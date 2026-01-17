@@ -2,5 +2,8 @@
   "name": "suggest-rules",
   "version": "1.0.0",
   "description": "Анализ сессии и предложение Claude rules на основе выявленных паттернов",
-  "commands": ["claude/suggest-rules.md"]
+  "author": {
+    "name": "stgmt"
+  },
+  "commands": "./commands"
 }
