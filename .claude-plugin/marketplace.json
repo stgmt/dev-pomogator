@@ -1,0 +1,14 @@
+{
+  "name": "dev-pomogator",
+  "owner": {
+    "name": "stgmt"
+  },
+  "plugins": [
+    {
+      "name": "suggest-rules",
+      "source": "./extensions/suggest-rules",
+      "description": "Анализ сессии и предложение Claude rules на основе выявленных паттернов",
+      "version": "1.0.0"
+    }
+  ]
+}
