@@ -1,6 +1,6 @@
 {
   "name": "dev-pomogator",
-  "version": "0.1.0",
+  "version": "1.1.0",
   "description": "Team coding standards and workflows for Cursor and Claude Code",
   "author": "stgmt",
   "license": "MIT",
@@ -26,7 +26,9 @@
   "files": [
     "bin",
     "dist",
-    "extensions"
+    "extensions",
+    "scripts",
+    "shared"
   ],
   "scripts": {
     "build": "tsc",

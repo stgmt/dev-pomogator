@@ -21,12 +21,13 @@ export async function runInstaller(): Promise<void> {
     });
     
     if (useExisting) {
-      await install(existingConfig.platforms, existingConfig.autoUpdate);
+      const extNames = existingConfig.installedExtensions?.map(e => e.name) || [];
+      await install(existingConfig.platforms, existingConfig.autoUpdate, extNames);
       return;
     }
   }
   
-  // Platform selection
+  // 1. Platform selection
   const platforms = await checkbox<Platform>({
     message: 'Select platform(s) to install:',
     choices: [
@@ -41,52 +42,76 @@ export async function runInstaller(): Promise<void> {
     process.exit(0);
   }
   
-  // Auto-update option (only for Cursor)
+  // 2. Extension selection
+  const allExtensions = await listExtensions();
+  const availableExtensions = allExtensions.filter(ext =>
+    ext.platforms.some(p => platforms.includes(p as Platform))
+  );
+  
+  let selectedExtensions: string[] = [];
+  
+  if (availableExtensions.length > 0) {
+    selectedExtensions = await checkbox({
+      message: 'Select extensions to install:',
+      choices: availableExtensions.map(ext => ({
+        name: `${ext.name} — ${ext.description}`,
+        value: ext.name,
+        checked: true,
+      })),
+    });
+    
+    if (selectedExtensions.length === 0) {
+      console.log(chalk.yellow('No extensions selected. Exiting.'));
+      process.exit(0);
+    }
+  }
+  
+  // 3. Auto-update option (only for Cursor)
   let autoUpdate = false;
   if (platforms.includes('cursor')) {
     autoUpdate = await confirm({
-      message: 'Enable auto-updates for Cursor? (checks on stop hook, 6h cooldown)',
+      message: 'Enable auto-updates for Cursor? (checks every 24 hours)',
       default: true,
     });
   }
   
-  // Remember choice
+  // 4. Remember choice
   const rememberChoice = await confirm({
     message: 'Remember these choices for next time?',
     default: true,
   });
   
-  // Save config
+  // 5. Save config
   const config: Config = {
     platforms,
     autoUpdate,
     lastCheck: new Date().toISOString(),
-    cooldownHours: 6,
-    installedVersion: process.env.npm_package_version || '0.1.0',
+    cooldownHours: 24,
     rememberChoice,
-    installPath: {
-      cursor: '.cursor/rules',
-      claude: '~/.claude/plugins/dev-pomogator',
-    },
+    installedExtensions: [],
   };
   
   await saveConfig(config);
   
-  // Install
-  await install(platforms, autoUpdate);
+  // 6. Install
+  await install(platforms, autoUpdate, selectedExtensions);
 }
 
-async function install(platforms: Platform[], autoUpdate: boolean): Promise<void> {
+async function install(
+  platforms: Platform[],
+  autoUpdate: boolean,
+  extensions: string[]
+): Promise<void> {
   console.log(chalk.cyan('\nInstalling...\n'));
   
   for (const platform of platforms) {
     if (platform === 'cursor') {
-      await installCursor({ autoUpdate });
-      console.log(chalk.green('✓ Cursor rules installed'));
+      await installCursor({ autoUpdate, extensions });
+      console.log(chalk.green('✓ Cursor commands installed'));
     }
     
     if (platform === 'claude') {
-      await installClaude();
+      await installClaude({ extensions });
       console.log(chalk.green('✓ Claude Code plugin installed'));
     }
   }
@@ -94,7 +119,10 @@ async function install(platforms: Platform[], autoUpdate: boolean): Promise<void
   console.log(chalk.bold.green('\n✨ Installation complete!\n'));
   
   if (platforms.includes('cursor')) {
-    console.log(chalk.cyan('Cursor: Use suggest-rules command to generate project rules'));
+    console.log(chalk.cyan('Cursor: Type /suggest-rules in chat to generate project rules'));
+    if (autoUpdate) {
+      console.log(chalk.gray('         Auto-update enabled (checks every 24 hours)'));
+    }
   }
   
   if (platforms.includes('claude')) {

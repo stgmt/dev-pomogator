@@ -61,12 +61,13 @@ export async function getExtensionFiles(
   extension: Extension,
   platform: 'cursor' | 'claude'
 ): Promise<string[]> {
-  const platformDir = path.join(extension.path, platform);
+  // Новый путь: extensions/{name}/{platform}/commands/
+  const commandsDir = path.join(extension.path, platform, 'commands');
   
-  if (!(await fs.pathExists(platformDir))) {
+  if (!(await fs.pathExists(commandsDir))) {
     return [];
   }
   
-  const files = await fs.readdir(platformDir);
-  return files.map((f) => path.join(platformDir, f));
+  const files = await fs.readdir(commandsDir);
+  return files.map((f) => path.join(commandsDir, f));
 }

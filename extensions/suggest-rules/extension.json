@@ -1,11 +1,11 @@
 {
   "name": "suggest-rules",
-  "version": "1.0.1",
-  "description": "Анализирует проект и предлагает правила для IDE",
+  "version": "1.1.0",
+  "description": "Анализ сессии и предложение правил для IDE",
   "platforms": ["cursor", "claude"],
   "category": "workflow",
   "files": {
-    "cursor": ["cursor/suggest-rules.mdc"],
-    "claude": ["claude/suggest-rules.md"]
+    "cursor": ["cursor/commands/suggest-rules.md"],
+    "claude": ["claude/commands/suggest-rules.md"]
   }
 }
