@@ -1,6 +1,6 @@
 {
   "name": "suggest-rules",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Анализ сессии и предложение Claude rules на основе выявленных паттернов",
   "author": {
     "name": "stgmt"
