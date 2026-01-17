@@ -1,7 +1,7 @@
 {
-  "name": "dev-pomogator",
+  "name": "suggest-rules",
   "version": "1.1.1",
-  "description": "Набор инструментов для разработки: suggest-rules и другие команды",
+  "description": "Анализ сессии и предложение Claude rules на основе выявленных паттернов",
   "author": {
     "name": "stgmt"
   },
