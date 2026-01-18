@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "hooks": {
+    "stop": [
+      {
+        "command": "node C:\\Users\\stigm\\.dev-pomogator\\scripts\\check-update.js"
+      }
+    ]
+  }
+}

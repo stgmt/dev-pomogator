@@ -1,6 +1,6 @@
 {
   "name": "suggest-rules",
-  "version": "1.1.2",
+  "version": "1.2.0",
   "description": "Анализ сессии и предложение правил для IDE",
   "platforms": ["cursor", "claude"],
   "category": "workflow",
