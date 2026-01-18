@@ -10,6 +10,7 @@ export interface InstalledExtension {
 export interface Config {
   platforms: Platform[];
   autoUpdate: boolean;
+  enableMemory?: boolean;
   lastCheck: string;
   cooldownHours: number;
   rememberChoice: boolean;
@@ -19,6 +20,7 @@ export interface Config {
 export const DEFAULT_CONFIG: Config = {
   platforms: [],
   autoUpdate: true,
+  enableMemory: true,
   lastCheck: new Date().toISOString(),
   cooldownHours: 24,
   rememberChoice: true,

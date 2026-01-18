@@ -3,6 +3,7 @@ import chalk from 'chalk';
 import { installCursor } from './cursor.js';
 import { installClaude } from './claude.js';
 import { listExtensions } from './extensions.js';
+import { ensureClaudeMem } from './memory.js';
 import { saveConfig, loadConfig } from '../config/index.js';
 import type { Config, Platform } from '../config/schema.js';
 
@@ -22,7 +23,11 @@ export async function runInstaller(): Promise<void> {
     
     if (useExisting) {
       const extNames = existingConfig.installedExtensions?.map(e => e.name) || [];
-      await install(existingConfig.platforms, existingConfig.autoUpdate, extNames);
+      await install(
+        existingConfig.platforms,
+        existingConfig.autoUpdate,
+        extNames
+      );
       return;
     }
   }
@@ -108,11 +113,17 @@ async function install(
     if (platform === 'cursor') {
       await installCursor({ autoUpdate, extensions });
       console.log(chalk.green('✓ Cursor commands installed'));
+      
+      // Install claude-mem for Cursor (automatic, checks if already installed)
+      await ensureClaudeMem('cursor');
     }
     
     if (platform === 'claude') {
       await installClaude({ extensions });
       console.log(chalk.green('✓ Claude Code plugin installed'));
+      
+      // Install claude-mem plugin for Claude Code (automatic, checks if already installed)
+      await ensureClaudeMem('claude');
     }
   }
   
@@ -123,9 +134,11 @@ async function install(
     if (autoUpdate) {
       console.log(chalk.gray('         Auto-update enabled (checks every 24 hours)'));
     }
+    console.log(chalk.gray('         Persistent memory enabled (claude-mem)'));
   }
   
   if (platforms.includes('claude')) {
     console.log(chalk.cyan('Claude Code: Use /suggest-rules command to generate project rules'));
+    console.log(chalk.gray('             Persistent memory enabled (claude-mem plugin)'));
   }
 }
