@@ -7,9 +7,9 @@ $originalDir = Get-Location
 
 Write-Host "Installing dev-pomogator..." -ForegroundColor Cyan
 
-# Clone to temp (redirect stderr to stdout to avoid PowerShell error)
+# Clone to temp (use cmd to avoid PowerShell stderr issues)
 Write-Host "  Cloning repository..." -ForegroundColor Gray
-$null = git clone --depth 1 $repo $tmpDir 2>&1
+cmd /c "git clone --depth 1 $repo $tmpDir 2>nul"
 if (-not (Test-Path $tmpDir)) {
     Write-Host "Failed to clone repository" -ForegroundColor Red
     exit 1
@@ -18,9 +18,9 @@ if (-not (Test-Path $tmpDir)) {
 # Install and build
 Set-Location $tmpDir
 Write-Host "  Installing dependencies..." -ForegroundColor Gray
-$null = npm install 2>&1
+cmd /c "npm install 2>nul >nul"
 Write-Host "  Building..." -ForegroundColor Gray
-$null = npm run build 2>&1
+cmd /c "npm run build 2>nul >nul"
 
 # Run installer for Cursor (from original directory)
 Set-Location $originalDir

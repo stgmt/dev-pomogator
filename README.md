@@ -15,7 +15,7 @@ curl -fsSL https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install.sh
 **Windows (PowerShell):**
 ```powershell
 cd C:\path\to\your-project
-irm https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install.ps1 | iex
+iwr -useb https://api.github.com/repos/stgmt/dev-pomogator/contents/install.ps1 -Headers @{Accept='application/vnd.github.v3.raw'} | iex
 ```
 
 > **Important**: Run from your project folder. The installer detects project root via git.
