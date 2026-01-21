@@ -1,0 +1,31 @@
+FROM node:20-slim
+
+# Install git and other dependencies
+RUN apt-get update && apt-get install -y git curl unzip && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Create test user with home directory
+RUN useradd -m -s /bin/bash testuser
+
+# Switch to testuser and install bun
+USER testuser
+ENV HOME=/home/testuser
+ENV PATH="${HOME}/.bun/bin:${PATH}"
+
+# Install bun for testuser
+RUN curl -fsSL https://bun.sh/install | bash
+
+WORKDIR /home/testuser/app
+
+# Copy all source code
+COPY --chown=testuser:testuser . .
+
+# Install dependencies (skip prepare script)
+RUN npm install --ignore-scripts
+
+# Build
+RUN npm run build
+
+ENV HOME=/home/testuser
+
+CMD ["npm", "run", "test:e2e:docker"]

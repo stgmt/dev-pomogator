@@ -9,6 +9,38 @@ import type { Config, Platform } from '../config/schema.js';
 
 export { listExtensions } from './extensions.js';
 
+/**
+ * Non-interactive installer for CI/testing
+ */
+export async function runNonInteractiveInstaller(platforms: Platform[]): Promise<void> {
+  console.log(chalk.bold.cyan('\n🚀 dev-pomogator installer (non-interactive)\n'));
+  
+  // Get all extensions for selected platforms
+  const allExtensions = await listExtensions();
+  const availableExtensions = allExtensions.filter(ext =>
+    ext.platforms.some(p => platforms.includes(p as Platform))
+  );
+  const extensionNames = availableExtensions.map(ext => ext.name);
+  
+  // Default settings
+  const autoUpdate = platforms.includes('cursor');
+  
+  // Save config
+  const config: Config = {
+    platforms,
+    autoUpdate,
+    lastCheck: new Date().toISOString(),
+    cooldownHours: 24,
+    rememberChoice: true,
+    installedExtensions: [],
+  };
+  
+  await saveConfig(config);
+  
+  // Install
+  await install(platforms, autoUpdate, extensionNames);
+}
+
 export async function runInstaller(): Promise<void> {
   console.log(chalk.bold.cyan('\n🚀 dev-pomogator installer\n'));
   

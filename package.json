@@ -31,10 +31,12 @@
     "shared"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node scripts/build-check-update.js",
     "dev": "tsc --watch",
     "lint": "eslint src",
     "test": "vitest",
+    "test:e2e": "docker compose -f docker-compose.test.yml run --rm test",
+    "test:e2e:docker": "vitest run tests/e2e --reporter=verbose",
     "prepare": "npm run build"
   },
   "dependencies": {
@@ -47,6 +49,7 @@
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^20.11.0",
     "@types/semver": "^7.5.6",
+    "esbuild": "^0.20.0",
     "typescript": "^5.3.0",
     "vitest": "^1.2.0"
   },

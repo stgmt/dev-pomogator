@@ -2,6 +2,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
 import type { Platform } from '../config/schema.js';
+import { findRepoRoot } from '../utils/repo.js';
 
 export async function updateFiles(
   _releaseData: Buffer,
@@ -10,11 +11,12 @@ export async function updateFiles(
   // For now, we'll use npx to reinstall
   // In future, extract tarball and copy files
   
-  const cwd = process.cwd();
+  // Find git repository root for correct project directory
+  const repoRoot = findRepoRoot();
   
   for (const platform of platforms) {
     if (platform === 'cursor') {
-      await updateCursorFiles(cwd);
+      await updateCursorFiles(repoRoot);
     }
     
     if (platform === 'claude') {

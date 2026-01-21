@@ -24,3 +24,8 @@ coverage/
 # Temp files
 *.tmp
 *.temp
+
+# Environment files with secrets
+.env
+.env.*
+!.env.example
