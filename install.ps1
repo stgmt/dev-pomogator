@@ -1,26 +1,33 @@
 # dev-pomogator installer for Windows
 # Usage: irm https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install.ps1 | iex
 
-$ErrorActionPreference = "Stop"
-
 $repo = "https://github.com/stgmt/dev-pomogator.git"
 $tmpDir = Join-Path $env:TEMP "dev-pomogator-$(Get-Random)"
+$originalDir = Get-Location
 
-Write-Host "🚀 Installing dev-pomogator..." -ForegroundColor Cyan
+Write-Host "Installing dev-pomogator..." -ForegroundColor Cyan
 
-# Clone to temp
-git clone --depth 1 $repo $tmpDir 2>$null | Out-Null
+# Clone to temp (redirect stderr to stdout to avoid PowerShell error)
+Write-Host "  Cloning repository..." -ForegroundColor Gray
+$null = git clone --depth 1 $repo $tmpDir 2>&1
+if (-not (Test-Path $tmpDir)) {
+    Write-Host "Failed to clone repository" -ForegroundColor Red
+    exit 1
+}
 
 # Install and build
-Push-Location $tmpDir
-npm install --silent 2>$null | Out-Null
-npm run build --silent 2>$null | Out-Null
+Set-Location $tmpDir
+Write-Host "  Installing dependencies..." -ForegroundColor Gray
+$null = npm install 2>&1
+Write-Host "  Building..." -ForegroundColor Gray
+$null = npm run build 2>&1
 
-# Run installer for Cursor
-node dist/index.js --cursor
+# Run installer for Cursor (from original directory)
+Set-Location $originalDir
+Write-Host "  Running installer..." -ForegroundColor Gray
+node "$tmpDir\dist\index.js" --cursor
 
 # Cleanup
-Pop-Location
-Remove-Item -Recurse -Force $tmpDir
+Remove-Item -Recurse -Force $tmpDir -ErrorAction SilentlyContinue
 
-Write-Host "✨ Done!" -ForegroundColor Green
+Write-Host "Done!" -ForegroundColor Green
