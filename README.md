@@ -4,26 +4,21 @@ Universal installer for custom plugins, rules, commands, and hooks for **Cursor*
 
 ## Installation
 
-### Cursor
+### Cursor (one-liner)
 
-Run from your **project folder**:
-
+**Linux/macOS:**
 ```bash
 cd /path/to/your-project
-npx dev-pomogator --cursor
+curl -fsSL https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install.sh | bash
 ```
 
-Or from source:
-
-```bash
-cd /path/to/your-project
-git clone https://github.com/stgmt/dev-pomogator.git
-cd dev-pomogator
-npm install && npm run build
-node dist/index.js --cursor
+**Windows (PowerShell):**
+```powershell
+cd C:\path\to\your-project
+irm https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install.ps1 | iex
 ```
 
-> **Important**: The installer detects the project root via git. Commands are installed into the project you run it from.
+> **Important**: Run from your project folder. The installer detects project root via git.
 
 ### Claude Code
 
