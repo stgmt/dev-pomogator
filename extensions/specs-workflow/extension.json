@@ -1,0 +1,26 @@
+{
+  "name": "specs-workflow",
+  "version": "1.0.0",
+  "description": "Управление спецификациями: 3-фазный workflow, валидация, dev-plan формат",
+  "platforms": ["cursor", "claude"],
+  "category": "workflow",
+  "files": {
+    "cursor": ["cursor/commands/create-spec.md"],
+    "claude": ["claude/commands/create-spec.md"]
+  },
+  "rules": {
+    "cursor": [
+      "cursor/rules/specs-management.mdc",
+      "cursor/rules/dev-plan.mdc",
+      "cursor/rules/research-workflow.mdc"
+    ],
+    "claude": [
+      "claude/rules/specs-management.md",
+      "claude/rules/dev-plan.md",
+      "claude/rules/research-workflow.md"
+    ]
+  },
+  "tools": {
+    "specs-generator": "tools/specs-generator"
+  }
+}

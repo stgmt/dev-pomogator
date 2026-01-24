@@ -14,6 +14,15 @@ export interface Extension {
     cursor?: string[];
     claude?: string[];
   };
+  // Rules to install to .cursor/rules/ or .claude/rules/
+  rules?: {
+    cursor?: string[];
+    claude?: string[];
+  };
+  // Tools to install to project/tools/
+  tools?: {
+    [toolName: string]: string; // name -> relative path in extension
+  };
   path: string;
 }
 
@@ -70,4 +79,30 @@ export async function getExtensionFiles(
   
   const files = await fs.readdir(commandsDir);
   return files.map((f) => path.join(commandsDir, f));
+}
+
+/**
+ * Get absolute paths to rule files for an extension
+ */
+export async function getExtensionRules(
+  extension: Extension,
+  platform: 'cursor' | 'claude'
+): Promise<string[]> {
+  const rules = extension.rules?.[platform] || [];
+  return rules.map((r) => path.join(extension.path, r));
+}
+
+/**
+ * Get map of tool_name -> absolute_path for extension tools
+ */
+export async function getExtensionTools(
+  extension: Extension
+): Promise<Map<string, string>> {
+  const tools = new Map<string, string>();
+  if (extension.tools) {
+    for (const [name, relativePath] of Object.entries(extension.tools)) {
+      tools.set(name, path.join(extension.path, relativePath));
+    }
+  }
+  return tools;
 }

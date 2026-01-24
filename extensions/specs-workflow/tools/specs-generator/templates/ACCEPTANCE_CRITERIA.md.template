@@ -1,0 +1,22 @@
+# Acceptance Criteria (EARS)
+
+## AC-1 (FR-1)
+
+WHEN {событие} THEN {система} SHALL {действие}.
+
+## AC-2 (FR-2)
+
+IF {условие} THEN {система} SHALL {действие}.
+
+## AC-3 (FR-3)
+
+WHEN {событие} AND {условие} THEN {система} SHALL {действие}.
+
+## AC-4 (FR-4)
+
+WHEN {событие} THEN {система} SHALL {действие}.
+
+## AC-5 (FR-5)
+
+IF {условие} THEN {система} SHALL {действие}.
+

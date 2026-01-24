@@ -9,17 +9,33 @@ import type { Config, Platform } from '../config/schema.js';
 
 export { listExtensions } from './extensions.js';
 
+interface NonInteractiveOptions {
+  plugins?: string[]; // undefined = all plugins, [] = none, [...] = selected
+}
+
 /**
  * Non-interactive installer for CI/testing
  */
-export async function runNonInteractiveInstaller(platforms: Platform[]): Promise<void> {
+export async function runNonInteractiveInstaller(
+  platforms: Platform[],
+  options: NonInteractiveOptions = {}
+): Promise<void> {
   console.log(chalk.bold.cyan('\n🚀 dev-pomogator installer (non-interactive)\n'));
   
   // Get all extensions for selected platforms
   const allExtensions = await listExtensions();
-  const availableExtensions = allExtensions.filter(ext =>
+  let availableExtensions = allExtensions.filter(ext =>
     ext.platforms.some(p => platforms.includes(p as Platform))
   );
+  
+  // Filter by selected plugins if specified
+  if (options.plugins !== undefined) {
+    availableExtensions = availableExtensions.filter(ext =>
+      options.plugins!.includes(ext.name)
+    );
+    console.log(chalk.gray(`Installing plugins: ${options.plugins.join(', ')}\n`));
+  }
+  
   const extensionNames = availableExtensions.map(ext => ext.name);
   
   // Default settings

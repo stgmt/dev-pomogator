@@ -2,7 +2,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
 import { fileURLToPath } from 'url';
-import { listExtensions, getExtensionFiles, Extension } from './extensions.js';
+import { listExtensions, getExtensionFiles, getExtensionRules, getExtensionTools, Extension } from './extensions.js';
 import { loadConfig, saveConfig } from '../config/index.js';
 import type { InstalledExtension } from '../config/schema.js';
 import { findRepoRoot } from '../utils/repo.js';
@@ -47,7 +47,37 @@ export async function installCursor(options: CursorOptions): Promise<void> {
     }
   }
   
-  // 2. Setup auto-update if enabled
+  // 2. Install rules to .cursor/rules/
+  const rulesDir = path.join(repoRoot, '.cursor', 'rules');
+  await fs.ensureDir(rulesDir);
+  
+  for (const extension of extensionsToInstall) {
+    const ruleFiles = await getExtensionRules(extension, 'cursor');
+    
+    for (const ruleFile of ruleFiles) {
+      if (await fs.pathExists(ruleFile)) {
+        const fileName = path.basename(ruleFile);
+        const dest = path.join(rulesDir, fileName);
+        await fs.copy(ruleFile, dest, { overwrite: true });
+        console.log(`  ✓ Installed rule: ${fileName}`);
+      }
+    }
+  }
+  
+  // 3. Install tools to project/tools/
+  for (const extension of extensionsToInstall) {
+    const tools = await getExtensionTools(extension);
+    
+    for (const [toolName, toolPath] of tools) {
+      if (await fs.pathExists(toolPath)) {
+        const dest = path.join(repoRoot, 'tools', toolName);
+        await fs.copy(toolPath, dest, { overwrite: true });
+        console.log(`  ✓ Installed tool: ${toolName}/`);
+      }
+    }
+  }
+  
+  // 4. Setup auto-update if enabled
   // Note: Hooks (claude-mem + updater) are installed globally by memory.ts
   // Here we only copy the check-update.js script and track project paths
   if (options.autoUpdate) {

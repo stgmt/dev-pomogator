@@ -34,9 +34,18 @@ Or add manually to `~/.claude/settings.json`.
 
 ### Per-Project (Cursor)
 
-| File | Location |
-|------|----------|
-| `suggest-rules.md` | `{project}/.cursor/commands/` |
+| Type | Location | Files |
+|------|----------|-------|
+| Commands | `{project}/.cursor/commands/` | `suggest-rules.md`, `create-spec.md` |
+| Rules | `{project}/.cursor/rules/` | `specs-management.mdc`, `dev-plan.mdc`, `research-workflow.mdc` |
+| Tools | `{project}/tools/specs-generator/` | 5 scripts + 13 templates |
+
+### Per-Project (Claude Code)
+
+| Type | Location | Files |
+|------|----------|-------|
+| Rules | `{project}/.claude/rules/` | `specs-management.md`, `dev-plan.md`, `research-workflow.md` |
+| Tools | `{project}/tools/specs-generator/` | 5 scripts + 13 templates |
 
 ### Global (Cursor)
 
@@ -54,6 +63,37 @@ Or add manually to `~/.claude/settings.json`.
 |------|----------|
 | Plugin | `~/.claude/plugins/dev-pomogator/` |
 
+## Plugins
+
+### suggest-rules
+
+Analyze session and suggest rules for IDE.
+
+```bash
+/suggest-rules
+```
+
+Creates `.cursor/rules/*.mdc` files tailored to your stack.
+
+### specs-workflow
+
+Comprehensive specs management with 3-phase workflow.
+
+| Component | Description |
+|-----------|-------------|
+| `/create-spec <name>` | Create spec folder structure |
+| 3 Rules | `specs-management`, `dev-plan`, `research-workflow` |
+| 5 Scripts | `scaffold-spec.ps1`, `validate-spec.ps1`, etc. |
+| 13 Templates | User Stories, Use Cases, FR, NFR, Design, etc. |
+
+Install only specific plugins:
+
+```bash
+npx dev-pomogator --cursor --plugins=suggest-rules
+npx dev-pomogator --cursor --plugins=specs-workflow
+npx dev-pomogator --cursor --plugins=suggest-rules,specs-workflow
+```
+
 ## Features
 
 ### 📜 /suggest-rules Command
@@ -66,6 +106,17 @@ Analyze project and generate custom rules:
 ```
 
 Creates `.cursor/rules/*.mdc` files tailored to your stack.
+
+### 📋 /create-spec Command
+
+Create new specification folder:
+
+```bash
+# In Cursor/Claude chat:
+/create-spec my-feature
+```
+
+Creates `.specs/my-feature/` with 13 template files.
 
 ### 🪝 Cursor Hooks
 
