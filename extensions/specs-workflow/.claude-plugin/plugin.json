@@ -5,5 +5,5 @@
   "author": {
     "name": "stgmt"
   },
-  "commands": "./commands"
+  "commands": "./claude/commands"
 }

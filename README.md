@@ -22,13 +22,11 @@ iwr -useb https://api.github.com/repos/stgmt/dev-pomogator/contents/install.ps1 
 
 ### Claude Code
 
-Use standard marketplace:
-
-```bash
-claude mcp add /path/to/dev-pomogator
 ```
-
-Or add manually to `~/.claude/settings.json`.
+/plugin marketplace add stgmt/dev-pomogator
+/plugin install suggest-rules@dev-pomogator
+/plugin install specs-workflow@dev-pomogator
+```
 
 ## What Gets Installed
 

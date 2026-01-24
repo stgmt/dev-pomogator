@@ -130,6 +130,55 @@ describe('PLUGIN001: Suggest-rules Extension', () => {
   });
 });
 
+// PLUGIN003: Specs-workflow extension verification
+describe('PLUGIN003: Specs-workflow Extension', () => {
+  it('should install create-spec.md in project directory', async () => {
+    const cmdPath = appPath('.cursor', 'commands', 'create-spec.md');
+    expect(await fs.pathExists(cmdPath)).toBe(true);
+  });
+
+  it('should have non-empty content', async () => {
+    const cmdPath = appPath('.cursor', 'commands', 'create-spec.md');
+    const content = await fs.readFile(cmdPath, 'utf-8');
+    expect(content.length).toBeGreaterThan(100);
+  });
+
+  it('should install specs-management rule', async () => {
+    const rulePath = appPath('.cursor', 'rules', 'specs-management.mdc');
+    expect(await fs.pathExists(rulePath)).toBe(true);
+  });
+
+  it('should install dev-plan rule', async () => {
+    const rulePath = appPath('.cursor', 'rules', 'dev-plan.mdc');
+    expect(await fs.pathExists(rulePath)).toBe(true);
+  });
+
+  it('should install research-workflow rule', async () => {
+    const rulePath = appPath('.cursor', 'rules', 'research-workflow.mdc');
+    expect(await fs.pathExists(rulePath)).toBe(true);
+  });
+
+  it('should install specs-generator tools', async () => {
+    const toolsPath = appPath('tools', 'specs-generator');
+    expect(await fs.pathExists(toolsPath)).toBe(true);
+    
+    // Check key scripts exist
+    expect(await fs.pathExists(path.join(toolsPath, 'scaffold-spec.ps1'))).toBe(true);
+    expect(await fs.pathExists(path.join(toolsPath, 'validate-spec.ps1'))).toBe(true);
+    expect(await fs.pathExists(path.join(toolsPath, 'list-specs.ps1'))).toBe(true);
+  });
+
+  it('should install templates', async () => {
+    const templatesPath = appPath('tools', 'specs-generator', 'templates');
+    expect(await fs.pathExists(templatesPath)).toBe(true);
+    
+    // Check some key templates
+    expect(await fs.pathExists(path.join(templatesPath, 'FR.md.template'))).toBe(true);
+    expect(await fs.pathExists(path.join(templatesPath, 'DESIGN.md.template'))).toBe(true);
+    expect(await fs.pathExists(path.join(templatesPath, 'TASKS.md.template'))).toBe(true);
+  });
+});
+
 // PLUGIN002: Claude-mem hooks verification
 describe('PLUGIN002: Claude-mem Hooks', () => {
   // State from Scenario 1 - hooks.json already created
