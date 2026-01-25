@@ -1,0 +1,14 @@
+{
+  "name": "forbid-root-artifacts",
+  "version": "1.0.0",
+  "description": "Pre-commit хук для контроля файлов в корне репозитория",
+  "platforms": ["cursor", "claude"],
+  "category": "workflow",
+  "files": {
+    "cursor": ["cursor/commands/configure-root-artifacts.md"],
+    "claude": ["claude/commands/configure-root-artifacts.md"]
+  },
+  "tools": {
+    "forbid-root-artifacts": "tools/forbid-root-artifacts"
+  }
+}

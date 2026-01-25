@@ -1,0 +1,29 @@
+# Default whitelist for forbid-root-artifacts
+# These files are allowed in repository root by default
+
+files:
+  - .cursorrules
+  - .dockerignore
+  - .gitattributes
+  - .gitignore
+  - .gitlab-ci.yml
+  - .pre-commit-config.yaml
+  - .root-artifacts.yaml
+  - .yamllint
+  - AGENTS.md
+  - CLAUDE.md
+  - Directory.Build.props
+  - docker-compose.prod.yml
+  - docker-compose.tests.yml
+  - docker-compose.yml
+  - LICENSE
+  - Makefile
+  - package-lock.json
+  - package.json
+  - README.md
+  - tsconfig.json
+
+# Patterns (glob) - files matching these patterns are always allowed
+patterns:
+  - "*.sln"
+  - "*.csproj"

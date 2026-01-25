@@ -1,0 +1,80 @@
+---
+description: Настроить whitelist файлов в корне репозитория
+allowed-tools: Read, Write, Glob, Grep, Shell
+argument-hint: "[add FILE|remove FILE|show|analyze]"
+---
+
+# /configure-root-artifacts
+
+Анализирует текущие файлы в корне репозитория и помогает настроить `.root-artifacts.yaml`.
+
+## Что делает команда
+
+1. Показывает текущие файлы и папки в корне репозитория
+2. Показывает текущий whitelist (дефолтный + кастомный)
+3. Выявляет нарушения (файлы не в whitelist)
+4. Помогает создать или обновить `.root-artifacts.yaml`
+
+## Инструкция для агента
+
+### Шаг 1: Анализ текущего состояния
+
+1. Прочитай `tools/forbid-root-artifacts/default-whitelist.yaml` для понимания дефолтов
+2. Проверь существует ли `.root-artifacts.yaml` в корне
+3. Получи список файлов в корне репозитория
+4. Запусти `python tools/forbid-root-artifacts/check.py` для выявления нарушений
+
+### Шаг 2: Показать отчёт пользователю
+
+Покажи:
+- Список файлов в корне (разделив на разрешённые и нарушения)
+- Текущий режим (extend/replace)
+- Какие файлы добавлены пользователем
+- Какие файлы запрещены
+
+### Шаг 3: Предложить действия
+
+Спроси пользователя что он хочет сделать:
+- Добавить файлы в whitelist
+- Убрать файлы из whitelist
+- Ограничить папки
+- Игнорировать паттерны
+
+### Шаг 4: Обновить конфигурацию
+
+Создай или обнови `.root-artifacts.yaml` согласно пожеланиям пользователя.
+
+## Формат конфигурации
+
+```yaml
+# Режим: extend (добавить к дефолтам) или replace (заменить)
+mode: extend
+
+# Дополнительные разрешённые файлы
+allow:
+  - Makefile
+  - pyproject.toml
+
+# Явно запрещённые файлы
+deny:
+  - docker-compose.yml
+
+# Ограничить папки (если не указано - все разрешены)
+allowed_directories:
+  - src
+  - docs
+
+# Игнорировать паттерны
+ignore_patterns:
+  - "*.tmp"
+```
+
+## Примеры использования
+
+```
+/configure-root-artifacts show
+/configure-root-artifacts add Makefile
+/configure-root-artifacts add pyproject.toml poetry.lock
+/configure-root-artifacts remove docker-compose.yml
+/configure-root-artifacts analyze
+```

@@ -96,4 +96,29 @@ describe('Claude Code Marketplace', () => {
       expect(await fs.pathExists(cmdPath)).toBe(true);
     });
   });
+
+  describe('forbid-root-artifacts plugin', () => {
+    it('should be listed in marketplace.json', async () => {
+      const marketplacePath = path.join(ROOT_DIR, '.claude-plugin', 'marketplace.json');
+      const content = await fs.readJson(marketplacePath);
+      
+      const plugin = content.plugins.find((p: any) => p.name === 'forbid-root-artifacts');
+      expect(plugin).toBeDefined();
+      expect(plugin.source).toBe('./extensions/forbid-root-artifacts');
+    });
+
+    it('should have plugin.json', async () => {
+      const pluginPath = path.join(ROOT_DIR, 'extensions', 'forbid-root-artifacts', '.claude-plugin', 'plugin.json');
+      expect(await fs.pathExists(pluginPath)).toBe(true);
+      
+      const content = await fs.readJson(pluginPath);
+      expect(content.name).toBe('forbid-root-artifacts');
+      expect(content.commands).toBe('./claude/commands');
+    });
+
+    it('should have configure-root-artifacts.md command', async () => {
+      const cmdPath = path.join(ROOT_DIR, 'extensions', 'forbid-root-artifacts', 'claude', 'commands', 'configure-root-artifacts.md');
+      expect(await fs.pathExists(cmdPath)).toBe(true);
+    });
+  });
 });

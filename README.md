@@ -26,6 +26,7 @@ iwr -useb https://api.github.com/repos/stgmt/dev-pomogator/contents/install.ps1 
 /plugin marketplace add stgmt/dev-pomogator
 /plugin install suggest-rules@dev-pomogator
 /plugin install specs-workflow@dev-pomogator
+/plugin install forbid-root-artifacts@dev-pomogator
 ```
 
 ## What Gets Installed
@@ -34,9 +35,10 @@ iwr -useb https://api.github.com/repos/stgmt/dev-pomogator/contents/install.ps1 
 
 | Type | Location | Files |
 |------|----------|-------|
-| Commands | `{project}/.cursor/commands/` | `suggest-rules.md`, `create-spec.md` |
+| Commands | `{project}/.cursor/commands/` | `suggest-rules.md`, `create-spec.md`, `configure-root-artifacts.md` |
 | Rules | `{project}/.cursor/rules/` | `specs-management.mdc`, `dev-plan.mdc`, `research-workflow.mdc` |
 | Tools | `{project}/tools/specs-generator/` | 5 scripts + 13 templates |
+| Tools | `{project}/tools/forbid-root-artifacts/` | check.py, setup.py, whitelist config |
 
 ### Per-Project (Claude Code)
 
@@ -84,12 +86,23 @@ Comprehensive specs management with 3-phase workflow.
 | 5 Scripts | `scaffold-spec.ps1`, `validate-spec.ps1`, etc. |
 | 13 Templates | User Stories, Use Cases, FR, NFR, Design, etc. |
 
+### forbid-root-artifacts
+
+Pre-commit hook to control files in repository root.
+
+| Component | Description |
+|-----------|-------------|
+| `/configure-root-artifacts` | Configure whitelist interactively |
+| `check.py` | Pre-commit hook script |
+| `setup.py` | First-time setup (creates config, installs hook) |
+| `.root-artifacts.yaml` | User configuration file |
+
 Install only specific plugins:
 
 ```bash
 npx dev-pomogator --cursor --plugins=suggest-rules
 npx dev-pomogator --cursor --plugins=specs-workflow
-npx dev-pomogator --cursor --plugins=suggest-rules,specs-workflow
+npx dev-pomogator --cursor --plugins=forbid-root-artifacts
 ```
 
 ## Features
@@ -115,6 +128,30 @@ Create new specification folder:
 ```
 
 Creates `.specs/my-feature/` with 13 template files.
+
+### 🚫 /configure-root-artifacts Command
+
+Control files allowed in repository root:
+
+```bash
+# In Cursor/Claude chat:
+/configure-root-artifacts
+```
+
+Setup pre-commit hook:
+
+```bash
+python tools/forbid-root-artifacts/setup.py
+```
+
+Customize via `.root-artifacts.yaml`:
+
+```yaml
+mode: extend
+allow:
+  - Makefile
+  - pyproject.toml
+```
 
 ### 🪝 Cursor Hooks
 
