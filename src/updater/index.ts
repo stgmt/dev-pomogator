@@ -9,10 +9,11 @@ import semver from 'semver';
 interface UpdateOptions {
   force?: boolean;
   silent?: boolean;
+  platform?: 'cursor' | 'claude';  // Filter updates by platform
 }
 
 export async function checkUpdate(options: UpdateOptions = {}): Promise<boolean> {
-  const { force = false, silent = false } = options;
+  const { force = false, silent = false, platform } = options;
   
   // 1. Попытка получить lock
   if (!await acquireLock()) {
@@ -40,6 +41,11 @@ export async function checkUpdate(options: UpdateOptions = {}): Promise<boolean>
     
     // 3. Для каждого установленного extension
     for (const installed of config.installedExtensions) {
+      // Filter by platform if specified
+      if (platform && installed.platform !== platform) {
+        continue;
+      }
+      
       try {
         // Получить манифест из GitHub
         const remote = await fetchExtensionManifest(installed.name);
@@ -68,7 +74,9 @@ export async function checkUpdate(options: UpdateOptions = {}): Promise<boolean>
         // 6. Обновить во всех projectPaths
         for (const projectPath of installed.projectPaths) {
           try {
-            const destDir = path.join(projectPath, '.cursor', 'commands');
+            // Determine destination directory based on platform
+            const platformDir = installed.platform === 'claude' ? '.claude' : '.cursor';
+            const destDir = path.join(projectPath, platformDir, 'commands');
             const destFile = path.join(destDir, fileName);
             
             await fs.ensureDir(destDir);

@@ -18,19 +18,40 @@ export async function installCursor(options: CursorOptions): Promise<void> {
   // Find git repository root to install commands in the correct project directory
   const repoRoot = findRepoRoot();
   
-  // 1. Установить commands (НЕ rules!)
-  const targetDir = path.join(repoRoot, '.cursor', 'commands');
-  await fs.ensureDir(targetDir);
+  // Validate project directory
+  if (!await fs.pathExists(repoRoot)) {
+    throw new Error(`Project directory not found: ${repoRoot}`);
+  }
   
   // Get extensions to install
   const allExtensions = await listExtensions();
+  if (allExtensions.length === 0) {
+    throw new Error('No extensions found. Check your dev-pomogator installation.');
+  }
+  
   const cursorExtensions = allExtensions.filter((ext) =>
     ext.platforms.includes('cursor')
   );
   
+  if (cursorExtensions.length === 0) {
+    throw new Error('No extensions support Cursor platform.');
+  }
+  
   const extensionsToInstall = options.extensions?.length
     ? cursorExtensions.filter((ext) => options.extensions!.includes(ext.name))
     : cursorExtensions;
+  
+  if (options.extensions?.length && extensionsToInstall.length === 0) {
+    const available = cursorExtensions.map(e => e.name).join(', ');
+    throw new Error(
+      `None of the requested plugins found: ${options.extensions.join(', ')}. ` +
+      `Available plugins: ${available}`
+    );
+  }
+  
+  // 1. Установить commands (НЕ rules!)
+  const targetDir = path.join(repoRoot, '.cursor', 'commands');
+  await fs.ensureDir(targetDir);
   
   // Install each extension's cursor files
   for (const extension of extensionsToInstall) {

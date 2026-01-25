@@ -22,11 +22,15 @@ iwr -useb https://api.github.com/repos/stgmt/dev-pomogator/contents/install.ps1 
 
 ### Claude Code
 
+```bash
+cd /path/to/your-project
+npx dev-pomogator --claude
 ```
-/plugin marketplace add stgmt/dev-pomogator
-/plugin install suggest-rules@dev-pomogator
-/plugin install specs-workflow@dev-pomogator
-/plugin install forbid-root-artifacts@dev-pomogator
+
+Or with specific plugins:
+
+```bash
+npx dev-pomogator --claude --plugins=suggest-rules,specs-workflow
 ```
 
 ## What Gets Installed
@@ -44,8 +48,10 @@ iwr -useb https://api.github.com/repos/stgmt/dev-pomogator/contents/install.ps1 
 
 | Type | Location | Files |
 |------|----------|-------|
+| Commands | `{project}/.claude/commands/` | `suggest-rules.md`, `create-spec.md`, `configure-root-artifacts.md` |
 | Rules | `{project}/.claude/rules/` | `specs-management.md`, `dev-plan.md`, `research-workflow.md` |
 | Tools | `{project}/tools/specs-generator/` | 5 scripts + 13 templates |
+| Tools | `{project}/tools/forbid-root-artifacts/` | check.py, setup.py, whitelist config |
 
 ### Global (Cursor)
 
@@ -61,7 +67,10 @@ iwr -useb https://api.github.com/repos/stgmt/dev-pomogator/contents/install.ps1 
 
 | File | Location |
 |------|----------|
-| Plugin | `~/.claude/plugins/dev-pomogator/` |
+| `settings.json` (hooks) | `~/.claude/` |
+| `check-update.js` | `~/.dev-pomogator/scripts/` |
+| `config.json` | `~/.dev-pomogator/` |
+| Logs | `~/.dev-pomogator/logs/` |
 
 ## Plugins
 
@@ -163,6 +172,12 @@ allow:
 | `afterFileEdit` | After edit | Log file change |
 | `stop` | Conversation end | Summarize, check updates |
 
+### 🪝 Claude Code Hooks
+
+| Hook | Trigger | Action |
+|------|---------|--------|
+| `Stop` | Conversation end | Check updates |
+
 ### 🔄 Auto-Update
 
 - Checks GitHub releases every 24 hours
@@ -183,10 +198,10 @@ Integration with [claude-mem](https://github.com/thedotmack/claude-mem):
 
 ```json
 {
-  "platforms": ["cursor"],
+  "platforms": ["cursor", "claude"],
   "autoUpdate": true,
   "cooldownHours": 24,
-  "installedVersion": "1.1.0"
+  "installedExtensions": [...]
 }
 ```
 

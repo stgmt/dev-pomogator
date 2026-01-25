@@ -1,7 +1,11 @@
 /**
  * Bundled auto-update script for dev-pomogator.
- * Called by Cursor stop hook from ~/.dev-pomogator/scripts/check-update.js
+ * Called by Cursor/Claude Code stop hook from ~/.dev-pomogator/scripts/check-update.js
  * This file is bundled with esbuild to include all dependencies.
+ * 
+ * Usage:
+ *   node check-update.js          # Default (Cursor)
+ *   node check-update.js --claude # Called from Claude Code
  * 
  * Note: Shebang is added by esbuild via banner option.
  */
@@ -14,6 +18,11 @@ import { logger } from '../utils/logger.js';
 
 const CONFIG_DIR = path.join(os.homedir(), '.dev-pomogator');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
+
+// Parse command line arguments
+const args = process.argv.slice(2);
+const isClaudeCode = args.includes('--claude');
+const platform = isClaudeCode ? 'claude' : 'cursor';
 
 interface Config {
   autoUpdate?: boolean;
@@ -46,7 +55,7 @@ function shouldUpdate(config: Config | null): boolean {
 }
 
 async function main(): Promise<void> {
-  logger.info('=== Update check started ===');
+  logger.info(`=== Update check started (${platform}) ===`);
   
   const config = loadConfig();
   
@@ -58,9 +67,9 @@ async function main(): Promise<void> {
   logger.info('Cooldown expired, checking for updates...');
   
   try {
-    const updated = await checkUpdate({ silent: true });
+    const updated = await checkUpdate({ silent: true, platform });
     if (updated) {
-      logger.info('Extensions updated successfully');
+      logger.info(`Extensions updated successfully (${platform})`);
     } else {
       logger.info('No updates available');
     }

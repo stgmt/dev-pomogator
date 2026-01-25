@@ -84,14 +84,8 @@ describe('PLUGIN004: Forbid Root Artifacts', () => {
       expect(ext.platforms).toContain('claude');
     });
 
-    it('should have .claude-plugin/plugin.json', async () => {
-      const pluginPath = path.join(PLUGIN_DIR, '.claude-plugin', 'plugin.json');
-      expect(await fs.pathExists(pluginPath)).toBe(true);
-      
-      const plugin = await fs.readJson(pluginPath);
-      expect(plugin.name).toBe('forbid-root-artifacts');
-      expect(plugin.commands).toBe('./claude/commands');
-    });
+    // .claude-plugin removed - marketplace approach deprecated
+    // it('should have .claude-plugin/plugin.json', ...)
 
     it('should have check.py script', async () => {
       const checkPath = path.join(TOOLS_DIR, 'check.py');

@@ -159,19 +159,37 @@ async function install(
   
   for (const platform of platforms) {
     if (platform === 'cursor') {
-      await installCursor({ autoUpdate, extensions });
-      console.log(chalk.green('✓ Cursor commands installed'));
+      try {
+        await installCursor({ autoUpdate, extensions });
+        console.log(chalk.green('✓ Cursor commands installed'));
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        throw new Error(`Failed to install for Cursor: ${message}`);
+      }
       
       // Install claude-mem for Cursor (automatic, checks if already installed)
-      await ensureClaudeMem('cursor');
+      try {
+        await ensureClaudeMem('cursor');
+      } catch (error) {
+        console.log(chalk.yellow('⚠ Could not setup claude-mem (optional feature)'));
+      }
     }
     
     if (platform === 'claude') {
-      await installClaude({ extensions });
-      console.log(chalk.green('✓ Claude Code plugin installed'));
+      try {
+        await installClaude({ extensions });
+        console.log(chalk.green('✓ Claude Code plugin installed'));
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        throw new Error(`Failed to install for Claude Code: ${message}`);
+      }
       
       // Install claude-mem plugin for Claude Code (automatic, checks if already installed)
-      await ensureClaudeMem('claude');
+      try {
+        await ensureClaudeMem('claude');
+      } catch (error) {
+        console.log(chalk.yellow('⚠ Could not setup claude-mem (optional feature)'));
+      }
     }
   }
   

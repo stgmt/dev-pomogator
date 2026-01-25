@@ -1,9 +1,0 @@
-{
-  "name": "forbid-root-artifacts",
-  "version": "1.0.0",
-  "description": "Pre-commit хук для контроля файлов в корне репозитория",
-  "author": {
-    "name": "stgmt"
-  },
-  "commands": "./claude/commands"
-}

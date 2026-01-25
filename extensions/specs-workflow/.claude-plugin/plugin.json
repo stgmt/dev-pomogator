@@ -1,9 +1,0 @@
-{
-  "name": "specs-workflow",
-  "version": "1.0.0",
-  "description": "Управление спецификациями: 3-фазный workflow, валидация, dev-plan формат",
-  "author": {
-    "name": "stgmt"
-  },
-  "commands": "./claude/commands"
-}
