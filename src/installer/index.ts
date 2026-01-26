@@ -40,8 +40,8 @@ export async function runNonInteractiveInstaller(
   
   const extensionNames = availableExtensions.map(ext => ext.name);
   
-  // Default settings
-  const autoUpdate = platforms.includes('cursor');
+  // Default settings - auto-update enabled by default
+  const autoUpdate = true;
   
   // Save config
   const config: Config = {
@@ -94,14 +94,11 @@ export async function runSemiInteractiveInstaller(
     process.exit(0);
   }
   
-  // Auto-update option (only for Cursor)
-  let autoUpdate = false;
-  if (platforms.includes('cursor')) {
-    autoUpdate = await confirm({
-      message: 'Enable auto-updates? (checks every 24 hours)',
-      default: true,
-    });
-  }
+  // Auto-update option
+  const autoUpdate = await confirm({
+    message: 'Enable auto-updates? (checks every 24 hours)',
+    default: true,
+  });
   
   // Save config
   const config: Config = {
@@ -181,14 +178,11 @@ export async function runInstaller(): Promise<void> {
     }
   }
   
-  // 3. Auto-update option (only for Cursor)
-  let autoUpdate = false;
-  if (platforms.includes('cursor')) {
-    autoUpdate = await confirm({
-      message: 'Enable auto-updates for Cursor? (checks every 24 hours)',
-      default: true,
-    });
-  }
+  // 3. Auto-update option
+  const autoUpdate = await confirm({
+    message: 'Enable auto-updates? (checks every 24 hours)',
+    default: true,
+  });
   
   // 4. Remember choice
   const rememberChoice = await confirm({
