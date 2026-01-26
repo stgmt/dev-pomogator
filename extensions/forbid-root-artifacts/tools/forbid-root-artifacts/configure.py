@@ -80,25 +80,30 @@ def add_hook_to_pre_commit_config(repo_root: Path) -> bool:
         with open(config_path, "r", encoding="utf-8") as f:
             config = yaml.safe_load(f) or {}
         
-        # Check if hook already exists
         repos = config.get("repos", [])
-        for repo in repos:
-            if repo.get("repo") == "local":
-                hooks = repo.get("hooks", [])
-                for hook in hooks:
-                    if hook.get("id") == "forbid-root-artifacts":
-                        return False  # Already configured
         
-        # Add to existing local repo or create new
+        # Find local repo and check for existing hook
         local_repo = None
+        existing_hook_idx = None
         for repo in repos:
             if repo.get("repo") == "local":
                 local_repo = repo
+                hooks = repo.get("hooks", [])
+                for i, hook in enumerate(hooks):
+                    if hook.get("id") == "forbid-root-artifacts":
+                        existing_hook_idx = i
+                        break
                 break
         
         if local_repo:
-            local_repo.setdefault("hooks", []).append(hook_entry)
+            if existing_hook_idx is not None:
+                # Update existing hook entry
+                local_repo["hooks"][existing_hook_idx] = hook_entry
+            else:
+                # Add new hook
+                local_repo.setdefault("hooks", []).append(hook_entry)
         else:
+            # Create local repo with hook
             repos.append({"repo": "local", "hooks": [hook_entry]})
         
         config["repos"] = repos
