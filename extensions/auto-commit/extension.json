@@ -1,0 +1,17 @@
+{
+  "name": "auto-commit",
+  "version": "1.0.0",
+  "description": "Automatic git commits with LLM-generated messages",
+  "platforms": ["cursor", "claude"],
+  "tools": {
+    "auto-commit": "tools/auto-commit"
+  },
+  "hooks": {
+    "claude": {
+      "UserPromptSubmit": "python tools/auto-commit/auto_commit.py"
+    },
+    "cursor": {
+      "beforeSubmitPrompt": "python tools/auto-commit/auto_commit.py"
+    }
+  }
+}

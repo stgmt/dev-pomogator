@@ -2,7 +2,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
 import { fileURLToPath } from 'url';
-import { listExtensions, getExtensionFiles, getExtensionRules, getExtensionTools, runPostInstallHook, Extension } from './extensions.js';
+import { listExtensions, getExtensionFiles, getExtensionRules, getExtensionTools, getExtensionHooks, runPostInstallHook, Extension } from './extensions.js';
 import { loadConfig, saveConfig } from '../config/index.js';
 import type { InstalledExtension } from '../config/schema.js';
 import { findRepoRoot } from '../utils/repo.js';
@@ -96,14 +96,17 @@ export async function installClaude(options: ClaudeOptions = {}): Promise<void> 
     }
   }
   
-  // 4. Run post-install hooks for extensions that have them
+  // 4. Install extension hooks to project .claude/settings.json
+  await installExtensionHooks(repoRoot, extensionsToInstall);
+  
+  // 5. Run post-install hooks for extensions that have them
   for (const extension of extensionsToInstall) {
     if (extension.postInstall) {
       await runPostInstallHook(extension, repoRoot);
     }
   }
   
-  // 5. Setup auto-update hooks if enabled
+  // 6. Setup auto-update hooks if enabled
   if (options.autoUpdate !== false) {
     await setupClaudeHooks();
     await setupGlobalScripts();
@@ -242,4 +245,90 @@ async function addProjectPaths(projectPath: string, extensions: Extension[]): Pr
   }
   
   await saveConfig(config);
+}
+
+/**
+ * Install extension hooks to project .claude/settings.json
+ */
+async function installExtensionHooks(repoRoot: string, extensions: Extension[]): Promise<void> {
+  const settingsPath = path.join(repoRoot, '.claude', 'settings.json');
+  
+  // Collect all hooks from extensions
+  const allHooks: Record<string, Array<{ type: string; command: string; timeout?: number }>> = {};
+  
+  for (const ext of extensions) {
+    const hooks = getExtensionHooks(ext, 'claude');
+    
+    for (const [hookName, command] of Object.entries(hooks)) {
+      if (!allHooks[hookName]) {
+        allHooks[hookName] = [];
+      }
+      
+      // Check if this hook command already exists
+      const exists = allHooks[hookName].some(h => h.command === command);
+      if (!exists) {
+        allHooks[hookName].push({
+          type: 'command',
+          command,
+          timeout: 60,
+        });
+      }
+    }
+  }
+  
+  // No hooks to install
+  if (Object.keys(allHooks).length === 0) {
+    return;
+  }
+  
+  // Load existing project settings or create new
+  let settings: Record<string, unknown> = {};
+  if (await fs.pathExists(settingsPath)) {
+    try {
+      settings = await fs.readJson(settingsPath);
+    } catch {
+      // Invalid JSON, start fresh
+    }
+  }
+  
+  // Ensure hooks structure exists
+  if (!settings.hooks) {
+    settings.hooks = {};
+  }
+  
+  const existingHooks = settings.hooks as Record<string, unknown[]>;
+  
+  // Merge new hooks
+  for (const [hookName, hookEntries] of Object.entries(allHooks)) {
+    if (!existingHooks[hookName]) {
+      existingHooks[hookName] = [];
+    }
+    
+    const hookArray = existingHooks[hookName] as Array<{ matcher?: string; hooks?: Array<{ type: string; command: string }> }>;
+    
+    for (const hookEntry of hookEntries) {
+      // Check if hook command already exists
+      const commandExists = hookArray.some(h => 
+        h.hooks?.some(hook => hook.command === hookEntry.command)
+      );
+      
+      if (!commandExists) {
+        hookArray.push({
+          matcher: '',
+          hooks: [hookEntry],
+        });
+      }
+    }
+  }
+  
+  // Ensure directory exists
+  await fs.ensureDir(path.dirname(settingsPath));
+  
+  // Write settings
+  await fs.writeJson(settingsPath, settings, { spaces: 2 });
+  
+  const hookCount = Object.values(allHooks).flat().length;
+  if (hookCount > 0) {
+    console.log(`  ✓ Installed ${hookCount} extension hook(s)`);
+  }
 }

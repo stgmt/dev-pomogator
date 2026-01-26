@@ -4,6 +4,15 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+export interface ExtensionHooks {
+  claude?: {
+    [hookName: string]: string; // e.g. "UserPromptSubmit": "python tools/auto-commit/auto_commit.py"
+  };
+  cursor?: {
+    [hookName: string]: string; // e.g. "beforeSubmitPrompt": "python tools/auto-commit/auto_commit.py"
+  };
+}
+
 export interface Extension {
   name: string;
   version: string;
@@ -23,6 +32,8 @@ export interface Extension {
   tools?: {
     [toolName: string]: string; // name -> relative path in extension
   };
+  // IDE hooks to install
+  hooks?: ExtensionHooks;
   // Post-install hook to run after extension is installed
   postInstall?: {
     command: string;       // Command to run (relative to repoRoot)
@@ -113,6 +124,16 @@ export async function getExtensionTools(
     }
   }
   return tools;
+}
+
+/**
+ * Get hooks defined in extension for a specific platform
+ */
+export function getExtensionHooks(
+  extension: Extension,
+  platform: 'cursor' | 'claude'
+): Record<string, string> {
+  return extension.hooks?.[platform] || {};
 }
 
 /**
