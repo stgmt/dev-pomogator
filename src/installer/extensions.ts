@@ -23,6 +23,14 @@ export interface Extension {
   tools?: {
     [toolName: string]: string; // name -> relative path in extension
   };
+  // Post-install hook to run after extension is installed
+  postInstall?: {
+    command: string;       // Command to run (relative to repoRoot)
+    interactive?: boolean; // Requires terminal input (default: true)
+    skipInCI?: boolean;    // Skip in CI environment (default: true)
+  };
+  // Whether this extension requires claude-mem persistent memory
+  requiresClaudeMem?: boolean;
   path: string;
 }
 
@@ -105,4 +113,52 @@ export async function getExtensionTools(
     }
   }
   return tools;
+}
+
+/**
+ * Check if running in CI environment
+ */
+function isCI(): boolean {
+  return !!(
+    process.env.CI ||
+    process.env.GITHUB_ACTIONS ||
+    process.env.GITLAB_CI ||
+    process.env.JENKINS_URL ||
+    process.env.CIRCLECI ||
+    process.env.TRAVIS
+  );
+}
+
+/**
+ * Run post-install hook for an extension
+ */
+export async function runPostInstallHook(
+  extension: Extension,
+  repoRoot: string
+): Promise<void> {
+  if (!extension.postInstall) return;
+
+  const { command, interactive = true, skipInCI = true } = extension.postInstall;
+
+  // Skip in CI if configured
+  if (skipInCI && isCI()) {
+    console.log(`  ⏭ Skipping post-install hook for ${extension.name} (CI detected)`);
+    return;
+  }
+
+  console.log(`  ▶ Running post-install hook for ${extension.name}...`);
+
+  try {
+    const { execa } = await import('execa');
+    await execa(command, {
+      cwd: repoRoot,
+      stdio: interactive ? 'inherit' : 'pipe',
+      shell: true,
+    });
+    console.log(`  ✓ Post-install hook completed for ${extension.name}`);
+  } catch (error) {
+    // Don't fail installation if post-install hook fails
+    const message = error instanceof Error ? error.message : String(error);
+    console.log(`  ⚠ Post-install hook failed for ${extension.name}: ${message}`);
+  }
 }

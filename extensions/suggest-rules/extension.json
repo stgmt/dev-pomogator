@@ -7,5 +7,6 @@
   "files": {
     "cursor": ["cursor/commands/suggest-rules.md"],
     "claude": ["claude/commands/suggest-rules.md"]
-  }
+  },
+  "requiresClaudeMem": true
 }

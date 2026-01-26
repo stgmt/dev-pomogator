@@ -1,4 +1,4 @@
-import { runInstaller, runNonInteractiveInstaller } from './installer/index.js';
+import { runInstaller, runNonInteractiveInstaller, runSemiInteractiveInstaller } from './installer/index.js';
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
@@ -14,25 +14,28 @@ async function main(): Promise<void> {
 dev-pomogator - Team coding standards for Cursor and Claude Code
 
 Usage:
-  npx dev-pomogator                                    Interactive installation
-  npx dev-pomogator --cursor                           Install for Cursor (all plugins)
-  npx dev-pomogator --claude                           Install for Claude Code (all plugins)
-  npx dev-pomogator --cursor --plugins=suggest-rules   Install specific plugins only
+  npx dev-pomogator                                    Interactive (choose platform + plugins)
+  npx dev-pomogator --cursor                           Cursor + choose plugins interactively
+  npx dev-pomogator --claude                           Claude Code + choose plugins interactively
+  npx dev-pomogator --cursor --plugins=suggest-rules   Non-interactive (specific plugins only)
+  npx dev-pomogator --cursor --all                     Non-interactive (all plugins)
   npx dev-pomogator --status                           Show current configuration
   npx dev-pomogator --update                           Check for updates
 
 Options:
   -v, --version              Show version
   -h, --help                 Show this help
-  --cursor                   Install for Cursor (non-interactive)
-  --claude                   Install for Claude Code (non-interactive)
-  --plugins=name1,name2      Install only specified plugins (comma-separated)
+  --cursor                   Install for Cursor
+  --claude                   Install for Claude Code
+  --plugins=name1,name2      Install only specified plugins (non-interactive)
+  --all                      Install all plugins (non-interactive)
   --status                   Show configuration status
   --update                   Check for updates now
 
 Available plugins:
-  suggest-rules    Analyze session and suggest rules for IDE
-  specs-workflow   Specs management with 3-phase workflow
+  suggest-rules           Analyze session and suggest rules for IDE
+  specs-workflow          Specs management with 3-phase workflow
+  forbid-root-artifacts   Control files allowed in repository root
 `);
     process.exit(0);
   }
@@ -49,7 +52,7 @@ Available plugins:
     process.exit(0);
   }
   
-  // Non-interactive mode
+  // Parse platform flags
   const hasCursor = args.includes('--cursor');
   const hasClaude = args.includes('--claude');
   
@@ -60,15 +63,23 @@ Available plugins:
     
     // Parse --plugins flag
     const pluginsArg = args.find((a) => a.startsWith('--plugins='));
-    const selectedPlugins = pluginsArg
-      ? pluginsArg.replace('--plugins=', '').split(',').filter(Boolean)
-      : undefined; // undefined = all plugins
+    const hasAllFlag = args.includes('--all');
     
-    await runNonInteractiveInstaller(platforms, { plugins: selectedPlugins });
+    if (pluginsArg) {
+      // Fully non-interactive: specific plugins
+      const selectedPlugins = pluginsArg.replace('--plugins=', '').split(',').filter(Boolean);
+      await runNonInteractiveInstaller(platforms, { plugins: selectedPlugins });
+    } else if (hasAllFlag) {
+      // Fully non-interactive: all plugins
+      await runNonInteractiveInstaller(platforms, { plugins: undefined });
+    } else {
+      // Semi-interactive: platform is set, but choose plugins
+      await runSemiInteractiveInstaller(platforms);
+    }
     process.exit(0);
   }
   
-  // Default: run interactive installer
+  // Default: run fully interactive installer (choose platform + plugins)
   await runInstaller();
 }
 

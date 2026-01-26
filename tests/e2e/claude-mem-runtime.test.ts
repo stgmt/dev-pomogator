@@ -35,8 +35,8 @@ describe('PLUGIN002-RUNTIME: Claude-mem Full E2E', () => {
     
     if (!await fs.pathExists(workerServicePath)) {
       console.log('[claude-mem-runtime] claude-mem not installed, running installer first...');
-      // Run the installer to install claude-mem
-      const result = await runInstaller('--cursor');
+      // Run the installer to install claude-mem (--all for non-interactive mode)
+      const result = await runInstaller('--cursor --all');
       if (result.exitCode !== 0) {
         throw new Error(`Installer failed: ${result.logs}`);
       }

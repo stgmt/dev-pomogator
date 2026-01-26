@@ -12,8 +12,9 @@ export interface InstallerResult {
 
 /**
  * Run the dev-pomogator installer
+ * Note: Use --all flag to install all plugins in non-interactive mode
  */
-export async function runInstaller(args: string = '--cursor'): Promise<InstallerResult> {
+export async function runInstaller(args: string = '--cursor --all'): Promise<InstallerResult> {
   try {
     const logs = execSync(`node dist/index.js ${args}`, {
       encoding: 'utf-8',

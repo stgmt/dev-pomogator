@@ -38,8 +38,8 @@ describe('CORE003: Claude Code Installer', () => {
     // Initialize git repo so findRepoRoot() works correctly
     await initGitRepo();
     
-    // Run Claude Code installer
-    await runInstaller('--claude');
+    // Run Claude Code installer (--all for non-interactive mode)
+    await runInstaller('--claude --all');
   });
 
   describe('Scenario: Clean installation', () => {
@@ -194,8 +194,8 @@ describe('CORE003: Claude Code Installer', () => {
 
   describe('Scenario: Re-installation preserves existing hooks', () => {
     it('should not duplicate check-update.js hook on reinstall', async () => {
-      // Run installer again
-      await runInstaller('--claude');
+      // Run installer again (--all for non-interactive mode)
+      await runInstaller('--claude --all');
       
       const settingsPath = homePath('.claude', 'settings.json');
       const settings = await fs.readJson(settingsPath);

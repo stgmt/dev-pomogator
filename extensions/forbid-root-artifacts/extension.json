@@ -10,5 +10,10 @@
   },
   "tools": {
     "forbid-root-artifacts": "tools/forbid-root-artifacts"
+  },
+  "postInstall": {
+    "command": "python tools/forbid-root-artifacts/configure.py",
+    "interactive": true,
+    "skipInCI": true
   }
 }

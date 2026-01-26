@@ -10,7 +10,7 @@ import type { Config, Platform } from '../config/schema.js';
 export { listExtensions } from './extensions.js';
 
 interface NonInteractiveOptions {
-  plugins?: string[]; // undefined = all plugins, [] = none, [...] = selected
+  plugins?: string[]; // undefined = all plugins, [...] = selected
 }
 
 /**
@@ -34,6 +34,8 @@ export async function runNonInteractiveInstaller(
       options.plugins!.includes(ext.name)
     );
     console.log(chalk.gray(`Installing plugins: ${options.plugins.join(', ')}\n`));
+  } else {
+    console.log(chalk.gray(`Installing all plugins: ${availableExtensions.map(e => e.name).join(', ')}\n`));
   }
   
   const extensionNames = availableExtensions.map(ext => ext.name);
@@ -55,6 +57,66 @@ export async function runNonInteractiveInstaller(
   
   // Install
   await install(platforms, autoUpdate, extensionNames);
+}
+
+/**
+ * Semi-interactive installer: platform is pre-selected, but user chooses plugins
+ */
+export async function runSemiInteractiveInstaller(
+  platforms: Platform[]
+): Promise<void> {
+  console.log(chalk.bold.cyan('\n🚀 dev-pomogator installer\n'));
+  console.log(chalk.gray(`Platform: ${platforms.join(', ')}\n`));
+  
+  // Get extensions for selected platforms
+  const allExtensions = await listExtensions();
+  const availableExtensions = allExtensions.filter(ext =>
+    ext.platforms.some(p => platforms.includes(p as Platform))
+  );
+  
+  if (availableExtensions.length === 0) {
+    console.log(chalk.yellow('No plugins available for selected platform(s). Exiting.'));
+    process.exit(0);
+  }
+  
+  // Let user choose plugins
+  const selectedExtensions = await checkbox({
+    message: 'Select plugins to install:',
+    choices: availableExtensions.map(ext => ({
+      name: `${ext.name} — ${ext.description}`,
+      value: ext.name,
+      checked: false, // Not checked by default - user must choose
+    })),
+  });
+  
+  if (selectedExtensions.length === 0) {
+    console.log(chalk.yellow('No plugins selected. Exiting.'));
+    process.exit(0);
+  }
+  
+  // Auto-update option (only for Cursor)
+  let autoUpdate = false;
+  if (platforms.includes('cursor')) {
+    autoUpdate = await confirm({
+      message: 'Enable auto-updates? (checks every 24 hours)',
+      default: true,
+    });
+  }
+  
+  // Save config
+  const config: Config = {
+    platforms,
+    autoUpdate,
+    lastCheck: new Date().toISOString(),
+    cooldownHours: 24,
+    rememberChoice: true,
+    installedExtensions: [],
+  };
+  
+  await saveConfig(config);
+  
+  // Install
+  await install(platforms, autoUpdate, selectedExtensions);
 }
 
 export async function runInstaller(): Promise<void> {
@@ -157,6 +219,13 @@ async function install(
 ): Promise<void> {
   console.log(chalk.cyan('\nInstalling...\n'));
   
+  // Get full extension objects to check requiresClaudeMem
+  const allExtensions = await listExtensions();
+  const selectedExtensions = allExtensions.filter(e => extensions.includes(e.name));
+  
+  // Check if any selected extension requires claude-mem
+  const needsClaudeMem = selectedExtensions.some(e => e.requiresClaudeMem === true);
+  
   for (const platform of platforms) {
     if (platform === 'cursor') {
       try {
@@ -167,11 +236,13 @@ async function install(
         throw new Error(`Failed to install for Cursor: ${message}`);
       }
       
-      // Install claude-mem for Cursor (automatic, checks if already installed)
-      try {
-        await ensureClaudeMem('cursor');
-      } catch (error) {
-        console.log(chalk.yellow('⚠ Could not setup claude-mem (optional feature)'));
+      // Install claude-mem for Cursor only if required by selected extensions
+      if (needsClaudeMem) {
+        try {
+          await ensureClaudeMem('cursor');
+        } catch (error) {
+          console.log(chalk.yellow('⚠ Could not setup claude-mem (optional feature)'));
+        }
       }
     }
     
@@ -184,11 +255,13 @@ async function install(
         throw new Error(`Failed to install for Claude Code: ${message}`);
       }
       
-      // Install claude-mem plugin for Claude Code (automatic, checks if already installed)
-      try {
-        await ensureClaudeMem('claude');
-      } catch (error) {
-        console.log(chalk.yellow('⚠ Could not setup claude-mem (optional feature)'));
+      // Install claude-mem plugin for Claude Code only if required by selected extensions
+      if (needsClaudeMem) {
+        try {
+          await ensureClaudeMem('claude');
+        } catch (error) {
+          console.log(chalk.yellow('⚠ Could not setup claude-mem (optional feature)'));
+        }
       }
     }
   }
@@ -196,15 +269,19 @@ async function install(
   console.log(chalk.bold.green('\n✨ Installation complete!\n'));
   
   if (platforms.includes('cursor')) {
-    console.log(chalk.cyan('Cursor: Type /suggest-rules in chat to generate project rules'));
+    console.log(chalk.cyan('Cursor: Installed plugins: ' + extensions.join(', ')));
     if (autoUpdate) {
       console.log(chalk.gray('         Auto-update enabled (checks every 24 hours)'));
     }
-    console.log(chalk.gray('         Persistent memory enabled (claude-mem)'));
+    if (needsClaudeMem) {
+      console.log(chalk.gray('         Persistent memory enabled (claude-mem)'));
+    }
   }
   
   if (platforms.includes('claude')) {
-    console.log(chalk.cyan('Claude Code: Use /suggest-rules command to generate project rules'));
-    console.log(chalk.gray('             Persistent memory enabled (claude-mem plugin)'));
+    console.log(chalk.cyan('Claude Code: Installed plugins: ' + extensions.join(', ')));
+    if (needsClaudeMem) {
+      console.log(chalk.gray('             Persistent memory enabled (claude-mem plugin)'));
+    }
   }
 }

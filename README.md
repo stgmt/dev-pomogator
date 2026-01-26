@@ -27,10 +27,16 @@ cd /path/to/your-project
 npx dev-pomogator --claude
 ```
 
-Or with specific plugins:
+This will prompt you to select which plugins to install.
+
+**Non-interactive modes:**
 
 ```bash
+# Install specific plugins
 npx dev-pomogator --claude --plugins=suggest-rules,specs-workflow
+
+# Install all plugins
+npx dev-pomogator --claude --all
 ```
 
 ## What Gets Installed
@@ -106,12 +112,12 @@ Pre-commit hook to control files in repository root.
 | `setup.py` | First-time setup (creates config, installs hook) |
 | `.root-artifacts.yaml` | User configuration file |
 
-Install only specific plugins:
+**Install specific plugins (non-interactive):**
 
 ```bash
 npx dev-pomogator --cursor --plugins=suggest-rules
-npx dev-pomogator --cursor --plugins=specs-workflow
-npx dev-pomogator --cursor --plugins=forbid-root-artifacts
+npx dev-pomogator --cursor --plugins=specs-workflow,forbid-root-artifacts
+npx dev-pomogator --cursor --all  # all plugins
 ```
 
 ## Features

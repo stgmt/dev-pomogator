@@ -2,7 +2,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
 import { fileURLToPath } from 'url';
-import { listExtensions, getExtensionFiles, getExtensionRules, getExtensionTools, Extension } from './extensions.js';
+import { listExtensions, getExtensionFiles, getExtensionRules, getExtensionTools, runPostInstallHook, Extension } from './extensions.js';
 import { loadConfig, saveConfig } from '../config/index.js';
 import type { InstalledExtension } from '../config/schema.js';
 import { findRepoRoot } from '../utils/repo.js';
@@ -98,7 +98,14 @@ export async function installCursor(options: CursorOptions): Promise<void> {
     }
   }
   
-  // 4. Setup auto-update if enabled
+  // 4. Run post-install hooks for extensions that have them
+  for (const extension of extensionsToInstall) {
+    if (extension.postInstall) {
+      await runPostInstallHook(extension, repoRoot);
+    }
+  }
+  
+  // 5. Setup auto-update if enabled
   // Note: Hooks (claude-mem + updater) are installed globally by memory.ts
   // Here we only copy the check-update.js script and track project paths
   if (options.autoUpdate) {
