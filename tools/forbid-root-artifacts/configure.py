@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import fnmatch
+import shutil
 import subprocess
 import sys
 from dataclasses import dataclass, field
@@ -59,6 +60,120 @@ def get_repo_root() -> Path:
 def get_script_dir() -> Path:
     """Get directory containing this script."""
     return Path(__file__).parent.resolve()
+
+
+def add_hook_to_pre_commit_config(repo_root: Path) -> bool:
+    """Add forbid-root-artifacts hook to .pre-commit-config.yaml."""
+    config_path = repo_root / ".pre-commit-config.yaml"
+    
+    hook_entry = {
+        "id": "forbid-root-artifacts",
+        "name": "Forbid root artifacts",
+        "entry": "python tools/forbid-root-artifacts/check.py",
+        "language": "python",
+        "pass_filenames": False,
+        "always_run": True,
+        "additional_dependencies": ["pyyaml"],
+    }
+    
+    if config_path.exists():
+        with open(config_path, "r", encoding="utf-8") as f:
+            config = yaml.safe_load(f) or {}
+        
+        # Check if hook already exists
+        repos = config.get("repos", [])
+        for repo in repos:
+            if repo.get("repo") == "local":
+                hooks = repo.get("hooks", [])
+                for hook in hooks:
+                    if hook.get("id") == "forbid-root-artifacts":
+                        return False  # Already configured
+        
+        # Add to existing local repo or create new
+        local_repo = None
+        for repo in repos:
+            if repo.get("repo") == "local":
+                local_repo = repo
+                break
+        
+        if local_repo:
+            local_repo.setdefault("hooks", []).append(hook_entry)
+        else:
+            repos.append({"repo": "local", "hooks": [hook_entry]})
+        
+        config["repos"] = repos
+    else:
+        # Create new config
+        config = {
+            "repos": [
+                {"repo": "local", "hooks": [hook_entry]}
+            ]
+        }
+    
+    with open(config_path, "w", encoding="utf-8") as f:
+        yaml.dump(config, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+    
+    return True
+
+
+def get_pre_commit_command() -> Optional[list[str]]:
+    """
+    Get the command to run pre-commit.
+    
+    Returns command as list (e.g. ["pre-commit"] or ["python", "-m", "pre_commit"]),
+    or None if pre-commit is not available.
+    """
+    # Try direct command first
+    if shutil.which("pre-commit"):
+        return ["pre-commit"]
+    
+    # Try python -m pre_commit
+    try:
+        result = subprocess.run(
+            [sys.executable, "-m", "pre_commit", "--version"],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode == 0:
+            return [sys.executable, "-m", "pre_commit"]
+    except Exception:
+        pass
+    
+    return None
+
+
+def setup_pre_commit_hook(repo_root: Path) -> bool:
+    """
+    Setup pre-commit hook if pre-commit is installed.
+    
+    Returns True if hook was successfully installed, False otherwise.
+    """
+    # Check if pre-commit is available
+    pre_commit_cmd = get_pre_commit_command()
+    if not pre_commit_cmd:
+        return False
+    
+    # Add hook to .pre-commit-config.yaml
+    was_added = add_hook_to_pre_commit_config(repo_root)
+    
+    if was_added:
+        print("✓ Added hook to .pre-commit-config.yaml")
+    else:
+        print("✓ Hook already configured in .pre-commit-config.yaml")
+    
+    # Run pre-commit install
+    try:
+        subprocess.run(
+            pre_commit_cmd + ["install"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        print("✓ Pre-commit hook installed (.git/hooks/pre-commit)")
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"⚠ Failed to run 'pre-commit install': {e.stderr}", file=sys.stderr)
+        return False
 
 
 def load_default_whitelist(script_dir: Path) -> DefaultConfig:
@@ -249,7 +364,7 @@ def main() -> int:
     )
     args = parser.parse_args()
     
-    print("\n🔍 Configuring forbid-root-artifacts whitelist...\n")
+    print("\n🔧 Setting up forbid-root-artifacts...\n")
     
     try:
         repo_root = get_repo_root()
@@ -258,6 +373,16 @@ def main() -> int:
         return 2
     
     script_dir = get_script_dir()
+    
+    # 1. Setup pre-commit hook first
+    if not setup_pre_commit_hook(repo_root):
+        print("⚠ Pre-commit hook not configured (pre-commit not installed)")
+        print("  Install with: pip install pre-commit")
+        print("  Then run: python tools/forbid-root-artifacts/setup.py")
+        print()
+    
+    print()
+    print("🔍 Configuring whitelist...\n")
     
     # Load configurations
     defaults = load_default_whitelist(script_dir)

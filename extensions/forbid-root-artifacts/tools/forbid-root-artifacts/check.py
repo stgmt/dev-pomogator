@@ -149,6 +149,71 @@ def matches_pattern(filename: str, patterns: list[str]) -> bool:
     return False
 
 
+# =============================================================================
+# AI Agent Classification
+# =============================================================================
+
+# Files that are DEFINITELY trash - delete without asking
+TRASH_PATTERNS = [
+    # Temp/backup files
+    "*.tmp", "*.temp", "*.bak", "*.swp", "*.swo", "*.orig",
+    "*.backup", "*~", "*.old",
+    # Logs
+    "*.log", "*.logs", "npm-debug.log*", "yarn-debug.log*",
+    "yarn-error.log*", "lerna-debug.log*", "debug.log",
+    # Cache/compiled
+    "*.cache", "*.pyc", "*.pyo", "*.pyd", "__pycache__",
+    "*.class", "*.o", "*.obj", "*.exe", "*.dll", "*.so",
+    # OS junk
+    ".DS_Store", "Thumbs.db", "desktop.ini", "*.lnk",
+    # IDE junk (not in .gitignore)
+    "*.sublime-workspace", ".idea", "*.iml",
+    # Random extensions that are never config
+    "*.cal", "*.bkp", "*.gho", "*.iso",
+    # Build artifacts
+    "*.min.js", "*.min.css", "*.map",
+    # Test artifacts
+    "coverage", ".nyc_output", "junit.xml",
+    # Misc junk JSON (not package.json, tsconfig.json, etc.)
+    "*.json.bak", "*.json.tmp", "*.json.old",
+]
+
+# Files that MAY be important - ask user
+CONFIG_PATTERNS = [
+    # Configs (known)
+    "package.json", "tsconfig.json", "jsconfig.json",
+    "*.config.js", "*.config.ts", "*.config.mjs",
+    "*.yaml", "*.yml", "*.toml",
+    "Makefile", "Dockerfile*", "docker-compose*",
+    "*.md", "LICENSE*", "CHANGELOG*",
+    "*.env", "*.env.*",
+    # Scripts
+    "*.sh", "*.ps1", "*.bat", "*.cmd",
+]
+
+
+def classify_file(filename: str) -> str:
+    """
+    Classify file for AI agent instructions.
+    
+    Returns:
+        'trash' - obvious junk, delete without asking
+        'config' - likely important, ask user
+        'unknown' - analyze content to decide
+    """
+    name_lower = filename.lower()
+    
+    for pattern in TRASH_PATTERNS:
+        if fnmatch.fnmatch(name_lower, pattern.lower()):
+            return "trash"
+    
+    for pattern in CONFIG_PATTERNS:
+        if fnmatch.fnmatch(name_lower, pattern.lower()):
+            return "config"
+    
+    return "unknown"
+
+
 def find_violations(
     repo_root: Path,
     allowed_files: set[str],
@@ -241,6 +306,57 @@ def main() -> int:
     for v in violations[:3]:
         print(f"      - {v.filename}")
     print()
+    
+    # AI Agent instructions
+    print("=" * 60)
+    print("## AI AGENT INSTRUCTIONS")
+    print("=" * 60)
+    print()
+    
+    trash_files = [v for v in violations if classify_file(v.filename) == "trash"]
+    config_files = [v for v in violations if classify_file(v.filename) == "config"]
+    unknown_files = [v for v in violations if classify_file(v.filename) == "unknown"]
+    
+    if trash_files:
+        print("### AUTO-DELETE (obvious trash):")
+        for v in trash_files:
+            print(f"  - {safe_text(v.filename)}")
+        print()
+        print("Action: Delete these files without asking user.")
+        print("Command: Remove-Item <file> (Windows) or rm <file> (Unix)")
+        print()
+    
+    if config_files:
+        print("### ASK USER (config/important files):")
+        for v in config_files:
+            print(f"  - {safe_text(v.filename)}")
+        print()
+        print("Action: Ask user whether to:")
+        print("  1. Add to whitelist (.root-artifacts.yaml)")
+        print("  2. Move to subdirectory (src/, docs/, tools/, etc.)")
+        print()
+    
+    if unknown_files:
+        print("### ANALYZE (unknown files):")
+        for v in unknown_files:
+            print(f"  - {safe_text(v.filename)}")
+        print()
+        print("Action: Read file content, determine if trash or important, then decide.")
+        print()
+    
+    if not trash_files and not config_files and not unknown_files:
+        print("No files to process.")
+        print()
+    
+    print("To add files to whitelist, edit .root-artifacts.yaml:")
+    print("  mode: extend")
+    print("  allow:")
+    for v in config_files[:3] if config_files else violations[:3]:
+        print(f"    - {v.filename}")
+    print()
+    print("After fixing, retry: git add . && git commit")
+    print()
+    
     return 1
 
 
