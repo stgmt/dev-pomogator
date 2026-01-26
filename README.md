@@ -4,38 +4,41 @@ Universal installer for custom plugins, rules, commands, and hooks for **Cursor*
 
 ## Installation
 
-### Cursor (one-liner)
+Run from your project folder. The installer detects project root via git.
 
-**Linux/macOS:**
-```bash
-cd /path/to/your-project
-curl -fsSL https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install.sh | bash
-```
+### Cursor
 
 **Windows (PowerShell):**
 ```powershell
-cd C:\path\to\your-project
-iwr -useb https://api.github.com/repos/stgmt/dev-pomogator/contents/install.ps1 -Headers @{Accept='application/vnd.github.v3.raw'} | iex
+irm https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install.ps1 | iex
 ```
 
-> **Important**: Run from your project folder. The installer detects project root via git.
+**Linux/macOS:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install.sh | bash
+```
 
 ### Claude Code
 
-```bash
-cd /path/to/your-project
-npx dev-pomogator --claude
+**Windows (PowerShell):**
+```powershell
+$env:TARGET="claude"; irm https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install.ps1 | iex
 ```
 
-This will prompt you to select which plugins to install.
+**Linux/macOS:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install.sh | TARGET=claude bash
+```
 
-**Non-interactive modes:**
+### Non-interactive modes
 
 ```bash
 # Install specific plugins
-npx dev-pomogator --claude --plugins=suggest-rules,specs-workflow
+npx dev-pomogator --cursor --plugins=suggest-rules,specs-workflow
+npx dev-pomogator --claude --plugins=forbid-root-artifacts
 
 # Install all plugins
+npx dev-pomogator --cursor --all
 npx dev-pomogator --claude --all
 ```
 

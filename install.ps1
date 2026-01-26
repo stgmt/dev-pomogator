@@ -1,11 +1,16 @@
 # dev-pomogator installer for Windows
-# Usage: irm https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install.ps1 | iex
+# Usage (Cursor):      irm https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install.ps1 | iex
+# Usage (Claude Code): $env:TARGET="claude"; irm https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install.ps1 | iex
 
 $repo = "https://github.com/stgmt/dev-pomogator.git"
 $tmpDir = Join-Path $env:TEMP "dev-pomogator-$(Get-Random)"
 $originalDir = Get-Location
 
-Write-Host "Installing dev-pomogator..." -ForegroundColor Cyan
+# Determine target: claude or cursor (default)
+$target = if ($env:TARGET -eq "claude") { "--claude" } else { "--cursor" }
+$targetName = if ($env:TARGET -eq "claude") { "Claude Code" } else { "Cursor" }
+
+Write-Host "Installing dev-pomogator for $targetName..." -ForegroundColor Cyan
 
 # Clone to temp (use cmd to avoid PowerShell stderr issues)
 Write-Host "  Cloning repository..." -ForegroundColor Gray
@@ -22,12 +27,13 @@ cmd /c "npm install 2>nul >nul"
 Write-Host "  Building..." -ForegroundColor Gray
 cmd /c "npm run build 2>nul >nul"
 
-# Run installer for Cursor (from original directory)
+# Run installer (from original directory)
 Set-Location $originalDir
 Write-Host "  Running installer..." -ForegroundColor Gray
-node "$tmpDir\dist\index.js" --cursor
+node "$tmpDir\dist\index.js" $target
 
 # Cleanup
 Remove-Item -Recurse -Force $tmpDir -ErrorAction SilentlyContinue
+$env:TARGET = $null
 
 Write-Host "Done!" -ForegroundColor Green

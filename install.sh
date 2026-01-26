@@ -1,13 +1,24 @@
 #!/bin/bash
 # dev-pomogator installer
-# Usage: curl -fsSL https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install.sh | bash
+# Usage (Cursor):      curl -fsSL https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install.sh | bash
+# Usage (Claude Code): curl -fsSL https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install.sh | TARGET=claude bash
 
 set -e
 
 REPO="https://github.com/stgmt/dev-pomogator.git"
 TMP_DIR=$(mktemp -d)
+ORIGINAL_DIR=$(pwd)
 
-echo "🚀 Installing dev-pomogator..."
+# Determine target: claude or cursor (default)
+if [ "$TARGET" = "claude" ]; then
+    TARGET_FLAG="--claude"
+    TARGET_NAME="Claude Code"
+else
+    TARGET_FLAG="--cursor"
+    TARGET_NAME="Cursor"
+fi
+
+echo "🚀 Installing dev-pomogator for $TARGET_NAME..."
 
 # Clone to temp
 git clone --depth 1 "$REPO" "$TMP_DIR" > /dev/null 2>&1
@@ -17,11 +28,11 @@ cd "$TMP_DIR"
 npm install --silent > /dev/null 2>&1
 npm run build --silent > /dev/null 2>&1
 
-# Run installer for Cursor
-node dist/index.js --cursor
+# Run installer (from original directory)
+cd "$ORIGINAL_DIR"
+node "$TMP_DIR/dist/index.js" $TARGET_FLAG
 
 # Cleanup
-cd - > /dev/null
 rm -rf "$TMP_DIR"
 
 echo "✨ Done!"
