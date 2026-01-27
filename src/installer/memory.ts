@@ -148,10 +148,13 @@ function generateCursorHooksJson(): CursorHooksJson {
   const checkUpdatePath = getCheckUpdateScriptPath();
   const cursorSummarizePath = getCursorSummarizeScriptPath();
   
+  const validateSpecsPath = getValidateSpecsScriptPath();
+  
   // Escape backslashes for JSON on Windows
   const escapedWorkerPath = workerServicePath.replace(/\\/g, '\\\\');
   const escapedUpdatePath = checkUpdatePath.replace(/\\/g, '\\\\');
   const escapedSummarizePath = cursorSummarizePath.replace(/\\/g, '\\\\');
+  const escapedValidateSpecsPath = validateSpecsPath.replace(/\\/g, '\\\\');
   
   // Helper to create claude-mem hook command (uses bun because worker-service.cjs requires bun:sqlite)
   const makeClaudeMemHook = (action: string): string => {
@@ -164,6 +167,7 @@ function generateCursorHooksJson(): CursorHooksJson {
       beforeSubmitPrompt: [
         { command: makeClaudeMemHook('session-init') },
         { command: makeClaudeMemHook('context') },
+        { command: `bun "${escapedValidateSpecsPath}"` },  // specs-workflow validator
       ],
       afterMCPExecution: [
         { command: makeClaudeMemHook('observation') },
@@ -315,6 +319,9 @@ export async function installCursorHooks(): Promise<void> {
   // Copy cursor-summarize script (reads Cursor SQLite + calls claude-mem API)
   await copyCursorSummarizeScript();
   
+  // Copy validate-specs script (specs-workflow validator)
+  await copyValidateSpecsScript();
+  
   console.log(chalk.green('  ✓ Cursor hooks installed'));
   console.log(chalk.gray(`    Path: ${hooksFilePath}`));
 }
@@ -357,6 +364,73 @@ async function copyCheckUpdateScript(): Promise<void> {
       console.log(chalk.yellow(`    ⚠ check-update script not found`));
     }
   }
+}
+
+/**
+ * Get path to validate-specs script
+ * This script validates @featureN tags in .specs/ folders
+ */
+function getValidateSpecsScriptPath(): string {
+  return path.join(os.homedir(), '.dev-pomogator', 'scripts', 'validate-specs.ts');
+}
+
+/**
+ * Copy validate-specs script to ~/.dev-pomogator/scripts/
+ * 
+ * This script validates @featureN tags in MD files against BDD scenarios.
+ * It's executed with bun (which supports TypeScript natively).
+ */
+async function copyValidateSpecsScript(): Promise<void> {
+  const devPomogatorDir = path.join(os.homedir(), '.dev-pomogator');
+  const scriptsDir = path.join(devPomogatorDir, 'scripts');
+  const destDir = scriptsDir;
+  
+  await fs.ensureDir(scriptsDir);
+  
+  // Get source from installed extensions
+  // First try: node_modules location (installed package)
+  // Second try: development location (extensions folder)
+  const extensionsDir = path.resolve(__dirname, '..', '..', 'extensions');
+  const nodeModulesDir = path.resolve(__dirname, '..', '..', 'node_modules', 'dev-pomogator', 'extensions');
+  
+  const possibleSources = [
+    path.join(extensionsDir, 'specs-workflow', 'tools', 'specs-validator'),
+    path.join(nodeModulesDir, 'specs-workflow', 'tools', 'specs-validator'),
+  ];
+  
+  for (const sourceDir of possibleSources) {
+    const mainScript = path.join(sourceDir, 'validate-specs.ts');
+    if (await fs.pathExists(mainScript)) {
+      // Copy all validator files
+      const filesToCopy = [
+        'validate-specs.ts',
+        'completeness.ts',
+        'matcher.ts',
+        'reporter.ts',
+      ];
+      
+      for (const file of filesToCopy) {
+        const src = path.join(sourceDir, file);
+        const dest = path.join(destDir, file);
+        if (await fs.pathExists(src)) {
+          await fs.copy(src, dest, { overwrite: true });
+        }
+      }
+      
+      // Copy parsers subdirectory
+      const parsersDir = path.join(sourceDir, 'parsers');
+      const destParsersDir = path.join(destDir, 'parsers');
+      if (await fs.pathExists(parsersDir)) {
+        await fs.ensureDir(destParsersDir);
+        await fs.copy(parsersDir, destParsersDir, { overwrite: true });
+      }
+      
+      console.log(chalk.gray(`    Copied validate-specs to ${destDir}`));
+      return;
+    }
+  }
+  
+  console.log(chalk.yellow(`    ⚠ validate-specs script not found`));
 }
 
 /**
@@ -554,6 +628,16 @@ async function areCursorHooksInstalled(): Promise<boolean> {
       return false;
     }
     
+    // Check for validate-specs hook (specs-workflow validator)
+    const expectedValidateSpecsPath = getValidateSpecsScriptPath();
+    const escapedValidateSpecsPath = expectedValidateSpecsPath.replace(/\\/g, '\\\\\\\\');
+    const hasValidateSpecsHook = hooksStr.includes(escapedValidateSpecsPath);
+    
+    if (!hasValidateSpecsHook) {
+      console.log(chalk.gray('  Hooks exist but validate-specs hook missing, will reinstall...'));
+      return false;
+    }
+    
     // Check for INVALID hooks (old npm claude-mem commands that don't work)
     const hasInvalidHooks = hooksStr.includes('claude-mem cursor hook');
     
@@ -579,8 +663,9 @@ export async function ensureClaudeMem(platform: 'cursor' | 'claude'): Promise<vo
     
     if (hooksInstalled) {
       console.log(chalk.green('  ✓ Cursor hooks already configured'));
-      // Always update cursor-summarize.ts script (may have new version)
+      // Always update scripts (may have new versions)
       await copyCursorSummarizeScript();
+      await copyValidateSpecsScript();
     } else {
       // installCursorHooks will check for marketplace first, clone only if needed
       await installCursorHooks();

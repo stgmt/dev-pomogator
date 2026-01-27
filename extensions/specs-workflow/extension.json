@@ -1,7 +1,7 @@
 {
   "name": "specs-workflow",
-  "version": "1.0.0",
-  "description": "Управление спецификациями: 3-фазный workflow, валидация, dev-plan формат",
+  "version": "1.1.0",
+  "description": "Управление спецификациями: 3-фазный workflow, валидация, dev-plan формат, автоматическая проверка покрытия",
   "platforms": ["cursor", "claude"],
   "category": "workflow",
   "files": {
@@ -12,15 +12,26 @@
     "cursor": [
       "cursor/rules/specs-management.mdc",
       "cursor/rules/dev-plan.mdc",
-      "cursor/rules/research-workflow.mdc"
+      "cursor/rules/research-workflow.mdc",
+      "cursor/rules/specs-validation.mdc"
     ],
     "claude": [
       "claude/rules/specs-management.md",
       "claude/rules/dev-plan.md",
-      "claude/rules/research-workflow.md"
+      "claude/rules/research-workflow.md",
+      "claude/rules/specs-validation.md"
     ]
   },
   "tools": {
-    "specs-generator": "tools/specs-generator"
+    "specs-generator": "tools/specs-generator",
+    "specs-validator": "tools/specs-validator"
+  },
+  "hooks": {
+    "cursor": {
+      "beforeSubmitPrompt": "bun ~/.dev-pomogator/scripts/validate-specs.ts"
+    },
+    "claude": {
+      "UserPromptSubmit": "bun ~/.dev-pomogator/scripts/validate-specs.ts"
+    }
   }
 }
