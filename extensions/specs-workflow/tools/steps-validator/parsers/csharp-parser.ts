@@ -10,7 +10,6 @@
  */
 
 import * as fs from "fs/promises";
-import * as path from "path";
 import { glob } from "glob";
 import type { StepDefinition, StepType, ValidatorConfig } from "../types";
 
@@ -86,30 +85,32 @@ export const CSHARP_BAD_PATTERNS: RegExp[] = [
 ];
 
 // ============================================================================
-// WARNING PATTERNS - Potentially problematic
+// WARNING PATTERNS - Potentially problematic (независимо от assertions)
 // ============================================================================
 
 export const CSHARP_WARNING_PATTERNS: RegExp[] = [
-  // Console output without assertion (like in LoggingAssertionSteps)
-  /Console\.(WriteLine|Write)\s*\(/,
-  /Debug\.(WriteLine|Write|Print)\s*\(/,
-
-  // Logger calls without assertion
-  /_logger\.(Log|LogInformation|LogDebug|LogWarning|LogError|LogTrace)\s*\(/,
-  /\bLog(Information|Debug|Warning|Error|Trace)\s*\(/,
-
-  // TODO/FIXME comments
+  // TODO/FIXME comments - всегда warning
   /\/\/\s*(TODO|FIXME|HACK|XXX|BUG)\b/i,
   /\/\*\s*(TODO|FIXME|HACK|XXX|BUG)\b/i,
 
-  // STUBBED/SKIPPED comments (found in SmartApiAssertionSteps)
+  // STUBBED/SKIPPED в коде - указывает на заглушку
   /\/\/.*STUBBED/i,
   /\/\/.*SKIPPED/i,
   /Console\.WriteLine.*STUBBED/i,
   /Console\.WriteLine.*SKIP/i,
+];
 
-  // Early return without check
-  /if\s*\([^)]+\)\s*\{?\s*return\s*;/,
+// ============================================================================
+// LOGGING PATTERNS - Только для определения "hasOnlyLogging"
+// Console.WriteLine сам по себе НЕ плохой!
+// BAD только если: Then + ТОЛЬКО логи + НЕТ assertions
+// ============================================================================
+
+export const CSHARP_LOGGING_PATTERNS: RegExp[] = [
+  /Console\.(WriteLine|Write)\s*\(/,
+  /Debug\.(WriteLine|Write|Print)\s*\(/,
+  /_logger\.(Log|LogInformation|LogDebug|LogWarning|LogError|LogTrace)\s*\(/,
+  /\bLog(Information|Debug|Warning|Error|Trace)\s*\(/,
 ];
 
 // ============================================================================
@@ -300,10 +301,17 @@ export function hasBadPattern(body: string): boolean {
 }
 
 /**
- * Check if step body contains warning patterns
+ * Check if step body contains warning patterns (TODO, FIXME, STUBBED, etc.)
  */
 export function hasWarningPattern(body: string): boolean {
   return CSHARP_WARNING_PATTERNS.some((pattern) => pattern.test(body));
+}
+
+/**
+ * Check if step body contains logging calls
+ */
+export function hasLogging(body: string): boolean {
+  return CSHARP_LOGGING_PATTERNS.some((pattern) => pattern.test(body));
 }
 
 /**
@@ -344,12 +352,28 @@ export function isPendingStep(body: string): boolean {
 
 /**
  * Check if step contains only logging (Console.WriteLine) without assertions
+ *
+ * ВАЖНО: Console.WriteLine сам по себе НЕ плохой!
+ * BAD только если:
+ *   1. Это Then step (проверка)
+ *   2. Есть Console.WriteLine/Debug.Write/etc
+ *   3. НЕТ assertions (Assert.*, throw check, .Should())
+ *
+ * Примеры:
+ *   - Console.WriteLine + Assert.Equal → GOOD (лог + assertion)
+ *   - Console.WriteLine только → BAD для Then
+ *   - Console.WriteLine только → OK для Given/When (не обязаны проверять)
  */
 export function hasOnlyLogging(body: string): boolean {
-  const hasLogging = /Console\.(WriteLine|Write)\s*\(/.test(body);
-  const hasAssertions = hasAssertion(body);
+  // Проверяем есть ли логирование
+  const hasLoggingCall = CSHARP_LOGGING_PATTERNS.some((p) => p.test(body));
+  if (!hasLoggingCall) return false;
 
-  return hasLogging && !hasAssertions;
+  // Проверяем есть ли assertions
+  const hasAssertionCall = hasAssertion(body);
+
+  // "Only logging" = есть логи И нет assertions
+  return hasLoggingCall && !hasAssertionCall;
 }
 
 export default CSharpParser;

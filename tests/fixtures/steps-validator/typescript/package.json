@@ -1,0 +1,11 @@
+{
+  "name": "steps-validator-typescript-fixture",
+  "version": "1.0.0",
+  "description": "TypeScript fixture for testing steps validator",
+  "private": true,
+  "devDependencies": {
+    "@cucumber/cucumber": "^10.0.0",
+    "@playwright/test": "^1.40.0",
+    "typescript": "^5.0.0"
+  }
+}
