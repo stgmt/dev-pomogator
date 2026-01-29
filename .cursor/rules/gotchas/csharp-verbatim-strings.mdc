@@ -1,0 +1,60 @@
+---
+name: csharp-verbatim-strings
+description: В C# verbatim strings "" означает escaped quote
+alwaysApply: false
+globs:
+  - "**/*.cs"
+  - "**/csharp-parser.ts"
+---
+
+# C# Verbatim Strings Gotcha
+
+В C# verbatim strings (`@"..."`) символ `""` означает **escaped quote**, а не конец строки.
+
+## Проблема
+
+```csharp
+// Verbatim string с escaped quotes
+[Then(@"System logs ""(.*)""")]
+public void ThenSystemLogs(string message) { }
+```
+
+```typescript
+// ❌ Неправильный regex — остановится на первой "
+const pattern = /@?"([^"]+)"/;
+// Результат: "System logs " — потеряли остаток
+
+// ✅ Правильный regex — учитывает ""
+const pattern = /@?"((?:[^"\\]|\\.|\"\")*)"/;
+// Результат: "System logs \"\"(.*)\"\""
+```
+
+## Правило
+
+| Тип строки | Escape для quote |
+|------------|-----------------|
+| Regular `"..."` | `\"` |
+| Verbatim `@"..."` | `""` |
+
+## Regex для парсинга
+
+```typescript
+// Паттерн для извлечения содержимого C# string literal
+const CSHARP_STRING_PATTERN = /
+    @?"                    # Опциональный @ для verbatim
+    (                      # Группа захвата
+        (?:
+            [^"\\]         # Любой символ кроме " и \
+            | \\.          # Или escape-последовательность
+            | ""           # Или "" (escaped quote в verbatim)
+        )*
+    )
+    "
+/x;
+```
+
+## Чеклист
+
+- [ ] При парсинге C# строк — учитывай `@"..."` синтаксис
+- [ ] В verbatim strings `""` = одна кавычка
+- [ ] Тестируй на строках с `""` внутри

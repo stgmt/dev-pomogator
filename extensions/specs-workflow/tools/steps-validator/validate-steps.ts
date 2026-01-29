@@ -1,4 +1,4 @@
-#!/usr/bin/env bun
+#!/usr/bin/env npx tsx
 /**
  * Steps Validator - Entry Point
  *
@@ -6,7 +6,7 @@
  * Validates step definitions quality in BDD projects.
  *
  * Usage:
- *   bun validate-steps.ts
+ *   npx tsx validate-steps.ts
  *
  * Input (stdin): JSON with workspaceRoots
  * Output (stdout): Warnings about bad steps
@@ -27,9 +27,12 @@ import type { ValidationResult } from "./types";
 
 async function main(): Promise<void> {
   try {
+    // CLI argument takes priority
+    const cliPath = process.argv[2];
+    
     // Read stdin for hook input
-    const input = await readStdin();
-    const workspaceRoots = input?.workspaceRoots || [process.cwd()];
+    const input = cliPath ? null : await readStdin();
+    const workspaceRoots = cliPath ? [cliPath] : (input?.workspaceRoots || [process.cwd()]);
 
     await logInfo(`Starting validation for ${workspaceRoots.length} workspace(s)`);
 

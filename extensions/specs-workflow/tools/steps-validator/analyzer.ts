@@ -135,19 +135,20 @@ export function analyzeStep(
     issues.push("Pending implementation");
   }
 
-  // Check for bad patterns
-  if (analysis.hasBadPattern && !analysis.hasAssertion) {
-    status = "BAD";
-    issues.push("Bad pattern detected");
-  }
-
   // For Then steps, assertions are required
+  // Given/When steps do NOT require assertions - they set up or perform actions
   if (step.type === "Then" || isInheritedThen(step, config)) {
-    if (!analysis.hasAssertion && !analysis.isEmpty && !analysis.isPending) {
+    // Check for bad patterns (only for Then steps)
+    if (analysis.hasBadPattern && !analysis.hasAssertion) {
+      status = "BAD";
+      issues.push("Bad pattern detected");
+    }
+    
+    if (!analysis.hasAssertion && !analysis.isEmpty && !analysis.isPending && !analysis.hasBadPattern) {
       if (analysis.hasOnlyLogging) {
         status = "BAD";
         issues.push("Only logging, no assertion");
-      } else if (!analysis.hasBadPattern) {
+      } else {
         status = "BAD";
         issues.push("No assertion found");
       }

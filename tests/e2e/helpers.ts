@@ -5,6 +5,22 @@ import fs from 'fs-extra';
 const APP_DIR = process.env.APP_DIR || '/home/testuser/app';
 const WORKER_PORT = 37777;
 
+/**
+ * Get enhanced PATH with bun location
+ * Bun installs to ~/.bun/bin which may not be in child process PATH
+ */
+function getEnhancedPath(): string {
+  const home = process.env.HOME || '/home/testuser';
+  const bunPath = `${home}/.bun/bin`;
+  const currentPath = process.env.PATH || '';
+  
+  // Add bun to PATH if not already present
+  if (!currentPath.includes(bunPath)) {
+    return `${bunPath}:${currentPath}`;
+  }
+  return currentPath;
+}
+
 export interface InstallerResult {
   logs: string;
   exitCode: number;
@@ -182,6 +198,10 @@ export async function startWorker(): Promise<void> {
     cwd: claudeMemDir,
     detached: true,
     stdio: 'ignore',
+    env: {
+      ...process.env,
+      PATH: getEnhancedPath(),
+    },
   });
   workerProcess.unref();
   
@@ -219,6 +239,10 @@ export function runHook(action: string): string {
     return execSync(`bun "${workerPath}" hook cursor ${action}`, {
       encoding: 'utf-8',
       timeout: 30000,
+      env: {
+        ...process.env,
+        PATH: getEnhancedPath(),
+      },
     });
   } catch (error: any) {
     return error.stdout || error.message || '';
@@ -618,6 +642,10 @@ export function runHookWithParams(action: string, params: HookParams): string {
       encoding: 'utf-8',
       timeout: 30000,
       shell: '/bin/bash',
+      env: {
+        ...process.env,
+        PATH: getEnhancedPath(),
+      },
     });
     return result;
   } catch (error: any) {

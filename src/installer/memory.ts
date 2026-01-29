@@ -167,7 +167,7 @@ function generateCursorHooksJson(): CursorHooksJson {
       beforeSubmitPrompt: [
         { command: makeClaudeMemHook('session-init') },
         { command: makeClaudeMemHook('context') },
-        { command: `bun "${escapedValidateSpecsPath}"` },  // specs-workflow validator
+        { command: `npx tsx "${escapedValidateSpecsPath}"` },  // specs-workflow validator
       ],
       afterMCPExecution: [
         { command: makeClaudeMemHook('observation') },
@@ -182,6 +182,7 @@ function generateCursorHooksJson(): CursorHooksJson {
         // Use our custom wrapper that reads Cursor's SQLite and calls claude-mem API
         // This fixes "Missing transcriptPath" error
         { command: `bun "${escapedSummarizePath}"` },
+        { command: `npx tsx "${getValidateStepsScriptPath().replace(/\\/g, '\\\\')}"` },  // steps-validator
         { command: `node "${escapedUpdatePath}"` },  // dev-pomogator updater
       ],
     },
@@ -322,6 +323,9 @@ export async function installCursorHooks(): Promise<void> {
   // Copy validate-specs script (specs-workflow validator)
   await copyValidateSpecsScript();
   
+  // Copy validate-steps script (steps-validator for BDD)
+  await copyValidateStepsScript();
+  
   console.log(chalk.green('  ✓ Cursor hooks installed'));
   console.log(chalk.gray(`    Path: ${hooksFilePath}`));
 }
@@ -371,21 +375,31 @@ async function copyCheckUpdateScript(): Promise<void> {
  * This script validates @featureN tags in .specs/ folders
  */
 function getValidateSpecsScriptPath(): string {
-  return path.join(os.homedir(), '.dev-pomogator', 'scripts', 'validate-specs.ts');
+  return path.join(os.homedir(), '.dev-pomogator', 'scripts', 'specs-validator', 'validate-specs.ts');
 }
 
 /**
- * Copy validate-specs script to ~/.dev-pomogator/scripts/
+ * Get path to validate-steps script
+ * This script validates step definitions quality in BDD projects
+ */
+function getValidateStepsScriptPath(): string {
+  return path.join(os.homedir(), '.dev-pomogator', 'scripts', 'steps-validator', 'validate-steps.ts');
+}
+
+/**
+ * Copy validate-specs script to ~/.dev-pomogator/scripts/specs-validator/
  * 
  * This script validates @featureN tags in MD files against BDD scenarios.
- * It's executed with bun (which supports TypeScript natively).
+ * It's executed with npx tsx (which supports TypeScript natively).
+ * 
+ * Note: Using separate subdirectory to avoid file conflicts with steps-validator.
  */
 async function copyValidateSpecsScript(): Promise<void> {
   const devPomogatorDir = path.join(os.homedir(), '.dev-pomogator');
   const scriptsDir = path.join(devPomogatorDir, 'scripts');
-  const destDir = scriptsDir;
+  const destDir = path.join(scriptsDir, 'specs-validator');
   
-  await fs.ensureDir(scriptsDir);
+  await fs.ensureDir(destDir);
   
   // Get source from installed extensions
   // First try: node_modules location (installed package)
@@ -431,6 +445,68 @@ async function copyValidateSpecsScript(): Promise<void> {
   }
   
   console.log(chalk.yellow(`    ⚠ validate-specs script not found`));
+}
+
+/**
+ * Copy validate-steps (steps-validator) script to ~/.dev-pomogator/scripts/steps-validator/
+ * 
+ * This script validates step definitions quality in BDD projects.
+ * It's executed with npx tsx (which supports TypeScript natively).
+ * 
+ * Note: Using separate subdirectory to avoid file conflicts with specs-validator.
+ */
+async function copyValidateStepsScript(): Promise<void> {
+  const devPomogatorDir = path.join(os.homedir(), '.dev-pomogator');
+  const scriptsDir = path.join(devPomogatorDir, 'scripts');
+  const destDir = path.join(scriptsDir, 'steps-validator');
+  
+  await fs.ensureDir(destDir);
+  
+  // Get source from installed extensions
+  const extensionsDir = path.resolve(__dirname, '..', '..', 'extensions');
+  const nodeModulesDir = path.resolve(__dirname, '..', '..', 'node_modules', 'dev-pomogator', 'extensions');
+  
+  const possibleSources = [
+    path.join(extensionsDir, 'specs-workflow', 'tools', 'steps-validator'),
+    path.join(nodeModulesDir, 'specs-workflow', 'tools', 'steps-validator'),
+  ];
+  
+  for (const sourceDir of possibleSources) {
+    const mainScript = path.join(sourceDir, 'validate-steps.ts');
+    if (await fs.pathExists(mainScript)) {
+      // Copy all validator files
+      const filesToCopy = [
+        'validate-steps.ts',
+        'types.ts',
+        'config.ts',
+        'detector.ts',
+        'analyzer.ts',
+        'reporter.ts',
+        'logger.ts',
+      ];
+      
+      for (const file of filesToCopy) {
+        const src = path.join(sourceDir, file);
+        const dest = path.join(destDir, file);
+        if (await fs.pathExists(src)) {
+          await fs.copy(src, dest, { overwrite: true });
+        }
+      }
+      
+      // Copy parsers subdirectory
+      const parsersDir = path.join(sourceDir, 'parsers');
+      const destParsersDir = path.join(destDir, 'parsers');
+      if (await fs.pathExists(parsersDir)) {
+        await fs.ensureDir(destParsersDir);
+        await fs.copy(parsersDir, destParsersDir, { overwrite: true });
+      }
+      
+      console.log(chalk.gray(`    Copied validate-steps to ${destDir}`));
+      return;
+    }
+  }
+  
+  console.log(chalk.yellow(`    ⚠ validate-steps script not found`));
 }
 
 /**
@@ -638,6 +714,16 @@ async function areCursorHooksInstalled(): Promise<boolean> {
       return false;
     }
     
+    // Check for validate-steps hook (steps-validator for BDD)
+    const expectedValidateStepsPath = getValidateStepsScriptPath();
+    const escapedValidateStepsPath = expectedValidateStepsPath.replace(/\\/g, '\\\\\\\\');
+    const hasValidateStepsHook = hooksStr.includes(escapedValidateStepsPath);
+    
+    if (!hasValidateStepsHook) {
+      console.log(chalk.gray('  Hooks exist but validate-steps hook missing, will reinstall...'));
+      return false;
+    }
+    
     // Check for INVALID hooks (old npm claude-mem commands that don't work)
     const hasInvalidHooks = hooksStr.includes('claude-mem cursor hook');
     
@@ -666,6 +752,7 @@ export async function ensureClaudeMem(platform: 'cursor' | 'claude'): Promise<vo
       // Always update scripts (may have new versions)
       await copyCursorSummarizeScript();
       await copyValidateSpecsScript();
+      await copyValidateStepsScript();
     } else {
       // installCursorHooks will check for marketplace first, clone only if needed
       await installCursorHooks();

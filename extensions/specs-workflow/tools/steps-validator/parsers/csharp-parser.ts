@@ -21,16 +21,19 @@ import type { StepDefinition, StepType, ValidatorConfig } from "../types";
  * Pattern to match C# step definition attributes
  * Matches: [Given(@"...")], [When(@"...")], [Then(@"...")], [StepDefinition(@"...")]
  * Also: [And(@"...")], [But(@"...")]
+ * Supports both regular strings ("...") and verbatim strings (@"...")
+ * In verbatim strings, "" represents an escaped quote
  */
 const STEP_ATTRIBUTE_PATTERN =
-  /\[(Given|When|Then|And|But|StepDefinition)\s*\(\s*@?"((?:[^"\\]|\\.)*)"\s*\)\]/g;
+  /\[(Given|When|Then|And|But|StepDefinition)\s*\(\s*@?"((?:[^"\\]|\\.|"")*)"\s*\)\]/g;
 
 /**
  * Pattern to extract method signature after step attribute
  * Matches: public void MethodName(...) or public async Task MethodName(...)
+ * Now captures the entire signature up to the opening brace
  */
-const METHOD_SIGNATURE_PATTERN =
-  /\]\s*(?:public\s+)?(?:async\s+)?(?:Task|void)\s+(\w+)\s*\([^)]*\)/;
+const METHOD_SIGNATURE_WITH_BODY_PATTERN =
+  /\]\s*(?:public\s+)?(?:async\s+)?(?:Task|void)\s+(\w+)\s*\([^)]*\)\s*\{/;
 
 // ============================================================================
 // ASSERTION PATTERNS - What makes a step "GOOD"
@@ -51,13 +54,27 @@ export const CSHARP_ASSERTION_PATTERNS: RegExp[] = [
   // MSTest Assert.*
   /\bAssert\.(AreEqual|AreNotEqual|IsTrue|IsFalse|IsNull|IsNotNull|ThrowsException|ThrowsExceptionAsync)\s*[<(]/,
 
-  // throw InvalidOperationException with check (common pattern in zoho tests)
-  /if\s*\([^)]+\)\s*\{?\s*throw\s+new\s+(InvalidOperationException|ArgumentException|ArgumentNullException)\s*\(/,
+  // Conditional throw patterns (common assertion pattern in zoho tests)
+  // Pattern 1: if (...) { ... throw ... } - throw anywhere inside if block
+  /if\s*\([^)]+\)\s*\{[\s\S]*?throw\s+new\s+(InvalidOperationException|ArgumentException|ArgumentNullException)/,
+  
+  // Pattern 2: if (...) throw ... (single line without braces)
+  /if\s*\([^)]+\)\s+throw\s+new\s+(InvalidOperationException|ArgumentException)/,
 
-  // Direct throw with condition check (validated assertion)
-  /throw\s+new\s+InvalidOperationException\s*\(\s*\$?"[^"]*NOT FOUND/i,
-  /throw\s+new\s+InvalidOperationException\s*\(\s*\$?"[^"]*mismatch/i,
-  /throw\s+new\s+InvalidOperationException\s*\(\s*\$?"[^"]*should/i,
+  // Pattern 3: Any throw InvalidOperationException/ArgumentException = conditional assertion
+  // If method throws these exceptions, it's validating something
+  /throw\s+new\s+InvalidOperationException\s*\(/,
+  /throw\s+new\s+ArgumentException\s*\(/,
+  /throw\s+new\s+ArgumentNullException\s*\(/,
+
+  // Method delegation pattern - calls another Then/Assert/Verify method
+  // e.g., ThenResultContainsItems(count), AssertValidResponse(), VerifyData()
+  /\b(Then|Assert|Verify|Check|Validate)\w+\s*\([^)]*\)\s*;/,
+
+  // Playwright assertions (implicit - throws on failure)
+  /\.WaitFor(URL|Selector|Function|LoadState)Async\s*\(/,
+  /\.Expect\w*Async\s*\(/,
+  /await\s+Expect\s*\(/,
 ];
 
 // ============================================================================
@@ -180,7 +197,6 @@ export class CSharpParser {
    */
   async parseFile(filePath: string): Promise<StepDefinition[]> {
     const content = await fs.readFile(filePath, "utf-8");
-    const lines = content.split("\n");
     const steps: StepDefinition[] = [];
 
     // Reset regex lastIndex for global patterns
@@ -188,18 +204,30 @@ export class CSharpParser {
 
     let match: RegExpExecArray | null;
     while ((match = STEP_ATTRIBUTE_PATTERN.exec(content)) !== null) {
-      const stepType = this.normalizeStepType(match[1]);
+      const rawType = match[1];
       const pattern = match[2];
       const matchIndex = match.index;
       const lineNumber = this.getLineNumber(content, matchIndex);
 
-      // Find method name
+      // Find method signature and body opening brace
       const afterAttribute = content.slice(matchIndex);
-      const methodMatch = afterAttribute.match(METHOD_SIGNATURE_PATTERN);
-      const methodName = methodMatch ? methodMatch[1] : "UnknownMethod";
-
-      // Extract method body
-      const body = this.extractMethodBody(content, matchIndex);
+      const methodMatch = afterAttribute.match(METHOD_SIGNATURE_WITH_BODY_PATTERN);
+      
+      if (!methodMatch) {
+        // Skip if can't find method signature
+        continue;
+      }
+      
+      const methodName = methodMatch[1];
+      
+      // Normalize step type - for StepDefinition, infer from method name
+      const stepType = this.normalizeStepType(rawType, methodName);
+      
+      // Find opening brace position (it's at the end of the matched pattern)
+      const openBraceOffset = matchIndex + methodMatch.index! + methodMatch[0].length - 1;
+      
+      // Extract method body starting from the opening brace
+      const body = this.extractMethodBody(content, openBraceOffset);
 
       steps.push({
         type: stepType,
@@ -215,16 +243,26 @@ export class CSharpParser {
   }
 
   /**
-   * Normalize step type (StepDefinition -> based on pattern, or keep original)
+   * Normalize step type (StepDefinition -> based on method name, or keep original)
+   * For [StepDefinition] attribute, infer type from method name prefix (Then*, When*, Given*)
    */
-  private normalizeStepType(rawType: string): StepType {
+  private normalizeStepType(rawType: string, methodName?: string): StepType {
+    // For StepDefinition, infer type from method name
+    if (rawType === "StepDefinition" && methodName) {
+      if (methodName.startsWith("Then")) return "Then";
+      if (methodName.startsWith("When")) return "When";
+      if (methodName.startsWith("Given")) return "Given";
+      // Default to Given if method name doesn't have standard prefix
+      return "Given";
+    }
+
     const typeMap: Record<string, StepType> = {
       Given: "Given",
       When: "When",
       Then: "Then",
       And: "And",
       But: "But",
-      StepDefinition: "Given", // StepDefinition is universal, treat as Given for analysis
+      StepDefinition: "Given", // Fallback if no method name
     };
 
     return typeMap[rawType] || "Given";
@@ -239,23 +277,69 @@ export class CSharpParser {
   }
 
   /**
-   * Extract method body from content starting at attribute position
-   * Handles nested braces correctly
+   * Extract method body from content starting at the opening brace position
+   * 
+   * FIXED: Now starts from the opening brace of the method body,
+   * not from the attribute (which may contain {string} placeholders)
    */
-  private extractMethodBody(content: string, attributeIndex: number): string {
-    const afterAttribute = content.slice(attributeIndex);
-
-    // Find opening brace of method body
-    const openBraceIndex = afterAttribute.indexOf("{");
-    if (openBraceIndex === -1) return "";
-
+  private extractMethodBody(content: string, openBraceIndex: number): string {
     // Track brace depth to find matching closing brace
     let depth = 0;
-    let bodyStart = openBraceIndex;
     let bodyEnd = openBraceIndex;
 
-    for (let i = openBraceIndex; i < afterAttribute.length; i++) {
-      const char = afterAttribute[i];
+    for (let i = openBraceIndex; i < content.length; i++) {
+      const char = content[i];
+
+      // Skip string literals to avoid counting braces inside strings
+      if (char === '"') {
+        // Check for verbatim string @"..."
+        if (i > 0 && content[i - 1] === "@") {
+          // Find end of verbatim string (handle "" escape)
+          i++;
+          while (i < content.length) {
+            if (content[i] === '"') {
+              if (content[i + 1] === '"') {
+                i++; // Skip escaped quote
+              } else {
+                break;
+              }
+            }
+            i++;
+          }
+          continue;
+        }
+        // Regular string - find end
+        i++;
+        while (i < content.length && content[i] !== '"') {
+          if (content[i] === "\\") i++; // Skip escape
+          i++;
+        }
+        continue;
+      }
+
+      // Skip char literals
+      if (char === "'") {
+        i++;
+        if (content[i] === "\\") i++;
+        i++; // closing quote
+        continue;
+      }
+
+      // Skip single-line comments
+      if (char === "/" && content[i + 1] === "/") {
+        while (i < content.length && content[i] !== "\n") i++;
+        continue;
+      }
+
+      // Skip multi-line comments
+      if (char === "/" && content[i + 1] === "*") {
+        i += 2;
+        while (i < content.length && !(content[i] === "*" && content[i + 1] === "/")) {
+          i++;
+        }
+        i++; // skip closing */
+        continue;
+      }
 
       if (char === "{") {
         depth++;
@@ -269,7 +353,7 @@ export class CSharpParser {
     }
 
     // Extract body content (without outer braces)
-    const body = afterAttribute.slice(bodyStart + 1, bodyEnd).trim();
+    const body = content.slice(openBraceIndex + 1, bodyEnd).trim();
     return body;
   }
 }

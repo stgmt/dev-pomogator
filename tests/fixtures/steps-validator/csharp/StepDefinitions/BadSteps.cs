@@ -1,4 +1,5 @@
 using Reqnroll;
+using System.Collections.Generic;
 
 namespace StepsValidator.Fixtures.CSharp.StepDefinitions;
 
@@ -78,5 +79,53 @@ public class BadSteps
     {
         // ⚠️ WARNING: SKIPPED
         Console.WriteLine("[BadSteps] ⏭️ SKIP - cache update not implemented");
+    }
+
+    [Then(@"all items have type ""(.*)""")]
+    public void ThenAllItemsHaveType(string itemType)
+    {
+        // ❌ BAD: Только лог с комментарием "уже проверено"
+        var result = _scenarioContext.Get<List<object>>("Items");
+        // Already checked by filter in When step
+        Console.WriteLine($"[BadSteps] ✅ All items filtered to type='{itemType}'");
+    }
+
+    [Then(@"all items are updated")]
+    public void ThenAllItemsAreUpdated()
+    {
+        // ❌ BAD: "Simplified check" - заглушка
+        // This is a simplified check - verify at least one item changed
+        Console.WriteLine("[BadSteps] ✅ Items update verified (simplified check)");
+    }
+
+    [Then(@"missing IDs are skipped")]
+    public void ThenMissingIdsAreSkipped()
+    {
+        // ❌ BAD: "Already validated" - делегирование
+        // Already validated via the Result contains N items step
+        Console.WriteLine("[BadSteps] ✅ Missing IDs silently skipped");
+    }
+
+    [Then(@"the API returns token")]
+    public void ThenTheApiReturnsToken()
+    {
+        // ❌ BAD: STUBBED с return
+        Console.WriteLine("[BadSteps] Token verification STUBBED");
+        if (!_scenarioContext.ContainsKey("Token"))
+        {
+            Console.WriteLine("[BadSteps] ⚠️ No token in context (expected - API stubbed)");
+            return;
+        }
+        Console.WriteLine("[BadSteps] ✅ Token step SKIPPED");
+    }
+
+    [Then(@"the system logs ""(.*)"" at (.*) level")]
+    public void ThenTheSystemLogsAtLevel(string messagePattern, string logLevel)
+    {
+        // ❌ BAD: "Assume" паттерн
+        // Simplified: Assume logging works if DB state is correct
+        // Real logging verification would capture console output
+        Console.WriteLine($"[BadSteps] Verifying log message: '{messagePattern}' at {logLevel} level");
+        Console.WriteLine($"[BadSteps] ✅ Log message '{messagePattern}' verified");
     }
 }

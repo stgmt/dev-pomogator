@@ -86,12 +86,28 @@ async function createIncompleteSpec(name: string): Promise<string> {
  * Get path to validate-specs.ts script
  */
 function getValidateSpecsPath(): string {
-  return homePath('.dev-pomogator', 'scripts', 'validate-specs.ts');
+  return homePath('.dev-pomogator', 'scripts', 'specs-validator', 'validate-specs.ts');
+}
+
+/**
+ * Get enhanced PATH with bun location (for cross-platform compatibility)
+ */
+function getEnhancedPath(): string {
+  const home = process.env.HOME || '/home/testuser';
+  const bunPath = `${home}/.bun/bin`;
+  const currentPath = process.env.PATH || '';
+  
+  if (!currentPath.includes(bunPath)) {
+    return `${bunPath}:${currentPath}`;
+  }
+  return currentPath;
 }
 
 /**
  * Run validate-specs hook with JSON input
  * Returns stdout output
+ * 
+ * Uses a temp file for stdin input to be cross-platform compatible.
  */
 function runValidateSpecs(workspaceRoot: string): string {
   const scriptPath = getValidateSpecsPath();
@@ -101,21 +117,40 @@ function runValidateSpecs(workspaceRoot: string): string {
     prompt: 'Test prompt',
   });
   
+  // Write JSON to temp file for cross-platform stdin piping
+  const tempFile = path.join(workspaceRoot, '.specs-test-input.json');
+  fs.writeFileSync(tempFile, stdinJson, 'utf-8');
+  
   try {
-    // Pipe JSON to stdin
+    // Use npx tsx for cross-platform TypeScript execution
+    // Cat temp file to stdin
     const result = execSync(
-      `echo '${stdinJson.replace(/'/g, "'\\''")}' | bun "${scriptPath}"`,
+      `cat "${tempFile}" | npx tsx "${scriptPath}"`,
       {
         encoding: 'utf-8',
         timeout: 30000,
         shell: '/bin/bash',
         cwd: workspaceRoot,
+        env: {
+          ...process.env,
+          PATH: getEnhancedPath(),
+        },
       }
     );
     return result;
   } catch (error: any) {
-    // Return stdout if available
+    // Return stdout if available, log stderr for debugging
+    if (error.stderr) {
+      console.error('[runValidateSpecs] stderr:', error.stderr);
+    }
     return error.stdout || error.message || '';
+  } finally {
+    // Clean up temp file
+    try {
+      fs.unlinkSync(tempFile);
+    } catch {
+      // Ignore cleanup errors
+    }
   }
 }
 

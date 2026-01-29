@@ -1,3 +1,4 @@
+#!/usr/bin/env npx tsx
 /**
  * Specs Validator Hook
  * 
@@ -5,7 +6,7 @@
  * Validates that @featureN tags in MD files are covered by BDD scenarios.
  * 
  * Usage:
- *   bun ~/.dev-pomogator/scripts/validate-specs.ts
+ *   npx tsx validate-specs.ts
  * 
  * Input (stdin): JSON with conversation_id, workspace_roots, prompt
  * Output (stdout): Warnings for NOT_COVERED and ORPHAN tags

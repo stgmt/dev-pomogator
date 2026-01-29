@@ -24,14 +24,17 @@
   },
   "tools": {
     "specs-generator": "tools/specs-generator",
-    "specs-validator": "tools/specs-validator"
+    "specs-validator": "tools/specs-validator",
+    "steps-validator": "tools/steps-validator"
   },
   "hooks": {
     "cursor": {
-      "beforeSubmitPrompt": "bun ~/.dev-pomogator/scripts/validate-specs.ts"
+      "beforeSubmitPrompt": "npx tsx ~/.dev-pomogator/scripts/validate-specs.ts",
+      "Stop": "npx tsx ~/.dev-pomogator/scripts/validate-steps.ts"
     },
     "claude": {
-      "UserPromptSubmit": "bun ~/.dev-pomogator/scripts/validate-specs.ts"
+      "UserPromptSubmit": "npx tsx ~/.dev-pomogator/scripts/validate-specs.ts",
+      "Stop": "npx tsx ~/.dev-pomogator/scripts/validate-steps.ts"
     }
   }
 }

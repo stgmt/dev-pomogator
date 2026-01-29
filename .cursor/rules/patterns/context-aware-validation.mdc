@@ -1,0 +1,58 @@
+---
+name: context-aware-validation
+description: Валидация должна учитывать контекст, не только наличие паттерна
+alwaysApply: true
+---
+
+# Context-Aware Validation
+
+Валидация кода должна учитывать **контекст** — что ещё есть рядом с найденным паттерном.
+
+## Принцип
+
+Наличие "плохого" паттерна не всегда означает ошибку. Важно что ЕЩЁ есть в коде.
+
+## Пример: console.log в Then-степе
+
+```csharp
+// ❌ BAD — только logging, нет assertion
+[Then(@"result is logged")]
+public void ThenResultLogged()
+{
+    Console.WriteLine($"Result: {_result}");
+    // Нет проверки!
+}
+
+// ✅ OK — logging + assertion
+[Then(@"result should be valid")]
+public void ThenResultValid()
+{
+    Console.WriteLine($"Checking result: {_result}"); // Logging для debug
+    Assert.NotNull(_result);                          // Есть assertion!
+}
+```
+
+## Правильный подход
+
+```typescript
+function analyzeStep(step: StepDefinition): ValidationResult {
+    const hasLogging = LOGGING_PATTERN.test(step.body);
+    const hasAssertion = ASSERTION_PATTERNS.some(p => p.test(step.body));
+    
+    // ❌ Неправильно: флаговать любой logging
+    // if (hasLogging) return 'BAD';
+    
+    // ✅ Правильно: logging BAD только если нет assertions
+    if (step.type === 'Then' && hasLogging && !hasAssertion) {
+        return 'BAD';
+    }
+    
+    return 'OK';
+}
+```
+
+## Чеклист
+
+- [ ] Определи что делает паттерн "плохим" — изоляция или комбинация?
+- [ ] Проверяй наличие "компенсирующих" паттернов
+- [ ] Учитывай тип/контекст (Given vs Then, function vs test)

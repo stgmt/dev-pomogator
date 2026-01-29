@@ -1,0 +1,50 @@
+---
+name: real-world-test-fixtures
+description: Тестовые фикстуры должны строиться из реальных паттернов production кода
+alwaysApply: true
+---
+
+# Real-World Test Fixtures
+
+Тестовые фикстуры должны содержать **реальные паттерны** из production кода, а не синтетические примеры.
+
+## Принцип
+
+Синтетические тесты не ловят edge cases. Реальный код содержит паттерны, которые сложно предугадать.
+
+## Правильно
+
+```csharp
+// Фикстура построена из реального ZohoIntegrationClient.Tests
+[Then(@"the result should contain {int} items")]
+public void ThenResultContainsItems(int count)
+{
+    // Реальный паттерн: delegation to assertion method
+    ThenResultContainsItems();
+}
+
+[Then(@"element is visible")]
+public async Task ThenElementIsVisible()
+{
+    // Реальный паттерн: Playwright WaitForSelectorAsync
+    await locator.WaitForSelectorAsync(options);
+}
+```
+
+## Неправильно
+
+```csharp
+// Синтетическая фикстура — не отражает реальность
+[Then(@"test passes")]
+public void ThenTestPasses()
+{
+    Assert.True(true); // Никто так не пишет в реальном коде
+}
+```
+
+## Чеклист
+
+- [ ] Перед созданием фикстур — изучи реальный проект с тестами
+- [ ] Извлеки GOOD паттерны (что используется)
+- [ ] Извлеки BAD паттерны (что встречается как ошибка)
+- [ ] Фикстура должна покрывать edge cases из реального кода

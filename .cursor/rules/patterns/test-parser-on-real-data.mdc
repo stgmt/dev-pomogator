@@ -1,0 +1,54 @@
+---
+name: test-parser-on-real-data
+description: Перед выбором парсера тестируй на реальных данных проекта
+alwaysApply: true
+---
+
+# Test Parser on Real Data First
+
+Перед выбором библиотеки парсинга (tree-sitter, Roslyn, regex) — **тестируй на реальных файлах** целевого проекта.
+
+## Принцип
+
+Библиотека может отлично работать на примерах из документации, но падать на реальных данных:
+- Большие файлы
+- Нестандартный синтаксис
+- Edge cases в encoding
+
+## Пример из практики
+
+```typescript
+// Попытка использовать tree-sitter для C# парсинга
+import Parser from 'tree-sitter';
+import CSharp from 'tree-sitter-c-sharp';
+
+// ❌ Падает с "Invalid argument" на файлах > 1000 строк
+const tree = parser.parse(largeFileContent);
+```
+
+## Правильный подход
+
+```typescript
+// 1. Собрать реальные файлы из целевого проекта
+const realFiles = glob.sync('**/*.cs', { cwd: targetProject });
+
+// 2. Тестировать парсер на ВСЕХ файлах
+for (const file of realFiles) {
+    const content = fs.readFileSync(file, 'utf-8');
+    try {
+        parser.parse(content);
+    } catch (e) {
+        console.error(`Parser failed on ${file}: ${e.message}`);
+        // ❌ Парсер не подходит
+    }
+}
+
+// 3. Только после успеха — использовать в production
+```
+
+## Чеклист
+
+- [ ] Есть ли реальный проект для тестирования?
+- [ ] Протестирован парсер на самых больших файлах?
+- [ ] Протестирован на файлах с нестандартным форматированием?
+- [ ] Есть fallback если парсер не справится?
