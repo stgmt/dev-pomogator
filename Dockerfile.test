@@ -5,16 +5,23 @@ RUN apt-get update && apt-get install -y git curl unzip python3 python3-pip pyth
     apt-get clean && rm -rf /var/lib/apt/lists/* && \
     ln -s /usr/bin/python3 /usr/bin/python
 
+# Install Claude Code CLI globally (as root, before user switch)
+RUN npm install -g @anthropic-ai/claude-code || true
+
 # Create test user with home directory
 RUN useradd -m -s /bin/bash testuser
 
-# Switch to testuser and install bun
+# Switch to testuser
 USER testuser
 ENV HOME=/home/testuser
-ENV PATH="${HOME}/.bun/bin:${PATH}"
+ENV PATH="${HOME}/.bun/bin:${HOME}/.local/bin:${PATH}"
 
 # Install bun for testuser
 RUN curl -fsSL https://bun.sh/install | bash
+
+# Install Cursor CLI
+# Note: Cursor CLI requires interactive login, so we just install the binary
+RUN curl -fsSL https://cursor.com/install | bash || true
 
 WORKDIR /home/testuser/app
 
