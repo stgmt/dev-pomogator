@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
     Creates a new spec folder structure with all template files.
 
@@ -56,7 +56,8 @@ $ErrorActionPreference = "Stop"
 
 # Determine script and repo paths
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$RepoRoot = (Get-Item $ScriptDir).Parent.Parent.FullName
+# Go up 4 levels: specs-generator -> tools -> specs-workflow -> extensions -> repo root
+$RepoRoot = (Get-Item $ScriptDir).Parent.Parent.Parent.Parent.FullName
 $TemplatesDir = Join-Path $ScriptDir "templates"
 $LogsDir = Join-Path $ScriptDir "logs"
 $SpecsDir = Join-Path $RepoRoot ".specs"

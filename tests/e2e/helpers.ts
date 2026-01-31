@@ -994,3 +994,121 @@ export async function ensureCheckUpdateScript(): Promise<void> {
     }
   }
 }
+
+// ============================================================================
+// PowerShell Script Helpers
+// ============================================================================
+
+export interface PowerShellResult {
+  stdout: string;
+  stderr: string;
+  exitCode: number;
+  json?: any;
+}
+
+/**
+ * Detect PowerShell executable (pwsh for cross-platform, powershell for Windows)
+ */
+function getPowerShellExecutable(): string {
+  // In Docker (Linux), use pwsh
+  // On Windows, powershell.exe is available
+  try {
+    execSync('which pwsh', { encoding: 'utf-8', stdio: 'pipe' });
+    return 'pwsh';
+  } catch {
+    return 'powershell';
+  }
+}
+
+/**
+ * Run a PowerShell script and return the result
+ * 
+ * @param scriptPath - Path to the .ps1 script (relative to APP_DIR or absolute)
+ * @param args - Array of arguments to pass to the script
+ * @param cwd - Working directory for the script (defaults to APP_DIR)
+ * @returns PowerShellResult with stdout, stderr, exitCode, and parsed JSON
+ */
+export function runPowerShell(
+  scriptPath: string,
+  args: string[] = [],
+  cwd: string = APP_DIR
+): PowerShellResult {
+  const pwsh = getPowerShellExecutable();
+  
+  // Resolve script path
+  const resolvedScript = path.isAbsolute(scriptPath)
+    ? scriptPath
+    : path.join(APP_DIR, scriptPath);
+  
+  // Build command
+  // Quote arguments that contain spaces or special characters
+  const quotedArgs = args.map(arg => {
+    // If argument is a JSON string or contains spaces, wrap in single quotes
+    if (arg.includes(' ') || arg.startsWith('{') || arg.startsWith('[')) {
+      // Escape single quotes within the argument
+      return `'${arg.replace(/'/g, "''")}'`;
+    }
+    return arg;
+  });
+  
+  // Always add -Format json for structured output
+  const argsStr = quotedArgs.join(' ');
+  const command = `${pwsh} -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "${resolvedScript}" ${argsStr} -Format json`;
+  
+  try {
+    const stdout = execSync(command, {
+      encoding: 'utf-8',
+      cwd,
+      timeout: 30000,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    
+    // Try to parse JSON from output
+    let json: any;
+    try {
+      json = JSON.parse(stdout.trim());
+    } catch {
+      // Not JSON, that's OK
+    }
+    
+    return {
+      stdout,
+      stderr: '',
+      exitCode: 0,
+      json,
+    };
+  } catch (error: any) {
+    const stdout = error.stdout || '';
+    const stderr = error.stderr || '';
+    const exitCode = error.status ?? 1;
+    
+    // Try to parse JSON even from error output
+    let json: any;
+    try {
+      json = JSON.parse(stdout.trim());
+    } catch {
+      // Not JSON
+    }
+    
+    return {
+      stdout,
+      stderr,
+      exitCode,
+      json,
+    };
+  }
+}
+
+/**
+ * Get path to specs-generator scripts
+ */
+export function getSpecsGeneratorPath(script: string): string {
+  return path.join(APP_DIR, 'extensions', 'specs-workflow', 'tools', 'specs-generator', script);
+}
+
+/**
+ * Get path to specs-generator test fixtures
+ */
+export function getSpecsGeneratorFixturePath(fixture: string): string {
+  return path.join(APP_DIR, 'tests', 'fixtures', 'specs-generator', fixture);
+}

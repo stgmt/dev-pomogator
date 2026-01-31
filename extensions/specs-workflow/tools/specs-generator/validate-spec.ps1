@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
     Validates spec folder structure, formats, and placeholders.
 
@@ -57,7 +57,8 @@ $ErrorActionPreference = "Stop"
 
 # Determine script paths
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$RepoRoot = (Get-Item $ScriptDir).Parent.Parent.FullName
+# Go up 4 levels: specs-generator -> tools -> specs-workflow -> extensions -> repo root
+$RepoRoot = (Get-Item $ScriptDir).Parent.Parent.Parent.Parent.FullName
 $LogsDir = Join-Path $ScriptDir "logs"
 
 # Resolve path
