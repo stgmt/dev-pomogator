@@ -67,10 +67,18 @@ Write-Host "Cleaning global dev-pomogator files..." -ForegroundColor Yellow
 $devPomogator = Join-Path $env:USERPROFILE ".dev-pomogator"
 if (Remove-SafePath $devPomogator "~/.dev-pomogator/") { $removed++ }
 
-# 2. Global: ~/.claude-mem/ (claude-mem data directory)
-Write-Host "Cleaning claude-mem data..." -ForegroundColor Yellow
+# 2. Global: ~/.claude-mem/ (clean logs/temp, preserve *.db)
+Write-Host "Cleaning claude-mem data (preserving database)..." -ForegroundColor Yellow
 $claudeMem = Join-Path $env:USERPROFILE ".claude-mem"
-if (Remove-SafePath $claudeMem "~/.claude-mem/") { $removed++ }
+if (Test-Path $claudeMem) {
+    if ($WhatIf) {
+        Write-Host "  [WhatIf] Would clean ~/.claude-mem/ (preserving *.db)" -ForegroundColor Yellow
+    } else {
+        Get-ChildItem $claudeMem -Exclude "*.db" -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+        Write-Host "  Cleaned: ~/.claude-mem/ (preserved *.db)" -ForegroundColor Green
+    }
+    $removed++
+}
 
 # 3. Cursor hooks and state
 Write-Host "Cleaning Cursor hooks..." -ForegroundColor Yellow

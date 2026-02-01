@@ -1,0 +1,15 @@
+# Configuration for forbid-root-artifacts
+# See: https://github.com/user/dev-pomogator
+
+mode: extend
+allow:
+- .env.test
+- CHANGELOG.md
+- docker-compose.gui.yml
+- docker-compose.test.yml
+- Dockerfile.gui
+- Dockerfile.test
+- install.ps1
+- install.sh
+- uninstall.ps1
+- vitest.config.ts
