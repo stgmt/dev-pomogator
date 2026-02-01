@@ -1,0 +1,53 @@
+# GUI Testing Container
+# 
+# Usage:
+#   docker compose -f docker-compose.gui.yml build
+#   docker compose -f docker-compose.gui.yml up -d
+#
+# Access:
+#   Open browser: https://localhost:3001
+#   (Use Chrome/Edge for seamless clipboard support)
+#
+# Clipboard:
+#   - Chrome/Edge: automatic clipboard sync
+#   - Firefox/Safari: use Control Panel (Ctrl+Shift+Alt)
+
+services:
+  gui-test:
+    build:
+      context: .
+      dockerfile: Dockerfile.gui
+    container_name: dev-pomogator-gui
+    ports:
+      - "3000:3000"   # HTTP access
+      - "3001:3001"   # HTTPS access (recommended)
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Moscow
+      # Custom title for browser tab
+      - TITLE=Dev-Pomogator GUI Test
+      # Keyboard layout (optional)
+      # - KEYBOARD=en-us-qwerty
+    volumes:
+      # Mount project directory
+      - ./:/app:rw
+      # Persist desktop config between restarts
+      - gui-config:/config
+    # Required for browsers and GUI apps
+    shm_size: "1gb"
+    # Restart policy
+    restart: unless-stopped
+    # Security options for GUI
+    security_opt:
+      - seccomp:unconfined
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  gui-config:
+    name: dev-pomogator-gui-config

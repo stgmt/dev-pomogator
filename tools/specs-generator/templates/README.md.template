@@ -1,0 +1,23 @@
+# {Feature Name}
+
+{Краткое описание фичи}
+
+## Ключевые идеи
+
+- {Идея 1}
+- {Идея 2}
+- {Идея 3}
+
+## Где лежит реализация
+
+- **App-код**: `{путь/к/коду}`
+- **Wiring**: `{путь/к/wiring}`
+
+## Где читать дальше
+
+- [USER_STORIES.md](USER_STORIES.md)
+- [USE_CASES.md](USE_CASES.md)
+- [REQUIREMENTS.md](REQUIREMENTS.md)
+- [DESIGN.md](DESIGN.md)
+- [TASKS.md](TASKS.md)
+
