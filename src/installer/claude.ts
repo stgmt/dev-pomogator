@@ -102,7 +102,7 @@ export async function installClaude(options: ClaudeOptions = {}): Promise<void> 
   // 5. Run post-install hooks for extensions that have them
   for (const extension of extensionsToInstall) {
     if (extension.postInstall) {
-      await runPostInstallHook(extension, repoRoot);
+      await runPostInstallHook(extension, repoRoot, 'claude');
     }
   }
   

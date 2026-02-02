@@ -1,7 +1,7 @@
 {
   "name": "specs-workflow",
-  "version": "1.1.0",
-  "description": "Управление спецификациями: 3-фазный workflow, валидация, dev-plan формат, автоматическая проверка покрытия",
+  "version": "1.2.0",
+  "description": "Управление спецификациями: 3-фазный workflow, валидация, dev-plan формат, автоматическая проверка покрытия, MCP инструменты для research",
   "platforms": ["cursor", "claude"],
   "category": "workflow",
   "files": {
@@ -11,12 +11,14 @@
   "rules": {
     "cursor": [
       "cursor/rules/specs-management.mdc",
+      "cursor/rules/no-mocks-fallbacks.mdc",
       "cursor/rules/dev-plan.mdc",
       "cursor/rules/research-workflow.mdc",
       "cursor/rules/specs-validation.mdc"
     ],
     "claude": [
       "claude/rules/specs-management.md",
+      "claude/rules/no-mocks-fallbacks.md",
       "claude/rules/dev-plan.md",
       "claude/rules/research-workflow.md",
       "claude/rules/specs-validation.md"
@@ -25,16 +27,24 @@
   "tools": {
     "specs-generator": "tools/specs-generator",
     "specs-validator": "tools/specs-validator",
-    "steps-validator": "tools/steps-validator"
+    "steps-validator": "tools/steps-validator",
+    "mcp-setup": "tools/mcp-setup"
   },
   "hooks": {
+    "cursor": {},
+    "claude": {}
+  },
+  "postInstall": {
     "cursor": {
-      "beforeSubmitPrompt": "npx tsx ~/.dev-pomogator/scripts/validate-specs.ts",
-      "Stop": "npx tsx ~/.dev-pomogator/scripts/validate-steps.ts"
+      "command": "python tools/mcp-setup/setup-mcp.py --platform cursor",
+      "interactive": true,
+      "skipInCI": true
     },
     "claude": {
-      "UserPromptSubmit": "npx tsx ~/.dev-pomogator/scripts/validate-specs.ts",
-      "Stop": "npx tsx ~/.dev-pomogator/scripts/validate-steps.ts"
+      "command": "python tools/mcp-setup/setup-mcp.py --platform claude",
+      "interactive": true,
+      "skipInCI": true
     }
-  }
+  },
+  "_hooksNote": "Hooks are installed by memory.ts (hardcoded) - specs-validator and steps-validator"
 }

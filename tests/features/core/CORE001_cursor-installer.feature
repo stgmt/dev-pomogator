@@ -29,3 +29,9 @@ Feature: CORE001 Cursor Installer
     And hooks.json should contain beforeSubmitPrompt hooks
     And hooks.json should contain stop hooks
     And stop hooks should include check-update.js
+
+  Scenario: Extension hooks from extension.json are installed
+    Given auto-commit extension has hooks defined in extension.json
+    When I run "node dist/index.js --cursor --all"
+    Then hooks.json should contain auto-commit hook in beforeSubmitPrompt
+    And the hook command should include "python" and "auto_commit.py"

@@ -2,7 +2,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
 import { fileURLToPath } from 'url';
-import { listExtensions, getExtensionFiles, getExtensionRules, getExtensionTools, runPostInstallHook, Extension } from './extensions.js';
+import { listExtensions, getExtensionFiles, getExtensionRules, getExtensionTools, getExtensionHooks, runPostInstallHook, Extension } from './extensions.js';
 import { loadConfig, saveConfig } from '../config/index.js';
 import type { InstalledExtension } from '../config/schema.js';
 import { findRepoRoot } from '../utils/repo.js';
@@ -98,20 +98,101 @@ export async function installCursor(options: CursorOptions): Promise<void> {
     }
   }
   
-  // 4. Run post-install hooks for extensions that have them
+  // 4. Install extension hooks to ~/.cursor/hooks/hooks.json
+  await installExtensionHooks(extensionsToInstall, repoRoot);
+  
+  // 5. Run post-install hooks for extensions that have them
   for (const extension of extensionsToInstall) {
     if (extension.postInstall) {
-      await runPostInstallHook(extension, repoRoot);
+      await runPostInstallHook(extension, repoRoot, 'cursor');
     }
   }
   
-  // 5. Setup auto-update if enabled
-  // Note: Hooks (claude-mem + updater) are installed globally by memory.ts
-  // Here we only copy the check-update.js script and track project paths
+  // 6. Setup auto-update if enabled
+  // Note: claude-mem hooks are installed by memory.ts
+  // Here we install extension hooks and track project paths
   if (options.autoUpdate) {
     await setupGlobalScripts();
     await addProjectPaths(repoRoot, extensionsToInstall);
   }
+}
+
+interface CursorHooksJson {
+  version: number;
+  hooks: {
+    [eventName: string]: { command: string }[];
+  };
+}
+
+/**
+ * Install extension hooks to ~/.cursor/hooks/hooks.json
+ * Merges hooks from extension.json with existing hooks
+ */
+async function installExtensionHooks(extensions: Extension[], repoRoot: string): Promise<void> {
+  const homeDir = os.homedir();
+  const hooksDir = path.join(homeDir, '.cursor', 'hooks');
+  const hooksFile = path.join(hooksDir, 'hooks.json');
+  
+  // Collect all hooks from extensions
+  const extensionHooks: { [eventName: string]: string[] } = {};
+  
+  for (const extension of extensions) {
+    const hooks = getExtensionHooks(extension, 'cursor');
+    for (const [eventName, command] of Object.entries(hooks)) {
+      if (!extensionHooks[eventName]) {
+        extensionHooks[eventName] = [];
+      }
+      // Replace relative paths with absolute paths
+      const absoluteCommand = command.replace(
+        /tools\//g,
+        path.join(repoRoot, 'tools').replace(/\\/g, '/') + '/'
+      );
+      extensionHooks[eventName].push(absoluteCommand);
+    }
+  }
+  
+  // Skip if no hooks to install
+  if (Object.keys(extensionHooks).length === 0) {
+    return;
+  }
+  
+  // Ensure hooks directory exists
+  await fs.ensureDir(hooksDir);
+  
+  // Load existing hooks
+  let existingHooks: CursorHooksJson = { version: 1, hooks: {} };
+  if (await fs.pathExists(hooksFile)) {
+    try {
+      existingHooks = await fs.readJson(hooksFile);
+    } catch {
+      // Invalid JSON, start fresh
+    }
+  }
+  
+  // Merge extension hooks into existing hooks
+  for (const [eventName, commands] of Object.entries(extensionHooks)) {
+    if (!existingHooks.hooks[eventName]) {
+      existingHooks.hooks[eventName] = [];
+    }
+    
+    for (const command of commands) {
+      // Escape backslashes for JSON on Windows
+      const escapedCommand = command.replace(/\\/g, '\\\\');
+      
+      // Check if hook already exists (avoid duplicates)
+      const exists = existingHooks.hooks[eventName].some(
+        (h) => h.command === escapedCommand || h.command.includes(command.split(' ')[1] || command)
+      );
+      
+      if (!exists) {
+        existingHooks.hooks[eventName].push({ command: escapedCommand });
+        console.log(`  ✓ Installed hook: ${eventName} -> ${command.split(' ').slice(0, 2).join(' ')}...`);
+      }
+    }
+  }
+  
+  // Write merged hooks
+  await fs.writeJson(hooksFile, existingHooks, { spaces: 2 });
 }
 
 async function setupGlobalScripts(): Promise<void> {

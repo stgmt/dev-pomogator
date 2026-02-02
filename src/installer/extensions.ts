@@ -13,6 +13,12 @@ export interface ExtensionHooks {
   };
 }
 
+export interface PostInstallHook {
+  command: string;       // Command to run (relative to repoRoot)
+  interactive?: boolean; // Requires terminal input (default: true)
+  skipInCI?: boolean;    // Skip in CI environment (default: true)
+}
+
 export interface Extension {
   name: string;
   version: string;
@@ -35,10 +41,10 @@ export interface Extension {
   // IDE hooks to install
   hooks?: ExtensionHooks;
   // Post-install hook to run after extension is installed
-  postInstall?: {
-    command: string;       // Command to run (relative to repoRoot)
-    interactive?: boolean; // Requires terminal input (default: true)
-    skipInCI?: boolean;    // Skip in CI environment (default: true)
+  // Can be a single hook or platform-specific hooks
+  postInstall?: PostInstallHook | {
+    cursor?: PostInstallHook;
+    claude?: PostInstallHook;
   };
   // Whether this extension requires claude-mem persistent memory
   requiresClaudeMem?: boolean;
@@ -151,15 +157,45 @@ function isCI(): boolean {
 }
 
 /**
+ * Get post-install hook for an extension and platform
+ */
+function getPostInstallHook(
+  extension: Extension,
+  platform?: 'cursor' | 'claude'
+): PostInstallHook | undefined {
+  if (!extension.postInstall) return undefined;
+
+  // Check if it's platform-specific format
+  const postInstall = extension.postInstall as PostInstallHook | {
+    cursor?: PostInstallHook;
+    claude?: PostInstallHook;
+  };
+
+  // If it has 'command' property, it's a simple PostInstallHook
+  if ('command' in postInstall) {
+    return postInstall as PostInstallHook;
+  }
+
+  // Otherwise it's platform-specific
+  if (platform && (postInstall as any)[platform]) {
+    return (postInstall as any)[platform] as PostInstallHook;
+  }
+
+  return undefined;
+}
+
+/**
  * Run post-install hook for an extension
  */
 export async function runPostInstallHook(
   extension: Extension,
-  repoRoot: string
+  repoRoot: string,
+  platform?: 'cursor' | 'claude'
 ): Promise<void> {
-  if (!extension.postInstall) return;
+  const hook = getPostInstallHook(extension, platform);
+  if (!hook) return;
 
-  const { command, interactive = true, skipInCI = true } = extension.postInstall;
+  const { command, interactive = true, skipInCI = true } = hook;
 
   // Skip in CI if configured
   if (skipInCI && isCI()) {

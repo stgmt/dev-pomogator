@@ -148,6 +148,11 @@ describe('PLUGIN003: Specs-workflow Extension', () => {
     expect(await fs.pathExists(rulePath)).toBe(true);
   });
 
+  it('should install no-mocks-fallbacks rule', async () => {
+    const rulePath = appPath('.cursor', 'rules', 'no-mocks-fallbacks.mdc');
+    expect(await fs.pathExists(rulePath)).toBe(true);
+  });
+
   it('should install dev-plan rule', async () => {
     const rulePath = appPath('.cursor', 'rules', 'dev-plan.mdc');
     expect(await fs.pathExists(rulePath)).toBe(true);
@@ -366,6 +371,23 @@ describe('Scenario 2: Re-install (after Scenario 1)', () => {
     expect(await fs.pathExists(homePath('.claude', 'plugins', 'marketplaces', 'thedotmack', 'plugin', 'scripts', 'worker-service.cjs'))).toBe(true);
     // Project-level artifacts in APP_DIR
     expect(await fs.pathExists(appPath('.cursor', 'commands', 'suggest-rules.md'))).toBe(true);
+  });
+
+  it('should install extension hooks from extension.json', async () => {
+    // Run installer with --all to include auto-commit
+    const { exitCode } = await runInstaller('--cursor --all');
+    expect(exitCode).toBe(0);
+    
+    const hooksPath = homePath('.cursor', 'hooks', 'hooks.json');
+    const hooks = await fs.readJson(hooksPath);
+    
+    // Check that auto-commit hook is installed (defined in extensions/auto-commit/extension.json)
+    const beforeSubmitCommands = hooks.hooks.beforeSubmitPrompt.map((h: any) => h.command);
+    const hasAutoCommitHook = beforeSubmitCommands.some((cmd: string) => 
+      cmd.includes('python') && cmd.includes('auto_commit.py')
+    );
+    
+    expect(hasAutoCommitHook).toBe(true);
   });
 });
 

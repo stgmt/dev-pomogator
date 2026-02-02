@@ -1,0 +1,14 @@
+{
+  "servers": {
+    "context7": {
+      "description": "Документация библиотек (Context7)",
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp@latest"]
+    },
+    "octocode": {
+      "description": "Поиск кода на GitHub (Octocode)",
+      "command": "npx",
+      "args": ["octocode-mcp@latest"]
+    }
+  }
+}

@@ -103,11 +103,7 @@ async function isClaudeMemInstalled(): Promise<boolean> {
 interface CursorHooksJson {
   version: number;
   hooks: {
-    beforeSubmitPrompt?: { command: string }[];
-    afterMCPExecution?: { command: string }[];
-    afterShellExecution?: { command: string }[];
-    afterFileEdit?: { command: string }[];
-    stop?: { command: string }[];
+    [eventName: string]: { command: string }[] | undefined;
   };
 }
 
@@ -302,14 +298,34 @@ export async function installCursorHooks(): Promise<void> {
     }
   }
   
-  // Merge hooks (our hooks take precedence)
+  // Merge hooks - combine arrays, don't overwrite
   const mergedHooks: CursorHooksJson = {
     version: 1,
-    hooks: {
-      ...existingHooks.hooks,
-      ...hooksJson.hooks,
-    },
+    hooks: {},
   };
+  
+  // Get all unique event names from both sources
+  const allEvents = new Set([
+    ...Object.keys(existingHooks.hooks || {}),
+    ...Object.keys(hooksJson.hooks || {}),
+  ]);
+  
+  // Merge each event's hooks array
+  for (const event of allEvents) {
+    const existingArray = existingHooks.hooks[event] || [];
+    const newArray = hooksJson.hooks[event as keyof typeof hooksJson.hooks] || [];
+    
+    // Combine arrays, avoiding duplicates by command
+    const combined = [...existingArray];
+    for (const hook of newArray) {
+      const exists = combined.some((h) => h.command === hook.command);
+      if (!exists) {
+        combined.push(hook);
+      }
+    }
+    
+    mergedHooks.hooks[event] = combined;
+  }
   
   // Write hooks.json
   await fs.writeJson(hooksFilePath, mergedHooks, { spaces: 2 });

@@ -15,6 +15,7 @@ Feature: PLUGIN003 Specs Workflow Extension
   Scenario: Rules are installed for Cursor
     When dev-pomogator installs specs-workflow for Cursor
     Then specs-management.mdc should exist in PROJECT/.cursor/rules/
+    And no-mocks-fallbacks.mdc should exist in PROJECT/.cursor/rules/
     And dev-plan.mdc should exist in PROJECT/.cursor/rules/
     And research-workflow.mdc should exist in PROJECT/.cursor/rules/
 

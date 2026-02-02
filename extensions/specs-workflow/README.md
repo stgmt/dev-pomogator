@@ -130,8 +130,12 @@
 
 | Platform | Location | Files |
 |----------|----------|-------|
-| Cursor | `.cursor/rules/` | `specs-management.mdc`, `dev-plan.mdc`, `research-workflow.mdc`, `specs-validation.mdc` |
-| Claude Code | `.claude/rules/` | `specs-management.md`, `dev-plan.md`, `research-workflow.md`, `specs-validation.md` |
+| Cursor | `.cursor/rules/` | `specs-management.mdc`, `no-mocks-fallbacks.mdc`, `dev-plan.mdc`, `research-workflow.mdc`, `specs-validation.mdc` |
+| Claude Code | `.claude/rules/` | `specs-management.md`, `no-mocks-fallbacks.md`, `dev-plan.md`, `research-workflow.md`, `specs-validation.md` |
+
+Дополнительно:
+- `.feature` для спеков создаются на основе существующих feature/fixtures/steps; при отсутствии `Background` добавляется hook‑фикстура на основе существующих шагов
+- Правило `no-mocks-fallbacks` запрещает моки/фолбеки и требует явных исключений
 
 ### Tools
 
