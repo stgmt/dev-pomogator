@@ -135,7 +135,10 @@ async function updateClaudeHooksForProject(
       existingHooks[hookName] = [];
     }
 
-    const hookArray = existingHooks[hookName] as Array<{ matcher?: string; hooks?: Array<{ type: string; command: string }> }>;
+    const hookArray = existingHooks[hookName] as Array<{
+      matcher?: string;
+      hooks?: Array<{ type: string; command: string; timeout?: number }>;
+    }>;
     const commandExists = hookArray.some((h) =>
       h.hooks?.some((hook) => hook.command === command)
     );
