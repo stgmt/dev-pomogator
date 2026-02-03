@@ -7,6 +7,7 @@ Installs Context7 and Octocode MCP servers for Cursor and Claude Code.
 import argparse
 import json
 import os
+import shutil
 import sys
 from pathlib import Path
 from typing import Dict, Any
@@ -23,25 +24,68 @@ def get_config_path(platform: str) -> Path:
         raise ValueError(f"Unknown platform: {platform}")
 
 
-def load_mcp_config(config_path: Path) -> Dict[str, Any]:
+def get_backup_path(config_path: Path) -> Path:
+    """Get backup path for the given config."""
+    return config_path.with_suffix(config_path.suffix + ".backup")
+
+
+def restore_backup(config_path: Path) -> bool:
+    """Restore config from backup if it exists."""
+    backup_path = get_backup_path(config_path)
+    if not backup_path.exists():
+        return False
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(backup_path, config_path)
+    print(f"[RESTORE] Restored config from backup: {backup_path}")
+    return True
+
+
+def load_mcp_config(config_path: Path, allow_restore: bool = True) -> Dict[str, Any]:
     """Load existing MCP config or return empty structure."""
-    if config_path.exists():
-        try:
-            with open(config_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                if "mcpServers" not in data:
-                    data["mcpServers"] = {}
-                return data
-        except (json.JSONDecodeError, IOError):
-            pass
-    return {"mcpServers": {}}
+    backup_path = get_backup_path(config_path)
+
+    if not config_path.exists():
+        if allow_restore and backup_path.exists():
+            if restore_backup(config_path):
+                return load_mcp_config(config_path, allow_restore=False)
+        return {"mcpServers": {}}
+
+    try:
+        with open(config_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            if "mcpServers" not in data:
+                data["mcpServers"] = {}
+            return data
+    except (json.JSONDecodeError, IOError) as exc:
+        if allow_restore and backup_path.exists():
+            print(f"[WARN] Invalid config at {config_path}, attempting restore from backup...")
+            if restore_backup(config_path):
+                return load_mcp_config(config_path, allow_restore=False)
+        raise RuntimeError(f"Failed to read MCP config: {config_path}") from exc
 
 
 def save_mcp_config(config_path: Path, config: Dict[str, Any]) -> None:
-    """Save MCP config to file."""
+    """Save MCP config to file (backup + atomic write)."""
     config_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(config_path, "w", encoding="utf-8") as f:
-        json.dump(config, f, indent=2, ensure_ascii=False)
+    backup_path = get_backup_path(config_path)
+
+    if config_path.exists():
+        shutil.copy2(config_path, backup_path)
+        print(f"[BACKUP] Config backed up to {backup_path}")
+
+    temp_path = config_path.with_name(config_path.name + ".tmp")
+    try:
+        with open(temp_path, "w", encoding="utf-8") as f:
+            json.dump(config, f, indent=2, ensure_ascii=False)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(temp_path, config_path)
+    finally:
+        if temp_path.exists():
+            try:
+                temp_path.unlink()
+            except OSError:
+                pass
 
 
 def get_mcp_definitions() -> Dict[str, Dict[str, Any]]:

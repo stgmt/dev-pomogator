@@ -80,6 +80,14 @@ Feature: PLUGIN005 - MCP Setup for Research Workflow
     Then ~/.claude.json should have "theme" property equal to "dark"
     And ~/.claude.json should contain "context7" server
 
+  Scenario: Restore claude.json from backup when missing
+    Given ~/.claude.json.backup has "theme" property set to "dark"
+    And ~/.claude.json is missing
+    When I run mcp-setup with "--platform claude --skip-interactive"
+    Then ~/.claude.json should have "theme" property equal to "dark"
+    And ~/.claude.json should contain "context7" server
+    And the output should contain "[RESTORE]"
+
   # ============================================================================
   # Both Platforms
   # ============================================================================

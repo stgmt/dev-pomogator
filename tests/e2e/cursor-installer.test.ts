@@ -86,8 +86,8 @@ describe('Scenario 1: Clean Install', () => {
     expect(await fs.pathExists(scriptPath)).toBe(true);
     
     const content = await fs.readFile(scriptPath, 'utf-8');
-    // Bundled script contains the auto-update logic
-    expect(content).toContain('checkUpdate');
+    // Bundled script should include standalone logger messages
+    expect(content).toContain('Update check completed');
   });
 });
 
@@ -381,10 +381,11 @@ describe('Scenario 2: Re-install (after Scenario 1)', () => {
     const hooksPath = homePath('.cursor', 'hooks', 'hooks.json');
     const hooks = await fs.readJson(hooksPath);
     
-    // Check that auto-commit hook is installed (defined in extensions/auto-commit/extension.json)
-    const beforeSubmitCommands = hooks.hooks.beforeSubmitPrompt.map((h: any) => h.command);
-    const hasAutoCommitHook = beforeSubmitCommands.some((cmd: string) => 
-      cmd.includes('python') && cmd.includes('auto_commit.py')
+    // Check that auto-commit hook is installed in stop event (defined in extensions/auto-commit/extension.json)
+    // auto-commit v2.0.0 uses TypeScript with npx tsx on stop hook
+    const stopCommands = hooks.hooks.stop?.map((h: any) => h.command) ?? [];
+    const hasAutoCommitHook = stopCommands.some((cmd: string) => 
+      cmd.includes('tsx') && cmd.includes('auto_commit_stop.ts')
     );
     
     expect(hasAutoCommitHook).toBe(true);

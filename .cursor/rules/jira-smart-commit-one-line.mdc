@@ -1,0 +1,38 @@
+---
+name: jira-smart-commit-one-line
+description: Smart Commit требует ключ Jira и одну строку
+alwaysApply: true
+---
+
+# Jira Smart Commit — одна строка
+
+Smart Commit в Jira парсится только если ключ задачи и команда находятся в первой строке, без переносов.
+
+## Антипаттерн
+
+Многострочный коммит или ключ не в первой строке.
+
+## Пример из практики
+
+```text
+✨ feat(hooks): add auto-commit summary
+
+PROJ-123 #comment fixed something
+```
+
+## Последствия
+
+- Jira не связывает коммит с задачей
+- Smart Commit команды игнорируются
+
+## Как правильно
+
+```text
+PROJ-123 #comment add auto-commit smart summary
+```
+
+## Чеклист
+
+- [ ] Сообщение в одну строку
+- [ ] Начинается с `KEY-123 #comment`
+- [ ] Нет markdown/таблиц/переносов

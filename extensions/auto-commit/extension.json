@@ -1,17 +1,31 @@
 {
   "name": "auto-commit",
-  "version": "1.0.0",
-  "description": "Automatic git commits with LLM-generated messages",
+  "version": "2.1.0",
+  "description": "Automatic git commits with LLM-generated messages on agent stop",
   "platforms": ["cursor", "claude"],
+  "category": "automation",
+  "files": {
+    "cursor": [],
+    "claude": []
+  },
   "tools": {
     "auto-commit": "tools/auto-commit"
   },
+  "toolFiles": {
+    "auto-commit": [
+      "tools/auto-commit/auto_commit_core.ts",
+      "tools/auto-commit/auto_commit_llm.ts",
+      "tools/auto-commit/auto_commit_prompt_guide.md",
+      "tools/auto-commit/auto_commit_stop.ts",
+      "tools/auto-commit/auto_commit_transcript.ts"
+    ]
+  },
   "hooks": {
     "claude": {
-      "UserPromptSubmit": "python tools/auto-commit/auto_commit.py"
+      "Stop": "npx tsx tools/auto-commit/auto_commit_stop.ts"
     },
     "cursor": {
-      "beforeSubmitPrompt": "python tools/auto-commit/auto_commit.py"
+      "stop": "npx tsx tools/auto-commit/auto_commit_stop.ts"
     }
   }
 }

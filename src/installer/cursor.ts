@@ -201,11 +201,19 @@ async function setupGlobalScripts(): Promise<void> {
   await fs.ensureDir(scriptsDir);
   
   const scriptPath = path.join(scriptsDir, 'check-update.js');
-  
-  // Копировать скрипт из пакета
+
+  // Prefer bundled script from dist (matches runtime behavior)
+  const distDir = path.resolve(__dirname, '..');
+  const bundledScript = path.join(distDir, 'check-update.bundle.cjs');
+
+  if (await fs.pathExists(bundledScript)) {
+    await fs.copy(bundledScript, scriptPath, { overwrite: true });
+    return;
+  }
+
+  // Fallback: use unbundled script from package root
   const packageRoot = path.resolve(__dirname, '..', '..');
   const packageScript = path.join(packageRoot, 'scripts', 'check-update.js');
-  
   if (await fs.pathExists(packageScript)) {
     await fs.copy(packageScript, scriptPath, { overwrite: true });
   }

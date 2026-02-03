@@ -54,13 +54,17 @@ describe('PLUGIN005: MCP Setup', () => {
   beforeEach(async () => {
     // Clean up MCP configs before each test
     await fs.remove(homePath('.cursor', 'mcp.json'));
+    await fs.remove(homePath('.cursor', 'mcp.json.backup'));
     await fs.remove(homePath('.claude.json'));
+    await fs.remove(homePath('.claude.json.backup'));
   });
 
   afterAll(async () => {
     // Clean up after all tests
     await fs.remove(homePath('.cursor', 'mcp.json'));
+    await fs.remove(homePath('.cursor', 'mcp.json.backup'));
     await fs.remove(homePath('.claude.json'));
+    await fs.remove(homePath('.claude.json.backup'));
   });
 
   describe('Check mode', () => {
@@ -207,6 +211,31 @@ describe('PLUGIN005: MCP Setup', () => {
       const config = await loadMcpConfig('claude');
       expect(config.theme).toBe('dark');
       expect(config.onboardingComplete).toBe(true);
+      expect(config.mcpServers.context7).toBeDefined();
+    });
+
+    it('should restore claude.json from backup when missing', async () => {
+      const backupPath = homePath('.claude.json.backup');
+      await fs.ensureDir(path.dirname(backupPath));
+      await fs.writeJson(backupPath, {
+        theme: 'dark',
+        mcpServers: {
+          'my-custom-mcp': {
+            command: 'node',
+            args: ['my-server.js']
+          }
+        }
+      });
+
+      await fs.remove(homePath('.claude.json'));
+
+      const { output, exitCode } = runMcpSetup('--platform claude');
+      expect(exitCode).toBe(0);
+      expect(output).toContain('[RESTORE]');
+
+      const config = await loadMcpConfig('claude');
+      expect(config.theme).toBe('dark');
+      expect(config.mcpServers['my-custom-mcp']).toBeDefined();
       expect(config.mcpServers.context7).toBeDefined();
     });
   });

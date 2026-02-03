@@ -1,0 +1,26 @@
+---
+name: updater-sync-tools-hooks
+description: Апдейтер должен обновлять tools и hooks вместе с commands
+alwaysApply: true
+---
+
+# Апдейтер должен синхронизировать tools и hooks
+
+Если апдейтер обновляет только commands, функционал расширений может остаться старым (tools/hooks не обновлены).
+
+## Правильно
+
+- Обновлять commands по манифесту
+- Обновлять toolFiles по манифесту
+- Переустанавливать hooks для projectPaths
+
+## Неправильно
+
+- Обновлять только `.cursor/commands`
+- Игнорировать `tools/` и `hooks` при апдейте
+
+## Чеклист
+
+- [ ] Есть `toolFiles` в манифесте расширения
+- [ ] Апдейтер пишет tools в `projectPath`
+- [ ] Апдейтер ставит/обновляет hooks после апдейта

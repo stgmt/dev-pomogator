@@ -10,6 +10,20 @@ export interface ExtensionManifest {
     cursor?: string[];
     claude?: string[];
   };
+  rules?: {
+    cursor?: string[];
+    claude?: string[];
+  };
+  tools?: {
+    [toolName: string]: string;
+  };
+  toolFiles?: {
+    [toolName: string]: string[];
+  };
+  hooks?: {
+    cursor?: Record<string, string>;
+    claude?: Record<string, string>;
+  };
 }
 
 export async function fetchExtensionManifest(name: string): Promise<ExtensionManifest | null> {
@@ -34,10 +48,9 @@ export async function fetchExtensionManifest(name: string): Promise<ExtensionMan
 
 export async function downloadExtensionFile(
   extensionName: string,
-  platform: 'cursor' | 'claude',
-  fileName: string
+  relativePath: string
 ): Promise<string | null> {
-  const url = `${RAW_BASE}/extensions/${extensionName}/${platform}/commands/${fileName}`;
+  const url = `${RAW_BASE}/extensions/${extensionName}/${relativePath}`;
   
   try {
     const response = await fetch(url, {
