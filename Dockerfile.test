@@ -23,6 +23,7 @@ RUN useradd -m -s /bin/bash testuser
 USER testuser
 ENV HOME=/home/testuser
 ENV PATH="${HOME}/.bun/bin:${HOME}/.local/bin:${PATH}"
+ENV DEV_POMOGATOR_TEST_IN_DOCKER=1
 
 # Install bun for testuser
 RUN curl -fsSL https://bun.sh/install | bash

@@ -34,7 +34,7 @@
     "build": "tsc && node scripts/build-check-update.js",
     "dev": "tsc --watch",
     "lint": "eslint src",
-    "test": "vitest",
+    "test": "npm run test:e2e",
     "test:e2e": "docker compose -f docker-compose.test.yml run --rm test",
     "test:e2e:docker": "vitest run tests/e2e --reporter=verbose",
     "prepare": "npm run build"

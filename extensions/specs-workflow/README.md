@@ -170,11 +170,13 @@
 |---|--------|------------|
 | 1 | **User Stories** | "Как {роль}, я хочу {цель}, чтобы {ценность}" |
 | 2 | **Use Cases** | Happy path + edge cases |
-| 3 | **Requirements** | FR + NFR + Acceptance Criteria (EARS формат) |
+| 3 | **Requirements** | FR + NFR + Acceptance Criteria (EARS формат) + Assumptions |
 | 4 | **Implementation Plan** | Пошаговый план + Leverage (что переиспользуем) |
 | 5 | **Todos** | Atomic tasks (1-3 файла, 15-30 мин, 1 outcome) |
 | 6 | **Definition of Done** | Критерии готовности + Verification Plan |
 | 7 | **File Changes** | Таблица Path/Action/Reason (ОБЯЗАТЕЛЬНО в конце!) |
+
+Важно: FR/AC/Use Cases должны быть заполнены **доменным содержанием** из контекста задачи и источников требований.
 
 ### EARS формат (Acceptance Criteria)
 
@@ -194,11 +196,20 @@ WHEN [event] AND [condition] THEN [system] SHALL [response]
 ### Todo формат
 
 ```markdown
-- [ ] **todo-id**: Описание задачи
-  - _files_: `path/to/file.ts` (create/edit/delete)
-  - _Requirements refs_: FR-1, NFR-Security-2
-  - _Leverage_: `existing/module.ts`
+- id: todo-id
+  description: Краткое описание; files: edit path/to/file.ts; Requirements refs: FR-1, NFR-Security-2; Leverage: existing/module.ts
+  dependencies: []
 ```
+
+### Валидация плана (ручная)
+
+Перед завершением плана запусти валидатор структуры:
+
+```
+npx tsx tools/plan-validator/validate-plan.ts <path-to-plan.md>
+```
+
+Валидатор проверяет только структуру/формат и не оценивает доменную корректность.
 
 ---
 

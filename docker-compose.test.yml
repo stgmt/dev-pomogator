@@ -7,3 +7,4 @@ services:
       - .env.test
     environment:
       - HOME=/home/testuser
+      - DEV_POMOGATOR_TEST_IN_DOCKER=1
