@@ -1,7 +1,7 @@
 {
   "name": "specs-workflow",
   "version": "1.2.0",
-  "description": "Управление спецификациями: 3-фазный workflow, валидация, dev-plan формат, автоматическая проверка покрытия, MCP инструменты для research",
+  "description": "Управление спецификациями: 3-фазный workflow, валидация, автоматическая проверка покрытия, MCP инструменты для research",
   "platforms": ["cursor", "claude"],
   "category": "workflow",
   "files": {
@@ -12,14 +12,12 @@
     "cursor": [
       "cursor/rules/specs-management.mdc",
       "cursor/rules/no-mocks-fallbacks.mdc",
-      "cursor/rules/dev-plan.mdc",
       "cursor/rules/research-workflow.mdc",
       "cursor/rules/specs-validation.mdc"
     ],
     "claude": [
       "claude/rules/specs-management.md",
       "claude/rules/no-mocks-fallbacks.md",
-      "claude/rules/dev-plan.md",
       "claude/rules/research-workflow.md",
       "claude/rules/specs-validation.md"
     ]

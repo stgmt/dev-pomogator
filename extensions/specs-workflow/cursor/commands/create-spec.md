@@ -51,4 +51,4 @@ description: Создать новую спецификацию в .specs/
 ## Связанные правила
 
 - `specs-management.mdc` — полный workflow управления спеками
-- `dev-plan.mdc` — формат планов разработки
+- `plan-pomogator.mdc` — формат планов разработки

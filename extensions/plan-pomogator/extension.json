@@ -1,0 +1,22 @@
+{
+  "name": "plan-pomogator",
+  "version": "1.0.0",
+  "description": "Единый формат планов + шаблон и ручной валидатор структуры",
+  "platforms": ["cursor", "claude"],
+  "category": "workflow",
+  "files": {
+    "cursor": [],
+    "claude": []
+  },
+  "rules": {
+    "cursor": ["cursor/rules/plan-pomogator.mdc"],
+    "claude": ["claude/rules/plan-pomogator.md"]
+  },
+  "tools": {
+    "plan-pomogator": "tools/plan-pomogator"
+  },
+  "hooks": {
+    "cursor": {},
+    "claude": {}
+  }
+}

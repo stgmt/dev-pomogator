@@ -1,4 +1,4 @@
-# Dev Plan - Формат планов разработки
+# Plan-pomogator — Формат планов разработки
 
 ## Цель правила
 
@@ -6,8 +6,8 @@
 
 ## Источник требований и копипаст-шаблон
 
-- Спецификация требований к формату планов: `.specs/cursor-plan-rules/requirements.md`
-- Копипаст-шаблон плана: `.specs/cursor-plan-rules/template.md`
+- Спецификация требований к формату планов: `tools/plan-pomogator/requirements.md`
+- Копипаст-шаблон плана: `tools/plan-pomogator/template.md`
 - **Specs Management**: `.claude/rules/specs-management.md` (structure `.specs/`, scripts `tools/specs-generator/`)
 
 > Примечание (render-safe): плейсхолдеры вида `<роль>` могут интерпретироваться как HTML-теги и пропадать в рендере. Используй `{роль}` / `{цель}` / `{ценность}`.
@@ -93,7 +93,7 @@
 ## File Changes
 | Path | Action | Reason |
 |------|--------|--------|
-| `.specs/cursor-plan-rules/requirements.md` | create | Зафиксировать требования к формату планов с примерами good/bad. |
+| `tools/plan-pomogator/requirements.md` | create | Зафиксировать требования к формату планов с примерами good/bad. |
 ```
 
 Пример (некорректно — пустая таблица):
@@ -106,7 +106,7 @@
 ## Валидация плана (ручная)
 
 - Перед завершением плана запусти валидатор структуры:
-  - `npx tsx tools/plan-validator/validate-plan.ts <path-to-plan.md>`
+  - `npx tsx tools/plan-pomogator/validate-plan.ts <path-to-plan.md>`
 - Валидатор проверяет **формат и структуру**, но не оценивает доменную корректность.
 
 ## Запреты и ограничения

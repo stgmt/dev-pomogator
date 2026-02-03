@@ -35,6 +35,7 @@ Options:
 Available plugins:
   suggest-rules           Analyze session and suggest rules for IDE
   specs-workflow          Specs management with 3-phase workflow
+  plan-pomogator          Plan format, template, and validator
   forbid-root-artifacts   Control files allowed in repository root
 `);
     process.exit(0);

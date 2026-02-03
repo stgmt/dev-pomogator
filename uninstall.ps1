@@ -222,7 +222,7 @@ if ($Force) {
         # Files to always remove (not in source control)
         @(
             ".cursor\commands",
-            ".cursor\rules\dev-plan.mdc",
+            ".cursor\rules\plan-pomogator.mdc",
             ".cursor\rules\research-workflow.mdc",
             ".cursor\rules\specs-management.mdc",
             ".cursor\rules\specs-validation.mdc",
@@ -239,6 +239,7 @@ if ($Force) {
             "tools\auto-commit",
             "tools\forbid-root-artifacts",
             "tools\specs-generator",
+            "tools\plan-pomogator",
             "tools\specs-validator",
             "tools\steps-validator"
         ) | ForEach-Object {

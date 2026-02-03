@@ -177,7 +177,7 @@ alwaysApply: false
 
 ## Связанные правила
 
-- `dev-plan.mdc` — использует EARS формат из спеков
+- `plan-pomogator.mdc` — использует EARS формат из спеков
 - `research-workflow.mdc` — интегрируется с RESEARCH.md
 
 ## Эталонная структура

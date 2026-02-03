@@ -53,4 +53,4 @@ argument-hint: "<feature-name>"
 ## Связанные правила
 
 - `specs-management.md` — полный workflow управления спеками
-- `dev-plan.md` — формат планов разработки
+- `plan-pomogator.md` — формат планов разработки

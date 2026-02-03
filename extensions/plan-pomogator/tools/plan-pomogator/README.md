@@ -1,10 +1,10 @@
-# Plan Validator
+# Plan-pomogator Validator
 
-Ручной валидатор структуры dev‑планов. Проверяет формат и структуру, но не оценивает доменную корректность.
+Ручной валидатор структуры планов. Проверяет формат и структуру, но не оценивает доменную корректность.
 
 ## Usage
 ```
-npx tsx tools/plan-validator/validate-plan.ts <path-to-plan.md>
+npx tsx tools/plan-pomogator/validate-plan.ts <path-to-plan.md>
 ```
 
 ## Что проверяет

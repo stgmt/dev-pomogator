@@ -1,5 +1,5 @@
 ---
-description: Генерация планов разработки (Plan mode): User Stories / Use Cases / Requirements (EARS + NFR + Assumptions) / Implementation Plan (Leverage) / Todos (atomic + traceability) / DoD (Verification Plan) + File Changes
+description: Plan-pomogator — формат планов разработки (Plan mode): User Stories / Use Cases / Requirements (EARS + NFR + Assumptions) / Implementation Plan (Leverage) / Todos (atomic + traceability) / DoD (Verification Plan) + File Changes
 globs:
   - "**/*"
 alwaysApply: true
@@ -11,8 +11,8 @@ alwaysApply: true
 
 ## Источник требований и копипаст-шаблон
 
-- Спецификация требований к формату планов: `.specs/cursor-plan-rules/requirements.md`
-- Копипаст-шаблон плана: `.specs/cursor-plan-rules/template.md`
+- Спецификация требований к формату планов: `tools/plan-pomogator/requirements.md`
+- Копипаст-шаблон плана: `tools/plan-pomogator/template.md`
 - **Specs Management**: `.cursor/rules/specs-management.mdc` (structure `.specs/`, scripts `tools/specs-generator/`)
 
 > Примечание (render-safe): плейсхолдеры вида `<роль>` могут интерпретироваться как HTML-теги и пропадать в рендере. Используй `{роль}` / `{цель}` / `{ценность}`.
@@ -98,7 +98,7 @@ alwaysApply: true
 ## File Changes
 | Path | Action | Reason |
 |------|--------|--------|
-| `.specs/cursor-plan-rules/requirements.md` | create | Зафиксировать требования к формату планов с примерами good/bad. |
+| `tools/plan-pomogator/requirements.md` | create | Зафиксировать требования к формату планов с примерами good/bad. |
 ```
 
 Пример (некорректно — пустая таблица):
@@ -111,7 +111,7 @@ alwaysApply: true
 ## Валидация плана (ручная)
 
 - Перед завершением плана запусти валидатор структуры:
-  - `npx tsx tools/plan-validator/validate-plan.ts <path-to-plan.md>`
+  - `npx tsx tools/plan-pomogator/validate-plan.ts <path-to-plan.md>`
 - Валидатор проверяет **формат и структуру**, но не оценивает доменную корректность.
 
 ## Запреты и ограничения

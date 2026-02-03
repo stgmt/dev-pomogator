@@ -98,8 +98,8 @@ describe('CORE003: Claude Code Installer', () => {
       expect(await fs.pathExists(rulePath)).toBe(true);
     });
 
-    it('should install dev-plan.md', async () => {
-      const rulePath = appPath('.claude', 'rules', 'dev-plan.md');
+    it('should install plan-pomogator.md', async () => {
+      const rulePath = appPath('.claude', 'rules', 'plan-pomogator.md');
       expect(await fs.pathExists(rulePath)).toBe(true);
     });
 
@@ -113,6 +113,12 @@ describe('CORE003: Claude Code Installer', () => {
     it('should create tools/specs-generator/', async () => {
       const toolsPath = appPath('tools', 'specs-generator');
       expect(await fs.pathExists(toolsPath)).toBe(true);
+    });
+
+    it('should create tools/plan-pomogator/', async () => {
+      const toolsPath = appPath('tools', 'plan-pomogator');
+      expect(await fs.pathExists(toolsPath)).toBe(true);
+      expect(await fs.pathExists(path.join(toolsPath, 'validate-plan.ts'))).toBe(true);
     });
 
     it('should create tools/forbid-root-artifacts/', async () => {

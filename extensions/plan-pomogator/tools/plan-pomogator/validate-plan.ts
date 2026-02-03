@@ -312,7 +312,7 @@ function validatePlan(filePath: string): ValidationError[] {
 }
 
 function printUsage(): void {
-  console.log('Usage: npx tsx tools/plan-validator/validate-plan.ts <path-to-plan.md>');
+  console.log('Usage: npx tsx tools/plan-pomogator/validate-plan.ts <path-to-plan.md>');
 }
 
 function main(): void {

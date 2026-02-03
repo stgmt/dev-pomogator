@@ -197,5 +197,5 @@ tools/specs-generator/
 ## Связанные правила
 
 - `.cursor/rules/specs-management.mdc` — Cursor Rule для AI агента
-- `.cursor/rules/dev-plan.mdc` — формат планов разработки
+- `.cursor/rules/plan-pomogator.mdc` — формат планов разработки
 - `.cursor/rules/research-workflow.mdc` — workflow ресерча

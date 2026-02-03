@@ -172,7 +172,7 @@
 
 ## Связанные правила
 
-- `dev-plan.md` — использует EARS формат из спеков
+- `plan-pomogator.md` — использует EARS формат из спеков
 - `research-workflow.md` — интегрируется с RESEARCH.md
 
 ## Эталонная структура

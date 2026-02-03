@@ -153,11 +153,6 @@ describe('PLUGIN003: Specs-workflow Extension', () => {
     expect(await fs.pathExists(rulePath)).toBe(true);
   });
 
-  it('should install dev-plan rule', async () => {
-    const rulePath = appPath('.cursor', 'rules', 'dev-plan.mdc');
-    expect(await fs.pathExists(rulePath)).toBe(true);
-  });
-
   it('should install research-workflow rule', async () => {
     const rulePath = appPath('.cursor', 'rules', 'research-workflow.mdc');
     expect(await fs.pathExists(rulePath)).toBe(true);
@@ -181,6 +176,21 @@ describe('PLUGIN003: Specs-workflow Extension', () => {
     expect(await fs.pathExists(path.join(templatesPath, 'FR.md.template'))).toBe(true);
     expect(await fs.pathExists(path.join(templatesPath, 'DESIGN.md.template'))).toBe(true);
     expect(await fs.pathExists(path.join(templatesPath, 'TASKS.md.template'))).toBe(true);
+  });
+});
+
+// PLUGIN007: Plan-pomogator extension verification
+describe('PLUGIN007: Plan-pomogator Extension', () => {
+  it('should install plan-pomogator rule', async () => {
+    const rulePath = appPath('.cursor', 'rules', 'plan-pomogator.mdc');
+    expect(await fs.pathExists(rulePath)).toBe(true);
+  });
+
+  it('should install plan-pomogator tools', async () => {
+    const toolsPath = appPath('tools', 'plan-pomogator');
+    expect(await fs.pathExists(toolsPath)).toBe(true);
+    expect(await fs.pathExists(path.join(toolsPath, 'validate-plan.ts'))).toBe(true);
+    expect(await fs.pathExists(path.join(toolsPath, 'requirements.md'))).toBe(true);
   });
 });
 

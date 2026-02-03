@@ -25,7 +25,7 @@ Feature: CORE003 Claude Code Installer
     When dev-pomogator installs for Claude Code
     Then .claude/rules/ should exist in project
     And specs-management.md should be in .claude/rules/
-    And dev-plan.md should be in .claude/rules/
+    And plan-pomogator.md should be in .claude/rules/
     And research-workflow.md should be in .claude/rules/
 
   Scenario: Tools are installed to project

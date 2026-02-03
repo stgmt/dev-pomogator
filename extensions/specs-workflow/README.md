@@ -130,8 +130,8 @@
 
 | Platform | Location | Files |
 |----------|----------|-------|
-| Cursor | `.cursor/rules/` | `specs-management.mdc`, `no-mocks-fallbacks.mdc`, `dev-plan.mdc`, `research-workflow.mdc`, `specs-validation.mdc` |
-| Claude Code | `.claude/rules/` | `specs-management.md`, `no-mocks-fallbacks.md`, `dev-plan.md`, `research-workflow.md`, `specs-validation.md` |
+| Cursor | `.cursor/rules/` | `specs-management.mdc`, `no-mocks-fallbacks.mdc`, `research-workflow.mdc`, `specs-validation.mdc` |
+| Claude Code | `.claude/rules/` | `specs-management.md`, `no-mocks-fallbacks.md`, `research-workflow.md`, `specs-validation.md` |
 
 Дополнительно:
 - `.feature` для спеков создаются на основе существующих feature/fixtures/steps; при отсутствии `Background` добавляется hook‑фикстура на основе существующих шагов
@@ -160,56 +160,10 @@
 
 ---
 
-## Dev Plan Format (правило dev-plan)
+## Plan-pomogator
 
-Формат планов разработки, активируемый в Plan mode или по запросу "plan/спека/roadmap".
-
-### Обязательные секции плана
-
-| # | Секция | Содержание |
-|---|--------|------------|
-| 1 | **User Stories** | "Как {роль}, я хочу {цель}, чтобы {ценность}" |
-| 2 | **Use Cases** | Happy path + edge cases |
-| 3 | **Requirements** | FR + NFR + Acceptance Criteria (EARS формат) + Assumptions |
-| 4 | **Implementation Plan** | Пошаговый план + Leverage (что переиспользуем) |
-| 5 | **Todos** | Atomic tasks (1-3 файла, 15-30 мин, 1 outcome) |
-| 6 | **Definition of Done** | Критерии готовности + Verification Plan |
-| 7 | **File Changes** | Таблица Path/Action/Reason (ОБЯЗАТЕЛЬНО в конце!) |
-
-Важно: FR/AC/Use Cases должны быть заполнены **доменным содержанием** из контекста задачи и источников требований.
-
-### EARS формат (Acceptance Criteria)
-
-```
-WHEN [event] THEN [system] SHALL [response]
-IF [precondition] THEN [system] SHALL [response]
-WHEN [event] AND [condition] THEN [system] SHALL [response]
-```
-
-### NFR категории (минимум)
-
-- **Performance** - время отклика, throughput
-- **Security** - авторизация, шифрование
-- **Reliability** - fault tolerance, recovery
-- **Usability** - UX, accessibility
-
-### Todo формат
-
-```markdown
-- id: todo-id
-  description: Краткое описание; files: edit path/to/file.ts; Requirements refs: FR-1, NFR-Security-2; Leverage: existing/module.ts
-  dependencies: []
-```
-
-### Валидация плана (ручная)
-
-Перед завершением плана запусти валидатор структуры:
-
-```
-npx tsx tools/plan-validator/validate-plan.ts <path-to-plan.md>
-```
-
-Валидатор проверяет только структуру/формат и не оценивает доменную корректность.
+Формат планов и валидатор вынесены в отдельное расширение `plan-pomogator`.
+См. `extensions/plan-pomogator/README.md`.
 
 ---
 
@@ -679,7 +633,7 @@ echo '{"workspace_roots": ["/path/to/project"]}' | npx tsx ~/.dev-pomogator/scri
 | "найди" | "find" | Поиск информации |
 | "погугли" | "google" | Web search |
 
-### Dev Plan
+### Plan-pomogator
 
 | Триггер | Действие |
 |---------|----------|
@@ -718,7 +672,6 @@ extensions/specs-workflow/
 │   │   └── create-spec.md      # Команда /create-spec
 │   └── rules/
 │       ├── specs-management.mdc
-│       ├── dev-plan.mdc
 │       ├── research-workflow.mdc
 │       └── specs-validation.mdc
 ├── claude/
@@ -726,7 +679,6 @@ extensions/specs-workflow/
 │   │   └── create-spec.md
 │   └── rules/
 │       ├── specs-management.md
-│       ├── dev-plan.md
 │       ├── research-workflow.md
 │       └── specs-validation.md
 └── tools/

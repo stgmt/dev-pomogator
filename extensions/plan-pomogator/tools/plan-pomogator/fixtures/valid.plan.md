@@ -10,7 +10,7 @@
 ## Requirements
 
 ### FR (Functional Requirements)
-- FR-1: Валидатор проверяет структуру dev‑плана.
+- FR-1: Валидатор проверяет структуру плана.
 
 ### Acceptance Criteria (EARS)
 - WHEN валидатор запускается THEN система SHALL вернуть список структурных ошибок или OK.
@@ -30,7 +30,7 @@
 
 ## Todos
 - id: implement-validator
-  description: Добавить скрипт проверки структуры; files: create tools/plan-validator/validate-plan.ts; Requirements refs: FR-1, NFR-Usability; Leverage: tools/specs-validator/validate-specs.ts
+  description: Добавить скрипт проверки структуры; files: create tools/plan-pomogator/validate-plan.ts; Requirements refs: FR-1, NFR-Usability; Leverage: tools/specs-validator/validate-specs.ts
   dependencies: []
 
 ## Definition of Done (DoD)
@@ -38,11 +38,11 @@
 
 ### Verification Plan
 - Automated Tests:
-  - `npx tsx tools/plan-validator/validate-plan.ts tools/plan-validator/fixtures/valid.plan.md`
+  - `npx tsx tools/plan-pomogator/validate-plan.ts tools/plan-pomogator/fixtures/valid.plan.md`
 - Manual Verification:
   - Запустить валидатор на заведомо битом плане.
 
 ## File Changes
 | Path | Action | Reason |
 |---|---|---|
-| `tools/plan-validator/validate-plan.ts` | create | Скрипт для проверки структуры плана. |
+| `tools/plan-pomogator/validate-plan.ts` | create | Скрипт для проверки структуры плана. |

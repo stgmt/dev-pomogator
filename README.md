@@ -49,8 +49,9 @@ npx dev-pomogator --claude --all
 | Type | Location | Files |
 |------|----------|-------|
 | Commands | `{project}/.cursor/commands/` | `suggest-rules.md`, `create-spec.md`, `configure-root-artifacts.md` |
-| Rules | `{project}/.cursor/rules/` | `specs-management.mdc`, `dev-plan.mdc`, `research-workflow.mdc` |
+| Rules | `{project}/.cursor/rules/` | `specs-management.mdc`, `plan-pomogator.mdc`, `research-workflow.mdc` |
 | Tools | `{project}/tools/specs-generator/` | 5 scripts + 13 templates |
+| Tools | `{project}/tools/plan-pomogator/` | requirements, template, validate-plan |
 | Tools | `{project}/tools/forbid-root-artifacts/` | check.py, setup.py, whitelist config |
 
 ### Per-Project (Claude Code)
@@ -58,8 +59,9 @@ npx dev-pomogator --claude --all
 | Type | Location | Files |
 |------|----------|-------|
 | Commands | `{project}/.claude/commands/` | `suggest-rules.md`, `create-spec.md`, `configure-root-artifacts.md` |
-| Rules | `{project}/.claude/rules/` | `specs-management.md`, `dev-plan.md`, `research-workflow.md` |
+| Rules | `{project}/.claude/rules/` | `specs-management.md`, `plan-pomogator.md`, `research-workflow.md` |
 | Tools | `{project}/tools/specs-generator/` | 5 scripts + 13 templates |
+| Tools | `{project}/tools/plan-pomogator/` | requirements, template, validate-plan |
 | Tools | `{project}/tools/forbid-root-artifacts/` | check.py, setup.py, whitelist config |
 
 ### Global (Cursor)
@@ -100,9 +102,18 @@ Comprehensive specs management with 3-phase workflow.
 | Component | Description |
 |-----------|-------------|
 | `/create-spec <name>` | Create spec folder structure |
-| 3 Rules | `specs-management`, `dev-plan`, `research-workflow` |
+| 4 Rules | `specs-management`, `specs-validation`, `research-workflow`, `no-mocks-fallbacks` |
 | 5 Scripts | `scaffold-spec.ps1`, `validate-spec.ps1`, etc. |
 | 13 Templates | User Stories, Use Cases, FR, NFR, Design, etc. |
+
+### plan-pomogator
+
+Формат планов, шаблон и ручной валидатор структуры.
+
+| Component | Description |
+|-----------|-------------|
+| 1 Rule | `plan-pomogator` |
+| 1 Tool | `tools/plan-pomogator` (requirements, template, validate-plan) |
 
 ### forbid-root-artifacts
 
@@ -119,7 +130,7 @@ Pre-commit hook to control files in repository root.
 
 ```bash
 npx dev-pomogator --cursor --plugins=suggest-rules
-npx dev-pomogator --cursor --plugins=specs-workflow,forbid-root-artifacts
+npx dev-pomogator --cursor --plugins=specs-workflow,plan-pomogator,forbid-root-artifacts
 npx dev-pomogator --cursor --all  # all plugins
 ```
 
