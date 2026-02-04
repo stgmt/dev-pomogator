@@ -44,5 +44,17 @@
       "skipInCI": true
     }
   },
+  "postUpdate": {
+    "cursor": {
+      "command": "python tools/mcp-setup/setup-mcp.py --platform cursor",
+      "interactive": true,
+      "skipInCI": true
+    },
+    "claude": {
+      "command": "python tools/mcp-setup/setup-mcp.py --platform claude",
+      "interactive": true,
+      "skipInCI": true
+    }
+  },
   "_hooksNote": "Hooks are installed by memory.ts (hardcoded) - specs-validator and steps-validator"
 }

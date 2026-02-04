@@ -32,7 +32,7 @@ def get_global_config_path(platform: str) -> Path:
     if platform == "cursor":
         return home / ".cursor" / "mcp.json"
     elif platform == "claude":
-        return home / ".mcp.json"
+        return home / ".claude.json"
     else:
         raise ValueError(f"Unknown platform: {platform}")
 
@@ -124,12 +124,14 @@ def get_mcp_definitions() -> Dict[str, Dict[str, Any]]:
         "context7": {
             "description": "Library documentation",
             "package": "@upstash/context7-mcp@latest",
-            "bin": "context7-mcp"
+            "command": "npx",
+            "args": ["-y", "@upstash/context7-mcp@latest"]
         },
         "octocode": {
             "description": "GitHub code search",
             "package": "octocode-mcp@latest",
-            "bin": "octocode-mcp"
+            "command": "npx",
+            "args": ["-y", "octocode-mcp@latest"]
         }
     }
 
@@ -159,48 +161,57 @@ def find_existing_server_key(config: Dict[str, Any], server_name: str) -> Option
     return None
 
 
-def is_mcp_installed(config: Dict[str, Any], server_name: str) -> bool:
-    """Check if MCP server is already installed."""
-    return find_existing_server_key(config, server_name) is not None
+def get_npm_path() -> str:
+    """Resolve npm binary path."""
+    npm_path = shutil.which("npm")
+    if not npm_path:
+        raise RuntimeError("npm not found in PATH. Install Node.js and npm first.")
+    return npm_path
 
 
-def get_user_npm_prefix() -> Path:
-    """Return the user-level npm global prefix used by setup."""
-    return Path.home() / ".npm-global"
+def get_npx_path() -> str:
+    """Resolve npx binary path."""
+    npx_path = shutil.which("npx")
+    if not npx_path:
+        raise RuntimeError("npx not found in PATH. Install Node.js and npm first.")
+    return npx_path
 
 
-def get_npm_bin_dir(prefix_dir: Path) -> Path:
-    """Return the directory that contains npm global binaries."""
-    return prefix_dir if os.name == "nt" else prefix_dir / "bin"
+def run_command(command: list[str], label: str) -> None:
+    """Run command and fail-fast on error."""
+    print(label)
+    result = subprocess.run(command, text=True, capture_output=True)
+    if result.returncode != 0:
+        if result.stdout:
+            print(result.stdout)
+        if result.stderr:
+            print(result.stderr, file=sys.stderr)
+        raise RuntimeError(f"{command[0]} failed with exit code {result.returncode}")
 
 
-def resolve_npm_bin(bin_name: str, prefix_dir: Path) -> Path:
-    """Resolve npm global binary path for current OS."""
-    bin_dir = get_npm_bin_dir(prefix_dir)
-    if os.name == "nt":
-        return bin_dir / f"{bin_name}.cmd"
-    return bin_dir / bin_name
+def clean_npm_cache() -> None:
+    """Clean npm cache to force fresh npx downloads."""
+    npm_path = get_npm_path()
+    run_command([npm_path, "cache", "clean", "--force"], "  [NPM] npm cache clean --force")
 
 
-def build_mcp_entry(server_def: Dict[str, Any], prefix_dir: Path) -> Dict[str, Any]:
+def prefetch_npx_package(package: str) -> None:
+    """Prefetch package via npx to refresh cache."""
+    if not package:
+        raise RuntimeError("Missing package name for MCP server")
+    npx_path = get_npx_path()
+    run_command([npx_path, "-y", package, "--help"], f"  [NPX] npx -y {package} --help")
+
+
+def build_mcp_entry(server_def: Dict[str, Any]) -> Dict[str, Any]:
     """Build MCP server entry for config."""
-    bin_name = server_def.get("bin")
-    if bin_name:
-        command_path = resolve_npm_bin(bin_name, prefix_dir)
-        if not command_path.exists():
-            raise RuntimeError(f"Expected MCP binary not found: {command_path}")
-        return {
-            "command": str(command_path),
-            "args": server_def.get("args", [])
-        }
-
     command = server_def.get("command")
-    if not command:
-        raise RuntimeError("Missing command or bin for MCP server")
-
+    args = server_def.get("args")
+    if not command or not isinstance(args, list):
+        raise RuntimeError("Missing MCP command/args definition")
     return {
         "command": command,
-        "args": server_def.get("args", [])
+        "args": args
     }
 
 
@@ -212,50 +223,6 @@ def entries_match(existing: Dict[str, Any], expected: Dict[str, Any]) -> bool:
     )
 
 
-def ensure_npm_package(server_def: Dict[str, Any], prefix_dir: Path, force: bool) -> None:
-    """Install npm package if required."""
-    package_name = server_def.get("package")
-    if not package_name:
-        return
-
-    if force:
-        install_npm_package(package_name, prefix_dir)
-        return
-
-    bin_name = server_def.get("bin")
-    if bin_name:
-        command_path = resolve_npm_bin(bin_name, prefix_dir)
-        if command_path.exists():
-            return
-
-    install_npm_package(package_name, prefix_dir)
-
-
-def install_npm_package(package: str, prefix_dir: Path) -> None:
-    """Install MCP server package globally via npm into user prefix."""
-    if not package:
-        raise RuntimeError("Missing package name for MCP server")
-
-    npm_path = shutil.which("npm")
-    if not npm_path:
-        raise RuntimeError("npm not found in PATH. Install Node.js and npm first.")
-
-    prefix_dir.mkdir(parents=True, exist_ok=True)
-    print(f"  [NPM] npm install -g --prefix {prefix_dir} {package}")
-    result = subprocess.run(
-        [npm_path, "install", "-g", "--prefix", str(prefix_dir), package],
-        text=True,
-        capture_output=True
-    )
-
-    if result.returncode != 0:
-        if result.stdout:
-            print(result.stdout)
-        if result.stderr:
-            print(result.stderr, file=sys.stderr)
-        raise RuntimeError(f"npm install -g {package} failed with exit code {result.returncode}")
-
-
 def install_mcp_servers(
     platform: str,
     force: bool = False,
@@ -263,7 +230,6 @@ def install_mcp_servers(
 ) -> int:
     """Install MCP servers for the given platform."""
     config_path, config_scope = get_config_path(platform)
-    prefix_dir = get_user_npm_prefix()
     config = load_mcp_config(config_path)
     definitions = get_mcp_definitions()
     
@@ -277,7 +243,15 @@ def install_mcp_servers(
     print(f"{'='*50}\n")
     
     installed_count = 0
+    updated_count = 0
     skipped_count = 0
+
+    if not check_only:
+        try:
+            clean_npm_cache()
+        except RuntimeError as exc:
+            print(f"[ERROR] cache: {exc}")
+            return 1
     
     for server_name, server_def in definitions.items():
         description = server_def.get("description", server_name)
@@ -291,14 +265,27 @@ def install_mcp_servers(
                 print(f"[MISSING] {server_name}: not installed ({description})")
             continue
 
-        if existing_key and not force:
-            try:
-                ensure_npm_package(server_def, prefix_dir, force=False)
-                expected_entry = build_mcp_entry(server_def, prefix_dir)
-            except RuntimeError as exc:
-                print(f"[ERROR] {server_name}: {exc}")
-                return 1
+        try:
+            prefetch_npx_package(server_def.get("package", ""))
+        except RuntimeError as exc:
+            print(f"[ERROR] {server_name}: {exc}")
+            return 1
 
+        try:
+            expected_entry = build_mcp_entry(server_def)
+        except RuntimeError as exc:
+            print(f"[ERROR] {server_name}: {exc}")
+            return 1
+
+        target_key = existing_key or server_name
+
+        if force:
+            print(f"[FORCE] {server_name}: {description}")
+            config["mcpServers"][target_key] = expected_entry
+            updated_count += 1
+            continue
+
+        if existing_key:
             existing_entry = config["mcpServers"].get(existing_key, {})
             if entries_match(existing_entry, expected_entry):
                 print(f"[OK] {server_name}: already installed ({description})")
@@ -307,34 +294,22 @@ def install_mcp_servers(
 
             print(f"[UPDATE] {server_name}: {description}")
             config["mcpServers"][existing_key] = expected_entry
-            installed_count += 1
+            updated_count += 1
             continue
-        
+
         print(f"[INSTALL] {server_name}: {description}")
-
-        try:
-            ensure_npm_package(server_def, prefix_dir, force=force)
-        except RuntimeError as exc:
-            print(f"[ERROR] {server_name}: {exc}")
-            return 1
-
-        try:
-            entry = build_mcp_entry(server_def, prefix_dir)
-        except RuntimeError as exc:
-            print(f"[ERROR] {server_name}: {exc}")
-            return 1
-        config["mcpServers"][server_name] = entry
+        config["mcpServers"][server_name] = expected_entry
         installed_count += 1
         print(f"  [OK] Added {server_name}")
     
-    if not check_only and installed_count > 0:
+    if not check_only and (installed_count > 0 or updated_count > 0):
         save_mcp_config(config_path, config)
         print(f"\n[SAVED] Config written to {config_path}")
         print(f"\n[INFO] Restart {platform.title()} IDE to apply changes")
     
-    print(f"\nSummary: {installed_count} installed, {skipped_count} skipped")
+    print(f"\nSummary: {installed_count} installed, {updated_count} updated, {skipped_count} skipped")
     
-    return 0 if installed_count > 0 or skipped_count > 0 else 1
+    return 0 if installed_count > 0 or updated_count > 0 or skipped_count > 0 else 1
 
 
 def main() -> int:

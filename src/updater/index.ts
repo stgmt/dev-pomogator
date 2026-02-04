@@ -2,6 +2,7 @@ import { loadConfig, saveConfig } from '../config/index.js';
 import { shouldCheckUpdate } from './cooldown.js';
 import { fetchExtensionManifest, downloadExtensionFile } from './github.js';
 import { acquireLock, releaseLock } from './lock.js';
+import { runPostUpdateHook, PostUpdateHookError } from '../installer/extensions.js';
 import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
@@ -224,7 +225,14 @@ export async function checkUpdate(options: UpdateOptions = {}): Promise<boolean>
             } else {
               await updateClaudeHooksForProject(projectPath, hooks);
             }
-          } catch {
+
+            if (remote.postUpdate) {
+              await runPostUpdateHook(remote, projectPath, installed.platform, true);
+            }
+          } catch (error) {
+            if (error instanceof PostUpdateHookError) {
+              throw error;
+            }
             // Пропустить недоступные проекты
           }
         }
@@ -233,7 +241,10 @@ export async function checkUpdate(options: UpdateOptions = {}): Promise<boolean>
         installed.version = remote.version;
         updated = true;
         
-      } catch {
+      } catch (error) {
+        if (error instanceof PostUpdateHookError) {
+          throw error;
+        }
         // Продолжить с другими extensions
       }
     }

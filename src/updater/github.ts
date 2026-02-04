@@ -24,6 +24,22 @@ export interface ExtensionManifest {
     cursor?: Record<string, string>;
     claude?: Record<string, string>;
   };
+  postUpdate?: {
+    command: string;
+    interactive?: boolean;
+    skipInCI?: boolean;
+  } | {
+    cursor?: {
+      command: string;
+      interactive?: boolean;
+      skipInCI?: boolean;
+    };
+    claude?: {
+      command: string;
+      interactive?: boolean;
+      skipInCI?: boolean;
+    };
+  };
 }
 
 export async function fetchExtensionManifest(name: string): Promise<ExtensionManifest | null> {

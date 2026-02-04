@@ -35,7 +35,7 @@ function getGlobalMcpConfigPath(platform: 'cursor' | 'claude'): string {
   if (platform === 'cursor') {
     return homePath('.cursor', 'mcp.json');
   }
-  return homePath('.mcp.json');
+  return homePath('.claude.json');
 }
 
 /**
@@ -46,13 +46,6 @@ function getProjectMcpConfigPath(platform: 'cursor' | 'claude'): string {
     return appPath('.cursor', 'mcp.json');
   }
   return appPath('.mcp.json');
-}
-
-function getNpmGlobalBin(binName: string): string {
-  const prefix = homePath('.npm-global');
-  return process.platform === 'win32'
-    ? path.join(prefix, `${binName}.cmd`)
-    : path.join(prefix, 'bin', binName);
 }
 
 /**
@@ -70,8 +63,8 @@ describe('PLUGIN005: MCP Setup', () => {
     // Clean up MCP configs before each test
     await fs.remove(homePath('.cursor', 'mcp.json'));
     await fs.remove(homePath('.cursor', 'mcp.json.backup'));
-    await fs.remove(homePath('.mcp.json'));
-    await fs.remove(homePath('.mcp.json.backup'));
+    await fs.remove(homePath('.claude.json'));
+    await fs.remove(homePath('.claude.json.backup'));
     await fs.remove(appPath('.cursor', 'mcp.json'));
     await fs.remove(appPath('.cursor', 'mcp.json.backup'));
     await fs.remove(appPath('.mcp.json'));
@@ -82,8 +75,8 @@ describe('PLUGIN005: MCP Setup', () => {
     // Clean up after all tests
     await fs.remove(homePath('.cursor', 'mcp.json'));
     await fs.remove(homePath('.cursor', 'mcp.json.backup'));
-    await fs.remove(homePath('.mcp.json'));
-    await fs.remove(homePath('.mcp.json.backup'));
+    await fs.remove(homePath('.claude.json'));
+    await fs.remove(homePath('.claude.json.backup'));
     await fs.remove(appPath('.cursor', 'mcp.json'));
     await fs.remove(appPath('.cursor', 'mcp.json.backup'));
     await fs.remove(appPath('.mcp.json'));
@@ -130,7 +123,7 @@ describe('PLUGIN005: MCP Setup', () => {
           },
           'user-octocode': {
             command: 'npx',
-            args: ['octocode-mcp@latest']
+            args: ['-y', 'octocode-mcp@latest']
           }
         }
       });
@@ -149,20 +142,20 @@ describe('PLUGIN005: MCP Setup', () => {
       const { output, exitCode } = runMcpSetup('--platform cursor');
       
       expect(exitCode).toBe(0);
-      const npmPrefix = homePath('.npm-global');
-      expect(output).toContain(`npm install -g --prefix ${npmPrefix} @upstash/context7-mcp@latest`);
-      expect(output).toContain(`npm install -g --prefix ${npmPrefix} octocode-mcp@latest`);
+      expect(output).toContain('npm cache clean --force');
+      expect(output).toContain('npx -y @upstash/context7-mcp@latest --help');
+      expect(output).toContain('npx -y octocode-mcp@latest --help');
       expect(output).toContain('context7');
       expect(output).toContain('octocode');
       expect(output).toContain('SAVED');
 
       const config = await loadMcpConfig(getGlobalMcpConfigPath('cursor'));
       expect(config.mcpServers.context7).toBeDefined();
-      expect(config.mcpServers.context7.command).toBe(getNpmGlobalBin('context7-mcp'));
-      expect(config.mcpServers.context7.args ?? []).toEqual([]);
+      expect(config.mcpServers.context7.command).toBe('npx');
+      expect(config.mcpServers.context7.args).toEqual(['-y', '@upstash/context7-mcp@latest']);
       expect(config.mcpServers.octocode).toBeDefined();
-      expect(config.mcpServers.octocode.command).toBe(getNpmGlobalBin('octocode-mcp'));
-      expect(config.mcpServers.octocode.args ?? []).toEqual([]);
+      expect(config.mcpServers.octocode.command).toBe('npx');
+      expect(config.mcpServers.octocode.args).toEqual(['-y', 'octocode-mcp@latest']);
     });
 
     it('should install to project cursor config when present', async () => {
@@ -204,15 +197,17 @@ describe('PLUGIN005: MCP Setup', () => {
       const { output, exitCode } = runMcpSetup('--platform claude');
       
       expect(exitCode).toBe(0);
-      const npmPrefix = homePath('.npm-global');
-      expect(output).toContain(`npm install -g --prefix ${npmPrefix} @upstash/context7-mcp@latest`);
-      expect(output).toContain(`npm install -g --prefix ${npmPrefix} octocode-mcp@latest`);
+      expect(output).toContain('npm cache clean --force');
+      expect(output).toContain('npx -y @upstash/context7-mcp@latest --help');
+      expect(output).toContain('npx -y octocode-mcp@latest --help');
 
       const config = await loadMcpConfig(getGlobalMcpConfigPath('claude'));
       expect(config.mcpServers.context7).toBeDefined();
       expect(config.mcpServers.octocode).toBeDefined();
-      expect(config.mcpServers.context7.command).toBe(getNpmGlobalBin('context7-mcp'));
-      expect(config.mcpServers.octocode.command).toBe(getNpmGlobalBin('octocode-mcp'));
+      expect(config.mcpServers.context7.command).toBe('npx');
+      expect(config.mcpServers.context7.args).toEqual(['-y', '@upstash/context7-mcp@latest']);
+      expect(config.mcpServers.octocode.command).toBe('npx');
+      expect(config.mcpServers.octocode.args).toEqual(['-y', 'octocode-mcp@latest']);
     });
 
     it('should install to project .mcp.json when present for Claude Code', async () => {
@@ -266,11 +261,11 @@ describe('PLUGIN005: MCP Setup', () => {
       // Force reinstall
       const { output } = runMcpSetup('--platform cursor --force');
       
-      const npmPrefix = homePath('.npm-global');
-      expect(output).toContain(`npm install -g --prefix ${npmPrefix} @upstash/context7-mcp@latest`);
-      expect(output).toContain(`npm install -g --prefix ${npmPrefix} octocode-mcp@latest`);
-      expect(output).toContain('[INSTALL] context7');
-      expect(output).toContain('[INSTALL] octocode');
+      expect(output).toContain('npm cache clean --force');
+      expect(output).toContain('npx -y @upstash/context7-mcp@latest --help');
+      expect(output).toContain('npx -y octocode-mcp@latest --help');
+      expect(output).toContain('[FORCE] context7');
+      expect(output).toContain('[FORCE] octocode');
     });
   });
 
@@ -298,8 +293,8 @@ describe('PLUGIN005: MCP Setup', () => {
       expect(config.mcpServers.octocode).toBeDefined();
     });
 
-    it('should preserve other properties in .mcp.json', async () => {
-      // .mcp.json has other properties besides mcpServers
+    it('should preserve other properties in .claude.json', async () => {
+      // .claude.json has other properties besides mcpServers
       const configPath = getGlobalMcpConfigPath('claude');
       await fs.ensureDir(path.dirname(configPath));
       await fs.writeJson(configPath, {
@@ -318,8 +313,8 @@ describe('PLUGIN005: MCP Setup', () => {
       expect(config.mcpServers.context7).toBeDefined();
     });
 
-    it('should restore .mcp.json from backup when missing', async () => {
-      const backupPath = homePath('.mcp.json.backup');
+    it('should restore .claude.json from backup when missing', async () => {
+      const backupPath = homePath('.claude.json.backup');
       await fs.ensureDir(path.dirname(backupPath));
       await fs.writeJson(backupPath, {
         theme: 'dark',
@@ -331,7 +326,7 @@ describe('PLUGIN005: MCP Setup', () => {
         }
       });
 
-      await fs.remove(homePath('.mcp.json'));
+      await fs.remove(homePath('.claude.json'));
 
       const { output, exitCode } = runMcpSetup('--platform claude');
       expect(exitCode).toBe(0);

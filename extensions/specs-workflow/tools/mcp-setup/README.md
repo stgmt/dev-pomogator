@@ -14,8 +14,10 @@
 ### Автоматическая (при установке dev-pomogator)
 
 MCP серверы устанавливаются автоматически при установке плагина `specs-workflow`.
-При отсутствии сервера выполняется `npm install -g --prefix ~/.npm-global <package>`, затем в config
-записывается путь к бинарнику из user-prefix (`~/.npm-global` на Windows, `~/.npm-global/bin` на Linux/macOS).
+При каждом install/update выполняется `npm cache clean --force`, затем `npx -y <package>@latest --help`
+для обновления кеша. В config записывается команда `npx` с `@latest`.
+При автообновлении dev-pomogator запускается post-update хук для `specs-workflow`,
+который повторно обновляет MCP пакеты.
 
 ### Ручная
 
@@ -41,12 +43,11 @@ python tools/mcp-setup/setup-mcp.py --platform both
 ## Требования
 
 - Должен быть установлен `npm` (Node.js).
-- Установка выполняется в user-prefix `~/.npm-global` (без прав администратора).
 
 ## Файлы конфигурации
 
 - **Cursor:** `.cursor/mcp.json` (если существует в проекте), иначе `~/.cursor/mcp.json`
-- **Claude Code:** `.mcp.json` (если существует в проекте), иначе `~/.mcp.json`
+- **Claude Code:** `.mcp.json` (если существует в проекте), иначе `~/.claude.json`
 
 ## Приватные репозитории
 

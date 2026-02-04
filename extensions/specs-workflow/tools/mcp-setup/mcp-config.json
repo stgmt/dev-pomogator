@@ -3,12 +3,14 @@
     "context7": {
       "description": "Документация библиотек (Context7)",
       "package": "@upstash/context7-mcp@latest",
-      "bin": "context7-mcp"
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp@latest"]
     },
     "octocode": {
       "description": "Поиск кода на GitHub (Octocode)",
       "package": "octocode-mcp@latest",
-      "bin": "octocode-mcp"
+      "command": "npx",
+      "args": ["-y", "octocode-mcp@latest"]
     }
   }
 }

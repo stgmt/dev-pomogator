@@ -8,6 +8,7 @@ import argparse
 import json
 import os
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 from typing import Dict, Any, Optional, Tuple
@@ -31,7 +32,7 @@ def get_global_config_path(platform: str) -> Path:
     if platform == "cursor":
         return home / ".cursor" / "mcp.json"
     elif platform == "claude":
-        return home / ".mcp.json"
+        return home / ".claude.json"
     else:
         raise ValueError(f"Unknown platform: {platform}")
 
@@ -71,7 +72,7 @@ def load_mcp_config(config_path: Path, allow_restore: bool = True) -> Dict[str, 
         return {"mcpServers": {}}
 
     try:
-        with open(config_path, "r", encoding="utf-8") as f:
+        with open(config_path, "r", encoding="utf-8-sig") as f:
             data = json.load(f)
             if "mcpServers" not in data:
                 data["mcpServers"] = {}
@@ -122,50 +123,104 @@ def get_mcp_definitions() -> Dict[str, Dict[str, Any]]:
     return {
         "context7": {
             "description": "Library documentation",
+            "package": "@upstash/context7-mcp@latest",
             "command": "npx",
             "args": ["-y", "@upstash/context7-mcp@latest"]
         },
         "octocode": {
             "description": "GitHub code search",
+            "package": "octocode-mcp@latest",
             "command": "npx",
-            "args": ["octocode-mcp@latest"]
+            "args": ["-y", "octocode-mcp@latest"]
         }
     }
 
 
-def is_mcp_installed(config: Dict[str, Any], server_name: str) -> bool:
-    """Check if MCP server is already installed.
-    
-    Checks for both exact name and common prefixed variants (user-*, cursor-*).
-    """
+def find_existing_server_key(config: Dict[str, Any], server_name: str) -> Optional[str]:
+    """Find existing MCP server key (exact or prefixed variant)."""
     servers = config.get("mcpServers", {})
-    
+
     # Check exact match
     if server_name in servers:
-        return True
-    
+        return server_name
+
     # Check common prefixed variants
     prefixes = ["user-", "cursor-", "claude-"]
     for prefix in prefixes:
-        if f"{prefix}{server_name}" in servers:
-            return True
-    
+        key = f"{prefix}{server_name}"
+        if key in servers:
+            return key
+
     # Check if server_name itself has prefix and base name exists
     for prefix in prefixes:
         if server_name.startswith(prefix):
             base_name = server_name[len(prefix):]
             if base_name in servers:
-                return True
-    
-    return False
+                return base_name
+
+    return None
+
+
+def get_npm_path() -> str:
+    """Resolve npm binary path."""
+    npm_path = shutil.which("npm")
+    if not npm_path:
+        raise RuntimeError("npm not found in PATH. Install Node.js and npm first.")
+    return npm_path
+
+
+def get_npx_path() -> str:
+    """Resolve npx binary path."""
+    npx_path = shutil.which("npx")
+    if not npx_path:
+        raise RuntimeError("npx not found in PATH. Install Node.js and npm first.")
+    return npx_path
+
+
+def run_command(command: list[str], label: str) -> None:
+    """Run command and fail-fast on error."""
+    print(label)
+    result = subprocess.run(command, text=True, capture_output=True)
+    if result.returncode != 0:
+        if result.stdout:
+            print(result.stdout)
+        if result.stderr:
+            print(result.stderr, file=sys.stderr)
+        raise RuntimeError(f"{command[0]} failed with exit code {result.returncode}")
+
+
+def clean_npm_cache() -> None:
+    """Clean npm cache to force fresh npx downloads."""
+    npm_path = get_npm_path()
+    run_command([npm_path, "cache", "clean", "--force"], "  [NPM] npm cache clean --force")
+
+
+def prefetch_npx_package(package: str) -> None:
+    """Prefetch package via npx to refresh cache."""
+    if not package:
+        raise RuntimeError("Missing package name for MCP server")
+    npx_path = get_npx_path()
+    run_command([npx_path, "-y", package, "--help"], f"  [NPX] npx -y {package} --help")
 
 
 def build_mcp_entry(server_def: Dict[str, Any]) -> Dict[str, Any]:
     """Build MCP server entry for config."""
+    command = server_def.get("command")
+    args = server_def.get("args")
+    if not command or not isinstance(args, list):
+        raise RuntimeError("Missing MCP command/args definition")
     return {
-        "command": server_def["command"],
-        "args": server_def["args"]
+        "command": command,
+        "args": args
     }
+
+
+def entries_match(existing: Dict[str, Any], expected: Dict[str, Any]) -> bool:
+    """Compare MCP entries by command and args."""
+    return (
+        existing.get("command") == expected.get("command")
+        and existing.get("args", []) == expected.get("args", [])
+    )
 
 
 def install_mcp_servers(
@@ -188,35 +243,73 @@ def install_mcp_servers(
     print(f"{'='*50}\n")
     
     installed_count = 0
+    updated_count = 0
     skipped_count = 0
+
+    if not check_only:
+        try:
+            clean_npm_cache()
+        except RuntimeError as exc:
+            print(f"[ERROR] cache: {exc}")
+            return 1
     
     for server_name, server_def in definitions.items():
         description = server_def.get("description", server_name)
         
-        if is_mcp_installed(config, server_name) and not force:
-            print(f"[OK] {server_name}: already installed ({description})")
-            skipped_count += 1
-            continue
-        
+        existing_key = find_existing_server_key(config, server_name)
+
         if check_only:
-            print(f"[MISSING] {server_name}: not installed ({description})")
+            if existing_key:
+                print(f"[OK] {server_name}: already installed ({description})")
+            else:
+                print(f"[MISSING] {server_name}: not installed ({description})")
             continue
-        
+
+        try:
+            prefetch_npx_package(server_def.get("package", ""))
+        except RuntimeError as exc:
+            print(f"[ERROR] {server_name}: {exc}")
+            return 1
+
+        try:
+            expected_entry = build_mcp_entry(server_def)
+        except RuntimeError as exc:
+            print(f"[ERROR] {server_name}: {exc}")
+            return 1
+
+        target_key = existing_key or server_name
+
+        if force:
+            print(f"[FORCE] {server_name}: {description}")
+            config["mcpServers"][target_key] = expected_entry
+            updated_count += 1
+            continue
+
+        if existing_key:
+            existing_entry = config["mcpServers"].get(existing_key, {})
+            if entries_match(existing_entry, expected_entry):
+                print(f"[OK] {server_name}: already installed ({description})")
+                skipped_count += 1
+                continue
+
+            print(f"[UPDATE] {server_name}: {description}")
+            config["mcpServers"][existing_key] = expected_entry
+            updated_count += 1
+            continue
+
         print(f"[INSTALL] {server_name}: {description}")
-        
-        entry = build_mcp_entry(server_def)
-        config["mcpServers"][server_name] = entry
+        config["mcpServers"][server_name] = expected_entry
         installed_count += 1
         print(f"  [OK] Added {server_name}")
     
-    if not check_only and installed_count > 0:
+    if not check_only and (installed_count > 0 or updated_count > 0):
         save_mcp_config(config_path, config)
         print(f"\n[SAVED] Config written to {config_path}")
         print(f"\n[INFO] Restart {platform.title()} IDE to apply changes")
     
-    print(f"\nSummary: {installed_count} installed, {skipped_count} skipped")
+    print(f"\nSummary: {installed_count} installed, {updated_count} updated, {skipped_count} skipped")
     
-    return 0 if installed_count > 0 or skipped_count > 0 else 1
+    return 0 if installed_count > 0 or updated_count > 0 or skipped_count > 0 else 1
 
 
 def main() -> int:

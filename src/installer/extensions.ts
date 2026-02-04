@@ -46,9 +46,30 @@ export interface Extension {
     cursor?: PostInstallHook;
     claude?: PostInstallHook;
   };
+  // Post-update hook to run after extension update
+  // Can be a single hook or platform-specific hooks
+  postUpdate?: PostInstallHook | {
+    cursor?: PostInstallHook;
+    claude?: PostInstallHook;
+  };
   // Whether this extension requires claude-mem persistent memory
   requiresClaudeMem?: boolean;
   path: string;
+}
+
+export interface PostHookOwner {
+  name: string;
+  postUpdate?: PostInstallHook | {
+    cursor?: PostInstallHook;
+    claude?: PostInstallHook;
+  };
+}
+
+export class PostUpdateHookError extends Error {
+  constructor(extensionName: string, message: string) {
+    super(`Post-update hook failed for ${extensionName}: ${message}`);
+    this.name = 'PostUpdateHookError';
+  }
 }
 
 export async function getExtensionsDir(): Promise<string> {
@@ -185,6 +206,31 @@ function getPostInstallHook(
 }
 
 /**
+ * Get post-update hook for an extension and platform
+ */
+function getPostUpdateHook(
+  extension: PostHookOwner,
+  platform?: 'cursor' | 'claude'
+): PostInstallHook | undefined {
+  if (!extension.postUpdate) return undefined;
+
+  const postUpdate = extension.postUpdate as PostInstallHook | {
+    cursor?: PostInstallHook;
+    claude?: PostInstallHook;
+  };
+
+  if ('command' in postUpdate) {
+    return postUpdate as PostInstallHook;
+  }
+
+  if (platform && (postUpdate as any)[platform]) {
+    return (postUpdate as any)[platform] as PostInstallHook;
+  }
+
+  return undefined;
+}
+
+/**
  * Run post-install hook for an extension
  */
 export async function runPostInstallHook(
@@ -217,5 +263,43 @@ export async function runPostInstallHook(
     // Don't fail installation if post-install hook fails
     const message = error instanceof Error ? error.message : String(error);
     console.log(`  ⚠ Post-install hook failed for ${extension.name}: ${message}`);
+  }
+}
+
+/**
+ * Run post-update hook for an extension
+ */
+export async function runPostUpdateHook(
+  extension: PostHookOwner,
+  repoRoot: string,
+  platform?: 'cursor' | 'claude',
+  failFast: boolean = false
+): Promise<void> {
+  const hook = getPostUpdateHook(extension, platform);
+  if (!hook) return;
+
+  const { command, interactive = true, skipInCI = true } = hook;
+
+  if (skipInCI && isCI()) {
+    console.log(`  ⏭ Skipping post-update hook for ${extension.name} (CI detected)`);
+    return;
+  }
+
+  console.log(`  ▶ Running post-update hook for ${extension.name}...`);
+
+  try {
+    const { execa } = await import('execa');
+    await execa(command, {
+      cwd: repoRoot,
+      stdio: interactive ? 'inherit' : 'pipe',
+      shell: true,
+    });
+    console.log(`  ✓ Post-update hook completed for ${extension.name}`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.log(`  ⚠ Post-update hook failed for ${extension.name}: ${message}`);
+    if (failFast) {
+      throw new PostUpdateHookError(extension.name, message);
+    }
   }
 }
