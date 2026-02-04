@@ -38,8 +38,8 @@ python tools/mcp-setup/setup-mcp.py --platform both
 
 ## Файлы конфигурации
 
-- **Cursor:** `~/.cursor/mcp.json`
-- **Claude Code:** `~/.claude.json`
+- **Cursor:** `.cursor/mcp.json` (если существует в проекте), иначе `~/.cursor/mcp.json`
+- **Claude Code:** `.mcp.json` (если существует в проекте), иначе `~/.mcp.json`
 
 ## Приватные репозитории
 

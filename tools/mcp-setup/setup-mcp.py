@@ -10,18 +10,38 @@ import os
 import shutil
 import sys
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Optional, Tuple
 
 
-def get_config_path(platform: str) -> Path:
-    """Get the MCP config file path for the given platform."""
+def get_project_config_path(platform: str, cwd: Optional[Path] = None) -> Optional[Path]:
+    """Return project MCP config path if it exists."""
+    root = cwd or Path.cwd()
+    if platform == "cursor":
+        config_path = root / ".cursor" / "mcp.json"
+    elif platform == "claude":
+        config_path = root / ".mcp.json"
+    else:
+        raise ValueError(f"Unknown platform: {platform}")
+    return config_path if config_path.exists() else None
+
+
+def get_global_config_path(platform: str) -> Path:
+    """Get the global MCP config file path for the given platform."""
     home = Path.home()
     if platform == "cursor":
         return home / ".cursor" / "mcp.json"
     elif platform == "claude":
-        return home / ".claude.json"
+        return home / ".mcp.json"
     else:
         raise ValueError(f"Unknown platform: {platform}")
+
+
+def get_config_path(platform: str) -> Tuple[Path, str]:
+    """Resolve MCP config path and scope (project/global)."""
+    project_path = get_project_config_path(platform)
+    if project_path:
+        return project_path, "project"
+    return get_global_config_path(platform), "global"
 
 
 def get_backup_path(config_path: Path) -> Path:
@@ -154,13 +174,17 @@ def install_mcp_servers(
     check_only: bool = False
 ) -> int:
     """Install MCP servers for the given platform."""
-    config_path = get_config_path(platform)
+    config_path, config_scope = get_config_path(platform)
     config = load_mcp_config(config_path)
     definitions = get_mcp_definitions()
     
     print(f"\n{'='*50}")
     print(f"MCP Setup for {platform.upper()}")
-    print(f"Config: {config_path}")
+    print(f"Config: {config_path} ({config_scope})")
+    if config_scope == "project":
+        print("Reason: project config found")
+    else:
+        print("Reason: project config not found")
     print(f"{'='*50}\n")
     
     installed_count = 0

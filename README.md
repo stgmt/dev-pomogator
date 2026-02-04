@@ -1,10 +1,11 @@
 # dev-pomogator
 
-Universal installer for custom plugins, rules, commands, and hooks for **Cursor** and **Claude Code**.
+Установщик и менеджер команд, правил, инструментов и хуков для Cursor и Claude Code.
+Помогает быстро включить командные стандарты и рабочие процессы в проекте.
 
-## Installation
+## Быстрый старт
 
-Run from your project folder. The installer detects project root via git.
+Запускайте из папки проекта (root определяется по git).
 
 ### Cursor
 
@@ -30,189 +31,75 @@ $env:TARGET="claude"; irm https://raw.githubusercontent.com/stgmt/dev-pomogator/
 curl -fsSL https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install.sh | TARGET=claude bash
 ```
 
-### Non-interactive modes
+## CLI
 
+**Интерактивно:**
 ```bash
-# Install specific plugins
-npx dev-pomogator --cursor --plugins=suggest-rules,specs-workflow
-npx dev-pomogator --claude --plugins=forbid-root-artifacts
+npx dev-pomogator
+npx dev-pomogator --cursor
+npx dev-pomogator --claude
+```
 
-# Install all plugins
-npx dev-pomogator --cursor --all
+**Неинтерактивно:**
+```bash
+npx dev-pomogator --cursor --plugins=suggest-rules,specs-workflow
 npx dev-pomogator --claude --all
 ```
 
-## What Gets Installed
-
-### Per-Project (Cursor)
-
-| Type | Location | Files |
-|------|----------|-------|
-| Commands | `{project}/.cursor/commands/` | `suggest-rules.md`, `create-spec.md`, `configure-root-artifacts.md` |
-| Rules | `{project}/.cursor/rules/` | `specs-management.mdc`, `plan-pomogator.mdc`, `research-workflow.mdc` |
-| Tools | `{project}/tools/specs-generator/` | 5 scripts + 13 templates |
-| Tools | `{project}/tools/plan-pomogator/` | requirements, template, validate-plan |
-| Tools | `{project}/tools/forbid-root-artifacts/` | check.py, setup.py, whitelist config |
-
-### Per-Project (Claude Code)
-
-| Type | Location | Files |
-|------|----------|-------|
-| Commands | `{project}/.claude/commands/` | `suggest-rules.md`, `create-spec.md`, `configure-root-artifacts.md` |
-| Rules | `{project}/.claude/rules/` | `specs-management.md`, `plan-pomogator.md`, `research-workflow.md` |
-| Tools | `{project}/tools/specs-generator/` | 5 scripts + 13 templates |
-| Tools | `{project}/tools/plan-pomogator/` | requirements, template, validate-plan |
-| Tools | `{project}/tools/forbid-root-artifacts/` | check.py, setup.py, whitelist config |
-
-### Global (Cursor)
-
-| File | Location |
-|------|----------|
-| `hooks.json` | `~/.cursor/hooks/` |
-| `check-update.js` | `~/.dev-pomogator/scripts/` |
-| `cursor-summarize.ts` | `~/.dev-pomogator/scripts/` |
-| `config.json` | `~/.dev-pomogator/` |
-| Logs | `~/.dev-pomogator/logs/` |
-
-### Global (Claude Code)
-
-| File | Location |
-|------|----------|
-| `settings.json` (hooks) | `~/.claude/` |
-| `check-update.js` | `~/.dev-pomogator/scripts/` |
-| `config.json` | `~/.dev-pomogator/` |
-| Logs | `~/.dev-pomogator/logs/` |
-
-## Plugins
-
-### suggest-rules
-
-Analyze session and suggest rules for IDE.
-
+**Сервисные команды:**
 ```bash
-/suggest-rules
+npx dev-pomogator --status
+npx dev-pomogator --update
 ```
 
-Creates `.cursor/rules/*.mdc` files tailored to your stack.
+## Плагины
 
-### specs-workflow
+| Плагин | Назначение | Команда в чате |
+|--------|------------|----------------|
+| `suggest-rules` | Анализирует сессию и предлагает правила для проекта | `/suggest-rules` |
+| `specs-workflow` | Управление спеками (3 фазы) + валидаторы | `/create-spec <name>` |
+| `plan-pomogator` | Формат планов, шаблон и валидатор | — |
+| `forbid-root-artifacts` | Антигаллюцинационная защита: allowlist файлов в корне репозитория | `/configure-root-artifacts` |
 
-Comprehensive specs management with 3-phase workflow.
+Идея `forbid-root-artifacts` — защитный барьер от случайных root-артефактов, которые LLM-агенты могут создавать «по инерции».
 
-| Component | Description |
-|-----------|-------------|
-| `/create-spec <name>` | Create spec folder structure |
-| 4 Rules | `specs-management`, `specs-validation`, `research-workflow`, `no-mocks-fallbacks` |
-| 5 Scripts | `scaffold-spec.ps1`, `validate-spec.ps1`, etc. |
-| 13 Templates | User Stories, Use Cases, FR, NFR, Design, etc. |
+Подробнее:
+- `extensions/specs-workflow/README.md`
+- `extensions/plan-pomogator/README.md`
+- `extensions/forbid-root-artifacts/README.md`
 
-### plan-pomogator
+## Что устанавливается
 
-Формат планов, шаблон и ручной валидатор структуры.
+Состав зависит от выбранных плагинов. Ниже — типовые места установки.
 
-| Component | Description |
-|-----------|-------------|
-| 1 Rule | `plan-pomogator` |
-| 1 Tool | `tools/plan-pomogator` (requirements, template, validate-plan) |
+### В проект (Cursor)
 
-### forbid-root-artifacts
+- `.cursor/commands/` — команды плагинов (например, `suggest-rules`, `create-spec`, `configure-root-artifacts`)
+- `.cursor/rules/` — правила плагинов (например, `specs-*`, `plan-pomogator`, `research-workflow`, `no-mocks-fallbacks`)
+- `tools/` — утилиты плагинов (`specs-generator`, `specs-validator`, `steps-validator`, `plan-pomogator`, `forbid-root-artifacts`)
 
-Pre-commit hook to control files in repository root.
+### В проект (Claude Code)
 
-| Component | Description |
-|-----------|-------------|
-| `/configure-root-artifacts` | Configure whitelist interactively |
-| `check.py` | Pre-commit hook script |
-| `setup.py` | First-time setup (creates config, installs hook) |
-| `.root-artifacts.yaml` | User configuration file |
+- `.claude/commands/` — команды плагинов
+- `.claude/rules/` — правила плагинов
+- `tools/` — утилиты плагинов
 
-**Install specific plugins (non-interactive):**
+### Глобально (Cursor)
 
-```bash
-npx dev-pomogator --cursor --plugins=suggest-rules
-npx dev-pomogator --cursor --plugins=specs-workflow,plan-pomogator,forbid-root-artifacts
-npx dev-pomogator --cursor --all  # all plugins
-```
+- `~/.cursor/hooks/hooks.json`
+- `~/.dev-pomogator/scripts/check-update.js`
+- `~/.dev-pomogator/scripts/cursor-summarize.ts`
+- `~/.dev-pomogator/config.json`
+- `~/.dev-pomogator/logs/`
 
-## Features
+### Глобально (Claude Code)
 
-### 📜 /suggest-rules Command
+- `~/.claude/settings.json` (hooks)
+- `~/.dev-pomogator/scripts/check-update.js`
+- `~/.dev-pomogator/config.json`
+- `~/.dev-pomogator/logs/`
 
-Analyze project and generate custom rules:
-
-```bash
-# In Cursor chat:
-/suggest-rules
-```
-
-Creates `.cursor/rules/*.mdc` files tailored to your stack.
-
-### 📋 /create-spec Command
-
-Create new specification folder:
-
-```bash
-# In Cursor/Claude chat:
-/create-spec my-feature
-```
-
-Creates `.specs/my-feature/` with 13 template files.
-
-### 🚫 /configure-root-artifacts Command
-
-Control files allowed in repository root:
-
-```bash
-# In Cursor/Claude chat:
-/configure-root-artifacts
-```
-
-Setup pre-commit hook:
-
-```bash
-python tools/forbid-root-artifacts/setup.py
-```
-
-Customize via `.root-artifacts.yaml`:
-
-```yaml
-mode: extend
-allow:
-  - Makefile
-  - pyproject.toml
-```
-
-### 🪝 Cursor Hooks
-
-| Hook | Trigger | Action |
-|------|---------|--------|
-| `beforeSubmitPrompt` | Before prompt | Session init, context |
-| `afterMCPExecution` | After MCP call | Log observation |
-| `afterShellExecution` | After shell | Log observation |
-| `afterFileEdit` | After edit | Log file change |
-| `stop` | Conversation end | Summarize, check updates |
-
-### 🪝 Claude Code Hooks
-
-| Hook | Trigger | Action |
-|------|---------|--------|
-| `Stop` | Conversation end | Check updates |
-
-### 🔄 Auto-Update
-
-- Checks GitHub releases every 24 hours
-- Silent background updates
-- Logs: `~/.dev-pomogator/logs/dev-pomogator-YYYY-MM-DD.log`
-
-### 🧠 Persistent Memory
-
-Integration with [claude-mem](https://github.com/thedotmack/claude-mem):
-
-- Session tracking
-- Context injection
-- Automatic summarization
-
-## Configuration
+## Конфигурация
 
 `~/.dev-pomogator/config.json`:
 
@@ -225,7 +112,21 @@ Integration with [claude-mem](https://github.com/thedotmack/claude-mem):
 }
 ```
 
-## Development
+## Автообновления и логи
+
+- Проверка релизов GitHub раз в 24 часа
+- Фоновые обновления
+- Логи: `~/.dev-pomogator/logs/dev-pomogator-YYYY-MM-DD.log`
+
+## Интеграции
+
+- [claude-mem](https://github.com/thedotmack/claude-mem): трекинг сессий, контекст, суммаризация; токен для LLM, нужный claude-mem, можно взять на `aipomogator.ru`
+
+## Требования
+
+- Node.js >= 18
+
+## Разработка
 
 ```bash
 npm install
@@ -233,6 +134,6 @@ npm run build
 npm run test:e2e:docker
 ```
 
-## License
+## Лицензия
 
 MIT
