@@ -6,6 +6,9 @@ export function shouldCheckUpdate(config: Config): boolean {
   }
   
   const lastCheck = new Date(config.lastCheck);
+  if (Number.isNaN(lastCheck.getTime())) {
+    return true;
+  }
   const now = new Date();
   const hoursSinceLastCheck = (now.getTime() - lastCheck.getTime()) / (1000 * 60 * 60);
   
@@ -18,6 +21,9 @@ export function getTimeUntilNextCheck(config: Config): number {
   }
   
   const lastCheck = new Date(config.lastCheck);
+  if (Number.isNaN(lastCheck.getTime())) {
+    return 0;
+  }
   const nextCheck = new Date(lastCheck.getTime() + config.cooldownHours * 60 * 60 * 1000);
   const now = new Date();
   

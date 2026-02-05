@@ -181,7 +181,7 @@ async function installExtensionHooks(extensions: Extension[], repoRoot: string):
       
       // Check if hook already exists (avoid duplicates)
       const exists = existingHooks.hooks[eventName].some(
-        (h) => h.command === escapedCommand || h.command.includes(command.split(' ')[1] || command)
+        (h) => h.command === escapedCommand
       );
       
       if (!exists) {

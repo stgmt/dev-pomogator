@@ -11,6 +11,16 @@
   "tools": {
     "forbid-root-artifacts": "tools/forbid-root-artifacts"
   },
+  "toolFiles": {
+    "forbid-root-artifacts": [
+      "tools/forbid-root-artifacts/.root-artifacts.yaml.template",
+      "tools/forbid-root-artifacts/check.py",
+      "tools/forbid-root-artifacts/configure.py",
+      "tools/forbid-root-artifacts/default-whitelist.yaml",
+      "tools/forbid-root-artifacts/requirements.txt",
+      "tools/forbid-root-artifacts/setup.py"
+    ]
+  },
   "postInstall": {
     "command": "python tools/forbid-root-artifacts/configure.py",
     "interactive": true,

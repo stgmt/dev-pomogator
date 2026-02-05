@@ -15,6 +15,16 @@
   "tools": {
     "plan-pomogator": "tools/plan-pomogator"
   },
+  "toolFiles": {
+    "plan-pomogator": [
+      "tools/plan-pomogator/README.md",
+      "tools/plan-pomogator/mcp-dedupe.plan.md",
+      "tools/plan-pomogator/requirements.md",
+      "tools/plan-pomogator/template.md",
+      "tools/plan-pomogator/validate-plan.ts",
+      "tools/plan-pomogator/fixtures/valid.plan.md"
+    ]
+  },
   "hooks": {
     "cursor": {},
     "claude": {}

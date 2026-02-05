@@ -5,6 +5,14 @@ export interface InstalledExtension {
   version: string;
   platform: Platform;
   projectPaths: string[];
+  managed?: Record<string, ManagedFiles>;
+}
+
+export interface ManagedFiles {
+  commands?: string[];
+  rules?: string[];
+  tools?: string[];
+  hooks?: Record<string, string[]>;
 }
 
 export interface Config {

@@ -9,7 +9,8 @@ const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 export async function loadConfig(): Promise<Config | null> {
   try {
     if (await fs.pathExists(CONFIG_FILE)) {
-      return await fs.readJson(CONFIG_FILE);
+      const config = await fs.readJson(CONFIG_FILE) as Config;
+      return normalizeConfig(config);
     }
   } catch {
     // Return null if config doesn't exist or is invalid
@@ -17,14 +18,32 @@ export async function loadConfig(): Promise<Config | null> {
   return null;
 }
 
+function normalizeConfig(config: Config): Config {
+  const normalized: Config = {
+    ...config,
+    installedExtensions: Array.isArray(config.installedExtensions)
+      ? config.installedExtensions.map((ext) => ({
+          ...ext,
+          projectPaths: Array.isArray(ext.projectPaths) ? ext.projectPaths : [],
+          managed: ext.managed ?? {},
+        }))
+      : [],
+  };
+
+  return normalized;
+}
+
 export async function saveConfig(config: Config): Promise<void> {
   await fs.ensureDir(CONFIG_DIR);
-  await fs.writeJson(CONFIG_FILE, config, { spaces: 2 });
-  
+  const tempFile = path.join(CONFIG_DIR, 'config.json.tmp');
+  await fs.writeJson(tempFile, config, { spaces: 2 });
+
   // Set restrictive permissions on Unix
   if (process.platform !== 'win32') {
-    await fs.chmod(CONFIG_FILE, 0o600);
+    await fs.chmod(tempFile, 0o600);
   }
+
+  await fs.move(tempFile, CONFIG_FILE, { overwrite: true });
 }
 
 export async function updateLastCheck(): Promise<void> {
