@@ -249,10 +249,15 @@ describe('PLUGIN005: Specs Validator Hook', () => {
       
       // Run validation
       const appDir = appPath('');
-      runValidateSpecs(appDir);
+      const output = runValidateSpecs(appDir);
       
       // Check that validation report was created
       expect(await hasValidationReport(specName)).toBe(true);
+      const report = await getValidationReport(specName);
+      expect(report).toContain('Specs Validation Report');
+      expect(report).toContain(`Feature: ${specName}`);
+      expect(report).toContain('Total: 0 tags');
+      expect(output.trim()).toBe('');
     });
   });
 
@@ -264,10 +269,11 @@ describe('PLUGIN005: Specs Validator Hook', () => {
       
       // Run validation
       const appDir = appPath('');
-      runValidateSpecs(appDir);
+      const output = runValidateSpecs(appDir);
       
       // Check that validation report was NOT created
       expect(await hasValidationReport(specName)).toBe(false);
+      expect(output.trim()).toBe('');
     });
   });
 
@@ -289,8 +295,11 @@ describe('PLUGIN005: Specs Validator Hook', () => {
       
       // Check report contains NOT_COVERED
       const report = await getValidationReport(specName);
+      expect(report).toContain('## NOT_COVERED');
       expect(report).toContain('NOT_COVERED');
       expect(report).toContain('@feature10');
+      expect(output).toContain('NOT_COVERED');
+      expect(output).toContain('@feature10');
     });
   });
 
@@ -308,12 +317,15 @@ describe('PLUGIN005: Specs Validator Hook', () => {
       
       // Run validation
       const appDir = appPath('');
-      runValidateSpecs(appDir);
+      const output = runValidateSpecs(appDir);
       
       // Check report contains ORPHAN
       const report = await getValidationReport(specName);
+      expect(report).toContain('## ORPHAN');
       expect(report).toContain('ORPHAN');
       expect(report).toContain('@feature99');
+      expect(output).toContain('ORPHAN');
+      expect(output).toContain('@feature99');
     });
   });
 
@@ -331,12 +343,13 @@ describe('PLUGIN005: Specs Validator Hook', () => {
       
       // Run validation
       const appDir = appPath('');
-      runValidateSpecs(appDir);
+      const output = runValidateSpecs(appDir);
       
       // Check report contains COVERED
       const report = await getValidationReport(specName);
       expect(report).toContain('COVERED');
       expect(report).toContain('@feature20');
+      expect(output.trim()).toBe('');
     });
   });
 
@@ -372,10 +385,11 @@ describe('PLUGIN005: Specs Validator Hook', () => {
       
       // Run validation
       const appDir = appPath('');
-      runValidateSpecs(appDir);
+      const output = runValidateSpecs(appDir);
       
       // Check that validation report was NOT created
       expect(await hasValidationReport(specName)).toBe(false);
+      expect(output.trim()).toBe('');
     });
   });
 });

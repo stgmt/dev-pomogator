@@ -55,7 +55,6 @@ export function parseFeatureFile(filePath: string): FeatureTag[] {
   }
 
   const lines = content.split('\n');
-  let pendingTag: { tag: string; line: number } | null = null;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -67,8 +66,6 @@ export function parseFeatureFile(filePath: string): FeatureTag[] {
       // Also extract all @featureN from the line (in case of multiple)
       const allTags = extractAllFeatureTags(line);
       for (const featureTag of allTags) {
-        pendingTag = { tag: featureTag, line: lineNumber };
-        
         // Look ahead for the Scenario
         const scenarioName = findNextScenario(lines, i + 1);
         

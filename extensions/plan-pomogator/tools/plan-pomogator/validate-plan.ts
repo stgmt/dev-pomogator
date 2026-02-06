@@ -137,9 +137,10 @@ function validateTodos(lines: string[], indices: Map<string, number>, errors: Va
   const sectionLines = lines.slice(start, end);
 
   let hasTodo = false;
+  // Catch top-level (no indentation) description/dependencies outside of any todo block
   for (let i = 0; i < sectionLines.length; i += 1) {
     const line = sectionLines[i];
-    if (/^description:/.test(line.trim()) || /^dependencies:/.test(line.trim())) {
+    if (/^description:/.test(line) || /^dependencies:/.test(line)) {
       addError(errors, start + i, 'description/dependencies должны быть вложенными строками');
     }
   }
@@ -161,7 +162,7 @@ function validateTodos(lines: string[], indices: Map<string, number>, errors: Va
     let descriptionLine = '';
     const nextTodoIndex = sectionLines
       .slice(i + 1)
-      .findIndex((nextLine) => /^- id:\s+/.test(nextLine.trim()));
+      .findIndex((nextLine) => /^- id:\s+/.test(nextLine));
     const todoEnd = nextTodoIndex === -1 ? sectionLines.length : i + 1 + nextTodoIndex;
 
     for (let j = i + 1; j < todoEnd; j += 1) {
@@ -173,10 +174,11 @@ function validateTodos(lines: string[], indices: Map<string, number>, errors: Va
       if (/^\s{2,}dependencies:/.test(todoLine)) {
         hasDependencies = true;
       }
-      if (/^\s*description:/.test(todoLine.trim()) && !/^\s{2,}description:/.test(todoLine)) {
+      // Catch description/dependencies with insufficient indentation (but not zero — that's caught above)
+      if (/^\s?description:/.test(todoLine) && !/^\s{2,}description:/.test(todoLine)) {
         addError(errors, start + j, 'description должна быть вложенной строкой');
       }
-      if (/^\s*dependencies:/.test(todoLine.trim()) && !/^\s{2,}dependencies:/.test(todoLine)) {
+      if (/^\s?dependencies:/.test(todoLine) && !/^\s{2,}dependencies:/.test(todoLine)) {
         addError(errors, start + j, 'dependencies должны быть вложенной строкой');
       }
     }
@@ -272,28 +274,33 @@ function validateFileChanges(lines: string[], indices: Map<string, number>, erro
   }
 
   const separatorIndex = headerIndex + 1;
-  const dataRows = sectionLines.slice(separatorIndex + 1).filter((line) => line.includes('|'));
+  const afterSeparator = sectionLines.slice(separatorIndex + 1);
+  const dataRows: Array<{ line: string; offset: number }> = [];
+  for (let i = 0; i < afterSeparator.length; i += 1) {
+    if (afterSeparator[i].includes('|')) {
+      dataRows.push({ line: afterSeparator[i], offset: separatorIndex + 1 + i });
+    }
+  }
   if (dataRows.length === 0) {
     addError(errors, start + headerIndex, 'Таблица File Changes не содержит строк данных');
     return;
   }
 
-  for (let i = 0; i < dataRows.length; i += 1) {
-    const row = dataRows[i];
-    const columns = row.split('|').map((item) => item.trim()).filter(Boolean);
+  for (const dataRow of dataRows) {
+    const columns = dataRow.line.split('|').map((item) => item.trim()).filter(Boolean);
     if (columns.length < 3) {
       continue;
     }
     const rawPath = columns[0].replace(/`/g, '');
     const action = columns[1].replace(/`/g, '').toLowerCase();
     if (/^[a-zA-Z]:\\/.test(rawPath) || rawPath.startsWith('/') || rawPath.startsWith('\\\\')) {
-      addError(errors, start + separatorIndex + 1 + i, `Абсолютный путь в File Changes: ${rawPath}`);
+      addError(errors, start + dataRow.offset, `Абсолютный путь в File Changes: ${rawPath}`);
     }
     if (rawPath === '') {
-      addError(errors, start + separatorIndex + 1 + i, 'Пустой Path в File Changes');
+      addError(errors, start + dataRow.offset, 'Пустой Path в File Changes');
     }
     if (action && !ALLOWED_ACTIONS.has(action) && rawPath.toLowerCase() !== 'tbd') {
-      addError(errors, start + separatorIndex + 1 + i, `Недопустимый Action в File Changes: ${action}`);
+      addError(errors, start + dataRow.offset, `Недопустимый Action в File Changes: ${action}`);
     }
   }
 }

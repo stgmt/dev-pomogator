@@ -1,9 +1,13 @@
 import { loadConfig, saveConfig } from '../config/index.js';
-import type { InstalledExtension, ManagedFiles } from '../config/schema.js';
+import type { InstalledExtension, ManagedFiles, ManagedFileEntry } from '../config/schema.js';
+import { getManagedPaths, getManagedHash } from '../config/schema.js';
 import { shouldCheckUpdate } from './cooldown.js';
 import { fetchExtensionManifest, downloadExtensionFile } from './github.js';
 import { acquireLock, releaseLock } from './lock.js';
 import { runPostUpdateHook, PostUpdateHookError } from '../installer/extensions.js';
+import { computeHash, isModifiedByUser, getFileHash } from './content-hash.js';
+import { backupUserFile, writeUpdateReport } from './backup.js';
+import type { ModifiedFile } from './backup.js';
 import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
@@ -23,16 +27,13 @@ interface CursorHooksJson {
 }
 
 interface UpdateResult {
-  written: string[];
+  written: ManagedFileEntry[];
   hadFailures: boolean;
+  backedUp: ModifiedFile[];
 }
 
 function normalizeRelativePath(value: string): string {
   return value.replace(/\\/g, '/');
-}
-
-function uniquePaths(paths: string[]): string[] {
-  return Array.from(new Set(paths.map(normalizeRelativePath)));
 }
 
 function resolveWithinProject(
@@ -65,6 +66,31 @@ function ensureManagedEntry(
   return installed.managed[projectPath];
 }
 
+/**
+ * Determine whether a managed file should be backed up before overwriting.
+ *
+ * Handles the migration case: when storedHash is empty (old config format),
+ * we compare the current file against the NEW upstream content. If they match,
+ * the user hasn't modified the file — no backup needed.
+ */
+async function shouldBackupFile(
+  destFile: string,
+  storedHash: string | undefined,
+  upstreamContent: string
+): Promise<boolean> {
+  if (!await isModifiedByUser(destFile, storedHash)) {
+    return false;
+  }
+  // Migration case: storedHash is '' (normalized from old string format).
+  // Compare current file with upstream to avoid false-positive backups.
+  if (!storedHash) {
+    const currentHash = await getFileHash(destFile);
+    if (currentHash === null) return false;
+    return currentHash !== computeHash(upstreamContent);
+  }
+  return true;
+}
+
 async function removeStaleFiles(
   projectPath: string,
   previous: string[] = [],
@@ -93,15 +119,17 @@ async function updateCommandFiles(
   extensionName: string,
   platform: 'cursor' | 'claude',
   files: string[],
-  projectPath: string
+  projectPath: string,
+  previousItems?: ManagedFiles['commands']
 ): Promise<UpdateResult> {
-  if (files.length === 0) return { written: [], hadFailures: false };
+  if (files.length === 0) return { written: [], hadFailures: false, backedUp: [] };
 
   const platformDir = platform === 'claude' ? '.claude' : '.cursor';
   const destDir = path.join(projectPath, platformDir, 'commands');
   await fs.ensureDir(destDir);
 
-  const written: string[] = [];
+  const written: ManagedFileEntry[] = [];
+  const backedUp: ModifiedFile[] = [];
   let hadFailures = false;
   for (const relativePath of files) {
     const content = await downloadExtensionFile(extensionName, relativePath);
@@ -115,26 +143,39 @@ async function updateCommandFiles(
       hadFailures = true;
       continue;
     }
+
+    // Check for user modifications before overwriting
+    const storedHash = getManagedHash(previousItems, relativeDest);
+    if (await shouldBackupFile(destFile, storedHash, content)) {
+      const backupPath = await backupUserFile(projectPath, relativeDest);
+      if (backupPath) {
+        console.log(`  📋 Backed up user-modified command: ${relativeDest}`);
+        backedUp.push({ relativePath: relativeDest, backupPath, extensionName });
+      }
+    }
+
     await fs.writeFile(destFile, content, 'utf-8');
-    written.push(relativeDest);
+    written.push({ path: relativeDest, hash: computeHash(content) });
   }
 
-  return { written: uniquePaths(written), hadFailures };
+  return { written, hadFailures, backedUp };
 }
 
 async function updateRuleFiles(
   extensionName: string,
   platform: 'cursor' | 'claude',
   files: string[],
-  projectPath: string
+  projectPath: string,
+  previousItems?: ManagedFiles['rules']
 ): Promise<UpdateResult> {
-  if (files.length === 0) return { written: [], hadFailures: false };
+  if (files.length === 0) return { written: [], hadFailures: false, backedUp: [] };
 
   const platformDir = platform === 'claude' ? '.claude' : '.cursor';
   const destDir = path.join(projectPath, platformDir, 'rules');
   await fs.ensureDir(destDir);
 
-  const written: string[] = [];
+  const written: ManagedFileEntry[] = [];
+  const backedUp: ModifiedFile[] = [];
   let hadFailures = false;
   for (const relativePath of files) {
     const content = await downloadExtensionFile(extensionName, relativePath);
@@ -149,22 +190,35 @@ async function updateRuleFiles(
       hadFailures = true;
       continue;
     }
+
+    // Check for user modifications before overwriting
+    const storedHash = getManagedHash(previousItems, relativeDest);
+    if (await shouldBackupFile(destFile, storedHash, content)) {
+      const backupPath = await backupUserFile(projectPath, relativeDest);
+      if (backupPath) {
+        console.log(`  📋 Backed up user-modified rule: ${relativeDest}`);
+        backedUp.push({ relativePath: relativeDest, backupPath, extensionName });
+      }
+    }
+
     await fs.writeFile(destFile, content, 'utf-8');
-    written.push(relativeDest);
+    written.push({ path: relativeDest, hash: computeHash(content) });
   }
 
-  return { written: uniquePaths(written), hadFailures };
+  return { written, hadFailures, backedUp };
 }
 
 async function updateToolFiles(
   extensionName: string,
   toolFiles: Record<string, string[]>,
-  projectPath: string
+  projectPath: string,
+  previousItems?: ManagedFiles['tools']
 ): Promise<UpdateResult> {
   const allFiles = Object.values(toolFiles).flat();
-  if (allFiles.length === 0) return { written: [], hadFailures: false };
+  if (allFiles.length === 0) return { written: [], hadFailures: false, backedUp: [] };
 
-  const written: string[] = [];
+  const written: ManagedFileEntry[] = [];
+  const backedUp: ModifiedFile[] = [];
   let hadFailures = false;
   for (const relativePath of allFiles) {
     const content = await downloadExtensionFile(extensionName, relativePath);
@@ -181,11 +235,22 @@ async function updateToolFiles(
       hadFailures = true;
       continue;
     }
+
+    // Check for user modifications before overwriting
+    const storedHash = getManagedHash(previousItems, normalizedPath);
+    if (await shouldBackupFile(destFile, storedHash, content)) {
+      const backupPath = await backupUserFile(projectPath, normalizedPath);
+      if (backupPath) {
+        console.log(`  📋 Backed up user-modified tool: ${normalizedPath}`);
+        backedUp.push({ relativePath: normalizedPath, backupPath, extensionName });
+      }
+    }
+
     await fs.writeFile(destFile, content, 'utf-8');
-    written.push(normalizedPath);
+    written.push({ path: normalizedPath, hash: computeHash(content) });
   }
 
-  return { written: uniquePaths(written), hadFailures };
+  return { written, hadFailures, backedUp };
 }
 
 async function updateCursorHooksForProject(
@@ -376,6 +441,7 @@ export async function checkUpdate(options: UpdateOptions = {}): Promise<boolean>
     }
     
     let updated = false;
+    const allBackedUp: ModifiedFile[] = [];
     
     // 3. Для каждого установленного extension
     for (const installed of config.installedExtensions) {
@@ -409,46 +475,60 @@ export async function checkUpdate(options: UpdateOptions = {}): Promise<boolean>
         for (const projectPath of installed.projectPaths) {
           try {
             const managedEntry = ensureManagedEntry(installed, projectPath);
-            const previousManaged = {
-              commands: managedEntry.commands ?? [],
-              rules: managedEntry.rules ?? [],
-              tools: managedEntry.tools ?? [],
+            const previousManagedPaths = {
+              commands: getManagedPaths(managedEntry.commands),
+              rules: getManagedPaths(managedEntry.rules),
+              tools: getManagedPaths(managedEntry.tools),
             };
 
             const commandResult = await updateCommandFiles(
               installed.name,
               installed.platform,
               commandFiles,
-              projectPath
+              projectPath,
+              managedEntry.commands
             );
             const ruleResult = await updateRuleFiles(
               installed.name,
               installed.platform,
               ruleFiles,
-              projectPath
+              projectPath,
+              managedEntry.rules
             );
             const toolResult = await updateToolFiles(
               installed.name,
               toolFiles,
-              projectPath
+              projectPath,
+              managedEntry.tools
             );
 
+            // Collect backed-up files
+            allBackedUp.push(
+              ...commandResult.backedUp,
+              ...ruleResult.backedUp,
+              ...toolResult.backedUp
+            );
+
+            const writtenCommandPaths = commandResult.written.map((e) => e.path);
+            const writtenRulePaths = ruleResult.written.map((e) => e.path);
+            const writtenToolPaths = toolResult.written.map((e) => e.path);
+
             if (!commandResult.hadFailures) {
-              await removeStaleFiles(projectPath, previousManaged.commands, commandResult.written);
+              await removeStaleFiles(projectPath, previousManagedPaths.commands, writtenCommandPaths);
               managedEntry.commands = commandResult.written;
             } else {
               console.log(`  ⚠ Skipping command cleanup for ${installed.name} in ${projectPath}`);
             }
 
             if (!ruleResult.hadFailures) {
-              await removeStaleFiles(projectPath, previousManaged.rules, ruleResult.written);
+              await removeStaleFiles(projectPath, previousManagedPaths.rules, writtenRulePaths);
               managedEntry.rules = ruleResult.written;
             } else {
               console.log(`  ⚠ Skipping rules cleanup for ${installed.name} in ${projectPath}`);
             }
 
             if (!toolResult.hadFailures) {
-              await removeStaleFiles(projectPath, previousManaged.tools, toolResult.written);
+              await removeStaleFiles(projectPath, previousManagedPaths.tools, writtenToolPaths);
               managedEntry.tools = toolResult.written;
             } else {
               console.log(`  ⚠ Skipping tools cleanup for ${installed.name} in ${projectPath}`);
@@ -470,7 +550,7 @@ export async function checkUpdate(options: UpdateOptions = {}): Promise<boolean>
             // Пропустить недоступные проекты
           }
         }
-        
+
         // 7. Обновить версию в config
         installed.version = remote.version;
         updated = true;
@@ -482,8 +562,14 @@ export async function checkUpdate(options: UpdateOptions = {}): Promise<boolean>
         // Продолжить с другими extensions
       }
     }
+
+    // 8. Write update report if any files were backed up (across all extensions)
+    if (allBackedUp.length > 0) {
+      console.log(`  📋 ${allBackedUp.length} user-modified file(s) backed up to .user-overrides/`);
+      await writeUpdateReport(allBackedUp);
+    }
     
-    // 8. Сохранить config
+    // 9. Сохранить config
     config.lastCheck = new Date().toISOString();
     await saveConfig(config);
     

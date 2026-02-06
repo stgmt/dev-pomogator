@@ -1,7 +1,7 @@
 import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
-import type { Config } from './schema.js';
+import type { Config, ManagedFiles, ManagedFileItem } from './schema.js';
 
 const CONFIG_DIR = path.join(os.homedir(), '.dev-pomogator');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
@@ -18,15 +18,46 @@ export async function loadConfig(): Promise<Config | null> {
   return null;
 }
 
+/**
+ * Normalize a ManagedFileItem array: plain strings (old format) become
+ * { path, hash: '' } so downstream code can always work with ManagedFileEntry.
+ */
+function normalizeManagedItems(
+  items: ManagedFileItem[] | undefined
+): ManagedFileItem[] | undefined {
+  if (!items || items.length === 0) return items;
+  // Already normalized if every item is an object
+  if (items.every((i) => typeof i !== 'string')) return items;
+  return items.map((item) =>
+    typeof item === 'string' ? { path: item, hash: '' } : item
+  );
+}
+
+function normalizeManagedEntry(managed: ManagedFiles): ManagedFiles {
+  return {
+    ...managed,
+    commands: normalizeManagedItems(managed.commands),
+    rules: normalizeManagedItems(managed.rules),
+    tools: normalizeManagedItems(managed.tools),
+  };
+}
+
 function normalizeConfig(config: Config): Config {
   const normalized: Config = {
     ...config,
     installedExtensions: Array.isArray(config.installedExtensions)
-      ? config.installedExtensions.map((ext) => ({
-          ...ext,
-          projectPaths: Array.isArray(ext.projectPaths) ? ext.projectPaths : [],
-          managed: ext.managed ?? {},
-        }))
+      ? config.installedExtensions.map((ext) => {
+          const rawManaged = ext.managed ?? {};
+          const normalizedManaged: Record<string, ManagedFiles> = {};
+          for (const [projectPath, entry] of Object.entries(rawManaged)) {
+            normalizedManaged[projectPath] = normalizeManagedEntry(entry);
+          }
+          return {
+            ...ext,
+            projectPaths: Array.isArray(ext.projectPaths) ? ext.projectPaths : [],
+            managed: normalizedManaged,
+          };
+        })
       : [],
   };
 

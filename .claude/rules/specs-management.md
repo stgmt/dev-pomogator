@@ -1,8 +1,3 @@
----
-description: "Управление спецификациями в .specs/. Триггеры: создай/обнови спеки, create/update specs, покажи/show specs"
-alwaysApply: false
----
-
 # Specs Management - Управление спецификациями
 
 ## Когда применять
@@ -30,6 +25,7 @@ alwaysApply: false
 ├── DESIGN.md              # Архитектура, компоненты, API
 ├── TASKS.md               # План задач с чеклистами
 ├── FILE_CHANGES.md        # Список изменяемых файлов
+├── CHANGELOG.md           # Changelog (Keep-a-Changelog)
 ├── {feature-slug}.feature # BDD сценарии (Gherkin)
 └── *_SCHEMA.md            # (опционально) Схемы данных
 ```
@@ -177,8 +173,8 @@ alwaysApply: false
 
 ## Связанные правила
 
-- `plan-pomogator.mdc` — использует EARS формат из спеков
-- `research-workflow.mdc` — интегрируется с RESEARCH.md
+- `plan-pomogator.md` — использует EARS формат из спеков
+- `research-workflow.md` — интегрируется с RESEARCH.md
 
 ## Эталонная структура
 

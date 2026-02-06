@@ -26,6 +26,12 @@
 ### Assumptions
 - N/A
 
+### Risks
+- N/A
+
+### Out of Scope
+- N/A
+
 ## Implementation Plan
 1. {шаг 1}
 2. {шаг 2}

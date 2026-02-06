@@ -15,6 +15,8 @@
    - **Acceptance Criteria (EARS)**
    - **NFR (Non‑Functional Requirements)**: Performance, Security, Reliability, Usability
    - **Assumptions** (может быть `N/A`)
+   - **Risks** (опционально, может быть `N/A`) — риски, breaking changes, внешние зависимости
+   - **Out of Scope** (опционально, может быть `N/A`) — что явно НЕ входит в план
 4. **Implementation Plan**
 5. **Todos**
 6. **Definition of Done (DoD)**

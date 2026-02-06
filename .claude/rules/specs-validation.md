@@ -1,22 +1,12 @@
----
-description: Валидация и синхронизация спеков с BDD и тестами через @featureN теги
-globs: 
-  - .specs/**/*.md
-  - .specs/**/*.feature
-  - tests/features/**/*.feature
-  - tests/**/*.test.ts
-alwaysApply: false
----
+# Правило: Синхронизация Спеков через @featureN
 
-## Правило: Синхронизация Спеков через @featureN
-
-### Структура полной фичи
+## Структура полной фичи
 
 Фича считается ПОЛНОЙ если содержит ВСЕ 13 файлов:
 - 12 MD файлов: ACCEPTANCE_CRITERIA, CHANGELOG, DESIGN, FILE_CHANGES, FR, NFR, README, REQUIREMENTS, RESEARCH, TASKS, USE_CASES, USER_STORIES
 - 1 .feature файл с BDD сценариями
 
-### Теги @featureN
+## Теги @featureN
 
 При работе со спеками ВСЕГДА используй теги @featureN для кросс-ссылок:
 
@@ -43,7 +33,7 @@ alwaysApply: false
    - [x] Реализовать авторизацию @feature1
    ```
 
-### Workflow создания фичи
+## Workflow создания фичи
 
 1. Создай структуру через `scaffold-spec.ps1`
 2. Заполни USER_STORIES.md → добавляй @featureN к каждой story
@@ -51,16 +41,16 @@ alwaysApply: false
 4. Пиши .feature файл → добавляй # @featureN перед Scenario
 5. Пиши тесты → добавляй // @featureN перед describe/it
 
-### Автоматическая валидация
+## Автоматическая валидация
 
-Хук beforeSubmitPrompt автоматически:
+Хук UserPromptSubmit автоматически:
 1. Находит `.specs/` папку
 2. Проверяет полноту каждой поддиректории (13 файлов)
 3. Для полных фич валидирует кросс-ссылки @featureN
 4. Генерирует `.specs/{feature}/validation-report.md`
 5. Показывает предупреждения в начале промпта
 
-### Типы проблем
+## Типы проблем
 
 | Проблема | Описание | Действие |
 |----------|----------|----------|
@@ -69,7 +59,7 @@ alwaysApply: false
 | NO_TEST | @featureN без теста | Добавь // @featureN в тест |
 | INCOMPLETE | Фича не имеет всех 13 файлов | Дозаполни недостающие файлы |
 
-### Отключение валидации
+## Отключение валидации
 
 Создай файл `.specs-validator.yaml` в корне проекта:
 

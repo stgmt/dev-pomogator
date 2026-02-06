@@ -3,7 +3,7 @@
     Creates a new spec folder structure with all template files.
 
 .DESCRIPTION
-    Scaffolds a new .specs/{feature-slug}/ folder with 13 template files.
+    Scaffolds a new .specs/{feature-slug}/ folder with 14 template files.
     All templates contain placeholders in {placeholder} format.
 
 .PARAMETER Name
@@ -54,12 +54,46 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# Find repo root by markers
+function Find-RepoRoot {
+    param([string]$StartDir)
+
+    $current = $StartDir
+    while ($current -and (Test-Path $current)) {
+        if (
+            (Test-Path (Join-Path $current ".git")) -or
+            (Test-Path (Join-Path $current "package.json")) -or
+            (Test-Path (Join-Path $current ".root-artifacts.yaml"))
+        ) {
+            return $current
+        }
+
+        $parent = Split-Path -Parent $current
+        if ($parent -eq $current) {
+            break
+        }
+        $current = $parent
+    }
+
+    return $null
+}
+
 # Determine script and repo paths
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-# Go up 4 levels: specs-generator -> tools -> specs-workflow -> extensions -> repo root
-$RepoRoot = (Get-Item $ScriptDir).Parent.Parent.Parent.Parent.FullName
+# Resolve repo root from script directory
+$RepoRoot = Find-RepoRoot -StartDir $ScriptDir
 $TemplatesDir = Join-Path $ScriptDir "templates"
 $LogsDir = Join-Path $ScriptDir "logs"
+# Fail fast if repo root not found
+if (-not $RepoRoot) {
+    $result = @{
+        success = $false
+        error = "Repo root not found. Run this script inside the repository."
+    }
+    Output-Result $result
+    exit 1
+}
+
 $SpecsDir = Join-Path $RepoRoot ".specs"
 $TargetDir = Join-Path $SpecsDir $Name
 
@@ -161,6 +195,7 @@ $templateMappings = @{
     "TASKS.md.template" = "TASKS.md"
     "FILE_CHANGES.md.template" = "FILE_CHANGES.md"
     "README.md.template" = "README.md"
+    "CHANGELOG.md.template" = "CHANGELOG.md"
     "feature.template" = "$Name.feature"
     "SCHEMA.md.template" = "${Name}_SCHEMA.md"
 }

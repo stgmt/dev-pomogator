@@ -1,9 +1,3 @@
----
-name: updater-sync-tools-hooks
-description: Апдейтер должен обновлять tools и hooks вместе с commands
-alwaysApply: true
----
-
 # Апдейтер должен синхронизировать tools и hooks
 
 Если апдейтер обновляет только commands, функционал расширений может остаться старым (tools/hooks не обновлены).

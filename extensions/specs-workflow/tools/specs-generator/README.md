@@ -38,6 +38,8 @@ tools/specs-generator/
 
 Создаёт структуру папки `.specs/{feature-slug}/` со всеми шаблонами.
 
+**Важно:** запускать внутри репозитория. Если repo root не найден, скрипт завершится с ошибкой и не создаст `.specs`.
+
 ```powershell
 # Базовое использование
 .\scaffold-spec.ps1 -Name "hook-worklog-checker"
@@ -166,7 +168,7 @@ tools/specs-generator/
 ```
 [2026-01-15 10:30:00] [INFO] Creating spec folder: .specs/hook-worklog-checker
 [2026-01-15 10:30:00] [INFO] Copying template: USER_STORIES.md.template -> USER_STORIES.md
-[2026-01-15 10:30:01] [INFO] Created 13 files in .specs/hook-worklog-checker
+[2026-01-15 10:30:01] [INFO] Created 14 files in .specs/hook-worklog-checker
 ```
 
 ---

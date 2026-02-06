@@ -12,7 +12,7 @@ Feature: PLUGIN006 Specs Generator PowerShell Scripts
   Scenario: Create spec structure with valid name
     When I run scaffold-spec.ps1 with name "test-feature"
     Then the result should be successful
-    And 13 files should be created in ".specs/test-feature/"
+    And 14 files should be created in ".specs/test-feature/"
     And the next_step should mention "USER_STORIES.md"
 
   @feature2
@@ -26,7 +26,7 @@ Feature: PLUGIN006 Specs Generator PowerShell Scripts
     Given a spec folder "existing-spec" already exists
     When I run scaffold-spec.ps1 with name "existing-spec" and -Force flag
     Then the result should be successful
-    And 13 files should be created
+    And 14 files should be created
 
   # validate-spec.ps1 scenarios
 

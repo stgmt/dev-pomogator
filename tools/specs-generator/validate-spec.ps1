@@ -57,8 +57,8 @@ $ErrorActionPreference = "Stop"
 
 # Determine script paths
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-# Go up 4 levels: specs-generator -> tools -> specs-workflow -> extensions -> repo root
-$RepoRoot = (Get-Item $ScriptDir).Parent.Parent.Parent.Parent.FullName
+# Go up 2 levels: specs-generator -> tools -> repo root
+$RepoRoot = (Get-Item $ScriptDir).Parent.Parent.FullName
 $LogsDir = Join-Path $ScriptDir "logs"
 
 # Resolve path
@@ -99,6 +99,7 @@ function Write-Log {
 $requiredFiles = @(
     "USER_STORIES.md",
     "USE_CASES.md",
+    "RESEARCH.md",
     "REQUIREMENTS.md",
     "FR.md",
     "NFR.md",
@@ -106,6 +107,7 @@ $requiredFiles = @(
     "DESIGN.md",
     "TASKS.md",
     "FILE_CHANGES.md",
+    "CHANGELOG.md",
     "README.md"
 )
 

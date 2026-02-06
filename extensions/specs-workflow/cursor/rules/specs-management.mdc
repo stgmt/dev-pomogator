@@ -30,6 +30,7 @@ alwaysApply: false
 ├── DESIGN.md              # Архитектура, компоненты, API
 ├── TASKS.md               # План задач с чеклистами
 ├── FILE_CHANGES.md        # Список изменяемых файлов
+├── CHANGELOG.md           # Changelog (Keep-a-Changelog)
 ├── {feature-slug}.feature # BDD сценарии (Gherkin)
 └── *_SCHEMA.md            # (опционально) Схемы данных
 ```

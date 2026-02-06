@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsx:*)",
+      "Bash(test:*)",
+      "Bash(xargs:*)",
+      "Bash(wc:*)",
+      "Bash(powershell -NoProfile -Command '$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path; $RepoRoot = \\(Get-Item $ScriptDir\\).Parent.Parent.Parent.Parent.FullName; Write-Host \"\"ScriptDir: $ScriptDir\"\"; Write-Host \"\"RepoRoot: $RepoRoot\"\"')",
+      "Bash(powershell -NoProfile -Command:*)",
+      "Bash(npm run:*)",
+      "Bash(node -e:*)",
+      "Bash(code:*)",
+      "WebFetch(domain:docs.anthropic.com)"
+    ]
+  }
+}

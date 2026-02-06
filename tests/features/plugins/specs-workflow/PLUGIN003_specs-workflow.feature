@@ -23,7 +23,7 @@ Feature: PLUGIN003 Specs Workflow Extension
     Then specs-generator folder should exist in PROJECT/tools/
     And scaffold-spec.ps1 should exist
     And validate-spec.ps1 should exist
-    And templates folder should contain 13 template files
+    And templates folder should contain 14 template files
 
   Scenario: Claude Code plugin is registered
     Given marketplace.json exists in .claude-plugin/

@@ -49,7 +49,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     });
 
     // @feature1
-    it('should create 13 files with valid kebab-case name', () => {
+    it('should create 14 files with valid kebab-case name', () => {
       const result = runPowerShell(
         getSpecsGeneratorPath('scaffold-spec.ps1'),
         ['-Name', testSpecName]
@@ -58,9 +58,16 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       expect(result.exitCode).toBe(0);
       expect(result.json).toBeDefined();
       expect(result.json.success).toBe(true);
+      expect(result.json.path).toBe(`.specs/${testSpecName}`);
       expect(result.json.created_files).toBeDefined();
-      expect(result.json.created_files.length).toBe(13);
-      expect(result.json.next_step).toContain('USER_STORIES');
+      expect(result.json.created_files.length).toBe(14);
+      expect(result.json.created_files).toEqual(expect.arrayContaining([
+        'USER_STORIES.md',
+        'FR.md',
+        'NFR.md',
+        `${testSpecName}.feature`,
+      ]));
+      expect(result.json.next_step).toBe('Fill USER_STORIES.md first');
     });
 
     // @feature2
@@ -71,6 +78,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       );
 
       // PowerShell should reject names with spaces
+      expect(result.exitCode).toBe(2);
       expect(result.json).toBeDefined();
       expect(result.json.success).toBe(false);
       expect(result.json.error).toContain('kebab-case');
@@ -92,7 +100,13 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
 
       expect(result.exitCode).toBe(0);
       expect(result.json.success).toBe(true);
-      expect(result.json.created_files.length).toBe(13);
+      expect(result.json.path).toBe(`.specs/${specName}`);
+      expect(result.json.created_files.length).toBe(14);
+      expect(result.json.created_files).toEqual(expect.arrayContaining([
+        'USER_STORIES.md',
+        'FR.md',
+        `${specName}.feature`,
+      ]));
       
       // Old file should be gone
       expect(await fs.pathExists(appPath('.specs', specName, 'dummy.txt'))).toBe(false);
@@ -161,7 +175,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       // Add remaining required files to avoid STRUCTURE errors
       const requiredFiles = [
         'USER_STORIES.md', 'REQUIREMENTS.md', 'DESIGN.md',
-        'TASKS.md', 'FILE_CHANGES.md', 'README.md', 'RESEARCH.md'
+        'TASKS.md', 'FILE_CHANGES.md', 'README.md', 'RESEARCH.md',
+        'CHANGELOG.md'
       ];
       for (const file of requiredFiles) {
         await fs.writeFile(path.join(destPath, file), `# ${file}\n\nContent`);
@@ -188,7 +203,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       // Add required files
       const requiredFiles = [
         'USER_STORIES.md', 'REQUIREMENTS.md', 'DESIGN.md',
-        'TASKS.md', 'FILE_CHANGES.md', 'README.md', 'RESEARCH.md'
+        'TASKS.md', 'FILE_CHANGES.md', 'README.md', 'RESEARCH.md',
+        'CHANGELOG.md'
       ];
       for (const file of requiredFiles) {
         await fs.writeFile(path.join(destPath, file), `# ${file}\n\nContent`);
@@ -215,7 +231,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       // Add required files
       const requiredFiles = [
         'USER_STORIES.md', 'REQUIREMENTS.md', 'DESIGN.md',
-        'TASKS.md', 'FILE_CHANGES.md', 'README.md', 'RESEARCH.md'
+        'TASKS.md', 'FILE_CHANGES.md', 'README.md', 'RESEARCH.md',
+        'CHANGELOG.md'
       ];
       for (const file of requiredFiles) {
         await fs.writeFile(path.join(destPath, file), `# ${file}\n\nContent`);
@@ -256,8 +273,13 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       );
 
       expect(result.json).toBeDefined();
+      expect(result.json.path).toBe('.specs/partial-spec-test');
       expect(['Discovery', 'Requirements']).toContain(result.json.phase);
       expect(result.json.progress_percent).toBeLessThan(100);
+      expect(result.json.files).toBeDefined();
+      expect(result.json.files['USER_STORIES.md'].status).toBe('complete');
+      expect(result.json.files['FR.md'].status).toBe('partial');
+      expect(result.json.files['RESEARCH.md'].status).toBe('not_created');
     });
 
     // @feature10
@@ -271,11 +293,15 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       );
 
       expect(result.json).toBeDefined();
+      expect(result.json.path).toBe('.specs/valid-spec-test');
       // Phase should be one of the defined phases
       expect(['Discovery', 'Requirements', 'Finalization']).toContain(result.json.phase);
       // Progress should be a valid percentage
-      expect(result.json.progress_percent).toBeGreaterThanOrEqual(0);
-      expect(result.json.progress_percent).toBeLessThanOrEqual(100);
+      expect(result.json.progress_percent).toBe(100);
+      expect(result.json.files).toBeDefined();
+      const featureFiles = Object.keys(result.json.files).filter((file: string) => file.endsWith('.feature'));
+      expect(featureFiles.length).toBeGreaterThan(0);
+      expect(result.json.files[featureFiles[0]].status).toBe('complete');
     });
 
     // @feature11
@@ -290,7 +316,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
 
       expect(result.json).toBeDefined();
       expect(result.json.next_action).toBeDefined();
-      expect(result.json.next_action.length).toBeGreaterThan(0);
+      expect(result.json.next_action).toContain('RESEARCH.md');
     });
   });
 
@@ -332,6 +358,11 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       expect(Array.isArray(result.json.specs)).toBe(true);
       expect(result.json.summary).toBeDefined();
       expect(result.json.summary.total).toBeGreaterThanOrEqual(2);
+      
+      const specNames = result.json.specs.map((spec: any) => spec.name);
+      expect(specNames).toEqual(expect.arrayContaining(['list-test-complete', 'list-test-partial']));
+      expect(result.json.specs.some((spec: any) => spec.status === 'complete')).toBe(true);
+      expect(result.json.specs.some((spec: any) => spec.status === 'partial')).toBe(true);
     });
 
     // @feature13
@@ -344,6 +375,10 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       expect(result.json).toBeDefined();
       expect(result.json.specs).toBeDefined();
       
+      const specNames = result.json.specs.map((spec: any) => spec.name);
+      expect(specNames).toContain('list-test-partial');
+      expect(specNames).not.toContain('list-test-complete');
+
       // All returned specs should NOT be complete
       for (const spec of result.json.specs) {
         expect(spec.status).not.toBe('complete');
@@ -384,6 +419,12 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       expect(Array.isArray(result.json.placeholders)).toBe(true);
       expect(result.json.total).toBeGreaterThan(0);
       
+      const totalFromPlaceholders = result.json.placeholders.reduce(
+        (sum: number, p: any) => sum + p.count,
+        0
+      );
+      expect(totalFromPlaceholders).toBe(result.json.total);
+      
       // Should find specific placeholders
       const placeholderNames = result.json.placeholders.map((p: any) => p.name);
       expect(placeholderNames).toContain('{роль}');
@@ -417,6 +458,11 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       expect(result.json.placeholders_after).toBeLessThan(result.json.placeholders_before);
       expect(result.json.filled).toBeDefined();
       expect(result.json.filled.length).toBeGreaterThan(0);
+      expect(result.json.filled).toEqual(expect.arrayContaining([
+        '{роль}',
+        '{цель}',
+        '{ценность}',
+      ]));
       
       // Verify file content was updated
       const content = await fs.readFile(tempTemplatePath, 'utf-8');

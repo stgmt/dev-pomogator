@@ -1,8 +1,3 @@
----
-description: "Research Workflow - полный цикл ресерча. Триггер: исследуй/найди/погугли/ресерч"
-alwaysApply: false
----
-
 # Research Workflow - Полный цикл ресерча
 
 ## Когда применять
@@ -159,4 +154,4 @@ alwaysApply: false
 2. Предложить обновить/создать RESEARCH.md с результатами
 3. Использовать скрипт: `.\tools\specs-generator\spec-status.ps1`
 
-См. также: `.cursor/rules/specs-management.mdc`
+См. также: `.claude/rules/specs-management.md`

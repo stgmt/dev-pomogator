@@ -77,7 +77,7 @@ export function parseMdFile(filePath: string): MdTag[] {
     // Try to match FR pattern
     const frMatch = line.match(PATTERNS.fr);
     if (frMatch) {
-      const [, num, title, tag] = frMatch;
+      const [, num, title] = frMatch;
       // Extract all @featureN from the line
       const allTags = extractAllFeatureTags(line);
       for (const featureTag of allTags) {
@@ -95,7 +95,7 @@ export function parseMdFile(filePath: string): MdTag[] {
     // Try to match AC pattern
     const acMatch = line.match(PATTERNS.ac);
     if (acMatch) {
-      const [, num, title, tag] = acMatch;
+      const [, num, title] = acMatch;
       const allTags = extractAllFeatureTags(line);
       for (const featureTag of allTags) {
         tags.push({
@@ -112,7 +112,7 @@ export function parseMdFile(filePath: string): MdTag[] {
     // Try to match UC pattern
     const ucMatch = line.match(PATTERNS.uc);
     if (ucMatch) {
-      const [, num, title, tag] = ucMatch;
+      const [, num, title] = ucMatch;
       const allTags = extractAllFeatureTags(line);
       for (const featureTag of allTags) {
         tags.push({

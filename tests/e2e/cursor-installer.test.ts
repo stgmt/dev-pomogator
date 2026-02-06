@@ -559,4 +559,854 @@ describe('CORE002: Auto-update', () => {
       expect(content).toBe(customContent);
     });
   });
+
+  // Scenario 6: Stale managed files are removed on update
+  describe('Stale File Cleanup', () => {
+    let testProjectPath: string;
+
+    afterEach(async () => {
+      if (testProjectPath) {
+        await fs.remove(testProjectPath);
+      }
+    });
+
+    it('should remove stale command when updating extension', async () => {
+      testProjectPath = appPath('test-stale-cmd');
+      const commandsDir = path.join(testProjectPath, '.cursor', 'commands');
+      await fs.ensureDir(commandsDir);
+
+      // Create real + stale command files
+      await fs.writeFile(path.join(commandsDir, 'suggest-rules.md'), '# OLD');
+      await fs.writeFile(path.join(commandsDir, 'fake-old-command.md'), '# STALE');
+
+      await setupConfigForUpdate({
+        autoUpdate: true,
+        cooldownHours: 24,
+        lastCheck: hoursAgo(25),
+        installedExtensions: [{
+          name: 'suggest-rules',
+          version: '0.0.1',
+          platform: 'cursor',
+          projectPaths: [testProjectPath],
+          managed: {
+            [testProjectPath]: {
+              commands: [
+                '.cursor/commands/suggest-rules.md',
+                '.cursor/commands/fake-old-command.md',
+              ],
+            },
+          },
+        }],
+      });
+
+      await runCheckUpdate();
+
+      // Stale file should be deleted
+      expect(await fs.pathExists(path.join(commandsDir, 'fake-old-command.md'))).toBe(false);
+      // Real file should be updated (not deleted)
+      expect(await fs.pathExists(path.join(commandsDir, 'suggest-rules.md'))).toBe(true);
+      const content = await fs.readFile(path.join(commandsDir, 'suggest-rules.md'), 'utf-8');
+      expect(content).not.toBe('# OLD');
+    });
+
+    it('should remove stale rule when updating extension', async () => {
+      testProjectPath = appPath('test-stale-rule');
+      const rulesDir = path.join(testProjectPath, '.cursor', 'rules');
+      await fs.ensureDir(rulesDir);
+
+      // Create real + stale rule files
+      await fs.writeFile(path.join(rulesDir, 'specs-management.mdc'), '# OLD');
+      await fs.writeFile(path.join(rulesDir, 'obsolete-rule.mdc'), '# STALE');
+
+      await setupConfigForUpdate({
+        autoUpdate: true,
+        cooldownHours: 24,
+        lastCheck: hoursAgo(25),
+        installedExtensions: [{
+          name: 'specs-workflow',
+          version: '0.0.1',
+          platform: 'cursor',
+          projectPaths: [testProjectPath],
+          managed: {
+            [testProjectPath]: {
+              rules: [
+                '.cursor/rules/specs-management.mdc',
+                '.cursor/rules/obsolete-rule.mdc',
+              ],
+            },
+          },
+        }],
+      });
+
+      await runCheckUpdate();
+
+      // Stale rule should be deleted
+      expect(await fs.pathExists(path.join(rulesDir, 'obsolete-rule.mdc'))).toBe(false);
+      // Real rule should exist (updated from GitHub)
+      expect(await fs.pathExists(path.join(rulesDir, 'specs-management.mdc'))).toBe(true);
+    });
+
+    it('should remove stale tool when updating extension', async () => {
+      testProjectPath = appPath('test-stale-tool');
+      const toolsDir = path.join(testProjectPath, 'tools', 'specs-generator');
+      await fs.ensureDir(toolsDir);
+
+      // Create real + stale tool files
+      await fs.writeFile(path.join(toolsDir, 'scaffold-spec.ps1'), '# OLD');
+      await fs.writeFile(path.join(toolsDir, 'old-tool.ps1'), '# STALE');
+
+      await setupConfigForUpdate({
+        autoUpdate: true,
+        cooldownHours: 24,
+        lastCheck: hoursAgo(25),
+        installedExtensions: [{
+          name: 'specs-workflow',
+          version: '0.0.1',
+          platform: 'cursor',
+          projectPaths: [testProjectPath],
+          managed: {
+            [testProjectPath]: {
+              tools: [
+                'tools/specs-generator/scaffold-spec.ps1',
+                'tools/specs-generator/old-tool.ps1',
+              ],
+            },
+          },
+        }],
+      });
+
+      await runCheckUpdate();
+
+      // Stale tool should be deleted
+      expect(await fs.pathExists(path.join(toolsDir, 'old-tool.ps1'))).toBe(false);
+      // Real tool should exist (updated from GitHub)
+      expect(await fs.pathExists(path.join(toolsDir, 'scaffold-spec.ps1'))).toBe(true);
+    });
+
+    it('should update managed state in config after update', async () => {
+      testProjectPath = appPath('test-managed-state');
+      const commandsDir = path.join(testProjectPath, '.cursor', 'commands');
+      await fs.ensureDir(commandsDir);
+
+      await fs.writeFile(path.join(commandsDir, 'suggest-rules.md'), '# OLD');
+      await fs.writeFile(path.join(commandsDir, 'removed-command.md'), '# STALE');
+
+      await setupConfigForUpdate({
+        autoUpdate: true,
+        cooldownHours: 24,
+        lastCheck: hoursAgo(25),
+        installedExtensions: [{
+          name: 'suggest-rules',
+          version: '0.0.1',
+          platform: 'cursor',
+          projectPaths: [testProjectPath],
+          managed: {
+            [testProjectPath]: {
+              commands: [
+                '.cursor/commands/suggest-rules.md',
+                '.cursor/commands/removed-command.md',
+              ],
+            },
+          },
+        }],
+      });
+
+      await runCheckUpdate();
+
+      // Re-read config
+      const config = await getDevPomogatorConfig();
+      const ext = config?.installedExtensions.find((e: any) => e.name === 'suggest-rules');
+      expect(ext).toBeDefined();
+      expect(ext!.version).not.toBe('0.0.1');
+
+      // Managed commands should contain only real files, not stale ones
+      const managed = (ext as any)?.managed?.[testProjectPath];
+      expect(managed).toBeDefined();
+      expect(managed.commands).toBeDefined();
+      const commandPaths = managed.commands.map((c: any) => typeof c === 'string' ? c : c.path);
+      expect(commandPaths).toContain('.cursor/commands/suggest-rules.md');
+      expect(commandPaths).not.toContain('.cursor/commands/removed-command.md');
+    });
+
+    it('should remove stale Cursor hook from hooks.json', async () => {
+      testProjectPath = appPath('test-stale-hook');
+      // Ensure tools dir exists (updater resolves hooks with projectPath)
+      await fs.ensureDir(path.join(testProjectPath, 'tools', 'auto-commit'));
+      await fs.writeFile(
+        path.join(testProjectPath, 'tools', 'auto-commit', 'auto_commit_stop.ts'),
+        '// placeholder'
+      );
+
+      const hooksFile = homePath('.cursor', 'hooks', 'hooks.json');
+      const realCommand = `npx tsx ${path.join(testProjectPath, 'tools', 'auto-commit', 'auto_commit_stop.ts').replace(/\\/g, '/')}`.replace(/\\/g, '\\\\');
+      const staleCommand = `npx tsx ${path.join(testProjectPath, 'tools', 'auto-commit', 'old_hook.ts').replace(/\\/g, '/')}`.replace(/\\/g, '\\\\');
+
+      // Write hooks.json with both real and stale hook
+      await fs.ensureDir(path.dirname(hooksFile));
+      await fs.writeJson(hooksFile, {
+        version: 1,
+        hooks: {
+          stop: [
+            { command: realCommand },
+            { command: staleCommand },
+          ],
+        },
+      }, { spaces: 2 });
+
+      await setupConfigForUpdate({
+        autoUpdate: true,
+        cooldownHours: 24,
+        lastCheck: hoursAgo(25),
+        installedExtensions: [{
+          name: 'auto-commit',
+          version: '0.0.1',
+          platform: 'cursor',
+          projectPaths: [testProjectPath],
+          managed: {
+            [testProjectPath]: {
+              hooks: {
+                stop: [
+                  'npx tsx tools/auto-commit/auto_commit_stop.ts',
+                  'npx tsx tools/auto-commit/old_hook.ts',
+                ],
+              },
+            },
+          },
+        }],
+      });
+
+      await runCheckUpdate();
+
+      // Read hooks.json
+      const hooks = await fs.readJson(hooksFile);
+      const stopCommands = (hooks.hooks?.stop ?? []).map((h: any) => h.command);
+
+      // Real hook should still exist
+      expect(stopCommands.some((cmd: string) => cmd.includes('auto_commit_stop.ts'))).toBe(true);
+      // Stale hook should be removed
+      expect(stopCommands.some((cmd: string) => cmd.includes('old_hook.ts'))).toBe(false);
+    });
+
+    it('should preserve user hooks when removing stale managed hooks', async () => {
+      testProjectPath = appPath('test-user-hooks');
+      await fs.ensureDir(path.join(testProjectPath, 'tools', 'auto-commit'));
+      await fs.writeFile(
+        path.join(testProjectPath, 'tools', 'auto-commit', 'auto_commit_stop.ts'),
+        '// placeholder'
+      );
+
+      const hooksFile = homePath('.cursor', 'hooks', 'hooks.json');
+      const realCommand = `npx tsx ${path.join(testProjectPath, 'tools', 'auto-commit', 'auto_commit_stop.ts').replace(/\\/g, '/')}`.replace(/\\/g, '\\\\');
+      const staleCommand = `npx tsx ${path.join(testProjectPath, 'tools', 'auto-commit', 'old_hook.ts').replace(/\\/g, '/')}`.replace(/\\/g, '\\\\');
+      const userCommand = 'bash /home/testuser/my-custom-lint-hook.sh';
+
+      // Write hooks.json with managed hooks + user's own hook
+      await fs.ensureDir(path.dirname(hooksFile));
+      await fs.writeJson(hooksFile, {
+        version: 1,
+        hooks: {
+          stop: [
+            { command: realCommand },
+            { command: staleCommand },
+            { command: userCommand },
+          ],
+        },
+      }, { spaces: 2 });
+
+      await setupConfigForUpdate({
+        autoUpdate: true,
+        cooldownHours: 24,
+        lastCheck: hoursAgo(25),
+        installedExtensions: [{
+          name: 'auto-commit',
+          version: '0.0.1',
+          platform: 'cursor',
+          projectPaths: [testProjectPath],
+          managed: {
+            [testProjectPath]: {
+              hooks: {
+                stop: [
+                  'npx tsx tools/auto-commit/auto_commit_stop.ts',
+                  'npx tsx tools/auto-commit/old_hook.ts',
+                ],
+              },
+            },
+          },
+        }],
+      });
+
+      await runCheckUpdate();
+
+      const hooks = await fs.readJson(hooksFile);
+      const stopCommands = (hooks.hooks?.stop ?? []).map((h: any) => h.command);
+
+      // Stale managed hook should be removed
+      expect(stopCommands.some((cmd: string) => cmd.includes('old_hook.ts'))).toBe(false);
+      // Current managed hook should remain
+      expect(stopCommands.some((cmd: string) => cmd.includes('auto_commit_stop.ts'))).toBe(true);
+      // User's custom hook should be preserved (NOT in managed, never touched)
+      expect(stopCommands).toContain(userCommand);
+    });
+
+    it('should preserve hooks.json structure (version, other events) during cleanup', async () => {
+      testProjectPath = appPath('test-hooks-structure');
+      await fs.ensureDir(path.join(testProjectPath, 'tools', 'auto-commit'));
+      await fs.writeFile(
+        path.join(testProjectPath, 'tools', 'auto-commit', 'auto_commit_stop.ts'),
+        '// placeholder'
+      );
+
+      const hooksFile = homePath('.cursor', 'hooks', 'hooks.json');
+      const realCommand = `npx tsx ${path.join(testProjectPath, 'tools', 'auto-commit', 'auto_commit_stop.ts').replace(/\\/g, '/')}`.replace(/\\/g, '\\\\');
+      const staleCommand = `npx tsx ${path.join(testProjectPath, 'tools', 'auto-commit', 'old_hook.ts').replace(/\\/g, '/')}`.replace(/\\/g, '\\\\');
+
+      // Write hooks.json with version, multiple events, and extra fields
+      await fs.ensureDir(path.dirname(hooksFile));
+      await fs.writeJson(hooksFile, {
+        version: 1,
+        hooks: {
+          stop: [
+            { command: realCommand },
+            { command: staleCommand },
+          ],
+          beforeSubmitPrompt: [
+            { command: 'bun run /home/testuser/my-context-hook.js' },
+          ],
+        },
+      }, { spaces: 2 });
+
+      await setupConfigForUpdate({
+        autoUpdate: true,
+        cooldownHours: 24,
+        lastCheck: hoursAgo(25),
+        installedExtensions: [{
+          name: 'auto-commit',
+          version: '0.0.1',
+          platform: 'cursor',
+          projectPaths: [testProjectPath],
+          managed: {
+            [testProjectPath]: {
+              hooks: {
+                stop: [
+                  'npx tsx tools/auto-commit/auto_commit_stop.ts',
+                  'npx tsx tools/auto-commit/old_hook.ts',
+                ],
+              },
+            },
+          },
+        }],
+      });
+
+      await runCheckUpdate();
+
+      const hooks = await fs.readJson(hooksFile);
+
+      // version field should be preserved
+      expect(hooks.version).toBe(1);
+
+      // beforeSubmitPrompt event (not managed) should be untouched
+      expect(hooks.hooks.beforeSubmitPrompt).toBeDefined();
+      expect(hooks.hooks.beforeSubmitPrompt.length).toBe(1);
+      expect(hooks.hooks.beforeSubmitPrompt[0].command).toBe('bun run /home/testuser/my-context-hook.js');
+
+      // stop event: stale removed, real kept
+      const stopCommands = hooks.hooks.stop.map((h: any) => h.command);
+      expect(stopCommands.some((cmd: string) => cmd.includes('auto_commit_stop.ts'))).toBe(true);
+      expect(stopCommands.some((cmd: string) => cmd.includes('old_hook.ts'))).toBe(false);
+    });
+
+    it('should remove stale Claude hook from settings.json and preserve user hooks', async () => {
+      testProjectPath = appPath('test-claude-hooks');
+      await fs.ensureDir(path.join(testProjectPath, 'tools', 'auto-commit'));
+      await fs.writeFile(
+        path.join(testProjectPath, 'tools', 'auto-commit', 'auto_commit_stop.ts'),
+        '// placeholder'
+      );
+
+      const settingsPath = path.join(testProjectPath, '.claude', 'settings.json');
+
+      // Pre-populate settings.json with managed hooks + user hook
+      await fs.ensureDir(path.dirname(settingsPath));
+      await fs.writeJson(settingsPath, {
+        hooks: {
+          Stop: [
+            {
+              matcher: '',
+              hooks: [{ type: 'command', command: 'npx tsx tools/auto-commit/auto_commit_stop.ts', timeout: 60 }],
+            },
+            {
+              matcher: '',
+              hooks: [{ type: 'command', command: 'npx tsx tools/auto-commit/old_claude_hook.ts', timeout: 60 }],
+            },
+            {
+              matcher: '',
+              hooks: [{ type: 'command', command: 'python3 /home/testuser/my-user-hook.py', timeout: 30 }],
+            },
+          ],
+        },
+      }, { spaces: 2 });
+
+      await setupConfigForUpdate({
+        autoUpdate: true,
+        cooldownHours: 24,
+        lastCheck: hoursAgo(25),
+        installedExtensions: [{
+          name: 'auto-commit',
+          version: '0.0.1',
+          platform: 'claude',
+          projectPaths: [testProjectPath],
+          managed: {
+            [testProjectPath]: {
+              hooks: {
+                Stop: [
+                  'npx tsx tools/auto-commit/auto_commit_stop.ts',
+                  'npx tsx tools/auto-commit/old_claude_hook.ts',
+                ],
+              },
+            },
+          },
+        }],
+      });
+
+      await runCheckUpdate('--claude');
+
+      const settings = await fs.readJson(settingsPath);
+      const stopEntries = settings.hooks?.Stop ?? [];
+      const allCommands = stopEntries.flatMap((entry: any) =>
+        (entry.hooks ?? []).map((h: any) => h.command)
+      );
+
+      // Stale managed hook should be removed
+      expect(allCommands).not.toContain('npx tsx tools/auto-commit/old_claude_hook.ts');
+      // Current managed hook should remain
+      expect(allCommands.some((cmd: string) => cmd.includes('auto_commit_stop.ts'))).toBe(true);
+      // User's custom hook should be preserved
+      expect(allCommands).toContain('python3 /home/testuser/my-user-hook.py');
+    });
+
+    it('should preserve non-hook settings in Claude settings.json during update', async () => {
+      testProjectPath = appPath('test-claude-settings-integrity');
+      await fs.ensureDir(path.join(testProjectPath, 'tools', 'auto-commit'));
+      await fs.writeFile(
+        path.join(testProjectPath, 'tools', 'auto-commit', 'auto_commit_stop.ts'),
+        '// placeholder'
+      );
+
+      const settingsPath = path.join(testProjectPath, '.claude', 'settings.json');
+
+      // Pre-populate settings.json with hooks AND other user settings
+      await fs.ensureDir(path.dirname(settingsPath));
+      await fs.writeJson(settingsPath, {
+        permissions: {
+          allow: ['Read', 'Write'],
+          deny: ['WebFetch'],
+        },
+        model: 'claude-sonnet-4-20250514',
+        customInstructions: 'Always respond in Russian',
+        hooks: {
+          Stop: [
+            {
+              matcher: '',
+              hooks: [{ type: 'command', command: 'npx tsx tools/auto-commit/auto_commit_stop.ts', timeout: 60 }],
+            },
+          ],
+        },
+      }, { spaces: 2 });
+
+      await setupConfigForUpdate({
+        autoUpdate: true,
+        cooldownHours: 24,
+        lastCheck: hoursAgo(25),
+        installedExtensions: [{
+          name: 'auto-commit',
+          version: '0.0.1',
+          platform: 'claude',
+          projectPaths: [testProjectPath],
+          managed: {
+            [testProjectPath]: {
+              hooks: {
+                Stop: [
+                  'npx tsx tools/auto-commit/auto_commit_stop.ts',
+                ],
+              },
+            },
+          },
+        }],
+      });
+
+      await runCheckUpdate('--claude');
+
+      const settings = await fs.readJson(settingsPath);
+
+      // Non-hook settings should be fully preserved
+      expect(settings.permissions).toEqual({
+        allow: ['Read', 'Write'],
+        deny: ['WebFetch'],
+      });
+      expect(settings.model).toBe('claude-sonnet-4-20250514');
+      expect(settings.customInstructions).toBe('Always respond in Russian');
+
+      // Hooks should still work
+      expect(settings.hooks).toBeDefined();
+      expect(settings.hooks.Stop).toBeDefined();
+      expect(settings.hooks.Stop.length).toBeGreaterThan(0);
+    });
+
+    it('should not delete files outside project (path traversal protection)', async () => {
+      testProjectPath = appPath('test-path-traversal');
+      const toolsDir = path.join(testProjectPath, 'tools', 'specs-generator');
+      await fs.ensureDir(toolsDir);
+      await fs.writeFile(path.join(toolsDir, 'scaffold-spec.ps1'), '# OLD');
+
+      // Create a sentinel file outside the project
+      const sentinelPath = appPath('sentinel-do-not-delete.txt');
+      await fs.writeFile(sentinelPath, 'SENTINEL');
+
+      await setupConfigForUpdate({
+        autoUpdate: true,
+        cooldownHours: 24,
+        lastCheck: hoursAgo(25),
+        installedExtensions: [{
+          name: 'specs-workflow',
+          version: '0.0.1',
+          platform: 'cursor',
+          projectPaths: [testProjectPath],
+          managed: {
+            [testProjectPath]: {
+              tools: [
+                'tools/specs-generator/scaffold-spec.ps1',
+                '../sentinel-do-not-delete.txt',
+              ],
+            },
+          },
+        }],
+      });
+
+      await runCheckUpdate();
+
+      // Sentinel file outside project should NOT be deleted
+      expect(await fs.pathExists(sentinelPath)).toBe(true);
+
+      // Cleanup sentinel
+      await fs.remove(sentinelPath);
+    });
+
+    it('should not delete any files on first update (managed = undefined)', async () => {
+      testProjectPath = appPath('test-first-update');
+      const commandsDir = path.join(testProjectPath, '.cursor', 'commands');
+      await fs.ensureDir(commandsDir);
+
+      // Create an unrelated file that should survive (not in managed list)
+      const unrelatedFile = path.join(commandsDir, 'user-custom-command.md');
+      await fs.writeFile(unrelatedFile, '# User custom command');
+      await fs.writeFile(path.join(commandsDir, 'suggest-rules.md'), '# OLD');
+
+      // No managed field — simulates first update
+      await setupConfigForUpdate({
+        autoUpdate: true,
+        cooldownHours: 24,
+        lastCheck: hoursAgo(25),
+        installedExtensions: [{
+          name: 'suggest-rules',
+          version: '0.0.1',
+          platform: 'cursor',
+          projectPaths: [testProjectPath],
+          // No managed field
+        }],
+      });
+
+      await runCheckUpdate();
+
+      // User's custom file should NOT be deleted (empty previous list = nothing to remove)
+      expect(await fs.pathExists(unrelatedFile)).toBe(true);
+
+      // Config should now have managed field populated
+      const config = await getDevPomogatorConfig();
+      const ext = config?.installedExtensions.find((e: any) => e.name === 'suggest-rules');
+      const managed = (ext as any)?.managed?.[testProjectPath];
+      expect(managed).toBeDefined();
+      expect(managed.commands).toBeDefined();
+      expect(managed.commands.length).toBeGreaterThan(0);
+    });
+
+    it('should store hashes in managed entries after update', async () => {
+      testProjectPath = appPath('test-hash-storage');
+      const commandsDir = path.join(testProjectPath, '.cursor', 'commands');
+      await fs.ensureDir(commandsDir);
+
+      await setupConfigForUpdate({
+        autoUpdate: true,
+        cooldownHours: 24,
+        lastCheck: hoursAgo(25),
+        installedExtensions: [{
+          name: 'suggest-rules',
+          version: '0.0.1',
+          platform: 'cursor',
+          projectPaths: [testProjectPath],
+        }],
+      });
+
+      await runCheckUpdate();
+
+      const config = await getDevPomogatorConfig();
+      const ext = config?.installedExtensions.find((e: any) => e.name === 'suggest-rules');
+      const managed = (ext as any)?.managed?.[testProjectPath];
+      expect(managed).toBeDefined();
+      expect(managed.commands).toBeDefined();
+      expect(managed.commands.length).toBeGreaterThan(0);
+
+      // Each entry should be { path, hash } with a non-empty hash
+      for (const entry of managed.commands) {
+        expect(typeof entry).toBe('object');
+        expect(entry.path).toBeDefined();
+        expect(typeof entry.path).toBe('string');
+        expect(entry.hash).toBeDefined();
+        expect(typeof entry.hash).toBe('string');
+        expect(entry.hash.length).toBe(64); // SHA-256 hex = 64 chars
+      }
+    });
+
+    it('should backup user-modified rule to .user-overrides/ and overwrite with upstream', async () => {
+      testProjectPath = appPath('test-user-modified-rule');
+      const rulesDir = path.join(testProjectPath, '.cursor', 'rules');
+      await fs.ensureDir(rulesDir);
+
+      const ruleFile = path.join(rulesDir, 'specs-management.mdc');
+      const originalContent = '# Original rule from extension';
+      const userModifiedContent = '# Original rule from extension\n\n## My custom additions\n- Custom rule 1';
+
+      // Write the original file
+      await fs.writeFile(ruleFile, originalContent, 'utf-8');
+
+      // Compute hash of original content (simulates what updater stored)
+      const crypto = await import('crypto');
+      const originalHash = crypto.createHash('sha256').update(originalContent, 'utf-8').digest('hex');
+
+      // Setup config with managed entry including the hash
+      await setupConfigForUpdate({
+        autoUpdate: true,
+        cooldownHours: 24,
+        lastCheck: hoursAgo(25),
+        installedExtensions: [{
+          name: 'specs-workflow',
+          version: '0.0.1',
+          platform: 'cursor',
+          projectPaths: [testProjectPath],
+          managed: {
+            [testProjectPath]: {
+              rules: [
+                { path: '.cursor/rules/specs-management.mdc', hash: originalHash },
+              ],
+            },
+          },
+        }],
+      });
+
+      // User modifies the rule file
+      await fs.writeFile(ruleFile, userModifiedContent, 'utf-8');
+
+      await runCheckUpdate();
+
+      // 1. Backup should exist in .user-overrides/
+      const backupPath = path.join(testProjectPath, '.user-overrides', '.cursor', 'rules', 'specs-management.mdc');
+      expect(await fs.pathExists(backupPath)).toBe(true);
+
+      // 2. Backup should contain user's modified content
+      const backupContent = await fs.readFile(backupPath, 'utf-8');
+      expect(backupContent).toBe(userModifiedContent);
+
+      // 3. Rule file should be overwritten with upstream (new version from GitHub)
+      const updatedContent = await fs.readFile(ruleFile, 'utf-8');
+      expect(updatedContent).not.toBe(userModifiedContent);
+    });
+
+    it('should NOT backup unmodified files during update', async () => {
+      testProjectPath = appPath('test-unmodified-no-backup');
+      const commandsDir = path.join(testProjectPath, '.cursor', 'commands');
+      await fs.ensureDir(commandsDir);
+
+      const cmdFile = path.join(commandsDir, 'suggest-rules.md');
+      const originalContent = '# Suggest rules command';
+
+      // Write the original file
+      await fs.writeFile(cmdFile, originalContent, 'utf-8');
+
+      // Compute hash of original content
+      const crypto = await import('crypto');
+      const originalHash = crypto.createHash('sha256').update(originalContent, 'utf-8').digest('hex');
+
+      await setupConfigForUpdate({
+        autoUpdate: true,
+        cooldownHours: 24,
+        lastCheck: hoursAgo(25),
+        installedExtensions: [{
+          name: 'suggest-rules',
+          version: '0.0.1',
+          platform: 'cursor',
+          projectPaths: [testProjectPath],
+          managed: {
+            [testProjectPath]: {
+              commands: [
+                { path: '.cursor/commands/suggest-rules.md', hash: originalHash },
+              ],
+            },
+          },
+        }],
+      });
+
+      // Do NOT modify the file — it stays at original content
+
+      await runCheckUpdate();
+
+      // No .user-overrides/ directory should be created
+      const overridesDir = path.join(testProjectPath, '.user-overrides');
+      expect(await fs.pathExists(overridesDir)).toBe(false);
+    });
+
+    it('should backup user-modified file when migrating from old schema (no hashes)', async () => {
+      testProjectPath = appPath('test-migration-backup');
+      const rulesDir = path.join(testProjectPath, '.cursor', 'rules');
+      await fs.ensureDir(rulesDir);
+
+      const ruleFile = path.join(rulesDir, 'specs-management.mdc');
+      const userContent = '# My custom rule content that differs from upstream';
+      await fs.writeFile(ruleFile, userContent, 'utf-8');
+
+      // Old config format: managed entries are plain strings (no hashes)
+      await setupConfigForUpdate({
+        autoUpdate: true,
+        cooldownHours: 24,
+        lastCheck: hoursAgo(25),
+        installedExtensions: [{
+          name: 'specs-workflow',
+          version: '0.0.1',
+          platform: 'cursor',
+          projectPaths: [testProjectPath],
+          managed: {
+            [testProjectPath]: {
+              rules: ['.cursor/rules/specs-management.mdc'],
+            },
+          },
+        }],
+      });
+
+      await runCheckUpdate();
+
+      // Since no hash was stored (migration), and file exists with content,
+      // it should be treated as potentially modified and backed up
+      const backupPath = path.join(testProjectPath, '.user-overrides', '.cursor', 'rules', 'specs-management.mdc');
+      expect(await fs.pathExists(backupPath)).toBe(true);
+
+      const backupContent = await fs.readFile(backupPath, 'utf-8');
+      expect(backupContent).toBe(userContent);
+    });
+
+    it('should create update report when files are backed up', async () => {
+      // Clean previous report to ensure isolation
+      const reportPath = homePath('.dev-pomogator', 'last-update-report.md');
+      await fs.remove(reportPath);
+
+      testProjectPath = appPath('test-update-report');
+      const rulesDir = path.join(testProjectPath, '.cursor', 'rules');
+      await fs.ensureDir(rulesDir);
+
+      const ruleFile = path.join(rulesDir, 'specs-management.mdc');
+      const originalContent = '# Original';
+      await fs.writeFile(ruleFile, originalContent, 'utf-8');
+
+      const crypto = await import('crypto');
+      const originalHash = crypto.createHash('sha256').update(originalContent, 'utf-8').digest('hex');
+
+      await setupConfigForUpdate({
+        autoUpdate: true,
+        cooldownHours: 24,
+        lastCheck: hoursAgo(25),
+        installedExtensions: [{
+          name: 'specs-workflow',
+          version: '0.0.1',
+          platform: 'cursor',
+          projectPaths: [testProjectPath],
+          managed: {
+            [testProjectPath]: {
+              rules: [
+                { path: '.cursor/rules/specs-management.mdc', hash: originalHash },
+              ],
+            },
+          },
+        }],
+      });
+
+      // User modifies the file
+      await fs.writeFile(ruleFile, '# Modified by user', 'utf-8');
+
+      await runCheckUpdate();
+
+      // Report should exist
+      const reportPath = homePath('.dev-pomogator', 'last-update-report.md');
+      expect(await fs.pathExists(reportPath)).toBe(true);
+
+      const reportContent = await fs.readFile(reportPath, 'utf-8');
+      expect(reportContent).toContain('Update Report');
+      expect(reportContent).toContain('.cursor/rules/specs-management.mdc');
+      expect(reportContent).toContain('specs-workflow');
+      expect(reportContent).toContain('.user-overrides');
+    });
+
+    it('should mirror .user-overrides/ structure to match original file paths', async () => {
+      testProjectPath = appPath('test-overrides-structure');
+      const rulesDir = path.join(testProjectPath, '.cursor', 'rules');
+      const toolsDir = path.join(testProjectPath, 'tools', 'specs-generator');
+      await fs.ensureDir(rulesDir);
+      await fs.ensureDir(toolsDir);
+
+      const ruleFile = path.join(rulesDir, 'specs-management.mdc');
+      const toolFile = path.join(toolsDir, 'scaffold-spec.ps1');
+      const ruleContent = '# Rule original';
+      const toolContent = '# Tool original';
+      await fs.writeFile(ruleFile, ruleContent, 'utf-8');
+      await fs.writeFile(toolFile, toolContent, 'utf-8');
+
+      const crypto = await import('crypto');
+      const ruleHash = crypto.createHash('sha256').update(ruleContent, 'utf-8').digest('hex');
+      const toolHash = crypto.createHash('sha256').update(toolContent, 'utf-8').digest('hex');
+
+      await setupConfigForUpdate({
+        autoUpdate: true,
+        cooldownHours: 24,
+        lastCheck: hoursAgo(25),
+        installedExtensions: [{
+          name: 'specs-workflow',
+          version: '0.0.1',
+          platform: 'cursor',
+          projectPaths: [testProjectPath],
+          managed: {
+            [testProjectPath]: {
+              rules: [
+                { path: '.cursor/rules/specs-management.mdc', hash: ruleHash },
+              ],
+              tools: [
+                { path: 'tools/specs-generator/scaffold-spec.ps1', hash: toolHash },
+              ],
+            },
+          },
+        }],
+      });
+
+      // User modifies both files
+      await fs.writeFile(ruleFile, '# User modified rule', 'utf-8');
+      await fs.writeFile(toolFile, '# User modified tool', 'utf-8');
+
+      await runCheckUpdate();
+
+      // Check .user-overrides/ mirrors the exact directory structure
+      const ruleBackup = path.join(testProjectPath, '.user-overrides', '.cursor', 'rules', 'specs-management.mdc');
+      const toolBackup = path.join(testProjectPath, '.user-overrides', 'tools', 'specs-generator', 'scaffold-spec.ps1');
+
+      expect(await fs.pathExists(ruleBackup)).toBe(true);
+      expect(await fs.pathExists(toolBackup)).toBe(true);
+
+      expect(await fs.readFile(ruleBackup, 'utf-8')).toBe('# User modified rule');
+      expect(await fs.readFile(toolBackup, 'utf-8')).toBe('# User modified tool');
+    });
+  });
 });

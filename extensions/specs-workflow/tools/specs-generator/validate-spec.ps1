@@ -99,6 +99,7 @@ function Write-Log {
 $requiredFiles = @(
     "USER_STORIES.md",
     "USE_CASES.md",
+    "RESEARCH.md",
     "REQUIREMENTS.md",
     "FR.md",
     "NFR.md",
@@ -106,6 +107,7 @@ $requiredFiles = @(
     "DESIGN.md",
     "TASKS.md",
     "FILE_CHANGES.md",
+    "CHANGELOG.md",
     "README.md"
 )
 

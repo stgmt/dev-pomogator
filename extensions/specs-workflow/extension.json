@@ -48,7 +48,8 @@
       "tools/specs-generator/templates/SCHEMA.md.template",
       "tools/specs-generator/templates/TASKS.md.template",
       "tools/specs-generator/templates/USE_CASES.md.template",
-      "tools/specs-generator/templates/USER_STORIES.md.template"
+      "tools/specs-generator/templates/USER_STORIES.md.template",
+      "tools/specs-generator/templates/CHANGELOG.md.template"
     ],
     "specs-validator": [
       "tools/specs-validator/completeness.ts",

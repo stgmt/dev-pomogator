@@ -1,9 +1,4 @@
----
-description: Plan-pomogator — формат планов разработки (Plan mode): User Stories / Use Cases / Requirements (EARS + NFR + Assumptions) / Implementation Plan (Leverage) / Todos (atomic + traceability) / DoD (Verification Plan) + File Changes
-globs:
-  - "**/*"
-alwaysApply: true
----
+# Plan-pomogator — Формат планов разработки
 
 ## Цель правила
 
@@ -13,7 +8,7 @@ alwaysApply: true
 
 - Спецификация требований к формату планов: `tools/plan-pomogator/requirements.md`
 - Копипаст-шаблон плана: `tools/plan-pomogator/template.md`
-- **Specs Management**: `.cursor/rules/specs-management.mdc` (structure `.specs/`, scripts `tools/specs-generator/`)
+- **Specs Management**: `.claude/rules/specs-management.md` (structure `.specs/`, scripts `tools/specs-generator/`)
 
 > Примечание (render-safe): плейсхолдеры вида `<роль>` могут интерпретироваться как HTML-теги и пропадать в рендере. Используй `{роль}` / `{цель}` / `{ценность}`.
 
@@ -53,6 +48,8 @@ alwaysApply: true
      - Reliability
      - Usability
    - **Assumptions**: явная секция допущений (может быть `N/A`).
+   - **Risks** (опционально): риски, breaking changes, внешние зависимости (может быть `N/A`).
+   - **Out of Scope** (опционально): что явно НЕ входит в этот план (может быть `N/A`).
    - FR/AC/Use Cases заполняются **доменным содержанием** из контекста задачи и источников требований.
 
 4. **Implementation Plan**

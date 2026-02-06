@@ -836,6 +836,27 @@ export async function waitForObservation(
 // ============================================================================
 
 /**
+ * Managed file entry (new format with hash tracking)
+ */
+export interface ManagedFileEntryTest {
+  path: string;
+  hash: string;
+}
+
+/** Managed file item: plain string (old format) or entry with hash (new format) */
+export type ManagedFileItemTest = string | ManagedFileEntryTest;
+
+/**
+ * Managed files tracking structure (mirrors src/config/schema.ts ManagedFiles)
+ */
+export interface ManagedFilesTest {
+  commands?: ManagedFileItemTest[];
+  rules?: ManagedFileItemTest[];
+  tools?: ManagedFileItemTest[];
+  hooks?: Record<string, string[]>;
+}
+
+/**
  * Installed extension config structure
  */
 export interface InstalledExtension {
@@ -843,6 +864,7 @@ export interface InstalledExtension {
   version: string;
   platform: 'cursor' | 'claude';
   projectPaths: string[];
+  managed?: Record<string, ManagedFilesTest>;
 }
 
 /**
@@ -928,11 +950,13 @@ export async function getConfigLastCheck(): Promise<string | null> {
 /**
  * Run check-update.js script
  * Returns stdout output
+ * 
+ * @param args - Optional CLI arguments (e.g. '--claude' to update Claude platform)
  */
-export async function runCheckUpdate(): Promise<string> {
+export async function runCheckUpdate(args: string = ''): Promise<string> {
   const scriptPath = homePath('.dev-pomogator', 'scripts', 'check-update.js');
   try {
-    const result = execSync(`node "${scriptPath}"`, {
+    const result = execSync(`node "${scriptPath}" ${args}`.trim(), {
       encoding: 'utf-8',
       timeout: 60000, // 60s for network requests
       env: {

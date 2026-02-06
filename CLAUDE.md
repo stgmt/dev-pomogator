@@ -1,0 +1,51 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `npm run build` | Compile TypeScript + bundle standalone check-update script |
+| `npm run dev` | Watch mode TypeScript compilation |
+| `npm run lint` | ESLint on `src/` |
+| `npm test` | E2E tests via Docker Compose (requires Docker) |
+| `npm run test:e2e:docker` | Run vitest directly inside Docker container |
+| `npx tsx tools/plan-pomogator/validate-plan.ts <path>` | Validate plan structure |
+| `.\tools\specs-generator\scaffold-spec.ps1 -Name "feature"` | Scaffold spec structure |
+| `.\tools\specs-generator\validate-spec.ps1 -Path ".specs/feature"` | Validate spec formats |
+
+## Architecture
+
+**Extension/plugin system** for Cursor and Claude Code that installs team coding standards, workflows, and tools into projects.
+
+- **Source of truth**: `tools/` and `.cursor/rules/` in repo root
+- **Extensions** (`extensions/`): self-contained plugins with platform-specific copies (cursor/claude)
+- **File sync**: every change to root `tools/` or `.cursor/rules/` must be synced to corresponding `extensions/` copies
+- **Updater** (`src/updater/`): autonomous background update system with content hashing and user modification protection
+- **Config**: `~/.dev-pomogator/config.json` — tracks installed extensions, managed files with SHA-256 hashes
+
+## Rules
+
+### Always-apply
+
+| Rule | Description | Path |
+|------|-------------|------|
+| plan-pomogator | Единый формат планов разработки (7 обязательных секций + File Changes) | `.claude/rules/plan-pomogator.md` |
+| extension-manifest-integrity | `extension.json` — source of truth для апдейтера; обновлять files/rules/tools/toolFiles/hooks при изменениях | `.claude/rules/extension-manifest-integrity.md` |
+| updater-managed-cleanup | Апдейтер удаляет только managed-файлы; user-модификации бэкапятся в `.user-overrides/`; hooks через smart merge | `.claude/rules/updater-managed-cleanup.md` |
+| updater-sync-tools-hooks | Апдейтер обновляет tools и hooks вместе с commands, не только `.cursor/commands` | `.claude/rules/updater-sync-tools-hooks.md` |
+| jira-smart-commit-one-line | Smart Commit парсится только если ключ Jira и команда в первой строке, одна строка | `.claude/rules/jira-smart-commit-one-line.md` |
+| atomic-config-save | Конфиги через temp file + atomic move, не прямой writeJson | `.claude/rules/atomic-config-save.md` |
+| atomic-update-lock | Lock через `flag: 'wx'` (O_EXCL), не exists-check + write | `.claude/rules/atomic-update-lock.md` |
+| no-unvalidated-manifest-paths | Пути из манифеста валидировать через resolve + startsWith(projectPath) | `.claude/rules/no-unvalidated-manifest-paths.md` |
+| claude-md-glossary | CLAUDE.md = глоссарий/индекс на rules; при добавлении/удалении правил обновлять таблицу | `.claude/rules/claude-md-glossary.md` |
+
+### Triggered
+
+| Rule | Trigger | Path |
+|------|---------|------|
+| specs-management | "создай/обнови спеки", "create/update specs" | `.claude/rules/specs-management.md` |
+| specs-validation | Работа с файлами в `.specs/` или `tests/features/` | `.claude/rules/specs-validation.md` |
+| no-mocks-fallbacks | Реализация по спекам / написание тестов | `.claude/rules/no-mocks-fallbacks.md` |
+| research-workflow | "исследуй", "найди", "погугли", "ресерч" | `.claude/rules/research-workflow.md` |
