@@ -1,4 +1,6 @@
 const RAW_BASE = 'https://raw.githubusercontent.com/stgmt/dev-pomogator/main';
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 2000;
 
 export interface ExtensionManifest {
   name: string;
@@ -42,24 +44,30 @@ export interface ExtensionManifest {
   };
 }
 
-export async function fetchExtensionManifest(name: string): Promise<ExtensionManifest | null> {
-  const url = `${RAW_BASE}/extensions/${name}/extension.json`;
-  
-  try {
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'dev-pomogator',
-      },
-    });
-    
-    if (!response.ok) {
+async function fetchWithRetry(url: string): Promise<Response | null> {
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const response = await fetch(url, {
+        headers: { 'User-Agent': 'dev-pomogator' },
+      });
+      if (!response.ok) return null;
+      return response;
+    } catch {
+      if (attempt < MAX_RETRIES) {
+        await new Promise(r => setTimeout(r, RETRY_DELAY_MS * attempt));
+        continue;
+      }
       return null;
     }
-    
-    return response.json() as Promise<ExtensionManifest>;
-  } catch {
-    return null;
   }
+  return null;
+}
+
+export async function fetchExtensionManifest(name: string): Promise<ExtensionManifest | null> {
+  const url = `${RAW_BASE}/extensions/${name}/extension.json`;
+  const response = await fetchWithRetry(url);
+  if (!response) return null;
+  return response.json() as Promise<ExtensionManifest>;
 }
 
 export async function downloadExtensionFile(
@@ -70,20 +78,7 @@ export async function downloadExtensionFile(
   // but source files on GitHub are at extensions/{name}/tools/... (no .dev-pomogator/ prefix)
   const remotePath = relativePath.replace(/^\.dev-pomogator\//, '');
   const url = `${RAW_BASE}/extensions/${extensionName}/${remotePath}`;
-  
-  try {
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'dev-pomogator',
-      },
-    });
-    
-    if (!response.ok) {
-      return null;
-    }
-    
-    return response.text();
-  } catch {
-    return null;
-  }
+  const response = await fetchWithRetry(url);
+  if (!response) return null;
+  return response.text();
 }

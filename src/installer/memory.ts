@@ -203,17 +203,28 @@ async function cloneAndBuildRepo(): Promise<void> {
   // Ensure parent directories exist
   await fs.ensureDir(path.dirname(CLAUDE_MEM_DIR));
   
-  // Clone if not exists
+  // Clone if not exists (with retry for transient network failures)
   const packageJson = path.join(CLAUDE_MEM_DIR, 'package.json');
   if (!await fs.pathExists(packageJson)) {
-    try {
-      execSync(`git clone ${CLAUDE_MEM_REPO} "${CLAUDE_MEM_DIR}"`, {
-        stdio: 'inherit',
-        timeout: 300000, // 5 minutes for slow connections
-      });
-      console.log(chalk.green('  ✓ Repository cloned'));
-    } catch (error) {
-      throw new Error(`Failed to clone claude-mem: ${error}`);
+    const maxRetries = 3;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        execSync(`git clone ${CLAUDE_MEM_REPO} "${CLAUDE_MEM_DIR}"`, {
+          stdio: 'inherit',
+          timeout: 300000, // 5 minutes for slow connections
+        });
+        console.log(chalk.green('  ✓ Repository cloned'));
+        break;
+      } catch (error) {
+        if (attempt < maxRetries) {
+          console.log(chalk.yellow(`  ⚠ Clone attempt ${attempt} failed, retrying in ${attempt * 5}s...`));
+          await fs.remove(CLAUDE_MEM_DIR).catch(() => {});
+          await fs.ensureDir(path.dirname(CLAUDE_MEM_DIR));
+          await new Promise(r => setTimeout(r, attempt * 5000));
+        } else {
+          throw new Error(`Failed to clone claude-mem after ${maxRetries} attempts: ${error}`);
+        }
+      }
     }
   } else {
     console.log(chalk.gray('  Repository already cloned, pulling latest...'));
