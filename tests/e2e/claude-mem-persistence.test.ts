@@ -4,6 +4,7 @@ import {
   startWorker,
   stopWorker,
   runHookWithParams,
+  runHookExpectSuccess,
   runInstaller,
   homePath,
   getStatsTyped,
@@ -107,8 +108,13 @@ describe('PLUGIN002-PERSISTENCE: Claude-mem Data Persistence', () => {
       prompt: 'E2E persistence test: testing data storage',
     });
 
-    // Small delay to ensure DB write completes
-    await new Promise((r) => setTimeout(r, 500));
+    // Wait until session is actually persisted (poll, not arbitrary sleep)
+    const initSessions = ctx.initialStats?.database.sessions ?? 0;
+    try {
+      await waitForStatsIncrease(initSessions, 'sessions', 10000);
+    } catch {
+      console.log('[persistence] Warning: session count did not increase after session-init within 10s');
+    }
   }, 120000);
 
   afterAll(async () => {
@@ -141,8 +147,8 @@ describe('PLUGIN002-PERSISTENCE: Claude-mem Data Persistence', () => {
   // =========================================================================
   describe('Observation Persistence', () => {
     it('observation hook should execute without throwing', async () => {
-      // Execute observation hook with test data
-      const output = runHookWithParams('observation', {
+      // Execute observation hook with test data — throws on non-zero exit
+      const output = runHookExpectSuccess('observation', {
         conversationId: ctx.sessionId,
         workspaceRoot: ctx.workspaceRoot,
         toolName: 'PersistenceTest',
@@ -150,29 +156,29 @@ describe('PLUGIN002-PERSISTENCE: Claude-mem Data Persistence', () => {
         toolResult: { success: true, data: 'test-data' },
       });
 
-      expect(typeof output).toBe('string');
+      expect(output.trim().length).toBeGreaterThan(0);
     });
 
     it('shell command observation should execute', async () => {
-      const output = runHookWithParams('observation', {
+      const output = runHookExpectSuccess('observation', {
         conversationId: ctx.sessionId,
         workspaceRoot: ctx.workspaceRoot,
         command: 'echo "persistence test"',
         output: 'persistence test',
       });
 
-      expect(typeof output).toBe('string');
+      expect(output.trim().length).toBeGreaterThan(0);
     });
 
     it('file-edit hook should execute', async () => {
-      const output = runHookWithParams('file-edit', {
+      const output = runHookExpectSuccess('file-edit', {
         conversationId: ctx.sessionId,
         workspaceRoot: ctx.workspaceRoot,
         filePath: `${ctx.workspaceRoot}/src/test.ts`,
         edits: [{ type: 'insert', line: 1, content: 'const x = 1;' }],
       });
 
-      expect(typeof output).toBe('string');
+      expect(output.trim().length).toBeGreaterThan(0);
     });
   });
 
@@ -207,15 +213,15 @@ describe('PLUGIN002-PERSISTENCE: Claude-mem Data Persistence', () => {
       expect(Array.isArray(response.items)).toBe(true);
     });
 
-    it('observations items should have required fields when present', async () => {
+    it('observations items should have required fields', async () => {
       const response = await getObservationsByProject(undefined, 0, 10);
 
-      if (response.items.length > 0) {
-        const obs = response.items[0];
-        expect(obs).toHaveProperty('id');
-        expect(obs).toHaveProperty('tool_name');
-      }
-      // If no items, test still passes - DB might be empty
+      // After observation hooks above, DB should NOT be empty
+      expect(response.items.length).toBeGreaterThan(0);
+
+      const obs = response.items[0];
+      expect(obs).toHaveProperty('id');
+      expect(obs).toHaveProperty('tool_name');
     });
   });
 
@@ -236,41 +242,25 @@ describe('PLUGIN002-PERSISTENCE: Claude-mem Data Persistence', () => {
         toolResult: { verified: true },
       });
 
-      // Wait for observation to appear (with 15s timeout)
-      try {
-        const observation = await waitForObservation(uniqueToolName, undefined, 15000);
-        expect(observation.tool_name).toBe(uniqueToolName);
-        expect(observation.id).toBeGreaterThan(0);
-        console.log('[persistence] Observation found:', {
-          id: observation.id,
-          tool_name: observation.tool_name,
-        });
-      } catch (e) {
-        // If timeout, log but don't fail - claude-mem may have async processing delays
-        console.log('[persistence] Observation polling timed out (expected in some environments):', e);
-        // Still pass if the hook executed without error
-        expect(true).toBe(true);
-      }
+      // Wait for observation to appear (with 15s timeout).
+      // If timeout — test fails with descriptive error from waitForObservation.
+      const observation = await waitForObservation(uniqueToolName, undefined, 15000);
+      expect(observation.tool_name).toBe(uniqueToolName);
+      expect(observation.id).toBeGreaterThan(0);
+      console.log('[persistence] Observation found:', {
+        id: observation.id,
+        tool_name: observation.tool_name,
+      });
     });
 
     it('stats.sessions should increase after session-init', async () => {
       const initialSessions = ctx.initialStats?.database.sessions ?? 0;
 
-      // Wait for sessions count to increase (with 10s timeout)
-      try {
-        const newCount = await waitForStatsIncrease(initialSessions, 'sessions', 10000);
-        expect(newCount).toBeGreaterThan(initialSessions);
-        console.log('[persistence] Sessions increased:', { from: initialSessions, to: newCount });
-      } catch (e) {
-        // If timeout, verify current state
-        const currentStats = await getStatsTyped();
-        console.log('[persistence] Sessions polling result:', {
-          initial: initialSessions,
-          current: currentStats.database.sessions,
-        });
-        // Session should have been created by beforeAll
-        expect(currentStats.database.sessions).toBeGreaterThanOrEqual(initialSessions);
-      }
+      // Wait for sessions count to strictly increase (with 10s timeout).
+      // If sessions don't increase — test fails.
+      const newCount = await waitForStatsIncrease(initialSessions, 'sessions', 10000);
+      expect(newCount).toBeGreaterThan(initialSessions);
+      console.log('[persistence] Sessions increased:', { from: initialSessions, to: newCount });
     });
   });
 
@@ -281,28 +271,28 @@ describe('PLUGIN002-PERSISTENCE: Claude-mem Data Persistence', () => {
     it('complete workflow: init, observe, verify stats', async () => {
       // Get stats after our test operations
       const finalStats = await getStatsTyped();
-
-      // Verify stats structure
       expect(finalStats.database).toBeDefined();
-      expect(typeof finalStats.database.observations).toBe('number');
-      expect(typeof finalStats.database.sessions).toBe('number');
 
-      // Log for debugging
+      const initialObs = ctx.initialStats?.database.observations ?? 0;
+      const initialSess = ctx.initialStats?.database.sessions ?? 0;
+
+      // Verify data actually increased from test operations
+      expect(finalStats.database.observations).toBeGreaterThan(initialObs);
+      expect(finalStats.database.sessions).toBeGreaterThan(initialSess);
+
       console.log('[persistence] Final stats:', {
-        observations: finalStats.database.observations,
-        sessions: finalStats.database.sessions,
-        initialObservations: ctx.initialStats?.database.observations,
-        initialSessions: ctx.initialStats?.database.sessions,
+        observations: `${initialObs} → ${finalStats.database.observations}`,
+        sessions: `${initialSess} → ${finalStats.database.sessions}`,
       });
     });
 
     it('summarize hook should execute (session end)', async () => {
-      const output = runHookWithParams('summarize', {
+      const output = runHookExpectSuccess('summarize', {
         conversationId: ctx.sessionId,
         workspaceRoot: ctx.workspaceRoot,
       });
 
-      expect(typeof output).toBe('string');
+      expect(output.trim().length).toBeGreaterThan(0);
       expect(output).not.toContain('Missing transcriptPath');
     });
   });

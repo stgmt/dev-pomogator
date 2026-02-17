@@ -658,6 +658,31 @@ export function runHookWithParams(action: string, params: HookParams): string {
 }
 
 /**
+ * Run a claude-mem hook command, THROWING on non-zero exit.
+ * Use when hook success is a test requirement (not just "doesn't crash").
+ * Unlike runHookWithParams, this does NOT swallow errors.
+ */
+export function runHookExpectSuccess(action: string, params: HookParams): string {
+  const workerPath = getWorkerServicePath();
+  const stdinJson = buildCursorStdinJson(action, params);
+
+  // No try/catch: execSync throws on non-zero exit code
+  const result = execSync(
+    `echo '${stdinJson.replace(/'/g, "'\\''")}' | bun "${workerPath}" hook cursor ${action}`,
+    {
+      encoding: 'utf-8',
+      timeout: 30000,
+      shell: '/bin/bash',
+      env: {
+        ...process.env,
+        PATH: getEnhancedPath(),
+      },
+    }
+  );
+  return result;
+}
+
+/**
  * Generate a unique session ID for testing
  */
 export function generateTestSessionId(): string {

@@ -89,9 +89,10 @@ async function isWorkerRunning(): Promise<boolean> {
 }
 
 /**
- * Check if claude-mem is installed (worker-service.cjs exists)
+ * Check if claude-mem repo is cloned and built (worker-service.cjs exists).
+ * Used for Cursor path — checks file presence, NOT Claude Code plugin registration.
  */
-async function isClaudeMemInstalled(): Promise<boolean> {
+async function isClaudeMemRepoCloned(): Promise<boolean> {
   const workerPath = path.join(CLAUDE_MEM_DIR, 'plugin', 'scripts', 'worker-service.cjs');
   return fs.pathExists(workerPath);
 }
@@ -264,7 +265,7 @@ export async function installCursorHooks(): Promise<void> {
   console.log(chalk.cyan('  Installing Cursor hooks...'));
   
   // Check if claude-mem is installed
-  if (!await isClaudeMemInstalled()) {
+  if (!await isClaudeMemRepoCloned()) {
     console.log(chalk.gray('    claude-mem not found, cloning repository...'));
     await cloneAndBuildRepo();
   } else {
@@ -563,8 +564,8 @@ export async function startClaudeMemWorker(): Promise<void> {
     return;
   }
   
-  // Ensure claude-mem is installed
-  if (!await isClaudeMemInstalled()) {
+  // Ensure claude-mem repo is cloned and built
+  if (!await isClaudeMemRepoCloned()) {
     await cloneAndBuildRepo();
   }
   
@@ -612,10 +613,41 @@ export async function startClaudeMemWorker(): Promise<void> {
 // ============================================================================
 
 /**
- * Check if claude-mem plugin is installed in Claude Code
+ * Check if claude-mem plugin is registered in Claude Code.
+ * Checks installed_plugins.json first (fast, works in Docker),
+ * falls back to `claude plugin list` CLI.
  */
 export async function checkClaudeMemPluginInstalled(): Promise<boolean> {
-  return isClaudeMemInstalled();
+  // Strategy 1: Check installed_plugins.json for claude-mem registration
+  const installedPluginsPath = path.join(
+    os.homedir(), '.claude', 'plugins', 'installed_plugins.json'
+  );
+
+  try {
+    if (await fs.pathExists(installedPluginsPath)) {
+      const data = await fs.readJson(installedPluginsPath);
+      const plugins = data?.plugins || {};
+      const isRegistered = Object.keys(plugins).some(
+        key => key.includes('claude-mem') || key.includes('thedotmack')
+      );
+      if (isRegistered) return true;
+    }
+  } catch {
+    // Fall through to CLI check
+  }
+
+  // Strategy 2: Try `claude plugin list` CLI as fallback
+  try {
+    const output = execSync('claude plugin list', {
+      encoding: 'utf-8',
+      timeout: 15000,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    return output.includes('claude-mem');
+  } catch {
+    // CLI not available (Docker headless, etc.)
+    return false;
+  }
 }
 
 /**
@@ -776,7 +808,9 @@ export async function ensureClaudeMem(platform: 'cursor' | 'claude'): Promise<vo
   }
   
   if (platform === 'claude') {
-    // Check and install plugin
+    // Check and install plugin via Claude Code CLI.
+    // Worker lifecycle is managed by Claude Code plugin system —
+    // no need to call startClaudeMemWorker() here.
     const isInstalled = await checkClaudeMemPluginInstalled();
     
     if (!isInstalled) {
