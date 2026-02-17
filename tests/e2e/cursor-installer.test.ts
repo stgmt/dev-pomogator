@@ -528,14 +528,14 @@ describe('CORE002: Auto-update', () => {
       const customContent = '# CUSTOM CONTENT - should remain\nThis is custom content.';
       await fs.writeFile(filePath, customContent);
       
-      // Setup config with SAME version as GitHub (1.2.0)
+      // Setup config with version >= GitHub — no update should occur
       await setupConfigForUpdate({
         autoUpdate: true,
         cooldownHours: 24,
         lastCheck: hoursAgo(25), // Cooldown expired
         installedExtensions: [{
           name: 'suggest-rules',
-          version: '1.2.0', // Same version as GitHub
+          version: '999.0.0', // Higher than any GitHub version → semver.gt() = false → no update
           platform: 'cursor',
           projectPaths: [testProjectPath],
         }],

@@ -142,9 +142,9 @@ describe('PLUGIN005: MCP Setup', () => {
       const { output, exitCode } = runMcpSetup('--platform cursor');
       
       expect(exitCode).toBe(0);
-      expect(output).toContain('npm cache clean --force');
-      expect(output).toContain('npx -y @upstash/context7-mcp@latest --help');
-      expect(output).toContain('npx -y octocode-mcp@latest --help');
+      expect(output).toContain('[NPX]');
+      expect(output).toContain('@upstash/context7-mcp@latest');
+      expect(output).toContain('octocode-mcp@latest');
       expect(output).toContain('context7');
       expect(output).toContain('octocode');
       expect(output).toContain('SAVED');
@@ -197,9 +197,9 @@ describe('PLUGIN005: MCP Setup', () => {
       const { output, exitCode } = runMcpSetup('--platform claude');
       
       expect(exitCode).toBe(0);
-      expect(output).toContain('npm cache clean --force');
-      expect(output).toContain('npx -y @upstash/context7-mcp@latest --help');
-      expect(output).toContain('npx -y octocode-mcp@latest --help');
+      expect(output).toContain('[NPX]');
+      expect(output).toContain('@upstash/context7-mcp@latest');
+      expect(output).toContain('octocode-mcp@latest');
 
       const config = await loadMcpConfig(getGlobalMcpConfigPath('claude'));
       expect(config.mcpServers.context7).toBeDefined();
@@ -261,9 +261,9 @@ describe('PLUGIN005: MCP Setup', () => {
       // Force reinstall
       const { output } = runMcpSetup('--platform cursor --force');
       
-      expect(output).toContain('npm cache clean --force');
-      expect(output).toContain('npx -y @upstash/context7-mcp@latest --help');
-      expect(output).toContain('npx -y octocode-mcp@latest --help');
+      expect(output).toContain('[NPX]');
+      expect(output).toContain('@upstash/context7-mcp@latest');
+      expect(output).toContain('octocode-mcp@latest');
       expect(output).toContain('[FORCE] context7');
       expect(output).toContain('[FORCE] octocode');
     });

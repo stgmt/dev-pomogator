@@ -66,7 +66,10 @@ export async function downloadExtensionFile(
   extensionName: string,
   relativePath: string
 ): Promise<string | null> {
-  const url = `${RAW_BASE}/extensions/${extensionName}/${relativePath}`;
+  // toolFiles in extension.json use target project paths (.dev-pomogator/tools/...)
+  // but source files on GitHub are at extensions/{name}/tools/... (no .dev-pomogator/ prefix)
+  const remotePath = relativePath.replace(/^\.dev-pomogator\//, '');
+  const url = `${RAW_BASE}/extensions/${extensionName}/${remotePath}`;
   
   try {
     const response = await fetch(url, {
