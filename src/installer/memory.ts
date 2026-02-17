@@ -81,7 +81,7 @@ async function ensureBun(): Promise<void> {
  */
 async function isWorkerRunning(): Promise<boolean> {
   try {
-    const response = await fetch(`http://127.0.0.1:${WORKER_PORT}/api/readiness`);
+    const response = await fetch(`http://127.0.0.1:${WORKER_PORT}/api/health`);
     return response.ok;
   } catch {
     return false;
