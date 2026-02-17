@@ -1,4 +1,5 @@
 import { execSync, spawn, ChildProcess } from 'child_process';
+import { readFileSync, readdirSync, readlinkSync } from 'fs';
 import path from 'path';
 import fs from 'fs-extra';
 
@@ -163,7 +164,7 @@ export async function waitForWorker(timeoutMs = 15000): Promise<void> {
   const startTime = Date.now();
   while (Date.now() - startTime < timeoutMs) {
     try {
-      const res = await fetch(`http://127.0.0.1:${WORKER_PORT}/api/readiness`);
+      const res = await fetch(`http://127.0.0.1:${WORKER_PORT}/api/health`);
       if (res.ok) return;
     } catch {
       // Worker not ready yet
@@ -171,6 +172,52 @@ export async function waitForWorker(timeoutMs = 15000): Promise<void> {
     await new Promise(r => setTimeout(r, 500));
   }
   throw new Error(`Worker did not start within ${timeoutMs}ms`);
+}
+
+/**
+ * Kill any process listening on a TCP port using /proc filesystem (Linux only).
+ * Works without procps/psmisc/fuser packages.
+ */
+function killProcessOnPort(port: number): void {
+  if (process.platform !== 'linux') return;
+
+  const portHex = port.toString(16).toUpperCase().padStart(4, '0');
+
+  // Find inode of socket in LISTEN state on our port
+  let inode: string | null = null;
+  for (const file of ['/proc/net/tcp', '/proc/net/tcp6']) {
+    try {
+      for (const line of readFileSync(file, 'utf8').split('\n')) {
+        const cols = line.trim().split(/\s+/);
+        if (cols[1]?.endsWith(':' + portHex) && cols[3] === '0A') {
+          inode = cols[9];
+          break;
+        }
+      }
+    } catch {}
+    if (inode && inode !== '0') break;
+  }
+  if (!inode || inode === '0') return;
+
+  // Find PID owning this socket inode by scanning /proc/*/fd/
+  const socketTarget = `socket:[${inode}]`;
+  try {
+    for (const entry of readdirSync('/proc')) {
+      if (!/^\d+$/.test(entry)) continue;
+      try {
+        for (const fd of readdirSync(`/proc/${entry}/fd`)) {
+          try {
+            if (readlinkSync(`/proc/${entry}/fd/${fd}`) === socketTarget) {
+              const pid = parseInt(entry);
+              process.kill(pid, 'SIGKILL');
+              console.log(`[helpers] Killed process ${pid} on port ${port}`);
+              return;
+            }
+          } catch {}
+        }
+      } catch {}
+    }
+  } catch {}
 }
 
 /**
@@ -184,14 +231,22 @@ export async function startWorker(): Promise<void> {
 
   // Check if already running
   try {
-    const res = await fetch(`http://127.0.0.1:${WORKER_PORT}/api/readiness`);
+    const res = await fetch(`http://127.0.0.1:${WORKER_PORT}/api/health`);
     if (res.ok) {
       console.log('[helpers] Worker already running');
       return;
     }
   } catch {
-    // Not running, start it
+    // Not running
   }
+
+  // Kill any stale process holding the port (e.g. daemon from installer)
+  killProcessOnPort(WORKER_PORT);
+  await new Promise(r => setTimeout(r, 500));
+
+  // Kill any stale process on port (daemon that doesn't respond to HTTP)
+  await killByPort(WORKER_PORT);
+  await new Promise(r => setTimeout(r, 500));
 
   // Pre-flight: verify claude-mem is installed
   const packageJsonPath = path.join(claudeMemDir, 'package.json');
@@ -211,12 +266,10 @@ export async function startWorker(): Promise<void> {
   // - The 'start' arg triggers daemon fork which fails in Docker — omit it.
   // - Without args, WorkerService starts HTTP server directly in-process.
   // - Port is configured via configureClaudeMemSettings() above (CLAUDE_MEM_WORKER_PORT).
-  // - No shell: true — avoids shell wrapping issues with detached + bun.
   const workerScript = path.join(claudeMemDir, 'plugin', 'scripts', 'worker-service.cjs');
   const bunBin = path.join(process.env.HOME || '/home/testuser', '.bun', 'bin', 'bun');
   workerProcess = spawn(bunBin, [workerScript], {
     cwd: claudeMemDir,
-    detached: true,
     stdio: ['ignore', 'pipe', 'pipe'],
     env: {
       ...process.env,
@@ -244,20 +297,31 @@ export async function startWorker(): Promise<void> {
     workerStderr += `\nSpawn error: ${err.message}`;
   });
 
-  workerProcess.unref();
-
   // Wait for worker to become ready (foreground mode — process stays alive)
   const startTime = Date.now();
   while (Date.now() - startTime < 30000) {
     if (workerExitedEarly) {
+      // Read claude-mem log files for additional diagnostics
+      let logContent = '';
+      try {
+        const logsDir = path.join(getClaudeMemDataDir(), 'logs');
+        if (await fs.pathExists(logsDir)) {
+          const logFiles = (await fs.readdir(logsDir)).sort().slice(-2);
+          for (const f of logFiles) {
+            const content = await fs.readFile(path.join(logsDir, f), 'utf8');
+            logContent += `\n--- ${f} ---\n${content.slice(-500)}`;
+          }
+        }
+      } catch {}
       throw new Error(
         `[startWorker] Worker exited with code ${workerExitCode} before becoming ready.\n` +
         `stdout: ${workerStdout || '(empty)'}\n` +
-        `stderr: ${workerStderr || '(empty)'}`
+        `stderr: ${workerStderr || '(empty)'}` +
+        (logContent ? `\nlogs: ${logContent}` : '')
       );
     }
     try {
-      const res = await fetch(`http://127.0.0.1:${WORKER_PORT}/api/readiness`);
+      const res = await fetch(`http://127.0.0.1:${WORKER_PORT}/api/health`);
       if (res.ok) {
         console.log('[helpers] Worker started');
         return;
@@ -269,6 +333,17 @@ export async function startWorker(): Promise<void> {
   }
 
   // Timeout — include diagnostics
+  let logContent = '';
+  try {
+    const logsDir = path.join(getClaudeMemDataDir(), 'logs');
+    if (await fs.pathExists(logsDir)) {
+      const logFiles = (await fs.readdir(logsDir)).sort().slice(-2);
+      for (const f of logFiles) {
+        const content = await fs.readFile(path.join(logsDir, f), 'utf8');
+        logContent += `\n--- ${f} ---\n${content.slice(-500)}`;
+      }
+    }
+  } catch {}
   const diag = [
     `stdout: ${workerStdout || '(empty)'}`,
     `stderr: ${workerStderr || '(empty)'}`,
@@ -276,7 +351,7 @@ export async function startWorker(): Promise<void> {
     `exit code: ${workerExitCode}`,
     `PID: ${workerProcess?.pid ?? 'N/A'}`,
   ].join(', ');
-  throw new Error(`Worker did not start within 30000ms. Diagnostics: ${diag}`);
+  throw new Error(`Worker did not start within 30000ms. Diagnostics: ${diag}${logContent ? `\nlogs: ${logContent}` : ''}`);
 }
 
 /**
@@ -315,18 +390,14 @@ export async function stopWorker(): Promise<void> {
     // Ignore
   }
 
-  // 3. Kill by pattern (pkill — requires procps package in Docker image)
-  try {
-    execSync('pkill -f worker-service.cjs || true', { stdio: 'ignore' });
-  } catch {
-    // pkill may not be available
-  }
+  // 3. Kill any process on the port via /proc (no procps needed)
+  killProcessOnPort(WORKER_PORT);
 
   // Wait for port to actually be released (avoid race with next startWorker)
   const deadline = Date.now() + 10000;
   while (Date.now() < deadline) {
     try {
-      await fetch(`http://127.0.0.1:${WORKER_PORT}/api/readiness`);
+      await fetch(`http://127.0.0.1:${WORKER_PORT}/api/health`);
       await new Promise(r => setTimeout(r, 200));
     } catch {
       break; // Connection refused = port free
@@ -359,7 +430,7 @@ export function runHook(action: string): string {
  */
 export async function isWorkerRunning(): Promise<boolean> {
   try {
-    const res = await fetch(`http://127.0.0.1:${WORKER_PORT}/api/readiness`);
+    const res = await fetch(`http://127.0.0.1:${WORKER_PORT}/api/health`);
     return res.ok;
   } catch {
     return false;
