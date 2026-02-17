@@ -201,135 +201,82 @@ export async function startWorker(): Promise<void> {
 
   console.log('[helpers] Starting claude-mem worker...');
 
+  let workerStdout = '';
+  let workerStderr = '';
+  let workerExitedEarly = false;
+  let workerExitCode: number | null = null;
+
+  // Start worker-service.cjs with bun in foreground mode (no args).
+  // - Must use bun (not node) because worker-service.cjs depends on bun:sqlite.
+  // - The 'start' arg triggers daemon fork which fails in Docker — omit it.
+  // - Without args, WorkerService starts HTTP server directly in-process.
+  // - Port is configured via configureClaudeMemSettings() above (CLAUDE_MEM_WORKER_PORT).
+  // - No shell: true — avoids shell wrapping issues with detached + bun.
   const workerScript = path.join(claudeMemDir, 'plugin', 'scripts', 'worker-service.cjs');
   const bunBin = path.join(process.env.HOME || '/home/testuser', '.bun', 'bin', 'bun');
+  workerProcess = spawn(bunBin, [workerScript], {
+    cwd: claudeMemDir,
+    detached: true,
+    stdio: ['ignore', 'pipe', 'pipe'],
+    env: {
+      ...process.env,
+      PATH: getEnhancedPath(),
+    },
+  });
 
-  // Verify worker script exists
-  if (!await fs.pathExists(workerScript)) {
-    throw new Error(`[startWorker] worker-service.cjs not found at ${workerScript}`);
+  // Capture diagnostics
+  if (workerProcess.stderr) {
+    workerProcess.stderr.on('data', (chunk: Buffer) => {
+      workerStderr += chunk.toString();
+    });
+  }
+  if (workerProcess.stdout) {
+    workerProcess.stdout.on('data', (chunk: Buffer) => {
+      workerStdout += chunk.toString();
+    });
+  }
+  workerProcess.on('exit', (code) => {
+    workerExitedEarly = true;
+    workerExitCode = code;
+  });
+  workerProcess.on('error', (err) => {
+    workerExitedEarly = true;
+    workerStderr += `\nSpawn error: ${err.message}`;
+  });
+
+  workerProcess.unref();
+
+  // Wait for worker to become ready (foreground mode — process stays alive)
+  const startTime = Date.now();
+  while (Date.now() - startTime < 30000) {
+    if (workerExitedEarly) {
+      throw new Error(
+        `[startWorker] Worker exited with code ${workerExitCode} before becoming ready.\n` +
+        `stdout: ${workerStdout || '(empty)'}\n` +
+        `stderr: ${workerStderr || '(empty)'}`
+      );
+    }
+    try {
+      const res = await fetch(`http://127.0.0.1:${WORKER_PORT}/api/readiness`);
+      if (res.ok) {
+        console.log('[helpers] Worker started');
+        return;
+      }
+    } catch {
+      // Not ready yet
+    }
+    await new Promise(r => setTimeout(r, 500));
   }
 
-  // Retry loop: worker may exit early if port is in TIME_WAIT from previous run
-  const maxAttempts = 3;
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    let workerStdout = '';
-    let workerStderr = '';
-    let workerExitedEarly = false;
-    let workerExitCode: number | null = null;
-
-    // Start worker-service.cjs with bun in foreground mode (no args).
-    // - Must use bun (not node) because worker-service.cjs depends on bun:sqlite.
-    // - The 'start' arg triggers daemon fork which fails in Docker — omit it.
-    // - Without args, WorkerService starts HTTP server directly in-process.
-    // - Port is configured via configureClaudeMemSettings() above (CLAUDE_MEM_WORKER_PORT).
-    // - shell: true required — bun without shell wrapper fails silently in Node spawn()
-    workerProcess = spawn(bunBin, [workerScript], {
-      cwd: claudeMemDir,
-      stdio: ['ignore', 'pipe', 'pipe'],
-      shell: true,
-      env: {
-        ...process.env,
-        PATH: getEnhancedPath(),
-      },
-    });
-
-    // Capture diagnostics
-    if (workerProcess.stderr) {
-      workerProcess.stderr.on('data', (chunk: Buffer) => {
-        workerStderr += chunk.toString();
-      });
-    }
-    if (workerProcess.stdout) {
-      workerProcess.stdout.on('data', (chunk: Buffer) => {
-        workerStdout += chunk.toString();
-      });
-    }
-    workerProcess.on('exit', (code) => {
-      workerExitedEarly = true;
-      workerExitCode = code;
-    });
-    workerProcess.on('error', (err) => {
-      workerExitedEarly = true;
-      workerStderr += `\nSpawn error: ${err.message}`;
-    });
-
-
-    // Wait for worker to become ready (foreground mode — process stays alive)
-    const startTime = Date.now();
-    let started = false;
-    while (Date.now() - startTime < 30000) {
-      if (workerExitedEarly) {
-        // Wait a tick for buffered stdout/stderr to be delivered
-        await new Promise(r => setTimeout(r, 100));
-        // Diagnose port state
-        let portDiag = '';
-        try {
-          portDiag = execSync(`ss -tlnp sport = :${WORKER_PORT} 2>/dev/null || netstat -tlnp 2>/dev/null | grep ${WORKER_PORT} || echo 'port check unavailable'`, { encoding: 'utf-8' }).trim();
-        } catch { portDiag = 'diag failed'; }
-
-        // Read worker log file for actual error (worker logs there, not stderr)
-        let workerLog = '';
-        try {
-          const today = new Date().toISOString().slice(0, 10);
-          const logPath = path.join(process.env.HOME || '/home/testuser', '.claude-mem', 'logs', `worker-${today}.log`);
-          if (await fs.pathExists(logPath)) {
-            const content = await fs.readFile(logPath, 'utf-8');
-            const lines = content.split('\n');
-            workerLog = lines.slice(-20).join('\n'); // last 20 lines
-          }
-        } catch { /* ignore */ }
-
-        if (attempt < maxAttempts) {
-          console.log(`[helpers] Worker exited early (code ${workerExitCode}), attempt ${attempt}/${maxAttempts}. Port diag: ${portDiag}. Log: ${workerLog || 'none'}. Retrying in 5s...`);
-          workerProcess = null;
-          // Kill anything on the port before retry
-          try { execSync(`fuser -k ${WORKER_PORT}/tcp 2>/dev/null || true`, { stdio: 'ignore' }); } catch {}
-          await new Promise(r => setTimeout(r, 5000));
-          break;
-        }
-        throw new Error(
-          `[startWorker] Worker exited with code ${workerExitCode} before becoming ready (after ${maxAttempts} attempts).\n` +
-          `stdout: ${workerStdout || '(empty)'}\n` +
-          `stderr: ${workerStderr || '(empty)'}\n` +
-          `port diag: ${portDiag}\n` +
-          `worker log (last 20 lines): ${workerLog || '(empty)'}`
-        );
-      }
-      try {
-        const res = await fetch(`http://127.0.0.1:${WORKER_PORT}/api/readiness`);
-        if (res.ok) {
-          console.log('[helpers] Worker started');
-          return;
-        }
-      } catch {
-        // Not ready yet
-      }
-      await new Promise(r => setTimeout(r, 500));
-    }
-
-    if (!workerExitedEarly && !started) {
-      // Read worker log for actual error
-      let workerLog = '';
-      try {
-        const today = new Date().toISOString().slice(0, 10);
-        const logPath = path.join(process.env.HOME || '/home/testuser', '.claude-mem', 'logs', `worker-${today}.log`);
-        if (await fs.pathExists(logPath)) {
-          const content = await fs.readFile(logPath, 'utf-8');
-          const lines = content.split('\n');
-          workerLog = lines.slice(-20).join('\n');
-        }
-      } catch { /* ignore */ }
-
-      const diag = [
-        `stdout: ${workerStdout || '(empty)'}`,
-        `stderr: ${workerStderr || '(empty)'}`,
-        `exited early: ${workerExitedEarly}`,
-        `exit code: ${workerExitCode}`,
-        `PID: ${workerProcess?.pid ?? 'N/A'}`,
-      ].join(', ');
-      throw new Error(`Worker did not start within 30000ms. Diagnostics: ${diag}\nworker log (last 20 lines): ${workerLog || '(empty)'}`);
-    }
-  }
+  // Timeout — include diagnostics
+  const diag = [
+    `stdout: ${workerStdout || '(empty)'}`,
+    `stderr: ${workerStderr || '(empty)'}`,
+    `exited early: ${workerExitedEarly}`,
+    `exit code: ${workerExitCode}`,
+    `PID: ${workerProcess?.pid ?? 'N/A'}`,
+  ].join(', ');
+  throw new Error(`Worker did not start within 30000ms. Diagnostics: ${diag}`);
 }
 
 /**
@@ -338,49 +285,49 @@ export async function startWorker(): Promise<void> {
 export async function stopWorker(): Promise<void> {
   console.log('[helpers] Stopping claude-mem worker...');
 
-  // 1. Use worker's own CLI stop command (does httpShutdown + waitForPortFree)
-  const workerScript = getWorkerServicePath();
-  const bunBin = path.join(process.env.HOME || '/home/testuser', '.bun', 'bin', 'bun');
-  try {
-    execSync(`"${bunBin}" "${workerScript}" stop`, {
-      stdio: 'ignore',
-      timeout: 10000,
-      env: { ...process.env, PATH: getEnhancedPath() },
-    });
-  } catch {
-    // Worker may not be running — ignore
-  }
-
-  // 2. Kill tracked process (if started by startWorker in this process)
+  // 1. Kill tracked process (started by startWorker in this test file)
   if (workerProcess) {
     try {
       workerProcess.kill('SIGTERM');
     } catch {
-      // Ignore
+      // Ignore — process already dead
     }
     workerProcess = null;
   }
 
-  // 3. pkill as backup for orphaned/daemon workers
+  // 2. Kill daemon started by installer (reads PID from worker.pid)
+  const pidFile = path.join(getClaudeMemDataDir(), 'worker.pid');
+  try {
+    if (await fs.pathExists(pidFile)) {
+      const content = await fs.readJson(pidFile);
+      const pid = content?.pid;
+      if (pid) {
+        try {
+          process.kill(pid, 'SIGTERM');
+          console.log(`[helpers] Killed daemon worker PID ${pid}`);
+        } catch {
+          // Process already dead
+        }
+      }
+      await fs.remove(pidFile);
+    }
+  } catch {
+    // Ignore
+  }
+
+  // 3. Kill by pattern (pkill — requires procps package in Docker image)
   try {
     execSync('pkill -f worker-service.cjs || true', { stdio: 'ignore' });
   } catch {
-    // pkill may not be available in slim images — ignore
+    // pkill may not be available
   }
 
-  // 4. fuser as last resort — kills by port
-  try {
-    execSync(`fuser -k ${WORKER_PORT}/tcp 2>/dev/null || true`, { stdio: 'ignore' });
-  } catch {
-    // fuser may not be available
-  }
-
-  // 5. Wait for port to actually be released
+  // Wait for port to actually be released (avoid race with next startWorker)
   const deadline = Date.now() + 10000;
   while (Date.now() < deadline) {
     try {
       await fetch(`http://127.0.0.1:${WORKER_PORT}/api/readiness`);
-      await new Promise(r => setTimeout(r, 500));
+      await new Promise(r => setTimeout(r, 200));
     } catch {
       break; // Connection refused = port free
     }
