@@ -666,7 +666,7 @@ export async function checkClaudeMemPluginInstalled(): Promise<boolean> {
  */
 export async function installClaudeMemPlugin(): Promise<void> {
   console.log(chalk.cyan('  Installing claude-mem plugin for Claude Code...'));
-  
+
   try {
     // Add marketplace
     console.log(chalk.gray('    Adding marketplace...'));
@@ -674,17 +674,21 @@ export async function installClaudeMemPlugin(): Promise<void> {
       stdio: 'inherit',
       timeout: 60000,
     });
-    
+
     // Install plugin
     console.log(chalk.gray('    Installing plugin...'));
     execSync('claude plugin install claude-mem', {
       stdio: 'inherit',
       timeout: 60000,
     });
-    
-    console.log(chalk.green('  ✓ claude-mem plugin installed'));
-  } catch (error) {
-    throw new Error(`Failed to install claude-mem plugin: ${error}`);
+
+    console.log(chalk.green('  ✓ claude-mem plugin installed via CLI'));
+  } catch {
+    // claude CLI not available or plugin commands failed — fallback to git clone + build
+    console.log(chalk.yellow('  ⚠ claude CLI not available, falling back to git clone...'));
+    if (!await isClaudeMemRepoCloned()) {
+      await cloneAndBuildRepo();
+    }
   }
 }
 
@@ -879,18 +883,28 @@ export async function ensureClaudeMem(platform: 'cursor' | 'claude'): Promise<vo
   }
 
   if (platform === 'claude') {
-    // Check and install plugin via Claude Code CLI.
-    // Worker lifecycle is managed by Claude Code plugin system —
-    // no need to call startClaudeMemWorker() here.
+    // Step 1: Install plugin (CLI or git clone fallback)
     const isInstalled = await checkClaudeMemPluginInstalled();
-    
     if (!isInstalled) {
       await installClaudeMemPlugin();
     } else {
       console.log(chalk.green('  ✓ claude-mem plugin already installed'));
     }
 
-    // Register MCP server in ~/.claude.json
+    // Step 2: Ensure repo is cloned and built (installClaudeMemPlugin may have used fallback)
+    if (!await isClaudeMemRepoCloned()) {
+      await cloneAndBuildRepo();
+    }
+
+    // Step 3: Start worker if not running (same as Cursor path)
+    const workerRunning = await isWorkerRunning();
+    if (workerRunning) {
+      console.log(chalk.green('  ✓ claude-mem worker already running'));
+    } else {
+      await startClaudeMemWorker();
+    }
+
+    // Step 4: Register MCP server in ~/.claude.json
     await registerClaudeMemMcp(platform);
   }
 

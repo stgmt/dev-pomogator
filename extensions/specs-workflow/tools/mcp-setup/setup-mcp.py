@@ -201,11 +201,16 @@ def prefetch_package(package: str) -> None:
 
 
 def build_mcp_entry(server_def: Dict[str, Any]) -> Dict[str, Any]:
-    """Build MCP server entry for config."""
+    """Build MCP server entry for config.
+
+    On Windows, wraps npx/node commands with 'cmd /c' as required by Claude Code.
+    """
     command = server_def.get("command")
     args = server_def.get("args")
     if not command or not isinstance(args, list):
         raise RuntimeError("Missing MCP command/args definition")
+    if sys.platform == "win32" and command in ("npx", "node"):
+        return {"command": "cmd", "args": ["/c", command] + args}
     return {
         "command": command,
         "args": args
@@ -213,7 +218,11 @@ def build_mcp_entry(server_def: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def entries_match(existing: Dict[str, Any], expected: Dict[str, Any]) -> bool:
-    """Compare MCP entries by command and args."""
+    """Compare MCP entries by command and args (exact match).
+
+    No normalization: if existing is 'npx' and expected is 'cmd /c npx',
+    they won't match, forcing an update to the correct Windows format.
+    """
     return (
         existing.get("command") == expected.get("command")
         and existing.get("args", []) == expected.get("args", [])

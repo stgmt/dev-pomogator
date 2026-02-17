@@ -244,10 +244,6 @@ export async function startWorker(): Promise<void> {
   killProcessOnPort(WORKER_PORT);
   await new Promise(r => setTimeout(r, 500));
 
-  // Kill any stale process on port (daemon that doesn't respond to HTTP)
-  await killByPort(WORKER_PORT);
-  await new Promise(r => setTimeout(r, 500));
-
   // Pre-flight: verify claude-mem is installed
   const packageJsonPath = path.join(claudeMemDir, 'package.json');
   if (!await fs.pathExists(packageJsonPath)) {

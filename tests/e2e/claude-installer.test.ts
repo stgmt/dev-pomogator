@@ -349,3 +349,33 @@ describe('PostInstall: Dependencies are installed during setup', () => {
     expect(ext).toBeDefined();
   });
 });
+
+/**
+ * claude-mem integration tests for Claude Code platform.
+ *
+ * --claude --all includes suggest-rules (requiresClaudeMem: true)
+ * → ensureClaudeMem('claude') must clone repo + register MCP.
+ *
+ * BUG reproduced: ensureClaudeMem('claude') did NOT call
+ * cloneAndBuildRepo() or startClaudeMemWorker(), so worker-service.cjs
+ * was never created and MCP was never registered.
+ */
+describe('CORE003-Claude-mem: claude-mem installed for Claude platform', () => {
+  it('should have claude-mem worker-service.cjs after --claude --all', async () => {
+    const workerServicePath = homePath(
+      '.claude', 'plugins', 'marketplaces', 'thedotmack', 'plugin', 'scripts', 'worker-service.cjs'
+    );
+    expect(await fs.pathExists(workerServicePath)).toBe(true);
+  });
+
+  it('should register claude-mem MCP in ~/.claude.json', async () => {
+    const claudeJsonPath = homePath('.claude.json');
+    if (!await fs.pathExists(claudeJsonPath)) {
+      expect.fail('~/.claude.json not found — claude-mem MCP was not registered');
+    }
+    const config = await fs.readJson(claudeJsonPath);
+    expect(config.mcpServers?.['claude-mem']).toBeDefined();
+    expect(config.mcpServers['claude-mem'].command).toBe('node');
+    expect(config.mcpServers['claude-mem'].args[0]).toContain('mcp-server.cjs');
+  });
+});
