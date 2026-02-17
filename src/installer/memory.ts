@@ -773,9 +773,66 @@ async function areCursorHooksInstalled(): Promise<boolean> {
 }
 
 /**
+ * Register claude-mem MCP server in the IDE's MCP config file.
+ * Cursor: ~/.cursor/mcp.json
+ * Claude Code: ~/.claude.json
+ *
+ * Uses atomic config save (temp + move) per project rules.
+ * Paths use forward slashes in JSON for cross-platform compatibility.
+ */
+async function registerClaudeMemMcp(platform: 'cursor' | 'claude'): Promise<void> {
+  const configPath = platform === 'cursor'
+    ? path.join(os.homedir(), '.cursor', 'mcp.json')
+    : path.join(os.homedir(), '.claude.json');
+
+  // Load existing config
+  let config: Record<string, any> = {};
+  if (await fs.pathExists(configPath)) {
+    try {
+      config = await fs.readJson(configPath);
+    } catch {
+      // Corrupted config — start fresh
+    }
+  }
+  if (!config.mcpServers) config.mcpServers = {};
+
+  // Path to mcp-server.cjs (forward slashes for JSON cross-platform compat)
+  const mcpServerPath = path.join(CLAUDE_MEM_DIR, 'plugin', 'scripts', 'mcp-server.cjs')
+    .replace(/\\/g, '/');
+
+  // Verify binary exists before registering
+  if (!(await fs.pathExists(path.join(CLAUDE_MEM_DIR, 'plugin', 'scripts', 'mcp-server.cjs')))) {
+    console.log(chalk.yellow('  ⚠ mcp-server.cjs not found, skipping MCP registration'));
+    return;
+  }
+
+  // Check if already registered with same config
+  const existing = config.mcpServers['claude-mem'];
+  const expectedArgs = [mcpServerPath];
+  if (existing?.command === 'node' && JSON.stringify(existing.args) === JSON.stringify(expectedArgs)) {
+    console.log(chalk.green('  ✓ claude-mem MCP server already registered'));
+    return;
+  }
+
+  // Register MCP server
+  config.mcpServers['claude-mem'] = {
+    command: 'node',
+    args: expectedArgs,
+  };
+
+  // Atomic config save: temp file + move
+  await fs.ensureDir(path.dirname(configPath));
+  const tempPath = configPath + '.tmp';
+  await fs.writeJson(tempPath, config, { spaces: 2 });
+  await fs.move(tempPath, configPath, { overwrite: true });
+
+  console.log(chalk.green(`  ✓ claude-mem MCP server registered in ${path.basename(configPath)}`));
+}
+
+/**
  * Ensure claude-mem is installed and configured for the specified platform.
  * Runs AUTOMATICALLY without user confirmation.
- * 
+ *
  * For Cursor: Clones repo, builds, installs hooks, starts worker
  * For Claude Code: Installs plugin via marketplace
  */
@@ -799,14 +856,17 @@ export async function ensureClaudeMem(platform: 'cursor' | 'claude'): Promise<vo
     
     // Step 2: Check and start worker (independent of hooks)
     const workerRunning = await isWorkerRunning();
-    
+
     if (workerRunning) {
       console.log(chalk.green('  ✓ claude-mem worker already running'));
     } else {
       await startClaudeMemWorker();
     }
+
+    // Step 3: Register MCP server in ~/.cursor/mcp.json
+    await registerClaudeMemMcp(platform);
   }
-  
+
   if (platform === 'claude') {
     // Check and install plugin via Claude Code CLI.
     // Worker lifecycle is managed by Claude Code plugin system —
@@ -818,7 +878,10 @@ export async function ensureClaudeMem(platform: 'cursor' | 'claude'): Promise<vo
     } else {
       console.log(chalk.green('  ✓ claude-mem plugin already installed'));
     }
+
+    // Register MCP server in ~/.claude.json
+    await registerClaudeMemMcp(platform);
   }
-  
+
   console.log(chalk.green('\n✨ Persistent memory configured!\n'));
 }

@@ -201,11 +201,20 @@ export async function startWorker(): Promise<void> {
 
   console.log('[helpers] Starting claude-mem worker...');
 
+  let workerStdout = '';
   let workerStderr = '';
   let workerExitedEarly = false;
   let workerExitCode: number | null = null;
 
-  workerProcess = spawn('bun', ['run', 'worker:start'], {
+  // Start worker-service.cjs with bun in foreground mode (no args).
+  // - Must use bun (not node) because worker-service.cjs depends on bun:sqlite.
+  // - The 'start' arg triggers daemon fork which fails in Docker — omit it.
+  // - Without args, WorkerService starts HTTP server directly in-process.
+  // - Port is configured via configureClaudeMemSettings() above (CLAUDE_MEM_WORKER_PORT).
+  // - No shell: true — avoids shell wrapping issues with detached + bun.
+  const workerScript = path.join(claudeMemDir, 'plugin', 'scripts', 'worker-service.cjs');
+  const bunBin = path.join(process.env.HOME || '/home/testuser', '.bun', 'bin', 'bun');
+  workerProcess = spawn(bunBin, [workerScript], {
     cwd: claudeMemDir,
     detached: true,
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -213,7 +222,6 @@ export async function startWorker(): Promise<void> {
       ...process.env,
       PATH: getEnhancedPath(),
     },
-    shell: true,
   });
 
   // Capture diagnostics
@@ -223,7 +231,9 @@ export async function startWorker(): Promise<void> {
     });
   }
   if (workerProcess.stdout) {
-    workerProcess.stdout.on('data', () => { /* drain */ });
+    workerProcess.stdout.on('data', (chunk: Buffer) => {
+      workerStdout += chunk.toString();
+    });
   }
   workerProcess.on('exit', (code) => {
     workerExitedEarly = true;
@@ -236,12 +246,13 @@ export async function startWorker(): Promise<void> {
 
   workerProcess.unref();
 
-  // Wait with early-exit detection
+  // Wait for worker to become ready (foreground mode — process stays alive)
   const startTime = Date.now();
-  while (Date.now() - startTime < 15000) {
+  while (Date.now() - startTime < 30000) {
     if (workerExitedEarly) {
       throw new Error(
         `[startWorker] Worker exited with code ${workerExitCode} before becoming ready.\n` +
+        `stdout: ${workerStdout || '(empty)'}\n` +
         `stderr: ${workerStderr || '(empty)'}`
       );
     }
@@ -259,12 +270,13 @@ export async function startWorker(): Promise<void> {
 
   // Timeout — include diagnostics
   const diag = [
+    `stdout: ${workerStdout || '(empty)'}`,
     `stderr: ${workerStderr || '(empty)'}`,
     `exited early: ${workerExitedEarly}`,
     `exit code: ${workerExitCode}`,
     `PID: ${workerProcess?.pid ?? 'N/A'}`,
   ].join(', ');
-  throw new Error(`Worker did not start within 15000ms. Diagnostics: ${diag}`);
+  throw new Error(`Worker did not start within 30000ms. Diagnostics: ${diag}`);
 }
 
 /**

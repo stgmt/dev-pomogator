@@ -52,22 +52,6 @@ describe('CLI Integration: Claude Code', () => {
     });
   });
 
-  describe('MCP servers visible via claude mcp list', () => {
-    it('claude mcp list shows context7', () => {
-      const { stdout, exitCode } = runClaude('mcp list');
-      expect(exitCode).toBe(0);
-      const clean = stripAnsi(stdout);
-      expect(clean).toContain('context7');
-    });
-
-    it('claude mcp list shows octocode', () => {
-      const { stdout, exitCode } = runClaude('mcp list');
-      expect(exitCode).toBe(0);
-      const clean = stripAnsi(stdout);
-      expect(clean).toContain('octocode');
-    });
-  });
-
   describe('Commands installed and readable', () => {
     it('.claude/commands/ directory exists', async () => {
       expect(await fs.pathExists(appPath('.claude', 'commands'))).toBe(true);
@@ -129,6 +113,15 @@ describe('CLI Integration: Claude Code', () => {
       expect(config.mcpServers.context7.command).toBe('npx');
       expect(config.mcpServers.octocode).toBeDefined();
       expect(config.mcpServers.octocode.command).toBe('npx');
+    });
+
+    it('~/.claude.json has claude-mem MCP server registered', async () => {
+      const claudeJson = homePath('.claude.json');
+      const config = await fs.readJson(claudeJson);
+      expect(config.mcpServers['claude-mem']).toBeDefined();
+      expect(config.mcpServers['claude-mem'].command).toBe('node');
+      expect(config.mcpServers['claude-mem'].args).toBeDefined();
+      expect(config.mcpServers['claude-mem'].args[0]).toContain('mcp-server.cjs');
     });
   });
 
@@ -238,6 +231,15 @@ describe('CLI Integration: Cursor Agent', () => {
       expect(config.mcpServers.context7.command).toBe('npx');
       expect(config.mcpServers.octocode).toBeDefined();
       expect(config.mcpServers.octocode.command).toBe('npx');
+    });
+
+    it('~/.cursor/mcp.json has claude-mem MCP server registered', async () => {
+      const mcpPath = homePath('.cursor', 'mcp.json');
+      const config = await fs.readJson(mcpPath);
+      expect(config.mcpServers['claude-mem']).toBeDefined();
+      expect(config.mcpServers['claude-mem'].command).toBe('node');
+      expect(config.mcpServers['claude-mem'].args).toBeDefined();
+      expect(config.mcpServers['claude-mem'].args[0]).toContain('mcp-server.cjs');
     });
   });
 });

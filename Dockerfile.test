@@ -34,10 +34,13 @@ RUN curl -fsSL https://cursor.com/install | bash && \
 
 WORKDIR /home/testuser/app
 
-# Copy all source code
+# Copy all source code (may include Windows node_modules)
 COPY --chown=testuser:testuser . .
 
-# Install dependencies (skip prepare script)
+# Remove Windows node_modules to avoid platform mismatches (esbuild etc.)
+RUN rm -rf node_modules
+
+# Install dependencies for Linux (skip prepare script)
 RUN npm install --ignore-scripts
 
 # Build
