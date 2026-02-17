@@ -227,6 +227,16 @@ export async function stopWorker(): Promise<void> {
     }
     workerProcess = null;
   }
+  // Wait for port to actually be released (avoid race with next startWorker)
+  const deadline = Date.now() + 10000;
+  while (Date.now() < deadline) {
+    try {
+      await fetch(`http://127.0.0.1:${WORKER_PORT}/api/readiness`);
+      await new Promise(r => setTimeout(r, 200));
+    } catch {
+      break; // Connection refused = port free
+    }
+  }
   console.log('[helpers] Worker stopped');
 }
 
