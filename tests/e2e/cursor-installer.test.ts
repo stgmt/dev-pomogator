@@ -288,10 +288,12 @@ describe('PLUGIN002: Claude-mem Hooks', () => {
 
 // PLUGIN002-RUNTIME: Claude-mem Worker runtime tests
 describe('PLUGIN002-RUNTIME: Claude-mem Worker', () => {
-  // Start worker before runtime tests — stop any stale worker from installer first
+  // Reuse installer-started worker if running, otherwise start fresh
   beforeAll(async () => {
-    await stopWorker();
-    await startWorker();
+    if (!await isWorkerRunning()) {
+      await stopWorker(); // clean up any zombie processes
+      await startWorker();
+    }
   });
 
   // Stop worker after runtime tests
