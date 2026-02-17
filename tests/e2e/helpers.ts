@@ -1166,12 +1166,27 @@ export async function loadConfigTemplate(
 }
 
 /**
+ * Clean ~/.claude/ directory while preserving claude-mem clone cache.
+ * Removes settings.json, commands/, rules/ etc but keeps plugins/.
+ */
+async function cleanClaudeDir(): Promise<void> {
+  const claudeDir = homePath('.claude');
+  if (!await fs.pathExists(claudeDir)) return;
+
+  const entries = await fs.readdir(claudeDir);
+  for (const entry of entries) {
+    if (entry === 'plugins') continue; // preserve claude-mem clone
+    await fs.remove(path.join(claudeDir, entry));
+  }
+}
+
+/**
  * Set up a clean (pre-install) state for the given platform.
  *
  * - Removes HOME-level platform directories and .dev-pomogator config
  * - Removes project-level platform artifacts
  * - For Cursor: copies cursor-base fixture to ~/.cursor
- * - For Claude: ensures ~/.claude does not exist
+ * - For Claude: cleans ~/.claude/ but preserves plugins/ (claude-mem cache)
  * - Initialises a git repo so findRepoRoot() works
  */
 export async function setupCleanState(platform: 'cursor' | 'claude'): Promise<void> {
@@ -1180,14 +1195,14 @@ export async function setupCleanState(platform: 'cursor' | 'claude'): Promise<vo
 
   if (platform === 'cursor') {
     await fs.remove(homePath('.cursor'));
-    await fs.remove(homePath('.claude'));
+    await cleanClaudeDir();
     // Copy cursor-base fixture
     await fs.copy(path.join(FIXTURES_BASE, 'cursor-base'), homePath('.cursor'));
     // Clean project-level Cursor artifacts
     await fs.remove(appPath('.cursor'));
     await fs.remove(appPath('.dev-pomogator'));
   } else {
-    await fs.remove(homePath('.claude'));
+    await cleanClaudeDir();
     await fs.remove(homePath('.cursor'));
     // Clean project-level Claude artifacts
     await fs.remove(appPath('.claude'));

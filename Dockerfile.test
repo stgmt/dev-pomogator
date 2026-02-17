@@ -32,6 +32,19 @@ RUN curl -fsSL https://bun.sh/install | bash
 RUN curl -fsSL https://cursor.com/install | bash && \
     cursor-agent --version
 
+# Pre-cache claude-mem clone and build (avoid re-clone during tests).
+# Non-fatal: if clone fails, tests will clone at runtime (slower but works).
+RUN (for i in 1 2 3; do \
+      git clone https://github.com/thedotmack/claude-mem.git \
+        /home/testuser/.claude/plugins/marketplaces/thedotmack && break; \
+      echo "Clone attempt $i failed, retrying in ${i}0s..."; \
+      rm -rf /home/testuser/.claude/plugins/marketplaces/thedotmack; \
+      sleep $((i * 10)); \
+    done && \
+    cd /home/testuser/.claude/plugins/marketplaces/thedotmack && \
+    bun install && \
+    bun run build) || echo "WARNING: claude-mem pre-cache failed, will clone at runtime"
+
 WORKDIR /home/testuser/app
 
 # Copy all source code (may include Windows node_modules)
