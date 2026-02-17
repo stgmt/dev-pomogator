@@ -150,17 +150,52 @@ export async function installClaude(options: ClaudeOptions = {}): Promise<void> 
     managedByExtension.get(extName)!.hooks = hookData;
   }
 
-  // 5. Run post-install hooks for extensions that have them
+  // 5. Generate .dev-pomogator/.claude-plugin/plugin.json (Claude Code plugin metadata)
+  const pluginDir = path.join(repoRoot, '.dev-pomogator', '.claude-plugin');
+  await fs.ensureDir(pluginDir);
+
+  const packageJsonPath = path.resolve(__dirname, '..', '..', 'package.json');
+  let packageVersion = '0.0.0';
+  try {
+    const pkg = await fs.readJson(packageJsonPath);
+    packageVersion = pkg.version || '0.0.0';
+  } catch {
+    // fallback version if package.json not found
+  }
+
+  const pluginJsonContent = {
+    name: 'dev-pomogator',
+    version: packageVersion,
+    description: `Installed extensions: ${extensionsToInstall.map(e => e.name).join(', ')}`,
+  };
+
+  const pluginJsonPath = path.join(pluginDir, 'plugin.json');
+  await fs.writeJson(pluginJsonPath, pluginJsonContent, { spaces: 2 });
+  console.log('  ✓ Generated .dev-pomogator/.claude-plugin/plugin.json');
+
+  // Track plugin.json in managed files (first extension's tools)
+  const pluginJsonHash = await getFileHash(pluginJsonPath);
+  if (pluginJsonHash && extensionsToInstall.length > 0) {
+    const firstExtName = extensionsToInstall[0].name;
+    if (!managedByExtension.has(firstExtName)) {
+      managedByExtension.set(firstExtName, {});
+    }
+    const firstExtManaged = managedByExtension.get(firstExtName)!;
+    if (!firstExtManaged.tools) firstExtManaged.tools = [];
+    firstExtManaged.tools.push({ path: '.dev-pomogator/.claude-plugin/plugin.json', hash: pluginJsonHash });
+  }
+
+  // 6. Run post-install hooks for extensions that have them
   for (const extension of extensionsToInstall) {
     if (extension.postInstall) {
       await runPostInstallHook(extension, repoRoot, 'claude');
     }
   }
 
-  // 6. Always persist managed data for tracking
+  // 7. Always persist managed data for tracking
   await addProjectPaths(repoRoot, extensionsToInstall, 'claude', managedByExtension);
 
-  // 7. Setup auto-update hooks if enabled
+  // 8. Setup auto-update hooks if enabled
   if (options.autoUpdate !== false) {
     await setupClaudeHooks();
     await setupGlobalScripts();

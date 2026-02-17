@@ -1,6 +1,6 @@
 {
   "name": "specs-workflow",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Управление спецификациями: 3-фазный workflow, валидация, автоматическая проверка покрытия, MCP инструменты для research",
   "platforms": ["cursor", "claude"],
   "category": "workflow",

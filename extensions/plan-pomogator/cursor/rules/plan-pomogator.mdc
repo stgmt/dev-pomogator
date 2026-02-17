@@ -13,7 +13,7 @@ alwaysApply: true
 
 - Спецификация требований к формату планов: `.dev-pomogator/tools/plan-pomogator/requirements.md`
 - Копипаст-шаблон плана: `.dev-pomogator/tools/plan-pomogator/template.md`
-- **Specs Management**: `.cursor/rules/specs-management.mdc` (structure `.specs/`, scripts `.dev-pomogator/tools/specs-generator/`)
+- **Specs Management**: `.cursor/rules/pomogator/specs-management.mdc` (structure `.specs/`, scripts `.dev-pomogator/tools/specs-generator/`)
 
 > Примечание (render-safe): плейсхолдеры вида `<роль>` могут интерпретироваться как HTML-теги и пропадать в рендере. Используй `{роль}` / `{цель}` / `{ценность}`.
 

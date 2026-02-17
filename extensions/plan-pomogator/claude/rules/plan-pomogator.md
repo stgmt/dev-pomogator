@@ -8,7 +8,7 @@
 
 - Спецификация требований к формату планов: `.dev-pomogator/tools/plan-pomogator/requirements.md`
 - Копипаст-шаблон плана: `.dev-pomogator/tools/plan-pomogator/template.md`
-- **Specs Management**: `.claude/rules/specs-management.md` (structure `.specs/`, scripts `.dev-pomogator/tools/specs-generator/`)
+- **Specs Management**: `.claude/rules/pomogator/specs-management.md` (structure `.specs/`, scripts `.dev-pomogator/tools/specs-generator/`)
 
 > Примечание (render-safe): плейсхолдеры вида `<роль>` могут интерпретироваться как HTML-теги и пропадать в рендере. Используй `{роль}` / `{цель}` / `{ценность}`.
 

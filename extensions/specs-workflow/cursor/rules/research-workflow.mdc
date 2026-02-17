@@ -159,4 +159,4 @@ alwaysApply: false
 2. Предложить обновить/создать RESEARCH.md с результатами
 3. Использовать скрипт: `.\.dev-pomogator\tools\specs-generator\spec-status.ps1`
 
-См. также: `.cursor/rules/specs-management.mdc`
+См. также: `.cursor/rules/pomogator/specs-management.mdc`

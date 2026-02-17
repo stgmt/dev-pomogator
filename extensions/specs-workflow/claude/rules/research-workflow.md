@@ -154,4 +154,4 @@
 2. Предложить обновить/создать RESEARCH.md с результатами
 3. Использовать скрипт: `.\.dev-pomogator\tools\specs-generator\spec-status.ps1`
 
-См. также: `.claude/rules/specs-management.md`
+См. также: `.claude/rules/pomogator/specs-management.md`

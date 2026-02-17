@@ -1,6 +1,6 @@
 {
   "name": "plan-pomogator",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Единый формат планов + шаблон и ручной валидатор структуры",
   "platforms": ["cursor", "claude"],
   "category": "workflow",

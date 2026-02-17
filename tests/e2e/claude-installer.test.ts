@@ -123,6 +123,32 @@ describe('CORE003: Claude Code Installer', () => {
     });
   });
 
+  describe('Scenario: Plugin manifest is generated', () => {
+    it('should create .dev-pomogator/.claude-plugin/plugin.json', async () => {
+      const pluginJsonPath = appPath('.dev-pomogator', '.claude-plugin', 'plugin.json');
+      expect(await fs.pathExists(pluginJsonPath)).toBe(true);
+    });
+
+    it('should have valid plugin.json with name and version', async () => {
+      const pluginJsonPath = appPath('.dev-pomogator', '.claude-plugin', 'plugin.json');
+      const pluginJson = await fs.readJson(pluginJsonPath);
+
+      expect(pluginJson.name).toBe('dev-pomogator');
+      expect(pluginJson.version).toMatch(/^\d+\.\d+\.\d+/);
+      expect(pluginJson.description).toBeDefined();
+      expect(pluginJson.description.length).toBeGreaterThan(0);
+    });
+
+    it('should list installed extensions in description', async () => {
+      const pluginJsonPath = appPath('.dev-pomogator', '.claude-plugin', 'plugin.json');
+      const pluginJson = await fs.readJson(pluginJsonPath);
+
+      // Should mention at least some known extensions
+      expect(pluginJson.description).toContain('plan-pomogator');
+      expect(pluginJson.description).toContain('specs-workflow');
+    });
+  });
+
   describe('Scenario: Settings.json hooks structure is correct', () => {
     it('should have hooks.Stop array', async () => {
       const settingsPath = homePath('.claude', 'settings.json');
