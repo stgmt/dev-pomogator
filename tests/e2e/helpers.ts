@@ -181,7 +181,7 @@ export async function startWorker(): Promise<void> {
 
   // Configure settings before starting (OpenRouter API key)
   configureClaudeMemSettings();
-  
+
   // Check if already running
   try {
     const res = await fetch(`http://127.0.0.1:${WORKER_PORT}/api/readiness`);
@@ -192,21 +192,79 @@ export async function startWorker(): Promise<void> {
   } catch {
     // Not running, start it
   }
-  
+
+  // Pre-flight: verify claude-mem is installed
+  const packageJsonPath = path.join(claudeMemDir, 'package.json');
+  if (!await fs.pathExists(packageJsonPath)) {
+    throw new Error(`[startWorker] package.json not found at ${packageJsonPath}. Claude-mem not installed.`);
+  }
+
   console.log('[helpers] Starting claude-mem worker...');
+
+  let workerStderr = '';
+  let workerExitedEarly = false;
+  let workerExitCode: number | null = null;
+
   workerProcess = spawn('bun', ['run', 'worker:start'], {
     cwd: claudeMemDir,
     detached: true,
-    stdio: 'ignore',
+    stdio: ['ignore', 'pipe', 'pipe'],
     env: {
       ...process.env,
       PATH: getEnhancedPath(),
     },
+    shell: true,
   });
+
+  // Capture diagnostics
+  if (workerProcess.stderr) {
+    workerProcess.stderr.on('data', (chunk: Buffer) => {
+      workerStderr += chunk.toString();
+    });
+  }
+  if (workerProcess.stdout) {
+    workerProcess.stdout.on('data', () => { /* drain */ });
+  }
+  workerProcess.on('exit', (code) => {
+    workerExitedEarly = true;
+    workerExitCode = code;
+  });
+  workerProcess.on('error', (err) => {
+    workerExitedEarly = true;
+    workerStderr += `\nSpawn error: ${err.message}`;
+  });
+
   workerProcess.unref();
-  
-  await waitForWorker();
-  console.log('[helpers] Worker started');
+
+  // Wait with early-exit detection
+  const startTime = Date.now();
+  while (Date.now() - startTime < 15000) {
+    if (workerExitedEarly) {
+      throw new Error(
+        `[startWorker] Worker exited with code ${workerExitCode} before becoming ready.\n` +
+        `stderr: ${workerStderr || '(empty)'}`
+      );
+    }
+    try {
+      const res = await fetch(`http://127.0.0.1:${WORKER_PORT}/api/readiness`);
+      if (res.ok) {
+        console.log('[helpers] Worker started');
+        return;
+      }
+    } catch {
+      // Not ready yet
+    }
+    await new Promise(r => setTimeout(r, 500));
+  }
+
+  // Timeout — include diagnostics
+  const diag = [
+    `stderr: ${workerStderr || '(empty)'}`,
+    `exited early: ${workerExitedEarly}`,
+    `exit code: ${workerExitCode}`,
+    `PID: ${workerProcess?.pid ?? 'N/A'}`,
+  ].join(', ');
+  throw new Error(`Worker did not start within 15000ms. Diagnostics: ${diag}`);
 }
 
 /**
