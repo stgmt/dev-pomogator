@@ -13,16 +13,17 @@
   },
   "toolFiles": {
     "forbid-root-artifacts": [
-      "tools/forbid-root-artifacts/.root-artifacts.yaml.template",
-      "tools/forbid-root-artifacts/check.py",
-      "tools/forbid-root-artifacts/configure.py",
-      "tools/forbid-root-artifacts/default-whitelist.yaml",
-      "tools/forbid-root-artifacts/requirements.txt",
-      "tools/forbid-root-artifacts/setup.py"
+      ".dev-pomogator/tools/forbid-root-artifacts/.root-artifacts.yaml.template",
+      ".dev-pomogator/tools/forbid-root-artifacts/check.py",
+      ".dev-pomogator/tools/forbid-root-artifacts/configure.py",
+      ".dev-pomogator/tools/forbid-root-artifacts/default-whitelist.yaml",
+      ".dev-pomogator/tools/forbid-root-artifacts/deps-install.py",
+      ".dev-pomogator/tools/forbid-root-artifacts/requirements.txt",
+      ".dev-pomogator/tools/forbid-root-artifacts/setup.py"
     ]
   },
   "postInstall": {
-    "command": "python tools/forbid-root-artifacts/configure.py",
+    "command": "python .dev-pomogator/tools/forbid-root-artifacts/deps-install.py && python .dev-pomogator/tools/forbid-root-artifacts/configure.py",
     "interactive": true,
     "skipInCI": true
   }

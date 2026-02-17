@@ -1,0 +1,20 @@
+{
+  "autoUpdate": true,
+  "cooldownHours": 24,
+  "lastCheck": "{{LAST_CHECK}}",
+  "installedExtensions": [
+    {
+      "name": "{{EXTENSION_NAME}}",
+      "version": "0.0.1",
+      "platform": "{{PLATFORM}}",
+      "projectPaths": ["{{PROJECT_PATH}}"],
+      "managed": {
+        "{{PROJECT_PATH}}": {
+          "commands": [],
+          "rules": [],
+          "tools": []
+        }
+      }
+    }
+  ]
+}

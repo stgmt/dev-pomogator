@@ -76,13 +76,13 @@ npx dev-pomogator --update
 
 - `.cursor/commands/` — команды плагинов (например, `suggest-rules`, `create-spec`, `configure-root-artifacts`)
 - `.cursor/rules/` — правила плагинов (например, `specs-*`, `plan-pomogator`, `research-workflow`, `no-mocks-fallbacks`)
-- `tools/` — утилиты плагинов (`specs-generator`, `specs-validator`, `steps-validator`, `plan-pomogator`, `forbid-root-artifacts`)
+- `.dev-pomogator/tools/` — утилиты плагинов (`specs-generator`, `specs-validator`, `steps-validator`, `plan-pomogator`, `forbid-root-artifacts`)
 
 ### В проект (Claude Code)
 
 - `.claude/commands/` — команды плагинов
 - `.claude/rules/` — правила плагинов
-- `tools/` — утилиты плагинов
+- `.dev-pomogator/tools/` — утилиты плагинов
 
 ### Глобально (Cursor)
 

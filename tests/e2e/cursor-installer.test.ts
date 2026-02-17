@@ -1,15 +1,14 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
-import { 
-  runInstaller, 
-  homePath, 
-  appPath, 
-  startWorker, 
-  stopWorker, 
-  runHook, 
-  isWorkerRunning, 
-  initGitRepo,
+import {
+  runInstaller,
+  homePath,
+  appPath,
+  startWorker,
+  stopWorker,
+  runHook,
+  isWorkerRunning,
   // Auto-update helpers
   hoursAgo,
   setupConfigForUpdate,
@@ -17,26 +16,14 @@ import {
   getConfigLastCheck,
   runCheckUpdate,
   ensureCheckUpdateScript,
+  // Platform setup helpers
+  setupCleanState,
+  setupInstalledState,
 } from './helpers';
-
-const FIXTURES_DIR = path.join(__dirname, '..', 'fixtures');
 
 describe('Scenario 1: Clean Install', () => {
   beforeAll(async () => {
-    // Copy fixture (base Cursor structure without our hooks)
-    const fixture = path.join(FIXTURES_DIR, 'fixture');
-    const cursorDir = homePath('.cursor');
-    
-    // Clean up any existing state
-    await fs.remove(cursorDir);
-    await fs.remove(homePath('.claude'));
-    await fs.remove(homePath('.dev-pomogator'));
-    
-    // Copy fixture
-    await fs.copy(fixture, cursorDir);
-    
-    // Initialize git repo so findRepoRoot() works correctly
-    await initGitRepo();
+    await setupCleanState('cursor');
   });
 
   it('should clone claude-mem to marketplace directory', async () => {
@@ -144,24 +131,24 @@ describe('PLUGIN003: Specs-workflow Extension', () => {
   });
 
   it('should install specs-management rule', async () => {
-    const rulePath = appPath('.cursor', 'rules', 'specs-management.mdc');
+    const rulePath = appPath('.cursor', 'rules', 'pomogator', 'specs-management.mdc');
     expect(await fs.pathExists(rulePath)).toBe(true);
   });
 
   it('should install no-mocks-fallbacks rule', async () => {
-    const rulePath = appPath('.cursor', 'rules', 'no-mocks-fallbacks.mdc');
+    const rulePath = appPath('.cursor', 'rules', 'pomogator', 'no-mocks-fallbacks.mdc');
     expect(await fs.pathExists(rulePath)).toBe(true);
   });
 
   it('should install research-workflow rule', async () => {
-    const rulePath = appPath('.cursor', 'rules', 'research-workflow.mdc');
+    const rulePath = appPath('.cursor', 'rules', 'pomogator', 'research-workflow.mdc');
     expect(await fs.pathExists(rulePath)).toBe(true);
   });
 
   it('should install specs-generator tools', async () => {
-    const toolsPath = appPath('tools', 'specs-generator');
+    const toolsPath = appPath('.dev-pomogator', 'tools', 'specs-generator');
     expect(await fs.pathExists(toolsPath)).toBe(true);
-    
+
     // Check key scripts exist
     expect(await fs.pathExists(path.join(toolsPath, 'scaffold-spec.ps1'))).toBe(true);
     expect(await fs.pathExists(path.join(toolsPath, 'validate-spec.ps1'))).toBe(true);
@@ -169,7 +156,7 @@ describe('PLUGIN003: Specs-workflow Extension', () => {
   });
 
   it('should install templates', async () => {
-    const templatesPath = appPath('tools', 'specs-generator', 'templates');
+    const templatesPath = appPath('.dev-pomogator', 'tools', 'specs-generator', 'templates');
     expect(await fs.pathExists(templatesPath)).toBe(true);
     
     // Check some key templates
@@ -182,12 +169,12 @@ describe('PLUGIN003: Specs-workflow Extension', () => {
 // PLUGIN007: Plan-pomogator extension verification
 describe('PLUGIN007: Plan-pomogator Extension', () => {
   it('should install plan-pomogator rule', async () => {
-    const rulePath = appPath('.cursor', 'rules', 'plan-pomogator.mdc');
+    const rulePath = appPath('.cursor', 'rules', 'pomogator', 'plan-pomogator.mdc');
     expect(await fs.pathExists(rulePath)).toBe(true);
   });
 
   it('should install plan-pomogator tools', async () => {
-    const toolsPath = appPath('tools', 'plan-pomogator');
+    const toolsPath = appPath('.dev-pomogator', 'tools', 'plan-pomogator');
     expect(await fs.pathExists(toolsPath)).toBe(true);
     expect(await fs.pathExists(path.join(toolsPath, 'validate-plan.ts'))).toBe(true);
     expect(await fs.pathExists(path.join(toolsPath, 'requirements.md'))).toBe(true);
@@ -345,9 +332,12 @@ describe('PLUGIN002-RUNTIME: Claude-mem Worker', () => {
   });
 });
 
-describe('Scenario 2: Re-install (after Scenario 1)', () => {
-  // State is preserved from Scenario 1
-  
+describe('Scenario 2: Re-install (isolated)', () => {
+  beforeAll(async () => {
+    // Set up a fully installed state from scratch (isolated from Scenario 1)
+    await setupInstalledState('cursor');
+  });
+
   it('should NOT clone claude-mem again', async () => {
     const { logs, exitCode } = await runInstaller();
     
@@ -611,7 +601,7 @@ describe('CORE002: Auto-update', () => {
 
     it('should remove stale rule when updating extension', async () => {
       testProjectPath = appPath('test-stale-rule');
-      const rulesDir = path.join(testProjectPath, '.cursor', 'rules');
+      const rulesDir = path.join(testProjectPath, '.cursor', 'rules', 'pomogator');
       await fs.ensureDir(rulesDir);
 
       // Create real + stale rule files
@@ -630,8 +620,8 @@ describe('CORE002: Auto-update', () => {
           managed: {
             [testProjectPath]: {
               rules: [
-                '.cursor/rules/specs-management.mdc',
-                '.cursor/rules/obsolete-rule.mdc',
+                '.cursor/rules/pomogator/specs-management.mdc',
+                '.cursor/rules/pomogator/obsolete-rule.mdc',
               ],
             },
           },
@@ -648,7 +638,7 @@ describe('CORE002: Auto-update', () => {
 
     it('should remove stale tool when updating extension', async () => {
       testProjectPath = appPath('test-stale-tool');
-      const toolsDir = path.join(testProjectPath, 'tools', 'specs-generator');
+      const toolsDir = path.join(testProjectPath, '.dev-pomogator', 'tools', 'specs-generator');
       await fs.ensureDir(toolsDir);
 
       // Create real + stale tool files
@@ -667,8 +657,8 @@ describe('CORE002: Auto-update', () => {
           managed: {
             [testProjectPath]: {
               tools: [
-                'tools/specs-generator/scaffold-spec.ps1',
-                'tools/specs-generator/old-tool.ps1',
+                '.dev-pomogator/tools/specs-generator/scaffold-spec.ps1',
+                '.dev-pomogator/tools/specs-generator/old-tool.ps1',
               ],
             },
           },
@@ -731,15 +721,15 @@ describe('CORE002: Auto-update', () => {
     it('should remove stale Cursor hook from hooks.json', async () => {
       testProjectPath = appPath('test-stale-hook');
       // Ensure tools dir exists (updater resolves hooks with projectPath)
-      await fs.ensureDir(path.join(testProjectPath, 'tools', 'auto-commit'));
+      await fs.ensureDir(path.join(testProjectPath, '.dev-pomogator', 'tools', 'auto-commit'));
       await fs.writeFile(
-        path.join(testProjectPath, 'tools', 'auto-commit', 'auto_commit_stop.ts'),
+        path.join(testProjectPath, '.dev-pomogator', 'tools', 'auto-commit', 'auto_commit_stop.ts'),
         '// placeholder'
       );
 
       const hooksFile = homePath('.cursor', 'hooks', 'hooks.json');
-      const realCommand = `npx tsx ${path.join(testProjectPath, 'tools', 'auto-commit', 'auto_commit_stop.ts').replace(/\\/g, '/')}`.replace(/\\/g, '\\\\');
-      const staleCommand = `npx tsx ${path.join(testProjectPath, 'tools', 'auto-commit', 'old_hook.ts').replace(/\\/g, '/')}`.replace(/\\/g, '\\\\');
+      const realCommand = `npx tsx ${path.join(testProjectPath, '.dev-pomogator', 'tools', 'auto-commit', 'auto_commit_stop.ts').replace(/\\/g, '/')}`.replace(/\\/g, '\\\\');
+      const staleCommand = `npx tsx ${path.join(testProjectPath, '.dev-pomogator', 'tools', 'auto-commit', 'old_hook.ts').replace(/\\/g, '/')}`.replace(/\\/g, '\\\\');
 
       // Write hooks.json with both real and stale hook
       await fs.ensureDir(path.dirname(hooksFile));
@@ -766,8 +756,8 @@ describe('CORE002: Auto-update', () => {
             [testProjectPath]: {
               hooks: {
                 stop: [
-                  'npx tsx tools/auto-commit/auto_commit_stop.ts',
-                  'npx tsx tools/auto-commit/old_hook.ts',
+                  'npx tsx .dev-pomogator/tools/auto-commit/auto_commit_stop.ts',
+                  'npx tsx .dev-pomogator/tools/auto-commit/old_hook.ts',
                 ],
               },
             },
@@ -789,15 +779,15 @@ describe('CORE002: Auto-update', () => {
 
     it('should preserve user hooks when removing stale managed hooks', async () => {
       testProjectPath = appPath('test-user-hooks');
-      await fs.ensureDir(path.join(testProjectPath, 'tools', 'auto-commit'));
+      await fs.ensureDir(path.join(testProjectPath, '.dev-pomogator', 'tools', 'auto-commit'));
       await fs.writeFile(
-        path.join(testProjectPath, 'tools', 'auto-commit', 'auto_commit_stop.ts'),
+        path.join(testProjectPath, '.dev-pomogator', 'tools', 'auto-commit', 'auto_commit_stop.ts'),
         '// placeholder'
       );
 
       const hooksFile = homePath('.cursor', 'hooks', 'hooks.json');
-      const realCommand = `npx tsx ${path.join(testProjectPath, 'tools', 'auto-commit', 'auto_commit_stop.ts').replace(/\\/g, '/')}`.replace(/\\/g, '\\\\');
-      const staleCommand = `npx tsx ${path.join(testProjectPath, 'tools', 'auto-commit', 'old_hook.ts').replace(/\\/g, '/')}`.replace(/\\/g, '\\\\');
+      const realCommand = `npx tsx ${path.join(testProjectPath, '.dev-pomogator', 'tools', 'auto-commit', 'auto_commit_stop.ts').replace(/\\/g, '/')}`.replace(/\\/g, '\\\\');
+      const staleCommand = `npx tsx ${path.join(testProjectPath, '.dev-pomogator', 'tools', 'auto-commit', 'old_hook.ts').replace(/\\/g, '/')}`.replace(/\\/g, '\\\\');
       const userCommand = 'bash /home/testuser/my-custom-lint-hook.sh';
 
       // Write hooks.json with managed hooks + user's own hook
@@ -826,8 +816,8 @@ describe('CORE002: Auto-update', () => {
             [testProjectPath]: {
               hooks: {
                 stop: [
-                  'npx tsx tools/auto-commit/auto_commit_stop.ts',
-                  'npx tsx tools/auto-commit/old_hook.ts',
+                  'npx tsx .dev-pomogator/tools/auto-commit/auto_commit_stop.ts',
+                  'npx tsx .dev-pomogator/tools/auto-commit/old_hook.ts',
                 ],
               },
             },
@@ -850,15 +840,15 @@ describe('CORE002: Auto-update', () => {
 
     it('should preserve hooks.json structure (version, other events) during cleanup', async () => {
       testProjectPath = appPath('test-hooks-structure');
-      await fs.ensureDir(path.join(testProjectPath, 'tools', 'auto-commit'));
+      await fs.ensureDir(path.join(testProjectPath, '.dev-pomogator', 'tools', 'auto-commit'));
       await fs.writeFile(
-        path.join(testProjectPath, 'tools', 'auto-commit', 'auto_commit_stop.ts'),
+        path.join(testProjectPath, '.dev-pomogator', 'tools', 'auto-commit', 'auto_commit_stop.ts'),
         '// placeholder'
       );
 
       const hooksFile = homePath('.cursor', 'hooks', 'hooks.json');
-      const realCommand = `npx tsx ${path.join(testProjectPath, 'tools', 'auto-commit', 'auto_commit_stop.ts').replace(/\\/g, '/')}`.replace(/\\/g, '\\\\');
-      const staleCommand = `npx tsx ${path.join(testProjectPath, 'tools', 'auto-commit', 'old_hook.ts').replace(/\\/g, '/')}`.replace(/\\/g, '\\\\');
+      const realCommand = `npx tsx ${path.join(testProjectPath, '.dev-pomogator', 'tools', 'auto-commit', 'auto_commit_stop.ts').replace(/\\/g, '/')}`.replace(/\\/g, '\\\\');
+      const staleCommand = `npx tsx ${path.join(testProjectPath, '.dev-pomogator', 'tools', 'auto-commit', 'old_hook.ts').replace(/\\/g, '/')}`.replace(/\\/g, '\\\\');
 
       // Write hooks.json with version, multiple events, and extra fields
       await fs.ensureDir(path.dirname(hooksFile));
@@ -888,8 +878,8 @@ describe('CORE002: Auto-update', () => {
             [testProjectPath]: {
               hooks: {
                 stop: [
-                  'npx tsx tools/auto-commit/auto_commit_stop.ts',
-                  'npx tsx tools/auto-commit/old_hook.ts',
+                  'npx tsx .dev-pomogator/tools/auto-commit/auto_commit_stop.ts',
+                  'npx tsx .dev-pomogator/tools/auto-commit/old_hook.ts',
                 ],
               },
             },
@@ -917,9 +907,9 @@ describe('CORE002: Auto-update', () => {
 
     it('should remove stale Claude hook from settings.json and preserve user hooks', async () => {
       testProjectPath = appPath('test-claude-hooks');
-      await fs.ensureDir(path.join(testProjectPath, 'tools', 'auto-commit'));
+      await fs.ensureDir(path.join(testProjectPath, '.dev-pomogator', 'tools', 'auto-commit'));
       await fs.writeFile(
-        path.join(testProjectPath, 'tools', 'auto-commit', 'auto_commit_stop.ts'),
+        path.join(testProjectPath, '.dev-pomogator', 'tools', 'auto-commit', 'auto_commit_stop.ts'),
         '// placeholder'
       );
 
@@ -932,11 +922,11 @@ describe('CORE002: Auto-update', () => {
           Stop: [
             {
               matcher: '',
-              hooks: [{ type: 'command', command: 'npx tsx tools/auto-commit/auto_commit_stop.ts', timeout: 60 }],
+              hooks: [{ type: 'command', command: 'npx tsx .dev-pomogator/tools/auto-commit/auto_commit_stop.ts', timeout: 60 }],
             },
             {
               matcher: '',
-              hooks: [{ type: 'command', command: 'npx tsx tools/auto-commit/old_claude_hook.ts', timeout: 60 }],
+              hooks: [{ type: 'command', command: 'npx tsx .dev-pomogator/tools/auto-commit/old_claude_hook.ts', timeout: 60 }],
             },
             {
               matcher: '',
@@ -959,8 +949,8 @@ describe('CORE002: Auto-update', () => {
             [testProjectPath]: {
               hooks: {
                 Stop: [
-                  'npx tsx tools/auto-commit/auto_commit_stop.ts',
-                  'npx tsx tools/auto-commit/old_claude_hook.ts',
+                  'npx tsx .dev-pomogator/tools/auto-commit/auto_commit_stop.ts',
+                  'npx tsx .dev-pomogator/tools/auto-commit/old_claude_hook.ts',
                 ],
               },
             },
@@ -977,7 +967,7 @@ describe('CORE002: Auto-update', () => {
       );
 
       // Stale managed hook should be removed
-      expect(allCommands).not.toContain('npx tsx tools/auto-commit/old_claude_hook.ts');
+      expect(allCommands).not.toContain('npx tsx .dev-pomogator/tools/auto-commit/old_claude_hook.ts');
       // Current managed hook should remain
       expect(allCommands.some((cmd: string) => cmd.includes('auto_commit_stop.ts'))).toBe(true);
       // User's custom hook should be preserved
@@ -986,9 +976,9 @@ describe('CORE002: Auto-update', () => {
 
     it('should preserve non-hook settings in Claude settings.json during update', async () => {
       testProjectPath = appPath('test-claude-settings-integrity');
-      await fs.ensureDir(path.join(testProjectPath, 'tools', 'auto-commit'));
+      await fs.ensureDir(path.join(testProjectPath, '.dev-pomogator', 'tools', 'auto-commit'));
       await fs.writeFile(
-        path.join(testProjectPath, 'tools', 'auto-commit', 'auto_commit_stop.ts'),
+        path.join(testProjectPath, '.dev-pomogator', 'tools', 'auto-commit', 'auto_commit_stop.ts'),
         '// placeholder'
       );
 
@@ -1007,7 +997,7 @@ describe('CORE002: Auto-update', () => {
           Stop: [
             {
               matcher: '',
-              hooks: [{ type: 'command', command: 'npx tsx tools/auto-commit/auto_commit_stop.ts', timeout: 60 }],
+              hooks: [{ type: 'command', command: 'npx tsx .dev-pomogator/tools/auto-commit/auto_commit_stop.ts', timeout: 60 }],
             },
           ],
         },
@@ -1026,7 +1016,7 @@ describe('CORE002: Auto-update', () => {
             [testProjectPath]: {
               hooks: {
                 Stop: [
-                  'npx tsx tools/auto-commit/auto_commit_stop.ts',
+                  'npx tsx .dev-pomogator/tools/auto-commit/auto_commit_stop.ts',
                 ],
               },
             },
@@ -1054,7 +1044,7 @@ describe('CORE002: Auto-update', () => {
 
     it('should not delete files outside project (path traversal protection)', async () => {
       testProjectPath = appPath('test-path-traversal');
-      const toolsDir = path.join(testProjectPath, 'tools', 'specs-generator');
+      const toolsDir = path.join(testProjectPath, '.dev-pomogator', 'tools', 'specs-generator');
       await fs.ensureDir(toolsDir);
       await fs.writeFile(path.join(toolsDir, 'scaffold-spec.ps1'), '# OLD');
 
@@ -1074,7 +1064,7 @@ describe('CORE002: Auto-update', () => {
           managed: {
             [testProjectPath]: {
               tools: [
-                'tools/specs-generator/scaffold-spec.ps1',
+                '.dev-pomogator/tools/specs-generator/scaffold-spec.ps1',
                 '../sentinel-do-not-delete.txt',
               ],
             },
@@ -1166,9 +1156,9 @@ describe('CORE002: Auto-update', () => {
       }
     });
 
-    it('should backup user-modified rule to .user-overrides/ and overwrite with upstream', async () => {
+    it('should backup user-modified rule to .dev-pomogator/.user-overrides/ and overwrite with upstream', async () => {
       testProjectPath = appPath('test-user-modified-rule');
-      const rulesDir = path.join(testProjectPath, '.cursor', 'rules');
+      const rulesDir = path.join(testProjectPath, '.cursor', 'rules', 'pomogator');
       await fs.ensureDir(rulesDir);
 
       const ruleFile = path.join(rulesDir, 'specs-management.mdc');
@@ -1195,7 +1185,7 @@ describe('CORE002: Auto-update', () => {
           managed: {
             [testProjectPath]: {
               rules: [
-                { path: '.cursor/rules/specs-management.mdc', hash: originalHash },
+                { path: '.cursor/rules/pomogator/specs-management.mdc', hash: originalHash },
               ],
             },
           },
@@ -1207,8 +1197,8 @@ describe('CORE002: Auto-update', () => {
 
       await runCheckUpdate();
 
-      // 1. Backup should exist in .user-overrides/
-      const backupPath = path.join(testProjectPath, '.user-overrides', '.cursor', 'rules', 'specs-management.mdc');
+      // 1. Backup should exist in .dev-pomogator/.user-overrides/
+      const backupPath = path.join(testProjectPath, '.dev-pomogator', '.user-overrides', '.cursor', 'rules', 'pomogator', 'specs-management.mdc');
       expect(await fs.pathExists(backupPath)).toBe(true);
 
       // 2. Backup should contain user's modified content
@@ -1258,14 +1248,14 @@ describe('CORE002: Auto-update', () => {
 
       await runCheckUpdate();
 
-      // No .user-overrides/ directory should be created
-      const overridesDir = path.join(testProjectPath, '.user-overrides');
+      // No .dev-pomogator/.user-overrides/ directory should be created
+      const overridesDir = path.join(testProjectPath, '.dev-pomogator', '.user-overrides');
       expect(await fs.pathExists(overridesDir)).toBe(false);
     });
 
     it('should backup user-modified file when migrating from old schema (no hashes)', async () => {
       testProjectPath = appPath('test-migration-backup');
-      const rulesDir = path.join(testProjectPath, '.cursor', 'rules');
+      const rulesDir = path.join(testProjectPath, '.cursor', 'rules', 'pomogator');
       await fs.ensureDir(rulesDir);
 
       const ruleFile = path.join(rulesDir, 'specs-management.mdc');
@@ -1284,7 +1274,7 @@ describe('CORE002: Auto-update', () => {
           projectPaths: [testProjectPath],
           managed: {
             [testProjectPath]: {
-              rules: ['.cursor/rules/specs-management.mdc'],
+              rules: ['.cursor/rules/pomogator/specs-management.mdc'],
             },
           },
         }],
@@ -1294,7 +1284,7 @@ describe('CORE002: Auto-update', () => {
 
       // Since no hash was stored (migration), and file exists with content,
       // it should be treated as potentially modified and backed up
-      const backupPath = path.join(testProjectPath, '.user-overrides', '.cursor', 'rules', 'specs-management.mdc');
+      const backupPath = path.join(testProjectPath, '.dev-pomogator', '.user-overrides', '.cursor', 'rules', 'pomogator', 'specs-management.mdc');
       expect(await fs.pathExists(backupPath)).toBe(true);
 
       const backupContent = await fs.readFile(backupPath, 'utf-8');
@@ -1307,7 +1297,7 @@ describe('CORE002: Auto-update', () => {
       await fs.remove(reportPath);
 
       testProjectPath = appPath('test-update-report');
-      const rulesDir = path.join(testProjectPath, '.cursor', 'rules');
+      const rulesDir = path.join(testProjectPath, '.cursor', 'rules', 'pomogator');
       await fs.ensureDir(rulesDir);
 
       const ruleFile = path.join(rulesDir, 'specs-management.mdc');
@@ -1329,7 +1319,7 @@ describe('CORE002: Auto-update', () => {
           managed: {
             [testProjectPath]: {
               rules: [
-                { path: '.cursor/rules/specs-management.mdc', hash: originalHash },
+                { path: '.cursor/rules/pomogator/specs-management.mdc', hash: originalHash },
               ],
             },
           },
@@ -1341,21 +1331,20 @@ describe('CORE002: Auto-update', () => {
 
       await runCheckUpdate();
 
-      // Report should exist
-      const reportPath = homePath('.dev-pomogator', 'last-update-report.md');
+      // Report should exist (reportPath already declared above for cleanup)
       expect(await fs.pathExists(reportPath)).toBe(true);
 
       const reportContent = await fs.readFile(reportPath, 'utf-8');
       expect(reportContent).toContain('Update Report');
-      expect(reportContent).toContain('.cursor/rules/specs-management.mdc');
+      expect(reportContent).toContain('.cursor/rules/pomogator/specs-management.mdc');
       expect(reportContent).toContain('specs-workflow');
-      expect(reportContent).toContain('.user-overrides');
+      expect(reportContent).toContain('.dev-pomogator/.user-overrides');
     });
 
-    it('should mirror .user-overrides/ structure to match original file paths', async () => {
+    it('should mirror .dev-pomogator/.user-overrides/ structure to match original file paths', async () => {
       testProjectPath = appPath('test-overrides-structure');
-      const rulesDir = path.join(testProjectPath, '.cursor', 'rules');
-      const toolsDir = path.join(testProjectPath, 'tools', 'specs-generator');
+      const rulesDir = path.join(testProjectPath, '.cursor', 'rules', 'pomogator');
+      const toolsDir = path.join(testProjectPath, '.dev-pomogator', 'tools', 'specs-generator');
       await fs.ensureDir(rulesDir);
       await fs.ensureDir(toolsDir);
 
@@ -1382,10 +1371,10 @@ describe('CORE002: Auto-update', () => {
           managed: {
             [testProjectPath]: {
               rules: [
-                { path: '.cursor/rules/specs-management.mdc', hash: ruleHash },
+                { path: '.cursor/rules/pomogator/specs-management.mdc', hash: ruleHash },
               ],
               tools: [
-                { path: 'tools/specs-generator/scaffold-spec.ps1', hash: toolHash },
+                { path: '.dev-pomogator/tools/specs-generator/scaffold-spec.ps1', hash: toolHash },
               ],
             },
           },
@@ -1398,9 +1387,9 @@ describe('CORE002: Auto-update', () => {
 
       await runCheckUpdate();
 
-      // Check .user-overrides/ mirrors the exact directory structure
-      const ruleBackup = path.join(testProjectPath, '.user-overrides', '.cursor', 'rules', 'specs-management.mdc');
-      const toolBackup = path.join(testProjectPath, '.user-overrides', 'tools', 'specs-generator', 'scaffold-spec.ps1');
+      // Check .dev-pomogator/.user-overrides/ mirrors the exact directory structure
+      const ruleBackup = path.join(testProjectPath, '.dev-pomogator', '.user-overrides', '.cursor', 'rules', 'pomogator', 'specs-management.mdc');
+      const toolBackup = path.join(testProjectPath, '.dev-pomogator', '.user-overrides', '.dev-pomogator', 'tools', 'specs-generator', 'scaffold-spec.ps1');
 
       expect(await fs.pathExists(ruleBackup)).toBe(true);
       expect(await fs.pathExists(toolBackup)).toBe(true);

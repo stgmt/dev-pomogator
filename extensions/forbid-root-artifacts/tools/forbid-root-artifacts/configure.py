@@ -69,7 +69,7 @@ def add_hook_to_pre_commit_config(repo_root: Path) -> bool:
     hook_entry = {
         "id": "forbid-root-artifacts",
         "name": "Forbid root artifacts",
-        "entry": "python tools/forbid-root-artifacts/check.py",
+        "entry": "python .dev-pomogator/tools/forbid-root-artifacts/check.py",
         "language": "python",
         "pass_filenames": False,
         "always_run": True,

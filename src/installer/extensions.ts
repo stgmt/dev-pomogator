@@ -4,12 +4,20 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+export interface EnvRequirement {
+  name: string;        // e.g. AUTO_COMMIT_API_KEY
+  required: boolean;   // true = feature won't work without it
+  description: string; // human-readable description
+  default?: string;    // default value (for optional vars)
+  example?: string;    // example value for .env.example
+}
+
 export interface ExtensionHooks {
   claude?: {
-    [hookName: string]: string; // e.g. "UserPromptSubmit": "python tools/auto-commit/auto_commit.py"
+    [hookName: string]: string; // e.g. "UserPromptSubmit": "python .dev-pomogator/tools/auto-commit/auto_commit.py"
   };
   cursor?: {
-    [hookName: string]: string; // e.g. "beforeSubmitPrompt": "python tools/auto-commit/auto_commit.py"
+    [hookName: string]: string; // e.g. "beforeSubmitPrompt": "python .dev-pomogator/tools/auto-commit/auto_commit.py"
   };
 }
 
@@ -34,7 +42,7 @@ export interface Extension {
     cursor?: string[];
     claude?: string[];
   };
-  // Tools to install to project/tools/
+  // Tools to install to project/.dev-pomogator/tools/
   tools?: {
     [toolName: string]: string; // name -> relative path in extension
   };
@@ -52,6 +60,8 @@ export interface Extension {
     cursor?: PostInstallHook;
     claude?: PostInstallHook;
   };
+  // Environment variables required by this extension
+  envRequirements?: EnvRequirement[];
   // Whether this extension requires claude-mem persistent memory
   requiresClaudeMem?: boolean;
   path: string;

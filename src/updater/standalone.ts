@@ -1,6 +1,6 @@
 /**
  * Bundled auto-update script for dev-pomogator.
- * Called by Cursor/Claude Code stop hook from ~/.dev-pomogator/scripts/check-update.js
+ * Called by Cursor/Claude Code stop hook from ~/.dev-pomogator/scripts/check-update.js (bundled from dist/check-update.bundle.cjs)
  * This file is bundled with esbuild to include all dependencies.
  * 
  * Usage:

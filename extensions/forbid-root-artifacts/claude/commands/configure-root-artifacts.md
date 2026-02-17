@@ -19,10 +19,10 @@ argument-hint: "[add FILE|remove FILE|show|analyze]"
 
 ### Шаг 1: Анализ текущего состояния
 
-1. Прочитай `tools/forbid-root-artifacts/default-whitelist.yaml` для понимания дефолтов
+1. Прочитай `.dev-pomogator/tools/forbid-root-artifacts/default-whitelist.yaml` для понимания дефолтов
 2. Проверь существует ли `.root-artifacts.yaml` в корне
 3. Получи список файлов в корне репозитория
-4. Запусти `python tools/forbid-root-artifacts/check.py` для выявления нарушений
+4. Запусти `python .dev-pomogator/tools/forbid-root-artifacts/check.py` для выявления нарушений
 
 ### Шаг 2: Показать отчёт пользователю
 

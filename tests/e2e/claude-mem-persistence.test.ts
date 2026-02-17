@@ -303,6 +303,7 @@ describe('PLUGIN002-PERSISTENCE: Claude-mem Data Persistence', () => {
       });
 
       expect(typeof output).toBe('string');
+      expect(output).not.toContain('Missing transcriptPath');
     });
   });
 

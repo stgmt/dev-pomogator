@@ -161,22 +161,6 @@ def find_existing_server_key(config: Dict[str, Any], server_name: str) -> Option
     return None
 
 
-def get_npm_path() -> str:
-    """Resolve npm binary path."""
-    npm_path = shutil.which("npm")
-    if not npm_path:
-        raise RuntimeError("npm not found in PATH. Install Node.js and npm first.")
-    return npm_path
-
-
-def get_npx_path() -> str:
-    """Resolve npx binary path."""
-    npx_path = shutil.which("npx")
-    if not npx_path:
-        raise RuntimeError("npx not found in PATH. Install Node.js and npm first.")
-    return npx_path
-
-
 def run_command(command: list[str], label: str) -> None:
     """Run command and fail-fast on error."""
     print(label)
@@ -189,18 +173,31 @@ def run_command(command: list[str], label: str) -> None:
         raise RuntimeError(f"{command[0]} failed with exit code {result.returncode}")
 
 
-def clean_npm_cache() -> None:
-    """Clean npm cache to force fresh npx downloads."""
-    npm_path = get_npm_path()
-    run_command([npm_path, "cache", "clean", "--force"], "  [NPM] npm cache clean --force")
+def clean_npx_cache() -> None:
+    """Clean npx cache directory to fix stale/broken packages."""
+    if sys.platform == "win32":
+        cache_dir = Path(os.environ.get("LOCALAPPDATA", "")) / "npm-cache" / "_npx"
+    else:
+        cache_dir = Path.home() / ".npm" / "_npx"
+
+    if cache_dir.exists():
+        shutil.rmtree(cache_dir, ignore_errors=True)
+        print(f"  [NPX] Cleaned npx cache: {cache_dir}")
+    else:
+        print(f"  [NPX] No npx cache to clean")
 
 
-def prefetch_npx_package(package: str) -> None:
-    """Prefetch package via npx to refresh cache."""
+def prefetch_package(package: str) -> None:
+    """Pre-download package via npm install so npx doesn't need to fetch at runtime."""
     if not package:
         raise RuntimeError("Missing package name for MCP server")
-    npx_path = get_npx_path()
-    run_command([npx_path, "-y", package, "--help"], f"  [NPX] npx -y {package} --help")
+    npm_path = shutil.which("npm")
+    if not npm_path:
+        raise RuntimeError("npm not found in PATH")
+    run_command(
+        [npm_path, "install", "--no-save", "--ignore-scripts", package],
+        f"  [NPM] npm install --no-save --ignore-scripts {package}",
+    )
 
 
 def build_mcp_entry(server_def: Dict[str, Any]) -> Dict[str, Any]:
@@ -248,10 +245,9 @@ def install_mcp_servers(
 
     if not check_only:
         try:
-            clean_npm_cache()
-        except RuntimeError as exc:
-            print(f"[ERROR] cache: {exc}")
-            return 1
+            clean_npx_cache()
+        except Exception as exc:
+            print(f"  [WARN] Failed to clean npx cache: {exc}")
     
     for server_name, server_def in definitions.items():
         description = server_def.get("description", server_name)
@@ -266,10 +262,10 @@ def install_mcp_servers(
             continue
 
         try:
-            prefetch_npx_package(server_def.get("package", ""))
+            prefetch_package(server_def.get("package", ""))
         except RuntimeError as exc:
-            print(f"[ERROR] {server_name}: {exc}")
-            return 1
+            print(f"  [WARN] Prefetch failed for {server_name}: {exc}")
+            print(f"  [WARN] MCP config will be written anyway — IDE will download on first use")
 
         try:
             expected_entry = build_mcp_entry(server_def)
@@ -309,7 +305,7 @@ def install_mcp_servers(
     
     print(f"\nSummary: {installed_count} installed, {updated_count} updated, {skipped_count} skipped")
     
-    return 0 if installed_count > 0 or updated_count > 0 or skipped_count > 0 else 1
+    return 0
 
 
 def main() -> int:

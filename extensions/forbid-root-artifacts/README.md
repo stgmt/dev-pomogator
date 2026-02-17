@@ -26,7 +26,7 @@ npx dev-pomogator --cursor --plugins=forbid-root-artifacts
 
 ```bash
 # Run setup script (creates config, adds hook, runs pre-commit install)
-python tools/forbid-root-artifacts/setup.py
+python .dev-pomogator/tools/forbid-root-artifacts/setup.py
 ```
 
 Or manually add to `.pre-commit-config.yaml`:
@@ -37,7 +37,7 @@ repos:
     hooks:
       - id: forbid-root-artifacts
         name: Forbid root artifacts
-        entry: python tools/forbid-root-artifacts/check.py
+        entry: python .dev-pomogator/tools/forbid-root-artifacts/check.py
         language: python
         pass_filenames: false
         always_run: true
@@ -98,7 +98,7 @@ These files are allowed by default:
 | *.sln | .NET solution (pattern) |
 | *.csproj | .NET project (pattern) |
 
-Full list in `tools/forbid-root-artifacts/default-whitelist.yaml`.
+Full list in `.dev-pomogator/tools/forbid-root-artifacts/default-whitelist.yaml`.
 
 ## AI Customization Prompts
 
@@ -225,7 +225,7 @@ allow:
 
 > "What files in repository root violate the whitelist?"
 
-AI will run `python tools/forbid-root-artifacts/check.py` and show results.
+AI will run `python .dev-pomogator/tools/forbid-root-artifacts/check.py` and show results.
 
 ### Show current whitelist
 
@@ -252,8 +252,8 @@ Your customizations are safe during plugin updates:
 
 | What | Location | Updated? |
 |------|----------|----------|
-| Plugin code | `tools/forbid-root-artifacts/` | Yes |
-| Default whitelist | `tools/forbid-root-artifacts/default-whitelist.yaml` | Yes |
+| Plugin code | `.dev-pomogator/tools/forbid-root-artifacts/` | Yes |
+| Default whitelist | `.dev-pomogator/tools/forbid-root-artifacts/default-whitelist.yaml` | Yes |
 | Your config | `.root-artifacts.yaml` | **No** |
 
 Using `mode: extend` ensures your additions are preserved even if defaults change.
@@ -262,10 +262,10 @@ Using `mode: extend` ensures your additions are preserved even if defaults chang
 
 ```bash
 # Check for violations
-python tools/forbid-root-artifacts/check.py
+python .dev-pomogator/tools/forbid-root-artifacts/check.py
 
 # Run setup
-python tools/forbid-root-artifacts/setup.py
+python .dev-pomogator/tools/forbid-root-artifacts/setup.py
 ```
 
 ## Exit Codes

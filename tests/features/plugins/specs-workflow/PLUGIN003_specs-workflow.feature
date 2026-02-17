@@ -20,7 +20,7 @@ Feature: PLUGIN003 Specs Workflow Extension
 
   Scenario: Tools are installed
     When dev-pomogator installs specs-workflow
-    Then specs-generator folder should exist in PROJECT/tools/
+    Then specs-generator folder should exist in PROJECT/.dev-pomogator/tools/
     And scaffold-spec.ps1 should exist
     And validate-spec.ps1 should exist
     And templates folder should contain 14 template files

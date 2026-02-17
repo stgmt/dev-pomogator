@@ -5,7 +5,7 @@
 ## Обзор инструментов
 
 ```
-tools/specs-generator/
+.dev-pomogator/tools/specs-generator/
 ├── README.md              # Этот файл
 ├── scaffold-spec.ps1      # Создание структуры папки с шаблонами
 ├── validate-spec.ps1      # Валидация структуры и форматов
@@ -20,16 +20,16 @@ tools/specs-generator/
 
 ```powershell
 # Создать новую спеку
-.\tools\specs-generator\scaffold-spec.ps1 -Name "my-feature"
+.\.dev-pomogator\tools\specs-generator\scaffold-spec.ps1 -Name "my-feature"
 
 # Проверить статус
-.\tools\specs-generator\spec-status.ps1 -Path ".specs/my-feature"
+.\.dev-pomogator\tools\specs-generator\spec-status.ps1 -Path ".specs/my-feature"
 
 # Валидация
-.\tools\specs-generator\validate-spec.ps1 -Path ".specs/my-feature"
+.\.dev-pomogator\tools\specs-generator\validate-spec.ps1 -Path ".specs/my-feature"
 
 # Список всех спеков
-.\tools\specs-generator\list-specs.ps1
+.\.dev-pomogator\tools\specs-generator\list-specs.ps1
 ```
 
 ## Скрипты
@@ -158,7 +158,7 @@ tools/specs-generator/
 
 ## Логирование
 
-Все скрипты пишут логи в `tools/specs-generator/logs/`.
+Все скрипты пишут логи в `.dev-pomogator/tools/specs-generator/logs/`.
 
 **Формат:** `[YYYY-MM-DD HH:mm:ss] [LEVEL] Message`
 

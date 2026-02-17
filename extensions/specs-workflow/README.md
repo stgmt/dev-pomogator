@@ -141,9 +141,9 @@
 
 | Tool | Location | Description |
 |------|----------|-------------|
-| specs-generator | `tools/specs-generator/` | PowerShell скрипты + 13 шаблонов |
-| specs-validator | `tools/specs-validator/` | Валидация покрытия @featureN тегов |
-| steps-validator | `tools/steps-validator/` | Валидация качества step definitions |
+| specs-generator | `.dev-pomogator/tools/specs-generator/` | PowerShell скрипты + 13 шаблонов |
+| specs-validator | `.dev-pomogator/tools/specs-validator/` | Валидация покрытия @featureN тегов |
+| steps-validator | `.dev-pomogator/tools/steps-validator/` | Валидация качества step definitions |
 
 ### Commands
 
@@ -577,13 +577,13 @@ strictness:
 ### Проверить статус спека
 
 ```powershell
-.\tools\specs-generator\spec-status.ps1 -Path ".specs/my-feature"
+.\.dev-pomogator\tools\specs-generator\spec-status.ps1 -Path ".specs/my-feature"
 ```
 
 ### Валидировать спек
 
 ```powershell
-.\tools\specs-generator\validate-spec.ps1 -Path ".specs/my-feature"
+.\.dev-pomogator\tools\specs-generator\validate-spec.ps1 -Path ".specs/my-feature"
 ```
 
 ### Запустить steps-validator вручную

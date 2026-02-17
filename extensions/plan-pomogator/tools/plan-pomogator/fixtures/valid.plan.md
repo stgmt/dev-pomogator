@@ -45,4 +45,4 @@
 ## File Changes
 | Path | Action | Reason |
 |---|---|---|
-| `tools/plan-pomogator/validate-plan.ts` | create | Скрипт для проверки структуры плана. |
+| `.dev-pomogator/tools/plan-pomogator/validate-plan.ts` | create | Скрипт для проверки структуры плана. |

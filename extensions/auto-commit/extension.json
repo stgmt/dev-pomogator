@@ -13,19 +13,46 @@
   },
   "toolFiles": {
     "auto-commit": [
-      "tools/auto-commit/auto_commit_core.ts",
-      "tools/auto-commit/auto_commit_llm.ts",
-      "tools/auto-commit/auto_commit_prompt_guide.md",
-      "tools/auto-commit/auto_commit_stop.ts",
-      "tools/auto-commit/auto_commit_transcript.ts"
+      ".dev-pomogator/tools/auto-commit/auto_commit_core.ts",
+      ".dev-pomogator/tools/auto-commit/auto_commit_llm.ts",
+      ".dev-pomogator/tools/auto-commit/auto_commit_prompt_guide.md",
+      ".dev-pomogator/tools/auto-commit/auto_commit_stop.ts",
+      ".dev-pomogator/tools/auto-commit/auto_commit_transcript.ts"
     ]
   },
+  "postInstall": {
+    "command": "npm install --no-save tsx",
+    "interactive": false,
+    "skipInCI": true
+  },
+  "envRequirements": [
+    {
+      "name": "AUTO_COMMIT_API_KEY",
+      "required": true,
+      "description": "API key for LLM commit message generation",
+      "example": "sk-xxx"
+    },
+    {
+      "name": "AUTO_COMMIT_LLM_URL",
+      "required": false,
+      "description": "Custom LLM endpoint (default: aipomogator.ru)",
+      "default": "https://aipomogator.ru/go/v1",
+      "example": "https://aipomogator.ru/go/v1"
+    },
+    {
+      "name": "AUTO_COMMIT_LLM_MODEL",
+      "required": false,
+      "description": "LLM model name",
+      "default": "openrouter/deepseek/deepseek-v3.2",
+      "example": "openrouter/deepseek/deepseek-v3.2"
+    }
+  ],
   "hooks": {
     "claude": {
-      "Stop": "npx tsx tools/auto-commit/auto_commit_stop.ts"
+      "Stop": "npx tsx .dev-pomogator/tools/auto-commit/auto_commit_stop.ts"
     },
     "cursor": {
-      "stop": "npx tsx tools/auto-commit/auto_commit_stop.ts"
+      "stop": "npx tsx .dev-pomogator/tools/auto-commit/auto_commit_stop.ts"
     }
   }
 }

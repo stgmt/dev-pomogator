@@ -11,7 +11,7 @@
 
 1. Создать `.claude/rules/{rule-name}.md`
 2. Добавить строку в таблицу Rules в `CLAUDE.md` (имя, описание, путь)
-3. Если правило также для Cursor — создать `.cursor/rules/{rule-name}.mdc` с frontmatter
+3. Если правило также для Cursor — создать `extensions/*/cursor/rules/{rule-name}.mdc` с frontmatter
 
 ## При удалении правила
 

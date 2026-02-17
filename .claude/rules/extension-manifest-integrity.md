@@ -23,3 +23,4 @@
 - [ ] `toolFiles` покрывает все файлы инструмента
 - [ ] `toolFiles` включает docs/templates/fixtures/plan-файлы (`*.md`, `*.template`, `*.plan.md`)
 - [ ] hooks и версия обновлены при изменении команд
+- [ ] `envRequirements` перечислены для расширений с env-зависимостями

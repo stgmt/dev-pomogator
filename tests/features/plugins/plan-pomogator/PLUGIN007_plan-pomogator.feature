@@ -17,7 +17,7 @@ Feature: PLUGIN007 Plan-pomogator Extension
 
   Scenario: Tools are installed
     When dev-pomogator installs plan-pomogator
-    Then plan-pomogator folder should exist in PROJECT/tools/
+    Then plan-pomogator folder should exist in PROJECT/.dev-pomogator/tools/
     And requirements.md should exist
     And template.md should exist
     And validate-plan.ts should exist

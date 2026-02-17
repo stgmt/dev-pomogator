@@ -30,54 +30,54 @@
   },
   "toolFiles": {
     "specs-generator": [
-      "tools/specs-generator/README.md",
-      "tools/specs-generator/fill-template.ps1",
-      "tools/specs-generator/list-specs.ps1",
-      "tools/specs-generator/scaffold-spec.ps1",
-      "tools/specs-generator/spec-status.ps1",
-      "tools/specs-generator/validate-spec.ps1",
-      "tools/specs-generator/templates/ACCEPTANCE_CRITERIA.md.template",
-      "tools/specs-generator/templates/DESIGN.md.template",
-      "tools/specs-generator/templates/feature.template",
-      "tools/specs-generator/templates/FILE_CHANGES.md.template",
-      "tools/specs-generator/templates/FR.md.template",
-      "tools/specs-generator/templates/NFR.md.template",
-      "tools/specs-generator/templates/README.md.template",
-      "tools/specs-generator/templates/REQUIREMENTS.md.template",
-      "tools/specs-generator/templates/RESEARCH.md.template",
-      "tools/specs-generator/templates/SCHEMA.md.template",
-      "tools/specs-generator/templates/TASKS.md.template",
-      "tools/specs-generator/templates/USE_CASES.md.template",
-      "tools/specs-generator/templates/USER_STORIES.md.template",
-      "tools/specs-generator/templates/CHANGELOG.md.template"
+      ".dev-pomogator/tools/specs-generator/README.md",
+      ".dev-pomogator/tools/specs-generator/fill-template.ps1",
+      ".dev-pomogator/tools/specs-generator/list-specs.ps1",
+      ".dev-pomogator/tools/specs-generator/scaffold-spec.ps1",
+      ".dev-pomogator/tools/specs-generator/spec-status.ps1",
+      ".dev-pomogator/tools/specs-generator/validate-spec.ps1",
+      ".dev-pomogator/tools/specs-generator/templates/ACCEPTANCE_CRITERIA.md.template",
+      ".dev-pomogator/tools/specs-generator/templates/DESIGN.md.template",
+      ".dev-pomogator/tools/specs-generator/templates/feature.template",
+      ".dev-pomogator/tools/specs-generator/templates/FILE_CHANGES.md.template",
+      ".dev-pomogator/tools/specs-generator/templates/FR.md.template",
+      ".dev-pomogator/tools/specs-generator/templates/NFR.md.template",
+      ".dev-pomogator/tools/specs-generator/templates/README.md.template",
+      ".dev-pomogator/tools/specs-generator/templates/REQUIREMENTS.md.template",
+      ".dev-pomogator/tools/specs-generator/templates/RESEARCH.md.template",
+      ".dev-pomogator/tools/specs-generator/templates/SCHEMA.md.template",
+      ".dev-pomogator/tools/specs-generator/templates/TASKS.md.template",
+      ".dev-pomogator/tools/specs-generator/templates/USE_CASES.md.template",
+      ".dev-pomogator/tools/specs-generator/templates/USER_STORIES.md.template",
+      ".dev-pomogator/tools/specs-generator/templates/CHANGELOG.md.template"
     ],
     "specs-validator": [
-      "tools/specs-validator/completeness.ts",
-      "tools/specs-validator/matcher.ts",
-      "tools/specs-validator/reporter.ts",
-      "tools/specs-validator/validate-specs.ts",
-      "tools/specs-validator/parsers/feature-parser.ts",
-      "tools/specs-validator/parsers/md-parser.ts"
+      ".dev-pomogator/tools/specs-validator/completeness.ts",
+      ".dev-pomogator/tools/specs-validator/matcher.ts",
+      ".dev-pomogator/tools/specs-validator/reporter.ts",
+      ".dev-pomogator/tools/specs-validator/validate-specs.ts",
+      ".dev-pomogator/tools/specs-validator/parsers/feature-parser.ts",
+      ".dev-pomogator/tools/specs-validator/parsers/md-parser.ts"
     ],
     "steps-validator": [
-      "tools/steps-validator/analyzer.ts",
-      "tools/steps-validator/config.ts",
-      "tools/steps-validator/detector.ts",
-      "tools/steps-validator/logger.ts",
-      "tools/steps-validator/reporter.ts",
-      "tools/steps-validator/types.ts",
-      "tools/steps-validator/validate-steps.ts",
-      "tools/steps-validator/docs/CSHARP_PATTERNS.md",
-      "tools/steps-validator/docs/SKIP_SCENARIO_ANALYSIS.md",
-      "tools/steps-validator/parsers/csharp-parser.ts",
-      "tools/steps-validator/parsers/index.ts",
-      "tools/steps-validator/parsers/python-parser.ts",
-      "tools/steps-validator/parsers/typescript-parser.ts"
+      ".dev-pomogator/tools/steps-validator/analyzer.ts",
+      ".dev-pomogator/tools/steps-validator/config.ts",
+      ".dev-pomogator/tools/steps-validator/detector.ts",
+      ".dev-pomogator/tools/steps-validator/logger.ts",
+      ".dev-pomogator/tools/steps-validator/reporter.ts",
+      ".dev-pomogator/tools/steps-validator/types.ts",
+      ".dev-pomogator/tools/steps-validator/validate-steps.ts",
+      ".dev-pomogator/tools/steps-validator/docs/CSHARP_PATTERNS.md",
+      ".dev-pomogator/tools/steps-validator/docs/SKIP_SCENARIO_ANALYSIS.md",
+      ".dev-pomogator/tools/steps-validator/parsers/csharp-parser.ts",
+      ".dev-pomogator/tools/steps-validator/parsers/index.ts",
+      ".dev-pomogator/tools/steps-validator/parsers/python-parser.ts",
+      ".dev-pomogator/tools/steps-validator/parsers/typescript-parser.ts"
     ],
     "mcp-setup": [
-      "tools/mcp-setup/mcp-config.json",
-      "tools/mcp-setup/README.md",
-      "tools/mcp-setup/setup-mcp.py"
+      ".dev-pomogator/tools/mcp-setup/mcp-config.json",
+      ".dev-pomogator/tools/mcp-setup/README.md",
+      ".dev-pomogator/tools/mcp-setup/setup-mcp.py"
     ]
   },
   "hooks": {
@@ -86,24 +86,24 @@
   },
   "postInstall": {
     "cursor": {
-      "command": "python tools/mcp-setup/setup-mcp.py --platform cursor",
+      "command": "python .dev-pomogator/tools/mcp-setup/setup-mcp.py --platform cursor",
       "interactive": true,
       "skipInCI": true
     },
     "claude": {
-      "command": "python tools/mcp-setup/setup-mcp.py --platform claude",
+      "command": "python .dev-pomogator/tools/mcp-setup/setup-mcp.py --platform claude",
       "interactive": true,
       "skipInCI": true
     }
   },
   "postUpdate": {
     "cursor": {
-      "command": "python tools/mcp-setup/setup-mcp.py --platform cursor",
+      "command": "python .dev-pomogator/tools/mcp-setup/setup-mcp.py --platform cursor",
       "interactive": true,
       "skipInCI": true
     },
     "claude": {
-      "command": "python tools/mcp-setup/setup-mcp.py --platform claude",
+      "command": "python .dev-pomogator/tools/mcp-setup/setup-mcp.py --platform claude",
       "interactive": true,
       "skipInCI": true
     }

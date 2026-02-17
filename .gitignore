@@ -30,6 +30,17 @@ __pycache__/
 *.tmp
 *.temp
 
+# dev-pomogator runtime (tools, backups)
+.dev-pomogator/
+
+# Windows null device artifact
+nul
+
+# .NET build artifacts
+*.sln
+**/obj/
+**/bin/
+
 # Environment files with secrets
 .env
 .env.*

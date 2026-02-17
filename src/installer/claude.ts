@@ -3,9 +3,11 @@ import path from 'path';
 import os from 'os';
 import { fileURLToPath } from 'url';
 import { listExtensions, getExtensionFiles, getExtensionRules, getExtensionTools, getExtensionHooks, runPostInstallHook, Extension } from './extensions.js';
-import { loadConfig, saveConfig } from '../config/index.js';
-import type { InstalledExtension } from '../config/schema.js';
+import type { ManagedFileEntry, ManagedFiles } from '../config/schema.js';
 import { findRepoRoot } from '../utils/repo.js';
+import { RULES_SUBFOLDER, TOOLS_DIR } from '../constants.js';
+import { getFileHash } from '../updater/content-hash.js';
+import { collectFileHashes, addProjectPaths } from './shared.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -49,68 +51,119 @@ export async function installClaude(options: ClaudeOptions = {}): Promise<void> 
     );
   }
   
+  // Track managed files per extension for config
+  const managedByExtension = new Map<string, ManagedFiles>();
+
   // 1. Install commands to .claude/commands/ (in project directory)
   const commandsDir = path.join(repoRoot, '.claude', 'commands');
   await fs.ensureDir(commandsDir);
-  
+
   for (const extension of extensionsToInstall) {
     const files = await getExtensionFiles(extension, 'claude');
-    
+    const managedCommands: ManagedFileEntry[] = [];
+
     for (const srcFile of files) {
       if (srcFile.endsWith('.md')) {
         const fileName = path.basename(srcFile);
         const dest = path.join(commandsDir, fileName);
         await fs.copy(srcFile, dest, { overwrite: true });
         console.log(`  ✓ Installed command: ${fileName}`);
+
+        const hash = await getFileHash(dest);
+        if (hash) {
+          managedCommands.push({ path: `.claude/commands/${fileName}`, hash });
+        }
       }
     }
+
+    if (!managedByExtension.has(extension.name)) {
+      managedByExtension.set(extension.name, {});
+    }
+    if (managedCommands.length > 0) {
+      managedByExtension.get(extension.name)!.commands = managedCommands;
+    }
   }
-  
+
   // 2. Install rules to .claude/rules/ (in project directory)
-  const rulesDir = path.join(repoRoot, '.claude', 'rules');
+  const rulesDir = path.join(repoRoot, '.claude', 'rules', RULES_SUBFOLDER);
   await fs.ensureDir(rulesDir);
-  
+
   for (const extension of extensionsToInstall) {
     const ruleFiles = await getExtensionRules(extension, 'claude');
-    
+    const managedRules: ManagedFileEntry[] = [];
+
     for (const ruleFile of ruleFiles) {
       if (await fs.pathExists(ruleFile)) {
         const fileName = path.basename(ruleFile);
         const dest = path.join(rulesDir, fileName);
         await fs.copy(ruleFile, dest, { overwrite: true });
         console.log(`  ✓ Installed rule: ${fileName}`);
+
+        const hash = await getFileHash(dest);
+        if (hash) {
+          managedRules.push({ path: `.claude/rules/${RULES_SUBFOLDER}/${fileName}`, hash });
+        }
       }
     }
+
+    if (!managedByExtension.has(extension.name)) {
+      managedByExtension.set(extension.name, {});
+    }
+    if (managedRules.length > 0) {
+      managedByExtension.get(extension.name)!.rules = managedRules;
+    }
   }
-  
-  // 3. Install tools to project/tools/
+
+  // 3. Install tools to project/.dev-pomogator/tools/
   for (const extension of extensionsToInstall) {
     const tools = await getExtensionTools(extension);
-    
+    const managedTools: ManagedFileEntry[] = [];
+
     for (const [toolName, toolPath] of tools) {
       if (await fs.pathExists(toolPath)) {
-        const dest = path.join(repoRoot, 'tools', toolName);
+        const dest = path.join(repoRoot, TOOLS_DIR, toolName);
         await fs.copy(toolPath, dest, { overwrite: true });
         console.log(`  ✓ Installed tool: ${toolName}/`);
+
+        // Hash all files in the tool directory
+        const toolFiles = await collectFileHashes(dest, path.join(TOOLS_DIR, toolName));
+        managedTools.push(...toolFiles);
       }
     }
+
+    if (!managedByExtension.has(extension.name)) {
+      managedByExtension.set(extension.name, {});
+    }
+    if (managedTools.length > 0) {
+      managedByExtension.get(extension.name)!.tools = managedTools;
+    }
   }
-  
+
   // 4. Install extension hooks to project .claude/settings.json
-  await installExtensionHooks(repoRoot, extensionsToInstall);
-  
+  const installedHooks = await installExtensionHooks(repoRoot, extensionsToInstall);
+
+  // Store hook info in managed data
+  for (const [extName, hookData] of Object.entries(installedHooks)) {
+    if (!managedByExtension.has(extName)) {
+      managedByExtension.set(extName, {});
+    }
+    managedByExtension.get(extName)!.hooks = hookData;
+  }
+
   // 5. Run post-install hooks for extensions that have them
   for (const extension of extensionsToInstall) {
     if (extension.postInstall) {
       await runPostInstallHook(extension, repoRoot, 'claude');
     }
   }
-  
-  // 6. Setup auto-update hooks if enabled
+
+  // 6. Always persist managed data for tracking
+  await addProjectPaths(repoRoot, extensionsToInstall, 'claude', managedByExtension);
+
+  // 7. Setup auto-update hooks if enabled
   if (options.autoUpdate !== false) {
     await setupClaudeHooks();
     await setupGlobalScripts();
-    await addProjectPaths(repoRoot, extensionsToInstall);
   }
 }
 
@@ -199,71 +252,30 @@ async function setupGlobalScripts(): Promise<void> {
   if (await fs.pathExists(bundledScript)) {
     await fs.copy(bundledScript, destScript, { overwrite: true });
   } else {
-    // Fallback: try the old scripts/check-update.js
-    const sourceScriptsDir = path.resolve(__dirname, '..', '..', 'scripts');
-    const sourceScript = path.join(sourceScriptsDir, 'check-update.js');
-    
-    if (await fs.pathExists(sourceScript)) {
-      await fs.copy(sourceScript, destScript, { overwrite: true });
-    }
+    console.log('  ⚠ check-update.bundle.cjs not found. Run "npm run build" first.');
   }
 }
 
-/**
- * Add project path to config for tracking installed extensions
- */
-async function addProjectPaths(projectPath: string, extensions: Extension[]): Promise<void> {
-  let config = await loadConfig();
-  
-  if (!config) {
-    const { DEFAULT_CONFIG } = await import('../config/schema.js');
-    config = { ...DEFAULT_CONFIG };
-  }
-  
-  if (!config.installedExtensions) {
-    config.installedExtensions = [];
-  }
-  
-  for (const ext of extensions) {
-    const existing = config.installedExtensions.find(
-      (e: InstalledExtension) => e.name === ext.name && e.platform === 'claude'
-    );
-    
-    if (existing) {
-      if (!existing.projectPaths.includes(projectPath)) {
-        existing.projectPaths.push(projectPath);
-      }
-      existing.version = ext.version;
-    } else {
-      config.installedExtensions.push({
-        name: ext.name,
-        version: ext.version,
-        platform: 'claude',
-        projectPaths: [projectPath],
-      });
-    }
-  }
-  
-  await saveConfig(config);
-}
 
 /**
  * Install extension hooks to project .claude/settings.json
+ * Returns map of extension name -> { hookName: commands[] } for managed tracking
  */
-async function installExtensionHooks(repoRoot: string, extensions: Extension[]): Promise<void> {
+async function installExtensionHooks(repoRoot: string, extensions: Extension[]): Promise<Record<string, Record<string, string[]>>> {
   const settingsPath = path.join(repoRoot, '.claude', 'settings.json');
-  
+  const installedHooksByExtension: Record<string, Record<string, string[]>> = {};
+
   // Collect all hooks from extensions
   const allHooks: Record<string, Array<{ type: string; command: string; timeout?: number }>> = {};
-  
+
   for (const ext of extensions) {
     const hooks = getExtensionHooks(ext, 'claude');
-    
+
     for (const [hookName, command] of Object.entries(hooks)) {
       if (!allHooks[hookName]) {
         allHooks[hookName] = [];
       }
-      
+
       // Check if this hook command already exists
       const exists = allHooks[hookName].some(h => h.command === command);
       if (!exists) {
@@ -273,12 +285,21 @@ async function installExtensionHooks(repoRoot: string, extensions: Extension[]):
           timeout: 60,
         });
       }
+
+      // Track per-extension hooks for managed data
+      if (!installedHooksByExtension[ext.name]) {
+        installedHooksByExtension[ext.name] = {};
+      }
+      if (!installedHooksByExtension[ext.name][hookName]) {
+        installedHooksByExtension[ext.name][hookName] = [];
+      }
+      installedHooksByExtension[ext.name][hookName].push(command);
     }
   }
   
   // No hooks to install
   if (Object.keys(allHooks).length === 0) {
-    return;
+    return installedHooksByExtension;
   }
   
   // Load existing project settings or create new
@@ -331,4 +352,6 @@ async function installExtensionHooks(repoRoot: string, extensions: Extension[]):
   if (hookCount > 0) {
     console.log(`  ✓ Installed ${hookCount} extension hook(s)`);
   }
+
+  return installedHooksByExtension;
 }

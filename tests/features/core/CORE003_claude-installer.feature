@@ -30,9 +30,9 @@ Feature: CORE003 Claude Code Installer
 
   Scenario: Tools are installed to project
     When dev-pomogator installs for Claude Code
-    Then tools/specs-generator/ should exist in project
-    And tools/forbid-root-artifacts/ should exist in project
-    And tools/forbid-root-artifacts/check.py should be executable
+    Then .dev-pomogator/tools/specs-generator/ should exist in project
+    And .dev-pomogator/tools/forbid-root-artifacts/ should exist in project
+    And .dev-pomogator/tools/forbid-root-artifacts/check.py should be executable
 
   Scenario: Settings.json hooks structure is correct
     When dev-pomogator installs for Claude Code
@@ -52,3 +52,11 @@ Feature: CORE003 Claude Code Installer
     Then ~/.dev-pomogator/config.json should exist
     And installedExtensions should contain entries with platform "claude"
     And projectPaths should include current project path
+
+  Scenario: PostInstall hooks install dependencies
+    Given dev-pomogator installs for Claude Code with --all
+    Then deps-install.py should exist in .dev-pomogator/tools/forbid-root-artifacts/
+    And deps-install.py should run without errors
+    And pyyaml should be importable by Python
+    And pre-commit should be available via python -m pre_commit
+    And .pre-commit-config.yaml should contain forbid-root-artifacts hook

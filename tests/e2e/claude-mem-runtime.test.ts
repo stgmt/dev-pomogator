@@ -184,6 +184,7 @@ describe('PLUGIN002-RUNTIME: Claude-mem Full E2E', () => {
         workspaceRoot: testWorkspace,
       });
       expect(typeof output).toBe('string');
+      expect(output).not.toContain('Missing transcriptPath');
     });
   });
 

@@ -9,12 +9,12 @@
 - Claude Code: `.claude/rules/plan-pomogator.md`
 
 ### Tools
-- `tools/plan-pomogator/`:
+- `.dev-pomogator/tools/plan-pomogator/`:
   - `requirements.md` — требования к формату
   - `template.md` — копипаст‑шаблон
   - `validate-plan.ts` — ручной валидатор структуры
 
 ## Быстрый старт
 ```
-npx tsx tools/plan-pomogator/validate-plan.ts <path-to-plan.md>
+npx tsx .dev-pomogator/tools/plan-pomogator/validate-plan.ts <path-to-plan.md>
 ```

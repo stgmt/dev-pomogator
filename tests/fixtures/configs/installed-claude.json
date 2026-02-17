@@ -1,0 +1,96 @@
+{
+  "autoUpdate": true,
+  "cooldownHours": 24,
+  "lastCheck": "{{LAST_CHECK}}",
+  "installedExtensions": [
+    {
+      "name": "suggest-rules",
+      "version": "1.3.0",
+      "platform": "claude",
+      "projectPaths": ["{{PROJECT_PATH}}"],
+      "managed": {
+        "{{PROJECT_PATH}}": {
+          "commands": [
+            { "path": ".claude/commands/suggest-rules.md", "hash": "{{HASH}}" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "specs-workflow",
+      "version": "1.2.0",
+      "platform": "claude",
+      "projectPaths": ["{{PROJECT_PATH}}"],
+      "managed": {
+        "{{PROJECT_PATH}}": {
+          "commands": [
+            { "path": ".claude/commands/create-spec.md", "hash": "{{HASH}}" }
+          ],
+          "rules": [
+            { "path": ".claude/rules/pomogator/specs-management.md", "hash": "{{HASH}}" },
+            { "path": ".claude/rules/pomogator/no-mocks-fallbacks.md", "hash": "{{HASH}}" },
+            { "path": ".claude/rules/pomogator/research-workflow.md", "hash": "{{HASH}}" },
+            { "path": ".claude/rules/pomogator/specs-validation.md", "hash": "{{HASH}}" }
+          ],
+          "tools": [
+            { "path": ".dev-pomogator/tools/specs-generator/scaffold-spec.ps1", "hash": "{{HASH}}" },
+            { "path": ".dev-pomogator/tools/specs-generator/validate-spec.ps1", "hash": "{{HASH}}" },
+            { "path": ".dev-pomogator/tools/specs-generator/list-specs.ps1", "hash": "{{HASH}}" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "plan-pomogator",
+      "version": "1.0.0",
+      "platform": "claude",
+      "projectPaths": ["{{PROJECT_PATH}}"],
+      "managed": {
+        "{{PROJECT_PATH}}": {
+          "rules": [
+            { "path": ".claude/rules/pomogator/plan-pomogator.md", "hash": "{{HASH}}" }
+          ],
+          "tools": [
+            { "path": ".dev-pomogator/tools/plan-pomogator/validate-plan.ts", "hash": "{{HASH}}" },
+            { "path": ".dev-pomogator/tools/plan-pomogator/requirements.md", "hash": "{{HASH}}" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "forbid-root-artifacts",
+      "version": "1.0.0",
+      "platform": "claude",
+      "projectPaths": ["{{PROJECT_PATH}}"],
+      "managed": {
+        "{{PROJECT_PATH}}": {
+          "commands": [
+            { "path": ".claude/commands/configure-root-artifacts.md", "hash": "{{HASH}}" }
+          ],
+          "tools": [
+            { "path": ".dev-pomogator/tools/forbid-root-artifacts/check.py", "hash": "{{HASH}}" },
+            { "path": ".dev-pomogator/tools/forbid-root-artifacts/setup.py", "hash": "{{HASH}}" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "auto-commit",
+      "version": "2.1.0",
+      "platform": "claude",
+      "projectPaths": ["{{PROJECT_PATH}}"],
+      "managed": {
+        "{{PROJECT_PATH}}": {
+          "tools": [
+            { "path": ".dev-pomogator/tools/auto-commit/auto_commit_stop.ts", "hash": "{{HASH}}" }
+          ],
+          "hooks": {
+            "Stop": [
+              "npx tsx .dev-pomogator/tools/auto-commit/auto_commit_stop.ts"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

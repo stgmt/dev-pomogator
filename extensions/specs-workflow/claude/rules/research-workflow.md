@@ -152,6 +152,6 @@
 
 1. Проверить наличие `.specs/{feature}/RESEARCH.md`
 2. Предложить обновить/создать RESEARCH.md с результатами
-3. Использовать скрипт: `.\tools\specs-generator\spec-status.ps1`
+3. Использовать скрипт: `.\.dev-pomogator\tools\specs-generator\spec-status.ps1`
 
 См. также: `.claude/rules/specs-management.md`

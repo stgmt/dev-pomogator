@@ -4,8 +4,10 @@ import { installCursor } from './cursor.js';
 import { installClaude } from './claude.js';
 import { listExtensions } from './extensions.js';
 import { ensureClaudeMem } from './memory.js';
+import { generateEnvExample, getMissingRequiredEnv } from './env-setup.js';
 import { saveConfig, loadConfig } from '../config/index.js';
 import type { Config, Platform } from '../config/schema.js';
+import { findRepoRoot } from '../utils/repo.js';
 
 export { listExtensions } from './extensions.js';
 
@@ -261,7 +263,36 @@ async function install(
   }
   
   console.log(chalk.bold.green('\n✨ Installation complete!\n'));
-  
+
+  // Generate .env.example and warn about missing required env vars
+  const repoRoot = findRepoRoot();
+  const missingEnvVars = await generateEnvExample(repoRoot, selectedExtensions);
+
+  if (missingEnvVars.length > 0) {
+    const missing = getMissingRequiredEnv(selectedExtensions);
+    // Group by extension
+    const byExtension = new Map<string, Array<{ name: string; description: string }>>();
+    for (const m of missing) {
+      if (!byExtension.has(m.extensionName)) {
+        byExtension.set(m.extensionName, []);
+      }
+      byExtension.get(m.extensionName)!.push({
+        name: m.requirement.name,
+        description: m.requirement.description,
+      });
+    }
+
+    console.log(chalk.yellow('⚠  Environment variables required:\n'));
+    for (const [extName, vars] of byExtension) {
+      console.log(chalk.yellow(`   ${extName}:`));
+      for (const v of vars) {
+        console.log(chalk.yellow(`     ${v.name}  — ${v.description}`));
+      }
+      console.log(chalk.gray('                            Add to your .env or shell profile\n'));
+    }
+    console.log(chalk.cyan('   📄 .env.example generated — copy to .env and fill in values\n'));
+  }
+
   if (platforms.includes('cursor')) {
     console.log(chalk.cyan('Cursor: Installed plugins: ' + extensions.join(', ')));
     if (autoUpdate) {

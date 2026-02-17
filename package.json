@@ -26,9 +26,7 @@
   "files": [
     "bin",
     "dist",
-    "extensions",
-    "scripts",
-    "shared"
+    "extensions"
   ],
   "scripts": {
     "build": "tsc && node scripts/build-check-update.js",

@@ -354,7 +354,7 @@ export async function installCursorHooks(): Promise<void> {
  * 
  * Structure after copy:
  * ~/.dev-pomogator/
- *   scripts/check-update.js  (bundled version with all deps)
+ *   scripts/check-update.js  (copied from dist/check-update.bundle.cjs)
  *   logs/update.log          (created by the script when running)
  */
 async function copyCheckUpdateScript(): Promise<void> {
@@ -373,16 +373,7 @@ async function copyCheckUpdateScript(): Promise<void> {
     await fs.copy(bundledScript, destScript, { overwrite: true });
     console.log(chalk.gray(`    Copied check-update.bundle.cjs to ${destScript}`));
   } else {
-    // Fallback: try the old scripts/check-update.js
-    const sourceScriptsDir = path.resolve(__dirname, '..', '..', 'scripts');
-    const sourceScript = path.join(sourceScriptsDir, 'check-update.js');
-    
-    if (await fs.pathExists(sourceScript)) {
-      await fs.copy(sourceScript, destScript, { overwrite: true });
-      console.log(chalk.yellow(`    ⚠ Bundled script not found, using unbundled check-update.js`));
-    } else {
-      console.log(chalk.yellow(`    ⚠ check-update script not found`));
-    }
+    console.log(chalk.yellow(`    ⚠ check-update.bundle.cjs not found. Run "npm run build" first.`));
   }
 }
 

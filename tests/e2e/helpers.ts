@@ -1020,6 +1020,204 @@ export async function ensureCheckUpdateScript(): Promise<void> {
 }
 
 // ============================================================================
+// Platform setup helpers (test fixture states)
+// ============================================================================
+
+const FIXTURES_BASE = path.join(__dirname, '..', 'fixtures');
+const CONFIG_TEMPLATES_DIR = path.join(FIXTURES_BASE, 'configs');
+
+/**
+ * Snapshot of project state for before/after comparison
+ */
+export interface StateSnapshot {
+  /** Map of relative file path → SHA-256 hash */
+  files: Map<string, string>;
+  /** Hook counts per event type */
+  hookCount: Record<string, number>;
+  /** Number of installed extensions in config */
+  configExtensions: number;
+}
+
+/**
+ * Load a config template JSON and replace placeholders.
+ *
+ * Supported placeholders: {{PROJECT_PATH}}, {{LAST_CHECK}}, {{HASH}},
+ * {{PLATFORM}}, {{EXTENSION_NAME}}, and any custom key in `vars`.
+ */
+export async function loadConfigTemplate(
+  name: string,
+  vars: Record<string, string>,
+): Promise<DevPomogatorConfig> {
+  const templatePath = path.join(CONFIG_TEMPLATES_DIR, name);
+  let raw = await fs.readFile(templatePath, 'utf-8');
+  for (const [key, value] of Object.entries(vars)) {
+    const placeholder = `{{${key}}}`;
+    // Replace all occurrences
+    while (raw.includes(placeholder)) {
+      raw = raw.replace(placeholder, value);
+    }
+  }
+  return JSON.parse(raw);
+}
+
+/**
+ * Set up a clean (pre-install) state for the given platform.
+ *
+ * - Removes HOME-level platform directories and .dev-pomogator config
+ * - Removes project-level platform artifacts
+ * - For Cursor: copies cursor-base fixture to ~/.cursor
+ * - For Claude: ensures ~/.claude does not exist
+ * - Initialises a git repo so findRepoRoot() works
+ */
+export async function setupCleanState(platform: 'cursor' | 'claude'): Promise<void> {
+  // Clean HOME-level state
+  await fs.remove(homePath('.dev-pomogator'));
+
+  if (platform === 'cursor') {
+    await fs.remove(homePath('.cursor'));
+    await fs.remove(homePath('.claude'));
+    // Copy cursor-base fixture
+    await fs.copy(path.join(FIXTURES_BASE, 'cursor-base'), homePath('.cursor'));
+    // Clean project-level Cursor artifacts
+    await fs.remove(appPath('.cursor'));
+    await fs.remove(appPath('.dev-pomogator'));
+  } else {
+    await fs.remove(homePath('.claude'));
+    await fs.remove(homePath('.cursor'));
+    // Clean project-level Claude artifacts
+    await fs.remove(appPath('.claude'));
+    await fs.remove(appPath('.dev-pomogator'));
+  }
+
+  // Initialise minimal git repo
+  await initGitRepo();
+}
+
+/**
+ * Set up an "installed" state by running the real installer.
+ *
+ * Returns a StateSnapshot that can be used for before/after comparison.
+ */
+export async function setupInstalledState(platform: 'cursor' | 'claude'): Promise<StateSnapshot> {
+  // Start from a clean state
+  await setupCleanState(platform);
+
+  // Run the installer
+  const flag = platform === 'cursor' ? '--cursor' : '--claude';
+  const { exitCode } = await runInstaller(`${flag} --all`);
+  if (exitCode !== 0) {
+    throw new Error(`Installer failed with exit code ${exitCode} for platform ${platform}`);
+  }
+
+  // Capture and return a state snapshot
+  return captureSnapshot(platform);
+}
+
+/**
+ * Set up a "needs-update" state for a specific extension.
+ *
+ * Uses the needs-update config template with version "0.0.1" so the updater
+ * sees a newer version on GitHub and triggers an update.
+ *
+ * @param platform - Target platform
+ * @param extension - Extension name (e.g. 'suggest-rules')
+ * @param options.userModified - Array of relative paths to simulate user-modified files
+ */
+export async function setupNeedsUpdateState(
+  platform: 'cursor' | 'claude',
+  extension: string,
+  options?: { userModified?: string[] },
+): Promise<void> {
+  const config = await loadConfigTemplate('needs-update.json', {
+    LAST_CHECK: hoursAgo(25),
+    PLATFORM: platform,
+    EXTENSION_NAME: extension,
+    PROJECT_PATH: appPath(),
+  });
+  await saveDevPomogatorConfig(config);
+
+  // Ensure check-update script is available
+  await ensureCheckUpdateScript();
+
+  // If userModified paths are given, create those files with custom content
+  if (options?.userModified) {
+    for (const relPath of options.userModified) {
+      const absPath = path.join(appPath(), relPath);
+      await fs.ensureDir(path.dirname(absPath));
+      await fs.writeFile(absPath, `# User modified: ${relPath}\n`, 'utf-8');
+    }
+  }
+}
+
+/**
+ * Capture a snapshot of the current project state for the given platform.
+ */
+export async function captureSnapshot(platform: 'cursor' | 'claude'): Promise<StateSnapshot> {
+  const crypto = await import('crypto');
+  const files = new Map<string, string>();
+
+  // Collect files from the platform-specific directories
+  const dirs = platform === 'cursor'
+    ? [appPath('.cursor'), appPath('.dev-pomogator')]
+    : [appPath('.claude'), appPath('.dev-pomogator')];
+
+  for (const dir of dirs) {
+    if (await fs.pathExists(dir)) {
+      const entries = await collectFiles(dir);
+      for (const filePath of entries) {
+        const relPath = path.relative(appPath(), filePath);
+        const content = await fs.readFile(filePath, 'utf-8');
+        const hash = crypto.createHash('sha256').update(content, 'utf-8').digest('hex');
+        files.set(relPath.replace(/\\/g, '/'), hash);
+      }
+    }
+  }
+
+  // Count hooks
+  const hookCount: Record<string, number> = {};
+  if (platform === 'cursor') {
+    const hooksPath = homePath('.cursor', 'hooks', 'hooks.json');
+    if (await fs.pathExists(hooksPath)) {
+      const hooks = await fs.readJson(hooksPath);
+      for (const [event, list] of Object.entries(hooks.hooks || {})) {
+        hookCount[event] = Array.isArray(list) ? list.length : 0;
+      }
+    }
+  } else {
+    const settingsPath = homePath('.claude', 'settings.json');
+    if (await fs.pathExists(settingsPath)) {
+      const settings = await fs.readJson(settingsPath);
+      for (const [event, list] of Object.entries(settings.hooks || {})) {
+        hookCount[event] = Array.isArray(list) ? list.length : 0;
+      }
+    }
+  }
+
+  // Count config extensions
+  const config = await getDevPomogatorConfig();
+  const configExtensions = config?.installedExtensions?.length ?? 0;
+
+  return { files, hookCount, configExtensions };
+}
+
+/**
+ * Recursively collect all file paths under a directory.
+ */
+async function collectFiles(dir: string): Promise<string[]> {
+  const result: string[] = [];
+  const entries = await fs.readdir(dir, { withFileTypes: true });
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      result.push(...await collectFiles(fullPath));
+    } else {
+      result.push(fullPath);
+    }
+  }
+  return result;
+}
+
+// ============================================================================
 // PowerShell Script Helpers
 // ============================================================================
 
@@ -1135,4 +1333,83 @@ export function getSpecsGeneratorPath(script: string): string {
  */
 export function getSpecsGeneratorFixturePath(fixture: string): string {
   return path.join(APP_DIR, 'tests', 'fixtures', 'specs-generator', fixture);
+}
+
+// ============================================================================
+// CLI integration helpers (claude / cursor binary execution)
+// ============================================================================
+
+export interface CliResult {
+  stdout: string;
+  stderr: string;
+  exitCode: number;
+}
+
+/**
+ * Assert that a CLI binary is available on PATH.
+ * Throws (fails the test) with a descriptive error if not found.
+ */
+export function assertCliAvailable(name: string): void {
+  try {
+    execSync(`which ${name}`, { encoding: 'utf-8', stdio: 'pipe' });
+  } catch {
+    throw new Error(
+      `CLI binary "${name}" is not installed or not on PATH. ` +
+      `Ensure Dockerfile.test installs it correctly.`
+    );
+  }
+}
+
+/**
+ * Run `claude <args>` and return stdout/stderr/exitCode.
+ * Does NOT throw on non-zero exit — caller decides what to assert.
+ */
+export function runClaude(args: string, timeoutMs = 30000): CliResult {
+  try {
+    const stdout = execSync(`claude ${args}`, {
+      encoding: 'utf-8',
+      timeout: timeoutMs,
+      cwd: APP_DIR,
+      env: {
+        ...process.env,
+        FORCE_COLOR: '0',
+      },
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    return { stdout, stderr: '', exitCode: 0 };
+  } catch (error: any) {
+    return {
+      stdout: error.stdout || '',
+      stderr: error.stderr || '',
+      exitCode: error.status ?? 1,
+    };
+  }
+}
+
+/**
+ * Run `cursor-agent <args>` and return stdout/stderr/exitCode.
+ * Note: The Cursor CLI binary is called `cursor-agent` (installed via cursor.com/install).
+ * Does NOT throw on non-zero exit — caller decides what to assert.
+ */
+export function runCursorCli(args: string, timeoutMs = 30000): CliResult {
+  try {
+    const stdout = execSync(`cursor-agent ${args}`, {
+      encoding: 'utf-8',
+      timeout: timeoutMs,
+      cwd: APP_DIR,
+      env: {
+        ...process.env,
+        FORCE_COLOR: '0',
+        NO_COLOR: '1',
+      },
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    return { stdout, stderr: '', exitCode: 0 };
+  } catch (error: any) {
+    return {
+      stdout: error.stdout || '',
+      stderr: error.stderr || '',
+      exitCode: error.status ?? 1,
+    };
+  }
 }

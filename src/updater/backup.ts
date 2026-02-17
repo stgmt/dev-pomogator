@@ -1,8 +1,7 @@
 import fs from 'fs-extra';
 import path from 'path';
 import { getConfigDir } from '../config/index.js';
-
-const USER_OVERRIDES_DIR = '.user-overrides';
+import { USER_OVERRIDES_DIR } from '../constants.js';
 
 export interface ModifiedFile {
   /** Relative path inside the project (e.g. ".cursor/rules/specs-management.mdc") */
@@ -26,7 +25,7 @@ function resolveWithinDir(base: string, relativePath: string): string | null {
 }
 
 /**
- * Copy a user-modified file into `{projectPath}/.user-overrides/{relativePath}`
+ * Copy a user-modified file into `{projectPath}/.dev-pomogator/.user-overrides/{relativePath}`
  * before it gets overwritten by an upstream update.
  *
  * Returns the absolute backup path on success, or null on failure.
@@ -91,7 +90,7 @@ export async function writeUpdateReport(
   }
 
   lines.push('');
-  lines.push('> Merge your changes from `.user-overrides/` back into the updated files if needed.');
+  lines.push('> Merge your changes from `.dev-pomogator/.user-overrides/` back into the updated files if needed.');
   lines.push('');
 
   await fs.ensureDir(configDir);

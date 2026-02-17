@@ -13,8 +13,8 @@ let tempDir: string;
 let testRepoDir: string;
 
 function runCheck(cwd: string): { exitCode: number; output: string } {
-  // Use the check.py from the test repo's tools directory
-  const checkScript = path.join(cwd, 'tools', 'forbid-root-artifacts', 'check.py');
+  // Use the check.py from the test repo's .dev-pomogator/tools directory
+  const checkScript = path.join(cwd, '.dev-pomogator', 'tools', 'forbid-root-artifacts', 'check.py');
   try {
     const output = execSync(`python "${checkScript}"`, {
       cwd,
@@ -69,7 +69,7 @@ describe('PLUGIN004: Forbid Root Artifacts', () => {
     initGitRepo(testRepoDir);
     
     // Copy tools to test repo
-    const toolsDest = path.join(testRepoDir, 'tools', 'forbid-root-artifacts');
+    const toolsDest = path.join(testRepoDir, '.dev-pomogator', 'tools', 'forbid-root-artifacts');
     await fs.copy(TOOLS_DIR, toolsDest);
   });
 
@@ -201,24 +201,24 @@ describe('PLUGIN004: Forbid Root Artifacts', () => {
 
   describe('Directory Restrictions', () => {
     it('should block directories not in allowed list', async () => {
-      // Note: tools/ is created by beforeEach, so we must include it
+      // Note: .dev-pomogator/ is created by beforeEach, so we must include it
       await fs.writeFile(
         path.join(testRepoDir, '.root-artifacts.yaml'),
-        'mode: extend\nallowed_directories:\n  - src\n  - docs\n  - tools\n'
+        'mode: extend\nallowed_directories:\n  - src\n  - docs\n  - .dev-pomogator\n'
       );
       await fs.ensureDir(path.join(testRepoDir, 'random-dir'));
-      
+
       const { exitCode, output } = runCheck(testRepoDir);
-      
+
       expect(exitCode).toBe(1);
       expect(output).toContain('random-dir');
     });
 
     it('should allow directories in allowed list', async () => {
-      // Note: tools/ is created by beforeEach, so we must include it
+      // Note: .dev-pomogator/ is created by beforeEach, so we must include it
       await fs.writeFile(
         path.join(testRepoDir, '.root-artifacts.yaml'),
-        'mode: extend\nallowed_directories:\n  - src\n  - tools\n'
+        'mode: extend\nallowed_directories:\n  - src\n  - .dev-pomogator\n'
       );
       await fs.ensureDir(path.join(testRepoDir, 'src'));
       

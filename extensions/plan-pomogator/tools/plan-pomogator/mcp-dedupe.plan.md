@@ -37,7 +37,7 @@
 - Claude Code использует `.mcp.json` (project root + home), `~/.claude.json` сохраняется как fallback для обратной совместимости.
 
 ## Implementation Plan
-1. Зафиксировать текущую логику путей и логирования в `extensions/specs-workflow/tools/mcp-setup/setup-mcp.py`, `tools/mcp-setup/setup-mcp.py`, `tests/e2e/mcp-setup.test.ts`, `extensions/specs-workflow/tools/mcp-setup/README.md`, `tools/mcp-setup/README.md`.
+1. Зафиксировать текущую логику путей и логирования в `extensions/specs-workflow/tools/mcp-setup/setup-mcp.py`, `.dev-pomogator/tools/mcp-setup/setup-mcp.py`, `tests/e2e/mcp-setup.test.ts`, `extensions/specs-workflow/tools/mcp-setup/README.md`, `.dev-pomogator/tools/mcp-setup/README.md`.
 2. Добавить резолвер пути конфигурации с учетом project-конфигов (`.cursor/mcp.json` и `.mcp.json`) и fallback на глобальные файлы (`~/.cursor/mcp.json`, `~/.mcp.json`, `~/.claude.json`).
 3. Обновить установку так, чтобы запись происходила только в выбранный конфиг и не затрагивала альтернативные пути при наличии project-конфига.
 4. Обновить e2e-тесты `tests/e2e/mcp-setup.test.ts` под новые пути и кейсы (project + global).
@@ -71,9 +71,9 @@
 ## File Changes
 | Path | Action | Reason |
 |---|---|---|
-| `tools/plan-pomogator/mcp-dedupe.plan.md` | create | Зафиксировать план работ по устранению дублей MCP. |
+| `.dev-pomogator/tools/plan-pomogator/mcp-dedupe.plan.md` | create | Зафиксировать план работ по устранению дублей MCP. |
 | `extensions/specs-workflow/tools/mcp-setup/setup-mcp.py` | edit | Добавить выбор project/global конфигов и устранение дублей. |
-| `tools/mcp-setup/setup-mcp.py` | edit | Синхронизировать логику с расширением. |
+| `.dev-pomogator/tools/mcp-setup/setup-mcp.py` | edit | Синхронизировать логику с расширением. |
 | `tests/e2e/mcp-setup.test.ts` | edit | Обновить тесты под новые пути и кейсы. |
 | `extensions/specs-workflow/tools/mcp-setup/README.md` | edit | Обновить пути и приоритеты конфигов. |
-| `tools/mcp-setup/README.md` | edit | Синхронизировать документацию. |
+| `.dev-pomogator/tools/mcp-setup/README.md` | edit | Синхронизировать документацию. |

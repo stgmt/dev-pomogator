@@ -28,9 +28,9 @@ ENV DEV_POMOGATOR_TEST_IN_DOCKER=1
 # Install bun for testuser
 RUN curl -fsSL https://bun.sh/install | bash
 
-# Install Cursor CLI
-# Note: Cursor CLI requires interactive login, so we just install the binary
-RUN curl -fsSL https://cursor.com/install | bash || true
+# Install Cursor Agent CLI (cursor-agent binary from cursor.com/install)
+RUN curl -fsSL https://cursor.com/install | bash && \
+    cursor-agent --version
 
 WORKDIR /home/testuser/app
 

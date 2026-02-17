@@ -17,12 +17,12 @@
   },
   "toolFiles": {
     "plan-pomogator": [
-      "tools/plan-pomogator/README.md",
-      "tools/plan-pomogator/mcp-dedupe.plan.md",
-      "tools/plan-pomogator/requirements.md",
-      "tools/plan-pomogator/template.md",
-      "tools/plan-pomogator/validate-plan.ts",
-      "tools/plan-pomogator/fixtures/valid.plan.md"
+      ".dev-pomogator/tools/plan-pomogator/README.md",
+      ".dev-pomogator/tools/plan-pomogator/mcp-dedupe.plan.md",
+      ".dev-pomogator/tools/plan-pomogator/requirements.md",
+      ".dev-pomogator/tools/plan-pomogator/template.md",
+      ".dev-pomogator/tools/plan-pomogator/validate-plan.ts",
+      ".dev-pomogator/tools/plan-pomogator/fixtures/valid.plan.md"
     ]
   },
   "hooks": {

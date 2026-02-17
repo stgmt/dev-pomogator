@@ -10,7 +10,7 @@
 
 **Main Flow:**
 1. Разработчик запускает scaffold-spec.ps1 с именем фичи
-2. Система создаёт папку .specs/{name}/
+2. Система создаёт папку .specs/valid-spec/
 3. Система копирует 13 шаблонов
 4. Система выводит результат в JSON
 
@@ -22,7 +22,7 @@
 **Actor:** Developer
 
 **Preconditions:**
-- Папка .specs/{name}/ существует
+- Папка .specs/valid-spec/ существует
 
 **Main Flow:**
 1. Разработчик запускает validate-spec.ps1

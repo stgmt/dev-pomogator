@@ -12,6 +12,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
 import semver from 'semver';
+import { RULES_SUBFOLDER, TOOLS_DIR } from '../constants.js';
 
 interface UpdateOptions {
   force?: boolean;
@@ -171,7 +172,7 @@ async function updateRuleFiles(
   if (files.length === 0) return { written: [], hadFailures: false, backedUp: [] };
 
   const platformDir = platform === 'claude' ? '.claude' : '.cursor';
-  const destDir = path.join(projectPath, platformDir, 'rules');
+  const destDir = path.join(projectPath, platformDir, 'rules', RULES_SUBFOLDER);
   await fs.ensureDir(destDir);
 
   const written: ManagedFileEntry[] = [];
@@ -182,7 +183,7 @@ async function updateRuleFiles(
     const fileName = path.basename(relativePath);
     const destFile = path.join(destDir, fileName);
     const relativeDest = normalizeRelativePath(
-      path.join(platformDir, 'rules', fileName)
+      path.join(platformDir, 'rules', RULES_SUBFOLDER, fileName)
     );
 
     if (!content) {
@@ -285,8 +286,8 @@ async function updateCursorHooksForProject(
     nextManagedHooks[eventName].push(command);
 
     const absoluteCommand = command.replace(
-      /tools\//g,
-      path.join(repoRoot, 'tools').replace(/\\/g, '/') + '/'
+      /\.dev-pomogator\/tools\//g,
+      path.join(repoRoot, TOOLS_DIR).replace(/\\/g, '/') + '/'
     );
     if (!nextAbsoluteByEvent[eventName]) {
       nextAbsoluteByEvent[eventName] = [];
@@ -316,8 +317,8 @@ async function updateCursorHooksForProject(
     const nextSet = new Set(nextAbsoluteByEvent[eventName] ?? []);
     const previousAbsolute = commands.map((command) =>
       command.replace(
-        /tools\//g,
-        path.join(repoRoot, 'tools').replace(/\\/g, '/') + '/'
+        /\.dev-pomogator\/tools\//g,
+        path.join(repoRoot, TOOLS_DIR).replace(/\\/g, '/') + '/'
       ).replace(/\\/g, '\\\\')
     );
     const removeSet = new Set(previousAbsolute.filter((command) => !nextSet.has(command)));
@@ -565,7 +566,7 @@ export async function checkUpdate(options: UpdateOptions = {}): Promise<boolean>
 
     // 8. Write update report if any files were backed up (across all extensions)
     if (allBackedUp.length > 0) {
-      console.log(`  📋 ${allBackedUp.length} user-modified file(s) backed up to .user-overrides/`);
+      console.log(`  📋 ${allBackedUp.length} user-modified file(s) backed up to .dev-pomogator/.user-overrides/`);
       await writeUpdateReport(allBackedUp);
     }
     

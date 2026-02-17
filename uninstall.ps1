@@ -236,12 +236,12 @@ if ($Force) {
         
         # Tools - only remove if NOT tracked by git (installed by plugin, not source)
         @(
-            "tools\auto-commit",
-            "tools\forbid-root-artifacts",
-            "tools\specs-generator",
-            "tools\plan-pomogator",
-            "tools\specs-validator",
-            "tools\steps-validator"
+            ".dev-pomogator\tools\auto-commit",
+            ".dev-pomogator\tools\forbid-root-artifacts",
+            ".dev-pomogator\tools\specs-generator",
+            ".dev-pomogator\tools\plan-pomogator",
+            ".dev-pomogator\tools\specs-validator",
+            ".dev-pomogator\tools\steps-validator"
         ) | ForEach-Object {
             $path = Join-Path $gitRoot $_
             if (Test-Path $path) {

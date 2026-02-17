@@ -38,15 +38,15 @@
 
 | Скрипт | Назначение | Пример |
 |--------|------------|--------|
-| `scaffold-spec.ps1` | Создание структуры | `.\tools\specs-generator\scaffold-spec.ps1 -Name "my-feature"` |
-| `validate-spec.ps1` | Валидация форматов | `.\tools\specs-generator\validate-spec.ps1 -Path ".specs/my-feature"` |
-| `spec-status.ps1` | Отчёт о прогрессе | `.\tools\specs-generator\spec-status.ps1 -Path ".specs/my-feature"` |
-| `fill-template.ps1` | Заполнение плейсхолдеров | `.\tools\specs-generator\fill-template.ps1 -File "..." -ListPlaceholders` |
-| `list-specs.ps1` | Список всех спеков | `.\tools\specs-generator\list-specs.ps1` |
+| `scaffold-spec.ps1` | Создание структуры | `.\.dev-pomogator\tools\specs-generator\scaffold-spec.ps1 -Name "my-feature"` |
+| `validate-spec.ps1` | Валидация форматов | `.\.dev-pomogator\tools\specs-generator\validate-spec.ps1 -Path ".specs/my-feature"` |
+| `spec-status.ps1` | Отчёт о прогрессе | `.\.dev-pomogator\tools\specs-generator\spec-status.ps1 -Path ".specs/my-feature"` |
+| `fill-template.ps1` | Заполнение плейсхолдеров | `.\.dev-pomogator\tools\specs-generator\fill-template.ps1 -File "..." -ListPlaceholders` |
+| `list-specs.ps1` | Список всех спеков | `.\.dev-pomogator\tools\specs-generator\list-specs.ps1` |
 
 ### Документация скриптов
 
-Полная документация: `tools/specs-generator/README.md`
+Полная документация: `.dev-pomogator/tools/specs-generator/README.md`
 
 ---
 
@@ -57,12 +57,12 @@
 **Файлы:** USER_STORIES.md, USE_CASES.md, RESEARCH.md
 
 **Алгоритм:**
-1. Создать структуру: `.\tools\specs-generator\scaffold-spec.ps1 -Name "{feature}"`
+1. Создать структуру: `.\.dev-pomogator\tools\specs-generator\scaffold-spec.ps1 -Name "{feature}"`
 2. Опросить пользователя о целях и ролях
 3. Заполнить USER_STORIES.md
 4. Заполнить USE_CASES.md
 5. Заполнить RESEARCH.md (если нужен ресерч)
-6. Проверить статус: `.\tools\specs-generator\spec-status.ps1 -Path ".specs/{feature}"`
+6. Проверить статус: `.\.dev-pomogator\tools\specs-generator\spec-status.ps1 -Path ".specs/{feature}"`
 
 **СТОП #1:** Показать результаты Discovery, спросить подтверждение.
 
@@ -80,7 +80,7 @@
 5. Заполнить DESIGN.md
 6. Заполнить FILE_CHANGES.md
 7. Создать {feature-slug}.feature (по правилам ниже)
-8. Валидация: `.\tools\specs-generator\validate-spec.ps1 -Path ".specs/{feature}"`
+8. Валидация: `.\.dev-pomogator\tools\specs-generator\validate-spec.ps1 -Path ".specs/{feature}"`
 9. Исправить ошибки если есть
 
 **СТОП #2:** Показать Requirements + Design, спросить подтверждение.
@@ -114,7 +114,6 @@
 - Источники формулировок:
   - `tests/features/**`
   - `tests/fixtures/steps-validator/**` (реальные шаги для валидатора)
-  - `shared/hooks/hooks.json` (для понимания доступных хуков)
 
 Примеры реальных Background из решения (можно переиспользовать дословно):
 - `Given dev-pomogator is installed`

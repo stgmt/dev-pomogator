@@ -3,7 +3,7 @@ repos:
   hooks:
   - id: forbid-root-artifacts
     name: Forbid root artifacts
-    entry: python tools/forbid-root-artifacts/check.py
+    entry: python extensions/forbid-root-artifacts/tools/forbid-root-artifacts/check.py
     language: python
     pass_filenames: false
     always_run: true
