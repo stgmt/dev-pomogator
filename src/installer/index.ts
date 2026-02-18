@@ -288,9 +288,12 @@ async function install(
       for (const v of vars) {
         console.log(chalk.yellow(`     ${v.name}  — ${v.description}`));
       }
-      console.log(chalk.gray('                            Add to your .env or shell profile\n'));
     }
-    console.log(chalk.cyan('   📄 .env.example generated — copy to .env and fill in values\n'));
+    const platformHint = platforms.includes('claude')
+      ? '.claude/settings.json → "env"'
+      : '.env or shell profile';
+    console.log(chalk.gray(`\n   Add to ${platformHint}\n`));
+    console.log(chalk.cyan('   📄 .env.example generated with defaults\n'));
   }
 
   if (platforms.includes('cursor')) {

@@ -1,6 +1,7 @@
 import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
+import chalk from 'chalk';
 import { fileURLToPath } from 'url';
 import { listExtensions, getExtensionFiles, getExtensionRules, getExtensionTools, getExtensionHooks, runPostInstallHook, Extension } from './extensions.js';
 import type { ManagedFileEntry, ManagedFiles } from '../config/schema.js';
@@ -377,15 +378,49 @@ async function installExtensionHooks(repoRoot: string, extensions: Extension[]):
     }
   }
   
+  // Inject envRequirements defaults into settings.env
+  // Extensions with hooks may need env vars to function (e.g. AUTO_COMMIT_API_KEY)
+  const envSection = (settings.env ?? {}) as Record<string, string>;
+  const missingRequired: Array<{ extName: string; varName: string; description: string }> = [];
+
+  for (const ext of extensions) {
+    if (!ext.envRequirements || !getExtensionHooks(ext, 'claude') || Object.keys(getExtensionHooks(ext, 'claude')).length === 0) continue;
+
+    for (const req of ext.envRequirements) {
+      if (envSection[req.name] !== undefined) continue; // already set, don't touch
+
+      if (req.default) {
+        // Optional var with default — inject it
+        envSection[req.name] = req.default;
+      } else if (req.required) {
+        // Required var without value — warn user
+        missingRequired.push({ extName: ext.name, varName: req.name, description: req.description });
+      }
+    }
+  }
+
+  if (Object.keys(envSection).length > 0) {
+    settings.env = envSection;
+  }
+
   // Ensure directory exists
   await fs.ensureDir(path.dirname(settingsPath));
-  
+
   // Write settings
   await fs.writeJson(settingsPath, settings, { spaces: 2 });
-  
+
   const hookCount = Object.values(allHooks).flat().length;
   if (hookCount > 0) {
     console.log(`  ✓ Installed ${hookCount} extension hook(s)`);
+  }
+
+  // Warn about missing required env vars
+  if (missingRequired.length > 0) {
+    console.log(chalk.yellow('\n  ⚠  Настройте env переменные в .claude/settings.json → "env":'));
+    for (const m of missingRequired) {
+      console.log(chalk.yellow(`     ${m.varName}  — ${m.description} (${m.extName})`));
+    }
+    console.log('');
   }
 
   return installedHooksByExtension;
