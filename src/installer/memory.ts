@@ -15,6 +15,7 @@ const CLAUDE_MEM_REPO = 'https://github.com/thedotmack/claude-mem.git';
 // Always use marketplace directory - shared between Cursor and Claude Code
 const CLAUDE_MEM_DIR = path.join(os.homedir(), '.claude', 'plugins', 'marketplaces', 'thedotmack');
 const WORKER_PORT = 37777;
+const CHROMA_PORT = 8000;
 
 /**
  * Get the claude-mem directory (always marketplace location)
@@ -187,6 +188,180 @@ function generateCursorHooksJson(): CursorHooksJson {
 }
 
 // ============================================================================
+// Chroma vector DB dependency management
+// ============================================================================
+
+/**
+ * Check if Chroma server is running on port 8000
+ */
+async function isChromaRunning(): Promise<boolean> {
+  try {
+    const response = await fetch(`http://127.0.0.1:${CHROMA_PORT}/api/v2/heartbeat`, {
+      signal: AbortSignal.timeout(3000),
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Find Python chromadb's chroma executable path.
+ * Searches pip user install Scripts dirs and uv cache.
+ * Returns the path to chroma.exe (Windows) or chroma (Unix), or null if not found.
+ */
+function findPythonChroma(): string | null {
+  const isWindows = process.platform === 'win32';
+  const chromaBin = isWindows ? 'chroma.exe' : 'chroma';
+
+  // Strategy 1: pip show chromadb → derive Scripts path
+  try {
+    const location = execSync('pip show chromadb', {
+      encoding: 'utf-8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+      timeout: 10000,
+    });
+    const locationMatch = location.match(/Location:\s*(.+)/);
+    if (locationMatch) {
+      // User install: .../site-packages → .../Scripts/chroma.exe
+      const scriptsDir = path.join(path.dirname(locationMatch[1].trim()), 'Scripts');
+      const chromaPath = path.join(scriptsDir, chromaBin);
+      if (fs.existsSync(chromaPath)) return chromaPath;
+    }
+  } catch { /* pip not available or chromadb not installed */ }
+
+  // Strategy 2: which/where
+  try {
+    const chromaPath = execSync(isWindows ? `where ${chromaBin}` : `which ${chromaBin}`, {
+      encoding: 'utf-8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+      timeout: 5000,
+    }).trim().split('\n')[0].trim();
+    if (chromaPath && fs.existsSync(chromaPath)) return chromaPath;
+  } catch { /* not in PATH */ }
+
+  return null;
+}
+
+/**
+ * Ensure Chroma server can start by fixing the chroma binary resolution.
+ *
+ * Problem chain (Windows x64):
+ * 1. bun install creates node_modules with chromadb, but npm .cmd shims are missing
+ * 2. npm chromadb@3.3.x CLI doesn't support Windows x64 (only ARM64 has binaries)
+ * 3. ChromaServerManager looks for chroma.cmd in node_modules/.bin/
+ *
+ * Fix: Install Python chromadb (which works on all platforms) and create a
+ * chroma.cmd shim in node_modules/.bin/ that delegates to Python's chroma.exe.
+ */
+async function ensureChromaDeps(): Promise<void> {
+  const claudeMemDir = getClaudeMemDir();
+  const isWindows = process.platform === 'win32';
+  const binDir = path.join(claudeMemDir, 'node_modules', '.bin');
+  const chromaShim = path.join(binDir, isWindows ? 'chroma.cmd' : 'chroma');
+
+  // Quick check: does the existing chroma binary actually work?
+  if (fs.existsSync(chromaShim)) {
+    try {
+      execSync(`"${chromaShim}" --version`, {
+        cwd: claudeMemDir,
+        stdio: 'ignore',
+        timeout: 15000,
+      });
+      return; // Chroma binary works, nothing to fix
+    } catch {
+      // Chroma binary broken (Windows x64 or missing semver) — fix it
+    }
+  }
+
+  console.log(chalk.cyan('  Fixing Chroma server binary...'));
+
+  // Step 1: Ensure Python chromadb is installed
+  let pythonChromaPath = findPythonChroma();
+  if (!pythonChromaPath) {
+    console.log(chalk.cyan('  Installing Python chromadb...'));
+    try {
+      execSync('pip install chromadb', {
+        stdio: 'inherit',
+        timeout: 180000,
+      });
+      pythonChromaPath = findPythonChroma();
+    } catch (error) {
+      console.log(chalk.yellow(`  ⚠ Could not install Python chromadb: ${error}`));
+    }
+  }
+
+  if (!pythonChromaPath) {
+    console.log(chalk.yellow('  ⚠ Python chromadb not found. Chroma vector search may not work.'));
+    return;
+  }
+
+  console.log(chalk.gray(`  Found Python chroma at: ${pythonChromaPath}`));
+
+  // Step 2: Create chroma.cmd shim that delegates to Python chroma
+  await fs.ensureDir(binDir);
+
+  if (isWindows) {
+    // Windows: create .cmd shim pointing to Python chroma.exe
+    const shimContent = `@ECHO off\r\n"${pythonChromaPath}" %*\r\n`;
+    await fs.writeFile(chromaShim, shimContent, 'utf-8');
+  } else {
+    // Unix: create shell shim
+    const shimContent = `#!/bin/sh\nexec "${pythonChromaPath}" "$@"\n`;
+    await fs.writeFile(chromaShim, shimContent, { mode: 0o755 });
+  }
+
+  console.log(chalk.green('  ✓ Chroma binary shim created (Python backend)'));
+}
+
+/**
+ * Verify Chroma vector DB is running after worker start.
+ * If not running, attempt dependency repair and worker restart.
+ * Non-blocking: failures only produce warnings.
+ */
+async function verifyChromaHealth(): Promise<void> {
+  // Wait for worker to fully initialize (up to 30s)
+  const deadline = Date.now() + 30000;
+  while (Date.now() < deadline) {
+    try {
+      const res = await fetch(`http://127.0.0.1:${WORKER_PORT}/api/health`);
+      if (res.ok) break;
+    } catch { /* worker not ready yet */ }
+    await new Promise(r => setTimeout(r, 1000));
+  }
+
+  // Give Chroma extra time to start (worker starts it during init)
+  await new Promise(r => setTimeout(r, 10000));
+
+  if (await isChromaRunning()) {
+    console.log(chalk.green('  ✓ Chroma vector database running'));
+    return;
+  }
+
+  // Chroma not running — attempt repair
+  console.log(chalk.yellow('  ⚠ Chroma not running, repairing dependencies...'));
+  await ensureChromaDeps();
+
+  // Restart worker so it re-attempts Chroma startup with fixed deps
+  console.log(chalk.cyan('  Restarting worker...'));
+  try {
+    await fetch(`http://127.0.0.1:${WORKER_PORT}/api/admin/shutdown`, { method: 'POST' });
+  } catch { /* worker may already be down */ }
+  await new Promise(r => setTimeout(r, 2000));
+
+  await startClaudeMemWorker();
+
+  // Final Chroma check (give it 15s to start)
+  await new Promise(r => setTimeout(r, 15000));
+  if (await isChromaRunning()) {
+    console.log(chalk.green('  ✓ Chroma running after repair'));
+  } else {
+    console.log(chalk.yellow('  ⚠ Chroma still not running. Vector search will be disabled.'));
+    console.log(chalk.gray('    Basic memory features (observations, context) still work.'));
+  }
+}
+
+// ============================================================================
 // Cursor: claude-mem installation via git clone
 // ============================================================================
 
@@ -264,6 +439,9 @@ async function cloneAndBuildRepo(): Promise<void> {
   } catch (error) {
     throw new Error(`Failed to build claude-mem: ${error}`);
   }
+
+  // Fix chromadb transitive deps for Node.js (bun doesn't resolve them for npx)
+  await ensureChromaDeps();
 }
 
 /**
@@ -880,6 +1058,13 @@ export async function ensureClaudeMem(platform: 'cursor' | 'claude'): Promise<vo
 
     // Step 3: Register MCP server in ~/.cursor/mcp.json
     await registerClaudeMemMcp(platform);
+
+    // Step 4: Verify Chroma vector DB is running (non-blocking)
+    try {
+      await verifyChromaHealth();
+    } catch {
+      console.log(chalk.yellow('  ⚠ Could not verify Chroma status (non-blocking)'));
+    }
   }
 
   if (platform === 'claude') {
@@ -906,6 +1091,13 @@ export async function ensureClaudeMem(platform: 'cursor' | 'claude'): Promise<vo
 
     // Step 4: Register MCP server in ~/.claude.json
     await registerClaudeMemMcp(platform);
+
+    // Step 5: Verify Chroma vector DB is running (non-blocking)
+    try {
+      await verifyChromaHealth();
+    } catch {
+      console.log(chalk.yellow('  ⚠ Could not verify Chroma status (non-blocking)'));
+    }
   }
 
   console.log(chalk.green('\n✨ Persistent memory configured!\n'));
