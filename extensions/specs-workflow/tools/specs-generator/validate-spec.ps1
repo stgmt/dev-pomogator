@@ -55,10 +55,32 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# Find repo root by markers
+function Find-RepoRoot {
+    param([string]$StartDir)
+    $current = $StartDir
+    while ($current -and (Test-Path $current)) {
+        if (
+            (Test-Path (Join-Path $current ".git")) -or
+            (Test-Path (Join-Path $current "package.json")) -or
+            (Test-Path (Join-Path $current ".root-artifacts.yaml"))
+        ) {
+            return $current
+        }
+        $parent = Split-Path -Parent $current
+        if ($parent -eq $current) { break }
+        $current = $parent
+    }
+    return $null
+}
+
 # Determine script paths
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-# Go up 4 levels: specs-generator -> tools -> specs-workflow -> extensions -> repo root
-$RepoRoot = (Get-Item $ScriptDir).Parent.Parent.Parent.Parent.FullName
+$RepoRoot = Find-RepoRoot -StartDir $ScriptDir
+if (-not $RepoRoot) {
+    Write-Error "Repository root not found from $ScriptDir"
+    exit 1
+}
 $LogsDir = Join-Path $ScriptDir "logs"
 
 # Resolve path
@@ -272,6 +294,49 @@ foreach ($file in $existingFiles) {
         }
     }
     
+    # CONTEXT_SECTION: Check RESEARCH.md has Project Context section
+    if ($file -eq "RESEARCH.md") {
+        Write-Log "INFO" "Checking CONTEXT_SECTION rule..."
+        $hasContextHeader = $content -match '## Project Context & Constraints'
+        if (-not $hasContextHeader) {
+            $warnings += @{
+                file = $file
+                rule = "CONTEXT_SECTION"
+                message = "Missing '## Project Context & Constraints' section. Run Phase 1.5 or add '> Skipped: {reason}'"
+            }
+            $fileHasWarnings = $true
+            Write-Log "WARN" "$file : Missing Project Context & Constraints section"
+        } else {
+            $hasSubsection = $content -match '### (Relevant Rules|Existing Patterns & Extensions|Architectural Constraints Summary)'
+            $isSkipped = $content -match '>\s*Skipped:'
+            if (-not $hasSubsection -and -not $isSkipped) {
+                $warnings += @{
+                    file = $file
+                    rule = "CONTEXT_SECTION"
+                    message = "Section 'Project Context & Constraints' exists but has no subsections and no skip reason"
+                }
+                $fileHasWarnings = $true
+                Write-Log "WARN" "$file : Context section incomplete"
+            }
+        }
+    }
+
+    # TDD_TASK_ORDER: Check TASKS.md has Phase 0 (BDD Foundation) before implementation
+    if ($file -eq "TASKS.md") {
+        Write-Log "INFO" "Checking TDD_TASK_ORDER rule..."
+        $hasPhase0 = $content -match '(?i)## Phase 0.*\b(Red|BDD|Foundation|Feature)\b'
+        $hasFeatureTask = $content -match '(?i)\.feature'
+        if (-not $hasPhase0 -and -not $hasFeatureTask) {
+            $warnings += @{
+                file = $file
+                rule = "TDD_TASK_ORDER"
+                message = "No 'Phase 0: BDD Foundation' or .feature task found. TDD requires test tasks BEFORE implementation."
+            }
+            $fileHasWarnings = $true
+            Write-Log "WARN" "$file : No BDD/feature task found in early phases"
+        }
+    }
+
     if ($fileHasErrors) {
         $filesWithErrors++
     } elseif ($fileHasWarnings) {
@@ -280,6 +345,103 @@ foreach ($file in $existingFiles) {
         $validFiles++
     }
 }
+
+# =========================================================================
+# CROSS_REF_LINKS: Validate markdown cross-reference links between spec files
+# =========================================================================
+Write-Log "INFO" "Checking CROSS_REF_LINKS rule..."
+
+# Helper: convert markdown header to GitHub-style anchor slug
+function ConvertTo-AnchorSlug {
+    param([string]$Header)
+    $slug = $Header.ToLower()
+    # Remove markdown formatting: bold, italic, code, link brackets
+    $slug = [regex]::Replace($slug, '[\*_`\[\]\(\)]', '')
+    # Remove @featureN tags
+    $slug = [regex]::Replace($slug, '@feature\d+', '')
+    # Remove special chars except alphanumeric, spaces, hyphens, underscores
+    $slug = [regex]::Replace($slug, '[^\w\s-]', '')
+    $slug = $slug.Trim()
+    # Replace spaces with hyphens
+    $slug = [regex]::Replace($slug, '\s+', '-')
+    # Collapse multiple hyphens
+    $slug = [regex]::Replace($slug, '-+', '-')
+    $slug = $slug.TrimEnd('-')
+    return $slug
+}
+
+# Build anchor index: filename -> @(anchor1, anchor2, ...)
+$anchorIndex = @{}
+$mdFiles = $existingFiles | Where-Object { $_ -match '\.md$' }
+
+foreach ($mdFile in $mdFiles) {
+    $mdPath = Join-Path $TargetDir $mdFile
+    $mdLines = Get-Content -Path $mdPath -ErrorAction SilentlyContinue
+    if (-not $mdLines) { continue }
+
+    $anchors = @()
+    foreach ($mdLine in $mdLines) {
+        if ($mdLine -match '^(#{1,6})\s+(.+)$') {
+            $headerText = $Matches[2]
+            $anchor = ConvertTo-AnchorSlug -Header $headerText
+            if ($anchor) {
+                $anchors += $anchor
+            }
+        }
+    }
+    $anchorIndex[$mdFile] = $anchors
+}
+
+# Scan all MD files for markdown links to other spec files
+$linkPattern = '\[([^\]]+)\]\(([^)#\s]+\.md)(?:#([^)]+))?\)'
+
+foreach ($mdFile in $mdFiles) {
+    $mdPath = Join-Path $TargetDir $mdFile
+    $mdLines = Get-Content -Path $mdPath -ErrorAction SilentlyContinue
+    if (-not $mdLines) { continue }
+
+    $lineNum = 0
+    foreach ($mdLine in $mdLines) {
+        $lineNum++
+        $linkMatches = [regex]::Matches($mdLine, $linkPattern)
+        foreach ($lm in $linkMatches) {
+            $linkText = $lm.Groups[1].Value
+            $targetFile = $lm.Groups[2].Value
+            # Strip leading ./ from relative paths
+            $targetFile = $targetFile -replace '^\.\/', ''
+            $anchor = $lm.Groups[3].Value  # may be empty
+
+            # Check if target file exists in spec folder
+            if ($targetFile -notin $existingFiles) {
+                $linkDisplay = "[$linkText]($targetFile$(if($anchor){"#$anchor"}))"
+                $warnings += @{
+                    file = $mdFile
+                    line = $lineNum
+                    rule = "CROSS_REF_LINKS"
+                    message = "Broken link: $linkDisplay - target file '$targetFile' not found in spec folder"
+                }
+                Write-Log "WARN" "$mdFile line ${lineNum}: target file '$targetFile' not found"
+                continue
+            }
+
+            # Check anchor if present
+            if ($anchor -and $anchorIndex.ContainsKey($targetFile)) {
+                if ($anchor -notin $anchorIndex[$targetFile]) {
+                    $linkDisplay = "[$linkText]($targetFile#$anchor)"
+                    $warnings += @{
+                        file = $mdFile
+                        line = $lineNum
+                        rule = "CROSS_REF_LINKS"
+                        message = "Broken link: $linkDisplay - anchor '#$anchor' not found in $targetFile"
+                    }
+                    Write-Log "WARN" "$mdFile line ${lineNum}: anchor '#$anchor' not found in $targetFile"
+                }
+            }
+        }
+    }
+}
+
+Write-Log "INFO" "CROSS_REF_LINKS check complete"
 
 Write-Log "INFO" "Validation complete: $($errors.Count) errors, $($warnings.Count) warnings"
 

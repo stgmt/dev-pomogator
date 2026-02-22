@@ -12,6 +12,8 @@
 ├── spec-status.ps1        # Отчёт о прогрессе заполнения
 ├── fill-template.ps1      # Заполнение плейсхолдеров в файле
 ├── list-specs.ps1         # Список всех спеков с их статусом
+├── audit-spec.ps1         # Аудит кросс-ссылок и консистентности
+├── analyze-features.ps1   # Анализ паттернов .feature файлов
 ├── logs/                  # Директория для логов (gitignore)
 └── templates/             # Шаблоны файлов
 ```
@@ -30,6 +32,15 @@
 
 # Список всех спеков
 .\.dev-pomogator\tools\specs-generator\list-specs.ps1
+
+# Аудит кросс-ссылок
+.\.dev-pomogator\tools\specs-generator\audit-spec.ps1 -Path ".specs/my-feature"
+
+# Анализ паттернов .feature файлов (ПЕРЕД написанием .feature)
+.\.dev-pomogator\tools\specs-generator\analyze-features.ps1 -Format text
+
+# Анализ с поиском кандидатов
+.\.dev-pomogator\tools\specs-generator\analyze-features.ps1 -FeatureSlug "my-feature" -Format text
 ```
 
 ## Скрипты
@@ -88,6 +99,8 @@
 - `EARS_FORMAT` — WHEN/IF...THEN...SHALL в ACCEPTANCE_CRITERIA.md
 - `NFR_SECTIONS` — секции Performance/Security/Reliability/Usability
 - `FEATURE_NAMING` — формат `{DOMAIN}{NNN}_{Название}` в .feature
+- `CONTEXT_SECTION` — секция `## Project Context & Constraints` в RESEARCH.md (Phase 1.5)
+- `TDD_TASK_ORDER` — Phase 0 (BDD Foundation) или .feature задача в TASKS.md
 
 **Exit codes:**
 - 0 — валидация пройдена
@@ -109,6 +122,7 @@
 
 **Выводит:**
 - Текущая фаза (Discovery, Requirements, Finalization)
+- Подфаза (Context Analysis pending — если Discovery завершён, но `## Project Context & Constraints` в RESEARCH.md отсутствует)
 - Процент прогресса
 - Статус каждого файла (complete, partial, empty, not_created)
 - Рекомендуемое следующее действие
@@ -153,6 +167,82 @@
 **Выводит:**
 - Список спеков с их статусом
 - Summary: total/complete/partial/empty
+
+---
+
+### audit-spec.ps1
+
+Аудит кросс-ссылок и консистентности спецификации. Выполняет автоматические проверки и выдаёт список проблем для AI семантического анализа.
+
+```powershell
+# JSON формат (для AI агента)
+.\audit-spec.ps1 -Path ".specs/my-feature"
+
+# Текстовый формат (для человека)
+.\audit-spec.ps1 -Path ".specs/my-feature" -Format text
+
+# С подробным выводом
+.\audit-spec.ps1 -Path ".specs/my-feature" -Format text -VerboseOutput
+```
+
+**Автоматические проверки:**
+- `FR_AC_COVERAGE` — каждый FR-N имеет хотя бы один AC-N(FR-N)
+- `FR_BDD_COVERAGE` — @featureN теги из FR/AC присутствуют в .feature
+- `REQUIREMENTS_TRACEABILITY` — REQUIREMENTS.md ссылается на все FR-N
+- `TASKS_FR_REFS` — TASKS.md содержит ссылки на FR/NFR
+- `OPEN_QUESTIONS` — незакрытые `- [ ]` в RESEARCH.md
+- `TERM_CONSISTENCY` — PascalCase/camelCase варианты одного термина
+
+**Выходной формат JSON:**
+- `findings` — массив находок с категорией, severity, сообщением
+- `summary` — итоги по 5 категориям (ERRORS, LOGIC_GAPS, INCONSISTENCY, RUDIMENTS, FANTASIES)
+- `ai_checks_pending` — список проверок для AI семантического анализа
+
+**Exit codes:**
+- 0 — всегда (report-only, не блокирует workflow)
+
+---
+
+### analyze-features.ps1
+
+Анализирует все `.feature` файлы в проекте и выдаёт структурированный отчёт с паттернами. **Обязательно запускать ПЕРЕД написанием нового .feature файла** в Phase 2 specs workflow.
+
+```powershell
+# Полный отчёт (текст)
+.\analyze-features.ps1 -Format text
+
+# Поиск кандидатов по slug
+.\analyze-features.ps1 -FeatureSlug "blind-receiving" -Format text
+
+# Поиск по домену
+.\analyze-features.ps1 -DomainCode "PLUGIN" -Format text
+
+# Свободный поиск
+.\analyze-features.ps1 -Query "shipment" -Format text
+
+# JSON (для AI агента)
+.\analyze-features.ps1 -Format json
+```
+
+**Параметры:**
+- `-FeatureSlug` — фильтр кандидатов по slug
+- `-DomainCode` — фильтр по domain code (CORE, PLUGIN)
+- `-Query` — свободный поиск в Feature: lines
+- `-VerboseOutput` — подробный лог
+- `-Format json|text` — формат вывода (default: json)
+
+**Секции отчёта:**
+- **Step Dictionary** — все Given/When/Then шаги с частотой использования
+- **Background Patterns** — переиспользуемые комбинации Background шагов
+- **Naming Patterns** — domain codes, распределение, следующий свободный номер
+- **Data Table Patterns** — какие колонки используются в таблицах (чтобы не добавлять лишние)
+- **Setup vs Table** — что передаётся через Given step (entity setup), а что в таблице
+- **Assertion Patterns** — формулировки Then шагов по типам (status, error, contains, data)
+- **Candidates** — найденные похожие features (при фильтрации)
+- **Recommendations** — предлагаемый Background, следующий domain number
+
+**Exit codes:**
+- 0 — всегда (report-only, не блокирует workflow)
 
 ---
 

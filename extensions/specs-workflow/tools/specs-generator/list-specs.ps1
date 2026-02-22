@@ -56,10 +56,32 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# Find repo root by markers
+function Find-RepoRoot {
+    param([string]$StartDir)
+    $current = $StartDir
+    while ($current -and (Test-Path $current)) {
+        if (
+            (Test-Path (Join-Path $current ".git")) -or
+            (Test-Path (Join-Path $current "package.json")) -or
+            (Test-Path (Join-Path $current ".root-artifacts.yaml"))
+        ) {
+            return $current
+        }
+        $parent = Split-Path -Parent $current
+        if ($parent -eq $current) { break }
+        $current = $parent
+    }
+    return $null
+}
+
 # Determine script paths
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-# Go up 4 levels: specs-generator -> tools -> specs-workflow -> extensions -> repo root
-$RepoRoot = (Get-Item $ScriptDir).Parent.Parent.Parent.Parent.FullName
+$RepoRoot = Find-RepoRoot -StartDir $ScriptDir
+if (-not $RepoRoot) {
+    Write-Error "Repository root not found from $ScriptDir"
+    exit 1
+}
 $LogsDir = Join-Path $ScriptDir "logs"
 $SpecsDir = Join-Path $RepoRoot ".specs"
 

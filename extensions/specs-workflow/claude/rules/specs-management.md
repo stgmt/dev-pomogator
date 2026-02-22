@@ -42,6 +42,8 @@
 | `spec-status.ps1` | Отчёт о прогрессе | `.\.dev-pomogator\tools\specs-generator\spec-status.ps1 -Path ".specs/my-feature"` |
 | `fill-template.ps1` | Заполнение плейсхолдеров | `.\.dev-pomogator\tools\specs-generator\fill-template.ps1 -File "..." -ListPlaceholders` |
 | `list-specs.ps1` | Список всех спеков | `.\.dev-pomogator\tools\specs-generator\list-specs.ps1` |
+| `audit-spec.ps1` | Аудит кросс-ссылок | `.\.dev-pomogator\tools\specs-generator\audit-spec.ps1 -Path ".specs/my-feature"` |
+| `analyze-features.ps1` | Анализ паттернов .feature | `.\.dev-pomogator\tools\specs-generator\analyze-features.ps1 -Format text` |
 
 ### Документация скриптов
 
@@ -49,7 +51,7 @@
 
 ---
 
-## Workflow создания (3 СТОП-точки)
+## Workflow создания (4 СТОП-точки)
 
 ### PHASE 1: Discovery
 
@@ -67,6 +69,37 @@
 
 ---
 
+### PHASE 1.5: Project Context Analysis
+
+**Файл:** RESEARCH.md (секция `## Project Context & Constraints`)
+
+**Когда пропустить:**
+- Пользователь явно сказал "skip context analysis" / "пропусти контекст-анализ"
+- Фича greenfield (не затрагивает существующий код/правила)
+- В проекте < 2 правил в `.claude/rules/`
+- Фича тривиальная (1 файл, нет архитектурных решений)
+
+**Алгоритм:**
+1. Извлечь ключевые слова из USER_STORIES.md и USE_CASES.md (домены, технологии, действия)
+2. Просканировать `.claude/rules/*.md` — найти правила, релевантные ключевым словам
+3. Просканировать `extensions/*/extension.json` — найти расширения, пересекающиеся по домену
+4. Просканировать существующий код, упомянутый в USE_CASES — найти паттерны для reuse
+5. Заполнить секцию `## Project Context & Constraints` в RESEARCH.md:
+   - `### Relevant Rules` — таблица: Rule | Path | Summary | Triggered By | Impacts
+   - `### Existing Patterns & Extensions` — таблица: Source | Path | What It Provides | Relevance
+   - `### Architectural Constraints Summary` — как ограничения влияют на будущие FR/NFR
+6. Проверить статус: `.\.dev-pomogator\tools\specs-generator\spec-status.ps1 -Path ".specs/{feature}"`
+
+**При пропуске:** записать в RESEARCH.md:
+```
+## Project Context & Constraints
+> Skipped: {причина}
+```
+
+**СТОП #1.5:** Показать найденные ограничения проекта, спросить подтверждение перед Phase 2.
+
+---
+
 ### PHASE 2: Requirements + Design
 
 **Файлы:** REQUIREMENTS.md, FR.md, NFR.md, ACCEPTANCE_CRITERIA.md, DESIGN.md, FILE_CHANGES.md, *.feature
@@ -78,9 +111,20 @@
 4. Заполнить REQUIREMENTS.md (индекс ссылок)
 5. Заполнить DESIGN.md
 6. Заполнить FILE_CHANGES.md
-7. Создать {feature-slug}.feature (по правилам ниже)
-8. Валидация: `.\.dev-pomogator\tools\specs-generator\validate-spec.ps1 -Path ".specs/{feature}"`
-9. Исправить ошибки если есть
+7. **Анализ паттернов .feature (ОБЯЗАТЕЛЬНО перед написанием .feature):**
+   `.\.dev-pomogator\tools\specs-generator\analyze-features.ps1 -Format text [-FeatureSlug "{slug}"] [-DomainCode "{DOMAIN}"]`
+   На основе отчёта:
+   - Использовать Background из самого частого паттерна (не выдумывать)
+   - Переиспользовать формулировки шагов из Step Dictionary
+   - Использовать следующий свободный domain number из отчёта
+   - **Таблицы**: использовать ТОЛЬКО колонки из Table Patterns (не добавлять лишние)
+   - **Setup через Given**: данные из ScenarioContext (vendor/customer ID, warehouse ID) — НЕ класть в таблицу
+   - **Serial/Batch items**: использовать отдельные When-шаги без таблиц (как в реальных тестах)
+   - **Assertions**: копировать формулировки Then из Assertion Patterns
+   - Если есть кандидаты — взять за основу, указать `# Source:`
+8. Создать {feature-slug}.feature (по правилам ниже, опираясь на отчёт analyze-features)
+9. Валидация: `.\.dev-pomogator\tools\specs-generator\validate-spec.ps1 -Path ".specs/{feature}"`
+10. Исправить ошибки если есть
 
 **СТОП #2:** Показать Requirements + Design, спросить подтверждение.
 
@@ -127,6 +171,14 @@
 - Используй шаблон, но **все шаги** бери из существующих feature/fixtures/steps
 - Пометь файл как черновик (`# DRAFT`) и укажи, на какие источники опирался
 
+### 4) Data Table правила (из analyze-features отчёта)
+
+- В таблицах использовать **ТОЛЬКО** колонки, которые реально передаются в API payload
+- Данные, которые резолвятся через ScenarioContext (customer/vendor ID, warehouse ID), передаются через Given step, а НЕ через таблицу
+- Serial/batch items используют отдельные When-шаги без таблиц
+- Assertion формулировки копировать из отчёта (не придумывать свои)
+- Если отчёт показывает кандидат-feature — скопировать его table pattern дословно
+
 ---
 
 ### PHASE 3: Finalization
@@ -134,11 +186,100 @@
 **Файлы:** TASKS.md, README.md
 
 **Алгоритм:**
-1. Заполнить TASKS.md
+1. Заполнить TASKS.md **по TDD-порядку:**
+   - **Phase 0 (Red):** .feature файл + step definitions (заглушки) -- ПЕРВЫЕ задачи
+   - **Phase 1-N (Green):** Реализация бизнес-логики, где каждая группа задач привязана к @featureN сценариям
+   - **Последний Phase (Refactor):** Рефакторинг + финальная верификация всех сценариев
+   - Каждая задача реализации ОБЯЗАНА ссылаться на @featureN сценарий
+   - Каждый Phase завершается verify-шагом: "сценарии @featureN переходят из Red в Green"
 2. Сгенерировать README.md
 3. Финальная валидация
 
+**Правила TDD-порядка в TASKS.md:**
+- .feature и step definitions -- ВСЕГДА Phase 0 (первые задачи)
+- Зависимости реализации: implementation задачи зависят от Phase 0
+- Каждая implementation задача содержит `@featureN` тег
+- Каждый Phase содержит verify-шаг (Red->Green проверка)
+- Рефакторинг -- ПОСЛЕДНИЙ Phase (после всех Green)
+
 **СТОП #3:** Финальный отчёт со summary.
+
+---
+
+### PHASE 3+: Audit (автоматически после СТОП #3)
+
+**Когда запускается:** Автоматически после финализации (СТОП #3 подтверждён), ПЕРЕД объявлением спеки готовой.
+
+**Файл:** AUDIT_REPORT.md (опциональный, не входит в 13 обязательных)
+
+**Алгоритм:**
+
+#### Шаг 1: Автоматические проверки
+
+Запустить: `.\.dev-pomogator\tools\specs-generator\audit-spec.ps1 -Path ".specs/{feature}" -Format json`
+
+Скрипт проверяет:
+- FR↔AC покрытие (каждый FR-N имеет AC-N)
+- FR/AC↔BDD покрытие через @featureN теги
+- Полноту traceability matrix в REQUIREMENTS.md
+- Незакрытые open questions в RESEARCH.md (`- [ ]`)
+- TASKS.md→FR/NFR кросс-ссылки
+- Терминологическую консистентность (PascalCase/camelCase варианты)
+
+#### Шаг 2: AI семантический анализ (5 категорий)
+
+Агент ОБЯЗАН выполнить следующие проверки, читая файлы спеки И реальный код проекта:
+
+**ОШИБКИ (Errors) — расхождения с кодом:**
+1. Прочитать DESIGN.md секции про компоненты, reuse plan, файлы реализации — проверить что указанные файлы/классы/методы СУЩЕСТВУЮТ в кодовой базе
+2. Прочитать FILE_CHANGES.md — файлы с action=edit реально существуют, файлы с action=create ещё НЕ существуют
+3. Проверить правильность имён клиентов/сервисов/API в DESIGN.md и FR.md
+4. Найти пометки "Need to add" / "TODO: create" — проверить что эти компоненты действительно отсутствуют
+
+**ЛОГИЧЕСКИЕ ПРОБЕЛЫ (Logic Gaps) — непокрытые требования:**
+1. Для каждого FR-N проверить полную цепочку: FR → AC → BDD сценарий → задача в TASKS.md
+2. Для каждого UC проверить: есть ли связанный FR
+3. Для каждой User Story проверить: есть ли связанные UC/FR
+4. Для каждого AC проверить: есть ли BDD сценарий (включая edge cases и rollback)
+
+**НЕКОНСИСТЕНТНОСТЬ (Inconsistency) — терминологические расхождения:**
+1. Сравнить именование сущностей (идентификаторы, параметры API, имена полей) между FR.md, DESIGN.md, .feature, TASKS.md, SCHEMA.md
+2. Проверить форматы ID (vendorId vs customerVendorId vs vendor_id)
+3. Проверить что тестовые данные в .feature реалистичны (не "PRA" вместо числового ID)
+
+**РУДИМЕНТЫ (Rudiments) — устаревшая информация:**
+1. Проверить RESEARCH.md на open questions (`- [ ]`) которые уже имеют ответ в других файлах спеки
+2. Проверить нет ли client-side требований в серверной спеке (и наоборот)
+3. Проверить нет ли устаревших ссылок, TODO которые уже сделаны, или дублирующих UC
+
+**ФАНТАЗИИ (Fantasies) — непроверенные допущения:**
+1. Проверить RESEARCH.md — все ли утверждения об API имеют источник (URL, файл, тест, документация)
+2. Проверить DESIGN.md — нет ли API endpoints/методов, помеченных как "работает" без пруфа
+3. Проверить нет ли утверждений "API поддерживает X" / "метод возвращает Y" без верификации через live API или тесты
+
+#### Шаг 3: Исправление найденных проблем
+
+Агент ОБЯЗАН автоматически исправить ВСЕ найденные проблемы (автоматические + AI семантические):
+
+1. **ОШИБКИ** — исправить ссылки на несуществующие методы/файлы, убрать "Need to add" для уже существующих компонентов, указать правильные имена
+2. **ЛОГИЧЕСКИЕ ПРОБЕЛЫ** — добавить недостающие AC для FR, добавить BDD сценарии для непокрытых AC, добавить ссылки в TASKS.md и REQUIREMENTS.md
+3. **НЕКОНСИСТЕНТНОСТЬ** — унифицировать терминологию (выбрать один вариант, заменить во всех файлах), исправить нереалистичные тестовые данные
+4. **РУДИМЕНТЫ** — закрыть решённые open questions (`- [x]`), удалить дублирующие UC, убрать client-side требования из серверной спеки
+5. **ФАНТАЗИИ** — пометить непроверенные допущения как `[UNVERIFIED]`, добавить задачу live API verification в TASKS.md
+
+#### Шаг 4: Повторный аудит
+
+1. Перезапустить `audit-spec.ps1` на исправленных файлах
+2. Повторить AI семантический анализ
+3. Если findings > 0 — повторить Шаг 3 (максимум 3 итерации)
+
+#### Шаг 5: Генерация AUDIT_REPORT.md
+
+1. Создать `.specs/{feature}/AUDIT_REPORT.md` по шаблону из `.dev-pomogator/tools/specs-generator/templates/AUDIT_REPORT.md.template`
+2. Записать ВСЕ найденные и исправленные проблемы (что было → что исправлено)
+3. Показать summary таблицу пользователю
+
+**НЕ СТОП-ТОЧКА.** Аудит и исправления выполняются автоматически. Пользователь уже дал подтверждение на СТОП #3.
 
 ---
 
@@ -166,6 +307,10 @@
 | EARS_FORMAT | WHEN/IF...THEN...SHALL | WARNING |
 | NFR_SECTIONS | Performance/Security/Reliability/Usability | WARNING |
 | FEATURE_NAMING | {DOMAIN}{NNN}_{Название} | WARNING |
+| CONTEXT_SECTION | `## Project Context & Constraints` в RESEARCH.md с подсекциями или skip reason | WARNING |
+| TDD_TASK_ORDER | Phase 0 (BDD Foundation) или .feature задача в TASKS.md | WARNING |
+| CROSS_REF_LINKS | Markdown ссылки `[ID](file.md#anchor)` — целевой файл и якорь существуют | WARNING |
+| LINK_VALIDITY | FR/AC/NFR в REQUIREMENTS/TASKS — кликабельные линки, не plain text | WARNING |
 
 ---
 

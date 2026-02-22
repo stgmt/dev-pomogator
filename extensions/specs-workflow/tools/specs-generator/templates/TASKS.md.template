@@ -1,20 +1,40 @@
 # Tasks
 
-## 1. {Этап 1}
+## TDD Workflow
 
-- [ ] {Задача 1.1}
-- [ ] {Задача 1.2}
-- [ ] {Задача 1.3}
+> Задачи организованы по TDD: Red -> Green -> Refactor.
+> Каждый этап реализации начинается с .feature сценария (Red), затем реализация (Green), затем рефакторинг.
 
-## 2. {Этап 2}
+## Phase 0: BDD Foundation (Red)
 
-- [ ] {Задача 2.1}
-- [ ] {Задача 2.2}
-- [ ] {Задача 2.3}
+> Создать .feature файл, step definitions, и BDD hooks ПЕРЕД реализацией бизнес-логики.
+> Все сценарии должны FAIL (Red) на этом этапе.
 
-## 3. {Этап 3}
+- [ ] {Создать/обновить .feature файл с BDD сценариями}
+- [ ] {Создать step definitions (заглушки с PendingStepException/throw)}
+- [ ] {Создать/обновить hooks для setup/teardown (если нужны — см. DESIGN.md "BDD Test Infrastructure")}
+- [ ] {Убедиться что все сценарии FAIL (Red)}
 
-- [ ] {Задача 3.1}
-- [ ] {Задача 3.2}
-- [ ] {Задача 3.3}
+## Phase 1: {Этап реализации 1} (Green)
 
+> Реализовать код, чтобы BDD сценарии начали проходить.
+
+- [ ] {Задача 1.1} -- @featureN
+  _Requirements: [FR-N](FR.md#fr-n-{название})_
+- [ ] {Задача 1.2} -- @featureN
+  _Requirements: [FR-N](FR.md#fr-n-{название})_
+- [ ] {Verify: сценарии @featureN переходят из Red в Green}
+
+## Phase 2: {Этап реализации 2} (Green)
+
+- [ ] {Задача 2.1} -- @featureN
+  _Requirements: [FR-N](FR.md#fr-n-{название})_
+- [ ] {Задача 2.2} -- @featureN
+  _Requirements: [FR-N](FR.md#fr-n-{название})_
+- [ ] {Verify: сценарии @featureN переходят из Red в Green}
+
+## Phase 3: Refactor & Polish
+
+- [ ] {Рефакторинг после прохождения всех сценариев}
+- [ ] {Все BDD сценарии GREEN}
+- [ ] {E2E тест-план выполнен}

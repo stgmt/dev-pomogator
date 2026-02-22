@@ -28,3 +28,21 @@
 
 {Краткие выводы исследования}
 
+## Project Context & Constraints
+
+### Relevant Rules
+
+| Rule | Path | Summary | Triggered By | Impacts |
+|------|------|---------|--------------|---------|
+| {rule-name} | `.claude/rules/{rule-name}.md` | {1-line summary} | {keywords} | {FR-N / NFR-Category} |
+
+### Existing Patterns & Extensions
+
+| Source | Path | What It Provides | Relevance |
+|--------|------|-------------------|-----------|
+| {source} | `{path}` | {description} | {relevance} |
+
+### Architectural Constraints Summary
+
+{Краткое описание: какие правила/паттерны ограничивают какие требования.}
+

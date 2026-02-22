@@ -52,10 +52,32 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# Find repo root by markers
+function Find-RepoRoot {
+    param([string]$StartDir)
+    $current = $StartDir
+    while ($current -and (Test-Path $current)) {
+        if (
+            (Test-Path (Join-Path $current ".git")) -or
+            (Test-Path (Join-Path $current "package.json")) -or
+            (Test-Path (Join-Path $current ".root-artifacts.yaml"))
+        ) {
+            return $current
+        }
+        $parent = Split-Path -Parent $current
+        if ($parent -eq $current) { break }
+        $current = $parent
+    }
+    return $null
+}
+
 # Determine script paths
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-# Go up 4 levels: specs-generator -> tools -> specs-workflow -> extensions -> repo root
-$RepoRoot = (Get-Item $ScriptDir).Parent.Parent.Parent.Parent.FullName
+$RepoRoot = Find-RepoRoot -StartDir $ScriptDir
+if (-not $RepoRoot) {
+    Write-Error "Repository root not found from $ScriptDir"
+    exit 1
+}
 $LogsDir = Join-Path $ScriptDir "logs"
 
 # Resolve path
@@ -217,6 +239,7 @@ $progressPercent = [math]::Round(($completeCount / $totalWeight) * 100)
 
 # Determine current phase
 $currentPhase = "Discovery"
+$subPhase = $null
 $discoveryComplete = $true
 $requirementsComplete = $true
 
@@ -228,16 +251,32 @@ foreach ($file in $phases["Discovery"]) {
 }
 
 if ($discoveryComplete) {
-    $currentPhase = "Requirements"
-    foreach ($file in $phases["Requirements"]) {
-        if ($files.ContainsKey($file) -and $files[$file].status -notin @("complete")) {
-            $requirementsComplete = $false
-            break
+    # Phase 1.5: Check context analysis in RESEARCH.md
+    $researchPath = Join-Path $TargetDir "RESEARCH.md"
+    $contextDone = $false
+    if (Test-Path $researchPath) {
+        $rc = Get-Content -Path $researchPath -Raw -ErrorAction SilentlyContinue
+        if ($rc -match '## Project Context & Constraints') {
+            $hasSub = $rc -match '### (Relevant Rules|Existing Patterns|Architectural Constraints)'
+            $isSkip = $rc -match '>\s*Skipped:'
+            if ($hasSub -or $isSkip) { $contextDone = $true }
         }
     }
-    
-    if ($requirementsComplete) {
-        $currentPhase = "Finalization"
+
+    if (-not $contextDone) {
+        $subPhase = "Context Analysis pending"
+    } else {
+        $currentPhase = "Requirements"
+        foreach ($file in $phases["Requirements"]) {
+            if ($files.ContainsKey($file) -and $files[$file].status -notin @("complete")) {
+                $requirementsComplete = $false
+                break
+            }
+        }
+
+        if ($requirementsComplete) {
+            $currentPhase = "Finalization"
+        }
     }
 }
 
@@ -264,12 +303,17 @@ foreach ($file in $allFiles) {
 }
 
 if (-not $nextAction) {
-    $nextAction = "All files complete! Run validation."
+    if ($subPhase -eq "Context Analysis pending") {
+        $nextAction = "Run Phase 1.5: Add '## Project Context & Constraints' to RESEARCH.md"
+    } else {
+        $nextAction = "All files complete! Run validation."
+    }
 }
 
 $result = @{
     path = $Path
     phase = $currentPhase
+    sub_phase = $subPhase
     progress_percent = $progressPercent
     files = $files
     next_action = $nextAction
@@ -281,6 +325,7 @@ if ($Format -eq "json") {
         @{
             path = $Path
             phase = $currentPhase
+            sub_phase = $subPhase
             progress_percent = $progressPercent
             next_action = $nextAction
         } | ConvertTo-Json -Depth 10
@@ -289,7 +334,9 @@ if ($Format -eq "json") {
     }
 } else {
     Write-Host "Spec Status: $Path" -ForegroundColor Cyan
-    Write-Host "Phase: $currentPhase" -ForegroundColor Yellow
+    $phaseDisplay = $currentPhase
+    if ($subPhase) { $phaseDisplay += " ($subPhase)" }
+    Write-Host "Phase: $phaseDisplay" -ForegroundColor Yellow
     Write-Host "Progress: $progressPercent%" -ForegroundColor $(if ($progressPercent -ge 80) { "Green" } elseif ($progressPercent -ge 50) { "Yellow" } else { "Red" })
     
     if (-not $Brief) {

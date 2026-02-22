@@ -114,3 +114,41 @@ Feature: PLUGIN006 Specs Generator PowerShell Scripts
     When I run fill-template.ps1 with -Values JSON
     Then placeholders_after should be less than placeholders_before
     And filled array should contain replaced placeholders
+
+  # validate-spec.ps1 cross-reference link validation
+
+  @feature16
+  Scenario: Validate spec with valid cross-references
+    Given a spec fixture "valid-spec-with-crossrefs" with all cross-reference links
+    When I run validate-spec.ps1 on the spec
+    Then the result should have valid=true
+    And warnings should not contain rule "CROSS_REF_LINKS"
+
+  @feature17
+  Scenario: Detect broken anchor in cross-reference link
+    Given a spec fixture "broken-crossrefs" with broken links
+    When I run validate-spec.ps1 on the spec
+    Then warnings should contain rule "CROSS_REF_LINKS"
+    And CROSS_REF_LINKS warnings should mention "anchor" and "not found"
+
+  @feature18
+  Scenario: Detect missing target file in cross-reference
+    Given a spec fixture "broken-crossrefs" with link to missing file
+    When I run validate-spec.ps1 on the spec
+    Then warnings should contain rule "CROSS_REF_LINKS"
+    And CROSS_REF_LINKS warnings should mention "file" and "not found"
+
+  # audit-spec.ps1 link validity audit
+
+  @feature19
+  Scenario: Audit finds plain text references that should be links
+    Given a spec fixture "broken-crossrefs" with plain text FR references
+    When I run audit-spec.ps1 on the spec
+    Then findings should contain check "LINK_VALIDITY"
+    And LINK_VALIDITY findings should suggest clickable link format
+
+  @feature20
+  Scenario: Audit passes for spec with proper cross-references
+    Given a spec fixture "valid-spec-with-crossrefs" with all links
+    When I run audit-spec.ps1 on the spec
+    Then findings should not contain check "LINK_VALIDITY"

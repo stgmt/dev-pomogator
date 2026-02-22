@@ -223,6 +223,56 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       expect(ucErrors.length).toBeGreaterThan(0);
     });
 
+    // @feature16
+    it('should report TDD_TASK_ORDER warning when TASKS.md lacks Phase 0 and .feature', async () => {
+      const destPath = appPath('.specs', 'invalid-spec-test');
+      await fs.copy(getSpecsGeneratorFixturePath('invalid-spec'), destPath);
+
+      // Add required files to avoid STRUCTURE errors
+      const requiredFiles = [
+        'USER_STORIES.md', 'REQUIREMENTS.md', 'DESIGN.md',
+        'FILE_CHANGES.md', 'README.md', 'RESEARCH.md',
+        'CHANGELOG.md'
+      ];
+      for (const file of requiredFiles) {
+        await fs.writeFile(path.join(destPath, file), `# ${file}\n\nContent`);
+      }
+      // TASKS.md without Phase 0 or .feature mention
+      await fs.writeFile(path.join(destPath, 'TASKS.md'), '# Tasks\n\n## Phase 1: Implementation\n\n- [ ] Create module A\n');
+
+      const result = runPowerShell(
+        getSpecsGeneratorPath('validate-spec.ps1'),
+        ['-Path', '.specs/invalid-spec-test']
+      );
+
+      expect(result.json).toBeDefined();
+
+      const tddWarnings = result.json.warnings.filter(
+        (w: any) => w.rule === 'TDD_TASK_ORDER'
+      );
+      expect(tddWarnings.length).toBeGreaterThan(0);
+      expect(tddWarnings[0].message).toContain('Phase 0');
+    });
+
+    // @feature17
+    it('should NOT report TDD_TASK_ORDER warning when TASKS.md has Phase 0', async () => {
+      const destPath = appPath('.specs', 'valid-spec-test');
+      await fs.copy(getSpecsGeneratorFixturePath('valid-spec'), destPath);
+
+      const result = runPowerShell(
+        getSpecsGeneratorPath('validate-spec.ps1'),
+        ['-Path', '.specs/valid-spec-test']
+      );
+
+      expect(result.json).toBeDefined();
+
+      const warnings = Array.isArray(result.json.warnings) ? result.json.warnings : [];
+      const tddWarnings = warnings.filter(
+        (w: any) => w.rule === 'TDD_TASK_ORDER'
+      );
+      expect(tddWarnings.length).toBe(0);
+    });
+
     // @feature8
     it('should report NFR_SECTIONS warnings for missing sections', async () => {
       const destPath = appPath('.specs', 'invalid-spec-test');
@@ -469,6 +519,129 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       expect(content).toContain('разработчик');
       expect(content).toContain('автоматизировать работу');
       expect(content).toContain('экономия времени');
+    });
+  });
+
+  // ============================================================================
+  // validate-spec.ps1 — CROSS_REF_LINKS rule
+  // ============================================================================
+
+  describe('validate-spec.ps1 CROSS_REF_LINKS', () => {
+    const validCrossrefsPath = appPath('.specs', 'crossrefs-test');
+    const brokenCrossrefsPath = appPath('.specs', 'broken-crossrefs-test');
+
+    afterEach(async () => {
+      await fs.remove(validCrossrefsPath);
+      await fs.remove(brokenCrossrefsPath);
+    });
+
+    // @feature16
+    it('should return no CROSS_REF_LINKS warnings for valid cross-references', async () => {
+      await fs.copy(getSpecsGeneratorFixturePath('valid-spec-with-crossrefs'), validCrossrefsPath);
+
+      const result = runPowerShell(
+        getSpecsGeneratorPath('validate-spec.ps1'),
+        ['-Path', '.specs/crossrefs-test']
+      );
+
+      expect(result.json).toBeDefined();
+      expect(result.json.valid).toBe(true);
+
+      const crossRefWarnings = (result.json.warnings || []).filter(
+        (w: any) => w.rule === 'CROSS_REF_LINKS'
+      );
+      expect(crossRefWarnings.length).toBe(0);
+    });
+
+    // @feature17
+    it('should detect broken anchor in cross-reference link', async () => {
+      await fs.copy(getSpecsGeneratorFixturePath('broken-crossrefs'), brokenCrossrefsPath);
+
+      const result = runPowerShell(
+        getSpecsGeneratorPath('validate-spec.ps1'),
+        ['-Path', '.specs/broken-crossrefs-test']
+      );
+
+      expect(result.json).toBeDefined();
+
+      const crossRefWarnings = (result.json.warnings || []).filter(
+        (w: any) => w.rule === 'CROSS_REF_LINKS'
+      );
+      expect(crossRefWarnings.length).toBeGreaterThan(0);
+      expect(
+        crossRefWarnings.some((w: any) => w.message.includes('anchor') && w.message.includes('not found'))
+      ).toBe(true);
+    });
+
+    // @feature18
+    it('should detect missing target file in cross-reference', async () => {
+      await fs.copy(getSpecsGeneratorFixturePath('broken-crossrefs'), brokenCrossrefsPath);
+
+      const result = runPowerShell(
+        getSpecsGeneratorPath('validate-spec.ps1'),
+        ['-Path', '.specs/broken-crossrefs-test']
+      );
+
+      expect(result.json).toBeDefined();
+
+      const crossRefWarnings = (result.json.warnings || []).filter(
+        (w: any) => w.rule === 'CROSS_REF_LINKS'
+      );
+      expect(
+        crossRefWarnings.some((w: any) =>
+          (w.message.includes('file') || w.message.includes('target')) && w.message.includes('not found')
+        )
+      ).toBe(true);
+    });
+  });
+
+  // ============================================================================
+  // audit-spec.ps1 — LINK_VALIDITY check
+  // ============================================================================
+
+  describe('audit-spec.ps1 LINK_VALIDITY', () => {
+    const validCrossrefsPath = appPath('.specs', 'crossrefs-test');
+    const brokenCrossrefsPath = appPath('.specs', 'broken-crossrefs-test');
+
+    afterEach(async () => {
+      await fs.remove(validCrossrefsPath);
+      await fs.remove(brokenCrossrefsPath);
+    });
+
+    // @feature19
+    it('should find plain text references that should be links', async () => {
+      await fs.copy(getSpecsGeneratorFixturePath('broken-crossrefs'), brokenCrossrefsPath);
+
+      const result = runPowerShell(
+        getSpecsGeneratorPath('audit-spec.ps1'),
+        ['-Path', '.specs/broken-crossrefs-test']
+      );
+
+      expect(result.exitCode).toBe(0);
+      expect(result.json).toBeDefined();
+
+      const linkFindings = (result.json.findings || []).filter(
+        (f: any) => f.check === 'LINK_VALIDITY'
+      );
+      expect(linkFindings.length).toBeGreaterThan(0);
+    });
+
+    // @feature20
+    it('should pass for spec with proper cross-references', async () => {
+      await fs.copy(getSpecsGeneratorFixturePath('valid-spec-with-crossrefs'), validCrossrefsPath);
+
+      const result = runPowerShell(
+        getSpecsGeneratorPath('audit-spec.ps1'),
+        ['-Path', '.specs/crossrefs-test']
+      );
+
+      expect(result.exitCode).toBe(0);
+      expect(result.json).toBeDefined();
+
+      const linkFindings = (result.json.findings || []).filter(
+        (f: any) => f.check === 'LINK_VALIDITY'
+      );
+      expect(linkFindings.length).toBe(0);
     });
   });
 });

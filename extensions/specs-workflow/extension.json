@@ -1,7 +1,7 @@
 {
   "name": "specs-workflow",
-  "version": "1.2.1",
-  "description": "Управление спецификациями: 3-фазный workflow, валидация, автоматическая проверка покрытия, MCP инструменты для research",
+  "version": "1.7.0",
+  "description": "Управление спецификациями: 4-фазный workflow (включая Context Analysis), TDD-порядок задач, валидация, автоматический аудит кросс-ссылок, MCP инструменты для research",
   "platforms": ["cursor", "claude"],
   "category": "workflow",
   "files": {
@@ -36,6 +36,8 @@
       ".dev-pomogator/tools/specs-generator/scaffold-spec.ps1",
       ".dev-pomogator/tools/specs-generator/spec-status.ps1",
       ".dev-pomogator/tools/specs-generator/validate-spec.ps1",
+      ".dev-pomogator/tools/specs-generator/audit-spec.ps1",
+      ".dev-pomogator/tools/specs-generator/analyze-features.ps1",
       ".dev-pomogator/tools/specs-generator/templates/ACCEPTANCE_CRITERIA.md.template",
       ".dev-pomogator/tools/specs-generator/templates/DESIGN.md.template",
       ".dev-pomogator/tools/specs-generator/templates/feature.template",
@@ -49,7 +51,8 @@
       ".dev-pomogator/tools/specs-generator/templates/TASKS.md.template",
       ".dev-pomogator/tools/specs-generator/templates/USE_CASES.md.template",
       ".dev-pomogator/tools/specs-generator/templates/USER_STORIES.md.template",
-      ".dev-pomogator/tools/specs-generator/templates/CHANGELOG.md.template"
+      ".dev-pomogator/tools/specs-generator/templates/CHANGELOG.md.template",
+      ".dev-pomogator/tools/specs-generator/templates/AUDIT_REPORT.md.template"
     ],
     "specs-validator": [
       ".dev-pomogator/tools/specs-validator/completeness.ts",

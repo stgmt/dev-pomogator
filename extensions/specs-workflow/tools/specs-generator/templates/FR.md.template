@@ -4,9 +4,15 @@
 
 {Описание требования}
 
+**Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1)
+**Use Case:** [UC-1](USE_CASES.md#uc-1-{название})
+
 ## FR-2: {Название}
 
 {Описание требования}
+
+**Связанные AC:** [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2)
+**Use Case:** [UC-2](USE_CASES.md#uc-2-{название})
 
 ## FR-3: {Название}
 

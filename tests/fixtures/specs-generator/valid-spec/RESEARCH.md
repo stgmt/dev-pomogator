@@ -25,3 +25,7 @@ PowerShell Core (pwsh) работает на Windows, Linux, macOS.
 - Все скрипты должны поддерживать -Format json/text
 - Логирование в файл опционально
 - Verbose режим для отладки
+
+## Project Context & Constraints
+
+> Skipped: Test fixture — no project rules to analyze
