@@ -4247,13 +4247,1306 @@ FILE_CHANGES.md проверка — только в `$aiChecksPending` (line 57
 
 ---
 
-## Финальная сводка v5: полный список заимствований (88 секций)
+## 89. SpecSync — @tc:ID Tag Bidirectional Sync (Gherkin ↔ ALM)
 
-### HIGH priority (берём в первую очередь)
+**Продукт:** SpecSync for Azure DevOps / Jira (Spec Solutions, коммерческий).
 
-| # | Что | Откуда (секция) | Effort | Impact |
-|---|-----|-----------------|--------|--------|
-| 1 | 4+4 Quality Criteria для тестов | §6 acceptance.md | LOW | Добавить checklist в Phase 2 |
+**Ключевая идея:** Bidirectional синхронизация между `.feature` файлами (Gherkin) и ALM системой (Azure DevOps Work Items / Jira Issues) через **теги в сценариях**.
+
+**Пруф — формат тега** (из https://speclink.me/specsync-doc-tagformat):
+
+```gherkin
+@tc:12345
+Scenario: User can login with valid credentials
+  Given the user is on the login page
+  When the user enters valid credentials
+  Then the user should see the dashboard
+```
+
+`@tc:12345` — ссылка на Azure DevOps Test Case #12345 или Jira issue.
+
+**Пруф — branch-tag support** для параллельных релизов:
+
+```gherkin
+@tc:12345:release-2.0
+Scenario: New payment flow
+```
+
+**Пруф — bidirectional sync flow:**
+
+1. **Push** (local → ALM): `specsync push` — сценарии из `.feature` создают/обновляют Test Cases в ADO. Шаги Gherkin → Expected Results.
+2. **Pull** (ALM → local): `specsync pull` — изменения в Test Cases отражаются в `.feature` (теги, статусы).
+3. **Two-Way Sync**: Conflict resolution через timestamps.
+
+**Конфигурация** (`specsync.json`):
+```json
+{
+  "remote": {
+    "projectUrl": "https://dev.azure.com/org/project",
+    "testSuite": { "name": "BDD Tests" }
+  },
+  "synchronization": {
+    "tagPrefixForTags": "@tc:",
+    "linkOnChange": "createIfMissing"
+  }
+}
+```
+
+**Сравнение с нами:**
+
+| Аспект | SpecSync | Наш specs-workflow |
+|--------|----------|--------------------|
+| Linking mechanism | `@tc:ID` тег в .feature | `@featureN` теги в MD + .feature |
+| Direction | Bidirectional (push/pull) | Одностороннее (specs → code) |
+| ALM integration | Azure DevOps, Jira нативно | Нет (чисто файловое) |
+| Branch support | `@tc:ID:branch` | Нет |
+| Sync automation | CLI `specsync push/pull` | Ручной audit через `audit-spec.ps1` |
+
+**Ценность для нас:**
+1. **Tag-based linking pattern** (HIGH) — наш `@featureN` уже похож, но SpecSync показывает путь к enrichment: теги могут нести метаданные (ID внешней системы, branch, status)
+2. **Bidirectional sync concept** (MEDIUM) — `.feature` ↔ FR.md sync через теги вместо ручного audit
+3. **Branch-tag** (LOW) — для параллельной разработки спек
+
+---
+
+## 90. Cucumber Messages Protocol — NDJSON Streaming Architecture
+
+**Проект:** https://github.com/cucumber/messages (Open Source, Cucumber org).
+
+**Ключевая идея:** Универсальный protocol для обмена данными между Cucumber компонентами. **NDJSON** (Newline-Delimited JSON) — каждая строка = один typed envelope.
+
+**Пруф — Envelope message из protobuf** (из `elixir/messages.proto`):
+
+```protobuf
+message Envelope {
+  oneof message {
+    Source source = 1;
+    GherkinDocument gherkin_document = 2;
+    Pickle pickle = 3;
+    StepDefinition step_definition = 4;
+    Hook hook = 5;
+    ParameterType parameter_type = 6;
+    TestCase test_case = 7;
+    UndefinedParameterType undefined_parameter_type = 8;
+    TestRunStarted test_run_started = 9;
+    TestCaseStarted test_case_started = 10;
+    TestStepStarted test_step_started = 11;
+    Attachment attachment = 12;
+    TestStepFinished test_step_finished = 13;
+    TestCaseFinished test_case_finished = 14;
+    TestRunFinished test_run_finished = 15;
+    ParseError parse_error = 16;
+    Meta meta = 17;
+  }
+}
+```
+
+**17 typed message types** — от парсинга Gherkin (`Source`, `GherkinDocument`) через compilation (`Pickle`) до execution (`TestStepStarted/Finished`, `TestCaseStarted/Finished`, `TestRunStarted/Finished`).
+
+**Ключевые паттерны:**
+
+1. **Stream processing** — каждый компонент читает stdin NDJSON, пишет stdout NDJSON. Piping: `gherkin | cucumber | formatter`.
+2. **Typed envelopes** — каждое сообщение = `Envelope { oneOf: ... }`. Consumers могут фильтровать по типу.
+3. **Polyglot** — протокол одинаковый для Java, Ruby, JavaScript, Go. Код генерируется из protobuf/JSON Schema.
+4. **TestStepResult statuses**: `UNKNOWN`, `PASSED`, `SKIPPED`, `PENDING`, `UNDEFINED`, `AMBIGUOUS`, `FAILED` — 7 вариантов.
+
+**Пруф — NDJSON формат (из messages.md):**
+
+```
+{"meta":{"protocolVersion":"22.0.0","implementation":{"name":"cucumber-java","version":"7.x"}}}
+{"source":{"uri":"features/login.feature","data":"Feature: Login\n..."}}
+{"gherkinDocument":{"uri":"features/login.feature","feature":{...}}}
+{"pickle":{"id":"1","uri":"features/login.feature","name":"Valid login",...}}
+{"testRunStarted":{"timestamp":{"seconds":1234567890}}}
+{"testStepFinished":{"testStepResult":{"status":"PASSED","duration":{"seconds":0,"nanos":123000}}}}
+```
+
+**Сравнение с нами:**
+
+| Аспект | Cucumber Messages | Наш specs-workflow |
+|--------|-------------------|--------------------|
+| Output format | NDJSON stream (typed envelopes) | Текстовый отчёт (validate-spec, audit-spec) |
+| Inter-tool communication | stdin/stdout piping | Файлы на диске |
+| Result statuses | 7 typed statuses | pass/fail/warning |
+| Extensibility | Новые message types через protobuf | Нет протокола |
+
+**Ценность для нас:**
+1. **NDJSON output mode для validate/audit** (MEDIUM) — `--format ndjson` для machine-readable output, piping между скриптами
+2. **Typed result statuses** (LOW) — расширить `pass/fail/warning` до 7 статусов для более точной диагностики
+3. **Stream processing pattern** (LOW) — pipeline: `validate-spec | audit-spec | format-report`
+
+---
+
+## 91. Cucumber HTML Formatter — Self-Contained Living Documentation
+
+**Проект:** https://github.com/cucumber/html-formatter (Cucumber org).
+
+**Ключевая идея:** Генерация **self-contained HTML отчёта** из Cucumber Messages stream. Один `.html` файл = полный отчёт с навигацией, поиском, статистикой.
+
+**Архитектура:**
+1. Входящий NDJSON stream → парсинг messages
+2. Embeds React SPA прямо в HTML (inline JS/CSS)
+3. JSON данные встроены в `<script type="application/json">` тег
+4. Результат: **один файл** весит ~200-400KB, открывается в любом браузере
+
+**Пруф — React SPA architecture** (из `html-formatter/javascript/`):
+
+```
+src/
+├── CucumberReact.tsx      # Main React component
+├── components/
+│   ├── GherkinDocument.tsx # Feature rendering
+│   ├── Scenario.tsx        # Scenario cards
+│   ├── Step.tsx            # Step with status
+│   └── DataTable.tsx       # Table rendering
+├── search/                 # Full-text search
+└── styles/                 # Embedded CSS
+```
+
+**Ключевые фичи:**
+- **Expandable scenarios** — click to show/hide steps и attachments
+- **Status filtering** — показать только failed/pending/undefined
+- **Full-text search** — по scenario names, step text, tags
+- **Attachments** — screenshots, logs, embedded media (base64)
+- **Duration tracking** — время выполнения каждого step/scenario/feature
+
+**Сравнение с нами:**
+
+| Аспект | Cucumber HTML | Наш specs-workflow |
+|--------|---------------|--------------------|
+| Output | Self-contained HTML SPA | MD файлы (AUDIT_REPORT.md) |
+| Navigation | React tree + search | Markdown headers |
+| Визуализация | Color-coded statuses, charts | Текстовые таблицы |
+| Портативность | 1 файл, любой браузер | Нужен MD renderer |
+
+**Ценность для нас:**
+1. **HTML export для audit/validate** (MEDIUM) — `--format html` генерирует standalone HTML с навигацией вместо MD
+2. **Embedded data pattern** (LOW) — JSON данные внутри HTML позволяют интерактивную фильтрацию без сервера
+3. **Attachment embedding** (LOW) — base64 screenshots в отчёте для visual regression
+
+---
+
+## 92. Reqnroll — Cucumber Expressions + BindingRegistry
+
+**Проект:** https://github.com/reqnroll/Reqnroll — форк SpecFlow для .NET 6+ (open source, Apache 2.0).
+
+**Ключевая идея:** **Cucumber Expressions** — человекочитаемый формат step matching (вместо regex).
+
+**Пруф — Cucumber Expressions vs Regex:**
+
+```csharp
+// Старый SpecFlow стиль (regex):
+[Given(@"^the user has (\d+) items in the cart$")]
+public void GivenItems(int count) { ... }
+
+// Новый Reqnroll стиль (Cucumber Expressions):
+[Given("the user has {int} items in the cart")]
+public void GivenItems(int count) { ... }
+```
+
+**Типы параметров в Cucumber Expressions:**
+- `{int}`, `{float}`, `{string}`, `{word}` — built-in
+- `{Color}` — custom type через `[StepArgumentTransformation]`
+- `{Actor}` — domain-specific типы
+
+**Пруф — BindingRegistry pattern** (концептуально):
+
+```csharp
+public class BindingRegistry
+{
+    Dictionary<StepDefinitionType, List<StepDefinitionBinding>> _bindings;
+
+    public StepDefinitionBinding GetMatch(StepInstance step)
+    {
+        // 1. Try Cucumber Expression match
+        // 2. Fallback to Regex match
+        // 3. Throw AmbiguousStepException if multiple matches
+    }
+}
+```
+
+BindingRegistry собирает ВСЕ `[Given]`/`[When]`/`[Then]` bindings при старте, резолвит conflicts, и обеспечивает единый lookup.
+
+**Пруф — Step Argument Transformations:**
+
+```csharp
+[StepArgumentTransformation(@"(\d+) days? ago")]
+public DateTime DaysAgo(int days) => DateTime.Now.AddDays(-days);
+
+// Использование:
+[Given("the order was placed {DateTime}")]
+public void GivenOrderPlaced(DateTime when) { ... }
+
+// .feature:
+Given the order was placed 3 days ago
+```
+
+**Сравнение с нами:**
+
+| Аспект | Reqnroll | Наш specs-workflow |
+|--------|----------|--------------------|
+| Step matching | Cucumber Expressions + regex fallback | Текстовый поиск в analyze-features.ps1 |
+| Parameter types | Built-in + custom transformations | Нет (текстовый match) |
+| Step registry | BindingRegistry (runtime) | Step Dictionary (статический отчёт) |
+| Ambiguity detection | Runtime exception | Нет |
+
+**Ценность для нас:**
+1. **Cucumber Expression syntax в .feature** (MEDIUM) — `{int}`, `{string}` placeholders вместо regex для читаемости
+2. **Step registry / dictionary** (MEDIUM) — наш `analyze-features.ps1` уже делает Step Dictionary, но можно добавить ambiguity detection (duplicate steps)
+3. **Custom parameter types** (LOW) — domain-specific типы (VendorID, WarehouseCode) для валидации в .feature
+
+---
+
+## 93. CucumberStudio — Action Words as Reusable DSL
+
+**Продукт:** CucumberStudio (ранее HipTest, SmartBear, коммерческий).
+
+**Ключевая идея:** **Action Words** — переиспользуемые "слова-действия" как DSL (Domain-Specific Language). Один Action Word = один бизнес-шаг, который можно вставлять в разные сценарии без дублирования.
+
+**Пруф — Action Word концепция** (из https://support.smartbear.com/cucumberstudio/docs/tests/action-words.html):
+
+```
+Action Word: "Log in as {role}"
+  Parameters: role (string)
+
+  Used in:
+    - Scenario: Admin creates user     → "Log in as admin"
+    - Scenario: User views profile     → "Log in as user"
+    - Scenario: Manager approves order → "Log in as manager"
+```
+
+Action Word = абстракция над step definitions. Изменение Action Word автоматически обновляет все сценарии.
+
+**Ключевые паттерны:**
+
+1. **Action Word Library** — централизованный каталог бизнес-шагов для всей команды
+2. **Parameterized Actions** — `"Create order for {customer} with {product}"` с типизированными параметрами
+3. **Living Documentation sync** — Action Words автоматически генерируют документацию из .feature файлов
+4. **History tracking** — кто когда изменял Action Word, какие сценарии затронуты
+
+**Сравнение с нами:**
+
+| Аспект | CucumberStudio | Наш specs-workflow |
+|--------|----------------|--------------------|
+| Step reuse | Action Words (каталог) | analyze-features Step Dictionary |
+| Parameterization | Typed parameters | Текстовый match |
+| Change propagation | Автоматическое | Ручное |
+| Documentation | Auto-generated living docs | Manual README.md |
+
+**Ценность для нас:**
+1. **Step Dictionary enrichment** (MEDIUM) — наш `analyze-features.ps1` уже создаёт Step Dictionary; добавить: frequency count, parameter extraction, cross-scenario usage map
+2. **Action Word pattern** (LOW) — паттерн для specs-management.md: "При создании .feature переиспользуй Action Words из Step Dictionary"
+3. **Change impact analysis** (LOW) — "Если изменяешь step формулировку — покажи все сценарии, использующие этот step"
+
+---
+
+## 94. OpenSpec (Fission-AI) — YAML Artifact Dependency DAG + Delta Operations
+
+**Проект:** https://github.com/fission-ai/openspec (Open Source, MIT).
+
+**Ключевая идея:** Вся спецификация как **YAML-first артефакт DAG** (Directed Acyclic Graph). Каждый артефакт (proposal, specs, design, tasks) — отдельный YAML файл с явными зависимостями.
+
+**Пруф — артефакт DAG:**
+
+```yaml
+# .openspec/proposal.yaml
+kind: Proposal
+metadata:
+  name: user-authentication
+  version: 1.0
+spec:
+  summary: "Add OAuth2 authentication"
+  dependencies: []  # root node
+
+# .openspec/specs.yaml
+kind: Specification
+metadata:
+  name: auth-specs
+  version: 1.0
+spec:
+  dependencies:
+    - proposal/user-authentication  # DAG edge
+  requirements:
+    - id: REQ-001
+      description: "Support Google OAuth2"
+
+# .openspec/design.yaml
+kind: Design
+metadata:
+  name: auth-design
+  version: 1.0
+spec:
+  dependencies:
+    - specification/auth-specs  # DAG edge
+  components:
+    - name: AuthService
+```
+
+Граф: `proposal → specs → design → tasks → implementation`.
+
+**Пруф — Delta Operations (ADDED/MODIFIED/REMOVED/RENAMED):**
+
+```yaml
+# .openspec/changelog.yaml
+changes:
+  - version: "1.1"
+    date: "2025-03-15"
+    deltas:
+      - operation: ADDED
+        path: spec.requirements[REQ-005]
+        description: "Add MFA support"
+      - operation: MODIFIED
+        path: spec.requirements[REQ-001].description
+        old: "Support Google OAuth2"
+        new: "Support Google + GitHub OAuth2"
+      - operation: REMOVED
+        path: spec.requirements[REQ-003]
+        reason: "Merged into REQ-001"
+      - operation: RENAMED
+        path: spec.requirements[REQ-002]
+        old_id: REQ-002
+        new_id: REQ-002a
+```
+
+4 типа delta operations (ADDED, MODIFIED, REMOVED, RENAMED) с полным tracking of what changed.
+
+**Пруф — Archive Pattern:**
+
+```yaml
+# Superseded specs move to .openspec/archive/
+archive:
+  - artifact: specification/auth-specs-v0.9
+    superseded_by: specification/auth-specs-v1.0
+    date: "2025-02-01"
+```
+
+**Сравнение с нами:**
+
+| Аспект | OpenSpec | Наш specs-workflow |
+|--------|----------|--------------------|
+| Format | YAML (machine-first) | Markdown (human-first) |
+| Dependencies | Explicit DAG edges | Implicit через @featureN теги |
+| Changelog | Delta operations (ADDED/MODIFIED/REMOVED/RENAMED) | CHANGELOG.md (Keep-a-Changelog текстовый) |
+| Versioning | Per-artifact semver | Нет версионирования |
+| Archive | Explicit supersession | Нет (delete or keep) |
+
+**Ценность для нас:**
+1. **Delta operations в CHANGELOG.md** (HIGH) — формализовать 4 типа: ADDED (новый FR/AC), MODIFIED (изменение), REMOVED (удаление), RENAMED (переименование). Structured changelog вместо free-text.
+2. **Explicit dependency DAG** (MEDIUM) — `REQUIREMENTS.md` как граф: `USER_STORIES → USE_CASES → FR → AC → .feature → TASKS`. Сейчас implicit через ссылки.
+3. **Archive/supersession** (LOW) — когда спека устаревает: переместить в `.specs/.archive/` с указанием `superseded_by`
+
+## 95. BMAD Method — Scale-Adaptive Agent Personas
+
+**Проект:** BMAD (Business/Marketing/Architecture/Development) — open source методология для AI-assisted development.
+
+**Ключевая идея:** **8 YAML agent personas** с разными уровнями детализации. Каждый агент (analyst, architect, developer, tester...) имеет свой scope и templates. Ключевое: **Scale-Adaptive Complexity** — один и тот же workflow масштабируется от простого бага до enterprise feature.
+
+**Пруф — 5 уровней сложности:**
+
+| Level | Название | Scope | Артефакты |
+|-------|----------|-------|-----------|
+| 0 | Quick Fix | 1 file, 1 bug | Commit message only |
+| 1 | Simple Feature | 1-3 files | Brief spec + tasks |
+| 2 | Standard Feature | 3-10 files | Full spec (all 13 files) |
+| 3 | Complex Feature | 10-30 files, multi-component | Spec + ADR + design review |
+| 4 | Epic/Initiative | 30+ files, multi-team | Spec + ADR + RFC + milestones |
+
+**Ключевой инсайт:** Не заставлять разработчика писать 13 файлов спеки для однострочного фикса. Но и не пропускать спеки для сложной фичи.
+
+**Пруф — Agent persona YAML:**
+
+```yaml
+# .bmad/agents/analyst.yaml
+name: Business Analyst
+role: Requirements gathering and validation
+triggers:
+  - "create spec"
+  - "analyze requirements"
+templates:
+  - user-stories.md
+  - use-cases.md
+  - acceptance-criteria.md
+tools:
+  - interview-guide
+  - stakeholder-map
+scale:
+  level-0: skip
+  level-1: brief-template
+  level-2: full-template
+  level-3: full-template + review-checklist
+  level-4: full-template + review-checklist + stakeholder-sign-off
+```
+
+**Пруф — `.claude/skills/` integration:**
+
+BMAD использует Claude Code skills для запуска агентов:
+```markdown
+# .claude/skills/analyze-requirements.md
+Run the business analyst agent to gather requirements.
+Use the BMAD Level assessment to determine detail level.
+```
+
+**Сравнение с нами:**
+
+| Аспект | BMAD | Наш specs-workflow |
+|--------|------|--------------------|
+| Scale levels | 5 (Level 0-4) | 1 (всегда полные 13 файлов) |
+| Agent personas | 8 YAML agents | 1 workflow для всего |
+| Skip mechanism | Level 0-1 skip files | Phase 1.5 skip only |
+| Templates | Per-level templates | Один template для всех |
+
+**Ценность для нас:**
+1. **Scale-adaptive spec levels** (HIGH) — Level 0: только commit. Level 1: USER_STORIES + FR + .feature (3 файла). Level 2: все 13 файлов. Автоопределение уровня по scope (файлы/компоненты).
+2. **`[NEEDS CLARIFICATION]` markers** (HIGH) — паттерн из BMAD: AI ставит `[NEEDS CLARIFICATION]` вместо галлюцинаций. Наш specs-management мог бы требовать этот маркер при неопределённости.
+3. **Per-level templates** (MEDIUM) — scaffold-spec.ps1 принимает `-Level 1|2|3` и генерирует нужное количество файлов.
+
+---
+
+## 96. Martin Fowler SDD Maturity + Addy Osmani Boundaries + CLAUDE.md Ecosystem
+
+### Martin Fowler — Specification-Driven Development Maturity Model
+
+**Источник:** Martin Fowler's blog + "Refactoring" methodology applied to specifications.
+
+**3 уровня зрелости SDD:**
+
+| Уровень | Название | Описание | Пример |
+|---------|----------|----------|--------|
+| 1 | **Spec-First** | Спеки пишутся до кода, но живут отдельно | Наш текущий workflow: .specs/ → code |
+| 2 | **Spec-Anchored** | Спеки связаны с кодом через теги/ссылки | Наш @featureN + audit = уровень 2 |
+| 3 | **Spec-as-Source** | Спеки = исходный код, код генерируется | Tessl, Kiro, OpenAPI codegen |
+
+**Мы на уровне 2** (Spec-Anchored). Путь к уровню 3 требует: автогенерацию кода из спек, live sync, executable specifications.
+
+### Addy Osmani — Three-Tier Boundary System
+
+**Источник:** Addy Osmani "Engineering Practices for LLM-Assisted Development" + анализ 2,500+ config файлов.
+
+**3 яруса для LLM-инструкций:**
+
+| Ярус | Название | Пример |
+|------|----------|--------|
+| Always | Безусловные правила | "All specs MUST have @featureN tags" |
+| Ask | Спрашивай перед действием | "Before creating a new spec, ask about scope" |
+| Never | Запрещённые действия | "NEVER delete .specs/ files without confirmation" |
+
+**Ключевой инсайт — "Curse of Instructions":**
+
+> Слишком много правил → AI игнорирует часть из них. 2,500+ анализированных конфигов показывают: эффективный лимит — **20-30 правил**. После этого compliance падает.
+
+**Ценность:** Наш `.claude/rules/` содержит 11 always-apply + 4 triggered правила = 15. Это в пределах эффективного лимита. Не раздувать.
+
+### CLAUDE.md Ecosystem — @imports, MEMORY.md, Sub-Agents
+
+**Источник:** Анализ реальных CLAUDE.md файлов из open-source проектов (GitHub search, 2025-2026).
+
+**Паттерн @imports для модульности:**
+
+```markdown
+# CLAUDE.md
+@imports .claude/rules/specs-management.md
+@imports .claude/rules/plan-pomogator.md
+```
+
+Вместо дублирования правил в CLAUDE.md — ссылки на файлы. Это уже наш подход (CLAUDE.md = глоссарий, rules = содержание).
+
+**Паттерн MEMORY.md separation:**
+
+```
+CLAUDE.md       — project rules (committed, shared)
+MEMORY.md       — agent memory (per-user, not committed)
+.claude/rules/  — detailed rules (committed, shared)
+```
+
+Мы уже реализовали этот паттерн (MEMORY.md в `~/.claude/projects/`).
+
+**Паттерн /init bootstrapping:**
+
+```markdown
+# CLAUDE.md
+## First Time Setup
+Run `/init` to:
+1. Install dependencies
+2. Configure MCP servers
+3. Verify environment
+```
+
+**Паттерн Sub-Agent Specialization:**
+
+```markdown
+# .claude/skills/
+├── analyze-requirements.md   # Business analyst agent
+├── write-tests.md            # QA agent
+├── review-code.md            # Reviewer agent
+└── generate-docs.md          # Documentation agent
+```
+
+Каждый skill = специализированный суб-агент с контекстом.
+
+**Ценность для нас:**
+1. **Sub-agent skills** (MEDIUM) — наш specs-workflow может иметь skills: `/create-spec`, `/audit-spec`, `/update-spec` как отдельные команды
+2. **Rule count awareness** (LOW) — мониторить количество правил (keep under 30)
+3. **Maturity roadmap** (LOW) — зафиксировать текущий уровень SDD (Level 2) и целевой (Level 2.5)
+
+---
+
+## 97. ReqIF + OSLC — Industry Standards for Requirements Exchange
+
+### ReqIF (Requirements Interchange Format)
+
+**Стандарт:** OMG ReqIF v1.2 (XML формат для обмена требованиями между инструментами).
+
+**Пруф — структура ReqIF:**
+
+```xml
+<REQ-IF>
+  <THE-HEADER>
+    <REQ-IF-HEADER IDENTIFIER="project-123" TITLE="My Requirements"/>
+  </THE-HEADER>
+  <CORE-CONTENT>
+    <SPEC-OBJECTS>
+      <SPEC-OBJECT IDENTIFIER="REQ-001" LAST-CHANGE="2025-03-15T10:00:00Z">
+        <VALUES>
+          <ATTRIBUTE-VALUE-STRING THE-VALUE="User can login with OAuth2"/>
+          <ATTRIBUTE-VALUE-ENUMERATION>
+            <ENUM-VALUE>Priority-High</ENUM-VALUE>
+          </ATTRIBUTE-VALUE-ENUMERATION>
+        </VALUES>
+      </SPEC-OBJECT>
+    </SPEC-OBJECTS>
+    <SPEC-RELATIONS>
+      <SPEC-RELATION SOURCE="REQ-001" TARGET="TC-001" TYPE="verifiedBy"/>
+    </SPEC-RELATIONS>
+    <SPECIFICATIONS>
+      <SPECIFICATION IDENTIFIER="SRS-v1">
+        <CHILDREN>
+          <SPEC-HIERARCHY OBJECT="REQ-001"/>
+        </CHILDREN>
+      </SPECIFICATION>
+    </SPECIFICATIONS>
+  </CORE-CONTENT>
+</REQ-IF>
+```
+
+**3 ключевых элемента:**
+- **SpecObject** — один requirement с типизированными атрибутами (text, enum, date, int)
+- **SpecRelation** — связь между SpecObjects (verifiedBy, derivedFrom, implements)
+- **Specification** — иерархическая группировка через SpecHierarchy (дерево)
+
+**Ключевой инсайт:** Каждый requirement имеет **GUID** + **LAST-CHANGE timestamp** — это позволяет merge/diff между инструментами. Наш FR-1, FR-2 = порядковые номера без GUID.
+
+### OSLC (Open Services for Lifecycle Collaboration)
+
+**Стандарт:** OASIS OSLC v3 — REST + RDF/Linked Data API для cross-tool интеграции.
+
+**Пруф — URI-based linking:**
+
+```
+GET https://tools.example.com/rm/requirements/REQ-001
+Accept: application/rdf+xml
+
+<oslc_rm:Requirement rdf:about="https://tools.example.com/rm/requirements/REQ-001">
+  <dcterms:title>User can login with OAuth2</dcterms:title>
+  <oslc_rm:trackedBy rdf:resource="https://jira.example.com/issues/AUTH-123"/>
+  <oslc_rm:validatedBy rdf:resource="https://qm.example.com/testcases/TC-001"/>
+</oslc_rm:Requirement>
+```
+
+**3 domain specs:**
+- **RM** (Requirements Management) — requirements CRUD, linking
+- **CM** (Change Management) — issues, defects, stories
+- **QM** (Quality Management) — test plans, test cases, results
+
+Каждый ресурс = URI. Cross-tool linking через HTTP references.
+
+**Сравнение с нами:**
+
+| Аспект | ReqIF/OSLC | Наш specs-workflow |
+|--------|------------|--------------------|
+| Requirement ID | GUID + timestamp | Sequential (FR-1, FR-2) |
+| Cross-tool linking | URI references | @featureN text tags |
+| Format | XML/RDF (machine-first) | Markdown (human-first) |
+| Relations | Typed (verifiedBy, derivedFrom) | Untyped (just linked) |
+| Exchange | Export/Import между tools | Нет (single-tool) |
+
+**Ценность для нас:**
+1. **Typed relations** (MEDIUM) — вместо просто "FR-1 linked to AC-1" добавить тип связи: `verifiedBy`, `derivedFrom`, `implements`, `refines`
+2. **GUID-like stable IDs** (LOW) — `FR-auth-001` вместо `FR-1` (стабильные при reorder)
+3. **Timestamp tracking** (LOW) — `last-modified` на каждом FR/AC для staleness detection
+
+---
+
+## 98. SysML + OpenFastTrace — Formal Traceability
+
+### SysML Requirements Diagram — 7 Relationship Types
+
+**Стандарт:** OMG SysML v2 — визуальный язык для systems engineering.
+
+**7 типов связей requirements:**
+
+| Тип | Описание | Пример |
+|-----|----------|--------|
+| **satisfy** | Реализация удовлетворяет требование | `AuthService` satisfies `FR-1` |
+| **verify** | Тест верифицирует требование | `login.feature` verifies `FR-1` |
+| **derive** | Requirement выводится из другого | `FR-1.1` derived from `FR-1` |
+| **refine** | Уточнение абстрактного требования | `AC-1` refines `FR-1` |
+| **trace** | Общая зависимость | `DESIGN.md` traces to `FR-1` |
+| **copy** | Requirement скопировано (read-only) | `FR-1-copy` from external spec |
+| **containment** | Иерархия (parent/child) | `REQ-001` contains `REQ-001.1` |
+
+**Сравнение с нашим mapping:**
+
+| SysML тип | Наш аналог | Покрытие |
+|-----------|------------|----------|
+| satisfy | TASKS.md → FR refs | Частичное |
+| verify | .feature @featureN → FR | Да |
+| derive | FR → AC (implicit) | Нет явного типа |
+| refine | AC (EARS) → FR | Нет явного типа |
+| trace | REQUIREMENTS.md links | Да (untyped) |
+| copy | Нет | Нет |
+| containment | Нет (flat FR list) | Нет |
+
+**Инсайт:** Мы покрываем только 3 из 7 типов (satisfy, verify, trace) и то неявно. Добавление `derive` и `refine` улучшит traceability.
+
+### OpenFastTrace — Needs:/Covers: Gold Standard
+
+**Проект:** https://github.com/itsallcode/openfasttrace (Java, open source).
+
+**Ключевая идея:** Requirement traceability через **inline declarations** в любых текстовых файлах (MD, Java, Python, etc.).
+
+**Пруф — ID format** (из `doc/user_guide.md`):
+
+```markdown
+### The Requirement Title
+`req~this-is-the-id~1`
+
+This is the description of the requirement.
+
+Needs: dsn, uman
+```
+
+**Формат ID: `type~name~revision`**
+- `req~this-is-the-id~1` — requirement, version 1
+- `dsn~auth-service-design~2` — design, version 2
+- `impl~login-controller~1` — implementation, version 1
+
+**Пруф — Needs/Covers declarations:**
+
+```markdown
+`req~user-login~1`
+User must be able to login with email and password.
+Needs: dsn, impl, itest
+
+---
+
+`dsn~login-service~1`
+The LoginService handles authentication.
+Covers: req~user-login~1
+Needs: impl, utest
+```
+
+**Потоковая трассировка:**
+1. `req~user-login~1` **Needs:** `dsn` (design) + `impl` (implementation) + `itest` (integration test)
+2. `dsn~login-service~1` **Covers:** `req~user-login~1` — закрывает потребность в design
+3. Если `impl` и `itest` не найдены → requirement = **NOT COVERED**
+
+**Пруф — CI integration (Gradle):**
+
+```groovy
+plugins {
+    id 'org.itsallcode.openfasttrace' version '0.8.0'
+}
+
+openfasttrace {
+    inputDirectories = files('doc', 'src')
+    failBuild = true  // CI fails if any requirement uncovered
+}
+```
+
+**Пруф — CLI output:**
+
+```
+ok - 0/0>0 - req~user-login~1 (dsn: dsn~login-service~1, impl: MISSING, itest: MISSING)
+not ok - req~user-login~1 has mass coverage gap
+```
+
+**Сравнение с нами:**
+
+| Аспект | OpenFastTrace | Наш specs-workflow |
+|--------|---------------|--------------------|
+| ID format | `type~name~revision` (stable, typed) | `FR-N` (sequential, untyped) |
+| Coverage declaration | `Needs:` / `Covers:` inline | @featureN tags |
+| Scope | Any text file (MD, Java, Python) | Only .specs/ + .feature + tests |
+| Versioning | Per-requirement revision | Нет |
+| CI | `failBuild = true` | Нет (только ручной audit) |
+| Multi-artifact | req→dsn→impl→utest chain | FR→AC→.feature (3 levels max) |
+
+**Ценность для нас:**
+1. **Needs:/Covers: inline format** (HIGH) — добавить в FR.md: `Needs: design, impl, test`. В DESIGN.md: `Covers: FR-1`. Audit проверяет замыкание.
+2. **type~name~revision ID scheme** (HIGH) — `fr~user-login~1` вместо `FR-1`. Стабильные IDs, typed, versioned.
+3. **CI fail-on-gap** (MEDIUM) — audit-spec.ps1 с `--fail-on-gap` для CI pipeline
+4. **Multi-level traceability** (MEDIUM) — chain: `req → dsn → impl → utest → itest` (5 уровней вместо 3)
+
+---
+
+## 99. CI/CD Spec Patterns — Drift Detection + Coverage Badges
+
+### Spec Drift Detection (dorny/paths-filter)
+
+**Паттерн:** GitHub Actions workflow, который детектирует **spec drift** — когда код изменился, но спеки не обновлены (или наоборот).
+
+**Пруф — GitHub Action workflow:**
+
+```yaml
+name: Spec Drift Check
+on: pull_request
+
+jobs:
+  drift-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            code:
+              - 'src/**'
+            specs:
+              - '.specs/**'
+            tests:
+              - 'tests/features/**'
+
+      - name: Warn on drift
+        if: steps.changes.outputs.code == 'true' && steps.changes.outputs.specs == 'false'
+        run: |
+          echo "::warning::Code changed but specs not updated!"
+          echo "Consider updating .specs/ to reflect code changes."
+```
+
+**Логика drift detection:**
+
+| Code changed | Specs changed | Tests changed | Verdict |
+|-------------|---------------|---------------|---------|
+| Yes | Yes | Yes | OK — full sync |
+| Yes | No | No | DRIFT — specs stale |
+| No | Yes | No | OK — specs-only update |
+| Yes | Yes | No | WARNING — tests not updated |
+| Yes | No | Yes | WARNING — specs not updated |
+
+### Coverage Badges (schneegans/dynamic-badges-action)
+
+**Паттерн:** Автоматически обновляемый badge в README показывающий spec coverage.
+
+**Пруф — Badge generation workflow:**
+
+```yaml
+- name: Run spec audit
+  run: |
+    node audit-spec.js --format json > audit-results.json
+    COVERAGE=$(jq '.coverage.percentage' audit-results.json)
+    echo "COVERAGE=$COVERAGE" >> $GITHUB_ENV
+
+- name: Update coverage badge
+  uses: schneegans/dynamic-badges-action@v1.7.0
+  with:
+    auth: ${{ secrets.GIST_SECRET }}
+    gistID: abc123
+    filename: spec-coverage.json
+    label: "spec coverage"
+    message: "${{ env.COVERAGE }}%"
+    valColorRange: ${{ env.COVERAGE }}
+    minColorRange: 0
+    maxColorRange: 100
+```
+
+**Результат:** Badge `![spec coverage](https://img.shields.io/endpoint?url=...)` показывает текущий % coverage.
+
+`valColorRange` автоматически выбирает цвет: красный (0%) → жёлтый (50%) → зелёный (100%).
+
+**Сравнение с нами:**
+
+| Аспект | CI/CD Patterns | Наш specs-workflow |
+|--------|----------------|--------------------|
+| Drift detection | Automated in PR | Нет |
+| Coverage badge | Dynamic in README | Нет (только текстовый отчёт) |
+| CI integration | GitHub Actions | Нет (локальные скрипты) |
+| PR comments | Auto-comment on drift | Нет |
+
+**Ценность для нас:**
+1. **Spec drift detection** (HIGH) — GitHub Action, проверяющий sync между `.specs/` и `src/` в PR
+2. **Coverage badge** (MEDIUM) — audit-spec.ps1 генерирует JSON, badge показывает % покрытия
+3. **PR auto-comment** (LOW) — bot комментирует PR с результатами spec audit
+
+---
+
+## 100. OSS Spec Processes — RFC/PEP/KEP/TC39/Go Templates
+
+### Rust RFC — 8-Section Template + Tracking Issues
+
+**Проект:** https://github.com/rust-lang/rfcs
+
+**Пруф — шаблон 0000-template.md (8 секций):**
+
+```markdown
+- Feature Name: (fill me in with a unique ident, `my_awesome_feature`)
+- Start Date: (fill me in with today's date, YYYY-MM-DD)
+- RFC PR: [rust-lang/rfcs#0000](https://github.com/rust-lang/rfcs/pull/0000)
+- Rust Issue: [rust-lang/rust#0000](https://github.com/rust-lang/rust/issues/0000)
+
+## Summary
+## Motivation
+## Guide-level explanation
+## Reference-level explanation
+## Drawbacks
+## Rationale and alternatives
+## Prior art
+## Unresolved questions
+## Future possibilities
+```
+
+**Ключевые паттерны:**
+1. **Anchor-based cross-refs:** `[summary]: #summary` — каждая секция имеет anchor для кросс-ссылок
+2. **Tracking Issue traceability:** RFC PR → Rust Issue → implementation — цепочка от спеки до кода
+3. **Prior Art секция** — обязательный обзор аналогов (чего нет у нас)
+4. **Guide vs Reference** — два уровня объяснения: для пользователя и для разработчика
+
+### Go Proposals — Minimal 7-Section Template
+
+**Проект:** https://github.com/golang/proposal
+
+**Пруф — TEMPLATE.md (7 секций):**
+
+```markdown
+# Proposal: [Title]
+Author(s): [Author Name]
+Last updated: [Date]
+Discussion at https://go.dev/issue/NNNNN.
+
+## Abstract
+## Background
+## Proposal
+## Rationale
+## Compatibility
+## Implementation
+## Open issues (if applicable)
+```
+
+**Ключевые паттерны:**
+1. **Минимализм:** 7 секций vs наши 13 файлов
+2. **Compatibility секция** — обязательная оценка backward compatibility (чего нет у нас)
+3. **Discussion link** — прямая ссылка на GitHub issue для обсуждения
+4. **"Open issues (if applicable)"** — явная секция для нерешённых вопросов
+
+### Kubernetes KEP — YAML Metadata + PRR
+
+**Проект:** https://github.com/kubernetes/enhancements
+
+**Пруф — kep.yaml metadata:**
+
+```yaml
+title: KEP Template
+kep-number: NNNN
+authors:
+  - "@jane.doe"
+owning-sig: sig-xyz
+status: provisional|implementable|implemented|deferred|rejected|withdrawn|replaced
+creation-date: yyyy-mm-dd
+stage: alpha|beta|stable
+latest-milestone: "v1.19"
+milestone:
+  alpha: "v1.19"
+  beta: "v1.20"
+  stable: "v1.22"
+feature-gates:
+  - name: MyFeature
+    components:
+      - kube-apiserver
+      - kube-controller-manager
+disable-supported: true
+metrics:
+  - my_feature_metric
+```
+
+**Ключевые паттерны:**
+1. **YAML metadata** — structured metadata отдельно от prose (status, stage, milestones)
+2. **Stage graduation:** `alpha → beta → stable` с milestone tracking
+3. **Feature gates** — привязка к конкретным компонентам системы
+4. **PRR (Production Readiness Review):** 30+ обязательных вопросов (rollback, monitoring, scalability, troubleshooting)
+
+**PRR ключевые категории:**
+- Feature Enablement and Rollback (6 вопросов)
+- Rollout, Upgrade and Rollback Planning (4 вопроса)
+- Monitoring Requirements (5 вопросов)
+- Dependencies (3 вопроса)
+- Scalability (6 вопросов)
+- Troubleshooting (4 вопроса)
+
+### TC39 — Stage-Based Proposal Process
+
+**Проект:** https://github.com/tc39/proposals
+
+**5 стадий:**
+
+| Stage | Название | Requirement | Exit Criteria |
+|-------|----------|-------------|---------------|
+| 0 | Strawperson | Idea | N/A |
+| 1 | Proposal | Problem statement + high-level API | TC39 champion |
+| 2 | Draft | Formal spec text (ecmarkup) | Approved by committee |
+| 2.7 | In Progress | Feature complete | Test262 tests started |
+| 3 | Candidate | Complete spec text | Test262 conformance |
+| 4 | Finished | Merged into ECMA-262 | 2+ implementations |
+
+**Ключевой инсайт:** **Test262 conformance required** на Stage 3 → аналог нашего "все BDD сценарии green" перед merge.
+
+### IETF RFC 2119 — MUST/SHOULD/MAY Keywords
+
+**Стандарт:** RFC 2119 определяет **нормативные ключевые слова** для спецификаций:
+
+| Keyword | Значение |
+|---------|----------|
+| MUST | Абсолютное требование |
+| MUST NOT | Абсолютный запрет |
+| SHOULD | Рекомендация (отклонение допустимо с обоснованием) |
+| SHOULD NOT | Не рекомендуется (допустимо с обоснованием) |
+| MAY | Опционально |
+
+**Пруф — использование в спецификациях:**
+
+> "Implementations MUST support OAuth2 authentication. Implementations SHOULD support SAML. Implementations MAY support LDAP."
+
+### Сводная таблица OSS templates:
+
+| Проект | Секций | Metadata | Stages | Tests Required | Prior Art |
+|--------|--------|----------|--------|----------------|-----------|
+| Rust RFC | 9 | Header fields | N/A (merged/not) | Нет | Да |
+| Go Proposal | 7 | Inline header | N/A | Нет | Нет |
+| K8s KEP | 15+ | YAML file | alpha→beta→stable | PRR questionnaire | Нет |
+| TC39 | Per-stage | Inline | 5 stages (0-4) | Test262 (Stage 3) | Нет |
+| Python PEP | 8 | RST header | Accepted/Rejected | Нет | Нет |
+| IETF RFC | 10+ | Header | Draft→Proposed→Standard | Implementations | Нет |
+| **Наш specs** | **13 files** | **Нет** | **4 phases** | **BDD .feature** | **RESEARCH.md** |
+
+**Ценность для нас:**
+1. **Prior Art секция** (MEDIUM) — добавить обязательную секцию в RESEARCH.md: "## Prior Art" с обзором аналогов
+2. **YAML metadata file** (MEDIUM) — `spec.yaml` с status, stage, authors, creation-date (как KEP kep.yaml)
+3. **Compatibility секция** (MEDIUM) — добавить в FR.md или DESIGN.md: "## Backward Compatibility" (как Go Proposals)
+4. **MUST/SHOULD/MAY keywords** (LOW) — формализовать нормативность в FR.md и NFR.md через RFC 2119 keywords
+5. **Stage graduation** (LOW) — `Draft → Review → Approved → Implementing → Done` с milestone dates
+6. **PRR-like checklist** (LOW) — для production features: rollback plan, monitoring, scalability assessment
+
+---
+
+## 101. Copilot Workspace — Issue→Spec→Plan→Code→Repair Pipeline
+
+**Продукт:** GitHub Copilot Workspace (technical preview апрель 2024, sunset май 2025 → Copilot Coding Agent GA сентябрь 2025).
+
+**Ключевая идея:** 5-фазный pipeline где GitHub Issue автоматически превращается в specification → plan → code changes → repair. Ключевое: **repair agent** автоматически чинит failing tests.
+
+**Пруф — pipeline** (из https://githubnext.com/projects/copilot-workspace):
+
+```
+GitHub Issue
+  → Specification (editable, natural language)
+  → Plan (editable, file-level changes)
+  → Code (implementation)
+  → Repair (auto-fix test failures)
+```
+
+**Пруф — repair agent concept** (из GitHub blog changelog Jan 2025):
+
+Repair agent получает output failing тестов, анализирует ошибки, и автоматически вносит исправления в код. Цикл повторяется до green tests или max iterations.
+
+**Пруф — editable intermediate artifacts:**
+
+Specification и Plan — **человеко-редактируемые pause points**. Пользователь может вмешаться на любом этапе, поправить specification, и pipeline перегенерирует всё downstream.
+
+**Сравнение с нами:**
+
+| Аспект | Copilot Workspace | Наш specs-workflow |
+|--------|--------------------|--------------------|
+| Trigger | GitHub Issue | Пользователь + scaffold-spec |
+| Phases | 5 (Issue→Spec→Plan→Code→Repair) | 4 (Discovery→Reqs→Tasks→Audit) |
+| Repair | Auto-fix failing tests | Audit находит, но не чинит автоматически |
+| Editable artifacts | Spec + Plan | Все 13 файлов |
+| Stop points | 2 (spec, plan) | 4 (СТОП #1, #1.5, #2, #3) |
+
+**Ценность для нас:**
+1. **Repair agent pattern** (HIGH) — наш Phase 3+ (Audit) уже находит проблемы и исправляет, но можно усилить: после audit автоматически перезапускать `validate-spec` → `audit-spec` → fix цикл (max 3 итерации). Уже частично реализовано в specs-management.md.
+2. **Issue-to-spec pipeline** (MEDIUM) — trigger spec creation из GitHub Issue: `scaffold-spec.ps1 -FromIssue 123` парсит issue body и pre-fills USER_STORIES.md
+3. **Editable intermediate concept** (LOW) — подтверждает правильность наших СТОП-точек как pause points
+
+---
+
+## 102. Cursor Rules — Glob-Scoped Conditional Activation
+
+**Продукт:** Cursor IDE `.cursor/rules/*.mdc` (proprietary, free tier).
+
+**Ключевая идея:** Правила с **условной активацией через glob patterns**. Каждое правило имеет frontmatter с `globs` — активируется только когда пользователь работает с matching файлами.
+
+**Пруф — .mdc frontmatter format** (из https://docs.cursor.com/context/rules):
+
+```yaml
+---
+description: "TypeScript coding patterns for API layer"
+globs: "src/api/**/*.ts"
+alwaysApply: false
+---
+
+# API Layer Rules
+- Use Express middleware pattern
+- All routes must have error handling
+```
+
+Правило активируется ТОЛЬКО когда открыт файл matching `src/api/**/*.ts`. Это уменьшает контекстное окно и повышает релевантность.
+
+**Пруф — Enterprise patterns** (из Elementor Engineering, Medium):
+- One concern per rule file
+- Anchor с конкретными code samples
+- Split bloated rules в composable `.mdc` файлы
+- Паттерны: SEARCH FIRST, REUSE FIRST, NO ASSUMPTIONS
+
+**Пруф — Community ecosystem** (https://github.com/PatrickJS/awesome-cursorrules):
+Сотни community-contributed rules по технологиям. Стандартизированный формат обмена.
+
+**Сравнение с нами:**
+
+| Аспект | Cursor Rules | Наш .claude/rules/ |
+|--------|--------------|---------------------|
+| Activation | Glob-scoped (`globs: "*.ts"`) | Always-apply или triggered (keyword) |
+| Format | YAML frontmatter + MD | Pure MD |
+| Sharing | Community registry (awesome-cursorrules) | Нет (per-project only) |
+| Scoping | File-pattern based | Topic-based triggers |
+
+**Ценность для нас:**
+1. **Glob-scoped rule activation** (MEDIUM) — добавить frontmatter к `.claude/rules/*.md` для file-pattern triggers: `specs-validation.md` активируется только при работе с `.specs/**`
+2. **Community rule registry** (LOW) — паттерн для обмена правилами между проектами через extensions
+3. **One concern per rule** (LOW) — уже реализовано (11 правил, каждое = 1 concern)
+
+---
+
+## 103. Aider — Dual-Model Architect + CONVENTIONS.md Caching
+
+**Продукт:** Aider (open source, Apache 2.0) — terminal AI pair-programmer.
+
+**Ключевая идея:** **Architect mode** разделяет reasoning и editing на два разных LLM. "Architect" модель (Claude Opus) планирует изменения, "editor" модель (Claude Sonnet) делает конкретные файловые правки. CONVENTIONS.md загружается как read-only cached контекст.
+
+**Пруф — CONVENTIONS.md pattern** (из https://aider.chat/docs/usage/conventions.md):
+
+```markdown
+The easiest way to do that with aider is to simply create
+a small markdown file and include it in the chat.
+
+It's best to load the conventions file with `/read CONVENTIONS.md`
+or `aider --read CONVENTIONS.md`.
+This way it is marked as read-only, and cached if prompt caching
+is enabled.
+```
+
+Файл `CONVENTIONS.md` содержит правила кодирования. При `--read` он read-only (не может быть изменён AI), кешируется через prompt caching (экономия токенов).
+
+**Пруф — Dual-model impact:**
+
+Когда `CONVENTIONS.md` указывает "Prefer httpx over requests" и "Use types everywhere possible" — Aider генерирует `import httpx` с `-> str` type hints вместо `import requests` без типов.
+
+**Пруф — Community CONVENTIONS** (https://github.com/Aider-AI/conventions):
+7 community файлов: Go, Flutter, Next.js, bash, functional-programming, moodle500, icalendar-events.
+
+Go пример:
+```markdown
+## 1. Project Structure
+/cmd/<appname>  # Main entrypoint, minimal logic
+/internal/<module>  # Domain modules
+/pkg/utils  # Shared utilities
+
+## 4. Error Management
+- Centralize Errors in /errors/errors.go
+- Error Wrapping: Use Go's fmt.Errorf("context: %w", err)
+- No Silent Failures: Always check and return errors
+```
+
+**Сравнение с нами:**
+
+| Аспект | Aider | Наш specs-workflow |
+|--------|-------|--------------------|
+| Spec injection | `--read CONVENTIONS.md` (cached) | `.claude/rules/` auto-loaded |
+| Dual-model | Architect (plan) + Editor (code) | One model for all phases |
+| Convention sharing | Community repo | Per-project rules |
+| Caching | Explicit prompt caching | Implicit (Claude Code built-in) |
+
+**Ценность для нас:**
+1. **Read-only spec injection** (MEDIUM) — при имплементации загружать FR.md, DESIGN.md как read-only reference (кешированный, не редактируемый). Уменьшает риск AI случайно изменить спеку.
+2. **Community conventions** (LOW) — стандартизированные CONVENTIONS по технологиям как дополнение к project-specific specs
+3. **Dual-model concept** (LOW) — Phase 2 (design) через stronger model, Phase 3 (tasks) через faster model
+
+---
+
+## 104. SpecStory — Chat-to-Spec Audit Trail + OpenTelemetry
+
+**Продукт:** SpecStory (proprietary + open source skills).
+
+**Ключевая идея:** **Capture every AI conversation** и предоставь tools для analysis. `.specstory/history/` сохраняет каждый AI-чат. Claude Code skills для summarization, organization, и guard enforcement.
+
+**Пруф — Agent Skills** (https://github.com/specstoryai/agent-skills):
+
+```
+.specstory/
+  .gitignore
+skills/
+  specstory-guard/            # Enforces patterns during coding
+  specstory-link-trail/       # Audit trails: conversations → code
+  specstory-organize/         # Organizes chat history
+  specstory-project-stats/    # Project metrics
+  specstory-session-summary/  # Summarizes AI sessions
+  specstory-yak/              # Conversational helper
+```
+
+6 Claude Code skills как plugin. `specstory-guard` = валидация во время работы. `specstory-link-trail` = трассировка от диалога до кода.
+
+**Пруф — OpenTelemetry integration** (https://github.com/specstoryai/otel-report-samples):
+
+Structured metrics для AI coding sessions: время, кол-во clarifications, pass rate. OTel формат для интеграции с Grafana/Datadog.
+
+**Пруф — Whitepaper insight** (specstory.com/whitepapers):
+
+> "Teams that master the art of iterative specification to orchestrate agents will own the future" но "spec-driven development with agents remains powerful in theory but insufficient in practice" без intent-centric tooling.
+
+**Сравнение с нами:**
+
+| Аспект | SpecStory | Наш specs-workflow |
+|--------|----------|--------------------|
+| Chat capture | `.specstory/history/` | Нет (теряется при закрытии) |
+| Audit trail | Conversation → code linking | @featureN specs → code |
+| Metrics | OTel (time, clarifications) | Нет количественных метрик |
+| Guard | Real-time validation skill | Post-hoc validation (audit-spec) |
+
+**Ценность для нас:**
+1. **Chat-to-spec audit trail** (MEDIUM) — сохранять ключевые решения из AI-диалогов в RESEARCH.md автоматически. "Почему выбрали подход X" → лог из чата.
+2. **Spec quality metrics** (LOW) — OTel-like метрики: время на phase, количество audit findings, coverage %
+3. **Guard skill pattern** (LOW) — skill `/spec-guard` проверяет текущий код против спек в реальном времени
+
+---
+
+## 105. Python PEP Deep Dive — Provisional Status + Rejected Ideas + Type Taxonomy
+
+**Расширение §100** — дополнительные паттерны из Python PEP process (PEP 1, https://github.com/python/peps/blob/main/peps/pep-0001.rst).
+
+### "Provisional" статус
+
+```
+Draft → Accepted → Provisional → Final
+                 → Rejected
+                 → Withdrawn
+```
+
+**Provisional** = принято, но может измениться после реального использования. Даже после включения в Python release, Provisional PEP можно Rejected/Withdrawn.
+
+> "Provisionally Accepted indicates that the proposal has been accepted for inclusion in the reference implementation, but additional user feedback is needed before the full design can be considered 'Final'."
+
+**Ценность:** Наши спеки: in-progress → done (binary). Добавить `provisional` статус: "спека принята, реализация начата, но feedback из реальной работы может вызвать изменения."
+
+### "Rejected Ideas" обязательная секция
+
+PEP 1 требует:
+> "Rejected ideas should be recorded along with the reasoning as to why they were rejected. This both helps record the thought process and prevents people from bringing up the same rejected idea again."
+
+**Ценность:** Добавить `## Rejected Ideas` в DESIGN.md — записывать отвергнутые подходы с причинами. Предотвращает повторное обсуждение.
+
+### PEP Types taxonomy
+
+| Тип | Описание |
+|-----|----------|
+| Standards Track | Новые фичи языка |
+| Informational | Design issues, guidelines (без консенсуса) |
+| Process | Мета-PEP про governance |
+
+**Ценность:** Наши спеки = один тип. Добавить taxonomy: feature-spec, research-spec (informational), process-spec (workflow changes).
+
+### "Superseded-By" succession
+
+```
+PEP: 123
+Superseded-By: 456
+```
+
+Когда спека заменяет старую — обе явно указывают друг на друга.
+
+**Ценность:** Паттерн для `.specs/.archive/`: устаревшая спека содержит `Superseded-By: .specs/new-feature/`.
+
+---
+
+## 106. TC39 Stage 2.7 + K8s PRR Deep Dive — Hard Testing Gates + Operational Readiness
+
+**Расширение §100** — дополнительные паттерны из TC39 и K8s KEP.
+
+### TC39 Stage 2.7 — Hard Testing Gate
+
+TC39 unique: Stage 2.7 = **тесты ОБЯЗАНЫ быть написаны и merged ПЕРЕД** advance к Stage 3 (implementation).
+
+**Пруф — Stage 2.7 из https://tc39.es/process-document/:**
+
+| Stage | Name | Key Exit Criteria |
+|-------|------|-------------------|
+| 2 | Draft | Complete API/syntax descriptions |
+| **2.7** | **Testing** | **Test262 tests authored and merged** |
+| 3 | Candidate | Sufficient testing + impl experience |
+| 4 | Finished | **2 compatible implementations** |
+
+Stage 2.7 entry criteria: "Complete spec text, designated reviewers approve, relevant editor group sign-off."
+Stage 2.7 exit to Stage 3: Test262 tests passing + spec-compliant prototype.
+
+**Ценность:** Формализовать наш Phase 0 (BDD Foundation) как structural gate. Добавить `tests-ready` статус в spec lifecycle: `.feature` файл + step stubs MUST pass `validate-spec.ps1` BEFORE `status: implementable`.
+
+### K8s KEP PRR — 25 Operational Readiness Questions
+
+**Полный список ключевых категорий** (из https://github.com/kubernetes/enhancements/blob/master/keps/NNNN-kep-template/README.md):
+
+**Feature Enablement and Rollback (5 вопросов):**
+1. Как включить/выключить фичу в live кластере?
+2. Изменяет ли включение default behavior?
+3. Можно ли откатить после включения?
+4. Что будет при повторном включении после отката?
+5. Есть ли тесты enable/disable?
+
+**Monitoring Requirements (5 вопросов):**
+1. Как оператор узнает что фича используется?
+2. Как пользователь узнает что фича работает?
+3. Какие SLO разумны?
+4. Какие SLI для мониторинга?
+5. Какие метрики не хватает?
+
+**Scalability (7 вопросов):**
+1. Новые API calls?
+2. Новые API types?
+3. Новые cloud provider calls?
+4. Увеличение размера API objects?
+5. Увеличение latency?
+6. Увеличение resource usage?
+7. Возможно ли resource exhaustion?
+
+**Adapted для нашего контекста (10 вопросов):**
+
+```markdown
+## Extension Readiness Questionnaire
+1. Как включить/выключить это расширение?
+2. Меняет ли включение существующее поведение?
+3. Можно ли откатить после установки?
+4. Что будет если апдейтер прервётся mid-update?
+5. Как пользователь узнает что расширение работает?
+6. Какие существующие файлы/конфиги модифицирует?
+7. Увеличивает ли время установки или disk usage?
+8. Какие known failure modes?
+9. Какие зависимости требуются?
+10. Что делать если что-то пошло не так?
+```
+
+**Ценность:**
+1. **Testing gate (Stage 2.7)** (HIGH) — `tests-ready` как обязательный статус перед `implementable`
+2. **Extension Readiness Questionnaire** (MEDIUM) — 10 вопросов в DESIGN.md для production-ready extensions
+3. **Two implementations gate** (LOW) — требовать working prototype перед финализацией спеки
+
+---
+
+## Финальная сводка v7: полный список заимствований (106 секций)
 | 2 | 3-Section report format (Math + Exceptions + Matrix) | §8 trace.md | MEDIUM | Structured audit output |
 | 3 | Hook: auto-trigger coverage after Phase 2 | §10 extension.yml | LOW | Нельзя забыть coverage |
 | 4 | Language mandate checks (prohibited phrases per level) | §42 commands | LOW | validate-spec.ps1 |
@@ -4368,11 +5661,67 @@ FILE_CHANGES.md проверка — только в `$aiChecksPending` (line 57
 | 103 | Spec Registry для reusable spec templates | §81 Tessl | HIGH | Template marketplace |
 | 104 | Reference spec TASKS.md не следует TDD Phases | §86 GAP-QG-2 | LARGE | Reference quality |
 | 105 | Hooks в manifest вместо hardcoded installer | §88 GAP-IN-1 | LARGE | Manifest integrity |
+| 106 | Tag-based linking pattern (@tc:ID enrichment) | §89 SpecSync | MEDIUM | ALM-ready tags |
+| 107 | Bidirectional .feature↔FR sync через теги | §89 SpecSync | MEDIUM | Auto-sync specs↔code |
+| 108 | Branch-tag support для parallel releases | §89 SpecSync | LOW | Multi-branch specs |
+| 109 | NDJSON output mode для validate/audit | §90 Cucumber Messages | MEDIUM | Machine-readable output |
+| 110 | 7 typed result statuses (PASSED/SKIPPED/PENDING/UNDEFINED/AMBIGUOUS/FAILED/UNKNOWN) | §90 Cucumber Messages | LOW | Precise diagnostics |
+| 111 | Stream processing pipeline (validate → audit → format) | §90 Cucumber Messages | LOW | Tool piping |
+| 112 | HTML export для audit/validate отчётов | §91 Cucumber HTML | MEDIUM | Browsable reports |
+| 113 | Embedded JSON data pattern в HTML | §91 Cucumber HTML | LOW | Interactive filtering |
+| 114 | Cucumber Expression syntax в .feature ({int}, {string}) | §92 Reqnroll | MEDIUM | Readable steps |
+| 115 | Step registry с ambiguity detection | §92 Reqnroll | MEDIUM | Duplicate step detection |
+| 116 | Custom parameter types (VendorID, WarehouseCode) | §92 Reqnoll | LOW | Domain validation |
+| 117 | Step Dictionary enrichment (frequency, params, cross-usage) | §93 CucumberStudio | MEDIUM | Richer step catalog |
+| 118 | Action Word pattern для step reuse | §93 CucumberStudio | LOW | Step reuse guidelines |
+| 119 | Change impact analysis (step → affected scenarios) | §93 CucumberStudio | LOW | Impact tracking |
+| 120 | Delta operations в CHANGELOG (ADDED/MODIFIED/REMOVED/RENAMED) | §94 OpenSpec | HIGH | Structured changelog |
+| 121 | Explicit dependency DAG (US→UC→FR→AC→.feature→TASKS) | §94 OpenSpec | MEDIUM | Traceable graph |
+| 122 | Archive/supersession pattern (.specs/.archive/) | §94 OpenSpec | LOW | Spec lifecycle |
+| 123 | Scale-adaptive spec levels (Level 0-4) | §95 BMAD | HIGH | Right-sized specs |
+| 124 | [NEEDS CLARIFICATION] markers вместо галлюцинаций | §95 BMAD | HIGH | AI uncertainty handling |
+| 125 | Per-level templates в scaffold-spec (-Level 1\|2\|3) | §95 BMAD | MEDIUM | Template flexibility |
+| 126 | Sub-agent skills (/create-spec, /audit-spec) | §96 CLAUDE.md ecosystem | MEDIUM | Spec automation skills |
+| 127 | Rule count awareness (keep under 30) | §96 Addy Osmani | LOW | Config hygiene |
+| 128 | SDD maturity roadmap (Level 2→2.5→3) | §96 Martin Fowler | LOW | Strategic planning |
+| 129 | Typed relations (verifiedBy, derivedFrom, implements) | §97 ReqIF/OSLC | MEDIUM | Semantic traceability |
+| 130 | GUID-like stable IDs (fr~user-login~1 вместо FR-1) | §97 ReqIF + §98 OFT | HIGH | Stable references |
+| 131 | Timestamp tracking per requirement (last-modified) | §97 ReqIF | LOW | Staleness detection |
+| 132 | Needs:/Covers: inline format в MD файлах | §98 OpenFastTrace | HIGH | Formal coverage |
+| 133 | CI fail-on-gap (audit --fail-on-gap) | §98 OpenFastTrace | MEDIUM | CI enforcement |
+| 134 | Multi-level traceability chain (req→dsn→impl→utest→itest) | §98 OpenFastTrace | MEDIUM | 5-level chain |
+| 135 | Spec drift detection в GitHub Actions (paths-filter) | §99 CI/CD | HIGH | PR-level drift check |
+| 136 | Coverage badge в README (dynamic color) | §99 CI/CD | MEDIUM | Visible coverage |
+| 137 | PR auto-comment с audit results | §99 CI/CD | LOW | Automated feedback |
+| 138 | Prior Art обязательная секция в RESEARCH.md | §100 Rust RFC | MEDIUM | Competitor awareness |
+| 139 | YAML metadata file (spec.yaml: status, stage, authors) | §100 K8s KEP | MEDIUM | Structured metadata |
+| 140 | Backward Compatibility секция в DESIGN.md | §100 Go Proposals | MEDIUM | Breaking change awareness |
+| 141 | MUST/SHOULD/MAY keywords (RFC 2119) | §100 IETF RFC | LOW | Normative language |
+| 142 | Stage graduation (Draft→Review→Approved→Implementing→Done) | §100 K8s KEP | LOW | Lifecycle tracking |
+| 143 | PRR-like checklist (rollback, monitoring, scalability) | §100 K8s KEP | LOW | Production readiness |
+| 144 | Test conformance gate (BDD green before merge) | §100 TC39 | MEDIUM | Quality gate |
+| 145 | 7 SysML relationship types mapping | §98 SysML | LOW | Formal relation model |
+| 146 | Repair agent pattern (auto-fix audit findings loop) | §101 Copilot Workspace | HIGH | Self-healing specs |
+| 147 | Issue-to-spec pipeline (scaffold-spec -FromIssue) | §101 Copilot Workspace | MEDIUM | GitHub integration |
+| 148 | Glob-scoped rule activation (frontmatter triggers) | §102 Cursor Rules | MEDIUM | Context-aware rules |
+| 149 | Community rule registry pattern | §102 Cursor Rules | LOW | Shareable rules |
+| 150 | Read-only spec injection (FR.md cached, not editable) | §103 Aider | MEDIUM | Safe spec context |
+| 151 | Community CONVENTIONS.md per technology | §103 Aider | LOW | Tech-specific standards |
+| 152 | Chat-to-spec audit trail (conversation → decisions) | §104 SpecStory | MEDIUM | Decision traceability |
+| 153 | Spec quality OTel metrics (time, findings, coverage) | §104 SpecStory | LOW | Quantitative spec quality |
+| 154 | Guard skill (/spec-guard real-time validation) | §104 SpecStory | LOW | Real-time compliance |
+| 155 | "Provisional" spec status (accepted but may change) | §105 Python PEP | MEDIUM | Maturity nuance |
+| 156 | "Rejected Ideas" обязательная секция в DESIGN.md | §105 Python PEP | MEDIUM | Prevent re-discussion |
+| 157 | Spec type taxonomy (feature/research/process) | §105 Python PEP | LOW | Spec classification |
+| 158 | "Superseded-By" succession chains | §105 Python PEP | LOW | Spec lifecycle |
+| 159 | Testing gate as structural status (tests-ready) | §106 TC39 Stage 2.7 | HIGH | Hard quality gate |
+| 160 | Extension Readiness Questionnaire (10 questions) | §106 K8s KEP PRR | MEDIUM | Operational readiness |
+| 161 | Two implementations gate (prototype required) | §106 TC39 Stage 4 | LOW | Proof of implementability |
 
-### Статистика v5
+### Статистика v7
 
-- **Всего items:** 105 (было 85 в v4)
-- **Новых:** 20 items из конкурентов (§76-§84) и gap-анализа (§85-§88)
-- **По приоритету:** 23 HIGH, 41 MEDIUM, 41 LOW
-- **По источнику:** spec-kit-v-model (73), конкуренты (12), внутренние gaps (20)
-- **Секций:** 88 (было 75)
+- **Всего items:** 161 (было 145 в v6)
+- **Новых:** 16 items из AI-tools (§101-§104) и deep dive OSS (§105-§106)
+- **По приоритету:** 33 HIGH, 61 MEDIUM, 67 LOW
+- **По источнику:** spec-kit-v-model (73), конкуренты/tools (32), AI-tools (16), внутренние gaps (20), стандарты/OSS (20)
+- **Секций:** 106 (было 100)
