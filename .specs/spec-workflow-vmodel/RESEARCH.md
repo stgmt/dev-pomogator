@@ -5553,17 +5553,17 @@ Stage 2.7 exit to Stage 3: Test262 tests passing + spec-compliant prototype.
 
 ## Финальная сводка v7: полный список заимствований (106 секций)
 | 2 | 3-Section report format (Math + Exceptions + Matrix) | §8 trace.md | MEDIUM | Structured audit output |
-| 3 | Hook: auto-trigger coverage after Phase 2 | §10 extension.yml | LOW | Нельзя забыть coverage |
+| ~~3~~ | ~~Hook: auto-trigger coverage after Phase 2~~ | §10 extension.yml | LOW | ~~DECLINED: дубль #27 (Structured handoffs between phases)~~ |
 | 4 | Language mandate checks (prohibited phrases per level) | §42 commands | LOW | validate-spec.ps1 |
 | 5 | Structural metrics per artifact type | §30 structural.py | MEDIUM | Per-level validation |
 | 6 | Score formula: `1.0 - (issues / checks)` | §30 id_validator.py | LOW | Unified scoring |
-| 7 | ID immutability + [DEPRECATED] tag | §18 id-schema-guide.md | LOW | specs-management.md rule |
+| ~~7~~ | ~~ID immutability + [DEPRECATED] tag~~ | §18 id-schema-guide.md | LOW | ~~DECLINED: правило организационное; [DEPRECATED] уже покрывается через CHANGELOG.md~~ |
 | 8 | Per-artifact structural validators | §30 5 Python validators | HIGH | ~50 rules vs our 10 |
 | 9 | Coverage Summary self-check in templates | §31 all 9 templates | LOW | Built-in gap detection |
 | 10 | Bidirectional coverage checks | §38 coverage scripts | MEDIUM | FR→AC AND AC→FR |
 | 11 | Derived Requirement HALT system | §41 commands | LOW | Anti gold-plating |
-| 12 | Escalating language mandates (cascading firewall) | §42 5 commands | LOW | Wrong-level prevention |
-| 13 | `[NEEDS CLARIFICATION]` tag + STOP | §46 constitution.md | LOW | AI stops on ambiguity |
+| ~~12~~ | ~~Escalating language mandates (cascading firewall)~~ | §42 5 commands | LOW | ~~DECLINED: дубль #4 (Language mandate checks) — то же самое, другое название~~ |
+| ~~13~~ | ~~`[NEEDS CLARIFICATION]` tag + STOP~~ | §46 constitution.md | LOW | ~~DECLINED: дубль #124 (BMAD [NEEDS CLARIFICATION] markers)~~ |
 | 14 | No-black-box interface rule | §51 architecture-design.md | LOW | DESIGN.md quality |
 | 15 | 3-Facet User Stories (narrative + why priority + independent test) | §52 spec-template.md | LOW | USER_STORIES.md quality |
 | 16 | Spec Quality Checklist (3 categories) | §52 checklist-template.md | LOW | Pre-Phase-2 gate |
@@ -5586,8 +5586,8 @@ Stage 2.7 exit to Stage 3: Test262 tests passing + spec-compliant prototype.
 | 28 | Common Audit Findings Prevention | §16 compliance-guide.md | LOW | Preventive checks |
 | 29 | Config-driven customization (specs-config.yml) | §12 config-template.yml | MEDIUM | Flexibility |
 | 30 | Dual regex (loose/strict) | §30 id_validator.py | LOW | Better parsing |
-| 31 | Dependency & Mock Registry per test | §22 unit-test.md | MEDIUM | Mock strategy |
-| 32 | Arrange/Act/Assert format | §22 unit-test.md | LOW | Unit test style |
+| 31 | Dependency Registry per test (без моков — явное объявление внешних зависимостей step definitions) | §22 unit-test.md | MEDIUM | Dependency declaration |
+| ~~32~~ | ~~Arrange/Act/Assert format~~ | §22 unit-test.md | LOW | ~~DECLINED: у нас BDD-only, AAA формат для unit tests не применим~~ |
 | 33 | Technique Selection Matrix | §22 unit-test.md | MEDIUM | Technique guidance |
 | 34 | Dual output (human + JSON) all scripts | §35 scripts | MEDIUM | Machine-consumable |
 | 35 | Section-scoped regex parsing | §47 build-matrix.sh | MEDIUM | Prevent false positives |
@@ -5597,7 +5597,7 @@ Stage 2.7 exit to Stage 3: Test262 tests passing + spec-compliant prototype.
 | 39 | Technique whitelist validation | §30 module_validators.py | MEDIUM | Valid approaches |
 | 40 | IEEE 29148 quality prompt template | §33 requirements_quality.py | MEDIUM | Structured AI audit |
 | 41 | Design View → Test Technique chain | §43 5 commands | MEDIUM | Design→test mapping |
-| 42 | Graduated test fixtures (6 levels) | §45 tests/fixtures | HIGH | Test infrastructure |
+| 42 | Graduated test fixtures (6 levels) — **уже есть** в `tests/fixtures/specs-generator/` (6 типов: valid-spec, audit-coverage-fixture, broken-crossrefs, invalid-spec, partial-spec, valid-spec-with-crossrefs); нужно задокументировать контракт каждого (что ловит, какой порог) | §45 tests/fixtures | HIGH | Test infrastructure |
 | 43 | 6 gap types in build-matrix | §47 build-matrix.sh | MEDIUM | Comprehensive gaps |
 | 44 | Tiered threshold degradation (1.0→0.95→0.90) | §53 eval tests | MEDIUM | Flexible validation |
 | 45 | Threshold=0.0 sub-check inspection | §54 eval tests | LOW | Granular metric testing |
@@ -5606,7 +5606,7 @@ Stage 2.7 exit to Stage 3: Test262 tests passing + spec-compliant prototype.
 | 48 | Foundational phase BLOCKS all stories | §52 tasks-template.md | LOW | Dependency enforcement |
 | 49 | [P] parallel + [USN] story markers in tasks | §52 tasks-template.md | LOW | Traceability + parallelism |
 | 50 | Parallelism percentage metric | §52 tasks-template.md | LOW | Plan efficiency metric |
-| 51 | Agent-file auto-aggregator from all plans | §52 agent-file-template.md | MEDIUM | Context compression |
+| ~~51~~ | ~~Agent-file auto-aggregator from all plans~~ | §52 agent-file-template.md | MEDIUM | ~~DECLINED: meta-tooling, выходит за рамки specs-workflow~~ |
 | 52 | Minimal fixture = contract for "acceptable" | §57 fixtures/minimal | MEDIUM | Validation threshold |
 | 53 | Document concatenation for cross-artifact testing | §60 test_trace_eval.py | LOW | Cross-file validation |
 | 54 | Two-class test architecture (Structural + Quality) | §62 eval tests | MEDIUM | Selective CI execution |
@@ -5614,7 +5614,7 @@ Stage 2.7 exit to Stage 3: Test262 tests passing + spec-compliant prototype.
 | 56 | Status lifecycle frontmatter (draft→approved→superseded) | §83 ADR | LOW | Formal spec lifecycle |
 | 57 | Coverage target linter mode для CI | §82 Allure | LOW | `--coverage-target 80` |
 | 58 | Staleness detection для referenced code files | §84 Swimm/Doorstop | MEDIUM | Anti-stale specs |
-| 59 | Concept files — reusable step macros (.cpt) | §79 Gauge | MEDIUM | BDD step reuse |
+| ~~59~~ | ~~Concept files — reusable step macros (.cpt)~~ | §79 Gauge | MEDIUM | ~~DECLINED: Gauge-специфично, несовместимо с нашим Cucumber/Gherkin~~ |
 | 60 | Partial coverage tracking (partly_verifies 1/3) | §78 git-reqs | MEDIUM | Granular coverage |
 | 61 | UC→FR cross-reference check в audit | §86 GAP-TR-1 | MEDIUM | Full traceability chain |
 | 62 | .feature + SCHEMA в term consistency check | §86 GAP-AU-2 | SMALL | Complete consistency |
