@@ -59,6 +59,24 @@ AI НЕ выдумывает требования. Только формализ
 
 Каждый REQ обязан иметь поле Verification Method: **Test** | **Inspection** | **Analysis** | **Demonstration**.
 
+### Independence Coverage для сложных AC (≥2 условий в EARS)
+
+Если AC содержит составное EARS условие (`AND`/`OR`/`IF`) с ≥2 предикатами — ACCEPTANCE_CRITERIA.md ОБЯЗАН содержать **truth table**, где каждое условие независимо влияет на outcome (не только happy path).
+
+**Формат таблицы:**
+
+| Test | Условие A | Условие B | NOT Условие C | Outcome | Что проверяет |
+|------|-----------|-----------|----------------|---------|---------------|
+| T1   | T         | F         | F              | fail    | A alone достаточно |
+| T2   | F         | T         | F              | fail    | B alone достаточно |
+| T3   | T         | T         | T              | pass    | C (skip) побеждает |
+
+Каждая строка таблицы = **отдельный Gherkin сценарий** в `.feature` файле.
+
+**Когда применять:** EARS формулировки типа `WHEN (X OR Y) AND NOT Z THEN system SHALL ...`
+
+**Пруф:** адаптировано из MC/DC coverage criterion (DO-178C, ISO 29119-4) — universal technique, применимо к любым complex boolean AC, независимо от домена. Источник: [§22 RESEARCH.md](RESEARCH.md#22-white-box-unit-test-techniques-из-unit-testmd).
+
 **Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1)
 
 ---

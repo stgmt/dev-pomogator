@@ -850,8 +850,8 @@ verification_methods:
 | Internal Data Structures | **Equivalence Partitioning** | One representative per valid partition + invalid | Discrete non-scalar (Boolean, Enum) |
 | Architecture Interface View | **Strict Isolation** | Dependency & Mock Registry table per UTP | Modules with external dependencies |
 | State Machine View | **State Transition Testing** | Valid/invalid transitions, entry/exit actions | Stateful modules (Mermaid stateDiagram-v2) |
-| *(safety-critical)* | **MC/DC Coverage** | Boolean truth table: каждое condition independently affects decision | Complex boolean decisions (domain ≠ "") |
-| *(safety-critical)* | **Variable-Level Fault Injection** | Corrupt to NULL/zero/max/negative → verify detection | Safety-critical variables (domain ≠ "") |
+| *(complex AC)* | **Independence Coverage** | Truth table: каждое condition independently affects decision | EARS с ≥2 условиями (AND/OR/IF) |
+| *(fault resilience)* | **Variable-Level Fault Injection** | Corrupt to NULL/zero/max/negative → verify detection | Любые переменные с defensive handling |
 
 #### Ключевые паттерны
 
@@ -881,24 +881,29 @@ Modules без зависимостей: `"None — module is self-contained."`
 - Loop N iterations
 - Error branches
 
-**4. MC/DC Boolean truth table (safety-critical):**
+**4. Independence Coverage truth table (для EARS с ≥2 условиями):**
 
-| Test | A | B | C | Decision | Independence Proof |
-|------|---|---|---|----------|-------------------|
-| 1 | T | T | F | T | A flips: row 1 vs row 3 |
-| 2 | T | F | F | F | B flips: row 1 vs row 2 |
+Применимо к любому AC с составным условием, не только safety-critical.
 
-Каждая строка = один UTS scenario.
+Пример: `WHEN (FR_wrong OR NFR_missing) AND NOT forceSkip THEN fail`
+
+| Test | FR_wrong | NFR_missing | forceSkip | Outcome | Что проверяет |
+|------|----------|-------------|-----------|---------|---------------|
+| 1 | T | F | F | fail | FR_wrong alone достаточно |
+| 2 | F | T | F | fail | NFR_missing alone достаточно |
+| 3 | T | T | T | pass | forceSkip побеждает |
+
+Каждая строка = отдельный Gherkin сценарий. Таблица живёт в `ACCEPTANCE_CRITERIA.md` рядом с AC.
 
 **5. External Module Bypass:** `[EXTERNAL]` modules skipped entirely — "Module MOD-NNN is [EXTERNAL] — wrapper behavior tested at integration level."
 
-**Наш аналог:** У нас unit тесты не формализованы. DESIGN.md не содержит pseudocode, нет mandatory views для модулей. Нет Dependency & Mock Registry.
+**Наш аналог:** Наши BDD сценарии = тесты. Independence Coverage применимо к сложным AC условиям (EARS AND/OR/IF с ≥2 predicates).
 
 **Ценность:**
-- Technique Selection Matrix → можно добавить как checklist в specs-management.md Phase 2 при генерации unit-test specs
-- Dependency & Mock Registry → решает проблему "какие зависимости мокать?"
+- **Independence Coverage таблица** → обязательная для AC с ≥2 EARS условиями в ACCEPTANCE_CRITERIA.md
+- Technique Selection Matrix → checklist в specs-management.md Phase 2
+- Dependency & Mock Registry → решает "какие зависимости мокать?"
 - Arrange/Act/Assert формат → чёткое разделение от BDD стиля
-- MC/DC для safety-critical → если проект regulated
 
 ---
 
@@ -1247,7 +1252,7 @@ Step 8: /speckit.v-model.trace → traceability-matrix.md (4 matrices, OVERALL: 
 | 22 | E2E eval harness (simulated runtime) | harness.py | HIGH | AI generation testing |
 | 23 | LLM-as-judge metrics (DeepEval + Gemini) | requirements_quality.py | HIGH | Quality scoring |
 | 24 | Medical device reference example | usage-examples.md | LOW | Documentation |
-| 25 | MC/DC truth tables (safety-critical) | unit-test.md | MEDIUM | Only for regulated |
+| 25 | Independence coverage criterion для complex AC conditions (≥2 условий в EARS) | unit-test.md | MEDIUM | Formal truth table в ACCEPTANCE_CRITERIA.md |
 | 26 | Variable-Level Fault Injection | unit-test.md | MEDIUM | Only for safety |
 | 27 | Domain-driven safety config (v-model-config.yml) | v-model-config.md | MEDIUM | Only for regulated |
 | 28 | Git as QMS (progressive baselines) | product-vision.md | LOW | Audit discipline |
@@ -2028,7 +2033,7 @@ V-Model сильнее в **формализации** (IEEE/ISO views, mandator
 | 33 | E2E eval harness (simulated runtime) | harness.py | HIGH | AI generation testing |
 | 34 | LLM-as-judge metrics (DeepEval + Gemini) | all quality metrics | HIGH | Quality scoring |
 | 35 | Medical device reference example | usage-examples.md | LOW | Documentation |
-| 36 | MC/DC truth tables (safety-critical) | unit-test.md | MEDIUM | Only for regulated |
+| 36 | Independence coverage criterion для complex AC conditions (≥2 условий в EARS) | unit-test.md | MEDIUM | Formal truth table в ACCEPTANCE_CRITERIA.md |
 | 37 | Variable-Level Fault Injection | unit-test.md | MEDIUM | Only for safety |
 | 38 | Domain-driven safety config (v-model-config.yml) | v-model-config.md | MEDIUM | Only for regulated |
 | 39 | Git as QMS (progressive baselines) | product-vision.md | LOW | Audit discipline |
@@ -5621,21 +5626,21 @@ Stage 2.7 exit to Stage 3: Test262 tests passing + spec-compliant prototype.
 | # | Что | Откуда (секция) | Effort | Impact |
 |---|-----|-----------------|--------|--------|
 | 65 | Execution State per test (⬜/✅/❌/🚫/⏸️) | §13 trace.md | MEDIUM | Regulated |
-| 66 | Compliance artifact mapping | §16 compliance-guide.md | LOW | Regulated only |
+| 66 | ~~Compliance artifact mapping~~ → **Spec-to-rule traceability table** ("validate-spec проверяет X, audit-spec проверяет Y") | §16 compliance-guide.md → GAP-IN-3 | LOW | Добавить колонку "Checked by" в таблицу правил specs-management.md |
 | 67 | Pre-Audit Checklist | §16 compliance-guide.md | LOW | DoD "спека готова" |
 | 68 | E2E eval harness (simulated runtime) | §27 harness.py | HIGH | AI gen testing |
 | 69 | LLM-as-judge metrics | §33 quality metrics | HIGH | Quality scoring |
-| 70 | Medical device reference | §16 usage-examples.md | LOW | Documentation |
-| 71 | MC/DC truth tables | §22 unit-test.md | MEDIUM | Safety only |
-| 72 | Variable-Level Fault Injection | §22 unit-test.md | MEDIUM | Safety only |
-| 73 | Domain-driven safety config | §15 v-model-config.md | MEDIUM | Regulated only |
-| 74 | Git as QMS (progressive baselines) | §19 product-vision.md | LOW | Audit discipline |
+| 70 | ~~Medical device reference~~ → **DROPPED** (документационный пример, нет применения) | §16 usage-examples.md | — | — |
+| 71 | Independence coverage criterion для complex AC (≥2 условий в EARS → truth table в ACCEPTANCE_CRITERIA.md) | §22 unit-test.md | MEDIUM | Formal coverage; пример: `WHEN (A OR B) AND NOT C` → 3 сценария |
+| 72 | ~~Variable-Level Fault Injection~~ → **MERGED** с negative fixtures (уже реализовано: сломанные спеки как тестовые фикстуры) | §22 unit-test.md → §45 tests/fixtures | — | Кросс-ref: item #77 (Golden fixtures) |
+| 73 | ~~Domain-driven safety config~~ → **MERGED** с item #123 (scale-adaptive levels: Level 0-4) | §15 v-model-config.md → §95 BMAD | — | Кросс-ref: item #123 |
+| 74 | ~~Git as QMS (progressive baselines)~~ → **DROPPED** (organizational discipline, не tooling) | §19 product-vision.md | — | — |
 | 75 | Mermaid diagram validation | §30 architecture_validators.py | MEDIUM | Diagram quality |
 | 76 | Three-tier test strategy for our scripts | §34 tests/ architecture | VERY HIGH | Regression |
 | 77 | Golden fixtures (2 domains) | §45 tests/fixtures/golden | HIGH | Reference data |
 | 78 | Multi-agent context updater | §49 update-agent-context.sh | MEDIUM | 18+ agents |
 | 79 | Decomposition granularity rules per type | §44 module-design.md | LOW | MOD guidelines |
-| 80 | Safety-critical conditional sections | §42 5 commands | MEDIUM | Regulated only |
+| 80 | ~~Safety-critical conditional sections~~ → **MERGED** с item #123 (scale-adaptive levels) и существующими conditional phases (Phase 1.5 skip) | §42 5 commands → §95 BMAD | — | Кросс-ref: item #123 |
 | 81 | Release discipline: one pair per version | §59 CHANGELOG.md | LOW | Incremental delivery |
 | 82 | Constitution Check as GATE before research | §52 plan-template.md | LOW | Quality gate |
 | 83 | 3 project archetypes in plan (single/web/mobile) | §52 plan-template.md | LOW | Template flexibility |
@@ -5651,7 +5656,7 @@ Stage 2.7 exit to Stage 3: Test262 tests passing + spec-compliant prototype.
 | 93 | Constitution/rules compliance in audit | §68 /speckit.analyze | MEDIUM | Rules alignment check |
 | 94 | IEEE/ISO correct terminology (Verifiable, Singular) | §69 standards | LOW | Accurate citations |
 | 95 | Verification Method column in FR template | §70 golden fixtures | LOW | How-to-verify per FR |
-| 96 | 4-category requirement prefixes (NF/IF/CN) | §70 golden fixtures | LOW | FR classification |
+| 96 | ~~4-category requirement prefixes (NF/IF/CN)~~ → **DECLINED** (дубль — уже в FR-1 §"4 категории REQ с prefix") | §70 golden fixtures | — | — |
 | 97 | Test format progression (G/W/T → A/A/A) | §73 golden fixtures | MEDIUM | Level-appropriate testing |
 | 98 | Coverage expansion ratio benchmark (1 FR ≈ 18 scenarios) | §75 golden fixtures | LOW | Audit reference |
 | 99 | Extension manifest config_schema (JSON Schema) | §65 extension.yml | LOW | Config validation |
@@ -5663,60 +5668,60 @@ Stage 2.7 exit to Stage 3: Test262 tests passing + spec-compliant prototype.
 | 105 | Hooks в manifest вместо hardcoded installer | §88 GAP-IN-1 | LARGE | Manifest integrity |
 | 106 | Tag-based linking pattern (@tc:ID enrichment) | §89 SpecSync | MEDIUM | ALM-ready tags |
 | 107 | Bidirectional .feature↔FR sync через теги | §89 SpecSync | MEDIUM | Auto-sync specs↔code |
-| 108 | Branch-tag support для parallel releases | §89 SpecSync | LOW | Multi-branch specs |
+| 108 | ~~Branch-tag support для parallel releases~~ → **DECLINED** (нет multi-release в нашем workflow) | §89 SpecSync | — | — |
 | 109 | NDJSON output mode для validate/audit | §90 Cucumber Messages | MEDIUM | Machine-readable output |
 | 110 | 7 typed result statuses (PASSED/SKIPPED/PENDING/UNDEFINED/AMBIGUOUS/FAILED/UNKNOWN) | §90 Cucumber Messages | LOW | Precise diagnostics |
 | 111 | Stream processing pipeline (validate → audit → format) | §90 Cucumber Messages | LOW | Tool piping |
 | 112 | HTML export для audit/validate отчётов | §91 Cucumber HTML | MEDIUM | Browsable reports |
-| 113 | Embedded JSON data pattern в HTML | §91 Cucumber HTML | LOW | Interactive filtering |
+| 113 | ~~Embedded JSON data pattern в HTML~~ → **DECLINED** (зависит от item 112 HTML export; если 112 примем — вернуться) | §91 Cucumber HTML | — | — |
 | 114 | Cucumber Expression syntax в .feature ({int}, {string}) | §92 Reqnroll | MEDIUM | Readable steps |
 | 115 | Step registry с ambiguity detection | §92 Reqnroll | MEDIUM | Duplicate step detection |
-| 116 | Custom parameter types (VendorID, WarehouseCode) | §92 Reqnoll | LOW | Domain validation |
+| ~~116~~ | ~~Custom parameter types (VendorID, WarehouseCode)~~ | §92 Reqnoll | LOW | ~~DECLINED: зависит от #114 Cucumber Expressions; вернуться если #114 примем~~ |
 | 117 | Step Dictionary enrichment (frequency, params, cross-usage) | §93 CucumberStudio | MEDIUM | Richer step catalog |
-| 118 | Action Word pattern для step reuse | §93 CucumberStudio | LOW | Step reuse guidelines |
+| 118 | ~~Action Word pattern для step reuse~~ → **DECLINED** (дубль — покрывается item #117 Step Dictionary enrichment) | §93 CucumberStudio | — | — |
 | 119 | Change impact analysis (step → affected scenarios) | §93 CucumberStudio | LOW | Impact tracking |
 | 120 | Delta operations в CHANGELOG (ADDED/MODIFIED/REMOVED/RENAMED) | §94 OpenSpec | HIGH | Structured changelog |
 | 121 | Explicit dependency DAG (US→UC→FR→AC→.feature→TASKS) | §94 OpenSpec | MEDIUM | Traceable graph |
-| 122 | Archive/supersession pattern (.specs/.archive/) | §94 OpenSpec | LOW | Spec lifecycle |
+| 122 | ~~Archive/supersession pattern (.specs/.archive/)~~ → **DECLINED** (нет кейса; сделать за 5 мин когда понадобится) | §94 OpenSpec | — | — |
 | 123 | Scale-adaptive spec levels (Level 0-4) | §95 BMAD | HIGH | Right-sized specs |
 | 124 | [NEEDS CLARIFICATION] markers вместо галлюцинаций | §95 BMAD | HIGH | AI uncertainty handling |
 | 125 | Per-level templates в scaffold-spec (-Level 1\|2\|3) | §95 BMAD | MEDIUM | Template flexibility |
 | 126 | Sub-agent skills (/create-spec, /audit-spec) | §96 CLAUDE.md ecosystem | MEDIUM | Spec automation skills |
-| 127 | Rule count awareness (keep under 30) | §96 Addy Osmani | LOW | Config hygiene |
+| ~~127~~ | ~~Rule count awareness (keep under 30)~~ | §96 Addy Osmani | LOW | ~~DECLINED: рекомендация, не инструментарий; задокументировать в CLAUDE.md если нужно~~ |
 | 128 | SDD maturity roadmap (Level 2→2.5→3) | §96 Martin Fowler | LOW | Strategic planning |
 | 129 | Typed relations (verifiedBy, derivedFrom, implements) | §97 ReqIF/OSLC | MEDIUM | Semantic traceability |
 | 130 | GUID-like stable IDs (fr~user-login~1 вместо FR-1) | §97 ReqIF + §98 OFT | HIGH | Stable references |
-| 131 | Timestamp tracking per requirement (last-modified) | §97 ReqIF | LOW | Staleness detection |
+| ~~131~~ | ~~Timestamp tracking per requirement (last-modified)~~ | §97 ReqIF | LOW | ~~DECLINED: metadata noise; audit-spec ловит несинхронизированные refs без timestamp~~ |
 | 132 | Needs:/Covers: inline format в MD файлах | §98 OpenFastTrace | HIGH | Formal coverage |
 | 133 | CI fail-on-gap (audit --fail-on-gap) | §98 OpenFastTrace | MEDIUM | CI enforcement |
 | 134 | Multi-level traceability chain (req→dsn→impl→utest→itest) | §98 OpenFastTrace | MEDIUM | 5-level chain |
 | 135 | Spec drift detection в GitHub Actions (paths-filter) | §99 CI/CD | HIGH | PR-level drift check |
 | 136 | Coverage badge в README (dynamic color) | §99 CI/CD | MEDIUM | Visible coverage |
-| 137 | PR auto-comment с audit results | §99 CI/CD | LOW | Automated feedback |
+| 137 | ~~PR auto-comment с audit results~~ → **DECLINED** (GitHub Actions scope, вне нашего инструментария) | §99 CI/CD | — | — |
 | 138 | Prior Art обязательная секция в RESEARCH.md | §100 Rust RFC | MEDIUM | Competitor awareness |
 | 139 | YAML metadata file (spec.yaml: status, stage, authors) | §100 K8s KEP | MEDIUM | Structured metadata |
 | 140 | Backward Compatibility секция в DESIGN.md | §100 Go Proposals | MEDIUM | Breaking change awareness |
 | 141 | MUST/SHOULD/MAY keywords (RFC 2119) | §100 IETF RFC | LOW | Normative language |
-| 142 | Stage graduation (Draft→Review→Approved→Implementing→Done) | §100 K8s KEP | LOW | Lifecycle tracking |
-| 143 | PRR-like checklist (rollback, monitoring, scalability) | §100 K8s KEP | LOW | Production readiness |
+| ~~142~~ | ~~Stage graduation (Draft→Review→Approved→Implementing→Done)~~ | §100 K8s KEP | LOW | ~~DECLINED: дублирует STOP-точки + -ConfirmStop механизм; избыточный lifecycle~~ |
+| 143 | ~~PRR-like checklist (rollback, monitoring, scalability)~~ → **DECLINED** (дубль — покрывается item #160 Extension Readiness Questionnaire) | §100 K8s KEP | — | — |
 | 144 | Test conformance gate (BDD green before merge) | §100 TC39 | MEDIUM | Quality gate |
-| 145 | 7 SysML relationship types mapping | §98 SysML | LOW | Formal relation model |
+| 145 | ~~7 SysML relationship types mapping~~ → **DECLINED** (дубль — концепция покрыта item #129 Typed relations verifiedBy/derivedFrom/implements) | §98 SysML | — | — |
 | 146 | Repair agent pattern (auto-fix audit findings loop) | §101 Copilot Workspace | HIGH | Self-healing specs |
 | 147 | Issue-to-spec pipeline (scaffold-spec -FromIssue) | §101 Copilot Workspace | MEDIUM | GitHub integration |
 | 148 | Glob-scoped rule activation (frontmatter triggers) | §102 Cursor Rules | MEDIUM | Context-aware rules |
-| 149 | Community rule registry pattern | §102 Cursor Rules | LOW | Shareable rules |
+| ~~149~~ | ~~Community rule registry pattern~~ | §102 Cursor Rules | LOW | ~~DECLINED: организационное, не инструментарий; вне scope проекта~~ |
 | 150 | Read-only spec injection (FR.md cached, not editable) | §103 Aider | MEDIUM | Safe spec context |
-| 151 | Community CONVENTIONS.md per technology | §103 Aider | LOW | Tech-specific standards |
+| ~~151~~ | ~~Community CONVENTIONS.md per technology~~ | §103 Aider | LOW | ~~DECLINED: extensions/rules уже покрывают это; мета-tooling~~ |
 | 152 | Chat-to-spec audit trail (conversation → decisions) | §104 SpecStory | MEDIUM | Decision traceability |
-| 153 | Spec quality OTel metrics (time, findings, coverage) | §104 SpecStory | LOW | Quantitative spec quality |
+| ~~153~~ | ~~Spec quality OTel metrics (time, findings, coverage)~~ | §104 SpecStory | LOW | ~~DECLINED: тяжёлая инфраструктура; audit-spec уже даёт coverage %~~ |
 | 154 | Guard skill (/spec-guard real-time validation) | §104 SpecStory | LOW | Real-time compliance |
 | 155 | "Provisional" spec status (accepted but may change) | §105 Python PEP | MEDIUM | Maturity nuance |
 | 156 | "Rejected Ideas" обязательная секция в DESIGN.md | §105 Python PEP | MEDIUM | Prevent re-discussion |
-| 157 | Spec type taxonomy (feature/research/process) | §105 Python PEP | LOW | Spec classification |
+| ~~157~~ | ~~Spec type taxonomy (feature/research/process)~~ | §105 Python PEP | LOW | ~~DECLINED: scaffold намеренно создаёт полную структуру; -Type усложняет tooling без явной потребности~~ |
 | 158 | "Superseded-By" succession chains | §105 Python PEP | LOW | Spec lifecycle |
 | 159 | Testing gate as structural status (tests-ready) | §106 TC39 Stage 2.7 | HIGH | Hard quality gate |
 | 160 | Extension Readiness Questionnaire (10 questions) | §106 K8s KEP PRR | MEDIUM | Operational readiness |
-| 161 | Two implementations gate (prototype required) | §106 TC39 Stage 4 | LOW | Proof of implementability |
+| ~~161~~ | ~~Two implementations gate (prototype required)~~ | §106 TC39 Stage 4 | LOW | ~~DECLINED: мы один проект, не стандарт; нет независимых имплементоров~~ |
 
 ### Статистика v7
 
