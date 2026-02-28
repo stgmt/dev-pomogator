@@ -69,6 +69,11 @@ export async function runSemiInteractiveInstaller(
 ): Promise<void> {
   console.log(chalk.bold.cyan('\n🚀 dev-pomogator installer\n'));
   console.log(chalk.gray(`Platform: ${platforms.join(', ')}\n`));
+
+  if (!process.stdin.isTTY) {
+    console.log(chalk.gray('Non-interactive mode detected. Installing all plugins...\n'));
+    return await runNonInteractiveInstaller(platforms, { plugins: undefined });
+  }
   
   // Get extensions for selected platforms
   const allExtensions = await listExtensions();

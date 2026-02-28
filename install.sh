@@ -30,7 +30,7 @@ npm run build --silent > /dev/null 2>&1
 
 # Run installer (from original directory)
 cd "$ORIGINAL_DIR"
-node "$TMP_DIR/dist/index.js" $TARGET_FLAG
+node "$TMP_DIR/dist/index.js" $TARGET_FLAG --all
 
 # Cleanup
 rm -rf "$TMP_DIR"
