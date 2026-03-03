@@ -1,14 +1,18 @@
 # dev-pomogator installer for Windows
 # Usage (Cursor):      irm https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install.ps1 | iex
 # Usage (Claude Code): $env:TARGET="claude"; irm https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install.ps1 | iex
+# Usage (All):         $env:TARGET="all"; irm https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install.ps1 | iex
 
 $repo = "https://github.com/stgmt/dev-pomogator.git"
 $tmpDir = Join-Path $env:TEMP "dev-pomogator-$(Get-Random)"
 $originalDir = Get-Location
 
-# Determine target: claude or cursor (default)
-$target = if ($env:TARGET -eq "claude") { "--claude" } else { "--cursor" }
-$targetName = if ($env:TARGET -eq "claude") { "Claude Code" } else { "Cursor" }
+# Determine target: all, claude, or cursor (default)
+switch ($env:TARGET) {
+    "all"    { $target = "--cursor --claude"; $targetName = "Cursor + Claude Code" }
+    "claude" { $target = "--claude"; $targetName = "Claude Code" }
+    default  { $target = "--cursor"; $targetName = "Cursor" }
+}
 
 Write-Host "Installing dev-pomogator for $targetName..." -ForegroundColor Cyan
 
@@ -30,7 +34,7 @@ cmd /c "npm run build 2>nul >nul"
 # Run installer (from original directory)
 Set-Location $originalDir
 Write-Host "  Running installer..." -ForegroundColor Gray
-node "$tmpDir\dist\index.js" $target
+node "$tmpDir\dist\index.js" $target.Split(' ') --all
 
 # Cleanup
 Remove-Item -Recurse -Force $tmpDir -ErrorAction SilentlyContinue
