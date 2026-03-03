@@ -1188,6 +1188,24 @@ export async function getUpdateLog(): Promise<string> {
 }
 
 /**
+ * Get the path to the install log file
+ */
+export function getInstallLogPath(): string {
+  return homePath('.dev-pomogator', 'logs', 'install.log');
+}
+
+/**
+ * Read the install log file
+ */
+export async function getInstallLog(): Promise<string> {
+  const logPath = getInstallLogPath();
+  if (await fs.pathExists(logPath)) {
+    return fs.readFile(logPath, 'utf-8');
+  }
+  return '';
+}
+
+/**
  * Ensure the check-update.js script is installed (bundled version).
  * ALWAYS copies the bundled script from /app/dist to ~/.dev-pomogator/scripts/
  * to ensure we're testing the correct version with logging support.

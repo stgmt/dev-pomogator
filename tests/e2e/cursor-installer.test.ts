@@ -19,6 +19,9 @@ import {
   // Platform setup helpers
   setupCleanState,
   setupInstalledState,
+  // Logging helpers
+  getInstallLogPath,
+  getInstallLog,
 } from './helpers';
 
 describe('Scenario 1: Clean Install', () => {
@@ -1413,5 +1416,23 @@ describe('CORE002: Auto-update', () => {
       expect(await fs.readFile(ruleBackup, 'utf-8')).toBe('# User modified rule');
       expect(await fs.readFile(toolBackup, 'utf-8')).toBe('# User modified tool');
     });
+  });
+});
+
+describe('Install logging', () => {
+  it('should create install.log during installation', async () => {
+    const logPath = getInstallLogPath();
+    expect(await fs.pathExists(logPath)).toBe(true);
+  });
+
+  it('should log installation start with platforms and extensions', async () => {
+    const log = await getInstallLog();
+    expect(log).toContain('Installation started');
+    expect(log).toContain('platforms=');
+  });
+
+  it('should capture console output to install log', async () => {
+    const log = await getInstallLog();
+    expect(log).toContain('Installed rule:');
   });
 });

@@ -35,3 +35,17 @@ Feature: CORE001 Cursor Installer
     When I run "node dist/index.js --cursor --all"
     Then hooks.json should contain auto-commit hook in beforeSubmitPrompt
     And the hook command should include "python" and "auto_commit.py"
+
+  # ============================================================================
+  # Install Logging
+  # ============================================================================
+
+  Scenario: Install log is created during installation
+    When I run "node dist/index.js --cursor --all"
+    Then ~/.dev-pomogator/logs/install.log should exist
+    And install.log should contain "Installation started"
+    And install.log should contain "platforms="
+
+  Scenario: Install log captures console output
+    When I run "node dist/index.js --cursor --all"
+    Then install.log should contain "Installed rule:"

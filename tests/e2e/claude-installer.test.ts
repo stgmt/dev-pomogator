@@ -8,6 +8,8 @@ import {
   getDevPomogatorConfig,
   // Platform setup helpers
   setupCleanState,
+  // Logging helpers
+  getInstallLog,
 } from './helpers';
 
 /**
@@ -426,5 +428,13 @@ describe('CORE003-Claude-mem: claude-mem installed for Claude platform', () => {
     expect(config.mcpServers?.['claude-mem']).toBeDefined();
     expect(config.mcpServers['claude-mem'].command).toBe('node');
     expect(config.mcpServers['claude-mem'].args[0]).toContain('mcp-server.cjs');
+  });
+});
+
+describe('CORE003: Install logging for Claude Code', () => {
+  it('should log Claude Code installation to install.log', async () => {
+    const log = await getInstallLog();
+    expect(log).toContain('Installation started');
+    expect(log).toContain('claude');
   });
 });
