@@ -41,6 +41,56 @@ interface ValidatorConfig {
 }
 
 /**
+ * Phase state in .progress.json
+ */
+interface PhaseState {
+  completedAt: string | null;
+  stopConfirmed: boolean;
+  stopConfirmedAt: string | null;
+}
+
+/**
+ * .progress.json schema
+ */
+interface ProgressState {
+  version: number;
+  featureSlug: string;
+  createdAt: string;
+  currentPhase: string;
+  phases: {
+    Discovery: PhaseState;
+    Context: PhaseState;
+    Requirements: PhaseState;
+    Finalization: PhaseState;
+  };
+}
+
+/**
+ * Files belonging to each phase (used for phase gate detection)
+ */
+const PHASE_FILES: Record<string, string[]> = {
+  Discovery: ['USER_STORIES.md', 'USE_CASES.md', 'RESEARCH.md'],
+  Context: [], // sub-check of RESEARCH.md, no additional files
+  Requirements: ['REQUIREMENTS.md', 'FR.md', 'NFR.md', 'ACCEPTANCE_CRITERIA.md', 'DESIGN.md', 'FILE_CHANGES.md'],
+  Finalization: ['TASKS.md', 'README.md', 'CHANGELOG.md'],
+};
+
+/**
+ * Phase order for gate checking
+ */
+const PHASE_ORDER = ['Discovery', 'Context', 'Requirements', 'Finalization'];
+
+/**
+ * STOP point labels per phase
+ */
+const STOP_LABELS: Record<string, string> = {
+  Discovery: 'STOP #1',
+  Context: 'STOP #1.5',
+  Requirements: 'STOP #2',
+  Finalization: 'STOP #3',
+};
+
+/**
  * Get home directory (cross-platform)
  */
 function getHomeDir(): string {
@@ -150,6 +200,73 @@ function validateSpec(spec: SpecCompleteness): void {
 }
 
 /**
+ * Read .progress.json from a spec directory
+ */
+function readProgressState(specPath: string): ProgressState | null {
+  const progressPath = path.join(specPath, '.progress.json');
+  if (!fs.existsSync(progressPath)) return null;
+  try {
+    const content = fs.readFileSync(progressPath, 'utf-8');
+    return JSON.parse(content) as ProgressState;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Check if the prompt mentions files from a phase that hasn't been confirmed yet.
+ * Returns array of warning strings to print.
+ */
+function checkPhaseGate(
+  specName: string,
+  progress: ProgressState,
+  prompt: string,
+): string[] {
+  const warnings: string[] = [];
+  const currentPhaseIdx = PHASE_ORDER.indexOf(progress.currentPhase);
+  if (currentPhaseIdx < 0) return warnings;
+
+  // Check each phase after current
+  for (let i = currentPhaseIdx + 1; i < PHASE_ORDER.length; i++) {
+    const futurePhaseName = PHASE_ORDER[i];
+    const futurePhaseFiles = PHASE_FILES[futurePhaseName] || [];
+
+    const mentionedFiles = futurePhaseFiles.filter(f => prompt.includes(f));
+    if (mentionedFiles.length === 0) continue;
+
+    // Check if current phase stop is confirmed
+    const currentPhaseName = PHASE_ORDER[currentPhaseIdx];
+    const currentPhaseState = progress.phases[currentPhaseName as keyof typeof progress.phases];
+
+    if (currentPhaseState && !currentPhaseState.stopConfirmed) {
+      const stopLabel = STOP_LABELS[currentPhaseName] || `STOP for ${currentPhaseName}`;
+      warnings.push(
+        `[specs-validator] PHASE GATE WARNING for "${specName}": ` +
+        `Attempting to work on ${futurePhaseName} files (${mentionedFiles.join(', ')}) ` +
+        `but ${stopLabel} (${currentPhaseName}) has not been confirmed. ` +
+        `Run: spec-status.ps1 -Path ".specs/${specName}" -ConfirmStop ${currentPhaseName}`
+      );
+    }
+  }
+
+  return warnings;
+}
+
+/**
+ * Find all spec directories (complete and incomplete)
+ */
+function findAllSpecDirs(specsRoot: string): string[] {
+  try {
+    const entries = fs.readdirSync(specsRoot, { withFileTypes: true });
+    return entries
+      .filter(e => e.isDirectory())
+      .map(e => path.join(specsRoot, e.name));
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Main entry point
  */
 async function main(): Promise<void> {
@@ -177,15 +294,25 @@ async function main(): Promise<void> {
       return; // Disabled, exit silently
     }
 
-    // 4. Find complete specs (13 files)
+    // 4. Find complete specs (13 files) and validate @featureN coverage
     const completeSpecs = findCompleteSpecs(specsRoot);
-    if (completeSpecs.length === 0) {
-      return; // No complete specs, exit silently
-    }
-
-    // 5. Validate each complete spec
     for (const spec of completeSpecs) {
       validateSpec(spec);
+    }
+
+    // 5. Phase gate check for ALL specs with .progress.json
+    if (input.prompt) {
+      const allSpecDirs = findAllSpecDirs(specsRoot);
+      for (const specDir of allSpecDirs) {
+        const specName = path.basename(specDir);
+        const progress = readProgressState(specDir);
+        if (!progress) continue; // no .progress.json = old spec, skip
+
+        const phaseWarnings = checkPhaseGate(specName, progress, input.prompt);
+        for (const w of phaseWarnings) {
+          console.log(w);
+        }
+      }
     }
 
   } catch (err) {

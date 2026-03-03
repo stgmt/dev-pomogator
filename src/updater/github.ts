@@ -22,6 +22,9 @@ export interface ExtensionManifest {
   toolFiles?: {
     [toolName: string]: string[];
   };
+  skillFiles?: {
+    [skillName: string]: string[];
+  };
   hooks?: {
     cursor?: Record<string, string>;
     claude?: Record<string, string>;
@@ -74,9 +77,12 @@ export async function downloadExtensionFile(
   extensionName: string,
   relativePath: string
 ): Promise<string | null> {
-  // toolFiles in extension.json use target project paths (.dev-pomogator/tools/...)
-  // but source files on GitHub are at extensions/{name}/tools/... (no .dev-pomogator/ prefix)
-  const remotePath = relativePath.replace(/^\.dev-pomogator\//, '');
+  // toolFiles/skillFiles in extension.json use target project paths
+  // (.dev-pomogator/tools/... or .claude/skills/...) but source files on GitHub
+  // are at extensions/{name}/tools/... or extensions/{name}/skills/...
+  const remotePath = relativePath
+    .replace(/^\.dev-pomogator\//, '')
+    .replace(/^\.claude\//, '');
   const url = `${RAW_BASE}/extensions/${extensionName}/${remotePath}`;
   const response = await fetchWithRetry(url);
   if (!response) return null;

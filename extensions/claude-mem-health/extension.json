@@ -1,0 +1,23 @@
+{
+  "name": "claude-mem-health",
+  "version": "1.0.0",
+  "description": "Health-check и auto-restart для Chroma vector DB (claude-mem)",
+  "platforms": ["claude"],
+  "category": "automation",
+  "files": {
+    "claude": []
+  },
+  "tools": {
+    "claude-mem-health": "tools/claude-mem-health"
+  },
+  "toolFiles": {
+    "claude-mem-health": [
+      ".dev-pomogator/tools/claude-mem-health/health-check.ts"
+    ]
+  },
+  "hooks": {
+    "claude": {
+      "SessionStart": "npx tsx .dev-pomogator/tools/claude-mem-health/health-check.ts"
+    }
+  }
+}

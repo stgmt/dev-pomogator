@@ -383,14 +383,14 @@ foreach ($fileName in $filesToCheck) {
             }
         }
 
-        if ($id -notin $termMap[$normalized].variants) {
+        if ($id -cnotin $termMap[$normalized].variants) {
             $termMap[$normalized].variants += $id
         }
 
         if (-not $termMap[$normalized].files.ContainsKey($fileName)) {
             $termMap[$normalized].files[$fileName] = @()
         }
-        if ($id -notin $termMap[$normalized].files[$fileName]) {
+        if ($id -cnotin $termMap[$normalized].files[$fileName]) {
             $termMap[$normalized].files[$fileName] += $id
         }
     }

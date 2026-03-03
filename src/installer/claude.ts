@@ -3,10 +3,10 @@ import path from 'path';
 import os from 'os';
 import chalk from 'chalk';
 import { fileURLToPath } from 'url';
-import { listExtensions, getExtensionFiles, getExtensionRules, getExtensionTools, getExtensionHooks, runPostInstallHook, Extension } from './extensions.js';
+import { listExtensions, getExtensionFiles, getExtensionRules, getExtensionTools, getExtensionSkills, getExtensionHooks, runPostInstallHook, Extension } from './extensions.js';
 import type { ManagedFileEntry, ManagedFiles } from '../config/schema.js';
 import { findRepoRoot } from '../utils/repo.js';
-import { RULES_SUBFOLDER, TOOLS_DIR } from '../constants.js';
+import { RULES_SUBFOLDER, TOOLS_DIR, SKILLS_DIR } from '../constants.js';
 import { getFileHash } from '../updater/content-hash.js';
 import { collectFileHashes, addProjectPaths } from './shared.js';
 
@@ -140,7 +140,31 @@ export async function installClaude(options: ClaudeOptions = {}): Promise<void> 
     }
   }
 
-  // 4. Install extension hooks to project .claude/settings.json
+  // 4. Install skills to project/.claude/skills/ (Claude Code only)
+  for (const extension of extensionsToInstall) {
+    const skills = await getExtensionSkills(extension);
+    const managedSkills: ManagedFileEntry[] = [];
+
+    for (const [skillName, skillPath] of skills) {
+      if (await fs.pathExists(skillPath)) {
+        const dest = path.join(repoRoot, SKILLS_DIR, skillName);
+        await fs.copy(skillPath, dest, { overwrite: true });
+        console.log(`  ✓ Installed skill: ${skillName}/`);
+
+        const skillFiles = await collectFileHashes(dest, path.join(SKILLS_DIR, skillName));
+        managedSkills.push(...skillFiles);
+      }
+    }
+
+    if (!managedByExtension.has(extension.name)) {
+      managedByExtension.set(extension.name, {});
+    }
+    if (managedSkills.length > 0) {
+      managedByExtension.get(extension.name)!.skills = managedSkills;
+    }
+  }
+
+  // 5. Install extension hooks to project .claude/settings.json
   const installedHooks = await installExtensionHooks(repoRoot, extensionsToInstall);
 
   // Store hook info in managed data
@@ -151,7 +175,7 @@ export async function installClaude(options: ClaudeOptions = {}): Promise<void> 
     managedByExtension.get(extName)!.hooks = hookData;
   }
 
-  // 5. Generate .dev-pomogator/.claude-plugin/plugin.json (Claude Code plugin metadata)
+  // 6. Generate .dev-pomogator/.claude-plugin/plugin.json (Claude Code plugin metadata)
   const pluginDir = path.join(repoRoot, '.dev-pomogator', '.claude-plugin');
   await fs.ensureDir(pluginDir);
 
@@ -164,11 +188,24 @@ export async function installClaude(options: ClaudeOptions = {}): Promise<void> 
     // fallback version if package.json not found
   }
 
-  const pluginJsonContent = {
+  // Collect installed skills for plugin metadata
+  const installedSkills: Array<{ name: string; path: string }> = [];
+  for (const ext of extensionsToInstall) {
+    if (ext.skills) {
+      for (const skillName of Object.keys(ext.skills)) {
+        installedSkills.push({ name: skillName, path: `${SKILLS_DIR}/${skillName}` });
+      }
+    }
+  }
+
+  const pluginJsonContent: Record<string, unknown> = {
     name: 'dev-pomogator',
     version: packageVersion,
     description: `Installed extensions: ${extensionsToInstall.map(e => e.name).join(', ')}`,
   };
+  if (installedSkills.length > 0) {
+    pluginJsonContent.skills = installedSkills;
+  }
 
   const pluginJsonPath = path.join(pluginDir, 'plugin.json');
   await fs.writeJson(pluginJsonPath, pluginJsonContent, { spaces: 2 });
@@ -186,17 +223,17 @@ export async function installClaude(options: ClaudeOptions = {}): Promise<void> 
     firstExtManaged.tools.push({ path: '.dev-pomogator/.claude-plugin/plugin.json', hash: pluginJsonHash });
   }
 
-  // 6. Run post-install hooks for extensions that have them
+  // 7. Run post-install hooks for extensions that have them
   for (const extension of extensionsToInstall) {
     if (extension.postInstall) {
       await runPostInstallHook(extension, repoRoot, 'claude');
     }
   }
 
-  // 7. Always persist managed data for tracking
+  // 8. Always persist managed data for tracking
   await addProjectPaths(repoRoot, extensionsToInstall, 'claude', managedByExtension);
 
-  // 8. Setup auto-update hooks if enabled
+  // 9. Setup auto-update hooks if enabled
   if (options.autoUpdate !== false) {
     await setupClaudeHooks();
     await setupGlobalScripts();

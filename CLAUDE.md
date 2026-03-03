@@ -15,6 +15,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `.\extensions\specs-workflow\tools\specs-generator\scaffold-spec.ps1 -Name "feature"` | Scaffold spec structure |
 | `.\extensions\specs-workflow\tools\specs-generator\validate-spec.ps1 -Path ".specs/feature"` | Validate spec formats |
 | `.\extensions\specs-workflow\tools\specs-generator\audit-spec.ps1 -Path ".specs/feature"` | Audit spec cross-references |
+| `.\extensions\specs-workflow\tools\specs-generator\spec-status.ps1 -Path ".specs/feature" -ConfirmStop Discovery` | Confirm STOP point |
 | `.\extensions\specs-workflow\tools\specs-generator\analyze-features.ps1 -Format text` | Analyze .feature file patterns |
 
 ## Architecture

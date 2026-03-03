@@ -46,6 +46,10 @@ export interface Extension {
   tools?: {
     [toolName: string]: string; // name -> relative path in extension
   };
+  // Skills to install to project/.claude/skills/ (Claude Code only)
+  skills?: {
+    [skillName: string]: string; // name -> relative path in extension
+  };
   // IDE hooks to install
   hooks?: ExtensionHooks;
   // Post-install hook to run after extension is installed
@@ -161,6 +165,21 @@ export async function getExtensionTools(
     }
   }
   return tools;
+}
+
+/**
+ * Get map of skill_name -> absolute_path for extension skills (Claude Code only)
+ */
+export async function getExtensionSkills(
+  extension: Extension
+): Promise<Map<string, string>> {
+  const skills = new Map<string, string>();
+  if (extension.skills) {
+    for (const [name, relativePath] of Object.entries(extension.skills)) {
+      skills.set(name, path.join(extension.path, relativePath));
+    }
+  }
+  return skills;
 }
 
 /**

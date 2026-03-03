@@ -261,6 +261,57 @@ Project.Tests/
 
 ---
 
+## Hooks (BeforeScenario / AfterScenario)
+
+### Паттерн: Cleanup Hook
+
+```csharp
+[Binding]
+public class {Feature}Hooks
+{
+    private readonly ScenarioContext _scenarioContext;
+    private readonly IApiClient _apiClient;
+
+    public {Feature}Hooks(ScenarioContext scenarioContext, IApiClient apiClient)
+    {
+        _scenarioContext = scenarioContext;
+        _apiClient = apiClient;
+    }
+
+    [AfterScenario("{FeatureTag}", Order = 1000)]
+    public async Task Cleanup{Feature}Data()
+    {
+        // Cleanup в обратном порядке зависимостей
+        if (_scenarioContext.TryGetValue<string>("AutoCreatedChildId", out var childId))
+            await _apiClient.DeleteAsync($"/child-entities/{childId}");
+
+        if (_scenarioContext.TryGetValue<string>("AutoCreatedParentId", out var parentId))
+            await _apiClient.DeleteAsync($"/parent-entities/{parentId}");
+    }
+}
+```
+
+### Правила hooks
+
+| Правило | Описание |
+|---------|----------|
+| `[Binding]` | Обязательный атрибут класса |
+| Tag filter | `[AfterScenario("TagName")]` — только для сценариев с тегом |
+| Order | `Order = 1000` — после основных шагов |
+| DI | ScenarioContext и сервисы через конструктор |
+| Cleanup order | Обратный порядок зависимостей (child → parent) |
+| Error handling | `try/catch` с логированием, не блокировать другие cleanups |
+
+### Типичные Shared Context Keys
+
+| Ключ | Тип | Записывает | Читает |
+|------|-----|------------|--------|
+| `AutoCreated{Entity}Id` | `string` | When step (создание) | AfterScenario (cleanup) |
+| `TenantId` | `Guid` | Given step (setup) | Steps + Hooks |
+| `SkipCleanup` | `bool` | Given step (debug) | AfterScenario (skip) |
+
+---
+
 ## Классификация по Strictness
 
 | Step Type | Strictness | Требования |

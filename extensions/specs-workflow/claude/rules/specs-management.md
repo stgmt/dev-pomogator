@@ -25,6 +25,7 @@
 ├── DESIGN.md              # Архитектура, компоненты, API
 ├── TASKS.md               # План задач с чеклистами
 ├── FILE_CHANGES.md        # Список изменяемых файлов
+├── CHANGELOG.md           # Changelog (Keep-a-Changelog)
 ├── {feature-slug}.feature # BDD сценарии (Gherkin)
 └── *_SCHEMA.md            # (опционально) Схемы данных
 ```
@@ -39,7 +40,8 @@
 |--------|------------|--------|
 | `scaffold-spec.ps1` | Создание структуры | `.\.dev-pomogator\tools\specs-generator\scaffold-spec.ps1 -Name "my-feature"` |
 | `validate-spec.ps1` | Валидация форматов | `.\.dev-pomogator\tools\specs-generator\validate-spec.ps1 -Path ".specs/my-feature"` |
-| `spec-status.ps1` | Отчёт о прогрессе | `.\.dev-pomogator\tools\specs-generator\spec-status.ps1 -Path ".specs/my-feature"` |
+| `spec-status.ps1` | Отчёт о прогрессе + state machine | `.\.dev-pomogator\tools\specs-generator\spec-status.ps1 -Path ".specs/my-feature"` |
+| `spec-status.ps1 -ConfirmStop` | Подтверждение СТОП-точки | `.\.dev-pomogator\tools\specs-generator\spec-status.ps1 -Path ".specs/my-feature" -ConfirmStop Discovery` |
 | `fill-template.ps1` | Заполнение плейсхолдеров | `.\.dev-pomogator\tools\specs-generator\fill-template.ps1 -File "..." -ListPlaceholders` |
 | `list-specs.ps1` | Список всех спеков | `.\.dev-pomogator\tools\specs-generator\list-specs.ps1` |
 | `audit-spec.ps1` | Аудит кросс-ссылок | `.\.dev-pomogator\tools\specs-generator\audit-spec.ps1 -Path ".specs/my-feature"` |
@@ -66,6 +68,7 @@
 6. Проверить статус: `.\.dev-pomogator\tools\specs-generator\spec-status.ps1 -Path ".specs/{feature}"`
 
 **СТОП #1:** Показать результаты Discovery, спросить подтверждение.
+После подтверждения: `.\.dev-pomogator\tools\specs-generator\spec-status.ps1 -Path ".specs/{feature}" -ConfirmStop Discovery`
 
 ---
 
@@ -84,11 +87,13 @@
 2. Просканировать `.claude/rules/*.md` — найти правила, релевантные ключевым словам
 3. Просканировать `extensions/*/extension.json` — найти расширения, пересекающиеся по домену
 4. Просканировать существующий код, упомянутый в USE_CASES — найти паттерны для reuse
-5. Заполнить секцию `## Project Context & Constraints` в RESEARCH.md:
+5. Просканировать `**/Hooks/`, `**/hooks/`, `**/support/` — найти существующие BDD hooks (BeforeScenario/AfterScenario, setup/teardown, environment hooks)
+6. Если фича создаёт/изменяет тестовые данные — записать найденные hooks в `### Existing Patterns & Extensions` с рекомендациями по аналогии
+7. Заполнить секцию `## Project Context & Constraints` в RESEARCH.md:
    - `### Relevant Rules` — таблица: Rule | Path | Summary | Triggered By | Impacts
    - `### Existing Patterns & Extensions` — таблица: Source | Path | What It Provides | Relevance
    - `### Architectural Constraints Summary` — как ограничения влияют на будущие FR/NFR
-6. Проверить статус: `.\.dev-pomogator\tools\specs-generator\spec-status.ps1 -Path ".specs/{feature}"`
+8. Проверить статус: `.\.dev-pomogator\tools\specs-generator\spec-status.ps1 -Path ".specs/{feature}"`
 
 **При пропуске:** записать в RESEARCH.md:
 ```
@@ -97,6 +102,7 @@
 ```
 
 **СТОП #1.5:** Показать найденные ограничения проекта, спросить подтверждение перед Phase 2.
+После подтверждения: `.\.dev-pomogator\tools\specs-generator\spec-status.ps1 -Path ".specs/{feature}" -ConfirmStop Context`
 
 ---
 
@@ -110,8 +116,13 @@
 3. Заполнить ACCEPTANCE_CRITERIA.md (EARS формат)
 4. Заполнить REQUIREMENTS.md (индекс ссылок)
 5. Заполнить DESIGN.md
-6. Заполнить FILE_CHANGES.md
-7. **Анализ паттернов .feature (ОБЯЗАТЕЛЬНО перед написанием .feature):**
+6. Заполнить секцию "BDD Test Infrastructure" в DESIGN.md (если фича создаёт/изменяет тестовые данные):
+   - Найти существующие hooks по аналогии (из Phase 1.5)
+   - Спроектировать новые hooks (класс/модуль, тег/scope, cleanup order)
+   - Определить shared context keys для передачи данных между steps и hooks
+   - Если не применимо — N/A или удалить секцию
+7. Заполнить FILE_CHANGES.md
+8. **Анализ паттернов .feature (ОБЯЗАТЕЛЬНО перед написанием .feature):**
    `.\.dev-pomogator\tools\specs-generator\analyze-features.ps1 -Format text [-FeatureSlug "{slug}"] [-DomainCode "{DOMAIN}"]`
    На основе отчёта:
    - Использовать Background из самого частого паттерна (не выдумывать)
@@ -122,11 +133,12 @@
    - **Serial/Batch items**: использовать отдельные When-шаги без таблиц (как в реальных тестах)
    - **Assertions**: копировать формулировки Then из Assertion Patterns
    - Если есть кандидаты — взять за основу, указать `# Source:`
-8. Создать {feature-slug}.feature (по правилам ниже, опираясь на отчёт analyze-features)
-9. Валидация: `.\.dev-pomogator\tools\specs-generator\validate-spec.ps1 -Path ".specs/{feature}"`
-10. Исправить ошибки если есть
+9. Создать {feature-slug}.feature (по правилам ниже, опираясь на отчёт analyze-features)
+10. Валидация: `.\.dev-pomogator\tools\specs-generator\validate-spec.ps1 -Path ".specs/{feature}"`
+11. Исправить ошибки если есть
 
 **СТОП #2:** Показать Requirements + Design, спросить подтверждение.
+После подтверждения: `.\.dev-pomogator\tools\specs-generator\spec-status.ps1 -Path ".specs/{feature}" -ConfirmStop Requirements`
 
 ---
 
@@ -187,7 +199,7 @@
 
 **Алгоритм:**
 1. Заполнить TASKS.md **по TDD-порядку:**
-   - **Phase 0 (Red):** .feature файл + step definitions (заглушки) -- ПЕРВЫЕ задачи
+   - **Phase 0 (Red):** .feature файл + step definitions + hooks (заглушки) -- ПЕРВЫЕ задачи
    - **Phase 1-N (Green):** Реализация бизнес-логики, где каждая группа задач привязана к @featureN сценариям
    - **Последний Phase (Refactor):** Рефакторинг + финальная верификация всех сценариев
    - Каждая задача реализации ОБЯЗАНА ссылаться на @featureN сценарий
@@ -196,13 +208,14 @@
 3. Финальная валидация
 
 **Правила TDD-порядка в TASKS.md:**
-- .feature и step definitions -- ВСЕГДА Phase 0 (первые задачи)
+- .feature, step definitions, и hooks -- ВСЕГДА Phase 0 (первые задачи)
 - Зависимости реализации: implementation задачи зависят от Phase 0
 - Каждая implementation задача содержит `@featureN` тег
 - Каждый Phase содержит verify-шаг (Red->Green проверка)
 - Рефакторинг -- ПОСЛЕДНИЙ Phase (после всех Green)
 
 **СТОП #3:** Финальный отчёт со summary.
+После подтверждения: `.\.dev-pomogator\tools\specs-generator\spec-status.ps1 -Path ".specs/{feature}" -ConfirmStop Finalization`
 
 ---
 

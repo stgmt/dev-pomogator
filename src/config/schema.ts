@@ -20,6 +20,7 @@ export interface ManagedFiles {
   commands?: ManagedFileItem[];
   rules?: ManagedFileItem[];
   tools?: ManagedFileItem[];
+  skills?: ManagedFileItem[];
   hooks?: Record<string, string[]>;
 }
 

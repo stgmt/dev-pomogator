@@ -12,7 +12,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
 import semver from 'semver';
-import { RULES_SUBFOLDER, TOOLS_DIR } from '../constants.js';
+import { RULES_SUBFOLDER, TOOLS_DIR, SKILLS_DIR } from '../constants.js';
 
 interface UpdateOptions {
   force?: boolean;
@@ -254,6 +254,51 @@ async function updateToolFiles(
   return { written, hadFailures, backedUp };
 }
 
+async function updateSkillFiles(
+  extensionName: string,
+  skillFiles: Record<string, string[]>,
+  projectPath: string,
+  previousItems?: ManagedFiles['skills']
+): Promise<UpdateResult> {
+  const allFiles = Object.values(skillFiles).flat();
+  if (allFiles.length === 0) return { written: [], hadFailures: false, backedUp: [] };
+
+  const written: ManagedFileEntry[] = [];
+  const backedUp: ModifiedFile[] = [];
+  let hadFailures = false;
+  for (const relativePath of allFiles) {
+    const content = await downloadExtensionFile(extensionName, relativePath);
+    const destFile = resolveWithinProject(projectPath, relativePath);
+    if (!destFile) {
+      console.log(`  ⚠ Skipping skill file outside project: ${relativePath}`);
+      hadFailures = true;
+      continue;
+    }
+    await fs.ensureDir(path.dirname(destFile));
+    const normalizedPath = normalizeRelativePath(relativePath);
+    if (!content) {
+      console.log(`  ⚠ Failed to download skill file: ${relativePath}`);
+      hadFailures = true;
+      continue;
+    }
+
+    // Check for user modifications before overwriting
+    const storedHash = getManagedHash(previousItems, normalizedPath);
+    if (await shouldBackupFile(destFile, storedHash, content)) {
+      const backupPath = await backupUserFile(projectPath, normalizedPath);
+      if (backupPath) {
+        console.log(`  📋 Backed up user-modified skill: ${normalizedPath}`);
+        backedUp.push({ relativePath: normalizedPath, backupPath, extensionName });
+      }
+    }
+
+    await fs.writeFile(destFile, content, 'utf-8');
+    written.push({ path: normalizedPath, hash: computeHash(content) });
+  }
+
+  return { written, hadFailures, backedUp };
+}
+
 async function updateCursorHooksForProject(
   repoRoot: string,
   hooks: Record<string, string>,
@@ -471,6 +516,7 @@ export async function checkUpdate(options: UpdateOptions = {}): Promise<boolean>
           : [`${installed.platform}/commands/${installed.name}.md`];
         const ruleFiles = remote.rules?.[installed.platform] ?? [];
         const toolFiles = remote.toolFiles ?? {};
+        const skillFiles = installed.platform === 'claude' ? (remote.skillFiles ?? {}) : {};
         const hooks = remote.hooks?.[installed.platform] ?? {};
 
         for (const projectPath of installed.projectPaths) {
@@ -480,6 +526,7 @@ export async function checkUpdate(options: UpdateOptions = {}): Promise<boolean>
               commands: getManagedPaths(managedEntry.commands),
               rules: getManagedPaths(managedEntry.rules),
               tools: getManagedPaths(managedEntry.tools),
+              skills: getManagedPaths(managedEntry.skills),
             };
 
             const commandResult = await updateCommandFiles(
@@ -502,17 +549,25 @@ export async function checkUpdate(options: UpdateOptions = {}): Promise<boolean>
               projectPath,
               managedEntry.tools
             );
+            const skillResult = await updateSkillFiles(
+              installed.name,
+              skillFiles,
+              projectPath,
+              managedEntry.skills
+            );
 
             // Collect backed-up files
             allBackedUp.push(
               ...commandResult.backedUp,
               ...ruleResult.backedUp,
-              ...toolResult.backedUp
+              ...toolResult.backedUp,
+              ...skillResult.backedUp
             );
 
             const writtenCommandPaths = commandResult.written.map((e) => e.path);
             const writtenRulePaths = ruleResult.written.map((e) => e.path);
             const writtenToolPaths = toolResult.written.map((e) => e.path);
+            const writtenSkillPaths = skillResult.written.map((e) => e.path);
 
             if (!commandResult.hadFailures) {
               await removeStaleFiles(projectPath, previousManagedPaths.commands, writtenCommandPaths);
@@ -533,6 +588,13 @@ export async function checkUpdate(options: UpdateOptions = {}): Promise<boolean>
               managedEntry.tools = toolResult.written;
             } else {
               console.log(`  ⚠ Skipping tools cleanup for ${installed.name} in ${projectPath}`);
+            }
+
+            if (!skillResult.hadFailures) {
+              await removeStaleFiles(projectPath, previousManagedPaths.skills, writtenSkillPaths);
+              managedEntry.skills = skillResult.written;
+            } else {
+              console.log(`  ⚠ Skipping skills cleanup for ${installed.name} in ${projectPath}`);
             }
 
             const previousHooks = managedEntry.hooks ?? {};

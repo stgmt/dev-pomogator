@@ -1,12 +1,22 @@
 {
   "name": "suggest-rules",
-  "version": "1.3.0",
+  "version": "1.5.0",
   "description": "Анализ сессии и предложение правил для IDE",
   "platforms": ["cursor", "claude"],
   "category": "workflow",
   "files": {
     "cursor": ["cursor/commands/suggest-rules.md"],
     "claude": ["claude/commands/suggest-rules.md"]
+  },
+  "skills": {
+    "deep-insights": "skills/deep-insights"
+  },
+  "skillFiles": {
+    "deep-insights": [
+      ".claude/skills/deep-insights/SKILL.md",
+      ".claude/skills/deep-insights/scripts/aggregate-facets.sh",
+      ".claude/skills/deep-insights/references/facets-schema.md"
+    ]
   },
   "requiresClaudeMem": true
 }

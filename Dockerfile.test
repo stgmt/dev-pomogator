@@ -5,6 +5,11 @@ RUN apt-get update && apt-get install -y git curl unzip python3 python3-pip pyth
     apt-get clean && rm -rf /var/lib/apt/lists/* && \
     ln -s /usr/bin/python3 /usr/bin/python
 
+# Install Python chromadb for Chroma vector DB server
+# npm chromadb CLI is broken on many platforms (missing semver dependency),
+# so we use Python chromadb which provides a working 'chroma' binary.
+RUN pip3 install --break-system-packages chromadb
+
 # Install PowerShell Core
 RUN wget -q https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb && \
     dpkg -i packages-microsoft-prod.deb && \
@@ -46,6 +51,9 @@ RUN (for i in 1 2 3; do \
     bun run build) || echo "WARNING: claude-mem pre-cache failed, will clone at runtime"
 
 WORKDIR /home/testuser/app
+
+# Cache-bust arg to force COPY refresh when test files change
+ARG CACHEBUST=1
 
 # Copy all source code (may include Windows node_modules)
 COPY --chown=testuser:testuser . .

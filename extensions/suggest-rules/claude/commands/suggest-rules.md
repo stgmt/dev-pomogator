@@ -95,19 +95,157 @@ search({ query: bugfix_query, obs_type: "bugfix", limit: 10 })
 
 > **ВАЖНО:** Параметр `obs_type`, НЕ `type`!
 
-### Шаг 3: Показать режим работы
+### Шаг 3: Показать режим работы (предварительный)
 
-**ПЕРВОЙ строкой ответа выведи:**
+**Вывести предварительный статус памяти:**
 
-| Результат | Режим | Что показать |
-|-----------|-------|--------------|
-| ✅ Найдено N записей | **Full** | `🔍 Режим: Full (память + сессия) — N записей` |
-| ⚠️ Все 3 запроса пусты | **Session-only** | `🔍 Режим: Session-only (нет данных в памяти)` |
-| ❌ MCP недоступен | **Session-only** | `🔍 Режим: Session-only (MCP недоступен)` |
+| Результат | Что показать |
+|-----------|--------------|
+| ✅ Найдено N записей | `🧠 Память: N записей (project: <имя>)` |
+| ⚠️ Все 3 запроса пусты | `🧠 Память: нет данных` |
+| ❌ MCP недоступен | `🧠 Память: MCP недоступен` |
+
+> **Финальная строка режима выводится ПОСЛЕ Phase -0.5** (когда известен статус insights).
 
 ### Шаг 4-5: Scoring и Timeline
 
 См. основную документацию по scoring (relevance 40%, recency 30%, impact 20%, type 10%) и timeline enrichment.
+
+---
+
+## Phase -0.5: Insights Context — КРОСС-СЕССИОННЫЕ ПАТТЕРНЫ
+
+> **Claude Code only.** Использует skill `/deep-insights` для глубокого анализа кросс-сессионных данных.
+> Пропускается автоматически если данные отсутствуют или платформа — Cursor.
+
+### Шаг 1: Invoke Deep Insights Skill
+
+**Вызвать skill через Skill tool:**
+
+```
+Skill("deep-insights")
+```
+
+Skill выполняет:
+- Агрегацию ALL facets JSON (~50+ файлов) из `~/.claude/usage-data/facets/`
+- Кросс-корреляцию friction↔outcome
+- Анализ tool errors и workflow patterns
+- Чтение report.html для CLAUDE.md suggestions и big wins
+
+**Если skill недоступен** (не установлен или ошибка):
+→ Fallback к прямому чтению report.html (легаси-режим, см. ниже).
+
+### Шаг 2: Consume Structured Output
+
+Skill возвращает structured analysis:
+
+| Секция | Что получаем | Как использовать |
+|--------|-------------|-----------------|
+| `Freshness` | status, date range, N sessions | Определяет `insights_mode` (fresh/stale/missing) |
+| `Friction Trends` | type, count, trend, correlated_outcome | Pre-candidates: 🔴 antipattern / ⚠️ gotcha |
+| `Satisfaction` | happy/satisfied/frustrated + trend | Context для общей оценки |
+| `Tool Errors` | error pattern, count, suggested_gotcha | Готовые gotcha pre-candidates |
+| `Workflow Insights` | finding + rule_candidate | Pattern/checklist pre-candidates |
+| `Quantitative Evidence` | total_sessions, success_rate, avg_friction | Scoring bonus в Phase 2 |
+| `CLAUDE.md Suggestions` | suggestion text + priority | HIGH priority pattern candidates |
+
+**Если статус `missing`:**
+```
+📊 Insights: недоступен (данные не найдены)
+💡 Совет: запустите /insights для генерации кросс-сессионного анализа
+```
+- `insights_mode = "unavailable"`
+- Перейти к Phase 0 без задержки
+
+### Шаг 3: Generate Pre-candidates
+
+Для каждого friction trend с `trend=rising` или `count >= 3`:
+```
+📊 Insights находка: "<friction type>"
+   Секция: Friction Trends
+   Контекст: "<count> occurrences, trend: <trend>, correlates with <outcome>"
+   Релевантность сессии: <HIGH|MEDIUM|LOW>
+
+🔄 Предварительная оценка:
+├── Тип: 🔴 antipattern | ⚠️ gotcha
+├── Название: <kebab-case>
+└── Суть: <1 предложение>
+```
+
+Для каждого tool error с `count >= 3`:
+```
+📊 Insights находка: "<error pattern>"
+   Секция: Tool Errors
+   Контекст: "<count> occurrences"
+   Готовый gotcha: <suggested_gotcha>
+```
+
+Для каждого workflow insight с rule_candidate:
+```
+📊 Insights находка: "<finding>"
+   Секция: Workflow Insights
+   Rule candidate: <rule_candidate>
+```
+
+Для каждого CLAUDE.md suggestion с priority HIGH:
+```
+📊 Insights находка: "<suggestion text>"
+   Секция: CLAUDE.md Suggestions
+   Priority: HIGH — готовая формулировка правила
+```
+
+**Оценка релевантности** — соответствие keywords из Phase -1 Шаг 1.5:
+- **HIGH**: Прямое совпадение с технологиями/доменами/проблемами сессии
+- **MEDIUM**: Тот же домен, но другая конкретная проблема
+- **LOW**: Общее воркфлоу-улучшение без привязки к сессии
+
+### Шаг 4: Deduplication with Session Findings
+
+При обработке в Phase 1.5:
+- Если insights-находка совпадает с session-находкой → **MERGE** (session = primary, insights = доп. evidence: "также наблюдалось кросс-сессионно")
+- Если insights-находка НЕ имеет session-overlap → независимый кандидат с источником `📊 insights`
+
+### Шаг 5: Unified Mode Display
+
+**ПОСЛЕ Phase -0.5 вывести финальную строку режима:**
+
+```
+🔍 Режим: Full (память + сессия + insights)
+├── 🧠 Память: N записей (project: <имя>)
+├── 📊 Insights: Fresh (Feb 15-22) — N сессий, M находок
+└── 📍 Сессия: анализ текущей
+
+📊 Контекст сессии:
+- Технологии: [...]
+- Домены: [...]
+- Проблемы: [...]
+- Паттерны: [...]
+```
+
+**Варианты режима:**
+
+| Память | Insights | Режим |
+|--------|----------|-------|
+| ✅ есть | ✅ fresh/stale | `Full (память + сессия + insights)` |
+| ✅ есть | ❌ нет | `Full (память + сессия)` |
+| ❌ нет | ✅ fresh/stale | `Insights + Session` |
+| ❌ нет | ❌ нет | `Session-only` |
+
+### Fallback: Legacy Mode (без skill)
+
+Если `/deep-insights` skill недоступен, использовать прямое чтение:
+
+```javascript
+Read("~/.claude/usage-data/report.html")
+```
+
+Извлечь данные из HTML секций:
+| HTML секция | CSS класс | Что извлекать |
+|-------------|-----------|---------------|
+| Friction categories | `.friction-category` | `.friction-title` + `.friction-desc` |
+| CLAUDE.md suggestions | `.claude-md-item` | `data-text` + `.cmd-why` |
+| Big wins | `.big-win` | `.big-win-title` + `.big-win-desc` |
+| Usage patterns | `.pattern-card` | `.pattern-title` + `.pattern-summary` |
 
 ---
 
@@ -310,7 +448,17 @@ Project domains: [zoho, ef-core, postgres, docker, csharp]
 
 **REUSABILITY подсказка:** domain-specific паттерн = полный балл (30), если домен есть в `Project domains` из Phase 0.5. `.claude/rules/` — это именно место для проектных знаний, domain-specific НЕ штрафуется.
 
-**Confidence = сумма баллов (max 100)**
+**Confidence = сумма баллов (max 100) + бонусы**
+
+### Бонусы из Deep Insights
+
+| Бонус | Условие | Значение |
+|-------|---------|----------|
+| QUANTITATIVE_EVIDENCE | Кандидат подкреплён числами из deep-insights (success_rate, friction count) | +10 |
+| RISING_FRICTION | friction_trends с trend=`rising` коррелирует с кандидатом | +10 к PREVENTS |
+| TOOL_ERROR_MATCH | tool_errors из insights совпадает с gotcha-кандидатом | готовый pre-candidate |
+
+**Бонусы НЕ увеличивают max выше 100** — они поднимают кандидата в ранжировании.
 
 ### Уровни confidence
 
@@ -407,18 +555,20 @@ Project domains: [zoho, ef-core, postgres, docker, csharp]
 |---|----------|-----|-------|----------|--------|
 | 1 | <name>   | 🔴 antipattern | 95% | 📍 turn #12 | 🆕 NEW |
 | 2 | <name>   | 🟢 pattern | 85% | 🧠 #163 | 🔀 MERGE |
+| 3 | <name>   | ⚠️ gotcha | 82% | 📊 insights | 🆕 NEW |
 
 ### 🟡 Для выбора (MEDIUM confidence, 60-79)
 
 | # | Название | Тип | Score | Источник | Статус |
 |---|----------|-----|-------|----------|--------|
-| 3 | <name>   | 📋 checklist | 78% | 📍 turn #5 | 🆕 NEW |
+| 4 | <name>   | 📋 checklist | 78% | 📍 turn #5 + 📊 | 🆕 NEW |
 
 ### 🟠 С предупреждением (LOW confidence, 40-59)
 
 | # | Название | Тип | Score | Источник | Статус | Предупреждение |
 |---|----------|-----|-------|----------|--------|----------------|
-| 4 | <name>   | ⚠️ gotcha | 45% | 📍 turn #8 | 🆕 NEW | Низкий SELF_CONTAINED |
+| 5 | <name>   | ⚠️ gotcha | 45% | 📍 turn #8 | 🆕 NEW | Низкий SELF_CONTAINED |
+| 6 | <name>   | 🟢 pattern | 42% | 📊 insights ⚠️ | 🆕 NEW | Stale insights (5d) |
 
 ### 🔴 Отклонены (REJECT, <40 — только дубликаты/тривиалки)
 
@@ -576,21 +726,24 @@ Project domains: [zoho, ef-core, postgres, docker, csharp]
 ## Execution Order (КРИТИЧНО)
 
 ```
-1. [АНАЛИЗ] Извлечение контекста сессии (Шаг 1.5)
-2. [TOOL] MCP search ×3 (динамический query из контекста)
-3. [TOOL] Fallback без project (если 0 результатов)
-4. [TEXT] "🔍 Режим: ..." + контекст сессии
-5. [TOOL] Glob rules
-6. [TEXT] Phase 0: дерево файлов
-7. [TEXT] Phase 1: анализ сессии (сырые находки)
-8. [TEXT] Phase 1.5: Abstraction (извлечение antipatterns!)
-9. [TEXT] Phase 2: Quality Ranking (category scoring, confidence, ПРУФЫ)
-10. [TEXT] Phase 2.5: Smart Merge
-11. [TEXT] Phase 3: Streamlined таблицы (rules + antipatterns)
-12. [STOP] Ожидание выбора
-13. [TEXT] Phase 4: Smart Generation
-14. [STOP] Ожидание подтверждения
-15. [TEXT] Phase 5: создание файлов
+1.  [АНАЛИЗ] Извлечение контекста сессии (Шаг 1.5)
+2.  [TOOL] MCP search ×3 (динамический query из контекста)
+3.  [TOOL] Fallback без project (если 0 результатов)
+4.  [TEXT] Предварительный статус памяти
+5.  [SKILL] Invoke /deep-insights (Skill tool)
+6.  [TEXT] Phase -0.5: deep-insights output + unified mode display
+7.  [TOOL] Glob rules
+8.  [TEXT] Phase 0: дерево файлов
+9.  [TEXT] Phase 0.5: domains (+ insights project areas)
+10. [TEXT] Phase 1: анализ сессии (сырые находки)
+11. [TEXT] Phase 1.5: Abstraction (session + insights находки!)
+12. [TEXT] Phase 2: Quality Ranking (category scoring, confidence, ПРУФЫ)
+13. [TEXT] Phase 2.5: Smart Merge
+14. [TEXT] Phase 3: Streamlined таблицы (sources: 📍 📊 🧠)
+15. [STOP] Ожидание выбора
+16. [TEXT] Phase 4: Smart Generation
+17. [STOP] Ожидание подтверждения
+18. [TEXT] Phase 5: создание файлов
 ```
 
 **❌ ЗАПРЕЩЕНО:**
@@ -604,8 +757,9 @@ Project domains: [zoho, ef-core, postgres, docker, csharp]
 ## Начни
 
 1. Извлечь контекст сессии → построить динамические query
-2. MCP Search ×3 (с project) → если 0, fallback без project → режим
-3. Phase 0 (дерево) → Phase 0.5 (domains) → Phase 1 (сырые находки) → **Phase 1.5 (ABSTRACTION!)** → Phase 2 (category scoring + пруфы) → Phase 2.5 (merge) → Phase 3 (таблицы)
-4. **СТОП** — ждать выбор
-5. Phase 4 (generation) → **СТОП** — ждать подтверждение
+2. MCP Search ×3 (с project) → если 0, fallback без project
+3. Read insights report → Phase -0.5 (если доступен) → unified mode display
+4. Phase 0 (дерево) → Phase 0.5 (domains + insights areas) → Phase 1 (сырые находки) → **Phase 1.5 (ABSTRACTION — session + insights!)** → Phase 2 (category scoring + пруфы) → Phase 2.5 (merge) → Phase 3 (таблицы)
+5. **СТОП** — ждать выбор
+6. Phase 4 (generation) → **СТОП** — ждать подтверждение
 6. Phase 5 (создание)

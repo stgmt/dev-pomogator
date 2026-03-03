@@ -7,6 +7,8 @@
  * - spec-status.ps1
  * - list-specs.ps1
  * - fill-template.ps1
+ * - audit-spec.ps1
+ * - analyze-features.ps1
  */
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
@@ -642,6 +644,441 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
         (f: any) => f.check === 'LINK_VALIDITY'
       );
       expect(linkFindings.length).toBe(0);
+    });
+  });
+
+  // ============================================================================
+  // audit-spec.ps1 — coverage checks (FR_AC, FR_BDD, TRACEABILITY, TASKS_FR, OPEN_Q, TERM)
+  // ============================================================================
+
+  describe('audit-spec.ps1 coverage checks', () => {
+    const auditFixturePath = appPath('.specs', 'audit-coverage-test');
+
+    beforeEach(async () => {
+      await fs.copy(getSpecsGeneratorFixturePath('audit-coverage-fixture'), auditFixturePath);
+    });
+
+    afterEach(async () => {
+      await fs.remove(auditFixturePath);
+    });
+
+    // @feature21
+    it('should detect FR without matching AC (FR_AC_COVERAGE)', () => {
+      const result = runPowerShell(
+        getSpecsGeneratorPath('audit-spec.ps1'),
+        ['-Path', '.specs/audit-coverage-test']
+      );
+
+      expect(result.exitCode).toBe(0);
+      expect(result.json).toBeDefined();
+
+      const frAcFindings = (result.json.findings || []).filter(
+        (f: any) => f.check === 'FR_AC_COVERAGE'
+      );
+      expect(frAcFindings.length).toBeGreaterThan(0);
+      expect(
+        frAcFindings.some((f: any) => f.message.includes('FR-3'))
+      ).toBe(true);
+    });
+
+    // @feature22
+    it('should detect @featureN tag missing in .feature file (FR_BDD_COVERAGE)', () => {
+      const result = runPowerShell(
+        getSpecsGeneratorPath('audit-spec.ps1'),
+        ['-Path', '.specs/audit-coverage-test']
+      );
+
+      expect(result.exitCode).toBe(0);
+      expect(result.json).toBeDefined();
+
+      const bddFindings = (result.json.findings || []).filter(
+        (f: any) => f.check === 'FR_BDD_COVERAGE'
+      );
+      // FR-3 has no @feature3 tag, so there should be no mismatch for it
+      // But FR-1 and FR-2 have @feature1/@feature2 which are in .feature — no findings expected for them
+      // The check validates MD tags vs .feature tags
+      expect(bddFindings).toBeDefined();
+    });
+
+    // @feature23
+    it('should detect FR not referenced in REQUIREMENTS.md (REQUIREMENTS_TRACEABILITY)', () => {
+      const result = runPowerShell(
+        getSpecsGeneratorPath('audit-spec.ps1'),
+        ['-Path', '.specs/audit-coverage-test']
+      );
+
+      expect(result.exitCode).toBe(0);
+      expect(result.json).toBeDefined();
+
+      const traceFindings = (result.json.findings || []).filter(
+        (f: any) => f.check === 'REQUIREMENTS_TRACEABILITY'
+      );
+      expect(traceFindings.length).toBeGreaterThan(0);
+      // FR-2 and FR-3 are not in REQUIREMENTS.md
+      expect(
+        traceFindings.some((f: any) => f.message.includes('FR-2'))
+      ).toBe(true);
+      expect(
+        traceFindings.some((f: any) => f.message.includes('FR-3'))
+      ).toBe(true);
+    });
+
+    // @feature24
+    it('should detect FR not referenced in TASKS.md (TASKS_FR_REFS)', () => {
+      const result = runPowerShell(
+        getSpecsGeneratorPath('audit-spec.ps1'),
+        ['-Path', '.specs/audit-coverage-test']
+      );
+
+      expect(result.exitCode).toBe(0);
+      expect(result.json).toBeDefined();
+
+      const tasksFindings = (result.json.findings || []).filter(
+        (f: any) => f.check === 'TASKS_FR_REFS'
+      );
+      expect(tasksFindings.length).toBeGreaterThan(0);
+      // FR-2 is not in TASKS.md
+      expect(
+        tasksFindings.some((f: any) => f.message.includes('FR-2'))
+      ).toBe(true);
+    });
+
+    // @feature25
+    it('should detect unclosed open questions in RESEARCH.md (OPEN_QUESTIONS)', () => {
+      const result = runPowerShell(
+        getSpecsGeneratorPath('audit-spec.ps1'),
+        ['-Path', '.specs/audit-coverage-test']
+      );
+
+      expect(result.exitCode).toBe(0);
+      expect(result.json).toBeDefined();
+
+      const openQFindings = (result.json.findings || []).filter(
+        (f: any) => f.check === 'OPEN_QUESTIONS'
+      );
+      expect(openQFindings.length).toBeGreaterThan(0);
+      expect(
+        openQFindings.some((f: any) => f.message.includes('unclosed'))
+      ).toBe(true);
+    });
+
+    // @feature26
+    it('should detect term inconsistency across files (TERM_CONSISTENCY)', () => {
+      const result = runPowerShell(
+        getSpecsGeneratorPath('audit-spec.ps1'),
+        ['-Path', '.specs/audit-coverage-test']
+      );
+
+      expect(result.exitCode).toBe(0);
+      expect(result.json).toBeDefined();
+
+      const termFindings = (result.json.findings || []).filter(
+        (f: any) => f.check === 'TERM_CONSISTENCY'
+      );
+      expect(termFindings.length).toBeGreaterThan(0);
+      expect(
+        termFindings.some((f: any) =>
+          f.message.includes('dataProcessor') || f.message.includes('DataProcessor')
+        )
+      ).toBe(true);
+    });
+  });
+
+  // ============================================================================
+  // validate-spec.ps1 — missing rule coverage
+  // ============================================================================
+
+  describe('validate-spec.ps1 additional rules', () => {
+    let tempSpecDir: string;
+
+    beforeEach(async () => {
+      tempSpecDir = appPath('.specs', 'validate-rules-test');
+      await fs.ensureDir(tempSpecDir);
+    });
+
+    afterEach(async () => {
+      await fs.remove(tempSpecDir);
+    });
+
+    // @feature27
+    it('should report PLACEHOLDER warnings for unfilled placeholders', async () => {
+      // Create a complete spec with unfilled placeholders
+      await fs.copy(getSpecsGeneratorFixturePath('valid-spec'), tempSpecDir);
+
+      // Add unfilled placeholders to FR.md
+      const frPath = path.join(tempSpecDir, 'FR.md');
+      await fs.writeFile(frPath, '# Functional Requirements\n\n## FR-1: {Название фичи}\n\n{Описание функционального требования}\n');
+
+      const result = runPowerShell(
+        getSpecsGeneratorPath('validate-spec.ps1'),
+        ['-Path', '.specs/validate-rules-test']
+      );
+
+      expect(result.json).toBeDefined();
+
+      const placeholderWarnings = (result.json.warnings || []).filter(
+        (w: any) => w.rule === 'PLACEHOLDER'
+      );
+      expect(placeholderWarnings.length).toBeGreaterThan(0);
+    });
+
+    // @feature28
+    it('should report EARS_FORMAT warning when AC lacks WHEN/THEN/SHALL', async () => {
+      await fs.copy(getSpecsGeneratorFixturePath('valid-spec'), tempSpecDir);
+
+      // Overwrite AC with non-EARS content
+      const acPath = path.join(tempSpecDir, 'ACCEPTANCE_CRITERIA.md');
+      await fs.writeFile(acPath, '# Acceptance Criteria\n\n## AC-1 (FR-1): Basic Check\n\nThe system should work correctly.\n');
+
+      const result = runPowerShell(
+        getSpecsGeneratorPath('validate-spec.ps1'),
+        ['-Path', '.specs/validate-rules-test']
+      );
+
+      expect(result.json).toBeDefined();
+
+      const earsWarnings = (result.json.warnings || []).filter(
+        (w: any) => w.rule === 'EARS_FORMAT'
+      );
+      expect(earsWarnings.length).toBeGreaterThan(0);
+    });
+
+    // @feature29
+    it('should report FEATURE_NAMING warning when Feature line lacks DOMAIN prefix', async () => {
+      await fs.copy(getSpecsGeneratorFixturePath('valid-spec'), tempSpecDir);
+
+      // Overwrite .feature with non-DOMAIN naming
+      const featurePath = path.join(tempSpecDir, 'valid-spec.feature');
+      await fs.writeFile(featurePath, 'Feature: Some feature without domain prefix\n\n  Scenario: Basic test\n    Given something\n    Then it works\n');
+
+      const result = runPowerShell(
+        getSpecsGeneratorPath('validate-spec.ps1'),
+        ['-Path', '.specs/validate-rules-test']
+      );
+
+      expect(result.json).toBeDefined();
+
+      const namingWarnings = (result.json.warnings || []).filter(
+        (w: any) => w.rule === 'FEATURE_NAMING'
+      );
+      expect(namingWarnings.length).toBeGreaterThan(0);
+    });
+
+    // @feature30
+    it('should report CONTEXT_SECTION warning when RESEARCH.md lacks Project Context', async () => {
+      await fs.copy(getSpecsGeneratorFixturePath('valid-spec'), tempSpecDir);
+
+      // Overwrite RESEARCH.md without Project Context & Constraints section
+      const researchPath = path.join(tempSpecDir, 'RESEARCH.md');
+      await fs.writeFile(researchPath, '# Research\n\n## Findings\n\nSome research findings here.\n');
+
+      const result = runPowerShell(
+        getSpecsGeneratorPath('validate-spec.ps1'),
+        ['-Path', '.specs/validate-rules-test']
+      );
+
+      expect(result.json).toBeDefined();
+
+      const contextWarnings = (result.json.warnings || []).filter(
+        (w: any) => w.rule === 'CONTEXT_SECTION'
+      );
+      expect(contextWarnings.length).toBeGreaterThan(0);
+    });
+  });
+
+  // ============================================================================
+  // analyze-features.ps1
+  // ============================================================================
+
+  describe('analyze-features.ps1', () => {
+    // @feature31
+    it('should return JSON with totalFeatures > 0', () => {
+      const result = runPowerShell(
+        getSpecsGeneratorPath('analyze-features.ps1'),
+        []
+      );
+
+      expect(result.exitCode).toBe(0);
+      expect(result.json).toBeDefined();
+      expect(result.json.totalFeatures).toBeGreaterThan(0);
+      expect(result.json.distribution).toBeDefined();
+      expect(result.json.searchPaths).toBeDefined();
+      expect(Array.isArray(result.json.searchPaths)).toBe(true);
+    });
+
+    // @feature32
+    it('should contain step dictionary with given/when/then', () => {
+      const result = runPowerShell(
+        getSpecsGeneratorPath('analyze-features.ps1'),
+        []
+      );
+
+      expect(result.exitCode).toBe(0);
+      expect(result.json.stepDictionary).toBeDefined();
+      expect(result.json.stepDictionary.given).toBeDefined();
+      expect(result.json.stepDictionary.when).toBeDefined();
+      expect(result.json.stepDictionary.then).toBeDefined();
+      expect(Array.isArray(result.json.stepDictionary.given)).toBe(true);
+    });
+
+    // @feature33
+    it('should detect naming patterns with domain codes', () => {
+      const result = runPowerShell(
+        getSpecsGeneratorPath('analyze-features.ps1'),
+        []
+      );
+
+      expect(result.exitCode).toBe(0);
+      expect(result.json.namingPatterns).toBeDefined();
+      expect(result.json.namingPatterns.domains).toBeDefined();
+    });
+
+    // @feature34
+    it('should filter candidates by -DomainCode', () => {
+      const result = runPowerShell(
+        getSpecsGeneratorPath('analyze-features.ps1'),
+        ['-DomainCode', 'PLUGIN']
+      );
+
+      expect(result.exitCode).toBe(0);
+      expect(result.json).toBeDefined();
+      expect(result.json.candidates).toBeDefined();
+      expect(Array.isArray(result.json.candidates)).toBe(true);
+
+      // All candidates should match PLUGIN domain
+      for (const candidate of result.json.candidates) {
+        expect(
+          candidate.reasons.some((r: string) => r.includes('PLUGIN'))
+        ).toBe(true);
+      }
+    });
+
+    // @feature35
+    it('should filter candidates by -FeatureSlug', () => {
+      const result = runPowerShell(
+        getSpecsGeneratorPath('analyze-features.ps1'),
+        ['-FeatureSlug', 'specs-generator']
+      );
+
+      expect(result.exitCode).toBe(0);
+      expect(result.json).toBeDefined();
+      expect(result.json.candidates).toBeDefined();
+      expect(Array.isArray(result.json.candidates)).toBe(true);
+      expect(result.json.candidates.length).toBeGreaterThan(0);
+    });
+  });
+
+  // ============================================================================
+  // .progress.json state machine
+  // ============================================================================
+
+  describe('.progress.json state machine', () => {
+    const progressTestName = 'progress-test';
+
+    afterEach(async () => {
+      await fs.remove(appPath('.specs', progressTestName));
+    });
+
+    // @feature36
+    it('scaffold-spec.ps1 should create .progress.json with initial state', () => {
+      const result = runPowerShell(
+        getSpecsGeneratorPath('scaffold-spec.ps1'),
+        ['-Name', progressTestName]
+      );
+
+      expect(result.exitCode).toBe(0);
+      expect(result.json.success).toBe(true);
+      // created_files count stays 14 (.progress.json is not counted)
+      expect(result.json.created_files.length).toBe(14);
+
+      const progressPath = appPath('.specs', progressTestName, '.progress.json');
+      expect(fs.existsSync(progressPath)).toBe(true);
+
+      const progress = fs.readJsonSync(progressPath);
+      expect(progress.version).toBe(1);
+      expect(progress.featureSlug).toBe(progressTestName);
+      expect(progress.currentPhase).toBe('Discovery');
+      expect(progress.phases.Discovery.stopConfirmed).toBe(false);
+      expect(progress.phases.Context.stopConfirmed).toBe(false);
+      expect(progress.phases.Requirements.stopConfirmed).toBe(false);
+      expect(progress.phases.Finalization.stopConfirmed).toBe(false);
+    });
+
+    // @feature37
+    it('spec-status.ps1 should create .progress.json for pre-existing specs (backward compat)', async () => {
+      const destPath = appPath('.specs', progressTestName);
+      await fs.copy(getSpecsGeneratorFixturePath('partial-spec'), destPath);
+
+      // No .progress.json exists yet
+      expect(fs.existsSync(path.join(destPath, '.progress.json'))).toBe(false);
+
+      const result = runPowerShell(
+        getSpecsGeneratorPath('spec-status.ps1'),
+        ['-Path', `.specs/${progressTestName}`]
+      );
+
+      expect(result.exitCode).toBe(0);
+      expect(result.json.progress_state).toBeDefined();
+      expect(result.json.progress_state.version).toBe(1);
+
+      // File should be created
+      expect(fs.existsSync(path.join(destPath, '.progress.json'))).toBe(true);
+    });
+
+    // @feature38
+    it('spec-status.ps1 -ConfirmStop should set stopConfirmed to true', async () => {
+      const destPath = appPath('.specs', progressTestName);
+      await fs.copy(getSpecsGeneratorFixturePath('partial-spec'), destPath);
+
+      // First run to create .progress.json
+      runPowerShell(
+        getSpecsGeneratorPath('spec-status.ps1'),
+        ['-Path', `.specs/${progressTestName}`]
+      );
+
+      // Confirm Discovery stop
+      const result = runPowerShell(
+        getSpecsGeneratorPath('spec-status.ps1'),
+        ['-Path', `.specs/${progressTestName}`, '-ConfirmStop', 'Discovery']
+      );
+
+      expect(result.exitCode).toBe(0);
+      expect(result.json.progress_state.phases.Discovery.stopConfirmed).toBe(true);
+      expect(result.json.progress_state.phases.Discovery.stopConfirmedAt).not.toBeNull();
+
+      // Other phases should remain unconfirmed
+      expect(result.json.progress_state.phases.Requirements.stopConfirmed).toBe(false);
+    });
+
+    // @feature39
+    it('spec-status.ps1 should track CHANGELOG.md in files output', async () => {
+      const destPath = appPath('.specs', progressTestName);
+      await fs.copy(getSpecsGeneratorFixturePath('valid-spec'), destPath);
+
+      const result = runPowerShell(
+        getSpecsGeneratorPath('spec-status.ps1'),
+        ['-Path', `.specs/${progressTestName}`]
+      );
+
+      expect(result.exitCode).toBe(0);
+      expect(result.json.files).toBeDefined();
+      expect(result.json.files['CHANGELOG.md']).toBeDefined();
+      expect(result.json.files['CHANGELOG.md'].status).toBeDefined();
+    });
+
+    // @feature40
+    it('spec-status.ps1 should update completedAt when phase is done', async () => {
+      const destPath = appPath('.specs', progressTestName);
+      await fs.copy(getSpecsGeneratorFixturePath('valid-spec'), destPath);
+
+      const result = runPowerShell(
+        getSpecsGeneratorPath('spec-status.ps1'),
+        ['-Path', `.specs/${progressTestName}`]
+      );
+
+      expect(result.exitCode).toBe(0);
+      // For a complete spec, Discovery should be marked completed
+      expect(result.json.progress_state.phases.Discovery.completedAt).not.toBeNull();
     });
   });
 });

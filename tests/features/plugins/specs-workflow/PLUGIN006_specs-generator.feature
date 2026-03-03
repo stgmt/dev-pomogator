@@ -152,3 +152,139 @@ Feature: PLUGIN006 Specs Generator PowerShell Scripts
     Given a spec fixture "valid-spec-with-crossrefs" with all links
     When I run audit-spec.ps1 on the spec
     Then findings should not contain check "LINK_VALIDITY"
+
+  # audit-spec.ps1 coverage checks
+
+  @feature21
+  Scenario: Audit detects FR without matching Acceptance Criteria
+    Given a spec fixture "audit-coverage-fixture" with FR-3 lacking AC
+    When I run audit-spec.ps1 on the spec
+    Then findings should contain check "FR_AC_COVERAGE"
+    And FR_AC_COVERAGE finding should mention "FR-3"
+
+  @feature22
+  Scenario: Audit detects featureN tag mismatch between MD and BDD
+    Given a spec fixture "audit-coverage-fixture" with @featureN tag gaps
+    When I run audit-spec.ps1 on the spec
+    Then audit should run FR_BDD_COVERAGE check without errors
+
+  @feature23
+  Scenario: Audit detects FR not referenced in REQUIREMENTS.md
+    Given a spec fixture "audit-coverage-fixture" with incomplete REQUIREMENTS.md
+    When I run audit-spec.ps1 on the spec
+    Then findings should contain check "REQUIREMENTS_TRACEABILITY"
+    And REQUIREMENTS_TRACEABILITY findings should mention "FR-2" and "FR-3"
+
+  @feature24
+  Scenario: Audit detects FR not referenced in TASKS.md
+    Given a spec fixture "audit-coverage-fixture" with incomplete TASKS.md
+    When I run audit-spec.ps1 on the spec
+    Then findings should contain check "TASKS_FR_REFS"
+    And TASKS_FR_REFS finding should mention "FR-2"
+
+  @feature25
+  Scenario: Audit detects unclosed open questions in RESEARCH.md
+    Given a spec fixture "audit-coverage-fixture" with open questions
+    When I run audit-spec.ps1 on the spec
+    Then findings should contain check "OPEN_QUESTIONS"
+    And OPEN_QUESTIONS finding should mention "unclosed"
+
+  @feature26
+  Scenario: Audit detects term inconsistency across files
+    Given a spec fixture "audit-coverage-fixture" with mixed casing terms
+    When I run audit-spec.ps1 on the spec
+    Then findings should contain check "TERM_CONSISTENCY"
+    And TERM_CONSISTENCY finding should mention casing variants
+
+  # validate-spec.ps1 additional rule coverage
+
+  @feature27
+  Scenario: Validate detects unfilled placeholders
+    Given a spec with unfilled {placeholder} templates
+    When I run validate-spec.ps1 on that spec
+    Then warnings should contain rule "PLACEHOLDER"
+
+  @feature28
+  Scenario: Validate detects missing EARS format in Acceptance Criteria
+    Given a spec with non-EARS acceptance criteria
+    When I run validate-spec.ps1 on that spec
+    Then warnings should contain rule "EARS_FORMAT"
+
+  @feature29
+  Scenario: Validate detects non-standard feature naming
+    Given a spec with Feature line lacking DOMAIN prefix
+    When I run validate-spec.ps1 on that spec
+    Then warnings should contain rule "FEATURE_NAMING"
+
+  @feature30
+  Scenario: Validate detects missing Project Context section in RESEARCH.md
+    Given a spec with RESEARCH.md lacking Project Context
+    When I run validate-spec.ps1 on that spec
+    Then warnings should contain rule "CONTEXT_SECTION"
+
+  # analyze-features.ps1 scenarios
+
+  @feature31
+  Scenario: Analyze features returns JSON report with discovered files
+    When I run analyze-features.ps1 with -Format json
+    Then the result should have totalFeatures greater than 0
+    And distribution should contain production and fixture counts
+
+  @feature32
+  Scenario: Analyze features extracts step dictionary
+    When I run analyze-features.ps1 with -Format json
+    Then stepDictionary should contain given, when, and then arrays
+
+  @feature33
+  Scenario: Analyze features detects naming patterns
+    When I run analyze-features.ps1 with -Format json
+    Then namingPatterns should contain domain codes
+
+  @feature34
+  Scenario: Analyze features filters candidates by domain code
+    When I run analyze-features.ps1 with -DomainCode "PLUGIN"
+    Then all candidates should match PLUGIN domain
+
+  @feature35
+  Scenario: Analyze features filters candidates by feature slug
+    When I run analyze-features.ps1 with -FeatureSlug "specs-generator"
+    Then candidates should contain at least one match
+
+  # .progress.json state machine scenarios
+
+  @feature36
+  Scenario: Scaffold creates .progress.json with initial state
+    When I run scaffold-spec.ps1 with name "progress-test"
+    Then .progress.json should exist in ".specs/progress-test/"
+    And progress.version should be 1
+    And progress.currentPhase should be "Discovery"
+    And all stopConfirmed flags should be false
+    And created_files count should still be 14
+
+  @feature37
+  Scenario: Spec-status creates .progress.json for pre-existing specs
+    Given a partial spec fixture exists without .progress.json
+    When I run spec-status.ps1 on the spec
+    Then .progress.json should be created with version 1
+    And progress_state should be included in the output
+
+  @feature38
+  Scenario: ConfirmStop marks phase as confirmed
+    Given a spec with .progress.json exists
+    When I run spec-status.ps1 with -ConfirmStop "Discovery"
+    Then progress.phases.Discovery.stopConfirmed should be true
+    And progress.phases.Discovery.stopConfirmedAt should not be null
+    And progress.phases.Requirements.stopConfirmed should still be false
+
+  @feature39
+  Scenario: Spec-status tracks CHANGELOG.md in files output
+    Given a valid spec fixture exists
+    When I run spec-status.ps1 on the spec
+    Then the files output should include CHANGELOG.md
+    And CHANGELOG.md status should be defined
+
+  @feature40
+  Scenario: Spec-status updates completedAt for finished phases
+    Given a valid spec fixture exists
+    When I run spec-status.ps1 on the spec
+    Then progress.phases.Discovery.completedAt should not be null

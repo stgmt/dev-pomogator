@@ -151,6 +151,7 @@ export function configureClaudeMemSettings(): void {
     CLAUDE_MEM_OPENROUTER_MODEL: 'xiaomi/mimo-v2-flash:free',
     CLAUDE_MEM_WORKER_PORT: '37777',
     CLAUDE_MEM_LOG_LEVEL: 'DEBUG',
+    CLAUDE_MEM_CHROMA_MODE: 'external',
   };
 
   fs.writeJsonSync(settingsPath, settings, { spaces: 2 });

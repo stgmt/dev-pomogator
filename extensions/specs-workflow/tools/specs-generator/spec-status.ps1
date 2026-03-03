@@ -9,6 +9,7 @@
     - Status of each file (complete, partial, empty, not_created)
     - Next recommended action
     - Blockers if any
+    - Progress state (.progress.json) with phase confirmations
 
 .PARAMETER Path
     Required. Path to the spec folder (e.g., ".specs/hook-worklog-checker").
@@ -25,11 +26,18 @@
 .PARAMETER Format
     Optional. Output format: "json" or "text". Default: "json".
 
+.PARAMETER ConfirmStop
+    Optional. Mark a STOP point as confirmed by the user.
+    Valid values: Discovery, Context, Requirements, Finalization.
+
 .EXAMPLE
     .\spec-status.ps1 -Path ".specs/hook-worklog-checker"
 
 .EXAMPLE
     .\spec-status.ps1 -Path ".specs/hook-worklog-checker" -Brief -Format text
+
+.EXAMPLE
+    .\spec-status.ps1 -Path ".specs/hook-worklog-checker" -ConfirmStop Discovery
 #>
 
 param(
@@ -47,7 +55,11 @@ param(
 
     [Parameter(Mandatory = $false)]
     [ValidateSet("json", "text")]
-    [string]$Format = "json"
+    [string]$Format = "json",
+
+    [Parameter(Mandatory = $false)]
+    [ValidateSet("Discovery", "Context", "Requirements", "Finalization", "")]
+    [string]$ConfirmStop = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -118,7 +130,7 @@ function Write-Log {
 $phases = @{
     "Discovery" = @("USER_STORIES.md", "USE_CASES.md", "RESEARCH.md")
     "Requirements" = @("REQUIREMENTS.md", "FR.md", "NFR.md", "ACCEPTANCE_CRITERIA.md", "DESIGN.md", "FILE_CHANGES.md")
-    "Finalization" = @("TASKS.md", "README.md")
+    "Finalization" = @("TASKS.md", "README.md", "CHANGELOG.md")
 }
 
 # All expected files
@@ -133,6 +145,7 @@ $allFiles = @(
     "DESIGN.md",
     "TASKS.md",
     "FILE_CHANGES.md",
+    "CHANGELOG.md",
     "README.md"
 )
 
@@ -282,6 +295,72 @@ if ($discoveryComplete) {
 
 Write-Log "INFO" "Phase: $currentPhase, Progress: $progressPercent%"
 
+# --- .progress.json state machine ---
+$progressPath = Join-Path $TargetDir ".progress.json"
+$progressState = $null
+
+if (Test-Path $progressPath) {
+    try {
+        $progressState = Get-Content -Path $progressPath -Raw | ConvertFrom-Json
+    } catch {
+        Write-Log "WARN" "Failed to parse .progress.json: $_"
+        $progressState = $null
+    }
+}
+
+# Create default state if not exists (backward compat for pre-existing specs)
+if (-not $progressState) {
+    $progressState = [PSCustomObject]@{
+        version      = 1
+        featureSlug  = (Split-Path -Leaf $TargetDir)
+        createdAt    = (Get-Date -Format "o")
+        currentPhase = $currentPhase
+        phases       = [PSCustomObject]@{
+            Discovery    = [PSCustomObject]@{ completedAt = $null; stopConfirmed = $false; stopConfirmedAt = $null }
+            Context      = [PSCustomObject]@{ completedAt = $null; stopConfirmed = $false; stopConfirmedAt = $null }
+            Requirements = [PSCustomObject]@{ completedAt = $null; stopConfirmed = $false; stopConfirmedAt = $null }
+            Finalization = [PSCustomObject]@{ completedAt = $null; stopConfirmed = $false; stopConfirmedAt = $null }
+        }
+    }
+}
+
+# Update currentPhase
+$progressState.currentPhase = $currentPhase
+
+# Mark completed phases
+if ($discoveryComplete -and -not $progressState.phases.Discovery.completedAt) {
+    $progressState.phases.Discovery.completedAt = (Get-Date -Format "o")
+}
+if ($contextDone -and -not $progressState.phases.Context.completedAt) {
+    $progressState.phases.Context.completedAt = (Get-Date -Format "o")
+}
+if ($requirementsComplete -and ($currentPhase -eq "Finalization") -and -not $progressState.phases.Requirements.completedAt) {
+    $progressState.phases.Requirements.completedAt = (Get-Date -Format "o")
+}
+
+# Handle -ConfirmStop
+if ($ConfirmStop) {
+    $phase = $progressState.phases.$ConfirmStop
+    if ($phase) {
+        $phase.stopConfirmed = $true
+        $phase.stopConfirmedAt = (Get-Date -Format "o")
+        Write-Log "INFO" "STOP confirmed for phase: $ConfirmStop"
+    } else {
+        Write-Log "WARN" "Unknown phase for ConfirmStop: $ConfirmStop"
+    }
+}
+
+# Atomic write: temp + move
+$tempProgressPath = "$progressPath.tmp"
+try {
+    $progressState | ConvertTo-Json -Depth 5 | Set-Content -Path $tempProgressPath -NoNewline -Encoding UTF8
+    Move-Item -Path $tempProgressPath -Destination $progressPath -Force
+    Write-Log "INFO" "Updated .progress.json"
+} catch {
+    Write-Log "WARN" "Failed to write .progress.json: $_"
+    if (Test-Path $tempProgressPath) { Remove-Item $tempProgressPath -Force -ErrorAction SilentlyContinue }
+}
+
 # Determine next action
 $nextAction = ""
 $blockers = @()
@@ -318,6 +397,7 @@ $result = @{
     files = $files
     next_action = $nextAction
     blockers = $blockers
+    progress_state = $progressState
 }
 
 if ($Format -eq "json") {
@@ -358,6 +438,19 @@ if ($Format -eq "json") {
         }
     }
     
+    # Show STOP confirmations
+    if ($progressState) {
+        Write-Host "`nSTOP Confirmations:" -ForegroundColor Cyan
+        foreach ($phaseName in @("Discovery", "Context", "Requirements", "Finalization")) {
+            $ps = $progressState.phases.$phaseName
+            if ($ps.stopConfirmed) {
+                Write-Host "  $phaseName : CONFIRMED" -ForegroundColor Green
+            } else {
+                Write-Host "  $phaseName : pending" -ForegroundColor DarkGray
+            }
+        }
+    }
+
     Write-Host "`nNext action: $nextAction" -ForegroundColor Magenta
 }
 

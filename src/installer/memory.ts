@@ -315,50 +315,79 @@ async function ensureChromaDeps(): Promise<void> {
 }
 
 /**
- * Verify Chroma vector DB is running after worker start.
- * If not running, attempt dependency repair and worker restart.
- * Non-blocking: failures only produce warnings.
+ * Start Chroma server directly using Python's chroma binary.
+ *
+ * The claude-mem worker (from plugin cache) cannot find the chroma binary
+ * because the plugin cache has no node_modules/. The npm chromadb CLI is
+ * broken on Windows x64 (missing 'semver' transitive dependency).
+ *
+ * Fix: Start Chroma externally BEFORE the worker. The worker detects a
+ * running Chroma via heartbeat and reuses it instead of trying to start one.
  */
-async function verifyChromaHealth(): Promise<void> {
-  // Wait for worker to fully initialize (up to 30s)
-  const deadline = Date.now() + 30000;
-  while (Date.now() < deadline) {
-    try {
-      const res = await fetch(`http://127.0.0.1:${WORKER_PORT}/api/health`);
-      if (res.ok) break;
-    } catch { /* worker not ready yet */ }
-    await new Promise(r => setTimeout(r, 1000));
-  }
-
-  // Give Chroma extra time to start (worker starts it during init)
-  await new Promise(r => setTimeout(r, 10000));
-
+export async function startChromaServer(): Promise<void> {
+  // Already running? Nothing to do.
   if (await isChromaRunning()) {
-    console.log(chalk.green('  ✓ Chroma vector database running'));
+    console.log(chalk.green('  ✓ Chroma vector database already running'));
     return;
   }
 
-  // Chroma not running — attempt repair
-  console.log(chalk.yellow('  ⚠ Chroma not running, repairing dependencies...'));
-  await ensureChromaDeps();
+  console.log(chalk.cyan('  Starting Chroma vector database...'));
 
-  // Restart worker so it re-attempts Chroma startup with fixed deps
-  console.log(chalk.cyan('  Restarting worker...'));
-  try {
-    await fetch(`http://127.0.0.1:${WORKER_PORT}/api/admin/shutdown`, { method: 'POST' });
-  } catch { /* worker may already be down */ }
-  await new Promise(r => setTimeout(r, 2000));
-
-  await startClaudeMemWorker();
-
-  // Final Chroma check (give it 15s to start)
-  await new Promise(r => setTimeout(r, 15000));
-  if (await isChromaRunning()) {
-    console.log(chalk.green('  ✓ Chroma running after repair'));
-  } else {
-    console.log(chalk.yellow('  ⚠ Chroma still not running. Vector search will be disabled.'));
-    console.log(chalk.gray('    Basic memory features (observations, context) still work.'));
+  // Find Python chroma binary
+  let chromaBin = findPythonChroma();
+  if (!chromaBin) {
+    // Attempt to install Python chromadb
+    console.log(chalk.cyan('  Installing Python chromadb...'));
+    try {
+      execSync('pip install chromadb', {
+        stdio: 'inherit',
+        timeout: 180000,
+      });
+      chromaBin = findPythonChroma();
+    } catch (error) {
+      console.log(chalk.yellow(`  ⚠ Could not install Python chromadb: ${error}`));
+    }
   }
+
+  if (!chromaBin) {
+    console.log(chalk.yellow('  ⚠ Python chroma not found. Vector search will be disabled.'));
+    console.log(chalk.gray('    Basic memory features (observations, context) still work.'));
+    return;
+  }
+
+  // Ensure data directory exists
+  const dataDir = path.join(os.homedir(), '.claude-mem', 'vector-db');
+  await fs.ensureDir(dataDir);
+
+  // Start Chroma as detached background process
+  const isWindows = process.platform === 'win32';
+  const args = ['run', '--path', dataDir, '--host', '127.0.0.1', '--port', String(CHROMA_PORT)];
+
+  console.log(chalk.gray(`  Using: ${chromaBin}`));
+
+  const chromaProcess = spawn(chromaBin, args, {
+    stdio: 'ignore',
+    detached: !isWindows,
+    windowsHide: true,
+  });
+  chromaProcess.unref();
+
+  chromaProcess.on('error', (err) => {
+    console.log(chalk.yellow(`  ⚠ Chroma process error: ${err.message}`));
+  });
+
+  // Wait for heartbeat (up to 30 seconds)
+  const deadline = Date.now() + 30000;
+  while (Date.now() < deadline) {
+    if (await isChromaRunning()) {
+      console.log(chalk.green('  ✓ Chroma vector database started'));
+      return;
+    }
+    await new Promise(r => setTimeout(r, 1000));
+  }
+
+  console.log(chalk.yellow('  ⚠ Chroma did not respond within 30s. Vector search may be disabled.'));
+  console.log(chalk.gray('    Basic memory features (observations, context) still work.'));
 }
 
 // ============================================================================
@@ -1023,6 +1052,34 @@ async function registerClaudeMemMcp(platform: 'cursor' | 'claude'): Promise<void
 }
 
 /**
+ * Set CLAUDE_MEM_CHROMA_MODE=external in ~/.claude-mem/settings.json.
+ * This prevents the claude-mem worker from trying to start Chroma via
+ * `npx chromadb` (broken on Windows — missing 'semver' dep in bun cache).
+ * Instead, our health-check hook starts Chroma via Python chroma binary.
+ */
+async function ensureChromaExternalMode(): Promise<void> {
+  const settingsPath = path.join(os.homedir(), '.claude-mem', 'settings.json');
+  await fs.ensureDir(path.dirname(settingsPath));
+
+  let settings: Record<string, string> = {};
+  if (await fs.pathExists(settingsPath)) {
+    try {
+      settings = await fs.readJson(settingsPath);
+    } catch {
+      // Corrupted settings — start fresh
+    }
+  }
+
+  if (settings.CLAUDE_MEM_CHROMA_MODE === 'external') return;
+
+  settings.CLAUDE_MEM_CHROMA_MODE = 'external';
+  const tempPath = settingsPath + '.tmp';
+  await fs.writeJson(tempPath, settings, { spaces: 2 });
+  await fs.move(tempPath, settingsPath, { overwrite: true });
+  console.log(chalk.green('  ✓ Chroma mode set to external (managed by health-check hook)'));
+}
+
+/**
  * Ensure claude-mem is installed and configured for the specified platform.
  * Runs AUTOMATICALLY without user confirmation.
  *
@@ -1035,7 +1092,7 @@ export async function ensureClaudeMem(platform: 'cursor' | 'claude'): Promise<vo
   if (platform === 'cursor') {
     // Step 1: Check and install hooks (independent of worker)
     const hooksInstalled = await areCursorHooksInstalled();
-    
+
     if (hooksInstalled) {
       console.log(chalk.green('  ✓ Cursor hooks already configured'));
       // Always update scripts (may have new versions)
@@ -1046,8 +1103,18 @@ export async function ensureClaudeMem(platform: 'cursor' | 'claude'): Promise<vo
       // installCursorHooks will check for marketplace first, clone only if needed
       await installCursorHooks();
     }
-    
-    // Step 2: Check and start worker (independent of hooks)
+
+    // Step 2: Set CHROMA_MODE=external so worker doesn't try broken npx chromadb
+    await ensureChromaExternalMode();
+
+    // Step 3: Start Chroma BEFORE worker (worker detects running Chroma via heartbeat)
+    try {
+      await startChromaServer();
+    } catch {
+      console.log(chalk.yellow('  ⚠ Could not start Chroma (non-blocking)'));
+    }
+
+    // Step 4: Check and start worker (independent of hooks)
     const workerRunning = await isWorkerRunning();
 
     if (workerRunning) {
@@ -1056,15 +1123,8 @@ export async function ensureClaudeMem(platform: 'cursor' | 'claude'): Promise<vo
       await startClaudeMemWorker();
     }
 
-    // Step 3: Register MCP server in ~/.cursor/mcp.json
+    // Step 5: Register MCP server in ~/.cursor/mcp.json
     await registerClaudeMemMcp(platform);
-
-    // Step 4: Verify Chroma vector DB is running (non-blocking)
-    try {
-      await verifyChromaHealth();
-    } catch {
-      console.log(chalk.yellow('  ⚠ Could not verify Chroma status (non-blocking)'));
-    }
   }
 
   if (platform === 'claude') {
@@ -1081,7 +1141,17 @@ export async function ensureClaudeMem(platform: 'cursor' | 'claude'): Promise<vo
       await cloneAndBuildRepo();
     }
 
-    // Step 3: Start worker if not running (same as Cursor path)
+    // Step 3: Set CHROMA_MODE=external so worker doesn't try broken npx chromadb
+    await ensureChromaExternalMode();
+
+    // Step 4: Start Chroma BEFORE worker (worker detects running Chroma via heartbeat)
+    try {
+      await startChromaServer();
+    } catch {
+      console.log(chalk.yellow('  ⚠ Could not start Chroma (non-blocking)'));
+    }
+
+    // Step 5: Start worker if not running (same as Cursor path)
     const workerRunning = await isWorkerRunning();
     if (workerRunning) {
       console.log(chalk.green('  ✓ claude-mem worker already running'));
@@ -1089,15 +1159,8 @@ export async function ensureClaudeMem(platform: 'cursor' | 'claude'): Promise<vo
       await startClaudeMemWorker();
     }
 
-    // Step 4: Register MCP server in ~/.claude.json
+    // Step 6: Register MCP server in ~/.claude.json
     await registerClaudeMemMcp(platform);
-
-    // Step 5: Verify Chroma vector DB is running (non-blocking)
-    try {
-      await verifyChromaHealth();
-    } catch {
-      console.log(chalk.yellow('  ⚠ Could not verify Chroma status (non-blocking)'));
-    }
   }
 
   console.log(chalk.green('\n✨ Persistent memory configured!\n'));

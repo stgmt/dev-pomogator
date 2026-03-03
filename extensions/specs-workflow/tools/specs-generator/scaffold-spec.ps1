@@ -228,6 +228,30 @@ foreach ($mapping in $templateMappings.GetEnumerator()) {
     }
 }
 
+# Create .progress.json state file (not counted in created_files)
+$progressData = [PSCustomObject]@{
+    version      = 1
+    featureSlug  = $Name
+    createdAt    = (Get-Date -Format "o")
+    currentPhase = "Discovery"
+    phases       = [PSCustomObject]@{
+        Discovery    = [PSCustomObject]@{ completedAt = $null; stopConfirmed = $false; stopConfirmedAt = $null }
+        Context      = [PSCustomObject]@{ completedAt = $null; stopConfirmed = $false; stopConfirmedAt = $null }
+        Requirements = [PSCustomObject]@{ completedAt = $null; stopConfirmed = $false; stopConfirmedAt = $null }
+        Finalization = [PSCustomObject]@{ completedAt = $null; stopConfirmed = $false; stopConfirmedAt = $null }
+    }
+}
+$progressPath = Join-Path $TargetDir ".progress.json"
+$tempProgressPath = "$progressPath.tmp"
+try {
+    $progressData | ConvertTo-Json -Depth 5 | Set-Content -Path $tempProgressPath -NoNewline -Encoding UTF8
+    Move-Item -Path $tempProgressPath -Destination $progressPath -Force
+    Write-Log "INFO" "Created .progress.json"
+} catch {
+    Write-Log "WARN" "Failed to create .progress.json: $_"
+    if (Test-Path $tempProgressPath) { Remove-Item $tempProgressPath -Force -ErrorAction SilentlyContinue }
+}
+
 Write-Log "INFO" "Created $($createdFiles.Count) files in $TargetDir"
 
 $result = @{

@@ -195,3 +195,21 @@ Feature: PLUGIN002 Claude-mem Persistent Memory
     And I execute summarize hook
     Then project should appear in /api/projects
     And observations count should increase in /api/stats
+
+  # ============================================================================
+  # Chroma External Mode — Worker не стартует Chroma через npx
+  # @implemented: claude-mem-runtime.test.ts > Chroma External Mode
+  # ============================================================================
+
+  # @implemented: claude-mem-runtime.test.ts
+  Scenario: Chroma mode is set to external after installation
+    Given dev-pomogator is installed
+    When I check ~/.claude-mem/settings.json
+    Then CLAUDE_MEM_CHROMA_MODE should be "external"
+
+  # @implemented: claude-mem-runtime.test.ts
+  Scenario: Chroma is available via Python binary
+    Given claude-mem worker is running
+    And CLAUDE_MEM_CHROMA_MODE is "external"
+    When health-check hook starts Chroma via Python chroma binary
+    Then Chroma heartbeat on port 8000 should respond

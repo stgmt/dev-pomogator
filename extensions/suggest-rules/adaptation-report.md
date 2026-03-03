@@ -67,6 +67,13 @@
 | `.cursor/rules/antipatterns/<name>.mdcc` | → `.mdc` (опечатка) |
 | Отсутствующая `**` в критических правилах | Добавлена |
 
+## Claude-only секции (НЕ адаптируются)
+
+| Секция | Причина |
+|--------|---------|
+| `Phase -0.5: Insights Context` | `/insights` — built-in команда Claude Code, недоступна в Cursor |
+
 ## Результат
 
 ✅ Адаптация завершена успешно (23 автозамены + 3 ручных исправления)
+⚠️ Phase -0.5 (Insights Context) — Claude-only, отсутствует в Cursor-версии (v1.4.0+)

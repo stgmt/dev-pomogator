@@ -1,6 +1,6 @@
 {
   "name": "specs-workflow",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "description": "Управление спецификациями: 4-фазный workflow (включая Context Analysis), TDD-порядок задач, валидация, автоматический аудит кросс-ссылок, MCP инструменты для research",
   "platforms": ["cursor", "claude"],
   "category": "workflow",
@@ -85,7 +85,9 @@
   },
   "hooks": {
     "cursor": {},
-    "claude": {}
+    "claude": {
+      "UserPromptSubmit": "npx tsx .dev-pomogator/tools/specs-validator/validate-specs.ts"
+    }
   },
   "postInstall": {
     "cursor": {

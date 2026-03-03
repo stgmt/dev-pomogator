@@ -123,6 +123,32 @@ describe('CORE003: Claude Code Installer', () => {
     });
   });
 
+  describe('Scenario: Skills are installed to project', () => {
+    it('should create .claude/skills/deep-insights/', async () => {
+      const skillsPath = appPath('.claude', 'skills', 'deep-insights');
+      expect(await fs.pathExists(skillsPath)).toBe(true);
+    });
+
+    it('should have SKILL.md in deep-insights', async () => {
+      const skillMd = appPath('.claude', 'skills', 'deep-insights', 'SKILL.md');
+      expect(await fs.pathExists(skillMd)).toBe(true);
+
+      const content = await fs.readFile(skillMd, 'utf-8');
+      expect(content).toContain('deep-insights');
+      expect(content).toContain('allowed-tools');
+    });
+
+    it('should have aggregate-facets.sh script', async () => {
+      const scriptPath = appPath('.claude', 'skills', 'deep-insights', 'scripts', 'aggregate-facets.sh');
+      expect(await fs.pathExists(scriptPath)).toBe(true);
+    });
+
+    it('should have facets-schema.md reference', async () => {
+      const refPath = appPath('.claude', 'skills', 'deep-insights', 'references', 'facets-schema.md');
+      expect(await fs.pathExists(refPath)).toBe(true);
+    });
+  });
+
   describe('Scenario: Plugin manifest is generated', () => {
     it('should create .dev-pomogator/.claude-plugin/plugin.json', async () => {
       const pluginJsonPath = appPath('.dev-pomogator', '.claude-plugin', 'plugin.json');
@@ -146,6 +172,17 @@ describe('CORE003: Claude Code Installer', () => {
       // Should mention at least some known extensions
       expect(pluginJson.description).toContain('plan-pomogator');
       expect(pluginJson.description).toContain('specs-workflow');
+    });
+
+    it('should include skills in plugin.json when extensions have skills', async () => {
+      const pluginJsonPath = appPath('.dev-pomogator', '.claude-plugin', 'plugin.json');
+      const pluginJson = await fs.readJson(pluginJsonPath);
+
+      expect(pluginJson.skills).toBeDefined();
+      expect(Array.isArray(pluginJson.skills)).toBe(true);
+      const deepInsights = pluginJson.skills.find((s: { name: string }) => s.name === 'deep-insights');
+      expect(deepInsights).toBeDefined();
+      expect(deepInsights.path).toBe('.claude/skills/deep-insights');
     });
   });
 
@@ -196,6 +233,18 @@ describe('CORE003: Claude Code Installer', () => {
         (ext) => ext.platform === 'claude'
       );
       expect(claudeExtensions?.length).toBeGreaterThan(0);
+    });
+
+    it('should track managed skills in config', async () => {
+      const config = await getDevPomogatorConfig();
+      const appDir = appPath();
+
+      const suggestRules = config?.installedExtensions.find(
+        (ext) => ext.name === 'suggest-rules' && ext.platform === 'claude'
+      );
+      expect(suggestRules).toBeDefined();
+      expect(suggestRules?.managed?.[appDir]?.skills).toBeDefined();
+      expect(suggestRules!.managed![appDir].skills!.length).toBeGreaterThan(0);
     });
 
     it('should include project path in projectPaths', async () => {
