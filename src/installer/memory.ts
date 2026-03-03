@@ -62,6 +62,12 @@ async function installBun(): Promise<void> {
         shell: '/bin/bash',
       });
     }
+    // Add bun to PATH for current process (installer updated ~/.bashrc
+    // but current Node.js process doesn't see it until shell restart)
+    const bunBinDir = path.join(os.homedir(), '.bun', 'bin');
+    if (!process.env.PATH?.includes(bunBinDir)) {
+      process.env.PATH = `${bunBinDir}${path.delimiter}${process.env.PATH}`;
+    }
     console.log(chalk.green('  ✓ bun installed'));
   } catch (error) {
     throw new Error(`Failed to install bun: ${error}`);
@@ -198,8 +204,50 @@ async function isChromaRunning(): Promise<boolean> {
 }
 
 /**
+ * Install a Python package with PEP 668 compatibility.
+ * Cascade: pip3 --user → venv fallback → throw
+ */
+function pipInstall(pkg: string): void {
+  const isWindows = process.platform === 'win32';
+
+  // Strategy 1: pip3 install --user (works on PEP 668 systems)
+  try {
+    const pip = isWindows ? 'pip' : 'pip3';
+    execSync(`${pip} install --user ${pkg}`, {
+      stdio: 'inherit',
+      timeout: 180000,
+    });
+    // Ensure ~/.local/bin is in PATH for current process (pip --user installs there on Linux)
+    if (!isWindows) {
+      const localBin = path.join(os.homedir(), '.local', 'bin');
+      if (!process.env.PATH?.includes(localBin)) {
+        process.env.PATH = `${localBin}${path.delimiter}${process.env.PATH}`;
+      }
+    }
+    return;
+  } catch { /* --user failed, try venv */ }
+
+  // Strategy 2: venv fallback
+  const venvDir = path.join(os.homedir(), '.dev-pomogator', '.venv');
+  const venvPip = isWindows
+    ? path.join(venvDir, 'Scripts', 'pip.exe')
+    : path.join(venvDir, 'bin', 'pip');
+  const python = isWindows ? 'python' : 'python3';
+
+  try {
+    if (!fs.existsSync(venvPip)) {
+      execSync(`${python} -m venv "${venvDir}"`, { stdio: 'inherit', timeout: 60000 });
+    }
+    execSync(`"${venvPip}" install ${pkg}`, { stdio: 'inherit', timeout: 180000 });
+    return;
+  } catch { /* venv also failed */ }
+
+  throw new Error(`Could not install ${pkg} (tried --user and venv)`);
+}
+
+/**
  * Find Python chromadb's chroma executable path.
- * Searches pip user install Scripts dirs and uv cache.
+ * Searches pip user install, venv, Scripts dirs, and PATH.
  * Returns the path to chroma.exe (Windows) or chroma (Unix), or null if not found.
  */
 function findPythonChroma(): string | null {
@@ -207,22 +255,35 @@ function findPythonChroma(): string | null {
   const chromaBin = isWindows ? 'chroma.exe' : 'chroma';
 
   // Strategy 1: pip show chromadb → derive Scripts path
-  try {
-    const location = execSync('pip show chromadb', {
-      encoding: 'utf-8',
-      stdio: ['pipe', 'pipe', 'pipe'],
-      timeout: 10000,
-    });
-    const locationMatch = location.match(/Location:\s*(.+)/);
-    if (locationMatch) {
-      // User install: .../site-packages → .../Scripts/chroma.exe
-      const scriptsDir = path.join(path.dirname(locationMatch[1].trim()), 'Scripts');
-      const chromaPath = path.join(scriptsDir, chromaBin);
-      if (fs.existsSync(chromaPath)) return chromaPath;
-    }
-  } catch { /* pip not available or chromadb not installed */ }
+  for (const pip of isWindows ? ['pip'] : ['pip3', 'pip']) {
+    try {
+      const location = execSync(`${pip} show chromadb`, {
+        encoding: 'utf-8',
+        stdio: ['pipe', 'pipe', 'pipe'],
+        timeout: 10000,
+      });
+      const locationMatch = location.match(/Location:\s*(.+)/);
+      if (locationMatch) {
+        const scriptsDir = path.join(path.dirname(locationMatch[1].trim()), 'Scripts');
+        const chromaPath = path.join(scriptsDir, chromaBin);
+        if (fs.existsSync(chromaPath)) return chromaPath;
+      }
+    } catch { /* pip not available or chromadb not installed */ }
+  }
 
-  // Strategy 2: which/where
+  // Strategy 2: check well-known locations
+  const knownPaths = [
+    // pip --user install on Linux
+    path.join(os.homedir(), '.local', 'bin', chromaBin),
+    // venv fallback
+    path.join(os.homedir(), '.dev-pomogator', '.venv', 'bin', chromaBin),
+    path.join(os.homedir(), '.dev-pomogator', '.venv', 'Scripts', chromaBin),
+  ];
+  for (const p of knownPaths) {
+    if (fs.existsSync(p)) return p;
+  }
+
+  // Strategy 3: which/where
   try {
     const chromaPath = execSync(isWindows ? `where ${chromaBin}` : `which ${chromaBin}`, {
       encoding: 'utf-8',
@@ -273,10 +334,7 @@ async function ensureChromaDeps(): Promise<void> {
   if (!pythonChromaPath) {
     console.log(chalk.cyan('  Installing Python chromadb...'));
     try {
-      execSync('pip install chromadb', {
-        stdio: 'inherit',
-        timeout: 180000,
-      });
+      pipInstall('chromadb');
       pythonChromaPath = findPythonChroma();
     } catch (error) {
       console.log(chalk.yellow(`  ⚠ Could not install Python chromadb: ${error}`));
@@ -331,10 +389,7 @@ export async function startChromaServer(): Promise<void> {
     // Attempt to install Python chromadb
     console.log(chalk.cyan('  Installing Python chromadb...'));
     try {
-      execSync('pip install chromadb', {
-        stdio: 'inherit',
-        timeout: 180000,
-      });
+      pipInstall('chromadb');
       chromaBin = findPythonChroma();
     } catch (error) {
       console.log(chalk.yellow(`  ⚠ Could not install Python chromadb: ${error}`));

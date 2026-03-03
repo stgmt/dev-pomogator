@@ -23,7 +23,7 @@
     ]
   },
   "postInstall": {
-    "command": "python .dev-pomogator/tools/forbid-root-artifacts/deps-install.py && python .dev-pomogator/tools/forbid-root-artifacts/configure.py",
+    "command": "python3 .dev-pomogator/tools/forbid-root-artifacts/deps-install.py && python3 .dev-pomogator/tools/forbid-root-artifacts/configure.py",
     "interactive": true,
     "skipInCI": true
   }

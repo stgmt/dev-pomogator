@@ -91,24 +91,24 @@
   },
   "postInstall": {
     "cursor": {
-      "command": "python .dev-pomogator/tools/mcp-setup/setup-mcp.py --platform cursor",
+      "command": "python3 .dev-pomogator/tools/mcp-setup/setup-mcp.py --platform cursor",
       "interactive": true,
       "skipInCI": true
     },
     "claude": {
-      "command": "python .dev-pomogator/tools/mcp-setup/setup-mcp.py --platform claude",
+      "command": "python3 .dev-pomogator/tools/mcp-setup/setup-mcp.py --platform claude",
       "interactive": true,
       "skipInCI": true
     }
   },
   "postUpdate": {
     "cursor": {
-      "command": "python .dev-pomogator/tools/mcp-setup/setup-mcp.py --platform cursor",
+      "command": "python3 .dev-pomogator/tools/mcp-setup/setup-mcp.py --platform cursor",
       "interactive": true,
       "skipInCI": true
     },
     "claude": {
-      "command": "python .dev-pomogator/tools/mcp-setup/setup-mcp.py --platform claude",
+      "command": "python3 .dev-pomogator/tools/mcp-setup/setup-mcp.py --platform claude",
       "interactive": true,
       "skipInCI": true
     }
