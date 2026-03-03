@@ -260,15 +260,31 @@ function getPostUpdateHook(
 }
 
 /**
+ * Check if an extension has a shared (non-platform-specific) post-install hook
+ */
+export function isSharedPostInstallHook(extension: Extension): boolean {
+  if (!extension.postInstall) return false;
+  return 'command' in (extension.postInstall as any);
+}
+
+/**
  * Run post-install hook for an extension
  */
 export async function runPostInstallHook(
   extension: Extension,
   repoRoot: string,
-  platform?: 'cursor' | 'claude'
+  platform?: 'cursor' | 'claude',
+  executedSharedHooks?: Set<string>
 ): Promise<void> {
   const hook = getPostInstallHook(extension, platform);
   if (!hook) return;
+
+  // Skip shared hooks that were already executed for another platform
+  if (executedSharedHooks && isSharedPostInstallHook(extension)) {
+    if (executedSharedHooks.has(extension.name)) {
+      return;
+    }
+  }
 
   const { command, interactive = true, skipInCI = true } = hook;
 
@@ -288,6 +304,9 @@ export async function runPostInstallHook(
       shell: true,
     });
     console.log(`  ✓ Post-install hook completed for ${extension.name}`);
+    if (executedSharedHooks && isSharedPostInstallHook(extension)) {
+      executedSharedHooks.add(extension.name);
+    }
   } catch (error) {
     // Don't fail installation if post-install hook fails
     const message = error instanceof Error ? error.message : String(error);

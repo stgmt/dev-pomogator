@@ -15,6 +15,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 interface ClaudeOptions {
   extensions?: string[]; // List of extension names to install, empty = all
   autoUpdate?: boolean;  // Enable auto-update via hooks
+  executedSharedHooks?: Set<string>; // Track shared hooks to avoid duplicates with TARGET=all
 }
 
 export async function installClaude(options: ClaudeOptions = {}): Promise<void> {
@@ -226,7 +227,7 @@ export async function installClaude(options: ClaudeOptions = {}): Promise<void> 
   // 7. Run post-install hooks for extensions that have them
   for (const extension of extensionsToInstall) {
     if (extension.postInstall) {
-      await runPostInstallHook(extension, repoRoot, 'claude');
+      await runPostInstallHook(extension, repoRoot, 'claude', options.executedSharedHooks);
     }
   }
 

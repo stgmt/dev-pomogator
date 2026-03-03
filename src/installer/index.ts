@@ -8,6 +8,8 @@ import { generateEnvExample, getMissingRequiredEnv } from './env-setup.js';
 import { saveConfig, loadConfig } from '../config/index.js';
 import type { Config, Platform } from '../config/schema.js';
 import { findRepoRoot } from '../utils/repo.js';
+import { createLogger } from '../utils/logger.js';
+import { captureConsole } from '../utils/console-capture.js';
 
 export { listExtensions } from './extensions.js';
 
@@ -218,103 +220,115 @@ async function install(
   autoUpdate: boolean,
   extensions: string[]
 ): Promise<void> {
-  console.log(chalk.cyan('\nInstalling...\n'));
-  
-  // Get full extension objects to check requiresClaudeMem
-  const allExtensions = await listExtensions();
-  const selectedExtensions = allExtensions.filter(e => extensions.includes(e.name));
-  
-  // Check if any selected extension requires claude-mem
-  const needsClaudeMem = selectedExtensions.some(e => e.requiresClaudeMem === true);
-  
-  for (const platform of platforms) {
-    if (platform === 'cursor') {
-      try {
-        await installCursor({ autoUpdate, extensions });
-        console.log(chalk.green('✓ Cursor commands installed'));
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        throw new Error(`Failed to install for Cursor: ${message}`);
-      }
-      
-      // Install claude-mem for Cursor only if required by selected extensions
-      if (needsClaudeMem) {
+  const installLog = createLogger('install.log');
+  installLog.info(`=== Installation started: platforms=${platforms.join(',')}, extensions=${extensions.join(',')} ===`);
+  const restoreConsole = captureConsole((level, msg) => installLog[level.toLowerCase() as 'info' | 'warn' | 'error'](msg));
+
+  try {
+    console.log(chalk.cyan('\nInstalling...\n'));
+
+    // Get full extension objects to check requiresClaudeMem
+    const allExtensions = await listExtensions();
+    const selectedExtensions = allExtensions.filter(e => extensions.includes(e.name));
+
+    // Check if any selected extension requires claude-mem
+    const needsClaudeMem = selectedExtensions.some(e => e.requiresClaudeMem === true);
+
+    // Track shared post-install hooks to avoid running them twice for TARGET=all
+    const executedSharedHooks = new Set<string>();
+
+    for (const platform of platforms) {
+      if (platform === 'cursor') {
         try {
-          await ensureClaudeMem('cursor');
+          await installCursor({ autoUpdate, extensions, executedSharedHooks });
+          console.log(chalk.green('✓ Cursor commands installed'));
         } catch (error) {
-          console.log(chalk.yellow('⚠ Could not setup claude-mem (optional feature)'));
+          const message = error instanceof Error ? error.message : String(error);
+          throw new Error(`Failed to install for Cursor: ${message}`);
+        }
+
+        // Install claude-mem for Cursor only if required by selected extensions
+        if (needsClaudeMem) {
+          try {
+            await ensureClaudeMem('cursor');
+          } catch (error) {
+            console.log(chalk.yellow('⚠ Could not setup claude-mem (optional feature)'));
+          }
+        }
+      }
+
+      if (platform === 'claude') {
+        try {
+          await installClaude({ extensions, executedSharedHooks });
+          console.log(chalk.green('✓ Claude Code plugin installed'));
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          throw new Error(`Failed to install for Claude Code: ${message}`);
+        }
+
+        // Install claude-mem plugin for Claude Code only if required by selected extensions
+        if (needsClaudeMem) {
+          try {
+            await ensureClaudeMem('claude');
+          } catch (error) {
+            console.log(chalk.yellow('⚠ Could not setup claude-mem (optional feature)'));
+          }
         }
       }
     }
-    
-    if (platform === 'claude') {
-      try {
-        await installClaude({ extensions });
-        console.log(chalk.green('✓ Claude Code plugin installed'));
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        throw new Error(`Failed to install for Claude Code: ${message}`);
+
+    console.log(chalk.bold.green('\n✨ Installation complete!\n'));
+
+    // Generate .env.example and warn about missing required env vars
+    const repoRoot = findRepoRoot();
+    const missingEnvVars = await generateEnvExample(repoRoot, selectedExtensions);
+
+    if (missingEnvVars.length > 0) {
+      const missing = getMissingRequiredEnv(selectedExtensions);
+      // Group by extension
+      const byExtension = new Map<string, Array<{ name: string; description: string }>>();
+      for (const m of missing) {
+        if (!byExtension.has(m.extensionName)) {
+          byExtension.set(m.extensionName, []);
+        }
+        byExtension.get(m.extensionName)!.push({
+          name: m.requirement.name,
+          description: m.requirement.description,
+        });
       }
-      
-      // Install claude-mem plugin for Claude Code only if required by selected extensions
-      if (needsClaudeMem) {
-        try {
-          await ensureClaudeMem('claude');
-        } catch (error) {
-          console.log(chalk.yellow('⚠ Could not setup claude-mem (optional feature)'));
+
+      console.log(chalk.yellow('⚠  Environment variables required:\n'));
+      for (const [extName, vars] of byExtension) {
+        console.log(chalk.yellow(`   ${extName}:`));
+        for (const v of vars) {
+          console.log(chalk.yellow(`     ${v.name}  — ${v.description}`));
         }
       }
+      const platformHint = platforms.includes('claude')
+        ? '.claude/settings.json → "env"'
+        : '.env or shell profile';
+      console.log(chalk.gray(`\n   Add to ${platformHint}\n`));
+      console.log(chalk.cyan('   📄 .env.example generated with defaults\n'));
     }
-  }
-  
-  console.log(chalk.bold.green('\n✨ Installation complete!\n'));
 
-  // Generate .env.example and warn about missing required env vars
-  const repoRoot = findRepoRoot();
-  const missingEnvVars = await generateEnvExample(repoRoot, selectedExtensions);
-
-  if (missingEnvVars.length > 0) {
-    const missing = getMissingRequiredEnv(selectedExtensions);
-    // Group by extension
-    const byExtension = new Map<string, Array<{ name: string; description: string }>>();
-    for (const m of missing) {
-      if (!byExtension.has(m.extensionName)) {
-        byExtension.set(m.extensionName, []);
+    if (platforms.includes('cursor')) {
+      console.log(chalk.cyan('Cursor: Installed plugins: ' + extensions.join(', ')));
+      if (autoUpdate) {
+        console.log(chalk.gray('         Auto-update enabled (checks every 24 hours)'));
       }
-      byExtension.get(m.extensionName)!.push({
-        name: m.requirement.name,
-        description: m.requirement.description,
-      });
-    }
-
-    console.log(chalk.yellow('⚠  Environment variables required:\n'));
-    for (const [extName, vars] of byExtension) {
-      console.log(chalk.yellow(`   ${extName}:`));
-      for (const v of vars) {
-        console.log(chalk.yellow(`     ${v.name}  — ${v.description}`));
+      if (needsClaudeMem) {
+        console.log(chalk.gray('         Persistent memory enabled (claude-mem)'));
       }
     }
-    const platformHint = platforms.includes('claude')
-      ? '.claude/settings.json → "env"'
-      : '.env or shell profile';
-    console.log(chalk.gray(`\n   Add to ${platformHint}\n`));
-    console.log(chalk.cyan('   📄 .env.example generated with defaults\n'));
-  }
 
-  if (platforms.includes('cursor')) {
-    console.log(chalk.cyan('Cursor: Installed plugins: ' + extensions.join(', ')));
-    if (autoUpdate) {
-      console.log(chalk.gray('         Auto-update enabled (checks every 24 hours)'));
+    if (platforms.includes('claude')) {
+      console.log(chalk.cyan('Claude Code: Installed plugins: ' + extensions.join(', ')));
+      if (needsClaudeMem) {
+        console.log(chalk.gray('             Persistent memory enabled (claude-mem plugin)'));
+      }
     }
-    if (needsClaudeMem) {
-      console.log(chalk.gray('         Persistent memory enabled (claude-mem)'));
-    }
-  }
-  
-  if (platforms.includes('claude')) {
-    console.log(chalk.cyan('Claude Code: Installed plugins: ' + extensions.join(', ')));
-    if (needsClaudeMem) {
-      console.log(chalk.gray('             Persistent memory enabled (claude-mem plugin)'));
-    }
+  } finally {
+    restoreConsole();
+    installLog.info('=== Installation finished ===');
   }
 }

@@ -14,6 +14,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 interface CursorOptions {
   autoUpdate: boolean;
   extensions?: string[];
+  executedSharedHooks?: Set<string>;
 }
 
 export async function installCursor(options: CursorOptions): Promise<void> {
@@ -155,7 +156,7 @@ export async function installCursor(options: CursorOptions): Promise<void> {
   // 5. Run post-install hooks for extensions that have them
   for (const extension of extensionsToInstall) {
     if (extension.postInstall) {
-      await runPostInstallHook(extension, repoRoot, 'cursor');
+      await runPostInstallHook(extension, repoRoot, 'cursor', options.executedSharedHooks);
     }
   }
 
