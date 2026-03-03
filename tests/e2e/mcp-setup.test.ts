@@ -342,7 +342,7 @@ describe('PLUGIN005: MCP Setup', () => {
   describe('Both platforms', () => {
     it('should install to both cursor and claude with --platform both', async () => {
       const { exitCode } = runMcpSetup('--platform both');
-      
+
       expect(exitCode).toBe(0);
 
       const cursorConfig = await loadMcpConfig(getGlobalMcpConfigPath('cursor'));
@@ -352,6 +352,89 @@ describe('PLUGIN005: MCP Setup', () => {
       expect(cursorConfig.mcpServers.octocode).toBeDefined();
       expect(claudeConfig.mcpServers.context7).toBeDefined();
       expect(claudeConfig.mcpServers.octocode).toBeDefined();
+    });
+  });
+
+  describe('Invalid JSON recovery', () => {
+    it('should auto-fix trailing comma without needing backup', async () => {
+      const configPath = getGlobalMcpConfigPath('cursor');
+      await fs.ensureDir(path.dirname(configPath));
+
+      // Write JSON with trailing comma (real user scenario)
+      await fs.writeFile(configPath, JSON.stringify({
+        mcpServers: {
+          'my-custom': { command: 'node', args: ['srv.js'] }
+        }
+      }, null, 2).replace('}\n  }', '},\n  }'), 'utf-8');
+
+      const { output, exitCode } = runMcpSetup('--platform cursor');
+
+      expect(exitCode).toBe(0);
+      expect(output).toContain('[WARN] Fixed trailing commas');
+      expect(output).not.toContain('[RESTORE]');
+
+      const config = await loadMcpConfig(configPath);
+      expect(config.mcpServers['my-custom']).toBeDefined();
+      expect(config.mcpServers.context7).toBeDefined();
+      expect(config.mcpServers.octocode).toBeDefined();
+    });
+
+    it('should auto-fix trailing comma in project config', async () => {
+      const projectConfigPath = getProjectMcpConfigPath('cursor');
+      await fs.ensureDir(path.dirname(projectConfigPath));
+
+      // Write project config with trailing comma
+      await fs.writeFile(projectConfigPath,
+        '{\n  "mcpServers": {\n    "project-mcp": {"command": "node", "args": ["srv.js"]},\n  }\n}',
+        'utf-8'
+      );
+
+      const { output, exitCode } = runMcpSetup('--platform cursor');
+
+      expect(exitCode).toBe(0);
+      expect(output).toContain('[WARN] Fixed trailing commas');
+
+      const config = await loadMcpConfig(projectConfigPath);
+      expect(config.mcpServers['project-mcp']).toBeDefined();
+      expect(config.mcpServers.context7).toBeDefined();
+    });
+
+    it('should restore from backup when config is completely broken', async () => {
+      const configPath = getGlobalMcpConfigPath('claude');
+      const backupPath = configPath + '.backup';
+      await fs.ensureDir(path.dirname(configPath));
+
+      // Write garbage content
+      await fs.writeFile(configPath, 'not json at all {{{', 'utf-8');
+
+      // Write valid backup
+      await fs.writeJson(backupPath, {
+        theme: 'dark',
+        mcpServers: {}
+      });
+
+      const { output, exitCode } = runMcpSetup('--platform claude');
+
+      expect(exitCode).toBe(0);
+      expect(output).toContain('[WARN]');
+      expect(output).toContain('[RESTORE]');
+
+      const config = await loadMcpConfig(configPath);
+      expect(config.theme).toBe('dark');
+      expect(config.mcpServers.context7).toBeDefined();
+    });
+
+    it('should fail gracefully when config is garbage and no backup exists', async () => {
+      const configPath = getGlobalMcpConfigPath('claude');
+      await fs.ensureDir(path.dirname(configPath));
+
+      // Write garbage content, no backup
+      await fs.writeFile(configPath, 'not json at all', 'utf-8');
+
+      const { output, exitCode } = runMcpSetup('--platform claude');
+
+      expect(exitCode).not.toBe(0);
+      expect(output).toContain('Failed to read MCP config');
     });
   });
 });

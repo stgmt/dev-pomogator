@@ -7,6 +7,7 @@ Installs Context7 and Octocode MCP servers for Cursor and Claude Code.
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -73,10 +74,20 @@ def load_mcp_config(config_path: Path, allow_restore: bool = True) -> Dict[str, 
 
     try:
         with open(config_path, "r", encoding="utf-8-sig") as f:
-            data = json.load(f)
-            if "mcpServers" not in data:
-                data["mcpServers"] = {}
-            return data
+            content = f.read()
+        try:
+            data = json.loads(content)
+        except json.JSONDecodeError:
+            # Try stripping trailing commas (common in hand-edited configs)
+            cleaned = re.sub(r",\s*([\]}])", r"\1", content)
+            try:
+                data = json.loads(cleaned)
+                print(f"[WARN] Fixed trailing commas in {config_path}")
+            except json.JSONDecodeError:
+                raise  # Re-raise to hit the backup/error path below
+        if "mcpServers" not in data:
+            data["mcpServers"] = {}
+        return data
     except (json.JSONDecodeError, IOError) as exc:
         if allow_restore and backup_path.exists():
             print(f"[WARN] Invalid config at {config_path}, attempting restore from backup...")

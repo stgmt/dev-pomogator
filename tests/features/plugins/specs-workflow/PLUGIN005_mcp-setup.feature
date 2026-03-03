@@ -99,6 +99,45 @@ Feature: PLUGIN005 - MCP Setup for Research Workflow
     And ~/.claude.json should contain "context7" server
 
   # ============================================================================
+  # Invalid JSON Recovery
+  # ============================================================================
+
+  Scenario: Auto-fix trailing comma without backup
+    Given ~/.cursor/mcp.json contains JSON with trailing comma and "my-custom" server
+    And ~/.cursor/mcp.json.backup does not exist
+    When I run mcp-setup with "--platform cursor"
+    Then the exit code should be 0
+    And the output should contain "Fixed trailing commas"
+    And the output should not contain "[RESTORE]"
+    And ~/.cursor/mcp.json should contain "my-custom" server
+    And ~/.cursor/mcp.json should contain "context7" server
+
+  Scenario: Auto-fix trailing comma in project config
+    Given project .cursor/mcp.json contains JSON with trailing comma and "project-mcp" server
+    When I run mcp-setup with "--platform cursor"
+    Then the exit code should be 0
+    And the output should contain "Fixed trailing commas"
+    And project .cursor/mcp.json should contain "project-mcp" server
+    And project .cursor/mcp.json should contain "context7" server
+
+  Scenario: Restore from backup when config is completely broken
+    Given ~/.claude.json contains garbage content "not json at all"
+    And ~/.claude.json.backup has "theme" property set to "dark"
+    When I run mcp-setup with "--platform claude"
+    Then the exit code should be 0
+    And the output should contain "[WARN]"
+    And the output should contain "[RESTORE]"
+    And ~/.claude.json should have "theme" property equal to "dark"
+    And ~/.claude.json should contain "context7" server
+
+  Scenario: Fail gracefully when config is garbage and no backup
+    Given ~/.claude.json contains garbage content "not json at all"
+    And ~/.claude.json.backup does not exist
+    When I run mcp-setup with "--platform claude"
+    Then the exit code should not be 0
+    And the output should contain "Failed to read MCP config"
+
+  # ============================================================================
   # Post-Install Hook Integration
   # ============================================================================
 
