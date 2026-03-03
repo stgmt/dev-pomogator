@@ -66,6 +66,21 @@ describe('Scenario 1: Clean Install', () => {
     expect(stopCommands.some((cmd: string) => cmd.includes('check-update.js'))).toBe(true);
   });
 
+  it('should use portable cross-platform path for check-update hook', async () => {
+    const hooksPath = homePath('.cursor', 'hooks', 'hooks.json');
+    const hooksJson = await fs.readJson(hooksPath);
+    const stopCommands = hooksJson.hooks.stop.map((h: any) => h.command);
+    const updateCmd = stopCommands.find((cmd: string) => cmd.includes('check-update.js'));
+    expect(updateCmd).toBeDefined();
+    // Must not contain absolute OS-specific paths
+    expect(updateCmd).not.toMatch(/[A-Z]:\\/i);
+    expect(updateCmd).not.toMatch(/\/home\/\w+\//);
+    expect(updateCmd).not.toMatch(/\/Users\/\w+\//);
+    // Should use runtime os.homedir() resolution
+    expect(updateCmd).toContain('os');
+    expect(updateCmd).toContain('homedir');
+  });
+
   it('should install suggest-rules command', async () => {
     // Commands are installed in project directory, not global HOME
     const cmdPath = appPath('.cursor', 'commands', 'suggest-rules.md');

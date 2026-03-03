@@ -4,6 +4,7 @@ import os from 'os';
 import { execSync, spawn } from 'child_process';
 import { fileURLToPath } from 'url';
 import chalk from 'chalk';
+import { makePortableScriptCommand } from './shared.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -118,13 +119,6 @@ function getWorkerServicePath(): string {
 }
 
 /**
- * Get the path to dev-pomogator check-update.js script
- */
-function getCheckUpdateScriptPath(): string {
-  return path.join(os.homedir(), '.dev-pomogator', 'scripts', 'check-update.js');
-}
-
-/**
  * Get path to cursor-summarize wrapper script
  * This wrapper reads conversation from Cursor's SQLite and calls claude-mem API
  * Uses .ts extension since bun can execute TypeScript directly
@@ -143,14 +137,12 @@ function getCursorSummarizeScriptPath(): string {
  */
 function generateCursorHooksJson(): CursorHooksJson {
   const workerServicePath = getWorkerServicePath();
-  const checkUpdatePath = getCheckUpdateScriptPath();
   const cursorSummarizePath = getCursorSummarizeScriptPath();
-  
+
   const validateSpecsPath = getValidateSpecsScriptPath();
-  
+
   // Escape backslashes for JSON on Windows
   const escapedWorkerPath = workerServicePath.replace(/\\/g, '\\\\');
-  const escapedUpdatePath = checkUpdatePath.replace(/\\/g, '\\\\');
   const escapedSummarizePath = cursorSummarizePath.replace(/\\/g, '\\\\');
   const escapedValidateSpecsPath = validateSpecsPath.replace(/\\/g, '\\\\');
   
@@ -181,7 +173,7 @@ function generateCursorHooksJson(): CursorHooksJson {
         // This fixes "Missing transcriptPath" error
         { command: `bun "${escapedSummarizePath}"` },
         { command: `npx tsx "${getValidateStepsScriptPath().replace(/\\/g, '\\\\')}"` },  // steps-validator
-        { command: `node "${escapedUpdatePath}"` },  // dev-pomogator updater
+        { command: makePortableScriptCommand('check-update.js') },  // dev-pomogator updater
       ],
     },
   };
@@ -945,10 +937,8 @@ async function areCursorHooksInstalled(): Promise<boolean> {
       return false;
     }
     
-    // Check for dev-pomogator updater hook
-    const expectedUpdatePath = getCheckUpdateScriptPath();
-    const escapedUpdatePath = expectedUpdatePath.replace(/\\/g, '\\\\\\\\');
-    const hasUpdaterHook = hooksStr.includes(escapedUpdatePath);
+    // Check for dev-pomogator updater hook (portable format with os.homedir())
+    const hasUpdaterHook = hooksStr.includes('check-update.js');
     
     if (!hasUpdaterHook) {
       console.log(chalk.gray('  Hooks exist but dev-pomogator updater missing, will reinstall...'));

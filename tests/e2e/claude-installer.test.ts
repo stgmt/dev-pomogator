@@ -261,6 +261,30 @@ describe('CORE003: Claude Code Installer', () => {
     });
   });
 
+  describe('Scenario: Hook uses portable cross-platform path', () => {
+    it('should not contain absolute OS-specific paths in hook command', async () => {
+      const settingsPath = homePath('.claude', 'settings.json');
+      const settings = await fs.readJson(settingsPath);
+
+      for (const stopHook of settings.hooks.Stop) {
+        if (stopHook.hooks) {
+          for (const hook of stopHook.hooks) {
+            if (hook.command?.includes('check-update.js')) {
+              // Must not contain absolute Windows path
+              expect(hook.command).not.toMatch(/[A-Z]:\\/i);
+              // Must not contain absolute Unix path to specific user
+              expect(hook.command).not.toMatch(/\/home\/\w+\//);
+              expect(hook.command).not.toMatch(/\/Users\/\w+\//);
+              // Should use runtime os.homedir() resolution
+              expect(hook.command).toContain('os');
+              expect(hook.command).toContain('homedir');
+            }
+          }
+        }
+      }
+    });
+  });
+
   describe('Scenario: Re-installation preserves existing hooks', () => {
     it('should not duplicate check-update.js hook on reinstall', async () => {
       // Run installer again (--all for non-interactive mode)

@@ -8,7 +8,7 @@ import type { ManagedFileEntry, ManagedFiles } from '../config/schema.js';
 import { findRepoRoot } from '../utils/repo.js';
 import { RULES_SUBFOLDER, TOOLS_DIR, SKILLS_DIR } from '../constants.js';
 import { getFileHash } from '../updater/content-hash.js';
-import { collectFileHashes, addProjectPaths } from './shared.js';
+import { collectFileHashes, addProjectPaths, makePortableScriptCommand } from './shared.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -242,24 +242,13 @@ export async function installClaude(options: ClaudeOptions = {}): Promise<void> 
 }
 
 /**
- * Get the path to dev-pomogator check-update.js script
- */
-function getCheckUpdateScriptPath(): string {
-  return path.join(os.homedir(), '.dev-pomogator', 'scripts', 'check-update.js');
-}
-
-/**
  * Setup Claude Code hooks for auto-update
  * Hooks are stored in ~/.claude/settings.json
  */
 async function setupClaudeHooks(): Promise<void> {
   const homeDir = os.homedir();
   const settingsPath = path.join(homeDir, '.claude', 'settings.json');
-  const checkUpdatePath = getCheckUpdateScriptPath();
-  
-  // Escape backslashes for JSON on Windows
-  const escapedUpdatePath = checkUpdatePath.replace(/\\/g, '\\\\');
-  
+
   // Load existing settings or create new
   let settings: Record<string, unknown> = {};
   if (await fs.pathExists(settingsPath)) {
@@ -269,40 +258,40 @@ async function setupClaudeHooks(): Promise<void> {
       console.log('  ⚠ Could not parse existing settings.json, creating new...');
     }
   }
-  
+
   // Ensure hooks structure exists
   if (!settings.hooks) {
     settings.hooks = {};
   }
-  
-  const hooks = settings.hooks as Record<string, unknown[]>;
-  
-  // Add Stop hook for auto-update
-  const updateHookCommand = `node "${escapedUpdatePath}" --claude`;
-  
+
+  const hooksObj = settings.hooks as Record<string, unknown[]>;
+
+  // Portable command: resolves ~/.dev-pomogator/scripts/ at runtime via os.homedir()
+  // so settings.json can sync across OS (Windows <-> Linux <-> Mac)
+  const updateHookCommand = makePortableScriptCommand('check-update.js', '--claude');
+
   // Check if Stop hooks exist
-  if (!hooks.Stop) {
-    hooks.Stop = [];
+  if (!hooksObj.Stop) {
+    hooksObj.Stop = [];
   }
-  
-  // Check if our hook already exists
-  const stopHooks = hooks.Stop as Array<{ hooks?: Array<{ type: string; command: string }> }>;
-  const hasUpdateHook = stopHooks.some((h) => 
-    h.hooks?.some((hook) => hook.command?.includes('check-update.js'))
+
+  // Remove old-style hooks with absolute paths (migration to portable format)
+  const stopHooks = hooksObj.Stop as Array<{ hooks?: Array<{ type: string; command: string }> }>;
+  hooksObj.Stop = stopHooks.filter((h) =>
+    !h.hooks?.some((hook) => hook.command?.includes('check-update.js'))
   );
-  
-  if (!hasUpdateHook) {
-    stopHooks.push({
-      hooks: [{
-        type: 'command',
-        command: updateHookCommand,
-      }],
-    });
-  }
-  
+
+  // Add portable hook
+  (hooksObj.Stop as unknown[]).push({
+    hooks: [{
+      type: 'command',
+      command: updateHookCommand,
+    }],
+  });
+
   // Ensure directory exists
   await fs.ensureDir(path.dirname(settingsPath));
-  
+
   // Write settings
   await fs.writeJson(settingsPath, settings, { spaces: 2 });
   console.log('  ✓ Installed Claude Code hooks for auto-update');

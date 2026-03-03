@@ -6,6 +6,15 @@ import type { Extension } from './extensions.js';
 import { getFileHash } from '../updater/content-hash.js';
 
 /**
+ * Generate a cross-platform hook command that resolves ~/.dev-pomogator/scripts/<script>
+ * at runtime using os.homedir(), so settings.json can sync across OS.
+ */
+export function makePortableScriptCommand(scriptName: string, args?: string): string {
+  const cmd = `node -e "require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','${scriptName}'))"`;
+  return args ? `${cmd} ${args}` : cmd;
+}
+
+/**
  * Recursively collect file hashes from a directory.
  * Returns ManagedFileEntry[] with relative paths prefixed by basePath.
  * basePath is normalized to forward slashes to avoid mixed separators on Windows.

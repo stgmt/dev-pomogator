@@ -30,6 +30,12 @@ Feature: CORE001 Cursor Installer
     And hooks.json should contain stop hooks
     And stop hooks should include check-update.js
 
+  Scenario: Hook uses portable cross-platform path
+    When dev-pomogator installs for Cursor
+    Then stop hooks should include check-update.js
+    And check-update.js hook should use runtime os.homedir() resolution
+    And check-update.js hook should not contain absolute OS-specific paths
+
   Scenario: Extension hooks from extension.json are installed
     Given auto-commit extension has hooks defined in extension.json
     When I run "node dist/index.js --cursor --all"
