@@ -17,21 +17,30 @@ import sys
 
 
 def _pip_install(package: str) -> bool:
-    """Install a package via pip. Returns True on success."""
-    try:
-        subprocess.run(
-            [sys.executable, "-m", "pip", "install", package],
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-        return True
-    except subprocess.CalledProcessError as e:
-        print(f"  WARNING: pip install {package} failed: {e.stderr.strip()}", file=sys.stderr)
-        return False
-    except FileNotFoundError:
-        print(f"  WARNING: pip not found, cannot install {package}", file=sys.stderr)
-        return False
+    """Install a package via pip. Returns True on success.
+
+    Cascade for PEP 668 compatibility:
+    1. pip install --user (works on externally-managed systems)
+    2. pip install --break-system-packages (Docker/root fallback)
+    3. bare pip install (legacy systems)
+    """
+    strategies = [
+        [sys.executable, "-m", "pip", "install", "--user", package],
+        [sys.executable, "-m", "pip", "install", "--break-system-packages", package],
+        [sys.executable, "-m", "pip", "install", package],
+    ]
+    last_err = ""
+    for cmd in strategies:
+        try:
+            subprocess.run(cmd, check=True, capture_output=True, text=True)
+            return True
+        except subprocess.CalledProcessError as e:
+            last_err = e.stderr.strip()
+        except FileNotFoundError:
+            print(f"  WARNING: pip not found, cannot install {package}", file=sys.stderr)
+            return False
+    print(f"  WARNING: pip install {package} failed: {last_err}", file=sys.stderr)
+    return False
 
 
 def ensure_pyyaml() -> None:
