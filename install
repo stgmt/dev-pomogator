@@ -1,0 +1,20 @@
+# dev-pomogator universal installer
+# One URL for all platforms:
+#   Windows:   irm https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install | iex
+#   Linux/Mac: curl -fsSL https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install | bash
+#
+# With target:
+#   Windows:   $env:TARGET="claude"; irm https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install | iex
+#   Linux/Mac: curl -fsSL https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install | TARGET=claude bash
+
+echo --% > /dev/null ; : <<'POWERSHELL_SECTION'
+# --- PowerShell section (bash skips via heredoc) ---
+$ErrorActionPreference = 'Stop'
+$uri = 'https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install.ps1'
+$script = Invoke-RestMethod -Uri $uri
+Invoke-Expression $script
+return
+POWERSHELL_SECTION
+# --- Bash section (PowerShell never reaches due to return) ---
+set -e
+curl -fsSL https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install.sh | TARGET="${TARGET:-}" bash
