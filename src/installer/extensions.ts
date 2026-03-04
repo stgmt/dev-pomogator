@@ -286,7 +286,12 @@ export async function runPostInstallHook(
     }
   }
 
-  const { command, interactive = true, skipInCI = true } = hook;
+  const { command: rawCommand, interactive = true, skipInCI = true } = hook;
+
+  // On Windows, python3 doesn't exist — normalize to python
+  const command = process.platform === 'win32'
+    ? rawCommand.replace(/\bpython3\b/g, 'python')
+    : rawCommand;
 
   // Skip in CI if configured
   if (skipInCI && isCI()) {
@@ -326,7 +331,12 @@ export async function runPostUpdateHook(
   const hook = getPostUpdateHook(extension, platform);
   if (!hook) return;
 
-  const { command, interactive = true, skipInCI = true } = hook;
+  const { command: rawCommand, interactive = true, skipInCI = true } = hook;
+
+  // On Windows, python3 doesn't exist — normalize to python
+  const command = process.platform === 'win32'
+    ? rawCommand.replace(/\bpython3\b/g, 'python')
+    : rawCommand;
 
   if (skipInCI && isCI()) {
     console.log(`  ⏭ Skipping post-update hook for ${extension.name} (CI detected)`);
