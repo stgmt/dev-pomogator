@@ -11,7 +11,7 @@ import { getFileHash } from '../updater/content-hash.js';
  */
 export function makePortableScriptCommand(scriptName: string, args?: string): string {
   const cmd = `node -e "require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','${scriptName}'))"`;
-  return args ? `${cmd} ${args}` : cmd;
+  return args ? `${cmd} -- ${args}` : cmd;
 }
 
 /**

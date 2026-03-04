@@ -47,50 +47,69 @@ async function isChromaHealthy(): Promise<boolean> {
 }
 
 function findChromaExe(): string | null {
-  // 1. Try PATH first
+  const isWindows = process.platform === 'win32';
+  const chromaBin = isWindows ? 'chroma.exe' : 'chroma';
+
+  // 1. Check well-known locations
+  const knownPaths = [
+    // pip --user install on Linux
+    path.join(os.homedir(), '.local', 'bin', chromaBin),
+    // venv fallback
+    path.join(os.homedir(), '.dev-pomogator', '.venv', 'bin', chromaBin),
+    path.join(os.homedir(), '.dev-pomogator', '.venv', 'Scripts', chromaBin),
+  ];
+  for (const p of knownPaths) {
+    if (fs.existsSync(p)) return p;
+  }
+
+  // 2. pip show chromadb → derive Scripts/bin path
+  for (const pip of isWindows ? ['pip'] : ['pip3', 'pip']) {
+    try {
+      const location = execSync(`${pip} show chromadb`, {
+        encoding: 'utf-8',
+        stdio: ['pipe', 'pipe', 'pipe'],
+        timeout: 10000,
+      });
+      const locationMatch = location.match(/Location:\s*(.+)/);
+      if (locationMatch) {
+        const scriptsDir = path.join(path.dirname(locationMatch[1].trim()), isWindows ? 'Scripts' : 'bin');
+        const chromaPath = path.join(scriptsDir, chromaBin);
+        if (fs.existsSync(chromaPath)) return chromaPath;
+      }
+    } catch { /* pip not available or chromadb not installed */ }
+  }
+
+  // 3. Windows-specific: APPDATA/Python and LOCALAPPDATA/Programs/Python
+  if (isWindows) {
+    for (const envVar of ['APPDATA', 'LOCALAPPDATA']) {
+      const base = envVar === 'APPDATA'
+        ? process.env.APPDATA
+        : process.env.LOCALAPPDATA;
+      if (!base) continue;
+      const pythonDir = envVar === 'APPDATA'
+        ? path.join(base, 'Python')
+        : path.join(base, 'Programs', 'Python');
+      if (fs.existsSync(pythonDir)) {
+        try {
+          const versions = fs.readdirSync(pythonDir).filter((d) => d.startsWith('Python'));
+          for (const ver of versions) {
+            const candidate = path.join(pythonDir, ver, 'Scripts', chromaBin);
+            if (fs.existsSync(candidate)) return candidate;
+          }
+        } catch { /* skip */ }
+      }
+    }
+  }
+
+  // 4. which/where as last resort
   try {
-    const result = execSync('where chroma 2>NUL', { encoding: 'utf-8', timeout: 5000 }).trim();
-    if (result) {
-      const firstLine = result.split('\n')[0].trim();
-      if (fs.existsSync(firstLine)) return firstLine;
-    }
-  } catch {
-    // not in PATH
-  }
-
-  // 2. Search Python Scripts directories (pip user install)
-  const appData = process.env.APPDATA;
-  if (appData) {
-    const pythonDir = path.join(appData, 'Python');
-    if (fs.existsSync(pythonDir)) {
-      try {
-        const versions = fs.readdirSync(pythonDir).filter((d) => d.startsWith('Python'));
-        for (const ver of versions) {
-          const candidate = path.join(pythonDir, ver, 'Scripts', 'chroma.exe');
-          if (fs.existsSync(candidate)) return candidate;
-        }
-      } catch {
-        // skip
-      }
-    }
-  }
-
-  // 3. Search LocalAppData Python installations
-  const localAppData = process.env.LOCALAPPDATA;
-  if (localAppData) {
-    const programsDir = path.join(localAppData, 'Programs', 'Python');
-    if (fs.existsSync(programsDir)) {
-      try {
-        const versions = fs.readdirSync(programsDir).filter((d) => d.startsWith('Python'));
-        for (const ver of versions) {
-          const candidate = path.join(programsDir, ver, 'Scripts', 'chroma.exe');
-          if (fs.existsSync(candidate)) return candidate;
-        }
-      } catch {
-        // skip
-      }
-    }
-  }
+    const result = execSync(isWindows ? `where ${chromaBin}` : `which ${chromaBin}`, {
+      encoding: 'utf-8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+      timeout: 5000,
+    }).trim().split('\n')[0].trim();
+    if (result && fs.existsSync(result)) return result;
+  } catch { /* not in PATH */ }
 
   return null;
 }
@@ -126,7 +145,7 @@ async function main(): Promise<void> {
   const chromaExe = findChromaExe();
   if (!chromaExe) {
     process.stderr.write(
-      '[claude-mem-health] chroma.exe not found. Install: pip install chromadb\n',
+      '[claude-mem-health] chroma not found. Install: pip install chromadb\n',
     );
     writeOutput({ continue: true, suppressOutput: true });
     return;

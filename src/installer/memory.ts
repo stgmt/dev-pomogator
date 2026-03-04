@@ -1133,7 +1133,10 @@ async function ensureChromaExternalMode(): Promise<void> {
  */
 export async function ensureClaudeMem(platform: 'cursor' | 'claude'): Promise<void> {
   console.log(chalk.cyan('\n🧠 Setting up persistent memory (claude-mem)...\n'));
-  
+
+  // Ensure bun is available before any hooks run (they depend on bun)
+  await ensureBun();
+
   if (platform === 'cursor') {
     // Step 1: Check and install hooks (independent of worker)
     const hooksInstalled = await areCursorHooksInstalled();
