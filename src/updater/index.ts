@@ -13,7 +13,7 @@ import path from 'path';
 import os from 'os';
 import semver from 'semver';
 import { RULES_SUBFOLDER, TOOLS_DIR, SKILLS_DIR } from '../constants.js';
-import { resolveHookToolPaths } from '../installer/shared.js';
+import { resolveHookToolPaths, replaceNpxTsxWithPortable } from '../installer/shared.js';
 
 interface UpdateOptions {
   force?: boolean;
@@ -331,7 +331,7 @@ async function updateCursorHooksForProject(
     }
     nextManagedHooks[eventName].push(command);
 
-    const absoluteCommand = resolveHookToolPaths(command, repoRoot);
+    const absoluteCommand = replaceNpxTsxWithPortable(resolveHookToolPaths(command, repoRoot));
     if (!nextAbsoluteByEvent[eventName]) {
       nextAbsoluteByEvent[eventName] = [];
     }
@@ -408,8 +408,8 @@ async function updateClaudeHooksForProject(
     }
     nextManagedHooks[hookName].push(rawCommand);
 
-    // Replace relative paths with absolute paths so hooks work from any CWD
-    const command = resolveHookToolPaths(rawCommand, repoRoot);
+    // Replace relative paths with absolute paths, then wrap npx tsx with resilient runner
+    const command = replaceNpxTsxWithPortable(resolveHookToolPaths(rawCommand, repoRoot));
 
     if (!existingHooks[hookName]) {
       existingHooks[hookName] = [];

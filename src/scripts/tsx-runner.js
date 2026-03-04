@@ -1,0 +1,105 @@
+#!/usr/bin/env node
+/**
+ * tsx-runner.js — Resilient TypeScript runner via npx tsx.
+ *
+ * Wraps `npx tsx <script>` with automatic retry on corrupted npx cache.
+ * On Windows, the npx _npx/ cache directory can become corrupted
+ * (ENOTEMPTY, MODULE_NOT_FOUND), causing all tsx-based hooks to fail.
+ *
+ * Usage (via node -e portable pattern):
+ *   node -e "require('<path>/tsx-runner.js')" -- <script.ts> [args...]
+ *
+ * Or directly:
+ *   node tsx-runner.js <script.ts> [args...]
+ */
+
+'use strict';
+
+const { execSync, execFileSync } = require('child_process');
+const path = require('path');
+const fs = require('fs');
+
+// Parse args: everything after "--" or after the script name itself
+const dashIdx = process.argv.indexOf('--');
+const args = dashIdx !== -1
+  ? process.argv.slice(dashIdx + 1)
+  : process.argv.slice(2);
+
+if (args.length === 0) {
+  // No script provided — nothing to do (silent exit for hook compatibility)
+  process.exit(0);
+}
+
+const scriptPath = args[0];
+const scriptArgs = args.slice(1);
+
+/**
+ * Check if an error looks like a corrupted npx cache issue.
+ */
+function isNpxCacheError(error) {
+  const msg = String(error.message || error.stderr || error);
+  return (
+    msg.includes('ENOTEMPTY') ||
+    msg.includes('MODULE_NOT_FOUND') ||
+    msg.includes('Cannot find module') ||
+    msg.includes('ERR_MODULE_NOT_FOUND')
+  );
+}
+
+/**
+ * Clean the npx cache directory (_npx/ inside npm cache).
+ */
+function cleanNpxCache() {
+  try {
+    const cache = execSync('npm config get cache', {
+      encoding: 'utf-8',
+      timeout: 10000,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    }).trim();
+
+    const npxDir = path.join(cache, '_npx');
+    if (fs.existsSync(npxDir)) {
+      fs.rmSync(npxDir, { recursive: true, force: true });
+      console.error('dev-pomogator: cleaned corrupted npx cache, retrying...');
+    }
+  } catch {
+    // Can't clean cache — will retry anyway
+  }
+}
+
+/**
+ * Build the npx tsx command parts.
+ */
+function buildCommand() {
+  const parts = ['npx', 'tsx', scriptPath, ...scriptArgs];
+  return parts.map(p => `"${p}"`).join(' ');
+}
+
+/**
+ * Run the tsx command.
+ */
+function run() {
+  execSync(buildCommand(), {
+    stdio: 'inherit',
+    cwd: process.cwd(),
+    env: process.env,
+    timeout: 120000,
+    shell: true,
+  });
+}
+
+// Main: try → on cache error → clean → retry once
+try {
+  run();
+} catch (error) {
+  if (isNpxCacheError(error)) {
+    cleanNpxCache();
+    try {
+      run();
+    } catch (retryError) {
+      process.exit(retryError.status || 1);
+    }
+  } else {
+    process.exit(error.status || 1);
+  }
+}

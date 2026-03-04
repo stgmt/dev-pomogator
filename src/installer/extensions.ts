@@ -1,5 +1,6 @@
 import fs from 'fs-extra';
 import path from 'path';
+import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -268,6 +269,39 @@ export function isSharedPostInstallHook(extension: Extension): boolean {
 }
 
 /**
+ * Check if an error looks like a corrupted npx cache (Windows ENOTEMPTY, MODULE_NOT_FOUND).
+ */
+function isNpxCacheError(error: unknown): boolean {
+  const msg = String(error instanceof Error ? error.message : error);
+  return (
+    msg.includes('ENOTEMPTY') ||
+    msg.includes('MODULE_NOT_FOUND') ||
+    msg.includes('Cannot find module') ||
+    msg.includes('ERR_MODULE_NOT_FOUND')
+  );
+}
+
+/**
+ * Clean the npx cache directory to recover from corruption.
+ */
+function cleanNpxCache(): void {
+  try {
+    const cache = execSync('npm config get cache', {
+      encoding: 'utf-8',
+      timeout: 10000,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    }).trim();
+    const npxDir = path.join(cache, '_npx');
+    if (fs.existsSync(npxDir)) {
+      fs.rmSync(npxDir, { recursive: true, force: true });
+      console.log('  ↻ Cleaned corrupted npx cache, retrying...');
+    }
+  } catch {
+    // Can't clean — will still retry
+  }
+}
+
+/**
  * Run post-install hook for an extension
  */
 export async function runPostInstallHook(
@@ -303,17 +337,28 @@ export async function runPostInstallHook(
 
   try {
     const { execa } = await import('execa');
-    await execa(command, {
-      cwd: repoRoot,
-      stdio: interactive ? 'inherit' : 'pipe',
-      shell: true,
-    });
+    const execOpts = { cwd: repoRoot, stdio: (interactive ? 'inherit' : 'pipe') as 'inherit' | 'pipe', shell: true };
+    await execa(command, execOpts);
     console.log(`  ✓ Post-install hook completed for ${extension.name}`);
     if (executedSharedHooks && isSharedPostInstallHook(extension)) {
       executedSharedHooks.add(extension.name);
     }
   } catch (error) {
-    // Don't fail installation if post-install hook fails
+    // Retry once if npx cache is corrupted (Windows ENOTEMPTY / MODULE_NOT_FOUND)
+    if (command.includes('npx') && isNpxCacheError(error)) {
+      cleanNpxCache();
+      try {
+        const { execa } = await import('execa');
+        await execa(command, { cwd: repoRoot, stdio: interactive ? 'inherit' : 'pipe', shell: true });
+        console.log(`  ✓ Post-install hook completed for ${extension.name} (after cache cleanup)`);
+        if (executedSharedHooks && isSharedPostInstallHook(extension)) {
+          executedSharedHooks.add(extension.name);
+        }
+        return;
+      } catch {
+        // Retry also failed — fall through to warning
+      }
+    }
     const message = error instanceof Error ? error.message : String(error);
     console.log(`  ⚠ Post-install hook failed for ${extension.name}: ${message}`);
   }
@@ -354,6 +399,18 @@ export async function runPostUpdateHook(
     });
     console.log(`  ✓ Post-update hook completed for ${extension.name}`);
   } catch (error) {
+    // Retry once if npx cache is corrupted
+    if (command.includes('npx') && isNpxCacheError(error)) {
+      cleanNpxCache();
+      try {
+        const { execa } = await import('execa');
+        await execa(command, { cwd: repoRoot, stdio: interactive ? 'inherit' : 'pipe', shell: true });
+        console.log(`  ✓ Post-update hook completed for ${extension.name} (after cache cleanup)`);
+        return;
+      } catch {
+        // Retry also failed — fall through
+      }
+    }
     const message = error instanceof Error ? error.message : String(error);
     console.log(`  ⚠ Post-update hook failed for ${extension.name}: ${message}`);
     if (failFast) {

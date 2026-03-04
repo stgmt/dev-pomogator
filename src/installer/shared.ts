@@ -16,6 +16,34 @@ export function makePortableScriptCommand(scriptName: string, args?: string): st
 }
 
 /**
+ * Generate a cross-platform hook command that runs a TypeScript file
+ * via tsx-runner.js (which handles npx cache corruption with retry).
+ *
+ * Same portable pattern as makePortableScriptCommand — resolves
+ * ~/.dev-pomogator/scripts/tsx-runner.js at runtime via os.homedir().
+ */
+export function makePortableTsxCommand(scriptPath: string, args?: string): string {
+  const escaped = scriptPath.replace(/\\/g, '/');
+  const runner = `node -e "require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner.js'))"`;
+  return args ? `${runner} -- "${escaped}" ${args}` : `${runner} -- "${escaped}"`;
+}
+
+/**
+ * Replace `npx tsx "SCRIPT"` or `npx tsx SCRIPT` in a hook command
+ * with the portable tsx-runner command that handles cache corruption.
+ */
+export function replaceNpxTsxWithPortable(command: string): string {
+  // Match: npx tsx "quoted/path" or npx tsx unquoted/path
+  return command.replace(
+    /\bnpx\s+tsx\s+"([^"]+)"/g,
+    (_match, scriptPath) => makePortableTsxCommand(scriptPath)
+  ).replace(
+    /\bnpx\s+tsx\s+(\S+)/g,
+    (_match, scriptPath) => makePortableTsxCommand(scriptPath)
+  );
+}
+
+/**
  * Transform relative .dev-pomogator/tools/ paths in a hook command to absolute paths.
  * Ensures hooks work correctly regardless of CWD when the IDE executes them.
  */

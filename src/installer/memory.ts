@@ -4,7 +4,7 @@ import os from 'os';
 import { execSync, spawn } from 'child_process';
 import { fileURLToPath } from 'url';
 import chalk from 'chalk';
-import { makePortableScriptCommand } from './shared.js';
+import { makePortableScriptCommand, makePortableTsxCommand } from './shared.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -163,7 +163,7 @@ function generateCursorHooksJson(): CursorHooksJson {
       beforeSubmitPrompt: [
         { command: makeClaudeMemHook('session-init') },
         { command: makeClaudeMemHook('context') },
-        { command: `npx tsx "${escapedValidateSpecsPath}"` },  // specs-workflow validator
+        { command: makePortableTsxCommand(validateSpecsPath) },  // specs-workflow validator
       ],
       afterMCPExecution: [
         { command: makeClaudeMemHook('observation') },
@@ -178,7 +178,7 @@ function generateCursorHooksJson(): CursorHooksJson {
         // Use our custom wrapper that reads Cursor's SQLite and calls claude-mem API
         // This fixes "Missing transcriptPath" error
         { command: `bun "${escapedSummarizePath}"` },
-        { command: `npx tsx "${getValidateStepsScriptPath().replace(/\\/g, '\\\\')}"` },  // steps-validator
+        { command: makePortableTsxCommand(getValidateStepsScriptPath()) },  // steps-validator
         { command: makePortableScriptCommand('check-update.js') },  // dev-pomogator updater
       ],
     },

@@ -7,7 +7,7 @@ import type { ManagedFileEntry, ManagedFiles } from '../config/schema.js';
 import { findRepoRoot } from '../utils/repo.js';
 import { RULES_SUBFOLDER, TOOLS_DIR } from '../constants.js';
 import { getFileHash } from '../updater/content-hash.js';
-import { collectFileHashes, addProjectPaths, resolveHookToolPaths } from './shared.js';
+import { collectFileHashes, addProjectPaths, resolveHookToolPaths, replaceNpxTsxWithPortable } from './shared.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -196,8 +196,8 @@ async function installExtensionHooks(extensions: Extension[], repoRoot: string):
       if (!extensionHooks[eventName]) {
         extensionHooks[eventName] = [];
       }
-      // Replace relative paths with absolute paths
-      const absoluteCommand = resolveHookToolPaths(command, repoRoot);
+      // Replace relative paths with absolute paths, then wrap npx tsx with resilient runner
+      const absoluteCommand = replaceNpxTsxWithPortable(resolveHookToolPaths(command, repoRoot));
       extensionHooks[eventName].push(absoluteCommand);
 
       // Track per-extension hooks for managed data
@@ -296,6 +296,15 @@ async function setupGlobalScripts(): Promise<void> {
     await fs.copy(bundledScript, scriptPath, { overwrite: true });
   } else {
     console.log('  ⚠ check-update.bundle.cjs not found. Run "npm run build" first.');
+  }
+
+  // Copy tsx-runner.js (resilient npx tsx wrapper with cache cleanup)
+  const tsxRunnerSrc = path.join(distDir, 'tsx-runner.js');
+  const tsxRunnerDest = path.join(scriptsDir, 'tsx-runner.js');
+  if (await fs.pathExists(tsxRunnerSrc)) {
+    await fs.copy(tsxRunnerSrc, tsxRunnerDest, { overwrite: true });
+  } else {
+    console.log('  ⚠ tsx-runner.js not found. Run "npm run build" first.');
   }
 }
 

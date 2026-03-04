@@ -9,6 +9,7 @@ allow:
 - docker-compose.test.yml
 - Dockerfile.gui
 - Dockerfile.test
+- install
 - install.ps1
 - install.sh
 - uninstall.ps1

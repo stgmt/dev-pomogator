@@ -32,3 +32,8 @@ await esbuild.build({
 });
 
 console.log('Built dist/check-update.bundle.cjs');
+
+// Copy tsx-runner.js to dist/ (plain JS, no bundling needed)
+import { copyFileSync } from 'fs';
+copyFileSync('src/scripts/tsx-runner.js', 'dist/tsx-runner.js');
+console.log('Copied dist/tsx-runner.js');
