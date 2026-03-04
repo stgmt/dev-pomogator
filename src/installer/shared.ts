@@ -4,6 +4,7 @@ import { loadConfig, saveConfig } from '../config/index.js';
 import type { InstalledExtension, ManagedFileEntry, ManagedFiles, Platform } from '../config/schema.js';
 import type { Extension } from './extensions.js';
 import { getFileHash } from '../updater/content-hash.js';
+import { TOOLS_DIR } from '../constants.js';
 
 /**
  * Generate a cross-platform hook command that resolves ~/.dev-pomogator/scripts/<script>
@@ -12,6 +13,17 @@ import { getFileHash } from '../updater/content-hash.js';
 export function makePortableScriptCommand(scriptName: string, args?: string): string {
   const cmd = `node -e "require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','${scriptName}'))"`;
   return args ? `${cmd} -- ${args}` : cmd;
+}
+
+/**
+ * Transform relative .dev-pomogator/tools/ paths in a hook command to absolute paths.
+ * Ensures hooks work correctly regardless of CWD when the IDE executes them.
+ */
+export function resolveHookToolPaths(command: string, repoRoot: string): string {
+  return command.replace(
+    /\.dev-pomogator\/tools\//g,
+    path.join(repoRoot, TOOLS_DIR).replace(/\\/g, '/') + '/'
+  );
 }
 
 /**

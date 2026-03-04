@@ -285,6 +285,61 @@ describe('CORE003: Claude Code Installer', () => {
     });
   });
 
+  describe('Scenario: Extension hooks use absolute paths in project settings', () => {
+    it('should have extension hooks in project .claude/settings.json', async () => {
+      const settingsPath = appPath('.claude', 'settings.json');
+      expect(await fs.pathExists(settingsPath)).toBe(true);
+
+      const settings = await fs.readJson(settingsPath);
+      expect(settings.hooks).toBeDefined();
+    });
+
+    it('should use absolute paths in extension hook commands', async () => {
+      const settingsPath = appPath('.claude', 'settings.json');
+      const settings = await fs.readJson(settingsPath);
+      const projectDir = appPath().replace(/\\/g, '/');
+
+      for (const [, hookEntries] of Object.entries(settings.hooks || {})) {
+        if (!Array.isArray(hookEntries)) continue;
+
+        for (const entry of hookEntries as any[]) {
+          if (!entry.hooks) continue;
+          for (const hook of entry.hooks) {
+            if (hook.command?.includes('dev-pomogator/tools/')) {
+              // Must contain absolute project path prefix
+              expect(hook.command).toContain(projectDir);
+              // Must NOT have relative .dev-pomogator/tools/ without absolute prefix
+              expect(hook.command).not.toMatch(/(?:^|\s)\.dev-pomogator\/tools\//);
+            }
+          }
+        }
+      }
+    });
+
+    it('should use forward slashes in hook tool paths', async () => {
+      const settingsPath = appPath('.claude', 'settings.json');
+      const settings = await fs.readJson(settingsPath);
+
+      for (const [, hookEntries] of Object.entries(settings.hooks || {})) {
+        if (!Array.isArray(hookEntries)) continue;
+
+        for (const entry of hookEntries as any[]) {
+          if (!entry.hooks) continue;
+          for (const hook of entry.hooks) {
+            if (hook.command?.includes('dev-pomogator/tools/')) {
+              const toolPathMatch = hook.command.match(
+                /[\w/\\:.-]+dev-pomogator\/tools\/[\w/.]+/
+              );
+              if (toolPathMatch) {
+                expect(toolPathMatch[0]).not.toContain('\\');
+              }
+            }
+          }
+        }
+      }
+    });
+  });
+
   describe('Scenario: Re-installation preserves existing hooks', () => {
     it('should not duplicate check-update.js hook on reinstall', async () => {
       // Run installer again (--all for non-interactive mode)

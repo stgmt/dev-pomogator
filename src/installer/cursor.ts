@@ -7,7 +7,7 @@ import type { ManagedFileEntry, ManagedFiles } from '../config/schema.js';
 import { findRepoRoot } from '../utils/repo.js';
 import { RULES_SUBFOLDER, TOOLS_DIR } from '../constants.js';
 import { getFileHash } from '../updater/content-hash.js';
-import { collectFileHashes, addProjectPaths } from './shared.js';
+import { collectFileHashes, addProjectPaths, resolveHookToolPaths } from './shared.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -197,10 +197,7 @@ async function installExtensionHooks(extensions: Extension[], repoRoot: string):
         extensionHooks[eventName] = [];
       }
       // Replace relative paths with absolute paths
-      const absoluteCommand = command.replace(
-        /\.dev-pomogator\/tools\//g,
-        path.join(repoRoot, TOOLS_DIR).replace(/\\/g, '/') + '/'
-      );
+      const absoluteCommand = resolveHookToolPaths(command, repoRoot);
       extensionHooks[eventName].push(absoluteCommand);
 
       // Track per-extension hooks for managed data

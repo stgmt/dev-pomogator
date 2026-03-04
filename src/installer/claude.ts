@@ -8,7 +8,7 @@ import type { ManagedFileEntry, ManagedFiles } from '../config/schema.js';
 import { findRepoRoot } from '../utils/repo.js';
 import { RULES_SUBFOLDER, TOOLS_DIR, SKILLS_DIR } from '../constants.js';
 import { getFileHash } from '../updater/content-hash.js';
-import { collectFileHashes, addProjectPaths, makePortableScriptCommand } from './shared.js';
+import { collectFileHashes, addProjectPaths, makePortableScriptCommand, resolveHookToolPaths } from './shared.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -334,7 +334,10 @@ async function installExtensionHooks(repoRoot: string, extensions: Extension[]):
   for (const ext of extensions) {
     const hooks = getExtensionHooks(ext, 'claude');
 
-    for (const [hookName, command] of Object.entries(hooks)) {
+    for (const [hookName, rawCommand] of Object.entries(hooks)) {
+      // Replace relative paths with absolute paths so hooks work from any CWD
+      const command = resolveHookToolPaths(rawCommand, repoRoot);
+
       if (!allHooks[hookName]) {
         allHooks[hookName] = [];
       }

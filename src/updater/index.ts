@@ -13,6 +13,7 @@ import path from 'path';
 import os from 'os';
 import semver from 'semver';
 import { RULES_SUBFOLDER, TOOLS_DIR, SKILLS_DIR } from '../constants.js';
+import { resolveHookToolPaths } from '../installer/shared.js';
 
 interface UpdateOptions {
   force?: boolean;
@@ -330,10 +331,7 @@ async function updateCursorHooksForProject(
     }
     nextManagedHooks[eventName].push(command);
 
-    const absoluteCommand = command.replace(
-      /\.dev-pomogator\/tools\//g,
-      path.join(repoRoot, TOOLS_DIR).replace(/\\/g, '/') + '/'
-    );
+    const absoluteCommand = resolveHookToolPaths(command, repoRoot);
     if (!nextAbsoluteByEvent[eventName]) {
       nextAbsoluteByEvent[eventName] = [];
     }
@@ -360,11 +358,8 @@ async function updateCursorHooksForProject(
       continue;
     }
     const nextSet = new Set(nextAbsoluteByEvent[eventName] ?? []);
-    const previousAbsolute = commands.map((command) =>
-      command.replace(
-        /\.dev-pomogator\/tools\//g,
-        path.join(repoRoot, TOOLS_DIR).replace(/\\/g, '/') + '/'
-      ).replace(/\\/g, '\\\\')
+    const previousAbsolute = commands.map((cmd) =>
+      resolveHookToolPaths(cmd, repoRoot).replace(/\\/g, '\\\\')
     );
     const removeSet = new Set(previousAbsolute.filter((command) => !nextSet.has(command)));
     if (removeSet.size === 0) {
@@ -407,11 +402,14 @@ async function updateClaudeHooksForProject(
 
   const nextManagedHooks: Record<string, string[]> = {};
 
-  for (const [hookName, command] of Object.entries(hooks)) {
+  for (const [hookName, rawCommand] of Object.entries(hooks)) {
     if (!nextManagedHooks[hookName]) {
       nextManagedHooks[hookName] = [];
     }
-    nextManagedHooks[hookName].push(command);
+    nextManagedHooks[hookName].push(rawCommand);
+
+    // Replace relative paths with absolute paths so hooks work from any CWD
+    const command = resolveHookToolPaths(rawCommand, repoRoot);
 
     if (!existingHooks[hookName]) {
       existingHooks[hookName] = [];
@@ -445,8 +443,14 @@ async function updateClaudeHooksForProject(
     if (!hookArray) {
       continue;
     }
-    const nextSet = new Set(nextManagedHooks[hookName] ?? []);
-    const removeSet = new Set(commands.filter((command) => !nextSet.has(command)));
+    const nextAbsolute = new Set(
+      (nextManagedHooks[hookName] ?? []).map(cmd => resolveHookToolPaths(cmd, repoRoot))
+    );
+    const removeSet = new Set(
+      commands
+        .map(cmd => resolveHookToolPaths(cmd, repoRoot))
+        .filter(cmd => !nextAbsolute.has(cmd))
+    );
     if (removeSet.size === 0) {
       continue;
     }
