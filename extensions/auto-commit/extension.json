@@ -1,6 +1,6 @@
 {
   "name": "auto-commit",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Automatic git commits with LLM-generated messages on agent stop",
   "platforms": ["cursor", "claude"],
   "category": "automation",

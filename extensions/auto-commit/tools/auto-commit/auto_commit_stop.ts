@@ -254,8 +254,13 @@ async function main(): Promise<void> {
     }
 
     // Commit
-    gitCommit(repoRoot, commitMessage);
-    log("INFO", "Commit created successfully");
+    const commitResult = gitCommit(repoRoot, commitMessage, config.bypassHooksOnFailure);
+    if (commitResult.hooksBypassed) {
+      log("INFO", "Commit created with --no-verify (pre-commit hooks failed)");
+      log("INFO", `Hook failure reason: ${commitResult.hookError}`);
+    } else {
+      log("INFO", "Commit created successfully");
+    }
 
     // Update state
     updateLastCommitTimestamp(nowMs);

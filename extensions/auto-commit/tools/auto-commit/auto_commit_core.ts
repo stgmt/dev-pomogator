@@ -31,6 +31,7 @@ export type AutoCommitConfig = {
   maxDiffTokens: number;
   maxDialogs: number;
   maxMessages: number;
+  bypassHooksOnFailure: boolean;
   smartCommit: {
     enabled: boolean;
     command: string; // e.g., "comment"
@@ -40,6 +41,11 @@ export type AutoCommitConfig = {
     model: string;
     apiKey: string;
   };
+};
+
+export type GitCommitResult = {
+  hooksBypassed: boolean;
+  hookError?: string;
 };
 
 export type AutoCommitState = {
@@ -128,6 +134,7 @@ export function defaultAutoCommitConfig(): AutoCommitConfig {
     maxDiffTokens: 4000,
     maxDialogs: 3,
     maxMessages: 12,
+    bypassHooksOnFailure: true,
     smartCommit: {
       enabled: false,
       command: "comment",
@@ -157,6 +164,7 @@ export function loadAutoCommitConfig(repoRootAbs: string): AutoCommitConfig {
     maxDiffTokens: projCfg.maxDiffTokens ?? userCfg.maxDiffTokens ?? defaults.maxDiffTokens,
     maxDialogs: projCfg.maxDialogs ?? userCfg.maxDialogs ?? defaults.maxDialogs,
     maxMessages: projCfg.maxMessages ?? userCfg.maxMessages ?? defaults.maxMessages,
+    bypassHooksOnFailure: projCfg.bypassHooksOnFailure ?? userCfg.bypassHooksOnFailure ?? defaults.bypassHooksOnFailure,
     smartCommit: {
       enabled: projCfg.smartCommit?.enabled ?? userCfg.smartCommit?.enabled ?? defaults.smartCommit.enabled,
       command: projCfg.smartCommit?.command ?? userCfg.smartCommit?.command ?? defaults.smartCommit.command,
@@ -269,24 +277,48 @@ export function hasUncommittedChanges(cwd: string): boolean {
   }
 }
 
-export function gitCommit(cwd: string, message: string): void {
+export function gitCommit(cwd: string, message: string, bypassHooksOnFailure: boolean = true): GitCommitResult {
+  // Stage all changes (failure here is not recoverable)
   try {
-    // Stage all changes
     execSync("git add -A", {
       cwd,
       encoding: "utf-8",
       timeout: 10000,
     });
+  } catch (e) {
+    throw new Error(`Failed to stage changes: ${e instanceof Error ? e.message : String(e)}`);
+  }
 
-    // Commit with message via stdin (-F -) to preserve newlines on all platforms
+  // Attempt commit with hooks
+  try {
     execSync("git commit -F -", {
       cwd,
       encoding: "utf-8",
-      timeout: 10000,
+      timeout: 30000, // hooks can be slow
       input: message,
     });
-  } catch (e) {
-    throw new Error(`Failed to commit: ${e instanceof Error ? e.message : String(e)}`);
+    return { hooksBypassed: false };
+  } catch (firstError) {
+    const hookErrorMsg = firstError instanceof Error ? firstError.message : String(firstError);
+
+    if (!bypassHooksOnFailure) {
+      throw new Error(`Failed to commit (hooks may have failed): ${hookErrorMsg}`);
+    }
+
+    // Retry without hooks
+    try {
+      execSync("git commit --no-verify -F -", {
+        cwd,
+        encoding: "utf-8",
+        timeout: 10000,
+        input: message,
+      });
+      return { hooksBypassed: true, hookError: hookErrorMsg };
+    } catch (retryError) {
+      throw new Error(
+        `Failed to commit even with --no-verify: ${retryError instanceof Error ? retryError.message : String(retryError)}`
+      );
+    }
   }
 }
 

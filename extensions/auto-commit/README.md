@@ -75,6 +75,7 @@ Create `~/.cursor/auto-commit.json` for global settings or `.cursor/auto-commit.
 | `maxDiffTokens` | number | `4000` | Max tokens for git diff |
 | `maxDialogs` | number | `3` | Max dialogs to include in context |
 | `maxMessages` | number | `12` | Max messages per dialog |
+| `bypassHooksOnFailure` | boolean | `true` | Retry commit with --no-verify if pre-commit hooks fail |
 | `smartCommit.enabled` | boolean | `false` | Enable Smart Commit one-line format |
 | `smartCommit.command` | string | `"comment"` | Smart Commit command (e.g. `comment`) |
 | `llm.baseUrl` | string | env/default | LLM API base URL |
@@ -143,6 +144,17 @@ Logs are written to stderr with format:
 
 1. Set `jiraBaseUrl` in config
 2. Ensure branch name contains Jira key matching `jiraKeyPattern`
+
+### Commits bypass pre-commit hooks
+
+If you see `Commit created with --no-verify` in logs, your pre-commit hooks are failing.
+Common causes:
+- CRLF line endings in hook scripts (Windows install, Linux runtime)
+- Wrong Python shebang (`python` vs `python3`)
+- Missing Python modules (`pre_commit`)
+- Hardcoded absolute paths in hooks
+
+To enforce strict hook compliance, set `"bypassHooksOnFailure": false` in your config.
 
 ### Slow context loading
 
