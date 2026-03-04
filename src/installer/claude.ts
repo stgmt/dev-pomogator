@@ -394,7 +394,16 @@ async function installExtensionHooks(repoRoot: string, extensions: Extension[]):
   }
   
   const existingHooks = settings.hooks as Record<string, unknown[]>;
-  
+
+  // Clean previous managed hooks to prevent duplicates on re-install
+  // Our hooks always contain '.dev-pomogator/tools/' — user hooks never do
+  for (const hookName of Object.keys(existingHooks)) {
+    const arr = existingHooks[hookName] as Array<{ hooks?: Array<{ command: string }> }>;
+    existingHooks[hookName] = arr.filter(
+      entry => !entry.hooks?.some(h => h.command.includes('.dev-pomogator/tools/'))
+    );
+  }
+
   // Merge new hooks
   for (const [hookName, hookEntries] of Object.entries(allHooks)) {
     if (!existingHooks[hookName]) {

@@ -322,6 +322,15 @@ async function updateCursorHooksForProject(
     }
   }
 
+  // Clean all managed hooks before re-adding to prevent path-format duplicates
+  for (const eventName of Object.keys(existingHooks.hooks)) {
+    existingHooks.hooks[eventName] = existingHooks.hooks[eventName].filter(
+      h => !h.command.includes('.dev-pomogator/tools/')
+        && !h.command.includes('.dev-pomogator\\\\tools\\\\')
+        && !h.command.includes('.dev-pomogator\\tools\\')
+    );
+  }
+
   const nextManagedHooks: Record<string, string[]> = {};
   const nextAbsoluteByEvent: Record<string, string[]> = {};
 
@@ -399,6 +408,14 @@ async function updateClaudeHooksForProject(
     settings.hooks = {};
   }
   const existingHooks = settings.hooks as Record<string, unknown[]>;
+
+  // Clean all managed hooks before re-adding to prevent path-format duplicates
+  for (const hookName of Object.keys(existingHooks)) {
+    const arr = existingHooks[hookName] as Array<{ hooks?: Array<{ command: string }> }>;
+    existingHooks[hookName] = arr.filter(
+      entry => !entry.hooks?.some(h => h.command.includes('.dev-pomogator/tools/'))
+    );
+  }
 
   const nextManagedHooks: Record<string, string[]> = {};
 
