@@ -1,34 +1,40 @@
 # dev-pomogator
 
-Установщик и менеджер команд, правил, инструментов и хуков для Cursor и Claude Code.
-Помогает быстро включить командные стандарты и рабочие процессы в проекте.
+Плагин-система для Cursor и Claude Code, которая устанавливает в проект командные стандарты, рабочие процессы, инструменты и хуки.
+
+**Что это даёт:**
+- Единый формат планов, спецификаций и коммитов для всей команды
+- Автокоммиты с LLM-генерацией сообщений при завершении работы агента
+- Анализ сессий и автоматическое предложение правил для проекта
+- Защита от типичных LLM-ошибок (лишние файлы в корне, пустые фолбеки)
+- Автообновления плагинов с защитой пользовательских изменений
 
 ## Быстрый старт
 
 Запускайте из папки проекта (root определяется по git).
 
-### Cursor
+### Cursor (по умолчанию)
 
 **Windows (PowerShell):**
 ```powershell
-irm https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install | iex
 ```
 
 **Linux/macOS:**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install | bash
 ```
 
 ### Claude Code
 
 **Windows (PowerShell):**
 ```powershell
-$env:TARGET="claude"; irm https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install.ps1 | iex
+$env:TARGET="claude"; irm https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install | iex
 ```
 
 **Linux/macOS:**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install.sh | TARGET=claude bash
+curl -fsSL https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install | TARGET=claude bash
 ```
 
 ## CLI
@@ -56,17 +62,13 @@ npx dev-pomogator --update
 
 | Плагин | Назначение | Команда в чате |
 |--------|------------|----------------|
-| `suggest-rules` | Анализирует сессию и предлагает правила для проекта | `/suggest-rules` |
+| `suggest-rules` | Анализирует сессию и предлагает правила; включает skill `/deep-insights` для количественного анализа метрик | `/suggest-rules`, `/deep-insights` |
 | `specs-workflow` | Управление спеками (3 фазы) + валидаторы | `/create-spec <name>` |
 | `plan-pomogator` | Формат планов, шаблон и валидатор | — |
+| `auto-commit` | Автокоммиты с LLM-генерацией сообщений при завершении агента (Stop hook) | — |
 | `forbid-root-artifacts` | Антигаллюцинационная защита: allowlist файлов в корне репозитория | `/configure-root-artifacts` |
 
-Идея `forbid-root-artifacts` — защитный барьер от случайных root-артефактов, которые LLM-агенты могут создавать «по инерции».
-
-Подробнее:
-- `extensions/specs-workflow/README.md`
-- `extensions/plan-pomogator/README.md`
-- `extensions/forbid-root-artifacts/README.md`
+Подробнее: `extensions/*/README.md`
 
 ## Что устанавливается
 
@@ -86,15 +88,14 @@ npx dev-pomogator --update
 
 ### Глобально (Cursor)
 
-- `~/.cursor/hooks/hooks.json`
+- `~/.cursor/hooks/hooks.json` — хуки плагинов (auto-commit Stop, check-update и др.)
 - `~/.dev-pomogator/scripts/check-update.js`
-- `~/.dev-pomogator/scripts/cursor-summarize.ts`
 - `~/.dev-pomogator/config.json`
 - `~/.dev-pomogator/logs/`
 
 ### Глобально (Claude Code)
 
-- `~/.claude/settings.json` (hooks)
+- `~/.claude/settings.json` — хуки плагинов (auto-commit Stop, check-update и др.)
 - `~/.dev-pomogator/scripts/check-update.js`
 - `~/.dev-pomogator/config.json`
 - `~/.dev-pomogator/logs/`

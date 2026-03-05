@@ -3,6 +3,7 @@
 
 mode: extend
 allow:
+- .env.example
 - .env.test
 - CHANGELOG.md
 - docker-compose.gui.yml
