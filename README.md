@@ -37,27 +37,6 @@ $env:TARGET="claude"; irm https://raw.githubusercontent.com/stgmt/dev-pomogator/
 curl -fsSL https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install | TARGET=claude bash
 ```
 
-## CLI
-
-**Интерактивно:**
-```bash
-npx dev-pomogator
-npx dev-pomogator --cursor
-npx dev-pomogator --claude
-```
-
-**Неинтерактивно:**
-```bash
-npx dev-pomogator --cursor --plugins=suggest-rules,specs-workflow
-npx dev-pomogator --claude --all
-```
-
-**Сервисные команды:**
-```bash
-npx dev-pomogator --status
-npx dev-pomogator --update
-```
-
 ## Плагины
 
 | Плагин | Назначение | Команда в чате |
