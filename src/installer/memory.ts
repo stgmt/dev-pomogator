@@ -1040,9 +1040,31 @@ async function areCursorHooksInstalled(): Promise<boolean> {
 }
 
 /**
+ * Check if claude-mem marketplace plugin is enabled in ~/.claude/settings.json.
+ * When enabled, Claude Code auto-discovers MCP servers from the plugin's .mcp.json,
+ * so manual registration in ~/.claude.json is unnecessary and causes duplication.
+ */
+async function isClaudeMemPluginEnabled(): Promise<boolean> {
+  const settingsPath = path.join(os.homedir(), '.claude', 'settings.json');
+  try {
+    if (await fs.pathExists(settingsPath)) {
+      const settings = await fs.readJson(settingsPath);
+      return settings?.enabledPlugins?.['claude-mem@thedotmack'] === true;
+    }
+  } catch {
+    // Corrupted settings — assume not enabled
+  }
+  return false;
+}
+
+/**
  * Register claude-mem MCP server in the IDE's MCP config file.
  * Cursor: ~/.cursor/mcp.json
  * Claude Code: ~/.claude.json
+ *
+ * For Claude Code: skips manual registration when the marketplace plugin
+ * is enabled (enabledPlugins), and cleans up legacy manual entries to
+ * prevent duplicate MCP servers.
  *
  * Uses atomic config save (temp + move) per project rules.
  * Paths use forward slashes in JSON for cross-platform compatibility.
@@ -1051,6 +1073,31 @@ async function registerClaudeMemMcp(platform: 'cursor' | 'claude'): Promise<void
   const configPath = platform === 'cursor'
     ? path.join(os.homedir(), '.cursor', 'mcp.json')
     : path.join(os.homedir(), '.claude.json');
+
+  // For Claude Code: if marketplace plugin is enabled, it already provides MCP.
+  // Clean up any legacy manual entry to prevent duplicate servers.
+  if (platform === 'claude' && await isClaudeMemPluginEnabled()) {
+    let config: Record<string, any> = {};
+    try {
+      if (await fs.pathExists(configPath)) {
+        config = await fs.readJson(configPath);
+      }
+    } catch {
+      // Can't read config — nothing to clean up
+    }
+
+    if (config.mcpServers?.['claude-mem']) {
+      delete config.mcpServers['claude-mem'];
+      await fs.ensureDir(path.dirname(configPath));
+      const tempPath = configPath + '.tmp';
+      await fs.writeJson(tempPath, config, { spaces: 2 });
+      await fs.move(tempPath, configPath, { overwrite: true });
+      console.log(chalk.green('  ✓ cleaned up legacy claude-mem MCP entry (plugin provides it)'));
+    } else {
+      console.log(chalk.green('  ✓ claude-mem MCP provided by marketplace plugin'));
+    }
+    return;
+  }
 
   // Load existing config
   let config: Record<string, any> = {};
@@ -1081,7 +1128,7 @@ async function registerClaudeMemMcp(platform: 'cursor' | 'claude'): Promise<void
     return;
   }
 
-  // Register MCP server
+  // Register MCP server (fallback when plugin not available)
   config.mcpServers['claude-mem'] = {
     command: 'node',
     args: expectedArgs,

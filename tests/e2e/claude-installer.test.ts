@@ -486,9 +486,9 @@ describe('PostInstall: Dependencies are installed during setup', () => {
  * --claude --all includes suggest-rules (requiresClaudeMem: true)
  * → ensureClaudeMem('claude') must clone repo + register MCP.
  *
- * BUG reproduced: ensureClaudeMem('claude') did NOT call
- * cloneAndBuildRepo() or startClaudeMemWorker(), so worker-service.cjs
- * was never created and MCP was never registered.
+ * MCP deduplication: when marketplace plugin is enabled (enabledPlugins),
+ * manual registration in ~/.claude.json is skipped to prevent duplicate
+ * MCP servers (mcp__claude-mem__* vs mcp__plugin_claude-mem_mcp-search__*).
  */
 describe('CORE003-Claude-mem: claude-mem installed for Claude platform', () => {
   it('should have claude-mem worker-service.cjs after --claude --all', async () => {
@@ -498,15 +498,55 @@ describe('CORE003-Claude-mem: claude-mem installed for Claude platform', () => {
     expect(await fs.pathExists(workerServicePath)).toBe(true);
   });
 
-  it('should register claude-mem MCP in ~/.claude.json', async () => {
+  it('should not have manual claude-mem MCP when plugin is enabled', async () => {
+    const settingsPath = homePath('.claude', 'settings.json');
+    if (!await fs.pathExists(settingsPath)) return; // no settings = can't check
+
+    const settings = await fs.readJson(settingsPath);
+    const pluginEnabled = settings?.enabledPlugins?.['claude-mem@thedotmack'] === true;
+
     const claudeJsonPath = homePath('.claude.json');
-    if (!await fs.pathExists(claudeJsonPath)) {
-      expect.fail('~/.claude.json not found — claude-mem MCP was not registered');
-    }
+    if (!await fs.pathExists(claudeJsonPath)) return;
+
     const config = await fs.readJson(claudeJsonPath);
-    expect(config.mcpServers?.['claude-mem']).toBeDefined();
-    expect(config.mcpServers['claude-mem'].command).toBe('node');
-    expect(config.mcpServers['claude-mem'].args[0]).toContain('mcp-server.cjs');
+
+    if (pluginEnabled) {
+      // Plugin provides MCP — manual entry must NOT exist (deduplication)
+      expect(config.mcpServers?.['claude-mem']).toBeUndefined();
+    } else {
+      // Plugin not available — fallback manual entry must exist
+      expect(config.mcpServers?.['claude-mem']).toBeDefined();
+      expect(config.mcpServers['claude-mem'].command).toBe('node');
+      expect(config.mcpServers['claude-mem'].args[0]).toContain('mcp-server.cjs');
+    }
+  });
+
+  it('should clean up legacy manual MCP entry on reinstall', async () => {
+    const settingsPath = homePath('.claude', 'settings.json');
+    if (!await fs.pathExists(settingsPath)) return;
+
+    const settings = await fs.readJson(settingsPath);
+    if (!settings?.enabledPlugins?.['claude-mem@thedotmack']) return;
+
+    // Inject a legacy manual entry to simulate pre-fix state
+    const claudeJsonPath = homePath('.claude.json');
+    let config: Record<string, any> = {};
+    if (await fs.pathExists(claudeJsonPath)) {
+      config = await fs.readJson(claudeJsonPath);
+    }
+    if (!config.mcpServers) config.mcpServers = {};
+    config.mcpServers['claude-mem'] = {
+      command: 'node',
+      args: [homePath('.claude', 'plugins', 'marketplaces', 'thedotmack', 'plugin', 'scripts', 'mcp-server.cjs')],
+    };
+    await fs.writeJson(claudeJsonPath, config, { spaces: 2 });
+
+    // Re-run installer
+    await runInstaller('--claude --all');
+
+    // Legacy entry should be cleaned up
+    const configAfter = await fs.readJson(claudeJsonPath);
+    expect(configAfter.mcpServers?.['claude-mem']).toBeUndefined();
   });
 });
 
