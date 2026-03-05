@@ -14,6 +14,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { checkUpdate } from './index.js';
+import { migrateOldProjectHooks } from './hook-migration.js';
 import { logger } from '../utils/logger.js';
 
 const CONFIG_DIR = path.join(os.homedir(), '.dev-pomogator');
@@ -56,9 +57,12 @@ function shouldUpdate(config: Config | null): boolean {
 
 async function main(): Promise<void> {
   logger.info(`=== Update check started (${platform}) ===`);
-  
+
+  // Always migrate old hooks (fast local check, no network)
+  await migrateOldProjectHooks(platform).catch(() => {});
+
   const config = loadConfig();
-  
+
   if (!shouldUpdate(config)) {
     logger.info('Skipped: cooldown not expired or autoUpdate disabled');
     return;

@@ -61,6 +61,19 @@ Feature: CORE003 Claude Code Installer
     And installedExtensions should contain entries with platform "claude"
     And projectPaths should include current project path
 
+  Scenario: tsx-runner resolves script from subdirectory via git root
+    Given tsx-runner.js is installed in ~/.dev-pomogator/scripts/
+    And .dev-pomogator/tools/ contains hook scripts in project root
+    When tsx-runner is invoked from a project subdirectory with relative path
+    Then it should find the script by walking up to git root
+    And the hook script should execute successfully
+
+  Scenario: Auto-update migrates old-format hooks to portable format
+    Given project .claude/settings.json has old-format "npx tsx" hook
+    When check-update runs for the project
+    Then hook command should be migrated to tsx-runner format
+    And hook paths should be absolute
+
   Scenario: PostInstall hooks install dependencies
     Given dev-pomogator installs for Claude Code with --all
     Then deps-install.py should exist in .dev-pomogator/tools/forbid-root-artifacts/

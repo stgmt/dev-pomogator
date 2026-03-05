@@ -30,7 +30,33 @@ if (args.length === 0) {
   process.exit(0);
 }
 
-const scriptPath = args[0];
+/**
+ * Resolve script path — handles CWD mismatch when IDE runs from subdirectory.
+ * Tries: absolute → CWD-relative → walk up to git root(s).
+ */
+function resolveScriptPath(rawPath) {
+  // Absolute and exists — use as-is
+  if (path.isAbsolute(rawPath) && fs.existsSync(rawPath)) return rawPath;
+
+  // Relative from CWD
+  const cwdResolved = path.resolve(process.cwd(), rawPath);
+  if (fs.existsSync(cwdResolved)) return cwdResolved;
+
+  // Walk up to find git root where script exists
+  let dir = path.resolve(process.cwd());
+  while (dir !== path.dirname(dir)) {
+    if (fs.existsSync(path.join(dir, '.git'))) {
+      const candidate = path.resolve(dir, rawPath);
+      if (fs.existsSync(candidate)) return candidate;
+    }
+    dir = path.dirname(dir);
+  }
+
+  // Not found anywhere — return original (will fail with clear error)
+  return rawPath;
+}
+
+const scriptPath = resolveScriptPath(args[0]);
 const scriptArgs = args.slice(1);
 
 /**

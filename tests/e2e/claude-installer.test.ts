@@ -550,6 +550,105 @@ describe('CORE003-Claude-mem: claude-mem installed for Claude platform', () => {
   });
 });
 
+describe('Scenario: tsx-runner resolves script from subdirectory via git root', () => {
+  const testScriptRelPath = '.dev-pomogator/tools/test-echo.ts';
+
+  beforeAll(async () => {
+    // Write a minimal test script that just outputs a marker and exits
+    const testScript = appPath('.dev-pomogator', 'tools', 'test-echo.ts');
+    await fs.writeFile(testScript, 'console.log("TSX_RUNNER_OK");');
+
+    // Create a subdirectory to simulate CWD mismatch
+    await fs.ensureDir(appPath('subdir'));
+  });
+
+  it('should have tsx-runner.js installed in ~/.dev-pomogator/scripts/', async () => {
+    const runnerPath = homePath('.dev-pomogator', 'scripts', 'tsx-runner.js');
+    expect(await fs.pathExists(runnerPath)).toBe(true);
+  });
+
+  it('should resolve relative script path from subdirectory via git root', async () => {
+    const { execSync } = await import('child_process');
+    const runnerPath = homePath('.dev-pomogator', 'scripts', 'tsx-runner.js');
+
+    // Run tsx-runner from subdirectory with relative path
+    const output = execSync(`node "${runnerPath}" "${testScriptRelPath}"`, {
+      encoding: 'utf-8',
+      cwd: appPath('subdir'),
+      timeout: 30000,
+    });
+
+    expect(output).toContain('TSX_RUNNER_OK');
+  });
+
+  it('should also work with absolute paths', async () => {
+    const { execSync } = await import('child_process');
+    const runnerPath = homePath('.dev-pomogator', 'scripts', 'tsx-runner.js');
+    const absoluteScript = appPath('.dev-pomogator', 'tools', 'test-echo.ts');
+
+    const output = execSync(`node "${runnerPath}" "${absoluteScript}"`, {
+      encoding: 'utf-8',
+      cwd: appPath('subdir'),
+      timeout: 30000,
+    });
+
+    expect(output).toContain('TSX_RUNNER_OK');
+  });
+});
+
+describe('Scenario: Auto-update migrates old-format hooks to portable format', () => {
+  it('should migrate old npx tsx hooks to tsx-runner format', async () => {
+    const projectDir = appPath();
+    const settingsPath = appPath('.claude', 'settings.json');
+
+    // Inject old-format hook into project settings
+    const settings = await fs.readJson(settingsPath);
+    if (!settings.hooks) settings.hooks = {};
+    if (!settings.hooks.Stop) settings.hooks.Stop = [];
+
+    settings.hooks.Stop.push({
+      matcher: '',
+      hooks: [{
+        type: 'command',
+        command: 'npx tsx .dev-pomogator/tools/auto-commit/summary.ts',
+      }],
+    });
+    await fs.writeJson(settingsPath, settings, { spaces: 2 });
+
+    // Verify old format is in place
+    const before = await fs.readJson(settingsPath);
+    const oldHook = before.hooks.Stop.at(-1).hooks[0];
+    expect(oldHook.command).toContain('npx tsx .dev-pomogator/tools/');
+
+    // Run the bundled check-update script (which calls migrateOldProjectHooks)
+    const { execSync } = await import('child_process');
+    try {
+      execSync('node dist/check-update.bundle.cjs --claude', {
+        encoding: 'utf-8',
+        cwd: appPath(),
+        timeout: 30000,
+      });
+    } catch {
+      // check-update may exit non-zero if no network / no config — that's OK,
+      // migration runs before cooldown check
+    }
+
+    // Verify migration happened
+    const after = await fs.readJson(settingsPath);
+    const migratedHook = after.hooks.Stop.at(-1).hooks[0];
+
+    // Should no longer contain bare "npx tsx .dev-pomogator/"
+    expect(migratedHook.command).not.toMatch(/\bnpx\s+tsx\s+\.dev-pomogator/);
+
+    // Should use tsx-runner portable format
+    expect(migratedHook.command).toContain('tsx-runner.js');
+
+    // Should have absolute path (project dir prefix)
+    const projectDirFwd = projectDir.replace(/\\/g, '/');
+    expect(migratedHook.command).toContain(projectDirFwd);
+  });
+});
+
 describe('CORE003: Install logging for Claude Code', () => {
   it('should log Claude Code installation to install.log', async () => {
     const log = await getInstallLog();
