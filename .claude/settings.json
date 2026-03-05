@@ -1,0 +1,44 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner.js'))\" -- \"D:/repos/dev-pomogator/.dev-pomogator/tools/auto-commit/auto_commit_stop.ts\"",
+            "timeout": 60
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner.js'))\" -- \"D:/repos/dev-pomogator/.dev-pomogator/tools/claude-mem-health/health-check.ts\"",
+            "timeout": 60
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner.js'))\" -- \"D:/repos/dev-pomogator/.dev-pomogator/tools/specs-validator/validate-specs.ts\"",
+            "timeout": 60
+          }
+        ]
+      }
+    ]
+  },
+  "env": {
+    "AUTO_COMMIT_LLM_URL": "https://aipomogator.ru/go/v1",
+    "AUTO_COMMIT_LLM_MODEL": "openrouter/deepseek/deepseek-v3.2"
+  }
+}

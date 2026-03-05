@@ -1,0 +1,410 @@
+# Specs Management - Управление спецификациями
+
+## Когда применять
+
+Пользователь просит:
+- **RU:** "создай спеки", "обнови спеки", "спецификация для...", "покажи спеки", "статус спеков"
+- **EN:** "create specs", "update specs", "spec for...", "show specs", "specs status"
+
+---
+
+## Структура спецификации
+
+Каждая спека располагается в `.specs/{feature-slug}/` и содержит 13 файлов:
+
+```
+.specs/{feature-slug}/
+├── README.md              # Overview, навигация (создаётся ПОСЛЕДНИМ)
+├── USER_STORIES.md        # User Stories (создаётся ПЕРВЫМ)
+├── USE_CASES.md           # Use Cases (UC-1, UC-2...)
+├── RESEARCH.md            # Исследование, технические находки
+├── REQUIREMENTS.md        # Индекс требований (ссылки на FR/NFR/AC)
+├── FR.md                  # Functional Requirements (FR-1, FR-2...)
+├── NFR.md                 # Non-Functional Requirements
+├── ACCEPTANCE_CRITERIA.md # Критерии приёмки (EARS формат)
+├── DESIGN.md              # Архитектура, компоненты, API
+├── TASKS.md               # План задач с чеклистами
+├── FILE_CHANGES.md        # Список изменяемых файлов
+├── CHANGELOG.md           # Changelog (Keep-a-Changelog)
+├── {feature-slug}.feature # BDD сценарии (Gherkin)
+└── *_SCHEMA.md            # (опционально) Схемы данных
+```
+
+---
+
+## Инструменты автоматизации
+
+### Скрипты
+
+| Скрипт | Назначение | Пример |
+|--------|------------|--------|
+| `scaffold-spec.ps1` | Создание структуры | `.\.dev-pomogator\tools\specs-generator\scaffold-spec.ps1 -Name "my-feature"` |
+| `validate-spec.ps1` | Валидация форматов | `.\.dev-pomogator\tools\specs-generator\validate-spec.ps1 -Path ".specs/my-feature"` |
+| `spec-status.ps1` | Отчёт о прогрессе + state machine | `.\.dev-pomogator\tools\specs-generator\spec-status.ps1 -Path ".specs/my-feature"` |
+| `spec-status.ps1 -ConfirmStop` | Подтверждение СТОП-точки | `.\.dev-pomogator\tools\specs-generator\spec-status.ps1 -Path ".specs/my-feature" -ConfirmStop Discovery` |
+| `fill-template.ps1` | Заполнение плейсхолдеров | `.\.dev-pomogator\tools\specs-generator\fill-template.ps1 -File "..." -ListPlaceholders` |
+| `list-specs.ps1` | Список всех спеков | `.\.dev-pomogator\tools\specs-generator\list-specs.ps1` |
+| `audit-spec.ps1` | Аудит кросс-ссылок | `.\.dev-pomogator\tools\specs-generator\audit-spec.ps1 -Path ".specs/my-feature"` |
+| `analyze-features.ps1` | Анализ паттернов .feature | `.\.dev-pomogator\tools\specs-generator\analyze-features.ps1 -Format text` |
+
+### Документация скриптов
+
+Полная документация: `.dev-pomogator/tools/specs-generator/README.md`
+
+---
+
+## Workflow создания (4 СТОП-точки)
+
+### PHASE 1: Discovery
+
+**Файлы:** USER_STORIES.md, USE_CASES.md, RESEARCH.md
+
+**Алгоритм:**
+1. Создать структуру: `.\.dev-pomogator\tools\specs-generator\scaffold-spec.ps1 -Name "{feature}"`
+2. Опросить пользователя о целях и ролях
+3. Заполнить USER_STORIES.md
+4. Заполнить USE_CASES.md
+5. Заполнить RESEARCH.md (если нужен ресерч)
+6. Проверить статус: `.\.dev-pomogator\tools\specs-generator\spec-status.ps1 -Path ".specs/{feature}"`
+
+**СТОП #1:** Показать результаты Discovery, спросить подтверждение.
+После подтверждения: `.\.dev-pomogator\tools\specs-generator\spec-status.ps1 -Path ".specs/{feature}" -ConfirmStop Discovery`
+
+---
+
+### PHASE 1.5: Project Context Analysis
+
+**Файл:** RESEARCH.md (секция `## Project Context & Constraints`)
+
+**Когда пропустить:**
+- Пользователь явно сказал "skip context analysis" / "пропусти контекст-анализ"
+- Фича greenfield (не затрагивает существующий код/правила)
+- В проекте < 2 правил в `.claude/rules/`
+- Фича тривиальная (1 файл, нет архитектурных решений)
+
+**Алгоритм:**
+1. Извлечь ключевые слова из USER_STORIES.md и USE_CASES.md (домены, технологии, действия)
+2. Просканировать `.claude/rules/*.md` — найти правила, релевантные ключевым словам
+3. Просканировать `extensions/*/extension.json` — найти расширения, пересекающиеся по домену
+4. Просканировать существующий код, упомянутый в USE_CASES — найти паттерны для reuse
+5. Просканировать `**/Hooks/`, `**/hooks/`, `**/support/` — найти существующие BDD hooks (BeforeScenario/AfterScenario, setup/teardown, environment hooks)
+6. Если фича создаёт/изменяет тестовые данные — записать найденные hooks в `### Existing Patterns & Extensions` с рекомендациями по аналогии
+7. Заполнить секцию `## Project Context & Constraints` в RESEARCH.md:
+   - `### Relevant Rules` — таблица: Rule | Path | Summary | Triggered By | Impacts
+   - `### Existing Patterns & Extensions` — таблица: Source | Path | What It Provides | Relevance
+   - `### Architectural Constraints Summary` — как ограничения влияют на будущие FR/NFR
+8. Проверить статус: `.\.dev-pomogator\tools\specs-generator\spec-status.ps1 -Path ".specs/{feature}"`
+
+**При пропуске:** записать в RESEARCH.md:
+```
+## Project Context & Constraints
+> Skipped: {причина}
+```
+
+**СТОП #1.5:** Показать найденные ограничения проекта, спросить подтверждение перед Phase 2.
+После подтверждения: `.\.dev-pomogator\tools\specs-generator\spec-status.ps1 -Path ".specs/{feature}" -ConfirmStop Context`
+
+---
+
+### PHASE 2: Requirements + Design
+
+**Файлы:** REQUIREMENTS.md, FR.md, NFR.md, ACCEPTANCE_CRITERIA.md, DESIGN.md, FILE_CHANGES.md, *.feature
+
+**Алгоритм:**
+1. Заполнить FR.md (формат: ## FR-N: {Название})
+2. Заполнить NFR.md (секции: Performance, Security, Reliability, Usability)
+3. Заполнить ACCEPTANCE_CRITERIA.md (EARS формат)
+4. Заполнить REQUIREMENTS.md (индекс ссылок)
+5. Заполнить DESIGN.md
+6. **BDD Test Infrastructure Assessment (ОБЯЗАТЕЛЬНО — НЕ пропускать)**
+
+   Агент ОБЯЗАН выполнить следующий алгоритм. Результат записывается в секцию
+   `## BDD Test Infrastructure` в DESIGN.md. Секция НЕ МОЖЕТ быть удалена.
+
+   **Шаг 6.1: Классификация фичи по Test Data Impact**
+
+   Ответить на 4 вопроса (ДА/НЕТ):
+   1. Фича создаёт, изменяет или удаляет данные через API/БД/файлы?
+   2. Фича изменяет состояние системы, которое нужно откатить после теста?
+   3. BDD сценарии из .feature требуют предустановленных данных (Given-шаги с данными)?
+   4. Фича взаимодействует с внешними сервисами, требующими mock/stub на уровне теста?
+
+   - Если хотя бы 1 ответ ДА → `TEST_DATA_ACTIVE` → перейти к Шагу 6.2
+   - Если все ответы НЕТ → `TEST_DATA_NONE` → записать в DESIGN.md:
+     ```
+     ## BDD Test Infrastructure
+     **Classification:** TEST_DATA_NONE
+     **Evidence:** {1-2 предложения почему все 4 вопроса = НЕТ}
+     **Verdict:** Hooks/fixtures не требуются. Тесты stateless.
+     ```
+     → перейти к Шагу 7 (FILE_CHANGES.md)
+
+   **Шаг 6.2: Сканирование существующих hooks (ОБЯЗАТЕЛЬНО для TEST_DATA_ACTIVE)**
+
+   Искать в проекте:
+   - `**/Hooks/**`, `**/hooks/**`, `**/support/**`
+   - `tests/**/hook*`, `tests/**/setup*`, `tests/**/teardown*`
+   - `tests/**/helpers*`, `tests/**/fixtures/**`
+   - Файлы с `Before`, `After`, `BeforeAll`, `AfterAll` в содержимом
+
+   Для каждого найденного файла заполнить таблицу в DESIGN.md:
+
+   | Hook файл | Тип | Тег/Scope | Что делает | Можно переиспользовать? |
+
+   - Если hooks найдены → заполнить подсекцию `### Существующие hooks` с реальными путями
+   - Если hooks НЕ найдены → записать: `### Существующие hooks — Не найдены в проекте`
+
+   **Шаг 6.3: Проектирование hooks для этой фичи (ОБЯЗАТЕЛЬНО для TEST_DATA_ACTIVE)**
+
+   Для каждого BDD сценария из .feature, который создаёт/изменяет данные:
+   1. Определить: какие данные создаются в Given/When
+   2. Определить: как откатить эти данные (API delete, DB rollback, file cleanup)
+   3. Если существующий hook подходит → указать `Reuse: {путь}`
+   4. Если нужен новый hook → спроектировать с указанием:
+      - Путь к файлу hook-а (конкретный, не "TBD")
+      - Тип: Before/After/BeforeAll/AfterAll
+      - Scope: per-scenario / per-feature / global
+      - Cleanup order (если каскадные зависимости)
+      - По аналогии с каким существующим hook-ом
+
+   Заполнить в DESIGN.md:
+   - `### Новые hooks` — таблица с конкретными файлами и описанием
+   - `### Cleanup Strategy` — порядок удаления, каскадные зависимости
+   - `### Test Data & Fixtures` — lifecycle каждого fixture
+   - `### Shared Context / State Management` — ключи контекста
+
+   **Шаг 6.4: Валидация полноты (self-check)**
+
+   Перед переходом к Шагу 7, проверить:
+   - [ ] Каждый Given-шаг из .feature, создающий данные, имеет cleanup hook
+   - [ ] Каждый новый hook указан в FILE_CHANGES.md (create)
+   - [ ] Каждый переиспользуемый hook указан в FILE_CHANGES.md (edit или reference)
+   - [ ] Cleanup Strategy покрывает все каскадные зависимости
+   - [ ] Shared Context ключи не конфликтуют с существующими
+
+7. Заполнить FILE_CHANGES.md
+8. **Анализ паттернов .feature (ОБЯЗАТЕЛЬНО перед написанием .feature):**
+   `.\.dev-pomogator\tools\specs-generator\analyze-features.ps1 -Format text [-FeatureSlug "{slug}"] [-DomainCode "{DOMAIN}"]`
+   На основе отчёта:
+   - Использовать Background из самого частого паттерна (не выдумывать)
+   - Переиспользовать формулировки шагов из Step Dictionary
+   - Использовать следующий свободный domain number из отчёта
+   - **Таблицы**: использовать ТОЛЬКО колонки из Table Patterns (не добавлять лишние)
+   - **Setup через Given**: данные из ScenarioContext (vendor/customer ID, warehouse ID) — НЕ класть в таблицу
+   - **Serial/Batch items**: использовать отдельные When-шаги без таблиц (как в реальных тестах)
+   - **Assertions**: копировать формулировки Then из Assertion Patterns
+   - Если есть кандидаты — взять за основу, указать `# Source:`
+9. Создать {feature-slug}.feature (по правилам ниже, опираясь на отчёт analyze-features)
+10. Валидация: `.\.dev-pomogator\tools\specs-generator\validate-spec.ps1 -Path ".specs/{feature}"`
+11. Исправить ошибки если есть
+
+**СТОП #2:** Показать Requirements + Design, спросить подтверждение.
+После подтверждения: `.\.dev-pomogator\tools\specs-generator\spec-status.ps1 -Path ".specs/{feature}" -ConfirmStop Requirements`
+
+---
+
+## Правила создания .feature (без отрыва от реальности)
+
+### 1) Сначала искать существующие .feature
+
+Искать в:
+- `tests/features/**`
+- `.specs/**`
+
+Приоритет соответствия:
+1. Совпадение кода `DOMAINNNN_` в имени файла (например, `CORE001_`, `PLUGIN003_`)
+2. Совпадение с `feature-slug` в имени файла
+3. Совпадение по строке `Feature:` внутри файла
+
+Если найден один кандидат — используй его как основу:
+- Сохраняй формулировки шагов без «перепридумывания»
+- Добавь `# @featureN` к нужным сценариям
+- Явно укажи источник вверху файла, например: `# Source: tests/features/...`
+
+Если кандидатов несколько — выбери по приоритету и перечисли все варианты в комментарии `# Candidates: ...`.
+
+### 2) Background hook‑фикстура
+
+Если в выбранном `.feature` нет `Background`, добавь его:
+- Используй **существующие** формулировки шагов (не выдумывай новые)
+- Источники формулировок:
+  - `tests/features/**`
+  - `tests/fixtures/steps-validator/**` (реальные шаги для валидатора)
+
+Примеры реальных Background из решения (можно переиспользовать дословно):
+- `Given dev-pomogator is installed`
+- `And specs-workflow extension is enabled`
+- `Given the specs-generator scripts are installed`
+
+Если `Background` уже есть — используй существующий без замены.
+
+### 3) Нет кандидатов .feature
+
+Если подходящих `.feature` нет:
+- Используй шаблон, но **все шаги** бери из существующих feature/fixtures/steps
+- Пометь файл как черновик (`# DRAFT`) и укажи, на какие источники опирался
+
+### 4) Data Table правила (из analyze-features отчёта)
+
+- В таблицах использовать **ТОЛЬКО** колонки, которые реально передаются в API payload
+- Данные, которые резолвятся через ScenarioContext (customer/vendor ID, warehouse ID), передаются через Given step, а НЕ через таблицу
+- Serial/batch items используют отдельные When-шаги без таблиц
+- Assertion формулировки копировать из отчёта (не придумывать свои)
+- Если отчёт показывает кандидат-feature — скопировать его table pattern дословно
+
+---
+
+### PHASE 3: Finalization
+
+**Файлы:** TASKS.md, README.md
+
+**Алгоритм:**
+1. Заполнить TASKS.md **по TDD-порядку:**
+   - **Phase 0 (Red):** .feature файл + step definitions + hooks (заглушки) -- ПЕРВЫЕ задачи
+   - **Phase 1-N (Green):** Реализация бизнес-логики, где каждая группа задач привязана к @featureN сценариям
+   - **Последний Phase (Refactor):** Рефакторинг + финальная верификация всех сценариев
+   - Каждая задача реализации ОБЯЗАНА ссылаться на @featureN сценарий
+   - Каждый Phase завершается verify-шагом: "сценарии @featureN переходят из Red в Green"
+
+   **Phase 0 hooks enforcement (ОБЯЗАТЕЛЬНО):**
+   - Если DESIGN.md содержит `TEST_DATA_ACTIVE` → Phase 0 ОБЯЗАН содержать:
+     - Задачу для **каждого** hook из DESIGN.md секции "Новые hooks"
+     - Задачу для **каждого** fixture из DESIGN.md секции "Test Data & Fixtures"
+   - Формат hook-задачи: `- [ ] Создать hook: {путь} ({тип}, {scope}) — cleanup для {данные}`
+     `_Source: DESIGN.md "BDD Test Infrastructure" > "Новые hooks"_`
+   - Если DESIGN.md содержит `TEST_DATA_NONE` → hook-задачи не нужны
+   - Если Phase 0 не содержит hook-задач при TEST_DATA_ACTIVE → ОШИБКА, исправить
+
+2. Сгенерировать README.md
+3. Финальная валидация
+
+**Правила TDD-порядка в TASKS.md:**
+- .feature, step definitions, и hooks -- ВСЕГДА Phase 0 (первые задачи)
+- Зависимости реализации: implementation задачи зависят от Phase 0
+- Каждая implementation задача содержит `@featureN` тег
+- Каждый Phase содержит verify-шаг (Red->Green проверка)
+- Рефакторинг -- ПОСЛЕДНИЙ Phase (после всех Green)
+
+**СТОП #3:** Финальный отчёт со summary.
+После подтверждения: `.\.dev-pomogator\tools\specs-generator\spec-status.ps1 -Path ".specs/{feature}" -ConfirmStop Finalization`
+
+---
+
+### PHASE 3+: Audit (автоматически после СТОП #3)
+
+**Когда запускается:** Автоматически после финализации (СТОП #3 подтверждён), ПЕРЕД объявлением спеки готовой.
+
+**Файл:** AUDIT_REPORT.md (опциональный, не входит в 13 обязательных)
+
+**Алгоритм:**
+
+#### Шаг 1: Автоматические проверки
+
+Запустить: `.\.dev-pomogator\tools\specs-generator\audit-spec.ps1 -Path ".specs/{feature}" -Format json`
+
+Скрипт проверяет:
+- FR↔AC покрытие (каждый FR-N имеет AC-N)
+- FR/AC↔BDD покрытие через @featureN теги
+- Полноту traceability matrix в REQUIREMENTS.md
+- Незакрытые open questions в RESEARCH.md (`- [ ]`)
+- TASKS.md→FR/NFR кросс-ссылки
+- Терминологическую консистентность (PascalCase/camelCase варианты)
+
+#### Шаг 2: AI семантический анализ (5 категорий)
+
+Агент ОБЯЗАН выполнить следующие проверки, читая файлы спеки И реальный код проекта:
+
+**ОШИБКИ (Errors) — расхождения с кодом:**
+1. Прочитать DESIGN.md секции про компоненты, reuse plan, файлы реализации — проверить что указанные файлы/классы/методы СУЩЕСТВУЮТ в кодовой базе
+2. Прочитать FILE_CHANGES.md — файлы с action=edit реально существуют, файлы с action=create ещё НЕ существуют
+3. Проверить правильность имён клиентов/сервисов/API в DESIGN.md и FR.md
+4. Найти пометки "Need to add" / "TODO: create" — проверить что эти компоненты действительно отсутствуют
+
+**ЛОГИЧЕСКИЕ ПРОБЕЛЫ (Logic Gaps) — непокрытые требования:**
+1. Для каждого FR-N проверить полную цепочку: FR → AC → BDD сценарий → задача в TASKS.md
+2. Для каждого UC проверить: есть ли связанный FR
+3. Для каждой User Story проверить: есть ли связанные UC/FR
+4. Для каждого AC проверить: есть ли BDD сценарий (включая edge cases и rollback)
+
+**НЕКОНСИСТЕНТНОСТЬ (Inconsistency) — терминологические расхождения:**
+1. Сравнить именование сущностей (идентификаторы, параметры API, имена полей) между FR.md, DESIGN.md, .feature, TASKS.md, SCHEMA.md
+2. Проверить форматы ID (vendorId vs customerVendorId vs vendor_id)
+3. Проверить что тестовые данные в .feature реалистичны (не "PRA" вместо числового ID)
+
+**РУДИМЕНТЫ (Rudiments) — устаревшая информация:**
+1. Проверить RESEARCH.md на open questions (`- [ ]`) которые уже имеют ответ в других файлах спеки
+2. Проверить нет ли client-side требований в серверной спеке (и наоборот)
+3. Проверить нет ли устаревших ссылок, TODO которые уже сделаны, или дублирующих UC
+
+**ФАНТАЗИИ (Fantasies) — непроверенные допущения:**
+1. Проверить RESEARCH.md — все ли утверждения об API имеют источник (URL, файл, тест, документация)
+2. Проверить DESIGN.md — нет ли API endpoints/методов, помеченных как "работает" без пруфа
+3. Проверить нет ли утверждений "API поддерживает X" / "метод возвращает Y" без верификации через live API или тесты
+
+#### Шаг 3: Исправление найденных проблем
+
+Агент ОБЯЗАН автоматически исправить ВСЕ найденные проблемы (автоматические + AI семантические):
+
+1. **ОШИБКИ** — исправить ссылки на несуществующие методы/файлы, убрать "Need to add" для уже существующих компонентов, указать правильные имена
+2. **ЛОГИЧЕСКИЕ ПРОБЕЛЫ** — добавить недостающие AC для FR, добавить BDD сценарии для непокрытых AC, добавить ссылки в TASKS.md и REQUIREMENTS.md
+3. **НЕКОНСИСТЕНТНОСТЬ** — унифицировать терминологию (выбрать один вариант, заменить во всех файлах), исправить нереалистичные тестовые данные
+4. **РУДИМЕНТЫ** — закрыть решённые open questions (`- [x]`), удалить дублирующие UC, убрать client-side требования из серверной спеки
+5. **ФАНТАЗИИ** — пометить непроверенные допущения как `[UNVERIFIED]`, добавить задачу live API verification в TASKS.md
+
+#### Шаг 4: Повторный аудит
+
+1. Перезапустить `audit-spec.ps1` на исправленных файлах
+2. Повторить AI семантический анализ
+3. Если findings > 0 — повторить Шаг 3 (максимум 3 итерации)
+
+#### Шаг 5: Генерация AUDIT_REPORT.md
+
+1. Создать `.specs/{feature}/AUDIT_REPORT.md` по шаблону из `.dev-pomogator/tools/specs-generator/templates/AUDIT_REPORT.md.template`
+2. Записать ВСЕ найденные и исправленные проблемы (что было → что исправлено)
+3. Показать summary таблицу пользователю
+
+**НЕ СТОП-ТОЧКА.** Аудит и исправления выполняются автоматически. Пользователь уже дал подтверждение на СТОП #3.
+
+---
+
+## Операции с существующими спеками
+
+### READ: Просмотр спеков
+Триггер: "покажи спеки для X" / "show specs for X"
+
+### UPDATE: Редактирование спеков
+Триггер: "обнови спеки для X" / "update specs for X"
+
+### STATUS: Проверка прогресса
+Триггер: "статус спеков" / "specs status"
+
+---
+
+## Правила валидации
+
+| Правило | Описание | Severity |
+|---------|----------|----------|
+| STRUCTURE | Наличие обязательных файлов | ERROR |
+| PLACEHOLDER | Незаполненные плейсхолдеры | WARNING |
+| FR_FORMAT | Формат ## FR-N: {Название} | ERROR |
+| UC_FORMAT | Формат ## UC-N: {Название} | ERROR |
+| EARS_FORMAT | WHEN/IF...THEN...SHALL | WARNING |
+| NFR_SECTIONS | Performance/Security/Reliability/Usability | WARNING |
+| FEATURE_NAMING | {DOMAIN}{NNN}_{Название} | WARNING |
+| CONTEXT_SECTION | `## Project Context & Constraints` в RESEARCH.md с подсекциями или skip reason | WARNING |
+| TDD_TASK_ORDER | Phase 0 (BDD Foundation) или .feature задача в TASKS.md | WARNING |
+| CROSS_REF_LINKS | Markdown ссылки `[ID](file.md#anchor)` — целевой файл и якорь существуют | WARNING |
+| LINK_VALIDITY | FR/AC/NFR в REQUIREMENTS/TASKS — кликабельные линки, не plain text | WARNING |
+| BDD_INFRA | `## BDD Test Infrastructure` в DESIGN.md с Classification (TEST_DATA_ACTIVE/TEST_DATA_NONE) | WARNING |
+| BDD_HOOKS_TASKS | Если TEST_DATA_ACTIVE, Phase 0 в TASKS.md содержит задачи для всех hooks из DESIGN.md | WARNING |
+
+---
+
+## Связанные правила
+
+- `plan-pomogator.md` — использует EARS формат из спеков
+- `research-workflow.md` — интегрируется с RESEARCH.md
+
+## Эталонная структура
+
+Референс: `.specs/hook-worklog-checker/`
