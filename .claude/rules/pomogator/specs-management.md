@@ -400,6 +400,35 @@
 
 ---
 
+## Правила качества спеков
+
+### FR Variant Decomposition (Phase 2)
+
+Если FR описывает поведение для >1 варианта реализации (примеры вариантных осей: batch/serial, IN/OUT, sync/async, single/bulk), то FR ОБЯЗАН быть decomposed:
+- FR-N: базовый вариант
+- FR-Na: дополнительный вариант
+
+Каждый sub-FR получает отдельный AC, BDD сценарий (@featureNa) и задачу в TASKS.md.
+
+**Consistency check**: если FR-M уже decomposed (FR-M + FR-Ma), все аналогичные FR с той же вариантной осью тоже ДОЛЖНЫ быть decomposed.
+
+### Task Completion Integrity (Phase 3 + Runtime)
+
+Task `[x]` = FR ПОЛНОСТЬЮ реализован. ЗАПРЕЩЕНО:
+- Пометить task `[x]` и дописать "не реализовано" / "deferred" / "partial"
+- Пометить task `[x]` если FR содержит маркеры неполной реализации
+
+Частичная реализация:
+1. Оставить task `[ ]`
+2. Создать НОВУЮ задачу для нереализованной части
+3. НЕ дописывать "Implementation note: не реализовано" в FR
+
+### AC Scope Match (Phase 2)
+
+Каждый AC покрывает ровно 1 FR или sub-FR. AC НЕ МОЖЕТ быть generic если FR описывает конкретные варианты с разным поведением. Если FR-N содержит >1 payload format / tracking type, AC-N ОБЯЗАН быть split (аналогично FR split).
+
+---
+
 ## Связанные правила
 
 - `plan-pomogator.md` — использует EARS формат из спеков

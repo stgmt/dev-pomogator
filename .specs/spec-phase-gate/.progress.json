@@ -1,0 +1,28 @@
+﻿{
+    "version":  1,
+    "featureSlug":  "spec-phase-gate",
+    "createdAt":  "2026-03-05T19:15:07.8354416+03:00",
+    "currentPhase":  "Finalization",
+    "phases":  {
+                   "Discovery":  {
+                                     "completedAt":  "2026-03-05T19:34:33.6264302+03:00",
+                                     "stopConfirmed":  true,
+                                     "stopConfirmedAt":  "2026-03-05T19:26:21.9704824+03:00"
+                                 },
+                   "Context":  {
+                                   "completedAt":  "2026-03-05T19:34:33.6274727+03:00",
+                                   "stopConfirmed":  true,
+                                   "stopConfirmedAt":  "2026-03-05T19:26:29.9305852+03:00"
+                               },
+                   "Requirements":  {
+                                        "completedAt":  "2026-03-05T19:35:21.9404173+03:00",
+                                        "stopConfirmed":  true,
+                                        "stopConfirmedAt":  "2026-03-05T19:35:59.5621044+03:00"
+                                    },
+                   "Finalization":  {
+                                        "completedAt":  null,
+                                        "stopConfirmed":  true,
+                                        "stopConfirmedAt":  "2026-03-05T19:44:52.6872391+03:00"
+                                    }
+               }
+}

@@ -1,6 +1,6 @@
 {
   "name": "specs-workflow",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "description": "Управление спецификациями: 4-фазный workflow (включая Context Analysis), TDD-порядок задач, валидация, автоматический аудит кросс-ссылок, MCP инструменты для research",
   "platforms": ["cursor", "claude"],
   "category": "workflow",
@@ -57,6 +57,10 @@
     "specs-validator": [
       ".dev-pomogator/tools/specs-validator/completeness.ts",
       ".dev-pomogator/tools/specs-validator/matcher.ts",
+      ".dev-pomogator/tools/specs-validator/phase-constants.ts",
+      ".dev-pomogator/tools/specs-validator/phase-gate.ts",
+      ".dev-pomogator/tools/specs-validator/audit-checks.ts",
+      ".dev-pomogator/tools/specs-validator/audit-runner.ts",
       ".dev-pomogator/tools/specs-validator/reporter.ts",
       ".dev-pomogator/tools/specs-validator/validate-specs.ts",
       ".dev-pomogator/tools/specs-validator/parsers/feature-parser.ts",
@@ -86,7 +90,11 @@
   "hooks": {
     "cursor": {},
     "claude": {
-      "UserPromptSubmit": "npx tsx .dev-pomogator/tools/specs-validator/validate-specs.ts"
+      "UserPromptSubmit": "npx tsx .dev-pomogator/tools/specs-validator/validate-specs.ts",
+      "PreToolUse": {
+        "matcher": "Write|Edit",
+        "command": "npx tsx .dev-pomogator/tools/specs-validator/phase-gate.ts"
+      }
     }
   },
   "postInstall": {

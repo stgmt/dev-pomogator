@@ -43,6 +43,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | atomic-update-lock | Lock через `flag: 'wx'` (O_EXCL), не exists-check + write | `.claude/rules/atomic-update-lock.md` |
 | no-unvalidated-manifest-paths | Пути из манифеста валидировать через resolve + startsWith(projectPath) | `.claude/rules/no-unvalidated-manifest-paths.md` |
 | claude-md-glossary | CLAUDE.md = глоссарий/индекс на rules; при добавлении/удалении правил обновлять таблицу | `.claude/rules/claude-md-glossary.md` |
+| docker-only-tests | Тесты только через Docker (`npm test`); запрет vitest.unit.config.ts и тестов вне `tests/e2e/` | `.claude/rules/docker-only-tests.md` |
 
 ### Triggered
 

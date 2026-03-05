@@ -20,6 +20,14 @@ import { parseMdFiles } from './parsers/md-parser';
 import { parseFeatureFile } from './parsers/feature-parser';
 import { matchTags } from './matcher';
 import { generateReport, printWarnings } from './reporter';
+import {
+  PHASE_FILES,
+  PHASE_ORDER,
+  STOP_LABELS,
+  readProgressState,
+  type PhaseState,
+  type ProgressState,
+} from './phase-constants';
 
 /**
  * Input from Cursor/Claude hook
@@ -40,55 +48,8 @@ interface ValidatorConfig {
   extra_feature_dirs?: string[];
 }
 
-/**
- * Phase state in .progress.json
- */
-interface PhaseState {
-  completedAt: string | null;
-  stopConfirmed: boolean;
-  stopConfirmedAt: string | null;
-}
-
-/**
- * .progress.json schema
- */
-interface ProgressState {
-  version: number;
-  featureSlug: string;
-  createdAt: string;
-  currentPhase: string;
-  phases: {
-    Discovery: PhaseState;
-    Context: PhaseState;
-    Requirements: PhaseState;
-    Finalization: PhaseState;
-  };
-}
-
-/**
- * Files belonging to each phase (used for phase gate detection)
- */
-const PHASE_FILES: Record<string, string[]> = {
-  Discovery: ['USER_STORIES.md', 'USE_CASES.md', 'RESEARCH.md'],
-  Context: [], // sub-check of RESEARCH.md, no additional files
-  Requirements: ['REQUIREMENTS.md', 'FR.md', 'NFR.md', 'ACCEPTANCE_CRITERIA.md', 'DESIGN.md', 'FILE_CHANGES.md'],
-  Finalization: ['TASKS.md', 'README.md', 'CHANGELOG.md'],
-};
-
-/**
- * Phase order for gate checking
- */
-const PHASE_ORDER = ['Discovery', 'Context', 'Requirements', 'Finalization'];
-
-/**
- * STOP point labels per phase
- */
-const STOP_LABELS: Record<string, string> = {
-  Discovery: 'STOP #1',
-  Context: 'STOP #1.5',
-  Requirements: 'STOP #2',
-  Finalization: 'STOP #3',
-};
+// PhaseState, ProgressState, PHASE_FILES, PHASE_ORDER, STOP_LABELS
+// imported from ./phase-constants
 
 /**
  * Get home directory (cross-platform)
@@ -199,19 +160,7 @@ function validateSpec(spec: SpecCompleteness): void {
   printWarnings(results);
 }
 
-/**
- * Read .progress.json from a spec directory
- */
-function readProgressState(specPath: string): ProgressState | null {
-  const progressPath = path.join(specPath, '.progress.json');
-  if (!fs.existsSync(progressPath)) return null;
-  try {
-    const content = fs.readFileSync(progressPath, 'utf-8');
-    return JSON.parse(content) as ProgressState;
-  } catch {
-    return null;
-  }
-}
+// readProgressState imported from ./phase-constants
 
 /**
  * Check if the prompt mentions files from a phase that hasn't been confirmed yet.
@@ -250,6 +199,56 @@ function checkPhaseGate(
   }
 
   return warnings;
+}
+
+/**
+ * Print phase status banner for specs with .progress.json.
+ * Injects allowed/blocked file lists so Claude knows what's writable.
+ */
+function printPhaseStatus(specName: string, progress: ProgressState): void {
+  const allFiles = Object.values(PHASE_FILES).flat();
+  const allowed: string[] = [];
+  const blocked: string[] = [];
+
+  for (const [phase, files] of Object.entries(PHASE_FILES)) {
+    if (files.length === 0) continue; // Context has no files
+    const phaseIdx = PHASE_ORDER.indexOf(phase as typeof PHASE_ORDER[number]);
+    let isAllowed = true;
+    for (let i = 0; i < phaseIdx; i++) {
+      const prevPhase = PHASE_ORDER[i];
+      if (prevPhase === 'Context') continue;
+      const prevState = progress.phases[prevPhase];
+      if (!prevState || !prevState.stopConfirmed) {
+        isAllowed = false;
+        break;
+      }
+    }
+    if (isAllowed) {
+      allowed.push(...files);
+    } else {
+      blocked.push(...files);
+    }
+  }
+
+  // Find first unconfirmed STOP
+  let unconfirmedStop = '';
+  let unconfirmedPhase = '';
+  for (const phase of PHASE_ORDER) {
+    if (phase === 'Context') continue;
+    const state = progress.phases[phase];
+    if (!state || !state.stopConfirmed) {
+      unconfirmedStop = STOP_LABELS[phase] || phase;
+      unconfirmedPhase = phase;
+      break;
+    }
+  }
+
+  if (unconfirmedStop) {
+    console.log(`[specs-validator] SPEC: ${specName} | Phase: ${progress.currentPhase} | ${unconfirmedStop} not confirmed`);
+    if (allowed.length > 0) console.log(`  Allowed files: ${allowed.join(', ')}`);
+    if (blocked.length > 0) console.log(`  Blocked files: ${blocked.join(', ')}`);
+    console.log(`  Confirm: spec-status.ps1 -Path ".specs/${specName}" -ConfirmStop ${unconfirmedPhase}`);
+  }
 }
 
 /**
@@ -300,14 +299,18 @@ async function main(): Promise<void> {
       validateSpec(spec);
     }
 
-    // 5. Phase gate check for ALL specs with .progress.json
-    if (input.prompt) {
-      const allSpecDirs = findAllSpecDirs(specsRoot);
-      for (const specDir of allSpecDirs) {
-        const specName = path.basename(specDir);
-        const progress = readProgressState(specDir);
-        if (!progress) continue; // no .progress.json = old spec, skip
+    // 5. Phase status injection + gate check for ALL specs with .progress.json
+    const allSpecDirs = findAllSpecDirs(specsRoot);
+    for (const specDir of allSpecDirs) {
+      const specName = path.basename(specDir);
+      const progress = readProgressState(specDir);
+      if (!progress) continue; // no .progress.json = old spec, skip
 
+      // Inject phase status banner (Layer 2)
+      printPhaseStatus(specName, progress);
+
+      // Phase gate warning (advisory, Layer 2 — hard gate is in phase-gate.ts PreToolUse)
+      if (input.prompt) {
         const phaseWarnings = checkPhaseGate(specName, progress, input.prompt);
         for (const w of phaseWarnings) {
           console.log(w);

@@ -10,6 +10,12 @@
     - TASKS.md references to FR/NFR (TASKS_FR_REFS)
     - Unclosed open questions in RESEARCH.md (OPEN_QUESTIONS)
     - Terminology consistency across files (TERM_CONSISTENCY)
+    - Link validity for cross-references (LINK_VALIDITY)
+    - BDD hooks coverage in TASKS.md Phase 0 (BDD_HOOKS_COVERAGE)
+    - Partial implementation markers vs completed tasks (PARTIAL_IMPL_DETECTION)
+    - Task atomicity — tasks covering multiple FRs (TASK_FR_ATOMICITY)
+    - FR sub-variant split consistency (FR_SPLIT_CONSISTENCY)
+    - BDD scenario scope vs FR domain terms (BDD_SCENARIO_SCOPE)
 
     This is a report-only tool (exit code always 0). It does not block the workflow.
 
@@ -599,6 +605,243 @@ if ((Test-Path $designPath) -and (Test-Path $tasksPath)) {
 }
 
 Write-Log "INFO" "BDD_HOOKS_COVERAGE check complete"
+
+# --- CHECK 9: PARTIAL_IMPL_DETECTION ---
+# FR-N with partial implementation markers but task marked [x] → ERROR
+Write-Log "INFO" "Running PARTIAL_IMPL_DETECTION check..."
+
+$frContent = Get-FileContent "FR.md"
+$tasksContent = Get-FileContent "TASKS.md"
+
+if ($frContent -and $tasksContent) {
+    $frLines = Get-FileLines "FR.md"
+    $partialMarkers = @(
+        "НЕ РЕАЛИЗОВАНО",
+        "NOT IMPLEMENTED",
+        "PARTIAL",
+        "TODO: implement",
+        "deferred",
+        "будущее улучшение"
+    )
+
+    # Build map: FR-N → has partial marker
+    $currentFr = $null
+    $frWithMarkers = @{}
+
+    foreach ($line in $frLines) {
+        $frHeaderMatch = [regex]::Match($line, '## (FR-\d+[a-z]?):')
+        if ($frHeaderMatch.Success) {
+            $currentFr = $frHeaderMatch.Groups[1].Value
+        }
+        if ($currentFr) {
+            foreach ($marker in $partialMarkers) {
+                if ($line -match [regex]::Escape($marker)) {
+                    $frWithMarkers[$currentFr] = $marker
+                    break
+                }
+            }
+        }
+    }
+
+    if ($frWithMarkers.Count -gt 0) {
+        $tasksLines = Get-FileLines "TASKS.md"
+
+        foreach ($frId in $frWithMarkers.Keys) {
+            $marker = $frWithMarkers[$frId]
+            $frEscaped = [regex]::Escape($frId)
+
+            # Find completed tasks referencing this FR
+            foreach ($taskLine in $tasksLines) {
+                if ($taskLine -match '^\s*-\s*\[x\]' -and $taskLine -match $frEscaped) {
+                    $findings += @{
+                        check = "PARTIAL_IMPL_DETECTION"
+                        category = "ERRORS"
+                        severity = "ERROR"
+                        message = "PARTIAL_IMPL: $frId has partial implementation marker '$marker' but task is marked complete [x]"
+                        details = "Either remove the marker from FR.md or uncheck the task in TASKS.md"
+                    }
+                    Write-Log "WARN" "PARTIAL_IMPL_DETECTION: $frId has marker '$marker' but task is [x]"
+                    break
+                }
+            }
+        }
+    }
+
+    Write-Log "INFO" "PARTIAL_IMPL_DETECTION: $($frWithMarkers.Count) FR(s) with partial markers"
+} else {
+    if (-not $frContent) {
+        Write-Log "WARN" "PARTIAL_IMPL_DETECTION: FR.md is empty or missing"
+    }
+    if (-not $tasksContent) {
+        Write-Log "WARN" "PARTIAL_IMPL_DETECTION: TASKS.md is empty or missing"
+    }
+}
+
+# --- CHECK 10: TASK_FR_ATOMICITY ---
+# Tasks referencing >1 FR → WARNING
+Write-Log "INFO" "Running TASK_FR_ATOMICITY check..."
+
+$tasksContent = Get-FileContent "TASKS.md"
+
+if ($tasksContent) {
+    $tasksLines = Get-FileLines "TASKS.md"
+
+    foreach ($taskLine in $tasksLines) {
+        if ($taskLine -match '^\s*-\s*\[[ x]\]') {
+            $frRefs = [regex]::Matches($taskLine, 'FR-\d+[a-z]?') | ForEach-Object { $_.Value } | Select-Object -Unique
+            if ($frRefs.Count -gt 1) {
+                $frList = $frRefs -join ", "
+                $findings += @{
+                    check = "TASK_FR_ATOMICITY"
+                    category = "LOGIC_GAPS"
+                    severity = "WARNING"
+                    message = "TASK_ATOMICITY: Task covers multiple FRs: $frList"
+                    details = "Task: $($taskLine.Trim())"
+                }
+                Write-Log "WARN" "TASK_FR_ATOMICITY: Task covers $($frRefs.Count) FRs: $frList"
+            }
+        }
+    }
+
+    Write-Log "INFO" "TASK_FR_ATOMICITY check complete"
+} else {
+    Write-Log "WARN" "TASK_FR_ATOMICITY: TASKS.md is empty or missing"
+}
+
+# --- CHECK 11: FR_SPLIT_CONSISTENCY ---
+# FR sub-variants (FR-4a, FR-5b) without siblings at same level → INFO
+Write-Log "INFO" "Running FR_SPLIT_CONSISTENCY check..."
+
+$frContent = Get-FileContent "FR.md"
+
+if ($frContent) {
+    # Extract all FR IDs including sub-variants
+    $allFrIds = [regex]::Matches($frContent, '## FR-(\d+)([a-z])?:') | ForEach-Object {
+        @{
+            full = "FR-$($_.Groups[1].Value)$($_.Groups[2].Value)"
+            num = [int]$_.Groups[1].Value
+            suffix = $_.Groups[2].Value
+        }
+    }
+
+    # Find FR numbers that have sub-variants
+    $splitFrNums = @($allFrIds | Where-Object { $_.suffix -ne "" } | ForEach-Object { $_.num } | Select-Object -Unique)
+
+    # For each split FR number, find all FR numbers in the document
+    $allFrNums = @($allFrIds | ForEach-Object { $_.num } | Select-Object -Unique | Sort-Object)
+
+    foreach ($splitNum in $splitFrNums) {
+        # Get the sub-variant suffixes for this number
+        $subVariants = @($allFrIds | Where-Object { $_.num -eq $splitNum -and $_.suffix -ne "" } | ForEach-Object { $_.suffix })
+
+        # Check sibling FR numbers (adjacent) for consistency
+        foreach ($otherNum in $allFrNums) {
+            if ($otherNum -eq $splitNum) { continue }
+
+            # Check if the other FR number has sub-variants too
+            $otherSubVariants = @($allFrIds | Where-Object { $_.num -eq $otherNum -and $_.suffix -ne "" } | ForEach-Object { $_.suffix })
+
+            # Only flag if this is a neighboring FR (within +/- 1) that lacks sub-variants
+            if ([Math]::Abs($otherNum - $splitNum) -eq 1 -and $otherSubVariants.Count -eq 0) {
+                $splitList = ($subVariants | ForEach-Object { "FR-${splitNum}$_" }) -join ", "
+                $findings += @{
+                    check = "FR_SPLIT_CONSISTENCY"
+                    category = "INCONSISTENCY"
+                    severity = "INFO"
+                    message = "FR_SPLIT_CONSISTENCY: FR-$splitNum has sub-variant(s) ($splitList) but adjacent FR-$otherNum does not"
+                    details = "Review whether FR-$otherNum should also be split or if FR-$splitNum sub-variants are justified"
+                }
+                Write-Log "INFO" "FR_SPLIT_CONSISTENCY: FR-$splitNum split, FR-$otherNum not"
+            }
+        }
+    }
+
+    Write-Log "INFO" "FR_SPLIT_CONSISTENCY: $($splitFrNums.Count) split FR(s) found"
+} else {
+    Write-Log "WARN" "FR_SPLIT_CONSISTENCY: FR.md is empty or missing"
+}
+
+# --- CHECK 12: BDD_SCENARIO_SCOPE ---
+# FR mentions domain term but corresponding @featureN scenario does not → WARNING
+Write-Log "INFO" "Running BDD_SCENARIO_SCOPE check..."
+
+$frContent = Get-FileContent "FR.md"
+$featureFiles = Get-ChildItem -Path $TargetDir -Filter "*.feature" -ErrorAction SilentlyContinue
+$featureContent = ""
+if ($featureFiles) {
+    $featureContent = Get-Content -Path $featureFiles[0].FullName -Raw -ErrorAction SilentlyContinue
+}
+
+if ($frContent -and $featureContent) {
+    # Domain terms to check for scope coverage
+    $domainTerms = @("batch", "serial", "IN", "OUT", "inbound", "outbound", "create", "update", "delete", "rollback", "cancel", "approve", "reject")
+
+    # Parse FR sections with their @featureN tags
+    $frSections = [regex]::Matches($frContent, '## (FR-\d+[a-z]?):.*?(?=## FR-\d|$)', [System.Text.RegularExpressions.RegexOptions]::Singleline)
+
+    foreach ($frSection in $frSections) {
+        $frText = $frSection.Value
+        $frIdMatch = [regex]::Match($frText, '## (FR-\d+[a-z]?):')
+        if (-not $frIdMatch.Success) { continue }
+        $frId = $frIdMatch.Groups[1].Value
+
+        # Get @featureN tags for this FR
+        $frFeatureTags = [regex]::Matches($frText, '@feature(\d+)') | ForEach-Object { $_.Value } | Select-Object -Unique
+        if ($frFeatureTags.Count -eq 0) { continue }
+
+        # Find domain terms mentioned in FR
+        $frTerms = @()
+        foreach ($term in $domainTerms) {
+            if ($frText -match "\b$term\b") {
+                $frTerms += $term
+            }
+        }
+        if ($frTerms.Count -eq 0) { continue }
+
+        # For each @featureN, extract scenario text
+        foreach ($tag in $frFeatureTags) {
+            $tagNum = [regex]::Match($tag, '\d+').Value
+            # Extract scenario block after this @featureN tag (up to next @featureN or end)
+            $scenarioPattern = "#\s*@feature${tagNum}\s*\n\s*Scenario[^:]*:.*?(?=#\s*@feature\d+|$)"
+            $scenarioMatches = [regex]::Matches($featureContent, $scenarioPattern, [System.Text.RegularExpressions.RegexOptions]::Singleline)
+
+            if ($scenarioMatches.Count -eq 0) { continue }
+
+            $scenarioText = ($scenarioMatches | ForEach-Object { $_.Value }) -join " "
+
+            # Check which FR domain terms are missing from scenario text
+            $missingTerms = @()
+            $presentTerms = @()
+            foreach ($term in $frTerms) {
+                if ($scenarioText -match "\b$term\b") {
+                    $presentTerms += $term
+                } else {
+                    $missingTerms += $term
+                }
+            }
+
+            if ($missingTerms.Count -gt 0 -and $presentTerms.Count -gt 0) {
+                $findings += @{
+                    check = "BDD_SCENARIO_SCOPE"
+                    category = "LOGIC_GAPS"
+                    severity = "WARNING"
+                    message = "BDD_SCENARIO_SCOPE: $frId mentions '$($missingTerms -join "', '")' but $tag scenarios only cover '$($presentTerms -join "', '")'"
+                    details = "Add BDD scenarios to cover missing domain terms or verify they are out of scope"
+                }
+                Write-Log "WARN" "BDD_SCENARIO_SCOPE: $frId missing terms in $tag scenarios"
+            }
+        }
+    }
+
+    Write-Log "INFO" "BDD_SCENARIO_SCOPE check complete"
+} else {
+    if (-not $frContent) {
+        Write-Log "WARN" "BDD_SCENARIO_SCOPE: FR.md is empty or missing"
+    }
+    if (-not $featureContent) {
+        Write-Log "WARN" "BDD_SCENARIO_SCOPE: No .feature file found"
+    }
+}
 
 # ===== Build result =====
 
