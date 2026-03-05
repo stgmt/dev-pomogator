@@ -602,9 +602,18 @@ Project domains: [zoho, ef-core, postgres, docker, csharp]
 2. **Абстрагирование** — принцип универсальный, примеры конкретные
 3. **Связывание** — ссылки на timeline (если есть связанные записи)
 
-### Шаблон для Antipattern
+### Шаблон для Antipattern (scoped — с frontmatter)
+
+> Если антипаттерн привязан к конкретным файлам/расширениям — добавь `paths:`.
+> Если это общий принцип (безопасность, git workflow) — создавай БЕЗ frontmatter (global).
 
 ```markdown
+---
+paths:
+  - "**/*.sql"
+  - "**/migrations/**"
+---
+
 # <Название антипаттерна>
 
 **НЕ ДЕЛАЙ ТАК** — <краткое описание почему плохо>
@@ -638,9 +647,16 @@ Project domains: [zoho, ef-core, postgres, docker, csharp]
 - [ ] Используй <правильный подход> вместо
 ```
 
-### Шаблон для Pattern/Checklist
+### Шаблон для Pattern/Checklist (scoped — с frontmatter)
+
+> Аналогично: `paths:` для scoped, без frontmatter для global.
 
 ```markdown
+---
+paths:
+  - "src/**/*.ts"
+---
+
 # <Название>
 
 <описание принципа>
@@ -662,6 +678,18 @@ Project domains: [zoho, ef-core, postgres, docker, csharp]
 - [ ] <пункт>
 ```
 
+### Когда использовать frontmatter, а когда нет
+
+| Тип правила | Frontmatter? | Пример |
+|-------------|-------------|--------|
+| Security, injection, OWASP | НЕТ (global) | `no-sql-injection.md` |
+| Git workflow, commits | НЕТ (global) | `always-use-migrations.md` |
+| Общий code style | НЕТ (global) | `no-empty-catch.md` |
+| API-specific | ДА — `paths: ["**/api/**"]` | `api-error-format.md` |
+| Database-specific | ДА — `paths: ["**/*.sql"]` | `no-direct-prod-db.md` |
+| Test-specific | ДА — `paths: ["**/tests/**"]` | `test-naming.md` |
+| Language-specific | ДА — `paths: ["**/*.ts"]` | `ts-strict-null.md` |
+
 ---
 
 ## Phase 5: File Creation
@@ -675,6 +703,61 @@ Project domains: [zoho, ef-core, postgres, docker, csharp]
 | 📋 checklist | `.claude/rules/checklists/<name>.md` |
 | ⚠️ gotcha | `.claude/rules/gotchas/<name>.md` |
 | 📁 project-specific | `.claude/rules/<domain>/<name>.md` |
+
+---
+
+## Phase 6: Rules Optimization (АВТОМАТИЧЕСКИ)
+
+> После создания правил в Phase 5 — автоматически оптимизировать ВСЕ rules в `.claude/rules/`.
+> Phase 6 НЕ требует отдельного СТОП — выполняется как часть suggest-rules pipeline.
+> Пользователь уже подтвердил rules в Phase 3/4. Phase 6 только оптимизирует форматирование.
+
+### 6.1: Sync с актуальными доками (опционально)
+
+Если нужно уточнить синтаксис frontmatter:
+```
+resolve-library-id("claude-code") -> query-docs(id, "rules frontmatter paths format")
+```
+
+### 6.2: Аудит
+
+```bash
+npx tsx .claude/skills/rules-optimizer/scripts/audit.ts --dir .claude/rules --save audit_before.json
+```
+
+Показать результат: файлы без paths, кандидаты на merge, антипаттерны.
+
+### 6.3: Добавить path-scoped frontmatter
+
+Для КАЖДОГО файла без `paths:` в frontmatter:
+1. Прочитать содержимое
+2. Определить paths по `references/path-inference-table.md`
+3. Если правило **global** (безопасность, git workflow, общий стиль) — оставить без frontmatter
+4. Если правило **scoped** — добавить YAML frontmatter с `paths:`
+
+### 6.4: Исправить антипаттерны
+
+```bash
+npx tsx .claude/skills/rules-optimizer/scripts/check-antipatterns.ts --dir .claude/rules
+```
+
+Для каждого найденного — применить фикс из `references/known-antipatterns.md`.
+
+### 6.5: Merge мелких файлов
+
+Для merge-кандидатов из аудита:
+- Подтвердить что файлы покрывают **один домен** с **пересекающимися paths**
+- Объединить в основной файл + удалить дубликат
+- **НЕ мержить** файлы с разными подсистемами (пример: `atomic-config-save` + `atomic-update-lock`)
+
+### 6.6: Финальный отчёт
+
+```bash
+npx tsx .claude/skills/rules-optimizer/scripts/audit.ts --dir .claude/rules --save audit_after.json
+npx tsx .claude/skills/rules-optimizer/scripts/report.ts --before audit_before.json --after audit_after.json
+```
+
+Показать summary что было оптимизировано.
 
 ---
 
@@ -719,7 +802,7 @@ Project domains: [zoho, ef-core, postgres, docker, csharp]
 5. **ПРУФЫ обязательны** — цитаты и номера turn
 6. **< 500 строк** — большие разбивай на несколько
 7. **Self-contained** — понятно без контекста сессии
-8. **БЕЗ frontmatter** — Claude Code rules это чистый Markdown
+8. **Path-scoped frontmatter** — scoped rules создаются сразу с `paths:` в YAML frontmatter, global rules без frontmatter
 
 ---
 
@@ -741,9 +824,13 @@ Project domains: [zoho, ef-core, postgres, docker, csharp]
 13. [TEXT] Phase 2.5: Smart Merge
 14. [TEXT] Phase 3: Streamlined таблицы (sources: 📍 📊 🧠)
 15. [STOP] Ожидание выбора
-16. [TEXT] Phase 4: Smart Generation
+16. [TEXT] Phase 4: Smart Generation (с path-scoped frontmatter)
 17. [STOP] Ожидание подтверждения
 18. [TEXT] Phase 5: создание файлов
+19. [TOOL] Phase 6: audit.ts → аудит rules
+20. [TOOL] Phase 6: check-antipatterns.ts → фиксы
+21. [TEXT] Phase 6: добавление frontmatter + merge (silent, без STOP)
+22. [TOOL] Phase 6: report.ts → финальный отчёт
 ```
 
 **❌ ЗАПРЕЩЕНО:**
@@ -761,5 +848,5 @@ Project domains: [zoho, ef-core, postgres, docker, csharp]
 3. Read insights report → Phase -0.5 (если доступен) → unified mode display
 4. Phase 0 (дерево) → Phase 0.5 (domains + insights areas) → Phase 1 (сырые находки) → **Phase 1.5 (ABSTRACTION — session + insights!)** → Phase 2 (category scoring + пруфы) → Phase 2.5 (merge) → Phase 3 (таблицы)
 5. **СТОП** — ждать выбор
-6. Phase 4 (generation) → **СТОП** — ждать подтверждение
-6. Phase 5 (создание)
+6. Phase 4 (generation с frontmatter) → **СТОП** — ждать подтверждение
+7. Phase 5 (создание) → Phase 6 (optimization — silent, без STOP)

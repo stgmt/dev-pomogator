@@ -1,6 +1,6 @@
 {
   "name": "suggest-rules",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "Анализ сессии и предложение правил для IDE",
   "platforms": ["cursor", "claude"],
   "category": "workflow",
@@ -9,13 +9,23 @@
     "claude": ["claude/commands/suggest-rules.md"]
   },
   "skills": {
-    "deep-insights": "skills/deep-insights"
+    "deep-insights": "skills/deep-insights",
+    "rules-optimizer": "skills/rules-optimizer"
   },
   "skillFiles": {
     "deep-insights": [
       ".claude/skills/deep-insights/SKILL.md",
       ".claude/skills/deep-insights/scripts/aggregate-facets.sh",
       ".claude/skills/deep-insights/references/facets-schema.md"
+    ],
+    "rules-optimizer": [
+      ".claude/skills/rules-optimizer/SKILL.md",
+      ".claude/skills/rules-optimizer/scripts/shared.ts",
+      ".claude/skills/rules-optimizer/scripts/audit.ts",
+      ".claude/skills/rules-optimizer/scripts/check-antipatterns.ts",
+      ".claude/skills/rules-optimizer/scripts/report.ts",
+      ".claude/skills/rules-optimizer/references/path-inference-table.md",
+      ".claude/skills/rules-optimizer/references/known-antipatterns.md"
     ]
   },
   "requiresClaudeMem": true
