@@ -224,12 +224,12 @@ async function main(): Promise<void> {
       log("INFO", `Found Jira key from branch: ${jiraKey}`);
     }
     if (config.smartCommit.enabled && !jiraKey) {
-      throw new Error("Smart Commit enabled but Jira key not found in branch name");
+      log("INFO", "Smart Commit enabled but Jira key not found in branch name — falling back to full commit message");
     }
 
     // Generate commit message via LLM (REQUIRED - throws on error)
     let commitMessage = "";
-    if (config.smartCommit.enabled) {
+    if (config.smartCommit.enabled && jiraKey) {
       log("INFO", "Generating Smart Commit summary via LLM...");
       const result = await generateSmartCommitSummary(config, {
         gitDiff,
