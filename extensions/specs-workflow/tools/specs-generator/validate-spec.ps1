@@ -321,6 +321,51 @@ foreach ($file in $existingFiles) {
         }
     }
 
+    # BDD_INFRA: Check DESIGN.md has mandatory BDD Test Infrastructure section with Classification
+    if ($file -eq "DESIGN.md") {
+        Write-Log "INFO" "Checking BDD_INFRA rule..."
+        $hasBddSection = $content -match '## BDD Test Infrastructure'
+        if (-not $hasBddSection) {
+            $warnings += @{
+                file = $file
+                rule = "BDD_INFRA"
+                message = "Missing '## BDD Test Infrastructure' section. This section is mandatory — run Phase 2 Step 6 assessment."
+            }
+            $fileHasWarnings = $true
+            Write-Log "WARN" "$file : Missing BDD Test Infrastructure section"
+        } else {
+            $hasClassification = $content -match '\*\*Classification:\*\*\s*(TEST_DATA_ACTIVE|TEST_DATA_NONE)'
+            if (-not $hasClassification) {
+                $warnings += @{
+                    file = $file
+                    rule = "BDD_INFRA"
+                    message = "BDD Test Infrastructure section exists but has no Classification (TEST_DATA_ACTIVE or TEST_DATA_NONE). Agent must classify the feature."
+                }
+                $fileHasWarnings = $true
+                Write-Log "WARN" "$file : Missing Classification in BDD Test Infrastructure"
+            } else {
+                # If TEST_DATA_ACTIVE, check required subsections
+                $isActive = $content -match 'TEST_DATA_ACTIVE'
+                if ($isActive) {
+                    $requiredSubs = @('### Существующие hooks', '### Новые hooks', '### Cleanup Strategy')
+                    foreach ($sub in $requiredSubs) {
+                        $subFound = $content -match [regex]::Escape($sub)
+                        $subNotFound = $content -match "$([regex]::Escape($sub)).*Не найдены"
+                        if (-not $subFound -and -not $subNotFound) {
+                            $warnings += @{
+                                file = $file
+                                rule = "BDD_INFRA"
+                                message = "TEST_DATA_ACTIVE but missing required subsection: $sub"
+                            }
+                            $fileHasWarnings = $true
+                            Write-Log "WARN" "$file : TEST_DATA_ACTIVE missing subsection: $sub"
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     # TDD_TASK_ORDER: Check TASKS.md has Phase 0 (BDD Foundation) before implementation
     if ($file -eq "TASKS.md") {
         Write-Log "INFO" "Checking TDD_TASK_ORDER rule..."

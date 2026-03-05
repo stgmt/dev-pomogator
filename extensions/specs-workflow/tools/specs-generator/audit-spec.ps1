@@ -544,6 +544,62 @@ if ($acContent -and $frContent) {
 
 Write-Log "INFO" "LINK_VALIDITY check complete"
 
+# ===== CHECK: BDD_HOOKS_COVERAGE =====
+# If DESIGN.md has TEST_DATA_ACTIVE, verify TASKS.md Phase 0 has hook tasks
+Write-Log "INFO" "Running BDD_HOOKS_COVERAGE check..."
+
+$designPath = Join-Path $TargetDir "DESIGN.md"
+$tasksPath = Join-Path $TargetDir "TASKS.md"
+
+if ((Test-Path $designPath) -and (Test-Path $tasksPath)) {
+    $designContent = Get-Content $designPath -Raw -ErrorAction SilentlyContinue
+    $tasksContent = Get-Content $tasksPath -Raw -ErrorAction SilentlyContinue
+
+    if ($designContent -and $tasksContent) {
+        $isActive = $designContent -match 'TEST_DATA_ACTIVE'
+        if ($isActive) {
+            # Extract hook paths from "### Новые hooks" section
+            $newHooksMatch = [regex]::Match($designContent, '### Новые hooks(.*?)(?=###|\z)', [System.Text.RegularExpressions.RegexOptions]::Singleline)
+            if ($newHooksMatch.Success) {
+                $hookPaths = [regex]::Matches($newHooksMatch.Value, '\|\s*`([^`]+)`\s*\|') | ForEach-Object { $_.Groups[1].Value }
+
+                # Check Phase 0 in TASKS.md
+                $phase0Match = [regex]::Match($tasksContent, '## Phase 0.*?(?=## Phase \d|## Phase [A-Z]|\z)', [System.Text.RegularExpressions.RegexOptions]::Singleline)
+
+                foreach ($hookPath in $hookPaths) {
+                    if (-not $hookPath -or $hookPath -match '^\{') { continue }  # Skip template placeholders
+                    $hookEscaped = [regex]::Escape($hookPath)
+                    if (-not $phase0Match.Success -or $phase0Match.Value -notmatch $hookEscaped) {
+                        $findings += @{
+                            check = "BDD_HOOKS_COVERAGE"
+                            category = "LOGIC_GAPS"
+                            severity = "WARNING"
+                            message = "Hook '$hookPath' from DESIGN.md 'Новые hooks' not found in TASKS.md Phase 0"
+                            details = "Each hook in DESIGN.md must have a corresponding task in TASKS.md Phase 0"
+                        }
+                        Write-Log "WARN" "BDD_HOOKS_COVERAGE: Hook '$hookPath' missing from TASKS.md Phase 0"
+                    }
+                }
+            }
+
+            # Also check that Classification exists
+            $hasClassification = $designContent -match '\*\*Classification:\*\*\s*TEST_DATA_ACTIVE'
+            if (-not $hasClassification) {
+                $findings += @{
+                    check = "BDD_HOOKS_COVERAGE"
+                    category = "LOGIC_GAPS"
+                    severity = "WARNING"
+                    message = "DESIGN.md mentions TEST_DATA_ACTIVE but has no formal **Classification:** field"
+                    details = "Add '**Classification:** TEST_DATA_ACTIVE' to BDD Test Infrastructure section"
+                }
+                Write-Log "WARN" "BDD_HOOKS_COVERAGE: Missing formal Classification field"
+            }
+        }
+    }
+}
+
+Write-Log "INFO" "BDD_HOOKS_COVERAGE check complete"
+
 # ===== Build result =====
 
 # Count by category
@@ -571,7 +627,6 @@ $aiChecksPending = @(
     "FANTASIES: Check for untested claims presented as confirmed facts"
     "RUDIMENTS: Identify scope creep (client-side concerns in server spec, or vice versa)"
     "RUDIMENTS: Check for open questions in RESEARCH.md that are answered elsewhere in spec"
-    "LOGIC_GAPS: If feature creates/modifies test data, check DESIGN.md has 'BDD Test Infrastructure' section with hooks/cleanup strategy"
 )
 
 $result = @{

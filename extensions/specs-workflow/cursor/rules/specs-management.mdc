@@ -121,11 +121,72 @@ alwaysApply: false
 3. Заполнить ACCEPTANCE_CRITERIA.md (EARS формат)
 4. Заполнить REQUIREMENTS.md (индекс ссылок)
 5. Заполнить DESIGN.md
-6. Заполнить секцию "BDD Test Infrastructure" в DESIGN.md (если фича создаёт/изменяет тестовые данные):
-   - Найти существующие hooks по аналогии (из Phase 1.5)
-   - Спроектировать новые hooks (класс/модуль, тег/scope, cleanup order)
-   - Определить shared context keys для передачи данных между steps и hooks
-   - Если не применимо — N/A или удалить секцию
+6. **BDD Test Infrastructure Assessment (ОБЯЗАТЕЛЬНО — НЕ пропускать)**
+
+   Агент ОБЯЗАН выполнить следующий алгоритм. Результат записывается в секцию
+   `## BDD Test Infrastructure` в DESIGN.md. Секция НЕ МОЖЕТ быть удалена.
+
+   **Шаг 6.1: Классификация фичи по Test Data Impact**
+
+   Ответить на 4 вопроса (ДА/НЕТ):
+   1. Фича создаёт, изменяет или удаляет данные через API/БД/файлы?
+   2. Фича изменяет состояние системы, которое нужно откатить после теста?
+   3. BDD сценарии из .feature требуют предустановленных данных (Given-шаги с данными)?
+   4. Фича взаимодействует с внешними сервисами, требующими mock/stub на уровне теста?
+
+   - Если хотя бы 1 ответ ДА → `TEST_DATA_ACTIVE` → перейти к Шагу 6.2
+   - Если все ответы НЕТ → `TEST_DATA_NONE` → записать в DESIGN.md:
+     ```
+     ## BDD Test Infrastructure
+     **Classification:** TEST_DATA_NONE
+     **Evidence:** {1-2 предложения почему все 4 вопроса = НЕТ}
+     **Verdict:** Hooks/fixtures не требуются. Тесты stateless.
+     ```
+     → перейти к Шагу 7 (FILE_CHANGES.md)
+
+   **Шаг 6.2: Сканирование существующих hooks (ОБЯЗАТЕЛЬНО для TEST_DATA_ACTIVE)**
+
+   Искать в проекте:
+   - `**/Hooks/**`, `**/hooks/**`, `**/support/**`
+   - `tests/**/hook*`, `tests/**/setup*`, `tests/**/teardown*`
+   - `tests/**/helpers*`, `tests/**/fixtures/**`
+   - Файлы с `Before`, `After`, `BeforeAll`, `AfterAll` в содержимом
+
+   Для каждого найденного файла заполнить таблицу в DESIGN.md:
+
+   | Hook файл | Тип | Тег/Scope | Что делает | Можно переиспользовать? |
+
+   - Если hooks найдены → заполнить подсекцию `### Существующие hooks` с реальными путями
+   - Если hooks НЕ найдены → записать: `### Существующие hooks — Не найдены в проекте`
+
+   **Шаг 6.3: Проектирование hooks для этой фичи (ОБЯЗАТЕЛЬНО для TEST_DATA_ACTIVE)**
+
+   Для каждого BDD сценария из .feature, который создаёт/изменяет данные:
+   1. Определить: какие данные создаются в Given/When
+   2. Определить: как откатить эти данные (API delete, DB rollback, file cleanup)
+   3. Если существующий hook подходит → указать `Reuse: {путь}`
+   4. Если нужен новый hook → спроектировать с указанием:
+      - Путь к файлу hook-а (конкретный, не "TBD")
+      - Тип: Before/After/BeforeAll/AfterAll
+      - Scope: per-scenario / per-feature / global
+      - Cleanup order (если каскадные зависимости)
+      - По аналогии с каким существующим hook-ом
+
+   Заполнить в DESIGN.md:
+   - `### Новые hooks` — таблица с конкретными файлами и описанием
+   - `### Cleanup Strategy` — порядок удаления, каскадные зависимости
+   - `### Test Data & Fixtures` — lifecycle каждого fixture
+   - `### Shared Context / State Management` — ключи контекста
+
+   **Шаг 6.4: Валидация полноты (self-check)**
+
+   Перед переходом к Шагу 7, проверить:
+   - [ ] Каждый Given-шаг из .feature, создающий данные, имеет cleanup hook
+   - [ ] Каждый новый hook указан в FILE_CHANGES.md (create)
+   - [ ] Каждый переиспользуемый hook указан в FILE_CHANGES.md (edit или reference)
+   - [ ] Cleanup Strategy покрывает все каскадные зависимости
+   - [ ] Shared Context ключи не конфликтуют с существующими
+
 7. Заполнить FILE_CHANGES.md
 8. **Анализ паттернов .feature (ОБЯЗАТЕЛЬНО перед написанием .feature):**
    `.\.dev-pomogator\tools\specs-generator\analyze-features.ps1 -Format text [-FeatureSlug "{slug}"] [-DomainCode "{DOMAIN}"]`
@@ -209,6 +270,16 @@ alwaysApply: false
    - **Последний Phase (Refactor):** Рефакторинг + финальная верификация всех сценариев
    - Каждая задача реализации ОБЯЗАНА ссылаться на @featureN сценарий
    - Каждый Phase завершается verify-шагом: "сценарии @featureN переходят из Red в Green"
+
+   **Phase 0 hooks enforcement (ОБЯЗАТЕЛЬНО):**
+   - Если DESIGN.md содержит `TEST_DATA_ACTIVE` → Phase 0 ОБЯЗАН содержать:
+     - Задачу для **каждого** hook из DESIGN.md секции "Новые hooks"
+     - Задачу для **каждого** fixture из DESIGN.md секции "Test Data & Fixtures"
+   - Формат hook-задачи: `- [ ] Создать hook: {путь} ({тип}, {scope}) — cleanup для {данные}`
+     `_Source: DESIGN.md "BDD Test Infrastructure" > "Новые hooks"_`
+   - Если DESIGN.md содержит `TEST_DATA_NONE` → hook-задачи не нужны
+   - Если Phase 0 не содержит hook-задач при TEST_DATA_ACTIVE → ОШИБКА, исправить
+
 2. Сгенерировать README.md
 3. Финальная валидация
 
@@ -329,6 +400,8 @@ alwaysApply: false
 | TDD_TASK_ORDER | Phase 0 (BDD Foundation) или .feature задача в TASKS.md | WARNING |
 | CROSS_REF_LINKS | Markdown ссылки `[ID](file.md#anchor)` — целевой файл и якорь существуют | WARNING |
 | LINK_VALIDITY | FR/AC/NFR в REQUIREMENTS/TASKS — кликабельные линки, не plain text | WARNING |
+| BDD_INFRA | `## BDD Test Infrastructure` в DESIGN.md с Classification (TEST_DATA_ACTIVE/TEST_DATA_NONE) | WARNING |
+| BDD_HOOKS_TASKS | Если TEST_DATA_ACTIVE, Phase 0 в TASKS.md содержит задачи для всех hooks из DESIGN.md | WARNING |
 
 ---
 
