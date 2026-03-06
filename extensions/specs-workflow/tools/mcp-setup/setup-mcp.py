@@ -198,6 +198,17 @@ def clean_npx_cache() -> None:
         print(f"  [NPX] No npx cache to clean")
 
 
+def clean_stale_node_modules(cwd: Optional[Path] = None) -> None:
+    """Clean stale npm temp directories in node_modules/."""
+    nm_dir = (cwd or Path.cwd()) / "node_modules"
+    if not nm_dir.exists():
+        return
+    for entry in nm_dir.iterdir():
+        if entry.name.startswith('.') and re.search(r'-.{8,}$', entry.name) and entry.is_dir():
+            shutil.rmtree(entry, ignore_errors=True)
+            print(f"  [NPM] Cleaned stale temp dir: node_modules/{entry.name}")
+
+
 def prefetch_package(package: str) -> None:
     """Pre-download package via npm install so npx doesn't need to fetch at runtime."""
     if not package:
@@ -283,9 +294,14 @@ def install_mcp_servers(
 
         try:
             prefetch_package(server_def.get("package", ""))
-        except RuntimeError as exc:
-            print(f"  [WARN] Prefetch failed for {server_name}: {exc}")
-            print(f"  [WARN] MCP config will be written anyway — IDE will download on first use")
+        except RuntimeError:
+            # Retry once after cleaning stale node_modules temp dirs
+            clean_stale_node_modules()
+            try:
+                prefetch_package(server_def.get("package", ""))
+            except RuntimeError as exc2:
+                print(f"  [WARN] Prefetch failed for {server_name}: {exc2}")
+                print(f"  [WARN] MCP config will be written anyway — IDE will download on first use")
 
         try:
             expected_entry = build_mcp_entry(server_def)

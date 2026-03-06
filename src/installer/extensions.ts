@@ -211,6 +211,25 @@ function isCI(): boolean {
 }
 
 /**
+ * Check if running in non-interactive environment (no TTY, CI, Docker tests).
+ * Unlike isCI() which skips hooks entirely, this allows hooks to run but without user prompts.
+ */
+function isNonInteractive(): boolean {
+  return isCI() || !process.stdin.isTTY || !process.stdout.isTTY;
+}
+
+/**
+ * For interactive hooks running in non-interactive environment,
+ * append --non-interactive flag to known scripts that support it.
+ */
+function augmentCommandForNonInteractive(command: string): string {
+  if (command.includes('configure.py') && !command.includes('--non-interactive')) {
+    return command.replace('configure.py', 'configure.py --non-interactive');
+  }
+  return command;
+}
+
+/**
  * Get post-install hook for an extension and platform
  */
 function getPostInstallHook(
@@ -305,6 +324,30 @@ function cleanNpxCache(): void {
 }
 
 /**
+ * Clean stale npm temp directories in node_modules/.
+ * npm leaves behind .package-name-randomHash dirs on failed renames (ENOTEMPTY).
+ */
+function cleanStaleNodeModulesDirs(cwd: string): void {
+  try {
+    const nodeModulesDir = path.join(cwd, 'node_modules');
+    if (!fs.existsSync(nodeModulesDir)) return;
+    const entries = fs.readdirSync(nodeModulesDir);
+    for (const entry of entries) {
+      // npm temp rename pattern: .package-name-aBcDeFgH (dot + name + dash + 8+ random chars)
+      if (entry.startsWith('.') && /-.{8,}$/.test(entry)) {
+        const fullPath = path.join(nodeModulesDir, entry);
+        try {
+          if (fs.statSync(fullPath).isDirectory()) {
+            fs.rmSync(fullPath, { recursive: true, force: true });
+            console.log(`  ↻ Cleaned stale temp dir: node_modules/${entry}`);
+          }
+        } catch { /* skip */ }
+      }
+    }
+  } catch { /* skip */ }
+}
+
+/**
  * Run post-install hook for an extension
  */
 export async function runPostInstallHook(
@@ -326,7 +369,7 @@ export async function runPostInstallHook(
   const { command: rawCommand, interactive = true, skipInCI = true } = hook;
 
   // On Windows, python3 doesn't exist — normalize to python
-  const command = process.platform === 'win32'
+  let command = process.platform === 'win32'
     ? rawCommand.replace(/\bpython3\b/g, 'python')
     : rawCommand;
 
@@ -336,24 +379,32 @@ export async function runPostInstallHook(
     return;
   }
 
+  // Auto-append --non-interactive for interactive hooks in headless environments
+  if (interactive && isNonInteractive()) {
+    command = augmentCommandForNonInteractive(command);
+  }
+
+  const useInherit = interactive && !isNonInteractive();
+
   console.log(`  ▶ Running post-install hook for ${extension.name}...`);
 
   const env = getMsysSafeEnv();
   try {
     const { execa } = await import('execa');
-    const execOpts = { cwd: repoRoot, stdio: (interactive ? 'inherit' : 'pipe') as 'inherit' | 'pipe', shell: true, env };
+    const execOpts = { cwd: repoRoot, stdio: (useInherit ? 'inherit' : 'pipe') as 'inherit' | 'pipe', shell: true, env };
     await execa(command, execOpts);
     console.log(`  ✓ Post-install hook completed for ${extension.name}`);
     if (executedSharedHooks && isSharedPostInstallHook(extension)) {
       executedSharedHooks.add(extension.name);
     }
   } catch (error) {
-    // Retry once if npx cache is corrupted (Windows ENOTEMPTY / MODULE_NOT_FOUND)
-    if (command.includes('npx') && isNpxCacheError(error)) {
+    // Retry once on ENOTEMPTY / MODULE_NOT_FOUND — clean both npx cache and stale node_modules dirs
+    if (isNpxCacheError(error)) {
       cleanNpxCache();
+      cleanStaleNodeModulesDirs(repoRoot);
       try {
         const { execa } = await import('execa');
-        await execa(command, { cwd: repoRoot, stdio: interactive ? 'inherit' : 'pipe', shell: true, env });
+        await execa(command, { cwd: repoRoot, stdio: useInherit ? 'inherit' : 'pipe', shell: true, env });
         console.log(`  ✓ Post-install hook completed for ${extension.name} (after cache cleanup)`);
         if (executedSharedHooks && isSharedPostInstallHook(extension)) {
           executedSharedHooks.add(extension.name);
@@ -383,7 +434,7 @@ export async function runPostUpdateHook(
   const { command: rawCommand, interactive = true, skipInCI = true } = hook;
 
   // On Windows, python3 doesn't exist — normalize to python
-  const command = process.platform === 'win32'
+  let command = process.platform === 'win32'
     ? rawCommand.replace(/\bpython3\b/g, 'python')
     : rawCommand;
 
@@ -392,6 +443,13 @@ export async function runPostUpdateHook(
     return;
   }
 
+  // Auto-append --non-interactive for interactive hooks in headless environments
+  if (interactive && isNonInteractive()) {
+    command = augmentCommandForNonInteractive(command);
+  }
+
+  const useInherit = interactive && !isNonInteractive();
+
   console.log(`  ▶ Running post-update hook for ${extension.name}...`);
 
   const env = getMsysSafeEnv();
@@ -399,18 +457,19 @@ export async function runPostUpdateHook(
     const { execa } = await import('execa');
     await execa(command, {
       cwd: repoRoot,
-      stdio: interactive ? 'inherit' : 'pipe',
+      stdio: useInherit ? 'inherit' : 'pipe',
       shell: true,
       env,
     });
     console.log(`  ✓ Post-update hook completed for ${extension.name}`);
   } catch (error) {
-    // Retry once if npx cache is corrupted
-    if (command.includes('npx') && isNpxCacheError(error)) {
+    // Retry once on ENOTEMPTY / MODULE_NOT_FOUND — clean both npx cache and stale node_modules dirs
+    if (isNpxCacheError(error)) {
       cleanNpxCache();
+      cleanStaleNodeModulesDirs(repoRoot);
       try {
         const { execa } = await import('execa');
-        await execa(command, { cwd: repoRoot, stdio: interactive ? 'inherit' : 'pipe', shell: true, env });
+        await execa(command, { cwd: repoRoot, stdio: useInherit ? 'inherit' : 'pipe', shell: true, env });
         console.log(`  ✓ Post-update hook completed for ${extension.name} (after cache cleanup)`);
         return;
       } catch {

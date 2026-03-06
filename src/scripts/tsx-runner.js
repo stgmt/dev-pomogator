@@ -94,6 +94,27 @@ function cleanNpxCache() {
 }
 
 /**
+ * Clean stale npm temp directories in node_modules/.
+ * npm leaves behind .package-name-randomHash dirs on failed renames (ENOTEMPTY).
+ */
+function cleanStaleNodeModulesDirs() {
+  try {
+    const nmDir = path.join(process.cwd(), 'node_modules');
+    if (!fs.existsSync(nmDir)) return;
+    for (const entry of fs.readdirSync(nmDir)) {
+      if (entry.startsWith('.') && /-.{8,}$/.test(entry)) {
+        const full = path.join(nmDir, entry);
+        try {
+          if (fs.statSync(full).isDirectory()) {
+            fs.rmSync(full, { recursive: true, force: true });
+          }
+        } catch { /* skip */ }
+      }
+    }
+  } catch { /* skip */ }
+}
+
+/**
  * Build the npx tsx command parts.
  */
 function buildCommand() {
@@ -126,6 +147,7 @@ try {
 } catch (error) {
   if (isNpxCacheError(error)) {
     cleanNpxCache();
+    cleanStaleNodeModulesDirs();
     try {
       run();
     } catch (retryError) {

@@ -87,3 +87,18 @@ Feature: CORE003 Claude Code Installer
     And pyyaml should be importable by Python
     And pre-commit should be available via python -m pre_commit
     And .pre-commit-config.yaml should contain forbid-root-artifacts hook
+
+  Scenario: Post-install hooks run non-interactively in headless environment
+    Given dev-pomogator installs for Claude Code with --all
+    And the environment has no TTY (piped stdin)
+    Then configure.py should receive --non-interactive flag automatically
+    And configure.py should not prompt for user input
+    And all files should be auto-added to whitelist
+
+  Scenario: npm ENOTEMPTY recovery cleans stale node_modules temp dirs
+    Given dev-pomogator installs for Claude Code with --all
+    And node_modules contains stale temp dirs like .package-name-dLWEkYjE
+    When a post-install hook fails with ENOTEMPTY
+    Then the installer should clean stale temp dirs in node_modules
+    And the installer should retry the failed command
+    And the retry should use both npx cache and node_modules cleanup
