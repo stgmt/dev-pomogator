@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import { listExtensions, getExtensionFiles, getExtensionRules, getExtensionTools, getExtensionSkills, getExtensionHooks, runPostInstallHook, Extension } from './extensions.js';
 import type { ManagedFileEntry, ManagedFiles } from '../config/schema.js';
 import { findRepoRoot } from '../utils/repo.js';
+import { detectMangledArtifacts } from '../utils/msys.js';
 import { RULES_SUBFOLDER, TOOLS_DIR, SKILLS_DIR } from '../constants.js';
 import { getFileHash } from '../updater/content-hash.js';
 import { collectFileHashes, addProjectPaths, makePortableScriptCommand, resolveHookToolPaths, replaceNpxTsxWithPortable } from './shared.js';
@@ -238,6 +239,19 @@ export async function installClaude(options: ClaudeOptions = {}): Promise<void> 
   if (options.autoUpdate !== false) {
     await setupClaudeHooks();
     await setupGlobalScripts();
+  }
+
+  // 10. Check for MSYS path mangling artifacts
+  const mangledArtifacts = await detectMangledArtifacts(repoRoot);
+  if (mangledArtifacts.length > 0) {
+    console.log(chalk.yellow('\n  ⚠  MSYS path mangling detected in project root!'));
+    console.log(chalk.yellow('  Found directories that look like MSYS-mangled Unix paths:'));
+    for (const artifact of mangledArtifacts) {
+      console.log(chalk.yellow(`     ${artifact}/Program Files/Git/...`));
+    }
+    console.log(chalk.yellow('  This happens when Unix paths (e.g. /home/user) are passed through Git Bash on Windows.'));
+    console.log(chalk.yellow('  Fix: add MSYS_NO_PATHCONV=1 to your environment or devcontainer config.'));
+    console.log(chalk.yellow('  These directories can be safely deleted.\n'));
   }
 }
 

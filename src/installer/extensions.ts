@@ -2,6 +2,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
+import { getMsysSafeEnv } from '../utils/msys.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -337,7 +338,7 @@ export async function runPostInstallHook(
 
   try {
     const { execa } = await import('execa');
-    const execOpts = { cwd: repoRoot, stdio: (interactive ? 'inherit' : 'pipe') as 'inherit' | 'pipe', shell: true };
+    const execOpts = { cwd: repoRoot, stdio: (interactive ? 'inherit' : 'pipe') as 'inherit' | 'pipe', shell: true, env: getMsysSafeEnv() };
     await execa(command, execOpts);
     console.log(`  ✓ Post-install hook completed for ${extension.name}`);
     if (executedSharedHooks && isSharedPostInstallHook(extension)) {
@@ -349,7 +350,7 @@ export async function runPostInstallHook(
       cleanNpxCache();
       try {
         const { execa } = await import('execa');
-        await execa(command, { cwd: repoRoot, stdio: interactive ? 'inherit' : 'pipe', shell: true });
+        await execa(command, { cwd: repoRoot, stdio: interactive ? 'inherit' : 'pipe', shell: true, env: getMsysSafeEnv() });
         console.log(`  ✓ Post-install hook completed for ${extension.name} (after cache cleanup)`);
         if (executedSharedHooks && isSharedPostInstallHook(extension)) {
           executedSharedHooks.add(extension.name);
@@ -396,6 +397,7 @@ export async function runPostUpdateHook(
       cwd: repoRoot,
       stdio: interactive ? 'inherit' : 'pipe',
       shell: true,
+      env: getMsysSafeEnv(),
     });
     console.log(`  ✓ Post-update hook completed for ${extension.name}`);
   } catch (error) {
@@ -404,7 +406,7 @@ export async function runPostUpdateHook(
       cleanNpxCache();
       try {
         const { execa } = await import('execa');
-        await execa(command, { cwd: repoRoot, stdio: interactive ? 'inherit' : 'pipe', shell: true });
+        await execa(command, { cwd: repoRoot, stdio: interactive ? 'inherit' : 'pipe', shell: true, env: getMsysSafeEnv() });
         console.log(`  ✓ Post-update hook completed for ${extension.name} (after cache cleanup)`);
         return;
       } catch {

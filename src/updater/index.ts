@@ -14,6 +14,7 @@ import os from 'os';
 import semver from 'semver';
 import { RULES_SUBFOLDER, TOOLS_DIR, SKILLS_DIR } from '../constants.js';
 import { resolveHookToolPaths, replaceNpxTsxWithPortable } from '../installer/shared.js';
+import { detectMangledArtifacts } from '../utils/msys.js';
 
 interface UpdateOptions {
   force?: boolean;
@@ -647,13 +648,24 @@ export async function checkUpdate(options: UpdateOptions = {}): Promise<boolean>
       }
     }
 
-    // 8. Write update report if any files were backed up (across all extensions)
+    // 8. Check for MSYS path mangling artifacts in each project
+    for (const installed of config.installedExtensions) {
+      if (platform && installed.platform !== platform) continue;
+      for (const projectPath of installed.projectPaths) {
+        const mangledArtifacts = await detectMangledArtifacts(projectPath);
+        if (mangledArtifacts.length > 0) {
+          console.log(`  ⚠ MSYS path mangling artifacts in ${projectPath}: ${mangledArtifacts.join(', ')}`);
+        }
+      }
+    }
+
+    // 9. Write update report if any files were backed up (across all extensions)
     if (allBackedUp.length > 0) {
       console.log(`  📋 ${allBackedUp.length} user-modified file(s) backed up to .dev-pomogator/.user-overrides/`);
       await writeUpdateReport(allBackedUp);
     }
     
-    // 9. Сохранить config
+    // 10. Сохранить config
     config.lastCheck = new Date().toISOString();
     await saveConfig(config);
     

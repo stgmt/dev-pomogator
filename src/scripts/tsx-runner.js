@@ -105,10 +105,15 @@ function buildCommand() {
  * Run the tsx command.
  */
 function run() {
+  const env = { ...process.env };
+  if (process.platform === 'win32') {
+    env.MSYS_NO_PATHCONV = '1';
+    env.MSYS2_ARG_CONV_EXCL = '*';
+  }
   execSync(buildCommand(), {
     stdio: 'inherit',
     cwd: process.cwd(),
-    env: process.env,
+    env,
     timeout: 120000,
     shell: true,
   });
