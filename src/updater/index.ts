@@ -303,7 +303,7 @@ async function updateSkillFiles(
 
 async function updateCursorHooksForProject(
   repoRoot: string,
-  hooks: Record<string, string>,
+  hooks: Record<string, string | { matcher?: string; command: string; timeout?: number }>,
   previousManagedHooks: Record<string, string[]> = {}
 ): Promise<Record<string, string[]>> {
   const hooksDir = path.join(os.homedir(), '.cursor', 'hooks');
@@ -335,7 +335,8 @@ async function updateCursorHooksForProject(
   const nextManagedHooks: Record<string, string[]> = {};
   const nextAbsoluteByEvent: Record<string, string[]> = {};
 
-  for (const [eventName, command] of Object.entries(hooks)) {
+  for (const [eventName, rawHook] of Object.entries(hooks)) {
+    const command = typeof rawHook === 'string' ? rawHook : rawHook.command;
     if (!nextManagedHooks[eventName]) {
       nextManagedHooks[eventName] = [];
     }
@@ -386,7 +387,7 @@ async function updateCursorHooksForProject(
 
 async function updateClaudeHooksForProject(
   repoRoot: string,
-  hooks: Record<string, string>,
+  hooks: Record<string, string | { matcher?: string; command: string; timeout?: number }>,
   previousManagedHooks: Record<string, string[]> = {}
 ): Promise<Record<string, string[]>> {
   const settingsPath = path.join(repoRoot, '.claude', 'settings.json');
@@ -420,7 +421,11 @@ async function updateClaudeHooksForProject(
 
   const nextManagedHooks: Record<string, string[]> = {};
 
-  for (const [hookName, rawCommand] of Object.entries(hooks)) {
+  for (const [hookName, rawHook] of Object.entries(hooks)) {
+    const rawCommand = typeof rawHook === 'string' ? rawHook : rawHook.command;
+    const matcher = typeof rawHook === 'string' ? '' : (rawHook.matcher ?? '');
+    const timeout = typeof rawHook === 'string' ? 60 : (rawHook.timeout ?? 60);
+
     if (!nextManagedHooks[hookName]) {
       nextManagedHooks[hookName] = [];
     }
@@ -443,11 +448,11 @@ async function updateClaudeHooksForProject(
 
     if (!commandExists) {
       hookArray.push({
-        matcher: '',
+        matcher,
         hooks: [{
           type: 'command',
           command,
-          timeout: 60,
+          timeout,
         }],
       });
     }

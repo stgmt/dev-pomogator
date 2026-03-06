@@ -343,6 +343,26 @@ describe('CORE003: Claude Code Installer', () => {
     });
   });
 
+  describe('Scenario: Extension hooks with matcher object are installed correctly', () => {
+    it('should install PreToolUse hooks with matcher from object-format hook', async () => {
+      const settingsPath = appPath('.claude', 'settings.json');
+      const settings = await fs.readJson(settingsPath);
+      const preToolUse = settings.hooks?.PreToolUse;
+      expect(preToolUse).toBeDefined();
+      expect(Array.isArray(preToolUse)).toBe(true);
+      expect(preToolUse.length).toBeGreaterThan(0);
+
+      // Find the phase-gate hook entry
+      const phaseGateEntry = preToolUse.find((entry: any) =>
+        entry.hooks?.some((h: any) => h.command?.includes('phase-gate.ts'))
+      );
+      expect(phaseGateEntry).toBeDefined();
+      expect(phaseGateEntry.matcher).toBe('Write|Edit');
+      expect(phaseGateEntry.hooks[0].command).toContain('tsx-runner.js');
+      expect(phaseGateEntry.hooks[0].command).toContain('phase-gate.ts');
+    });
+  });
+
   describe('Scenario: Re-installation preserves existing hooks', () => {
     it('should not duplicate check-update.js hook on reinstall', async () => {
       // Run installer again (--all for non-interactive mode)

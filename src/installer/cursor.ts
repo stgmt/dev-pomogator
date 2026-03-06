@@ -192,7 +192,9 @@ async function installExtensionHooks(extensions: Extension[], repoRoot: string):
   
   for (const extension of extensions) {
     const hooks = getExtensionHooks(extension, 'cursor');
-    for (const [eventName, command] of Object.entries(hooks)) {
+    for (const [eventName, rawHook] of Object.entries(hooks)) {
+      // Hook can be a string or { command, matcher, timeout } object
+      const command = typeof rawHook === 'string' ? rawHook : rawHook.command;
       if (!extensionHooks[eventName]) {
         extensionHooks[eventName] = [];
       }

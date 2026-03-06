@@ -47,6 +47,12 @@ Feature: CORE003 Claude Code Installer
     And extension hook paths should be relative ".dev-pomogator/tools/"
     And extension hook paths should not contain OS-specific absolute paths
 
+  Scenario: Extension hooks with matcher are installed correctly
+    Given dev-pomogator installs for Claude Code with --all
+    Then project .claude/settings.json should contain PreToolUse hooks
+    And PreToolUse hooks should have matcher "Write|Edit"
+    And PreToolUse hook command should reference phase-gate.ts via tsx-runner
+
   @implemented: claude-installer.test.ts > Extension hooks use absolute paths
   Scenario: Re-installation preserves existing hooks
     Given dev-pomogator was previously installed for Claude Code

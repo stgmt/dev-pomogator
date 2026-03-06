@@ -352,12 +352,17 @@ async function installExtensionHooks(repoRoot: string, extensions: Extension[]):
   const installedHooksByExtension: Record<string, Record<string, string[]>> = {};
 
   // Collect all hooks from extensions
-  const allHooks: Record<string, Array<{ type: string; command: string; timeout?: number }>> = {};
+  const allHooks: Record<string, Array<{ type: string; command: string; timeout?: number; matcher: string }>> = {};
 
   for (const ext of extensions) {
     const hooks = getExtensionHooks(ext, 'claude');
 
-    for (const [hookName, rawCommand] of Object.entries(hooks)) {
+    for (const [hookName, rawHook] of Object.entries(hooks)) {
+      // Hook can be a string or { matcher, command, timeout } object
+      const rawCommand = typeof rawHook === 'string' ? rawHook : rawHook.command;
+      const matcher = typeof rawHook === 'string' ? '' : (rawHook.matcher ?? '');
+      const timeout = typeof rawHook === 'string' ? 60 : (rawHook.timeout ?? 60);
+
       // Replace relative paths with absolute paths so hooks work from any CWD
       // Then replace npx tsx with resilient tsx-runner wrapper
       const command = replaceNpxTsxWithPortable(resolveHookToolPaths(rawCommand, repoRoot));
@@ -372,7 +377,8 @@ async function installExtensionHooks(repoRoot: string, extensions: Extension[]):
         allHooks[hookName].push({
           type: 'command',
           command,
-          timeout: 60,
+          timeout,
+          matcher,
         });
       }
 
@@ -424,18 +430,22 @@ async function installExtensionHooks(repoRoot: string, extensions: Extension[]):
       existingHooks[hookName] = [];
     }
     
-    const hookArray = existingHooks[hookName] as Array<{ matcher?: string; hooks?: Array<{ type: string; command: string }> }>;
+    const hookArray = existingHooks[hookName] as Array<{ matcher?: string; hooks?: Array<{ type: string; command: string; timeout?: number }> }>;
     
     for (const hookEntry of hookEntries) {
       // Check if hook command already exists
-      const commandExists = hookArray.some(h => 
+      const commandExists = hookArray.some(h =>
         h.hooks?.some(hook => hook.command === hookEntry.command)
       );
-      
+
       if (!commandExists) {
         hookArray.push({
-          matcher: '',
-          hooks: [hookEntry],
+          matcher: hookEntry.matcher,
+          hooks: [{
+            type: hookEntry.type,
+            command: hookEntry.command,
+            timeout: hookEntry.timeout,
+          }],
         });
       }
     }

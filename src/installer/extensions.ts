@@ -14,12 +14,14 @@ export interface EnvRequirement {
   example?: string;    // example value for .env.example
 }
 
+export type HookValue = string | { matcher?: string; command: string; timeout?: number };
+
 export interface ExtensionHooks {
   claude?: {
-    [hookName: string]: string; // e.g. "UserPromptSubmit": "python .dev-pomogator/tools/auto-commit/auto_commit.py"
+    [hookName: string]: HookValue;
   };
   cursor?: {
-    [hookName: string]: string; // e.g. "beforeSubmitPrompt": "python .dev-pomogator/tools/auto-commit/auto_commit.py"
+    [hookName: string]: HookValue;
   };
 }
 
@@ -190,7 +192,7 @@ export async function getExtensionSkills(
 export function getExtensionHooks(
   extension: Extension,
   platform: 'cursor' | 'claude'
-): Record<string, string> {
+): Record<string, HookValue> {
   return extension.hooks?.[platform] || {};
 }
 
