@@ -648,13 +648,17 @@ export async function checkUpdate(options: UpdateOptions = {}): Promise<boolean>
       }
     }
 
-    // 8. Check for MSYS path mangling artifacts in each project
+    // 8. Check for MSYS path mangling artifacts (deduplicated across extensions)
+    const scannedPaths = new Set<string>();
     for (const installed of config.installedExtensions) {
       if (platform && installed.platform !== platform) continue;
       for (const projectPath of installed.projectPaths) {
-        const mangledArtifacts = await detectMangledArtifacts(projectPath);
+        if (scannedPaths.has(projectPath)) continue;
+        scannedPaths.add(projectPath);
+        const mangledArtifacts = detectMangledArtifacts(projectPath);
         if (mangledArtifacts.length > 0) {
           console.log(`  ⚠ MSYS path mangling artifacts in ${projectPath}: ${mangledArtifacts.join(', ')}`);
+          console.log(`    Fix: add MSYS_NO_PATHCONV=1 to your environment. These directories can be safely deleted.`);
         }
       }
     }

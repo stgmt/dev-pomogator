@@ -336,9 +336,10 @@ export async function runPostInstallHook(
 
   console.log(`  ▶ Running post-install hook for ${extension.name}...`);
 
+  const env = getMsysSafeEnv();
   try {
     const { execa } = await import('execa');
-    const execOpts = { cwd: repoRoot, stdio: (interactive ? 'inherit' : 'pipe') as 'inherit' | 'pipe', shell: true, env: getMsysSafeEnv() };
+    const execOpts = { cwd: repoRoot, stdio: (interactive ? 'inherit' : 'pipe') as 'inherit' | 'pipe', shell: true, env };
     await execa(command, execOpts);
     console.log(`  ✓ Post-install hook completed for ${extension.name}`);
     if (executedSharedHooks && isSharedPostInstallHook(extension)) {
@@ -350,7 +351,7 @@ export async function runPostInstallHook(
       cleanNpxCache();
       try {
         const { execa } = await import('execa');
-        await execa(command, { cwd: repoRoot, stdio: interactive ? 'inherit' : 'pipe', shell: true, env: getMsysSafeEnv() });
+        await execa(command, { cwd: repoRoot, stdio: interactive ? 'inherit' : 'pipe', shell: true, env });
         console.log(`  ✓ Post-install hook completed for ${extension.name} (after cache cleanup)`);
         if (executedSharedHooks && isSharedPostInstallHook(extension)) {
           executedSharedHooks.add(extension.name);
@@ -391,13 +392,14 @@ export async function runPostUpdateHook(
 
   console.log(`  ▶ Running post-update hook for ${extension.name}...`);
 
+  const env = getMsysSafeEnv();
   try {
     const { execa } = await import('execa');
     await execa(command, {
       cwd: repoRoot,
       stdio: interactive ? 'inherit' : 'pipe',
       shell: true,
-      env: getMsysSafeEnv(),
+      env,
     });
     console.log(`  ✓ Post-update hook completed for ${extension.name}`);
   } catch (error) {
@@ -406,7 +408,7 @@ export async function runPostUpdateHook(
       cleanNpxCache();
       try {
         const { execa } = await import('execa');
-        await execa(command, { cwd: repoRoot, stdio: interactive ? 'inherit' : 'pipe', shell: true, env: getMsysSafeEnv() });
+        await execa(command, { cwd: repoRoot, stdio: interactive ? 'inherit' : 'pipe', shell: true, env });
         console.log(`  ✓ Post-update hook completed for ${extension.name} (after cache cleanup)`);
         return;
       } catch {

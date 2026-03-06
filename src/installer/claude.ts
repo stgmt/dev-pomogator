@@ -242,7 +242,7 @@ export async function installClaude(options: ClaudeOptions = {}): Promise<void> 
   }
 
   // 10. Check for MSYS path mangling artifacts
-  const mangledArtifacts = await detectMangledArtifacts(repoRoot);
+  const mangledArtifacts = detectMangledArtifacts(repoRoot);
   if (mangledArtifacts.length > 0) {
     console.log(chalk.yellow('\n  ⚠  MSYS path mangling detected in project root!'));
     console.log(chalk.yellow('  Found directories that look like MSYS-mangled Unix paths:'));

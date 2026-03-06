@@ -105,6 +105,7 @@ function buildCommand() {
  * Run the tsx command.
  */
 function run() {
+  // Duplicated from src/utils/msys.ts:getMsysSafeEnv — keep in sync
   const env = { ...process.env };
   if (process.platform === 'win32') {
     env.MSYS_NO_PATHCONV = '1';

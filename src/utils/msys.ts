@@ -40,7 +40,7 @@ export function getMsysSafeEnv(baseEnv?: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
  * almost certainly an artifact of MSYS converting /home/... to C:/Program Files/Git/...
  * which, on Linux, creates a literal "C:" directory.
  */
-export async function detectMangledArtifacts(projectRoot: string): Promise<string[]> {
+export function detectMangledArtifacts(projectRoot: string): string[] {
   const artifacts: string[] = [];
   try {
     const entries = fs.readdirSync(projectRoot, { withFileTypes: true });
