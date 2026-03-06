@@ -294,10 +294,9 @@ describe('CORE003: Claude Code Installer', () => {
       expect(settings.hooks).toBeDefined();
     });
 
-    it('should use absolute paths in extension hook commands', async () => {
+    it('should use portable relative paths in extension hook commands', async () => {
       const settingsPath = appPath('.claude', 'settings.json');
       const settings = await fs.readJson(settingsPath);
-      const projectDir = appPath().replace(/\\/g, '/');
 
       for (const [, hookEntries] of Object.entries(settings.hooks || {})) {
         if (!Array.isArray(hookEntries)) continue;
@@ -306,10 +305,14 @@ describe('CORE003: Claude Code Installer', () => {
           if (!entry.hooks) continue;
           for (const hook of entry.hooks) {
             if (hook.command?.includes('dev-pomogator/tools/')) {
-              // Must contain absolute project path prefix
-              expect(hook.command).toContain(projectDir);
-              // Must NOT have relative .dev-pomogator/tools/ without absolute prefix
-              expect(hook.command).not.toMatch(/(?:^|\s)\.dev-pomogator\/tools\//);
+              // Must use tsx-runner wrapper
+              expect(hook.command).toContain('tsx-runner.js');
+              // Must use relative .dev-pomogator/tools/ path (portable across OS)
+              expect(hook.command).toContain('.dev-pomogator/tools/');
+              // Must NOT contain OS-specific absolute paths
+              expect(hook.command).not.toMatch(/[A-Z]:\\/i);
+              expect(hook.command).not.toMatch(/\/home\/\w+\//);
+              expect(hook.command).not.toMatch(/\/workspaces\//);
             }
           }
         }
@@ -643,9 +646,9 @@ describe('Scenario: Auto-update migrates old-format hooks to portable format', (
     // Should use tsx-runner portable format
     expect(migratedHook.command).toContain('tsx-runner.js');
 
-    // Should have absolute path (project dir prefix)
-    const projectDirFwd = projectDir.replace(/\\/g, '/');
-    expect(migratedHook.command).toContain(projectDirFwd);
+    // Should use portable relative path (no OS-specific absolute prefix)
+    expect(migratedHook.command).toContain('.dev-pomogator/tools/');
+    expect(migratedHook.command).not.toMatch(/[A-Z]:\\/i);
   });
 });
 

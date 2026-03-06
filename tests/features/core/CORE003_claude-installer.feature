@@ -40,12 +40,12 @@ Feature: CORE003 Claude Code Installer
     And settings.json should contain hooks.Stop array
     And Stop hooks should include check-update.js with --claude flag
 
-  Scenario: Extension hooks use absolute paths in project settings
+  Scenario: Extension hooks use portable relative paths in project settings
     Given dev-pomogator installs for Claude Code with --all
     Then project .claude/settings.json should contain extension hooks
-    And extension hook commands should use absolute project path
-    And extension hook paths should not be relative ".dev-pomogator/"
-    And extension hook paths should use forward slashes
+    And extension hook commands should use tsx-runner wrapper
+    And extension hook paths should be relative ".dev-pomogator/tools/"
+    And extension hook paths should not contain OS-specific absolute paths
 
   @implemented: claude-installer.test.ts > Extension hooks use absolute paths
   Scenario: Re-installation preserves existing hooks
@@ -72,7 +72,7 @@ Feature: CORE003 Claude Code Installer
     Given project .claude/settings.json has old-format "npx tsx" hook
     When check-update runs for the project
     Then hook command should be migrated to tsx-runner format
-    And hook paths should be absolute
+    And hook paths should be portable relative paths
 
   Scenario: PostInstall hooks install dependencies
     Given dev-pomogator installs for Claude Code with --all

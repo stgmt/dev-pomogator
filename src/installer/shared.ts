@@ -4,7 +4,7 @@ import { loadConfig, saveConfig } from '../config/index.js';
 import type { InstalledExtension, ManagedFileEntry, ManagedFiles, Platform } from '../config/schema.js';
 import type { Extension } from './extensions.js';
 import { getFileHash } from '../updater/content-hash.js';
-import { TOOLS_DIR } from '../constants.js';
+// TOOLS_DIR import removed — resolveHookToolPaths no longer bakes absolute paths
 
 /**
  * Generate a cross-platform hook command that resolves ~/.dev-pomogator/scripts/<script>
@@ -44,14 +44,15 @@ export function replaceNpxTsxWithPortable(command: string): string {
 }
 
 /**
- * Transform relative .dev-pomogator/tools/ paths in a hook command to absolute paths.
- * Ensures hooks work correctly regardless of CWD when the IDE executes them.
+ * Hook tool path resolver — currently a no-op.
+ *
+ * Previously converted relative `.dev-pomogator/tools/` paths to absolute.
+ * Now tsx-runner.js handles path resolution at runtime via CWD-relative
+ * lookup and git-root walk-up, making baked absolute paths unnecessary
+ * and harmful for cross-platform use (Windows host + Linux devcontainer).
  */
-export function resolveHookToolPaths(command: string, repoRoot: string): string {
-  return command.replace(
-    /\.dev-pomogator\/tools\//g,
-    path.join(repoRoot, TOOLS_DIR).replace(/\\/g, '/') + '/'
-  );
+export function resolveHookToolPaths(command: string, _repoRoot: string): string {
+  return command;
 }
 
 /**
