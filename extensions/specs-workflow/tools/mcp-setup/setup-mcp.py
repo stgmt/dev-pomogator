@@ -198,13 +198,17 @@ def clean_npx_cache() -> None:
         print(f"  [NPX] No npx cache to clean")
 
 
+_STALE_NPM_DIR_PATTERN = re.compile(r'-.{8,}$')
+
 def clean_stale_node_modules(cwd: Optional[Path] = None) -> None:
-    """Clean stale npm temp directories in node_modules/."""
+    """Clean stale npm temp directories in node_modules/.
+    Duplicated from extensions.ts — this is an independent Python hook, keep in sync.
+    """
     nm_dir = (cwd or Path.cwd()) / "node_modules"
     if not nm_dir.exists():
         return
     for entry in nm_dir.iterdir():
-        if entry.name.startswith('.') and re.search(r'-.{8,}$', entry.name) and entry.is_dir():
+        if entry.name.startswith('.') and _STALE_NPM_DIR_PATTERN.search(entry.name) and entry.is_dir():
             shutil.rmtree(entry, ignore_errors=True)
             print(f"  [NPM] Cleaned stale temp dir: node_modules/{entry.name}")
 

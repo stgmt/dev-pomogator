@@ -291,9 +291,10 @@ export function isSharedPostInstallHook(extension: Extension): boolean {
 }
 
 /**
- * Check if an error looks like a corrupted npx cache (Windows ENOTEMPTY, MODULE_NOT_FOUND).
+ * Check if an error is a recoverable npm/node_modules error (ENOTEMPTY, MODULE_NOT_FOUND).
+ * Covers both npx cache corruption and stale node_modules temp directories.
  */
-function isNpxCacheError(error: unknown): boolean {
+function isRecoverableNpmError(error: unknown): boolean {
   const msg = String(error instanceof Error ? error.message : error);
   return (
     msg.includes('ENOTEMPTY') ||
@@ -326,25 +327,22 @@ function cleanNpxCache(): void {
 /**
  * Clean stale npm temp directories in node_modules/.
  * npm leaves behind .package-name-randomHash dirs on failed renames (ENOTEMPTY).
+ * Duplicated in tsx-runner.js (standalone CJS bundle) and setup-mcp.py — keep in sync.
  */
+const STALE_NPM_DIR_PATTERN = /-.{8,}$/;
 function cleanStaleNodeModulesDirs(cwd: string): void {
   try {
     const nodeModulesDir = path.join(cwd, 'node_modules');
-    if (!fs.existsSync(nodeModulesDir)) return;
-    const entries = fs.readdirSync(nodeModulesDir);
+    const entries = fs.readdirSync(nodeModulesDir, { withFileTypes: true });
     for (const entry of entries) {
-      // npm temp rename pattern: .package-name-aBcDeFgH (dot + name + dash + 8+ random chars)
-      if (entry.startsWith('.') && /-.{8,}$/.test(entry)) {
-        const fullPath = path.join(nodeModulesDir, entry);
+      if (entry.isDirectory() && entry.name.startsWith('.') && STALE_NPM_DIR_PATTERN.test(entry.name)) {
         try {
-          if (fs.statSync(fullPath).isDirectory()) {
-            fs.rmSync(fullPath, { recursive: true, force: true });
-            console.log(`  ↻ Cleaned stale temp dir: node_modules/${entry}`);
-          }
+          fs.rmSync(path.join(nodeModulesDir, entry.name), { recursive: true, force: true });
+          console.log(`  ↻ Cleaned stale temp dir: node_modules/${entry.name}`);
         } catch { /* skip */ }
       }
     }
-  } catch { /* skip */ }
+  } catch { /* skip — node_modules may not exist */ }
 }
 
 /**
@@ -380,11 +378,12 @@ export async function runPostInstallHook(
   }
 
   // Auto-append --non-interactive for interactive hooks in headless environments
-  if (interactive && isNonInteractive()) {
+  const nonInteractive = isNonInteractive();
+  if (interactive && nonInteractive) {
     command = augmentCommandForNonInteractive(command);
   }
 
-  const useInherit = interactive && !isNonInteractive();
+  const useInherit = interactive && !nonInteractive;
 
   console.log(`  ▶ Running post-install hook for ${extension.name}...`);
 
@@ -399,7 +398,7 @@ export async function runPostInstallHook(
     }
   } catch (error) {
     // Retry once on ENOTEMPTY / MODULE_NOT_FOUND — clean both npx cache and stale node_modules dirs
-    if (isNpxCacheError(error)) {
+    if (isRecoverableNpmError(error)) {
       cleanNpxCache();
       cleanStaleNodeModulesDirs(repoRoot);
       try {
@@ -444,11 +443,12 @@ export async function runPostUpdateHook(
   }
 
   // Auto-append --non-interactive for interactive hooks in headless environments
-  if (interactive && isNonInteractive()) {
+  const nonInteractive = isNonInteractive();
+  if (interactive && nonInteractive) {
     command = augmentCommandForNonInteractive(command);
   }
 
-  const useInherit = interactive && !isNonInteractive();
+  const useInherit = interactive && !nonInteractive;
 
   console.log(`  ▶ Running post-update hook for ${extension.name}...`);
 
@@ -464,7 +464,7 @@ export async function runPostUpdateHook(
     console.log(`  ✓ Post-update hook completed for ${extension.name}`);
   } catch (error) {
     // Retry once on ENOTEMPTY / MODULE_NOT_FOUND — clean both npx cache and stale node_modules dirs
-    if (isNpxCacheError(error)) {
+    if (isRecoverableNpmError(error)) {
       cleanNpxCache();
       cleanStaleNodeModulesDirs(repoRoot);
       try {

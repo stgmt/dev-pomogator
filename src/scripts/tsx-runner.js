@@ -96,22 +96,20 @@ function cleanNpxCache() {
 /**
  * Clean stale npm temp directories in node_modules/.
  * npm leaves behind .package-name-randomHash dirs on failed renames (ENOTEMPTY).
+ * Duplicated from extensions.ts — this is a standalone CJS bundle, keep in sync.
  */
+const STALE_NPM_DIR_PATTERN = /-.{8,}$/;
 function cleanStaleNodeModulesDirs() {
   try {
     const nmDir = path.join(process.cwd(), 'node_modules');
-    if (!fs.existsSync(nmDir)) return;
-    for (const entry of fs.readdirSync(nmDir)) {
-      if (entry.startsWith('.') && /-.{8,}$/.test(entry)) {
-        const full = path.join(nmDir, entry);
+    for (const entry of fs.readdirSync(nmDir, { withFileTypes: true })) {
+      if (entry.isDirectory() && entry.name.startsWith('.') && STALE_NPM_DIR_PATTERN.test(entry.name)) {
         try {
-          if (fs.statSync(full).isDirectory()) {
-            fs.rmSync(full, { recursive: true, force: true });
-          }
+          fs.rmSync(path.join(nmDir, entry.name), { recursive: true, force: true });
         } catch { /* skip */ }
       }
     }
-  } catch { /* skip */ }
+  } catch { /* skip — node_modules may not exist */ }
 }
 
 /**
