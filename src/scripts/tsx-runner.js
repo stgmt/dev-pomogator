@@ -94,15 +94,27 @@ function cleanNpxCache() {
 }
 
 /**
- * Fix directory permissions so rmSync can delete contents (Linux/Mac).
- * npm may leave stale dirs with read-only files that rmSync({ force: true }) can't remove.
+ * Remove a directory, trying chmod and rename-aside as fallbacks.
+ * On Linux/devcontainers, stale dirs may be owned by root so rmSync fails with EACCES.
+ * rename() only needs write permission on the parent dir, not on contents.
  * Duplicated from extensions.ts — this is a standalone CJS bundle, keep in sync.
  */
-function fixDirPermissions(dirPath) {
-  if (process.platform === 'win32') return;
+function forceRemoveDir(dirPath) {
   try {
-    execSync(`chmod -R u+w "${dirPath}"`, { stdio: 'pipe', timeout: 5000 });
-  } catch { /* ignore */ }
+    fs.rmSync(dirPath, { recursive: true, force: true });
+    return;
+  } catch { /* fall through */ }
+
+  if (process.platform !== 'win32') {
+    try {
+      execSync(`chmod -R u+w "${dirPath}"`, { stdio: 'pipe', timeout: 5000 });
+      fs.rmSync(dirPath, { recursive: true, force: true });
+      return;
+    } catch { /* fall through */ }
+  }
+
+  const aside = `${dirPath}-purge-${Date.now()}`;
+  fs.renameSync(dirPath, aside);
 }
 
 /**
@@ -117,9 +129,7 @@ function cleanStaleNodeModulesDirs() {
     for (const entry of fs.readdirSync(nmDir, { withFileTypes: true })) {
       if (entry.isDirectory() && entry.name.startsWith('.') && STALE_NPM_DIR_PATTERN.test(entry.name)) {
         try {
-          const dirPath = path.join(nmDir, entry.name);
-          fixDirPermissions(dirPath);
-          fs.rmSync(dirPath, { recursive: true, force: true });
+          forceRemoveDir(path.join(nmDir, entry.name));
         } catch { /* skip */ }
       }
     }

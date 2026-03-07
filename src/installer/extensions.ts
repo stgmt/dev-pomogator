@@ -325,14 +325,30 @@ function cleanNpxCache(): void {
 }
 
 /**
- * Fix directory permissions so rmSync can delete contents (Linux/Mac).
- * npm may leave stale dirs with read-only files that rmSync({ force: true }) can't remove.
+ * Remove a directory, trying chmod and rename-aside as fallbacks.
+ * On Linux/devcontainers, stale dirs may be owned by root so rmSync fails with EACCES.
+ * rename() only needs write permission on the parent dir, not on contents.
  */
-function fixDirPermissions(dirPath: string): void {
-  if (process.platform === 'win32') return;
+function forceRemoveDir(dirPath: string): void {
+  // Attempt 1: direct rmSync
   try {
-    execSync(`chmod -R u+w "${dirPath}"`, { stdio: 'pipe', timeout: 5000 });
-  } catch { /* ignore — rmSync will report the real error */ }
+    fs.rmSync(dirPath, { recursive: true, force: true });
+    return;
+  } catch { /* fall through */ }
+
+  // Attempt 2: fix permissions, then rmSync (handles read-only files)
+  if (process.platform !== 'win32') {
+    try {
+      execSync(`chmod -R u+w "${dirPath}"`, { stdio: 'pipe', timeout: 5000 });
+      fs.rmSync(dirPath, { recursive: true, force: true });
+      return;
+    } catch { /* fall through */ }
+  }
+
+  // Attempt 3: rename aside so npm can reuse the original name
+  // rename() on Linux only requires write on parent dir, not on contents
+  const aside = `${dirPath}-purge-${Date.now()}`;
+  fs.renameSync(dirPath, aside);
 }
 
 /**
@@ -348,9 +364,7 @@ export function cleanStaleNodeModulesDirs(cwd: string): void {
     for (const entry of entries) {
       if (entry.isDirectory() && entry.name.startsWith('.') && STALE_NPM_DIR_PATTERN.test(entry.name)) {
         try {
-          const dirPath = path.join(nodeModulesDir, entry.name);
-          fixDirPermissions(dirPath);
-          fs.rmSync(dirPath, { recursive: true, force: true });
+          forceRemoveDir(path.join(nodeModulesDir, entry.name));
           console.log(`  ↻ Cleaned stale temp dir: node_modules/${entry.name}`);
         } catch (e) {
           console.log(`  ⚠ Could not remove stale dir node_modules/${entry.name}: ${e instanceof Error ? e.message : e}`);
