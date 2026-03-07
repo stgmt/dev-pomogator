@@ -94,6 +94,18 @@ function cleanNpxCache() {
 }
 
 /**
+ * Fix directory permissions so rmSync can delete contents (Linux/Mac).
+ * npm may leave stale dirs with read-only files that rmSync({ force: true }) can't remove.
+ * Duplicated from extensions.ts — this is a standalone CJS bundle, keep in sync.
+ */
+function fixDirPermissions(dirPath) {
+  if (process.platform === 'win32') return;
+  try {
+    execSync(`chmod -R u+w "${dirPath}"`, { stdio: 'pipe', timeout: 5000 });
+  } catch { /* ignore */ }
+}
+
+/**
  * Clean stale npm temp directories in node_modules/.
  * npm leaves behind .package-name-randomHash dirs on failed renames (ENOTEMPTY).
  * Duplicated from extensions.ts — this is a standalone CJS bundle, keep in sync.
@@ -105,7 +117,9 @@ function cleanStaleNodeModulesDirs() {
     for (const entry of fs.readdirSync(nmDir, { withFileTypes: true })) {
       if (entry.isDirectory() && entry.name.startsWith('.') && STALE_NPM_DIR_PATTERN.test(entry.name)) {
         try {
-          fs.rmSync(path.join(nmDir, entry.name), { recursive: true, force: true });
+          const dirPath = path.join(nmDir, entry.name);
+          fixDirPermissions(dirPath);
+          fs.rmSync(dirPath, { recursive: true, force: true });
         } catch { /* skip */ }
       }
     }
