@@ -3,7 +3,7 @@ import path from 'path';
 import os from 'os';
 import chalk from 'chalk';
 import { fileURLToPath } from 'url';
-import { listExtensions, getExtensionFiles, getExtensionRules, getExtensionTools, getExtensionSkills, getExtensionHooks, runPostInstallHook, Extension } from './extensions.js';
+import { listExtensions, getExtensionFiles, getExtensionRules, getExtensionTools, getExtensionSkills, getExtensionHooks, runPostInstallHook, cleanStaleNodeModulesDirs, Extension } from './extensions.js';
 import type { ManagedFileEntry, ManagedFiles } from '../config/schema.js';
 import { findRepoRoot } from '../utils/repo.js';
 import { detectMangledArtifacts } from '../utils/msys.js';
@@ -226,6 +226,8 @@ export async function installClaude(options: ClaudeOptions = {}): Promise<void> 
   }
 
   // 7. Run post-install hooks for extensions that have them
+  // Proactively clean stale npm temp dirs BEFORE hooks run to prevent ENOTEMPTY errors
+  cleanStaleNodeModulesDirs(repoRoot);
   for (const extension of extensionsToInstall) {
     if (extension.postInstall) {
       await runPostInstallHook(extension, repoRoot, 'claude', options.executedSharedHooks);

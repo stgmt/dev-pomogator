@@ -330,7 +330,7 @@ function cleanNpxCache(): void {
  * Duplicated in tsx-runner.js (standalone CJS bundle) and setup-mcp.py — keep in sync.
  */
 const STALE_NPM_DIR_PATTERN = /-.{8,}$/;
-function cleanStaleNodeModulesDirs(cwd: string): void {
+export function cleanStaleNodeModulesDirs(cwd: string): void {
   try {
     const nodeModulesDir = path.join(cwd, 'node_modules');
     const entries = fs.readdirSync(nodeModulesDir, { withFileTypes: true });
@@ -339,7 +339,9 @@ function cleanStaleNodeModulesDirs(cwd: string): void {
         try {
           fs.rmSync(path.join(nodeModulesDir, entry.name), { recursive: true, force: true });
           console.log(`  ↻ Cleaned stale temp dir: node_modules/${entry.name}`);
-        } catch { /* skip */ }
+        } catch (e) {
+          console.log(`  ⚠ Could not remove stale dir node_modules/${entry.name}: ${e instanceof Error ? e.message : e}`);
+        }
       }
     }
   } catch { /* skip — node_modules may not exist */ }
