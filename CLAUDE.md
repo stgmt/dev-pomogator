@@ -17,6 +17,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `.\extensions\specs-workflow\tools\specs-generator\audit-spec.ps1 -Path ".specs/feature"` | Audit spec cross-references |
 | `.\extensions\specs-workflow\tools\specs-generator\spec-status.ps1 -Path ".specs/feature" -ConfirmStop Discovery` | Confirm STOP point |
 | `.\extensions\specs-workflow\tools\specs-generator\analyze-features.ps1 -Format text` | Analyze .feature file patterns |
+| `/reflect` | Просмотр и управление очередью автозахваченных сигналов |
 
 ## Architecture
 
@@ -44,6 +45,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | no-unvalidated-manifest-paths | Пути из манифеста валидировать через resolve + startsWith(projectPath) | `.claude/rules/no-unvalidated-manifest-paths.md` |
 | claude-md-glossary | CLAUDE.md = глоссарий/индекс на rules; при добавлении/удалении правил обновлять таблицу | `.claude/rules/claude-md-glossary.md` |
 | docker-only-tests | Тесты только через Docker (`npm test`); запрет vitest.unit.config.ts и тестов вне `tests/e2e/` | `.claude/rules/docker-only-tests.md` |
+| self-improving | Real-time детекция ситуаций для новых rules/skills/hooks (триггеры T2/T3/T4/T6 + automation hints) | `.claude/rules/pomogator/self-improving.md` |
 
 ### Triggered
 

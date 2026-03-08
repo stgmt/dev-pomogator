@@ -78,8 +78,8 @@
 - `TEST_DIR/tools` — должен отсутствовать
 - Если существует → **CRITICAL FAIL** (стейловый путь)
 
-### A2. `.dev-pomogator/tools/` — 7 подпапок
-Ожидаемые: `auto-commit`, `forbid-root-artifacts`, `plan-pomogator`, `specs-generator`, `specs-validator`, `steps-validator`, `mcp-setup`
+### A2. `.dev-pomogator/tools/` — 8 подпапок
+Ожидаемые: `auto-commit`, `forbid-root-artifacts`, `learnings-capture`, `plan-pomogator`, `specs-generator`, `specs-validator`, `steps-validator`, `mcp-setup`
 
 ### A3. Количество файлов в каждом tool (рекурсивно, без runtime-артефактов типа `__pycache__`, `logs/`)
 | Tool | Min файлов | Ключевые файлы |
@@ -91,16 +91,19 @@
 | `specs-validator` | 6 | `completeness.ts`, `matcher.ts`, `reporter.ts`, `validate-specs.ts`, `parsers/feature-parser.ts`, `parsers/md-parser.ts` |
 | `steps-validator` | 13 | `analyzer.ts`, `config.ts`, `detector.ts`, `logger.ts`, `reporter.ts`, `types.ts`, `validate-steps.ts`, 4x `parsers/*.ts`, 2x `docs/*.md` |
 | `mcp-setup` | 3 | `README.md`, `mcp-config.json`, `setup-mcp.py` |
+| `learnings-capture` | 5 | `capture.ts`, `queue.ts`, `types.ts`, `semantic.ts`, `dedupe.ts` |
 
-### A4. `.cursor/commands/` — 3 команды
+### A4. `.cursor/commands/` — 4 команды
 - `configure-root-artifacts.md`
 - `create-spec.md`
 - `suggest-rules.md`
+- `reflect.md`
 
-### A5. `.claude/commands/` — 3 команды
+### A5. `.claude/commands/` — 4 команды
 - `configure-root-artifacts.md`
 - `create-spec.md`
 - `suggest-rules.md`
+- `reflect.md`
 
 ### A6. `.cursor/rules/pomogator/` — 5 rules
 - `plan-pomogator.mdc`
@@ -169,6 +172,8 @@
 - Файл существует
 - Содержит `hooks.Stop` массив
 - auto-commit Stop hook: команда содержит `.dev-pomogator/tools/auto-commit/auto_commit_stop.ts`
+- learnings-capture UserPromptSubmit hook: команда содержит `.dev-pomogator/tools/learnings-capture/capture.ts --event UserPromptSubmit`
+- learnings-capture Stop hook: команда содержит `.dev-pomogator/tools/learnings-capture/capture.ts --event Stop`
 - Нет bare `tools/` путей без `.dev-pomogator/` префикса
 
 ### C2. `.cursor/hooks/hooks.json` — Cursor hooks (локальные)

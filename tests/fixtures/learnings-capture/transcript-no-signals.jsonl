@@ -1,0 +1,6 @@
+{"role":"user","message":"Please refactor this function to be more readable"}
+{"role":"assistant","message":"I'll clean up the function for better readability."}
+{"role":"user","message":"Can you add a return type annotation?"}
+{"role":"assistant","message":"Done, added the return type."}
+{"role":"user","message":"Looks good, thanks"}
+{"role":"assistant","message":"You're welcome!"}

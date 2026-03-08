@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "id": "fp-test-0001-0000-0000-000000000001",
+      "timestamp": "2026-03-08T10:00:00.000Z",
+      "sessionId": "session-fp-001",
+      "trigger": "T2",
+      "signal": "use bun not npm",
+      "context": "User corrected: no, use bun instead of npm",
+      "confidence": 0.85,
+      "source": "UserPromptSubmit",
+      "platform": "claude",
+      "status": "pending",
+      "consumedBy": null,
+      "consumedAt": null,
+      "fingerprint": "bfda4b722e70932a",
+      "count": 1,
+      "lastSeen": "2026-03-08T10:00:00.000Z"
+    }
+  ]
+}

@@ -1,12 +1,38 @@
 {
   "name": "suggest-rules",
-  "version": "1.6.0",
-  "description": "Анализ сессии и предложение правил для IDE",
+  "version": "1.8.0",
+  "description": "Анализ сессии и предложение правил, skills и hooks для IDE",
   "platforms": ["cursor", "claude"],
   "category": "workflow",
   "files": {
-    "cursor": ["cursor/commands/suggest-rules.md"],
-    "claude": ["claude/commands/suggest-rules.md"]
+    "cursor": ["cursor/commands/suggest-rules.md", "cursor/commands/reflect.md"],
+    "claude": ["claude/commands/suggest-rules.md", "claude/commands/reflect.md"]
+  },
+  "rules": {
+    "cursor": ["cursor/rules/self-improving.mdc"],
+    "claude": ["claude/rules/self-improving.md"]
+  },
+  "hooks": {
+    "claude": {
+      "UserPromptSubmit": "npx tsx .dev-pomogator/tools/learnings-capture/capture.ts --event UserPromptSubmit",
+      "Stop": "npx tsx .dev-pomogator/tools/learnings-capture/capture.ts --event Stop"
+    },
+    "cursor": {
+      "beforeSubmitPrompt": "npx tsx .dev-pomogator/tools/learnings-capture/capture.ts --event UserPromptSubmit",
+      "stop": "npx tsx .dev-pomogator/tools/learnings-capture/capture.ts --event Stop"
+    }
+  },
+  "tools": {
+    "learnings-capture": "tools/learnings-capture"
+  },
+  "toolFiles": {
+    "learnings-capture": [
+      ".dev-pomogator/tools/learnings-capture/capture.ts",
+      ".dev-pomogator/tools/learnings-capture/queue.ts",
+      ".dev-pomogator/tools/learnings-capture/types.ts",
+      ".dev-pomogator/tools/learnings-capture/semantic.ts",
+      ".dev-pomogator/tools/learnings-capture/dedupe.ts"
+    ]
   },
   "skills": {
     "deep-insights": "skills/deep-insights",

@@ -1,0 +1,5 @@
+{
+  "conversation_id": "test-session-threshold",
+  "workspace_roots": ["."],
+  "prompt": "no, use vitest not jest"
+}
