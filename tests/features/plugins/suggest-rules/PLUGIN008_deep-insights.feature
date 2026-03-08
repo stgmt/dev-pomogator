@@ -63,3 +63,23 @@ Feature: PLUGIN008 Deep Insights Aggregation Script
     When I run aggregate-facets.sh
     Then output should be valid JSON
     And JSON status should be "ok"
+
+  # @feature9
+  Scenario: Observer sessions excluded from main metrics by text marker
+    Given facets directory contains work and observer sessions
+    When I run aggregate-facets.sh
+    Then JSON facets_count should only include work sessions
+    And JSON observer_count should count observer sessions
+    And success_rate should be calculated from work sessions only
+
+  # @feature10
+  Scenario: Observer detection by goal_categories marker
+    Given facets directory contains a session with memory_observation_creation goal
+    When I run aggregate-facets.sh
+    Then the session should be counted as observer
+
+  # @feature11
+  Scenario: warmup_minimal session without observer text is NOT filtered
+    Given facets directory contains a warmup_minimal session without observer markers
+    When I run aggregate-facets.sh
+    Then the session should be included in facets_count as work session

@@ -71,6 +71,33 @@ Each file in `~/.claude/usage-data/facets/*.json` represents one analyzed Claude
 | `satisfied` | Task completed adequately |
 | `frustrated` | User expressed frustration or had to correct Claude |
 
+## Observer Session Detection
+
+The aggregation script filters out observer/memory sessions to avoid skewing work metrics.
+
+### Detection markers (OR logic)
+
+| Marker | Field | Example |
+|--------|-------|---------|
+| Text: `observer` | `brief_summary` or `underlying_goal` | "Memory observer agent watched..." |
+| Text: `claude-mem` | `brief_summary` or `underlying_goal` | "User fed Claude-Mem observer..." |
+| Text: `memory agent` | `brief_summary` or `underlying_goal` | "Memory agent observed a primary session..." |
+| Goal: `memory_observation_creation` | `goal_categories` | `{ "memory_observation_creation": 1 }` |
+| Goal: `observation_relay` | `goal_categories` | `{ "observation_relay": 1 }` |
+
+### NOT a marker
+
+`warmup_minimal` is NOT used as an observer marker — proven to cause false positives on real data (legitimate short sessions like checking Docker test results).
+
+### Output fields
+
+| Field | Description |
+|-------|-------------|
+| `total_facets_count` | All sessions (work + observer) |
+| `facets_count` | Work sessions only |
+| `observer_count` | Observer sessions filtered out |
+| `observer_summary` | Separate outcomes for observer sessions |
+
 ## Session Meta Schema
 
 Files in `~/.claude/usage-data/session-meta/*.json` contain detailed per-session metrics including token counts, tool usage, and timing data.

@@ -48,6 +48,25 @@ function makeSampleFacet(overrides: Partial<Record<string, any>> = {}): Record<s
     claude_helpfulness: 'very_helpful',
     primary_success: 'multi_file_changes',
     user_satisfaction_counts: { happy: 1, satisfied: 0, frustrated: 0 },
+    brief_summary: 'User implemented a feature and ran tests successfully.',
+    underlying_goal: 'Implement feature X with tests',
+    ...overrides,
+  };
+}
+
+function makeObserverFacet(overrides: Partial<Record<string, any>> = {}): Record<string, any> {
+  return {
+    session_id: `test-observer-${Date.now()}`,
+    outcome: 'partially_achieved',
+    session_type: 'exploration',
+    friction_counts: {},
+    friction_detail: '',
+    goal_categories: { warmup_minimal: 1 },
+    claude_helpfulness: 'slightly_helpful',
+    primary_success: 'none',
+    user_satisfaction_counts: { likely_satisfied: 1 },
+    brief_summary: 'Memory observer agent watched the primary session reading files.',
+    underlying_goal: 'Observe and record the primary Claude session progress',
     ...overrides,
   };
 }
@@ -207,6 +226,74 @@ describe('PLUGIN008: Deep Insights Aggregation Script', () => {
     const json = JSON.parse(stdout);
     expect(json.date_range.earliest).toBe('aaa-first');
     expect(json.date_range.latest).toBe('zzz-last');
+  });
+
+  // @feature9
+  it('should exclude observer sessions from main metrics by text marker', async () => {
+    await fs.ensureDir(facetsDir);
+    writeFacet('work-1.json', makeSampleFacet({
+      session_id: 'work-1',
+      outcome: 'fully_achieved',
+    }));
+    writeFacet('work-2.json', makeSampleFacet({
+      session_id: 'work-2',
+      outcome: 'partially_achieved',
+    }));
+    writeFacet('observer-1.json', makeObserverFacet({
+      session_id: 'observer-1',
+    }));
+
+    const { exitCode, stdout } = runScript({ HOME: tempHome });
+    expect(exitCode).toBe(0);
+
+    const json = JSON.parse(stdout);
+    expect(json.total_facets_count).toBe(3);
+    expect(json.facets_count).toBe(2);
+    expect(json.observer_count).toBe(1);
+    // success_rate based on work sessions only (1 fully / 2 work = 50%)
+    expect(json.success_rate).toBe(50);
+    expect(json.observer_summary.count).toBe(1);
+  });
+
+  // @feature10
+  it('should detect observer by goal_categories marker', async () => {
+    await fs.ensureDir(facetsDir);
+    writeFacet('work-1.json', makeSampleFacet({ session_id: 'work-1' }));
+    writeFacet('goal-observer.json', makeObserverFacet({
+      session_id: 'goal-observer',
+      brief_summary: 'Regular session doing work.',
+      underlying_goal: 'Do regular work',
+      goal_categories: { memory_observation_creation: 1 },
+    }));
+
+    const { exitCode, stdout } = runScript({ HOME: tempHome });
+    expect(exitCode).toBe(0);
+
+    const json = JSON.parse(stdout);
+    expect(json.facets_count).toBe(1);
+    expect(json.observer_count).toBe(1);
+  });
+
+  // @feature11
+  it('should NOT filter warmup_minimal sessions without observer markers', async () => {
+    await fs.ensureDir(facetsDir);
+    writeFacet('warmup-real.json', makeSampleFacet({
+      session_id: 'warmup-real',
+      outcome: 'fully_achieved',
+      goal_categories: { warmup_minimal: 1 },
+      brief_summary: 'User checked Docker test results.',
+      underlying_goal: 'Check test results from previous session',
+    }));
+    writeFacet('work-1.json', makeSampleFacet({ session_id: 'work-1' }));
+
+    const { exitCode, stdout } = runScript({ HOME: tempHome });
+    expect(exitCode).toBe(0);
+
+    const json = JSON.parse(stdout);
+    // warmup_minimal without observer text should be counted as work
+    expect(json.facets_count).toBe(2);
+    expect(json.observer_count).toBe(0);
+    expect(json.success_rate).toBe(100);
   });
 
   // @feature5 — additional: friction aggregation

@@ -31,25 +31,43 @@ if ! command -v jq &>/dev/null; then
 fi
 
 # Aggregate all facets into a single JSON array, then process
+# Observer sessions (Claude-Mem, memory agents) are separated from work sessions
+# to avoid skewing metrics like success_rate and helpfulness distribution.
 jq -s '
+# Detect observer/memory sessions by text markers and goal categories.
+# Does NOT use warmup_minimal — proven to cause false positives on real data.
+def is_observer:
+  (((.brief_summary // "") + " " + (.underlying_goal // "")) | test("observer|claude-mem|memory agent"; "i"))
+  or
+  ((.goal_categories // {}) |
+    if type == "object" then keys else . end |
+    any(. == "memory_observation_creation" or . == "observation_relay")
+  );
+
+# Split into work and observer sessions
+(map(select(is_observer | not))) as $work |
+(map(select(is_observer))) as $observers |
+
 {
   status: "ok",
-  facets_count: length,
+  total_facets_count: length,
+  facets_count: ($work | length),
+  observer_count: ($observers | length),
   date_range: {
     earliest: (map(.session_id // empty) | sort | first // "unknown"),
     latest: (map(.session_id // empty) | sort | last // "unknown")
   },
-  outcomes: (group_by(.outcome) | map({
+  outcomes: ($work | group_by(.outcome) | map({
     outcome: .[0].outcome,
     count: length
   }) | sort_by(-.count)),
   satisfaction: {
-    happy: (map(.user_satisfaction_counts.happy // 0) | add // 0),
-    satisfied: (map(.user_satisfaction_counts.satisfied // 0) | add // 0),
-    frustrated: (map(.user_satisfaction_counts.frustrated // 0) | add // 0)
+    happy: ($work | map(.user_satisfaction_counts.happy // 0) | add // 0),
+    satisfied: ($work | map(.user_satisfaction_counts.satisfied // 0) | add // 0),
+    frustrated: ($work | map(.user_satisfaction_counts.frustrated // 0) | add // 0)
   },
   friction_summary: (
-    [.[] | .friction_counts // {} | to_entries[]] |
+    [$work[] | .friction_counts // {} | to_entries[]] |
     group_by(.key) |
     map({
       type: .[0].key,
@@ -59,7 +77,7 @@ jq -s '
     sort_by(-.total)
   ),
   friction_details: (
-    [.[] | .friction_detail // [] | if type == "array" then .[] else empty end] |
+    [$work[] | .friction_detail // [] | if type == "array" then .[] else empty end] |
     group_by(.type // .category // "unknown") |
     map({
       type: .[0].type // .[0].category // "unknown",
@@ -69,27 +87,34 @@ jq -s '
     sort_by(-.count) |
     .[0:10]
   ),
-  session_types: (group_by(.session_type) | map({
+  session_types: ($work | group_by(.session_type) | map({
     type: .[0].session_type,
     count: length
   }) | sort_by(-.count)),
   goal_categories: (
-    [.[] | .goal_categories // {} | if type == "object" then to_entries[] | .key elif type == "array" then .[] else empty end] |
+    [$work[] | .goal_categories // {} | if type == "object" then to_entries[] | .key elif type == "array" then .[] else empty end] |
     group_by(.) |
     map({category: .[0], count: length}) |
     sort_by(-.count) |
     .[0:10]
   ),
   helpfulness: (
-    [.[] | .claude_helpfulness // "unknown"] |
+    [$work[] | .claude_helpfulness // "unknown"] |
     group_by(.) |
     map({level: .[0], count: length}) |
     sort_by(-.count)
   ),
   success_rate: (
-    (map(select(.outcome == "fully_achieved" or .outcome == "mostly_achieved")) | length) as $success |
-    if length > 0 then ($success / length * 100 | round) else 0 end
-  )
+    ($work | map(select(.outcome == "fully_achieved" or .outcome == "mostly_achieved")) | length) as $success |
+    if ($work | length) > 0 then ($success / ($work | length) * 100 | round) else 0 end
+  ),
+  observer_summary: {
+    count: ($observers | length),
+    outcomes: ($observers | group_by(.outcome) | map({
+      outcome: .[0].outcome,
+      count: length
+    }) | sort_by(-.count))
+  }
 }
 ' "$FACETS_DIR"/*.json 2>/dev/null || {
   echo '{"status":"error","error":"jq aggregation failed","facets_count":'"${FACETS_COUNT}"'}'
