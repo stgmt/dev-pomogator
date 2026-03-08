@@ -59,7 +59,7 @@ jq -s '
     sort_by(-.total)
   ),
   friction_details: (
-    [.[] | .friction_detail // [] | .[]] |
+    [.[] | .friction_detail // [] | if type == "array" then .[] else empty end] |
     group_by(.type // .category // "unknown") |
     map({
       type: .[0].type // .[0].category // "unknown",
@@ -74,19 +74,20 @@ jq -s '
     count: length
   }) | sort_by(-.count)),
   goal_categories: (
-    [.[] | .goal_categories // [] | .[]] |
+    [.[] | .goal_categories // {} | if type == "object" then to_entries[] | .key elif type == "array" then .[] else empty end] |
     group_by(.) |
     map({category: .[0], count: length}) |
     sort_by(-.count) |
     .[0:10]
   ),
-  helpfulness: {
-    avg: (map(.claude_helpfulness // 0) | if length > 0 then (add / length * 100 | round / 100) else 0 end),
-    min: (map(.claude_helpfulness // 1) | min),
-    max: (map(.claude_helpfulness // 0) | max)
-  },
+  helpfulness: (
+    [.[] | .claude_helpfulness // "unknown"] |
+    group_by(.) |
+    map({level: .[0], count: length}) |
+    sort_by(-.count)
+  ),
   success_rate: (
-    (map(select(.primary_success == true)) | length) as $success |
+    (map(select(.outcome == "fully_achieved" or .outcome == "mostly_achieved")) | length) as $success |
     if length > 0 then ($success / length * 100 | round) else 0 end
   )
 }
