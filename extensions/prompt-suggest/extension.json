@@ -1,0 +1,53 @@
+{
+  "name": "prompt-suggest",
+  "version": "1.0.0",
+  "description": "Prompt suggestion after agent stop — generates next-step hints via Haiku LLM, displayed with lightbulb emoji, activated by typing +",
+  "platforms": ["claude"],
+  "category": "automation",
+  "files": {
+    "claude": []
+  },
+  "tools": {
+    "prompt-suggest": "tools/prompt-suggest"
+  },
+  "toolFiles": {
+    "prompt-suggest": [
+      ".dev-pomogator/tools/prompt-suggest/prompt_suggest_core.ts",
+      ".dev-pomogator/tools/prompt-suggest/prompt_suggest_prompt.md",
+      ".dev-pomogator/tools/prompt-suggest/prompt_suggest_stop.ts",
+      ".dev-pomogator/tools/prompt-suggest/prompt_suggest_submit.ts"
+    ]
+  },
+  "envRequirements": [
+    {
+      "name": "OPENROUTER_API_KEY",
+      "required": false,
+      "description": "OpenRouter API key for Haiku LLM (priority over AUTO_COMMIT_API_KEY)",
+      "example": "sk-or-v1-xxx"
+    },
+    {
+      "name": "AUTO_COMMIT_API_KEY",
+      "required": false,
+      "description": "Fallback API key (aipomogator.ru) if OPENROUTER not set",
+      "example": "sk-xxx"
+    },
+    {
+      "name": "PROMPT_SUGGEST_ENABLED",
+      "required": false,
+      "description": "Enable/disable prompt suggestions (default: true)",
+      "default": "true"
+    },
+    {
+      "name": "PROMPT_SUGGEST_TTL",
+      "required": false,
+      "description": "Suggestion TTL in ms (default: 600000 = 10 min)",
+      "default": "600000"
+    }
+  ],
+  "hooks": {
+    "claude": {
+      "Stop": "npx tsx .dev-pomogator/tools/prompt-suggest/prompt_suggest_stop.ts",
+      "UserPromptSubmit": "npx tsx .dev-pomogator/tools/prompt-suggest/prompt_suggest_submit.ts"
+    }
+  }
+}

@@ -6,7 +6,37 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner.js'))\" -- \"D:/repos/dev-pomogator/.dev-pomogator/tools/auto-commit/auto_commit_stop.ts\"",
+            "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner.js'))\" -- \".dev-pomogator/tools/auto-commit/auto_commit_stop.ts\"",
+            "timeout": 60
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner.js'))\" -- \".dev-pomogator/tools/auto-simplify/simplify_stop.ts\"",
+            "timeout": 60
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner.js'))\" -- \".dev-pomogator/tools/prompt-suggest/prompt_suggest_stop.ts\"",
+            "timeout": 60
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner.js'))\" -- \".dev-pomogator/tools/learnings-capture/capture.ts\" --event Stop",
             "timeout": 60
           }
         ]
@@ -18,7 +48,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner.js'))\" -- \"D:/repos/dev-pomogator/.dev-pomogator/tools/claude-mem-health/health-check.ts\"",
+            "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner.js'))\" -- \".dev-pomogator/tools/claude-mem-health/health-check.ts\"",
             "timeout": 60
           }
         ]
@@ -30,8 +60,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner.js'))\" -- \"D:/repos/dev-pomogator/.dev-pomogator/tools/specs-validator/phase-gate.ts\"",
-            "timeout": 10
+            "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner.js'))\" -- \".dev-pomogator/tools/specs-validator/phase-gate.ts\"",
+            "timeout": 60
           }
         ]
       }
@@ -42,7 +72,27 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner.js'))\" -- \"D:/repos/dev-pomogator/.dev-pomogator/tools/specs-validator/validate-specs.ts\"",
+            "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner.js'))\" -- \".dev-pomogator/tools/prompt-suggest/prompt_suggest_submit.ts\"",
+            "timeout": 60
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner.js'))\" -- \".dev-pomogator/tools/specs-validator/validate-specs.ts\"",
+            "timeout": 60
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner.js'))\" -- \".dev-pomogator/tools/learnings-capture/capture.ts\" --event UserPromptSubmit",
             "timeout": 60
           }
         ]
@@ -51,6 +101,8 @@
   },
   "env": {
     "AUTO_COMMIT_LLM_URL": "https://aipomogator.ru/go/v1",
-    "AUTO_COMMIT_LLM_MODEL": "openrouter/deepseek/deepseek-v3.2"
+    "AUTO_COMMIT_LLM_MODEL": "openrouter/deepseek/deepseek-v3.2",
+    "PROMPT_SUGGEST_ENABLED": "true",
+    "PROMPT_SUGGEST_TTL": "600000"
   }
 }

@@ -1,10 +1,15 @@
 #!/usr/bin/env node
 /**
- * tsx-runner.js — Resilient TypeScript runner via npx tsx.
+ * tsx-runner.js — Resilient TypeScript runner with multi-strategy fallback.
  *
- * Wraps `npx tsx <script>` with automatic retry on corrupted npx cache.
+ * Execution order (first success wins):
+ *   1. Local tsx: node_modules/.bin/tsx (no npx dependency)
+ *   2. npx tsx (standard approach)
+ *   3. On npx error → clean cache → npm install (repair) → retry npx
+ *
  * On Windows, the npx _npx/ cache directory can become corrupted
  * (ENOTEMPTY, MODULE_NOT_FOUND), causing all tsx-based hooks to fail.
+ * Strategy 1 bypasses npx entirely, making hooks resilient to broken npx.
  *
  * Usage (via node -e portable pattern):
  *   node -e "require('<path>/tsx-runner.js')" -- <script.ts> [args...]
@@ -15,15 +20,24 @@
 
 'use strict';
 
-const { execSync, execFileSync } = require('child_process');
+const { execSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
-// Parse args: everything after "--" or after the script name itself
+// Parse args: everything after "--" or after the script name itself.
+// When invoked via `node -e "require(runner)" -- script.ts --event Stop`,
+// Node consumes "--" and puts script.ts in argv[1], so indexOf('--') = -1.
+// Detect this case: if argv[1] looks like a .ts script path, include it.
 const dashIdx = process.argv.indexOf('--');
-const args = dashIdx !== -1
-  ? process.argv.slice(dashIdx + 1)
-  : process.argv.slice(2);
+let args;
+if (dashIdx !== -1) {
+  args = process.argv.slice(dashIdx + 1);
+} else if (process.argv[1] && /\.tsx?$/.test(process.argv[1])) {
+  // argv[1] is a .ts file — node consumed "--", include argv[1] onwards
+  args = process.argv.slice(1);
+} else {
+  args = process.argv.slice(2);
+}
 
 if (args.length === 0) {
   // No script provided — nothing to do (silent exit for hook compatibility)
@@ -137,41 +151,124 @@ function cleanStaleNodeModulesDirs() {
 }
 
 /**
- * Build the npx tsx command parts.
+ * Find local tsx binary in node_modules/.bin/ by walking up from a starting dir.
+ * Returns the path to tsx binary or null if not found.
  */
-function buildCommand() {
-  const parts = ['npx', 'tsx', scriptPath, ...scriptArgs];
-  return parts.map(p => `"${p}"`).join(' ');
+function findTsxBin(startDir) {
+  const binName = process.platform === 'win32' ? 'tsx.cmd' : 'tsx';
+  let dir = path.resolve(startDir);
+  while (dir !== path.dirname(dir)) {
+    const candidate = path.join(dir, 'node_modules', '.bin', binName);
+    if (fs.existsSync(candidate)) return candidate;
+    dir = path.dirname(dir);
+  }
+  return null;
 }
 
 /**
- * Run the tsx command.
+ * Find local tsx binary — searches from script directory first, then CWD.
  */
-function run() {
-  // Duplicated from src/utils/msys.ts:getMsysSafeEnv — keep in sync
+function findLocalTsx() {
+  // Search from script's directory (most likely to have tsx installed)
+  const fromScript = findTsxBin(path.dirname(scriptPath));
+  if (fromScript) return fromScript;
+
+  // Search from CWD
+  const fromCwd = findTsxBin(process.cwd());
+  if (fromCwd) return fromCwd;
+
+  return null;
+}
+
+/**
+ * Get MSYS-safe env for Windows.
+ * Duplicated from src/utils/msys.ts:getMsysSafeEnv — keep in sync.
+ */
+function getSafeEnv() {
   const env = { ...process.env };
   if (process.platform === 'win32') {
     env.MSYS_NO_PATHCONV = '1';
     env.MSYS2_ARG_CONV_EXCL = '*';
   }
-  execSync(buildCommand(), {
+  return env;
+}
+
+/**
+ * Strategy 1: Run tsx directly from node_modules/.bin/ (no npx dependency).
+ * Returns true if successful, false if tsx not found.
+ * Throws on execution error (script error, not tsx-not-found).
+ */
+function runLocalTsx() {
+  const tsxBin = findLocalTsx();
+  if (!tsxBin) return false;
+
+  const cmd = [tsxBin, scriptPath, ...scriptArgs].map(p => `"${p}"`).join(' ');
+  execSync(cmd, {
     stdio: 'inherit',
     cwd: process.cwd(),
-    env,
+    env: getSafeEnv(),
+    timeout: 120000,
+    shell: true,
+  });
+  return true;
+}
+
+/**
+ * Strategy 2: Run tsx via npx (standard approach).
+ */
+function runNpxTsx() {
+  const parts = ['npx', 'tsx', scriptPath, ...scriptArgs];
+  const cmd = parts.map(p => `"${p}"`).join(' ');
+  execSync(cmd, {
+    stdio: 'inherit',
+    cwd: process.cwd(),
+    env: getSafeEnv(),
     timeout: 120000,
     shell: true,
   });
 }
 
-// Main: try → on cache error → clean → retry once
+/**
+ * Attempt to repair broken npm/npx by running `npm install`.
+ * Called during Strategy 3 (npx failed) before retry.
+ */
+function repairNpmSync() {
+  try {
+    const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+    console.error('dev-pomogator: npx broken, running npm install to repair...');
+    execSync(`"${npmCmd}" install`, {
+      cwd: process.cwd(),
+      stdio: 'pipe',
+      timeout: 120000,
+      shell: true,
+      env: getSafeEnv(),
+    });
+    console.error('dev-pomogator: npm install completed, retrying...');
+  } catch {
+    // npm install failed — will retry npx anyway
+  }
+}
+
+// Main: Strategy 1 (local tsx) → Strategy 2 (npx tsx) → Strategy 3 (clean + repair + retry npx)
 try {
-  run();
+  // Strategy 1: direct local tsx — bypasses npx entirely
+  if (runLocalTsx()) process.exit(0);
+} catch (localError) {
+  // Local tsx found but script failed — this is a real error, not a fallback case
+  process.exit(localError.status || 1);
+}
+
+try {
+  // Strategy 2: npx tsx
+  runNpxTsx();
 } catch (error) {
   if (isNpxCacheError(error)) {
+    // Strategy 3: clean npx cache + repair npm + retry
     cleanNpxCache();
     cleanStaleNodeModulesDirs();
+    repairNpmSync();
     try {
-      run();
+      runNpxTsx();
     } catch (retryError) {
       process.exit(retryError.status || 1);
     }
