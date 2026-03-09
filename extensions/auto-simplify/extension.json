@@ -1,0 +1,31 @@
+{
+  "name": "auto-simplify",
+  "version": "1.0.0",
+  "description": "Automatic code quality review on agent stop — triggers /simplify when significant file changes detected",
+  "platforms": ["claude"],
+  "category": "automation",
+  "files": {
+    "claude": []
+  },
+  "tools": {
+    "auto-simplify": "tools/auto-simplify"
+  },
+  "toolFiles": {
+    "auto-simplify": [
+      ".dev-pomogator/tools/auto-simplify/simplify_stop.ts"
+    ]
+  },
+  "skills": {
+    "simplify": "skills/simplify"
+  },
+  "skillFiles": {
+    "simplify": [
+      ".claude/skills/simplify/SKILL.md"
+    ]
+  },
+  "hooks": {
+    "claude": {
+      "Stop": "npx tsx .dev-pomogator/tools/auto-simplify/simplify_stop.ts"
+    }
+  }
+}

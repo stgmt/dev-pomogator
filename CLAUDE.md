@@ -18,6 +18,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `.\extensions\specs-workflow\tools\specs-generator\spec-status.ps1 -Path ".specs/feature" -ConfirmStop Discovery` | Confirm STOP point |
 | `.\extensions\specs-workflow\tools\specs-generator\analyze-features.ps1 -Format text` | Analyze .feature file patterns |
 | `/reflect` | Просмотр и управление очередью автозахваченных сигналов |
+| `/simplify` | Review изменённых файлов на качество, reuse и эффективность (auto-trigger на Stop) |
 
 ## Architecture
 
