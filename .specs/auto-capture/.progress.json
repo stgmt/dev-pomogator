@@ -1,0 +1,28 @@
+﻿{
+    "version":  1,
+    "featureSlug":  "auto-capture",
+    "createdAt":  "2026-03-08T05:32:29.3041195+03:00",
+    "currentPhase":  "Requirements",
+    "phases":  {
+                   "Discovery":  {
+                                     "completedAt":  "2026-03-08T05:43:57.4822870+03:00",
+                                     "stopConfirmed":  false,
+                                     "stopConfirmedAt":  null
+                                 },
+                   "Context":  {
+                                   "completedAt":  "2026-03-08T05:43:57.4833318+03:00",
+                                   "stopConfirmed":  false,
+                                   "stopConfirmedAt":  null
+                               },
+                   "Requirements":  {
+                                        "completedAt":  null,
+                                        "stopConfirmed":  false,
+                                        "stopConfirmedAt":  null
+                                    },
+                   "Finalization":  {
+                                        "completedAt":  null,
+                                        "stopConfirmed":  false,
+                                        "stopConfirmedAt":  null
+                                    }
+               }
+}

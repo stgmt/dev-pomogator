@@ -1,7 +1,8 @@
 // Auto-Capture Learnings — Shared Types
 // Source of truth: .specs/auto-capture/DESIGN.md
 
-export type TriggerType = 'T1' | 'T2' | 'T3' | 'T4' | 'T5' | 'T6';
+export const TRIGGER_TYPES = ['T1', 'T2', 'T3', 'T4', 'T5', 'T6'] as const;
+export type TriggerType = (typeof TRIGGER_TYPES)[number];
 
 export type HookSource = 'UserPromptSubmit' | 'Stop';
 

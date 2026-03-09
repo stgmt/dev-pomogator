@@ -113,6 +113,70 @@ search({ query: bugfix_query, obs_type: "bugfix", limit: 10 })
 
 ---
 
+## Phase -1.5: Queue Context — НАКОПЛЕННЫЕ СИГНАЛЫ
+
+> Читает `.dev-pomogator/learnings-queue.json` и создаёт pre-candidates из pending entries.
+> Пропускается если файл не существует или пуст.
+
+### Шаг 1: Прочитать очередь
+
+Read `.dev-pomogator/learnings-queue.json`. Если файл не существует → вывести:
+```
+📥 Queue: пуст (сигналы появятся автоматически при работе)
+```
+→ перейти к Phase -0.5.
+
+### Шаг 2: Фильтрация pending entries
+
+Отфильтровать entries с `status === "pending"`. Если 0 pending → вывести пустое сообщение → перейти к Phase -0.5.
+
+### Шаг 3: Создать pre-candidates
+
+Для каждого pending entry создать pre-candidate:
+
+| Trigger | Тип кандидата |
+|---------|--------------|
+| T1 | pattern |
+| T2 | antipattern/gotcha |
+| T3 | pattern/gotcha |
+| T4 | pattern refinement |
+| T5 | pattern |
+| T6 | gotcha |
+
+Scoring bonuses:
+- `ACCUMULATED_EVIDENCE` (+15): любой entry из queue
+- `CROSS_SESSION_REPEAT` (+20): entry с `count >= 3`
+
+descriptionHint = exact error/symptom из context + technology stack.
+
+### Шаг 4: Вывести summary
+
+```
+📥 Queue: N pending (breakdown by trigger)
+```
+Пример: `📥 Queue: 5 pending (1×T2 seen 4 times, 2×T6, 1×T3 seen 2 times, 1×T2)`
+
+### Шаг 4.5: Встроенный /reflect preview
+
+Если pending entries > 0, показать таблицу:
+
+| # | Trigger | Signal | Confidence | Count | Age |
+|---|---------|--------|------------|-------|-----|
+
+💡 `reject N` — исключить entry из кандидатов (пометить rejected в queue файле).
+Без ответа → все pending идут в Phase 1 как pre-candidates.
+
+### Шаг 5: После Phase 5 — mark consumed
+
+**После Phase 5 (file creation)**, для entries, конвертированных в rules/skills:
+- `status = "consumed"`
+- `consumedBy = "suggest-rules-run-{timestamp}"`
+- `consumedAt = ISO8601 timestamp`
+
+Обновить queue файл через Read → Edit.
+
+---
+
 ## Phase -0.5: Insights Context — КРОСС-СЕССИОННЫЕ ПАТТЕРНЫ
 
 > **Claude Code only.** Использует skill `/deep-insights` для глубокого анализа кросс-сессионных данных.
@@ -301,6 +365,26 @@ Project domains: [zoho, ef-core, postgres, docker, csharp]
 - ⏱️ **Потеря времени**: одна ошибка заняла >5 минут или 4+ turn
 - 🧰 **CLI-команды**: повторные ошибки в `curl`, `docker`, `kubectl`, `psql`
 
+### Self-Improving Signals
+
+| Категория | Что искать |
+|-----------|------------|
+| 🔄 **User Corrections** (T2) | Моменты где юзер сказал "нет, делай так", отменил действие, отклонил tool use |
+| ❓ **Repeated Confusion** (T3) | Одна и та же тема/конвенция вызывала uncertainty 2+ раз |
+| ⚡ **Rule Violations** (T4) | Claude нарушил существующее правило из `.claude/rules/` |
+| 🩹 **Workarounds** (T6) | Обходное решение из-за отсутствия документации |
+| 🆕 **New Patterns** (T1) | Claude создал новую утилиту/компонент/helper |
+
+### Skill/Hook Signals
+
+| Категория | Что искать |
+|-----------|------------|
+| 🎯 **Multi-step Workflows** | Одна и та же последовательность 3+ шагов выполнялась 2+ раз |
+| 🎯 **Bundled Assets** | Созданы скрипты + templates + references для одной задачи |
+| 🪝 **Verification Questions** | Юзер спросил "ты запустил/проверил/протестировал?" |
+| 🪝 **Manual Gates** | Юзер каждый раз вручную проверяет/одобряет перед определённым действием |
+| 🪝 **Command Failures** | Одна и та же команда фейлится 2+ раз (exit code != 0) |
+
 ---
 
 ## Phase 1.5: Abstraction Layer — ИЗВЛЕЧЕНИЕ АНТИПАТТЕРНОВ
@@ -319,12 +403,48 @@ Project domains: [zoho, ef-core, postgres, docker, csharp]
 | 3 | Это хороший подход? | Оценить качество решения |
 | 4 | Как НАДО было? | Найти правильный паттерн |
 | 5 | Что извлечь на будущее? | Сформулировать rule/antipattern |
+| 6 | Rule, skill или hook? | Decision tree: автоматизация vs знание vs workflow |
 
 ### Спец-триггер: повторные команды и time-waste
 
 Если одна и та же команда/аргументы исправлялись ≥3 раз или ошибка заняла >5 минут:
 - Всегда извлекай ⚠️ gotcha `command-retry-gotcha`
 - Если это `curl` — дополни 📋 checklist `curl-args-checklist`
+
+### Decision Tree: Rule vs Skill vs Hook (MUTUAL EXCLUSIVITY)
+
+> **Принцип:** Одна находка → ОДИН тип. Rule и hook на один аспект = дублирование.
+> Если можно автоматизировать → hook (не rule). Если требует суждения → rule (не hook).
+
+```
+Находка из сессии
+│
+├── Можно полностью автоматизировать? (детерминистичная проверка, чёткий event)
+│   ├── ДА + есть IDE event trigger → 🪝 HOOK (НЕ создавать rule на ту же тему!)
+│   └── ДА + нет чёткого event → 📋 CHECKLIST
+│
+├── Это multi-step workflow с 3+ шагами, повторённый 2+ раз?
+│   └── ДА → 🎯 SKILL (НЕ checklist — skill содержит процедурное знание)
+│
+├── Требует суждения Claude / контекстного решения?
+│   ├── Запрет (что НЕ делать) → 🔴 ANTIPATTERN
+│   ├── Подход (как делать) → 🟢 PATTERN
+│   ├── Подводный камень → ⚠️ GOTCHA
+│   └── Список проверок → 📋 CHECKLIST
+│
+└── Не подходит ни под что → пропустить
+```
+
+**Порог evidence** (из Claude Coach):
+- Hook candidate: 1 event (command failure) или 2 events (verification question)
+- Skill candidate: 2+ повторения workflow ИЛИ bundled assets (scripts + refs)
+- Rule candidate: 2+ коррекции ИЛИ 1 critical ошибка
+
+**Cross-type dedup:**
+- Если находка автоматизируема И детерминистична → ТОЛЬКО hook, rule не создаётся
+- Если находка субъективна / требует AI-суждения → ТОЛЬКО rule, hook не создаётся
+- Пример: "проверяй line endings" → hook (автоматизируемо). НЕ gotcha + hook.
+- Пример: "используй atomic config save" → pattern (требует суждения). НЕ pattern + hook.
 
 ### Формат вывода
 
@@ -340,10 +460,34 @@ Project domains: [zoho, ef-core, postgres, docker, csharp]
 └── Извлечь: <тип> "<название>"
 
 📤 Кандидат:
-├── Тип: 🔴 antipattern | 🟢 pattern | 📋 checklist | ⚠️ gotcha
+├── Тип: 🔴 antipattern | 🟢 pattern | 📋 checklist | ⚠️ gotcha | 🎯 skill | 🪝 hook
 ├── Название: <kebab-case>
 ├── Путь: .claude/rules/<категория>/
 └── Суть: <1 предложение>
+```
+
+**Спец-формат для skill-кандидатов:**
+```
+📤 Кандидат:
+├── Тип: 🎯 skill
+├── Название: <kebab-case>
+├── Путь: .claude/skills/<name>/SKILL.md
+├── Суть: <1 предложение>
+├── Шаги workflow: <перечислить 3-5 шагов>
+├── Bundled assets: <scripts/references если есть>
+└── Trigger phrases: <когда skill вызывается>
+```
+
+**Спец-формат для hook-кандидатов:**
+```
+📤 Кандидат:
+├── Тип: 🪝 hook
+├── Название: <kebab-case>
+├── Event: <PreToolUse|PostToolUse|Stop|UserPromptSubmit|SessionStart>
+├── Matcher: <Write|Edit|Bash|*|"">
+├── Hook type: <command|prompt>
+├── Суть: <1 предложение — что проверяет/делает>
+└── Script path: .dev-pomogator/tools/<name>/<script>.ts
 ```
 
 ### Пример трансформации
@@ -376,6 +520,8 @@ Project domains: [zoho, ef-core, postgres, docker, csharp]
 | 🟢 **Pattern** | `patterns/` | Как делать правильно |
 | 📋 **Checklist** | `checklists/` | Список проверок для повторяющихся задач |
 | ⚠️ **Gotcha** | `gotchas/` | Подводные камни, неочевидные нюансы |
+| 🎯 **Skill** | `skills/` | Multi-step workflow с reusable assets |
+| 🪝 **Hook** | `hooks/` | Автоматическая проверка/действие на IDE event |
 
 ---
 
@@ -384,7 +530,7 @@ Project domains: [zoho, ef-core, postgres, docker, csharp]
 > **Принцип:** Phase 1.5 уже определила ценность кандидата. Phase 2 — **ранжировщик**, а не привратник. Задача — упорядочить кандидатов по score, а НЕ отсеять. REJECT — только для дубликатов, тривиалок и бессмыслиц. Если кандидат предотвращает реальную проблему из сессии — он НЕ может быть REJECT.
 
 **Для каждого кандидата:**
-1. Определи тип (🔴 antipattern | 🟢 pattern | 📋 checklist | ⚠️ gotcha).
+1. Определи тип (🔴 antipattern | 🟢 pattern | 📋 checklist | ⚠️ gotcha | 🎯 skill | 🪝 hook).
 2. Используй соответствующую таблицу критериев.
 3. Просуммируй баллы (max 100).
 4. **АРИФМЕТИЧЕСКАЯ ПРОВЕРКА:** пересчитай сумму вручную и убедись что C1 + C2 + C3 + C4 = TOTAL.
@@ -448,6 +594,38 @@ Project domains: [zoho, ef-core, postgres, docker, csharp]
 
 **REUSABILITY подсказка:** domain-specific паттерн = полный балл (30), если домен есть в `Project domains` из Phase 0.5. `.claude/rules/` — это именно место для проектных знаний, domain-specific НЕ штрафуется.
 
+### Категория: Skill
+
+**Главный вопрос:** фиксирует ли повторяемый multi-step workflow?
+
+| Критерий | Вес | Подсказка |
+|----------|-----|----------|
+| WORKFLOW_COMPLEXITY | 35 | Multi-step (3+ шагов), нетривиальная последовательность |
+| REUSABILITY | 30 | Будет переиспользоваться в будущих сессиях |
+| BUNDLED_ASSETS | 25 | Есть скрипты, шаблоны, references для bundling |
+| UNIQUE | 10 | Не покрыт существующим skill |
+
+**WORKFLOW_COMPLEXITY подсказка:** 3-4 шага = 50%, 5+ шагов = 100%, <3 шагов = 0% (→ checklist).
+**BUNDLED_ASSETS подсказка:** scripts + templates = 100%, только scripts = 50%, ничего = 0% (→ pattern или checklist).
+
+### Категория: Hook
+
+**Главный вопрос:** автоматизирует ли ручную проверку/действие?
+
+| Критерий | Вес | Подсказка |
+|----------|-----|----------|
+| AUTOMATION_VALUE | 35 | Сколько времени/фрустрации экономит автоматизация |
+| EVENT_FIT | 30 | Чёткий event trigger (PreToolUse/Stop/etc.) |
+| RELIABILITY | 25 | Детерминистичный, без false positives |
+| UNIQUE | 10 | Не покрыт существующим hook |
+
+**EVENT_FIT шкала:**
+- Чёткий event + matcher = 100% (пример: PreToolUse + Write)
+- Event ясен, matcher размытый = 50%
+- Нет чёткого event = 0% (→ rule или checklist)
+
+**RELIABILITY подсказка:** Детерминистичная проверка (lint, format, file existence) = 100%. Эвристика с false positives = 50%. Субъективная оценка = 0% (→ prompt hook или rule).
+
 **Confidence = сумма баллов (max 100) + бонусы**
 
 ### Бонусы из Deep Insights
@@ -457,6 +635,15 @@ Project domains: [zoho, ef-core, postgres, docker, csharp]
 | QUANTITATIVE_EVIDENCE | Кандидат подкреплён числами из deep-insights (success_rate, friction count) | +10 |
 | RISING_FRICTION | friction_trends с trend=`rising` коррелирует с кандидатом | +10 к PREVENTS |
 | TOOL_ERROR_MATCH | tool_errors из insights совпадает с gotcha-кандидатом | готовый pre-candidate |
+
+### Бонусы из Self-Improving Triggers
+
+| Бонус | Условие | Значение |
+|-------|---------|----------|
+| SELF_IMPROVING_TRIGGER | Кандидат порождён self-improving триггером (T1-T6) | +15 к ведущему критерию |
+| USER_CORRECTION | Кандидат из прямой коррекции пользователя (T2) | +10 к PREVENTS |
+| REPEATED_WORKFLOW | Workflow выполнялся 3+ раз в сессии | +10 к WORKFLOW_COMPLEXITY |
+| VERIFICATION_QUESTION | Юзер спрашивал "ты проверил?" | +10 к AUTOMATION_VALUE |
 
 **Бонусы НЕ увеличивают max выше 100** — они поднимают кандидата в ранжировании.
 
@@ -509,7 +696,37 @@ Project domains: [zoho, ef-core, postgres, docker, csharp]
 
 **Для каждого кандидата с confidence ≥40%:**
 
-### Алгоритм проверки
+### Cross-Type Dedup (MUTUAL EXCLUSIVITY — проверять ПЕРВЫМ)
+
+Перед проверкой within-type дубликатов, проверить cross-type конфликты:
+
+1. Для каждого hook-кандидата: есть ли rule-кандидат на тот же аспект?
+   - ДА + hook автоматизируем → оставить ТОЛЬКО hook, rule → REJECT (причина: "Автоматизировано hook-ом")
+   - ДА + hook ненадёжный → оставить ТОЛЬКО rule, hook → REJECT (причина: "Требует суждения AI")
+2. Для каждого rule-кандидата: есть ли hook-кандидат на тот же аспект?
+   - Аналогично пункту 1 (зеркальная проверка)
+
+| Ситуация | Результат |
+|----------|-----------|
+| gotcha "run-tests" + hook Stop "run-tests" | → ТОЛЬКО hook (автоматизируемо) |
+| pattern "atomic-save" + hook PreToolUse | → ТОЛЬКО pattern (требует суждения) |
+| antipattern "no-crlf" + hook PreToolUse Write | → ТОЛЬКО hook (детерминистичная проверка) |
+
+### Within-Type Dedup
+
+**Для skill-кандидатов:**
+1. Glob `.claude/skills/*/SKILL.md` — проверить существующие skills
+2. Сравнить trigger phrases и workflow steps
+3. Если совпадение >80% → DUP, 30-80% → MERGE (добавить reference/step)
+
+**Для hook-кандидатов:**
+1. Read `.claude/settings.json` — проверить существующие hooks
+2. Сравнить event + matcher комбинацию
+3. Если тот же event + matcher → MERGE (расширить скрипт), иначе NEW
+
+**Для rule-кандидатов:** существующая логика ниже.
+
+### Алгоритм проверки (rules)
 
 1. **Поиск по имени:** Сравнить kebab-case название с файлами из Phase 0
 2. **Поиск по содержимому:** Grep ключевых терминов в существующих rules
@@ -583,6 +800,17 @@ Project domains: [zoho, ef-core, postgres, docker, csharp]
 - **Откуда:** turn #12 — исправляли pricing через UPDATE в prod MySQL
 - **Почему важно:** Нет версионирования, нет отката, риск ошибки
 - **Путь:** `.claude/rules/antipatterns/no-direct-prod-db.md`
+
+**N. workflow-name** (🎯 skill, 85%)
+- **Что:** Multi-step workflow для [задача]
+- **Шаги:** 1. ... 2. ... 3. ... 4. ... 5. ...
+- **Assets:** scripts/validate.ts, references/schema.md
+- **Trigger:** "когда пользователь просит [фраза]"
+
+**M. validation-name** (🪝 hook, 78%)
+- **Что:** Auto-validate [что] before [действие]
+- **Event:** PreToolUse (matcher: Write|Edit)
+- **Script:** .dev-pomogator/tools/validate-name/check.ts
 
 ---
 **Выбор:** `1,2,3,4,...` | `all` | `recommended` | `0` (отмена)
@@ -690,6 +918,82 @@ paths:
 | Test-specific | ДА — `paths: ["**/tests/**"]` | `test-naming.md` |
 | Language-specific | ДА — `paths: ["**/*.ts"]` | `ts-strict-null.md` |
 
+### Шаблон для Skill
+
+```yaml
+---
+name: <kebab-case>
+description: "This skill should be used when the user asks to \"<trigger 1>\", \"<trigger 2>\". <Конкретное описание когда использовать>."
+allowed-tools: Read, Write, Grep, Bash
+---
+```
+
+```markdown
+# <Название>
+
+## Mission
+
+<1-2 предложения: что делает skill>
+
+## Steps
+
+1. <Шаг из workflow>
+2. <Шаг из workflow>
+3. ...
+
+## References
+
+- `references/<name>.md` — <описание>
+- `scripts/<name>.ts` — <описание>
+
+## Output
+
+<Что skill выдаёт на выходе>
+```
+
+> **Принципы:** target ~1500-2000 слов в SKILL.md. Детали → references/. Императивная форма (глагол первым).
+
+### Шаблон для Hook Proposal
+
+> Hook proposals — это СПЕЦИФИКАЦИЯ, не готовый скрипт. Создание скрипта — отдельная задача.
+
+```markdown
+## 🪝 Hook: <название>
+
+**Event:** <PreToolUse|PostToolUse|Stop|UserPromptSubmit|SessionStart>
+**Matcher:** <Write|Edit|Bash|""|*>
+**Type:** <command|prompt>
+**Timeout:** <секунды>
+
+### Что делает
+<описание — что проверяет/обеспечивает>
+
+### Логика
+1. <Шаг проверки>
+2. <Шаг проверки>
+3. Return: `{ continue: true/false, systemMessage: "..." }`
+
+### Пример extension.json entry
+```json
+{
+  "hooks": {
+    "claude": {
+      "<Event>": {
+        "matcher": "<matcher>",
+        "command": "npx tsx .dev-pomogator/tools/<name>/<script>.ts"
+      }
+    }
+  }
+}
+```
+
+### Что нужно для реализации
+- [ ] Создать script: `.dev-pomogator/tools/<name>/<script>.ts`
+- [ ] Добавить в extension.json hooks
+- [ ] Добавить в extension.json toolFiles
+- [ ] Bump version
+```
+
 ---
 
 ## Phase 5: File Creation
@@ -702,6 +1006,8 @@ paths:
 | 🟢 pattern | `.claude/rules/patterns/<name>.md` |
 | 📋 checklist | `.claude/rules/checklists/<name>.md` |
 | ⚠️ gotcha | `.claude/rules/gotchas/<name>.md` |
+| 🎯 skill | `.claude/skills/<name>/SKILL.md` |
+| 🪝 hook (spec) | `.claude/rules/hooks/<name>-hook.md` |
 | 📁 project-specific | `.claude/rules/<domain>/<name>.md` |
 
 ---
@@ -782,6 +1088,14 @@ npx tsx .claude/skills/rules-optimizer/scripts/report.ts --before audit_before.j
 | "руками проверил" | automate-checks | checklists/ |
 | "повторял команду 3+ раз", "исправил команду с N-й попытки" | command-retry-gotcha | gotchas/ |
 | "curl ... invalid argument", "curl: (3) URL malformed" | curl-args-checklist | checklists/ |
+| "нет, делай так", "я же говорил", "не так" | user-correction-rule-gap | gotchas/ |
+| "опять спрашиваю", "снова не помню" | undocumented-convention | patterns/ |
+| "нарушил правило", "по правилу надо" | rule-clarity-improvement | patterns/ |
+| "пришлось обойти", "workaround" | missing-documentation | gotchas/ |
+| "сделай как в прошлый раз", "опять то же самое" | repeatable-workflow | skills/ |
+| "ты запустил тесты?", "ты проверил?" | auto-verification-hook | hooks/ |
+| "каждый раз проверяю вручную" | manual-gate-automation | hooks/ |
+| "опять упала команда", "снова ошибка в..." | command-failure-validator | hooks/ |
 
 ### Добавление нового триггера
 
@@ -790,6 +1104,35 @@ npx tsx .claude/skills/rules-optimizer/scripts/report.ts --before audit_before.j
 ```markdown
 | "<фраза из сессии>" | <kebab-name> | <категория>/ |
 ```
+
+---
+
+## Self-Improving Triggers — TAXONOMY
+
+> suggest-rules детектирует 7 типов триггеров. Триггеры T1-T6 обнаруживаются
+> в Phase 1 (Session Analysis). T7 обнаруживается в Phase -0.5 (Insights).
+
+| # | Триггер | Urgency | Detection | Output Type |
+|---|---------|---------|-----------|-------------|
+| T1 | New Pattern Introduced | Low | Claude создал новую утилиту/helper | 🟢 pattern |
+| T2 | User Correction | High | Юзер исправил подход Claude (≥2 раз = HIGH) | 🔴 antipattern / ⚠️ gotcha |
+| T3 | Repeated Confusion | Medium | Claude спрашивал/сомневался 2+ раз по одной теме | 🟢 pattern / ⚠️ gotcha |
+| T4 | Rule Violation | High | Claude нарушил правило из `.claude/rules/` | 🟢 pattern (уточнение) |
+| T5 | Convention Discovered | Low | Claude нашёл undocumented конвенцию через чтение кода | 🟢 pattern |
+| T6 | Workaround Applied | Medium | Обходное решение из-за пробела в документации | ⚠️ gotcha |
+| T7 | Cross-Session Recurrence | High | Тот же issue в deep-insights И текущей сессии | +10 RISING_FRICTION |
+
+### Automation Detection — SKILL vs HOOK
+
+| Signal | Evidence Threshold | Output Type | Decision Criteria |
+|--------|-------------------|-------------|-------------------|
+| Multi-step workflow (3+ steps) | 2+ повторения | 🎯 skill | Workflow нетривиальный, включает решения |
+| Bundled assets created | 1 (scripts + refs) | 🎯 skill | Assets группируются по одной задаче |
+| Verification question | 2+ вопроса | 🪝 hook (Stop) | "Ты проверил/запустил/протестировал?" |
+| Manual gate (user approves) | 2+ approval | 🪝 hook (PreToolUse) | Юзер каждый раз одобряет перед действием |
+| Command failure pattern | 2+ failures | 🪝 hook (PreToolUse) + ⚠️ gotcha | Одна и та же команда фейлится |
+| Context loading at start | 2+ сессии | 🪝 hook (SessionStart) | Юзер каждый раз загружает контекст |
+| Post-action cleanup | 2+ cleanup | 🪝 hook (PostToolUse) | Каждый раз нужна ручная очистка |
 
 ---
 
@@ -803,6 +1146,7 @@ npx tsx .claude/skills/rules-optimizer/scripts/report.ts --before audit_before.j
 6. **< 500 строк** — большие разбивай на несколько
 7. **Self-contained** — понятно без контекста сессии
 8. **Path-scoped frontmatter** — scoped rules создаются сразу с `paths:` в YAML frontmatter, global rules без frontmatter
+9. **SKILL vs RULE vs HOOK** — используй Decision Tree из Phase 1.5. Не предлагай rule когда нужен skill, не предлагай checklist когда нужен hook
 
 ---
 
@@ -813,13 +1157,14 @@ npx tsx .claude/skills/rules-optimizer/scripts/report.ts --before audit_before.j
 2.  [TOOL] MCP search ×3 (динамический query из контекста)
 3.  [TOOL] Fallback без project (если 0 результатов)
 4.  [TEXT] Предварительный статус памяти
+4.5 [TOOL] Phase -1.5: Read learnings-queue.json → pre-candidates + inline /reflect preview
 5.  [SKILL] Invoke /deep-insights (Skill tool)
 6.  [TEXT] Phase -0.5: deep-insights output + unified mode display
 7.  [TOOL] Glob rules
 8.  [TEXT] Phase 0: дерево файлов
 9.  [TEXT] Phase 0.5: domains (+ insights project areas)
-10. [TEXT] Phase 1: анализ сессии (сырые находки)
-11. [TEXT] Phase 1.5: Abstraction (session + insights находки!)
+10. [TEXT] Phase 1: анализ сессии (сырые находки + self-improving signals + skill/hook signals)
+11. [TEXT] Phase 1.5: Abstraction (session + insights + DECISION TREE: rule/skill/hook)
 12. [TEXT] Phase 2: Quality Ranking (category scoring, confidence, ПРУФЫ)
 13. [TEXT] Phase 2.5: Smart Merge
 14. [TEXT] Phase 3: Streamlined таблицы (sources: 📍 📊 🧠)
@@ -845,8 +1190,9 @@ npx tsx .claude/skills/rules-optimizer/scripts/report.ts --before audit_before.j
 
 1. Извлечь контекст сессии → построить динамические query
 2. MCP Search ×3 (с project) → если 0, fallback без project
-3. Read insights report → Phase -0.5 (если доступен) → unified mode display
-4. Phase 0 (дерево) → Phase 0.5 (domains + insights areas) → Phase 1 (сырые находки) → **Phase 1.5 (ABSTRACTION — session + insights!)** → Phase 2 (category scoring + пруфы) → Phase 2.5 (merge) → Phase 3 (таблицы)
+3. Phase -1.5: Read learnings-queue.json → pre-candidates + inline /reflect preview
+4. Read insights report → Phase -0.5 (если доступен) → unified mode display
+5. Phase 0 (дерево) → Phase 0.5 (domains + insights areas) → Phase 1 (сырые находки) → **Phase 1.5 (ABSTRACTION — session + insights!)** → Phase 2 (category scoring + пруфы) → Phase 2.5 (merge) → Phase 3 (таблицы)
 5. **СТОП** — ждать выбор
 6. Phase 4 (generation с frontmatter) → **СТОП** — ждать подтверждение
 7. Phase 5 (создание) → Phase 6 (optimization — silent, без STOP)

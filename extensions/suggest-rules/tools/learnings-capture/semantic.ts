@@ -4,6 +4,7 @@
 
 import fs from 'fs-extra';
 import type { Signal } from './types.js';
+import { TRIGGER_TYPES, MAX_SIGNAL_LENGTH, MAX_CONTEXT_LENGTH } from './types.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -40,7 +41,7 @@ interface SemanticResult {
 
 const MAX_TRANSCRIPT_MESSAGES = 20;
 const LLM_TIMEOUT_MS = 30_000;
-const VALID_TRIGGERS = new Set(['T1', 'T2', 'T3', 'T4', 'T5', 'T6']);
+const VALID_TRIGGERS = new Set(TRIGGER_TYPES);
 
 const SYSTEM_PROMPT = `You are analyzing a conversation transcript between a developer and an AI assistant.
 Identify learning signals — patterns worth remembering for future sessions.
@@ -204,8 +205,8 @@ export async function detectSignalsSemantic(
 
     signals.push({
       trigger: sig.trigger as Signal['trigger'],
-      signal: sig.signal.slice(0, 100),
-      context: sig.context.slice(0, 200),
+      signal: sig.signal.slice(0, MAX_SIGNAL_LENGTH),
+      context: sig.context.slice(0, MAX_CONTEXT_LENGTH),
       confidence: Math.max(0, Math.min(1, sig.confidence ?? 0.7)),
     });
   }

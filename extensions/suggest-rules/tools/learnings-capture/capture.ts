@@ -6,12 +6,17 @@
 import {
   readQueue,
   appendEntries,
-  updateEntries,
+  acquireLock,
+  releaseLock,
+  appendEntriesInPlace,
+  writeQueueAtomic,
 } from './queue.js';
 import { detectSignalsSemantic, readTranscriptText } from './semantic.js';
 import { extractKeywords } from './dedupe.js';
-import type { Signal, HookInput, Platform } from './types.js';
-import { DEFAULT_SUGGEST_THRESHOLD } from './types.js';
+import type { Signal, HookInput, Platform, Queue } from './types.js';
+import { DEFAULT_SUGGEST_THRESHOLD, MAX_SIGNAL_LENGTH } from './types.js';
+
+const APPROVAL_BOOST = 0.15;
 
 // ---------------------------------------------------------------------------
 // Regex Patterns (FR-1a)
@@ -93,36 +98,29 @@ const APPROVAL_PATTERNS: RegExp[] = [
 // Detection
 // ---------------------------------------------------------------------------
 
+function accumulateMatches(
+  patterns: PatternDef[],
+  text: string,
+  map: Map<string, { maxConf: number; count: number }>
+): void {
+  for (const def of patterns) {
+    if (def.pattern.test(text)) {
+      const existing = map.get(def.trigger);
+      if (existing) {
+        existing.maxConf = Math.max(existing.maxConf, def.confidence);
+        existing.count++;
+      } else {
+        map.set(def.trigger, { maxConf: def.confidence, count: 1 });
+      }
+    }
+  }
+}
+
 function detectSignalsRegex(text: string): Signal[] {
   const matchesByTrigger = new Map<string, { maxConf: number; count: number }>();
 
-  // Check explicit markers first (higher priority)
-  for (const def of EXPLICIT_MARKERS) {
-    if (def.pattern.test(text)) {
-      const key = def.trigger;
-      const existing = matchesByTrigger.get(key);
-      if (existing) {
-        existing.maxConf = Math.max(existing.maxConf, def.confidence);
-        existing.count++;
-      } else {
-        matchesByTrigger.set(key, { maxConf: def.confidence, count: 1 });
-      }
-    }
-  }
-
-  // Check standard patterns
-  for (const def of PATTERNS) {
-    if (def.pattern.test(text)) {
-      const key = def.trigger;
-      const existing = matchesByTrigger.get(key);
-      if (existing) {
-        existing.maxConf = Math.max(existing.maxConf, def.confidence);
-        existing.count++;
-      } else {
-        matchesByTrigger.set(key, { maxConf: def.confidence, count: 1 });
-      }
-    }
-  }
+  accumulateMatches(EXPLICIT_MARKERS, text, matchesByTrigger);
+  accumulateMatches(PATTERNS, text, matchesByTrigger);
 
   const signals: Signal[] = [];
   for (const [trigger, { maxConf, count }] of matchesByTrigger) {
@@ -148,7 +146,7 @@ function extractSignal(text: string): string {
     .replace(/^(no,?\s*|actually,?\s*|нет,?\s*)/i, '')
     .replace(/\s+/g, ' ')
     .trim();
-  return cleaned.slice(0, 100);
+  return cleaned.slice(0, MAX_SIGNAL_LENGTH);
 }
 
 // ---------------------------------------------------------------------------
@@ -159,21 +157,17 @@ function isApproval(text: string): boolean {
   return APPROVAL_PATTERNS.some((p) => p.test(text));
 }
 
-async function handleApproval(
-  projectPath: string,
-  text: string
-): Promise<boolean> {
+/** Apply approval boost in-place on queue entries. Returns true if text was an approval. */
+function applyApprovalBoost(queue: Queue, text: string): boolean {
   if (!isApproval(text)) return false;
 
-  const queue = await readQueue(projectPath);
   const pending = queue.entries.filter((e) => e.status === 'pending');
-  if (pending.length === 0) return true; // approval but nothing to boost
+  if (pending.length === 0) return true;
 
   const keywords = extractKeywords(text);
-  const updates = new Map<string, { confidence: number }>();
+  let boosted = false;
 
   if (keywords.size > 0) {
-    // Try keyword-based matching first
     for (const entry of pending) {
       const entryWords = new Set([
         ...extractKeywords(entry.signal),
@@ -184,40 +178,34 @@ async function handleApproval(
         if (entryWords.has(k)) overlapCount++;
       }
       if (overlapCount > 0) {
-        updates.set(entry.id, {
-          confidence: Math.min(entry.confidence + 0.15, 1.0),
-        });
+        entry.confidence = Math.min(entry.confidence + APPROVAL_BOOST, 1.0);
+        boosted = true;
       }
     }
   }
 
   // If no keyword overlap, boost the most recent pending entry
-  if (updates.size === 0) {
-    const mostRecent = pending.sort(
-      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-    )[0];
-    updates.set(mostRecent.id, {
-      confidence: Math.min(mostRecent.confidence + 0.15, 1.0),
-    });
+  if (!boosted) {
+    let mostRecent = pending[0];
+    for (const entry of pending) {
+      if (entry.timestamp > mostRecent.timestamp) mostRecent = entry;
+    }
+    mostRecent.confidence = Math.min(mostRecent.confidence + APPROVAL_BOOST, 1.0);
   }
 
-  await updateEntries(projectPath, updates);
-  return true; // approval handled — don't create new entry
+  return true;
 }
 
 // ---------------------------------------------------------------------------
 // Threshold Check (FR-10)
 // ---------------------------------------------------------------------------
 
-async function checkThreshold(projectPath: string): Promise<void> {
+function checkThreshold(pendingCount: number): void {
   const threshold = parseInt(
     process.env.LEARNINGS_SUGGEST_THRESHOLD ?? String(DEFAULT_SUGGEST_THRESHOLD),
     10
   );
   if (threshold <= 0) return;
-
-  const queue = await readQueue(projectPath);
-  const pendingCount = queue.entries.filter((e) => e.status === 'pending').length;
 
   if (pendingCount >= threshold) {
     process.stderr.write(
@@ -289,26 +277,36 @@ async function main(): Promise<void> {
     const prompt = input.prompt;
     if (!prompt) return;
 
-    // 1. Handle approval boost first
-    const wasApproval = await handleApproval(projectPath, prompt);
-
-    // 2. Detect new signals via regex
+    // Detect signals before acquiring lock (pure computation, no I/O)
     const signals = detectSignalsRegex(prompt);
+    const isApprovalText = isApproval(prompt);
 
-    // 3. If only approval (no new signals) — done
-    if (signals.length === 0) {
-      if (wasApproval) {
-        // Approval without new signals — threshold check still applies
-        await checkThreshold(projectPath);
+    if (signals.length === 0 && !isApprovalText) return;
+
+    // Single locked read-modify-write cycle
+    await acquireLock(projectPath);
+    try {
+      const queue = await readQueue(projectPath);
+
+      // 1. Apply approval boost in-place
+      if (isApprovalText) {
+        applyApprovalBoost(queue, prompt);
       }
-      return;
+
+      // 2. Append new signals in-place
+      if (signals.length > 0) {
+        appendEntriesInPlace(queue, signals, 'UserPromptSubmit', platform, sessionId);
+      }
+
+      // 3. Write once
+      await writeQueueAtomic(projectPath, queue);
+
+      // 4. Threshold check (no I/O — uses in-memory count)
+      const pendingCount = queue.entries.filter((e) => e.status === 'pending').length;
+      checkThreshold(pendingCount);
+    } finally {
+      await releaseLock(projectPath);
     }
-
-    // 4. Append new entries
-    await appendEntries(projectPath, signals, 'UserPromptSubmit', platform, sessionId);
-
-    // 5. Check threshold
-    await checkThreshold(projectPath);
   } else if (event === 'Stop') {
     const transcriptPath = input.transcript_path;
     if (!transcriptPath) return;
@@ -330,7 +328,10 @@ async function main(): Promise<void> {
 
     if (signals.length > 0) {
       await appendEntries(projectPath, signals, 'Stop', platform, sessionId);
-      await checkThreshold(projectPath);
+      // Re-read for threshold (Stop path is not latency-critical)
+      const queue = await readQueue(projectPath);
+      const pendingCount = queue.entries.filter((e) => e.status === 'pending').length;
+      checkThreshold(pendingCount);
     }
   }
 }

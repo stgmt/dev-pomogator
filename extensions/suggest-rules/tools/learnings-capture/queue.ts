@@ -47,7 +47,7 @@ function emptyQueue(): Queue {
   return { version: 1, entries: [] };
 }
 
-async function writeQueueAtomic(projectPath: string, queue: Queue): Promise<void> {
+export async function writeQueueAtomic(projectPath: string, queue: Queue): Promise<void> {
   const filePath = queuePath(projectPath);
   await fs.ensureDir(path.dirname(filePath));
   const tmpPath = filePath + '.tmp';
@@ -144,45 +144,58 @@ export async function appendEntries(
   await acquireLock(projectPath);
   try {
     const queue = await readQueue(projectPath);
-    const now = new Date().toISOString();
-
-    for (const sig of signals) {
-      const fp = generateFingerprint(sig.signal);
-      const existing = queue.entries.find(
-        (e) => e.fingerprint === fp && e.status === 'pending'
-      );
-
-      if (existing) {
-        existing.count++;
-        existing.lastSeen = now;
-        existing.confidence = clampConfidence(
-          Math.max(existing.confidence, sig.confidence)
-        );
-      } else {
-        const entry: QueueEntry = {
-          id: randomUUID(),
-          timestamp: now,
-          sessionId,
-          trigger: sig.trigger,
-          signal: truncate(sig.signal, MAX_SIGNAL_LENGTH),
-          context: truncate(sig.context, MAX_CONTEXT_LENGTH),
-          confidence: clampConfidence(sig.confidence),
-          source,
-          platform,
-          status: 'pending',
-          consumedBy: null,
-          consumedAt: null,
-          fingerprint: fp,
-          count: 1,
-          lastSeen: now,
-        };
-        queue.entries.push(entry);
-      }
-    }
-
+    appendEntriesInPlace(queue, signals, source, platform, sessionId);
     await writeQueueAtomic(projectPath, queue);
   } finally {
     await releaseLock(projectPath);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Queue Append In-Place (no lock/read/write — caller manages lifecycle)
+// ---------------------------------------------------------------------------
+
+export function appendEntriesInPlace(
+  queue: Queue,
+  signals: Signal[],
+  source: HookSource,
+  platform: Platform,
+  sessionId: string
+): void {
+  const now = new Date().toISOString();
+
+  for (const sig of signals) {
+    const fp = generateFingerprint(sig.signal);
+    const existing = queue.entries.find(
+      (e) => e.fingerprint === fp && e.status === 'pending'
+    );
+
+    if (existing) {
+      existing.count++;
+      existing.lastSeen = now;
+      existing.confidence = clampConfidence(
+        Math.max(existing.confidence, sig.confidence)
+      );
+    } else {
+      const entry: QueueEntry = {
+        id: randomUUID(),
+        timestamp: now,
+        sessionId,
+        trigger: sig.trigger,
+        signal: truncate(sig.signal, MAX_SIGNAL_LENGTH),
+        context: truncate(sig.context, MAX_CONTEXT_LENGTH),
+        confidence: clampConfidence(sig.confidence),
+        source,
+        platform,
+        status: 'pending',
+        consumedBy: null,
+        consumedAt: null,
+        fingerprint: fp,
+        count: 1,
+        lastSeen: now,
+      };
+      queue.entries.push(entry);
+    }
   }
 }
 
