@@ -69,6 +69,7 @@
 
 **СТОП #1:** Показать результаты Discovery, спросить подтверждение.
 После подтверждения: `.\.dev-pomogator\tools\specs-generator\spec-status.ps1 -Path ".specs/{feature}" -ConfirmStop Discovery`
+Затем запустить `/simplify` для review качества файлов текущей фазы.
 
 ---
 
@@ -103,6 +104,7 @@
 
 **СТОП #1.5:** Показать найденные ограничения проекта, спросить подтверждение перед Phase 2.
 После подтверждения: `.\.dev-pomogator\tools\specs-generator\spec-status.ps1 -Path ".specs/{feature}" -ConfirmStop Context`
+Затем запустить `/simplify` для review качества файлов текущей фазы.
 
 ---
 
@@ -200,6 +202,7 @@
 
 **СТОП #2:** Показать Requirements + Design, спросить подтверждение.
 После подтверждения: `.\.dev-pomogator\tools\specs-generator\spec-status.ps1 -Path ".specs/{feature}" -ConfirmStop Requirements`
+Затем запустить `/simplify` для review качества файлов текущей фазы.
 
 ---
 
@@ -287,6 +290,7 @@
 
 **СТОП #3:** Финальный отчёт со summary.
 После подтверждения: `.\.dev-pomogator\tools\specs-generator\spec-status.ps1 -Path ".specs/{feature}" -ConfirmStop Finalization`
+Затем запустить `/simplify` для review качества файлов текущей фазы, перед запуском Phase 3+ Audit.
 
 ---
 
