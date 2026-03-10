@@ -14,6 +14,7 @@ class TestState(str, Enum):
     PASSED = "passed"
     FAILED = "failed"
     ERROR = "error"
+    COMPLETED = "completed"
 
 
 class TestResultStatus(str, Enum):
@@ -71,6 +72,7 @@ class TestStatus:
     running: int = 0
     percent: int = 0
     duration_ms: int = 0
+    duration_str: str = ""
     error_message: str = ""
     log_file: str = ""
     suites: list[TestSuite] = field(default_factory=list)
@@ -82,6 +84,8 @@ class TestStatus:
 
     @property
     def duration_display(self) -> str:
+        if self.duration_str:
+            return self.duration_str
         secs = self.duration_ms / 1000
         if secs < 60:
             return f"{secs:.1f}s"
@@ -103,7 +107,8 @@ class TestStatus:
             skipped=int(data.get("skipped", 0)),
             running=int(data.get("running", 0)),
             percent=int(data.get("percent", 0)),
-            duration_ms=int(data.get("duration_ms", 0)),
+            duration_ms=int(data.get("duration_ms", 0)) if isinstance(data.get("duration_ms"), (int, float)) else 0,
+            duration_str=str(data.get("duration", "")) if isinstance(data.get("duration"), str) else "",
             error_message=str(data.get("error_message", "")),
             log_file=str(data.get("log_file", "")),
         )

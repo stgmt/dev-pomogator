@@ -111,6 +111,7 @@ class TestRunnerApp(App):
             TestState.PASSED: "✅",
             TestState.FAILED: "❌",
             TestState.ERROR: "⚠️",
+            TestState.COMPLETED: "✅",
         }.get(s.state, "")
 
         self.title = f"TUI Test Runner {state_icon} {s.passed}✓ {s.failed}✗ {s.skipped}⏭ ({s.percent}%) [{s.duration_display}]"
