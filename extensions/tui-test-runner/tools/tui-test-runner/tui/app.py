@@ -4,6 +4,10 @@ Ported from zoho tui_test_explorer, made framework-agnostic.
 Reads YAML v1/v2 status files via polling.
 """
 
+import os
+from datetime import datetime
+from pathlib import Path
+
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.css.query import NoMatches
@@ -42,6 +46,7 @@ class TestRunnerApp(App):
         Binding("3", "switch_tab('monitoring')", "Monitoring", show=False),
         Binding("4", "switch_tab('analysis')", "Analysis", show=False),
         Binding("f", "focus_filter", "Filter", show=False),
+        Binding("s", "screenshot", "Screenshot", show=False),
     ]
 
     TITLE = "TUI Test Runner"
@@ -54,12 +59,15 @@ class TestRunnerApp(App):
         log_file: str = "",
         framework: str = "auto",
         poll_interval: float = 0.5,
+        auto_run: bool = False,
     ) -> None:
         super().__init__()
         self._yaml_reader = YamlReader(status_file)
         self._log_reader = LogReader(log_file) if log_file else None
         self._framework = framework
         self._poll_interval = poll_interval
+        self._auto_run = auto_run
+        self._screenshot_dir = Path("logs/screenshots")
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -75,8 +83,11 @@ class TestRunnerApp(App):
         yield Footer()
 
     def on_mount(self) -> None:
-        """Start polling loop."""
+        """Start polling loop. Auto-run tests if --run flag was passed."""
         self.set_interval(self._poll_interval, self._poll)
+        if self._auto_run:
+            self.notify("Auto-running tests...")
+            # Tests are managed by the wrapper script, not the TUI itself
 
     def _poll(self) -> None:
         """Poll YAML status and log files."""
@@ -136,3 +147,12 @@ class TestRunnerApp(App):
             tests_tab.focus_filter()
         except NoMatches:
             pass
+
+    def action_screenshot(self) -> None:
+        """Export screenshot as SVG file."""
+        self._screenshot_dir.mkdir(parents=True, exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        filename = f"tui-screenshot-{timestamp}.svg"
+        filepath = self._screenshot_dir / filename
+        self.export_screenshot(str(filepath))
+        self.notify(f"Screenshot saved: {filepath}")

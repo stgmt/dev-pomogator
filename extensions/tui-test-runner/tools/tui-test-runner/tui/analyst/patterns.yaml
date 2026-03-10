@@ -1,0 +1,151 @@
+patterns:
+  # --- Timeout ---
+  - id: timeout
+    match: "(timeout|timed out|ETIMEDOUT|deadline exceeded)"
+    hint: "Check service availability and increase timeout if needed"
+    category: timeout
+
+  - id: connection_timeout
+    match: "(connect ETIMEDOUT|connection timed out)"
+    keywords: ["database", "sql", "redis", "mongo"]
+    hint: "Database connection timeout — verify DB is running and accessible"
+    category: timeout
+
+  # --- Connection ---
+  - id: connection_refused
+    match: "(ECONNREFUSED|connection refused|ECONNRESET)"
+    hint: "Service is not running or port is wrong"
+    category: connection
+
+  - id: dns_resolution
+    match: "(ENOTFOUND|getaddrinfo|DNS resolution failed)"
+    hint: "DNS resolution failed — check hostname and network"
+    category: connection
+
+  # --- Assertion ---
+  - id: assertion_equality
+    match: "(expected .+ to (equal|be|match)|AssertionError|AssertionFailed)"
+    hint: "Value mismatch — check expected vs actual"
+    category: assertion
+
+  - id: assertion_contains
+    match: "(expected .+ to contain|toContain|should contain)"
+    hint: "Missing content — verify the source produces expected output"
+    category: assertion
+
+  - id: snapshot_mismatch
+    match: "(snapshot .+ mismatched|toMatchSnapshot|toMatchInlineSnapshot)"
+    hint: "Snapshot outdated — run with --update flag to update snapshots"
+    category: assertion
+
+  # --- Type / Runtime ---
+  - id: type_error
+    match: "(TypeError|is not a function|Cannot read propert|undefined is not)"
+    hint: "Type error — check null/undefined values and function signatures"
+    category: runtime
+
+  - id: reference_error
+    match: "(ReferenceError|is not defined)"
+    hint: "Variable not defined — check imports and scope"
+    category: runtime
+
+  - id: syntax_error
+    match: "(SyntaxError|Unexpected token|unexpected end of)"
+    hint: "Syntax error — check file for typos and missing brackets"
+    category: runtime
+
+  # --- File I/O ---
+  - id: file_not_found
+    match: "(ENOENT|no such file|FileNotFoundError|file not found)"
+    hint: "File missing — check path and ensure file exists"
+    category: file_io
+
+  - id: permission_denied
+    match: "(EACCES|permission denied|PermissionError)"
+    hint: "Permission denied — check file/directory permissions"
+    category: file_io
+
+  - id: file_busy
+    match: "(EBUSY|resource busy|locked)"
+    hint: "File is locked by another process"
+    category: file_io
+
+  # --- HTTP ---
+  - id: http_401
+    match: "(401|Unauthorized|authentication required)"
+    keywords: ["http", "api", "request", "fetch"]
+    hint: "Authentication failed — check API key or credentials"
+    category: http
+
+  - id: http_403
+    match: "(403|Forbidden|access denied)"
+    keywords: ["http", "api", "request", "fetch"]
+    hint: "Access forbidden — check permissions and API scope"
+    category: http
+
+  - id: http_404
+    match: "(404|Not Found)"
+    keywords: ["http", "api", "request", "fetch", "endpoint"]
+    hint: "Endpoint not found — check URL and API version"
+    category: http
+
+  - id: http_500
+    match: "(500|Internal Server Error)"
+    keywords: ["http", "api", "request", "fetch"]
+    hint: "Server error — check server logs"
+    category: http
+
+  # --- Database ---
+  - id: db_connection
+    match: "(ER_ACCESS_DENIED|connection to .+ refused|SQLSTATE)"
+    hint: "Database connection failed — check credentials and host"
+    category: database
+
+  - id: db_constraint
+    match: "(unique constraint|duplicate key|foreign key|ER_DUP_ENTRY)"
+    hint: "Database constraint violation — check data uniqueness"
+    category: database
+
+  # --- Browser / E2E ---
+  - id: element_not_found
+    match: "(element not found|no element|locator .+ resolved to|waitForSelector)"
+    hint: "UI element not found — check selector and page state"
+    category: browser
+
+  - id: navigation_timeout
+    match: "(navigation timeout|page.goto|waitForNavigation)"
+    hint: "Page navigation timed out — check URL and server response"
+    category: browser
+
+  # --- Module ---
+  - id: module_not_found
+    match: "(Cannot find module|Module not found|ImportError|ModuleNotFoundError)"
+    hint: "Module not installed — run npm install or pip install"
+    category: module
+
+  - id: import_error
+    match: "(cannot import name|has no exported member|is not exported)"
+    hint: "Import error — check export name and module version"
+    category: module
+
+  # --- Memory / Process ---
+  - id: oom
+    match: "(out of memory|heap out of memory|ENOMEM|MemoryError)"
+    hint: "Out of memory — reduce data size or increase memory limit"
+    category: process
+
+  - id: segfault
+    match: "(segmentation fault|SIGSEGV|core dumped)"
+    hint: "Segfault — check native module compatibility"
+    category: process
+
+  # --- Auth ---
+  - id: token_expired
+    match: "(token expired|jwt expired|TokenExpiredError)"
+    hint: "Auth token expired — refresh or regenerate token"
+    category: auth
+
+  - id: invalid_token
+    match: "(invalid token|jwt malformed|JsonWebTokenError)"
+    hint: "Invalid auth token — check token format and signing key"
+    category: auth

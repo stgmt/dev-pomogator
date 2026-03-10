@@ -51,6 +51,8 @@ def main() -> None:
     parser.add_argument("--log-file", default="", help="Path to test log file")
     parser.add_argument("--framework", default="auto", help="Test framework name")
     parser.add_argument("--poll-interval", type=float, default=0.5, help="Polling interval in seconds")
+    parser.add_argument("--run", action="store_true", help="Auto-run tests on startup")
+    parser.add_argument("--filter", default="", help="Initial test name filter")
     parser.add_argument("--no-single-instance", action="store_true", help="Allow multiple instances")
     args = parser.parse_args()
 
@@ -73,6 +75,7 @@ def main() -> None:
             log_file=args.log_file,
             framework=args.framework,
             poll_interval=args.poll_interval,
+            auto_run=args.run,
         )
         app.run()
     finally:
