@@ -72,10 +72,10 @@ Feature: PLUGIN006 Specs Generator PowerShell Scripts
     And progress_percent should be less than 100
 
   @feature10
-  Scenario: Show Finalization phase for complete spec
+  Scenario: Show complete phase for complete spec
     Given a complete spec fixture "valid-spec" exists
     When I run spec-status.ps1 on "valid-spec"
-    Then the phase should be "Finalization"
+    Then the phase should be "Finalization" or "Complete"
     And progress_percent should be close to 100
 
   @feature11
@@ -288,3 +288,34 @@ Feature: PLUGIN006 Specs Generator PowerShell Scripts
     Given a valid spec fixture exists
     When I run spec-status.ps1 on the spec
     Then progress.phases.Discovery.completedAt should not be null
+
+  # .progress.json state machine — false-positive and override fixes
+
+  @feature41
+  Scenario: Files with programming vars in curly braces detected as complete
+    Given a spec fixture "placeholder-false-positive" with programming vars like {prefix} and {session_id}
+    When I run spec-status.ps1 on the spec
+    Then all Discovery files should have status "complete" not "partial"
+    And no file should report placeholders for programming identifiers
+
+  @feature42
+  Scenario: stopConfirmed overrides auto-detection for currentPhase progression
+    Given a partial spec fixture exists with incomplete files
+    When I run spec-status.ps1 with -ConfirmStop "Discovery"
+    And I run spec-status.ps1 with -ConfirmStop "Context"
+    And I run spec-status.ps1 again
+    Then currentPhase should be "Requirements"
+    And progress.phases.Discovery.stopConfirmed should be true
+
+  @feature43
+  Scenario: Finalization completedAt is set when all Finalization files are complete
+    Given a valid spec fixture exists with all files complete
+    When I run spec-status.ps1 on the spec
+    Then progress.phases.Finalization.completedAt should not be null
+
+  @feature44
+  Scenario: currentPhase becomes Complete when all phases are done
+    Given a valid spec fixture exists with all files complete
+    When I confirm all stop points via -ConfirmStop
+    And I run spec-status.ps1 on the spec
+    Then currentPhase should be "Complete"

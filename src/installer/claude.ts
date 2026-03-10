@@ -10,6 +10,7 @@ import { detectMangledArtifacts } from '../utils/msys.js';
 import { RULES_SUBFOLDER, TOOLS_DIR, SKILLS_DIR } from '../constants.js';
 import { getFileHash } from '../updater/content-hash.js';
 import { collectFileHashes, addProjectPaths, makePortableScriptCommand, resolveHookToolPaths, replaceNpxTsxWithPortable } from './shared.js';
+import { writeJsonAtomic, readJsonSafe } from '../utils/atomic-json.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -265,15 +266,8 @@ async function setupClaudeHooks(): Promise<void> {
   const homeDir = os.homedir();
   const settingsPath = path.join(homeDir, '.claude', 'settings.json');
 
-  // Load existing settings or create new
-  let settings: Record<string, unknown> = {};
-  if (await fs.pathExists(settingsPath)) {
-    try {
-      settings = await fs.readJson(settingsPath);
-    } catch {
-      console.log('  ⚠ Could not parse existing settings.json, creating new...');
-    }
-  }
+  // Load existing settings with backup recovery
+  const settings = await readJsonSafe<Record<string, unknown>>(settingsPath, {});
 
   // Ensure hooks structure exists
   if (!settings.hooks) {
@@ -305,11 +299,8 @@ async function setupClaudeHooks(): Promise<void> {
     }],
   });
 
-  // Ensure directory exists
-  await fs.ensureDir(path.dirname(settingsPath));
-
-  // Write settings
-  await fs.writeJson(settingsPath, settings, { spaces: 2 });
+  // Write settings atomically (backup + temp + move)
+  await writeJsonAtomic(settingsPath, settings);
   console.log('  ✓ Installed Claude Code hooks for auto-update');
 }
 
@@ -400,15 +391,8 @@ async function installExtensionHooks(repoRoot: string, extensions: Extension[]):
     return installedHooksByExtension;
   }
   
-  // Load existing project settings or create new
-  let settings: Record<string, unknown> = {};
-  if (await fs.pathExists(settingsPath)) {
-    try {
-      settings = await fs.readJson(settingsPath);
-    } catch {
-      // Invalid JSON, start fresh
-    }
-  }
+  // Load existing project settings with backup recovery
+  const settings = await readJsonSafe<Record<string, unknown>>(settingsPath, {});
   
   // Ensure hooks structure exists
   if (!settings.hooks) {
@@ -478,11 +462,8 @@ async function installExtensionHooks(repoRoot: string, extensions: Extension[]):
     settings.env = envSection;
   }
 
-  // Ensure directory exists
-  await fs.ensureDir(path.dirname(settingsPath));
-
-  // Write settings
-  await fs.writeJson(settingsPath, settings, { spaces: 2 });
+  // Write settings atomically (backup + temp + move)
+  await writeJsonAtomic(settingsPath, settings);
 
   const hookCount = Object.values(allHooks).flat().length;
   if (hookCount > 0) {

@@ -2,25 +2,25 @@
     "version":  1,
     "featureSlug":  "prompt-suggest",
     "createdAt":  "2026-03-09T19:24:03.8500882+03:00",
-    "currentPhase":  "Discovery",
+    "currentPhase":  "Complete",
     "phases":  {
                    "Discovery":  {
-                                     "completedAt":  null,
+                                     "completedAt":  "2026-03-10T13:38:39.2699484+03:00",
                                      "stopConfirmed":  false,
                                      "stopConfirmedAt":  null
                                  },
                    "Context":  {
-                                   "completedAt":  null,
+                                   "completedAt":  "2026-03-10T13:38:39.2714656+03:00",
                                    "stopConfirmed":  false,
                                    "stopConfirmedAt":  null
                                },
                    "Requirements":  {
-                                        "completedAt":  null,
+                                        "completedAt":  "2026-03-10T13:38:39.2714656+03:00",
                                         "stopConfirmed":  false,
                                         "stopConfirmedAt":  null
                                     },
                    "Finalization":  {
-                                        "completedAt":  null,
+                                        "completedAt":  "2026-03-10T13:38:39.2729878+03:00",
                                         "stopConfirmed":  false,
                                         "stopConfirmedAt":  null
                                     }

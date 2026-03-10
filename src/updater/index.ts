@@ -15,6 +15,7 @@ import semver from 'semver';
 import { RULES_SUBFOLDER, TOOLS_DIR, SKILLS_DIR } from '../constants.js';
 import { resolveHookToolPaths, replaceNpxTsxWithPortable } from '../installer/shared.js';
 import { detectMangledArtifacts } from '../utils/msys.js';
+import { writeJsonAtomic, readJsonSafe } from '../utils/atomic-json.js';
 
 interface UpdateOptions {
   force?: boolean;
@@ -397,14 +398,7 @@ async function updateClaudeHooksForProject(
     return {};
   }
 
-  let settings: Record<string, unknown> = {};
-  if (await fs.pathExists(settingsPath)) {
-    try {
-      settings = await fs.readJson(settingsPath);
-    } catch {
-      // Invalid JSON, start fresh
-    }
-  }
+  const settings = await readJsonSafe<Record<string, unknown>>(settingsPath, {});
 
   if (!settings.hooks) {
     settings.hooks = {};
@@ -482,8 +476,7 @@ async function updateClaudeHooksForProject(
     );
   }
 
-  await fs.ensureDir(path.dirname(settingsPath));
-  await fs.writeJson(settingsPath, settings, { spaces: 2 });
+  await writeJsonAtomic(settingsPath, settings);
 
   return nextManagedHooks;
 }

@@ -2,27 +2,27 @@
     "version":  1,
     "featureSlug":  "test-statusline",
     "createdAt":  "2026-03-09T20:18:20.7227352+03:00",
-    "currentPhase":  "Discovery",
+    "currentPhase":  "Complete",
     "phases":  {
                    "Discovery":  {
-                                     "completedAt":  null,
+                                     "completedAt":  "2026-03-10T13:38:19.6197890+03:00",
                                      "stopConfirmed":  true,
                                      "stopConfirmedAt":  "2026-03-09T20:21:46.2281287+03:00"
                                  },
                    "Context":  {
-                                   "completedAt":  null,
+                                   "completedAt":  "2026-03-10T13:38:19.6197890+03:00",
                                    "stopConfirmed":  true,
                                    "stopConfirmedAt":  "2026-03-09T20:21:54.6680873+03:00"
                                },
                    "Requirements":  {
-                                        "completedAt":  null,
-                                        "stopConfirmed":  false,
-                                        "stopConfirmedAt":  null
+                                        "completedAt":  "2026-03-10T13:38:19.6213098+03:00",
+                                        "stopConfirmed":  true,
+                                        "stopConfirmedAt":  "2026-03-09T20:36:53.1865912+03:00"
                                     },
                    "Finalization":  {
-                                        "completedAt":  null,
-                                        "stopConfirmed":  false,
-                                        "stopConfirmedAt":  null
+                                        "completedAt":  "2026-03-10T13:38:19.6224304+03:00",
+                                        "stopConfirmed":  true,
+                                        "stopConfirmedAt":  "2026-03-09T20:38:11.3542616+03:00"
                                     }
                }
 }

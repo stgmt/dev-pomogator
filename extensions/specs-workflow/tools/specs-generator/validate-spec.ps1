@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Validates spec folder structure, formats, and placeholders.
 
@@ -329,7 +329,7 @@ foreach ($file in $existingFiles) {
             $warnings += @{
                 file = $file
                 rule = "BDD_INFRA"
-                message = "Missing '## BDD Test Infrastructure' section. This section is mandatory — run Phase 2 Step 6 assessment."
+                message = "Missing '## BDD Test Infrastructure' section. This section is mandatory - run Phase 2 Step 6 assessment."
             }
             $fileHasWarnings = $true
             Write-Log "WARN" "$file : Missing BDD Test Infrastructure section"
@@ -347,7 +347,7 @@ foreach ($file in $existingFiles) {
                 # If TEST_DATA_ACTIVE, check required subsections
                 $isActive = $content -match 'TEST_DATA_ACTIVE'
                 if ($isActive) {
-                    $requiredSubs = @('### Существующие hooks', '### Новые hooks', '### Cleanup Strategy')
+                    $requiredSubs = @('Cleanup Strategy', 'hooks')
                     foreach ($sub in $requiredSubs) {
                         $subFound = $content -match [regex]::Escape($sub)
                         $subNotFound = $content -match "$([regex]::Escape($sub)).*Не найдены"
@@ -458,7 +458,8 @@ foreach ($mdFile in $mdFiles) {
 
             # Check if target file exists in spec folder
             if ($targetFile -notin $existingFiles) {
-                $linkDisplay = "[$linkText]($targetFile$(if($anchor){"#$anchor"}))"
+                $anchorPart = if ($anchor) { "#$anchor" } else { "" }
+                $linkDisplay = "[$linkText]($targetFile$anchorPart)"
                 $warnings += @{
                     file = $mdFile
                     line = $lineNum

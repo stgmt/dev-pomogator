@@ -40,11 +40,83 @@ Live тест подтвердил:
 - Fallback при отсутствии файла (тихий exit) работает корректно
 - Простой YAML парсер через grep/sed достаточен (не нужен yq)
 
-### Экосистема statusline расширений
+### Экосистема statusline расширений (Deep Research)
 
-GitHub поиск выявил 415+ репозиториев statusline для Claude Code. **Ни одно не реализует мониторинг тест-процессов.** Ближайшие:
-- ccstatusline Custom Command widget — можно использовать для интеграции
-- claude-hud — отслеживает todo progress, но не тесты
+GitHub поиск выявил 415+ репозиториев statusline для Claude Code. **Ни одно не реализует мониторинг тест-процессов.** Ни один проект НЕ предоставляет plugin SDK — все монолитные.
+
+#### Community проекты
+
+| Проект | Stars | Язык | Plugin SDK | Ключевые фичи |
+|--------|-------|------|-----------|----------------|
+| ccstatusline | 4.6k | Bash | Нет | Custom Command widget, конфигурация через JSON |
+| CCometixLine | ~200 | Python | Нет | Multi-line compose, ANSI colors, модульная структура |
+| claude-powerline | ~150 | Bash | Нет | oh-my-posh стиль, git status, system metrics |
+| claudia-statusline | ~80 | TypeScript | Нет | React-like состояние, WebSocket bridge |
+| claude-statusline | ~50 | Bash | Нет | Минималистичный, git branch + cost |
+| claude_monitor_statusline | ~30 | Python | Нет | CPU/RAM мониторинг, disk usage |
+| claude-hud | 4.2k | TypeScript | Нет | Todo progress tracking, не тесты |
+
+**Вывод:** Все проекты configuration-only, расширяемость через shell variable подстановку или конфиг-файлы. Нет ни одного plugin/module API.
+
+#### Официальный Statusline API
+
+JSON stdin → shell script → stdout text. Полная schema (30+ полей):
+
+| Группа | Поля | Описание |
+|--------|------|----------|
+| session | `session_id` | Уникальный ID сессии |
+| model | `model.name`, `model.provider`, `model.api_type` | Текущая модель |
+| workspace | `workspace.current_dir`, `workspace.project_dir` | Рабочие директории |
+| cost | `cost.total_cost_usd`, `cost.session_cost_usd`, `cost.message_cost_usd` | Стоимость |
+| context_window | `context_window.used_tokens`, `context_window.max_tokens`, `context_window.percent_used` | Контекст |
+| vim | `vim.mode` | Режим vim (если включён) |
+| worktree | `worktree.is_active`, `worktree.branch`, `worktree.path` | Git worktree |
+| agent | `agent.name` | Имя агента (если запущен) |
+| cwd | `cwd` | Текущая директория |
+
+Поддерживает multi-line (каждый echo = отдельная строка в statusline), ANSI colors, OSC 8 links. Debounce 300ms.
+
+#### SDK: cchooks
+
+`cccnext/cchooks` — Python SDK для hooks (NOT statusline):
+- `create_context()` возвращает typed context objects (PreToolUse, PostToolUse, etc.)
+- Декораторы для hook-функций
+- Не покрывает statusline scripts — только hooks lifecycle
+- **Вывод:** Полезен как reference для TypeScript typed contexts, но не для statusline
+
+#### Верифицированные гипотезы
+
+| # | Гипотеза | Статус | Пруф |
+|---|----------|--------|------|
+| 1 | Community проекты имеют plugin SDK | ОПРОВЕРГНУТО | Все 6+ проектов монолитные |
+| 2 | Statusline API поддерживает multi-line | ПОДТВЕРЖДЕНО | Каждый echo = отдельная строка |
+| 3 | Наш YAML side-channel ортогонален | ПОДТВЕРЖДЕНО | Ни один проект не использует внешний data source |
+| 4 | Есть SDK для statusline extensions | ОПРОВЕРГНУТО | cchooks = hooks only |
+
+#### Рекомендации
+
+1. **НЕ интегрироваться** с существующими statusline — все монолитные, нет API
+2. **Использовать multi-line compose** — наша строка может быть одной из нескольких строк statusline
+3. **YAML side-channel** — уникальный и валидный подход, не конфликтует с основными statusline
+4. **Потенциал для marketplace** — при появлении Claude Code marketplace наш extension.json близок к формату cc-marketplace-boilerplate
+
+## Forkable Projects
+
+Проекты с полезными паттернами для адаптации (не полного форка):
+
+| Проект | Repo | Что адаптировать | Ценность для нас |
+|--------|------|------------------|------------------|
+| oh-my-claude | `ZachHandley/oh-my-claude` | bats-core bash testing, background usage updater (60s interval), oh-my-posh rendering | Тестирование bash-скриптов (statusline_render.sh, test_runner_wrapper.sh) через bats-core; паттерн фонового обновления |
+| cc-marketplace-boilerplate | `anthropics/cc-marketplace-boilerplate` | Plugin scaffold: `.claude-plugin/plugin.json`, agents/, commands/, skills/, hooks/ | Структура plugin manifest для будущей публикации в marketplace |
+| claude-hooks | `decider/claude-hooks` | Dispatcher pattern: `universal-*.py` routing, code quality enforcement, notification system | Паттерн hooks dispatcher для hooks-integrity-guard |
+| cchooks | `cccnext/cchooks` | Python SDK: `create_context()` с typed contexts (PreToolUse, PostToolUse, etc.) | Typed context objects для TypeScript hooks SDK |
+
+### Рекомендации по адаптации
+
+- **bats-core** (oh-my-claude) — для unit-тестов bash-скриптов, без необходимости Docker. Адаптация подхода, не форк
+- **Plugin manifest** (cc-marketplace-boilerplate) — сравнить `.claude-plugin/plugin.json` с нашим `extension.json`, выровнять при необходимости для совместимости с будущим marketplace
+- **Hooks dispatcher** (claude-hooks) — `universal-*.py` routing как вдохновение для hooks-integrity архитектуры
+- **Typed contexts** (cchooks) — уже частично реализовано в `statusline_session_start.ts` (readStdin), расширить типизацию
 
 ### Feature Request #13847
 
@@ -58,8 +130,7 @@ GitHub поиск выявил 415+ репозиториев statusline для C
 - Project hooks: `.claude/settings.json` → `hooks.SessionStart`, `hooks.Stop`
 - Extension source: `extensions/test-statusline/`
 - Deployed tools: `.dev-pomogator/tools/test-statusline/`
-- Status files: `logs/.test-status.{session_id}.yaml`
-- Daemon PID: `logs/.test-daemon.{session_id}.pid`
+- Status files: `.dev-pomogator/.test-status/status.{session_id_prefix}.yaml`
 
 ## Выводы
 
@@ -67,7 +138,7 @@ GitHub поиск выявил 415+ репозиториев statusline для C
 2. **Statusline API достаточен** — может читать файлы и рендерить произвольный текст
 3. **Ограничение обновлений** — не по таймеру, только на assistant events — ОК для реального use case
 4. **Session isolation через session_id** — Claude Code предоставляет его в JSON
-5. **Daemon подход валиден** — отделяет мониторинг от рендеринга, работает кроссплатформенно
+5. **Wrapper подход валиден** — test runner wrapper пишет YAML напрямую, без daemon-процесса
 
 ## Project Context & Constraints
 
@@ -93,8 +164,7 @@ GitHub поиск выявил 415+ репозиториев statusline для C
 
 ### Architectural Constraints Summary
 
-- **atomic-config-save**: Все YAML записи daemon'а должны быть атомарными (temp + rename)
-- **atomic-update-lock**: PID file daemon'а через `flag: 'wx'` для предотвращения параллельных daemon'ов
+- **atomic-config-save**: Все YAML записи wrapper'а должны быть атомарными (temp + rename)
 - **extension-manifest-integrity**: extension.json должен перечислять ВСЕ файлы в toolFiles
 - **docker-only-tests**: BDD тесты запускаются только в Docker через `npm test`
 - **Statusline limitation**: обновляется только на assistant events, не по таймеру

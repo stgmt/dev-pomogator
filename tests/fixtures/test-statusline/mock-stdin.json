@@ -1,0 +1,11 @@
+{
+  "session_id": "abc12345def67890ghijklmnop",
+  "cwd": "/test/project",
+  "model": "claude-opus-4-6",
+  "context_window": 1000000,
+  "cost": { "input": 0.5, "output": 1.2 },
+  "workspace": {
+    "current_dir": "/test/project",
+    "project_dir": "/test/project"
+  }
+}

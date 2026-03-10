@@ -1,0 +1,11 @@
+ ❯ tests/auth.test.ts
+   ✓ should authenticate valid user 120ms
+   ✗ should reject expired token 45ms
+     AssertionError: Expected 401, received 200
+       at Object.<anonymous> (tests/auth.test.ts:42:5)
+   ✓ should refresh token 200ms
+   ○ should skip admin test
+   ✓ should logout cleanly 80ms
+
+ Tests  3 passed | 1 failed | 1 skipped | 5 total
+ Duration  445ms

@@ -1,0 +1,21 @@
+{
+  "name": "bun-oom-guard",
+  "version": "1.0.0",
+  "description": "Auto-patches Bun runner to prevent OOM crashes on Windows (claude-mem plugin)",
+  "category": "infrastructure",
+  "platforms": ["claude"],
+  "tools": {
+    "bun-oom-guard": "tools/bun-oom-guard"
+  },
+  "toolFiles": {
+    "bun-oom-guard": [
+      ".dev-pomogator/tools/bun-oom-guard/patch_bun_runner.ts",
+      ".dev-pomogator/tools/bun-oom-guard/bun-runner.patched.js"
+    ]
+  },
+  "hooks": {
+    "claude": {
+      "SessionStart": "npx tsx .dev-pomogator/tools/bun-oom-guard/patch_bun_runner.ts"
+    }
+  }
+}

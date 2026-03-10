@@ -1,0 +1,28 @@
+﻿{
+    "version":  1,
+    "featureSlug":  "tui-test-runner",
+    "createdAt":  "2026-03-09T22:03:27.0756174+03:00",
+    "currentPhase":  "Complete",
+    "phases":  {
+                   "Discovery":  {
+                                     "completedAt":  "2026-03-10T13:38:30.2539321+03:00",
+                                     "stopConfirmed":  true,
+                                     "stopConfirmedAt":  "2026-03-09T22:05:58.8595252+03:00"
+                                 },
+                   "Context":  {
+                                   "completedAt":  "2026-03-10T13:38:30.2544452+03:00",
+                                   "stopConfirmed":  true,
+                                   "stopConfirmedAt":  "2026-03-09T22:06:22.6226686+03:00"
+                               },
+                   "Requirements":  {
+                                        "completedAt":  "2026-03-10T13:38:30.2544452+03:00",
+                                        "stopConfirmed":  true,
+                                        "stopConfirmedAt":  "2026-03-09T22:13:03.0893204+03:00"
+                                    },
+                   "Finalization":  {
+                                        "completedAt":  "2026-03-10T13:38:30.2559622+03:00",
+                                        "stopConfirmed":  true,
+                                        "stopConfirmedAt":  "2026-03-09T22:15:14.3647660+03:00"
+                                    }
+               }
+}

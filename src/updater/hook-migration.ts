@@ -13,6 +13,7 @@ import path from 'path';
 import os from 'os';
 import { resolveHookToolPaths, replaceNpxTsxWithPortable } from '../installer/shared.js';
 import { logger } from '../utils/logger.js';
+import { writeJsonAtomicSync } from '../utils/atomic-json.js';
 
 const CONFIG_DIR = path.join(os.homedir(), '.dev-pomogator');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
@@ -91,7 +92,7 @@ function migrateProjectSettings(projectPath: string): number {
   }
 
   if (migrated > 0) {
-    fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
+    writeJsonAtomicSync(settingsPath, settings);
     logger.info(`Migrated ${migrated} old-format hook(s) in ${projectPath}`);
   }
   return migrated;

@@ -1,0 +1,34 @@
+{
+  "name": "test-statusline",
+  "version": "1.0.0",
+  "description": "Test runner progress display in Claude Code statusline via YAML status files with session isolation",
+  "platforms": ["claude"],
+  "category": "automation",
+  "files": {
+    "claude": []
+  },
+  "tools": {
+    "test-statusline": "tools/test-statusline"
+  },
+  "toolFiles": {
+    "test-statusline": [
+      ".dev-pomogator/tools/test-statusline/statusline_render.sh",
+      ".dev-pomogator/tools/test-statusline/test_runner_wrapper.sh",
+      ".dev-pomogator/tools/test-statusline/statusline_session_start.ts",
+      ".dev-pomogator/tools/test-statusline/status_types.ts"
+    ]
+  },
+  "hooks": {
+    "claude": {
+      "SessionStart": "npx tsx .dev-pomogator/tools/test-statusline/statusline_session_start.ts"
+    }
+  },
+  "envRequirements": [
+    {
+      "name": "TEST_STATUSLINE_ENABLED",
+      "required": false,
+      "default": "true",
+      "description": "Enable/disable test statusline extension"
+    }
+  ]
+}

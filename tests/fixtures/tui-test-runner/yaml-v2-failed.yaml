@@ -1,0 +1,55 @@
+version: 2
+session_id: "def67890"
+started_at: "2026-03-09T20:00:00Z"
+updated_at: "2026-03-09T20:02:30Z"
+state: failed
+framework: "vitest"
+total: 5
+passed: 2
+failed: 3
+skipped: 0
+running: 0
+percent: 100
+duration_ms: 150000
+error_message: ""
+log_file: ".dev-pomogator/.test-status/test.def67890.log"
+suites:
+  - name: "api.test.ts"
+    file: "tests/api.test.ts"
+    status: "failed"
+    passed: 2
+    failed: 3
+    skipped: 0
+    total: 5
+    duration_ms: 150000
+    tests:
+      - name: "should connect to API"
+        status: "passed"
+        duration_ms: 500
+      - name: "should handle rate limiting"
+        status: "passed"
+        duration_ms: 1200
+      - name: "should retry on timeout"
+        status: "failed"
+        duration_ms: 30000
+        error: "Error: Timeout of 30000ms exceeded"
+        stack: "at Timeout._onTimeout (tests/api.test.ts:78:9)"
+      - name: "should validate response schema"
+        status: "failed"
+        duration_ms: 45
+        error: "AssertionError: expected { status: 200 } to deep equal { status: 200, data: [] }"
+        stack: "at Object.<anonymous> (tests/api.test.ts:95:5)"
+      - name: "should handle network error"
+        status: "failed"
+        duration_ms: 100
+        error: "Error: connect ECONNREFUSED 127.0.0.1:8080"
+        stack: "at TCPConnectWrap.afterConnect (net.js:1141:16)"
+phases:
+  - name: "setup"
+    status: "completed"
+    started_at: "2026-03-09T20:00:00Z"
+    duration_ms: 800
+  - name: "tests"
+    status: "failed"
+    started_at: "2026-03-09T20:00:01Z"
+    duration_ms: 149200

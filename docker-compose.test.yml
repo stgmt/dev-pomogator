@@ -3,6 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.test
+    image: dev-pomogator-test:local
     env_file:
       - .env.test
     environment:

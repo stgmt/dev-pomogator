@@ -5,6 +5,7 @@ import { execSync, spawn } from 'child_process';
 import { fileURLToPath } from 'url';
 import chalk from 'chalk';
 import { makePortableScriptCommand, makePortableTsxCommand } from './shared.js';
+import { writeJsonAtomic } from '../utils/atomic-json.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -1088,10 +1089,7 @@ async function registerClaudeMemMcp(platform: 'cursor' | 'claude'): Promise<void
 
     if (config.mcpServers?.['claude-mem']) {
       delete config.mcpServers['claude-mem'];
-      await fs.ensureDir(path.dirname(configPath));
-      const tempPath = configPath + '.tmp';
-      await fs.writeJson(tempPath, config, { spaces: 2 });
-      await fs.move(tempPath, configPath, { overwrite: true });
+      await writeJsonAtomic(configPath, config);
       console.log(chalk.green('  ✓ cleaned up legacy claude-mem MCP entry (plugin provides it)'));
     } else {
       console.log(chalk.green('  ✓ claude-mem MCP provided by marketplace plugin'));
@@ -1134,11 +1132,8 @@ async function registerClaudeMemMcp(platform: 'cursor' | 'claude'): Promise<void
     args: expectedArgs,
   };
 
-  // Atomic config save: temp file + move
-  await fs.ensureDir(path.dirname(configPath));
-  const tempPath = configPath + '.tmp';
-  await fs.writeJson(tempPath, config, { spaces: 2 });
-  await fs.move(tempPath, configPath, { overwrite: true });
+  // Atomic config save
+  await writeJsonAtomic(configPath, config);
 
   console.log(chalk.green(`  ✓ claude-mem MCP server registered in ${path.basename(configPath)}`));
 }
@@ -1165,9 +1160,7 @@ async function ensureChromaExternalMode(): Promise<void> {
   if (settings.CLAUDE_MEM_CHROMA_MODE === 'external') return;
 
   settings.CLAUDE_MEM_CHROMA_MODE = 'external';
-  const tempPath = settingsPath + '.tmp';
-  await fs.writeJson(tempPath, settings, { spaces: 2 });
-  await fs.move(tempPath, settingsPath, { overwrite: true });
+  await writeJsonAtomic(settingsPath, settings);
   console.log(chalk.green('  ✓ Chroma mode set to external (managed by health-check hook)'));
 }
 

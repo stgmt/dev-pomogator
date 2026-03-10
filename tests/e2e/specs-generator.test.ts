@@ -346,8 +346,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
 
       expect(result.json).toBeDefined();
       expect(result.json.path).toBe('.specs/valid-spec-test');
-      // Phase should be one of the defined phases
-      expect(['Discovery', 'Requirements', 'Finalization']).toContain(result.json.phase);
+      // Phase should be one of the defined phases (Complete when all files are done)
+      expect(['Discovery', 'Requirements', 'Finalization', 'Complete']).toContain(result.json.phase);
       // Progress should be a valid percentage
       expect(result.json.progress_percent).toBe(100);
       expect(result.json.files).toBeDefined();
@@ -1079,6 +1079,99 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       expect(result.exitCode).toBe(0);
       // For a complete spec, Discovery should be marked completed
       expect(result.json.progress_state.phases.Discovery.completedAt).not.toBeNull();
+    });
+
+    // @feature41
+    it('files with programming vars in curly braces should be detected as complete', async () => {
+      const destPath = appPath('.specs', progressTestName);
+      await fs.copy(getSpecsGeneratorFixturePath('placeholder-false-positive'), destPath);
+
+      const result = runPowerShell(
+        getSpecsGeneratorPath('spec-status.ps1'),
+        ['-Path', `.specs/${progressTestName}`]
+      );
+
+      expect(result.exitCode).toBe(0);
+      // Files containing {prefix}, {session_id}, {percent} should be "complete" not "partial"
+      expect(result.json.files['USER_STORIES.md'].status).toBe('complete');
+      expect(result.json.files['USE_CASES.md'].status).toBe('complete');
+      expect(result.json.files['RESEARCH.md'].status).toBe('complete');
+      // No placeholders should be counted for programming identifiers
+      expect(result.json.files['USER_STORIES.md'].placeholders).toBe(0);
+      expect(result.json.files['USE_CASES.md'].placeholders).toBe(0);
+      expect(result.json.files['RESEARCH.md'].placeholders).toBe(0);
+    });
+
+    // @feature42
+    it('stopConfirmed should override auto-detection for currentPhase progression', async () => {
+      const destPath = appPath('.specs', progressTestName);
+      await fs.copy(getSpecsGeneratorFixturePath('partial-spec'), destPath);
+
+      // First run to create .progress.json
+      runPowerShell(
+        getSpecsGeneratorPath('spec-status.ps1'),
+        ['-Path', `.specs/${progressTestName}`]
+      );
+
+      // Confirm Discovery and Context stops (both needed to progress past Discovery phase)
+      runPowerShell(
+        getSpecsGeneratorPath('spec-status.ps1'),
+        ['-Path', `.specs/${progressTestName}`, '-ConfirmStop', 'Discovery']
+      );
+      runPowerShell(
+        getSpecsGeneratorPath('spec-status.ps1'),
+        ['-Path', `.specs/${progressTestName}`, '-ConfirmStop', 'Context']
+      );
+
+      // Run again — stopConfirmed should override and move to Requirements
+      const result = runPowerShell(
+        getSpecsGeneratorPath('spec-status.ps1'),
+        ['-Path', `.specs/${progressTestName}`]
+      );
+
+      expect(result.exitCode).toBe(0);
+      expect(result.json.progress_state.phases.Discovery.stopConfirmed).toBe(true);
+      expect(result.json.progress_state.phases.Context.stopConfirmed).toBe(true);
+      // currentPhase should have progressed past Discovery to Requirements
+      expect(result.json.phase).toBe('Requirements');
+    });
+
+    // @feature43
+    it('Finalization.completedAt should be set when all Finalization files are complete', async () => {
+      const destPath = appPath('.specs', progressTestName);
+      await fs.copy(getSpecsGeneratorFixturePath('valid-spec'), destPath);
+
+      const result = runPowerShell(
+        getSpecsGeneratorPath('spec-status.ps1'),
+        ['-Path', `.specs/${progressTestName}`]
+      );
+
+      expect(result.exitCode).toBe(0);
+      expect(result.json.progress_state.phases.Finalization.completedAt).not.toBeNull();
+    });
+
+    // @feature44
+    it('currentPhase should become Complete when all phases are done', async () => {
+      const destPath = appPath('.specs', progressTestName);
+      await fs.copy(getSpecsGeneratorFixturePath('valid-spec'), destPath);
+
+      // Confirm all stop points
+      for (const phase of ['Discovery', 'Context', 'Requirements', 'Finalization']) {
+        runPowerShell(
+          getSpecsGeneratorPath('spec-status.ps1'),
+          ['-Path', `.specs/${progressTestName}`, '-ConfirmStop', phase]
+        );
+      }
+
+      // Final run
+      const result = runPowerShell(
+        getSpecsGeneratorPath('spec-status.ps1'),
+        ['-Path', `.specs/${progressTestName}`]
+      );
+
+      expect(result.exitCode).toBe(0);
+      expect(result.json.phase).toBe('Complete');
+      expect(result.json.progress_state.currentPhase).toBe('Complete');
     });
   });
 });

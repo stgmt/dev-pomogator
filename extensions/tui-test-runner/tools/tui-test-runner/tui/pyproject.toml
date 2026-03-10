@@ -1,0 +1,13 @@
+[project]
+name = "tui-test-runner"
+version = "1.0.0"
+description = "Rich 4-tab TUI for monitoring test execution in real-time"
+requires-python = ">=3.9"
+dependencies = [
+    "textual>=0.40.0",
+    "pyyaml>=6.0",
+]
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.backends._legacy:_Backend"

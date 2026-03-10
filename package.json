@@ -1,6 +1,6 @@
 {
   "name": "dev-pomogator",
-  "version": "1.1.0",
+  "version": "1.4.0",
   "description": "Team coding standards and workflows for Cursor and Claude Code",
   "author": "stgmt",
   "license": "MIT",
@@ -33,7 +33,7 @@
     "dev": "tsc --watch",
     "lint": "eslint src",
     "test": "npm run test:e2e",
-    "test:e2e": "docker compose -f docker-compose.test.yml run --rm test",
+    "test:e2e": "bash scripts/docker-test.sh",
     "test:e2e:docker": "vitest run tests/e2e --reporter=verbose",
     "prepare": "npm run build"
   },

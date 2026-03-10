@@ -184,13 +184,27 @@ function Get-FileStatus {
         }
     }
     
-    # Count placeholders
-    $placeholderMatches = [regex]::Matches($content, '\{[^}]+\}')
+    # Count placeholders — strip code blocks/inline code first to avoid false positives
+    $contentForCheck = $content
+    # Remove fenced code blocks (```...```)
+    $contentForCheck = [regex]::Replace($contentForCheck, '(?ms)```.*?```', '')
+    # Remove inline code (`...`)
+    $contentForCheck = [regex]::Replace($contentForCheck, '`[^`]+`', '')
+
+    $placeholderMatches = [regex]::Matches($contentForCheck, '\{[^}]+\}')
     $placeholderCount = 0
     foreach ($match in $placeholderMatches) {
-        if ($match.Value -notmatch '^\{[\s\S]*:[\s\S]*\}$' -and $match.Value -notin @('{', '}', '{}')) {
-            $placeholderCount++
+        $inner = $match.Value
+        # Skip empty or colon-containing (CSS/JSON-like)
+        if ($inner -match '^\{[\s\S]*:[\s\S]*\}$' -or $inner -in @('{', '}', '{}')) {
+            continue
         }
+        # Skip programming identifiers: lowercase snake_case/camelCase (e.g. {prefix}, {session_id}, {percent})
+        if ($inner -match '^\{[a-z][a-z0-9_]*\}$') {
+            continue
+        }
+        # This is a real placeholder (Cyrillic, PascalCase with spaces, etc.)
+        $placeholderCount++
     }
     
     # Count items (FR-N, UC-N, AC-N, etc.)
@@ -250,18 +264,33 @@ if ($featureFiles) {
 # Calculate progress
 $progressPercent = [math]::Round(($completeCount / $totalWeight) * 100)
 
-# Determine current phase
+# Phase helper functions
+function Test-PhaseComplete {
+    param([string[]]$PhaseFiles, [hashtable]$FilesHash)
+    foreach ($f in $PhaseFiles) {
+        if ($FilesHash.ContainsKey($f) -and $FilesHash[$f].status -notin @("complete")) {
+            return $false
+        }
+    }
+    return $true
+}
+
+function Test-PhaseFilesExist {
+    param([string[]]$PhaseFiles, [hashtable]$FilesHash)
+    foreach ($f in $PhaseFiles) {
+        if ($FilesHash.ContainsKey($f) -and $FilesHash[$f].status -ne "not_created") {
+            return $true
+        }
+    }
+    return $false
+}
+
+# Determine current phase (auto-detection)
 $currentPhase = "Discovery"
 $subPhase = $null
-$discoveryComplete = $true
+$contextDone = $false
 $requirementsComplete = $true
-
-foreach ($file in $phases["Discovery"]) {
-    if ($files.ContainsKey($file) -and $files[$file].status -notin @("complete")) {
-        $discoveryComplete = $false
-        break
-    }
-}
+$discoveryComplete = Test-PhaseComplete $phases["Discovery"] $files
 
 if ($discoveryComplete) {
     # Phase 1.5: Check context analysis in RESEARCH.md
@@ -280,13 +309,7 @@ if ($discoveryComplete) {
         $subPhase = "Context Analysis pending"
     } else {
         $currentPhase = "Requirements"
-        foreach ($file in $phases["Requirements"]) {
-            if ($files.ContainsKey($file) -and $files[$file].status -notin @("complete")) {
-                $requirementsComplete = $false
-                break
-            }
-        }
-
+        $requirementsComplete = Test-PhaseComplete $phases["Requirements"] $files
         if ($requirementsComplete) {
             $currentPhase = "Finalization"
         }
@@ -324,6 +347,71 @@ if (-not $progressState) {
     }
 }
 
+# Handle -ConfirmStop FIRST (before override, so current invocation's confirm is available)
+if ($ConfirmStop) {
+    $phase = $progressState.phases.$ConfirmStop
+    if ($phase) {
+        $phase.stopConfirmed = $true
+        $phase.stopConfirmedAt = (Get-Date -Format "o")
+        Write-Log "INFO" "STOP confirmed for phase: $ConfirmStop"
+    } else {
+        Write-Log "WARN" "Unknown phase for ConfirmStop: $ConfirmStop"
+    }
+}
+
+# --- stopConfirmed override for currentPhase progression ---
+# If auto-detection says phase is incomplete but user confirmed stop AND files exist,
+# treat phase as complete for currentPhase progression.
+
+# Override Discovery
+if (-not $discoveryComplete -and $progressState.phases.Discovery.stopConfirmed -and (Test-PhaseFilesExist $phases["Discovery"] $files)) {
+    $discoveryComplete = $true
+    Write-Log "INFO" "Discovery override: stopConfirmed=true"
+}
+
+# Override Context (only if Discovery passed)
+if ($discoveryComplete -and -not $contextDone -and $progressState.phases.Context.stopConfirmed) {
+    $contextDone = $true
+    Write-Log "INFO" "Context override: stopConfirmed=true"
+}
+
+# Re-evaluate requirements completeness (may not have been checked during auto-detection
+# if discovery was originally incomplete and got overridden)
+if ($discoveryComplete -and $contextDone) {
+    $requirementsComplete = Test-PhaseComplete $phases["Requirements"] $files
+    # Override with stopConfirmed
+    if (-not $requirementsComplete -and $progressState.phases.Requirements.stopConfirmed -and (Test-PhaseFilesExist $phases["Requirements"] $files)) {
+        $requirementsComplete = $true
+        Write-Log "INFO" "Requirements override: stopConfirmed=true"
+    }
+}
+
+# Check Finalization completeness (before re-deriving currentPhase)
+$finalizationComplete = Test-PhaseComplete $phases["Finalization"] $files
+# Override Finalization with stopConfirmed
+if (-not $finalizationComplete -and $progressState.phases.Finalization.stopConfirmed -and (Test-PhaseFilesExist $phases["Finalization"] $files)) {
+    $finalizationComplete = $true
+    Write-Log "INFO" "Finalization override: stopConfirmed=true"
+}
+
+# Re-derive currentPhase after overrides (including terminal state)
+if (-not $discoveryComplete) {
+    $currentPhase = "Discovery"
+    $subPhase = $null
+} elseif (-not $contextDone) {
+    $currentPhase = "Discovery"
+    $subPhase = "Context Analysis pending"
+} elseif (-not $requirementsComplete) {
+    $currentPhase = "Requirements"
+    $subPhase = $null
+} elseif (-not $finalizationComplete) {
+    $currentPhase = "Finalization"
+    $subPhase = $null
+} else {
+    $currentPhase = "Complete"
+    $subPhase = $null
+}
+
 # Update currentPhase
 $progressState.currentPhase = $currentPhase
 
@@ -334,20 +422,11 @@ if ($discoveryComplete -and -not $progressState.phases.Discovery.completedAt) {
 if ($contextDone -and -not $progressState.phases.Context.completedAt) {
     $progressState.phases.Context.completedAt = (Get-Date -Format "o")
 }
-if ($requirementsComplete -and ($currentPhase -eq "Finalization") -and -not $progressState.phases.Requirements.completedAt) {
+if ($requirementsComplete -and ($currentPhase -in @("Finalization", "Complete")) -and -not $progressState.phases.Requirements.completedAt) {
     $progressState.phases.Requirements.completedAt = (Get-Date -Format "o")
 }
-
-# Handle -ConfirmStop
-if ($ConfirmStop) {
-    $phase = $progressState.phases.$ConfirmStop
-    if ($phase) {
-        $phase.stopConfirmed = $true
-        $phase.stopConfirmedAt = (Get-Date -Format "o")
-        Write-Log "INFO" "STOP confirmed for phase: $ConfirmStop"
-    } else {
-        Write-Log "WARN" "Unknown phase for ConfirmStop: $ConfirmStop"
-    }
+if ($finalizationComplete -and ($currentPhase -eq "Complete") -and -not $progressState.phases.Finalization.completedAt) {
+    $progressState.phases.Finalization.completedAt = (Get-Date -Format "o")
 }
 
 # Atomic write: temp + move
@@ -382,7 +461,9 @@ foreach ($file in $allFiles) {
 }
 
 if (-not $nextAction) {
-    if ($subPhase -eq "Context Analysis pending") {
+    if ($currentPhase -eq "Complete") {
+        $nextAction = "Spec complete! All phases finalized."
+    } elseif ($subPhase -eq "Context Analysis pending") {
         $nextAction = "Run Phase 1.5: Add '## Project Context & Constraints' to RESEARCH.md"
     } else {
         $nextAction = "All files complete! Run validation."

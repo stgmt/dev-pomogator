@@ -4,11 +4,11 @@
 
 **Требование:** [FR-1](FR.md#fr-1-statusline-render-script-feature1)
 
-WHEN statusline скрипт получает JSON с session_id на stdin AND существует YAML status file с state=running THEN скрипт SHALL вывести строку формата `T {percent}% [{bar}] {passed}ok {failed}fail {running}run | {time}` на stdout.
+WHEN statusline скрипт получает JSON с session_id на stdin AND существует YAML status file с state=running THEN скрипт SHALL вывести строку формата `{percent}% [{bar}] {passed}✅ {failed}❌ {running}⏳ | {time}` с unicode progress bar (▓░) и color threshold на stdout.
 
-WHEN YAML status file содержит state=passed AND failed=0 THEN скрипт SHALL вывести `T pass {passed}/{total} | {time}`.
+WHEN YAML status file содержит state=passed AND failed=0 THEN скрипт SHALL вывести `✅ {passed}/{total} | {time}`.
 
-WHEN YAML status file содержит state=failed OR (state=passed AND failed>0) THEN скрипт SHALL вывести `T fail {passed}/{total} ({failed} failed) | {time}`.
+WHEN YAML status file содержит state=failed OR (state=passed AND failed>0) THEN скрипт SHALL вывести `❌ {passed}/{total} ({failed} failed) | {time}`.
 
 ## AC-1a (FR-1a): Graceful Degradation @feature1a
 
@@ -81,3 +81,27 @@ WHEN SessionStart hook обнаруживает YAML files с state=idle AND mti
 WHEN инсталлер обрабатывает extension.json THEN инсталлер SHALL скопировать все toolFiles в `.dev-pomogator/tools/test-statusline/`.
 
 WHEN инсталлер обрабатывает hooks THEN инсталлер SHALL зарегистрировать SessionStart hook в `.claude/settings.json`.
+
+## AC-9 (FR-9): Docker Test Isolation @feature6
+
+**Требование:** [FR-9](FR.md#fr-9-docker-test-isolation-feature6)
+
+WHEN тесты запускаются через Docker Compose THEN каждый запуск SHALL получить уникальный `COMPOSE_PROJECT_NAME` для предотвращения конфликтов контейнеров.
+
+WHEN env var `TEST_STATUSLINE_SESSION` доступен THEN project name SHALL быть `devpom-test-{session}`.
+
+WHEN env var `TEST_STATUSLINE_SESSION` недоступен THEN project name SHALL быть `devpom-test-{PID}-{random}`.
+
+WHEN тест-процесс завершается (штатно или аварийно) THEN `docker compose down --remove-orphans` SHALL быть вызван через trap cleanup.
+
+## AC-10 (FR-10): Hooks Integrity Guard @feature7
+
+**Требование:** [FR-10](FR.md#fr-10-hooks-integrity-guard-feature7)
+
+WHEN SessionStart hook запускается THEN hook SHALL прочитать все `extensions/*/extension.json` AND собрать ожидаемые hooks.
+
+WHEN ожидаемый hook отсутствует в `.claude/settings.json` THEN hook SHALL добавить его через smart merge (сохраняя пользовательские hooks).
+
+WHEN все hooks уже присутствуют THEN hook SHALL завершиться без изменений AND логировать "all hooks intact".
+
+WHEN hook восстанавливает недостающие hooks THEN запись SHALL происходить атомарно (temp + rename).
