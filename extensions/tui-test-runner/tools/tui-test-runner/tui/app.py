@@ -124,23 +124,11 @@ class TestRunnerApp(App):
 
     def watch_status(self, new_status: TestStatus) -> None:
         """React to status changes — update all tabs."""
-        try:
-            tests_tab = self.query_one(TestsTab, TestsTab)
-            tests_tab.update_status(new_status)
-        except NoMatches:
-            pass
-
-        try:
-            monitoring_tab = self.query_one(MonitoringTab, MonitoringTab)
-            monitoring_tab.update_status(new_status)
-        except NoMatches:
-            pass
-
-        try:
-            analysis_tab = self.query_one(AnalysisTab, AnalysisTab)
-            analysis_tab.update_status(new_status)
-        except NoMatches:
-            pass
+        for tab_cls in (TestsTab, MonitoringTab, AnalysisTab):
+            try:
+                self.query_one(tab_cls).update_status(new_status)
+            except NoMatches:
+                pass
 
     def action_switch_tab(self, tab_id: str) -> None:
         """Switch to tab by id (keyboard 1-4)."""

@@ -3,7 +3,6 @@ YAML status file poller — reads v1/v2 YAML and emits Textual messages on chang
 Replaces zoho's state_service.py with framework-agnostic YAML polling.
 """
 
-import os
 from pathlib import Path
 from typing import Optional
 

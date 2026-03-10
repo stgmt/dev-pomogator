@@ -67,11 +67,16 @@ def parse_stack_trace(stack_text: str) -> List[StackFrame]:
             if match:
                 groups = match.groups()
                 if len(groups) == 3:
-                    # (method, file, line) or (file, line, method)
-                    if groups[0] and "/" in groups[0] or "\\" in groups[0]:
-                        file, line_num, method = groups[0], int(groups[1]), groups[2] or ""
+                    g0, g1, g2 = groups[0] or "", groups[1] or "", groups[2] or ""
+                    # Determine order by checking which group is the line number
+                    if g1.isdigit():
+                        # (file_or_method, line, method_or_file) — Python/JS patterns
+                        file, line_num, method = g0, int(g1), g2
+                    elif g2.isdigit():
+                        # (method, file, line) — C#/.NET pattern
+                        method, file, line_num = g0, g1, int(g2)
                     else:
-                        method, file, line_num = groups[0] or "", groups[1], int(groups[2])
+                        continue
                 elif len(groups) == 2:
                     file, line_num = groups[0], int(groups[1])
                     method = ""

@@ -53,11 +53,8 @@ class PatternLoader:
         if self._user_path and self._user_path.exists():
             user = self._load_file(self._user_path)
             # User patterns override built-in by id
-            builtin_ids = {p.id for p in builtin}
             user_ids = {p.id for p in user}
-            # Keep user patterns + built-in patterns not overridden
-            merged = user + [p for p in builtin if p.id not in user_ids]
-            return merged
+            return user + [p for p in builtin if p.id not in user_ids]
         return builtin
 
     def _load_file(self, path: Path) -> List[Pattern]:

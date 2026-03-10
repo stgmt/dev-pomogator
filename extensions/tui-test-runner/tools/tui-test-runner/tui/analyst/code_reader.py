@@ -4,6 +4,7 @@ Finds files in project tree, reads ±N lines around error location.
 Ported from zoho analyst/code_reader.py, adapted for multi-language projects.
 """
 
+import os
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -59,14 +60,14 @@ class CodeSnippetReader:
             self._file_cache[file_name] = exact
             return exact
 
-        # Search by basename
+        # Search by basename with directory pruning
         basename = Path(file_name).name
-        for path in self._root.rglob(basename):
-            if any(skip in path.parts for skip in SKIP_DIRS):
-                continue
-            if path.is_file():
-                self._file_cache[file_name] = path
-                return path
+        for dirpath, dirnames, filenames in os.walk(self._root):
+            dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
+            if basename in filenames:
+                found = Path(dirpath) / basename
+                self._file_cache[file_name] = found
+                return found
 
         self._file_cache[file_name] = None
         return None
