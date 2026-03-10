@@ -30,6 +30,12 @@ class TestRunnerApp(App):
     Screen {
         layout: vertical;
     }
+    TabPane {
+        padding: 0;
+    }
+    MonitoringTab, TestsTab, LogsTab, AnalysisTab {
+        height: 1fr;
+    }
     #status-bar {
         dock: bottom;
         height: 1;
