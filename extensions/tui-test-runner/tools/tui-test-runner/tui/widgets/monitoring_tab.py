@@ -18,6 +18,7 @@ STATUS_ICONS = {
     TestState.PASSED: "[bold green]✅ Passed[/]",
     TestState.FAILED: "[bold red]❌ Failed[/]",
     TestState.ERROR: "[bold yellow]⚠️ Error[/]",
+    TestState.COMPLETED: "[bold green]✅ Completed[/]",
 }
 
 PHASE_ICONS = {
