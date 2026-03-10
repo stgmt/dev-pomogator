@@ -1315,8 +1315,11 @@ export async function setupCleanState(platform: 'cursor' | 'claude'): Promise<vo
   } else {
     await cleanClaudeDir();
     await fs.remove(homePath('.cursor'));
-    // Clean project-level Claude artifacts
-    await fs.remove(appPath('.claude'));
+    // Clean project-level Claude artifacts (preserve .claude/rules/ — committed project rules)
+    await fs.remove(appPath('.claude', 'settings.json'));
+    await fs.remove(appPath('.claude', 'settings.json.bak'));
+    await fs.remove(appPath('.claude', 'skills'));
+    await fs.remove(appPath('.claude', 'commands'));
     await fs.remove(appPath('.dev-pomogator'));
   }
 

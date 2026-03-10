@@ -78,11 +78,11 @@ def is_observer:
   ),
   friction_details: (
     [$work[] | .friction_detail // [] | if type == "array" then .[] else empty end] |
-    group_by(.type // .category // "unknown") |
+    group_by((.type // .category // "unknown")) |
     map({
-      type: .[0].type // .[0].category // "unknown",
+      type: (.[0].type // .[0].category // "unknown"),
       count: length,
-      examples: (.[0:3] | map(.description // .detail // .message // ""))
+      examples: (.[0:3] | map((.description // .detail // .message // "")))
     }) |
     sort_by(-.count) |
     .[0:10]
@@ -116,6 +116,6 @@ def is_observer:
     }) | sort_by(-.count))
   }
 }
-' "$FACETS_DIR"/*.json 2>/dev/null || {
+' $(find "$FACETS_DIR" -name '*.json' -type f | sort) 2>/dev/null || {
   echo '{"status":"error","error":"jq aggregation failed","facets_count":'"${FACETS_COUNT}"'}'
 }

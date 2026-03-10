@@ -15,14 +15,6 @@
       ".dev-pomogator/tools/auto-simplify/simplify_stop.ts"
     ]
   },
-  "skills": {
-    "simplify": "skills/simplify"
-  },
-  "skillFiles": {
-    "simplify": [
-      ".claude/skills/simplify/SKILL.md"
-    ]
-  },
   "hooks": {
     "claude": {
       "Stop": "npx tsx .dev-pomogator/tools/auto-simplify/simplify_stop.ts"

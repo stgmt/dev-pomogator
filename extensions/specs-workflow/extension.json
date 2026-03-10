@@ -88,7 +88,10 @@
     ]
   },
   "hooks": {
-    "cursor": {},
+    "cursor": {
+      "beforeSubmitPrompt": "npx tsx .dev-pomogator/tools/specs-validator/validate-specs.ts",
+      "stop": "npx tsx .dev-pomogator/tools/steps-validator/validate-steps.ts"
+    },
     "claude": {
       "UserPromptSubmit": "npx tsx .dev-pomogator/tools/specs-validator/validate-specs.ts",
       "PreToolUse": {
@@ -121,5 +124,5 @@
       "skipInCI": true
     }
   },
-  "_hooksNote": "Hooks are installed by memory.ts (hardcoded) - specs-validator and steps-validator"
+  "_hooksNote": "specs-validator and steps-validator hooks defined in cursor/claude sections above"
 }

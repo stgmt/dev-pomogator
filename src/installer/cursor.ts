@@ -234,13 +234,26 @@ async function installExtensionHooks(extensions: Extension[], repoRoot: string):
   }
   
   // Clean previous managed hooks to prevent duplicates on re-install
-  // Our hooks always reference '.dev-pomogator/tools/' — user hooks never do
+  // Only remove hooks whose script basename matches one being reinstalled by current extensions
+  // This preserves hooks installed by other systems (e.g. memory.ts validate-specs)
+  const newScriptBasenames = new Set<string>();
+  for (const commands of Object.values(extensionHooks)) {
+    for (const cmd of commands) {
+      const m = cmd.match(/[\w.\-\\/]+\.(ts|js|py)/);
+      if (m) newScriptBasenames.add(path.basename(m[0]));
+    }
+  }
   for (const eventName of Object.keys(existingHooks.hooks)) {
-    existingHooks.hooks[eventName] = existingHooks.hooks[eventName].filter(
-      h => !h.command.includes('.dev-pomogator/tools/')
+    existingHooks.hooks[eventName] = existingHooks.hooks[eventName].filter(h => {
+      if (!h.command.includes('.dev-pomogator/tools/')
          && !h.command.includes('.dev-pomogator\\\\tools\\\\')
-         && !h.command.includes('.dev-pomogator\\tools\\')
-    );
+         && !h.command.includes('.dev-pomogator\\tools\\')) {
+        return true; // not a managed hook, keep
+      }
+      const m = h.command.match(/[\w.\-\\/]+\.(ts|js|py)/);
+      const basename = m ? path.basename(m[0]) : '';
+      return basename ? !newScriptBasenames.has(basename) : true;
+    });
   }
 
   // Merge extension hooks into existing hooks
@@ -265,25 +278,24 @@ async function installExtensionHooks(extensions: Extension[], repoRoot: string):
     }
   }
   
-  // Remove stale hooks that reference the same script but with different paths
+  // Remove stale hooks that reference the same target script but with different paths
+  // Use the script after "-- " (tsx-runner argument), not tsx-runner.js itself
   for (const [eventName, commands] of Object.entries(extensionHooks)) {
     const hooks = existingHooks.hooks[eventName];
     if (!hooks) continue;
 
     for (const newCommand of commands) {
       const escapedNew = newCommand.replace(/\\/g, '\\\\');
-      // P1+P2 fix: extract script file via regex instead of path.basename()
-      // This avoids false positives from substring matching and handles args correctly
-      const scriptMatch = newCommand.match(/[\w.\-\\/]+\.(ts|js|py)/);
-      const scriptName = scriptMatch ? path.basename(scriptMatch[0]) : '';
+      // Extract the TARGET script (after "-- "), not the runner (tsx-runner.js)
+      const targetMatch = newCommand.match(/--\s+"?([^"]+\.(ts|js|py))"?/);
+      const scriptName = targetMatch ? path.basename(targetMatch[1]) : '';
 
       if (!scriptName) continue;
 
       existingHooks.hooks[eventName] = existingHooks.hooks[eventName].filter(h => {
         if (h.command === escapedNew) return true; // keep the new one
-        // Extract script basename from existing hook command for exact comparison
-        const existingMatch = h.command.match(/[\w.\-\\/]+\.(ts|js|py)/);
-        const existingScript = existingMatch ? path.basename(existingMatch[0]) : '';
+        const existingTarget = h.command.match(/--\s+"?([^"]+\.(ts|js|py))"?/);
+        const existingScript = existingTarget ? path.basename(existingTarget[1]) : '';
         return existingScript !== scriptName;
       });
     }

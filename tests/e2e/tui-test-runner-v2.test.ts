@@ -28,127 +28,87 @@ afterEach(async () => {
 describe('PLUGIN013: TUI Test Runner V2', () => {
   describe('AI Test Analyst @feature1', () => {
     // PLUGIN013_01
-    it('Analysis tab shows matched pattern with hint', async () => {
-      throw new Error('Not implemented');
-    });
+    it.todo('Analysis tab shows matched pattern with hint');
 
     // PLUGIN013_02
-    it('Analysis tab shows code snippet for failure', async () => {
-      throw new Error('Not implemented');
-    });
+    it.todo('Analysis tab shows code snippet for failure');
 
     // PLUGIN013_03
-    it('Analysis tab handles unknown errors gracefully', async () => {
-      throw new Error('Not implemented');
-    });
+    it.todo('Analysis tab handles unknown errors gracefully');
 
     // PLUGIN013_04
-    it('Analysis tab handles missing source file', async () => {
-      throw new Error('Not implemented');
-    });
+    it.todo('Analysis tab handles missing source file');
   });
 
   // --- @feature2: Clickable File Paths ---
 
   describe('Clickable File Paths @feature2', () => {
     // PLUGIN013_05
-    it('Logs tab renders clickable file paths', async () => {
-      throw new Error('Not implemented');
-    });
+    it.todo('Logs tab renders clickable file paths');
 
     // PLUGIN013_06
-    it('Logs tab renders multiple paths in one line', async () => {
-      throw new Error('Not implemented');
-    });
+    it.todo('Logs tab renders multiple paths in one line');
 
     // PLUGIN013_07
-    it('Clickable path handles missing file without crash', async () => {
-      throw new Error('Not implemented');
-    });
+    it.todo('Clickable path handles missing file without crash');
   });
 
   // --- @feature3: Test Discovery ---
 
   describe('Test Discovery @feature3', () => {
     // PLUGIN013_08
-    it('Discovery shows test tree before run', async () => {
-      throw new Error('Not implemented');
-    });
+    it.todo('Discovery shows test tree before run');
 
     // PLUGIN013_09
-    it('Discovery runs only selected tests', async () => {
-      throw new Error('Not implemented');
-    });
+    it.todo('Discovery runs only selected tests');
 
     // PLUGIN013_10
-    it('Discovery timeout falls back to run all', async () => {
-      throw new Error('Not implemented');
-    });
+    it.todo('Discovery timeout falls back to run all');
   });
 
   // --- @feature4: State Persistence ---
 
   describe('State Persistence @feature4', () => {
     // PLUGIN013_11
-    it('State saves active tab on switch', async () => {
-      throw new Error('Not implemented');
-    });
+    it.todo('State saves active tab on switch');
 
     // PLUGIN013_12
-    it('State restores on startup', async () => {
-      throw new Error('Not implemented');
-    });
+    it.todo('State restores on startup');
 
     // PLUGIN013_13
-    it('Corrupted state file uses defaults', async () => {
-      throw new Error('Not implemented');
-    });
+    it.todo('Corrupted state file uses defaults');
   });
 
   // --- @feature5: Configurable Error Patterns ---
 
   describe('Configurable Error Patterns @feature5', () => {
     // PLUGIN013_14
-    it('User patterns override built-in', async () => {
-      throw new Error('Not implemented');
-    });
+    it.todo('User patterns override built-in');
 
     // PLUGIN013_15
-    it('Invalid regex in user pattern is skipped', async () => {
-      throw new Error('Not implemented');
-    });
+    it.todo('Invalid regex in user pattern is skipped');
 
     // PLUGIN013_16
-    it('Pattern matching uses regex then keywords', async () => {
-      throw new Error('Not implemented');
-    });
+    it.todo('Pattern matching uses regex then keywords');
   });
 
   // --- @feature6: Auto-Run & Keybinding Launch ---
 
   describe('Auto-Run & Keybinding Launch @feature6', () => {
     // PLUGIN013_17
-    it('TUI auto-runs tests with --run flag', async () => {
-      throw new Error('Not implemented');
-    });
+    it.todo('TUI auto-runs tests with --run flag');
 
     // PLUGIN013_18
-    it('Single instance prevents duplicate TUI', async () => {
-      throw new Error('Not implemented');
-    });
+    it.todo('Single instance prevents duplicate TUI');
   });
 
   // --- @feature7: Screenshot/SVG Export ---
 
   describe('Screenshot/SVG Export @feature7', () => {
     // PLUGIN013_19
-    it('Screenshot exports SVG file', async () => {
-      throw new Error('Not implemented');
-    });
+    it.todo('Screenshot exports SVG file');
 
     // PLUGIN013_20
-    it('Screenshot creates directory if missing', async () => {
-      throw new Error('Not implemented');
-    });
+    it.todo('Screenshot creates directory if missing');
   });
 });

@@ -508,7 +508,7 @@ describe('PostInstall: Non-interactive mode and npm ENOTEMPTY resilience', () =>
     // Import the augment function indirectly via testing the installer behavior
     // The Docker test environment has no TTY → isNonInteractive() returns true
     // → configure.py should have been called with --non-interactive
-    const log = getInstallLog();
+    const log = await getInstallLog();
     // In non-interactive mode, configure.py auto-adds all files
     // The hook should complete successfully (not fail on stdin EOF)
     if (log.includes('forbid-root-artifacts')) {
@@ -539,7 +539,7 @@ describe('PostInstall: Non-interactive mode and npm ENOTEMPTY resilience', () =>
   it('should retry npm commands on ENOTEMPTY (not just npx)', async () => {
     // The auto-commit extension uses "npm install --no-save tsx"
     // Previously, retry was gated by command.includes('npx') — now it catches all ENOTEMPTY
-    const log = getInstallLog();
+    const log = await getInstallLog();
     // If auto-commit hook failed, it should show a warning, not a crash
     if (log.includes('auto-commit')) {
       expect(log).not.toContain('unhandled');

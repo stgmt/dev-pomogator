@@ -146,12 +146,9 @@ function generateCursorHooksJson(): CursorHooksJson {
   const workerServicePath = getWorkerServicePath();
   const cursorSummarizePath = getCursorSummarizeScriptPath();
 
-  const validateSpecsPath = getValidateSpecsScriptPath();
-
   // Escape backslashes for JSON on Windows
   const escapedWorkerPath = workerServicePath.replace(/\\/g, '\\\\');
   const escapedSummarizePath = cursorSummarizePath.replace(/\\/g, '\\\\');
-  const escapedValidateSpecsPath = validateSpecsPath.replace(/\\/g, '\\\\');
   
   // Helper to create claude-mem hook command (uses bun because worker-service.cjs requires bun:sqlite)
   const makeClaudeMemHook = (action: string): string => {
@@ -164,7 +161,6 @@ function generateCursorHooksJson(): CursorHooksJson {
       beforeSubmitPrompt: [
         { command: makeClaudeMemHook('session-init') },
         { command: makeClaudeMemHook('context') },
-        { command: makePortableTsxCommand(validateSpecsPath) },  // specs-workflow validator
       ],
       afterMCPExecution: [
         { command: makeClaudeMemHook('observation') },
@@ -179,7 +175,6 @@ function generateCursorHooksJson(): CursorHooksJson {
         // Use our custom wrapper that reads Cursor's SQLite and calls claude-mem API
         // This fixes "Missing transcriptPath" error
         { command: `bun "${escapedSummarizePath}"` },
-        { command: makePortableTsxCommand(getValidateStepsScriptPath()) },  // steps-validator
         { command: makePortableScriptCommand('check-update.js') },  // dev-pomogator updater
       ],
     },
@@ -644,21 +639,6 @@ async function copyCheckUpdateScript(): Promise<void> {
   }
 }
 
-/**
- * Get path to validate-specs script
- * This script validates @featureN tags in .specs/ folders
- */
-function getValidateSpecsScriptPath(): string {
-  return path.join(os.homedir(), '.dev-pomogator', 'scripts', 'specs-validator', 'validate-specs.ts');
-}
-
-/**
- * Get path to validate-steps script
- * This script validates step definitions quality in BDD projects
- */
-function getValidateStepsScriptPath(): string {
-  return path.join(os.homedir(), '.dev-pomogator', 'scripts', 'steps-validator', 'validate-steps.ts');
-}
 
 /**
  * Copy validate-specs script to ~/.dev-pomogator/scripts/specs-validator/
@@ -695,6 +675,7 @@ async function copyValidateSpecsScript(): Promise<void> {
         'completeness.ts',
         'matcher.ts',
         'reporter.ts',
+        'phase-constants.ts',
       ];
       
       for (const file of filesToCopy) {
@@ -1008,26 +989,6 @@ async function areCursorHooksInstalled(): Promise<boolean> {
     
     if (!hasSummarizeWrapper) {
       console.log(chalk.gray('  Hooks exist but cursor-summarize wrapper missing, will reinstall...'));
-      return false;
-    }
-    
-    // Check for validate-specs hook (specs-workflow validator)
-    const expectedValidateSpecsPath = getValidateSpecsScriptPath();
-    const escapedValidateSpecsPath = expectedValidateSpecsPath.replace(/\\/g, '\\\\\\\\');
-    const hasValidateSpecsHook = hooksStr.includes(escapedValidateSpecsPath);
-    
-    if (!hasValidateSpecsHook) {
-      console.log(chalk.gray('  Hooks exist but validate-specs hook missing, will reinstall...'));
-      return false;
-    }
-    
-    // Check for validate-steps hook (steps-validator for BDD)
-    const expectedValidateStepsPath = getValidateStepsScriptPath();
-    const escapedValidateStepsPath = expectedValidateStepsPath.replace(/\\/g, '\\\\\\\\');
-    const hasValidateStepsHook = hooksStr.includes(escapedValidateStepsPath);
-    
-    if (!hasValidateStepsHook) {
-      console.log(chalk.gray('  Hooks exist but validate-steps hook missing, will reinstall...'));
       return false;
     }
     

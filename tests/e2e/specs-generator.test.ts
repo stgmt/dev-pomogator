@@ -549,7 +549,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       expect(result.json).toBeDefined();
       expect(result.json.valid).toBe(true);
 
-      const crossRefWarnings = (result.json.warnings || []).filter(
+      const crossRefWarnings = (Array.isArray(result.json.warnings) ? result.json.warnings : []).filter(
         (w: any) => w.rule === 'CROSS_REF_LINKS'
       );
       expect(crossRefWarnings.length).toBe(0);
@@ -566,7 +566,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
 
       expect(result.json).toBeDefined();
 
-      const crossRefWarnings = (result.json.warnings || []).filter(
+      const crossRefWarnings = (Array.isArray(result.json.warnings) ? result.json.warnings : []).filter(
         (w: any) => w.rule === 'CROSS_REF_LINKS'
       );
       expect(crossRefWarnings.length).toBeGreaterThan(0);
@@ -586,7 +586,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
 
       expect(result.json).toBeDefined();
 
-      const crossRefWarnings = (result.json.warnings || []).filter(
+      const crossRefWarnings = (Array.isArray(result.json.warnings) ? result.json.warnings : []).filter(
         (w: any) => w.rule === 'CROSS_REF_LINKS'
       );
       expect(
@@ -816,7 +816,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
 
       expect(result.json).toBeDefined();
 
-      const placeholderWarnings = (result.json.warnings || []).filter(
+      const placeholderWarnings = (Array.isArray(result.json.warnings) ? result.json.warnings : []).filter(
         (w: any) => w.rule === 'PLACEHOLDER'
       );
       expect(placeholderWarnings.length).toBeGreaterThan(0);
@@ -837,7 +837,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
 
       expect(result.json).toBeDefined();
 
-      const earsWarnings = (result.json.warnings || []).filter(
+      const earsWarnings = (Array.isArray(result.json.warnings) ? result.json.warnings : []).filter(
         (w: any) => w.rule === 'EARS_FORMAT'
       );
       expect(earsWarnings.length).toBeGreaterThan(0);
@@ -858,7 +858,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
 
       expect(result.json).toBeDefined();
 
-      const namingWarnings = (result.json.warnings || []).filter(
+      const namingWarnings = (Array.isArray(result.json.warnings) ? result.json.warnings : []).filter(
         (w: any) => w.rule === 'FEATURE_NAMING'
       );
       expect(namingWarnings.length).toBeGreaterThan(0);
@@ -879,7 +879,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
 
       expect(result.json).toBeDefined();
 
-      const contextWarnings = (result.json.warnings || []).filter(
+      const contextWarnings = (Array.isArray(result.json.warnings) ? result.json.warnings : []).filter(
         (w: any) => w.rule === 'CONTEXT_SECTION'
       );
       expect(contextWarnings.length).toBeGreaterThan(0);

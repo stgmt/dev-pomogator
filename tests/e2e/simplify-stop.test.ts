@@ -227,25 +227,18 @@ describe('Auto-Simplify Stop Hook', () => {
     });
   });
 
-  describe('SKILL.md', () => {
-    const skillPath = 'extensions/auto-simplify/skills/simplify/SKILL.md';
+  describe('Simplify-extended rule', () => {
+    const rulePath = '.claude/rules/simplify-extended.md';
 
     it('should exist', async () => {
-      const exists = await fs.pathExists(appPath(skillPath));
+      const exists = await fs.pathExists(appPath(rulePath));
       expect(exists).toBe(true);
     });
 
-    it('should have correct frontmatter', async () => {
-      const content = await fs.readFile(appPath(skillPath), 'utf-8');
-      expect(content).toContain('name: simplify');
-      expect(content).toContain('allowed-tools:');
-      expect(content).toContain('Read');
-      expect(content).toContain('Edit');
-    });
-
-    it('should describe idempotent behavior', async () => {
-      const content = await fs.readFile(appPath(skillPath), 'utf-8');
-      expect(content.toLowerCase()).toContain('idempotent');
+    it('should cover spec and test review', async () => {
+      const content = await fs.readFile(appPath(rulePath), 'utf-8');
+      expect(content).toContain('Spec-файлы');
+      expect(content).toContain('Test-файлы');
     });
   });
 
@@ -264,11 +257,11 @@ describe('Auto-Simplify Stop Hook', () => {
       expect(manifest.hooks?.claude?.Stop).toContain('simplify_stop.ts');
     });
 
-    it('should declare simplify skill', async () => {
+    it('should not override stock simplify skill', async () => {
       const content = await fs.readFile(appPath(manifestPath), 'utf-8');
       const manifest = JSON.parse(content);
-      expect(manifest.skills?.simplify).toBeDefined();
-      expect(manifest.skillFiles?.simplify).toContain('.claude/skills/simplify/SKILL.md');
+      expect(manifest.skills).toBeUndefined();
+      expect(manifest.skillFiles).toBeUndefined();
     });
 
     it('should declare toolFiles', async () => {

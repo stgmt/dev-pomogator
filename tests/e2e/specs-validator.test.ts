@@ -86,7 +86,7 @@ async function createIncompleteSpec(name: string): Promise<string> {
  * Get path to validate-specs.ts script
  */
 function getValidateSpecsPath(): string {
-  return homePath('.dev-pomogator', 'scripts', 'specs-validator', 'validate-specs.ts');
+  return appPath('.dev-pomogator', 'tools', 'specs-validator', 'validate-specs.ts');
 }
 
 /**
@@ -214,21 +214,18 @@ describe('PLUGIN005: Specs Validator Hook', () => {
 
   // @feature2
   describe('Claude Hook Registration', () => {
-    it('should have validate-specs installed via memory.ts (not extension.json)', async () => {
-      // Note: specs-workflow hooks are installed via memory.ts (hardcoded),
-      // not via extension.json. Check that extension.json has empty hooks.
+    it('should have validate-specs defined in extension.json cursor hooks', async () => {
       const extJsonPath = appPath(
         'extensions',
         'specs-workflow',
         'extension.json'
       );
-      
+
       if (await fs.pathExists(extJsonPath)) {
         const extJson = await fs.readJson(extJsonPath);
-        
-        // Hooks should be empty (installed by memory.ts, not extension.json)
+
         expect(extJson.hooks).toBeDefined();
-        expect(extJson._hooksNote).toContain('memory.ts');
+        expect(extJson.hooks.cursor.beforeSubmitPrompt).toContain('validate-specs');
       }
     });
   });

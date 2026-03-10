@@ -366,7 +366,7 @@ describe('PLUGIN006: Auto-Commit', () => {
       const ext = await fs.readJson(extPath);
       
       expect(ext.name).toBe('auto-commit');
-      expect(ext.version).toBe('2.1.0');
+      expect(ext.version).toBe('2.3.0');
       expect(ext.hooks.cursor.stop).toContain('auto_commit_stop.ts');
       expect(ext.hooks.claude.Stop).toContain('auto_commit_stop.ts');
     });
