@@ -1,0 +1,9 @@
+# Deny everything by default — build context only needs files for COPY instructions
+*
+
+# Allow only what Dockerfile COPY needs:
+#   COPY patches/oculos-atspi2-fix.patch  (line 93)
+#   COPY scripts/entrypoint.sh            (line 131)
+!Dockerfile
+!patches/
+!scripts/entrypoint.sh

@@ -1,0 +1,49 @@
+{
+  "name": "devcontainer",
+  "version": "1.0.0",
+  "description": "Full GUI devcontainer: Claude Code + OculOS + noVNC + Docker-in-Docker + dynamic ports for worktrees",
+  "platforms": ["cursor", "claude"],
+  "category": "infrastructure",
+  "envRequirements": [],
+  "tools": {
+    "devcontainer": "tools/devcontainer"
+  },
+  "toolFiles": {
+    "devcontainer": [
+      ".dev-pomogator/tools/devcontainer/postinstall.ts",
+      ".dev-pomogator/tools/devcontainer/launch-worktree.ps1",
+      ".dev-pomogator/tools/devcontainer/templates/.dockerignore",
+      ".dev-pomogator/tools/devcontainer/templates/devcontainer.json",
+      ".dev-pomogator/tools/devcontainer/templates/docker-compose.yml",
+      ".dev-pomogator/tools/devcontainer/templates/Dockerfile",
+      ".dev-pomogator/tools/devcontainer/templates/start.bat",
+      ".dev-pomogator/tools/devcontainer/templates/stop.bat",
+      ".dev-pomogator/tools/devcontainer/templates/patches/oculos-atspi2-fix.patch",
+      ".dev-pomogator/tools/devcontainer/templates/scripts/auto-snapshot.sh",
+      ".dev-pomogator/tools/devcontainer/templates/scripts/create-stealth-profile.sh",
+      ".dev-pomogator/tools/devcontainer/templates/scripts/entrypoint.sh",
+      ".dev-pomogator/tools/devcontainer/templates/scripts/firefox-wrapper.sh",
+      ".dev-pomogator/tools/devcontainer/templates/scripts/oculos-wrapper.sh",
+      ".dev-pomogator/tools/devcontainer/templates/scripts/open-browser.sh",
+      ".dev-pomogator/tools/devcontainer/templates/scripts/post-create.sh",
+      ".dev-pomogator/tools/devcontainer/templates/scripts/post-start.sh",
+      ".dev-pomogator/tools/devcontainer/templates/scripts/pre-create.sh",
+      ".dev-pomogator/tools/devcontainer/templates/scripts/restore.sh",
+      ".dev-pomogator/tools/devcontainer/templates/scripts/save.sh",
+      ".dev-pomogator/tools/devcontainer/templates/scripts/start-gui.sh",
+      ".dev-pomogator/tools/devcontainer/templates/scripts/update-content.sh"
+    ]
+  },
+  "postInstall": {
+    "cursor": {
+      "command": "npx tsx .dev-pomogator/tools/devcontainer/postinstall.ts",
+      "interactive": true,
+      "skipInCI": true
+    },
+    "claude": {
+      "command": "npx tsx .dev-pomogator/tools/devcontainer/postinstall.ts",
+      "interactive": true,
+      "skipInCI": true
+    }
+  }
+}

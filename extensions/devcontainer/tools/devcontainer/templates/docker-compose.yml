@@ -1,0 +1,46 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ..:/workspaces/{{PROJECT_NAME}}:cached
+      - /var/run/docker.sock:/var/run/docker.sock
+      - {{PROJECT_NAME}}-home:/home/vscode
+      - "${HOST_REPOS_PATH:-{{HOST_REPOS_PATH}}}:/mnt/repos:cached"
+    cap_add:
+      - SYS_ADMIN     # mount --bind (entrypoint.sh worktree fix)
+      - NET_ADMIN      # sysctl (post-start.sh TCP/IP fingerprint)
+      - SYS_PTRACE     # debugging (strace, gdb)
+    security_opt:
+      - seccomp=unconfined    # Chromium sandbox (clone/unshare syscalls)
+      - no-new-privileges:false
+    sysctls:
+      - net.ipv4.ip_default_ttl=128
+      - net.ipv6.conf.all.disable_ipv6=1
+      - net.ipv6.conf.default.disable_ipv6=1
+    ports:
+      - "${HOST_NOVNC_PORT:-6080}:6080"
+      - "${HOST_VNC_PORT:-5900}:5900"
+    environment:
+      DEVCONTAINER: "true"
+      CLAUDE_CONFIG_DIR: /home/vscode/.claude
+    user: vscode
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'Xvfb :1' && pgrep -f x11vnc && pgrep -f novnc_proxy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          memory: 8g
+          cpus: '4.0'
+        reservations:
+          memory: 2g
+          cpus: '1.0'
+    restart: unless-stopped
+
+volumes:
+  {{PROJECT_NAME}}-home:

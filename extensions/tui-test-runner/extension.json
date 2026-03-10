@@ -1,0 +1,73 @@
+{
+  "name": "tui-test-runner",
+  "version": "1.1.0",
+  "description": "Rich 4-tab TUI test runner with Python Textual UI, universal framework adapters, /run-tests skill, and test-guard hook",
+  "platforms": ["claude"],
+  "category": "automation",
+  "files": {
+    "claude": []
+  },
+  "rules": {
+    "centralized-test-runner": "centralized-test-runner.md"
+  },
+  "tools": {
+    "tui-test-runner": "tools/tui-test-runner"
+  },
+  "toolFiles": [
+    "launcher.ts",
+    "config.ts",
+    "dispatch.ts",
+    "tui_session_start.ts",
+    "test_guard.ts",
+    "yaml_writer.ts",
+    "adapters/types.ts",
+    "adapters/adapter_base.ts",
+    "adapters/vitest_adapter.ts",
+    "adapters/jest_adapter.ts",
+    "adapters/pytest_adapter.ts",
+    "adapters/dotnet_adapter.ts",
+    "tui/pyproject.toml",
+    "tui/__main__.py",
+    "tui/app.py",
+    "tui/models.py",
+    "tui/yaml_reader.py",
+    "tui/log_reader.py",
+    "tui/widgets/tests_tab.py",
+    "tui/widgets/logs_tab.py",
+    "tui/widgets/monitoring_tab.py",
+    "tui/widgets/analysis_tab.py"
+  ],
+  "skills": {
+    "run-tests": "skills/run-tests"
+  },
+  "skillFiles": {
+    "run-tests": [
+      ".claude/skills/run-tests/SKILL.md"
+    ]
+  },
+  "hooks": [
+    {
+      "event": "SessionStart",
+      "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner.js'))\" -- \".dev-pomogator/tools/tui-test-runner/tui_session_start.ts\""
+    },
+    {
+      "event": "PreToolUse",
+      "matcher": "Bash",
+      "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner.js'))\" -- \".dev-pomogator/tools/tui-test-runner/test_guard.ts\""
+    }
+  ],
+  "envRequirements": [
+    {
+      "name": "TUI_TEST_RUNNER_ENABLED",
+      "required": false,
+      "default": "true",
+      "description": "Enable/disable TUI test runner extension"
+    },
+    {
+      "name": "TUI_TEST_FRAMEWORK",
+      "required": false,
+      "default": "auto",
+      "description": "Test framework: vitest|jest|pytest|dotnet|rust|go|auto"
+    }
+  ]
+}

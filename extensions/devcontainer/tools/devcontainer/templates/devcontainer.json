@@ -1,0 +1,58 @@
+{
+  "name": "{{PROJECT_NAME}} (Claude Code + Desktop)",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "{{WORKSPACE_FOLDER}}",
+  "shutdownAction": "stopCompose",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "files.watcherExclude": {
+          "**/node_modules/**": true,
+          "**/.git/objects/**": true,
+          "**/.git/subtree-cache/**": true,
+          "**/__pycache__/**": true,
+          "**/content/posts/**/media/**": true,
+          "**/content/posts/**/media-hq/**": true,
+          "**/.devcontainer/snapshots/**": true
+        },
+        "search.exclude": {
+          "**/node_modules": true,
+          "**/__pycache__": true,
+          "**/legacy/**": true,
+          "**/.devcontainer/snapshots/**": true
+        },
+        "editor.formatOnSave": true,
+        "terminal.integrated.defaultProfile.linux": "zsh"
+      },
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "ms-python.python",
+        "ms-azuretools.vscode-docker",
+        "eamodio.gitlens",
+        "mhutchie.git-graph",
+        "streetsidesoftware.code-spell-checker",
+        "streetsidesoftware.code-spell-checker-russian"
+      ]
+    }
+  },
+  "features": {},
+  "forwardPorts": [6080, 5900],
+  "portsAttributes": {
+    "6080": {
+      "label": "Desktop (noVNC)",
+      "onAutoForward": "openBrowserOnce"
+    },
+    "5900": {
+      "label": "VNC Direct",
+      "onAutoForward": "ignore"
+    }
+  },
+  "onCreateCommand": "bash .devcontainer/scripts/pre-create.sh",
+  "postCreateCommand": "bash .devcontainer/scripts/post-create.sh",
+  "postStartCommand": "cd {{WORKSPACE_FOLDER}} && bash .devcontainer/scripts/post-start.sh",
+  "remoteUser": "vscode",
+  "containerUser": "vscode",
+  "overrideCommand": false
+}
