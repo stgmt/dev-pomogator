@@ -1,7 +1,7 @@
 // Auto-Capture Learnings — Atomic Queue Operations
 // Reuse patterns: src/updater/lock.ts (flag 'wx'), src/config/index.ts (atomic write)
 
-import fs from 'fs-extra';
+import { promises as nodeFs } from 'node:fs';
 import path from 'path';
 import { createHash, randomUUID } from 'node:crypto';
 import type { Queue, QueueEntry, Signal, HookSource, Platform, EntryStatus } from './types.js';
@@ -49,10 +49,10 @@ function emptyQueue(): Queue {
 
 export async function writeQueueAtomic(projectPath: string, queue: Queue): Promise<void> {
   const filePath = queuePath(projectPath);
-  await fs.ensureDir(path.dirname(filePath));
+  await nodeFs.mkdir(path.dirname(filePath), { recursive: true });
   const tmpPath = filePath + '.tmp';
-  await fs.writeJson(tmpPath, queue, { spaces: 2 });
-  await fs.move(tmpPath, filePath, { overwrite: true });
+  await nodeFs.writeFile(tmpPath, JSON.stringify(queue, null, 2));
+  await nodeFs.rename(tmpPath, filePath);
 }
 
 // ---------------------------------------------------------------------------
@@ -61,10 +61,10 @@ export async function writeQueueAtomic(projectPath: string, queue: Queue): Promi
 
 export async function acquireLock(projectPath: string): Promise<void> {
   const lp = lockPath(projectPath);
-  await fs.ensureDir(path.dirname(lp));
+  await nodeFs.mkdir(path.dirname(lp), { recursive: true });
 
   try {
-    await fs.writeFile(lp, process.pid.toString(), { flag: 'wx' });
+    await nodeFs.writeFile(lp, process.pid.toString(), { flag: 'wx' });
     return;
   } catch (error) {
     if ((error as NodeJS.ErrnoException)?.code !== 'EEXIST') {
@@ -74,16 +74,16 @@ export async function acquireLock(projectPath: string): Promise<void> {
 
   // Lock exists — check if stale
   try {
-    const stat = await fs.stat(lp);
+    const stat = await nodeFs.stat(lp);
     if (Date.now() - stat.mtimeMs > LOCK_STALE_TIMEOUT_MS) {
-      await fs.remove(lp);
-      await fs.writeFile(lp, process.pid.toString(), { flag: 'wx' });
+      await nodeFs.unlink(lp);
+      await nodeFs.writeFile(lp, process.pid.toString(), { flag: 'wx' });
       return;
     }
   } catch {
     // stat failed — try creating again
     try {
-      await fs.writeFile(lp, process.pid.toString(), { flag: 'wx' });
+      await nodeFs.writeFile(lp, process.pid.toString(), { flag: 'wx' });
       return;
     } catch {
       // ignore
@@ -95,7 +95,7 @@ export async function acquireLock(projectPath: string): Promise<void> {
 
 export async function releaseLock(projectPath: string): Promise<void> {
   try {
-    await fs.remove(lockPath(projectPath));
+    await nodeFs.unlink(lockPath(projectPath));
   } catch {
     // Ignore errors on release
   }
@@ -107,12 +107,16 @@ export async function releaseLock(projectPath: string): Promise<void> {
 
 export async function readQueue(projectPath: string): Promise<Queue> {
   const filePath = queuePath(projectPath);
-  if (!(await fs.pathExists(filePath))) {
+
+  let raw: string;
+  try {
+    raw = await nodeFs.readFile(filePath, 'utf-8');
+  } catch {
     return emptyQueue();
   }
 
   try {
-    const data = await fs.readJson(filePath);
+    const data = JSON.parse(raw);
     if (data && typeof data.version === 'number' && Array.isArray(data.entries)) {
       return data as Queue;
     }
@@ -120,7 +124,7 @@ export async function readQueue(projectPath: string): Promise<Queue> {
   } catch {
     // Corrupted JSON — backup and return empty
     try {
-      await fs.move(filePath, filePath + '.bak', { overwrite: true });
+      await nodeFs.rename(filePath, filePath + '.bak');
     } catch {
       // ignore backup failure
     }

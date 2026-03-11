@@ -2,8 +2,12 @@
 // Called by capture.ts for Stop hook event
 // Fallback: regex-only if LLM unavailable or disabled
 
-import fs from 'fs-extra';
+import { promises as nodeFs } from 'node:fs';
 import type { Signal } from './types.js';
+
+async function pathExists(p: string): Promise<boolean> {
+  try { await nodeFs.access(p); return true; } catch { return false; }
+}
 import { TRIGGER_TYPES, MAX_SIGNAL_LENGTH, MAX_CONTEXT_LENGTH } from './types.js';
 
 // ---------------------------------------------------------------------------
@@ -122,11 +126,11 @@ async function callLLM(messages: LLMMessage[]): Promise<string | null> {
 // ---------------------------------------------------------------------------
 
 export async function readTranscriptText(transcriptPath: string): Promise<string> {
-  if (!(await fs.pathExists(transcriptPath))) {
+  if (!(await pathExists(transcriptPath))) {
     return '';
   }
 
-  const raw = await fs.readFile(transcriptPath, 'utf-8');
+  const raw = await nodeFs.readFile(transcriptPath, 'utf-8');
   const lines = raw.trim().split('\n').filter(Boolean);
 
   // Take last N messages

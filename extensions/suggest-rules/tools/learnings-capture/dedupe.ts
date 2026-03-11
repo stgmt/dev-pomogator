@@ -2,8 +2,12 @@
 // Used by suggest-rules Phase 2.5 (queue-based candidate overlap)
 // and Phase 6 (pairwise rule merge candidates)
 
-import fs from 'fs-extra';
+import { promises as nodeFs } from 'node:fs';
 import path from 'path';
+
+async function pathExists(p: string): Promise<boolean> {
+  try { await nodeFs.access(p); return true; } catch { return false; }
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -75,12 +79,12 @@ function computeOverlap(set1: Set<string>, set2: Set<string>): number {
 // ---------------------------------------------------------------------------
 
 async function findRuleFiles(rulesDir: string): Promise<string[]> {
-  if (!(await fs.pathExists(rulesDir))) return [];
+  if (!(await pathExists(rulesDir))) return [];
 
   const files: string[] = [];
 
   async function walk(dir: string): Promise<void> {
-    const entries = await fs.readdir(dir, { withFileTypes: true });
+    const entries = await nodeFs.readdir(dir, { withFileTypes: true });
     for (const entry of entries) {
       const fullPath = path.join(dir, entry.name);
       if (entry.isDirectory()) {
@@ -114,7 +118,7 @@ export async function checkOverlap(
   let maxFile: string | undefined;
 
   for (const file of ruleFiles) {
-    const content = await fs.readFile(file, 'utf-8');
+    const content = await nodeFs.readFile(file, 'utf-8');
     const ruleKeywords = extractKeywords(content);
     const overlap = computeOverlap(candidateKeywords, ruleKeywords);
 
@@ -146,7 +150,7 @@ export async function findMergeCandidates(
   // Pre-compute keywords for all files
   const fileKeywords = new Map<string, Set<string>>();
   for (const file of ruleFiles) {
-    const content = await fs.readFile(file, 'utf-8');
+    const content = await nodeFs.readFile(file, 'utf-8');
     fileKeywords.set(file, extractKeywords(content));
   }
 
