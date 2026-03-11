@@ -250,8 +250,27 @@ async function main() {
     return;
   }
 
+  // Early exit if .devcontainer/ already exists (idempotency on reinstall)
+  const forceReconfigure = process.argv.includes('--reconfigure') ||
+                            process.env.DEVCONTAINER_RECONFIGURE === '1';
+  const devcontainerDir = path.join(projectRoot, '.devcontainer');
+
+  if (fs.existsSync(devcontainerDir) && !forceReconfigure) {
+    console.log('\n  DevContainer already configured at .devcontainer/, skipping.');
+    console.log('  To reconfigure, set DEVCONTAINER_RECONFIGURE=1 or pass --reconfigure');
+    return;
+  }
+
   console.log('\n  DevContainer Setup');
   console.log('  ==================\n');
+
+  // Check for existing .devcontainer/ (only reached with --reconfigure)
+  const mergeResult = await migrateExisting(projectRoot);
+  // mergeResult === null: either no existing dir OR user declined migration
+  // If declined and .devcontainer still exists (not moved to backup), skip entirely
+  if (mergeResult === null && fs.existsSync(devcontainerDir)) {
+    return;
+  }
 
   // Auto-detect parameters
   const defaultName = detectProjectName();
@@ -270,14 +289,6 @@ async function main() {
     HOST_VNC_PORT: vncPort,
     VOLUME_NAME: `${projectName}-home`,
   };
-
-  // Check for existing .devcontainer/
-  const mergeResult = await migrateExisting(projectRoot);
-  // mergeResult === null: either no existing dir OR user declined migration
-  // If declined and .devcontainer still exists (not moved to backup), skip entirely
-  if (mergeResult === null && fs.existsSync(path.join(projectRoot, '.devcontainer'))) {
-    return;
-  }
 
   // Copy templates to .devcontainer/
   const destDir = path.join(projectRoot, '.devcontainer');
