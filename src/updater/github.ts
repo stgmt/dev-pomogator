@@ -29,6 +29,9 @@ export interface ExtensionManifest {
     cursor?: Record<string, string>;
     claude?: Record<string, string>;
   };
+  statusLine?: {
+    claude?: { type: string; command: string };
+  };
   postUpdate?: {
     command: string;
     interactive?: boolean;
@@ -47,19 +50,27 @@ export interface ExtensionManifest {
   };
 }
 
+const FETCH_TIMEOUT_MS = 15000;
+
 async function fetchWithRetry(url: string): Promise<Response | null> {
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
       const response = await fetch(url, {
         headers: { 'User-Agent': 'dev-pomogator' },
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       });
-      if (!response.ok) return null;
+      if (!response.ok) {
+        console.log(`  ⚠ HTTP ${response.status} for ${url}`);
+        return null;
+      }
       return response;
-    } catch {
+    } catch (error) {
       if (attempt < MAX_RETRIES) {
         await new Promise(r => setTimeout(r, RETRY_DELAY_MS * attempt));
         continue;
       }
+      const message = error instanceof Error ? error.message : String(error);
+      console.log(`  ⚠ Fetch failed for ${url}: ${message}`);
       return null;
     }
   }

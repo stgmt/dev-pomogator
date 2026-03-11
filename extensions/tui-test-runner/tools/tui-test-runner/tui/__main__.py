@@ -5,20 +5,27 @@ Singleton instance management, CLI args, launch Textual app.
 
 import argparse
 import os
+import re
 import sys
 import signal
 from pathlib import Path
 
 
-LOCK_FILE = Path.home() / ".tui-test-runner.lock"
+def get_lock_file(status_file: str) -> Path:
+    """Get per-session lock file path from status file name."""
+    match = re.search(r'status\.(.+)\.yaml$', os.path.basename(status_file))
+    if match:
+        session = match.group(1)
+        return Path.home() / f".tui-test-runner.{session}.lock"
+    return Path.home() / ".tui-test-runner.lock"
 
 
-def is_already_running() -> bool:
+def is_already_running(lock_file: Path) -> bool:
     """Check if another instance is running via lock file."""
-    if not LOCK_FILE.exists():
+    if not lock_file.exists():
         return False
     try:
-        pid = int(LOCK_FILE.read_text().strip())
+        pid = int(lock_file.read_text().strip())
         # Check if process alive
         if sys.platform == "win32":
             import ctypes
@@ -27,22 +34,22 @@ def is_already_running() -> bool:
             if handle:
                 kernel32.CloseHandle(handle)
                 return True
-            return False
         else:
             os.kill(pid, 0)
             return True
     except (ValueError, OSError, ProcessLookupError):
-        # Stale lock file
-        LOCK_FILE.unlink(missing_ok=True)
-        return False
+        pass
+    # Stale or unreadable lock file — clean up
+    lock_file.unlink(missing_ok=True)
+    return False
 
 
-def acquire_lock() -> None:
-    LOCK_FILE.write_text(str(os.getpid()))
+def acquire_lock(lock_file: Path) -> None:
+    lock_file.write_text(str(os.getpid()))
 
 
-def release_lock() -> None:
-    LOCK_FILE.unlink(missing_ok=True)
+def release_lock(lock_file: Path) -> None:
+    lock_file.unlink(missing_ok=True)
 
 
 def main() -> None:
@@ -56,11 +63,13 @@ def main() -> None:
     parser.add_argument("--no-single-instance", action="store_true", help="Allow multiple instances")
     args = parser.parse_args()
 
-    if not args.no_single_instance and is_already_running():
-        print("TUI Test Runner is already running. Use --no-single-instance to override.", file=sys.stderr)
+    lock_file = get_lock_file(args.status_file)
+
+    if not args.no_single_instance and is_already_running(lock_file):
+        print("TUI Test Runner is already running for this session. Use --no-single-instance to override.", file=sys.stderr)
         sys.exit(0)
 
-    acquire_lock()
+    acquire_lock(lock_file)
 
     # Force color support (override NO_COLOR from IDEs)
     os.environ.pop("NO_COLOR", None)
@@ -79,7 +88,7 @@ def main() -> None:
         )
         app.run()
     finally:
-        release_lock()
+        release_lock(lock_file)
 
 
 if __name__ == "__main__":

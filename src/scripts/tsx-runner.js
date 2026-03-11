@@ -3,9 +3,10 @@
  * tsx-runner.js — Resilient TypeScript runner with multi-strategy fallback.
  *
  * Execution order (first success wins):
- *   1. Local tsx: node_modules/.bin/tsx (no npx dependency)
- *   2. npx tsx (standard approach)
- *   3. On npx error → clean cache → npm install (repair) → retry npx
+ *   1.  Local tsx: node_modules/.bin/tsx (no npx dependency)
+ *   1.5 Global tsx: tsx on PATH (e.g. installed globally via npm i -g tsx)
+ *   2.  npx tsx (standard approach)
+ *   3.  On npx error → clean cache → npm install (repair) → retry npx
  *
  * On Windows, the npx _npx/ cache directory can become corrupted
  * (ENOTEMPTY, MODULE_NOT_FOUND), causing all tsx-based hooks to fail.
@@ -214,6 +215,34 @@ function runLocalTsx() {
 }
 
 /**
+ * Strategy 1.5: Run tsx from global PATH (e.g. `npm i -g tsx`).
+ * Returns true if successful, false if tsx not on PATH.
+ * Throws on execution error (script error, not tsx-not-found).
+ */
+function runGlobalTsx() {
+  try {
+    execSync('tsx --version', {
+      stdio: 'pipe',
+      timeout: 5000,
+      env: getSafeEnv(),
+      shell: true,
+    });
+  } catch {
+    return false;
+  }
+
+  const cmd = ['tsx', scriptPath, ...scriptArgs].map(p => `"${p}"`).join(' ');
+  execSync(cmd, {
+    stdio: 'inherit',
+    cwd: process.cwd(),
+    env: getSafeEnv(),
+    timeout: 120000,
+    shell: true,
+  });
+  return true;
+}
+
+/**
  * Strategy 2: Run tsx via npx (standard approach).
  */
 function runNpxTsx() {
@@ -249,13 +278,21 @@ function repairNpmSync() {
   }
 }
 
-// Main: Strategy 1 (local tsx) → Strategy 2 (npx tsx) → Strategy 3 (clean + repair + retry npx)
+// Main: Strategy 1 (local) → 1.5 (global) → 2 (npx) → 3 (clean + repair + retry npx)
 try {
   // Strategy 1: direct local tsx — bypasses npx entirely
   if (runLocalTsx()) process.exit(0);
 } catch (localError) {
   // Local tsx found but script failed — this is a real error, not a fallback case
   process.exit(localError.status || 1);
+}
+
+try {
+  // Strategy 1.5: global tsx on PATH (e.g. npm i -g tsx)
+  if (runGlobalTsx()) process.exit(0);
+} catch (globalError) {
+  // Global tsx found but script failed — real error
+  process.exit(globalError.status || 1);
 }
 
 try {

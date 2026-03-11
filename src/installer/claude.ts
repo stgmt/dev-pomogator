@@ -3,7 +3,7 @@ import path from 'path';
 import os from 'os';
 import chalk from 'chalk';
 import { fileURLToPath } from 'url';
-import { listExtensions, getExtensionFiles, getExtensionRules, getExtensionTools, getExtensionSkills, getExtensionHooks, runPostInstallHook, cleanStaleNodeModulesDirs, Extension } from './extensions.js';
+import { listExtensions, getExtensionFiles, getExtensionRules, getExtensionTools, getExtensionSkills, getExtensionHooks, getExtensionStatusLine, runPostInstallHook, cleanStaleNodeModulesDirs, Extension } from './extensions.js';
 import type { ManagedFileEntry, ManagedFiles } from '../config/schema.js';
 import { findRepoRoot } from '../utils/repo.js';
 import { detectMangledArtifacts } from '../utils/msys.js';
@@ -460,6 +460,33 @@ async function installExtensionHooks(repoRoot: string, extensions: Extension[]):
 
   if (Object.keys(envSection).length > 0) {
     settings.env = envSection;
+  }
+
+  // Install statusLine config from extensions (first one wins)
+  for (const ext of extensions) {
+    const statusLineConfig = getExtensionStatusLine(ext, 'claude');
+    if (!statusLineConfig) continue;
+
+    const existing = settings.statusLine as { type?: string; command?: string } | undefined;
+    if (existing?.command && !existing.command.includes('.dev-pomogator/tools/')) {
+      // User-defined statusLine — preserve it, warn
+      console.log(chalk.yellow(`  ⚠  statusLine уже настроен пользователем — пропускаю (${ext.name})`));
+      break;
+    }
+
+    // Resolve relative path to absolute for the command
+    const rawCommand = statusLineConfig.command;
+    const command = rawCommand.replace(
+      /\.dev-pomogator\/tools\//,
+      `${repoRoot.replace(/\\/g, '/')}/.dev-pomogator/tools/`
+    );
+
+    settings.statusLine = {
+      type: statusLineConfig.type,
+      command,
+    };
+    console.log(`  ✓ Installed statusLine (${ext.name})`);
+    break; // Only one statusLine allowed
   }
 
   // Write settings atomically (backup + temp + move)

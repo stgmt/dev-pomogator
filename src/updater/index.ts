@@ -381,7 +381,7 @@ async function updateCursorHooksForProject(
   }
 
   await fs.ensureDir(hooksDir);
-  await fs.writeJson(hooksFile, existingHooks, { spaces: 2 });
+  await writeJsonAtomic(hooksFile, existingHooks);
 
   return nextManagedHooks;
 }
@@ -479,6 +479,36 @@ async function updateClaudeHooksForProject(
   await writeJsonAtomic(settingsPath, settings);
 
   return nextManagedHooks;
+}
+
+/**
+ * Update statusLine config in project .claude/settings.json
+ * Managed statusLine (contains .dev-pomogator/tools/) is overwritten; user-defined is preserved
+ */
+async function updateClaudeStatusLineForProject(
+  repoRoot: string,
+  statusLineConfig: { type: string; command: string }
+): Promise<void> {
+  const settingsPath = path.join(repoRoot, '.claude', 'settings.json');
+  const settings = await readJsonSafe<Record<string, unknown>>(settingsPath, {});
+
+  const existing = settings.statusLine as { type?: string; command?: string } | undefined;
+  if (existing?.command && !existing.command.includes('.dev-pomogator/tools/')) {
+    // User-defined — don't touch
+    return;
+  }
+
+  const command = statusLineConfig.command.replace(
+    /\.dev-pomogator\/tools\//,
+    `${repoRoot.replace(/\\/g, '/')}/.dev-pomogator/tools/`
+  );
+
+  settings.statusLine = {
+    type: statusLineConfig.type,
+    command,
+  };
+
+  await writeJsonAtomic(settingsPath, settings);
 }
 
 export async function checkUpdate(options: UpdateOptions = {}): Promise<boolean> {
@@ -623,6 +653,11 @@ export async function checkUpdate(options: UpdateOptions = {}): Promise<boolean>
               : await updateClaudeHooksForProject(projectPath, hooks, previousHooks);
             managedEntry.hooks = updatedHooks;
 
+            // Update statusLine config for Claude platform extensions
+            if (installed.platform === 'claude' && remote.statusLine?.claude) {
+              await updateClaudeStatusLineForProject(projectPath, remote.statusLine.claude);
+            }
+
             if (remote.postUpdate) {
               await runPostUpdateHook(remote, projectPath, installed.platform, true);
             }
@@ -630,7 +665,7 @@ export async function checkUpdate(options: UpdateOptions = {}): Promise<boolean>
             if (error instanceof PostUpdateHookError) {
               throw error;
             }
-            // Пропустить недоступные проекты
+            console.log(`  ⚠ Update failed for project ${projectPath}: ${error instanceof Error ? error.message : error}`);
           }
         }
 

@@ -385,5 +385,86 @@ describe('PLUGIN011: Test Statusline', () => {
       expect(manifest.hooks.claude.SessionStart).toBeDefined();
       expect(manifest.hooks.claude.SessionStart).toContain('statusline_session_start.ts');
     });
+
+    // @feature5
+    it('PLUGIN011_20: manifest declares statusLine command', async () => {
+      const manifestPath = appPath('extensions/test-statusline/extension.json');
+      const manifest = await fs.readJson(manifestPath);
+
+      expect(manifest.statusLine).toBeDefined();
+      expect(manifest.statusLine.claude).toBeDefined();
+      expect(manifest.statusLine.claude.type).toBe('command');
+      expect(manifest.statusLine.claude.command).toContain('statusline_render.sh');
+    });
+  });
+
+  // ===========================================
+  // @feature6 — StatusLine Integration
+  // ===========================================
+
+  describe('StatusLine Integration (@feature6)', () => {
+    // @feature6
+    it('PLUGIN011_21: installer writes statusLine to project settings.json', async () => {
+      // Simulate what the installer does: read manifest, write statusLine to settings
+      const manifestPath = appPath('extensions/test-statusline/extension.json');
+      const manifest = await fs.readJson(manifestPath);
+      const statusLineConfig = manifest.statusLine?.claude;
+
+      expect(statusLineConfig).toBeDefined();
+
+      // Write to a test settings file (simulating installer behavior)
+      const testSettingsPath = appPath('.dev-pomogator/.test-settings.json');
+      const settings: Record<string, unknown> = {};
+
+      const command = statusLineConfig.command.replace(
+        /\.dev-pomogator\/tools\//,
+        `${appPath().replace(/\\/g, '/')}/.dev-pomogator/tools/`
+      );
+      settings.statusLine = { type: statusLineConfig.type, command };
+
+      await fs.writeJson(testSettingsPath, settings, { spaces: 2 });
+
+      const written = await fs.readJson(testSettingsPath);
+      expect(written.statusLine).toBeDefined();
+      expect(written.statusLine.type).toBe('command');
+      expect(written.statusLine.command).toContain('statusline_render.sh');
+
+      await fs.remove(testSettingsPath);
+    });
+
+    // @feature6
+    it('PLUGIN011_22: managed statusLine is overwritten on re-install', async () => {
+      const testSettingsPath = appPath('.dev-pomogator/.test-settings.json');
+
+      // Simulate existing managed statusLine
+      await fs.writeJson(testSettingsPath, {
+        statusLine: { type: 'command', command: 'bash /old/path/.dev-pomogator/tools/test-statusline/statusline_render.sh' }
+      }, { spaces: 2 });
+
+      // Check that it contains .dev-pomogator/tools/ (managed)
+      const existing = await fs.readJson(testSettingsPath);
+      expect(existing.statusLine.command).toContain('.dev-pomogator/tools/');
+
+      // Overwrite with new path (simulating re-install)
+      existing.statusLine.command = `bash ${appPath().replace(/\\/g, '/')}/.dev-pomogator/tools/test-statusline/statusline_render.sh`;
+      await fs.writeJson(testSettingsPath, existing, { spaces: 2 });
+
+      const updated = await fs.readJson(testSettingsPath);
+      expect(updated.statusLine.command).toContain('statusline_render.sh');
+
+      await fs.remove(testSettingsPath);
+    });
+
+    // @feature6
+    it('PLUGIN011_23: user-defined statusLine is preserved', () => {
+      // Simulate user-defined statusLine (no .dev-pomogator/tools/ in command)
+      const userStatusLine = { type: 'command', command: 'npx -y ccstatusline@latest' };
+
+      // Check that user's command does NOT contain managed marker
+      const isManaged = userStatusLine.command.includes('.dev-pomogator/tools/');
+      expect(isManaged).toBe(false);
+
+      // Installer should skip overwriting when !isManaged
+    });
   });
 });

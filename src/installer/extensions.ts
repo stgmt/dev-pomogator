@@ -56,6 +56,10 @@ export interface Extension {
   };
   // IDE hooks to install
   hooks?: ExtensionHooks;
+  // Claude Code statusLine command (renders persistent status bar)
+  statusLine?: {
+    claude?: { type: string; command: string };
+  };
   // Post-install hook to run after extension is installed
   // Can be a single hook or platform-specific hooks
   postInstall?: PostInstallHook | {
@@ -194,6 +198,17 @@ export function getExtensionHooks(
   platform: 'cursor' | 'claude'
 ): Record<string, HookValue> {
   return extension.hooks?.[platform] || {};
+}
+
+/**
+ * Get statusLine config from extension for a specific platform
+ */
+export function getExtensionStatusLine(
+  extension: Extension,
+  platform: 'cursor' | 'claude'
+): { type: string; command: string } | null {
+  if (platform !== 'claude') return null;
+  return extension.statusLine?.claude ?? null;
 }
 
 /**
