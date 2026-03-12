@@ -1,13 +1,14 @@
 import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
+import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import { listExtensions, getExtensionFiles, getExtensionRules, getExtensionTools, getExtensionHooks, runPostInstallHook, cleanStaleNodeModulesDirs, Extension } from './extensions.js';
 import type { ManagedFileEntry, ManagedFiles } from '../config/schema.js';
 import { findRepoRoot } from '../utils/repo.js';
 import { RULES_SUBFOLDER, TOOLS_DIR } from '../constants.js';
 import { getFileHash } from '../updater/content-hash.js';
-import { collectFileHashes, addProjectPaths, resolveHookToolPaths, replaceNpxTsxWithPortable } from './shared.js';
+import { collectFileHashes, addProjectPaths, resolveHookToolPaths, replaceNpxTsxWithPortable, ensureExecutableShellScripts } from './shared.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -126,6 +127,7 @@ export async function installCursor(options: CursorOptions): Promise<void> {
       if (await fs.pathExists(toolPath)) {
         const dest = path.join(repoRoot, TOOLS_DIR, toolName);
         await fs.copy(toolPath, dest, { overwrite: true });
+        await ensureExecutableShellScripts(dest);
         console.log(`  ✓ Installed tool: ${toolName}/`);
 
         // Hash all files in the tool directory
@@ -331,6 +333,40 @@ async function setupGlobalScripts(): Promise<void> {
     await fs.copy(tsxRunnerSrc, tsxRunnerDest, { overwrite: true });
   } else {
     console.log('  ⚠ tsx-runner.js not found. Run "npm run build" first.');
+  }
+
+  // Ensure tsx is available at ~/.dev-pomogator/node_modules/.bin/tsx (cross-platform)
+  // This makes hooks work in ANY project, even those without local tsx or working npx
+  await ensureHomeTsx(path.join(homeDir, '.dev-pomogator'));
+}
+
+/**
+ * Install tsx into ~/.dev-pomogator/ so tsx-runner.js can always find it.
+ * Non-fatal: if npm install fails, tsx-runner still falls back to global/npx strategies.
+ */
+async function ensureHomeTsx(devPomogatorDir: string): Promise<void> {
+  const binName = process.platform === 'win32' ? 'tsx.cmd' : 'tsx';
+  const tsxBin = path.join(devPomogatorDir, 'node_modules', '.bin', binName);
+
+  // Skip if already installed
+  if (await fs.pathExists(tsxBin)) return;
+
+  const pkgJsonPath = path.join(devPomogatorDir, 'package.json');
+  if (!await fs.pathExists(pkgJsonPath)) {
+    await fs.writeJson(pkgJsonPath, {
+      private: true,
+      dependencies: { tsx: '^4.0.0' },
+    }, { spaces: 2 });
+  }
+
+  try {
+    execSync('npm install --no-audit --no-fund --ignore-scripts', {
+      cwd: devPomogatorDir,
+      stdio: 'pipe',
+      timeout: 60000,
+    });
+  } catch {
+    // Non-fatal — tsx-runner still has global/npx fallbacks
   }
 }
 

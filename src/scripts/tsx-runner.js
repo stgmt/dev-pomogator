@@ -3,10 +3,11 @@
  * tsx-runner.js — Resilient TypeScript runner with multi-strategy fallback.
  *
  * Execution order (first success wins):
- *   1.  Local tsx: node_modules/.bin/tsx (no npx dependency)
- *   1.5 Global tsx: tsx on PATH (e.g. installed globally via npm i -g tsx)
- *   2.  npx tsx (standard approach)
- *   3.  On npx error → clean cache → npm install (repair) → retry npx
+ *   1.    Local tsx: node_modules/.bin/tsx (no npx dependency)
+ *   1.25  Home tsx: ~/.dev-pomogator/node_modules/.bin/tsx (user-level, cross-platform)
+ *   1.5   Global tsx: tsx on PATH (e.g. installed globally via npm i -g tsx)
+ *   2.    npx tsx (standard approach)
+ *   3.    On npx error → clean cache → npm install (repair) → retry npx
  *
  * On Windows, the npx _npx/ cache directory can become corrupted
  * (ENOTEMPTY, MODULE_NOT_FOUND), causing all tsx-based hooks to fail.
@@ -182,6 +183,39 @@ function findLocalTsx() {
 }
 
 /**
+ * Strategy 1.25: Find tsx in ~/.dev-pomogator/node_modules/.bin/
+ * User-level tsx installed by dev-pomogator installer — works regardless
+ * of which project is active, cross-platform (Windows/Linux/Mac).
+ */
+function findHomeTsx() {
+  const homeDir = require('os').homedir();
+  const binName = process.platform === 'win32' ? 'tsx.cmd' : 'tsx';
+  const candidate = path.join(homeDir, '.dev-pomogator', 'node_modules', '.bin', binName);
+  if (fs.existsSync(candidate)) return candidate;
+  return null;
+}
+
+/**
+ * Strategy 1.25: Run tsx from ~/.dev-pomogator/node_modules/.bin/
+ * Returns true if successful, false if tsx not found.
+ * Throws on execution error (script error, not tsx-not-found).
+ */
+function runHomeTsx() {
+  const tsxBin = findHomeTsx();
+  if (!tsxBin) return false;
+
+  const cmd = [tsxBin, scriptPath, ...scriptArgs].map(p => `"${p}"`).join(' ');
+  execSync(cmd, {
+    stdio: 'inherit',
+    cwd: process.cwd(),
+    env: getSafeEnv(),
+    timeout: 120000,
+    shell: true,
+  });
+  return true;
+}
+
+/**
  * Get MSYS-safe env for Windows.
  * Duplicated from src/utils/msys.ts:getMsysSafeEnv — keep in sync.
  */
@@ -278,13 +312,21 @@ function repairNpmSync() {
   }
 }
 
-// Main: Strategy 1 (local) → 1.5 (global) → 2 (npx) → 3 (clean + repair + retry npx)
+// Main: Strategy 1 (local) → 1.25 (home) → 1.5 (global) → 2 (npx) → 3 (clean + repair + retry npx)
 try {
   // Strategy 1: direct local tsx — bypasses npx entirely
   if (runLocalTsx()) process.exit(0);
 } catch (localError) {
   // Local tsx found but script failed — this is a real error, not a fallback case
   process.exit(localError.status || 1);
+}
+
+try {
+  // Strategy 1.25: tsx from ~/.dev-pomogator/ (user-level, cross-platform)
+  if (runHomeTsx()) process.exit(0);
+} catch (homeError) {
+  // Home tsx found but script failed — real error
+  process.exit(homeError.status || 1);
 }
 
 try {

@@ -1,6 +1,7 @@
 import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
+import { execSync } from 'child_process';
 import chalk from 'chalk';
 import { fileURLToPath } from 'url';
 import { listExtensions, getExtensionFiles, getExtensionRules, getExtensionTools, getExtensionSkills, getExtensionHooks, getExtensionStatusLine, runPostInstallHook, cleanStaleNodeModulesDirs, Extension } from './extensions.js';
@@ -9,8 +10,9 @@ import { findRepoRoot } from '../utils/repo.js';
 import { detectMangledArtifacts } from '../utils/msys.js';
 import { RULES_SUBFOLDER, TOOLS_DIR, SKILLS_DIR } from '../constants.js';
 import { getFileHash } from '../updater/content-hash.js';
-import { collectFileHashes, addProjectPaths, makePortableScriptCommand, resolveHookToolPaths, replaceNpxTsxWithPortable } from './shared.js';
+import { collectFileHashes, addProjectPaths, makePortableScriptCommand, resolveHookToolPaths, replaceNpxTsxWithPortable, ensureExecutableShellScripts } from './shared.js';
 import { writeJsonAtomic, readJsonSafe } from '../utils/atomic-json.js';
+import { resolveClaudeStatusLine } from '../utils/statusline.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -127,6 +129,7 @@ export async function installClaude(options: ClaudeOptions = {}): Promise<void> 
       if (await fs.pathExists(toolPath)) {
         const dest = path.join(repoRoot, TOOLS_DIR, toolName);
         await fs.copy(toolPath, dest, { overwrite: true });
+        await ensureExecutableShellScripts(dest);
         console.log(`  ✓ Installed tool: ${toolName}/`);
 
         // Hash all files in the tool directory
@@ -333,6 +336,40 @@ async function setupGlobalScripts(): Promise<void> {
   } else {
     console.log('  ⚠ tsx-runner.js not found. Run "npm run build" first.');
   }
+
+  // Ensure tsx is available at ~/.dev-pomogator/node_modules/.bin/tsx (cross-platform)
+  // This makes hooks work in ANY project, even those without local tsx or working npx
+  await ensureHomeTsx(devPomogatorDir);
+}
+
+/**
+ * Install tsx into ~/.dev-pomogator/ so tsx-runner.js can always find it.
+ * Non-fatal: if npm install fails, tsx-runner still falls back to global/npx strategies.
+ */
+async function ensureHomeTsx(devPomogatorDir: string): Promise<void> {
+  const binName = process.platform === 'win32' ? 'tsx.cmd' : 'tsx';
+  const tsxBin = path.join(devPomogatorDir, 'node_modules', '.bin', binName);
+
+  // Skip if already installed
+  if (await fs.pathExists(tsxBin)) return;
+
+  const pkgJsonPath = path.join(devPomogatorDir, 'package.json');
+  if (!await fs.pathExists(pkgJsonPath)) {
+    await fs.writeJson(pkgJsonPath, {
+      private: true,
+      dependencies: { tsx: '^4.0.0' },
+    }, { spaces: 2 });
+  }
+
+  try {
+    execSync('npm install --no-audit --no-fund --ignore-scripts', {
+      cwd: devPomogatorDir,
+      stdio: 'pipe',
+      timeout: 60000,
+    });
+  } catch {
+    // Non-fatal — tsx-runner still has global/npx fallbacks
+  }
 }
 
 
@@ -463,29 +500,35 @@ async function installExtensionHooks(repoRoot: string, extensions: Extension[]):
   }
 
   // Install statusLine config from extensions (first one wins)
+  const globalSettingsPath = path.join(os.homedir(), '.claude', 'settings.json');
+  const globalSettings =
+    settingsPath === globalSettingsPath
+      ? settings
+      : await fs.pathExists(globalSettingsPath)
+        ? await readJsonSafe<Record<string, unknown>>(globalSettingsPath, {})
+        : {};
+
   for (const ext of extensions) {
     const statusLineConfig = getExtensionStatusLine(ext, 'claude');
     if (!statusLineConfig) continue;
 
-    const existing = settings.statusLine as { type?: string; command?: string } | undefined;
-    if (existing?.command && !existing.command.includes('.dev-pomogator/tools/')) {
-      // User-defined statusLine — preserve it, warn
-      console.log(chalk.yellow(`  ⚠  statusLine уже настроен пользователем — пропускаю (${ext.name})`));
-      break;
-    }
-
-    // Resolve relative path to absolute for the command
-    const rawCommand = statusLineConfig.command;
-    const command = rawCommand.replace(
-      /\.dev-pomogator\/tools\//,
-      `${repoRoot.replace(/\\/g, '/')}/.dev-pomogator/tools/`
-    );
+    const resolved = resolveClaudeStatusLine({
+      repoRoot,
+      projectStatusLine: settings.statusLine as { type?: string; command?: string } | undefined,
+      globalStatusLine: globalSettings.statusLine as { type?: string; command?: string } | undefined,
+      statusLineConfig,
+    });
 
     settings.statusLine = {
-      type: statusLineConfig.type,
-      command,
+      type: resolved.type,
+      command: resolved.command,
     };
-    console.log(`  ✓ Installed statusLine (${ext.name})`);
+    if (resolved.mode === 'wrapped') {
+      const sourceLabel = resolved.source === 'global' ? ' from global settings' : '';
+      console.log(`  ✓ Installed statusLine wrapper${sourceLabel} (${ext.name})`);
+    } else {
+      console.log(`  ✓ Installed statusLine (${ext.name})`);
+    }
     break; // Only one statusLine allowed
   }
 
