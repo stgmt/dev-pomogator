@@ -1,7 +1,6 @@
 import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
-import { execSync } from 'child_process';
 import chalk from 'chalk';
 import { fileURLToPath } from 'url';
 import { listExtensions, getExtensionFiles, getExtensionRules, getExtensionTools, getExtensionSkills, getExtensionHooks, getExtensionStatusLine, runPostInstallHook, cleanStaleNodeModulesDirs, Extension } from './extensions.js';
@@ -10,7 +9,7 @@ import { findRepoRoot } from '../utils/repo.js';
 import { detectMangledArtifacts } from '../utils/msys.js';
 import { RULES_SUBFOLDER, TOOLS_DIR, SKILLS_DIR } from '../constants.js';
 import { getFileHash } from '../updater/content-hash.js';
-import { collectFileHashes, addProjectPaths, makePortableScriptCommand, resolveHookToolPaths, replaceNpxTsxWithPortable, ensureExecutableShellScripts } from './shared.js';
+import { collectFileHashes, addProjectPaths, makePortableScriptCommand, resolveHookToolPaths, replaceNpxTsxWithPortable, ensureExecutableShellScripts, setupGlobalScripts } from './shared.js';
 import { writeJsonAtomic, readJsonSafe } from '../utils/atomic-json.js';
 import { resolveClaudeStatusLine } from '../utils/statusline.js';
 
@@ -244,7 +243,8 @@ export async function installClaude(options: ClaudeOptions = {}): Promise<void> 
   // 9. Setup auto-update hooks if enabled
   if (options.autoUpdate !== false) {
     await setupClaudeHooks();
-    await setupGlobalScripts();
+    const distDir = path.resolve(__dirname, '..');
+    await setupGlobalScripts(distDir);
   }
 
   // 10. Check for MSYS path mangling artifacts
@@ -306,72 +306,6 @@ async function setupClaudeHooks(): Promise<void> {
   await writeJsonAtomic(settingsPath, settings);
   console.log('  ✓ Installed Claude Code hooks for auto-update');
 }
-
-/**
- * Copy bundled check-update script to ~/.dev-pomogator/scripts/
- */
-async function setupGlobalScripts(): Promise<void> {
-  const devPomogatorDir = path.join(os.homedir(), '.dev-pomogator');
-  const scriptsDir = path.join(devPomogatorDir, 'scripts');
-  const destScript = path.join(scriptsDir, 'check-update.js');
-  
-  // Get source path: dist/check-update.bundle.cjs (relative to this file in dist/installer/)
-  const distDir = path.resolve(__dirname, '..');
-  const bundledScript = path.join(distDir, 'check-update.bundle.cjs');
-  
-  await fs.ensureDir(scriptsDir);
-
-  // Copy bundled script
-  if (await fs.pathExists(bundledScript)) {
-    await fs.copy(bundledScript, destScript, { overwrite: true });
-  } else {
-    console.log('  ⚠ check-update.bundle.cjs not found. Run "npm run build" first.');
-  }
-
-  // Copy tsx-runner.js (resilient npx tsx wrapper with cache cleanup)
-  const tsxRunnerSrc = path.join(distDir, 'tsx-runner.js');
-  const tsxRunnerDest = path.join(scriptsDir, 'tsx-runner.js');
-  if (await fs.pathExists(tsxRunnerSrc)) {
-    await fs.copy(tsxRunnerSrc, tsxRunnerDest, { overwrite: true });
-  } else {
-    console.log('  ⚠ tsx-runner.js not found. Run "npm run build" first.');
-  }
-
-  // Ensure tsx is available at ~/.dev-pomogator/node_modules/.bin/tsx (cross-platform)
-  // This makes hooks work in ANY project, even those without local tsx or working npx
-  await ensureHomeTsx(devPomogatorDir);
-}
-
-/**
- * Install tsx into ~/.dev-pomogator/ so tsx-runner.js can always find it.
- * Non-fatal: if npm install fails, tsx-runner still falls back to global/npx strategies.
- */
-async function ensureHomeTsx(devPomogatorDir: string): Promise<void> {
-  const binName = process.platform === 'win32' ? 'tsx.cmd' : 'tsx';
-  const tsxBin = path.join(devPomogatorDir, 'node_modules', '.bin', binName);
-
-  // Skip if already installed
-  if (await fs.pathExists(tsxBin)) return;
-
-  const pkgJsonPath = path.join(devPomogatorDir, 'package.json');
-  if (!await fs.pathExists(pkgJsonPath)) {
-    await fs.writeJson(pkgJsonPath, {
-      private: true,
-      dependencies: { tsx: '^4.0.0' },
-    }, { spaces: 2 });
-  }
-
-  try {
-    execSync('npm install --no-audit --no-fund --ignore-scripts', {
-      cwd: devPomogatorDir,
-      stdio: 'pipe',
-      timeout: 60000,
-    });
-  } catch {
-    // Non-fatal — tsx-runner still has global/npx fallbacks
-  }
-}
-
 
 /**
  * Install extension hooks to project .claude/settings.json

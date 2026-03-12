@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import fs from 'node:fs';
-import { spawnSync } from 'node:child_process';
+const fs = require('node:fs');
+const { spawnSync } = require('node:child_process');
 
 const COMMAND_TIMEOUT_MS = 2000;
 

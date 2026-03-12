@@ -1,14 +1,13 @@
 import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
-import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import { listExtensions, getExtensionFiles, getExtensionRules, getExtensionTools, getExtensionHooks, runPostInstallHook, cleanStaleNodeModulesDirs, Extension } from './extensions.js';
 import type { ManagedFileEntry, ManagedFiles } from '../config/schema.js';
 import { findRepoRoot } from '../utils/repo.js';
 import { RULES_SUBFOLDER, TOOLS_DIR } from '../constants.js';
 import { getFileHash } from '../updater/content-hash.js';
-import { collectFileHashes, addProjectPaths, resolveHookToolPaths, replaceNpxTsxWithPortable, ensureExecutableShellScripts } from './shared.js';
+import { collectFileHashes, addProjectPaths, resolveHookToolPaths, replaceNpxTsxWithPortable, ensureExecutableShellScripts, setupGlobalScripts } from './shared.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -169,7 +168,8 @@ export async function installCursor(options: CursorOptions): Promise<void> {
 
   // 7. Setup auto-update if enabled
   if (options.autoUpdate) {
-    await setupGlobalScripts();
+    const distDir = path.resolve(__dirname, '..');
+    await setupGlobalScripts(distDir);
   }
 }
 
@@ -309,64 +309,4 @@ async function installExtensionHooks(extensions: Extension[], repoRoot: string):
   return installedHooksByExtension;
 }
 
-async function setupGlobalScripts(): Promise<void> {
-  const homeDir = os.homedir();
-  const scriptsDir = path.join(homeDir, '.dev-pomogator', 'scripts');
-  await fs.ensureDir(scriptsDir);
-  
-  const scriptPath = path.join(scriptsDir, 'check-update.js');
-
-  // Prefer bundled script from dist (matches runtime behavior)
-  const distDir = path.resolve(__dirname, '..');
-  const bundledScript = path.join(distDir, 'check-update.bundle.cjs');
-
-  if (await fs.pathExists(bundledScript)) {
-    await fs.copy(bundledScript, scriptPath, { overwrite: true });
-  } else {
-    console.log('  ⚠ check-update.bundle.cjs not found. Run "npm run build" first.');
-  }
-
-  // Copy tsx-runner.js (resilient npx tsx wrapper with cache cleanup)
-  const tsxRunnerSrc = path.join(distDir, 'tsx-runner.js');
-  const tsxRunnerDest = path.join(scriptsDir, 'tsx-runner.js');
-  if (await fs.pathExists(tsxRunnerSrc)) {
-    await fs.copy(tsxRunnerSrc, tsxRunnerDest, { overwrite: true });
-  } else {
-    console.log('  ⚠ tsx-runner.js not found. Run "npm run build" first.');
-  }
-
-  // Ensure tsx is available at ~/.dev-pomogator/node_modules/.bin/tsx (cross-platform)
-  // This makes hooks work in ANY project, even those without local tsx or working npx
-  await ensureHomeTsx(path.join(homeDir, '.dev-pomogator'));
-}
-
-/**
- * Install tsx into ~/.dev-pomogator/ so tsx-runner.js can always find it.
- * Non-fatal: if npm install fails, tsx-runner still falls back to global/npx strategies.
- */
-async function ensureHomeTsx(devPomogatorDir: string): Promise<void> {
-  const binName = process.platform === 'win32' ? 'tsx.cmd' : 'tsx';
-  const tsxBin = path.join(devPomogatorDir, 'node_modules', '.bin', binName);
-
-  // Skip if already installed
-  if (await fs.pathExists(tsxBin)) return;
-
-  const pkgJsonPath = path.join(devPomogatorDir, 'package.json');
-  if (!await fs.pathExists(pkgJsonPath)) {
-    await fs.writeJson(pkgJsonPath, {
-      private: true,
-      dependencies: { tsx: '^4.0.0' },
-    }, { spaces: 2 });
-  }
-
-  try {
-    execSync('npm install --no-audit --no-fund --ignore-scripts', {
-      cwd: devPomogatorDir,
-      stdio: 'pipe',
-      timeout: 60000,
-    });
-  } catch {
-    // Non-fatal — tsx-runner still has global/npx fallbacks
-  }
-}
 

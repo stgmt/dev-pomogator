@@ -1,5 +1,7 @@
 import fs from 'fs-extra';
 import path from 'path';
+import os from 'os';
+import { execSync } from 'child_process';
 import { loadConfig, saveConfig } from '../config/index.js';
 import type { InstalledExtension, ManagedFileEntry, ManagedFiles, Platform } from '../config/schema.js';
 import type { Extension } from './extensions.js';
@@ -169,4 +171,67 @@ export async function addProjectPaths(
   }
 
   await saveConfig(config);
+}
+
+/**
+ * Copy bundled scripts (check-update, tsx-runner) to ~/.dev-pomogator/scripts/
+ * and ensure tsx is installed at ~/.dev-pomogator/node_modules/.bin/tsx.
+ * @param distDir — path to the dist/ directory containing bundled scripts
+ */
+export async function setupGlobalScripts(distDir: string): Promise<void> {
+  const devPomogatorDir = path.join(os.homedir(), '.dev-pomogator');
+  const scriptsDir = path.join(devPomogatorDir, 'scripts');
+  await fs.ensureDir(scriptsDir);
+
+  // Copy bundled check-update script
+  const bundledScript = path.join(distDir, 'check-update.bundle.cjs');
+  const destScript = path.join(scriptsDir, 'check-update.js');
+  if (await fs.pathExists(bundledScript)) {
+    await fs.copy(bundledScript, destScript, { overwrite: true });
+  } else {
+    console.log('  ⚠ check-update.bundle.cjs not found. Run "npm run build" first.');
+  }
+
+  // Copy tsx-runner.js (resilient npx tsx wrapper with cache cleanup)
+  const tsxRunnerSrc = path.join(distDir, 'tsx-runner.js');
+  const tsxRunnerDest = path.join(scriptsDir, 'tsx-runner.js');
+  if (await fs.pathExists(tsxRunnerSrc)) {
+    await fs.copy(tsxRunnerSrc, tsxRunnerDest, { overwrite: true });
+  } else {
+    console.log('  ⚠ tsx-runner.js not found. Run "npm run build" first.');
+  }
+
+  // Ensure tsx is available at ~/.dev-pomogator/node_modules/.bin/tsx (cross-platform)
+  // This makes hooks work in ANY project, even those without local tsx or working npx
+  await ensureHomeTsx(devPomogatorDir);
+}
+
+/**
+ * Install tsx into ~/.dev-pomogator/ so tsx-runner.js can always find it.
+ * Non-fatal: if npm install fails, tsx-runner still falls back to global/npx strategies.
+ */
+export async function ensureHomeTsx(devPomogatorDir: string): Promise<void> {
+  const binName = process.platform === 'win32' ? 'tsx.cmd' : 'tsx';
+  const tsxBin = path.join(devPomogatorDir, 'node_modules', '.bin', binName);
+
+  // Skip if already installed
+  if (await fs.pathExists(tsxBin)) return;
+
+  const pkgJsonPath = path.join(devPomogatorDir, 'package.json');
+  if (!await fs.pathExists(pkgJsonPath)) {
+    await fs.writeJson(pkgJsonPath, {
+      private: true,
+      dependencies: { tsx: '^4.0.0' },
+    }, { spaces: 2 });
+  }
+
+  try {
+    execSync('npm install --no-audit --no-fund --ignore-scripts', {
+      cwd: devPomogatorDir,
+      stdio: 'pipe',
+      timeout: 60000,
+    });
+  } catch {
+    // Non-fatal — tsx-runner still has global/npx fallbacks
+  }
 }

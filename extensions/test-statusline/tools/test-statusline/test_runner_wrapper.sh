@@ -15,11 +15,21 @@ fi
 TUI_WRAPPER="$REPO_ROOT/.dev-pomogator/tools/tui-test-runner/test_runner_wrapper.ts"
 TUI_WRAPPER_SRC="$REPO_ROOT/extensions/tui-test-runner/tools/tui-test-runner/test_runner_wrapper.ts"
 
+TSX_RUNNER="$HOME/.dev-pomogator/scripts/tsx-runner.js"
+
 if [ -f "$TUI_WRAPPER" ]; then
-  exec npx tsx "$TUI_WRAPPER" "$@"
+  if [ -f "$TSX_RUNNER" ]; then
+    exec node -e "require('$TSX_RUNNER')" -- "$TUI_WRAPPER" "$@"
+  else
+    exec npx tsx "$TUI_WRAPPER" "$@"
+  fi
 fi
 if [ -f "$TUI_WRAPPER_SRC" ]; then
-  exec npx tsx "$TUI_WRAPPER_SRC" "$@"
+  if [ -f "$TSX_RUNNER" ]; then
+    exec node -e "require('$TSX_RUNNER')" -- "$TUI_WRAPPER_SRC" "$@"
+  else
+    exec npx tsx "$TUI_WRAPPER_SRC" "$@"
+  fi
 fi
 
 # Fallback: run command directly if tui-test-runner not installed
