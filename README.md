@@ -11,21 +11,21 @@
 
 ## Быстрый старт
 
-Запускайте из папки проекта (root определяется по git).
+Запускайте из папки проекта (root определяется по git). Одна команда для любой ОС:
 
-### Cursor (по умолчанию)
-
-**Windows (PowerShell):**
-```powershell
-irm https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install | iex
-```
-
-**Linux/macOS:**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install | bash
+# Claude Code
+npx github:stgmt/dev-pomogator --claude --all
+
+# Cursor
+npx github:stgmt/dev-pomogator --cursor --all
+
+# Оба
+npx github:stgmt/dev-pomogator --cursor --claude --all
 ```
 
-### Claude Code
+<details>
+<summary>Альтернатива (shell-pipe)</summary>
 
 **Windows (PowerShell):**
 ```powershell
@@ -36,6 +36,7 @@ $env:TARGET="claude"; irm https://raw.githubusercontent.com/stgmt/dev-pomogator/
 ```bash
 curl -fsSL https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install | TARGET=claude bash
 ```
+</details>
 
 ## Плагины
 
@@ -104,7 +105,8 @@ curl -fsSL https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install | 
 
 ## Требования
 
-- Node.js >= 18
+- **Node.js** >= 18 (с npm)
+- **Git**
 
 ## Разработка
 

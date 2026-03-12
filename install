@@ -1,11 +1,14 @@
-# dev-pomogator universal installer
-# One URL for all platforms:
+# dev-pomogator installer
+#
+# Recommended (cross-platform, one command everywhere):
+#   npx github:stgmt/dev-pomogator --claude --all
+#   npx github:stgmt/dev-pomogator --cursor --all
+#   npx github:stgmt/dev-pomogator --cursor --claude --all
+#
+# Alternative (shell-pipe):
 #   Windows:   irm https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install | iex
 #   Linux/Mac: curl -fsSL https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install | bash
-#
-# With target:
-#   Windows:   $env:TARGET="claude"; irm https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install | iex
-#   Linux/Mac: curl -fsSL https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install | TARGET=claude bash
+#   With target: $env:TARGET="claude"; irm ... | iex  /  TARGET=claude curl ... | bash
 
 echo --% > /dev/null ; : <<'POWERSHELL_SECTION'
 # --- PowerShell section (bash skips via heredoc) ---
