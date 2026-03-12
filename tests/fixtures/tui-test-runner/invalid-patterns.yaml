@@ -1,0 +1,10 @@
+patterns:
+  - id: broken_regex
+    match: "[invalid"
+    hint: "Broken pattern should be skipped"
+    category: invalid
+
+  - id: keyword_only_safe
+    keywords: ["safe", "keyword"]
+    hint: "Keyword-only pattern should still load"
+    category: keyword

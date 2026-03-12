@@ -41,7 +41,7 @@ async function main(): Promise<void> {
     }
 
     // Check if extension is enabled
-    if (process.env.TUI_TEST_RUNNER_ENABLED === 'false') {
+    if (process.env.TEST_STATUSLINE_ENABLED === 'false') {
       log('DEBUG', 'TUI test runner disabled');
       process.stdout.write('{}');
       return;
@@ -58,11 +58,11 @@ async function main(): Promise<void> {
     const envFile = process.env.CLAUDE_ENV_FILE;
     if (envFile) {
       const envLines = [
-        `TUI_TEST_RUNNER_SESSION=${prefix}`,
-        `TUI_TEST_RUNNER_STATUS_DIR=${statusDir}`,
+        `TEST_STATUSLINE_SESSION=${prefix}`,
+        `TEST_STATUSLINE_PROJECT=${cwd}`,
       ].join('\n') + '\n';
       fs.appendFileSync(envFile, envLines, 'utf-8');
-      log('INFO', `Wrote TUI_TEST_RUNNER env vars to ${envFile}`);
+      log('INFO', `Wrote TEST_STATUSLINE env vars to ${envFile}`);
     } else {
       log('DEBUG', 'CLAUDE_ENV_FILE not set, skipping env write');
     }

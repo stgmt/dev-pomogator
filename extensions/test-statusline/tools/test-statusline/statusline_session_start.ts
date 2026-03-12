@@ -30,6 +30,46 @@ async function readStdin(): Promise<string> {
   return Buffer.concat(chunks).toString('utf-8');
 }
 
+function getYamlField(content: string, field: string): string {
+  const match = content.match(new RegExp(`^${field}:\\s*(.*)$`, 'm'));
+  return match ? match[1].replace(/"/g, '').replace(/\r/g, '').trim() : '';
+}
+
+function isProcessAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function rewriteRunningToFailed(content: string, pid: number): string {
+  const message = `Process died unexpectedly (PID: ${pid})`;
+  return content
+    .replace(/^state:\s*.*$/m, 'state: failed')
+    .replace(/^running:\s*.*$/m, 'running: 0')
+    .replace(/^percent:\s*.*$/m, 'percent: 100')
+    .replace(/^error_message:\s*.*$/m, `error_message: "${message}"`)
+    .replace(/^updated_at:\s*.*$/m, `updated_at: "${new Date().toISOString()}"`);
+}
+
+function writeFileAtomic(filePath: string, content: string): void {
+  const tmpFile = `${filePath}.tmp.${process.pid}`;
+  try {
+    fs.writeFileSync(tmpFile, content, 'utf-8');
+    fs.renameSync(tmpFile, filePath);
+  } finally {
+    if (fs.existsSync(tmpFile)) {
+      try {
+        fs.unlinkSync(tmpFile);
+      } catch {
+        // Ignore temp cleanup failures
+      }
+    }
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
@@ -52,6 +92,12 @@ async function main(): Promise<void> {
       return;
     }
 
+    if (process.env.TEST_STATUSLINE_ENABLED === 'false') {
+      log('DEBUG', 'Test statusline disabled');
+      process.stdout.write('{}');
+      return;
+    }
+
     // Session prefix = first 8 characters (FR-5)
     const prefix = sessionId.substring(0, 8);
 
@@ -63,9 +109,12 @@ async function main(): Promise<void> {
     // Write env var to CLAUDE_ENV_FILE (FR-6)
     const envFile = process.env.CLAUDE_ENV_FILE;
     if (envFile) {
-      const envLine = `TEST_STATUSLINE_SESSION=${prefix}\n`;
-      fs.appendFileSync(envFile, envLine, 'utf-8');
-      log('INFO', `Wrote TEST_STATUSLINE_SESSION=${prefix} to ${envFile}`);
+      const envLines = [
+        `TEST_STATUSLINE_SESSION=${prefix}`,
+        `TEST_STATUSLINE_PROJECT=${cwd}`,
+      ].join('\n') + '\n';
+      fs.appendFileSync(envFile, envLines, 'utf-8');
+      log('INFO', `Wrote TEST_STATUSLINE env vars to ${envFile}`);
     } else {
       log('DEBUG', 'CLAUDE_ENV_FILE not set, skipping env write');
     }
@@ -107,15 +156,21 @@ function cleanStaleFiles(statusDir: string): void {
           continue;
         }
 
+        const content = fs.readFileSync(filePath, 'utf-8');
+        const state = getYamlField(content, 'state');
+        const pid = Number.parseInt(getYamlField(content, 'pid'), 10);
+
+        // Rule 1.5: Repair running files whose PID is no longer alive
+        if (state === 'running' && Number.isInteger(pid) && pid > 0 && !isProcessAlive(pid)) {
+          writeFileAtomic(filePath, rewriteRunningToFailed(content, pid));
+          log('INFO', `Repaired dead running file: ${file}`);
+          continue;
+        }
+
         // Rule 2: idle files older than 1 hour
-        if (age > ONE_HOUR) {
-          const content = fs.readFileSync(filePath, 'utf-8');
-          const stateMatch = content.match(/^state:\s*(.*)$/m);
-          const state = stateMatch ? stateMatch[1].replace(/"/g, '').replace(/\r/g, '').trim() : '';
-          if (state === 'idle') {
-            fs.unlinkSync(filePath);
-            log('INFO', `Removed stale idle file (>1h): ${file}`);
-          }
+        if (age > ONE_HOUR && state === 'idle') {
+          fs.unlinkSync(filePath);
+          log('INFO', `Removed stale idle file (>1h): ${file}`);
         }
       } catch (fileErr) {
         log('DEBUG', `Could not process ${file}: ${fileErr}`);

@@ -37,21 +37,21 @@ TUI приложение отображает 4 вкладки: Tests, Logs, Mon
 
 ## FR-6: YAML v2 Protocol @feature6
 
-YAML status file расширяется до v2: добавляются suites[] с tests[], phases[], framework, log_file. Все v1 поля (version, session_id, state, total, passed, failed, skipped, running, percent, duration_ms, error_message) сохраняются для backward compatibility с statusline_render.sh.
+YAML status file фиксируется как canonical v2 runtime contract: flat summary поля (version, session_id, pid, state, total, passed, failed, skipped, running, percent, duration_ms, error_message, log_file) и structured sections suites[]/phases[] обязаны присутствовать в одном payload для statusline и TUI.
 
 **Связанные AC:** [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6-yaml-v2-protocol)
 **Use Case:** [UC-7](USE_CASES.md#uc-7-сосуществование-с-test-statusline-feature7)
 
 ## FR-7: Universal Framework Adapters @feature6
 
-Node.js adapters парсят stdout каждого тест-фреймворка (vitest, jest, pytest, dotnet) в универсальный TestEvent interface. Adapter автоматически определяется по конфигу проекта или env var `TUI_TEST_FRAMEWORK`.
+Node.js adapters парсят stdout каждого тест-фреймворка (vitest, jest, pytest, dotnet, rust, go) в универсальный TestEvent interface. Framework передаётся в wrapper через явный аргумент `--framework`; autodetect используется только если wrapper запускается вне dispatch path.
 
 **Связанные AC:** [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7-universal-framework-adapters)
 **Use Case:** [UC-6](USE_CASES.md#uc-6-использование-с-разными-фреймворками-feature6)
 
 ## FR-8: YAML Polling @feature1
 
-Python TUI читает YAML v2 status file через polling с интервалом 500ms. При изменении данных TUI обновляет все вкладки. Поддерживает как v1, так и v2 формат (graceful degradation для v1).
+Python TUI читает canonical YAML v2 status file через polling с интервалом 500ms. При изменении данных TUI обновляет все вкладки и отклоняет payload, который не соответствует обязательной v2 schema.
 
 **Связанные AC:** [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8-yaml-polling)
 **Use Case:** [UC-1](USE_CASES.md#uc-1-запуск-tui-и-мониторинг-тестов-feature1)
@@ -65,7 +65,7 @@ Node.js launcher определяет наличие Python, проверяет 
 
 ## FR-10: SessionStart Hook @feature7
 
-Hook инициализирует status directory (.dev-pomogator/.test-status/), пишет env vars в $CLAUDE_ENV_FILE: TUI_TEST_RUNNER_SESSION, TUI_TEST_RUNNER_STATUS_DIR. Fail-open: всегда exit 0.
+Hook инициализирует status directory (.dev-pomogator/.test-status/), пишет canonical env vars в $CLAUDE_ENV_FILE: TEST_STATUSLINE_SESSION и TEST_STATUSLINE_PROJECT. Fail-open: всегда exit 0.
 
 **Связанные AC:** [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-10-sessionstart-hook)
 **Use Case:** [UC-7](USE_CASES.md#uc-7-сосуществование-с-test-statusline-feature7)

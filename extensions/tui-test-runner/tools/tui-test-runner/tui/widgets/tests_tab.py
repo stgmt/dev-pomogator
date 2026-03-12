@@ -59,8 +59,8 @@ class TestsTab(Widget):
         yield Input(placeholder="Filter tests (name or status)...", id="filter-input")
         yield Tree("Tests", id="test-tree")
         yield Static(
-            "[dim]No suite details available (v1 protocol)\n"
-            "Use enhanced wrapper with v2 YAML for test tree.[/]",
+            "[dim]No suite details available yet.\n"
+            "Test tree populates as tests run.[/]",
             id="no-data",
         )
 
@@ -77,8 +77,8 @@ class TestsTab(Widget):
         self.query_one("#filter-input", Input).focus()
 
     def update_status(self, status: TestStatus) -> None:
-        """Rebuild test tree from YAML v2 status. Skips if data unchanged."""
-        if not status.is_v2:
+        """Rebuild test tree from canonical v2 status. Skips if data unchanged."""
+        if not status.suites:
             self.query_one("#test-tree", Tree).display = False
             self.query_one("#no-data", Static).display = True
             self._has_data = False

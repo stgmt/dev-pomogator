@@ -38,14 +38,14 @@
 
 | Скрипт | Назначение | Пример |
 |--------|------------|--------|
-| `scaffold-spec.ps1` | Создание структуры | `.\.dev-pomogator\tools\specs-generator\scaffold-spec.ps1 -Name "my-feature"` |
-| `validate-spec.ps1` | Валидация форматов | `.\.dev-pomogator\tools\specs-generator\validate-spec.ps1 -Path ".specs/my-feature"` |
-| `spec-status.ps1` | Отчёт о прогрессе + state machine | `.\.dev-pomogator\tools\specs-generator\spec-status.ps1 -Path ".specs/my-feature"` |
-| `spec-status.ps1 -ConfirmStop` | Подтверждение СТОП-точки | `.\.dev-pomogator\tools\specs-generator\spec-status.ps1 -Path ".specs/my-feature" -ConfirmStop Discovery` |
-| `fill-template.ps1` | Заполнение плейсхолдеров | `.\.dev-pomogator\tools\specs-generator\fill-template.ps1 -File "..." -ListPlaceholders` |
-| `list-specs.ps1` | Список всех спеков | `.\.dev-pomogator\tools\specs-generator\list-specs.ps1` |
-| `audit-spec.ps1` | Аудит кросс-ссылок | `.\.dev-pomogator\tools\specs-generator\audit-spec.ps1 -Path ".specs/my-feature"` |
-| `analyze-features.ps1` | Анализ паттернов .feature | `.\.dev-pomogator\tools\specs-generator\analyze-features.ps1 -Format text` |
+| `scaffold-spec.sh` | Создание структуры | `./.dev-pomogator/tools/specs-generator/scaffold-spec.sh -Name "my-feature"` |
+| `validate-spec.sh` | Валидация форматов | `./.dev-pomogator/tools/specs-generator/validate-spec.sh -Path ".specs/my-feature"` |
+| `spec-status.sh` | Отчёт о прогрессе + state machine | `./.dev-pomogator/tools/specs-generator/spec-status.sh -Path ".specs/my-feature"` |
+| `spec-status.sh -ConfirmStop` | Подтверждение СТОП-точки | `./.dev-pomogator/tools/specs-generator/spec-status.sh -Path ".specs/my-feature" -ConfirmStop Discovery` |
+| `fill-template.sh` | Заполнение плейсхолдеров | `./.dev-pomogator/tools/specs-generator/fill-template.sh -File "..." -ListPlaceholders` |
+| `list-specs.sh` | Список всех спеков | `./.dev-pomogator/tools/specs-generator/list-specs.sh` |
+| `audit-spec.sh` | Аудит кросс-ссылок | `./.dev-pomogator/tools/specs-generator/audit-spec.sh -Path ".specs/my-feature"` |
+| `analyze-features.sh` | Анализ паттернов .feature | `./.dev-pomogator/tools/specs-generator/analyze-features.sh -Format text` |
 
 ### Документация скриптов
 
@@ -60,15 +60,15 @@
 **Файлы:** USER_STORIES.md, USE_CASES.md, RESEARCH.md
 
 **Алгоритм:**
-1. Создать структуру: `.\.dev-pomogator\tools\specs-generator\scaffold-spec.ps1 -Name "{feature}"`
+1. Создать структуру: `./.dev-pomogator/tools/specs-generator/scaffold-spec.sh -Name "{feature}"`
 2. Опросить пользователя о целях и ролях
 3. Заполнить USER_STORIES.md
 4. Заполнить USE_CASES.md
 5. Заполнить RESEARCH.md (если нужен ресерч)
-6. Проверить статус: `.\.dev-pomogator\tools\specs-generator\spec-status.ps1 -Path ".specs/{feature}"`
+6. Проверить статус: `./.dev-pomogator/tools/specs-generator/spec-status.sh -Path ".specs/{feature}"`
 
 **СТОП #1:** Показать результаты Discovery, спросить подтверждение.
-После подтверждения: `.\.dev-pomogator\tools\specs-generator\spec-status.ps1 -Path ".specs/{feature}" -ConfirmStop Discovery`
+После подтверждения: `./.dev-pomogator/tools/specs-generator/spec-status.sh -Path ".specs/{feature}" -ConfirmStop Discovery`
 Затем запустить `/simplify` для review качества файлов текущей фазы.
 
 ---
@@ -94,7 +94,7 @@
    - `### Relevant Rules` — таблица: Rule | Path | Summary | Triggered By | Impacts
    - `### Existing Patterns & Extensions` — таблица: Source | Path | What It Provides | Relevance
    - `### Architectural Constraints Summary` — как ограничения влияют на будущие FR/NFR
-8. Проверить статус: `.\.dev-pomogator\tools\specs-generator\spec-status.ps1 -Path ".specs/{feature}"`
+8. Проверить статус: `./.dev-pomogator/tools/specs-generator/spec-status.sh -Path ".specs/{feature}"`
 
 **При пропуске:** записать в RESEARCH.md:
 ```
@@ -103,7 +103,7 @@
 ```
 
 **СТОП #1.5:** Показать найденные ограничения проекта, спросить подтверждение перед Phase 2.
-После подтверждения: `.\.dev-pomogator\tools\specs-generator\spec-status.ps1 -Path ".specs/{feature}" -ConfirmStop Context`
+После подтверждения: `./.dev-pomogator/tools/specs-generator/spec-status.sh -Path ".specs/{feature}" -ConfirmStop Context`
 Затем запустить `/simplify` для review качества файлов текущей фазы.
 
 ---
@@ -186,7 +186,7 @@
 
 7. Заполнить FILE_CHANGES.md
 8. **Анализ паттернов .feature (ОБЯЗАТЕЛЬНО перед написанием .feature):**
-   `.\.dev-pomogator\tools\specs-generator\analyze-features.ps1 -Format text [-FeatureSlug "{slug}"] [-DomainCode "{DOMAIN}"]`
+   `./.dev-pomogator/tools/specs-generator/analyze-features.sh -Format text [-FeatureSlug "{slug}"] [-DomainCode "{DOMAIN}"]`
    На основе отчёта:
    - Использовать Background из самого частого паттерна (не выдумывать)
    - Переиспользовать формулировки шагов из Step Dictionary
@@ -197,11 +197,11 @@
    - **Assertions**: копировать формулировки Then из Assertion Patterns
    - Если есть кандидаты — взять за основу, указать `# Source:`
 9. Создать {feature-slug}.feature (по правилам ниже, опираясь на отчёт analyze-features)
-10. Валидация: `.\.dev-pomogator\tools\specs-generator\validate-spec.ps1 -Path ".specs/{feature}"`
+10. Валидация: `./.dev-pomogator/tools/specs-generator/validate-spec.sh -Path ".specs/{feature}"`
 11. Исправить ошибки если есть
 
 **СТОП #2:** Показать Requirements + Design, спросить подтверждение.
-После подтверждения: `.\.dev-pomogator\tools\specs-generator\spec-status.ps1 -Path ".specs/{feature}" -ConfirmStop Requirements`
+После подтверждения: `./.dev-pomogator/tools/specs-generator/spec-status.sh -Path ".specs/{feature}" -ConfirmStop Requirements`
 Затем запустить `/simplify` для review качества файлов текущей фазы.
 
 ---
@@ -289,7 +289,7 @@
 - Рефакторинг -- ПОСЛЕДНИЙ Phase (после всех Green)
 
 **СТОП #3:** Финальный отчёт со summary.
-После подтверждения: `.\.dev-pomogator\tools\specs-generator\spec-status.ps1 -Path ".specs/{feature}" -ConfirmStop Finalization`
+После подтверждения: `./.dev-pomogator/tools/specs-generator/spec-status.sh -Path ".specs/{feature}" -ConfirmStop Finalization`
 Затем запустить `/simplify` для review качества файлов текущей фазы, перед запуском Phase 3+ Audit.
 
 ---
@@ -304,7 +304,7 @@
 
 #### Шаг 1: Автоматические проверки
 
-Запустить: `.\.dev-pomogator\tools\specs-generator\audit-spec.ps1 -Path ".specs/{feature}" -Format json`
+Запустить: `./.dev-pomogator/tools/specs-generator/audit-spec.sh -Path ".specs/{feature}" -Format json`
 
 Скрипт проверяет:
 - FR↔AC покрытие (каждый FR-N имеет AC-N)
@@ -357,7 +357,7 @@
 
 #### Шаг 4: Повторный аудит
 
-1. Перезапустить `audit-spec.ps1` на исправленных файлах
+1. Перезапустить `audit-spec.sh` на исправленных файлах
 2. Повторить AI семантический анализ
 3. Если findings > 0 — повторить Шаг 3 (максимум 3 итерации)
 

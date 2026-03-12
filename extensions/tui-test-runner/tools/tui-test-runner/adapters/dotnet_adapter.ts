@@ -15,6 +15,13 @@ const RE_DURATION = /Total time:\s*([\d.]+)\s*(Seconds|Minutes)/i;
 const RE_ERROR = /^\s+(Expected|Assert|Exception|Error|at\s)/;
 
 export class DotnetAdapter extends AdapterBase {
+  private summaryStats: Record<'passed' | 'failed' | 'skipped' | 'total', number> = {
+    passed: 0,
+    failed: 0,
+    skipped: 0,
+    total: 0,
+  };
+
   parseLine(line: string): TestEvent | null {
     const passMatch = line.match(RE_TEST_PASSED);
     if (passMatch) {
@@ -43,8 +50,33 @@ export class DotnetAdapter extends AdapterBase {
       return this.event('test_skip', { testName: test });
     }
 
+    const summaryMatch = line.match(RE_SUMMARY);
+    if (summaryMatch) {
+      const key = summaryMatch[1].toLowerCase();
+      const value = parseInt(summaryMatch[2], 10);
+      if (key === 'total tests') this.summaryStats.total = value;
+      if (key === 'passed') this.summaryStats.passed = value;
+      if (key === 'failed') this.summaryStats.failed = value;
+      if (key === 'skipped') this.summaryStats.skipped = value;
+      return this.event('summary', {
+        summary: {
+          total: this.summaryStats.total,
+          passed: this.summaryStats.passed,
+          failed: this.summaryStats.failed,
+          skipped: this.summaryStats.skipped,
+        },
+      });
+    }
+
     if (RE_TEST_RUN.test(line)) {
-      return this.event('summary', { testName: line.trim() });
+      return this.event('summary', {
+        summary: {
+          total: this.summaryStats.total,
+          passed: this.summaryStats.passed,
+          failed: this.summaryStats.failed,
+          skipped: this.summaryStats.skipped,
+        },
+      });
     }
 
     return null;

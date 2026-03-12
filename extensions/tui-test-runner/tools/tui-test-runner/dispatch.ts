@@ -27,6 +27,7 @@ const FILTER_FORMAT: Record<TestFramework, (filter: string) => string> = {
   unknown: () => '',
 };
 
+/** Wrapper lives in test-statusline and delegates to the canonical TS writer. */
 const WRAPPER_PATH = '.dev-pomogator/tools/test-statusline/test_runner_wrapper.sh';
 
 export interface TestCommand {
@@ -62,6 +63,7 @@ export function buildTestCommand(opts: {
 }): TestCommand {
   const { framework, filter, extraArgs, docker } = opts;
   const wrapper = opts.wrapperPath || WRAPPER_PATH;
+  const wrapperPrefix = `bash ${wrapper} --framework ${framework} --`;
 
   if (framework === 'unknown') {
     return {
@@ -87,7 +89,7 @@ export function buildTestCommand(opts: {
   if (docker) {
     const projectName = generateProjectName();
     return {
-      command: `bash ${wrapper} COMPOSE_PROJECT_NAME=${projectName} docker compose -f docker-compose.test.yml run --rm test ${testCmd}`,
+      command: `${wrapperPrefix} COMPOSE_PROJECT_NAME=${projectName} docker compose -f docker-compose.test.yml run --rm test ${testCmd}`,
       framework,
       wrapped: true,
       dockerProjectName: projectName,
@@ -95,7 +97,7 @@ export function buildTestCommand(opts: {
   }
 
   return {
-    command: `bash ${wrapper} ${testCmd}`,
+    command: `${wrapperPrefix} ${testCmd}`,
     framework,
     wrapped: true,
   };

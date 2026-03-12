@@ -1,10 +1,7 @@
 """
-Main Textual App — 4-tab TUI test runner.
-Ported from zoho tui_test_explorer, made framework-agnostic.
-Reads YAML v1/v2 status files via polling.
+Main Textual app for monitoring canonical YAML v2 test status.
 """
 
-import os
 from datetime import datetime
 from pathlib import Path
 
@@ -14,13 +11,13 @@ from textual.css.query import NoMatches
 from textual.reactive import reactive
 from textual.widgets import Footer, Header, TabbedContent, TabPane
 
-from .models import TestStatus, TestState
-from .yaml_reader import YamlReader, StatusChanged
 from .log_reader import LogReader
-from .widgets.tests_tab import TestsTab
+from .models import TestState, TestStatus
+from .widgets.analysis_tab import AnalysisTab
 from .widgets.logs_tab import LogsTab
 from .widgets.monitoring_tab import MonitoringTab
-from .widgets.analysis_tab import AnalysisTab
+from .widgets.tests_tab import TestsTab
+from .yaml_reader import StatusChanged, YamlReader
 
 
 class TestRunnerApp(App):
@@ -68,7 +65,9 @@ class TestRunnerApp(App):
         auto_run: bool = False,
     ) -> None:
         super().__init__()
+        self._project_root = self._resolve_project_root(status_file)
         self._yaml_reader = YamlReader(status_file)
+        self._log_file_override = log_file
         self._log_reader = LogReader(log_file) if log_file else None
         self._framework = framework
         self._poll_interval = poll_interval
@@ -85,7 +84,7 @@ class TestRunnerApp(App):
             with TabPane("Monitoring", id="monitoring"):
                 yield MonitoringTab()
             with TabPane("Analysis", id="analysis"):
-                yield AnalysisTab()
+                yield AnalysisTab(project_root=self._project_root)
         yield Footer()
 
     def on_mount(self) -> None:
@@ -93,13 +92,13 @@ class TestRunnerApp(App):
         self.set_interval(self._poll_interval, self._poll)
         if self._auto_run:
             self.notify("Auto-running tests...")
-            # Tests are managed by the wrapper script, not the TUI itself
 
     def _poll(self) -> None:
         """Poll YAML status and log files."""
         new_status = self._yaml_reader.check()
         if new_status is not None:
             self.status = new_status
+            self._sync_log_reader(new_status)
             self.post_message(StatusChanged(new_status))
             self._update_title()
 
@@ -120,7 +119,34 @@ class TestRunnerApp(App):
             TestState.COMPLETED: "✅",
         }.get(s.state, "")
 
-        self.title = f"TUI Test Runner {state_icon} {s.passed}✓ {s.failed}✗ {s.skipped}⏭ ({s.percent}%) [{s.duration_display}]"
+        self.title = (
+            f"TUI Test Runner {state_icon} "
+            f"{s.passed}✓ {s.failed}✗ {s.skipped}⏭ ({s.percent}%) [{s.duration_display}]"
+        )
+
+    def _resolve_project_root(self, status_file: str) -> Path:
+        status_path = Path(status_file).resolve()
+        if len(status_path.parents) >= 3:
+            return status_path.parents[2]
+        return status_path.parent
+
+    def _resolve_log_file(self, log_file: str) -> str:
+        path = Path(log_file)
+        if path.is_absolute():
+            return str(path)
+        return str((self._project_root / path).resolve())
+
+    def _sync_log_reader(self, status: TestStatus) -> None:
+        desired_log = self._log_file_override or status.log_file
+        if not desired_log:
+            self._log_reader = None
+            return
+
+        resolved_path = Path(self._resolve_log_file(desired_log))
+        if self._log_reader and self._log_reader.log_file.resolve() == resolved_path:
+            return
+
+        self._log_reader = LogReader(str(resolved_path))
 
     def watch_status(self, new_status: TestStatus) -> None:
         """React to status changes — update all tabs."""

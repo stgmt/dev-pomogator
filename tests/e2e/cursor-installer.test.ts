@@ -172,9 +172,21 @@ describe('PLUGIN003: Specs-workflow Extension', () => {
     expect(await fs.pathExists(toolsPath)).toBe(true);
 
     // Check key scripts exist
-    expect(await fs.pathExists(path.join(toolsPath, 'scaffold-spec.ps1'))).toBe(true);
-    expect(await fs.pathExists(path.join(toolsPath, 'validate-spec.ps1'))).toBe(true);
-    expect(await fs.pathExists(path.join(toolsPath, 'list-specs.ps1'))).toBe(true);
+    const scaffoldPath = path.join(toolsPath, 'scaffold-spec.sh');
+    const validatePath = path.join(toolsPath, 'validate-spec.sh');
+    const listPath = path.join(toolsPath, 'list-specs.sh');
+
+    expect(await fs.pathExists(scaffoldPath)).toBe(true);
+    expect(await fs.pathExists(validatePath)).toBe(true);
+    expect(await fs.pathExists(listPath)).toBe(true);
+
+    const scaffoldStat = await fs.stat(scaffoldPath);
+    const validateStat = await fs.stat(validatePath);
+    const listStat = await fs.stat(listPath);
+
+    expect((scaffoldStat.mode & 0o111) !== 0).toBe(true);
+    expect((validateStat.mode & 0o111) !== 0).toBe(true);
+    expect((listStat.mode & 0o111) !== 0).toBe(true);
   });
 
   it('should install templates', async () => {
@@ -676,8 +688,8 @@ describe('CORE002: Auto-update', () => {
       await fs.ensureDir(toolsDir);
 
       // Create real + stale tool files
-      await fs.writeFile(path.join(toolsDir, 'scaffold-spec.ps1'), '# OLD');
-      await fs.writeFile(path.join(toolsDir, 'old-tool.ps1'), '# STALE');
+      await fs.writeFile(path.join(toolsDir, 'scaffold-spec.sh'), '# OLD');
+      await fs.writeFile(path.join(toolsDir, 'old-tool.sh'), '# STALE');
 
       await setupConfigForUpdate({
         autoUpdate: true,
@@ -691,8 +703,8 @@ describe('CORE002: Auto-update', () => {
           managed: {
             [testProjectPath]: {
               tools: [
-                '.dev-pomogator/tools/specs-generator/scaffold-spec.ps1',
-                '.dev-pomogator/tools/specs-generator/old-tool.ps1',
+                '.dev-pomogator/tools/specs-generator/scaffold-spec.sh',
+                '.dev-pomogator/tools/specs-generator/old-tool.sh',
               ],
             },
           },
@@ -702,9 +714,61 @@ describe('CORE002: Auto-update', () => {
       await runCheckUpdate();
 
       // Stale tool should be deleted
-      expect(await fs.pathExists(path.join(toolsDir, 'old-tool.ps1'))).toBe(false);
+      expect(await fs.pathExists(path.join(toolsDir, 'old-tool.sh'))).toBe(false);
       // Real tool should exist (updated from GitHub)
-      expect(await fs.pathExists(path.join(toolsDir, 'scaffold-spec.ps1'))).toBe(true);
+      expect(await fs.pathExists(path.join(toolsDir, 'scaffold-spec.sh'))).toBe(true);
+    });
+
+    it('should backup user-modified stale ps1 tool before deleting during ps1-to-sh migration', async () => {
+      testProjectPath = appPath('test-stale-ps1-migration');
+      const toolsDir = path.join(testProjectPath, '.dev-pomogator', 'tools', 'specs-generator');
+      await fs.ensureDir(toolsDir);
+
+      const legacyToolPath = path.join(toolsDir, 'scaffold-spec.ps1');
+      const originalContent = '# Original managed ps1 tool';
+      const modifiedContent = '# User modified ps1 tool';
+      await fs.writeFile(legacyToolPath, originalContent, 'utf-8');
+
+      const crypto = await import('crypto');
+      const legacyHash = crypto.createHash('sha256').update(originalContent, 'utf-8').digest('hex');
+
+      await setupConfigForUpdate({
+        autoUpdate: true,
+        cooldownHours: 24,
+        lastCheck: hoursAgo(25),
+        installedExtensions: [{
+          name: 'specs-workflow',
+          version: '0.0.1',
+          platform: 'cursor',
+          projectPaths: [testProjectPath],
+          managed: {
+            [testProjectPath]: {
+              tools: [
+                { path: '.dev-pomogator/tools/specs-generator/scaffold-spec.ps1', hash: legacyHash },
+              ],
+            },
+          },
+        }],
+      });
+
+      await fs.writeFile(legacyToolPath, modifiedContent, 'utf-8');
+
+      await runCheckUpdate();
+
+      const legacyBackupPath = path.join(
+        testProjectPath,
+        '.dev-pomogator',
+        '.user-overrides',
+        '.dev-pomogator',
+        'tools',
+        'specs-generator',
+        'scaffold-spec.ps1'
+      );
+
+      expect(await fs.pathExists(legacyToolPath)).toBe(false);
+      expect(await fs.pathExists(path.join(toolsDir, 'scaffold-spec.sh'))).toBe(true);
+      expect(await fs.pathExists(legacyBackupPath)).toBe(true);
+      expect(await fs.readFile(legacyBackupPath, 'utf-8')).toBe(modifiedContent);
     });
 
     it('should update managed state in config after update', async () => {
@@ -1080,7 +1144,7 @@ describe('CORE002: Auto-update', () => {
       testProjectPath = appPath('test-path-traversal');
       const toolsDir = path.join(testProjectPath, '.dev-pomogator', 'tools', 'specs-generator');
       await fs.ensureDir(toolsDir);
-      await fs.writeFile(path.join(toolsDir, 'scaffold-spec.ps1'), '# OLD');
+      await fs.writeFile(path.join(toolsDir, 'scaffold-spec.sh'), '# OLD');
 
       // Create a sentinel file outside the project
       const sentinelPath = appPath('sentinel-do-not-delete.txt');
@@ -1098,7 +1162,7 @@ describe('CORE002: Auto-update', () => {
           managed: {
             [testProjectPath]: {
               tools: [
-                '.dev-pomogator/tools/specs-generator/scaffold-spec.ps1',
+                '.dev-pomogator/tools/specs-generator/scaffold-spec.sh',
                 '../sentinel-do-not-delete.txt',
               ],
             },
@@ -1383,7 +1447,7 @@ describe('CORE002: Auto-update', () => {
       await fs.ensureDir(toolsDir);
 
       const ruleFile = path.join(rulesDir, 'specs-management.mdc');
-      const toolFile = path.join(toolsDir, 'scaffold-spec.ps1');
+      const toolFile = path.join(toolsDir, 'scaffold-spec.sh');
       const ruleContent = '# Rule original';
       const toolContent = '# Tool original';
       await fs.writeFile(ruleFile, ruleContent, 'utf-8');
@@ -1408,7 +1472,7 @@ describe('CORE002: Auto-update', () => {
                 { path: '.cursor/rules/pomogator/specs-management.mdc', hash: ruleHash },
               ],
               tools: [
-                { path: '.dev-pomogator/tools/specs-generator/scaffold-spec.ps1', hash: toolHash },
+                { path: '.dev-pomogator/tools/specs-generator/scaffold-spec.sh', hash: toolHash },
               ],
             },
           },
@@ -1423,7 +1487,7 @@ describe('CORE002: Auto-update', () => {
 
       // Check .dev-pomogator/.user-overrides/ mirrors the exact directory structure
       const ruleBackup = path.join(testProjectPath, '.dev-pomogator', '.user-overrides', '.cursor', 'rules', 'pomogator', 'specs-management.mdc');
-      const toolBackup = path.join(testProjectPath, '.dev-pomogator', '.user-overrides', '.dev-pomogator', 'tools', 'specs-generator', 'scaffold-spec.ps1');
+      const toolBackup = path.join(testProjectPath, '.dev-pomogator', '.user-overrides', '.dev-pomogator', 'tools', 'specs-generator', 'scaffold-spec.sh');
 
       expect(await fs.pathExists(ruleBackup)).toBe(true);
       expect(await fs.pathExists(toolBackup)).toBe(true);

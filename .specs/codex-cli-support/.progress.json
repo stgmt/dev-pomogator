@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "featureSlug": "codex-cli-support",
+  "createdAt": "2026-03-11T23:48:14.433Z",
+  "currentPhase": "Finalization",
+  "phases": {
+    "Discovery": {
+      "completedAt": "2026-03-12T00:10:06.839Z",
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    },
+    "Context": {
+      "completedAt": "2026-03-12T00:10:06.839Z",
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    },
+    "Requirements": {
+      "completedAt": "2026-03-12T00:10:06.839Z",
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    },
+    "Finalization": {
+      "completedAt": null,
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    }
+  }
+}

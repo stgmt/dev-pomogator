@@ -1,0 +1,272 @@
+#!/usr/bin/env node
+/**
+ * Canonical v2 test runner wrapper.
+ */
+
+import { execSync, spawn } from 'node:child_process';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import type { TestEvent, TestFramework } from './adapters/types.js';
+import { CargoAdapter } from './adapters/cargo_adapter.js';
+import { DotnetAdapter } from './adapters/dotnet_adapter.js';
+import { GoTestAdapter } from './adapters/go_test_adapter.js';
+import { JestAdapter } from './adapters/jest_adapter.js';
+import { PytestAdapter } from './adapters/pytest_adapter.js';
+import { VitestAdapter } from './adapters/vitest_adapter.js';
+import { detectFramework } from './config.js';
+import { YamlWriter } from './yaml_writer.js';
+
+const SESSION = process.env.TEST_STATUSLINE_SESSION || '';
+const PROJECT = process.env.TEST_STATUSLINE_PROJECT || process.cwd();
+
+const KNOWN_FRAMEWORKS = new Set<TestFramework>([
+  'vitest',
+  'jest',
+  'pytest',
+  'dotnet',
+  'rust',
+  'go',
+  'unknown',
+]);
+
+interface ParsedArgs {
+  framework?: TestFramework;
+  childEnv: Record<string, string>;
+  commandArgs: string[];
+}
+
+function parseArgs(args: string[]): ParsedArgs {
+  let framework: TestFramework | undefined;
+  let commandStart = args.length;
+
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === '--') {
+      commandStart = i + 1;
+      break;
+    }
+
+    if (arg === '--framework' && i + 1 < args.length) {
+      const candidate = args[i + 1] as TestFramework;
+      framework = KNOWN_FRAMEWORKS.has(candidate) ? candidate : 'unknown';
+      i++;
+      continue;
+    }
+
+    if (arg.startsWith('--framework=')) {
+      const candidate = arg.slice('--framework='.length) as TestFramework;
+      framework = KNOWN_FRAMEWORKS.has(candidate) ? candidate : 'unknown';
+      continue;
+    }
+
+    commandStart = i;
+    break;
+  }
+
+  const childEnv: Record<string, string> = {};
+  const commandArgs = args.slice(commandStart);
+  while (commandArgs.length > 0) {
+    const match = commandArgs[0].match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
+    if (!match) {
+      break;
+    }
+    childEnv[match[1]] = match[2];
+    commandArgs.shift();
+  }
+
+  return {
+    framework,
+    childEnv,
+    commandArgs,
+  };
+}
+
+function quoteShellArg(arg: string): string {
+  if (!arg) {
+    return "''";
+  }
+  return `'${arg.replace(/'/g, `'\"'\"'`)}'`;
+}
+
+function buildShellCommand(args: string[]): string {
+  return args.map(quoteShellArg).join(' ');
+}
+
+function getAdapter(framework: TestFramework): { parseLine: (line: string) => TestEvent | null } {
+  switch (framework) {
+    case 'vitest':
+      return new VitestAdapter();
+    case 'jest':
+      return new JestAdapter();
+    case 'pytest':
+      return new PytestAdapter();
+    case 'dotnet':
+      return new DotnetAdapter();
+    case 'rust':
+      return new CargoAdapter();
+    case 'go':
+      return new GoTestAdapter();
+    default:
+      throw new Error(`Unsupported framework adapter: ${framework}`);
+  }
+}
+
+function resolveFramework(explicitFramework: TestFramework | undefined, projectRoot: string): TestFramework {
+  if (explicitFramework && explicitFramework !== 'unknown') {
+    return explicitFramework;
+  }
+
+  const detected = detectFramework(projectRoot);
+  return detected;
+}
+
+function passthrough(commandArgs: string[], childEnv: Record<string, string>): number {
+  try {
+    execSync(buildShellCommand(commandArgs), {
+      stdio: 'inherit',
+      cwd: PROJECT,
+      env: { ...process.env, ...childEnv },
+    });
+    return 0;
+  } catch {
+    return 1;
+  }
+}
+
+function createEvent(type: TestEvent['type'], errorMessage: string): TestEvent {
+  return {
+    type,
+    errorMessage,
+    timestamp: new Date().toISOString(),
+  };
+}
+
+async function main(): Promise<number> {
+  const parsed = parseArgs(process.argv.slice(2));
+  if (parsed.commandArgs.length === 0) {
+    process.stderr.write('Usage: test_runner_wrapper.ts [--framework <name>] -- <test-command>\n');
+    return 1;
+  }
+
+  if (!SESSION) {
+    return passthrough(parsed.commandArgs, parsed.childEnv);
+  }
+
+  const prefix = SESSION.length >= 8 ? SESSION.slice(0, 8) : SESSION;
+  const projectRoot = path.resolve(PROJECT);
+  const statusDir = path.join(projectRoot, '.dev-pomogator', '.test-status');
+  const statusFile = path.join(statusDir, `status.${prefix}.yaml`);
+  const logFile = path.join(statusDir, `test.${prefix}.log`);
+  const logFileForYaml = path.posix.join('.dev-pomogator', '.test-status', `test.${prefix}.log`);
+  const framework = resolveFramework(parsed.framework, projectRoot);
+
+  fs.mkdirSync(statusDir, { recursive: true });
+  fs.writeFileSync(logFile, '', 'utf-8');
+
+  const writer = new YamlWriter(statusFile, prefix, framework, logFileForYaml, 1000, process.pid);
+  writer.write();
+
+  let adapter;
+  try {
+    adapter = getAdapter(framework);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    process.stderr.write(`${message}\n`);
+    writer.processEvent(createEvent('error', message));
+    writer.finalize(2);
+    return 2;
+  }
+
+  const logStream = fs.createWriteStream(logFile, { flags: 'a' });
+  const child = spawn(buildShellCommand(parsed.commandArgs), {
+    cwd: projectRoot,
+    shell: true,
+    stdio: ['inherit', 'pipe', 'pipe'],
+    env: { ...process.env, ...parsed.childEnv },
+  });
+
+  let childError: string | null = null;
+  const buffers: Record<'stdout' | 'stderr', string> = {
+    stdout: '',
+    stderr: '',
+  };
+
+  const parseLines = (streamName: 'stdout' | 'stderr', text: string): void => {
+    buffers[streamName] += text;
+    const lines = buffers[streamName].split(/\r?\n/);
+    buffers[streamName] = lines.pop() ?? '';
+
+    let changed = false;
+    for (const line of lines) {
+      const event = adapter.parseLine(line);
+      if (!event) {
+        continue;
+      }
+      writer.processEvent(event);
+      changed = true;
+    }
+
+    if (changed) {
+      writer.writeIfNeeded();
+    }
+  };
+
+  child.stdout?.on('data', (chunk: Buffer) => {
+    const text = chunk.toString('utf-8');
+    process.stdout.write(text);
+    logStream.write(text);
+    parseLines('stdout', text);
+  });
+
+  child.stderr?.on('data', (chunk: Buffer) => {
+    const text = chunk.toString('utf-8');
+    process.stderr.write(text);
+    logStream.write(text);
+    parseLines('stderr', text);
+  });
+
+  child.on('error', (error) => {
+    childError = error.message;
+    writer.processEvent(createEvent('error', error.message));
+    writer.write();
+  });
+
+  const flushRemainders = (): void => {
+    for (const key of ['stdout', 'stderr'] as const) {
+      const line = buffers[key].trimEnd();
+      if (!line) {
+        continue;
+      }
+      const event = adapter.parseLine(line);
+      if (event) {
+        writer.processEvent(event);
+      }
+      buffers[key] = '';
+    }
+  };
+
+  return new Promise<number>((resolve) => {
+    child.on('close', (code, signal) => {
+      flushRemainders();
+
+      const exitCode = childError
+        ? 1
+        : code !== null
+          ? code
+          : signal
+            ? 1
+            : 0;
+
+      if (childError) {
+        writer.processEvent(createEvent('error', childError));
+      }
+
+      logStream.end(() => {
+        writer.finalize(exitCode);
+        resolve(exitCode);
+      });
+    });
+  });
+}
+
+main().then((code) => process.exit(code));

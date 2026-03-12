@@ -1,5 +1,6 @@
 version: 2
 session_id: "abc12345"
+pid: 12345
 started_at: "2026-03-09T19:30:00Z"
 updated_at: "2026-03-09T19:31:15Z"
 state: running

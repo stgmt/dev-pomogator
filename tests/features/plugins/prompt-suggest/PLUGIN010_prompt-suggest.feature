@@ -1,4 +1,4 @@
-# Source: analyze-features.ps1 (PLUGIN010, next free domain number)
+# Source: analyze-features.sh (PLUGIN010, next free domain number)
 Feature: PLUGIN010_Prompt-Suggest
 
   Background:

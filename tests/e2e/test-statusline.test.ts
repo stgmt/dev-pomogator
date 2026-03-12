@@ -2,7 +2,12 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import { spawnSync } from 'child_process';
-import { appPath } from './helpers';
+import { appPath, homePath, runInstaller, setupCleanState } from './helpers';
+import {
+  buildWrappedStatusLineCommand,
+  parseWrappedStatusLineCommand,
+  resolveClaudeStatusLine,
+} from '../../src/utils/statusline.js';
 
 // --- Helpers ---
 
@@ -10,10 +15,23 @@ const STATUS_DIR = '.dev-pomogator/.test-status';
 const FIXTURES_DIR = 'tests/fixtures/test-statusline';
 const RENDER_SCRIPT = 'extensions/test-statusline/tools/test-statusline/statusline_render.sh';
 const WRAPPER_SCRIPT = 'extensions/test-statusline/tools/test-statusline/test_runner_wrapper.sh';
+const STATUSLINE_WRAPPER_SCRIPT = 'extensions/test-statusline/tools/test-statusline/statusline_wrapper.js';
 const SESSION_HOOK = 'extensions/test-statusline/tools/test-statusline/statusline_session_start.ts';
+const DEFAULT_STATUSLINE_CONFIG = {
+  type: 'command',
+  command: 'bash .dev-pomogator/tools/test-statusline/statusline_render.sh',
+};
 
 function statusFilePath(prefix: string): string {
   return path.join(appPath(), STATUS_DIR, `status.${prefix}.yaml`);
+}
+
+function projectClaudeSettingsPath(): string {
+  return appPath('.claude', 'settings.json');
+}
+
+function globalClaudeSettingsPath(): string {
+  return homePath('.claude', 'settings.json');
 }
 
 function runRenderScript(stdinJson: Record<string, unknown>): { stdout: string; stderr: string; status: number | null } {
@@ -37,6 +55,35 @@ function runWrapper(args: string[], env: Record<string, string> = {}): { stdout:
   return { stdout: result.stdout || '', stderr: result.stderr || '', status: result.status };
 }
 
+function canonicalWrapperEnv(overrides: Record<string, string> = {}): Record<string, string> {
+  return {
+    TEST_STATUSLINE_SESSION: 'abc12345',
+    TEST_STATUSLINE_PROJECT: appPath(),
+    ...overrides,
+  };
+}
+
+function runStatuslineWrapper(
+  userCommand: string,
+  managedCommand: string,
+  stdinJson: Record<string, unknown>
+): { stdout: string; stderr: string; status: number | null } {
+  const result = spawnSync('node', [
+    appPath(STATUSLINE_WRAPPER_SCRIPT),
+    '--user-b64',
+    Buffer.from(userCommand, 'utf-8').toString('base64'),
+    '--managed-b64',
+    Buffer.from(managedCommand, 'utf-8').toString('base64'),
+  ], {
+    input: JSON.stringify(stdinJson),
+    encoding: 'utf-8',
+    cwd: appPath(),
+    env: { ...process.env, FORCE_COLOR: '0' },
+    timeout: 10000,
+  });
+  return { stdout: result.stdout || '', stderr: result.stderr || '', status: result.status };
+}
+
 function runSessionHook(stdinJson: Record<string, unknown>, env: Record<string, string> = {}): { stdout: string; stderr: string; status: number | null } {
   const result = spawnSync('npx', ['tsx', appPath(SESSION_HOOK)], {
     input: JSON.stringify(stdinJson),
@@ -52,13 +99,34 @@ function readFixture(name: string): string {
   return fs.readFileSync(appPath(FIXTURES_DIR, name), 'utf-8');
 }
 
+function readTuiFixture(name: string): string {
+  return fs.readFileSync(appPath('tests/fixtures/tui-test-runner', name), 'utf-8');
+}
+
 function readFixtureJson(name: string): Record<string, unknown> {
   return fs.readJsonSync(appPath(FIXTURES_DIR, name));
 }
 
 function getYamlField(yamlContent: string, field: string): string {
   const match = yamlContent.match(new RegExp(`^${field}:\\s*(.*)$`, 'm'));
-  return match ? match[1].replace(/"/g, '').replace(/\r/g, '').trim() : '';
+  return match ? match[1].replace(/['"]/g, '').replace(/\r/g, '').trim() : '';
+}
+
+function withPid(yamlContent: string, pid: number): string {
+  return yamlContent.replace('__PID__', String(pid));
+}
+
+function createDeadPid(): number {
+  const result = spawnSync(process.execPath, ['-e', 'process.exit(0)'], {
+    encoding: 'utf-8',
+    cwd: appPath(),
+    env: { ...process.env, FORCE_COLOR: '0' },
+    timeout: 10000,
+  });
+  if (!result.pid || result.status !== 0) {
+    throw new Error(`Failed to create dead PID fixture (status=${result.status}, pid=${result.pid})`);
+  }
+  return result.pid;
 }
 
 // --- Setup / Cleanup ---
@@ -87,7 +155,7 @@ describe('PLUGIN011: Test Statusline', () => {
   describe('Statusline Render (@feature1)', () => {
     // @feature1
     it('PLUGIN011_01: renders running state with progress bar', async () => {
-      const yamlContent = readFixture('mock-status-running.yaml');
+      const yamlContent = withPid(readFixture('mock-status-running-live-pid.yaml'), process.pid);
       await fs.writeFile(statusFilePath('abc12345'), yamlContent);
       const stdinJson = { ...readFixtureJson('mock-stdin.json'), cwd: appPath() };
       const result = runRenderScript(stdinJson);
@@ -120,6 +188,61 @@ describe('PLUGIN011: Test Statusline', () => {
       expect(result.stdout).toContain('48/50');
       expect(result.stdout).toContain('2 failed');
     });
+
+    // @feature1
+    it('PLUGIN011_35: reads only top-level summary fields from canonical multi-suite v2 YAML', async () => {
+      const yamlContent = readTuiFixture('yaml-v2-full.yaml')
+        .replace(/^state: running$/m, 'state: failed')
+        .replace(/^total: 10$/m, 'total: 19')
+        .replace(/^passed: 6$/m, 'passed: 12')
+        .replace(/^failed: 1$/m, 'failed: 7')
+        .replace(/^running: 2$/m, 'running: 0')
+        .replace(/^percent: 80$/m, 'percent: 100')
+        .replace(/^duration_ms: 12000$/m, 'duration_ms: 65000');
+      await fs.writeFile(statusFilePath('abc12345'), yamlContent);
+      const stdinJson = { ...readFixtureJson('mock-stdin.json'), cwd: appPath() };
+      const result = runRenderScript(stdinJson);
+
+      expect(result.status).toBe(0);
+      expect(result.stdout).toContain('12/19');
+      expect(result.stdout).toContain('7 failed');
+      expect(result.stdout).not.toContain('3/5');
+    });
+
+    // @feature1
+    it('PLUGIN011_26: rewrites dead running pid to failed', async () => {
+      const deadPid = createDeadPid();
+      const yamlContent = withPid(readFixture('mock-status-running-dead-pid.yaml'), deadPid);
+      await fs.writeFile(statusFilePath('abc12345'), yamlContent);
+      const stdinJson = { ...readFixtureJson('mock-stdin.json'), cwd: appPath() };
+      const result = runRenderScript(stdinJson);
+
+      expect(result.status).toBe(0);
+      expect(result.stdout).toContain('❌');
+      expect(result.stdout).not.toContain('10⏳');
+
+      const repaired = await fs.readFile(statusFilePath('abc12345'), 'utf-8');
+      expect(getYamlField(repaired, 'state')).toBe('failed');
+      expect(getYamlField(repaired, 'pid')).toBe(String(deadPid));
+      expect(getYamlField(repaired, 'error_message')).toContain('Process died unexpectedly');
+    });
+
+    // @feature1
+    it('PLUGIN011_29: keeps running state when pid is alive', async () => {
+      const yamlContent = withPid(readFixture('mock-status-running-live-pid.yaml'), process.pid);
+      await fs.writeFile(statusFilePath('abc12345'), yamlContent);
+      const stdinJson = { ...readFixtureJson('mock-stdin.json'), cwd: appPath() };
+      const result = runRenderScript(stdinJson);
+
+      expect(result.status).toBe(0);
+      expect(result.stdout).toContain('76%');
+      expect(result.stdout).toContain('10⏳');
+
+      const afterRender = await fs.readFile(statusFilePath('abc12345'), 'utf-8');
+      expect(getYamlField(afterRender, 'state')).toBe('running');
+      expect(getYamlField(afterRender, 'pid')).toBe(String(process.pid));
+    });
+
   });
 
   // ===========================================
@@ -149,7 +272,7 @@ describe('PLUGIN011: Test Statusline', () => {
 
     // @feature1a
     it('PLUGIN011_06: works without jq installed', async () => {
-      const yamlContent = readFixture('mock-status-running.yaml');
+      const yamlContent = withPid(readFixture('mock-status-running-live-pid.yaml'), process.pid);
       await fs.writeFile(statusFilePath('abc12345'), yamlContent);
       const stdinJson = { ...readFixtureJson('mock-stdin.json'), cwd: appPath() };
       // Run with PATH that excludes jq
@@ -173,15 +296,16 @@ describe('PLUGIN011: Test Statusline', () => {
   describe('YAML Protocol & Wrapper (@feature2)', () => {
     // @feature2
     it('PLUGIN011_07: YAML status file contains all required fields', async () => {
-      const env = { TEST_STATUSLINE_SESSION: 'abc12345', TEST_STATUSLINE_PROJECT: appPath() };
+      const env = canonicalWrapperEnv();
       const result = runWrapper(['echo', 'test passed'], env);
 
       const statusFile = statusFilePath('abc12345');
       expect(await fs.pathExists(statusFile)).toBe(true);
       const content = await fs.readFile(statusFile, 'utf-8');
 
-      expect(getYamlField(content, 'version')).toBe('1');
+      expect(getYamlField(content, 'version')).toBe('2');
       expect(getYamlField(content, 'session_id')).toBeTruthy();
+      expect(getYamlField(content, 'pid')).toBeTruthy();
       expect(getYamlField(content, 'started_at')).toBeTruthy();
       expect(getYamlField(content, 'updated_at')).toBeTruthy();
       expect(getYamlField(content, 'state')).toBeTruthy();
@@ -192,11 +316,12 @@ describe('PLUGIN011: Test Statusline', () => {
       expect(content).toContain('running:');
       expect(content).toContain('percent:');
       expect(content).toContain('duration_ms:');
+      expect(getYamlField(content, 'log_file')).toContain('test.abc12345.log');
     });
 
     // @feature2
     it('PLUGIN011_08: wrapper writes atomic YAML via temp file rename', async () => {
-      const env = { TEST_STATUSLINE_SESSION: 'abc12345', TEST_STATUSLINE_PROJECT: appPath() };
+      const env = canonicalWrapperEnv();
       const result = runWrapper(['echo', 'test passed'], env);
 
       // Verify no .tmp files left behind (atomic write completed)
@@ -207,7 +332,7 @@ describe('PLUGIN011: Test Statusline', () => {
 
     // @feature2
     it('PLUGIN011_09: wrapper creates initial state on test start', async () => {
-      const env = { TEST_STATUSLINE_SESSION: 'abc12345', TEST_STATUSLINE_PROJECT: appPath() };
+      const env = canonicalWrapperEnv();
       // Use a command that takes time so we can check initial state
       const result = runWrapper(['sleep', '0.1'], env);
 
@@ -220,7 +345,7 @@ describe('PLUGIN011: Test Statusline', () => {
 
     // @feature2
     it('PLUGIN011_10: wrapper updates state to passed on success', async () => {
-      const env = { TEST_STATUSLINE_SESSION: 'abc12345', TEST_STATUSLINE_PROJECT: appPath() };
+      const env = canonicalWrapperEnv();
       const result = runWrapper(['true'], env);
 
       const content = await fs.readFile(statusFilePath('abc12345'), 'utf-8');
@@ -229,11 +354,48 @@ describe('PLUGIN011: Test Statusline', () => {
 
     // @feature2
     it('PLUGIN011_11: wrapper updates state to failed on error', async () => {
-      const env = { TEST_STATUSLINE_SESSION: 'abc12345', TEST_STATUSLINE_PROJECT: appPath() };
+      const env = canonicalWrapperEnv();
       const result = runWrapper(['false'], env);
 
       const content = await fs.readFile(statusFilePath('abc12345'), 'utf-8');
       expect(getYamlField(content, 'state')).toBe('failed');
+    });
+
+    // @feature2
+    it('PLUGIN011_27: wrapper writes pid field to YAML', async () => {
+      const env = canonicalWrapperEnv();
+      runWrapper(['echo', 'test passed'], env);
+
+      const content = await fs.readFile(statusFilePath('abc12345'), 'utf-8');
+      const pid = getYamlField(content, 'pid');
+      expect(pid).toMatch(/^\d+$/);
+      expect(Number(pid)).toBeGreaterThan(0);
+    });
+
+    // @feature2
+    it('PLUGIN011_36: wrapper writes stdout and stderr into log_file', async () => {
+      const env = canonicalWrapperEnv();
+      const scriptPath = appPath(STATUS_DIR, 'wrapper-log-script.js');
+      await fs.writeFile(scriptPath, [
+        "console.log('stdout line');",
+        "console.error('stderr line');",
+      ].join('\n'));
+      const result = runWrapper([
+        'node',
+        scriptPath,
+      ], env);
+
+      expect(result.status).toBe(0);
+
+      const content = await fs.readFile(statusFilePath('abc12345'), 'utf-8');
+      const logFile = getYamlField(content, 'log_file');
+      const absoluteLogFile = path.isAbsolute(logFile) ? logFile : path.join(appPath(), logFile);
+
+      expect(await fs.pathExists(absoluteLogFile)).toBe(true);
+
+      const logContent = await fs.readFile(absoluteLogFile, 'utf-8');
+      expect(logContent).toContain('stdout line');
+      expect(logContent).toContain('stderr line');
     });
   });
 
@@ -245,7 +407,7 @@ describe('PLUGIN011: Test Statusline', () => {
     // @feature3
     it('PLUGIN011_12: sessions use isolated status files', async () => {
       // Create two session files
-      const runningYaml = readFixture('mock-status-running.yaml');
+      const runningYaml = withPid(readFixture('mock-status-running-live-pid.yaml'), process.pid);
       const passedYaml = readFixture('mock-status-passed.yaml');
       await fs.writeFile(statusFilePath('aaaabbbb'), runningYaml);
       await fs.writeFile(statusFilePath('ccccdddd'), passedYaml);
@@ -305,6 +467,7 @@ describe('PLUGIN011: Test Statusline', () => {
 
       const envContent = await fs.readFile(envFile, 'utf-8');
       expect(envContent).toContain('TEST_STATUSLINE_SESSION=abc12345');
+      expect(envContent).toContain(`TEST_STATUSLINE_PROJECT=${appPath()}`);
 
       await fs.remove(envFile);
     });
@@ -354,6 +517,32 @@ describe('PLUGIN011: Test Statusline', () => {
 
       await fs.remove(envFile);
     });
+
+    // @feature4
+    it('PLUGIN011_28: repairs running files with dead pid', async () => {
+      const deadPid = createDeadPid();
+      const runningFile = statusFilePath('deadpid1');
+      const yamlContent = withPid(readFixture('mock-status-running-dead-pid.yaml'), deadPid);
+      await fs.writeFile(runningFile, yamlContent);
+
+      const envFile = appPath('.dev-pomogator/.test-env-file');
+      await fs.ensureFile(envFile);
+
+      const result = runSessionHook(
+        { session_id: 'newsessidxxxxxxx', cwd: appPath(), hook_event_name: 'SessionStart' },
+        { CLAUDE_ENV_FILE: envFile }
+      );
+
+      expect(result.status).toBe(0);
+      expect(await fs.pathExists(runningFile)).toBe(true);
+
+      const repaired = await fs.readFile(runningFile, 'utf-8');
+      expect(getYamlField(repaired, 'state')).toBe('failed');
+      expect(getYamlField(repaired, 'pid')).toBe(String(deadPid));
+      expect(getYamlField(repaired, 'error_message')).toContain('Process died unexpectedly');
+
+      await fs.remove(envFile);
+    });
   });
 
   // ===========================================
@@ -370,6 +559,7 @@ describe('PLUGIN011: Test Statusline', () => {
       const toolFiles = manifest.toolFiles?.['test-statusline'] || [];
 
       expect(toolFiles.join(',')).toContain('statusline_render.sh');
+      expect(toolFiles.join(',')).toContain('statusline_wrapper.js');
       expect(toolFiles.join(',')).toContain('test_runner_wrapper.sh');
       expect(toolFiles.join(',')).toContain('statusline_session_start.ts');
       expect(toolFiles.join(',')).toContain('status_types.ts');
@@ -399,11 +589,11 @@ describe('PLUGIN011: Test Statusline', () => {
   });
 
   // ===========================================
-  // @feature6 — StatusLine Integration
+  // @feature8 — StatusLine Coexistence
   // ===========================================
 
-  describe('StatusLine Integration (@feature6)', () => {
-    // @feature6
+  describe('StatusLine Coexistence (@feature8)', () => {
+    // @feature8
     it('PLUGIN011_21: installer writes statusLine to project settings.json', async () => {
       // Simulate what the installer does: read manifest, write statusLine to settings
       const manifestPath = appPath('extensions/test-statusline/extension.json');
@@ -432,7 +622,7 @@ describe('PLUGIN011: Test Statusline', () => {
       await fs.remove(testSettingsPath);
     });
 
-    // @feature6
+    // @feature8
     it('PLUGIN011_22: managed statusLine is overwritten on re-install', async () => {
       const testSettingsPath = appPath('.dev-pomogator/.test-settings.json');
 
@@ -455,16 +645,141 @@ describe('PLUGIN011: Test Statusline', () => {
       await fs.remove(testSettingsPath);
     });
 
-    // @feature6
-    it('PLUGIN011_23: user-defined statusLine is preserved', () => {
-      // Simulate user-defined statusLine (no .dev-pomogator/tools/ in command)
-      const userStatusLine = { type: 'command', command: 'npx -y ccstatusline@latest' };
+    // @feature8
+    it('PLUGIN011_23: user-defined statusLine is wrapped alongside managed one', () => {
+      const resolved = resolveClaudeStatusLine({
+        repoRoot: appPath(),
+        projectStatusLine: { type: 'command', command: 'npx -y ccstatusline@latest' },
+        statusLineConfig: DEFAULT_STATUSLINE_CONFIG,
+      });
 
-      // Check that user's command does NOT contain managed marker
-      const isManaged = userStatusLine.command.includes('.dev-pomogator/tools/');
-      expect(isManaged).toBe(false);
+      expect(resolved.command).toContain('statusline_wrapper.js');
+      expect(resolved.source).toBe('project');
 
-      // Installer should skip overwriting when !isManaged
+      const parsed = parseWrappedStatusLineCommand(resolved.command);
+      expect(parsed).not.toBeNull();
+      expect(parsed?.userCommand).toBe('npx -y ccstatusline@latest');
+      expect(parsed?.managedCommand).toContain('statusline_render.sh');
+    });
+
+    // @feature8
+    it('PLUGIN011_24: existing wrapper keeps user command and updates managed command', () => {
+      const existingWrapper = buildWrappedStatusLineCommand(
+        appPath(),
+        'npx -y ccstatusline@latest',
+        'bash /old/path/.dev-pomogator/tools/test-statusline/statusline_render.sh'
+      );
+
+      const resolved = resolveClaudeStatusLine({
+        repoRoot: appPath(),
+        projectStatusLine: { type: 'command', command: existingWrapper },
+        statusLineConfig: DEFAULT_STATUSLINE_CONFIG,
+      });
+
+      const parsed = parseWrappedStatusLineCommand(resolved.command);
+      expect(parsed).not.toBeNull();
+      expect(parsed?.userCommand).toBe('npx -y ccstatusline@latest');
+      expect(parsed?.managedCommand).toContain(`${appPath().replace(/\\/g, '/')}/.dev-pomogator/tools/test-statusline/statusline_render.sh`);
+      expect(parsed?.managedCommand).not.toContain('/old/path/');
+    });
+
+    // @feature8
+    it('PLUGIN011_25: wrapper combines outputs of user and managed commands', () => {
+      const result = runStatuslineWrapper(
+        'printf userinfo',
+        'printf testinfo',
+        { session_id: 'abc12345', cwd: appPath() }
+      );
+
+      expect(result.status).toBe(0);
+      expect(result.stdout.trim()).toBe('userinfo | testinfo');
+    });
+
+    // @feature8
+    it('PLUGIN011_30: resolver prefers project statusLine over global one', () => {
+      const resolved = resolveClaudeStatusLine({
+        repoRoot: appPath(),
+        projectStatusLine: { type: 'command', command: 'printf projectinfo' },
+        globalStatusLine: { type: 'command', command: 'printf globalinfo' },
+        statusLineConfig: DEFAULT_STATUSLINE_CONFIG,
+      });
+
+      expect(resolved.mode).toBe('wrapped');
+      expect(resolved.source).toBe('project');
+
+      const parsed = parseWrappedStatusLineCommand(resolved.command);
+      expect(parsed?.userCommand).toBe('printf projectinfo');
+      expect(parsed?.managedCommand).toContain('statusline_render.sh');
+    });
+
+    // @feature8
+    it('PLUGIN011_31: installer wraps global user-defined statusLine when project has none', async () => {
+      const globalSettingsPath = globalClaudeSettingsPath();
+
+      await setupCleanState('claude');
+      try {
+        await fs.ensureDir(path.dirname(globalSettingsPath));
+        await fs.writeJson(globalSettingsPath, {
+          statusLine: { type: 'command', command: 'npx -y ccstatusline@latest' },
+        }, { spaces: 2 });
+
+        const result = await runInstaller('--claude --all');
+        expect(result.exitCode).toBe(0);
+
+        const projectSettings = await fs.readJson(projectClaudeSettingsPath());
+        const parsed = parseWrappedStatusLineCommand(projectSettings.statusLine.command);
+        expect(parsed).not.toBeNull();
+        expect(parsed?.userCommand).toBe('npx -y ccstatusline@latest');
+        expect(parsed?.managedCommand).toContain('statusline_render.sh');
+
+        const globalSettings = await fs.readJson(globalSettingsPath);
+        expect(globalSettings.statusLine.command).toBe('npx -y ccstatusline@latest');
+      } finally {
+        await setupCleanState('claude');
+      }
+    });
+
+    // @feature8
+    it('PLUGIN011_32: wrapper keeps managed output when user command fails', () => {
+      const result = runStatuslineWrapper(
+        'false',
+        'printf managedinfo',
+        { session_id: 'abc12345', cwd: appPath() }
+      );
+
+      expect(result.status).toBe(0);
+      expect(result.stdout.trim()).toBe('managedinfo');
+    });
+
+    // @feature8
+    it('PLUGIN011_33: wrapper keeps user output when managed command fails', () => {
+      const result = runStatuslineWrapper(
+        'printf userinfo',
+        'false',
+        { session_id: 'abc12345', cwd: appPath() }
+      );
+
+      expect(result.status).toBe(0);
+      expect(result.stdout.trim()).toBe('userinfo');
+    });
+
+    // @feature8
+    it('PLUGIN011_34: broken wrapper falls back to direct managed statusLine', () => {
+      const brokenWrapper = `node "${appPath().replace(/\\/g, '/')}/.dev-pomogator/tools/test-statusline/statusline_wrapper.js" --user-b64 "not_base64" --managed-b64 "still_bad"`;
+
+      expect(parseWrappedStatusLineCommand(brokenWrapper)).toBeNull();
+
+      const resolved = resolveClaudeStatusLine({
+        repoRoot: appPath(),
+        projectStatusLine: { type: 'command', command: brokenWrapper },
+        statusLineConfig: DEFAULT_STATUSLINE_CONFIG,
+      });
+
+      expect(resolved.mode).toBe('direct');
+      expect(resolved.source).toBe('project');
+      expect(resolved.existingKind).toBe('wrapped');
+      expect(resolved.command).toContain('statusline_render.sh');
+      expect(resolved.command).not.toContain('statusline_wrapper.js');
     });
   });
 });

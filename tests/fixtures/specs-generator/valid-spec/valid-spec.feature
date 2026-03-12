@@ -5,11 +5,11 @@ Feature: PLUGIN006_Valid_Spec
 
   Scenario: Validate complete spec
     Given a complete spec folder exists
-    When I run validate-spec.ps1
+    When I run validate-spec.sh
     Then the result should be valid
 
   Scenario: Check spec status
     Given a complete spec folder exists
-    When I run spec-status.ps1
+    When I run spec-status.sh
     Then the phase should be "Finalization"
     And the progress should be 100%

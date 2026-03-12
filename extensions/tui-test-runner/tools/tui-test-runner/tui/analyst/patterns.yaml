@@ -23,7 +23,7 @@ patterns:
     category: connection
 
   # --- Assertion ---
-  - id: assertion_equality
+  - id: assertion_equal
     match: "(expected .+ to (equal|be|match)|AssertionError|AssertionFailed)"
     hint: "Value mismatch — check expected vs actual"
     category: assertion

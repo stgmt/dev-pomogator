@@ -11,13 +11,16 @@ import signal
 from pathlib import Path
 
 
+LOCK_FILE = ".tui-test-runner.lock"
+
+
 def get_lock_file(status_file: str) -> Path:
     """Get per-session lock file path from status file name."""
     match = re.search(r'status\.(.+)\.yaml$', os.path.basename(status_file))
     if match:
         session = match.group(1)
         return Path.home() / f".tui-test-runner.{session}.lock"
-    return Path.home() / ".tui-test-runner.lock"
+    return Path.home() / LOCK_FILE
 
 
 def is_already_running(lock_file: Path) -> bool:

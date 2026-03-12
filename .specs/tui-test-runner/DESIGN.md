@@ -108,7 +108,7 @@ extensions/tui-test-runner/
 ## Алгоритм (Data Flow)
 
 1. Тесты запускаются через `test_runner_wrapper.sh` (или enhanced wrapper)
-2. Wrapper пишет YAML v1/v2 в `.dev-pomogator/.test-status/status.{session}.yaml` (atomic: temp+rename)
+2. Wrapper пишет canonical YAML v2 в `.dev-pomogator/.test-status/status.{session}.yaml` (atomic: temp+rename)
 3. Wrapper tees stdout в `.dev-pomogator/.test-status/test.{session}.log`
 4. Python TUI (запущен отдельно) polling YAML каждые 500ms
 5. При обнаружении изменений — yaml_reader.py парсит в models, emits Textual message
@@ -126,7 +126,7 @@ updated_at: "2026-03-09T19:31:15Z"
 state: "running"          # idle | running | passed | failed | error
 framework: "vitest"       # vitest | jest | pytest | dotnet | unknown
 
-# v1 compat fields
+# flat summary fields
 total: 50
 passed: 38
 failed: 2
@@ -187,8 +187,8 @@ interface TestEvent {
 
 | Source | Target | What is reused |
 |--------|--------|---------------|
-| `extensions/test-statusline/tools/test-statusline/status_types.ts` | `adapters/types.ts` | TestStatus v1 interface, extended to v2 |
-| `extensions/test-statusline/tools/test-statusline/test_runner_wrapper.sh` | Unchanged, reused as-is | YAML v1 writer |
+| `extensions/test-statusline/tools/test-statusline/status_types.ts` | `adapters/types.ts` | Minimal flat statusline contract aligned to canonical v2 |
+| `extensions/test-statusline/tools/test-statusline/test_runner_wrapper.sh` | Thin shim to `test_runner_wrapper.ts` | Delegates to canonical v2 writer |
 | `extensions/test-statusline/tools/test-statusline/statusline_session_start.ts` | `tui_session_start.ts` | Hook pattern (stdin JSON, stdout JSON, fail-open) |
 | `D:\repos\zoho\tools\tui-test-explorer\tui_test_explorer\ui\app.py` | `tui/app.py` | 4-tab Textual App structure |
 | `D:\repos\zoho\tools\tui-test-explorer\tui_test_explorer\ui\widgets\logs_tab.py` | `tui/widgets/logs_tab.py` | 20+ regex highlight patterns |
@@ -200,7 +200,7 @@ interface TestEvent {
 
 **Classification:** TEST_DATA_ACTIVE
 **Evidence:** Фича создаёт YAML status files и log files в filesystem (вопрос 1 = ДА). BDD сценарии требуют предустановленных YAML fixtures (вопрос 3 = ДА). Вопросы 2, 4 = НЕТ (нет внешних сервисов, состояние — только файлы).
-**Verdict:** Нужны hooks для cleanup temp YAML/log файлов и fixtures для тестовых YAML v1/v2.
+**Verdict:** Нужны hooks для cleanup temp YAML/log файлов и fixtures для canonical YAML v2.
 
 ### Существующие hooks
 
@@ -212,7 +212,7 @@ interface TestEvent {
 
 | Hook файл | Тип | Тег/Scope | Что делает | По аналогии с |
 |-----------|-----|-----------|------------|---------------|
-| `tests/fixtures/tui-test-runner/yaml-v1-running.yaml` | Fixture | per-test | YAML v1 sample (state=running) | N/A |
+| `tests/fixtures/tui-test-runner/yaml-v2-running.yaml` | Fixture | per-test | Canonical YAML v2 sample (state=running) | N/A |
 | `tests/fixtures/tui-test-runner/yaml-v2-full.yaml` | Fixture | per-test | YAML v2 sample (suites+tests+phases) | N/A |
 | `tests/fixtures/tui-test-runner/yaml-v2-failed.yaml` | Fixture | per-test | YAML v2 sample (state=failed, errors) | N/A |
 | `tests/fixtures/tui-test-runner/vitest-output.txt` | Fixture | per-test | Sample vitest stdout для adapter testing | N/A |
@@ -225,7 +225,7 @@ interface TestEvent {
 
 | Fixture/Data | Путь | Назначение | Lifecycle |
 |-------------|------|------------|-----------|
-| yaml-v1-running.yaml | `tests/fixtures/tui-test-runner/` | YAML v1 status sample | per-test (read-only) |
+| yaml-v2-running.yaml | `tests/fixtures/tui-test-runner/` | Canonical YAML v2 status sample | per-test (read-only) |
 | yaml-v2-full.yaml | `tests/fixtures/tui-test-runner/` | YAML v2 full sample | per-test (read-only) |
 | yaml-v2-failed.yaml | `tests/fixtures/tui-test-runner/` | YAML v2 failed sample | per-test (read-only) |
 | vitest-output.txt | `tests/fixtures/tui-test-runner/` | Vitest stdout sample | per-test (read-only) |

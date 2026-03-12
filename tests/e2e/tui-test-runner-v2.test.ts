@@ -1,13 +1,15 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
-import { execSync } from 'child_process';
+import { execSync, spawnSync } from 'child_process';
 import { appPath } from './helpers';
 import { cleanupTuiV2 } from './helpers/tui-v2-cleanup';
 
 // --- Paths ---
 
 const STATUS_DIR = '.dev-pomogator/.test-status';
+const FIXTURES_DIR = 'tests/fixtures/tui-test-runner';
+const FIXTURE_PROJECT_DIR = path.join(FIXTURES_DIR, 'project');
 const TUI_DIR = 'extensions/tui-test-runner/tools/tui-test-runner/tui';
 const ANALYST_DIR = path.join(TUI_DIR, 'analyst');
 
@@ -26,7 +28,176 @@ afterEach(async () => {
 
 // --- Helper: run Python module check ---
 
+interface PythonRunner {
+  command: string;
+  prefixArgs: string[];
+}
+
+let cachedPythonRunner: PythonRunner | null = null;
+
+const ANALYZE_STATUS_SCRIPT = String.raw`
+import json
+import sys
+from pathlib import Path
+
+import yaml
+
+payload = json.loads(sys.stdin.read())
+sys.path.insert(0, str(Path(payload["package_root"]).resolve()))
+
+from tui.models import TestStatus
+from tui.analyst.output import analyze_status
+
+status_path = Path(payload["status_file"])
+status = TestStatus.from_dict(yaml.safe_load(status_path.read_text(encoding="utf-8")))
+
+report = analyze_status(
+    status,
+    project_root=payload.get("project_root"),
+    user_patterns_path=payload.get("user_patterns_path"),
+)
+
+cards = []
+for card in report.failures:
+    crash = None
+    code_snippet = None
+    call_tree = ""
+    if card.location and card.location.crash_point:
+        crash = {
+            "file": card.location.crash_point.file,
+            "line": card.location.crash_point.line,
+            "method": card.location.crash_point.method,
+        }
+        code_snippet = card.location.crash_point.code_snippet
+        call_tree = card.location.render_tree()
+
+    cards.append({
+        "test": card.test,
+        "duration": card.duration,
+        "errorType": card.error_type,
+        "errorMessage": card.error_message,
+        "patternId": card.matched_pattern.pattern.id if card.matched_pattern else None,
+        "hint": card.matched_pattern.pattern.hint if card.matched_pattern else None,
+        "matchedBy": card.matched_pattern.matched_by if card.matched_pattern else None,
+        "crash": crash,
+        "codeSnippet": code_snippet,
+        "callTree": call_tree,
+        "rawStack": card.raw_stack,
+        "suiteFile": card.suite_file,
+    })
+
+print(json.dumps({
+    "summary": {
+        "total": report.total_tests,
+        "passed": report.passed,
+        "failed": report.failed,
+    },
+    "cards": cards,
+}))
+`;
+
+const LOAD_PATTERNS_SCRIPT = String.raw`
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(sys.stdin.read())
+sys.path.insert(0, str(Path(payload["package_root"]).resolve()))
+
+from tui.analyst.patterns import PatternLoader, PatternMatcher
+
+loader = PatternLoader(builtin_path=Path(payload["patterns_file"]))
+patterns = loader.load()
+matcher = PatternMatcher(patterns)
+match = matcher.match(payload.get("message", ""), payload.get("error_type", ""))
+
+print(json.dumps({
+    "ids": [pattern.id for pattern in patterns],
+    "matchId": match.pattern.id if match else None,
+    "matchedBy": match.matched_by if match else None,
+}))
+`;
+
+const COMPILE_PYTHON_FILE_SCRIPT = String.raw`
+import json
+import py_compile
+import sys
+
+payload = json.loads(sys.stdin.read())
+py_compile.compile(payload["file"], doraise=True)
+print(json.dumps({"compiled": True}))
+`;
+
+function getPythonRunner(): PythonRunner {
+  if (cachedPythonRunner) {
+    return cachedPythonRunner;
+  }
+
+  const candidates: PythonRunner[] = process.platform === 'win32'
+    ? [
+        { command: 'python', prefixArgs: [] },
+        { command: 'py', prefixArgs: ['-3'] },
+        { command: 'python3', prefixArgs: [] },
+      ]
+    : [
+        { command: 'python3', prefixArgs: [] },
+        { command: 'python', prefixArgs: [] },
+      ];
+
+  for (const candidate of candidates) {
+    const result = spawnSync(candidate.command, [...candidate.prefixArgs, '--version'], {
+      encoding: 'utf-8',
+      cwd: appPath(),
+      timeout: 5000,
+    });
+    if (result.status === 0) {
+      cachedPythonRunner = candidate;
+      return candidate;
+    }
+  }
+
+  throw new Error('Python 3.9+ is required for TUI analysis tests');
+}
+
+function runPythonJson(script: string, payload: Record<string, unknown>) {
+  const runner = getPythonRunner();
+  const result = spawnSync(runner.command, [...runner.prefixArgs, '-c', script], {
+    input: JSON.stringify(payload),
+    encoding: 'utf-8',
+    cwd: appPath(),
+    timeout: 20000,
+  });
+
+  if (result.status !== 0) {
+    throw new Error(`Python script failed:\nSTDOUT:\n${result.stdout}\nSTDERR:\n${result.stderr}`);
+  }
+
+  return JSON.parse((result.stdout || '').trim());
+}
+
+function analyzeStatusFixture(fixtureName: string, projectRoot = appPath(FIXTURE_PROJECT_DIR)) {
+  return runPythonJson(ANALYZE_STATUS_SCRIPT, {
+    package_root: path.dirname(appPath(TUI_DIR)),
+    status_file: appPath(FIXTURES_DIR, fixtureName),
+    project_root: projectRoot,
+    user_patterns_path: path.join(projectRoot, '.dev-pomogator', 'patterns.yaml'),
+  });
+}
+
+function compilePythonFile(filePath: string) {
+  return runPythonJson(COMPILE_PYTHON_FILE_SCRIPT, { file: filePath });
+}
+
 function pythonImportCheck(module: string): string {
+  const runner = getPythonRunner();
+  const result = spawnSync(runner.command, [...runner.prefixArgs, '-c', `import ${module}; print('ok')`], {
+    encoding: 'utf-8',
+    cwd: appPath(),
+    timeout: 10000,
+  });
+  if (result.status === 0) {
+    return (result.stdout || '').trim();
+  }
   try {
     return execSync(`python3 -c "import ${module}; print('ok')"`, {
       encoding: 'utf-8',
@@ -44,52 +215,50 @@ describe('PLUGIN013: TUI Test Runner V2', () => {
   describe('AI Test Analyst @feature1', () => {
     // PLUGIN013_01
     it('Analysis tab shows matched pattern with hint', async () => {
-      // Verify patterns.yaml exists and contains patterns
-      const patternsPath = appPath(ANALYST_DIR, 'patterns.yaml');
-      expect(await fs.pathExists(patternsPath)).toBe(true);
-      const content = await fs.readFile(patternsPath, 'utf-8');
-      expect(content).toContain('patterns:');
-      expect(content).toContain('hint:');
-      expect(content).toContain('timeout');
+      const result = analyzeStatusFixture('yaml-v2-failed.yaml');
+      const timeoutCard = result.cards.find((card: any) => card.patternId === 'timeout');
+      const analysisTabCode = await fs.readFile(appPath(TUI_DIR, 'widgets', 'analysis_tab.py'), 'utf-8');
 
-      // Verify patterns.py has PatternMatcher class
-      const matcherPath = appPath(ANALYST_DIR, 'patterns.py');
-      const matcherCode = await fs.readFile(matcherPath, 'utf-8');
-      expect(matcherCode).toContain('class PatternMatcher');
-      expect(matcherCode).toContain('def match');
+      expect(timeoutCard).toBeDefined();
+      expect(timeoutCard.hint).toBe('Custom timeout hint from project override');
+      expect(analysisTabCode).toContain('analyze_status');
+      expect(compilePythonFile(appPath(TUI_DIR, 'widgets', 'analysis_tab.py'))).toEqual({ compiled: true });
     });
 
     // PLUGIN013_02
     it('Analysis tab shows code snippet for failure', async () => {
-      // Verify code_reader.py exists with CodeSnippetReader
-      const readerPath = appPath(ANALYST_DIR, 'code_reader.py');
-      expect(await fs.pathExists(readerPath)).toBe(true);
-      const code = await fs.readFile(readerPath, 'utf-8');
-      expect(code).toContain('class CodeSnippetReader');
-      expect(code).toContain('def get_snippet');
-      expect(code).toContain('context');
-      // Should format with line numbers and arrow marker
-      expect(code).toContain('→');
+      const result = analyzeStatusFixture('yaml-v2-full.yaml');
+      const failure = result.cards[0];
+
+      expect(failure.patternId).toBe('assertion_equal');
+      expect(failure.crash).toEqual({
+        file: 'tests/auth.test.ts',
+        line: 42,
+        method: 'Object.<anonymous>',
+      });
+      expect(failure.codeSnippet).toContain('39│');
+      expect(failure.codeSnippet).toContain('→ 42│');
+      expect(failure.codeSnippet).toContain('45│');
     });
 
     // PLUGIN013_03
     it('Analysis tab handles unknown errors gracefully', async () => {
-      // PatternMatcher.match should return None for unknown errors
-      const matcherCode = await fs.readFile(appPath(ANALYST_DIR, 'patterns.py'), 'utf-8');
-      expect(matcherCode).toContain('return None');
-      // Output module should handle missing pattern gracefully
-      const outputCode = await fs.readFile(appPath(ANALYST_DIR, 'output.py'), 'utf-8');
-      expect(outputCode).toContain('matched_pattern');
+      const result = analyzeStatusFixture('yaml-v2-unknown.yaml');
+      const failure = result.cards[0];
+
+      expect(failure.patternId).toBeNull();
+      expect(failure.errorMessage).toBe('impossible condition triggered');
+      expect(failure.errorType).toBe('SomeRareException');
     });
 
     // PLUGIN013_04
     it('Analysis tab handles missing source file', async () => {
-      // CodeSnippetReader should return None for missing files
-      const code = await fs.readFile(appPath(ANALYST_DIR, 'code_reader.py'), 'utf-8');
-      expect(code).toContain('return None');
-      // Should cache negative results
-      expect(code).toContain('_file_cache');
-      expect(code).toContain('SKIP_DIRS');
+      const result = analyzeStatusFixture('yaml-v2-missing-source.yaml');
+      const failure = result.cards[0];
+
+      expect(failure.codeSnippet).toBeNull();
+      expect(failure.rawStack).toContain('tests/deleted.ts:10:3');
+      expect(failure.crash?.file).toBe('tests/deleted.ts');
     });
   });
 
@@ -207,31 +376,36 @@ describe('PLUGIN013: TUI Test Runner V2', () => {
   describe('Configurable Error Patterns @feature5', () => {
     // PLUGIN013_14
     it('User patterns override built-in', async () => {
-      const code = await fs.readFile(appPath(ANALYST_DIR, 'patterns.py'), 'utf-8');
-      // PatternLoader should merge user + built-in, user priority
-      expect(code).toContain('class PatternLoader');
-      expect(code).toContain('user_path');
-      expect(code).toContain('merged');
+      const result = analyzeStatusFixture('yaml-v2-failed.yaml');
+      const timeoutCard = result.cards.find((card: any) => card.patternId === 'timeout');
+
+      expect(timeoutCard).toBeDefined();
+      expect(timeoutCard.hint).toBe('Custom timeout hint from project override');
     });
 
     // PLUGIN013_15
     it('Invalid regex in user pattern is skipped', async () => {
-      const code = await fs.readFile(appPath(ANALYST_DIR, 'patterns.py'), 'utf-8');
-      // Should handle invalid regex gracefully
-      expect(code).toContain('def compile');
-      expect(code).toContain('re.error');
-      expect(code).toContain('Warning');
+      const result = runPythonJson(LOAD_PATTERNS_SCRIPT, {
+        package_root: path.dirname(appPath(TUI_DIR)),
+        patterns_file: appPath(FIXTURES_DIR, 'invalid-patterns.yaml'),
+        message: 'safe keyword path',
+      });
+
+      expect(result.ids).toEqual(['keyword_only_safe']);
+      expect(result.matchId).toBe('keyword_only_safe');
+      expect(result.matchedBy).toBe('keywords');
     });
 
     // PLUGIN013_16
     it('Pattern matching uses regex then keywords', async () => {
-      const code = await fs.readFile(appPath(ANALYST_DIR, 'patterns.py'), 'utf-8');
-      // Algorithm: regex first, then keyword ALL
-      expect(code).toContain('_compiled');
-      expect(code).toContain('search');
-      expect(code).toContain('keywords');
-      expect(code).toContain('all(');
-      expect(code).toContain('regex+keywords');
+      const keywordOnly = analyzeStatusFixture('yaml-v2-keyword-only.yaml');
+      const regexWithKeywords = analyzeStatusFixture('yaml-v2-regex-keywords.yaml');
+
+      expect(keywordOnly.cards[0].patternId).toBe('keyword_handshake');
+      expect(keywordOnly.cards[0].matchedBy).toBe('keywords');
+
+      expect(regexWithKeywords.cards[0].patternId).toBe('regex_keyword_bootstrap');
+      expect(regexWithKeywords.cards[0].matchedBy).toBe('regex+keywords');
     });
   });
 

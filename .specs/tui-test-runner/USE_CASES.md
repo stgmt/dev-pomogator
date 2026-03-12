@@ -6,7 +6,7 @@
 
 1. Разработчик запускает тесты через wrapper: `bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.sh npm test`
 2. Wrapper пишет YAML status file в `.dev-pomogator/.test-status/status.{session}.yaml`
-3. В отдельном терминале запускает TUI: `python -m tui_test_runner --status-file <path>`
+3. В отдельном терминале запускает TUI: `python -m tui --status-file <path>`
 4. TUI открывается с 4 вкладками, Monitoring tab активен по умолчанию
 5. TUI polling (500ms) читает YAML и обновляет все вкладки в реальном времени
 6. По завершении тестов TUI показывает итоговый статус (passed/failed)
@@ -55,7 +55,7 @@
 Расширение работает с любым тест-фреймворком.
 
 1. Node.js adapter автоматически определяет фреймворк по конфигу проекта (vitest.config.ts, jest.config.js, pytest.ini, *.csproj)
-2. Или разработчик явно указывает через env: `TUI_TEST_FRAMEWORK=vitest`
+2. Или разработчик явно указывает через env: `TEST_STATUSLINE_FRAMEWORK=vitest`
 3. Framework adapter парсит stdout конкретного фреймворка в универсальный TestEvent
 4. YAML v2 writer конвертирует TestEvent в стандартный YAML формат
 5. Python TUI читает только YAML — не зависит от фреймворка
@@ -67,5 +67,5 @@
 1. test-statusline показывает однострочный статус в Claude Code statusline
 2. tui-test-runner показывает полный 4-tab TUI в отдельном терминале
 3. Оба читают одни и те же YAML status files
-4. YAML v2 backward compatible с v1 — statusline_render.sh работает без изменений
+4. Оба consumer-а читают один canonical YAML v2 payload: statusline использует flat summary, TUI — structured sections
 5. Отдельные SessionStart hooks, не конфликтуют

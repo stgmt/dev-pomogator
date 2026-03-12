@@ -1,5 +1,5 @@
 import { loadConfig, saveConfig } from '../config/index.js';
-import type { InstalledExtension, ManagedFiles, ManagedFileEntry } from '../config/schema.js';
+import type { InstalledExtension, ManagedFiles, ManagedFileEntry, ManagedFileItem } from '../config/schema.js';
 import { getManagedPaths, getManagedHash } from '../config/schema.js';
 import { shouldCheckUpdate } from './cooldown.js';
 import { fetchExtensionManifest, downloadExtensionFile } from './github.js';
@@ -13,9 +13,10 @@ import path from 'path';
 import os from 'os';
 import semver from 'semver';
 import { RULES_SUBFOLDER, TOOLS_DIR, SKILLS_DIR } from '../constants.js';
-import { resolveHookToolPaths, replaceNpxTsxWithPortable } from '../installer/shared.js';
+import { resolveHookToolPaths, replaceNpxTsxWithPortable, ensureExecutableShellScripts } from '../installer/shared.js';
 import { detectMangledArtifacts } from '../utils/msys.js';
 import { writeJsonAtomic, readJsonSafe } from '../utils/atomic-json.js';
+import { resolveClaudeStatusLine } from '../utils/statusline.js';
 
 interface UpdateOptions {
   force?: boolean;
@@ -97,11 +98,13 @@ async function shouldBackupFile(
 
 async function removeStaleFiles(
   projectPath: string,
-  previous: string[] = [],
-  next: string[] = []
-): Promise<void> {
-  const previousSet = new Set(previous.map(normalizeRelativePath));
+  previousItems: ManagedFileItem[] = [],
+  next: string[] = [],
+  extensionName?: string
+): Promise<ModifiedFile[]> {
+  const previousSet = new Set(getManagedPaths(previousItems).map(normalizeRelativePath));
   const nextSet = new Set(next.map(normalizeRelativePath));
+  const backedUp: ModifiedFile[] = [];
 
   for (const relativePath of previousSet) {
     if (nextSet.has(relativePath)) {
@@ -113,10 +116,25 @@ async function removeStaleFiles(
       continue;
     }
     if (await fs.pathExists(destFile)) {
+      const storedHash = getManagedHash(previousItems, relativePath);
+      const shouldBackupStaleFile = storedHash
+        ? await isModifiedByUser(destFile, storedHash)
+        : true;
+
+      if (shouldBackupStaleFile && extensionName) {
+        const backupPath = await backupUserFile(projectPath, relativePath);
+        if (backupPath) {
+          console.log(`  📋 Backed up stale user-modified file: ${relativePath}`);
+          backedUp.push({ relativePath, backupPath, extensionName });
+        }
+      }
+
       await fs.remove(destFile);
       console.log(`  - Removed stale file: ${relativePath}`);
     }
   }
+
+  return backedUp;
 }
 
 async function updateCommandFiles(
@@ -251,6 +269,7 @@ async function updateToolFiles(
     }
 
     await fs.writeFile(destFile, content, 'utf-8');
+    await ensureExecutableShellScripts(destFile);
     written.push({ path: normalizedPath, hash: computeHash(content) });
   }
 
@@ -483,7 +502,7 @@ async function updateClaudeHooksForProject(
 
 /**
  * Update statusLine config in project .claude/settings.json
- * Managed statusLine (contains .dev-pomogator/tools/) is overwritten; user-defined is preserved
+ * Managed statusLine is overwritten; user-defined is wrapped to coexist.
  */
 async function updateClaudeStatusLineForProject(
   repoRoot: string,
@@ -491,21 +510,24 @@ async function updateClaudeStatusLineForProject(
 ): Promise<void> {
   const settingsPath = path.join(repoRoot, '.claude', 'settings.json');
   const settings = await readJsonSafe<Record<string, unknown>>(settingsPath, {});
+  const globalSettingsPath = path.join(os.homedir(), '.claude', 'settings.json');
+  const globalSettings =
+    settingsPath === globalSettingsPath
+      ? settings
+      : await fs.pathExists(globalSettingsPath)
+        ? await readJsonSafe<Record<string, unknown>>(globalSettingsPath, {})
+        : {};
 
-  const existing = settings.statusLine as { type?: string; command?: string } | undefined;
-  if (existing?.command && !existing.command.includes('.dev-pomogator/tools/')) {
-    // User-defined — don't touch
-    return;
-  }
-
-  const command = statusLineConfig.command.replace(
-    /\.dev-pomogator\/tools\//,
-    `${repoRoot.replace(/\\/g, '/')}/.dev-pomogator/tools/`
-  );
+  const resolved = resolveClaudeStatusLine({
+    repoRoot,
+    projectStatusLine: settings.statusLine as { type?: string; command?: string } | undefined,
+    globalStatusLine: globalSettings.statusLine as { type?: string; command?: string } | undefined,
+    statusLineConfig,
+  });
 
   settings.statusLine = {
-    type: statusLineConfig.type,
-    command,
+    type: resolved.type,
+    command: resolved.command,
   };
 
   await writeJsonAtomic(settingsPath, settings);
@@ -572,13 +594,6 @@ export async function checkUpdate(options: UpdateOptions = {}): Promise<boolean>
         for (const projectPath of installed.projectPaths) {
           try {
             const managedEntry = ensureManagedEntry(installed, projectPath);
-            const previousManagedPaths = {
-              commands: getManagedPaths(managedEntry.commands),
-              rules: getManagedPaths(managedEntry.rules),
-              tools: getManagedPaths(managedEntry.tools),
-              skills: getManagedPaths(managedEntry.skills),
-            };
-
             const commandResult = await updateCommandFiles(
               installed.name,
               installed.platform,
@@ -620,28 +635,36 @@ export async function checkUpdate(options: UpdateOptions = {}): Promise<boolean>
             const writtenSkillPaths = skillResult.written.map((e) => e.path);
 
             if (!commandResult.hadFailures) {
-              await removeStaleFiles(projectPath, previousManagedPaths.commands, writtenCommandPaths);
+              allBackedUp.push(
+                ...await removeStaleFiles(projectPath, managedEntry.commands, writtenCommandPaths, installed.name)
+              );
               managedEntry.commands = commandResult.written;
             } else {
               console.log(`  ⚠ Skipping command cleanup for ${installed.name} in ${projectPath}`);
             }
 
             if (!ruleResult.hadFailures) {
-              await removeStaleFiles(projectPath, previousManagedPaths.rules, writtenRulePaths);
+              allBackedUp.push(
+                ...await removeStaleFiles(projectPath, managedEntry.rules, writtenRulePaths, installed.name)
+              );
               managedEntry.rules = ruleResult.written;
             } else {
               console.log(`  ⚠ Skipping rules cleanup for ${installed.name} in ${projectPath}`);
             }
 
             if (!toolResult.hadFailures) {
-              await removeStaleFiles(projectPath, previousManagedPaths.tools, writtenToolPaths);
+              allBackedUp.push(
+                ...await removeStaleFiles(projectPath, managedEntry.tools, writtenToolPaths, installed.name)
+              );
               managedEntry.tools = toolResult.written;
             } else {
               console.log(`  ⚠ Skipping tools cleanup for ${installed.name} in ${projectPath}`);
             }
 
             if (!skillResult.hadFailures) {
-              await removeStaleFiles(projectPath, previousManagedPaths.skills, writtenSkillPaths);
+              allBackedUp.push(
+                ...await removeStaleFiles(projectPath, managedEntry.skills, writtenSkillPaths, installed.name)
+              );
               managedEntry.skills = skillResult.written;
             } else {
               console.log(`  ⚠ Skipping skills cleanup for ${installed.name} in ${projectPath}`);

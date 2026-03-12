@@ -29,7 +29,7 @@
 | `extensions/tui-test-runner/tools/tui-test-runner/tui/widgets/analysis_tab.py` | create | [FR-5](FR.md#fr-5-failure-analysis-feature5) — Analysis widget |
 | `tests/e2e/tui-test-runner.test.ts` | create | E2E тесты для адаптеров и YAML v2 |
 | `tests/features/plugins/tui-test-runner/tui-test-runner.feature` | create | BDD scenarios |
-| `tests/fixtures/tui-test-runner/yaml-v1-running.yaml` | create | Test fixture: YAML v1 sample |
+| `tests/fixtures/tui-test-runner/yaml-v2-running.yaml` | create | Test fixture: canonical YAML v2 sample |
 | `tests/fixtures/tui-test-runner/yaml-v2-full.yaml` | create | Test fixture: YAML v2 sample |
 | `tests/fixtures/tui-test-runner/yaml-v2-failed.yaml` | create | Test fixture: YAML v2 failed |
 | `tests/fixtures/tui-test-runner/vitest-output.txt` | create | Test fixture: vitest stdout |

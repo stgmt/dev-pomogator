@@ -87,6 +87,32 @@ export async function collectFileHashes(dirPath: string, basePath: string): Prom
 }
 
 /**
+ * Ensure every shell entrypoint under a copied tool directory is executable.
+ * Accepts either a single file path or a directory path.
+ */
+export async function ensureExecutableShellScripts(targetPath: string): Promise<void> {
+  if (!await fs.pathExists(targetPath)) {
+    return;
+  }
+
+  const stat = await fs.stat(targetPath);
+
+  if (stat.isDirectory()) {
+    const items = await fs.readdir(targetPath, { withFileTypes: true });
+    for (const item of items) {
+      await ensureExecutableShellScripts(path.join(targetPath, item.name));
+    }
+    return;
+  }
+
+  if (!targetPath.endsWith('.sh')) {
+    return;
+  }
+
+  await fs.chmod(targetPath, 0o755);
+}
+
+/**
  * Add project path to config for tracking installed extensions.
  * Always called regardless of autoUpdate setting to persist managed data.
  */

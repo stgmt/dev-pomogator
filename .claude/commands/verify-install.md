@@ -87,7 +87,7 @@
 | `auto-commit` | 5 | `auto_commit_core.ts`, `auto_commit_llm.ts`, `auto_commit_prompt_guide.md`, `auto_commit_stop.ts`, `auto_commit_transcript.ts` |
 | `forbid-root-artifacts` | 7 | `.root-artifacts.yaml.template`, `check.py`, `configure.py`, `default-whitelist.yaml`, `deps-install.py`, `requirements.txt`, `setup.py` |
 | `plan-pomogator` | 6 | `README.md`, `mcp-dedupe.plan.md`, `requirements.md`, `template.md`, `validate-plan.ts`, `fixtures/valid.plan.md` |
-| `specs-generator` | 20 | 5x `.ps1`, `README.md`, 14x `templates/*.template` |
+| `specs-generator` | 24 | 7x `.sh`, `common.sh`, `specs-generator-core.mjs`, `README.md`, 14x `templates/*.template` |
 | `specs-validator` | 6 | `completeness.ts`, `matcher.ts`, `reporter.ts`, `validate-specs.ts`, `parsers/feature-parser.ts`, `parsers/md-parser.ts` |
 | `steps-validator` | 13 | `analyzer.ts`, `config.ts`, `detector.ts`, `logger.ts`, `reporter.ts`, `types.ts`, `validate-steps.ts`, 4x `parsers/*.ts`, 2x `docs/*.md` |
 | `mcp-setup` | 3 | `README.md`, `mcp-config.json`, `setup-mcp.py` |
@@ -158,7 +158,7 @@
 | Файл | Проверка |
 |------|---------|
 | `.dev-pomogator/tools/plan-pomogator/validate-plan.ts` | содержит `import` |
-| `.dev-pomogator/tools/specs-generator/scaffold-spec.ps1` | содержит `param` или `function` |
+| `.dev-pomogator/tools/specs-generator/scaffold-spec.sh` | содержит `run_specs_generator` или `specs-generator-core.mjs` |
 | `.dev-pomogator/tools/auto-commit/auto_commit_core.ts` | содержит `import` или `export` |
 | `.dev-pomogator/tools/specs-validator/validate-specs.ts` | содержит `import` |
 | `.dev-pomogator/tools/steps-validator/validate-steps.ts` | содержит `import` |

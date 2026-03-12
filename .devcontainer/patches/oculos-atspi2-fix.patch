@@ -1,0 +1,147 @@
+diff --git a/src/platform/linux.rs b/src/platform/linux.rs
+index bedc35f..17e6727 100644
+--- a/src/platform/linux.rs
++++ b/src/platform/linux.rs
+@@ -61,9 +61,47 @@ impl LinuxUiBackend {
+                 .context("Failed to create dedicated Tokio runtime for AT-SPI2")?;
+
+             let connection = rt.block_on(async {
+-                Connection::session()
++                // Try AT-SPI2 accessibility bus first (org.a11y.Bus.GetAddress on session bus),
++                // fall back to session bus if unavailable.
++                let session = Connection::session()
+                     .await
+-                    .context("Failed to connect to D-Bus session bus. Is AT-SPI2 running?")
++                    .context("Failed to connect to D-Bus session bus")?;
++
++                // Resolve AT-SPI2 accessibility bus address
++                match session.call_method(
++                    Some("org.a11y.Bus"),
++                    "/org/a11y/bus",
++                    Some("org.a11y.Bus"),
++                    "GetAddress",
++                    &(),
++                ).await {
++                    Ok(reply) => {
++                        if let Ok(addr) = reply.body::<String>() {
++                            tracing::info!("Resolved AT-SPI2 a11y bus: {}", addr);
++                            match zbus::ConnectionBuilder::address(addr.as_str()) {
++                                Ok(builder) => {
++                                    match builder.build().await {
++                                        Ok(a11y_conn) => {
++                                            tracing::info!("Connected to AT-SPI2 a11y bus");
++                                            return Ok::<Connection, anyhow::Error>(a11y_conn);
++                                        }
++                                        Err(e) => {
++                                            tracing::warn!("Failed to connect to a11y bus: {:?}, falling back to session bus", e);
++                                        }
++                                    }
++                                }
++                                Err(e) => {
++                                    tracing::warn!("Invalid a11y bus address: {:?}, falling back to session bus", e);
++                                }
++                            }
++                        }
++                    }
++                    Err(e) => {
++                        tracing::info!("org.a11y.Bus not available: {:?}, using session bus", e);
++                    }
++                }
++
++                Ok(session)
+             })?;
+
+             Ok((rt, connection))
+@@ -127,6 +165,7 @@ impl LinuxUiBackend {
+         AccessibleProxy::builder(conn)
+             .destination(bus_name(bname))?
+             .path(obj_path(opath))?
++            .cache_properties(zbus::CacheProperties::No)
+             .build()
+             .await
+             .context("Failed to build AccessibleProxy")
+@@ -140,6 +179,7 @@ impl LinuxUiBackend {
+         ComponentProxy::builder(conn)
+             .destination(bus_name(bname))?
+             .path(obj_path(opath))?
++            .cache_properties(zbus::CacheProperties::No)
+             .build()
+             .await
+             .context("Failed to build ComponentProxy")
+@@ -153,6 +193,7 @@ impl LinuxUiBackend {
+         ActionProxy::builder(conn)
+             .destination(bus_name(bname))?
+             .path(obj_path(opath))?
++            .cache_properties(zbus::CacheProperties::No)
+             .build()
+             .await
+             .context("Failed to build ActionProxy")
+@@ -166,6 +207,7 @@ impl LinuxUiBackend {
+         ApplicationProxy::builder(conn)
+             .destination(bus_name(bname))?
+             .path(obj_path(opath))?
++            .cache_properties(zbus::CacheProperties::No)
+             .build()
+             .await
+             .context("Failed to build ApplicationProxy")
+@@ -179,6 +221,7 @@ impl LinuxUiBackend {
+         TextProxy::builder(conn)
+             .destination(bus_name(bname))?
+             .path(obj_path(opath))?
++            .cache_properties(zbus::CacheProperties::No)
+             .build()
+             .await
+             .context("Failed to build TextProxy")
+@@ -192,6 +235,7 @@ impl LinuxUiBackend {
+         ValueProxy::builder(conn)
+             .destination(bus_name(bname))?
+             .path(obj_path(opath))?
++            .cache_properties(zbus::CacheProperties::No)
+             .build()
+             .await
+             .context("Failed to build ValueProxy")
+@@ -205,6 +249,7 @@ impl LinuxUiBackend {
+         EditableTextProxy::builder(conn)
+             .destination(bus_name(bname))?
+             .path(obj_path(opath))?
++            .cache_properties(zbus::CacheProperties::No)
+             .build()
+             .await
+             .context("Failed to build EditableTextProxy")
+@@ -484,7 +529,35 @@ impl UiBackend for LinuxUiBackend {
+                 "/org/a11y/atspi/accessible/root",
+             ).await.context("Failed to connect to AT-SPI2 registry")?;
+
+-            let child_count = registry.child_count().await.unwrap_or(0);
++            // Raw D-Bus Get for ChildCount
++            let child_count: i32 = match self.connection.call_method(
++                Some("org.a11y.atspi.Registry"),
++                "/org/a11y/atspi/accessible/root",
++                Some("org.freedesktop.DBus.Properties"),
++                "Get",
++                &("org.a11y.atspi.Accessible", "ChildCount"),
++            ).await {
++                Ok(m) => {
++                    let sig = m.body_signature().map(|s| s.to_string()).unwrap_or_default();
++                    tracing::info!("Properties.Get reply body signature: {}", sig);
++                    // Properties.Get returns (v) — unwrap variant
++                    match m.body::<zbus::zvariant::Value>() {
++                        Ok(val) => {
++                            tracing::info!("Body value: {:?}", val);
++                            match val {
++                                zbus::zvariant::Value::Value(inner) => {
++                                    tracing::info!("Inner value: {:?}", inner);
++                                    i32::try_from(*inner).unwrap_or(0)
++                                }
++                                _ => i32::try_from(val).unwrap_or(0)
++                            }
++                        }
++                        Err(e) => { tracing::warn!("body deser as Value error: {:?}", e); 0 }
++                    }
++                },
++                Err(e) => { tracing::warn!("call_method error: {:?}", e); 0 }
++            };
++            tracing::info!("Registry child_count = {}", child_count);
+             let mut windows = Vec::new();
+
+             for i in 0..child_count {

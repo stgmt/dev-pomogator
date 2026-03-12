@@ -26,7 +26,7 @@ const FRAMEWORK_INDICATORS: Array<{ framework: TestFramework; files: string[] }>
 
 /** Detect test framework from project files */
 export function detectFramework(projectDir: string): TestFramework {
-  const envFramework = process.env.TUI_TEST_FRAMEWORK;
+  const envFramework = process.env.TEST_STATUSLINE_FRAMEWORK;
   if (envFramework && envFramework !== 'auto') {
     return envFramework as TestFramework;
   }
@@ -60,13 +60,14 @@ export function detectFramework(projectDir: string): TestFramework {
 /** Build full config from env and project detection */
 export function getConfig(projectDir: string, sessionId: string): TuiTestRunnerConfig {
   const prefix = sessionId.substring(0, 8);
-  const statusDir = path.join(projectDir, '.dev-pomogator', '.test-status');
+  const statusDir = process.env.TEST_STATUSLINE_STATUS_DIR
+    || path.join(projectDir, '.dev-pomogator', '.test-status');
 
   return {
     framework: detectFramework(projectDir),
     statusDir,
     logFile: path.join(statusDir, `test.${prefix}.log`),
     pythonPath: process.env.TUI_PYTHON_PATH || (process.platform === 'win32' ? 'python' : 'python3'),
-    enabled: process.env.TUI_TEST_RUNNER_ENABLED !== 'false',
+    enabled: process.env.TEST_STATUSLINE_ENABLED !== 'false',
   };
 }

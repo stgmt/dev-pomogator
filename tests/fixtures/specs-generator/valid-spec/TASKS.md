@@ -12,11 +12,11 @@
 
 ## Phase 1: Implementation (Green)
 
-- [x] Создать scaffold-spec.ps1 -- @feature1
-- [x] Создать validate-spec.ps1 -- @feature2
-- [x] Создать spec-status.ps1 -- @feature3
-- [x] Создать list-specs.ps1 -- @feature4
-- [x] Создать fill-template.ps1 -- @feature5
+- [x] Создать scaffold-spec.sh -- @feature1
+- [x] Создать validate-spec.sh -- @feature2
+- [x] Создать spec-status.sh -- @feature3
+- [x] Создать list-specs.sh -- @feature4
+- [x] Создать fill-template.sh -- @feature5
 - [x] Verify: сценарии @feature1-@feature5 переходят из Red в Green
 
 ## Phase 2: Testing (Green)

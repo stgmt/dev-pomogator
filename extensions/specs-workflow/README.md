@@ -8,7 +8,7 @@
 - **Specs Validator** - проверка покрытия `@featureN` тегов между MD и .feature файлами
 - **Steps Validator** - проверка качества BDD step definitions (C#, TypeScript, Python)
 - **Research Workflow** - структурированный ресерч с верификацией гипотез
-- **PowerShell скрипты** для автоматизации работы со спеками
+- **shell-скрипты** для автоматизации работы со спеками
 - **Хуки** для автоматической валидации в Cursor и Claude Code
 
 ---
@@ -24,7 +24,7 @@
                                                    ▼
 ┌──────────────────────────────────────────────────────────────────────────────────────────┐
 │                                    /create-spec my-feature                                │
-│                         scaffold-spec.ps1 → создаёт 13 файлов-шаблонов                   │
+│                         scaffold-spec.sh → создаёт 13 файлов-шаблонов                    │
 └──────────────────────────────────────────────────────────────────────────────────────────┘
                                                    │
                     ┌──────────────────────────────┼──────────────────────────────┐
@@ -54,7 +54,7 @@
                                                    ▼
 ┌──────────────────────────────────────────────────────────────────────────────────────────┐
 │                              SPEC COMPLETE (13 files)                                     │
-│                    validate-spec.ps1 → проверяет форматы и структуру                     │
+│                    validate-spec.sh → проверяет форматы и структуру                      │
 └──────────────────────────────────────────────────────────────────────────────────────────┘
                                                    │
                     ┌──────────────────────────────┴──────────────────────────────┐
@@ -141,7 +141,7 @@
 
 | Tool | Location | Description |
 |------|----------|-------------|
-| specs-generator | `.dev-pomogator/tools/specs-generator/` | PowerShell скрипты + 13 шаблонов |
+| specs-generator | `.dev-pomogator/tools/specs-generator/` | shell-скрипты + 13 шаблонов |
 | specs-validator | `.dev-pomogator/tools/specs-validator/` | Валидация покрытия @featureN тегов |
 | steps-validator | `.dev-pomogator/tools/steps-validator/` | Валидация качества step definitions |
 
@@ -552,15 +552,15 @@ strictness:
 
 ---
 
-## PowerShell скрипты
+## Shell-скрипты
 
 | Script | Description | Usage |
 |--------|-------------|-------|
-| `scaffold-spec.ps1` | Создать структуру спека | `.\scaffold-spec.ps1 -Name my-feature` |
-| `validate-spec.ps1` | Валидировать формат | `.\validate-spec.ps1 -Path .specs/my-feature` |
-| `spec-status.ps1` | Показать прогресс | `.\spec-status.ps1 -Path .specs/my-feature` |
-| `fill-template.ps1` | Заполнить placeholder'ы | `.\fill-template.ps1 -Template FR.md -Values @{name="..."}`|
-| `list-specs.ps1` | Список всех спеков | `.\list-specs.ps1` |
+| `scaffold-spec.sh` | Создать структуру спека | `./scaffold-spec.sh -Name my-feature` |
+| `validate-spec.sh` | Валидировать формат | `./validate-spec.sh -Path .specs/my-feature` |
+| `spec-status.sh` | Показать прогресс | `./spec-status.sh -Path .specs/my-feature` |
+| `fill-template.sh` | Заполнить placeholder'ы | `./fill-template.sh -File FR.md -Values '{"name":"..."}'` |
+| `list-specs.sh` | Список всех спеков | `./list-specs.sh` |
 
 ---
 
@@ -577,13 +577,13 @@ strictness:
 ### Проверить статус спека
 
 ```powershell
-.\.dev-pomogator\tools\specs-generator\spec-status.ps1 -Path ".specs/my-feature"
+./.dev-pomogator/tools/specs-generator/spec-status.sh -Path ".specs/my-feature"
 ```
 
 ### Валидировать спек
 
 ```powershell
-.\.dev-pomogator\tools\specs-generator\validate-spec.ps1 -Path ".specs/my-feature"
+./.dev-pomogator/tools/specs-generator/validate-spec.sh -Path ".specs/my-feature"
 ```
 
 ### Запустить steps-validator вручную
@@ -682,7 +682,7 @@ extensions/specs-workflow/
 │       ├── research-workflow.md
 │       └── specs-validation.md
 └── tools/
-    ├── specs-generator/        # PowerShell автоматизация
+    ├── specs-generator/        # shell-автоматизация
     │   ├── *.ps1               # Скрипты
     │   └── templates/          # 13 шаблонов
     ├── specs-validator/        # Валидатор @featureN тегов

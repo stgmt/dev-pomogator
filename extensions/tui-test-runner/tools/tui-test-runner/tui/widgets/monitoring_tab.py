@@ -1,15 +1,13 @@
 """
-Monitoring Tab — real-time status dashboard.
-Shows: state, progress, duration, phases, counters, current test.
-Ported from zoho monitoring_tab.py, made framework-agnostic.
+Monitoring tab with canonical YAML v2 session summary and phases.
 """
 
 from textual.app import ComposeResult
-from textual.containers import Vertical, Horizontal
-from textual.widgets import Static, ProgressBar, Label
+from textual.containers import Horizontal, Vertical
 from textual.widget import Widget
+from textual.widgets import ProgressBar, Static
 
-from ..models import TestStatus, TestState, Phase
+from ..models import TestState, TestStatus
 
 
 STATUS_ICONS = {
@@ -117,7 +115,6 @@ class MonitoringTab(Widget):
         self.query_one("#failed-value", Static).update(f"[red]{status.failed}[/]")
         self.query_one("#skipped-value", Static).update(f"[yellow]{status.skipped}[/]")
 
-        # Phases
         if status.phases:
             lines = []
             for phase in status.phases:
@@ -126,9 +123,8 @@ class MonitoringTab(Widget):
                 lines.append(f"  {icon} {phase.name}: {phase.status}{dur}")
             self.query_one("#phases-content", Static).update("\n".join(lines))
         else:
-            self.query_one("#phases-content", Static).update("  [dim]No phase data (v1 protocol)[/]")
+            self.query_one("#phases-content", Static).update("  [dim]No phase data yet[/]")
 
-        # Error
         if status.error_message:
             self.query_one("#error-section", Static).update(
                 f"[bold red]Error:[/] {status.error_message}"

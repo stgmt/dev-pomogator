@@ -6,19 +6,19 @@ PowerShell скрипты для автоматизации работы со с
 
 ## Components
 
-### scaffold-spec.ps1
+### scaffold-spec.sh
 
 - Создаёт структуру папки
 - Копирует шаблоны из templates/
 - Заменяет плейсхолдеры
 
-### validate-spec.ps1
+### validate-spec.sh
 
 - Проверяет наличие файлов
 - Валидирует форматы (FR, UC, EARS, NFR)
 - Генерирует отчёт
 
-### spec-status.ps1
+### spec-status.sh
 
 - Анализирует состояние файлов
 - Определяет фазу (Discovery/Requirements/Finalization)

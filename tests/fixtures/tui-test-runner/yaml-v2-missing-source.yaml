@@ -1,0 +1,36 @@
+version: 2
+session_id: "jkl24680"
+pid: 12348
+started_at: "2026-03-09T22:00:00Z"
+updated_at: "2026-03-09T22:00:05Z"
+state: failed
+framework: "vitest"
+total: 1
+passed: 0
+failed: 1
+skipped: 0
+running: 0
+percent: 100
+duration_ms: 5000
+error_message: ""
+log_file: ".dev-pomogator/.test-status/test.jkl24680.log"
+suites:
+  - name: "deleted.test.ts"
+    file: "tests/deleted.test.ts"
+    status: "failed"
+    passed: 0
+    failed: 1
+    skipped: 0
+    total: 1
+    duration_ms: 5000
+    tests:
+      - name: "should not crash when source file is missing"
+        status: "failed"
+        duration_ms: 90
+        error: "TypeError: undefined is not a function"
+        stack: "at deletedHandler (tests/deleted.ts:10:3)\nat executeDeletedCase (tests/deleted.test.ts:15:5)"
+phases:
+  - name: "tests"
+    status: "failed"
+    started_at: "2026-03-09T22:00:00Z"
+    duration_ms: 5000

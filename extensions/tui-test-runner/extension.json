@@ -17,6 +17,7 @@
     "launcher.ts",
     "config.ts",
     "dispatch.ts",
+    "test_runner_wrapper.ts",
     "tui_session_start.ts",
     "test_guard.ts",
     "yaml_writer.ts",
@@ -26,6 +27,10 @@
     "adapters/jest_adapter.ts",
     "adapters/pytest_adapter.ts",
     "adapters/dotnet_adapter.ts",
+    "adapters/rust_adapter.ts",
+    "adapters/go_adapter.ts",
+    "adapters/cargo_adapter.ts",
+    "adapters/go_test_adapter.ts",
     "tui/pyproject.toml",
     "tui/__main__.py",
     "tui/app.py",
@@ -67,16 +72,16 @@
   ],
   "envRequirements": [
     {
-      "name": "TUI_TEST_RUNNER_ENABLED",
+      "name": "TEST_STATUSLINE_ENABLED",
       "required": false,
       "default": "true",
-      "description": "Enable/disable TUI test runner extension"
+      "description": "Enable/disable the canonical status v2 pipeline"
     },
     {
-      "name": "TUI_TEST_FRAMEWORK",
+      "name": "TEST_STATUSLINE_FRAMEWORK",
       "required": false,
       "default": "auto",
-      "description": "Test framework: vitest|jest|pytest|dotnet|rust|go|auto"
+      "description": "Framework override for canonical status v2 writer: vitest|jest|pytest|dotnet|rust|go|auto"
     }
   ]
 }

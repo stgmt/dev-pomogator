@@ -1,13 +1,18 @@
 """
-YAML status file poller — reads v1/v2 YAML and emits Textual messages on change.
-Replaces zoho's state_service.py with framework-agnostic YAML polling.
+YAML status file poller — reads canonical v2 YAML and emits Textual messages on change.
+Framework-agnostic: consumes status file produced by test_runner_wrapper.ts.
 """
 
 from pathlib import Path
 from typing import Optional
 
 import yaml
-from textual.message import Message
+try:
+    from textual.message import Message
+except ModuleNotFoundError:
+    class Message:  # type: ignore[override]
+        def __init__(self, *args, **kwargs) -> None:
+            pass
 
 from .models import TestStatus
 
@@ -21,7 +26,7 @@ class StatusChanged(Message):
 
 
 class YamlReader:
-    """Polls a YAML status file and detects changes via mtime."""
+    """Polls a canonical v2 YAML status file and detects changes via mtime."""
 
     def __init__(self, status_file: str) -> None:
         self.status_file = Path(status_file)
@@ -35,16 +40,18 @@ class YamlReader:
             if mtime == self._last_mtime:
                 return None
 
-            self._last_mtime = mtime
             content = self.status_file.read_text(encoding="utf-8")
             data = yaml.safe_load(content)
             if not isinstance(data, dict):
+                self._last_status = None
                 return None
 
             self._last_status = TestStatus.from_dict(data)
+            self._last_mtime = mtime
             return self._last_status
 
         except (yaml.YAMLError, OSError, ValueError):
+            self._last_status = None
             return None
 
     @property

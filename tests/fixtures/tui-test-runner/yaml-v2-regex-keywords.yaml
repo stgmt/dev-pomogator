@@ -1,0 +1,36 @@
+version: 2
+session_id: "pqr44556"
+pid: 12350
+started_at: "2026-03-10T00:00:00Z"
+updated_at: "2026-03-10T00:00:03Z"
+state: failed
+framework: "vitest"
+total: 1
+passed: 0
+failed: 1
+skipped: 0
+running: 0
+percent: 100
+duration_ms: 3000
+error_message: ""
+log_file: ".dev-pomogator/.test-status/test.pqr44556.log"
+suites:
+  - name: "database.test.ts"
+    file: "tests/database.test.ts"
+    status: "failed"
+    passed: 0
+    failed: 1
+    skipped: 0
+    total: 1
+    duration_ms: 3000
+    tests:
+      - name: "should report bootstrap handshake failures"
+        status: "failed"
+        duration_ms: 70
+        error: "CustomFailure: database connection bootstrap handshake failed"
+        stack: "at bootstrapDatabase (tests/database.test.ts:20:3)"
+phases:
+  - name: "tests"
+    status: "failed"
+    started_at: "2026-03-10T00:00:00Z"
+    duration_ms: 3000

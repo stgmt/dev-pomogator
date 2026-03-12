@@ -1160,6 +1160,7 @@ export async function runCheckUpdate(args: string = ''): Promise<string> {
       env: {
         ...process.env,
         HOME: getHome(),
+        DEV_POMOGATOR_UPDATE_SOURCE_ROOT: getAppDir(),
       },
     });
     return result;
@@ -1452,10 +1453,10 @@ async function collectFiles(dir: string): Promise<string[]> {
 }
 
 // ============================================================================
-// PowerShell Script Helpers
+// Shell Script Helpers
 // ============================================================================
 
-export interface PowerShellResult {
+export interface ShellScriptResult {
   stdout: string;
   stderr: string;
   exitCode: number;
@@ -1463,53 +1464,63 @@ export interface PowerShellResult {
 }
 
 /**
- * Detect PowerShell executable (pwsh for cross-platform, powershell for Windows)
+ * Extract JSON object from script output.
+ * Useful when the shell prepends warnings before the actual JSON payload.
  */
-function getPowerShellExecutable(): string {
-  // In Docker (Linux), use pwsh
-  // On Windows, powershell.exe is available
+function parseJsonFromOutput(output: string): any | undefined {
+  const objectStart = output.indexOf('{');
+  const arrayStart = output.indexOf('[');
+  let start = -1;
+
+  if (objectStart >= 0 && arrayStart >= 0) {
+    start = Math.min(objectStart, arrayStart);
+  } else if (objectStart >= 0) {
+    start = objectStart;
+  } else if (arrayStart >= 0) {
+    start = arrayStart;
+  }
+
+  if (start < 0) {
+    return undefined;
+  }
+
   try {
-    execSync('which pwsh', { encoding: 'utf-8', stdio: 'pipe' });
-    return 'pwsh';
+    return JSON.parse(output.slice(start).trim());
   } catch {
-    return 'powershell';
+    return undefined;
   }
 }
 
 /**
- * Run a PowerShell script and return the result
+ * Run a shell script and return the result.
  * 
- * @param scriptPath - Path to the .ps1 script (relative to APP_DIR or absolute)
+ * @param scriptPath - Path to the .sh script (relative to APP_DIR or absolute)
  * @param args - Array of arguments to pass to the script
  * @param cwd - Working directory for the script (defaults to APP_DIR)
- * @returns PowerShellResult with stdout, stderr, exitCode, and parsed JSON
+ * @returns ShellScriptResult with stdout, stderr, exitCode, and parsed JSON
  */
-export function runPowerShell(
+export function runShellScript(
   scriptPath: string,
   args: string[] = [],
   cwd: string = APP_DIR
-): PowerShellResult {
-  const pwsh = getPowerShellExecutable();
-  
+): ShellScriptResult {
   // Resolve script path
   const resolvedScript = path.isAbsolute(scriptPath)
     ? scriptPath
     : path.join(APP_DIR, scriptPath);
   
-  // Build command
-  // Quote arguments that contain spaces or special characters
+  // Quote arguments that contain spaces or JSON payloads
   const quotedArgs = args.map(arg => {
-    // If argument is a JSON string or contains spaces, wrap in single quotes
     if (arg.includes(' ') || arg.startsWith('{') || arg.startsWith('[')) {
-      // Escape single quotes within the argument
-      return `'${arg.replace(/'/g, "''")}'`;
+      return `'${arg.replace(/'/g, "'\\''")}'`;
     }
     return arg;
   });
   
   // Always add -Format json for structured output
-  const argsStr = quotedArgs.join(' ');
-  const command = `${pwsh} -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "${resolvedScript}" ${argsStr} -Format json`;
+  const hasFormatArg = args.includes('-Format');
+  const argsStr = [...quotedArgs, ...(hasFormatArg ? [] : ['-Format', 'json'])].join(' ');
+  const command = `"${resolvedScript}" ${argsStr}`.trim();
   
   try {
     const stdout = execSync(command, {
@@ -1519,38 +1530,22 @@ export function runPowerShell(
       stdio: ['pipe', 'pipe', 'pipe'],
     });
     
-    // Try to parse JSON from output
-    let json: any;
-    try {
-      json = JSON.parse(stdout.trim());
-    } catch {
-      // Not JSON, that's OK
-    }
-    
     return {
       stdout,
       stderr: '',
       exitCode: 0,
-      json,
+      json: parseJsonFromOutput(stdout),
     };
   } catch (error: any) {
     const stdout = error.stdout || '';
     const stderr = error.stderr || '';
     const exitCode = error.status ?? 1;
     
-    // Try to parse JSON even from error output
-    let json: any;
-    try {
-      json = JSON.parse(stdout.trim());
-    } catch {
-      // Not JSON
-    }
-    
     return {
       stdout,
       stderr,
       exitCode,
-      json,
+      json: parseJsonFromOutput(stdout),
     };
   }
 }
@@ -1559,7 +1554,13 @@ export function runPowerShell(
  * Get path to specs-generator scripts
  */
 export function getSpecsGeneratorPath(script: string): string {
-  return path.join(APP_DIR, 'extensions', 'specs-workflow', 'tools', 'specs-generator', script);
+  return path.join(
+    APP_DIR,
+    '.dev-pomogator',
+    'tools',
+    'specs-generator',
+    script
+  );
 }
 
 /**

@@ -68,8 +68,39 @@ Test runner wrapper оборачивает тест-команду и запис
 2. Инсталлер читает `extensions/test-statusline/extension.json`
 3. Копирует toolFiles в `.dev-pomogator/tools/test-statusline/`
 4. Регистрирует hook (SessionStart) в `.claude/settings.json`
-5. Statusline script копируется, но не заменяет текущий statusline (пользователь подключает вручную или через ccstatusline custom command)
+5. Регистрирует `statusLine` command для `statusline_render.sh`
 
 **Edge cases:**
-- У пользователя уже есть свой statusline — не перезаписывать, предложить интеграцию
+- У пользователя уже есть свой statusline — не перезаписывать, использовать wrapper для coexistence
 - Переустановка — идемпотентность (файлы обновляются, hooks не дублируются)
+
+## UC-6: Защита от случайной очистки hooks @feature7
+
+SessionStart hook проверяет, что ожидаемые managed hooks не пропали из `.claude/settings.json`.
+
+1. Claude Code запускает SessionStart
+2. Hook читает extension manifests и собирает ожидаемые hooks
+3. Hook сравнивает их с текущими hooks в `.claude/settings.json`
+4. Если managed hook отсутствует — hook восстанавливает его через smart merge
+5. Hook логирует результат и завершается с exit 0
+
+**Edge cases:**
+- Все hooks уже целы — только логируем проверку, без изменений
+- В settings есть пользовательские hooks — сохраняем их без перезаписи
+
+## UC-7: Coexistence с существующим statusLine @feature8
+
+У пользователя уже есть свой Claude Code `statusLine`, и `test-statusline` должен встроиться рядом, а не ломать текущий вывод.
+
+1. Installer/updater читает project `.claude/settings.json`
+2. Если project `statusLine` отсутствует — читает global `~/.claude/settings.json`
+3. Если найден user-defined `statusLine` — записывает wrapper в project settings
+4. Wrapper запускает user command и managed `statusline_render.sh` на одном stdin
+5. Если обе стороны вернули текст — Claude Code показывает `user | managed`
+6. Если одна из сторон молчит или падает — показывается только непустая сторона
+7. Если wrapper уже существует — сохраняется прежний `userCommand`, обновляется только managed часть
+
+**Edge cases:**
+- Project settings и global settings оба содержат `statusLine` — project имеет приоритет
+- Project settings не содержит `statusLine`, но global содержит — wrapper всё равно пишется в project settings
+- Existing wrapper повреждён — fallback на direct managed `statusLine`

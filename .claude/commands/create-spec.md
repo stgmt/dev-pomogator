@@ -36,17 +36,17 @@ argument-hint: "<feature-name>"
 
 ## Скрипт
 
-Команда вызывает PowerShell скрипт:
+Команда вызывает shell-скрипт:
 
-```powershell
-.\.dev-pomogator\tools\specs-generator\scaffold-spec.ps1 -Name "{feature-slug}"
+```sh
+./.dev-pomogator/tools/specs-generator/scaffold-spec.sh -Name "{feature-slug}"
 ```
 
 ## Инструкция для агента
 
 1. Получи название фичи от пользователя (или из аргумента команды)
 2. Преобразуй в kebab-case если нужно
-3. Запусти скрипт: `.\.dev-pomogator\tools\specs-generator\scaffold-spec.ps1 -Name "{feature-slug}"`
+3. Запусти скрипт: `./.dev-pomogator/tools/specs-generator/scaffold-spec.sh -Name "{feature-slug}"`
 4. Покажи результат создания
 5. Предложи перейти к заполнению USER_STORIES.md (первый файл workflow)
 

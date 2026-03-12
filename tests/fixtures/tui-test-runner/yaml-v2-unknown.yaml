@@ -1,0 +1,36 @@
+version: 2
+session_id: "ghi13579"
+pid: 12347
+started_at: "2026-03-09T21:00:00Z"
+updated_at: "2026-03-09T21:00:05Z"
+state: failed
+framework: "vitest"
+total: 1
+passed: 0
+failed: 1
+skipped: 0
+running: 0
+percent: 100
+duration_ms: 5000
+error_message: ""
+log_file: ".dev-pomogator/.test-status/test.ghi13579.log"
+suites:
+  - name: "rare.test.ts"
+    file: "tests/rare.test.ts"
+    status: "failed"
+    passed: 0
+    failed: 1
+    skipped: 0
+    total: 1
+    duration_ms: 5000
+    tests:
+      - name: "should surface unknown errors"
+        status: "failed"
+        duration_ms: 75
+        error: "SomeRareException: impossible condition triggered"
+        stack: "at Object.<anonymous> (tests/rare.test.ts:10:3)"
+phases:
+  - name: "tests"
+    status: "failed"
+    started_at: "2026-03-09T21:00:00Z"
+    duration_ms: 5000

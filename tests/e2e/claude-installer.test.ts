@@ -423,8 +423,17 @@ describe('PLUGIN003-Claude: Specs-workflow Extension for Claude Code', () => {
     expect(await fs.pathExists(toolsPath)).toBe(true);
 
     // Check key scripts exist
-    expect(await fs.pathExists(path.join(toolsPath, 'scaffold-spec.ps1'))).toBe(true);
-    expect(await fs.pathExists(path.join(toolsPath, 'validate-spec.ps1'))).toBe(true);
+    const scaffoldPath = path.join(toolsPath, 'scaffold-spec.sh');
+    const validatePath = path.join(toolsPath, 'validate-spec.sh');
+
+    expect(await fs.pathExists(scaffoldPath)).toBe(true);
+    expect(await fs.pathExists(validatePath)).toBe(true);
+
+    const scaffoldStat = await fs.stat(scaffoldPath);
+    const validateStat = await fs.stat(validatePath);
+
+    expect((scaffoldStat.mode & 0o111) !== 0).toBe(true);
+    expect((validateStat.mode & 0o111) !== 0).toBe(true);
   });
 });
 

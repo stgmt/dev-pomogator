@@ -1,25 +1,26 @@
 /**
- * E2E Tests for PLUGIN006: Specs Generator PowerShell Scripts
+ * E2E Tests for PLUGIN006: Specs Generator Shell Scripts
  *
- * Tests the PowerShell scripts for spec management:
- * - scaffold-spec.ps1
- * - validate-spec.ps1
- * - spec-status.ps1
- * - list-specs.ps1
- * - fill-template.ps1
- * - audit-spec.ps1
- * - analyze-features.ps1
+ * Tests the shell scripts for spec management:
+ * - scaffold-spec.sh
+ * - validate-spec.sh
+ * - spec-status.sh
+ * - list-specs.sh
+ * - fill-template.sh
+ * - audit-spec.sh
+ * - analyze-features.sh
  */
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import {
-  runPowerShell,
+  runShellScript,
   getSpecsGeneratorPath,
   getSpecsGeneratorFixturePath,
   appPath,
-  initGitRepo,
+  runInstaller,
+  setupCleanState,
 } from './helpers';
 
 // ============================================================================
@@ -34,14 +35,16 @@ const SCRIPTS_DIR = 'extensions/specs-workflow/tools/specs-generator';
 
 describe('PLUGIN006: Specs Generator Scripts', () => {
   beforeAll(async () => {
-    await initGitRepo();
+    await setupCleanState('cursor');
+    const result = await runInstaller('--cursor --plugins=specs-workflow');
+    expect(result.exitCode).toBe(0);
   });
 
   // ==========================================================================
-  // scaffold-spec.ps1
+  // scaffold-spec.sh
   // ==========================================================================
 
-  describe('scaffold-spec.ps1', () => {
+  describe('scaffold-spec.sh', () => {
     const testSpecName = 'test-scaffold-spec';
 
     afterEach(async () => {
@@ -52,8 +55,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
 
     // @feature1
     it('should create 14 files with valid kebab-case name', () => {
-      const result = runPowerShell(
-        getSpecsGeneratorPath('scaffold-spec.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('scaffold-spec.sh'),
         ['-Name', testSpecName]
       );
 
@@ -74,12 +77,12 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
 
     // @feature2
     it('should reject name with spaces', () => {
-      const result = runPowerShell(
-        getSpecsGeneratorPath('scaffold-spec.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('scaffold-spec.sh'),
         ['-Name', 'invalid name with spaces']
       );
 
-      // PowerShell should reject names with spaces
+      // The shell entrypoint should reject names with spaces
       expect(result.exitCode).toBe(2);
       expect(result.json).toBeDefined();
       expect(result.json.success).toBe(false);
@@ -95,8 +98,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       await fs.writeFile(appPath('.specs', specName, 'dummy.txt'), 'test');
 
       // Run with -Force
-      const result = runPowerShell(
-        getSpecsGeneratorPath('scaffold-spec.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('scaffold-spec.sh'),
         ['-Name', specName, '-Force']
       );
 
@@ -116,10 +119,10 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
   });
 
   // ==========================================================================
-  // validate-spec.ps1
+  // validate-spec.sh
   // ==========================================================================
 
-  describe('validate-spec.ps1', () => {
+  describe('validate-spec.sh', () => {
     let tempSpecDir: string;
 
     beforeEach(async () => {
@@ -140,8 +143,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       const destPath = appPath('.specs', 'valid-spec-test');
       await fs.copy(getSpecsGeneratorFixturePath('valid-spec'), destPath);
 
-      const result = runPowerShell(
-        getSpecsGeneratorPath('validate-spec.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('validate-spec.sh'),
         ['-Path', '.specs/valid-spec-test']
       );
 
@@ -155,8 +158,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       const destPath = appPath('.specs', 'invalid-spec-test');
       await fs.copy(getSpecsGeneratorFixturePath('invalid-spec'), destPath);
 
-      const result = runPowerShell(
-        getSpecsGeneratorPath('validate-spec.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('validate-spec.sh'),
         ['-Path', '.specs/invalid-spec-test']
       );
 
@@ -184,8 +187,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
         await fs.writeFile(path.join(destPath, file), `# ${file}\n\nContent`);
       }
 
-      const result = runPowerShell(
-        getSpecsGeneratorPath('validate-spec.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('validate-spec.sh'),
         ['-Path', '.specs/invalid-spec-test']
       );
 
@@ -212,8 +215,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
         await fs.writeFile(path.join(destPath, file), `# ${file}\n\nContent`);
       }
 
-      const result = runPowerShell(
-        getSpecsGeneratorPath('validate-spec.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('validate-spec.sh'),
         ['-Path', '.specs/invalid-spec-test']
       );
 
@@ -242,8 +245,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       // TASKS.md without Phase 0 or .feature mention
       await fs.writeFile(path.join(destPath, 'TASKS.md'), '# Tasks\n\n## Phase 1: Implementation\n\n- [ ] Create module A\n');
 
-      const result = runPowerShell(
-        getSpecsGeneratorPath('validate-spec.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('validate-spec.sh'),
         ['-Path', '.specs/invalid-spec-test']
       );
 
@@ -261,8 +264,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       const destPath = appPath('.specs', 'valid-spec-test');
       await fs.copy(getSpecsGeneratorFixturePath('valid-spec'), destPath);
 
-      const result = runPowerShell(
-        getSpecsGeneratorPath('validate-spec.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('validate-spec.sh'),
         ['-Path', '.specs/valid-spec-test']
       );
 
@@ -290,8 +293,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
         await fs.writeFile(path.join(destPath, file), `# ${file}\n\nContent`);
       }
 
-      const result = runPowerShell(
-        getSpecsGeneratorPath('validate-spec.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('validate-spec.sh'),
         ['-Path', '.specs/invalid-spec-test']
       );
 
@@ -305,10 +308,10 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
   });
 
   // ==========================================================================
-  // spec-status.ps1
+  // spec-status.sh
   // ==========================================================================
 
-  describe('spec-status.ps1', () => {
+  describe('spec-status.sh', () => {
     afterEach(async () => {
       await fs.remove(appPath('.specs', 'partial-spec-test'));
       await fs.remove(appPath('.specs', 'valid-spec-test'));
@@ -319,8 +322,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       const destPath = appPath('.specs', 'partial-spec-test');
       await fs.copy(getSpecsGeneratorFixturePath('partial-spec'), destPath);
 
-      const result = runPowerShell(
-        getSpecsGeneratorPath('spec-status.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('spec-status.sh'),
         ['-Path', '.specs/partial-spec-test']
       );
 
@@ -339,8 +342,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       const destPath = appPath('.specs', 'valid-spec-test');
       await fs.copy(getSpecsGeneratorFixturePath('valid-spec'), destPath);
 
-      const result = runPowerShell(
-        getSpecsGeneratorPath('spec-status.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('spec-status.sh'),
         ['-Path', '.specs/valid-spec-test']
       );
 
@@ -361,8 +364,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       const destPath = appPath('.specs', 'partial-spec-test');
       await fs.copy(getSpecsGeneratorFixturePath('partial-spec'), destPath);
 
-      const result = runPowerShell(
-        getSpecsGeneratorPath('spec-status.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('spec-status.sh'),
         ['-Path', '.specs/partial-spec-test']
       );
 
@@ -373,10 +376,10 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
   });
 
   // ==========================================================================
-  // list-specs.ps1
+  // list-specs.sh
   // ==========================================================================
 
-  describe('list-specs.ps1', () => {
+  describe('list-specs.sh', () => {
     beforeEach(async () => {
       // Create test specs
       await fs.ensureDir(appPath('.specs', 'list-test-complete'));
@@ -400,8 +403,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
 
     // @feature12
     it('should list all specs with summary', () => {
-      const result = runPowerShell(
-        getSpecsGeneratorPath('list-specs.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('list-specs.sh'),
         []
       );
 
@@ -419,8 +422,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
 
     // @feature13
     it('should filter incomplete specs with -Incomplete flag', () => {
-      const result = runPowerShell(
-        getSpecsGeneratorPath('list-specs.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('list-specs.sh'),
         ['-Incomplete']
       );
 
@@ -439,10 +442,10 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
   });
 
   // ==========================================================================
-  // fill-template.ps1
+  // fill-template.sh
   // ==========================================================================
 
-  describe('fill-template.ps1', () => {
+  describe('fill-template.sh', () => {
     let tempTemplatePath: string;
 
     beforeEach(async () => {
@@ -461,8 +464,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
 
     // @feature14
     it('should list placeholders with -ListPlaceholders', () => {
-      const result = runPowerShell(
-        getSpecsGeneratorPath('fill-template.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('fill-template.sh'),
         ['-File', tempTemplatePath, '-ListPlaceholders']
       );
 
@@ -487,8 +490,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     // @feature15
     it('should replace placeholders with -Values', async () => {
       // First check how many placeholders exist
-      const beforeResult = runPowerShell(
-        getSpecsGeneratorPath('fill-template.ps1'),
+      const beforeResult = runShellScript(
+        getSpecsGeneratorPath('fill-template.sh'),
         ['-File', tempTemplatePath, '-ListPlaceholders']
       );
       const totalBefore = beforeResult.json.total;
@@ -500,8 +503,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
         'ценность': 'экономия времени'
       });
 
-      const result = runPowerShell(
-        getSpecsGeneratorPath('fill-template.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('fill-template.sh'),
         ['-File', tempTemplatePath, '-Values', values]
       );
 
@@ -525,10 +528,10 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
   });
 
   // ============================================================================
-  // validate-spec.ps1 — CROSS_REF_LINKS rule
+  // validate-spec.sh — CROSS_REF_LINKS rule
   // ============================================================================
 
-  describe('validate-spec.ps1 CROSS_REF_LINKS', () => {
+  describe('validate-spec.sh CROSS_REF_LINKS', () => {
     const validCrossrefsPath = appPath('.specs', 'crossrefs-test');
     const brokenCrossrefsPath = appPath('.specs', 'broken-crossrefs-test');
 
@@ -541,8 +544,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     it('should return no CROSS_REF_LINKS warnings for valid cross-references', async () => {
       await fs.copy(getSpecsGeneratorFixturePath('valid-spec-with-crossrefs'), validCrossrefsPath);
 
-      const result = runPowerShell(
-        getSpecsGeneratorPath('validate-spec.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('validate-spec.sh'),
         ['-Path', '.specs/crossrefs-test']
       );
 
@@ -559,8 +562,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     it('should detect broken anchor in cross-reference link', async () => {
       await fs.copy(getSpecsGeneratorFixturePath('broken-crossrefs'), brokenCrossrefsPath);
 
-      const result = runPowerShell(
-        getSpecsGeneratorPath('validate-spec.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('validate-spec.sh'),
         ['-Path', '.specs/broken-crossrefs-test']
       );
 
@@ -579,8 +582,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     it('should detect missing target file in cross-reference', async () => {
       await fs.copy(getSpecsGeneratorFixturePath('broken-crossrefs'), brokenCrossrefsPath);
 
-      const result = runPowerShell(
-        getSpecsGeneratorPath('validate-spec.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('validate-spec.sh'),
         ['-Path', '.specs/broken-crossrefs-test']
       );
 
@@ -598,10 +601,10 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
   });
 
   // ============================================================================
-  // audit-spec.ps1 — LINK_VALIDITY check
+  // audit-spec.sh — LINK_VALIDITY check
   // ============================================================================
 
-  describe('audit-spec.ps1 LINK_VALIDITY', () => {
+  describe('audit-spec.sh LINK_VALIDITY', () => {
     const validCrossrefsPath = appPath('.specs', 'crossrefs-test');
     const brokenCrossrefsPath = appPath('.specs', 'broken-crossrefs-test');
 
@@ -614,8 +617,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     it('should find plain text references that should be links', async () => {
       await fs.copy(getSpecsGeneratorFixturePath('broken-crossrefs'), brokenCrossrefsPath);
 
-      const result = runPowerShell(
-        getSpecsGeneratorPath('audit-spec.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('audit-spec.sh'),
         ['-Path', '.specs/broken-crossrefs-test']
       );
 
@@ -632,8 +635,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     it('should pass for spec with proper cross-references', async () => {
       await fs.copy(getSpecsGeneratorFixturePath('valid-spec-with-crossrefs'), validCrossrefsPath);
 
-      const result = runPowerShell(
-        getSpecsGeneratorPath('audit-spec.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('audit-spec.sh'),
         ['-Path', '.specs/crossrefs-test']
       );
 
@@ -648,10 +651,10 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
   });
 
   // ============================================================================
-  // audit-spec.ps1 — coverage checks (FR_AC, FR_BDD, TRACEABILITY, TASKS_FR, OPEN_Q, TERM)
+  // audit-spec.sh — coverage checks (FR_AC, FR_BDD, TRACEABILITY, TASKS_FR, OPEN_Q, TERM)
   // ============================================================================
 
-  describe('audit-spec.ps1 coverage checks', () => {
+  describe('audit-spec.sh coverage checks', () => {
     const auditFixturePath = appPath('.specs', 'audit-coverage-test');
 
     beforeEach(async () => {
@@ -664,8 +667,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
 
     // @feature21
     it('should detect FR without matching AC (FR_AC_COVERAGE)', () => {
-      const result = runPowerShell(
-        getSpecsGeneratorPath('audit-spec.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('audit-spec.sh'),
         ['-Path', '.specs/audit-coverage-test']
       );
 
@@ -683,8 +686,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
 
     // @feature22
     it('should detect @featureN tag missing in .feature file (FR_BDD_COVERAGE)', () => {
-      const result = runPowerShell(
-        getSpecsGeneratorPath('audit-spec.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('audit-spec.sh'),
         ['-Path', '.specs/audit-coverage-test']
       );
 
@@ -702,8 +705,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
 
     // @feature23
     it('should detect FR not referenced in REQUIREMENTS.md (REQUIREMENTS_TRACEABILITY)', () => {
-      const result = runPowerShell(
-        getSpecsGeneratorPath('audit-spec.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('audit-spec.sh'),
         ['-Path', '.specs/audit-coverage-test']
       );
 
@@ -725,8 +728,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
 
     // @feature24
     it('should detect FR not referenced in TASKS.md (TASKS_FR_REFS)', () => {
-      const result = runPowerShell(
-        getSpecsGeneratorPath('audit-spec.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('audit-spec.sh'),
         ['-Path', '.specs/audit-coverage-test']
       );
 
@@ -745,8 +748,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
 
     // @feature25
     it('should detect unclosed open questions in RESEARCH.md (OPEN_QUESTIONS)', () => {
-      const result = runPowerShell(
-        getSpecsGeneratorPath('audit-spec.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('audit-spec.sh'),
         ['-Path', '.specs/audit-coverage-test']
       );
 
@@ -764,8 +767,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
 
     // @feature26
     it('should detect term inconsistency across files (TERM_CONSISTENCY)', () => {
-      const result = runPowerShell(
-        getSpecsGeneratorPath('audit-spec.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('audit-spec.sh'),
         ['-Path', '.specs/audit-coverage-test']
       );
 
@@ -785,10 +788,10 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
   });
 
   // ============================================================================
-  // validate-spec.ps1 — missing rule coverage
+  // validate-spec.sh — missing rule coverage
   // ============================================================================
 
-  describe('validate-spec.ps1 additional rules', () => {
+  describe('validate-spec.sh additional rules', () => {
     let tempSpecDir: string;
 
     beforeEach(async () => {
@@ -809,8 +812,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       const frPath = path.join(tempSpecDir, 'FR.md');
       await fs.writeFile(frPath, '# Functional Requirements\n\n## FR-1: {Название фичи}\n\n{Описание функционального требования}\n');
 
-      const result = runPowerShell(
-        getSpecsGeneratorPath('validate-spec.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('validate-spec.sh'),
         ['-Path', '.specs/validate-rules-test']
       );
 
@@ -830,8 +833,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       const acPath = path.join(tempSpecDir, 'ACCEPTANCE_CRITERIA.md');
       await fs.writeFile(acPath, '# Acceptance Criteria\n\n## AC-1 (FR-1): Basic Check\n\nThe system should work correctly.\n');
 
-      const result = runPowerShell(
-        getSpecsGeneratorPath('validate-spec.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('validate-spec.sh'),
         ['-Path', '.specs/validate-rules-test']
       );
 
@@ -851,8 +854,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       const featurePath = path.join(tempSpecDir, 'valid-spec.feature');
       await fs.writeFile(featurePath, 'Feature: Some feature without domain prefix\n\n  Scenario: Basic test\n    Given something\n    Then it works\n');
 
-      const result = runPowerShell(
-        getSpecsGeneratorPath('validate-spec.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('validate-spec.sh'),
         ['-Path', '.specs/validate-rules-test']
       );
 
@@ -872,8 +875,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       const researchPath = path.join(tempSpecDir, 'RESEARCH.md');
       await fs.writeFile(researchPath, '# Research\n\n## Findings\n\nSome research findings here.\n');
 
-      const result = runPowerShell(
-        getSpecsGeneratorPath('validate-spec.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('validate-spec.sh'),
         ['-Path', '.specs/validate-rules-test']
       );
 
@@ -887,14 +890,14 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
   });
 
   // ============================================================================
-  // analyze-features.ps1
+  // analyze-features.sh
   // ============================================================================
 
-  describe('analyze-features.ps1', () => {
+  describe('analyze-features.sh', () => {
     // @feature31
     it('should return JSON with totalFeatures > 0', () => {
-      const result = runPowerShell(
-        getSpecsGeneratorPath('analyze-features.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('analyze-features.sh'),
         []
       );
 
@@ -908,8 +911,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
 
     // @feature32
     it('should contain step dictionary with given/when/then', () => {
-      const result = runPowerShell(
-        getSpecsGeneratorPath('analyze-features.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('analyze-features.sh'),
         []
       );
 
@@ -923,8 +926,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
 
     // @feature33
     it('should detect naming patterns with domain codes', () => {
-      const result = runPowerShell(
-        getSpecsGeneratorPath('analyze-features.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('analyze-features.sh'),
         []
       );
 
@@ -935,8 +938,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
 
     // @feature34
     it('should filter candidates by -DomainCode', () => {
-      const result = runPowerShell(
-        getSpecsGeneratorPath('analyze-features.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('analyze-features.sh'),
         ['-DomainCode', 'PLUGIN']
       );
 
@@ -955,8 +958,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
 
     // @feature35
     it('should filter candidates by -FeatureSlug', () => {
-      const result = runPowerShell(
-        getSpecsGeneratorPath('analyze-features.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('analyze-features.sh'),
         ['-FeatureSlug', 'specs-generator']
       );
 
@@ -980,9 +983,9 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     });
 
     // @feature36
-    it('scaffold-spec.ps1 should create .progress.json with initial state', () => {
-      const result = runPowerShell(
-        getSpecsGeneratorPath('scaffold-spec.ps1'),
+    it('scaffold-spec.sh should create .progress.json with initial state', () => {
+      const result = runShellScript(
+        getSpecsGeneratorPath('scaffold-spec.sh'),
         ['-Name', progressTestName]
       );
 
@@ -1005,15 +1008,15 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     });
 
     // @feature37
-    it('spec-status.ps1 should create .progress.json for pre-existing specs (backward compat)', async () => {
+    it('spec-status.sh should create .progress.json for pre-existing specs (backward compat)', async () => {
       const destPath = appPath('.specs', progressTestName);
       await fs.copy(getSpecsGeneratorFixturePath('partial-spec'), destPath);
 
       // No .progress.json exists yet
       expect(fs.existsSync(path.join(destPath, '.progress.json'))).toBe(false);
 
-      const result = runPowerShell(
-        getSpecsGeneratorPath('spec-status.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('spec-status.sh'),
         ['-Path', `.specs/${progressTestName}`]
       );
 
@@ -1026,19 +1029,19 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     });
 
     // @feature38
-    it('spec-status.ps1 -ConfirmStop should set stopConfirmed to true', async () => {
+    it('spec-status.sh -ConfirmStop should set stopConfirmed to true', async () => {
       const destPath = appPath('.specs', progressTestName);
       await fs.copy(getSpecsGeneratorFixturePath('partial-spec'), destPath);
 
       // First run to create .progress.json
-      runPowerShell(
-        getSpecsGeneratorPath('spec-status.ps1'),
+      runShellScript(
+        getSpecsGeneratorPath('spec-status.sh'),
         ['-Path', `.specs/${progressTestName}`]
       );
 
       // Confirm Discovery stop
-      const result = runPowerShell(
-        getSpecsGeneratorPath('spec-status.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('spec-status.sh'),
         ['-Path', `.specs/${progressTestName}`, '-ConfirmStop', 'Discovery']
       );
 
@@ -1051,12 +1054,12 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     });
 
     // @feature39
-    it('spec-status.ps1 should track CHANGELOG.md in files output', async () => {
+    it('spec-status.sh should track CHANGELOG.md in files output', async () => {
       const destPath = appPath('.specs', progressTestName);
       await fs.copy(getSpecsGeneratorFixturePath('valid-spec'), destPath);
 
-      const result = runPowerShell(
-        getSpecsGeneratorPath('spec-status.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('spec-status.sh'),
         ['-Path', `.specs/${progressTestName}`]
       );
 
@@ -1067,12 +1070,12 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     });
 
     // @feature40
-    it('spec-status.ps1 should update completedAt when phase is done', async () => {
+    it('spec-status.sh should update completedAt when phase is done', async () => {
       const destPath = appPath('.specs', progressTestName);
       await fs.copy(getSpecsGeneratorFixturePath('valid-spec'), destPath);
 
-      const result = runPowerShell(
-        getSpecsGeneratorPath('spec-status.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('spec-status.sh'),
         ['-Path', `.specs/${progressTestName}`]
       );
 
@@ -1086,8 +1089,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       const destPath = appPath('.specs', progressTestName);
       await fs.copy(getSpecsGeneratorFixturePath('placeholder-false-positive'), destPath);
 
-      const result = runPowerShell(
-        getSpecsGeneratorPath('spec-status.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('spec-status.sh'),
         ['-Path', `.specs/${progressTestName}`]
       );
 
@@ -1108,24 +1111,24 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       await fs.copy(getSpecsGeneratorFixturePath('partial-spec'), destPath);
 
       // First run to create .progress.json
-      runPowerShell(
-        getSpecsGeneratorPath('spec-status.ps1'),
+      runShellScript(
+        getSpecsGeneratorPath('spec-status.sh'),
         ['-Path', `.specs/${progressTestName}`]
       );
 
       // Confirm Discovery and Context stops (both needed to progress past Discovery phase)
-      runPowerShell(
-        getSpecsGeneratorPath('spec-status.ps1'),
+      runShellScript(
+        getSpecsGeneratorPath('spec-status.sh'),
         ['-Path', `.specs/${progressTestName}`, '-ConfirmStop', 'Discovery']
       );
-      runPowerShell(
-        getSpecsGeneratorPath('spec-status.ps1'),
+      runShellScript(
+        getSpecsGeneratorPath('spec-status.sh'),
         ['-Path', `.specs/${progressTestName}`, '-ConfirmStop', 'Context']
       );
 
       // Run again — stopConfirmed should override and move to Requirements
-      const result = runPowerShell(
-        getSpecsGeneratorPath('spec-status.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('spec-status.sh'),
         ['-Path', `.specs/${progressTestName}`]
       );
 
@@ -1141,8 +1144,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       const destPath = appPath('.specs', progressTestName);
       await fs.copy(getSpecsGeneratorFixturePath('valid-spec'), destPath);
 
-      const result = runPowerShell(
-        getSpecsGeneratorPath('spec-status.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('spec-status.sh'),
         ['-Path', `.specs/${progressTestName}`]
       );
 
@@ -1157,15 +1160,15 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
 
       // Confirm all stop points
       for (const phase of ['Discovery', 'Context', 'Requirements', 'Finalization']) {
-        runPowerShell(
-          getSpecsGeneratorPath('spec-status.ps1'),
+        runShellScript(
+          getSpecsGeneratorPath('spec-status.sh'),
           ['-Path', `.specs/${progressTestName}`, '-ConfirmStop', phase]
         );
       }
 
       // Final run
-      const result = runPowerShell(
-        getSpecsGeneratorPath('spec-status.ps1'),
+      const result = runShellScript(
+        getSpecsGeneratorPath('spec-status.sh'),
         ['-Path', `.specs/${progressTestName}`]
       );
 

@@ -1,62 +1,50 @@
 """
-Analysis Tab — automatic failure grouping by error patterns with recommendations.
-Ported from zoho analyst, made framework-agnostic.
+Analysis Tab — structured failure cards built from YAML v2 status.
 """
 
-import re
-from collections import defaultdict
+from pathlib import Path
+
 from textual.app import ComposeResult
-from textual.containers import Vertical, VerticalScroll
-from textual.widgets import Static
+from textual.containers import VerticalScroll
 from textual.widget import Widget
+from textual.widgets import Static
 
-from ..models import TestStatus, TestResult, TestResultStatus
-
-
-# Error pattern categories
-ERROR_PATTERNS: list[tuple[str, re.Pattern, str]] = [
-    ("Assertion", re.compile(r"(?:Assert|Expect|assert|expect)", re.IGNORECASE), "Check expected values and test data."),
-    ("Timeout", re.compile(r"(?:timeout|timed?\s*out|ETIMEDOUT)", re.IGNORECASE), "Increase timeout or check service availability."),
-    ("Connection", re.compile(r"(?:ECONNREFUSED|ECONNRESET|ENOTFOUND|connection\s+refused)", re.IGNORECASE), "Check if required services are running."),
-    ("Permission", re.compile(r"(?:EACCES|EPERM|permission\s+denied)", re.IGNORECASE), "Check file/directory permissions."),
-    ("Not Found", re.compile(r"(?:ENOENT|not\s+found|404|Module not found)", re.IGNORECASE), "Check file paths and module imports."),
-    ("Type Error", re.compile(r"(?:TypeError|is not a function|undefined is not)", re.IGNORECASE), "Check variable types and null checks."),
-    ("Runtime", re.compile(r"(?:RangeError|ReferenceError|SyntaxError)", re.IGNORECASE), "Check code for runtime errors."),
-]
-
-
-def categorize_error(error: str | None, stack: str | None) -> tuple[str, str]:
-    """Categorize an error message into a pattern group. Returns (category, recommendation)."""
-    text = f"{error or ''} {stack or ''}"
-    for category, pattern, recommendation in ERROR_PATTERNS:
-        if pattern.search(text):
-            return category, recommendation
-    return "Unknown", "Investigate the error message and stack trace."
+from ..analyst.output import AnalysisReport, FailureCard, analyze_status
+from ..models import TestStatus
 
 
 class AnalysisTab(Widget):
-    """Failure analysis with error pattern grouping."""
+    """Failure analysis with pattern matching, locations, and code snippets."""
 
     DEFAULT_CSS = """
     AnalysisTab {
         layout: vertical;
         padding: 1 2;
     }
-    .group-header {
+    .analysis-summary {
+        text-style: bold;
+        margin-bottom: 1;
+    }
+    .failure-title {
         text-style: bold;
         margin-top: 1;
     }
-    .group-recommendation {
-        color: $text-muted;
-        margin-bottom: 1;
+    .failure-meta {
         padding-left: 2;
     }
-    .test-entry {
-        padding-left: 4;
+    .failure-hint {
+        color: $text-muted;
+        padding-left: 2;
     }
-    .test-error {
-        padding-left: 6;
+    .failure-error {
         color: $error;
+        padding-left: 2;
+    }
+    .analysis-block {
+        background: $surface;
+        color: $text;
+        margin: 1 0 0 2;
+        padding: 1;
     }
     #no-failures {
         padding: 2 4;
@@ -64,8 +52,9 @@ class AnalysisTab(Widget):
     }
     """
 
-    def __init__(self) -> None:
+    def __init__(self, project_root: str | Path | None = None) -> None:
         super().__init__()
+        self._project_root = str(project_root) if project_root else None
         self._last_failed_key: str = ""
 
     def compose(self) -> ComposeResult:
@@ -74,25 +63,23 @@ class AnalysisTab(Widget):
         yield Static("[green]No failures to analyze[/]", id="no-failures")
 
     def update_status(self, status: TestStatus) -> None:
-        """Rebuild analysis from failed tests. Skips rebuild if failures unchanged."""
-        failed_tests: list[TestResult] = []
+        """Rebuild analysis from failed tests in YAML v2 status."""
+        report = analyze_status(
+            status,
+            project_root=self._project_root,
+            user_patterns_path=self._get_user_patterns_path(),
+        )
 
-        if status.is_v2:
-            for suite in status.suites:
-                for test in suite.tests:
-                    if test.status == TestResultStatus.FAILED:
-                        failed_tests.append(test)
-
-        # Skip rebuild if same failures as last update
-        key = "|".join(f"{t.name}:{t.error or ''}" for t in failed_tests)
+        key = self._build_report_key(report)
         if key == self._last_failed_key:
             return
         self._last_failed_key = key
 
         content = self.query_one("#analysis-content", VerticalScroll)
         no_failures = self.query_one("#no-failures", Static)
+        content.remove_children()
 
-        if not failed_tests:
+        if not report.failures:
             content.display = False
             no_failures.display = True
             no_failures.update("[green]No failures to analyze[/]")
@@ -100,38 +87,93 @@ class AnalysisTab(Widget):
 
         content.display = True
         no_failures.display = False
+        content.mount(Static(
+            f"[bold red]{report.failed} failed test(s)[/] out of {report.total_tests or report.failed}",
+            classes="analysis-summary",
+        ))
 
-        # Group by error pattern
-        groups: dict[str, list[tuple[TestResult, str]]] = defaultdict(list)
-        for test in failed_tests:
-            category, recommendation = categorize_error(test.error, test.stack)
-            groups[category].append((test, recommendation))
+        for index, card in enumerate(report.failures, start=1):
+            self._mount_failure_card(content, index, card)
 
-        # Rebuild content
-        content.remove_children()
+    def _build_report_key(self, report: AnalysisReport) -> str:
+        parts: list[str] = []
+        for card in report.failures:
+            crash = card.location.crash_point if card.location and card.location.crash_point else None
+            pattern_id = card.matched_pattern.pattern.id if card.matched_pattern else "unknown"
+            parts.append(
+                f"{card.test}:{pattern_id}:{card.error_type}:{card.error_message}:"
+                f"{crash.file if crash else ''}:{crash.line if crash else 0}"
+            )
+        return "|".join(parts)
 
-        content.mount(Static(f"[bold red]{len(failed_tests)} failed test(s)[/] in {len(groups)} group(s)\n"))
+    def _get_user_patterns_path(self) -> str | None:
+        if not self._project_root:
+            return None
+        path = Path(self._project_root) / ".dev-pomogator" / "patterns.yaml"
+        return str(path) if path.exists() else None
 
-        for category, items in sorted(groups.items(), key=lambda x: -len(x[1])):
-            recommendation = items[0][1]
+    def _mount_failure_card(self, content: VerticalScroll, index: int, card: FailureCard) -> None:
+        pattern_id = card.matched_pattern.pattern.id if card.matched_pattern else "Unknown"
+        content.mount(Static(
+            f"[bold red]#{index} {card.test}[/]",
+            classes="failure-title",
+        ))
+        content.mount(Static(
+            f"Pattern: {pattern_id}",
+            classes="failure-meta",
+        ))
+
+        if card.matched_pattern and card.matched_pattern.pattern.hint:
             content.mount(Static(
-                f"[bold]{category}[/] ({len(items)} test(s))",
-                classes="group-header",
-            ))
-            content.mount(Static(
-                f"💡 {recommendation}",
-                classes="group-recommendation",
+                f"Hint: {card.matched_pattern.pattern.hint}",
+                classes="failure-hint",
             ))
 
-            for test, _ in items:
-                dur = f" ({test.duration_ms}ms)" if test.duration_ms else ""
-                content.mount(Static(
-                    f"❌ {test.name}{dur}",
-                    classes="test-entry",
-                ))
-                if test.error:
-                    err_display = test.error[:200] + "..." if len(test.error) > 200 else test.error
-                    content.mount(Static(
-                        f"  {err_display}",
-                        classes="test-error",
-                    ))
+        if card.duration:
+            content.mount(Static(
+                f"Duration: {card.duration}",
+                classes="failure-meta",
+            ))
+
+        error_label = f"{card.error_type}: {card.error_message}" if card.error_type else card.error_message
+        if error_label:
+            content.mount(Static(
+                f"Error: {error_label}",
+                classes="failure-error",
+            ))
+
+        crash = card.location.crash_point if card.location and card.location.crash_point else None
+        if crash:
+            method = f" {crash.method}" if crash.method else ""
+            content.mount(Static(
+                f"Location: {crash.file}:{crash.line}{method}",
+                classes="failure-meta",
+            ))
+
+        if card.suite_file and not crash:
+            content.mount(Static(
+                f"Suite: {card.suite_file}",
+                classes="failure-meta",
+            ))
+
+        call_tree = card.location.render_tree() if card.location else ""
+        if call_tree:
+            content.mount(Static(
+                f"Call chain:\n{call_tree}",
+                classes="analysis-block",
+                markup=False,
+            ))
+
+        if crash and crash.code_snippet:
+            content.mount(Static(
+                f"Code snippet:\n{crash.code_snippet}",
+                classes="analysis-block",
+                markup=False,
+            ))
+
+        if card.raw_stack and (not crash or not crash.code_snippet):
+            content.mount(Static(
+                f"Stack trace:\n{card.raw_stack}",
+                classes="analysis-block",
+                markup=False,
+            ))

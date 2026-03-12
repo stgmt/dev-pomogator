@@ -1,18 +1,30 @@
 /**
- * YAML v2 Status Writer
- * Converts TestEvent stream into atomic YAML v2 status file
- * Backward compatible with v1 (statusline_render.sh reads flat fields)
+ * Canonical status v2 writer.
  */
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import type { TestEvent, TestStatusV2, TestSuiteV2, TestResultV2, PhaseV2, TestFramework } from './adapters/types.js';
+import { stringify } from 'yaml';
+import type {
+  TestEvent,
+  TestFramework,
+  TestResultV2,
+  TestStatusV2,
+  TestSuiteV2,
+  TestSummary,
+} from './adapters/types.js';
+
+interface SuiteRuntime {
+  suite: TestSuiteV2;
+  tests: Map<string, TestResultV2>;
+}
 
 export class YamlWriter {
   private status: TestStatusV2;
-  private suiteMap = new Map<string, TestSuiteV2>();
-  private lastWriteTime = 0;
+  private readonly suiteMap = new Map<string, SuiteRuntime>();
   private readonly throttleMs: number;
+  private lastWriteTime = 0;
+  private reportedSummary: TestSummary = {};
 
   constructor(
     private readonly statusFile: string,
@@ -20,13 +32,16 @@ export class YamlWriter {
     framework: TestFramework,
     logFile: string,
     throttleMs = 1000,
+    pid: number = process.pid,
   ) {
+    const now = new Date().toISOString();
     this.throttleMs = throttleMs;
     this.status = {
       version: 2,
       session_id: sessionId,
-      started_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      pid,
+      started_at: now,
+      updated_at: now,
       state: 'running',
       framework,
       total: 0,
@@ -37,197 +52,265 @@ export class YamlWriter {
       percent: 0,
       duration_ms: 0,
       error_message: '',
+      log_file: logFile,
       suites: [],
       phases: [
-        { name: 'tests', status: 'running', started_at: new Date().toISOString(), duration_ms: 0 },
+        {
+          name: 'tests',
+          status: 'running',
+          started_at: now,
+          duration_ms: 0,
+        },
       ],
-      log_file: logFile,
     };
   }
 
-  /** Process a single TestEvent and update internal state */
   processEvent(event: TestEvent): void {
     switch (event.type) {
       case 'suite_start':
         this.ensureSuite(event.suiteName || 'unknown', event.suiteFile);
         break;
+      case 'test_start':
+        this.upsertTest(event, 'running');
+        break;
       case 'test_pass':
-        this.recordTest(event, 'passed');
-        this.status.passed++;
-        this.status.total++;
+        this.upsertTest(event, 'passed');
         break;
       case 'test_fail':
-        this.recordTest(event, 'failed');
-        this.status.failed++;
-        this.status.total++;
+        this.upsertTest(event, 'failed');
+        if (event.errorMessage) {
+          this.status.error_message = event.errorMessage;
+        }
         break;
       case 'test_skip':
-        this.recordTest(event, 'skipped');
-        this.status.skipped++;
-        this.status.total++;
+        this.upsertTest(event, 'skipped');
         break;
-      case 'test_start':
-        this.recordTest(event, 'running');
+      case 'summary':
+        if (event.summary) {
+          this.reportedSummary = { ...this.reportedSummary, ...event.summary };
+        }
         break;
       case 'error':
-        this.status.error_message = event.errorMessage || '';
+        if (event.errorMessage) {
+          this.status.error_message = event.errorMessage;
+        }
+        break;
+      case 'suite_end':
+      case 'log':
         break;
     }
 
     this.updateAggregates();
   }
 
-  /** Write YAML to disk (throttled) */
   writeIfNeeded(): boolean {
     const now = Date.now();
-    if (now - this.lastWriteTime < this.throttleMs) return false;
+    if (now - this.lastWriteTime < this.throttleMs) {
+      return false;
+    }
+
     this.write();
     return true;
   }
 
-  /** Force write YAML to disk */
   write(): void {
+    this.updateAggregates();
     this.status.updated_at = new Date().toISOString();
-    this.status.suites = Array.from(this.suiteMap.values());
     this.updatePhaseDuration();
+    this.status.suites = this.serializeSuites();
 
-    const yaml = this.toYaml();
     const tmpFile = `${this.statusFile}.tmp.${process.pid}`;
+    const yaml = stringify(this.status, { lineWidth: 0 });
+
+    fs.mkdirSync(path.dirname(this.statusFile), { recursive: true });
     fs.writeFileSync(tmpFile, yaml, 'utf-8');
     fs.renameSync(tmpFile, this.statusFile);
     this.lastWriteTime = Date.now();
   }
 
-  /** Finalize: set state to passed/failed, write final YAML */
   finalize(exitCode: number): void {
     this.status.state = exitCode === 0 ? 'passed' : 'failed';
-    this.status.running = 0;
-    this.status.percent = 100;
-    this.status.phases[0].status = exitCode === 0 ? 'completed' : 'failed';
-    this.updatePhaseDuration();
+    if (exitCode !== 0 && !this.status.error_message) {
+      this.status.error_message = `Test command exited with code ${exitCode}`;
+    }
 
-    // Update suite statuses
-    for (const suite of this.suiteMap.values()) {
-      if (suite.status === 'running') {
-        suite.status = suite.failed > 0 ? 'failed' : 'passed';
-      }
+    if (this.status.phases.length > 0) {
+      this.status.phases[0].status = exitCode === 0 ? 'completed' : 'failed';
     }
 
     this.write();
   }
 
-  private ensureSuite(name: string, file?: string): TestSuiteV2 {
-    let suite = this.suiteMap.get(name);
-    if (!suite) {
-      suite = {
-        name,
-        file: file || name,
-        status: 'running',
-        passed: 0,
-        failed: 0,
-        skipped: 0,
-        total: 0,
-        duration_ms: 0,
-        tests: [],
-      };
-      this.suiteMap.set(name, suite);
+  private ensureSuite(name: string, file?: string): SuiteRuntime {
+    const key = file || name;
+    const existing = this.suiteMap.get(key);
+    if (existing) {
+      return existing;
     }
-    return suite;
+
+    const suite: TestSuiteV2 = {
+      name,
+      file,
+      status: 'running',
+      passed: 0,
+      failed: 0,
+      skipped: 0,
+      total: 0,
+      duration_ms: 0,
+      tests: [],
+    };
+    const runtime: SuiteRuntime = {
+      suite,
+      tests: new Map<string, TestResultV2>(),
+    };
+    this.suiteMap.set(key, runtime);
+    return runtime;
   }
 
-  private recordTest(event: TestEvent, status: TestResultV2['status']): void {
+  private upsertTest(event: TestEvent, status: TestResultV2['status']): void {
     const suite = this.ensureSuite(event.suiteName || 'unknown', event.suiteFile);
-    const result: TestResultV2 = {
-      name: event.testName || 'unknown',
-      status,
-      duration_ms: event.duration,
-      error: event.errorMessage,
-      stack: event.stackTrace,
-    };
-    suite.tests.push(result);
-    suite.total++;
+    const key = event.testName || 'unknown';
 
-    if (status === 'passed') suite.passed++;
-    else if (status === 'failed') { suite.failed++; suite.status = 'failed'; }
-    else if (status === 'skipped') suite.skipped++;
+    let test = suite.tests.get(key);
+    if (!test) {
+      test = {
+        name: key,
+        status: 'pending',
+      };
+      suite.tests.set(key, test);
+    }
 
-    if (event.duration) suite.duration_ms += event.duration;
+    test.status = status;
+
+    if (event.duration !== undefined) {
+      test.duration_ms = event.duration;
+    }
+
+    if (status === 'failed') {
+      if (event.errorMessage !== undefined) {
+        test.error = event.errorMessage;
+      }
+      if (event.stackTrace !== undefined) {
+        test.stack = event.stackTrace;
+      }
+    } else if (status === 'passed' || status === 'skipped') {
+      delete test.error;
+      delete test.stack;
+    }
+
+    this.recalculateSuite(suite);
+  }
+
+  private recalculateSuite(runtime: SuiteRuntime): void {
+    let passed = 0;
+    let failed = 0;
+    let skipped = 0;
+    let running = 0;
+    let durationMs = 0;
+
+    for (const test of runtime.tests.values()) {
+      if (test.status === 'passed') {
+        passed++;
+      } else if (test.status === 'failed') {
+        failed++;
+      } else if (test.status === 'skipped') {
+        skipped++;
+      } else if (test.status === 'running') {
+        running++;
+      }
+
+      if (typeof test.duration_ms === 'number') {
+        durationMs += test.duration_ms;
+      }
+    }
+
+    runtime.suite.passed = passed;
+    runtime.suite.failed = failed;
+    runtime.suite.skipped = skipped;
+    runtime.suite.total = runtime.tests.size;
+    runtime.suite.duration_ms = durationMs;
+    runtime.suite.tests = Array.from(runtime.tests.values());
+
+    if (failed > 0) {
+      runtime.suite.status = 'failed';
+      return;
+    }
+
+    if (running > 0 || (this.status.state === 'running' && runtime.tests.size === 0)) {
+      runtime.suite.status = 'running';
+      return;
+    }
+
+    runtime.suite.status = 'passed';
   }
 
   private updateAggregates(): void {
-    const completed = this.status.passed + this.status.failed + this.status.skipped;
-    this.status.running = Math.max(0, this.status.total - completed);
-    this.status.percent = this.status.total > 0
-      ? Math.min(100, Math.round(completed * 100 / this.status.total))
-      : 0;
+    let discoveredTotal = 0;
+    let discoveredPassed = 0;
+    let discoveredFailed = 0;
+    let discoveredSkipped = 0;
+    let discoveredRunning = 0;
+
+    for (const runtime of this.suiteMap.values()) {
+      this.recalculateSuite(runtime);
+      discoveredTotal += runtime.suite.total;
+      discoveredPassed += runtime.suite.passed;
+      discoveredFailed += runtime.suite.failed;
+      discoveredSkipped += runtime.suite.skipped;
+      discoveredRunning += runtime.suite.tests.filter((test) => test.status === 'running').length;
+    }
+
+    const total = Math.max(discoveredTotal, this.reportedSummary.total ?? 0);
+    const passed = Math.max(discoveredPassed, this.reportedSummary.passed ?? 0);
+    const failed = Math.max(discoveredFailed, this.reportedSummary.failed ?? 0);
+    const skipped = Math.max(discoveredSkipped, this.reportedSummary.skipped ?? 0);
+    const completed = passed + failed + skipped;
+
+    let running = discoveredRunning;
+    if (this.status.state === 'running' && (this.reportedSummary.total ?? 0) > discoveredTotal) {
+      running = Math.max(running, total - completed);
+    }
+
+    this.status.total = total;
+    this.status.passed = passed;
+    this.status.failed = failed;
+    this.status.skipped = skipped;
+    this.status.running = this.status.state === 'running' ? Math.max(running, 0) : 0;
+
+    if (this.status.state === 'running') {
+      if (total === 0) {
+        this.status.percent = 0;
+      } else {
+        const percent = Math.round((completed * 100) / total);
+        this.status.percent = Math.min(percent, completed === total ? 99 : 100);
+      }
+    } else {
+      this.status.percent = 100;
+    }
+
     this.status.duration_ms = Date.now() - new Date(this.status.started_at).getTime();
   }
 
   private updatePhaseDuration(): void {
-    if (this.status.phases.length > 0) {
-      const phase = this.status.phases[0];
-      if (phase.started_at) {
-        phase.duration_ms = Date.now() - new Date(phase.started_at).getTime();
-      }
+    if (this.status.phases.length === 0) {
+      return;
     }
+
+    const phase = this.status.phases[0];
+    if (!phase.started_at) {
+      return;
+    }
+
+    phase.duration_ms = Date.now() - new Date(phase.started_at).getTime();
   }
 
-  private toYaml(): string {
-    const s = this.status;
-    const lines: string[] = [
-      `version: ${s.version}`,
-      `session_id: "${s.session_id}"`,
-      `started_at: "${s.started_at}"`,
-      `updated_at: "${s.updated_at}"`,
-      `state: ${s.state}`,
-      `framework: "${s.framework}"`,
-      `total: ${s.total}`,
-      `passed: ${s.passed}`,
-      `failed: ${s.failed}`,
-      `skipped: ${s.skipped}`,
-      `running: ${s.running}`,
-      `percent: ${s.percent}`,
-      `duration_ms: ${s.duration_ms}`,
-      `error_message: "${s.error_message.replace(/"/g, '\\"')}"`,
-      `log_file: "${s.log_file}"`,
-    ];
-
-    // Suites
-    if (s.suites.length > 0) {
-      lines.push('suites:');
-      for (const suite of s.suites) {
-        lines.push(`  - name: "${suite.name}"`);
-        if (suite.file) lines.push(`    file: "${suite.file}"`);
-        lines.push(`    status: "${suite.status}"`);
-        lines.push(`    passed: ${suite.passed}`);
-        lines.push(`    failed: ${suite.failed}`);
-        lines.push(`    skipped: ${suite.skipped}`);
-        lines.push(`    total: ${suite.total}`);
-        lines.push(`    duration_ms: ${suite.duration_ms}`);
-        if (suite.tests.length > 0) {
-          lines.push('    tests:');
-          for (const test of suite.tests) {
-            lines.push(`      - name: "${test.name.replace(/"/g, '\\"')}"`);
-            lines.push(`        status: "${test.status}"`);
-            if (test.duration_ms !== undefined) lines.push(`        duration_ms: ${test.duration_ms}`);
-            if (test.error) lines.push(`        error: "${test.error.replace(/"/g, '\\"')}"`);
-            if (test.stack) lines.push(`        stack: "${test.stack.replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`);
-          }
-        }
-      }
-    }
-
-    // Phases
-    if (s.phases.length > 0) {
-      lines.push('phases:');
-      for (const phase of s.phases) {
-        lines.push(`  - name: "${phase.name}"`);
-        lines.push(`    status: "${phase.status}"`);
-        if (phase.started_at) lines.push(`    started_at: "${phase.started_at}"`);
-        lines.push(`    duration_ms: ${phase.duration_ms}`);
-      }
-    }
-
-    return lines.join('\n') + '\n';
+  private serializeSuites(): TestSuiteV2[] {
+    return Array.from(this.suiteMap.values(), (runtime) => {
+      this.recalculateSuite(runtime);
+      return {
+        ...runtime.suite,
+        tests: Array.from(runtime.tests.values()),
+      };
+    });
   }
 }

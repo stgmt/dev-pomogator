@@ -18,7 +18,7 @@
 - [ ] Создать E2E тест `tests/e2e/tui-test-runner.test.ts` с заглушками step definitions
   _files: `tests/e2e/tui-test-runner.test.ts` (create)_
   _Requirements: все FR_
-- [ ] Создать fixture: `tests/fixtures/tui-test-runner/yaml-v1-running.yaml` — YAML v1 sample (state=running), lifecycle: per-test (read-only)
+- [ ] Создать fixture: `tests/fixtures/tui-test-runner/yaml-v2-running.yaml` — canonical YAML v2 sample (state=running), lifecycle: per-test (read-only)
   _Source: DESIGN.md "BDD Test Infrastructure" > "Test Data & Fixtures"_
 - [ ] Создать fixture: `tests/fixtures/tui-test-runner/yaml-v2-full.yaml` — YAML v2 full sample (suites+tests+phases), lifecycle: per-test (read-only)
   _Source: DESIGN.md "BDD Test Infrastructure" > "Test Data & Fixtures"_
@@ -38,7 +38,7 @@
   _files: `extensions/tui-test-runner/extension.json` (create)_
   _Requirements: [FR-9](FR.md#fr-9-tui-launcher-feature6), [FR-10](FR.md#fr-10-sessionstart-hook-feature7)_
   _Leverage: `extensions/test-statusline/extension.json`_
-- [ ] Создать `adapters/types.ts` — TestEvent interface + TestStatusV2 (extends TestStatus v1) @feature6
+- [ ] Создать `adapters/types.ts` — TestEvent interface + canonical TestStatusV2 contract @feature6
   _files: `extensions/tui-test-runner/tools/tui-test-runner/adapters/types.ts` (create)_
   _Requirements: [FR-6](FR.md#fr-6-yaml-v2-protocol-feature6)_
   _Leverage: `extensions/test-statusline/tools/test-statusline/status_types.ts`_
@@ -49,7 +49,7 @@
   _files: `extensions/tui-test-runner/tools/tui-test-runner/tui_session_start.ts` (create)_
   _Requirements: [FR-10](FR.md#fr-10-sessionstart-hook-feature7)_
   _Leverage: `extensions/test-statusline/tools/test-statusline/statusline_session_start.ts`_
-- [ ] Verify: сценарии @feature6 (YAML v2 backward compat, v2 writer) и @feature7 (SessionStart hook) переходят из Red в Green
+- [ ] Verify: сценарии @feature6 (canonical v2 writer, strict consumer contract) и @feature7 (SessionStart hook) переходят из Red в Green
 
 ## Phase 2: Framework Adapters (Green) @feature6
 

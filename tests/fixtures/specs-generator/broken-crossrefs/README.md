@@ -5,8 +5,8 @@ Test fixture for cross-reference validation with intentionally broken links.
 ## Purpose
 
 This spec has broken cross-references for negative testing of:
-- validate-spec.ps1 CROSS_REF_LINKS rule
-- audit-spec.ps1 LINK_VALIDITY check
+- validate-spec.sh CROSS_REF_LINKS rule
+- audit-spec.sh LINK_VALIDITY check
 
 ## Files
 

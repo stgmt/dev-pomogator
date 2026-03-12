@@ -1,39 +1,10 @@
 /**
- * YAML Status Protocol v2 — extends v1 from test-statusline
- * Contract between framework adapters, yaml_writer, and Python TUI
- *
- * v1 fields preserved for backward compat with statusline_render.sh
+ * Canonical status v2 schema shared by the wrapper, statusline, and TUI.
  */
 
-// Re-export v1 types for reference
-export interface TestSuiteV1 {
-  name: string;
-  status: 'running' | 'passed' | 'failed';
-  passed: number;
-  failed: number;
-  total: number;
-}
-
-export interface TestStatusV1 {
-  version: number;
-  session_id: string;
-  started_at: string;
-  updated_at: string;
-  state: 'idle' | 'running' | 'passed' | 'failed' | 'error';
-  total: number;
-  passed: number;
-  failed: number;
-  skipped: number;
-  running: number;
-  percent: number;
-  duration_ms: number;
-  error_message: string;
-  suites?: TestSuiteV1[];
-}
-
-// --- v2 extensions ---
-
 export type TestFramework = 'vitest' | 'jest' | 'pytest' | 'dotnet' | 'rust' | 'go' | 'unknown';
+
+export type TestState = 'idle' | 'running' | 'passed' | 'failed' | 'error';
 
 export interface TestResultV2 {
   name: string;
@@ -62,15 +33,33 @@ export interface PhaseV2 {
   duration_ms: number;
 }
 
-export interface TestStatusV2 extends TestStatusV1 {
+export interface TestStatusV2 {
   version: 2;
+  session_id: string;
+  pid: number;
+  started_at: string;
+  updated_at: string;
+  state: TestState;
   framework: TestFramework;
+  total: number;
+  passed: number;
+  failed: number;
+  skipped: number;
+  running: number;
+  percent: number;
+  duration_ms: number;
+  error_message: string;
+  log_file: string;
   suites: TestSuiteV2[];
   phases: PhaseV2[];
-  log_file: string;
 }
 
-// --- TestEvent: adapter output ---
+export interface TestSummary {
+  total?: number;
+  passed?: number;
+  failed?: number;
+  skipped?: number;
+}
 
 export type TestEventType =
   | 'suite_start'
@@ -91,10 +80,9 @@ export interface TestEvent {
   duration?: number;
   errorMessage?: string;
   stackTrace?: string;
+  summary?: TestSummary;
   timestamp: string;
 }
-
-// --- Hook input ---
 
 export interface HookInput {
   session_id?: string;

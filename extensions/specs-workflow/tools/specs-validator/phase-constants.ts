@@ -110,7 +110,7 @@ export function checkPhaseAllowed(
       return (
         `PHASE GATE: Cannot write ${filename} (${targetPhase} phase). ` +
         `${stopLabel} (${phaseName}) has not been confirmed. ` +
-        `Run: spec-status.ps1 -Path ".specs/${specName}" -ConfirmStop ${phaseName}`
+        `Run: spec-status.sh -Path ".specs/${specName}" -ConfirmStop ${phaseName}`
       );
     }
   }

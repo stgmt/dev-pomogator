@@ -76,14 +76,18 @@ export class VitestAdapter extends AdapterBase {
     }
 
     // Summary line
-    if (RE_SUMMARY.test(line)) {
-      const passed = line.match(RE_SUMMARY_PASSED)?.[1];
-      const failed = line.match(RE_SUMMARY_FAILED)?.[1];
-      const total = line.match(RE_SUMMARY_TOTAL)?.[1];
-      return this.event('summary', {
-        testName: `passed:${passed || 0} failed:${failed || 0} total:${total || 0}`,
-      });
-    }
+     if (RE_SUMMARY.test(line)) {
+       const passed = line.match(RE_SUMMARY_PASSED)?.[1];
+       const failed = line.match(RE_SUMMARY_FAILED)?.[1];
+       const total = line.match(RE_SUMMARY_TOTAL)?.[1];
+       return this.event('summary', {
+         summary: {
+           passed: passed ? parseInt(passed, 10) : 0,
+           failed: failed ? parseInt(failed, 10) : 0,
+           total: total ? parseInt(total, 10) : 0,
+         },
+       });
+     }
 
     return null;
   }

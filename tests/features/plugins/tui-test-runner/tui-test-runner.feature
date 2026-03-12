@@ -52,8 +52,8 @@ Feature: PLUGIN012_TUI_Test_Runner
     And BDD keywords Given/When/Then should be highlighted
 
   # @feature4
-  Scenario: Monitoring shows progress from YAML v1
-    Given a YAML v1 status file with state "running" and percent 50
+  Scenario: Monitoring shows progress from canonical YAML v2
+    Given a YAML v2 status file with state "running" and percent 50
     When TUI reads the status file
     Then Monitoring tab should show state "running"
     And Monitoring tab should show percent 50
@@ -81,11 +81,11 @@ Feature: PLUGIN012_TUI_Test_Runner
     Then Analysis tab should display "No failures to analyze"
 
   # @feature6
-  Scenario: YAML v2 backward compatible with v1
-    Given an enhanced wrapper writes a YAML v2 file
+  Scenario: Statusline reads top-level summary from canonical YAML v2
+    Given an enhanced wrapper writes a canonical YAML v2 file
     When statusline_render.sh reads the same file
-    Then statusline_render.sh should display state and percent correctly
-    And hook should exit with code 0
+    Then statusline_render.sh should display the top-level state and counters
+    And statusline_render.sh should ignore nested suite totals
 
   # @feature6
   Scenario: Vitest adapter parses stdout into TestEvents
@@ -101,14 +101,14 @@ Feature: PLUGIN012_TUI_Test_Runner
     When yaml_writer processes the events
     Then output YAML should contain version 2
     And output YAML should contain suites array with tests
-    And output YAML should contain all v1 flat fields
+    And output YAML should contain canonical flat summary fields
 
   # @feature6
-  Scenario: TUI gracefully handles v1-only YAML
-    Given a YAML v1 status file without suites or phases
+  Scenario: TUI gracefully handles canonical YAML with empty suites
+    Given a YAML v2 status file without suites or phases
     When TUI reads the status file
     Then Monitoring tab should show aggregate counters
-    And Tests tab should show "No suite details available (v1 protocol)"
+    And Tests tab should show "No suite details available yet"
 
   # @feature7
   Scenario: SessionStart hook initializes status directory

@@ -19,7 +19,11 @@ export class PytestAdapter extends AdapterBase {
     // Test result with progress: test_file.py::test_name PASSED [ 50%]
     const progressMatch = line.match(RE_PROGRESS);
     if (progressMatch) {
-      return this.parseResult(progressMatch[1].trim(), progressMatch[2]);
+      return this.parseResult(
+        progressMatch[1].trim(),
+        progressMatch[2],
+        parseInt(progressMatch[3], 10),
+      );
     }
 
     // Test result: test_file.py::TestClass::test_name PASSED
@@ -42,14 +46,19 @@ export class PytestAdapter extends AdapterBase {
         counts[m[2]] = parseInt(m[1], 10);
       }
       return this.event('summary', {
-        testName: `passed:${counts.passed || 0} failed:${counts.failed || 0} total:${(counts.passed || 0) + (counts.failed || 0) + (counts.skipped || 0)}`,
+        summary: {
+          passed: counts.passed || 0,
+          failed: counts.failed || 0,
+          skipped: counts.skipped || 0,
+          total: (counts.passed || 0) + (counts.failed || 0) + (counts.skipped || 0),
+        },
       });
     }
 
     return null;
   }
 
-  private parseResult(fullName: string, status: string): TestEvent {
+  private parseResult(fullName: string, status: string, percent?: number): TestEvent {
     // Extract suite and test from pytest :: format
     const parts = fullName.split('::');
     const file = parts[0];
@@ -64,6 +73,8 @@ export class PytestAdapter extends AdapterBase {
       'ERROR': 'test_fail',
     };
 
-    return this.event(statusMap[status] || 'test_fail', { testName });
+    return this.event(statusMap[status] || 'test_fail', {
+      testName,
+    });
   }
 }

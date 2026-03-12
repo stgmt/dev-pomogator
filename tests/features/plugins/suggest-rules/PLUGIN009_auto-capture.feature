@@ -1,4 +1,4 @@
-# Source: analyze-features.ps1 (PLUGIN009, next free domain number)
+# Source: analyze-features.sh (PLUGIN009, next free domain number)
 Feature: PLUGIN009_Auto-Capture Learnings
 
   Background:

@@ -24,6 +24,9 @@ class Pattern:
 
     def compile(self) -> bool:
         """Compile regex. Returns False if invalid."""
+        if not self.match:
+            self._compiled = None
+            return True
         try:
             self._compiled = re.compile(self.match, re.IGNORECASE)
             return True
@@ -92,16 +95,25 @@ class PatternMatcher:
 
     def match(self, error_message: str, error_type: str = "") -> Optional[MatchResult]:
         """Match error against patterns. Returns first match or None."""
-        text = f"{error_type} {error_message}".lower()
+        text = f"{error_type} {error_message}".strip()
+        text_lower = text.lower()
 
         for pattern in self._patterns:
-            # Step 1: Try regex match
-            if pattern._compiled and pattern._compiled.search(error_message):
-                # Step 2: If keywords defined, ALL must match
-                if pattern.keywords:
-                    if all(kw.lower() in text for kw in pattern.keywords):
-                        return MatchResult(pattern=pattern, matched_by="regex+keywords")
-                else:
-                    return MatchResult(pattern=pattern, matched_by="regex")
+            regex_matched = False
+            if pattern._compiled is not None:
+                if not pattern._compiled.search(text):
+                    continue
+                regex_matched = True
+
+            if pattern.keywords:
+                if not all(kw.lower() in text_lower for kw in pattern.keywords):
+                    continue
+                return MatchResult(
+                    pattern=pattern,
+                    matched_by="regex+keywords" if regex_matched else "keywords",
+                )
+
+            if regex_matched:
+                return MatchResult(pattern=pattern, matched_by="regex")
 
         return None

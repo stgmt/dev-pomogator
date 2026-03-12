@@ -15,6 +15,7 @@
 | [FR-8](FR.md#fr-8-extension-manifest-feature5) | Extension Manifest | [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8-extension-manifest-feature5) | @feature5 | Draft |
 | [FR-9](FR.md#fr-9-docker-test-isolation-feature6) | Docker Test Isolation | [AC-9](ACCEPTANCE_CRITERIA.md#ac-9-fr-9-docker-test-isolation-feature6) | @feature6 | Done |
 | [FR-10](FR.md#fr-10-hooks-integrity-guard-feature7) | Hooks Integrity Guard | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-10-hooks-integrity-guard-feature7) | @feature7 | Planned |
+| [FR-11](FR.md#fr-11-statusline-coexistence-wrapper-feature8) | StatusLine Coexistence Wrapper | [AC-11](ACCEPTANCE_CRITERIA.md#ac-11-fr-11-statusline-coexistence-wrapper-feature8) | @feature8 | Done |
 
 ## Functional Requirements
 
@@ -29,6 +30,7 @@
 - [FR-8: Extension Manifest](FR.md#fr-8-extension-manifest-feature5)
 - [FR-9: Docker Test Isolation](FR.md#fr-9-docker-test-isolation-feature6)
 - [FR-10: Hooks Integrity Guard](FR.md#fr-10-hooks-integrity-guard-feature7)
+- [FR-11: StatusLine Coexistence Wrapper](FR.md#fr-11-statusline-coexistence-wrapper-feature8)
 
 ## Non-Functional Requirements
 
@@ -50,3 +52,4 @@
 - [AC-8 (FR-8): Extension Manifest](ACCEPTANCE_CRITERIA.md#ac-8-fr-8-extension-manifest-feature5)
 - [AC-9 (FR-9): Docker Test Isolation](ACCEPTANCE_CRITERIA.md#ac-9-fr-9-docker-test-isolation-feature6)
 - [AC-10 (FR-10): Hooks Integrity Guard](ACCEPTANCE_CRITERIA.md#ac-10-fr-10-hooks-integrity-guard-feature7)
+- [AC-11 (FR-11): StatusLine Coexistence Wrapper](ACCEPTANCE_CRITERIA.md#ac-11-fr-11-statusline-coexistence-wrapper-feature8)

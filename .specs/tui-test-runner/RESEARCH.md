@@ -48,7 +48,7 @@
 
 ### YAML Status Protocol
 
-Существующий v1 протокол определён в `extensions/test-statusline/tools/test-statusline/status_types.ts` (TestStatus interface). Расширение до v2 (backward compatible) добавляет suites[], tests[], phases[], framework, log_file.
+Существующий test-statusline контракт вынесен в `extensions/test-statusline/tools/test-statusline/status_types.ts` (TestStatus interface). Canonical v2 фиксирует один runtime payload с suites[], tests[], phases[], framework и log_file без dual-mode consumer logic.
 
 Полная v2 schema: см. [DESIGN.md § YAML v2 Protocol Schema](DESIGN.md#yaml-v2-protocol-schema).
 
@@ -95,7 +95,7 @@
 
 | Source | Path | What It Provides | Relevance |
 |--------|------|-------------------|-----------|
-| test-statusline | `extensions/test-statusline/` | YAML v1 protocol, wrapper, session hook, statusline render | Основа: переиспользуем YAML protocol, wrapper |
+| test-statusline | `extensions/test-statusline/` | Canonical YAML v2 statusline, wrapper, session hook, statusline render | Основа: переиспользуем общий runtime contract и wrapper |
 | auto-simplify | `extensions/auto-simplify/` | Stop hook pattern, TypeScript hook handler | Паттерн для tui_stop.ts |
 | suggest-rules | `extensions/suggest-rules/` | Complex extension with tools+skills+hooks+postInstall | Паттерн для полного extension.json |
 | specs-workflow | `extensions/specs-workflow/` | Python postInstall hook | Прецедент Python в Node.js проекте |
@@ -104,7 +104,7 @@
 
 ### Architectural Constraints Summary
 
-1. **YAML v1 backward compatibility** — новый v2 формат ОБЯЗАН сохранять все v1 поля для statusline_render.sh
+1. **Canonical YAML v2** — один runtime payload ОБЯЗАН содержать flat summary для statusline и structured sections для TUI без dual-mode consumer logic
 2. **Atomic writes** — YAML status файлы пишутся через temp+rename (rule: atomic-config-save)
 3. **Fail-open** — все hooks exit 0, Python crash не блокирует тесты (rule: no-mocks-fallbacks → fail-fast, но hooks — fail-open)
 4. **Docker-only tests** — E2E тесты только через `npm test` в Docker

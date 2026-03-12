@@ -1,3 +1,6 @@
+import fs from 'fs-extra';
+import path from 'path';
+
 const RAW_BASE = 'https://raw.githubusercontent.com/stgmt/dev-pomogator/main';
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 2000;
@@ -52,6 +55,31 @@ export interface ExtensionManifest {
 
 const FETCH_TIMEOUT_MS = 15000;
 
+function getLocalUpdateSourceRoot(): string | null {
+  return process.env.DEV_POMOGATOR_UPDATE_SOURCE_ROOT || null;
+}
+
+async function readLocalUpdateFile(relativePath: string): Promise<string | null> {
+  const sourceRoot = getLocalUpdateSourceRoot();
+  if (!sourceRoot) {
+    return null;
+  }
+
+  const base = path.resolve(sourceRoot);
+  const resolved = path.resolve(base, relativePath);
+  const relative = path.relative(base, resolved);
+
+  if (relative.startsWith('..') || path.isAbsolute(relative)) {
+    return null;
+  }
+
+  if (!await fs.pathExists(resolved)) {
+    return null;
+  }
+
+  return fs.readFile(resolved, 'utf-8');
+}
+
 async function fetchWithRetry(url: string): Promise<Response | null> {
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
@@ -78,6 +106,11 @@ async function fetchWithRetry(url: string): Promise<Response | null> {
 }
 
 export async function fetchExtensionManifest(name: string): Promise<ExtensionManifest | null> {
+  const localManifest = await readLocalUpdateFile(`extensions/${name}/extension.json`);
+  if (localManifest) {
+    return JSON.parse(localManifest) as ExtensionManifest;
+  }
+
   const url = `${RAW_BASE}/extensions/${name}/extension.json`;
   const response = await fetchWithRetry(url);
   if (!response) return null;
@@ -94,6 +127,12 @@ export async function downloadExtensionFile(
   const remotePath = relativePath
     .replace(/^\.dev-pomogator\//, '')
     .replace(/^\.claude\//, '');
+
+  const localFile = await readLocalUpdateFile(`extensions/${extensionName}/${remotePath}`);
+  if (localFile !== null) {
+    return localFile;
+  }
+
   const url = `${RAW_BASE}/extensions/${extensionName}/${remotePath}`;
   const response = await fetchWithRetry(url);
   if (!response) return null;

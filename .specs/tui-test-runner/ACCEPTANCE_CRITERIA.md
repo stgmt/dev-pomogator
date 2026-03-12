@@ -48,7 +48,7 @@ IF ни один тест не failed THEN Analysis tab SHALL отобразит
 
 **Требование:** [FR-6](FR.md#fr-6-yaml-v2-protocol-feature6)
 
-WHEN enhanced wrapper пишет YAML v2 THEN файл SHALL содержать все v1 поля (version, session_id, state, total, passed, failed, skipped, running, percent, duration_ms, error_message) плюс v2 поля (suites, phases, framework, log_file).
+WHEN enhanced wrapper пишет canonical YAML v2 THEN файл SHALL содержать flat summary поля (version, session_id, pid, state, total, passed, failed, skipped, running, percent, duration_ms, error_message, log_file) и structured поля suites, phases, framework в одном payload.
 
 WHEN statusline_render.sh читает YAML v2 файл THEN render SHALL работать корректно, игнорируя неизвестные v2 поля.
 
@@ -70,7 +70,7 @@ WHEN тест-процесс пишет stdout в формате dotnet test THE
 
 WHEN YAML файл изменяется THEN TUI SHALL обнаружить изменение и обновить UI в течение 1 секунды (при polling 500ms).
 
-IF YAML содержит только v1 поля (без suites[]) THEN TUI SHALL отобразить Monitoring tab с aggregate counters, Tests tab покажет "No suite details available (v1 protocol)".
+IF canonical YAML v2 содержит пустые suites[] и phases[] THEN TUI SHALL отобразить Monitoring tab с aggregate counters, Tests tab покажет "No suite details available yet".
 
 ## AC-9 (FR-9): TUI Launcher @feature6
 

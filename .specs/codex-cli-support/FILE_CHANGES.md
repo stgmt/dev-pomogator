@@ -1,0 +1,52 @@
+# File Changes
+
+Список файлов, которые будут добавлены/изменены при реализации фичи.
+
+См. также: [README.md](README.md) и [TASKS.md](TASKS.md).
+
+| Path | Action | Reason |
+|------|--------|--------|
+| `src/config/schema.ts` | edit | Добавить платформу `codex` и managed model для новых project-level артефактов. [FR-1](FR.md#fr-1-first-class-codex-platform-feature1), [FR-2](FR.md#fr-2-project-level-codex-artifact-layout-feature2) |
+| `src/constants.ts` | edit | Ввести Codex-specific paths (`.codex`, `.agents/skills`, hooks/config targets) и убрать жесткую привязку skills к `.claude/skills`. [FR-2](FR.md#fr-2-project-level-codex-artifact-layout-feature2), [FR-6](FR.md#fr-6-codex-skills-packaging-feature6) |
+| `src/index.ts` | edit | Добавить CLI target `--codex` и обновить help output. [FR-1](FR.md#fr-1-first-class-codex-platform-feature1), [FR-9](FR.md#fr-9-windows-bashsh-bootstrap-for-codex-feature9) |
+| `src/installer/index.ts` | edit | Включить `codex` в interactive/non-interactive installer flow. [FR-1](FR.md#fr-1-first-class-codex-platform-feature1) |
+| `src/installer/extensions.ts` | edit | Нормализовать manifest typing и platform-specific asset resolution для `codex`, включая heterogeneous extension manifests. [FR-1](FR.md#fr-1-first-class-codex-platform-feature1), [FR-8](FR.md#fr-8-extension-parity-support-matrix-feature8) |
+| `src/installer/shared.ts` | edit | Переиспользуемые merge/backup helpers и portable command builders для Codex artifacts. [FR-3](FR.md#fr-3-existing-user-artifact-protection-feature3), [FR-10](FR.md#fr-10-managed-update-and-reinstall-path-feature10) |
+| `src/installer/codex.ts` | create | Новый installer path для project-level Codex support. [FR-2](FR.md#fr-2-project-level-codex-artifact-layout-feature2), [FR-4](FR.md#fr-4-codex-hooks-installation-feature4), [FR-6](FR.md#fr-6-codex-skills-packaging-feature6), [FR-7](FR.md#fr-7-project-level-codex-mcp-configuration-feature7) |
+| `src/installer/memory.ts` | edit | Явно разрешить `requiresClaudeMem` coupling для Codex или задекларировать replacement/exclusion strategy. [FR-8](FR.md#fr-8-extension-parity-support-matrix-feature8), [FR-11](FR.md#fr-11-explicit-codex-parity-routing-feature11) |
+| `src/updater/index.ts` | edit | Распространить managed tracking, backup и stale cleanup на `codex`. [FR-3](FR.md#fr-3-existing-user-artifact-protection-feature3), [FR-10](FR.md#fr-10-managed-update-and-reinstall-path-feature10) |
+| `src/updater/github.ts` | edit | Поддержать download/translation Codex assets и новые manifest sections. [FR-1](FR.md#fr-1-first-class-codex-platform-feature1), [FR-10](FR.md#fr-10-managed-update-and-reinstall-path-feature10) |
+| `install` | edit | Добавить universal installer routing для `codex` с учетом Windows entrypoint behavior. [FR-9](FR.md#fr-9-windows-bashsh-bootstrap-for-codex-feature9) |
+| `install.ps1` | edit | Согласовать Windows bootstrap с Codex bash/sh routing решением. [FR-9](FR.md#fr-9-windows-bashsh-bootstrap-for-codex-feature9) |
+| `install.sh` | edit | Добавить `TARGET=codex` path. [FR-9](FR.md#fr-9-windows-bashsh-bootstrap-for-codex-feature9) |
+| `README.md` | edit | Документировать Codex platform, project-level only strategy и Windows bootstrap. [FR-2](FR.md#fr-2-project-level-codex-artifact-layout-feature2), [FR-9](FR.md#fr-9-windows-bashsh-bootstrap-for-codex-feature9) |
+| `Dockerfile.test` | edit | Добавить Codex CLI и split Codex e2e support в Docker harness. [FR-1](FR.md#fr-1-first-class-codex-platform-feature1), [FR-11](FR.md#fr-11-explicit-codex-parity-routing-feature11) |
+| `extensions/*/extension.json` | edit | Добавить явные Codex parity sections, support matrix metadata и managed asset ownership. [FR-4](FR.md#fr-4-codex-hooks-installation-feature4), [FR-6](FR.md#fr-6-codex-skills-packaging-feature6), [FR-8](FR.md#fr-8-extension-parity-support-matrix-feature8), [FR-11](FR.md#fr-11-explicit-codex-parity-routing-feature11) |
+| `extensions/specs-workflow/tools/mcp-setup/setup-mcp.py` | edit | Добавить Codex-aware MCP flow или explicitly bypass existing Cursor/Claude JSON writer. [FR-7](FR.md#fr-7-project-level-codex-mcp-configuration-feature7), [FR-11](FR.md#fr-11-explicit-codex-parity-routing-feature11) |
+| `tests/e2e/helpers.ts` | edit | Добавить Codex cleanup/setup/snapshot helpers, CLI helpers и platform union. [FR-1](FR.md#fr-1-first-class-codex-platform-feature1), [FR-10](FR.md#fr-10-managed-update-and-reinstall-path-feature10) |
+| `tests/e2e/codex-installer.test.ts` | create | Проверки core install/protection scenarios для Codex. [FR-1](FR.md#fr-1-first-class-codex-platform-feature1), [FR-2](FR.md#fr-2-project-level-codex-artifact-layout-feature2), [FR-3](FR.md#fr-3-existing-user-artifact-protection-feature3), [FR-5](FR.md#fr-5-agentsmd-and-claudemd-coexistence-feature5), [FR-9](FR.md#fr-9-windows-bashsh-bootstrap-for-codex-feature9) |
+| `tests/e2e/codex-update.test.ts` | create | Проверки managed update, stale cleanup и backup discipline. [FR-10](FR.md#fr-10-managed-update-and-reinstall-path-feature10) |
+| `tests/e2e/cli-integration.test.ts` | edit | Добавить Codex CLI/integration coverage. [FR-1](FR.md#fr-1-first-class-codex-platform-feature1), [FR-11](FR.md#fr-11-explicit-codex-parity-routing-feature11) |
+| `tests/e2e/mcp-setup.test.ts` | edit | Проверить Codex MCP flow отдельно от Cursor/Claude JSON paths. [FR-7](FR.md#fr-7-project-level-codex-mcp-configuration-feature7) |
+| `tests/features/core/CORE007_codex-platform.feature` | create | Core BDD для platform recognition, project-level install и Windows bootstrap. [FR-1](FR.md#fr-1-first-class-codex-platform-feature1), [FR-2](FR.md#fr-2-project-level-codex-artifact-layout-feature2), [FR-9](FR.md#fr-9-windows-bashsh-bootstrap-for-codex-feature9) |
+| `tests/features/core/CORE008_codex-protection.feature` | create | Core BDD для backup, merge warning и CLAUDE/AGENTS coexistence. [FR-3](FR.md#fr-3-existing-user-artifact-protection-feature3), [FR-5](FR.md#fr-5-agentsmd-and-claudemd-coexistence-feature5) |
+| `tests/features/core/CORE009_codex-update.feature` | create | Core BDD для reinstall/update behavior. [FR-10](FR.md#fr-10-managed-update-and-reinstall-path-feature10) |
+| `tests/features/core/CORE010_codex-hooks-schema.feature` | create | Core BDD для cross-cutting schema contract `v0.114.0` hook entries. [FR-4](FR.md#fr-4-codex-hooks-installation-feature4) |
+| `tests/features/plugins/auto-commit/` | edit | Добавить отдельный Codex feature-файл для plugin parity. [FR-4](FR.md#fr-4-codex-hooks-installation-feature4), [FR-8](FR.md#fr-8-extension-parity-support-matrix-feature8) |
+| `tests/features/plugins/auto-simplify/` | edit | Добавить отдельный Codex feature-файл для plugin parity. [FR-4](FR.md#fr-4-codex-hooks-installation-feature4), [FR-8](FR.md#fr-8-extension-parity-support-matrix-feature8) |
+| `tests/features/plugins/claude-mem-health/` | create | Создать новый plugin suite directory и отдельный Codex feature-файл. [FR-4](FR.md#fr-4-codex-hooks-installation-feature4), [FR-8](FR.md#fr-8-extension-parity-support-matrix-feature8) |
+| `tests/features/plugins/bun-oom-guard/` | create | Создать новый plugin suite directory и отдельный Codex feature-файл. [FR-4](FR.md#fr-4-codex-hooks-installation-feature4), [FR-8](FR.md#fr-8-extension-parity-support-matrix-feature8) |
+| `tests/features/plugins/suggest-rules/` | edit | Добавить отдельный Codex feature-файл для plugin parity. [FR-6](FR.md#fr-6-codex-skills-packaging-feature6), [FR-8](FR.md#fr-8-extension-parity-support-matrix-feature8), [FR-11](FR.md#fr-11-explicit-codex-parity-routing-feature11) |
+| `tests/features/plugins/specs-workflow/` | edit | Добавить отдельный Codex feature-файл для plugin parity. [FR-7](FR.md#fr-7-project-level-codex-mcp-configuration-feature7), [FR-8](FR.md#fr-8-extension-parity-support-matrix-feature8), [FR-11](FR.md#fr-11-explicit-codex-parity-routing-feature11) |
+| `tests/features/plugins/prompt-suggest/` | edit | Добавить отдельный Codex feature-файл для plugin parity. [FR-11](FR.md#fr-11-explicit-codex-parity-routing-feature11) |
+| `tests/features/plugins/tui-test-runner/` | edit | Добавить отдельный Codex feature-файл для plugin parity. [FR-6](FR.md#fr-6-codex-skills-packaging-feature6), [FR-8](FR.md#fr-8-extension-parity-support-matrix-feature8), [FR-11](FR.md#fr-11-explicit-codex-parity-routing-feature11) |
+| `tests/features/plugins/devcontainer/` | edit | Добавить отдельный Codex feature-файл для plugin parity. [FR-8](FR.md#fr-8-extension-parity-support-matrix-feature8), [FR-11](FR.md#fr-11-explicit-codex-parity-routing-feature11) |
+| `tests/features/plugins/forbid-root-artifacts/` | edit | Добавить отдельный Codex feature-файл для plugin parity. [FR-8](FR.md#fr-8-extension-parity-support-matrix-feature8), [FR-11](FR.md#fr-11-explicit-codex-parity-routing-feature11) |
+| `tests/features/plugins/plan-pomogator/` | edit | Добавить отдельный Codex feature-файл для plugin parity. [FR-8](FR.md#fr-8-extension-parity-support-matrix-feature8), [FR-11](FR.md#fr-11-explicit-codex-parity-routing-feature11) |
+| `tests/features/plugins/test-statusline/` | edit | Добавить отдельный exclusion-oriented Codex feature-файл. [FR-8](FR.md#fr-8-extension-parity-support-matrix-feature8) |
+| `tests/fixtures/configs/installed-codex.json` | create | Snapshot managed config для Codex update tests. [FR-10](FR.md#fr-10-managed-update-and-reinstall-path-feature10) |
+| `tests/fixtures/codex/existing/AGENTS.md` | create | Fixture для backup/merge user guidance. [FR-3](FR.md#fr-3-existing-user-artifact-protection-feature3) |
+| `tests/fixtures/codex/existing/CLAUDE.md` | create | Fixture для coexistence и backup/merge. [FR-3](FR.md#fr-3-existing-user-artifact-protection-feature3), [FR-5](FR.md#fr-5-agentsmd-and-claudemd-coexistence-feature5) |
+| `tests/fixtures/codex/existing/.codex/config.toml` | create | Fixture для project config merge/update tests. [FR-3](FR.md#fr-3-existing-user-artifact-protection-feature3), [FR-7](FR.md#fr-7-project-level-codex-mcp-configuration-feature7) |
+| `tests/fixtures/codex/existing/.codex/hooks.json` | create | Fixture для managed/user hooks merge tests. [FR-3](FR.md#fr-3-existing-user-artifact-protection-feature3), [FR-4](FR.md#fr-4-codex-hooks-installation-feature4) |
+| `tests/fixtures/codex/existing/.agents/skills/custom-skill/SKILL.md` | create | Fixture для сохранения user-owned Codex skills. [FR-3](FR.md#fr-3-existing-user-artifact-protection-feature3), [FR-6](FR.md#fr-6-codex-skills-packaging-feature6) |

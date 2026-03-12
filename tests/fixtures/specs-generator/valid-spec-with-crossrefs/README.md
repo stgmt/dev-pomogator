@@ -6,8 +6,8 @@ Test fixture for cross-reference link validation.
 
 This spec contains all required files with properly formed cross-reference links for testing:
 
-- validate-spec.ps1 CROSS_REF_LINKS rule
-- audit-spec.ps1 LINK_VALIDITY check
+- validate-spec.sh CROSS_REF_LINKS rule
+- audit-spec.sh LINK_VALIDITY check
 
 ## Files
 

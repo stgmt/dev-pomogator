@@ -18,7 +18,7 @@
 - **NFR-R1**: Fail-open — если Python недоступен или TUI crash, тесты продолжают работать без прерывания
 - **NFR-R2**: YAML atomic writes (temp file + rename) для предотвращения чтения частично записанных файлов
 - **NFR-R3**: Singleton instance — только один TUI процесс на session (lock file)
-- **NFR-R4**: Graceful degradation — если YAML содержит только v1 поля, TUI показывает Monitoring tab без Tests tree detail
+- **NFR-R4**: Graceful degradation — если YAML повреждён или не соответствует canonical v2 schema, TUI тихо отклоняет payload без падения UI
 - **NFR-R5**: Hook handlers всегда exit 0, ошибки в stderr
 
 ## Usability
@@ -26,4 +26,4 @@
 - **NFR-U1**: Keyboard-driven навигация: 1-4 вкладки, q quit, f filter, r run
 - **NFR-U2**: Работает в любом terminal emulator поддерживающем 256 colors (Windows Terminal, iTerm2, Gnome Terminal, Kitty)
 - **NFR-U3**: Status icons видимы в шрифтах без Nerd Font (fallback на ASCII: P/F/S/R/.)
-- **NFR-U4**: Запуск одной командой: `python -m tui_test_runner --status-file <path>`
+- **NFR-U4**: Запуск одной командой: `python -m tui --status-file <path>`

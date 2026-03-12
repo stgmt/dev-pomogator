@@ -35,7 +35,7 @@
 
 ## Workflow создания фичи
 
-1. Создай структуру через `scaffold-spec.ps1`
+1. Создай структуру через `scaffold-spec.sh`
 2. Заполни USER_STORIES.md → добавляй @featureN к каждой story
 3. Пиши FR.md → копируй @featureN из story
 4. Пиши .feature файл → добавляй # @featureN перед Scenario

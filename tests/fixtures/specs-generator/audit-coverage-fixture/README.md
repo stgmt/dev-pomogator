@@ -1,3 +1,3 @@
 # Audit Coverage Fixture
 
-Test fixture for audit-spec.ps1 coverage tests.
+Test fixture for audit-spec.sh coverage tests.

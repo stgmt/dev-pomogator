@@ -3593,7 +3593,7 @@ stateDiagram-v2
 |-----------|-------------|---------------|
 | Requirements Management | Doorstop, git-reqs, OpenFastTrace | YAML/code-linked requirements + traceability graphs |
 | BDD Frameworks | Gauge, Concordion, SpecFlow/ReqnRoll | Markdown/HTML specs вместо Gherkin |
-| Spec-Driven Dev | Kiro (AWS), Tessl | Specs как primary artifact, code generated |
+| Spec-Driven Dev | External spec-driven IDEs, Tessl | Specs как primary artifact, code generated |
 | Test Reporting | Allure TestOps, Serenity BDD | Coverage visualization + living documentation |
 | Architecture Docs | ADR (MADR/adr-tools) | Decision records с lifecycle tracking |
 | Code-Linked Docs | Swimm, Pickles | Auto-sync docs↔code |
@@ -3602,7 +3602,7 @@ stateDiagram-v2
 - Doorstop: https://github.com/doorstop-dev/doorstop (720+ stars)
 - git-reqs: https://github.com/niradynamics/git-reqs (NIRA Dynamics)
 - Gauge: https://github.com/getgauge/gauge (ThoughtWorks, 3.2k+ stars)
-- Kiro: https://kiro.dev/ (AWS-backed IDE)
+- External spec-driven IDE vendors: проприетарные IDE с specs как primary artifact
 - Tessl: https://tessl.io/ ($125M funding, closed beta)
 - Allure: https://github.com/allure-framework (Qameta)
 - MADR: https://github.com/adr/madr
@@ -3827,11 +3827,11 @@ Plugins через gRPC. Language runners (JS, Python, Java, Ruby, C#, Go), repo
 
 ---
 
-## 80. Kiro (AWS) — Spec-Driven IDE
+## 80. External Spec-Driven IDE Pattern
 
-AWS-backed IDE (форк VS Code/Code OSS). Spec-driven development как first-class workflow.
+Проприетарный IDE-подход, где spec-driven development становится first-class workflow.
 
-**Пруф** (из https://kiro.dev/docs/specs/ и https://martinfowler.com/articles/exploring-gen-ai/sdd-3-tools.html):
+**Пруф** (из vendor docs по spec-driven IDE и https://martinfowler.com/articles/exploring-gen-ai/sdd-3-tools.html):
 
 **Три файла на spec:**
 1. `requirements.md` — User stories + GIVEN/WHEN/THEN acceptance criteria (EARS format)
@@ -3842,18 +3842,18 @@ AWS-backed IDE (форк VS Code/Code OSS). Spec-driven development как first
 - **Requirements-First:** requirements.md → design.md → tasks.md
 - **Design-First:** design.md → requirements.md → tasks.md
 
-**Пруф — Agent Hooks** (из https://kiro.dev/ и AWS re:Post):
+**Пруф — Agent Hooks** (из vendor docs и AWS re:Post):
 
 Agent hooks = agentic actions triggered by file events (create, save, delete) или manually. Пример: auto-generating tests при save implementation files, security review при изменениях.
 
 **Пруф — Task Execution:**
-> "Kiro provides a task execution interface for tasks.md files that displays real-time status updates."
+Task execution interface для `tasks.md` может отображать real-time status updates прямо в IDE.
 
 Задачи обновляются как in-progress/completed в реальном времени.
 
 **Сравнение с нами:**
 
-| Аспект | Kiro | Наш specs-workflow |
+| Аспект | External spec-driven IDE | Наш specs-workflow |
 |--------|------|--------------------|
 | Файлы | 3 (requirements + design + tasks) | 13 (12 MD + 1 .feature) |
 | Format | EARS в requirements | EARS в ACCEPTANCE_CRITERIA.md |
@@ -4194,7 +4194,7 @@ FILE_CHANGES.md проверка — только в `$aiChecksPending` (line 57
 | 1 | GAP-VA-1+VA-2: CHANGELOG.md missing | HIGH | SMALL | `spec-status.ps1`, `list-specs.ps1` | Doorstop (все артефакты трекаются) |
 | 2 | GAP-TM-1+TM-2+TM-3: @featureN missing | HIGH | SMALL | `FR.md.template`, `AC.md.template`, `feature.template` | git-reqs (traceability markers everywhere) |
 | 3 | GAP-WF-1: Reference spec path broken | HIGH | SMALL | `specs-management.md` | — (bug fix) |
-| 4 | GAP-TM-5: US-N format missing | MEDIUM | SMALL | `USER_STORIES.md.template` | Kiro (structured requirements format) |
+| 4 | GAP-TM-5: US-N format missing | MEDIUM | SMALL | `USER_STORIES.md.template` | external spec-driven IDEs (structured requirements format) |
 | 5 | GAP-TM-7+TM-8: Missing template sections | MEDIUM | SMALL | `TASKS.md.template`, `RESEARCH.md.template` | spec-kit-v-model (comprehensive templates) |
 | 6 | GAP-VA-3+WF-2+WF-3: Phase assignment gaps | MEDIUM | SMALL | `spec-status.ps1` | — (consistency fix) |
 | 7 | GAP-TR-3: Traceability matrix mismatch | MEDIUM | SMALL | `REQUIREMENTS.md.template` | Doorstop/OpenFastTrace (structured traceability) |
@@ -4719,7 +4719,7 @@ Use the BMAD Level assessment to determine detail level.
 |---------|----------|----------|--------|
 | 1 | **Spec-First** | Спеки пишутся до кода, но живут отдельно | Наш текущий workflow: .specs/ → code |
 | 2 | **Spec-Anchored** | Спеки связаны с кодом через теги/ссылки | Наш @featureN + audit = уровень 2 |
-| 3 | **Spec-as-Source** | Спеки = исходный код, код генерируется | Tessl, Kiro, OpenAPI codegen |
+| 3 | **Spec-as-Source** | Спеки = исходный код, код генерируется | Tessl, external spec-driven IDEs, OpenAPI codegen |
 
 **Мы на уровне 2** (Spec-Anchored). Путь к уровню 3 требует: автогенерацию кода из спек, live sync, executable specifications.
 

@@ -33,9 +33,9 @@
             { "path": ".cursor/rules/pomogator/specs-validation.mdc", "hash": "{{HASH}}" }
           ],
           "tools": [
-            { "path": ".dev-pomogator/tools/specs-generator/scaffold-spec.ps1", "hash": "{{HASH}}" },
-            { "path": ".dev-pomogator/tools/specs-generator/validate-spec.ps1", "hash": "{{HASH}}" },
-            { "path": ".dev-pomogator/tools/specs-generator/list-specs.ps1", "hash": "{{HASH}}" }
+            { "path": ".dev-pomogator/tools/specs-generator/scaffold-spec.sh", "hash": "{{HASH}}" },
+            { "path": ".dev-pomogator/tools/specs-generator/validate-spec.sh", "hash": "{{HASH}}" },
+            { "path": ".dev-pomogator/tools/specs-generator/list-specs.sh", "hash": "{{HASH}}" }
           ]
         }
       }

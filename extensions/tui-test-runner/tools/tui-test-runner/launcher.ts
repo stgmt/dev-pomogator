@@ -64,15 +64,25 @@ export function installDeps(pythonCmd: string): boolean {
   }
 }
 
+export function buildTuiLaunchArgs(statusFile: string, logFile: string, framework: string): string[] {
+  return [
+    '-m', 'tui',
+    '--status-file', statusFile,
+    '--log-file', logFile,
+    '--framework', framework,
+  ];
+}
+
 /** Launch TUI process */
 export function launchTui(
   pythonCmd: string,
-  tuiModulePath: string,
+  tuiPackagePath: string,
   statusFile: string,
   logFile: string,
   framework: string,
 ): void {
   const pidFile = statusFile.replace(/status\..+\.yaml$/, 'tui.pid');
+  const entrypoint = path.join(tuiPackagePath, '__main__.py');
 
   // Check if already running
   if (fs.existsSync(pidFile)) {
@@ -87,13 +97,13 @@ export function launchTui(
     }
   }
 
-  const child = spawn(pythonCmd, [
-    '-m', 'tui_test_runner',
-    '--status-file', statusFile,
-    '--log-file', logFile,
-    '--framework', framework,
-  ], {
-    cwd: path.dirname(tuiModulePath),
+  if (!fs.existsSync(entrypoint)) {
+    log('ERROR', `TUI entrypoint not found: ${entrypoint}`);
+    return;
+  }
+
+  const child = spawn(pythonCmd, buildTuiLaunchArgs(statusFile, logFile, framework), {
+    cwd: path.dirname(tuiPackagePath),
     detached: true,
     stdio: 'ignore',
   });

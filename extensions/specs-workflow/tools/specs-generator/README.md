@@ -7,59 +7,59 @@
 ```
 .dev-pomogator/tools/specs-generator/
 ├── README.md              # Этот файл
-├── scaffold-spec.ps1      # Создание структуры папки с шаблонами
-├── validate-spec.ps1      # Валидация структуры и форматов
-├── spec-status.ps1        # Отчёт о прогрессе заполнения
-├── fill-template.ps1      # Заполнение плейсхолдеров в файле
-├── list-specs.ps1         # Список всех спеков с их статусом
-├── audit-spec.ps1         # Аудит кросс-ссылок и консистентности
-├── analyze-features.ps1   # Анализ паттернов .feature файлов
+├── scaffold-spec.sh       # Создание структуры папки с шаблонами
+├── validate-spec.sh       # Валидация структуры и форматов
+├── spec-status.sh         # Отчёт о прогрессе заполнения
+├── fill-template.sh       # Заполнение плейсхолдеров в файле
+├── list-specs.sh          # Список всех спеков с их статусом
+├── audit-spec.sh          # Аудит кросс-ссылок и консистентности
+├── analyze-features.sh    # Анализ паттернов .feature файлов
 ├── logs/                  # Директория для логов (gitignore)
 └── templates/             # Шаблоны файлов
 ```
 
 ## Быстрый старт
 
-```powershell
+```sh
 # Создать новую спеку
-.\.dev-pomogator\tools\specs-generator\scaffold-spec.ps1 -Name "my-feature"
+./.dev-pomogator/tools/specs-generator/scaffold-spec.sh -Name "my-feature"
 
 # Проверить статус
-.\.dev-pomogator\tools\specs-generator\spec-status.ps1 -Path ".specs/my-feature"
+./.dev-pomogator/tools/specs-generator/spec-status.sh -Path ".specs/my-feature"
 
 # Валидация
-.\.dev-pomogator\tools\specs-generator\validate-spec.ps1 -Path ".specs/my-feature"
+./.dev-pomogator/tools/specs-generator/validate-spec.sh -Path ".specs/my-feature"
 
 # Список всех спеков
-.\.dev-pomogator\tools\specs-generator\list-specs.ps1
+./.dev-pomogator/tools/specs-generator/list-specs.sh
 
 # Аудит кросс-ссылок
-.\.dev-pomogator\tools\specs-generator\audit-spec.ps1 -Path ".specs/my-feature"
+./.dev-pomogator/tools/specs-generator/audit-spec.sh -Path ".specs/my-feature"
 
 # Анализ паттернов .feature файлов (ПЕРЕД написанием .feature)
-.\.dev-pomogator\tools\specs-generator\analyze-features.ps1 -Format text
+./.dev-pomogator/tools/specs-generator/analyze-features.sh -Format text
 
 # Анализ с поиском кандидатов
-.\.dev-pomogator\tools\specs-generator\analyze-features.ps1 -FeatureSlug "my-feature" -Format text
+./.dev-pomogator/tools/specs-generator/analyze-features.sh -FeatureSlug "my-feature" -Format text
 ```
 
 ## Скрипты
 
-### scaffold-spec.ps1
+### scaffold-spec.sh
 
 Создаёт структуру папки `.specs/{feature-slug}/` со всеми шаблонами.
 
 **Важно:** запускать внутри репозитория. Если repo root не найден, скрипт завершится с ошибкой и не создаст `.specs`.
 
-```powershell
+```sh
 # Базовое использование
-.\scaffold-spec.ps1 -Name "hook-worklog-checker"
+./scaffold-spec.sh -Name "hook-worklog-checker"
 
 # С указанием домена для .feature файла
-.\scaffold-spec.ps1 -Name "hook-worklog-checker" -Domain "INF"
+./scaffold-spec.sh -Name "hook-worklog-checker" -Domain "INF"
 
 # Перезаписать существующую
-.\scaffold-spec.ps1 -Name "hook-worklog-checker" -Force
+./scaffold-spec.sh -Name "hook-worklog-checker" -Force
 ```
 
 **Параметры:**
@@ -76,19 +76,19 @@
 
 ---
 
-### validate-spec.ps1
+### validate-spec.sh
 
 Проверяет структуру, форматы, плейсхолдеры в спеке.
 
-```powershell
+```sh
 # Полная валидация
-.\validate-spec.ps1 -Path ".specs/hook-worklog-checker"
+./validate-spec.sh -Path ".specs/hook-worklog-checker"
 
 # Только ошибки (без warnings)
-.\validate-spec.ps1 -Path ".specs/hook-worklog-checker" -ErrorsOnly
+./validate-spec.sh -Path ".specs/hook-worklog-checker" -ErrorsOnly
 
 # Текстовый вывод
-.\validate-spec.ps1 -Path ".specs/hook-worklog-checker" -Format text
+./validate-spec.sh -Path ".specs/hook-worklog-checker" -Format text
 ```
 
 **Правила валидации:**
@@ -108,16 +108,16 @@
 
 ---
 
-### spec-status.ps1
+### spec-status.sh
 
 Показывает прогресс заполнения спеки.
 
-```powershell
+```sh
 # Полный статус
-.\spec-status.ps1 -Path ".specs/hook-worklog-checker"
+./spec-status.sh -Path ".specs/hook-worklog-checker"
 
 # Краткий формат
-.\spec-status.ps1 -Path ".specs/hook-worklog-checker" -Brief
+./spec-status.sh -Path ".specs/hook-worklog-checker" -Brief
 ```
 
 **Выводит:**
@@ -129,16 +129,16 @@
 
 ---
 
-### fill-template.ps1
+### fill-template.sh
 
 Заполняет плейсхолдеры в конкретном файле.
 
-```powershell
+```sh
 # Показать плейсхолдеры
-.\fill-template.ps1 -File ".specs/my-feature/USER_STORIES.md" -ListPlaceholders
+./fill-template.sh -File ".specs/my-feature/USER_STORIES.md" -ListPlaceholders
 
 # Заполнить плейсхолдеры
-.\fill-template.ps1 -File ".specs/my-feature/USER_STORIES.md" `
+./fill-template.sh -File ".specs/my-feature/USER_STORIES.md" \
   -Values '{"роль": "разработчик", "цель": "автоматизировать процесс"}'
 ```
 
@@ -149,19 +149,19 @@
 
 ---
 
-### list-specs.ps1
+### list-specs.sh
 
 Показывает список всех спеков в репозитории.
 
-```powershell
+```sh
 # Все спеки
-.\list-specs.ps1
+./list-specs.sh
 
 # Только незавершённые
-.\list-specs.ps1 -Incomplete
+./list-specs.sh -Incomplete
 
 # Фильтр по имени
-.\list-specs.ps1 -Filter "zoho"
+./list-specs.sh -Filter "zoho"
 ```
 
 **Выводит:**
@@ -170,19 +170,19 @@
 
 ---
 
-### audit-spec.ps1
+### audit-spec.sh
 
 Аудит кросс-ссылок и консистентности спецификации. Выполняет автоматические проверки и выдаёт список проблем для AI семантического анализа.
 
-```powershell
+```sh
 # JSON формат (для AI агента)
-.\audit-spec.ps1 -Path ".specs/my-feature"
+./audit-spec.sh -Path ".specs/my-feature"
 
 # Текстовый формат (для человека)
-.\audit-spec.ps1 -Path ".specs/my-feature" -Format text
+./audit-spec.sh -Path ".specs/my-feature" -Format text
 
 # С подробным выводом
-.\audit-spec.ps1 -Path ".specs/my-feature" -Format text -VerboseOutput
+./audit-spec.sh -Path ".specs/my-feature" -Format text -VerboseOutput
 ```
 
 **Автоматические проверки:**
@@ -203,25 +203,25 @@
 
 ---
 
-### analyze-features.ps1
+### analyze-features.sh
 
 Анализирует все `.feature` файлы в проекте и выдаёт структурированный отчёт с паттернами. **Обязательно запускать ПЕРЕД написанием нового .feature файла** в Phase 2 specs workflow.
 
-```powershell
+```sh
 # Полный отчёт (текст)
-.\analyze-features.ps1 -Format text
+./analyze-features.sh -Format text
 
 # Поиск кандидатов по slug
-.\analyze-features.ps1 -FeatureSlug "blind-receiving" -Format text
+./analyze-features.sh -FeatureSlug "blind-receiving" -Format text
 
 # Поиск по домену
-.\analyze-features.ps1 -DomainCode "PLUGIN" -Format text
+./analyze-features.sh -DomainCode "PLUGIN" -Format text
 
 # Свободный поиск
-.\analyze-features.ps1 -Query "shipment" -Format text
+./analyze-features.sh -Query "shipment" -Format text
 
 # JSON (для AI агента)
-.\analyze-features.ps1 -Format json
+./analyze-features.sh -Format json
 ```
 
 **Параметры:**
