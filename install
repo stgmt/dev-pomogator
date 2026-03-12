@@ -10,11 +10,70 @@
 echo --% > /dev/null ; : <<'POWERSHELL_SECTION'
 # --- PowerShell section (bash skips via heredoc) ---
 $ErrorActionPreference = 'Stop'
-$uri = 'https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install.ps1'
-$script = Invoke-RestMethod -Uri $uri
-Invoke-Expression $script
+$repo = "https://github.com/stgmt/dev-pomogator.git"
+$tmpDir = Join-Path $env:TEMP "dev-pomogator-$(Get-Random)"
+$originalDir = Get-Location
+
+switch ($env:TARGET) {
+    "all"    { $target = "--cursor --claude"; $targetName = "Cursor + Claude Code" }
+    "claude" { $target = "--claude"; $targetName = "Claude Code" }
+    default  { $target = "--cursor"; $targetName = "Cursor" }
+}
+
+Write-Host "Installing dev-pomogator for $targetName..." -ForegroundColor Cyan
+
+Write-Host "  Cloning repository..." -ForegroundColor Gray
+cmd /c "git clone --depth 1 $repo $tmpDir 2>nul"
+if (-not (Test-Path $tmpDir)) {
+    Write-Host "Failed to clone repository" -ForegroundColor Red
+    exit 1
+}
+
+Set-Location $tmpDir
+Write-Host "  Installing dependencies..." -ForegroundColor Gray
+cmd /c "npm install 2>nul >nul"
+if ($LASTEXITCODE -ne 0) { Write-Host "npm install failed" -ForegroundColor Red; Set-Location $originalDir; Remove-Item -Recurse -Force $tmpDir -ErrorAction SilentlyContinue; exit 1 }
+Write-Host "  Building..." -ForegroundColor Gray
+cmd /c "npm run build 2>nul >nul"
+if ($LASTEXITCODE -ne 0) { Write-Host "npm run build failed" -ForegroundColor Red; Set-Location $originalDir; Remove-Item -Recurse -Force $tmpDir -ErrorAction SilentlyContinue; exit 1 }
+
+Set-Location $originalDir
+Write-Host "  Running installer..." -ForegroundColor Gray
+node "$tmpDir\dist\index.cjs" $target.Split(' ') --all
+
+Remove-Item -Recurse -Force $tmpDir -ErrorAction SilentlyContinue
+$env:TARGET = $null
+
+Write-Host "Done!" -ForegroundColor Green
 return
 POWERSHELL_SECTION
 # --- Bash section (PowerShell never reaches due to return) ---
 set -e
-curl -fsSL https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install.sh | TARGET="${TARGET:-}" bash
+
+for cmd in git node npm; do
+  command -v "$cmd" >/dev/null 2>&1 || { echo "Error: $cmd is required but not found"; exit 1; }
+done
+
+REPO="https://github.com/stgmt/dev-pomogator.git"
+TMP_DIR=$(mktemp -d)
+trap 'rm -rf "$TMP_DIR"' EXIT
+ORIGINAL_DIR=$(pwd)
+
+case "$TARGET" in
+    all)    TARGET_FLAG="--cursor --claude"; TARGET_NAME="Cursor + Claude Code" ;;
+    claude) TARGET_FLAG="--claude"; TARGET_NAME="Claude Code" ;;
+    *)      TARGET_FLAG="--cursor"; TARGET_NAME="Cursor" ;;
+esac
+
+echo "Installing dev-pomogator for $TARGET_NAME..."
+
+git clone --depth 1 "$REPO" "$TMP_DIR" > /dev/null 2>&1
+
+cd "$TMP_DIR"
+npm install --silent > /dev/null 2>&1
+npm run build --silent > /dev/null 2>&1
+
+cd "$ORIGINAL_DIR"
+node "$TMP_DIR/dist/index.cjs" $TARGET_FLAG --all
+
+echo "Done!"

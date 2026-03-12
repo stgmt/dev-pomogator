@@ -133,3 +133,13 @@ IF existing `statusLine` уже является wrapper-командой THEN i
 WHEN wrapper запускает обе команды AND одна из сторон возвращает пустой вывод или ошибку THEN wrapper SHALL вывести только непустую сторону AND SHALL не ломать весь statusline.
 
 WHEN existing wrapper содержит невалидные encoded аргументы THEN система SHALL fallback на direct managed `statusLine`, а не на nested wrapper.
+
+WHEN wrapper запускает обе команды AND обе стороны возвращают пустой вывод или ошибку THEN wrapper SHALL вывести пустую строку AND SHALL завершиться с exit code 0.
+
+WHEN wrapper запускает команду AND команда не завершается в течение COMMAND_TIMEOUT_MS (2 секунды) THEN wrapper SHALL трактовать её как пустой вывод AND SHALL продолжить с выводом другой команды.
+
+WHEN user command выводит многострочный текст с ANSI-кодами THEN wrapper SHALL нормализовать вывод в одну строку, соединяя непустые trimmed строки пробелами.
+
+WHEN installer запускается на проекте который уже содержит wrapper THEN результирующий settings SHALL содержать ровно один `--user-b64` и один `--managed-b64` аргумент (без вложенных wrappers).
+
+WHEN wrapper получает StatusJSON на stdin THEN wrapper SHALL передать идентичный JSON на stdin обоим командам (user и managed).

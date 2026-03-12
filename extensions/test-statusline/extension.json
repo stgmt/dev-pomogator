@@ -13,8 +13,11 @@
   "toolFiles": {
     "test-statusline": [
       ".dev-pomogator/tools/test-statusline/statusline_render.sh",
+      ".dev-pomogator/tools/test-statusline/statusline_render.cjs",
       ".dev-pomogator/tools/test-statusline/statusline_wrapper.js",
+      ".dev-pomogator/tools/test-statusline/package.json",
       ".dev-pomogator/tools/test-statusline/test_runner_wrapper.sh",
+      ".dev-pomogator/tools/test-statusline/test_runner_wrapper.cjs",
       ".dev-pomogator/tools/test-statusline/statusline_session_start.ts",
       ".dev-pomogator/tools/test-statusline/status_types.ts"
     ]
@@ -27,7 +30,7 @@
   "statusLine": {
     "claude": {
       "type": "command",
-      "command": "bash .dev-pomogator/tools/test-statusline/statusline_render.sh"
+      "command": "node .dev-pomogator/tools/test-statusline/statusline_render.cjs"
     }
   },
   "envRequirements": [

@@ -271,3 +271,57 @@ Feature: PLUGIN011_test-statusline
     When installer resolves statusLine coexistence
     Then resulting statusLine should fall back to direct managed command
     And resulting statusLine should not nest another wrapper command
+
+  # @feature2
+  Scenario: PLUGIN011_36 Wrapper writes stdout and stderr into log_file
+    Given test runner wrapper is running with session "abc12345"
+    When wrapped process writes to both stdout and stderr
+    Then log_file should contain both stdout and stderr lines
+
+  # @feature8
+  Scenario: PLUGIN011_37 Wrapper outputs nothing when both commands fail
+    Given statusline wrapper receives user command that exits with error
+    And managed command also exits with error
+    When wrapper is executed
+    Then wrapper should output empty string
+    And wrapper should exit with code 0
+
+  # @feature8
+  Scenario: PLUGIN011_38 Wrapper completes within timeout when user command hangs
+    Given statusline wrapper receives user command that blocks for 10 seconds
+    And managed command outputs "managedinfo"
+    When wrapper is executed with 2-second timeout per command
+    Then wrapper should output only "managedinfo"
+    And wrapper total execution time should be under 5 seconds
+
+  # @feature8
+  Scenario: PLUGIN011_39 Wrapper normalizes multi-line ANSI user output to single line
+    Given statusline wrapper receives user command that outputs multi-line ANSI text
+    And managed command outputs "testinfo"
+    When wrapper is executed
+    Then wrapper should output single-line combined result with pipe separator
+    And no newline characters should appear in the output
+
+  # @feature8
+  Scenario: PLUGIN011_40 Updater preserves wrapper when auto-updating extension
+    Given project ".claude/settings.json" contains wrapper with user command and managed command
+    When updater processes test-statusline extension update
+    Then wrapper user command should remain unchanged
+    And wrapper managed command should be updated to new path
+    And global "~/.claude/settings.json" should remain unchanged
+
+  # @feature8
+  Scenario: PLUGIN011_41 Re-install does not create nested wrapper
+    Given project ".claude/settings.json" contains wrapper combining user and managed commands
+    When installer processes test-statusline extension again
+    Then resulting statusLine should still be a single wrapper command
+    And wrapper should contain exactly one user-b64 argument
+    And wrapper should contain exactly one managed-b64 argument
+
+  # @feature8
+  Scenario: PLUGIN011_42 Wrapper forwards full StatusJSON stdin to both commands
+    Given statusline wrapper receives full StatusJSON with context_window and cost fields
+    And user command echoes received session_id from stdin
+    And managed command echoes received session_id from stdin
+    When wrapper is executed
+    Then both commands should receive identical session_id

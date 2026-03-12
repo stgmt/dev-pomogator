@@ -13,13 +13,13 @@ import {
 
 const STATUS_DIR = '.dev-pomogator/.test-status';
 const FIXTURES_DIR = 'tests/fixtures/test-statusline';
-const RENDER_SCRIPT = 'extensions/test-statusline/tools/test-statusline/statusline_render.sh';
+const RENDER_SCRIPT = 'extensions/test-statusline/tools/test-statusline/statusline_render.cjs';
 const WRAPPER_SCRIPT = 'extensions/test-statusline/tools/test-statusline/test_runner_wrapper.sh';
 const STATUSLINE_WRAPPER_SCRIPT = 'extensions/test-statusline/tools/test-statusline/statusline_wrapper.js';
 const SESSION_HOOK = 'extensions/test-statusline/tools/test-statusline/statusline_session_start.ts';
 const DEFAULT_STATUSLINE_CONFIG = {
   type: 'command',
-  command: 'bash .dev-pomogator/tools/test-statusline/statusline_render.sh',
+  command: 'node .dev-pomogator/tools/test-statusline/statusline_render.cjs',
 };
 
 function statusFilePath(prefix: string): string {
@@ -35,7 +35,7 @@ function globalClaudeSettingsPath(): string {
 }
 
 function runRenderScript(stdinJson: Record<string, unknown>): { stdout: string; stderr: string; status: number | null } {
-  const result = spawnSync('bash', [appPath(RENDER_SCRIPT)], {
+  const result = spawnSync('node', [appPath(RENDER_SCRIPT)], {
     input: JSON.stringify(stdinJson),
     encoding: 'utf-8',
     cwd: appPath(),
@@ -271,16 +271,16 @@ describe('PLUGIN011: Test Statusline', () => {
     });
 
     // @feature1a
-    it('PLUGIN011_06: works without jq installed', async () => {
+    it('PLUGIN011_06: works without jq installed (Node.js render has no jq dependency)', async () => {
       const yamlContent = withPid(readFixture('mock-status-running-live-pid.yaml'), process.pid);
       await fs.writeFile(statusFilePath('abc12345'), yamlContent);
       const stdinJson = { ...readFixtureJson('mock-stdin.json'), cwd: appPath() };
-      // Run with PATH that excludes jq
-      const result = spawnSync('bash', [appPath(RENDER_SCRIPT)], {
+      // Node.js render doesn't use jq at all — verify it works with minimal PATH
+      const result = spawnSync('node', [appPath(RENDER_SCRIPT)], {
         input: JSON.stringify(stdinJson),
         encoding: 'utf-8',
         cwd: appPath(),
-        env: { ...process.env, FORCE_COLOR: '0', PATH: '/usr/bin:/bin' },
+        env: { ...process.env, FORCE_COLOR: '0', PATH: '/usr/local/bin:/usr/bin:/bin' },
         timeout: 10000,
       });
 
@@ -558,7 +558,7 @@ describe('PLUGIN011: Test Statusline', () => {
       const manifest = await fs.readJson(manifestPath);
       const toolFiles = manifest.toolFiles?.['test-statusline'] || [];
 
-      expect(toolFiles.join(',')).toContain('statusline_render.sh');
+      expect(toolFiles.join(',')).toContain('statusline_render.cjs');
       expect(toolFiles.join(',')).toContain('statusline_wrapper.js');
       expect(toolFiles.join(',')).toContain('test_runner_wrapper.sh');
       expect(toolFiles.join(',')).toContain('statusline_session_start.ts');
@@ -584,7 +584,7 @@ describe('PLUGIN011: Test Statusline', () => {
       expect(manifest.statusLine).toBeDefined();
       expect(manifest.statusLine.claude).toBeDefined();
       expect(manifest.statusLine.claude.type).toBe('command');
-      expect(manifest.statusLine.claude.command).toContain('statusline_render.sh');
+      expect(manifest.statusLine.claude.command).toContain('statusline_render.cjs');
     });
   });
 
@@ -617,7 +617,7 @@ describe('PLUGIN011: Test Statusline', () => {
       const written = await fs.readJson(testSettingsPath);
       expect(written.statusLine).toBeDefined();
       expect(written.statusLine.type).toBe('command');
-      expect(written.statusLine.command).toContain('statusline_render.sh');
+      expect(written.statusLine.command).toContain('statusline_render.cjs');
 
       await fs.remove(testSettingsPath);
     });
@@ -628,7 +628,7 @@ describe('PLUGIN011: Test Statusline', () => {
 
       // Simulate existing managed statusLine
       await fs.writeJson(testSettingsPath, {
-        statusLine: { type: 'command', command: 'bash /old/path/.dev-pomogator/tools/test-statusline/statusline_render.sh' }
+        statusLine: { type: 'command', command: 'bash /old/path/.dev-pomogator/tools/test-statusline/statusline_render.cjs' }
       }, { spaces: 2 });
 
       // Check that it contains .dev-pomogator/tools/ (managed)
@@ -636,11 +636,11 @@ describe('PLUGIN011: Test Statusline', () => {
       expect(existing.statusLine.command).toContain('.dev-pomogator/tools/');
 
       // Overwrite with new path (simulating re-install)
-      existing.statusLine.command = `bash ${appPath().replace(/\\/g, '/')}/.dev-pomogator/tools/test-statusline/statusline_render.sh`;
+      existing.statusLine.command = `bash ${appPath().replace(/\\/g, '/')}/.dev-pomogator/tools/test-statusline/statusline_render.cjs`;
       await fs.writeJson(testSettingsPath, existing, { spaces: 2 });
 
       const updated = await fs.readJson(testSettingsPath);
-      expect(updated.statusLine.command).toContain('statusline_render.sh');
+      expect(updated.statusLine.command).toContain('statusline_render.cjs');
 
       await fs.remove(testSettingsPath);
     });
@@ -659,7 +659,7 @@ describe('PLUGIN011: Test Statusline', () => {
       const parsed = parseWrappedStatusLineCommand(resolved.command);
       expect(parsed).not.toBeNull();
       expect(parsed?.userCommand).toBe('npx -y ccstatusline@latest');
-      expect(parsed?.managedCommand).toContain('statusline_render.sh');
+      expect(parsed?.managedCommand).toContain('statusline_render.cjs');
     });
 
     // @feature8
@@ -667,7 +667,7 @@ describe('PLUGIN011: Test Statusline', () => {
       const existingWrapper = buildWrappedStatusLineCommand(
         appPath(),
         'npx -y ccstatusline@latest',
-        'bash /old/path/.dev-pomogator/tools/test-statusline/statusline_render.sh'
+        'bash /old/path/.dev-pomogator/tools/test-statusline/statusline_render.cjs'
       );
 
       const resolved = resolveClaudeStatusLine({
@@ -679,7 +679,7 @@ describe('PLUGIN011: Test Statusline', () => {
       const parsed = parseWrappedStatusLineCommand(resolved.command);
       expect(parsed).not.toBeNull();
       expect(parsed?.userCommand).toBe('npx -y ccstatusline@latest');
-      expect(parsed?.managedCommand).toContain(`${appPath().replace(/\\/g, '/')}/.dev-pomogator/tools/test-statusline/statusline_render.sh`);
+      expect(parsed?.managedCommand).toContain(`${appPath().replace(/\\/g, '/')}/.dev-pomogator/tools/test-statusline/statusline_render.cjs`);
       expect(parsed?.managedCommand).not.toContain('/old/path/');
     });
 
@@ -709,7 +709,7 @@ describe('PLUGIN011: Test Statusline', () => {
 
       const parsed = parseWrappedStatusLineCommand(resolved.command);
       expect(parsed?.userCommand).toBe('printf projectinfo');
-      expect(parsed?.managedCommand).toContain('statusline_render.sh');
+      expect(parsed?.managedCommand).toContain('statusline_render.cjs');
     });
 
     // @feature8
@@ -730,7 +730,7 @@ describe('PLUGIN011: Test Statusline', () => {
         const parsed = parseWrappedStatusLineCommand(projectSettings.statusLine.command);
         expect(parsed).not.toBeNull();
         expect(parsed?.userCommand).toBe('npx -y ccstatusline@latest');
-        expect(parsed?.managedCommand).toContain('statusline_render.sh');
+        expect(parsed?.managedCommand).toContain('statusline_render.cjs');
 
         const globalSettings = await fs.readJson(globalSettingsPath);
         expect(globalSettings.statusLine.command).toBe('npx -y ccstatusline@latest');
@@ -778,8 +778,125 @@ describe('PLUGIN011: Test Statusline', () => {
       expect(resolved.mode).toBe('direct');
       expect(resolved.source).toBe('project');
       expect(resolved.existingKind).toBe('wrapped');
-      expect(resolved.command).toContain('statusline_render.sh');
+      expect(resolved.command).toContain('statusline_render.cjs');
       expect(resolved.command).not.toContain('statusline_wrapper.js');
+    });
+
+    // @feature8
+    it('PLUGIN011_37: wrapper outputs nothing when both commands fail', () => {
+      const result = runStatuslineWrapper(
+        'false',
+        'false',
+        { session_id: 'abc12345', cwd: appPath() }
+      );
+
+      expect(result.status).toBe(0);
+      expect(result.stdout.trim()).toBe('');
+    });
+
+    // @feature8
+    it('PLUGIN011_38: wrapper completes within timeout when user command hangs', () => {
+      const start = Date.now();
+      const result = runStatuslineWrapper(
+        'sleep 10',
+        'printf managedinfo',
+        { session_id: 'abc12345', cwd: appPath() }
+      );
+      const elapsed = Date.now() - start;
+
+      expect(result.status).toBe(0);
+      expect(result.stdout.trim()).toBe('managedinfo');
+      expect(elapsed).toBeLessThan(5000);
+    });
+
+    // @feature8
+    it('PLUGIN011_39: wrapper normalizes multi-line ANSI user output to single line', () => {
+      const mockScript = appPath('tests/fixtures/test-statusline/mock-ccstatusline.sh').replace(/\\/g, '/');
+      const result = runStatuslineWrapper(
+        `bash "${mockScript}" multiline`,
+        'printf testinfo',
+        { session_id: 'abc12345', cwd: appPath() }
+      );
+
+      expect(result.status).toBe(0);
+      const output = result.stdout;
+      expect(output).not.toContain('\n');
+      expect(output).toContain('|');
+      expect(output).toContain('testinfo');
+      // Multi-line ccstatusline output should be joined with spaces
+      expect(output).toContain('Opus');
+      expect(output).toContain('Session:');
+    });
+
+    // @feature8
+    it('PLUGIN011_40: updater preserves wrapper on extension update', () => {
+      const existingWrapper = buildWrappedStatusLineCommand(
+        appPath(),
+        'npx -y ccstatusline@latest',
+        'bash /old/path/.dev-pomogator/tools/test-statusline/statusline_render.cjs'
+      );
+
+      const resolved = resolveClaudeStatusLine({
+        repoRoot: appPath(),
+        projectStatusLine: { type: 'command', command: existingWrapper },
+        statusLineConfig: DEFAULT_STATUSLINE_CONFIG,
+      });
+
+      expect(resolved.mode).toBe('wrapped');
+      const parsed = parseWrappedStatusLineCommand(resolved.command);
+      expect(parsed).not.toBeNull();
+      expect(parsed?.userCommand).toBe('npx -y ccstatusline@latest');
+      expect(parsed?.managedCommand).toContain(appPath().replace(/\\/g, '/'));
+      expect(parsed?.managedCommand).toContain('statusline_render.cjs');
+    });
+
+    // @feature8
+    it('PLUGIN011_41: re-install does not create nested wrapper', () => {
+      const firstWrapper = buildWrappedStatusLineCommand(
+        appPath(),
+        'npx -y ccstatusline@latest',
+        `bash ${appPath().replace(/\\/g, '/')}/.dev-pomogator/tools/test-statusline/statusline_render.cjs`
+      );
+
+      const resolved = resolveClaudeStatusLine({
+        repoRoot: appPath(),
+        projectStatusLine: { type: 'command', command: firstWrapper },
+        statusLineConfig: DEFAULT_STATUSLINE_CONFIG,
+      });
+
+      // Should still be a single wrapper, not nested
+      expect(resolved.mode).toBe('wrapped');
+      const parsed = parseWrappedStatusLineCommand(resolved.command);
+      expect(parsed).not.toBeNull();
+      expect(parsed?.userCommand).toBe('npx -y ccstatusline@latest');
+      // Managed command must not itself be a wrapper
+      expect(parsed?.managedCommand).not.toContain('statusline_wrapper.js');
+      // Exactly one --user-b64 and one --managed-b64
+      const userB64Count = (resolved.command.match(/--user-b64/g) || []).length;
+      const managedB64Count = (resolved.command.match(/--managed-b64/g) || []).length;
+      expect(userB64Count).toBe(1);
+      expect(managedB64Count).toBe(1);
+    });
+
+    // @feature8
+    it('PLUGIN011_42: wrapper forwards full StatusJSON stdin to both commands', () => {
+      const fullStdin = readFixtureJson('ccstatusline-stdin.json');
+      // Both commands extract session_id from stdin JSON via node one-liner
+      const extractCmd = `node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{process.stdout.write(JSON.parse(d).session_id||'')}catch(e){}})"`;
+
+      const result = runStatuslineWrapper(
+        extractCmd,
+        extractCmd,
+        fullStdin
+      );
+
+      expect(result.status).toBe(0);
+      // Both commands received the same stdin and extracted the same session_id
+      // Wrapper combines: "session_id | session_id"
+      const parts = result.stdout.trim().split(' | ');
+      expect(parts).toHaveLength(2);
+      expect(parts[0]).toBe('abc12345def67890ghijklmnop');
+      expect(parts[1]).toBe('abc12345def67890ghijklmnop');
     });
   });
 });
