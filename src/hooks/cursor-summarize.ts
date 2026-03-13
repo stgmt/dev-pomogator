@@ -1,18 +1,18 @@
 /**
  * Cursor Summarize Hook Wrapper
- * 
+ *
  * Этот скрипт решает проблему "Missing transcriptPath" для Cursor:
  * 1. Читает conversation_id из hook input
  * 2. Извлекает последнее сообщение assistant из SQLite
  * 3. Вызывает claude-mem API напрямую с last_assistant_message
- * 
+ *
  * Cursor хранит сообщения в:
  * %APPDATA%\Cursor\User\globalStorage\state.vscdb
  * Таблица: cursorDiskKV
  * Ключ: bubbleId:<conversation_id>:<bubble_id>
- * 
+ *
  * Логи пишутся в:
- * ~/.dev-pomogator/logs/dev-pomogator-YYYY-MM-DD.log
+ * ~/.dev-pomogator/logs/summarize.log (централизованный формат с ротацией 1MB)
  */
 
 import Database from 'bun:sqlite';
@@ -22,59 +22,32 @@ import fs from 'fs';
 
 const WORKER_PORT = 37777;
 
-/**
- * Logger that writes to both console and file
- */
-class Logger {
-  private logDir: string;
-  private logFile: string;
+// Inline logger — same format/rotation as src/utils/logger.ts
+// (this script is deployed standalone to ~/.dev-pomogator/scripts/)
+const LOG_DIR = path.join(os.homedir(), '.dev-pomogator', 'logs');
+const LOG_FILE = path.join(LOG_DIR, 'summarize.log');
+const MAX_LOG_SIZE = 1024 * 1024; // 1MB
 
-  constructor() {
-    this.logDir = path.join(os.homedir(), '.dev-pomogator', 'logs');
-    const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-    this.logFile = path.join(this.logDir, `dev-pomogator-${date}.log`);
-    this.ensureLogDir();
-  }
+const log = {
+  info: (msg: string) => writeLog('INFO', msg),
+  error: (msg: string) => writeLog('ERROR', msg),
+};
 
-  private ensureLogDir(): void {
-    if (!fs.existsSync(this.logDir)) {
-      fs.mkdirSync(this.logDir, { recursive: true });
+function writeLog(level: 'INFO' | 'ERROR', message: string): void {
+  try {
+    fs.mkdirSync(LOG_DIR, { recursive: true });
+    if (fs.existsSync(LOG_FILE)) {
+      const stats = fs.statSync(LOG_FILE);
+      if (stats.size > MAX_LOG_SIZE) {
+        fs.renameSync(LOG_FILE, LOG_FILE + '.old');
+      }
     }
-  }
-
-  private format(level: string, message: string): string {
-    const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 23);
-    return `[${timestamp}] [${level.padEnd(5)}] [SUMMARIZE] ${message}\n`;
-  }
-
-  private write(level: string, message: string): void {
-    const formatted = this.format(level, message);
-    
-    // Write to console
-    if (level === 'ERROR') {
-      process.stderr.write(formatted);
-    } else {
-      process.stdout.write(formatted);
-    }
-    
-    // Append to log file
-    try {
-      fs.appendFileSync(this.logFile, formatted);
-    } catch {
-      // Ignore file write errors
-    }
-  }
-
-  info(message: string): void {
-    this.write('INFO', message);
-  }
-
-  error(message: string): void {
-    this.write('ERROR', message);
+    const timestamp = new Date().toISOString();
+    fs.appendFileSync(LOG_FILE, `[${timestamp}] [${level}] ${message}\n`);
+  } catch {
+    // Silent fail — logging should not break the hook
   }
 }
-
-const log = new Logger();
 
 interface HookInput {
   conversation_id: string;
