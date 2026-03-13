@@ -1,9 +1,29 @@
 #!/usr/bin/env node
 
 const fs = require('node:fs');
+const path = require('node:path');
+const os = require('node:os');
 const { spawnSync } = require('node:child_process');
 
-const COMMAND_TIMEOUT_MS = 2000;
+const COMMAND_TIMEOUT_MS = 5000;
+const LOG_DIR = path.join(os.homedir(), '.dev-pomogator', 'logs');
+const LOG_FILE = path.join(LOG_DIR, 'statusline.log');
+const MAX_LOG_SIZE = 512 * 1024; // 512KB
+
+function logDiag(message) {
+  try {
+    fs.mkdirSync(LOG_DIR, { recursive: true });
+    // Rotate if too large
+    try {
+      const stat = fs.statSync(LOG_FILE);
+      if (stat.size > MAX_LOG_SIZE) {
+        try { fs.unlinkSync(LOG_FILE + '.old'); } catch (_) { /* ignore */ }
+        fs.renameSync(LOG_FILE, LOG_FILE + '.old');
+      }
+    } catch (_) { /* file doesn't exist yet */ }
+    fs.appendFileSync(LOG_FILE, `[${new Date().toISOString()}] ${message}\n`);
+  } catch (_) { /* never fail on logging */ }
+}
 
 function readFlag(flag) {
   const index = process.argv.indexOf(flag);
@@ -40,11 +60,12 @@ function normalizeOutput(value) {
   return lines.join(' ');
 }
 
-function runCommand(command, input) {
+function runCommand(label, command, input) {
   if (!command) {
     return '';
   }
 
+  const start = Date.now();
   const result = spawnSync(command, {
     input,
     encoding: 'utf-8',
@@ -52,20 +73,25 @@ function runCommand(command, input) {
     windowsHide: true,
     timeout: COMMAND_TIMEOUT_MS,
   });
+  const elapsed = Date.now() - start;
 
   if (result.error) {
+    const reason = result.error.code === 'ETIMEDOUT' ? `TIMEOUT(${COMMAND_TIMEOUT_MS}ms)` : result.error.message;
+    logDiag(`${label}: ${reason} after ${elapsed}ms cmd=${command.substring(0, 40)}`);
     return '';
   }
 
-  return normalizeOutput(result.stdout);
+  const output = normalizeOutput(result.stdout);
+  logDiag(`${label}: ${elapsed}ms exit=${result.status} out=${output.length}b`);
+  return output;
 }
 
 const input = fs.readFileSync(0, 'utf-8');
 const userCommand = decodeBase64(readFlag('--user-b64'));
 const managedCommand = decodeBase64(readFlag('--managed-b64'));
 
-const userOutput = runCommand(userCommand, input);
-const managedOutput = runCommand(managedCommand, input);
+const userOutput = runCommand('user', userCommand, input);
+const managedOutput = runCommand('managed', managedCommand, input);
 
 if (userOutput && managedOutput) {
   process.stdout.write(`${userOutput} | ${managedOutput}`);
