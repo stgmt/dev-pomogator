@@ -41,7 +41,14 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         build-essential libxtst-dev libpng-dev python3
 
 # Build as vscode-compatible user (UID 1000)
-RUN useradd -m -u 1000 -s /bin/bash vscode \
+# Handle base images where UID 1000 already exists (e.g. node:22 has 'node:1000')
+RUN existing_user=$(getent passwd 1000 | cut -d: -f1 || true) \
+    && if [ -n "$existing_user" ] && [ "$existing_user" != "vscode" ]; then \
+         usermod -l vscode -d /home/vscode -m -s /bin/bash "$existing_user"; \
+         groupmod -n vscode "$(getent group 1000 | cut -d: -f1)" 2>/dev/null || true; \
+       elif [ -z "$existing_user" ]; then \
+         useradd -m -u 1000 -s /bin/bash vscode; \
+       fi \
     && mkdir -p /home/vscode/.npm-global \
     && chown -R vscode:vscode /home/vscode/.npm-global
 
