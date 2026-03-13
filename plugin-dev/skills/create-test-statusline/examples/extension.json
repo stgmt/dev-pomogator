@@ -1,0 +1,44 @@
+{
+  "name": "my-test-statusline",
+  "version": "1.0.0",
+  "description": "Test runner progress display in Claude Code statusline",
+  "platforms": ["claude"],
+  "category": "automation",
+  "files": {
+    "claude": []
+  },
+  "tools": {
+    "my-test-statusline": "tools/my-test-statusline"
+  },
+  "toolFiles": {
+    "my-test-statusline": [
+      ".dev-pomogator/tools/my-test-statusline/statusline_render.cjs",
+      ".dev-pomogator/tools/my-test-statusline/test_runner_wrapper.cjs",
+      ".dev-pomogator/tools/my-test-statusline/session_start_hook.cjs",
+      ".dev-pomogator/tools/my-test-statusline/statusline_wrapper.cjs",
+      ".dev-pomogator/tools/my-test-statusline/package.json"
+    ]
+  },
+  "hooks": {
+    "claude": {
+      "SessionStart": "node .dev-pomogator/tools/my-test-statusline/session_start_hook.cjs"
+    }
+  },
+  "statusLine": {
+    "claude": {
+      "type": "command",
+      "_comment_direct": "Use this for direct render (no coexistence wrapper):",
+      "_direct_command": "node .dev-pomogator/tools/my-test-statusline/statusline_render.cjs",
+      "_comment_wrapped": "Use this for coexistence with existing statusline (base64-encode both commands):",
+      "command": "node .dev-pomogator/tools/my-test-statusline/statusline_wrapper.cjs --user-b64 REPLACE_WITH_BASE64_USER_CMD --managed-b64 REPLACE_WITH_BASE64_RENDER_CMD"
+    }
+  },
+  "envRequirements": [
+    {
+      "name": "TEST_STATUSLINE_ENABLED",
+      "required": false,
+      "default": "true",
+      "description": "Enable/disable test statusline extension"
+    }
+  ]
+}

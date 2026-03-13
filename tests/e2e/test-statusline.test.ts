@@ -253,22 +253,24 @@ describe('PLUGIN011: Test Statusline', () => {
 
   describe('Graceful Degradation (@feature1a)', () => {
     // @feature1a
-    it('PLUGIN011_04: outputs nothing when no YAML file exists', async () => {
+    it('PLUGIN011_04: shows idle indicator when no YAML file exists', async () => {
       const stdinJson = { ...readFixtureJson('mock-stdin.json'), cwd: appPath() };
       const result = runRenderScript(stdinJson);
 
-      expect(result.stdout.trim()).toBe('');
+      expect(result.stdout).toContain('0%');
+      expect(result.stdout).toContain('no test runs');
       expect(result.status).toBe(0);
     });
 
     // @feature1a
-    it('PLUGIN011_05: handles corrupted YAML gracefully', async () => {
+    it('PLUGIN011_05: handles corrupted YAML gracefully with idle indicator', async () => {
       const yamlContent = readFixture('mock-status-corrupted.yaml');
       await fs.writeFile(statusFilePath('abc12345'), yamlContent);
       const stdinJson = { ...readFixtureJson('mock-stdin.json'), cwd: appPath() };
       const result = runRenderScript(stdinJson);
 
-      expect(result.stdout.trim()).toBe('');
+      expect(result.stdout).toContain('0%');
+      expect(result.stdout).toContain('no test runs');
       expect(result.status).toBe(0);
     });
 

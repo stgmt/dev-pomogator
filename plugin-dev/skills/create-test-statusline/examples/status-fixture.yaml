@@ -1,0 +1,27 @@
+version: 2
+session_id: "abc12345def67890"
+pid: 54321
+started_at: "2026-03-13T12:00:00Z"
+updated_at: "2026-03-13T12:01:15Z"
+state: running
+framework: "vitest"
+total: 50
+passed: 38
+failed: 2
+skipped: 0
+running: 10
+percent: 76
+duration_ms: 75000
+error_message: ""
+log_file: ".dev-pomogator/.test-status/test.abc12345.log"
+suites:
+  - name: "auth.test.ts"
+    status: "passed"
+    passed: 12
+    failed: 0
+    total: 12
+  - name: "api.test.ts"
+    status: "running"
+    passed: 26
+    failed: 2
+    total: 38

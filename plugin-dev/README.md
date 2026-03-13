@@ -4,7 +4,7 @@ A comprehensive toolkit for developing Claude Code plugins with expert guidance 
 
 ## Overview
 
-The plugin-dev toolkit provides seven specialized skills to help you build high-quality Claude Code plugins:
+The plugin-dev toolkit provides eight specialized skills to help you build high-quality Claude Code plugins:
 
 1. **Hook Development** - Advanced hooks API and event-driven automation
 2. **MCP Integration** - Model Context Protocol server integration
@@ -13,6 +13,7 @@ The plugin-dev toolkit provides seven specialized skills to help you build high-
 5. **Command Development** - Creating slash commands with frontmatter and arguments
 6. **Agent Development** - Creating autonomous agents with AI-assisted generation
 7. **Skill Development** - Creating skills with progressive disclosure and strong triggers
+8. **Create Test Statusline** - Building test progress statusline extensions with framework adapters
 
 Each skill follows best practices with progressive disclosure: lean core documentation, detailed references, working examples, and utility scripts.
 
@@ -192,6 +193,26 @@ Use this workflow for structured, high-quality plugin development from concept t
 
 **Use when:** Creating new skills for plugins or improving existing skill quality.
 
+### 8. Create Test Statusline
+
+**Trigger phrases:** "create test statusline", "add test progress to statusline", "test progress bar", "real-time test progress", "test runner wrapper with statusline"
+
+**What it covers:**
+- 8-step workflow for building test progress statusline extensions
+- YAML v2 status file protocol (atomic writes, session isolation, PID liveness)
+- Framework adapter pattern (vitest, jest, pytest, dotnet, cargo, go)
+- Auto-detection of test framework from project config files
+- Statusline coexistence via wrapper pattern (base64, timeout, output combining)
+- Cross-platform compatibility (CJS, portable paths, Windows support)
+- Scaffold script for generating extension skeleton
+
+**Resources:**
+- Core SKILL.md (~2,000 words)
+- 4 reference docs: yaml-protocol, adapter-patterns, testing-guide, cross-platform
+- 7 examples: render, wrapper, adapter, statusline-wrapper, session-hook, manifest, fixture
+- 1 scaffold script with embedded templates
+
+**Use when:** Building a test progress statusline for Claude Code, adding framework adapters, or setting up test monitoring.
 
 ## Installation
 
@@ -303,7 +324,7 @@ All skills follow consistent standards:
 
 ## Total Content
 
-- **Core Skills**: ~11,065 words across 7 SKILL.md files
+- **Core Skills**: ~13,065 words across 8 SKILL.md files
 - **Reference Docs**: ~10,000+ words of detailed guides
 - **Examples**: 12+ working examples (hook scripts, MCP configs, plugin layouts, settings files)
 - **Utilities**: 6 production-ready validation/testing/parsing scripts
@@ -387,7 +408,7 @@ This plugin is part of the claude-code-marketplace. To contribute improvements:
 
 ## Version
 
-0.1.0 - Initial release with seven comprehensive skills and three validation agents
+0.1.0 - Initial release with eight comprehensive skills and three validation agents
 
 ## Author
 

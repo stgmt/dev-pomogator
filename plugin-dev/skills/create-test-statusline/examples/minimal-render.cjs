@@ -1,17 +1,17 @@
 #!/usr/bin/env node
-// Test Statusline Render Script (Node.js port of statusline_render.sh)
-// Reads Claude Code JSON from stdin, finds session-specific canonical v2 YAML, renders status line.
+// Minimal statusline render script for test progress.
+// Reads JSON stdin from Claude Code, finds session YAML status file, renders ANSI progress bar.
+// Source: extracted from extensions/test-statusline/tools/test-statusline/statusline_render.cjs
 
 'use strict';
 
 const fs = require('node:fs');
 const path = require('node:path');
 
-// --- Read stdin ---
+// --- Read stdin (Claude Code passes JSON with session_id and cwd) ---
 let input = '';
 try { input = fs.readFileSync(0, 'utf-8'); } catch (_) { /* empty stdin */ }
 
-// --- Parse session_id and cwd from JSON ---
 let sessionId = '';
 let cwd = '.';
 try {
@@ -20,12 +20,13 @@ try {
   cwd = json.cwd || '.';
 } catch (_) { /* invalid JSON */ }
 
+// Fallback: env vars written by SessionStart hook
 if (!sessionId) sessionId = process.env.TEST_STATUSLINE_SESSION || '';
 if (cwd === '.') cwd = process.env.TEST_STATUSLINE_PROJECT || '.';
 
-const sessionPrefix = sessionId ? sessionId.substring(0, 8) : '';
+const prefix = sessionId ? sessionId.substring(0, 8) : '';
 
-// --- Idle indicator (DIM progress bar with "no test runs") ---
+// --- Idle indicator (shown when no test data available) ---
 function renderIdle() {
   const DIM = '\x1b[2m';
   const RESET = '\x1b[0m';
@@ -34,25 +35,23 @@ function renderIdle() {
   process.exit(0);
 }
 
-if (!sessionPrefix) renderIdle();
+if (!prefix) renderIdle();
 
-const statusFile = path.join(cwd, '.dev-pomogator', '.test-status', `status.${sessionPrefix}.yaml`);
+const statusFile = path.join(cwd, '.dev-pomogator', '.test-status', `status.${prefix}.yaml`);
 
-// --- Parse top-level YAML fields (flat, no nested) ---
-// Read directly without existsSync to avoid TOCTOU race (one fewer syscall per refresh)
+// --- Parse flat YAML fields (no library needed) ---
 let yamlContent;
 try { yamlContent = fs.readFileSync(statusFile, 'utf-8'); } catch (_) { renderIdle(); }
 
 const fields = {};
 for (const rawLine of yamlContent.split('\n')) {
-  const line = rawLine.replace(/\r$/, '');
+  const line = rawLine.replace(/\r$/, ''); // normalize Windows newlines
   if (!line || line.startsWith(' ') || line.startsWith('- ')) continue;
-  if (line === 'suites:' || line === 'phases:') break;
+  if (line === 'suites:' || line === 'phases:') break; // stop at nested sections
   const colonIdx = line.indexOf(':');
   if (colonIdx === -1) continue;
   const key = line.substring(0, colonIdx).trim();
   let val = line.substring(colonIdx + 1).trim();
-  // strip YAML quotes
   if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
     val = val.slice(1, -1);
   }
@@ -61,48 +60,15 @@ for (const rawLine of yamlContent.split('\n')) {
 
 if (fields.version !== '2' || !fields.state || !fields.total) renderIdle();
 
-let state = fields.state;
-const pid = parseInt(fields.pid, 10) || 0;
+const state = fields.state;
 const total = parseInt(fields.total, 10) || 0;
 const passed = parseInt(fields.passed, 10) || 0;
 const failed = parseInt(fields.failed, 10) || 0;
-let running = parseInt(fields.running, 10) || 0;
-let percent = parseInt(fields.percent, 10) || 0;
+const running = parseInt(fields.running, 10) || 0;
+const percent = parseInt(fields.percent, 10) || 0;
 const durationMs = parseInt(fields.duration_ms, 10) || 0;
-let errorMsg = fields.error_message || '';
 
-// --- PID liveness check ---
-// Note: duplicates rewriteRunningToFailed logic from statusline_session_start.ts
-// because this .cjs must run without tsx (CJS runtime constraint).
-function rewriteDeadRunning(deadPid) {
-  const message = `Process died unexpectedly (PID: ${deadPid})`;
-  const updatedAt = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
-  const tmpFile = statusFile + '.tmp.' + process.pid;
-  try {
-    let content = fs.readFileSync(statusFile, 'utf-8');
-    content = content
-      .replace(/^state: .*/m, 'state: failed')
-      .replace(/^running: .*/m, 'running: 0')
-      .replace(/^percent: .*/m, 'percent: 100')
-      .replace(/^error_message: .*/m, `error_message: "${message}"`)
-      .replace(/^updated_at: .*/m, `updated_at: "${updatedAt}"`);
-    fs.writeFileSync(tmpFile, content, 'utf-8');
-    fs.renameSync(tmpFile, statusFile);
-    // Mutate in-memory state only after successful file rewrite
-    state = 'failed';
-    running = 0;
-    percent = 100;
-    errorMsg = message;
-  } catch (_) {
-    try { fs.unlinkSync(tmpFile); } catch (__) { /* ignore */ }
-  }
-}
-
-if (state === 'running' && pid > 0) {
-  try { process.kill(pid, 0); } catch (_) { rewriteDeadRunning(pid); }
-}
-
-// --- Format duration ---
+// --- Format duration as m:ss ---
 const durationS = Math.floor(durationMs / 1000);
 const durationStr = `${Math.floor(durationS / 60)}:${String(durationS % 60).padStart(2, '0')}`;
 
@@ -120,11 +86,10 @@ const RESET = '\x1b[0m';
 
 let barColor = GREEN;
 if (total > 0 && failed > 0) {
-  const failPct = Math.floor(failed * 100 / total);
-  barColor = failPct >= 10 ? RED : YELLOW;
+  barColor = Math.floor(failed * 100 / total) >= 10 ? RED : YELLOW;
 }
 
-// --- Render ---
+// --- Render based on state ---
 let line = '';
 switch (state) {
   case 'running':
@@ -143,9 +108,9 @@ switch (state) {
       : `\u274C ${passed}/${total} ${DIM}${durationStr}${RESET}`;
     break;
   case 'error':
-    line = `\u274C ${RED}ERR${RESET} ${errorMsg || 'unknown error'}`;
+    line = `\u274C ${RED}ERR${RESET} ${fields.error_message || 'unknown error'}`;
     break;
-  default: // idle
+  default:
     renderIdle();
 }
 

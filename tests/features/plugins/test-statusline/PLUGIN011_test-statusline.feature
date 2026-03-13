@@ -44,17 +44,17 @@ Feature: PLUGIN011_test-statusline
     And statusline output should contain "7 failed"
 
   # @feature1a
-  Scenario: PLUGIN011_04 Statusline outputs nothing when no YAML file exists
+  Scenario: PLUGIN011_04 Statusline shows idle indicator when no YAML file exists
     Given no YAML status file exists for current session
     When statusline script receives JSON stdin with matching session_id
-    Then statusline output should be empty
+    Then statusline output should contain idle indicator "0%" and "no test runs"
     And statusline script should exit with code 0
 
   # @feature1a
-  Scenario: PLUGIN011_05 Statusline handles corrupted YAML gracefully
+  Scenario: PLUGIN011_05 Statusline shows idle indicator for corrupted YAML
     Given a corrupted YAML status file exists
     When statusline script receives JSON stdin with matching session_id
-    Then statusline output should be empty
+    Then statusline output should contain idle indicator "0%" and "no test runs"
     And statusline script should exit with code 0
 
   # @feature1a
