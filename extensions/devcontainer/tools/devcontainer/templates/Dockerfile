@@ -24,6 +24,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     cd /tmp \
     && git clone https://github.com/huseyinstif/oculos.git oculos-build \
     && cd oculos-build \
+    && git checkout ce2b01e18088 \
     && git apply /tmp/oculos-atspi2-fix.patch \
     && cargo build --release \
     && cp target/release/oculos /usr/local/bin/oculos \
