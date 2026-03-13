@@ -288,12 +288,12 @@ Feature: PLUGIN011_test-statusline
     And wrapper total execution time should be under 5 seconds
 
   # @feature8
-  Scenario: PLUGIN011_39 Wrapper normalizes multi-line ANSI user output to single line
+  Scenario: PLUGIN011_39 Wrapper preserves multi-line ANSI user output with newlines
     Given statusline wrapper receives user command that outputs multi-line ANSI text
     And managed command outputs "testinfo"
     When wrapper is executed
-    Then wrapper should output single-line combined result with pipe separator
-    And no newline characters should appear in the output
+    Then wrapper should preserve newlines from user output
+    And managed output should be appended to the last line via pipe separator
 
   # @feature8
   Scenario: PLUGIN011_40 Updater preserves wrapper when auto-updating extension

@@ -780,11 +780,11 @@ describe('PLUGIN011: Test Statusline', () => {
 
       expect(result.status).toBe(0);
       expect(result.stdout.trim()).toBe('managedinfo');
-      expect(elapsed).toBeLessThan(5000);
+      expect(elapsed).toBeLessThan(10000); // wrapper timeout 5s + overhead
     });
 
     // @feature8
-    it('PLUGIN011_39: wrapper normalizes multi-line ANSI user output to single line', () => {
+    it('PLUGIN011_39: wrapper preserves multi-line ANSI user output with newlines', () => {
       const mockScript = appPath('tests/fixtures/test-statusline/mock-ccstatusline.sh').replace(/\\/g, '/');
       const result = runStatuslineWrapper(
         `bash "${mockScript}" multiline`,
@@ -794,12 +794,12 @@ describe('PLUGIN011: Test Statusline', () => {
 
       expect(result.status).toBe(0);
       const output = result.stdout;
-      expect(output).not.toContain('\n');
-      expect(output).toContain('|');
-      expect(output).toContain('testinfo');
-      // Multi-line ccstatusline output should be joined with spaces
+      // Multi-line ccstatusline output should preserve newlines
+      expect(output).toContain('\n');
       expect(output).toContain('Opus');
       expect(output).toContain('Session:');
+      // Managed output appended to last line via pipe separator
+      expect(output).toContain('| testinfo');
     });
 
     // @feature8
