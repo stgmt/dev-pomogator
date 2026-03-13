@@ -1,3 +1,8 @@
+import os from 'os';
+import path from 'path';
+import { makePortableScriptCommand } from '../installer/shared.js';
+import { writeJsonAtomic, readJsonSafe } from './atomic-json.js';
+
 export interface ClaudeStatusLineEntry {
   type: string;
   command: string;
@@ -9,9 +14,6 @@ export interface ExistingClaudeStatusLineEntry {
 }
 
 export interface ResolveClaudeStatusLineInput {
-  repoRoot: string;
-  existing?: ExistingClaudeStatusLineEntry;
-  projectStatusLine?: ExistingClaudeStatusLineEntry;
   globalStatusLine?: ExistingClaudeStatusLineEntry;
   statusLineConfig: ClaudeStatusLineEntry;
 }
@@ -22,23 +24,22 @@ export interface ParsedWrappedStatusLineCommand {
 }
 
 export interface SelectedClaudeStatusLine {
-  source: 'project' | 'global' | 'none';
+  source: 'global' | 'none';
   kind: 'none' | 'managed' | 'wrapped' | 'user';
   entry?: ExistingClaudeStatusLineEntry;
 }
 
 export interface ResolvedClaudeStatusLine extends ClaudeStatusLineEntry {
   mode: 'direct' | 'wrapped';
-  source: 'project' | 'global' | 'none';
+  source: 'global' | 'none';
   existingKind: 'none' | 'managed' | 'wrapped' | 'user';
 }
 
 const MANAGED_STATUSLINE_DIR = '.dev-pomogator/tools/test-statusline/';
+const MANAGED_RENDER_SCRIPT = 'statusline_render.cjs';
 const WRAPPER_SCRIPT_MARKER = 'statusline_wrapper.js';
 
-function normalizeRepoRoot(repoRoot: string): string {
-  return repoRoot.replace(/\\/g, '/');
-}
+export const DEFAULT_USER_STATUSLINE_COMMAND = 'npx -y ccstatusline@latest';
 
 function quoteArgument(value: string): string {
   return `"${value.replace(/"/g, '\\"')}"`;
@@ -89,7 +90,11 @@ export function isWrappedStatusLineCommand(command: string): boolean {
 }
 
 export function isManagedStatusLineCommand(command: string): boolean {
-  return command.includes(MANAGED_STATUSLINE_DIR) && !isWrappedStatusLineCommand(command);
+  if (isWrappedStatusLineCommand(command)) return false;
+  // Detect old project-path format (.dev-pomogator/tools/test-statusline/)
+  if (command.includes(MANAGED_STATUSLINE_DIR)) return true;
+  // Detect new global format (os.homedir() + scripts/statusline_render.cjs)
+  return command.includes("'.dev-pomogator','scripts','" + MANAGED_RENDER_SCRIPT + "'");
 }
 
 export function classifyClaudeStatusLineCommand(
@@ -111,20 +116,32 @@ export function classifyClaudeStatusLineCommand(
   return 'user';
 }
 
-export function selectExistingClaudeStatusLine({
-  existing,
-  projectStatusLine,
-  globalStatusLine,
-}: Pick<ResolveClaudeStatusLineInput, 'existing' | 'projectStatusLine' | 'globalStatusLine'>): SelectedClaudeStatusLine {
-  const project = normalizeExistingStatusLine(projectStatusLine ?? existing);
-  if (project) {
-    return {
-      source: 'project',
-      kind: classifyClaudeStatusLineCommand(project.command),
-      entry: project,
-    };
-  }
+/**
+ * Build portable managed command that resolves ~/.dev-pomogator/scripts/statusline_render.cjs
+ * at runtime via os.homedir(). Works cross-platform.
+ */
+export function buildPortableManagedCommand(): string {
+  return makePortableScriptCommand(MANAGED_RENDER_SCRIPT);
+}
 
+/**
+ * Build portable wrapped command that runs both user and managed statuslines
+ * via ~/.dev-pomogator/scripts/statusline_wrapper.js with base64-encoded args.
+ */
+export function buildPortableWrappedCommand(
+  userCommand: string,
+  managedCommand: string
+): string {
+  const wrapperCmd = makePortableScriptCommand(WRAPPER_SCRIPT_MARKER);
+  const encodedUserCommand = Buffer.from(userCommand, 'utf-8').toString('base64');
+  const encodedManagedCommand = Buffer.from(managedCommand, 'utf-8').toString('base64');
+
+  return `${wrapperCmd} -- --user-b64 ${quoteArgument(encodedUserCommand)} --managed-b64 ${quoteArgument(encodedManagedCommand)}`;
+}
+
+export function selectExistingClaudeStatusLine({
+  globalStatusLine,
+}: Pick<ResolveClaudeStatusLineInput, 'globalStatusLine'>): SelectedClaudeStatusLine {
   const global = normalizeExistingStatusLine(globalStatusLine);
   if (global) {
     return {
@@ -138,33 +155,6 @@ export function selectExistingClaudeStatusLine({
     source: 'none',
     kind: 'none',
   };
-}
-
-export function resolveManagedStatusLineCommand(repoRoot: string, rawCommand: string): string {
-  return rawCommand.replace(
-    /\.dev-pomogator\/tools\/([^\s'"]+)/,
-    (_match, relativeToolPath: string) =>
-      quoteArgument(`${normalizeRepoRoot(repoRoot)}/.dev-pomogator/tools/${relativeToolPath}`)
-  );
-}
-
-export function buildWrappedStatusLineCommand(
-  repoRoot: string,
-  userCommand: string,
-  managedCommand: string
-): string {
-  const wrapperPath = `${normalizeRepoRoot(repoRoot)}/.dev-pomogator/tools/test-statusline/statusline_wrapper.js`;
-  const encodedUserCommand = Buffer.from(userCommand, 'utf-8').toString('base64');
-  const encodedManagedCommand = Buffer.from(managedCommand, 'utf-8').toString('base64');
-
-  return [
-    'node',
-    quoteArgument(wrapperPath),
-    '--user-b64',
-    quoteArgument(encodedUserCommand),
-    '--managed-b64',
-    quoteArgument(encodedManagedCommand),
-  ].join(' ');
 }
 
 export function parseWrappedStatusLineCommand(command: string): ParsedWrappedStatusLineCommand | null {
@@ -190,38 +180,62 @@ export function parseWrappedStatusLineCommand(command: string): ParsedWrappedSta
   };
 }
 
+/**
+ * Shared helper: resolve and write statusLine to global ~/.claude/settings.json.
+ * Used by both installer (setupClaudeStatusLine) and updater (updateClaudeStatusLineGlobal).
+ * Preserves extra fields (e.g. padding) via read-modify-write pattern.
+ * Pass pre-loaded settings to avoid double-reading the file.
+ */
+export async function writeGlobalStatusLine(
+  statusLineConfig: ClaudeStatusLineEntry,
+  preloadedSettings?: Record<string, unknown>,
+): Promise<void> {
+  const settingsPath = path.join(os.homedir(), '.claude', 'settings.json');
+  const settings = preloadedSettings ?? await readJsonSafe<Record<string, unknown>>(settingsPath, {});
+
+  const resolved = resolveClaudeStatusLine({
+    globalStatusLine: settings.statusLine as ExistingClaudeStatusLineEntry | undefined,
+    statusLineConfig,
+  });
+
+  const existingStatusLine = (settings.statusLine ?? {}) as Record<string, unknown>;
+  settings.statusLine = {
+    ...existingStatusLine,
+    type: resolved.type,
+    command: resolved.command,
+  };
+
+  await writeJsonAtomic(settingsPath, settings);
+}
+
 export function resolveClaudeStatusLine({
-  repoRoot,
-  existing,
-  projectStatusLine,
   globalStatusLine,
   statusLineConfig,
 }: ResolveClaudeStatusLineInput): ResolvedClaudeStatusLine {
-  const managedCommand = resolveManagedStatusLineCommand(repoRoot, statusLineConfig.command);
-  const selected = selectExistingClaudeStatusLine({
-    existing,
-    projectStatusLine,
-    globalStatusLine,
-  });
+  const managedCommand = buildPortableManagedCommand();
+  const selected = selectExistingClaudeStatusLine({ globalStatusLine });
   const existingCommand = selected.entry?.command;
 
+  // No existing statusLine → auto-install ccstatusline wrapped with managed
   if (!existingCommand) {
     return {
       type: statusLineConfig.type,
-      command: managedCommand,
-      mode: 'direct',
+      command: buildPortableWrappedCommand(DEFAULT_USER_STATUSLINE_COMMAND, managedCommand),
+      mode: 'wrapped',
       source: 'none',
       existingKind: 'none',
     };
   }
 
+  // Existing is wrapped → parse, keep user command, update managed
   if (selected.kind === 'wrapped') {
     const wrapped = parseWrappedStatusLineCommand(existingCommand);
     if (!wrapped) {
+      // Broken wrapper → fall back to ccstatusline + managed
       return {
         type: statusLineConfig.type,
-        command: managedCommand,
-        mode: 'direct',
+        command: buildPortableWrappedCommand(DEFAULT_USER_STATUSLINE_COMMAND, managedCommand),
+        mode: 'wrapped',
         source: selected.source,
         existingKind: selected.kind,
       };
@@ -229,26 +243,28 @@ export function resolveClaudeStatusLine({
 
     return {
       type: statusLineConfig.type,
-      command: buildWrappedStatusLineCommand(repoRoot, wrapped.userCommand, managedCommand),
+      command: buildPortableWrappedCommand(wrapped.userCommand, managedCommand),
       mode: 'wrapped',
       source: selected.source,
       existingKind: selected.kind,
     };
   }
 
+  // Existing is managed (old format) → replace with ccstatusline + managed wrapper
   if (selected.kind === 'managed') {
     return {
       type: statusLineConfig.type,
-      command: managedCommand,
-      mode: 'direct',
+      command: buildPortableWrappedCommand(DEFAULT_USER_STATUSLINE_COMMAND, managedCommand),
+      mode: 'wrapped',
       source: selected.source,
       existingKind: selected.kind,
     };
   }
 
+  // Existing is user-defined → wrap with managed
   return {
     type: statusLineConfig.type,
-    command: buildWrappedStatusLineCommand(repoRoot, existingCommand, managedCommand),
+    command: buildPortableWrappedCommand(existingCommand, managedCommand),
     mode: 'wrapped',
     source: selected.source,
     existingKind: selected.kind,

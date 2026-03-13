@@ -178,28 +178,25 @@ export async function addProjectPaths(
  * and ensure tsx is installed at ~/.dev-pomogator/node_modules/.bin/tsx.
  * @param distDir — path to the dist/ directory containing bundled scripts
  */
+async function copyBundledScript(distDir: string, scriptsDir: string, srcName: string, destName?: string): Promise<void> {
+  const src = path.join(distDir, srcName);
+  const dest = path.join(scriptsDir, destName ?? srcName);
+  if (await fs.pathExists(src)) {
+    await fs.copy(src, dest, { overwrite: true });
+  } else {
+    console.log(`  ⚠ ${srcName} not found. Run "npm run build" first.`);
+  }
+}
+
 export async function setupGlobalScripts(distDir: string): Promise<void> {
   const devPomogatorDir = path.join(os.homedir(), '.dev-pomogator');
   const scriptsDir = path.join(devPomogatorDir, 'scripts');
   await fs.ensureDir(scriptsDir);
 
-  // Copy bundled check-update script
-  const bundledScript = path.join(distDir, 'check-update.bundle.cjs');
-  const destScript = path.join(scriptsDir, 'check-update.js');
-  if (await fs.pathExists(bundledScript)) {
-    await fs.copy(bundledScript, destScript, { overwrite: true });
-  } else {
-    console.log('  ⚠ check-update.bundle.cjs not found. Run "npm run build" first.');
-  }
-
-  // Copy tsx-runner.js (resilient npx tsx wrapper with cache cleanup)
-  const tsxRunnerSrc = path.join(distDir, 'tsx-runner.js');
-  const tsxRunnerDest = path.join(scriptsDir, 'tsx-runner.js');
-  if (await fs.pathExists(tsxRunnerSrc)) {
-    await fs.copy(tsxRunnerSrc, tsxRunnerDest, { overwrite: true });
-  } else {
-    console.log('  ⚠ tsx-runner.js not found. Run "npm run build" first.');
-  }
+  await copyBundledScript(distDir, scriptsDir, 'check-update.bundle.cjs', 'check-update.js');
+  await copyBundledScript(distDir, scriptsDir, 'tsx-runner.js');
+  await copyBundledScript(distDir, scriptsDir, 'statusline_render.cjs');
+  await copyBundledScript(distDir, scriptsDir, 'statusline_wrapper.js');
 
   // Ensure tsx is available at ~/.dev-pomogator/node_modules/.bin/tsx (cross-platform)
   // This makes hooks work in ANY project, even those without local tsx or working npx

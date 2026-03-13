@@ -467,7 +467,7 @@ describe('PLUGIN012: TUI Test Runner', () => {
       const command = buildTestCommand({ framework: 'pytest', filter: 'auth', docker: true });
 
       expect(command.command).toContain('--framework pytest --');
-      expect(command.command).toContain('test_runner_wrapper.sh');
+      expect(command.command).toContain('test_runner_wrapper.cjs');
       expect(command.command).toContain('python -m pytest -k "auth"');
       expect(command.dockerProjectName).toBe('devpom-test-dispatch1');
     });

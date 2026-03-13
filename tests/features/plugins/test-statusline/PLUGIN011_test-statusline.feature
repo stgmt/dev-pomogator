@@ -176,31 +176,33 @@ Feature: PLUGIN011_test-statusline
     And statusLine command should reference statusline_render.sh
 
   # @feature8
-  Scenario: PLUGIN011_21 Installer writes managed statusLine when no existing statusLine exists
-    Given no project or global user statusLine is configured
+  Scenario: PLUGIN011_21 Installer writes ccstatusline wrapper to global settings when no statusLine exists
+    Given no global user statusLine is configured
     When installer processes test-statusline extension
-    Then project ".claude/settings.json" should contain managed statusLine command
+    Then global "~/.claude/settings.json" should contain wrapped statusLine command
+    And wrapper user command should be "npx -y ccstatusline@latest"
+    And wrapper managed command should reference statusline_render.cjs
 
   # @feature8
-  Scenario: PLUGIN011_22 Managed statusLine is overwritten on re-install
-    Given project ".claude/settings.json" already contains managed test-statusline command
+  Scenario: PLUGIN011_22 Managed statusLine is updated in global settings on re-install
+    Given global "~/.claude/settings.json" already contains managed test-statusline wrapper
     When installer processes test-statusline extension again
-    Then managed statusLine path should be updated to the current project
+    Then global statusLine wrapper managed command should be updated
 
   # @feature8
-  Scenario: PLUGIN011_23 Project user-defined statusLine is wrapped alongside managed one
-    Given project ".claude/settings.json" contains user-defined statusLine command
+  Scenario: PLUGIN011_23 Global user-defined statusLine is wrapped alongside managed one
+    Given global "~/.claude/settings.json" contains user-defined statusLine command
     When installer resolves statusLine coexistence
     Then resulting statusLine should use statusline wrapper
     And wrapper should preserve the original user command
-    And wrapper should include managed statusline_render.sh command
+    And wrapper should include managed statusline_render.cjs command
 
   # @feature8
   Scenario: PLUGIN011_24 Existing wrapper keeps user command and updates managed command
-    Given project ".claude/settings.json" already contains statusline wrapper command
+    Given global "~/.claude/settings.json" already contains statusline wrapper command
     When installer resolves statusLine coexistence
     Then wrapper should preserve existing user command
-    And wrapper should update managed command path only
+    And wrapper should update managed command only
 
   # @feature8
   Scenario: PLUGIN011_25 Wrapper combines outputs of user and managed commands
@@ -236,20 +238,11 @@ Feature: PLUGIN011_test-statusline
     And statusline output should still contain running indicators
 
   # @feature8
-  Scenario: PLUGIN011_30 Project statusLine wins over global one
-    Given project ".claude/settings.json" contains user-defined statusLine command
-    And global "~/.claude/settings.json" contains a different user-defined statusLine command
-    When installer resolves statusLine coexistence
-    Then project statusLine should have priority
-    And wrapper should preserve project user command
-
-  # @feature8
-  Scenario: PLUGIN011_31 Installer wraps global user-defined statusLine when project has none
-    Given project ".claude/settings.json" has no statusLine
-    And global "~/.claude/settings.json" contains user-defined statusLine command
+  Scenario: PLUGIN011_31 Installer wraps existing global user-defined statusLine
+    Given global "~/.claude/settings.json" contains user-defined statusLine command "my-custom-statusline"
     When installer processes test-statusline extension
-    Then project ".claude/settings.json" should contain wrapper command
-    And global statusLine should remain unchanged
+    Then global "~/.claude/settings.json" should contain wrapper command
+    And wrapper should preserve "my-custom-statusline" as user command
 
   # @feature8
   Scenario: PLUGIN011_32 Wrapper keeps managed output when user command fails
@@ -266,10 +259,10 @@ Feature: PLUGIN011_test-statusline
     Then wrapper should output only "userinfo"
 
   # @feature8
-  Scenario: PLUGIN011_34 Broken wrapper falls back to direct managed statusLine
-    Given project ".claude/settings.json" contains wrapper command with invalid encoded arguments
+  Scenario: PLUGIN011_34 Broken wrapper falls back to ccstatusline wrapper
+    Given global "~/.claude/settings.json" contains wrapper command with invalid encoded arguments
     When installer resolves statusLine coexistence
-    Then resulting statusLine should fall back to direct managed command
+    Then resulting statusLine should fall back to ccstatusline wrapped with managed command
     And resulting statusLine should not nest another wrapper command
 
   # @feature2
@@ -304,15 +297,14 @@ Feature: PLUGIN011_test-statusline
 
   # @feature8
   Scenario: PLUGIN011_40 Updater preserves wrapper when auto-updating extension
-    Given project ".claude/settings.json" contains wrapper with user command and managed command
+    Given global "~/.claude/settings.json" contains wrapper with user command and managed command
     When updater processes test-statusline extension update
     Then wrapper user command should remain unchanged
-    And wrapper managed command should be updated to new path
-    And global "~/.claude/settings.json" should remain unchanged
+    And wrapper managed command should be updated
 
   # @feature8
   Scenario: PLUGIN011_41 Re-install does not create nested wrapper
-    Given project ".claude/settings.json" contains wrapper combining user and managed commands
+    Given global "~/.claude/settings.json" contains wrapper combining user and managed commands
     When installer processes test-statusline extension again
     Then resulting statusLine should still be a single wrapper command
     And wrapper should contain exactly one user-b64 argument
@@ -325,3 +317,44 @@ Feature: PLUGIN011_test-statusline
     And managed command echoes received session_id from stdin
     When wrapper is executed
     Then both commands should receive identical session_id
+
+  # @feature9
+  Scenario: PLUGIN011_43 ccstatusline auto-installed when no statusLine exists anywhere
+    Given no global or project statusLine is configured
+    When installer processes test-statusline extension
+    Then global "~/.claude/settings.json" should contain wrapped statusLine
+    And wrapper user command should be "npx -y ccstatusline@latest"
+    And wrapper managed command should use portable path to statusline_render.cjs
+
+  # @feature9
+  Scenario: PLUGIN011_44 Project-level statusLine is removed during installation
+    Given project ".claude/settings.json" contains old managed statusLine with project path
+    When installer processes test-statusline extension
+    Then project ".claude/settings.json" should not contain statusLine key
+    And global "~/.claude/settings.json" should contain wrapped statusLine
+
+  # @feature9
+  Scenario: PLUGIN011_45 Global render script uses portable path resolution
+    Given statusLine command uses portable makePortableScriptCommand pattern
+    When the command is executed
+    Then it should resolve ~/.dev-pomogator/scripts/statusline_render.cjs at runtime
+
+  # @feature9
+  Scenario: PLUGIN011_46 Global wrapper script uses portable path resolution
+    Given wrapped statusLine command uses portable makePortableScriptCommand pattern
+    When the wrapper command is executed
+    Then it should resolve ~/.dev-pomogator/scripts/statusline_wrapper.js at runtime
+
+  # @feature9
+  Scenario: PLUGIN011_47 Old project-path managed statusLine migrated on update
+    Given global "~/.claude/settings.json" contains old-format managed statusLine with absolute project path
+    When updater processes test-statusline extension update
+    Then global statusLine should be updated to portable wrapper format
+    And project ".claude/settings.json" statusLine should be removed
+
+  # @feature9
+  Scenario: PLUGIN011_48 ccstatusline extra fields preserved during wrapping
+    Given global "~/.claude/settings.json" contains statusLine with "padding" field set to 0
+    When installer resolves statusLine coexistence
+    Then global statusLine should retain "padding" field with value 0
+    And statusLine command should be updated to wrapper format

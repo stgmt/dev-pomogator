@@ -16,7 +16,7 @@ import { RULES_SUBFOLDER, TOOLS_DIR, SKILLS_DIR } from '../constants.js';
 import { resolveHookToolPaths, replaceNpxTsxWithPortable, ensureExecutableShellScripts } from '../installer/shared.js';
 import { detectMangledArtifacts } from '../utils/msys.js';
 import { writeJsonAtomic, readJsonSafe } from '../utils/atomic-json.js';
-import { resolveClaudeStatusLine } from '../utils/statusline.js';
+import { writeGlobalStatusLine } from '../utils/statusline.js';
 
 interface UpdateOptions {
   force?: boolean;
@@ -501,36 +501,13 @@ async function updateClaudeHooksForProject(
 }
 
 /**
- * Update statusLine config in project .claude/settings.json
- * Managed statusLine is overwritten; user-defined is wrapped to coexist.
+ * Update statusLine config in global ~/.claude/settings.json
+ * Delegates to shared writeGlobalStatusLine helper.
  */
-async function updateClaudeStatusLineForProject(
-  repoRoot: string,
+async function updateClaudeStatusLineGlobal(
   statusLineConfig: { type: string; command: string }
 ): Promise<void> {
-  const settingsPath = path.join(repoRoot, '.claude', 'settings.json');
-  const settings = await readJsonSafe<Record<string, unknown>>(settingsPath, {});
-  const globalSettingsPath = path.join(os.homedir(), '.claude', 'settings.json');
-  const globalSettings =
-    settingsPath === globalSettingsPath
-      ? settings
-      : await fs.pathExists(globalSettingsPath)
-        ? await readJsonSafe<Record<string, unknown>>(globalSettingsPath, {})
-        : {};
-
-  const resolved = resolveClaudeStatusLine({
-    repoRoot,
-    projectStatusLine: settings.statusLine as { type?: string; command?: string } | undefined,
-    globalStatusLine: globalSettings.statusLine as { type?: string; command?: string } | undefined,
-    statusLineConfig,
-  });
-
-  settings.statusLine = {
-    type: resolved.type,
-    command: resolved.command,
-  };
-
-  await writeJsonAtomic(settingsPath, settings);
+  await writeGlobalStatusLine(statusLineConfig);
 }
 
 export async function checkUpdate(options: UpdateOptions = {}): Promise<boolean> {
@@ -676,9 +653,14 @@ export async function checkUpdate(options: UpdateOptions = {}): Promise<boolean>
               : await updateClaudeHooksForProject(projectPath, hooks, previousHooks);
             managedEntry.hooks = updatedHooks;
 
-            // Update statusLine config for Claude platform extensions
-            if (installed.platform === 'claude' && remote.statusLine?.claude) {
-              await updateClaudeStatusLineForProject(projectPath, remote.statusLine.claude);
+            // Migrate: remove project-level statusLine (now global)
+            if (installed.platform === 'claude') {
+              const projectSettingsPath = path.join(projectPath, '.claude', 'settings.json');
+              const projectSettings = await readJsonSafe<Record<string, unknown>>(projectSettingsPath, {});
+              if (projectSettings.statusLine) {
+                delete projectSettings.statusLine;
+                await writeJsonAtomic(projectSettingsPath, projectSettings);
+              }
             }
 
             if (remote.postUpdate) {
@@ -692,7 +674,12 @@ export async function checkUpdate(options: UpdateOptions = {}): Promise<boolean>
           }
         }
 
-        // 7. Обновить версию в config
+        // 7. Update global statusLine for Claude platform extensions (once per extension, not per-project)
+        if (installed.platform === 'claude' && remote.statusLine?.claude) {
+          await updateClaudeStatusLineGlobal(remote.statusLine.claude);
+        }
+
+        // 8. Обновить версию в config
         installed.version = remote.version;
         updated = true;
         

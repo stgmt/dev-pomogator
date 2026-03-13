@@ -4,7 +4,9 @@ import path from 'path';
 import { spawnSync } from 'child_process';
 import { appPath, homePath, runInstaller, setupCleanState } from './helpers';
 import {
-  buildWrappedStatusLineCommand,
+  buildPortableManagedCommand,
+  buildPortableWrappedCommand,
+  DEFAULT_USER_STATUSLINE_COMMAND,
   parseWrappedStatusLineCommand,
   resolveClaudeStatusLine,
 } from '../../src/utils/statusline.js';
@@ -589,72 +591,57 @@ describe('PLUGIN011: Test Statusline', () => {
   });
 
   // ===========================================
-  // @feature8 — StatusLine Coexistence
+  // @feature8 — StatusLine Coexistence (Global)
   // ===========================================
 
   describe('StatusLine Coexistence (@feature8)', () => {
     // @feature8
-    it('PLUGIN011_21: installer writes statusLine to project settings.json', async () => {
-      // Simulate what the installer does: read manifest, write statusLine to settings
-      const manifestPath = appPath('extensions/test-statusline/extension.json');
-      const manifest = await fs.readJson(manifestPath);
-      const statusLineConfig = manifest.statusLine?.claude;
+    it('PLUGIN011_21: no existing statusLine installs ccstatusline wrapped with managed', () => {
+      const resolved = resolveClaudeStatusLine({
+        statusLineConfig: DEFAULT_STATUSLINE_CONFIG,
+      });
 
-      expect(statusLineConfig).toBeDefined();
+      expect(resolved.mode).toBe('wrapped');
+      expect(resolved.source).toBe('none');
+      expect(resolved.existingKind).toBe('none');
+      expect(resolved.command).toContain('statusline_wrapper.js');
 
-      // Write to a test settings file (simulating installer behavior)
-      const testSettingsPath = appPath('.dev-pomogator/.test-settings.json');
-      const settings: Record<string, unknown> = {};
-
-      const command = statusLineConfig.command.replace(
-        /\.dev-pomogator\/tools\//,
-        `${appPath().replace(/\\/g, '/')}/.dev-pomogator/tools/`
-      );
-      settings.statusLine = { type: statusLineConfig.type, command };
-
-      await fs.writeJson(testSettingsPath, settings, { spaces: 2 });
-
-      const written = await fs.readJson(testSettingsPath);
-      expect(written.statusLine).toBeDefined();
-      expect(written.statusLine.type).toBe('command');
-      expect(written.statusLine.command).toContain('statusline_render.cjs');
-
-      await fs.remove(testSettingsPath);
+      const parsed = parseWrappedStatusLineCommand(resolved.command);
+      expect(parsed).not.toBeNull();
+      expect(parsed?.userCommand).toBe(DEFAULT_USER_STATUSLINE_COMMAND);
+      expect(parsed?.managedCommand).toContain('statusline_render.cjs');
     });
 
     // @feature8
-    it('PLUGIN011_22: managed statusLine is overwritten on re-install', async () => {
-      const testSettingsPath = appPath('.dev-pomogator/.test-settings.json');
+    it('PLUGIN011_22: old managed statusLine is replaced with ccstatusline wrapper', () => {
+      const oldManaged = 'bash /old/path/.dev-pomogator/tools/test-statusline/statusline_render.cjs';
 
-      // Simulate existing managed statusLine
-      await fs.writeJson(testSettingsPath, {
-        statusLine: { type: 'command', command: 'bash /old/path/.dev-pomogator/tools/test-statusline/statusline_render.cjs' }
-      }, { spaces: 2 });
+      const resolved = resolveClaudeStatusLine({
+        globalStatusLine: { type: 'command', command: oldManaged },
+        statusLineConfig: DEFAULT_STATUSLINE_CONFIG,
+      });
 
-      // Check that it contains .dev-pomogator/tools/ (managed)
-      const existing = await fs.readJson(testSettingsPath);
-      expect(existing.statusLine.command).toContain('.dev-pomogator/tools/');
+      expect(resolved.mode).toBe('wrapped');
+      expect(resolved.source).toBe('global');
+      expect(resolved.existingKind).toBe('managed');
 
-      // Overwrite with new path (simulating re-install)
-      existing.statusLine.command = `bash ${appPath().replace(/\\/g, '/')}/.dev-pomogator/tools/test-statusline/statusline_render.cjs`;
-      await fs.writeJson(testSettingsPath, existing, { spaces: 2 });
-
-      const updated = await fs.readJson(testSettingsPath);
-      expect(updated.statusLine.command).toContain('statusline_render.cjs');
-
-      await fs.remove(testSettingsPath);
+      const parsed = parseWrappedStatusLineCommand(resolved.command);
+      expect(parsed).not.toBeNull();
+      expect(parsed?.userCommand).toBe(DEFAULT_USER_STATUSLINE_COMMAND);
+      expect(parsed?.managedCommand).toContain('statusline_render.cjs');
+      // Old path should be gone
+      expect(parsed?.managedCommand).not.toContain('/old/path/');
     });
 
     // @feature8
     it('PLUGIN011_23: user-defined statusLine is wrapped alongside managed one', () => {
       const resolved = resolveClaudeStatusLine({
-        repoRoot: appPath(),
-        projectStatusLine: { type: 'command', command: 'npx -y ccstatusline@latest' },
+        globalStatusLine: { type: 'command', command: 'npx -y ccstatusline@latest' },
         statusLineConfig: DEFAULT_STATUSLINE_CONFIG,
       });
 
       expect(resolved.command).toContain('statusline_wrapper.js');
-      expect(resolved.source).toBe('project');
+      expect(resolved.source).toBe('global');
 
       const parsed = parseWrappedStatusLineCommand(resolved.command);
       expect(parsed).not.toBeNull();
@@ -664,22 +651,20 @@ describe('PLUGIN011: Test Statusline', () => {
 
     // @feature8
     it('PLUGIN011_24: existing wrapper keeps user command and updates managed command', () => {
-      const existingWrapper = buildWrappedStatusLineCommand(
-        appPath(),
+      const existingWrapper = buildPortableWrappedCommand(
         'npx -y ccstatusline@latest',
         'bash /old/path/.dev-pomogator/tools/test-statusline/statusline_render.cjs'
       );
 
       const resolved = resolveClaudeStatusLine({
-        repoRoot: appPath(),
-        projectStatusLine: { type: 'command', command: existingWrapper },
+        globalStatusLine: { type: 'command', command: existingWrapper },
         statusLineConfig: DEFAULT_STATUSLINE_CONFIG,
       });
 
       const parsed = parseWrappedStatusLineCommand(resolved.command);
       expect(parsed).not.toBeNull();
       expect(parsed?.userCommand).toBe('npx -y ccstatusline@latest');
-      expect(parsed?.managedCommand).toContain(`${appPath().replace(/\\/g, '/')}/.dev-pomogator/tools/test-statusline/statusline_render.cjs`);
+      expect(parsed?.managedCommand).toContain('statusline_render.cjs');
       expect(parsed?.managedCommand).not.toContain('/old/path/');
     });
 
@@ -696,24 +681,7 @@ describe('PLUGIN011: Test Statusline', () => {
     });
 
     // @feature8
-    it('PLUGIN011_30: resolver prefers project statusLine over global one', () => {
-      const resolved = resolveClaudeStatusLine({
-        repoRoot: appPath(),
-        projectStatusLine: { type: 'command', command: 'printf projectinfo' },
-        globalStatusLine: { type: 'command', command: 'printf globalinfo' },
-        statusLineConfig: DEFAULT_STATUSLINE_CONFIG,
-      });
-
-      expect(resolved.mode).toBe('wrapped');
-      expect(resolved.source).toBe('project');
-
-      const parsed = parseWrappedStatusLineCommand(resolved.command);
-      expect(parsed?.userCommand).toBe('printf projectinfo');
-      expect(parsed?.managedCommand).toContain('statusline_render.cjs');
-    });
-
-    // @feature8
-    it('PLUGIN011_31: installer wraps global user-defined statusLine when project has none', async () => {
+    it('PLUGIN011_31: installer wraps existing global user-defined statusLine', async () => {
       const globalSettingsPath = globalClaudeSettingsPath();
 
       await setupCleanState('claude');
@@ -726,14 +694,17 @@ describe('PLUGIN011: Test Statusline', () => {
         const result = await runInstaller('--claude --all');
         expect(result.exitCode).toBe(0);
 
-        const projectSettings = await fs.readJson(projectClaudeSettingsPath());
-        const parsed = parseWrappedStatusLineCommand(projectSettings.statusLine.command);
+        // StatusLine should be in global settings now (wrapped)
+        const globalSettings = await fs.readJson(globalSettingsPath);
+        expect(globalSettings.statusLine).toBeDefined();
+        const parsed = parseWrappedStatusLineCommand(globalSettings.statusLine.command);
         expect(parsed).not.toBeNull();
         expect(parsed?.userCommand).toBe('npx -y ccstatusline@latest');
         expect(parsed?.managedCommand).toContain('statusline_render.cjs');
 
-        const globalSettings = await fs.readJson(globalSettingsPath);
-        expect(globalSettings.statusLine.command).toBe('npx -y ccstatusline@latest');
+        // Project settings should NOT have statusLine
+        const projectSettings = await fs.readJson(projectClaudeSettingsPath());
+        expect(projectSettings.statusLine).toBeUndefined();
       } finally {
         await setupCleanState('claude');
       }
@@ -764,22 +735,25 @@ describe('PLUGIN011: Test Statusline', () => {
     });
 
     // @feature8
-    it('PLUGIN011_34: broken wrapper falls back to direct managed statusLine', () => {
-      const brokenWrapper = `node "${appPath().replace(/\\/g, '/')}/.dev-pomogator/tools/test-statusline/statusline_wrapper.js" --user-b64 "not_base64" --managed-b64 "still_bad"`;
+    it('PLUGIN011_34: broken wrapper falls back to ccstatusline wrapped with managed', () => {
+      const brokenWrapper = `node -e "require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','statusline_wrapper.js'))" -- --user-b64 "not_base64" --managed-b64 "still_bad"`;
 
       expect(parseWrappedStatusLineCommand(brokenWrapper)).toBeNull();
 
       const resolved = resolveClaudeStatusLine({
-        repoRoot: appPath(),
-        projectStatusLine: { type: 'command', command: brokenWrapper },
+        globalStatusLine: { type: 'command', command: brokenWrapper },
         statusLineConfig: DEFAULT_STATUSLINE_CONFIG,
       });
 
-      expect(resolved.mode).toBe('direct');
-      expect(resolved.source).toBe('project');
+      expect(resolved.mode).toBe('wrapped');
+      expect(resolved.source).toBe('global');
       expect(resolved.existingKind).toBe('wrapped');
-      expect(resolved.command).toContain('statusline_render.cjs');
-      expect(resolved.command).not.toContain('statusline_wrapper.js');
+      // Falls back to ccstatusline + managed wrapper, NOT direct managed
+      expect(resolved.command).toContain('statusline_wrapper.js');
+      const parsed = parseWrappedStatusLineCommand(resolved.command);
+      expect(parsed).not.toBeNull();
+      expect(parsed?.userCommand).toBe(DEFAULT_USER_STATUSLINE_COMMAND);
+      expect(parsed?.managedCommand).toContain('statusline_render.cjs');
     });
 
     // @feature8
@@ -829,16 +803,15 @@ describe('PLUGIN011: Test Statusline', () => {
     });
 
     // @feature8
-    it('PLUGIN011_40: updater preserves wrapper on extension update', () => {
-      const existingWrapper = buildWrappedStatusLineCommand(
-        appPath(),
+    it('PLUGIN011_40: updater preserves wrapper on extension update (global)', () => {
+      const existingWrapper = buildPortableWrappedCommand(
         'npx -y ccstatusline@latest',
         'bash /old/path/.dev-pomogator/tools/test-statusline/statusline_render.cjs'
       );
 
+      // Simulate updater: reads global settings, resolves statusLine
       const resolved = resolveClaudeStatusLine({
-        repoRoot: appPath(),
-        projectStatusLine: { type: 'command', command: existingWrapper },
+        globalStatusLine: { type: 'command', command: existingWrapper },
         statusLineConfig: DEFAULT_STATUSLINE_CONFIG,
       });
 
@@ -846,21 +819,21 @@ describe('PLUGIN011: Test Statusline', () => {
       const parsed = parseWrappedStatusLineCommand(resolved.command);
       expect(parsed).not.toBeNull();
       expect(parsed?.userCommand).toBe('npx -y ccstatusline@latest');
-      expect(parsed?.managedCommand).toContain(appPath().replace(/\\/g, '/'));
       expect(parsed?.managedCommand).toContain('statusline_render.cjs');
+      // Old path should be replaced with portable command
+      expect(parsed?.managedCommand).not.toContain('/old/path/');
     });
 
     // @feature8
     it('PLUGIN011_41: re-install does not create nested wrapper', () => {
-      const firstWrapper = buildWrappedStatusLineCommand(
-        appPath(),
+      const managedCommand = buildPortableManagedCommand();
+      const firstWrapper = buildPortableWrappedCommand(
         'npx -y ccstatusline@latest',
-        `bash ${appPath().replace(/\\/g, '/')}/.dev-pomogator/tools/test-statusline/statusline_render.cjs`
+        managedCommand
       );
 
       const resolved = resolveClaudeStatusLine({
-        repoRoot: appPath(),
-        projectStatusLine: { type: 'command', command: firstWrapper },
+        globalStatusLine: { type: 'command', command: firstWrapper },
         statusLineConfig: DEFAULT_STATUSLINE_CONFIG,
       });
 
@@ -897,6 +870,114 @@ describe('PLUGIN011: Test Statusline', () => {
       expect(parts).toHaveLength(2);
       expect(parts[0]).toBe('abc12345def67890ghijklmnop');
       expect(parts[1]).toBe('abc12345def67890ghijklmnop');
+    });
+  });
+
+  // ===========================================
+  // @feature9 — Global StatusLine Migration
+  // ===========================================
+
+  describe('Global StatusLine Migration (@feature9)', () => {
+    // @feature9
+    it('PLUGIN011_43: ccstatusline auto-install when no statusLine exists', () => {
+      const resolved = resolveClaudeStatusLine({
+        statusLineConfig: DEFAULT_STATUSLINE_CONFIG,
+      });
+
+      expect(resolved.mode).toBe('wrapped');
+      expect(resolved.source).toBe('none');
+      expect(resolved.existingKind).toBe('none');
+
+      const parsed = parseWrappedStatusLineCommand(resolved.command);
+      expect(parsed).not.toBeNull();
+      // ccstatusline is auto-installed as user command
+      expect(parsed?.userCommand).toBe(DEFAULT_USER_STATUSLINE_COMMAND);
+      expect(parsed?.userCommand).toContain('ccstatusline');
+      // Managed command points to statusline_render.cjs
+      expect(parsed?.managedCommand).toContain('statusline_render.cjs');
+    });
+
+    // @feature9
+    it('PLUGIN011_44: installer deletes project-level statusLine (migration)', async () => {
+      const globalSettingsPath = globalClaudeSettingsPath();
+      const projectSettingsPath = projectClaudeSettingsPath();
+
+      await setupCleanState('claude');
+      try {
+        // Pre-populate project settings with old project-level statusLine
+        await fs.ensureDir(path.dirname(projectSettingsPath));
+        await fs.writeJson(projectSettingsPath, {
+          statusLine: { type: 'command', command: 'node /old/project/.dev-pomogator/tools/test-statusline/statusline_render.cjs' },
+        }, { spaces: 2 });
+
+        const result = await runInstaller('--claude --all');
+        expect(result.exitCode).toBe(0);
+
+        // Project settings should have statusLine REMOVED (migrated to global)
+        const projectSettings = await fs.readJson(projectSettingsPath);
+        expect(projectSettings.statusLine).toBeUndefined();
+
+        // Global settings should have statusLine installed
+        const globalSettings = await fs.readJson(globalSettingsPath);
+        expect(globalSettings.statusLine).toBeDefined();
+        expect(globalSettings.statusLine.command).toContain('statusline_wrapper.js');
+      } finally {
+        await setupCleanState('claude');
+      }
+    });
+
+    // @feature9
+    it('PLUGIN011_48: extra fields like padding are preserved when wrapping', () => {
+      const resolved = resolveClaudeStatusLine({
+        globalStatusLine: { type: 'command', command: 'npx -y ccstatusline@latest' },
+        statusLineConfig: DEFAULT_STATUSLINE_CONFIG,
+      });
+
+      // Simulate what the installer does: spread existing statusLine then overwrite type/command
+      const existingStatusLine: Record<string, unknown> = { type: 'command', command: 'npx -y ccstatusline@latest', padding: 0 };
+      const merged: Record<string, unknown> = {
+        ...existingStatusLine,
+        type: resolved.type,
+        command: resolved.command,
+      };
+
+      // Extra field (padding) should be preserved
+      expect(merged.padding).toBe(0);
+      expect(merged.type).toBe('command');
+      expect(merged.command).toContain('statusline_wrapper.js');
+    });
+
+    // @feature9
+    it('PLUGIN011_49: portable managed command uses os.homedir() path', () => {
+      const managed = buildPortableManagedCommand();
+
+      // Should use portable node -e require(...) pattern
+      expect(managed).toContain('node -e');
+      expect(managed).toContain("os').homedir()");  // portable require pattern with single-quoted module
+      expect(managed).toContain('.dev-pomogator');
+      expect(managed).toContain('statusline_render.cjs');
+      // Should NOT contain absolute paths
+      expect(managed).not.toMatch(/[A-Z]:\\/);
+      expect(managed).not.toMatch(/\/home\//);
+      expect(managed).not.toMatch(/\/Users\//);
+    });
+
+    // @feature9
+    it('PLUGIN011_50: portable wrapped command encodes user and managed in base64', () => {
+      const userCmd = 'npx -y ccstatusline@latest';
+      const managedCmd = buildPortableManagedCommand();
+      const wrapped = buildPortableWrappedCommand(userCmd, managedCmd);
+
+      // Should contain wrapper script reference
+      expect(wrapped).toContain('statusline_wrapper.js');
+      expect(wrapped).toContain('--user-b64');
+      expect(wrapped).toContain('--managed-b64');
+
+      // Should be parseable
+      const parsed = parseWrappedStatusLineCommand(wrapped);
+      expect(parsed).not.toBeNull();
+      expect(parsed?.userCommand).toBe(userCmd);
+      expect(parsed?.managedCommand).toBe(managedCmd);
     });
   });
 });

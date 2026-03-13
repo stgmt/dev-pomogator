@@ -11,7 +11,7 @@ import { RULES_SUBFOLDER, TOOLS_DIR, SKILLS_DIR } from '../constants.js';
 import { getFileHash } from '../updater/content-hash.js';
 import { collectFileHashes, addProjectPaths, makePortableScriptCommand, resolveHookToolPaths, replaceNpxTsxWithPortable, ensureExecutableShellScripts, setupGlobalScripts } from './shared.js';
 import { writeJsonAtomic, readJsonSafe } from '../utils/atomic-json.js';
-import { resolveClaudeStatusLine } from '../utils/statusline.js';
+import { writeGlobalStatusLine } from '../utils/statusline.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -240,11 +240,12 @@ export async function installClaude(options: ClaudeOptions = {}): Promise<void> 
   // 8. Always persist managed data for tracking
   await addProjectPaths(repoRoot, extensionsToInstall, 'claude', managedByExtension);
 
-  // 9. Setup auto-update hooks if enabled
+  // 9. Setup auto-update hooks, global scripts, and statusLine if enabled
   if (options.autoUpdate !== false) {
     await setupClaudeHooks();
     const distDir = path.resolve(__dirname, '..');
     await setupGlobalScripts(distDir);
+    await setupClaudeStatusLine(extensionsToInstall);
   }
 
   // 10. Check for MSYS path mangling artifacts
@@ -305,6 +306,22 @@ async function setupClaudeHooks(): Promise<void> {
   // Write settings atomically (backup + temp + move)
   await writeJsonAtomic(settingsPath, settings);
   console.log('  ✓ Installed Claude Code hooks for auto-update');
+}
+
+/**
+ * Setup statusLine in global ~/.claude/settings.json
+ * Auto-installs ccstatusline wrapped with managed test-statusline render.
+ * Preserves existing user statusLine (wraps it) or updates existing wrapper.
+ */
+async function setupClaudeStatusLine(extensions: Extension[]): Promise<void> {
+  for (const ext of extensions) {
+    const statusLineConfig = getExtensionStatusLine(ext, 'claude');
+    if (!statusLineConfig) continue;
+
+    await writeGlobalStatusLine(statusLineConfig);
+    console.log(`  ✓ Installed statusLine to global settings (${ext.name})`);
+    break; // Only one statusLine allowed
+  }
 }
 
 /**
@@ -433,37 +450,9 @@ async function installExtensionHooks(repoRoot: string, extensions: Extension[]):
     settings.env = envSection;
   }
 
-  // Install statusLine config from extensions (first one wins)
-  const globalSettingsPath = path.join(os.homedir(), '.claude', 'settings.json');
-  const globalSettings =
-    settingsPath === globalSettingsPath
-      ? settings
-      : await fs.pathExists(globalSettingsPath)
-        ? await readJsonSafe<Record<string, unknown>>(globalSettingsPath, {})
-        : {};
-
-  for (const ext of extensions) {
-    const statusLineConfig = getExtensionStatusLine(ext, 'claude');
-    if (!statusLineConfig) continue;
-
-    const resolved = resolveClaudeStatusLine({
-      repoRoot,
-      projectStatusLine: settings.statusLine as { type?: string; command?: string } | undefined,
-      globalStatusLine: globalSettings.statusLine as { type?: string; command?: string } | undefined,
-      statusLineConfig,
-    });
-
-    settings.statusLine = {
-      type: resolved.type,
-      command: resolved.command,
-    };
-    if (resolved.mode === 'wrapped') {
-      const sourceLabel = resolved.source === 'global' ? ' from global settings' : '';
-      console.log(`  ✓ Installed statusLine wrapper${sourceLabel} (${ext.name})`);
-    } else {
-      console.log(`  ✓ Installed statusLine (${ext.name})`);
-    }
-    break; // Only one statusLine allowed
+  // Migrate: remove project-level statusLine (now installed globally via setupClaudeStatusLine)
+  if (settings.statusLine) {
+    delete settings.statusLine;
   }
 
   // Write settings atomically (backup + temp + move)
