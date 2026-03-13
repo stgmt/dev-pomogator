@@ -52,12 +52,9 @@ function decodeBase64(value) {
 }
 
 function normalizeOutput(value) {
-  const lines = String(value || '')
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
-
-  return lines.join(' ');
+  // Preserve newlines — Claude Code renders each \n as a separate statusline row.
+  // Only strip \r (Windows line endings) and trailing newlines.
+  return String(value || '').replace(/\r\n/g, '\n').replace(/\n+$/, '');
 }
 
 function runCommand(label, command, input) {
@@ -94,7 +91,13 @@ const userOutput = runCommand('user', userCommand, input);
 const managedOutput = runCommand('managed', managedCommand, input);
 
 if (userOutput && managedOutput) {
-  process.stdout.write(`${userOutput} | ${managedOutput}`);
+  // Append managed to last line of user output (test progress next to last ccstatusline row)
+  const lastNewline = userOutput.lastIndexOf('\n');
+  if (lastNewline >= 0) {
+    process.stdout.write(`${userOutput.substring(0, lastNewline)}\n${userOutput.substring(lastNewline + 1)} | ${managedOutput}`);
+  } else {
+    process.stdout.write(`${userOutput} | ${managedOutput}`);
+  }
 } else if (userOutput) {
   process.stdout.write(userOutput);
 } else if (managedOutput) {
