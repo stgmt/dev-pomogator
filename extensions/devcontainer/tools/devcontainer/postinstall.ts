@@ -188,14 +188,12 @@ async function migrateExisting(projectRoot: string): Promise<MergeResult | null>
     volumes: extractVolumes(path.join(devcontainerDir, 'docker-compose.yml')),
   };
 
-  // Backup
-  const backupDir = path.join(projectRoot, '.devcontainer.backup');
+  // Timestamped backup (never overwrites previous backups)
+  const timestamp = new Date().toISOString().slice(0, 19).replace(/[:.]/g, '-');
+  const backupDir = path.join(projectRoot, `.devcontainer.backup.${timestamp}`);
   try {
-    if (fs.existsSync(backupDir)) {
-      fs.rmSync(backupDir, { recursive: true, force: true });
-    }
     fs.renameSync(devcontainerDir, backupDir);
-    console.log(`  Backed up to .devcontainer.backup/`);
+    console.log(`  Backed up to .devcontainer.backup.${timestamp}/`);
   } catch (err) {
     console.error(`  [ERROR] Failed to backup .devcontainer/: ${err instanceof Error ? err.message : 'unknown'}`);
     console.error('  Aborting migration to avoid data loss.');
@@ -232,7 +230,7 @@ function mergeCustomizations(projectRoot: string, mergeResult: MergeResult): voi
 
   // Log user apt packages for manual review
   if (mergeResult.aptPackages.length > 0) {
-    console.log(`  User apt packages from old Dockerfile (review .devcontainer.backup/Dockerfile):`);
+    console.log(`  User apt packages from old Dockerfile (check backup directory):`);
     console.log(`    ${mergeResult.aptPackages.slice(0, 10).join(', ')}${mergeResult.aptPackages.length > 10 ? '...' : ''}`);
     console.log(`  Add custom packages to .devcontainer/Dockerfile manually if needed.`);
   }
@@ -259,6 +257,21 @@ async function main() {
     console.log('\n  DevContainer already configured at .devcontainer/, skipping.');
     console.log('  To reconfigure, set DEVCONTAINER_RECONFIGURE=1 or pass --reconfigure');
     return;
+  }
+
+  // Optional: ask before first install (no existing .devcontainer/)
+  const firstInstall = !fs.existsSync(devcontainerDir);
+  if (firstInstall) {
+    if (isInteractive) {
+      const answer = await ask('  Install DevContainer (GUI desktop + noVNC + MCP servers)? [y/N]');
+      if (answer.toLowerCase() !== 'y') {
+        console.log('  Skipping devcontainer setup.');
+        return;
+      }
+    } else if (process.env.DEVCONTAINER_INSTALL !== '1') {
+      console.log('  Non-interactive mode: skipping devcontainer (set DEVCONTAINER_INSTALL=1 to enable).');
+      return;
+    }
   }
 
   console.log('\n  DevContainer Setup');

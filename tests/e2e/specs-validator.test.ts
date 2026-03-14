@@ -221,12 +221,11 @@ describe('PLUGIN005: Specs Validator Hook', () => {
         'extension.json'
       );
 
-      if (await fs.pathExists(extJsonPath)) {
-        const extJson = await fs.readJson(extJsonPath);
+      expect(await fs.pathExists(extJsonPath)).toBe(true);
+      const extJson = await fs.readJson(extJsonPath);
 
-        expect(extJson.hooks).toBeDefined();
-        expect(extJson.hooks.cursor.beforeSubmitPrompt).toContain('validate-specs');
-      }
+      expect(extJson.hooks).toBeDefined();
+      expect(extJson.hooks.cursor.beforeSubmitPrompt).toContain('validate-specs');
     });
   });
 

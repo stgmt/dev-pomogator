@@ -112,8 +112,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         libxtst6 libpng16-16 \
         # Clipboard for browser automation
         xclip \
-        # Real-ESRGAN dependency
-        libomp5 \
+        # Real-ESRGAN + Vulkan (realesrgan-ncnn-py needs libvulkan.so.1)
+        libomp5 libvulkan1 \
     && rm -rf /var/lib/apt/lists/* /var/cache/apt/* \
     # Docker group + sudo
     && ln -s /usr/libexec/docker/cli-plugins/docker-compose /usr/local/bin/docker-compose 2>/dev/null || true \

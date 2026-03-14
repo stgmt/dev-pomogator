@@ -263,8 +263,10 @@ export async function installClaude(options: ClaudeOptions = {}): Promise<void> 
 }
 
 /**
- * Setup Claude Code hooks for auto-update
+ * Setup Claude Code hooks for update version check
  * Hooks are stored in ~/.claude/settings.json
+ *
+ * SessionStart --check-only: warns if update available (no auto-apply)
  */
 async function setupClaudeHooks(): Promise<void> {
   const homeDir = os.homedir();
@@ -280,32 +282,43 @@ async function setupClaudeHooks(): Promise<void> {
 
   const hooksObj = settings.hooks as Record<string, unknown[]>;
 
-  // Portable command: resolves ~/.dev-pomogator/scripts/ at runtime via os.homedir()
-  // so settings.json can sync across OS (Windows <-> Linux <-> Mac)
-  const updateHookCommand = makePortableScriptCommand('check-update.js', '--claude');
-
-  // Check if Stop hooks exist
-  if (!hooksObj.Stop) {
-    hooksObj.Stop = [];
+  // --- Cleanup: remove old Stop auto-update hooks (migration) ---
+  if (hooksObj.Stop) {
+    const stopHooks = hooksObj.Stop as Array<{ hooks?: Array<{ type: string; command: string }> }>;
+    hooksObj.Stop = stopHooks.filter((h) =>
+      !h.hooks?.some((hook) => hook.command?.includes('check-update.js'))
+    );
+    // Remove empty Stop array
+    if ((hooksObj.Stop as unknown[]).length === 0) {
+      delete hooksObj.Stop;
+    }
   }
 
-  // Remove old-style hooks with absolute paths (migration to portable format)
-  const stopHooks = hooksObj.Stop as Array<{ hooks?: Array<{ type: string; command: string }> }>;
-  hooksObj.Stop = stopHooks.filter((h) =>
+  // --- SessionStart: check-only version warning ---
+  const checkOnlyCommand = makePortableScriptCommand('check-update.js', '--claude --check-only');
+
+  if (!hooksObj.SessionStart) {
+    hooksObj.SessionStart = [];
+  }
+
+  // Remove old check-update hooks from SessionStart (idempotent reinstall)
+  const sessionStartHooks = hooksObj.SessionStart as Array<{ hooks?: Array<{ type: string; command: string }> }>;
+  hooksObj.SessionStart = sessionStartHooks.filter((h) =>
     !h.hooks?.some((hook) => hook.command?.includes('check-update.js'))
   );
 
-  // Add portable hook
-  (hooksObj.Stop as unknown[]).push({
+  // Add check-only hook
+  (hooksObj.SessionStart as unknown[]).push({
     hooks: [{
       type: 'command',
-      command: updateHookCommand,
+      command: checkOnlyCommand,
+      timeout: 15000,
     }],
   });
 
   // Write settings atomically (backup + temp + move)
   await writeJsonAtomic(settingsPath, settings);
-  console.log('  ✓ Installed Claude Code hooks for auto-update');
+  console.log('  ✓ Installed SessionStart version check hook');
 }
 
 /**

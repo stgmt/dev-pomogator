@@ -31,14 +31,14 @@ describe('CORE003: Claude Code Installer', () => {
   });
 
   describe('Scenario: Clean installation', () => {
-    it('should create settings.json with Stop hooks in ~/.claude/', async () => {
+    it('should create settings.json with SessionStart hooks in ~/.claude/', async () => {
       const settingsPath = homePath('.claude', 'settings.json');
       expect(await fs.pathExists(settingsPath)).toBe(true);
-      
+
       const settings = await fs.readJson(settingsPath);
       expect(settings.hooks).toBeDefined();
-      expect(settings.hooks.Stop).toBeDefined();
-      expect(Array.isArray(settings.hooks.Stop)).toBe(true);
+      expect(settings.hooks.SessionStart).toBeDefined();
+      expect(Array.isArray(settings.hooks.SessionStart)).toBe(true);
     });
 
     it('should copy check-update.js to ~/.dev-pomogator/scripts/', async () => {
@@ -189,26 +189,27 @@ describe('CORE003: Claude Code Installer', () => {
   });
 
   describe('Scenario: Settings.json hooks structure is correct', () => {
-    it('should have hooks.Stop array', async () => {
+    it('should have hooks.SessionStart array with check-update', async () => {
       const settingsPath = homePath('.claude', 'settings.json');
       const settings = await fs.readJson(settingsPath);
-      
-      expect(settings.hooks.Stop).toBeDefined();
-      expect(Array.isArray(settings.hooks.Stop)).toBe(true);
-      expect(settings.hooks.Stop.length).toBeGreaterThan(0);
+
+      expect(settings.hooks.SessionStart).toBeDefined();
+      expect(Array.isArray(settings.hooks.SessionStart)).toBe(true);
+      expect(settings.hooks.SessionStart.length).toBeGreaterThan(0);
     });
 
-    it('should include check-update.js with --claude flag', async () => {
+    it('should include check-update.js with --claude --check-only flags', async () => {
       const settingsPath = homePath('.claude', 'settings.json');
       const settings = await fs.readJson(settingsPath);
-      
+
       // Find hook with check-update.js
       let foundUpdateHook = false;
-      for (const stopHook of settings.hooks.Stop) {
-        if (stopHook.hooks) {
-          for (const hook of stopHook.hooks) {
+      for (const sessionHook of settings.hooks.SessionStart) {
+        if (sessionHook.hooks) {
+          for (const hook of sessionHook.hooks) {
             if (hook.command && hook.command.includes('check-update.js')) {
               expect(hook.command).toContain('--claude');
+              expect(hook.command).toContain('--check-only');
               foundUpdateHook = true;
             }
           }
@@ -266,10 +267,12 @@ describe('CORE003: Claude Code Installer', () => {
       const settingsPath = homePath('.claude', 'settings.json');
       const settings = await fs.readJson(settingsPath);
 
-      for (const stopHook of settings.hooks.Stop) {
-        if (stopHook.hooks) {
-          for (const hook of stopHook.hooks) {
+      let checkedCount = 0;
+      for (const sessionHook of settings.hooks.SessionStart) {
+        if (sessionHook.hooks) {
+          for (const hook of sessionHook.hooks) {
             if (hook.command?.includes('check-update.js')) {
+              checkedCount++;
               // Must not contain absolute Windows path
               expect(hook.command).not.toMatch(/[A-Z]:\\/i);
               // Must not contain absolute Unix path to specific user
@@ -282,6 +285,7 @@ describe('CORE003: Claude Code Installer', () => {
           }
         }
       }
+      expect(checkedCount).toBeGreaterThan(0);
     });
   });
 
@@ -298,6 +302,7 @@ describe('CORE003: Claude Code Installer', () => {
       const settingsPath = appPath('.claude', 'settings.json');
       const settings = await fs.readJson(settingsPath);
 
+      let checkedCount = 0;
       for (const [, hookEntries] of Object.entries(settings.hooks || {})) {
         if (!Array.isArray(hookEntries)) continue;
 
@@ -305,6 +310,7 @@ describe('CORE003: Claude Code Installer', () => {
           if (!entry.hooks) continue;
           for (const hook of entry.hooks) {
             if (hook.command?.includes('dev-pomogator/tools/')) {
+              checkedCount++;
               // Must use tsx-runner wrapper
               expect(hook.command).toContain('tsx-runner.js');
               // Must use relative .dev-pomogator/tools/ path (portable across OS)
@@ -317,12 +323,14 @@ describe('CORE003: Claude Code Installer', () => {
           }
         }
       }
+      expect(checkedCount).toBeGreaterThan(0);
     });
 
     it('should use forward slashes in hook tool paths', async () => {
       const settingsPath = appPath('.claude', 'settings.json');
       const settings = await fs.readJson(settingsPath);
 
+      let checkedCount = 0;
       for (const [, hookEntries] of Object.entries(settings.hooks || {})) {
         if (!Array.isArray(hookEntries)) continue;
 
@@ -330,16 +338,17 @@ describe('CORE003: Claude Code Installer', () => {
           if (!entry.hooks) continue;
           for (const hook of entry.hooks) {
             if (hook.command?.includes('dev-pomogator/tools/')) {
+              checkedCount++;
               const toolPathMatch = hook.command.match(
                 /[\w/\\:.-]+dev-pomogator\/tools\/[\w/.]+/
               );
-              if (toolPathMatch) {
-                expect(toolPathMatch[0]).not.toContain('\\');
-              }
+              expect(toolPathMatch).not.toBeNull();
+              expect(toolPathMatch![0]).not.toContain('\\');
             }
           }
         }
       }
+      expect(checkedCount).toBeGreaterThan(0);
     });
   });
 
@@ -371,20 +380,23 @@ describe('CORE003: Claude Code Installer', () => {
       const settingsPath = homePath('.claude', 'settings.json');
       const settings = await fs.readJson(settingsPath);
       
-      // Count check-update.js hooks
+      // Count check-update.js hooks in SessionStart
       let updateHookCount = 0;
-      for (const stopHook of settings.hooks.Stop) {
-        if (stopHook.hooks) {
-          for (const hook of stopHook.hooks) {
+      for (const sessionHook of settings.hooks.SessionStart) {
+        if (sessionHook.hooks) {
+          for (const hook of sessionHook.hooks) {
             if (hook.command && hook.command.includes('check-update.js')) {
               updateHookCount++;
             }
           }
         }
       }
-      
+
       // Should only have 1 update hook, not duplicated
       expect(updateHookCount).toBe(1);
+
+      // Stop hooks should NOT contain check-update.js (migrated away)
+      expect(settings.hooks.Stop).toBeUndefined();
     });
   });
 });

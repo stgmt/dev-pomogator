@@ -85,19 +85,19 @@ describe('CLI Integration: Claude Code', () => {
   });
 
   describe('Hooks configured in settings.json', () => {
-    it('~/.claude/settings.json has Stop hooks', async () => {
+    it('~/.claude/settings.json has SessionStart hooks with check-update', async () => {
       const settingsPath = homePath('.claude', 'settings.json');
       expect(await fs.pathExists(settingsPath)).toBe(true);
       const settings = await fs.readJson(settingsPath);
-      expect(settings.hooks?.Stop).toBeDefined();
-      expect(Array.isArray(settings.hooks.Stop)).toBe(true);
-      expect(settings.hooks.Stop.length).toBeGreaterThan(0);
+      expect(settings.hooks?.SessionStart).toBeDefined();
+      expect(Array.isArray(settings.hooks.SessionStart)).toBe(true);
+      expect(settings.hooks.SessionStart.length).toBeGreaterThan(0);
     });
 
-    it('Stop hooks include check-update.js with --claude', async () => {
+    it('SessionStart hooks include check-update.js with --claude --check-only', async () => {
       const settings = await fs.readJson(homePath('.claude', 'settings.json'));
-      const found = settings.hooks.Stop.some((s: any) =>
-        s.hooks?.some((h: any) => h.command?.includes('check-update.js') && h.command?.includes('--claude'))
+      const found = settings.hooks.SessionStart.some((s: any) =>
+        s.hooks?.some((h: any) => h.command?.includes('check-update.js') && h.command?.includes('--claude') && h.command?.includes('--check-only'))
       );
       expect(found).toBe(true);
     });

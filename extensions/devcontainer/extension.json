@@ -45,5 +45,17 @@
       "interactive": true,
       "skipInCI": true
     }
+  },
+  "postUpdate": {
+    "cursor": {
+      "command": "echo \"⚠️  DevContainer templates updated. To apply: DEVCONTAINER_RECONFIGURE=1 npx tsx .dev-pomogator/tools/devcontainer/postinstall.ts\"",
+      "interactive": false,
+      "skipInCI": true
+    },
+    "claude": {
+      "command": "echo \"⚠️  DevContainer templates updated. To apply: DEVCONTAINER_RECONFIGURE=1 npx tsx .dev-pomogator/tools/devcontainer/postinstall.ts\"",
+      "interactive": false,
+      "skipInCI": true
+    }
   }
 }

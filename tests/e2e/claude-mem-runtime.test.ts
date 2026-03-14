@@ -197,12 +197,8 @@ describe('PLUGIN002-RUNTIME: Claude-mem Full E2E', () => {
       expect(typeof output).toBe('string');
       // Check if we get valid JSON response
       if (output.trim()) {
-        try {
-          const response = JSON.parse(output);
-          expect(response.continue).toBe(true);
-        } catch {
-          // May be empty or error message - that's ok for now
-        }
+        const response = JSON.parse(output);
+        expect(response.continue).toBe(true);
       }
     });
 

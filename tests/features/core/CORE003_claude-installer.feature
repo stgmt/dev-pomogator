@@ -37,8 +37,8 @@ Feature: CORE003 Claude Code Installer
   Scenario: Settings.json hooks structure is correct
     When dev-pomogator installs for Claude Code
     Then ~/.claude/settings.json should exist
-    And settings.json should contain hooks.Stop array
-    And Stop hooks should include check-update.js with --claude flag
+    And settings.json should contain hooks.SessionStart array
+    And SessionStart hooks should include check-update.js with --claude --check-only flags
 
   Scenario: Extension hooks use portable relative paths in project settings
     Given dev-pomogator installs for Claude Code with --all
