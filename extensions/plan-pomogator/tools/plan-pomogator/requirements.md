@@ -18,10 +18,11 @@
    - **Risks** (опционально, может быть `N/A`) — риски, breaking changes, внешние зависимости
    - **Out of Scope** (опционально, может быть `N/A`) — что явно НЕ входит в план
 4. **Implementation Plan**
-5. **Todos**
-6. **Definition of Done (DoD)**
+5. **Impact Analysis** (обязательно для delete/rename/move, иначе `N/A`)
+6. **Todos**
+7. **Definition of Done (DoD)**
    - **Verification Plan** (Automated Tests + Manual Verification)
-7. **File Changes** (в самом конце)
+8. **File Changes** (в самом конце)
 
 ## Доменные требования
 - FR/AC/Use Cases **должны** быть заполнены доменным содержанием из контекста задачи и источников требований.
@@ -31,6 +32,12 @@
 - WHEN [event] THEN [system] SHALL [response]
 - IF [precondition] THEN [system] SHALL [response]
 - WHEN [event] AND [condition] THEN [system] SHALL [response]
+
+## Impact Analysis
+- **Обязателен** если File Changes содержит `delete`, `rename`, `move` или `replace`.
+- Таблица `Keyword | Files Found | Action in Plan` — grep по проекту для каждой затрагиваемой сущности.
+- Каждый найденный файл ОБЯЗАН быть в File Changes или явно исключён с обоснованием.
+- Для планов только с `create`/`edit` — `N/A`.
 
 ## Формат Todos
 Каждая задача:

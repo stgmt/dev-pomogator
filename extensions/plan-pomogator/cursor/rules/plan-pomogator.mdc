@@ -1,5 +1,5 @@
 ---
-description: Plan-pomogator — формат планов разработки (Plan mode): User Stories / Use Cases / Requirements (EARS + NFR + Assumptions) / Implementation Plan (Leverage) / Todos (atomic + traceability) / DoD (Verification Plan) + File Changes
+description: Plan-pomogator — формат планов разработки (Plan mode): User Stories / Use Cases / Requirements (EARS + NFR + Assumptions) / Implementation Plan (Leverage) / Impact Analysis (grep для delete/rename/move) / Todos (atomic + traceability) / DoD (Verification Plan) + File Changes
 globs:
   - "**/*"
 alwaysApply: true
@@ -7,7 +7,7 @@ alwaysApply: true
 
 ## Цель правила
 
-Это правило задаёт **единый формат планов разработки**. Если пользователь просит план (или включён Plan mode) — план **обязан** содержать секции ниже и завершаться **непустой** таблицей **File Changes** (что именно будет создано/изменено/удалено и почему).
+Это правило задаёт **единый формат планов разработки**. Если пользователь просит план (или включён Plan mode) — план **обязан** содержать 8 секций ниже и завершаться **непустой** таблицей **File Changes** (что именно будет создано/изменено/удалено и почему).
 
 ## Источник требований и копипаст-шаблон
 
@@ -62,7 +62,21 @@ alwaysApply: true
    - Если план зависит от изучения кода/файлов — явно указать, какие файлы будут просмотрены и зачем.
    - Явно фиксируй **Leverage / Code reuse**: что переиспользуем/расширяем (пути к существующим файлам/классам/функциям), прежде чем предлагать создавать новое.
 
-5. **Todos**
+5. **Impact Analysis (обязательно для delete/rename/move)**
+   - Если план содержит действия `delete`, `rename`, `move` или `replace` — агент ОБЯЗАН выполнить `grep -ri <keyword>` по проекту для каждой затрагиваемой сущности (имя файла, имя расширения, имя функции/класса).
+   - Результаты оформляются в таблицу:
+
+     | Keyword | Files Found | Action in Plan |
+     |---------|-------------|----------------|
+     | `example-name` | `path/to/file1.ts`, `path/to/config.json` | delete, edit |
+
+   - Каждый найденный файл ОБЯЗАН быть в File Changes ИЛИ явно исключён с обоснованием:
+     - `[excluded: historical research, not code]` — допустимо для `.specs/*/RESEARCH.md`
+     - `[excluded: auto-generated, will regenerate]` — допустимо для `.dev-pomogator/tools/`
+   - Если план содержит только `create`/`edit` — секция может содержать `N/A — нет удалений/переименований`.
+   - **ЗАПРЕЩЕНО**: формировать File Changes без предварительного Impact Analysis для планов с удалениями/переименованиями.
+
+6. **Todos**
    - Список задач с уникальными идентификаторами в `kebab-case`.
    - У каждой задачи должны быть:
      - `id`
@@ -78,13 +92,13 @@ alwaysApply: true
      - **Requirements refs**: ссылки на требования из секции Requirements (например `_Requirements: FR-1, NFR-Security-2_`)
      - **Leverage** (если применимо): `_Leverage: path/to/file1, path/to/file2_`
 
-6. **Definition of Done (DoD)**
+7. **Definition of Done (DoD)**
    - Критерии готовности: реализация соответствует Requirements/Use Cases, обновлены конфиги/документация при необходимости, нет утечек секретов, выполнены проверки/тест-план (в рамках правил репозитория).
    - **Verification Plan**:
      - **Automated Tests**: точные команды, которые будут запущены
      - **Manual Verification**: шаги ручной проверки (если применимо)
 
-7. **File Changes (Plan Output) — ОБЯЗАТЕЛЬНО В САМОМ КОНЦЕ**
+8. **File Changes (Plan Output) — ОБЯЗАТЕЛЬНО В САМОМ КОНЦЕ**
    - В конце плана должна быть таблица со **всеми файлами**, которые планируется:
      - `create` / `edit` / `delete` / `rename` / `move` / `replace`
    - Таблица **НЕ может быть пустой**: минимум 1 строка данных (кроме заголовка).

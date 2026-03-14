@@ -76,6 +76,16 @@
     ],
     "PreToolUse": [
       {
+        "matcher": "ExitPlanMode",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner.js'))\" -- \".dev-pomogator/tools/plan-pomogator/plan-gate.ts\"",
+            "timeout": 60
+          }
+        ]
+      },
+      {
         "matcher": "Write|Edit",
         "hooks": [
           {

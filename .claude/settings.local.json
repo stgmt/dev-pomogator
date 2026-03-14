@@ -10,7 +10,14 @@
       "Bash(npm run:*)",
       "Bash(node -e:*)",
       "Bash(code:*)",
-      "WebFetch(domain:docs.anthropic.com)"
+      "WebFetch(domain:docs.anthropic.com)",
+      "Bash(wt:*)",
+      "Bash(wt.exe --version 2>&1)",
+      "Bash(cmd.exe //c \"wt --version\" 2>&1)",
+      "Bash(rm:*)",
+      "mcp__plugin_claude-mem_mcp-search__search",
+      "mcp__plugin_claude-mem_mcp-search__get_observations",
+      "Skill(create-spec)"
     ]
   }
 }

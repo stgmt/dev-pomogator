@@ -2,7 +2,7 @@
 import fs from 'fs';
 import path from 'path';
 
-interface ValidationError {
+export interface ValidationError {
   line: number;
   message: string;
 }
@@ -16,6 +16,8 @@ const REQUIRED_SECTIONS: Array<{ name: string; regex: RegExp }> = [
   { name: 'Definition of Done', regex: /^##\s+Definition of Done\b.*$/ },
   { name: 'File Changes', regex: /^##\s+File Changes\b.*$/ },
 ];
+
+const DESTRUCTIVE_ACTIONS = new Set(['delete', 'rename', 'move', 'replace']);
 
 const REQUIRED_REQUIREMENTS_SUBSECTIONS: Array<{ name: string; regex: RegExp }> = [
   { name: 'FR', regex: /^###\s+FR\s+\(Functional Requirements\)\s*$/ },
@@ -249,14 +251,54 @@ function validateVerificationPlan(lines: string[], indices: Map<string, number>,
   }
 }
 
-function validateFileChanges(lines: string[], indices: Map<string, number>, errors: ValidationError[]): void {
+interface ParsedRow {
+  path: string;
+  action: string;
+  lineOffset: number;
+}
+
+/**
+ * Parse File Changes markdown table into structured rows.
+ * Returns null if no valid table found.
+ */
+function parseFileChangesTable(
+  lines: string[],
+  indices: Map<string, number>,
+): { rows: ParsedRow[]; sectionStart: number; headerLine: number } | null {
   const fileChangesIndex = indices.get('File Changes');
-  if (fileChangesIndex === undefined) {
-    return;
-  }
+  if (fileChangesIndex === undefined) return null;
 
   const { start, end } = getSectionRange(lines, fileChangesIndex);
   const sectionLines = lines.slice(start, end);
+
+  const headerIndex = sectionLines.findIndex((line) =>
+    /^\|\s*Path\s*\|\s*Action\s*\|\s*Reason\s*\|/.test(line.trim()),
+  );
+  if (headerIndex === -1) return null;
+
+  const afterSeparator = sectionLines.slice(headerIndex + 2);
+  const rows: ParsedRow[] = [];
+  for (let i = 0; i < afterSeparator.length; i += 1) {
+    if (!afterSeparator[i].includes('|')) continue;
+    const columns = afterSeparator[i].split('|').map((c) => c.trim()).filter(Boolean);
+    if (columns.length < 2) continue;
+    rows.push({
+      path: columns[0].replace(/`/g, ''),
+      action: columns[1].replace(/`/g, '').toLowerCase(),
+      lineOffset: start + headerIndex + 2 + i,
+    });
+  }
+
+  return { rows, sectionStart: start, headerLine: start + headerIndex };
+}
+
+function validateFileChanges(lines: string[], indices: Map<string, number>, errors: ValidationError[]): void {
+  const fileChangesIndex = indices.get('File Changes');
+  if (fileChangesIndex === undefined) return;
+
+  const { start } = getSectionRange(lines, fileChangesIndex);
+  const sectionEnd = nextHeadingIndex(lines, fileChangesIndex, /^##\s+/);
+  const sectionLines = lines.slice(start, sectionEnd);
 
   for (let i = 0; i < sectionLines.length; i += 1) {
     if (/^```/.test(sectionLines[i].trim())) {
@@ -265,47 +307,56 @@ function validateFileChanges(lines: string[], indices: Map<string, number>, erro
     }
   }
 
-  const headerIndex = sectionLines.findIndex((line) =>
-    /^\|\s*Path\s*\|\s*Action\s*\|\s*Reason\s*\|/.test(line.trim()),
-  );
-  if (headerIndex === -1) {
+  const parsed = parseFileChangesTable(lines, indices);
+  if (!parsed) {
     addError(errors, start, 'В File Changes отсутствует таблица Path/Action/Reason');
     return;
   }
-
-  const separatorIndex = headerIndex + 1;
-  const afterSeparator = sectionLines.slice(separatorIndex + 1);
-  const dataRows: Array<{ line: string; offset: number }> = [];
-  for (let i = 0; i < afterSeparator.length; i += 1) {
-    if (afterSeparator[i].includes('|')) {
-      dataRows.push({ line: afterSeparator[i], offset: separatorIndex + 1 + i });
-    }
-  }
-  if (dataRows.length === 0) {
-    addError(errors, start + headerIndex, 'Таблица File Changes не содержит строк данных');
+  if (parsed.rows.length === 0) {
+    addError(errors, parsed.headerLine, 'Таблица File Changes не содержит строк данных');
     return;
   }
 
-  for (const dataRow of dataRows) {
-    const columns = dataRow.line.split('|').map((item) => item.trim()).filter(Boolean);
-    if (columns.length < 3) {
-      continue;
+  for (const row of parsed.rows) {
+    if (/^[a-zA-Z]:\\/.test(row.path) || row.path.startsWith('/') || row.path.startsWith('\\\\')) {
+      addError(errors, row.lineOffset, `Абсолютный путь в File Changes: ${row.path}`);
     }
-    const rawPath = columns[0].replace(/`/g, '');
-    const action = columns[1].replace(/`/g, '').toLowerCase();
-    if (/^[a-zA-Z]:\\/.test(rawPath) || rawPath.startsWith('/') || rawPath.startsWith('\\\\')) {
-      addError(errors, start + dataRow.offset, `Абсолютный путь в File Changes: ${rawPath}`);
+    if (row.path === '') {
+      addError(errors, row.lineOffset, 'Пустой Path в File Changes');
     }
-    if (rawPath === '') {
-      addError(errors, start + dataRow.offset, 'Пустой Path в File Changes');
-    }
-    if (action && !ALLOWED_ACTIONS.has(action) && rawPath.toLowerCase() !== 'tbd') {
-      addError(errors, start + dataRow.offset, `Недопустимый Action в File Changes: ${action}`);
+    if (row.action && !ALLOWED_ACTIONS.has(row.action) && row.path.toLowerCase() !== 'tbd') {
+      addError(errors, row.lineOffset, `Недопустимый Action в File Changes: ${row.action}`);
     }
   }
 }
 
-function validatePlan(filePath: string): ValidationError[] {
+/**
+ * Check if File Changes contains destructive actions (delete/rename/move/replace)
+ * and if so, verify Impact Analysis section exists.
+ */
+function validateImpactAnalysis(lines: string[], indices: Map<string, number>, errors: ValidationError[]): void {
+  const parsed = parseFileChangesTable(lines, indices);
+  if (!parsed || parsed.rows.length === 0) return;
+
+  const hasDestructiveAction = parsed.rows.some((row) => DESTRUCTIVE_ACTIONS.has(row.action));
+  if (!hasDestructiveAction) return;
+
+  // File Changes has destructive actions — check for Impact Analysis
+  const impactIndex = findHeadingIndex(lines, /^##\s+Impact Analysis\b/);
+  if (impactIndex === -1) {
+    addError(errors, parsed.sectionStart, 'File Changes содержит delete/rename/move/replace, но отсутствует секция Impact Analysis');
+    return;
+  }
+
+  // Check that Impact Analysis is not just N/A when destructive actions exist
+  const impactEnd = nextHeadingIndex(lines, impactIndex, /^##\s+/);
+  const impactLines = lines.slice(impactIndex, impactEnd).join('\n');
+  if (/N\/A/i.test(impactLines) && !impactLines.includes('|')) {
+    addError(errors, impactIndex, 'Impact Analysis содержит N/A, но File Changes имеет delete/rename/move — нужна таблица Keyword/Files');
+  }
+}
+
+export function validatePlan(filePath: string): ValidationError[] {
   const errors: ValidationError[] = [];
   const lines = readFileLines(filePath);
 
@@ -314,6 +365,7 @@ function validatePlan(filePath: string): ValidationError[] {
   validateTodos(lines, indices, errors);
   validateVerificationPlan(lines, indices, errors);
   validateFileChanges(lines, indices, errors);
+  validateImpactAnalysis(lines, indices, errors);
 
   return errors;
 }
@@ -356,4 +408,7 @@ function main(): void {
   }
 }
 
-main();
+// Run CLI only when invoked directly (not when imported as module)
+if (process.argv[1]?.endsWith('validate-plan.ts')) {
+  main();
+}

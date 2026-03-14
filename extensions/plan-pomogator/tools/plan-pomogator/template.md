@@ -36,6 +36,14 @@
 1. {шаг 1}
 2. {шаг 2}
 
+## Impact Analysis
+
+| Keyword | Files Found | Action in Plan |
+|---------|-------------|----------------|
+| `{keyword}` | `{path/to/file}` | {action} |
+
+> N/A — нет удалений/переименований (удалить эту строку если есть delete/rename/move)
+
 ## Todos
 - id: {todo-id}
   description: {описание}; files: {path} ({action}); Requirements refs: {FR-1, NFR-Usability}; Leverage: {path/to/reuse}

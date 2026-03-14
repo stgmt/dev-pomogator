@@ -5,8 +5,8 @@
 ## Что устанавливает
 
 ### Rules
-- Cursor: `.cursor/rules/plan-pomogator.mdc`
-- Claude Code: `.claude/rules/plan-pomogator.md`
+- Cursor: `.cursor/rules/pomogator/plan-pomogator.mdc`
+- Claude Code: `.claude/rules/pomogator/plan-pomogator.md`
 
 ### Tools
 - `.dev-pomogator/tools/plan-pomogator/`:

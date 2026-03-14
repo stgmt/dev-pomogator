@@ -1,0 +1,22 @@
+{
+  "name": "context-menu",
+  "version": "1.0.0",
+  "description": "Enable Claude Code in Windows right-click context menu via Nilesoft Shell",
+  "platforms": ["claude"],
+  "category": "automation",
+  "files": {
+    "claude": []
+  },
+  "rules": {},
+  "tools": {},
+  "toolFiles": [],
+  "skills": {
+    "context-menu": "skills/context-menu"
+  },
+  "skillFiles": {
+    "context-menu": [
+      ".claude/skills/context-menu/SKILL.md"
+    ]
+  },
+  "hooks": []
+}

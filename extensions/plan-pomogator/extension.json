@@ -1,7 +1,7 @@
 {
   "name": "plan-pomogator",
-  "version": "1.0.1",
-  "description": "Единый формат планов + шаблон и ручной валидатор структуры",
+  "version": "1.1.0",
+  "description": "Единый формат планов + валидатор структуры + PreToolUse hook для ExitPlanMode",
   "platforms": ["cursor", "claude"],
   "category": "workflow",
   "files": {
@@ -22,11 +22,17 @@
       ".dev-pomogator/tools/plan-pomogator/requirements.md",
       ".dev-pomogator/tools/plan-pomogator/template.md",
       ".dev-pomogator/tools/plan-pomogator/validate-plan.ts",
+      ".dev-pomogator/tools/plan-pomogator/plan-gate.ts",
       ".dev-pomogator/tools/plan-pomogator/fixtures/valid.plan.md"
     ]
   },
   "hooks": {
     "cursor": {},
-    "claude": {}
+    "claude": {
+      "PreToolUse": {
+        "matcher": "ExitPlanMode",
+        "command": "npx tsx .dev-pomogator/tools/plan-pomogator/plan-gate.ts"
+      }
+    }
   }
 }
