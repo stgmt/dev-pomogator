@@ -123,8 +123,8 @@ export class YamlWriter {
     const yaml = stringify(this.status, { lineWidth: 0 });
 
     fs.mkdirSync(path.dirname(this.statusFile), { recursive: true });
-    fs.writeFileSync(tmpFile, yaml, 'utf-8');
-    fs.renameSync(tmpFile, this.statusFile);
+    // Direct write — no temp+rename. Atomic rename fails on Windows when reader holds the file (EPERM).
+    fs.writeFileSync(this.statusFile, yaml, 'utf-8');
     this.lastWriteTime = Date.now();
   }
 

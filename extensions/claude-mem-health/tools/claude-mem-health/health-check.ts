@@ -21,6 +21,7 @@ const CHROMA_DATA_DIR = path.join(os.homedir(), '.claude-mem', 'vector-db');
 const HEARTBEAT_URL = `http://${CHROMA_HOST}:${CHROMA_PORT}/api/v2/heartbeat`;
 const RETRY_COUNT = 8;
 const RETRY_INTERVAL_MS = 1500;
+const VERBOSE = process.env.DEV_POMOGATOR_HOOK_VERBOSE === '1';
 
 function httpGet(url: string, timeoutMs: number): Promise<{ status: number; body: string }> {
   return new Promise((resolve, reject) => {
@@ -144,9 +145,11 @@ async function main(): Promise<void> {
   // Chroma is down — find and start it
   const chromaExe = findChromaExe();
   if (!chromaExe) {
-    process.stderr.write(
-      '[claude-mem-health] chroma not found. Install: pip install chromadb\n',
-    );
+    if (VERBOSE) {
+      process.stderr.write(
+        '[claude-mem-health] chroma not found. Install: pip install chromadb\n',
+      );
+    }
     writeOutput({ continue: true, suppressOutput: true });
     return;
   }
@@ -167,17 +170,21 @@ async function main(): Promise<void> {
   for (let i = 0; i < RETRY_COUNT; i++) {
     await sleep(RETRY_INTERVAL_MS);
     if (await isChromaHealthy()) {
-      process.stderr.write(
-        `[claude-mem-health] Chroma started (PID ${child.pid}, attempt ${i + 1}/${RETRY_COUNT})\n`,
-      );
+      if (VERBOSE) {
+        process.stderr.write(
+          `[claude-mem-health] Chroma started (PID ${child.pid}, attempt ${i + 1}/${RETRY_COUNT})\n`,
+        );
+      }
       writeOutput({ continue: true, suppressOutput: true });
       return;
     }
   }
 
-  process.stderr.write(
-    `[claude-mem-health] Chroma failed to start after ${RETRY_COUNT} attempts\n`,
-  );
+  if (VERBOSE) {
+    process.stderr.write(
+      `[claude-mem-health] Chroma failed to start after ${RETRY_COUNT} attempts\n`,
+    );
+  }
   writeOutput({ continue: true, suppressOutput: true });
 }
 

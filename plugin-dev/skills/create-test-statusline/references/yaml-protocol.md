@@ -55,8 +55,8 @@ idle → running → passed
 | `idle` | No test run in progress (or stale file) |
 | `running` | Tests executing; counters update in real-time |
 | `passed` | All tests completed successfully (exit code 0) |
-| `failed` | Tests completed with failures, or process died |
-| `error` | Test command could not start or crashed |
+| `failed` | Tests completed with at least one failure (exit code non-zero), OR render script detected dead PID while `state: running` |
+| `error` | Test command could not start (spawn failure), crashed before producing output, or timed out. Use when `result.error` is set by `spawnSync` |
 
 **Transitions:**
 - `idle → running` — Wrapper writes initial status
@@ -130,6 +130,17 @@ if (state === 'running' && pid > 0) {
 - `running` → `0`
 - `percent` → `100`
 - `error_message` → `"Process died unexpectedly (PID: {pid})"`
+
+## Dual PID Repair
+
+Both the render script and the SessionStart hook repair dead-running files, serving complementary roles:
+
+| Component | When | Scope | Latency |
+|-----------|------|-------|---------|
+| Render script | Every poll (~seconds) | Current session file only | Immediate (next poll) |
+| SessionStart hook | Once per session start | All status files in directory | Batch (session init) |
+
+**Why both are needed:** The render script catches PIDs that die during an active session (immediate repair). The SessionStart hook catches files from crashed sessions that were never repaired (e.g., machine reboot). Without both, dead-running files can persist indefinitely.
 
 ## Stale File Cleanup
 

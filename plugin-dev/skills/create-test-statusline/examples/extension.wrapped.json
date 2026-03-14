@@ -1,7 +1,7 @@
 {
   "name": "my-test-statusline",
   "version": "1.0.0",
-  "description": "Test runner progress display in Claude Code statusline",
+  "description": "Test runner progress display in Claude Code statusline (with wrapper)",
   "platforms": ["claude"],
   "category": "automation",
   "files": {
@@ -15,6 +15,7 @@
       ".dev-pomogator/tools/my-test-statusline/statusline_render.cjs",
       ".dev-pomogator/tools/my-test-statusline/test_runner_wrapper.cjs",
       ".dev-pomogator/tools/my-test-statusline/session_start_hook.cjs",
+      ".dev-pomogator/tools/my-test-statusline/statusline_wrapper.cjs",
       ".dev-pomogator/tools/my-test-statusline/package.json"
     ]
   },
@@ -26,7 +27,7 @@
   "statusLine": {
     "claude": {
       "type": "command",
-      "command": "node -e \"require(require('path').join(require('os').homedir(), '.dev-pomogator', 'tools', 'my-test-statusline', 'statusline_render.cjs'))\""
+      "command": "node -e \"require(require('path').join(require('os').homedir(), '.dev-pomogator', 'tools', 'my-test-statusline', 'statusline_wrapper.cjs'))\" --user-b64 REPLACE_WITH_BASE64_USER_CMD --managed-b64 REPLACE_WITH_BASE64_RENDER_CMD"
     }
   },
   "envRequirements": [

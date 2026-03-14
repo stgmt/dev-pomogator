@@ -125,9 +125,5 @@
     "PROMPT_SUGGEST_ENABLED": "true",
     "PROMPT_SUGGEST_TTL": "600000",
     "TEST_STATUSLINE_ENABLED": "true"
-  },
-  "statusLine": {
-    "type": "command",
-    "command": "bash D:/repos/dev-pomogator/.dev-pomogator/tools/test-statusline/statusline_render.sh"
   }
 }

@@ -3,7 +3,7 @@
  * Canonical v2 test runner wrapper.
  */
 
-import { execSync, spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { TestEvent, TestFramework } from './adapters/types.js';
@@ -81,17 +81,6 @@ function parseArgs(args: string[]): ParsedArgs {
   };
 }
 
-function quoteShellArg(arg: string): string {
-  if (!arg) {
-    return "''";
-  }
-  return `'${arg.replace(/'/g, `'\"'\"'`)}'`;
-}
-
-function buildShellCommand(args: string[]): string {
-  return args.map(quoteShellArg).join(' ');
-}
-
 function getAdapter(framework: TestFramework): { parseLine: (line: string) => TestEvent | null } {
   switch (framework) {
     case 'vitest':
@@ -121,16 +110,12 @@ function resolveFramework(explicitFramework: TestFramework | undefined, projectR
 }
 
 function passthrough(commandArgs: string[], childEnv: Record<string, string>): number {
-  try {
-    execSync(buildShellCommand(commandArgs), {
-      stdio: 'inherit',
-      cwd: PROJECT,
-      env: { ...process.env, ...childEnv },
-    });
-    return 0;
-  } catch {
-    return 1;
-  }
+  const result = spawnSync(commandArgs[0], commandArgs.slice(1), {
+    stdio: 'inherit',
+    cwd: PROJECT,
+    env: { ...process.env, ...childEnv },
+  });
+  return result.status ?? 1;
 }
 
 function createEvent(type: TestEvent['type'], errorMessage: string): TestEvent {
@@ -178,12 +163,16 @@ async function main(): Promise<number> {
   }
 
   const logStream = fs.createWriteStream(logFile, { flags: 'a' });
-  const child = spawn(buildShellCommand(parsed.commandArgs), {
+  const child = spawn(parsed.commandArgs[0], parsed.commandArgs.slice(1), {
     cwd: projectRoot,
-    shell: true,
     stdio: ['inherit', 'pipe', 'pipe'],
     env: { ...process.env, ...parsed.childEnv },
   });
+
+  // Heartbeat: update YAML every 2s even when no test output arrives (Docker buffering workaround)
+  const heartbeat = setInterval(() => {
+    writer.write();
+  }, 2000);
 
   let childError: string | null = null;
   const buffers: Record<'stdout' | 'stderr', string> = {
@@ -247,6 +236,7 @@ async function main(): Promise<number> {
 
   return new Promise<number>((resolve) => {
     child.on('close', (code, signal) => {
+      clearInterval(heartbeat);
       flushRemainders();
 
       const exitCode = childError

@@ -7,6 +7,9 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
+// --- Spinner ---
+const SPINNER = ['\u280B', '\u2819', '\u2839', '\u2838', '\u283C', '\u2834', '\u2826', '\u2827', '\u2807', '\u280F'];
+
 // --- Read stdin ---
 let input = '';
 try { input = fs.readFileSync(0, 'utf-8'); } catch (_) { /* empty stdin */ }
@@ -23,14 +26,39 @@ try {
 if (!sessionId) sessionId = process.env.TEST_STATUSLINE_SESSION || '';
 if (cwd === '.') cwd = process.env.TEST_STATUSLINE_PROJECT || '.';
 
+// session.env fallback: use when stdin session_id has no matching YAML file.
+// Claude Code passes its internal session_id which differs from wrapper's session_id.
+if (cwd !== '.') {
+  const hasYaml = sessionId && fs.existsSync(
+    path.join(cwd, '.dev-pomogator', '.test-status', `status.${sessionId.substring(0, 8)}.yaml`)
+  );
+  if (!hasYaml) {
+    try {
+      const envContent = fs.readFileSync(
+        path.join(cwd, '.dev-pomogator', '.test-status', 'session.env'), 'utf-8'
+      );
+      for (const line of envContent.split('\n')) {
+        const m = line.match(/^TEST_STATUSLINE_SESSION=(.+)/);
+        if (m) sessionId = m[1].trim();
+      }
+    } catch (_) { /* session.env not found */ }
+  }
+}
+
 const sessionPrefix = sessionId ? sessionId.substring(0, 8) : '';
 
-// --- Idle indicator (DIM progress bar with "no test runs") ---
+
+// --- Colors ---
+const GREEN = '\x1b[32m';
+const RED = '\x1b[31m';
+const YELLOW = '\x1b[33m';
+const DIM = '\x1b[2m';
+const CYAN = '\x1b[36m';
+const RESET = '\x1b[0m';
+
+// --- Idle indicator ---
 function renderIdle() {
-  const DIM = '\x1b[2m';
-  const RESET = '\x1b[0m';
-  const bar = '\u2591'.repeat(10);
-  process.stdout.write(`${DIM}0% [${bar}] no test runs${RESET}`);
+  process.stdout.write(`${DIM}no test runs${RESET}`);
   process.exit(0);
 }
 
@@ -39,7 +67,6 @@ if (!sessionPrefix) renderIdle();
 const statusFile = path.join(cwd, '.dev-pomogator', '.test-status', `status.${sessionPrefix}.yaml`);
 
 // --- Parse top-level YAML fields (flat, no nested) ---
-// Read directly without existsSync to avoid TOCTOU race (one fewer syscall per refresh)
 let yamlContent;
 try { yamlContent = fs.readFileSync(statusFile, 'utf-8'); } catch (_) { renderIdle(); }
 
@@ -52,32 +79,28 @@ for (const rawLine of yamlContent.split('\n')) {
   if (colonIdx === -1) continue;
   const key = line.substring(0, colonIdx).trim();
   let val = line.substring(colonIdx + 1).trim();
-  // strip YAML quotes
   if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
     val = val.slice(1, -1);
   }
   fields[key] = val;
 }
 
-if (fields.version !== '2' || !fields.state || !fields.total) renderIdle();
+if (fields.version !== '2' || !fields.state) renderIdle();
 
 let state = fields.state;
 const pid = parseInt(fields.pid, 10) || 0;
 const total = parseInt(fields.total, 10) || 0;
 const passed = parseInt(fields.passed, 10) || 0;
 const failed = parseInt(fields.failed, 10) || 0;
+const skipped = parseInt(fields.skipped, 10) || 0;
 let running = parseInt(fields.running, 10) || 0;
-let percent = parseInt(fields.percent, 10) || 0;
 const durationMs = parseInt(fields.duration_ms, 10) || 0;
 let errorMsg = fields.error_message || '';
 
 // --- PID liveness check ---
-// Note: duplicates rewriteRunningToFailed logic from statusline_session_start.ts
-// because this .cjs must run without tsx (CJS runtime constraint).
 function rewriteDeadRunning(deadPid) {
   const message = `Process died unexpectedly (PID: ${deadPid})`;
   const updatedAt = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
-  const tmpFile = statusFile + '.tmp.' + process.pid;
   try {
     let content = fs.readFileSync(statusFile, 'utf-8');
     content = content
@@ -86,16 +109,11 @@ function rewriteDeadRunning(deadPid) {
       .replace(/^percent: .*/m, 'percent: 100')
       .replace(/^error_message: .*/m, `error_message: "${message}"`)
       .replace(/^updated_at: .*/m, `updated_at: "${updatedAt}"`);
-    fs.writeFileSync(tmpFile, content, 'utf-8');
-    fs.renameSync(tmpFile, statusFile);
-    // Mutate in-memory state only after successful file rewrite
+    fs.writeFileSync(statusFile, content, 'utf-8');
     state = 'failed';
     running = 0;
-    percent = 100;
     errorMsg = message;
-  } catch (_) {
-    try { fs.unlinkSync(tmpFile); } catch (__) { /* ignore */ }
-  }
+  } catch (_) { /* ignore */ }
 }
 
 if (state === 'running' && pid > 0) {
@@ -106,46 +124,37 @@ if (state === 'running' && pid > 0) {
 const durationS = Math.floor(durationMs / 1000);
 const durationStr = `${Math.floor(durationS / 60)}:${String(durationS % 60).padStart(2, '0')}`;
 
-// --- Progress bar ---
-const filled = Math.floor(percent * 10 / 100);
-const empty = 10 - filled;
-const bar = '\u2593'.repeat(filled) + '\u2591'.repeat(empty);
-
-// --- Colors ---
-const GREEN = '\x1b[32m';
-const RED = '\x1b[31m';
-const YELLOW = '\x1b[33m';
-const DIM = '\x1b[2m';
-const RESET = '\x1b[0m';
-
-let barColor = GREEN;
-if (total > 0 && failed > 0) {
-  const failPct = Math.floor(failed * 100 / total);
-  barColor = failPct >= 10 ? RED : YELLOW;
-}
+// --- Spinner frame ---
+const spin = SPINNER[durationS % SPINNER.length];
 
 // --- Render ---
 let line = '';
 switch (state) {
-  case 'running':
-    line = `${barColor}${percent}%${RESET} [${barColor}${bar}${RESET}]`;
-    if (passed > 0) line += ` ${passed}\u2705`;
-    if (failed > 0) line += ` ${failed}\u274C`;
-    if (running > 0) line += ` ${running}\u23F3`;
-    line += ` ${DIM}${durationStr}${RESET}`;
+  case 'running': {
+    const completed = passed + failed + skipped;
+    if (total === 0) {
+      // Phase 1: Docker build / vitest startup — no tests yet
+      line = `${CYAN}${spin}${RESET} ${DIM}starting...${RESET} ${DIM}${durationStr}${RESET}`;
+    } else {
+      // Phase 2: tests running — show count + spinner
+      line = `${CYAN}${spin}${RESET} ${GREEN}${passed}${RESET}`;
+      if (failed > 0) line += ` ${RED}${failed}\u274C${RESET}`;
+      line += ` ${DIM}${durationStr}${RESET}`;
+    }
     break;
+  }
   case 'passed':
-    line = `\u2705 ${passed}/${total} ${DIM}${durationStr}${RESET}`;
+    line = `\u2705 ${GREEN}${passed}/${total}${RESET} ${DIM}${durationStr}${RESET}`;
     break;
   case 'failed':
     line = failed > 0
-      ? `\u274C ${passed}/${total} ${DIM}(${failed} failed)${RESET} ${DIM}${durationStr}${RESET}`
+      ? `\u274C ${passed}/${total} ${RED}(${failed} failed)${RESET} ${DIM}${durationStr}${RESET}`
       : `\u274C ${passed}/${total} ${DIM}${durationStr}${RESET}`;
     break;
   case 'error':
     line = `\u274C ${RED}ERR${RESET} ${errorMsg || 'unknown error'}`;
     break;
-  default: // idle
+  default:
     renderIdle();
 }
 

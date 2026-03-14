@@ -1,0 +1,27 @@
+{
+  "eval_id": 2,
+  "eval_name": "eval-pytest-adapter",
+  "prompt": "I'm building a test statusline extension and I already have the render script and wrapper working. Now I need to parse pytest output line by line to get real-time test progress instead of just pass/fail at the end. What's the adapter pattern I should follow?",
+  "assertions": [
+    {
+      "name": "explains-adapter-interface",
+      "text": "Output describes the parseLine(line) -> TestEvent | null adapter interface"
+    },
+    {
+      "name": "lists-test-event-types",
+      "text": "Output lists TestEvent types (at least test_pass, test_fail, suite_start)"
+    },
+    {
+      "name": "pytest-specific-patterns",
+      "text": "Output includes pytest-specific stdout patterns or regex examples"
+    },
+    {
+      "name": "mentions-wrapper-integration",
+      "text": "Output explains how the adapter integrates with the wrapper (pipe stdout lines through parseLine)"
+    },
+    {
+      "name": "mentions-dispatch-table",
+      "text": "Output mentions or references the dispatch table with pytest command and filter flag"
+    }
+  ]
+}

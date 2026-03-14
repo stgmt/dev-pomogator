@@ -7,6 +7,8 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+// NOTE: No diagnostic logging in the render script — it runs on a hot path (every 3-5s).
+// Add logging only when debugging. See minimal-wrapper.cjs for the logging pattern.
 
 // --- Read stdin (Claude Code passes JSON with session_id and cwd) ---
 let input = '';

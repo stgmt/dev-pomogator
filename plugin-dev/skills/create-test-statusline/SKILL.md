@@ -1,6 +1,6 @@
 ---
 name: Create Test Statusline
-description: This skill should be used when the user asks to "create test statusline", "add test progress to statusline", "show test results in statusline", "build test runner statusline", "test progress bar in Claude Code", "statusline for test runs", "real-time test progress", "test runner wrapper with statusline", or mentions building a system to display test execution progress in the Claude Code statusline.
+description: Build a test progress statusline extension for Claude Code that shows real-time test execution in the status bar. Use this skill whenever the user wants to display test progress, build a test runner wrapper, create a statusline extension, add a progress bar for tests, integrate vitest/jest/pytest output into Claude Code's statusline, or mentions YAML status files for test tracking — even if they don't use the exact term "statusline". Do NOT use for building TUI test dashboards or terminal-based test runners with interactive UI.
 version: 0.1.0
 ---
 
@@ -14,6 +14,13 @@ Build a complete test progress statusline extension for Claude Code. The extensi
 2. **Session Init** - SessionStart hook creates status directory, writes env vars
 3. **YAML Writer** - Wrapper writes throttled, atomic YAML status updates
 4. **Render** - Statusline command reads YAML, outputs ANSI progress bar
+
+## Prerequisites
+
+- **Claude Code** installed and working
+- **Node.js** >= 18 (for CJS scripts and `spawnSync`)
+- Project uses the `.dev-pomogator/` directory structure (created by the dev-pomogator installer)
+- Understanding that the render script is **stateless and polled** — Claude Code calls it repeatedly on a timer; there is no file watcher or event stream
 
 ## Step 1: Determine Test Framework
 
@@ -58,6 +65,8 @@ extensions/my-test-statusline/
 
 Alternatively, create the structure manually following `examples/extension.json` as template.
 
+> **Note:** Throughout this guide, `{name}` refers to your extension name (e.g. `my-test-statusline`). Replace it with the actual name you chose in this step.
+
 ## Step 3: Implement Render Script
 
 Create the statusline render script in CommonJS format. Claude Code invokes this via `node <script>` and passes JSON on stdin.
@@ -81,6 +90,10 @@ Create the statusline render script in CommonJS format. Claude Code invokes this
 
 See `examples/minimal-render.cjs` for a complete working implementation.
 
+**Execution model:** The render script is stateless — Claude Code invokes it repeatedly (every few seconds). Each invocation reads the current YAML file from disk, parses it, renders output, and exits. There is no file watcher, no caching, no persistent state. Throttling happens on the writer side (wrapper writes YAML at most once per 1000ms), not the reader side.
+
+**Diagnostic logging:** Log errors to `~/.dev-pomogator/logs/statusline.log` for troubleshooting. Never fail on logging — wrap in try/catch.
+
 Cross-platform considerations: use `os.homedir()` and `path.join()` for portable paths; normalize `\r\n` to `\n`; see `references/cross-platform.md`.
 
 ## Step 4: Implement Test Runner Wrapper
@@ -92,7 +105,9 @@ Create a CJS wrapper script that spawns the test command as a child process, cap
 - **Throttled YAML writes** - maximum 1 write per 1000ms to avoid I/O pressure
 - **Atomic writes** - write to temp file, then `fs.renameSync` to final path (NEVER write directly)
 - Track state transitions: `idle` -> `running` -> `passed`/`failed`/`error`
+- Distinguish `failed` (tests ran but some failed, exit code non-zero) from `error` (command could not start, crashed before producing output, or timed out)
 - Write `pid` field for liveness checking by render script
+- **Diagnostic logging:** Log wrapper events to `~/.dev-pomogator/logs/statusline.log` (same log as render script). Wrap in try/catch — never fail on logging.
 
 **Fallback mode (no adapter):** Without a framework adapter, the wrapper operates in basic mode:
 1. Set state to `running` with `total: 0`
@@ -128,7 +143,10 @@ For multiple framework support, see the dispatch table and adapter development g
 
 Set up `extension.json` with three key sections:
 
-**1. statusLine** - Register the render script:
+**1. statusLine** — Register the render script.
+
+The snippet below shows the project-local relative form (works for development/testing). For the global `~/.claude/settings.json` installation, use the portable command pattern shown after the snippet:
+
 ```json
 {
   "statusLine": {
@@ -140,7 +158,17 @@ Set up `extension.json` with three key sections:
 }
 ```
 
-**2. hooks** - Register SessionStart hook:
+**Important — global installation:** The `statusLine` command is installed **globally** to `~/.claude/settings.json`, NOT to the project's `.claude/settings.json`. This is because statusline must work across all projects. Hooks and toolFiles remain project-local.
+
+**Portable command:** For global statusLine, use a portable command that resolves paths at runtime:
+```javascript
+// Generate portable command that works regardless of home directory location
+const cmd = `node -e "require(require('path').join(require('os').homedir(), '.dev-pomogator', 'tools', '{name}', 'statusline_render.cjs'))"`;
+```
+
+This ensures the command works on any machine after installation, not just the machine where it was configured.
+
+**2. hooks** — Register SessionStart hook:
 ```json
 {
   "hooks": {
@@ -153,10 +181,15 @@ Set up `extension.json` with three key sections:
 
 The SessionStart hook performs three tasks:
 - Create status directory: `{cwd}/.dev-pomogator/.test-status/`
-- Write `TEST_STATUSLINE_SESSION={prefix}` and `TEST_STATUSLINE_PROJECT={cwd}` to `$CLAUDE_ENV_FILE` (makes session ID available to render script as env var fallback)
-- Clean stale status files (older than 24h, idle older than 1h, dead PIDs)
+- Write `TEST_STATUSLINE_SESSION={prefix}` and `TEST_STATUSLINE_PROJECT={cwd}` to `$CLAUDE_ENV_FILE` (makes session ID available to render script and wrapper as env var fallback)
+- Clean stale status files — three cleanup rules:
+  - Files older than 24h → delete
+  - Files with `state: running` but dead PID → **rewrite to `failed`** (not delete — preserves diagnostics)
+  - Files with `state: idle` older than 1h → delete
 
-**3. toolFiles** - List all managed files for the updater:
+**Why dual PID repair:** Both the render script (Step 3) and the SessionStart hook repair dead-running files. The render script catches dead PIDs in real-time during statusline refresh. The hook catches them at session start as a batch cleanup. Both are needed — render handles immediate cases, hook handles files from old sessions.
+
+**3. toolFiles** — List all managed files for the updater:
 ```json
 {
   "toolFiles": {
@@ -170,6 +203,28 @@ The SessionStart hook performs three tasks:
 }
 ```
 
+**4. envRequirements** — Declare environment variables:
+```json
+{
+  "envRequirements": [
+    { "name": "TEST_STATUSLINE_ENABLED", "required": false, "default": "true",
+      "description": "Set to 'false' to disable the statusline extension" },
+    { "name": "TEST_STATUSLINE_FRAMEWORK", "required": false,
+      "description": "Override framework auto-detection (vitest/jest/pytest/dotnet/rust/go)" }
+  ]
+}
+```
+
+**Complete env var reference:**
+
+| Variable | Set by | Read by | Purpose |
+|----------|--------|---------|---------|
+| `TEST_STATUSLINE_SESSION` | SessionStart hook → CLAUDE_ENV_FILE | Render, Wrapper | Session prefix (8 chars) |
+| `TEST_STATUSLINE_PROJECT` | SessionStart hook → CLAUDE_ENV_FILE | Render, Wrapper | Project cwd path |
+| `TEST_STATUSLINE_ENABLED` | User env | SessionStart hook | Disable extension (`false`) |
+| `TEST_STATUSLINE_FRAMEWORK` | User env | Wrapper (Step 1) | Override auto-detect |
+| `CLAUDE_ENV_FILE` | Claude Code | SessionStart hook | Path to env file for persisting vars |
+
 See `examples/extension.json` and `examples/session-start-hook.cjs` for complete implementations.
 
 ## Step 7: Statusline Coexistence (Wrapper)
@@ -178,12 +233,34 @@ If the user already has a statusline (or other extensions provide one), use a wr
 
 **Problem:** Claude Code supports only one `statusLine` command per configuration. Two extensions with `statusLine` would conflict.
 
+**Default user statusline:** Many users install `ccstatusline` (via `npx -y ccstatusline@latest`) which provides git branch, time, and system info. The installer should detect an existing statusline command in `~/.claude/settings.json` and automatically configure the wrapper if one is found.
+
+**Detection logic:**
+```javascript
+const os = require('node:os');
+const settingsPath = path.join(os.homedir(), '.claude', 'settings.json');
+let existingCmd = '';
+try {
+  const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+  existingCmd = settings?.statusLine?.command || '';
+} catch (_) {}
+// If existingCmd is non-empty, configure wrapper; otherwise use direct render
+```
+
 **Solution:** A wrapper script that runs both commands in parallel and combines their output:
 
 1. Encode both commands as base64 (avoids shell escaping issues)
-2. Run both with `spawnSync` in parallel, each with a 5-second timeout
+2. Run both with `spawnSync` sequentially, each with a 5-second timeout
 3. Combine output: `{userOutput} | {managedOutput}`
 4. If either command fails or times out, show only the successful one
+
+**Generating base64 commands:**
+```javascript
+const userB64 = Buffer.from(existingCmd).toString('base64');
+const managedB64 = Buffer.from(
+  `node -e "require(require('path').join(require('os').homedir(), '.dev-pomogator', 'tools', '{name}', 'statusline_render.cjs'))"`
+).toString('base64');
+```
 
 **Wrapper invocation in extension.json:**
 ```json
@@ -191,7 +268,7 @@ If the user already has a statusline (or other extensions provide one), use a wr
   "statusLine": {
     "claude": {
       "type": "command",
-      "command": "node .dev-pomogator/tools/{name}/statusline_wrapper.cjs --user-b64 {base64_user_cmd} --managed-b64 {base64_managed_cmd}"
+      "command": "node -e \"require(require('path').join(require('os').homedir(), '.dev-pomogator', 'tools', '{name}', 'statusline_wrapper.cjs'))\" --user-b64 {base64_user_cmd} --managed-b64 {base64_managed_cmd}"
     }
   }
 }
@@ -203,7 +280,7 @@ If the user already has a statusline (or other extensions provide one), use a wr
 - Round-trip validation: re-encode decoded value and compare with input
 - `spawnSync` with `{ shell: true, windowsHide: true, timeout: 5000 }`
 - Preserve newlines in output (Claude Code renders `\n` as separate statusline rows)
-- Log diagnostics to `~/.dev-pomogator/logs/statusline.log` with rotation
+- Log diagnostics to `~/.dev-pomogator/logs/statusline.log` (add rotation for production use)
 
 See `examples/statusline-wrapper.cjs` for the complete implementation and `references/cross-platform.md` for portable path patterns.
 
@@ -227,7 +304,7 @@ Test each component independently using fixture-based approach:
 
 **BDD pattern:** Tag test scenarios with `@featureN` for traceability back to requirements.
 
-For detailed testing strategies, fixture examples, and Docker integration patterns, see `references/testing-guide.md`.
+Read `references/testing-guide.md` for the complete fixture library, per-component test patterns (render, wrapper, adapter, hook, statusline-wrapper), BDD integration with `@featureN` tags, and Docker testing setup.
 
 ## Additional Resources
 
@@ -245,8 +322,10 @@ For detailed testing strategies, fixture examples, and Docker integration patter
 - **`examples/statusline-wrapper.cjs`** - Coexistence wrapper with base64 commands (~70 lines)
 - **`examples/vitest-adapter.ts`** - TypeScript reference adapter for vitest
 - **`examples/session-start-hook.cjs`** - SessionStart hook with cleanup (~50 lines)
-- **`examples/extension.json`** - Extension manifest template
+- **`examples/extension.json`** - Extension manifest template (direct statusline)
+- **`examples/extension.wrapped.json`** - Extension manifest with statusline wrapper
 - **`examples/status-fixture.yaml`** - YAML v2 fixture for testing
+- **`examples/vitest-output-fixture.txt`** - Sample vitest stdout for adapter testing
 
 ### Scaffold Script
 

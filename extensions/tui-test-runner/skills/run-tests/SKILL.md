@@ -69,13 +69,23 @@ Wrap with `test_runner_wrapper.sh` for YAML status tracking:
 bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.sh <test-command>
 ```
 
-If `--docker` flag: wrap with Docker Compose and session-isolated project name:
+If `--docker` flag, check if `scripts/docker-test.sh` exists in the project root:
+
+**If `scripts/docker-test.sh` exists** (preferred — handles build, cleanup, session isolation automatically):
 
 ```bash
-bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.sh COMPOSE_PROJECT_NAME=devpom-test-{session} docker compose -f docker-compose.test.yml run --rm test <test-command>
+bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.sh bash scripts/docker-test.sh <test-command>
 ```
 
-**Docker Isolation:** Each test run gets a unique `COMPOSE_PROJECT_NAME` based on the session prefix (`TEST_STATUSLINE_SESSION`). This prevents container name conflicts when multiple Claude Code sessions run tests simultaneously. The Docker image is shared across sessions via `image: dev-pomogator-test:local` in `docker-compose.test.yml`.
+Where `<test-command>` is the framework-specific command from the dispatch table above (e.g., `npx vitest run --grep "auth"`).
+
+**If `scripts/docker-test.sh` does NOT exist** (fallback for other projects):
+
+```bash
+bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.sh docker compose -f docker-compose.test.yml run --rm test <test-command>
+```
+
+**Cross-platform note:** The wrapper uses Node.js `spawn()` without shell, so `docker` is found via system PATH on all platforms (Windows, Linux, macOS).
 
 Run the built command using the Bash tool.
 

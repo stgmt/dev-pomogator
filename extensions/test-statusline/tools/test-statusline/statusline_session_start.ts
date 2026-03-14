@@ -13,7 +13,10 @@ import * as path from 'node:path';
 // Logging (stderr only — stdout reserved for hook JSON output)
 // ---------------------------------------------------------------------------
 
+const VERBOSE = process.env.DEV_POMOGATOR_HOOK_VERBOSE === '1';
+
 function log(level: 'INFO' | 'DEBUG' | 'ERROR', message: string): void {
+  if (level !== 'ERROR' && !VERBOSE) return;
   const ts = new Date().toISOString();
   process.stderr.write(`[${ts}] [TEST-STATUSLINE] [${level}] ${message}\n`);
 }
@@ -106,17 +109,24 @@ async function main(): Promise<void> {
     fs.mkdirSync(statusDir, { recursive: true });
     log('INFO', `Status directory ensured: ${statusDir}`);
 
-    // Write env var to CLAUDE_ENV_FILE (FR-6)
+    // Write session env vars
+    const envLines = [
+      `TEST_STATUSLINE_SESSION=${prefix}`,
+      `TEST_STATUSLINE_PROJECT=${cwd}`,
+    ].join('\n') + '\n';
+
+    // Primary: write session.env file (works regardless of CLAUDE_ENV_FILE bug)
+    const sessionEnvFile = path.join(statusDir, 'session.env');
+    writeFileAtomic(sessionEnvFile, envLines);
+    log('INFO', `Wrote session.env: ${sessionEnvFile}`);
+
+    // Secondary: also write to CLAUDE_ENV_FILE if available
     const envFile = process.env.CLAUDE_ENV_FILE;
     if (envFile) {
-      const envLines = [
-        `TEST_STATUSLINE_SESSION=${prefix}`,
-        `TEST_STATUSLINE_PROJECT=${cwd}`,
-      ].join('\n') + '\n';
       fs.appendFileSync(envFile, envLines, 'utf-8');
-      log('INFO', `Wrote TEST_STATUSLINE env vars to ${envFile}`);
+      log('INFO', `Wrote env vars to CLAUDE_ENV_FILE: ${envFile}`);
     } else {
-      log('DEBUG', 'CLAUDE_ENV_FILE not set, skipping env write');
+      log('DEBUG', 'CLAUDE_ENV_FILE not set (known Claude Code bug #15840)');
     }
 
     // Clean stale files (FR-7)

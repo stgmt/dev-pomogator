@@ -1,0 +1,39 @@
+{
+  "eval_id": 0,
+  "eval_name": "eval-vitest-statusline",
+  "prompt": "I have a Node.js project that uses vitest for testing. I want to see real-time test progress in my Claude Code status bar — like a progress bar that shows how many tests passed/failed while they're running. Can you help me build this?",
+  "assertions": [
+    {
+      "name": "mentions-cjs-requirement",
+      "text": "Output mentions that scripts must be CommonJS (.cjs) format because Claude Code runs them via node"
+    },
+    {
+      "name": "mentions-yaml-status-file",
+      "text": "Output mentions YAML status file as the communication mechanism between wrapper and render"
+    },
+    {
+      "name": "mentions-atomic-writes",
+      "text": "Output mentions atomic writes (temp file + rename) for YAML status updates"
+    },
+    {
+      "name": "mentions-session-id",
+      "text": "Output mentions session_id or session prefix for file isolation"
+    },
+    {
+      "name": "provides-render-script",
+      "text": "Output includes or references a render script that reads YAML and outputs ANSI progress bar"
+    },
+    {
+      "name": "provides-wrapper-script",
+      "text": "Output includes or references a wrapper script that spawns test command and writes YAML"
+    },
+    {
+      "name": "mentions-extension-json",
+      "text": "Output mentions configuring extension.json with statusLine command and hooks"
+    },
+    {
+      "name": "vitest-specific",
+      "text": "Output includes vitest-specific guidance (adapter patterns, npx vitest run command)"
+    }
+  ]
+}

@@ -22,5 +22,5 @@ trap cleanup EXIT INT TERM
 # Build image (shared across sessions via image: directive)
 docker compose -f docker-compose.test.yml build --quiet 2>/dev/null
 
-# Run tests, pass through any extra arguments
-exec docker compose -f docker-compose.test.yml run --rm test "$@"
+# -T disables pseudo-TTY allocation for reliable stdout streaming through pipes
+exec docker compose -f docker-compose.test.yml run --rm -T test "$@"

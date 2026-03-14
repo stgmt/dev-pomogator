@@ -1,0 +1,29 @@
+# Sample vitest stdout output for adapter testing.
+# Feed these lines through adapter.parseLine(line) and assert expected TestEvent types.
+# Source: real vitest run output (vitest 3.x with default reporter)
+
+ RUN  v3.0.5 /home/user/project
+
+ ✓ tests/auth.test.ts (5 tests) 234ms
+   ✓ Auth > should login with valid credentials 45ms
+   ✓ Auth > should reject invalid password 12ms
+   ✓ Auth > should handle expired token 8ms
+   ✓ Auth > should refresh token automatically 67ms
+   ✓ Auth > should logout and clear session 15ms
+ ✓ tests/utils.test.ts (3 tests) 12ms
+   ✓ Utils > formatDate returns ISO string 2ms
+   ✓ Utils > parseConfig handles empty input 1ms
+   ✓ Utils > slugify removes special chars 3ms
+ ❌ tests/api.test.ts (4 tests | 1 failed) 1523ms
+   ✓ API > GET /users returns list 234ms
+   ✓ API > POST /users creates user 456ms
+   ❌ API > DELETE /users/:id requires auth 12ms
+     → expected 401 to be 403
+   ✓ API > PUT /users/:id updates user 321ms
+ ⊘ tests/integration.test.ts (2 tests | 2 skipped)
+   ⊘ Integration > database migration (skipped)
+   ⊘ Integration > seed data (skipped)
+
+ Test Files  3 passed | 1 failed (4)
+ Tests  12 passed | 1 failed | 2 skipped (15)
+ Duration  2.45s (transform 156ms, setup 234ms, collect 89ms, tests 1769ms, environment 0ms, prepare 45ms)

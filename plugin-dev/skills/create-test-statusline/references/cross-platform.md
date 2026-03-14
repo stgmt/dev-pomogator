@@ -137,6 +137,30 @@ const yaml = [
 ].join('\n');
 ```
 
+## Portable Global StatusLine Command
+
+The `statusLine` command is installed **globally** to `~/.claude/settings.json`. Since the home directory varies per machine, use a self-resolving command:
+
+```javascript
+// CORRECT: resolves path at runtime, works on any machine
+const cmd = `node -e "require(require('path').join(require('os').homedir(), '.dev-pomogator', 'tools', '{name}', 'statusline_render.cjs'))"`;
+
+// WRONG: hardcoded path, breaks on other machines
+const cmd = `node C:\\Users\\alice\\.dev-pomogator\\tools\\my-ext\\statusline_render.cjs`;
+```
+
+This pattern works because:
+- `require('os').homedir()` resolves to the current user's home directory
+- `require('path').join(...)` constructs the correct OS-specific path
+- `require(...)` loads and executes the CJS module
+- The entire expression runs in a single `node -e` invocation
+
+For the wrapper script (coexistence), the same pattern applies — both `--user-b64` and `--managed-b64` commands should be portable.
+
+## PID Liveness on Windows
+
+`process.kill(pid, 0)` works on Windows (Node.js uses `OpenProcess` + `GetExitCodeProcess` internally). However, Windows PIDs can be recycled faster than on Unix. The render script should only check PIDs for the current session, minimizing false positives from PID recycling.
+
 ## Portable Temp Files
 
 Use `os.tmpdir()` for temporary files (not `/tmp` which doesn't exist on Windows):
@@ -150,8 +174,10 @@ const tmpFile = `${statusFile}.tmp.${process.pid}`;
 
 - [ ] All scripts are `.cjs` (CommonJS)
 - [ ] Paths use `os.homedir()` and `path.join()`
+- [ ] Global statusLine command uses portable `node -e "require(...)"` pattern
 - [ ] Commands encoded with base64 for wrapper
 - [ ] `spawnSync` uses `shell: true` and `windowsHide: true`
 - [ ] `\r\n` normalized to `\n` when parsing
 - [ ] YAML string values are quoted
 - [ ] No hardcoded `/home/`, `C:\Users\`, or `/tmp/` paths
+- [ ] PID liveness check (`process.kill(pid, 0)`) tested on target platforms

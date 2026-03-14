@@ -139,6 +139,27 @@ Feature: PLUGIN011_test-statusline
     And CLAUDE_ENV_FILE should contain "TEST_STATUSLINE_PROJECT="
 
   # @feature4
+  Scenario: PLUGIN011_52 Hook writes session.env file when CLAUDE_ENV_FILE not available
+    Given CLAUDE_ENV_FILE is not set (known Claude Code bug #15840)
+    When SessionStart hook receives session_id "abc12345def67890"
+    Then session.env file should exist in .test-status directory
+    And session.env should contain "TEST_STATUSLINE_SESSION=abc12345"
+
+  # @feature4
+  Scenario: PLUGIN011_53 Wrapper reads session.env when env vars not set
+    Given session.env file exists with session "abc12345"
+    And TEST_STATUSLINE_SESSION env var is not set
+    When wrapper runs a test command
+    Then YAML status file should be created for session "abc12345"
+
+  # @feature4
+  Scenario: PLUGIN011_54 Render reads session.env when stdin has no session_id
+    Given YAML status file exists for session "abc12345"
+    And session.env file exists with session "abc12345"
+    When render script is called without session_id in stdin
+    Then render output should NOT contain "no test runs"
+
+  # @feature4
   Scenario: PLUGIN011_16 SessionStart hook cleans stale files older than 24h
     Given a YAML status file with mtime older than 24 hours exists
     And a recent YAML status file exists
@@ -270,6 +291,15 @@ Feature: PLUGIN011_test-statusline
     Given test runner wrapper is running with session "abc12345"
     When wrapped process writes to both stdout and stderr
     Then log_file should contain both stdout and stderr lines
+
+  # @feature2
+  Scenario: PLUGIN011_51 Render shows progress after wrapper processes test output (end-to-end)
+    Given test runner wrapper is configured with session "abc12345"
+    And a vitest-like test output fixture exists
+    When wrapper runs command that outputs the fixture content
+    And render script is called with the same session_id
+    Then render output should NOT contain "no test runs"
+    And render script should exit with code 0
 
   # @feature8
   Scenario: PLUGIN011_37 Wrapper outputs nothing when both commands fail

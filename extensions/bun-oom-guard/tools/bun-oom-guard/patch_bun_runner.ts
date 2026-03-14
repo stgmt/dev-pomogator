@@ -17,7 +17,10 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
 
+const VERBOSE = process.env.DEV_POMOGATOR_HOOK_VERBOSE === '1';
+
 function log(level: 'INFO' | 'DEBUG' | 'WARN' | 'ERROR', msg: string): void {
+  if (level !== 'ERROR' && !VERBOSE) return;
   process.stderr.write(`[${new Date().toISOString()}] [bun-oom-guard] [${level}] ${msg}\n`);
 }
 

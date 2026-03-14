@@ -2,10 +2,11 @@
   "name": "tui-test-runner",
   "version": "1.1.0",
   "description": "Rich 4-tab TUI test runner with Python Textual UI, universal framework adapters, /run-tests skill, and test-guard hook",
-  "platforms": ["claude"],
+  "platforms": ["claude", "cursor"],
   "category": "automation",
   "files": {
-    "claude": []
+    "claude": [],
+    "cursor": ["cursor/commands/run-tests.md"]
   },
   "rules": {
     "centralized-test-runner": "centralized-test-runner.md"

@@ -162,10 +162,10 @@ describe('PLUGIN011: Test Statusline', () => {
       const stdinJson = { ...readFixtureJson('mock-stdin.json'), cwd: appPath() };
       const result = runRenderScript(stdinJson);
 
-      expect(result.stdout).toContain('76%');
-      expect(result.stdout).toContain('38✅');
-      expect(result.stdout).toContain('2❌');
-      expect(result.stdout).toContain('10⏳');
+      // Running state: spinner + passed count + failed + duration
+      expect(result.stdout).toContain('38');
+      expect(result.stdout).toContain('2\u274C');
+      expect(result.stdout).toContain('0:45');
     });
 
     // @feature1
@@ -237,8 +237,8 @@ describe('PLUGIN011: Test Statusline', () => {
       const result = runRenderScript(stdinJson);
 
       expect(result.status).toBe(0);
-      expect(result.stdout).toContain('76%');
-      expect(result.stdout).toContain('10⏳');
+      expect(result.stdout).toContain('38');
+      expect(result.stdout).toContain('0:45');
 
       const afterRender = await fs.readFile(statusFilePath('abc12345'), 'utf-8');
       expect(getYamlField(afterRender, 'state')).toBe('running');
@@ -257,7 +257,7 @@ describe('PLUGIN011: Test Statusline', () => {
       const stdinJson = { ...readFixtureJson('mock-stdin.json'), cwd: appPath() };
       const result = runRenderScript(stdinJson);
 
-      expect(result.stdout).toContain('0%');
+      expect(result.stdout).toContain('no test runs');
       expect(result.stdout).toContain('no test runs');
       expect(result.status).toBe(0);
     });
@@ -269,7 +269,7 @@ describe('PLUGIN011: Test Statusline', () => {
       const stdinJson = { ...readFixtureJson('mock-stdin.json'), cwd: appPath() };
       const result = runRenderScript(stdinJson);
 
-      expect(result.stdout).toContain('0%');
+      expect(result.stdout).toContain('no test runs');
       expect(result.stdout).toContain('no test runs');
       expect(result.status).toBe(0);
     });
@@ -288,8 +288,8 @@ describe('PLUGIN011: Test Statusline', () => {
         timeout: 10000,
       });
 
-      expect(result.stdout || '').toContain('76%');
-      expect(result.stdout || '').toContain('✅');
+      expect(result.stdout || '').toContain('38');
+      expect(result.stdout || '').toContain('0:45');
     });
   });
 
@@ -401,6 +401,28 @@ describe('PLUGIN011: Test Statusline', () => {
       expect(logContent).toContain('stdout line');
       expect(logContent).toContain('stderr line');
     });
+
+    // @feature2
+    it('PLUGIN011_51: render shows progress after wrapper processes test output (end-to-end)', async () => {
+      const env = canonicalWrapperEnv();
+      const fixturePath = appPath('tests/fixtures/tui-test-runner/vitest-output.txt');
+
+      // Step 1: Run wrapper with command that outputs vitest-like test results
+      const wrapperResult = runWrapper(['cat', fixturePath], env);
+      expect(wrapperResult.status).toBe(0);
+
+      // Step 2: Verify YAML was created by wrapper
+      const statusFile = statusFilePath('abc12345');
+      expect(await fs.pathExists(statusFile)).toBe(true);
+
+      // Step 3: Run render script with the same session
+      const stdinJson = { ...readFixtureJson('mock-stdin.json'), cwd: appPath() };
+      const renderResult = runRenderScript(stdinJson);
+
+      // Step 4: Verify render shows actual test data, NOT idle/"no test runs"
+      expect(renderResult.status).toBe(0);
+      expect(renderResult.stdout).not.toContain('no test runs');
+    });
   });
 
   // ===========================================
@@ -420,8 +442,8 @@ describe('PLUGIN011: Test Statusline', () => {
       const stdinA = { ...readFixtureJson('mock-stdin.json'), session_id: 'aaaabbbbxxxxxxxx', cwd: appPath() };
       const resultA = runRenderScript(stdinA);
 
-      expect(resultA.stdout).toContain('76%');
-      expect(resultA.stdout).not.toContain('✅ 50/50');
+      expect(resultA.stdout).toContain('38');
+      expect(resultA.stdout).not.toContain('✅');
     });
 
     // @feature3
@@ -474,6 +496,56 @@ describe('PLUGIN011: Test Statusline', () => {
       expect(envContent).toContain(`TEST_STATUSLINE_PROJECT=${appPath()}`);
 
       await fs.remove(envFile);
+    });
+
+    // @feature4
+    it('PLUGIN011_52: hook writes session.env file (CLAUDE_ENV_FILE bug workaround)', async () => {
+      // Run hook WITHOUT CLAUDE_ENV_FILE (simulates bug #15840)
+      runSessionHook(
+        { session_id: 'abc12345def67890', cwd: appPath(), hook_event_name: 'SessionStart' },
+        {} // no CLAUDE_ENV_FILE
+      );
+
+      const sessionEnvPath = path.join(appPath(), STATUS_DIR, 'session.env');
+      expect(await fs.pathExists(sessionEnvPath)).toBe(true);
+
+      const content = await fs.readFile(sessionEnvPath, 'utf-8');
+      expect(content).toContain('TEST_STATUSLINE_SESSION=abc12345');
+      expect(content).toContain(`TEST_STATUSLINE_PROJECT=${appPath()}`);
+    });
+
+    // @feature4
+    it('PLUGIN011_53: wrapper reads session.env when env vars not set', async () => {
+      // Write session.env manually (simulates hook having written it)
+      const sessionEnvPath = path.join(appPath(), STATUS_DIR, 'session.env');
+      await fs.ensureDir(path.join(appPath(), STATUS_DIR));
+      await fs.writeFile(sessionEnvPath, `TEST_STATUSLINE_SESSION=abc12345\nTEST_STATUSLINE_PROJECT=${appPath()}\n`);
+
+      // Run wrapper WITHOUT env vars — it should read from session.env
+      const wrapperResult = runWrapper(['echo', 'test passed'], {});
+      expect(wrapperResult.status).toBe(0);
+
+      // YAML should be created (wrapper found session from session.env)
+      const statusFile = statusFilePath('abc12345');
+      expect(await fs.pathExists(statusFile)).toBe(true);
+    });
+
+    // @feature4
+    it('PLUGIN011_54: render reads session.env when stdin has no session_id', async () => {
+      // Create YAML status file
+      const yamlContent = readFixture('mock-status-passed.yaml');
+      await fs.writeFile(statusFilePath('abc12345'), yamlContent);
+
+      // Write session.env
+      const sessionEnvPath = path.join(appPath(), STATUS_DIR, 'session.env');
+      await fs.writeFile(sessionEnvPath, `TEST_STATUSLINE_SESSION=abc12345\nTEST_STATUSLINE_PROJECT=${appPath()}\n`);
+
+      // Run render with cwd but NO session_id in stdin
+      const stdinJson = { cwd: appPath() };
+      const renderResult = runRenderScript(stdinJson);
+
+      expect(renderResult.status).toBe(0);
+      expect(renderResult.stdout).not.toContain('no test runs');
     });
 
     // @feature4

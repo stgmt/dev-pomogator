@@ -1,0 +1,35 @@
+{
+  "eval_id": 1,
+  "eval_name": "eval-coexistence-wrapper",
+  "prompt": "I already have ccstatusline installed in my Claude Code (shows git branch and time). Now I want to add test progress to the statusline too, but I don't want to lose the ccstatusline output. How do I make both work together? I'm on Windows.",
+  "assertions": [
+    {
+      "name": "explains-single-statusline-limitation",
+      "text": "Output explains that Claude Code supports only one statusLine command, hence the need for a wrapper"
+    },
+    {
+      "name": "mentions-base64-encoding",
+      "text": "Output mentions base64 encoding of commands to avoid shell escaping issues"
+    },
+    {
+      "name": "mentions-wrapper-script",
+      "text": "Output describes or provides a wrapper script that runs both commands"
+    },
+    {
+      "name": "mentions-timeout",
+      "text": "Output mentions timeout handling for wrapper commands (e.g. 5s timeout)"
+    },
+    {
+      "name": "mentions-output-combining",
+      "text": "Output describes combining outputs (e.g. with separator like ' | ')"
+    },
+    {
+      "name": "windows-aware",
+      "text": "Output includes Windows-specific guidance (windowsHide, portable paths, or cross-platform mentions)"
+    },
+    {
+      "name": "detects-existing-statusline",
+      "text": "Output mentions detecting the existing statusline from ~/.claude/settings.json"
+    }
+  ]
+}

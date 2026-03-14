@@ -1,9 +1,5 @@
 ---
-name: run-tests
-description: >
-  Centralized test runner. Auto-detects framework (vitest/jest/pytest/dotnet/rust/go),
-  runs tests through wrapper for statusline & TUI monitoring. Use instead of direct test commands.
-allowed-tools: Read, Bash, Glob
+description: "Centralized test runner. Auto-detects framework (vitest/jest/pytest/dotnet/rust/go), runs tests through wrapper for statusline & TUI monitoring. Use instead of direct test commands."
 ---
 
 # /run-tests — Centralized Test Runner
@@ -42,13 +38,9 @@ Check project root for config files to determine the test framework:
 
 If `--framework` argument provided, use that instead.
 
-Use Glob tool to check which config files exist in the project root.
-
 ### Step 2: Check docker-only-tests rule
 
 If `.claude/rules/docker-only-tests.md` exists in the project, tests MUST run through Docker. Automatically add `--docker` flag unless already specified.
-
-Use Read tool to check if the rule file exists.
 
 ### Step 3: Build and run test command
 
@@ -87,7 +79,7 @@ bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.sh docker compose 
 
 **Cross-platform note:** The wrapper uses Node.js `spawn()` without shell, so `docker` is found via system PATH on all platforms (Windows, Linux, macOS).
 
-Run the built command using the Bash tool.
+Run the built command in the terminal.
 
 ### Step 4: Report results
 

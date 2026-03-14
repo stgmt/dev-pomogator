@@ -1,9 +1,5 @@
 ---
-name: run-tests
-description: >
-  Centralized test runner. Auto-detects framework (vitest/jest/pytest/dotnet/rust/go),
-  runs tests through wrapper for statusline & TUI monitoring. Use instead of direct test commands.
-allowed-tools: Read, Bash, Glob
+description: "Centralized test runner. Auto-detects framework (vitest/jest/pytest/dotnet/rust/go), runs tests through wrapper for statusline & TUI monitoring. Use instead of direct test commands."
 ---
 
 # /run-tests — Centralized Test Runner
@@ -42,13 +38,9 @@ Check project root for config files to determine the test framework:
 
 If `--framework` argument provided, use that instead.
 
-Use Glob tool to check which config files exist in the project root.
-
 ### Step 2: Check docker-only-tests rule
 
 If `.claude/rules/docker-only-tests.md` exists in the project, tests MUST run through Docker. Automatically add `--docker` flag unless already specified.
-
-Use Read tool to check if the rule file exists.
 
 ### Step 3: Build and run test command
 
@@ -69,25 +61,17 @@ Wrap with `test_runner_wrapper.sh` for YAML status tracking:
 bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.sh <test-command>
 ```
 
-If `--docker` flag, check if `scripts/docker-test.sh` exists in the project root:
-
-**If `scripts/docker-test.sh` exists** (preferred — handles build, cleanup, session isolation automatically):
+If `--docker` flag: set `COMPOSE_PROJECT_NAME` as env var prefix and pass Docker command to wrapper:
 
 ```bash
-bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.sh bash scripts/docker-test.sh <test-command>
+COMPOSE_PROJECT_NAME=devpom-test-${TEST_STATUSLINE_SESSION:-manual} bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.sh docker compose -f docker-compose.test.yml run --rm test <test-command>
 ```
 
-Where `<test-command>` is the framework-specific command from the dispatch table above (e.g., `npx vitest run --grep "auth"`).
+**Docker Isolation:** Each test run gets a unique `COMPOSE_PROJECT_NAME` based on the session prefix (`TEST_STATUSLINE_SESSION`). This prevents container name conflicts when multiple Claude Code sessions run tests simultaneously. The Docker image is shared across sessions via `image: dev-pomogator-test:local` in `docker-compose.test.yml`.
 
-**If `scripts/docker-test.sh` does NOT exist** (fallback for other projects):
+**Important:** `COMPOSE_PROJECT_NAME=...` MUST be an env var prefix (before `bash`), NOT an argument to the wrapper script.
 
-```bash
-bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.sh docker compose -f docker-compose.test.yml run --rm test <test-command>
-```
-
-**Cross-platform note:** The wrapper uses Node.js `spawn()` without shell, so `docker` is found via system PATH on all platforms (Windows, Linux, macOS).
-
-Run the built command using the Bash tool.
+Run the built command in the terminal.
 
 ### Step 4: Report results
 

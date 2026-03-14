@@ -1,0 +1,112 @@
+{
+  "skill_name": "create-test-statusline",
+  "evals": [
+    {
+      "id": 0,
+      "name": "eval-vitest-statusline",
+      "prompt": "I have a Node.js project that uses vitest for testing. I want to see real-time test progress in my Claude Code status bar — like a progress bar that shows how many tests passed/failed while they're running. Can you help me build this?",
+      "expected_output": "Should provide the full 8-step workflow: detect vitest, scaffold extension, implement render script (CJS), implement wrapper with adapter, configure extension.json with statusLine + hooks, mention coexistence option. Should reference examples like minimal-render.cjs and minimal-wrapper.cjs.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "mentions-cjs-requirement",
+          "text": "Output mentions that scripts must be CommonJS (.cjs) format because Claude Code runs them via node"
+        },
+        {
+          "name": "mentions-yaml-status-file",
+          "text": "Output mentions YAML status file as the communication mechanism between wrapper and render"
+        },
+        {
+          "name": "mentions-atomic-writes",
+          "text": "Output mentions atomic writes (temp file + rename) for YAML status updates"
+        },
+        {
+          "name": "mentions-session-id",
+          "text": "Output mentions session_id or session prefix for file isolation"
+        },
+        {
+          "name": "provides-render-script",
+          "text": "Output includes or references a render script that reads YAML and outputs ANSI progress bar"
+        },
+        {
+          "name": "provides-wrapper-script",
+          "text": "Output includes or references a wrapper script that spawns test command and writes YAML"
+        },
+        {
+          "name": "mentions-extension-json",
+          "text": "Output mentions configuring extension.json with statusLine command and hooks"
+        },
+        {
+          "name": "vitest-specific",
+          "text": "Output includes vitest-specific guidance (adapter patterns, npx vitest run command)"
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "name": "eval-coexistence-wrapper",
+      "prompt": "I already have ccstatusline installed in my Claude Code (shows git branch and time). Now I want to add test progress to the statusline too, but I don't want to lose the ccstatusline output. How do I make both work together? I'm on Windows.",
+      "expected_output": "Should focus on Step 7 (Statusline Coexistence). Should explain the wrapper pattern: detect existing statusline, base64 encode both commands, create wrapper that runs both sequentially with timeout, combine output with separator. Should mention Windows-specific concerns (windowsHide, path.join with os.homedir).",
+      "files": [],
+      "assertions": [
+        {
+          "name": "explains-single-statusline-limitation",
+          "text": "Output explains that Claude Code supports only one statusLine command, hence the need for a wrapper"
+        },
+        {
+          "name": "mentions-base64-encoding",
+          "text": "Output mentions base64 encoding of commands to avoid shell escaping issues"
+        },
+        {
+          "name": "mentions-wrapper-script",
+          "text": "Output describes or provides a wrapper script that runs both commands"
+        },
+        {
+          "name": "mentions-timeout",
+          "text": "Output mentions timeout handling for wrapper commands (e.g. 5s timeout)"
+        },
+        {
+          "name": "mentions-output-combining",
+          "text": "Output describes combining outputs (e.g. with separator like ' | ')"
+        },
+        {
+          "name": "windows-aware",
+          "text": "Output includes Windows-specific guidance (windowsHide, portable paths, or cross-platform mentions)"
+        },
+        {
+          "name": "detects-existing-statusline",
+          "text": "Output mentions detecting the existing statusline from ~/.claude/settings.json"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "eval-pytest-adapter",
+      "prompt": "I'm building a test statusline extension and I already have the render script and wrapper working. Now I need to parse pytest output line by line to get real-time test progress instead of just pass/fail at the end. What's the adapter pattern I should follow?",
+      "expected_output": "Should reference adapter-patterns.md. Should explain the parseLine(line) -> TestEvent interface, TestEvent types (test_pass, test_fail, suite_start, etc.), and how to write regex patterns for pytest output format. Should mention the dispatch table for pytest command.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "explains-adapter-interface",
+          "text": "Output describes the parseLine(line) -> TestEvent | null adapter interface"
+        },
+        {
+          "name": "lists-test-event-types",
+          "text": "Output lists TestEvent types (at least test_pass, test_fail, suite_start)"
+        },
+        {
+          "name": "pytest-specific-patterns",
+          "text": "Output includes pytest-specific stdout patterns or regex examples"
+        },
+        {
+          "name": "mentions-wrapper-integration",
+          "text": "Output explains how the adapter integrates with the wrapper (pipe stdout lines through parseLine)"
+        },
+        {
+          "name": "mentions-dispatch-table",
+          "text": "Output mentions or references the dispatch table with pytest command and filter flag"
+        }
+      ]
+    }
+  ]
+}

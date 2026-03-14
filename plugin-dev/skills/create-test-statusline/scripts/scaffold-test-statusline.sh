@@ -31,9 +31,20 @@ if [[ -z "$NAME" ]]; then
 fi
 
 # --- Determine project root ---
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# Navigate up from scripts/ -> create-test-statusline/ -> skills/ -> plugin-dev/ -> project root
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
+# Priority: 1) git root, 2) relative from script location, 3) current directory
+if command -v git &>/dev/null && git rev-parse --show-toplevel &>/dev/null; then
+  PROJECT_ROOT="$(git rev-parse --show-toplevel)"
+else
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  # Navigate up from scripts/ -> create-test-statusline/ -> skills/ -> plugin-dev/ -> project root
+  PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
+fi
+
+# Validate project root looks correct
+if [[ ! -f "$PROJECT_ROOT/package.json" ]] && [[ ! -d "$PROJECT_ROOT/.git" ]]; then
+  echo "Warning: Could not reliably detect project root (resolved to $PROJECT_ROOT)" >&2
+  echo "Run from inside a git repository or set PROJECT_ROOT manually." >&2
+fi
 
 EXT_DIR="$PROJECT_ROOT/extensions/$NAME"
 TOOLS_DIR="$EXT_DIR/tools/$NAME"

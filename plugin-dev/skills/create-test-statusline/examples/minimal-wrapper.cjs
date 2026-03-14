@@ -7,7 +7,20 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const os = require('node:os');
 const { spawnSync } = require('node:child_process');
+
+// --- Diagnostic logging (never fail on logging) ---
+const LOG_DIR = path.join(os.homedir(), '.dev-pomogator', 'logs');
+const LOG_FILE = path.join(LOG_DIR, 'statusline.log');
+let logDirReady = false;
+
+function log(msg) {
+  try {
+    if (!logDirReady) { fs.mkdirSync(LOG_DIR, { recursive: true }); logDirReady = true; }
+    fs.appendFileSync(LOG_FILE, `[${new Date().toISOString()}] [wrapper] ${msg}\n`);
+  } catch (_) { /* never fail on logging */ }
+}
 
 // --- Parse arguments: --framework <name> -- <command...> ---
 const args = process.argv.slice(2);
@@ -32,8 +45,10 @@ const statusFile = sessionPrefix
   : path.join(statusDir, `status.${process.pid}.yaml`);
 const logFile = path.join(statusDir, `test.${sessionPrefix || process.pid}.log`);
 
-// --- YAML helpers ---
+// --- Constants ---
 const THROTTLE_MS = 1000;
+const TIMEOUT_MS = 600000; // 10 min max
+const startEpoch = Date.now();
 let lastWriteTime = 0;
 
 const status = {
@@ -62,14 +77,15 @@ function toYaml(obj) {
 
 function writeStatus() {
   status.updated_at = new Date().toISOString();
-  status.duration_ms = Date.now() - new Date(status.started_at).getTime();
+  status.duration_ms = Date.now() - startEpoch;
   const tmpFile = `${statusFile}.tmp.${process.pid}`;
   try {
     fs.writeFileSync(tmpFile, toYaml(status), 'utf-8');
     fs.renameSync(tmpFile, statusFile);
     lastWriteTime = Date.now();
-  } catch (_) {
-    try { fs.unlinkSync(tmpFile); } catch (__) { /* ignore */ }
+  } catch (e) {
+    log(`Write failed: ${e.message}`);
+    try { fs.unlinkSync(tmpFile); } catch (_) { /* may not exist */ }
   }
 }
 
@@ -80,6 +96,7 @@ function writeIfNeeded() {
 
 // --- Write initial status ---
 writeStatus();
+log(`Started: framework=${framework} cmd="${testCommand}"`);
 
 // --- Run test command ---
 const result = spawnSync(testCommand, {
@@ -87,7 +104,7 @@ const result = spawnSync(testCommand, {
   shell: true,
   windowsHide: true,
   stdio: ['inherit', 'pipe', 'inherit'],
-  timeout: 600000, // 10 min max
+  timeout: TIMEOUT_MS,
 });
 
 // --- Process output (adapter integration point) ---
@@ -101,14 +118,24 @@ if (result.stdout) {
 }
 
 // --- Finalize ---
-const exitCode = result.status ?? 1;
-status.state = exitCode === 0 ? 'passed' : 'failed';
-status.percent = 100;
-status.running = 0;
-
-if (exitCode !== 0 && !status.error_message) {
-  status.error_message = `Test command exited with code ${exitCode}`;
+// Distinguish 'error' (spawn failure/timeout) from 'failed' (tests ran, non-zero exit)
+if (result.error) {
+  // Spawn failure or timeout — command couldn't run properly
+  status.state = 'error';
+  status.error_message = result.error.code === 'ETIMEDOUT'
+    ? `Test command timed out after ${TIMEOUT_MS / 1000}s`
+    : `Spawn error: ${result.error.message}`;
+  log(`Error: ${status.error_message}`);
+} else {
+  const exitCode = result.status ?? 1;
+  status.state = exitCode === 0 ? 'passed' : 'failed';
+  if (exitCode !== 0) {
+    status.error_message = `Test command exited with code ${exitCode}`;
+  }
+  log(`Finished: ${status.state} (exit ${exitCode})`);
 }
 
+status.percent = 100;
+status.running = 0;
 writeStatus();
-process.exit(exitCode);
+process.exit(result.status ?? 1);
