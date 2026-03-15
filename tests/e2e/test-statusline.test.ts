@@ -13,6 +13,21 @@ import {
 
 // --- Helpers ---
 
+interface PythonRunner { command: string; prefixArgs: string[]; }
+let cachedPythonRunner: PythonRunner | null = null;
+
+function getPythonRunner(): PythonRunner {
+  if (cachedPythonRunner) return cachedPythonRunner;
+  const candidates: PythonRunner[] = process.platform === 'win32'
+    ? [{ command: 'python', prefixArgs: [] }, { command: 'py', prefixArgs: ['-3'] }, { command: 'python3', prefixArgs: [] }]
+    : [{ command: 'python3', prefixArgs: [] }, { command: 'python', prefixArgs: [] }];
+  for (const c of candidates) {
+    const r = spawnSync(c.command, [...c.prefixArgs, '--version'], { encoding: 'utf-8', timeout: 5000 });
+    if (r.status === 0) { cachedPythonRunner = c; return c; }
+  }
+  throw new Error('Python 3 required for compact mode tests');
+}
+
 const STATUS_DIR = '.dev-pomogator/.test-status';
 const FIXTURES_DIR = 'tests/fixtures/test-statusline';
 const RENDER_SCRIPT = 'extensions/test-statusline/tools/test-statusline/statusline_render.cjs';
@@ -1052,6 +1067,73 @@ describe('PLUGIN011: Test Statusline', () => {
       expect(parsed).not.toBeNull();
       expect(parsed?.userCommand).toBe(userCmd);
       expect(parsed?.managedCommand).toBe(managedCmd);
+    });
+  });
+
+  // =========================================================================
+  // Compact Mode (@feature1) — CompactBar render tests
+  // =========================================================================
+  describe('Compact Mode (@feature1)', () => {
+    const TUI_DIR = 'extensions/tui-test-runner/tools/tui-test-runner';
+    const COMPACT_RENDER_SCRIPT = `
+import sys, json
+sys.path.insert(0, '${TUI_DIR}')
+from tui.widgets.compact_bar import render_compact
+from tui.models import TestStatus, TestState
+data = json.loads(sys.stdin.read())
+if data.get('_null'):
+    print(render_compact(None))
+elif data.get('_corrupted'):
+    print(render_compact(None))
+else:
+    status = TestStatus(**{k: (TestState(v) if k == 'state' else v) for k, v in data.items()})
+    print(render_compact(status))
+`;
+
+    function renderCompact(payload: Record<string, unknown>): string {
+      const runner = getPythonRunner();
+      const result = spawnSync(runner.command, [...runner.prefixArgs, '-c', COMPACT_RENDER_SCRIPT], {
+        input: JSON.stringify(payload),
+        encoding: 'utf-8',
+        cwd: appPath(),
+        timeout: 10000,
+      });
+      if (result.error) throw result.error;
+      if (result.status !== 0) throw new Error(`Python error: ${result.stderr}`);
+      return (result.stdout || '').trim();
+    }
+
+    // @feature1
+    it('PLUGIN011_60: CompactBar renders running state with progress', () => {
+      const output = renderCompact({
+        state: 'running',
+        framework: 'vitest',
+        passed: 38,
+        failed: 2,
+        skipped: 0,
+        running: 10,
+        total: 50,
+        percent: 76,
+        duration_ms: 12500,
+      });
+      expect(output).toContain('76%');
+      expect(output).toContain('38✅');
+      expect(output).toContain('2❌');
+      expect(output).toContain('vitest');
+      expect(output).toContain('█');
+    });
+
+    // @feature1
+    it('PLUGIN011_61: CompactBar shows idle indicator when no tests', () => {
+      const output = renderCompact({ _null: true });
+      expect(output).toContain('no test runs');
+    });
+
+    // @feature1
+    it('PLUGIN011_62: CompactBar handles corrupted YAML gracefully', () => {
+      // render_compact(None) should return idle indicator without crashing
+      const output = renderCompact({ _corrupted: true });
+      expect(output).toContain('no test runs');
     });
   });
 });

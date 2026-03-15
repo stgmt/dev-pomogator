@@ -16,6 +16,7 @@ from .models import TestState, TestStatus
 from .widgets.analysis_tab import AnalysisTab
 from .widgets.logs_tab import LogsTab
 from .widgets.monitoring_tab import MonitoringTab
+from .widgets.compact_bar import CompactBar
 from .widgets.tests_tab import TestsTab
 from .yaml_reader import StatusChanged, YamlReader
 
@@ -76,6 +77,7 @@ class TestRunnerApp(App):
 
     def compose(self) -> ComposeResult:
         yield Header()
+        yield CompactBar(id="compact-bar")
         with TabbedContent(initial="monitoring"):
             with TabPane("Tests", id="tests"):
                 yield TestsTab()
