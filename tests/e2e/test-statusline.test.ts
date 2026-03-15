@@ -1171,4 +1171,33 @@ else:
       expect(content).not.toContain('toggle_class');
     });
   });
+
+  // =========================================================================
+  // Stop Tests (@feature3) — stop_handler + keybinding verification
+  // =========================================================================
+  describe('Stop Tests (@feature3)', () => {
+    const TUI_DIR = 'extensions/tui-test-runner/tools/tui-test-runner';
+    const APP_PY = path.join(appPath(), TUI_DIR, 'tui/app.py');
+    const STOP_HANDLER_PY = path.join(appPath(), TUI_DIR, 'tui/stop_handler.py');
+
+    // @feature3
+    it('PLUGIN011_65: stop_handler.py exists with cross-platform kill', async () => {
+      expect(await fs.pathExists(STOP_HANDLER_PY)).toBe(true);
+      const content = await fs.readFile(STOP_HANDLER_PY, 'utf-8');
+      // Cross-platform: taskkill for Windows, SIGTERM for Unix
+      expect(content).toContain('taskkill');
+      expect(content).toContain('SIGTERM');
+      expect(content).toContain('is_process_alive');
+      expect(content).toContain('stop_tests');
+    });
+
+    // @feature3
+    it('PLUGIN011_66: app.py has X keybinding for stop_tests action', async () => {
+      const content = await fs.readFile(APP_PY, 'utf-8');
+      expect(content).toContain('"x"');
+      expect(content).toContain('stop_tests');
+      expect(content).toContain('action_stop_tests');
+      expect(content).toContain('self.status.pid');
+    });
+  });
 });

@@ -42,6 +42,7 @@
     "tui/widgets/logs_tab.py",
     "tui/widgets/monitoring_tab.py",
     "tui/widgets/analysis_tab.py",
+    "tui/stop_handler.py",
     "tui/widgets/compact_bar.py",
     "tui/widgets/clickable_path.py",
     "tui/state_service.py",

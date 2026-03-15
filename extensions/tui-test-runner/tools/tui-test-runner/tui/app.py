@@ -16,6 +16,7 @@ from .models import TestState, TestStatus
 from .widgets.analysis_tab import AnalysisTab
 from .widgets.logs_tab import LogsTab
 from .widgets.monitoring_tab import MonitoringTab
+from .stop_handler import stop_tests
 from .widgets.compact_bar import CompactBar
 from .widgets.tests_tab import TestsTab
 from .yaml_reader import StatusChanged, YamlReader
@@ -53,6 +54,7 @@ class TestRunnerApp(App):
     BINDINGS = [
         Binding("q", "quit", "Quit"),
         Binding("m", "toggle_compact", "Compact", show=True),
+        Binding("x", "stop_tests", "Stop", show=True),
         Binding("1", "switch_tab('tests')", "Tests", show=False),
         Binding("2", "switch_tab('logs')", "Logs", show=False),
         Binding("3", "switch_tab('monitoring')", "Monitoring", show=False),
@@ -183,6 +185,17 @@ class TestRunnerApp(App):
             tests_tab.focus_filter()
         except NoMatches:
             pass
+
+    def action_stop_tests(self) -> None:
+        """Stop running tests by sending termination signal (@feature3)."""
+        pid = self.status.pid
+        if pid <= 0:
+            self.notify("No test process running", severity="warning")
+            return
+        if stop_tests(pid):
+            self.notify(f"Stopped test process (PID {pid})")
+        else:
+            self.notify(f"Process {pid} already stopped", severity="information")
 
     def action_toggle_compact(self) -> None:
         """Toggle between compact and full mode (@feature2)."""
