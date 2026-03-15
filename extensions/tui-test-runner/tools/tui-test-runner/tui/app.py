@@ -6,6 +6,7 @@ from datetime import datetime
 from pathlib import Path
 
 from textual.app import App, ComposeResult
+from textual.events import Resize
 from textual.binding import Binding
 from textual.css.query import NoMatches
 from textual.reactive import reactive
@@ -185,6 +186,13 @@ class TestRunnerApp(App):
             tests_tab.focus_filter()
         except NoMatches:
             pass
+
+    COMPACT_HEIGHT_THRESHOLD = 15
+
+    def on_resize(self, event: Resize) -> None:
+        """Auto-switch to compact mode when terminal is too small (@feature4)."""
+        if event.size.height < self.COMPACT_HEIGHT_THRESHOLD and not self.screen.has_class("compact"):
+            self.screen.add_class("compact")
 
     def action_stop_tests(self) -> None:
         """Stop running tests by sending termination signal (@feature3)."""

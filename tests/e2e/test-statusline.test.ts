@@ -1200,4 +1200,24 @@ else:
       expect(content).toContain('self.status.pid');
     });
   });
+
+  // =========================================================================
+  // Auto-compact (@feature4) — on_resize verification
+  // =========================================================================
+  describe('Auto-compact (@feature4)', () => {
+    const APP_PY = path.join(appPath(), 'extensions/tui-test-runner/tools/tui-test-runner/tui/app.py');
+
+    // @feature4
+    it('PLUGIN011_67: app.py has on_resize handler with height threshold', async () => {
+      const content = await fs.readFile(APP_PY, 'utf-8');
+      expect(content).toContain('on_resize');
+      expect(content).toContain('COMPACT_HEIGHT_THRESHOLD');
+      expect(content).toContain('add_class("compact")');
+      // on_resize should only add compact class, never remove it
+      // (manual M key to restore full mode)
+      const onResizeMethod = content.match(/def on_resize[\s\S]*?(?=\n    def )/);
+      expect(onResizeMethod).not.toBeNull();
+      expect(onResizeMethod![0]).not.toContain('remove_class');
+    });
+  });
 });
