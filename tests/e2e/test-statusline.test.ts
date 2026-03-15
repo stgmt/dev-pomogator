@@ -30,9 +30,7 @@ function getPythonRunner(): PythonRunner {
 
 const STATUS_DIR = '.dev-pomogator/.test-status';
 const FIXTURES_DIR = 'tests/fixtures/test-statusline';
-const RENDER_SCRIPT = 'extensions/test-statusline/tools/test-statusline/statusline_render.cjs';
 const WRAPPER_SCRIPT = 'extensions/test-statusline/tools/test-statusline/test_runner_wrapper.sh';
-const STATUSLINE_WRAPPER_SCRIPT = 'extensions/test-statusline/tools/test-statusline/statusline_wrapper.js';
 const SESSION_HOOK = 'extensions/test-statusline/tools/test-statusline/statusline_session_start.ts';
 const DEFAULT_STATUSLINE_CONFIG = {
   type: 'command',
@@ -51,17 +49,6 @@ function globalClaudeSettingsPath(): string {
   return homePath('.claude', 'settings.json');
 }
 
-function runRenderScript(stdinJson: Record<string, unknown>): { stdout: string; stderr: string; status: number | null } {
-  const result = spawnSync('node', [appPath(RENDER_SCRIPT)], {
-    input: JSON.stringify(stdinJson),
-    encoding: 'utf-8',
-    cwd: appPath(),
-    env: { ...process.env, FORCE_COLOR: '0' },
-    timeout: 10000,
-  });
-  return { stdout: result.stdout || '', stderr: result.stderr || '', status: result.status };
-}
-
 function runWrapper(args: string[], env: Record<string, string> = {}): { stdout: string; stderr: string; status: number | null } {
   const result = spawnSync('bash', [appPath(WRAPPER_SCRIPT), ...args], {
     encoding: 'utf-8',
@@ -78,27 +65,6 @@ function canonicalWrapperEnv(overrides: Record<string, string> = {}): Record<str
     TEST_STATUSLINE_PROJECT: appPath(),
     ...overrides,
   };
-}
-
-function runStatuslineWrapper(
-  userCommand: string,
-  managedCommand: string,
-  stdinJson: Record<string, unknown>
-): { stdout: string; stderr: string; status: number | null } {
-  const result = spawnSync('node', [
-    appPath(STATUSLINE_WRAPPER_SCRIPT),
-    '--user-b64',
-    Buffer.from(userCommand, 'utf-8').toString('base64'),
-    '--managed-b64',
-    Buffer.from(managedCommand, 'utf-8').toString('base64'),
-  ], {
-    input: JSON.stringify(stdinJson),
-    encoding: 'utf-8',
-    cwd: appPath(),
-    env: { ...process.env, FORCE_COLOR: '0' },
-    timeout: 10000,
-  });
-  return { stdout: result.stdout || '', stderr: result.stderr || '', status: result.status };
 }
 
 function runSessionHook(stdinJson: Record<string, unknown>, env: Record<string, string> = {}): { stdout: string; stderr: string; status: number | null } {
@@ -575,71 +541,7 @@ describe('PLUGIN011: Test Statusline', () => {
       expect(parsed?.managedCommand).not.toContain('/old/path/');
     });
 
-    // @feature8
-    it.skip('PLUGIN011_25: wrapper combines outputs of user and managed commands', () => {
-      const result = runStatuslineWrapper(
-        'printf userinfo',
-        'printf testinfo',
-        { session_id: 'abc12345', cwd: appPath() }
-      );
-
-      expect(result.status).toBe(0);
-      expect(result.stdout.trim()).toBe('userinfo | testinfo');
-    });
-
-    // @feature8
-    it.skip('PLUGIN011_31: installer wraps existing global user-defined statusLine', async () => {
-      const globalSettingsPath = globalClaudeSettingsPath();
-
-      await setupCleanState('claude');
-      try {
-        await fs.ensureDir(path.dirname(globalSettingsPath));
-        await fs.writeJson(globalSettingsPath, {
-          statusLine: { type: 'command', command: 'npx -y ccstatusline@latest' },
-        }, { spaces: 2 });
-
-        const result = await runInstaller('--claude --all');
-        expect(result.exitCode).toBe(0);
-
-        // StatusLine should be in global settings now (wrapped)
-        const globalSettings = await fs.readJson(globalSettingsPath);
-        expect(globalSettings.statusLine).toBeDefined();
-        const parsed = parseWrappedStatusLineCommand(globalSettings.statusLine.command);
-        expect(parsed).not.toBeNull();
-        expect(parsed?.userCommand).toBe('npx -y ccstatusline@latest');
-        expect(parsed?.managedCommand).toContain('statusline_render.cjs');
-
-        // Project settings should NOT have statusLine
-        const projectSettings = await fs.readJson(projectClaudeSettingsPath());
-        expect(projectSettings.statusLine).toBeUndefined();
-      } finally {
-        await setupCleanState('claude');
-      }
-    });
-
-    // @feature8
-    it.skip('PLUGIN011_32: wrapper keeps managed output when user command fails', () => {
-      const result = runStatuslineWrapper(
-        'false',
-        'printf managedinfo',
-        { session_id: 'abc12345', cwd: appPath() }
-      );
-
-      expect(result.status).toBe(0);
-      expect(result.stdout.trim()).toBe('managedinfo');
-    });
-
-    // @feature8
-    it.skip('PLUGIN011_33: wrapper keeps user output when managed command fails', () => {
-      const result = runStatuslineWrapper(
-        'printf userinfo',
-        'false',
-        { session_id: 'abc12345', cwd: appPath() }
-      );
-
-      expect(result.status).toBe(0);
-      expect(result.stdout.trim()).toBe('userinfo');
-    });
+    // PLUGIN011_25, 31, 32, 33: legacy wrapper runtime tests — REMOVED in v2.0.0 (wrapper deleted)
 
     // @feature8
     it('PLUGIN011_34: broken wrapper falls back to ccstatusline wrapped with managed', () => {
@@ -663,51 +565,7 @@ describe('PLUGIN011: Test Statusline', () => {
       expect(parsed?.managedCommand).toContain('statusline_render.cjs');
     });
 
-    // @feature8
-    it.skip('PLUGIN011_37: wrapper outputs nothing when both commands fail', () => {
-      const result = runStatuslineWrapper(
-        'false',
-        'false',
-        { session_id: 'abc12345', cwd: appPath() }
-      );
-
-      expect(result.status).toBe(0);
-      expect(result.stdout.trim()).toBe('');
-    });
-
-    // @feature8
-    it.skip('PLUGIN011_38: wrapper completes within timeout when user command hangs', () => {
-      const start = Date.now();
-      const result = runStatuslineWrapper(
-        'sleep 10',
-        'printf managedinfo',
-        { session_id: 'abc12345', cwd: appPath() }
-      );
-      const elapsed = Date.now() - start;
-
-      expect(result.status).toBe(0);
-      expect(result.stdout.trim()).toBe('managedinfo');
-      expect(elapsed).toBeLessThan(10000); // wrapper timeout 5s + overhead
-    });
-
-    // @feature8
-    it.skip('PLUGIN011_39: wrapper preserves multi-line ANSI user output with newlines', () => {
-      const mockScript = appPath('tests/fixtures/test-statusline/mock-ccstatusline.sh').replace(/\\/g, '/');
-      const result = runStatuslineWrapper(
-        `bash "${mockScript}" multiline`,
-        'printf testinfo',
-        { session_id: 'abc12345', cwd: appPath() }
-      );
-
-      expect(result.status).toBe(0);
-      const output = result.stdout;
-      // Multi-line ccstatusline output should preserve newlines
-      expect(output).toContain('\n');
-      expect(output).toContain('Opus');
-      expect(output).toContain('Session:');
-      // Managed output appended to last line via pipe separator
-      expect(output).toContain('| testinfo');
-    });
+    // PLUGIN011_37, 38, 39: legacy wrapper edge case tests — REMOVED in v2.0.0
 
     // @feature8
     it('PLUGIN011_40: updater preserves wrapper on extension update (global)', () => {
@@ -758,26 +616,7 @@ describe('PLUGIN011: Test Statusline', () => {
       expect(managedB64Count).toBe(1);
     });
 
-    // @feature8
-    it.skip('PLUGIN011_42: wrapper forwards full StatusJSON stdin to both commands', () => {
-      const fullStdin = readFixtureJson('ccstatusline-stdin.json');
-      // Both commands extract session_id from stdin JSON via node one-liner
-      const extractCmd = `node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{process.stdout.write(JSON.parse(d).session_id||'')}catch(e){}})"`;
-
-      const result = runStatuslineWrapper(
-        extractCmd,
-        extractCmd,
-        fullStdin
-      );
-
-      expect(result.status).toBe(0);
-      // Both commands received the same stdin and extracted the same session_id
-      // Wrapper combines: "session_id | session_id"
-      const parts = result.stdout.trim().split(' | ');
-      expect(parts).toHaveLength(2);
-      expect(parts[0]).toBe('abc12345def67890ghijklmnop');
-      expect(parts[1]).toBe('abc12345def67890ghijklmnop');
-    });
+    // PLUGIN011_42: legacy wrapper stdin forwarding test — REMOVED in v2.0.0
   });
 
   // ===========================================
