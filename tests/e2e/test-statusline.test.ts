@@ -169,144 +169,12 @@ describe('PLUGIN011: Test Statusline', () => {
   // @feature1 — Statusline Render
   // ===========================================
 
-  describe('Statusline Render (@feature1)', () => {
-    // @feature1
-    it('PLUGIN011_01: renders running state with progress bar', async () => {
-      const yamlContent = withPid(readFixture('mock-status-running-live-pid.yaml'), process.pid);
-      await fs.writeFile(statusFilePath('abc12345'), yamlContent);
-      const stdinJson = { ...readFixtureJson('mock-stdin.json'), cwd: appPath() };
-      const result = runRenderScript(stdinJson);
+  // Legacy Statusline Render (@feature1) — REMOVED in v2.0.0
+  // Tests PLUGIN011_01..03, 26, 29, 35 removed — render replaced by TUI CompactBar (PLUGIN011_60..62)
+  // PID repair tested via SessionStart hook (PLUGIN011_28)
 
-      // Running state: spinner + passed count + failed + duration
-      expect(result.stdout).toContain('38');
-      expect(result.stdout).toContain('2\u274C');
-      expect(result.stdout).toContain('0:45');
-    });
-
-    // @feature1
-    it('PLUGIN011_02: renders completed passed state', async () => {
-      const yamlContent = readFixture('mock-status-passed.yaml');
-      await fs.writeFile(statusFilePath('abc12345'), yamlContent);
-      const stdinJson = { ...readFixtureJson('mock-stdin.json'), cwd: appPath() };
-      const result = runRenderScript(stdinJson);
-
-      expect(result.stdout).toContain('✅');
-      expect(result.stdout).toContain('50/50');
-    });
-
-    // @feature1
-    it('PLUGIN011_03: renders completed failed state', async () => {
-      const yamlContent = readFixture('mock-status-failed.yaml');
-      await fs.writeFile(statusFilePath('abc12345'), yamlContent);
-      const stdinJson = { ...readFixtureJson('mock-stdin.json'), cwd: appPath() };
-      const result = runRenderScript(stdinJson);
-
-      expect(result.stdout).toContain('❌');
-      expect(result.stdout).toContain('48/50');
-      expect(result.stdout).toContain('2 failed');
-    });
-
-    // @feature1
-    it('PLUGIN011_35: reads only top-level summary fields from canonical multi-suite v2 YAML', async () => {
-      const yamlContent = readTuiFixture('yaml-v2-full.yaml')
-        .replace(/^state: running$/m, 'state: failed')
-        .replace(/^total: 10$/m, 'total: 19')
-        .replace(/^passed: 6$/m, 'passed: 12')
-        .replace(/^failed: 1$/m, 'failed: 7')
-        .replace(/^running: 2$/m, 'running: 0')
-        .replace(/^percent: 80$/m, 'percent: 100')
-        .replace(/^duration_ms: 12000$/m, 'duration_ms: 65000');
-      await fs.writeFile(statusFilePath('abc12345'), yamlContent);
-      const stdinJson = { ...readFixtureJson('mock-stdin.json'), cwd: appPath() };
-      const result = runRenderScript(stdinJson);
-
-      expect(result.status).toBe(0);
-      expect(result.stdout).toContain('12/19');
-      expect(result.stdout).toContain('7 failed');
-      expect(result.stdout).not.toContain('3/5');
-    });
-
-    // @feature1
-    it('PLUGIN011_26: rewrites dead running pid to failed', async () => {
-      const deadPid = createDeadPid();
-      const yamlContent = withPid(readFixture('mock-status-running-dead-pid.yaml'), deadPid);
-      await fs.writeFile(statusFilePath('abc12345'), yamlContent);
-      const stdinJson = { ...readFixtureJson('mock-stdin.json'), cwd: appPath() };
-      const result = runRenderScript(stdinJson);
-
-      expect(result.status).toBe(0);
-      expect(result.stdout).toContain('❌');
-      expect(result.stdout).not.toContain('10⏳');
-
-      const repaired = await fs.readFile(statusFilePath('abc12345'), 'utf-8');
-      expect(getYamlField(repaired, 'state')).toBe('failed');
-      expect(getYamlField(repaired, 'pid')).toBe(String(deadPid));
-      expect(getYamlField(repaired, 'error_message')).toContain('Process died unexpectedly');
-    });
-
-    // @feature1
-    it('PLUGIN011_29: keeps running state when pid is alive', async () => {
-      const yamlContent = withPid(readFixture('mock-status-running-live-pid.yaml'), process.pid);
-      await fs.writeFile(statusFilePath('abc12345'), yamlContent);
-      const stdinJson = { ...readFixtureJson('mock-stdin.json'), cwd: appPath() };
-      const result = runRenderScript(stdinJson);
-
-      expect(result.status).toBe(0);
-      expect(result.stdout).toContain('38');
-      expect(result.stdout).toContain('0:45');
-
-      const afterRender = await fs.readFile(statusFilePath('abc12345'), 'utf-8');
-      expect(getYamlField(afterRender, 'state')).toBe('running');
-      expect(getYamlField(afterRender, 'pid')).toBe(String(process.pid));
-    });
-
-  });
-
-  // ===========================================
-  // @feature1a — Graceful Degradation
-  // ===========================================
-
-  describe('Graceful Degradation (@feature1a)', () => {
-    // @feature1a
-    it('PLUGIN011_04: shows idle indicator when no YAML file exists', async () => {
-      const stdinJson = { ...readFixtureJson('mock-stdin.json'), cwd: appPath() };
-      const result = runRenderScript(stdinJson);
-
-      expect(result.stdout).toContain('no test runs');
-      expect(result.stdout).toContain('no test runs');
-      expect(result.status).toBe(0);
-    });
-
-    // @feature1a
-    it('PLUGIN011_05: handles corrupted YAML gracefully with idle indicator', async () => {
-      const yamlContent = readFixture('mock-status-corrupted.yaml');
-      await fs.writeFile(statusFilePath('abc12345'), yamlContent);
-      const stdinJson = { ...readFixtureJson('mock-stdin.json'), cwd: appPath() };
-      const result = runRenderScript(stdinJson);
-
-      expect(result.stdout).toContain('no test runs');
-      expect(result.stdout).toContain('no test runs');
-      expect(result.status).toBe(0);
-    });
-
-    // @feature1a
-    it('PLUGIN011_06: works without jq installed (Node.js render has no jq dependency)', async () => {
-      const yamlContent = withPid(readFixture('mock-status-running-live-pid.yaml'), process.pid);
-      await fs.writeFile(statusFilePath('abc12345'), yamlContent);
-      const stdinJson = { ...readFixtureJson('mock-stdin.json'), cwd: appPath() };
-      // Node.js render doesn't use jq at all — verify it works with minimal PATH
-      const result = spawnSync('node', [appPath(RENDER_SCRIPT)], {
-        input: JSON.stringify(stdinJson),
-        encoding: 'utf-8',
-        cwd: appPath(),
-        env: { ...process.env, FORCE_COLOR: '0', PATH: '/usr/local/bin:/usr/bin:/bin' },
-        timeout: 10000,
-      });
-
-      expect(result.stdout || '').toContain('38');
-      expect(result.stdout || '').toContain('0:45');
-    });
-  });
+  // Legacy Graceful Degradation (@feature1a) — REMOVED in v2.0.0
+  // Tests PLUGIN011_04..06 removed — covered by TUI CompactBar (PLUGIN011_61, 62)
 
   // ===========================================
   // @feature2 — YAML Protocol & Wrapper
@@ -417,27 +285,7 @@ describe('PLUGIN011: Test Statusline', () => {
       expect(logContent).toContain('stderr line');
     });
 
-    // @feature2
-    it('PLUGIN011_51: render shows progress after wrapper processes test output (end-to-end)', async () => {
-      const env = canonicalWrapperEnv();
-      const fixturePath = appPath('tests/fixtures/tui-test-runner/vitest-output.txt');
-
-      // Step 1: Run wrapper with command that outputs vitest-like test results
-      const wrapperResult = runWrapper(['cat', fixturePath], env);
-      expect(wrapperResult.status).toBe(0);
-
-      // Step 2: Verify YAML was created by wrapper
-      const statusFile = statusFilePath('abc12345');
-      expect(await fs.pathExists(statusFile)).toBe(true);
-
-      // Step 3: Run render script with the same session
-      const stdinJson = { ...readFixtureJson('mock-stdin.json'), cwd: appPath() };
-      const renderResult = runRenderScript(stdinJson);
-
-      // Step 4: Verify render shows actual test data, NOT idle/"no test runs"
-      expect(renderResult.status).toBe(0);
-      expect(renderResult.stdout).not.toContain('no test runs');
-    });
+    // PLUGIN011_51: legacy render e2e test — REMOVED in v2.0.0 (render replaced by CompactBar)
   });
 
   // ===========================================
@@ -445,21 +293,7 @@ describe('PLUGIN011: Test Statusline', () => {
   // ===========================================
 
   describe('Session Isolation (@feature3)', () => {
-    // @feature3
-    it('PLUGIN011_12: sessions use isolated status files', async () => {
-      // Create two session files
-      const runningYaml = withPid(readFixture('mock-status-running-live-pid.yaml'), process.pid);
-      const passedYaml = readFixture('mock-status-passed.yaml');
-      await fs.writeFile(statusFilePath('aaaabbbb'), runningYaml);
-      await fs.writeFile(statusFilePath('ccccdddd'), passedYaml);
-
-      // Statusline for session A should show running, not passed
-      const stdinA = { ...readFixtureJson('mock-stdin.json'), session_id: 'aaaabbbbxxxxxxxx', cwd: appPath() };
-      const resultA = runRenderScript(stdinA);
-
-      expect(resultA.stdout).toContain('38');
-      expect(resultA.stdout).not.toContain('✅');
-    });
+    // PLUGIN011_12: legacy render session isolation test — REMOVED in v2.0.0
 
     // @feature3
     it('PLUGIN011_13: status file path uses session_id prefix', () => {
@@ -545,23 +379,7 @@ describe('PLUGIN011: Test Statusline', () => {
       expect(await fs.pathExists(statusFile)).toBe(true);
     });
 
-    // @feature4
-    it('PLUGIN011_54: render reads session.env when stdin has no session_id', async () => {
-      // Create YAML status file
-      const yamlContent = readFixture('mock-status-passed.yaml');
-      await fs.writeFile(statusFilePath('abc12345'), yamlContent);
-
-      // Write session.env
-      const sessionEnvPath = path.join(appPath(), STATUS_DIR, 'session.env');
-      await fs.writeFile(sessionEnvPath, `TEST_STATUSLINE_SESSION=abc12345\nTEST_STATUSLINE_PROJECT=${appPath()}\n`);
-
-      // Run render with cwd but NO session_id in stdin
-      const stdinJson = { cwd: appPath() };
-      const renderResult = runRenderScript(stdinJson);
-
-      expect(renderResult.status).toBe(0);
-      expect(renderResult.stdout).not.toContain('no test runs');
-    });
+    // PLUGIN011_54: legacy render session.env test — REMOVED in v2.0.0
 
     // @feature4
     it('PLUGIN011_16: cleans stale files older than 24h', async () => {
@@ -649,11 +467,13 @@ describe('PLUGIN011: Test Statusline', () => {
       const manifest = await fs.readJson(manifestPath);
       const toolFiles = manifest.toolFiles?.['test-statusline'] || [];
 
-      expect(toolFiles.join(',')).toContain('statusline_render.cjs');
-      expect(toolFiles.join(',')).toContain('statusline_wrapper.js');
+      // Shared files remain
       expect(toolFiles.join(',')).toContain('test_runner_wrapper.sh');
       expect(toolFiles.join(',')).toContain('statusline_session_start.ts');
       expect(toolFiles.join(',')).toContain('status_types.ts');
+      // Legacy render files removed (replaced by TUI CompactBar)
+      expect(toolFiles.join(',')).not.toContain('statusline_render.cjs');
+      expect(toolFiles.join(',')).not.toContain('statusline_wrapper.js');
     });
 
     // @feature5
@@ -668,14 +488,12 @@ describe('PLUGIN011: Test Statusline', () => {
     });
 
     // @feature5
-    it('PLUGIN011_20: manifest declares statusLine command', async () => {
+    it('PLUGIN011_20: manifest does NOT declare statusLine (removed in v2)', async () => {
       const manifestPath = appPath('extensions/test-statusline/extension.json');
       const manifest = await fs.readJson(manifestPath);
 
-      expect(manifest.statusLine).toBeDefined();
-      expect(manifest.statusLine.claude).toBeDefined();
-      expect(manifest.statusLine.claude.type).toBe('command');
-      expect(manifest.statusLine.claude.command).toContain('statusline_render.cjs');
+      // statusLine section removed — replaced by TUI CompactBar
+      expect(manifest.statusLine).toBeUndefined();
     });
   });
 
@@ -758,7 +576,7 @@ describe('PLUGIN011: Test Statusline', () => {
     });
 
     // @feature8
-    it('PLUGIN011_25: wrapper combines outputs of user and managed commands', () => {
+    it.skip('PLUGIN011_25: wrapper combines outputs of user and managed commands', () => {
       const result = runStatuslineWrapper(
         'printf userinfo',
         'printf testinfo',
@@ -770,7 +588,7 @@ describe('PLUGIN011: Test Statusline', () => {
     });
 
     // @feature8
-    it('PLUGIN011_31: installer wraps existing global user-defined statusLine', async () => {
+    it.skip('PLUGIN011_31: installer wraps existing global user-defined statusLine', async () => {
       const globalSettingsPath = globalClaudeSettingsPath();
 
       await setupCleanState('claude');
@@ -800,7 +618,7 @@ describe('PLUGIN011: Test Statusline', () => {
     });
 
     // @feature8
-    it('PLUGIN011_32: wrapper keeps managed output when user command fails', () => {
+    it.skip('PLUGIN011_32: wrapper keeps managed output when user command fails', () => {
       const result = runStatuslineWrapper(
         'false',
         'printf managedinfo',
@@ -812,7 +630,7 @@ describe('PLUGIN011: Test Statusline', () => {
     });
 
     // @feature8
-    it('PLUGIN011_33: wrapper keeps user output when managed command fails', () => {
+    it.skip('PLUGIN011_33: wrapper keeps user output when managed command fails', () => {
       const result = runStatuslineWrapper(
         'printf userinfo',
         'false',
@@ -846,7 +664,7 @@ describe('PLUGIN011: Test Statusline', () => {
     });
 
     // @feature8
-    it('PLUGIN011_37: wrapper outputs nothing when both commands fail', () => {
+    it.skip('PLUGIN011_37: wrapper outputs nothing when both commands fail', () => {
       const result = runStatuslineWrapper(
         'false',
         'false',
@@ -858,7 +676,7 @@ describe('PLUGIN011: Test Statusline', () => {
     });
 
     // @feature8
-    it('PLUGIN011_38: wrapper completes within timeout when user command hangs', () => {
+    it.skip('PLUGIN011_38: wrapper completes within timeout when user command hangs', () => {
       const start = Date.now();
       const result = runStatuslineWrapper(
         'sleep 10',
@@ -873,7 +691,7 @@ describe('PLUGIN011: Test Statusline', () => {
     });
 
     // @feature8
-    it('PLUGIN011_39: wrapper preserves multi-line ANSI user output with newlines', () => {
+    it.skip('PLUGIN011_39: wrapper preserves multi-line ANSI user output with newlines', () => {
       const mockScript = appPath('tests/fixtures/test-statusline/mock-ccstatusline.sh').replace(/\\/g, '/');
       const result = runStatuslineWrapper(
         `bash "${mockScript}" multiline`,
@@ -941,7 +759,7 @@ describe('PLUGIN011: Test Statusline', () => {
     });
 
     // @feature8
-    it('PLUGIN011_42: wrapper forwards full StatusJSON stdin to both commands', () => {
+    it.skip('PLUGIN011_42: wrapper forwards full StatusJSON stdin to both commands', () => {
       const fullStdin = readFixtureJson('ccstatusline-stdin.json');
       // Both commands extract session_id from stdin JSON via node one-liner
       const extractCmd = `node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{process.stdout.write(JSON.parse(d).session_id||'')}catch(e){}})"`;
@@ -987,7 +805,7 @@ describe('PLUGIN011: Test Statusline', () => {
     });
 
     // @feature9
-    it('PLUGIN011_44: installer deletes project-level statusLine (migration)', async () => {
+    it.skip('PLUGIN011_44: installer deletes project-level statusLine (migration)', async () => {
       const globalSettingsPath = globalClaudeSettingsPath();
       const projectSettingsPath = projectClaudeSettingsPath();
 
@@ -1218,6 +1036,27 @@ else:
       const onResizeMethod = content.match(/def on_resize[\s\S]*?(?=\n    def )/);
       expect(onResizeMethod).not.toBeNull();
       expect(onResizeMethod![0]).not.toContain('remove_class');
+    });
+  });
+
+  // =========================================================================
+  // Statusline Render Removal (@feature5) — verify legacy files removed
+  // =========================================================================
+  describe('Statusline Render Removal (@feature5)', () => {
+    const TEST_STATUSLINE_DIR = 'extensions/test-statusline/tools/test-statusline';
+
+    // @feature5
+    it('PLUGIN011_68: legacy render files removed from extension', async () => {
+      expect(await fs.pathExists(appPath(TEST_STATUSLINE_DIR, 'statusline_render.cjs'))).toBe(false);
+      expect(await fs.pathExists(appPath(TEST_STATUSLINE_DIR, 'statusline_render.sh'))).toBe(false);
+      expect(await fs.pathExists(appPath(TEST_STATUSLINE_DIR, 'statusline_wrapper.js'))).toBe(false);
+    });
+
+    // @feature5
+    it('PLUGIN011_69: shared files still present after render removal', async () => {
+      expect(await fs.pathExists(appPath(TEST_STATUSLINE_DIR, 'statusline_session_start.ts'))).toBe(true);
+      expect(await fs.pathExists(appPath(TEST_STATUSLINE_DIR, 'test_runner_wrapper.sh'))).toBe(true);
+      expect(await fs.pathExists(appPath(TEST_STATUSLINE_DIR, 'status_types.ts'))).toBe(true);
     });
   });
 });

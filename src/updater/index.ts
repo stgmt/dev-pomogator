@@ -16,7 +16,7 @@ import { RULES_SUBFOLDER, TOOLS_DIR, SKILLS_DIR } from '../constants.js';
 import { resolveHookToolPaths, replaceNpxTsxWithPortable, ensureExecutableShellScripts } from '../installer/shared.js';
 import { detectMangledArtifacts } from '../utils/msys.js';
 import { writeJsonAtomic, readJsonSafe } from '../utils/atomic-json.js';
-import { writeGlobalStatusLine } from '../utils/statusline.js';
+import { writeGlobalStatusLine, isManagedStatusLineCommand } from '../utils/statusline.js';
 
 interface UpdateOptions {
   force?: boolean;
@@ -510,6 +510,24 @@ async function updateClaudeStatusLineGlobal(
   await writeGlobalStatusLine(statusLineConfig);
 }
 
+/**
+ * Remove managed statusLine from global ~/.claude/settings.json.
+ * Only removes if the current statusLine is a dev-pomogator managed command.
+ * Preserves user-defined statusLines.
+ */
+async function cleanupLegacyStatusLine(): Promise<void> {
+  const settingsPath = path.join(os.homedir(), '.claude', 'settings.json');
+  const settings = await readJsonSafe<Record<string, unknown>>(settingsPath, {});
+  const statusLine = settings.statusLine as { type?: string; command?: string } | undefined;
+  if (!statusLine?.command) return;
+
+  if (isManagedStatusLineCommand(statusLine.command)) {
+    delete settings.statusLine;
+    await writeJsonAtomic(settingsPath, settings);
+    console.log('  ✓ Removed legacy statusLine from global settings');
+  }
+}
+
 export async function checkUpdate(options: UpdateOptions = {}): Promise<boolean> {
   const { force = false, silent = false, platform } = options;
   
@@ -677,6 +695,9 @@ export async function checkUpdate(options: UpdateOptions = {}): Promise<boolean>
         // 7. Update global statusLine for Claude platform extensions (once per extension, not per-project)
         if (installed.platform === 'claude' && remote.statusLine?.claude) {
           await updateClaudeStatusLineGlobal(remote.statusLine.claude);
+        } else if (installed.platform === 'claude' && !remote.statusLine?.claude) {
+          // Extension no longer provides statusLine — clean up managed entry from global settings
+          await cleanupLegacyStatusLine();
         }
 
         // 8. Обновить версию в config

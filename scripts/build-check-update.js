@@ -38,8 +38,4 @@ import { copyFileSync } from 'fs';
 copyFileSync('src/scripts/tsx-runner.js', 'dist/tsx-runner.js');
 console.log('Copied dist/tsx-runner.js');
 
-// Copy statusline scripts to dist/ (plain CJS/JS, no bundling needed)
-copyFileSync('extensions/test-statusline/tools/test-statusline/statusline_render.cjs', 'dist/statusline_render.cjs');
-console.log('Copied dist/statusline_render.cjs');
-copyFileSync('extensions/test-statusline/tools/test-statusline/statusline_wrapper.js', 'dist/statusline_wrapper.js');
-console.log('Copied dist/statusline_wrapper.js');
+// Legacy statusline render removed in v2.0.0 — no longer copied to dist/
