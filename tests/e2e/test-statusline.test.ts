@@ -1136,4 +1136,39 @@ else:
       expect(output).toContain('no test runs');
     });
   });
+
+  // =========================================================================
+  // Toggle Compact/Full (@feature2) — CSS + keybinding verification
+  // =========================================================================
+  describe('Toggle Compact/Full (@feature2)', () => {
+    const APP_PY = path.join(appPath(), 'extensions/tui-test-runner/tools/tui-test-runner/tui/app.py');
+
+    // @feature2
+    it('PLUGIN011_63: app.py has CSS rules for compact mode toggle', async () => {
+      const content = await fs.readFile(APP_PY, 'utf-8');
+      // Compact mode CSS: hide TabbedContent, show CompactBar
+      expect(content).toContain('Screen.compact TabbedContent');
+      expect(content).toContain('display: none');
+      expect(content).toContain('Screen.compact CompactBar');
+      expect(content).toContain('display: block');
+    });
+
+    // @feature2
+    it('PLUGIN011_64: app.py has M keybinding for toggle_compact action', async () => {
+      const content = await fs.readFile(APP_PY, 'utf-8');
+      expect(content).toContain('"m"');
+      expect(content).toContain('toggle_compact');
+      expect(content).toContain('action_toggle_compact');
+    });
+
+    // @feature2
+    it('PLUGIN011_64b: toggle_compact uses add_class/remove_class (not toggle_class)', async () => {
+      const content = await fs.readFile(APP_PY, 'utf-8');
+      expect(content).toContain('has_class("compact")');
+      expect(content).toContain('remove_class("compact")');
+      expect(content).toContain('add_class("compact")');
+      // toggle_class doesn't exist in Textual — must NOT be used
+      expect(content).not.toContain('toggle_class');
+    });
+  });
 });

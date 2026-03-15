@@ -41,10 +41,18 @@ class TestRunnerApp(App):
         color: $text;
         padding: 0 1;
     }
+    /* Compact mode: hide tabs, show compact bar */
+    Screen.compact TabbedContent {
+        display: none;
+    }
+    Screen.compact CompactBar {
+        display: block;
+    }
     """
 
     BINDINGS = [
         Binding("q", "quit", "Quit"),
+        Binding("m", "toggle_compact", "Compact", show=True),
         Binding("1", "switch_tab('tests')", "Tests", show=False),
         Binding("2", "switch_tab('logs')", "Logs", show=False),
         Binding("3", "switch_tab('monitoring')", "Monitoring", show=False),
@@ -151,12 +159,17 @@ class TestRunnerApp(App):
         self._log_reader = LogReader(str(resolved_path))
 
     def watch_status(self, new_status: TestStatus) -> None:
-        """React to status changes — update all tabs."""
+        """React to status changes — update all tabs + compact bar."""
         for tab_cls in (TestsTab, MonitoringTab, AnalysisTab):
             try:
                 self.query_one(tab_cls).update_status(new_status)
             except NoMatches:
                 pass
+        # Refresh CompactBar when status changes
+        try:
+            self.query_one(CompactBar).refresh()
+        except NoMatches:
+            pass
 
     def action_switch_tab(self, tab_id: str) -> None:
         """Switch to tab by id (keyboard 1-4)."""
@@ -170,6 +183,13 @@ class TestRunnerApp(App):
             tests_tab.focus_filter()
         except NoMatches:
             pass
+
+    def action_toggle_compact(self) -> None:
+        """Toggle between compact and full mode (@feature2)."""
+        if self.screen.has_class("compact"):
+            self.screen.remove_class("compact")
+        else:
+            self.screen.add_class("compact")
 
     def action_screenshot(self) -> None:
         """Export screenshot as SVG file."""
