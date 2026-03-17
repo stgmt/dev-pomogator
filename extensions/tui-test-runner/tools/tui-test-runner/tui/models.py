@@ -16,6 +16,17 @@ class TestState(str, Enum):
     COMPLETED = "completed"
 
 
+# Plain emoji icons for each state (single source of truth)
+STATE_ICONS = {
+    TestState.IDLE: "⏸",
+    TestState.RUNNING: "🔄",
+    TestState.PASSED: "✅",
+    TestState.FAILED: "❌",
+    TestState.ERROR: "⚠️",
+    TestState.COMPLETED: "✅",
+}
+
+
 class TestResultStatus(str, Enum):
     PENDING = "pending"
     RUNNING = "running"
@@ -84,8 +95,10 @@ def _require_mapping(data: Any) -> dict[str, Any]:
 
 def _require_str(data: dict[str, Any], field: str) -> str:
     value = data.get(field)
+    if value is None:
+        raise ValueError(f"missing '{field}'")
     if not isinstance(value, str):
-        raise ValueError(f"missing or invalid '{field}'")
+        return str(value)  # PyYAML auto-parses ISO timestamps as datetime
     return value
 
 

@@ -62,17 +62,12 @@
       ".claude/skills/run-tests/SKILL.md"
     ]
   },
-  "hooks": [
-    {
-      "event": "SessionStart",
-      "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner.js'))\" -- \".dev-pomogator/tools/tui-test-runner/tui_session_start.ts\""
-    },
-    {
-      "event": "PreToolUse",
-      "matcher": "Bash",
-      "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner.js'))\" -- \".dev-pomogator/tools/tui-test-runner/test_guard.ts\""
+  "hooks": {
+    "claude": {
+      "SessionStart": "npx tsx .dev-pomogator/tools/tui-test-runner/tui_session_start.ts",
+      "PreToolUse": { "matcher": "Bash", "command": "npx tsx .dev-pomogator/tools/tui-test-runner/test_guard.ts" }
     }
-  ],
+  },
   "envRequirements": [
     {
       "name": "TEST_STATUSLINE_ENABLED",

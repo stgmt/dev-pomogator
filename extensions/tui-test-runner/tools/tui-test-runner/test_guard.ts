@@ -90,8 +90,11 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
-  // Bypass env var
+  // Bypass env var (own process or in command string)
   if (process.env.TEST_GUARD_BYPASS === '1') {
+    process.exit(0);
+  }
+  if (command && /TEST_GUARD_BYPASS\s*=\s*1/.test(command)) {
     process.exit(0);
   }
 

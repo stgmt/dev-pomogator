@@ -123,6 +123,48 @@ Feature: PLUGIN012_TUI_Test_Runner
     When tui_session_start hook receives empty stdin
     Then hook should exit with code 0
 
+  # @feature10
+  Scenario: Dotnet adapter parses verbose multi-line summary with leading whitespace
+    Given a dotnet test verbose output with leading whitespace in summary lines
+    When dotnet_adapter processes each line
+    Then adapter should emit test_pass events for passed tests
+    And adapter should emit test_fail events for failed tests
+    And adapter should emit summary event with correct total, passed, failed, skipped counts
+
+  # @feature10
+  Scenario: Dotnet adapter parses minimal single-line summary
+    Given a dotnet test minimal output with single-line summary format
+    When dotnet_adapter processes each line
+    Then adapter should emit summary event with correct total, passed, failed, skipped counts
+
+  # @feature11
+  Scenario: YamlWriter freezes duration after finalize
+    Given a YamlWriter instance with test events processed
+    When finalize is called with exit code 0
+    And write is called again after finalize
+    Then YAML duration_ms should remain unchanged from finalize time
+    And YAML state should remain "passed"
+
+  # @feature12
+  Scenario: Discovery total provides real progress during running
+    Given a YamlWriter with discoveryTotal set to 100
+    And 1 test has passed during running
+    When YAML status is read
+    Then total should be 100 and percent should be 1
+
+  # @feature12
+  Scenario: No discovery total shows zero total during running
+    Given a YamlWriter without discoveryTotal
+    And 1 test has passed during running
+    When YAML status is read
+    Then total should be 0 and percent should be 0
+
+  # @feature10
+  Scenario: Regression — all adapters emit correct events after dotnet regex fix
+    Given inline test output for jest, pytest, dotnet, cargo, and go adapters
+    When each adapter processes its respective output
+    Then each adapter should emit the expected number of test_pass and test_fail events
+
   # @feature9
   Scenario: Launcher detects Python availability
     Given Python 3.9+ is installed

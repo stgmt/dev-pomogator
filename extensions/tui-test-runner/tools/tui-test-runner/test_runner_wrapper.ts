@@ -109,6 +109,61 @@ function resolveFramework(explicitFramework: TestFramework | undefined, projectR
   return detected;
 }
 
+const DISCOVERY_COMMANDS: Partial<Record<TestFramework, { cmd: string[]; count: (out: string) => number }>> = {
+  vitest: {
+    cmd: ['npx', 'vitest', 'list'],
+    count: (out) => out.split(/\r?\n/).filter((l) => l.trim() && !l.startsWith(' ')).length,
+  },
+  jest: {
+    cmd: ['npx', 'jest', '--listTests'],
+    count: (out) => out.split(/\r?\n/).filter((l) => l.trim()).length,
+  },
+  pytest: {
+    cmd: ['python3', '-m', 'pytest', '--collect-only', '-q'],
+    count: (out) => out.split(/\r?\n/).filter((l) => l.includes('::')).length,
+  },
+  dotnet: {
+    cmd: ['dotnet', 'test', '--list-tests', '-v=q'],
+    count: (out) => out.split(/\r?\n/).filter((l) => l.startsWith('    ')).length,
+  },
+  rust: {
+    cmd: ['cargo', 'test', '--', '--list'],
+    count: (out) => out.split(/\r?\n/).filter((l) => l.includes(': test')).length,
+  },
+  go: {
+    cmd: ['go', 'test', '-list', '.*', './...'],
+    count: (out) => out.split(/\r?\n/).filter((l) => l.trim() && !l.startsWith('ok')).length,
+  },
+};
+
+function discoverTestCount(framework: TestFramework, projectRoot: string): number {
+  const config = DISCOVERY_COMMANDS[framework];
+  if (!config) return 0;
+
+  try {
+    const result = spawnSync(config.cmd[0], config.cmd.slice(1), {
+      cwd: projectRoot,
+      encoding: 'utf-8',
+      timeout: 30000,
+      env: { ...process.env, FORCE_COLOR: '0', NO_COLOR: '1' },
+    });
+    if (result.status !== 0 || !result.stdout) {
+      if (result.stderr) {
+        process.stderr.write(`[discovery] ${framework}: ${result.stderr.slice(0, 200)}\n`);
+      }
+      return 0;
+    }
+    const count = config.count(result.stdout);
+    if (count > 0) {
+      process.stderr.write(`[discovery] ${framework}: ${count} tests found\n`);
+    }
+    return count;
+  } catch (err) {
+    process.stderr.write(`[discovery] ${framework}: ${err instanceof Error ? err.message : String(err)}\n`);
+    return 0;
+  }
+}
+
 function passthrough(commandArgs: string[], childEnv: Record<string, string>): number {
   const result = spawnSync(commandArgs[0], commandArgs.slice(1), {
     stdio: 'inherit',
@@ -148,7 +203,12 @@ async function main(): Promise<number> {
   fs.mkdirSync(statusDir, { recursive: true });
   fs.writeFileSync(logFile, '', 'utf-8');
 
+  const discoveryTotal = discoverTestCount(framework, projectRoot);
+
   const writer = new YamlWriter(statusFile, prefix, framework, logFileForYaml, 1000, process.pid);
+  if (discoveryTotal > 0) {
+    writer.setDiscoveryTotal(discoveryTotal);
+  }
   writer.write();
 
   let adapter;

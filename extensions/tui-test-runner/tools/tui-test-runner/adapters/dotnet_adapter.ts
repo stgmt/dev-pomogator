@@ -9,7 +9,9 @@ import type { TestEvent } from './types.js';
 const RE_TEST_PASSED = /^\s*Passed\s+(.+?)(?:\s+\[(\d+)\s*(?:ms|s)\])?$/;
 const RE_TEST_FAILED = /^\s*Failed\s+(.+?)(?:\s+\[(\d+)\s*(?:ms|s)\])?$/;
 const RE_TEST_SKIPPED = /^\s*Skipped\s+(.+)$/;
-const RE_SUMMARY = /^(Total tests|Passed|Failed|Skipped):\s*(\d+)/;
+const RE_SUMMARY = /^\s*(Total tests|Passed|Failed|Skipped):\s*(\d+)/;
+const RE_MINIMAL_SUMMARY =
+  /^(Passed|Failed)!\s+-\s+Failed:\s*(\d+),\s*Passed:\s*(\d+),\s*Skipped:\s*(\d+),\s*Total:\s*(\d+)/;
 const RE_TEST_RUN = /^Test Run (Successful|Failed)/;
 const RE_DURATION = /Total time:\s*([\d.]+)\s*(Seconds|Minutes)/i;
 const RE_ERROR = /^\s+(Expected|Assert|Exception|Error|at\s)/;
@@ -58,6 +60,22 @@ export class DotnetAdapter extends AdapterBase {
       if (key === 'passed') this.summaryStats.passed = value;
       if (key === 'failed') this.summaryStats.failed = value;
       if (key === 'skipped') this.summaryStats.skipped = value;
+      return this.event('summary', {
+        summary: {
+          total: this.summaryStats.total,
+          passed: this.summaryStats.passed,
+          failed: this.summaryStats.failed,
+          skipped: this.summaryStats.skipped,
+        },
+      });
+    }
+
+    const minimalMatch = line.match(RE_MINIMAL_SUMMARY);
+    if (minimalMatch) {
+      this.summaryStats.failed = parseInt(minimalMatch[2], 10);
+      this.summaryStats.passed = parseInt(minimalMatch[3], 10);
+      this.summaryStats.skipped = parseInt(minimalMatch[4], 10);
+      this.summaryStats.total = parseInt(minimalMatch[5], 10);
       return this.event('summary', {
         summary: {
           total: this.summaryStats.total,

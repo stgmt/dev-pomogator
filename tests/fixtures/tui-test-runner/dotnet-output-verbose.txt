@@ -1,0 +1,19 @@
+Test run for C:\src\Tests.dll (.NETCoreApp,Version=v8.0)
+Microsoft (R) Test Execution Command Line Tool Version 17.8.0 (x64)
+Copyright (c) Microsoft Corporation.  All rights reserved.
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+
+  Passed MyApp.Tests.AuthTests.ShouldLogin [42 ms]
+  Passed MyApp.Tests.AuthTests.ShouldRefreshToken [18 ms]
+  Passed MyApp.Tests.AuthTests.ShouldHandleBasicAuth [5 ms]
+  Failed MyApp.Tests.AuthTests.ShouldRejectExpiredToken [10 ms]
+  Skipped MyApp.Tests.AuthTests.ShouldHandleAdminRole
+
+Test Run Failed.
+Total tests: 5
+     Passed:  3
+     Failed:  1
+    Skipped:  1
+ Total time: 1.23 Seconds

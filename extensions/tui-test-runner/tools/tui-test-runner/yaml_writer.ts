@@ -102,6 +102,8 @@ export class YamlWriter {
   private readonly throttleMs: number;
   private lastWriteTime = 0;
   private reportedSummary: TestSummary = {};
+  private _finalized = false;
+  private _discoveryTotal = 0;
 
   constructor(
     private readonly statusFile: string,
@@ -140,6 +142,10 @@ export class YamlWriter {
         },
       ],
     };
+  }
+
+  setDiscoveryTotal(count: number): void {
+    this._discoveryTotal = count;
   }
 
   processEvent(event: TestEvent): void {
@@ -181,6 +187,7 @@ export class YamlWriter {
   }
 
   writeIfNeeded(): boolean {
+    if (this._finalized) return false;
     const now = Date.now();
     if (now - this.lastWriteTime < this.throttleMs) {
       return false;
@@ -191,6 +198,7 @@ export class YamlWriter {
   }
 
   write(): void {
+    if (this._finalized) return;
     this.updateAggregates();
     this.status.updated_at = new Date().toISOString();
     this.updatePhaseDuration();
@@ -205,6 +213,7 @@ export class YamlWriter {
   }
 
   finalize(exitCode: number): void {
+    this._finalized = false; // temporarily allow the final write
     this.status.state = exitCode === 0 ? 'passed' : 'failed';
     if (exitCode !== 0 && !this.status.error_message) {
       this.status.error_message = `Test command exited with code ${exitCode}`;
@@ -215,6 +224,7 @@ export class YamlWriter {
     }
 
     this.write();
+    this._finalized = true; // lock — no more writes after finalize
   }
 
   private ensureSuite(name: string, file?: string): SuiteRuntime {
@@ -336,14 +346,24 @@ export class YamlWriter {
       discoveredRunning += runtime.suite.tests.filter((test) => test.status === 'running').length;
     }
 
-    const total = Math.max(discoveredTotal, this.reportedSummary.total ?? 0);
+    const reportedTotal = this.reportedSummary.total ?? 0;
+    const knownTotal = Math.max(this._discoveryTotal, reportedTotal);
     const passed = Math.max(discoveredPassed, this.reportedSummary.passed ?? 0);
     const failed = Math.max(discoveredFailed, this.reportedSummary.failed ?? 0);
     const skipped = Math.max(discoveredSkipped, this.reportedSummary.skipped ?? 0);
     const completed = passed + failed + skipped;
 
+    // During running: use discovery/reported total if available, otherwise 0 (unknown)
+    // After completion: use max of discovered and known
+    let total: number;
+    if (this.status.state === 'running') {
+      total = knownTotal > 0 ? Math.max(discoveredTotal, knownTotal) : 0;
+    } else {
+      total = Math.max(discoveredTotal, knownTotal);
+    }
+
     let running = discoveredRunning;
-    if (this.status.state === 'running' && (this.reportedSummary.total ?? 0) > discoveredTotal) {
+    if (this.status.state === 'running' && knownTotal > discoveredTotal) {
       running = Math.max(running, total - completed);
     }
 
@@ -357,7 +377,7 @@ export class YamlWriter {
       if (total === 0) {
         this.status.percent = 0;
       } else {
-        this.status.percent = Math.round((completed * 100) / total);
+        this.status.percent = Math.min(Math.round((completed * 100) / total), 99);
       }
     } else {
       this.status.percent = 100;

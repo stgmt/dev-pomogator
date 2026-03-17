@@ -232,6 +232,7 @@ describe('PLUGIN012: TUI Test Runner', () => {
       const logPath = String.raw`C:\tmp\test-output.log`;
       const suiteFile = String.raw`C:\repo\tests\auth.test.ts`;
       const writer = new YamlWriter(statusPath, 'abc12345', 'vitest', logPath, 0, 4321);
+      writer.setDiscoveryTotal(2); // simulate pre-discovery found 2 tests
 
       writer.processEvent({
         type: 'suite_start',
@@ -285,6 +286,87 @@ describe('PLUGIN012: TUI Test Runner', () => {
       expect(finalStatus.suites[0].file).toBe(suiteFile);
       expect(finalStatus.suites[0].tests[0].stack).toContain(suiteFile);
       expect(finalStatus.suites[0].tests[0].error).toBe('Assertion "path" failed');
+    });
+
+    it('YamlWriter.write() is no-op after finalize() — duration frozen', async () => {
+      const { YamlWriter } = await importAdapterModule(
+        'extensions/tui-test-runner/tools/tui-test-runner/yaml_writer.ts',
+      );
+
+      const statusPath = appPath(STATUS_DIR, 'status.frozen.yaml');
+      const writer = new YamlWriter(statusPath, 'frozen01', 'vitest', 'log.txt', 0, 9999);
+
+      writer.processEvent({
+        type: 'test_pass',
+        suiteName: 'suite',
+        testName: 'test1',
+        duration: 100,
+        timestamp: new Date().toISOString(),
+      });
+      writer.finalize(0);
+
+      const afterFinalize = parseYaml(await fs.readFile(statusPath, 'utf-8')) as Record<string, any>;
+      const frozenDuration = afterFinalize.duration_ms;
+      const frozenState = afterFinalize.state;
+
+      expect(frozenState).toBe('passed');
+      expect(frozenDuration).toBeGreaterThanOrEqual(0);
+
+      // Attempt writes after finalize — should be no-ops
+      writer.write();
+      writer.writeIfNeeded();
+
+      const afterExtraWrites = parseYaml(await fs.readFile(statusPath, 'utf-8')) as Record<string, any>;
+      expect(afterExtraWrites.duration_ms).toBe(frozenDuration);
+      expect(afterExtraWrites.state).toBe('passed');
+    });
+
+    it('YamlWriter uses discoveryTotal for real progress during running', async () => {
+      const { YamlWriter } = await importAdapterModule(
+        'extensions/tui-test-runner/tools/tui-test-runner/yaml_writer.ts',
+      );
+
+      const statusPath = appPath(STATUS_DIR, 'status.discovery.yaml');
+      const writer = new YamlWriter(statusPath, 'discov01', 'vitest', 'log.txt', 0, 9999);
+      writer.setDiscoveryTotal(100);
+      writer.processEvent({
+        type: 'test_pass',
+        suiteName: 'suite',
+        testName: 'test1',
+        duration: 10,
+        timestamp: new Date().toISOString(),
+      });
+      writer.write();
+
+      const running = parseYaml(await fs.readFile(statusPath, 'utf-8')) as Record<string, any>;
+      // total should be 100 (from discovery), not 1 (from discovered)
+      expect(running.total).toBe(100);
+      expect(running.passed).toBe(1);
+      expect(running.percent).toBe(1); // 1/100 = 1%
+      expect(running.state).toBe('running');
+    });
+
+    it('YamlWriter uses total=0 during running without discovery or summary', async () => {
+      const { YamlWriter } = await importAdapterModule(
+        'extensions/tui-test-runner/tools/tui-test-runner/yaml_writer.ts',
+      );
+
+      const statusPath = appPath(STATUS_DIR, 'status.nodiscovery.yaml');
+      const writer = new YamlWriter(statusPath, 'nodisc01', 'vitest', 'log.txt', 0, 9999);
+      // No setDiscoveryTotal() call
+      writer.processEvent({
+        type: 'test_pass',
+        suiteName: 'suite',
+        testName: 'test1',
+        duration: 10,
+        timestamp: new Date().toISOString(),
+      });
+      writer.write();
+
+      const running = parseYaml(await fs.readFile(statusPath, 'utf-8')) as Record<string, any>;
+      // total should be 0 (unknown), not 1 (discovered)
+      expect(running.total).toBe(0);
+      expect(running.percent).toBe(0);
     });
   });
 
@@ -454,6 +536,130 @@ describe('PLUGIN012: TUI Test Runner', () => {
       expect(cargoEvents.some((event: any) => event.type === 'test_fail')).toBe(true);
       expect(goEvents.some((event: any) => event.type === 'test_start')).toBe(true);
       expect(goEvents.some((event: any) => event.type === 'test_fail')).toBe(true);
+    });
+
+    it('Dotnet adapter parses verbose output with leading-whitespace summary', async () => {
+      const { DotnetAdapter } = await importAdapterModule(
+        'extensions/tui-test-runner/tools/tui-test-runner/adapters/dotnet_adapter.ts',
+      );
+      const adapter = new DotnetAdapter();
+      const events = Array.from(
+        adapter.processLines(readFixture('dotnet-output-verbose.txt').split(/\r?\n/)),
+      );
+
+      const passes = events.filter((e: any) => e.type === 'test_pass');
+      const fails = events.filter((e: any) => e.type === 'test_fail');
+      const skips = events.filter((e: any) => e.type === 'test_skip');
+      const summaries = events.filter((e: any) => e.type === 'summary');
+
+      expect(passes).toHaveLength(3);
+      expect(fails).toHaveLength(1);
+      expect(skips).toHaveLength(1);
+      expect(summaries.length).toBeGreaterThanOrEqual(1);
+
+      const lastSummary = summaries[summaries.length - 1] as any;
+      expect(lastSummary.summary.total).toBe(5);
+      expect(lastSummary.summary.passed).toBe(3);
+      expect(lastSummary.summary.failed).toBe(1);
+      expect(lastSummary.summary.skipped).toBe(1);
+    });
+
+    it('Dotnet adapter parses minimal single-line summary', async () => {
+      const { DotnetAdapter } = await importAdapterModule(
+        'extensions/tui-test-runner/tools/tui-test-runner/adapters/dotnet_adapter.ts',
+      );
+      const adapter = new DotnetAdapter();
+      const events = Array.from(
+        adapter.processLines(readFixture('dotnet-output-minimal.txt').split(/\r?\n/)),
+      );
+
+      const summaries = events.filter((e: any) => e.type === 'summary');
+      expect(summaries.length).toBeGreaterThanOrEqual(1);
+
+      const lastSummary = summaries[summaries.length - 1] as any;
+      expect(lastSummary.summary.total).toBe(4);
+      expect(lastSummary.summary.passed).toBe(3);
+      expect(lastSummary.summary.failed).toBe(0);
+      expect(lastSummary.summary.skipped).toBe(1);
+    });
+
+    it('Regression: all adapters continue to emit correct event counts', async () => {
+      const [
+        { VitestAdapter },
+        { JestAdapter },
+        { PytestAdapter },
+        { DotnetAdapter },
+        { CargoAdapter },
+        { GoTestAdapter },
+      ] = await Promise.all([
+        importAdapterModule('extensions/tui-test-runner/tools/tui-test-runner/adapters/vitest_adapter.ts'),
+        importAdapterModule('extensions/tui-test-runner/tools/tui-test-runner/adapters/jest_adapter.ts'),
+        importAdapterModule('extensions/tui-test-runner/tools/tui-test-runner/adapters/pytest_adapter.ts'),
+        importAdapterModule('extensions/tui-test-runner/tools/tui-test-runner/adapters/dotnet_adapter.ts'),
+        importAdapterModule('extensions/tui-test-runner/tools/tui-test-runner/adapters/cargo_adapter.ts'),
+        importAdapterModule('extensions/tui-test-runner/tools/tui-test-runner/adapters/go_test_adapter.ts'),
+      ]);
+
+      // Vitest from fixture
+      const vitestEvents = Array.from(
+        new VitestAdapter().processLines(readFixture('vitest-output.txt').split(/\r?\n/)),
+      );
+      expect(vitestEvents.filter((e: any) => e.type === 'test_pass')).toHaveLength(3);
+      expect(vitestEvents.filter((e: any) => e.type === 'test_fail')).toHaveLength(1);
+      expect(vitestEvents.filter((e: any) => e.type === 'test_skip')).toHaveLength(1);
+
+      // Jest inline
+      const jestEvents = Array.from(new JestAdapter().processLines([
+        'PASS src/auth.test.ts',
+        '  ✓ should pass (5 ms)',
+        '  ✕ should fail (3 ms)',
+        'Tests: 1 failed, 1 passed, 2 total',
+      ]));
+      expect(jestEvents.filter((e: any) => e.type === 'test_pass')).toHaveLength(1);
+      expect(jestEvents.filter((e: any) => e.type === 'test_fail')).toHaveLength(1);
+
+      // Pytest inline
+      const pytestEvents = Array.from(new PytestAdapter().processLines([
+        'tests/test_auth.py::test_login PASSED [ 50%]',
+        'tests/test_auth.py::test_logout FAILED [100%]',
+        '==== 1 passed, 1 failed in 0.20s ====',
+      ]));
+      expect(pytestEvents.filter((e: any) => e.type === 'test_pass')).toHaveLength(1);
+      expect(pytestEvents.filter((e: any) => e.type === 'test_fail')).toHaveLength(1);
+
+      // Dotnet old format (no leading whitespace) — backward compat
+      const dotnetEvents = Array.from(new DotnetAdapter().processLines([
+        'Passed Namespace.Tests.AuthTests.ShouldLogin [12 ms]',
+        'Failed Namespace.Tests.AuthTests.ShouldLogout [10 ms]',
+        'Total tests: 2',
+        'Passed: 1',
+        'Failed: 1',
+      ]));
+      expect(dotnetEvents.filter((e: any) => e.type === 'test_pass')).toHaveLength(1);
+      expect(dotnetEvents.filter((e: any) => e.type === 'test_fail')).toHaveLength(1);
+      const dotnetSummary = dotnetEvents.filter((e: any) => e.type === 'summary').pop() as any;
+      expect(dotnetSummary.summary.total).toBe(2);
+      expect(dotnetSummary.summary.passed).toBe(1);
+      expect(dotnetSummary.summary.failed).toBe(1);
+
+      // Cargo inline
+      const cargoEvents = Array.from(new CargoAdapter().processLines([
+        'test auth::login_success ... ok',
+        'test auth::logout_failure ... FAILED',
+        'test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out;',
+      ]));
+      expect(cargoEvents.filter((e: any) => e.type === 'test_pass')).toHaveLength(1);
+      expect(cargoEvents.filter((e: any) => e.type === 'test_fail')).toHaveLength(1);
+
+      // Go inline
+      const goEvents = Array.from(new GoTestAdapter().processLines([
+        '=== RUN   TestLogin',
+        '--- PASS: TestLogin (0.00s)',
+        '=== RUN   TestLogout',
+        '--- FAIL: TestLogout (0.01s)',
+      ]));
+      expect(goEvents.filter((e: any) => e.type === 'test_pass')).toHaveLength(1);
+      expect(goEvents.filter((e: any) => e.type === 'test_fail')).toHaveLength(1);
     });
   });
 

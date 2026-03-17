@@ -13,7 +13,7 @@ from textual.reactive import reactive
 from textual.widgets import Footer, Header, TabbedContent, TabPane
 
 from .log_reader import LogReader
-from .models import TestState, TestStatus
+from .models import STATE_ICONS, TestState, TestStatus
 from .widgets.analysis_tab import AnalysisTab
 from .widgets.logs_tab import LogsTab
 from .widgets.monitoring_tab import MonitoringTab
@@ -43,8 +43,14 @@ class TestRunnerApp(App):
         color: $text;
         padding: 0 1;
     }
-    /* Compact mode: hide tabs, show compact bar */
+    /* Compact mode: hide everything except compact bar */
     Screen.compact TabbedContent {
+        display: none;
+    }
+    Screen.compact Header {
+        display: none;
+    }
+    Screen.compact Footer {
         display: none;
     }
     Screen.compact CompactBar {
@@ -62,6 +68,7 @@ class TestRunnerApp(App):
         Binding("4", "switch_tab('analysis')", "Analysis", show=False),
         Binding("f", "focus_filter", "Filter", show=False),
         Binding("s", "screenshot", "Screenshot", show=False),
+        Binding("question_mark", "show_help", "?", show=True),
     ]
 
     TITLE = "TUI Test Runner"
@@ -101,8 +108,9 @@ class TestRunnerApp(App):
         yield Footer()
 
     def on_mount(self) -> None:
-        """Start polling loop. Auto-run tests if --run flag was passed."""
+        """Start polling loop. Start in compact mode by default."""
         self.set_interval(self._poll_interval, self._poll)
+        self.screen.add_class("compact")
         if self._auto_run:
             self.notify("Auto-running tests...")
 
@@ -123,14 +131,7 @@ class TestRunnerApp(App):
 
     def _update_title(self) -> None:
         s = self.status
-        state_icon = {
-            TestState.IDLE: "⏸",
-            TestState.RUNNING: "🔄",
-            TestState.PASSED: "✅",
-            TestState.FAILED: "❌",
-            TestState.ERROR: "⚠️",
-            TestState.COMPLETED: "✅",
-        }.get(s.state, "")
+        state_icon = STATE_ICONS.get(s.state, "")
 
         self.title = (
             f"TUI Test Runner {state_icon} "
@@ -220,3 +221,21 @@ class TestRunnerApp(App):
         filepath = self._screenshot_dir / filename
         self.export_screenshot(str(filepath))
         self.notify(f"Screenshot saved: {filepath}")
+
+    HELP_TEXT = (
+        "? — this help\n"
+        "M — compact/full toggle\n"
+        "X — stop tests\n"
+        "Q — quit\n"
+        "1-4 — switch tabs (full mode)\n"
+        "F — focus filter\n"
+        "S — screenshot\n"
+        "─── Pane resize (Win Terminal) ───\n"
+        "Alt+Shift+↑ — grow pane\n"
+        "Alt+Shift+↓ — shrink pane\n"
+        "Alt+Shift+← → — resize horizontal"
+    )
+
+    def action_show_help(self) -> None:
+        """Show keybinding help overlay."""
+        self.notify(self.HELP_TEXT, title="Keybindings", timeout=10)
