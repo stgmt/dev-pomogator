@@ -4,13 +4,36 @@
  * Matches @featureN tags between MD files and .feature files
  */
 
+import fs from 'fs';
 import type { MdTag } from './parsers/md-parser';
 import type { FeatureTag } from './parsers/feature-parser';
+import type { TestCase } from './parsers/test-parser';
 
 /**
  * Match status for a @featureN tag
  */
 export type MatchStatus = 'COVERED' | 'NOT_COVERED' | 'ORPHAN';
+
+/**
+ * Alignment status for test↔feature scenario IDs
+ */
+export type AlignmentStatus = 'ALIGNED' | 'TEST_NOT_IN_FEATURE' | 'FEATURE_NOT_IN_TEST';
+
+/**
+ * Result of matching a test case ID with a feature scenario ID
+ */
+export interface AlignmentResult {
+  /** The scenario/test ID (e.g., "CTXMENU001_01") */
+  id: string;
+  /** Alignment status */
+  status: AlignmentStatus;
+  /** Test case source (if exists) */
+  testSource?: TestCase;
+  /** Feature scenario name (if exists) */
+  featureScenario?: string;
+  /** Line in feature file */
+  featureLine?: number;
+}
 
 /**
  * Result of matching a single @featureN tag
@@ -155,4 +178,97 @@ export function calculateSummary(results: MatchResult[]): MatchSummary {
  */
 export function filterByStatus(results: MatchResult[], status: MatchStatus): MatchResult[] {
   return results.filter(r => r.status === status);
+}
+
+/**
+ * Match test case IDs with feature scenario IDs.
+ *
+ * Extracts scenario IDs from feature file lines matching "Scenario: CODE_NN ..."
+ * and compares with test case IDs from parseTestFile().
+ *
+ * @param testCases - Test cases from parseTestFile()
+ * @param featureFilePath - Path to .feature file
+ * @returns Array of alignment results
+ */
+export function matchTestFeature(
+  testCases: TestCase[],
+  featureFilePath: string,
+): AlignmentResult[] {
+  const results: AlignmentResult[] = [];
+
+  // Extract scenario IDs from feature file
+  const scenarioMap = new Map<string, { name: string; line: number }>();
+
+  if (fs.existsSync(featureFilePath)) {
+    const content = fs.readFileSync(featureFilePath, 'utf-8');
+    const lines = content.split('\n');
+
+    for (let i = 0; i < lines.length; i++) {
+      const match = lines[i].match(/^\s*Scenario:\s+(\w+_\d+)\s+(.*)/);
+      if (match) {
+        scenarioMap.set(match[1], { name: match[2].trim(), line: i + 1 });
+      }
+    }
+  }
+
+  // Build test case map
+  const testMap = new Map<string, TestCase>();
+  for (const tc of testCases) {
+    testMap.set(tc.id, tc);
+  }
+
+  // Collect all IDs
+  const allIds = new Set<string>();
+  for (const tc of testCases) allIds.add(tc.id);
+  for (const id of scenarioMap.keys()) allIds.add(id);
+
+  // Match
+  for (const id of allIds) {
+    const tc = testMap.get(id);
+    const scenario = scenarioMap.get(id);
+
+    let status: AlignmentStatus;
+    if (tc && scenario) {
+      status = 'ALIGNED';
+    } else if (tc && !scenario) {
+      status = 'TEST_NOT_IN_FEATURE';
+    } else {
+      status = 'FEATURE_NOT_IN_TEST';
+    }
+
+    results.push({
+      id,
+      status,
+      testSource: tc,
+      featureScenario: scenario?.name,
+      featureLine: scenario?.line,
+    });
+  }
+
+  // Sort: problems first
+  const statusOrder: Record<AlignmentStatus, number> = {
+    'TEST_NOT_IN_FEATURE': 0,
+    'FEATURE_NOT_IN_TEST': 1,
+    'ALIGNED': 2,
+  };
+  results.sort((a, b) => statusOrder[a.status] - statusOrder[b.status] || a.id.localeCompare(b.id));
+
+  return results;
+}
+
+/**
+ * Calculate alignment summary
+ */
+export function calculateAlignmentSummary(results: AlignmentResult[]): {
+  total: number;
+  aligned: number;
+  testNotInFeature: number;
+  featureNotInTest: number;
+} {
+  return {
+    total: results.length,
+    aligned: results.filter(r => r.status === 'ALIGNED').length,
+    testNotInFeature: results.filter(r => r.status === 'TEST_NOT_IN_FEATURE').length,
+    featureNotInTest: results.filter(r => r.status === 'FEATURE_NOT_IN_TEST').length,
+  };
 }

@@ -388,4 +388,97 @@ describe('PLUGIN005: Specs Validator Hook', () => {
       expect(output.trim()).toBe('');
     });
   });
+
+  // ==========================================================================
+  // @feature10: Test parser extracts test case IDs
+  // ==========================================================================
+  describe('PLUGIN005_10 Test parser', () => {
+    // @feature10
+    it('PLUGIN005_10: parseTestFile extracts test case IDs from .test.ts', async () => {
+      const { parseTestFile } = await import(
+        '../../extensions/specs-workflow/tools/specs-validator/parsers/test-parser'
+      );
+
+      // Write a fixture test file
+      const fixtureDir = appPath('.test-fixtures');
+      await fs.ensureDir(fixtureDir);
+      const fixturePath = path.join(fixtureDir, 'sample.test.ts');
+      await fs.writeFile(fixturePath, [
+        "import { describe, it } from 'vitest';",
+        "describe('TEST001: Sample', () => {",
+        "  // @feature1",
+        "  it('TEST001_01: first test', () => {});",
+        "  // @feature2",
+        "  it('TEST001_02: second test', () => {});",
+        "  it('TEST001_03: no tag', () => {});",
+        '});',
+      ].join('\n'));
+
+      const cases = parseTestFile(fixturePath);
+      expect(cases).toHaveLength(3);
+      expect(cases[0].id).toBe('TEST001_01');
+      expect(cases[0].featureTag).toBe('@feature1');
+      expect(cases[1].id).toBe('TEST001_02');
+      expect(cases[1].featureTag).toBe('@feature2');
+      expect(cases[2].id).toBe('TEST001_03');
+      expect(cases[2].featureTag).toBeUndefined();
+
+      await fs.remove(fixtureDir);
+    });
+  });
+
+  // ==========================================================================
+  // @feature11: Test↔Feature alignment matching
+  // ==========================================================================
+  describe('PLUGIN005_11 Test↔Feature alignment', () => {
+    // @feature11
+    it('PLUGIN005_11: matchTestFeature detects aligned and misaligned IDs', async () => {
+      const { matchTestFeature } = await import(
+        '../../extensions/specs-workflow/tools/specs-validator/matcher'
+      );
+      const { parseTestFile } = await import(
+        '../../extensions/specs-workflow/tools/specs-validator/parsers/test-parser'
+      );
+
+      const fixtureDir = appPath('.test-fixtures-align');
+      await fs.ensureDir(fixtureDir);
+
+      // Create a .test.ts with 3 test cases
+      const testPath = path.join(fixtureDir, 'align.test.ts');
+      await fs.writeFile(testPath, [
+        "describe('ALIGN001: Test', () => {",
+        "  it('ALIGN001_01: exists in both', () => {});",
+        "  it('ALIGN001_02: only in test', () => {});",
+        '});',
+      ].join('\n'));
+
+      // Create a .feature with 2 scenarios (one matching, one test-only)
+      const featurePath = path.join(fixtureDir, 'align.feature');
+      await fs.writeFile(featurePath, [
+        'Feature: Alignment test',
+        '  Scenario: ALIGN001_01 exists in both',
+        '    Given something',
+        '  Scenario: ALIGN001_03 only in feature',
+        '    Given something else',
+      ].join('\n'));
+
+      const testCases = parseTestFile(testPath);
+      const results = matchTestFeature(testCases, featurePath);
+
+      const aligned = results.filter(r => r.status === 'ALIGNED');
+      const testOnly = results.filter(r => r.status === 'TEST_NOT_IN_FEATURE');
+      const featureOnly = results.filter(r => r.status === 'FEATURE_NOT_IN_TEST');
+
+      expect(aligned).toHaveLength(1);
+      expect(aligned[0].id).toBe('ALIGN001_01');
+
+      expect(testOnly).toHaveLength(1);
+      expect(testOnly[0].id).toBe('ALIGN001_02');
+
+      expect(featureOnly).toHaveLength(1);
+      expect(featureOnly[0].id).toBe('ALIGN001_03');
+
+      await fs.remove(fixtureDir);
+    });
+  });
 });

@@ -6,6 +6,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import { extractAllFeatureTags } from './tag-utils';
 
 /**
  * Represents a @featureN tag found in a .feature file
@@ -96,19 +97,6 @@ export function parseFeatureFile(filePath: string): FeatureTag[] {
     }
   }
 
-  return tags;
-}
-
-/**
- * Extract all @featureN tags from a line
- */
-function extractAllFeatureTags(line: string): string[] {
-  const tags: string[] = [];
-  const regex = /@feature\d+/g;
-  let match;
-  while ((match = regex.exec(line)) !== null) {
-    tags.push(match[0]);
-  }
   return tags;
 }
 

@@ -18,8 +18,9 @@ import path from 'path';
 import { findSpecsFolder, findCompleteSpecs, type SpecCompleteness } from './completeness';
 import { parseMdFiles } from './parsers/md-parser';
 import { parseFeatureFile } from './parsers/feature-parser';
-import { matchTags } from './matcher';
+import { matchTags, matchTestFeature } from './matcher';
 import { generateReport, printWarnings } from './reporter';
+import { parseTestFile, findTestFile } from './parsers/test-parser';
 import {
   PHASE_FILES,
   PHASE_ORDER,
@@ -137,25 +138,39 @@ function isDisabledByConfig(workspaceRoot: string): boolean {
 /**
  * Validate a single complete spec
  */
-function validateSpec(spec: SpecCompleteness): void {
+function validateSpec(spec: SpecCompleteness, workspaceRoot: string): void {
   // Parse MD files
   const mdTags = parseMdFiles(spec);
-  
+
   // Parse .feature file
-  const featureTags = spec.featureFile 
+  const featureTags = spec.featureFile
     ? parseFeatureFile(spec.featureFile)
     : [];
-  
+
   // Match tags
   const results = matchTags(mdTags, featureTags);
-  
+
+  // Test↔Feature alignment (find .test.ts by extension name convention)
+  let alignmentResults;
+  if (spec.featureFile) {
+    const testsDir = path.join(workspaceRoot, 'tests', 'e2e');
+    const testFile = findTestFile(testsDir, spec.specName);
+    if (testFile) {
+      const testCases = parseTestFile(testFile);
+      if (testCases.length > 0) {
+        alignmentResults = matchTestFeature(testCases, spec.featureFile);
+      }
+    }
+  }
+
   // Generate report
   generateReport({
     specPath: spec.specPath,
     specName: spec.specName,
     results,
+    alignmentResults,
   });
-  
+
   // Print warnings
   printWarnings(results);
 }
@@ -296,7 +311,7 @@ async function main(): Promise<void> {
     // 4. Find complete specs (13 files) and validate @featureN coverage
     const completeSpecs = findCompleteSpecs(specsRoot);
     for (const spec of completeSpecs) {
-      validateSpec(spec);
+      validateSpec(spec, workspaceRoot);
     }
 
     // 5. Phase status injection + gate check for ALL specs with .progress.json

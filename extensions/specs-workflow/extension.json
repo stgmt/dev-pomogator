@@ -66,7 +66,9 @@
       ".dev-pomogator/tools/specs-validator/reporter.ts",
       ".dev-pomogator/tools/specs-validator/validate-specs.ts",
       ".dev-pomogator/tools/specs-validator/parsers/feature-parser.ts",
-      ".dev-pomogator/tools/specs-validator/parsers/md-parser.ts"
+      ".dev-pomogator/tools/specs-validator/parsers/md-parser.ts",
+      ".dev-pomogator/tools/specs-validator/parsers/test-parser.ts",
+      ".dev-pomogator/tools/specs-validator/parsers/tag-utils.ts"
     ],
     "steps-validator": [
       ".dev-pomogator/tools/steps-validator/analyzer.ts",

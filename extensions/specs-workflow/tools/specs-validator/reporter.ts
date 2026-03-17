@@ -6,8 +6,8 @@
 
 import fs from 'fs';
 import path from 'path';
-import type { MatchResult, MatchSummary } from './matcher';
-import { calculateSummary, filterByStatus } from './matcher';
+import type { MatchResult, MatchSummary, AlignmentResult } from './matcher';
+import { calculateSummary, filterByStatus, calculateAlignmentSummary } from './matcher';
 
 /**
  * Options for report generation
@@ -19,17 +19,19 @@ export interface ReportOptions {
   specName: string;
   /** Match results */
   results: MatchResult[];
+  /** Test↔Feature alignment results (optional) */
+  alignmentResults?: AlignmentResult[];
 }
 
 /**
  * Generate validation-report.md in the spec directory
  */
 export function generateReport(options: ReportOptions): void {
-  const { specPath, specName, results } = options;
+  const { specPath, specName, results, alignmentResults } = options;
   const summary = calculateSummary(results);
   
   const reportPath = path.join(specPath, 'validation-report.md');
-  const content = buildReportContent(specName, results, summary);
+  const content = buildReportContent(specName, results, summary, alignmentResults);
   
   try {
     fs.writeFileSync(reportPath, content, 'utf-8');
@@ -45,7 +47,8 @@ export function generateReport(options: ReportOptions): void {
 function buildReportContent(
   specName: string,
   results: MatchResult[],
-  summary: MatchSummary
+  summary: MatchSummary,
+  alignmentResults?: AlignmentResult[],
 ): string {
   const timestamp = new Date().toISOString();
   const lines: string[] = [];
@@ -123,6 +126,26 @@ function buildReportContent(
       const featurePart = result.featureSource ? result.featureSource.scenario : '?';
       lines.push(`- ${result.tag}: ${mdPart} ↔ Scenario: ${featurePart}`);
     }
+    lines.push('');
+  }
+
+  // Test↔Feature Alignment section
+  if (alignmentResults && alignmentResults.length > 0) {
+    const alignSummary = calculateAlignmentSummary(alignmentResults);
+    lines.push('## Test↔Feature Alignment');
+    lines.push('');
+    lines.push('| Test ID | Feature Scenario | Status |');
+    lines.push('|---------|-----------------|--------|');
+
+    for (const result of alignmentResults) {
+      const featurePart = result.featureScenario
+        ? `Scenario: ${result.featureScenario.substring(0, 40)}`
+        : '-';
+      lines.push(`| ${result.id} | ${featurePart} | ${result.status} |`);
+    }
+
+    lines.push('');
+    lines.push(`Alignment: ${alignSummary.total} IDs, ${alignSummary.aligned} aligned, ${alignSummary.testNotInFeature} test-only, ${alignSummary.featureNotInTest} feature-only`);
     lines.push('');
   }
 

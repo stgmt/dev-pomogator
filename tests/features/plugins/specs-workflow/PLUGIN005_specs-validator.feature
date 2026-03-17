@@ -77,3 +77,19 @@ Feature: PLUGIN005 Specs Validator Hook
     When validation hook runs
     Then validation is skipped
     And no validation-report.md is created in my-feature
+
+  # @feature10
+  Scenario: PLUGIN005_10 Test parser extracts test case IDs
+    Given a .test.ts file with it('CODE_NN: ...') blocks
+    When parseTestFile runs on the file
+    Then it should extract all test case IDs with CODE_NN format
+    And @featureN comments should be associated with their test cases
+
+  # @feature11
+  Scenario: PLUGIN005_11 Test-Feature alignment detects mismatches
+    Given a .test.ts with test IDs ALIGN001_01 and ALIGN001_02
+    And a .feature with scenarios ALIGN001_01 and ALIGN001_03
+    When matchTestFeature runs
+    Then ALIGN001_01 should be ALIGNED
+    And ALIGN001_02 should be TEST_NOT_IN_FEATURE
+    And ALIGN001_03 should be FEATURE_NOT_IN_TEST

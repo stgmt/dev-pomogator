@@ -7,6 +7,7 @@
 import fs from 'fs';
 import path from 'path';
 import type { SpecCompleteness } from '../completeness';
+import { extractAllFeatureTags } from './tag-utils';
 
 /**
  * Represents a @featureN tag found in an MD file
@@ -142,19 +143,6 @@ export function parseMdFile(filePath: string): MdTag[] {
     }
   }
 
-  return tags;
-}
-
-/**
- * Extract all @featureN tags from a line
- */
-function extractAllFeatureTags(line: string): string[] {
-  const tags: string[] = [];
-  const regex = /@feature\d+/g;
-  let match;
-  while ((match = regex.exec(line)) !== null) {
-    tags.push(match[0]);
-  }
   return tags;
 }
 
