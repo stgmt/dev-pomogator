@@ -37,7 +37,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 | Rule | Description | Path |
 |------|-------------|------|
-| plan-pomogator | Единый формат планов разработки (8 обязательных секций включая Impact Analysis + File Changes) | `.claude/rules/pomogator/plan-pomogator.md` |
+| plan-pomogator | Единый формат планов разработки (9 секций: Context + Extracted Requirements → двухфазная валидация + prompt-capture) | `.claude/rules/pomogator/plan-pomogator.md` |
 | extension-manifest-integrity | `extension.json` — source of truth для апдейтера; обновлять files/rules/tools/toolFiles/hooks при изменениях | `.claude/rules/extension-manifest-integrity.md` |
 | updater-managed-cleanup | Апдейтер удаляет только managed-файлы; user-модификации бэкапятся в `.dev-pomogator/.user-overrides/`; hooks через smart merge | `.claude/rules/updater-managed-cleanup.md` |
 | updater-sync-tools-hooks | Апдейтер обновляет tools и hooks вместе с commands, не только `.cursor/commands` | `.claude/rules/updater-sync-tools-hooks.md` |
@@ -49,6 +49,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | docker-only-tests | Тесты только через Docker (`npm test`); запрет vitest.unit.config.ts и тестов вне `tests/e2e/` | `.claude/rules/docker-only-tests.md` |
 | self-improving | Real-time детекция ситуаций для новых rules/skills/hooks (триггеры T2/T3/T4/T6 + automation hints) | `.claude/rules/pomogator/self-improving.md` |
 | simplify-extended | При /simplify также проверять спеки (нечёткие FR, терминология, @featureN) и тесты (дублирование setup, hardcoded data, edge cases) | `.claude/rules/simplify-extended.md` |
+| tui-pilot-tests | TUI тесты через Textual Pilot API; запрет file-inspection тестов для виджетов | `.claude/rules/tui-pilot-tests.md` |
+| extension-test-quality | Тесты расширений: 1:1 mapping test↔feature, запрет inline-копий, naming DOMAIN_CODE_NN, import guard | `.claude/rules/extension-test-quality.md` |
 
 ### Triggered
 

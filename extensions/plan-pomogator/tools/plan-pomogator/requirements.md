@@ -8,21 +8,22 @@
 - Требования касаются **формы и структуры** плана, а не доменной корректности.
 
 ## Обязательная структура (порядок секций)
-1. **User Stories**
-2. **Use Cases**
-3. **Requirements**
+1. **Context** — описание проблемы + `### Extracted Requirements` (нумерованный список требований из диалога, минимум 2)
+2. **User Stories**
+3. **Use Cases**
+4. **Requirements**
    - **FR (Functional Requirements)**
    - **Acceptance Criteria (EARS)**
    - **NFR (Non‑Functional Requirements)**: Performance, Security, Reliability, Usability
    - **Assumptions** (может быть `N/A`)
    - **Risks** (опционально, может быть `N/A`) — риски, breaking changes, внешние зависимости
    - **Out of Scope** (опционально, может быть `N/A`) — что явно НЕ входит в план
-4. **Implementation Plan**
-5. **Impact Analysis** (обязательно для delete/rename/move, иначе `N/A`)
-6. **Todos**
-7. **Definition of Done (DoD)**
+5. **Implementation Plan**
+6. **Impact Analysis** (обязательно для delete/rename/move, иначе `N/A`)
+7. **Todos**
+8. **Definition of Done (DoD)**
    - **Verification Plan** (Automated Tests + Manual Verification)
-8. **File Changes** (в самом конце)
+9. **File Changes** (в самом конце)
 
 ## Доменные требования
 - FR/AC/Use Cases **должны** быть заполнены доменным содержанием из контекста задачи и источников требований.
@@ -64,6 +65,24 @@
 - **Automated Tests**: только конкретные команды (в backticks)
 - **Manual Verification**: шаги проверки (если применимо)
 
+## Двухфазная валидация
+
+Валидатор работает в две фазы:
+- **Phase 1 (структура)**: наличие секций, порядок, формат таблиц, Todo‑разметка, тест‑команды
+- **Phase 2 (требования)**: проверка `### Extracted Requirements` в `## Context` — запускается ТОЛЬКО когда Phase 1 = 0 ошибок
+
+Phase 2 проверяет:
+- Наличие подсекции `### Extracted Requirements` внутри `## Context`
+- Минимум 2 нумерованных пункта (`1. ...`, `2. ...`)
+- При отклонении plan-gate показывает агенту последние промпты пользователя из кэша
+
+## Prompt Capture (UserPromptSubmit hook)
+
+`prompt-capture.ts` сохраняет каждый промпт пользователя в `~/.dev-pomogator/.plan-prompts-{sessionId}.json`.
+- Rolling window: последние 10 промптов
+- GC: файлы старше 2 часов удаляются автоматически
+- plan-gate.ts читает промпты и включает последние 5 в Phase 2 deny-сообщение
+
 ## Границы валидатора
-- Валидатор проверяет **структуру и формат** (секций, таблиц, Todo‑разметки, тест‑команд).
-- Валидатор **не** оценивает доменную корректность и полноту требований.
+- Phase 1 проверяет **структуру и формат** (секций, таблиц, Todo‑разметки, тест‑команд).
+- Phase 2 проверяет **наличие** перечня требований, но **не** оценивает доменную корректность и полноту.

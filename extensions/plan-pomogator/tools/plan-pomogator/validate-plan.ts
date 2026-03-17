@@ -5,9 +5,16 @@ import path from 'path';
 export interface ValidationError {
   line: number;
   message: string;
+  hint: string;
+}
+
+export interface ValidationResult {
+  phase1: ValidationError[];
+  phase2: ValidationError[];
 }
 
 const REQUIRED_SECTIONS: Array<{ name: string; regex: RegExp }> = [
+  { name: 'Context', regex: /^##\s+Context\s*$/ },
   { name: 'User Stories', regex: /^##\s+User Stories\s*$/ },
   { name: 'Use Cases', regex: /^##\s+Use Cases\s*$/ },
   { name: 'Requirements', regex: /^##\s+Requirements\s*$/ },
@@ -17,14 +24,18 @@ const REQUIRED_SECTIONS: Array<{ name: string; regex: RegExp }> = [
   { name: 'File Changes', regex: /^##\s+File Changes\b.*$/ },
 ];
 
+const SECTION_ORDER_HINT = 'Порядок: ' + REQUIRED_SECTIONS.map((s) => s.name).join(' → ');
+
 const DESTRUCTIVE_ACTIONS = new Set(['delete', 'rename', 'move', 'replace']);
 
-const REQUIRED_REQUIREMENTS_SUBSECTIONS: Array<{ name: string; regex: RegExp }> = [
-  { name: 'FR', regex: /^###\s+FR\s+\(Functional Requirements\)\s*$/ },
-  { name: 'Acceptance Criteria', regex: /^###\s+Acceptance Criteria\s+\(EARS\)\s*$/ },
-  { name: 'NFR', regex: /^###\s+NFR\s+\(Non-Functional Requirements\)\s*$/ },
-  { name: 'Assumptions', regex: /^###\s+Assumptions\s*$/ },
+const REQUIRED_REQUIREMENTS_SUBSECTIONS: Array<{ name: string; regex: RegExp; heading: string }> = [
+  { name: 'FR', regex: /^###\s+FR\s+\(Functional Requirements\)\s*$/, heading: '### FR (Functional Requirements)' },
+  { name: 'Acceptance Criteria', regex: /^###\s+Acceptance Criteria\s+\(EARS\)\s*$/, heading: '### Acceptance Criteria (EARS)' },
+  { name: 'NFR', regex: /^###\s+NFR\s+\(Non-Functional Requirements\)\s*$/, heading: '### NFR (Non-Functional Requirements)' },
+  { name: 'Assumptions', regex: /^###\s+Assumptions\s*$/, heading: '### Assumptions' },
 ];
+
+const SUBSECTION_ORDER_HINT = 'Порядок: ' + REQUIRED_REQUIREMENTS_SUBSECTIONS.map((s) => s.name).join(' → ');
 
 const NFR_CATEGORIES = ['Performance', 'Security', 'Reliability', 'Usability'];
 const ALLOWED_ACTIONS = new Set(['create', 'edit', 'delete', 'rename', 'move', 'replace']);
@@ -34,8 +45,8 @@ function readFileLines(filePath: string): string[] {
   return content.split(/\r?\n/);
 }
 
-function addError(errors: ValidationError[], lineIndex: number, message: string): void {
-  errors.push({ line: Math.max(1, lineIndex + 1), message });
+function addError(errors: ValidationError[], lineIndex: number, message: string, hint: string): void {
+  errors.push({ line: Math.max(1, lineIndex + 1), message, hint });
 }
 
 function findHeadingIndex(lines: string[], regex: RegExp): number {
@@ -63,12 +74,12 @@ function validateSections(lines: string[], errors: ValidationError[]): Map<strin
   for (const section of REQUIRED_SECTIONS) {
     const index = findHeadingIndex(lines, section.regex);
     if (index === -1) {
-      addError(errors, 0, `Отсутствует секция: ${section.name}`);
+      addError(errors, 0, `Отсутствует секция: ${section.name}`, `Добавь: ## ${section.name}`);
       continue;
     }
     indices.set(section.name, index);
     if (index < lastIndex) {
-      addError(errors, index, `Секция "${section.name}" находится не в требуемом порядке`);
+      addError(errors, index, `Секция "${section.name}" находится не в требуемом порядке`, SECTION_ORDER_HINT);
     }
     lastIndex = Math.max(lastIndex, index);
   }
@@ -77,7 +88,7 @@ function validateSections(lines: string[], errors: ValidationError[]): Map<strin
   if (fileChangesIndex !== undefined) {
     const nextAfterFileChanges = nextHeadingIndex(lines, fileChangesIndex, /^##\s+/);
     if (nextAfterFileChanges < lines.length) {
-      addError(errors, fileChangesIndex, 'Секция File Changes должна быть последней');
+      addError(errors, fileChangesIndex, 'Секция File Changes должна быть последней', 'Перенеси ## File Changes в конец документа');
     }
   }
 
@@ -97,7 +108,7 @@ function validateRequirements(lines: string[], indices: Map<string, number>, err
   for (const subsection of REQUIRED_REQUIREMENTS_SUBSECTIONS) {
     const idx = sectionLines.findIndex((line) => subsection.regex.test(line.trim()));
     if (idx === -1) {
-      addError(errors, start, `В Requirements отсутствует подраздел: ${subsection.name}`);
+      addError(errors, start, `В Requirements отсутствует подраздел: ${subsection.name}`, `Добавь: ${subsection.heading}`);
     } else {
       subsectionIndices.push(start + idx);
     }
@@ -107,7 +118,7 @@ function validateRequirements(lines: string[], indices: Map<string, number>, err
   if (subsectionIndices.length === REQUIRED_REQUIREMENTS_SUBSECTIONS.length) {
     for (let i = 1; i < subsectionIndices.length; i += 1) {
       if (subsectionIndices[i] < subsectionIndices[i - 1]) {
-        addError(errors, subsectionIndices[i], 'Нарушен порядок подразделов в Requirements');
+        addError(errors, subsectionIndices[i], 'Нарушен порядок подразделов в Requirements', SUBSECTION_ORDER_HINT);
         break;
       }
     }
@@ -123,7 +134,7 @@ function validateRequirements(lines: string[], indices: Map<string, number>, err
     for (const category of NFR_CATEGORIES) {
       const regex = new RegExp(`\\b${category}\\b`, 'i');
       if (!regex.test(nfrLines)) {
-        addError(errors, nfrStart, `В NFR отсутствует категория: ${category}`);
+        addError(errors, nfrStart, `В NFR отсутствует категория: ${category}`, `Добавь "- ${category}: ..." в секцию NFR`);
       }
     }
   }
@@ -138,12 +149,14 @@ function validateTodos(lines: string[], indices: Map<string, number>, errors: Va
   const { start, end } = getSectionRange(lines, todosIndex);
   const sectionLines = lines.slice(start, end);
 
+  const indentHint = 'Добавь отступ 2+ пробела: "  description: ..." / "  dependencies: ..."';
+
   let hasTodo = false;
   // Catch top-level (no indentation) description/dependencies outside of any todo block
   for (let i = 0; i < sectionLines.length; i += 1) {
     const line = sectionLines[i];
     if (/^description:/.test(line) || /^dependencies:/.test(line)) {
-      addError(errors, start + i, 'description/dependencies должны быть вложенными строками');
+      addError(errors, start + i, 'description/dependencies должны быть вложенными строками', indentHint);
     }
   }
 
@@ -156,7 +169,7 @@ function validateTodos(lines: string[], indices: Map<string, number>, errors: Va
     hasTodo = true;
     const todoId = idMatch[1];
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(todoId)) {
-      addError(errors, start + i, `Некорректный id в Todos: ${todoId}`);
+      addError(errors, start + i, `Некорректный id в Todos: ${todoId}`, 'id в kebab-case: a-z, 0-9, дефис (например: my-task-1)');
     }
 
     let hasDescription = false;
@@ -178,31 +191,31 @@ function validateTodos(lines: string[], indices: Map<string, number>, errors: Va
       }
       // Catch description/dependencies with insufficient indentation (but not zero — that's caught above)
       if (/^\s?description:/.test(todoLine) && !/^\s{2,}description:/.test(todoLine)) {
-        addError(errors, start + j, 'description должна быть вложенной строкой');
+        addError(errors, start + j, 'description должна быть вложенной строкой', indentHint);
       }
       if (/^\s?dependencies:/.test(todoLine) && !/^\s{2,}dependencies:/.test(todoLine)) {
-        addError(errors, start + j, 'dependencies должны быть вложенной строкой');
+        addError(errors, start + j, 'dependencies должны быть вложенной строкой', indentHint);
       }
     }
 
     if (!hasDescription) {
-      addError(errors, start + i, `Для todo "${todoId}" отсутствует description`);
+      addError(errors, start + i, `Для todo "${todoId}" отсутствует description`, 'Добавь:   description: ...; files: ...; Requirements refs: ...');
     } else {
       if (!descriptionLine.includes('files:')) {
-        addError(errors, start + i, `В description todo "${todoId}" отсутствует files:`);
+        addError(errors, start + i, `В description todo "${todoId}" отсутствует files:`, 'Добавь files: в description (например: files: edit src/module.ts)');
       }
       if (!descriptionLine.toLowerCase().includes('requirements refs:')) {
-        addError(errors, start + i, `В description todo "${todoId}" отсутствует Requirements refs:`);
+        addError(errors, start + i, `В description todo "${todoId}" отсутствует Requirements refs:`, 'Добавь Requirements refs: в description (например: Requirements refs: FR-1)');
       }
     }
 
     if (!hasDependencies) {
-      addError(errors, start + i, `Для todo "${todoId}" отсутствует dependencies`);
+      addError(errors, start + i, `Для todo "${todoId}" отсутствует dependencies`, 'Добавь:   dependencies: [] или dependencies: [other-task]');
     }
   }
 
   if (!hasTodo) {
-    addError(errors, start, 'Секция Todos не содержит ни одной задачи');
+    addError(errors, start, 'Секция Todos не содержит ни одной задачи', 'Добавь задачу: - id: my-task (формат: см. template.md)');
   }
 }
 
@@ -218,7 +231,7 @@ function validateVerificationPlan(lines: string[], indices: Map<string, number>,
     /^###\s+Verification Plan\b/.test(line.trim()),
   );
   if (verificationIndex === -1) {
-    addError(errors, start, 'В DoD отсутствует секция Verification Plan');
+    addError(errors, start, 'В DoD отсутствует секция Verification Plan', 'Добавь: ### Verification Plan');
     return;
   }
 
@@ -230,7 +243,7 @@ function validateVerificationPlan(lines: string[], indices: Map<string, number>,
     /Automated Tests/i.test(line),
   );
   if (automatedIndex === -1) {
-    addError(errors, verificationStart, 'В Verification Plan отсутствует Automated Tests');
+    addError(errors, verificationStart, 'В Verification Plan отсутствует Automated Tests', 'Добавь: - Automated Tests:');
     return;
   }
 
@@ -247,7 +260,7 @@ function validateVerificationPlan(lines: string[], indices: Map<string, number>,
   }
 
   if (!hasCommand) {
-    addError(errors, verificationStart, 'Automated Tests должны содержать хотя бы одну команду в backticks');
+    addError(errors, verificationStart, 'Automated Tests должны содержать хотя бы одну команду в backticks', 'Формат: - `npx tsx ...` (строка начинается с "- `")');
   }
 }
 
@@ -302,30 +315,30 @@ function validateFileChanges(lines: string[], indices: Map<string, number>, erro
 
   for (let i = 0; i < sectionLines.length; i += 1) {
     if (/^```/.test(sectionLines[i].trim())) {
-      addError(errors, start + i, 'File Changes не должен быть внутри fenced code-block');
+      addError(errors, start + i, 'File Changes не должен быть внутри fenced code-block', 'Убери ``` вокруг таблицы');
       break;
     }
   }
 
   const parsed = parseFileChangesTable(lines, indices);
   if (!parsed) {
-    addError(errors, start, 'В File Changes отсутствует таблица Path/Action/Reason');
+    addError(errors, start, 'В File Changes отсутствует таблица Path/Action/Reason', 'Добавь: | Path | Action | Reason |');
     return;
   }
   if (parsed.rows.length === 0) {
-    addError(errors, parsed.headerLine, 'Таблица File Changes не содержит строк данных');
+    addError(errors, parsed.headerLine, 'Таблица File Changes не содержит строк данных', 'Добавь строку: | path/to/file | create | причина |');
     return;
   }
 
   for (const row of parsed.rows) {
     if (/^[a-zA-Z]:\\/.test(row.path) || row.path.startsWith('/') || row.path.startsWith('\\\\')) {
-      addError(errors, row.lineOffset, `Абсолютный путь в File Changes: ${row.path}`);
+      addError(errors, row.lineOffset, `Абсолютный путь в File Changes: ${row.path}`, 'Используй относительный путь (без C:\\ или /)');
     }
     if (row.path === '') {
-      addError(errors, row.lineOffset, 'Пустой Path в File Changes');
+      addError(errors, row.lineOffset, 'Пустой Path в File Changes', 'Укажи путь к файлу в колонке Path');
     }
     if (row.action && !ALLOWED_ACTIONS.has(row.action) && row.path.toLowerCase() !== 'tbd') {
-      addError(errors, row.lineOffset, `Недопустимый Action в File Changes: ${row.action}`);
+      addError(errors, row.lineOffset, `Недопустимый Action в File Changes: ${row.action}`, 'Допустимые: create, edit, delete, rename, move, replace');
     }
   }
 }
@@ -344,7 +357,7 @@ function validateImpactAnalysis(lines: string[], indices: Map<string, number>, e
   // File Changes has destructive actions — check for Impact Analysis
   const impactIndex = findHeadingIndex(lines, /^##\s+Impact Analysis\b/);
   if (impactIndex === -1) {
-    addError(errors, parsed.sectionStart, 'File Changes содержит delete/rename/move/replace, но отсутствует секция Impact Analysis');
+    addError(errors, parsed.sectionStart, 'File Changes содержит delete/rename/move/replace, но отсутствует секция Impact Analysis', 'Добавь: ## Impact Analysis с таблицей | Keyword | Files Found | Action in Plan |');
     return;
   }
 
@@ -352,22 +365,91 @@ function validateImpactAnalysis(lines: string[], indices: Map<string, number>, e
   const impactEnd = nextHeadingIndex(lines, impactIndex, /^##\s+/);
   const impactLines = lines.slice(impactIndex, impactEnd).join('\n');
   if (/N\/A/i.test(impactLines) && !impactLines.includes('|')) {
-    addError(errors, impactIndex, 'Impact Analysis содержит N/A, но File Changes имеет delete/rename/move — нужна таблица Keyword/Files');
+    addError(errors, impactIndex, 'Impact Analysis содержит N/A, но File Changes имеет delete/rename/move — нужна таблица Keyword/Files', 'Замени N/A на таблицу: | Keyword | Files Found | Action in Plan |');
   }
 }
 
+/**
+ * Phase 2: Validate Context section content.
+ * Checks for ### Extracted Requirements with at least 2 numbered items.
+ */
+function validateContextContent(lines: string[], indices: Map<string, number>, errors: ValidationError[]): void {
+  const contextIndex = indices.get('Context');
+  if (contextIndex === undefined) return;
+
+  const { start, end } = getSectionRange(lines, contextIndex);
+  const sectionLines = lines.slice(start, end);
+
+  // Check for ### Extracted Requirements subsection
+  const extractedIdx = sectionLines.findIndex((line) =>
+    /^###\s+Extracted Requirements\s*$/.test(line.trim()),
+  );
+  if (extractedIdx === -1) {
+    addError(
+      errors,
+      start,
+      'В Context отсутствует подсекция ### Extracted Requirements',
+      'Перечитай ВСЕ сообщения пользователя в диалоге и перечисли каждое требование нумерованным списком в ### Extracted Requirements',
+    );
+    return;
+  }
+
+  // Count numbered items (1. text, 2. text, etc.)
+  const extractedAbsStart = start + extractedIdx + 1;
+  const extractedAbsEnd = nextHeadingIndex(lines, start + extractedIdx, /^###\s+|^##\s+/);
+  const extractedLines = lines.slice(extractedAbsStart, extractedAbsEnd);
+
+  let numberedCount = 0;
+  for (const line of extractedLines) {
+    if (/^\d+\.\s+\S/.test(line.trim())) {
+      numberedCount += 1;
+    }
+  }
+
+  if (numberedCount < 2) {
+    addError(
+      errors,
+      start + extractedIdx,
+      `Extracted Requirements содержит ${numberedCount} пунктов (минимум 2)`,
+      'Перечитай ВСЕ сообщения пользователя и добавь каждое требование как нумерованный пункт (1. ..., 2. ...)',
+    );
+  }
+}
+
+/**
+ * Validate plan with two-phase approach:
+ * - Phase 1: Structural validation (sections, format, tables)
+ * - Phase 2: Context content validation (only when Phase 1 is clean)
+ *
+ * Returns flat error array for backward compatibility.
+ */
 export function validatePlan(filePath: string): ValidationError[] {
-  const errors: ValidationError[] = [];
+  const result = validatePlanPhased(filePath);
+  return result.phase1.length > 0 ? result.phase1 : result.phase2;
+}
+
+/**
+ * Validate plan returning Phase 1 and Phase 2 errors separately.
+ * Phase 2 only runs when Phase 1 has 0 errors.
+ */
+export function validatePlanPhased(filePath: string): ValidationResult {
+  const phase1: ValidationError[] = [];
   const lines = readFileLines(filePath);
 
-  const indices = validateSections(lines, errors);
-  validateRequirements(lines, indices, errors);
-  validateTodos(lines, indices, errors);
-  validateVerificationPlan(lines, indices, errors);
-  validateFileChanges(lines, indices, errors);
-  validateImpactAnalysis(lines, indices, errors);
+  const indices = validateSections(lines, phase1);
+  validateRequirements(lines, indices, phase1);
+  validateTodos(lines, indices, phase1);
+  validateVerificationPlan(lines, indices, phase1);
+  validateFileChanges(lines, indices, phase1);
+  validateImpactAnalysis(lines, indices, phase1);
 
-  return errors;
+  // Phase 2: only when Phase 1 is clean
+  const phase2: ValidationError[] = [];
+  if (phase1.length === 0) {
+    validateContextContent(lines, indices, phase2);
+  }
+
+  return { phase1, phase2 };
 }
 
 function printUsage(): void {
@@ -390,12 +472,15 @@ function main(): void {
       continue;
     }
 
-    const errors = validatePlan(resolvedPath);
+    const result = validatePlanPhased(resolvedPath);
+    const errors = result.phase1.length > 0 ? result.phase1 : result.phase2;
     if (errors.length > 0) {
       hasErrors = true;
-      console.error(`Ошибки в плане: ${resolvedPath}`);
+      const phase = result.phase1.length > 0 ? 'Phase 1 (структура)' : 'Phase 2 (требования)';
+      console.error(`${phase} ошибки в плане: ${resolvedPath}`);
       for (const error of errors) {
         console.error(`  line ${error.line}: ${error.message}`);
+        console.error(`    💡 ${error.hint}`);
       }
       console.error('');
     } else {
@@ -409,6 +494,8 @@ function main(): void {
 }
 
 // Run CLI only when invoked directly (not when imported as module)
-if (process.argv[1]?.endsWith('validate-plan.ts')) {
+import { fileURLToPath } from 'node:url';
+const __filename = fileURLToPath(import.meta.url);
+if (process.argv[1] === __filename) {
   main();
 }

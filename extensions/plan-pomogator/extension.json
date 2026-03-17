@@ -1,7 +1,7 @@
 {
   "name": "plan-pomogator",
-  "version": "1.1.0",
-  "description": "Единый формат планов + валидатор структуры + PreToolUse hook для ExitPlanMode",
+  "version": "1.2.0",
+  "description": "Единый формат планов (9 секций) + двухфазная валидация + prompt-capture для requirement extraction",
   "platforms": ["cursor", "claude"],
   "category": "workflow",
   "files": {
@@ -23,6 +23,8 @@
       ".dev-pomogator/tools/plan-pomogator/template.md",
       ".dev-pomogator/tools/plan-pomogator/validate-plan.ts",
       ".dev-pomogator/tools/plan-pomogator/plan-gate.ts",
+      ".dev-pomogator/tools/plan-pomogator/prompt-capture.ts",
+      ".dev-pomogator/tools/plan-pomogator/prompt-store.ts",
       ".dev-pomogator/tools/plan-pomogator/fixtures/valid.plan.md"
     ]
   },
@@ -32,6 +34,9 @@
       "PreToolUse": {
         "matcher": "ExitPlanMode",
         "command": "npx tsx .dev-pomogator/tools/plan-pomogator/plan-gate.ts"
+      },
+      "UserPromptSubmit": {
+        "command": "npx tsx .dev-pomogator/tools/plan-pomogator/prompt-capture.ts"
       }
     }
   }
