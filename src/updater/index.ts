@@ -629,41 +629,28 @@ export async function checkUpdate(options: UpdateOptions = {}): Promise<boolean>
             const writtenToolPaths = toolResult.written.map((e) => e.path);
             const writtenSkillPaths = skillResult.written.map((e) => e.path);
 
-            if (!commandResult.hadFailures) {
-              allBackedUp.push(
-                ...await removeStaleFiles(projectPath, managedEntry.commands, writtenCommandPaths, installed.name)
-              );
-              managedEntry.commands = commandResult.written;
-            } else {
-              console.log(`  ⚠ Skipping command cleanup for ${installed.name} in ${projectPath}`);
-            }
+            // Always remove stale files — even if some downloads failed.
+            // Stale = files in previous config that are NOT in current extension.json.
+            // Download failures don't change which files are stale.
+            allBackedUp.push(
+              ...await removeStaleFiles(projectPath, managedEntry.commands, writtenCommandPaths, installed.name)
+            );
+            managedEntry.commands = commandResult.written;
 
-            if (!ruleResult.hadFailures) {
-              allBackedUp.push(
-                ...await removeStaleFiles(projectPath, managedEntry.rules, writtenRulePaths, installed.name)
-              );
-              managedEntry.rules = ruleResult.written;
-            } else {
-              console.log(`  ⚠ Skipping rules cleanup for ${installed.name} in ${projectPath}`);
-            }
+            allBackedUp.push(
+              ...await removeStaleFiles(projectPath, managedEntry.rules, writtenRulePaths, installed.name)
+            );
+            managedEntry.rules = ruleResult.written;
 
-            if (!toolResult.hadFailures) {
-              allBackedUp.push(
-                ...await removeStaleFiles(projectPath, managedEntry.tools, writtenToolPaths, installed.name)
-              );
-              managedEntry.tools = toolResult.written;
-            } else {
-              console.log(`  ⚠ Skipping tools cleanup for ${installed.name} in ${projectPath}`);
-            }
+            allBackedUp.push(
+              ...await removeStaleFiles(projectPath, managedEntry.tools, writtenToolPaths, installed.name)
+            );
+            managedEntry.tools = toolResult.written;
 
-            if (!skillResult.hadFailures) {
-              allBackedUp.push(
-                ...await removeStaleFiles(projectPath, managedEntry.skills, writtenSkillPaths, installed.name)
-              );
-              managedEntry.skills = skillResult.written;
-            } else {
-              console.log(`  ⚠ Skipping skills cleanup for ${installed.name} in ${projectPath}`);
-            }
+            allBackedUp.push(
+              ...await removeStaleFiles(projectPath, managedEntry.skills, writtenSkillPaths, installed.name)
+            );
+            managedEntry.skills = skillResult.written;
 
             const previousHooks = managedEntry.hooks ?? {};
             const updatedHooks = installed.platform === 'cursor'

@@ -34,7 +34,7 @@
     "lint": "eslint src",
     "test": "npm run test:e2e",
     "test:e2e": "bash scripts/docker-test.sh",
-    "test:e2e:docker": "vitest run tests/e2e --reporter=verbose",
+    "test:e2e:docker": "vitest run tests/e2e --reporter=verbose && python3 -m pytest tests/tui/ -v",
     "prepare": "npm run build"
   },
   "dependencies": {

@@ -3,9 +3,9 @@
     Launch Windows Terminal with Claude Code + TUI test runner side-by-side.
 
 .DESCRIPTION
-    Opens Windows Terminal with two vertical panes:
-    - Left (75%): Claude Code in the project directory
-    - Right (25%): Python TUI test runner monitoring test status
+    Opens Windows Terminal with two horizontal panes:
+    - Top (96%): Claude Code in the project directory
+    - Bottom (12%, ~3 rows): Python TUI test runner in compact mode (Alt+Shift+Up to expand)
 
     The TUI automatically picks up test progress when /run-tests is used.
 
@@ -101,7 +101,7 @@ pause
 "@ | Set-Content -Path $tuiLauncher -Encoding ASCII
 
 # wt.exe with split-pane
-wt.exe -d $ProjectDir cmd /k $claudeLauncher `; split-pane -H -s 0.3 -d $ProjectDir cmd /k $tuiLauncher
+wt.exe -d $ProjectDir cmd /k $claudeLauncher `; split-pane -H -s 0.07 -d $ProjectDir cmd /k $tuiLauncher
 
 Write-Host "Launched Windows Terminal with Claude Code + TUI"
 Write-Host "  Session: $sessionPrefix"

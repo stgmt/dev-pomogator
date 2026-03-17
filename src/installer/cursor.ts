@@ -7,7 +7,7 @@ import type { ManagedFileEntry, ManagedFiles } from '../config/schema.js';
 import { findRepoRoot } from '../utils/repo.js';
 import { RULES_SUBFOLDER, TOOLS_DIR } from '../constants.js';
 import { getFileHash } from '../updater/content-hash.js';
-import { collectFileHashes, addProjectPaths, resolveHookToolPaths, replaceNpxTsxWithPortable, ensureExecutableShellScripts, setupGlobalScripts } from './shared.js';
+import { collectFileHashes, addProjectPaths, resolveHookToolPaths, replaceNpxTsxWithPortable, ensureExecutableShellScripts, setupGlobalScripts, removeOrphanedFiles } from './shared.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -127,6 +127,7 @@ export async function installCursor(options: CursorOptions): Promise<void> {
         const dest = path.join(repoRoot, TOOLS_DIR, toolName);
         await fs.copy(toolPath, dest, { overwrite: true });
         await ensureExecutableShellScripts(dest);
+        await removeOrphanedFiles(toolPath, dest);
         console.log(`  ✓ Installed tool: ${toolName}/`);
 
         // Hash all files in the tool directory

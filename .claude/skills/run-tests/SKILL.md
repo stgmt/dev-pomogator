@@ -27,6 +27,21 @@ Run tests through the centralized wrapper that provides YAML status tracking for
 
 ## Execution Steps
 
+### Step 0: Sanitize arguments
+
+Before parsing arguments, clean up the input — users often accidentally paste terminal output alongside their real arguments.
+
+1. Strip ANSI escape sequences (e.g. `\u001b[32m`, `\x1b[0m`) from the entire input
+2. If args contain `[Pasted text` or `[Pasted content` — warn user about pasted text detected
+3. Remove lines that look like terminal output noise: lines containing checkmarks (✓/✗), "passed"/"failed" status messages, ANSI artifacts, or bracket markers like `[Pasted`
+4. From the remaining cleaned lines, extract tokens that look like real arguments:
+   - Known flags: `--framework`, `--docker`, `--`
+   - Everything else: treat as potential test name filter
+5. If multiple candidate filter tokens remain, prefer the one that matches an existing test file name (use Glob to check `tests/**/*{token}*`)
+6. Trim whitespace from all args
+
+The goal is semantic extraction of the user's intent, not mechanical "take the first line". Terminal output artifacts (status messages, checkmarks, ANSI remnants) should be discarded even after stripping escape codes.
+
 ### Step 1: Detect framework
 
 Check project root for config files to determine the test framework:
@@ -56,7 +71,7 @@ Build the command using the dispatch table:
 
 | Framework | Command | Filter |
 |-----------|---------|--------|
-| vitest | `npx vitest run` | `--grep "filter"` |
+| vitest | `npx vitest run` | `filter` (positional arg) |
 | jest | `npx jest` | `--testNamePattern "filter"` |
 | pytest | `python -m pytest` | `-k "filter"` |
 | dotnet | `dotnet test` | `--filter "filter"` |
