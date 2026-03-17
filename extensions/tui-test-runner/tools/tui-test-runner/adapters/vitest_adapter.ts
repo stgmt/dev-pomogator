@@ -8,6 +8,7 @@ import type { TestEvent } from './types.js';
 
 // Vitest output patterns
 const RE_SUITE_START = /^\s*(❯|>)\s+(.+\.(?:test|spec)\.\w+)/;
+const RE_DOCKER_SUITE = /^(?:stdout|stderr)\s+\|\s+(.+\.(?:test|spec)\.\w+)/;
 const RE_TEST_PASS = /^\s*(✓|√|PASS)\s+(.+?)(?:\s+(\d+)\s*ms)?$/;
 const RE_TEST_FAIL = /^\s*(✗|×|FAIL)\s+(.+?)(?:\s+(\d+)\s*ms)?$/;
 const RE_TEST_SKIP = /^\s*(○|↓|SKIP|skipped)\s+(.+)$/;
@@ -23,10 +24,18 @@ export class VitestAdapter extends AdapterBase {
   private pendingStack: string[] = [];
 
   parseLine(line: string): TestEvent | null {
-    // Suite start
+    // Suite start (normal vitest output)
     const suiteMatch = line.match(RE_SUITE_START);
     if (suiteMatch) {
       this.suiteName = suiteMatch[2].trim();
+      this.suiteFile = this.suiteName;
+      return this.event('suite_start');
+    }
+
+    // Suite start (Docker output: "stdout | tests/e2e/file.test.ts > ...")
+    const dockerSuiteMatch = line.match(RE_DOCKER_SUITE);
+    if (dockerSuiteMatch) {
+      this.suiteName = dockerSuiteMatch[1].trim();
       this.suiteFile = this.suiteName;
       return this.event('suite_start');
     }

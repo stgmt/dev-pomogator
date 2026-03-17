@@ -4,7 +4,6 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { stringify } from 'yaml';
 import type {
   TestEvent,
   TestFramework,
@@ -13,6 +12,84 @@ import type {
   TestSuiteV2,
   TestSummary,
 } from './adapters/types.js';
+
+/**
+ * Minimal YAML serializer — no npm dependencies.
+ * Handles scalars, arrays, and nested objects for TestStatusV2 schema.
+ */
+function yamlEscape(val: string): string {
+  if (val === '') return '""';
+  if (/[\n\r]/.test(val)) return JSON.stringify(val);
+  if (/[:{}\[\],&*#?|<>=!%@`"']/.test(val) || val.trim() !== val) return JSON.stringify(val);
+  return val;
+}
+
+function serializeYaml(obj: Record<string, unknown>, indent = 0): string {
+  const prefix = '  '.repeat(indent);
+  let out = '';
+  for (const [key, val] of Object.entries(obj)) {
+    if (val === undefined) continue;
+    if (val === null) {
+      out += `${prefix}${key}: null\n`;
+    } else if (Array.isArray(val)) {
+      if (val.length === 0) {
+        out += `${prefix}${key}: []\n`;
+      } else {
+        out += `${prefix}${key}:\n`;
+        for (const item of val) {
+          if (typeof item === 'object' && item !== null) {
+            const entries = Object.entries(item as Record<string, unknown>).filter(([, v]) => v !== undefined);
+            if (entries.length > 0) {
+              const [firstKey, firstVal] = entries[0];
+              out += `${prefix}  - ${firstKey}: ${formatScalar(firstVal)}\n`;
+              for (let i = 1; i < entries.length; i++) {
+                const [k, v] = entries[i];
+                if (Array.isArray(v)) {
+                  if ((v as unknown[]).length === 0) {
+                    out += `${prefix}    ${k}: []\n`;
+                  } else {
+                    out += `${prefix}    ${k}:\n`;
+                    for (const subItem of v as unknown[]) {
+                      if (typeof subItem === 'object' && subItem !== null) {
+                        const subEntries = Object.entries(subItem as Record<string, unknown>).filter(([, sv]) => sv !== undefined);
+                        if (subEntries.length > 0) {
+                          const [sk, sv] = subEntries[0];
+                          out += `${prefix}      - ${sk}: ${formatScalar(sv)}\n`;
+                          for (let j = 1; j < subEntries.length; j++) {
+                            out += `${prefix}        ${subEntries[j][0]}: ${formatScalar(subEntries[j][1])}\n`;
+                          }
+                        }
+                      } else {
+                        out += `${prefix}      - ${formatScalar(subItem)}\n`;
+                      }
+                    }
+                  }
+                } else {
+                  out += `${prefix}    ${k}: ${formatScalar(v)}\n`;
+                }
+              }
+            }
+          } else {
+            out += `${prefix}  - ${formatScalar(item)}\n`;
+          }
+        }
+      }
+    } else if (typeof val === 'object') {
+      out += `${prefix}${key}:\n`;
+      out += serializeYaml(val as Record<string, unknown>, indent + 1);
+    } else {
+      out += `${prefix}${key}: ${formatScalar(val)}\n`;
+    }
+  }
+  return out;
+}
+
+function formatScalar(val: unknown): string {
+  if (val === null || val === undefined) return 'null';
+  if (typeof val === 'boolean') return val ? 'true' : 'false';
+  if (typeof val === 'number') return String(val);
+  return yamlEscape(String(val));
+}
 
 interface SuiteRuntime {
   suite: TestSuiteV2;
@@ -31,7 +108,7 @@ export class YamlWriter {
     sessionId: string,
     framework: TestFramework,
     logFile: string,
-    throttleMs = 1000,
+    throttleMs = 300,
     pid: number = process.pid,
   ) {
     const now = new Date().toISOString();
@@ -119,8 +196,7 @@ export class YamlWriter {
     this.updatePhaseDuration();
     this.status.suites = this.serializeSuites();
 
-    const tmpFile = `${this.statusFile}.tmp.${process.pid}`;
-    const yaml = stringify(this.status, { lineWidth: 0 });
+    const yaml = serializeYaml(this.status as unknown as Record<string, unknown>);
 
     fs.mkdirSync(path.dirname(this.statusFile), { recursive: true });
     // Direct write — no temp+rename. Atomic rename fails on Windows when reader holds the file (EPERM).
@@ -281,8 +357,7 @@ export class YamlWriter {
       if (total === 0) {
         this.status.percent = 0;
       } else {
-        const percent = Math.round((completed * 100) / total);
-        this.status.percent = Math.min(percent, completed === total ? 99 : 100);
+        this.status.percent = Math.round((completed * 100) / total);
       }
     } else {
       this.status.percent = 100;
