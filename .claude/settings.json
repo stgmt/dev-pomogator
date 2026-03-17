@@ -49,7 +49,7 @@
           {
             "type": "command",
             "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner.js'))\" -- \".dev-pomogator/tools/bun-oom-guard/patch_bun_runner.ts\"",
-            "timeout": 60
+            "timeout": 120
           }
         ]
       },
@@ -59,7 +59,7 @@
           {
             "type": "command",
             "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner.js'))\" -- \".dev-pomogator/tools/claude-mem-health/health-check.ts\"",
-            "timeout": 60
+            "timeout": 120
           }
         ]
       },
@@ -69,7 +69,17 @@
           {
             "type": "command",
             "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner.js'))\" -- \".dev-pomogator/tools/test-statusline/statusline_session_start.ts\"",
-            "timeout": 60
+            "timeout": 120
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner.js'))\" -- \".dev-pomogator/tools/tui-test-runner/tui_session_start.ts\"",
+            "timeout": 120
           }
         ]
       }
@@ -91,6 +101,16 @@
           {
             "type": "command",
             "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner.js'))\" -- \".dev-pomogator/tools/specs-validator/phase-gate.ts\"",
+            "timeout": 60
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner.js'))\" -- \".dev-pomogator/tools/tui-test-runner/test_guard.ts\"",
             "timeout": 60
           }
         ]
@@ -134,6 +154,7 @@
     "AUTO_COMMIT_LLM_MODEL": "openrouter/deepseek/deepseek-v3.2",
     "PROMPT_SUGGEST_ENABLED": "true",
     "PROMPT_SUGGEST_TTL": "600000",
-    "TEST_STATUSLINE_ENABLED": "true"
+    "TEST_STATUSLINE_ENABLED": "true",
+    "TEST_STATUSLINE_FRAMEWORK": "auto"
   }
 }

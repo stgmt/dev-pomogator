@@ -89,6 +89,37 @@ export async function collectFileHashes(dirPath: string, basePath: string): Prom
 }
 
 /**
+ * Remove files in dest that don't exist in source (stale/legacy cleanup).
+ * Compares recursively — if a file exists in dest but not in source, it's deleted.
+ * Skips runtime dirs (__pycache__, node_modules, logs).
+ */
+export async function removeOrphanedFiles(sourceDir: string, destDir: string): Promise<void> {
+  if (!await fs.pathExists(destDir)) return;
+  const items = await fs.readdir(destDir, { withFileTypes: true });
+
+  for (const item of items) {
+    if (item.name === '__pycache__' || item.name === 'node_modules' || item.name === 'logs') continue;
+
+    const destPath = path.join(destDir, item.name);
+    const sourcePath = path.join(sourceDir, item.name);
+
+    if (item.isDirectory()) {
+      if (!await fs.pathExists(sourcePath)) {
+        await fs.remove(destPath);
+        console.log(`  - Removed orphaned dir: ${item.name}/`);
+      } else {
+        await removeOrphanedFiles(sourcePath, destPath);
+      }
+    } else {
+      if (!await fs.pathExists(sourcePath)) {
+        await fs.remove(destPath);
+        console.log(`  - Removed orphaned file: ${item.name}`);
+      }
+    }
+  }
+}
+
+/**
  * Ensure every shell entrypoint under a copied tool directory is executable.
  * Accepts either a single file path or a directory path.
  */
@@ -195,12 +226,60 @@ export async function setupGlobalScripts(distDir: string): Promise<void> {
 
   await copyBundledScript(distDir, scriptsDir, 'check-update.bundle.cjs', 'check-update.js');
   await copyBundledScript(distDir, scriptsDir, 'tsx-runner.js');
-  await copyBundledScript(distDir, scriptsDir, 'statusline_render.cjs');
-  await copyBundledScript(distDir, scriptsDir, 'statusline_wrapper.js');
+  // statusline_render.cjs and statusline_wrapper.js removed — test progress shown in TUI, not Claude Code statusline
 
   // Ensure tsx is available at ~/.dev-pomogator/node_modules/.bin/tsx (cross-platform)
   // This makes hooks work in ANY project, even those without local tsx or working npx
   await ensureHomeTsx(devPomogatorDir);
+
+  // Ensure Bun is available for claude-mem plugin hooks (prevents cold-start failures)
+  await ensureHomeBun();
+}
+
+/**
+ * Ensure Bun runtime is installed for claude-mem plugin hooks.
+ * On cold start (devcontainer restart), claude-mem's SessionStart hooks
+ * fail if Bun is not available. Non-fatal: skips silently on failure.
+ */
+export async function ensureHomeBun(): Promise<void> {
+  // Check common Bun locations
+  const homeDir = os.homedir();
+  const bunPaths = [
+    path.join(homeDir, '.bun', 'bin', process.platform === 'win32' ? 'bun.exe' : 'bun'),
+  ];
+
+  // Also check PATH
+  try {
+    execSync(process.platform === 'win32' ? 'where bun' : 'which bun', {
+      stdio: 'pipe',
+      timeout: 5000,
+    });
+    return; // Bun found on PATH
+  } catch {
+    // Not on PATH — check known locations
+  }
+
+  for (const bunPath of bunPaths) {
+    if (await fs.pathExists(bunPath)) return; // Already installed
+  }
+
+  // Install Bun
+  try {
+    if (process.platform === 'win32') {
+      execSync('powershell -Command "irm bun.sh/install.ps1 | iex"', {
+        stdio: 'pipe',
+        timeout: 60000,
+      });
+    } else {
+      execSync('curl -fsSL https://bun.sh/install | bash', {
+        stdio: 'pipe',
+        timeout: 60000,
+        shell: '/bin/bash',
+      });
+    }
+  } catch {
+    // Non-fatal — claude-mem's smart-install.js will handle it
+  }
 }
 
 /**

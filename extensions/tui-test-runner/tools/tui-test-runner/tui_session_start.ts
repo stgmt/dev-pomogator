@@ -7,7 +7,7 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import type { HookInput } from './adapters/types.js';
+import type { HookInput } from './adapters/types.ts';
 
 function log(level: 'INFO' | 'DEBUG' | 'ERROR', message: string): void {
   const ts = new Date().toISOString();

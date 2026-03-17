@@ -3,6 +3,7 @@
  * tsx-runner.js — Resilient TypeScript runner with multi-strategy fallback.
  *
  * Execution order (first success wins):
+ *   0.    Node 22+ native: --experimental-strip-types (zero deps, ~50ms)
  *   1.    Local tsx: node_modules/.bin/tsx (no npx dependency)
  *   1.25  Home tsx: ~/.dev-pomogator/node_modules/.bin/tsx (user-level, cross-platform)
  *   1.5   Global tsx: tsx on PATH (e.g. installed globally via npm i -g tsx)
@@ -25,6 +26,10 @@
 const { execSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
+
+const VERBOSE = process.env.DEV_POMOGATOR_HOOK_VERBOSE === '1';
+const startTime = Date.now();
+const strategyLog = [];
 
 // Parse args: everything after "--" or after the script name itself.
 // When invoked via `node -e "require(runner)" -- script.ts --event Stop`,
@@ -312,46 +317,158 @@ function repairNpmSync() {
   }
 }
 
-// Main: Strategy 1 (local) → 1.25 (home) → 1.5 (global) → 2 (npx) → 3 (clean + repair + retry npx)
+/**
+ * Centralized log file at ~/.dev-pomogator/logs/tsx-runner.log.
+ * Persists across sessions — check after "startup hook error" to see what failed.
+ */
+function getLogFile() {
+  const logsDir = path.join(require('os').homedir(), '.dev-pomogator', 'logs');
+  try { fs.mkdirSync(logsDir, { recursive: true }); } catch { /* ignore */ }
+  return path.join(logsDir, 'tsx-runner.log');
+}
+
+function appendLog(line) {
+  try {
+    fs.appendFileSync(getLogFile(), line + '\n', 'utf-8');
+  } catch { /* non-fatal */ }
+}
+
+/**
+ * Diagnostic logging — file always, stderr on failure or verbose.
+ */
+function logResult(success) {
+  const scriptName = path.basename(scriptPath);
+  const elapsed = Date.now() - startTime;
+  const trace = strategyLog.join(',');
+  const ts = new Date().toISOString();
+  const status = success ? 'OK' : 'FAIL';
+  const logLine = `[${ts}] [tsx-runner] ${status} script=${scriptName} strategies=${trace} elapsed=${elapsed}ms`;
+
+  // Always write to file
+  appendLog(logLine);
+
+  // stderr: always on failure, verbose on success
+  if (!success) {
+    process.stderr.write(logLine + '\n');
+  } else if (VERBOSE) {
+    process.stderr.write(logLine + '\n');
+  }
+}
+
+/**
+ * Strategy 0: Node 22.6+ native TypeScript execution.
+ * Uses --experimental-strip-types (strips TS annotations, runs natively).
+ * Zero external dependencies, ~50ms cold start.
+ * --experimental-default-type=module ensures .ts files are treated as ESM
+ * regardless of nearest package.json.
+ */
+function runNodeNativeTs() {
+  const [major, minor] = process.versions.node.split('.').map(Number);
+  if (major < 22 || (major === 22 && minor < 6)) return false;
+
+  const parts = ['node', '--experimental-strip-types', '--experimental-default-type=module', scriptPath, ...scriptArgs];
+  const cmd = parts.map(p => `"${p}"`).join(' ');
+  execSync(cmd, {
+    stdio: 'inherit',
+    cwd: process.cwd(),
+    env: { ...getSafeEnv(), NODE_NO_WARNINGS: '1' },
+    timeout: 30000,
+    shell: true,
+  });
+  return true;
+}
+
+// Main: Strategy 0 (native) → 1 (local) → 1.25 (home) → 1.5 (global) → 2 (npx) → 3 (clean + repair + retry npx)
+try {
+  // Strategy 0: Node 22+ native --experimental-strip-types (zero deps, ~50ms)
+  if (runNodeNativeTs()) {
+    strategyLog.push('0:native');
+    logResult(true);
+    process.exit(0);
+  }
+  strategyLog.push('0:skip');
+} catch (nativeError) {
+  // Check if it's a script error (has exit code) vs strip-types incompatibility
+  const msg = String(nativeError.stderr || nativeError.message || '');
+  if (nativeError.status && !msg.includes('ERR_UNSUPPORTED_NODE_OPTION') && !msg.includes('SyntaxError')) {
+    // Script ran but failed — real error
+    strategyLog.push(`0:fail(${nativeError.status})`);
+    logResult(false);
+    process.exit(nativeError.status);
+  }
+  // strip-types not supported or TS incompatible — fall through
+  strategyLog.push('0:unsupported');
+}
+
 try {
   // Strategy 1: direct local tsx — bypasses npx entirely
-  if (runLocalTsx()) process.exit(0);
+  if (runLocalTsx()) {
+    strategyLog.push('1:local');
+    logResult(true);
+    process.exit(0);
+  }
+  strategyLog.push('1:notfound');
 } catch (localError) {
   // Local tsx found but script failed — this is a real error, not a fallback case
+  strategyLog.push(`1:fail(${localError.status || 1})`);
+  logResult(false);
   process.exit(localError.status || 1);
 }
 
 try {
   // Strategy 1.25: tsx from ~/.dev-pomogator/ (user-level, cross-platform)
-  if (runHomeTsx()) process.exit(0);
+  if (runHomeTsx()) {
+    strategyLog.push('1.25:home');
+    logResult(true);
+    process.exit(0);
+  }
+  strategyLog.push('1.25:notfound');
 } catch (homeError) {
   // Home tsx found but script failed — real error
+  strategyLog.push(`1.25:fail(${homeError.status || 1})`);
+  logResult(false);
   process.exit(homeError.status || 1);
 }
 
 try {
   // Strategy 1.5: global tsx on PATH (e.g. npm i -g tsx)
-  if (runGlobalTsx()) process.exit(0);
+  if (runGlobalTsx()) {
+    strategyLog.push('1.5:global');
+    logResult(true);
+    process.exit(0);
+  }
+  strategyLog.push('1.5:notfound');
 } catch (globalError) {
   // Global tsx found but script failed — real error
+  strategyLog.push(`1.5:fail(${globalError.status || 1})`);
+  logResult(false);
   process.exit(globalError.status || 1);
 }
 
 try {
   // Strategy 2: npx tsx
   runNpxTsx();
+  strategyLog.push('2:npx');
+  logResult(true);
 } catch (error) {
   if (isNpxCacheError(error)) {
+    strategyLog.push('2:cache-error');
     // Strategy 3: clean npx cache + repair npm + retry
     cleanNpxCache();
     cleanStaleNodeModulesDirs();
     repairNpmSync();
     try {
       runNpxTsx();
+      strategyLog.push('3:repaired');
+      logResult(true);
     } catch (retryError) {
+      strategyLog.push(`3:fail(${retryError.status || 1})`);
+      logResult(false);
       process.exit(retryError.status || 1);
     }
   } else {
+    strategyLog.push(`2:fail(${error.status || 1})`);
+    logResult(false);
     process.exit(error.status || 1);
   }
 }

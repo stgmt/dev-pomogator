@@ -134,13 +134,16 @@ RUN mkdir -p /home/vscode/.cargo/bin && chown -R vscode:vscode /home/vscode/.car
 COPY --from=node-builder /home/vscode/.npm-global /home/vscode/.npm-global
 RUN chown -R vscode:vscode /home/vscode/.npm-global
 
-# 4. Claude Code CLI (native installer, as vscode user)
+# 4. Claude Code CLI + Bun (as vscode user)
 USER vscode
 RUN for i in 1 2 3; do curl -fsSL https://claude.ai/install.sh | bash && break || sleep 5; done
+# Bun runtime for claude-mem plugin hooks (prevents SessionStart cold-start failures)
+RUN curl -fsSL https://bun.sh/install | bash
 USER root
 
 # Verify toolchain (non-fatal)
-RUN node -v && npm -v && python3 --version && claude --version && gh --version || true
+RUN node -v && npm -v && python3 --version && claude --version && gh --version \
+    && /home/vscode/.bun/bin/bun --version || true
 
 # 5. Firefox wrapper: stealth profile by default
 RUN mv /usr/bin/firefox-esr /usr/bin/firefox-esr.real \
@@ -182,7 +185,7 @@ ENV HEIGHT=800
 # Container environment
 ENV DEVCONTAINER=true
 ENV CLAUDE_CONFIG_DIR=/home/vscode/.claude
-ENV PATH="/home/vscode/.cargo/bin:/home/vscode/.local/bin:/home/vscode/.npm-global/bin:${PATH}"
+ENV PATH="/home/vscode/.bun/bin:/home/vscode/.cargo/bin:/home/vscode/.local/bin:/home/vscode/.npm-global/bin:${PATH}"
 
 WORKDIR /workspaces/dev-pomogator
 
