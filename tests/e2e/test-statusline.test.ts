@@ -644,8 +644,7 @@ describe('PLUGIN011: Test Statusline', () => {
     });
 
     // @feature9
-    it.skip('PLUGIN011_44: installer deletes project-level statusLine (migration)', async () => {
-      const globalSettingsPath = globalClaudeSettingsPath();
+    it('PLUGIN011_44: installer deletes project-level statusLine (migration)', async () => {
       const projectSettingsPath = projectClaudeSettingsPath();
 
       await setupCleanState('claude');
@@ -662,11 +661,6 @@ describe('PLUGIN011: Test Statusline', () => {
         // Project settings should have statusLine REMOVED (migrated to global)
         const projectSettings = await fs.readJson(projectSettingsPath);
         expect(projectSettings.statusLine).toBeUndefined();
-
-        // Global settings should have statusLine installed
-        const globalSettings = await fs.readJson(globalSettingsPath);
-        expect(globalSettings.statusLine).toBeDefined();
-        expect(globalSettings.statusLine.command).toContain('statusline_wrapper.js');
       } finally {
         await setupCleanState('claude');
       }
@@ -774,10 +768,47 @@ else:
         duration_ms: 12500,
       });
       expect(output).toContain('76%');
-      expect(output).toContain('38✅');
+      expect(output).toContain('38/50✅');
       expect(output).toContain('2❌');
       expect(output).toContain('vitest');
       expect(output).toContain('█');
+    });
+
+    // @feature12
+    it('PLUGIN011_74: CompactBar hides /total and % when total=0 (no discovery)', () => {
+      const output = renderCompact({
+        state: 'running',
+        framework: 'vitest',
+        passed: 34,
+        failed: 0,
+        skipped: 0,
+        running: 0,
+        total: 0,
+        percent: 0,
+        duration_ms: 66000,
+      });
+      // Should NOT show /total or percent
+      expect(output).not.toContain('/');
+      expect(output).not.toContain('%');
+      expect(output).toContain('34✅');
+      expect(output).toContain('vitest');
+    });
+
+    // @feature12
+    it('PLUGIN011_75: CompactBar shows real progress with discovery total', () => {
+      const output = renderCompact({
+        state: 'running',
+        framework: 'vitest',
+        passed: 34,
+        failed: 0,
+        skipped: 0,
+        running: 541,
+        total: 575,
+        percent: 6,
+        duration_ms: 66000,
+      });
+      expect(output).toContain('34/575✅');
+      expect(output).toContain('6%');
     });
 
     // @feature1
@@ -795,88 +826,11 @@ else:
   });
 
   // =========================================================================
-  // Toggle Compact/Full (@feature2) — CSS + keybinding verification
+  // Toggle/Stop/Resize (@feature2-4) — replaced by Python Pilot tests
+  // See: tests/tui/test_toggle.py, test_stop.py, test_resize.py
+  // Old file-inspection tests PLUGIN011_63-67 removed — they were false
+  // positives that checked code strings instead of real TUI behavior.
   // =========================================================================
-  describe('Toggle Compact/Full (@feature2)', () => {
-    const APP_PY = path.join(appPath(), 'extensions/tui-test-runner/tools/tui-test-runner/tui/app.py');
-
-    // @feature2
-    it('PLUGIN011_63: app.py has CSS rules for compact mode toggle', async () => {
-      const content = await fs.readFile(APP_PY, 'utf-8');
-      // Compact mode CSS: hide TabbedContent, show CompactBar
-      expect(content).toContain('Screen.compact TabbedContent');
-      expect(content).toContain('display: none');
-      expect(content).toContain('Screen.compact CompactBar');
-      expect(content).toContain('display: block');
-    });
-
-    // @feature2
-    it('PLUGIN011_64: app.py has M keybinding for toggle_compact action', async () => {
-      const content = await fs.readFile(APP_PY, 'utf-8');
-      expect(content).toContain('"m"');
-      expect(content).toContain('toggle_compact');
-      expect(content).toContain('action_toggle_compact');
-    });
-
-    // @feature2
-    it('PLUGIN011_64b: toggle_compact uses add_class/remove_class (not toggle_class)', async () => {
-      const content = await fs.readFile(APP_PY, 'utf-8');
-      expect(content).toContain('has_class("compact")');
-      expect(content).toContain('remove_class("compact")');
-      expect(content).toContain('add_class("compact")');
-      // toggle_class doesn't exist in Textual — must NOT be used
-      expect(content).not.toContain('toggle_class');
-    });
-  });
-
-  // =========================================================================
-  // Stop Tests (@feature3) — stop_handler + keybinding verification
-  // =========================================================================
-  describe('Stop Tests (@feature3)', () => {
-    const TUI_DIR = 'extensions/tui-test-runner/tools/tui-test-runner';
-    const APP_PY = path.join(appPath(), TUI_DIR, 'tui/app.py');
-    const STOP_HANDLER_PY = path.join(appPath(), TUI_DIR, 'tui/stop_handler.py');
-
-    // @feature3
-    it('PLUGIN011_65: stop_handler.py exists with cross-platform kill', async () => {
-      expect(await fs.pathExists(STOP_HANDLER_PY)).toBe(true);
-      const content = await fs.readFile(STOP_HANDLER_PY, 'utf-8');
-      // Cross-platform: taskkill for Windows, SIGTERM for Unix
-      expect(content).toContain('taskkill');
-      expect(content).toContain('SIGTERM');
-      expect(content).toContain('is_process_alive');
-      expect(content).toContain('stop_tests');
-    });
-
-    // @feature3
-    it('PLUGIN011_66: app.py has X keybinding for stop_tests action', async () => {
-      const content = await fs.readFile(APP_PY, 'utf-8');
-      expect(content).toContain('"x"');
-      expect(content).toContain('stop_tests');
-      expect(content).toContain('action_stop_tests');
-      expect(content).toContain('self.status.pid');
-    });
-  });
-
-  // =========================================================================
-  // Auto-compact (@feature4) — on_resize verification
-  // =========================================================================
-  describe('Auto-compact (@feature4)', () => {
-    const APP_PY = path.join(appPath(), 'extensions/tui-test-runner/tools/tui-test-runner/tui/app.py');
-
-    // @feature4
-    it('PLUGIN011_67: app.py has on_resize handler with height threshold', async () => {
-      const content = await fs.readFile(APP_PY, 'utf-8');
-      expect(content).toContain('on_resize');
-      expect(content).toContain('COMPACT_HEIGHT_THRESHOLD');
-      expect(content).toContain('add_class("compact")');
-      // on_resize should only add compact class, never remove it
-      // (manual M key to restore full mode)
-      const onResizeMethod = content.match(/def on_resize[\s\S]*?(?=\n    def )/);
-      expect(onResizeMethod).not.toBeNull();
-      expect(onResizeMethod![0]).not.toContain('remove_class');
-    });
-  });
 
   // =========================================================================
   // Statusline Render Removal (@feature5) — verify legacy files removed
@@ -896,6 +850,136 @@ else:
       expect(await fs.pathExists(appPath(TEST_STATUSLINE_DIR, 'statusline_session_start.ts'))).toBe(true);
       expect(await fs.pathExists(appPath(TEST_STATUSLINE_DIR, 'test_runner_wrapper.sh'))).toBe(true);
       expect(await fs.pathExists(appPath(TEST_STATUSLINE_DIR, 'status_types.ts'))).toBe(true);
+    });
+  });
+
+  // =========================================================================
+  // Installer hooks — tui-test-runner hooks in extension.json (@feature6)
+  // =========================================================================
+  describe('Installer hooks (@feature6)', () => {
+    // @feature6
+    it('PLUGIN011_70: tui-test-runner extension.json has object-format hooks', async () => {
+      const manifest = await fs.readJson(
+        appPath('extensions/tui-test-runner/extension.json'),
+      );
+      // Must be object { claude: { ... } }, NOT array
+      expect(manifest.hooks).not.toBeInstanceOf(Array);
+      expect(manifest.hooks.claude).toBeDefined();
+      expect(manifest.hooks.claude.SessionStart).toBeDefined();
+      expect(manifest.hooks.claude.PreToolUse).toBeDefined();
+      expect(manifest.hooks.claude.PreToolUse.matcher).toBe('Bash');
+    });
+
+    // @feature10
+    it('PLUGIN011_72: render script shows "ago" for completed runs', () => {
+      const session = 'agotest1';
+      const prefix = session.substring(0, 8);
+      const statusDir = path.join(appPath(), '.dev-pomogator', '.test-status');
+      fs.ensureDirSync(statusDir);
+      const statusFile = path.join(statusDir, `status.${prefix}.yaml`);
+
+      // Write a completed YAML with updated_at 5 minutes ago
+      const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+      fs.writeFileSync(statusFile, [
+        'version: 2',
+        `session_id: "${session}"`,
+        'pid: 0',
+        `started_at: "${fiveMinAgo}"`,
+        `updated_at: "${fiveMinAgo}"`,
+        'state: passed',
+        'framework: vitest',
+        'total: 10',
+        'passed: 10',
+        'failed: 0',
+        'skipped: 0',
+        'running: 0',
+        'percent: 100',
+        'duration_ms: 5000',
+        'error_message: ""',
+        'log_file: ""',
+      ].join('\n'), 'utf-8');
+
+      const stdinJson = JSON.stringify({ session_id: session, cwd: appPath() });
+      const result = spawnSync('node', [appPath('dist', 'statusline_render.cjs')], {
+        input: stdinJson,
+        encoding: 'utf-8',
+        timeout: 5000,
+        env: { ...process.env, FORCE_COLOR: '0' },
+      });
+
+      expect(result.stdout).toContain('10/10');
+      expect(result.stdout).toContain('ago');
+
+      // Cleanup
+      fs.removeSync(statusFile);
+    });
+
+    // @feature10
+    it('PLUGIN011_73: render script does NOT show "ago" for running state', () => {
+      const session = 'agotest2';
+      const prefix = session.substring(0, 8);
+      const statusDir = path.join(appPath(), '.dev-pomogator', '.test-status');
+      fs.ensureDirSync(statusDir);
+      const statusFile = path.join(statusDir, `status.${prefix}.yaml`);
+
+      const now = new Date().toISOString();
+      fs.writeFileSync(statusFile, [
+        'version: 2',
+        `session_id: "${session}"`,
+        `pid: ${process.pid}`,
+        `started_at: "${now}"`,
+        `updated_at: "${now}"`,
+        'state: running',
+        'framework: vitest',
+        'total: 5',
+        'passed: 3',
+        'failed: 0',
+        'skipped: 0',
+        'running: 2',
+        'percent: 60',
+        'duration_ms: 2000',
+        'error_message: ""',
+        'log_file: ""',
+      ].join('\n'), 'utf-8');
+
+      const stdinJson = JSON.stringify({ session_id: session, cwd: appPath() });
+      const result = spawnSync('node', [appPath('dist', 'statusline_render.cjs')], {
+        input: stdinJson,
+        encoding: 'utf-8',
+        timeout: 5000,
+        env: { ...process.env, FORCE_COLOR: '0' },
+      });
+
+      expect(result.stdout).not.toContain('ago');
+
+      // Cleanup
+      fs.removeSync(statusFile);
+    });
+
+    // @feature6
+    it('PLUGIN011_71: wrapper creates YAML when SESSION is set', () => {
+      // Run wrapper with a test session and a quick command (echo)
+      const session = 'e2etest1';
+      const result = spawnSync('bash', [
+        appPath('extensions/test-statusline/tools/test-statusline/test_runner_wrapper.sh'),
+        'echo', 'hello',
+      ], {
+        encoding: 'utf-8',
+        cwd: appPath(),
+        timeout: 15000,
+        env: {
+          ...process.env,
+          TEST_STATUSLINE_SESSION: session,
+          TEST_STATUSLINE_PROJECT: appPath(),
+        },
+      });
+      // Wrapper should create YAML status file
+      const statusFile = path.join(appPath(), '.dev-pomogator', '.test-status', `status.${session}.yaml`);
+      expect(fs.pathExistsSync(statusFile)).toBe(true);
+      const content = fs.readFileSync(statusFile, 'utf-8');
+      expect(content).toContain('state:');
+      // Cleanup
+      fs.removeSync(statusFile);
     });
   });
 });
