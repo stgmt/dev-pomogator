@@ -9,7 +9,7 @@ import { findRepoRoot } from '../utils/repo.js';
 import { detectMangledArtifacts } from '../utils/msys.js';
 import { RULES_SUBFOLDER, TOOLS_DIR, SKILLS_DIR } from '../constants.js';
 import { getFileHash } from '../updater/content-hash.js';
-import { collectFileHashes, addProjectPaths, makePortableScriptCommand, resolveHookToolPaths, replaceNpxTsxWithPortable, ensureExecutableShellScripts, setupGlobalScripts } from './shared.js';
+import { collectFileHashes, addProjectPaths, makePortableScriptCommand, resolveHookToolPaths, replaceNpxTsxWithPortable, ensureExecutableShellScripts, setupGlobalScripts, removeOrphanedFiles } from './shared.js';
 import { writeJsonAtomic, readJsonSafe } from '../utils/atomic-json.js';
 import { writeGlobalStatusLine } from '../utils/statusline.js';
 
@@ -129,6 +129,10 @@ export async function installClaude(options: ClaudeOptions = {}): Promise<void> 
         const dest = path.join(repoRoot, TOOLS_DIR, toolName);
         await fs.copy(toolPath, dest, { overwrite: true });
         await ensureExecutableShellScripts(dest);
+
+        // Remove files in dest that don't exist in source (stale/legacy cleanup)
+        await removeOrphanedFiles(toolPath, dest);
+
         console.log(`  ✓ Installed tool: ${toolName}/`);
 
         // Hash all files in the tool directory
@@ -355,7 +359,8 @@ async function installExtensionHooks(repoRoot: string, extensions: Extension[]):
       // Hook can be a string or { matcher, command, timeout } object
       const rawCommand = typeof rawHook === 'string' ? rawHook : rawHook.command;
       const matcher = typeof rawHook === 'string' ? '' : (rawHook.matcher ?? '');
-      const timeout = typeof rawHook === 'string' ? 60 : (rawHook.timeout ?? 60);
+      const defaultTimeout = hookName === 'SessionStart' ? 120 : 60;
+      const timeout = typeof rawHook === 'string' ? defaultTimeout : (rawHook.timeout ?? defaultTimeout);
 
       // Replace relative paths with absolute paths so hooks work from any CWD
       // Then replace npx tsx with resilient tsx-runner wrapper
