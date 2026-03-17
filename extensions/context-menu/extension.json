@@ -1,6 +1,6 @@
 {
   "name": "context-menu",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Enable Claude Code in Windows right-click context menu via Nilesoft Shell",
   "platforms": ["claude"],
   "category": "automation",
@@ -8,8 +8,14 @@
     "claude": []
   },
   "rules": {},
-  "tools": {},
-  "toolFiles": [],
+  "tools": {
+    "context-menu": "tools/context-menu"
+  },
+  "toolFiles": {
+    "context-menu": [
+      ".dev-pomogator/tools/context-menu/postinstall.ts"
+    ]
+  },
   "skills": {
     "context-menu": "skills/context-menu"
   },
@@ -18,5 +24,8 @@
       ".claude/skills/context-menu/SKILL.md"
     ]
   },
-  "hooks": []
+  "hooks": [],
+  "postInstall": {
+    "command": "npx tsx extensions/context-menu/tools/context-menu/postinstall.ts"
+  }
 }
