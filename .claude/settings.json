@@ -122,6 +122,16 @@
         "hooks": [
           {
             "type": "command",
+            "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner.js'))\" -- \".dev-pomogator/tools/plan-pomogator/prompt-capture.ts\"",
+            "timeout": 60
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
             "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner.js'))\" -- \".dev-pomogator/tools/prompt-suggest/prompt_suggest_submit.ts\"",
             "timeout": 60
           }
