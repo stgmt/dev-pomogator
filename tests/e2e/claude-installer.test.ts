@@ -10,6 +10,7 @@ import {
   setupCleanState,
   // Logging helpers
   getInstallLog,
+  type InstallerResult,
 } from './helpers';
 
 /**
@@ -22,12 +23,14 @@ import {
  * - Hooks configured in ~/.claude/settings.json
  * - Auto-update script installed
  */
+let installerResult: InstallerResult;
+
 describe('CORE003: Claude Code Installer', () => {
   beforeAll(async () => {
     await setupCleanState('claude');
 
     // Run Claude Code installer (--all for non-interactive mode)
-    await runInstaller('--claude --all');
+    installerResult = await runInstaller('--claude --all');
   });
 
   describe('Scenario: Clean installation', () => {
@@ -738,10 +741,59 @@ describe('Scenario: Auto-update migrates old-format hooks to portable format', (
   });
 });
 
+// @feature14
+describe('CORE003: Visible installer output', () => {
+  it('CORE003_14: should produce visible stdout during installation', () => {
+    expect(installerResult.logs).toContain('Installing...');
+    expect(installerResult.logs).toContain('Installation complete');
+    expect(installerResult.exitCode).toBe(0);
+  });
+});
+
+// @feature16
+describe('CORE003: PostInstall hooks use installed paths', () => {
+  it('CORE003_16: all postInstall commands should reference .dev-pomogator/tools/ not extensions/', async () => {
+    const extensionsDir = appPath('extensions');
+    const entries = await fs.readdir(extensionsDir);
+
+    for (const entry of entries) {
+      const manifestPath = path.join(extensionsDir, entry, 'extension.json');
+      if (!await fs.pathExists(manifestPath)) continue;
+
+      const manifest = await fs.readJson(manifestPath);
+      if (!manifest.postInstall) continue;
+
+      // postInstall can be { command: "..." } or { cursor: { command: "..." }, claude: { command: "..." } }
+      const commands: string[] = [];
+      if (typeof manifest.postInstall.command === 'string') {
+        commands.push(manifest.postInstall.command);
+      }
+      for (const platform of ['cursor', 'claude']) {
+        if (manifest.postInstall[platform]?.command) {
+          commands.push(manifest.postInstall[platform].command);
+        }
+      }
+
+      for (const cmd of commands) {
+        // Skip commands that don't reference TypeScript/Python files (e.g. "npm install --no-save tsx")
+        if (!cmd.includes('.ts') && !cmd.includes('.py') && !cmd.includes('.js')) continue;
+
+        expect(cmd, `${entry}: postInstall should not reference extensions/ source path`).not.toMatch(/\bextensions\//);
+      }
+    }
+  });
+});
+
 describe('CORE003: Install logging for Claude Code', () => {
   it('should log Claude Code installation to install.log', async () => {
     const log = await getInstallLog();
     expect(log).toContain('Installation started');
     expect(log).toContain('claude');
+  });
+
+  // @feature15
+  it('CORE003_15: should log completion marker to install.log', async () => {
+    const log = await getInstallLog();
+    expect(log).toContain('Installation finished');
   });
 });

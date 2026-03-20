@@ -55,3 +55,8 @@ Feature: CORE001 Cursor Installer
   Scenario: Install log captures console output
     When I run "node dist/index.js --cursor --all"
     Then install.log should contain "Installed rule:"
+
+  # @feature16
+  Scenario: CORE001_16 Install log contains completion marker
+    When I run "node dist/index.js --cursor --all"
+    Then install.log should contain "Installation finished"

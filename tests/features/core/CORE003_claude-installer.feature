@@ -95,6 +95,24 @@ Feature: CORE003 Claude Code Installer
     And configure.py should not prompt for user input
     And all files should be auto-added to whitelist
 
+  # @feature14
+  Scenario: CORE003_14 Installation produces visible terminal output
+    When I run "node dist/index.js --claude --all"
+    Then stdout should contain "Installing..."
+    And stdout should contain "Installation complete"
+
+  # @feature15
+  Scenario: CORE003_15 Install log contains completion marker
+    When I run "node dist/index.js --claude --all"
+    Then install.log should contain "Installation finished"
+
+  # @feature16
+  Scenario: CORE003_16 PostInstall hooks use installed .dev-pomogator/tools/ paths
+    Given all extension.json manifests are loaded
+    When checking postInstall commands that reference script files
+    Then no command should reference "extensions/" source paths
+    And all commands should use ".dev-pomogator/tools/" installed paths
+
   Scenario: npm ENOTEMPTY recovery cleans stale node_modules temp dirs
     Given dev-pomogator installs for Claude Code with --all
     And node_modules contains stale temp dirs like .package-name-dLWEkYjE

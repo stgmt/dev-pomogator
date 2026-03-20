@@ -1514,4 +1514,10 @@ describe('Install logging', () => {
     const log = await getInstallLog();
     expect(log).toContain('Installed rule:');
   });
+
+  // @feature16
+  it('CORE001_16: should log completion marker to install.log', async () => {
+    const log = await getInstallLog();
+    expect(log).toContain('Installation finished');
+  });
 });

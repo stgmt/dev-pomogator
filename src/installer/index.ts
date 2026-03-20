@@ -46,19 +46,20 @@ export async function runNonInteractiveInstaller(
   
   // Default settings - auto-update enabled by default
   const autoUpdate = true;
-  
-  // Save config
+
+  // Save config — preserve existing installedExtensions (addProjectPaths will update them)
+  const existingConfig = await loadConfig();
   const config: Config = {
     platforms,
     autoUpdate,
     lastCheck: new Date().toISOString(),
     cooldownHours: 24,
     rememberChoice: true,
-    installedExtensions: [],
+    installedExtensions: existingConfig?.installedExtensions ?? [],
   };
-  
+
   await saveConfig(config);
-  
+
   // Install
   await install(platforms, autoUpdate, extensionNames);
 }
@@ -109,18 +110,19 @@ export async function runSemiInteractiveInstaller(
     default: true,
   });
   
-  // Save config
+  // Save config — preserve existing installedExtensions (addProjectPaths will update them)
+  const existingConfig = await loadConfig();
   const config: Config = {
     platforms,
     autoUpdate,
     lastCheck: new Date().toISOString(),
     cooldownHours: 24,
     rememberChoice: true,
-    installedExtensions: [],
+    installedExtensions: existingConfig?.installedExtensions ?? [],
   };
-  
+
   await saveConfig(config);
-  
+
   // Install
   await install(platforms, autoUpdate, selectedExtensions);
 }
@@ -199,18 +201,18 @@ export async function runInstaller(): Promise<void> {
     default: true,
   });
   
-  // 5. Save config
+  // 5. Save config — preserve existing installedExtensions (addProjectPaths will update them)
   const config: Config = {
     platforms,
     autoUpdate,
     lastCheck: new Date().toISOString(),
     cooldownHours: 24,
     rememberChoice,
-    installedExtensions: [],
+    installedExtensions: existingConfig?.installedExtensions ?? [],
   };
-  
+
   await saveConfig(config);
-  
+
   // 6. Install
   await install(platforms, autoUpdate, selectedExtensions);
 }
