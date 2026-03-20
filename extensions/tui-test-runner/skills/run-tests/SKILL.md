@@ -71,17 +71,17 @@ Build the command using the dispatch table:
 
 | Framework | Command | Filter |
 |-----------|---------|--------|
-| vitest | `npx vitest run` | `filter` (positional arg) |
+| vitest | `npx vitest run` | `-t "filter"` |
 | jest | `npx jest` | `--testNamePattern "filter"` |
 | pytest | `python -m pytest` | `-k "filter"` |
 | dotnet | `dotnet test` | `--filter "filter"` |
 | rust | `cargo test` | `-- filter` |
 | go | `go test ./...` | `-run "filter"` |
 
-Wrap with `test_runner_wrapper.sh` for YAML status tracking:
+Wrap with `test_runner_wrapper.sh` for YAML status tracking. **Always pass `--framework`** so the wrapper uses the correct adapter (auto-detection can fail in Docker or nested projects):
 
 ```bash
-bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.sh <test-command>
+bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.sh --framework <detected-framework> -- <test-command>
 ```
 
 If `--docker` flag, check if `scripts/docker-test.sh` exists in the project root:
@@ -89,15 +89,26 @@ If `--docker` flag, check if `scripts/docker-test.sh` exists in the project root
 **If `scripts/docker-test.sh` exists** (preferred — handles build, cleanup, session isolation automatically):
 
 ```bash
-bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.sh bash scripts/docker-test.sh <test-command>
+bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.sh --framework vitest -- bash scripts/docker-test.sh npx vitest run -t "auth"
 ```
 
-Where `<test-command>` is the framework-specific command from the dispatch table above (e.g., `npx vitest run --grep "auth"`).
+**IMPORTANT: Each argument MUST be a separate word — do NOT wrap the entire test command in quotes.**
+
+```bash
+# CORRECT — each token is a separate shell word:
+bash scripts/docker-test.sh npx vitest run -t "auth"
+
+# WRONG — entire command in quotes becomes a single $1 argument:
+bash scripts/docker-test.sh "npx vitest run -t auth"
+#                            ^^^^^^^^^^^^^^^^^^^^^^^^ docker-test.sh passes this as one arg → node tries to load it as a file path → MODULE_NOT_FOUND
+```
+
+`docker-test.sh` uses `"$@"` to forward arguments individually to the container. If you wrap them in one string, Docker receives a single argument and `node` interprets it as a file path.
 
 **If `scripts/docker-test.sh` does NOT exist** (fallback for other projects):
 
 ```bash
-bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.sh docker compose -f docker-compose.test.yml run --rm test <test-command>
+bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.sh --framework <detected-framework> -- docker compose -f docker-compose.test.yml run --rm test <test-command>
 ```
 
 **Cross-platform note:** The wrapper uses Node.js `spawn()` without shell, so `docker` is found via system PATH on all platforms (Windows, Linux, macOS).

@@ -31,19 +31,27 @@ const VERBOSE = process.env.DEV_POMOGATOR_HOOK_VERBOSE === '1';
 const startTime = Date.now();
 const strategyLog = [];
 
-// Parse args: everything after "--" or after the script name itself.
-// When invoked via `node -e "require(runner)" -- script.ts --event Stop`,
-// Node consumes "--" and puts script.ts in argv[1], so indexOf('--') = -1.
-// Detect this case: if argv[1] looks like a .ts script path, include it.
-const dashIdx = process.argv.indexOf('--');
+// Parse args: find the .ts/.tsx script path in argv, pass everything after it as script args.
+// When invoked via `node -e "require(runner)" -- script.ts --framework vitest -- bash ...`,
+// Node consumes the first "--", so argv = [node, -e, script.ts, --framework, vitest, --, bash, ...].
+// We must NOT use indexOf('--') because a later "--" may be part of the CHILD script's args.
+// Instead, find the .ts file first — it's always the script to run.
 let args;
-if (dashIdx !== -1) {
-  args = process.argv.slice(dashIdx + 1);
-} else if (process.argv[1] && /\.tsx?$/.test(process.argv[1])) {
-  // argv[1] is a .ts file — node consumed "--", include argv[1] onwards
+if (process.argv[2] && /\.tsx?$/i.test(process.argv[2])) {
+  // `node -e "require(runner)" -- script.ts [child-args...]`
+  // Node consumed "--", argv[2] is the script, rest is for the child
+  args = process.argv.slice(2);
+} else if (process.argv[1] && /\.tsx?$/i.test(process.argv[1])) {
+  // `node tsx-runner.js script.ts [child-args...]` (direct invocation)
   args = process.argv.slice(1);
 } else {
-  args = process.argv.slice(2);
+  // Fallback: look for "--" separator
+  const dashIdx = process.argv.indexOf('--');
+  if (dashIdx !== -1) {
+    args = process.argv.slice(dashIdx + 1);
+  } else {
+    args = process.argv.slice(2);
+  }
 }
 
 if (args.length === 0) {

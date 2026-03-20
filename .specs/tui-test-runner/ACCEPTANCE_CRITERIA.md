@@ -108,6 +108,4 @@ WHEN AI-агент пытается выполнить `npm test` через Bas
 
 IF команда содержит `test_runner_wrapper` THEN hook SHALL пропустить (уже wrapped).
 
-IF TEST_GUARD_BYPASS=1 THEN hook SHALL пропустить.
-
-WHEN hook блокирует команду THEN сообщение SHALL содержать: usage /run-tests, список фреймворков, как bypass.
+WHEN hook блокирует команду THEN сообщение SHALL содержать: usage /run-tests, список фреймворков.

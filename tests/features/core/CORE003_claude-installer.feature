@@ -113,6 +113,12 @@ Feature: CORE003 Claude Code Installer
     Then no command should reference "extensions/" source paths
     And all commands should use ".dev-pomogator/tools/" installed paths
 
+  # @feature17
+  Scenario: CORE003_17 Production build has no execa dependency
+    Given dev-pomogator dist/ is built
+    When checking all JS files in dist/ for execa imports
+    Then no file should contain dynamic import or require of execa
+
   Scenario: npm ENOTEMPTY recovery cleans stale node_modules temp dirs
     Given dev-pomogator installs for Claude Code with --all
     And node_modules contains stale temp dirs like .package-name-dLWEkYjE

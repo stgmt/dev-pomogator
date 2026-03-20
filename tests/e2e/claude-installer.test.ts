@@ -797,3 +797,18 @@ describe('CORE003: Install logging for Claude Code', () => {
     expect(log).toContain('Installation finished');
   });
 });
+
+// @feature17
+describe('CORE003: No execa dependency in production build', () => {
+  it('CORE003_17: dist/ should not contain execa imports', async () => {
+    const distDir = appPath('dist');
+    const files = await fs.readdir(distDir);
+    const jsFiles = files.filter((f: string) => f.endsWith('.js') || f.endsWith('.cjs') || f.endsWith('.mjs'));
+
+    for (const file of jsFiles) {
+      const content = await fs.readFile(path.join(distDir, file), 'utf-8');
+      expect(content, `${file} should not import execa`).not.toMatch(/import\s*\(\s*['"]execa['"]\s*\)/);
+      expect(content, `${file} should not require execa`).not.toMatch(/require\s*\(\s*['"]execa['"]\s*\)/);
+    }
+  });
+});

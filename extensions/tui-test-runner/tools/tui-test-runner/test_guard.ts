@@ -59,7 +59,6 @@ function buildDenyMessage(blockedCommand: string): string {
     'Supported frameworks: vitest, jest, pytest, dotnet, rust (cargo), go',
     'Auto-detected from: vitest.config.ts, jest.config.js, pytest.ini, Cargo.toml, go.mod, *.csproj',
     '',
-    'To bypass (not recommended): set TEST_GUARD_BYPASS=1',
   ].join('\n');
 }
 
@@ -87,14 +86,6 @@ async function main(): Promise<void> {
 
   const command = data.tool_input?.command;
   if (!command) {
-    process.exit(0);
-  }
-
-  // Bypass env var (own process or in command string)
-  if (process.env.TEST_GUARD_BYPASS === '1') {
-    process.exit(0);
-  }
-  if (command && /TEST_GUARD_BYPASS\s*=\s*1/.test(command)) {
     process.exit(0);
   }
 

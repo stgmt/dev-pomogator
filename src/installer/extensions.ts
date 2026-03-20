@@ -1,6 +1,6 @@
 import fs from 'fs-extra';
 import path from 'path';
-import { execSync } from 'child_process';
+import { execSync, spawn } from 'child_process';
 import { fileURLToPath } from 'url';
 import { getMsysSafeEnv } from '../utils/msys.js';
 
@@ -92,6 +92,45 @@ export class PostUpdateHookError extends Error {
     super(`Post-update hook failed for ${extensionName}: ${message}`);
     this.name = 'PostUpdateHookError';
   }
+}
+
+/**
+ * Execute a shell command via child_process.spawn, returning a Promise.
+ * Replaces execa() — uses only Node.js built-ins (no external deps).
+ * Captures stderr in pipe mode so isRecoverableNpmError() can inspect error.message.
+ */
+function execShellCommand(
+  command: string,
+  opts: { cwd: string; stdio: 'inherit' | 'pipe'; env: NodeJS.ProcessEnv }
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, {
+      cwd: opts.cwd,
+      stdio: opts.stdio,
+      shell: true,
+      env: opts.env,
+    });
+
+    let stderr = '';
+    if (opts.stdio === 'pipe' && child.stderr) {
+      child.stderr.on('data', (chunk: Buffer) => {
+        stderr += chunk.toString();
+      });
+    }
+
+    child.on('error', (err) => {
+      reject(new Error(`Command failed: ${command}\n${err.message}`));
+    });
+
+    child.on('close', (code) => {
+      if (code !== 0) {
+        const msg = stderr ? `\n${stderr.trim()}` : '';
+        reject(new Error(`Command failed with exit code ${code}: ${command}${msg}`));
+      } else {
+        resolve();
+      }
+    });
+  });
 }
 
 export async function getExtensionsDir(): Promise<string> {
@@ -433,9 +472,7 @@ export async function runPostInstallHook(
 
   const env = getMsysSafeEnv();
   try {
-    const { execa } = await import('execa');
-    const execOpts = { cwd: repoRoot, stdio: (useInherit ? 'inherit' : 'pipe') as 'inherit' | 'pipe', shell: true, env };
-    await execa(command, execOpts);
+    await execShellCommand(command, { cwd: repoRoot, stdio: useInherit ? 'inherit' : 'pipe', env });
     console.log(`  ✓ Post-install hook completed for ${extension.name}`);
     if (executedSharedHooks && isSharedPostInstallHook(extension)) {
       executedSharedHooks.add(extension.name);
@@ -446,8 +483,7 @@ export async function runPostInstallHook(
       cleanNpxCache();
       cleanStaleNodeModulesDirs(repoRoot);
       try {
-        const { execa } = await import('execa');
-        await execa(command, { cwd: repoRoot, stdio: useInherit ? 'inherit' : 'pipe', shell: true, env });
+        await execShellCommand(command, { cwd: repoRoot, stdio: useInherit ? 'inherit' : 'pipe', env });
         console.log(`  ✓ Post-install hook completed for ${extension.name} (after cache cleanup)`);
         if (executedSharedHooks && isSharedPostInstallHook(extension)) {
           executedSharedHooks.add(extension.name);
@@ -498,13 +534,7 @@ export async function runPostUpdateHook(
 
   const env = getMsysSafeEnv();
   try {
-    const { execa } = await import('execa');
-    await execa(command, {
-      cwd: repoRoot,
-      stdio: useInherit ? 'inherit' : 'pipe',
-      shell: true,
-      env,
-    });
+    await execShellCommand(command, { cwd: repoRoot, stdio: useInherit ? 'inherit' : 'pipe', env });
     console.log(`  ✓ Post-update hook completed for ${extension.name}`);
   } catch (error) {
     // Retry once on ENOTEMPTY / MODULE_NOT_FOUND — clean both npx cache and stale node_modules dirs
@@ -512,8 +542,7 @@ export async function runPostUpdateHook(
       cleanNpxCache();
       cleanStaleNodeModulesDirs(repoRoot);
       try {
-        const { execa } = await import('execa');
-        await execa(command, { cwd: repoRoot, stdio: useInherit ? 'inherit' : 'pipe', shell: true, env });
+        await execShellCommand(command, { cwd: repoRoot, stdio: useInherit ? 'inherit' : 'pipe', env });
         console.log(`  ✓ Post-update hook completed for ${extension.name} (after cache cleanup)`);
         return;
       } catch {

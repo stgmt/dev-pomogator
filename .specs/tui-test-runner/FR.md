@@ -78,13 +78,13 @@ Skill `/run-tests [filter]` — централизованная точка за
 
 ## FR-12: Test Guard Hook @feature12
 
-PreToolUse hook на Bash — блокирует прямые тест-команды (npm test, npx vitest, pytest, dotnet test, cargo test, go test). При блокировке выдаёт полную инструкцию по /run-tests с аргументами. Исключения: test_runner_wrapper (уже wrapped), TEST_GUARD_BYPASS=1.
+PreToolUse hook на Bash — блокирует прямые тест-команды (npm test, npx vitest, pytest, dotnet test, cargo test, go test). При блокировке выдаёт полную инструкцию по /run-tests с аргументами. Исключения: test_runner_wrapper (уже wrapped).
 
 **Связанные AC:** [AC-12](ACCEPTANCE_CRITERIA.md#ac-12-fr-12-test-guard-hook-feature12)
 
 ## FR-13: Rule centralized-test-runner @feature13
 
-Rule документирует что тесты запускаются только через `/run-tests`, причину (wrapper для YAML status) и bypass через TEST_GUARD_BYPASS=1.
+Rule документирует что тесты запускаются только через `/run-tests` и причину (wrapper для YAML status).
 
 ## FR-14: Dispatch Table @feature14
 

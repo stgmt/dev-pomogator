@@ -29,6 +29,3 @@ dotnet test                    # ❌ заблокировано
 cargo test                     # ❌ заблокировано
 ```
 
-## Bypass
-
-Для исключительных случаев: `TEST_GUARD_BYPASS=1` в env.

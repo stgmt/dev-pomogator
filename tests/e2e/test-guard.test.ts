@@ -64,7 +64,7 @@ describe('GUARD001: Test Guard Hook', () => {
   }
 
   // =========================================================================
-  // Allow wrapper and bypass (@feature2)
+  // Allow wrapper commands (@feature2)
   // =========================================================================
 
   // @feature2
@@ -74,8 +74,8 @@ describe('GUARD001: Test Guard Hook', () => {
   });
 
   // @feature2
-  it('GUARD001_09: allows with TEST_GUARD_BYPASS=1', () => {
-    const result = runTestGuard('python -m pytest', { TEST_GUARD_BYPASS: '1' });
+  it('GUARD001_09: allows wrapper command with --framework flag', () => {
+    const result = runTestGuard('bash test_runner_wrapper.sh --framework dotnet -- dotnet test');
     expect(result.status).toBe(0);
   });
 

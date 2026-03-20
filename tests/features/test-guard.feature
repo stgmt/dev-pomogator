@@ -49,9 +49,8 @@ Feature: GUARD001 Test Guard Hook
     Then it should allow with exit code 0
 
   # @feature2
-  Scenario: GUARD001_09 Allow with TEST_GUARD_BYPASS
-    Given TEST_GUARD_BYPASS is set to "1"
-    When test_guard receives command "python -m pytest"
+  Scenario: GUARD001_09 Allow wrapper command with --framework flag
+    When test_guard receives command "bash test_runner_wrapper.sh --framework dotnet -- dotnet test"
     Then it should allow with exit code 0
 
   # @feature2
