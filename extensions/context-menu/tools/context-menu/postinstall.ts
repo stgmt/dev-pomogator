@@ -96,6 +96,25 @@ function ensureImportLine(): void {
   }
 }
 
+function reloadNilesoft(): void {
+  const shellExe = path.join(NILESOFT_DIR, 'shell.exe');
+  try {
+    execSync(`"${shellExe}" -restart`, { stdio: 'inherit', timeout: 15000 });
+    log('✓ Nilesoft Shell reloaded');
+  } catch {
+    // -restart may need elevation; try via RunAs
+    try {
+      execSync(
+        `powershell.exe -NoProfile -Command "Start-Process '${shellExe}' -ArgumentList '-restart' -Verb RunAs -Wait"`,
+        { stdio: 'inherit', timeout: 15000 },
+      );
+      log('✓ Nilesoft Shell reloaded (elevated)');
+    } catch {
+      log('⚠ Could not reload — Ctrl+Right-click desktop → Shell → Reload');
+    }
+  }
+}
+
 function main(): void {
   if (!isWindows()) {
     log('Skipped (not Windows)');
@@ -127,7 +146,8 @@ function main(): void {
   try { fs.unlinkSync(tempFile); } catch { /* ignore */ }
 
   ensureImportLine();
-  log('✓ Context menu configured. Reload: Ctrl+Right-click desktop → Shell → Reload');
+  reloadNilesoft();
+  log('✓ Context menu configured and reloaded');
 }
 
 // Run only when invoked directly (not when imported for testing)
