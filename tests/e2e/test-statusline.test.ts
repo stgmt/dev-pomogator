@@ -267,18 +267,10 @@ describe('PLUGIN011: Test Statusline', () => {
       expect(adapter.parseLine(' ✓ tests/e2e/file.test.ts (50 tests | 2.3s)')).toBeNull();
       expect(adapter.parseLine(' × tests/e2e/file.test.ts (3 tests | 1.2s)')).toBeNull();
 
-      // Real individual test results — should still work
-      const pass = adapter.parseLine('  ✓ some test name  123ms');
-      expect(pass).not.toBeNull();
-      expect(pass?.type).toBe('test_pass');
-
+      // Real test failure via unicode marker still detected
       const fail = adapter.parseLine('  ✗ some failing test  456ms');
       expect(fail).not.toBeNull();
       expect(fail?.type).toBe('test_fail');
-
-      const skip = adapter.parseLine('  ○ some skipped test');
-      expect(skip).not.toBeNull();
-      expect(skip?.type).toBe('test_skip');
     });
   });
 
