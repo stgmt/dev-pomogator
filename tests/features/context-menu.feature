@@ -9,7 +9,7 @@ Feature: CTXMENU001 Context Menu Setup
   # @feature1
   Scenario: CTXMENU001_01 postinstall generates valid NSS content
     Given the context-menu extension postinstall script exists
-    When postinstall generates NSS for project path "/test/project"
+    When postinstall generates NSS content
     Then NSS content should contain "Claude Code (YOLO + TUI)"
     And NSS content should contain "Claude Code (YOLO)"
     And NSS content should contain "Claude Code"
@@ -23,11 +23,11 @@ Feature: CTXMENU001 Context Menu Setup
     And no NSS file should be created
 
   # @feature1
-  Scenario: CTXMENU001_03 NSS uses dynamic project path
+  Scenario: CTXMENU001_03 NSS uses global scripts path
     Given the context-menu extension postinstall script exists
-    When postinstall generates NSS for project path "D:\repos\my-project"
-    Then NSS content should contain "D:\repos\my-project\scripts\launch-claude-tui.ps1"
-    And NSS content should not contain hardcoded "D:\repos\dev-pomogator"
+    When postinstall generates NSS content
+    Then NSS content should contain ".dev-pomogator" in the launch script path
+    And NSS content should not contain project-specific paths
 
   # @feature1
   Scenario: CTXMENU001_04 launch script uses compact split ratio
@@ -37,6 +37,6 @@ Feature: CTXMENU001 Context Menu Setup
 
   # @feature1
   Scenario: CTXMENU001_05 YOLO+TUI entry precedes plain YOLO in NSS
-    When postinstall generates NSS for any project path
+    When postinstall generates NSS content
     Then "Claude Code (YOLO + TUI)" should appear before "Claude Code (YOLO)"
     And "Claude Code (YOLO)" should appear before plain "Claude Code"

@@ -232,7 +232,11 @@ export async function installClaude(options: ClaudeOptions = {}): Promise<void> 
     firstExtManaged.tools.push({ path: '.dev-pomogator/.claude-plugin/plugin.json', hash: pluginJsonHash });
   }
 
-  // 7. Run post-install hooks for extensions that have them
+  // 7. Setup global scripts (before post-install hooks — context-menu needs launch-claude-tui.ps1)
+  const distDir = path.resolve(__dirname, '..');
+  await setupGlobalScripts(distDir);
+
+  // 8. Run post-install hooks for extensions that have them
   // Proactively clean stale npm temp dirs BEFORE hooks run to prevent ENOTEMPTY errors
   cleanStaleNodeModulesDirs(repoRoot);
   for (const extension of extensionsToInstall) {
@@ -241,18 +245,16 @@ export async function installClaude(options: ClaudeOptions = {}): Promise<void> 
     }
   }
 
-  // 8. Always persist managed data for tracking
+  // 9. Always persist managed data for tracking
   await addProjectPaths(repoRoot, extensionsToInstall, 'claude', managedByExtension);
 
-  // 9. Setup auto-update hooks, global scripts, and statusLine if enabled
+  // 10. Setup auto-update hooks and statusLine if enabled
   if (options.autoUpdate !== false) {
     await setupClaudeHooks();
-    const distDir = path.resolve(__dirname, '..');
-    await setupGlobalScripts(distDir);
     await setupClaudeStatusLine(extensionsToInstall);
   }
 
-  // 10. Check for MSYS path mangling artifacts
+  // 11. Check for MSYS path mangling artifacts
   const mangledArtifacts = detectMangledArtifacts(repoRoot);
   if (mangledArtifacts.length > 0) {
     console.log(chalk.yellow('\n  ⚠  MSYS path mangling detected in project root!'));

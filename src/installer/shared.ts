@@ -209,14 +209,27 @@ export async function addProjectPaths(
  * and ensure tsx is installed at ~/.dev-pomogator/node_modules/.bin/tsx.
  * @param distDir — path to the dist/ directory containing bundled scripts
  */
-async function copyBundledScript(distDir: string, scriptsDir: string, srcName: string, destName?: string): Promise<void> {
-  const src = path.join(distDir, srcName);
+async function copyBundledScript(distDir: string, scriptsDir: string, srcName: string, destName?: string, fallbackPaths?: string[]): Promise<void> {
   const dest = path.join(scriptsDir, destName ?? srcName);
-  if (await fs.pathExists(src)) {
-    await fs.copy(src, dest, { overwrite: true });
-  } else {
-    console.log(`  ⚠ ${srcName} not found. Run "npm run build" first.`);
+
+  // Primary location: dist/<srcName>
+  const primary = path.join(distDir, srcName);
+  if (await fs.pathExists(primary)) {
+    await fs.copy(primary, dest, { overwrite: true });
+    return;
   }
+
+  // Try fallback paths (e.g., src/scripts/ for plain JS files)
+  if (fallbackPaths) {
+    for (const fallback of fallbackPaths) {
+      if (await fs.pathExists(fallback)) {
+        await fs.copy(fallback, dest, { overwrite: true });
+        return;
+      }
+    }
+  }
+
+  console.log(`  ⚠ ${srcName} not found. Run "npm run build" first.`);
 }
 
 export async function setupGlobalScripts(distDir: string): Promise<void> {
@@ -224,8 +237,19 @@ export async function setupGlobalScripts(distDir: string): Promise<void> {
   const scriptsDir = path.join(devPomogatorDir, 'scripts');
   await fs.ensureDir(scriptsDir);
 
+  // check-update.bundle.cjs has no source fallback (requires esbuild bundling)
   await copyBundledScript(distDir, scriptsDir, 'check-update.bundle.cjs', 'check-update.js');
-  await copyBundledScript(distDir, scriptsDir, 'tsx-runner.js');
+
+  // tsx-runner.js is plain JS — fall back to src/scripts/ if dist/ copy missing
+  const packageRoot = path.resolve(distDir, '..');
+  await copyBundledScript(distDir, scriptsDir, 'tsx-runner.js', undefined, [
+    path.join(packageRoot, 'src', 'scripts', 'tsx-runner.js'),
+  ]);
+  // launch-claude-tui.ps1 — PowerShell launcher for context-menu, no bundling needed
+  await copyBundledScript(distDir, scriptsDir, 'launch-claude-tui.ps1', undefined, [
+    path.join(packageRoot, 'scripts', 'launch-claude-tui.ps1'),
+  ]);
+
   // statusline_render.cjs and statusline_wrapper.js removed — test progress shown in TUI, not Claude Code statusline
 
   // Ensure tsx is available at ~/.dev-pomogator/node_modules/.bin/tsx (cross-platform)

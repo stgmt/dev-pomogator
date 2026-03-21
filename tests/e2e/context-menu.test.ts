@@ -14,7 +14,7 @@ beforeAll(async () => {
 describe('CTXMENU001: Context Menu Setup', () => {
   // @feature1
   it('CTXMENU001_01: postinstall generates valid NSS content', () => {
-    const nss = postinstall.generateNss('/test/project');
+    const nss = postinstall.generateNss();
     expect(nss).toContain('Claude Code (YOLO + TUI)');
     expect(nss).toContain('Claude Code (YOLO)');
     expect(nss).toContain('Claude Code');
@@ -35,10 +35,12 @@ describe('CTXMENU001: Context Menu Setup', () => {
   });
 
   // @feature1
-  it('CTXMENU001_03: NSS uses dynamic project path', () => {
-    const nss = postinstall.generateNss('D:\\repos\\my-project');
-    expect(nss).toContain('D:\\repos\\my-project\\scripts\\launch-claude-tui.ps1');
-    // Should NOT contain hardcoded dev-pomogator path
+  it('CTXMENU001_03: NSS uses global scripts path', () => {
+    const nss = postinstall.generateNss();
+    expect(nss).toContain('.dev-pomogator');
+    expect(nss).toContain('launch-claude-tui.ps1');
+    // Should NOT contain any project-specific path
+    expect(nss).not.toContain('D:\\repos\\my-project\\scripts');
     expect(nss).not.toContain('D:\\repos\\dev-pomogator\\scripts');
   });
 
@@ -53,7 +55,7 @@ describe('CTXMENU001: Context Menu Setup', () => {
 
   // @feature1
   it('CTXMENU001_05: YOLO+TUI entry precedes plain YOLO in NSS', () => {
-    const nss = postinstall.generateNss('/any/path');
+    const nss = postinstall.generateNss();
     const tuiIndex = nss.indexOf('YOLO + TUI');
     const yoloIndex = nss.indexOf("title='Claude Code (YOLO)'");
     expect(tuiIndex).toBeGreaterThan(-1);

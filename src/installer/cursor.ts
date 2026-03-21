@@ -155,7 +155,11 @@ export async function installCursor(options: CursorOptions): Promise<void> {
     managedByExtension.get(extName)!.hooks = hookData;
   }
 
-  // 5. Run post-install hooks for extensions that have them
+  // 5. Setup global scripts (before post-install hooks — context-menu needs launch-claude-tui.ps1)
+  const distDir = path.resolve(__dirname, '..');
+  await setupGlobalScripts(distDir);
+
+  // 6. Run post-install hooks for extensions that have them
   // Proactively clean stale npm temp dirs BEFORE hooks run to prevent ENOTEMPTY errors
   cleanStaleNodeModulesDirs(repoRoot);
   for (const extension of extensionsToInstall) {
@@ -164,14 +168,8 @@ export async function installCursor(options: CursorOptions): Promise<void> {
     }
   }
 
-  // 6. Always persist managed data for tracking
+  // 7. Always persist managed data for tracking
   await addProjectPaths(repoRoot, extensionsToInstall, 'cursor', managedByExtension);
-
-  // 7. Setup auto-update if enabled
-  if (options.autoUpdate) {
-    const distDir = path.resolve(__dirname, '..');
-    await setupGlobalScripts(distDir);
-  }
 }
 
 interface CursorHooksJson {

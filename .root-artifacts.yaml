@@ -16,3 +16,4 @@ allow:
 - uninstall.ps1
 - vitest.config.ts
 - vitest.unit.config.ts
+- .npmignore

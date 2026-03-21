@@ -1,0 +1,2 @@
+# Empty .npmignore — forces npm to use package.json "files" field only.
+# Without this file, npm falls back to .gitignore which excludes dist/.
