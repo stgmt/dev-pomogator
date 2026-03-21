@@ -1,69 +1,19 @@
 # Source: tests/features/plugins/ (Background pattern from PLUGIN009, PLUGIN010)
 # Candidates: PLUGIN009_auto-capture.feature, PLUGIN010_prompt-suggest.feature
+# Note: CompactBar render scenarios (PLUGIN011_60..62) in .specs/tui-statusline-mode/tui-statusline-mode.feature
+# Note: Toggle/Stop/Resize scenarios (PLUGIN011_63..67) in .specs/tui-statusline-mode/tui-statusline-mode.feature
 
 Feature: PLUGIN011_test-statusline
-  Test statusline extension displays test runner progress in Claude Code statusline
-  via YAML status files with session isolation and graceful degradation.
+  Test statusline extension manages test runner sessions, YAML status files,
+  wrapper for test output parsing, and statusline coexistence.
 
   Background:
     Given dev-pomogator is installed
     And test-statusline extension is enabled
 
-  # @feature1
-  Scenario: PLUGIN011_01 Statusline renders running state with progress bar
-    Given a YAML status file exists with state "running" and percent 76
-    And the status file has passed 38, failed 2, running 10, total 50
-    When statusline script receives JSON stdin with matching session_id
-    Then statusline output should contain "76%"
-    And statusline output should contain "38✅"
-    And statusline output should contain "2❌"
-    And statusline output should contain "10⏳"
-
-  # @feature1
-  Scenario: PLUGIN011_02 Statusline renders completed passed state
-    Given a YAML status file exists with state "passed" and percent 100
-    And the status file has passed 50, failed 0, running 0, total 50
-    When statusline script receives JSON stdin with matching session_id
-    Then statusline output should contain "✅"
-    And statusline output should contain "50/50"
-
-  # @feature1
-  Scenario: PLUGIN011_03 Statusline renders completed failed state
-    Given a YAML status file exists with state "failed" and percent 100
-    And the status file has passed 48, failed 2, running 0, total 50
-    When statusline script receives JSON stdin with matching session_id
-    Then statusline output should contain "❌"
-    And statusline output should contain "48/50"
-    And statusline output should contain "2 failed"
-
-  # @feature1
-  Scenario: PLUGIN011_35 Statusline ignores nested suite totals in canonical v2 YAML
-    Given a canonical multi-suite YAML status file exists with top-level passed 12, failed 7, total 19
-    When statusline script receives JSON stdin with matching session_id
-    Then statusline output should contain "12/19"
-    And statusline output should contain "7 failed"
-
-  # @feature1a
-  Scenario: PLUGIN011_04 Statusline shows idle indicator when no YAML file exists
-    Given no YAML status file exists for current session
-    When statusline script receives JSON stdin with matching session_id
-    Then statusline output should contain idle indicator "0%" and "no test runs"
-    And statusline script should exit with code 0
-
-  # @feature1a
-  Scenario: PLUGIN011_05 Statusline shows idle indicator for corrupted YAML
-    Given a corrupted YAML status file exists
-    When statusline script receives JSON stdin with matching session_id
-    Then statusline output should contain idle indicator "0%" and "no test runs"
-    And statusline script should exit with code 0
-
-  # @feature1a
-  Scenario: PLUGIN011_06 Statusline works without jq installed
-    Given a YAML status file exists with state "running" and percent 50
-    And jq is not available in PATH
-    When statusline script receives JSON stdin with matching session_id
-    Then statusline output should contain "T"
-    And statusline output should contain "50%"
+  # ===========================================
+  # @feature2 — YAML Protocol & Wrapper
+  # ===========================================
 
   # @feature2
   Scenario: PLUGIN011_07 YAML status file contains all required fields
@@ -109,19 +59,38 @@ Feature: PLUGIN011_test-statusline
     When test process exits with code 1
     Then YAML status file should contain field "state" with value "failed"
 
-  # @feature3
-  Scenario: PLUGIN011_12 Sessions use isolated status files
-    Given session "aaaabbbb" has a status file with state "running"
-    And session "ccccdddd" has a status file with state "passed"
-    When statusline script receives JSON stdin with session_id starting with "aaaabbbb"
-    Then statusline output should contain running state indicators
-    And statusline output should not contain passed state indicators
+  # @feature2
+  Scenario: PLUGIN011_27 Wrapper writes pid field to YAML
+    Given test runner wrapper starts with a valid session
+    When wrapper creates or updates YAML status file
+    Then YAML status file should contain numeric field "pid"
+
+  # @feature2
+  Scenario: PLUGIN011_36 Wrapper writes stdout and stderr into log_file
+    Given test runner wrapper is running with session "abc12345"
+    When wrapped process writes to both stdout and stderr
+    Then log_file should contain both stdout and stderr lines
+
+  # @feature2
+  Scenario: PLUGIN011_76 Vitest adapter ignores file-level FAIL lines
+    Given vitest adapter receives line "FAIL tests/e2e/file.test.ts > Suite > test"
+    When adapter parses the line
+    Then no test_fail event should be produced
+    And adapter should still detect real test failures via unicode markers
+
+  # ===========================================
+  # @feature3 — Session Isolation
+  # ===========================================
 
   # @feature3
   Scenario: PLUGIN011_13 Status file path uses session_id prefix
     Given session_id is "abc12345def67890"
     When status file path is computed
     Then status file should be at ".dev-pomogator/.test-status/status.abc12345.yaml"
+
+  # ===========================================
+  # @feature4 — SessionStart Hook
+  # ===========================================
 
   # @feature4
   Scenario: PLUGIN011_14 SessionStart hook creates status directory
@@ -153,13 +122,6 @@ Feature: PLUGIN011_test-statusline
     Then YAML status file should be created for session "abc12345"
 
   # @feature4
-  Scenario: PLUGIN011_54 Render reads session.env when stdin has no session_id
-    Given YAML status file exists for session "abc12345"
-    And session.env file exists with session "abc12345"
-    When render script is called without session_id in stdin
-    Then render output should NOT contain "no test runs"
-
-  # @feature4
   Scenario: PLUGIN011_16 SessionStart hook cleans stale files older than 24h
     Given a YAML status file with mtime older than 24 hours exists
     And a recent YAML status file exists
@@ -173,14 +135,25 @@ Feature: PLUGIN011_test-statusline
     When SessionStart hook is triggered
     Then idle stale YAML file should be deleted
 
+  # @feature4
+  Scenario: PLUGIN011_28 SessionStart repairs running files with dead pid
+    Given a YAML status file has state "running" and dead pid
+    When SessionStart hook is triggered
+    Then file should remain present
+    And YAML state should be rewritten to "failed"
+
+  # ===========================================
+  # @feature5 — Extension Manifest
+  # ===========================================
+
   # @feature5
   Scenario: PLUGIN011_18 Extension manifest lists all tool files
     Given extension.json exists at "extensions/test-statusline/extension.json"
     When manifest is parsed
-    Then toolFiles should include "statusline_render.sh"
-    And toolFiles should include "test_runner_wrapper.sh"
+    Then toolFiles should include "test_runner_wrapper.sh"
     And toolFiles should include "statusline_session_start.ts"
     And toolFiles should include "status_types.ts"
+    And toolFiles should NOT include "statusline_render.cjs"
 
   # @feature5
   Scenario: PLUGIN011_19 Extension manifest registers SessionStart hook
@@ -190,11 +163,14 @@ Feature: PLUGIN011_test-statusline
     And SessionStart hook command should reference statusline_session_start.ts
 
   # @feature5
-  Scenario: PLUGIN011_20 Extension manifest declares statusLine command
+  Scenario: PLUGIN011_20 Extension manifest does NOT declare statusLine (removed in v2)
     Given extension.json exists at "extensions/test-statusline/extension.json"
-    When manifest statusLine section is parsed
-    Then statusLine should define Claude command type
-    And statusLine command should reference statusline_render.sh
+    When manifest is parsed
+    Then statusLine section should be undefined
+
+  # ===========================================
+  # @feature8 — StatusLine Coexistence (Global)
+  # ===========================================
 
   # @feature8
   Scenario: PLUGIN011_21 Installer writes ccstatusline wrapper to global settings when no statusLine exists
@@ -226,104 +202,11 @@ Feature: PLUGIN011_test-statusline
     And wrapper should update managed command only
 
   # @feature8
-  Scenario: PLUGIN011_25 Wrapper combines outputs of user and managed commands
-    Given statusline wrapper receives the same JSON stdin for both commands
-    When user command outputs "userinfo" and managed command outputs "testinfo"
-    Then wrapper should output "userinfo | testinfo"
-
-  # @feature1
-  Scenario: PLUGIN011_26 Statusline rewrites dead running pid to failed
-    Given a running YAML status file contains dead pid metadata
-    When statusline script receives JSON stdin with matching session_id
-    Then YAML state should be repaired to "failed"
-    And statusline output should show failed state instead of running state
-
-  # @feature2
-  Scenario: PLUGIN011_27 Wrapper writes pid field to YAML
-    Given test runner wrapper starts with a valid session
-    When wrapper creates or updates YAML status file
-    Then YAML status file should contain numeric field "pid"
-
-  # @feature4
-  Scenario: PLUGIN011_28 SessionStart repairs running files with dead pid
-    Given a YAML status file has state "running" and dead pid
-    When SessionStart hook is triggered
-    Then file should remain present
-    And YAML state should be rewritten to "failed"
-
-  # @feature1
-  Scenario: PLUGIN011_29 Statusline keeps running state when pid is alive
-    Given a running YAML status file contains a live pid
-    When statusline script receives JSON stdin with matching session_id
-    Then YAML state should remain "running"
-    And statusline output should still contain running indicators
-
-  # @feature8
-  Scenario: PLUGIN011_31 Installer wraps existing global user-defined statusLine
-    Given global "~/.claude/settings.json" contains user-defined statusLine command "my-custom-statusline"
-    When installer processes test-statusline extension
-    Then global "~/.claude/settings.json" should contain wrapper command
-    And wrapper should preserve "my-custom-statusline" as user command
-
-  # @feature8
-  Scenario: PLUGIN011_32 Wrapper keeps managed output when user command fails
-    Given statusline wrapper receives user command that exits with error
-    And managed command outputs "managedinfo"
-    When wrapper is executed
-    Then wrapper should output only "managedinfo"
-
-  # @feature8
-  Scenario: PLUGIN011_33 Wrapper keeps user output when managed command fails
-    Given statusline wrapper receives managed command that exits with error
-    And user command outputs "userinfo"
-    When wrapper is executed
-    Then wrapper should output only "userinfo"
-
-  # @feature8
   Scenario: PLUGIN011_34 Broken wrapper falls back to ccstatusline wrapper
     Given global "~/.claude/settings.json" contains wrapper command with invalid encoded arguments
     When installer resolves statusLine coexistence
     Then resulting statusLine should fall back to ccstatusline wrapped with managed command
     And resulting statusLine should not nest another wrapper command
-
-  # @feature2
-  Scenario: PLUGIN011_36 Wrapper writes stdout and stderr into log_file
-    Given test runner wrapper is running with session "abc12345"
-    When wrapped process writes to both stdout and stderr
-    Then log_file should contain both stdout and stderr lines
-
-  # @feature2
-  Scenario: PLUGIN011_51 Render shows progress after wrapper processes test output (end-to-end)
-    Given test runner wrapper is configured with session "abc12345"
-    And a vitest-like test output fixture exists
-    When wrapper runs command that outputs the fixture content
-    And render script is called with the same session_id
-    Then render output should NOT contain "no test runs"
-    And render script should exit with code 0
-
-  # @feature8
-  Scenario: PLUGIN011_37 Wrapper outputs nothing when both commands fail
-    Given statusline wrapper receives user command that exits with error
-    And managed command also exits with error
-    When wrapper is executed
-    Then wrapper should output empty string
-    And wrapper should exit with code 0
-
-  # @feature8
-  Scenario: PLUGIN011_38 Wrapper completes within timeout when user command hangs
-    Given statusline wrapper receives user command that blocks for 10 seconds
-    And managed command outputs "managedinfo"
-    When wrapper is executed with 2-second timeout per command
-    Then wrapper should output only "managedinfo"
-    And wrapper total execution time should be under 5 seconds
-
-  # @feature8
-  Scenario: PLUGIN011_39 Wrapper preserves multi-line ANSI user output with newlines
-    Given statusline wrapper receives user command that outputs multi-line ANSI text
-    And managed command outputs "testinfo"
-    When wrapper is executed
-    Then wrapper should preserve newlines from user output
-    And managed output should be appended to the last line via pipe separator
 
   # @feature8
   Scenario: PLUGIN011_40 Updater preserves wrapper when auto-updating extension
@@ -340,13 +223,9 @@ Feature: PLUGIN011_test-statusline
     And wrapper should contain exactly one user-b64 argument
     And wrapper should contain exactly one managed-b64 argument
 
-  # @feature8
-  Scenario: PLUGIN011_42 Wrapper forwards full StatusJSON stdin to both commands
-    Given statusline wrapper receives full StatusJSON with context_window and cost fields
-    And user command echoes received session_id from stdin
-    And managed command echoes received session_id from stdin
-    When wrapper is executed
-    Then both commands should receive identical session_id
+  # ===========================================
+  # @feature9 — Global StatusLine Migration
+  # ===========================================
 
   # @feature9
   Scenario: PLUGIN011_43 ccstatusline auto-installed when no statusLine exists anywhere
@@ -388,3 +267,71 @@ Feature: PLUGIN011_test-statusline
     When installer resolves statusLine coexistence
     Then global statusLine should retain "padding" field with value 0
     And statusLine command should be updated to wrapper format
+
+  # @feature9
+  Scenario: PLUGIN011_49 Portable managed command uses os.homedir() path
+    Given portable managed command is built via buildPortableManagedCommand()
+    When command string is inspected
+    Then it should use "node -e" with os.homedir() pattern
+    And it should reference ".dev-pomogator" and "statusline_render.cjs"
+
+  # ===========================================
+  # @feature1 — CompactBar Render (TUI)
+  # See also: .specs/tui-statusline-mode/tui-statusline-mode.feature
+  # ===========================================
+
+  # @feature1
+  Scenario: PLUGIN011_60 CompactBar renders running state with progress
+    Given a test status with state "running", framework "vitest", passed 38, failed 2, total 50, percent 76
+    When render_compact is called
+    Then output should contain "76%"
+    And output should contain "38/50"
+    And output should contain "2"
+    And output should contain "vitest"
+
+  # @feature1
+  Scenario: PLUGIN011_61 CompactBar shows idle indicator when no tests
+    Given no test status is available
+    When render_compact is called with null
+    Then output should contain "no test runs"
+
+  # @feature1
+  Scenario: PLUGIN011_62 CompactBar handles corrupted YAML gracefully
+    Given test status data is corrupted
+    When render_compact is called
+    Then output should contain "no test runs"
+    And no exception should be thrown
+
+  # @feature12
+  Scenario: PLUGIN011_74 CompactBar hides total and percent when total is 0
+    Given a test status with state "running", framework "vitest", passed 34, total 0, percent 0
+    When render_compact is called
+    Then output should NOT contain "/" or "%"
+    And output should contain "34"
+
+  # @feature12
+  Scenario: PLUGIN011_75 CompactBar shows real progress with discovery total
+    Given a test status with state "running", framework "vitest", passed 34, total 575, percent 6
+    When render_compact is called
+    Then output should contain "34/575"
+    And output should contain "6%"
+
+  # ===========================================
+  # @feature5 — Statusline Render Removal
+  # ===========================================
+
+  # @feature5
+  Scenario: PLUGIN011_68 Legacy render files removed from extension
+    Given extension directory "extensions/test-statusline/tools/test-statusline" exists
+    When checking for legacy render files
+    Then "statusline_render.cjs" should NOT exist
+    And "statusline_render.sh" should NOT exist
+    And "statusline_wrapper.js" should NOT exist
+
+  # @feature5
+  Scenario: PLUGIN011_69 Shared files still present after render removal
+    Given extension directory "extensions/test-statusline/tools/test-statusline" exists
+    When checking for shared files
+    Then "statusline_session_start.ts" should exist
+    And "test_runner_wrapper.sh" should exist
+    And "status_types.ts" should exist

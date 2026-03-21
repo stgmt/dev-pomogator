@@ -111,3 +111,64 @@ Feature: PLUGIN007 Plan-pomogator Extension
     Given a plan content referencing files from a different project
     When scoreCandidate scores against the current project cwd
     Then the score is zero
+
+  # @feature1
+  Scenario: PLUGIN007_20 Rule contains pre-flight checklist
+    Given plan-pomogator.md rule is loaded
+    When the agent reads the rule content
+    Then the rule should contain "Pre-flight Checklist"
+    And the checklist should mention "Extracted Requirements"
+    And the checklist should mention "Verification Plan"
+    And the checklist should mention "replace" in destructive actions
+
+  # @feature4
+  Scenario: PLUGIN007_21 Rule documents Phase 2 validation
+    Given plan-pomogator.md rule is loaded
+    When the agent reads the rule content
+    Then the rule should contain "Phase 2"
+    And the rule should mention "Extracted Requirements" minimum 2 items
+
+  # @feature2
+  Scenario: PLUGIN007_22 Deny message includes template on Phase 1 failure
+    Given a plan file missing the "User Stories" section
+    And template.md exists in the project
+    When plan-gate denies ExitPlanMode
+    Then deny message should contain "Отсутствует секция: User Stories"
+    And deny message should contain "Шаблон правильного формата:"
+    And deny message should contain "## Context"
+    And deny message should contain "## File Changes"
+
+  # @feature2
+  Scenario: PLUGIN007_23 Deny message works without template (fail-open)
+    Given a plan file missing the "User Stories" section
+    And template.md does not exist in the project
+    When plan-gate denies ExitPlanMode
+    Then deny message should contain "Отсутствует секция: User Stories"
+    And deny message should not contain "Шаблон правильного формата:"
+
+  # @feature2
+  Scenario: PLUGIN007_23b Deny message works when cwd is undefined (fail-open)
+    Given plan-gate receives no cwd in hook data
+    When readTemplateContent is called with undefined
+    Then it should return empty string
+
+  # @feature1
+  Scenario: PLUGIN007_24 Rule contains active instruction to read template
+    Given plan-pomogator.md rule is loaded
+    When the agent reads the rule content
+    Then the rule should contain "Перед написанием плана"
+    And the rule should contain ".dev-pomogator/tools/plan-pomogator/template.md"
+
+  # @feature1
+  Scenario: PLUGIN007_25 Rule lists replace as destructive action
+    Given plan-pomogator.md rule is loaded
+    When the agent reads the Impact Analysis section
+    Then the destructive actions list should contain "delete/rename/move/replace"
+
+  # @feature2 @feature4
+  Scenario: PLUGIN007_26 Deny message includes template on Phase 2 failure
+    Given a plan file passing Phase 1 but without Extracted Requirements
+    And template.md exists in the project
+    When plan-gate denies ExitPlanMode
+    Then deny message should contain "Extracted Requirements"
+    And deny message should contain "Шаблон правильного формата:"

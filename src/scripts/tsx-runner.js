@@ -28,6 +28,7 @@ const path = require('path');
 const fs = require('fs');
 
 const VERBOSE = process.env.DEV_POMOGATOR_HOOK_VERBOSE === '1';
+const TSX_EXEC_TIMEOUT = 180000; // 3 minutes — allows for slow npm discovery + tsx strategy fallback in Docker
 const startTime = Date.now();
 const strategyLog = [];
 
@@ -222,7 +223,7 @@ function runHomeTsx() {
     stdio: 'inherit',
     cwd: process.cwd(),
     env: getSafeEnv(),
-    timeout: 120000,
+    timeout: TSX_EXEC_TIMEOUT,
     shell: true,
   });
   return true;
@@ -255,7 +256,7 @@ function runLocalTsx() {
     stdio: 'inherit',
     cwd: process.cwd(),
     env: getSafeEnv(),
-    timeout: 120000,
+    timeout: TSX_EXEC_TIMEOUT,
     shell: true,
   });
   return true;
@@ -283,7 +284,7 @@ function runGlobalTsx() {
     stdio: 'inherit',
     cwd: process.cwd(),
     env: getSafeEnv(),
-    timeout: 120000,
+    timeout: TSX_EXEC_TIMEOUT,
     shell: true,
   });
   return true;
@@ -299,7 +300,7 @@ function runNpxTsx() {
     stdio: 'inherit',
     cwd: process.cwd(),
     env: getSafeEnv(),
-    timeout: 120000,
+    timeout: TSX_EXEC_TIMEOUT,
     shell: true,
   });
 }
@@ -315,7 +316,7 @@ function repairNpmSync() {
     execSync(`"${npmCmd}" install`, {
       cwd: process.cwd(),
       stdio: 'pipe',
-      timeout: 120000,
+      timeout: TSX_EXEC_TIMEOUT,
       shell: true,
       env: getSafeEnv(),
     });

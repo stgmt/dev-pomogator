@@ -9,8 +9,9 @@ import type { TestEvent } from './types.js';
 // Vitest output patterns
 const RE_SUITE_START = /^\s*(❯|>)\s+(.+\.(?:test|spec)\.\w+)/;
 const RE_DOCKER_SUITE = /^(?:stdout|stderr)\s+\|\s+(.+\.(?:test|spec)\.\w+)/;
-const RE_TEST_PASS = /^\s*(✓|√|PASS)\s+(.+?)(?:\s+(\d+)\s*ms)?$/;
-const RE_TEST_FAIL = /^\s*(✗|×|FAIL)\s+(.+?)(?:\s+(\d+)\s*ms)?$/;
+const RE_TEST_PASS = /^\s*(✓|√)\s+(.+?)(?:\s+(\d+)\s*ms)?$/;
+const RE_TEST_FAIL = /^\s*(✗|×)\s+(.+?)(?:\s+(\d+)\s*ms)?$/;
+const RE_FILE_LEVEL_RESULT = /^\s*(?:✓|√|✗|×)\s+\S+\.(?:test|spec)\.\w+\s*\(/;
 const RE_TEST_SKIP = /^\s*(○|↓|SKIP|skipped)\s+(.+)$/;
 const RE_SUMMARY = /Tests?\s+(\d+)\s+(passed|failed)/i;
 const RE_SUMMARY_TOTAL = /(\d+)\s+total/i;
@@ -38,6 +39,10 @@ export class VitestAdapter extends AdapterBase {
       this.suiteName = dockerSuiteMatch[1].trim();
       this.suiteFile = this.suiteName;
       return this.event('suite_start');
+    }
+
+    if (RE_FILE_LEVEL_RESULT.test(line)) {
+      return null;
     }
 
     // Test passed

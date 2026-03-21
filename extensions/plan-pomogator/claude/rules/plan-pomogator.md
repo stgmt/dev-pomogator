@@ -7,7 +7,7 @@
 ## Источник требований и копипаст-шаблон
 
 - Спецификация требований к формату планов: `.dev-pomogator/tools/plan-pomogator/requirements.md`
-- Копипаст-шаблон плана: `.dev-pomogator/tools/plan-pomogator/template.md`
+- **Перед написанием плана** прочитай шаблон: `.dev-pomogator/tools/plan-pomogator/template.md`
 - **Specs Management**: `.claude/rules/pomogator/specs-management.md` (structure `.specs/`, scripts `.dev-pomogator/tools/specs-generator/`)
 
 > Примечание (render-safe): плейсхолдеры вида `<роль>` могут интерпретироваться как HTML-теги и пропадать в рендере. Используй `{роль}` / `{цель}` / `{ценность}`.
@@ -57,7 +57,7 @@
    - Если план зависит от изучения кода/файлов — явно указать, какие файлы будут просмотрены и зачем.
    - Явно фиксируй **Leverage / Code reuse**: что переиспользуем/расширяем (пути к существующим файлам/классам/функциям), прежде чем предлагать создавать новое.
 
-5. **Impact Analysis (обязательно для delete/rename/move)**
+5. **Impact Analysis (обязательно для delete/rename/move/replace)**
    - Если план содержит действия `delete`, `rename`, `move` или `replace` — агент ОБЯЗАН выполнить `grep -ri <keyword>` по проекту для каждой затрагиваемой сущности (имя файла, имя расширения, имя функции/класса).
    - Результаты оформляются в таблицу:
 
@@ -124,6 +124,23 @@
 - Перед завершением плана запусти валидатор структуры:
   - `npx tsx .dev-pomogator/tools/plan-pomogator/validate-plan.ts <path-to-plan.md>`
 - Валидатор проверяет **формат и структуру**, но не оценивает доменную корректность.
+
+## Phase 2: Валидация требований
+
+После прохождения Phase 1 (0 ошибок структуры), валидатор дополнительно проверяет:
+- Секция Context содержит `### Extracted Requirements`
+- Минимум 2 нумерованных пункта (`1. ...`, `2. ...`)
+- Пункты извлекаются из сообщений пользователя в текущем диалоге
+
+## Pre-flight Checklist (перед ExitPlanMode)
+
+- [ ] 9 секций в порядке: Context → User Stories → Use Cases → Requirements → Implementation Plan → Impact Analysis → Todos → DoD → File Changes
+- [ ] Context → `### Extracted Requirements` → ≥2 нумерованных пунктов (`1. ...`, `2. ...`)
+- [ ] Requirements: `### FR` → `### Acceptance Criteria (EARS)` → `### NFR` (Performance, Security, Reliability, Usability) → `### Assumptions`
+- [ ] Todos: `- id:` kebab-case + `  description:` (files: + Requirements refs: на одной строке через `;`) + `  dependencies:` — отступ ≥2 пробела
+- [ ] DoD → `### Verification Plan` → `Automated Tests:` → `- `команда`` (в backticks, формат: `- `...``)
+- [ ] File Changes: `| Path | Action | Reason |` — ≥1 строка данных, относительные пути, ПОСЛЕДНЯЯ секция
+- [ ] Если delete/rename/move/replace → `## Impact Analysis` с таблицей Keyword/Files/Action (не N/A)
 
 ## Запреты и ограничения
 

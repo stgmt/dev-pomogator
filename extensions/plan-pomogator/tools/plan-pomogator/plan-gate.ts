@@ -217,6 +217,26 @@ function formatPromptsFromFile(filePath: string): string | null {
   return `\nПоследние сообщения пользователя:\n${formatted}\n`;
 }
 
+const TEMPLATE_MAX_CHARS = 8192;
+
+/**
+ * Read template.md content for inclusion in deny messages.
+ * Returns formatted section or empty string on any error (fail-open).
+ */
+export function readTemplateContent(cwd?: string): string {
+  if (!cwd) return '';
+  try {
+    const templatePath = path.join(cwd, '.dev-pomogator/tools/plan-pomogator/template.md');
+    const content = fs.readFileSync(templatePath, 'utf-8');
+    const trimmed = content.length > TEMPLATE_MAX_CHARS
+      ? content.substring(0, TEMPLATE_MAX_CHARS) + '\n...(truncated)'
+      : content;
+    return `\nШаблон правильного формата:\n${trimmed}\n`;
+  } catch {
+    return '';
+  }
+}
+
 /**
  * Deny ExitPlanMode with formatted error message and exit.
  */
@@ -271,12 +291,12 @@ async function main(): Promise<void> {
   const planName = path.basename(planFile);
 
   if (result.phase1.length > 0) {
-    denyAndExit(planName, 'Phase 1 — структура', result.phase1);
+    denyAndExit(planName, 'Phase 1 — структура', result.phase1, readTemplateContent(data.cwd));
   }
 
   if (result.phase2.length > 0) {
     const promptsSection = loadUserPrompts(data.session_id);
-    denyAndExit(planName, 'Phase 2 — требования', result.phase2, promptsSection);
+    denyAndExit(planName, 'Phase 2 — требования', result.phase2, promptsSection + readTemplateContent(data.cwd));
   }
 
   // Both phases passed

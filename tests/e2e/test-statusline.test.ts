@@ -10,6 +10,7 @@ import {
   parseWrappedStatusLineCommand,
   resolveClaudeStatusLine,
 } from '../../src/utils/statusline.js';
+import { VitestAdapter } from '../../extensions/tui-test-runner/tools/tui-test-runner/adapters/vitest_adapter.js';
 
 // --- Helpers ---
 
@@ -252,6 +253,33 @@ describe('PLUGIN011: Test Statusline', () => {
     });
 
     // PLUGIN011_51: legacy render e2e test — REMOVED in v2.0.0 (render replaced by CompactBar)
+
+    // @feature2
+    it('PLUGIN011_76: vitest adapter ignores file-level FAIL lines', () => {
+      const adapter = new VitestAdapter();
+
+      // File-level FAIL result — should NOT produce test_fail
+      expect(adapter.parseLine('FAIL tests/e2e/file.test.ts > Suite > some test')).toBeNull();
+      expect(adapter.parseLine(' FAIL  tests/e2e/installer.test.ts (50 tests | 2.3s)')).toBeNull();
+      expect(adapter.parseLine('PASS tests/e2e/file.test.ts > Suite > some test')).toBeNull();
+
+      // File-level result with ✓/× — should be skipped (file-level summary)
+      expect(adapter.parseLine(' ✓ tests/e2e/file.test.ts (50 tests | 2.3s)')).toBeNull();
+      expect(adapter.parseLine(' × tests/e2e/file.test.ts (3 tests | 1.2s)')).toBeNull();
+
+      // Real individual test results — should still work
+      const pass = adapter.parseLine('  ✓ some test name  123ms');
+      expect(pass).not.toBeNull();
+      expect(pass?.type).toBe('test_pass');
+
+      const fail = adapter.parseLine('  ✗ some failing test  456ms');
+      expect(fail).not.toBeNull();
+      expect(fail?.type).toBe('test_fail');
+
+      const skip = adapter.parseLine('  ○ some skipped test');
+      expect(skip).not.toBeNull();
+      expect(skip?.type).toBe('test_skip');
+    });
   });
 
   // ===========================================
@@ -962,6 +990,7 @@ else:
       const session = 'e2etest1';
       const result = spawnSync('bash', [
         appPath('extensions/test-statusline/tools/test-statusline/test_runner_wrapper.sh'),
+        '--skip-discovery',
         'echo', 'hello',
       ], {
         encoding: 'utf-8',

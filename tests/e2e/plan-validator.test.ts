@@ -11,7 +11,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { validatePlan, validatePlanPhased, type ValidationError } from '../../extensions/plan-pomogator/tools/plan-pomogator/validate-plan';
-import { extractFileChangePaths, scoreCandidate } from '../../extensions/plan-pomogator/tools/plan-pomogator/plan-gate';
+import { extractFileChangePaths, scoreCandidate, readTemplateContent } from '../../extensions/plan-pomogator/tools/plan-pomogator/plan-gate';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -643,5 +643,66 @@ describe('PLUGIN007_19 scoreCandidate non-matching project', () => {
     const cwd = path.resolve(__dirname, '../..');
     const score = scoreCandidate(content, cwd);
     expect(score).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// @feature2: readTemplateContent — template injection in deny messages
+// ---------------------------------------------------------------------------
+
+describe('PLUGIN007_22 readTemplateContent', () => {
+  // @feature2
+  it('PLUGIN007_22: returns template content with header when cwd has template.md', () => {
+    const cwd = path.resolve(__dirname, '../..');
+    const result = readTemplateContent(cwd);
+    expect(result).toContain('Шаблон правильного формата:');
+    expect(result).toContain('## Context');
+    expect(result).toContain('## File Changes');
+  });
+
+  // @feature2
+  it('PLUGIN007_23: returns empty string when cwd has no template.md (fail-open)', () => {
+    const result = readTemplateContent(os.tmpdir());
+    expect(result).toBe('');
+  });
+
+  // @feature2
+  it('PLUGIN007_23b: returns empty string when cwd is undefined', () => {
+    const result = readTemplateContent(undefined);
+    expect(result).toBe('');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// @feature1: Rule content checks — pre-flight checklist, Phase 2, replace
+// ---------------------------------------------------------------------------
+
+describe('PLUGIN007_20 Rule contains pre-flight checklist', () => {
+  const rulePath = path.resolve(__dirname, '../../extensions/plan-pomogator/claude/rules/plan-pomogator.md');
+  const ruleContent = fs.readFileSync(rulePath, 'utf-8');
+
+  // @feature1
+  it('PLUGIN007_20: rule contains Pre-flight Checklist section', () => {
+    expect(ruleContent).toContain('Pre-flight Checklist');
+    expect(ruleContent).toContain('Extracted Requirements');
+    expect(ruleContent).toContain('Verification Plan');
+  });
+
+  // @feature4
+  it('PLUGIN007_21: rule documents Phase 2 validation', () => {
+    expect(ruleContent).toContain('Phase 2');
+    expect(ruleContent).toContain('Extracted Requirements');
+    expect(ruleContent).toMatch(/минимум 2/i);
+  });
+
+  // @feature1
+  it('PLUGIN007_24: rule contains active instruction to read template', () => {
+    expect(ruleContent).toContain('Перед написанием плана');
+    expect(ruleContent).toContain('.dev-pomogator/tools/plan-pomogator/template.md');
+  });
+
+  // @feature1
+  it('PLUGIN007_25: rule lists replace as destructive action', () => {
+    expect(ruleContent).toContain('delete/rename/move/replace');
   });
 });
