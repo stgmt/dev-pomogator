@@ -1177,4 +1177,114 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       expect(result.json.progress_state.currentPhase).toBe('Complete');
     });
   });
+
+  // ============================================================================
+  // audit-spec.sh — new checks (OOS propagation, unverified config, infra, dedup)
+  // ============================================================================
+
+  describe('audit-spec.sh new audit checks', () => {
+    const auditFixturePath = appPath('.specs', 'audit-new-checks-test');
+
+    beforeEach(async () => {
+      await fs.copy(getSpecsGeneratorFixturePath('audit-coverage-fixture'), auditFixturePath);
+    });
+
+    afterEach(async () => {
+      await fs.remove(auditFixturePath);
+    });
+
+    // @feature45
+    it('should detect OUT_OF_SCOPE not propagated to USE_CASES.md', () => {
+      const result = runShellScript(
+        getSpecsGeneratorPath('audit-spec.sh'),
+        ['-Path', '.specs/audit-new-checks-test']
+      );
+
+      expect(result.exitCode).toBe(0);
+      expect(result.json).toBeDefined();
+
+      const oosFindings = (result.json.findings || []).filter(
+        (f: any) => f.check === 'OUT_OF_SCOPE_PROPAGATION'
+      );
+      expect(oosFindings.length).toBeGreaterThan(0);
+      expect(
+        oosFindings.some((f: any) => f.message.includes('FR-4'))
+      ).toBe(true);
+    });
+
+    // @feature46
+    it('should detect UNVERIFIED_CONFIG env vars in DESIGN.md', () => {
+      const result = runShellScript(
+        getSpecsGeneratorPath('audit-spec.sh'),
+        ['-Path', '.specs/audit-new-checks-test']
+      );
+
+      expect(result.exitCode).toBe(0);
+      expect(result.json).toBeDefined();
+
+      const configFindings = (result.json.findings || []).filter(
+        (f: any) => f.check === 'UNVERIFIED_CONFIG'
+      );
+      expect(configFindings.length).toBeGreaterThan(0);
+      expect(
+        configFindings.some((f: any) =>
+          f.message.includes('DATABASE_URL') ||
+          f.message.includes('REDIS_HOST') ||
+          f.message.includes('SMTP_API_KEY') ||
+          f.message.includes('N8N_BASIC_AUTH_USER')
+        )
+      ).toBe(true);
+    });
+
+    // @feature47
+    it('should detect INFRA_TASKS_MISSING when DESIGN.md has database', () => {
+      const result = runShellScript(
+        getSpecsGeneratorPath('audit-spec.sh'),
+        ['-Path', '.specs/audit-new-checks-test']
+      );
+
+      expect(result.exitCode).toBe(0);
+      expect(result.json).toBeDefined();
+
+      const infraFindings = (result.json.findings || []).filter(
+        (f: any) => f.check === 'INFRA_TASKS_MISSING'
+      );
+      expect(infraFindings.length).toBeGreaterThan(0);
+      expect(
+        infraFindings.some((f: any) => f.message.includes('postgresql'))
+      ).toBe(true);
+    });
+
+    // @feature48
+    it('should detect CONFIG_DUPLICATION between DESIGN.md and TASKS.md', () => {
+      const result = runShellScript(
+        getSpecsGeneratorPath('audit-spec.sh'),
+        ['-Path', '.specs/audit-new-checks-test']
+      );
+
+      expect(result.exitCode).toBe(0);
+      expect(result.json).toBeDefined();
+
+      const dupFindings = (result.json.findings || []).filter(
+        (f: any) => f.check === 'CONFIG_DUPLICATION'
+      );
+      expect(dupFindings.length).toBeGreaterThan(0);
+      expect(
+        dupFindings.some((f: any) => f.message.includes('Duplicated config block'))
+      ).toBe(true);
+    });
+  });
+
+  // Path validation - prevent .progress.json outside .specs/<feature>/
+
+  // @feature49
+  it('spec-status.sh should reject -Path "."', () => {
+    const result = runShellScript(
+      getSpecsGeneratorPath('spec-status.sh'),
+      ['-Path', '.']
+    );
+
+    expect(result.exitCode).not.toBe(0);
+    expect(result.stderr).toContain('must be inside .specs/');
+  });
 });

@@ -319,3 +319,38 @@ Feature: PLUGIN006 Specs Generator Shell Scripts
     When I confirm all stop points via -ConfirmStop
     And I run spec-status.sh on the spec
     Then currentPhase should be "Complete"
+
+  # audit-spec.sh — new checks
+  @feature45
+  Scenario: audit-spec detects OUT_OF_SCOPE not propagated to USE_CASES.md
+    Given a spec fixture with FR-4 marked OUT OF SCOPE
+    And USE_CASES.md references FR-4 without OUT OF SCOPE marker
+    When I run audit-spec.sh on the spec
+    Then findings should contain check "OUT_OF_SCOPE_PROPAGATION" mentioning "FR-4"
+
+  @feature46
+  Scenario: audit-spec detects UNVERIFIED_CONFIG env vars in DESIGN.md
+    Given a spec fixture with env vars in DESIGN.md without verification markers
+    When I run audit-spec.sh on the spec
+    Then findings should contain check "UNVERIFIED_CONFIG"
+
+  @feature47
+  Scenario: audit-spec detects INFRA_TASKS_MISSING when DESIGN.md has database
+    Given a spec fixture with DESIGN.md mentioning PostgreSQL
+    And TASKS.md has no infrastructure phase
+    When I run audit-spec.sh on the spec
+    Then findings should contain check "INFRA_TASKS_MISSING"
+
+  @feature48
+  Scenario: audit-spec detects CONFIG_DUPLICATION between DESIGN.md and TASKS.md
+    Given a spec fixture with identical config blocks in DESIGN.md and TASKS.md
+    When I run audit-spec.sh on the spec
+    Then findings should contain check "CONFIG_DUPLICATION"
+
+  # Path validation - prevent .progress.json outside .specs/<feature>/
+
+  @feature49
+  Scenario: spec-status rejects -Path outside .specs/
+    When I run spec-status.sh with -Path "."
+    Then exit code should be non-zero
+    And output should contain "must be inside .specs/"

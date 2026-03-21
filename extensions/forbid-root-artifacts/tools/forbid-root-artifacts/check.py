@@ -176,6 +176,8 @@ TRASH_PATTERNS = [
     "coverage", ".nyc_output", "junit.xml",
     # Misc junk JSON (not package.json, tsconfig.json, etc.)
     "*.json.bak", "*.json.tmp", "*.json.old",
+    # Spec progress state (belongs in .specs/<feature>/, not root)
+    ".progress.json",
 ]
 
 # Files that MAY be important - ask user

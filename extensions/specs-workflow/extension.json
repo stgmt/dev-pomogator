@@ -1,6 +1,6 @@
 {
   "name": "specs-workflow",
-  "version": "1.11.0",
+  "version": "1.12.0",
   "description": "Управление спецификациями: 4-фазный workflow (включая Context Analysis), TDD-порядок задач, валидация, автоматический аудит кросс-ссылок, MCP инструменты для research",
   "platforms": ["cursor", "claude"],
   "category": "workflow",

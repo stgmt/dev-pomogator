@@ -48,7 +48,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | claude-md-glossary | CLAUDE.md = глоссарий/индекс на rules; при добавлении/удалении правил обновлять таблицу | `.claude/rules/claude-md-glossary.md` |
 | docker-only-tests | Тесты только через Docker (`npm test`); запрет vitest.unit.config.ts и тестов вне `tests/e2e/` | `.claude/rules/docker-only-tests.md` |
 | self-improving | Real-time детекция ситуаций для новых rules/skills/hooks (триггеры T2/T3/T4/T6 + automation hints) | `.claude/rules/pomogator/self-improving.md` |
-| simplify-extended | При /simplify также проверять спеки (нечёткие FR, терминология, @featureN) и тесты (дублирование setup, hardcoded data, edge cases) | `.claude/rules/simplify-extended.md` |
+| simplify-extended | При /simplify проверять спеки (нечёткие FR, reuse) и тесты (setup duplication, naming); различать systemic vs one-off issues (extension: auto-simplify) | `.claude/rules/simplify-extended.md` |
 | tui-pilot-tests | TUI тесты через Textual Pilot API; запрет file-inspection тестов для виджетов | `.claude/rules/tui-pilot-tests.md` |
 | extension-test-quality | Тесты расширений: 1:1 mapping test↔feature, запрет inline-копий, naming DOMAIN_CODE_NN, import guard | `.claude/rules/extension-test-quality.md` |
 

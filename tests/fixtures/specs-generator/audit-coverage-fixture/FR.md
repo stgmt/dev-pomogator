@@ -26,3 +26,9 @@ System SHALL validate imported data against schema.
 
 - Schema-based validation
 - Error reporting with dataProcessor
+
+## FR-4: Email Notifications — OUT OF SCOPE
+
+> OUT OF SCOPE — Not needed for MVP, planned for v2.
+
+System would send email notifications on data import completion.

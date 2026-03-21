@@ -51,6 +51,10 @@
 
 Полная документация: `.dev-pomogator/tools/specs-generator/README.md`
 
+### Запреты
+
+- `.progress.json` создаётся ТОЛЬКО через `spec-status.sh`. ЗАПРЕЩЕНО создавать его через Write tool, вручную или напрямую. Аргумент `-Path` ОБЯЗАН указывать на `.specs/<feature>/` (не `.`, не `.specs/`, не произвольную папку).
+
 ---
 
 ## Workflow создания (4 СТОП-точки)
@@ -118,6 +122,14 @@
 3. Заполнить ACCEPTANCE_CRITERIA.md (EARS формат)
 4. Заполнить REQUIREMENTS.md (индекс ссылок)
 5. Заполнить DESIGN.md
+5a. **OUT OF SCOPE пропагация (ОБЯЗАТЕЛЬНО):**
+    Если FR помечен `> OUT OF SCOPE`, агент ОБЯЗАН пометить связанные UC, AC и User Stories.
+    Формат: `> OUT OF SCOPE — см. FR-N`
+5b. **External Service Verification (ОБЯЗАТЕЛЬНО для фич с внешними сервисами):**
+    Для каждого внешнего сервиса в DESIGN.md:
+    - Проверить env vars / API config через официальную документацию (Context7 или WebSearch)
+    - Пометить проверенные: `[VERIFIED: {источник}]`
+    - Пометить непроверенные: `[UNVERIFIED]`
 6. **BDD Test Infrastructure Assessment (ОБЯЗАТЕЛЬНО — НЕ пропускать)**
 
    Агент ОБЯЗАН выполнить следующий алгоритм. Результат записывается в секцию
@@ -263,11 +275,13 @@
 
 **Алгоритм:**
 1. Заполнить TASKS.md **по TDD-порядку:**
+   - **Phase -1 (Infrastructure):** Если DESIGN.md упоминает БД, docker, .env, secrets — добавить Phase -1: Infrastructure Prerequisites. Env vars пометить `[VERIFIED: source]`.
    - **Phase 0 (Red):** .feature файл + step definitions + hooks (заглушки) -- ПЕРВЫЕ задачи
    - **Phase 1-N (Green):** Реализация бизнес-логики, где каждая группа задач привязана к @featureN сценариям
    - **Последний Phase (Refactor):** Рефакторинг + финальная верификация всех сценариев
    - Каждая задача реализации ОБЯЗАНА ссылаться на @featureN сценарий
    - Каждый Phase завершается verify-шагом: "сценарии @featureN переходят из Red в Green"
+   - **Config dedup:** Задачи ССЫЛАЮТСЯ на секции DESIGN.md для конфигов, НЕ копируют блоки конфигов дословно. Формат: `_Config: см. DESIGN.md секция "..."_`
 
    **Phase 0 hooks enforcement (ОБЯЗАТЕЛЬНО):**
    - Если DESIGN.md содержит `TEST_DATA_ACTIVE` → Phase 0 ОБЯЗАН содержать:
@@ -401,6 +415,10 @@
 | LINK_VALIDITY | FR/AC/NFR в REQUIREMENTS/TASKS — кликабельные линки, не plain text | WARNING |
 | BDD_INFRA | `## BDD Test Infrastructure` в DESIGN.md с Classification (TEST_DATA_ACTIVE/TEST_DATA_NONE) | WARNING |
 | BDD_HOOKS_TASKS | Если TEST_DATA_ACTIVE, Phase 0 в TASKS.md содержит задачи для всех hooks из DESIGN.md | WARNING |
+| OUT_OF_SCOPE_PROPAGATION | FR с OUT OF SCOPE → связанные UC/AC/User Stories тоже помечены | WARNING |
+| UNVERIFIED_CONFIG | Env vars в DESIGN.md без `[VERIFIED]`/`[UNVERIFIED]` маркера | INFO |
+| INFRA_TASKS_MISSING | DESIGN.md упоминает инфраструктуру, TASKS.md без infra-задач | WARNING |
+| CONFIG_DUPLICATION | Идентичные блоки 3+ строк в DESIGN.md и TASKS.md | INFO |
 
 ---
 

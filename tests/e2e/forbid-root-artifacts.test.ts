@@ -227,4 +227,16 @@ describe('PLUGIN004: Forbid Root Artifacts', () => {
       expect(exitCode).toBe(0);
     });
   });
+
+  describe('Trash Classification', () => {
+    it('should classify .progress.json as trash and block it', async () => {
+      await fs.writeFile(path.join(testRepoDir, '.progress.json'), '{"version":1}');
+
+      const { exitCode, output } = runCheck(testRepoDir);
+
+      expect(exitCode).toBe(1);
+      expect(output).toContain('.progress.json');
+      expect(output).toContain('AUTO-DELETE');
+    });
+  });
 });

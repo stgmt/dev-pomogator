@@ -86,3 +86,10 @@ Feature: PLUGIN004 Forbid Root Artifacts
     When I run setup.py
     Then .root-artifacts.yaml should exist
     And .pre-commit-config.yaml should contain "forbid-root-artifacts"
+
+  Scenario: .progress.json classified as trash
+    Given default whitelist is active
+    And file ".progress.json" exists in root
+    When I run check.py
+    Then exit code should be 1
+    And output should classify ".progress.json" as "AUTO-DELETE"

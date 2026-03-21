@@ -139,6 +139,22 @@ function resolvePath(repoRoot, inputPath) {
   return path.join(repoRoot, inputPath);
 }
 
+/**
+ * Validate that targetDir is a subdirectory inside .specs/ (not .specs/ itself, not repo root).
+ * Prevents .progress.json from being created outside .specs/<feature>/.
+ */
+function assertSpecSubdir(targetDir, repoRoot) {
+  const rel = path.relative(repoRoot, targetDir).replace(/\\/g, '/');
+  // Must start with .specs/ and have a subdirectory component
+  const parts = rel.split('/').filter(Boolean);
+  if (parts.length < 2 || parts[0] !== '.specs') {
+    throw new CliError(
+      `Path must be inside .specs/<feature>/ directory, got: ${rel || '.'}. Example: -Path ".specs/my-feature"`,
+      1,
+    );
+  }
+}
+
 function toTitleFromSlug(slug) {
   return slug
     .split('-')
@@ -645,6 +661,7 @@ function commandValidateSpec(argv) {
   }
 
   const targetDir = resolvePath(context.repoRoot, options.inputPath);
+  assertSpecSubdir(targetDir, context.repoRoot);
   const { log } = context;
 
   if (!fs.existsSync(targetDir)) {
@@ -985,6 +1002,7 @@ function commandSpecStatus(argv) {
   }
 
   const targetDir = resolvePath(context.repoRoot, options.inputPath);
+  assertSpecSubdir(targetDir, context.repoRoot);
   const { log } = context;
 
   if (!fs.existsSync(targetDir)) {
@@ -1399,6 +1417,7 @@ function commandAuditSpec(argv) {
   }
 
   const targetDir = resolvePath(context.repoRoot, options.inputPath);
+  assertSpecSubdir(targetDir, context.repoRoot);
   const { log } = context;
 
   if (!fs.existsSync(targetDir)) {
@@ -1915,6 +1934,207 @@ function commandAuditSpec(argv) {
     }
     if (!featureContent) {
       log('WARN', 'BDD_SCENARIO_SCOPE: No .feature file found');
+    }
+  }
+
+  log('INFO', 'Running OUT_OF_SCOPE_PROPAGATION check...');
+  if (frContent) {
+    const frSections = [...frContent.matchAll(/## (FR-\d+[a-z]?):.*?(?=## FR-\d|$)/gis)];
+    const oosFrIds = [];
+
+    for (const section of frSections) {
+      const frId = section[1];
+      if (/OUT\s+OF\s+SCOPE/i.test(section[0])) {
+        oosFrIds.push(frId);
+      }
+    }
+
+    if (oosFrIds.length > 0) {
+      const oosUcContent = getFileContent('USE_CASES.md');
+      const oosUserStoriesContent = getFileContent('USER_STORIES.md');
+      const ucSections = oosUcContent ? oosUcContent.split(/(?=## UC-\d+)/i) : [];
+      const acSplitSections = acContent ? acContent.split(/(?=## AC-\d+)/i) : [];
+      const storyLines = oosUserStoriesContent ? oosUserStoriesContent.split(/\r?\n/) : [];
+
+      for (const frId of oosFrIds) {
+        const frNumMatch = frId.match(/\d+/);
+        if (!frNumMatch) {
+          continue;
+        }
+
+        for (const ucSection of ucSections) {
+          if (new RegExp(`\\b${escapeRegExp(frId)}\\b`, 'i').test(ucSection) && !/OUT\s+OF\s+SCOPE/i.test(ucSection)) {
+            const ucIdMatch = ucSection.match(/## (UC-\d+)/i);
+            findings.push({
+              check: 'OUT_OF_SCOPE_PROPAGATION',
+              category: 'LOGIC_GAPS',
+              severity: 'WARNING',
+              message: `${frId} is OUT OF SCOPE but ${ucIdMatch ? ucIdMatch[1] : 'a UC'} referencing it is not marked`,
+              details: `Add '> OUT OF SCOPE — see ${frId}' to the related Use Case in USE_CASES.md`,
+            });
+            log('WARN', `OUT_OF_SCOPE_PROPAGATION: ${frId} OOS, related UC not marked`);
+          }
+        }
+
+        for (const acSection of acSplitSections) {
+          if (new RegExp(`\\(${escapeRegExp(frId)}\\)`, 'i').test(acSection) && !/OUT\s+OF\s+SCOPE/i.test(acSection)) {
+            const acIdMatch = acSection.match(/## (AC-\d+)/i);
+            findings.push({
+              check: 'OUT_OF_SCOPE_PROPAGATION',
+              category: 'LOGIC_GAPS',
+              severity: 'WARNING',
+              message: `${frId} is OUT OF SCOPE but ${acIdMatch ? acIdMatch[1] : 'an AC'} referencing it is not marked`,
+              details: `Add '> OUT OF SCOPE — see ${frId}' to the related AC in ACCEPTANCE_CRITERIA.md`,
+            });
+            log('WARN', `OUT_OF_SCOPE_PROPAGATION: ${frId} OOS, related AC not marked`);
+          }
+        }
+
+        for (const line of storyLines) {
+          if (line.includes(`@feature${frNumMatch[0]}`) && !/OUT\s+OF\s+SCOPE/i.test(line)) {
+            findings.push({
+              check: 'OUT_OF_SCOPE_PROPAGATION',
+              category: 'LOGIC_GAPS',
+              severity: 'WARNING',
+              message: `${frId} is OUT OF SCOPE but User Story with @feature${frNumMatch[0]} is not marked`,
+              details: `Add '> OUT OF SCOPE' marker to the User Story tagged @feature${frNumMatch[0]} in USER_STORIES.md`,
+            });
+            log('WARN', `OUT_OF_SCOPE_PROPAGATION: ${frId} OOS, User Story @feature${frNumMatch[0]} not marked`);
+          }
+        }
+      }
+    }
+  }
+
+  log('INFO', 'Running UNVERIFIED_CONFIG check...');
+  if (designContent) {
+    const ENV_VAR_WHITELIST = new Set([
+      'SHALL', 'MUST', 'WHEN', 'THEN', 'NOTE', 'TODO', 'ACTIVE', 'NONE',
+      'TRUE', 'FALSE', 'NULL', 'HTTP', 'HTTPS', 'UTF', 'DRAFT', 'EARS',
+      'JSON', 'YAML', 'HTML', 'CRUD', 'TEST_DATA_ACTIVE', 'TEST_DATA_NONE',
+      'LOGIC_GAPS', 'INCONSISTENCY', 'RUDIMENTS', 'FANTASIES', 'ERRORS',
+      'WARNING', 'INFO', 'ERROR', 'WARN', 'DEBUG',
+      'ОБЯЗАТЕЛЬНО', 'DESIGN', 'TASKS', 'REQUIREMENTS', 'ACCEPTANCE',
+      'BDD', 'TDD', 'RED', 'GREEN', 'REFACTOR', 'PHASE',
+      'POST', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD',
+      'README', 'CHANGELOG', 'FILE_CHANGES', 'RESEARCH',
+    ]);
+
+    const designLines = designContent.split(/\r?\n/);
+    const foundEnvVars = new Set();
+
+    for (let i = 0; i < designLines.length; i++) {
+      const envVarPattern = /\b([A-Z][A-Z0-9_]{3,})\b/g;
+      let match;
+      while ((match = envVarPattern.exec(designLines[i])) !== null) {
+        const candidate = match[1];
+        if (ENV_VAR_WHITELIST.has(candidate) || foundEnvVars.has(candidate)) {
+          continue;
+        }
+        if (!/[_]/.test(candidate)) {
+          continue;
+        }
+
+        const contextStart = Math.max(0, i - 5);
+        const contextEnd = Math.min(designLines.length, i + 6);
+        const context = designLines.slice(contextStart, contextEnd).join('\n');
+
+        if (/\[VERIFIED|\[UNVERIFIED|https?:\/\/|Context7|official doc|documentation/i.test(context)) {
+          continue;
+        }
+
+        foundEnvVars.add(candidate);
+        findings.push({
+          check: 'UNVERIFIED_CONFIG',
+          category: 'FANTASIES',
+          severity: 'INFO',
+          message: `Env var '${candidate}' in DESIGN.md has no verification source`,
+          details: `Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near '${candidate}' in DESIGN.md`,
+        });
+        log('WARN', `UNVERIFIED_CONFIG: '${candidate}' has no verification marker`);
+      }
+    }
+  }
+
+  log('INFO', 'Running INFRA_TASKS_MISSING check...');
+  if (designContent && tasksContent) {
+    const INFRA_KEYWORDS = [
+      'database', 'docker', 'compose', '\\.env', 'secrets', 'volume',
+      'migration', 'redis', 'postgresql', 'mongodb', 'mysql',
+      'kafka', 'rabbitmq', 'elasticsearch', 'nginx', 'ssl', 'certificate',
+    ];
+
+    const infraPattern = new RegExp(`\\b(${INFRA_KEYWORDS.join('|')})\\b`, 'gi');
+    const designInfraMatches = designContent.match(infraPattern);
+
+    if (designInfraMatches && designInfraMatches.length > 0) {
+      const hasInfraSection = /##\s.*(?:Infrastructure|Infra)/i.test(tasksContent);
+      const tasksInfraMatches = tasksContent.match(infraPattern);
+      const hasInfraInTasks = tasksInfraMatches && tasksInfraMatches.length >= 2;
+
+      if (!hasInfraSection && !hasInfraInTasks) {
+        const uniqueKeywords = [...new Set(designInfraMatches.map((k) => k.toLowerCase()))];
+        findings.push({
+          check: 'INFRA_TASKS_MISSING',
+          category: 'LOGIC_GAPS',
+          severity: 'WARNING',
+          message: `DESIGN.md mentions infrastructure (${uniqueKeywords.join(', ')}) but TASKS.md has no infrastructure tasks`,
+          details: 'Add Phase -1: Infrastructure Prerequisites to TASKS.md with database/docker/env/secrets setup tasks',
+        });
+        log('WARN', `INFRA_TASKS_MISSING: DESIGN.md has infra keywords, TASKS.md does not`);
+      }
+    }
+  }
+
+  log('INFO', 'Running CONFIG_DUPLICATION check...');
+  if (designContent && tasksContent) {
+    const filterLines = (text) => text.split(/\r?\n/)
+      .filter((line) => {
+        const trimmed = line.trim();
+        return trimmed.length > 0
+          && !trimmed.startsWith('## ')
+          && !trimmed.startsWith('# ')
+          && !trimmed.startsWith('- [ ]')
+          && !trimmed.startsWith('- [x]')
+          && !trimmed.startsWith('> ')
+          && !trimmed.startsWith('|');
+      });
+
+    const designFilteredLines = filterLines(designContent);
+    const tasksFilteredLines = filterLines(tasksContent);
+
+    if (designFilteredLines.length >= 3 && tasksFilteredLines.length >= 3) {
+      const tasksJoined = tasksFilteredLines.join('\n');
+      const duplicatedBlocks = [];
+      let i = 0;
+
+      while (i <= designFilteredLines.length - 3) {
+        const window = designFilteredLines.slice(i, i + 3).join('\n');
+        if (tasksJoined.includes(window)) {
+          let end = i + 3;
+          while (end < designFilteredLines.length && tasksJoined.includes(designFilteredLines.slice(i, end + 1).join('\n'))) {
+            end++;
+          }
+          duplicatedBlocks.push({
+            startLine: designFilteredLines[i],
+            lineCount: end - i,
+          });
+          i = end;
+        } else {
+          i++;
+        }
+      }
+
+      for (const block of duplicatedBlocks) {
+        findings.push({
+          check: 'CONFIG_DUPLICATION',
+          category: 'INCONSISTENCY',
+          severity: 'INFO',
+          message: `Duplicated config block (${block.lineCount} lines) between DESIGN.md and TASKS.md starting with: ${block.startLine.trim().slice(0, 60)}`,
+          details: 'Reference the DESIGN.md section instead of copying config blocks. Use: _Config: see DESIGN.md section "..."_',
+        });
+        log('WARN', `CONFIG_DUPLICATION: ${block.lineCount}-line block duplicated`);
+      }
     }
   }
 

@@ -1,3 +1,8 @@
+---
+description: "При /simplify проверять спеки (нечёткие FR, reuse), тесты (setup duplication, naming), различать systemic vs one-off issues"
+alwaysApply: true
+---
+
 # Simplify Extended — спеки и тесты
 
 При выполнении `/simplify` (или любого code review) проверяй не только код, но и спеки и тесты если они есть в изменённых файлах.
