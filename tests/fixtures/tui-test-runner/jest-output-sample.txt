@@ -1,0 +1,4 @@
+PASS src/auth.test.ts
+  ✓ should pass (5 ms)
+  ✕ should fail (3 ms)
+Tests: 1 failed, 1 passed, 2 total

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import { spawnSync } from 'child_process';
-import { appPath, homePath, runInstaller, setupCleanState } from './helpers';
+import { appPath, homePath, runInstaller, setupCleanState, getPythonRunner } from './helpers';
 import {
   buildPortableManagedCommand,
   buildPortableWrappedCommand,
@@ -13,21 +13,6 @@ import {
 import { VitestAdapter } from '../../extensions/tui-test-runner/tools/tui-test-runner/adapters/vitest_adapter.js';
 
 // --- Helpers ---
-
-interface PythonRunner { command: string; prefixArgs: string[]; }
-let cachedPythonRunner: PythonRunner | null = null;
-
-function getPythonRunner(): PythonRunner {
-  if (cachedPythonRunner) return cachedPythonRunner;
-  const candidates: PythonRunner[] = process.platform === 'win32'
-    ? [{ command: 'python', prefixArgs: [] }, { command: 'py', prefixArgs: ['-3'] }, { command: 'python3', prefixArgs: [] }]
-    : [{ command: 'python3', prefixArgs: [] }, { command: 'python', prefixArgs: [] }];
-  for (const c of candidates) {
-    const r = spawnSync(c.command, [...c.prefixArgs, '--version'], { encoding: 'utf-8', timeout: 5000 });
-    if (r.status === 0) { cachedPythonRunner = c; return c; }
-  }
-  throw new Error('Python 3 required for compact mode tests');
-}
 
 const STATUS_DIR = '.dev-pomogator/.test-status';
 const FIXTURES_DIR = 'tests/fixtures/test-statusline';
@@ -230,10 +215,7 @@ describe('PLUGIN011: Test Statusline', () => {
     it('PLUGIN011_36: wrapper writes stdout and stderr into log_file', async () => {
       const env = canonicalWrapperEnv();
       const scriptPath = appPath(STATUS_DIR, 'wrapper-log-script.js');
-      await fs.writeFile(scriptPath, [
-        "console.log('stdout line');",
-        "console.error('stderr line');",
-      ].join('\n'));
+      await fs.copyFile(path.join(__dirname, '../fixtures/test-statusline/wrapper-log-test-script.js'), scriptPath);
       const result = runWrapper([
         'node',
         scriptPath,

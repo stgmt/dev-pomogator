@@ -23,12 +23,14 @@
 
 'use strict';
 
-const { execSync } = require('child_process');
+const { execSync, spawnSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
 const VERBOSE = process.env.DEV_POMOGATOR_HOOK_VERBOSE === '1';
-const TSX_EXEC_TIMEOUT = 180000; // 3 minutes — allows for slow npm discovery + tsx strategy fallback in Docker
+const TSX_EXEC_TIMEOUT = process.env.TSX_RUNNER_TIMEOUT
+  ? Number(process.env.TSX_RUNNER_TIMEOUT)
+  : 180000; // 3 minutes default; override with TSX_RUNNER_TIMEOUT env var for long-running scripts
 const startTime = Date.now();
 const strategyLog = [];
 

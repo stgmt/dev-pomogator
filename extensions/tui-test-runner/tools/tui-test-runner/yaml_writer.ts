@@ -379,6 +379,9 @@ export class YamlWriter {
       } else {
         this.status.percent = Math.min(Math.round((completed * 100) / total), 99);
       }
+    } else if (total > 0) {
+      // Show success rate, not completion — 100% only when all passed
+      this.status.percent = Math.round((passed * 100) / total);
     } else {
       this.status.percent = 100;
     }

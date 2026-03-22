@@ -4,7 +4,7 @@ import path from 'path';
 import { spawnSync } from 'child_process';
 import { pathToFileURL } from 'url';
 import { parse as parseYaml } from 'yaml';
-import { appPath } from './helpers';
+import { appPath, getPythonRunner, runPythonJson, type PythonRunner } from './helpers';
 
 const STATUS_DIR = '.dev-pomogator/.test-status';
 const FIXTURES_DIR = 'tests/fixtures/tui-test-runner';
@@ -14,68 +14,9 @@ const TUI_ROOT = 'extensions/tui-test-runner/tools/tui-test-runner';
 
 let testStatusDir: string;
 
-interface PythonRunner {
-  command: string;
-  prefixArgs: string[];
-}
-
-let cachedPythonRunner: PythonRunner | null = null;
-
-const ANALYZE_STATUS_SCRIPT = String.raw`
-import json
-import sys
-from pathlib import Path
-
-import yaml
-
-payload = json.loads(sys.stdin.read())
-sys.path.insert(0, str(Path(payload["package_root"]).resolve()))
-
-from tui.models import TestStatus
-from tui.analyst.output import analyze_status
-
-status_path = Path(payload["status_file"])
-status = TestStatus.from_dict(yaml.safe_load(status_path.read_text(encoding="utf-8")))
-report = analyze_status(status, project_root=payload["project_root"], user_patterns_path=payload["user_patterns_path"])
-
-print(json.dumps({
-    "failed": report.failed,
-    "pattern_ids": [card.matched_pattern.pattern.id if card.matched_pattern else None for card in report.failures],
-}))
-`;
-
-const STRICT_MODEL_SCRIPT = String.raw`
-import json
-import sys
-from pathlib import Path
-
-import yaml
-
-payload = json.loads(sys.stdin.read())
-sys.path.insert(0, str(Path(payload["package_root"]).resolve()))
-
-from tui.models import TestStatus
-
-try:
-    TestStatus.from_dict(yaml.safe_load(Path(payload["status_file"]).read_text(encoding="utf-8")))
-    print(json.dumps({"accepted": True}))
-except ValueError:
-    print(json.dumps({"accepted": False}))
-`;
-
-const LOG_READER_SCRIPT = String.raw`
-import json
-import sys
-from pathlib import Path
-
-payload = json.loads(sys.stdin.read())
-sys.path.insert(0, str(Path(payload["package_root"]).resolve()))
-
-from tui.log_reader import LogReader
-
-reader = LogReader(payload["log_file"])
-print(json.dumps({"lines": reader.read_new_lines()}))
-`;
+const ANALYZE_STATUS_SCRIPT = fs.readFileSync(path.join(__dirname, '../fixtures/tui-test-runner/analyze-status-script.py'), 'utf-8');
+const STRICT_MODEL_SCRIPT = fs.readFileSync(path.join(__dirname, '../fixtures/tui-test-runner/strict-model-validator.py'), 'utf-8');
+const LOG_READER_SCRIPT = fs.readFileSync(path.join(__dirname, '../fixtures/tui-test-runner/log-reader-script.py'), 'utf-8');
 
 beforeEach(async () => {
   testStatusDir = appPath(STATUS_DIR);
@@ -117,53 +58,6 @@ function runWrapper(
     timeout: 20000,
   });
   return { stdout: result.stdout || '', stderr: result.stderr || '', status: result.status };
-}
-
-function getPythonRunner(): PythonRunner {
-  if (cachedPythonRunner) {
-    return cachedPythonRunner;
-  }
-
-  const candidates: PythonRunner[] = process.platform === 'win32'
-    ? [
-        { command: 'python', prefixArgs: [] },
-        { command: 'py', prefixArgs: ['-3'] },
-        { command: 'python3', prefixArgs: [] },
-      ]
-    : [
-        { command: 'python3', prefixArgs: [] },
-        { command: 'python', prefixArgs: [] },
-      ];
-
-  for (const candidate of candidates) {
-    const result = spawnSync(candidate.command, [...candidate.prefixArgs, '--version'], {
-      encoding: 'utf-8',
-      cwd: appPath(),
-      timeout: 5000,
-    });
-    if (result.status === 0) {
-      cachedPythonRunner = candidate;
-      return candidate;
-    }
-  }
-
-  throw new Error('Python 3.9+ is required for TUI runtime tests');
-}
-
-function runPythonJson(script: string, payload: Record<string, unknown>) {
-  const runner = getPythonRunner();
-  const result = spawnSync(runner.command, [...runner.prefixArgs, '-c', script], {
-    input: JSON.stringify(payload),
-    encoding: 'utf-8',
-    cwd: appPath(),
-    timeout: 20000,
-  });
-
-  if (result.status !== 0) {
-    throw new Error(`Python script failed:\nSTDOUT:\n${result.stdout}\nSTDERR:\n${result.stderr}`);
-  }
-
-  return JSON.parse((result.stdout || '').trim());
 }
 
 async function importAdapterModule(relativePath: string) {
@@ -282,7 +176,7 @@ describe('PLUGIN012: TUI Test Runner', () => {
       expect(finalStatus.state).toBe('failed');
       expect(finalStatus.total).toBe(2);
       expect(finalStatus.failed).toBe(1);
-      expect(finalStatus.percent).toBe(100);
+      expect(finalStatus.percent).toBe(50); // 1 passed / 2 total = 50% success rate
       expect(finalStatus.suites[0].file).toBe(suiteFile);
       expect(finalStatus.suites[0].tests[0].stack).toContain(suiteFile);
       expect(finalStatus.suites[0].tests[0].error).toBe('Assertion "path" failed');
@@ -373,15 +267,10 @@ describe('PLUGIN012: TUI Test Runner', () => {
   describe('Wrapper Runtime', () => {
     it('writes canonical v2 status and populates the advertised log file', () => {
       const scriptPath = appPath(STATUS_DIR, 'wrapper-runtime-script.js');
-      fs.writeFileSync(scriptPath, [
-        "console.log('PASS alpha 5 ms');",
-        "console.log('FAIL beta 7 ms');",
-        "console.error('stderr-line');",
-        'process.exit(1);',
-      ].join('\n'));
+      fs.copyFileSync(path.join(__dirname, '../fixtures/tui-test-runner/vitest-pass-fail-output.js'), scriptPath);
 
       const result = runWrapper(
-        ['node', scriptPath],
+        ['--skip-discovery', 'node', scriptPath],
         {
           TEST_STATUSLINE_SESSION: 'wrap1234',
           TEST_STATUSLINE_PROJECT: appPath(),
@@ -403,20 +292,16 @@ describe('PLUGIN012: TUI Test Runner', () => {
       expect(status.passed).toBe(1);
       expect(status.failed).toBe(1);
       expect(status.log_file).toBe('.dev-pomogator/.test-status/test.wrap1234.log');
-      expect(logContent).toContain('PASS alpha 5 ms');
-      expect(logContent).toContain('FAIL beta 7 ms');
+      expect(logContent).toContain('✓ alpha 5 ms');
+      expect(logContent).toContain('✗ beta 7 ms');
       expect(logContent).toContain('stderr-line');
     });
   });
 
   describe('Strict v2 Consumers', () => {
     it('strict v2 model rejects legacy or incomplete payloads', () => {
-      const invalidStatusPath = writeTempStatus('status.invalid.yaml', [
-        'version: 1',
-        'session_id: "legacy123"',
-        'state: running',
-        'total: 1',
-      ].join('\n'));
+      const invalidStatusPath = writeTempStatus('status.invalid.yaml',
+        fs.readFileSync(path.join(__dirname, '../fixtures/tui-test-runner/invalid-status-v1.yaml'), 'utf-8'));
 
       const result = runPythonJson(STRICT_MODEL_SCRIPT, {
         package_root: appPath(TUI_ROOT),
@@ -499,35 +384,11 @@ describe('PLUGIN012: TUI Test Runner', () => {
         importAdapterModule('extensions/tui-test-runner/tools/tui-test-runner/adapters/go_test_adapter.ts'),
       ]);
 
-      const jestEvents = Array.from(new JestAdapter().processLines([
-        'PASS src/auth.test.ts',
-        '  ✓ should pass (5 ms)',
-        '  ✕ should fail (3 ms)',
-        'Tests: 1 failed, 1 passed, 2 total',
-      ]));
-      const pytestEvents = Array.from(new PytestAdapter().processLines([
-        'tests/test_auth.py::test_login PASSED [ 50%]',
-        'tests/test_auth.py::test_logout FAILED [100%]',
-        '==== 1 passed, 1 failed in 0.20s ====',
-      ]));
-      const dotnetEvents = Array.from(new DotnetAdapter().processLines([
-        'Passed Namespace.Tests.AuthTests.ShouldLogin [12 ms]',
-        'Failed Namespace.Tests.AuthTests.ShouldLogout [10 ms]',
-        'Total tests: 2',
-        'Passed: 1',
-        'Failed: 1',
-      ]));
-      const cargoEvents = Array.from(new CargoAdapter().processLines([
-        'test auth::login_success ... ok',
-        'test auth::logout_failure ... FAILED',
-        'test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out;',
-      ]));
-      const goEvents = Array.from(new GoTestAdapter().processLines([
-        '=== RUN   TestLogin',
-        '--- PASS: TestLogin (0.00s)',
-        '=== RUN   TestLogout',
-        '--- FAIL: TestLogout (0.01s)',
-      ]));
+      const jestEvents = Array.from(new JestAdapter().processLines(readFixture('jest-output-sample.txt').split(/\r?\n/)));
+      const pytestEvents = Array.from(new PytestAdapter().processLines(readFixture('pytest-output-sample.txt').split(/\r?\n/)));
+      const dotnetEvents = Array.from(new DotnetAdapter().processLines(readFixture('dotnet-output-sample.txt').split(/\r?\n/)));
+      const cargoEvents = Array.from(new CargoAdapter().processLines(readFixture('cargo-output-sample.txt').split(/\r?\n/)));
+      const goEvents = Array.from(new GoTestAdapter().processLines(readFixture('go-test-output-sample.txt').split(/\r?\n/)));
 
       expect(jestEvents.some((event: any) => event.type === 'summary')).toBe(true);
       expect(pytestEvents.some((event: any) => event.type === 'test_pass')).toBe(true);
@@ -608,33 +469,16 @@ describe('PLUGIN012: TUI Test Runner', () => {
       expect(vitestEvents.filter((e: any) => e.type === 'test_fail')).toHaveLength(1);
       expect(vitestEvents.filter((e: any) => e.type === 'test_skip')).toHaveLength(1);
 
-      // Jest inline
-      const jestEvents = Array.from(new JestAdapter().processLines([
-        'PASS src/auth.test.ts',
-        '  ✓ should pass (5 ms)',
-        '  ✕ should fail (3 ms)',
-        'Tests: 1 failed, 1 passed, 2 total',
-      ]));
+      // Adapter fixtures (same fixtures as first test — regression check)
+      const jestEvents = Array.from(new JestAdapter().processLines(readFixture('jest-output-sample.txt').split(/\r?\n/)));
       expect(jestEvents.filter((e: any) => e.type === 'test_pass')).toHaveLength(1);
       expect(jestEvents.filter((e: any) => e.type === 'test_fail')).toHaveLength(1);
 
-      // Pytest inline
-      const pytestEvents = Array.from(new PytestAdapter().processLines([
-        'tests/test_auth.py::test_login PASSED [ 50%]',
-        'tests/test_auth.py::test_logout FAILED [100%]',
-        '==== 1 passed, 1 failed in 0.20s ====',
-      ]));
+      const pytestEvents = Array.from(new PytestAdapter().processLines(readFixture('pytest-output-sample.txt').split(/\r?\n/)));
       expect(pytestEvents.filter((e: any) => e.type === 'test_pass')).toHaveLength(1);
       expect(pytestEvents.filter((e: any) => e.type === 'test_fail')).toHaveLength(1);
 
-      // Dotnet old format (no leading whitespace) — backward compat
-      const dotnetEvents = Array.from(new DotnetAdapter().processLines([
-        'Passed Namespace.Tests.AuthTests.ShouldLogin [12 ms]',
-        'Failed Namespace.Tests.AuthTests.ShouldLogout [10 ms]',
-        'Total tests: 2',
-        'Passed: 1',
-        'Failed: 1',
-      ]));
+      const dotnetEvents = Array.from(new DotnetAdapter().processLines(readFixture('dotnet-output-sample.txt').split(/\r?\n/)));
       expect(dotnetEvents.filter((e: any) => e.type === 'test_pass')).toHaveLength(1);
       expect(dotnetEvents.filter((e: any) => e.type === 'test_fail')).toHaveLength(1);
       const dotnetSummary = dotnetEvents.filter((e: any) => e.type === 'summary').pop() as any;
@@ -642,22 +486,11 @@ describe('PLUGIN012: TUI Test Runner', () => {
       expect(dotnetSummary.summary.passed).toBe(1);
       expect(dotnetSummary.summary.failed).toBe(1);
 
-      // Cargo inline
-      const cargoEvents = Array.from(new CargoAdapter().processLines([
-        'test auth::login_success ... ok',
-        'test auth::logout_failure ... FAILED',
-        'test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out;',
-      ]));
+      const cargoEvents = Array.from(new CargoAdapter().processLines(readFixture('cargo-output-sample.txt').split(/\r?\n/)));
       expect(cargoEvents.filter((e: any) => e.type === 'test_pass')).toHaveLength(1);
       expect(cargoEvents.filter((e: any) => e.type === 'test_fail')).toHaveLength(1);
 
-      // Go inline
-      const goEvents = Array.from(new GoTestAdapter().processLines([
-        '=== RUN   TestLogin',
-        '--- PASS: TestLogin (0.00s)',
-        '=== RUN   TestLogout',
-        '--- FAIL: TestLogout (0.01s)',
-      ]));
+      const goEvents = Array.from(new GoTestAdapter().processLines(readFixture('go-test-output-sample.txt').split(/\r?\n/)));
       expect(goEvents.filter((e: any) => e.type === 'test_pass')).toHaveLength(1);
       expect(goEvents.filter((e: any) => e.type === 'test_fail')).toHaveLength(1);
     });

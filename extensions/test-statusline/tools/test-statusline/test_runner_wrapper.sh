@@ -15,8 +15,6 @@ fi
 TUI_WRAPPER="$REPO_ROOT/.dev-pomogator/tools/tui-test-runner/test_runner_wrapper.ts"
 TUI_WRAPPER_SRC="$REPO_ROOT/extensions/tui-test-runner/tools/tui-test-runner/test_runner_wrapper.ts"
 
-TSX_RUNNER="$HOME/.dev-pomogator/scripts/tsx-runner.js"
-
 # Load session from session.env if env vars not set (CLAUDE_ENV_FILE bug #15840)
 if [ -z "$TEST_STATUSLINE_SESSION" ]; then
   _SESSION_FILE="$REPO_ROOT/.dev-pomogator/.test-status/session.env"
@@ -27,28 +25,14 @@ if [ -z "$TEST_STATUSLINE_SESSION" ]; then
   fi
 fi
 
-# Convert MSYS2/Git Bash paths to Windows paths for Node.js require()
-node_path() {
-  if command -v cygpath >/dev/null 2>&1; then
-    cygpath -m "$1"
-  else
-    printf '%s' "$1"
-  fi
-}
-
+# Use npx tsx directly — NOT tsx-runner.js.
+# tsx-runner uses execSync with timeout (for hooks), which kills long-lived
+# test runs (Docker tests take 12+ min). npx tsx has no timeout.
 if [ -f "$TUI_WRAPPER" ]; then
-  if [ -f "$TSX_RUNNER" ]; then
-    exec node -e "require('$(node_path "$TSX_RUNNER")')" -- "$(node_path "$TUI_WRAPPER")" "$@"
-  else
-    exec npx tsx "$TUI_WRAPPER" "$@"
-  fi
+  exec npx tsx "$TUI_WRAPPER" "$@"
 fi
 if [ -f "$TUI_WRAPPER_SRC" ]; then
-  if [ -f "$TSX_RUNNER" ]; then
-    exec node -e "require('$(node_path "$TSX_RUNNER")')" -- "$(node_path "$TUI_WRAPPER_SRC")" "$@"
-  else
-    exec npx tsx "$TUI_WRAPPER_SRC" "$@"
-  fi
+  exec npx tsx "$TUI_WRAPPER_SRC" "$@"
 fi
 
 # Fallback: run command directly if tui-test-runner not installed

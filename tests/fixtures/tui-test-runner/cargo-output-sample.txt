@@ -1,0 +1,3 @@
+test auth::login_success ... ok
+test auth::logout_failure ... FAILED
+test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out;

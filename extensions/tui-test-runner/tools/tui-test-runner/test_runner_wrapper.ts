@@ -119,8 +119,18 @@ function resolveFramework(explicitFramework: TestFramework | undefined, projectR
 
 const DISCOVERY_COMMANDS: Partial<Record<TestFramework, { cmd: string[]; count: (out: string) => number }>> = {
   vitest: {
-    cmd: ['npx', 'vitest', 'list'],
-    count: (out) => out.split(/\r?\n/).filter((l) => l.trim() && !l.startsWith(' ')).length,
+    cmd: ['npx', 'vitest', 'list', '--json'],
+    count: (out) => {
+      try {
+        const data = JSON.parse(out);
+        if (Array.isArray(data)) return data.length;
+        if (data?.testFiles) return data.testFiles.reduce((sum: number, f: any) => sum + (f.tests?.length ?? 0), 0);
+      } catch {
+        // Fallback: count non-empty non-indented lines (vitest list plain text)
+        return out.split(/\r?\n/).filter((l) => l.trim() && !l.startsWith(' ')).length;
+      }
+      return 0;
+    },
   },
   jest: {
     cmd: ['npx', 'jest', '--listTests'],
@@ -152,7 +162,7 @@ function discoverTestCount(framework: TestFramework, projectRoot: string): numbe
     const result = spawnSync(config.cmd[0], config.cmd.slice(1), {
       cwd: projectRoot,
       encoding: 'utf-8',
-      timeout: 30000,
+      timeout: 60000,
       env: { ...process.env, FORCE_COLOR: '0', NO_COLOR: '1' },
     });
     if (result.status !== 0 || !result.stdout) {

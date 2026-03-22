@@ -1,0 +1,4 @@
+=== RUN   TestLogin
+--- PASS: TestLogin (0.00s)
+=== RUN   TestLogout
+--- FAIL: TestLogout (0.01s)
