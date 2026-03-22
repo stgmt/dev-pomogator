@@ -31,14 +31,12 @@ const KNOWN_FRAMEWORKS = new Set<TestFramework>([
 
 interface ParsedArgs {
   framework?: TestFramework;
-  skipDiscovery: boolean;
   childEnv: Record<string, string>;
   commandArgs: string[];
 }
 
 function parseArgs(args: string[]): ParsedArgs {
   let framework: TestFramework | undefined;
-  let skipDiscovery = false;
   let commandStart = args.length;
 
   for (let i = 0; i < args.length; i++) {
@@ -46,11 +44,6 @@ function parseArgs(args: string[]): ParsedArgs {
     if (arg === '--') {
       commandStart = i + 1;
       break;
-    }
-
-    if (arg === '--skip-discovery') {
-      skipDiscovery = true;
-      continue;
     }
 
     if (arg === '--framework' && i + 1 < args.length) {
@@ -83,7 +76,6 @@ function parseArgs(args: string[]): ParsedArgs {
 
   return {
     framework,
-    skipDiscovery,
     childEnv,
     commandArgs,
   };
@@ -221,7 +213,7 @@ async function main(): Promise<number> {
   fs.mkdirSync(statusDir, { recursive: true });
   fs.writeFileSync(logFile, '', 'utf-8');
 
-  const discoveryTotal = parsed.skipDiscovery ? 0 : discoverTestCount(framework, projectRoot);
+  const discoveryTotal = discoverTestCount(framework, projectRoot);
 
   const writer = new YamlWriter(statusFile, prefix, framework, logFileForYaml, 1000, process.pid);
   if (discoveryTotal > 0) {

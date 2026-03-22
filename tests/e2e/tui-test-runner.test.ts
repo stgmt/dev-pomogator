@@ -278,7 +278,7 @@ describe('PLUGIN012: TUI Test Runner', () => {
       fs.copyFileSync(path.join(__dirname, '../fixtures/tui-test-runner/vitest-pass-fail-output.js'), scriptPath);
 
       const result = runWrapper(
-        ['--skip-discovery', 'node', scriptPath],
+        ['node', scriptPath],
         {
           TEST_STATUSLINE_SESSION: 'wrap1234',
           TEST_STATUSLINE_PROJECT: appPath(),

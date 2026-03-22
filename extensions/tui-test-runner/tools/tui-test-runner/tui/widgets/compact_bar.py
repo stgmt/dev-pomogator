@@ -31,7 +31,7 @@ def render_compact(status: TestStatus | None) -> str:
     pct_str = f"{status.percent}%" if status.total > 0 else ""
     return (
         f"{icon} {status.framework} "
-        f"{status.passed}{total_str}✅ {status.failed}❌ {status.skipped}⏭ "
+        f"{status.passed}{total_str}✅ {status.failed}❌ "
         f"{bar} {pct_str} {duration}".rstrip()
     )
 

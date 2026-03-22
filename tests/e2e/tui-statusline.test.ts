@@ -964,7 +964,6 @@ else:
       const session = 'e2etest1';
       const result = spawnSync('bash', [
         appPath('extensions/test-statusline/tools/test-statusline/test_runner_wrapper.sh'),
-        '--skip-discovery',
         'echo', 'hello',
       ], {
         encoding: 'utf-8',
