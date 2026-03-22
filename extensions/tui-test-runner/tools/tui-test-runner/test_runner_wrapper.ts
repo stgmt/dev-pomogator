@@ -258,6 +258,8 @@ async function main(): Promise<number> {
     stderr: '',
   };
 
+  const stripAnsi = (s: string): string => s.replace(/\x1b\[[0-9;]*m/g, '');
+
   const parseLines = (streamName: 'stdout' | 'stderr', text: string): void => {
     buffers[streamName] += text;
     const lines = buffers[streamName].split(/\r?\n/);
@@ -265,7 +267,7 @@ async function main(): Promise<number> {
 
     let changed = false;
     for (const line of lines) {
-      const event = adapter.parseLine(line);
+      const event = adapter.parseLine(stripAnsi(line));
       if (!event) {
         continue;
       }
@@ -304,7 +306,7 @@ async function main(): Promise<number> {
       if (!line) {
         continue;
       }
-      const event = adapter.parseLine(line);
+      const event = adapter.parseLine(stripAnsi(line));
       if (event) {
         writer.processEvent(event);
       }
