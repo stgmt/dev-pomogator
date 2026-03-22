@@ -151,14 +151,15 @@ switch (state) {
     const completed = passed + failed + skipped;
     const runBadge = `${BG_BLUE}${WHITE}${BOLD} RUN ${RESET}`;
     if (completed === 0 && total === 0) {
-      // Phase 1: Docker build / vitest startup — no tests yet
       line = `${runBadge} ${DIM}starting...${RESET} ${DIM}${durationStr}${RESET}`;
+    } else if (completed === 0 && total > 0) {
+      line = `${runBadge} ${DIM}building Docker...${RESET} ${DIM}0/${total} ${durationStr}${RESET}`;
     } else {
-      // Phase 2: tests running — show count
       const totalStr = total > 0 ? `/${total}` : '';
+      const pct = total > 0 ? ` ${Math.min(Math.round(completed * 100 / total), 99)}%` : '';
       line = `${runBadge} ${GREEN}${passed}${totalStr}${RESET}`;
       if (failed > 0) line += ` ${RED}${failed}\u274C${RESET}`;
-      line += ` ${DIM}${durationStr}${RESET}`;
+      line += `${DIM}${pct} ${durationStr}${RESET}`;
     }
     break;
   }
