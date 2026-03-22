@@ -52,7 +52,7 @@ function rewriteRunningToFailed(content: string, pid: number): string {
   return content
     .replace(/^state:\s*.*$/m, 'state: failed')
     .replace(/^running:\s*.*$/m, 'running: 0')
-    .replace(/^percent:\s*.*$/m, 'percent: 100')
+    .replace(/^percent:\s*.*$/m, 'percent: 0')
     .replace(/^error_message:\s*.*$/m, `error_message: "${message}"`)
     .replace(/^updated_at:\s*.*$/m, `updated_at: "${new Date().toISOString()}"`);
 }
@@ -181,6 +181,14 @@ function cleanStaleFiles(statusDir: string): void {
         if (age > ONE_HOUR && state === 'idle') {
           fs.unlinkSync(filePath);
           log('INFO', `Removed stale idle file (>1h): ${file}`);
+          continue;
+        }
+
+        // Rule 3: "Process died" failed files older than 1 hour (zombie cleanup)
+        const errorMessage = getYamlField(content, 'error_message');
+        if (age > ONE_HOUR && state === 'failed' && errorMessage.includes('Process died')) {
+          fs.unlinkSync(filePath);
+          log('INFO', `Removed zombie failed file (>1h): ${file}`);
         }
       } catch (fileErr) {
         log('DEBUG', `Could not process ${file}: ${fileErr}`);
