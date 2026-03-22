@@ -163,12 +163,13 @@ switch (state) {
     break;
   }
   case 'passed':
-    line = `\u2705 ${GREEN}${passed}/${total}${RESET} ${DIM}${durationStr}${agoStr}${RESET}`;
+    line = `\u2705 ${GREEN}${passed}/${total}${RESET} ${DIM}${durationStr}${RESET}${agoStr ? ` ${DIM}${agoStr.trim()}${RESET}` : ''}`;
     break;
   case 'failed':
-    line = failed > 0
-      ? `\u274C ${passed}/${total} ${RED}(${failed} failed)${RESET} ${DIM}${durationStr}${agoStr}${RESET}`
-      : `\u274C ${passed}/${total} ${DIM}${durationStr}${agoStr}${RESET}`;
+    line = `\u274C ${passed}/${total}`;
+    if (failed > 0) line += ` ${RED}(${failed} failed)${RESET}`;
+    line += ` ${DIM}${durationStr}${RESET}`;
+    if (agoStr) line += ` ${DIM}${agoStr.trim()}${RESET}`;
     break;
   case 'error':
     line = `\u274C ${RED}ERR${RESET} ${errorMsg || 'unknown error'} ${DIM}${agoStr.trim()}${RESET}`;

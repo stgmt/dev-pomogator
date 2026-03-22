@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
-import { execSync, spawnSync } from 'child_process';
-import { appPath } from './helpers';
+import { spawnSync } from 'child_process';
+import { appPath, getPythonRunner, runPythonJson } from './helpers';
 import { cleanupTuiV2 } from './helpers/tui-v2-cleanup';
 
 // --- Paths ---
@@ -25,15 +25,6 @@ beforeEach(async () => {
 afterEach(async () => {
   await cleanupTuiV2(tempDir);
 });
-
-// --- Helper: run Python module check ---
-
-interface PythonRunner {
-  command: string;
-  prefixArgs: string[];
-}
-
-let cachedPythonRunner: PythonRunner | null = null;
 
 const ANALYZE_STATUS_SCRIPT = String.raw`
 import json
@@ -128,53 +119,6 @@ py_compile.compile(payload["file"], doraise=True)
 print(json.dumps({"compiled": True}))
 `;
 
-function getPythonRunner(): PythonRunner {
-  if (cachedPythonRunner) {
-    return cachedPythonRunner;
-  }
-
-  const candidates: PythonRunner[] = process.platform === 'win32'
-    ? [
-        { command: 'python', prefixArgs: [] },
-        { command: 'py', prefixArgs: ['-3'] },
-        { command: 'python3', prefixArgs: [] },
-      ]
-    : [
-        { command: 'python3', prefixArgs: [] },
-        { command: 'python', prefixArgs: [] },
-      ];
-
-  for (const candidate of candidates) {
-    const result = spawnSync(candidate.command, [...candidate.prefixArgs, '--version'], {
-      encoding: 'utf-8',
-      cwd: appPath(),
-      timeout: 5000,
-    });
-    if (result.status === 0) {
-      cachedPythonRunner = candidate;
-      return candidate;
-    }
-  }
-
-  throw new Error('Python 3.9+ is required for TUI analysis tests');
-}
-
-function runPythonJson(script: string, payload: Record<string, unknown>) {
-  const runner = getPythonRunner();
-  const result = spawnSync(runner.command, [...runner.prefixArgs, '-c', script], {
-    input: JSON.stringify(payload),
-    encoding: 'utf-8',
-    cwd: appPath(),
-    timeout: 20000,
-  });
-
-  if (result.status !== 0) {
-    throw new Error(`Python script failed:\nSTDOUT:\n${result.stdout}\nSTDERR:\n${result.stderr}`);
-  }
-
-  return JSON.parse((result.stdout || '').trim());
-}
-
 function analyzeStatusFixture(fixtureName: string, projectRoot = appPath(FIXTURE_PROJECT_DIR)) {
   return runPythonJson(ANALYZE_STATUS_SCRIPT, {
     package_root: path.dirname(appPath(TUI_DIR)),
@@ -195,18 +139,7 @@ function pythonImportCheck(module: string): string {
     cwd: appPath(),
     timeout: 10000,
   });
-  if (result.status === 0) {
-    return (result.stdout || '').trim();
-  }
-  try {
-    return execSync(`python3 -c "import ${module}; print('ok')"`, {
-      encoding: 'utf-8',
-      cwd: appPath(),
-      timeout: 10000,
-    }).trim();
-  } catch {
-    return 'error';
-  }
+  return result.status === 0 ? (result.stdout || '').trim() : 'error';
 }
 
 // --- @feature1: AI Test Analyst ---

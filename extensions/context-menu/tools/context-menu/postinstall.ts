@@ -130,6 +130,15 @@ function main(): void {
 
   const nssContent = generateNss();
 
+  let existingContent = '';
+  try { existingContent = fs.readFileSync(CLAUDE_NSS, 'utf-8'); } catch { /* file doesn't exist yet */ }
+
+  if (existingContent === nssContent) {
+    ensureImportLine();
+    log('✓ Context menu already up to date (skipped reload)');
+    return;
+  }
+
   // Write temp → elevated copy
   const tempFile = path.join(process.cwd(), 'temp-claude-code.nss');
   fs.writeFileSync(tempFile, nssContent, 'utf-8');

@@ -4,7 +4,7 @@ import path from 'path';
 import { spawnSync } from 'child_process';
 import { pathToFileURL } from 'url';
 import { parse as parseYaml } from 'yaml';
-import { appPath, getPythonRunner, runPythonJson, type PythonRunner } from './helpers';
+import { appPath, getPythonRunner, runPythonJson } from './helpers';
 
 const STATUS_DIR = '.dev-pomogator/.test-status';
 const FIXTURES_DIR = 'tests/fixtures/tui-test-runner';

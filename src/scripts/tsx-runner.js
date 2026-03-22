@@ -23,14 +23,15 @@
 
 'use strict';
 
-const { execSync, spawnSync } = require('child_process');
+const { execSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
 const VERBOSE = process.env.DEV_POMOGATOR_HOOK_VERBOSE === '1';
-const TSX_EXEC_TIMEOUT = process.env.TSX_RUNNER_TIMEOUT
-  ? Number(process.env.TSX_RUNNER_TIMEOUT)
-  : 180000; // 3 minutes default; override with TSX_RUNNER_TIMEOUT env var for long-running scripts
+const TSX_EXEC_TIMEOUT = (() => {
+  const v = Number(process.env.TSX_RUNNER_TIMEOUT);
+  return Number.isFinite(v) && v > 0 ? v : 180000;
+})(); // 3 minutes default; override with TSX_RUNNER_TIMEOUT env var
 const startTime = Date.now();
 const strategyLog = [];
 

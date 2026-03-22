@@ -20,7 +20,10 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 # Build image (shared across sessions via image: directive)
-docker compose -f docker-compose.test.yml build --quiet 2>/dev/null
+# Skip build with SKIP_BUILD=1 when image is already current
+if [ "${SKIP_BUILD:-}" != "1" ]; then
+  docker compose -f docker-compose.test.yml build --quiet 2>/dev/null
+fi
 
 # -T disables pseudo-TTY allocation for reliable stdout streaming through pipes
 exec docker compose -f docker-compose.test.yml run --rm -T test "$@"

@@ -1,0 +1,34 @@
+{
+  "name": "test-quality",
+  "version": "1.0.0",
+  "description": "Test deduplication detection — Stop hook triggers /dedup-tests when test files change",
+  "platforms": ["claude"],
+  "category": "automation",
+  "files": {
+    "claude": []
+  },
+  "rules": {
+    "claude": ["claude/rules/no-test-helper-duplication.md"]
+  },
+  "skills": {
+    "dedup-tests": "skills/dedup-tests"
+  },
+  "skillFiles": {
+    "dedup-tests": [
+      ".claude/skills/dedup-tests/SKILL.md"
+    ]
+  },
+  "tools": {
+    "test-quality": "tools/test-quality"
+  },
+  "toolFiles": {
+    "test-quality": [
+      ".dev-pomogator/tools/test-quality/dedup_stop.ts"
+    ]
+  },
+  "hooks": {
+    "claude": {
+      "Stop": "npx tsx .dev-pomogator/tools/test-quality/dedup_stop.ts"
+    }
+  }
+}

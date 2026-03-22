@@ -1,4 +1,4 @@
-import { execSync, spawn, ChildProcess } from 'child_process';
+import { execSync, spawn, spawnSync, ChildProcess } from 'child_process';
 import { readFileSync, readdirSync, readlinkSync } from 'fs';
 import path from 'path';
 import fs from 'fs-extra';
@@ -1646,5 +1646,67 @@ export function runCursorCli(args: string, timeoutMs = 30000): CliResult {
       stderr: error.stderr || '',
       exitCode: error.status ?? 1,
     };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Python Runner (shared across TUI / statusline tests)
+// ---------------------------------------------------------------------------
+
+export interface PythonRunner {
+  command: string;
+  prefixArgs: string[];
+}
+
+let cachedPythonRunner: PythonRunner | null = null;
+
+export function getPythonRunner(): PythonRunner {
+  if (cachedPythonRunner) return cachedPythonRunner;
+
+  const candidates: PythonRunner[] = process.platform === 'win32'
+    ? [
+        { command: 'python', prefixArgs: [] },
+        { command: 'py', prefixArgs: ['-3'] },
+        { command: 'python3', prefixArgs: [] },
+      ]
+    : [
+        { command: 'python3', prefixArgs: [] },
+        { command: 'python', prefixArgs: [] },
+      ];
+
+  for (const candidate of candidates) {
+    const result = spawnSync(candidate.command, [...candidate.prefixArgs, '--version'], {
+      encoding: 'utf-8',
+      timeout: 5000,
+    });
+    if (result.status === 0) {
+      cachedPythonRunner = candidate;
+      return candidate;
+    }
+  }
+
+  throw new Error('Python 3 required for tests');
+}
+
+export function runPythonJson<T = Record<string, unknown>>(
+  script: string,
+  payload: Record<string, unknown>,
+  timeoutMs = 30000,
+): T {
+  const runner = getPythonRunner();
+  const result = spawnSync(runner.command, [...runner.prefixArgs, '-c', script], {
+    input: JSON.stringify(payload),
+    encoding: 'utf-8',
+    cwd: appPath(),
+    timeout: timeoutMs,
+  });
+  if (result.status !== 0) {
+    throw new Error(`Python script failed (exit ${result.status}): ${result.stderr}`);
+  }
+  const stdout = (result.stdout || '').trim();
+  try {
+    return JSON.parse(stdout);
+  } catch {
+    throw new Error(`runPythonJson: invalid JSON output. stdout: ${stdout.substring(0, 200)}`);
   }
 }
