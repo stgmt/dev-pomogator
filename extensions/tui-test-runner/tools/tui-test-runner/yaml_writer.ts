@@ -353,15 +353,17 @@ export class YamlWriter {
     const skipped = Math.max(discoveredSkipped, this.reportedSummary.skipped ?? 0);
     const completed = passed + failed + skipped;
 
-    // Total priority: discovery/reported > discovered from events > completed count
-    // When no discovery and no summary yet, use completed as best-effort total
+    // Total: use discovery/reported if available, otherwise discovered from events
+    // During running without discovery: total=0 (unknown), counts still shown
+    // After finalize: total = max of all sources including completed
     let total: number;
     if (knownTotal > 0) {
       total = Math.max(discoveredTotal, knownTotal);
-    } else if (discoveredTotal > 0) {
-      total = discoveredTotal;
+    } else if (this.status.state !== 'running') {
+      // After finalize: use completed as final total
+      total = Math.max(discoveredTotal, completed);
     } else {
-      total = completed;
+      total = discoveredTotal;
     }
 
     let running = discoveredRunning;
@@ -381,10 +383,8 @@ export class YamlWriter {
       } else {
         this.status.percent = Math.min(Math.round((completed * 100) / total), 99);
       }
-    } else if (total > 0) {
-      // Show success rate, not completion — 100% only when all passed
-      this.status.percent = Math.round((passed * 100) / total);
     } else {
+      // After finalize: 100% completion
       this.status.percent = 100;
     }
 
