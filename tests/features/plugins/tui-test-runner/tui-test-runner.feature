@@ -177,3 +177,11 @@ Feature: PLUGIN012_TUI_Test_Runner
     When launcher checks Python availability
     Then launcher should report error message to stderr
     And launcher should exit with code 0
+
+  # @feature13
+  Scenario: Dispatch builds correct wrapper command with framework argument
+    Given a test dispatch configuration with framework "pytest" and filter "auth"
+    When buildTestCommand is called with docker=true
+    Then command should contain "--framework pytest --"
+    And command should contain test_runner_wrapper
+    And command should contain 'python -m pytest -k "auth"'

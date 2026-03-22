@@ -72,6 +72,7 @@ function writeTempStatus(name: string, content: string): string {
 
 describe('PLUGIN012: TUI Test Runner', () => {
   describe('SessionStart Hook', () => {
+    // @feature7
     it('writes canonical TEST_STATUSLINE env contract', () => {
       const envFile = path.join(appPath(), '.dev-pomogator', '.test-tui-env');
       const result = runSessionHook(
@@ -92,6 +93,7 @@ describe('PLUGIN012: TUI Test Runner', () => {
   });
 
   describe('Canonical Fixtures', () => {
+    // @feature6
     it('yaml-v2-running.yaml is a canonical v2 status fixture', () => {
       const data = parseYaml(readFixture('yaml-v2-running.yaml')) as Record<string, unknown>;
 
@@ -104,6 +106,7 @@ describe('PLUGIN012: TUI Test Runner', () => {
       expect(data.phases).toEqual([]);
     });
 
+    // @feature6
     it('yaml-v2-full.yaml keeps top-level summary alongside suites and phases', () => {
       const data = parseYaml(readFixture('yaml-v2-full.yaml')) as Record<string, any>;
 
@@ -117,6 +120,7 @@ describe('PLUGIN012: TUI Test Runner', () => {
       expect(Array.isArray(data.phases)).toBe(true);
     });
 
+    // @feature6
     it('YamlWriter keeps live counters accurate and round-trips escaped payloads', async () => {
       const { YamlWriter } = await importAdapterModule(
         'extensions/tui-test-runner/tools/tui-test-runner/yaml_writer.ts',
@@ -182,6 +186,7 @@ describe('PLUGIN012: TUI Test Runner', () => {
       expect(finalStatus.suites[0].tests[0].error).toBe('Assertion "path" failed');
     });
 
+    // @feature11
     it('YamlWriter.write() is no-op after finalize() — duration frozen', async () => {
       const { YamlWriter } = await importAdapterModule(
         'extensions/tui-test-runner/tools/tui-test-runner/yaml_writer.ts',
@@ -215,6 +220,7 @@ describe('PLUGIN012: TUI Test Runner', () => {
       expect(afterExtraWrites.state).toBe('passed');
     });
 
+    // @feature12
     it('YamlWriter uses discoveryTotal for real progress during running', async () => {
       const { YamlWriter } = await importAdapterModule(
         'extensions/tui-test-runner/tools/tui-test-runner/yaml_writer.ts',
@@ -240,6 +246,7 @@ describe('PLUGIN012: TUI Test Runner', () => {
       expect(running.state).toBe('running');
     });
 
+    // @feature12
     it('YamlWriter uses total=0 during running without discovery or summary', async () => {
       const { YamlWriter } = await importAdapterModule(
         'extensions/tui-test-runner/tools/tui-test-runner/yaml_writer.ts',
@@ -265,6 +272,7 @@ describe('PLUGIN012: TUI Test Runner', () => {
   });
 
   describe('Wrapper Runtime', () => {
+    // @feature6
     it('writes canonical v2 status and populates the advertised log file', () => {
       const scriptPath = appPath(STATUS_DIR, 'wrapper-runtime-script.js');
       fs.copyFileSync(path.join(__dirname, '../fixtures/tui-test-runner/vitest-pass-fail-output.js'), scriptPath);
@@ -299,6 +307,7 @@ describe('PLUGIN012: TUI Test Runner', () => {
   });
 
   describe('Strict v2 Consumers', () => {
+    // @feature6
     it('strict v2 model rejects legacy or incomplete payloads', () => {
       const invalidStatusPath = writeTempStatus('status.invalid.yaml',
         fs.readFileSync(path.join(__dirname, '../fixtures/tui-test-runner/invalid-status-v1.yaml'), 'utf-8'));
@@ -311,6 +320,7 @@ describe('PLUGIN012: TUI Test Runner', () => {
       expect(result).toEqual({ accepted: false });
     });
 
+    // @feature3
     it('LogReader reads appended log lines', () => {
       const logPath = appPath(STATUS_DIR, 'test.reader.log');
       fs.writeFileSync(logPath, 'line one\nline two\n', 'utf-8');
@@ -325,6 +335,7 @@ describe('PLUGIN012: TUI Test Runner', () => {
   });
 
   describe('Analysis Runtime', () => {
+    // @feature5
     it('Analysis pipeline categorizes failures from runtime fixture data', () => {
       const projectRoot = appPath(FIXTURES_DIR, 'project');
       const result = runPythonJson(ANALYZE_STATUS_SCRIPT, {
@@ -341,6 +352,7 @@ describe('PLUGIN012: TUI Test Runner', () => {
   });
 
   describe('Launcher Runtime', () => {
+    // @feature9
     it('Python package entrypoint is launchable via python -m tui', () => {
       const runner = getPythonRunner();
       const tuiParentDir = appPath(TUI_ROOT);
@@ -356,6 +368,7 @@ describe('PLUGIN012: TUI Test Runner', () => {
   });
 
   describe('Adapter Runtime', () => {
+    // @feature6
     it('Vitest adapter parses pass/fail/skip events from fixture output', async () => {
       const { VitestAdapter } = await importAdapterModule(
         'extensions/tui-test-runner/tools/tui-test-runner/adapters/vitest_adapter.ts',
@@ -369,6 +382,7 @@ describe('PLUGIN012: TUI Test Runner', () => {
       expect(events.some((event: any) => event.type === 'summary')).toBe(true);
     });
 
+    // @feature10
     it('Jest, pytest, dotnet, cargo, and go adapters emit runtime events', async () => {
       const [
         { JestAdapter },
@@ -399,6 +413,7 @@ describe('PLUGIN012: TUI Test Runner', () => {
       expect(goEvents.some((event: any) => event.type === 'test_fail')).toBe(true);
     });
 
+    // @feature10
     it('Dotnet adapter parses verbose output with leading-whitespace summary', async () => {
       const { DotnetAdapter } = await importAdapterModule(
         'extensions/tui-test-runner/tools/tui-test-runner/adapters/dotnet_adapter.ts',
@@ -425,6 +440,7 @@ describe('PLUGIN012: TUI Test Runner', () => {
       expect(lastSummary.summary.skipped).toBe(1);
     });
 
+    // @feature10
     it('Dotnet adapter parses minimal single-line summary', async () => {
       const { DotnetAdapter } = await importAdapterModule(
         'extensions/tui-test-runner/tools/tui-test-runner/adapters/dotnet_adapter.ts',
@@ -444,6 +460,7 @@ describe('PLUGIN012: TUI Test Runner', () => {
       expect(lastSummary.summary.skipped).toBe(1);
     });
 
+    // @feature10
     it('Regression: all adapters continue to emit correct event counts', async () => {
       const [
         { VitestAdapter },
@@ -497,6 +514,7 @@ describe('PLUGIN012: TUI Test Runner', () => {
   });
 
   describe('Dispatch Runtime', () => {
+    // @feature13
     it('passes the canonical framework argument into the wrapper command', async () => {
       process.env.TEST_STATUSLINE_SESSION = 'dispatch1';
 
