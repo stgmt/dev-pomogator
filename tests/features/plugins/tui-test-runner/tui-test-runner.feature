@@ -1,5 +1,5 @@
 # Source: analyze-features report (PLUGIN012 domain)
-# Candidates: .specs/test-statusline/test-statusline.feature (related domain)
+# Candidates: .specs/tui-statusline/tui-statusline.feature (related domain)
 Feature: PLUGIN012_TUI_Test_Runner
   As a developer
   I want a rich 4-tab TUI for monitoring test execution

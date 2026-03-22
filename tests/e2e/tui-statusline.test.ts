@@ -15,7 +15,7 @@ import { VitestAdapter } from '../../extensions/tui-test-runner/tools/tui-test-r
 // --- Helpers ---
 
 const STATUS_DIR = '.dev-pomogator/.test-status';
-const FIXTURES_DIR = 'tests/fixtures/test-statusline';
+const FIXTURES_DIR = 'tests/fixtures/tui-statusline';
 const WRAPPER_SCRIPT = 'extensions/test-statusline/tools/test-statusline/test_runner_wrapper.sh';
 const SESSION_HOOK = 'extensions/test-statusline/tools/test-statusline/statusline_session_start.ts';
 const DEFAULT_STATUSLINE_CONFIG = {
@@ -115,7 +115,7 @@ afterEach(async () => {
 
 // --- Tests ---
 
-describe('PLUGIN011: Test Statusline', () => {
+describe('PLUGIN011: TUI Statusline', () => {
 
   // ===========================================
   // @feature1 — Statusline Render
@@ -215,7 +215,7 @@ describe('PLUGIN011: Test Statusline', () => {
     it('PLUGIN011_36: wrapper writes stdout and stderr into log_file', async () => {
       const env = canonicalWrapperEnv();
       const scriptPath = appPath(STATUS_DIR, 'wrapper-log-script.js');
-      await fs.copyFile(path.join(__dirname, '../fixtures/test-statusline/wrapper-log-test-script.js'), scriptPath);
+      await fs.copyFile(path.join(__dirname, '../fixtures/tui-statusline/wrapper-log-test-script.js'), scriptPath);
       const result = runWrapper([
         'node',
         scriptPath,

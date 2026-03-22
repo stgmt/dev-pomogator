@@ -3,13 +3,13 @@
 # Note: CompactBar render scenarios (PLUGIN011_60..62) in .specs/tui-statusline-mode/tui-statusline-mode.feature
 # Note: Toggle/Stop/Resize scenarios (PLUGIN011_63..67) in .specs/tui-statusline-mode/tui-statusline-mode.feature
 
-Feature: PLUGIN011_test-statusline
-  Test statusline extension manages test runner sessions, YAML status files,
+Feature: PLUGIN011_tui-statusline
+  TUI statusline extension manages test runner sessions, YAML status files,
   wrapper for test output parsing, and statusline coexistence.
 
   Background:
     Given dev-pomogator is installed
-    And test-statusline extension is enabled
+    And tui-statusline extension is enabled
 
   # ===========================================
   # @feature2 — YAML Protocol & Wrapper
