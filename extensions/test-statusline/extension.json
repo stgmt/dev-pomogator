@@ -16,7 +16,8 @@
       ".dev-pomogator/tools/test-statusline/test_runner_wrapper.sh",
       ".dev-pomogator/tools/test-statusline/test_runner_wrapper.cjs",
       ".dev-pomogator/tools/test-statusline/statusline_session_start.ts",
-      ".dev-pomogator/tools/test-statusline/status_types.ts"
+      ".dev-pomogator/tools/test-statusline/status_types.ts",
+      ".dev-pomogator/tools/test-statusline/statusline_render.cjs"
     ]
   },
   "hooks": {
