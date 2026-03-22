@@ -358,39 +358,66 @@ async function installExtensionHooks(repoRoot: string, extensions: Extension[]):
     const hooks = getExtensionHooks(ext, 'claude');
 
     for (const [hookName, rawHook] of Object.entries(hooks)) {
-      // Hook can be a string or { matcher, command, timeout } object
-      const rawCommand = typeof rawHook === 'string' ? rawHook : rawHook.command;
-      const matcher = typeof rawHook === 'string' ? '' : (rawHook.matcher ?? '');
+      // Hook can be: string, { matcher, command, timeout }, or array of { matcher?, hooks: [...] }
       const defaultTimeout = hookName === 'SessionStart' ? 120 : 60;
-      const timeout = typeof rawHook === 'string' ? defaultTimeout : (rawHook.timeout ?? defaultTimeout);
 
-      // Replace relative paths with absolute paths so hooks work from any CWD
-      // Then replace npx tsx with resilient tsx-runner wrapper
-      const command = replaceNpxTsxWithPortable(resolveHookToolPaths(rawCommand, repoRoot));
+      // Flatten array-format hooks into individual entries
+      const hookEntries: Array<{ command: string; matcher: string; timeout: number }> = [];
+
+      if (typeof rawHook === 'string') {
+        hookEntries.push({ command: rawHook, matcher: '', timeout: defaultTimeout });
+      } else if (Array.isArray(rawHook)) {
+        // Array format: [{ matcher?, hooks: [{ type, command }] }]
+        for (const group of rawHook) {
+          const groupMatcher = group.matcher ?? '';
+          const groupTimeout = group.timeout ?? defaultTimeout;
+          if (Array.isArray(group.hooks)) {
+            for (const h of group.hooks) {
+              if (h.command) {
+                hookEntries.push({ command: h.command, matcher: groupMatcher, timeout: h.timeout ?? groupTimeout });
+              }
+            }
+          } else if (group.command) {
+            hookEntries.push({ command: group.command, matcher: groupMatcher, timeout: groupTimeout });
+          }
+        }
+      } else if (rawHook.command) {
+        hookEntries.push({
+          command: rawHook.command,
+          matcher: rawHook.matcher ?? '',
+          timeout: rawHook.timeout ?? defaultTimeout,
+        });
+      }
 
       if (!allHooks[hookName]) {
         allHooks[hookName] = [];
       }
 
-      // Check if this hook command already exists
-      const exists = allHooks[hookName].some(h => h.command === command);
-      if (!exists) {
-        allHooks[hookName].push({
-          type: 'command',
-          command,
-          timeout,
-          matcher,
-        });
-      }
+      for (const entry of hookEntries) {
+        // Replace relative paths with absolute paths so hooks work from any CWD
+        // Then replace npx tsx with resilient tsx-runner wrapper
+        const command = replaceNpxTsxWithPortable(resolveHookToolPaths(entry.command, repoRoot));
 
-      // Track per-extension hooks for managed data
-      if (!installedHooksByExtension[ext.name]) {
-        installedHooksByExtension[ext.name] = {};
+        // Check if this hook command already exists
+        const exists = allHooks[hookName].some(h => h.command === command);
+        if (!exists) {
+          allHooks[hookName].push({
+            type: 'command',
+            command,
+            timeout: entry.timeout,
+            matcher: entry.matcher,
+          });
+        }
+
+        // Track per-extension hooks for managed data
+        if (!installedHooksByExtension[ext.name]) {
+          installedHooksByExtension[ext.name] = {};
+        }
+        if (!installedHooksByExtension[ext.name][hookName]) {
+          installedHooksByExtension[ext.name][hookName] = [];
+        }
+        installedHooksByExtension[ext.name][hookName].push(command);
       }
-      if (!installedHooksByExtension[ext.name][hookName]) {
-        installedHooksByExtension[ext.name][hookName] = [];
-      }
-      installedHooksByExtension[ext.name][hookName].push(command);
     }
   }
   

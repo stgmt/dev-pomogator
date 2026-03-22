@@ -1,6 +1,6 @@
 ---
 description: "Анализ сессии и предложение Claude rules на основе выявленных паттернов"
-allowed-tools: Read, Write, Glob, Grep
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent, AskUserQuestion, Skill, WebFetch, WebSearch, mcp__plugin_claude-mem_mcp-search__search, mcp__plugin_claude-mem_mcp-search__timeline, mcp__plugin_claude-mem_mcp-search__get_observations, mcp__plugin_claude-mem_mcp-search__save_memory, mcp__context7__resolve-library-id, mcp__context7__query-docs
 argument-hint: "[mem|nomem|session|global|project]"
 ---
 
@@ -1147,6 +1147,7 @@ npx tsx .claude/skills/rules-optimizer/scripts/report.ts --before audit_before.j
 7. **Self-contained** — понятно без контекста сессии
 8. **Path-scoped frontmatter** — scoped rules создаются сразу с `paths:` в YAML frontmatter, global rules без frontmatter
 9. **SKILL vs RULE vs HOOK** — используй Decision Tree из Phase 1.5. Не предлагай rule когда нужен skill, не предлагай checklist когда нужен hook
+10. **НИКОГДА не пропускай pipeline из-за размера контекста** — модель с 1M context window обязана выполнить ВСЕ фазы. Запрещено: "контекст слишком длинный", "сессию нужно завершить", "сокращённый анализ". Если MCP/insights недоступны — пропускай только эти конкретные шаги, остальные фазы выполняй полностью
 
 ---
 
