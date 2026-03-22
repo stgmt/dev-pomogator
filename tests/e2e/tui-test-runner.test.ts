@@ -180,7 +180,7 @@ describe('PLUGIN012: TUI Test Runner', () => {
       expect(finalStatus.state).toBe('failed');
       expect(finalStatus.total).toBe(2);
       expect(finalStatus.failed).toBe(1);
-      expect(finalStatus.percent).toBe(50); // 1 passed / 2 total = 50% success rate
+      expect(finalStatus.percent).toBe(100); // 100% = all tests completed (percent is completion, not success rate)
       expect(finalStatus.suites[0].file).toBe(suiteFile);
       expect(finalStatus.suites[0].tests[0].stack).toContain(suiteFile);
       expect(finalStatus.suites[0].tests[0].error).toBe('Assertion "path" failed');
@@ -282,6 +282,7 @@ describe('PLUGIN012: TUI Test Runner', () => {
         {
           TEST_STATUSLINE_SESSION: 'wrap1234',
           TEST_STATUSLINE_PROJECT: appPath(),
+          TEST_SKIP_DISCOVERY: '1',
         },
       );
 

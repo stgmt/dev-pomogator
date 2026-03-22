@@ -83,9 +83,9 @@ Feature: PLUGIN012_TUI_Test_Runner
   # @feature6
   Scenario: Statusline reads top-level summary from canonical YAML v2
     Given an enhanced wrapper writes a canonical YAML v2 file
-    When statusline_render.sh reads the same file
-    Then statusline_render.sh should display the top-level state and counters
-    And statusline_render.sh should ignore nested suite totals
+    When compact_bar.py reads the same file
+    Then compact_bar.py should display the top-level state and counters
+    And compact_bar.py should ignore nested suite totals
 
   # @feature6
   Scenario: Vitest adapter parses stdout into TestEvents

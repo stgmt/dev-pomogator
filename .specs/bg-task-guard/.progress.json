@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "featureSlug": "bg-task-guard",
+  "createdAt": "2026-03-22T16:32:53.892Z",
+  "currentPhase": "Complete",
+  "phases": {
+    "Discovery": {
+      "completedAt": "2026-03-22T16:34:25.769Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-03-22T16:35:36.827Z"
+    },
+    "Context": {
+      "completedAt": "2026-03-22T16:34:25.769Z",
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    },
+    "Requirements": {
+      "completedAt": "2026-03-22T17:10:06.711Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-03-22T17:10:06.710Z"
+    },
+    "Finalization": {
+      "completedAt": "2026-03-22T17:11:43.742Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-03-22T17:11:43.741Z"
+    }
+  }
+}

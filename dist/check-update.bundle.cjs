@@ -4756,10 +4756,6 @@ var import_semver = __toESM(require_semver2(), 1);
 // src/installer/shared.ts
 var import_fs_extra7 = __toESM(require_lib(), 1);
 var import_path7 = __toESM(require("path"), 1);
-function makePortableScriptCommand(scriptName, args2) {
-  const cmd = `node -e "require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','${scriptName}'))"`;
-  return args2 ? `${cmd} -- ${args2}` : cmd;
-}
 function makePortableTsxCommand(scriptPath, args2) {
   const escaped = scriptPath.replace(/\\/g, "/");
   const runner = `node -e "require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner.js'))"`;
@@ -4852,12 +4848,9 @@ function writeJsonAtomicSync(filePath, data) {
 var import_os3 = __toESM(require("os"), 1);
 var import_path9 = __toESM(require("path"), 1);
 var MANAGED_STATUSLINE_DIR = ".dev-pomogator/tools/test-statusline/";
-var MANAGED_RENDER_SCRIPT = "statusline_render.cjs";
-var WRAPPER_SCRIPT_MARKER = "statusline_wrapper.js";
+var LEGACY_RENDER_SCRIPT = "statusline_render.cjs";
+var LEGACY_WRAPPER_MARKER = "statusline_wrapper.js";
 var DEFAULT_USER_STATUSLINE_COMMAND = "npx -y ccstatusline@latest";
-function quoteArgument(value) {
-  return `"${value.replace(/"/g, '\\"')}"`;
-}
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -4887,14 +4880,14 @@ function normalizeExistingStatusLine(entry) {
   };
 }
 function isWrappedStatusLineCommand(command) {
-  return command.includes(WRAPPER_SCRIPT_MARKER);
+  return command.includes(LEGACY_WRAPPER_MARKER);
 }
 function isManagedStatusLineCommand(command) {
   if (isWrappedStatusLineCommand(command))
     return false;
   if (command.includes(MANAGED_STATUSLINE_DIR))
     return true;
-  return command.includes("'.dev-pomogator','scripts','" + MANAGED_RENDER_SCRIPT + "'");
+  return command.includes("'.dev-pomogator','scripts','" + LEGACY_RENDER_SCRIPT + "'");
 }
 function classifyClaudeStatusLineCommand(command) {
   const normalizedCommand = command?.trim();
@@ -4908,15 +4901,6 @@ function classifyClaudeStatusLineCommand(command) {
     return "managed";
   }
   return "user";
-}
-function buildPortableManagedCommand() {
-  return makePortableScriptCommand(MANAGED_RENDER_SCRIPT);
-}
-function buildPortableWrappedCommand(userCommand, managedCommand) {
-  const wrapperCmd = makePortableScriptCommand(WRAPPER_SCRIPT_MARKER);
-  const encodedUserCommand = Buffer.from(userCommand, "utf-8").toString("base64");
-  const encodedManagedCommand = Buffer.from(managedCommand, "utf-8").toString("base64");
-  return `${wrapperCmd} -- --user-b64 ${quoteArgument(encodedUserCommand)} --managed-b64 ${quoteArgument(encodedManagedCommand)}`;
 }
 function selectExistingClaudeStatusLine({
   globalStatusLine
@@ -4934,24 +4918,14 @@ function selectExistingClaudeStatusLine({
     kind: "none"
   };
 }
-function parseWrappedStatusLineCommand(command) {
+function extractUserCommandFromLegacyWrapper(command) {
   if (!isWrappedStatusLineCommand(command)) {
     return null;
   }
   const encodedUserCommand = extractFlagValue(command, "--user-b64");
-  const encodedManagedCommand = extractFlagValue(command, "--managed-b64");
-  if (!encodedUserCommand || !encodedManagedCommand) {
+  if (!encodedUserCommand)
     return null;
-  }
-  const userCommand = decodeBase64Strict(encodedUserCommand);
-  const managedCommand = decodeBase64Strict(encodedManagedCommand);
-  if (!userCommand || !managedCommand) {
-    return null;
-  }
-  return {
-    userCommand,
-    managedCommand
-  };
+  return decodeBase64Strict(encodedUserCommand);
 }
 async function writeGlobalStatusLine(statusLineConfig, preloadedSettings) {
   const settingsPath = import_path9.default.join(import_os3.default.homedir(), ".claude", "settings.json");
@@ -4972,33 +4946,23 @@ function resolveClaudeStatusLine({
   globalStatusLine,
   statusLineConfig
 }) {
-  const managedCommand = buildPortableManagedCommand();
   const selected = selectExistingClaudeStatusLine({ globalStatusLine });
   const existingCommand = selected.entry?.command;
   if (!existingCommand) {
     return {
       type: statusLineConfig.type,
-      command: buildPortableWrappedCommand(DEFAULT_USER_STATUSLINE_COMMAND, managedCommand),
-      mode: "wrapped",
+      command: DEFAULT_USER_STATUSLINE_COMMAND,
+      mode: "direct",
       source: "none",
       existingKind: "none"
     };
   }
   if (selected.kind === "wrapped") {
-    const wrapped = parseWrappedStatusLineCommand(existingCommand);
-    if (!wrapped) {
-      return {
-        type: statusLineConfig.type,
-        command: buildPortableWrappedCommand(DEFAULT_USER_STATUSLINE_COMMAND, managedCommand),
-        mode: "wrapped",
-        source: selected.source,
-        existingKind: selected.kind
-      };
-    }
+    const userCmd = extractUserCommandFromLegacyWrapper(existingCommand) || DEFAULT_USER_STATUSLINE_COMMAND;
     return {
       type: statusLineConfig.type,
-      command: buildPortableWrappedCommand(wrapped.userCommand, managedCommand),
-      mode: "wrapped",
+      command: userCmd,
+      mode: "direct",
       source: selected.source,
       existingKind: selected.kind
     };
@@ -5006,16 +4970,16 @@ function resolveClaudeStatusLine({
   if (selected.kind === "managed") {
     return {
       type: statusLineConfig.type,
-      command: buildPortableWrappedCommand(DEFAULT_USER_STATUSLINE_COMMAND, managedCommand),
-      mode: "wrapped",
+      command: DEFAULT_USER_STATUSLINE_COMMAND,
+      mode: "direct",
       source: selected.source,
       existingKind: selected.kind
     };
   }
   return {
     type: statusLineConfig.type,
-    command: buildPortableWrappedCommand(existingCommand, managedCommand),
-    mode: "wrapped",
+    command: existingCommand,
+    mode: "direct",
     source: selected.source,
     existingKind: selected.kind
   };

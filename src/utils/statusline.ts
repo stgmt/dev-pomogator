@@ -1,6 +1,5 @@
 import os from 'os';
 import path from 'path';
-import { makePortableScriptCommand } from '../installer/shared.js';
 import { writeJsonAtomic, readJsonSafe } from './atomic-json.js';
 
 export interface ClaudeStatusLineEntry {
@@ -18,11 +17,6 @@ export interface ResolveClaudeStatusLineInput {
   statusLineConfig: ClaudeStatusLineEntry;
 }
 
-export interface ParsedWrappedStatusLineCommand {
-  userCommand: string;
-  managedCommand: string;
-}
-
 export interface SelectedClaudeStatusLine {
   source: 'global' | 'none';
   kind: 'none' | 'managed' | 'wrapped' | 'user';
@@ -30,20 +24,17 @@ export interface SelectedClaudeStatusLine {
 }
 
 export interface ResolvedClaudeStatusLine extends ClaudeStatusLineEntry {
-  mode: 'direct' | 'wrapped';
+  mode: 'direct';
   source: 'global' | 'none';
   existingKind: 'none' | 'managed' | 'wrapped' | 'user';
 }
 
+// Legacy markers — kept for migration detection only
 const MANAGED_STATUSLINE_DIR = '.dev-pomogator/tools/test-statusline/';
-const MANAGED_RENDER_SCRIPT = 'statusline_render.cjs';
-const WRAPPER_SCRIPT_MARKER = 'statusline_wrapper.js';
+const LEGACY_RENDER_SCRIPT = 'statusline_render.cjs';
+const LEGACY_WRAPPER_MARKER = 'statusline_wrapper.js';
 
 export const DEFAULT_USER_STATUSLINE_COMMAND = 'npx -y ccstatusline@latest';
-
-function quoteArgument(value: string): string {
-  return `"${value.replace(/"/g, '\\"')}"`;
-}
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -85,16 +76,16 @@ function normalizeExistingStatusLine(
   };
 }
 
+/** Detect legacy wrapped command (statusline_wrapper.js) */
 export function isWrappedStatusLineCommand(command: string): boolean {
-  return command.includes(WRAPPER_SCRIPT_MARKER);
+  return command.includes(LEGACY_WRAPPER_MARKER);
 }
 
+/** Detect legacy managed-only command (statusline_render.cjs without wrapper) */
 export function isManagedStatusLineCommand(command: string): boolean {
   if (isWrappedStatusLineCommand(command)) return false;
-  // Detect old project-path format (.dev-pomogator/tools/test-statusline/)
   if (command.includes(MANAGED_STATUSLINE_DIR)) return true;
-  // Detect new global format (os.homedir() + scripts/statusline_render.cjs)
-  return command.includes("'.dev-pomogator','scripts','" + MANAGED_RENDER_SCRIPT + "'");
+  return command.includes("'.dev-pomogator','scripts','" + LEGACY_RENDER_SCRIPT + "'");
 }
 
 export function classifyClaudeStatusLineCommand(
@@ -116,29 +107,6 @@ export function classifyClaudeStatusLineCommand(
   return 'user';
 }
 
-/**
- * Build portable managed command that resolves ~/.dev-pomogator/scripts/statusline_render.cjs
- * at runtime via os.homedir(). Works cross-platform.
- */
-export function buildPortableManagedCommand(): string {
-  return makePortableScriptCommand(MANAGED_RENDER_SCRIPT);
-}
-
-/**
- * Build portable wrapped command that runs both user and managed statuslines
- * via ~/.dev-pomogator/scripts/statusline_wrapper.js with base64-encoded args.
- */
-export function buildPortableWrappedCommand(
-  userCommand: string,
-  managedCommand: string
-): string {
-  const wrapperCmd = makePortableScriptCommand(WRAPPER_SCRIPT_MARKER);
-  const encodedUserCommand = Buffer.from(userCommand, 'utf-8').toString('base64');
-  const encodedManagedCommand = Buffer.from(managedCommand, 'utf-8').toString('base64');
-
-  return `${wrapperCmd} -- --user-b64 ${quoteArgument(encodedUserCommand)} --managed-b64 ${quoteArgument(encodedManagedCommand)}`;
-}
-
 export function selectExistingClaudeStatusLine({
   globalStatusLine,
 }: Pick<ResolveClaudeStatusLineInput, 'globalStatusLine'>): SelectedClaudeStatusLine {
@@ -157,27 +125,19 @@ export function selectExistingClaudeStatusLine({
   };
 }
 
-export function parseWrappedStatusLineCommand(command: string): ParsedWrappedStatusLineCommand | null {
+/**
+ * Extract user command from legacy wrapped statusLine command.
+ * Used during migration to unwrap and keep only the user's command.
+ */
+export function extractUserCommandFromLegacyWrapper(command: string): string | null {
   if (!isWrappedStatusLineCommand(command)) {
     return null;
   }
 
   const encodedUserCommand = extractFlagValue(command, '--user-b64');
-  const encodedManagedCommand = extractFlagValue(command, '--managed-b64');
-  if (!encodedUserCommand || !encodedManagedCommand) {
-    return null;
-  }
+  if (!encodedUserCommand) return null;
 
-  const userCommand = decodeBase64Strict(encodedUserCommand);
-  const managedCommand = decodeBase64Strict(encodedManagedCommand);
-  if (!userCommand || !managedCommand) {
-    return null;
-  }
-
-  return {
-    userCommand,
-    managedCommand,
-  };
+  return decodeBase64Strict(encodedUserCommand);
 }
 
 /**
@@ -208,64 +168,59 @@ export async function writeGlobalStatusLine(
   await writeJsonAtomic(settingsPath, settings);
 }
 
+/**
+ * Resolve statusLine command. Always returns a direct command (no wrapping).
+ *
+ * Migration: legacy wrapped/managed commands are unwrapped to just the user command
+ * (or ccstatusline if no user command found). Test progress is shown in TUI
+ * (compact_bar.py), not in Claude Code statusLine.
+ */
 export function resolveClaudeStatusLine({
   globalStatusLine,
   statusLineConfig,
 }: ResolveClaudeStatusLineInput): ResolvedClaudeStatusLine {
-  const managedCommand = buildPortableManagedCommand();
   const selected = selectExistingClaudeStatusLine({ globalStatusLine });
   const existingCommand = selected.entry?.command;
 
-  // No existing statusLine → auto-install ccstatusline wrapped with managed
+  // No existing statusLine → install ccstatusline
   if (!existingCommand) {
     return {
       type: statusLineConfig.type,
-      command: buildPortableWrappedCommand(DEFAULT_USER_STATUSLINE_COMMAND, managedCommand),
-      mode: 'wrapped',
+      command: DEFAULT_USER_STATUSLINE_COMMAND,
+      mode: 'direct',
       source: 'none',
       existingKind: 'none',
     };
   }
 
-  // Existing is wrapped → parse, keep user command, update managed
+  // Legacy wrapped → extract user command, unwrap
   if (selected.kind === 'wrapped') {
-    const wrapped = parseWrappedStatusLineCommand(existingCommand);
-    if (!wrapped) {
-      // Broken wrapper → fall back to ccstatusline + managed
-      return {
-        type: statusLineConfig.type,
-        command: buildPortableWrappedCommand(DEFAULT_USER_STATUSLINE_COMMAND, managedCommand),
-        mode: 'wrapped',
-        source: selected.source,
-        existingKind: selected.kind,
-      };
-    }
-
+    const userCmd = extractUserCommandFromLegacyWrapper(existingCommand) || DEFAULT_USER_STATUSLINE_COMMAND;
     return {
       type: statusLineConfig.type,
-      command: buildPortableWrappedCommand(wrapped.userCommand, managedCommand),
-      mode: 'wrapped',
+      command: userCmd,
+      mode: 'direct',
       source: selected.source,
       existingKind: selected.kind,
     };
   }
 
-  // Existing is managed (old format) → replace with ccstatusline + managed wrapper
+  // Legacy managed (old format) → replace with ccstatusline
   if (selected.kind === 'managed') {
     return {
       type: statusLineConfig.type,
-      command: buildPortableWrappedCommand(DEFAULT_USER_STATUSLINE_COMMAND, managedCommand),
-      mode: 'wrapped',
+      command: DEFAULT_USER_STATUSLINE_COMMAND,
+      mode: 'direct',
       source: selected.source,
       existingKind: selected.kind,
     };
   }
 
-  // Existing is user-defined → wrap with managed
+  // User-defined → keep as-is
   return {
     type: statusLineConfig.type,
-    command: buildPortableWrappedCommand(existingCommand, managedCommand),
-    mode: 'wrapped',
+    command: existingCommand,
+    mode: 'direct',
     source: selected.source,
     existingKind: selected.kind,
   };

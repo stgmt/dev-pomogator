@@ -2,6 +2,7 @@
 Main Textual app for monitoring canonical YAML v2 test status.
 """
 
+import importlib
 from datetime import datetime
 from pathlib import Path
 
@@ -18,6 +19,7 @@ from .widgets.analysis_tab import AnalysisTab
 from .widgets.logs_tab import LogsTab
 from .widgets.monitoring_tab import MonitoringTab
 from .stop_handler import stop_tests
+from .widgets import compact_bar as _compact_bar_module
 from .widgets.compact_bar import CompactBar
 from .widgets.tests_tab import TestsTab
 from .yaml_reader import StatusChanged, YamlReader
@@ -92,6 +94,14 @@ class TestRunnerApp(App):
         self._poll_interval = poll_interval
         self._auto_run = auto_run
         self._screenshot_dir = Path("logs/screenshots")
+        # Hot-reload: track compact_bar.py mtime for dev workflow
+        self._compact_bar_path = Path(_compact_bar_module.__file__) if _compact_bar_module.__file__ else None
+        self._compact_bar_mtime: float = 0
+        if self._compact_bar_path:
+            try:
+                self._compact_bar_mtime = self._compact_bar_path.stat().st_mtime
+            except OSError:
+                pass
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -115,7 +125,8 @@ class TestRunnerApp(App):
             self.notify("Auto-running tests...")
 
     def _poll(self) -> None:
-        """Poll YAML status and log files."""
+        """Poll YAML status, log files, and hot-reload compact_bar.py if changed."""
+        self._check_compact_bar_reload()
         new_status = self._yaml_reader.check()
         if new_status is not None:
             self.status = new_status
@@ -128,6 +139,27 @@ class TestRunnerApp(App):
             if new_lines:
                 logs_tab = self.query_one(LogsTab, LogsTab)
                 logs_tab.append_lines(new_lines)
+
+    def _check_compact_bar_reload(self) -> None:
+        """Hot-reload compact_bar.py if file changed on disk.
+
+        Works because CompactBar.render() calls render_compact() as a module-level
+        name lookup. importlib.reload() updates the module dict in-place, so the
+        existing widget instance picks up the new function without reinstantiation.
+        """
+        if not self._compact_bar_path:
+            return
+        try:
+            current_mtime = self._compact_bar_path.stat().st_mtime
+            if current_mtime != self._compact_bar_mtime:
+                importlib.reload(_compact_bar_module)
+                self._compact_bar_mtime = current_mtime
+                try:
+                    self.query_one(CompactBar).refresh()
+                except NoMatches:
+                    pass
+        except (OSError, ImportError):
+            pass  # fail-open: keep using current version
 
     def _update_title(self) -> None:
         s = self.status

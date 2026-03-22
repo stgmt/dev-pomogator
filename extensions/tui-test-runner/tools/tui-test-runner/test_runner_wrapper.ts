@@ -213,7 +213,8 @@ async function main(): Promise<number> {
   fs.mkdirSync(statusDir, { recursive: true });
   fs.writeFileSync(logFile, '', 'utf-8');
 
-  const discoveryTotal = discoverTestCount(framework, projectRoot);
+  const skipDiscovery = process.env.TEST_SKIP_DISCOVERY === '1';
+  const discoveryTotal = skipDiscovery ? 0 : discoverTestCount(framework, projectRoot);
 
   const writer = new YamlWriter(statusFile, prefix, framework, logFileForYaml, 1000, process.pid);
   if (discoveryTotal > 0) {

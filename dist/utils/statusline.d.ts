@@ -10,36 +10,28 @@ export interface ResolveClaudeStatusLineInput {
     globalStatusLine?: ExistingClaudeStatusLineEntry;
     statusLineConfig: ClaudeStatusLineEntry;
 }
-export interface ParsedWrappedStatusLineCommand {
-    userCommand: string;
-    managedCommand: string;
-}
 export interface SelectedClaudeStatusLine {
     source: 'global' | 'none';
     kind: 'none' | 'managed' | 'wrapped' | 'user';
     entry?: ExistingClaudeStatusLineEntry;
 }
 export interface ResolvedClaudeStatusLine extends ClaudeStatusLineEntry {
-    mode: 'direct' | 'wrapped';
+    mode: 'direct';
     source: 'global' | 'none';
     existingKind: 'none' | 'managed' | 'wrapped' | 'user';
 }
 export declare const DEFAULT_USER_STATUSLINE_COMMAND = "npx -y ccstatusline@latest";
+/** Detect legacy wrapped command (statusline_wrapper.js) */
 export declare function isWrappedStatusLineCommand(command: string): boolean;
+/** Detect legacy managed-only command (statusline_render.cjs without wrapper) */
 export declare function isManagedStatusLineCommand(command: string): boolean;
 export declare function classifyClaudeStatusLineCommand(command?: string): SelectedClaudeStatusLine['kind'];
-/**
- * Build portable managed command that resolves ~/.dev-pomogator/scripts/statusline_render.cjs
- * at runtime via os.homedir(). Works cross-platform.
- */
-export declare function buildPortableManagedCommand(): string;
-/**
- * Build portable wrapped command that runs both user and managed statuslines
- * via ~/.dev-pomogator/scripts/statusline_wrapper.js with base64-encoded args.
- */
-export declare function buildPortableWrappedCommand(userCommand: string, managedCommand: string): string;
 export declare function selectExistingClaudeStatusLine({ globalStatusLine, }: Pick<ResolveClaudeStatusLineInput, 'globalStatusLine'>): SelectedClaudeStatusLine;
-export declare function parseWrappedStatusLineCommand(command: string): ParsedWrappedStatusLineCommand | null;
+/**
+ * Extract user command from legacy wrapped statusLine command.
+ * Used during migration to unwrap and keep only the user's command.
+ */
+export declare function extractUserCommandFromLegacyWrapper(command: string): string | null;
 /**
  * Shared helper: resolve and write statusLine to global ~/.claude/settings.json.
  * Used by both installer (setupClaudeStatusLine) and updater (updateClaudeStatusLineGlobal).
@@ -47,5 +39,12 @@ export declare function parseWrappedStatusLineCommand(command: string): ParsedWr
  * Pass pre-loaded settings to avoid double-reading the file.
  */
 export declare function writeGlobalStatusLine(statusLineConfig: ClaudeStatusLineEntry, preloadedSettings?: Record<string, unknown>): Promise<void>;
+/**
+ * Resolve statusLine command. Always returns a direct command (no wrapping).
+ *
+ * Migration: legacy wrapped/managed commands are unwrapped to just the user command
+ * (or ccstatusline if no user command found). Test progress is shown in TUI
+ * (compact_bar.py), not in Claude Code statusLine.
+ */
 export declare function resolveClaudeStatusLine({ globalStatusLine, statusLineConfig, }: ResolveClaudeStatusLineInput): ResolvedClaudeStatusLine;
 //# sourceMappingURL=statusline.d.ts.map

@@ -52,6 +52,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | tui-pilot-tests | TUI тесты через Textual Pilot API; запрет file-inspection тестов для виджетов | `.claude/rules/tui-pilot-tests.md` |
 | extension-test-quality | Тесты расширений: 1:1 mapping test↔feature, запрет inline-копий, naming DOMAIN_CODE_NN, import guard | `.claude/rules/extension-test-quality.md` |
 | no-test-helper-duplication | Запрет дублирования helpers в тестах; shared → `tests/e2e/helpers.ts` (extension: test-quality) | `.claude/rules/no-test-helper-duplication.md` |
+| verify-render-target | Перед редактированием render/statusline кода — проверить какой файл реально вызывается (compact_bar.py, не statusline_render.cjs) | `.claude/rules/pomogator/verify-render-target.md` |
+| screenshot-driven-verification | КАЖДЫЙ скриншот реально анализировать: описать что видно, сравнить с ожиданием, формат CONFIRMED/DENIED | `.claude/rules/pomogator/screenshot-driven-verification.md` |
+| no-blocking-on-tests | Docker тесты 7-12 мин; НИКОГДА не блокировать сессию; run_in_background + продолжать работу | `.claude/rules/pomogator/no-blocking-on-tests.md` |
+| post-edit-verification | После КАЖДОГО изменения кода: build, copy installed, /run-tests background, screenshot если UI | `.claude/rules/pomogator/post-edit-verification.md` |
 
 ### Triggered
 
