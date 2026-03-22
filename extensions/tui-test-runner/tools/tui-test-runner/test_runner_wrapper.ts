@@ -111,17 +111,15 @@ function resolveFramework(explicitFramework: TestFramework | undefined, projectR
 
 const DISCOVERY_COMMANDS: Partial<Record<TestFramework, { cmd: string[]; count: (out: string) => number }>> = {
   vitest: {
-    cmd: ['npx', 'vitest', 'list', '--json'],
+    // grep it( in test files — instant, no vitest startup, works without Docker
+    cmd: ['grep', '-rc', '--include=*.test.ts', 'it(.', 'tests/e2e/'],
     count: (out) => {
-      try {
-        const data = JSON.parse(out);
-        if (Array.isArray(data)) return data.length;
-        if (data?.testFiles) return data.testFiles.reduce((sum: number, f: any) => sum + (f.tests?.length ?? 0), 0);
-      } catch {
-        // Fallback: count non-empty non-indented lines (vitest list plain text)
-        return out.split(/\r?\n/).filter((l) => l.trim() && !l.startsWith(' ')).length;
+      let total = 0;
+      for (const line of out.split(/\r?\n/)) {
+        const match = line.match(/:(\d+)$/);
+        if (match) total += parseInt(match[1], 10);
       }
-      return 0;
+      return total;
     },
   },
   jest: {

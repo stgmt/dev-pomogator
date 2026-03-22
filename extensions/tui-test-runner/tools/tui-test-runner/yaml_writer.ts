@@ -353,17 +353,16 @@ export class YamlWriter {
     const skipped = Math.max(discoveredSkipped, this.reportedSummary.skipped ?? 0);
     const completed = passed + failed + skipped;
 
-    // Total: use discovery/reported if available, otherwise discovered from events
-    // During running without discovery: total=0 (unknown), counts still shown
-    // After finalize: total = max of all sources including completed
+    // Total: use pre-discovery or reported summary total ONLY (not discovered from events)
+    // discoveredTotal from events = completed count, NOT useful as total
     let total: number;
     if (knownTotal > 0) {
-      total = Math.max(discoveredTotal, knownTotal);
+      total = knownTotal;
     } else if (this.status.state !== 'running') {
-      // After finalize: use completed as final total
-      total = Math.max(discoveredTotal, completed);
+      // After finalize: total = completed (final count)
+      total = completed;
     } else {
-      total = discoveredTotal;
+      total = 0;
     }
 
     let running = discoveredRunning;
