@@ -111,15 +111,16 @@ function resolveFramework(explicitFramework: TestFramework | undefined, projectR
 
 const DISCOVERY_COMMANDS: Partial<Record<TestFramework, { cmd: string[]; count: (out: string) => number }>> = {
   vitest: {
-    // grep it( in test files — instant, no vitest startup, works without Docker
-    cmd: ['grep', '-rc', '--include=*.test.ts', 'it(.', 'tests/e2e/'],
+    cmd: ['npx', 'vitest', 'list', '--json'],
     count: (out) => {
-      let total = 0;
-      for (const line of out.split(/\r?\n/)) {
-        const match = line.match(/:(\d+)$/);
-        if (match) total += parseInt(match[1], 10);
+      try {
+        const data = JSON.parse(out);
+        if (Array.isArray(data)) return data.length;
+      } catch {
+        // Fallback: count non-empty non-indented lines
+        return out.split(/\r?\n/).filter((l) => l.trim() && !l.startsWith(' ')).length;
       }
-      return total;
+      return 0;
     },
   },
   jest: {
@@ -153,7 +154,8 @@ function discoverTestCount(framework: TestFramework, projectRoot: string): numbe
       cwd: projectRoot,
       encoding: 'utf-8',
       timeout: 60000,
-      env: { ...process.env, FORCE_COLOR: '0', NO_COLOR: '1' },
+      env: { ...process.env, FORCE_COLOR: '0', NO_COLOR: '1', VITEST_LIST: '1' },
+      shell: true,
     });
     if (result.status !== 0 || !result.stdout) {
       if (result.stderr) {

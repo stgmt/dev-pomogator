@@ -21,7 +21,10 @@ function isRunningInDocker(): boolean {
 const dockerFlag = process.env.DEV_POMOGATOR_TEST_IN_DOCKER === '1';
 const inDocker = isRunningInDocker();
 
-if (!dockerFlag || !inDocker) {
+// Skip docker check when VITEST_LIST=1 (discovery only, no test execution)
+if (process.env.VITEST_LIST === '1') {
+  // noop — vitest list only parses files
+} else if (!dockerFlag || !inDocker) {
   const message = [
     '[TESTS] Tests must run inside Docker only.',
     'Use: npm run test:e2e',
