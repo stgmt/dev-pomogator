@@ -23,17 +23,30 @@ def render_compact(status: TestStatus | None) -> str:
     if not status or status.state == TestState.IDLE:
         return "⏸ no test runs"
 
-    icon = STATE_ICONS.get(status.state, "?")
     bar = progress_bar_ascii(status.percent, width=12)
     duration = status.duration_display
+    completed = status.passed + status.failed + (status.skipped or 0)
 
+    if status.state == TestState.RUNNING:
+        badge = "\x1b[44m\x1b[97m\x1b[1m RUN \x1b[0m"
+        if completed == 0 and status.total > 0:
+            return f"{badge} \x1b[2mbuilding Docker...\x1b[0m \x1b[2m0/{status.total} {duration}\x1b[0m"
+        if completed == 0:
+            return f"{badge} \x1b[2mstarting...\x1b[0m \x1b[2m{duration}\x1b[0m"
+        total_str = f"/{status.total}" if status.total > 0 else ""
+        pct_str = f"{status.percent}%" if status.total > 0 else ""
+        parts = f"{badge} {status.passed}{total_str}✅"
+        if status.failed > 0:
+            parts += f" {status.failed}❌"
+        return f"{parts} {bar} {pct_str} {duration}".rstrip()
+
+    # Completed states (passed/failed)
+    icon = STATE_ICONS.get(status.state, "?")
     total_str = f"/{status.total}" if status.total > 0 else ""
-    pct_str = f"{status.percent}%" if status.total > 0 else ""
-    return (
-        f"{icon} {status.framework} "
-        f"{status.passed}{total_str}✅ {status.failed}❌ "
-        f"{bar} {pct_str} {duration}".rstrip()
-    )
+    parts = f"{icon} {status.framework} {status.passed}{total_str}✅"
+    if status.failed > 0:
+        parts += f" {status.failed}❌"
+    return f"{parts} {bar} 100% {duration}".rstrip()
 
 
 try:

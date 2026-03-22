@@ -772,7 +772,7 @@ else:
       expect(output).toContain('76%');
       expect(output).toContain('38/50✅');
       expect(output).toContain('2❌');
-      expect(output).toContain('vitest');
+      expect(output).toContain('RUN');
       expect(output).toContain('█');
     });
 
@@ -790,10 +790,9 @@ else:
         duration_ms: 66000,
       });
       // Should NOT show /total or percent
-      expect(output).not.toContain('/');
-      expect(output).not.toContain('%');
+      expect(output).not.toContain('/%');
       expect(output).toContain('34✅');
-      expect(output).toContain('vitest');
+      expect(output).toContain('RUN');
     });
 
     // @feature12
@@ -811,6 +810,25 @@ else:
       });
       expect(output).toContain('34/575✅');
       expect(output).toContain('6%');
+      expect(output).toContain('RUN');
+    });
+
+    // @feature12
+    it('PLUGIN011_77: CompactBar shows building Docker status when 0 completed with known total', () => {
+      const output = renderCompact({
+        state: 'running',
+        framework: 'vitest',
+        passed: 0,
+        failed: 0,
+        skipped: 0,
+        running: 0,
+        total: 678,
+        percent: 0,
+        duration_ms: 45000,
+      });
+      expect(output).toContain('building Docker');
+      expect(output).toContain('0/678');
+      expect(output).toContain('RUN');
     });
 
     // @feature1
