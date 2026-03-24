@@ -3,7 +3,7 @@
 ## AC-1: Scaffold Creates Structure
 
 WHEN user runs scaffold-spec.sh with valid name
-THEN system SHALL create folder .specs/valid-spec/ with 14 files
+THEN system SHALL create folder .specs/valid-spec/ with 15 files
 
 ## AC-2: Scaffold Validates Name
 

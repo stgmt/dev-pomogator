@@ -389,6 +389,21 @@ function countSpecStatusPlaceholders(content) {
   return placeholderCount;
 }
 
+function countOpenQuestions(content) {
+  const lines = content.split('\n');
+  let count = 0;
+  for (let i = 0; i < lines.length; i++) {
+    if (/^\s*-\s*\[ \]\s*.+$/.test(lines[i])) {
+      const prevLine = i > 0 ? lines[i - 1] : '';
+      if (/>\s*DEFERRED:/i.test(prevLine)) {
+        continue;
+      }
+      count++;
+    }
+  }
+  return count;
+}
+
 function getSpecStatusFileState(filePath) {
   if (!fs.existsSync(filePath)) {
     return { status: 'not_created', placeholders: 0, items: 0 };
@@ -406,6 +421,12 @@ function getSpecStatusFileState(filePath) {
   }
 
   if (placeholderCount === 0) {
+    if (filePath.endsWith('RESEARCH.md')) {
+      const openQ = countOpenQuestions(content);
+      if (openQ > 0) {
+        return { status: 'partial', placeholders: 0, items: itemCount, openQuestions: openQ };
+      }
+    }
     return { status: 'complete', placeholders: 0, items: itemCount };
   }
 
@@ -497,6 +518,7 @@ function commandScaffoldSpec(argv) {
     ['CHANGELOG.md.template', 'CHANGELOG.md'],
     ['feature.template', `${options.name}.feature`],
     ['SCHEMA.md.template', `${options.name}_SCHEMA.md`],
+    ['FIXTURES.md.template', 'FIXTURES.md'],
   ];
 
   const createdFiles = [];
@@ -839,6 +861,20 @@ function commandValidateSpec(argv) {
         });
         fileHasWarnings = true;
         log('WARN', `${fileName}: Context section incomplete`);
+      }
+    }
+
+    if (fileName === 'RESEARCH.md') {
+      log('INFO', 'Checking OPEN_QUESTIONS rule...');
+      const openQ = countOpenQuestions(content);
+      if (openQ > 0) {
+        warnings.push({
+          file: fileName,
+          rule: 'OPEN_QUESTIONS',
+          message: `${openQ} unclosed open question(s) found (- [ ]). Close them (- [x]) or add '> DEFERRED: reason' on the line before.`,
+        });
+        fileHasWarnings = true;
+        log('WARN', `${fileName}: ${openQ} unclosed open questions`);
       }
     }
 
@@ -1191,6 +1227,18 @@ function commandSpecStatus(argv) {
 
   let nextAction = '';
   const blockers = [];
+
+  // Check for open questions in RESEARCH.md (blocks Requirements/Finalization/Complete)
+  if (['Requirements', 'Finalization', 'Complete'].includes(currentPhase)) {
+    const researchPath = path.join(targetDir, 'RESEARCH.md');
+    if (fs.existsSync(researchPath)) {
+      const researchContent = safeReadText(researchPath) || '';
+      const openQ = countOpenQuestions(researchContent);
+      if (openQ > 0) {
+        blockers.push(`RESEARCH.md has ${openQ} unclosed open question(s). Close them (- [x]) or mark as DEFERRED.`);
+      }
+    }
+  }
 
   for (const fileName of allFiles) {
     const fileState = files[fileName];
@@ -1581,8 +1629,8 @@ function commandAuditSpec(argv) {
     if (unclosed.length > 0) {
       findings.push({
         check: 'OPEN_QUESTIONS',
-        category: 'RUDIMENTS',
-        severity: 'INFO',
+        category: 'LOGIC_GAPS',
+        severity: 'WARNING',
         message: `${unclosed.length} unclosed open question(s) in RESEARCH.md`,
         details: unclosed.map((item) => `- [ ] ${item}`).join('\n'),
       });

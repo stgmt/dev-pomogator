@@ -50,6 +50,7 @@
       ".dev-pomogator/tools/specs-generator/templates/REQUIREMENTS.md.template",
       ".dev-pomogator/tools/specs-generator/templates/RESEARCH.md.template",
       ".dev-pomogator/tools/specs-generator/templates/SCHEMA.md.template",
+      ".dev-pomogator/tools/specs-generator/templates/FIXTURES.md.template",
       ".dev-pomogator/tools/specs-generator/templates/TASKS.md.template",
       ".dev-pomogator/tools/specs-generator/templates/USE_CASES.md.template",
       ".dev-pomogator/tools/specs-generator/templates/USER_STORIES.md.template",

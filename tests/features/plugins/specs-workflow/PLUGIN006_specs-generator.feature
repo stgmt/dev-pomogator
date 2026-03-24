@@ -12,7 +12,7 @@ Feature: PLUGIN006 Specs Generator Shell Scripts
   Scenario: Create spec structure with valid name
     When I run scaffold-spec.sh with name "test-feature"
     Then the result should be successful
-    And 14 files should be created in ".specs/test-feature/"
+    And 15 files should be created in ".specs/test-feature/"
     And the next_step should mention "USER_STORIES.md"
 
   @feature2
@@ -26,7 +26,7 @@ Feature: PLUGIN006 Specs Generator Shell Scripts
     Given a spec folder "existing-spec" already exists
     When I run scaffold-spec.sh with name "existing-spec" and -Force flag
     Then the result should be successful
-    And 14 files should be created
+    And 15 files should be created
 
   # validate-spec.sh scenarios
 
@@ -259,7 +259,7 @@ Feature: PLUGIN006 Specs Generator Shell Scripts
     And progress.version should be 1
     And progress.currentPhase should be "Discovery"
     And all stopConfirmed flags should be false
-    And created_files count should still be 14
+    And created_files count should still be 15
 
   @feature37
   Scenario: Spec-status creates .progress.json for pre-existing specs
@@ -354,3 +354,45 @@ Feature: PLUGIN006 Specs Generator Shell Scripts
     When I run spec-status.sh with -Path "."
     Then exit code should be non-zero
     And output should contain "must be inside .specs/"
+
+  # Open questions gate - prevent finalization with unclosed research questions
+
+  @feature50
+  Scenario: validate-spec warns on unclosed open questions in RESEARCH.md
+    Given a spec with RESEARCH.md containing unclosed open questions
+    When I run validate-spec.sh on that spec
+    Then warnings should contain rule "OPEN_QUESTIONS"
+    And warning message should mention "unclosed"
+
+  @feature51
+  Scenario: spec-status marks RESEARCH.md as partial when open questions exist
+    Given a spec with RESEARCH.md containing unclosed open questions
+    When I run spec-status.sh on that spec
+    Then RESEARCH.md status should be "partial"
+    And blockers should mention "unclosed open question"
+
+  @feature52
+  Scenario: DEFERRED marker allows open questions without warning
+    Given a spec with RESEARCH.md where all open questions have DEFERRED markers
+    When I run validate-spec.sh on that spec
+    Then warnings should not contain rule "OPEN_QUESTIONS"
+
+  @feature53
+  Scenario: audit-spec reports OPEN_QUESTIONS as WARNING severity
+    Given a spec fixture with open questions in RESEARCH.md
+    When I run audit-spec.sh on the spec
+    Then OPEN_QUESTIONS finding severity should be "WARNING"
+
+  # FIXTURES.md optional file support
+
+  @feature54
+  Scenario: Scaffold creates FIXTURES.md as optional file
+    When I run scaffold-spec.sh with name "fixtures-test"
+    Then the result should be successful
+    And created files should include "FIXTURES.md"
+
+  @feature55
+  Scenario: Validate-spec passes with FIXTURES.md present
+    Given a complete spec fixture "valid-spec" exists
+    When I run validate-spec.sh on "valid-spec"
+    Then the result should have valid=true

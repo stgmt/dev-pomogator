@@ -10,6 +10,7 @@ allow:
 - docker-compose.test.yml
 - Dockerfile.gui
 - Dockerfile.test
+- Dockerfile.test.base
 - install
 - install.ps1
 - install.sh

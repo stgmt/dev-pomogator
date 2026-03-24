@@ -54,7 +54,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     });
 
     // @feature1
-    it('should create 14 files with valid kebab-case name', () => {
+    it('should create 15 files with valid kebab-case name', () => {
       const result = runShellScript(
         getSpecsGeneratorPath('scaffold-spec.sh'),
         ['-Name', testSpecName]
@@ -65,7 +65,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       expect(result.json.success).toBe(true);
       expect(result.json.path).toBe(`.specs/${testSpecName}`);
       expect(result.json.created_files).toBeDefined();
-      expect(result.json.created_files.length).toBe(14);
+      expect(result.json.created_files.length).toBe(15);
       expect(result.json.created_files).toEqual(expect.arrayContaining([
         'USER_STORIES.md',
         'FR.md',
@@ -106,7 +106,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       expect(result.exitCode).toBe(0);
       expect(result.json.success).toBe(true);
       expect(result.json.path).toBe(`.specs/${specName}`);
-      expect(result.json.created_files.length).toBe(14);
+      expect(result.json.created_files.length).toBe(15);
       expect(result.json.created_files).toEqual(expect.arrayContaining([
         'USER_STORIES.md',
         'FR.md',
@@ -763,6 +763,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       expect(
         openQFindings.some((f: any) => f.message.includes('unclosed'))
       ).toBe(true);
+      expect(openQFindings[0].severity).toBe('WARNING');
+      expect(openQFindings[0].category).toBe('LOGIC_GAPS');
     });
 
     // @feature26
@@ -991,8 +993,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
 
       expect(result.exitCode).toBe(0);
       expect(result.json.success).toBe(true);
-      // created_files count stays 14 (.progress.json is not counted)
-      expect(result.json.created_files.length).toBe(14);
+      // created_files count stays 15 (.progress.json is not counted)
+      expect(result.json.created_files.length).toBe(15);
 
       const progressPath = appPath('.specs', progressTestName, '.progress.json');
       expect(fs.existsSync(progressPath)).toBe(true);
@@ -1286,5 +1288,127 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
 
     expect(result.exitCode).not.toBe(0);
     expect(result.stderr).toContain('must be inside .specs/');
+  });
+
+  // Open questions gate tests
+
+  // @feature50
+  it('validate-spec should warn on unclosed open questions in RESEARCH.md', async () => {
+    const destPath = appPath('.specs', 'open-q-test');
+    await fs.copy(getSpecsGeneratorFixturePath('valid-spec'), destPath);
+    const researchPath = path.join(destPath, 'RESEARCH.md');
+    await fs.writeFile(
+      researchPath,
+      '# Research\n\n## Open Questions\n\n- [ ] Which API to use?\n- [x] Decided on REST\n\n## Project Context & Constraints\n\n> Skipped: test\n'
+    );
+
+    const result = runShellScript(
+      getSpecsGeneratorPath('validate-spec.sh'),
+      ['-Path', '.specs/open-q-test']
+    );
+
+    expect(result.json).toBeDefined();
+    const warnings = (Array.isArray(result.json.warnings) ? result.json.warnings : []).filter(
+      (w: any) => w.rule === 'OPEN_QUESTIONS'
+    );
+    expect(warnings.length).toBeGreaterThan(0);
+    expect(warnings[0].message).toContain('1 unclosed');
+
+    await fs.remove(destPath);
+  });
+
+  // @feature51
+  it('spec-status should mark RESEARCH.md as partial when open questions exist', async () => {
+    const destPath = appPath('.specs', 'open-q-status-test');
+    await fs.copy(getSpecsGeneratorFixturePath('valid-spec'), destPath);
+    const researchPath = path.join(destPath, 'RESEARCH.md');
+    await fs.writeFile(
+      researchPath,
+      '# Research\n\n## Open Questions\n\n- [ ] Unresolved question\n\n## Project Context & Constraints\n\n> Skipped: test\n'
+    );
+
+    const result = runShellScript(
+      getSpecsGeneratorPath('spec-status.sh'),
+      ['-Path', '.specs/open-q-status-test']
+    );
+
+    expect(result.exitCode).toBe(0);
+    expect(result.json.files['RESEARCH.md'].status).toBe('partial');
+    expect(result.json.blockers.length).toBeGreaterThan(0);
+    expect(result.json.blockers[0]).toContain('unclosed open question');
+
+    await fs.remove(destPath);
+  });
+
+  // @feature52
+  it('should NOT warn on open questions with DEFERRED marker', async () => {
+    const destPath = appPath('.specs', 'open-q-deferred-test');
+    await fs.copy(getSpecsGeneratorFixturePath('valid-spec'), destPath);
+    const researchPath = path.join(destPath, 'RESEARCH.md');
+    await fs.writeFile(
+      researchPath,
+      '# Research\n\n## Open Questions\n\n> DEFERRED: Not needed for MVP\n- [ ] Future consideration\n- [x] Already resolved\n\n## Project Context & Constraints\n\n> Skipped: test\n'
+    );
+
+    const result = runShellScript(
+      getSpecsGeneratorPath('validate-spec.sh'),
+      ['-Path', '.specs/open-q-deferred-test']
+    );
+
+    const warnings = (Array.isArray(result.json.warnings) ? result.json.warnings : []).filter(
+      (w: any) => w.rule === 'OPEN_QUESTIONS'
+    );
+    expect(warnings.length).toBe(0);
+
+    await fs.remove(destPath);
+  });
+
+  // @feature53
+  it('audit-spec should report OPEN_QUESTIONS as WARNING severity', () => {
+    const result = runShellScript(
+      getSpecsGeneratorPath('audit-spec.sh'),
+      ['-Path', '.specs/audit-coverage-test']
+    );
+
+    expect(result.exitCode).toBe(0);
+    expect(result.json).toBeDefined();
+
+    const openQFindings = (result.json.findings || []).filter(
+      (f: any) => f.check === 'OPEN_QUESTIONS'
+    );
+    expect(openQFindings.length).toBeGreaterThan(0);
+    expect(openQFindings[0].severity).toBe('WARNING');
+  });
+
+  // @feature54
+  it('PLUGIN006_54: scaffold creates FIXTURES.md as optional file', () => {
+    const result = runShellScript(
+      getSpecsGeneratorPath('scaffold-spec.sh'),
+      ['-Name', 'fixtures-test']
+    );
+
+    expect(result.exitCode).toBe(0);
+    expect(result.json.created_files).toContain('FIXTURES.md');
+
+    const fixturesPath = appPath('.specs', 'fixtures-test', 'FIXTURES.md');
+    expect(fs.existsSync(fixturesPath)).toBe(true);
+
+    const content = fs.readFileSync(fixturesPath, 'utf-8');
+    expect(content).toContain('## Fixture Inventory');
+    expect(content).toContain('## Gap Analysis');
+  });
+
+  // @feature55
+  it('PLUGIN006_55: validate-spec passes with FIXTURES.md present', () => {
+    const destPath = appPath('.specs', 'valid-spec-fixtures-test');
+    fs.copySync(getSpecsGeneratorFixturePath('valid-spec'), destPath);
+
+    const result = runShellScript(
+      getSpecsGeneratorPath('validate-spec.sh'),
+      ['-Path', '.specs/valid-spec-fixtures-test']
+    );
+
+    expect(result.exitCode).toBe(0);
+    expect(result.json.valid).toBe(true);
   });
 });

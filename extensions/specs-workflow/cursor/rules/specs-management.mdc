@@ -32,7 +32,8 @@ alwaysApply: false
 ├── FILE_CHANGES.md        # Список изменяемых файлов
 ├── CHANGELOG.md           # Changelog (Keep-a-Changelog)
 ├── {feature-slug}.feature # BDD сценарии (Gherkin)
-└── *_SCHEMA.md            # (опционально) Схемы данных
+├── *_SCHEMA.md            # (опционально) Схемы данных
+└── FIXTURES.md            # (опционально) Инвентаризация фикстур, lifecycle, gap analysis
 ```
 
 ---
@@ -200,6 +201,16 @@ alwaysApply: false
    - [ ] Каждый переиспользуемый hook указан в FILE_CHANGES.md (edit или reference)
    - [ ] Cleanup Strategy покрывает все каскадные зависимости
    - [ ] Shared Context ключи не конфликтуют с существующими
+
+   **Шаг 6.5: FIXTURES.md (если TEST_DATA_ACTIVE)**
+
+   Если классификация TEST_DATA_ACTIVE → создать FIXTURES.md с детальной информацией:
+   - Перенести данные из DESIGN.md "Test Data & Fixtures" таблицы в развёрнутый формат
+   - Для каждой фикстуры: Type, Format, Setup, Teardown, Dependencies, Used by (@featureN)
+   - Заполнить Dependencies Graph и Gap Analysis
+   - В DESIGN.md добавить ссылку: `_Details: see [FIXTURES.md](FIXTURES.md)_`
+
+   Если TEST_DATA_NONE → FIXTURES.md оставить с placeholder-ами (опционально удалить).
 
 7. Заполнить FILE_CHANGES.md
 8. **Анализ паттернов .feature (ОБЯЗАТЕЛЬНО перед написанием .feature):**
@@ -424,6 +435,8 @@ alwaysApply: false
 | UNVERIFIED_CONFIG | Env vars в DESIGN.md без `[VERIFIED]`/`[UNVERIFIED]` маркера | INFO |
 | INFRA_TASKS_MISSING | DESIGN.md упоминает инфраструктуру, TASKS.md без infra-задач | WARNING |
 | CONFIG_DUPLICATION | Идентичные блоки 3+ строк в DESIGN.md и TASKS.md | INFO |
+| OPEN_QUESTIONS | Незакрытые `- [ ]` в RESEARCH.md (escape: `> DEFERRED:` на предыдущей строке) | WARNING |
+| FIXTURES_CONSISTENCY | TEST_DATA_ACTIVE в DESIGN.md, но FIXTURES.md отсутствует или пуст | WARNING |
 
 ---
 
