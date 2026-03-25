@@ -4,7 +4,7 @@
 
 export type TestFramework = 'vitest' | 'jest' | 'pytest' | 'dotnet' | 'rust' | 'go' | 'unknown';
 
-export type TestState = 'idle' | 'running' | 'passed' | 'failed' | 'error';
+export type TestState = 'idle' | 'building' | 'running' | 'passed' | 'failed' | 'error';
 
 export interface TestResultV2 {
   name: string;

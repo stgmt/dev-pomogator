@@ -103,6 +103,7 @@ export class YamlWriter {
   private lastWriteTime = 0;
   private reportedSummary: TestSummary = {};
   private _finalized = false;
+  private _aggregatesDirty = false;
   private _discoveryTotal = 0;
 
   constructor(
@@ -121,7 +122,7 @@ export class YamlWriter {
       pid,
       started_at: now,
       updated_at: now,
-      state: 'running',
+      state: 'building',
       framework,
       total: 0,
       passed: 0,
@@ -183,7 +184,7 @@ export class YamlWriter {
         break;
     }
 
-    this.updateAggregates();
+    this._aggregatesDirty = true;
   }
 
   writeIfNeeded(): boolean {
@@ -199,7 +200,10 @@ export class YamlWriter {
 
   write(): void {
     if (this._finalized) return;
-    this.updateAggregates();
+    if (this._aggregatesDirty) {
+      this.updateAggregates();
+      this._aggregatesDirty = false;
+    }
     this.status.updated_at = new Date().toISOString();
     this.updatePhaseDuration();
     this.status.suites = this.serializeSuites();
@@ -207,9 +211,46 @@ export class YamlWriter {
     const yaml = serializeYaml(this.status as unknown as Record<string, unknown>);
 
     fs.mkdirSync(path.dirname(this.statusFile), { recursive: true });
-    // Direct write — no temp+rename. Atomic rename fails on Windows when reader holds the file (EPERM).
-    fs.writeFileSync(this.statusFile, yaml, 'utf-8');
+    // Atomic write: temp file + rename.
+    // Windows: renameSync EPERM when reader holds file → retry with backoff (graceful-fs pattern).
+    const tmpFile = this.statusFile + '.tmp';
+    fs.writeFileSync(tmpFile, yaml, 'utf-8');
+
+    if (process.platform !== 'win32') {
+      // POSIX: rename is atomic, always succeeds even with open readers
+      fs.renameSync(tmpFile, this.statusFile);
+    } else {
+      // Windows: retry rename up to 3 times with 10ms backoff (handles antivirus/indexer transient locks)
+      let renamed = false;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          fs.renameSync(tmpFile, this.statusFile);
+          renamed = true;
+          break;
+        } catch (err: unknown) {
+          const code = (err as NodeJS.ErrnoException).code;
+          if (code === 'EPERM' || code === 'EACCES' || code === 'EBUSY') {
+            // Zero-CPU sync sleep 10ms (Atomics.wait on dummy buffer)
+            Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10);
+          } else {
+            throw err; // unexpected error, don't swallow
+          }
+        }
+      }
+      if (!renamed) {
+        // All retries failed — fallback to copyFile (non-atomic but data is written)
+        fs.copyFileSync(tmpFile, this.statusFile);
+        try { fs.unlinkSync(tmpFile); } catch { /* ignore cleanup */ }
+      }
+    }
     this.lastWriteTime = Date.now();
+  }
+
+  /** Transition from 'building' to 'running' on first test event */
+  markRunning(): void {
+    if (this.status.state === 'building') {
+      this.status.state = 'running';
+    }
   }
 
   finalize(exitCode: number): void {

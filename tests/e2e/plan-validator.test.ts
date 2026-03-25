@@ -10,8 +10,8 @@ import { describe, it, expect, afterEach } from 'vitest';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { validatePlan, validatePlanPhased, type ValidationError } from '../../extensions/plan-pomogator/tools/plan-pomogator/validate-plan';
-import { extractFileChangePaths, scoreCandidate, readTemplateContent } from '../../extensions/plan-pomogator/tools/plan-pomogator/plan-gate';
+import { validatePlan, validatePlanPhased, REQUIRED_SECTIONS, findHeadingIndex, type ValidationError } from '../../extensions/plan-pomogator/tools/plan-pomogator/validate-plan';
+import { readTemplateContent, checkDuplicatePlan, scorePromptRelevance, resolvePlanFile } from '../../extensions/plan-pomogator/tools/plan-pomogator/plan-gate';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -24,6 +24,13 @@ const FIXTURE_PATH = path.resolve(
 
 function getValidPlan(): string {
   return fs.readFileSync(FIXTURE_PATH, 'utf-8');
+}
+
+/** Find section index by name using production REQUIRED_SECTIONS regex */
+function findSection(lines: string[], name: string): number {
+  const section = REQUIRED_SECTIONS.find((s) => s.name === name);
+  if (section) return findHeadingIndex(lines, section.regex);
+  return lines.findIndex((l) => new RegExp(`^##\\s+(?:\\S+\\s+)?${name}\\b`).test(l));
 }
 
 const tempFiles: string[] = [];
@@ -46,7 +53,7 @@ afterEach(() => {
 /** Remove a ## section from the plan by name */
 function removeSection(content: string, sectionName: string): string {
   const lines = content.split('\n');
-  const sectionRegex = new RegExp(`^## ${sectionName}\\b`);
+  const sectionRegex = new RegExp(`^##\\s+(?:\\S+\\s+)?${sectionName}\\b`);
   const startIdx = lines.findIndex((l) => sectionRegex.test(l));
   if (startIdx === -1) return content;
   let endIdx = lines.length;
@@ -196,7 +203,7 @@ describe('PLUGIN007_07 Todos hints', () => {
     // Replace Todos content with empty
     let plan = getValidPlan();
     const lines = plan.split(/\r?\n/);
-    const todosIdx = lines.findIndex((l) => /^## Todos\s*$/.test(l));
+    const todosIdx = findSection(lines, 'Todos');
     const nextSectionIdx = lines.findIndex((l, i) => i > todosIdx && /^## /.test(l));
     // Remove everything between ## Todos and next section
     lines.splice(todosIdx + 1, nextSectionIdx - todosIdx - 1);
@@ -207,16 +214,14 @@ describe('PLUGIN007_07 Todos hints', () => {
     expect(found[0].hint).toContain('template.md');
   });
 
-  it('should hint about indentation when description is not indented', () => {
+  it('should hint about description when blockquote is missing', () => {
     let plan = getValidPlan();
-    // Replace indented description with unindented
-    plan = plan.replace(/  description:/, 'description:');
+    // Remove blockquote line (> description)
+    plan = plan.split(/\r?\n/).filter((l) => !/^>\s+/.test(l)).join('\n');
     const errors = validatePlan(writeTempPlan(plan));
-    const indentErrors = errors.filter((e) =>
-      e.message.includes('вложенными строками') || e.message.includes('вложенной строкой'),
-    );
-    expect(indentErrors.length).toBeGreaterThan(0);
-    expect(indentErrors[0].hint).toContain('2+');
+    const found = findErrors(errors, 'отсутствует description');
+    expect(found.length).toBeGreaterThan(0);
+    expect(found[0].hint).toContain('blockquote');
   });
 
   it('should hint about files: when missing from description', () => {
@@ -229,23 +234,31 @@ describe('PLUGIN007_07 Todos hints', () => {
     expect(found[0].hint).toContain('files:');
   });
 
-  it('should hint about Requirements refs: when missing', () => {
+  it('should hint about refs: when missing', () => {
     let plan = getValidPlan();
-    plan = plan.replace(/Requirements refs:/i, 'Reqs:');
+    plan = plan.replace(/refs:/gi, 'rrrefs:');
     const errors = validatePlan(writeTempPlan(plan));
-    const found = findErrors(errors, 'отсутствует Requirements refs:');
+    const found = findErrors(errors, 'отсутствует refs:');
     expect(found.length).toBeGreaterThan(0);
-    expect(found[0].hint).toContain('Requirements refs:');
+    expect(found[0].hint).toContain('refs:');
   });
 
-  it('should hint about dependencies when missing', () => {
+  it('should hint about changes: when missing', () => {
     let plan = getValidPlan();
-    // Remove dependencies line using line-by-line filter (handles \r\n)
-    plan = plan.split(/\r?\n/).filter((l) => !l.trim().startsWith('dependencies:')).join('\n');
+    plan = plan.split(/\r?\n/).filter((l) => !l.includes('changes:')).join('\n');
     const errors = validatePlan(writeTempPlan(plan));
-    const found = findErrors(errors, 'отсутствует dependencies');
+    const found = findErrors(errors, 'отсутствует changes:');
     expect(found.length).toBeGreaterThan(0);
-    expect(found[0].hint).toContain('dependencies:');
+    expect(found[0].hint).toContain('changes:');
+  });
+
+  it('should hint about deps: when missing', () => {
+    let plan = getValidPlan();
+    plan = plan.split(/\r?\n/).filter((l) => !l.includes('deps:')).join('\n');
+    const errors = validatePlan(writeTempPlan(plan));
+    const found = findErrors(errors, 'отсутствует deps:');
+    expect(found.length).toBeGreaterThan(0);
+    expect(found[0].hint).toContain('deps:');
   });
 });
 
@@ -340,9 +353,9 @@ describe('PLUGIN007_10 Section order hints', () => {
     const plan = getValidPlan();
     const lines = plan.split(/\r?\n/);
     // Find User Stories and Use Cases sections, swap them
-    const usIdx = lines.findIndex((l) => /^## User Stories\b/.test(l));
-    const ucIdx = lines.findIndex((l) => /^## Use Cases\b/.test(l));
-    const reqIdx = lines.findIndex((l) => /^## Requirements\b/.test(l));
+    const usIdx = findSection(lines, 'User Stories');
+    const ucIdx = lines.findIndex((l) => /^##\s+(?:\S+\s+)?Use Cases\b/.test(l));
+    const reqIdx = findSection(lines, 'Requirements');
     // Extract sections
     const usLines = lines.slice(usIdx, ucIdx);
     const ucLines = lines.slice(ucIdx, reqIdx);
@@ -380,7 +393,7 @@ describe('PLUGIN007_11 Impact Analysis hints', () => {
     plan = plan.replace(/\| create \|/, '| delete |');
     // Insert Impact Analysis section with N/A before Todos
     const lines = plan.split(/\r?\n/);
-    const todosIdx = lines.findIndex((l) => /^## Todos\b/.test(l));
+    const todosIdx = findSection(lines, 'Todos');
     lines.splice(todosIdx, 0, '## Impact Analysis', '', 'N/A', '');
     plan = lines.join('\n');
     const errors = validatePlan(writeTempPlan(plan));
@@ -397,7 +410,7 @@ describe('PLUGIN007_12 Fenced code-block hints', () => {
   it('should error when File Changes table is inside fenced block', () => {
     let plan = getValidPlan();
     const lines = plan.split(/\r?\n/);
-    const fcIdx = lines.findIndex((l) => /^## File Changes\b/.test(l));
+    const fcIdx = findSection(lines, 'File Changes');
     // Insert ``` after ## File Changes heading
     lines.splice(fcIdx + 1, 0, '```');
     // Add closing ``` at end
@@ -422,7 +435,7 @@ describe('PLUGIN007_13 Requirements subsection order hints', () => {
     const acIdx = lines.findIndex((l) => /^### Acceptance Criteria\b/.test(l));
     const nfrIdx = lines.findIndex((l) => /^### NFR\b/.test(l));
     const assIdx = lines.findIndex((l) => /^### Assumptions\b/.test(l));
-    const implIdx = lines.findIndex((l) => /^## Implementation Plan\b/.test(l));
+    const implIdx = findSection(lines, 'Implementation Plan');
     // Extract FR and NFR sections
     const frSection = lines.slice(frIdx, acIdx);
     const acSection = lines.slice(acIdx, nfrIdx);
@@ -461,9 +474,9 @@ describe('PLUGIN007_14 Phase 2: Context section validation', () => {
     // Swap Context and User Stories
     const plan = getValidPlan();
     const lines = plan.split(/\r?\n/);
-    const ctxIdx = lines.findIndex((l) => /^## Context\b/.test(l));
-    const usIdx = lines.findIndex((l) => /^## User Stories\b/.test(l));
-    const ucIdx = lines.findIndex((l) => /^## Use Cases\b/.test(l));
+    const ctxIdx = findSection(lines, 'Context');
+    const usIdx = findSection(lines, 'User Stories');
+    const ucIdx = lines.findIndex((l) => /^##\s+(?:\S+\s+)?Use Cases\b/.test(l));
     // Extract sections
     const ctxLines = lines.slice(ctxIdx, usIdx);
     const usLines = lines.slice(usIdx, ucIdx);
@@ -557,92 +570,34 @@ describe('PLUGIN007_16 Phase gating: validatePlan backward compatibility', () =>
 });
 
 // ---------------------------------------------------------------------------
-// @feature17: Plan-gate content-based scoring — extractFileChangePaths
+// @feature17: resolvePlanFile — deterministic plan file resolution
 // ---------------------------------------------------------------------------
 
-describe('PLUGIN007_17 extractFileChangePaths', () => {
-  it('extracts paths from File Changes table', () => {
-    const content = `## File Changes
-
-| Path | Action | Reason |
-|------|--------|--------|
-| \`extensions/plan-pomogator/tools/plan-pomogator/plan-gate.ts\` | edit | Add scoring |
-| \`tests/e2e/plan-validator.test.ts\` | edit | Add tests |
-| \`.dev-pomogator/tools/plan-pomogator/plan-gate.ts\` | edit | Deploy |
-`;
-    const paths = extractFileChangePaths(content);
-    expect(paths).toHaveLength(3);
-    expect(paths).toContain('extensions/plan-pomogator/tools/plan-pomogator/plan-gate.ts');
-    expect(paths).toContain('tests/e2e/plan-validator.test.ts');
-    expect(paths).toContain('.dev-pomogator/tools/plan-pomogator/plan-gate.ts');
+describe('PLUGIN007_17 resolvePlanFile', () => {
+  it('PLUGIN007_17_01: returns planFilePath when file exists', () => {
+    // Use a known existing file as test
+    const existingFile = path.resolve(__dirname, '../../extensions/plan-pomogator/tools/plan-pomogator/plan-gate.ts');
+    const result = resolvePlanFile({ planFilePath: existingFile });
+    expect(result).toBe(existingFile);
   });
 
-  it('returns empty array when no File Changes section', () => {
-    const content = '## User Stories\n\nSome content here';
-    expect(extractFileChangePaths(content)).toHaveLength(0);
+  it('PLUGIN007_17_02: returns null when planFilePath is missing', () => {
+    expect(resolvePlanFile({})).toBeNull();
+    expect(resolvePlanFile(undefined)).toBeNull();
+    expect(resolvePlanFile({ allowedPrompts: [] })).toBeNull();
   });
 
-  it('returns empty array for empty File Changes table', () => {
-    const content = `## File Changes
-
-| Path | Action | Reason |
-|------|--------|--------|
-`;
-    expect(extractFileChangePaths(content)).toHaveLength(0);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// @feature18: Plan-gate content-based scoring — scoreCandidate matching project
-// ---------------------------------------------------------------------------
-
-describe('PLUGIN007_18 scoreCandidate matching project', () => {
-  it('returns positive score for plan referencing existing project files', () => {
-    const content = `## File Changes
-
-| Path | Action | Reason |
-|------|--------|--------|
-| \`extensions/plan-pomogator/tools/plan-pomogator/plan-gate.ts\` | edit | Fix scoring |
-| \`package.json\` | edit | Update deps |
-`;
-    // cwd is this project's root — these files exist
-    const cwd = path.resolve(__dirname, '../..');
-    const score = scoreCandidate(content, cwd);
-    expect(score).toBeGreaterThan(0);
+  it('PLUGIN007_17_03: returns null when planFilePath points to non-existent file', () => {
+    const result = resolvePlanFile({ planFilePath: '/tmp/non-existent-plan-12345.md' });
+    expect(result).toBeNull();
   });
 
-  it('adds score for project basename mention', () => {
-    const cwd = path.resolve(__dirname, '../..');
-    const projectName = path.basename(cwd); // "dev-pomogator"
-    const content = `Working on ${projectName} project improvements.\n\n## File Changes\n\n| Path | Action | Reason |\n|------|--------|--------|\n`;
-    const score = scoreCandidate(content, cwd);
-    expect(score).toBe(5); // basename mention only, no existing file paths
-  });
-});
-
-// ---------------------------------------------------------------------------
-// @feature19: Plan-gate content-based scoring — scoreCandidate non-matching
-// ---------------------------------------------------------------------------
-
-describe('PLUGIN007_19 scoreCandidate non-matching project', () => {
-  it('returns zero for plan referencing files from a different project', () => {
-    const content = `## File Changes
-
-| Path | Action | Reason |
-|------|--------|--------|
-| \`src/controllers/zoho-inventory.ts\` | create | New controller |
-| \`lib/warehouse/bin-locations.py\` | edit | Add feature |
-`;
-    const cwd = path.resolve(__dirname, '../..');
-    const score = scoreCandidate(content, cwd);
-    expect(score).toBe(0);
-  });
-
-  it('returns zero when plan has no File Changes and no project name', () => {
-    const content = '## Context\n\nSome generic plan.\n\n## User Stories\n\nAs a user...';
-    const cwd = path.resolve(__dirname, '../..');
-    const score = scoreCandidate(content, cwd);
-    expect(score).toBe(0);
+  it('PLUGIN007_17_04: handles path with native separators', () => {
+    // On Windows, Claude Code sends backslash paths; on Linux, forward slashes.
+    // resolvePlanFile passes the path to fs.accessSync which handles both natively.
+    const existingFile = path.resolve(__dirname, '../../extensions/plan-pomogator/tools/plan-pomogator/plan-gate.ts');
+    const result = resolvePlanFile({ planFilePath: existingFile });
+    expect(result).toBe(existingFile);
   });
 });
 
@@ -704,5 +659,246 @@ describe('PLUGIN007_20 Rule contains pre-flight checklist', () => {
   // @feature1
   it('PLUGIN007_25: rule lists replace as destructive action', () => {
     expect(ruleContent).toContain('delete/rename/move/replace');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// @feature5: Phase 0 — Duplicate Detection
+// ---------------------------------------------------------------------------
+
+describe('PLUGIN007_27 checkDuplicatePlan', () => {
+  const tmpDir = path.join(os.tmpdir(), 'plan-gate-dup-test-' + Date.now());
+
+  afterEach(() => {
+    try { fs.rmSync(tmpDir, { recursive: true }); } catch { /* ok */ }
+  });
+
+  // @feature5
+  it('PLUGIN007_27: detects duplicate plan file', () => {
+    fs.mkdirSync(tmpDir, { recursive: true });
+    const content = '# Test Plan\n\n## Context\nSome content here.';
+    const planA = path.join(tmpDir, 'plan-a.md');
+    const planB = path.join(tmpDir, 'plan-b.md');
+    fs.writeFileSync(planA, content);
+    fs.writeFileSync(planB, content);
+
+    const result = checkDuplicatePlan(planA, content);
+    expect(result).toBe('plan-b.md');
+  });
+
+  // @feature5
+  it('PLUGIN007_28: returns null for unique plan', () => {
+    fs.mkdirSync(tmpDir, { recursive: true });
+    const planA = path.join(tmpDir, 'plan-a.md');
+    const planB = path.join(tmpDir, 'plan-b.md');
+    fs.writeFileSync(planA, '# Plan A unique content');
+    fs.writeFileSync(planB, '# Plan B different content');
+
+    const result = checkDuplicatePlan(planA, '# Plan A unique content');
+    expect(result).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// @feature6: Phase 2.5 — Prompt Relevance Gate
+// ---------------------------------------------------------------------------
+
+describe('PLUGIN007_29 scorePromptRelevance hard check', () => {
+  // @feature6
+  it('PLUGIN007_29: returns <= -20 for mismatched plan and prompts', () => {
+    const planContent = `## Context\n\n### Extracted Requirements\n1. Optimize Docker build caching for faster builds\n2. Split Dockerfile into base and application layers\n`;
+    const prompts = ['plan-gate anti-copy protection duplicate detection'];
+    const score = scorePromptRelevance(planContent, prompts);
+    expect(score).toBeLessThanOrEqual(-20);
+  });
+
+  // @feature6
+  it('PLUGIN007_30: returns > -20 for matching plan and prompts', () => {
+    const planContent = `## Context\n\n### Extracted Requirements\n1. Detect duplicate plan files via SHA-256 comparison\n2. Block plans with low prompt relevance overlap\n`;
+    const prompts = ['duplicate detection plan-gate SHA-256 comparison prompt relevance'];
+    const score = scorePromptRelevance(planContent, prompts);
+    expect(score).toBeGreaterThan(-20);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// @feature31: Phase 1 — changes: field required
+// ---------------------------------------------------------------------------
+describe('PLUGIN007_31 changes: field validation', () => {
+  // @feature31
+  it('PLUGIN007_31_01: should error when changes: is missing from todo', () => {
+    let plan = getValidPlan();
+    // Remove all lines containing "changes:" and sub-bullets
+    const lines = plan.split(/\r?\n/);
+    const filtered: string[] = [];
+    let skipBullets = false;
+    for (const line of lines) {
+      if (/\bchanges:\b/i.test(line)) {
+        skipBullets = true;
+        continue;
+      }
+      if (skipBullets && /^\s+-\s+/.test(line)) {
+        continue;
+      }
+      skipBullets = false;
+      filtered.push(line);
+    }
+    plan = filtered.join('\n');
+    const errors = validatePlan(writeTempPlan(plan));
+    const found = findErrors(errors, 'отсутствует changes:');
+    expect(found.length).toBeGreaterThan(0);
+    expect(found[0].hint).toContain('changes:');
+  });
+
+  // @feature31
+  it('PLUGIN007_31_02: should pass when changes: has concrete sub-bullets', () => {
+    const errors = validatePlan(FIXTURE_PATH);
+    expect(errors).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// @feature32: Phase 4 — Actionability warnings
+// ---------------------------------------------------------------------------
+describe('PLUGIN007_32 Actionability warnings (Phase 4)', () => {
+  // @feature32
+  it('PLUGIN007_32_01: should warn when changes: bullet is too short', () => {
+    let plan = getValidPlan();
+    // Replace first changes bullet with short text
+    plan = plan.replace(
+      /- Реализовать функцию `validateSections\(\)`.+$/m,
+      '- Обновить код',
+    );
+    const result = validatePlanPhased(writeTempPlan(plan));
+    expect(result.phase1).toHaveLength(0);
+    const found = findErrors(result.phase4, 'слишком краткий');
+    expect(found.length).toBeGreaterThan(0);
+  });
+
+  // @feature32
+  it('PLUGIN007_32_02: should warn when changes: bullet contains generic phrase', () => {
+    let plan = getValidPlan();
+    plan = plan.replace(
+      /- Реализовать функцию `validateSections\(\)`.+$/m,
+      '- Update logic and implement feature for the plan validation system module processing',
+    );
+    const result = validatePlanPhased(writeTempPlan(plan));
+    expect(result.phase1).toHaveLength(0);
+    const found = findErrors(result.phase4, 'generic фразу');
+    expect(found.length).toBeGreaterThan(0);
+  });
+
+  // @feature32
+  it('PLUGIN007_32_03: should warn when Implementation Plan step is too short', () => {
+    let plan = getValidPlan();
+    plan = plan.replace(
+      /1\. Создать `validate-plan\.ts`.+$/m,
+      '1. Добавить валидатор.',
+    );
+    const result = validatePlanPhased(writeTempPlan(plan));
+    const found = findErrors(result.phase4, 'Implementation Plan шаг слишком краткий');
+    expect(found.length).toBeGreaterThan(0);
+  });
+
+  // @feature32
+  it('PLUGIN007_32_04: should warn when File Changes Reason is too short', () => {
+    let plan = getValidPlan();
+    plan = plan.replace(
+      /Скрипт многофазной валидации.+\|/,
+      'Update. |',
+    );
+    const result = validatePlanPhased(writeTempPlan(plan));
+    const found = findErrors(result.phase4, 'File Changes Reason слишком краткий');
+    expect(found.length).toBeGreaterThan(0);
+  });
+
+  // @feature32
+  it('PLUGIN007_32_05: Phase 4 only runs when Phase 1-3 are clean', () => {
+    const plan = removeSection(getValidPlan(), 'User Stories');
+    const result = validatePlanPhased(writeTempPlan(plan));
+    expect(result.phase1.length).toBeGreaterThan(0);
+    expect(result.phase4).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// @feature36: Proactive-investigation rule content verification
+// ---------------------------------------------------------------------------
+
+describe('PLUGIN007_36: Proactive-investigation rule', () => {
+  const RULE_SOURCE = path.resolve(
+    __dirname,
+    '../../extensions/plan-pomogator/claude/rules/proactive-investigation.md',
+  );
+  const RULE_INSTALLED = path.resolve(
+    __dirname,
+    '../../.claude/rules/pomogator/proactive-investigation.md',
+  );
+  const ruleContent = fs.readFileSync(RULE_SOURCE, 'utf-8');
+
+  // @feature36
+  it('PLUGIN007_36_01: rule exists in source of truth', () => {
+    expect(fs.existsSync(RULE_SOURCE)).toBe(true);
+  });
+
+  // @feature36
+  it('PLUGIN007_36_02: rule exists in installed location', () => {
+    expect(fs.existsSync(RULE_INSTALLED)).toBe(true);
+  });
+
+  // @feature36
+  it('PLUGIN007_36_03: rule contains banned phrases', () => {
+    expect(ruleContent).toContain('ЗАПРЕЩЕНО');
+    expect(ruleContent).toContain('Посмотреть?');
+    expect(ruleContent).toContain('Проверить?');
+    expect(ruleContent).toContain('Хотите чтобы я проверил?');
+  });
+
+  // @feature36
+  it('PLUGIN007_36_04: rule contains evidence format table', () => {
+    expect(ruleContent).toContain('Evidence формат');
+    expect(ruleContent).toContain('grep');
+    expect(ruleContent).toContain('скриншот');
+    expect(ruleContent).toContain('UNVERIFIED');
+  });
+
+  // @feature36
+  it('PLUGIN007_36_05: extension manifest includes proactive-investigation', () => {
+    const manifestPath = path.resolve(
+      __dirname,
+      '../../extensions/plan-pomogator/extension.json',
+    );
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+    expect(manifest.rules.claude).toContain('claude/rules/proactive-investigation.md');
+  });
+
+  // @feature36
+  it('PLUGIN007_36_06: rule is under 80 lines', () => {
+    const lineCount = ruleContent.split('\n').length;
+    expect(lineCount).toBeLessThan(80);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// @feature42: Installer normalizes array matcher to pipe string
+// ---------------------------------------------------------------------------
+
+describe('PLUGIN007_42: Installer normalizes array matcher to pipe string', () => {
+  it('PLUGIN007_42_01: extension.json claude hooks contain PreToolUse and UserPromptSubmit', () => {
+    const manifestPath = path.resolve(
+      __dirname,
+      '../../extensions/plan-pomogator/extension.json',
+    );
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+    const claudeHooks = manifest.hooks?.claude;
+
+    // Verify plan-pomogator hooks: PreToolUse for ExitPlanMode, UserPromptSubmit for prompt-capture
+    // PostToolUse for mark-plan-session was removed (planFilePath is now deterministic)
+    expect(claudeHooks).toBeDefined();
+    expect(claudeHooks.PreToolUse).toBeDefined();
+    expect(claudeHooks.PreToolUse.matcher).toBe('ExitPlanMode');
+    expect(claudeHooks.UserPromptSubmit).toBeDefined();
+    // PostToolUse hook for mark-plan-session.sh was removed
+    expect(claudeHooks.PostToolUse).toBeUndefined();
   });
 });

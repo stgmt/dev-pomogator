@@ -11,17 +11,21 @@ export interface ValidationError {
 export interface ValidationResult {
   phase1: ValidationError[];
   phase2: ValidationError[];
+  phase3: ValidationError[];
+  phase4: ValidationError[];
 }
 
-const REQUIRED_SECTIONS: Array<{ name: string; regex: RegExp }> = [
-  { name: 'Context', regex: /^##\s+Context\s*$/ },
-  { name: 'User Stories', regex: /^##\s+User Stories\s*$/ },
-  { name: 'Use Cases', regex: /^##\s+Use Cases\s*$/ },
-  { name: 'Requirements', regex: /^##\s+Requirements\s*$/ },
-  { name: 'Implementation Plan', regex: /^##\s+Implementation Plan\s*$/ },
-  { name: 'Todos', regex: /^##\s+Todos\s*$/ },
-  { name: 'Definition of Done', regex: /^##\s+Definition of Done\b.*$/ },
-  { name: 'File Changes', regex: /^##\s+File Changes\b.*$/ },
+// Emoji prefixes are optional in section headings (e.g. "## 🎯 Context" or "## Context")
+// Emoji prefixes match concrete emojis from template.md (source of truth)
+export const REQUIRED_SECTIONS: Array<{ name: string; regex: RegExp }> = [
+  { name: 'Context', regex: /^##\s+(?:🎯\s+)?Context\s*$/ },
+  { name: 'User Stories', regex: /^##\s+(?:👤\s+)?User Stories\s*$/ },
+  { name: 'Use Cases', regex: /^##\s+(?:🔀\s+)?Use Cases\s*$/ },
+  { name: 'Requirements', regex: /^##\s+(?:📐\s+)?Requirements\s*$/ },
+  { name: 'Implementation Plan', regex: /^##\s+(?:🔧\s+)?Implementation Plan\s*$/ },
+  { name: 'Todos', regex: /^##\s+(?:📋\s+)?Todos\s*$/ },
+  { name: 'Definition of Done', regex: /^##\s+(?:✅\s+)?Definition of Done\b.*$/ },
+  { name: 'File Changes', regex: /^##\s+(?:📁\s+)?File Changes\b.*$/ },
 ];
 
 const SECTION_ORDER_HINT = 'Порядок: ' + REQUIRED_SECTIONS.map((s) => s.name).join(' → ');
@@ -49,7 +53,7 @@ function addError(errors: ValidationError[], lineIndex: number, message: string,
   errors.push({ line: Math.max(1, lineIndex + 1), message, hint });
 }
 
-function findHeadingIndex(lines: string[], regex: RegExp): number {
+export function findHeadingIndex(lines: string[], regex: RegExp): number {
   return lines.findIndex((line) => regex.test(line.trim()));
 }
 
@@ -140,6 +144,19 @@ function validateRequirements(lines: string[], indices: Map<string, number>, err
   }
 }
 
+/**
+ * Extract todo ID from heading format: `### 📋 \`my-task-id\`` or `### \`my-task-id\``
+ * Uses strict kebab-case: no trailing hyphens, no consecutive hyphens.
+ */
+function extractTodoId(line: string): string | null {
+  const match = line.match(/^###\s+(?:\S+\s+)?`([a-z0-9]+(?:-[a-z0-9]+)*)`\s*$/);
+  return match ? match[1] : null;
+}
+
+function isTodoStart(line: string): boolean {
+  return extractTodoId(line) !== null;
+}
+
 function validateTodos(lines: string[], indices: Map<string, number>, errors: ValidationError[]): void {
   const todosIndex = indices.get('Todos');
   if (todosIndex === undefined) {
@@ -149,73 +166,52 @@ function validateTodos(lines: string[], indices: Map<string, number>, errors: Va
   const { start, end } = getSectionRange(lines, todosIndex);
   const sectionLines = lines.slice(start, end);
 
-  const indentHint = 'Добавь отступ 2+ пробела: "  description: ..." / "  dependencies: ..."';
-
   let hasTodo = false;
-  // Catch top-level (no indentation) description/dependencies outside of any todo block
-  for (let i = 0; i < sectionLines.length; i += 1) {
-    const line = sectionLines[i];
-    if (/^description:/.test(line) || /^dependencies:/.test(line)) {
-      addError(errors, start + i, 'description/dependencies должны быть вложенными строками', indentHint);
-    }
-  }
 
   for (let i = 0; i < sectionLines.length; i += 1) {
     const line = sectionLines[i];
-    const idMatch = line.match(/^- id:\s+([a-z0-9][a-z0-9-]*)\s*$/);
-    if (!idMatch) {
+    const todoId = extractTodoId(line);
+    if (!todoId) {
       continue;
     }
     hasTodo = true;
-    const todoId = idMatch[1];
-    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(todoId)) {
-      addError(errors, start + i, `Некорректный id в Todos: ${todoId}`, 'id в kebab-case: a-z, 0-9, дефис (например: my-task-1)');
-    }
 
-    let hasDescription = false;
-    let hasDependencies = false;
-    let descriptionLine = '';
+    // Find todo block boundaries (until next todo start)
     const nextTodoIndex = sectionLines
       .slice(i + 1)
-      .findIndex((nextLine) => /^- id:\s+/.test(nextLine));
+      .findIndex((nextLine) => isTodoStart(nextLine));
     const todoEnd = nextTodoIndex === -1 ? sectionLines.length : i + 1 + nextTodoIndex;
 
-    for (let j = i + 1; j < todoEnd; j += 1) {
-      const todoLine = sectionLines[j];
-      if (/^\s{2,}description:/.test(todoLine)) {
-        hasDescription = true;
-        descriptionLine = todoLine;
-      }
-      if (/^\s{2,}dependencies:/.test(todoLine)) {
-        hasDependencies = true;
-      }
-      // Catch description/dependencies with insufficient indentation (but not zero — that's caught above)
-      if (/^\s?description:/.test(todoLine) && !/^\s{2,}description:/.test(todoLine)) {
-        addError(errors, start + j, 'description должна быть вложенной строкой', indentHint);
-      }
-      if (/^\s?dependencies:/.test(todoLine) && !/^\s{2,}dependencies:/.test(todoLine)) {
-        addError(errors, start + j, 'dependencies должны быть вложенной строкой', indentHint);
-      }
-    }
+    const blockLines = sectionLines.slice(i + 1, todoEnd);
+
+    // Blockquote description + list items for fields (non-blockquote lines)
+    const hasDescription = blockLines.some((l) => /^>\s+\S/.test(l));
+    const fieldLines = blockLines.filter((l) => !l.startsWith('>'));
+    const fieldText = fieldLines.join('\n').toLowerCase();
+    const hasFiles = /\bfiles:/.test(fieldText);
+    const hasRefs = /\brefs:/.test(fieldText);
+    const hasChanges = /\bchanges:/.test(fieldText);
+    const hasDeps = /\bdeps:/.test(fieldText);
 
     if (!hasDescription) {
-      addError(errors, start + i, `Для todo "${todoId}" отсутствует description`, 'Добавь:   description: ...; files: ...; Requirements refs: ...');
-    } else {
-      if (!descriptionLine.includes('files:')) {
-        addError(errors, start + i, `В description todo "${todoId}" отсутствует files:`, 'Добавь files: в description (например: files: edit src/module.ts)');
-      }
-      if (!descriptionLine.toLowerCase().includes('requirements refs:')) {
-        addError(errors, start + i, `В description todo "${todoId}" отсутствует Requirements refs:`, 'Добавь Requirements refs: в description (например: Requirements refs: FR-1)');
-      }
+      addError(errors, start + i, `Для todo "${todoId}" отсутствует description`, 'Добавь описание в blockquote: > описание задачи');
     }
-
-    if (!hasDependencies) {
-      addError(errors, start + i, `Для todo "${todoId}" отсутствует dependencies`, 'Добавь:   dependencies: [] или dependencies: [other-task]');
+    if (!hasFiles) {
+      addError(errors, start + i, `В todo "${todoId}" отсутствует files:`, 'Добавь: - **files:** `path` *(action)*');
+    }
+    if (!hasChanges) {
+      addError(errors, start + i, `В todo "${todoId}" отсутствует changes:`, 'Добавь: - **changes:** с конкретными изменениями (что найти/добавить/удалить)');
+    }
+    if (!hasRefs) {
+      addError(errors, start + i, `В todo "${todoId}" отсутствует refs:`, 'Добавь: - **refs:** FR-1');
+    }
+    if (!hasDeps) {
+      addError(errors, start + i, `Для todo "${todoId}" отсутствует deps:`, 'Добавь: - **deps:** *none* или - **deps:** `other-task`');
     }
   }
 
   if (!hasTodo) {
-    addError(errors, start, 'Секция Todos не содержит ни одной задачи', 'Добавь задачу: - id: my-task (формат: см. template.md)');
+    addError(errors, start, 'Секция Todos не содержит ни одной задачи', 'Добавь задачу: ### 📋 `my-task` (формат: см. template.md)');
   }
 }
 
@@ -416,25 +412,234 @@ function validateContextContent(lines: string[], indices: Map<string, number>, e
   }
 }
 
+const CROSS_REF_THRESHOLD = 0.5; // >50% of File Changes paths must be mentioned in plan body
+
+/**
+ * Phase 3: Cross-reference validation.
+ * Checks that File Changes paths are actually mentioned in the plan body
+ * (Implementation Plan, Todos, Context, Requirements sections).
+ * Detects stale/contaminated plans where File Changes come from a previous task.
+ */
+function validateCrossReferences(lines: string[], indices: Map<string, number>, errors: ValidationError[]): void {
+  const parsed = parseFileChangesTable(lines, indices);
+  if (!parsed || parsed.rows.length === 0) return;
+
+  const fileChangesIndex = indices.get('File Changes') ?? lines.length;
+  const bodyLines = lines.slice(0, fileChangesIndex);
+  const bodyText = bodyLines.join('\n').toLowerCase();
+
+  const unmentioned: string[] = [];
+
+  for (const row of parsed.rows) {
+    const filePath = row.path.toLowerCase();
+    if (!filePath || filePath === 'tbd') continue;
+
+    const baseName = path.basename(filePath).toLowerCase();
+
+    // Check if full path or basename appears in plan body
+    const fullPathFound = bodyText.includes(filePath);
+    const baseNameFound = baseName.length >= 2 && bodyText.includes(baseName);
+
+    if (!fullPathFound && !baseNameFound) {
+      unmentioned.push(row.path);
+    }
+  }
+
+  const totalPaths = parsed.rows.filter((r) => r.path && r.path.toLowerCase() !== 'tbd').length;
+  if (totalPaths === 0) return;
+
+  const unmentionedRatio = unmentioned.length / totalPaths;
+
+  if (unmentionedRatio > CROSS_REF_THRESHOLD) {
+    const pathList = unmentioned.slice(0, 5).join(', ');
+    const more = unmentioned.length > 5 ? ` (и ещё ${unmentioned.length - 5})` : '';
+    addError(
+      errors,
+      parsed.sectionStart,
+      `Потенциальная контаминация: ${unmentioned.length} из ${totalPaths} путей в File Changes не упомянуты в плане: ${pathList}${more}`,
+      'Проверь что File Changes относится к текущей задаче. Каждый путь должен быть в Implementation Plan или Todos.',
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Phase 4: Actionability validation (warnings, non-blocking)
+// ---------------------------------------------------------------------------
+
+const GENERIC_PHRASES = [
+  'update logic', 'fix code', 'edit file', 'implement feature',
+  'add support', 'modify file', 'change code', 'update file',
+  'make changes', 'adjust code', 'обновить логику', 'изменить файл',
+  'добавить поддержку', 'исправить код',
+];
+
+const MIN_CHANGES_WORDS = 10;
+const MIN_IMPL_STEP_WORDS = 12;
+const MIN_REASON_WORDS = 5;
+
+function countWords(text: string): number {
+  return text.trim().split(/\s+/).filter(Boolean).length;
+}
+
+function containsGenericPhrase(text: string): boolean {
+  const lower = text.toLowerCase();
+  return GENERIC_PHRASES.some((phrase) => lower.includes(phrase));
+}
+
+function validateTodoChangesContent(
+  lines: string[], indices: Map<string, number>, warnings: ValidationError[],
+): void {
+  const todosIndex = indices.get('Todos');
+  if (todosIndex === undefined) return;
+
+  const { start, end } = getSectionRange(lines, todosIndex);
+  const sectionLines = lines.slice(start, end);
+
+  for (let i = 0; i < sectionLines.length; i += 1) {
+    const todoId = extractTodoId(sectionLines[i]);
+    if (!todoId) continue;
+
+    const nextTodoIdx = sectionLines.slice(i + 1).findIndex((l) => isTodoStart(l));
+    const todoEnd = nextTodoIdx === -1 ? sectionLines.length : i + 1 + nextTodoIdx;
+    const blockLines = sectionLines.slice(i + 1, todoEnd);
+
+    // Find changes: field
+    let changesFieldIdx = -1;
+    for (let j = 0; j < blockLines.length; j += 1) {
+      if (/\bchanges:/i.test(blockLines[j])) {
+        changesFieldIdx = j;
+        break;
+      }
+    }
+    if (changesFieldIdx === -1) continue; // Phase 1 handles missing changes:
+
+    // Collect sub-bullets (indented lines starting with -)
+    const bullets: { text: string; lineIdx: number }[] = [];
+    for (let j = changesFieldIdx + 1; j < blockLines.length; j += 1) {
+      const bLine = blockLines[j];
+      if (/^\s+-\s+/.test(bLine)) {
+        bullets.push({ text: bLine.replace(/^\s+-\s+/, '').trim(), lineIdx: start + i + 1 + j });
+      } else if (/^\s*-\s*\*\*\w+:\*\*/.test(bLine) || bLine.trim() === '' || bLine.trim() === '---') {
+        break;
+      }
+    }
+
+    if (bullets.length === 0) {
+      addError(warnings, start + i, `Todo "${todoId}" имеет пустое changes: без конкретных изменений`,
+        'Добавь sub-bullets: - {конкретное изменение}');
+      continue;
+    }
+
+    for (const bullet of bullets) {
+      const wc = countWords(bullet.text);
+      if (wc < MIN_CHANGES_WORDS) {
+        addError(warnings, bullet.lineIdx,
+          `Todo changes bullet слишком краткий (${wc} слов, мин. ${MIN_CHANGES_WORDS})`,
+          'Опиши конкретно: что найти, что добавить/удалить/заменить, в какой функции/секции');
+      }
+      if (containsGenericPhrase(bullet.text)) {
+        addError(warnings, bullet.lineIdx,
+          'Todo changes bullet содержит generic фразу',
+          'Замени на конкретное описание изменения (файл, функция, что именно менять)');
+      }
+    }
+  }
+}
+
+function validateImplStepDetail(
+  lines: string[], indices: Map<string, number>, warnings: ValidationError[],
+): void {
+  const implIndex = indices.get('Implementation Plan');
+  if (implIndex === undefined) return;
+
+  const { start, end } = getSectionRange(lines, implIndex);
+  for (let i = start + 1; i < end; i += 1) {
+    const line = lines[i].trim();
+    const match = line.match(/^\d+\.\s+(.+)$/);
+    if (!match) continue;
+
+    const stepText = match[1];
+    const wc = countWords(stepText);
+    if (wc < MIN_IMPL_STEP_WORDS) {
+      addError(warnings, i,
+        `Implementation Plan шаг слишком краткий (${wc} слов, мин. ${MIN_IMPL_STEP_WORDS})`,
+        'Опиши шаг подробнее: что, где, как, зачем');
+    }
+    if (containsGenericPhrase(stepText)) {
+      addError(warnings, i,
+        'Implementation Plan шаг содержит generic фразу',
+        'Замени "update logic" / "fix code" на конкретное описание');
+    }
+  }
+}
+
+function validateFileChangesReasonQuality(
+  lines: string[], indices: Map<string, number>, warnings: ValidationError[],
+): void {
+  const fileChangesIndex = indices.get('File Changes');
+  if (fileChangesIndex === undefined) return;
+
+  const { start } = getSectionRange(lines, fileChangesIndex);
+  const sectionEnd = nextHeadingIndex(lines, fileChangesIndex, /^##\s+/);
+  const sectionLines = lines.slice(start, sectionEnd);
+
+  const headerIndex = sectionLines.findIndex((line) =>
+    /^\|\s*Path\s*\|\s*Action\s*\|\s*Reason\s*\|/.test(line.trim()),
+  );
+  if (headerIndex === -1) return;
+
+  const afterSeparator = sectionLines.slice(headerIndex + 2);
+  for (let i = 0; i < afterSeparator.length; i += 1) {
+    if (!afterSeparator[i].includes('|')) continue;
+    const columns = afterSeparator[i].split('|').map((c) => c.trim()).filter(Boolean);
+    if (columns.length < 3) continue;
+    const reason = columns[2].replace(/`/g, '');
+    const lineIdx = start + headerIndex + 2 + i;
+    const wc = countWords(reason);
+
+    if (wc < MIN_REASON_WORDS) {
+      addError(warnings, lineIdx,
+        `File Changes Reason слишком краткий (${wc} слов, мин. ${MIN_REASON_WORDS})`,
+        'Опиши зачем файл меняется, не только "Update."');
+    }
+    if (containsGenericPhrase(reason)) {
+      addError(warnings, lineIdx,
+        'File Changes Reason содержит generic фразу',
+        'Замени на конкретное описание причины');
+    }
+  }
+}
+
+function validateActionability(
+  lines: string[], indices: Map<string, number>, warnings: ValidationError[],
+): void {
+  validateTodoChangesContent(lines, indices, warnings);
+  validateImplStepDetail(lines, indices, warnings);
+  validateFileChangesReasonQuality(lines, indices, warnings);
+}
+
 /**
  * Validate plan with two-phase approach:
  * - Phase 1: Structural validation (sections, format, tables)
  * - Phase 2: Context content validation (only when Phase 1 is clean)
+ * - Phase 3: Cross-reference validation (only when Phase 1+2 are clean)
  *
  * Returns flat error array for backward compatibility.
  */
 export function validatePlan(filePath: string): ValidationError[] {
   const result = validatePlanPhased(filePath);
-  return result.phase1.length > 0 ? result.phase1 : result.phase2;
+  if (result.phase1.length > 0) return result.phase1;
+  if (result.phase2.length > 0) return result.phase2;
+  return result.phase3;
 }
 
 /**
  * Validate plan returning Phase 1 and Phase 2 errors separately.
  * Phase 2 only runs when Phase 1 has 0 errors.
  */
-export function validatePlanPhased(filePath: string): ValidationResult {
+export function validatePlanPhased(filePathOrLines: string | string[]): ValidationResult {
   const phase1: ValidationError[] = [];
-  const lines = readFileLines(filePath);
+  const lines = Array.isArray(filePathOrLines) ? filePathOrLines : readFileLines(filePathOrLines);
 
   const indices = validateSections(lines, phase1);
   validateRequirements(lines, indices, phase1);
@@ -449,7 +654,19 @@ export function validatePlanPhased(filePath: string): ValidationResult {
     validateContextContent(lines, indices, phase2);
   }
 
-  return { phase1, phase2 };
+  // Phase 3: only when Phase 1+2 are clean
+  const phase3: ValidationError[] = [];
+  if (phase1.length === 0 && phase2.length === 0) {
+    validateCrossReferences(lines, indices, phase3);
+  }
+
+  // Phase 4: actionability warnings (only when Phase 1+2+3 are clean)
+  const phase4: ValidationError[] = [];
+  if (phase1.length === 0 && phase2.length === 0 && phase3.length === 0) {
+    validateActionability(lines, indices, phase4);
+  }
+
+  return { phase1, phase2, phase3, phase4 };
 }
 
 function printUsage(): void {
@@ -473,10 +690,14 @@ function main(): void {
     }
 
     const result = validatePlanPhased(resolvedPath);
-    const errors = result.phase1.length > 0 ? result.phase1 : result.phase2;
+    const errors = result.phase1.length > 0 ? result.phase1
+      : result.phase2.length > 0 ? result.phase2
+      : result.phase3;
     if (errors.length > 0) {
       hasErrors = true;
-      const phase = result.phase1.length > 0 ? 'Phase 1 (структура)' : 'Phase 2 (требования)';
+      const phase = result.phase1.length > 0 ? 'Phase 1 (структура)'
+        : result.phase2.length > 0 ? 'Phase 2 (требования)'
+        : 'Phase 3 (кросс-ссылки)';
       console.error(`${phase} ошибки в плане: ${resolvedPath}`);
       for (const error of errors) {
         console.error(`  line ${error.line}: ${error.message}`);
@@ -484,7 +705,16 @@ function main(): void {
       }
       console.error('');
     } else {
-      console.log(`OK: ${resolvedPath}`);
+      if (result.phase4.length > 0) {
+        console.warn(`Phase 4 (actionability) предупреждения: ${resolvedPath}`);
+        for (const warning of result.phase4) {
+          console.warn(`  line ${warning.line}: ${warning.message}`);
+          console.warn(`    💡 ${warning.hint}`);
+        }
+        console.log(`OK (${result.phase4.length} warnings): ${resolvedPath}`);
+      } else {
+        console.log(`OK: ${resolvedPath}`);
+      }
     }
   }
 

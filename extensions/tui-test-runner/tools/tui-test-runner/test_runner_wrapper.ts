@@ -204,7 +204,8 @@ async function main(): Promise<number> {
 
   const prefix = SESSION.length >= 8 ? SESSION.slice(0, 8) : SESSION;
   const projectRoot = path.resolve(PROJECT);
-  const statusDir = path.join(projectRoot, '.dev-pomogator', '.test-status');
+  const statusDirRel = process.env.TEST_STATUS_DIR || '.dev-pomogator/.test-status';
+  const statusDir = path.join(projectRoot, statusDirRel);
   const statusFile = path.join(statusDir, `status.${prefix}.yaml`);
   const logFile = path.join(statusDir, `test.${prefix}.log`);
   const logFileForYaml = path.posix.join('.dev-pomogator', '.test-status', `test.${prefix}.log`);
@@ -221,6 +222,52 @@ async function main(): Promise<number> {
     writer.setDiscoveryTotal(discoveryTotal);
   }
   writer.write();
+
+  // Centralized marker creation (Task Pattern: wrapper = sole lifecycle owner)
+  // Session prefix from session.env (single source of truth, written by SessionStart hook)
+  const markerDir = path.join(projectRoot, '.dev-pomogator');
+  let sessionPrefix = '';
+  try {
+    const sessionEnvPath = path.join(markerDir, '.test-status', 'session.env');
+    const envContent = fs.readFileSync(sessionEnvPath, 'utf-8');
+    const match = envContent.match(/^TEST_STATUSLINE_SESSION=(.+)$/m);
+    if (match) sessionPrefix = match[1].trim();
+  } catch { /* no session.env — use legacy marker */ }
+
+  const markerName = sessionPrefix ? `.bg-task-active.${sessionPrefix}` : '.bg-task-active';
+  const markerPath = path.join(markerDir, markerName);
+
+  // Zombie cleanup: if existing marker has dead PID → delete before creating new
+  try {
+    if (fs.existsSync(markerPath)) {
+      const existing = fs.readFileSync(markerPath, 'utf-8').trim();
+      const existingPid = parseInt(existing.split(' ')[0], 10);
+      if (existingPid && existingPid !== process.pid) {
+        try { process.kill(existingPid, 0); } catch {
+          // PID dead → stale marker
+          fs.unlinkSync(markerPath);
+          process.stderr.write(`[marker] CLEANED stale marker pid=${existingPid}\n`);
+        }
+      }
+    }
+  } catch { /* ignore */ }
+
+  try {
+    fs.mkdirSync(markerDir, { recursive: true });
+    fs.writeFileSync(markerPath, `${process.pid} ${new Date().toISOString()}\n`);
+    process.stderr.write(`[marker] CREATED ${markerPath} pid=${process.pid}\n`);
+  } catch { /* fail-open: marker is best-effort */ }
+
+  // Cleanup marker on exit (normal + crash + signal)
+  const cleanupMarker = (reason: string) => {
+    try {
+      fs.unlinkSync(markerPath);
+      process.stderr.write(`[marker] DELETED ${markerPath} reason=${reason}\n`);
+    } catch { /* ignore */ }
+  };
+  process.on('exit', (code) => cleanupMarker(`exit(${code})`));
+  process.on('SIGTERM', () => { cleanupMarker('SIGTERM'); process.exit(143); });
+  process.on('SIGINT', () => { cleanupMarker('SIGINT'); process.exit(130); });
 
   let adapter;
   try {
@@ -269,6 +316,7 @@ async function main(): Promise<number> {
     }
 
     if (changed) {
+      writer.markRunning(); // building → running on first test event
       writer.writeIfNeeded();
     }
   };

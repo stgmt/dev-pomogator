@@ -27,9 +27,9 @@
 
 ## Обязательная структура плана (шаблон)
 
-План должен быть в Markdown и содержать секции **в этом порядке**:
+План должен быть в Markdown и содержать секции **в этом порядке**. Каждая секция использует emoji-заголовок:
 
-1. **User Stories**
+1. **👤 User Stories**
    - Список user stories в формате "Как {роль}, я хочу {цель}, чтобы {ценность}".
 
 2. **Use Cases**
@@ -71,21 +71,33 @@
    - Если план содержит только `create`/`edit` — секция может содержать `N/A — нет удалений/переименований`.
    - **ЗАПРЕЩЕНО**: формировать File Changes без предварительного Impact Analysis для планов с удалениями/переименованиями.
 
-6. **Todos**
-   - Список задач с уникальными идентификаторами в `kebab-case`.
-   - У каждой задачи должны быть:
-     - `id`
-     - `description`
-     - `dependencies` (если есть)
-   - `description` и `dependencies` должны быть **вложенными строками** (с отступом).
+6. **📋 Todos**
+   - Каждая задача — отдельный `### 📋 \`todo-id\`` блок с уникальным id в `kebab-case`.
+   - Блоки разделяются `---` (горизонтальная линия).
+   - Формат каждого блока:
+     - `### 📋 \`todo-id\`` — заголовок с id в backticks
+     - `> описание` — blockquote с описанием задачи
+     - `- **files:** \`path\` *(action)*` — файлы и действия
+     - `- **changes:**` — **ОБЯЗАТЕЛЬНО**: конкретные изменения (sub-bullets: что найти/добавить/удалить/заменить)
+     - `- **refs:** FR-1, NFR-Usability` — ссылки на требования
+     - `- **leverage:** \`path/to/reuse\`` — что переиспользуем (опционально)
+     - `- **deps:** *none*` или `- **deps:** \`other-task\`` — зависимости
+   - **Пример `changes:` (хорошо):**
+     ```
+     - **changes:**
+       - Добавить функцию `validateActionability(lines, indices, warnings)` после `validateCrossReferences` — проверяет word count и generic phrases
+       - В `validateTodos()` добавить проверку `hasChanges` по аналогии с `hasFiles`/`hasRefs`/`hasDeps`
+     ```
+   - **Пример `changes:` (плохо):**
+     ```
+     - **changes:**
+       - Обновить логику
+       - Изменить файл
+     ```
    - **Atomic Task Requirements (обязательно)**:
      - 1–3 файла на задачу
      - 15–30 минут на задачу (ориентир)
      - 1 проверяемый outcome
-   - В описании каждой задачи обязательно указывать:
-     - **files**: пути + действия (`create/edit/delete/rename/move/replace`)
-     - **Requirements refs**: ссылки на требования из секции Requirements (например `_Requirements: FR-1, NFR-Security-2_`)
-     - **Leverage** (если применимо): `_Leverage: path/to/file1, path/to/file2_`
 
 7. **Definition of Done (DoD)**
    - Критерии готовности: реализация соответствует Requirements/Use Cases, обновлены конфиги/документация при необходимости, нет утечек секретов, выполнены проверки/тест-план (в рамках правил репозитория).
@@ -106,7 +118,7 @@
 
 Пример (корректно):
 ```markdown
-## File Changes
+## 📁 File Changes
 | Path | Action | Reason |
 |------|--------|--------|
 | `.dev-pomogator/tools/plan-pomogator/requirements.md` | create | Зафиксировать требования к формату планов с примерами good/bad. |
@@ -114,7 +126,7 @@
 
 Пример (некорректно — пустая таблица):
 ```markdown
-## File Changes
+## 📁 File Changes
 | Path | Action | Reason |
 |------|--------|--------|
 ```
@@ -132,18 +144,32 @@
 - Минимум 2 нумерованных пункта (`1. ...`, `2. ...`)
 - Пункты извлекаются из сообщений пользователя в текущем диалоге
 
+## Phase 4: Actionability (предупреждения)
+
+После прохождения Phase 1-3 (0 ошибок), валидатор проверяет качество описаний:
+- Каждый todo имеет `changes:` с минимум 1 sub-bullet
+- Каждый changes bullet содержит минимум 10 слов
+- Implementation Plan шаги содержат минимум 12 слов
+- File Changes Reason содержит минимум 5 слов
+- Нет generic фраз ("update logic", "fix code", "edit file", "implement feature", "modify file", ...)
+
+Phase 4 выдаёт **предупреждения** (не блокирует ExitPlanMode).
+
 ## Pre-flight Checklist (перед ExitPlanMode)
 
-- [ ] 9 секций в порядке: Context → User Stories → Use Cases → Requirements → Implementation Plan → Impact Analysis → Todos → DoD → File Changes
+- [ ] 9 секций с emoji в порядке: 🎯 Context → 👤 User Stories → 🔀 Use Cases → 📐 Requirements → 🔧 Implementation Plan → 💥 Impact Analysis → 📋 Todos → ✅ DoD → 📁 File Changes
 - [ ] Context → `### Extracted Requirements` → ≥2 нумерованных пунктов (`1. ...`, `2. ...`)
 - [ ] Requirements: `### FR` → `### Acceptance Criteria (EARS)` → `### NFR` (Performance, Security, Reliability, Usability) → `### Assumptions`
-- [ ] Todos: `- id:` kebab-case + `  description:` (files: + Requirements refs: на одной строке через `;`) + `  dependencies:` — отступ ≥2 пробела
+- [ ] Todos: `### 📋 \`todo-id\`` + `> описание` + `- **files:**` + `- **changes:**` + `- **refs:**` + `- **deps:**` — блоки разделены `---`
+- [ ] Todos: каждый todo содержит `- **changes:**` с конкретными sub-bullets (что найти/добавить/удалить/заменить)
 - [ ] DoD → `### Verification Plan` → `Automated Tests:` → `- `команда`` (в backticks, формат: `- `...``)
 - [ ] File Changes: `| Path | Action | Reason |` — ≥1 строка данных, относительные пути, ПОСЛЕДНЯЯ секция
-- [ ] Если delete/rename/move/replace → `## Impact Analysis` с таблицей Keyword/Files/Action (не N/A)
+- [ ] Если delete/rename/move/replace → `## 💥 Impact Analysis` с таблицей Keyword/Files/Action (не N/A)
+- [ ] Каждый путь в File Changes упомянут в Implementation Plan или Todos (нет stale путей от других планов)
 
 ## Запреты и ограничения
 
 - НЕ вставляй в планы/примеры секреты (логины, пароли, токены).
 - Не предлагай отключать фичи/тесты/ставить ignore вместо исправления.
 - Следуй существующим правилам репозитория (TDD, fail-fast, без моков для E2E и т.п.).
+- НЕ копируй File Changes, Requirements или Implementation Plan из предыдущих планов. Каждый план создаётся С НУЛЯ для текущей задачи. См. `plan-freshness.md`.

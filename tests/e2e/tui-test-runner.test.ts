@@ -131,6 +131,7 @@ describe('PLUGIN012: TUI Test Runner', () => {
       const suiteFile = String.raw`C:\repo\tests\auth.test.ts`;
       const writer = new YamlWriter(statusPath, 'abc12345', 'vitest', logPath, 0, 4321);
       writer.setDiscoveryTotal(2); // simulate pre-discovery found 2 tests
+      writer.markRunning(); // simulate wrapper transition building → running
 
       writer.processEvent({
         type: 'suite_start',
@@ -229,6 +230,7 @@ describe('PLUGIN012: TUI Test Runner', () => {
       const statusPath = appPath(STATUS_DIR, 'status.discovery.yaml');
       const writer = new YamlWriter(statusPath, 'discov01', 'vitest', 'log.txt', 0, 9999);
       writer.setDiscoveryTotal(100);
+      writer.markRunning(); // simulate wrapper transition building → running
       writer.processEvent({
         type: 'test_pass',
         suiteName: 'suite',
@@ -254,6 +256,7 @@ describe('PLUGIN012: TUI Test Runner', () => {
 
       const statusPath = appPath(STATUS_DIR, 'status.nodiscovery.yaml');
       const writer = new YamlWriter(statusPath, 'nodisc01', 'vitest', 'log.txt', 0, 9999);
+      writer.markRunning(); // simulate wrapper transition building → running
       // No setDiscoveryTotal() call
       writer.processEvent({
         type: 'test_pass',

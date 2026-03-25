@@ -5,19 +5,23 @@
 - [FR-1: PostToolUse marker creation](FR.md#fr-1-posttooluse-marker-creation-feature1)
 - [FR-2: Stop hook блокировка](FR.md#fr-2-stop-hook-блокировка-при-активном-marker-feature1)
 - [FR-3: TTL expire маркера](FR.md#fr-3-ttl-expire-маркера-feature2)
+- [FR-5: Auto-cleanup marker](FR.md#fr-5-auto-cleanup-marker-при-завершении-background-task-feature3)
+- [FR-5: Auto-cleanup marker](FR.md#fr-5-auto-cleanup-marker-при-завершении-background-task-feature3)
 - [FR-4: Fail-open](FR.md#fr-4-fail-open-при-ошибках-hook-feature1)
 
 ## Компоненты
 
-- `mark-bg-task.sh` — PostToolUse hook: парсит stdin JSON, ищет "Command running in background" в stdout, создаёт marker
-- `stop-guard.sh` — Stop hook: проверяет marker, если < 15 мин → block, иначе → approve
+- `test_runner_wrapper.ts` — **Orchestrator (Task Pattern)**: создаёт marker при старте, пишет YAML (building → running → passed/failed), удаляет marker при exit. Единая точка контроля lifecycle.
+- `mark-bg-task.sh` — PostToolUse hook: **NO-OP** (exit 0). Marker creation moved to wrapper.
+- `stop-guard.sh` — Stop hook: **reader only**. Проверяет marker + YAML. Freshness check: YAML mtime > 30s → stale, skip. Building state → block с "Building Docker". Per-session marker isolation.
 
 ## Где лежит реализация
 
 - Hook scripts: `extensions/test-statusline/tools/bg-task-guard/`
 - Hook config: `extensions/test-statusline/extension.json` → hooks.claude
 - Installed: `.dev-pomogator/tools/bg-task-guard/`
-- Marker file: `.dev-pomogator/.bg-task-active`
+- Marker files: `.dev-pomogator/.bg-task-active.{session_prefix}` (per-session), `.dev-pomogator/.bg-task-active` (legacy fallback)
+- Session config: `.dev-pomogator/.test-status/session.env` (SESSION_PREFIX_LEN source of truth)
 
 ## Директории и файлы
 
@@ -29,10 +33,12 @@
 
 ### mark-bg-task.sh (PostToolUse on Bash)
 
-1. Read stdin JSON
-2. Extract `tool_output.stdout` via jq
-3. If stdout contains "Command running in background" → write ISO timestamp to `.dev-pomogator/.bg-task-active`
-4. Exit 0 (always — fail-open)
+1. Read stdin JSON (Claude Code PostToolUse format: `tool_response`, NOT `tool_output`)
+2. Extract `tool_response.backgroundTaskId` via jq (primary detection)
+3. Extract `tool_response.stdout` via jq (fallback detection)
+4. If `backgroundTaskId` is non-empty OR stdout contains "Command running in background" → write ISO timestamp to `.dev-pomogator/.bg-task-active`
+5. If marker exists AND `run_in_background` is NOT true AND `backgroundTaskId` matches marker task ID → task completed → delete marker
+6. Exit 0 (always — fail-open)
 
 ### stop-guard.sh (Stop hook)
 
@@ -40,7 +46,9 @@
 2. If not exists → exit 0 (approve stop)
 3. Read file mtime, calculate age in minutes
 4. If age >= 15 → delete stale marker → exit 0 (approve stop)
-5. If age < 15 → output `{"decision": "block", "reason": "Background task running (Nmin ago). Continue working or wait for results."}` → exit 0
+5. If age < 15 → read task ID from marker → check if task still running (optional validation)
+6. If task no longer running → delete marker → exit 0 (approve stop)
+7. If task still running or unknown → output `{"decision": "block", "reason": "Background task running (Nmin ago). Continue working or wait for results."}` → exit 0
 
 ## API
 

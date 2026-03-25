@@ -95,22 +95,25 @@ Feature: PLUGIN007 Plan-pomogator Extension
     Then Phase 2 returns error about minimum 2 items
 
   # @feature17
-  Scenario: PLUGIN007_17 extractFileChangePaths extracts paths from File Changes table
-    Given a plan content with File Changes table containing 3 file paths
-    When extractFileChangePaths parses the content
-    Then it returns all 3 paths without backticks
+  Scenario: PLUGIN007_17 resolvePlanFile returns planFilePath when file exists
+    Given tool_input contains planFilePath pointing to an existing file
+    When resolvePlanFile processes the tool_input
+    Then it returns the exact planFilePath value
 
-  # @feature18
-  Scenario: PLUGIN007_18 scoreCandidate returns positive score for matching project
-    Given a plan content referencing files that exist in the current project
-    When scoreCandidate scores against the project cwd
-    Then the score is greater than zero
+  Scenario: PLUGIN007_17_02 resolvePlanFile returns null when planFilePath is missing
+    Given tool_input without planFilePath field
+    When resolvePlanFile processes the tool_input
+    Then it returns null
 
-  # @feature19
-  Scenario: PLUGIN007_19 scoreCandidate returns zero for non-matching project
-    Given a plan content referencing files from a different project
-    When scoreCandidate scores against the current project cwd
-    Then the score is zero
+  Scenario: PLUGIN007_17_03 resolvePlanFile returns null for non-existent file
+    Given tool_input with planFilePath pointing to a non-existent file
+    When resolvePlanFile processes the tool_input
+    Then it returns null
+
+  Scenario: PLUGIN007_17_04 resolvePlanFile handles Windows backslash paths
+    Given tool_input with planFilePath using Windows backslash separators
+    When resolvePlanFile processes the tool_input
+    Then it returns the path as-is
 
   # @feature1
   Scenario: PLUGIN007_20 Rule contains pre-flight checklist
@@ -172,3 +175,97 @@ Feature: PLUGIN007 Plan-pomogator Extension
     When plan-gate denies ExitPlanMode
     Then deny message should contain "Extracted Requirements"
     And deny message should contain "Шаблон правильного формата:"
+
+  # @feature5
+  Scenario: PLUGIN007_27 Phase 0 detects duplicate plan
+    Given a plan file with valid content
+    And another plan file in ~/.claude/plans/ with identical content
+    When checkDuplicatePlan runs on the plan
+    Then it should return the duplicate filename
+
+  # @feature5
+  Scenario: PLUGIN007_28 Phase 0 allows unique plan
+    Given a plan file with valid content
+    And no other plan file has the same content
+    When checkDuplicatePlan runs on the plan
+    Then it should return null
+
+  # @feature6
+  Scenario: PLUGIN007_29 Phase 2.5 blocks low prompt relevance
+    Given a plan with Extracted Requirements about "docker optimization"
+    And user prompts are about "plan-gate anti-copy protection"
+    When scorePromptRelevance runs
+    Then the score should be <= -20
+
+  # @feature6
+  Scenario: PLUGIN007_30 Phase 2.5 allows matching prompt relevance
+    Given a plan with Extracted Requirements about "anti-copy protection"
+    And user prompts are about "plan-gate anti-copy protection"
+    When scorePromptRelevance runs
+    Then the score should be > -20
+
+  # @feature31
+  Scenario: PLUGIN007_31 Validator detects missing changes: field in todo
+    Given a plan file with todo block missing "changes:" field
+    When validate-plan runs on the file
+    Then validation returns Phase 1 error about missing changes:
+
+  # @feature32
+  Scenario: PLUGIN007_32 Phase 4 warns on short changes: bullet
+    Given a plan file passing Phase 1-3 with short changes: bullet
+    When validate-plan runs phased validation
+    Then Phase 4 returns warning about brief changes bullet
+
+  # @feature32
+  Scenario: PLUGIN007_33 Phase 4 warns on generic Implementation Plan step
+    Given a plan file passing Phase 1-3 with generic Implementation Plan step
+    When validate-plan runs phased validation
+    Then Phase 4 returns warning about generic phrase
+
+  # @feature32
+  Scenario: PLUGIN007_34 Phase 4 warns on short File Changes Reason
+    Given a plan file passing Phase 1-3 with short File Changes Reason
+    When validate-plan runs phased validation
+    Then Phase 4 returns warning about brief Reason
+
+  # @feature32
+  Scenario: PLUGIN007_35 Phase 4 only runs after Phase 1-3 pass
+    Given a plan file with Phase 1 structural errors
+    When validate-plan runs phased validation
+    Then Phase 4 is empty
+
+  # @feature36 proactive-investigation rule
+  Scenario: PLUGIN007_36 Proactive-investigation rule exists in source of truth
+    Given plan-pomogator extension source is at extensions/plan-pomogator/
+    When I check claude/rules/ directory
+    Then proactive-investigation.md should exist
+
+  # @feature36
+  Scenario: PLUGIN007_37 Proactive-investigation rule contains banned phrases
+    Given proactive-investigation.md rule is loaded
+    When the agent reads the rule content
+    Then it should contain "ЗАПРЕЩЕНО"
+    And it should contain "Посмотреть?"
+    And it should contain "Проверить?"
+
+  # @feature36
+  Scenario: PLUGIN007_38 Proactive-investigation rule contains evidence format
+    Given proactive-investigation.md rule is loaded
+    When the agent reads the rule content
+    Then it should contain "Evidence формат"
+    And it should contain "grep"
+    And it should contain "UNVERIFIED"
+
+  # @feature36
+  Scenario: PLUGIN007_39 Extension manifest includes proactive-investigation rule
+    Given plan-pomogator extension.json is loaded
+    When I check the claude rules array
+    Then it should contain "proactive-investigation"
+
+  # @feature42
+  Scenario: PLUGIN007_42 Extension manifest hooks structure is correct
+    Given plan-pomogator extension.json is loaded
+    When I check the claude hooks
+    Then PreToolUse hook for ExitPlanMode should exist
+    And UserPromptSubmit hook for prompt-capture should exist
+    And PostToolUse hook should not exist (mark-plan-session removed)

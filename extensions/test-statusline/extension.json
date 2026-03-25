@@ -1,6 +1,6 @@
 {
   "name": "test-statusline",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Test runner session management, YAML status files, wrapper for test output parsing, and background task guard",
   "platforms": ["claude"],
   "category": "automation",

@@ -1,20 +1,20 @@
 # План работ
 
-## Context
+## 🎯 Context
 {Описание проблемы, что вызвало задачу, желаемый результат}
 
 ### Extracted Requirements
 1. {Требование из диалога}
 2. {Требование из диалога}
 
-## User Stories
+## 👤 User Stories
 - Как {роль}, я хочу {цель}, чтобы {ценность}.
 
-## Use Cases
+## 🔀 Use Cases
 - UC-1: {happy path}
 - Edge cases: {ключевые отклонения/ошибки}
 
-## Requirements
+## 📐 Requirements
 
 > FR/AC/Use Cases должны быть доменными и браться из контекста задачи.
 
@@ -39,11 +39,11 @@
 ### Out of Scope
 - N/A
 
-## Implementation Plan
+## 🔧 Implementation Plan
 1. {шаг 1}
 2. {шаг 2}
 
-## Impact Analysis
+## 💥 Impact Analysis
 
 | Keyword | Files Found | Action in Plan |
 |---------|-------------|----------------|
@@ -51,12 +51,25 @@
 
 > N/A — нет удалений/переименований (удалить эту строку если есть delete/rename/move)
 
-## Todos
-- id: {todo-id}
-  description: {описание}; files: {path} ({action}); Requirements refs: {FR-1, NFR-Usability}; Leverage: {path/to/reuse}
-  dependencies: []
+## 📋 Todos
 
-## Definition of Done (DoD)
+---
+
+### 📋 `{todo-id}`
+
+> {Описание задачи — что нужно сделать и зачем}
+
+- **files:** `{path}` *({action})*
+- **changes:**
+  - {Конкретное изменение: что найти/добавить/удалить/заменить и где}
+  - {Ещё изменение, если нужно}
+- **refs:** {FR-1, NFR-Usability}
+- **leverage:** `{path/to/reuse}` *(опционально)*
+- **deps:** *none*
+
+---
+
+## ✅ Definition of Done (DoD)
 - {критерий}
 
 ### Verification Plan
@@ -65,7 +78,7 @@
 - Manual Verification:
   - {шаг проверки}
 
-## File Changes
+## 📁 File Changes
 | Path | Action | Reason |
 |---|---|---|
 | `TBD` | `create` | {причина} |

@@ -1,7 +1,7 @@
 {
   "name": "plan-pomogator",
-  "version": "1.3.0",
-  "description": "Единый формат планов (9 секций) + двухфазная валидация + prompt-capture для requirement extraction",
+  "version": "1.8.0",
+  "description": "Rich markdown планы (emoji заголовки, ### todo blocks, blockquotes) + 5-фазная валидация (deterministic planFilePath, Phase 0 duplicate, Phase 2.5 prompt relevance)",
   "platforms": ["cursor", "claude"],
   "category": "workflow",
   "files": {
@@ -10,7 +10,7 @@
   },
   "rules": {
     "cursor": ["cursor/rules/plan-pomogator.mdc"],
-    "claude": ["claude/rules/plan-pomogator.md"]
+    "claude": ["claude/rules/plan-pomogator.md", "claude/rules/plan-freshness.md", "claude/rules/proactive-investigation.md", "claude/rules/cross-scope-coverage.md"]
   },
   "tools": {
     "plan-pomogator": "tools/plan-pomogator"

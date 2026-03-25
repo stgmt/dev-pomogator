@@ -1,73 +1,26 @@
-FROM node:20-slim
+# syntax=docker/dockerfile:1
+# App layer for dev-pomogator tests.
+# Uses pre-built base image with all heavy dependencies (apt, pip, PowerShell, bun, cursor, claude-mem).
+# Base image: scripts/build-test-base.sh → dev-pomogator-test-base:local
+#
+# Layer strategy (cache-friendly):
+#   1. COPY package*.json only → npm install (cached until deps change)
+#   2. COPY source code → build (cached until source changes)
+# CACHEBUST only invalidates layer 2, not npm install.
 
-# Install git, python, PowerShell and other dependencies
-RUN apt-get update && apt-get install -y git curl unzip python3 python3-pip python3-yaml wget apt-transport-https software-properties-common jq && \
-    apt-get clean && rm -rf /var/lib/apt/lists/* && \
-    ln -s /usr/bin/python3 /usr/bin/python
+FROM dev-pomogator-test-base:local
 
-# Install Python packages:
-# - chromadb: Chroma vector DB server (npm CLI is broken on many platforms)
-# - textual, pytest, pytest-asyncio: TUI Textual Pilot tests
-# Note: pyyaml already provided by python3-yaml apt package
-RUN pip3 install --break-system-packages chromadb textual pytest pytest-asyncio
+# Layer 1: Dependencies (cached until package.json or package-lock.json change)
+COPY --chown=testuser:testuser package.json package-lock.json ./
+RUN npm config set cache /tmp/.npm \
+    && for i in 1 2 3; do npm install --ignore-scripts && break || echo "[retry] npm install attempt $i failed" && sleep 5; done
 
-# Install PowerShell Core
-RUN wget -q https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb && \
-    dpkg -i packages-microsoft-prod.deb && \
-    rm packages-microsoft-prod.deb && \
-    apt-get update && \
-    apt-get install -y powershell && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
-
-# Install Claude Code CLI globally (as root, before user switch)
-RUN npm install -g @anthropic-ai/claude-code || true
-
-# Create test user with home directory
-RUN useradd -m -s /bin/bash testuser
-
-# Switch to testuser
-USER testuser
-ENV HOME=/home/testuser
-ENV PATH="${HOME}/.bun/bin:${HOME}/.local/bin:${PATH}"
-ENV DEV_POMOGATOR_TEST_IN_DOCKER=1
-
-# Install bun for testuser
-RUN curl -fsSL https://bun.sh/install | bash
-
-# Install Cursor Agent CLI (cursor-agent binary from cursor.com/install)
-RUN curl -fsSL https://cursor.com/install | bash && \
-    cursor-agent --version
-
-# Pre-cache claude-mem clone and build (avoid re-clone during tests).
-# Non-fatal: if clone fails, tests will clone at runtime (slower but works).
-RUN (for i in 1 2 3; do \
-      git clone https://github.com/thedotmack/claude-mem.git \
-        /home/testuser/.claude/plugins/marketplaces/thedotmack && break; \
-      echo "Clone attempt $i failed, retrying in ${i}0s..."; \
-      rm -rf /home/testuser/.claude/plugins/marketplaces/thedotmack; \
-      sleep $((i * 10)); \
-    done && \
-    cd /home/testuser/.claude/plugins/marketplaces/thedotmack && \
-    bun install && \
-    bun run build) || echo "WARNING: claude-mem pre-cache failed, will clone at runtime"
-
-WORKDIR /home/testuser/app
-
-# Cache-bust arg to force COPY refresh when test files change
+# Layer 2: Source code + build (invalidated by CACHEBUST on every run)
 ARG CACHEBUST=1
-
-# Copy all source code (may include Windows node_modules)
 COPY --chown=testuser:testuser . .
-
-# Remove Windows node_modules to avoid platform mismatches (esbuild etc.)
-RUN rm -rf node_modules
-
-# Install dependencies for Linux (skip prepare script)
-RUN npm install --ignore-scripts
-
-# Build
 RUN npm run build
 
 ENV HOME=/home/testuser
 
-CMD ["npm", "run", "test:e2e:docker"]
+ENTRYPOINT ["/usr/bin/tini", "--"]
+CMD ["bash", ".dev-pomogator/tools/test-statusline/test_runner_wrapper.sh", "--framework", "vitest", "--", "npm", "run", "test:e2e:docker"]

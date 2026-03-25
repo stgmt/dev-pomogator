@@ -12,6 +12,7 @@ from ..models import TestState, TestStatus
 
 STATUS_ICONS = {
     TestState.IDLE: "[dim]⏸ Idle[/]",
+    TestState.BUILDING: "[bold yellow]🔨 Building[/]",
     TestState.RUNNING: "[bold blue]🔄 Running[/]",
     TestState.PASSED: "[bold green]✅ Passed[/]",
     TestState.FAILED: "[bold red]❌ Failed[/]",

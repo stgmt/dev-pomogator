@@ -101,8 +101,8 @@ async function main(): Promise<void> {
       return;
     }
 
-    // Session prefix = first 8 characters (FR-5)
-    const prefix = sessionId.substring(0, 8);
+    const SESSION_PREFIX_LEN = 8;
+    const prefix = sessionId.substring(0, SESSION_PREFIX_LEN);
 
     // Create status directory (FR-6)
     const statusDir = path.join(cwd, '.dev-pomogator', '.test-status');
@@ -113,6 +113,7 @@ async function main(): Promise<void> {
     const envLines = [
       `TEST_STATUSLINE_SESSION=${prefix}`,
       `TEST_STATUSLINE_PROJECT=${cwd}`,
+      `SESSION_PREFIX_LEN=${SESSION_PREFIX_LEN}`,
     ].join('\n') + '\n';
 
     // Primary: write session.env file (works regardless of CLAUDE_ENV_FILE bug)
@@ -131,6 +132,25 @@ async function main(): Promise<void> {
 
     // Clean stale files (FR-7)
     cleanStaleFiles(statusDir);
+
+    // Clean stale bg-task markers from previous sessions (glob .bg-task-active*)
+    const devPomDir = path.join(cwd, '.dev-pomogator');
+    try {
+      const entries = fs.readdirSync(devPomDir);
+      for (const entry of entries) {
+        if (entry === '.bg-task-active' || entry.startsWith('.bg-task-active.')) {
+          const markerPath = path.join(devPomDir, entry);
+          try {
+            fs.unlinkSync(markerPath);
+            log('INFO', `Cleaned stale bg-task marker: ${entry}`);
+          } catch (e) {
+            log('DEBUG', `Could not clean bg-task marker ${entry}: ${e}`);
+          }
+        }
+      }
+    } catch (e) {
+      log('DEBUG', `Could not read .dev-pomogator dir for cleanup: ${e}`);
+    }
 
   } catch (err) {
     log('ERROR', `Hook error: ${err}`);

@@ -9,6 +9,7 @@ from typing import Any, Optional
 
 class TestState(str, Enum):
     IDLE = "idle"
+    BUILDING = "building"
     RUNNING = "running"
     PASSED = "passed"
     FAILED = "failed"
@@ -19,6 +20,7 @@ class TestState(str, Enum):
 # Plain emoji icons for each state (single source of truth)
 STATE_ICONS = {
     TestState.IDLE: "⏸",
+    TestState.BUILDING: "🔨",
     TestState.RUNNING: "🔄",
     TestState.PASSED: "✅",
     TestState.FAILED: "❌",

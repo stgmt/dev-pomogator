@@ -1,0 +1,13 @@
+.git
+node_modules
+dist
+coverage
+.cache
+.npm
+.specs
+*.log
+.DS_Store
+.env.local
+run-tests-workspace
+.dev-pomogator/.test-status
+.dev-pomogator/.bg-task-active*

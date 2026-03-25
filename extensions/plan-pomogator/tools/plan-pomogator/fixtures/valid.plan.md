@@ -1,55 +1,72 @@
 # План работ
 
-## Context
+## 🎯 Context
 Необходим валидатор структуры планов для обеспечения единого формата.
 
 ### Extracted Requirements
 1. Валидатор проверяет наличие обязательных секций и их порядок
 2. При ошибках выдаёт actionable hints с точными инструкциями по исправлению
 
-## User Stories
-- Как {роль}, я хочу {цель}, чтобы {ценность}.
+## 👤 User Stories
+- Как разработчик, я хочу автоматическую проверку структуры плана, чтобы не пропустить обязательные секции.
 
-## Use Cases
-- UC-1: Пользователь получает валидный план по шаблону.
-- Edge cases: некорректная структура Todos, пустой File Changes.
+## 🔀 Use Cases
+- UC-1: Пользователь запускает валидатор на корректном плане — получает OK.
+- Edge cases: некорректная структура Todos, пустой File Changes, отсутствующие секции.
 
-## Requirements
+## 📐 Requirements
 
 ### FR (Functional Requirements)
-- FR-1: Валидатор проверяет структуру плана.
+- FR-1: Валидатор проверяет наличие 9 секций в правильном порядке и формат каждой секции.
 
 ### Acceptance Criteria (EARS)
-- WHEN валидатор запускается THEN система SHALL вернуть список структурных ошибок или OK.
+- WHEN валидатор запускается на файле плана THEN система SHALL вернуть список структурных ошибок или OK с кодом 0.
 
 ### NFR (Non-Functional Requirements)
-- Performance: < 1 сек на 500 строк
-- Security: без сетевых вызовов
-- Reliability: ненулевой exit code при ошибках
-- Usability: понятные сообщения об ошибках
+- Performance: валидация < 1 сек на файле до 500 строк
+- Security: без сетевых вызовов, работа только с локальной файловой системой
+- Reliability: ненулевой exit code при ошибках, fail-open при недоступности файла
+- Usability: каждая ошибка содержит actionable hint с инструкцией по исправлению
 
 ### Assumptions
 - N/A
 
-## Implementation Plan
-1. Добавить валидатор структуры планов.
-2. Обновить правила и документацию.
+## 🔧 Implementation Plan
+1. Создать `validate-plan.ts` с функцией `validatePlanPhased()` — многофазная валидация секций, формата Todos и таблицы File Changes.
+2. Добавить CLI wrapper с exit code 1 при ошибках и человеко-читаемым выводом ошибок вместе с хинтами по исправлению.
 
-## Todos
-- id: implement-validator
-  description: Добавить скрипт проверки структуры; files: create tools/plan-pomogator/validate-plan.ts; Requirements refs: FR-1, NFR-Usability; Leverage: tools/specs-validator/validate-specs.ts
-  dependencies: []
+## 💥 Impact Analysis
 
-## Definition of Done (DoD)
-- Валидатор сообщает об ошибках структуры.
+> N/A — нет удалений/переименований
+
+## 📋 Todos
+
+---
+
+### 📋 `implement-validator`
+
+> Создать скрипт валидации структуры планов с поддержкой многофазной проверки и actionable hints
+
+- **files:** `extensions/plan-pomogator/tools/plan-pomogator/validate-plan.ts` *(create)*
+- **changes:**
+  - Реализовать функцию `validateSections()` проверяющую наличие и порядок 9 обязательных секций с emoji-заголовками
+  - Реализовать функцию `validateTodos()` проверяющую формат `### 📋 todo-id` блоков включая description, files, refs, changes, deps
+- **refs:** FR-1, NFR-Usability
+- **leverage:** `extensions/specs-workflow/tools/specs-generator/validate-spec.sh` *(паттерн CLI валидатора)*
+- **deps:** *none*
+
+---
+
+## ✅ Definition of Done (DoD)
+- Валидатор корректно сообщает обо всех структурных ошибках с actionable hints.
 
 ### Verification Plan
 - Automated Tests:
-  - `npx tsx tools/plan-pomogator/validate-plan.ts tools/plan-pomogator/fixtures/valid.plan.md`
+  - `npx tsx extensions/plan-pomogator/tools/plan-pomogator/validate-plan.ts extensions/plan-pomogator/tools/plan-pomogator/fixtures/valid.plan.md`
 - Manual Verification:
-  - Запустить валидатор на заведомо битом плане.
+  - Запустить валидатор на заведомо битом плане и проверить наличие хинтов.
 
-## File Changes
+## 📁 File Changes
 | Path | Action | Reason |
-|---|---|---|
-| `.dev-pomogator/tools/plan-pomogator/validate-plan.ts` | create | Скрипт для проверки структуры плана. |
+|------|--------|--------|
+| `extensions/plan-pomogator/tools/plan-pomogator/validate-plan.ts` | create | Скрипт многофазной валидации структуры планов с actionable hints для каждой ошибки. |

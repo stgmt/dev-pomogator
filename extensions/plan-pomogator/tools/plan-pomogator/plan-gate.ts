@@ -3,7 +3,7 @@
  * Plan Gate — PreToolUse Hook
  *
  * Blocks ExitPlanMode if the current plan file fails validation.
- * Finds the most recently modified plan in ~/.claude/plans/ and runs validatePlanPhased().
+ * Uses tool_input.planFilePath from Claude Code (deterministic, parallel-session safe).
  *
  * Phase 1 errors → structural issues only.
  * Phase 2 errors → requirements issues + last 5 user prompts from prompt-capture cache.
@@ -17,7 +17,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import os from 'os';
+import { createHash } from 'crypto';
 import { validatePlanPhased, type ValidationError } from './validate-plan';
 import {
   PROMPT_FILE_PREFIX,
@@ -36,123 +36,22 @@ interface PreToolUseInput {
 }
 
 /**
- * Extract file paths from the ## File Changes markdown table.
- * Matches rows like: | `path/to/file.ts` | action | reason |
+ * Resolve plan file path from ExitPlanMode tool_input.
+ *
+ * Priority:
+ *   1. tool_input.planFilePath — deterministic, injected by Claude Code
+ *   2. null — fail-open (no guessing, no scoring)
  */
-export function extractFileChangePaths(content: string): string[] {
-  const paths: string[] = [];
-  const fileChangesMatch = content.indexOf('## File Changes');
-  if (fileChangesMatch === -1) return paths;
+export function resolvePlanFile(toolInput?: Record<string, unknown>): string | null {
+  const planFilePath = toolInput?.planFilePath;
+  if (typeof planFilePath !== 'string' || !planFilePath) return null;
 
-  const tableSection = content.slice(fileChangesMatch);
-  const lines = tableSection.split('\n');
-
-  let pastHeader = false;
-  for (const line of lines) {
-    if (!line.includes('|')) continue;
-    // Skip header row and separator
-    if (/^\|\s*Path\s*\|/i.test(line.trim())) { pastHeader = false; continue; }
-    if (/^\|[\s-|]+\|/.test(line.trim())) { pastHeader = true; continue; }
-    if (!pastHeader) continue;
-    // Stop at next section
-    if (/^##\s/.test(line)) break;
-
-    const columns = line.split('|').map((c) => c.trim()).filter(Boolean);
-    if (columns.length >= 2) {
-      const filePath = columns[0].replace(/`/g, '').trim();
-      if (filePath && filePath !== 'Path' && !filePath.startsWith('-')) {
-        paths.push(filePath);
-      }
-    }
+  try {
+    fs.accessSync(planFilePath);
+    return planFilePath;
+  } catch {
+    return null;
   }
-
-  return paths;
-}
-
-/**
- * Score how well a plan's content matches a project directory.
- * +10 for each File Changes path that exists in cwd.
- * +5 for project basename mention in content.
- */
-export function scoreCandidate(content: string, cwd: string): number {
-  let score = 0;
-
-  // Check project basename mention
-  const projectName = path.basename(cwd).toLowerCase();
-  if (projectName && content.toLowerCase().includes(projectName)) {
-    score += 5;
-  }
-
-  // Check File Changes paths existence in cwd
-  const filePaths = extractFileChangePaths(content);
-  for (const p of filePaths) {
-    try {
-      if (fs.existsSync(path.join(cwd, p))) {
-        score += 10;
-      }
-    } catch { /* skip unreadable paths */ }
-  }
-
-  return score;
-}
-
-const MAX_CANDIDATES_TO_SCORE = 5;
-const PLAN_READ_LIMIT = 16384; // 16KB — enough to reach ## File Changes at end of typical plans
-
-/**
- * Find the most recently modified .md file in ~/.claude/plans/.
- * Only considers files modified within the last 60 minutes (likely current session).
- * When cwd is provided, scores candidates by content match to prefer project-relevant plans.
- */
-function findLatestPlanFile(cwd?: string): string | null {
-  const plansDir = path.join(os.homedir(), '.claude', 'plans');
-  if (!fs.existsSync(plansDir)) return null;
-
-  const entries = fs.readdirSync(plansDir);
-  const sixtyMinutesAgo = Date.now() - 60 * 60 * 1000;
-  const candidates: { path: string; mtimeMs: number }[] = [];
-
-  for (const f of entries) {
-    if (!f.endsWith('.md') || f.includes('-agent-')) continue;
-    const fullPath = path.join(plansDir, f);
-    const stat = fs.statSync(fullPath);
-    if (stat.mtimeMs >= sixtyMinutesAgo) {
-      candidates.push({ path: fullPath, mtimeMs: stat.mtimeMs });
-    }
-  }
-
-  if (candidates.length === 0) return null;
-
-  // Sort by mtime descending
-  candidates.sort((a, b) => b.mtimeMs - a.mtimeMs);
-
-  // Single candidate or no cwd — return most recent
-  if (candidates.length === 1 || !cwd) {
-    return candidates[0].path;
-  }
-
-  // Score top candidates by content match against cwd
-  let bestMatch: { path: string; score: number; mtimeMs: number } | null = null;
-  const buf = Buffer.alloc(PLAN_READ_LIMIT);
-
-  for (const candidate of candidates.slice(0, MAX_CANDIDATES_TO_SCORE)) {
-    let fd: number | undefined;
-    try {
-      fd = fs.openSync(candidate.path, 'r');
-      const bytesRead = fs.readSync(fd, buf, 0, PLAN_READ_LIMIT, 0);
-      const content = buf.toString('utf-8', 0, bytesRead);
-
-      const score = scoreCandidate(content, cwd);
-      if (score > 0 && (!bestMatch || score > bestMatch.score || (score === bestMatch.score && candidate.mtimeMs > bestMatch.mtimeMs))) {
-        bestMatch = { path: candidate.path, score, mtimeMs: candidate.mtimeMs };
-      }
-    } catch { /* skip unreadable files, fail-open */ } finally {
-      if (fd !== undefined) fs.closeSync(fd);
-    }
-  }
-
-  // Return best content match, or fallback to most recent by mtime
-  return bestMatch?.path ?? candidates[0].path;
 }
 
 const MAX_PROMPT_DISPLAY = 5;
@@ -217,6 +116,40 @@ function formatPromptsFromFile(filePath: string): string | null {
   return `\nПоследние сообщения пользователя:\n${formatted}\n`;
 }
 
+/**
+ * Check if plan content is a duplicate of another plan in ~/.claude/plans/.
+ * Returns the duplicate filename or null.
+ */
+export function checkDuplicatePlan(planPath: string, planContent: string): string | null {
+  const plansDir = path.dirname(planPath);
+  const planName = path.basename(planPath);
+  const planHash = createHash('sha256').update(planContent).digest('hex');
+
+  let entries: string[];
+  try {
+    entries = fs.readdirSync(plansDir);
+  } catch {
+    return null;
+  }
+
+  const planSize = Buffer.byteLength(planContent, 'utf-8');
+
+  for (const f of entries) {
+    if (!f.endsWith('.md') || f === planName) continue;
+    try {
+      const otherPath = path.join(plansDir, f);
+      // Short-circuit: different file sizes cannot be duplicates
+      const stat = fs.statSync(otherPath);
+      if (Math.abs(stat.size - planSize) > 10) continue;
+      const otherContent = fs.readFileSync(otherPath, 'utf-8');
+      const otherHash = createHash('sha256').update(otherContent).digest('hex');
+      if (otherHash === planHash) return f;
+    } catch { /* skip unreadable */ }
+  }
+
+  return null;
+}
+
 const TEMPLATE_MAX_CHARS = 8192;
 
 /**
@@ -235,6 +168,42 @@ export function readTemplateContent(cwd?: string): string {
   } catch {
     return '';
   }
+}
+
+const STOPWORDS = new Set([
+  'about', 'after', 'before', 'between', 'would', 'could', 'should', 'which', 'where', 'there',
+  'нужно', 'сделай', 'добавь', 'убери', 'потом', 'также', 'можно', 'нужна', 'блять',
+  'файлы', 'claude',
+]);
+
+/**
+ * Score how well a plan's Extracted Requirements match recent user prompts.
+ * Returns negative score if low overlap (plan likely from different task).
+ */
+export function scorePromptRelevance(planContent: string, promptTexts: string[]): number {
+  if (promptTexts.length === 0) return 0;
+
+  const reqMatch = planContent.match(/###\s+Extracted Requirements\s*\n([\s\S]*?)(?=\n##|\n###|$)/i);
+  if (!reqMatch) return 0;
+  const reqText = reqMatch[1].toLowerCase();
+
+  const allPromptText = promptTexts.join(' ').toLowerCase();
+  const words = allPromptText.match(/[a-zа-яё]{5,}/g) ?? [];
+  const significantWords = [...new Set(words.filter((w) => !STOPWORDS.has(w)))];
+
+  if (significantWords.length === 0) return 0;
+
+  let matched = 0;
+  for (const word of significantWords) {
+    if (reqText.includes(word)) {
+      matched += 1;
+    }
+  }
+
+  const overlap = matched / significantWords.length;
+  if (overlap < 0.2) return -20;
+  if (overlap < 0.4) return -10;
+  return 0;
 }
 
 /**
@@ -280,18 +249,32 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
-  // Find the most recently modified plan file (scoped to current project via cwd)
-  const planFile = findLatestPlanFile(data.cwd);
+  // Resolve plan file — deterministic via tool_input.planFilePath
+  const planFile = resolvePlanFile(data.tool_input);
   if (!planFile) {
-    process.exit(0); // no plan file found, fail-open
+    process.exit(0); // no plan file path — fail-open
   }
 
-  // Validate the plan (phased)
-  const result = validatePlanPhased(planFile);
   const planName = path.basename(planFile);
+  const planContent = fs.readFileSync(planFile, 'utf-8');
+
+  // Phase 0: Duplicate Detection
+  try {
+    const duplicate = checkDuplicatePlan(planFile, planContent);
+    if (duplicate) {
+      denyAndExit(planName, 'Phase 0 — дубликат',
+        [`План является копией "${duplicate}"`],
+        '\nНЕ копируй содержимое из других планов. Создай план С НУЛЯ по шаблону.\n' + readTemplateContent(data.cwd));
+    }
+  } catch { /* fail-open */ }
+
+  // Validate the plan (phased)
+  const planLines = planContent.split(/\r?\n/);
+  const result = validatePlanPhased(planLines);
 
   if (result.phase1.length > 0) {
-    denyAndExit(planName, 'Phase 1 — структура', result.phase1, readTemplateContent(data.cwd));
+    denyAndExit(planName, 'Phase 1 — структура', result.phase1,
+      '\nНЕ копируй содержимое из других планов. Создай план С НУЛЯ по шаблону.\n' + readTemplateContent(data.cwd));
   }
 
   if (result.phase2.length > 0) {
@@ -299,7 +282,36 @@ async function main(): Promise<void> {
     denyAndExit(planName, 'Phase 2 — требования', result.phase2, promptsSection + readTemplateContent(data.cwd));
   }
 
-  // Both phases passed
+  // Phase 2.5: Prompt Relevance Check
+  try {
+    const promptTexts: string[] = [];
+    if (data.session_id) {
+      const promptData = readPromptFile(getPromptFilePath(data.session_id));
+      if (promptData?.prompts?.length) {
+        promptTexts.push(...promptData.prompts.slice(-3).map((p) => p.text));
+      }
+    }
+    if (promptTexts.length > 0) {
+      const relevanceScore = scorePromptRelevance(planContent, promptTexts);
+      if (relevanceScore <= -20) {
+        denyAndExit(planName, 'Phase 2.5 — релевантность',
+          ['План не соответствует текущей задаче (overlap < 20%). Extracted Requirements должны отражать ТЕКУЩИЙ запрос пользователя.'],
+          '\nНЕ копируй содержимое из других планов. Создай план С НУЛЯ по шаблону.\n' + loadUserPrompts(data.session_id));
+      }
+    }
+  } catch { /* fail-open */ }
+
+  if (result.phase3.length > 0) {
+    denyAndExit(planName, 'Phase 3 — кросс-ссылки (контаминация)', result.phase3);
+  }
+
+  // Phase 4: Actionability warnings (non-blocking)
+  if (result.phase4.length > 0) {
+    const warningList = result.phase4.map((e) => `  line ${e.line}: ${e.message}\n    💡 ${e.hint}`).join('\n');
+    process.stderr.write(`[plan-gate] Phase 4 предупреждения (не блокируют):\n${warningList}\n`);
+  }
+
+  // All phases passed
   process.exit(0);
 }
 

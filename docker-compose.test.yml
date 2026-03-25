@@ -3,9 +3,15 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.test
+      args:
+        CACHEBUST: ${CACHEBUST:-1}
     image: dev-pomogator-test:local
     env_file:
       - .env.test
     environment:
       - HOME=/home/testuser
       - DEV_POMOGATOR_TEST_IN_DOCKER=1
+      - TEST_STATUS_DIR=.dev-pomogator/.docker-status
+    volumes:
+      # Separate dir for Docker YAML output — tests don't touch this, only wrapper writes here
+      - ./.dev-pomogator/.docker-status:/home/testuser/app/.dev-pomogator/.docker-status
