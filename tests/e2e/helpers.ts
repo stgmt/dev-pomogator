@@ -3,7 +3,7 @@ import { readFileSync, readdirSync, readlinkSync } from 'fs';
 import path from 'path';
 import fs from 'fs-extra';
 
-const APP_DIR = process.env.APP_DIR || '/home/testuser/app';
+const APP_DIR = process.env.APP_DIR || process.cwd();
 const WORKER_PORT = 37777;
 
 /**
@@ -11,7 +11,7 @@ const WORKER_PORT = 37777;
  * Bun installs to ~/.bun/bin which may not be in child process PATH
  */
 function getEnhancedPath(): string {
-  const home = process.env.HOME || '/home/testuser';
+  const home = process.env.HOME || process.env.USERPROFILE || '/home/testuser';
   const bunPath = `${home}/.bun/bin`;
   const currentPath = process.env.PATH || '';
   
@@ -54,7 +54,7 @@ export async function runInstaller(args: string = '--cursor --all'): Promise<Ins
  * Get the HOME directory
  */
 export function getHome(): string {
-  return process.env.HOME || '/home/testuser';
+  return process.env.HOME || process.env.USERPROFILE || '/home/testuser';
 }
 
 /**
@@ -264,7 +264,7 @@ export async function startWorker(): Promise<void> {
   // - Without args, WorkerService starts HTTP server directly in-process.
   // - Port is configured via configureClaudeMemSettings() above (CLAUDE_MEM_WORKER_PORT).
   const workerScript = path.join(claudeMemDir, 'plugin', 'scripts', 'worker-service.cjs');
-  const bunBin = path.join(process.env.HOME || '/home/testuser', '.bun', 'bin', 'bun');
+  const bunBin = path.join(process.env.HOME || process.env.USERPROFILE || '/home/testuser', '.bun', 'bin', 'bun');
   workerProcess = spawn(bunBin, [workerScript], {
     cwd: claudeMemDir,
     stdio: ['ignore', 'pipe', 'pipe'],

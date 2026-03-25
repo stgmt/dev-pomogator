@@ -9,8 +9,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `npm run build` | Compile TypeScript + bundle standalone check-update script |
 | `npm run dev` | Watch mode TypeScript compilation |
 | `npm run lint` | ESLint on `src/` |
-| `npm test` | E2E tests via Docker Compose (requires Docker) |
-| `npm run test:e2e:docker` | Run vitest directly inside Docker container |
+| `npm test` | E2E tests via vitest (direct, no Docker) |
+| `npm run test:all` | E2E + TUI tests (vitest + pytest) |
+| `npm run test:docker` | E2E tests via Docker (deprecated) |
 | `npx tsx extensions/plan-pomogator/tools/plan-pomogator/validate-plan.ts <path>` | Validate plan structure |
 | `./extensions/specs-workflow/tools/specs-generator/scaffold-spec.sh -Name "feature"` | Scaffold spec structure |
 | `./extensions/specs-workflow/tools/specs-generator/validate-spec.sh -Path ".specs/feature"` | Validate spec formats |
@@ -48,7 +49,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | atomic-update-lock | Lock через `flag: 'wx'` (O_EXCL), не exists-check + write | `.claude/rules/atomic-update-lock.md` |
 | no-unvalidated-manifest-paths | Пути из манифеста валидировать через resolve + startsWith(projectPath) | `.claude/rules/no-unvalidated-manifest-paths.md` |
 | claude-md-glossary | CLAUDE.md = глоссарий/индекс на rules; при добавлении/удалении правил обновлять таблицу | `.claude/rules/claude-md-glossary.md` |
-| docker-only-tests | Тесты только через Docker (`npm test`); запрет vitest.unit.config.ts и тестов вне `tests/e2e/` | `.claude/rules/docker-only-tests.md` |
 | self-improving | Real-time детекция ситуаций для новых rules/skills/hooks (триггеры T2/T3/T4/T6 + automation hints) | `.claude/rules/pomogator/self-improving.md` |
 | simplify-extended | При /simplify проверять спеки (нечёткие FR, reuse) и тесты (setup duplication, naming); различать systemic vs one-off issues (extension: auto-simplify) | `.claude/rules/simplify-extended.md` |
 | tui-pilot-tests | TUI тесты через Textual Pilot API; запрет file-inspection тестов для виджетов | `.claude/rules/tui-pilot-tests.md` |

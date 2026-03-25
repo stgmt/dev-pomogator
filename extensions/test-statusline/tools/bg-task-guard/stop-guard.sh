@@ -99,9 +99,13 @@ else
   STAT_GNU=""
 fi
 
-# No marker → allow stop
+# No marker → try legacy fallback, then allow stop
 if [ ! -f "$MARKER" ]; then
-  exit 0
+  if [ -n "$SESSION_PREFIX" ] && [ -f ".dev-pomogator/.bg-task-active" ]; then
+    MARKER=".dev-pomogator/.bg-task-active"
+  else
+    exit 0
+  fi
 fi
 
 # Empty/whitespace-only marker → clean up and allow stop
