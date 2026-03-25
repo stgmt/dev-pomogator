@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import { spawnSync } from 'child_process';
-import { appPath, homePath, runInstaller, setupCleanState, getPythonRunner } from './helpers';
+import { appPath, homePath, runInstaller, setupCleanState, getPythonRunner, runTsx } from './helpers';
 import {
   DEFAULT_USER_STATUSLINE_COMMAND,
   extractUserCommandFromLegacyWrapper,
@@ -16,7 +16,7 @@ import { VitestAdapter } from '../../extensions/tui-test-runner/tools/tui-test-r
 
 const STATUS_DIR = '.dev-pomogator/.test-status';
 const FIXTURES_DIR = 'tests/fixtures/tui-statusline';
-const WRAPPER_SCRIPT = 'extensions/test-statusline/tools/test-statusline/test_runner_wrapper.sh';
+const WRAPPER_SCRIPT = 'extensions/test-statusline/tools/test-statusline/test_runner_wrapper.cjs';
 const SESSION_HOOK = 'extensions/test-statusline/tools/test-statusline/statusline_session_start.ts';
 const DEFAULT_STATUSLINE_CONFIG = {
   type: 'command',
@@ -43,7 +43,7 @@ function buildLegacyWrappedFixture(userCmd: string, managedCmd: string): string 
 }
 
 function runWrapper(args: string[], env: Record<string, string> = {}): { stdout: string; stderr: string; status: number | null } {
-  const result = spawnSync('bash', [appPath(WRAPPER_SCRIPT), ...args], {
+  const result = spawnSync('node', [appPath(WRAPPER_SCRIPT), ...args], {
     encoding: 'utf-8',
     cwd: appPath(),
     env: { ...process.env, FORCE_COLOR: '0', ...env },
@@ -60,15 +60,8 @@ function canonicalWrapperEnv(overrides: Record<string, string> = {}): Record<str
   };
 }
 
-function runSessionHook(stdinJson: Record<string, unknown>, env: Record<string, string> = {}): { stdout: string; stderr: string; status: number | null } {
-  const result = spawnSync('npx', ['tsx', appPath(SESSION_HOOK)], {
-    input: JSON.stringify(stdinJson),
-    encoding: 'utf-8',
-    cwd: appPath(),
-    env: { ...process.env, FORCE_COLOR: '0', ...env },
-    timeout: 15000,
-  });
-  return { stdout: result.stdout || '', stderr: result.stderr || '', status: result.status };
+function runSessionHook(stdinJson: Record<string, unknown>, env: Record<string, string> = {}) {
+  return runTsx(SESSION_HOOK, { input: stdinJson, env });
 }
 
 function readFixture(name: string): string {
@@ -443,7 +436,7 @@ describe('PLUGIN011: TUI Statusline', () => {
       const toolFiles = manifest.toolFiles?.['test-statusline'] || [];
 
       // Shared files remain
-      expect(toolFiles.join(',')).toContain('test_runner_wrapper.sh');
+      expect(toolFiles.join(',')).toContain('test_runner_wrapper.cjs');
       expect(toolFiles.join(',')).toContain('statusline_session_start.ts');
       expect(toolFiles.join(',')).toContain('status_types.ts');
       // Legacy render files removed (replaced by TUI CompactBar)
@@ -661,6 +654,17 @@ describe('PLUGIN011: TUI Statusline', () => {
 
     // PLUGIN011_49: portable managed command test — REMOVED in v3.0.0 (managed render script deleted)
     // PLUGIN011_50: portable wrapped command test — REMOVED in v3.0.0 (wrapping removed)
+
+    // @feature9
+    it('PLUGIN011_51: installer writes ccstatusline to global settings.json', async () => {
+      await setupCleanState('claude');
+      const result = await runInstaller('--claude --all');
+      expect(result.exitCode).toBe(0);
+
+      const globalSettings = await fs.readJson(homePath('.claude', 'settings.json'));
+      expect(globalSettings.statusLine).toBeDefined();
+      expect(globalSettings.statusLine.command).toContain('ccstatusline');
+    });
   });
 
   // =========================================================================
@@ -783,6 +787,77 @@ else:
       const output = renderCompact({ _corrupted: true });
       expect(output).toContain('no test runs');
     });
+
+    // --- Integration tests: VitestAdapter → CompactBar pipeline ---
+
+    function parseFixtureCounts(fixturePath: string): { passed: number; failed: number; skipped: number } {
+      const adapter = new VitestAdapter();
+      const content = fs.readFileSync(fixturePath, 'utf-8');
+      let passed = 0, failed = 0, skipped = 0;
+      for (const line of content.split('\n')) {
+        const event = adapter.parseLine(line.replace(/\x1b\[[0-9;]*m/g, ''));
+        if (!event) continue;
+        if (event.type === 'test_pass') passed++;
+        if (event.type === 'test_fail') failed++;
+        if (event.type === 'test_skip') skipped++;
+      }
+      return { passed, failed, skipped };
+    }
+
+    // @feature13
+    it('PLUGIN011_78: VitestAdapter parses fixture into correct counts', () => {
+      const counts = parseFixtureCounts(appPath(FIXTURES_DIR, 'vitest-docker-output.txt'));
+      expect(counts.passed).toBe(8);
+      expect(counts.failed).toBe(2);
+      expect(counts.skipped).toBe(3);
+    });
+
+    // @feature13
+    it('PLUGIN011_79: VitestAdapter parses suite start headers', () => {
+      const adapter = new VitestAdapter();
+      const event = adapter.parseLine(' ❯ tests/e2e/installer.test.ts (28)');
+      expect(event).not.toBeNull();
+      expect(event!.type).toBe('suite_start');
+    });
+
+    // @feature13
+    it('PLUGIN011_80: Full pipeline fixture → adapter → render shows progress', () => {
+      const { passed, failed, skipped } = parseFixtureCounts(appPath(FIXTURES_DIR, 'vitest-docker-output.txt'));
+
+      const output = renderCompact({
+        state: 'running',
+        framework: 'vitest',
+        passed,
+        failed,
+        skipped,
+        running: 0,
+        total: 13,
+        percent: Math.round(((passed + failed + skipped) / 13) * 100),
+        duration_ms: 4400,
+      });
+
+      expect(output).toContain('8');
+      expect(output).toContain('2❌');
+      expect(output).not.toContain('building Docker');
+    });
+
+    // @feature13
+    it('PLUGIN011_81: Building Docker state when adapter has 0 results but total known', () => {
+      // Simulate: discovery found 687 tests, but adapter hasn't parsed any results yet
+      const output = renderCompact({
+        state: 'running',
+        framework: 'vitest',
+        passed: 0,
+        failed: 0,
+        skipped: 0,
+        running: 0,
+        total: 687,
+        percent: 0,
+        duration_ms: 30000,
+      });
+      expect(output).toContain('building Docker');
+      expect(output).toContain('0/687');
+    });
   });
 
   // =========================================================================
@@ -808,7 +883,7 @@ else:
     // @feature5
     it('PLUGIN011_69: shared files still present after render removal', async () => {
       expect(await fs.pathExists(appPath(TEST_STATUSLINE_DIR, 'statusline_session_start.ts'))).toBe(true);
-      expect(await fs.pathExists(appPath(TEST_STATUSLINE_DIR, 'test_runner_wrapper.sh'))).toBe(true);
+      expect(await fs.pathExists(appPath(TEST_STATUSLINE_DIR, 'test_runner_wrapper.cjs'))).toBe(true);
       expect(await fs.pathExists(appPath(TEST_STATUSLINE_DIR, 'status_types.ts'))).toBe(true);
     });
   });
@@ -836,8 +911,8 @@ else:
     it('PLUGIN011_71: wrapper creates YAML when SESSION is set', () => {
       // Run wrapper with a test session and a quick command (echo)
       const session = 'e2etest1';
-      const result = spawnSync('bash', [
-        appPath('extensions/test-statusline/tools/test-statusline/test_runner_wrapper.sh'),
+      const result = spawnSync('node', [
+        appPath('extensions/test-statusline/tools/test-statusline/test_runner_wrapper.cjs'),
         'echo', 'hello',
       ], {
         encoding: 'utf-8',

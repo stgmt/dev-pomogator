@@ -372,3 +372,32 @@ custom_assertions:
     });
   });
 });
+
+// =========================================================================
+// Integration — validate-steps.ts via real process execution
+// =========================================================================
+import { spawnSync } from "child_process";
+
+describe("Integration: validate-steps.ts CLI", () => {
+  const SCRIPT_PATH = "extensions/specs-workflow/tools/steps-validator/validate-steps.ts";
+  const appDir = process.env.APP_DIR || process.cwd();
+
+  it("runs validate-steps.ts on C# fixture and exits 0 (integration)", () => {
+    const fixtureDir = path.join(FIXTURES_DIR, "csharp");
+    const result = spawnSync(
+      "npx", ["tsx", path.join(appDir, SCRIPT_PATH), fixtureDir],
+      { encoding: "utf-8", cwd: appDir, timeout: 30000 },
+    );
+    expect(result.status).toBe(0);
+  });
+
+  it("runs validate-steps.ts on TypeScript fixture and exits 0 (integration)", () => {
+    const fixtureDir = path.join(FIXTURES_DIR, "typescript");
+    if (!fs.stat(fixtureDir).then(() => true).catch(() => false)) return; // skip if no ts fixture
+    const result = spawnSync(
+      "npx", ["tsx", path.join(appDir, SCRIPT_PATH), fixtureDir],
+      { encoding: "utf-8", cwd: appDir, timeout: 30000 },
+    );
+    expect(result.status).toBe(0);
+  });
+});

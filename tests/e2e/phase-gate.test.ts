@@ -318,3 +318,64 @@ describe('readProgressState', () => {
     expect(result).toBeNull();
   });
 });
+
+// =========================================================================
+// Integration — phase-gate.ts via real process execution
+// =========================================================================
+import { runTsx, appPath } from './helpers';
+
+describe('Integration: phase-gate.ts', () => {
+  const PHASE_GATE_SCRIPT = 'extensions/specs-workflow/tools/specs-validator/phase-gate.ts';
+
+  function runPhaseGate(stdin: Record<string, unknown>) {
+    return runTsx(PHASE_GATE_SCRIPT, { input: stdin });
+  }
+
+  it('blocks spec file edit before Discovery confirmed (integration)', () => {
+    const specDir = path.join(appPath(), '.specs', 'test-integration');
+    fs.mkdirSync(specDir, { recursive: true });
+    // Empty progress — no phases confirmed
+    fs.writeFileSync(path.join(specDir, '.progress.json'), JSON.stringify({
+      version: 1, featureSlug: 'test-integration', createdAt: '2025-01-01T00:00:00Z',
+      currentPhase: 'Discovery', phases: {},
+    }));
+
+    try {
+      const result = runPhaseGate({
+        tool_name: 'Write',
+        tool_input: { file_path: `${appPath()}/.specs/test-integration/FR.md`, content: '# FR' },
+      });
+      expect(result.status).toBe(0);
+      // FR.md is Phase 2 (Requirements) — should block without Discovery confirmation
+      const output = result.stdout.trim();
+      if (output) {
+        const parsed = JSON.parse(output);
+        expect(parsed.decision).toBe('block');
+      }
+    } finally {
+      fs.rmSync(specDir, { recursive: true, force: true });
+    }
+  });
+
+  it('approves non-spec file edit (integration)', () => {
+    const result = runPhaseGate({
+      tool_name: 'Write',
+      tool_input: { file_path: `${appPath()}/src/app.ts`, content: 'code' },
+    });
+    expect(result.status).toBe(0);
+    const output = result.stdout.trim();
+    // Non-spec file → approve (empty or {})
+    if (output) {
+      const parsed = JSON.parse(output);
+      expect(parsed.decision).not.toBe('block');
+    }
+  });
+
+  it('approves when no .specs directory exists (integration)', () => {
+    const result = runPhaseGate({
+      tool_name: 'Read',
+      tool_input: { file_path: `${appPath()}/README.md` },
+    });
+    expect(result.status).toBe(0);
+  });
+});

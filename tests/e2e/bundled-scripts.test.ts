@@ -121,4 +121,29 @@ describe('CORE007: Bundled Scripts Installation', () => {
       expect(content).toContain('-ProjectDir');
     });
   });
+
+  // @feature7
+  describe('Scenario: CORE007_07 tsx-runner.js uses execCmd for .cmd files on Windows', () => {
+    it('CORE007_07: should use execCmd wrapper instead of direct execFileSync on .cmd', async () => {
+      const scriptPath = homePath('.dev-pomogator', 'scripts', 'tsx-runner.js');
+      const content = await fs.readFile(scriptPath, 'utf-8');
+
+      // Must contain execCmd function (CVE-2024-27980 fix for Node 20.12+)
+      expect(content).toContain('function execCmd(');
+      // Must route .cmd through COMSPEC (cmd.exe) on Windows
+      expect(content).toContain('COMSPEC');
+
+      // All strategy functions must use execCmd, not raw execFileSync for .cmd binaries
+      // Extract function bodies for runLocalTsx, runHomeTsx, runGlobalTsx, runNpxTsx, repairNpmSync
+      const strategyFunctions = ['runLocalTsx', 'runHomeTsx', 'runGlobalTsx', 'runNpxTsx', 'repairNpmSync'];
+      for (const fnName of strategyFunctions) {
+        const fnStart = content.indexOf(`function ${fnName}(`);
+        if (fnStart === -1) continue;
+        // Extract ~500 chars of function body
+        const fnBody = content.slice(fnStart, fnStart + 500);
+        expect(fnBody, `${fnName} should use execCmd, not execFileSync`)
+          .not.toMatch(/execFileSync\s*\(/);
+      }
+    });
+  });
 });

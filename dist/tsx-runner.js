@@ -23,11 +23,26 @@
 
 'use strict';
 
-const { execSync } = require('child_process');
+const { execSync, execFileSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
 const VERBOSE = process.env.DEV_POMOGATOR_HOOK_VERBOSE === '1';
+const IS_WIN = process.platform === 'win32';
+/** Resolve bare command name to .cmd on Windows for execFileSync compatibility */
+function cmd(name) { return IS_WIN ? name + '.cmd' : name; }
+/**
+ * execFileSync wrapper for .cmd files on Windows.
+ * Node 20.12+ (CVE-2024-27980) no longer auto-wraps .cmd in cmd.exe,
+ * so execFileSync('file.cmd', args) silently fails (exit null, no output).
+ * Fix: route .cmd through COMSPEC (cmd.exe /c).
+ */
+function execCmd(bin, args, opts) {
+  if (IS_WIN && /\.cmd$/i.test(bin)) {
+    return execFileSync(process.env.COMSPEC || 'cmd.exe', ['/c', bin, ...args], opts);
+  }
+  return execFileSync(bin, args, opts);
+}
 const TSX_EXEC_TIMEOUT = (() => {
   const v = Number(process.env.TSX_RUNNER_TIMEOUT);
   return Number.isFinite(v) && v > 0 ? v : 180000;
@@ -221,13 +236,11 @@ function runHomeTsx() {
   const tsxBin = findHomeTsx();
   if (!tsxBin) return false;
 
-  const cmd = [tsxBin, scriptPath, ...scriptArgs].map(p => `"${p}"`).join(' ');
-  execSync(cmd, {
+  execCmd(tsxBin, [scriptPath, ...scriptArgs], {
     stdio: 'inherit',
     cwd: process.cwd(),
     env: getSafeEnv(),
     timeout: TSX_EXEC_TIMEOUT,
-    shell: true,
   });
   return true;
 }
@@ -254,13 +267,11 @@ function runLocalTsx() {
   const tsxBin = findLocalTsx();
   if (!tsxBin) return false;
 
-  const cmd = [tsxBin, scriptPath, ...scriptArgs].map(p => `"${p}"`).join(' ');
-  execSync(cmd, {
+  execCmd(tsxBin, [scriptPath, ...scriptArgs], {
     stdio: 'inherit',
     cwd: process.cwd(),
     env: getSafeEnv(),
     timeout: TSX_EXEC_TIMEOUT,
-    shell: true,
   });
   return true;
 }
@@ -272,23 +283,20 @@ function runLocalTsx() {
  */
 function runGlobalTsx() {
   try {
-    execSync('tsx --version', {
+    execCmd(cmd('tsx'), ['--version'], {
       stdio: 'pipe',
       timeout: 5000,
       env: getSafeEnv(),
-      shell: true,
     });
   } catch {
     return false;
   }
 
-  const cmd = ['tsx', scriptPath, ...scriptArgs].map(p => `"${p}"`).join(' ');
-  execSync(cmd, {
+  execCmd(cmd('tsx'), [scriptPath, ...scriptArgs], {
     stdio: 'inherit',
     cwd: process.cwd(),
     env: getSafeEnv(),
     timeout: TSX_EXEC_TIMEOUT,
-    shell: true,
   });
   return true;
 }
@@ -297,14 +305,11 @@ function runGlobalTsx() {
  * Strategy 2: Run tsx via npx (standard approach).
  */
 function runNpxTsx() {
-  const parts = ['npx', 'tsx', scriptPath, ...scriptArgs];
-  const cmd = parts.map(p => `"${p}"`).join(' ');
-  execSync(cmd, {
+  execCmd(cmd('npx'), ['tsx', scriptPath, ...scriptArgs], {
     stdio: 'inherit',
     cwd: process.cwd(),
     env: getSafeEnv(),
     timeout: TSX_EXEC_TIMEOUT,
-    shell: true,
   });
 }
 
@@ -314,13 +319,11 @@ function runNpxTsx() {
  */
 function repairNpmSync() {
   try {
-    const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
     console.error('dev-pomogator: npx broken, running npm install to repair...');
-    execSync(`"${npmCmd}" install`, {
+    execCmd(cmd('npm'), ['install'], {
       cwd: process.cwd(),
       stdio: 'pipe',
       timeout: TSX_EXEC_TIMEOUT,
-      shell: true,
       env: getSafeEnv(),
     });
     console.error('dev-pomogator: npm install completed, retrying...');
@@ -378,14 +381,16 @@ function runNodeNativeTs() {
   const [major, minor] = process.versions.node.split('.').map(Number);
   if (major < 22 || (major === 22 && minor < 6)) return false;
 
-  const parts = ['node', '--experimental-strip-types', '--experimental-default-type=module', scriptPath, ...scriptArgs];
-  const cmd = parts.map(p => `"${p}"`).join(' ');
-  execSync(cmd, {
+  execFileSync(process.execPath, [
+    '--experimental-strip-types',
+    '--experimental-default-type=module',
+    scriptPath,
+    ...scriptArgs,
+  ], {
     stdio: 'inherit',
     cwd: process.cwd(),
     env: { ...getSafeEnv(), NODE_NO_WARNINGS: '1' },
     timeout: 30000,
-    shell: true,
   });
   return true;
 }

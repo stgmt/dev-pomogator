@@ -120,3 +120,34 @@ describe('MSYS Path Mangling Detection', () => {
     });
   });
 });
+
+// =========================================================================
+// Integration — installer MSYS detection via real installer run
+// =========================================================================
+import { runInstaller, setupCleanState, appPath } from './helpers';
+
+describe('Integration: installer MSYS warning', () => {
+  it('warns about MSYS-mangled artifacts in project (integration)', async () => {
+    await setupCleanState('claude');
+    // Create a mangled artifact in the project
+    const mangledDir = path.join(appPath(), 'C:', 'Program Files', 'Git', 'home');
+    await fs.ensureDir(mangledDir);
+
+    try {
+      const result = await runInstaller('--claude --all');
+      expect(result.exitCode).toBe(0);
+      // Installer should detect and warn about MSYS mangling
+      expect(result.logs.toLowerCase()).toMatch(/msys|mangl/);
+    } finally {
+      await fs.remove(path.join(appPath(), 'C:'));
+    }
+  });
+
+  it('no MSYS warning for clean project (integration)', async () => {
+    await setupCleanState('claude');
+    const result = await runInstaller('--claude --all');
+    expect(result.exitCode).toBe(0);
+    // Should NOT contain MSYS warning
+    expect(result.logs.toLowerCase()).not.toMatch(/msys.*mangl|mangled.*artifact/);
+  });
+});

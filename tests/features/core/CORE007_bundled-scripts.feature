@@ -45,3 +45,10 @@ Feature: CORE007 Bundled Scripts Installation
     When dev-pomogator installs for Claude Code
     Then ~/.dev-pomogator/scripts/launch-claude-tui.ps1 should exist
     And launch-claude-tui.ps1 should contain "-ProjectDir" parameter
+
+  # @feature7
+  Scenario: CORE007_07 tsx-runner.js uses execCmd for .cmd files on Windows
+    Given tsx-runner.js exists in ~/.dev-pomogator/scripts/
+    Then tsx-runner.js should contain "execCmd" function
+    And tsx-runner.js should contain "COMSPEC" for cmd.exe routing
+    And tsx-runner.js should not call execFileSync directly on .cmd binaries

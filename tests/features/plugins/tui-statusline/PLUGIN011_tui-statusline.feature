@@ -150,7 +150,7 @@ Feature: PLUGIN011_tui-statusline
   Scenario: PLUGIN011_18 Extension manifest lists all tool files
     Given extension.json exists at "extensions/test-statusline/extension.json"
     When manifest is parsed
-    Then toolFiles should include "test_runner_wrapper.sh"
+    Then toolFiles should include "test_runner_wrapper.cjs"
     And toolFiles should include "statusline_session_start.ts"
     And toolFiles should include "status_types.ts"
     And toolFiles should NOT include "statusline_render.cjs"
@@ -240,6 +240,12 @@ Feature: PLUGIN011_tui-statusline
     Then global statusLine should retain "padding" field with value 0
     And statusLine command should be "npx -y ccstatusline@latest"
 
+  # @feature9
+  Scenario: PLUGIN011_51 Installer writes ccstatusline to global settings.json (integration)
+    Given dev-pomogator is installed with --claude --all
+    Then global "~/.claude/settings.json" should contain statusLine key
+    And statusLine command should contain "ccstatusline"
+
   # ===========================================
   # @feature1 — CompactBar Render (TUI)
   # See also: .specs/tui-statusline-mode/tui-statusline-mode.feature
@@ -282,6 +288,35 @@ Feature: PLUGIN011_tui-statusline
     And output should contain "6%"
 
   # ===========================================
+  # @feature13 — Adapter Integration (Pipeline)
+  # ===========================================
+
+  # @feature13
+  Scenario: PLUGIN011_78 VitestAdapter parses fixture into correct counts
+    Given a fixture file "vitest-docker-output.txt" with real vitest output
+    When each line is fed through VitestAdapter.parseLine()
+    Then parsed events should contain 8 passed, 2 failed, 3 skipped
+
+  # @feature13
+  Scenario: PLUGIN011_79 VitestAdapter parses suite start headers
+    Given a vitest output line with suite marker
+    When fed through VitestAdapter.parseLine()
+    Then event type should be "suite_start"
+
+  # @feature13
+  Scenario: PLUGIN011_80 Full pipeline: fixture -> adapter -> render
+    Given a fixture file "vitest-docker-output.txt" parsed through VitestAdapter
+    When results are rendered through CompactBar
+    Then output should contain pass and fail counts
+    And output should NOT contain "building Docker"
+
+  # @feature13
+  Scenario: PLUGIN011_81 Building Docker state with 0 completed tests
+    Given VitestAdapter has 0 results but total is known
+    When rendered through CompactBar
+    Then output should contain "building Docker"
+
+  # ===========================================
   # @feature5 — Statusline Render Removal
   # ===========================================
 
@@ -298,5 +333,5 @@ Feature: PLUGIN011_tui-statusline
     Given extension directory "extensions/test-statusline/tools/test-statusline" exists
     When checking for shared files
     Then "statusline_session_start.ts" should exist
-    And "test_runner_wrapper.sh" should exist
+    And "test_runner_wrapper.cjs" should exist
     And "status_types.ts" should exist

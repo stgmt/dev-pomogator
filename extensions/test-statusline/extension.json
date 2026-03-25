@@ -14,7 +14,6 @@
   "toolFiles": {
     "test-statusline": [
       ".dev-pomogator/tools/test-statusline/package.json",
-      ".dev-pomogator/tools/test-statusline/test_runner_wrapper.sh",
       ".dev-pomogator/tools/test-statusline/test_runner_wrapper.cjs",
       ".dev-pomogator/tools/test-statusline/statusline_session_start.ts",
       ".dev-pomogator/tools/test-statusline/status_types.ts"
@@ -48,6 +47,12 @@
           ]
         }
       ]
+    }
+  },
+  "statusLine": {
+    "claude": {
+      "type": "custom_polling",
+      "command": "npx -y ccstatusline@latest"
     }
   },
   "envRequirements": [

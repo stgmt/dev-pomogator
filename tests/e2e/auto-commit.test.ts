@@ -3,6 +3,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import { execSync } from 'child_process';
 import os from 'os';
+import { runTsx } from './helpers';
 
 /**
  * Get the project root directory
@@ -377,6 +378,18 @@ describe('PLUGIN006: Auto-Commit', () => {
       
       expect(ext.hooks.cursor.stop).toContain('npx tsx');
       expect(ext.hooks.claude.Stop).toContain('npx tsx');
+    });
+  });
+
+  describe('Integration: stop hook', () => {
+    it('should exit 0 and skip when no API key (integration)', () => {
+      const result = runTsx(
+        'extensions/auto-commit/tools/auto-commit/auto_commit_stop.ts',
+        { input: { conversation_id: 'test', workspace_roots: [testRepoPath] } },
+      );
+      expect(result.status).toBe(0);
+      expect(result.stdout).toContain('{}');
+      expect(result.stderr).toContain('API key not configured');
     });
   });
 });

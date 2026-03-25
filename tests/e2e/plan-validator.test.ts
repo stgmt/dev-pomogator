@@ -902,3 +902,120 @@ describe('PLUGIN007_42: Installer normalizes array matcher to pipe string', () =
     expect(claudeHooks.PostToolUse).toBeUndefined();
   });
 });
+
+// ---------------------------------------------------------------------------
+// @feature1 @feature2: Spec-Test Sync Enforcement (Phase 4 warnings)
+// ---------------------------------------------------------------------------
+
+describe('PLUGIN015: Spec-Test Sync Enforcement', () => {
+  /** Build a valid plan with custom File Changes rows.
+   *  Also injects paths into Implementation Plan so Phase 3 cross-ref passes. */
+  function planWithFileChanges(rows: string): string {
+    let plan = getValidPlan();
+    // Extract paths from rows to inject into body (Phase 3 cross-ref requires mention)
+    const paths = [...rows.matchAll(/`([^`]+)`\s*\|/g)].map((m) => m[1]);
+    const pathMention = paths.map((p) => `1. Edit \`${p}\` — apply changes for spec-test-sync validation testing purposes`).join('\n');
+    // Inject paths into Implementation Plan
+    plan = plan.replace(
+      /(## 🔧 Implementation Plan\n)/,
+      `$1${pathMention}\n`,
+    );
+    // Replace File Changes table rows
+    return plan.replace(
+      /(## 📁 File Changes\n\| Path \| Action \| Reason \|\n\|[-|]+\|)\n[\s\S]*$/m,
+      `$1\n${rows}\n`,
+    );
+  }
+
+  // @feature1
+  it('PLUGIN015_01: warns when tests in File Changes without specs', () => {
+    const plan = planWithFileChanges(
+      '| `tests/e2e/auth.test.ts` | edit | Update authentication test coverage for the login edge case scenario |',
+    );
+    const result = validatePlanPhased(writeTempPlan(plan));
+    expect(result.phase1).toHaveLength(0);
+    const found = findErrors(result.phase4, 'тестовые файлы');
+    expect(found.length).toBeGreaterThan(0);
+    expect(found[0].message).toContain('спецификаций');
+  });
+
+  // @feature1
+  it('PLUGIN015_02: no warning when tests and specs both present', () => {
+    const plan = planWithFileChanges(
+      '| `tests/e2e/auth.test.ts` | edit | Update authentication tests for login flow |\n' +
+      '| `.specs/auth/FR.md` | edit | Sync FR with updated authentication test scenarios |',
+    );
+    const result = validatePlanPhased(writeTempPlan(plan));
+    expect(result.phase1).toHaveLength(0);
+    const found = findErrors(result.phase4, 'тестовые файлы');
+    expect(found).toHaveLength(0);
+  });
+
+  // @feature1
+  it('PLUGIN015_03: no warning when no test files in File Changes', () => {
+    const plan = planWithFileChanges(
+      '| `src/parser.ts` | edit | Refactor parser logic for better edge case handling in production |',
+    );
+    const result = validatePlanPhased(writeTempPlan(plan));
+    expect(result.phase1).toHaveLength(0);
+    const found = findErrors(result.phase4, 'тестовые файлы');
+    expect(found).toHaveLength(0);
+  });
+
+  // @feature2
+  it('PLUGIN015_04: warns when bugfix Reason without BDD feature', () => {
+    const plan = planWithFileChanges(
+      '| `src/parser.ts` | edit | Fix parsing bug for edge case with malformed input data |',
+    );
+    const result = validatePlanPhased(writeTempPlan(plan));
+    expect(result.phase1).toHaveLength(0);
+    const found = findErrors(result.phase4, 'Багфикс');
+    expect(found.length).toBeGreaterThan(0);
+  });
+
+  // @feature2
+  it('PLUGIN015_05: no bugfix warning when feature file present', () => {
+    const plan = planWithFileChanges(
+      '| `src/parser.ts` | edit | Fix parsing bug for edge case with malformed input data |\n' +
+      '| `tests/features/parser.feature` | edit | Add regression BDD scenario for the parser edge case |',
+    );
+    const result = validatePlanPhased(writeTempPlan(plan));
+    expect(result.phase1).toHaveLength(0);
+    const found = findErrors(result.phase4, 'Багфикс');
+    expect(found).toHaveLength(0);
+  });
+
+  // @feature1 @feature2
+  it('PLUGIN015_09: spec-test-sync rule is installed', () => {
+    const rulePath = path.resolve(
+      __dirname, '../../extensions/plan-pomogator/claude/rules/spec-test-sync.md',
+    );
+    expect(fs.existsSync(rulePath)).toBe(true);
+    const content = fs.readFileSync(rulePath, 'utf-8');
+    expect(content).toContain('Антипаттерн');
+    expect(content).toContain('Чеклист');
+  });
+});
+
+// =========================================================================
+// CLI Integration — validate-plan.ts via real process execution
+// =========================================================================
+describe('CLI Integration: validate-plan.ts', () => {
+  it('returns exit 0 for valid plan fixture (integration)', () => {
+    const result = require('child_process').spawnSync(
+      'npx', ['tsx', 'extensions/plan-pomogator/tools/plan-pomogator/validate-plan.ts', FIXTURE_PATH],
+      { encoding: 'utf-8', cwd: process.env.APP_DIR || process.cwd(), timeout: 30000 },
+    );
+    expect(result.status).toBe(0);
+  });
+
+  it('returns non-zero for broken plan (integration)', () => {
+    const brokenPlan = '# No sections at all\nJust text.';
+    const tmpFile = writeTempPlan(brokenPlan);
+    const result = require('child_process').spawnSync(
+      'npx', ['tsx', 'extensions/plan-pomogator/tools/plan-pomogator/validate-plan.ts', tmpFile],
+      { encoding: 'utf-8', cwd: process.env.APP_DIR || process.cwd(), timeout: 30000 },
+    );
+    expect(result.status).not.toBe(0);
+  });
+});

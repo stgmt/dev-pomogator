@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import fs from 'fs-extra';
-import { spawnSync } from 'child_process';
-import { appPath } from './helpers';
+import { appPath, runTsx } from './helpers';
 
 const POSTINSTALL_SCRIPT = 'extensions/context-menu/tools/context-menu/postinstall.ts';
 
@@ -24,12 +23,7 @@ describe('CTXMENU001: Context Menu Setup', () => {
   // @feature1
   it('CTXMENU001_02: postinstall skips on non-Windows', () => {
     // Run the real postinstall.ts in Docker (Linux) — should skip
-    const scriptPath = appPath(POSTINSTALL_SCRIPT);
-    const result = spawnSync('npx', ['tsx', scriptPath], {
-      encoding: 'utf-8',
-      cwd: appPath(),
-      timeout: 15000,
-    });
+    const result = runTsx(POSTINSTALL_SCRIPT);
     expect(result.status).toBe(0);
     expect(result.stdout).toContain('Skipped');
   });
@@ -61,5 +55,14 @@ describe('CTXMENU001: Context Menu Setup', () => {
     expect(tuiIndex).toBeGreaterThan(-1);
     expect(yoloIndex).toBeGreaterThan(-1);
     expect(tuiIndex).toBeLessThan(yoloIndex);
+  });
+
+  // @feature1 — Integration
+  it('CTXMENU001_06: postinstall.ts exits 0 and produces output via real execution (integration)', () => {
+    const result = runTsx(POSTINSTALL_SCRIPT);
+    expect(result.status).toBe(0);
+    // In Docker (Linux) → "Skipped"; on Windows → NSS content or install attempt
+    const output = (result.stdout + result.stderr).toLowerCase();
+    expect(output.length).toBeGreaterThan(0);
   });
 });

@@ -9,9 +9,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `npm run build` | Compile TypeScript + bundle standalone check-update script |
 | `npm run dev` | Watch mode TypeScript compilation |
 | `npm run lint` | ESLint on `src/` |
-| `npm test` | E2E tests via vitest (direct, no Docker) |
-| `npm run test:all` | E2E + TUI tests (vitest + pytest) |
-| `npm run test:docker` | E2E tests via Docker (deprecated) |
+| `npm test` | E2E tests via Docker (isolated, safe) |
+| `npm run test:all` | E2E + TUI tests via Docker |
 | `npx tsx extensions/plan-pomogator/tools/plan-pomogator/validate-plan.ts <path>` | Validate plan structure |
 | `./extensions/specs-workflow/tools/specs-generator/scaffold-spec.sh -Name "feature"` | Scaffold spec structure |
 | `./extensions/specs-workflow/tools/specs-generator/validate-spec.sh -Path ".specs/feature"` | Validate spec formats |
@@ -63,6 +62,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | proactive-investigation | Не спрашивай разрешение исследовать — делай сам; каждое утверждение с evidence; [UNVERIFIED] для непроверяемого | `.claude/rules/pomogator/proactive-investigation.md` |
 | cross-scope-coverage | При multi-scope фичах: coverage matrix scope×variant, gap report, [OUT_OF_SCOPE] для пропусков | `.claude/rules/pomogator/cross-scope-coverage.md` |
 | manifest-test-coverage | При добавлении rule/tool в extension.json — динамический тест CORE003_RULES покрывает автоматически | `.claude/rules/checklists/manifest-test-coverage.md` |
+| spec-test-sync | При тестах в File Changes — спеки обязательны; при багфиксе — BDD .feature обязателен | `.claude/rules/pomogator/spec-test-sync.md` |
+| integration-tests-first | Тесты ОБЯЗАНЫ быть интеграционными (runInstaller/spawnSync); unit допустим как доп, не как замена | `.claude/rules/integration-tests-first.md` |
 
 ### Triggered
 
