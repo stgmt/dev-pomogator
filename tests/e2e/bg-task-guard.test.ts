@@ -157,18 +157,15 @@ describe('GUARD002: Background Task Guard', () => {
 
   describe('Stop Hook', () => {
     // @feature1 (updated: PID-based blocking instead of TTL)
-    it('GUARD002_03: blocks when marker PID is alive (current process)', () => {
-      // Use current process PID — guaranteed alive
-      const mp = markerPath();
-      fs.ensureDirSync(path.dirname(mp));
-      fs.writeFileSync(mp, `${process.pid} ${new Date().toISOString()}\n`, 'utf-8');
+    it('GUARD002_03: blocks when marker is fresh (within TTL)', () => {
+      createMarker(2, 'bs0olkeoz'); // 2 min old, under 15 min TTL
 
       const result = runHook(STOP_HOOK);
       expect(result.status).toBe(0);
 
       const output = JSON.parse(result.stdout.trim());
       expect(output.decision).toBe('block');
-      expect(output.reason).toContain(`Background task ${process.pid}`);
+      expect(output.reason).toContain('Background task bs0olkeoz');
     });
 
     // @feature2 (updated: PID dead → allow, replaces TTL stale)
@@ -467,10 +464,8 @@ describe('GUARD002: Background Task Guard', () => {
     }
 
     function cleanSessionEnv(): void {
-      // Restore original, never delete
-      if (savedSessionEnv !== null) {
-        fs.writeFileSync(sessionEnvPath, savedSessionEnv, 'utf-8');
-      }
+      // Delete test session.env — stop-guard will use legacy marker without it
+      try { fs.removeSync(sessionEnvPath); } catch { /* ignore */ }
       savedSessionEnv = null;
     }
 

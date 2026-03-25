@@ -129,9 +129,9 @@ if [[ "$TASK_ID" =~ ^[0-9]+$ ]]; then
   if kill -0 "$TASK_ID" 2>/dev/null; then
     : # process alive — continue to blocking logic
   else
-    # PID not found via kill -0. On MSYS/Windows, Node.js PIDs may not be visible.
-    # Fall through to age-based blocking (hard TTL as safety net).
-    :
+    # Process dead — stale marker, allow stop
+    rm -f "$MARKER"
+    exit 0
   fi
 fi
 # Non-numeric TASK_ID or kill not available → fall through to age/YAML based blocking
