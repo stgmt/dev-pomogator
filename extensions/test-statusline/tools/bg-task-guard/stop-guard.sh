@@ -114,8 +114,10 @@ if [ ! -s "$MARKER" ] || ! grep -q '[^ 	]' "$MARKER" 2>/dev/null; then
   exit 0
 fi
 
-# Read task ID from marker (format: "TASK_ID TIMESTAMP")
+# Read task ID from marker (format: "PID TIMESTAMP" or "TASK_ID TIMESTAMP")
 TASK_ID=$(cut -d' ' -f1 "$MARKER" 2>/dev/null || echo "unknown")
+# Sanitize: only keep alphanumeric + hyphen (reject binary garbage)
+TASK_ID=$(echo "$TASK_ID" | tr -cd '[:alnum:]-')
 if [ -z "$TASK_ID" ]; then
   rm -f "$MARKER"
   exit 0
@@ -127,9 +129,9 @@ if [[ "$TASK_ID" =~ ^[0-9]+$ ]]; then
   if kill -0 "$TASK_ID" 2>/dev/null; then
     : # process alive — continue to blocking logic
   else
-    # Process dead — stale marker from crash without cleanup
-    rm -f "$MARKER"
-    exit 0
+    # PID not found via kill -0. On MSYS/Windows, Node.js PIDs may not be visible.
+    # Fall through to age-based blocking (hard TTL as safety net).
+    :
   fi
 fi
 # Non-numeric TASK_ID or kill not available → fall through to age/YAML based blocking
@@ -141,8 +143,8 @@ if [ -n "$STAT_GNU" ]; then
   AGE=$(( NOW - MTIME ))
   AGE_MIN=$(( AGE / 60 ))
 
-  # Hard TTL fallback for non-numeric task IDs (backward compat)
-  if ! [[ "$TASK_ID" =~ ^[0-9]+$ ]] && [ "$AGE" -ge "$HARD_TTL" ]; then
+  # Hard TTL: safety net for stale markers (crash without cleanup, Windows PID mismatch)
+  if [ "$AGE" -ge "$HARD_TTL" ]; then
     rm -f "$MARKER"
     exit 0
   fi

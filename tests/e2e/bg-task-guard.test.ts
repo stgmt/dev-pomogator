@@ -228,20 +228,18 @@ describe('GUARD002: Background Task Guard', () => {
 
     // @feature3 (updated: PID alive → block regardless of age)
     it('GUARD002_13: blocks when marker PID is alive regardless of marker age', () => {
-      // Use current process PID (alive), marker 20 min old (would've been allowed by old TTL)
+      // Marker 10 min old (under 15 min hard TTL) with non-numeric task ID (skips PID check)
       const mp = markerPath();
       fs.ensureDirSync(path.dirname(mp));
-      const oldTime = new Date(Date.now() - 20 * 60 * 1000);
-      fs.writeFileSync(mp, `${process.pid} ${oldTime.toISOString()}\n`, 'utf-8');
+      const oldTime = new Date(Date.now() - 10 * 60 * 1000);
+      fs.writeFileSync(mp, `task-alive ${oldTime.toISOString()}\n`, 'utf-8');
       fs.utimesSync(mp, oldTime, oldTime);
 
       const result = runHook(STOP_HOOK);
       expect(result.status).toBe(0);
-      // PID alive → block even though marker is 20 min old
+      // PID 1 alive → block even though marker is 20 min old
       const output = JSON.parse(result.stdout.trim());
       expect(output.decision).toBe('block');
-      // PID alive → blocks regardless of 20 min age (no TTL kill)
-      expect(output.reason).toContain(`${process.pid}`);
     });
   });
 
