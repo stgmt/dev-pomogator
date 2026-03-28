@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "featureSlug": "extension-beta-flag",
+  "createdAt": "2026-03-28T10:51:25.720Z",
+  "currentPhase": "Complete",
+  "phases": {
+    "Discovery": {
+      "completedAt": "2026-03-28T10:54:23.031Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-03-28T10:54:23.031Z"
+    },
+    "Context": {
+      "completedAt": "2026-03-28T10:54:23.031Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-03-28T10:54:24.014Z"
+    },
+    "Requirements": {
+      "completedAt": "2026-03-28T10:56:12.234Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-03-28T10:56:12.234Z"
+    },
+    "Finalization": {
+      "completedAt": "2026-03-28T10:56:41.855Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-03-28T10:56:41.854Z"
+    }
+  }
+}

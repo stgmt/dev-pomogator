@@ -1,6 +1,7 @@
 import fs from 'fs-extra';
 import path from 'path';
-import { execSync, spawn } from 'child_process';
+import { execSync } from 'child_process';
+import crossSpawn from 'cross-spawn';
 import { fileURLToPath } from 'url';
 import { getMsysSafeEnv } from '../utils/msys.js';
 
@@ -20,9 +21,6 @@ export interface ExtensionHooks {
   claude?: {
     [hookName: string]: HookValue;
   };
-  cursor?: {
-    [hookName: string]: HookValue;
-  };
 }
 
 export interface PostInstallHook {
@@ -35,15 +33,14 @@ export interface Extension {
   name: string;
   version: string;
   description: string;
-  platforms: ('cursor' | 'claude')[];
+  platforms: ('claude')[];
   category: string;
-  files: {
-    cursor?: string[];
+  // Rule files with repo-root relative paths
+  ruleFiles?: {
     claude?: string[];
   };
-  // Rules to install to .cursor/rules/ or .claude/rules/
-  rules?: {
-    cursor?: string[];
+  // Command files with repo-root relative paths
+  commandFiles?: {
     claude?: string[];
   };
   // Tools to install to project/.dev-pomogator/tools/
@@ -63,26 +60,29 @@ export interface Extension {
   // Post-install hook to run after extension is installed
   // Can be a single hook or platform-specific hooks
   postInstall?: PostInstallHook | {
-    cursor?: PostInstallHook;
     claude?: PostInstallHook;
   };
   // Post-update hook to run after extension update
   // Can be a single hook or platform-specific hooks
   postUpdate?: PostInstallHook | {
-    cursor?: PostInstallHook;
     claude?: PostInstallHook;
   };
   // Environment variables required by this extension
   envRequirements?: EnvRequirement[];
   // Whether this extension requires claude-mem persistent memory
   requiresClaudeMem?: boolean;
+  stability?: 'stable' | 'beta';
   path: string;
+}
+
+/** Check if extension is marked as beta (undefined = stable) */
+export function isBeta(ext: Extension): boolean {
+  return ext.stability === 'beta';
 }
 
 export interface PostHookOwner {
   name: string;
   postUpdate?: PostInstallHook | {
-    cursor?: PostInstallHook;
     claude?: PostInstallHook;
   };
 }
@@ -104,10 +104,10 @@ function execShellCommand(
   opts: { cwd: string; stdio: 'inherit' | 'pipe'; env: NodeJS.ProcessEnv }
 ): Promise<void> {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, {
+    const parts = command.split(/\s+/);
+    const child = crossSpawn(parts[0], parts.slice(1), {
       cwd: opts.cwd,
       stdio: opts.stdio,
-      shell: true,
       env: opts.env,
     });
 
@@ -173,30 +173,26 @@ export async function getExtension(name: string): Promise<Extension | null> {
   return extensions.find((ext) => ext.name === name) || null;
 }
 
-export async function getExtensionFiles(
+export function getExtensionFiles(
   extension: Extension,
-  platform: 'cursor' | 'claude'
-): Promise<string[]> {
-  // Новый путь: extensions/{name}/{platform}/commands/
-  const commandsDir = path.join(extension.path, platform, 'commands');
-  
-  if (!(await fs.pathExists(commandsDir))) {
-    return [];
-  }
-  
-  const files = await fs.readdir(commandsDir);
-  return files.map((f) => path.join(commandsDir, f));
+  platform: 'claude',
+  repoRoot: string
+): string[] {
+  const commandFiles = extension.commandFiles?.[platform] || [];
+  return commandFiles.map((f) => path.join(repoRoot, f));
 }
 
 /**
- * Get absolute paths to rule files for an extension
+ * Get absolute paths to rule files for an extension.
+ * Uses ruleFiles format (repo-root relative paths).
  */
-export async function getExtensionRules(
+export function getExtensionRules(
   extension: Extension,
-  platform: 'cursor' | 'claude'
-): Promise<string[]> {
-  const rules = extension.rules?.[platform] || [];
-  return rules.map((r) => path.join(extension.path, r));
+  platform: 'claude',
+  repoRoot: string
+): string[] {
+  const ruleFiles = extension.ruleFiles?.[platform] || [];
+  return ruleFiles.map((r) => path.join(repoRoot, r));
 }
 
 /**
@@ -215,15 +211,17 @@ export async function getExtensionTools(
 }
 
 /**
- * Get map of skill_name -> absolute_path for extension skills (Claude Code only)
+ * Get map of skill_name -> absolute_path for extension skills (Claude Code only).
+ * Skills paths are repo-root relative (starting with .claude/).
  */
-export async function getExtensionSkills(
-  extension: Extension
-): Promise<Map<string, string>> {
+export function getExtensionSkills(
+  extension: Extension,
+  repoRoot: string
+): Map<string, string> {
   const skills = new Map<string, string>();
   if (extension.skills) {
     for (const [name, relativePath] of Object.entries(extension.skills)) {
-      skills.set(name, path.join(extension.path, relativePath));
+      skills.set(name, path.join(repoRoot, relativePath));
     }
   }
   return skills;
@@ -234,7 +232,7 @@ export async function getExtensionSkills(
  */
 export function getExtensionHooks(
   extension: Extension,
-  platform: 'cursor' | 'claude'
+  platform: 'claude'
 ): Record<string, HookValue> {
   return extension.hooks?.[platform] || {};
 }
@@ -244,7 +242,7 @@ export function getExtensionHooks(
  */
 export function getExtensionStatusLine(
   extension: Extension,
-  platform: 'cursor' | 'claude'
+  platform: 'claude'
 ): { type: string; command: string } | null {
   if (platform !== 'claude') return null;
   return extension.statusLine?.claude ?? null;
@@ -288,13 +286,12 @@ function augmentCommandForNonInteractive(command: string): string {
  */
 function getPostInstallHook(
   extension: Extension,
-  platform?: 'cursor' | 'claude'
+  platform?: 'claude'
 ): PostInstallHook | undefined {
   if (!extension.postInstall) return undefined;
 
   // Check if it's platform-specific format
   const postInstall = extension.postInstall as PostInstallHook | {
-    cursor?: PostInstallHook;
     claude?: PostInstallHook;
   };
 
@@ -316,12 +313,11 @@ function getPostInstallHook(
  */
 function getPostUpdateHook(
   extension: PostHookOwner,
-  platform?: 'cursor' | 'claude'
+  platform?: 'claude'
 ): PostInstallHook | undefined {
   if (!extension.postUpdate) return undefined;
 
   const postUpdate = extension.postUpdate as PostInstallHook | {
-    cursor?: PostInstallHook;
     claude?: PostInstallHook;
   };
 
@@ -434,7 +430,7 @@ export function cleanStaleNodeModulesDirs(cwd: string): void {
 export async function runPostInstallHook(
   extension: Extension,
   repoRoot: string,
-  platform?: 'cursor' | 'claude',
+  platform?: 'claude',
   executedSharedHooks?: Set<string>
 ): Promise<void> {
   const hook = getPostInstallHook(extension, platform);
@@ -504,7 +500,7 @@ export async function runPostInstallHook(
 export async function runPostUpdateHook(
   extension: PostHookOwner,
   repoRoot: string,
-  platform?: 'cursor' | 'claude',
+  platform?: 'claude',
   failFast: boolean = false
 ): Promise<void> {
   const hook = getPostUpdateHook(extension, platform);

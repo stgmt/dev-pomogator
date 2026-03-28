@@ -1,0 +1,14 @@
+{
+  "name": "docker-optimization",
+  "version": "1.0.0",
+  "description": "Docker build optimization — analyze Dockerfile, suggest layer caching, .dockerignore, multi-stage split",
+  "platforms": ["claude"],
+  "category": "optimization",
+  "stability": "beta",
+  "skills": {
+    "docker-optimize": ".claude/skills/docker-optimize"
+  },
+  "skillFiles": {
+    "docker-optimize": [".claude/skills/docker-optimize/SKILL.md"]
+  }
+}

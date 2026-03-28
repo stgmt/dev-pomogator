@@ -2,33 +2,32 @@ import { runInstaller, runNonInteractiveInstaller, runSemiInteractiveInstaller }
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
-  
+
   if (args.includes('--version') || args.includes('-v')) {
     const pkg = await import('../package.json', { assert: { type: 'json' } });
     console.log(pkg.default.version);
     process.exit(0);
   }
-  
+
   if (args.includes('--help') || args.includes('-h')) {
     console.log(`
-dev-pomogator - Team coding standards for Cursor and Claude Code
+dev-pomogator - Team coding standards for Claude Code
 
 Usage:
-  npx dev-pomogator                                    Interactive (choose platform + plugins)
-  npx dev-pomogator --cursor                           Cursor + choose plugins interactively
-  npx dev-pomogator --claude                           Claude Code + choose plugins interactively
-  npx dev-pomogator --cursor --plugins=suggest-rules   Non-interactive (specific plugins only)
-  npx dev-pomogator --cursor --all                     Non-interactive (all plugins)
+  npx dev-pomogator                                    Interactive (choose plugins)
+  npx dev-pomogator --claude                           Choose plugins interactively
+  npx dev-pomogator --claude --plugins=suggest-rules   Non-interactive (specific plugins only)
+  npx dev-pomogator --claude --all                     Non-interactive (all plugins)
   npx dev-pomogator --status                           Show current configuration
   npx dev-pomogator --update                           Check for updates
 
 Options:
   -v, --version              Show version
   -h, --help                 Show this help
-  --cursor                   Install for Cursor
   --claude                   Install for Claude Code
   --plugins=name1,name2      Install only specified plugins (non-interactive)
   --all                      Install all plugins (non-interactive)
+  --include-beta             Include beta plugins with --all
   --status                   Show configuration status
   --update                   Check for updates now
 
@@ -40,47 +39,43 @@ Available plugins:
 `);
     process.exit(0);
   }
-  
+
+  if (args.includes('--cursor')) {
+    console.error('Cursor support has been removed. Use --claude.');
+    process.exit(1);
+  }
+
   if (args.includes('--status')) {
     const { showStatus } = await import('./installer/status.js');
     await showStatus();
     process.exit(0);
   }
-  
+
   if (args.includes('--update')) {
     const { checkUpdate } = await import('./updater/index.js');
     await checkUpdate({ force: true });
     process.exit(0);
   }
-  
-  // Parse platform flags
-  const hasCursor = args.includes('--cursor');
+
   const hasClaude = args.includes('--claude');
-  
-  if (hasCursor || hasClaude) {
-    const platforms: ('cursor' | 'claude')[] = [];
-    if (hasCursor) platforms.push('cursor');
-    if (hasClaude) platforms.push('claude');
-    
-    // Parse --plugins flag
+
+  if (hasClaude) {
     const pluginsArg = args.find((a) => a.startsWith('--plugins='));
     const hasAllFlag = args.includes('--all');
-    
+
     if (pluginsArg) {
-      // Fully non-interactive: specific plugins
       const selectedPlugins = pluginsArg.replace('--plugins=', '').split(',').filter(Boolean);
-      await runNonInteractiveInstaller(platforms, { plugins: selectedPlugins });
+      await runNonInteractiveInstaller({ plugins: selectedPlugins });
     } else if (hasAllFlag) {
-      // Fully non-interactive: all plugins
-      await runNonInteractiveInstaller(platforms, { plugins: undefined });
+      const includeBeta = args.includes('--include-beta');
+      await runNonInteractiveInstaller({ plugins: undefined, includeBeta });
     } else {
-      // Semi-interactive: platform is set, but choose plugins
-      await runSemiInteractiveInstaller(platforms);
+      await runSemiInteractiveInstaller();
     }
     process.exit(0);
   }
-  
-  // Default: run fully interactive installer (choose platform + plugins)
+
+  // Default: run fully interactive installer
   await runInstaller();
 }
 
