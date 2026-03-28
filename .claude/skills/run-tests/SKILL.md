@@ -65,6 +65,8 @@ If `.claude/rules/docker-only-tests.md` exists in the project, tests MUST run th
 
 Use Read tool to check if the rule file exists.
 
+**Note: Build Guard** — PreToolUse hook `build_guard.ts` automatically blocks test execution if build is stale (TypeScript src/ newer than dist/, Docker SKIP_BUILD=1, dotnet --no-build). Bypass: `SKIP_BUILD_CHECK=1`.
+
 ### Step 3: Build and run test command
 
 Build the command using the dispatch table:
@@ -78,18 +80,25 @@ Build the command using the dispatch table:
 | rust | `cargo test` | `-- filter` |
 | go | `go test ./...` | `-run "filter"` |
 
-Wrap with `test_runner_wrapper.sh` for YAML status tracking. **Always pass `--framework`** so the wrapper uses the correct adapter (auto-detection can fail in Docker or nested projects):
+Wrap with `test_runner_wrapper.cjs` for YAML status tracking. **Always pass `--framework`** so the wrapper uses the correct adapter (auto-detection can fail in Docker or nested projects):
 
 ```bash
-bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.sh --framework <detected-framework> -- <test-command>
+bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.cjs --framework <detected-framework> -- <test-command>
 ```
 
 If `--docker` flag, check if `scripts/docker-test.sh` exists in the project root:
 
+**Docker mode: wrapper runs INSIDE the container** via Dockerfile CMD. Do NOT wrap in host wrapper — the container already has `test_runner_wrapper.cjs` as its CMD. YAML status files are shared via volume mount.
+
 **If `scripts/docker-test.sh` exists** (preferred — handles build, cleanup, session isolation automatically):
 
 ```bash
-bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.sh --framework vitest -- bash scripts/docker-test.sh npx vitest run -t "auth"
+bash scripts/docker-test.sh
+```
+
+With test filter:
+```bash
+bash scripts/docker-test.sh npx vitest run -t "auth"
 ```
 
 **IMPORTANT: Each argument MUST be a separate word — do NOT wrap the entire test command in quotes.**
@@ -108,10 +117,10 @@ bash scripts/docker-test.sh "npx vitest run -t auth"
 **If `scripts/docker-test.sh` does NOT exist** (fallback for other projects):
 
 ```bash
-bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.sh --framework <detected-framework> -- docker compose -f docker-compose.test.yml run --rm test <test-command>
+bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.cjs --framework <detected-framework> -- docker compose -f docker-compose.test.yml run --rm test <test-command>
 ```
 
-**Cross-platform note:** The wrapper uses Node.js `spawn()` without shell, so `docker` is found via system PATH on all platforms (Windows, Linux, macOS).
+**Cross-platform note:** The wrapper uses `cross-spawn` for transparent cross-platform command resolution on all OSes.
 
 Run the built command using the Bash tool.
 

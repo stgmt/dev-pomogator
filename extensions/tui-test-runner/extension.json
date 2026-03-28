@@ -2,14 +2,14 @@
   "name": "tui-test-runner",
   "version": "1.1.0",
   "description": "Rich 4-tab TUI test runner with Python Textual UI, universal framework adapters, /run-tests skill, and test-guard hook",
-  "platforms": ["claude", "cursor"],
+  "platforms": [
+    "claude"
+  ],
   "category": "automation",
-  "files": {
-    "claude": [],
-    "cursor": ["cursor/commands/run-tests.md"]
-  },
-  "rules": {
-    "centralized-test-runner": "centralized-test-runner.md"
+  "ruleFiles": {
+    "claude": [
+      ".claude/rules/tui-test-runner/centralized-test-runner.md"
+    ]
   },
   "tools": {
     "tui-test-runner": "tools/tui-test-runner"
@@ -21,6 +21,8 @@
     "test_runner_wrapper.ts",
     "tui_session_start.ts",
     "test_guard.ts",
+    "build_guard.ts",
+    "build-staleness.ts",
     "yaml_writer.ts",
     "adapters/types.ts",
     "adapters/adapter_base.ts",
@@ -55,7 +57,7 @@
     "tui/analyst/output.py"
   ],
   "skills": {
-    "run-tests": "skills/run-tests"
+    "run-tests": ".claude/skills/run-tests"
   },
   "skillFiles": {
     "run-tests": [
@@ -65,7 +67,28 @@
   "hooks": {
     "claude": {
       "SessionStart": "npx tsx .dev-pomogator/tools/tui-test-runner/tui_session_start.ts",
-      "PreToolUse": { "matcher": "Bash", "command": "npx tsx .dev-pomogator/tools/tui-test-runner/test_guard.ts" }
+      "PreToolUse": [
+        {
+          "matcher": "Bash",
+          "hooks": [
+            {
+              "type": "command",
+              "command": "npx tsx .dev-pomogator/tools/tui-test-runner/build_guard.ts",
+              "timeout": 30
+            }
+          ]
+        },
+        {
+          "matcher": "Bash",
+          "hooks": [
+            {
+              "type": "command",
+              "command": "npx tsx .dev-pomogator/tools/tui-test-runner/test_guard.ts",
+              "timeout": 30
+            }
+          ]
+        }
+      ]
     }
   },
   "envRequirements": [
