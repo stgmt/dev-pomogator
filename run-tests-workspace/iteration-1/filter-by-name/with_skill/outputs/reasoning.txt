@@ -1,0 +1,29 @@
+Step-by-step reasoning for: "запусти тесты только по statusline"
+
+Step 0: Sanitize arguments
+- User input: "statusline" (extracted from Russian phrase "запусти тесты только по statusline")
+- No pasted text, no ANSI sequences, no newlines. Filter keyword: "statusline"
+
+Step 1: Detect framework
+- Checked project root for config files using Glob tool
+- Found: vitest.config.ts at D:\repos\dev-pomogator\vitest.config.ts
+- Other configs found but NOT at project root (conftest.py in tests/tui/, pyproject.toml in subdirectories, .csproj in test fixtures)
+- Framework detected: vitest (root-level vitest.config.ts takes priority)
+
+Step 2: Check docker-only-tests rule
+- File .claude/rules/docker-only-tests.md EXISTS in the project
+- Rule states: all tests must run through Docker (docker-compose.test.yml)
+- Action: automatically add --docker flag
+
+Step 3: Build test command
+- Framework: vitest
+- Base command from dispatch table: npx vitest run
+- Filter applied: --grep "statusline"
+- Full test command: npx vitest run --grep "statusline"
+- Docker mode: --docker is active (from Step 2)
+- scripts/docker-test.sh EXISTS (preferred path)
+- Final command wrapped with test_runner_wrapper.sh:
+  bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.sh bash scripts/docker-test.sh npx vitest run --grep "statusline"
+
+Step 4: Report results (would happen after execution)
+- Would report exit code, framework (vitest), and YAML status summary

@@ -1,0 +1,32 @@
+{
+  "eval_id": 1,
+  "eval_name": "basic-run-all",
+  "prompt": "запусти тесты",
+  "assertions": [
+    {
+      "name": "uses-wrapper",
+      "description": "Command uses test_runner_wrapper.sh for YAML status tracking",
+      "check": "command.txt contains 'test_runner_wrapper.sh'"
+    },
+    {
+      "name": "detects-docker-rule",
+      "description": "Detects docker-only-tests rule and uses docker mode",
+      "check": "command.txt contains 'docker'"
+    },
+    {
+      "name": "detects-vitest",
+      "description": "Auto-detects vitest as the framework from vitest.config.ts",
+      "check": "reasoning.txt mentions vitest detection"
+    },
+    {
+      "name": "uses-docker-test-sh",
+      "description": "Uses scripts/docker-test.sh when it exists (preferred path)",
+      "check": "command.txt contains 'docker-test.sh'"
+    },
+    {
+      "name": "no-direct-npm-test",
+      "description": "Does NOT use bare 'npm test' — uses wrapper instead",
+      "check": "command.txt does NOT contain standalone 'npm test'"
+    }
+  ]
+}

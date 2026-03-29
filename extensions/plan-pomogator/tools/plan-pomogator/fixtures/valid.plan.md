@@ -52,7 +52,7 @@
   - Реализовать функцию `validateSections()` проверяющую наличие и порядок 9 обязательных секций с emoji-заголовками
   - Реализовать функцию `validateTodos()` проверяющую формат `### 📋 todo-id` блоков включая description, files, refs, changes, deps
 - **refs:** FR-1, NFR-Usability
-- **leverage:** `extensions/specs-workflow/tools/specs-generator/validate-spec.sh` *(паттерн CLI валидатора)*
+- **leverage:** `extensions/specs-workflow/tools/specs-generator/validate-spec.ts` *(паттерн CLI валидатора)*
 - **deps:** *none*
 
 ---

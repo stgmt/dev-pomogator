@@ -36,6 +36,8 @@ const BLOCKED_PATTERNS = [
 /** Patterns that indicate the command is already wrapped (allow) */
 const ALLOWED_PATTERNS = [
   /test_runner_wrapper/,
+  /docker-test\.sh/,       // project Docker test script (used by /run-tests --docker)
+  /docker compose.*test/,  // direct docker compose test invocation
   /test:e2e:docker/,       // internal Docker test command
   /vitest.*--reporter/,    // vitest inside Docker (npm run test:e2e:docker)
 ];

@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "featureSlug": "claude-mem-integration",
+  "createdAt": "2026-03-28T10:07:28.093Z",
+  "currentPhase": "Complete",
+  "phases": {
+    "Discovery": {
+      "completedAt": "2026-03-28T10:14:20.911Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-03-28T10:14:20.911Z"
+    },
+    "Context": {
+      "completedAt": "2026-03-28T10:14:20.911Z",
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    },
+    "Requirements": {
+      "completedAt": "2026-03-28T10:20:02.233Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-03-28T10:20:02.232Z"
+    },
+    "Finalization": {
+      "completedAt": "2026-03-28T10:21:54.698Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-03-28T10:21:54.698Z"
+    }
+  }
+}

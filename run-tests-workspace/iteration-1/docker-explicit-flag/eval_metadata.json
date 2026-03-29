@@ -1,0 +1,32 @@
+{
+  "eval_id": 5,
+  "eval_name": "docker-explicit-flag",
+  "prompt": "/run-tests --docker auth",
+  "assertions": [
+    {
+      "name": "uses-docker",
+      "description": "Uses docker mode (explicit --docker flag)",
+      "check": "command.txt contains 'docker'"
+    },
+    {
+      "name": "has-auth-filter",
+      "description": "Passes 'auth' as test name filter",
+      "check": "command.txt contains 'auth'"
+    },
+    {
+      "name": "uses-docker-test-sh",
+      "description": "Uses scripts/docker-test.sh when it exists",
+      "check": "command.txt contains 'docker-test.sh'"
+    },
+    {
+      "name": "uses-wrapper",
+      "description": "Command uses test_runner_wrapper.sh",
+      "check": "command.txt contains 'test_runner_wrapper.sh'"
+    },
+    {
+      "name": "uses-vitest-grep",
+      "description": "Detects vitest and uses --grep for filter",
+      "check": "command.txt contains '--grep'"
+    }
+  ]
+}

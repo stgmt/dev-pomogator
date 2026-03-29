@@ -3,7 +3,7 @@
  * Canonical v2 test runner wrapper.
  */
 
-import { spawn, spawnSync } from 'node:child_process';
+import crossSpawn from 'cross-spawn';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { TestEvent, TestFramework } from './adapters/types.js';
@@ -150,12 +150,11 @@ function discoverTestCount(framework: TestFramework, projectRoot: string): numbe
   if (!config) return 0;
 
   try {
-    const result = spawnSync(config.cmd[0], config.cmd.slice(1), {
+    const result = crossSpawn.sync(config.cmd[0], config.cmd.slice(1), {
       cwd: projectRoot,
       encoding: 'utf-8',
       timeout: 60000,
       env: { ...process.env, FORCE_COLOR: '0', NO_COLOR: '1', VITEST_LIST: '1' },
-      shell: true,
     });
     if (result.status !== 0 || !result.stdout) {
       if (result.stderr) {
@@ -175,7 +174,7 @@ function discoverTestCount(framework: TestFramework, projectRoot: string): numbe
 }
 
 function passthrough(commandArgs: string[], childEnv: Record<string, string>): number {
-  const result = spawnSync(commandArgs[0], commandArgs.slice(1), {
+  const result = crossSpawn.sync(commandArgs[0], commandArgs.slice(1), {
     stdio: 'inherit',
     cwd: PROJECT,
     env: { ...process.env, ...childEnv },
@@ -281,7 +280,7 @@ async function main(): Promise<number> {
   }
 
   const logStream = fs.createWriteStream(logFile, { flags: 'a' });
-  const child = spawn(parsed.commandArgs[0], parsed.commandArgs.slice(1), {
+  const child = crossSpawn(parsed.commandArgs[0], parsed.commandArgs.slice(1), {
     cwd: projectRoot,
     stdio: ['inherit', 'pipe', 'pipe'],
     env: { ...process.env, ...parsed.childEnv },

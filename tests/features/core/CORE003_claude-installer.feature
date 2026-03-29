@@ -126,3 +126,25 @@ Feature: CORE003 Claude Code Installer
     Then the installer should clean stale temp dirs in node_modules
     And the installer should retry the failed command
     And the retry should use both npx cache and node_modules cleanup
+
+  # @feature36
+  Scenario: CORE003_RULES All manifest rules are installed
+    Given dev-pomogator installs for Claude Code with --all
+    When I check all extension.json manifests for claude rules
+    Then every rule listed in every manifest should exist in .claude/rules/
+    And no rule file should be empty (size > 0)
+
+  Scenario: CORE003_REPORT Installation generates structured report
+    Given dev-pomogator installs for Claude Code with --all
+    Then ~/.dev-pomogator/last-install-report.md should exist
+    And report should contain "claude-code" component with status
+    And report should contain "claude-mem" component with status
+
+  Scenario: CORE003_CMEM claude-mem installation pipeline is complete
+    Given dev-pomogator installs for Claude Code with --all
+    Then claude-mem package.json should be valid in marketplace dir
+    And worker-service.cjs should exist and be non-empty (>1000 bytes)
+    And mcp-server.cjs should exist and be non-empty (>1000 bytes)
+    And mcp-server.cjs should contain MCP protocol markers
+    And claude-mem settings should have CHROMA_MODE defined
+    And MCP should be accessible via plugin enablement OR manual registration

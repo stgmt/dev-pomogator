@@ -1,0 +1,11 @@
+{
+  "eval_id": 2,
+  "run_type": "without_skill",
+  "command": "bash scripts/docker-test.sh npx vitest run tests/e2e/test-statusline.test.ts --reporter=verbose",
+  "expectations": [
+    {"text": "has-filter", "passed": true, "evidence": "Filters by file path test-statusline.test.ts (different approach but valid)"},
+    {"text": "uses-grep-flag", "passed": false, "evidence": "Uses file path filter instead of --grep flag"},
+    {"text": "uses-wrapper", "passed": false, "evidence": "No test_runner_wrapper.sh — statusline/TUI won't get data"},
+    {"text": "uses-docker", "passed": true, "evidence": "Uses docker-test.sh directly"}
+  ]
+}

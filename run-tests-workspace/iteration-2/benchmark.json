@@ -1,0 +1,64 @@
+{
+  "metadata": {
+    "skill_name": "run-tests",
+    "skill_path": "D:\\repos\\dev-pomogator\\extensions\\tui-test-runner\\skills\\run-tests\\SKILL.md",
+    "executor_model": "claude-opus-4-6",
+    "analyzer_model": "claude-opus-4-6",
+    "timestamp": "2026-03-16T02:45:00Z",
+    "evals_run": ["basic-run-all", "filter-by-name", "explicit-framework", "pasted-text-sanitization"],
+    "runs_per_configuration": 1
+  },
+  "runs": [
+    {
+      "eval_name": "basic-run-all",
+      "with_skill": {"pass_rate": 1.0, "passed": 5, "total": 5, "tokens": 59513, "duration_seconds": 76.5},
+      "without_skill": {"pass_rate": 0.0, "passed": 0, "total": 5, "tokens": 60046, "duration_seconds": 73.0}
+    },
+    {
+      "eval_name": "filter-by-name",
+      "with_skill": {"pass_rate": 1.0, "passed": 4, "total": 4, "tokens": 59949, "duration_seconds": 96.9},
+      "without_skill": {"pass_rate": 0.5, "passed": 2, "total": 4, "tokens": 61132, "duration_seconds": 104.8}
+    },
+    {
+      "eval_name": "explicit-framework",
+      "with_skill": {"pass_rate": 1.0, "passed": 4, "total": 4, "tokens": 58905, "duration_seconds": 76.3},
+      "without_skill": {"pass_rate": 0.5, "passed": 2, "total": 4, "tokens": 69765, "duration_seconds": 108.4}
+    },
+    {
+      "eval_name": "pasted-text-sanitization",
+      "with_skill": {"pass_rate": 1.0, "passed": 4, "total": 4, "tokens": 59187, "duration_seconds": 83.7},
+      "without_skill": {"pass_rate": 0.5, "passed": 2, "total": 4, "tokens": 68018, "duration_seconds": 90.0}
+    }
+  ],
+  "run_summary": {
+    "with_skill": {
+      "mean_pass_rate": 1.0,
+      "stddev_pass_rate": 0.0,
+      "mean_tokens": 59389,
+      "mean_duration_seconds": 83.4
+    },
+    "without_skill": {
+      "mean_pass_rate": 0.375,
+      "stddev_pass_rate": 0.239,
+      "mean_tokens": 64740,
+      "mean_duration_seconds": 94.1
+    },
+    "delta": {
+      "pass_rate": "+62.5%",
+      "tokens": "-8.3%",
+      "duration": "-11.4%"
+    }
+  },
+  "notes": [
+    "IMPROVEMENT: Eval 4 (pasted-text) went from 80% to 100% pass rate. New Step 0 correctly extracts 'statusline' via Glob matching instead of mechanical first-line.",
+    "REGRESSION CHECK: Evals 1-3 maintained same results as iteration-1 — no regressions.",
+    "Eval 3 baseline improved: found test_runner_wrapper.ts directly and used --framework jest, but missed docker rule.",
+    "Overall with-skill pass rate: 100% (up from 95.7% in iter-1).",
+    "Non-discriminating eval 5 removed — remaining 4 evals all show clear skill value."
+  ],
+  "comparison_with_previous": {
+    "iteration_1_with_skill": 0.957,
+    "iteration_2_with_skill": 1.0,
+    "improvement": "+4.3%"
+  }
+}

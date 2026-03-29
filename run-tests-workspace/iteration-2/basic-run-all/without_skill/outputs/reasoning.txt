@@ -1,0 +1,36 @@
+Step-by-step reasoning for determining the test command:
+
+1. Read package.json to find test scripts:
+   - "test": "npm run test:e2e"
+   - "test:e2e": "bash scripts/docker-test.sh"
+   - "test:e2e:docker": "vitest run tests/e2e --reporter=verbose && python3 -m pytest tests/tui/ -v"
+
+2. Read CLAUDE.md Commands table:
+   - `npm test` is documented as "E2E tests via Docker Compose (requires Docker)"
+   - The docker-only-tests rule states: "All tests run only through Docker (npm test)"
+
+3. Read scripts/docker-test.sh:
+   - It uses docker compose with docker-compose.test.yml
+   - Generates a unique COMPOSE_PROJECT_NAME for session isolation
+   - Builds the test image and runs: `docker compose -f docker-compose.test.yml run --rm -T test "$@"`
+
+4. Checked the centralized-test-runner rule in .claude/rules/:
+   - States tests should ONLY be run through `/run-tests` (a skill/slash command)
+   - Direct `npm test`, `pytest`, etc. are blocked by a PreToolUse hook
+   - However, since we don't have access to the /run-tests skill, and the underlying
+     command that /run-tests would invoke is `npm test`, that is the command.
+
+5. The docker-only-tests rule confirms:
+   - Test files live in tests/e2e/*.test.ts
+   - Tests run via `npm test` (Docker Compose)
+   - No unit test configs or tests outside tests/e2e/ are allowed
+
+6. Confirmed 24 test files exist in tests/e2e/.
+
+Conclusion: The exact command to run all tests is `npm test`, which chains to
+`npm run test:e2e` -> `bash scripts/docker-test.sh` -> Docker Compose build + run.
+
+Note: The project rules (centralized-test-runner.md) indicate that tests should
+ideally be run through the `/run-tests` skill which wraps the test command with
+a status-tracking wrapper (test_runner_wrapper.sh) that feeds data to the TUI
+and statusline. Without the skill, `npm test` is the direct equivalent.

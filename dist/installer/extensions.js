@@ -1,9 +1,14 @@
 import fs from 'fs-extra';
 import path from 'path';
-import { execSync, spawn } from 'child_process';
+import { execSync } from 'child_process';
+import crossSpawn from 'cross-spawn';
 import { fileURLToPath } from 'url';
 import { getMsysSafeEnv } from '../utils/msys.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+/** Check if extension is marked as beta (undefined = stable) */
+export function isBeta(ext) {
+    return ext.stability === 'beta';
+}
 export class PostUpdateHookError extends Error {
     constructor(extensionName, message) {
         super(`Post-update hook failed for ${extensionName}: ${message}`);
@@ -17,10 +22,10 @@ export class PostUpdateHookError extends Error {
  */
 function execShellCommand(command, opts) {
     return new Promise((resolve, reject) => {
-        const child = spawn(command, {
+        const parts = command.split(/\s+/);
+        const child = crossSpawn(parts[0], parts.slice(1), {
             cwd: opts.cwd,
             stdio: opts.stdio,
-            shell: true,
             env: opts.env,
         });
         let stderr = '';
@@ -76,21 +81,17 @@ export async function getExtension(name) {
     const extensions = await listExtensions();
     return extensions.find((ext) => ext.name === name) || null;
 }
-export async function getExtensionFiles(extension, platform) {
-    // Новый путь: extensions/{name}/{platform}/commands/
-    const commandsDir = path.join(extension.path, platform, 'commands');
-    if (!(await fs.pathExists(commandsDir))) {
-        return [];
-    }
-    const files = await fs.readdir(commandsDir);
-    return files.map((f) => path.join(commandsDir, f));
+export function getExtensionFiles(extension, platform, repoRoot) {
+    const commandFiles = extension.commandFiles?.[platform] || [];
+    return commandFiles.map((f) => path.join(repoRoot, f));
 }
 /**
- * Get absolute paths to rule files for an extension
+ * Get absolute paths to rule files for an extension.
+ * Uses ruleFiles format (repo-root relative paths).
  */
-export async function getExtensionRules(extension, platform) {
-    const rules = extension.rules?.[platform] || [];
-    return rules.map((r) => path.join(extension.path, r));
+export function getExtensionRules(extension, platform, repoRoot) {
+    const ruleFiles = extension.ruleFiles?.[platform] || [];
+    return ruleFiles.map((r) => path.join(repoRoot, r));
 }
 /**
  * Get map of tool_name -> absolute_path for extension tools
@@ -105,13 +106,14 @@ export async function getExtensionTools(extension) {
     return tools;
 }
 /**
- * Get map of skill_name -> absolute_path for extension skills (Claude Code only)
+ * Get map of skill_name -> absolute_path for extension skills (Claude Code only).
+ * Skills paths are repo-root relative (starting with .claude/).
  */
-export async function getExtensionSkills(extension) {
+export function getExtensionSkills(extension, repoRoot) {
     const skills = new Map();
     if (extension.skills) {
         for (const [name, relativePath] of Object.entries(extension.skills)) {
-            skills.set(name, path.join(extension.path, relativePath));
+            skills.set(name, path.join(repoRoot, relativePath));
         }
     }
     return skills;

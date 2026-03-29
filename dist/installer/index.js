@@ -1,38 +1,42 @@
 import { confirm, checkbox } from '@inquirer/prompts';
 import chalk from 'chalk';
-import { installCursor } from './cursor.js';
 import { installClaude } from './claude.js';
-import { listExtensions } from './extensions.js';
+import { listExtensions, isBeta } from './extensions.js';
 import { ensureClaudeMem } from './memory.js';
 import { generateEnvExample, getMissingRequiredEnv } from './env-setup.js';
 import { saveConfig, loadConfig } from '../config/index.js';
 import { findRepoRoot } from '../utils/repo.js';
-import { createLogger } from '../utils/logger.js';
+import { createLogger, formatErrorChain, getErrorMessage } from '../utils/logger.js';
 import { captureConsole } from '../utils/console-capture.js';
+import { InstallReport } from './report.js';
 export { listExtensions } from './extensions.js';
 /**
  * Non-interactive installer for CI/testing
  */
-export async function runNonInteractiveInstaller(platforms, options = {}) {
+export async function runNonInteractiveInstaller(options = {}) {
     console.log(chalk.bold.cyan('\n🚀 dev-pomogator installer (non-interactive)\n'));
-    // Get all extensions for selected platforms
     const allExtensions = await listExtensions();
-    let availableExtensions = allExtensions.filter(ext => ext.platforms.some(p => platforms.includes(p)));
-    // Filter by selected plugins if specified
+    let availableExtensions = allExtensions.filter(ext => ext.platforms.includes('claude'));
     if (options.plugins !== undefined) {
         availableExtensions = availableExtensions.filter(ext => options.plugins.includes(ext.name));
         console.log(chalk.gray(`Installing plugins: ${options.plugins.join(', ')}\n`));
     }
     else {
+        // --all without --include-beta: exclude beta plugins
+        if (!options.includeBeta) {
+            const betaSkipped = availableExtensions.filter(ext => isBeta(ext)).map(e => e.name);
+            availableExtensions = availableExtensions.filter(ext => !isBeta(ext));
+            if (betaSkipped.length > 0) {
+                console.log(chalk.gray(`Skipping beta plugins: ${betaSkipped.join(', ')} (use --include-beta to install)\n`));
+            }
+        }
         console.log(chalk.gray(`Installing all plugins: ${availableExtensions.map(e => e.name).join(', ')}\n`));
     }
     const extensionNames = availableExtensions.map(ext => ext.name);
-    // Default settings - auto-update enabled by default
     const autoUpdate = true;
-    // Save config — preserve existing installedExtensions (addProjectPaths will update them)
     const existingConfig = await loadConfig();
     const config = {
-        platforms,
+        platforms: ['claude'],
         autoUpdate,
         lastCheck: new Date().toISOString(),
         cooldownHours: 24,
@@ -40,48 +44,43 @@ export async function runNonInteractiveInstaller(platforms, options = {}) {
         installedExtensions: existingConfig?.installedExtensions ?? [],
     };
     await saveConfig(config);
-    // Install
-    await install(platforms, autoUpdate, extensionNames);
+    await install(autoUpdate, extensionNames);
 }
 /**
- * Semi-interactive installer: platform is pre-selected, but user chooses plugins
+ * Semi-interactive installer: user chooses plugins
  */
-export async function runSemiInteractiveInstaller(platforms) {
+export async function runSemiInteractiveInstaller() {
     console.log(chalk.bold.cyan('\n🚀 dev-pomogator installer\n'));
-    console.log(chalk.gray(`Platform: ${platforms.join(', ')}\n`));
+    console.log(chalk.gray('Platform: Claude Code\n'));
     if (!process.stdin.isTTY) {
         console.log(chalk.gray('Non-interactive mode detected. Installing all plugins...\n'));
-        return await runNonInteractiveInstaller(platforms, { plugins: undefined });
+        return await runNonInteractiveInstaller({ plugins: undefined });
     }
-    // Get extensions for selected platforms
     const allExtensions = await listExtensions();
-    const availableExtensions = allExtensions.filter(ext => ext.platforms.some(p => platforms.includes(p)));
+    const availableExtensions = allExtensions.filter(ext => ext.platforms.includes('claude'));
     if (availableExtensions.length === 0) {
-        console.log(chalk.yellow('No plugins available for selected platform(s). Exiting.'));
+        console.log(chalk.yellow('No plugins available. Exiting.'));
         process.exit(0);
     }
-    // Let user choose plugins
     const selectedExtensions = await checkbox({
         message: 'Select plugins to install:',
         choices: availableExtensions.map(ext => ({
-            name: `${ext.name} — ${ext.description}`,
+            name: `${ext.name}${isBeta(ext) ? ' (BETA)' : ''} — ${ext.description}`,
             value: ext.name,
-            checked: false, // Not checked by default - user must choose
+            checked: !isBeta(ext),
         })),
     });
     if (selectedExtensions.length === 0) {
         console.log(chalk.yellow('No plugins selected. Exiting.'));
         process.exit(0);
     }
-    // Auto-update option
     const autoUpdate = await confirm({
         message: 'Enable auto-updates? (checks every 24 hours)',
         default: true,
     });
-    // Save config — preserve existing installedExtensions (addProjectPaths will update them)
     const existingConfig = await loadConfig();
     const config = {
-        platforms,
+        platforms: ['claude'],
         autoUpdate,
         lastCheck: new Date().toISOString(),
         cooldownHours: 24,
@@ -89,8 +88,7 @@ export async function runSemiInteractiveInstaller(platforms) {
         installedExtensions: existingConfig?.installedExtensions ?? [],
     };
     await saveConfig(config);
-    // Install
-    await install(platforms, autoUpdate, selectedExtensions);
+    await install(autoUpdate, selectedExtensions);
 }
 export async function runInstaller() {
     console.log(chalk.bold.cyan('\n🚀 dev-pomogator installer\n'));
@@ -103,34 +101,20 @@ export async function runInstaller() {
         });
         if (useExisting) {
             const extNames = existingConfig.installedExtensions?.map(e => e.name) || [];
-            await install(existingConfig.platforms, existingConfig.autoUpdate, extNames);
+            await install(existingConfig.autoUpdate, extNames);
             return;
         }
     }
-    // 1. Platform selection
-    const platforms = await checkbox({
-        message: 'Select platform(s) to install:',
-        choices: [
-            { name: 'Cursor', value: 'cursor' },
-            { name: 'Claude Code', value: 'claude' },
-        ],
-        required: true,
-    });
-    if (platforms.length === 0) {
-        console.log(chalk.yellow('No platforms selected. Exiting.'));
-        process.exit(0);
-    }
-    // 2. Extension selection
     const allExtensions = await listExtensions();
-    const availableExtensions = allExtensions.filter(ext => ext.platforms.some(p => platforms.includes(p)));
+    const availableExtensions = allExtensions.filter(ext => ext.platforms.includes('claude'));
     let selectedExtensions = [];
     if (availableExtensions.length > 0) {
         selectedExtensions = await checkbox({
             message: 'Select extensions to install:',
             choices: availableExtensions.map(ext => ({
-                name: `${ext.name} — ${ext.description}`,
+                name: `${ext.name}${isBeta(ext) ? ' (BETA)' : ''} — ${ext.description}`,
                 value: ext.name,
-                checked: true,
+                checked: !isBeta(ext),
             })),
         });
         if (selectedExtensions.length === 0) {
@@ -138,89 +122,90 @@ export async function runInstaller() {
             process.exit(0);
         }
     }
-    // 3. Auto-update option
     const autoUpdate = await confirm({
         message: 'Enable auto-updates? (checks every 24 hours)',
         default: true,
     });
-    // 4. Remember choice
     const rememberChoice = await confirm({
         message: 'Remember these choices for next time?',
         default: true,
     });
-    // 5. Save config — preserve existing installedExtensions (addProjectPaths will update them)
+    const existingInstalled = existingConfig?.installedExtensions ?? [];
     const config = {
-        platforms,
+        platforms: ['claude'],
         autoUpdate,
         lastCheck: new Date().toISOString(),
         cooldownHours: 24,
         rememberChoice,
-        installedExtensions: existingConfig?.installedExtensions ?? [],
+        installedExtensions: existingInstalled,
     };
     await saveConfig(config);
-    // 6. Install
-    await install(platforms, autoUpdate, selectedExtensions);
+    await install(autoUpdate, selectedExtensions);
 }
-async function install(platforms, autoUpdate, extensions) {
+async function install(autoUpdate, extensions) {
     const installLog = createLogger('install.log');
-    installLog.info(`=== Installation started: platforms=${platforms.join(',')}, extensions=${extensions.join(',')} ===`);
+    installLog.info(`=== Installation started: platform=claude, extensions=${extensions.join(',')} ===`);
     const restoreConsole = captureConsole((level, msg) => installLog[level.toLowerCase()](msg));
+    const report = new InstallReport();
     try {
         console.log(chalk.cyan('\nInstalling...\n'));
-        // Get full extension objects to check requiresClaudeMem
         const allExtensions = await listExtensions();
         const selectedExtensions = allExtensions.filter(e => extensions.includes(e.name));
-        // Check if any selected extension requires claude-mem
         const needsClaudeMem = selectedExtensions.some(e => e.requiresClaudeMem === true);
-        // Track shared post-install hooks to avoid running them twice for TARGET=all
         const executedSharedHooks = new Set();
-        for (const platform of platforms) {
-            if (platform === 'cursor') {
-                try {
-                    await installCursor({ autoUpdate, extensions, executedSharedHooks });
-                    console.log(chalk.green('✓ Cursor commands installed'));
-                }
-                catch (error) {
-                    const message = error instanceof Error ? error.message : String(error);
-                    throw new Error(`Failed to install for Cursor: ${message}`);
-                }
-                // Install claude-mem for Cursor only if required by selected extensions
-                if (needsClaudeMem) {
+        try {
+            await installClaude({ extensions, executedSharedHooks });
+            console.log(chalk.green('✓ Claude Code plugin installed'));
+            report.add({ component: 'claude-code', status: 'ok' });
+        }
+        catch (error) {
+            const msg = getErrorMessage(error);
+            report.add({ component: 'claude-code', status: 'fail', message: msg });
+            throw new Error(`Failed to install for Claude Code: ${msg}`);
+        }
+        if (needsClaudeMem) {
+            try {
+                const validation = await ensureClaudeMem('claude', installLog);
+                report.add({ component: 'claude-mem', status: validation.worker ? 'ok' : 'fail' });
+                report.add({ component: 'claude-mem/worker', status: validation.worker ? 'ok' : 'fail' });
+                report.add({ component: 'claude-mem/chroma', status: validation.chroma ? 'ok' : 'warn', message: validation.chroma ? '' : 'degraded mode — basic memory works, semantic search unavailable' });
+                report.add({ component: 'claude-mem/mcp', status: validation.mcpBinary ? 'ok' : 'fail' });
+                // Auto-install claude-mem-health extension (SessionStart hook for chroma auto-restart)
+                let healthHooksOk = false;
+                if (!extensions.includes('claude-mem-health')) {
                     try {
-                        await ensureClaudeMem('cursor');
+                        await installClaude({ extensions: ['claude-mem-health'], executedSharedHooks });
+                        console.log(chalk.green('  ✓ claude-mem-health hooks installed'));
+                        healthHooksOk = true;
                     }
-                    catch (error) {
-                        console.log(chalk.yellow('⚠ Could not setup claude-mem (optional feature)'));
+                    catch (err) {
+                        installLog.warn(`claude-mem-health install failed: ${getErrorMessage(err)}`);
+                        console.log(chalk.yellow('  ⚠ Could not install claude-mem-health hooks'));
                     }
                 }
+                else {
+                    healthHooksOk = true;
+                }
+                report.add({ component: 'claude-mem/hooks', status: healthHooksOk ? 'ok' : 'fail' });
             }
-            if (platform === 'claude') {
-                try {
-                    await installClaude({ extensions, executedSharedHooks });
-                    console.log(chalk.green('✓ Claude Code plugin installed'));
-                }
-                catch (error) {
-                    const message = error instanceof Error ? error.message : String(error);
-                    throw new Error(`Failed to install for Claude Code: ${message}`);
-                }
-                // Install claude-mem plugin for Claude Code only if required by selected extensions
-                if (needsClaudeMem) {
-                    try {
-                        await ensureClaudeMem('claude');
-                    }
-                    catch (error) {
-                        console.log(chalk.yellow('⚠ Could not setup claude-mem (optional feature)'));
-                    }
-                }
+            catch (error) {
+                const msg = getErrorMessage(error);
+                installLog.error(`claude-mem setup failed: ${formatErrorChain(error)}`);
+                console.log(chalk.yellow('⚠ Could not setup claude-mem (optional feature)'));
+                console.log(chalk.gray(`  Reason: ${msg}`));
+                console.log(chalk.gray('  Details: ~/.dev-pomogator/logs/install.log'));
+                report.add({ component: 'claude-mem', status: 'fail', message: msg });
+                report.add({ component: 'claude-mem/worker', status: 'fail', message: msg });
+                report.add({ component: 'claude-mem/chroma', status: 'fail', message: msg });
+                report.add({ component: 'claude-mem/mcp', status: 'fail', message: msg });
+                report.add({ component: 'claude-mem/hooks', status: 'fail', message: msg });
             }
         }
         console.log(chalk.bold.green('\n✨ Installation complete!\n'));
-        // Generate .env.example and warn about missing required env vars
         const repoRoot = findRepoRoot();
         const missingEnvVars = await generateEnvExample(repoRoot, selectedExtensions);
         if (missingEnvVars.length > 0) {
             const missing = getMissingRequiredEnv(selectedExtensions);
-            // Group by extension
             const byExtension = new Map();
             for (const m of missing) {
                 if (!byExtension.has(m.extensionName)) {
@@ -238,29 +223,16 @@ async function install(platforms, autoUpdate, extensions) {
                     console.log(chalk.yellow(`     ${v.name}  — ${v.description}`));
                 }
             }
-            const platformHint = platforms.includes('claude')
-                ? '.claude/settings.json → "env"'
-                : '.env or shell profile';
-            console.log(chalk.gray(`\n   Add to ${platformHint}\n`));
+            console.log(chalk.gray('\n   Add to .claude/settings.json → "env"\n'));
             console.log(chalk.cyan('   📄 .env.example generated with defaults\n'));
         }
-        if (platforms.includes('cursor')) {
-            console.log(chalk.cyan('Cursor: Installed plugins: ' + extensions.join(', ')));
-            if (autoUpdate) {
-                console.log(chalk.gray('         Auto-update enabled (checks every 24 hours)'));
-            }
-            if (needsClaudeMem) {
-                console.log(chalk.gray('         Persistent memory enabled (claude-mem)'));
-            }
-        }
-        if (platforms.includes('claude')) {
-            console.log(chalk.cyan('Claude Code: Installed plugins: ' + extensions.join(', ')));
-            if (needsClaudeMem) {
-                console.log(chalk.gray('             Persistent memory enabled (claude-mem plugin)'));
-            }
+        console.log(chalk.cyan('Claude Code: Installed plugins: ' + extensions.join(', ')));
+        if (needsClaudeMem) {
+            console.log(chalk.gray('             Persistent memory enabled (claude-mem plugin)'));
         }
     }
     finally {
+        await report.write().catch(() => { });
         restoreConsole();
         installLog.info('=== Installation finished ===');
     }

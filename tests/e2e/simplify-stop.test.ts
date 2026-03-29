@@ -1,19 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
-import { spawnSync } from 'child_process';
+import { runTsx, appPath } from './helpers';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function getProjectRoot(): string {
-  return process.env.APP_DIR || process.cwd();
-}
-
-function appPath(...segments: string[]): string {
-  return path.join(getProjectRoot(), ...segments);
-}
 
 const HOOK_PATH = 'extensions/auto-simplify/tools/auto-simplify/simplify_stop.ts';
 const MARKER_PATH = '.dev-pomogator/.simplify-marker.json';
@@ -28,23 +20,14 @@ function runStopHook(
   input: Record<string, unknown>,
   envOverrides: Record<string, string> = {}
 ): HookResult {
-  const hookFile = path.join(appPath(), HOOK_PATH);
-  const result = spawnSync('npx', ['tsx', hookFile], {
-    input: JSON.stringify(input),
-    encoding: 'utf-8',
-    cwd: appPath(),
-    env: {
-      ...process.env,
-      FORCE_COLOR: '0',
-      ...envOverrides,
-    },
-    timeout: 15000,
-    shell: true,
+  const result = runTsx(HOOK_PATH, {
+    input,
+    env: envOverrides,
   });
   return {
     exitCode: result.status ?? 1,
-    stdout: result.stdout ?? '',
-    stderr: result.stderr ?? '',
+    stdout: result.stdout,
+    stderr: result.stderr,
   };
 }
 
@@ -98,15 +81,7 @@ describe('Auto-Simplify Stop Hook', () => {
 
   // @feature7 — Empty input
   it('should approve on empty stdin', () => {
-    const hookFile = path.join(appPath(), HOOK_PATH);
-    const result = spawnSync('npx', ['tsx', hookFile], {
-      input: '',
-      encoding: 'utf-8',
-      cwd: appPath(),
-      env: { ...process.env, FORCE_COLOR: '0' },
-      timeout: 15000,
-      shell: true,
-    });
+    const result = runTsx(HOOK_PATH, {});
     expect(result.status).toBe(0);
   });
 

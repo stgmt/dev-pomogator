@@ -2,16 +2,17 @@ import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
 import { execSync, spawn } from 'child_process';
-import { fileURLToPath } from 'url';
+import crossSpawn from 'cross-spawn';
 import chalk from 'chalk';
-import { makePortableScriptCommand } from './shared.js';
 import { writeJsonAtomic } from '../utils/atomic-json.js';
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+import { getErrorMessage } from '../utils/logger.js';
 // ============================================================================
 // Constants
 // ============================================================================
 const CLAUDE_MEM_REPO = 'https://github.com/thedotmack/claude-mem.git';
-// Always use marketplace directory - shared between Cursor and Claude Code
+// Module-level logger set by ensureClaudeMem, used by inner functions
+let _installLogger;
+// Always use marketplace directory for Claude Code
 const CLAUDE_MEM_DIR = path.join(os.homedir(), '.claude', 'plugins', 'marketplaces', 'thedotmack');
 const WORKER_PORT = 37777;
 const CHROMA_PORT = 8000;
@@ -91,69 +92,11 @@ async function isWorkerRunning() {
 }
 /**
  * Check if claude-mem repo is cloned and built (worker-service.cjs exists).
- * Used for Cursor path — checks file presence, NOT Claude Code plugin registration.
+ * Checks file presence for plugin availability.
  */
 async function isClaudeMemRepoCloned() {
     const workerPath = path.join(CLAUDE_MEM_DIR, 'plugin', 'scripts', 'worker-service.cjs');
     return fs.pathExists(workerPath);
-}
-/**
- * Get the path to worker-service.cjs
- * Uses marketplace version if available, otherwise git clone
- */
-function getWorkerServicePath() {
-    return path.join(getClaudeMemDir(), 'plugin', 'scripts', 'worker-service.cjs');
-}
-/**
- * Get path to cursor-summarize wrapper script
- * This wrapper reads conversation from Cursor's SQLite and calls claude-mem API
- * Uses .ts extension since bun can execute TypeScript directly
- */
-function getCursorSummarizeScriptPath() {
-    return path.join(os.homedir(), '.dev-pomogator', 'scripts', 'cursor-summarize.ts');
-}
-/**
- * Generate Cursor hooks.json structure with node CLI commands
- *
- * Includes:
- * - claude-mem hooks (session-init, context, observation, file-edit)
- * - cursor-summarize wrapper (reads SQLite + calls claude-mem API)
- * - dev-pomogator updater hook (check-update.js)
- */
-function generateCursorHooksJson() {
-    const workerServicePath = getWorkerServicePath();
-    const cursorSummarizePath = getCursorSummarizeScriptPath();
-    // Escape backslashes for JSON on Windows
-    const escapedWorkerPath = workerServicePath.replace(/\\/g, '\\\\');
-    const escapedSummarizePath = cursorSummarizePath.replace(/\\/g, '\\\\');
-    // Helper to create claude-mem hook command (uses bun because worker-service.cjs requires bun:sqlite)
-    const makeClaudeMemHook = (action) => {
-        return `bun "${escapedWorkerPath}" hook cursor ${action}`;
-    };
-    return {
-        version: 1,
-        hooks: {
-            beforeSubmitPrompt: [
-                { command: makeClaudeMemHook('session-init') },
-                { command: makeClaudeMemHook('context') },
-            ],
-            afterMCPExecution: [
-                { command: makeClaudeMemHook('observation') },
-            ],
-            afterShellExecution: [
-                { command: makeClaudeMemHook('observation') },
-            ],
-            afterFileEdit: [
-                { command: makeClaudeMemHook('file-edit') },
-            ],
-            stop: [
-                // Use our custom wrapper that reads Cursor's SQLite and calls claude-mem API
-                // This fixes "Missing transcriptPath" error
-                { command: `bun "${escapedSummarizePath}"` },
-                { command: makePortableScriptCommand('check-update.js') }, // dev-pomogator updater
-            ],
-        },
-    };
 }
 // ============================================================================
 // Chroma vector DB dependency management
@@ -302,10 +245,12 @@ async function ensureChromaDeps() {
             pythonChromaPath = findPythonChroma();
         }
         catch (error) {
+            _installLogger?.warn(`pip-install-chromadb: ${getErrorMessage(error)}`);
             console.log(chalk.yellow(`  ⚠ Could not install Python chromadb: ${error}`));
         }
     }
     if (!pythonChromaPath) {
+        _installLogger?.warn('find-chroma-binary: Python chromadb not found after all strategies');
         console.log(chalk.yellow('  ⚠ Python chromadb not found. Chroma vector search may not work.'));
         return;
     }
@@ -351,10 +296,12 @@ export async function startChromaServer() {
             chromaBin = findPythonChroma();
         }
         catch (error) {
+            _installLogger?.warn(`startChroma-pip-install: ${getErrorMessage(error)}`);
             console.log(chalk.yellow(`  ⚠ Could not install Python chromadb: ${error}`));
         }
     }
     if (!chromaBin) {
+        _installLogger?.warn('startChroma-find-binary: chroma not found, vector search disabled');
         console.log(chalk.yellow('  ⚠ Python chroma not found. Vector search will be disabled.'));
         console.log(chalk.gray('    Basic memory features (observations, context) still work.'));
         return;
@@ -373,6 +320,7 @@ export async function startChromaServer() {
     });
     chromaProcess.unref();
     chromaProcess.on('error', (err) => {
+        _installLogger?.warn(`startChroma-spawn: ${err.message}`);
         console.log(chalk.yellow(`  ⚠ Chroma process error: ${err.message}`));
     });
     // Wait for heartbeat (up to 30 seconds)
@@ -384,15 +332,16 @@ export async function startChromaServer() {
         }
         await new Promise(r => setTimeout(r, 1000));
     }
+    _installLogger?.warn('startChroma-heartbeat: Chroma did not respond within 30s');
     console.log(chalk.yellow('  ⚠ Chroma did not respond within 30s. Vector search may be disabled.'));
     console.log(chalk.gray('    Basic memory features (observations, context) still work.'));
 }
 // ============================================================================
-// Cursor: claude-mem installation via git clone
+// claude-mem installation via git clone
 // ============================================================================
 /**
  * Clone and build claude-mem repository into marketplace directory
- * This makes it available for both Cursor and Claude Code
+ * Clone and build claude-mem repository into marketplace directory
  */
 async function cloneAndBuildRepo() {
     console.log(chalk.cyan('  Cloning claude-mem repository...'));
@@ -415,6 +364,7 @@ async function cloneAndBuildRepo() {
             }
             catch (error) {
                 if (attempt < maxRetries) {
+                    _installLogger?.warn(`cloneRepo-attempt${attempt}: ${getErrorMessage(error)}`);
                     console.log(chalk.yellow(`  ⚠ Clone attempt ${attempt} failed, retrying in ${attempt * 5}s...`));
                     await fs.remove(CLAUDE_MEM_DIR).catch(() => { });
                     await fs.ensureDir(path.dirname(CLAUDE_MEM_DIR));
@@ -436,6 +386,7 @@ async function cloneAndBuildRepo() {
             });
         }
         catch {
+            _installLogger?.warn('cloneRepo-pull: Could not pull latest changes');
             console.log(chalk.yellow('  ⚠ Could not pull latest changes'));
         }
     }
@@ -469,245 +420,6 @@ async function cloneAndBuildRepo() {
     await ensureChromaDeps();
 }
 /**
- * Install Cursor hooks by directly generating hooks.json
- *
- * Bypasses broken `bun run cursor:install` which looks for non-existent shell scripts.
- * Generates hooks.json with node CLI commands that call worker-service.cjs directly.
- */
-export async function installCursorHooks() {
-    console.log(chalk.cyan('  Installing Cursor hooks...'));
-    // Check if claude-mem is installed
-    if (!await isClaudeMemRepoCloned()) {
-        console.log(chalk.gray('    claude-mem not found, cloning repository...'));
-        await cloneAndBuildRepo();
-    }
-    else {
-        console.log(chalk.gray('    Using existing installation (shared with Claude Code)'));
-    }
-    // Verify worker-service.cjs exists
-    const workerServicePath = getWorkerServicePath();
-    if (!await fs.pathExists(workerServicePath)) {
-        throw new Error(`worker-service.cjs not found at: ${workerServicePath}`);
-    }
-    // Generate hooks.json
-    const hooksJson = generateCursorHooksJson();
-    // Target directory: ~/.cursor/hooks/
-    const cursorHooksDir = path.join(os.homedir(), '.cursor', 'hooks');
-    const hooksFilePath = path.join(cursorHooksDir, 'hooks.json');
-    // Create directory if not exists
-    await fs.ensureDir(cursorHooksDir);
-    // Merge with existing hooks if present
-    let existingHooks = { version: 1, hooks: {} };
-    if (await fs.pathExists(hooksFilePath)) {
-        try {
-            existingHooks = await fs.readJson(hooksFilePath);
-            console.log(chalk.gray('    Merging with existing hooks.json...'));
-        }
-        catch {
-            console.log(chalk.yellow('    ⚠ Could not parse existing hooks.json, overwriting...'));
-        }
-    }
-    // Merge hooks - combine arrays, don't overwrite
-    const mergedHooks = {
-        version: 1,
-        hooks: {},
-    };
-    // Get all unique event names from both sources
-    const allEvents = new Set([
-        ...Object.keys(existingHooks.hooks || {}),
-        ...Object.keys(hooksJson.hooks || {}),
-    ]);
-    // Merge each event's hooks array
-    for (const event of allEvents) {
-        const existingArray = existingHooks.hooks[event] || [];
-        const newArray = hooksJson.hooks[event] || [];
-        // Combine arrays, avoiding duplicates by command
-        const combined = [...existingArray];
-        for (const hook of newArray) {
-            const exists = combined.some((h) => h.command === hook.command);
-            if (!exists) {
-                combined.push(hook);
-            }
-        }
-        mergedHooks.hooks[event] = combined;
-    }
-    // Write hooks.json
-    await fs.writeJson(hooksFilePath, mergedHooks, { spaces: 2 });
-    // Copy check-update.js script for dev-pomogator updater
-    await copyCheckUpdateScript();
-    // Copy cursor-summarize script (reads Cursor SQLite + calls claude-mem API)
-    await copyCursorSummarizeScript();
-    // Copy validate-specs script (specs-workflow validator)
-    await copyValidateSpecsScript();
-    // Copy validate-steps script (steps-validator for BDD)
-    await copyValidateStepsScript();
-    console.log(chalk.green('  ✓ Cursor hooks installed'));
-    console.log(chalk.gray(`    Path: ${hooksFilePath}`));
-}
-/**
- * Copy bundled check-update script to ~/.dev-pomogator/scripts/
- *
- * The bundle (check-update.bundle.js) is self-contained with all dependencies,
- * so no need to copy dist/updater or dist/config folders.
- *
- * Structure after copy:
- * ~/.dev-pomogator/
- *   scripts/check-update.js  (copied from dist/check-update.bundle.cjs)
- *   logs/update.log          (created by the script when running)
- */
-async function copyCheckUpdateScript() {
-    const devPomogatorDir = path.join(os.homedir(), '.dev-pomogator');
-    const scriptsDir = path.join(devPomogatorDir, 'scripts');
-    const destScript = path.join(scriptsDir, 'check-update.js');
-    // Get source path: dist/check-update.bundle.cjs (relative to this file in dist/installer/)
-    const distDir = path.resolve(__dirname, '..'); // This is /app/dist
-    const bundledScript = path.join(distDir, 'check-update.bundle.cjs');
-    await fs.ensureDir(scriptsDir);
-    // Copy bundled script
-    if (await fs.pathExists(bundledScript)) {
-        await fs.copy(bundledScript, destScript, { overwrite: true });
-        console.log(chalk.gray(`    Copied check-update.bundle.cjs to ${destScript}`));
-    }
-    else {
-        console.log(chalk.yellow(`    ⚠ check-update.bundle.cjs not found. Run "npm run build" first.`));
-    }
-}
-/**
- * Copy validate-specs script to ~/.dev-pomogator/scripts/specs-validator/
- *
- * This script validates @featureN tags in MD files against BDD scenarios.
- * It's executed with npx tsx (which supports TypeScript natively).
- *
- * Note: Using separate subdirectory to avoid file conflicts with steps-validator.
- */
-async function copyValidateSpecsScript() {
-    const devPomogatorDir = path.join(os.homedir(), '.dev-pomogator');
-    const scriptsDir = path.join(devPomogatorDir, 'scripts');
-    const destDir = path.join(scriptsDir, 'specs-validator');
-    await fs.ensureDir(destDir);
-    // Get source from installed extensions
-    // First try: node_modules location (installed package)
-    // Second try: development location (extensions folder)
-    const extensionsDir = path.resolve(__dirname, '..', '..', 'extensions');
-    const nodeModulesDir = path.resolve(__dirname, '..', '..', 'node_modules', 'dev-pomogator', 'extensions');
-    const possibleSources = [
-        path.join(extensionsDir, 'specs-workflow', 'tools', 'specs-validator'),
-        path.join(nodeModulesDir, 'specs-workflow', 'tools', 'specs-validator'),
-    ];
-    for (const sourceDir of possibleSources) {
-        const mainScript = path.join(sourceDir, 'validate-specs.ts');
-        if (await fs.pathExists(mainScript)) {
-            // Copy all validator files
-            const filesToCopy = [
-                'validate-specs.ts',
-                'completeness.ts',
-                'matcher.ts',
-                'reporter.ts',
-                'phase-constants.ts',
-            ];
-            for (const file of filesToCopy) {
-                const src = path.join(sourceDir, file);
-                const dest = path.join(destDir, file);
-                if (await fs.pathExists(src)) {
-                    await fs.copy(src, dest, { overwrite: true });
-                }
-            }
-            // Copy parsers subdirectory
-            const parsersDir = path.join(sourceDir, 'parsers');
-            const destParsersDir = path.join(destDir, 'parsers');
-            if (await fs.pathExists(parsersDir)) {
-                await fs.ensureDir(destParsersDir);
-                await fs.copy(parsersDir, destParsersDir, { overwrite: true });
-            }
-            console.log(chalk.gray(`    Copied validate-specs to ${destDir}`));
-            return;
-        }
-    }
-    console.log(chalk.yellow(`    ⚠ validate-specs script not found`));
-}
-/**
- * Copy validate-steps (steps-validator) script to ~/.dev-pomogator/scripts/steps-validator/
- *
- * This script validates step definitions quality in BDD projects.
- * It's executed with npx tsx (which supports TypeScript natively).
- *
- * Note: Using separate subdirectory to avoid file conflicts with specs-validator.
- */
-async function copyValidateStepsScript() {
-    const devPomogatorDir = path.join(os.homedir(), '.dev-pomogator');
-    const scriptsDir = path.join(devPomogatorDir, 'scripts');
-    const destDir = path.join(scriptsDir, 'steps-validator');
-    await fs.ensureDir(destDir);
-    // Get source from installed extensions
-    const extensionsDir = path.resolve(__dirname, '..', '..', 'extensions');
-    const nodeModulesDir = path.resolve(__dirname, '..', '..', 'node_modules', 'dev-pomogator', 'extensions');
-    const possibleSources = [
-        path.join(extensionsDir, 'specs-workflow', 'tools', 'steps-validator'),
-        path.join(nodeModulesDir, 'specs-workflow', 'tools', 'steps-validator'),
-    ];
-    for (const sourceDir of possibleSources) {
-        const mainScript = path.join(sourceDir, 'validate-steps.ts');
-        if (await fs.pathExists(mainScript)) {
-            // Copy all validator files
-            const filesToCopy = [
-                'validate-steps.ts',
-                'types.ts',
-                'config.ts',
-                'detector.ts',
-                'analyzer.ts',
-                'reporter.ts',
-                'logger.ts',
-            ];
-            for (const file of filesToCopy) {
-                const src = path.join(sourceDir, file);
-                const dest = path.join(destDir, file);
-                if (await fs.pathExists(src)) {
-                    await fs.copy(src, dest, { overwrite: true });
-                }
-            }
-            // Copy parsers subdirectory
-            const parsersDir = path.join(sourceDir, 'parsers');
-            const destParsersDir = path.join(destDir, 'parsers');
-            if (await fs.pathExists(parsersDir)) {
-                await fs.ensureDir(destParsersDir);
-                await fs.copy(parsersDir, destParsersDir, { overwrite: true });
-            }
-            console.log(chalk.gray(`    Copied validate-steps to ${destDir}`));
-            return;
-        }
-    }
-    console.log(chalk.yellow(`    ⚠ validate-steps script not found`));
-}
-/**
- * Copy cursor-summarize script to ~/.dev-pomogator/scripts/
- *
- * This script reads Cursor's SQLite database and calls claude-mem API.
- * It's executed with bun (which supports bun:sqlite and TypeScript natively).
- */
-async function copyCursorSummarizeScript() {
-    const devPomogatorDir = path.join(os.homedir(), '.dev-pomogator');
-    const scriptsDir = path.join(devPomogatorDir, 'scripts');
-    const destScript = path.join(scriptsDir, 'cursor-summarize.ts');
-    await fs.ensureDir(scriptsDir);
-    // Copy TypeScript source directly (bun can execute .ts natively)
-    // First try: adjacent to this compiled file (dev-pomogator/dist/hooks/cursor-summarize.ts)
-    // Second try: source directory (dev-pomogator/src/hooks/cursor-summarize.ts)
-    const distDir = path.resolve(__dirname, '..');
-    const srcDir = path.resolve(__dirname, '..', '..', 'src');
-    const possibleSources = [
-        path.join(distDir, 'hooks', 'cursor-summarize.ts'),
-        path.join(srcDir, 'hooks', 'cursor-summarize.ts'),
-    ];
-    for (const sourceScript of possibleSources) {
-        if (await fs.pathExists(sourceScript)) {
-            await fs.copy(sourceScript, destScript, { overwrite: true });
-            console.log(chalk.gray(`    Copied cursor-summarize.ts to ${destScript}`));
-            return;
-        }
-    }
-    console.log(chalk.yellow(`    ⚠ cursor-summarize.ts script not found`));
-}
-/**
  * Start claude-mem worker using bun run worker:start
  */
 export async function startClaudeMemWorker() {
@@ -724,25 +436,11 @@ export async function startClaudeMemWorker() {
     const claudeMemDir = getClaudeMemDir();
     // Start worker in background
     try {
-        const isWindows = process.platform === 'win32';
-        if (isWindows) {
-            // Windows: use start /B to run in background
-            spawn('cmd', ['/c', 'start', '/B', 'bun', 'run', 'worker:start'], {
-                cwd: claudeMemDir,
-                detached: true,
-                stdio: 'ignore',
-                shell: true,
-            }).unref();
-        }
-        else {
-            // Unix: use & to run in background
-            spawn('bun', ['run', 'worker:start'], {
-                cwd: claudeMemDir,
-                detached: true,
-                stdio: 'ignore',
-                shell: true,
-            }).unref();
-        }
+        crossSpawn('bun', ['run', 'worker:start'], {
+            cwd: claudeMemDir,
+            detached: true,
+            stdio: 'ignore',
+        }).unref();
         // Wait for worker to start
         await new Promise((resolve) => setTimeout(resolve, 3000));
         // Verify worker started
@@ -750,11 +448,13 @@ export async function startClaudeMemWorker() {
             console.log(chalk.green('  ✓ claude-mem worker started'));
         }
         else {
+            _installLogger?.warn('startWorker-health: worker not responding after 3s');
             console.log(chalk.yellow('  ⚠ Worker may not have started. Check manually.'));
             console.log(chalk.gray(`  You can manually run: cd ${claudeMemDir} && bun run worker:start`));
         }
     }
     catch (error) {
+        _installLogger?.error(`startWorker-spawn: ${getErrorMessage(error)}`);
         console.log(chalk.yellow(`  ⚠ Could not start worker: ${error}`));
     }
 }
@@ -817,6 +517,7 @@ export async function installClaudeMemPlugin() {
     }
     catch {
         // claude CLI not available or plugin commands failed — fallback to git clone + build
+        _installLogger?.warn('installPlugin-cli: claude CLI not available, falling back to git clone');
         console.log(chalk.yellow('  ⚠ claude CLI not available, falling back to git clone...'));
         if (!await isClaudeMemRepoCloned()) {
             await cloneAndBuildRepo();
@@ -826,63 +527,6 @@ export async function installClaudeMemPlugin() {
 // ============================================================================
 // Main entry point
 // ============================================================================
-/**
- * Check if Cursor hooks are installed correctly with CURRENT paths
- *
- * Validates:
- * 1. hooks.json exists
- * 2. Contains required hook actions (session-init, context, observation)
- * 3. Uses CURRENT worker-service.cjs path (will reinstall if path changed)
- * 4. No invalid old npm commands
- */
-async function areCursorHooksInstalled() {
-    const hooksFile = path.join(os.homedir(), '.cursor', 'hooks', 'hooks.json');
-    if (!await fs.pathExists(hooksFile)) {
-        return false;
-    }
-    try {
-        const hooks = await fs.readJson(hooksFile);
-        const hooksStr = JSON.stringify(hooks);
-        // Check for required hook actions
-        const hasRequiredActions = hooksStr.includes('hook cursor session-init') &&
-            hooksStr.includes('hook cursor context') &&
-            hooksStr.includes('hook cursor observation');
-        if (!hasRequiredActions) {
-            return false;
-        }
-        // Check that hooks use CURRENT worker-service.cjs path
-        // This ensures hooks are updated if path changes
-        // Note: JSON.stringify escapes backslashes, so we need to match the escaped version
-        const expectedWorkerPath = getWorkerServicePath();
-        // In JSON string, backslashes are double-escaped: \ -> \\ -> \\\\
-        const escapedWorkerPath = expectedWorkerPath.replace(/\\/g, '\\\\\\\\');
-        const hasCurrentWorkerPath = hooksStr.includes(escapedWorkerPath);
-        if (!hasCurrentWorkerPath) {
-            console.log(chalk.gray('  Hooks exist but claude-mem path outdated, will reinstall...'));
-            return false;
-        }
-        // Check for dev-pomogator updater hook (portable format with os.homedir())
-        const hasUpdaterHook = hooksStr.includes('check-update.js');
-        if (!hasUpdaterHook) {
-            console.log(chalk.gray('  Hooks exist but dev-pomogator updater missing, will reinstall...'));
-            return false;
-        }
-        // Check for cursor-summarize wrapper (fixes "Missing transcriptPath" error)
-        const expectedSummarizePath = getCursorSummarizeScriptPath();
-        const escapedSummarizePath = expectedSummarizePath.replace(/\\/g, '\\\\\\\\');
-        const hasSummarizeWrapper = hooksStr.includes(escapedSummarizePath);
-        if (!hasSummarizeWrapper) {
-            console.log(chalk.gray('  Hooks exist but cursor-summarize wrapper missing, will reinstall...'));
-            return false;
-        }
-        // Check for INVALID hooks (old npm claude-mem commands that don't work)
-        const hasInvalidHooks = hooksStr.includes('claude-mem cursor hook');
-        return !hasInvalidHooks;
-    }
-    catch {
-        return false;
-    }
-}
 /**
  * Check if claude-mem marketplace plugin is enabled in ~/.claude/settings.json.
  * When enabled, Claude Code auto-discovers MCP servers from the plugin's .mcp.json,
@@ -902,11 +546,9 @@ async function isClaudeMemPluginEnabled() {
     return false;
 }
 /**
- * Register claude-mem MCP server in the IDE's MCP config file.
- * Cursor: ~/.cursor/mcp.json
- * Claude Code: ~/.claude.json
+ * Register claude-mem MCP server in ~/.claude.json.
  *
- * For Claude Code: skips manual registration when the marketplace plugin
+ * Skips manual registration when the marketplace plugin
  * is enabled (enabledPlugins), and cleans up legacy manual entries to
  * prevent duplicate MCP servers.
  *
@@ -914,12 +556,10 @@ async function isClaudeMemPluginEnabled() {
  * Paths use forward slashes in JSON for cross-platform compatibility.
  */
 async function registerClaudeMemMcp(platform) {
-    const configPath = platform === 'cursor'
-        ? path.join(os.homedir(), '.cursor', 'mcp.json')
-        : path.join(os.homedir(), '.claude.json');
-    // For Claude Code: if marketplace plugin is enabled, it already provides MCP.
+    const configPath = path.join(os.homedir(), '.claude.json');
+    // If marketplace plugin is enabled, it already provides MCP.
     // Clean up any legacy manual entry to prevent duplicate servers.
-    if (platform === 'claude' && await isClaudeMemPluginEnabled()) {
+    if (await isClaudeMemPluginEnabled()) {
         let config = {};
         try {
             if (await fs.pathExists(configPath)) {
@@ -956,6 +596,7 @@ async function registerClaudeMemMcp(platform) {
         .replace(/\\/g, '/');
     // Verify binary exists before registering
     if (!(await fs.pathExists(path.join(CLAUDE_MEM_DIR, 'plugin', 'scripts', 'mcp-server.cjs')))) {
+        _installLogger?.warn('registerMcp: mcp-server.cjs not found, skipping MCP registration');
         console.log(chalk.yellow('  ⚠ mcp-server.cjs not found, skipping MCP registration'));
         return;
     }
@@ -1003,80 +644,66 @@ async function ensureChromaExternalMode() {
  * Ensure claude-mem is installed and configured for the specified platform.
  * Runs AUTOMATICALLY without user confirmation.
  *
- * For Cursor: Clones repo, builds, installs hooks, starts worker
- * For Claude Code: Installs plugin via marketplace
+ * Installs claude-mem plugin via marketplace for Claude Code.
  */
-export async function ensureClaudeMem(platform) {
+export async function ensureClaudeMem(platform, logger) {
+    _installLogger = logger;
     console.log(chalk.cyan('\n🧠 Setting up persistent memory (claude-mem)...\n'));
     // Ensure bun is available before any hooks run (they depend on bun)
     await ensureBun();
-    if (platform === 'cursor') {
-        // Step 1: Check and install hooks (independent of worker)
-        const hooksInstalled = await areCursorHooksInstalled();
-        if (hooksInstalled) {
-            console.log(chalk.green('  ✓ Cursor hooks already configured'));
-            // Always update scripts (may have new versions)
-            await copyCursorSummarizeScript();
-            await copyValidateSpecsScript();
-            await copyValidateStepsScript();
-        }
-        else {
-            // installCursorHooks will check for marketplace first, clone only if needed
-            await installCursorHooks();
-        }
-        // Step 2: Set CHROMA_MODE=external so worker doesn't try broken npx chromadb
-        await ensureChromaExternalMode();
-        // Step 3: Start Chroma BEFORE worker (worker detects running Chroma via heartbeat)
-        try {
-            await startChromaServer();
-        }
-        catch {
-            console.log(chalk.yellow('  ⚠ Could not start Chroma (non-blocking)'));
-        }
-        // Step 4: Check and start worker (independent of hooks)
-        const workerRunning = await isWorkerRunning();
-        if (workerRunning) {
-            console.log(chalk.green('  ✓ claude-mem worker already running'));
-        }
-        else {
-            await startClaudeMemWorker();
-        }
-        // Step 5: Register MCP server in ~/.cursor/mcp.json
-        await registerClaudeMemMcp(platform);
+    // Step 1: Install plugin (CLI or git clone fallback)
+    const isInstalled = await checkClaudeMemPluginInstalled();
+    if (!isInstalled) {
+        await installClaudeMemPlugin();
     }
-    if (platform === 'claude') {
-        // Step 1: Install plugin (CLI or git clone fallback)
-        const isInstalled = await checkClaudeMemPluginInstalled();
-        if (!isInstalled) {
-            await installClaudeMemPlugin();
-        }
-        else {
-            console.log(chalk.green('  ✓ claude-mem plugin already installed'));
-        }
-        // Step 2: Ensure repo is cloned and built (installClaudeMemPlugin may have used fallback)
-        if (!await isClaudeMemRepoCloned()) {
-            await cloneAndBuildRepo();
-        }
-        // Step 3: Set CHROMA_MODE=external so worker doesn't try broken npx chromadb
-        await ensureChromaExternalMode();
-        // Step 4: Start Chroma BEFORE worker (worker detects running Chroma via heartbeat)
-        try {
-            await startChromaServer();
-        }
-        catch {
-            console.log(chalk.yellow('  ⚠ Could not start Chroma (non-blocking)'));
-        }
-        // Step 5: Start worker if not running (same as Cursor path)
-        const workerRunning = await isWorkerRunning();
-        if (workerRunning) {
-            console.log(chalk.green('  ✓ claude-mem worker already running'));
-        }
-        else {
-            await startClaudeMemWorker();
-        }
-        // Step 6: Register MCP server in ~/.claude.json
+    else {
+        console.log(chalk.green('  ✓ claude-mem plugin already installed'));
+    }
+    // Step 2: Ensure repo is cloned and built (installClaudeMemPlugin may have used fallback)
+    if (!await isClaudeMemRepoCloned()) {
+        await cloneAndBuildRepo();
+    }
+    // Step 3: Set CHROMA_MODE=external so worker doesn't try broken npx chromadb
+    await ensureChromaExternalMode();
+    // Step 4: Start Chroma BEFORE worker (worker detects running Chroma via heartbeat)
+    try {
+        await startChromaServer();
+    }
+    catch (err) {
+        const msg = getErrorMessage(err);
+        logger?.warn(`chroma-start: ${msg}`);
+        console.log(chalk.yellow('  ⚠ Could not start Chroma (non-blocking)'));
+    }
+    // Step 5: Start worker if not running
+    const workerRunning = await isWorkerRunning();
+    if (workerRunning) {
+        console.log(chalk.green('  ✓ claude-mem worker already running'));
+    }
+    else {
+        await startClaudeMemWorker();
+    }
+    // Step 6: Post-install validation — check services alive
+    const validation = {
+        worker: await isWorkerRunning(),
+        chroma: await isChromaRunning(),
+        mcpBinary: false,
+    };
+    // Step 7: Register MCP only if worker is alive (no point pointing to dead service)
+    const mcpPath = path.join(CLAUDE_MEM_DIR, 'plugin', 'scripts', 'mcp-server.cjs');
+    if (validation.worker) {
         await registerClaudeMemMcp(platform);
+        validation.mcpBinary = await fs.pathExists(mcpPath);
+    }
+    else {
+        logger?.error('post-install: worker not running, skipping MCP registration');
+        console.log(chalk.red('  ✗ Worker not running — MCP registration skipped'));
+    }
+    // Log validation results
+    logger?.info(`post-install validation: worker=${validation.worker}, chroma=${validation.chroma}, mcp=${validation.mcpBinary}`);
+    if (!validation.chroma) {
+        console.log(chalk.gray('  ℹ Chroma not running — basic memory works, semantic search unavailable'));
     }
     console.log(chalk.green('\n✨ Persistent memory configured!\n'));
+    return validation;
 }
 //# sourceMappingURL=memory.js.map

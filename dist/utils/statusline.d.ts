@@ -32,12 +32,6 @@ export declare function selectExistingClaudeStatusLine({ globalStatusLine, }: Pi
  * Used during migration to unwrap and keep only the user's command.
  */
 export declare function extractUserCommandFromLegacyWrapper(command: string): string | null;
-/**
- * Shared helper: resolve and write statusLine to global ~/.claude/settings.json.
- * Used by both installer (setupClaudeStatusLine) and updater (updateClaudeStatusLineGlobal).
- * Preserves extra fields (e.g. padding) via read-modify-write pattern.
- * Pass pre-loaded settings to avoid double-reading the file.
- */
 export declare function writeGlobalStatusLine(statusLineConfig: ClaudeStatusLineEntry, preloadedSettings?: Record<string, unknown>): Promise<void>;
 /**
  * Resolve statusLine command. Always returns a direct command (no wrapping).

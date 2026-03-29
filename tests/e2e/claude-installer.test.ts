@@ -6,6 +6,7 @@ import {
   homePath,
   appPath,
   getDevPomogatorConfig,
+  getClaudeMemDir,
   // Platform setup helpers
   setupCleanState,
   // Logging helpers
@@ -39,9 +40,9 @@ describe('CORE003: Claude Code Installer', () => {
       expect(await fs.pathExists(settingsPath)).toBe(true);
 
       const settings = await fs.readJson(settingsPath);
-      expect(settings.hooks).toBeDefined();
-      expect(settings.hooks.SessionStart).toBeDefined();
+      expect(settings.hooks).toHaveProperty('SessionStart');
       expect(Array.isArray(settings.hooks.SessionStart)).toBe(true);
+      expect(settings.hooks.SessionStart.length).toBeGreaterThan(0);
     });
 
     it('should copy check-update.js to ~/.dev-pomogator/scripts/', async () => {
@@ -54,9 +55,11 @@ describe('CORE003: Claude Code Installer', () => {
   });
 
   describe('Scenario: Commands are installed to project', () => {
-    it('should create .claude/commands/ in project', async () => {
+    it('should create .claude/commands/ with expected commands', async () => {
       const commandsDir = appPath('.claude', 'commands');
-      expect(await fs.pathExists(commandsDir)).toBe(true);
+      const files = await fs.readdir(commandsDir);
+      expect(files, 'commands dir should contain suggest-rules.md').toContain('suggest-rules.md');
+      expect(files, 'commands dir should contain create-spec.md').toContain('create-spec.md');
     });
 
     it('should install suggest-rules.md', async () => {
@@ -70,33 +73,88 @@ describe('CORE003: Claude Code Installer', () => {
     it('should install create-spec.md', async () => {
       const cmdPath = appPath('.claude', 'commands', 'create-spec.md');
       expect(await fs.pathExists(cmdPath)).toBe(true);
+
+      const content = await fs.readFile(cmdPath, 'utf-8');
+      expect(content.length).toBeGreaterThan(100);
     });
 
     it('should install configure-root-artifacts.md', async () => {
       const cmdPath = appPath('.claude', 'commands', 'configure-root-artifacts.md');
       expect(await fs.pathExists(cmdPath)).toBe(true);
+
+      const content = await fs.readFile(cmdPath, 'utf-8');
+      expect(content.length).toBeGreaterThan(100);
     });
   });
 
   describe('Scenario: Rules are installed to project', () => {
-    it('should create .claude/rules/pomogator/ in project', async () => {
-      const rulesDir = appPath('.claude', 'rules', 'pomogator');
-      expect(await fs.pathExists(rulesDir)).toBe(true);
+    it('should create per-extension rules directories with expected files', async () => {
+      const rulesDir = appPath('.claude', 'rules', 'plan-pomogator');
+      const files = await fs.readdir(rulesDir);
+      expect(files, 'plan-pomogator rules dir should contain plan-pomogator.md').toContain('plan-pomogator.md');
     });
 
-    it('should install specs-management.md', async () => {
-      const rulePath = appPath('.claude', 'rules', 'pomogator', 'specs-management.md');
-      expect(await fs.pathExists(rulePath)).toBe(true);
+    it('should install specs-management.md to specs-workflow namespace', async () => {
+      const rulePath = appPath('.claude', 'rules', 'specs-workflow', 'specs-management.md');
+      const content = await fs.readFile(rulePath, 'utf-8');
+      expect(content).toContain('## ');
     });
 
-    it('should install plan-pomogator.md', async () => {
-      const rulePath = appPath('.claude', 'rules', 'pomogator', 'plan-pomogator.md');
-      expect(await fs.pathExists(rulePath)).toBe(true);
+    it('should install plan-pomogator.md to plan-pomogator namespace', async () => {
+      const rulePath = appPath('.claude', 'rules', 'plan-pomogator', 'plan-pomogator.md');
+      const content = await fs.readFile(rulePath, 'utf-8');
+      expect(content).toContain('## ');
     });
 
-    it('should install research-workflow.md', async () => {
-      const rulePath = appPath('.claude', 'rules', 'pomogator', 'research-workflow.md');
-      expect(await fs.pathExists(rulePath)).toBe(true);
+    it('should install research-workflow.md to specs-workflow namespace', async () => {
+      const rulePath = appPath('.claude', 'rules', 'specs-workflow', 'research-workflow.md');
+      const content = await fs.readFile(rulePath, 'utf-8');
+      expect(content).toContain('## ');
+    });
+
+    // @feature36 — dynamic: verify ALL rules from extension manifests are installed
+    it('CORE003_RULES: all manifest rules are installed', async () => {
+      const extensionsDir = path.resolve(__dirname, '../../extensions');
+      const extensions = await fs.readdir(extensionsDir);
+      const missing: string[] = [];
+
+      for (const ext of extensions) {
+        const manifestPath = path.join(extensionsDir, ext, 'extension.json');
+        if (!await fs.pathExists(manifestPath)) continue;
+
+        const manifest = await fs.readJson(manifestPath);
+
+        // New format: ruleFiles.claude[] — repo-root relative paths
+        const ruleFilePaths: string[] = manifest.ruleFiles?.claude ?? [];
+        for (const rf of ruleFilePaths) {
+          const destPath = appPath(rf);
+          try {
+            const stat = await fs.stat(destPath);
+            if (stat.size === 0) {
+              missing.push(`${ext}: ${rf} (empty file)`);
+            }
+          } catch {
+            missing.push(`${ext}: ${rf} (ruleFiles)`);
+          }
+        }
+
+        // Legacy format: rules.claude[] — basename into per-extension or pomogator dir
+        const claudeRules: string[] = manifest.rules?.claude ?? [];
+        for (const rulePath of claudeRules) {
+          const filename = path.basename(rulePath);
+          const candidates = [
+            appPath('.claude', 'rules', ext, filename),
+            appPath('.claude', 'rules', 'pomogator', filename),
+            appPath('.claude', 'rules', filename),
+          ];
+          const exists = await Promise.all(candidates.map(c => fs.pathExists(c)));
+          if (!exists.some(Boolean)) {
+            missing.push(`${ext}: ${filename}`);
+          }
+        }
+      }
+
+      expect(missing, `Rules missing after install: ${missing.join(', ')}`).toHaveLength(0);
     });
   });
 
@@ -104,27 +162,35 @@ describe('CORE003: Claude Code Installer', () => {
     it('should create .dev-pomogator/tools/specs-generator/', async () => {
       const toolsPath = appPath('.dev-pomogator', 'tools', 'specs-generator');
       expect(await fs.pathExists(toolsPath)).toBe(true);
+      const files = await fs.readdir(toolsPath);
+      expect(files.length).toBeGreaterThan(0);
     });
 
     it('should create .dev-pomogator/tools/plan-pomogator/', async () => {
       const toolsPath = appPath('.dev-pomogator', 'tools', 'plan-pomogator');
       expect(await fs.pathExists(toolsPath)).toBe(true);
       expect(await fs.pathExists(path.join(toolsPath, 'validate-plan.ts'))).toBe(true);
+      const files = await fs.readdir(toolsPath);
+      expect(files.length).toBeGreaterThan(0);
     });
 
     it('should create .dev-pomogator/tools/forbid-root-artifacts/', async () => {
       const toolsPath = appPath('.dev-pomogator', 'tools', 'forbid-root-artifacts');
       expect(await fs.pathExists(toolsPath)).toBe(true);
+      const files = await fs.readdir(toolsPath);
+      expect(files.length).toBeGreaterThan(0);
     });
 
     it('should have check.py in forbid-root-artifacts', async () => {
       const checkPath = appPath('.dev-pomogator', 'tools', 'forbid-root-artifacts', 'check.py');
-      expect(await fs.pathExists(checkPath)).toBe(true);
+      const stat = await fs.stat(checkPath);
+      expect(stat.size, 'check.py should not be empty').toBeGreaterThan(0);
     });
 
     it('should have setup.py in forbid-root-artifacts', async () => {
       const setupPath = appPath('.dev-pomogator', 'tools', 'forbid-root-artifacts', 'setup.py');
-      expect(await fs.pathExists(setupPath)).toBe(true);
+      const stat = await fs.stat(setupPath);
+      expect(stat.size, 'setup.py should not be empty').toBeGreaterThan(0);
     });
   });
 
@@ -145,7 +211,8 @@ describe('CORE003: Claude Code Installer', () => {
 
     it('should have aggregate-facets.sh script', async () => {
       const scriptPath = appPath('.claude', 'skills', 'deep-insights', 'scripts', 'aggregate-facets.sh');
-      expect(await fs.pathExists(scriptPath)).toBe(true);
+      const stat = await fs.stat(scriptPath);
+      expect(stat.size, 'aggregate-facets.sh should not be empty').toBeGreaterThan(0);
     });
 
     it('should have facets-schema.md reference', async () => {
@@ -429,7 +496,7 @@ describe('PLUGIN003-Claude: Specs-workflow Extension for Claude Code', () => {
   });
 
   it('should install specs-management.md rule', async () => {
-    const rulePath = appPath('.claude', 'rules', 'pomogator', 'specs-management.md');
+    const rulePath = appPath('.claude', 'rules', 'specs-workflow', 'specs-management.md');
     expect(await fs.pathExists(rulePath)).toBe(true);
   });
 
@@ -438,8 +505,8 @@ describe('PLUGIN003-Claude: Specs-workflow Extension for Claude Code', () => {
     expect(await fs.pathExists(toolsPath)).toBe(true);
 
     // Check key scripts exist
-    const scaffoldPath = path.join(toolsPath, 'scaffold-spec.sh');
-    const validatePath = path.join(toolsPath, 'validate-spec.sh');
+    const scaffoldPath = path.join(toolsPath, 'scaffold-spec.ts');
+    const validatePath = path.join(toolsPath, 'validate-spec.ts');
 
     expect(await fs.pathExists(scaffoldPath)).toBe(true);
     expect(await fs.pathExists(validatePath)).toBe(true);
@@ -506,13 +573,10 @@ describe('PostInstall: Dependencies are installed during setup', () => {
 
   it('should have .pre-commit-config.yaml with forbid-root-artifacts hook', async () => {
     const configPath = appPath('.pre-commit-config.yaml');
-    // postInstall chain runs configure.py which creates this
-    if (await fs.pathExists(configPath)) {
-      const content = await fs.readFile(configPath, 'utf-8');
-      expect(content).toContain('forbid-root-artifacts');
-    }
-    // If config doesn't exist, configure.py may have been skipped (non-interactive)
-    // — this is acceptable, the key test is that deps-install.py itself works
+    // postInstall chain runs configure.py which creates this in Docker (non-interactive mode)
+    expect(await fs.pathExists(configPath), '.pre-commit-config.yaml must exist after postInstall').toBe(true);
+    const content = await fs.readFile(configPath, 'utf-8');
+    expect(content).toContain('forbid-root-artifacts');
   });
 
   it('should have postInstall command as chain in config', async () => {
@@ -533,12 +597,9 @@ describe('PostInstall: Non-interactive mode and npm ENOTEMPTY resilience', () =>
     // The Docker test environment has no TTY → isNonInteractive() returns true
     // → configure.py should have been called with --non-interactive
     const log = await getInstallLog();
-    // In non-interactive mode, configure.py auto-adds all files
-    // The hook should complete successfully (not fail on stdin EOF)
-    if (log.includes('forbid-root-artifacts')) {
-      // Hook either succeeded or warned — but should NOT have "EOFError"
-      expect(log).not.toContain('EOFError');
-    }
+    // In Docker non-interactive mode, configure.py must run without EOFError
+    expect(log, 'install log must mention forbid-root-artifacts').toContain('forbid-root-artifacts');
+    expect(log).not.toContain('EOFError');
   });
 
   it('should clean stale node_modules temp dirs on ENOTEMPTY', async () => {
@@ -564,11 +625,10 @@ describe('PostInstall: Non-interactive mode and npm ENOTEMPTY resilience', () =>
     // The auto-commit extension uses "npm install --no-save tsx"
     // Previously, retry was gated by command.includes('npx') — now it catches all ENOTEMPTY
     const log = await getInstallLog();
-    // If auto-commit hook failed, it should show a warning, not a crash
-    if (log.includes('auto-commit')) {
-      expect(log).not.toContain('unhandled');
-      expect(log).not.toContain('FATAL');
-    }
+    // auto-commit extension must appear in install log
+    expect(log, 'install log must mention auto-commit').toContain('auto-commit');
+    expect(log).not.toContain('unhandled');
+    expect(log).not.toContain('FATAL');
   });
 });
 
@@ -584,21 +644,86 @@ describe('PostInstall: Non-interactive mode and npm ENOTEMPTY resilience', () =>
  */
 describe('CORE003-Claude-mem: claude-mem installed for Claude platform', () => {
   it('should have claude-mem worker-service.cjs after --claude --all', async () => {
-    const workerServicePath = homePath(
-      '.claude', 'plugins', 'marketplaces', 'thedotmack', 'plugin', 'scripts', 'worker-service.cjs'
-    );
+    const workerServicePath = path.join(getClaudeMemDir(), 'plugin', 'scripts', 'worker-service.cjs');
     expect(await fs.pathExists(workerServicePath)).toBe(true);
+    const stat = await fs.stat(workerServicePath);
+    expect(stat.size, 'worker-service.cjs should not be empty').toBeGreaterThan(1000);
+  });
+
+  it('should have valid package.json in marketplace dir', async () => {
+    const pkgPath = path.join(getClaudeMemDir(), 'package.json');
+    expect(await fs.pathExists(pkgPath)).toBe(true);
+    const pkg = await fs.readJson(pkgPath);
+    expect(pkg.name).toBe('claude-mem');
+    expect(pkg.version).toMatch(/^\d+\.\d+/);
+  });
+
+  it('should have non-empty mcp-server.cjs', async () => {
+    const mcpPath = path.join(getClaudeMemDir(), 'plugin', 'scripts', 'mcp-server.cjs');
+    expect(await fs.pathExists(mcpPath)).toBe(true);
+    const stat = await fs.stat(mcpPath);
+    expect(stat.size, 'mcp-server.cjs should not be empty').toBeGreaterThan(1000);
+  });
+
+  it('mcp-server.cjs should contain MCP protocol markers', async () => {
+    const mcpPath = path.join(getClaudeMemDir(), 'plugin', 'scripts', 'mcp-server.cjs');
+    const content = await fs.readFile(mcpPath, 'utf-8');
+    // MCP server must reference the protocol SDK or transport
+    const hasMcpMarker = content.includes('StdioServerTransport') ||
+                         content.includes('modelcontextprotocol') ||
+                         content.includes('mcp-server');
+    expect(hasMcpMarker, 'mcp-server.cjs should contain MCP protocol references').toBe(true);
+  });
+
+  it('should have claude-mem settings with CHROMA_MODE', async () => {
+    const settingsPath = homePath('.claude-mem', 'settings.json');
+    expect(await fs.pathExists(settingsPath)).toBe(true);
+    const settings = await fs.readJson(settingsPath);
+    expect(settings.CLAUDE_MEM_CHROMA_MODE).toBe('external');
+  });
+
+  it('should have MCP access path (plugin or manual)', async () => {
+    // Either marketplace plugin is enabled OR manual MCP entry exists
+    let hasAccess = false;
+
+    // Check 1: marketplace plugin enabled
+    const settingsPath = homePath('.claude', 'settings.json');
+    if (await fs.pathExists(settingsPath)) {
+      const settings = await fs.readJson(settingsPath);
+      if (settings?.enabledPlugins?.['claude-mem@thedotmack'] === true) {
+        hasAccess = true;
+      }
+    }
+
+    // Check 2: manual MCP entry in ~/.claude.json
+    if (!hasAccess) {
+      const claudeJsonPath = homePath('.claude.json');
+      if (await fs.pathExists(claudeJsonPath)) {
+        const config = await fs.readJson(claudeJsonPath);
+        if (config?.mcpServers?.['claude-mem']) {
+          const mcpEntry = config.mcpServers['claude-mem'];
+          expect(mcpEntry.command).toBe('node');
+          expect(mcpEntry.args?.[0]).toContain('mcp-server.cjs');
+          // Verify the referenced file actually exists
+          const mcpBinaryPath = mcpEntry.args[0];
+          expect(await fs.pathExists(mcpBinaryPath), `MCP binary not found: ${mcpBinaryPath}`).toBe(true);
+          hasAccess = true;
+        }
+      }
+    }
+
+    expect(hasAccess, 'claude-mem must be accessible via plugin enablement OR manual MCP registration').toBe(true);
   });
 
   it('should not have manual claude-mem MCP when plugin is enabled', async () => {
     const settingsPath = homePath('.claude', 'settings.json');
-    if (!await fs.pathExists(settingsPath)) return; // no settings = can't check
+    expect(await fs.pathExists(settingsPath), 'settings.json must exist for MCP dedup test').toBe(true);
 
     const settings = await fs.readJson(settingsPath);
     const pluginEnabled = settings?.enabledPlugins?.['claude-mem@thedotmack'] === true;
 
     const claudeJsonPath = homePath('.claude.json');
-    if (!await fs.pathExists(claudeJsonPath)) return;
+    expect(await fs.pathExists(claudeJsonPath), '~/.claude.json must exist').toBe(true);
 
     const config = await fs.readJson(claudeJsonPath);
 
@@ -615,9 +740,10 @@ describe('CORE003-Claude-mem: claude-mem installed for Claude platform', () => {
 
   it('should clean up legacy manual MCP entry on reinstall', async () => {
     const settingsPath = homePath('.claude', 'settings.json');
-    if (!await fs.pathExists(settingsPath)) return;
+    expect(await fs.pathExists(settingsPath), 'settings.json must exist').toBe(true);
 
     const settings = await fs.readJson(settingsPath);
+    // Skip if plugin not enabled — cleanup only applies when marketplace plugin is active
     if (!settings?.enabledPlugins?.['claude-mem@thedotmack']) return;
 
     // Inject a legacy manual entry to simulate pre-fix state
@@ -639,6 +765,35 @@ describe('CORE003-Claude-mem: claude-mem installed for Claude platform', () => {
     // Legacy entry should be cleaned up
     const configAfter = await fs.readJson(claudeJsonPath);
     expect(configAfter.mcpServers?.['claude-mem']).toBeUndefined();
+  });
+});
+
+describe('Scenario: Installation generates structured report', () => {
+  it('should create last-install-report.md', async () => {
+    const reportPath = homePath('.dev-pomogator', 'last-install-report.md');
+    expect(await fs.pathExists(reportPath)).toBe(true);
+  });
+
+  it('should list claude-code component with ok status', async () => {
+    const reportPath = homePath('.dev-pomogator', 'last-install-report.md');
+    const content = await fs.readFile(reportPath, 'utf-8');
+    expect(content).toContain('claude-code');
+    expect(content).toContain('| ok |');
+  });
+
+  it('should list claude-mem component in report', async () => {
+    const reportPath = homePath('.dev-pomogator', 'last-install-report.md');
+    const content = await fs.readFile(reportPath, 'utf-8');
+    // claude-mem should appear in report with either ok or fail status
+    expect(content).toContain('claude-mem');
+  });
+
+  it('should log errors in install.log when claude-mem fails', async () => {
+    const log = await getInstallLog();
+    // If claude-mem failed, the log MUST contain structured error info
+    if (log.includes('Could not setup claude-mem')) {
+      expect(log).toMatch(/claude-mem setup failed:/);
+    }
   });
 });
 
@@ -810,5 +965,119 @@ describe('CORE003: No execa dependency in production build', () => {
       expect(content, `${file} should not import execa`).not.toMatch(/import\s*\(\s*['"]execa['"]\s*\)/);
       expect(content, `${file} should not require execa`).not.toMatch(/require\s*\(\s*['"]execa['"]\s*\)/);
     }
+  });
+});
+
+/**
+ * CORE019: Claude-mem Integration
+ *
+ * Verifies reliable claude-mem installation:
+ * - Health hooks auto-installed
+ * - Post-install validation (worker + chroma + MCP)
+ * - Per-component install report
+ * - Graceful degradation
+ */
+describe('CORE019: Claude-mem Integration', () => {
+  // @feature1
+  it('CORE019_01: health hooks registered in settings.json after install', async () => {
+    const settingsPath = appPath('.claude', 'settings.json');
+    const settings = await fs.readJson(settingsPath);
+
+    // Find SessionStart hook referencing health-check.ts
+    let hasHealthHook = false;
+    for (const entry of settings.hooks?.SessionStart ?? []) {
+      if (entry.hooks) {
+        for (const hook of entry.hooks) {
+          if (hook.command?.includes('health-check.ts')) {
+            hasHealthHook = true;
+          }
+        }
+      }
+    }
+    expect(hasHealthHook, 'SessionStart must contain health-check.ts hook').toBe(true);
+  });
+
+  // @feature2
+  it('CORE019_02: install report contains worker component status', async () => {
+    const reportPath = homePath('.dev-pomogator', 'last-install-report.md');
+    const content = await fs.readFile(reportPath, 'utf-8');
+    expect(content).toContain('claude-mem/worker');
+  });
+
+  // @feature2
+  it('CORE019_03: install report contains chroma component status', async () => {
+    const reportPath = homePath('.dev-pomogator', 'last-install-report.md');
+    const content = await fs.readFile(reportPath, 'utf-8');
+    expect(content).toContain('claude-mem/chroma');
+  });
+
+  // @feature3
+  it('CORE019_04: install.log contains structured entries for claude-mem steps', async () => {
+    const log = await getInstallLog();
+    // At minimum, the ensureClaudeMem call should produce log entries
+    expect(log).toMatch(/claude-mem/i);
+  });
+
+  // @feature4
+  it('CORE019_05: installer output shows diagnostics on claude-mem issues', () => {
+    // If claude-mem had issues, installer should show Reason + path to log
+    if (installerResult.logs.includes('Could not setup claude-mem')) {
+      expect(installerResult.logs).toContain('Reason:');
+      expect(installerResult.logs).toContain('install.log');
+    }
+  });
+
+  // @feature5
+  it('CORE019_06: worker status determines MCP registration', async () => {
+    const reportPath = homePath('.dev-pomogator', 'last-install-report.md');
+    const content = await fs.readFile(reportPath, 'utf-8');
+
+    // If worker failed, MCP should also fail (not registered on dead worker)
+    if (content.includes('claude-mem/worker') && content.includes('| fail |')) {
+      expect(content).toMatch(/claude-mem\/mcp.*\| fail \|/);
+    }
+  });
+
+  // @feature5
+  it('CORE019_07: chroma failure shows warn not fail', async () => {
+    const reportPath = homePath('.dev-pomogator', 'last-install-report.md');
+    const content = await fs.readFile(reportPath, 'utf-8');
+
+    // Chroma unavailable should be warn (degraded mode), not fail
+    if (content.includes('claude-mem/chroma')) {
+      expect(content).not.toMatch(/claude-mem\/chroma.*\| fail \|/);
+    }
+  });
+
+  // @feature6
+  it('CORE019_08: re-install does not duplicate hooks', async () => {
+    // Run installer again
+    await runInstaller('--claude --all');
+
+    const settingsPath = appPath('.claude', 'settings.json');
+    const settings = await fs.readJson(settingsPath);
+
+    // Count health-check.ts hooks — should be exactly 1
+    let healthHookCount = 0;
+    for (const entry of settings.hooks?.SessionStart ?? []) {
+      if (entry.hooks) {
+        for (const hook of entry.hooks) {
+          if (hook.command?.includes('health-check.ts')) {
+            healthHookCount++;
+          }
+        }
+      }
+    }
+    expect(healthHookCount, 'health-check hook must not be duplicated').toBe(1);
+  });
+
+  // @feature7
+  it('CORE019_09: install report has per-component breakdown', async () => {
+    const reportPath = homePath('.dev-pomogator', 'last-install-report.md');
+    const content = await fs.readFile(reportPath, 'utf-8');
+    expect(content).toContain('claude-mem/worker');
+    expect(content).toContain('claude-mem/chroma');
+    expect(content).toContain('claude-mem/mcp');
+    expect(content).toContain('claude-mem/hooks');
   });
 });

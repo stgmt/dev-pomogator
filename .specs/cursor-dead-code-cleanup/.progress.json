@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "featureSlug": "cursor-dead-code-cleanup",
+  "createdAt": "2026-03-26T00:10:39.742Z",
+  "currentPhase": "Complete",
+  "phases": {
+    "Discovery": {
+      "completedAt": "2026-03-26T00:12:57.602Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-03-26T00:12:57.602Z"
+    },
+    "Context": {
+      "completedAt": "2026-03-26T00:12:57.602Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-03-26T00:13:15.207Z"
+    },
+    "Requirements": {
+      "completedAt": "2026-03-26T00:14:21.079Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-03-26T00:14:21.079Z"
+    },
+    "Finalization": {
+      "completedAt": "2026-03-26T00:15:10.042Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-03-26T00:15:10.042Z"
+    }
+  }
+}

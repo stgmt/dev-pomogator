@@ -1,0 +1,10 @@
+{
+  "eval_id": 3,
+  "run_type": "without_skill",
+  "expectations": [
+    {"text": "uses-jest", "passed": true, "evidence": "Command contains 'npx jest' — baseline found wrapper.ts and used --framework jest"},
+    {"text": "no-vitest-in-command", "passed": true, "evidence": "No vitest in command"},
+    {"text": "uses-wrapper", "passed": true, "evidence": "Uses test_runner_wrapper.ts (TypeScript version, not .sh shell wrapper)"},
+    {"text": "uses-docker", "passed": false, "evidence": "No docker — invokes wrapper.ts directly without docker-test.sh"}
+  ]
+}

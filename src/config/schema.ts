@@ -1,4 +1,4 @@
-export type Platform = 'cursor' | 'claude';
+export type Platform = 'claude';
 
 export interface ManagedFileEntry {
   path: string;

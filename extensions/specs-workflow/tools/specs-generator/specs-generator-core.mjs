@@ -1228,16 +1228,10 @@ function commandSpecStatus(argv) {
   let nextAction = '';
   const blockers = [];
 
-  // Check for open questions in RESEARCH.md (blocks Requirements/Finalization/Complete)
-  if (['Requirements', 'Finalization', 'Complete'].includes(currentPhase)) {
-    const researchPath = path.join(targetDir, 'RESEARCH.md');
-    if (fs.existsSync(researchPath)) {
-      const researchContent = safeReadText(researchPath) || '';
-      const openQ = countOpenQuestions(researchContent);
-      if (openQ > 0) {
-        blockers.push(`RESEARCH.md has ${openQ} unclosed open question(s). Close them (- [x]) or mark as DEFERRED.`);
-      }
-    }
+  // Check for open questions in RESEARCH.md (reuse already-computed state from files map)
+  const researchState = files['RESEARCH.md'];
+  if (researchState && researchState.openQuestions > 0) {
+    blockers.push(`RESEARCH.md has ${researchState.openQuestions} unclosed open question(s). Close them (- [x]) or mark as DEFERRED.`);
   }
 
   for (const fileName of allFiles) {
@@ -1560,7 +1554,7 @@ function commandAuditSpec(argv) {
             findings.push({
               check: 'FR_BDD_COVERAGE',
               category: 'INCONSISTENCY',
-              severity: 'INFO',
+              severity: 'WARNING',
               message: `${tag} in .feature has no matching FR/AC requirement`,
               details: `Add ${tag} to FR.md or ACCEPTANCE_CRITERIA.md header`,
             });
@@ -1611,6 +1605,77 @@ function commandAuditSpec(argv) {
     }
   } else if (!tasksContent) {
     log('WARN', 'TASKS_FR_REFS: TASKS.md is empty or missing');
+  }
+
+  // =========================================================================
+  // AC_TAG_SYNC: @featureN tags in FR-N must also be in matching AC-N
+  // =========================================================================
+  log('INFO', 'Running AC_TAG_SYNC check...');
+  if (frContent && acContent) {
+    const frSections = [...frContent.matchAll(/## FR-(\d+):.*$/gm)];
+    for (const frMatch of frSections) {
+      const frNum = frMatch[1];
+      const frLine = frMatch[0];
+      const frTags = [...new Set(frLine.match(/@feature\d+/g) || [])];
+      if (frTags.length === 0) continue;
+      // Find matching AC-N header(s)
+      const acPattern = new RegExp(`## AC-${frNum}\\b[^\\n]*`, 'g');
+      const acHeaders = [...acContent.matchAll(acPattern)].map((m) => m[0]);
+      const acTagsJoined = acHeaders.join(' ');
+      for (const tag of frTags) {
+        if (!acTagsJoined.includes(tag)) {
+          findings.push({
+            check: 'AC_TAG_SYNC',
+            category: 'INCONSISTENCY',
+            severity: 'WARNING',
+            message: `FR-${frNum} has ${tag} but AC-${frNum} header is missing it`,
+            details: `Add ${tag} to AC-${frNum} header in ACCEPTANCE_CRITERIA.md`,
+          });
+          log('WARN', `AC_TAG_SYNC: FR-${frNum} ${tag} not in AC-${frNum}`);
+        }
+      }
+    }
+  }
+
+  // =========================================================================
+  // FEATURE_TAG_PROPAGATION: @featureN from .feature must exist in TASKS/US/UC
+  // =========================================================================
+  log('INFO', 'Running FEATURE_TAG_PROPAGATION check...');
+  if (featureContent && tasksContent) {
+    const bddTagsForPropagation = [...new Set(featureContent.match(/@feature\d+/g) || [])];
+    const tasksTags = new Set(tasksContent.match(/@feature\d+/g) || []);
+    const userStoriesContent = getFileContent('USER_STORIES.md');
+    const useCasesContent = getFileContent('USE_CASES.md');
+    for (const tag of bddTagsForPropagation) {
+      if (!tasksTags.has(tag) && !tasksContent.includes(tag)) {
+        findings.push({
+          check: 'FEATURE_TAG_PROPAGATION',
+          category: 'LOGIC_GAPS',
+          severity: 'WARNING',
+          message: `${tag} in .feature but not referenced in TASKS.md`,
+          details: `Add ${tag} to the relevant phase/task in TASKS.md for traceability`,
+        });
+        log('WARN', `FEATURE_TAG_PROPAGATION: ${tag} not in TASKS.md`);
+      }
+      if (userStoriesContent && !userStoriesContent.includes(tag)) {
+        findings.push({
+          check: 'FEATURE_TAG_PROPAGATION',
+          category: 'LOGIC_GAPS',
+          severity: 'INFO',
+          message: `${tag} in .feature but not in USER_STORIES.md`,
+          details: `Add ${tag} to the relevant User Story in USER_STORIES.md`,
+        });
+      }
+      if (useCasesContent && !useCasesContent.includes(tag)) {
+        findings.push({
+          check: 'FEATURE_TAG_PROPAGATION',
+          category: 'LOGIC_GAPS',
+          severity: 'INFO',
+          message: `${tag} in .feature but not in USE_CASES.md`,
+          details: `Add ${tag} to the relevant Use Case in USE_CASES.md`,
+        });
+      }
+    }
   }
 
   log('INFO', 'Running OPEN_QUESTIONS check...');
@@ -1699,7 +1764,7 @@ function commandAuditSpec(argv) {
         findings.push({
           check: 'LINK_VALIDITY',
           category: 'INCONSISTENCY',
-          severity: 'WARNING',
+          severity: 'ERROR',
           message: `${frId} in REQUIREMENTS.md is plain text, not a clickable link`,
           details: `Replace '${frId}' with '[${frId}](FR.md#fr-${frNum}-...)' for cross-reference navigation`,
         });
@@ -1718,7 +1783,7 @@ function commandAuditSpec(argv) {
         findings.push({
           check: 'LINK_VALIDITY',
           category: 'INCONSISTENCY',
-          severity: 'INFO',
+          severity: 'ERROR',
           message: `${frId} in TASKS.md is plain text, not a clickable link`,
           details: `Use '[${frId}](FR.md#fr-${frNum}-...)' format for requirement references`,
         });
@@ -1735,7 +1800,7 @@ function commandAuditSpec(argv) {
         findings.push({
           check: 'LINK_VALIDITY',
           category: 'INCONSISTENCY',
-          severity: 'INFO',
+          severity: 'ERROR',
           message: `FR-${frNum} in FR.md has no clickable link to ACCEPTANCE_CRITERIA.md`,
           details: `Add '**AC:** [AC-N](ACCEPTANCE_CRITERIA.md#ac-N-fr-${frNum}-...)' to FR-${frNum} section`,
         });
@@ -1754,7 +1819,7 @@ function commandAuditSpec(argv) {
         findings.push({
           check: 'LINK_VALIDITY',
           category: 'INCONSISTENCY',
-          severity: 'INFO',
+          severity: 'ERROR',
           message: `AC-${acNum} (FR-${frNum}) has no clickable link back to FR.md`,
           details: `Add '**FR:** [FR-${frNum}](FR.md#fr-${frNum}-...)' to AC-${acNum} section`,
         });
@@ -1902,15 +1967,25 @@ function commandAuditSpec(argv) {
 
         const otherSubVariants = allFrIds.filter((item) => item.num === otherNum && item.suffix);
         if (Math.abs(otherNum - splitNum) === 1 && otherSubVariants.length === 0) {
-          const splitList = subVariants.map((suffix) => `FR-${splitNum}${suffix}`).join(', ');
-          findings.push({
-            check: 'FR_SPLIT_CONSISTENCY',
-            category: 'INCONSISTENCY',
-            severity: 'INFO',
-            message: `FR_SPLIT_CONSISTENCY: FR-${splitNum} has sub-variant(s) (${splitList}) but adjacent FR-${otherNum} does not`,
-            details: `Review whether FR-${otherNum} should also be split or if FR-${splitNum} sub-variants are justified`,
+          // Suppress for common patterns: language/platform adapters (≤4 sub-variants with single-letter suffixes)
+          // or when one of the sub-variants is OUT OF SCOPE (intentional partial decomposition)
+          const hasOosSuffix = subVariants.some((suffix) => {
+            const subFrSection = frContent.match(new RegExp(`## FR-${splitNum}${suffix}:.*?(?=## FR-\\d|$)`, 'is'));
+            return subFrSection && /^\s*>\s*OUT\s+OF\s+SCOPE/im.test(subFrSection[0]);
           });
-          log('INFO', `FR_SPLIT_CONSISTENCY: FR-${splitNum} split, FR-${otherNum} not`);
+          if (subVariants.length <= 4 && subVariants.every((s) => /^[a-d]$/.test(s)) || hasOosSuffix) {
+            log('DEBUG', `FR_SPLIT_CONSISTENCY: FR-${splitNum} split suppressed (language adapters / OOS sub-variant)`);
+          } else {
+            const splitList = subVariants.map((suffix) => `FR-${splitNum}${suffix}`).join(', ');
+            findings.push({
+              check: 'FR_SPLIT_CONSISTENCY',
+              category: 'INCONSISTENCY',
+              severity: 'INFO',
+              message: `FR_SPLIT_CONSISTENCY: FR-${splitNum} has sub-variant(s) (${splitList}) but adjacent FR-${otherNum} does not`,
+              details: `Review whether FR-${otherNum} should also be split or if FR-${splitNum} sub-variants are justified`,
+            });
+            log('INFO', `FR_SPLIT_CONSISTENCY: FR-${splitNum} split, FR-${otherNum} not`);
+          }
         }
       }
     }
@@ -1988,14 +2063,20 @@ function commandAuditSpec(argv) {
   log('INFO', 'Running OUT_OF_SCOPE_PROPAGATION check...');
   if (frContent) {
     const frSections = [...frContent.matchAll(/## (FR-\d+[a-z]?):.*?(?=## FR-\d|$)/gis)];
-    const oosFrIds = [];
+    const oosFrEntries = [];
 
     for (const section of frSections) {
       const frId = section[1];
-      if (/OUT\s+OF\s+SCOPE/i.test(section[0])) {
-        oosFrIds.push(frId);
+      // Match only blockquote format: "> OUT OF SCOPE" (not substring in regular text like "Ограничения v1: ... out of scope")
+      if (/^\s*>\s*OUT\s+OF\s+SCOPE/im.test(section[0])) {
+        // Extract @featureN tag from the FR header line (e.g., "## FR-3a: ... @feature3a")
+        const featureTagMatch = section[0].match(/@feature(\w+)/);
+        const featureTag = featureTagMatch ? featureTagMatch[1] : null;
+        oosFrEntries.push({ frId, featureTag });
       }
     }
+    // Back-compat alias
+    const oosFrIds = oosFrEntries.map((e) => e.frId);
 
     if (oosFrIds.length > 0) {
       const oosUcContent = getFileContent('USE_CASES.md');
@@ -2004,14 +2085,16 @@ function commandAuditSpec(argv) {
       const acSplitSections = acContent ? acContent.split(/(?=## AC-\d+)/i) : [];
       const storyLines = oosUserStoriesContent ? oosUserStoriesContent.split(/\r?\n/) : [];
 
-      for (const frId of oosFrIds) {
+      for (const { frId, featureTag } of oosFrEntries) {
+        // Use @featureTag from FR header if available, otherwise extract number from frId
         const frNumMatch = frId.match(/\d+/);
-        if (!frNumMatch) {
+        const tagToSearch = featureTag || (frNumMatch ? frNumMatch[0] : null);
+        if (!tagToSearch) {
           continue;
         }
 
         for (const ucSection of ucSections) {
-          if (new RegExp(`\\b${escapeRegExp(frId)}\\b`, 'i').test(ucSection) && !/OUT\s+OF\s+SCOPE/i.test(ucSection)) {
+          if (new RegExp(`\\b${escapeRegExp(frId)}\\b`, 'i').test(ucSection) && !/^\s*>\s*OUT\s+OF\s+SCOPE/im.test(ucSection)) {
             const ucIdMatch = ucSection.match(/## (UC-\d+)/i);
             findings.push({
               check: 'OUT_OF_SCOPE_PROPAGATION',
@@ -2025,7 +2108,7 @@ function commandAuditSpec(argv) {
         }
 
         for (const acSection of acSplitSections) {
-          if (new RegExp(`\\(${escapeRegExp(frId)}\\)`, 'i').test(acSection) && !/OUT\s+OF\s+SCOPE/i.test(acSection)) {
+          if (new RegExp(`\\(${escapeRegExp(frId)}\\)`, 'i').test(acSection) && !/^\s*>\s*OUT\s+OF\s+SCOPE/im.test(acSection)) {
             const acIdMatch = acSection.match(/## (AC-\d+)/i);
             findings.push({
               check: 'OUT_OF_SCOPE_PROPAGATION',
@@ -2039,13 +2122,13 @@ function commandAuditSpec(argv) {
         }
 
         for (const line of storyLines) {
-          if (line.includes(`@feature${frNumMatch[0]}`) && !/OUT\s+OF\s+SCOPE/i.test(line)) {
+          if (line.includes(`@feature${tagToSearch}`) && !/^\s*>\s*OUT\s+OF\s+SCOPE/im.test(line)) {
             findings.push({
               check: 'OUT_OF_SCOPE_PROPAGATION',
               category: 'LOGIC_GAPS',
               severity: 'WARNING',
-              message: `${frId} is OUT OF SCOPE but User Story with @feature${frNumMatch[0]} is not marked`,
-              details: `Add '> OUT OF SCOPE' marker to the User Story tagged @feature${frNumMatch[0]} in USER_STORIES.md`,
+              message: `${frId} is OUT OF SCOPE but User Story with @feature${tagToSearch} is not marked`,
+              details: `Add '> OUT OF SCOPE' marker to the User Story tagged @feature${tagToSearch} in USER_STORIES.md`,
             });
             log('WARN', `OUT_OF_SCOPE_PROPAGATION: ${frId} OOS, User Story @feature${frNumMatch[0]} not marked`);
           }
@@ -2113,7 +2196,16 @@ function commandAuditSpec(argv) {
     ];
 
     const infraPattern = new RegExp(`\\b(${INFRA_KEYWORDS.join('|')})\\b`, 'gi');
-    const designInfraMatches = designContent.match(infraPattern);
+    // Filter out table rows (|...|) and code blocks (```) before matching infra keywords
+    let inCodeBlock = false;
+    const designProseContent = designContent.split(/\r?\n/).filter((line) => {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('```')) { inCodeBlock = !inCodeBlock; return false; }
+      if (inCodeBlock) return false;
+      if (trimmed.includes('|') && trimmed.startsWith('|')) return false; // table row
+      return true;
+    }).join('\n');
+    const designInfraMatches = designProseContent.match(infraPattern);
 
     if (designInfraMatches && designInfraMatches.length > 0) {
       const hasInfraSection = /##\s.*(?:Infrastructure|Infra)/i.test(tasksContent);
@@ -2186,6 +2278,237 @@ function commandAuditSpec(argv) {
     }
   }
 
+  // =========================================================================
+  // FILE_CHANGES_COMPLETENESS: files from TASKS.md must be in FILE_CHANGES.md
+  // =========================================================================
+  log('INFO', 'Running FILE_CHANGES_COMPLETENESS check...');
+  const fileChangesContent = getFileContent('FILE_CHANGES.md');
+  if (tasksContent && fileChangesContent) {
+    // Extract paths from FILE_CHANGES.md table rows: | `path` | action | reason |
+    const fcPaths = new Set();
+    for (const m of fileChangesContent.matchAll(/\|\s*`([^`]+)`\s*\|/g)) {
+      fcPaths.add(m[1].replace(/\/+$/, '')); // normalize trailing slash
+    }
+
+    // Extract file paths from TASKS.md **files:** lines: `path` *(action)*
+    const taskFiles = [];
+    for (const m of tasksContent.matchAll(/\*\*files:\*\*\s*(.+)/g)) {
+      for (const pm of m[1].matchAll(/`([^`]+)`/g)) {
+        const p = pm[1].replace(/\/+$/, '');
+        if (p.includes('/') || p.includes('.')) taskFiles.push(p);
+      }
+    }
+
+    const fcPathsArr = [...fcPaths];
+    for (const tf of taskFiles) {
+      // Check if path or its parent directory is listed
+      const found = fcPaths.has(tf) || fcPathsArr.some((fp) => tf.startsWith(fp + '/'));
+      if (!found) {
+        findings.push({
+          check: 'FILE_CHANGES_COMPLETENESS',
+          category: 'LOGIC_GAPS',
+          severity: 'WARNING',
+          message: `File "${tf}" referenced in TASKS.md but missing from FILE_CHANGES.md`,
+          details: `Add '| \`${tf}\` | edit/create | reason |' to FILE_CHANGES.md`,
+        });
+        log('WARN', `FILE_CHANGES_COMPLETENESS: ${tf} missing from FILE_CHANGES.md`);
+      }
+    }
+  }
+
+  // =========================================================================
+  // FILE_CHANGES_VERIFY: action=edit files must exist, action=create must not
+  // =========================================================================
+  log('INFO', 'Running FILE_CHANGES_VERIFY check...');
+  if (fileChangesContent) {
+    const specParent = path.dirname(targetDir); // .specs/ parent = repo root
+    const projectRoot = path.dirname(specParent);
+    const fcRows = [...fileChangesContent.matchAll(/\|\s*`([^`]+)`\s*\|\s*`?(\w+)`?\s*\|/g)];
+    for (const [, filePath, action] of fcRows) {
+      if (!filePath || filePath === 'Path' || filePath === 'TBD') continue;
+      // Skip wildcard patterns, home-relative paths, and placeholder paths
+      if (filePath.includes('*') || filePath.startsWith('~') || filePath.includes('...')) continue;
+      // Skip directory-only entries (ending with /)
+      if (filePath.endsWith('/')) continue;
+      const fullPath = path.join(projectRoot, filePath);
+      const exists = fs.existsSync(fullPath);
+      if (action === 'edit' && !exists) {
+        findings.push({
+          check: 'FILE_CHANGES_VERIFY',
+          category: 'ERRORS',
+          severity: 'ERROR',
+          message: `FILE_CHANGES: "${filePath}" has action=edit but file does not exist`,
+          details: `Verify the path exists or change action to 'create'`,
+        });
+        log('WARN', `FILE_CHANGES_VERIFY: ${filePath} action=edit but missing`);
+      }
+      // Note: action=create check disabled — spec may be written before implementation
+    }
+  }
+
+  // =========================================================================
+  // PHANTOM_CREATE_SOURCE: action=create "Move from X" — verify X exists
+  // =========================================================================
+  log('INFO', 'Running PHANTOM_CREATE_SOURCE check...');
+  if (fileChangesContent) {
+    const specParent2 = path.dirname(targetDir);
+    const projectRoot2 = path.dirname(specParent2);
+    // Parse full table rows: | path | action | reason |
+    const fullRows = [...fileChangesContent.matchAll(/\|\s*`([^`]+)`\s*\|\s*`?(\w+)`?\s*\|\s*([^|]*)\|/g)];
+    for (const [, , action, reason] of fullRows) {
+      if (action !== 'create') continue;
+      // Extract source path from reason: "Move from X" or "from X"
+      const sourceMatch = reason.match(/(?:Move\s+)?from\s+(\S+)/i);
+      if (!sourceMatch) continue;
+      let sourcePath = sourceMatch[1].replace(/[`'"]/g, '').replace(/\/+$/, '');
+      if (!sourcePath || sourcePath.includes('*') || sourcePath.includes('...')) continue;
+      const sourceFullPath = path.join(projectRoot2, sourcePath);
+      if (!fs.existsSync(sourceFullPath)) {
+        findings.push({
+          check: 'PHANTOM_CREATE_SOURCE',
+          category: 'ERRORS',
+          severity: 'WARNING',
+          message: `FILE_CHANGES: source "${sourcePath}" does not exist (action=create)`,
+          details: `Verify the source path exists or remove the migration entry`,
+        });
+        log('WARN', `PHANTOM_CREATE_SOURCE: ${sourcePath} not found`);
+      }
+    }
+  }
+
+  // =========================================================================
+  // COUNT_CONSISTENCY: numeric claims must match actual counts
+  // =========================================================================
+  log('INFO', 'Running COUNT_CONSISTENCY check...');
+  const readmeContent = getFileContent('README.md');
+  if (frContent) {
+    const actualFrCount = [...frContent.matchAll(/## FR-\d+:/g)].length;
+    // Scan README and RESEARCH for "N FR" or "N functional" claims
+    const textSources = [
+      { name: 'README.md', content: readmeContent },
+      { name: 'RESEARCH.md', content: researchContent },
+    ];
+    for (const { name, content } of textSources) {
+      if (!content) continue;
+      for (const m of content.matchAll(/(\d+)\s+FR\b/gi)) {
+        const claimed = parseInt(m[1], 10);
+        if (claimed > 0 && claimed !== actualFrCount && Math.abs(claimed - actualFrCount) > 2) {
+          findings.push({
+            check: 'COUNT_CONSISTENCY',
+            category: 'INCONSISTENCY',
+            severity: 'WARNING',
+            message: `${name} claims "${m[0]}" but FR.md has ${actualFrCount} FR headings`,
+            details: `Update the count in ${name} to match actual FR count (${actualFrCount})`,
+          });
+          log('WARN', `COUNT_CONSISTENCY: ${name} says ${claimed} FR, actual ${actualFrCount}`);
+        }
+      }
+    }
+  }
+
+  // =========================================================================
+  // PROSE_COUNT_SYNC: "N orphan/duplicate/phase/tool" claims vs actual counts
+  // =========================================================================
+  log('INFO', 'Running PROSE_COUNT_SYNC check...');
+  {
+    const proseSearchSources = [
+      { name: 'README.md', content: readmeContent },
+      { name: 'RESEARCH.md', content: researchContent },
+    ];
+    // Count actual phases in TASKS.md: "## Phase N" or "## Phase -N"
+    const actualPhaseCount = tasksContent ? (tasksContent.match(/^## Phase\s+[-\d]+/gm) || []).length : 0;
+    const prosePatterns = [
+      { regex: /(\d+)\s+phase/gi, actual: actualPhaseCount, label: 'phases in TASKS.md' },
+    ];
+    for (const { name, content } of proseSearchSources) {
+      if (!content) continue;
+      for (const { regex, actual, label } of prosePatterns) {
+        regex.lastIndex = 0;
+        for (const m of content.matchAll(regex)) {
+          const claimed = parseInt(m[1], 10);
+          if (claimed > 0 && actual > 0 && claimed !== actual) {
+            findings.push({
+              check: 'PROSE_COUNT_SYNC',
+              category: 'INCONSISTENCY',
+              severity: 'WARNING',
+              message: `${name} claims "${m[0]}" but actual count is ${actual} ${label}`,
+              details: `Update "${m[0]}" in ${name} to ${actual}`,
+            });
+            log('WARN', `PROSE_COUNT_SYNC: ${name} ${m[0]} vs ${actual} ${label}`);
+          }
+        }
+      }
+    }
+  }
+
+  // =========================================================================
+  // SCENARIO_COUNT_SYNC: "N scenarios" claims must match .feature Scenario count
+  // =========================================================================
+  log('INFO', 'Running SCENARIO_COUNT_SYNC check...');
+  if (featureContent) {
+    const actualScenarioCount = (featureContent.match(/^\s*Scenario:/gm) || []).length;
+    const changelogContent = getFileContent('CHANGELOG.md');
+    const countSources = [
+      { name: 'README.md', content: readmeContent },
+      { name: 'CHANGELOG.md', content: changelogContent },
+    ];
+    for (const { name, content } of countSources) {
+      if (!content) continue;
+      // Match both "N scenarios" and "scenarios | N" (table format)
+      const scenarioPatterns = [
+        ...content.matchAll(/(\d+)\s+(?:BDD\s+)?scenario/gi),
+        ...content.matchAll(/(?:BDD\s+)?scenarios?\s*\|\s*(\d+)/gi),
+      ];
+      for (const m of scenarioPatterns) {
+        const claimed = parseInt(m[1], 10);
+        if (claimed > 0 && claimed !== actualScenarioCount) {
+          findings.push({
+            check: 'SCENARIO_COUNT_SYNC',
+            category: 'INCONSISTENCY',
+            severity: 'WARNING',
+            message: `${name} claims "${m[0]}" but .feature has ${actualScenarioCount} Scenario: lines`,
+            details: `Update the scenario count in ${name} to ${actualScenarioCount}`,
+          });
+          log('WARN', `SCENARIO_COUNT_SYNC: ${name} says ${claimed}, actual ${actualScenarioCount}`);
+        }
+      }
+    }
+  }
+
+  // =========================================================================
+  // FIXTURES_CONSISTENCY: TEST_DATA_ACTIVE requires filled FIXTURES.md
+  // =========================================================================
+  log('INFO', 'Running FIXTURES_CONSISTENCY check...');
+  const designContent2 = designContent || getFileContent('DESIGN.md');
+  if (designContent2 && /TEST_DATA_ACTIVE/i.test(designContent2)) {
+    const fixturesContent = getFileContent('FIXTURES.md');
+    if (!fixturesContent) {
+      findings.push({
+        check: 'FIXTURES_CONSISTENCY',
+        category: 'LOGIC_GAPS',
+        severity: 'WARNING',
+        message: 'DESIGN.md has TEST_DATA_ACTIVE classification but FIXTURES.md is missing',
+        details: 'Create FIXTURES.md with fixture inventory, lifecycle, and gap analysis per specs-management Step 6.5',
+      });
+      log('WARN', 'FIXTURES_CONSISTENCY: FIXTURES.md missing for TEST_DATA_ACTIVE');
+    } else {
+      // Check if FIXTURES.md is still a placeholder (contains unfilled template markers)
+      const hasPlaceholders = /\{Название фикстуры\}|\{static\/factory/.test(fixturesContent);
+      // Real content = F-N headings with actual names (not template placeholders)
+      const hasRealFixtures = /### F-\d+:\s+[^{]/.test(fixturesContent);
+      if (hasPlaceholders && !hasRealFixtures) {
+        findings.push({
+          check: 'FIXTURES_CONSISTENCY',
+          category: 'LOGIC_GAPS',
+          severity: 'WARNING',
+          message: 'DESIGN.md has TEST_DATA_ACTIVE but FIXTURES.md contains only placeholder template',
+          details: 'Fill FIXTURES.md with actual fixture definitions: inventory, lifecycle, dependencies, gap analysis',
+        });
+        log('WARN', 'FIXTURES_CONSISTENCY: FIXTURES.md is placeholder for TEST_DATA_ACTIVE');
+      }
+    }
+  }
+
   const categoryCount = {
     ERRORS: 0,
     LOGIC_GAPS: 0,
@@ -2203,12 +2526,14 @@ function commandAuditSpec(argv) {
   const aiChecksPending = [
     'ERRORS: Verify DESIGN.md component/method/file references exist in codebase',
     "ERRORS: Check items marked 'Need to add' or 'TODO' that may already exist",
-    'ERRORS: Verify FILE_CHANGES.md - edit targets exist, create targets do not exist',
+    'ERRORS: Verify FILE_CHANGES.md - create targets do not already exist (pre-implementation only)',
     'INCONSISTENCY: Compare domain-specific naming across all spec files',
     'FANTASIES: Verify API assumptions in RESEARCH.md have sources/proof',
     'FANTASIES: Check for untested claims presented as confirmed facts',
     'RUDIMENTS: Identify scope creep (client-side concerns in server spec, or vice versa)',
     'RUDIMENTS: Check for open questions in RESEARCH.md that are answered elsewhere in spec',
+    'INCONSISTENCY: TABLE_ROW_COUNT — verify section headers ("N dirs", "N files") match actual table row counts below them',
+    'LOGIC_GAPS: AUDIT_REPORT_EXISTS — verify AUDIT_REPORT.md exists if spec completed Phase 3+ Audit',
   ];
 
   const result = {

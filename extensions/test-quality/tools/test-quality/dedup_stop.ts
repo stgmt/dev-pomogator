@@ -10,9 +10,15 @@
  */
 
 import { execSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
-import * as fs from 'node:fs';
-import * as path from 'node:path';
+
+import { log as _logShared, normalizePath } from '../../../_shared/hook-utils.js';
+import {
+  markerPath,
+  readMarker,
+  writeMarkerAtomic,
+  isWithinCooldown,
+  hashFileList,
+} from '../../../_shared/marker-utils.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -22,12 +28,6 @@ interface StopHookInput {
   conversation_id?: string;
   workspace_roots?: string[];
   transcript_path?: string;
-}
-
-interface MarkerData {
-  hash: string;
-  timestamp: string;
-  count: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -44,22 +44,9 @@ const TEST_DIR_PREFIX = 'tests/';
 // Logging
 // ---------------------------------------------------------------------------
 
+const LOG_PREFIX = 'DEDUP-TESTS';
 function log(level: 'INFO' | 'DEBUG' | 'ERROR', message: string): void {
-  const ts = new Date().toISOString();
-  process.stderr.write(`[${ts}] [DEDUP-TESTS] [${level}] ${message}\n`);
-}
-
-// ---------------------------------------------------------------------------
-// Path normalization (from simplify_stop.ts pattern)
-// ---------------------------------------------------------------------------
-
-function normalizePath(p: string): string {
-  if (!p) return p;
-  if (process.platform === 'win32' && /^\/[a-zA-Z]:\//.test(p)) {
-    const drive = p[1].toUpperCase();
-    return `${drive}:${p.slice(2).replace(/\//g, '\\')}`;
-  }
-  return p;
+  _logShared(level, LOG_PREFIX, message);
 }
 
 // ---------------------------------------------------------------------------
@@ -91,55 +78,6 @@ function getTestDiffFiles(repoRoot: string): string[] {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Hash
-// ---------------------------------------------------------------------------
-
-function hashFileList(files: string[]): string {
-  return createHash('sha256').update(files.join('\n')).digest('hex').slice(0, 16);
-}
-
-// ---------------------------------------------------------------------------
-// Marker file (atomic read/write)
-// ---------------------------------------------------------------------------
-
-function markerPath(repoRoot: string): string {
-  return path.join(repoRoot, MARKER_DIR, MARKER_FILENAME);
-}
-
-function readMarker(filePath: string): MarkerData | null {
-  try {
-    const raw = fs.readFileSync(filePath, 'utf-8');
-    const data = JSON.parse(raw) as MarkerData;
-    if (data && typeof data.hash === 'string' && typeof data.timestamp === 'string') {
-      return data;
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-function writeMarkerAtomic(filePath: string, data: MarkerData): void {
-  const dir = path.dirname(filePath);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-  const tmpPath = filePath + '.tmp';
-  fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2), 'utf-8');
-  fs.renameSync(tmpPath, filePath);
-}
-
-// ---------------------------------------------------------------------------
-// Cooldown
-// ---------------------------------------------------------------------------
-
-function isWithinCooldown(timestamp: string, cooldownMinutes: number): boolean {
-  const markerTime = new Date(timestamp).getTime();
-  if (isNaN(markerTime)) return false;
-  const elapsed = (Date.now() - markerTime) / 60_000;
-  return elapsed < cooldownMinutes;
-}
 
 // ---------------------------------------------------------------------------
 // Stdin reader
@@ -212,7 +150,7 @@ async function main(): Promise<void> {
   const currentHash = hashFileList(testFiles);
 
   // 3. Read marker
-  const mp = markerPath(repoRoot);
+  const mp = markerPath(repoRoot, MARKER_DIR, MARKER_FILENAME);
   const marker = readMarker(mp);
 
   // 4. Hash dedup

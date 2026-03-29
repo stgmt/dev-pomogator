@@ -6,8 +6,8 @@
 
 Эта спека содержит все обязательные файлы в правильном формате для тестирования:
 
-- validate-spec.sh должен вернуть valid=true
-- spec-status.sh должен показать phase=Finalization, progress=100%
+- validate-spec.ts должен вернуть valid=true
+- spec-status.ts должен показать phase=Finalization, progress=100%
 
 ## Файлы
 

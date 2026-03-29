@@ -1,0 +1,1 @@
+bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.sh bash scripts/docker-test.sh npx jest

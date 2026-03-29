@@ -4,9 +4,6 @@
   "description": "Test runner session management, YAML status files, wrapper for test output parsing, and background task guard",
   "platforms": ["claude"],
   "category": "automation",
-  "files": {
-    "claude": []
-  },
   "tools": {
     "test-statusline": "tools/test-statusline",
     "bg-task-guard": "tools/bg-task-guard"
@@ -51,7 +48,7 @@
   },
   "statusLine": {
     "claude": {
-      "type": "custom_polling",
+      "type": "command",
       "command": "npx -y ccstatusline@latest"
     }
   },

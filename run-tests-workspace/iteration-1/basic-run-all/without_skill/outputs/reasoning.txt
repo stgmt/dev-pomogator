@@ -1,0 +1,48 @@
+Step-by-step reasoning for determining the test command:
+
+1. CHECKED package.json SCRIPTS SECTION:
+   - "test": "npm run test:e2e" — the main test entry point delegates to test:e2e
+   - "test:e2e": "bash scripts/docker-test.sh" — runs tests via Docker
+   - "test:e2e:docker": "vitest run tests/e2e --reporter=verbose && python3 -m pytest tests/tui/ -v" — the actual test commands run INSIDE Docker
+
+2. CHECKED docker-compose.test.yml:
+   - Builds from Dockerfile.test
+   - Sets DEV_POMOGATOR_TEST_IN_DOCKER=1 environment variable
+   - Uses .env.test for additional environment configuration
+
+3. CHECKED Dockerfile.test:
+   - Based on node:20-slim
+   - Installs git, python3, PowerShell, chromadb, textual, pytest, pytest-asyncio, bun, claude CLI, cursor-agent CLI
+   - Default CMD is: npm run test:e2e:docker
+   - This means the Docker container runs both vitest (TypeScript E2E tests) and pytest (Python TUI tests)
+
+4. CHECKED scripts/docker-test.sh:
+   - Generates unique COMPOSE_PROJECT_NAME for session isolation
+   - Builds Docker image via docker compose
+   - Runs the test service with `docker compose run --rm -T test`
+   - Has cleanup trap to remove containers on exit
+
+5. CHECKED test files:
+   - tests/e2e/*.test.ts — 24 TypeScript E2E test files (vitest)
+   - tests/tui/*.py — 7 Python TUI test files + conftest.py + helpers.py (pytest)
+
+6. CHECKED vitest.config.ts:
+   - Includes tests/**/*.test.ts, excludes tests/fixtures/**
+   - 5-minute timeout, sequential execution (fileParallelism: false)
+   - Setup file: tests/setup/ensure-docker.ts
+
+7. CHECKED project rules (CLAUDE.md and .claude/rules/docker-only-tests.md):
+   - "docker-only-tests" rule: ALL tests run only through Docker (npm test -> docker-compose.test.yml)
+   - "centralized-test-runner" rule: Tests should be run through /run-tests skill
+   - However, without the /run-tests skill available, the standard command is `npm test`
+
+CONCLUSION:
+The correct command is `npm test`, which:
+1. Calls `npm run test:e2e`
+2. Which calls `bash scripts/docker-test.sh`
+3. Which builds and runs Docker container via docker-compose.test.yml
+4. Inside Docker, runs `npm run test:e2e:docker`
+5. Which executes: vitest (24 E2E tests) + pytest (7 TUI tests)
+
+No test filter was specified by the user ("запусти тесты" = "run tests"), so all tests should be run.
+The working directory should be D:\repos\dev-pomogator (project root where package.json lives).

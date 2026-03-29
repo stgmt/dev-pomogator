@@ -2,25 +2,25 @@
 
 ## AC-1: Scaffold Creates Structure
 
-WHEN user runs scaffold-spec.sh with valid name
+WHEN user runs scaffold-spec.ts with valid name
 THEN system SHALL create folder .specs/valid-spec/ with 15 files
 
 ## AC-2: Scaffold Validates Name
 
-WHEN user runs scaffold-spec.sh with invalid name (not kebab-case)
+WHEN user runs scaffold-spec.ts with invalid name (not kebab-case)
 THEN system SHALL return error with exit code 2
 
 ## AC-3: Validate Checks Structure
 
-WHEN user runs validate-spec.sh on folder with missing files
+WHEN user runs validate-spec.ts on folder with missing files
 THEN system SHALL report STRUCTURE errors for each missing file
 
 ## AC-4: Validate Checks FR Format
 
-WHEN user runs validate-spec.sh on folder with FR.md without FR-N headers
+WHEN user runs validate-spec.ts on folder with FR.md without FR-N headers
 THEN system SHALL report FR_FORMAT error
 
 ## AC-5: Status Shows Phase
 
-WHEN user runs spec-status.sh on partially filled spec
+WHEN user runs spec-status.ts on partially filled spec
 THEN system SHALL report current phase AND progress percentage

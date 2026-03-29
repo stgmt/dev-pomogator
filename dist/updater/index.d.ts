@@ -1,7 +1,6 @@
 interface UpdateOptions {
     force?: boolean;
-    silent?: boolean;
-    platform?: 'cursor' | 'claude';
+    platform?: 'claude';
 }
 export declare function checkUpdate(options?: UpdateOptions): Promise<boolean>;
 export {};

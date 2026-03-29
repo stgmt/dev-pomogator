@@ -29,6 +29,35 @@ export function createLogger(filename) {
         error: (msg) => log('ERROR', msg),
     };
 }
+/**
+ * Extract the top-level error message (one-liner for user-facing output).
+ */
+export function getErrorMessage(error) {
+    return error instanceof Error ? error.message : String(error);
+}
+/**
+ * Serialize an error (including cause chain) into a loggable string.
+ */
+export function formatErrorChain(error) {
+    if (!(error instanceof Error))
+        return String(error);
+    const parts = [];
+    let current = error;
+    let depth = 0;
+    while (current && depth < 10) {
+        const prefix = depth === 0 ? '' : 'Caused by: ';
+        parts.push(`${prefix}${current.message}`);
+        if (current.stack) {
+            // Skip the first line of stack (it's the message repeated)
+            const stackLines = current.stack.split('\n').slice(1).join('\n');
+            if (stackLines.trim())
+                parts.push(stackLines);
+        }
+        current = current.cause instanceof Error ? current.cause : undefined;
+        depth++;
+    }
+    return parts.join('\n');
+}
 /** Default logger for updater (backward-compatible) */
 export const logger = createLogger('update.log');
 //# sourceMappingURL=logger.js.map

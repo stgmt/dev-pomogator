@@ -4,7 +4,7 @@
 
 ## Причина
 
-`test_runner_wrapper.sh` парсит stdout тестов и пишет YAML status файл, который используют:
+`test_runner_wrapper.cjs` парсит stdout тестов и пишет YAML status файл, который используют:
 - `statusline_render.sh` — однострочный прогресс в Claude Code statusline
 - Python TUI — полный 4-tab мониторинг (Tests/Logs/Monitoring/Analysis)
 

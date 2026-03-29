@@ -1,0 +1,35 @@
+Step-by-step reasoning for: "запусти тесты только по statusline"
+
+Step 0: Sanitize arguments
+- User input: "запусти тесты только по statusline"
+- No ANSI escape sequences detected
+- No pasted terminal output detected
+- Extracted filter token: "statusline"
+- No flags (--framework, --docker, --) present in user input
+
+Step 1: Detect framework
+- Checked project root for config files using Glob
+- Found: vitest.config.ts -> framework = vitest
+- Other files found but NOT in project root:
+  - conftest.py in tests/tui/ (not root)
+  - pyproject.toml in extensions/tui-test-runner/ (not root)
+  - .csproj in tests/fixtures/ (not root, test fixture)
+- Decision: framework = vitest
+
+Step 2: Check docker-only-tests rule
+- Read .claude/rules/docker-only-tests.md -> file EXISTS
+- Rule mandates all tests run through Docker
+- Automatically adding --docker flag
+
+Step 3: Build and run test command
+- Framework: vitest
+- Filter: "statusline"
+- Base test command: npx vitest run --grep "statusline"
+- Docker mode: yes (auto-added due to docker-only-tests rule)
+- Checked for scripts/docker-test.sh -> EXISTS (preferred path)
+- Final command: bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.sh bash scripts/docker-test.sh npx vitest run --grep "statusline"
+
+Command structure breakdown:
+1. bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.sh — YAML status wrapper for statusline/TUI monitoring
+2. bash scripts/docker-test.sh — Docker execution layer (handles build, cleanup, session isolation)
+3. npx vitest run --grep "statusline" — the actual vitest command with filter for "statusline"

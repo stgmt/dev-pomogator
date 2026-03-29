@@ -1,0 +1,125 @@
+{
+  "skill_name": "run-tests",
+  "evals": [
+    {
+      "id": 1,
+      "name": "basic-run-all",
+      "prompt": "запусти тесты",
+      "expected_output": "Detects vitest from vitest.config.ts, checks docker-only-tests rule, runs via wrapper + docker-test.sh",
+      "files": [],
+      "assertions": [
+        {
+          "name": "uses-wrapper",
+          "type": "output_contains",
+          "value": "test_runner_wrapper.sh",
+          "description": "Must use the centralized wrapper for YAML status tracking"
+        },
+        {
+          "name": "detects-docker-rule",
+          "type": "output_contains",
+          "value": "docker",
+          "description": "Must detect docker-only-tests rule and use docker mode"
+        },
+        {
+          "name": "detects-vitest",
+          "type": "output_mentions",
+          "value": "vitest",
+          "description": "Must auto-detect vitest as the framework"
+        },
+        {
+          "name": "no-direct-npm-test",
+          "type": "output_not_contains",
+          "value": "npm test",
+          "description": "Must NOT use direct npm test — should use wrapper"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "filter-by-name",
+      "prompt": "запусти тесты только по statusline",
+      "expected_output": "Runs vitest with --grep statusline filter through docker wrapper",
+      "files": [],
+      "assertions": [
+        {
+          "name": "has-filter",
+          "type": "output_contains",
+          "value": "statusline",
+          "description": "Must pass the filter string to the test command"
+        },
+        {
+          "name": "uses-grep-flag",
+          "type": "output_contains",
+          "value": "--grep",
+          "description": "vitest uses --grep for filtering"
+        },
+        {
+          "name": "uses-wrapper",
+          "type": "output_contains",
+          "value": "test_runner_wrapper.sh",
+          "description": "Must use the centralized wrapper"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "explicit-framework",
+      "prompt": "/run-tests --framework jest",
+      "expected_output": "Uses jest despite vitest.config.ts existing, runs through docker wrapper",
+      "files": [],
+      "assertions": [
+        {
+          "name": "uses-jest",
+          "type": "output_contains",
+          "value": "jest",
+          "description": "Must use jest when explicitly specified"
+        },
+        {
+          "name": "no-vitest",
+          "type": "output_not_contains",
+          "value": "vitest",
+          "description": "Must NOT auto-detect vitest when framework is explicit"
+        },
+        {
+          "name": "uses-wrapper",
+          "type": "output_contains",
+          "value": "test_runner_wrapper.sh",
+          "description": "Must use the centralized wrapper"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "pasted-text-sanitization",
+      "prompt": "/run-tests [Pasted text from terminal]\n\u001b[32m✓\u001b[0m auth test passed\nsome garbage here\nstatusline",
+      "expected_output": "Sanitizes pasted text, strips ANSI, extracts meaningful content, warns user",
+      "files": [],
+      "assertions": [
+        {
+          "name": "warns-about-paste",
+          "type": "output_mentions",
+          "value": "pasted",
+          "description": "Must warn user about pasted text in arguments"
+        },
+        {
+          "name": "runs-something",
+          "type": "output_contains",
+          "value": "test_runner_wrapper.sh",
+          "description": "Must still attempt to run tests after sanitization"
+        },
+        {
+          "name": "smart-filter-extraction",
+          "type": "output_contains",
+          "value": "statusline",
+          "description": "Must extract 'statusline' as the real filter, not terminal noise like '✓ auth test passed'"
+        },
+        {
+          "name": "no-checkmark-in-filter",
+          "type": "output_not_contains",
+          "value": "✓",
+          "description": "Must NOT include unicode checkmark artifact in the test filter"
+        }
+      ]
+    }
+  ]
+}

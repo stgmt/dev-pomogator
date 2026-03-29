@@ -1,0 +1,23 @@
+ RUN  v4.1.0 /home/testuser/app
+
+ ❯ tests/e2e/installer.test.ts (28)
+ ❯ tests/e2e/updater.test.ts (15)
+ ❯ tests/e2e/specs-generator.test.ts (40)
+ ✓ tests/e2e/bg-task-guard.test.ts > GUARD002: Background Task Guard > PostToolUse Hook > GUARD002_01: creates marker when bg task detected 44ms
+ ✓ tests/e2e/bg-task-guard.test.ts > GUARD002: Background Task Guard > PostToolUse Hook > GUARD002_02: ignores non-background output 23ms
+ ✓ tests/e2e/bg-task-guard.test.ts > GUARD002: Background Task Guard > Stop Hook > GUARD002_03: blocks when marker is fresh 13ms
+ ✗ tests/e2e/bg-task-guard.test.ts > GUARD002: Background Task Guard > Stop Hook > GUARD002_04: allows when marker is stale 11ms
+ ✓ tests/e2e/bg-task-guard.test.ts > GUARD002: Background Task Guard > Stop Hook > GUARD002_05: allows when no marker exists 4ms
+ ↓ tests/e2e/cursor-installer.test.ts > Scenario 1: Clean Install > should clone claude-mem to marketplace directory
+ ↓ tests/e2e/cursor-installer.test.ts > Scenario 1: Clean Install > should create hooks.json with all required hooks
+ ✓ tests/e2e/installer.test.ts > Scenario 1 > should install extensions 156ms
+ ✓ tests/e2e/installer.test.ts > Scenario 1 > should create config 89ms
+ ✗ tests/e2e/installer.test.ts > Scenario 2 > should handle missing extension 45ms
+ ✓ tests/e2e/updater.test.ts > should detect updates 234ms
+ ✓ tests/e2e/updater.test.ts > should skip unchanged files 67ms
+ ○ tests/e2e/updater.test.ts > should handle network errors
+
+ Test Files  3 passed | 1 failed | 2 skipped (6)
+      Tests  8 passed | 2 failed | 3 skipped (13)
+   Start at  18:31:00
+   Duration  4.40s

@@ -33,7 +33,7 @@ interface HookEntry {
  * Scan all Claude project settings and migrate old-format hooks.
  * Returns total number of migrated hook commands.
  */
-export async function migrateOldProjectHooks(platform: 'claude' | 'cursor'): Promise<number> {
+export async function migrateOldProjectHooks(platform: 'claude'): Promise<number> {
   if (platform !== 'claude') return 0;
 
   if (!fs.existsSync(CONFIG_FILE)) return 0;

@@ -208,7 +208,7 @@ function checkPhaseGate(
         `[specs-validator] PHASE GATE WARNING for "${specName}": ` +
         `Attempting to work on ${futurePhaseName} files (${mentionedFiles.join(', ')}) ` +
         `but ${stopLabel} (${currentPhaseName}) has not been confirmed. ` +
-        `Run: spec-status.sh -Path ".specs/${specName}" -ConfirmStop ${currentPhaseName}`
+        `Run: spec-status.ts -Path ".specs/${specName}" -ConfirmStop ${currentPhaseName}`
       );
     }
   }
@@ -262,7 +262,7 @@ function printPhaseStatus(specName: string, progress: ProgressState): void {
     console.log(`[specs-validator] SPEC: ${specName} | Phase: ${progress.currentPhase} | ${unconfirmedStop} not confirmed`);
     if (allowed.length > 0) console.log(`  Allowed files: ${allowed.join(', ')}`);
     if (blocked.length > 0) console.log(`  Blocked files: ${blocked.join(', ')}`);
-    console.log(`  Confirm: spec-status.sh -Path ".specs/${specName}" -ConfirmStop ${unconfirmedPhase}`);
+    console.log(`  Confirm: spec-status.ts -Path ".specs/${specName}" -ConfirmStop ${unconfirmedPhase}`);
   }
 }
 

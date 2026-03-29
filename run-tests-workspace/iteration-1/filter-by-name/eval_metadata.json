@@ -1,0 +1,27 @@
+{
+  "eval_id": 2,
+  "eval_name": "filter-by-name",
+  "prompt": "запусти тесты только по statusline",
+  "assertions": [
+    {
+      "name": "has-filter",
+      "description": "Passes 'statusline' as filter string to the test command",
+      "check": "command.txt contains 'statusline'"
+    },
+    {
+      "name": "uses-grep-flag",
+      "description": "vitest uses --grep for filtering test names",
+      "check": "command.txt contains '--grep'"
+    },
+    {
+      "name": "uses-wrapper",
+      "description": "Command uses test_runner_wrapper.sh",
+      "check": "command.txt contains 'test_runner_wrapper.sh'"
+    },
+    {
+      "name": "uses-docker",
+      "description": "Detects docker-only-tests rule",
+      "check": "command.txt contains 'docker'"
+    }
+  ]
+}

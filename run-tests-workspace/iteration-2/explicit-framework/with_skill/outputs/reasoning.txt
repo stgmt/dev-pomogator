@@ -1,0 +1,39 @@
+Step-by-step reasoning for: /run-tests --framework jest
+
+Step 0: Sanitize arguments
+- Input: "--framework jest"
+- No ANSI escape sequences detected.
+- No pasted text markers detected.
+- No terminal output noise detected.
+- Extracted tokens: --framework, jest
+- Result: framework flag = "jest", no test name filter.
+
+Step 1: Detect framework
+- The user provided --framework jest explicitly.
+- Per the skill: "If --framework argument provided, use that instead."
+- Framework = jest. No need to scan for config files.
+
+Step 2: Check docker-only-tests rule
+- File .claude/rules/docker-only-tests.md EXISTS in the project.
+- Per the skill: "If .claude/rules/docker-only-tests.md exists in the project, tests MUST run through Docker. Automatically add --docker flag unless already specified."
+- The user did NOT specify --docker, so --docker is automatically added.
+- Docker mode = true.
+
+Step 3: Build and run test command
+- Framework = jest
+- From the dispatch table: jest command = "npx jest"
+- No test name filter was provided, so no --testNamePattern argument.
+- Base test command: npx jest
+
+- Docker mode is active. Check if scripts/docker-test.sh exists.
+- scripts/docker-test.sh EXISTS (confirmed via Glob).
+- Per the skill (preferred path): wrap with docker-test.sh:
+  bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.sh bash scripts/docker-test.sh <test-command>
+
+- Final command:
+  bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.sh bash scripts/docker-test.sh npx jest
+
+Step 4: Report results (would happen after execution)
+- Would check exit code (0 = passed, non-zero = failed).
+- Would report framework = jest.
+- Would read YAML status file for pass/fail/skip counts.

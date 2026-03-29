@@ -2,12 +2,10 @@
   "name": "auto-commit",
   "version": "2.3.0",
   "description": "Automatic git commits with LLM-generated messages on agent stop",
-  "platforms": ["cursor", "claude"],
+  "platforms": [
+    "claude"
+  ],
   "category": "automation",
-  "files": {
-    "cursor": [],
-    "claude": []
-  },
   "tools": {
     "auto-commit": "tools/auto-commit"
   },
@@ -50,9 +48,6 @@
   "hooks": {
     "claude": {
       "Stop": "npx tsx .dev-pomogator/tools/auto-commit/auto_commit_stop.ts"
-    },
-    "cursor": {
-      "stop": "npx tsx .dev-pomogator/tools/auto-commit/auto_commit_stop.ts"
     }
   }
 }

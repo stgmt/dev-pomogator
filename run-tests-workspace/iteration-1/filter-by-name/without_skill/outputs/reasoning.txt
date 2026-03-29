@@ -1,0 +1,35 @@
+Step-by-step reasoning for running tests filtered by "statusline":
+
+1. IDENTIFIED TEST FILE:
+   - The relevant test file is: tests/e2e/test-statusline.test.ts
+   - It uses vitest as the test framework (imports from 'vitest')
+
+2. TRACED THE TEST EXECUTION CHAIN:
+   - npm test → npm run test:e2e → bash scripts/docker-test.sh
+   - docker-test.sh runs: docker compose -f docker-compose.test.yml run --rm -T test "$@"
+   - The "$@" means any arguments passed to docker-test.sh are forwarded to the container
+   - Container CMD (default): ["npm", "run", "test:e2e:docker"]
+   - test:e2e:docker = "vitest run tests/e2e --reporter=verbose && python3 -m pytest tests/tui/ -v"
+
+3. DOCKER COMPOSE RUN BEHAVIOR:
+   - `docker compose run <service> <args>` REPLACES the CMD with <args>
+   - So passing args to docker-test.sh replaces the entire CMD
+   - We need to provide a full command that runs vitest with a statusline filter
+
+4. FILTERING OPTIONS:
+   - Vitest supports filename pattern matching: `vitest run tests/e2e/test-statusline`
+   - Vitest also supports -t flag for test name grep
+   - Since the user said "statusline", matching the test file name is the most direct approach
+
+5. CHOSEN COMMAND:
+   - We pass the full vitest command through docker-test.sh
+   - The script docker-test.sh accepts "$@" and passes it to the container
+   - Command: bash scripts/docker-test.sh npx vitest run tests/e2e/test-statusline.test.ts --reporter=verbose
+   - This replaces the default CMD with our filtered vitest command
+
+6. CONSTRAINTS NOTED:
+   - Project rule: tests MUST run through Docker (docker-only-tests.md)
+   - Project rule: tests should use /run-tests skill (centralized-test-runner.md)
+   - Since I was asked not to use skills, I'm providing the raw docker command
+   - The python TUI tests (pytest) are skipped since user only wants statusline tests
+     and test-statusline.test.ts is a vitest test, not a pytest test

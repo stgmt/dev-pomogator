@@ -1,0 +1,10 @@
+{
+  "eval_id": 2,
+  "run_type": "with_skill",
+  "expectations": [
+    {"text": "has-filter", "passed": true, "evidence": "Contains --grep \"statusline\""},
+    {"text": "uses-grep-flag", "passed": true, "evidence": "Uses vitest --grep"},
+    {"text": "uses-wrapper", "passed": true, "evidence": "Wrapped in test_runner_wrapper.sh"},
+    {"text": "uses-docker", "passed": true, "evidence": "Uses docker-test.sh"}
+  ]
+}

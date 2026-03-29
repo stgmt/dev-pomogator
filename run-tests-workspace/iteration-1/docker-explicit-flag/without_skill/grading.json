@@ -1,0 +1,12 @@
+{
+  "eval_id": 5,
+  "run_type": "without_skill",
+  "command": "bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.sh bash scripts/docker-test.sh npx vitest run --grep \"auth\"",
+  "expectations": [
+    {"text": "uses-docker", "passed": true, "evidence": "Command contains docker-test.sh"},
+    {"text": "has-auth-filter", "passed": true, "evidence": "Command contains '--grep \"auth\"'"},
+    {"text": "uses-docker-test-sh", "passed": true, "evidence": "Uses scripts/docker-test.sh"},
+    {"text": "uses-wrapper", "passed": true, "evidence": "Found test_runner_wrapper.sh on its own — NON-DISCRIMINATING"},
+    {"text": "uses-vitest-grep", "passed": true, "evidence": "Uses --grep — found vitest dispatch on its own"}
+  ]
+}

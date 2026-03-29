@@ -1,3 +1,9 @@
+import type { Logger } from '../utils/logger.js';
+export interface ClaudeMemValidation {
+    worker: boolean;
+    chroma: boolean;
+    mcpBinary: boolean;
+}
 /**
  * Start Chroma server directly using Python's chroma binary.
  *
@@ -9,13 +15,6 @@
  * running Chroma via heartbeat and reuses it instead of trying to start one.
  */
 export declare function startChromaServer(): Promise<void>;
-/**
- * Install Cursor hooks by directly generating hooks.json
- *
- * Bypasses broken `bun run cursor:install` which looks for non-existent shell scripts.
- * Generates hooks.json with node CLI commands that call worker-service.cjs directly.
- */
-export declare function installCursorHooks(): Promise<void>;
 /**
  * Start claude-mem worker using bun run worker:start
  */
@@ -34,8 +33,7 @@ export declare function installClaudeMemPlugin(): Promise<void>;
  * Ensure claude-mem is installed and configured for the specified platform.
  * Runs AUTOMATICALLY without user confirmation.
  *
- * For Cursor: Clones repo, builds, installs hooks, starts worker
- * For Claude Code: Installs plugin via marketplace
+ * Installs claude-mem plugin via marketplace for Claude Code.
  */
-export declare function ensureClaudeMem(platform: 'cursor' | 'claude'): Promise<void>;
+export declare function ensureClaudeMem(platform: 'claude', logger?: Logger): Promise<ClaudeMemValidation>;
 //# sourceMappingURL=memory.d.ts.map

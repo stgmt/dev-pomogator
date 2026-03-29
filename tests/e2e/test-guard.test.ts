@@ -1,38 +1,27 @@
 import { describe, it, expect } from 'vitest';
-import { spawnSync } from 'child_process';
 import path from 'path';
 import fs from 'fs-extra';
-import { appPath, runInstaller, setupCleanState } from './helpers';
+import { appPath, runInstaller, setupCleanState, runTsx } from './helpers';
 
 const GUARD_SCRIPT = 'extensions/tui-test-runner/tools/tui-test-runner/test_guard.ts';
 
-/**
- * Simulate PreToolUse hook input for test_guard.
- * Sends JSON to stdin, returns exit code and stdout.
- */
 function runTestGuard(
   command: string,
   env: Record<string, string> = {},
 ): { status: number; stdout: string } {
-  const input = JSON.stringify({
-    session_id: 'test-session',
-    cwd: appPath(),
-    tool_name: 'Bash',
-    tool_input: { command },
-  });
-
-  const guardPath = appPath(GUARD_SCRIPT);
-  const result = spawnSync('npx', ['tsx', guardPath], {
-    input,
-    encoding: 'utf-8',
-    cwd: appPath(),
+  const result = runTsx(GUARD_SCRIPT, {
+    input: {
+      session_id: 'test-session',
+      cwd: appPath(),
+      tool_name: 'Bash',
+      tool_input: { command },
+    },
+    env,
     timeout: 10000,
-    env: { ...process.env, ...env },
   });
-
   return {
     status: result.status ?? 1,
-    stdout: (result.stdout || '').trim(),
+    stdout: result.stdout.trim(),
   };
 }
 
@@ -69,13 +58,13 @@ describe('GUARD001: Test Guard Hook', () => {
 
   // @feature2
   it('GUARD001_08: allows wrapper command', () => {
-    const result = runTestGuard('bash test_runner_wrapper.sh python -m pytest');
+    const result = runTestGuard('node test_runner_wrapper.cjs python -m pytest');
     expect(result.status).toBe(0);
   });
 
   // @feature2
   it('GUARD001_09: allows wrapper command with --framework flag', () => {
-    const result = runTestGuard('bash test_runner_wrapper.sh --framework dotnet -- dotnet test');
+    const result = runTestGuard('node test_runner_wrapper.cjs --framework dotnet -- dotnet test');
     expect(result.status).toBe(0);
   });
 

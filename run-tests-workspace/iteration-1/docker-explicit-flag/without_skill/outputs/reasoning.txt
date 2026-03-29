@@ -1,0 +1,55 @@
+Step-by-step reasoning for: /run-tests --docker auth
+
+1. PARSE ARGUMENTS
+   - "--docker" flag: run tests through Docker Compose
+   - "auth": test name filter pattern
+
+2. DETECT FRAMEWORK
+   - Found vitest.config.ts in project root -> framework = vitest
+   - Vitest dispatch table filter syntax: --grep "filter"
+
+3. CHECK docker-only-tests RULE
+   - .claude/rules/docker-only-tests.md exists in the project
+   - This means tests MUST run through Docker regardless, but --docker was explicitly provided
+
+4. BUILD TEST COMMAND (inner command)
+   - Framework: vitest
+   - Filter: "auth"
+   - Base command: npx vitest run
+   - With filter: npx vitest run --grep "auth"
+
+5. DOCKER WRAPPING
+   - --docker flag is set
+   - scripts/docker-test.sh EXISTS in the project root
+   - Per the run-tests command docs: when docker-test.sh exists, use it as the preferred method
+   - docker-test.sh handles: build, cleanup, session isolation, COMPOSE_PROJECT_NAME
+   - docker-test.sh passes "$@" to: docker compose -f docker-compose.test.yml run --rm -T test "$@"
+   - So the inner test command replaces the container's default CMD
+
+6. WRAPPER WRAPPING
+   - test_runner_wrapper.sh wraps the entire command for YAML status tracking
+   - It delegates to test_runner_wrapper.ts which parses test output and writes YAML status files
+   - Without TEST_STATUSLINE_SESSION env var, wrapper falls through to passthrough mode
+
+7. FINAL COMMAND
+   bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.sh bash scripts/docker-test.sh npx vitest run --grep "auth"
+
+   Breakdown:
+   - bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.sh  <- YAML status wrapper
+   - bash scripts/docker-test.sh                                       <- Docker runner (build + run + cleanup)
+   - npx vitest run --grep "auth"                                      <- actual test command inside container
+
+8. EXECUTION FLOW
+   a. test_runner_wrapper.sh invokes test_runner_wrapper.ts via tsx
+   b. test_runner_wrapper.ts spawns: bash scripts/docker-test.sh npx vitest run --grep "auth"
+   c. docker-test.sh builds the Docker image via docker compose build
+   d. docker-test.sh runs: docker compose -f docker-compose.test.yml run --rm -T test npx vitest run --grep "auth"
+   e. Inside the container, vitest runs with --grep "auth" filter, matching test names containing "auth"
+   f. test_runner_wrapper.ts parses vitest output via VitestAdapter and writes YAML status
+   g. On completion, docker-test.sh cleanup trap removes the container
+
+9. NOTE ON FILTER
+   - vitest --grep filters by test NAME (describe/it text), not by file name
+   - There are no test files with "auth" in the filename under tests/e2e/
+   - The filter will match any describe() or it() block whose name contains "auth"
+   - If no tests match, vitest exits with 0 and reports "no tests found"

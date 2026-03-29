@@ -1,0 +1,48 @@
+Step-by-step reasoning for extracting the test command from messy pasted input:
+
+1. RAW INPUT ANALYSIS:
+   The user typed "/run-tests" followed by what appears to be pasted terminal output:
+   - ANSI escape codes: "\u001b[32m✓\u001b[0m" (green checkmark)
+   - "auth test passed"
+   - "some garbage here"
+   - "statusline"
+
+2. SEPARATING INTENT FROM NOISE:
+   The user invoked "/run-tests" which is the centralized test runner skill.
+   After "/run-tests", there is pasted terminal output mixed with the actual argument.
+
+   Breaking down the tokens after "/run-tests":
+   - "[Pasted text from terminal]" -- literal bracket text, clearly noise/label
+   - "\u001b[32m✓\u001b[0m auth test passed" -- ANSI-colored terminal output from a previous test run, NOT an argument
+   - "some garbage here" -- explicitly labeled garbage, NOT an argument
+   - "statusline" -- this is the ACTUAL test filter argument
+
+3. WHY "statusline" IS THE REAL ARGUMENT:
+   - It appears last, after all the noise/garbage
+   - It matches an actual test file: tests/e2e/test-statusline.test.ts
+   - The other tokens are clearly terminal output artifacts (ANSI codes, "passed" status messages)
+   - "auth test passed" is output FROM a test, not a test name to run
+   - The user likely copied terminal output and appended their actual command argument at the end
+
+4. COMMAND CONSTRUCTION:
+   Per the project's package.json:
+   - "test": "npm run test:e2e" -> "bash scripts/docker-test.sh"
+   - docker-test.sh passes "$@" to the docker compose run command
+   - So "npm test -- statusline" would pass "statusline" as a filter argument
+
+   The project uses Docker-based tests (docker-only-tests rule) and the centralized
+   test runner pattern. The standard invocation is "npm test" with optional filter args.
+
+5. ALTERNATIVE INTERPRETATIONS CONSIDERED AND REJECTED:
+   - "auth" as the filter: Rejected because "auth test passed" is clearly test output
+     (contains ANSI color codes wrapping a checkmark, indicating prior terminal output)
+   - Running both "auth" and "statusline": Rejected because "auth test passed" is output,
+     not a request to run auth tests
+   - No filter (run all tests): Rejected because "statusline" at the end clearly looks
+     like an intentional argument, and there IS a matching test file
+
+6. FINAL COMMAND:
+   npm test -- statusline
+
+   This runs Docker-based tests filtered to "statusline", which matches
+   tests/e2e/test-statusline.test.ts.

@@ -1,0 +1,1 @@
+bash scripts/docker-test.sh npx vitest run tests/e2e/test-statusline.test.ts --reporter=verbose

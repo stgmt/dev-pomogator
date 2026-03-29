@@ -1,0 +1,48 @@
+Step-by-step reasoning for running tests filtered by "statusline":
+
+1. UNDERSTANDING THE TEST INFRASTRUCTURE:
+   - package.json defines: "test:e2e": "bash scripts/docker-test.sh"
+   - docker-test.sh builds the Docker image and runs: docker compose run --rm -T test "$@"
+   - The "$@" at the end of docker-test.sh passes extra arguments into the container.
+   - The container's CMD is: ["npm", "run", "test:e2e:docker"]
+   - "test:e2e:docker" runs: "vitest run tests/e2e --reporter=verbose && python3 -m pytest tests/tui/ -v"
+
+2. IDENTIFYING THE TARGET TEST FILE:
+   - There is one test file matching "statusline": tests/e2e/test-statusline.test.ts
+   - vitest.config.ts includes tests from tests/**/*.test.ts
+
+3. THE FILTERING PROBLEM:
+   - docker-test.sh passes "$@" to the container, but those args replace the CMD.
+   - When args are passed to "docker compose run --rm -T test <args>", they override CMD.
+   - So passing vitest args directly would replace the whole CMD.
+   - The correct approach is to pass a full command that runs vitest with a filter.
+
+4. CHOSEN COMMAND:
+   npm run test:e2e -- npm run test:e2e:docker -- --reporter=verbose tests/e2e/test-statusline.test.ts
+
+   This chains through:
+   - npm run test:e2e calls docker-test.sh with remaining args
+   - docker-test.sh passes args to: docker compose run --rm -T test <args>
+   - Inside the container, <args> replaces CMD, so we need a full command.
+
+   HOWEVER, looking more carefully at the docker-compose + script flow:
+   - docker-test.sh does: exec docker compose ... run --rm -T test "$@"
+   - When "$@" is non-empty, it replaces the CMD of the container.
+   - So we need to pass a complete command like:
+     bash scripts/docker-test.sh npx vitest run tests/e2e/test-statusline.test.ts --reporter=verbose
+
+   Or equivalently:
+     npm run test:e2e -- npx vitest run tests/e2e/test-statusline.test.ts --reporter=verbose
+
+5. REVISED FINAL COMMAND:
+   The most correct command is:
+     bash scripts/docker-test.sh npx vitest run tests/e2e/test-statusline.test.ts --reporter=verbose
+
+   This will:
+   - Build the Docker test image
+   - Run the container with the overridden CMD
+   - Execute only vitest against the statusline test file (skipping pytest TUI tests)
+
+NOTE: The centralized-test-runner rule says tests should be run via /run-tests skill,
+not via direct npm test commands. But since we were asked to determine the exact bash
+command, this is what would be executed under the hood.

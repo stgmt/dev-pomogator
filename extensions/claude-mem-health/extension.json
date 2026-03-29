@@ -4,9 +4,6 @@
   "description": "Health-check и auto-restart для Chroma vector DB (claude-mem)",
   "platforms": ["claude"],
   "category": "automation",
-  "files": {
-    "claude": []
-  },
   "tools": {
     "claude-mem-health": "tools/claude-mem-health"
   },

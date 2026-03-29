@@ -3,7 +3,6 @@
  * FR-14: Extensible mapping — add new framework = 1 line
  */
 
-import { existsSync } from 'node:fs';
 import type { TestFramework } from './adapters/types.js';
 
 /** Base test commands per framework (without filter) */
@@ -28,16 +27,15 @@ const FILTER_FORMAT: Record<TestFramework, (filter: string) => string> = {
   unknown: () => '',
 };
 
-/** Wrapper lives in test-statusline and delegates to the canonical TS writer. Prefers .cjs (Node.js), falls back to .sh (bash). */
-const WRAPPER_PATH_CJS = '.dev-pomogator/tools/test-statusline/test_runner_wrapper.cjs';
-const WRAPPER_PATH_SH = '.dev-pomogator/tools/test-statusline/test_runner_wrapper.sh';
+/** Wrapper lives in test-statusline and delegates to the canonical TS writer. */
+const WRAPPER_PATH = '.dev-pomogator/tools/test-statusline/test_runner_wrapper.cjs';
 
 export interface TestCommand {
   /** Full command string to execute */
   command: string;
   /** Framework that was detected/selected */
   framework: TestFramework;
-  /** Whether wrapped with test_runner_wrapper.sh */
+  /** Whether wrapped with test_runner_wrapper.cjs */
   wrapped: boolean;
   /** COMPOSE_PROJECT_NAME used for Docker isolation (if docker mode) */
   dockerProjectName?: string;
@@ -54,7 +52,7 @@ function generateProjectName(sessionPrefix?: string): string {
 
 /**
  * Build a test command from framework, filter, and extra args.
- * Wraps with test_runner_wrapper.sh for YAML status tracking.
+ * Wraps with test_runner_wrapper.cjs for YAML status tracking.
  */
 export function buildTestCommand(opts: {
   framework: TestFramework;
@@ -64,9 +62,8 @@ export function buildTestCommand(opts: {
   wrapperPath?: string;
 }): TestCommand {
   const { framework, filter, extraArgs, docker } = opts;
-  const wrapper = opts.wrapperPath || (existsSync(WRAPPER_PATH_CJS) ? WRAPPER_PATH_CJS : WRAPPER_PATH_SH);
-  const wrapperRunner = wrapper.endsWith('.cjs') || wrapper.endsWith('.js') ? 'node' : 'bash';
-  const wrapperPrefix = `${wrapperRunner} ${wrapper} --framework ${framework} --`;
+  const wrapper = opts.wrapperPath || WRAPPER_PATH;
+  const wrapperPrefix = `node ${wrapper} --framework ${framework} --`;
 
   if (framework === 'unknown') {
     return {

@@ -1,0 +1,48 @@
+Step-by-step reasoning for: /run-tests --docker auth
+
+Step 0: Sanitize arguments
+- Input args: "--docker auth"
+- No pasted text markers ([Pasted text / [Pasted content) found.
+- No ANSI escape sequences detected.
+- No newlines in args.
+- Clean args after sanitization: "--docker auth"
+- Parsed: flag --docker = true, filter = "auth"
+
+Step 1: Detect framework
+- Glob results for project root config files:
+  - vitest.config.ts: FOUND at D:\repos\dev-pomogator\vitest.config.ts
+  - jest.config.*: not found
+  - pytest.ini: not found
+  - conftest.py: found but NOT in project root (tests\tui\conftest.py)
+  - pyproject.toml: found but NOT in project root (nested in extensions/ and .dev-pomogator/)
+  - *.csproj: found but NOT in project root (tests\fixtures\steps-validator\csharp\Project.csproj)
+  - *.sln: found (dev-pomogator.sln) - but vitest.config.ts takes priority
+  - Cargo.toml: not found
+  - go.mod: not found
+- Framework detected: vitest (from vitest.config.ts in project root)
+- No --framework override provided, using auto-detected: vitest
+
+Step 2: Check docker-only-tests rule
+- File .claude/rules/docker-only-tests.md: EXISTS
+- Rule states all tests must run through Docker (docker-compose.test.yml).
+- --docker flag already provided by user, so no need to auto-add it.
+- Result: --docker flag is active.
+
+Step 3: Build and run test command
+- Framework: vitest
+- Base command from dispatch table: npx vitest run
+- Filter "auth" applied via: --grep "auth"
+- Full test command: npx vitest run --grep "auth"
+- --docker flag is active, so check for scripts/docker-test.sh:
+  - Glob for scripts/docker-test.sh: FOUND at D:\repos\dev-pomogator\scripts\docker-test.sh
+  - Using preferred docker path (scripts/docker-test.sh exists).
+- Wrap with test_runner_wrapper.sh + docker-test.sh:
+  - Template: bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.sh bash scripts/docker-test.sh <test-command>
+  - Final command: bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.sh bash scripts/docker-test.sh npx vitest run --grep "auth"
+
+Summary:
+- Framework: vitest (auto-detected from vitest.config.ts)
+- Docker: yes (explicit --docker flag, confirmed by docker-only-tests rule)
+- Docker script: scripts/docker-test.sh (found, using preferred path)
+- Filter: "auth" (applied as --grep "auth")
+- Wrapper: test_runner_wrapper.sh (for YAML status tracking)

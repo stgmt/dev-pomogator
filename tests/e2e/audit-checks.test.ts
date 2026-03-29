@@ -173,12 +173,12 @@ describe('runAllChecks', () => {
 });
 
 // =========================================================================
-// Integration — audit-spec.sh via real process execution
+// Integration — audit-spec.ts via real process execution
 // =========================================================================
 import { spawnSync } from 'child_process';
 
-describe('Integration: audit-spec.sh', () => {
-  const AUDIT_SCRIPT = '.dev-pomogator/tools/specs-generator/audit-spec.sh';
+describe('Integration: audit-spec.ts', () => {
+  const AUDIT_SCRIPT = '.dev-pomogator/tools/specs-generator/audit-spec.ts';
   const appDir = process.env.APP_DIR || process.cwd();
 
   it('detects FR without matching AC (integration)', () => {

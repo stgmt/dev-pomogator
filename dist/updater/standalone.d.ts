@@ -6,7 +6,6 @@
  * Usage:
  *   node check-update.js --claude --check-only  # SessionStart: warn if update available
  *   node check-update.js --claude               # Legacy: auto-update (kept for manual use)
- *   node check-update.js                        # Default (Cursor)
  *
  * Note: Shebang is added by esbuild via banner option.
  */

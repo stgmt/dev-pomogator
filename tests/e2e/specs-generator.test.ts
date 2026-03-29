@@ -2,13 +2,13 @@
  * E2E Tests for PLUGIN006: Specs Generator Shell Scripts
  *
  * Tests the shell scripts for spec management:
- * - scaffold-spec.sh
- * - validate-spec.sh
- * - spec-status.sh
- * - list-specs.sh
- * - fill-template.sh
- * - audit-spec.sh
- * - analyze-features.sh
+ * - scaffold-spec.ts
+ * - validate-spec.ts
+ * - spec-status.ts
+ * - list-specs.ts
+ * - fill-template.ts
+ * - audit-spec.ts
+ * - analyze-features.ts
  */
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
@@ -41,10 +41,10 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
   });
 
   // ==========================================================================
-  // scaffold-spec.sh
+  // scaffold-spec.ts
   // ==========================================================================
 
-  describe('scaffold-spec.sh', () => {
+  describe('scaffold-spec.ts', () => {
     const testSpecName = 'test-scaffold-spec';
 
     afterEach(async () => {
@@ -56,7 +56,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     // @feature1
     it('should create 15 files with valid kebab-case name', () => {
       const result = runShellScript(
-        getSpecsGeneratorPath('scaffold-spec.sh'),
+        getSpecsGeneratorPath('scaffold-spec.ts'),
         ['-Name', testSpecName]
       );
 
@@ -78,7 +78,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     // @feature2
     it('should reject name with spaces', () => {
       const result = runShellScript(
-        getSpecsGeneratorPath('scaffold-spec.sh'),
+        getSpecsGeneratorPath('scaffold-spec.ts'),
         ['-Name', 'invalid name with spaces']
       );
 
@@ -99,7 +99,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
 
       // Run with -Force
       const result = runShellScript(
-        getSpecsGeneratorPath('scaffold-spec.sh'),
+        getSpecsGeneratorPath('scaffold-spec.ts'),
         ['-Name', specName, '-Force']
       );
 
@@ -119,10 +119,10 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
   });
 
   // ==========================================================================
-  // validate-spec.sh
+  // validate-spec.ts
   // ==========================================================================
 
-  describe('validate-spec.sh', () => {
+  describe('validate-spec.ts', () => {
     let tempSpecDir: string;
 
     beforeEach(async () => {
@@ -144,7 +144,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       await fs.copy(getSpecsGeneratorFixturePath('valid-spec'), destPath);
 
       const result = runShellScript(
-        getSpecsGeneratorPath('validate-spec.sh'),
+        getSpecsGeneratorPath('validate-spec.ts'),
         ['-Path', '.specs/valid-spec-test']
       );
 
@@ -159,7 +159,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       await fs.copy(getSpecsGeneratorFixturePath('invalid-spec'), destPath);
 
       const result = runShellScript(
-        getSpecsGeneratorPath('validate-spec.sh'),
+        getSpecsGeneratorPath('validate-spec.ts'),
         ['-Path', '.specs/invalid-spec-test']
       );
 
@@ -188,7 +188,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       }
 
       const result = runShellScript(
-        getSpecsGeneratorPath('validate-spec.sh'),
+        getSpecsGeneratorPath('validate-spec.ts'),
         ['-Path', '.specs/invalid-spec-test']
       );
 
@@ -216,7 +216,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       }
 
       const result = runShellScript(
-        getSpecsGeneratorPath('validate-spec.sh'),
+        getSpecsGeneratorPath('validate-spec.ts'),
         ['-Path', '.specs/invalid-spec-test']
       );
 
@@ -246,7 +246,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       await fs.writeFile(path.join(destPath, 'TASKS.md'), '# Tasks\n\n## Phase 1: Implementation\n\n- [ ] Create module A\n');
 
       const result = runShellScript(
-        getSpecsGeneratorPath('validate-spec.sh'),
+        getSpecsGeneratorPath('validate-spec.ts'),
         ['-Path', '.specs/invalid-spec-test']
       );
 
@@ -265,7 +265,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       await fs.copy(getSpecsGeneratorFixturePath('valid-spec'), destPath);
 
       const result = runShellScript(
-        getSpecsGeneratorPath('validate-spec.sh'),
+        getSpecsGeneratorPath('validate-spec.ts'),
         ['-Path', '.specs/valid-spec-test']
       );
 
@@ -294,7 +294,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       }
 
       const result = runShellScript(
-        getSpecsGeneratorPath('validate-spec.sh'),
+        getSpecsGeneratorPath('validate-spec.ts'),
         ['-Path', '.specs/invalid-spec-test']
       );
 
@@ -308,10 +308,10 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
   });
 
   // ==========================================================================
-  // spec-status.sh
+  // spec-status.ts
   // ==========================================================================
 
-  describe('spec-status.sh', () => {
+  describe('spec-status.ts', () => {
     afterEach(async () => {
       await fs.remove(appPath('.specs', 'partial-spec-test'));
       await fs.remove(appPath('.specs', 'valid-spec-test'));
@@ -323,7 +323,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       await fs.copy(getSpecsGeneratorFixturePath('partial-spec'), destPath);
 
       const result = runShellScript(
-        getSpecsGeneratorPath('spec-status.sh'),
+        getSpecsGeneratorPath('spec-status.ts'),
         ['-Path', '.specs/partial-spec-test']
       );
 
@@ -343,7 +343,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       await fs.copy(getSpecsGeneratorFixturePath('valid-spec'), destPath);
 
       const result = runShellScript(
-        getSpecsGeneratorPath('spec-status.sh'),
+        getSpecsGeneratorPath('spec-status.ts'),
         ['-Path', '.specs/valid-spec-test']
       );
 
@@ -365,7 +365,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       await fs.copy(getSpecsGeneratorFixturePath('partial-spec'), destPath);
 
       const result = runShellScript(
-        getSpecsGeneratorPath('spec-status.sh'),
+        getSpecsGeneratorPath('spec-status.ts'),
         ['-Path', '.specs/partial-spec-test']
       );
 
@@ -376,10 +376,10 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
   });
 
   // ==========================================================================
-  // list-specs.sh
+  // list-specs.ts
   // ==========================================================================
 
-  describe('list-specs.sh', () => {
+  describe('list-specs.ts', () => {
     beforeEach(async () => {
       // Create test specs
       await fs.ensureDir(appPath('.specs', 'list-test-complete'));
@@ -404,7 +404,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     // @feature12
     it('should list all specs with summary', () => {
       const result = runShellScript(
-        getSpecsGeneratorPath('list-specs.sh'),
+        getSpecsGeneratorPath('list-specs.ts'),
         []
       );
 
@@ -423,7 +423,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     // @feature13
     it('should filter incomplete specs with -Incomplete flag', () => {
       const result = runShellScript(
-        getSpecsGeneratorPath('list-specs.sh'),
+        getSpecsGeneratorPath('list-specs.ts'),
         ['-Incomplete']
       );
 
@@ -442,10 +442,10 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
   });
 
   // ==========================================================================
-  // fill-template.sh
+  // fill-template.ts
   // ==========================================================================
 
-  describe('fill-template.sh', () => {
+  describe('fill-template.ts', () => {
     let tempTemplatePath: string;
 
     beforeEach(async () => {
@@ -465,7 +465,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     // @feature14
     it('should list placeholders with -ListPlaceholders', () => {
       const result = runShellScript(
-        getSpecsGeneratorPath('fill-template.sh'),
+        getSpecsGeneratorPath('fill-template.ts'),
         ['-File', tempTemplatePath, '-ListPlaceholders']
       );
 
@@ -491,7 +491,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     it('should replace placeholders with -Values', async () => {
       // First check how many placeholders exist
       const beforeResult = runShellScript(
-        getSpecsGeneratorPath('fill-template.sh'),
+        getSpecsGeneratorPath('fill-template.ts'),
         ['-File', tempTemplatePath, '-ListPlaceholders']
       );
       const totalBefore = beforeResult.json.total;
@@ -504,7 +504,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       });
 
       const result = runShellScript(
-        getSpecsGeneratorPath('fill-template.sh'),
+        getSpecsGeneratorPath('fill-template.ts'),
         ['-File', tempTemplatePath, '-Values', values]
       );
 
@@ -528,10 +528,10 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
   });
 
   // ============================================================================
-  // validate-spec.sh — CROSS_REF_LINKS rule
+  // validate-spec.ts — CROSS_REF_LINKS rule
   // ============================================================================
 
-  describe('validate-spec.sh CROSS_REF_LINKS', () => {
+  describe('validate-spec.ts CROSS_REF_LINKS', () => {
     const validCrossrefsPath = appPath('.specs', 'crossrefs-test');
     const brokenCrossrefsPath = appPath('.specs', 'broken-crossrefs-test');
 
@@ -545,7 +545,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       await fs.copy(getSpecsGeneratorFixturePath('valid-spec-with-crossrefs'), validCrossrefsPath);
 
       const result = runShellScript(
-        getSpecsGeneratorPath('validate-spec.sh'),
+        getSpecsGeneratorPath('validate-spec.ts'),
         ['-Path', '.specs/crossrefs-test']
       );
 
@@ -563,7 +563,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       await fs.copy(getSpecsGeneratorFixturePath('broken-crossrefs'), brokenCrossrefsPath);
 
       const result = runShellScript(
-        getSpecsGeneratorPath('validate-spec.sh'),
+        getSpecsGeneratorPath('validate-spec.ts'),
         ['-Path', '.specs/broken-crossrefs-test']
       );
 
@@ -583,7 +583,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       await fs.copy(getSpecsGeneratorFixturePath('broken-crossrefs'), brokenCrossrefsPath);
 
       const result = runShellScript(
-        getSpecsGeneratorPath('validate-spec.sh'),
+        getSpecsGeneratorPath('validate-spec.ts'),
         ['-Path', '.specs/broken-crossrefs-test']
       );
 
@@ -601,10 +601,10 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
   });
 
   // ============================================================================
-  // audit-spec.sh — LINK_VALIDITY check
+  // audit-spec.ts — LINK_VALIDITY check
   // ============================================================================
 
-  describe('audit-spec.sh LINK_VALIDITY', () => {
+  describe('audit-spec.ts LINK_VALIDITY', () => {
     const validCrossrefsPath = appPath('.specs', 'crossrefs-test');
     const brokenCrossrefsPath = appPath('.specs', 'broken-crossrefs-test');
 
@@ -618,7 +618,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       await fs.copy(getSpecsGeneratorFixturePath('broken-crossrefs'), brokenCrossrefsPath);
 
       const result = runShellScript(
-        getSpecsGeneratorPath('audit-spec.sh'),
+        getSpecsGeneratorPath('audit-spec.ts'),
         ['-Path', '.specs/broken-crossrefs-test']
       );
 
@@ -629,6 +629,9 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
         (f: any) => f.check === 'LINK_VALIDITY'
       );
       expect(linkFindings.length).toBeGreaterThan(0);
+      for (const finding of linkFindings) {
+        expect(finding.severity).toBe('ERROR');
+      }
     });
 
     // @feature20
@@ -636,7 +639,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       await fs.copy(getSpecsGeneratorFixturePath('valid-spec-with-crossrefs'), validCrossrefsPath);
 
       const result = runShellScript(
-        getSpecsGeneratorPath('audit-spec.sh'),
+        getSpecsGeneratorPath('audit-spec.ts'),
         ['-Path', '.specs/crossrefs-test']
       );
 
@@ -651,10 +654,10 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
   });
 
   // ============================================================================
-  // audit-spec.sh — coverage checks (FR_AC, FR_BDD, TRACEABILITY, TASKS_FR, OPEN_Q, TERM)
+  // audit-spec.ts — coverage checks (FR_AC, FR_BDD, TRACEABILITY, TASKS_FR, OPEN_Q, TERM)
   // ============================================================================
 
-  describe('audit-spec.sh coverage checks', () => {
+  describe('audit-spec.ts coverage checks', () => {
     const auditFixturePath = appPath('.specs', 'audit-coverage-test');
 
     beforeEach(async () => {
@@ -668,7 +671,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     // @feature21
     it('should detect FR without matching AC (FR_AC_COVERAGE)', () => {
       const result = runShellScript(
-        getSpecsGeneratorPath('audit-spec.sh'),
+        getSpecsGeneratorPath('audit-spec.ts'),
         ['-Path', '.specs/audit-coverage-test']
       );
 
@@ -687,7 +690,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     // @feature22
     it('should detect @featureN tag missing in .feature file (FR_BDD_COVERAGE)', () => {
       const result = runShellScript(
-        getSpecsGeneratorPath('audit-spec.sh'),
+        getSpecsGeneratorPath('audit-spec.ts'),
         ['-Path', '.specs/audit-coverage-test']
       );
 
@@ -706,7 +709,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     // @feature23
     it('should detect FR not referenced in REQUIREMENTS.md (REQUIREMENTS_TRACEABILITY)', () => {
       const result = runShellScript(
-        getSpecsGeneratorPath('audit-spec.sh'),
+        getSpecsGeneratorPath('audit-spec.ts'),
         ['-Path', '.specs/audit-coverage-test']
       );
 
@@ -729,7 +732,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     // @feature24
     it('should detect FR not referenced in TASKS.md (TASKS_FR_REFS)', () => {
       const result = runShellScript(
-        getSpecsGeneratorPath('audit-spec.sh'),
+        getSpecsGeneratorPath('audit-spec.ts'),
         ['-Path', '.specs/audit-coverage-test']
       );
 
@@ -749,7 +752,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     // @feature25
     it('should detect unclosed open questions in RESEARCH.md (OPEN_QUESTIONS)', () => {
       const result = runShellScript(
-        getSpecsGeneratorPath('audit-spec.sh'),
+        getSpecsGeneratorPath('audit-spec.ts'),
         ['-Path', '.specs/audit-coverage-test']
       );
 
@@ -770,7 +773,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     // @feature26
     it('should detect term inconsistency across files (TERM_CONSISTENCY)', () => {
       const result = runShellScript(
-        getSpecsGeneratorPath('audit-spec.sh'),
+        getSpecsGeneratorPath('audit-spec.ts'),
         ['-Path', '.specs/audit-coverage-test']
       );
 
@@ -790,10 +793,10 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
   });
 
   // ============================================================================
-  // validate-spec.sh — missing rule coverage
+  // validate-spec.ts — missing rule coverage
   // ============================================================================
 
-  describe('validate-spec.sh additional rules', () => {
+  describe('validate-spec.ts additional rules', () => {
     let tempSpecDir: string;
 
     beforeEach(async () => {
@@ -815,7 +818,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       await fs.writeFile(frPath, '# Functional Requirements\n\n## FR-1: {Название фичи}\n\n{Описание функционального требования}\n');
 
       const result = runShellScript(
-        getSpecsGeneratorPath('validate-spec.sh'),
+        getSpecsGeneratorPath('validate-spec.ts'),
         ['-Path', '.specs/validate-rules-test']
       );
 
@@ -836,7 +839,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       await fs.writeFile(acPath, '# Acceptance Criteria\n\n## AC-1 (FR-1): Basic Check\n\nThe system should work correctly.\n');
 
       const result = runShellScript(
-        getSpecsGeneratorPath('validate-spec.sh'),
+        getSpecsGeneratorPath('validate-spec.ts'),
         ['-Path', '.specs/validate-rules-test']
       );
 
@@ -857,7 +860,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       await fs.writeFile(featurePath, 'Feature: Some feature without domain prefix\n\n  Scenario: Basic test\n    Given something\n    Then it works\n');
 
       const result = runShellScript(
-        getSpecsGeneratorPath('validate-spec.sh'),
+        getSpecsGeneratorPath('validate-spec.ts'),
         ['-Path', '.specs/validate-rules-test']
       );
 
@@ -878,7 +881,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       await fs.writeFile(researchPath, '# Research\n\n## Findings\n\nSome research findings here.\n');
 
       const result = runShellScript(
-        getSpecsGeneratorPath('validate-spec.sh'),
+        getSpecsGeneratorPath('validate-spec.ts'),
         ['-Path', '.specs/validate-rules-test']
       );
 
@@ -892,14 +895,14 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
   });
 
   // ============================================================================
-  // analyze-features.sh
+  // analyze-features.ts
   // ============================================================================
 
-  describe('analyze-features.sh', () => {
+  describe('analyze-features.ts', () => {
     // @feature31
     it('should return JSON with totalFeatures > 0', () => {
       const result = runShellScript(
-        getSpecsGeneratorPath('analyze-features.sh'),
+        getSpecsGeneratorPath('analyze-features.ts'),
         []
       );
 
@@ -914,7 +917,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     // @feature32
     it('should contain step dictionary with given/when/then', () => {
       const result = runShellScript(
-        getSpecsGeneratorPath('analyze-features.sh'),
+        getSpecsGeneratorPath('analyze-features.ts'),
         []
       );
 
@@ -929,7 +932,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     // @feature33
     it('should detect naming patterns with domain codes', () => {
       const result = runShellScript(
-        getSpecsGeneratorPath('analyze-features.sh'),
+        getSpecsGeneratorPath('analyze-features.ts'),
         []
       );
 
@@ -941,7 +944,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     // @feature34
     it('should filter candidates by -DomainCode', () => {
       const result = runShellScript(
-        getSpecsGeneratorPath('analyze-features.sh'),
+        getSpecsGeneratorPath('analyze-features.ts'),
         ['-DomainCode', 'PLUGIN']
       );
 
@@ -961,7 +964,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     // @feature35
     it('should filter candidates by -FeatureSlug', () => {
       const result = runShellScript(
-        getSpecsGeneratorPath('analyze-features.sh'),
+        getSpecsGeneratorPath('analyze-features.ts'),
         ['-FeatureSlug', 'specs-generator']
       );
 
@@ -985,9 +988,9 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     });
 
     // @feature36
-    it('scaffold-spec.sh should create .progress.json with initial state', () => {
+    it('scaffold-spec.ts should create .progress.json with initial state', () => {
       const result = runShellScript(
-        getSpecsGeneratorPath('scaffold-spec.sh'),
+        getSpecsGeneratorPath('scaffold-spec.ts'),
         ['-Name', progressTestName]
       );
 
@@ -1010,7 +1013,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     });
 
     // @feature37
-    it('spec-status.sh should create .progress.json for pre-existing specs (backward compat)', async () => {
+    it('spec-status.ts should create .progress.json for pre-existing specs (backward compat)', async () => {
       const destPath = appPath('.specs', progressTestName);
       await fs.copy(getSpecsGeneratorFixturePath('partial-spec'), destPath);
 
@@ -1018,7 +1021,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       expect(fs.existsSync(path.join(destPath, '.progress.json'))).toBe(false);
 
       const result = runShellScript(
-        getSpecsGeneratorPath('spec-status.sh'),
+        getSpecsGeneratorPath('spec-status.ts'),
         ['-Path', `.specs/${progressTestName}`]
       );
 
@@ -1031,19 +1034,19 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     });
 
     // @feature38
-    it('spec-status.sh -ConfirmStop should set stopConfirmed to true', async () => {
+    it('spec-status.ts -ConfirmStop should set stopConfirmed to true', async () => {
       const destPath = appPath('.specs', progressTestName);
       await fs.copy(getSpecsGeneratorFixturePath('partial-spec'), destPath);
 
       // First run to create .progress.json
       runShellScript(
-        getSpecsGeneratorPath('spec-status.sh'),
+        getSpecsGeneratorPath('spec-status.ts'),
         ['-Path', `.specs/${progressTestName}`]
       );
 
       // Confirm Discovery stop
       const result = runShellScript(
-        getSpecsGeneratorPath('spec-status.sh'),
+        getSpecsGeneratorPath('spec-status.ts'),
         ['-Path', `.specs/${progressTestName}`, '-ConfirmStop', 'Discovery']
       );
 
@@ -1056,12 +1059,12 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     });
 
     // @feature39
-    it('spec-status.sh should track CHANGELOG.md in files output', async () => {
+    it('spec-status.ts should track CHANGELOG.md in files output', async () => {
       const destPath = appPath('.specs', progressTestName);
       await fs.copy(getSpecsGeneratorFixturePath('valid-spec'), destPath);
 
       const result = runShellScript(
-        getSpecsGeneratorPath('spec-status.sh'),
+        getSpecsGeneratorPath('spec-status.ts'),
         ['-Path', `.specs/${progressTestName}`]
       );
 
@@ -1072,12 +1075,12 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     });
 
     // @feature40
-    it('spec-status.sh should update completedAt when phase is done', async () => {
+    it('spec-status.ts should update completedAt when phase is done', async () => {
       const destPath = appPath('.specs', progressTestName);
       await fs.copy(getSpecsGeneratorFixturePath('valid-spec'), destPath);
 
       const result = runShellScript(
-        getSpecsGeneratorPath('spec-status.sh'),
+        getSpecsGeneratorPath('spec-status.ts'),
         ['-Path', `.specs/${progressTestName}`]
       );
 
@@ -1092,7 +1095,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       await fs.copy(getSpecsGeneratorFixturePath('placeholder-false-positive'), destPath);
 
       const result = runShellScript(
-        getSpecsGeneratorPath('spec-status.sh'),
+        getSpecsGeneratorPath('spec-status.ts'),
         ['-Path', `.specs/${progressTestName}`]
       );
 
@@ -1114,23 +1117,23 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
 
       // First run to create .progress.json
       runShellScript(
-        getSpecsGeneratorPath('spec-status.sh'),
+        getSpecsGeneratorPath('spec-status.ts'),
         ['-Path', `.specs/${progressTestName}`]
       );
 
       // Confirm Discovery and Context stops (both needed to progress past Discovery phase)
       runShellScript(
-        getSpecsGeneratorPath('spec-status.sh'),
+        getSpecsGeneratorPath('spec-status.ts'),
         ['-Path', `.specs/${progressTestName}`, '-ConfirmStop', 'Discovery']
       );
       runShellScript(
-        getSpecsGeneratorPath('spec-status.sh'),
+        getSpecsGeneratorPath('spec-status.ts'),
         ['-Path', `.specs/${progressTestName}`, '-ConfirmStop', 'Context']
       );
 
       // Run again — stopConfirmed should override and move to Requirements
       const result = runShellScript(
-        getSpecsGeneratorPath('spec-status.sh'),
+        getSpecsGeneratorPath('spec-status.ts'),
         ['-Path', `.specs/${progressTestName}`]
       );
 
@@ -1147,7 +1150,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       await fs.copy(getSpecsGeneratorFixturePath('valid-spec'), destPath);
 
       const result = runShellScript(
-        getSpecsGeneratorPath('spec-status.sh'),
+        getSpecsGeneratorPath('spec-status.ts'),
         ['-Path', `.specs/${progressTestName}`]
       );
 
@@ -1163,14 +1166,14 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       // Confirm all stop points
       for (const phase of ['Discovery', 'Context', 'Requirements', 'Finalization']) {
         runShellScript(
-          getSpecsGeneratorPath('spec-status.sh'),
+          getSpecsGeneratorPath('spec-status.ts'),
           ['-Path', `.specs/${progressTestName}`, '-ConfirmStop', phase]
         );
       }
 
       // Final run
       const result = runShellScript(
-        getSpecsGeneratorPath('spec-status.sh'),
+        getSpecsGeneratorPath('spec-status.ts'),
         ['-Path', `.specs/${progressTestName}`]
       );
 
@@ -1181,10 +1184,10 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
   });
 
   // ============================================================================
-  // audit-spec.sh — new checks (OOS propagation, unverified config, infra, dedup)
+  // audit-spec.ts — new checks (OOS propagation, unverified config, infra, dedup)
   // ============================================================================
 
-  describe('audit-spec.sh new audit checks', () => {
+  describe('audit-spec.ts new audit checks', () => {
     const auditFixturePath = appPath('.specs', 'audit-new-checks-test');
 
     beforeEach(async () => {
@@ -1198,7 +1201,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     // @feature45
     it('should detect OUT_OF_SCOPE not propagated to USE_CASES.md', () => {
       const result = runShellScript(
-        getSpecsGeneratorPath('audit-spec.sh'),
+        getSpecsGeneratorPath('audit-spec.ts'),
         ['-Path', '.specs/audit-new-checks-test']
       );
 
@@ -1217,7 +1220,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     // @feature46
     it('should detect UNVERIFIED_CONFIG env vars in DESIGN.md', () => {
       const result = runShellScript(
-        getSpecsGeneratorPath('audit-spec.sh'),
+        getSpecsGeneratorPath('audit-spec.ts'),
         ['-Path', '.specs/audit-new-checks-test']
       );
 
@@ -1241,7 +1244,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     // @feature47
     it('should detect INFRA_TASKS_MISSING when DESIGN.md has database', () => {
       const result = runShellScript(
-        getSpecsGeneratorPath('audit-spec.sh'),
+        getSpecsGeneratorPath('audit-spec.ts'),
         ['-Path', '.specs/audit-new-checks-test']
       );
 
@@ -1260,7 +1263,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     // @feature48
     it('should detect CONFIG_DUPLICATION between DESIGN.md and TASKS.md', () => {
       const result = runShellScript(
-        getSpecsGeneratorPath('audit-spec.sh'),
+        getSpecsGeneratorPath('audit-spec.ts'),
         ['-Path', '.specs/audit-new-checks-test']
       );
 
@@ -1280,9 +1283,9 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
   // Path validation - prevent .progress.json outside .specs/<feature>/
 
   // @feature49
-  it('spec-status.sh should reject -Path "."', () => {
+  it('spec-status.ts should reject -Path "."', () => {
     const result = runShellScript(
-      getSpecsGeneratorPath('spec-status.sh'),
+      getSpecsGeneratorPath('spec-status.ts'),
       ['-Path', '.']
     );
 
@@ -1303,7 +1306,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     );
 
     const result = runShellScript(
-      getSpecsGeneratorPath('validate-spec.sh'),
+      getSpecsGeneratorPath('validate-spec.ts'),
       ['-Path', '.specs/open-q-test']
     );
 
@@ -1328,7 +1331,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     );
 
     const result = runShellScript(
-      getSpecsGeneratorPath('spec-status.sh'),
+      getSpecsGeneratorPath('spec-status.ts'),
       ['-Path', '.specs/open-q-status-test']
     );
 
@@ -1351,7 +1354,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     );
 
     const result = runShellScript(
-      getSpecsGeneratorPath('validate-spec.sh'),
+      getSpecsGeneratorPath('validate-spec.ts'),
       ['-Path', '.specs/open-q-deferred-test']
     );
 
@@ -1364,10 +1367,13 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
   });
 
   // @feature53
-  it('audit-spec should report OPEN_QUESTIONS as WARNING severity', () => {
+  it('audit-spec should report OPEN_QUESTIONS as WARNING severity', async () => {
+    const destPath = appPath('.specs', 'open-q-audit-test');
+    await fs.copy(getSpecsGeneratorFixturePath('audit-coverage-fixture'), destPath);
+
     const result = runShellScript(
-      getSpecsGeneratorPath('audit-spec.sh'),
-      ['-Path', '.specs/audit-coverage-test']
+      getSpecsGeneratorPath('audit-spec.ts'),
+      ['-Path', '.specs/open-q-audit-test']
     );
 
     expect(result.exitCode).toBe(0);
@@ -1378,12 +1384,14 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     );
     expect(openQFindings.length).toBeGreaterThan(0);
     expect(openQFindings[0].severity).toBe('WARNING');
+
+    await fs.remove(destPath);
   });
 
   // @feature54
   it('PLUGIN006_54: scaffold creates FIXTURES.md as optional file', () => {
     const result = runShellScript(
-      getSpecsGeneratorPath('scaffold-spec.sh'),
+      getSpecsGeneratorPath('scaffold-spec.ts'),
       ['-Name', 'fixtures-test']
     );
 
@@ -1404,11 +1412,265 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     fs.copySync(getSpecsGeneratorFixturePath('valid-spec'), destPath);
 
     const result = runShellScript(
-      getSpecsGeneratorPath('validate-spec.sh'),
+      getSpecsGeneratorPath('validate-spec.ts'),
       ['-Path', '.specs/valid-spec-fixtures-test']
     );
 
     expect(result.exitCode).toBe(0);
     expect(result.json.valid).toBe(true);
+  });
+
+  // ==========================================================================
+  // audit-spec.ts — review checks (FILE_CHANGES_COMPLETENESS, VERIFY, COUNT)
+  // ==========================================================================
+
+  describe('audit-spec.ts review checks', () => {
+    const reviewFixturePath = appPath('.specs', 'audit-review-test');
+
+    beforeEach(async () => {
+      await fs.copy(getSpecsGeneratorFixturePath('audit-review-fixture'), reviewFixturePath);
+    });
+
+    afterEach(async () => {
+      await fs.remove(reviewFixturePath);
+    });
+
+    // @feature56
+    it('PLUGIN006_56: detects TASKS.md file refs missing from FILE_CHANGES.md', () => {
+      const result = runShellScript(
+        getSpecsGeneratorPath('audit-spec.ts'),
+        ['-Path', '.specs/audit-review-test']
+      );
+
+      expect(result.exitCode).toBe(0);
+      const findings = (result.json.findings || []).filter(
+        (f: any) => f.check === 'FILE_CHANGES_COMPLETENESS'
+      );
+      expect(findings.length).toBeGreaterThan(0);
+      expect(findings.some((f: any) => f.message.includes('csv-parser.ts'))).toBe(true);
+      expect(findings.some((f: any) => f.message.includes('validate.ts'))).toBe(true);
+    });
+
+    // @feature57
+    it('PLUGIN006_57: detects phantom edit paths in FILE_CHANGES.md', () => {
+      const result = runShellScript(
+        getSpecsGeneratorPath('audit-spec.ts'),
+        ['-Path', '.specs/audit-review-test']
+      );
+
+      expect(result.exitCode).toBe(0);
+      const findings = (result.json.findings || []).filter(
+        (f: any) => f.check === 'FILE_CHANGES_VERIFY'
+      );
+      expect(findings.length).toBeGreaterThan(0);
+      expect(findings[0].severity).toBe('ERROR');
+      expect(findings[0].message).toContain('nonexistent-file.ts');
+    });
+
+    // @feature58
+    it('PLUGIN006_58: detects FR count mismatch between prose and headings', () => {
+      const result = runShellScript(
+        getSpecsGeneratorPath('audit-spec.ts'),
+        ['-Path', '.specs/audit-review-test']
+      );
+
+      expect(result.exitCode).toBe(0);
+      const findings = (result.json.findings || []).filter(
+        (f: any) => f.check === 'COUNT_CONSISTENCY'
+      );
+      expect(findings.length).toBeGreaterThan(0);
+      expect(findings[0].message).toContain('3');
+    });
+
+    // @feature59
+    it('PLUGIN006_59: detects orphan @featureN in .feature not in TASKS.md', () => {
+      const result = runShellScript(
+        getSpecsGeneratorPath('audit-spec.ts'),
+        ['-Path', '.specs/audit-review-test']
+      );
+
+      expect(result.exitCode).toBe(0);
+      const findings = (result.json.findings || []).filter(
+        (f: any) => f.check === 'FEATURE_TAG_PROPAGATION'
+      );
+      expect(findings.length).toBeGreaterThan(0);
+      expect(findings.some((f: any) => f.message.includes('@feature99'))).toBe(true);
+    });
+
+    // @feature60
+    it('PLUGIN006_60: detects scenario count mismatch between README and .feature', () => {
+      const result = runShellScript(
+        getSpecsGeneratorPath('audit-spec.ts'),
+        ['-Path', '.specs/audit-review-test']
+      );
+
+      expect(result.exitCode).toBe(0);
+      const findings = (result.json.findings || []).filter(
+        (f: any) => f.check === 'SCENARIO_COUNT_SYNC'
+      );
+      expect(findings.length).toBeGreaterThan(0);
+      expect(findings[0].message).toContain('2');
+    });
+
+    // @feature64
+    it('PLUGIN006_64: detects placeholder FIXTURES.md when TEST_DATA_ACTIVE', () => {
+      const result = runShellScript(
+        getSpecsGeneratorPath('audit-spec.ts'),
+        ['-Path', '.specs/audit-review-test']
+      );
+
+      expect(result.exitCode).toBe(0);
+      const findings = (result.json.findings || []).filter(
+        (f: any) => f.check === 'FIXTURES_CONSISTENCY'
+      );
+      expect(findings.length).toBeGreaterThan(0);
+      expect(findings[0].message).toContain('placeholder');
+    });
+
+    // @feature65
+    it('PLUGIN006_65: detects @featureN in FR but missing from AC', () => {
+      const result = runShellScript(
+        getSpecsGeneratorPath('audit-spec.ts'),
+        ['-Path', '.specs/audit-review-test']
+      );
+
+      expect(result.exitCode).toBe(0);
+      const findings = (result.json.findings || []).filter(
+        (f: any) => f.check === 'AC_TAG_SYNC'
+      );
+      expect(findings.length).toBeGreaterThan(0);
+      expect(findings.some((f: any) => f.message.includes('@feature2'))).toBe(true);
+    });
+
+    // @feature66
+    it('PLUGIN006_66: detects @featureN missing from USER_STORIES.md', () => {
+      const result = runShellScript(
+        getSpecsGeneratorPath('audit-spec.ts'),
+        ['-Path', '.specs/audit-review-test']
+      );
+
+      expect(result.exitCode).toBe(0);
+      const findings = (result.json.findings || []).filter(
+        (f: any) => f.check === 'FEATURE_TAG_PROPAGATION' && f.message.includes('USER_STORIES')
+      );
+      expect(findings.length).toBeGreaterThan(0);
+    });
+
+    // @feature67
+    it('PLUGIN006_67: detects phantom create source in FILE_CHANGES.md', () => {
+      const result = runShellScript(
+        getSpecsGeneratorPath('audit-spec.ts'),
+        ['-Path', '.specs/audit-review-test']
+      );
+
+      expect(result.exitCode).toBe(0);
+      const findings = (result.json.findings || []).filter(
+        (f: any) => f.check === 'PHANTOM_CREATE_SOURCE'
+      );
+      expect(findings.length).toBeGreaterThan(0);
+      expect(findings[0].message).toContain('nonexistent-ext');
+    });
+  });
+
+  // audit-spec.ts false-positive fixes
+  // ============================================================================
+
+  describe('audit-spec.ts false-positive fixes', () => {
+    const fpFixturePath = appPath('.specs', 'audit-fp-test');
+
+    beforeEach(async () => {
+      await fs.copy(getSpecsGeneratorFixturePath('audit-coverage-fixture'), fpFixturePath);
+    });
+
+    afterEach(async () => {
+      await fs.remove(fpFixturePath);
+    });
+
+    // @feature61
+    it('PLUGIN006_61: audit does not flag "v1 limitation" text as OUT_OF_SCOPE', async () => {
+      // Add FR with "не реализуются в v1" (NOT blockquote > OUT OF SCOPE)
+      const frPath = path.join(fpFixturePath, 'FR.md');
+      const frContent = await fs.readFile(frPath, 'utf-8');
+      const updatedFr = frContent + '\n\n## FR-99: Test Limitation FR @feature99\n\n**Ограничения v1:** Some features не реализуются в v1.\n\n**Связанные AC:** AC-99\n';
+      await fs.writeFile(frPath, updatedFr);
+
+      const result = runShellScript(
+        getSpecsGeneratorPath('audit-spec.ts'),
+        ['-Path', '.specs/audit-fp-test', '-Format', 'json'],
+      );
+
+      expect(result.exitCode).toBe(0);
+      const oosFindings = (result.json.findings || []).filter(
+        (f: any) => f.check === 'OUT_OF_SCOPE_PROPAGATION' && f.message.includes('FR-99'),
+      );
+      // FR-99 should NOT be flagged — it's not OUT OF SCOPE, just has "v1 limitation" text
+      expect(oosFindings.length).toBe(0);
+    });
+
+    // @feature62
+    it('PLUGIN006_62: audit does not flag keyword in table row as INFRA_TASKS', async () => {
+      // Add "database" inside a markdown table in DESIGN.md
+      const designPath = path.join(fpFixturePath, 'DESIGN.md');
+      const designContent = await fs.readFile(designPath, 'utf-8');
+      const tableRow = '\n\n| patterns.yaml category | Verdict signal |\n|---|---|\n| database, runtime | context-dependent |\n';
+      await fs.writeFile(designPath, designContent + tableRow);
+
+      // Remove any real infra mentions that would legitimately trigger
+      const tasksPath = path.join(fpFixturePath, 'TASKS.md');
+      const tasksContent = await fs.readFile(tasksPath, 'utf-8');
+      await fs.writeFile(tasksPath, tasksContent.replace(/database|docker|compose/gi, 'service'));
+
+      const result = runShellScript(
+        getSpecsGeneratorPath('audit-spec.ts'),
+        ['-Path', '.specs/audit-fp-test', '-Format', 'json'],
+      );
+
+      expect(result.exitCode).toBe(0);
+      const infraFindings = (result.json.findings || []).filter(
+        (f: any) => f.check === 'INFRA_TASKS_MISSING',
+      );
+      // "database" in table row should NOT trigger INFRA_TASKS_MISSING
+      expect(infraFindings.length).toBe(0);
+    });
+
+    // @feature63
+    it('PLUGIN006_63: audit suppresses FR_SPLIT_CONSISTENCY for language adapters', async () => {
+      // Create FR.md with FR-3, FR-3a (OUT OF SCOPE), FR-3b — language adapter split
+      const frPath = path.join(fpFixturePath, 'FR.md');
+      await fs.writeFile(frPath, `# Functional Requirements (FR)
+
+## FR-2: Simple FR @feature2
+
+Simple requirement.
+
+## FR-3: JS/TS Resolver @feature3
+
+JS/TS import resolution.
+
+## FR-3a: Python Resolver @feature3a
+
+> OUT OF SCOPE v1
+
+## FR-3b: C# Resolver @feature3b
+
+C# import resolution.
+
+## FR-4: DeFlaker @feature4
+
+DeFlaker correlation.
+`);
+
+      const result = runShellScript(
+        getSpecsGeneratorPath('audit-spec.ts'),
+        ['-Path', '.specs/audit-fp-test', '-Format', 'json'],
+      );
+
+      expect(result.exitCode).toBe(0);
+      const splitFindings = (result.json.findings || []).filter(
+        (f: any) => f.check === 'FR_SPLIT_CONSISTENCY',
+      );
+      // FR-3 split with single-letter suffixes (a, b) should be suppressed
+      expect(splitFindings.length).toBe(0);
+    });
   });
 });

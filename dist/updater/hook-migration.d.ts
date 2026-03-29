@@ -11,5 +11,5 @@
  * Scan all Claude project settings and migrate old-format hooks.
  * Returns total number of migrated hook commands.
  */
-export declare function migrateOldProjectHooks(platform: 'claude' | 'cursor'): Promise<number>;
+export declare function migrateOldProjectHooks(platform: 'claude'): Promise<number>;
 //# sourceMappingURL=hook-migration.d.ts.map

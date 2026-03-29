@@ -1,0 +1,34 @@
+Step-by-step reasoning for /run-tests (user prompt: "запусти тесты")
+
+Step 0: Sanitize arguments
+- User prompt: "запусти тесты" (Russian for "run tests")
+- No arguments provided, no ANSI sequences, no pasted text
+- Result: no filter, no --framework, no --docker flag from user
+
+Step 1: Detect framework
+- Checked project root for config files using Glob:
+  - vitest.config.ts — FOUND at D:\repos\dev-pomogator\vitest.config.ts
+  - jest.config.{ts,js,cjs} — not found
+  - pytest.ini, conftest.py, pyproject.toml — found but NOT in project root (nested in subdirectories)
+  - *.csproj, *.sln — found but these are test fixtures, not primary project configs
+  - Cargo.toml — not found
+  - go.mod — not found
+- Framework detected: vitest (vitest.config.ts in project root)
+- The vitest.config.ts is the primary project-level config, taking priority over nested pytest/dotnet configs
+
+Step 2: Check docker-only-tests rule
+- File .claude/rules/docker-only-tests.md EXISTS
+- Content confirms: "Все тесты запускаются только через Docker"
+- Action: automatically add --docker flag (even though user did not specify it)
+
+Step 3: Build test command
+- Framework: vitest
+- Base test command from dispatch table: npx vitest run
+- No filter (user said "run tests" with no filter argument)
+- Docker mode: YES (forced by docker-only-tests rule)
+- scripts/docker-test.sh: EXISTS at D:\repos\dev-pomogator\scripts\docker-test.sh
+- Using preferred docker path (scripts/docker-test.sh exists):
+  bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.sh bash scripts/docker-test.sh npx vitest run
+
+Final command:
+  bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.sh bash scripts/docker-test.sh npx vitest run

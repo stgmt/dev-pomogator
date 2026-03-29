@@ -4,9 +4,6 @@
   "description": "Prompt suggestion after agent stop — generates next-step hints via Haiku LLM, displayed with lightbulb emoji, activated by typing +",
   "platforms": ["claude"],
   "category": "automation",
-  "files": {
-    "claude": []
-  },
   "tools": {
     "prompt-suggest": "tools/prompt-suggest"
   },

@@ -1,19 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
-import { spawnSync } from 'child_process';
+import { runTsx, appPath } from './helpers';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function getProjectRoot(): string {
-  return process.env.APP_DIR || process.cwd();
-}
-
-function appPath(...segments: string[]): string {
-  return path.join(getProjectRoot(), ...segments);
-}
 
 const CAPTURE_TOOL_PATH = 'extensions/suggest-rules/tools/learnings-capture';
 const QUEUE_PATH = '.dev-pomogator/learnings-queue.json';
@@ -27,23 +19,15 @@ interface CaptureResult {
 }
 
 function runCaptureHook(input: Record<string, unknown>, event: string): CaptureResult {
-  const capturePath = path.join(appPath(), CAPTURE_TOOL_PATH, 'capture.ts');
-  const inputJson = JSON.stringify(input);
-  const result = spawnSync('npx', ['tsx', capturePath, '--event', event], {
-    input: inputJson,
-    encoding: 'utf-8',
-    cwd: appPath(),
-    env: {
-      ...process.env,
-      FORCE_COLOR: '0',
-    },
+  const result = runTsx(path.join(CAPTURE_TOOL_PATH, 'capture.ts'), {
+    input,
+    args: ['--event', event],
     timeout: 30000,
-    shell: true,
   });
   return {
     exitCode: result.status ?? 1,
-    stdout: result.stdout ?? '',
-    stderr: result.stderr ?? '',
+    stdout: result.stdout,
+    stderr: result.stderr,
   };
 }
 

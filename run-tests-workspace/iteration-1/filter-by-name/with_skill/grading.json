@@ -1,0 +1,11 @@
+{
+  "eval_id": 2,
+  "run_type": "with_skill",
+  "command": "bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.sh bash scripts/docker-test.sh npx vitest run --grep \"statusline\"",
+  "expectations": [
+    {"text": "has-filter", "passed": true, "evidence": "Command contains '--grep \"statusline\"'"},
+    {"text": "uses-grep-flag", "passed": true, "evidence": "Uses vitest's --grep flag for name-based filtering"},
+    {"text": "uses-wrapper", "passed": true, "evidence": "Command starts with test_runner_wrapper.sh"},
+    {"text": "uses-docker", "passed": true, "evidence": "Command wraps through docker-test.sh"}
+  ]
+}

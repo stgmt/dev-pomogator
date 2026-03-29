@@ -14,9 +14,6 @@ export interface ExtensionHooks {
     claude?: {
         [hookName: string]: HookValue;
     };
-    cursor?: {
-        [hookName: string]: HookValue;
-    };
 }
 export interface PostInstallHook {
     command: string;
@@ -27,14 +24,12 @@ export interface Extension {
     name: string;
     version: string;
     description: string;
-    platforms: ('cursor' | 'claude')[];
+    platforms: ('claude')[];
     category: string;
-    files: {
-        cursor?: string[];
+    ruleFiles?: {
         claude?: string[];
     };
-    rules?: {
-        cursor?: string[];
+    commandFiles?: {
         claude?: string[];
     };
     tools?: {
@@ -51,21 +46,21 @@ export interface Extension {
         };
     };
     postInstall?: PostInstallHook | {
-        cursor?: PostInstallHook;
         claude?: PostInstallHook;
     };
     postUpdate?: PostInstallHook | {
-        cursor?: PostInstallHook;
         claude?: PostInstallHook;
     };
     envRequirements?: EnvRequirement[];
     requiresClaudeMem?: boolean;
+    stability?: 'stable' | 'beta';
     path: string;
 }
+/** Check if extension is marked as beta (undefined = stable) */
+export declare function isBeta(ext: Extension): boolean;
 export interface PostHookOwner {
     name: string;
     postUpdate?: PostInstallHook | {
-        cursor?: PostInstallHook;
         claude?: PostInstallHook;
     };
 }
@@ -75,27 +70,29 @@ export declare class PostUpdateHookError extends Error {
 export declare function getExtensionsDir(): Promise<string>;
 export declare function listExtensions(): Promise<Extension[]>;
 export declare function getExtension(name: string): Promise<Extension | null>;
-export declare function getExtensionFiles(extension: Extension, platform: 'cursor' | 'claude'): Promise<string[]>;
+export declare function getExtensionFiles(extension: Extension, platform: 'claude', repoRoot: string): string[];
 /**
- * Get absolute paths to rule files for an extension
+ * Get absolute paths to rule files for an extension.
+ * Uses ruleFiles format (repo-root relative paths).
  */
-export declare function getExtensionRules(extension: Extension, platform: 'cursor' | 'claude'): Promise<string[]>;
+export declare function getExtensionRules(extension: Extension, platform: 'claude', repoRoot: string): string[];
 /**
  * Get map of tool_name -> absolute_path for extension tools
  */
 export declare function getExtensionTools(extension: Extension): Promise<Map<string, string>>;
 /**
- * Get map of skill_name -> absolute_path for extension skills (Claude Code only)
+ * Get map of skill_name -> absolute_path for extension skills (Claude Code only).
+ * Skills paths are repo-root relative (starting with .claude/).
  */
-export declare function getExtensionSkills(extension: Extension): Promise<Map<string, string>>;
+export declare function getExtensionSkills(extension: Extension, repoRoot: string): Map<string, string>;
 /**
  * Get hooks defined in extension for a specific platform
  */
-export declare function getExtensionHooks(extension: Extension, platform: 'cursor' | 'claude'): Record<string, HookValue>;
+export declare function getExtensionHooks(extension: Extension, platform: 'claude'): Record<string, HookValue>;
 /**
  * Get statusLine config from extension for a specific platform
  */
-export declare function getExtensionStatusLine(extension: Extension, platform: 'cursor' | 'claude'): {
+export declare function getExtensionStatusLine(extension: Extension, platform: 'claude'): {
     type: string;
     command: string;
 } | null;
@@ -107,9 +104,9 @@ export declare function cleanStaleNodeModulesDirs(cwd: string): void;
 /**
  * Run post-install hook for an extension
  */
-export declare function runPostInstallHook(extension: Extension, repoRoot: string, platform?: 'cursor' | 'claude', executedSharedHooks?: Set<string>): Promise<void>;
+export declare function runPostInstallHook(extension: Extension, repoRoot: string, platform?: 'claude', executedSharedHooks?: Set<string>): Promise<void>;
 /**
  * Run post-update hook for an extension
  */
-export declare function runPostUpdateHook(extension: PostHookOwner, repoRoot: string, platform?: 'cursor' | 'claude', failFast?: boolean): Promise<void>;
+export declare function runPostUpdateHook(extension: PostHookOwner, repoRoot: string, platform?: 'claude', failFast?: boolean): Promise<void>;
 //# sourceMappingURL=extensions.d.ts.map

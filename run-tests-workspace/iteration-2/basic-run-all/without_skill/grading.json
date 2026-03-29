@@ -1,0 +1,11 @@
+{
+  "eval_id": 1,
+  "run_type": "without_skill",
+  "expectations": [
+    {"text": "uses-wrapper", "passed": false, "evidence": "Command is 'npm test' — no wrapper"},
+    {"text": "detects-docker-rule", "passed": false, "evidence": "No explicit docker in command"},
+    {"text": "detects-vitest", "passed": false, "evidence": "No vitest in command"},
+    {"text": "uses-docker-test-sh", "passed": false, "evidence": "No docker-test.sh"},
+    {"text": "no-direct-npm-test", "passed": false, "evidence": "Uses 'npm test' directly"}
+  ]
+}

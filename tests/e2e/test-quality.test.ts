@@ -1,8 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
-import { spawnSync } from 'child_process';
-import { appPath } from './helpers';
+import { appPath, runTsx } from './helpers';
 
 // --- Constants ---
 
@@ -12,15 +11,8 @@ const MANIFEST_PATH = 'extensions/test-quality/extension.json';
 function runDedupHook(
   stdinJson: Record<string, unknown>,
   env: Record<string, string> = {},
-): { stdout: string; stderr: string; status: number | null } {
-  const result = spawnSync('npx', ['tsx', appPath(DEDUP_HOOK)], {
-    input: JSON.stringify(stdinJson),
-    encoding: 'utf-8',
-    cwd: appPath(),
-    env: { ...process.env, FORCE_COLOR: '0', ...env },
-    timeout: 15000,
-  });
-  return { stdout: result.stdout || '', stderr: result.stderr || '', status: result.status };
+) {
+  return runTsx(DEDUP_HOOK, { input: stdinJson, env });
 }
 
 // --- Tests ---

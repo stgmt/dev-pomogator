@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 import { listExtensions, getExtensionFiles, getExtensionRules, getExtensionTools, getExtensionSkills, getExtensionHooks, getExtensionStatusLine, runPostInstallHook, cleanStaleNodeModulesDirs } from './extensions.js';
 import { findRepoRoot } from '../utils/repo.js';
 import { detectMangledArtifacts } from '../utils/msys.js';
-import { RULES_SUBFOLDER, TOOLS_DIR, SKILLS_DIR } from '../constants.js';
+import { TOOLS_DIR, SKILLS_DIR } from '../constants.js';
 import { getFileHash } from '../updater/content-hash.js';
 import { collectFileHashes, addProjectPaths, makePortableScriptCommand, resolveHookToolPaths, replaceNpxTsxWithPortable, ensureExecutableShellScripts, setupGlobalScripts, removeOrphanedFiles } from './shared.js';
 import { writeJsonAtomic, readJsonSafe } from '../utils/atomic-json.js';
@@ -42,7 +42,7 @@ export async function installClaude(options = {}) {
     const commandsDir = path.join(repoRoot, '.claude', 'commands');
     await fs.ensureDir(commandsDir);
     for (const extension of extensionsToInstall) {
-        const files = await getExtensionFiles(extension, 'claude');
+        const files = getExtensionFiles(extension, 'claude', repoRoot);
         const managedCommands = [];
         for (const srcFile of files) {
             if (srcFile.endsWith('.md')) {
@@ -63,11 +63,17 @@ export async function installClaude(options = {}) {
             managedByExtension.get(extension.name).commands = managedCommands;
         }
     }
-    // 2. Install rules to .claude/rules/ (in project directory)
-    const rulesDir = path.join(repoRoot, '.claude', 'rules', RULES_SUBFOLDER);
-    await fs.ensureDir(rulesDir);
+    // 2. Install rules to .claude/rules/{ext-name}/ (per-extension namespace)
     for (const extension of extensionsToInstall) {
-        const ruleFiles = await getExtensionRules(extension, 'claude');
+        const ruleFiles = getExtensionRules(extension, 'claude', repoRoot);
+        if (ruleFiles.length === 0)
+            continue;
+        // Extract subfolder from ruleFiles path (e.g. .claude/rules/plan-pomogator/rule.md → plan-pomogator)
+        const subfolder = extension.ruleFiles?.claude?.[0]
+            ? path.basename(path.dirname(extension.ruleFiles.claude[0]))
+            : extension.name;
+        const rulesDir = path.join(repoRoot, '.claude', 'rules', subfolder);
+        await fs.ensureDir(rulesDir);
         const managedRules = [];
         for (const ruleFile of ruleFiles) {
             if (await fs.pathExists(ruleFile)) {
@@ -77,7 +83,7 @@ export async function installClaude(options = {}) {
                 console.log(`  ✓ Installed rule: ${fileName}`);
                 const hash = await getFileHash(dest);
                 if (hash) {
-                    managedRules.push({ path: `.claude/rules/${RULES_SUBFOLDER}/${fileName}`, hash });
+                    managedRules.push({ path: `.claude/rules/${subfolder}/${fileName}`, hash });
                 }
             }
         }
@@ -114,7 +120,7 @@ export async function installClaude(options = {}) {
     }
     // 4. Install skills to project/.claude/skills/ (Claude Code only)
     for (const extension of extensionsToInstall) {
-        const skills = await getExtensionSkills(extension);
+        const skills = getExtensionSkills(extension, repoRoot);
         const managedSkills = [];
         for (const [skillName, skillPath] of skills) {
             if (await fs.pathExists(skillPath)) {
@@ -315,7 +321,7 @@ async function installExtensionHooks(repoRoot, extensions) {
             else if (rawHook.command) {
                 hookEntries.push({
                     command: rawHook.command,
-                    matcher: rawHook.matcher ?? '',
+                    matcher: Array.isArray(rawHook.matcher) ? rawHook.matcher.join('|') : (rawHook.matcher ?? ''),
                     timeout: rawHook.timeout ?? defaultTimeout,
                 });
             }

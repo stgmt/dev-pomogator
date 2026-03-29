@@ -1,25 +1,22 @@
 {
   "name": "specs-workflow",
-  "version": "1.12.0",
+  "version": "1.13.0",
   "description": "Управление спецификациями: 4-фазный workflow (включая Context Analysis), TDD-порядок задач, валидация, автоматический аудит кросс-ссылок, MCP инструменты для research",
-  "platforms": ["cursor", "claude"],
+  "platforms": [
+    "claude"
+  ],
   "category": "workflow",
-  "files": {
-    "cursor": ["cursor/commands/create-spec.md"],
-    "claude": ["claude/commands/create-spec.md"]
-  },
-  "rules": {
-    "cursor": [
-      "cursor/rules/specs-management.mdc",
-      "cursor/rules/no-mocks-fallbacks.mdc",
-      "cursor/rules/research-workflow.mdc",
-      "cursor/rules/specs-validation.mdc"
-    ],
+  "commandFiles": {
     "claude": [
-      "claude/rules/specs-management.md",
-      "claude/rules/no-mocks-fallbacks.md",
-      "claude/rules/research-workflow.md",
-      "claude/rules/specs-validation.md"
+      ".claude/commands/create-spec.md"
+    ]
+  },
+  "ruleFiles": {
+    "claude": [
+      ".claude/rules/specs-workflow/specs-management.md",
+      ".claude/rules/specs-workflow/no-mocks-fallbacks.md",
+      ".claude/rules/specs-workflow/research-workflow.md",
+      ".claude/rules/specs-workflow/specs-validation.md"
     ]
   },
   "tools": {
@@ -31,15 +28,14 @@
   "toolFiles": {
     "specs-generator": [
       ".dev-pomogator/tools/specs-generator/README.md",
-      ".dev-pomogator/tools/specs-generator/common.sh",
       ".dev-pomogator/tools/specs-generator/specs-generator-core.mjs",
-      ".dev-pomogator/tools/specs-generator/fill-template.sh",
-      ".dev-pomogator/tools/specs-generator/list-specs.sh",
-      ".dev-pomogator/tools/specs-generator/scaffold-spec.sh",
-      ".dev-pomogator/tools/specs-generator/spec-status.sh",
-      ".dev-pomogator/tools/specs-generator/validate-spec.sh",
-      ".dev-pomogator/tools/specs-generator/audit-spec.sh",
-      ".dev-pomogator/tools/specs-generator/analyze-features.sh",
+      ".dev-pomogator/tools/specs-generator/fill-template.ts",
+      ".dev-pomogator/tools/specs-generator/list-specs.ts",
+      ".dev-pomogator/tools/specs-generator/scaffold-spec.ts",
+      ".dev-pomogator/tools/specs-generator/spec-status.ts",
+      ".dev-pomogator/tools/specs-generator/validate-spec.ts",
+      ".dev-pomogator/tools/specs-generator/audit-spec.ts",
+      ".dev-pomogator/tools/specs-generator/analyze-features.ts",
       ".dev-pomogator/tools/specs-generator/templates/ACCEPTANCE_CRITERIA.md.template",
       ".dev-pomogator/tools/specs-generator/templates/DESIGN.md.template",
       ".dev-pomogator/tools/specs-generator/templates/feature.template",
@@ -93,10 +89,6 @@
     ]
   },
   "hooks": {
-    "cursor": {
-      "beforeSubmitPrompt": "npx tsx .dev-pomogator/tools/specs-validator/validate-specs.ts",
-      "stop": "npx tsx .dev-pomogator/tools/steps-validator/validate-steps.ts"
-    },
     "claude": {
       "UserPromptSubmit": "npx tsx .dev-pomogator/tools/specs-validator/validate-specs.ts",
       "PreToolUse": {
@@ -106,11 +98,6 @@
     }
   },
   "postInstall": {
-    "cursor": {
-      "command": "python3 .dev-pomogator/tools/mcp-setup/setup-mcp.py --platform cursor",
-      "interactive": true,
-      "skipInCI": true
-    },
     "claude": {
       "command": "python3 .dev-pomogator/tools/mcp-setup/setup-mcp.py --platform claude",
       "interactive": true,
@@ -118,11 +105,6 @@
     }
   },
   "postUpdate": {
-    "cursor": {
-      "command": "python3 .dev-pomogator/tools/mcp-setup/setup-mcp.py --platform cursor",
-      "interactive": true,
-      "skipInCI": true
-    },
     "claude": {
       "command": "python3 .dev-pomogator/tools/mcp-setup/setup-mcp.py --platform claude",
       "interactive": true,

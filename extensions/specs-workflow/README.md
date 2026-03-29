@@ -24,7 +24,7 @@
                                                    ▼
 ┌──────────────────────────────────────────────────────────────────────────────────────────┐
 │                                    /create-spec my-feature                                │
-│                         scaffold-spec.sh → создаёт 13 файлов-шаблонов                    │
+│                         scaffold-spec.ts → создаёт 13 файлов-шаблонов                    │
 └──────────────────────────────────────────────────────────────────────────────────────────┘
                                                    │
                     ┌──────────────────────────────┼──────────────────────────────┐
@@ -54,7 +54,7 @@
                                                    ▼
 ┌──────────────────────────────────────────────────────────────────────────────────────────┐
 │                              SPEC COMPLETE (13 files)                                     │
-│                    validate-spec.sh → проверяет форматы и структуру                      │
+│                    validate-spec.ts → проверяет форматы и структуру                      │
 └──────────────────────────────────────────────────────────────────────────────────────────┘
                                                    │
                     ┌──────────────────────────────┴──────────────────────────────┐
@@ -556,11 +556,11 @@ strictness:
 
 | Script | Description | Usage |
 |--------|-------------|-------|
-| `scaffold-spec.sh` | Создать структуру спека | `./scaffold-spec.sh -Name my-feature` |
-| `validate-spec.sh` | Валидировать формат | `./validate-spec.sh -Path .specs/my-feature` |
-| `spec-status.sh` | Показать прогресс | `./spec-status.sh -Path .specs/my-feature` |
-| `fill-template.sh` | Заполнить placeholder'ы | `./fill-template.sh -File FR.md -Values '{"name":"..."}'` |
-| `list-specs.sh` | Список всех спеков | `./list-specs.sh` |
+| `scaffold-spec.ts` | Создать структуру спека | `./scaffold-spec.ts -Name my-feature` |
+| `validate-spec.ts` | Валидировать формат | `./validate-spec.ts -Path .specs/my-feature` |
+| `spec-status.ts` | Показать прогресс | `./spec-status.ts -Path .specs/my-feature` |
+| `fill-template.ts` | Заполнить placeholder'ы | `./fill-template.ts -File FR.md -Values '{"name":"..."}'` |
+| `list-specs.ts` | Список всех спеков | `./list-specs.ts` |
 
 ---
 
@@ -577,13 +577,13 @@ strictness:
 ### Проверить статус спека
 
 ```powershell
-./.dev-pomogator/tools/specs-generator/spec-status.sh -Path ".specs/my-feature"
+./.dev-pomogator/tools/specs-generator/spec-status.ts -Path ".specs/my-feature"
 ```
 
 ### Валидировать спек
 
 ```powershell
-./.dev-pomogator/tools/specs-generator/validate-spec.sh -Path ".specs/my-feature"
+./.dev-pomogator/tools/specs-generator/validate-spec.ts -Path ".specs/my-feature"
 ```
 
 ### Запустить steps-validator вручную

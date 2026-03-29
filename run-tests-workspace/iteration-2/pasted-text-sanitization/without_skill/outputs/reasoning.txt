@@ -1,0 +1,51 @@
+Step-by-step reasoning for parsing the user's /run-tests input:
+
+1. RAW INPUT ANALYSIS
+   The user typed: /run-tests [Pasted text from terminal]
+   Followed by ANSI-colored terminal output:
+   - "\u001b[32m✓\u001b[0m auth test passed"  (green checkmark + "auth test passed")
+   - "some garbage here"
+   - "statusline"
+
+2. IDENTIFYING THE TEST FILTER
+   The user's input is a messy paste from a terminal. The key question is:
+   what did the user actually WANT to run?
+
+   Breaking down the pasted content:
+   - "\u001b[32m✓\u001b[0m auth test passed" — This is clearly terminal output from
+     a previous test run (green checkmark followed by a test result message).
+     This is NOT a user command; it is copy-pasted output.
+   - "some garbage here" — The user themselves labeled this as garbage, or it is
+     literally noise from a messy clipboard paste.
+   - "statusline" — This appears at the end, after the garbage. This is the most
+     likely candidate for the actual test filter the user wants to run.
+
+3. PROJECT CONTEXT
+   - The project has `tests/e2e/test-statusline.test.ts` — a real test file
+     for statusline functionality.
+   - Tests run via Docker: `npm test` -> `scripts/docker-test.sh` ->
+     `docker compose run test` -> `vitest run tests/e2e --reporter=verbose`
+   - The vitest framework supports `--grep` for filtering tests by name.
+   - The project's test dispatch system (dispatch.ts) uses `--grep` for vitest filtering.
+
+4. DECISION
+   The word "statusline" at the end of the pasted text is the intended test filter.
+   Everything before it (ANSI escape codes, "auth test passed", "some garbage here")
+   is noise from a clipboard paste and should be discarded.
+
+   The correct command is: npm test -- --grep "statusline"
+   This runs the Docker-based test suite filtered to tests matching "statusline",
+   which would target the test-statusline.test.ts file.
+
+5. ALTERNATIVE INTERPRETATIONS CONSIDERED
+   - Could "auth" be the filter? Unlikely — it appears inside ANSI-colored output
+     that looks like a previous test result, not a user command.
+   - Could the entire pasted text be the filter? No — ANSI codes and "some garbage"
+     are clearly not test names.
+   - Could the user want to run ALL tests? Possible, but the presence of "statusline"
+     as the last clean word strongly suggests it is the filter argument.
+
+6. CONFIDENCE: Medium-high
+   The "statusline" extraction is the most reasonable interpretation, but there is
+   ambiguity because the input is messy. A skill with proper ANSI stripping and
+   structured parsing would handle this more reliably.

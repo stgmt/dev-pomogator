@@ -2,24 +2,25 @@
   "name": "suggest-rules",
   "version": "1.8.0",
   "description": "Анализ сессии и предложение правил, skills и hooks для IDE",
-  "platforms": ["cursor", "claude"],
+  "platforms": [
+    "claude"
+  ],
   "category": "workflow",
-  "files": {
-    "cursor": ["cursor/commands/suggest-rules.md", "cursor/commands/reflect.md"],
-    "claude": ["claude/commands/suggest-rules.md", "claude/commands/reflect.md"]
+  "commandFiles": {
+    "claude": [
+      ".claude/commands/reflect.md",
+      ".claude/commands/suggest-rules.md"
+    ]
   },
-  "rules": {
-    "cursor": ["cursor/rules/self-improving.mdc"],
-    "claude": ["claude/rules/self-improving.md"]
+  "ruleFiles": {
+    "claude": [
+      ".claude/rules/suggest-rules/self-improving.md"
+    ]
   },
   "hooks": {
     "claude": {
       "UserPromptSubmit": "npx tsx .dev-pomogator/tools/learnings-capture/capture.ts --event UserPromptSubmit",
       "Stop": "npx tsx .dev-pomogator/tools/learnings-capture/capture.ts --event Stop"
-    },
-    "cursor": {
-      "beforeSubmitPrompt": "npx tsx .dev-pomogator/tools/learnings-capture/capture.ts --event UserPromptSubmit",
-      "stop": "npx tsx .dev-pomogator/tools/learnings-capture/capture.ts --event Stop"
     }
   },
   "tools": {
@@ -35,8 +36,8 @@
     ]
   },
   "skills": {
-    "deep-insights": "skills/deep-insights",
-    "rules-optimizer": "skills/rules-optimizer"
+    "deep-insights": ".claude/skills/deep-insights",
+    "rules-optimizer": ".claude/skills/rules-optimizer"
   },
   "skillFiles": {
     "deep-insights": [

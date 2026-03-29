@@ -1,0 +1,27 @@
+{
+  "eval_id": 3,
+  "eval_name": "explicit-framework",
+  "prompt": "/run-tests --framework jest",
+  "assertions": [
+    {
+      "name": "uses-jest",
+      "description": "Uses jest command (npx jest) despite vitest.config.ts existing",
+      "check": "command.txt contains 'jest'"
+    },
+    {
+      "name": "no-vitest-in-command",
+      "description": "Does NOT use vitest when framework is explicitly overridden to jest",
+      "check": "command.txt does NOT contain 'vitest'"
+    },
+    {
+      "name": "uses-wrapper",
+      "description": "Command uses test_runner_wrapper.sh",
+      "check": "command.txt contains 'test_runner_wrapper.sh'"
+    },
+    {
+      "name": "uses-docker",
+      "description": "Still applies docker-only-tests rule",
+      "check": "command.txt contains 'docker'"
+    }
+  ]
+}

@@ -56,10 +56,10 @@ function normalizeOutput(value) {
 function runCommand(label, command, input) {
   if (!command) return '';
   const start = Date.now();
-  const result = spawnSync(command, {
+  const parts = command.split(/\s+/);
+  const result = spawnSync(parts[0], parts.slice(1), {
     input,
     encoding: 'utf-8',
-    shell: true,
     windowsHide: true,
     timeout: COMMAND_TIMEOUT_MS,
   });

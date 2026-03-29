@@ -1,0 +1,12 @@
+{
+  "eval_id": 4,
+  "run_type": "with_skill",
+  "command": "bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.sh bash scripts/docker-test.sh npx vitest run --grep \"✓ auth test passed\"",
+  "expectations": [
+    {"text": "warns-about-paste", "passed": true, "evidence": "Reasoning says: 'WARNING issued to user: Pasted text detected'"},
+    {"text": "strips-ansi", "passed": true, "evidence": "Reasoning shows ANSI \\u001b[32m stripped, ✓ remains"},
+    {"text": "extracts-meaningful", "passed": true, "evidence": "Extracted first meaningful line after [Pasted text] marker"},
+    {"text": "still-runs-tests", "passed": true, "evidence": "Command uses test_runner_wrapper.sh"},
+    {"text": "smart-filter-extraction", "passed": false, "evidence": "WEAKNESS: Filter is '✓ auth test passed' — contains unicode checkmark artifact. Baseline correctly identified 'statusline' as the real intent. Skill's Step 0 takes first line mechanically."}
+  ]
+}

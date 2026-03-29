@@ -1,3 +1,4 @@
+import { logger, formatErrorChain, getErrorMessage } from '../utils/logger.js';
 import { loadConfig, saveConfig } from '../config/index.js';
 import type { InstalledExtension, ManagedFiles, ManagedFileEntry, ManagedFileItem } from '../config/schema.js';
 import { getManagedPaths, getManagedHash } from '../config/schema.js';
@@ -20,15 +21,7 @@ import { writeGlobalStatusLine, isManagedStatusLineCommand } from '../utils/stat
 
 interface UpdateOptions {
   force?: boolean;
-  silent?: boolean;
-  platform?: 'cursor' | 'claude';  // Filter updates by platform
-}
-
-interface CursorHooksJson {
-  version: number;
-  hooks: {
-    [eventName: string]: { command: string }[];
-  };
+  platform?: 'claude';  // Filter updates by platform
 }
 
 interface UpdateResult {
@@ -139,14 +132,14 @@ async function removeStaleFiles(
 
 async function updateCommandFiles(
   extensionName: string,
-  platform: 'cursor' | 'claude',
+  platform: 'claude',
   files: string[],
   projectPath: string,
   previousItems?: ManagedFiles['commands']
 ): Promise<UpdateResult> {
   if (files.length === 0) return { written: [], hadFailures: false, backedUp: [] };
 
-  const platformDir = platform === 'claude' ? '.claude' : '.cursor';
+  const platformDir = '.claude';
   const destDir = path.join(projectPath, platformDir, 'commands');
   await fs.ensureDir(destDir);
 
@@ -185,27 +178,23 @@ async function updateCommandFiles(
 
 async function updateRuleFiles(
   extensionName: string,
-  platform: 'cursor' | 'claude',
+  platform: 'claude',
   files: string[],
   projectPath: string,
   previousItems?: ManagedFiles['rules']
 ): Promise<UpdateResult> {
   if (files.length === 0) return { written: [], hadFailures: false, backedUp: [] };
 
-  const platformDir = platform === 'claude' ? '.claude' : '.cursor';
-  const destDir = path.join(projectPath, platformDir, 'rules', RULES_SUBFOLDER);
-  await fs.ensureDir(destDir);
-
   const written: ManagedFileEntry[] = [];
   const backedUp: ModifiedFile[] = [];
   let hadFailures = false;
+
   for (const relativePath of files) {
     const content = await downloadExtensionFile(extensionName, relativePath);
-    const fileName = path.basename(relativePath);
-    const destFile = path.join(destDir, fileName);
-    const relativeDest = normalizeRelativePath(
-      path.join(platformDir, 'rules', RULES_SUBFOLDER, fileName)
-    );
+    // ruleFiles paths are repo-root relative (e.g. .claude/rules/ext-name/rule.md)
+    const relativeDest = normalizeRelativePath(relativePath);
+    const destFile = path.join(projectPath, relativePath);
+    await fs.ensureDir(path.dirname(destFile));
 
     if (!content) {
       console.log(`  ⚠ Failed to download rule: ${relativePath}`);
@@ -228,6 +217,59 @@ async function updateRuleFiles(
   }
 
   return { written, hadFailures, backedUp };
+}
+
+/**
+ * Migrate rules from legacy .claude/rules/pomogator/ to .claude/rules/{ext-name}/
+ * Idempotent: skips if source doesn't exist or dest already exists.
+ */
+/**
+ * Migrate rules from legacy .claude/rules/pomogator/ to .claude/rules/{ext-name}/
+ * for a specific extension. Idempotent: skips if source doesn't exist or dest already exists.
+ */
+async function migrateRulesNamespace(
+  installed: InstalledExtension,
+  projectPath: string
+): Promise<void> {
+  if (!installed.managed) return;
+  const managed = installed.managed[projectPath];
+  if (!managed?.rules) return;
+
+  let changed = false;
+  for (let i = 0; i < managed.rules.length; i++) {
+    const entry = managed.rules[i];
+    const entryPath = typeof entry === 'string' ? entry : entry.path;
+    const oldPrefix = `.claude/rules/${RULES_SUBFOLDER}/`;
+    if (!entryPath.startsWith(oldPrefix)) continue;
+
+    const fileName = path.basename(entryPath);
+    const newPath = `.claude/rules/${installed.name}/${fileName}`;
+    const oldFile = path.join(projectPath, entryPath);
+    const newFile = path.join(projectPath, newPath);
+
+    if (!await fs.pathExists(oldFile)) continue;
+    if (await fs.pathExists(newFile)) continue;
+
+    await fs.ensureDir(path.dirname(newFile));
+    await fs.move(oldFile, newFile);
+    if (typeof entry === 'string') {
+      managed.rules[i] = newPath;
+    } else {
+      entry.path = newPath;
+    }
+    changed = true;
+    console.log(`  📦 Migrated rule: ${oldPrefix}${fileName} → ${newPath}`);
+  }
+
+  if (changed) {
+    const pomDir = path.join(projectPath, '.claude', 'rules', RULES_SUBFOLDER);
+    try {
+      const remaining = await fs.readdir(pomDir);
+      if (remaining.length === 0) {
+        await fs.remove(pomDir);
+      }
+    } catch { /* directory may not exist */ }
+  }
 }
 
 async function updateToolFiles(
@@ -319,90 +361,6 @@ async function updateSkillFiles(
   }
 
   return { written, hadFailures, backedUp };
-}
-
-async function updateCursorHooksForProject(
-  repoRoot: string,
-  hooks: Record<string, string | { matcher?: string; command: string; timeout?: number }>,
-  previousManagedHooks: Record<string, string[]> = {}
-): Promise<Record<string, string[]>> {
-  const hooksDir = path.join(os.homedir(), '.cursor', 'hooks');
-  const hooksFile = path.join(hooksDir, 'hooks.json');
-
-  const hasNewHooks = Object.keys(hooks).length > 0;
-  if (!hasNewHooks && Object.keys(previousManagedHooks).length === 0) {
-    return {};
-  }
-
-  let existingHooks: CursorHooksJson = { version: 1, hooks: {} };
-  if (await fs.pathExists(hooksFile)) {
-    try {
-      existingHooks = await fs.readJson(hooksFile);
-    } catch {
-      // Invalid JSON, start fresh
-    }
-  }
-
-  // Clean all managed hooks before re-adding to prevent path-format duplicates
-  for (const eventName of Object.keys(existingHooks.hooks)) {
-    existingHooks.hooks[eventName] = existingHooks.hooks[eventName].filter(
-      h => !h.command.includes('.dev-pomogator/tools/')
-        && !h.command.includes('.dev-pomogator\\\\tools\\\\')
-        && !h.command.includes('.dev-pomogator\\tools\\')
-    );
-  }
-
-  const nextManagedHooks: Record<string, string[]> = {};
-  const nextAbsoluteByEvent: Record<string, string[]> = {};
-
-  for (const [eventName, rawHook] of Object.entries(hooks)) {
-    const command = typeof rawHook === 'string' ? rawHook : rawHook.command;
-    if (!nextManagedHooks[eventName]) {
-      nextManagedHooks[eventName] = [];
-    }
-    nextManagedHooks[eventName].push(command);
-
-    const absoluteCommand = replaceNpxTsxWithPortable(resolveHookToolPaths(command, repoRoot));
-    if (!nextAbsoluteByEvent[eventName]) {
-      nextAbsoluteByEvent[eventName] = [];
-    }
-    nextAbsoluteByEvent[eventName].push(absoluteCommand.replace(/\\/g, '\\\\'));
-  }
-
-  for (const [eventName, commands] of Object.entries(nextAbsoluteByEvent)) {
-    if (!existingHooks.hooks[eventName]) {
-      existingHooks.hooks[eventName] = [];
-    }
-    for (const escapedCommand of commands) {
-      const exists = existingHooks.hooks[eventName].some(
-        (h) => h.command === escapedCommand
-      );
-      if (!exists) {
-        existingHooks.hooks[eventName].push({ command: escapedCommand });
-      }
-    }
-  }
-
-  for (const [eventName, commands] of Object.entries(previousManagedHooks)) {
-    const existing = existingHooks.hooks[eventName];
-    if (!existing) {
-      continue;
-    }
-    const nextSet = new Set(nextAbsoluteByEvent[eventName] ?? []);
-    const previousAbsolute = commands.map((cmd) =>
-      resolveHookToolPaths(cmd, repoRoot).replace(/\\/g, '\\\\')
-    );
-    const removeSet = new Set(previousAbsolute.filter((command) => !nextSet.has(command)));
-    if (removeSet.size === 0) {
-      continue;
-    }
-    existingHooks.hooks[eventName] = existing.filter((hook) => !removeSet.has(hook.command));
-  }
-
-  await fs.ensureDir(hooksDir);
-  await writeJsonAtomic(hooksFile, existingHooks);
-
-  return nextManagedHooks;
 }
 
 async function updateClaudeHooksForProject(
@@ -529,7 +487,7 @@ async function cleanupLegacyStatusLine(): Promise<void> {
 }
 
 export async function checkUpdate(options: UpdateOptions = {}): Promise<boolean> {
-  const { force = false, silent = false, platform } = options;
+  const { force = false, platform } = options;
   
   // 1. Попытка получить lock
   if (!await acquireLock()) {
@@ -577,14 +535,16 @@ export async function checkUpdate(options: UpdateOptions = {}): Promise<boolean>
         }
         
         // 5. Скачать и обновить файлы во всех projectPaths
-        const platformFiles = remote.files?.[installed.platform] ?? [];
-        const commandFiles = platformFiles.length > 0
-          ? platformFiles
-          : [`${installed.platform}/commands/${installed.name}.md`];
-        const ruleFiles = remote.rules?.[installed.platform] ?? [];
+        const commandFiles = remote.commandFiles?.[installed.platform] ?? [];
+        const ruleFiles = remote.ruleFiles?.[installed.platform] ?? [];
         const toolFiles = remote.toolFiles ?? {};
         const skillFiles = installed.platform === 'claude' ? (remote.skillFiles ?? {}) : {};
         const hooks = remote.hooks?.[installed.platform] ?? {};
+
+        // Migrate legacy pomogator/ rules to per-extension namespace
+        for (const projectPath of installed.projectPaths) {
+          await migrateRulesNamespace(installed, projectPath);
+        }
 
         for (const projectPath of installed.projectPaths) {
           try {
@@ -653,13 +613,11 @@ export async function checkUpdate(options: UpdateOptions = {}): Promise<boolean>
             managedEntry.skills = skillResult.written;
 
             const previousHooks = managedEntry.hooks ?? {};
-            const updatedHooks = installed.platform === 'cursor'
-              ? await updateCursorHooksForProject(projectPath, hooks, previousHooks)
-              : await updateClaudeHooksForProject(projectPath, hooks, previousHooks);
+            const updatedHooks = await updateClaudeHooksForProject(projectPath, hooks, previousHooks);
             managedEntry.hooks = updatedHooks;
 
             // Migrate: remove project-level statusLine (now global)
-            if (installed.platform === 'claude') {
+            {
               const projectSettingsPath = path.join(projectPath, '.claude', 'settings.json');
               const projectSettings = await readJsonSafe<Record<string, unknown>>(projectSettingsPath, {});
               if (projectSettings.statusLine) {
@@ -695,7 +653,8 @@ export async function checkUpdate(options: UpdateOptions = {}): Promise<boolean>
         if (error instanceof PostUpdateHookError) {
           throw error;
         }
-        // Продолжить с другими extensions
+        console.log(`  ⚠ Update failed for ${installed.name}: ${getErrorMessage(error)}`);
+        logger.error(`Extension ${installed.name} update failed: ${formatErrorChain(error)}`);
       }
     }
 

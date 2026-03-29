@@ -21,8 +21,8 @@ Feature: PLUGIN003 Specs Workflow Extension
   Scenario: Tools are installed
     When dev-pomogator installs specs-workflow
     Then specs-generator folder should exist in PROJECT/.dev-pomogator/tools/
-    And scaffold-spec.sh should exist
-    And validate-spec.sh should exist
+    And scaffold-spec.ts should exist
+    And validate-spec.ts should exist
     And templates folder should contain 14 template files
 
   Scenario: Claude Code plugin is registered

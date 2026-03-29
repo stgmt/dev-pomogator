@@ -1,0 +1,12 @@
+{
+  "eval_id": 1,
+  "run_type": "with_skill",
+  "command": "bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.sh bash scripts/docker-test.sh npx vitest run",
+  "expectations": [
+    {"text": "uses-wrapper", "passed": true, "evidence": "Command contains 'test_runner_wrapper.sh'"},
+    {"text": "detects-docker-rule", "passed": true, "evidence": "Command contains 'docker-test.sh', docker mode auto-applied from rule"},
+    {"text": "detects-vitest", "passed": true, "evidence": "Command contains 'npx vitest run'"},
+    {"text": "uses-docker-test-sh", "passed": true, "evidence": "Command uses 'scripts/docker-test.sh' (preferred path)"},
+    {"text": "no-direct-npm-test", "passed": true, "evidence": "No bare 'npm test' in command"}
+  ]
+}

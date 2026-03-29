@@ -6,7 +6,6 @@
  * Usage:
  *   node check-update.js --claude --check-only  # SessionStart: warn if update available
  *   node check-update.js --claude               # Legacy: auto-update (kept for manual use)
- *   node check-update.js                        # Default (Cursor)
  *
  * Note: Shebang is added by esbuild via banner option.
  */
@@ -18,16 +17,15 @@ import semver from 'semver';
 import { checkUpdate } from './index.js';
 import { fetchExtensionManifest } from './github.js';
 import { migrateOldProjectHooks } from './hook-migration.js';
-import { logger } from '../utils/logger.js';
+import { logger, getErrorMessage } from '../utils/logger.js';
 
 const CONFIG_DIR = path.join(os.homedir(), '.dev-pomogator');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 
 // Parse command line arguments
 const args = process.argv.slice(2);
-const isClaudeCode = args.includes('--claude');
 const isCheckOnly = args.includes('--check-only');
-const platform = isClaudeCode ? 'claude' : 'cursor';
+const platform = 'claude';
 
 interface InstalledExt {
   name: string;
@@ -76,7 +74,7 @@ async function checkOnly(): Promise<void> {
 
   const outdated: Array<{ name: string; current: string; latest: string }> = [];
 
-  // Deduplicate extensions by name (may be installed for both cursor and claude)
+  // Deduplicate extensions by name
   const seen = new Set<string>();
   const toCheck: InstalledExt[] = [];
   for (const ext of config.installedExtensions) {
@@ -107,9 +105,7 @@ async function checkOnly(): Promise<void> {
 
   if (outdated.length > 0) {
     const details = outdated.map(e => `${e.name}: ${e.current} → ${e.latest}`).join(', ');
-    const cmd = platform === 'claude'
-      ? 'npx github:stgmt/dev-pomogator --claude --all'
-      : 'npx github:stgmt/dev-pomogator --cursor --all';
+    const cmd = 'npx github:stgmt/dev-pomogator --claude --all';
     process.stderr.write(`\n⚠️  dev-pomogator update available (${details})\n   Run: ${cmd}\n\n`);
   }
 }
@@ -124,7 +120,9 @@ async function main(): Promise<void> {
   logger.info(`=== Update check started (${platform}) ===`);
 
   // Always migrate old hooks (fast local check, no network)
-  await migrateOldProjectHooks(platform).catch(() => {});
+  await migrateOldProjectHooks(platform).catch((err) => {
+    logger.warn(`Hook migration failed: ${getErrorMessage(err)}`);
+  });
 
   const config = loadConfig();
 
@@ -136,7 +134,7 @@ async function main(): Promise<void> {
   logger.info('Cooldown expired, checking for updates...');
 
   try {
-    const updated = await checkUpdate({ silent: true, platform });
+    const updated = await checkUpdate({ platform });
     if (updated) {
       logger.info(`Extensions updated successfully (${platform})`);
     } else {
@@ -156,7 +154,6 @@ main()
   .finally(() => {
     if (!isCheckOnly) {
       logger.info('Update check completed');
-      // Signal Cursor to continue
       process.stdout.write(JSON.stringify({ continue: true }));
     }
   });

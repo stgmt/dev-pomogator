@@ -4,14 +4,10 @@
   "description": "Screenshot-driven debugging and visual verification for UI state, TUI, terminal output",
   "platforms": ["claude"],
   "category": "automation",
-  "files": {
-    "claude": []
-  },
-  "rules": {},
   "tools": {},
   "toolFiles": [],
   "skills": {
-    "debug-screenshot": "skills/debug-screenshot"
+    "debug-screenshot": ".claude/skills/debug-screenshot"
   },
   "skillFiles": {
     "debug-screenshot": [

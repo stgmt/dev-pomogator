@@ -213,3 +213,26 @@ Feature: PLUGIN002 Claude-mem Persistent Memory
     And CLAUDE_MEM_CHROMA_MODE is "external"
     When health-check hook starts Chroma via Python chroma binary
     Then Chroma heartbeat on port 8000 should respond
+
+  # ============================================================================
+  # Installation Pipeline Verification
+  # @implemented: claude-installer.test.ts > CORE003-Claude-mem
+  # ============================================================================
+
+  # @implemented: claude-installer.test.ts
+  Scenario: claude-mem binaries are non-empty after installation
+    Given dev-pomogator installs for Claude Code with --all
+    Then worker-service.cjs should have size > 1000 bytes
+    And mcp-server.cjs should have size > 1000 bytes
+    And package.json should be valid JSON with name and version
+
+  # @implemented: claude-installer.test.ts
+  Scenario: MCP server contains protocol implementation
+    Given claude-mem is installed
+    Then mcp-server.cjs should contain StdioServerTransport or modelcontextprotocol references
+
+  # @implemented: claude-installer.test.ts
+  Scenario: MCP is accessible via plugin or manual registration
+    Given claude-mem is installed
+    Then EITHER enabledPlugins contains claude-mem@thedotmack
+    Or ~/.claude.json mcpServers contains claude-mem with valid path

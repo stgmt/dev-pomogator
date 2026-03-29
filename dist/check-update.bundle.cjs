@@ -4231,18 +4231,569 @@ var init_schema = __esm({
   }
 });
 
+// node_modules/isexe/windows.js
+var require_windows = __commonJS({
+  "node_modules/isexe/windows.js"(exports2, module2) {
+    module2.exports = isexe;
+    isexe.sync = sync;
+    var fs14 = require("fs");
+    function checkPathExt(path14, options) {
+      var pathext = options.pathExt !== void 0 ? options.pathExt : process.env.PATHEXT;
+      if (!pathext) {
+        return true;
+      }
+      pathext = pathext.split(";");
+      if (pathext.indexOf("") !== -1) {
+        return true;
+      }
+      for (var i = 0; i < pathext.length; i++) {
+        var p = pathext[i].toLowerCase();
+        if (p && path14.substr(-p.length).toLowerCase() === p) {
+          return true;
+        }
+      }
+      return false;
+    }
+    function checkStat(stat, path14, options) {
+      if (!stat.isSymbolicLink() && !stat.isFile()) {
+        return false;
+      }
+      return checkPathExt(path14, options);
+    }
+    function isexe(path14, options, cb) {
+      fs14.stat(path14, function(er, stat) {
+        cb(er, er ? false : checkStat(stat, path14, options));
+      });
+    }
+    function sync(path14, options) {
+      return checkStat(fs14.statSync(path14), path14, options);
+    }
+  }
+});
+
+// node_modules/isexe/mode.js
+var require_mode = __commonJS({
+  "node_modules/isexe/mode.js"(exports2, module2) {
+    module2.exports = isexe;
+    isexe.sync = sync;
+    var fs14 = require("fs");
+    function isexe(path14, options, cb) {
+      fs14.stat(path14, function(er, stat) {
+        cb(er, er ? false : checkStat(stat, options));
+      });
+    }
+    function sync(path14, options) {
+      return checkStat(fs14.statSync(path14), options);
+    }
+    function checkStat(stat, options) {
+      return stat.isFile() && checkMode(stat, options);
+    }
+    function checkMode(stat, options) {
+      var mod = stat.mode;
+      var uid = stat.uid;
+      var gid = stat.gid;
+      var myUid = options.uid !== void 0 ? options.uid : process.getuid && process.getuid();
+      var myGid = options.gid !== void 0 ? options.gid : process.getgid && process.getgid();
+      var u = parseInt("100", 8);
+      var g = parseInt("010", 8);
+      var o = parseInt("001", 8);
+      var ug = u | g;
+      var ret = mod & o || mod & g && gid === myGid || mod & u && uid === myUid || mod & ug && myUid === 0;
+      return ret;
+    }
+  }
+});
+
+// node_modules/isexe/index.js
+var require_isexe = __commonJS({
+  "node_modules/isexe/index.js"(exports2, module2) {
+    var fs14 = require("fs");
+    var core;
+    if (process.platform === "win32" || global.TESTING_WINDOWS) {
+      core = require_windows();
+    } else {
+      core = require_mode();
+    }
+    module2.exports = isexe;
+    isexe.sync = sync;
+    function isexe(path14, options, cb) {
+      if (typeof options === "function") {
+        cb = options;
+        options = {};
+      }
+      if (!cb) {
+        if (typeof Promise !== "function") {
+          throw new TypeError("callback not provided");
+        }
+        return new Promise(function(resolve, reject) {
+          isexe(path14, options || {}, function(er, is) {
+            if (er) {
+              reject(er);
+            } else {
+              resolve(is);
+            }
+          });
+        });
+      }
+      core(path14, options || {}, function(er, is) {
+        if (er) {
+          if (er.code === "EACCES" || options && options.ignoreErrors) {
+            er = null;
+            is = false;
+          }
+        }
+        cb(er, is);
+      });
+    }
+    function sync(path14, options) {
+      try {
+        return core.sync(path14, options || {});
+      } catch (er) {
+        if (options && options.ignoreErrors || er.code === "EACCES") {
+          return false;
+        } else {
+          throw er;
+        }
+      }
+    }
+  }
+});
+
+// node_modules/which/which.js
+var require_which = __commonJS({
+  "node_modules/which/which.js"(exports2, module2) {
+    var isWindows = process.platform === "win32" || process.env.OSTYPE === "cygwin" || process.env.OSTYPE === "msys";
+    var path14 = require("path");
+    var COLON = isWindows ? ";" : ":";
+    var isexe = require_isexe();
+    var getNotFoundError = (cmd) => Object.assign(new Error(`not found: ${cmd}`), { code: "ENOENT" });
+    var getPathInfo = (cmd, opt) => {
+      const colon = opt.colon || COLON;
+      const pathEnv = cmd.match(/\//) || isWindows && cmd.match(/\\/) ? [""] : [
+        // windows always checks the cwd first
+        ...isWindows ? [process.cwd()] : [],
+        ...(opt.path || process.env.PATH || /* istanbul ignore next: very unusual */
+        "").split(colon)
+      ];
+      const pathExtExe = isWindows ? opt.pathExt || process.env.PATHEXT || ".EXE;.CMD;.BAT;.COM" : "";
+      const pathExt = isWindows ? pathExtExe.split(colon) : [""];
+      if (isWindows) {
+        if (cmd.indexOf(".") !== -1 && pathExt[0] !== "")
+          pathExt.unshift("");
+      }
+      return {
+        pathEnv,
+        pathExt,
+        pathExtExe
+      };
+    };
+    var which = (cmd, opt, cb) => {
+      if (typeof opt === "function") {
+        cb = opt;
+        opt = {};
+      }
+      if (!opt)
+        opt = {};
+      const { pathEnv, pathExt, pathExtExe } = getPathInfo(cmd, opt);
+      const found = [];
+      const step = (i) => new Promise((resolve, reject) => {
+        if (i === pathEnv.length)
+          return opt.all && found.length ? resolve(found) : reject(getNotFoundError(cmd));
+        const ppRaw = pathEnv[i];
+        const pathPart = /^".*"$/.test(ppRaw) ? ppRaw.slice(1, -1) : ppRaw;
+        const pCmd = path14.join(pathPart, cmd);
+        const p = !pathPart && /^\.[\\\/]/.test(cmd) ? cmd.slice(0, 2) + pCmd : pCmd;
+        resolve(subStep(p, i, 0));
+      });
+      const subStep = (p, i, ii) => new Promise((resolve, reject) => {
+        if (ii === pathExt.length)
+          return resolve(step(i + 1));
+        const ext = pathExt[ii];
+        isexe(p + ext, { pathExt: pathExtExe }, (er, is) => {
+          if (!er && is) {
+            if (opt.all)
+              found.push(p + ext);
+            else
+              return resolve(p + ext);
+          }
+          return resolve(subStep(p, i, ii + 1));
+        });
+      });
+      return cb ? step(0).then((res) => cb(null, res), cb) : step(0);
+    };
+    var whichSync = (cmd, opt) => {
+      opt = opt || {};
+      const { pathEnv, pathExt, pathExtExe } = getPathInfo(cmd, opt);
+      const found = [];
+      for (let i = 0; i < pathEnv.length; i++) {
+        const ppRaw = pathEnv[i];
+        const pathPart = /^".*"$/.test(ppRaw) ? ppRaw.slice(1, -1) : ppRaw;
+        const pCmd = path14.join(pathPart, cmd);
+        const p = !pathPart && /^\.[\\\/]/.test(cmd) ? cmd.slice(0, 2) + pCmd : pCmd;
+        for (let j = 0; j < pathExt.length; j++) {
+          const cur = p + pathExt[j];
+          try {
+            const is = isexe.sync(cur, { pathExt: pathExtExe });
+            if (is) {
+              if (opt.all)
+                found.push(cur);
+              else
+                return cur;
+            }
+          } catch (ex) {
+          }
+        }
+      }
+      if (opt.all && found.length)
+        return found;
+      if (opt.nothrow)
+        return null;
+      throw getNotFoundError(cmd);
+    };
+    module2.exports = which;
+    which.sync = whichSync;
+  }
+});
+
+// node_modules/path-key/index.js
+var require_path_key = __commonJS({
+  "node_modules/path-key/index.js"(exports2, module2) {
+    "use strict";
+    var pathKey = (options = {}) => {
+      const environment = options.env || process.env;
+      const platform2 = options.platform || process.platform;
+      if (platform2 !== "win32") {
+        return "PATH";
+      }
+      return Object.keys(environment).reverse().find((key) => key.toUpperCase() === "PATH") || "Path";
+    };
+    module2.exports = pathKey;
+    module2.exports.default = pathKey;
+  }
+});
+
+// node_modules/cross-spawn/lib/util/resolveCommand.js
+var require_resolveCommand = __commonJS({
+  "node_modules/cross-spawn/lib/util/resolveCommand.js"(exports2, module2) {
+    "use strict";
+    var path14 = require("path");
+    var which = require_which();
+    var getPathKey = require_path_key();
+    function resolveCommandAttempt(parsed, withoutPathExt) {
+      const env = parsed.options.env || process.env;
+      const cwd = process.cwd();
+      const hasCustomCwd = parsed.options.cwd != null;
+      const shouldSwitchCwd = hasCustomCwd && process.chdir !== void 0 && !process.chdir.disabled;
+      if (shouldSwitchCwd) {
+        try {
+          process.chdir(parsed.options.cwd);
+        } catch (err) {
+        }
+      }
+      let resolved;
+      try {
+        resolved = which.sync(parsed.command, {
+          path: env[getPathKey({ env })],
+          pathExt: withoutPathExt ? path14.delimiter : void 0
+        });
+      } catch (e) {
+      } finally {
+        if (shouldSwitchCwd) {
+          process.chdir(cwd);
+        }
+      }
+      if (resolved) {
+        resolved = path14.resolve(hasCustomCwd ? parsed.options.cwd : "", resolved);
+      }
+      return resolved;
+    }
+    function resolveCommand(parsed) {
+      return resolveCommandAttempt(parsed) || resolveCommandAttempt(parsed, true);
+    }
+    module2.exports = resolveCommand;
+  }
+});
+
+// node_modules/cross-spawn/lib/util/escape.js
+var require_escape = __commonJS({
+  "node_modules/cross-spawn/lib/util/escape.js"(exports2, module2) {
+    "use strict";
+    var metaCharsRegExp = /([()\][%!^"`<>&|;, *?])/g;
+    function escapeCommand(arg) {
+      arg = arg.replace(metaCharsRegExp, "^$1");
+      return arg;
+    }
+    function escapeArgument(arg, doubleEscapeMetaChars) {
+      arg = `${arg}`;
+      arg = arg.replace(/(?=(\\+?)?)\1"/g, '$1$1\\"');
+      arg = arg.replace(/(?=(\\+?)?)\1$/, "$1$1");
+      arg = `"${arg}"`;
+      arg = arg.replace(metaCharsRegExp, "^$1");
+      if (doubleEscapeMetaChars) {
+        arg = arg.replace(metaCharsRegExp, "^$1");
+      }
+      return arg;
+    }
+    module2.exports.command = escapeCommand;
+    module2.exports.argument = escapeArgument;
+  }
+});
+
+// node_modules/shebang-regex/index.js
+var require_shebang_regex = __commonJS({
+  "node_modules/shebang-regex/index.js"(exports2, module2) {
+    "use strict";
+    module2.exports = /^#!(.*)/;
+  }
+});
+
+// node_modules/shebang-command/index.js
+var require_shebang_command = __commonJS({
+  "node_modules/shebang-command/index.js"(exports2, module2) {
+    "use strict";
+    var shebangRegex = require_shebang_regex();
+    module2.exports = (string = "") => {
+      const match = string.match(shebangRegex);
+      if (!match) {
+        return null;
+      }
+      const [path14, argument] = match[0].replace(/#! ?/, "").split(" ");
+      const binary = path14.split("/").pop();
+      if (binary === "env") {
+        return argument;
+      }
+      return argument ? `${binary} ${argument}` : binary;
+    };
+  }
+});
+
+// node_modules/cross-spawn/lib/util/readShebang.js
+var require_readShebang = __commonJS({
+  "node_modules/cross-spawn/lib/util/readShebang.js"(exports2, module2) {
+    "use strict";
+    var fs14 = require("fs");
+    var shebangCommand = require_shebang_command();
+    function readShebang(command) {
+      const size = 150;
+      const buffer = Buffer.alloc(size);
+      let fd;
+      try {
+        fd = fs14.openSync(command, "r");
+        fs14.readSync(fd, buffer, 0, size, 0);
+        fs14.closeSync(fd);
+      } catch (e) {
+      }
+      return shebangCommand(buffer.toString());
+    }
+    module2.exports = readShebang;
+  }
+});
+
+// node_modules/cross-spawn/lib/parse.js
+var require_parse2 = __commonJS({
+  "node_modules/cross-spawn/lib/parse.js"(exports2, module2) {
+    "use strict";
+    var path14 = require("path");
+    var resolveCommand = require_resolveCommand();
+    var escape = require_escape();
+    var readShebang = require_readShebang();
+    var isWin = process.platform === "win32";
+    var isExecutableRegExp = /\.(?:com|exe)$/i;
+    var isCmdShimRegExp = /node_modules[\\/].bin[\\/][^\\/]+\.cmd$/i;
+    function detectShebang(parsed) {
+      parsed.file = resolveCommand(parsed);
+      const shebang = parsed.file && readShebang(parsed.file);
+      if (shebang) {
+        parsed.args.unshift(parsed.file);
+        parsed.command = shebang;
+        return resolveCommand(parsed);
+      }
+      return parsed.file;
+    }
+    function parseNonShell(parsed) {
+      if (!isWin) {
+        return parsed;
+      }
+      const commandFile = detectShebang(parsed);
+      const needsShell = !isExecutableRegExp.test(commandFile);
+      if (parsed.options.forceShell || needsShell) {
+        const needsDoubleEscapeMetaChars = isCmdShimRegExp.test(commandFile);
+        parsed.command = path14.normalize(parsed.command);
+        parsed.command = escape.command(parsed.command);
+        parsed.args = parsed.args.map((arg) => escape.argument(arg, needsDoubleEscapeMetaChars));
+        const shellCommand = [parsed.command].concat(parsed.args).join(" ");
+        parsed.args = ["/d", "/s", "/c", `"${shellCommand}"`];
+        parsed.command = process.env.comspec || "cmd.exe";
+        parsed.options.windowsVerbatimArguments = true;
+      }
+      return parsed;
+    }
+    function parse(command, args2, options) {
+      if (args2 && !Array.isArray(args2)) {
+        options = args2;
+        args2 = null;
+      }
+      args2 = args2 ? args2.slice(0) : [];
+      options = Object.assign({}, options);
+      const parsed = {
+        command,
+        args: args2,
+        options,
+        file: void 0,
+        original: {
+          command,
+          args: args2
+        }
+      };
+      return options.shell ? parsed : parseNonShell(parsed);
+    }
+    module2.exports = parse;
+  }
+});
+
+// node_modules/cross-spawn/lib/enoent.js
+var require_enoent = __commonJS({
+  "node_modules/cross-spawn/lib/enoent.js"(exports2, module2) {
+    "use strict";
+    var isWin = process.platform === "win32";
+    function notFoundError(original, syscall) {
+      return Object.assign(new Error(`${syscall} ${original.command} ENOENT`), {
+        code: "ENOENT",
+        errno: "ENOENT",
+        syscall: `${syscall} ${original.command}`,
+        path: original.command,
+        spawnargs: original.args
+      });
+    }
+    function hookChildProcess(cp, parsed) {
+      if (!isWin) {
+        return;
+      }
+      const originalEmit = cp.emit;
+      cp.emit = function(name, arg1) {
+        if (name === "exit") {
+          const err = verifyENOENT(arg1, parsed);
+          if (err) {
+            return originalEmit.call(cp, "error", err);
+          }
+        }
+        return originalEmit.apply(cp, arguments);
+      };
+    }
+    function verifyENOENT(status, parsed) {
+      if (isWin && status === 1 && !parsed.file) {
+        return notFoundError(parsed.original, "spawn");
+      }
+      return null;
+    }
+    function verifyENOENTSync(status, parsed) {
+      if (isWin && status === 1 && !parsed.file) {
+        return notFoundError(parsed.original, "spawnSync");
+      }
+      return null;
+    }
+    module2.exports = {
+      hookChildProcess,
+      verifyENOENT,
+      verifyENOENTSync,
+      notFoundError
+    };
+  }
+});
+
+// node_modules/cross-spawn/index.js
+var require_cross_spawn = __commonJS({
+  "node_modules/cross-spawn/index.js"(exports2, module2) {
+    "use strict";
+    var cp = require("child_process");
+    var parse = require_parse2();
+    var enoent = require_enoent();
+    function spawn(command, args2, options) {
+      const parsed = parse(command, args2, options);
+      const spawned = cp.spawn(parsed.command, parsed.args, parsed.options);
+      enoent.hookChildProcess(spawned, parsed);
+      return spawned;
+    }
+    function spawnSync(command, args2, options) {
+      const parsed = parse(command, args2, options);
+      const result = cp.spawnSync(parsed.command, parsed.args, parsed.options);
+      result.error = result.error || enoent.verifyENOENTSync(result.status, parsed);
+      return result;
+    }
+    module2.exports = spawn;
+    module2.exports.spawn = spawn;
+    module2.exports.sync = spawnSync;
+    module2.exports._parse = parse;
+    module2.exports._enoent = enoent;
+  }
+});
+
 // src/updater/standalone.ts
 var import_fs5 = __toESM(require("fs"), 1);
 var import_path13 = __toESM(require("path"), 1);
 var import_os7 = __toESM(require("os"), 1);
 var import_semver2 = __toESM(require_semver2(), 1);
 
-// src/config/index.ts
-var import_fs_extra = __toESM(require_lib(), 1);
+// src/utils/logger.ts
+var import_fs = __toESM(require("fs"), 1);
 var import_path = __toESM(require("path"), 1);
 var import_os = __toESM(require("os"), 1);
-var CONFIG_DIR = import_path.default.join(import_os.default.homedir(), ".dev-pomogator");
-var CONFIG_FILE = import_path.default.join(CONFIG_DIR, "config.json");
+var LOG_DIR = import_path.default.join(import_os.default.homedir(), ".dev-pomogator", "logs");
+var MAX_LOG_SIZE = 1024 * 1024;
+function createLogger(filename) {
+  const logFile = import_path.default.join(LOG_DIR, filename);
+  function log(level, message) {
+    try {
+      import_fs.default.mkdirSync(LOG_DIR, { recursive: true });
+      if (import_fs.default.existsSync(logFile)) {
+        const stats = import_fs.default.statSync(logFile);
+        if (stats.size > MAX_LOG_SIZE) {
+          import_fs.default.renameSync(logFile, logFile + ".old");
+        }
+      }
+      const timestamp = (/* @__PURE__ */ new Date()).toISOString();
+      const line = `[${timestamp}] [${level}] ${message}
+`;
+      import_fs.default.appendFileSync(logFile, line);
+    } catch {
+    }
+  }
+  return {
+    info: (msg) => log("INFO", msg),
+    warn: (msg) => log("WARN", msg),
+    error: (msg) => log("ERROR", msg)
+  };
+}
+function getErrorMessage(error) {
+  return error instanceof Error ? error.message : String(error);
+}
+function formatErrorChain(error) {
+  if (!(error instanceof Error))
+    return String(error);
+  const parts = [];
+  let current = error;
+  let depth = 0;
+  while (current && depth < 10) {
+    const prefix = depth === 0 ? "" : "Caused by: ";
+    parts.push(`${prefix}${current.message}`);
+    if (current.stack) {
+      const stackLines = current.stack.split("\n").slice(1).join("\n");
+      if (stackLines.trim())
+        parts.push(stackLines);
+    }
+    current = current.cause instanceof Error ? current.cause : void 0;
+    depth++;
+  }
+  return parts.join("\n");
+}
+var logger = createLogger("update.log");
+
+// src/config/index.ts
+var import_fs_extra = __toESM(require_lib(), 1);
+var import_path2 = __toESM(require("path"), 1);
+var import_os2 = __toESM(require("os"), 1);
+var CONFIG_DIR = import_path2.default.join(import_os2.default.homedir(), ".dev-pomogator");
+var CONFIG_FILE = import_path2.default.join(CONFIG_DIR, "config.json");
 async function loadConfig() {
   try {
     if (await import_fs_extra.default.pathExists(CONFIG_FILE)) {
@@ -4290,7 +4841,7 @@ function normalizeConfig(config) {
 }
 async function saveConfig(config) {
   await import_fs_extra.default.ensureDir(CONFIG_DIR);
-  const tempFile = import_path.default.join(CONFIG_DIR, "config.json.tmp");
+  const tempFile = import_path2.default.join(CONFIG_DIR, "config.json.tmp");
   await import_fs_extra.default.writeJson(tempFile, config, { spaces: 2 });
   if (process.platform !== "win32") {
     await import_fs_extra.default.chmod(tempFile, 384);
@@ -4320,7 +4871,7 @@ function shouldCheckUpdate(config) {
 
 // src/updater/github.ts
 var import_fs_extra2 = __toESM(require_lib(), 1);
-var import_path2 = __toESM(require("path"), 1);
+var import_path3 = __toESM(require("path"), 1);
 var RAW_BASE = "https://raw.githubusercontent.com/stgmt/dev-pomogator/main";
 var MAX_RETRIES = 3;
 var RETRY_DELAY_MS = 2e3;
@@ -4333,10 +4884,10 @@ async function readLocalUpdateFile(relativePath) {
   if (!sourceRoot) {
     return null;
   }
-  const base = import_path2.default.resolve(sourceRoot);
-  const resolved = import_path2.default.resolve(base, relativePath);
-  const relative = import_path2.default.relative(base, resolved);
-  if (relative.startsWith("..") || import_path2.default.isAbsolute(relative)) {
+  const base = import_path3.default.resolve(sourceRoot);
+  const resolved = import_path3.default.resolve(base, relativePath);
+  const relative = import_path3.default.relative(base, resolved);
+  if (relative.startsWith("..") || import_path3.default.isAbsolute(relative)) {
     return null;
   }
   if (!await import_fs_extra2.default.pathExists(resolved)) {
@@ -4380,6 +4931,16 @@ async function fetchExtensionManifest(name) {
   return response.json();
 }
 async function downloadExtensionFile(extensionName, relativePath) {
+  if (relativePath.startsWith(".claude/rules/") || relativePath.startsWith(".claude/commands/") || relativePath.startsWith(".claude/skills/")) {
+    const localFile2 = await readLocalUpdateFile(relativePath);
+    if (localFile2 !== null)
+      return localFile2;
+    const url2 = `${RAW_BASE}/${relativePath}`;
+    const response2 = await fetchWithRetry(url2);
+    if (!response2)
+      return null;
+    return response2.text();
+  }
   const remotePath = relativePath.replace(/^\.dev-pomogator\//, "").replace(/^\.claude\//, "");
   const localFile = await readLocalUpdateFile(`extensions/${extensionName}/${remotePath}`);
   if (localFile !== null) {
@@ -4394,14 +4955,14 @@ async function downloadExtensionFile(extensionName, relativePath) {
 
 // src/updater/lock.ts
 var import_fs_extra3 = __toESM(require_lib(), 1);
-var import_path3 = __toESM(require("path"), 1);
-var import_os2 = __toESM(require("os"), 1);
-var LOCK_FILE = import_path3.default.join(import_os2.default.homedir(), ".dev-pomogator", "update.lock");
+var import_path4 = __toESM(require("path"), 1);
+var import_os3 = __toESM(require("os"), 1);
+var LOCK_FILE = import_path4.default.join(import_os3.default.homedir(), ".dev-pomogator", "update.lock");
 var LOCK_STALE = LOCK_FILE + ".stale";
 var LOCK_TIMEOUT = 60 * 1e3;
 async function tryCreateLock() {
   try {
-    await import_fs_extra3.default.ensureDir(import_path3.default.dirname(LOCK_FILE));
+    await import_fs_extra3.default.ensureDir(import_path4.default.dirname(LOCK_FILE));
     await import_fs_extra3.default.writeFile(LOCK_FILE, process.pid.toString(), { flag: "wx" });
     return true;
   } catch (error) {
@@ -4466,13 +5027,14 @@ async function releaseLock() {
 
 // src/installer/extensions.ts
 var import_fs_extra4 = __toESM(require_lib(), 1);
-var import_path5 = __toESM(require("path"), 1);
+var import_path6 = __toESM(require("path"), 1);
 var import_child_process = require("child_process");
+var import_cross_spawn = __toESM(require_cross_spawn(), 1);
 var import_url = require("url");
 
 // src/utils/msys.ts
-var import_fs = __toESM(require("fs"), 1);
-var import_path4 = __toESM(require("path"), 1);
+var import_fs2 = __toESM(require("fs"), 1);
+var import_path5 = __toESM(require("path"), 1);
 function getMsysSafeEnv(baseEnv) {
   const env = { ...baseEnv ?? process.env };
   if (process.platform === "win32") {
@@ -4484,11 +5046,11 @@ function getMsysSafeEnv(baseEnv) {
 function detectMangledArtifacts(projectRoot) {
   const artifacts = [];
   try {
-    const entries = import_fs.default.readdirSync(projectRoot, { withFileTypes: true });
+    const entries = import_fs2.default.readdirSync(projectRoot, { withFileTypes: true });
     for (const entry of entries) {
       if (entry.isDirectory() && /^[A-Za-z]:$/.test(entry.name)) {
-        const nested = import_path4.default.join(projectRoot, entry.name, "Program Files", "Git");
-        if (import_fs.default.existsSync(nested)) {
+        const nested = import_path5.default.join(projectRoot, entry.name, "Program Files", "Git");
+        if (import_fs2.default.existsSync(nested)) {
           artifacts.push(entry.name);
         }
       }
@@ -4499,7 +5061,7 @@ function detectMangledArtifacts(projectRoot) {
 }
 
 // src/installer/extensions.ts
-var __dirname = import_path5.default.dirname((0, import_url.fileURLToPath)(importMetaUrl));
+var __dirname = import_path6.default.dirname((0, import_url.fileURLToPath)(importMetaUrl));
 var PostUpdateHookError = class extends Error {
   constructor(extensionName, message) {
     super(`Post-update hook failed for ${extensionName}: ${message}`);
@@ -4508,10 +5070,10 @@ var PostUpdateHookError = class extends Error {
 };
 function execShellCommand(command, opts) {
   return new Promise((resolve, reject) => {
-    const child = (0, import_child_process.spawn)(command, {
+    const parts = command.split(/\s+/);
+    const child = (0, import_cross_spawn.default)(parts[0], parts.slice(1), {
       cwd: opts.cwd,
       stdio: opts.stdio,
-      shell: true,
       env: opts.env
     });
     let stderr = "";
@@ -4570,7 +5132,7 @@ function cleanNpxCache() {
       timeout: 1e4,
       stdio: ["pipe", "pipe", "pipe"]
     }).trim();
-    const npxDir = import_path5.default.join(cache, "_npx");
+    const npxDir = import_path6.default.join(cache, "_npx");
     if (import_fs_extra4.default.existsSync(npxDir)) {
       import_fs_extra4.default.rmSync(npxDir, { recursive: true, force: true });
       console.log("  \u21BB Cleaned corrupted npx cache, retrying...");
@@ -4598,12 +5160,12 @@ function forceRemoveDir(dirPath) {
 var STALE_NPM_DIR_PATTERN = /-.{8,}$/;
 function cleanStaleNodeModulesDirs(cwd) {
   try {
-    const nodeModulesDir = import_path5.default.join(cwd, "node_modules");
+    const nodeModulesDir = import_path6.default.join(cwd, "node_modules");
     const entries = import_fs_extra4.default.readdirSync(nodeModulesDir, { withFileTypes: true });
     for (const entry of entries) {
       if (entry.isDirectory() && entry.name.startsWith(".") && STALE_NPM_DIR_PATTERN.test(entry.name)) {
         try {
-          forceRemoveDir(import_path5.default.join(nodeModulesDir, entry.name));
+          forceRemoveDir(import_path6.default.join(nodeModulesDir, entry.name));
           console.log(`  \u21BB Cleaned stale temp dir: node_modules/${entry.name}`);
         } catch (e) {
           console.log(`  \u26A0 Could not remove stale dir node_modules/${entry.name}: ${e instanceof Error ? e.message : e}`);
@@ -4681,7 +5243,7 @@ async function isModifiedByUser(filePath, storedHash) {
 
 // src/updater/backup.ts
 var import_fs_extra6 = __toESM(require_lib(), 1);
-var import_path6 = __toESM(require("path"), 1);
+var import_path7 = __toESM(require("path"), 1);
 
 // src/constants.ts
 var RULES_SUBFOLDER = "pomogator";
@@ -4689,10 +5251,10 @@ var USER_OVERRIDES_DIR = ".dev-pomogator/.user-overrides";
 
 // src/updater/backup.ts
 function resolveWithinDir(base, relativePath) {
-  const resolvedBase = import_path6.default.resolve(base);
-  const resolved = import_path6.default.resolve(resolvedBase, relativePath);
-  const rel = import_path6.default.relative(resolvedBase, resolved);
-  if (rel.startsWith("..") || import_path6.default.isAbsolute(rel))
+  const resolvedBase = import_path7.default.resolve(base);
+  const resolved = import_path7.default.resolve(resolvedBase, relativePath);
+  const rel = import_path7.default.relative(resolvedBase, resolved);
+  if (rel.startsWith("..") || import_path7.default.isAbsolute(rel))
     return null;
   return resolved;
 }
@@ -4706,14 +5268,14 @@ async function backupUserFile(projectPath, relativePath) {
     if (!await import_fs_extra6.default.pathExists(sourcePath))
       return null;
     const backupPath = resolveWithinDir(
-      import_path6.default.join(projectPath, USER_OVERRIDES_DIR),
+      import_path7.default.join(projectPath, USER_OVERRIDES_DIR),
       relativePath
     );
     if (!backupPath) {
       console.log(`  \u26A0 Skipping backup \u2014 backup path outside project: ${relativePath}`);
       return null;
     }
-    await import_fs_extra6.default.ensureDir(import_path6.default.dirname(backupPath));
+    await import_fs_extra6.default.ensureDir(import_path7.default.dirname(backupPath));
     await import_fs_extra6.default.copy(sourcePath, backupPath, { overwrite: true });
     return backupPath;
   } catch (error) {
@@ -4725,7 +5287,7 @@ async function writeUpdateReport(modifications) {
   if (modifications.length === 0)
     return;
   const configDir = getConfigDir();
-  const reportPath = import_path6.default.join(configDir, "last-update-report.md");
+  const reportPath = import_path7.default.join(configDir, "last-update-report.md");
   const timestamp = (/* @__PURE__ */ new Date()).toISOString();
   const lines = [
     "# Update Report",
@@ -4749,13 +5311,13 @@ async function writeUpdateReport(modifications) {
 
 // src/updater/index.ts
 var import_fs_extra9 = __toESM(require_lib(), 1);
-var import_path10 = __toESM(require("path"), 1);
-var import_os4 = __toESM(require("os"), 1);
+var import_path11 = __toESM(require("path"), 1);
+var import_os5 = __toESM(require("os"), 1);
 var import_semver = __toESM(require_semver2(), 1);
 
 // src/installer/shared.ts
 var import_fs_extra7 = __toESM(require_lib(), 1);
-var import_path7 = __toESM(require("path"), 1);
+var import_path8 = __toESM(require("path"), 1);
 function makePortableTsxCommand(scriptPath, args2) {
   const escaped = scriptPath.replace(/\\/g, "/");
   const runner = `node -e "require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner.js'))"`;
@@ -4781,7 +5343,7 @@ async function ensureExecutableShellScripts(targetPath) {
   if (stat.isDirectory()) {
     const items = await import_fs_extra7.default.readdir(targetPath, { withFileTypes: true });
     for (const item of items) {
-      await ensureExecutableShellScripts(import_path7.default.join(targetPath, item.name));
+      await ensureExecutableShellScripts(import_path8.default.join(targetPath, item.name));
     }
     return;
   }
@@ -4793,10 +5355,10 @@ async function ensureExecutableShellScripts(targetPath) {
 
 // src/utils/atomic-json.ts
 var import_fs_extra8 = __toESM(require_lib(), 1);
-var import_fs2 = __toESM(require("fs"), 1);
-var import_path8 = __toESM(require("path"), 1);
+var import_fs3 = __toESM(require("fs"), 1);
+var import_path9 = __toESM(require("path"), 1);
 async function writeJsonAtomic(filePath, data) {
-  await import_fs_extra8.default.ensureDir(import_path8.default.dirname(filePath));
+  await import_fs_extra8.default.ensureDir(import_path9.default.dirname(filePath));
   try {
     const content = await import_fs_extra8.default.readFile(filePath, "utf-8");
     JSON.parse(content);
@@ -4832,21 +5394,21 @@ async function readJsonSafe(filePath, fallback = {}) {
   return fallback;
 }
 function writeJsonAtomicSync(filePath, data) {
-  import_fs2.default.mkdirSync(import_path8.default.dirname(filePath), { recursive: true });
+  import_fs3.default.mkdirSync(import_path9.default.dirname(filePath), { recursive: true });
   try {
-    const content = import_fs2.default.readFileSync(filePath, "utf-8");
+    const content = import_fs3.default.readFileSync(filePath, "utf-8");
     JSON.parse(content);
-    import_fs2.default.writeFileSync(filePath + ".bak", content, "utf-8");
+    import_fs3.default.writeFileSync(filePath + ".bak", content, "utf-8");
   } catch {
   }
   const tempFile = filePath + ".tmp";
-  import_fs2.default.writeFileSync(tempFile, JSON.stringify(data, null, 2));
-  import_fs2.default.renameSync(tempFile, filePath);
+  import_fs3.default.writeFileSync(tempFile, JSON.stringify(data, null, 2));
+  import_fs3.default.renameSync(tempFile, filePath);
 }
 
 // src/utils/statusline.ts
-var import_os3 = __toESM(require("os"), 1);
-var import_path9 = __toESM(require("path"), 1);
+var import_os4 = __toESM(require("os"), 1);
+var import_path10 = __toESM(require("path"), 1);
 var MANAGED_STATUSLINE_DIR = ".dev-pomogator/tools/test-statusline/";
 var LEGACY_RENDER_SCRIPT = "statusline_render.cjs";
 var LEGACY_WRAPPER_MARKER = "statusline_wrapper.js";
@@ -4927,8 +5489,13 @@ function extractUserCommandFromLegacyWrapper(command) {
     return null;
   return decodeBase64Strict(encodedUserCommand);
 }
+var VALID_STATUSLINE_TYPES = /* @__PURE__ */ new Set(["command"]);
 async function writeGlobalStatusLine(statusLineConfig, preloadedSettings) {
-  const settingsPath = import_path9.default.join(import_os3.default.homedir(), ".claude", "settings.json");
+  if (!VALID_STATUSLINE_TYPES.has(statusLineConfig.type)) {
+    console.warn(`  \u26A0 statusLine.type "${statusLineConfig.type}" is not valid for Claude Code (expected: ${[...VALID_STATUSLINE_TYPES].join(", ")}), using "command"`);
+    statusLineConfig = { ...statusLineConfig, type: "command" };
+  }
+  const settingsPath = import_path10.default.join(import_os4.default.homedir(), ".claude", "settings.json");
   const settings = preloadedSettings ?? await readJsonSafe(settingsPath, {});
   const resolved = resolveClaudeStatusLine({
     globalStatusLine: settings.statusLine,
@@ -4991,13 +5558,13 @@ function normalizeRelativePath(value) {
 }
 function resolveWithinProject(projectPath, relativePath) {
   const normalized = normalizeRelativePath(relativePath);
-  if (import_path10.default.isAbsolute(normalized)) {
+  if (import_path11.default.isAbsolute(normalized)) {
     return null;
   }
-  const base = import_path10.default.resolve(projectPath);
-  const resolved = import_path10.default.resolve(base, normalized);
-  const relative = import_path10.default.relative(base, resolved);
-  if (relative.startsWith("..") || import_path10.default.isAbsolute(relative)) {
+  const base = import_path11.default.resolve(projectPath);
+  const resolved = import_path11.default.resolve(base, normalized);
+  const relative = import_path11.default.relative(base, resolved);
+  if (relative.startsWith("..") || import_path11.default.isAbsolute(relative)) {
     return null;
   }
   return resolved;
@@ -5055,18 +5622,18 @@ async function removeStaleFiles(projectPath, previousItems = [], next = [], exte
 async function updateCommandFiles(extensionName, platform2, files, projectPath, previousItems) {
   if (files.length === 0)
     return { written: [], hadFailures: false, backedUp: [] };
-  const platformDir = platform2 === "claude" ? ".claude" : ".cursor";
-  const destDir = import_path10.default.join(projectPath, platformDir, "commands");
+  const platformDir = ".claude";
+  const destDir = import_path11.default.join(projectPath, platformDir, "commands");
   await import_fs_extra9.default.ensureDir(destDir);
   const written = [];
   const backedUp = [];
   let hadFailures = false;
   for (const relativePath of files) {
     const content = await downloadExtensionFile(extensionName, relativePath);
-    const fileName = import_path10.default.basename(relativePath);
-    const destFile = import_path10.default.join(destDir, fileName);
+    const fileName = import_path11.default.basename(relativePath);
+    const destFile = import_path11.default.join(destDir, fileName);
     const relativeDest = normalizeRelativePath(
-      import_path10.default.join(platformDir, "commands", fileName)
+      import_path11.default.join(platformDir, "commands", fileName)
     );
     if (!content) {
       console.log(`  \u26A0 Failed to download command: ${relativePath}`);
@@ -5089,19 +5656,14 @@ async function updateCommandFiles(extensionName, platform2, files, projectPath, 
 async function updateRuleFiles(extensionName, platform2, files, projectPath, previousItems) {
   if (files.length === 0)
     return { written: [], hadFailures: false, backedUp: [] };
-  const platformDir = platform2 === "claude" ? ".claude" : ".cursor";
-  const destDir = import_path10.default.join(projectPath, platformDir, "rules", RULES_SUBFOLDER);
-  await import_fs_extra9.default.ensureDir(destDir);
   const written = [];
   const backedUp = [];
   let hadFailures = false;
   for (const relativePath of files) {
     const content = await downloadExtensionFile(extensionName, relativePath);
-    const fileName = import_path10.default.basename(relativePath);
-    const destFile = import_path10.default.join(destDir, fileName);
-    const relativeDest = normalizeRelativePath(
-      import_path10.default.join(platformDir, "rules", RULES_SUBFOLDER, fileName)
-    );
+    const relativeDest = normalizeRelativePath(relativePath);
+    const destFile = import_path11.default.join(projectPath, relativePath);
+    await import_fs_extra9.default.ensureDir(import_path11.default.dirname(destFile));
     if (!content) {
       console.log(`  \u26A0 Failed to download rule: ${relativePath}`);
       hadFailures = true;
@@ -5120,6 +5682,48 @@ async function updateRuleFiles(extensionName, platform2, files, projectPath, pre
   }
   return { written, hadFailures, backedUp };
 }
+async function migrateRulesNamespace(installed, projectPath) {
+  if (!installed.managed)
+    return;
+  const managed = installed.managed[projectPath];
+  if (!managed?.rules)
+    return;
+  let changed = false;
+  for (let i = 0; i < managed.rules.length; i++) {
+    const entry = managed.rules[i];
+    const entryPath = typeof entry === "string" ? entry : entry.path;
+    const oldPrefix = `.claude/rules/${RULES_SUBFOLDER}/`;
+    if (!entryPath.startsWith(oldPrefix))
+      continue;
+    const fileName = import_path11.default.basename(entryPath);
+    const newPath = `.claude/rules/${installed.name}/${fileName}`;
+    const oldFile = import_path11.default.join(projectPath, entryPath);
+    const newFile = import_path11.default.join(projectPath, newPath);
+    if (!await import_fs_extra9.default.pathExists(oldFile))
+      continue;
+    if (await import_fs_extra9.default.pathExists(newFile))
+      continue;
+    await import_fs_extra9.default.ensureDir(import_path11.default.dirname(newFile));
+    await import_fs_extra9.default.move(oldFile, newFile);
+    if (typeof entry === "string") {
+      managed.rules[i] = newPath;
+    } else {
+      entry.path = newPath;
+    }
+    changed = true;
+    console.log(`  \u{1F4E6} Migrated rule: ${oldPrefix}${fileName} \u2192 ${newPath}`);
+  }
+  if (changed) {
+    const pomDir = import_path11.default.join(projectPath, ".claude", "rules", RULES_SUBFOLDER);
+    try {
+      const remaining = await import_fs_extra9.default.readdir(pomDir);
+      if (remaining.length === 0) {
+        await import_fs_extra9.default.remove(pomDir);
+      }
+    } catch {
+    }
+  }
+}
 async function updateToolFiles(extensionName, toolFiles, projectPath, previousItems) {
   const allFiles = Object.values(toolFiles).flat();
   if (allFiles.length === 0)
@@ -5135,7 +5739,7 @@ async function updateToolFiles(extensionName, toolFiles, projectPath, previousIt
       hadFailures = true;
       continue;
     }
-    await import_fs_extra9.default.ensureDir(import_path10.default.dirname(destFile));
+    await import_fs_extra9.default.ensureDir(import_path11.default.dirname(destFile));
     const normalizedPath = normalizeRelativePath(relativePath);
     if (!content) {
       console.log(`  \u26A0 Failed to download tool file: ${relativePath}`);
@@ -5171,7 +5775,7 @@ async function updateSkillFiles(extensionName, skillFiles, projectPath, previous
       hadFailures = true;
       continue;
     }
-    await import_fs_extra9.default.ensureDir(import_path10.default.dirname(destFile));
+    await import_fs_extra9.default.ensureDir(import_path11.default.dirname(destFile));
     const normalizedPath = normalizeRelativePath(relativePath);
     if (!content) {
       console.log(`  \u26A0 Failed to download skill file: ${relativePath}`);
@@ -5191,73 +5795,8 @@ async function updateSkillFiles(extensionName, skillFiles, projectPath, previous
   }
   return { written, hadFailures, backedUp };
 }
-async function updateCursorHooksForProject(repoRoot, hooks, previousManagedHooks = {}) {
-  const hooksDir = import_path10.default.join(import_os4.default.homedir(), ".cursor", "hooks");
-  const hooksFile = import_path10.default.join(hooksDir, "hooks.json");
-  const hasNewHooks = Object.keys(hooks).length > 0;
-  if (!hasNewHooks && Object.keys(previousManagedHooks).length === 0) {
-    return {};
-  }
-  let existingHooks = { version: 1, hooks: {} };
-  if (await import_fs_extra9.default.pathExists(hooksFile)) {
-    try {
-      existingHooks = await import_fs_extra9.default.readJson(hooksFile);
-    } catch {
-    }
-  }
-  for (const eventName of Object.keys(existingHooks.hooks)) {
-    existingHooks.hooks[eventName] = existingHooks.hooks[eventName].filter(
-      (h) => !h.command.includes(".dev-pomogator/tools/") && !h.command.includes(".dev-pomogator\\\\tools\\\\") && !h.command.includes(".dev-pomogator\\tools\\")
-    );
-  }
-  const nextManagedHooks = {};
-  const nextAbsoluteByEvent = {};
-  for (const [eventName, rawHook] of Object.entries(hooks)) {
-    const command = typeof rawHook === "string" ? rawHook : rawHook.command;
-    if (!nextManagedHooks[eventName]) {
-      nextManagedHooks[eventName] = [];
-    }
-    nextManagedHooks[eventName].push(command);
-    const absoluteCommand = replaceNpxTsxWithPortable(resolveHookToolPaths(command, repoRoot));
-    if (!nextAbsoluteByEvent[eventName]) {
-      nextAbsoluteByEvent[eventName] = [];
-    }
-    nextAbsoluteByEvent[eventName].push(absoluteCommand.replace(/\\/g, "\\\\"));
-  }
-  for (const [eventName, commands] of Object.entries(nextAbsoluteByEvent)) {
-    if (!existingHooks.hooks[eventName]) {
-      existingHooks.hooks[eventName] = [];
-    }
-    for (const escapedCommand of commands) {
-      const exists = existingHooks.hooks[eventName].some(
-        (h) => h.command === escapedCommand
-      );
-      if (!exists) {
-        existingHooks.hooks[eventName].push({ command: escapedCommand });
-      }
-    }
-  }
-  for (const [eventName, commands] of Object.entries(previousManagedHooks)) {
-    const existing = existingHooks.hooks[eventName];
-    if (!existing) {
-      continue;
-    }
-    const nextSet = new Set(nextAbsoluteByEvent[eventName] ?? []);
-    const previousAbsolute = commands.map(
-      (cmd) => resolveHookToolPaths(cmd, repoRoot).replace(/\\/g, "\\\\")
-    );
-    const removeSet = new Set(previousAbsolute.filter((command) => !nextSet.has(command)));
-    if (removeSet.size === 0) {
-      continue;
-    }
-    existingHooks.hooks[eventName] = existing.filter((hook) => !removeSet.has(hook.command));
-  }
-  await import_fs_extra9.default.ensureDir(hooksDir);
-  await writeJsonAtomic(hooksFile, existingHooks);
-  return nextManagedHooks;
-}
 async function updateClaudeHooksForProject(repoRoot, hooks, previousManagedHooks = {}) {
-  const settingsPath = import_path10.default.join(repoRoot, ".claude", "settings.json");
+  const settingsPath = import_path11.default.join(repoRoot, ".claude", "settings.json");
   const hasNewHooks = Object.keys(hooks).length > 0;
   if (!hasNewHooks && Object.keys(previousManagedHooks).length === 0) {
     return {};
@@ -5326,7 +5865,7 @@ async function updateClaudeStatusLineGlobal(statusLineConfig) {
   await writeGlobalStatusLine(statusLineConfig);
 }
 async function cleanupLegacyStatusLine() {
-  const settingsPath = import_path10.default.join(import_os4.default.homedir(), ".claude", "settings.json");
+  const settingsPath = import_path11.default.join(import_os5.default.homedir(), ".claude", "settings.json");
   const settings = await readJsonSafe(settingsPath, {});
   const statusLine = settings.statusLine;
   if (!statusLine?.command)
@@ -5338,7 +5877,7 @@ async function cleanupLegacyStatusLine() {
   }
 }
 async function checkUpdate(options = {}) {
-  const { force = false, silent = false, platform: platform2 } = options;
+  const { force = false, platform: platform2 } = options;
   if (!await acquireLock()) {
     return false;
   }
@@ -5367,12 +5906,14 @@ async function checkUpdate(options = {}) {
         if (!import_semver.default.gt(remote.version, installed.version)) {
           continue;
         }
-        const platformFiles = remote.files?.[installed.platform] ?? [];
-        const commandFiles = platformFiles.length > 0 ? platformFiles : [`${installed.platform}/commands/${installed.name}.md`];
-        const ruleFiles = remote.rules?.[installed.platform] ?? [];
+        const commandFiles = remote.commandFiles?.[installed.platform] ?? [];
+        const ruleFiles = remote.ruleFiles?.[installed.platform] ?? [];
         const toolFiles = remote.toolFiles ?? {};
         const skillFiles = installed.platform === "claude" ? remote.skillFiles ?? {} : {};
         const hooks = remote.hooks?.[installed.platform] ?? {};
+        for (const projectPath of installed.projectPaths) {
+          await migrateRulesNamespace(installed, projectPath);
+        }
         for (const projectPath of installed.projectPaths) {
           try {
             const managedEntry = ensureManagedEntry(installed, projectPath);
@@ -5429,10 +5970,10 @@ async function checkUpdate(options = {}) {
             );
             managedEntry.skills = skillResult.written;
             const previousHooks = managedEntry.hooks ?? {};
-            const updatedHooks = installed.platform === "cursor" ? await updateCursorHooksForProject(projectPath, hooks, previousHooks) : await updateClaudeHooksForProject(projectPath, hooks, previousHooks);
+            const updatedHooks = await updateClaudeHooksForProject(projectPath, hooks, previousHooks);
             managedEntry.hooks = updatedHooks;
-            if (installed.platform === "claude") {
-              const projectSettingsPath = import_path10.default.join(projectPath, ".claude", "settings.json");
+            {
+              const projectSettingsPath = import_path11.default.join(projectPath, ".claude", "settings.json");
               const projectSettings = await readJsonSafe(projectSettingsPath, {});
               if (projectSettings.statusLine) {
                 delete projectSettings.statusLine;
@@ -5460,6 +6001,8 @@ async function checkUpdate(options = {}) {
         if (error instanceof PostUpdateHookError) {
           throw error;
         }
+        console.log(`  \u26A0 Update failed for ${installed.name}: ${getErrorMessage(error)}`);
+        logger.error(`Extension ${installed.name} update failed: ${formatErrorChain(error)}`);
       }
     }
     const scannedPaths = /* @__PURE__ */ new Set();
@@ -5493,40 +6036,6 @@ async function checkUpdate(options = {}) {
 var import_fs4 = __toESM(require("fs"), 1);
 var import_path12 = __toESM(require("path"), 1);
 var import_os6 = __toESM(require("os"), 1);
-
-// src/utils/logger.ts
-var import_fs3 = __toESM(require("fs"), 1);
-var import_path11 = __toESM(require("path"), 1);
-var import_os5 = __toESM(require("os"), 1);
-var LOG_DIR = import_path11.default.join(import_os5.default.homedir(), ".dev-pomogator", "logs");
-var MAX_LOG_SIZE = 1024 * 1024;
-function createLogger(filename) {
-  const logFile = import_path11.default.join(LOG_DIR, filename);
-  function log(level, message) {
-    try {
-      import_fs3.default.mkdirSync(LOG_DIR, { recursive: true });
-      if (import_fs3.default.existsSync(logFile)) {
-        const stats = import_fs3.default.statSync(logFile);
-        if (stats.size > MAX_LOG_SIZE) {
-          import_fs3.default.renameSync(logFile, logFile + ".old");
-        }
-      }
-      const timestamp = (/* @__PURE__ */ new Date()).toISOString();
-      const line = `[${timestamp}] [${level}] ${message}
-`;
-      import_fs3.default.appendFileSync(logFile, line);
-    } catch {
-    }
-  }
-  return {
-    info: (msg) => log("INFO", msg),
-    warn: (msg) => log("WARN", msg),
-    error: (msg) => log("ERROR", msg)
-  };
-}
-var logger = createLogger("update.log");
-
-// src/updater/hook-migration.ts
 var CONFIG_DIR2 = import_path12.default.join(import_os6.default.homedir(), ".dev-pomogator");
 var CONFIG_FILE2 = import_path12.default.join(CONFIG_DIR2, "config.json");
 var OLD_HOOK_RE = /\bnpx\s+tsx\s+[."']?\.?dev-pomogator\/tools\//;
@@ -5596,9 +6105,8 @@ function migrateProjectSettings(projectPath) {
 var CONFIG_DIR3 = import_path13.default.join(import_os7.default.homedir(), ".dev-pomogator");
 var CONFIG_FILE3 = import_path13.default.join(CONFIG_DIR3, "config.json");
 var args = process.argv.slice(2);
-var isClaudeCode = args.includes("--claude");
 var isCheckOnly = args.includes("--check-only");
-var platform = isClaudeCode ? "claude" : "cursor";
+var platform = "claude";
 function loadConfig2() {
   try {
     if (import_fs5.default.existsSync(CONFIG_FILE3)) {
@@ -5653,7 +6161,7 @@ async function checkOnly() {
   }
   if (outdated.length > 0) {
     const details = outdated.map((e) => `${e.name}: ${e.current} \u2192 ${e.latest}`).join(", ");
-    const cmd = platform === "claude" ? "npx github:stgmt/dev-pomogator --claude --all" : "npx github:stgmt/dev-pomogator --cursor --all";
+    const cmd = "npx github:stgmt/dev-pomogator --claude --all";
     process.stderr.write(`
 \u26A0\uFE0F  dev-pomogator update available (${details})
    Run: ${cmd}
@@ -5667,7 +6175,8 @@ async function main() {
     return;
   }
   logger.info(`=== Update check started (${platform}) ===`);
-  await migrateOldProjectHooks(platform).catch(() => {
+  await migrateOldProjectHooks(platform).catch((err) => {
+    logger.warn(`Hook migration failed: ${getErrorMessage(err)}`);
   });
   const config = loadConfig2();
   if (!shouldUpdate(config)) {
@@ -5676,7 +6185,7 @@ async function main() {
   }
   logger.info("Cooldown expired, checking for updates...");
   try {
-    const updated = await checkUpdate({ silent: true, platform });
+    const updated = await checkUpdate({ platform });
     if (updated) {
       logger.info(`Extensions updated successfully (${platform})`);
     } else {

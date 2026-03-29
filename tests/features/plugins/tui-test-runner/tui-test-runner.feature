@@ -178,6 +178,22 @@ Feature: PLUGIN012_TUI_Test_Runner
     Then launcher should report error message to stderr
     And launcher should exit with code 0
 
+  # @feature14
+  Scenario: Wrapper spawns npx child commands cross-platform with shell resolution
+    Given wrapper is configured with TEST_STATUSLINE_SESSION
+    And child command is "npx --version"
+    When wrapper runs the child command with shell resolution
+    Then wrapper should complete with exit code 0
+    And stdout should contain a semver version
+
+  # @feature14
+  Scenario: Passthrough spawns npx child commands cross-platform
+    Given wrapper is configured WITHOUT TEST_STATUSLINE_SESSION
+    And child command is "npx --version"
+    When wrapper runs in passthrough mode with shell resolution
+    Then wrapper should complete with exit code 0
+    And stdout should contain a semver version
+
   # @feature13
   Scenario: Dispatch builds correct wrapper command with framework argument
     Given a test dispatch configuration with framework "pytest" and filter "auth"

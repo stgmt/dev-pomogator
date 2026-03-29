@@ -1,0 +1,11 @@
+{
+  "eval_id": 3,
+  "run_type": "without_skill",
+  "command": "npm run test:e2e",
+  "expectations": [
+    {"text": "uses-jest", "passed": false, "evidence": "Ignores --framework jest, falls back to npm run test:e2e (vitest)"},
+    {"text": "no-vitest-in-command", "passed": true, "evidence": "No explicit vitest in command (but internally runs vitest)"},
+    {"text": "uses-wrapper", "passed": false, "evidence": "No test_runner_wrapper.sh"},
+    {"text": "uses-docker", "passed": false, "evidence": "npm run test:e2e internally uses docker but not explicit in command"}
+  ]
+}

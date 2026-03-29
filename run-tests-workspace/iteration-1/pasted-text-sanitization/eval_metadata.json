@@ -1,0 +1,27 @@
+{
+  "eval_id": 4,
+  "eval_name": "pasted-text-sanitization",
+  "prompt": "/run-tests [Pasted text from terminal]\n\u001b[32m✓\u001b[0m auth test passed\nsome garbage here\nstatusline",
+  "assertions": [
+    {
+      "name": "warns-about-paste",
+      "description": "Warns user about pasted text in arguments",
+      "check": "reasoning.txt mentions warning about pasted/clipboard text"
+    },
+    {
+      "name": "strips-ansi",
+      "description": "Strips ANSI escape sequences from arguments",
+      "check": "reasoning.txt mentions stripping ANSI or escape sequences"
+    },
+    {
+      "name": "extracts-meaningful",
+      "description": "Extracts meaningful content from the garbage input",
+      "check": "reasoning.txt shows extraction of first meaningful line"
+    },
+    {
+      "name": "still-runs-tests",
+      "description": "Still attempts to build and run a test command after sanitization",
+      "check": "command.txt contains 'test_runner_wrapper.sh'"
+    }
+  ]
+}

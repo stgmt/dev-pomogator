@@ -45,12 +45,12 @@ Feature: GUARD001 Test Guard Hook
 
   # @feature2
   Scenario: GUARD001_08 Allow wrapper command
-    When test_guard receives command "bash test_runner_wrapper.sh pytest"
+    When test_guard receives command "node test_runner_wrapper.cjs pytest"
     Then it should allow with exit code 0
 
   # @feature2
   Scenario: GUARD001_09 Allow wrapper command with --framework flag
-    When test_guard receives command "bash test_runner_wrapper.sh --framework dotnet -- dotnet test"
+    When test_guard receives command "node test_runner_wrapper.cjs --framework dotnet -- dotnet test"
     Then it should allow with exit code 0
 
   # @feature2

@@ -1,0 +1,48 @@
+Step-by-step reasoning for: /run-tests --framework jest
+
+=== Step 0: Sanitize arguments ===
+Arguments: --framework jest
+No pasted text, no ANSI escapes, no newlines. Args are clean.
+Parsed: framework=jest, filter=none, docker=not explicitly set.
+
+=== Step 1: Detect framework ===
+The user explicitly provided --framework jest.
+Per SKILL.md Step 1: "If --framework argument provided, use that instead."
+Therefore, framework detection via config files is SKIPPED entirely.
+Framework = jest (explicit override).
+
+Why jest and not vitest:
+- The user explicitly requested jest via --framework jest.
+- The skill says explicit --framework overrides auto-detection.
+- Even though this project has vitest.config.ts (and the docker-only-tests rule
+  mentions vitest), the explicit user request takes precedence per the skill logic.
+
+=== Step 2: Check docker-only-tests rule ===
+Checked: .claude/rules/docker-only-tests.md EXISTS in the project.
+Per SKILL.md Step 2: "If .claude/rules/docker-only-tests.md exists in the project,
+tests MUST run through Docker. Automatically add --docker flag unless already specified."
+The user did NOT pass --docker, so --docker is automatically added.
+Result: docker=true (auto-applied by rule).
+
+=== Step 3: Build and run test command ===
+
+3a. Framework-specific command (from dispatch table):
+    Framework = jest -> Command = "npx jest"
+    No filter was provided, so no --testNamePattern argument.
+    Inner test command: npx jest
+
+3b. Docker wrapping:
+    --docker flag is active (auto-applied in Step 2).
+    Checked: scripts/docker-test.sh EXISTS in the project root.
+    Per SKILL.md: "If scripts/docker-test.sh exists (preferred)":
+      bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.sh bash scripts/docker-test.sh <test-command>
+
+3c. Final assembled command:
+    bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.sh bash scripts/docker-test.sh npx jest
+
+=== Summary ===
+- Framework: jest (explicit via --framework, not auto-detected)
+- Docker: yes (auto-applied because docker-only-tests.md rule exists)
+- Docker method: scripts/docker-test.sh (exists, preferred path)
+- Filter: none
+- Wrapper: test_runner_wrapper.sh (for YAML status tracking)

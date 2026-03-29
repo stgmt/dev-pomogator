@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "featureSlug": "tests-create-update",
+  "createdAt": "2026-03-27T23:45:19.381Z",
+  "currentPhase": "Complete",
+  "phases": {
+    "Discovery": {
+      "completedAt": "2026-03-27T23:53:37.406Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-03-28T00:00:32.615Z"
+    },
+    "Context": {
+      "completedAt": "2026-03-27T23:53:37.406Z",
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    },
+    "Requirements": {
+      "completedAt": "2026-03-28T05:25:31.023Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-03-28T05:25:31.023Z"
+    },
+    "Finalization": {
+      "completedAt": "2026-03-28T05:26:40.693Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-03-28T05:26:40.693Z"
+    }
+  }
+}

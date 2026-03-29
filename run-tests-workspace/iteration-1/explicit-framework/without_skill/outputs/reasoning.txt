@@ -1,0 +1,33 @@
+Step-by-step reasoning for /run-tests --framework jest:
+
+1. USER REQUEST: The user asked to run tests with `--framework jest`.
+
+2. PROJECT TEST INFRASTRUCTURE:
+   - package.json defines: "test": "npm run test:e2e" which calls "bash scripts/docker-test.sh"
+   - scripts/docker-test.sh builds a Docker image and runs `docker compose -f docker-compose.test.yml run --rm -T test`
+   - Inside Docker, the CMD is `npm run test:e2e:docker` which runs: `vitest run tests/e2e --reporter=verbose && python3 -m pytest tests/tui/ -v`
+   - The project uses vitest (not jest) as its test runner. Jest is NOT in package.json dependencies.
+
+3. FRAMEWORK ANALYSIS:
+   - The project has vitest.config.ts (vitest is the actual test framework used)
+   - There is NO jest.config.ts/js/cjs in the project
+   - Jest is not listed in dependencies or devDependencies
+   - The tui-test-runner has a JestAdapter (extensions/tui-test-runner/tools/tui-test-runner/adapters/jest_adapter.ts) for *parsing* jest output in other projects, but the project itself does not use jest
+
+4. --framework jest CONSIDERATION:
+   - The test_runner_wrapper.ts accepts --framework to override auto-detection, but this only affects the OUTPUT PARSER (which adapter parses stdout), not which test runner is invoked
+   - Even if we passed --framework jest, the actual test command would still need to be a jest command
+   - Since jest is not installed in this project, running jest would fail
+   - The docker-only-tests rule says all tests run via Docker (`npm test` -> docker-compose.test.yml)
+
+5. DECISION:
+   - The project's test infrastructure is Docker-based with vitest inside
+   - Jest is not available in this project
+   - The --framework flag cannot change the actual test runner, only the output parser
+   - Without the /run-tests skill (which would handle the wrapper orchestration), the correct command is simply `npm run test:e2e` which triggers the Docker-based test pipeline
+   - The --framework jest flag is effectively a no-op or would cause an error since jest is not installed
+
+6. COMMAND CHOSEN: `npm run test:e2e`
+   - This is the standard way to run tests in this project per package.json and CLAUDE.md
+   - It triggers Docker Compose which builds the test container and runs vitest + pytest inside
+   - The --framework jest request cannot be honored because jest is not a dependency of this project

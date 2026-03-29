@@ -32,11 +32,11 @@ function runViaTsxRunner(scriptPath) {
 }
 
 function runViaNpxTsx(scriptPath) {
-  const result = spawnSync('npx', ['tsx', scriptPath, ...args], {
+  const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+  const result = spawnSync(npxCmd, ['tsx', scriptPath, ...args], {
     stdio: 'inherit',
     cwd: repoRoot,
     env: process.env,
-    shell: true,
   });
   process.exit(result.status ?? (result.signal ? 1 : 0));
 }
@@ -47,7 +47,6 @@ function runDirect() {
     stdio: 'inherit',
     cwd: repoRoot,
     env: process.env,
-    shell: true,
   });
   process.exit(result.status ?? (result.signal ? 1 : 0));
 }

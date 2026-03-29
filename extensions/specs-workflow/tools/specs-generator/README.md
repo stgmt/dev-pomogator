@@ -7,13 +7,13 @@
 ```
 .dev-pomogator/tools/specs-generator/
 ├── README.md              # Этот файл
-├── scaffold-spec.sh       # Создание структуры папки с шаблонами
-├── validate-spec.sh       # Валидация структуры и форматов
-├── spec-status.sh         # Отчёт о прогрессе заполнения
-├── fill-template.sh       # Заполнение плейсхолдеров в файле
-├── list-specs.sh          # Список всех спеков с их статусом
-├── audit-spec.sh          # Аудит кросс-ссылок и консистентности
-├── analyze-features.sh    # Анализ паттернов .feature файлов
+├── scaffold-spec.ts       # Создание структуры папки с шаблонами
+├── validate-spec.ts       # Валидация структуры и форматов
+├── spec-status.ts         # Отчёт о прогрессе заполнения
+├── fill-template.ts       # Заполнение плейсхолдеров в файле
+├── list-specs.ts          # Список всех спеков с их статусом
+├── audit-spec.ts          # Аудит кросс-ссылок и консистентности
+├── analyze-features.ts    # Анализ паттернов .feature файлов
 ├── logs/                  # Директория для логов (gitignore)
 └── templates/             # Шаблоны файлов
 ```
@@ -22,30 +22,30 @@
 
 ```sh
 # Создать новую спеку
-./.dev-pomogator/tools/specs-generator/scaffold-spec.sh -Name "my-feature"
+./.dev-pomogator/tools/specs-generator/scaffold-spec.ts -Name "my-feature"
 
 # Проверить статус
-./.dev-pomogator/tools/specs-generator/spec-status.sh -Path ".specs/my-feature"
+./.dev-pomogator/tools/specs-generator/spec-status.ts -Path ".specs/my-feature"
 
 # Валидация
-./.dev-pomogator/tools/specs-generator/validate-spec.sh -Path ".specs/my-feature"
+./.dev-pomogator/tools/specs-generator/validate-spec.ts -Path ".specs/my-feature"
 
 # Список всех спеков
-./.dev-pomogator/tools/specs-generator/list-specs.sh
+./.dev-pomogator/tools/specs-generator/list-specs.ts
 
 # Аудит кросс-ссылок
-./.dev-pomogator/tools/specs-generator/audit-spec.sh -Path ".specs/my-feature"
+./.dev-pomogator/tools/specs-generator/audit-spec.ts -Path ".specs/my-feature"
 
 # Анализ паттернов .feature файлов (ПЕРЕД написанием .feature)
-./.dev-pomogator/tools/specs-generator/analyze-features.sh -Format text
+./.dev-pomogator/tools/specs-generator/analyze-features.ts -Format text
 
 # Анализ с поиском кандидатов
-./.dev-pomogator/tools/specs-generator/analyze-features.sh -FeatureSlug "my-feature" -Format text
+./.dev-pomogator/tools/specs-generator/analyze-features.ts -FeatureSlug "my-feature" -Format text
 ```
 
 ## Скрипты
 
-### scaffold-spec.sh
+### scaffold-spec.ts
 
 Создаёт структуру папки `.specs/{feature-slug}/` со всеми шаблонами.
 
@@ -53,13 +53,13 @@
 
 ```sh
 # Базовое использование
-./scaffold-spec.sh -Name "hook-worklog-checker"
+./scaffold-spec.ts -Name "hook-worklog-checker"
 
 # С указанием домена для .feature файла
-./scaffold-spec.sh -Name "hook-worklog-checker" -Domain "INF"
+./scaffold-spec.ts -Name "hook-worklog-checker" -Domain "INF"
 
 # Перезаписать существующую
-./scaffold-spec.sh -Name "hook-worklog-checker" -Force
+./scaffold-spec.ts -Name "hook-worklog-checker" -Force
 ```
 
 **Параметры:**
@@ -76,19 +76,19 @@
 
 ---
 
-### validate-spec.sh
+### validate-spec.ts
 
 Проверяет структуру, форматы, плейсхолдеры в спеке.
 
 ```sh
 # Полная валидация
-./validate-spec.sh -Path ".specs/hook-worklog-checker"
+./validate-spec.ts -Path ".specs/hook-worklog-checker"
 
 # Только ошибки (без warnings)
-./validate-spec.sh -Path ".specs/hook-worklog-checker" -ErrorsOnly
+./validate-spec.ts -Path ".specs/hook-worklog-checker" -ErrorsOnly
 
 # Текстовый вывод
-./validate-spec.sh -Path ".specs/hook-worklog-checker" -Format text
+./validate-spec.ts -Path ".specs/hook-worklog-checker" -Format text
 ```
 
 **Правила валидации:**
@@ -108,16 +108,16 @@
 
 ---
 
-### spec-status.sh
+### spec-status.ts
 
 Показывает прогресс заполнения спеки.
 
 ```sh
 # Полный статус
-./spec-status.sh -Path ".specs/hook-worklog-checker"
+./spec-status.ts -Path ".specs/hook-worklog-checker"
 
 # Краткий формат
-./spec-status.sh -Path ".specs/hook-worklog-checker" -Brief
+./spec-status.ts -Path ".specs/hook-worklog-checker" -Brief
 ```
 
 **Выводит:**
@@ -129,16 +129,16 @@
 
 ---
 
-### fill-template.sh
+### fill-template.ts
 
 Заполняет плейсхолдеры в конкретном файле.
 
 ```sh
 # Показать плейсхолдеры
-./fill-template.sh -File ".specs/my-feature/USER_STORIES.md" -ListPlaceholders
+./fill-template.ts -File ".specs/my-feature/USER_STORIES.md" -ListPlaceholders
 
 # Заполнить плейсхолдеры
-./fill-template.sh -File ".specs/my-feature/USER_STORIES.md" \
+./fill-template.ts -File ".specs/my-feature/USER_STORIES.md" \
   -Values '{"роль": "разработчик", "цель": "автоматизировать процесс"}'
 ```
 
@@ -149,19 +149,19 @@
 
 ---
 
-### list-specs.sh
+### list-specs.ts
 
 Показывает список всех спеков в репозитории.
 
 ```sh
 # Все спеки
-./list-specs.sh
+./list-specs.ts
 
 # Только незавершённые
-./list-specs.sh -Incomplete
+./list-specs.ts -Incomplete
 
 # Фильтр по имени
-./list-specs.sh -Filter "zoho"
+./list-specs.ts -Filter "zoho"
 ```
 
 **Выводит:**
@@ -170,19 +170,19 @@
 
 ---
 
-### audit-spec.sh
+### audit-spec.ts
 
 Аудит кросс-ссылок и консистентности спецификации. Выполняет автоматические проверки и выдаёт список проблем для AI семантического анализа.
 
 ```sh
 # JSON формат (для AI агента)
-./audit-spec.sh -Path ".specs/my-feature"
+./audit-spec.ts -Path ".specs/my-feature"
 
 # Текстовый формат (для человека)
-./audit-spec.sh -Path ".specs/my-feature" -Format text
+./audit-spec.ts -Path ".specs/my-feature" -Format text
 
 # С подробным выводом
-./audit-spec.sh -Path ".specs/my-feature" -Format text -VerboseOutput
+./audit-spec.ts -Path ".specs/my-feature" -Format text -VerboseOutput
 ```
 
 **Автоматические проверки:**
@@ -203,25 +203,25 @@
 
 ---
 
-### analyze-features.sh
+### analyze-features.ts
 
 Анализирует все `.feature` файлы в проекте и выдаёт структурированный отчёт с паттернами. **Обязательно запускать ПЕРЕД написанием нового .feature файла** в Phase 2 specs workflow.
 
 ```sh
 # Полный отчёт (текст)
-./analyze-features.sh -Format text
+./analyze-features.ts -Format text
 
 # Поиск кандидатов по slug
-./analyze-features.sh -FeatureSlug "blind-receiving" -Format text
+./analyze-features.ts -FeatureSlug "blind-receiving" -Format text
 
 # Поиск по домену
-./analyze-features.sh -DomainCode "PLUGIN" -Format text
+./analyze-features.ts -DomainCode "PLUGIN" -Format text
 
 # Свободный поиск
-./analyze-features.sh -Query "shipment" -Format text
+./analyze-features.ts -Query "shipment" -Format text
 
 # JSON (для AI агента)
-./analyze-features.sh -Format json
+./analyze-features.ts -Format json
 ```
 
 **Параметры:**

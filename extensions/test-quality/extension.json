@@ -1,21 +1,24 @@
 {
   "name": "test-quality",
-  "version": "1.0.0",
-  "description": "Test deduplication detection — Stop hook triggers /dedup-tests when test files change",
+  "version": "1.1.0",
+  "description": "Test quality enforcement — anti-pattern detection on Write/Edit, deduplication on Stop",
   "platforms": ["claude"],
   "category": "automation",
-  "files": {
-    "claude": []
-  },
-  "rules": {
-    "claude": ["claude/rules/no-test-helper-duplication.md"]
+  "ruleFiles": {
+    "claude": [
+      ".claude/rules/test-quality/no-test-helper-duplication.md"
+    ]
   },
   "skills": {
-    "dedup-tests": "skills/dedup-tests"
+    "dedup-tests": ".claude/skills/dedup-tests",
+    "tests-create-update": ".claude/skills/tests-create-update"
   },
   "skillFiles": {
     "dedup-tests": [
       ".claude/skills/dedup-tests/SKILL.md"
+    ],
+    "tests-create-update": [
+      ".claude/skills/tests-create-update/SKILL.md"
     ]
   },
   "tools": {
@@ -23,12 +26,24 @@
   },
   "toolFiles": {
     "test-quality": [
-      ".dev-pomogator/tools/test-quality/dedup_stop.ts"
+      ".dev-pomogator/tools/test-quality/dedup_stop.ts",
+      ".dev-pomogator/tools/test-quality/compliance_check.ts"
     ]
   },
   "hooks": {
     "claude": {
-      "Stop": "npx tsx .dev-pomogator/tools/test-quality/dedup_stop.ts"
+      "Stop": "npx tsx .dev-pomogator/tools/test-quality/dedup_stop.ts",
+      "PostToolUse": [
+        {
+          "matcher": "Write|Edit",
+          "hooks": [
+            {
+              "type": "command",
+              "command": "npx tsx .dev-pomogator/tools/test-quality/compliance_check.ts"
+            }
+          ]
+        }
+      ]
     }
   }
 }

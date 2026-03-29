@@ -64,9 +64,11 @@ type StopHookOutput = {
 // Logging
 // ============================================================================
 
+import { log as _logShared } from '../../../_shared/hook-utils.js';
+
+const LOG_PREFIX = 'AUTO-COMMIT';
 function log(level: "INFO" | "ERROR" | "DEBUG", message: string): void {
-  const timestamp = new Date().toISOString();
-  console.error(`[${timestamp}] [AUTO-COMMIT] [${level}] ${message}`);
+  _logShared(level, LOG_PREFIX, message);
 }
 
 function redactSecrets(text: string): string {

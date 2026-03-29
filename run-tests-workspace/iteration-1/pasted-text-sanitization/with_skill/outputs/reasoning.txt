@@ -1,0 +1,71 @@
+Step-by-step reasoning for /run-tests with pasted terminal output
+
+=== INPUT ===
+Raw args: "[Pasted text from terminal]\n\u001b[32m✓\u001b[0m auth test passed\nsome garbage here\nstatusline"
+
+=== STEP 0: SANITIZE ARGUMENTS ===
+
+Rule 1: "If args contain [Pasted text — extract only the first meaningful line, warn user about pasted text"
+  - Args contain "[Pasted text from terminal]" marker -> TRIGGERED
+  - WARNING issued to user: "Pasted text detected in arguments. Extracting first meaningful line only."
+  - Lines after the marker:
+    Line 1: "\u001b[32m✓\u001b[0m auth test passed"
+    Line 2: "some garbage here"
+    Line 3: "statusline"
+  - First meaningful line selected: "\u001b[32m✓\u001b[0m auth test passed"
+
+Rule 2: "Strip ANSI escape sequences from args"
+  - Input:  "\u001b[32m✓\u001b[0m auth test passed"
+  - After stripping ANSI: "✓ auth test passed"
+
+Rule 3: "If args contain newlines — use only the first non-empty line, ignore the rest"
+  - Already handled by Rule 1 (extracted first meaningful line)
+  - Lines "some garbage here" and "statusline" are DISCARDED
+
+Rule 4: "Trim whitespace from all args"
+  - Result: "✓ auth test passed"
+
+SANITIZED ARGS: "✓ auth test passed"
+  - No --framework flag detected
+  - No --docker flag detected
+  - No -- separator detected
+  - Entire sanitized string treated as test name filter: "✓ auth test passed"
+
+NOTE: The sanitized filter contains "✓" (a Unicode checkmark from terminal output).
+This is not a valid test name pattern but the skill does not prescribe further cleanup
+beyond ANSI stripping. The filter will likely match nothing, which is a correct outcome
+for garbage input — no false positive test runs.
+
+=== STEP 1: DETECT FRAMEWORK ===
+
+Checked project root (D:\repos\dev-pomogator) for config files:
+  - vitest.config.ts -> FOUND
+  - Framework detected: vitest
+
+=== STEP 2: CHECK DOCKER-ONLY-TESTS RULE ===
+
+Checked: .claude/rules/docker-only-tests.md -> EXISTS
+  - Docker mode is MANDATORY for this project
+  - --docker flag auto-added
+
+Checked: scripts/docker-test.sh -> EXISTS
+  - Using preferred docker-test.sh path (handles build, cleanup, session isolation)
+
+=== STEP 3: BUILD COMMAND ===
+
+Framework: vitest
+Filter: "✓ auth test passed"
+Docker: yes (via docker-test.sh)
+
+Command construction:
+  1. Base test command: npx vitest run --grep "✓ auth test passed"
+  2. Docker wrapper: bash scripts/docker-test.sh <test-command>
+  3. Status wrapper: bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.sh <docker-wrapped-command>
+
+Final command:
+  bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.sh bash scripts/docker-test.sh npx vitest run --grep "✓ auth test passed"
+
+=== WARNINGS TO USER ===
+
+1. "Pasted text detected in arguments. Extracting first meaningful line only. Discarded 2 additional lines."
+2. "Sanitized filter contains non-standard characters (✓). This may not match any test names."

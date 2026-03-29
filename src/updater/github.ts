@@ -11,12 +11,10 @@ export interface ExtensionManifest {
   description: string;
   platforms: string[];
   category: string;
-  files: {
-    cursor?: string[];
+  ruleFiles?: {
     claude?: string[];
   };
-  rules?: {
-    cursor?: string[];
+  commandFiles?: {
     claude?: string[];
   };
   tools?: {
@@ -29,7 +27,6 @@ export interface ExtensionManifest {
     [skillName: string]: string[];
   };
   hooks?: {
-    cursor?: Record<string, string>;
     claude?: Record<string, string>;
   };
   statusLine?: {
@@ -40,11 +37,6 @@ export interface ExtensionManifest {
     interactive?: boolean;
     skipInCI?: boolean;
   } | {
-    cursor?: {
-      command: string;
-      interactive?: boolean;
-      skipInCI?: boolean;
-    };
     claude?: {
       command: string;
       interactive?: boolean;
@@ -121,6 +113,18 @@ export async function downloadExtensionFile(
   extensionName: string,
   relativePath: string
 ): Promise<string | null> {
+  // Centralized paths (.claude/rules/, .claude/commands/, .claude/skills/)
+  // live at repo root, not inside extensions/{name}/
+  if (relativePath.startsWith('.claude/rules/') || relativePath.startsWith('.claude/commands/') || relativePath.startsWith('.claude/skills/')) {
+    const localFile = await readLocalUpdateFile(relativePath);
+    if (localFile !== null) return localFile;
+
+    const url = `${RAW_BASE}/${relativePath}`;
+    const response = await fetchWithRetry(url);
+    if (!response) return null;
+    return response.text();
+  }
+
   // toolFiles/skillFiles in extension.json use target project paths
   // (.dev-pomogator/tools/... or .claude/skills/...) but source files on GitHub
   // are at extensions/{name}/tools/... or extensions/{name}/skills/...

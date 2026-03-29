@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "featureSlug": "global-dir-guard",
+  "createdAt": "2026-03-25T20:53:23.080Z",
+  "currentPhase": "Complete",
+  "phases": {
+    "Discovery": {
+      "completedAt": "2026-03-25T20:55:25.106Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-03-25T20:56:06.743Z"
+    },
+    "Context": {
+      "completedAt": "2026-03-25T20:55:25.106Z",
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    },
+    "Requirements": {
+      "completedAt": "2026-03-25T21:02:23.423Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-03-25T21:02:23.423Z"
+    },
+    "Finalization": {
+      "completedAt": "2026-03-25T21:03:47.386Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-03-25T21:03:47.385Z"
+    }
+  }
+}

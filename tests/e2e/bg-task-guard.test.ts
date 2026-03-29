@@ -1,12 +1,26 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
+import os from 'os';
 import { spawnSync } from 'child_process';
 import { appPath } from './helpers';
 
 const MARK_HOOK = 'extensions/test-statusline/tools/bg-task-guard/mark-bg-task.sh';
 const STOP_HOOK = 'extensions/test-statusline/tools/bg-task-guard/stop-guard.sh';
 const MARKER_FILE = '.dev-pomogator/.bg-task-active';
+
+// Temp directory for test isolation — all markers/YAML/session.env go here, not in real .dev-pomogator/
+let tmpDir: string;
+
+beforeAll(() => {
+  tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'bg-task-guard-test-'));
+  fs.ensureDirSync(path.join(tmpDir, '.dev-pomogator', '.test-status'));
+  fs.ensureDirSync(path.join(tmpDir, '.dev-pomogator', '.docker-status'));
+});
+
+afterAll(() => {
+  fs.removeSync(tmpDir);
+});
 
 /**
  * Build a realistic Claude Code PostToolUse stdin payload.
@@ -50,7 +64,7 @@ function runHook(
   const result = spawnSync('bash', [appPath(scriptPath)], {
     input: JSON.stringify(stdinJson),
     encoding: 'utf-8',
-    cwd: cwd || appPath(),
+    cwd: cwd || tmpDir,
     env: { ...process.env, FORCE_COLOR: '0' },
     timeout: 10000,
   });
@@ -59,9 +73,9 @@ function runHook(
 
 function markerPath(sessionPrefix?: string): string {
   if (sessionPrefix) {
-    return path.join(appPath(), `.dev-pomogator/.bg-task-active.${sessionPrefix}`);
+    return path.join(tmpDir, `.dev-pomogator/.bg-task-active.${sessionPrefix}`);
   }
-  return path.join(appPath(), MARKER_FILE);
+  return path.join(tmpDir, MARKER_FILE);
 }
 
 function createMarker(ageMinutes: number = 0, taskId: string = 'test-task-id', sessionPrefix?: string): void {
@@ -79,7 +93,7 @@ function createMarker(ageMinutes: number = 0, taskId: string = 'test-task-id', s
 function removeMarker(): void {
   fs.removeSync(markerPath());
   // Also clean per-session markers
-  const dir = path.join(appPath(), '.dev-pomogator');
+  const dir = path.join(tmpDir, '.dev-pomogator');
   if (fs.existsSync(dir)) {
     for (const f of fs.readdirSync(dir)) {
       if (f === '.bg-task-active' || f.startsWith('.bg-task-active.')) {
@@ -209,7 +223,7 @@ describe('GUARD002: Background Task Guard', () => {
       fs.writeFileSync(mp, '99998 2026-01-01T00:00:00Z\n', 'utf-8');
 
       // Stale YAML exists
-      const statusDir = path.join(appPath(), '.dev-pomogator', '.test-status');
+      const statusDir = path.join(tmpDir, '.dev-pomogator', '.test-status');
       fs.ensureDirSync(statusDir);
       const staleStatusFile = path.join(statusDir, 'status.test.yaml');
       fs.writeFileSync(staleStatusFile, 'state: running\nresult: unknown\n', 'utf-8');
@@ -299,7 +313,7 @@ describe('GUARD002: Background Task Guard', () => {
     // @feature4 — empty stdin edge case, runHook always sends JSON so use spawnSync
     it('GUARD002_16: does not create marker with empty stdin', () => {
       const result = spawnSync('bash', [appPath(MARK_HOOK)], {
-        cwd: appPath(),
+        cwd: tmpDir,
         encoding: 'utf-8',
         input: '',
       });
@@ -325,14 +339,14 @@ describe('GUARD002: Background Task Guard', () => {
     const STATUS_DIR = '.dev-pomogator/.test-status';
 
     function createYamlStatus(fields: Record<string, string | number>): void {
-      const statusDir = path.join(appPath(), STATUS_DIR);
+      const statusDir = path.join(tmpDir, STATUS_DIR);
       fs.ensureDirSync(statusDir);
       const lines = Object.entries(fields).map(([k, v]) => `${k}: ${v}`);
       fs.writeFileSync(path.join(statusDir, 'status.test-session.yaml'), lines.join('\n'), 'utf-8');
     }
 
     function cleanYamlStatus(): void {
-      const statusDir = path.join(appPath(), STATUS_DIR);
+      const statusDir = path.join(tmpDir, STATUS_DIR);
       const statusFile = path.join(statusDir, 'status.test-session.yaml');
       if (fs.existsSync(statusFile)) fs.removeSync(statusFile);
     }
@@ -424,7 +438,7 @@ describe('GUARD002: Background Task Guard', () => {
       createMarker(1, 'stale-yaml-task');
       createYamlStatus({ state: 'running', passed: 100, failed: 5, skipped: 0, total: 200, percent: 52 });
       // Make YAML old (60s ago)
-      const statusDir = path.join(appPath(), '.dev-pomogator', '.test-status');
+      const statusDir = path.join(tmpDir, '.dev-pomogator', '.test-status');
       const yamlFile = path.join(statusDir, 'status.test-session.yaml');
       const sixtySecAgo = new Date(Date.now() - 60_000);
       fs.utimesSync(yamlFile, sixtySecAgo, sixtySecAgo);
@@ -451,22 +465,18 @@ describe('GUARD002: Background Task Guard', () => {
       expect(fs.pathExistsSync(markerPath())).toBe(false);
     });
 
-    // Helper: write session.env for stop-guard to read (save/restore pattern — never delete infra file)
-    const sessionEnvPath = path.join(appPath(), '.dev-pomogator', '.test-status', 'session.env');
-    let savedSessionEnv: string | null = null;
+    function getSessionEnvPath(): string {
+      return path.join(tmpDir, '.dev-pomogator', '.test-status', 'session.env');
+    }
 
     function writeSessionEnv(prefix: string): void {
-      const statusDir = path.join(appPath(), '.dev-pomogator', '.test-status');
+      const statusDir = path.join(tmpDir, '.dev-pomogator', '.test-status');
       fs.ensureDirSync(statusDir);
-      // Save original before overwriting
-      try { savedSessionEnv = fs.readFileSync(sessionEnvPath, 'utf-8'); } catch { savedSessionEnv = null; }
-      fs.writeFileSync(sessionEnvPath, `TEST_STATUSLINE_SESSION=${prefix}\n`, 'utf-8');
+      fs.writeFileSync(getSessionEnvPath(), `TEST_STATUSLINE_SESSION=${prefix}\n`, 'utf-8');
     }
 
     function cleanSessionEnv(): void {
-      // Delete test session.env — stop-guard will use legacy marker without it
-      try { fs.removeSync(sessionEnvPath); } catch { /* ignore */ }
-      savedSessionEnv = null;
+      try { fs.removeSync(getSessionEnvPath()); } catch { /* ignore */ }
     }
 
     // @feature7

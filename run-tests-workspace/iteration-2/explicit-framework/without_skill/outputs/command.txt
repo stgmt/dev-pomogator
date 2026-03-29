@@ -1,0 +1,1 @@
+npx tsx extensions/tui-test-runner/tools/tui-test-runner/test_runner_wrapper.ts --framework jest -- npx jest

@@ -4,7 +4,7 @@ import { getConfigDir } from '../config/index.js';
 import { USER_OVERRIDES_DIR } from '../constants.js';
 
 export interface ModifiedFile {
-  /** Relative path inside the project (e.g. ".cursor/rules/specs-management.mdc") */
+  /** Relative path inside the project (e.g. ".claude/rules/specs-management.md") */
   relativePath: string;
   /** Absolute path to the backup copy */
   backupPath: string;

@@ -2,7 +2,9 @@
   "name": "devcontainer",
   "version": "1.0.0",
   "description": "Full GUI devcontainer: Claude Code + OculOS + noVNC + Docker-in-Docker + dynamic ports for worktrees",
-  "platforms": ["cursor", "claude"],
+  "platforms": [
+    "claude"
+  ],
   "category": "infrastructure",
   "envRequirements": [],
   "tools": {
@@ -35,11 +37,6 @@
     ]
   },
   "postInstall": {
-    "cursor": {
-      "command": "npx tsx .dev-pomogator/tools/devcontainer/postinstall.ts",
-      "interactive": true,
-      "skipInCI": true
-    },
     "claude": {
       "command": "npx tsx .dev-pomogator/tools/devcontainer/postinstall.ts",
       "interactive": true,
@@ -47,11 +44,6 @@
     }
   },
   "postUpdate": {
-    "cursor": {
-      "command": "echo \"⚠️  DevContainer templates updated. To apply: DEVCONTAINER_RECONFIGURE=1 npx tsx .dev-pomogator/tools/devcontainer/postinstall.ts\"",
-      "interactive": false,
-      "skipInCI": true
-    },
     "claude": {
       "command": "echo \"⚠️  DevContainer templates updated. To apply: DEVCONTAINER_RECONFIGURE=1 npx tsx .dev-pomogator/tools/devcontainer/postinstall.ts\"",
       "interactive": false,

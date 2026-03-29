@@ -1,0 +1,64 @@
+{
+  "metadata": {
+    "skill_name": "run-tests",
+    "skill_path": "D:\\repos\\dev-pomogator\\extensions\\tui-test-runner\\skills\\run-tests\\SKILL.md",
+    "executor_model": "claude-opus-4-6",
+    "analyzer_model": "claude-opus-4-6",
+    "timestamp": "2026-03-16T02:30:00Z",
+    "evals_run": ["basic-run-all", "filter-by-name", "explicit-framework", "pasted-text-sanitization", "docker-explicit-flag"],
+    "runs_per_configuration": 1
+  },
+  "runs": [
+    {
+      "eval_name": "basic-run-all",
+      "with_skill": {"pass_rate": 1.0, "passed": 5, "total": 5, "tokens": 60411, "duration_seconds": 80.0},
+      "without_skill": {"pass_rate": 0.0, "passed": 0, "total": 5, "tokens": 63402, "duration_seconds": 74.4}
+    },
+    {
+      "eval_name": "filter-by-name",
+      "with_skill": {"pass_rate": 1.0, "passed": 4, "total": 4, "tokens": 59615, "duration_seconds": 65.3},
+      "without_skill": {"pass_rate": 0.5, "passed": 2, "total": 4, "tokens": 63116, "duration_seconds": 170.1}
+    },
+    {
+      "eval_name": "explicit-framework",
+      "with_skill": {"pass_rate": 1.0, "passed": 4, "total": 4, "tokens": 58691, "duration_seconds": 57.6},
+      "without_skill": {"pass_rate": 0.25, "passed": 1, "total": 4, "tokens": 70537, "duration_seconds": 395.8}
+    },
+    {
+      "eval_name": "pasted-text-sanitization",
+      "with_skill": {"pass_rate": 0.8, "passed": 4, "total": 5, "tokens": 62068, "duration_seconds": 195.1},
+      "without_skill": {"pass_rate": 0.4, "passed": 2, "total": 5, "tokens": 63055, "duration_seconds": 362.6}
+    },
+    {
+      "eval_name": "docker-explicit-flag",
+      "with_skill": {"pass_rate": 1.0, "passed": 5, "total": 5, "tokens": 59877, "duration_seconds": 65.6},
+      "without_skill": {"pass_rate": 1.0, "passed": 5, "total": 5, "tokens": 69994, "duration_seconds": 460.4}
+    }
+  ],
+  "run_summary": {
+    "with_skill": {
+      "mean_pass_rate": 0.957,
+      "stddev_pass_rate": 0.087,
+      "mean_tokens": 60132,
+      "mean_duration_seconds": 92.7
+    },
+    "without_skill": {
+      "mean_pass_rate": 0.430,
+      "stddev_pass_rate": 0.363,
+      "mean_tokens": 66021,
+      "mean_duration_seconds": 292.7
+    },
+    "delta": {
+      "pass_rate": "+52.7%",
+      "time_seconds": "-68.3%",
+      "tokens": "-8.9%"
+    }
+  },
+  "notes": [
+    "NON-DISCRIMINATING: Eval 5 (docker-explicit-flag) — baseline produced IDENTICAL command. Prompt gives too many clues.",
+    "SKILL WEAKNESS: Eval 4 — Step 0 sanitization is too mechanical (takes first line, not semantically best line). Baseline outperformed on intent extraction.",
+    "WRAPPER USAGE is the primary differentiator: 4/5 baselines skip test_runner_wrapper.sh.",
+    "SPEED: with-skill 3x faster (93s vs 293s) — deterministic recipe vs project exploration.",
+    "TOKEN EFFICIENCY: with-skill uses ~9% fewer tokens (60k vs 66k)."
+  ]
+}

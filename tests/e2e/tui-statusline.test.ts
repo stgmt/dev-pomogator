@@ -18,8 +18,11 @@ const STATUS_DIR = '.dev-pomogator/.test-status';
 const FIXTURES_DIR = 'tests/fixtures/tui-statusline';
 const WRAPPER_SCRIPT = 'extensions/test-statusline/tools/test-statusline/test_runner_wrapper.cjs';
 const SESSION_HOOK = 'extensions/test-statusline/tools/test-statusline/statusline_session_start.ts';
+// Read statusLine type from the real extension manifest (not hardcoded)
+const EXT_MANIFEST = fs.readJsonSync(appPath('extensions/test-statusline/extension.json'));
+const MANIFEST_STATUSLINE_TYPE = EXT_MANIFEST.statusLine?.claude?.type ?? 'command';
 const DEFAULT_STATUSLINE_CONFIG = {
-  type: 'command',
+  type: MANIFEST_STATUSLINE_TYPE,
   command: DEFAULT_USER_STATUSLINE_COMMAND,
 };
 

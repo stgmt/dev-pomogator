@@ -60,6 +60,18 @@ export async function fetchExtensionManifest(name) {
     return response.json();
 }
 export async function downloadExtensionFile(extensionName, relativePath) {
+    // Centralized paths (.claude/rules/, .claude/commands/, .claude/skills/)
+    // live at repo root, not inside extensions/{name}/
+    if (relativePath.startsWith('.claude/rules/') || relativePath.startsWith('.claude/commands/') || relativePath.startsWith('.claude/skills/')) {
+        const localFile = await readLocalUpdateFile(relativePath);
+        if (localFile !== null)
+            return localFile;
+        const url = `${RAW_BASE}/${relativePath}`;
+        const response = await fetchWithRetry(url);
+        if (!response)
+            return null;
+        return response.text();
+    }
     // toolFiles/skillFiles in extension.json use target project paths
     // (.dev-pomogator/tools/... or .claude/skills/...) but source files on GitHub
     // are at extensions/{name}/tools/... or extensions/{name}/skills/...

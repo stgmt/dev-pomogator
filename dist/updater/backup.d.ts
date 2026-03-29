@@ -1,5 +1,5 @@
 export interface ModifiedFile {
-    /** Relative path inside the project (e.g. ".cursor/rules/specs-management.mdc") */
+    /** Relative path inside the project (e.g. ".claude/rules/specs-management.md") */
     relativePath: string;
     /** Absolute path to the backup copy */
     backupPath: string;

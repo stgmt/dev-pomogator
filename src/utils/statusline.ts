@@ -146,10 +146,17 @@ export function extractUserCommandFromLegacyWrapper(command: string): string | n
  * Preserves extra fields (e.g. padding) via read-modify-write pattern.
  * Pass pre-loaded settings to avoid double-reading the file.
  */
+const VALID_STATUSLINE_TYPES = new Set(['command']);
+
 export async function writeGlobalStatusLine(
   statusLineConfig: ClaudeStatusLineEntry,
   preloadedSettings?: Record<string, unknown>,
 ): Promise<void> {
+  if (!VALID_STATUSLINE_TYPES.has(statusLineConfig.type)) {
+    console.warn(`  ⚠ statusLine.type "${statusLineConfig.type}" is not valid for Claude Code (expected: ${[...VALID_STATUSLINE_TYPES].join(', ')}), using "command"`);
+    statusLineConfig = { ...statusLineConfig, type: 'command' };
+  }
+
   const settingsPath = path.join(os.homedir(), '.claude', 'settings.json');
   const settings = preloadedSettings ?? await readJsonSafe<Record<string, unknown>>(settingsPath, {});
 

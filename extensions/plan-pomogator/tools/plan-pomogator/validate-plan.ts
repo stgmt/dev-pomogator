@@ -610,12 +610,74 @@ function validateFileChangesReasonQuality(
   }
 }
 
+const BUGFIX_TRIGGERS = /\b(fix|bug|баг|исправ|hotfix|regression)\b/i;
+
+function validateTestSpecSync(
+  lines: string[], indices: Map<string, number>, warnings: ValidationError[],
+): void {
+  const parsed = parseFileChangesTable(lines, indices);
+  if (!parsed || parsed.rows.length === 0) return;
+
+  const testPaths = parsed.rows.filter((r) => /^tests\//.test(r.path));
+  const specPaths = parsed.rows.filter((r) => /^\.specs\//.test(r.path) || /\.feature$/.test(r.path));
+
+  if (testPaths.length > 0 && specPaths.length === 0) {
+    addError(warnings, parsed.sectionStart,
+      `File Changes содержит тестовые файлы (${testPaths.length}) но не содержит спецификаций (.specs/ или .feature) — обнови спеки при изменении тестов`,
+      'Добавь .specs/ файлы или .feature при изменении тестов');
+  }
+}
+
+function validateBugfixBdd(
+  lines: string[], indices: Map<string, number>, warnings: ValidationError[],
+): void {
+  const fileChangesIndex = indices.get('File Changes');
+  if (fileChangesIndex === undefined) return;
+
+  const { start } = getSectionRange(lines, fileChangesIndex);
+  const sectionEnd = nextHeadingIndex(lines, fileChangesIndex, /^##\s+/);
+  const sectionLines = lines.slice(start, sectionEnd);
+
+  const headerIndex = sectionLines.findIndex((line) =>
+    /^\|\s*Path\s*\|\s*Action\s*\|\s*Reason\s*\|/.test(line.trim()),
+  );
+  if (headerIndex === -1) return;
+
+  const afterSeparator = sectionLines.slice(headerIndex + 2);
+  let hasBugfix = false;
+  let bugfixLineIdx = 0;
+  let hasFeature = false;
+
+  for (let i = 0; i < afterSeparator.length; i += 1) {
+    if (!afterSeparator[i].includes('|')) continue;
+    const columns = afterSeparator[i].split('|').map((c) => c.trim()).filter(Boolean);
+    if (columns.length < 3) continue;
+
+    const path = columns[0].replace(/`/g, '');
+    const reason = columns[2].replace(/`/g, '');
+
+    if (/\.feature$/.test(path)) hasFeature = true;
+    if (BUGFIX_TRIGGERS.test(reason) && !hasBugfix) {
+      hasBugfix = true;
+      bugfixLineIdx = start + headerIndex + 2 + i;
+    }
+  }
+
+  if (hasBugfix && !hasFeature) {
+    addError(warnings, bugfixLineIdx,
+      'Багфикс в File Changes без BDD сценария — добавь .feature файл для регрессионного теста',
+      'Создай или обнови .feature с Scenario для этого бага');
+  }
+}
+
 function validateActionability(
   lines: string[], indices: Map<string, number>, warnings: ValidationError[],
 ): void {
   validateTodoChangesContent(lines, indices, warnings);
   validateImplStepDetail(lines, indices, warnings);
   validateFileChangesReasonQuality(lines, indices, warnings);
+  validateTestSpecSync(lines, indices, warnings);
+  validateBugfixBdd(lines, indices, warnings);
 }
 
 /**

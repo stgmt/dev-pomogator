@@ -9,16 +9,18 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
+import { log as _logShared } from '../../../_shared/hook-utils.js';
+
 // ---------------------------------------------------------------------------
 // Logging (stderr only — stdout reserved for hook JSON output)
 // ---------------------------------------------------------------------------
 
 const VERBOSE = process.env.DEV_POMOGATOR_HOOK_VERBOSE === '1';
+const LOG_PREFIX = 'TEST-STATUSLINE';
 
 function log(level: 'INFO' | 'DEBUG' | 'ERROR', message: string): void {
   if (level !== 'ERROR' && !VERBOSE) return;
-  const ts = new Date().toISOString();
-  process.stderr.write(`[${ts}] [TEST-STATUSLINE] [${level}] ${message}\n`);
+  _logShared(level, LOG_PREFIX, message);
 }
 
 // ---------------------------------------------------------------------------

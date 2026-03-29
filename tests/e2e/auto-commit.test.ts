@@ -2,38 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import { execSync } from 'child_process';
-import os from 'os';
-import { runTsx } from './helpers';
-
-/**
- * Get the project root directory
- * In Docker: uses APP_DIR env var
- * Locally: uses process.cwd() (assumes running from project root)
- */
-function getProjectRoot(): string {
-  return process.env.APP_DIR || process.cwd();
-}
-
-/**
- * Get home directory (for state files)
- */
-function getHome(): string {
-  return process.env.HOME || os.homedir();
-}
-
-/**
- * Get path relative to project root
- */
-function appPath(...segments: string[]): string {
-  return path.join(getProjectRoot(), ...segments);
-}
-
-/**
- * Get path relative to HOME
- */
-function homePath(...segments: string[]): string {
-  return path.join(getHome(), ...segments);
-}
+import { runTsx, appPath, homePath } from './helpers';
 
 const AUTO_COMMIT_TOOL_PATH = 'extensions/auto-commit/tools/auto-commit';
 

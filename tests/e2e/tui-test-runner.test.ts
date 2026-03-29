@@ -4,7 +4,7 @@ import path from 'path';
 import { spawnSync } from 'child_process';
 import { pathToFileURL } from 'url';
 import { parse as parseYaml } from 'yaml';
-import { appPath, getPythonRunner, runPythonJson } from './helpers';
+import { appPath, getPythonRunner, runPythonJson, runTsx } from './helpers';
 
 const STATUS_DIR = '.dev-pomogator/.test-status';
 const FIXTURES_DIR = 'tests/fixtures/tui-test-runner';
@@ -36,28 +36,15 @@ function readFixture(name: string): string {
 function runSessionHook(
   stdinJson: Record<string, unknown>,
   env: Record<string, string> = {},
-): { stdout: string; stderr: string; status: number | null } {
-  const result = spawnSync('npx', ['tsx', appPath(SESSION_HOOK)], {
-    input: JSON.stringify(stdinJson),
-    encoding: 'utf-8',
-    cwd: appPath(),
-    env: { ...process.env, FORCE_COLOR: '0', ...env },
-    timeout: 15000,
-  });
-  return { stdout: result.stdout || '', stderr: result.stderr || '', status: result.status };
+) {
+  return runTsx(SESSION_HOOK, { input: stdinJson, env });
 }
 
 function runWrapper(
   args: string[],
   env: Record<string, string> = {},
-): { stdout: string; stderr: string; status: number | null } {
-  const result = spawnSync('npx', ['tsx', appPath(WRAPPER), ...args], {
-    encoding: 'utf-8',
-    cwd: appPath(),
-    env: { ...process.env, FORCE_COLOR: '0', ...env },
-    timeout: 20000,
-  });
-  return { stdout: result.stdout || '', stderr: result.stderr || '', status: result.status };
+) {
+  return runTsx(WRAPPER, { args, env, timeout: 20000 });
 }
 
 async function importAdapterModule(relativePath: string) {
@@ -514,6 +501,35 @@ describe('PLUGIN012: TUI Test Runner', () => {
       const goEvents = Array.from(new GoTestAdapter().processLines(readFixture('go-test-output-sample.txt').split(/\r?\n/)));
       expect(goEvents.filter((e: any) => e.type === 'test_pass')).toHaveLength(1);
       expect(goEvents.filter((e: any) => e.type === 'test_fail')).toHaveLength(1);
+    });
+  });
+
+  describe('Cross-Platform Spawn', () => {
+    // @feature14
+    it('wrapper spawns npx child commands cross-platform (shell resolution)', () => {
+      const result = runWrapper(
+        ['npx', '--version'],
+        {
+          TEST_STATUSLINE_SESSION: 'xplat01',
+          TEST_STATUSLINE_PROJECT: appPath(),
+          TEST_SKIP_DISCOVERY: '1',
+        },
+      );
+      expect(result.status).toBe(0);
+      expect(result.stdout.trim()).toMatch(/^\d+\.\d+\.\d+$/);
+    });
+
+    // @feature14
+    it('passthrough spawns npx child commands cross-platform', () => {
+      const result = runWrapper(
+        ['npx', '--version'],
+        {
+          // No TEST_STATUSLINE_SESSION → passthrough mode
+          TEST_STATUSLINE_PROJECT: appPath(),
+        },
+      );
+      expect(result.status).toBe(0);
+      expect(result.stdout.trim()).toMatch(/^\d+\.\d+\.\d+$/);
     });
   });
 

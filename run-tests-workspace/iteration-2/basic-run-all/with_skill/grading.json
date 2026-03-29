@@ -1,0 +1,11 @@
+{
+  "eval_id": 1,
+  "run_type": "with_skill",
+  "expectations": [
+    {"text": "uses-wrapper", "passed": true, "evidence": "Command contains 'test_runner_wrapper.sh'"},
+    {"text": "detects-docker-rule", "passed": true, "evidence": "Command uses docker-test.sh"},
+    {"text": "detects-vitest", "passed": true, "evidence": "Command contains 'npx vitest run'"},
+    {"text": "uses-docker-test-sh", "passed": true, "evidence": "Command uses scripts/docker-test.sh"},
+    {"text": "no-direct-npm-test", "passed": true, "evidence": "No bare npm test"}
+  ]
+}

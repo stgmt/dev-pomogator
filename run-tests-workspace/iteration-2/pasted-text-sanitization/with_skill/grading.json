@@ -1,0 +1,10 @@
+{
+  "eval_id": 4,
+  "run_type": "with_skill",
+  "expectations": [
+    {"text": "warns-about-paste", "passed": true, "evidence": "Reasoning mentions warning about pasted text"},
+    {"text": "runs-something", "passed": true, "evidence": "Command uses test_runner_wrapper.sh"},
+    {"text": "smart-filter-extraction", "passed": true, "evidence": "Filter is 'statusline' — correctly extracted via Glob matching, not mechanical first-line"},
+    {"text": "no-checkmark-in-filter", "passed": true, "evidence": "No ✓ in command — checkmark line discarded as terminal noise"}
+  ]
+}

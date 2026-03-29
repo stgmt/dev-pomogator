@@ -1,0 +1,10 @@
+{
+  "eval_id": 4,
+  "run_type": "without_skill",
+  "expectations": [
+    {"text": "warns-about-paste", "passed": false, "evidence": "No explicit warning — silent reasoning"},
+    {"text": "runs-something", "passed": false, "evidence": "Uses npm test — no wrapper"},
+    {"text": "smart-filter-extraction", "passed": true, "evidence": "Correctly extracted 'statusline' as real filter"},
+    {"text": "no-checkmark-in-filter", "passed": true, "evidence": "No checkmark in command"}
+  ]
+}

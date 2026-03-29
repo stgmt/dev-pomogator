@@ -99,9 +99,9 @@ writeStatus();
 log(`Started: framework=${framework} cmd="${testCommand}"`);
 
 // --- Run test command ---
-const result = spawnSync(testCommand, {
+const cmdParts = testCommand.split(/\s+/);
+const result = spawnSync(cmdParts[0], cmdParts.slice(1), {
   encoding: 'utf-8',
-  shell: true,
   windowsHide: true,
   stdio: ['inherit', 'pipe', 'inherit'],
   timeout: TIMEOUT_MS,

@@ -4,12 +4,10 @@ export interface ExtensionManifest {
     description: string;
     platforms: string[];
     category: string;
-    files: {
-        cursor?: string[];
+    ruleFiles?: {
         claude?: string[];
     };
-    rules?: {
-        cursor?: string[];
+    commandFiles?: {
         claude?: string[];
     };
     tools?: {
@@ -22,7 +20,6 @@ export interface ExtensionManifest {
         [skillName: string]: string[];
     };
     hooks?: {
-        cursor?: Record<string, string>;
         claude?: Record<string, string>;
     };
     statusLine?: {
@@ -36,11 +33,6 @@ export interface ExtensionManifest {
         interactive?: boolean;
         skipInCI?: boolean;
     } | {
-        cursor?: {
-            command: string;
-            interactive?: boolean;
-            skipInCI?: boolean;
-        };
         claude?: {
             command: string;
             interactive?: boolean;

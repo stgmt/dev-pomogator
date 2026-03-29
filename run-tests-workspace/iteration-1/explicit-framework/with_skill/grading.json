@@ -1,0 +1,11 @@
+{
+  "eval_id": 3,
+  "run_type": "with_skill",
+  "command": "bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.sh bash scripts/docker-test.sh npx jest",
+  "expectations": [
+    {"text": "uses-jest", "passed": true, "evidence": "Command contains 'npx jest'"},
+    {"text": "no-vitest-in-command", "passed": true, "evidence": "No vitest in command — framework override works"},
+    {"text": "uses-wrapper", "passed": true, "evidence": "Wrapped in test_runner_wrapper.sh"},
+    {"text": "uses-docker", "passed": true, "evidence": "Uses docker-test.sh"}
+  ]
+}

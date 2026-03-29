@@ -121,18 +121,10 @@ function reloadNilesoft(): void {
 
 function ensureExplorerRunning(): void {
   try {
-    // Use PowerShell — tasklist flags break in MSYS/Git Bash (path conversion)
-    const result = execSync(
-      'powershell.exe -NoProfile -Command "(Get-Process explorer -ErrorAction SilentlyContinue).Count"',
+    execSync(
+      'powershell.exe -NoProfile -Command "if (-not (Get-Process explorer -EA SilentlyContinue)) { Start-Process explorer.exe }"',
       { encoding: 'utf-8', stdio: 'pipe', timeout: 5000 },
-    ).trim();
-    if (result === '0' || result === '') {
-      execSync(
-        'powershell.exe -NoProfile -Command "Start-Process explorer.exe"',
-        { stdio: 'pipe', timeout: 5000 },
-      );
-      log('✓ Explorer restarted');
-    }
+    );
   } catch { /* best-effort */ }
 }
 

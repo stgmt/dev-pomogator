@@ -1,4 +1,5 @@
 import { execSync, spawn, spawnSync, ChildProcess } from 'child_process';
+import crossSpawn from 'cross-spawn';
 import { readFileSync, readdirSync, readlinkSync } from 'fs';
 import path from 'path';
 import fs from 'fs-extra';
@@ -31,7 +32,7 @@ export interface InstallerResult {
  * Run the dev-pomogator installer
  * Note: Use --all flag to install all plugins in non-interactive mode
  */
-export async function runInstaller(args: string = '--cursor --all'): Promise<InstallerResult> {
+export async function runInstaller(args: string = '--claude --all'): Promise<InstallerResult> {
   try {
     const logs = execSync(`node dist/index.js ${args}`, {
       encoding: 'utf-8',
@@ -409,7 +410,7 @@ export async function stopWorker(): Promise<void> {
 export function runHook(action: string): string {
   const workerPath = getWorkerServicePath();
   try {
-    return execSync(`bun "${workerPath}" hook cursor ${action}`, {
+    return execSync(`bun "${workerPath}" hook claude ${action}`, {
       encoding: 'utf-8',
       timeout: 30000,
       env: {
@@ -663,7 +664,7 @@ export async function getPrompts(project?: string, offset = 0, limit = 20): Prom
 }
 
 // ============================================================================
-// Hook execution with parameters via STDIN (Cursor format)
+// Hook execution with parameters via STDIN
 // ============================================================================
 
 export interface HookParams {
@@ -803,7 +804,7 @@ function buildCursorStdinJson(action: string, params: HookParams): string {
  * Run a claude-mem hook command with parameters via stdin (Cursor format)
  * 
  * Pipes JSON to stdin as Cursor does:
- * echo '{"conversation_id":"...","prompt":"..."}' | bun worker-service.cjs hook cursor session-init
+ * echo '{"conversation_id":"...","prompt":"..."}' | bun worker-service.cjs hook claude session-init
  */
 export function runHookWithParams(action: string, params: HookParams): string {
   const workerPath = getWorkerServicePath();
@@ -811,7 +812,7 @@ export function runHookWithParams(action: string, params: HookParams): string {
   
   try {
     // Use shell to pipe JSON to stdin
-    const result = execSync(`echo '${stdinJson.replace(/'/g, "'\\''")}' | bun "${workerPath}" hook cursor ${action}`, {
+    const result = execSync(`echo '${stdinJson.replace(/'/g, "'\\''")}' | bun "${workerPath}" hook claude ${action}`, {
       encoding: 'utf-8',
       timeout: 30000,
       shell: '/bin/bash',
@@ -841,7 +842,7 @@ export function runHookExpectSuccess(action: string, params: HookParams): string
 
   // No try/catch: execSync throws on non-zero exit code
   const result = execSync(
-    `echo '${stdinJson.replace(/'/g, "'\\''")}' | bun "${workerPath}" hook cursor ${action}`,
+    `echo '${stdinJson.replace(/'/g, "'\\''")}' | bun "${workerPath}" hook claude ${action}`,
     {
       encoding: 'utf-8',
       timeout: 30000,
@@ -1060,7 +1061,7 @@ export interface ManagedFilesTest {
 export interface InstalledExtension {
   name: string;
   version: string;
-  platform: 'cursor' | 'claude';
+  platform: 'claude';
   projectPaths: string[];
   managed?: Record<string, ManagedFilesTest>;
 }
@@ -1297,31 +1298,26 @@ async function cleanClaudeDir(): Promise<void> {
  *
  * - Removes HOME-level platform directories and .dev-pomogator config
  * - Removes project-level platform artifacts
- * - For Cursor: copies cursor-base fixture to ~/.cursor
  * - For Claude: cleans ~/.claude/ but preserves plugins/ (claude-mem cache)
  * - Initialises a git repo so findRepoRoot() works
  */
-export async function setupCleanState(platform: 'cursor' | 'claude'): Promise<void> {
+export async function setupCleanState(platform: 'claude' = 'claude'): Promise<void> {
   // Clean HOME-level state
   await fs.remove(homePath('.dev-pomogator'));
-
-  if (platform === 'cursor') {
-    await fs.remove(homePath('.cursor'));
-    await cleanClaudeDir();
-    // Copy cursor-base fixture
-    await fs.copy(path.join(FIXTURES_BASE, 'cursor-base'), homePath('.cursor'));
-    // Clean project-level Cursor artifacts
-    await fs.remove(appPath('.cursor'));
-    await fs.remove(appPath('.dev-pomogator'));
-  } else {
-    await cleanClaudeDir();
-    await fs.remove(homePath('.cursor'));
-    // Clean project-level Claude artifacts (preserve .claude/rules/ — committed project rules)
-    await fs.remove(appPath('.claude', 'settings.json'));
-    await fs.remove(appPath('.claude', 'settings.json.bak'));
-    await fs.remove(appPath('.claude', 'skills'));
-    await fs.remove(appPath('.claude', 'commands'));
-    await fs.remove(appPath('.dev-pomogator'));
+  await cleanClaudeDir();
+  // Clean project-level Claude artifacts (preserve .claude/rules/ — committed project rules)
+  await fs.remove(appPath('.claude', 'settings.json'));
+  await fs.remove(appPath('.claude', 'settings.json.bak'));
+  await fs.remove(appPath('.claude', 'skills'));
+  await fs.remove(appPath('.claude', 'commands'));
+  // Remove .dev-pomogator but skip .docker-status (Docker volume mount, EBUSY)
+  const devPomDir = appPath('.dev-pomogator');
+  if (await fs.pathExists(devPomDir)) {
+    const entries = await fs.readdir(devPomDir);
+    for (const entry of entries) {
+      if (entry === '.docker-status') continue;
+      await fs.remove(path.join(devPomDir, entry)).catch(() => {});
+    }
   }
 
   // Initialise minimal git repo
@@ -1333,12 +1329,12 @@ export async function setupCleanState(platform: 'cursor' | 'claude'): Promise<vo
  *
  * Returns a StateSnapshot that can be used for before/after comparison.
  */
-export async function setupInstalledState(platform: 'cursor' | 'claude'): Promise<StateSnapshot> {
+export async function setupInstalledState(platform: 'claude'): Promise<StateSnapshot> {
   // Start from a clean state
   await setupCleanState(platform);
 
   // Run the installer
-  const flag = platform === 'cursor' ? '--cursor' : '--claude';
+  const flag = '--claude';
   const { exitCode } = await runInstaller(`${flag} --all`);
   if (exitCode !== 0) {
     throw new Error(`Installer failed with exit code ${exitCode} for platform ${platform}`);
@@ -1359,7 +1355,7 @@ export async function setupInstalledState(platform: 'cursor' | 'claude'): Promis
  * @param options.userModified - Array of relative paths to simulate user-modified files
  */
 export async function setupNeedsUpdateState(
-  platform: 'cursor' | 'claude',
+  platform: 'claude',
   extension: string,
   options?: { userModified?: string[] },
 ): Promise<void> {
@@ -1387,14 +1383,12 @@ export async function setupNeedsUpdateState(
 /**
  * Capture a snapshot of the current project state for the given platform.
  */
-export async function captureSnapshot(platform: 'cursor' | 'claude'): Promise<StateSnapshot> {
+export async function captureSnapshot(platform: 'claude'): Promise<StateSnapshot> {
   const crypto = await import('crypto');
   const files = new Map<string, string>();
 
   // Collect files from the platform-specific directories
-  const dirs = platform === 'cursor'
-    ? [appPath('.cursor'), appPath('.dev-pomogator')]
-    : [appPath('.claude'), appPath('.dev-pomogator')];
+  const dirs = [appPath('.claude'), appPath('.dev-pomogator')];
 
   for (const dir of dirs) {
     if (await fs.pathExists(dir)) {
@@ -1410,21 +1404,11 @@ export async function captureSnapshot(platform: 'cursor' | 'claude'): Promise<St
 
   // Count hooks
   const hookCount: Record<string, number> = {};
-  if (platform === 'cursor') {
-    const hooksPath = homePath('.cursor', 'hooks', 'hooks.json');
-    if (await fs.pathExists(hooksPath)) {
-      const hooks = await fs.readJson(hooksPath);
-      for (const [event, list] of Object.entries(hooks.hooks || {})) {
-        hookCount[event] = Array.isArray(list) ? list.length : 0;
-      }
-    }
-  } else {
-    const settingsPath = homePath('.claude', 'settings.json');
-    if (await fs.pathExists(settingsPath)) {
-      const settings = await fs.readJson(settingsPath);
-      for (const [event, list] of Object.entries(settings.hooks || {})) {
-        hookCount[event] = Array.isArray(list) ? list.length : 0;
-      }
+  const settingsPath = homePath('.claude', 'settings.json');
+  if (await fs.pathExists(settingsPath)) {
+    const settings = await fs.readJson(settingsPath);
+    for (const [event, list] of Object.entries(settings.hooks || {})) {
+      hookCount[event] = Array.isArray(list) ? list.length : 0;
     }
   }
 
@@ -1520,7 +1504,18 @@ export function runShellScript(
   // Always add -Format json for structured output
   const hasFormatArg = args.includes('-Format');
   const argsStr = [...quotedArgs, ...(hasFormatArg ? [] : ['-Format', 'json'])].join(' ');
-  const command = `"${resolvedScript}" ${argsStr}`.trim();
+  // For .ts wrappers that delegate to specs-generator-core.mjs, call node directly
+  // to skip npx tsx startup overhead (~500ms per invocation)
+  const coreMjs = path.join(path.dirname(resolvedScript), 'specs-generator-core.mjs');
+  const commandName = path.basename(resolvedScript, '.ts');
+  let command: string;
+  if (resolvedScript.endsWith('.ts') && fs.existsSync(coreMjs)) {
+    command = `node "${coreMjs}" ${commandName} ${argsStr}`.trim();
+  } else if (resolvedScript.endsWith('.ts')) {
+    command = `npx tsx "${resolvedScript}" ${argsStr}`.trim();
+  } else {
+    command = `"${resolvedScript}" ${argsStr}`.trim();
+  }
   
   try {
     const stdout = execSync(command, {
@@ -1571,7 +1566,7 @@ export function getSpecsGeneratorFixturePath(fixture: string): string {
 }
 
 // ============================================================================
-// CLI integration helpers (claude / cursor binary execution)
+// CLI integration helpers
 // ============================================================================
 
 export interface CliResult {
@@ -1686,6 +1681,40 @@ export function getPythonRunner(): PythonRunner {
   }
 
   throw new Error('Python 3 required for tests');
+}
+
+export interface TsxResult {
+  stdout: string;
+  stderr: string;
+  status: number | null;
+}
+
+/**
+ * Cross-platform helper to run a TypeScript file via npx tsx.
+ * Uses cross-spawn for transparent .cmd resolution on Windows.
+ */
+export function runTsx(
+  scriptPath: string,
+  options: {
+    input?: Record<string, unknown>;
+    args?: string[];
+    env?: Record<string, string>;
+    timeout?: number;
+  } = {},
+): TsxResult {
+  const args = ['tsx', appPath(scriptPath), ...(options.args || [])];
+  const result = crossSpawn.sync('npx', args, {
+    input: options.input ? JSON.stringify(options.input) : undefined,
+    encoding: 'utf-8',
+    cwd: appPath(),
+    env: { ...process.env, FORCE_COLOR: '0', ...(options.env || {}) },
+    timeout: options.timeout ?? 15000,
+  });
+  return {
+    stdout: result.stdout || '',
+    stderr: result.stderr || '',
+    status: result.status,
+  };
 }
 
 export function runPythonJson<T = Record<string, unknown>>(
