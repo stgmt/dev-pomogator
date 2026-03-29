@@ -71,7 +71,9 @@ export async function installClaude(options: ClaudeOptions = {}): Promise<void> 
       if (srcFile.endsWith('.md')) {
         const fileName = path.basename(srcFile);
         const dest = path.join(commandsDir, fileName);
-        await fs.copy(srcFile, dest, { overwrite: true });
+        if (path.resolve(srcFile) !== path.resolve(dest)) {
+          await fs.copy(srcFile, dest, { overwrite: true });
+        }
         console.log(`  ✓ Installed command: ${fileName}`);
 
         const hash = await getFileHash(dest);
@@ -107,7 +109,7 @@ export async function installClaude(options: ClaudeOptions = {}): Promise<void> 
       if (await fs.pathExists(ruleFile)) {
         const fileName = path.basename(ruleFile);
         const dest = path.join(rulesDir, fileName);
-        await fs.copy(ruleFile, dest, { overwrite: true });
+        if (path.resolve(ruleFile) !== path.resolve(dest)) { await fs.copy(ruleFile, dest, { overwrite: true }); }
         console.log(`  ✓ Installed rule: ${fileName}`);
 
         const hash = await getFileHash(dest);
@@ -133,7 +135,7 @@ export async function installClaude(options: ClaudeOptions = {}): Promise<void> 
     for (const [toolName, toolPath] of tools) {
       if (await fs.pathExists(toolPath)) {
         const dest = path.join(repoRoot, TOOLS_DIR, toolName);
-        await fs.copy(toolPath, dest, { overwrite: true });
+        if (path.resolve(toolPath) !== path.resolve(dest)) { await fs.copy(toolPath, dest, { overwrite: true }); }
         await ensureExecutableShellScripts(dest);
 
         // Remove files in dest that don't exist in source (stale/legacy cleanup)
@@ -163,7 +165,7 @@ export async function installClaude(options: ClaudeOptions = {}): Promise<void> 
     for (const [skillName, skillPath] of skills) {
       if (await fs.pathExists(skillPath)) {
         const dest = path.join(repoRoot, SKILLS_DIR, skillName);
-        await fs.copy(skillPath, dest, { overwrite: true });
+        if (path.resolve(skillPath) !== path.resolve(dest)) { await fs.copy(skillPath, dest, { overwrite: true }); }
         console.log(`  ✓ Installed skill: ${skillName}/`);
 
         const skillFiles = await collectFileHashes(dest, path.join(SKILLS_DIR, skillName));

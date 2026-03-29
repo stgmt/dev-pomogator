@@ -16,7 +16,7 @@
       ".dev-pomogator/tools/test-statusline/status_types.ts"
     ],
     "bg-task-guard": [
-      ".dev-pomogator/tools/bg-task-guard/mark-bg-task.sh",
+      ".dev-pomogator/tools/bg-task-guard/mark-bg-task.ts",
       ".dev-pomogator/tools/bg-task-guard/stop-guard.sh"
     ]
   },
@@ -29,7 +29,7 @@
           "hooks": [
             {
               "type": "command",
-              "command": "bash .dev-pomogator/tools/bg-task-guard/mark-bg-task.sh"
+              "command": "npx tsx .dev-pomogator/tools/bg-task-guard/mark-bg-task.ts"
             }
           ]
         }

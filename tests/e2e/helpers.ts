@@ -1305,11 +1305,11 @@ export async function setupCleanState(platform: 'claude' = 'claude'): Promise<vo
   // Clean HOME-level state
   await fs.remove(homePath('.dev-pomogator'));
   await cleanClaudeDir();
-  // Clean project-level Claude artifacts (preserve .claude/rules/ — committed project rules)
+  // Clean project-level Claude artifacts
+  // Preserve .claude/rules/ and .claude/commands/ — these are committed source files
+  // that installer reads FROM (not installed copies). Deleting them breaks installer.
   await fs.remove(appPath('.claude', 'settings.json'));
   await fs.remove(appPath('.claude', 'settings.json.bak'));
-  await fs.remove(appPath('.claude', 'skills'));
-  await fs.remove(appPath('.claude', 'commands'));
   // Remove .dev-pomogator but skip .docker-status (Docker volume mount, EBUSY)
   const devPomDir = appPath('.dev-pomogator');
   if (await fs.pathExists(devPomDir)) {

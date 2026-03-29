@@ -381,8 +381,10 @@ describe('CORE003: Claude Code Installer', () => {
           for (const hook of entry.hooks) {
             if (hook.command?.includes('dev-pomogator/tools/')) {
               checkedCount++;
-              // Must use tsx-runner wrapper
-              expect(hook.command).toContain('tsx-runner.js');
+              // TypeScript hooks must use tsx-runner wrapper; bash hooks use direct bash invocation
+              if (hook.command.includes('.ts')) {
+                expect(hook.command).toContain('tsx-runner.js');
+              }
               // Must use relative .dev-pomogator/tools/ path (portable across OS)
               expect(hook.command).toContain('.dev-pomogator/tools/');
               // Must NOT contain OS-specific absolute paths

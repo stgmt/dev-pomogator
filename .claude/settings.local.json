@@ -28,7 +28,13 @@
       "Bash(cd:*)",
       "Bash(grep -l '\"\"rules\"\"' extensions/*/extension.json)",
       "Bash(grep -l '\"\"files\"\"' extensions/*/extension.json)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(claude:*)",
+      "Bash(env)",
+      "Read(//c/Users/stigm/.local/share/claude/versions/**)",
+      "Read(//c/Users/stigm/AppData/Local/claude/**)",
+      "Bash(ls:*)",
+      "Bash(where claude:*)"
     ]
   }
 }
