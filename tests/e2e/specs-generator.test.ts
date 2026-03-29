@@ -61,10 +61,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       );
 
       expect(result.exitCode).toBe(0);
-      expect(result.json).toBeDefined();
       expect(result.json.success).toBe(true);
       expect(result.json.path).toBe(`.specs/${testSpecName}`);
-      expect(result.json.created_files).toBeDefined();
       expect(result.json.created_files.length).toBe(15);
       expect(result.json.created_files).toEqual(expect.arrayContaining([
         'USER_STORIES.md',
@@ -84,7 +82,6 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
 
       // The shell entrypoint should reject names with spaces
       expect(result.exitCode).toBe(2);
-      expect(result.json).toBeDefined();
       expect(result.json.success).toBe(false);
       expect(result.json.error).toContain('kebab-case');
     });
@@ -148,7 +145,6 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
         ['-Path', '.specs/valid-spec-test']
       );
 
-      expect(result.json).toBeDefined();
       expect(result.json.valid).toBe(true);
       expect(result.json.errors.length).toBe(0);
     });
@@ -163,9 +159,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
         ['-Path', '.specs/invalid-spec-test']
       );
 
-      expect(result.json).toBeDefined();
       expect(result.json.valid).toBe(false);
-      
+
       const structureErrors = result.json.errors.filter(
         (e: any) => e.rule === 'STRUCTURE'
       );
@@ -192,8 +187,6 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
         ['-Path', '.specs/invalid-spec-test']
       );
 
-      expect(result.json).toBeDefined();
-      
       const frErrors = result.json.errors.filter(
         (e: any) => e.rule === 'FR_FORMAT'
       );
@@ -220,8 +213,6 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
         ['-Path', '.specs/invalid-spec-test']
       );
 
-      expect(result.json).toBeDefined();
-      
       const ucErrors = result.json.errors.filter(
         (e: any) => e.rule === 'UC_FORMAT'
       );
@@ -250,8 +241,6 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
         ['-Path', '.specs/invalid-spec-test']
       );
 
-      expect(result.json).toBeDefined();
-
       const tddWarnings = result.json.warnings.filter(
         (w: any) => w.rule === 'TDD_TASK_ORDER'
       );
@@ -268,8 +257,6 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
         getSpecsGeneratorPath('validate-spec.ts'),
         ['-Path', '.specs/valid-spec-test']
       );
-
-      expect(result.json).toBeDefined();
 
       const warnings = Array.isArray(result.json.warnings) ? result.json.warnings : [];
       const tddWarnings = warnings.filter(
@@ -298,8 +285,6 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
         ['-Path', '.specs/invalid-spec-test']
       );
 
-      expect(result.json).toBeDefined();
-      
       const nfrWarnings = result.json.warnings.filter(
         (w: any) => w.rule === 'NFR_SECTIONS'
       );
@@ -327,11 +312,9 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
         ['-Path', '.specs/partial-spec-test']
       );
 
-      expect(result.json).toBeDefined();
       expect(result.json.path).toBe('.specs/partial-spec-test');
       expect(['Discovery', 'Requirements']).toContain(result.json.phase);
       expect(result.json.progress_percent).toBeLessThan(100);
-      expect(result.json.files).toBeDefined();
       expect(result.json.files['USER_STORIES.md'].status).toBe('complete');
       expect(result.json.files['FR.md'].status).toBe('partial');
       expect(result.json.files['RESEARCH.md'].status).toBe('not_created');
@@ -347,13 +330,11 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
         ['-Path', '.specs/valid-spec-test']
       );
 
-      expect(result.json).toBeDefined();
       expect(result.json.path).toBe('.specs/valid-spec-test');
       // Phase should be one of the defined phases (Complete when all files are done)
       expect(['Discovery', 'Requirements', 'Finalization', 'Complete']).toContain(result.json.phase);
       // Progress should be a valid percentage
       expect(result.json.progress_percent).toBe(100);
-      expect(result.json.files).toBeDefined();
       const featureFiles = Object.keys(result.json.files).filter((file: string) => file.endsWith('.feature'));
       expect(featureFiles.length).toBeGreaterThan(0);
       expect(result.json.files[featureFiles[0]].status).toBe('complete');
@@ -369,8 +350,6 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
         ['-Path', '.specs/partial-spec-test']
       );
 
-      expect(result.json).toBeDefined();
-      expect(result.json.next_action).toBeDefined();
       expect(result.json.next_action).toContain('RESEARCH.md');
     });
   });
@@ -408,10 +387,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
         []
       );
 
-      expect(result.json).toBeDefined();
-      expect(result.json.specs).toBeDefined();
       expect(Array.isArray(result.json.specs)).toBe(true);
-      expect(result.json.summary).toBeDefined();
       expect(result.json.summary.total).toBeGreaterThanOrEqual(2);
       
       const specNames = result.json.specs.map((spec: any) => spec.name);
@@ -427,9 +403,6 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
         ['-Incomplete']
       );
 
-      expect(result.json).toBeDefined();
-      expect(result.json.specs).toBeDefined();
-      
       const specNames = result.json.specs.map((spec: any) => spec.name);
       expect(specNames).toContain('list-test-partial');
       expect(specNames).not.toContain('list-test-complete');
@@ -469,8 +442,6 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
         ['-File', tempTemplatePath, '-ListPlaceholders']
       );
 
-      expect(result.json).toBeDefined();
-      expect(result.json.placeholders).toBeDefined();
       expect(Array.isArray(result.json.placeholders)).toBe(true);
       expect(result.json.total).toBeGreaterThan(0);
       
@@ -508,10 +479,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
         ['-File', tempTemplatePath, '-Values', values]
       );
 
-      expect(result.json).toBeDefined();
       expect(result.json.placeholders_before).toBe(totalBefore);
       expect(result.json.placeholders_after).toBeLessThan(result.json.placeholders_before);
-      expect(result.json.filled).toBeDefined();
       expect(result.json.filled.length).toBeGreaterThan(0);
       expect(result.json.filled).toEqual(expect.arrayContaining([
         '{роль}',
@@ -549,7 +518,6 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
         ['-Path', '.specs/crossrefs-test']
       );
 
-      expect(result.json).toBeDefined();
       expect(result.json.valid).toBe(true);
 
       const crossRefWarnings = (Array.isArray(result.json.warnings) ? result.json.warnings : []).filter(
@@ -566,8 +534,6 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
         getSpecsGeneratorPath('validate-spec.ts'),
         ['-Path', '.specs/broken-crossrefs-test']
       );
-
-      expect(result.json).toBeDefined();
 
       const crossRefWarnings = (Array.isArray(result.json.warnings) ? result.json.warnings : []).filter(
         (w: any) => w.rule === 'CROSS_REF_LINKS'
@@ -586,8 +552,6 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
         getSpecsGeneratorPath('validate-spec.ts'),
         ['-Path', '.specs/broken-crossrefs-test']
       );
-
-      expect(result.json).toBeDefined();
 
       const crossRefWarnings = (Array.isArray(result.json.warnings) ? result.json.warnings : []).filter(
         (w: any) => w.rule === 'CROSS_REF_LINKS'
@@ -623,7 +587,6 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       );
 
       expect(result.exitCode).toBe(0);
-      expect(result.json).toBeDefined();
 
       const linkFindings = (result.json.findings || []).filter(
         (f: any) => f.check === 'LINK_VALIDITY'
@@ -644,7 +607,6 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       );
 
       expect(result.exitCode).toBe(0);
-      expect(result.json).toBeDefined();
 
       const linkFindings = (result.json.findings || []).filter(
         (f: any) => f.check === 'LINK_VALIDITY'
@@ -676,7 +638,6 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       );
 
       expect(result.exitCode).toBe(0);
-      expect(result.json).toBeDefined();
 
       const frAcFindings = (result.json.findings || []).filter(
         (f: any) => f.check === 'FR_AC_COVERAGE'
@@ -695,7 +656,6 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       );
 
       expect(result.exitCode).toBe(0);
-      expect(result.json).toBeDefined();
 
       const bddFindings = (result.json.findings || []).filter(
         (f: any) => f.check === 'FR_BDD_COVERAGE'
@@ -703,7 +663,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       // FR-3 has no @feature3 tag, so there should be no mismatch for it
       // But FR-1 and FR-2 have @feature1/@feature2 which are in .feature — no findings expected for them
       // The check validates MD tags vs .feature tags
-      expect(bddFindings).toBeDefined();
+      expect(Array.isArray(bddFindings)).toBe(true);
     });
 
     // @feature23
@@ -714,7 +674,6 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       );
 
       expect(result.exitCode).toBe(0);
-      expect(result.json).toBeDefined();
 
       const traceFindings = (result.json.findings || []).filter(
         (f: any) => f.check === 'REQUIREMENTS_TRACEABILITY'
@@ -737,7 +696,6 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       );
 
       expect(result.exitCode).toBe(0);
-      expect(result.json).toBeDefined();
 
       const tasksFindings = (result.json.findings || []).filter(
         (f: any) => f.check === 'TASKS_FR_REFS'
@@ -757,7 +715,6 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       );
 
       expect(result.exitCode).toBe(0);
-      expect(result.json).toBeDefined();
 
       const openQFindings = (result.json.findings || []).filter(
         (f: any) => f.check === 'OPEN_QUESTIONS'
@@ -778,7 +735,6 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       );
 
       expect(result.exitCode).toBe(0);
-      expect(result.json).toBeDefined();
 
       const termFindings = (result.json.findings || []).filter(
         (f: any) => f.check === 'TERM_CONSISTENCY'
@@ -822,8 +778,6 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
         ['-Path', '.specs/validate-rules-test']
       );
 
-      expect(result.json).toBeDefined();
-
       const placeholderWarnings = (Array.isArray(result.json.warnings) ? result.json.warnings : []).filter(
         (w: any) => w.rule === 'PLACEHOLDER'
       );
@@ -842,8 +796,6 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
         getSpecsGeneratorPath('validate-spec.ts'),
         ['-Path', '.specs/validate-rules-test']
       );
-
-      expect(result.json).toBeDefined();
 
       const earsWarnings = (Array.isArray(result.json.warnings) ? result.json.warnings : []).filter(
         (w: any) => w.rule === 'EARS_FORMAT'
@@ -864,8 +816,6 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
         ['-Path', '.specs/validate-rules-test']
       );
 
-      expect(result.json).toBeDefined();
-
       const namingWarnings = (Array.isArray(result.json.warnings) ? result.json.warnings : []).filter(
         (w: any) => w.rule === 'FEATURE_NAMING'
       );
@@ -884,8 +834,6 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
         getSpecsGeneratorPath('validate-spec.ts'),
         ['-Path', '.specs/validate-rules-test']
       );
-
-      expect(result.json).toBeDefined();
 
       const contextWarnings = (Array.isArray(result.json.warnings) ? result.json.warnings : []).filter(
         (w: any) => w.rule === 'CONTEXT_SECTION'
@@ -907,10 +855,8 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       );
 
       expect(result.exitCode).toBe(0);
-      expect(result.json).toBeDefined();
       expect(result.json.totalFeatures).toBeGreaterThan(0);
-      expect(result.json.distribution).toBeDefined();
-      expect(result.json.searchPaths).toBeDefined();
+      expect(result.json).toHaveProperty('distribution');
       expect(Array.isArray(result.json.searchPaths)).toBe(true);
     });
 
@@ -922,11 +868,9 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       );
 
       expect(result.exitCode).toBe(0);
-      expect(result.json.stepDictionary).toBeDefined();
-      expect(result.json.stepDictionary.given).toBeDefined();
-      expect(result.json.stepDictionary.when).toBeDefined();
-      expect(result.json.stepDictionary.then).toBeDefined();
       expect(Array.isArray(result.json.stepDictionary.given)).toBe(true);
+      expect(Array.isArray(result.json.stepDictionary.when)).toBe(true);
+      expect(Array.isArray(result.json.stepDictionary.then)).toBe(true);
     });
 
     // @feature33
@@ -937,8 +881,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       );
 
       expect(result.exitCode).toBe(0);
-      expect(result.json.namingPatterns).toBeDefined();
-      expect(result.json.namingPatterns.domains).toBeDefined();
+      expect(result.json.namingPatterns).toHaveProperty('domains');
     });
 
     // @feature34
@@ -949,8 +892,6 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       );
 
       expect(result.exitCode).toBe(0);
-      expect(result.json).toBeDefined();
-      expect(result.json.candidates).toBeDefined();
       expect(Array.isArray(result.json.candidates)).toBe(true);
 
       // All candidates should match PLUGIN domain
@@ -969,8 +910,6 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       );
 
       expect(result.exitCode).toBe(0);
-      expect(result.json).toBeDefined();
-      expect(result.json.candidates).toBeDefined();
       expect(Array.isArray(result.json.candidates)).toBe(true);
       expect(result.json.candidates.length).toBeGreaterThan(0);
     });
@@ -1026,7 +965,6 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       );
 
       expect(result.exitCode).toBe(0);
-      expect(result.json.progress_state).toBeDefined();
       expect(result.json.progress_state.version).toBe(1);
 
       // File should be created
@@ -1069,9 +1007,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       );
 
       expect(result.exitCode).toBe(0);
-      expect(result.json.files).toBeDefined();
-      expect(result.json.files['CHANGELOG.md']).toBeDefined();
-      expect(result.json.files['CHANGELOG.md'].status).toBeDefined();
+      expect(result.json.files['CHANGELOG.md'].status).toBeTruthy();
     });
 
     // @feature40
@@ -1206,7 +1142,6 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       );
 
       expect(result.exitCode).toBe(0);
-      expect(result.json).toBeDefined();
 
       const oosFindings = (result.json.findings || []).filter(
         (f: any) => f.check === 'OUT_OF_SCOPE_PROPAGATION'
@@ -1225,7 +1160,6 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       );
 
       expect(result.exitCode).toBe(0);
-      expect(result.json).toBeDefined();
 
       const configFindings = (result.json.findings || []).filter(
         (f: any) => f.check === 'UNVERIFIED_CONFIG'
@@ -1249,7 +1183,6 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       );
 
       expect(result.exitCode).toBe(0);
-      expect(result.json).toBeDefined();
 
       const infraFindings = (result.json.findings || []).filter(
         (f: any) => f.check === 'INFRA_TASKS_MISSING'
@@ -1268,7 +1201,6 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       );
 
       expect(result.exitCode).toBe(0);
-      expect(result.json).toBeDefined();
 
       const dupFindings = (result.json.findings || []).filter(
         (f: any) => f.check === 'CONFIG_DUPLICATION'
@@ -1310,7 +1242,6 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       ['-Path', '.specs/open-q-test']
     );
 
-    expect(result.json).toBeDefined();
     const warnings = (Array.isArray(result.json.warnings) ? result.json.warnings : []).filter(
       (w: any) => w.rule === 'OPEN_QUESTIONS'
     );
@@ -1377,7 +1308,6 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     );
 
     expect(result.exitCode).toBe(0);
-    expect(result.json).toBeDefined();
 
     const openQFindings = (result.json.findings || []).filter(
       (f: any) => f.check === 'OPEN_QUESTIONS'

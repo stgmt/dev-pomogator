@@ -76,20 +76,18 @@ describe('PLUGIN014: Test Quality', () => {
     // @feature2
     it('PLUGIN014_06: manifest registers Stop hook', async () => {
       const manifestPath = appPath(MANIFEST_PATH);
-      expect(await fs.pathExists(manifestPath)).toBe(true);
+      const stat = await fs.stat(manifestPath);
+      expect(stat.size).toBeGreaterThan(0);
 
       const manifest = await fs.readJson(manifestPath);
-      expect(manifest.hooks).toBeDefined();
-      expect(manifest.hooks.claude).toBeDefined();
-      expect(manifest.hooks.claude.Stop).toBeDefined();
+      expect(manifest).toHaveProperty('hooks.claude.Stop');
       expect(manifest.hooks.claude.Stop).toContain('dedup_stop.ts');
     });
 
     // @feature2
     it('PLUGIN014_07: manifest declares dedup-tests skill', async () => {
       const manifest = await fs.readJson(appPath(MANIFEST_PATH));
-      expect(manifest.skills).toBeDefined();
-      expect(manifest.skills['dedup-tests']).toBeDefined();
+      expect(manifest).toHaveProperty('skills.dedup-tests');
     });
   });
 
@@ -100,16 +98,14 @@ describe('PLUGIN014: Test Quality', () => {
   describe('Helper Extraction (@feature3)', () => {
     // @feature3
     it('PLUGIN014_08: getPythonRunner exported from helpers.ts', async () => {
-      const helpersPath = appPath('tests/e2e/helpers.ts');
-      const content = await fs.readFile(helpersPath, 'utf-8');
-      expect(content).toContain('export function getPythonRunner');
+      const { getPythonRunner } = await import('./helpers');
+      expect(typeof getPythonRunner).toBe('function');
     });
 
     // @feature3
     it('PLUGIN014_09: runPythonJson exported from helpers.ts', async () => {
-      const helpersPath = appPath('tests/e2e/helpers.ts');
-      const content = await fs.readFile(helpersPath, 'utf-8');
-      expect(content).toContain('export function runPythonJson');
+      const { runPythonJson } = await import('./helpers');
+      expect(typeof runPythonJson).toBe('function');
     });
 
     // @feature3

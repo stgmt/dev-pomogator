@@ -150,10 +150,8 @@ describe('PLUGIN005: MCP Setup', () => {
       expect(output).toContain('SAVED');
 
       const config = await loadMcpConfig(getGlobalMcpConfigPath('cursor'));
-      expect(config.mcpServers.context7).toBeDefined();
       expect(config.mcpServers.context7.command).toBe('npx');
       expect(config.mcpServers.context7.args).toEqual(['-y', '@upstash/context7-mcp@latest']);
-      expect(config.mcpServers.octocode).toBeDefined();
       expect(config.mcpServers.octocode.command).toBe('npx');
       expect(config.mcpServers.octocode.args).toEqual(['-y', 'octocode-mcp@latest']);
     });
@@ -185,9 +183,9 @@ describe('PLUGIN005: MCP Setup', () => {
       runMcpSetup('--platform cursor');
 
       const projectConfig = await loadMcpConfig(projectConfigPath);
-      expect(projectConfig.mcpServers['my-project-mcp']).toBeDefined();
-      expect(projectConfig.mcpServers.context7).toBeDefined();
-      expect(projectConfig.mcpServers.octocode).toBeDefined();
+      expect(projectConfig.mcpServers).toHaveProperty('my-project-mcp');
+      expect(projectConfig.mcpServers).toHaveProperty('context7');
+      expect(projectConfig.mcpServers).toHaveProperty('octocode');
 
       const globalConfigAfter = await loadMcpConfig(globalConfigPath);
       expect(globalConfigAfter).toEqual(globalConfigBefore);
@@ -202,8 +200,6 @@ describe('PLUGIN005: MCP Setup', () => {
       expect(output).toContain('octocode-mcp@latest');
 
       const config = await loadMcpConfig(getGlobalMcpConfigPath('claude'));
-      expect(config.mcpServers.context7).toBeDefined();
-      expect(config.mcpServers.octocode).toBeDefined();
       expect(config.mcpServers.context7.command).toBe('npx');
       expect(config.mcpServers.context7.args).toEqual(['-y', '@upstash/context7-mcp@latest']);
       expect(config.mcpServers.octocode.command).toBe('npx');
@@ -235,9 +231,9 @@ describe('PLUGIN005: MCP Setup', () => {
       runMcpSetup('--platform claude');
 
       const projectConfig = await loadMcpConfig(projectConfigPath);
-      expect(projectConfig.mcpServers['my-project-mcp']).toBeDefined();
-      expect(projectConfig.mcpServers.context7).toBeDefined();
-      expect(projectConfig.mcpServers.octocode).toBeDefined();
+      expect(projectConfig.mcpServers).toHaveProperty('my-project-mcp');
+      expect(projectConfig.mcpServers).toHaveProperty('context7');
+      expect(projectConfig.mcpServers).toHaveProperty('octocode');
 
       const globalConfigAfter = await loadMcpConfig(globalConfigPath);
       expect(globalConfigAfter).toEqual(globalConfigBefore);
@@ -288,9 +284,9 @@ describe('PLUGIN005: MCP Setup', () => {
 
       // Check that both servers exist
       const config = await loadMcpConfig(getGlobalMcpConfigPath('cursor'));
-      expect(config.mcpServers['my-custom-mcp']).toBeDefined();
-      expect(config.mcpServers.context7).toBeDefined();
-      expect(config.mcpServers.octocode).toBeDefined();
+      expect(config.mcpServers).toHaveProperty('my-custom-mcp');
+      expect(config.mcpServers).toHaveProperty('context7');
+      expect(config.mcpServers).toHaveProperty('octocode');
     });
 
     it('should preserve other properties in .claude.json', async () => {
@@ -310,7 +306,7 @@ describe('PLUGIN005: MCP Setup', () => {
       const config = await loadMcpConfig(getGlobalMcpConfigPath('claude'));
       expect(config.theme).toBe('dark');
       expect(config.onboardingComplete).toBe(true);
-      expect(config.mcpServers.context7).toBeDefined();
+      expect(config.mcpServers).toHaveProperty('context7');
     });
 
     it('should restore .claude.json from backup when missing', async () => {
@@ -334,8 +330,8 @@ describe('PLUGIN005: MCP Setup', () => {
 
       const config = await loadMcpConfig(getGlobalMcpConfigPath('claude'));
       expect(config.theme).toBe('dark');
-      expect(config.mcpServers['my-custom-mcp']).toBeDefined();
-      expect(config.mcpServers.context7).toBeDefined();
+      expect(config.mcpServers).toHaveProperty('my-custom-mcp');
+      expect(config.mcpServers).toHaveProperty('context7');
     });
   });
 
@@ -348,10 +344,10 @@ describe('PLUGIN005: MCP Setup', () => {
       const cursorConfig = await loadMcpConfig(getGlobalMcpConfigPath('cursor'));
       const claudeConfig = await loadMcpConfig(getGlobalMcpConfigPath('claude'));
 
-      expect(cursorConfig.mcpServers.context7).toBeDefined();
-      expect(cursorConfig.mcpServers.octocode).toBeDefined();
-      expect(claudeConfig.mcpServers.context7).toBeDefined();
-      expect(claudeConfig.mcpServers.octocode).toBeDefined();
+      expect(cursorConfig.mcpServers).toHaveProperty('context7');
+      expect(cursorConfig.mcpServers).toHaveProperty('octocode');
+      expect(claudeConfig.mcpServers).toHaveProperty('context7');
+      expect(claudeConfig.mcpServers).toHaveProperty('octocode');
     });
   });
 
@@ -374,9 +370,9 @@ describe('PLUGIN005: MCP Setup', () => {
       expect(output).not.toContain('[RESTORE]');
 
       const config = await loadMcpConfig(configPath);
-      expect(config.mcpServers['my-custom']).toBeDefined();
-      expect(config.mcpServers.context7).toBeDefined();
-      expect(config.mcpServers.octocode).toBeDefined();
+      expect(config.mcpServers).toHaveProperty('my-custom');
+      expect(config.mcpServers).toHaveProperty('context7');
+      expect(config.mcpServers).toHaveProperty('octocode');
     });
 
     it('should auto-fix trailing comma in project config', async () => {
@@ -395,8 +391,8 @@ describe('PLUGIN005: MCP Setup', () => {
       expect(output).toContain('[WARN] Fixed trailing commas');
 
       const config = await loadMcpConfig(projectConfigPath);
-      expect(config.mcpServers['project-mcp']).toBeDefined();
-      expect(config.mcpServers.context7).toBeDefined();
+      expect(config.mcpServers).toHaveProperty('project-mcp');
+      expect(config.mcpServers).toHaveProperty('context7');
     });
 
     it('should restore from backup when config is completely broken', async () => {
@@ -421,7 +417,7 @@ describe('PLUGIN005: MCP Setup', () => {
 
       const config = await loadMcpConfig(configPath);
       expect(config.theme).toBe('dark');
-      expect(config.mcpServers.context7).toBeDefined();
+      expect(config.mcpServers).toHaveProperty('context7');
     });
 
     it('should fail gracefully when config is garbage and no backup exists', async () => {

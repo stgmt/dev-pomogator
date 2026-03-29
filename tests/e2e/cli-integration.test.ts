@@ -54,43 +54,45 @@ describe('CLI Integration: Claude Code', () => {
 
   describe('Commands installed and readable', () => {
     it('.claude/commands/ directory exists', async () => {
-      expect(await fs.pathExists(appPath('.claude', 'commands'))).toBe(true);
+      const files = await fs.readdir(appPath('.claude', 'commands'));
+      expect(files).toContain('suggest-rules.md');
     });
 
     it('suggest-rules.md is installed', async () => {
       const p = appPath('.claude', 'commands', 'suggest-rules.md');
-      expect(await fs.pathExists(p)).toBe(true);
-      expect((await fs.readFile(p, 'utf-8')).length).toBeGreaterThan(50);
+      const content = await fs.readFile(p, 'utf-8');
+      expect(content.length).toBeGreaterThan(50);
     });
 
     it('create-spec.md is installed', async () => {
-      expect(await fs.pathExists(appPath('.claude', 'commands', 'create-spec.md'))).toBe(true);
+      const stat = await fs.stat(appPath('.claude', 'commands', 'create-spec.md'));
+      expect(stat.size).toBeGreaterThan(0);
     });
   });
 
   describe('Rules installed and readable', () => {
     it('.claude/rules/pomogator/ directory exists', async () => {
-      expect(await fs.pathExists(appPath('.claude', 'rules', 'pomogator'))).toBe(true);
+      const files = await fs.readdir(appPath('.claude', 'rules', 'pomogator'));
+      expect(files.length).toBeGreaterThan(0);
     });
 
     it('plan-pomogator.md rule is installed', async () => {
       const p = appPath('.claude', 'rules', 'pomogator', 'plan-pomogator.md');
-      expect(await fs.pathExists(p)).toBe(true);
-      expect((await fs.readFile(p, 'utf-8')).length).toBeGreaterThan(50);
+      const content = await fs.readFile(p, 'utf-8');
+      expect(content.length).toBeGreaterThan(50);
     });
 
     it('specs-management.md rule is installed', async () => {
-      expect(await fs.pathExists(appPath('.claude', 'rules', 'pomogator', 'specs-management.md'))).toBe(true);
+      const stat = await fs.stat(appPath('.claude', 'rules', 'pomogator', 'specs-management.md'));
+      expect(stat.size).toBeGreaterThan(0);
     });
   });
 
   describe('Hooks configured in settings.json', () => {
     it('~/.claude/settings.json has SessionStart hooks with check-update', async () => {
       const settingsPath = homePath('.claude', 'settings.json');
-      expect(await fs.pathExists(settingsPath)).toBe(true);
       const settings = await fs.readJson(settingsPath);
-      expect(settings.hooks?.SessionStart).toBeDefined();
-      expect(Array.isArray(settings.hooks.SessionStart)).toBe(true);
+      expect(Array.isArray(settings.hooks?.SessionStart)).toBe(true);
       expect(settings.hooks.SessionStart.length).toBeGreaterThan(0);
     });
 
@@ -106,28 +108,17 @@ describe('CLI Integration: Claude Code', () => {
   describe('MCP config file contains servers', () => {
     it('~/.claude.json has mcpServers with context7 and octocode', async () => {
       const claudeJson = homePath('.claude.json');
-      expect(await fs.pathExists(claudeJson)).toBe(true);
       const config = await fs.readJson(claudeJson);
-      expect(config.mcpServers).toBeDefined();
-      expect(config.mcpServers.context7).toBeDefined();
       expect(config.mcpServers.context7.command).toBe('npx');
-      expect(config.mcpServers.octocode).toBeDefined();
       expect(config.mcpServers.octocode.command).toBe('npx');
     });
 
     it('~/.claude.json has claude-mem MCP server registered', async () => {
-      // Claude Code installs claude-mem via `claude plugin marketplace add` (SSH clone).
-      // In Docker without SSH keys, this fails — skip gracefully.
       const mcpServerPath = homePath('.claude', 'plugins', 'marketplaces', 'thedotmack', 'plugin', 'scripts', 'mcp-server.cjs');
-      if (!await fs.pathExists(mcpServerPath)) {
-        console.log('  ⚠ claude-mem plugin not installed (SSH clone failed in Docker) — skipping MCP check');
-        return;
-      }
+      expect(await fs.pathExists(mcpServerPath), 'claude-mem MCP binary must exist').toBe(true);
       const claudeJson = homePath('.claude.json');
       const config = await fs.readJson(claudeJson);
-      expect(config.mcpServers['claude-mem']).toBeDefined();
       expect(config.mcpServers['claude-mem'].command).toBe('node');
-      expect(config.mcpServers['claude-mem'].args).toBeDefined();
       expect(config.mcpServers['claude-mem'].args[0]).toContain('mcp-server.cjs');
     });
   });
@@ -135,7 +126,8 @@ describe('CLI Integration: Claude Code', () => {
   describe('.env.example generation', () => {
     it('.env.example file exists after installation', async () => {
       const envExamplePath = appPath('.env.example');
-      expect(await fs.pathExists(envExamplePath)).toBe(true);
+      const stat = await fs.stat(envExamplePath);
+      expect(stat.size).toBeGreaterThan(0);
     });
 
     it('.env.example contains AUTO_COMMIT_API_KEY', async () => {
@@ -206,46 +198,40 @@ describe('CLI Integration: Cursor Agent', () => {
 
   describe('Commands installed', () => {
     it('.cursor/commands/ directory exists with suggest-rules', async () => {
-      // Cursor commands go to project .cursor/commands/ (or extensions copy them)
       const cmdDir = appPath('.cursor', 'commands');
-      expect(await fs.pathExists(cmdDir)).toBe(true);
+      const files = await fs.readdir(cmdDir);
+      expect(files.length).toBeGreaterThan(0);
     });
   });
 
   describe('Rules installed', () => {
     it('.cursor/rules/ directory has pomogator rules', async () => {
       const rulesDir = appPath('.cursor', 'rules');
-      expect(await fs.pathExists(rulesDir)).toBe(true);
+      const files = await fs.readdir(rulesDir);
+      expect(files.length).toBeGreaterThan(0);
     });
   });
 
   describe('Hooks configured', () => {
     it('~/.cursor/hooks/hooks.json exists with hook entries', async () => {
       const hooksPath = homePath('.cursor', 'hooks', 'hooks.json');
-      expect(await fs.pathExists(hooksPath)).toBe(true);
       const hooks = await fs.readJson(hooksPath);
-      expect(hooks.hooks).toBeDefined();
+      expect(hooks).toHaveProperty('hooks');
     });
   });
 
   describe('MCP config file contains servers', () => {
     it('~/.cursor/mcp.json has mcpServers with context7 and octocode', async () => {
       const mcpPath = homePath('.cursor', 'mcp.json');
-      expect(await fs.pathExists(mcpPath)).toBe(true);
       const config = await fs.readJson(mcpPath);
-      expect(config.mcpServers).toBeDefined();
-      expect(config.mcpServers.context7).toBeDefined();
       expect(config.mcpServers.context7.command).toBe('npx');
-      expect(config.mcpServers.octocode).toBeDefined();
       expect(config.mcpServers.octocode.command).toBe('npx');
     });
 
     it('~/.cursor/mcp.json has claude-mem MCP server registered', async () => {
       const mcpPath = homePath('.cursor', 'mcp.json');
       const config = await fs.readJson(mcpPath);
-      expect(config.mcpServers['claude-mem']).toBeDefined();
       expect(config.mcpServers['claude-mem'].command).toBe('node');
-      expect(config.mcpServers['claude-mem'].args).toBeDefined();
       expect(config.mcpServers['claude-mem'].args[0]).toContain('mcp-server.cjs');
     });
   });

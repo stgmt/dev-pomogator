@@ -446,7 +446,8 @@ describe('PLUGIN009: Auto-Capture Learnings', () => {
     // @feature1b
     it('should have semantic.ts module', async () => {
       const semanticPath = appPath(CAPTURE_TOOL_PATH, 'semantic.ts');
-      expect(await fs.pathExists(semanticPath)).toBe(true);
+      const stat = await fs.stat(semanticPath);
+      expect(stat.size).toBeGreaterThan(0);
     });
   });
 
@@ -456,37 +457,42 @@ describe('PLUGIN009: Auto-Capture Learnings', () => {
     // @feature4
     it('should have capture.ts entry point', async () => {
       const capturePath = appPath(CAPTURE_TOOL_PATH, 'capture.ts');
-      expect(await fs.pathExists(capturePath)).toBe(true);
+      const stat = await fs.stat(capturePath);
+      expect(stat.size).toBeGreaterThan(0);
     });
 
     // @feature4
     it('should have queue.ts module', async () => {
       const queuePath = appPath(CAPTURE_TOOL_PATH, 'queue.ts');
-      expect(await fs.pathExists(queuePath)).toBe(true);
+      const stat = await fs.stat(queuePath);
+      expect(stat.size).toBeGreaterThan(0);
     });
 
     // @feature4
     it('should have dedupe.ts module', async () => {
       const dedupePath = appPath(CAPTURE_TOOL_PATH, 'dedupe.ts');
-      expect(await fs.pathExists(dedupePath)).toBe(true);
+      const stat = await fs.stat(dedupePath);
+      expect(stat.size).toBeGreaterThan(0);
     });
 
     // @feature4
     it('should have hooks in extension.json', async () => {
       const extJson = await fs.readJson(appPath('extensions/suggest-rules/extension.json'));
-      expect(extJson.hooks).toBeDefined();
-      expect(extJson.hooks.claude).toBeDefined();
+      expect(extJson).toHaveProperty('hooks');
+      expect(extJson).toHaveProperty('hooks.claude');
       expect(extJson.hooks.claude.UserPromptSubmit).toContain('capture.ts');
       expect(extJson.hooks.claude.Stop).toContain('capture.ts');
-      expect(extJson.hooks.cursor).toBeDefined();
+      expect(extJson).toHaveProperty('hooks.cursor');
     });
 
     // @feature4
     it('should have reflect.md command for both platforms', async () => {
       const claudeReflect = appPath('extensions/suggest-rules/claude/commands/reflect.md');
       const cursorReflect = appPath('extensions/suggest-rules/cursor/commands/reflect.md');
-      expect(await fs.pathExists(claudeReflect)).toBe(true);
-      expect(await fs.pathExists(cursorReflect)).toBe(true);
+      const statClaude = await fs.stat(claudeReflect);
+      expect(statClaude.size).toBeGreaterThan(0);
+      const statCursor = await fs.stat(cursorReflect);
+      expect(statCursor.size).toBeGreaterThan(0);
     });
   });
 });
