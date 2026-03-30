@@ -1541,7 +1541,9 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     it('PLUGIN006_62: audit does not flag keyword in table row as INFRA_TASKS', async () => {
       // Add "database" inside a markdown table in DESIGN.md
       const designPath = path.join(fpFixturePath, 'DESIGN.md');
-      const designContent = await fs.readFile(designPath, 'utf-8');
+      let designContent = await fs.readFile(designPath, 'utf-8');
+      // Remove existing infra keywords from prose so only the table row contains them
+      designContent = designContent.replace(/database|docker|compose|PostgreSQL|postgresql|redis|migration/gi, 'service');
       const tableRow = '\n\n| patterns.yaml category | Verdict signal |\n|---|---|\n| database, runtime | context-dependent |\n';
       await fs.writeFile(designPath, designContent + tableRow);
 

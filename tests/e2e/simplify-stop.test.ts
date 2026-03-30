@@ -140,14 +140,15 @@ describe('Auto-Simplify Stop Hook', () => {
         count: 99,
       });
 
-      // Ensure git repo exists (Docker excludes .git via .dockerignore)
+      // Ensure REAL git repo (initGitRepo creates fake .git, git diff needs real one)
       const { execSync } = await import('child_process');
       const gitDir = appPath('.git');
-      const needTempGit = !await fs.pathExists(gitDir);
-      if (needTempGit) {
-        execSync('git init && git add -A && git -c user.email="t@t" -c user.name="t" commit -m "init"', {
-          cwd: appPath(), stdio: 'ignore', shell: true,
-        });
+      const hadGit = await fs.pathExists(path.join(gitDir, 'objects')); // real git has objects/
+      if (!hadGit) {
+        await fs.remove(gitDir); // remove fake .git from initGitRepo
+        execSync('git init', { cwd: appPath(), stdio: 'pipe' });
+        execSync('git add package.json', { cwd: appPath(), stdio: 'pipe' });
+        execSync('git -c user.email="t@t" -c user.name="t" commit -m "init"', { cwd: appPath(), stdio: 'pipe' });
       }
 
       // Create uncommitted change so git diff --numstat returns non-empty
@@ -156,10 +157,6 @@ describe('Auto-Simplify Stop Hook', () => {
       await fs.appendFile(trackedFile, '\n// dirty');
 
       try {
-        // Verify git diff sees the change
-        const diff = execSync('git diff --numstat', { cwd: appPath(), encoding: 'utf-8' });
-        expect(diff.trim().length, 'git diff should show uncommitted change').toBeGreaterThan(0);
-
         const result = runStopHook(defaultInput(), { SIMPLIFY_MAX_RETRIES: '2', SIMPLIFY_MIN_LINES: '1' });
         expect(result.exitCode).toBe(0);
         const output = parseOutput(result.stdout);
@@ -167,7 +164,7 @@ describe('Auto-Simplify Stop Hook', () => {
         expect(result.stderr).toContain('Max retries');
       } finally {
         await fs.writeFile(trackedFile, originalContent, 'utf-8');
-        if (needTempGit) {
+        if (!hadGit) {
           await fs.remove(gitDir);
         }
       }
