@@ -140,34 +140,16 @@ describe('Auto-Simplify Stop Hook', () => {
         count: 99,
       });
 
-      // Ensure REAL git repo (initGitRepo creates fake .git, git diff needs real one)
-      const { execSync } = await import('child_process');
-      const gitDir = appPath('.git');
-      const hadGit = await fs.pathExists(path.join(gitDir, 'objects')); // real git has objects/
-      if (!hadGit) {
-        await fs.remove(gitDir); // remove fake .git from initGitRepo
-        execSync('git init', { cwd: appPath(), stdio: 'pipe' });
-        execSync('git add package.json', { cwd: appPath(), stdio: 'pipe' });
-        execSync('git -c user.email="t@t" -c user.name="t" commit -m "init"', { cwd: appPath(), stdio: 'pipe' });
-      }
-
-      // Create uncommitted change so git diff --numstat returns non-empty
-      const trackedFile = appPath('package.json');
-      const originalContent = await fs.readFile(trackedFile, 'utf-8');
-      await fs.appendFile(trackedFile, '\n// dirty');
-
-      try {
-        const result = runStopHook(defaultInput(), { SIMPLIFY_MAX_RETRIES: '2', SIMPLIFY_MIN_LINES: '1' });
-        expect(result.exitCode).toBe(0);
-        const output = parseOutput(result.stdout);
-        expect(output).not.toHaveProperty('decision');
-        expect(result.stderr).toContain('Max retries');
-      } finally {
-        await fs.writeFile(trackedFile, originalContent, 'utf-8');
-        if (!hadGit) {
-          await fs.remove(gitDir);
-        }
-      }
+      // Use SIMPLIFY_DIFF_OVERRIDE to bypass git diff (Docker has no real .git)
+      const result = runStopHook(defaultInput(), {
+        SIMPLIFY_MAX_RETRIES: '2',
+        SIMPLIFY_MIN_LINES: '1',
+        SIMPLIFY_DIFF_OVERRIDE: 'src/test.ts,src/test2.ts',
+      });
+      expect(result.exitCode).toBe(0);
+      const output = parseOutput(result.stdout);
+      expect(output).not.toHaveProperty('decision');
+      expect(result.stderr).toContain('Max retries');
     });
   });
 

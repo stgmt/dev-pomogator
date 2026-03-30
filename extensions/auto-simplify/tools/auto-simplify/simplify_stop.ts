@@ -75,6 +75,13 @@ interface DiffStats {
 
 function getGitDiffStats(repoRoot: string): DiffStats | null {
   try {
+    // Test override: skip git and use synthetic diff data
+    const override = process.env.SIMPLIFY_DIFF_OVERRIDE;
+    if (override) {
+      const files = override.split(',').map(f => f.trim()).filter(Boolean);
+      return { totalLines: files.length * 10, fileList: files };
+    }
+
     // git diff --numstat outputs: "insertions\tdeletions\tfilename" per line
     // Binary files show "-\t-\tfilename"
     const raw = execSync('git diff --numstat', {
