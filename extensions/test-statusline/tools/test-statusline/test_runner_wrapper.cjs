@@ -22,6 +22,23 @@ const tsxRunner = path.join(os.homedir(), '.dev-pomogator', 'scripts', 'tsx-runn
 
 const args = process.argv.slice(2);
 
+// Read session.env fallback when TEST_STATUSLINE_SESSION not set in env
+// (SessionStart hook writes session.env to .dev-pomogator/.test-status/;
+//  Docker CMD entry point relies on this fallback)
+if (!process.env.TEST_STATUSLINE_SESSION) {
+  // SessionStart hook always writes to .dev-pomogator/.test-status/session.env
+  const sessionEnvPath = path.join(repoRoot, '.dev-pomogator', '.test-status', 'session.env');
+  try {
+    const envContent = fs.readFileSync(sessionEnvPath, 'utf-8');
+    for (const line of envContent.split(/\r?\n/)) {
+      const m = line.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.+)$/);
+      if (m && !process.env[m[1]]) {
+        process.env[m[1]] = m[2].trim();
+      }
+    }
+  } catch { /* no session.env — proceed without */ }
+}
+
 function runViaTsxRunner(scriptPath) {
   const result = spawnSync('node', ['-e', `require('${tsxRunner.replace(/\\/g, '\\\\')}')`, '--', scriptPath, ...args], {
     stdio: 'inherit',

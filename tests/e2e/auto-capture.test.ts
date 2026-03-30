@@ -482,17 +482,17 @@ describe('PLUGIN009: Auto-Capture Learnings', () => {
       expect(extJson).toHaveProperty('hooks.claude');
       expect(extJson.hooks.claude.UserPromptSubmit).toContain('capture.ts');
       expect(extJson.hooks.claude.Stop).toContain('capture.ts');
-      expect(extJson).toHaveProperty('hooks.cursor');
     });
 
     // @feature4
-    it('should have reflect.md command for both platforms', async () => {
-      const claudeReflect = appPath('extensions/suggest-rules/claude/commands/reflect.md');
-      const cursorReflect = appPath('extensions/suggest-rules/cursor/commands/reflect.md');
+    it('should have reflect.md command for claude platform', async () => {
+      const extJson = await fs.readJson(appPath('extensions/suggest-rules/extension.json'));
+      const claudeCommands = extJson.commandFiles?.claude || [];
+      expect(claudeCommands).toContain('.claude/commands/reflect.md');
+
+      const claudeReflect = appPath('.claude/commands/reflect.md');
       const statClaude = await fs.stat(claudeReflect);
       expect(statClaude.size).toBeGreaterThan(0);
-      const statCursor = await fs.stat(cursorReflect);
-      expect(statCursor.size).toBeGreaterThan(0);
     });
   });
 });

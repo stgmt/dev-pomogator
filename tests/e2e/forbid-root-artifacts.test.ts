@@ -80,7 +80,6 @@ describe('PLUGIN004: Forbid Root Artifacts', () => {
       
       const ext = await fs.readJson(extPath);
       expect(ext.name).toBe('forbid-root-artifacts');
-      expect(ext.platforms).toContain('cursor');
       expect(ext.platforms).toContain('claude');
     });
 
@@ -97,12 +96,9 @@ describe('PLUGIN004: Forbid Root Artifacts', () => {
       expect(await fs.pathExists(whitelistPath)).toBe(true);
     });
 
-    it('should have commands for Cursor and Claude', async () => {
-      const cursorCmd = path.join(PLUGIN_DIR, 'cursor', 'commands', 'configure-root-artifacts.md');
-      const claudeCmd = path.join(PLUGIN_DIR, 'claude', 'commands', 'configure-root-artifacts.md');
-      
-      expect(await fs.pathExists(cursorCmd)).toBe(true);
-      expect(await fs.pathExists(claudeCmd)).toBe(true);
+    it('should have configure-root-artifacts command installed', async () => {
+      const installedCmd = path.join(ROOT_DIR, '.claude', 'commands', 'configure-root-artifacts.md');
+      expect(await fs.pathExists(installedCmd)).toBe(true);
     });
   });
 

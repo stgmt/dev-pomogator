@@ -102,7 +102,8 @@ describe('GUARD001: Test Guard Hook', () => {
     expect(manifest.hooks.claude).toBeDefined();
     expect(manifest.hooks.claude.SessionStart).toBeDefined();
     expect(manifest.hooks.claude.PreToolUse).toBeDefined();
-    // PreToolUse must have matcher
-    expect(manifest.hooks.claude.PreToolUse.matcher).toBe('Bash');
+    // PreToolUse is array format with matcher objects
+    expect(Array.isArray(manifest.hooks.claude.PreToolUse)).toBe(true);
+    expect(manifest.hooks.claude.PreToolUse[0].matcher).toBe('Bash');
   });
 });

@@ -154,20 +154,18 @@ describe('PLUGIN006: Auto-Commit', () => {
     it('should have extension.json with stop hooks', async () => {
       const extPath = path.join(appPath(), 'extensions/auto-commit/extension.json');
       expect(await fs.pathExists(extPath)).toBe(true);
-      
+
       const ext = await fs.readJson(extPath);
-      
+
       expect(ext.name).toBe('auto-commit');
       expect(ext.version).toBe('2.3.0');
-      expect(ext.hooks.cursor.stop).toContain('auto_commit_stop.ts');
       expect(ext.hooks.claude.Stop).toContain('auto_commit_stop.ts');
     });
 
     it('should use npx tsx to run TypeScript', async () => {
       const extPath = path.join(appPath(), 'extensions/auto-commit/extension.json');
       const ext = await fs.readJson(extPath);
-      
-      expect(ext.hooks.cursor.stop).toContain('npx tsx');
+
       expect(ext.hooks.claude.Stop).toContain('npx tsx');
     });
   });

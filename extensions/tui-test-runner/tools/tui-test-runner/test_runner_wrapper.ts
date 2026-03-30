@@ -207,7 +207,7 @@ async function main(): Promise<number> {
   const statusDir = path.join(projectRoot, statusDirRel);
   const statusFile = path.join(statusDir, `status.${prefix}.yaml`);
   const logFile = path.join(statusDir, `test.${prefix}.log`);
-  const logFileForYaml = path.posix.join('.dev-pomogator', '.test-status', `test.${prefix}.log`);
+  const logFileForYaml = statusDirRel.replace(/\\/g, '/') + `/test.${prefix}.log`;
   const framework = resolveFramework(parsed.framework, projectRoot);
 
   fs.mkdirSync(statusDir, { recursive: true });

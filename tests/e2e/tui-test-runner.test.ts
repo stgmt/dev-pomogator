@@ -273,6 +273,7 @@ describe('PLUGIN012: TUI Test Runner', () => {
           TEST_STATUSLINE_SESSION: 'wrap1234',
           TEST_STATUSLINE_PROJECT: appPath(),
           TEST_SKIP_DISCOVERY: '1',
+          TEST_STATUS_DIR: STATUS_DIR,
         },
       );
 

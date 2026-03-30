@@ -5,7 +5,7 @@ import os from 'os';
 import { spawnSync } from 'child_process';
 import { appPath } from './helpers';
 
-const MARK_HOOK = 'extensions/test-statusline/tools/bg-task-guard/mark-bg-task.sh';
+const MARK_HOOK = 'extensions/test-statusline/tools/bg-task-guard/mark-bg-task.ts';
 const STOP_HOOK = 'extensions/test-statusline/tools/bg-task-guard/stop-guard.sh';
 const MARKER_FILE = '.dev-pomogator/.bg-task-active';
 
@@ -61,7 +61,9 @@ function runHook(
   stdinJson: Record<string, unknown> = {},
   cwd?: string,
 ): { stdout: string; stderr: string; status: number | null } {
-  const result = spawnSync('bash', [appPath(scriptPath)], {
+  const runner = scriptPath.endsWith('.ts') ? 'npx' : 'bash';
+  const args = scriptPath.endsWith('.ts') ? ['tsx', appPath(scriptPath)] : [appPath(scriptPath)];
+  const result = spawnSync(runner, args, {
     input: JSON.stringify(stdinJson),
     encoding: 'utf-8',
     cwd: cwd || tmpDir,
@@ -268,7 +270,7 @@ describe('GUARD002: Background Task Guard', () => {
       const postToolUse = manifest.hooks.claude.PostToolUse;
       expect(Array.isArray(postToolUse)).toBe(true);
       expect(postToolUse[0].matcher).toBe('Bash');
-      expect(postToolUse[0].hooks[0].command).toContain('mark-bg-task.sh');
+      expect(postToolUse[0].hooks[0].command).toContain('mark-bg-task.ts');
 
       // Stop should be array
       const stop = manifest.hooks.claude.Stop;
@@ -284,7 +286,7 @@ describe('GUARD002: Background Task Guard', () => {
 
       const toolFiles = manifest.toolFiles['bg-task-guard'];
       expect(toolFiles).toBeDefined();
-      expect(toolFiles.join(',')).toContain('mark-bg-task.sh');
+      expect(toolFiles.join(',')).toContain('mark-bg-task.ts');
       expect(toolFiles.join(',')).toContain('stop-guard.sh');
     });
   });
@@ -312,7 +314,7 @@ describe('GUARD002: Background Task Guard', () => {
 
     // @feature4 — empty stdin edge case, runHook always sends JSON so use spawnSync
     it('GUARD002_16: does not create marker with empty stdin', () => {
-      const result = spawnSync('bash', [appPath(MARK_HOOK)], {
+      const result = spawnSync('npx', ['tsx', appPath(MARK_HOOK)], {
         cwd: tmpDir,
         encoding: 'utf-8',
         input: '',

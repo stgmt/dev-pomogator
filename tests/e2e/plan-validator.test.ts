@@ -633,7 +633,7 @@ describe('PLUGIN007_22 readTemplateContent', () => {
 // ---------------------------------------------------------------------------
 
 describe('PLUGIN007_20 Rule contains pre-flight checklist', () => {
-  const rulePath = path.resolve(__dirname, '../../extensions/plan-pomogator/claude/rules/plan-pomogator.md');
+  const rulePath = path.resolve(__dirname, '../../.claude/rules/plan-pomogator/plan-pomogator.md');
   const ruleContent = fs.readFileSync(rulePath, 'utf-8');
 
   // @feature1
@@ -828,12 +828,9 @@ describe('PLUGIN007_32 Actionability warnings (Phase 4)', () => {
 describe('PLUGIN007_36: Proactive-investigation rule', () => {
   const RULE_SOURCE = path.resolve(
     __dirname,
-    '../../extensions/plan-pomogator/claude/rules/proactive-investigation.md',
+    '../../.claude/rules/plan-pomogator/proactive-investigation.md',
   );
-  const RULE_INSTALLED = path.resolve(
-    __dirname,
-    '../../.claude/rules/pomogator/proactive-investigation.md',
-  );
+  const RULE_INSTALLED = RULE_SOURCE;
   const ruleContent = fs.readFileSync(RULE_SOURCE, 'utf-8');
 
   // @feature36

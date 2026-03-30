@@ -59,6 +59,7 @@ function canonicalWrapperEnv(overrides: Record<string, string> = {}): Record<str
   return {
     TEST_STATUSLINE_SESSION: 'abc12345',
     TEST_STATUSLINE_PROJECT: appPath(),
+    TEST_STATUS_DIR: STATUS_DIR,
     ...overrides,
   };
 }
@@ -341,8 +342,9 @@ describe('PLUGIN011: TUI Statusline', () => {
       await fs.ensureDir(path.join(appPath(), STATUS_DIR));
       await fs.writeFile(sessionEnvPath, `TEST_STATUSLINE_SESSION=abc12345\nTEST_STATUSLINE_PROJECT=${appPath()}\n`);
 
-      // Run wrapper WITHOUT env vars — it should read from session.env
-      const wrapperResult = runWrapper(['echo', 'test passed'], {});
+      // Run wrapper WITHOUT session env vars — it should read from session.env
+      // Still set TEST_STATUS_DIR to match test expectations (Docker overrides this)
+      const wrapperResult = runWrapper(['echo', 'test passed'], { TEST_STATUS_DIR: STATUS_DIR });
       expect(wrapperResult.status).toBe(0);
 
       // YAML should be created (wrapper found session from session.env)
@@ -459,12 +461,15 @@ describe('PLUGIN011: TUI Statusline', () => {
     });
 
     // @feature5
-    it('PLUGIN011_20: manifest does NOT declare statusLine (removed in v2)', async () => {
+    it('PLUGIN011_20: manifest declares statusLine with ccstatusline command', async () => {
       const manifestPath = appPath('extensions/test-statusline/extension.json');
       const manifest = await fs.readJson(manifestPath);
 
-      // statusLine section removed — replaced by TUI CompactBar
-      expect(manifest.statusLine).toBeUndefined();
+      // statusLine section provides ccstatusline command for Claude Code
+      expect(manifest.statusLine).toBeDefined();
+      expect(manifest.statusLine.claude).toBeDefined();
+      expect(manifest.statusLine.claude.type).toBe('command');
+      expect(manifest.statusLine.claude.command).toContain('ccstatusline');
     });
   });
 
@@ -896,16 +901,19 @@ else:
   // =========================================================================
   describe('Installer hooks (@feature6)', () => {
     // @feature6
-    it('PLUGIN011_70: tui-test-runner extension.json has object-format hooks', async () => {
+    it('PLUGIN011_70: tui-test-runner extension.json has array-format PreToolUse hooks', async () => {
       const manifest = await fs.readJson(
         appPath('extensions/tui-test-runner/extension.json'),
       );
-      // Must be object { claude: { ... } }, NOT array
+      // Must be object { claude: { ... } }, NOT array at top level
       expect(manifest.hooks).not.toBeInstanceOf(Array);
       expect(manifest.hooks.claude).toBeDefined();
       expect(manifest.hooks.claude.SessionStart).toBeDefined();
+      // PreToolUse is array format with matcher groups
       expect(manifest.hooks.claude.PreToolUse).toBeDefined();
-      expect(manifest.hooks.claude.PreToolUse.matcher).toBe('Bash');
+      expect(Array.isArray(manifest.hooks.claude.PreToolUse)).toBe(true);
+      const matchers = manifest.hooks.claude.PreToolUse.map((g: any) => g.matcher);
+      expect(matchers).toContain('Bash');
     });
 
     // PLUGIN011_72, PLUGIN011_73: removed — statusline_render.cjs deleted (dead code, replaced by TUI compact_bar.py)
@@ -925,6 +933,7 @@ else:
           ...process.env,
           TEST_STATUSLINE_SESSION: session,
           TEST_STATUSLINE_PROJECT: appPath(),
+          TEST_STATUS_DIR: STATUS_DIR,
         },
       });
       // Wrapper should create YAML status file

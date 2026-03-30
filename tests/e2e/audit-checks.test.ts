@@ -175,11 +175,19 @@ describe('runAllChecks', () => {
 // =========================================================================
 // Integration — audit-spec.ts via real process execution
 // =========================================================================
-import { spawnSync } from 'child_process';
+import crossSpawn from 'cross-spawn';
 
 describe('Integration: audit-spec.ts', () => {
-  const AUDIT_SCRIPT = '.dev-pomogator/tools/specs-generator/audit-spec.ts';
+  const AUDIT_SCRIPT = 'extensions/specs-workflow/tools/specs-generator/audit-spec.ts';
   const appDir = process.env.APP_DIR || process.cwd();
+
+  function runAuditScript(args: string[]) {
+    return crossSpawn.sync('npx', ['tsx', path.join(appDir, AUDIT_SCRIPT), ...args], {
+      encoding: 'utf-8',
+      cwd: appDir,
+      timeout: 30000,
+    });
+  }
 
   it('detects FR without matching AC (integration)', () => {
     // Create minimal spec with FR but no AC
@@ -197,22 +205,18 @@ describe('Integration: audit-spec.ts', () => {
     writeSpecFile('README.md', '# README\n');
     writeSpecFile('test.feature', 'Feature: Test\n');
 
-    const result = spawnSync('bash', [
-      path.join(appDir, AUDIT_SCRIPT), '-Path', tmpDir, '-Format', 'json',
-    ], { encoding: 'utf-8', cwd: appDir, timeout: 30000 });
+    const result = runAuditScript(['-Path', tmpDir, '-Format', 'json']);
 
     // Script should run and produce output (may find FR_AC_COVERAGE gap)
     expect(result.status).toBe(0);
-    expect(result.stdout.length).toBeGreaterThan(0);
+    expect((result.stdout || '').length).toBeGreaterThan(0);
   });
 
   it('runs without crash on minimal spec (integration)', () => {
     writeSpecFile('FR.md', '## FR-1: Clean @feature1\n\n');
     writeSpecFile('ACCEPTANCE_CRITERIA.md', '## AC-1 (FR-1): Clean @feature1\n\nWHEN x THEN y SHALL z\n');
 
-    const result = spawnSync('bash', [
-      path.join(appDir, AUDIT_SCRIPT), '-Path', tmpDir, '-Format', 'text',
-    ], { encoding: 'utf-8', cwd: appDir, timeout: 30000 });
+    const result = runAuditScript(['-Path', tmpDir, '-Format', 'text']);
 
     expect(result.status).toBe(0);
   });

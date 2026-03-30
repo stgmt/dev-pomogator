@@ -195,9 +195,8 @@ describe('PLUGIN012: DevContainer Extension', () => {
       expect(manifest.tools).toHaveProperty('devcontainer');
     });
 
-    it('should have postInstall for both platforms', () => {
+    it('should have postInstall for claude platform', () => {
       const postInstall = manifest.postInstall as Record<string, unknown>;
-      expect(postInstall).toHaveProperty('cursor');
       expect(postInstall).toHaveProperty('claude');
     });
 

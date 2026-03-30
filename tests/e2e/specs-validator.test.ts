@@ -8,7 +8,7 @@ import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import { execSync } from 'child_process';
-import { runInstaller, appPath, homePath, initGitRepo } from './helpers';
+import { runInstaller, appPath, initGitRepo } from './helpers';
 
 // ============================================================================
 // Test Fixtures and Helpers
@@ -183,7 +183,7 @@ describe('PLUGIN005: Specs Validator Hook', () => {
     await initGitRepo();
     
     // Run installer to set up hooks and scripts
-    await runInstaller('--cursor --all');
+    await runInstaller('--claude --all');
   });
 
   beforeEach(async () => {
@@ -197,24 +197,9 @@ describe('PLUGIN005: Specs Validator Hook', () => {
     await fs.remove(appPath('.specs-validator.yaml'));
   });
 
-  // @feature1
-  describe('Cursor Hook Registration', () => {
-    it('should register beforeSubmitPrompt hook with validate-specs', async () => {
-      const hooksPath = homePath('.cursor', 'hooks', 'hooks.json');
-      
-      expect(await fs.pathExists(hooksPath)).toBe(true);
-      
-      const hooks = await fs.readJson(hooksPath);
-      const commands = hooks.hooks?.beforeSubmitPrompt?.map((h: any) => h.command) || [];
-      
-      // Check that validate-specs.ts is in the beforeSubmitPrompt hooks
-      expect(commands.some((cmd: string) => cmd.includes('validate-specs'))).toBe(true);
-    });
-  });
-
   // @feature2
   describe('Claude Hook Registration', () => {
-    it('should have validate-specs defined in extension.json cursor hooks', async () => {
+    it('should have validate-specs defined in extension.json claude hooks', async () => {
       const extJsonPath = appPath(
         'extensions',
         'specs-workflow',
@@ -225,7 +210,7 @@ describe('PLUGIN005: Specs Validator Hook', () => {
       const extJson = await fs.readJson(extJsonPath);
 
       expect(extJson.hooks).toBeDefined();
-      expect(extJson.hooks.cursor.beforeSubmitPrompt).toContain('validate-specs');
+      expect(extJson.hooks.claude.UserPromptSubmit).toContain('validate-specs');
     });
   });
 

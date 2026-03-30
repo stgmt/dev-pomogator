@@ -140,11 +140,21 @@ describe('Auto-Simplify Stop Hook', () => {
         count: 99,
       });
 
-      const result = runStopHook(defaultInput(), { SIMPLIFY_MAX_RETRIES: '2' });
-      expect(result.exitCode).toBe(0);
-      const output = parseOutput(result.stdout);
-      expect(output).not.toHaveProperty('decision');
-      expect(result.stderr).toContain('Max retries');
+      // Create an uncommitted change to a tracked file so git diff --numstat is non-empty.
+      // Otherwise the hook exits early with "No uncommitted changes" before reaching max retries.
+      const trackedFile = appPath('package.json');
+      const originalContent = await fs.readFile(trackedFile, 'utf-8');
+      await fs.appendFile(trackedFile, '\n');
+
+      try {
+        const result = runStopHook(defaultInput(), { SIMPLIFY_MAX_RETRIES: '2', SIMPLIFY_MIN_LINES: '1' });
+        expect(result.exitCode).toBe(0);
+        const output = parseOutput(result.stdout);
+        expect(output).not.toHaveProperty('decision');
+        expect(result.stderr).toContain('Max retries');
+      } finally {
+        await fs.writeFile(trackedFile, originalContent, 'utf-8');
+      }
     });
   });
 
@@ -158,7 +168,7 @@ describe('Auto-Simplify Stop Hook', () => {
   });
 
   describe('Simplify-extended rule', () => {
-    const rulePath = '.claude/rules/simplify-extended.md';
+    const rulePath = '.claude/rules/auto-simplify/simplify-extended.md';
 
     it('should exist', async () => {
       const stat = await fs.stat(appPath(rulePath));
