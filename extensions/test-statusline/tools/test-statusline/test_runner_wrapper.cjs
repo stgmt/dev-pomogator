@@ -26,7 +26,6 @@ const args = process.argv.slice(2);
 // (SessionStart hook writes session.env to .dev-pomogator/.test-status/;
 //  Docker CMD entry point relies on this fallback)
 if (!process.env.TEST_STATUSLINE_SESSION) {
-  // SessionStart hook always writes to .dev-pomogator/.test-status/session.env
   const sessionEnvPath = path.join(repoRoot, '.dev-pomogator', '.test-status', 'session.env');
   try {
     const envContent = fs.readFileSync(sessionEnvPath, 'utf-8');

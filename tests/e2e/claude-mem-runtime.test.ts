@@ -140,7 +140,6 @@ describe('PLUGIN002-RUNTIME: Claude-mem Full E2E', () => {
           const res = await fetch(`${WORKER_BASE_URL}/api/readiness`);
           if (res.ok) return;
         } catch { /* retry: worker may still be initializing */ }
-        // polling with condition check (not arbitrary sleep)
         await new Promise(r => setTimeout(r, 1000));
       }
     }, 35000);
@@ -151,7 +150,6 @@ describe('PLUGIN002-RUNTIME: Claude-mem Full E2E', () => {
       for (let i = 0; i < 3; i++) {
         res = await fetch(`${WORKER_BASE_URL}/api/projects`);
         if (res.ok) break;
-        // polling with condition check (not arbitrary sleep)
         await new Promise(r => setTimeout(r, 2000));
       }
       expect(res!.ok).toBe(true);

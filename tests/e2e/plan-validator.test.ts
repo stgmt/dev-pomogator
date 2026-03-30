@@ -830,17 +830,11 @@ describe('PLUGIN007_36: Proactive-investigation rule', () => {
     __dirname,
     '../../.claude/rules/plan-pomogator/proactive-investigation.md',
   );
-  const RULE_INSTALLED = RULE_SOURCE;
   const ruleContent = fs.readFileSync(RULE_SOURCE, 'utf-8');
 
   // @feature36
-  it('PLUGIN007_36_01: rule exists in source of truth', () => {
+  it('PLUGIN007_36_01: rule exists', () => {
     expect(fs.existsSync(RULE_SOURCE)).toBe(true);
-  });
-
-  // @feature36
-  it('PLUGIN007_36_02: rule exists in installed location', () => {
-    expect(fs.existsSync(RULE_INSTALLED)).toBe(true);
   });
 
   // @feature36

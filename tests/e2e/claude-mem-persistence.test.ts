@@ -262,7 +262,6 @@ describe('PLUGIN002-PERSISTENCE: Claude-mem Data Persistence', () => {
       });
       expect(output.trim().length).toBeGreaterThan(0);
 
-      // polling with condition check — not arbitrary sleep
       await new Promise((r) => setTimeout(r, 1000));
       let queueResult: { status: string; processed?: number } = { status: 'unknown' };
       try {
@@ -311,7 +310,6 @@ describe('PLUGIN002-PERSISTENCE: Claude-mem Data Persistence', () => {
       // Force queue processing before checking stats
       try {
         await processPendingQueue();
-        // polling with condition check — not arbitrary sleep
         await new Promise((r) => setTimeout(r, 500));
       } catch {
         // acceptable: SDK agent requires API key, not available in Docker
@@ -433,7 +431,6 @@ describe('PLUGIN002-PERSISTENCE: Claude-mem Data Persistence', () => {
 
     it('Observations are retrievable by project - should have required fields', async () => {
       expect.hasAssertions();
-      // polling with condition check — not arbitrary sleep
       await new Promise((r) => setTimeout(r, 500));
       
       // Get observations - should include our API observation
