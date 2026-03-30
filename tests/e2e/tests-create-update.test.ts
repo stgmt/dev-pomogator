@@ -152,9 +152,9 @@ describe('PLUGIN016: Tests Create Update Skill', () => {
       __dirname, '../../extensions/test-quality/tools/test-quality/compliance_check.ts'
     );
     const content = await fs.readFile(hookPath, 'utf-8');
-    expect(content).toContain('.test.ts');
-    expect(content).toContain('.test.cs');
-    expect(content).toContain('Steps.cs');
+    expect(content).toContain('test\\.ts');
+    expect(content).toContain('test\\.cs');
+    expect(content).toContain('Steps\\.cs');
   });
 
   // @feature8
