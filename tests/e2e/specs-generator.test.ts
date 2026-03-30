@@ -35,8 +35,8 @@ const SCRIPTS_DIR = 'extensions/specs-workflow/tools/specs-generator';
 
 describe('PLUGIN006: Specs Generator Scripts', () => {
   beforeAll(async () => {
-    await setupCleanState('cursor');
-    const result = await runInstaller('--cursor --plugins=specs-workflow');
+    await setupCleanState('claude');
+    const result = await runInstaller('--claude --plugins=specs-workflow');
     expect(result.exitCode).toBe(0);
   });
 

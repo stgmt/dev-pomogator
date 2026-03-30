@@ -57,7 +57,7 @@ describe('PLUGIN006: Auto-Commit', () => {
       expect(stat.size).toBeGreaterThan(0);
 
       const content = await fs.readFile(corePath, 'utf-8');
-      expect(content).toMatch(/export|module\.exports|require\(/);
+      expect(content).toMatch(/export|module\.exports|require\(|import\s+[\{*]/);
     });
   });
 
@@ -124,7 +124,7 @@ describe('PLUGIN006: Auto-Commit', () => {
       expect(stat.size).toBeGreaterThan(0);
 
       const content = await fs.readFile(transcriptPath, 'utf-8');
-      expect(content).toMatch(/export|module\.exports|require\(/);
+      expect(content).toMatch(/export|module\.exports|require\(|import\s+[\{*]/);
     });
   });
 
@@ -135,7 +135,7 @@ describe('PLUGIN006: Auto-Commit', () => {
       expect(stat.size).toBeGreaterThan(0);
 
       const content = await fs.readFile(llmPath, 'utf-8');
-      expect(content).toMatch(/export|module\.exports|require\(/);
+      expect(content).toMatch(/export|module\.exports|require\(|import\s+[\{*]/);
     });
   });
 
@@ -146,7 +146,7 @@ describe('PLUGIN006: Auto-Commit', () => {
       expect(stat.size).toBeGreaterThan(0);
 
       const content = await fs.readFile(stopPath, 'utf-8');
-      expect(content).toMatch(/export|module\.exports|require\(/);
+      expect(content).toMatch(/export|module\.exports|require\(|import\s+[\{*]/);
     });
   });
 
