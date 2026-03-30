@@ -140,6 +140,17 @@ describe('Auto-Simplify Stop Hook', () => {
         count: 99,
       });
 
+      // In Docker .git is excluded (.dockerignore), so git diff fails.
+      // Initialize a temporary git repo if .git is missing so the hook can run git diff.
+      const gitDir = appPath('.git');
+      const needTempGit = !await fs.pathExists(gitDir);
+      if (needTempGit) {
+        const { execSync } = await import('child_process');
+        execSync('git init', { cwd: appPath(), stdio: 'ignore' });
+        execSync('git add package.json', { cwd: appPath(), stdio: 'ignore' });
+        execSync('git -c user.email="test@test" -c user.name="test" commit -m "init" --allow-empty', { cwd: appPath(), stdio: 'ignore' });
+      }
+
       // Create an uncommitted change to a tracked file so git diff --numstat is non-empty.
       // Otherwise the hook exits early with "No uncommitted changes" before reaching max retries.
       const trackedFile = appPath('package.json');
@@ -154,6 +165,9 @@ describe('Auto-Simplify Stop Hook', () => {
         expect(result.stderr).toContain('Max retries');
       } finally {
         await fs.writeFile(trackedFile, originalContent, 'utf-8');
+        if (needTempGit) {
+          await fs.remove(gitDir);
+        }
       }
     });
   });

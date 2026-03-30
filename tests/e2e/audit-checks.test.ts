@@ -181,6 +181,24 @@ describe('Integration: audit-spec.ts', () => {
   const AUDIT_SCRIPT = 'extensions/specs-workflow/tools/specs-generator/audit-spec.ts';
   const appDir = process.env.APP_DIR || process.cwd();
 
+  // audit-spec.ts requires -Path to be inside .specs/<feature>/ of the repo.
+  // Create a temporary spec dir inside the project's .specs/ for integration tests.
+  let integrationSpecDir: string;
+  const slug = `audit-integration-${Date.now()}`;
+
+  beforeEach(() => {
+    integrationSpecDir = path.join(appDir, '.specs', slug);
+    fs.mkdirSync(integrationSpecDir, { recursive: true });
+  });
+
+  afterEach(() => {
+    fs.rmSync(integrationSpecDir, { recursive: true, force: true });
+  });
+
+  function writeIntegrationSpecFile(name: string, content: string): void {
+    fs.writeFileSync(path.join(integrationSpecDir, name), content, 'utf-8');
+  }
+
   function runAuditScript(args: string[]) {
     return crossSpawn.sync('npx', ['tsx', path.join(appDir, AUDIT_SCRIPT), ...args], {
       encoding: 'utf-8',
@@ -191,21 +209,21 @@ describe('Integration: audit-spec.ts', () => {
 
   it('detects FR without matching AC (integration)', () => {
     // Create minimal spec with FR but no AC
-    writeSpecFile('FR.md', '## FR-1: Test Feature @feature1\n\nDescription.\n');
-    writeSpecFile('ACCEPTANCE_CRITERIA.md', '# Acceptance Criteria\n\nEmpty.\n');
-    writeSpecFile('USER_STORIES.md', '# User Stories\n');
-    writeSpecFile('USE_CASES.md', '# Use Cases\n');
-    writeSpecFile('RESEARCH.md', '# Research\n');
-    writeSpecFile('REQUIREMENTS.md', '# Requirements\n');
-    writeSpecFile('NFR.md', '# NFR\n');
-    writeSpecFile('DESIGN.md', '# Design\n');
-    writeSpecFile('TASKS.md', '# Tasks\n');
-    writeSpecFile('FILE_CHANGES.md', '# File Changes\n');
-    writeSpecFile('CHANGELOG.md', '# Changelog\n');
-    writeSpecFile('README.md', '# README\n');
-    writeSpecFile('test.feature', 'Feature: Test\n');
+    writeIntegrationSpecFile('FR.md', '## FR-1: Test Feature @feature1\n\nDescription.\n');
+    writeIntegrationSpecFile('ACCEPTANCE_CRITERIA.md', '# Acceptance Criteria\n\nEmpty.\n');
+    writeIntegrationSpecFile('USER_STORIES.md', '# User Stories\n');
+    writeIntegrationSpecFile('USE_CASES.md', '# Use Cases\n');
+    writeIntegrationSpecFile('RESEARCH.md', '# Research\n');
+    writeIntegrationSpecFile('REQUIREMENTS.md', '# Requirements\n');
+    writeIntegrationSpecFile('NFR.md', '# NFR\n');
+    writeIntegrationSpecFile('DESIGN.md', '# Design\n');
+    writeIntegrationSpecFile('TASKS.md', '# Tasks\n');
+    writeIntegrationSpecFile('FILE_CHANGES.md', '# File Changes\n');
+    writeIntegrationSpecFile('CHANGELOG.md', '# Changelog\n');
+    writeIntegrationSpecFile('README.md', '# README\n');
+    writeIntegrationSpecFile('test.feature', 'Feature: Test\n');
 
-    const result = runAuditScript(['-Path', tmpDir, '-Format', 'json']);
+    const result = runAuditScript(['-Path', `.specs/${slug}`, '-Format', 'json']);
 
     // Script should run and produce output (may find FR_AC_COVERAGE gap)
     expect(result.status).toBe(0);
@@ -213,10 +231,10 @@ describe('Integration: audit-spec.ts', () => {
   });
 
   it('runs without crash on minimal spec (integration)', () => {
-    writeSpecFile('FR.md', '## FR-1: Clean @feature1\n\n');
-    writeSpecFile('ACCEPTANCE_CRITERIA.md', '## AC-1 (FR-1): Clean @feature1\n\nWHEN x THEN y SHALL z\n');
+    writeIntegrationSpecFile('FR.md', '## FR-1: Clean @feature1\n\n');
+    writeIntegrationSpecFile('ACCEPTANCE_CRITERIA.md', '## AC-1 (FR-1): Clean @feature1\n\nWHEN x THEN y SHALL z\n');
 
-    const result = runAuditScript(['-Path', tmpDir, '-Format', 'text']);
+    const result = runAuditScript(['-Path', `.specs/${slug}`, '-Format', 'text']);
 
     expect(result.status).toBe(0);
   });

@@ -345,13 +345,13 @@ describe('Integration: phase-gate.ts', () => {
         tool_name: 'Write',
         tool_input: { file_path: `${appPath()}/.specs/test-integration/FR.md`, content: '# FR' },
       });
-      expect(result.status).toBe(0);
-      // FR.md is Phase 2 (Requirements) — should block without Discovery confirmation
+      // FR.md is Phase 2 (Requirements) — should block without Discovery confirmation.
+      // phase-gate exits 2 on deny, 0 on approve.
+      expect(result.status).toBe(2);
       const output = result.stdout.trim();
-      if (output) {
-        const parsed = JSON.parse(output);
-        expect(parsed.decision).toBe('block');
-      }
+      expect(output).toBeTruthy();
+      const parsed = JSON.parse(output);
+      expect(parsed.hookSpecificOutput.permissionDecision).toBe('deny');
     } finally {
       fs.rmSync(specDir, { recursive: true, force: true });
     }

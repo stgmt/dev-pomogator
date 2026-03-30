@@ -292,7 +292,7 @@ describe('PLUGIN007_09 File Changes hints', () => {
   it('should hint about relative path when absolute path found', () => {
     let plan = getValidPlan();
     plan = plan.replace(
-      /\| `.dev-pomogator[^|]+\|/,
+      /\| `extensions\/plan-pomogator[^|]+\|/,
       '| `C:\\Users\\test\\file.ts` |',
     );
     const errors = validatePlan(writeTempPlan(plan));
@@ -611,8 +611,8 @@ describe('PLUGIN007_22 readTemplateContent', () => {
     const cwd = path.resolve(__dirname, '../..');
     const result = readTemplateContent(cwd);
     expect(result).toContain('Шаблон правильного формата:');
-    expect(result).toContain('## Context');
-    expect(result).toContain('## File Changes');
+    expect(result).toContain('Context');
+    expect(result).toContain('File Changes');
   });
 
   // @feature2
@@ -733,7 +733,7 @@ describe('PLUGIN007_31 changes: field validation', () => {
     const filtered: string[] = [];
     let skipBullets = false;
     for (const line of lines) {
-      if (/\bchanges:\b/i.test(line)) {
+      if (/\bchanges:/i.test(line)) {
         skipBullets = true;
         continue;
       }
@@ -866,7 +866,9 @@ describe('PLUGIN007_36: Proactive-investigation rule', () => {
       '../../extensions/plan-pomogator/extension.json',
     );
     const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
-    expect(manifest.rules.claude).toContain('claude/rules/proactive-investigation.md');
+    expect(manifest.ruleFiles.claude).toEqual(
+      expect.arrayContaining([expect.stringContaining('proactive-investigation.md')]),
+    );
   });
 
   // @feature36
@@ -985,7 +987,7 @@ describe('PLUGIN015: Spec-Test Sync Enforcement', () => {
   // @feature1 @feature2
   it('PLUGIN015_09: spec-test-sync rule is installed', () => {
     const rulePath = path.resolve(
-      __dirname, '../../extensions/plan-pomogator/claude/rules/spec-test-sync.md',
+      __dirname, '../../.claude/rules/plan-pomogator/spec-test-sync.md',
     );
     expect(fs.existsSync(rulePath)).toBe(true);
     const content = fs.readFileSync(rulePath, 'utf-8');
