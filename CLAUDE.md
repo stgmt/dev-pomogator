@@ -59,6 +59,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | post-edit-verification | После КАЖДОГО изменения кода: build, copy installed, /run-tests background, screenshot если UI | `.claude/rules/pomogator/post-edit-verification.md` |
 | skill-allowed-tools-audit | При создании/модификации skill — проверь что allowed-tools покрывает ВСЕ инструменты workflow | `.claude/rules/checklists/skill-allowed-tools-audit.md` |
 | installer-hook-formats | extension.json hooks имеют 3 формата (string, object, array) — обрабатывать все 3 | `.claude/rules/gotchas/installer-hook-formats.md` |
+| docker-no-git-repo | Docker тесты без .git — git команды fail, использовать env override | `.claude/rules/gotchas/docker-no-git-repo.md` |
 | proactive-investigation | Не спрашивай разрешение исследовать — делай сам; каждое утверждение с evidence; [UNVERIFIED] для непроверяемого | `.claude/rules/plan-pomogator/proactive-investigation.md` |
 | cross-scope-coverage | При multi-scope фичах: coverage matrix scope×variant, gap report, [OUT_OF_SCOPE] для пропусков | `.claude/rules/plan-pomogator/cross-scope-coverage.md` |
 | manifest-test-coverage | При добавлении rule/tool в extension.json — динамический тест CORE003_RULES покрывает автоматически | `.claude/rules/checklists/manifest-test-coverage.md` |
