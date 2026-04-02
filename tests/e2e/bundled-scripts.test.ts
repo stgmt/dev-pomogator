@@ -122,6 +122,58 @@ describe('CORE007: Bundled Scripts Installation', () => {
     });
   });
 
+  // @feature8
+  describe('Scenario: CORE007_08 tsx-runner.js executes scripts with local .js imports', () => {
+    it('CORE007_08: should resolve .js imports to .ts files via tsx fallback', async () => {
+      const runnerPath = homePath('.dev-pomogator', 'scripts', 'tsx-runner.js');
+
+      // Create a helper module (.ts) and a main script importing it with .js extension
+      const helperScript = appPath('test-bundled-helper.ts');
+      const mainScript = appPath('test-bundled-import.ts');
+      await fs.writeFile(helperScript, 'export function greet(): string { return "IMPORT_RESOLVED"; }');
+      await fs.writeFile(mainScript, [
+        'import { greet } from "./test-bundled-helper.js";',
+        'console.log(greet());',
+      ].join('\n'));
+
+      try {
+        const output = execSync(`node "${runnerPath}" "${mainScript}"`, {
+          encoding: 'utf-8',
+          timeout: 30_000,
+          cwd: appPath(),
+        });
+        expect(output).toContain('IMPORT_RESOLVED');
+      } catch (err: any) {
+        const stderr = err.stderr || err.message || '';
+        // Must NOT fail with ERR_MODULE_NOT_FOUND — tsx should handle .js→.ts resolution
+        expect(stderr).not.toContain('ERR_MODULE_NOT_FOUND');
+        // If it failed for some other reason, re-throw
+        throw err;
+      } finally {
+        await fs.remove(helperScript);
+        await fs.remove(mainScript);
+      }
+    });
+  });
+
+  // @feature9
+  describe('Scenario: CORE007_09 tsx-runner Strategy 0 falls through on ERR_MODULE_NOT_FOUND', () => {
+    it('CORE007_09: should contain ERR_MODULE_NOT_FOUND in fallthrough condition', async () => {
+      const scriptPath = homePath('.dev-pomogator', 'scripts', 'tsx-runner.js');
+      const content = await fs.readFile(scriptPath, 'utf-8');
+
+      // Strategy 0 catch block must include ERR_MODULE_NOT_FOUND in fallthrough list
+      // so it doesn't treat unresolved imports as fatal script errors
+      expect(content).toContain('ERR_MODULE_NOT_FOUND');
+
+      // Verify it's in the Strategy 0 catch block (near 'ERR_UNSUPPORTED_NODE_OPTION')
+      const unsupportedIdx = content.indexOf('ERR_UNSUPPORTED_NODE_OPTION');
+      const moduleNotFoundIdx = content.indexOf('ERR_MODULE_NOT_FOUND');
+      // Both should be in the same condition block (within ~200 chars of each other)
+      expect(Math.abs(moduleNotFoundIdx - unsupportedIdx)).toBeLessThan(200);
+    });
+  });
+
   // @feature7
   describe('Scenario: CORE007_07 tsx-runner.js uses execCmd for .cmd files on Windows', () => {
     it('CORE007_07: should use execCmd wrapper instead of direct execFileSync on .cmd', async () => {

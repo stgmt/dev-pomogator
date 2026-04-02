@@ -6,8 +6,8 @@
 
 import fs from 'fs';
 import path from 'path';
-import type { MatchResult, MatchSummary, AlignmentResult } from './matcher';
-import { calculateSummary, filterByStatus, calculateAlignmentSummary } from './matcher';
+import type { MatchResult, MatchSummary, AlignmentResult } from './matcher.js';
+import { calculateSummary, filterByStatus, calculateAlignmentSummary } from './matcher.js';
 
 /**
  * Options for report generation

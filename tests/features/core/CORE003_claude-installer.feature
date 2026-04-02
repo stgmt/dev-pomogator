@@ -33,6 +33,7 @@ Feature: CORE003 Claude Code Installer
     Then .dev-pomogator/tools/specs-generator/ should exist in project
     And .dev-pomogator/tools/forbid-root-artifacts/ should exist in project
     And .dev-pomogator/tools/forbid-root-artifacts/check.py should be executable
+    And .dev-pomogator/tools/_shared/ should exist with hook-utils.ts, marker-utils.ts, index.ts
 
   Scenario: Settings.json hooks structure is correct
     When dev-pomogator installs for Claude Code

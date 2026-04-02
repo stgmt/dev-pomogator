@@ -192,6 +192,22 @@ describe('CORE003: Claude Code Installer', () => {
       const stat = await fs.stat(setupPath);
       expect(stat.size, 'setup.py should not be empty').toBeGreaterThan(0);
     });
+
+    it('should install _shared/ utilities for cross-extension imports', async () => {
+      const sharedPath = appPath('.dev-pomogator', 'tools', '_shared');
+      expect(await fs.pathExists(sharedPath)).toBe(true);
+
+      // Must contain the 3 shared utility files
+      const files = await fs.readdir(sharedPath);
+      expect(files).toContain('hook-utils.ts');
+      expect(files).toContain('marker-utils.ts');
+      expect(files).toContain('index.ts');
+
+      // hook-utils.ts must export log() and normalizePath()
+      const hookUtils = await fs.readFile(path.join(sharedPath, 'hook-utils.ts'), 'utf-8');
+      expect(hookUtils).toContain('export function log(');
+      expect(hookUtils).toContain('export function normalizePath(');
+    });
   });
 
   describe('Scenario: Skills are installed to project', () => {

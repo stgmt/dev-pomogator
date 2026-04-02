@@ -6,7 +6,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import { extractAllFeatureTags } from './tag-utils';
+import { extractAllFeatureTags } from './tag-utils.js';
 
 /**
  * Represents a @featureN tag found in a .feature file

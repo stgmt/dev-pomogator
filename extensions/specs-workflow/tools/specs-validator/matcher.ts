@@ -5,9 +5,9 @@
  */
 
 import fs from 'fs';
-import type { MdTag } from './parsers/md-parser';
-import type { FeatureTag } from './parsers/feature-parser';
-import type { TestCase } from './parsers/test-parser';
+import type { MdTag } from './parsers/md-parser.js';
+import type { FeatureTag } from './parsers/feature-parser.js';
+import type { TestCase } from './parsers/test-parser.js';
 
 /**
  * Match status for a @featureN tag

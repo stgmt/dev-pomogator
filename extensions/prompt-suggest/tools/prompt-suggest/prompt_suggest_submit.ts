@@ -19,7 +19,7 @@ import {
   clearSuggestionState,
   isSuggestionExpired,
   log,
-} from './prompt_suggest_core';
+} from './prompt_suggest_core.js';
 
 // ---------------------------------------------------------------------------
 // Types

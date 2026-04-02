@@ -407,13 +407,13 @@ try {
 } catch (nativeError) {
   // Check if it's a script error (has exit code) vs strip-types incompatibility
   const msg = String(nativeError.stderr || nativeError.message || '');
-  if (nativeError.status && !msg.includes('ERR_UNSUPPORTED_NODE_OPTION') && !msg.includes('SyntaxError')) {
+  if (nativeError.status && !msg.includes('ERR_UNSUPPORTED_NODE_OPTION') && !msg.includes('SyntaxError') && !msg.includes('ERR_MODULE_NOT_FOUND')) {
     // Script ran but failed — real error
     strategyLog.push(`0:fail(${nativeError.status})`);
     logResult(false);
     process.exit(nativeError.status);
   }
-  // strip-types not supported or TS incompatible — fall through
+  // strip-types not supported, TS incompatible, or module resolution needs tsx — fall through
   strategyLog.push('0:unsupported');
 }
 

@@ -3,7 +3,7 @@ import path from 'path';
 import os from 'os';
 import chalk from 'chalk';
 import { fileURLToPath } from 'url';
-import { listExtensions, getExtensionFiles, getExtensionRules, getExtensionTools, getExtensionSkills, getExtensionHooks, getExtensionStatusLine, runPostInstallHook, cleanStaleNodeModulesDirs } from './extensions.js';
+import { listExtensions, getExtensionFiles, getExtensionRules, getExtensionTools, getExtensionSkills, getExtensionHooks, getExtensionStatusLine, runPostInstallHook, cleanStaleNodeModulesDirs, getExtensionsDir } from './extensions.js';
 import { findRepoRoot } from '../utils/repo.js';
 import { detectMangledArtifacts } from '../utils/msys.js';
 import { TOOLS_DIR, SKILLS_DIR } from '../constants.js';
@@ -122,6 +122,18 @@ export async function installClaude(options = {}) {
         }
         if (managedTools.length > 0) {
             managedByExtension.get(extension.name).tools = managedTools;
+        }
+    }
+    // 3b. Install _shared/ utilities to project/.dev-pomogator/tools/_shared/
+    {
+        const extensionsDir = await getExtensionsDir();
+        const sharedSrc = path.join(extensionsDir, '_shared');
+        if (await fs.pathExists(sharedSrc)) {
+            const sharedDest = path.join(repoRoot, TOOLS_DIR, '_shared');
+            if (path.resolve(sharedSrc) !== path.resolve(sharedDest)) {
+                await fs.copy(sharedSrc, sharedDest, { overwrite: true });
+            }
+            console.log(`  ✓ Installed shared utilities: _shared/`);
         }
     }
     // 4. Install skills to project/.claude/skills/ (Claude Code only)

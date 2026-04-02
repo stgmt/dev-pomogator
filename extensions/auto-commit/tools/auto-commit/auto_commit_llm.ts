@@ -13,7 +13,7 @@
  *  - Commit message in English with gitmoji
  */
 
-import type { AutoCommitConfig } from "./auto_commit_core";
+import type { AutoCommitConfig } from "./auto_commit_core.js";
 
 // ============================================================================
 // Types

@@ -46,6 +46,21 @@ Feature: CORE007 Bundled Scripts Installation
     Then ~/.dev-pomogator/scripts/launch-claude-tui.ps1 should exist
     And launch-claude-tui.ps1 should contain "-ProjectDir" parameter
 
+  # @feature8
+  Scenario: CORE007_08 tsx-runner.js executes scripts with local .js imports
+    Given tsx-runner.js exists in ~/.dev-pomogator/scripts/
+    And a helper TypeScript module exists in the project
+    And a main script imports the helper using .js extension
+    When running tsx-runner.js with the main script
+    Then the main script should execute successfully with resolved import
+    And stderr should not contain ERR_MODULE_NOT_FOUND
+
+  # @feature9
+  Scenario: CORE007_09 tsx-runner Strategy 0 falls through on ERR_MODULE_NOT_FOUND
+    Given tsx-runner.js exists in ~/.dev-pomogator/scripts/
+    Then tsx-runner.js should contain ERR_MODULE_NOT_FOUND in fallthrough condition
+    And ERR_MODULE_NOT_FOUND should be near ERR_UNSUPPORTED_NODE_OPTION in the same condition
+
   # @feature7
   Scenario: CORE007_07 tsx-runner.js uses execCmd for .cmd files on Windows
     Given tsx-runner.js exists in ~/.dev-pomogator/scripts/

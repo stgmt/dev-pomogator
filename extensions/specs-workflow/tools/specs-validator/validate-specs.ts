@@ -15,12 +15,12 @@
 
 import fs from 'fs';
 import path from 'path';
-import { findSpecsFolder, findCompleteSpecs, type SpecCompleteness } from './completeness';
-import { parseMdFiles } from './parsers/md-parser';
-import { parseFeatureFile } from './parsers/feature-parser';
-import { matchTags, matchTestFeature } from './matcher';
-import { generateReport, printWarnings } from './reporter';
-import { parseTestFile, findTestFile } from './parsers/test-parser';
+import { findSpecsFolder, findCompleteSpecs, type SpecCompleteness } from './completeness.js';
+import { parseMdFiles } from './parsers/md-parser.js';
+import { parseFeatureFile } from './parsers/feature-parser.js';
+import { matchTags, matchTestFeature } from './matcher.js';
+import { generateReport, printWarnings } from './reporter.js';
+import { parseTestFile, findTestFile } from './parsers/test-parser.js';
 import {
   PHASE_FILES,
   PHASE_ORDER,
@@ -28,7 +28,7 @@ import {
   readProgressState,
   type PhaseState,
   type ProgressState,
-} from './phase-constants';
+} from './phase-constants.js';
 
 /**
  * Input from Cursor/Claude hook

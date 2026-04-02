@@ -28,17 +28,17 @@ import {
   extractJiraKeyFromBranch,
   updateLastCommitTimestamp,
   normalizePath,
-} from "./auto_commit_core";
+} from "./auto_commit_core.js";
 
 import {
   getAggregatedSessionContextFromCursorComposer,
   formatMessagesForContext,
   parseTranscript,
   type Message,
-} from "./auto_commit_transcript";
+} from "./auto_commit_transcript.js";
 import * as fs from "node:fs";
 
-import { generateCommitMessage, generateSmartCommitSummary } from "./auto_commit_llm";
+import { generateCommitMessage, generateSmartCommitSummary } from "./auto_commit_llm.js";
 
 // ============================================================================
 // Types (Cursor stop hook)
@@ -64,7 +64,7 @@ type StopHookOutput = {
 // Logging
 // ============================================================================
 
-import { log as _logShared } from '../../../_shared/hook-utils.js';
+import { log as _logShared } from '../_shared/hook-utils.js';
 
 const LOG_PREFIX = 'AUTO-COMMIT';
 function log(level: "INFO" | "ERROR" | "DEBUG", message: string): void {

@@ -8,7 +8,7 @@ import { execSync, spawn } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
-import { log as _logShared } from '../../../_shared/hook-utils.js';
+import { log as _logShared } from '../_shared/hook-utils.js';
 
 const LOG_PREFIX = 'TUI-LAUNCHER';
 function log(level: 'INFO' | 'ERROR' | 'WARN', message: string): void {

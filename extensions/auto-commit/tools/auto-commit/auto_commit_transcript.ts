@@ -18,7 +18,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { execFileSync } from "node:child_process";
 
-import { safeJsonParse } from "./auto_commit_core";
+import { safeJsonParse } from "./auto_commit_core.js";
 
 // ============================================================================
 // Types
