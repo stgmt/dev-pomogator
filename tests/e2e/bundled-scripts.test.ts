@@ -166,11 +166,63 @@ describe('CORE007: Bundled Scripts Installation', () => {
       // so it doesn't treat unresolved imports as fatal script errors
       expect(content).toContain('ERR_MODULE_NOT_FOUND');
 
-      // Verify it's in the Strategy 0 catch block (near 'ERR_UNSUPPORTED_NODE_OPTION')
+      // Verify it's in the Strategy 0 catch block (near 'ERR_UNSUPPORTED_NODE_OPTION').
+      // Note: `ERR_MODULE_NOT_FOUND` appears earlier in isNpxCacheError, so use
+      // lastIndexOf to find the Strategy 0 occurrence specifically.
       const unsupportedIdx = content.indexOf('ERR_UNSUPPORTED_NODE_OPTION');
-      const moduleNotFoundIdx = content.indexOf('ERR_MODULE_NOT_FOUND');
+      const moduleNotFoundIdx = content.lastIndexOf('ERR_MODULE_NOT_FOUND');
       // Both should be in the same condition block (within ~200 chars of each other)
       expect(Math.abs(moduleNotFoundIdx - unsupportedIdx)).toBeLessThan(200);
+    });
+  });
+
+  // @feature10
+  describe('Scenario: CORE007_10 tsx-runner uses loader-aware strategy table', () => {
+    it('CORE007_10: STRATEGIES table + isResolverError exist; broken import fails without redundant same-loader retries', async () => {
+      const runnerPath = homePath('.dev-pomogator', 'scripts', 'tsx-runner.js');
+      const content = await fs.readFile(runnerPath, 'utf-8');
+
+      // 1. Strategy table is the single source of truth — no duplicated try/catch per strategy.
+      expect(content).toContain('const STRATEGIES = [');
+      expect(content).toMatch(/loader:\s*'node-strip'/);
+      expect(content).toMatch(/loader:\s*'tsx'/);
+
+      // 2. Classifier function exists and uses a token array (not inverted &&-!includes chain).
+      expect(content).toContain('function isResolverError(');
+      expect(content).toContain('RESOLVER_ERROR_TOKENS');
+
+      // 3. Old per-strategy duplicated try/catch blocks must be gone.
+      // Count occurrences of `runLocalTsx()` invocation — should appear once inside table, not in a try.
+      const runLocalTsxCalls = (content.match(/runLocalTsx\b/g) || []).length;
+      // Definition + table reference = 2; tolerate 3 for inline doc.
+      expect(runLocalTsxCalls).toBeLessThanOrEqual(3);
+
+      // 4. Smoke: run a temp .ts with a broken relative import. tsx (Strategy 1) will fail
+      //    with module-not-found; runner must NOT fall through to Strategy 1.25 (same loader)
+      //    and must propagate non-zero exit. strategyLog must contain `1:local:fail` (not :fallthrough).
+      const brokenScript = appPath('test-broken-import.ts');
+      await fs.writeFile(brokenScript, "import './does-not-exist.js';\nconsole.log('unreachable');\n");
+      try {
+        let exitCode = 0;
+        let combined = '';
+        try {
+          combined = execSync(`node "${runnerPath}" "${brokenScript}"`, {
+            encoding: 'utf-8',
+            timeout: 30_000,
+            cwd: appPath(),
+            stdio: ['pipe', 'pipe', 'pipe'],
+          });
+        } catch (err: any) {
+          exitCode = err.status || 1;
+          combined = String(err.stdout || '') + String(err.stderr || '');
+        }
+        expect(exitCode).not.toBe(0);
+        // Must show fail at a tsx strategy, not fall-through across same-loader strategies.
+        expect(combined).toMatch(/1:local:fail|1\.25:home:fail|1\.5:global:fail|2:npx:fail/);
+        expect(combined).not.toMatch(/1:local:fallthrough.*1\.25:home/);
+      } finally {
+        await fs.remove(brokenScript);
+      }
     });
   });
 

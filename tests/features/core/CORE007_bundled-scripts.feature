@@ -61,6 +61,14 @@ Feature: CORE007 Bundled Scripts Installation
     Then tsx-runner.js should contain ERR_MODULE_NOT_FOUND in fallthrough condition
     And ERR_MODULE_NOT_FOUND should be near ERR_UNSUPPORTED_NODE_OPTION in the same condition
 
+  # @feature10
+  Scenario: CORE007_10 tsx-runner uses loader-aware strategy table for fall-through
+    Given tsx-runner.js exists in ~/.dev-pomogator/scripts/
+    Then tsx-runner.js should declare a STRATEGIES array with loader metadata
+    And isResolverError should classify errors via RESOLVER_ERROR_TOKENS array
+    And running a script with a broken relative import should fail without redundant same-loader retries
+    And the failure log should record the originating strategy name
+
   # @feature7
   Scenario: CORE007_07 tsx-runner.js uses execCmd for .cmd files on Windows
     Given tsx-runner.js exists in ~/.dev-pomogator/scripts/

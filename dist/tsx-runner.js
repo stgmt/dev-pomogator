@@ -395,97 +395,109 @@ function runNodeNativeTs() {
   return true;
 }
 
-// Main: Strategy 0 (native) → 1 (local) → 1.25 (home) → 1.5 (global) → 2 (npx) → 3 (clean + repair + retry npx)
-try {
-  // Strategy 0: Node 22+ native --experimental-strip-types (zero deps, ~50ms)
-  if (runNodeNativeTs()) {
-    strategyLog.push('0:native');
-    logResult(true);
-    process.exit(0);
-  }
-  strategyLog.push('0:skip');
-} catch (nativeError) {
-  // Check if it's a script error (has exit code) vs strip-types incompatibility
-  const msg = String(nativeError.stderr || nativeError.message || '');
-  if (nativeError.status && !msg.includes('ERR_UNSUPPORTED_NODE_OPTION') && !msg.includes('SyntaxError') && !msg.includes('ERR_MODULE_NOT_FOUND')) {
-    // Script ran but failed — real error
-    strategyLog.push(`0:fail(${nativeError.status})`);
-    logResult(false);
-    process.exit(nativeError.status);
-  }
-  // strip-types not supported, TS incompatible, or module resolution needs tsx — fall through
-  strategyLog.push('0:unsupported');
+/**
+ * Resolver-level error tokens — these mean "the loader couldn't find/parse a module".
+ * When a strategy fails with one of these, the next strategy may succeed *only* if it
+ * uses a different loader family (e.g. node-strip → tsx). Falling through to another
+ * strategy in the same loader family is pointless — same loader, same result.
+ */
+const RESOLVER_ERROR_TOKENS = [
+  'ERR_MODULE_NOT_FOUND',
+  'ERR_UNSUPPORTED_NODE_OPTION',
+  'SyntaxError',
+  'Cannot find module',
+];
+function isResolverError(err) {
+  if (!err) return false;
+  const blob = String(err.stderr || '') + String(err.message || '');
+  return RESOLVER_ERROR_TOKENS.some((t) => blob.includes(t));
 }
 
-try {
-  // Strategy 1: direct local tsx — bypasses npx entirely
-  if (runLocalTsx()) {
-    strategyLog.push('1:local');
-    logResult(true);
-    process.exit(0);
-  }
-  strategyLog.push('1:notfound');
-} catch (localError) {
-  // Local tsx found but script failed — this is a real error, not a fallback case
-  strategyLog.push(`1:fail(${localError.status || 1})`);
-  logResult(false);
-  process.exit(localError.status || 1);
-}
-
-try {
-  // Strategy 1.25: tsx from ~/.dev-pomogator/ (user-level, cross-platform)
-  if (runHomeTsx()) {
-    strategyLog.push('1.25:home');
-    logResult(true);
-    process.exit(0);
-  }
-  strategyLog.push('1.25:notfound');
-} catch (homeError) {
-  // Home tsx found but script failed — real error
-  strategyLog.push(`1.25:fail(${homeError.status || 1})`);
-  logResult(false);
-  process.exit(homeError.status || 1);
-}
-
-try {
-  // Strategy 1.5: global tsx on PATH (e.g. npm i -g tsx)
-  if (runGlobalTsx()) {
-    strategyLog.push('1.5:global');
-    logResult(true);
-    process.exit(0);
-  }
-  strategyLog.push('1.5:notfound');
-} catch (globalError) {
-  // Global tsx found but script failed — real error
-  strategyLog.push(`1.5:fail(${globalError.status || 1})`);
-  logResult(false);
-  process.exit(globalError.status || 1);
-}
-
-try {
-  // Strategy 2: npx tsx
+/**
+ * Strategy 3 (npx repair): clean cache + repair npm install + retry npx tsx.
+ * Encapsulated so the strategy table can declare it as `onCacheError` for Strategy 2.
+ * Throws on retry failure (caller handles exit).
+ */
+function repairAndRetryNpx() {
+  cleanNpxCache();
+  cleanStaleNodeModulesDirs();
+  repairNpmSync();
   runNpxTsx();
-  strategyLog.push('2:npx');
-  logResult(true);
-} catch (error) {
-  if (isNpxCacheError(error)) {
-    strategyLog.push('2:cache-error');
-    // Strategy 3: clean npx cache + repair npm + retry
-    cleanNpxCache();
-    cleanStaleNodeModulesDirs();
-    repairNpmSync();
-    try {
-      runNpxTsx();
-      strategyLog.push('3:repaired');
-      logResult(true);
-    } catch (retryError) {
-      strategyLog.push(`3:fail(${retryError.status || 1})`);
-      logResult(false);
-      process.exit(retryError.status || 1);
+}
+
+/**
+ * Strategy table — single source of truth for execution order.
+ * `loader` declares which TypeScript loader family the strategy uses; fall-through on
+ * resolver errors is allowed only when the next strategy switches loader family.
+ *   - 'node-strip': Node 22.6+ --experimental-strip-types (strict ESM, no extension remap)
+ *   - 'tsx':         tsx loader hooks (handles extensionless imports, .ts paths, etc.)
+ */
+const STRATEGIES = [
+  { name: '0:native',   loader: 'node-strip', run: runNodeNativeTs },
+  { name: '1:local',    loader: 'tsx',        run: runLocalTsx },
+  { name: '1.25:home',  loader: 'tsx',        run: runHomeTsx },
+  { name: '1.5:global', loader: 'tsx',        run: runGlobalTsx },
+  { name: '2:npx',      loader: 'tsx',        run: runNpxTsx, onCacheError: repairAndRetryNpx },
+];
+
+let firstResolverError = null;
+
+for (let i = 0; i < STRATEGIES.length; i++) {
+  const s = STRATEGIES[i];
+  const next = STRATEGIES[i + 1];
+  try {
+    const ran = s.run();
+    if (ran === false) {
+      // Strategy not applicable (binary not found, Node version too old) — try next.
+      strategyLog.push(`${s.name}:notfound`);
+      continue;
     }
-  } else {
-    strategyLog.push(`2:fail(${error.status || 1})`);
+    // Success.
+    strategyLog.push(s.name);
+    logResult(true);
+    process.exit(0);
+  } catch (err) {
+    // Special case: npx cache corruption → clean + repair + retry (preserves Strategy 3 behavior).
+    if (s.onCacheError && isNpxCacheError(err)) {
+      strategyLog.push(`${s.name}:cache-error`);
+      try {
+        s.onCacheError();
+        strategyLog.push('3:repaired');
+        logResult(true);
+        process.exit(0);
+      } catch (retryError) {
+        strategyLog.push(`3:fail(${retryError.status || 1})`);
+        logResult(false);
+        process.exit(retryError.status || 1);
+      }
+    }
+
+    // Resolver error AND next strategy uses a different loader family → fall through.
+    if (isResolverError(err) && next && next.loader !== s.loader) {
+      if (!firstResolverError) {
+        firstResolverError = { strategy: s.name, message: String(err.stderr || err.message || '').slice(0, 500) };
+        appendLog(`[${new Date().toISOString()}] [tsx-runner] fallthrough ${s.name} → ${next.name}: ${firstResolverError.message.split('\n')[0]}`);
+      }
+      strategyLog.push(`${s.name}:fallthrough`);
+      continue;
+    }
+
+    // Either runtime/script error, or resolver error but next strategy is the same loader
+    // (pointless to retry). Propagate exit code.
+    strategyLog.push(`${s.name}:fail(${err.status || 1})`);
     logResult(false);
-    process.exit(error.status || 1);
+    if (firstResolverError) {
+      process.stderr.write(`tsx-runner: first resolver error from ${firstResolverError.strategy}: ${firstResolverError.message.split('\n')[0]}\n`);
+    }
+    process.exit(err.status || 1);
   }
 }
+
+// All strategies returned `notfound` — nothing was able to execute the script.
+strategyLog.push('all:notfound');
+logResult(false);
+process.stderr.write('tsx-runner: all strategies exhausted (no Node 22.6+, no tsx, no npx)\n');
+if (firstResolverError) {
+  process.stderr.write(`tsx-runner: first resolver error from ${firstResolverError.strategy}: ${firstResolverError.message.split('\n')[0]}\n`);
+}
+process.exit(1);
