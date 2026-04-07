@@ -37,11 +37,12 @@ Feature: CORE006 Updater Reliability
     And the updater should gracefully return null
 
   # @feature5
-  Scenario: HTTP errors are logged with status codes
-    Given the GitHub API returns a 404 error
-    When the updater fetches an extension manifest
-    Then the error response status should be logged
+  Scenario: 404 manifest fetch is silent, other HTTP errors are logged
+    Given the GitHub API returns a 404 error for an extension manifest
+    When the updater fetches the manifest
+    Then no "HTTP 404" warning should be printed to stdout
     And the updater should return null without throwing
+    And other status codes (5xx, 403) should still be logged with status
 
   # @feature6
   Scenario: Cursor hooks are written atomically

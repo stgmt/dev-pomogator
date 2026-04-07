@@ -80,7 +80,12 @@ async function fetchWithRetry(url: string): Promise<Response | null> {
         signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       });
       if (!response.ok) {
-        console.log(`  ⚠ HTTP ${response.status} for ${url}`);
+        // 404 is expected for local/dev-only extensions whose manifest was never
+        // pushed upstream — silent skip (no leak to SessionStart hook output).
+        // Other statuses (5xx, 403, etc.) indicate real upstream problems → log.
+        if (response.status !== 404) {
+          console.log(`  ⚠ HTTP ${response.status} for ${url}`);
+        }
         return null;
       }
       return response;
