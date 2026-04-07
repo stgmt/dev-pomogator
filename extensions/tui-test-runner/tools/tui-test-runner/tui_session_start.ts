@@ -9,7 +9,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { HookInput } from './adapters/types.ts';
 
-import { log as _logShared } from '../_shared/hook-utils.js';
+import { log as _logShared } from '../_shared/hook-utils.ts';
 
 const LOG_PREFIX = 'TUI-TEST-RUNNER';
 function log(level: 'INFO' | 'DEBUG' | 'ERROR', message: string): void {

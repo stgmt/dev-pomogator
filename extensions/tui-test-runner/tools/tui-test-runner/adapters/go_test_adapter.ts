@@ -1,1 +1,1 @@
-export { GoAdapter as GoTestAdapter } from './go_adapter.js';
+export { GoAdapter as GoTestAdapter } from './go_adapter.ts';

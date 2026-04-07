@@ -7,8 +7,8 @@
 import * as fs from "fs/promises";
 import * as path from "path";
 import { parse as parseYaml } from "yaml";
-import type { ValidatorConfig, Language, StepType } from "./types.js";
-import { DEFAULT_CONFIG } from "./types.js";
+import type { ValidatorConfig, Language, StepType } from "./types.ts";
+import { DEFAULT_CONFIG } from "./types.ts";
 
 const CONFIG_FILENAME = ".steps-validator.yaml";
 const CONFIG_FILENAME_ALT = ".steps-validator.yml";

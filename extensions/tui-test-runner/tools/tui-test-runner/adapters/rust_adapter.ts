@@ -2,8 +2,8 @@
  * cargo test stdout parser -> TestEvent.
  */
 
-import { AdapterBase } from './adapter_base.js';
-import type { TestEvent } from './types.js';
+import { AdapterBase } from './adapter_base.ts';
+import type { TestEvent } from './types.ts';
 
 const RE_TEST_RESULT = /^test\s+(.+?)\s+\.\.\.\s+(ok|FAILED|ignored)$/;
 const RE_SUMMARY = /^test result:\s+(ok|FAILED)\.\s+(.+)$/;

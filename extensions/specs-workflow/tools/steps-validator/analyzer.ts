@@ -13,7 +13,7 @@ import type {
   Language,
   ValidatorConfig,
   ValidationResult,
-} from "./types.js";
+} from "./types.ts";
 
 import {
   hasAssertion as hasCSharpAssertion,
@@ -23,7 +23,7 @@ import {
   isEmptyBody as isCSharpEmptyBody,
   hasTodoComment as hasCSharpTodoComment,
   isPendingStep as isCSharpPendingStep,
-} from "./parsers/csharp-parser.js";
+} from "./parsers/csharp-parser.ts";
 
 // ============================================================================
 // TYPESCRIPT PATTERNS

@@ -4,14 +4,14 @@
 import { promises as nodeFs } from 'node:fs';
 import path from 'path';
 import { createHash, randomUUID } from 'node:crypto';
-import type { Queue, QueueEntry, Signal, HookSource, Platform, EntryStatus } from './types.js';
+import type { Queue, QueueEntry, Signal, HookSource, Platform, EntryStatus } from './types.ts';
 import {
   QUEUE_RELATIVE_PATH,
   LOCK_RELATIVE_PATH,
   LOCK_STALE_TIMEOUT_MS,
   MAX_SIGNAL_LENGTH,
   MAX_CONTEXT_LENGTH,
-} from './types.js';
+} from './types.ts';
 
 // ---------------------------------------------------------------------------
 // Fingerprint

@@ -3,8 +3,8 @@
 // Fallback: regex-only if LLM unavailable or disabled
 
 import { promises as nodeFs } from 'node:fs';
-import type { Signal } from './types.js';
-import { TRIGGER_TYPES, MAX_SIGNAL_LENGTH, MAX_CONTEXT_LENGTH } from './types.js';
+import type { Signal } from './types.ts';
+import { TRIGGER_TYPES, MAX_SIGNAL_LENGTH, MAX_CONTEXT_LENGTH } from './types.ts';
 
 // ---------------------------------------------------------------------------
 // Types

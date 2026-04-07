@@ -61,6 +61,13 @@ Feature: CORE007 Bundled Scripts Installation
     Then tsx-runner.js should contain ERR_MODULE_NOT_FOUND in fallthrough condition
     And ERR_MODULE_NOT_FOUND should be near ERR_UNSUPPORTED_NODE_OPTION in the same condition
 
+  # @feature11
+  Scenario: CORE007_11 extensions/**/*.ts use .ts extension in relative imports
+    Given the dev-pomogator repo
+    When scanning every .ts file under extensions/ for relative imports
+    Then no import or import() expression should use a .js specifier
+    And the ts-import-extensions rule should be honored
+
   # @feature10
   Scenario: CORE007_10 tsx-runner uses loader-aware strategy table for fall-through
     Given tsx-runner.js exists in ~/.dev-pomogator/scripts/

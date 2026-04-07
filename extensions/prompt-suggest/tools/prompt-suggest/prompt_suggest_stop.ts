@@ -27,7 +27,7 @@ import {
   redactSecrets,
   log,
   type LLMMessage,
-} from './prompt_suggest_core.js';
+} from './prompt_suggest_core.ts';
 
 // ---------------------------------------------------------------------------
 // Types

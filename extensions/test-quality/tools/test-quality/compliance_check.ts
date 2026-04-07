@@ -12,13 +12,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 
-import { log as _logShared, normalizePath } from '../_shared/hook-utils.js';
+import { log as _logShared, normalizePath } from '../_shared/hook-utils.ts';
 import {
   markerPath,
   readMarker,
   writeMarkerAtomic,
   isWithinCooldown,
-} from '../_shared/marker-utils.js';
+} from '../_shared/marker-utils.ts';
 
 // ---------------------------------------------------------------------------
 // Types

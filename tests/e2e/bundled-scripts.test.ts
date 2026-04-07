@@ -226,6 +226,49 @@ describe('CORE007: Bundled Scripts Installation', () => {
     });
   });
 
+  // @feature11
+  describe('Scenario: CORE007_11 extensions/**/*.ts have no .js relative imports', () => {
+    it('CORE007_11: zero relative imports use .js specifier in extensions/', async () => {
+      // Walk extensions/ recursively, find every .ts file (skip .d.ts), grep for
+      // `from '<relative>.js'` and `import('<relative>.js')` patterns. Any match
+      // would re-introduce the Node 22.6+ strip-types ERR_MODULE_NOT_FOUND bug
+      // that ts-import-extensions.md rule prohibits.
+      const repoRoot = path.resolve(__dirname, '../..');
+      const extensionsDir = path.join(repoRoot, 'extensions');
+
+      const offenders: string[] = [];
+      const importRe = /(?:from|import)\s*\(?\s*['"](\.\.?\/[^'"]+)\.js['"]/g;
+
+      async function walk(dir: string): Promise<void> {
+        const entries = await fs.readdir(dir, { withFileTypes: true });
+        for (const e of entries) {
+          const p = path.join(dir, e.name);
+          if (e.isDirectory()) {
+            if (e.name === 'node_modules') continue;
+            await walk(p);
+          } else if (e.isFile() && e.name.endsWith('.ts') && !e.name.endsWith('.d.ts')) {
+            const content = await fs.readFile(p, 'utf-8');
+            const matches = content.matchAll(importRe);
+            for (const m of matches) {
+              offenders.push(`${path.relative(repoRoot, p)}: from '${m[1]}.js'`);
+            }
+          }
+        }
+      }
+
+      await walk(extensionsDir);
+
+      if (offenders.length > 0) {
+        throw new Error(
+          `Found ${offenders.length} relative imports using .js specifier in extensions/ — ` +
+          `ts-import-extensions rule requires .ts:\n  ` + offenders.slice(0, 20).join('\n  ') +
+          (offenders.length > 20 ? `\n  ... and ${offenders.length - 20} more` : '')
+        );
+      }
+      expect(offenders).toEqual([]);
+    });
+  });
+
   // @feature7
   describe('Scenario: CORE007_07 tsx-runner.js uses execCmd for .cmd files on Windows', () => {
     it('CORE007_07: should use execCmd wrapper instead of direct execFileSync on .cmd', async () => {

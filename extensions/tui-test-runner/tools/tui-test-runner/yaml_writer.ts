@@ -11,7 +11,7 @@ import type {
   TestStatusV2,
   TestSuiteV2,
   TestSummary,
-} from './adapters/types.js';
+} from './adapters/types.ts';
 
 /**
  * Minimal YAML serializer — no npm dependencies.

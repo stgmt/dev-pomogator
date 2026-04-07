@@ -25,7 +25,7 @@ import {
   readPromptFile,
   writePromptFile,
   type PromptFile,
-} from './prompt-store.js';
+} from './prompt-store.ts';
 
 interface HookInput {
   conversation_id?: string;

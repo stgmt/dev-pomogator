@@ -18,13 +18,13 @@
 import fs from 'fs';
 import path from 'path';
 import { createHash } from 'crypto';
-import { validatePlanPhased, type ValidationError } from './validate-plan.js';
+import { validatePlanPhased, type ValidationError } from './validate-plan.ts';
 import {
   PROMPT_FILE_PREFIX,
   getPromptsDir,
   getPromptFilePath,
   readPromptFile,
-} from './prompt-store.js';
+} from './prompt-store.ts';
 
 interface PreToolUseInput {
   session_id?: string;

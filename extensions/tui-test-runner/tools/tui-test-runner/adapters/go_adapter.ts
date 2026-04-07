@@ -2,8 +2,8 @@
  * go test stdout parser -> TestEvent.
  */
 
-import { AdapterBase } from './adapter_base.js';
-import type { TestEvent } from './types.js';
+import { AdapterBase } from './adapter_base.ts';
+import type { TestEvent } from './types.ts';
 
 const RE_TEST_START = /^=== RUN\s+(.+)$/;
 const RE_TEST_RESULT = /^--- (PASS|FAIL|SKIP):\s+(.+?)(?:\s+\(([\d.]+)s\))?$/;

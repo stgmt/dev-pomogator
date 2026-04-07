@@ -3,7 +3,7 @@
  * Each adapter converts raw test output lines into TestEvent objects.
  */
 
-import type { TestEvent, TestEventType } from './types.js';
+import type { TestEvent, TestEventType } from './types.ts';
 
 export abstract class AdapterBase {
   protected suiteName: string | undefined;

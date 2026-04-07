@@ -13,13 +13,13 @@
  * Output (file): steps-validation-report.md
  */
 
-import { loadConfig, isEnabled } from "./config.js";
-import { detectLanguage, hasStepDefinitions } from "./detector.js";
-import { getParser } from "./parsers/index.js";
-import { analyzeSteps } from "./analyzer.js";
-import { generateReport, printWarnings, printSuccess } from "./reporter.js";
-import { logError, logInfo } from "./logger.js";
-import type { ValidationResult } from "./types.js";
+import { loadConfig, isEnabled } from "./config.ts";
+import { detectLanguage, hasStepDefinitions } from "./detector.ts";
+import { getParser } from "./parsers/index.ts";
+import { analyzeSteps } from "./analyzer.ts";
+import { generateReport, printWarnings, printSuccess } from "./reporter.ts";
+import { logError, logInfo } from "./logger.ts";
+import type { ValidationResult } from "./types.ts";
 
 // ============================================================================
 // MAIN

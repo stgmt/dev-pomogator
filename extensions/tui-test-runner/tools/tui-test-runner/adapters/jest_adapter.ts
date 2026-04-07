@@ -3,8 +3,8 @@
  * Parses Jest output format (PASS/FAIL file headers, ✓/✕ test lines)
  */
 
-import { AdapterBase } from './adapter_base.js';
-import type { TestEvent } from './types.js';
+import { AdapterBase } from './adapter_base.ts';
+import type { TestEvent } from './types.ts';
 
 const RE_SUITE_PASS = /^\s*(PASS)\s+(.+)$/;
 const RE_SUITE_FAIL = /^\s*(FAIL)\s+(.+)$/;

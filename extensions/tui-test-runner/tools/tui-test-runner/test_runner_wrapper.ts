@@ -6,15 +6,15 @@
 import crossSpawn from 'cross-spawn';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import type { TestEvent, TestFramework } from './adapters/types.js';
-import { CargoAdapter } from './adapters/cargo_adapter.js';
-import { DotnetAdapter } from './adapters/dotnet_adapter.js';
-import { GoTestAdapter } from './adapters/go_test_adapter.js';
-import { JestAdapter } from './adapters/jest_adapter.js';
-import { PytestAdapter } from './adapters/pytest_adapter.js';
-import { VitestAdapter } from './adapters/vitest_adapter.js';
-import { detectFramework } from './config.js';
-import { YamlWriter } from './yaml_writer.js';
+import type { TestEvent, TestFramework } from './adapters/types.ts';
+import { CargoAdapter } from './adapters/cargo_adapter.ts';
+import { DotnetAdapter } from './adapters/dotnet_adapter.ts';
+import { GoTestAdapter } from './adapters/go_test_adapter.ts';
+import { JestAdapter } from './adapters/jest_adapter.ts';
+import { PytestAdapter } from './adapters/pytest_adapter.ts';
+import { VitestAdapter } from './adapters/vitest_adapter.ts';
+import { detectFramework } from './config.ts';
+import { YamlWriter } from './yaml_writer.ts';
 
 const SESSION = process.env.TEST_STATUSLINE_SESSION || '';
 const PROJECT = process.env.TEST_STATUSLINE_PROJECT || process.cwd();

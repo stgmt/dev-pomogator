@@ -7,7 +7,7 @@
  */
 
 import path from 'path';
-import { runAllChecks } from './audit-checks.js';
+import { runAllChecks } from './audit-checks.ts';
 
 function main(): void {
   const specPath = process.argv[2];

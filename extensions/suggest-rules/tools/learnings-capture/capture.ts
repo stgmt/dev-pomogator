@@ -10,11 +10,11 @@ import {
   releaseLock,
   appendEntriesInPlace,
   writeQueueAtomic,
-} from './queue.js';
-import { detectSignalsSemantic, readTranscriptText } from './semantic.js';
-import { extractKeywords } from './dedupe.js';
-import type { Signal, HookInput, Platform, Queue } from './types.js';
-import { DEFAULT_SUGGEST_THRESHOLD, MAX_SIGNAL_LENGTH } from './types.js';
+} from './queue.ts';
+import { detectSignalsSemantic, readTranscriptText } from './semantic.ts';
+import { extractKeywords } from './dedupe.ts';
+import type { Signal, HookInput, Platform, Queue } from './types.ts';
+import { DEFAULT_SUGGEST_THRESHOLD, MAX_SIGNAL_LENGTH } from './types.ts';
 
 const APPROVAL_BOOST = 0.15;
 

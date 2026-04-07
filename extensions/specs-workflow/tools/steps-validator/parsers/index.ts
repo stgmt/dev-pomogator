@@ -4,10 +4,10 @@
  * Returns the appropriate parser for the detected language.
  */
 
-import type { Language, Parser, ValidatorConfig } from "../types.js";
-import { CSharpParser } from "./csharp-parser.js";
-import { TypeScriptParser } from "./typescript-parser.js";
-import { PythonParser } from "./python-parser.js";
+import type { Language, Parser, ValidatorConfig } from "../types.ts";
+import { CSharpParser } from "./csharp-parser.ts";
+import { TypeScriptParser } from "./typescript-parser.ts";
+import { PythonParser } from "./python-parser.ts";
 
 /**
  * Get parser for the specified language
@@ -25,8 +25,8 @@ export function getParser(language: Language, config: ValidatorConfig): Parser {
   }
 }
 
-export { CSharpParser } from "./csharp-parser.js";
-export { TypeScriptParser } from "./typescript-parser.js";
-export { PythonParser } from "./python-parser.js";
+export { CSharpParser } from "./csharp-parser.ts";
+export { TypeScriptParser } from "./typescript-parser.ts";
+export { PythonParser } from "./python-parser.ts";
 
 export default getParser;

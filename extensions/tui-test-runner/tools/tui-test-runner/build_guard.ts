@@ -12,7 +12,7 @@
  * Fail-open: any error → exit(0)
  */
 
-import { checkStaleness } from './build-staleness.js';
+import { checkStaleness } from './build-staleness.ts';
 
 interface PreToolUseInput {
   session_id?: string;

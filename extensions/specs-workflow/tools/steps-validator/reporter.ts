@@ -6,7 +6,7 @@
 
 import * as fs from "fs/promises";
 import * as path from "path";
-import type { ValidationResult, AnalyzedStep } from "./types.js";
+import type { ValidationResult, AnalyzedStep } from "./types.ts";
 
 const REPORT_FILENAME = "steps-validation-report.md";
 

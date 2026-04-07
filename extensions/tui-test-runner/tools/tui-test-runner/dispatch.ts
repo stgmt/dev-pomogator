@@ -3,7 +3,7 @@
  * FR-14: Extensible mapping — add new framework = 1 line
  */
 
-import type { TestFramework } from './adapters/types.js';
+import type { TestFramework } from './adapters/types.ts';
 
 /** Base test commands per framework (without filter) */
 const DISPATCH: Record<TestFramework, string> = {

@@ -3,8 +3,8 @@
  * Parses vitest output format (✓/✗/○ markers, summary lines, suite headers)
  */
 
-import { AdapterBase } from './adapter_base.js';
-import type { TestEvent } from './types.js';
+import { AdapterBase } from './adapter_base.ts';
+import type { TestEvent } from './types.ts';
 
 // Vitest output patterns
 const RE_SUITE_START = /^\s*(❯|>)\s+(.+\.(?:test|spec)\.\w+)/;

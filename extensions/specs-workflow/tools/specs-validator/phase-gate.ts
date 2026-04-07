@@ -17,7 +17,7 @@
  */
 
 import path from 'path';
-import { readProgressState, checkPhaseAllowed } from './phase-constants.js';
+import { readProgressState, checkPhaseAllowed } from './phase-constants.ts';
 
 interface PreToolUseInput {
   session_id?: string;

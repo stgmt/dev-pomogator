@@ -3,8 +3,8 @@
  * Parses pytest output format (PASSED/FAILED/SKIPPED markers, :: path separators)
  */
 
-import { AdapterBase } from './adapter_base.js';
-import type { TestEvent } from './types.js';
+import { AdapterBase } from './adapter_base.ts';
+import type { TestEvent } from './types.ts';
 
 const RE_COLLECTING = /^collecting\s+\.\.\./;
 const RE_TEST_RESULT = /^(.+?::.*?)\s+(PASSED|FAILED|SKIPPED|ERROR)(?:\s+\[.*?\])?\s*$/;

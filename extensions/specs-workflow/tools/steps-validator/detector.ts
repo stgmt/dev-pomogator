@@ -5,7 +5,7 @@
  */
 
 import { glob } from "glob";
-import type { Language, ValidatorConfig } from "./types.js";
+import type { Language, ValidatorConfig } from "./types.ts";
 
 /**
  * Detect the primary BDD language used in the project

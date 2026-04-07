@@ -41,6 +41,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | plan-pomogator | Единый формат планов разработки (9 секций: Context + Extracted Requirements → трёхфазная валидация + prompt-capture) | `.claude/rules/plan-pomogator/plan-pomogator.md` |
 | plan-freshness | Каждый план с нуля; запрет копирования File Changes/Requirements из предыдущих планов; Phase 3 cross-ref валидация | `.claude/rules/plan-pomogator/plan-freshness.md` |
 | extension-manifest-integrity | `extension.json` — source of truth для апдейтера; обновлять files/rules/tools/toolFiles/hooks при изменениях | `.claude/rules/extension-manifest-integrity.md` |
+| ts-import-extensions | В `extensions/**/*.ts` relative imports ОБЯЗАНЫ использовать `.ts` расширение; `.js` спецификаторы ломают Node 22.6+ native strip-types | `.claude/rules/ts-import-extensions.md` |
 | updater-managed-cleanup | Апдейтер удаляет только managed-файлы; user-модификации бэкапятся в `.dev-pomogator/.user-overrides/`; hooks через smart merge | `.claude/rules/updater-managed-cleanup.md` |
 | updater-sync-tools-hooks | Апдейтер обновляет ВСЕ установленные плагины: commands, rules, tools, skills, hooks | `.claude/rules/updater-sync-tools-hooks.md` |
 | jira-smart-commit-one-line | Smart Commit парсится только если ключ Jira и команда в первой строке, одна строка | `.claude/rules/jira-smart-commit-one-line.md` |

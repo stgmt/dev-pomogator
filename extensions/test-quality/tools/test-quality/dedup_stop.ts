@@ -11,14 +11,14 @@
 
 import { execSync } from 'node:child_process';
 
-import { log as _logShared, normalizePath } from '../_shared/hook-utils.js';
+import { log as _logShared, normalizePath } from '../_shared/hook-utils.ts';
 import {
   markerPath,
   readMarker,
   writeMarkerAtomic,
   isWithinCooldown,
   hashFileList,
-} from '../_shared/marker-utils.js';
+} from '../_shared/marker-utils.ts';
 
 // ---------------------------------------------------------------------------
 // Types

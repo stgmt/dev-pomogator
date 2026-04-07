@@ -5,7 +5,7 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import type { TestFramework } from './adapters/types.js';
+import type { TestFramework } from './adapters/types.ts';
 
 export interface TuiTestRunnerConfig {
   framework: TestFramework;
