@@ -5637,6 +5637,9 @@ async function updateSharedFiles(projectPath, previousShared = []) {
   }
   return result;
 }
+function hasMissingSharedDir(projectPath) {
+  return !import_fs_extra9.default.existsSync(import_path12.default.join(projectPath, ".dev-pomogator/tools/_shared"));
+}
 
 // src/installer/plugin-json.ts
 var import_fs_extra10 = __toESM(require_lib(), 1);
@@ -6003,7 +6006,23 @@ async function checkUpdate(options = {}) {
     if (!config.autoUpdate && !force) {
       return false;
     }
-    if (!force && !shouldCheckUpdate(config)) {
+    let effectiveForce = false;
+    try {
+      const trackedProjects = Object.keys(config.installedShared ?? {});
+      for (const projectPath of trackedProjects) {
+        const entries = config.installedShared?.[projectPath];
+        if (!entries || entries.length === 0)
+          continue;
+        if (hasMissingSharedDir(projectPath)) {
+          effectiveForce = true;
+          console.log(`  \u26A0 _shared/ missing for ${projectPath} \u2014 forcing recovery sync`);
+          break;
+        }
+      }
+    } catch (probeError) {
+      console.log(`  \u26A0 _shared/ probe failed: ${getErrorMessage(probeError)} \u2014 falling back to normal cooldown`);
+    }
+    if (!force && !effectiveForce && !shouldCheckUpdate(config)) {
       return false;
     }
     let updated = false;
@@ -6301,9 +6320,50 @@ function shouldUpdate(config) {
   const cooldown = config.cooldownHours || 24;
   return hours >= cooldown;
 }
+async function recoverMissingShared(config) {
+  if (!config.installedShared)
+    return;
+  for (const [projectPath, entries] of Object.entries(config.installedShared)) {
+    if (!entries || entries.length === 0)
+      continue;
+    let missing = false;
+    try {
+      missing = hasMissingSharedDir(projectPath);
+    } catch {
+      continue;
+    }
+    if (!missing)
+      continue;
+    process.stderr.write(`\u26A0 _shared/ missing for ${projectPath} \u2014 forcing recovery sync
+`);
+    try {
+      const result = await updateSharedFiles(projectPath, entries);
+      if (result.written.length > 0) {
+        process.stderr.write(`  \u2713 Recovered ${result.written.length} _shared file(s) for ${projectPath}
+`);
+        config.installedShared[projectPath] = result.written;
+        try {
+          import_fs5.default.writeFileSync(CONFIG_FILE3, JSON.stringify(config, null, 2), "utf-8");
+        } catch (writeErr) {
+          process.stderr.write(`  \u26A0 Failed to persist installedShared after recovery: ${getErrorMessage(writeErr)}
+`);
+        }
+      } else if (result.hadFailures) {
+        process.stderr.write(`  \u26A0 _shared/ recovery for ${projectPath} had failures (manifest unreachable?)
+`);
+      }
+    } catch (syncErr) {
+      process.stderr.write(`  \u26A0 _shared/ recovery failed for ${projectPath}: ${getErrorMessage(syncErr)}
+`);
+    }
+  }
+}
 async function checkOnly() {
   const config = loadConfig2();
-  if (!config?.installedExtensions?.length)
+  if (!config)
+    return;
+  await recoverMissingShared(config);
+  if (!config.installedExtensions?.length)
     return;
   const outdated = [];
   const seen = /* @__PURE__ */ new Set();
@@ -6352,6 +6412,8 @@ async function main() {
     logger.warn(`Hook migration failed: ${getErrorMessage(err)}`);
   });
   const config = loadConfig2();
+  if (config)
+    await recoverMissingShared(config);
   if (!shouldUpdate(config)) {
     logger.info("Skipped: cooldown not expired or autoUpdate disabled");
     return;

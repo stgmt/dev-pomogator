@@ -157,22 +157,26 @@ describe('CORE007: Bundled Scripts Installation', () => {
   });
 
   // @feature9
-  describe('Scenario: CORE007_09 tsx-runner Strategy 0 falls through on ERR_MODULE_NOT_FOUND', () => {
-    it('CORE007_09: should contain ERR_MODULE_NOT_FOUND in fallthrough condition', async () => {
+  describe('Scenario: CORE007_09 isResolverError recognizes resolver-level error tokens', () => {
+    it('CORE007_09: RESOLVER_ERROR_TOKENS contains ERR_MODULE_NOT_FOUND + strip-types tokens for fall-through enablement', async () => {
       const scriptPath = homePath('.dev-pomogator', 'scripts', 'tsx-runner.js');
       const content = await fs.readFile(scriptPath, 'utf-8');
 
-      // Strategy 0 catch block must include ERR_MODULE_NOT_FOUND in fallthrough list
-      // so it doesn't treat unresolved imports as fatal script errors
-      expect(content).toContain('ERR_MODULE_NOT_FOUND');
+      // Structural invariant 1: classifier function exists
+      expect(content).toContain('function isResolverError(');
 
-      // Verify it's in the Strategy 0 catch block (near 'ERR_UNSUPPORTED_NODE_OPTION').
-      // Note: `ERR_MODULE_NOT_FOUND` appears earlier in isNpxCacheError, so use
-      // lastIndexOf to find the Strategy 0 occurrence specifically.
-      const unsupportedIdx = content.indexOf('ERR_UNSUPPORTED_NODE_OPTION');
-      const moduleNotFoundIdx = content.lastIndexOf('ERR_MODULE_NOT_FOUND');
-      // Both should be in the same condition block (within ~200 chars of each other)
-      expect(Math.abs(moduleNotFoundIdx - unsupportedIdx)).toBeLessThan(200);
+      // Structural invariant 2: token constant exists
+      expect(content).toContain('RESOLVER_ERROR_TOKENS');
+
+      // Structural invariant 3: extract the actual array contents (not random
+      // proximity in the file) and verify the three tokens that enable Node
+      // strip-types → tsx fall-through are present.
+      const arrayMatch = content.match(/RESOLVER_ERROR_TOKENS\s*=\s*\[([\s\S]*?)\]/);
+      expect(arrayMatch, 'RESOLVER_ERROR_TOKENS array literal should be parseable').not.toBeNull();
+      const arrayBody = arrayMatch![1];
+      expect(arrayBody).toContain("'ERR_MODULE_NOT_FOUND'");
+      expect(arrayBody).toContain("'ERR_UNSUPPORTED_NODE_OPTION'");
+      expect(arrayBody).toContain("'SyntaxError'");
     });
   });
 

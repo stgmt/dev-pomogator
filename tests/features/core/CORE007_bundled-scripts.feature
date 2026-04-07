@@ -56,10 +56,12 @@ Feature: CORE007 Bundled Scripts Installation
     And stderr should not contain ERR_MODULE_NOT_FOUND
 
   # @feature9
-  Scenario: CORE007_09 tsx-runner Strategy 0 falls through on ERR_MODULE_NOT_FOUND
+  Scenario: CORE007_09 isResolverError recognizes resolver-level error tokens
     Given tsx-runner.js exists in ~/.dev-pomogator/scripts/
-    Then tsx-runner.js should contain ERR_MODULE_NOT_FOUND in fallthrough condition
-    And ERR_MODULE_NOT_FOUND should be near ERR_UNSUPPORTED_NODE_OPTION in the same condition
+    When inspecting the isResolverError classifier
+    Then it should declare a function isResolverError
+    And it should declare a RESOLVER_ERROR_TOKENS array
+    And the array should contain ERR_MODULE_NOT_FOUND, ERR_UNSUPPORTED_NODE_OPTION, and SyntaxError
 
   # @feature11
   Scenario: CORE007_11 extensions/**/*.ts use .ts extension in relative imports

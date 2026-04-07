@@ -18,6 +18,9 @@ import { resolveHookToolPaths, replaceNpxTsxWithPortable, ensureExecutableShellS
 import { detectMangledArtifacts } from '../utils/msys.js';
 import { writeJsonAtomic, readJsonSafe } from '../utils/atomic-json.js';
 import { writeGlobalStatusLine, isManagedStatusLineCommand } from '../utils/statusline.js';
+import { resolveWithinProject, normalizeRelativePath } from '../utils/path-safety.js';
+import { updateSharedFiles, hasMissingSharedDir } from './shared-sync.js';
+import { writePluginJson } from '../installer/plugin-json.js';
 
 interface UpdateOptions {
   force?: boolean;
@@ -30,26 +33,9 @@ interface UpdateResult {
   backedUp: ModifiedFile[];
 }
 
-function normalizeRelativePath(value: string): string {
-  return value.replace(/\\/g, '/');
-}
-
-function resolveWithinProject(
-  projectPath: string,
-  relativePath: string
-): string | null {
-  const normalized = normalizeRelativePath(relativePath);
-  if (path.isAbsolute(normalized)) {
-    return null;
-  }
-  const base = path.resolve(projectPath);
-  const resolved = path.resolve(base, normalized);
-  const relative = path.relative(base, resolved);
-  if (relative.startsWith('..') || path.isAbsolute(relative)) {
-    return null;
-  }
-  return resolved;
-}
+// `resolveWithinProject` and `normalizeRelativePath` extracted to
+// `src/utils/path-safety.ts` so the same security primitive is shared with
+// `src/installer/uninstall-project.ts` (per .claude/rules/no-unvalidated-manifest-paths.md).
 
 function ensureManagedEntry(
   installed: InstalledExtension,
@@ -87,6 +73,49 @@ async function shouldBackupFile(
     return currentHash !== computeHash(upstreamContent);
   }
   return true;
+}
+
+/**
+ * Remove empty directories left behind after stale-file removal.
+ *
+ * Walks parents of removed files bottom-up, deleting any that are now empty.
+ * Stops at `{projectPath}/.dev-pomogator/tools/` boundary so the tools root
+ * itself is never deleted. Quietly skips dirs that no longer exist or are
+ * non-empty (other extensions still using them).
+ *
+ * Implements FR-13.
+ */
+async function pruneEmptyDirs(
+  projectPath: string,
+  removedRelativePaths: string[]
+): Promise<void> {
+  const toolsRoot = path.resolve(projectPath, '.dev-pomogator', 'tools');
+  const dirsToCheck = new Set<string>();
+
+  for (const rel of removedRelativePaths) {
+    const abs = resolveWithinProject(projectPath, rel);
+    if (!abs) continue;
+    let dir = path.dirname(abs);
+    // Walk up until we hit toolsRoot or filesystem root
+    while (dir !== toolsRoot && dir !== path.parse(dir).root && dir.startsWith(toolsRoot)) {
+      dirsToCheck.add(dir);
+      dir = path.dirname(dir);
+    }
+  }
+
+  // Sort descending by length so we prune leaves before parents
+  const sortedDirs = [...dirsToCheck].sort((a, b) => b.length - a.length);
+  for (const dir of sortedDirs) {
+    try {
+      const entries = await fs.readdir(dir);
+      if (entries.length === 0) {
+        await fs.rmdir(dir);
+        console.log(`  - Pruned empty dir: ${path.relative(projectPath, dir)}`);
+      }
+    } catch {
+      // Dir gone or non-empty — skip silently
+    }
+  }
 }
 
 async function removeStaleFiles(
@@ -505,15 +534,64 @@ export async function checkUpdate(options: UpdateOptions = {}): Promise<boolean>
     if (!config.autoUpdate && !force) {
       return false;
     }
-    
+
+    // 1.5. Forced recovery probe — bypass cooldown if `_shared/` is missing for any
+    // tracked project. Without this, legacy installs (pre-commit 6b475e4) hit the
+    // 24h cooldown gate and never recover, causing MODULE_NOT_FOUND in hooks.
+    // Cheap: only fs.existsSync per project, no network. Wrapped in try/catch so
+    // a permission/symlink error degrades gracefully to normal cooldown logic.
+    let effectiveForce = false;
+    try {
+      const trackedProjects = Object.keys(config.installedShared ?? {});
+      for (const projectPath of trackedProjects) {
+        const entries = config.installedShared?.[projectPath];
+        if (!entries || entries.length === 0) continue;
+        if (hasMissingSharedDir(projectPath)) {
+          effectiveForce = true;
+          console.log(`  ⚠ _shared/ missing for ${projectPath} — forcing recovery sync`);
+          break;
+        }
+      }
+    } catch (probeError) {
+      console.log(`  ⚠ _shared/ probe failed: ${getErrorMessage(probeError)} — falling back to normal cooldown`);
+    }
+
     // 2. Проверка cooldown
-    if (!force && !shouldCheckUpdate(config)) {
+    if (!force && !effectiveForce && !shouldCheckUpdate(config)) {
       return false;
     }
     
     let updated = false;
     const allBackedUp: ModifiedFile[] = [];
-    
+
+    // 2.5. Sync _shared/ utilities for every unique project path (FR-12).
+    // The installer copies extensions/_shared/ → .dev-pomogator/tools/_shared/
+    // via fs.copy. Updater historically didn't, leaving these files stale and
+    // causing MODULE_NOT_FOUND for hook scripts that import from them.
+    // Done ONCE per project (not per extension) since _shared/ is shared.
+    {
+      const sharedProjectPaths = new Set<string>();
+      for (const installed of config.installedExtensions) {
+        if (platform && installed.platform !== platform) continue;
+        for (const projectPath of installed.projectPaths) {
+          sharedProjectPaths.add(projectPath);
+        }
+      }
+      if (!config.installedShared) config.installedShared = {};
+      for (const projectPath of sharedProjectPaths) {
+        try {
+          const previousShared = config.installedShared[projectPath] ?? [];
+          const sharedResult = await updateSharedFiles(projectPath, previousShared);
+          if (sharedResult.written.length > 0 || sharedResult.removed.length > 0) {
+            config.installedShared[projectPath] = sharedResult.written;
+            console.log(`  ✓ Synced _shared/ utilities for ${projectPath} (${sharedResult.written.length} files)`);
+          }
+        } catch (error) {
+          console.log(`  ⚠ _shared sync failed for ${projectPath}: ${getErrorMessage(error)}`);
+        }
+      }
+    }
+
     // 3. Для каждого установленного extension
     for (const installed of config.installedExtensions) {
       // Filter by platform if specified
@@ -602,10 +680,21 @@ export async function checkUpdate(options: UpdateOptions = {}): Promise<boolean>
             );
             managedEntry.rules = ruleResult.written;
 
+            // FR-13: capture previous tool paths BEFORE overwriting managedEntry.tools
+            // so we can prune empty parent dirs after stale files are removed.
+            const previousToolPaths = getManagedPaths(managedEntry.tools).map(normalizeRelativePath);
+            const writtenToolSet = new Set(writtenToolPaths.map(normalizeRelativePath));
+            const removedToolPaths = previousToolPaths.filter(p => !writtenToolSet.has(p));
+
             allBackedUp.push(
               ...await removeStaleFiles(projectPath, managedEntry.tools, writtenToolPaths, installed.name)
             );
             managedEntry.tools = toolResult.written;
+
+            // FR-13: prune any empty parent dirs left over after tool removal
+            if (removedToolPaths.length > 0) {
+              await pruneEmptyDirs(projectPath, removedToolPaths);
+            }
 
             allBackedUp.push(
               ...await removeStaleFiles(projectPath, managedEntry.skills, writtenSkillPaths, installed.name)
@@ -669,6 +758,43 @@ export async function checkUpdate(options: UpdateOptions = {}): Promise<boolean>
         if (mangledArtifacts.length > 0) {
           console.log(`  ⚠ MSYS path mangling artifacts in ${projectPath}: ${mangledArtifacts.join(', ')}`);
           console.log(`    Fix: add MSYS_NO_PATHCONV=1 to your environment. These directories can be safely deleted.`);
+        }
+      }
+    }
+
+    // 8.5. FR-14: regenerate plugin.json for every project to reflect current installedExtensions.
+    // This catches stale entries from previously-removed extensions and updates the version
+    // string. Skills metadata is not propagated by the updater (would need manifest re-fetch);
+    // installer continues to populate it on next install. Plugin discovery only needs name+version.
+    {
+      const pluginProjectPaths = new Set<string>();
+      for (const installed of config.installedExtensions) {
+        if (platform && installed.platform !== platform) continue;
+        for (const projectPath of installed.projectPaths) {
+          pluginProjectPaths.add(projectPath);
+        }
+      }
+      // Read upstream package version (same as installer does)
+      let packageVersion = '0.0.0';
+      try {
+        const pkgPath = path.resolve(__dirname, '..', '..', 'package.json');
+        const pkg = await readJsonSafe<{ version?: string }>(pkgPath, {});
+        packageVersion = pkg.version || '0.0.0';
+      } catch {
+        // ignore — fallback version
+      }
+      const extensionNames = config.installedExtensions
+        .filter(e => !platform || e.platform === platform)
+        .map(e => e.name);
+      for (const projectPath of pluginProjectPaths) {
+        try {
+          await writePluginJson({
+            repoRoot: projectPath,
+            packageVersion,
+            extensionNames,
+          });
+        } catch (error) {
+          console.log(`  ⚠ plugin.json regen failed for ${projectPath}: ${getErrorMessage(error)}`);
         }
       }
     }
