@@ -51,6 +51,15 @@ export interface Config {
   cooldownHours: number;
   rememberChoice: boolean;
   installedExtensions: InstalledExtension[];
+  /**
+   * Per-project tracking of `_shared/` cross-extension utility files synced
+   * by the updater (FR-12). Keyed by absolute project path. Each entry tracks
+   * which files were last written so the updater can prune stale ones.
+   *
+   * Not populated by the installer — only by `updateSharedFiles()` after the
+   * first update run. Installer continues using `fs.copy` directly for fresh installs.
+   */
+  installedShared?: Record<string, ManagedFileEntry[]>;
 }
 
 export const DEFAULT_CONFIG: Config = {
