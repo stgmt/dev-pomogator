@@ -2,9 +2,14 @@
 
 ## Когда применять
 
-Пользователь просит:
-- **RU:** "создай спеки", "обнови спеки", "спецификация для...", "покажи спеки", "статус спеков"
-- **EN:** "create specs", "update specs", "spec for...", "show specs", "specs status"
+Пользователь просит работу со спеками — любым creation/update/view глаголом + словом "спеки/спека/спецификация/specs/spec/specification":
+
+- **RU создание/scaffold:** "создай/сделай/набросай/напиши/опиши/нужна спека/спеки", "новые спеки для X", "спеки по фиче", "спецификация для X"
+- **RU обновление/просмотр:** "обнови спеки", "покажи спеки", "что в спеке X", "статус спеков"
+- **EN create/scaffold:** "create/make/draft/write/sketch/outline specs", "spec out", "new spec for X", "scaffold a spec"
+- **EN update/view:** "update specs", "show specs", "specs status", "review the spec"
+
+Триггер должен срабатывать на любую из этих фраз даже в терсной форме ("ок спеки по фиче сделай"). Различай намерение: scaffold нового → запускай /create-spec; update/view существующего → следуй workflow ниже без scaffold.
 
 ---
 
@@ -74,7 +79,6 @@
 
 **СТОП #1:** Показать результаты Discovery, спросить подтверждение.
 После подтверждения: `./.dev-pomogator/tools/specs-generator/spec-status.ts -Path ".specs/{feature}" -ConfirmStop Discovery`
-Затем запустить `/simplify` для review качества файлов текущей фазы.
 
 ---
 
@@ -109,7 +113,6 @@
 
 **СТОП #1.5:** Показать найденные ограничения проекта, спросить подтверждение перед Phase 2.
 После подтверждения: `./.dev-pomogator/tools/specs-generator/spec-status.ts -Path ".specs/{feature}" -ConfirmStop Context`
-Затем запустить `/simplify` для review качества файлов текущей фазы.
 
 ---
 
@@ -225,7 +228,6 @@
 
 **СТОП #2:** Показать Requirements + Design, спросить подтверждение.
 После подтверждения: `./.dev-pomogator/tools/specs-generator/spec-status.ts -Path ".specs/{feature}" -ConfirmStop Requirements`
-Затем запустить `/simplify` для review качества файлов текущей фазы.
 
 ---
 
@@ -315,7 +317,6 @@
 
 **СТОП #3:** Финальный отчёт со summary.
 После подтверждения: `./.dev-pomogator/tools/specs-generator/spec-status.ts -Path ".specs/{feature}" -ConfirmStop Finalization`
-Затем запустить `/simplify` для review качества файлов текущей фазы, перед запуском Phase 3+ Audit.
 
 ---
 
@@ -394,7 +395,11 @@
 2. Записать ВСЕ найденные и исправленные проблемы (что было → что исправлено)
 3. Показать summary таблицу пользователю
 
-**НЕ СТОП-ТОЧКА.** Аудит и исправления выполняются автоматически. Пользователь уже дал подтверждение на СТОП #3.
+#### Шаг 6: Финальный /simplify review
+
+После создания AUDIT_REPORT.md — запустить `/simplify` ОДИН раз для финального review всех файлов спеки. Это **единственный** вызов /simplify в workflow — НЕ запускать после каждой STOP-точки (слишком тяжело: 4 цикла по 3 review agents = спам в чат и трата токенов).
+
+**НЕ СТОП-ТОЧКА.** Аудит, исправления и финальный /simplify выполняются автоматически. Пользователь уже дал подтверждение на СТОП #3.
 
 ---
 
