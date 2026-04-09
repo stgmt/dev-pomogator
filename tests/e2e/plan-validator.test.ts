@@ -52,10 +52,12 @@ afterEach(() => {
   tempFiles.length = 0;
 });
 
-/** Remove a ## section from the plan by name */
+/** Remove a ## section from the plan by name. Uses (?:$|\s) instead of \b
+ *  to support Cyrillic section names (e.g. "Простыми словами") where ASCII \b doesn't trigger. */
 function removeSection(content: string, sectionName: string): string {
   const lines = content.split('\n');
-  const sectionRegex = new RegExp(`^##\\s+(?:\\S+\\s+)?${sectionName}\\b`);
+  const escaped = sectionName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const sectionRegex = new RegExp(`^##\\s+(?:\\S+\\s+)?${escaped}(?:$|\\s)`);
   const startIdx = lines.findIndex((l) => sectionRegex.test(l));
   if (startIdx === -1) return content;
   let endIdx = lines.length;
@@ -109,6 +111,54 @@ describe('PLUGIN007_04 Valid plan', () => {
       expect(error.hint).toBeDefined();
       expect(error.hint.length).toBeGreaterThan(0);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// @feature44: Plain Language Summary section (Простыми словами)
+// ---------------------------------------------------------------------------
+describe('PLUGIN007_44 Plain Language Summary section', () => {
+  it('PLUGIN007_44_01: Phase 1 detects missing Простыми словами section', () => {
+    const broken = removeSection(getValidPlan(), 'Простыми словами');
+    const tmpFile = writeTempPlan(broken);
+    const result = validatePlanPhased(tmpFile);
+    const found = findErrors(result.phase1, 'Отсутствует секция: Простыми словами');
+    expect(found.length).toBe(1);
+    expect(found[0].hint).toBe('Добавь: ## Простыми словами');
+    // Phase 2 not triggered when Phase 1 has errors
+    expect(result.phase2).toHaveLength(0);
+  });
+
+  it('PLUGIN007_44_02: Phase 1 detects empty Простыми словами section', () => {
+    // Replace section content with just the heading
+    const lines = getValidPlan().split('\n');
+    const startIdx = lines.findIndex((l) => /^##\s+(?:💬\s+)?Простыми словами\s*$/.test(l));
+    expect(startIdx).toBeGreaterThanOrEqual(0);
+    let endIdx = lines.length;
+    for (let i = startIdx + 1; i < lines.length; i++) {
+      if (/^##\s+/.test(lines[i])) {
+        endIdx = i;
+        break;
+      }
+    }
+    // Keep heading + 1 empty line, remove everything else in section
+    lines.splice(startIdx + 1, endIdx - startIdx - 1, '');
+    const broken = lines.join('\n');
+    const tmpFile = writeTempPlan(broken);
+    const result = validatePlanPhased(tmpFile);
+    const found = findErrors(result.phase1, 'Секция Простыми словами пуста');
+    expect(found.length).toBe(1);
+    expect(found[0].hint).toContain('### Сейчас');
+    expect(found[0].hint).toContain('### Как должно быть');
+    expect(found[0].hint).toContain('### Правильно понял');
+  });
+
+  it('PLUGIN007_44_03: Phase 1 accepts plan with non-empty Простыми словами section first', () => {
+    const result = validatePlanPhased(FIXTURE_PATH);
+    expect(result.phase1).toHaveLength(0);
+    // No errors related to Простыми словами section
+    const summaryErrors = result.phase1.filter((e) => e.message.includes('Простыми словами'));
+    expect(summaryErrors).toHaveLength(0);
   });
 });
 

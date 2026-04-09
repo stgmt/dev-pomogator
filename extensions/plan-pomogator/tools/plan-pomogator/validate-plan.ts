@@ -18,6 +18,7 @@ export interface ValidationResult {
 // Emoji prefixes are optional in section headings (e.g. "## 🎯 Context" or "## Context")
 // Emoji prefixes match concrete emojis from template.md (source of truth)
 export const REQUIRED_SECTIONS: Array<{ name: string; regex: RegExp }> = [
+  { name: 'Простыми словами', regex: /^##\s+(?:💬\s+)?Простыми словами\s*$/ },
   { name: 'Context', regex: /^##\s+(?:🎯\s+)?Context\s*$/ },
   { name: 'User Stories', regex: /^##\s+(?:👤\s+)?User Stories\s*$/ },
   { name: 'Use Cases', regex: /^##\s+(?:🔀\s+)?Use Cases\s*$/ },
@@ -412,6 +413,34 @@ function validateContextContent(lines: string[], indices: Map<string, number>, e
   }
 }
 
+/**
+ * Phase 1: Validate Простыми словами section content.
+ * Section is mandatory via REQUIRED_SECTIONS, but this function additionally
+ * checks that the section is not empty (heading without content).
+ * Empty section breaks UX — reviewer would not see the human-friendly summary.
+ */
+function validateHumanSummarySection(
+  lines: string[],
+  indices: Map<string, number>,
+  errors: ValidationError[],
+): void {
+  const sectionIndex = indices.get('Простыми словами');
+  if (sectionIndex === undefined) return; // missing section already reported by validateSections
+
+  const range = getSectionRange(lines, sectionIndex);
+  const contentLines = lines.slice(range.start + 1, range.end);
+
+  const hasContent = contentLines.some((line) => line.trim().length > 0);
+  if (!hasContent) {
+    addError(
+      errors,
+      range.start,
+      'Секция Простыми словами пуста',
+      'Добавь три подсекции: ### Сейчас (как работает), ### Как должно быть (как я понял), ### Правильно понял?',
+    );
+  }
+}
+
 const CROSS_REF_THRESHOLD = 0.5; // >50% of File Changes paths must be mentioned in plan body
 
 /**
@@ -704,6 +733,7 @@ export function validatePlanPhased(filePathOrLines: string | string[]): Validati
   const lines = Array.isArray(filePathOrLines) ? filePathOrLines : readFileLines(filePathOrLines);
 
   const indices = validateSections(lines, phase1);
+  validateHumanSummarySection(lines, indices, phase1);
   validateRequirements(lines, indices, phase1);
   validateTodos(lines, indices, phase1);
   validateVerificationPlan(lines, indices, phase1);
