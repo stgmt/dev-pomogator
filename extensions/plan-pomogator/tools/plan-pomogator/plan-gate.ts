@@ -20,9 +20,8 @@ import path from 'path';
 import { createHash } from 'crypto';
 import { validatePlanPhased, type ValidationError } from './validate-plan.ts';
 import {
-  PROMPT_FILE_PREFIX,
-  getPromptsDir,
   getPromptFilePath,
+  isTaskNotification,
   readPromptFile,
 } from './prompt-store.ts';
 
@@ -58,54 +57,36 @@ const MAX_PROMPT_DISPLAY = 5;
 const MAX_PROMPT_LENGTH = 200;
 
 /**
- * Load user prompts from prompt-capture file.
- * Tries session-specific file first, falls back to most recent.
+ * Load user prompts from session-specific prompt-capture file.
+ *
+ * No fallback to most-recent file in shared home directory — that would
+ * violate `.claude/rules/gotchas/hook-global-state-cwd-scoping.md` and leak
+ * prompts across sessions/projects. Empty string is preferable to wrong context.
  */
-function loadUserPrompts(sessionId?: string): string {
+export function loadUserPrompts(sessionId?: string): string {
+  if (!sessionId) return '';
   try {
-    const dir = getPromptsDir();
-
-    // Try session-specific file first
-    if (sessionId) {
-      const result = formatPromptsFromFile(getPromptFilePath(sessionId));
-      if (result) return result;
-    }
-
-    // Fallback: find most recent prompt file
-    let mostRecent: { path: string; mtime: number } | null = null;
-    let entries: string[];
-    try {
-      entries = fs.readdirSync(dir);
-    } catch {
-      return '';
-    }
-
-    for (const f of entries) {
-      if (!f.startsWith(PROMPT_FILE_PREFIX) || !f.endsWith('.json')) continue;
-      const fullPath = path.join(dir, f);
-      try {
-        const mtime = fs.statSync(fullPath).mtimeMs;
-        if (!mostRecent || mtime > mostRecent.mtime) {
-          mostRecent = { path: fullPath, mtime };
-        }
-      } catch { /* skip unreadable files */ }
-    }
-
-    if (mostRecent) {
-      const result = formatPromptsFromFile(mostRecent.path);
-      if (result) return result;
-    }
+    return formatPromptsFromFile(getPromptFilePath(sessionId)) ?? '';
   } catch {
-    // fail-open: prompt loading errors are not critical
+    return '';
   }
-  return '';
 }
 
-function formatPromptsFromFile(filePath: string): string | null {
+/**
+ * Format user prompts from a single prompt file for inclusion in deny message.
+ *
+ * Defense-in-depth: filters out task-notification entries on read even if they
+ * somehow ended up in the file (legacy default.json from pre-fix versions, or
+ * a regression in capture-side filtering).
+ */
+export function formatPromptsFromFile(filePath: string): string | null {
   const data = readPromptFile(filePath);
   if (!data?.prompts?.length) return null;
 
-  const recent = data.prompts.slice(-MAX_PROMPT_DISPLAY);
+  const real = data.prompts.filter((p) => !isTaskNotification(p.text));
+  if (real.length === 0) return null;
+
+  const recent = real.slice(-MAX_PROMPT_DISPLAY);
   const formatted = recent.map((p, i) => {
     const text = p.text.length > MAX_PROMPT_LENGTH
       ? p.text.substring(0, MAX_PROMPT_LENGTH) + '...'

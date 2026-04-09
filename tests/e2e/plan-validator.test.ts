@@ -6,12 +6,14 @@
  *
  * Pattern: import validatePlan directly, mutate valid.plan.md fixture.
  */
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
+import { spawnSync } from 'child_process';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { validatePlan, validatePlanPhased, REQUIRED_SECTIONS, findHeadingIndex, type ValidationError } from '../../extensions/plan-pomogator/tools/plan-pomogator/validate-plan';
-import { readTemplateContent, checkDuplicatePlan, scorePromptRelevance, resolvePlanFile } from '../../extensions/plan-pomogator/tools/plan-pomogator/plan-gate';
+import { readTemplateContent, checkDuplicatePlan, scorePromptRelevance, resolvePlanFile, formatPromptsFromFile, loadUserPrompts } from '../../extensions/plan-pomogator/tools/plan-pomogator/plan-gate';
+import { PROMPT_FILE_PREFIX } from '../../extensions/plan-pomogator/tools/plan-pomogator/prompt-store';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -893,6 +895,131 @@ describe('PLUGIN007_42: Installer normalizes array matcher to pipe string', () =
     expect(claudeHooks.UserPromptSubmit).toBeDefined();
     // PostToolUse hook for mark-plan-session.sh was removed
     expect(claudeHooks.PostToolUse).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// @feature43: prompt-capture & plan-gate session isolation
+// Spec: .specs/plan-pomogator-prompt-isolation/
+// ---------------------------------------------------------------------------
+
+describe('PLUGIN007_43: prompt-capture & plan-gate session isolation', () => {
+  const captureScript = path.resolve(
+    __dirname,
+    '../../extensions/plan-pomogator/tools/plan-pomogator/prompt-capture.ts',
+  );
+
+  let tmpHome: string;
+
+  beforeEach(() => {
+    tmpHome = path.join(
+      os.tmpdir(),
+      'plan-prompt-test-' + Date.now() + '-' + Math.random().toString(36).slice(2),
+    );
+    fs.mkdirSync(tmpHome, { recursive: true });
+  });
+
+  afterEach(() => {
+    try {
+      fs.rmSync(tmpHome, { recursive: true, force: true });
+    } catch {
+      /* ignore cleanup errors */
+    }
+  });
+
+  /** Run prompt-capture.ts as child process with isolated HOME */
+  function runCapture(input: object): { status: number | null; stdout: string; stderr: string } {
+    const result = spawnSync('npx', ['tsx', captureScript], {
+      input: JSON.stringify(input),
+      encoding: 'utf-8',
+      env: {
+        ...process.env,
+        HOME: tmpHome,
+        USERPROFILE: tmpHome,
+      },
+      shell: process.platform === 'win32',
+    });
+    return {
+      status: result.status,
+      stdout: result.stdout ?? '',
+      stderr: result.stderr ?? '',
+    };
+  }
+
+  const promptsDir = (): string => path.join(tmpHome, '.dev-pomogator');
+  const promptFile = (sessionId: string): string =>
+    path.join(promptsDir(), `${PROMPT_FILE_PREFIX}${sessionId}.json`);
+
+  function seedPromptFile(sessionId: string, prompts: Array<{ ts: number; text: string }>): string {
+    const file = promptFile(sessionId);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, JSON.stringify({ sessionId, prompts }));
+    return file;
+  }
+
+  // @feature1 — FR-1, AC-1
+  it('PLUGIN007_43_01: prompt-capture writes to session-specific file when session_id provided', () => {
+    const result = runCapture({ session_id: 'abc-123', prompt: 'real user message' });
+    expect(result.status).toBe(0);
+
+    expect(fs.existsSync(promptFile('abc-123'))).toBe(true);
+    expect(fs.existsSync(promptFile('default'))).toBe(false);
+
+    const content = JSON.parse(fs.readFileSync(promptFile('abc-123'), 'utf-8'));
+    expect(content.sessionId).toBe('abc-123');
+    expect(content.prompts).toHaveLength(1);
+    expect(content.prompts[0].text).toBe('real user message');
+  });
+
+  // @feature2 — FR-2, AC-2
+  it('PLUGIN007_43_02: prompt-capture writes nothing when session_id is missing', () => {
+    const result = runCapture({ prompt: 'orphan message without session' });
+    expect(result.status).toBe(0);
+
+    if (fs.existsSync(promptsDir())) {
+      const files = fs.readdirSync(promptsDir()).filter((f) => f.startsWith(PROMPT_FILE_PREFIX));
+      expect(files).toHaveLength(0);
+    }
+    expect(fs.existsSync(promptFile('default'))).toBe(false);
+  });
+
+  // @feature3 — FR-3, AC-3
+  it('PLUGIN007_43_03: prompt-capture filters task-notification pseudo-prompts', () => {
+    const taskNotif = '<task-notification>\n<task-id>bg1</task-id>\n<status>completed</status>\n</task-notification>';
+    const result = runCapture({ session_id: 'sess-x', prompt: taskNotif });
+    expect(result.status).toBe(0);
+    // Hard contract: filter must reject before any write happens, so no file at all.
+    expect(fs.existsSync(promptFile('sess-x'))).toBe(false);
+  });
+
+  // @feature4 — FR-4, AC-4
+  it('PLUGIN007_43_04: loadUserPrompts returns empty for unknown session without scanning other files', () => {
+    // Decoy: a file under a DIFFERENT session — must NOT be picked up by any fallback.
+    seedPromptFile('other', [{ ts: Date.now(), text: 'leaked prompt from another session' }]);
+
+    vi.stubEnv('HOME', tmpHome);
+    vi.stubEnv('USERPROFILE', tmpHome);
+    try {
+      expect(loadUserPrompts('unknown-session-xyz')).toBe('');
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  // @feature5 — FR-5, AC-5
+  it('PLUGIN007_43_05: formatPromptsFromFile filters task-notification entries on read', () => {
+    const mixFile = seedPromptFile('mix', [
+      { ts: 1, text: '<task-notification>spam from background task</task-notification>' },
+      { ts: 2, text: 'real prompt 1' },
+      { ts: 3, text: 'real prompt 2' },
+    ]);
+
+    const result = formatPromptsFromFile(mixFile);
+    expect(result).not.toBeNull();
+    expect(result).toContain('real prompt 1');
+    expect(result).toContain('real prompt 2');
+    expect(result).not.toContain('<task-notification');
+    expect(result).not.toContain('spam from background task');
   });
 });
 

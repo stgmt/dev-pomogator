@@ -14,6 +14,15 @@ export const PROMPT_FILE_PREFIX = '.plan-prompts-';
 export const MAX_PROMPTS = 10;
 export const GC_MAX_AGE_MS = 2 * 60 * 60 * 1000; // 2 hours
 
+/**
+ * Detects system-injected pseudo-prompts (`<task-notification>...</task-notification>`)
+ * that Claude Code emits as user messages when a background task completes.
+ * These are NOT real user input and must be filtered on capture and on read.
+ */
+export function isTaskNotification(text: string): boolean {
+  return /^<task-notification\b/i.test(text);
+}
+
 export interface PromptEntry {
   ts: number;
   text: string;

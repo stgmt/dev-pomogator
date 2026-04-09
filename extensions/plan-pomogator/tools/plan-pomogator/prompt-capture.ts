@@ -22,13 +22,15 @@ import {
   GC_MAX_AGE_MS,
   getPromptsDir,
   getPromptFilePath,
+  isTaskNotification,
   readPromptFile,
   writePromptFile,
   type PromptFile,
 } from './prompt-store.ts';
 
 interface HookInput {
-  conversation_id?: string;
+  session_id?: string;
+  cwd?: string;
   workspace_roots?: string[];
   prompt?: string;
 }
@@ -85,7 +87,15 @@ async function main(): Promise<void> {
   const prompt = (input.prompt ?? '').trim();
   if (!prompt) return;
 
-  const sessionId = input.conversation_id || 'default';
+  // Skip system-injected pseudo-prompts from background tasks (Claude Code injects
+  // these as user messages but they are NOT real user input)
+  if (isTaskNotification(prompt)) return;
+
+  // Require session_id (Claude Code passes snake_case in hook input).
+  // No fallback to 'default' — that would defeat session isolation.
+  const sessionId = input.session_id;
+  if (!sessionId) return;
+
   const filePath = getPromptFilePath(sessionId);
 
   // Read existing or create new

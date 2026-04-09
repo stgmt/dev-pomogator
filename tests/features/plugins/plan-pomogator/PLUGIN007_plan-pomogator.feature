@@ -269,3 +269,45 @@ Feature: PLUGIN007 Plan-pomogator Extension
     Then PreToolUse hook for ExitPlanMode should exist
     And UserPromptSubmit hook for prompt-capture should exist
     And PostToolUse hook should not exist (mark-plan-session removed)
+
+  # @feature43 — prompt-capture session isolation (FR-1, AC-1)
+  # Spec: .specs/plan-pomogator-prompt-isolation/
+  Scenario: PLUGIN007_43_01 prompt-capture writes to session-specific file
+    Given prompt-capture.ts is invoked via UserPromptSubmit hook
+    And hook input contains session_id "abc-123" and prompt "real user message"
+    When the script processes the input
+    Then file ".plan-prompts-abc-123.json" should exist in HOME/.dev-pomogator/
+    And the file should contain entry with text "real user message"
+    And file ".plan-prompts-default.json" should not exist
+
+  # @feature43 — prompt-capture no-default fallback (FR-2, AC-2)
+  Scenario: PLUGIN007_43_02 prompt-capture writes nothing when session_id missing
+    Given prompt-capture.ts is invoked via UserPromptSubmit hook
+    And hook input contains prompt "orphan message" without session_id field
+    When the script processes the input
+    Then the script should exit with code 0
+    And no .plan-prompts-* file should be created in HOME/.dev-pomogator/
+    And specifically ".plan-prompts-default.json" should not exist
+
+  # @feature43 — prompt-capture task-notification filter (FR-3, AC-3)
+  Scenario: PLUGIN007_43_03 prompt-capture filters task-notification pseudo-prompts
+    Given prompt-capture.ts is invoked via UserPromptSubmit hook
+    And hook input contains session_id "sess-x" and prompt starting with "<task-notification>"
+    When the script processes the input
+    Then the script should exit with code 0
+    And file ".plan-prompts-sess-x.json" should not contain the task-notification entry
+
+  # @feature43 — plan-gate no most-recent fallback (FR-4, AC-4)
+  Scenario: PLUGIN007_43_04 plan-gate loadUserPrompts returns empty for unknown session
+    Given another file ".plan-prompts-other.json" exists in HOME/.dev-pomogator/ with valid prompts
+    And no file ".plan-prompts-unknown.json" exists in HOME/.dev-pomogator/
+    When loadUserPrompts is called with sessionId "unknown"
+    Then the function should return an empty string
+    And the function should not read from ".plan-prompts-other.json"
+
+  # @feature43 — plan-gate defense-in-depth filter (FR-5, AC-5)
+  Scenario: PLUGIN007_43_05 plan-gate formatPromptsFromFile filters legacy task-notification entries
+    Given a prompts file containing mixed entries with task-notification and real prompts
+    When formatPromptsFromFile is called on this file
+    Then the returned string should contain "real prompt 1" and "real prompt 2"
+    And the returned string should not contain the substring "<task-notification"

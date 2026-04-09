@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "featureSlug": "plan-pomogator-prompt-isolation",
+  "createdAt": "2026-04-09T12:35:18.002Z",
+  "currentPhase": "Complete",
+  "phases": {
+    "Discovery": {
+      "completedAt": "2026-04-09T12:38:54.567Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-09T12:39:17.759Z"
+    },
+    "Context": {
+      "completedAt": "2026-04-09T12:38:54.567Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-09T12:39:24.176Z"
+    },
+    "Requirements": {
+      "completedAt": "2026-04-09T12:44:11.903Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-09T12:44:11.903Z"
+    },
+    "Finalization": {
+      "completedAt": "2026-04-09T12:47:32.158Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-09T12:47:32.158Z"
+    }
+  }
+}

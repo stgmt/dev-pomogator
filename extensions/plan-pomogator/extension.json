@@ -1,7 +1,7 @@
 {
   "name": "plan-pomogator",
-  "version": "1.8.0",
-  "description": "Rich markdown планы (emoji заголовки, ### todo blocks, blockquotes) + 5-фазная валидация (deterministic planFilePath, Phase 0 duplicate, Phase 2.5 prompt relevance)",
+  "version": "1.8.1",
+  "description": "Rich markdown планы (emoji заголовки, ### todo blocks, blockquotes) + 5-фазная валидация (deterministic planFilePath, Phase 0 duplicate, Phase 2.5 prompt relevance) + session-isolated prompt cache (per-session_id, task-notification filter)",
   "platforms": [
     "claude"
   ],
