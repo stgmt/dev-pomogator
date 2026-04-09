@@ -1,84 +1,76 @@
 # dev-pomogator
 
-Плагин-система для Cursor и Claude Code, которая устанавливает в проект командные стандарты, рабочие процессы, инструменты и хуки.
+Плагин-система для **Claude Code**, которая устанавливает в проект командные стандарты, рабочие процессы, инструменты, скиллы и хуки.
 
 **Что это даёт:**
 - Единый формат планов, спецификаций и коммитов для всей команды
 - Автокоммиты с LLM-генерацией сообщений при завершении работы агента
 - Анализ сессий и автоматическое предложение правил для проекта
 - Защита от типичных LLM-ошибок (лишние файлы в корне, пустые фолбеки)
+- TUI/statusline мониторинг тестов, BDD/specs workflow, hooks-автоматизация
 - Автообновления плагинов с защитой пользовательских изменений
+
+> Cursor больше не поддерживается. Если ставили старую версию с `--cursor` — переустановите без флага.
 
 ## Быстрый старт
 
-Запускайте из папки проекта (root определяется по git). Одна команда для любой ОС:
+Запускайте из папки проекта (root определяется по git).
 
 ```bash
-# Claude Code
+# Интерактивный выбор плагинов
+npx github:stgmt/dev-pomogator --claude
+
+# Все плагины разом (non-interactive)
 npx github:stgmt/dev-pomogator --claude --all
 
-# Cursor
-npx github:stgmt/dev-pomogator --cursor --all
+# Конкретные плагины
+npx github:stgmt/dev-pomogator --claude --plugins=suggest-rules,specs-workflow
 
-# Оба
-npx github:stgmt/dev-pomogator --cursor --claude --all
+# Статус и обновления
+npx github:stgmt/dev-pomogator --status
+npx github:stgmt/dev-pomogator --update
+
+# Удаление из проекта
+npx github:stgmt/dev-pomogator uninstall --project [--dry-run]
 ```
-
-<details>
-<summary>Альтернатива (shell-pipe)</summary>
-
-**Windows (PowerShell):**
-```powershell
-$env:TARGET="claude"; irm https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install | iex
-```
-
-**Linux/macOS:**
-```bash
-curl -fsSL https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install | TARGET=claude bash
-```
-</details>
 
 ## Плагины
 
-| Плагин | Назначение | Команда в чате |
-|--------|------------|----------------|
-| `suggest-rules` | Анализирует сессию и предлагает правила; включает skill `/deep-insights` для количественного анализа метрик | `/suggest-rules`, `/deep-insights` |
-| `specs-workflow` | Управление спеками (3 фазы) + валидаторы | `/create-spec <name>` |
-| `plan-pomogator` | Формат планов, шаблон и валидатор | — |
-| `auto-commit` | Автокоммиты с LLM-генерацией сообщений при завершении агента (Stop hook) | — |
-| `forbid-root-artifacts` | Антигаллюцинационная защита: allowlist файлов в корне репозитория | `/configure-root-artifacts` |
+| Плагин | Назначение |
+|--------|------------|
+| `suggest-rules` | Анализ сессии, предложение правил; включает skill `/deep-insights` |
+| `specs-workflow` | Управление спеками (фазы Discovery → Requirements → Finalization → Audit), валидаторы, BDD |
+| `plan-pomogator` | Формат планов, шаблон, валидатор (9 секций + EARS + Acceptance) |
+| `auto-commit` | Автокоммиты с LLM-генерацией сообщений (Stop hook) |
+| `auto-simplify` | `/simplify` review кода + спеков + тестов на Stop |
+| `forbid-root-artifacts` | Allowlist файлов в корне репозитория |
+| `test-quality` | Контроль качества тестов (1:1 mapping test↔feature, no helper duplication) |
+| `tui-test-runner` | Гибридный Python/Node TUI для запуска и мониторинга тестов |
+| `test-statusline` | Статус-строка прогресса тестов в Claude Code |
+| `context-menu` | Claude Code в Windows right-click меню (через Nilesoft Shell) |
+| `bun-oom-guard` | Авто-патч Bun runner от OOM на Windows |
+| `debug-screenshot` | Screenshot-driven verification UI/TUI |
+| `docker-optimization` | Анализ Dockerfile/compose на возможности оптимизации |
+| `devcontainer` | Готовый devcontainer для проектов |
+| `personal-pomogator` | Персональная установка через `.claude/settings.local.json` + gitignore guard |
+| `prompt-suggest` | Предложения промптов на основе контекста |
+| `claude-mem-health` | Health-check для интеграции с claude-mem |
 
-Подробнее: `extensions/*/README.md`
+Подробнее: `extensions/*/README.md`.
 
 ## Что устанавливается
 
-Состав зависит от выбранных плагинов. Ниже — типовые места установки.
+- `.claude/commands/` — slash-команды плагинов
+- `.claude/rules/` — правила (always-apply и triggered)
+- `.claude/skills/` — skills, доступные через `Skill` tool
+- `.claude/settings.local.json` — личные хуки проекта (preserve user keys)
+- `.dev-pomogator/tools/` — утилиты плагинов (генерится из `extensions/`, в `.gitignore`)
+- `.gitignore` — managed marker block со всеми путями dev-pomogator
 
-### В проект (Cursor)
-
-- `.cursor/commands/` — команды плагинов (например, `suggest-rules`, `create-spec`, `configure-root-artifacts`)
-- `.cursor/rules/` — правила плагинов (например, `specs-*`, `plan-pomogator`, `research-workflow`, `no-mocks-fallbacks`)
-- `.dev-pomogator/tools/` — утилиты плагинов (`specs-generator`, `specs-validator`, `steps-validator`, `plan-pomogator`, `forbid-root-artifacts`)
-
-### В проект (Claude Code)
-
-- `.claude/commands/` — команды плагинов
-- `.claude/rules/` — правила плагинов
-- `.dev-pomogator/tools/` — утилиты плагинов
-
-### Глобально (Cursor)
-
-- `~/.cursor/hooks/hooks.json` — хуки плагинов (auto-commit Stop, check-update и др.)
-- `~/.dev-pomogator/scripts/check-update.js`
-- `~/.dev-pomogator/config.json`
-- `~/.dev-pomogator/logs/`
-
-### Глобально (Claude Code)
-
-- `~/.claude/settings.json` — хуки плагинов (auto-commit Stop, check-update и др.)
-- `~/.dev-pomogator/scripts/check-update.js`
-- `~/.dev-pomogator/config.json`
-- `~/.dev-pomogator/logs/`
+Глобально:
+- `~/.claude/settings.json` — только SessionStart check-update hook
+- `~/.dev-pomogator/config.json` — список установленных плагинов + SHA-256 хеши managed-файлов
+- `~/.dev-pomogator/logs/dev-pomogator-YYYY-MM-DD.log`
 
 ## Конфигурация
 
@@ -86,34 +78,39 @@ curl -fsSL https://raw.githubusercontent.com/stgmt/dev-pomogator/main/install | 
 
 ```json
 {
-  "platforms": ["cursor", "claude"],
+  "platforms": ["claude"],
   "autoUpdate": true,
   "cooldownHours": 24,
   "installedExtensions": [...]
 }
 ```
 
-## Автообновления и логи
+## Автообновления
 
-- Проверка релизов GitHub раз в 24 часа
-- Фоновые обновления
-- Логи: `~/.dev-pomogator/logs/dev-pomogator-YYYY-MM-DD.log`
+- Проверка релизов GitHub раз в 24 часа (SessionStart hook)
+- Фоновые обновления, не блокируют сессию
+- User-модификации managed-файлов бэкапятся в `.dev-pomogator/.user-overrides/` перед перезаписью
+- Hooks обновляются через smart merge — пользовательские хуки не затрагиваются
 
 ## Интеграции
 
-- [claude-mem](https://github.com/thedotmack/claude-mem): трекинг сессий, контекст, суммаризация; токен для LLM, нужный claude-mem, можно взять на `aipomogator.ru`
+- [claude-mem](https://github.com/thedotmack/claude-mem): трекинг сессий, контекст, суммаризация. LLM-токен можно взять на `aipomogator.ru`.
 
 ## Требования
 
-- **Node.js** >= 18 (с npm)
+- **Node.js** ≥ 18 (с npm)
 - **Git**
+- **Claude Code** CLI
+- (опционально) **Docker** — для изолированных E2E тестов
 
 ## Разработка
 
 ```bash
 npm install
-npm run build
-npm run test:e2e:docker
+npm run build           # tsc + bundle standalone check-update
+npm run lint
+npm test                # E2E через Docker (изолированно, безопасно)
+npm run test:all        # E2E + TUI через Docker
 ```
 
 ## Лицензия
