@@ -63,6 +63,53 @@
 
 ---
 
+## Progress Display Format
+
+При создании спеки AI ОБЯЗАН показывать прогресс на каждом шаге.
+
+### Прогресс-блок (после каждого заполненного файла)
+
+Формат (≤ 4 строки):
+
+```
+📊 Spec Progress: {slug} — Phase N/4: {phase_name}
+Files: {done}/{total} complete — Next: {next_action}
+```
+
+Опционально: вызвать `spec-status.ts -Path ".specs/{feature}" -Format human` и вставить output. Выводить ПОСЛЕ каждого заполненного spec файла, НЕ после каждого Edit tool call.
+
+### Executive Summary на STOP
+
+ПЕРЕД длинным перечислением файлов вывести:
+
+```
+## 💬 Ключевые решения фазы
+
+- Решение 1 (кратко, 1 строка)
+- Решение 2
+- Решение 3
+
+Подтверди для продолжения. Детали: [FR.md](FR.md), [DESIGN.md](DESIGN.md).
+```
+
+Максимум 5 bullets. Ядро наверху, детали по ссылкам.
+
+### Starter Message (при первом запуске)
+
+Если `.progress.json` для feature не существует, перед началом работы показать:
+
+```
+📊 Создаём спеку: {feature-slug}
+4 фазы с подтверждением на каждой:
+1️⃣ Discovery — определяем кто, зачем, что (USER_STORIES, USE_CASES, RESEARCH)
+2️⃣ Context — ограничения проекта, существующие паттерны (RESEARCH update)
+3️⃣ Requirements — формальные FR/AC/NFR + DESIGN + BDD .feature (7 файлов)
+4️⃣ Finalization — план задач TASKS + README + CHANGELOG
+Начинаем с Phase 1: Discovery.
+```
+
+---
+
 ## Workflow создания (4 СТОП-точки)
 
 ### PHASE 1: Discovery
@@ -340,7 +387,7 @@
 - TASKS.md→FR/NFR кросс-ссылки
 - Терминологическую консистентность (PascalCase/camelCase варианты)
 
-#### Шаг 2: AI семантический анализ (5 категорий)
+#### Шаг 2: AI семантический анализ (6 категорий)
 
 Агент ОБЯЗАН выполнить следующие проверки, читая файлы спеки И реальный код проекта:
 
@@ -373,6 +420,17 @@
 2. Проверить DESIGN.md — нет ли API endpoints/методов, помеченных как "работает" без пруфа
 3. Проверить нет ли утверждений "API поддерживает X" / "метод возвращает Y" без верификации через live API или тесты
 
+**UNDEFINED_BEHAVIOR (Undefined Behavior) — непокрытые edge cases:**
+
+> Если файл `.claude/rules/specs-workflow/undefined-behavior-taxonomy.md` существует — прочитать его и использовать 9 категорий ниже. Если не существует — пропустить эту категорию (fail-open).
+
+Для каждого FR/UC который описывает workflow (последовательность шагов системы):
+1. Извлечь "шаги" (действия системы) из FR.md и USE_CASES.md
+2. Для каждого шага проверить релевантные категории из taxonomy: null_empty, network, auth, resource, boundary, concurrency, logic, format, external
+3. Для каждого непокрытого случая (спека/AC/.feature НЕ отвечает на вопрос) — добавить finding: node / category / question / severity
+4. Для ЗАВИСИМЫХ шагов проверить combined failures (из 12 failure scenarios в taxonomy): "Что если A упал И B упал?"
+5. При написании/проверке .feature использовать BVA boundary values из taxonomy для edge case значений
+
 #### Шаг 3: Исправление найденных проблем
 
 Агент ОБЯЗАН автоматически исправить ВСЕ найденные проблемы (автоматические + AI семантические):
@@ -382,6 +440,7 @@
 3. **НЕКОНСИСТЕНТНОСТЬ** — унифицировать терминологию (выбрать один вариант, заменить во всех файлах), исправить нереалистичные тестовые данные
 4. **РУДИМЕНТЫ** — закрыть решённые open questions (`- [x]`), удалить дублирующие UC, убрать client-side требования из серверной спеки
 5. **ФАНТАЗИИ** — пометить непроверенные допущения как `[UNVERIFIED]`, добавить задачу live API verification в TASKS.md
+6. **UNDEFINED_BEHAVIOR** — для critical/high findings: добавить FR/AC/BDD сценарий покрывающий edge case. Для medium/low: добавить `[KNOWN_UB: {category}]` пометку в FR/AC и задачу в TASKS.md
 
 #### Шаг 4: Повторный аудит
 

@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
-const SUPPORTED_FORMATS = new Set(['json', 'text']);
+const SUPPORTED_FORMATS = new Set(['json', 'text', 'human']);
 const PHASE_ORDER = ['Discovery', 'Context', 'Requirements', 'Finalization'];
 
 class CliError extends Error {
@@ -254,8 +254,51 @@ function emitResult(format, result, textRenderer) {
 
 function assertFormat(format) {
   if (!SUPPORTED_FORMATS.has(format)) {
-    throw new CliError(`Invalid value for -Format. Allowed: json, text`, 2);
+    throw new CliError(`Invalid value for -Format. Allowed: json, text, human`, 2);
   }
+}
+
+/**
+ * Render spec-status result as human-readable progress block.
+ * Used by AI to include in chat messages for user visibility.
+ */
+function renderHumanProgress(result) {
+  const phaseOrder = ['Discovery', 'Context', 'Requirements', 'Finalization', 'Complete'];
+  const phaseIdx = phaseOrder.indexOf(result.phase);
+  const phaseNum = phaseIdx >= 0 ? Math.min(phaseIdx + 1, 4) : 1;
+  const slug = result.path.replace(/^\.specs\//, '');
+
+  const fileEntries = Object.entries(result.files || {});
+  const totalFiles = fileEntries.length;
+  const doneFiles = fileEntries.filter(([, f]) => f.status === 'complete').length;
+
+  const checklist = fileEntries
+    .map(([name, f]) => {
+      const icon = f.status === 'complete' ? '✓' : '○';
+      const short = name.replace(/\.md$/, '').replace(/\.feature$/, '⚡');
+      return `${icon} ${short}`;
+    })
+    .join('  ');
+
+  const pct = Math.round(result.progress_percent || 0);
+  const filled = Math.round(pct / 10);
+  const bar = '█'.repeat(filled) + '░'.repeat(10 - filled);
+
+  const lines = [
+    `📊 Spec Progress: ${slug}`,
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+    `Phase ${phaseNum}/4: ${result.phase}${result.sub_phase ? ` (${result.sub_phase})` : ''}`,
+    `Files: ${checklist}`,
+    `Progress: ${bar} ${pct}% (${doneFiles}/${totalFiles})`,
+    `Next: ${result.next_action || 'N/A'}`,
+  ];
+
+  if (result.blockers && result.blockers.length > 0) {
+    lines.push(`Blockers: ${result.blockers.join('; ')}`);
+  }
+
+  lines.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  return lines.join('\n');
 }
 
 function makeErrorResult(message) {
@@ -1274,7 +1317,9 @@ function commandSpecStatus(argv) {
     progress_state: progressState,
   };
 
-  if (options.format === 'json' && options.brief) {
+  if (options.format === 'human') {
+    process.stdout.write(renderHumanProgress(result) + '\n');
+  } else if (options.format === 'json' && options.brief) {
     emitResult(options.format, {
       path: options.inputPath,
       phase: currentPhase,
