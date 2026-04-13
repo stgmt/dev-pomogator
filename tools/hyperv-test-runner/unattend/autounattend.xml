@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8"?>
+<unattend xmlns="urn:schemas-microsoft-com:unattend">
+
+  <settings pass="windowsPE">
+    <component name="Microsoft-Windows-International-Core-WinPE" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+      <SetupUILanguage>
+        <UILanguage>en-US</UILanguage>
+      </SetupUILanguage>
+      <InputLocale>0409:00000409</InputLocale>
+      <SystemLocale>en-US</SystemLocale>
+      <UILanguage>en-US</UILanguage>
+      <UserLocale>en-US</UserLocale>
+    </component>
+    <component name="Microsoft-Windows-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+      <DiskConfiguration>
+        <Disk wcm:action="add">
+          <CreatePartitions>
+            <CreatePartition wcm:action="add">
+              <Order>1</Order>
+              <Type>EFI</Type>
+              <Size>300</Size>
+            </CreatePartition>
+            <CreatePartition wcm:action="add">
+              <Order>2</Order>
+              <Type>MSR</Type>
+              <Size>16</Size>
+            </CreatePartition>
+            <CreatePartition wcm:action="add">
+              <Order>3</Order>
+              <Type>Primary</Type>
+              <Extend>true</Extend>
+            </CreatePartition>
+          </CreatePartitions>
+          <ModifyPartitions>
+            <ModifyPartition wcm:action="add">
+              <Order>1</Order>
+              <PartitionID>1</PartitionID>
+              <Format>FAT32</Format>
+              <Label>System</Label>
+            </ModifyPartition>
+            <ModifyPartition wcm:action="add">
+              <Order>2</Order>
+              <PartitionID>2</PartitionID>
+            </ModifyPartition>
+            <ModifyPartition wcm:action="add">
+              <Order>3</Order>
+              <PartitionID>3</PartitionID>
+              <Format>NTFS</Format>
+              <Label>Windows</Label>
+            </ModifyPartition>
+          </ModifyPartitions>
+          <DiskID>0</DiskID>
+          <WillWipeDisk>true</WillWipeDisk>
+        </Disk>
+      </DiskConfiguration>
+      <ImageInstall>
+        <OSImage>
+          <InstallFrom>
+            <MetaData wcm:action="add">
+              <Key>/IMAGE/NAME</Key>
+              <Value>Windows 11 Enterprise Evaluation</Value>
+            </MetaData>
+          </InstallFrom>
+          <InstallTo>
+            <DiskID>0</DiskID>
+            <PartitionID>3</PartitionID>
+          </InstallTo>
+          <WillShowUI>OnError</WillShowUI>
+        </OSImage>
+      </ImageInstall>
+      <UserData>
+        <AcceptEula>true</AcceptEula>
+        <FullName>claude-test</FullName>
+        <Organization>dev-pomogator</Organization>
+      </UserData>
+    </component>
+  </settings>
+
+  <settings pass="specialize">
+    <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+      <ComputerName>claude-test</ComputerName>
+      <TimeZone>UTC</TimeZone>
+    </component>
+    <component name="Microsoft-Windows-Deployment" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+      <RunSynchronous>
+        <RunSynchronousCommand wcm:action="add">
+          <Order>1</Order>
+          <Path>cmd.exe /c mkdir C:\hyperv-test-runner</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand wcm:action="add">
+          <Order>2</Order>
+          <Path>cmd.exe /c copy /Y D:\02-post-install.ps1 C:\hyperv-test-runner\02-post-install.ps1</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand wcm:action="add">
+          <Order>3</Order>
+          <Path>cmd.exe /c if not exist C:\Windows\Setup\Scripts mkdir C:\Windows\Setup\Scripts</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand wcm:action="add">
+          <Order>4</Order>
+          <Path>cmd.exe /c copy /Y D:\SetupComplete.cmd C:\Windows\Setup\Scripts\SetupComplete.cmd</Path>
+        </RunSynchronousCommand>
+      </RunSynchronous>
+    </component>
+  </settings>
+
+  <settings pass="oobeSystem">
+    <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+      <OOBE>
+        <HideEULAPage>true</HideEULAPage>
+        <HideOEMRegistrationScreen>true</HideOEMRegistrationScreen>
+        <HideOnlineAccountScreens>true</HideOnlineAccountScreens>
+        <HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE>
+        <NetworkLocation>Work</NetworkLocation>
+        <ProtectYourPC>3</ProtectYourPC>
+        <SkipMachineOOBE>true</SkipMachineOOBE>
+        <SkipUserOOBE>true</SkipUserOOBE>
+      </OOBE>
+      <UserAccounts>
+        <LocalAccounts>
+          <LocalAccount wcm:action="add">
+            <Password>
+              <Value>ClaudeTest!2026</Value>
+              <PlainText>true</PlainText>
+            </Password>
+            <Description>local admin for hyperv-test-runner</Description>
+            <DisplayName>claude</DisplayName>
+            <Group>Administrators</Group>
+            <Name>claude</Name>
+          </LocalAccount>
+        </LocalAccounts>
+      </UserAccounts>
+      <AutoLogon>
+        <Password>
+          <Value>ClaudeTest!2026</Value>
+          <PlainText>true</PlainText>
+        </Password>
+        <Enabled>true</Enabled>
+        <LogonCount>1</LogonCount>
+        <Username>claude</Username>
+      </AutoLogon>
+      <RegisteredOrganization>dev-pomogator</RegisteredOrganization>
+      <RegisteredOwner>claude-test</RegisteredOwner>
+      <TimeZone>UTC</TimeZone>
+    </component>
+  </settings>
+
+</unattend>

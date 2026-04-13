@@ -58,6 +58,18 @@ export interface Extension {
 }
 /** Check if extension is marked as beta (undefined = stable) */
 export declare function isBeta(ext: Extension): boolean;
+export interface ExtensionChoice {
+    name: string;
+    value: string;
+    checked: boolean;
+}
+/**
+ * Build choices array for the inquirer checkbox prompt.
+ * Beta extensions get a "(BETA)" label in the name and are unchecked by default.
+ * Single source of truth for FR-2 (label) and FR-3 (default) — both interactive
+ * installer paths use this helper, so behavior can be verified by importing it.
+ */
+export declare function buildExtensionChoices(extensions: Extension[]): ExtensionChoice[];
 export interface PostHookOwner {
     name: string;
     postUpdate?: PostInstallHook | {

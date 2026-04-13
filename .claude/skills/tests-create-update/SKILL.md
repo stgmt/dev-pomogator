@@ -139,13 +139,17 @@ After writing or updating a test, output this compliance table:
 | 13 | Has assertions | PASS/FAIL | {suggest add expect() or expect.hasAssertions()} |
 | 14 | No tautological assert | PASS/FAIL | {suggest hardcoded expected value} |
 | 15 | No arbitrary sleep | PASS/FAIL | {suggest poll/fakeTimers} |
+| 16 | No trivial input | PASS/FAIL | {suggest real script with imports/deps} |
 
-**Summary:** X/15 PASS, Y/15 FAIL
+**Summary:** X/16 PASS, Y/16 FAIL
 **Coverage:** {what behaviors are tested, what is missing}
 **Weak spots:** {assertions that technically pass but could miss real bugs}
 ```
 
 If any rule shows FAIL — fix it immediately before finishing. Do not leave FAILs in the report.
+
+**Trivial input rule (from tsx-runner false-positive incident):**
+- NEVER test a script runner/hook executor with a trivial script that has zero imports — it gives false confidence that import resolution works. Test with a script that has `import ... from './dep.js'` at minimum. _(Source: dev-pomogator v1.4.2 incident — CORE007_04 tested tsx-runner with `console.log("OK")`, passed for months while real hooks with local imports were broken)_
 
 ---
 
@@ -160,6 +164,10 @@ When reviewing existing test code (update mode), scan for these regex patterns:
 - `\.ok\)\.toBe\(true\)` without nearby `.json()` → Rule 4
 - `if \(!.*\) return` inside `it(` block → Rule 5
 - `\.toContain\(['"](?:function|class|const|import|export|async|interface)[\s'"]` → Rule 1
+
+**TypeScript — trivial input (from tsx-runner incident):**
+- `writeFile.*console\.log` or `writeFile.*['"].*['"]` inside `it(` as the ONLY test script content (no `import`) → Rule 16 (trivial input)
+- `spawnSync|execSync` test that creates temp script without `import` or `require` → Rule 16
 
 **TypeScript — new 8 (from research):**
 - `if\s*\(` inside `it(` body wrapping `expect` → Rule 8 (conditional assertions)

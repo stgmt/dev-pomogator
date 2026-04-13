@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "featureSlug": "hyperv-test-runner",
+  "createdAt": "2026-04-08T11:50:34.646Z",
+  "currentPhase": "Complete",
+  "phases": {
+    "Discovery": {
+      "completedAt": "2026-04-08T12:03:05.616Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-08T12:03:05.615Z"
+    },
+    "Context": {
+      "completedAt": "2026-04-08T12:03:27.019Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-08T12:03:27.019Z"
+    },
+    "Requirements": {
+      "completedAt": "2026-04-08T12:20:00.858Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-08T12:20:00.858Z"
+    },
+    "Finalization": {
+      "completedAt": "2026-04-08T12:49:29.724Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-08T12:49:29.723Z"
+    }
+  }
+}

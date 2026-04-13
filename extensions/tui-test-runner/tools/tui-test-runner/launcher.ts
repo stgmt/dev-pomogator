@@ -67,12 +67,20 @@ export function installDeps(pythonCmd: string): boolean {
 }
 
 export function buildTuiLaunchArgs(statusFile: string, logFile: string, framework: string): string[] {
-  return [
+  const args = [
     '-m', 'tui',
     '--status-file', statusFile,
     '--log-file', logFile,
     '--framework', framework,
   ];
+
+  // Add .docker-status/ as fallback for Docker test YAML
+  if (statusFile.includes('.test-status')) {
+    const dockerFallbackDir = path.dirname(statusFile.replace('.test-status', '.docker-status'));
+    args.push('--fallback-dir', dockerFallbackDir);
+  }
+
+  return args;
 }
 
 /** Launch TUI process */

@@ -1,0 +1,165 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/stgmt/dev-pomogator/tests/hyperv-scenarios/schema.json",
+  "title": "hyperv-test-runner scenario",
+  "description": "YAML test scenario format for hyperv-test-runner. Each HV<NNN>_<slug>.yaml validates against this schema.",
+  "type": "object",
+  "required": ["id", "name", "description", "preconditions", "steps", "assertions", "post_test"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^HV\\d{3}$",
+      "description": "Scenario id matching filename HV<NNN> prefix"
+    },
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "kebab-case slug, must equal filename suffix after HV<id>_"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true,
+      "default": []
+    },
+    "preconditions": {
+      "type": "object",
+      "required": ["checkpoint"],
+      "additionalProperties": false,
+      "properties": {
+        "checkpoint": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Hyper-V snapshot name to revert to before this scenario"
+        },
+        "fixture": {
+          "type": "string",
+          "description": "Optional fixture name from tests/fixtures/ to copy into the VM"
+        },
+        "env_vars": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Env vars passed inside the VM (supports $env:NAME interpolation)"
+        }
+      }
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name", "cmd"],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Human-readable step name, must be unique within the scenario"
+          },
+          "cmd": {
+            "type": "string",
+            "minLength": 1,
+            "description": "PowerShell command executed inside the VM via Invoke-Command"
+          },
+          "screenshot": {
+            "type": "boolean",
+            "default": false,
+            "description": "If true, capture a screenshot after this step"
+          },
+          "timeout_seconds": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 60
+          },
+          "expect_exit": {
+            "type": "integer",
+            "description": "If set, step is failed when exit_code does not match"
+          }
+        }
+      }
+    },
+    "assertions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": ["type", "step", "equals"],
+            "additionalProperties": false,
+            "properties": {
+              "type":   { "const": "exit_code" },
+              "step":   { "type": "string" },
+              "equals": { "type": "integer" }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["type", "path"],
+            "additionalProperties": false,
+            "properties": {
+              "type": { "const": "file_exists" },
+              "path": { "type": "string" }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["type", "path"],
+            "additionalProperties": false,
+            "properties": {
+              "type": { "const": "file_absent" },
+              "path": { "type": "string" }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["type", "path", "value"],
+            "additionalProperties": false,
+            "properties": {
+              "type":     { "const": "text_contains" },
+              "path":     { "type": "string" },
+              "value":    { "type": "string" },
+              "encoding": { "type": "string", "default": "utf-8" }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["type", "step", "expect"],
+            "additionalProperties": false,
+            "properties": {
+              "type":   { "const": "screenshot_match" },
+              "step":   { "type": "string" },
+              "expect": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Prose description of expected visual state for the AI agent to compare"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "post_test": {
+      "type": "object",
+      "required": ["revert"],
+      "additionalProperties": false,
+      "properties": {
+        "revert": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Hyper-V snapshot name to revert to after this scenario, even on failure"
+        },
+        "collect_logs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Paths inside the VM to copy into the run artifacts directory before revert"
+        }
+      }
+    }
+  }
+}

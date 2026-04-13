@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "statusLine": {
+    "type": "command",
+    "command": "echo typical-claude-user"
+  },
+  "env": {
+    "NODE_ENV": "development",
+    "DEBUG": "false"
+  },
+  "permissions": {
+    "allow": ["Read(**)", "Glob", "Grep", "Bash(npm run *)"],
+    "deny": ["Bash(rm -rf *)", "Bash(git push --force *)"]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"const i=JSON.parse(require('fs').readFileSync(0,'utf8'));if(/rm\\\\s+-rf/.test(i.tool_input?.command||''))process.exit(2)\""
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo file-changed >> .claude/.activity.log"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo session-end >> .claude/.activity.log"
+          }
+        ]
+      }
+    ]
+  }
+}

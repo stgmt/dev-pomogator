@@ -1,0 +1,21 @@
+<Configuration>
+  <VGpu>Enable</VGpu>
+  <Networking>Enable</Networking>
+  <MemoryInMB>4096</MemoryInMB>
+  <ClipboardRedirection>Enable</ClipboardRedirection>
+  <MappedFolders>
+    <MappedFolder>
+      <HostFolder>D:\repos\dev-pomogator\tests\fixtures\typical-claude-user</HostFolder>
+      <SandboxFolder>C:\Users\WDAGUtilityAccount\Desktop\fixture</SandboxFolder>
+      <ReadOnly>true</ReadOnly>
+    </MappedFolder>
+    <MappedFolder>
+      <HostFolder>D:\repos\dev-pomogator\tools\sandbox-test-runner\bootstrap</HostFolder>
+      <SandboxFolder>C:\Users\WDAGUtilityAccount\Desktop\bootstrap</SandboxFolder>
+      <ReadOnly>true</ReadOnly>
+    </MappedFolder>
+  </MappedFolders>
+  <LogonCommand>
+    <Command>powershell.exe -NoExit -ExecutionPolicy Bypass -File "C:\Users\WDAGUtilityAccount\Desktop\bootstrap\setup.ps1"</Command>
+  </LogonCommand>
+</Configuration>

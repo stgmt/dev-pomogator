@@ -27,7 +27,7 @@ def render_compact(status: TestStatus | None) -> str:
     duration = status.duration_display
     completed = status.passed + status.failed + (status.skipped or 0)
 
-    if status.state == TestState.RUNNING:
+    if status.state in (TestState.RUNNING, TestState.BUILDING):
         badge = "\x1b[44m\x1b[97m\x1b[1m RUN \x1b[0m"
         if completed == 0 and status.total > 0:
             return f"{badge} \x1b[2mbuilding Docker...\x1b[0m \x1b[2m0/{status.total} {duration}\x1b[0m"

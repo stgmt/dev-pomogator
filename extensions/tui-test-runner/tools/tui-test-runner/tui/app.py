@@ -84,10 +84,11 @@ class TestRunnerApp(App):
         framework: str = "auto",
         poll_interval: float = 0.5,
         auto_run: bool = False,
+        fallback_dirs: list[str] | None = None,
     ) -> None:
         super().__init__()
         self._project_root = self._resolve_project_root(status_file)
-        self._yaml_reader = YamlReader(status_file)
+        self._yaml_reader = YamlReader(status_file, fallback_dirs=fallback_dirs)
         self._log_file_override = log_file
         self._log_reader = LogReader(log_file) if log_file else None
         self._framework = framework

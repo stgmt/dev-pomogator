@@ -20,6 +20,7 @@ Usage:
   npx dev-pomogator --claude --all                     Non-interactive (all plugins)
   npx dev-pomogator --status                           Show current configuration
   npx dev-pomogator --update                           Check for updates
+  npx dev-pomogator uninstall --project [--dry-run]    Per-project uninstall (personal-pomogator FR-8)
 
 Options:
   -v, --version              Show version
@@ -55,6 +56,44 @@ Available plugins:
     const { checkUpdate } = await import('./updater/index.js');
     await checkUpdate({ force: true });
     process.exit(0);
+  }
+
+  // Personal-pomogator FR-8: per-project uninstall command
+  // Usage: npx dev-pomogator uninstall --project [--dry-run]
+  // Accept any arg position for `uninstall` token (less brittle than args[0] check).
+  if (args.includes('uninstall') && args.includes('--project')) {
+    const { uninstallFromProject } = await import('./installer/uninstall-project.js');
+    const { findRepoRoot } = await import('./utils/repo.js');
+    const repoRoot = findRepoRoot();
+    const dryRun = args.includes('--dry-run');
+
+    console.log(`Uninstalling dev-pomogator from project: ${repoRoot}`);
+    if (dryRun) console.log('(dry run — no files will be deleted)');
+
+    try {
+      const report = await uninstallFromProject(repoRoot, { dryRun });
+
+      console.log(`\n=== Uninstall Report ===`);
+      console.log(`Deleted files: ${report.deletedFiles.length}`);
+      if (report.skippedFiles.length > 0) {
+        console.log(`Skipped files (path traversal guard): ${report.skippedFiles.length}`);
+      }
+      console.log(`Gitignore block removed: ${report.gitignoreBlockRemoved}`);
+      console.log(`settings.local.json cleaned: ${report.settingsLocalCleaned}`);
+      console.log(`Config updated: ${report.configUpdated}`);
+
+      if (report.errors.length > 0) {
+        console.error(`\n⚠  Errors (${report.errors.length}):`);
+        for (const err of report.errors) console.error(`  - ${err}`);
+        process.exit(1);
+      }
+
+      process.exit(0);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`Uninstall failed: ${msg}`);
+      process.exit(1);
+    }
   }
 
   const hasClaude = args.includes('--claude');

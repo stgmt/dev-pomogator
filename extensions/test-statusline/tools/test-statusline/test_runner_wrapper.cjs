@@ -26,16 +26,22 @@ const args = process.argv.slice(2);
 // (SessionStart hook writes session.env to .dev-pomogator/.test-status/;
 //  Docker CMD entry point relies on this fallback)
 if (!process.env.TEST_STATUSLINE_SESSION) {
-  const sessionEnvPath = path.join(repoRoot, '.dev-pomogator', '.test-status', 'session.env');
-  try {
-    const envContent = fs.readFileSync(sessionEnvPath, 'utf-8');
-    for (const line of envContent.split(/\r?\n/)) {
-      const m = line.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.+)$/);
-      if (m && !process.env[m[1]]) {
-        process.env[m[1]] = m[2].trim();
+  const sessionEnvPaths = [
+    path.join(repoRoot, '.dev-pomogator', '.test-status', 'session.env'),
+    path.join(repoRoot, '.dev-pomogator', '.docker-status', 'session.env'),
+  ];
+  for (const sessionEnvPath of sessionEnvPaths) {
+    try {
+      const envContent = fs.readFileSync(sessionEnvPath, 'utf-8');
+      for (const line of envContent.split(/\r?\n/)) {
+        const m = line.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.+)$/);
+        if (m && !process.env[m[1]]) {
+          process.env[m[1]] = m[2].trim();
+        }
       }
-    }
-  } catch { /* no session.env — proceed without */ }
+      if (process.env.TEST_STATUSLINE_SESSION) break;
+    } catch { /* no session.env at this path — try next */ }
+  }
 }
 
 function runViaTsxRunner(scriptPath) {

@@ -56,6 +56,22 @@ async function main(): Promise<void> {
     fs.mkdirSync(statusDir, { recursive: true });
     log('INFO', `Status directory ensured: ${statusDir}`);
 
+    // Kill stale TUI process from previous session (FR-9)
+    const tuiPidFile = path.join(statusDir, 'tui.pid');
+    try {
+      const raw = fs.readFileSync(tuiPidFile, 'utf-8').trim();
+      const pid = parseInt(raw, 10);
+      if (pid > 0) {
+        try {
+          process.kill(pid, 'SIGTERM');
+          log('INFO', `Killed stale TUI PID: ${pid}`);
+        } catch {
+          log('DEBUG', `Stale TUI PID ${pid} already dead`);
+        }
+      }
+      try { fs.unlinkSync(tuiPidFile); } catch { /* gone already */ }
+    } catch { /* no tui.pid — nothing to clean */ }
+
     // Write env vars to CLAUDE_ENV_FILE
     const envFile = process.env.CLAUDE_ENV_FILE;
     if (envFile) {

@@ -1,0 +1,71 @@
+id: HV001
+name: install-clean
+description: |
+  Install dev-pomogator into a clean typical-claude-user fixture inside the VM
+  and verify the managed marker block + .dev-pomogator/ tree are created.
+  Reference scenario for the catalog — every other scenario should follow this shape.
+
+tags:
+  - install
+  - smoke
+  - p1
+
+preconditions:
+  checkpoint: baseline-clean
+  fixture: typical-claude-user
+
+steps:
+  - name: copy fixture
+    cmd: |
+      if (Test-Path C:\test-project) { Remove-Item C:\test-project -Recurse -Force }
+      Copy-Item -Path C:\fixture-source -Destination C:\test-project -Recurse -Force
+    timeout_seconds: 30
+
+  - name: init git
+    cmd: |
+      Set-Location C:\test-project
+      git init -q
+      git add -A
+      git -c user.name=test -c user.email=test@test.local commit -q -m "fixture baseline"
+    timeout_seconds: 30
+
+  - name: install dev-pomogator
+    cmd: |
+      Set-Location C:\test-project
+      npx --yes dev-pomogator --claude --all 2>&1
+    screenshot: true
+    timeout_seconds: 240
+    expect_exit: 0
+
+assertions:
+  - type: exit_code
+    step: install dev-pomogator
+    equals: 0
+
+  - type: file_exists
+    path: C:\test-project\.dev-pomogator\tools
+
+  - type: file_exists
+    path: C:\test-project\.claude\settings.local.json
+
+  - type: text_contains
+    path: C:\test-project\.gitignore
+    value: ">>> dev-pomogator (managed"
+
+  - type: text_contains
+    path: C:\test-project\.gitignore
+    value: ".dev-pomogator/"
+
+  - type: screenshot_match
+    step: install dev-pomogator
+    expect: |
+      PowerShell window in the foreground showing the output of the
+      "npx dev-pomogator --claude --all" command.
+      The visible tail of the output contains a success summary line
+      mentioning "installed", "complete", or similar (no red error text).
+      No interactive prompts are blocking the terminal.
+
+post_test:
+  revert: baseline-clean
+  collect_logs:
+    - C:\test-project\.claude\settings.local.json

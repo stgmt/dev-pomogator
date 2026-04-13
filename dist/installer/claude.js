@@ -4,13 +4,20 @@ import os from 'os';
 import chalk from 'chalk';
 import { fileURLToPath } from 'url';
 import { listExtensions, getExtensionFiles, getExtensionRules, getExtensionTools, getExtensionSkills, getExtensionHooks, getExtensionStatusLine, runPostInstallHook, cleanStaleNodeModulesDirs, getExtensionsDir } from './extensions.js';
+import { getManagedPaths } from '../config/schema.js';
 import { findRepoRoot } from '../utils/repo.js';
 import { detectMangledArtifacts } from '../utils/msys.js';
 import { TOOLS_DIR, SKILLS_DIR } from '../constants.js';
 import { getFileHash } from '../updater/content-hash.js';
-import { collectFileHashes, addProjectPaths, makePortableScriptCommand, resolveHookToolPaths, replaceNpxTsxWithPortable, ensureExecutableShellScripts, setupGlobalScripts, removeOrphanedFiles } from './shared.js';
+import { collectFileHashes, addProjectPaths, makePortableScriptCommand, resolveHookToolPaths, replaceNpxTsxWithPortable, ensureExecutableShellScripts, setupGlobalScripts, removeOrphanedFiles, isDevPomogatorCommand } from './shared.js';
+import { writePluginJson } from './plugin-json.js';
 import { writeJsonAtomic, readJsonSafe } from '../utils/atomic-json.js';
 import { writeGlobalStatusLine } from '../utils/statusline.js';
+import { isDevPomogatorRepo } from './self-guard.js';
+import { writeManagedGitignoreBlock, collapseToDirectoryEntries } from './gitignore.js';
+import { migrateLegacySettingsJson, writeHooksToSettingsLocal } from './settings-local.js';
+import { detectGitTrackedCollisions } from './collisions.js';
+import { checkMcpJsonForSecrets, printSecretWarnings } from './mcp-security.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export async function installClaude(options = {}) {
     const repoRoot = findRepoRoot();
@@ -38,6 +45,41 @@ export async function installClaude(options = {}) {
     }
     // Track managed files per extension for config
     const managedByExtension = new Map();
+    // Personal-pomogator FR-7: collision detection via git ls-files.
+    // Collect all candidate paths for commands+rules+skills BEFORE copy loops,
+    // then batch-query git to find any that are already tracked (user-authored).
+    // Skip those: don't overwrite, don't add to gitignore block, emit WARN.
+    // Tools go to `.dev-pomogator/tools/` namespace — collision-free by design.
+    const candidatePaths = [];
+    for (const extension of extensionsToInstall) {
+        // Commands: .claude/commands/{cmd}.md
+        const cmdFiles = getExtensionFiles(extension, 'claude', repoRoot);
+        for (const srcFile of cmdFiles) {
+            if (srcFile.endsWith('.md')) {
+                candidatePaths.push(`.claude/commands/${path.basename(srcFile)}`);
+            }
+        }
+        // Rules: .claude/rules/{subfolder}/{rule}.md
+        const ruleFiles = getExtensionRules(extension, 'claude', repoRoot);
+        const subfolder = extension.ruleFiles?.claude?.[0]
+            ? path.basename(path.dirname(extension.ruleFiles.claude[0]))
+            : extension.name;
+        for (const ruleFile of ruleFiles) {
+            candidatePaths.push(`.claude/rules/${subfolder}/${path.basename(ruleFile)}`);
+        }
+        // Skills: .claude/skills/{skill-name}/** — check the root dir (SKILL.md is the key file)
+        const skills = getExtensionSkills(extension, repoRoot);
+        for (const [skillName, _skillPath] of skills) {
+            candidatePaths.push(`.claude/skills/${skillName}/SKILL.md`);
+        }
+    }
+    const collisions = await detectGitTrackedCollisions(repoRoot, candidatePaths);
+    if (collisions.size > 0) {
+        console.log(chalk.yellow(`  ⚠  Found ${collisions.size} collision(s) with user-tracked files:`));
+        for (const p of collisions) {
+            console.log(chalk.yellow(`     COLLISION: ${p} — skipped (user-tracked in git)`));
+        }
+    }
     // 1. Install commands to .claude/commands/ (in project directory)
     const commandsDir = path.join(repoRoot, '.claude', 'commands');
     await fs.ensureDir(commandsDir);
@@ -47,6 +89,11 @@ export async function installClaude(options = {}) {
         for (const srcFile of files) {
             if (srcFile.endsWith('.md')) {
                 const fileName = path.basename(srcFile);
+                const relPath = `.claude/commands/${fileName}`;
+                // FR-7: skip git-tracked user-authored files
+                if (collisions.has(relPath)) {
+                    continue;
+                }
                 const dest = path.join(commandsDir, fileName);
                 if (path.resolve(srcFile) !== path.resolve(dest)) {
                     await fs.copy(srcFile, dest, { overwrite: true });
@@ -54,7 +101,7 @@ export async function installClaude(options = {}) {
                 console.log(`  ✓ Installed command: ${fileName}`);
                 const hash = await getFileHash(dest);
                 if (hash) {
-                    managedCommands.push({ path: `.claude/commands/${fileName}`, hash });
+                    managedCommands.push({ path: relPath, hash });
                 }
             }
         }
@@ -80,6 +127,11 @@ export async function installClaude(options = {}) {
         for (const ruleFile of ruleFiles) {
             if (await fs.pathExists(ruleFile)) {
                 const fileName = path.basename(ruleFile);
+                const relPath = `.claude/rules/${subfolder}/${fileName}`;
+                // FR-7: skip git-tracked user-authored files
+                if (collisions.has(relPath)) {
+                    continue;
+                }
                 const dest = path.join(rulesDir, fileName);
                 if (path.resolve(ruleFile) !== path.resolve(dest)) {
                     await fs.copy(ruleFile, dest, { overwrite: true });
@@ -87,7 +139,7 @@ export async function installClaude(options = {}) {
                 console.log(`  ✓ Installed rule: ${fileName}`);
                 const hash = await getFileHash(dest);
                 if (hash) {
-                    managedRules.push({ path: `.claude/rules/${subfolder}/${fileName}`, hash });
+                    managedRules.push({ path: relPath, hash });
                 }
             }
         }
@@ -142,6 +194,11 @@ export async function installClaude(options = {}) {
         const managedSkills = [];
         for (const [skillName, skillPath] of skills) {
             if (await fs.pathExists(skillPath)) {
+                const skillMdRel = `.claude/skills/${skillName}/SKILL.md`;
+                // FR-7: skip if user committed their own SKILL.md at this path
+                if (collisions.has(skillMdRel)) {
+                    continue;
+                }
                 const dest = path.join(repoRoot, SKILLS_DIR, skillName);
                 if (path.resolve(skillPath) !== path.resolve(dest)) {
                     await fs.copy(skillPath, dest, { overwrite: true });
@@ -168,8 +225,6 @@ export async function installClaude(options = {}) {
         managedByExtension.get(extName).hooks = hookData;
     }
     // 6. Generate .dev-pomogator/.claude-plugin/plugin.json (Claude Code plugin metadata)
-    const pluginDir = path.join(repoRoot, '.dev-pomogator', '.claude-plugin');
-    await fs.ensureDir(pluginDir);
     const packageJsonPath = path.resolve(__dirname, '..', '..', 'package.json');
     let packageVersion = '0.0.0';
     try {
@@ -188,16 +243,12 @@ export async function installClaude(options = {}) {
             }
         }
     }
-    const pluginJsonContent = {
-        name: 'dev-pomogator',
-        version: packageVersion,
-        description: `Installed extensions: ${extensionsToInstall.map(e => e.name).join(', ')}`,
-    };
-    if (installedSkills.length > 0) {
-        pluginJsonContent.skills = installedSkills;
-    }
-    const pluginJsonPath = path.join(pluginDir, 'plugin.json');
-    await fs.writeJson(pluginJsonPath, pluginJsonContent, { spaces: 2 });
+    const pluginJsonPath = await writePluginJson({
+        repoRoot,
+        packageVersion,
+        extensionNames: extensionsToInstall.map(e => e.name),
+        skills: installedSkills,
+    });
     console.log('  ✓ Generated .dev-pomogator/.claude-plugin/plugin.json');
     // Track plugin.json in managed files (first extension's tools)
     const pluginJsonHash = await getFileHash(pluginJsonPath);
@@ -224,6 +275,24 @@ export async function installClaude(options = {}) {
     }
     // 9. Always persist managed data for tracking
     await addProjectPaths(repoRoot, extensionsToInstall, 'claude', managedByExtension);
+    // 9b. Personal-pomogator: write managed gitignore block + secret detection to target project.
+    //     Skipped under self-guard (dogfooding — don't mutate dev-pomogator's own .gitignore).
+    //     See .specs/personal-pomogator/ FR-1, FR-4, FR-10.
+    const isDogfoodRepo = await isDevPomogatorRepo(repoRoot);
+    if (!isDogfoodRepo) {
+        // FR-10: scan project .mcp.json for plaintext secrets and warn user
+        const secretFindings = await checkMcpJsonForSecrets(repoRoot);
+        printSecretWarnings(secretFindings);
+        // FR-1: write managed gitignore block
+        const managedPaths = collectManagedPaths(managedByExtension);
+        const collapsedPaths = collapseToDirectoryEntries(managedPaths);
+        // settings.local.json is always the first entry per FR-1 AC-1
+        const blockEntries = ['.claude/settings.local.json', ...collapsedPaths];
+        await writeManagedGitignoreBlock(repoRoot, blockEntries);
+    }
+    else {
+        console.log('  Detected dev-pomogator source repository — skipping personal-mode features');
+    }
     // 10. Setup auto-update hooks and statusLine if enabled
     if (options.autoUpdate !== false) {
         await setupClaudeHooks();
@@ -303,10 +372,19 @@ async function setupClaudeStatusLine(extensions) {
     }
 }
 /**
- * Install extension hooks to project .claude/settings.json
- * Returns map of extension name -> { hookName: commands[] } for managed tracking
+ * Install extension hooks to project settings file.
+ *
+ * Under self-guard false (normal target project): writes to `.claude/settings.local.json`
+ * (personal-pomogator FR-2) and migrates any legacy entries from `.claude/settings.json`.
+ * Team-shared hooks in `settings.json` (e.g. block-dotnet-test) are preserved.
+ *
+ * Under self-guard true (dev-pomogator source repo): writes to `.claude/settings.json`
+ * as before (dogfooding — our own repo tracks its hooks in settings.json).
+ *
+ * Returns map of extension name -> { hookName: commands[] } for managed tracking.
  */
 async function installExtensionHooks(repoRoot, extensions) {
+    const isDogfood = await isDevPomogatorRepo(repoRoot);
     const settingsPath = path.join(repoRoot, '.claude', 'settings.json');
     const installedHooksByExtension = {};
     // Collect all hooks from extensions
@@ -377,6 +455,55 @@ async function installExtensionHooks(repoRoot, extensions) {
     if (Object.keys(allHooks).length === 0) {
         return installedHooksByExtension;
     }
+    // Compute env section from extension envRequirements
+    // (same logic for both dogfood and personal-mode paths)
+    const envSection = {};
+    const missingRequired = [];
+    for (const ext of extensions) {
+        if (!ext.envRequirements || !getExtensionHooks(ext, 'claude') || Object.keys(getExtensionHooks(ext, 'claude')).length === 0)
+            continue;
+        for (const req of ext.envRequirements) {
+            if (req.default) {
+                envSection[req.name] = req.default;
+            }
+            else if (req.required) {
+                missingRequired.push({ extName: ext.name, varName: req.name, description: req.description });
+            }
+        }
+    }
+    if (!isDogfood) {
+        // Personal-pomogator path (FR-2, FR-3): write hooks/env to .claude/settings.local.json
+        // and migrate any legacy entries from .claude/settings.json.
+        //
+        // Legacy migration: remove our hooks from settings.json so team-shared file stays clean.
+        // Uses authoritative ourHookCommands set (from current install) + substring fallback.
+        const ourHookCommands = new Set();
+        for (const hookEntries of Object.values(allHooks)) {
+            for (const entry of hookEntries) {
+                ourHookCommands.add(entry.command);
+            }
+        }
+        const ourEnvKeys = new Set(Object.keys(envSection));
+        const migrationResult = await migrateLegacySettingsJson(repoRoot, ourHookCommands, ourEnvKeys);
+        if (migrationResult.movedHooks > 0 || migrationResult.movedEnvKeys > 0) {
+            console.log(`  ✓ Migrated ${migrationResult.movedHooks} hook(s) and ${migrationResult.movedEnvKeys} env key(s) ` +
+                `from .claude/settings.json → .claude/settings.local.json`);
+        }
+        await writeHooksToSettingsLocal(repoRoot, allHooks, envSection);
+        const hookCount = Object.values(allHooks).flat().length;
+        if (hookCount > 0) {
+            console.log(`  ✓ Installed ${hookCount} extension hook(s) to .claude/settings.local.json`);
+        }
+        if (missingRequired.length > 0) {
+            console.log(chalk.yellow('\n  ⚠  Настройте env переменные в .claude/settings.local.json → "env":'));
+            for (const m of missingRequired) {
+                console.log(chalk.yellow(`     ${m.varName}  — ${m.description} (${m.extName})`));
+            }
+            console.log('');
+        }
+        return installedHooksByExtension;
+    }
+    // Dogfood path: write to .claude/settings.json (dev-pomogator's own repo)
     // Load existing project settings with backup recovery
     const settings = await readJsonSafe(settingsPath, {});
     // Ensure hooks structure exists
@@ -384,11 +511,13 @@ async function installExtensionHooks(repoRoot, extensions) {
         settings.hooks = {};
     }
     const existingHooks = settings.hooks;
-    // Clean previous managed hooks to prevent duplicates on re-install
-    // Our hooks always contain '.dev-pomogator/tools/' — user hooks never do
+    // Clean previous managed hooks to prevent duplicates on re-install.
+    // Uses shared isDevPomogatorCommand which also catches legacy tsx-runner.js
+    // and current tsx-runner-bootstrap.cjs references — previously this branch
+    // only matched `.dev-pomogator/tools/` and left orphaned wrapper hooks.
     for (const hookName of Object.keys(existingHooks)) {
         const arr = existingHooks[hookName];
-        existingHooks[hookName] = arr.filter(entry => !entry.hooks?.some(h => h.command.includes('.dev-pomogator/tools/')));
+        existingHooks[hookName] = arr.filter(entry => !entry.hooks?.some(h => h.command && isDevPomogatorCommand(h.command)));
     }
     // Merge new hooks
     for (const [hookName, hookEntries] of Object.entries(allHooks)) {
@@ -412,27 +541,9 @@ async function installExtensionHooks(repoRoot, extensions) {
         }
     }
     // Inject envRequirements defaults into settings.env
-    // Extensions with hooks may need env vars to function (e.g. AUTO_COMMIT_API_KEY)
-    const envSection = (settings.env ?? {});
-    const missingRequired = [];
-    for (const ext of extensions) {
-        if (!ext.envRequirements || !getExtensionHooks(ext, 'claude') || Object.keys(getExtensionHooks(ext, 'claude')).length === 0)
-            continue;
-        for (const req of ext.envRequirements) {
-            if (envSection[req.name] !== undefined)
-                continue; // already set, don't touch
-            if (req.default) {
-                // Optional var with default — inject it
-                envSection[req.name] = req.default;
-            }
-            else if (req.required) {
-                // Required var without value — warn user
-                missingRequired.push({ extName: ext.name, varName: req.name, description: req.description });
-            }
-        }
-    }
-    if (Object.keys(envSection).length > 0) {
-        settings.env = envSection;
+    const mergedEnvSection = { ...(settings.env ?? {}), ...envSection };
+    if (Object.keys(mergedEnvSection).length > 0) {
+        settings.env = mergedEnvSection;
     }
     // Migrate: remove project-level statusLine (now installed globally via setupClaudeStatusLine)
     if (settings.statusLine) {
@@ -453,5 +564,26 @@ async function installExtensionHooks(repoRoot, extensions) {
         console.log('');
     }
     return installedHooksByExtension;
+}
+/**
+ * Flatten `managedByExtension` map into a single list of managed file paths.
+ *
+ * Used by personal-pomogator FR-1 gitignore writer to generate the marker block.
+ * Combines commands, rules, tools, and skills paths across all installed extensions.
+ * Hooks are NOT included (they're config entries, not files — handled by FR-2 settings.local.json).
+ */
+function collectManagedPaths(managedByExtension) {
+    const paths = new Set();
+    for (const managed of managedByExtension.values()) {
+        for (const p of getManagedPaths(managed.commands))
+            paths.add(p);
+        for (const p of getManagedPaths(managed.rules))
+            paths.add(p);
+        for (const p of getManagedPaths(managed.tools))
+            paths.add(p);
+        for (const p of getManagedPaths(managed.skills))
+            paths.add(p);
+    }
+    return Array.from(paths);
 }
 //# sourceMappingURL=claude.js.map

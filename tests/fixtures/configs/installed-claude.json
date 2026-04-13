@@ -23,8 +23,9 @@
       "projectPaths": ["{{PROJECT_PATH}}"],
       "managed": {
         "{{PROJECT_PATH}}": {
-          "commands": [
-            { "path": ".claude/commands/create-spec.md", "hash": "{{HASH}}" }
+          "commands": [],
+          "skills": [
+            { "path": ".claude/skills/create-spec/SKILL.md", "hash": "{{HASH}}" }
           ],
           "rules": [
             { "path": ".claude/rules/pomogator/specs-management.md", "hash": "{{HASH}}" },

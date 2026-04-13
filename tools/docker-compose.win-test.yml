@@ -1,0 +1,27 @@
+services:
+  windows:
+    image: dockurr/windows
+    container_name: win-test
+    environment:
+      VERSION: "11"
+      RAM_SIZE: "6G"
+      CPU_CORES: "4"
+      DISK_SIZE: "64G"
+      USERNAME: "claude"
+      PASSWORD: "ClaudeTest!2026"
+    devices:
+      - /dev/kvm
+      - /dev/net/tun
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - 8006:8006
+      - 3389:3389/tcp
+      - 3389:3389/udp
+    volumes:
+      - win-test-storage:/storage
+      - ./oem:/oem    # auto-runs oem/install.bat on first Win boot
+    stop_grace_period: 2m
+
+volumes:
+  win-test-storage:

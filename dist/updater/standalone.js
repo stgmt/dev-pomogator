@@ -17,6 +17,7 @@ import { checkUpdate } from './index.js';
 import { fetchExtensionManifest } from './github.js';
 import { migrateOldProjectHooks } from './hook-migration.js';
 import { logger, getErrorMessage } from '../utils/logger.js';
+import { updateSharedFiles, hasMissingSharedDir } from './shared-sync.js';
 const CONFIG_DIR = path.join(os.homedir(), '.dev-pomogator');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 // Parse command line arguments
@@ -46,13 +47,72 @@ function shouldUpdate(config) {
     return hours >= cooldown;
 }
 /**
+ * Forced recovery probe: if any tracked project has `installedShared[projectPath]`
+ * non-empty AND `.dev-pomogator/tools/_shared/` is physically missing, trigger an
+ * unconditional `updateSharedFiles` for that project. Bypasses cooldown by design —
+ * legacy installs (pre-commit 6b475e4) and accidental deletions need recovery on
+ * the very next SessionStart, not after 24h.
+ *
+ * Cheap path (fs.existsSync only) when nothing is missing — typical case.
+ * Slow path (network fetch) only when recovery is needed — once per legacy install.
+ *
+ * Incident reference: dkidyaev (`c:\msmaster`).
+ */
+async function recoverMissingShared(config) {
+    if (!config.installedShared)
+        return;
+    for (const [projectPath, entries] of Object.entries(config.installedShared)) {
+        if (!entries || entries.length === 0)
+            continue;
+        let missing = false;
+        try {
+            missing = hasMissingSharedDir(projectPath);
+        }
+        catch {
+            // Permission denied / broken symlink — silently skip this project
+            continue;
+        }
+        if (!missing)
+            continue;
+        process.stderr.write(`⚠ _shared/ missing for ${projectPath} — forcing recovery sync\n`);
+        try {
+            const result = await updateSharedFiles(projectPath, entries);
+            if (result.written.length > 0) {
+                process.stderr.write(`  ✓ Recovered ${result.written.length} _shared file(s) for ${projectPath}\n`);
+                // Persist updated hashes so future runs see the recovery as complete
+                config.installedShared[projectPath] = result.written;
+                try {
+                    fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), 'utf-8');
+                }
+                catch (writeErr) {
+                    process.stderr.write(`  ⚠ Failed to persist installedShared after recovery: ${getErrorMessage(writeErr)}\n`);
+                }
+            }
+            else if (result.hadFailures) {
+                process.stderr.write(`  ⚠ _shared/ recovery for ${projectPath} had failures (manifest unreachable?)\n`);
+            }
+        }
+        catch (syncErr) {
+            process.stderr.write(`  ⚠ _shared/ recovery failed for ${projectPath}: ${getErrorMessage(syncErr)}\n`);
+        }
+    }
+}
+/**
  * Check-only mode: fetch manifests, compare versions, print warning to stderr.
  * No lock, no cooldown, no file modifications.
  * Silent on errors — user should not see network failures.
+ *
+ * Side effect: if any tracked project is missing `_shared/`, trigger forced recovery
+ * before the version-check loop. This is the only place that runs on SessionStart
+ * for the typical user, so legacy install recovery must hook in here.
  */
 async function checkOnly() {
     const config = loadConfig();
-    if (!config?.installedExtensions?.length)
+    if (!config)
+        return;
+    // Forced recovery (cheap probe, no-op for healthy installs)
+    await recoverMissingShared(config);
+    if (!config.installedExtensions?.length)
         return;
     const outdated = [];
     // Deduplicate extensions by name
@@ -101,6 +161,11 @@ async function main() {
         logger.warn(`Hook migration failed: ${getErrorMessage(err)}`);
     });
     const config = loadConfig();
+    // Forced recovery probe — runs BEFORE cooldown gate so legacy installs (or
+    // accidental _shared/ deletions) recover on the next update invocation
+    // regardless of `lastCheck` recency. No-op for healthy installs.
+    if (config)
+        await recoverMissingShared(config);
     if (!shouldUpdate(config)) {
         logger.info('Skipped: cooldown not expired or autoUpdate disabled');
         return;

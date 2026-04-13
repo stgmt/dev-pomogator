@@ -65,3 +65,33 @@ CompactBar SHALL показывать idle indicator когда тесты не 
 - Если YAML файл повреждён → показать "waiting for tests..."
 
 **Связанные AC:** [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6-idle-indicator)
+
+## FR-7: Docker session propagation @feature14
+
+`docker-test.sh` SHALL читать `session.env` с хоста (`.dev-pomogator/.test-status/session.env`) и передавать `TEST_STATUSLINE_SESSION` в Docker контейнер через `-e` флаг. CJS shim (`test_runner_wrapper.cjs`) SHALL искать `session.env` также в `.docker-status/` как fallback путь. Если `session.env` не найден — proceed без SESSION (fail-open, wrapper пойдёт в passthrough).
+
+**Связанные AC:** [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7-docker-session-propagation)
+
+## FR-8: Dual-directory YAML reader @feature15
+
+`YamlReader` SHALL принимать опциональный параметр `fallback_dirs` и автоматически выводить `.docker-status/` из `.test-status/` parent structure. При каждом poll цикле YamlReader SHALL сканировать fallback dirs по glob `status.*.yaml` (любое имя файла, не только совпадающее с primary) и выбирать файл с наибольшим mtime среди primary + всех fallback. Это позволяет TUI видеть Docker-тесты с другим session prefix.
+
+**Связанные AC:** [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8-dual-directory-yaml-reader)
+
+## FR-9: TUI Stop hook (session cleanup) @feature16
+
+Extension `tui-test-runner` SHALL регистрировать Stop hook (`tui_stop.ts`), который при завершении сессии Claude Code:
+- Находит `tui.pid` файлы в `.test-status/` и `.docker-status/`
+- Читает PID и отправляет SIGTERM
+- Удаляет PID файл
+- Всегда exit 0 (fail-open)
+
+`tui_session_start.ts` SHALL при старте новой сессии убивать stale TUI процессы от предыдущих сессий (читая `tui.pid`).
+
+**Связанные AC:** [AC-9](ACCEPTANCE_CRITERIA.md#ac-9-fr-9-tui-stop-hook)
+
+## FR-10: Docker session passing @feature14
+
+`docker-test.sh` SHALL передавать `TEST_STATUSLINE_SESSION` в Docker через `-e` flag. YAML status пишется Dockerfile CMD (wrapper встроен в CMD). При custom args CMD перезаписывается — vitest бежит напрямую, YAML не пишется (accepted trade-off: filtered runs не трекаются в compact bar).
+
+**Связанные AC:** [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-10-docker-session-passing)

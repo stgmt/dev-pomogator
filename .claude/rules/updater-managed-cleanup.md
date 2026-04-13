@@ -30,6 +30,14 @@
    - Записывает в `~/.dev-pomogator/last-update-report.md`
 4. Hooks-файлы обновляются через smart merge (read-modify-write), пользовательские хуки не затрагиваются
 
+## Personal-pomogator integration
+
+Начиная с personal-pomogator spec, managed-cleanup scope расширен:
+
+1. **Gitignore marker block** (`.gitignore` target проекта) — managed. При uninstall удаляется через `removeManagedGitignoreBlock`. См. `src/installer/gitignore.ts`.
+2. **`.claude/settings.local.json` dev-pomogator entries** — managed. При uninstall удаляются через `stripDevPomogatorFromSettingsLocal` (preserving user keys). См. `src/installer/settings-local.ts`.
+3. **Self-guard**: uninstall refuses to run в dev-pomogator source repo (`isDevPomogatorRepo` check). Защищает dogfooding.
+
 ## Чеклист
 
 - [ ] Managed-список обновлён после апдейта (с хешами)
@@ -38,3 +46,6 @@
 - [ ] Hooks синхронизированы без дубликатов (smart merge)
 - [ ] Пользовательские хуки сохранены при обновлении
 - [ ] `.dev-pomogator/.user-overrides/` добавлен в `.gitignore`
+- [ ] Managed gitignore marker block удаляется при uninstall (personal-pomogator FR-8)
+- [ ] dev-pomogator entries стрипаются из `.claude/settings.local.json` при uninstall (preserve user keys)
+- [ ] Uninstall refuses в dev-pomogator source repo (self-guard)

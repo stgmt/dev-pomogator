@@ -1,7 +1,7 @@
 import { confirm, checkbox } from '@inquirer/prompts';
 import chalk from 'chalk';
 import { installClaude } from './claude.js';
-import { listExtensions, isBeta } from './extensions.js';
+import { listExtensions, isBeta, buildExtensionChoices } from './extensions.js';
 import { ensureClaudeMem } from './memory.js';
 import { generateEnvExample, getMissingRequiredEnv } from './env-setup.js';
 import { saveConfig, loadConfig } from '../config/index.js';
@@ -64,11 +64,7 @@ export async function runSemiInteractiveInstaller() {
     }
     const selectedExtensions = await checkbox({
         message: 'Select plugins to install:',
-        choices: availableExtensions.map(ext => ({
-            name: `${ext.name}${isBeta(ext) ? ' (BETA)' : ''} — ${ext.description}`,
-            value: ext.name,
-            checked: !isBeta(ext),
-        })),
+        choices: buildExtensionChoices(availableExtensions),
     });
     if (selectedExtensions.length === 0) {
         console.log(chalk.yellow('No plugins selected. Exiting.'));
@@ -111,11 +107,7 @@ export async function runInstaller() {
     if (availableExtensions.length > 0) {
         selectedExtensions = await checkbox({
             message: 'Select extensions to install:',
-            choices: availableExtensions.map(ext => ({
-                name: `${ext.name}${isBeta(ext) ? ' (BETA)' : ''} — ${ext.description}`,
-                value: ext.name,
-                checked: !isBeta(ext),
-            })),
+            choices: buildExtensionChoices(availableExtensions),
         });
         if (selectedExtensions.length === 0) {
             console.log(chalk.yellow('No extensions selected. Exiting.'));

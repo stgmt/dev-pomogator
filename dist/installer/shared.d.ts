@@ -7,12 +7,31 @@ import type { Extension } from './extensions.js';
 export declare function makePortableScriptCommand(scriptName: string, args?: string): string;
 /**
  * Generate a cross-platform hook command that runs a TypeScript file
- * via tsx-runner.js (which handles npx cache corruption with retry).
+ * via tsx-runner-bootstrap.cjs, which is a fail-soft wrapper around
+ * tsx-runner.js. If tsx-runner.js is missing after install (antivirus,
+ * Claude Code updater, manual cleanup), the bootstrap silently exits 0
+ * instead of crashing the entire Claude Code session with MODULE_NOT_FOUND.
  *
  * Same portable pattern as makePortableScriptCommand — resolves
- * ~/.dev-pomogator/scripts/tsx-runner.js at runtime via os.homedir().
+ * ~/.dev-pomogator/scripts/tsx-runner-bootstrap.cjs at runtime via os.homedir().
+ *
+ * See .specs/personal-pomogator/ FR-6.
  */
 export declare function makePortableTsxCommand(scriptPath: string, args?: string): string;
+/**
+ * Check if a hook command string belongs to dev-pomogator.
+ *
+ * Single source of truth used by:
+ *  - `installExtensionHooks` in claude.ts to scrub previous managed hooks on re-install
+ *  - `migrateLegacySettingsJson` / `stripDevPomogatorFromSettingsLocal` in settings-local.ts
+ *
+ * Matches any of:
+ *  - `.dev-pomogator/tools/` — managed tool script reference
+ *  - `.dev-pomogator/scripts/` — global scripts reference
+ *  - `tsx-runner.js` — legacy direct require pattern
+ *  - `tsx-runner-bootstrap.cjs` — current fail-soft wrapper (FR-6)
+ */
+export declare function isDevPomogatorCommand(command: string): boolean;
 /**
  * Replace `npx tsx "SCRIPT"` or `npx tsx SCRIPT` in a hook command
  * with the portable tsx-runner command that handles cache corruption.

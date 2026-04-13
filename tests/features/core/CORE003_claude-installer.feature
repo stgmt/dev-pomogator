@@ -19,7 +19,7 @@ Feature: CORE003 Claude Code Installer
     When dev-pomogator installs for Claude Code
     Then .claude/commands/ should exist in project
     And suggest-rules.md should be in .claude/commands/
-    And create-spec.md should be in .claude/commands/
+    And create-spec should be installed as a skill at .claude/skills/create-spec/SKILL.md
 
   Scenario: Rules are installed to project
     When dev-pomogator installs for Claude Code
@@ -149,3 +149,34 @@ Feature: CORE003 Claude Code Installer
     And mcp-server.cjs should contain MCP protocol markers
     And claude-mem settings should have CHROMA_MODE defined
     And MCP should be accessible via plugin enablement OR manual registration
+
+  # @feature18
+  # ⚠ TDD RED: scenario currently fails on Linux until missing source files are committed.
+  # Same root cause as CORE003_19: tsc fails during prepare script because
+  # src/utils/path-safety.ts and src/installer/plugin-json.ts are untracked in git.
+  # See .specs/install-diagnostics/RESEARCH.md for full evidence.
+  Scenario: CORE003_18 npx install succeeds end-to-end on Linux
+    Given the host OS is Linux
+    And dev-pomogator has not been installed before
+    When I run "npx --yes github:stgmt/dev-pomogator --claude --all" in a clean temp directory
+    Then the npx process should exit with code 0
+    And stdout should contain "dev-pomogator installer (non-interactive)"
+    And stdout should contain "Installation complete"
+    And ~/.dev-pomogator/logs/install.log mtime should advance during the run
+    And npm cache _npx/<hash>/node_modules/dev-pomogator/package.json should exist
+    And stderr should not contain any "npm warn cleanup" lines
+
+  # @feature19
+  # ⚠ TDD RED: scenario currently fails on Windows host until silent install bug is fixed.
+  # Expected fail mode: exit 2 + empty stdout + EPERM cleanup warnings on @inquirer/external-editor.
+  # See .specs/install-diagnostics/RESEARCH.md for full bug evidence and fix recommendations.
+  Scenario: CORE003_19 npx install succeeds end-to-end on Windows
+    Given the host OS is Windows
+    And dev-pomogator has not been installed before
+    When I run "npx --yes github:stgmt/dev-pomogator --claude --all" in a clean temp directory
+    Then the npx process should exit with code 0
+    And stdout should contain "dev-pomogator installer (non-interactive)"
+    And stdout should contain "Installation complete"
+    And ~/.dev-pomogator/logs/install.log mtime should advance during the run
+    And npm cache _npx/<hash>/node_modules/dev-pomogator/package.json should exist
+    And stderr should not contain any "npm warn cleanup" lines

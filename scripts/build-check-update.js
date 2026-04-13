@@ -63,6 +63,7 @@ function copyToDist(src, dest) {
 }
 
 copyToDist('src/scripts/tsx-runner.js', 'dist/tsx-runner.js');
+copyToDist('src/scripts/tsx-runner-bootstrap.cjs', 'dist/tsx-runner-bootstrap.cjs');
 copyToDist('scripts/launch-claude-tui.ps1', 'dist/launch-claude-tui.ps1');
 
 // Legacy statusline render removed in v2.0.0 — no longer copied to dist/

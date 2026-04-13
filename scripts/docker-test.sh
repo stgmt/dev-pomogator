@@ -6,6 +6,14 @@
 set -o pipefail
 
 SESSION="${TEST_STATUSLINE_SESSION:-}"
+# If no SESSION in env, read from host session.env (written by SessionStart hook)
+if [ -z "$SESSION" ]; then
+  SESSION_ENV=".dev-pomogator/.test-status/session.env"
+  if [ -f "$SESSION_ENV" ]; then
+    SESSION=$(grep -m1 '^TEST_STATUSLINE_SESSION=' "$SESSION_ENV" 2>/dev/null | cut -d= -f2 || true)
+  fi
+fi
+
 if [ -n "$SESSION" ]; then
   PROJECT_NAME="devpom-test-${SESSION}"
 else
@@ -18,6 +26,14 @@ cleanup() {
   COMPOSE_PROJECT_NAME="$PROJECT_NAME" docker compose -f docker-compose.test.yml down --remove-orphans 2>/dev/null || true
 }
 trap cleanup EXIT INT TERM
+
+# Pre-flight: kill orphaned devpom-test containers from previous runs
+# (exec replaces bash → old trap is lost → containers linger)
+for cid in $(docker ps -q --filter "name=devpom-test-" 2>/dev/null); do
+  echo "[docker-test] Killing orphaned container: $(docker inspect --format '{{.Name}}' "$cid" 2>/dev/null)"
+  docker stop "$cid" 2>/dev/null || true
+  docker rm "$cid" 2>/dev/null || true
+done
 
 # Auto-build base image if it doesn't exist
 if ! docker image inspect dev-pomogator-test-base:local >/dev/null 2>&1; then
@@ -41,7 +57,16 @@ fi
 
 # -T disables pseudo-TTY for pipe compatibility.
 # PYTHONUNBUFFERED + NODE_DISABLE_COLORS force Node/Python unbuffered output.
-# script /dev/null -qfc creates fake TTY → Node.js uses line buffering (not block).
-exec docker compose -f docker-compose.test.yml run --rm -T \
+SESSION_ARGS=()
+if [ -n "$SESSION" ]; then
+  SESSION_ARGS+=(-e "TEST_STATUSLINE_SESSION=$SESSION")
+fi
+
+# No exec — keep bash alive so trap cleanup fires on SIGTERM/EXIT.
+# Dockerfile CMD already includes wrapper (test_runner_wrapper.cjs).
+# Custom args override CMD, so vitest runs directly — wrapper YAML comes
+# from the Dockerfile CMD path only (full test suite).
+docker compose -f docker-compose.test.yml run --rm -T \
   -e PYTHONUNBUFFERED=1 \
+  "${SESSION_ARGS[@]}" \
   test "$@"

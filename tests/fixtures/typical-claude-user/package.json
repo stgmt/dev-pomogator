@@ -1,0 +1,20 @@
+{
+  "name": "typical-claude-user-fixture",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Test fixture: a Node.js project of a typical Claude Code user (hooks/commands/rules configured, NO dev-pomogator).",
+  "type": "module",
+  "scripts": {
+    "lint": "eslint src/",
+    "test": "vitest run",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "vitest": "^1.5.0",
+    "eslint": "^9.0.0"
+  }
+}

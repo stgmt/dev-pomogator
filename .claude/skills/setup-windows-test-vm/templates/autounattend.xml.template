@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="utf-8"?>
+<unattend xmlns="urn:schemas-microsoft-com:unattend">
+
+  <settings pass="windowsPE">
+    <component name="Microsoft-Windows-International-Core-WinPE" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+      <SetupUILanguage>
+        <UILanguage>en-US</UILanguage>
+      </SetupUILanguage>
+      <InputLocale>0409:00000409</InputLocale>
+      <SystemLocale>en-US</SystemLocale>
+      <UILanguage>en-US</UILanguage>
+      <UILanguageFallback>en-US</UILanguageFallback>
+      <UserLocale>en-US</UserLocale>
+    </component>
+    <component name="Microsoft-Windows-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+      <RunSynchronous>
+        <RunSynchronousCommand wcm:action="add">
+          <Order>1</Order>
+          <Path>reg add HKLM\SYSTEM\Setup\LabConfig /v BypassTPMCheck /t REG_DWORD /d 1 /f</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand wcm:action="add">
+          <Order>2</Order>
+          <Path>reg add HKLM\SYSTEM\Setup\LabConfig /v BypassSecureBootCheck /t REG_DWORD /d 1 /f</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand wcm:action="add">
+          <Order>3</Order>
+          <Path>reg add HKLM\SYSTEM\Setup\LabConfig /v BypassRAMCheck /t REG_DWORD /d 1 /f</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand wcm:action="add">
+          <Order>4</Order>
+          <Path>reg add HKLM\SYSTEM\Setup\LabConfig /v BypassStorageCheck /t REG_DWORD /d 1 /f</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand wcm:action="add">
+          <Order>5</Order>
+          <Path>reg add HKLM\SYSTEM\Setup\LabConfig /v BypassCPUCheck /t REG_DWORD /d 1 /f</Path>
+        </RunSynchronousCommand>
+      </RunSynchronous>
+      <Diagnostics>
+        <OptIn>false</OptIn>
+      </Diagnostics>
+      <DynamicUpdate>
+        <Enable>false</Enable>
+        <WillShowUI>OnError</WillShowUI>
+      </DynamicUpdate>
+      <DiskConfiguration>
+        <Disk wcm:action="add">
+          <CreatePartitions>
+            <CreatePartition wcm:action="add">
+              <Order>1</Order>
+              <Type>EFI</Type>
+              <Size>300</Size>
+            </CreatePartition>
+            <CreatePartition wcm:action="add">
+              <Order>2</Order>
+              <Type>MSR</Type>
+              <Size>16</Size>
+            </CreatePartition>
+            <CreatePartition wcm:action="add">
+              <Order>3</Order>
+              <Type>Primary</Type>
+              <Extend>true</Extend>
+            </CreatePartition>
+          </CreatePartitions>
+          <ModifyPartitions>
+            <ModifyPartition wcm:action="add">
+              <Order>1</Order>
+              <PartitionID>1</PartitionID>
+              <Format>FAT32</Format>
+              <Label>System</Label>
+            </ModifyPartition>
+            <ModifyPartition wcm:action="add">
+              <Order>2</Order>
+              <PartitionID>2</PartitionID>
+            </ModifyPartition>
+            <ModifyPartition wcm:action="add">
+              <Order>3</Order>
+              <PartitionID>3</PartitionID>
+              <Format>NTFS</Format>
+              <Label>Windows</Label>
+            </ModifyPartition>
+          </ModifyPartitions>
+          <DiskID>0</DiskID>
+          <WillWipeDisk>true</WillWipeDisk>
+        </Disk>
+      </DiskConfiguration>
+      <ImageInstall>
+        <OSImage>
+          <InstallFrom>
+            <MetaData wcm:action="add">
+              <Key>/IMAGE/NAME</Key>
+              <Value>Windows 11 Pro</Value>
+            </MetaData>
+          </InstallFrom>
+          <InstallTo>
+            <DiskID>0</DiskID>
+            <PartitionID>3</PartitionID>
+          </InstallTo>
+          <WillShowUI>OnError</WillShowUI>
+        </OSImage>
+      </ImageInstall>
+      <UserData>
+        <ProductKey>
+          <Key>W269N-WFGWX-YVC9B-4J6C9-T83GX</Key>
+        </ProductKey>
+        <AcceptEula>true</AcceptEula>
+        <FullName>claude</FullName>
+        <Organization>dev-pomogator</Organization>
+      </UserData>
+    </component>
+  </settings>
+
+  <settings pass="specialize">
+    <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+      <ComputerName>claudetest</ComputerName>
+      <TimeZone>UTC</TimeZone>
+    </component>
+    <component name="Microsoft-Windows-Deployment" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+      <RunSynchronous>
+        <RunSynchronousCommand wcm:action="add">
+          <Order>1</Order>
+          <Path>net accounts /maxpwage:unlimited</Path>
+          <WillReboot>Never</WillReboot>
+        </RunSynchronousCommand>
+      </RunSynchronous>
+    </component>
+    <component name="Microsoft-Windows-Security-SPP-UX" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+      <SkipAutoActivation>true</SkipAutoActivation>
+    </component>
+    <component name="Microsoft-Windows-UnattendedJoin" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+      <Identification>
+        <JoinWorkgroup>WORKGROUP</JoinWorkgroup>
+      </Identification>
+    </component>
+  </settings>
+
+  <settings pass="oobeSystem">
+    <component name="Microsoft-Windows-International-Core" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+      <InputLocale>0409:00000409</InputLocale>
+      <SystemLocale>en-US</SystemLocale>
+      <UILanguage>en-US</UILanguage>
+      <UILanguageFallback>en-US</UILanguageFallback>
+      <UserLocale>en-US</UserLocale>
+    </component>
+    <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+      <TimeZone>UTC</TimeZone>
+      <OOBE>
+        <HideEULAPage>true</HideEULAPage>
+        <HideLocalAccountScreen>true</HideLocalAccountScreen>
+        <HideOnlineAccountScreens>true</HideOnlineAccountScreens>
+        <HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE>
+        <NetworkLocation>Home</NetworkLocation>
+        <ProtectYourPC>3</ProtectYourPC>
+        <SkipMachineOOBE>true</SkipMachineOOBE>
+        <SkipUserOOBE>true</SkipUserOOBE>
+      </OOBE>
+      <UserAccounts>
+        <AdministratorPassword>
+          <Value></Value>
+          <PlainText>true</PlainText>
+        </AdministratorPassword>
+        <LocalAccounts>
+          <LocalAccount wcm:action="add">
+            <Password>
+              <Value>ClaudeTest!2026</Value>
+              <PlainText>true</PlainText>
+            </Password>
+            <Description>Local admin for hyperv-test-runner</Description>
+            <DisplayName>claude</DisplayName>
+            <Group>Administrators</Group>
+            <Name>claude</Name>
+          </LocalAccount>
+        </LocalAccounts>
+      </UserAccounts>
+      <AutoLogon>
+        <Password>
+          <Value>ClaudeTest!2026</Value>
+          <PlainText>true</PlainText>
+        </Password>
+        <Enabled>true</Enabled>
+        <LogonCount>1</LogonCount>
+        <Username>claude</Username>
+      </AutoLogon>
+      <FirstLogonCommands>
+        <SynchronousCommand wcm:action="add">
+          <Order>1</Order>
+          <CommandLine>powershell -NoProfile -ExecutionPolicy Bypass -EncodedCommand __POST_INSTALL_BASE64__</CommandLine>
+          <Description>dev-pomogator post-install</Description>
+          <RequiresUserInput>false</RequiresUserInput>
+        </SynchronousCommand>
+      </FirstLogonCommands>
+      <RegisteredOrganization>dev-pomogator</RegisteredOrganization>
+      <RegisteredOwner>claude</RegisteredOwner>
+    </component>
+  </settings>
+
+</unattend>

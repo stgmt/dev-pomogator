@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "featureSlug": "personal-pomogator",
+  "createdAt": "2026-04-06T09:48:58.148Z",
+  "currentPhase": "Complete",
+  "phases": {
+    "Discovery": {
+      "completedAt": "2026-04-06T09:52:47.326Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-06T09:52:47.325Z"
+    },
+    "Context": {
+      "completedAt": "2026-04-06T09:52:47.326Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-06T10:04:53.875Z"
+    },
+    "Requirements": {
+      "completedAt": "2026-04-06T10:04:33.902Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-06T10:05:10.754Z"
+    },
+    "Finalization": {
+      "completedAt": "2026-04-06T11:30:33.424Z",
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    }
+  }
+}

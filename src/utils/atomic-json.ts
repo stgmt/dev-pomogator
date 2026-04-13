@@ -65,6 +65,18 @@ export async function readJsonSafe<T = Record<string, unknown>>(
 }
 
 /**
+ * Write a text/binary file atomically: temp file + move.
+ * Same temp+move pattern as `writeJsonAtomic` but for non-JSON content
+ * (e.g. `.gitignore` text file). Per `.claude/rules/atomic-config-save.md`.
+ */
+export async function writeFileAtomic(filePath: string, content: string | Buffer): Promise<void> {
+  await fs.ensureDir(path.dirname(filePath));
+  const tempFile = filePath + '.tmp';
+  await fs.writeFile(tempFile, content);
+  await fs.move(tempFile, filePath, { overwrite: true });
+}
+
+/**
  * Sync version of writeJsonAtomic for use in standalone bundle context
  * (hook-migration.ts runs synchronously).
  */

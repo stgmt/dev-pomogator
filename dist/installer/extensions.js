@@ -9,6 +9,19 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export function isBeta(ext) {
     return ext.stability === 'beta';
 }
+/**
+ * Build choices array for the inquirer checkbox prompt.
+ * Beta extensions get a "(BETA)" label in the name and are unchecked by default.
+ * Single source of truth for FR-2 (label) and FR-3 (default) — both interactive
+ * installer paths use this helper, so behavior can be verified by importing it.
+ */
+export function buildExtensionChoices(extensions) {
+    return extensions.map(ext => ({
+        name: `${ext.name}${isBeta(ext) ? ' (BETA)' : ''} — ${ext.description}`,
+        value: ext.name,
+        checked: !isBeta(ext),
+    }));
+}
 export class PostUpdateHookError extends Error {
     constructor(extensionName, message) {
         super(`Post-update hook failed for ${extensionName}: ${message}`);

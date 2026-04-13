@@ -675,8 +675,9 @@ extensions/specs-workflow/
 │       ├── research-workflow.mdc
 │       └── specs-validation.mdc
 ├── claude/
-│   ├── commands/
-│   │   └── create-spec.md
+│   ├── skills/
+│   │   └── create-spec/
+│   │       └── SKILL.md           # Skill /create-spec (auto-trigger via natural language)
 │   └── rules/
 │       ├── specs-management.md
 │       ├── research-workflow.md

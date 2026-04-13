@@ -2,7 +2,7 @@
 /**
  * Test Compliance Check — PostToolUse Hook
  *
- * On Write/Edit of test files: scans for 7 anti-patterns and blocks
+ * On Write/Edit of test files: scans for 8 anti-patterns and blocks
  * if issues found, triggering /tests-create-update skill.
  *
  * Fail-open: exit 0 always, never block on errors.
@@ -114,6 +114,20 @@ function scanAntiPatterns(content: string, filePath: string): AntiPatternMatch[]
       // Rule 5: Silent skip
       if (/if\s*\(!.*\)\s*return/.test(line) && isInsideTestBlock(lines, i)) {
         matches.push({ rule: 'silent-skip', line: lineNum, code: line.trim() });
+      }
+
+      // Rule 8: Trivial input — writeFile with simple content (no import/require)
+      // as test script for runner/executor tests. False positive: test passes
+      // but doesn't verify import resolution works.
+      if (/writeFile\s*\(/.test(line) && isInsideTestBlock(lines, i)) {
+        const writeBlock = lines.slice(i, Math.min(i + 3, lines.length)).join(' ');
+        if (/console\.log|['"][\w_]+['"]/.test(writeBlock) && !/import\s|require\s*\(/.test(writeBlock)) {
+          // Check if this file is written as input to a runner/executor
+          const nearbyExec = lines.slice(i, Math.min(i + 10, lines.length)).join(' ');
+          if (/execSync|spawnSync|tsx-runner|runnerPath/.test(nearbyExec)) {
+            matches.push({ rule: 'trivial-input', line: lineNum, code: line.trim() });
+          }
+        }
       }
     }
 

@@ -19,15 +19,42 @@ export function makePortableScriptCommand(scriptName: string, args?: string): st
 
 /**
  * Generate a cross-platform hook command that runs a TypeScript file
- * via tsx-runner.js (which handles npx cache corruption with retry).
+ * via tsx-runner-bootstrap.cjs, which is a fail-soft wrapper around
+ * tsx-runner.js. If tsx-runner.js is missing after install (antivirus,
+ * Claude Code updater, manual cleanup), the bootstrap silently exits 0
+ * instead of crashing the entire Claude Code session with MODULE_NOT_FOUND.
  *
  * Same portable pattern as makePortableScriptCommand — resolves
- * ~/.dev-pomogator/scripts/tsx-runner.js at runtime via os.homedir().
+ * ~/.dev-pomogator/scripts/tsx-runner-bootstrap.cjs at runtime via os.homedir().
+ *
+ * See .specs/personal-pomogator/ FR-6.
  */
 export function makePortableTsxCommand(scriptPath: string, args?: string): string {
   const escaped = scriptPath.replace(/\\/g, '/');
-  const runner = `node -e "require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner.js'))"`;
+  const runner = `node -e "require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner-bootstrap.cjs'))"`;
   return args ? `${runner} -- "${escaped}" ${args}` : `${runner} -- "${escaped}"`;
+}
+
+/**
+ * Check if a hook command string belongs to dev-pomogator.
+ *
+ * Single source of truth used by:
+ *  - `installExtensionHooks` in claude.ts to scrub previous managed hooks on re-install
+ *  - `migrateLegacySettingsJson` / `stripDevPomogatorFromSettingsLocal` in settings-local.ts
+ *
+ * Matches any of:
+ *  - `.dev-pomogator/tools/` — managed tool script reference
+ *  - `.dev-pomogator/scripts/` — global scripts reference
+ *  - `tsx-runner.js` — legacy direct require pattern
+ *  - `tsx-runner-bootstrap.cjs` — current fail-soft wrapper (FR-6)
+ */
+export function isDevPomogatorCommand(command: string): boolean {
+  return (
+    command.includes('.dev-pomogator/tools/') ||
+    command.includes('.dev-pomogator/scripts/') ||
+    command.includes('tsx-runner.js') ||
+    command.includes('tsx-runner-bootstrap.cjs')
+  );
 }
 
 /**
@@ -205,6 +232,17 @@ export async function addProjectPaths(
 }
 
 /**
+ * Scripts that MUST be present — if missing, throw fatal error instead of
+ * silently continuing. Prevents broken install state where hooks are written
+ * but their runtime dependency is absent (dkorotkov incident 2026-04-06).
+ * See .specs/personal-pomogator/ FR-5.
+ */
+const REQUIRED_SCRIPTS = new Set<string>([
+  'tsx-runner.js',
+  'tsx-runner-bootstrap.cjs',
+]);
+
+/**
  * Copy bundled scripts (check-update, tsx-runner) to ~/.dev-pomogator/scripts/
  * and ensure tsx is installed at ~/.dev-pomogator/node_modules/.bin/tsx.
  * @param distDir — path to the dist/ directory containing bundled scripts
@@ -229,6 +267,17 @@ async function copyBundledScript(distDir: string, scriptsDir: string, srcName: s
     }
   }
 
+  // Personal-pomogator FR-5: loud-fail for required scripts.
+  // Missing tsx-runner.js would leave install in broken state (hooks written,
+  // runner absent → MODULE_NOT_FOUND). Better to fail hard with clear message.
+  if (REQUIRED_SCRIPTS.has(srcName)) {
+    const searchedPaths = [primary, ...(fallbackPaths ?? [])].join(', ');
+    throw new Error(
+      `Fatal: ${srcName} not found — run "npm run build" first. ` +
+      `Searched: ${searchedPaths}`
+    );
+  }
+
   console.log(`  ⚠ ${srcName} not found. Run "npm run build" first.`);
 }
 
@@ -245,6 +294,11 @@ export async function setupGlobalScripts(distDir: string): Promise<void> {
   await copyBundledScript(distDir, scriptsDir, 'tsx-runner.js', undefined, [
     path.join(packageRoot, 'src', 'scripts', 'tsx-runner.js'),
   ]);
+  // tsx-runner-bootstrap.cjs — fail-soft wrapper referenced by hook commands.
+  // Personal-pomogator FR-6. Must be present or hooks will hard-fail with MODULE_NOT_FOUND.
+  await copyBundledScript(distDir, scriptsDir, 'tsx-runner-bootstrap.cjs', undefined, [
+    path.join(packageRoot, 'src', 'scripts', 'tsx-runner-bootstrap.cjs'),
+  ]);
   // launch-claude-tui.ps1 — PowerShell launcher for context-menu, no bundling needed
   await copyBundledScript(distDir, scriptsDir, 'launch-claude-tui.ps1', undefined, [
     path.join(packageRoot, 'scripts', 'launch-claude-tui.ps1'),
@@ -258,6 +312,30 @@ export async function setupGlobalScripts(distDir: string): Promise<void> {
 
   // Ensure Bun is available for claude-mem plugin hooks (prevents cold-start failures)
   await ensureHomeBun();
+
+  // Personal-pomogator FR-5: post-install verification.
+  // copyBundledScript now throws for REQUIRED_SCRIPTS, but belt-and-suspenders:
+  // explicitly verify both files exist before returning. This prevents half-done
+  // install states where settings.local.json is written but runtime wrapper is
+  // absent — the dkorotkov incident symptom.
+  const runnerPath = path.join(scriptsDir, 'tsx-runner.js');
+  const bootstrapPath = path.join(scriptsDir, 'tsx-runner-bootstrap.cjs');
+  const [runnerExists, bootstrapExists] = await Promise.all([
+    fs.pathExists(runnerPath),
+    fs.pathExists(bootstrapPath),
+  ]);
+  if (!runnerExists) {
+    throw new Error(
+      `Post-install verification failed: ${runnerPath} missing after setupGlobalScripts. ` +
+      `This leaves hooks broken. Re-run installer after "npm run build".`
+    );
+  }
+  if (!bootstrapExists) {
+    throw new Error(
+      `Post-install verification failed: ${bootstrapPath} missing after setupGlobalScripts. ` +
+      `Hook commands would fail with MODULE_NOT_FOUND. Re-run installer after "npm run build".`
+    );
+  }
 }
 
 /**

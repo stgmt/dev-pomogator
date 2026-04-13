@@ -75,7 +75,7 @@ describe('PLUGIN016: Tests Create Update Skill', () => {
   });
 
   // @feature3
-  it('PLUGIN016_04: SKILL.md contains compliance report template with 15 rules', async () => {
+  it('PLUGIN016_04: SKILL.md contains compliance report template with 16 rules', async () => {
     const skillPath = appPath('.claude', 'skills', 'tests-create-update', 'SKILL.md');
     const content = await fs.readFile(skillPath, 'utf-8');
     expect(content).toContain('No source scan');
@@ -85,7 +85,8 @@ describe('PLUGIN016: Tests Create Update Skill', () => {
     expect(content).toContain('Has assertions');
     expect(content).toContain('No tautological assert');
     expect(content).toContain('No arbitrary sleep');
-    expect(content).toMatch(/X\/15 PASS/);
+    expect(content).toContain('No trivial input');
+    expect(content).toMatch(/X\/16 PASS/);
   });
 
   // @feature5

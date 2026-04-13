@@ -32,6 +32,14 @@ __pycache__/
 
 # dev-pomogator runtime (tools, backups)
 .dev-pomogator/
+# hyperv-test-runner artifacts: .dev-pomogator/hyperv-runs/ (per-run logs + screenshots)
+# RDP file (contains VM IP, user-specific)
+claude-test.rdp
+
+# OEM offline installers (if cached locally)
+oem/*.msi
+oem/*.exe
+!oem/install.bat
 
 # Windows null device artifact
 nul

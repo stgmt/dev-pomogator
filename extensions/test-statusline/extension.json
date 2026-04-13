@@ -1,6 +1,6 @@
 {
   "name": "test-statusline",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "Test runner session management, YAML status files, wrapper for test output parsing, and background task guard",
   "platforms": ["claude"],
   "category": "automation",
@@ -17,6 +17,7 @@
     ],
     "bg-task-guard": [
       ".dev-pomogator/tools/bg-task-guard/mark-bg-task.ts",
+      ".dev-pomogator/tools/bg-task-guard/mark-bg-task.sh",
       ".dev-pomogator/tools/bg-task-guard/stop-guard.sh"
     ]
   },

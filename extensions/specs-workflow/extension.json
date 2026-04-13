@@ -1,14 +1,20 @@
 {
   "name": "specs-workflow",
-  "version": "1.13.0",
+  "version": "1.14.0",
   "description": "Управление спецификациями: 4-фазный workflow (включая Context Analysis), TDD-порядок задач, валидация, автоматический аудит кросс-ссылок, MCP инструменты для research",
   "platforms": [
     "claude"
   ],
   "category": "workflow",
   "commandFiles": {
-    "claude": [
-      ".claude/commands/create-spec.md"
+    "claude": []
+  },
+  "skills": {
+    "create-spec": ".claude/skills/create-spec"
+  },
+  "skillFiles": {
+    "create-spec": [
+      ".claude/skills/create-spec/SKILL.md"
     ]
   },
   "ruleFiles": {

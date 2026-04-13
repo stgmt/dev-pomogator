@@ -1,6 +1,7 @@
 import { execSync, spawn, spawnSync, ChildProcess } from 'child_process';
 import crossSpawn from 'cross-spawn';
 import { readFileSync, readdirSync, readlinkSync } from 'fs';
+import os from 'os';
 import path from 'path';
 import fs from 'fs-extra';
 
@@ -32,23 +33,184 @@ export interface InstallerResult {
  * Run the dev-pomogator installer
  * Note: Use --all flag to install all plugins in non-interactive mode
  */
-export async function runInstaller(args: string = '--claude --all'): Promise<InstallerResult> {
-  try {
-    const logs = execSync(`node dist/index.js ${args}`, {
-      encoding: 'utf-8',
-      cwd: APP_DIR,
-      env: {
-        ...process.env,
-        FORCE_COLOR: '0', // Disable chalk colors for easier parsing
-      },
-    });
-    return { logs, exitCode: 0 };
-  } catch (error: any) {
-    return {
-      logs: error.stdout || error.message,
-      exitCode: error.status || 1,
-    };
+export async function runInstaller(
+  args: string = '--claude --all',
+  extraEnv: Record<string, string> = {},
+): Promise<InstallerResult> {
+  // spawnSync never throws — surface spawn errors directly so callers can
+  // distinguish "installer exited non-zero" from "node binary not found".
+  const result = spawnSync('node', ['dist/index.js', ...args.split(/\s+/).filter(Boolean)], {
+    encoding: 'utf-8',
+    cwd: APP_DIR,
+    env: {
+      ...process.env,
+      FORCE_COLOR: '0',
+      ...extraEnv,
+    },
+  });
+  if (result.error) {
+    return { logs: `spawn failed: ${result.error.message}`, exitCode: -1 };
   }
+  const logs = (result.stdout || '') + (result.stderr || '');
+  return { logs, exitCode: result.status ?? -1 };
+}
+
+// ============================================================================
+// runInstallerViaNpx — for CORE003_18 / CORE003_19 silent install regression
+// ============================================================================
+
+export interface NpxInstallResult {
+  stdout: string;
+  stderr: string;
+  exitCode: number;
+  /** Lines matching `npm warn cleanup` from stderr (Windows EPERM signal) */
+  cleanupWarnings: string[];
+  /** True if `_npx/<hash>/node_modules/dev-pomogator/package.json` exists after run */
+  cachePopulated: boolean;
+  /** True if mtime of `~/.dev-pomogator/logs/install.log` advanced during run */
+  installerLogTouched: boolean;
+  /** Temp directory created for this run (caller is responsible for cleanup) */
+  tempDir: string;
+  /** Temp NPM cache directory (only if `options.fresh === true`) */
+  tempCache: string | null;
+}
+
+/**
+ * Run dev-pomogator installer via `npx --yes github:stgmt/dev-pomogator …`.
+ *
+ * Used by CORE003_18 (Linux control) and CORE003_19 (Windows TDD red — known
+ * silent install bug). Reproduces the exact code path users hit when invoking
+ * dev-pomogator via npx, including npm reify and bin extraction.
+ *
+ * The helper:
+ *   1. Creates an isolated `mkdtempSync` working directory.
+ *   2. Optionally creates a fresh `NPM_CONFIG_CACHE` to bypass any locked
+ *      `_npx/<hash>` files left over from prior runs.
+ *   3. Captures the mtime of `~/.dev-pomogator/logs/install.log` BEFORE the
+ *      run so the caller can detect whether the installer ever wrote to it.
+ *   4. Spawns `npx --loglevel verbose --yes github:stgmt/dev-pomogator <args>`
+ *      synchronously with `input: 'y\n'` to auto-accept the npx download
+ *      confirmation.
+ *   5. Parses stderr for `npm warn cleanup` lines — these are emitted at WARN
+ *      level on Windows when reify cleanup hits EPERM and are HIDDEN at the
+ *      default loglevel. Their presence is the canonical signal of the bug
+ *      documented in `.specs/install-diagnostics/RESEARCH.md`.
+ *   6. Checks whether `_npx/<hash>/node_modules/dev-pomogator/package.json`
+ *      exists, indicating that the package was actually extracted (it is
+ *      NOT extracted in the bug case — reify rolls back).
+ *   7. Compares the install.log mtime — if it advanced, dev-pomogator's main()
+ *      ran; if it did NOT advance, the installer never started.
+ *
+ * Note: callers are responsible for cleaning up `result.tempDir` and
+ * `result.tempCache` (if non-null). The helper does not auto-delete them
+ * because failing tests benefit from being able to inspect the leftover state.
+ */
+export async function runInstallerViaNpx(
+  args: string = '--claude --all',
+  options: { fresh?: boolean } = {},
+): Promise<NpxInstallResult> {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pom-npx-'));
+  const tempCache = options.fresh
+    ? fs.mkdtempSync(path.join(os.tmpdir(), 'pom-npx-cache-'))
+    : null;
+
+  // Capture install.log mtime BEFORE running so we can detect if installer ran.
+  const installLogPath = getInstallLogPath();
+  let beforeMtime = 0;
+  try {
+    if (fs.existsSync(installLogPath)) {
+      beforeMtime = fs.statSync(installLogPath).mtimeMs;
+    }
+  } catch {
+    // log file does not exist yet — beforeMtime stays 0
+  }
+
+  const env: Record<string, string> = {
+    ...process.env,
+    FORCE_COLOR: '0',
+  };
+  if (tempCache) {
+    env.NPM_CONFIG_CACHE = tempCache;
+  }
+
+  const result = spawnSync(
+    'npx',
+    [
+      '--loglevel',
+      'verbose',
+      '--yes',
+      'github:stgmt/dev-pomogator',
+      ...args.split(/\s+/).filter(Boolean),
+    ],
+    {
+      encoding: 'utf-8',
+      cwd: tempDir,
+      env,
+      input: 'y\n',
+      shell: process.platform === 'win32',
+      // Allow up to 2 minutes — npm reify can be slow on Windows
+      timeout: 120_000,
+    },
+  );
+
+  const stdout = result.stdout || '';
+  const stderr = result.stderr || '';
+  const exitCode = result.status ?? -1;
+
+  // Parse cleanup warnings from stderr (the silent failure signal).
+  const cleanupWarnings = stderr
+    .split('\n')
+    .filter((line) => /npm warn cleanup/i.test(line));
+
+  // Check if dev-pomogator was actually extracted into the npx cache.
+  // npx hashes the package spec to derive the cache subdirectory name; we
+  // can't trivially recompute that hash, so instead we walk `_npx/*/node_modules/dev-pomogator/package.json`.
+  const cacheRoot = tempCache
+    ? path.join(tempCache, '_npx')
+    : path.join(os.homedir(), 'AppData', 'Local', 'npm-cache', '_npx');
+  let cachePopulated = false;
+  try {
+    if (fs.existsSync(cacheRoot)) {
+      const hashes = fs.readdirSync(cacheRoot);
+      for (const h of hashes) {
+        const pkgJson = path.join(
+          cacheRoot,
+          h,
+          'node_modules',
+          'dev-pomogator',
+          'package.json',
+        );
+        if (fs.existsSync(pkgJson)) {
+          cachePopulated = true;
+          break;
+        }
+      }
+    }
+  } catch {
+    // permission errors — leave cachePopulated as false
+  }
+
+  // Check if installer touched the log file (proves main() actually ran).
+  let afterMtime = 0;
+  try {
+    if (fs.existsSync(installLogPath)) {
+      afterMtime = fs.statSync(installLogPath).mtimeMs;
+    }
+  } catch {
+    // log not created — afterMtime stays 0
+  }
+  const installerLogTouched = afterMtime > beforeMtime;
+
+  return {
+    stdout,
+    stderr,
+    exitCode,
+    cleanupWarnings,
+    cachePopulated,
+    installerLogTouched,
+    tempDir,
+    tempCache,
+  };
 }
 
 /**
@@ -1310,6 +1472,10 @@ export async function setupCleanState(platform: 'claude' = 'claude'): Promise<vo
   // that installer reads FROM (not installed copies). Deleting them breaks installer.
   await fs.remove(appPath('.claude', 'settings.json'));
   await fs.remove(appPath('.claude', 'settings.json.bak'));
+  // Personal-pomogator FR-2 writes here; must be cleaned between tests otherwise
+  // self-guard tests (PERSO001_31) see pre-existing file and fail.
+  await fs.remove(appPath('.claude', 'settings.local.json'));
+  await fs.remove(appPath('.claude', 'settings.local.json.bak'));
   // Remove .dev-pomogator but skip .docker-status (Docker volume mount, EBUSY)
   const devPomDir = appPath('.dev-pomogator');
   if (await fs.pathExists(devPomDir)) {

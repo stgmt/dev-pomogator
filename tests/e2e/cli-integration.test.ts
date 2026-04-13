@@ -63,8 +63,8 @@ describe('CLI Integration: Claude Code', () => {
       expect(content.length).toBeGreaterThan(50);
     });
 
-    it('create-spec.md is installed', async () => {
-      const stat = await fs.stat(appPath('.claude', 'commands', 'create-spec.md'));
+    it('create-spec skill is installed', async () => {
+      const stat = await fs.stat(appPath('.claude', 'skills', 'create-spec', 'SKILL.md'));
       expect(stat.size).toBeGreaterThan(0);
     });
   });

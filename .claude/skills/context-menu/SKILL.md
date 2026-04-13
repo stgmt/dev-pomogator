@@ -217,11 +217,33 @@ Tell the user:
 
 ## Default Configuration
 
+The auto-generated NSS file (via `tools/context-menu/postinstall.ts`) creates **6 entries**: 3 standard + 3 in an "Admin" submenu. The admin submenu uses `admin=true` so Nilesoft Shell triggers UAC at click time, launching Claude Code elevated (required for Hyper-V cmdlets, ADK installs, modifying files in `C:\Program Files\`, etc.).
+
 ```nss
-item(type='dir|back' title='Claude Code (YOLO)' image='@app.dir\imports\claude-icon.ico' cmd='wt.exe' args='-d "@sel.path" -- cmd /k claude --dangerously-skip-permissions')
-item(type='dir|back' title='Claude Code (YOLO + TUI)' image='@app.dir\imports\claude-icon.ico' cmd='powershell.exe' args='-ExecutionPolicy Bypass -File "D:\repos\dev-pomogator\scripts\launch-claude-tui.ps1" -Yolo -ProjectDir "@sel.path"')
-item(type='dir|back' title='Claude Code' image='@app.dir\imports\claude-icon.ico' cmd='wt.exe' args='-d "@sel.path" -- cmd /k claude')
+// Standard (non-elevated) entries — for normal coding sessions
+item(type='dir|back' sep='top' title='Claude Code (YOLO + TUI)' image='@app.dir\imports\claude-icon.ico' cmd='powershell.exe' args='-ExecutionPolicy Bypass -File "<launchScript>" -Yolo -ProjectDir "@sel.dir"')
+item(type='dir|back' where=package.exists("WindowsTerminal") title='Claude Code (YOLO)' image='@app.dir\imports\claude-icon.ico' cmd='wt.exe' args='-d "@sel.dir\." -- cmd /k claude --dangerously-skip-permissions')
+item(type='dir|back' where=package.exists("WindowsTerminal") title='Claude Code' image='@app.dir\imports\claude-icon.ico' cmd='wt.exe' args='-d "@sel.dir\." -- cmd /k claude')
+
+// Elevated (admin) submenu — required for system-level operations
+menu(type='dir|back' sep='bottom' title='Claude Code (Admin)' image='@app.dir\imports\claude-icon.ico')
+{
+    item(admin=true title='Claude Code (YOLO + TUI)' image='@app.dir\imports\claude-icon.ico' cmd='powershell.exe' args='-ExecutionPolicy Bypass -File "<launchScript>" -Yolo -ProjectDir "@sel.dir"')
+    item(where=package.exists("WindowsTerminal") admin=true title='Claude Code (YOLO)' image='@app.dir\imports\claude-icon.ico' cmd='wt.exe' args='-d "@sel.dir\." -- cmd /k claude --dangerously-skip-permissions')
+    item(where=package.exists("WindowsTerminal") admin=true title='Claude Code' image='@app.dir\imports\claude-icon.ico' cmd='wt.exe' args='-d "@sel.dir\." -- cmd /k claude')
+}
 ```
+
+### When to use the Admin submenu
+
+Use the **Admin** entries whenever the upcoming Claude Code session will need to:
+- Run Hyper-V cmdlets (`Get-VM`, `New-VM`, `Restore-VMSnapshot`, `Checkpoint-VM`, `Set-VMFirmware`, etc.)
+- Install/modify software via `winget` system-wide
+- Edit files under `C:\Program Files\`, `C:\Windows\`, registry HKLM
+- Run `Enable-WindowsOptionalFeature`, `Stop-Service`, `Set-ItemProperty HKLM:\...`
+- Use `tools/hyperv-test-runner/` lifecycle scripts (vTPM, Secure Boot, snapshot ops)
+
+Standard entries are sufficient for normal coding, file editing in user space, and most non-system tasks.
 
 ## Troubleshooting
 

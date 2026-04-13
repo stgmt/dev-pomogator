@@ -1,8 +1,9 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import {
   runInstaller,
+  runInstallerViaNpx,
   homePath,
   appPath,
   getDevPomogatorConfig,
@@ -12,6 +13,7 @@ import {
   // Logging helpers
   getInstallLog,
   type InstallerResult,
+  type NpxInstallResult,
 } from './helpers';
 
 /**
@@ -59,23 +61,24 @@ describe('CORE003: Claude Code Installer', () => {
       const commandsDir = appPath('.claude', 'commands');
       const files = await fs.readdir(commandsDir);
       expect(files, 'commands dir should contain suggest-rules.md').toContain('suggest-rules.md');
-      expect(files, 'commands dir should contain create-spec.md').toContain('create-spec.md');
     });
 
     it('should install suggest-rules.md', async () => {
       const cmdPath = appPath('.claude', 'commands', 'suggest-rules.md');
       expect(await fs.pathExists(cmdPath)).toBe(true);
-      
+
       const content = await fs.readFile(cmdPath, 'utf-8');
       expect(content.length).toBeGreaterThan(100);
     });
 
-    it('should install create-spec.md', async () => {
-      const cmdPath = appPath('.claude', 'commands', 'create-spec.md');
-      expect(await fs.pathExists(cmdPath)).toBe(true);
+    it('should install create-spec as a skill (not slash command)', async () => {
+      const skillPath = appPath('.claude', 'skills', 'create-spec', 'SKILL.md');
+      expect(await fs.pathExists(skillPath)).toBe(true);
 
-      const content = await fs.readFile(cmdPath, 'utf-8');
+      const content = await fs.readFile(skillPath, 'utf-8');
       expect(content.length).toBeGreaterThan(100);
+      // Skill frontmatter must declare the create-spec name so the auto-trigger works
+      expect(content).toMatch(/^name:\s*create-spec/m);
     });
 
     it('should install configure-root-artifacts.md', async () => {
@@ -155,6 +158,60 @@ describe('CORE003: Claude Code Installer', () => {
       }
 
       expect(missing, `Rules missing after install: ${missing.join(', ')}`).toHaveLength(0);
+    });
+
+    // CORE021 — every source file in extensions/{ext}/tools/{tool}/ must be in toolFiles[].
+    // Catches the dkidyaev incident class: maintainer adds sibling helper, forgets manifest,
+    // installer copies it via fs.copy (full dir) but updater never syncs it (whitelist only).
+    it('CORE021: toolFiles[] manifest covers all source files in tool directories', async () => {
+      const extensionsDir = path.resolve(__dirname, '../../extensions');
+      const extensions = await fs.readdir(extensionsDir);
+      const errors: string[] = [];
+
+      for (const ext of extensions) {
+        if (ext === '_shared') continue; // _shared has its own .manifest.json (FR-12)
+        const manifestPath = path.join(extensionsDir, ext, 'extension.json');
+        if (!await fs.pathExists(manifestPath)) continue;
+
+        const manifest = await fs.readJson(manifestPath);
+        const tools = manifest.tools ?? {};
+        const toolFiles = manifest.toolFiles ?? {};
+
+        for (const [toolName, toolDirRel] of Object.entries(tools)) {
+          const absToolDir = path.join(extensionsDir, ext, toolDirRel as string);
+          if (!await fs.pathExists(absToolDir)) continue;
+
+          // Walk recursively for all source files
+          const realFiles: string[] = [];
+          const walk = async (dir: string): Promise<void> => {
+            const entries = await fs.readdir(dir, { withFileTypes: true });
+            for (const entry of entries) {
+              if (entry.name === 'node_modules' || entry.name === '__pycache__') continue;
+              if (entry.name.startsWith('.')) continue; // skip dotfiles
+              const full = path.join(dir, entry.name);
+              if (entry.isDirectory()) {
+                await walk(full);
+              } else if (/\.(ts|js|cjs|mjs|sh|py)$/.test(entry.name)) {
+                realFiles.push(full);
+              }
+            }
+          };
+          await walk(absToolDir);
+
+          const declared = (toolFiles[toolName] ?? []) as string[];
+          const declaredBasenames = new Set(declared.map((p: string) => path.basename(p)));
+
+          for (const realFile of realFiles) {
+            const basename = path.basename(realFile);
+            if (!declaredBasenames.has(basename)) {
+              const relativeToExt = path.relative(path.join(extensionsDir, ext), realFile).replace(/\\/g, '/');
+              errors.push(`${ext}/${toolName}: ${relativeToExt} not in toolFiles[]`);
+            }
+          }
+        }
+      }
+
+      expect(errors, `\nManifest gaps (updater would miss these files):\n${errors.join('\n')}`).toEqual([]);
     });
   });
 
@@ -397,9 +454,10 @@ describe('CORE003: Claude Code Installer', () => {
           for (const hook of entry.hooks) {
             if (hook.command?.includes('dev-pomogator/tools/')) {
               checkedCount++;
-              // TypeScript hooks must use tsx-runner wrapper; bash hooks use direct bash invocation
+              // TypeScript hooks must use tsx-runner wrapper; bash hooks use direct bash invocation.
+              // Post personal-pomogator FR-6: wrapper is now tsx-runner-bootstrap.cjs which require()s tsx-runner.js.
               if (hook.command.includes('.ts')) {
-                expect(hook.command).toContain('tsx-runner.js');
+                expect(hook.command).toMatch(/tsx-runner(-bootstrap\.cjs|\.js)/);
               }
               // Must use relative .dev-pomogator/tools/ path (portable across OS)
               expect(hook.command).toContain('.dev-pomogator/tools/');
@@ -455,7 +513,8 @@ describe('CORE003: Claude Code Installer', () => {
       );
       expect(phaseGateEntry).toBeDefined();
       expect(phaseGateEntry.matcher).toBe('Write|Edit');
-      expect(phaseGateEntry.hooks[0].command).toContain('tsx-runner.js');
+      // Post personal-pomogator FR-6: wrapper is tsx-runner-bootstrap.cjs (which require()s tsx-runner.js).
+      expect(phaseGateEntry.hooks[0].command).toMatch(/tsx-runner(-bootstrap\.cjs|\.js)/);
       expect(phaseGateEntry.hooks[0].command).toContain('phase-gate.ts');
     });
   });
@@ -508,9 +567,9 @@ describe('PLUGIN001-Claude: Suggest-rules Extension for Claude Code', () => {
 });
 
 describe('PLUGIN003-Claude: Specs-workflow Extension for Claude Code', () => {
-  it('should install create-spec.md in .claude/commands/', async () => {
-    const cmdPath = appPath('.claude', 'commands', 'create-spec.md');
-    expect(await fs.pathExists(cmdPath)).toBe(true);
+  it('should install create-spec as .claude/skills/create-spec/SKILL.md', async () => {
+    const skillPath = appPath('.claude', 'skills', 'create-spec', 'SKILL.md');
+    expect(await fs.pathExists(skillPath)).toBe(true);
   });
 
   it('should install specs-management.md rule', async () => {
@@ -905,8 +964,8 @@ describe('Scenario: Auto-update migrates old-format hooks to portable format', (
     // Should no longer contain bare "npx tsx .dev-pomogator/"
     expect(migratedHook.command).not.toMatch(/\bnpx\s+tsx\s+\.dev-pomogator/);
 
-    // Should use tsx-runner portable format
-    expect(migratedHook.command).toContain('tsx-runner.js');
+    // Should use tsx-runner portable format (via bootstrap wrapper post personal-pomogator FR-6)
+    expect(migratedHook.command).toMatch(/tsx-runner(-bootstrap\.cjs|\.js)/);
 
     // Should use portable relative path (no OS-specific absolute prefix)
     expect(migratedHook.command).toContain('.dev-pomogator/tools/');
@@ -920,6 +979,57 @@ describe('CORE003: Visible installer output', () => {
     expect(installerResult.logs).toContain('Installing...');
     expect(installerResult.logs).toContain('Installation complete');
     expect(installerResult.exitCode).toBe(0);
+  });
+});
+
+// @feature15 — Personal-mode (non-dogfood) parallel tests
+// These tests run installer with DEV_POMOGATOR_SKIP_SELF_GUARD=1 to validate
+// the non-dogfood code branch (settings.local.json routing). Without this block
+// the personal-pomogator architecture would only be tested in dogfood mode
+// (where settings.json is still used) — leaving the production code path for
+// target projects (smarts-like) untested in CI.
+describe('CORE003: Personal-mode non-dogfood path', () => {
+  let nonDogfoodResult: InstallerResult;
+
+  beforeAll(async () => {
+    await setupCleanState('claude');
+    nonDogfoodResult = await runInstaller('--claude --all', { DEV_POMOGATOR_SKIP_SELF_GUARD: '1' });
+  });
+
+  // Restore dogfood state for downstream describe blocks (CORE019, etc.)
+  // that rely on .claude/settings.json being present.
+  afterAll(async () => {
+    await setupCleanState('claude');
+    await runInstaller('--claude --all');
+  });
+
+  it('CORE003_15: writes hooks to .claude/settings.local.json (not .claude/settings.json)', async () => {
+    expect(nonDogfoodResult.exitCode).toBe(0);
+    const localPath = appPath('.claude', 'settings.local.json');
+    expect(await fs.pathExists(localPath)).toBe(true);
+    const local = await fs.readJson(localPath);
+    expect(JSON.stringify(local.hooks)).toContain('tsx-runner-bootstrap.cjs');
+  });
+
+  it('CORE003_16: hook commands use tsx-runner-bootstrap.cjs wrapper (FR-6)', async () => {
+    const local = await fs.readJson(appPath('.claude', 'settings.local.json'));
+    const allCmds = JSON.stringify(local.hooks);
+    expect(allCmds).toContain('tsx-runner-bootstrap.cjs');
+  });
+
+  it('CORE003_17: .gitignore contains managed marker block (FR-1)', async () => {
+    const gitignore = await fs.readFile(appPath('.gitignore'), 'utf-8');
+    expect(gitignore).toContain('# >>> dev-pomogator (managed');
+    expect(gitignore).toContain('# <<< dev-pomogator (managed');
+  });
+
+  it('CORE003_18: settings.json does not gain dev-pomogator entries (team-shared file untouched)', async () => {
+    const settingsPath = appPath('.claude', 'settings.json');
+    if (await fs.pathExists(settingsPath)) {
+      const content = JSON.stringify(await fs.readJson(settingsPath));
+      expect(content).not.toContain('tsx-runner');
+      expect(content).not.toContain('.dev-pomogator/tools/');
+    }
   });
 });
 
@@ -1099,3 +1209,139 @@ describe('CORE019: Claude-mem Integration', () => {
     expect(content).toContain('claude-mem/hooks');
   });
 });
+
+// ============================================================================
+// CORE003_18 / CORE003_19 — Silent install regression coverage
+// See .specs/install-diagnostics/ for full bug evidence and fix recommendations.
+// ============================================================================
+
+// @feature18 — CORE003_18 Linux regression test for npx install
+//
+// ⚠ TDD RED on current github HEAD (cad11b2): same as CORE003_19, this test
+// FAILS until missing source files are committed:
+//   - src/utils/path-safety.ts (untracked locally)
+//   - src/installer/plugin-json.ts (untracked locally)
+//   - installedShared field in src/config/schema.ts (uncommitted change)
+// These are referenced from src/updater/index.ts and src/updater/shared-sync.ts
+// → tsc fails during prepare → npm install exits 2 → npx silently propagates.
+// See .specs/install-diagnostics/RESEARCH.md for full evidence.
+describe.skipIf(process.platform !== 'linux')(
+  'CORE003_18: npx install succeeds end-to-end on Linux',
+  () => {
+    let result: NpxInstallResult;
+
+    beforeAll(async () => {
+      result = await runInstallerViaNpx('--claude --all', { fresh: true });
+    });
+
+    afterAll(async () => {
+      if (result?.tempDir) {
+        await fs.remove(result.tempDir).catch(() => {});
+      }
+      if (result?.tempCache) {
+        await fs.remove(result.tempCache).catch(() => {});
+      }
+    });
+
+    // @feature18
+    it('should exit with code 0 (RED until untracked files committed — see .specs/install-diagnostics/RESEARCH.md)', () => {
+      expect(
+        result.exitCode,
+        `npx exit ${result.exitCode}. Bug: see .specs/install-diagnostics/RESEARCH.md`,
+      ).toBe(0);
+    });
+
+    // @feature18
+    it('should print rocket banner to stdout', () => {
+      expect(result.stdout).toContain('dev-pomogator installer (non-interactive)');
+    });
+
+    // @feature18
+    it('should print completion message', () => {
+      expect(result.stdout).toMatch(/Installation complete|✨/);
+    });
+
+    // @feature18
+    it('should touch ~/.dev-pomogator/logs/install.log (proves installer ran)', () => {
+      expect(result.installerLogTouched).toBe(true);
+    });
+
+    // @feature18
+    it('should populate _npx cache with dev-pomogator package', () => {
+      expect(result.cachePopulated).toBe(true);
+    });
+
+    // @feature18
+    it('should not have npm warn cleanup messages', () => {
+      expect(result.cleanupWarnings).toHaveLength(0);
+    });
+  },
+);
+
+// @feature19 — CORE003_19 Windows TDD red regression test
+//
+// ⚠ This test is FAILING-BY-DESIGN on Windows hosts until the silent install
+// bug is fixed (npm reify EPERM on @inquirer/external-editor cleanup).
+//
+// See .specs/install-diagnostics/RESEARCH.md for full bug evidence,
+// reproduction steps, and recommended fixes (git clone source install,
+// npm install -g, etc).
+//
+// When the bug is fixed (upstream npm patch or local workaround), this test
+// will turn green automatically — assertions are identical to CORE003_18
+// (Linux control test).
+describe.skipIf(process.platform !== 'win32')(
+  'CORE003_19: npx install succeeds end-to-end on Windows',
+  () => {
+    let result: NpxInstallResult;
+
+    beforeAll(async () => {
+      result = await runInstallerViaNpx('--claude --all', { fresh: true });
+    });
+
+    afterAll(async () => {
+      if (result?.tempDir) {
+        await fs.remove(result.tempDir).catch(() => {});
+      }
+      if (result?.tempCache) {
+        await fs.remove(result.tempCache).catch(() => {});
+      }
+    });
+
+    // @feature19
+    it('should exit with code 0 (RED until EPERM bug fixed — see .specs/install-diagnostics/RESEARCH.md)', () => {
+      expect(
+        result.exitCode,
+        `npx exit ${result.exitCode}, stderr=${result.stderr.slice(0, 300)}. Bug: see .specs/install-diagnostics/RESEARCH.md`,
+      ).toBe(0);
+    });
+
+    // @feature19
+    it('should print rocket banner to stdout (RED until bug fixed)', () => {
+      expect(result.stdout).toContain('dev-pomogator installer (non-interactive)');
+    });
+
+    // @feature19
+    it('should print completion message (RED until bug fixed)', () => {
+      expect(result.stdout).toMatch(/Installation complete|✨/);
+    });
+
+    // @feature19
+    it('should touch ~/.dev-pomogator/logs/install.log (RED until bug fixed)', () => {
+      expect(result.installerLogTouched).toBe(true);
+    });
+
+    // @feature19
+    it('should populate _npx cache with dev-pomogator package (RED until bug fixed)', () => {
+      expect(result.cachePopulated).toBe(true);
+    });
+
+    // @feature19
+    it('should not have npm warn cleanup messages (RED until upstream npm/Windows fix)', () => {
+      expect(
+        result.cleanupWarnings,
+        `Cleanup warnings indicate npm reify EPERM bug. See .specs/install-diagnostics/RESEARCH.md`,
+      ).toHaveLength(0);
+    });
+  },
+);

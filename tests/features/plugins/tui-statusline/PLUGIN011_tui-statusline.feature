@@ -335,3 +335,112 @@ Feature: PLUGIN011_tui-statusline
     Then "statusline_session_start.ts" should exist
     And "test_runner_wrapper.cjs" should exist
     And "status_types.ts" should exist
+
+  # ===========================================
+  # @feature14 — Docker Session Propagation
+  # ===========================================
+
+  # @feature14
+  Scenario: PLUGIN011_82 docker-test.sh reads session.env and passes SESSION to container
+    Given session.env exists at ".dev-pomogator/.test-status/session.env" with session "abc12345"
+    When docker-test.sh constructs the docker compose run command
+    Then the command should include "-e TEST_STATUSLINE_SESSION=abc12345"
+
+  # @feature14
+  Scenario: PLUGIN011_83 docker-test.sh proceeds without SESSION when session.env missing
+    Given session.env does not exist at ".dev-pomogator/.test-status/session.env"
+    When docker-test.sh constructs the docker compose run command
+    Then the command should NOT include "-e TEST_STATUSLINE_SESSION"
+    And docker-test.sh should exit successfully
+
+  # @feature14
+  Scenario: PLUGIN011_84 CJS wrapper reads session.env from docker-status fallback
+    Given TEST_STATUSLINE_SESSION is not set in environment
+    And session.env exists at ".dev-pomogator/.docker-status/session.env" with session "abc12345"
+    When CJS wrapper runs
+    Then wrapper should set TEST_STATUSLINE_SESSION to "abc12345"
+
+  # @feature14
+  Scenario: PLUGIN011_85 Wrapper produces YAML inside Docker when SESSION propagated
+    Given TEST_STATUSLINE_SESSION is set to "abc12345"
+    And TEST_STATUS_DIR is set to ".dev-pomogator/.docker-status"
+    When wrapper runs a test command
+    Then YAML status file should exist at ".dev-pomogator/.docker-status/status.abc12345.yaml"
+
+  # ===========================================
+  # @feature15 — Dual-Directory YAML Reader
+  # ===========================================
+
+  # @feature15
+  Scenario: PLUGIN011_86 YamlReader falls back to docker-status directory
+    Given primary status file does not exist at ".test-status/status.abc12345.yaml"
+    And a status file exists at ".docker-status/status.abc12345.yaml"
+    When YamlReader.check() is called with fallback dirs
+    Then it should return TestStatus from the docker-status file
+
+  # @feature15
+  Scenario: PLUGIN011_87 YamlReader prefers freshest file across directories
+    Given a status file exists in ".test-status/" with mtime 10 seconds ago
+    And a status file exists in ".docker-status/" with mtime 2 seconds ago
+    When YamlReader.check() is called with fallback dirs
+    Then it should return TestStatus from the docker-status file
+
+  # @feature15
+  Scenario: PLUGIN011_88 YamlReader returns None when no files in any directory
+    Given no status files exist in ".test-status/" or ".docker-status/"
+    When YamlReader.check() is called with fallback dirs
+    Then it should return None
+
+  # @feature15
+  Scenario: PLUGIN011_89 Launcher passes docker-status as fallback directory
+    Given tui-test-runner launcher is invoked with a status file path in ".test-status/"
+    When launcher builds TUI launch arguments
+    Then arguments should include "--fallback-dir" with ".docker-status" path
+
+  # ===========================================
+  # @feature16 — TUI Stop Hook (Session Cleanup)
+  # ===========================================
+
+  # @feature16
+  Scenario: PLUGIN011_90 Stop hook kills TUI process from tui.pid
+    Given tui.pid exists in ".test-status/" with a running process PID
+    When Stop hook is triggered
+    Then the TUI process should receive termination signal
+    And tui.pid file should be removed
+
+  # @feature16
+  Scenario: PLUGIN011_91 Stop hook cleans stale tui.pid with dead process
+    Given tui.pid exists in ".test-status/" with a dead process PID
+    When Stop hook is triggered
+    Then tui.pid file should be removed
+    And hook should exit with code 0
+
+  # @feature16
+  Scenario: PLUGIN011_92 Stop hook exits cleanly when tui.pid missing
+    Given tui.pid does not exist in any status directory
+    When Stop hook is triggered
+    Then hook should exit with code 0
+
+  # @feature16
+  Scenario: PLUGIN011_93 SessionStart hook kills stale TUI from previous session
+    Given tui.pid exists from a previous session with a running process
+    When SessionStart hook is triggered for a new session
+    Then old TUI process should be terminated
+    And new session should proceed normally
+
+  # ===========================================
+  # @feature14 — Docker Wrapper Wrapping
+  # ===========================================
+
+  # @feature14
+  Scenario: PLUGIN011_94 docker-test.sh wraps custom args with wrapper
+    Given docker-test.sh receives custom test arguments
+    When constructing the docker compose run command
+    Then test_runner_wrapper.cjs SHALL be prepended to the arguments
+    And YAML status file SHALL be written during the test run
+
+  # @feature13
+  Scenario: PLUGIN011_95 Discovery count respects file filter args
+    Given wrapper receives command args with specific test file paths
+    When discoverTestCount runs with those file filters
+    Then discovery total SHALL match filtered count not full project total

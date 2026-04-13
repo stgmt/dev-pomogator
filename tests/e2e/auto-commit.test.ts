@@ -172,8 +172,10 @@ describe('PLUGIN006: Auto-Commit', () => {
 
   describe('Integration: stop hook', () => {
     it('should exit 0 and skip when no API key (integration)', () => {
+      // Use installed location: source path lacks _shared/ neighbor.
+      // Installer copies extensions/_shared/ → .dev-pomogator/tools/_shared/.
       const result = runTsx(
-        'extensions/auto-commit/tools/auto-commit/auto_commit_stop.ts',
+        '.dev-pomogator/tools/auto-commit/auto_commit_stop.ts',
         { input: { conversation_id: 'test', workspace_roots: [testRepoPath] } },
       );
       expect(result.status).toBe(0);

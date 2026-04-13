@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "featureSlug": "install-diagnostics",
+  "createdAt": "2026-04-09T10:30:09.808Z",
+  "currentPhase": "Complete",
+  "phases": {
+    "Discovery": {
+      "completedAt": "2026-04-09T10:34:52.576Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-09T10:34:52.576Z"
+    },
+    "Context": {
+      "completedAt": "2026-04-09T10:34:52.576Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-09T10:35:18.768Z"
+    },
+    "Requirements": {
+      "completedAt": "2026-04-09T10:39:41.907Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-09T10:39:41.907Z"
+    },
+    "Finalization": {
+      "completedAt": "2026-04-09T10:50:33.198Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-09T10:50:33.198Z"
+    }
+  }
+}

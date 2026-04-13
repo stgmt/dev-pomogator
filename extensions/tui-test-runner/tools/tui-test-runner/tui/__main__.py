@@ -64,6 +64,7 @@ def main() -> None:
     parser.add_argument("--run", action="store_true", help="Auto-run tests on startup")
     parser.add_argument("--filter", default="", help="Initial test name filter")
     parser.add_argument("--no-single-instance", action="store_true", help="Allow multiple instances")
+    parser.add_argument("--fallback-dir", action="append", default=[], help="Fallback dir(s) for YAML status file lookup")
     args = parser.parse_args()
 
     lock_file = get_lock_file(args.status_file)
@@ -88,6 +89,7 @@ def main() -> None:
             framework=args.framework,
             poll_interval=args.poll_interval,
             auto_run=args.run,
+            fallback_dirs=args.fallback_dir,
         )
         app.run()
     finally:

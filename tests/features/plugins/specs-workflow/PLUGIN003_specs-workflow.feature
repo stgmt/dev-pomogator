@@ -7,6 +7,12 @@ Feature: PLUGIN003 Specs Workflow Extension
     Given dev-pomogator is installed
     And specs-workflow extension is enabled
 
+  Scenario: Skill file is installed for Claude Code
+    When dev-pomogator installs specs-workflow for Claude Code
+    Then create-spec should exist at PROJECT/.claude/skills/create-spec/SKILL.md
+    And file content should not be empty
+    And SKILL.md frontmatter should contain "name: create-spec"
+
   Scenario: Command file is installed for Cursor
     When dev-pomogator installs specs-workflow for Cursor
     Then create-spec.md should exist in PROJECT/.cursor/commands/

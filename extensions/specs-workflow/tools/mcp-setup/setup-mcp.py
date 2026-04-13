@@ -39,11 +39,22 @@ def get_global_config_path(platform: str) -> Path:
 
 
 def get_config_path(platform: str) -> Tuple[Path, str]:
-    """Resolve MCP config path and scope (project/global)."""
-    project_path = get_project_config_path(platform)
-    if project_path:
-        return project_path, "project"
-    return get_global_config_path(platform), "global"
+    """Resolve MCP config path — always global for personal-pomogator mode.
+
+    Personal-pomogator FR-9: never write to project `.mcp.json` even if it exists.
+    Writing to project `.mcp.json` would mix our Context7/Octocode servers with
+    user's potential secrets (JIRA tokens, API keys) that already live there —
+    increasing the risk of `git add .` leaking credentials.
+
+    Our servers go to the user-global config (~/.claude.json or ~/.cursor/mcp.json),
+    where they stay personal and separate from any team-shared project MCP config.
+
+    The `get_project_config_path` function is preserved for FR-10 secret detection,
+    just not used for writes anymore.
+    """
+    global_path = get_global_config_path(platform)
+    print(f"[INFO] Writing MCP servers to global config ({global_path}) — personal mode")
+    return global_path, "global"
 
 
 def get_backup_path(config_path: Path) -> Path:
@@ -217,6 +228,10 @@ def prefetch_package(package: str) -> None:
     """Pre-download package via npm install so npx doesn't need to fetch at runtime."""
     if not package:
         raise RuntimeError("Missing package name for MCP server")
+    # Skip npm install in Docker — no registry access, causes indefinite hang
+    if os.environ.get("DEV_POMOGATOR_TEST_IN_DOCKER") == "1":
+        print(f"  [NPM] Skipped prefetch in Docker: {package}")
+        return
     npm_path = shutil.which("npm")
     if not npm_path:
         raise RuntimeError("npm not found in PATH")

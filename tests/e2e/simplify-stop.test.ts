@@ -7,7 +7,12 @@ import { runTsx, appPath } from './helpers';
 // Helpers
 // ---------------------------------------------------------------------------
 
-const HOOK_PATH = 'extensions/auto-simplify/tools/auto-simplify/simplify_stop.ts';
+// Use INSTALLED location (.dev-pomogator/tools/) — source path
+// `extensions/auto-simplify/tools/auto-simplify/` lacks `_shared/` neighbor
+// because installer copies extensions/_shared/ → .dev-pomogator/tools/_shared/.
+// Per .claude/rules/docker-no-git-repo.md: hooks use git, so test env runs them
+// from installed location which has the _shared sibling resolved.
+const HOOK_PATH = '.dev-pomogator/tools/auto-simplify/simplify_stop.ts';
 const MARKER_PATH = '.dev-pomogator/.simplify-marker.json';
 
 interface HookResult {

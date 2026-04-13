@@ -145,12 +145,47 @@ const DISCOVERY_COMMANDS: Partial<Record<TestFramework, { cmd: string[]; count: 
   },
 };
 
-function discoverTestCount(framework: TestFramework, projectRoot: string): number {
+/**
+ * Extract file filter args from the test command (e.g. ['npx','vitest','run','file1.ts'] → ['file1.ts']).
+ * Non-flag args after the framework subcommand (run, list, test, etc.) are file filters.
+ */
+function extractFileFilters(commandArgs: string[]): string[] {
+  // Skip command name (npx) and framework binary (vitest) and subcommand (run)
+  // Take non-flag args that look like file paths
+  const filters: string[] = [];
+  let pastSubcommand = false;
+  for (let i = 0; i < commandArgs.length; i++) {
+    const arg = commandArgs[i];
+    // Skip known prefixes: npx, framework binary, subcommands
+    if (i < 2) continue;
+    if (!pastSubcommand && ['run', 'list', 'test', '--', '-m'].includes(arg)) {
+      pastSubcommand = true;
+      continue;
+    }
+    // Skip flags and their values
+    if (arg.startsWith('-')) {
+      // Skip flag value if it's a key-value flag (e.g. -t "filter")
+      if (i + 1 < commandArgs.length && !commandArgs[i + 1].startsWith('-')) i++;
+      continue;
+    }
+    // Remaining non-flag args are file filters
+    if (arg.includes('/') || arg.endsWith('.ts') || arg.endsWith('.js') || arg.endsWith('.py') || arg.endsWith('.rs')) {
+      filters.push(arg);
+    }
+  }
+  return filters;
+}
+
+function discoverTestCount(framework: TestFramework, projectRoot: string, commandArgs: string[] = []): number {
   const config = DISCOVERY_COMMANDS[framework];
   if (!config) return 0;
 
+  // Pass file filter args to discovery so total matches actual filtered run
+  const fileFilters = extractFileFilters(commandArgs);
+  const discoveryCmd = [...config.cmd, ...fileFilters];
+
   try {
-    const result = crossSpawn.sync(config.cmd[0], config.cmd.slice(1), {
+    const result = crossSpawn.sync(discoveryCmd[0], discoveryCmd.slice(1), {
       cwd: projectRoot,
       encoding: 'utf-8',
       timeout: 60000,
@@ -213,8 +248,10 @@ async function main(): Promise<number> {
   fs.mkdirSync(statusDir, { recursive: true });
   fs.writeFileSync(logFile, '', 'utf-8');
 
-  const skipDiscovery = process.env.TEST_SKIP_DISCOVERY === '1';
-  const discoveryTotal = skipDiscovery ? 0 : discoverTestCount(framework, projectRoot);
+  // Skip discovery in Docker ENTRYPOINT mode — vitest list conflicts with vitest run in same container.
+  // Discovery total will be 0; wrapper relies on adapter-parsed counts instead.
+  const skipDiscovery = process.env.TEST_SKIP_DISCOVERY === '1' || process.env.DEV_POMOGATOR_TEST_IN_DOCKER === '1';
+  const discoveryTotal = skipDiscovery ? 0 : discoverTestCount(framework, projectRoot, parsed.commandArgs);
 
   const writer = new YamlWriter(statusFile, prefix, framework, logFileForYaml, 1000, process.pid);
   if (discoveryTotal > 0) {
@@ -282,9 +319,13 @@ async function main(): Promise<number> {
   const logStream = fs.createWriteStream(logFile, { flags: 'a' });
   const child = crossSpawn(parsed.commandArgs[0], parsed.commandArgs.slice(1), {
     cwd: projectRoot,
-    stdio: ['inherit', 'pipe', 'pipe'],
+    stdio: ['pipe', 'pipe', 'pipe'],
     env: { ...process.env, ...parsed.childEnv },
   });
+
+  // Close stdin immediately — child tests spawn hooks that call readStdin(),
+  // and inherited stdin would hang waiting for input that never comes.
+  child.stdin?.end();
 
   // Heartbeat: update YAML every 2s even when no test output arrives (Docker buffering workaround)
   const heartbeat = setInterval(() => {

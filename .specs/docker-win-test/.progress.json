@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "featureSlug": "docker-win-test",
+  "createdAt": "2026-04-10T16:33:57.357Z",
+  "currentPhase": "Complete",
+  "phases": {
+    "Discovery": {
+      "completedAt": "2026-04-10T16:37:32.588Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-10T16:37:32.588Z"
+    },
+    "Context": {
+      "completedAt": "2026-04-10T16:38:21.156Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-10T16:38:21.155Z"
+    },
+    "Requirements": {
+      "completedAt": "2026-04-10T16:40:46.024Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-10T16:40:46.023Z"
+    },
+    "Finalization": {
+      "completedAt": "2026-04-10T16:41:51.963Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-10T16:41:51.961Z"
+    }
+  }
+}
