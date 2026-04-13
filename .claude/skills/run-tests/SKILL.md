@@ -3,7 +3,7 @@ name: run-tests
 description: >
   Centralized test runner. Auto-detects framework (vitest/jest/pytest/dotnet/rust/go),
   runs tests through wrapper for statusline & TUI monitoring. Use instead of direct test commands.
-allowed-tools: Read, Bash, Glob
+allowed-tools: Read, Bash, Glob, Monitor
 ---
 
 # /run-tests — Centralized Test Runner
@@ -124,9 +124,40 @@ bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.cjs --framework <d
 
 Run the built command using the Bash tool.
 
+### Step 3.5: Start Monitor for real-time notifications
+
+After launching tests with `run_in_background: true`, start a Monitor to get real-time failure notifications and progress updates in the chat. This lets Claude react to failures immediately instead of waiting for the entire test suite to finish.
+
+```
+Monitor(
+  command: "bash .dev-pomogator/tools/tui-test-runner/test-monitor.sh",
+  description: "Test progress: failures and completion",
+  persistent: true,
+  timeout_ms: 1800000
+)
+```
+
+The monitor script polls the YAML status file and emits filtered events:
+- `❌ FAIL: <test name>` — instant, on each new failure
+- `📊 N/T (P%) — X✅ Y❌` — every 30s when counts change
+- `⏳ Still running: X✅ — no new results for Ns` — alive but no progress
+- `⚠️ STALL: YAML not updated for Ns` — heartbeat dead, tests may be hung
+- `✅/❌ DONE: summary` — terminal state, monitor auto-exits
+
+**When to use Monitor:** Always use Monitor when running tests in background. It adds zero overhead (read-only YAML polling) and enables Claude to start investigating failures while remaining tests are still running.
+
+**When NOT to use Monitor:** Skip if running a quick single-test filter that completes in <30 seconds — the Bash completion notification is sufficient.
+
+**Docker tests:** The monitor auto-detects `.dev-pomogator/.docker-status/` (Docker volume-mounted YAML). Pass the directory explicitly if needed:
+```
+command: "bash .dev-pomogator/tools/tui-test-runner/test-monitor.sh .dev-pomogator/.docker-status"
+```
+
+**On Monitor timeout:** If the Monitor times out before tests finish, re-arm it — the startup snapshot logic seamlessly picks up the active run from current state.
+
 ### Step 4: Report results
 
-After execution completes, report:
+After execution completes (or when Monitor emits DONE), report:
 - Exit code (0 = passed, non-zero = failed)
 - Framework detected
 - If YAML status file exists, read final status for summary (passed/failed/skipped counts)
