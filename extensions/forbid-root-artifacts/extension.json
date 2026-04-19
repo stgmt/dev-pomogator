@@ -29,5 +29,9 @@
     "command": "python3 .dev-pomogator/tools/forbid-root-artifacts/deps-install.py && python3 .dev-pomogator/tools/forbid-root-artifacts/configure.py",
     "interactive": true,
     "skipInCI": true
+  },
+  "dependencies": {
+    "binaries": ["python3"],
+    "pythonPackages": ["yaml", "simple_term_menu"]
   }
 }

@@ -58,6 +58,47 @@ Available plugins:
     process.exit(0);
   }
 
+  if (args.includes('--doctor')) {
+    const { runDoctor, LockHeldError } = await import('./doctor/index.js');
+    const { formatChalk, formatJson, buildHookOutput, exitCodeFor } = await import(
+      './doctor/reporter.js'
+    );
+    const { maybeOfferReinstall } = await import('./doctor/reinstall.js');
+    const json = args.includes('--json');
+    const quiet = args.includes('--quiet');
+    const extensionArg = args.find((a) => a.startsWith('--extension='));
+    const extension = extensionArg ? extensionArg.replace('--extension=', '') : undefined;
+    try {
+      const report = await runDoctor({
+        interactive: !json && !quiet,
+        json,
+        quiet,
+        extension,
+      });
+      if (quiet) {
+        process.stdout.write(JSON.stringify(buildHookOutput(report)) + '\n');
+        process.exit(0);
+      }
+      if (json) {
+        process.stdout.write(formatJson(report) + '\n');
+        process.exit(exitCodeFor(report));
+      }
+      console.log(formatChalk(report));
+      if (report.reinstallableIssues.length > 0) {
+        await maybeOfferReinstall(report);
+      }
+      process.exit(exitCodeFor(report));
+    } catch (err: unknown) {
+      if (err instanceof LockHeldError) {
+        console.error(err.message);
+        process.exit(2);
+      }
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`doctor failed: ${msg}`);
+      process.exit(2);
+    }
+  }
+
   // Personal-pomogator FR-8: per-project uninstall command
   // Usage: npx dev-pomogator uninstall --project [--dry-run]
   // Accept any arg position for `uninstall` token (less brittle than args[0] check).

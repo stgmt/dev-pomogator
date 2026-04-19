@@ -19,6 +19,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `./extensions/specs-workflow/tools/specs-generator/analyze-features.ts -Format text` | Analyze .feature file patterns |
 | `/reflect` | Просмотр и управление очередью автозахваченных сигналов |
 | `/simplify` | Стоковый Claude Code review (код + спеки + тесты через правило simplify-extended, auto-trigger на Stop) |
+| `/pomogator-doctor` или `dev-pomogator --doctor` | Диагностика окружения: 17 проверок в 🟢🟡🔴 группах + предложение переустановки при broken install |
 
 ## Architecture
 
@@ -53,6 +54,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | self-improving | Real-time детекция ситуаций для новых rules/skills/hooks (триггеры T2/T3/T4/T6 + automation hints) | `.claude/rules/suggest-rules/self-improving.md` |
 | simplify-extended | При /simplify проверять спеки (нечёткие FR, reuse) и тесты (setup duplication, naming); различать systemic vs one-off issues (extension: auto-simplify) | `.claude/rules/auto-simplify/simplify-extended.md` |
 | tui-pilot-tests | TUI тесты через Textual Pilot API; запрет file-inspection тестов для виджетов | `.claude/rules/tui-pilot-tests.md` |
+| reqnroll-ce-slash | Reqnroll 2.x авто-детектит CE vs regex; `/` в паттерне без regex-маркеров = ошибка парсера; hook `reqnroll-ce-guard` блокирует Write/Edit `.cs` | `.claude/rules/reqnroll-ce-guard/reqnroll-ce-slash.md` |
 | extension-test-quality | Тесты расширений: 1:1 mapping test↔feature, запрет inline-копий, naming DOMAIN_CODE_NN, import guard | `.claude/rules/extension-test-quality.md` |
 | no-test-helper-duplication | Запрет дублирования helpers в тестах; shared → `tests/e2e/helpers.ts` (extension: test-quality) | `.claude/rules/test-quality/no-test-helper-duplication.md` |
 | verify-render-target | Перед редактированием render/statusline кода — проверить какой файл реально вызывается (compact_bar.py, не statusline_render.cjs) | `.claude/rules/pomogator/verify-render-target.md` |
