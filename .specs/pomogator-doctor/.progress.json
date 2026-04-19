@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "featureSlug": "pomogator-doctor",
+  "createdAt": "2026-04-18T14:04:50.242Z",
+  "currentPhase": "Complete",
+  "phases": {
+    "Discovery": {
+      "completedAt": "2026-04-18T18:20:28.092Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-18T18:41:40.565Z"
+    },
+    "Context": {
+      "completedAt": "2026-04-18T18:20:28.092Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-18T18:41:56.391Z"
+    },
+    "Requirements": {
+      "completedAt": "2026-04-18T18:55:12.830Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-18T18:55:12.830Z"
+    },
+    "Finalization": {
+      "completedAt": "2026-04-18T19:06:03.904Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-18T19:06:03.903Z"
+    }
+  }
+}

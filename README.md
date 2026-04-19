@@ -92,6 +92,33 @@ npx github:stgmt/dev-pomogator uninstall --project [--dry-run]
 - User-модификации managed-файлов бэкапятся в `.dev-pomogator/.user-overrides/` перед перезаписью
 - Hooks обновляются через smart merge — пользовательские хуки не затрагиваются
 
+## Diagnostic Doctor
+
+Команда `/pomogator-doctor` (или `dev-pomogator --doctor`) проверяет окружение после clone:
+
+- 🟢 **Self-sufficient**: Node, Git, `~/.dev-pomogator/` структура, hooks registry, version match, managed gitignore
+- 🟡 **Needs env vars**: `AUTO_COMMIT_API_KEY` и другие required envRequirements (ищет в `.env` и `.claude/settings.local.json → env`)
+- 🔴 **Needs external deps**: Bun, Python + pip packages, Docker, MCP servers (с Full probe — реальное подключение)
+
+Examples:
+
+```bash
+# Interactive в терминале с chalk table
+dev-pomogator --doctor
+
+# CI mode: JSON к stdout, exit 0/1/2 по severity, env values redacted
+dev-pomogator --doctor --json
+
+# Только один extension
+dev-pomogator --doctor --extension=claude-mem-health
+
+# SessionStart hook запустит автоматически `dev-pomogator --doctor --quiet`
+```
+
+При обнаружении проблем, решаемых переустановкой (missing `~/.dev-pomogator/tools/`, stale hooks, version mismatch, broken plugin-loader), команда спросит "Run `npx dev-pomogator` now?" — и сама спавнит installer при согласии.
+
+**Non-reinstallable проблемы** (missing API keys, binaries) переустановка НЕ починит — для них Doctor показывает actionable hints и ссылается на `.env.example`.
+
 ## Интеграции
 
 - [claude-mem](https://github.com/thedotmack/claude-mem): трекинг сессий, контекст, суммаризация. LLM-токен можно взять на `aipomogator.ru`.

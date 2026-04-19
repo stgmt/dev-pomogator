@@ -17,5 +17,8 @@
     "claude": {
       "SessionStart": "npx tsx .dev-pomogator/tools/bun-oom-guard/patch_bun_runner.ts"
     }
+  },
+  "dependencies": {
+    "binaries": ["bun"]
   }
 }

@@ -1,0 +1,26 @@
+{
+  "name": "pomogator-doctor",
+  "version": "1.0.0",
+  "description": "Environment diagnostic: Node/Git/Bun/Python/MCP/hooks checks with reinstall offer",
+  "platforms": ["claude"],
+  "category": "automation",
+  "commandFiles": {
+    "claude": [
+      ".claude/commands/pomogator-doctor.md"
+    ]
+  },
+  "tools": {
+    "pomogator-doctor": "tools/pomogator-doctor"
+  },
+  "toolFiles": {
+    "pomogator-doctor": [
+      ".dev-pomogator/tools/pomogator-doctor/doctor-hook.ts"
+    ]
+  },
+  "hooks": {
+    "claude": {
+      "SessionStart": "npx tsx .dev-pomogator/tools/pomogator-doctor/doctor-hook.ts"
+    }
+  },
+  "dependencies": {}
+}

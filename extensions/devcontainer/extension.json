@@ -49,5 +49,8 @@
       "interactive": false,
       "skipInCI": true
     }
+  },
+  "dependencies": {
+    "docker": true
   }
 }

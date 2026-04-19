@@ -16,5 +16,9 @@
     "claude": {
       "SessionStart": "npx tsx .dev-pomogator/tools/claude-mem-health/health-check.ts"
     }
+  },
+  "dependencies": {
+    "binaries": ["chroma", "python3"],
+    "pythonPackages": ["chromadb"]
   }
 }

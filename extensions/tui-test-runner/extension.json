@@ -111,5 +111,9 @@
       "default": "auto",
       "description": "Framework override for canonical status v2 writer: vitest|jest|pytest|dotnet|rust|go|auto"
     }
-  ]
+  ],
+  "dependencies": {
+    "binaries": ["python3"],
+    "pythonPackages": ["textual"]
+  }
 }
