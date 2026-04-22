@@ -110,6 +110,35 @@ Files: {done}/{total} complete — Next: {next_action}
 
 ---
 
+## Jira-first Workflow (Optional)
+
+> **Opt-in trigger:** Spec папка содержит `JIRA_SOURCE.md`. Создаётся только jira-intake skill'ом (cleverence-pomogator) или аналогом — для greenfield / research спеков файла нет и весь раздел no-op. Тот же паттерн conditional activation что `TEST_DATA_ACTIVE` через DESIGN.md — без env vars, без глобальных конфигов.
+
+### Артефакты Jira-mode
+
+| Файл | Назначение | Lifecycle |
+|------|------------|-----------|
+| `JIRA_SOURCE.md` | Verbatim Jira description + comments с preserved эмфазой (`{color:red}` → `**🔴 CRITICAL:**`) | Создаётся jira-intake Phase 4b. Обновляется `/jira-intake-resync`. Не редактируется вручную. |
+| `ATTACHMENTS.md` | Committed каталог аттачей: file/role/purpose/evidence/hash/size | Создаётся jira-intake Phase 5g. Binaries (`attachments/`) gitignored. |
+| `.jira-cache.json` | Structured extractions: errors/ui_observations/video_steps/data_schema/config_values + attachment hashes | Schema: `extensions/specs-workflow/tools/specs-generator/templates/JIRA_CACHE.schema.json`. Читается validator/audit для cross-check. |
+
+### Поведенческие эффекты
+
+Когда `JIRA_SOURCE.md` присутствует:
+- Каждая фаза (1, 1.5, 2, 3, 3+) ОБЯЗАНА начинаться со **Step 0** — re-read трёх Jira-артефактов (см. алгоритмы phases ниже).
+- Validator активирует правило `JIRA_SOURCE_PRESERVED` (WARNING severity) — FR/AC/BDD scenarios/TASKS должны содержать `Jira imperative:` / `Jira acceptance:` / `Evidence:` / `# Jira trace:` / `_Jira:_` ссылки.
+- Audit Phase 3+ активирует категорию `JIRA_DRIFT` — diff `.jira-cache.json` vs live Jira (если MCP доступен).
+- Многомодальный re-Read для AC с ссылками `Screenshot:` / `Video:` — применяется existing правило `.claude/rules/pomogator/screenshot-driven-verification.md`.
+
+Когда файла нет — **все** выше перечисленные эффекты no-op. Существующие спеки без Jira не трогаются.
+
+### Когда файл создаётся
+
+- `/jira-intake {KEY}` skill (в cleverence-pomogator) после фетча Jira issue записывает все 3 артефакта и передаёт управление /create-spec.
+- Для existing spec без Jira — retroactive intake **out of scope**. Либо ждать следующей Jira-задачи, либо вручную создать `JIRA_SOURCE.md` + `.jira-cache.json` + `ATTACHMENTS.md` по шаблонам.
+
+---
+
 ## Workflow создания (4 СТОП-точки)
 
 ### PHASE 1: Discovery
@@ -117,11 +146,20 @@ Files: {done}/{total} complete — Next: {next_action}
 **Файлы:** USER_STORIES.md, USE_CASES.md, RESEARCH.md
 
 **Алгоритм:**
+
+**Step 0 (только если `.specs/{slug}/JIRA_SOURCE.md` существует — Jira-mode):**
+Re-read `JIRA_SOURCE.md` (verbatim Jira text с эмфазой), `ATTACHMENTS.md` (catalog с role tags), `.jira-cache.json` (structured extractions). Extract:
+- Roles/actors mentioned in description/comments → USER_STORIES candidates
+- User goals (что reporter хочет исправить) → USER_STORIES "чтобы {X}" clauses
+- Reproduction flow из attachments с role `reproduction-flow` (video_steps массив) → USE_CASES happy path + edge cases
+Each USER_STORY MUST contain `Jira quote: "..."` line с verbatim цитатой из JIRA_SOURCE.md.
+Each USE_CASE MUST reference attachment (`Evidence: {filename}`) или Jira quote как trigger.
+
 1. Создать структуру: `./.dev-pomogator/tools/specs-generator/scaffold-spec.ts -Name "{feature}"`
-2. Опросить пользователя о целях и ролях
+2. Опросить пользователя о целях и ролях (**в Jira-mode:** уточнить только то, что НЕ покрыто JIRA_SOURCE.md — не переспрашивать reporter)
 3. Заполнить USER_STORIES.md
 4. Заполнить USE_CASES.md
-5. Заполнить RESEARCH.md (если нужен ресерч)
+5. Заполнить RESEARCH.md (если нужен ресерч). В Jira-mode секция `## Problem` ссылается на JIRA_SOURCE.md: `См. JIRA_SOURCE.md ## Description (Verbatim)` — не дублировать текст.
 6. Проверить статус: `./.dev-pomogator/tools/specs-generator/spec-status.ts -Path ".specs/{feature}"`
 
 **СТОП #1:** Показать результаты Discovery, спросить подтверждение.
@@ -140,15 +178,38 @@ Files: {done}/{total} complete — Next: {next_action}
 - Фича тривиальная (1 файл, нет архитектурных решений)
 
 **Алгоритм:**
+
+**Step 0 (только если `.specs/{slug}/JIRA_SOURCE.md` существует — Jira-mode):**
+Re-read `JIRA_SOURCE.md` Comments секцию + `.jira-cache.json` metadata (labels, components) + `ATTACHMENTS.md` каталог. Extract:
+- Архитектурные constraints из обсуждений reporter/assignee в комментариях → `### Architectural Constraints Summary`
+- Referenced modules/files в комментариях → дополнение к `### Relevant Rules` / `### Existing Patterns & Extensions`
+- Attachments с role `env-config` → читать `.jira-cache.json` `config_values` для production constraints (timeouts, feature flags), которые станут NFR boundaries
+- Attachments с role `data-sample` → `.jira-cache.json` `data_schema` → ограничения на scope enumeration для Requirements
+В секцию `## Project Context & Constraints` добавить подсекцию `### Jira Context` со ссылками на конкретные quotes / `.jira-cache.json` fragments.
+
 1. Извлечь ключевые слова из USER_STORIES.md и USE_CASES.md (домены, технологии, действия)
 2. Просканировать `.claude/rules/*.md` — найти правила, релевантные ключевым словам
 3. Просканировать `extensions/*/extension.json` — найти расширения, пересекающиеся по домену
 4. Просканировать существующий код, упомянутый в USE_CASES — найти паттерны для reuse
+4a. **Детект BDD framework в target test-projects (ОБЯЗАТЕЛЬНО если FILE_CHANGES упоминает tests/**/\*.test.\* или **/Tests/**/\*.cs или **/*_steps.py):**
+    Для каждого target test-project из FILE_CHANGES.md — вызвать `bdd-framework-detector`:
+    ```
+    npx tsx extensions/specs-workflow/tools/specs-generator/bdd-framework-detector.ts {projectPath} [testProjectHints...]
+    ```
+    Результат (DetectionResult — JSON) записать в RESEARCH.md `### Existing Patterns & Extensions` как отдельные строки per test-project:
+    - `language` (csharp/typescript/python)
+    - `framework` (installed framework name или null)
+    - `installCommand` (для Phase 0 bootstrap block)
+    - `hookFileHints[]` (для scaffold hooks per framework convention)
+    - `configFileHint` (reqnroll.json / cucumber.js / behave.ini / pytest.ini)
+    - `evidence[]` (grep output с путями и номерами строк)
+    - `suggestedFrameworks[]` (fallback при framework=null — remediation target для Phase 0)
+    **Эта информация критически нужна в Phase 2 Step 6 для заполнения `## BDD Test Infrastructure` DESIGN.md секции и для генерации Phase 0 bootstrap block в TASKS.md.**
 5. Просканировать `**/Hooks/`, `**/hooks/`, `**/support/` — найти существующие BDD hooks (BeforeScenario/AfterScenario, setup/teardown, environment hooks)
 6. Если фича создаёт/изменяет тестовые данные — записать найденные hooks в `### Existing Patterns & Extensions` с рекомендациями по аналогии
 7. Заполнить секцию `## Project Context & Constraints` в RESEARCH.md:
    - `### Relevant Rules` — таблица: Rule | Path | Summary | Triggered By | Impacts
-   - `### Existing Patterns & Extensions` — таблица: Source | Path | What It Provides | Relevance
+   - `### Existing Patterns & Extensions` — таблица: Source | Path | What It Provides | Relevance (включая строки DetectionResult из шага 4a)
    - `### Architectural Constraints Summary` — как ограничения влияют на будущие FR/NFR
 8. Проверить статус: `./.dev-pomogator/tools/specs-generator/spec-status.ts -Path ".specs/{feature}"`
 
@@ -168,9 +229,37 @@ Files: {done}/{total} complete — Next: {next_action}
 **Файлы:** REQUIREMENTS.md, FR.md, NFR.md, ACCEPTANCE_CRITERIA.md, DESIGN.md, FILE_CHANGES.md, *.feature
 
 **Алгоритм:**
-1. Заполнить FR.md (формат: ## FR-N: {Название})
-2. Заполнить NFR.md (секции: Performance, Security, Reliability, Usability)
-3. Заполнить ACCEPTANCE_CRITERIA.md (EARS формат)
+
+**Step 0 (только если `.specs/{slug}/JIRA_SOURCE.md` существует — Jira-mode):**
+Re-read `JIRA_SOURCE.md` Description + Comments + Directives Extraction + `.jira-cache.json` `directives[]`. Extract:
+- Imperatives с severity `CRITICAL` (red/bold/!!!) → ОБЯЗАНЫ стать FR с тем же scope
+- Scope enumeration из `directives[*].scope` (паттерн `все X кроме Y`) → каждый scope member получает FR или `[WAIVED: {quote}]`
+- Exclusions из `directives[*].exclusions` → явно в `## Out of Scope` с Jira quote
+- Errors из `.jira-cache.json` `structured_extractions.errors[]` → FR про error handling должен reference `{source_file}:{line}`
+- UI observations (color, text blocks) → AC про UI содержат точные цвета/тексты из JIRA_SOURCE (не от головы агента)
+- Config values → NFR boundaries (timeouts, limits) MUST align, не invent
+
+**Формат Jira trace в FR/AC/BDD/Tasks (обязательно в Jira-mode, иначе WARNING от JIRA_SOURCE_PRESERVED):**
+- FR-N (в FR.md): `Jira imperative: "<verbatim quote from JIRA_SOURCE.md>"` в пределах 15 строк после заголовка
+- AC-N (в ACCEPTANCE_CRITERIA.md): `Jira acceptance: "..."` ИЛИ `Evidence: {file#fragment или .jira-cache.json path}` в пределах 15 строк после заголовка
+- BDD Scenario (в *.feature): `# Jira trace: "<quote>"` comment в пределах 10 строк ПЕРЕД `Scenario:`
+- Task (в TASKS.md): `_Jira: <fragment / quote reference>_` inline в теле task block в пределах 20 строк после `### 📋 \`task-id\``
+
+Примеры:
+```markdown
+## FR-1: Валидация остатков для всех non-INBOUND доктайпов
+Jira imperative: "все доступные сейчас доктайпы, КРОМЕ INBOUND"
+...
+```
+```gherkin
+# Jira trace: "блокировать добавление товара если его нет на остатках"
+# @feature1
+Scenario: SPECJIRA001_01 Picking blocks over-limit qty
+```
+
+1. Заполнить FR.md (формат: ## FR-N: {Название}). В Jira-mode — каждый FR со строкой `Jira imperative:`.
+2. Заполнить NFR.md (секции: Performance, Security, Reliability, Usability). В Jira-mode — constraints из `.jira-cache.json` `config_values` cross-checked.
+3. Заполнить ACCEPTANCE_CRITERIA.md (EARS формат). В Jira-mode — каждый AC со строкой `Jira acceptance:` или `Evidence:`.
 4. Заполнить REQUIREMENTS.md (индекс ссылок)
 5. Заполнить DESIGN.md
 5a. **OUT OF SCOPE пропагация (ОБЯЗАТЕЛЬНО):**
@@ -181,12 +270,17 @@ Files: {done}/{total} complete — Next: {next_action}
     - Проверить env vars / API config через официальную документацию (Context7 или WebSearch)
     - Пометить проверенные: `[VERIFIED: {источник}]`
     - Пометить непроверенные: `[UNVERIFIED]`
+5c. **Multimodal re-verification (ОБЯЗАТЕЛЬНО в Jira-mode):**
+    Для каждого AC, содержащего ссылку `Screenshot: {filename}` или `Video: {filename}:{timestamp}`:
+    - Прочитать attachment из `.specs/{slug}/attachments/{filename}` (если присутствует локально) через Read tool (multimodal)
+    - Применить правило `.claude/rules/pomogator/screenshot-driven-verification.md`: описать что ВИДНО, сравнить с ОЖИДАНИЕМ AC, вывести `CONFIRMED` / `DENIED` с обоснованием
+    - Если file отсутствует локально (gitignored + переключена ветка) → пометить AC `[EVIDENCE_MISSING: run /jira-intake-resync]` и не утверждать детали UI от головы.
 6. **BDD Test Infrastructure Assessment (ОБЯЗАТЕЛЬНО — НЕ пропускать)**
 
    Агент ОБЯЗАН выполнить следующий алгоритм. Результат записывается в секцию
    `## BDD Test Infrastructure` в DESIGN.md. Секция НЕ МОЖЕТ быть удалена.
 
-   **Шаг 6.1: Классификация фичи по Test Data Impact**
+   **Шаг 6.1a: TEST_DATA Classification (data impact)**
 
    Ответить на 4 вопроса (ДА/НЕТ):
    1. Фича создаёт, изменяет или удаляет данные через API/БД/файлы?
@@ -194,15 +288,32 @@ Files: {done}/{total} complete — Next: {next_action}
    3. BDD сценарии из .feature требуют предустановленных данных (Given-шаги с данными)?
    4. Фича взаимодействует с внешними сервисами, требующими mock/stub на уровне теста?
 
-   - Если хотя бы 1 ответ ДА → `TEST_DATA_ACTIVE` → перейти к Шагу 6.2
-   - Если все ответы НЕТ → `TEST_DATA_NONE` → записать в DESIGN.md:
-     ```
-     ## BDD Test Infrastructure
-     **Classification:** TEST_DATA_NONE
-     **Evidence:** {1-2 предложения почему все 4 вопроса = НЕТ}
-     **Verdict:** Hooks/fixtures не требуются. Тесты stateless.
-     ```
-     → перейти к Шагу 7 (FILE_CHANGES.md)
+   - Если хотя бы 1 ответ ДА → `TEST_DATA=TEST_DATA_ACTIVE` → перейти к Шагу 6.2
+   - Если все ответы НЕТ → `TEST_DATA=TEST_DATA_NONE` → подсекции hooks/fixtures не требуются
+
+   **Шаг 6.1b: TEST_FORMAT Classification (test format) — обязательный новый шаг**
+
+   Дефолт: `TEST_FORMAT=BDD` (для ВСЕХ языков). Escape hatch `TEST_FORMAT=UNIT` используется **только** когда установка BDD framework фактически невозможна — требует непустую `## Risks` секцию в DESIGN.md с обоснованием (иначе validator ERROR).
+
+   **НЕ классифицировать проект как "без BDD" как стабильное состояние.** Если framework ещё не установлен — это **remediation target** для Phase 0 bootstrap block, а не причина выбирать UNIT.
+
+   **Шаг 6.1c: Framework Choice (только если TEST_FORMAT=BDD)**
+
+   Использовать DetectionResult из Phase 1.5 Шаг 4a (`bdd-framework-detector` output):
+   - `framework ≠ null` → использовать detected framework, Evidence = positive grep-строка
+   - `framework === null` → выбрать из `suggestedFrameworks[]` (обычно первый), Evidence = "not installed in {projectPath} — remediation target (Phase 0 bootstrap block)"
+
+   **Записать в DESIGN.md `## BDD Test Infrastructure`:**
+   ```
+   **TEST_DATA:** {TEST_DATA_ACTIVE | TEST_DATA_NONE}
+   **TEST_FORMAT:** {BDD | UNIT}
+   **Framework:** {Reqnroll | SpecFlow | Cucumber.js | Playwright BDD | Behave | pytest-bdd | N/A при UNIT}
+   **Install Command:** {actual команда из DetectionResult.installCommand или "already installed"}
+   **Evidence:** {detector evidence строки или "grep {marker} in {path}:{line}" или reference на RESEARCH.md Existing Patterns}
+   **Verdict:** {какие hooks нужны / Phase 0 bootstrap требуется / hooks не требуются}
+   ```
+
+   **Если TEST_DATA_NONE** → перейти к Шагу 7 (FILE_CHANGES.md). Подсекции hooks/cleanup/fixtures не заполнять.
 
    **Шаг 6.2: Сканирование существующих hooks (ОБЯЗАТЕЛЬНО для TEST_DATA_ACTIVE)**
 
@@ -334,6 +445,23 @@ Files: {done}/{total} complete — Next: {next_action}
 **Файлы:** TASKS.md, README.md
 
 **Алгоритм:**
+
+**Step 0 (только если `.specs/{slug}/JIRA_SOURCE.md` существует — Jira-mode):**
+Re-read `JIRA_SOURCE.md` Description + `.jira-cache.json` `directives[]` + `ATTACHMENTS.md` с ролями `reproduction-flow` / `error-evidence`. Extract:
+- Reproduction steps (video_steps в `.jira-cache.json`) → mapping к implementation tasks (каждый шаг → phase/task). Порядок tasks должен **отражать** порядок видео.
+- Error evidence (file:line) → task обязан содержать `_Jira: <file>:<line>_` или `_Jira: <JIRA_SOURCE.md#fragment>_`.
+- Directives enumeration → каждый FR (один scope member) → как минимум одна green-task с `_Jira:_` reference.
+
+**Каждая task в TASKS.md ОБЯЗАНА содержать `_Jira:_` строку** в теле блока (в пределах 20 строк после `### 📋 \`task-id\``). Пример:
+```markdown
+### 📋 `block-picking-over-limit`
+> Добавить `picking` в isOutboundDocument() enum.
+- **files:** `src/services/StockValidationService.ts` *(edit)*
+- **refs:** FR-1, AC-1
+- **deps:** *none*
+- **_Jira:_** "все доступные сейчас доктайпы, КРОМЕ INBOUND" (JIRA_SOURCE.md Description)
+```
+
 1. Заполнить TASKS.md **по TDD-порядку:**
    - **Phase -1 (Infrastructure):** Если DESIGN.md упоминает БД, docker, .env, secrets — добавить Phase -1: Infrastructure Prerequisites. Env vars пометить `[VERIFIED: source]`.
    - **Phase 0 (Red):** .feature файл + step definitions + hooks (заглушки) -- ПЕРВЫЕ задачи
@@ -375,6 +503,12 @@ Files: {done}/{total} complete — Next: {next_action}
 
 **Алгоритм:**
 
+**Step 0 (только если `.specs/{slug}/JIRA_SOURCE.md` существует — Jira-mode):**
+Re-read all three Jira artifacts: `JIRA_SOURCE.md`, `ATTACHMENTS.md`, `.jira-cache.json`. Подготовить checklist для JIRA_DRIFT категории (см. Шаг 2):
+- Список CRITICAL directives из `.jira-cache.json` → проверить coverage FR
+- Список attachments с hashes → проверить что referenced evidence в FR/AC всё ещё matches
+- `last_fetch_at` timestamp → если > 7 дней назад, рекомендация `/jira-intake-resync` до audit
+
 #### Шаг 1: Автоматические проверки
 
 Запустить: `./.dev-pomogator/tools/specs-generator/audit-spec.ts -Path ".specs/{feature}" -Format json`
@@ -386,6 +520,7 @@ Files: {done}/{total} complete — Next: {next_action}
 - Незакрытые open questions в RESEARCH.md (`- [ ]`)
 - TASKS.md→FR/NFR кросс-ссылки
 - Терминологическую консистентность (PascalCase/camelCase варианты)
+- **JIRA_DRIFT (только Jira-mode):** `checkJiraDrift` из `audit-checks.ts` сравнивает `.jira-cache.json` vs live Jira (если MCP доступен). Без MCP → INFO "skipped".
 
 #### Шаг 2: AI семантический анализ (6 категорий)
 
@@ -430,6 +565,16 @@ Files: {done}/{total} complete — Next: {next_action}
 3. Для каждого непокрытого случая (спека/AC/.feature НЕ отвечает на вопрос) — добавить finding: node / category / question / severity
 4. Для ЗАВИСИМЫХ шагов проверить combined failures (из 12 failure scenarios в taxonomy): "Что если A упал И B упал?"
 5. При написании/проверке .feature использовать BVA boundary values из taxonomy для edge case значений
+
+**JIRA_DRIFT (только в Jira-mode — `.jira-cache.json` присутствует):**
+
+Агент ОБЯЗАН выполнить cross-check spec artifacts против Jira source:
+1. **Missing trace**: Для каждого FR/AC/BDD scenario/TASKS entry — найти `Jira imperative:` / `Jira acceptance:` / `Evidence:` / `# Jira trace:` / `_Jira:_` line. Отсутствие → finding `JIRA_DRIFT / missing_trace` (severity: WARNING). _(Дублирует JIRA_SOURCE_PRESERVED validator для consolidated view в AUDIT_REPORT.md.)_
+2. **Scope enumeration gap**: Для каждого `directives[]` с `scope[]` в `.jira-cache.json` — проверить, что **каждый** scope member имеет FR покрытие OR явный `[WAIVED: "{Jira quote}"]` в `## Out of Scope`. Missing enumeration member → `JIRA_DRIFT / scope_gap`.
+3. **CRITICAL directive without FR**: Для каждого directive с `severity: CRITICAL` — ОБЯЗАТЕЛЬНО matching FR с `Jira imperative:` соответствующий quote. Missing → `JIRA_DRIFT / missing_trace` severity ERROR (единственный ERROR-level в категории — CRITICAL directive не прощается).
+4. **Hallucinated FR**: FR без `Jira imperative:` (в Jira-mode) **И** без явного `[DERIVED: architectural necessity]` markera — `JIRA_DRIFT / hallucinated_fr` severity WARNING (FR не трассируется ни к Jira, ни к явно помеченному derived решению).
+5. **Live drift (если MCP доступен)**: `checkJiraDrift()` (уже вызван в Шаг 1) — результаты добавить в финальный AUDIT_REPORT категорию JIRA_DRIFT.
+6. **Multimodal evidence verify**: Для каждого AC с `Screenshot:` / `Video:` reference — попытаться Read attachment; если success — многомодальный re-check описания AC vs ВИДНО (CONFIRMED/DENIED по правилу `screenshot-driven-verification`). Расхождение → `JIRA_DRIFT / visual_mismatch` severity WARNING.
 
 #### Шаг 3: Исправление найденных проблем
 
@@ -498,6 +643,8 @@ Files: {done}/{total} complete — Next: {next_action}
 | CONFIG_DUPLICATION | Идентичные блоки 3+ строк в DESIGN.md и TASKS.md | INFO |
 | OPEN_QUESTIONS | Незакрытые `- [ ]` в RESEARCH.md (escape: `> DEFERRED:` на предыдущей строке) | WARNING |
 | FIXTURES_CONSISTENCY | TEST_DATA_ACTIVE в DESIGN.md, но FIXTURES.md отсутствует или пуст | WARNING |
+| JIRA_SOURCE_PRESERVED | _(conditional: только если `JIRA_SOURCE.md` exists)_ FR/AC/BDD/TASKS содержат trace (`Jira imperative:` / `Jira acceptance:` / `Evidence:` / `# Jira trace:` / `_Jira:_`) к `JIRA_SOURCE.md`. Opt-out: удалить `JIRA_SOURCE.md` → правило no-op. | WARNING |
+| JIRA_DRIFT | _(conditional: только если `.jira-cache.json` exists)_ `.jira-cache.json` cached snapshot vs live Jira (при MCP доступе): новые comments, изменённые attachments, drift description; missing trace; scope enumeration gaps; hallucinated FR; visual mismatch. MCP недоступен → INFO "skipped". | WARNING / ERROR (missing CRITICAL directive) |
 | FILE_CHANGES_COMPLETENESS | Файлы из TASKS.md `**files:**` отсутствуют в FILE_CHANGES.md | WARNING |
 | FILE_CHANGES_VERIFY | FILE_CHANGES.md action=edit для несуществующего файла | ERROR |
 | COUNT_CONSISTENCY | Числовые claims ("N FR") расходятся с фактическими counts | WARNING |

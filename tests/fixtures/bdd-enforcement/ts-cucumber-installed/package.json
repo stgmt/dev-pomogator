@@ -1,0 +1,9 @@
+{
+  "name": "ts-cucumber-installed-fixture",
+  "version": "1.0.0",
+  "private": true,
+  "devDependencies": {
+    "@cucumber/cucumber": "^10.3.0",
+    "vitest": "^1.0.0"
+  }
+}

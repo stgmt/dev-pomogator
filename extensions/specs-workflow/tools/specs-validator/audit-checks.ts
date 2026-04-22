@@ -5,6 +5,7 @@
  * CHECK-10: TASK_FR_ATOMICITY — task covers >1 FR → WARNING
  * CHECK-11: FR_SPLIT_CONSISTENCY — FR-4a exists but FR-5a doesn't → INFO
  * CHECK-12: BDD_SCENARIO_SCOPE — FR mentions "serial" but scenario only "batch" → WARNING
+ * CHECK-13: JIRA_DRIFT — (conditional, Jira-mode) cache vs .jira-cache.json / MCP fetch → WARNING / INFO
  */
 
 import fs from 'fs';
@@ -215,13 +216,168 @@ export function checkBddScenarioScope(specPath: string): AuditFinding[] {
 }
 
 /**
- * Run all 4 audit checks on a spec directory.
+ * CHECK-13: JIRA_DRIFT
+ * Conditional audit: активируется только если .jira-cache.json присутствует в spec directory
+ * (marker Jira-mode). Сравнивает cached snapshot vs. live Jira (через MCP, если доступен):
+ *   - Issue.updated timestamp — WARNING если reporter изменил description после intake
+ *   - comment_count — WARNING если новые комментарии
+ *   - attachments hashes — WARNING для changed/added/removed
+ *   - Если MCP недоступен — INFO "drift check skipped"
+ *
+ * MCP access: эта функция НЕ делает live MCP calls сама (runtime не имеет MCP handle).
+ * Она сравнивает cache с expected markers / delegates live check to audit-runner каноничный wrapper.
+ * При реальном MCP wiring (через audit-runner или hook environment) — передать current Jira state
+ * через опциональный параметр liveJiraState.
  */
-export function runAllChecks(specPath: string): AuditFinding[] {
+export interface JiraLiveState {
+  issueUpdatedAt?: string;
+  commentCount?: number;
+  attachmentHashes?: Record<string, string>; // id → sha256
+  status?: string;
+  priority?: string;
+}
+
+export function checkJiraDrift(
+  specPath: string,
+  liveJiraState?: JiraLiveState | null,
+  mcpUnavailable = false,
+): AuditFinding[] {
+  const findings: AuditFinding[] = [];
+  const cachePath = path.join(specPath, '.jira-cache.json');
+  if (!fs.existsSync(cachePath)) {
+    return findings; // Not Jira-mode — no-op
+  }
+
+  let cache: {
+    jira_key?: string;
+    issue_updated_at?: string | null;
+    comment_count?: number;
+    attachments?: Array<{ id: string; filename: string; hash: string }>;
+    metadata?: { status?: string | null; priority?: string | null };
+  };
+  try {
+    cache = JSON.parse(fs.readFileSync(cachePath, 'utf-8'));
+  } catch (err) {
+    findings.push({
+      check: 'JIRA_DRIFT',
+      category: 'JIRA_DRIFT',
+      severity: 'WARNING',
+      message: `JIRA_DRIFT: Cannot parse .jira-cache.json: ${(err as Error).message}`,
+      details: 'Re-run /jira-intake-resync to regenerate cache.',
+    });
+    return findings;
+  }
+
+  if (mcpUnavailable || !liveJiraState) {
+    findings.push({
+      check: 'JIRA_DRIFT',
+      category: 'JIRA_DRIFT',
+      severity: 'INFO',
+      message: 'JIRA_DRIFT: Jira MCP unavailable, drift check skipped.',
+      details: `Cached state from ${cache.jira_key || '<unknown>'} used as-is. Run /jira-intake-resync when MCP is available to refresh.`,
+    });
+    return findings;
+  }
+
+  // Issue.updated drift
+  if (liveJiraState.issueUpdatedAt && cache.issue_updated_at
+      && liveJiraState.issueUpdatedAt !== cache.issue_updated_at) {
+    findings.push({
+      check: 'JIRA_DRIFT',
+      category: 'JIRA_DRIFT',
+      severity: 'WARNING',
+      message: `JIRA_DRIFT: Issue modified since intake. Cached: ${cache.issue_updated_at}, live: ${liveJiraState.issueUpdatedAt}.`,
+      details: 'Reporter may have updated description or added comments. Run /jira-intake-resync to sync and review updated JIRA_SOURCE.md before proceeding.',
+    });
+  }
+
+  // Comment count drift
+  if (typeof liveJiraState.commentCount === 'number' && typeof cache.comment_count === 'number') {
+    const delta = liveJiraState.commentCount - cache.comment_count;
+    if (delta > 0) {
+      findings.push({
+        check: 'JIRA_DRIFT',
+        category: 'JIRA_DRIFT',
+        severity: 'WARNING',
+        message: `JIRA_DRIFT: ${delta} new comment(s) since intake (cached: ${cache.comment_count}, live: ${liveJiraState.commentCount}).`,
+        details: 'New comments may contain clarifications or new requirements. Run /jira-intake-resync to fetch updated comments into JIRA_SOURCE.md.',
+      });
+    }
+  }
+
+  // Attachment drift (added / changed / removed)
+  if (liveJiraState.attachmentHashes && Array.isArray(cache.attachments)) {
+    const cachedById = new Map<string, string>();
+    for (const att of cache.attachments) {
+      cachedById.set(att.id, att.hash);
+    }
+    const liveIds = new Set(Object.keys(liveJiraState.attachmentHashes));
+    const cachedIds = new Set(cachedById.keys());
+
+    for (const id of liveIds) {
+      if (!cachedIds.has(id)) {
+        findings.push({
+          check: 'JIRA_DRIFT',
+          category: 'JIRA_DRIFT',
+          severity: 'WARNING',
+          message: `JIRA_DRIFT: New attachment uploaded in Jira (id=${id}) not in cache.`,
+          details: 'Run /jira-intake-resync to download new attachment and re-tag role.',
+        });
+      } else if (cachedById.get(id) !== liveJiraState.attachmentHashes[id]) {
+        findings.push({
+          check: 'JIRA_DRIFT',
+          category: 'JIRA_DRIFT',
+          severity: 'WARNING',
+          message: `JIRA_DRIFT: Attachment id=${id} content changed (hash mismatch).`,
+          details: 'Reporter may have replaced attachment. Run /jira-intake-resync to refresh.',
+        });
+      }
+    }
+    for (const id of cachedIds) {
+      if (!liveIds.has(id)) {
+        findings.push({
+          check: 'JIRA_DRIFT',
+          category: 'JIRA_DRIFT',
+          severity: 'WARNING',
+          message: `JIRA_DRIFT: Cached attachment id=${id} removed from Jira.`,
+          details: 'Attachment deleted by reporter. Evidence references in FR/AC may become stale.',
+        });
+      }
+    }
+  }
+
+  // Status / priority change (INFO — non-blocking but worth noting)
+  if (liveJiraState.status && cache.metadata?.status
+      && liveJiraState.status !== cache.metadata.status) {
+    findings.push({
+      check: 'JIRA_DRIFT',
+      category: 'JIRA_DRIFT',
+      severity: 'INFO',
+      message: `JIRA_DRIFT: Issue status changed: '${cache.metadata.status}' → '${liveJiraState.status}'.`,
+    });
+  }
+
+  return findings;
+}
+
+/**
+ * Run all audit checks on a spec directory.
+ *
+ * JIRA_DRIFT is conditional: executes only if .jira-cache.json is present.
+ * Without live MCP state, emits INFO "drift check skipped" (fail-open, не блокирует).
+ * audit-runner / hook environment can call checkJiraDrift(specPath, liveState, false)
+ * directly if it has MCP handle.
+ */
+export function runAllChecks(
+  specPath: string,
+  jiraLiveState?: JiraLiveState | null,
+  mcpUnavailable = true,
+): AuditFinding[] {
   return [
     ...checkPartialImpl(specPath),
     ...checkTaskAtomicity(specPath),
     ...checkFrSplitConsistency(specPath),
     ...checkBddScenarioScope(specPath),
+    ...checkJiraDrift(specPath, jiraLiveState ?? null, mcpUnavailable),
   ];
 }
