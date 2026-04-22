@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "featureSlug": "onboard-repo-phase0",
+  "createdAt": "2026-04-20T17:02:44.557Z",
+  "currentPhase": "Complete",
+  "phases": {
+    "Discovery": {
+      "completedAt": "2026-04-21T09:20:25.026Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-21T09:20:25.025Z"
+    },
+    "Context": {
+      "completedAt": "2026-04-21T10:32:34.443Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-21T10:32:34.442Z"
+    },
+    "Requirements": {
+      "completedAt": "2026-04-21T21:03:22.911Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-21T21:03:22.910Z",
+      "bddInfraClassificationComplete": true,
+      "bddFrameworkSelected": "vitest (TypeScript) + custom BDD convention через `analyze-features.ts` парсинг `.feature` файлов"
+    },
+    "Finalization": {
+      "completedAt": "2026-04-21T21:08:30.570Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-21T21:08:30.570Z"
+    }
+  }
+}
