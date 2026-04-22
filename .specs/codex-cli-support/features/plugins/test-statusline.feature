@@ -6,5 +6,6 @@ Feature: Codex handling for test-statusline
 
   Scenario: Support matrix excludes test-statusline explicitly
     When Codex support matrix is generated
-    Then it should include all current installable extensions except "test-statusline"
+    Then it should include all current installable extensions
     And "test-statusline" should be explicitly marked as excluded
+    And the excluded reason should mention missing Codex status line surface and insufficient PostToolUse Bash parity

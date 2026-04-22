@@ -3,33 +3,34 @@
 ## Реализуемые требования
 
 - [FR-1: First-Class Codex Platform](FR.md#fr-1-first-class-codex-platform-feature1)
-- [FR-2: Project-Level Codex Artifact Layout](FR.md#fr-2-project-level-codex-artifact-layout-feature2)
-- [FR-3: Existing User Artifact Protection](FR.md#fr-3-existing-user-artifact-protection-feature3)
-- [FR-4: Codex Hooks Installation](FR.md#fr-4-codex-hooks-installation-feature4)
-- [FR-5: AGENTS.md and CLAUDE.md Coexistence](FR.md#fr-5-agentsmd-and-claudemd-coexistence-feature5)
-- [FR-6: Codex Skills Packaging](FR.md#fr-6-codex-skills-packaging-feature6)
-- [FR-7: Project-Level Codex MCP Configuration](FR.md#fr-7-project-level-codex-mcp-configuration-feature7)
-- [FR-8: Extension Parity Support Matrix](FR.md#fr-8-extension-parity-support-matrix-feature8)
-- [FR-9: Windows Bash/SH Bootstrap for Codex](FR.md#fr-9-windows-bashsh-bootstrap-for-codex-feature9)
-- [FR-10: Managed Update and Reinstall Path](FR.md#fr-10-managed-update-and-reinstall-path-feature10)
-- [FR-11: Explicit Codex Parity Routing](FR.md#fr-11-explicit-codex-parity-routing-feature11)
+- [FR-2: Trusted Project-Local Artifact Model](FR.md#fr-2-trusted-project-local-artifact-model-feature2)
+- [FR-3: Existing Project Artifact Protection](FR.md#fr-3-existing-project-artifact-protection-feature3)
+- [FR-4: Version-Aware Codex Hook Capability Model](FR.md#fr-4-version-aware-codex-hook-capability-model-feature4)
+- [FR-5: Hook Orchestration and Conflict Discipline](FR.md#fr-5-hook-orchestration-and-conflict-discipline-feature5)
+- [FR-6: AGENTS-First Guidance and CLAUDE Coexistence](FR.md#fr-6-agents-first-guidance-and-claude-coexistence-feature6)
+- [FR-7: Codex Skills Packaging with Layered Discovery](FR.md#fr-7-codex-skills-packaging-with-layered-discovery-feature7)
+- [FR-8: Project-Level Codex MCP Configuration](FR.md#fr-8-project-level-codex-mcp-configuration-feature8)
+- [FR-9: Extension Parity Support Matrix](FR.md#fr-9-extension-parity-support-matrix-feature9)
+- [FR-10: Windows Execution Strategy for Codex](FR.md#fr-10-windows-execution-strategy-for-codex-feature10)
+- [FR-11: Managed Update and Reinstall Path](FR.md#fr-11-managed-update-and-reinstall-path-feature11)
+- [FR-12: Explicit Codex Parity Routing](FR.md#fr-12-explicit-codex-parity-routing-feature12)
 
 ## Компоненты
 
 - `CodexPlatformSchema` — расширяет типы `Platform`, installer selection и manifest typing до `codex`.
+- `CodexTrustAndLayerGuard` — отслеживает trusted/untrusted project state и сообщает о coexistence с user-level `~/.codex/*`.
 - `CodexInstaller` — новый installer path, который materialize project-level Codex артефакты.
 - `CodexArtifactMerger` — merge-safe writer для `AGENTS.md`, `CLAUDE.md`, `.codex/config.toml`, `.codex/hooks.json`, `.agents/skills/*`.
-- `CodexHooksFeatureGate` — включает project-level `features.codex_hooks=true` и проверяет hooks-capable baseline `Codex >= 0.114.0`.
-- `CodexHooksWriter` — генерация и smart merge `SessionStart`/`Stop` hook entries.
-- `CodexGuidanceComposer` — собирает `AGENTS.md` и update blocks для `CLAUDE.md` без потери glossary semantics.
-- `CodexSkillsPackager` — копирует и/или адаптирует extension skills в `.agents/skills/`.
+- `CodexHookCapabilityResolver` — решает, какие events доступны на текущей версии Codex и текущей ОС.
+- `CodexHookDispatcherWriter` — materialize одного managed dispatcher per event вместо many independent hooks.
+- `CodexGuidanceComposer` — собирает `AGENTS.md` и optional minimal updates для `CLAUDE.md` без потери glossary semantics.
+- `CodexSkillsPackager` — копирует и/или адаптирует extension skills в `.agents/skills/` с collision-aware naming.
 - `CodexMcpWriter` — записывает project-level `[mcp_servers]` в `.codex/config.toml`.
-- `CodexParityRouter` — для каждого extension фиксирует, через какую Codex-native поверхность достигается parity.
+- `CodexSupportMatrixResolver` — для каждого extension фиксирует `supportLevel`, version floor, parity surfaces и blocked capabilities.
 - `CodexUpdaterSync` — распространяет существующую managed discipline на новую платформу.
 - `CodexManifestNormalizer` — убирает допущения `cursor | claude` из manifest typing и translation layer для `.agents/skills` / `.codex/*`.
-- `CodexMcpSetupAdapter` — отделяет Codex MCP flow от существующих Cursor/Claude JSON writers и `setup-mcp.py`.
 - `CodexMemoryParityDecision` — явно решает, как `requiresClaudeMem`-зависимые расширения ведут себя на `codex`.
-- `CodexTestHarness` — расширяет Docker/CLI/helpers под split Codex feature suite.
+- `CodexTestHarness` — расширяет Docker/CLI/helpers под split Codex feature suite и trust/global-layer fixtures.
 
 ## Где лежит реализация
 
@@ -40,6 +41,8 @@
 ## Директории и файлы
 
 - `src/installer/codex.ts`
+- `src/installer/codex-hook-dispatch.ts`
+- `src/installer/codex-support-matrix.ts`
 - `src/config/schema.ts`
 - `src/index.ts`
 - `src/installer/index.ts`
@@ -57,6 +60,7 @@
 - `extensions/specs-workflow/tools/mcp-setup/setup-mcp.py`
 - `tests/e2e/helpers.ts`
 - `tests/e2e/codex-installer.test.ts`
+- `tests/e2e/codex-hooks-dispatch.test.ts`
 - `tests/e2e/codex-update.test.ts`
 - `tests/e2e/cli-integration.test.ts`
 - `tests/e2e/mcp-setup.test.ts`
@@ -66,29 +70,36 @@
 ## Алгоритм
 
 1. CLI/bootstrap route распознаёт таргет `codex` и передаёт его в installer pipeline.
-2. Installer сначала нормализует manifest model для `codex`: platform union, hooks/skills/tool sections и translation между legacy `.claude/skills` targets и `.agents/skills/`.
-3. Installer собирает support matrix расширений для `codex` и вычисляет набор project-level артефактов.
-4. Tools копируются в `.dev-pomogator/tools/` по существующей managed модели.
-5. Skills materialize в `.agents/skills/`, при необходимости используя Codex-specific wrappers вокруг существующих extension workflows.
-6. `AGENTS.md` и `CLAUDE.md` обновляются через merge-safe composer:
+2. Installer сначала нормализует manifest model для `codex`: platform union, hooks/skills/tool sections и translation между legacy `.claude/skills` targets и `.agents/skills`.
+3. `CodexTrustAndLayerGuard` определяет:
+   - trusted ли текущий repo
+   - существуют ли `~/.codex/config.toml` и `~/.codex/hooks.json`
+   - нужно ли warning/debug report про additive layering
+4. Installer собирает support matrix расширений для `codex` и вычисляет набор project-level артефактов.
+5. Tools копируются в `.dev-pomogator/tools/` по существующей managed модели.
+6. Skills materialize в `.agents/skills/`, при необходимости используя Codex-specific wrappers и collision-safe naming.
+7. `AGENTS.md` и `CLAUDE.md` обновляются через merge-safe composer:
    - existing user file читается
    - before-overwrite создаётся backup
    - managed blocks вставляются/обновляются
    - выдаётся warning/report если потребовалось слияние
-7. `.codex/config.toml` создаётся или обновляется на project level:
+8. `.codex/config.toml` создаётся или обновляется на project level:
    - feature flags
    - `[mcp_servers]`
    - project-specific Codex settings
-   - `features.codex_hooks=true` для hooks-capable installs
-8. `.codex/hooks.json` создаётся или обновляется на project level:
-   - `SessionStart`
-   - `Stop`
-   - schema fields `type`, `command`, `statusMessage`, `timeout`
-   - только для тех extensions, чьё parity поведение реально привязано к этим lifecycle points
-9. Для extension behavior, которое не покрывается только `SessionStart` и `Stop`, `CodexParityRouter` назначает другой surface: skill, `AGENTS.md`, `codex exec`, app automation или GitHub Action.
-10. Для `requiresClaudeMem`-зависимых flows parity route обязан явно задокументировать memory strategy, а не опираться на implicit Claude-only install behavior.
-11. `specs-workflow` MCP parity использует TOML writer для `.codex/config.toml`; existing JSON `setup-mcp.py` path либо адаптируется, либо явно bypassed.
-12. Reinstall/update path применяет те же managed hash, backup и cleanup правила, что уже действуют для `Cursor`/`Claude`.
+   - hook feature gate только если direct hook parity действительно используется
+9. `CodexHookCapabilityResolver` определяет, какие events можно использовать на текущем Codex version / OS pair.
+10. `.codex/hooks.json` создаётся или обновляется на project level через dispatcher model:
+   - один managed `SessionStart` dispatcher при необходимости
+   - один managed `UserPromptSubmit` dispatcher при необходимости
+   - один managed `PreToolUse` dispatcher только с `matcher = "Bash"`
+   - один managed `PostToolUse` dispatcher только с `matcher = "Bash"`
+   - один managed `Stop` dispatcher при необходимости
+11. Внутри dispatcher-а `dev-pomogator` уже сам управляет deterministic order, continuation semantics и short-circuit behavior.
+12. Для extension behavior, которое не покрывается доступным hook surface, `CodexSupportMatrixResolver` назначает другой surface: skill, `AGENTS.md`, `codex exec`, notify, app automation или GitHub Action.
+13. Для `requiresClaudeMem`-зависимых flows parity route обязан явно задокументировать memory strategy, а не опираться на implicit Claude-only install behavior.
+14. `specs-workflow` MCP parity использует TOML writer для `.codex/config.toml`; existing JSON `setup-mcp.py` path либо адаптируется, либо явно bypassed.
+15. Reinstall/update path применяет те же managed hash, backup и cleanup правила, что уже действуют для `Cursor`/`Claude`.
 
 ## Contracts
 
@@ -100,30 +111,25 @@
   - Codex project config
   - `[features]`
   - `[mcp_servers]`
-  - feature flags, включая `codex_hooks = true` для hook-driven parity
+  - optional project instruction fallback knobs if design решит задействовать их явно
 - Constraints:
   - не хранит auth tokens
   - не пишет в `~/.codex/config.toml`
+  - не предполагает trusted state без проверки
   - обновляется atomically
 
 ### `.codex/hooks.json`
 
 - Owner: managed hook entries `dev-pomogator` + user-owned hook entries
-- Supported events in MVP:
-  - `SessionStart`
-  - `Stop`
-- Expected hook payload shape per entry:
-  - `type`
-  - `command`
-  - `statusMessage`
-  - `timeout`
+- Supported events depend on version:
+  - `0.114.0+`: `SessionStart`, `Stop`
+  - `0.116.0+`: `UserPromptSubmit`
+  - `0.117.0+`: `PreToolUse`, `PostToolUse` only for `Bash`
 - Merge model:
-  - только managed entries обновляются/удаляются автоматически
+  - managed dispatcher groups обновляются/удаляются автоматически
   - user entries сохраняются
   - конфликтные правки требуют backup + warning
-- Version contract:
-  - hook-driven parity требует `Codex >= 0.114.0`
-  - hooks feature должен быть включён через project-level config или эквивалентный runtime override
+  - проектный hooks layer не заменяет глобальный hooks layer
 
 ### `AGENTS.md`
 
@@ -144,42 +150,75 @@
 - Merge model:
   - только минимальные, явно обозначенные managed changes
   - запрещено превращать файл в дубликат `AGENTS.md`
+  - Codex parity не должна зависеть от его automatic discovery
 
 ### `.agents/skills/<skill-name>/`
 
 - Owner: managed repo-local Codex skills
 - Required file: `SKILL.md`
-- Optional files: `scripts/*`, `references/*`, `assets/*`
+- Optional files: `scripts/*`, `references/*`, `assets/*`, `agents/openai.yaml`
 - Constraints:
   - каждый skill traceable к extension manifest
   - при update obsolete managed skill files удаляются без затрагивания user-owned skills
+  - naming strategy должна учитывать layered discovery и duplicate names
+
+### Support Matrix Entry
+
+- Required fields:
+  - `extension`
+  - `supportLevel`
+  - `minimumCodexVersion`
+  - `paritySurfaces`
+  - `blockedCapabilities`
+  - `excludedReason`
+- Constraints:
+  - `supported` используется только когда parity route не теряет заявленное поведение
+  - `partial` используется, если часть заявленного extension behavior не переносится без redesign
+  - `excluded` требует явной причины
 
 ## Support Matrix Strategy
 
-### Direct hooks parity
+### Supported with direct or dispatcher-based hooks
 
-Расширения, которые могут быть спроектированы напрямую через подтверждённые `Codex hooks`:
+- `auto-commit` → `Stop` dispatcher
+- `auto-simplify` → `Stop` dispatcher
+- `claude-mem-health` → `SessionStart` dispatcher
+- `bun-oom-guard` → `SessionStart` dispatcher
 
-- `auto-commit` → `Stop`
-- `auto-simplify` → `Stop`
-- `claude-mem-health` → `SessionStart`
-- `bun-oom-guard` → `SessionStart`
+### Partial: hooks plus additional parity surface
 
-### Hooks + additional parity surface
-
-Расширения, которым кроме hooks требуется ещё один Codex-native механизм:
-
-- `prompt-suggest` → `Stop` + explicit skill/manual activation path
-- `suggest-rules` → `Stop`/skills/MCP + explicit memory parity decision
-- `specs-workflow` → skills + `AGENTS.md` + TOML MCP writer + optional hooks
-- `tui-test-runner` → skill + optional `SessionStart` hook after manifest normalization
+- `prompt-suggest` → `UserPromptSubmit` + `Stop` + explicit manual/AGENTS fallback
+- `suggest-rules` → `UserPromptSubmit`/`Stop` + skills + explicit memory parity decision
+- `specs-workflow` → skills + `AGENTS.md` + TOML MCP writer; non-Bash gating remains partial
+- `tui-test-runner` → skill + `SessionStart`/`Stop` + optional `PreToolUse(Bash)` guards only
 - `devcontainer` → skill/post-install style workflow
 - `forbid-root-artifacts` → tools + guidance + pre-commit workflow
-- `plan-pomogator` → `AGENTS.md` + skill
+- `plan-pomogator` → `AGENTS.md` + skill + optional `UserPromptSubmit`/`Stop`; no full `ExitPlanMode` parity
 
 ### Explicitly excluded
 
-- `test-statusline` — excluded from Codex support matrix по решению пользователя
+- `test-statusline` — excluded because Codex does not expose a Claude-style status line surface; `notify` / `tui.notifications` are not equivalent and `PostToolUse(Bash)` is insufficient
+
+## Deferred Upstream Gaps
+
+Эта секция фиксирует blockers, которые не должны silently превращаться в “сделаем потом в коде”. Пока upstream Codex их не предоставляет, соответствующие plugin routes остаются `partial` или `excluded`.
+
+- Missing non-Bash `PreToolUse` / `PostToolUse`:
+  - нужен для `Write`, `Edit`, `ApplyPatch`, `WebSearch`, `MCP`
+  - блокирует full parity для `specs-workflow`, `plan-pomogator`
+  - ограничивает `tui-test-runner` Bash-only route
+- Missing plan-mode event:
+  - нужен эквивалент `ExitPlanMode` или другой boundary event
+  - блокирует full parity для `plan-pomogator`
+  - на 2026-04-18 `ExitPlanMode` не найден в primary sources Codex, значит это именно upstream missing capability, а не просто нераскрытый config knob
+- Missing status line surface:
+  - блокирует `test-statusline`
+  - `notify` и `tui.notifications` не переводят feature в `supported`
+- Missing ordered matching-hook execution:
+  - пока Codex hooks concurrent, dispatcher per event остаётся обязательным
+  - если later upstream даст priorities/ordering, design можно упростить
+
+Любой revisit этой спецификации должен сначала перепроверить эти four buckets по official docs/changelog, а уже потом менять support levels.
 
 ## BDD Feature Suite
 
@@ -205,24 +244,29 @@
 - `features/plugins/plan-pomogator.feature`
 - `features/plugins/test-statusline.feature`
 
-> Принцип: один plugin parity path — один отдельный `.feature`, а cross-cutting contract scenarios вроде hook schema живут в core suite, чтобы implementation и BDD coverage не были завязаны на общий Codex mega-scenario файл и не теряли общий контракт.
+> Принцип: один plugin parity path — один отдельный `.feature`, а cross-cutting contract scenarios вроде hook schema, trust/layering и dispatch discipline живут в core suite.
 
 ## API / Data Flow
 
 ```mermaid
 flowchart TD
-  installTarget[InstallTarget_codex] --> extManifests[ExtensionManifests]
-  extManifests --> ProjectToolsCopy[ProjectToolsCopy]
-  extManifests --> skillsPackager[CodexSkillsPackager]
-  extManifests --> hooksWriter[CodexHooksWriter]
-  extManifests --> mcpWriter[CodexMcpWriter]
-  extManifests --> guidanceComposer[CodexGuidanceComposer]
+  installTarget[InstallTarget_codex] --> trustGuard[CodexTrustAndLayerGuard]
+  installTarget --> extManifests[ExtensionManifests]
+  extManifests --> supportMatrix[CodexSupportMatrixResolver]
+  supportMatrix --> ProjectToolsCopy[ProjectToolsCopy]
+  supportMatrix --> skillsPackager[CodexSkillsPackager]
+  supportMatrix --> hookCapability[CodexHookCapabilityResolver]
+  hookCapability --> hooksWriter[CodexHookDispatcherWriter]
+  supportMatrix --> mcpWriter[CodexMcpWriter]
+  supportMatrix --> guidanceComposer[CodexGuidanceComposer]
   guidanceComposer --> agentsFile[AGENTS.md]
   guidanceComposer --> claudeFile[CLAUDE.md]
   hooksWriter --> hooksJson[.codex/hooks.json]
   mcpWriter --> codexToml[.codex/config.toml]
   skillsPackager --> repoSkills[.agents/skills]
   ProjectToolsCopy --> repoTools[.dev-pomogator/tools]
+  trustGuard --> codexToml
+  trustGuard --> hooksJson
   backupGuard[BackupAndMergeGuard] --> agentsFile
   backupGuard --> claudeFile
   backupGuard --> hooksJson
@@ -244,10 +288,8 @@ flowchart TD
 > Все НЕТ → `TEST_DATA_NONE` (указать Evidence и Verdict, подсекции не нужны).
 
 **Classification:** TEST_DATA_ACTIVE
-**Evidence:** Фича создаёт и изменяет project-level файлы (`.codex/*`, `AGENTS.md`, `.agents/skills/*`, backup artifacts), требует rollback/cleanup между сценариями и нуждается в предустановленных fixtures существующих пользовательских файлов.
-**Verdict:** Нужны test hooks уровня `beforeEach/afterEach` для создания изолированного git-проекта, seed existing Codex artifacts и cleanup backup/managed state.
-
-<!-- Подсекции ниже заполнять ТОЛЬКО при TEST_DATA_ACTIVE. При TEST_DATA_NONE — удалить подсекции. -->
+**Evidence:** Фича создаёт и изменяет project-level файлы (`.codex/*`, `AGENTS.md`, `.agents/skills/*`, backup artifacts), требует rollback/cleanup между сценариями и нуждается в предустановленных fixtures существующих project и user-level Codex artifacts.
+**Verdict:** Нужны test hooks уровня `beforeEach/afterEach` для создания изолированного git-проекта, seed existing Codex artifacts, seed simulated `~/.codex` layers и cleanup backup/managed state.
 
 ### Существующие hooks
 
@@ -264,7 +306,8 @@ flowchart TD
 
 | Hook файл | Тип | Тег/Scope | Что делает | По аналогии с |
 |-----------|-----|-----------|------------|---------------|
-| `tests/e2e/codex-installer.test.ts` | beforeEach / afterEach | per-scenario | Создаёт временные project-level `Codex` артефакты и очищает их после сценария | `tests/e2e/cursor-installer.test.ts`, `tests/e2e/claude-installer.test.ts` |
+| `tests/e2e/codex-installer.test.ts` | beforeEach / afterEach | per-scenario | Создаёт временные project-level `Codex` артефакты и проверяет trust/layering warnings | `tests/e2e/cursor-installer.test.ts`, `tests/e2e/claude-installer.test.ts` |
+| `tests/e2e/codex-hooks-dispatch.test.ts` | beforeEach / afterEach | per-scenario | Seed managed/global hooks и проверяет dispatcher strategy, version gates и additive layering | `tests/e2e/helpers.ts` |
 | `tests/e2e/codex-update.test.ts` | beforeEach / afterEach | per-scenario | Seed managed state, симулирует user modifications и проверяет backup/cleanup | `tests/e2e/helpers.ts` |
 
 > Каждый новый hook ОБЯЗАН быть указан в FILE_CHANGES.md (action=create) и в TASKS.md Phase 0.
@@ -274,10 +317,11 @@ flowchart TD
 Порядок cleanup:
 
 1. Удалить созданные `.codex/` project fixtures.
-2. Удалить generated `.agents/skills/` managed directories, не затрагивая user fixture copies.
-3. Удалить backup artifacts в `.dev-pomogator/.user-overrides/`.
-4. Сбросить `~/.dev-pomogator/config.json` test snapshot для сценария.
-5. Сохранить install/update logs как debugging artifacts только при failing scenarios.
+2. Удалить simulated home fixtures для `~/.codex/`.
+3. Удалить generated `.agents/skills/` managed directories, не затрагивая user fixture copies.
+4. Удалить backup artifacts в `.dev-pomogator/.user-overrides/`.
+5. Сбросить `~/.dev-pomogator/config.json` test snapshot для сценария.
+6. Сохранить install/update logs как debugging artifacts только при failing scenarios.
 
 ### Test Data & Fixtures
 
@@ -286,7 +330,9 @@ flowchart TD
 | Existing AGENTS | `tests/fixtures/codex/existing/AGENTS.md` | Симуляция пользовательского `AGENTS.md` для backup/merge сценариев | per-scenario |
 | Existing CLAUDE | `tests/fixtures/codex/existing/CLAUDE.md` | Симуляция пользовательского `CLAUDE.md` | per-scenario |
 | Existing codex config | `tests/fixtures/codex/existing/.codex/config.toml` | Симуляция пользовательского project config | per-scenario |
-| Existing codex hooks | `tests/fixtures/codex/existing/.codex/hooks.json` | Симуляция пользовательских hooks | per-scenario |
+| Existing codex hooks | `tests/fixtures/codex/existing/.codex/hooks.json` | Симуляция пользовательских project hooks | per-scenario |
+| Existing home config | `tests/fixtures/codex/home/config.toml` | Симуляция `~/.codex/config.toml` для additive layering tests | per-scenario |
+| Existing home hooks | `tests/fixtures/codex/home/hooks.json` | Симуляция `~/.codex/hooks.json` для additive layering tests | per-scenario |
 | Existing custom skill | `tests/fixtures/codex/existing/.agents/skills/custom-skill/SKILL.md` | Проверка сохранения user-owned skills | per-scenario |
 | Installed codex config snapshot | `tests/fixtures/configs/installed-codex.json` | Snapshot managed state для update/reinstall tests | shared |
 
@@ -296,5 +342,6 @@ flowchart TD
 |------|-----|----------------|------------|------------|
 | `projectDir` | `string` | `beforeEach` test hook | installer/update assertions | Путь к временному git-проекту |
 | `existingArtifacts` | `record` | fixture setup | merge assertions | Набор user-owned project files до установки |
+| `homeLayerArtifacts` | `record` | fixture setup | layering assertions | Набор simulated `~/.codex/*` files |
 | `backupPaths` | `string[]` | installer/update run | verification steps | Пути созданных backup files |
-| `installLogs` | `string` | installer run | diagnostics assertions | Текст warning/report для merge scenarios |
+| `installLogs` | `string` | installer run | diagnostics assertions | Текст warning/report для merge/trust scenarios |

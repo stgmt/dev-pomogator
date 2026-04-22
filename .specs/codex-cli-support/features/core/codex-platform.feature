@@ -9,8 +9,9 @@ Feature: Codex platform and bootstrap
     Then installer should resolve platform "codex"
     And installer should start Codex-specific installation flow
 
-  Scenario: Fresh install creates only project-level Codex artifacts
+  Scenario: Fresh trusted install creates only project-level Codex artifacts
     Given the project has no existing Codex artifacts
+    And the project is trusted by Codex
     When user runs dev-pomogator install with target "codex"
     Then project should contain ".codex/config.toml"
     And project should contain ".codex/hooks.json"
@@ -24,9 +25,15 @@ Feature: Codex platform and bootstrap
     Then installer should NOT create or modify "~/.codex/config.toml"
     And installer should NOT create or modify "~/.codex/hooks.json"
 
-  Scenario: Windows Codex bootstrap routes through universal entrypoint and bash sh path
+  Scenario: Untrusted project warns about ignored project layers
+    Given the project is not trusted by Codex
+    When user runs dev-pomogator install with target "codex"
+    Then installer should warn that project ".codex" layers are ignored until trust onboarding
+    And installer should still materialize repo-local Codex artifacts safely
+
+  Scenario: Windows strategy is native-first with WSL fallback
     Given the current OS is Windows
     When user runs bootstrap for target "codex"
     Then universal bootstrap entrypoint should recognize target "codex"
-    And bootstrap should route through the bash sh path
-    And bootstrap should invoke the Codex installer target
+    And documentation should describe native Windows sandbox as the default path
+    And documentation should describe WSL2 as a fallback instead of forcing bash sh only
