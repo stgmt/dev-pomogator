@@ -62,3 +62,48 @@ Helper НЕ полагается на наличие/отсутствие фай
 - stderr содержит `ECONNRESET` / `ETIMEDOUT` / `404`
 
 Test FAIL, но не на CORE003_19-specific assertion (`cleanupWarnings.length === 0`). Test report покажет network error в stderr — разработчик может re-run и не считать это регрессией.
+
+---
+
+# Second Failure Mode Use Cases (2026-04-20, @feature6)
+
+## UC-4: Prompt-race detection @feature6
+
+**Real-world scenario (2026-04-20 diagnostic session):** юзер на Windows PowerShell запустил `npx github:stgmt/dev-pomogator --claude` cold (npx cache очищен). npm показал `Need to install the following packages: github:stgmt/dev-pomogator. Ok to proceed? (y)` — юзер ввёл `y`, но PS prompt вернулся без каких-либо сообщений, установка не произошла.
+
+- Юзер запускает `/install-diagnostics`
+- Skill собирает evidence через Read/Glob:
+  1. `ls ~/AppData/Local/npm-cache/_npx/` → находит папку `eade2dc1c54870ea/` created Apr 20 15:13
+  2. `ls ~/AppData/Local/npm-cache/_npx/eade2dc1c54870ea/` → **empty** (нет `node_modules/`, нет `package.json`)
+  3. `stat -c %Y ~/.dev-pomogator/logs/install.log` → Apr 18 02:39 (2 дня назад, не advanced)
+  4. `~/.dev-pomogator/last-install-report.md` mtime тоже Apr 18
+  5. Skill re-reproduces с `--yes` flag в isolated temp cache → exit 0, install.log advances, 17 плагинов установлены
+- Skill сравнивает evidence: empty npx hash folder + log mtime stale + `--yes` reproduction success = **Mode B**
+- Output: `Mode: B — npm Confirmation Prompt Race` + citation npm/cli#7147 + recommended fix `npx --yes github:stgmt/dev-pomogator --claude`
+- Юзер запускает рекомендованное — получает 17 плагинов и зелёный install.log
+
+## UC-5: Docs hardening prevents silent failure @feature6
+
+**Prevention scenario:** новый пользователь Windows открывает repo README, видит `## Quick Install: npx --yes github:stgmt/dev-pomogator --claude`. Копирует, запускает — работает без prompt.
+
+- Репо contributor открыл PR, добавивший новый extension `extensions/new-ext/README.md` с примером `npx github:stgmt/dev-pomogator --claude` (без `--yes`)
+- CI runs `tools/lint-install-commands.ts` → grep regex `/npx\s+(?!--?yes\s+|-y\s+)...dev-pomogator/` матчит
+- Build fails с error:
+  ```
+  Install command lint failed:
+    extensions/new-ext/README.md:12 — `npx github:stgmt/dev-pomogator --claude`
+    Reason: missing --yes flag (prevents npm/cli#7147 prompt race on Windows PowerShell)
+    Replace with: `npx --yes github:stgmt/dev-pomogator --claude`
+  ```
+- Contributor fix-ит PR, commit, CI green → merge
+- Downstream users копируют safe command → no silent failure
+
+## UC-6: CI lint rule catches regression @feature6
+
+**Regression prevention scenario:** через 3 месяца drive-by PR редактирует `CLAUDE.md` и случайно убирает `--yes` из одного примера.
+
+- PR opens, CI запускает docs-lint test
+- Test fails на `CLAUDE.md:45 — npx github:stgmt/dev-pomogator --claude` (без --yes)
+- PR author видит failure reason + suggested replacement
+- Исправляет → CI green → merge
+- Альтернатива без FR-8: regression просачивается в docs, следующий user копирует, хитит silent failure, тратит час на диагностику — лишние support tickets

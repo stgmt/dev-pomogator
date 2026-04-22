@@ -223,3 +223,83 @@ npm error git dep preparation failed
 - **Docker tests запускаются на Linux** (`docker-no-git-repo.md`) → CORE003_18 пройдёт в CI, CORE003_19 будет SKIPPED через `describe.skipIf()`
 - **Никогда не блокировать на тестах** (`no-blocking-on-tests.md`) → validation запускать через `run_in_background: true`
 - **Naming convention CORE003_NN** (`extension-test-quality.md`) → CORE003_18 и CORE003_19 — следующие свободные номера после CORE003_17
+
+---
+
+## Second Failure Mode — npm Confirmation Prompt Race (2026-04-20)
+
+> Добавлено после diagnostic session где skill `install-diagnostics` обнаружил **отличный от Mode A** pattern. Этот root cause **не покрывался** исходной спекой — она фокусировалась на EPERM/tsc prepare fail. Здесь bin даже не запускается.
+
+### User-visible symptom
+
+```
+PS D:\repos\smarts> npx github:stgmt/dev-pomogator --claude
+Need to install the following packages:
+github:stgmt/dev-pomogator
+Ok to proceed? (y) y
+PS D:\repos\smarts>
+```
+
+Prompt проглотил `y`, но npm exit без proceeding. Никаких сообщений в stdout/stderr, bin не запускался, `~/.dev-pomogator/logs/install.log` не обновлён.
+
+### Evidence collected (2026-04-20 diagnostic session)
+
+| Источник | Данные |
+|---|---|
+| `~/.dev-pomogator/logs/install.log` mtime | Apr 18 02:39 (2 дня до диагностики) → installer.main() не запускался |
+| `~/.dev-pomogator/last-install-report.md` mtime | Apr 18 (confirms nothing recorded) |
+| `~/AppData/Local/npm-cache/_npx/eade2dc1c54870ea/` (Apr 20 15:13) | **Пустая директория** — нет `node_modules/`, нет `package.json`. Classic partial/no reify — отличается от EPERM path где `@inquirer/...` partially present |
+| npm logs до reproduce | Pomogator-specific log ротирован (npm keeps 10) |
+| Reproduce с `--yes` (bypass prompt) | Exit 0, 17 плагинов установлено, `install.log` updated |
+| Reproduce без `--yes` (empty stdin) | Воспроизводит empty `_npx/<hash>/` + log mtime не advanced |
+| PowerShell env | Clean dir: no node_modules, no package.json, no .npmrc |
+| Windows Defender фон | Присутствует во всех npm logs но не на reify — не root cause |
+
+### Root cause
+
+npm 11.11.1 на Windows PowerShell (conhost backend) показывает confirmation prompt `Ok to proceed? (y)` перед `npm exec` установкой. Interactive stdin prompt race-ится с pipe между conhost и Node child process (npm/cli#7147). Prompt читает `y` input, но npm exec **exit 0 без proceeding** — bin `dev-pomogator` так и не извлёкся в `_npx/<hash>/`.
+
+Отличие от Mode A (EPERM):
+- **Mode A (EPERM)**: reify **стартует**, хитает EPERM на cleanup частично извлечённых `@inquirer/external-editor/dist/esm`, exit 2, stderr полон `npm warn cleanup` lines
+- **Mode B (prompt-race)**: reify **не стартует вообще**, exit 0, stderr/stdout пустые, `_npx/<hash>/` создана но пустая
+
+### Why silent
+
+npm exec на Windows PS при interactive prompt не пишет installer output в stderr/stdout если prompt exit-нул до реального reify. Pipe между conhost и child stdin может race-иться на PowerShell — known npm 11.x behavior (npm/cli#7147). Exit code = 0 (silent) потому что prompt refusal = "не ошибка" с точки зрения npm.
+
+### Confirmed fix options (verified)
+
+| Option | Команда | Status |
+|--------|---------|--------|
+| 1 (primary) | <!-- lint-install: allow --> `npx --yes github:stgmt/dev-pomogator --claude` | ✅ Verified: exit 0, 17 плагинов, install.log updated |
+| 2 (fallback) | `npm install -g github:stgmt/dev-pomogator && dev-pomogator --claude --all` | ✅ Bypasses npx entirely |
+| 3 (radical) | `git clone ... && cd dev-pomogator && npm install && node bin/cli.js --claude --all` | ✅ Обходит npm exec полностью |
+
+### Why this wasn't caught earlier
+
+1. Linux Docker CI ВСЕГДА использует `--yes` flag в test helpers (`runInstallerViaNpx` defaults to `input: 'y\n'`), potentially скрывая prompt-race на любой платформе
+2. Developer machines uses `npx --yes` в muscle memory / старых guides — баг не срабатывает
+3. Symptom silent → no telemetry / log trail → bug not reported
+4. Existing RESEARCH.md ожидает Mode A evidence (cleanup warnings) — не ищет empty `_npx/<hash>/`
+
+### Known related upstream issues
+
+- npm/cli#7147 — "npm exec confirmation prompt race on Windows PowerShell" (open as of 2026-04-20)
+- Related Windows conhost stdin buffering under PowerShell
+
+### Implications
+
+1. **Primary defense — FR-7 docs hardening**: замена всех `npx github:stgmt/dev-pomogator` на `npx --yes github:stgmt/dev-pomogator` в user-facing docs. Low-risk, immediately effective.
+2. **Regression prevention — FR-8 CI lint**: grep .md files, fail если unsafe pattern return.
+3. **Diagnostic coverage — FR-6**: skill `install-diagnostics` должен различать Mode A vs B vs A+B.
+4. **Test reproduction — FR-9**: CORE003_20 с `forceYes: false` воспроизводит prompt-race в isolated env.
+5. **Deferred safety net — FR-10**: optional defensive wrapper bin для edge cases после FR-7 adoption.
+
+### Cross-ref with Mode A
+
+Mode A (EPERM, original FR-1..FR-5) и Mode B (prompt-race, FR-6..FR-10) являются **independent failure modes того же симптома**. Юзер может хитать их в любой последовательности:
+- Typical first-time user: Mode B первый (prompt-race blocks any attempt)
+- После FR-7 docs fix: user использует `--yes`, видит Mode A (если EPERM actual)
+- Mode A+B одновременно возможно когда partial reify идёт до EPERM но после prompt proceed
+
+Diagnostic skill FR-6 выдаёт `Mode: A+B (sequential)` в этом случае.
