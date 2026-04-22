@@ -257,7 +257,7 @@ Feature: PLUGIN006 Specs Generator Scripts
   Scenario: Scaffold creates .progress.json with initial state
     When I run scaffold-spec.ts with name "progress-test"
     Then .progress.json should exist in ".specs/progress-test/"
-    And progress.version should be 1
+    And progress.version should be 2
     And progress.currentPhase should be "Discovery"
     And all stopConfirmed flags should be false
     And created_files count should still be 15
@@ -266,7 +266,7 @@ Feature: PLUGIN006 Specs Generator Scripts
   Scenario: Spec-status creates .progress.json for pre-existing specs
     Given a partial spec fixture exists without .progress.json
     When I run spec-status.ts on the spec
-    Then .progress.json should be created with version 1
+    Then .progress.json should be created with version 2
     And progress_state should be included in the output
 
   @feature38

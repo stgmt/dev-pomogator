@@ -11,6 +11,7 @@
 | 3 | НЕКОНСИСТЕНТНОСТЬ (Inconsistency) | {auto_inconsistency} | {ai_inconsistency} | {total_inconsistency} | {severity_inconsistency} |
 | 4 | РУДИМЕНТЫ (Rudiments) | {auto_rudiments} | {ai_rudiments} | {total_rudiments} | {severity_rudiments} |
 | 5 | ФАНТАЗИИ (Fantasies) | {auto_fantasies} | {ai_fantasies} | {total_fantasies} | {severity_fantasies} |
+| 6 | JIRA_DRIFT _(только в Jira-mode)_ | {auto_jira_drift} | {ai_jira_drift} | {total_jira_drift} | {severity_jira_drift} |
 | | **ИТОГО** | **{auto_total}** | **{ai_total}** | **{grand_total}** | |
 
 ---
@@ -62,6 +63,25 @@
 | # | Критичность | Файл | Проблема | Рекомендация |
 |---|-------------|------|----------|--------------|
 | {n} | {severity} | {file} | {problem} | {recommendation} |
+
+---
+
+## Категория 6: JIRA_DRIFT
+
+_Этот раздел заполняется **только** если спека в Jira-mode (присутствует `JIRA_SOURCE.md` + `.jira-cache.json`)._
+
+Расхождения между Jira-источником на момент `jira-intake` и актуальным состоянием Jira: новые комментарии reporter, изменённые/добавленные attachments, обновление description, status/priority изменения. Также: FR/AC без trace на `JIRA_SOURCE.md` quote.
+
+**Sub-categories:**
+- `source_updated` — Jira description изменён с момента intake.
+- `new_comments` — reporter добавил комментарии (могут содержать новые вводные).
+- `attachments_changed` — attachments добавлены/заменены/удалены.
+- `missing_trace` — FR/AC/BDD scenario без `Jira imperative:` / `Evidence:` / `# Jira trace:` reference (дублирует JIRA_SOURCE_PRESERVED validator, но audit даёт consolidated view).
+- `mcp_unavailable` — MCP недоступен, drift check skipped (INFO-level).
+
+| # | Критичность | Sub-category | Файл/Artifact | Проблема | Рекомендация |
+|---|-------------|--------------|---------------|----------|--------------|
+| {n} | {severity} | {sub_category} | {file} | {problem} | {recommendation} |
 
 ---
 
