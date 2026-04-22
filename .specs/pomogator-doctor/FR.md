@@ -162,3 +162,94 @@ WHEN `--json` flag указан THEN Doctor SHALL output JSON array `CheckResult
 WHEN `--json` flag указан AND check type=env-requirement THEN JSON output SHALL redact env var **values**: показать только `{name: "AUTO_COMMIT_API_KEY", status: "set" | "unset"}` без value. Защита от случайной утечки API keys в CI logs.
 
 **Связанные AC:** [AC-25](ACCEPTANCE_CRITERIA.md#ac-25-fr-25)
+
+---
+
+# Post-Launch Hardening (2026-04-20) — Edge Cases from Real-World Usage
+
+> Добавлено после incident-отчёта по `D:\repos\webapp\`: 22 broken хука на Stop/SessionStart/PreToolUse/UserPromptSubmit/PostToolUse, доктор выдал false-positive critical на C6 (неправильный JSON-path) и промолчал про project-local wipe (C5 смотрит в HOME). См. `RESEARCH.md` секцию `## Post-Launch Edge Cases Found (2026-04-20)` с file:line пруфами из живого запуска.
+
+## FR-26: Hook Command Integrity check @feature12
+
+Doctor SHALL парсить `projectRoot/.claude/settings.local.json → hooks` во всех 3 форматах (string, object, array per `.claude/rules/gotchas/installer-hook-formats.md`), извлекать relative paths на `.dev-pomogator/tools/**/*.{ts,sh,mjs,cjs,js}` из каждого `command`-поля и проверять существование каждого файла через `fs.existsSync(path.join(projectRoot, extractedPath))`. WHEN файл отсутствует THEN Doctor SHALL пометить check как `severity=critical`, `reinstallable=yes`, сгруппировать missing по event name, и включить в hint точный список отсутствующих путей (до 5 + "…N more"). Parser edge case: `bash .dev-pomogator/tools/X.sh` (shell hook без tsx-runner) — отдельный regex для shell path extraction.
+
+Meta: `reinstallable: yes`.
+
+**Связанные AC:** [AC-26](ACCEPTANCE_CRITERIA.md#ac-26-fr-26)
+**Use Case:** [UC-13](USE_CASES.md#uc-13-hook-storm-on-broken-project-feature12)
+
+## FR-27: Managed Files Hash Integrity check @feature12
+
+Doctor SHALL итерировать `config.installedExtensions[*].managed[projectRoot].tools[]` для current projectRoot. Для каждого entry: (1) `fs.existsSync(path.join(projectRoot, entry.path))` — missing → severity=critical `reinstallable=yes`; (2) пересчитать `crypto.createHash('sha256').update(fs.readFileSync(path)).digest('hex')`, сравнить с `entry.hash` — mismatch → severity=warning `reinstallable=no` с hint "file modified since install (user edit or version drift); compare with `extensions/{ext}/tools/` source". Performance guard: hash check skip если file size > 1MB (NFR-P-1 protection).
+
+Meta: missing → `reinstallable: yes`; hash-mismatch → `reinstallable: no`.
+
+**Связанные AC:** [AC-27](ACCEPTANCE_CRITERIA.md#ac-27-fr-27)
+**Use Case:** [UC-14](USE_CASES.md#uc-14-partial-wipe-managed-files-feature12), [UC-15](USE_CASES.md#uc-15-content-hash-drift-feature12)
+
+## FR-28: Plugin manifest presence for installed projects @feature10
+
+**FIX to FR-13.** IF current `projectRoot` ∈ `installedExtensions[*].projectPaths` AND `.dev-pomogator/.claude-plugin/plugin.json` does not exist THEN Doctor SHALL mark C15 as `severity=critical`, `reinstallable=yes`, hint=`"plugin manifest missing — Claude Code cannot load commands/skills from this project; run reinstall"`. Previous behavior (missing manifest → silent ok) является **blind spot** — manifest tracked в `managed.tools[]` и без него `/pomogator-doctor` сам не зарегистрирован в Claude Code.
+
+Meta: `reinstallable: yes`.
+
+**Связанные AC:** [AC-28](ACCEPTANCE_CRITERIA.md#ac-28-fr-28)
+
+## FR-29: pomogator-doctor self-install in all projectPaths @feature12
+
+Installer SHALL при любой успешной установке в project записать extension `pomogator-doctor` в `config.installedExtensions` с `projectPaths` включающим target, и его SessionStart hook в target `.claude/settings.local.json → hooks.SessionStart` — **автоматически без opt-in**. Doctor SHALL проверить: (a) `pomogator-doctor` ∈ `installedExtensions[*].name`, (b) current projectRoot ∈ `pomogator-doctor.projectPaths`, (c) settings.local.json hooks.SessionStart содержит команду, ссылающуюся на `.dev-pomogator/tools/pomogator-doctor/doctor-hook.ts`. Missing любого условия → severity=warning, reinstallable=yes, hint=`"proactive broken-install detection disabled — reinstall to enable SessionStart doctor banner"`.
+
+Meta: `reinstallable: yes`.
+
+**Связанные AC:** [AC-29](ACCEPTANCE_CRITERIA.md#ac-29-fr-29)
+**Use Case:** [UC-17](USE_CASES.md#uc-17-self-install-detection-feature12)
+
+## FR-30: --all-projects flag @feature8
+
+Doctor SHALL поддерживать CLI flag `--all-projects` который:
+1. Читает `config.installedExtensions[*].projectPaths` → deduplicated set (случай когда один projectPath появляется в multiple extensions).
+2. Для каждого projectPath запускает full doctor run (включая FR-26/FR-27/FR-28 которые зависят от projectRoot) с изолированным CheckContext.
+3. Аггрегирует результаты в single report: per-project section `=== {projectPath} ===` + traffic-light group + summary.
+4. Top-level summary: `"Scanned N projects: M fully healthy, K with issues"`.
+5. Exit code = worst severity across all projects (2 if any critical, 1 if any warning, 0 else).
+6. Ограничение concurrency: max 4 project runs параллельно (NFR-P-3 с `p-limit(4)`).
+7. При `--json` output — top-level object `{projects: {<path>: CheckResult[]}}`.
+8. При отсутствии projectPaths в config → exit 0 + stderr "no installed projects recorded".
+
+**Связанные AC:** [AC-30](ACCEPTANCE_CRITERIA.md#ac-30-fr-30)
+**Use Case:** [UC-16](USE_CASES.md#uc-16-cross-project-scan-feature8)
+
+## FR-31: Hooks registry path correction @feature2
+
+**FIX to FR-4.** Doctor SHALL читать expected hooks по правильному JSON-пути: `config.installedExtensions[*].managed[projectRoot].hooks` (aggregated union across all extensions для current projectRoot), НЕ `config.managed[projectRoot].hooks` (top-level field отсутствует в реальной schema). Aggregation algorithm: для каждого installedExtensions[i], если `managed[projectRoot]?.hooks` существует — union per event; если same command string появляется ≥2 раз в union → severity=warning "duplicate hook registration across extensions: {cmd}". Missing expected event или команд → critical; stale keys (в settings.local.json, не в union) → warning с suggestion "reinstall or manually prune".
+
+Meta: `reinstallable: yes`.
+
+**Связанные AC:** [AC-31](ACCEPTANCE_CRITERIA.md#ac-31-fr-31)
+
+## FR-32: config.json top-level version field @feature2
+
+Installer SHALL writing top-level `version` field в `~/.dev-pomogator/config.json` equal to current `package.json.version` при каждом install/update. Doctor FR-11 (version match) SHALL читать из этого field; missing field → severity=warning, reinstallable=yes, hint=`"config.json lacks top-level version (pre-1.x installer); run reinstall to backfill"`. Migration path: первый install после upgrade автоматически добавляет field (writer-only, no doctor action required).
+
+**Связанные AC:** [AC-32](ACCEPTANCE_CRITERIA.md#ac-32-fr-32)
+
+## FR-33: MCP probe timeout + error categorization @feature4
+
+**ADJUSTMENT to FR-10:**
+- Probe timeout SHALL increase from 3s to **10s** per server (`DOCTOR_TIMEOUTS.PROBE_MS = 10_000`) — Windows cold spawn + Python/Node MCP initialize+tools/list handshake typically takes 4–8s.
+- `timeout` outcome → severity=**warning** (не critical) — server likely slow but functional; hint=`"probe did not complete in 10s — server may be slow; retry manually or check server logs"`.
+- `spawn ENOENT` → severity=critical, reinstallable=no, hint=`"command not found in PATH when doctor spawned child — check .mcp.json uses absolute paths or ensure npx/python3 is on PATH at Claude Code launch"`.
+- `spawn EACCES` → severity=critical, hint=`"execute permission denied for MCP binary"`.
+- Exit-before-handshake (server started but closed stdin/stdout) → severity=critical с exit code в hint.
+- Evidence: real-world `spawn npx ENOENT` случается когда doctor наследует Git Bash / MSYS PATH без npm bin paths — categorized с PATH-specific hint.
+
+**Связанные AC:** [AC-33](ACCEPTANCE_CRITERIA.md#ac-33-fr-33)
+
+## FR-34: Stale managed entries detection @feature12
+
+Doctor SHALL cross-reference `config.installedExtensions[*].name` с distinct tool-directory именами извлечёнными из `installedExtensions[*].managed[projectRoot].tools[].path` (первый сегмент после `.dev-pomogator/tools/`). Валидный набор = union of (a) installed extension names, (b) sub-tool directories declared в `extensions/{ext}/extension.json → tools` (например `specs-workflow.tools.specs-validator`). IF tool-directory name в managed paths но не ∈ валидного набора (extension переименован/удалён но managed records остались) THEN Doctor SHALL пометить как severity=warning, reinstallable=yes, hint=`"managed entries orphaned from removed/renamed extension: {names}; reinstall will prune stale references"`. Known non-orphan case: `specs-validator` — это sub-tool-directory inside `specs-workflow` extension manifest; cross-reference MUST учитывать sub-tools.
+
+Meta: `reinstallable: yes`.
+
+**Связанные AC:** [AC-34](ACCEPTANCE_CRITERIA.md#ac-34-fr-34)
+**Use Case:** [UC-18](USE_CASES.md#uc-18-stale-managed-entries-feature12)

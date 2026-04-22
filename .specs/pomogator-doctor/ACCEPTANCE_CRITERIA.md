@@ -173,3 +173,70 @@ WHEN `--json` flag THEN Doctor stdout SHALL be valid JSON array `CheckResult[]` 
 **Требование:** [FR-25](FR.md#fr-25-env-values-redaction-in-json-feature8)
 
 IF `--json` flag AND check.type == `env-requirement` THEN JSON CheckResult SHALL NOT include `value` field. Only `name: string, status: "set" | "unset"`.
+
+---
+
+# Post-Launch Hardening Acceptance Criteria (2026-04-20)
+
+## AC-26 (FR-26) @feature12
+
+**Требование:** [FR-26](FR.md#fr-26-hook-command-integrity-check-feature12)
+
+WHEN Doctor parses `projectRoot/.claude/settings.local.json → hooks` AND обнаруживает hook entry с `command` ссылающимся на `.dev-pomogator/tools/{ext}/{script}.{ts,sh,mjs,cjs,js}` AND файл не существует на диске THEN Doctor SHALL emit check с `id=C20:{event}:{script}`, severity=critical, reinstallable=yes, message начинается с `{event}:` и перечисляет missing скрипты (до 5) + "…N more" если count > 5.
+
+## AC-27 (FR-27) @feature12
+
+**Требование:** [FR-27](FR.md#fr-27-managed-files-hash-integrity-check-feature12)
+
+WHEN Doctor iterates `installedExtensions[*].managed[projectRoot].tools[]` для current projectRoot AND entry.path file существует AND `sha256(fs.readFileSync(entry.path))` ≠ `entry.hash` AND file size ≤ 1MB THEN Doctor SHALL emit check с severity=warning, reinstallable=no, hint включающим relative path и слова "user edit or version drift". IF file отсутствует THEN severity=critical, reinstallable=yes. IF file size > 1MB — hash check skipped, emit ok с note `"skipped hash (file > 1MB)"`.
+
+## AC-28 (FR-28) @feature10
+
+**Требование:** [FR-28](FR.md#fr-28-plugin-manifest-presence-for-installed-projects-feature10)
+
+IF `projectRoot` ∈ `installedExtensions[*].projectPaths` (хотя бы одна extension декларирует этот projectRoot) AND `path.join(projectRoot, '.dev-pomogator', '.claude-plugin', 'plugin.json')` does not exist THEN Doctor SHALL override previous behavior (silent ok) and emit C15 с severity=critical, reinstallable=yes, hint содержащим "plugin manifest missing" AND "Claude Code cannot load commands/skills".
+
+## AC-29 (FR-29) @feature12
+
+**Требование:** [FR-29](FR.md#fr-29-pomogator-doctor-self-install-in-all-projectpaths-feature12)
+
+WHEN Doctor проверяет current projectRoot AND (a) `pomogator-doctor` ∉ `installedExtensions[*].name` OR (b) projectRoot ∉ `(installedExtensions[ext=pomogator-doctor]).projectPaths` OR (c) `.claude/settings.local.json → hooks.SessionStart` не содержит команды с substring `"pomogator-doctor/doctor-hook"` THEN Doctor SHALL emit severity=warning, reinstallable=yes, hint starts with "proactive broken-install detection disabled".
+
+## AC-30 (FR-30) @feature8
+
+**Требование:** [FR-30](FR.md#fr-30-allprojects-flag-feature8)
+
+WHEN CLI invoked с `--all-projects` THEN Doctor SHALL iterate deduplicated union of `installedExtensions[*].projectPaths` AND для каждого projectPath выполнить isolated doctor run с concurrency ≤ 4. Output structure:
+- Interactive mode: per-project section `=== {projectPath} ===` + traffic-light + per-project summary; top-level aggregate summary "Scanned N projects: M healthy, K with issues".
+- `--json` mode: `{"projects": {"<path>": CheckResult[], ...}, "aggregate": {"ok": ..., "warnings": ..., "critical": ...}}`.
+- Exit code = `max(per-project exit codes)` ∈ {0, 1, 2}.
+- IF `installedExtensions[*].projectPaths` union empty THEN stderr `"no installed projects recorded"`, exit 0.
+
+## AC-31 (FR-31) @feature2
+
+**Требование:** [FR-31](FR.md#fr-31-hooks-registry-path-correction-feature2)
+
+WHEN Doctor computes expected hooks THEN Doctor SHALL aggregate `installedExtensions[*].managed[projectRoot]?.hooks` (union of per-extension hook records для current projectRoot). IF same command string appears ≥2 times в aggregated union THEN Doctor SHALL emit warning "duplicate hook registration across extensions: {cmd}". Missing expected event/commands compared к settings.local.json → critical; stale keys in settings.local.json не в union → warning с reinstall hint. On healthy installation where union matches settings.local.json exactly — check is `ok`. (Previous behavior: always critical due to wrong path — regression fixed.)
+
+## AC-32 (FR-32) @feature2
+
+**Требование:** [FR-32](FR.md#fr-32-configjson-toplevel-version-field-feature2)
+
+WHEN Installer writes `~/.dev-pomogator/config.json` THEN JSON object SHALL include top-level `"version": "<package.json.version>"` key. Doctor FR-11 reads from `ctx.config.version` (top-level). IF `ctx.config.version` is null/undefined/empty string THEN emit severity=warning, reinstallable=yes, hint contains "lacks top-level version". IF field present AND valid semver AND matches `packageVersion` — severity=ok.
+
+## AC-33 (FR-33) @feature4
+
+**Требование:** [FR-33](FR.md#fr-33-mcp-probe-timeout--error-categorization-feature4)
+
+WHEN MCP probe executes THEN timeout SHALL be 10_000 ms (not 3_000). Severity mapping:
+- outcome `timeout` → severity=warning (not critical), hint starts with "probe did not complete in 10s".
+- outcome `spawn ENOENT` → severity=critical, hint mentions "PATH".
+- outcome `spawn EACCES` → severity=critical, hint mentions "permission denied".
+- outcome `server exited` (non-zero before handshake) → severity=critical, hint includes exit code numeric value.
+- successful handshake → severity=ok.
+
+## AC-34 (FR-34) @feature12
+
+**Требование:** [FR-34](FR.md#fr-34-stale-managed-entries-detection-feature12)
+
+WHEN Doctor extracts distinct tool-directory names (first path segment after `.dev-pomogator/tools/`) from `installedExtensions[*].managed[projectRoot].tools[].path` AND name ∉ (installedExtensions names ∪ declared sub-tool names из `extensions/{ext}/extension.json → tools`) THEN Doctor SHALL emit severity=warning, reinstallable=yes, message lists orphaned names, hint starts with "managed entries orphaned from removed/renamed extension". Known validated case: `specs-validator` is declared as sub-tool of `specs-workflow` extension → NOT orphan.

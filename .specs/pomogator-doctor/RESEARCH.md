@@ -269,3 +269,69 @@ if (manual.length > 0) printNonReinstallableBlock(manual);  // always show hints
 - **Node 22.6+ strip-types**: `extensions/**/*.ts` imports — `.ts` specifier обязателен (ts-import-extensions)
 - **Integration tests first**: unit-only тесты для C1..C14 недопустимы; каждый check покрыт integration test через spawnSync или runInstaller pattern (integration-tests-first)
 - **`/run-tests` gate**: запуск тестов только через `/run-tests`, прямые `npm test` блокируются PreToolUse hook (centralized-test-runner)
+
+---
+
+## Post-Launch Edge Cases Found (2026-04-20)
+
+> Добавлено после incident-отчёта по `D:\repos\webapp\` где юзер увидел 8 `ERR_MODULE_NOT_FOUND` на каждом Stop event + был неспособен диагностировать через `/pomogator-doctor`. Все находки — с file:line пруфами из живого запуска `dev-pomogator --doctor` и реальных файлов.
+
+### Real-world state examined
+
+1. **webapp project**: `.claude/settings.local.json` содержит **22 хука** зарегистрированных через 5 events (Stop=8, SessionStart=4, PreToolUse=4, UserPromptSubmit=4, PostToolUse=2). Пруф: `D:/repos/webapp/.claude/settings.local.json:1-215`.
+2. **Project-local wipe**: `D:/repos/webapp/.dev-pomogator/tools/` содержит только подпапку `tui-test-runner/tui/` — 16 других extension tool-directories отсутствуют. Пруф: `ls` output `tui-test-runner` single entry.
+3. **HOME partial wipe**: `C:/Users/stigm/.dev-pomogator/tools/` — директория НЕ существует. Но `~/.dev-pomogator/scripts/tsx-runner.js` и `node_modules/` целы (tsx strategy 1.25 работает для проектов с local .dev-pomogator/tools).
+4. **Config.json tracks both projects**: `installedExtensions[*].projectPaths` содержит `D:\\repos\\dev-pomogator` И `D:\\repos\\webapp`. Managed tools hashes сохранены per-project (часто разные sha256 для одного и того же script пути — evidence of version drift).
+5. **pomogator-doctor extension НЕ в installedExtensions**: `grep '"name":' ~/.dev-pomogator/config.json` → 17 extensions, `pomogator-doctor` отсутствует. SessionStart doctor hook не зарегистрирован ни в одной projectPath.
+
+### Defects in existing checks (D1-D4)
+
+| ID | Check | File:line | Проблема | Live evidence |
+|----|-------|-----------|----------|----------------|
+| D1 | C6 hooks-registry | `src/doctor/checks/hooks-registry.ts:30` `ctx.config?.managed?.[ctx.projectRoot]?.hooks` | Читает top-level `config.managed`, но реальная schema — `installedExtensions[*].managed[projectRoot].hooks` | `✗ C6: unexpected keys: Stop, SessionStart, PreToolUse, UserPromptSubmit, PostToolUse` на рабочей установке dev-pomogator — всегда critical |
+| D2 | C13 version-match | `version-match.ts:12` `ctx.config?.version ?? null` | Top-level `version` field не пишется installer-ом | `⚠ C13: cannot compare versions (config=unknown, package=24.1.20)` — dead by design |
+| D3 | C5 extension tools | `pomogator-home.ts:82-84` `toolDir = path.join(homeDir, '.dev-pomogator', 'tools', ext.name)` | Проверяет HOME директорию, но хуки запускаются project-relative | Ложный ok если HOME цел а project wiped; в webapp совпадение — оба wiped |
+| D4 | Cross-project blindness | `runner.ts:28` `projectRoot = options.projectRoot ?? process.cwd()` | Проверяется только cwd-проект, даже если config tracks другие | `/pomogator-doctor` из dev-pomogator не узнает про сломанный webapp |
+
+### Blind spots (B1-B7)
+
+| ID | Blind spot | Impact | Evidence |
+|----|-----------|--------|----------|
+| B1 | Hook command → script path existence не проверяется | 22 broken хука в webapp дают 0 detections от доктора | Webapp: hook `.dev-pomogator/tools/auto-commit/auto_commit_stop.ts` не существует → `ERR_MODULE_NOT_FOUND` на каждом Stop |
+| B2 | Managed tools SHA-256 integrity не проверяется | User edits silently затираются при reinstall; version drift undetected | `config.json` hash `auto_commit_stop.ts` для dev-pomogator = `f4ea8b61...`, для webapp = `33b4e963...` — разные версии одного script |
+| B3 | `.dev-pomogator/.claude-plugin/plugin.json` missing → C15 silent ok | `/pomogator-doctor` и другие commands не грузятся Claude Code-ом | `plugin-loader.ts:97` — `if (!manifest) return [{severity: 'ok', message: 'no plugin.json manifest found — nothing to verify'}]` |
+| B4 | pomogator-doctor не установлен по дефолту | SessionStart баннер (FR-17) не срабатывает на broken installs | `grep '"name":' config.json` не включает `pomogator-doctor`; webapp `settings.local.json.SessionStart` не имеет doctor-hook |
+| B5 | Stale managed entries после extension rename/remove | Installer не чистит при uninstall — вечный шум от doctor reinstall suggestions | potential case — сейчас не проявляется, но при любом future rename extension |
+| B6 | `~/.dev-pomogator/node_modules/.bin/tsx` existence не проверяется | tsx-runner strategy 1.25 тихо degrades если binary отсутствует | `tsx-runner.js:222-228` зависит от этого binary |
+| B7 | `tsx-runner.js` content corruption не детектируется | Syntax error в runner → все hooks crash через bootstrap `throw e` | `tsx-runner-bootstrap.cjs:60` |
+
+### Performance / UX findings
+
+- **Node 20 drift**: юзер имеет Node 20.19.6. tsx-runner.log показывает `0:native:notfound,1:local:notfound,1.25:home` — 3 стратегии per hook cold start. При 22 хуках за UserPrompt/Stop cycle ~9s дополнительной задержки vs Node 22.6. C1 warning не отражает real cost.
+- **MCP probe 3s timeout слишком жёсткий**: `C12:mcp-atlassian: timeout (3019ms)` + `C12:playwright: spawn npx ENOENT (20ms)` — первое false positive (server slow but functional), второе — distinct error case (PATH issue не "server down"). Смешивать в одно "critical" лишает пользователя точного hint-а.
+- **Параллельный stderr шум**: 8 Stop hooks запускаются параллельно, stderr interleaved — invisible какой hook зафейлил первым. Доктор должен sort + group by event чтобы output читаемый.
+
+### Windows-specific edge cases
+
+- **Partial wipe semantics**: `tui-test-runner/tui/` существует как подпапка, но `tui_stop.ts` в корне нет. `fs.existsSync(directoryPath)` возвращает true → false negative в C5. Requires **file-level** checks (каждый `managed.tools[].path` separately).
+- **Backslash path escaping**: config.json хранит `"D:\\repos\\webapp"` (escaped). При сравнении с `process.cwd()` на Windows работает, но test-coverage должен include этот case.
+- **bg-task-guard как parallel sub-tool**: `test-statusline/extension.json` декларирует `bg-task-guard` как **второй** tool-directory (not nested inside `test-statusline/`). Installer создаёт параллельные `.dev-pomogator/tools/test-statusline/` и `.dev-pomogator/tools/bg-task-guard/` — хук `bg-task-guard/stop-guard.sh` регистрируется через отдельную `hooks.Stop[]` entry. Orphan detection MUST учитывать sub-tools в extension manifest.
+
+### Sources verified
+
+- **Live doctor output**: `dev-pomogator --doctor` запущен в dev-pomogator на 2026-04-20 — confirmed D1, D2, P2 defects.
+- **Real settings.local.json**: `D:/repos/webapp/.claude/settings.local.json` — 22 хука, 5 events, все с `.dev-pomogator/tools/...` paths.
+- **Real config.json**: `C:/Users/stigm/.dev-pomogator/config.json` — 2520+ строк, 17 installed extensions, `pomogator-doctor` отсутствует.
+- **tsx-runner strategies**: `src/scripts/tsx-runner.js:374-396` подтверждает `runNodeNativeTs` возвращает false для Node < 22.6.
+- **Bootstrap fail-soft**: `src/scripts/tsx-runner-bootstrap.cjs:50-56` — silent no-op при missing runner, но tsx-runner сам exit(1) при missing script.
+
+### Implications для реализации (P0 minimum patch)
+
+3 файла + 4 edit'а покроют 90% webapp-style сценариев:
+
+1. **New** `src/doctor/checks/hook-command-integrity.ts` (~80 строк) — FR-26
+2. **New** `src/doctor/checks/managed-files-integrity.ts` (~70 строк) — FR-27
+3. **Fix** `src/doctor/checks/hooks-registry.ts` (~20 строк change) — FR-31 (critical false-positive regression)
+4. **Fix** `src/doctor/checks/plugin-loader.ts` (~10 строк change) — FR-28
+
+P1 дополнения (MCP retune, --all-projects, self-install, config.version) — следующая итерация после P0 verify.

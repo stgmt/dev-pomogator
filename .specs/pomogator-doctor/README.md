@@ -28,13 +28,13 @@
 
 **Быстро понять о чём**: [USER_STORIES.md](USER_STORIES.md) → [USE_CASES.md](USE_CASES.md)
 
-**Review требований**: [REQUIREMENTS.md](REQUIREMENTS.md) (traceability matrix) → [FR.md](FR.md) (25 FR) → [NFR.md](NFR.md) (Perf/Sec/Rel/Usa) → [ACCEPTANCE_CRITERIA.md](ACCEPTANCE_CRITERIA.md) (EARS)
+**Review требований**: [REQUIREMENTS.md](REQUIREMENTS.md) (traceability matrix) → [FR.md](FR.md) (34 FR: 25 initial + 9 post-launch hardening `@feature12`) → [NFR.md](NFR.md) (Perf/Sec/Rel/Usa) → [ACCEPTANCE_CRITERIA.md](ACCEPTANCE_CRITERIA.md) (EARS, 34 AC)
 
 **Архитектура перед implementation**: [DESIGN.md](DESIGN.md) → [pomogator-doctor_SCHEMA.md](pomogator-doctor_SCHEMA.md) (TypeScript interfaces + JSON output schema) → [FIXTURES.md](FIXTURES.md) (13 fixtures + 4 hooks + cleanup order)
 
-**Implementation план**: [TASKS.md](TASKS.md) (TDD Phase 0 Red → Phase 1-6 Green → Phase 7 Refactor) → [FILE_CHANGES.md](FILE_CHANGES.md) (43 операций: 33 create + 10 edit)
+**Implementation план**: [TASKS.md](TASKS.md) (TDD Phase 0 Red → Phase 1-7 Green + Refactor → Phase 8 Post-Launch Hardening) → [FILE_CHANGES.md](FILE_CHANGES.md) (63 операций: 37 create + 26 edit)
 
-**BDD сценарии**: [pomogator-doctor.feature](pomogator-doctor.feature) — 15 scenarios POMOGATORDOCTOR001_01..15 покрывающие все UC + reliability edge cases
+**BDD сценарии**: [pomogator-doctor.feature](pomogator-doctor.feature) — 31 scenarios POMOGATORDOCTOR001_01..31 покрывающие все UC + reliability edge cases + post-launch integrity checks
 
 **Background research**: [RESEARCH.md](RESEARCH.md) — portability analysis 17 категорий, Extension Dependency Matrix, MCP Full probe protocol, community patterns (Claude Code /doctor, npm doctor, Expo Doctor, mise), Project Context (9 relevant rules + 9 reuse patterns)
 

@@ -98,3 +98,25 @@
 | FR-12 | C14 | Self-healing: gitignore |
 | FR-13 | C15 | New: plugin-loader |
 | FR-14 | C16 | New: Docker |
+| FR-26 | C20 | Post-launch: Hook Command Integrity |
+| FR-27 | C21 | Post-launch: Managed Files Hash Integrity |
+| FR-28 | C15 (fix) | Post-launch: Plugin manifest for installed projects |
+| FR-29 | C29 | Post-launch: Self-install verification |
+| FR-31 | C6 (fix) | Post-launch: Hooks registry path correction |
+| FR-34 | C22 | Post-launch: Stale managed entries |
+
+## Post-Launch FR/AC Index (2026-04-20)
+
+Новые требования добавленные после real-world incident (webapp 22 broken hooks). Все tagged `@feature12`. См. [CHANGELOG.md](CHANGELOG.md) `[Unreleased] - Post-launch hardening spec update (2026-04-20)`.
+
+| FR | Описание | AC | US | UC | BDD scenarios |
+|----|----------|----|----|----|----------------|
+| [FR-26](FR.md#fr-26-hook-command-integrity-check-feature12) | Hook Command Integrity (C20) | [AC-26](ACCEPTANCE_CRITERIA.md#ac-26-fr-26) | US-9 | [UC-13](USE_CASES.md#uc-13-hook-storm-on-broken-project-feature12) | 16, 17, 18 |
+| [FR-27](FR.md#fr-27-managed-files-hash-integrity-check-feature12) | Managed Files Hash Integrity (C21) | [AC-27](ACCEPTANCE_CRITERIA.md#ac-27-fr-27) | US-11 | [UC-14](USE_CASES.md#uc-14-partial-wipe-of-managed-files-feature12), [UC-15](USE_CASES.md#uc-15-content-hash-drift-between-projects-feature12) | 19, 20, 21 |
+| [FR-28](FR.md#fr-28-plugin-manifest-presence-for-installed-projects-feature10) | Plugin.json for installed projects | [AC-28](ACCEPTANCE_CRITERIA.md#ac-28-fr-28) | US-7 | — | 22 |
+| [FR-29](FR.md#fr-29-pomogator-doctor-self-install-in-all-projectpaths-feature12) | Self-install guarantee | [AC-29](ACCEPTANCE_CRITERIA.md#ac-29-fr-29) | US-12 | [UC-17](USE_CASES.md#uc-17-self-install-detection-feature12) | 23 |
+| [FR-30](FR.md#fr-30-allprojects-flag-feature8) | --all-projects flag | [AC-30](ACCEPTANCE_CRITERIA.md#ac-30-fr-30) | US-10 | [UC-16](USE_CASES.md#uc-16-cross-project-scan-feature12) | 24 |
+| [FR-31](FR.md#fr-31-hooks-registry-path-correction-feature2) | Hooks registry path correction | [AC-31](ACCEPTANCE_CRITERIA.md#ac-31-fr-31) | (regression fix) | — | 25, 26 |
+| [FR-32](FR.md#fr-32-configjson-toplevel-version-field-feature2) | config.json top-level version | [AC-32](ACCEPTANCE_CRITERIA.md#ac-32-fr-32) | (regression fix) | — | 27 |
+| [FR-33](FR.md#fr-33-mcp-probe-timeout--error-categorization-feature4) | MCP probe retune | [AC-33](ACCEPTANCE_CRITERIA.md#ac-33-fr-33) | (UX fix) | — | 28, 29 |
+| [FR-34](FR.md#fr-34-stale-managed-entries-detection-feature12) | Stale managed entries (C22) | [AC-34](ACCEPTANCE_CRITERIA.md#ac-34-fr-34) | (maintainer) | [UC-18](USE_CASES.md#uc-18-stale-managed-entries-feature12) | 30, 31 |
