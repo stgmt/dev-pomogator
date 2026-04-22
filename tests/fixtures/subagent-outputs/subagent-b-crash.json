@@ -1,0 +1,22 @@
+{
+  "_description": "Mock partial failure: Subagent B crashes, A и C succeed. Used for AC-7 / NFR-R4 test (F-15).",
+  "subagent_A_manifest_env": {
+    "manifests_found": ["pyproject.toml"],
+    "languages": [{ "name": "python", "version": "3.11+", "usage": "all" }],
+    "frameworks": [{ "name": "FastAPI", "version": ">=0.110", "role": "web framework" }],
+    "package_managers": ["pip"],
+    "env_files": [".env.example"],
+    "required_env_vars": [],
+    "ci_configs": []
+  },
+  "subagent_B_tests_configs": {
+    "_error": "timeout after 180s",
+    "_crashed": true,
+    "subagent_id": "B"
+  },
+  "subagent_C_entry_points": {
+    "entry_points": [{ "file": "src/main.py", "role": "FastAPI app entry" }],
+    "top_level_dirs": ["src"],
+    "architecture_hint": "single entry, undetermined layering"
+  }
+}

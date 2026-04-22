@@ -1,0 +1,13 @@
+{
+  "_description": "Intentionally broken: missing required AI-first fields (boundaries, rules_index, skills_registry). Used by AC-2 / AC-10 schema violation tests.",
+  "schema_version": "1.0",
+  "version": "1.0",
+  "last_indexed_sha": "0000000000000000000000000000000000000000",
+  "indexed_at": "2026-04-21T10:00:00Z",
+  "generated_by": "dev-pomogator/onboard-repo/0.1.0",
+  "project": {
+    "name": "broken",
+    "purpose": "Missing AI-first sections"
+  },
+  "archetype": "unknown"
+}

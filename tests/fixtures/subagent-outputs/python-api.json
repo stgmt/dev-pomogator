@@ -1,0 +1,33 @@
+{
+  "_description": "Mock Subagent output for fake-python-api fixture. F-11.",
+  "subagent_A_manifest_env": {
+    "manifests_found": ["pyproject.toml"],
+    "languages": [{ "name": "python", "version": "3.11+", "usage": "all" }],
+    "frameworks": [
+      { "name": "FastAPI", "version": ">=0.110", "role": "web framework" },
+      { "name": "uvicorn", "version": ">=0.27", "role": "asgi server" }
+    ],
+    "package_managers": ["pip", "uv"],
+    "env_files": [".env.example"],
+    "required_env_vars": [
+      { "var": "DATABASE_URL", "purpose": "Postgres connection", "found_in": [".env.example"] },
+      { "var": "JWT_SECRET", "purpose": "JWT signing", "found_in": [".env.example"] },
+      { "var": "API_PORT", "purpose": "HTTP listen port", "found_in": [".env.example"] }
+    ],
+    "ci_configs": []
+  },
+  "subagent_B_tests_configs": {
+    "test_framework": "pytest",
+    "test_commands": ["uv run pytest", "pytest"],
+    "bdd_present": false,
+    "existing_ai_configs": [],
+    "pytest_config_location": "pyproject.toml ([tool.pytest.ini_options])"
+  },
+  "subagent_C_entry_points": {
+    "entry_points": [
+      { "file": "src/main.py", "role": "FastAPI app entry" }
+    ],
+    "top_level_dirs": ["src", "tests"],
+    "architecture_hint": "layered (routes separate from app entry)"
+  }
+}

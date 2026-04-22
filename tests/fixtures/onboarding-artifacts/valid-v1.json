@@ -1,0 +1,157 @@
+{
+  "$schema": "../../../extensions/onboard-repo/tools/onboard-repo/schemas/onboarding.schema.json",
+  "schema_version": "1.0",
+  "version": "1.0",
+  "last_indexed_sha": "0000000000000000000000000000000000000000",
+  "indexed_at": "2026-04-21T10:00:00Z",
+  "generated_by": "dev-pomogator/onboard-repo/0.1.0",
+  "cache_policy": {
+    "invalidate_on_sha_drift": true,
+    "drift_threshold_commits": 5,
+    "invalidate_on_file_change": ["package.json", "pyproject.toml"]
+  },
+  "project": {
+    "name": "fake-python-api",
+    "purpose": "Minimal FastAPI fixture for onboard-repo-phase0 tests",
+    "domain_problem": "Not a real product; exists only as fixture for Phase 0 integration tests.",
+    "audience": ["test-runner"],
+    "scope_boundaries": "Fixture only"
+  },
+  "tech_context": {
+    "languages": [{ "name": "python", "version": "3.11+", "usage": "all" }],
+    "frameworks": [
+      { "name": "FastAPI", "version": ">=0.110", "role": "web framework" },
+      { "name": "uvicorn", "version": ">=0.27", "role": "asgi server" }
+    ],
+    "package_managers": ["pip", "uv"],
+    "runtime_versions": { "python": "3.11" },
+    "technical_constraints": []
+  },
+  "commands": {
+    "test": {
+      "via_skill": "run-tests",
+      "preferred_invocation": "/run-tests",
+      "fallback_cmd": "uv run pytest",
+      "raw_pattern_to_block": "^pytest|^uv\\s+run\\s+pytest",
+      "forbidden_if_skill_present": true,
+      "reason": "/run-tests skill wraps pytest with TUI + YAML status writer"
+    },
+    "build": {
+      "via_skill": null,
+      "preferred_invocation": "uv build",
+      "fallback_cmd": "uv build",
+      "raw_pattern_to_block": "",
+      "forbidden_if_skill_present": false,
+      "reason": "No wrapper"
+    }
+  },
+  "system_patterns": {
+    "architecture": "FastAPI layered (routes separate from app entry)",
+    "key_decisions": [],
+    "design_patterns": [],
+    "component_relationships": [],
+    "critical_paths": []
+  },
+  "repo_map": {
+    "entry_points": [{ "file": "src/main.py", "role": "FastAPI app entry" }],
+    "key_symbols": []
+  },
+  "rules_index": [],
+  "skills_registry": [
+    {
+      "name": "run-tests",
+      "trigger": "тесты/запуск тестов",
+      "description": "Centralized test runner wrapping pytest/vitest/jest/dotnet/cargo/go",
+      "invocation_example": "/run-tests",
+      "path": ".claude/skills/run-tests/SKILL.md"
+    }
+  ],
+  "hooks_registry": [],
+  "mcp_servers": [],
+  "boundaries": {
+    "always": ["Use /run-tests skill for baseline tests"],
+    "ask_first": [],
+    "never": ["Commit secrets"]
+  },
+  "gotchas": [],
+  "env_requirements": {
+    "required": [
+      { "var": "DATABASE_URL", "purpose": "Postgres", "found_in": [".env.example"] }
+    ],
+    "optional": [],
+    "secrets_never_in_code": ["API keys", "tokens", "JWT_SECRET value"]
+  },
+  "verification": {
+    "primary_command": "/run-tests",
+    "success_criteria": "All pytest green",
+    "manual_checks": []
+  },
+  "code_style": {
+    "rules": [],
+    "examples": []
+  },
+  "workflow": {
+    "git_workflow": "main + feature branches",
+    "commit_style": "Conventional Commits",
+    "branch_naming": "feat/<slug>",
+    "pr_conventions": ""
+  },
+  "imports": ["@README.md"],
+  "ignore": {
+    "ai_excluded_paths": [".env"],
+    "index_only_excluded": [".venv/", "__pycache__/"],
+    "external_configs_found": []
+  },
+  "glossary": [],
+  "archetype": "python-api",
+  "archetype_confidence": "high",
+  "archetype_evidence": "pyproject.toml contains FastAPI and uvicorn; src/main.py is FastAPI entry",
+  "archetype_specific": {},
+  "ingestion": {
+    "method": "fallback",
+    "output_path": null,
+    "compression_ratio": 0,
+    "files_included": 5,
+    "total_tokens_estimate": 800
+  },
+  "baseline_tests": {
+    "framework": "pytest",
+    "command": "uv run pytest",
+    "via_skill": "run-tests",
+    "passed": 2,
+    "failed": 0,
+    "skipped": 0,
+    "duration_s": 1.5,
+    "failed_test_ids": [],
+    "reason_if_null": null,
+    "skipped_by_user": false
+  },
+  "active_context": {
+    "current_focus": "",
+    "recent_changes": [],
+    "next_steps": [],
+    "active_decisions_considerations": []
+  },
+  "progress": {
+    "works": ["health endpoint", "users listing"],
+    "pending": [],
+    "known_issues": []
+  },
+  "warnings": [],
+  "metrics": {
+    "total_duration_ms": 120000,
+    "per_step_duration_ms": {
+      "archetype_triage": 60000,
+      "parallel_recon": 40000,
+      "ingestion": 10000,
+      "baseline_tests": 5000,
+      "text_gate": 3000,
+      "finalize": 2000
+    },
+    "files_scanned": 8,
+    "subagent_retries": 0,
+    "tokens_consumed_estimate": 5000
+  },
+  "phase0_duration_ms": 120000,
+  "existing_ai_configs": []
+}

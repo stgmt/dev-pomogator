@@ -1,0 +1,37 @@
+{
+  "_description": "Mock Subagent output for fake-fullstack-monorepo fixture. F-13.",
+  "subagent_A_manifest_env": {
+    "manifests_found": ["package.json", "turbo.json", "packages/api/pyproject.toml", "packages/web/package.json"],
+    "languages": [
+      { "name": "typescript", "version": "5.3", "usage": "web + shared" },
+      { "name": "python", "version": "3.11+", "usage": "api" }
+    ],
+    "frameworks": [
+      { "name": "Turborepo", "version": "2.x", "role": "monorepo orchestration" },
+      { "name": "FastAPI", "version": ">=0.110", "role": "api" },
+      { "name": "Next.js", "version": "14.2", "role": "web" }
+    ],
+    "package_managers": ["npm", "uv"],
+    "env_files": ["packages/api/.env.example"],
+    "required_env_vars": [],
+    "ci_configs": []
+  },
+  "subagent_B_tests_configs": {
+    "test_framework": "mixed (vitest для web, pytest для api)",
+    "test_commands": ["turbo test"],
+    "bdd_present": false,
+    "existing_ai_configs": []
+  },
+  "subagent_C_entry_points": {
+    "entry_points": [
+      { "file": "packages/api/src/main.py", "role": "FastAPI app" },
+      { "file": "packages/web/src/app/page.tsx", "role": "Next.js root" }
+    ],
+    "top_level_dirs": ["packages"],
+    "architecture_hint": "Turborepo workspace, 3 packages (api/web/shared)",
+    "sub_archetypes": [
+      { "path": "packages/api/", "archetype": "python-api" },
+      { "path": "packages/web/", "archetype": "nodejs-frontend" }
+    ]
+  }
+}
