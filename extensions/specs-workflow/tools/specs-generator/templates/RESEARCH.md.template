@@ -46,3 +46,13 @@
 
 {Краткое описание: какие правила/паттерны ограничивают какие требования.}
 
+## Risk Assessment
+
+> Auto-populated by Skill `discovery-forms` during Phase 1. Hook `risk-assessment-guard` enforces:
+> when `## Risk Assessment` heading is present, the table below must have ≥2 non-placeholder rows
+> with Likelihood ∈ {Low, Medium, High}, Impact ∈ {Low, Medium, High}, and non-empty Mitigation.
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|------------|--------|------------|
+| {Risk 1 — concrete, not placeholder} | Medium | High | {Mitigation specific to this risk} |
+| {Risk 2 — concrete} | Low | Medium | {Mitigation} |

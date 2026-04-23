@@ -21,6 +21,7 @@ import { parseFeatureFile } from './parsers/feature-parser.ts';
 import { matchTags, matchTestFeature } from './matcher.ts';
 import { generateReport, printWarnings } from './reporter.ts';
 import { parseTestFile, findTestFile } from './parsers/test-parser.ts';
+import { summarizeRecent, rotateLog } from './audit-logger.ts';
 import {
   PHASE_FILES,
   PHASE_ORDER,
@@ -283,6 +284,34 @@ function findAllSpecDirs(specsRoot: string): string[] {
 /**
  * Main entry point
  */
+/**
+ * Print a one-line summary of form-guard events from the last 24 hours.
+ * Source: ~/.dev-pomogator/logs/form-guards.log (written by all 6 form-guards).
+ * Format: `📊 Form guards (24h): N DENY, M PARSER_CRASH ({hooks}), K ALLOW_AFTER_MIGRATION`.
+ * Silent skip if log missing / empty / no events within window.
+ * Also calls rotateLog() once per session for retention cleanup.
+ *
+ * @see .specs/spec-generator-v3/FR.md FR-13
+ */
+function renderFormGuardsSummary(): void {
+  try {
+    rotateLog();
+    const s = summarizeRecent(24);
+    if (s.total === 0) return;
+    const parts: string[] = [];
+    if (s.DENY > 0) parts.push(`${s.DENY} DENY`);
+    if (s.PARSER_CRASH > 0) {
+      const hooks = s.parserCrashHooks.length > 0 ? ` (${s.parserCrashHooks.join(', ')})` : '';
+      parts.push(`${s.PARSER_CRASH} PARSER_CRASH${hooks}`);
+    }
+    if (s.ALLOW_AFTER_MIGRATION > 0) parts.push(`${s.ALLOW_AFTER_MIGRATION} ALLOW_AFTER_MIGRATION`);
+    if (parts.length === 0) return; // only ALLOW_VALID events — not noteworthy
+    console.log(`📊 Form guards (24h): ${parts.join(', ')}`);
+  } catch {
+    // fail-silent — audit log is non-critical
+  }
+}
+
 async function main(): Promise<void> {
   try {
     // 1. Read hook input from stdin
@@ -295,6 +324,11 @@ async function main(): Promise<void> {
     if (workspaceRoots.length === 0) {
       return; // No workspace roots
     }
+
+    // 1.5 Form-guards summary runs independently of .specs/ discovery
+    // — so that it fires even on projects without any .specs/ folder
+    // but with form-guards events recorded globally.
+    renderFormGuardsSummary();
 
     // 2. Find .specs/ folder
     const specsRoot = findSpecsFolder(workspaceRoots);

@@ -1,7 +1,7 @@
 {
   "name": "specs-workflow",
-  "version": "1.14.0",
-  "description": "Управление спецификациями: 4-фазный workflow (включая Context Analysis), TDD-порядок задач, валидация, автоматический аудит кросс-ссылок, MCP инструменты для research",
+  "version": "1.17.0",
+  "description": "Управление спецификациями: 4-фазный workflow + spec-generator-v3 form-guards (USER_STORIES/TASKS/DESIGN/REQUIREMENTS/RESEARCH) + 3 private child skills (discovery-forms, requirements-chk-matrix, task-board-forms) + meta-guard на extension.json + audit log с UserPromptSubmit summary. Migration guard: form-guards активируются только для specs с .progress.json version >= 3; existing v1/v2 specs pass-through.",
   "platforms": [
     "claude"
   ],
@@ -10,11 +10,23 @@
     "claude": []
   },
   "skills": {
-    "create-spec": ".claude/skills/create-spec"
+    "create-spec": ".claude/skills/create-spec",
+    "discovery-forms": "extensions/specs-workflow/.claude/skills/discovery-forms",
+    "requirements-chk-matrix": "extensions/specs-workflow/.claude/skills/requirements-chk-matrix",
+    "task-board-forms": "extensions/specs-workflow/.claude/skills/task-board-forms"
   },
   "skillFiles": {
     "create-spec": [
       ".claude/skills/create-spec/SKILL.md"
+    ],
+    "discovery-forms": [
+      ".claude/skills/discovery-forms/SKILL.md"
+    ],
+    "requirements-chk-matrix": [
+      ".claude/skills/requirements-chk-matrix/SKILL.md"
+    ],
+    "task-board-forms": [
+      ".claude/skills/task-board-forms/SKILL.md"
     ]
   },
   "ruleFiles": {
@@ -68,6 +80,14 @@
       ".dev-pomogator/tools/specs-validator/audit-runner.ts",
       ".dev-pomogator/tools/specs-validator/reporter.ts",
       ".dev-pomogator/tools/specs-validator/validate-specs.ts",
+      ".dev-pomogator/tools/specs-validator/spec-form-parsers.ts",
+      ".dev-pomogator/tools/specs-validator/audit-logger.ts",
+      ".dev-pomogator/tools/specs-validator/user-story-form-guard.ts",
+      ".dev-pomogator/tools/specs-validator/task-form-guard.ts",
+      ".dev-pomogator/tools/specs-validator/design-decision-guard.ts",
+      ".dev-pomogator/tools/specs-validator/requirements-chk-guard.ts",
+      ".dev-pomogator/tools/specs-validator/risk-assessment-guard.ts",
+      ".dev-pomogator/tools/specs-validator/extension-json-meta-guard.ts",
       ".dev-pomogator/tools/specs-validator/parsers/feature-parser.ts",
       ".dev-pomogator/tools/specs-validator/parsers/md-parser.ts",
       ".dev-pomogator/tools/specs-validator/parsers/test-parser.ts",
@@ -97,10 +117,20 @@
   "hooks": {
     "claude": {
       "UserPromptSubmit": "npx tsx .dev-pomogator/tools/specs-validator/validate-specs.ts",
-      "PreToolUse": {
-        "matcher": "Write|Edit",
-        "command": "npx tsx .dev-pomogator/tools/specs-validator/phase-gate.ts"
-      }
+      "PreToolUse": [
+        {
+          "matcher": "Write|Edit",
+          "hooks": [
+            { "type": "command", "command": "npx tsx .dev-pomogator/tools/specs-validator/phase-gate.ts" },
+            { "type": "command", "command": "npx tsx .dev-pomogator/tools/specs-validator/user-story-form-guard.ts" },
+            { "type": "command", "command": "npx tsx .dev-pomogator/tools/specs-validator/task-form-guard.ts" },
+            { "type": "command", "command": "npx tsx .dev-pomogator/tools/specs-validator/design-decision-guard.ts" },
+            { "type": "command", "command": "npx tsx .dev-pomogator/tools/specs-validator/requirements-chk-guard.ts" },
+            { "type": "command", "command": "npx tsx .dev-pomogator/tools/specs-validator/risk-assessment-guard.ts" },
+            { "type": "command", "command": "npx tsx .dev-pomogator/tools/specs-validator/extension-json-meta-guard.ts" }
+          ]
+        }
+      ]
     }
   },
   "postInstall": {
