@@ -11,7 +11,8 @@ Feature: Codex parity for specs-workflow
     And ".codex/config.toml" should contain an mcp_servers entry for "octocode"
     And Codex MCP parity should not depend on existing Cursor or Claude JSON writers
 
-  Scenario: specs-workflow declares explicit Codex parity surfaces
+  Scenario: specs-workflow is marked partial until non-Bash gating replacement exists
     When Codex support matrix is generated
     Then specs-workflow should have an explicit parity route
     And the parity route should name skills, AGENTS guidance and MCP as applicable
+    And specs-workflow should be marked "partial" unless non-Bash interception parity is implemented

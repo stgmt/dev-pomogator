@@ -14,4 +14,5 @@ Feature: Codex parity for suggest-rules
     When Codex support matrix is generated
     Then suggest-rules should have an explicit parity route
     And suggest-rules should declare whether claude-mem behavior is reused, replaced or excluded for Codex
+    And suggest-rules should be marked "partial" until that strategy is implemented
     And suggest-rules should NOT rely on implicit Claude-only memory installation behavior

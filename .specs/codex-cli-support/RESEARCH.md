@@ -2,132 +2,212 @@
 
 ## Контекст
 
-Исследование фичи поддержки `Codex CLI` в `dev-pomogator`. Цель — подготовить полную спецификацию для третьей платформы `codex` с project-level only стратегией, безопасным merge/back-up существующих пользовательских артефактов, parity по всем текущим расширениям кроме `test-statusline`, и Windows bootstrap через `bash/sh`.
+Исследование фичи поддержки `Codex CLI` в `dev-pomogator`. Цель — актуализировать спецификацию под реальный Codex, а не под ранний снимок hooks из `0.114.0`: учесть trusted project model, additive config layers, AGENTS/skills discovery, расширившийся hook surface, ограничения `PreToolUse`/`PostToolUse`, Windows execution strategy и честную support matrix для текущих extensions.
 
 ## Источники
 
 - [Codex CLI](https://developers.openai.com/codex/cli) — overview, platform support
-- [Config basics](https://developers.openai.com/codex/config-basic) — `~/.codex/config.toml` и `.codex/config.toml`
+- [Config basics](https://developers.openai.com/codex/config-basic) — `~/.codex/config.toml`, `.codex/config.toml`, precedence, trusted projects
+- [Advanced Configuration](https://developers.openai.com/codex/config-advanced) — `project_doc_fallback_filenames`, `project_root_markers`, `notify`, `tui.notifications`
 - [Configuration Reference](https://developers.openai.com/codex/config-reference) — ключи `config.toml`, `[mcp_servers]`
+- [Hooks](https://developers.openai.com/codex/hooks) — текущий hooks surface, execution model, layering
 - [Custom instructions with AGENTS.md](https://developers.openai.com/codex/guides/agents-md) — project guidance model
 - [Agent Skills](https://developers.openai.com/codex/skills) — `.agents/skills` и skill lifecycle
 - [Customization](https://developers.openai.com/codex/concepts/customization) — связь `AGENTS.md`, skills и MCP
-- [Custom Prompts](https://developers.openai.com/codex/custom-prompts/) — deprecated prompt model
 - [Windows](https://developers.openai.com/codex/windows/) — native Windows sandbox и WSL path
-- [Codex CLI features](https://developers.openai.com/codex/cli/features/) — skills, `/review`, web search, MCP, `codex exec`
 - [Non-interactive mode](https://developers.openai.com/codex/noninteractive) — `codex exec`
 - [Automations](https://developers.openai.com/codex/app/automations) — app automations
 - [Codex GitHub Action](https://developers.openai.com/codex/github-action) — CI parity surface
-- [Codex changelog](https://developers.openai.com/codex/changelog) — experimental hooks engine
-- [openai/codex rust-v0.114.0 release](https://github.com/openai/codex/releases/tag/rust-v0.114.0) — release-level confirmation hooks shipped in `0.114.0`
-- [openai/codex#13276](https://github.com/openai/codex/pull/13276) — `SessionStart`/`Stop` hooks PR
-- [openai/codex discussion #2150](https://github.com/openai/codex/discussions/2150) — maintainer comment + `hooks.json` example
+- [Codex changelog](https://developers.openai.com/codex/changelog) — timeline hooks evolution and Windows updates
 
 ## Технические находки
 
-### Codex project-level customization model
+### 1. Project config в Codex layered и trusted-only
 
-Официальная модель `Codex` строится вокруг project-level артефактов:
+Официальные docs описывают два ключевых факта:
 
-- `.codex/config.toml` — project-scoped override конфигурации
-- `AGENTS.md` — persistent project guidance
-- `.agents/skills/` — repo-local reusable workflows
-- `[mcp_servers]` в `config.toml` — MCP конфигурация
+- user-level конфиг хранится в `~/.codex/config.toml`
+- project-level `.codex/config.toml` участвует в precedence chain только для trusted projects
 
-Важная деталь: `custom prompts` существуют, но уже помечены как deprecated, а основной рекомендуемый путь для reusable workflows — `skills`.
+Следствие для спеки:
 
-### Codex hooks: confirmed, but still experimental
+- repo-local install остаётся корректной стратегией, но support не может предполагать, что `.codex/config.toml` будет применён немедленно в untrusted repo
+- нужен onboarding/warning про trust state
+- support нельзя проектировать как “project config полностью заменяет user config”
 
-Во время исследования было подтверждено, что у `Codex` уже есть hooks engine:
+### 2. Hooks в Codex уже не ограничены двумя событиями
 
-- В release `rust-v0.114.0`: “Added an experimental hooks engine with `SessionStart` and `Stop` hook events.”
-- В официальном changelog: “Added an experimental hooks engine with `SessionStart` and `Stop` hook events.”
-- В merged PR `openai/codex#13276`: “This PR adds a first MVP for hooks, with SessionStart and Stop.”
-- В maintainer discussion указан пример включения hooks через feature flag `features.codex_hooks=true` и `hooks.json` в `.codex`/config directory.
+По актуальному changelog и текущей hooks-странице surface развивался по шагам:
 
-Текущий практический activation path, подтверждённый релизом/PR/discussion-связкой:
+- `0.114.0+`: `SessionStart`, `Stop`
+- `0.116.0+`: `UserPromptSubmit`
+- `0.117.0+`: `PreToolUse`, `PostToolUse`
+- `0.120.0+`: changelog сообщает о снятии Windows hook gate и расширении `SessionStart`
 
-- использовать `Codex >= 0.114.0`
-- включить hooks через `features.codex_hooks=true`
-- положить `hooks.json` в `.codex` / config directory
+Это ломает исходную предпосылку текущей спеки, где вся hook-модель жёстко прибита к `0.114.0` и только к `SessionStart`/`Stop`.
 
-Пример hook entry из discussion-level usage note:
+### 3. `PreToolUse` и `PostToolUse` пока shell-only
 
-- `type`
-- `command`
-- `statusMessage`
-- `timeout`
+Официальная hooks-страница прямо ограничивает `PreToolUse` и `PostToolUse` текущим перехватом `Bash`. Эти события:
 
-Это означает, что спецификация должна проектировать не абстрактные “hooks вообще”, а именно `v0.114.0`-совместимую модель `feature flag + hooks.json + SessionStart/Stop`.
+- не перехватывают `Write`, `WebSearch`, `MCP` и другие non-shell tool calls
+- не являются универсальной заменой Claude-style tool gating
 
-Отдельная operational note из discussion-level proof: hooks описываются как запускаемые вокруг prompt lifecycle (“before/after sending a prompt”). Так как это формулировка из discussion/example, а не из release note, в спецификации её стоит трактовать как runtime usage hint, но не как более широкий официальный набор event names.
+Следствие для спеки:
 
-Ограничение текущего этапа: подтверждены только два lifecycle события — `SessionStart` и `Stop`. Значит parity-архитектура должна опираться на них там, где это достаточно, и явно назначать другие Codex-native surfaces там, где нужны дополнительные lifecycle точки.
+- parity для `specs-workflow` и `plan-pomogator` нельзя честно описывать как прямой перенос существующих `PreToolUse` сценариев из Claude
+- `tui-test-runner` может использовать Bash guards, но только как Bash guards
 
-### Windows support и bootstrap implications
+### 4. Matching hooks одного события запускаются concurrently
 
-Официальные docs OpenAI говорят, что:
+Docs по hooks указывают два критичных свойства:
 
-- `Codex CLI` на Windows поддерживается, но находится в experimental status
-- для лучшего опыта CLI рекомендуется WSL
-- native Windows использует отдельный sandbox model
+- Codex загружает hooks additively из нескольких слоёв (`~/.codex/hooks.json` и `<repo>/.codex/hooks.json`)
+- matching hooks одного event запускаются concurrent, а не по одному в deterministic chain
 
-Для этой фичи пользователь явно выбрал Windows bootstrap через `bash/sh`, а не через PowerShell-only flow. Это нужно зафиксировать как продуктовое решение фичи, даже если остальная документация OpenAI допускает native PowerShell path.
+Следствие для спеки:
 
-### Automation surfaces для functional parity
+- нельзя materialize по отдельному managed `Stop` hook для каждого extension и ожидать стабильный порядок
+- нужен единый managed dispatcher per event, внутри которого `dev-pomogator` уже сам управляет порядком и short-circuit semantics
 
-Помимо hooks, `Codex` предоставляет несколько automation surfaces:
+### 5. `Stop` в Codex семантически не равен “последний пост-хук”
 
-- `codex exec` для non-interactive automation
-- app automations для scheduled/background tasks в локальном app
-- GitHub Action для CI-driven workflows
-- `AGENTS.md` и `.agents/skills` для always-on guidance и repeatable procedures
+У `Stop` есть особое поведение:
 
-Это означает, что parity для существующих расширений можно проектировать не только через hooks, но и через явное назначение наиболее подходящей Codex-native поверхности.
+- plain text stdout для `Stop` невалиден
+- `decision: "block"` не отменяет turn, а создаёт continuation prompt
+- `continue: false` имеет приоритет над continuation decisions других matching `Stop` hooks
 
-### Текущая архитектура dev-pomogator не готова к Codex без platform expansion
+Это означает, что несколько независимых `Stop` extensions без dispatcher-а будут конкурировать за continuation behavior.
 
-В текущем коде платформенная модель жёстко ограничена `cursor | claude`:
+### 6. `AGENTS.md` — core guidance surface, `CLAUDE.md` — только coexistence concern
 
-- `src/config/schema.ts` — `Platform = 'cursor' | 'claude'`
-- `src/index.ts` — CLI parsing знает только `--cursor` и `--claude`
-- `src/installer/extensions.ts` — manifests typed только под `cursor | claude`
+Docs по `AGENTS.md` и advanced config показывают:
 
-Также текущая skill-модель ориентирована на Claude-specific destination:
+- Codex читает `AGENTS.md` и `AGENTS.override.md`
+- можно добавить fallback filenames через `project_doc_fallback_filenames`
+- `CLAUDE.md` не является встроенным first-class instruction filename для Codex
 
-- `src/constants.ts` → `SKILLS_DIR = '.claude/skills'`
-- `extensions/*/extension.json` `skillFiles` указывают на `.claude/skills/...`
+Следствие для спеки:
 
-Следовательно, `Codex` support нельзя реализовать как alias существующей платформы; нужен отдельный installer/update path и отдельная destination model.
+- `AGENTS.md` должен быть primary managed guidance artifact
+- `CLAUDE.md` может сохраняться, обновляться минимально или упоминаться как fallback/legacy doc, но parity не должна зависеть от того, что Codex сам прочтёт `CLAUDE.md`
 
-### Safe merge / backup уже существует и её надо переиспользовать
+### 7. Skills layered и collision-prone
 
-В проекте уже есть правильная основа для merge-safe обновления managed файлов:
+Docs по skills уточняют:
 
-- `src/updater/index.ts` содержит `shouldBackupFile()` и backup перед overwrite
-- `.claude/rules/updater-managed-cleanup.md` требует hash-based managed tracking и backup user-modified files
-- `.claude/rules/atomic-config-save.md` требует temp-file + atomic move для конфигов
+- Codex сканирует `.agents/skills` не только в repo root, а в текущей директории и каждом parent directory до repo root
+- плюс существуют user/admin/system skill locations
+- skills с одинаковым `name` не merge-ятся
 
-Для `Codex` это особенно важно, потому что `AGENTS.md`, `CLAUDE.md`, `.codex/config.toml`, `.codex/hooks.json` и `.agents/skills/*` потенциально являются user-authored проектными файлами.
+Следствие для спеки:
 
-### Текущий MCP setup не подходит для Codex без отдельного writer
+- недостаточно просто скопировать skills в repo root и считать задачу закрытой
+- нужен collision-aware naming и явная стратегия для user-owned skills
+- `skillFiles` из текущих Claude manifests нельзя просто механически считать эквивалентом Codex distribution model
 
-Существующий `extensions/specs-workflow/tools/mcp-setup/setup-mcp.py` умеет только:
+### 8. Windows docs изменились и местами расходятся
 
-- `.cursor/mcp.json` / `~/.cursor/mcp.json`
-- `.mcp.json` / `~/.claude.json`
+Официальная страница Windows теперь рекомендует native Windows sandbox по умолчанию, а WSL2 — как fallback, если нужен Linux-native workflow. В то же время hooks documentation и changelog ещё не полностью синхронизированы по Windows hook support.
 
-Для `Codex` нужен project-level writer под `.codex/config.toml` c секцией `[mcp_servers]`. Это не просто смена пути — это другая serialisation model: TOML вместо JSON.
+Следствие для спеки:
 
-### Дополнительные точки актуализации по текущему репозиторию
+- FR про обязательный `bash/sh` path на Windows устарел
+- нужна native-first стратегия плюс explicit WSL fallback
+- hook support на Windows должен идти через version/capability gate, а не через вечное предположение “на Windows hooks нет” или “на Windows только bash/sh”
 
-Поверх исходных research-выводов, текущее состояние репозитория добавляет еще несколько обязательных ограничений:
+### 9. Помимо hooks у Codex есть другие parity surfaces
 
-- В коде уже есть reusable substrate для Codex-safe implementation: `src/installer/shared.ts` и `src/updater/index.ts` уже решают portable commands, hash tracking, backup и stale cleanup. Значит фичу надо проектировать как expansion поверх существующей managed discipline, а не как greenfield rewrite.
-- Test harness по состоянию на сейчас dual-platform only: `tests/e2e/helpers.ts`, `tests/e2e/cli-integration.test.ts` и `Dockerfile.test` знают только `cursor` и `claude`. Это делает Codex support не только product feature, но и test infrastructure feature.
-- `suggest-rules` сейчас помечен `requiresClaudeMem`, а runtime memory bootstrap живет в `src/installer/memory.ts` и тоже ограничен `cursor | claude`. Следовательно parity для Codex требует explicit memory strategy, а не implicit reuse существующего Claude-only flow.
-- Manifest landscape неоднороден: часть extension manifests уже отклоняется от идеальной typed model. Поэтому добавление `codex` требует отдельного manifest normalization шага, а не просто добавления третьего platform key.
-- Windows bootstrap route нужно менять на уровне `install` и `install.ps1`, потому что universal entrypoint по умолчанию уходит в PowerShell path раньше shell-ветки. Правка одного `install.sh` не закроет продуктовый сценарий.
+Даже без полного lifecycle parity Codex предоставляет:
+
+- `AGENTS.md`
+- `.agents/skills`
+- `[mcp_servers]` в `.codex/config.toml`
+- `codex exec`
+- `notify` и `tui.notifications`
+- app automations
+- GitHub Action
+
+Следствие для спеки:
+
+- support matrix должна быть честной и многоуровневой: `supported`, `partial`, `excluded`
+- `test-statusline` исключается не “просто по желанию”, а потому что в Codex нет эквивалента status line surface; notifications/notify — это другая UX-модель
+
+### 10. Реальный разрыв между Codex и текущими extension manifests
+
+Текущие manifests в репозитории уже показывают, что parity несимметрична:
+
+- `prompt-suggest` в Claude уже использует `UserPromptSubmit` + `Stop`, а не только `Stop`
+- `specs-workflow` и `plan-pomogator` опираются на `PreToolUse` для не-Bash semantics
+- `tui-test-runner` использует `PreToolUse` на `Bash` плюс `SessionStart`/`Stop`
+- `suggest-rules` зависит от `requiresClaudeMem`
+- `test-statusline` зависит от `PostToolUse(Bash)` и custom statusline surface
+
+Следствие для спеки:
+
+- часть расширений можно поддержать напрямую
+- часть только частично
+- часть нужно исключить или потребовать redesign
+
+### 11. Что это значит для dev-pomogator
+
+Поверх внешних docs есть внутренние constraints репозитория:
+
+- `src/config/schema.ts`, `src/index.ts`, `src/installer/extensions.ts` пока живут в модели `cursor | claude`
+- `src/constants.ts` и manifests привязаны к `.claude/skills`
+- `src/updater/index.ts` и `src/installer/shared.ts` уже дают правильные backup/update primitives
+- `tests/e2e/helpers.ts`, `tests/e2e/cli-integration.test.ts`, `Dockerfile.test` пока dual-platform only
+
+Значит Codex support — это одновременно platform expansion, hook-dispatch redesign, support-matrix exercise и test harness feature.
+
+### 12. Upstream capabilities, которых сейчас не хватает
+
+Ниже список не “вообще желательных” вещей, а конкретных upstream capabilities Codex, отсутствие которых прямо мешает parity текущих extensions.
+
+- Нет `PreToolUse` / `PostToolUse` для non-Bash tools.
+  Сейчас Codex не даёт hook events для `Write`, `Edit`, `ApplyPatch`, `WebSearch`, `MCP` и других non-shell инструментов.
+  Из-за этого:
+  - `specs-workflow` не может честно перенести phase gate на запись файлов
+  - `plan-pomogator` не может честно перенести gate при завершении plan mode
+  - `tui-test-runner` может использовать только Bash guardrails, но не generic tool interception
+- Нет lifecycle hook-а уровня `ExitPlanMode` или другого plan-mode boundary event.
+  Это отдельный blocker для `plan-pomogator`, даже если generic non-Bash hooks появятся не сразу.
+- Нет native status line / status bar surface.
+  Поэтому `test-statusline` нельзя считать partial direct-port: у Codex просто другой UX surface.
+- Нет deterministic ordered chain для matching hooks.
+  Пока matching hooks concurrent, несколько независимых `Stop` hooks будут конфликтовать по continuation semantics, значит dispatcher остаётся обязательным.
+- Нет полностью консистентного official story по hooks на Windows.
+  Changelog и docs частично расходятся, поэтому Windows hook support должен оставаться capability-gated.
+
+### 12.1 `ExitPlanMode` status in Codex primary sources
+
+На дату **2026-04-18** в primary sources Codex не найден публичный tool/event/hook с именем `ExitPlanMode`.
+
+Что подтверждено:
+
+- official hooks docs перечисляют только `SessionStart`, `PreToolUse`, `PostToolUse`, `UserPromptSubmit`, `Stop`
+- по GitHub `openai/codex` есть публичные discussion/issue про `Plan Mode` / `Plan / Spec Mode`
+- это не эквивалентно наличию задокументированного event-а `ExitPlanMode`
+
+Следствие для спеки:
+
+- `ExitPlanMode` нельзя использовать как проектный design assumption для Codex
+- parity `plan-pomogator` должна строиться вокруг `AGENTS.md`, skills, доступных prompt hooks и explicit partial support
+- revisit по этой точке нужен только если `ExitPlanMode` или аналогичный plan-mode boundary event появится в official docs/changelog
+
+### 13. Что именно нужно перепроверить через месяц
+
+Если вернуться к фиче позже, нужно в первую очередь проверить, появились ли в official Codex docs/changelog:
+
+1. `PreToolUse` / `PostToolUse` для `Write`, `Edit`, `ApplyPatch`, `WebSearch`, `MCP`
+2. plan-mode lifecycle event вроде `ExitPlanMode`
+   На 2026-04-18 такой event не найден в primary sources Codex; revisit нужен именно на предмет появления новой официальной сущности, а не для повторной проверки старого предположения
+3. native status line / persistent status bar surface
+4. deterministic hook ordering, priorities или sequential chain semantics
+5. синхронизация docs и changelog по Windows hooks
+
+Если хотя бы один из этих пунктов закроется, support matrix в этой спецификации надо пересмотреть, а не просто доработать код по старому plan.
 
 ## Где лежит реализация
 
@@ -137,12 +217,15 @@
 ## Выводы
 
 1. `Codex` должен быть спроектирован как first-class платформа `dev-pomogator`, а не как вариант `Cursor` или `Claude`.
-2. Выбранная пользователем стратегия `project-level only` полностью совместима с официальной Codex model.
-3. Основные артефакты фичи: `.codex/config.toml`, `.codex/hooks.json`, `AGENTS.md`, `CLAUDE.md`, `.agents/skills/`, `.dev-pomogator/tools/`.
-4. Hooks у `Codex` уже существуют в `v0.114.0+`, но пока ограничены `SessionStart` и `Stop` и требуют `features.codex_hooks=true`; поэтому functional parity нужно описывать как явное распределение по hooks / skills / `AGENTS.md` / `codex exec` / app automations / GitHub Action.
-5. Существующие пользовательские project-level файлы должны рассматриваться как high-risk merge surface: без silent overwrite, только backup + warning + merge proposal.
-6. Реализация должна опираться на уже существующие shared/update primitives, а не дублировать их в новом Codex-specific коде.
-7. Test harness, MCP tooling и memory-coupled extensions являются частью объема фичи наравне с installer/update path.
+2. Project-level only стратегия остаётся валидной, но должна быть дополнена trust onboarding и coexistence с глобальными `~/.codex/*` layers.
+3. Основные managed артефакты фичи: `.codex/config.toml`, `.codex/hooks.json`, `AGENTS.md`, `.agents/skills/`, `.dev-pomogator/tools/`; `CLAUDE.md` — secondary coexistence surface.
+4. Hooks у `Codex` больше нельзя описывать как `0.114.0-only` модель. Нужен version-aware capability resolver и единый dispatcher per event.
+5. `PreToolUse`/`PostToolUse` в текущем Codex — это Bash-only guardrail, а не общий tool interception layer.
+6. Support matrix должна быть честной: `supported`, `partial` или `excluded`, с version floor и reason, а не “всё кроме test-statusline поддержано”.
+7. Windows strategy должна быть native-first с documented WSL fallback; старая формулировка `bash/sh only` устарела.
+8. Реализация должна опираться на уже существующие shared/update primitives, а не дублировать их в новом Codex-specific коде.
+9. Test harness, MCP tooling, global layer coexistence и memory-coupled extensions являются частью объёма фичи наравне с installer/update path.
+10. Для части parity сейчас отсутствуют не “наши имплементационные детали”, а именно upstream capabilities Codex; эти gaps должны быть зафиксированы как revisit watchlist.
 
 ## Project Context & Constraints
 
@@ -151,10 +234,10 @@
 | Rule | Path | Summary | Triggered By | Impacts |
 |------|------|---------|--------------|---------|
 | atomic-config-save | `.claude/rules/atomic-config-save.md` | Конфиги пишутся через temp file + atomic move | `.codex/config.toml`, `.codex/hooks.json`, merge artefacts | FR-2, FR-3, NFR-Reliability |
-| extension-manifest-integrity | `.claude/rules/extension-manifest-integrity.md` | `extension.json` — source of truth; новые platform assets должны быть перечислены в manifest | Добавление `codex` в manifests | FR-1, FR-6, FR-8 |
-| updater-sync-tools-hooks | `.claude/rules/updater-sync-tools-hooks.md` | Апдейтер должен синхронизировать tools и hooks вместе | Reinstall/update path для `codex` | FR-4, FR-10 |
-| updater-managed-cleanup | `.claude/rules/updater-managed-cleanup.md` | Только managed cleanup, backup user-modified files, smart merge configs | Existing user artifacts, update safety | FR-3, FR-10, NFR-Reliability |
-| claude-md-glossary | `.claude/rules/claude-md-glossary.md` | `CLAUDE.md` — индекс/глоссарий, его нельзя разрушать или превращать в дубликат правил | Coexistence `AGENTS.md` + `CLAUDE.md` | FR-5, NFR-Usability |
+| extension-manifest-integrity | `.claude/rules/extension-manifest-integrity.md` | `extension.json` — source of truth; новые platform assets должны быть перечислены в manifest | Добавление `codex` в manifests | FR-1, FR-7, FR-9 |
+| updater-sync-tools-hooks | `.claude/rules/updater-sync-tools-hooks.md` | Апдейтер должен синхронизировать tools и hooks вместе | Reinstall/update path для `codex` | FR-4, FR-11 |
+| updater-managed-cleanup | `.claude/rules/updater-managed-cleanup.md` | Только managed cleanup, backup user-modified files, smart merge configs | Existing user artifacts, update safety | FR-3, FR-11, NFR-Reliability |
+| claude-md-glossary | `.claude/rules/claude-md-glossary.md` | `CLAUDE.md` — индекс/глоссарий, его нельзя разрушать или превращать в дубликат правил | Coexistence `AGENTS.md` + `CLAUDE.md` | FR-6, NFR-Usability |
 | docker-only-tests | `.claude/rules/docker-only-tests.md` | Тесты живут в `tests/e2e/*` и запускаются через `npm test` | Phase 0/implementation test plan | FR-11, NFR-Reliability |
 
 ### Existing Patterns & Extensions
@@ -165,14 +248,15 @@
 | MCP setup | `extensions/specs-workflow/tools/mcp-setup/setup-mcp.py` | Project/global config resolution, backup, atomic write | Reference для Codex TOML writer и MCP registration |
 | Claude Stop hooks | `extensions/auto-commit/`, `extensions/auto-simplify/`, `extensions/prompt-suggest/` | Existing lifecycle automation patterns on `Stop` | Reuse mapping для `Codex Stop` parity |
 | Claude SessionStart hooks | `extensions/claude-mem-health/`, `extensions/bun-oom-guard/` | Existing `SessionStart` hook patterns | Reuse mapping для `Codex SessionStart` parity |
-| Existing skills bundles | `extensions/suggest-rules/skills/`, `extensions/tui-test-runner/skills/` | `SKILL.md` + scripts/references packaging | Source material для `.agents/skills/` |
+| Existing skills bundles | `extensions/suggest-rules/skills/`, `extensions/tui-test-runner/skills/` | `SKILL.md` + scripts/references packaging | Source material для `.agents/skills/`, but not proof that repo-root-only layout is sufficient |
 | Root guidance | `CLAUDE.md` | Existing repo guidance/glossary that users may already maintain | Must coexist with `AGENTS.md`, not be clobbered |
-| Installer targets | `install`, `install.ps1`, `install.sh` | Existing platform routing for `cursor`/`claude` | Needs explicit `codex` target and Windows bash/sh route |
+| Installer targets | `install`, `install.ps1`, `install.sh` | Existing platform routing for `cursor`/`claude` | Needs explicit `codex` target and updated Windows strategy |
 
 ### Architectural Constraints Summary
 
 - `Codex` support must stay project-local: no writes to `~/.codex/*`, auth caches or user credential stores.
 - Existing user-owned project files are treated as merge surfaces, not as installer-owned blank slates.
 - `CLAUDE.md` already has repo-specific semantics in this project, so `AGENTS.md` introduction must coexist with it instead of replacing it.
-- `Codex hooks` currently provide only `SessionStart` and `Stop`, require `Codex >= 0.114.0` and hook feature enablement; any parity requirement that needs more than those triggers must be routed explicitly through another supported Codex mechanism.
-- Manifest, updater and bootstrap layers all require coordinated changes; partial support at only one layer would violate existing project rules and produce stale behaviour.
+- Hook support is versioned and partially shell-only; capability decisions must be explicit and version-gated.
+- Matching hooks can execute concurrently and global hooks are additive with project hooks, so managed behavior must use per-event dispatchers rather than many independent hooks.
+- Manifest, updater, trust onboarding and bootstrap layers all require coordinated changes; partial support at only one layer would violate existing project rules and produce stale behaviour.

@@ -16,8 +16,10 @@ args = ["-y", "octocode-mcp@latest"]
 ```
 
 - `[features]`: project-level feature flags for Codex.
-- `codex_hooks = true`: required flag for experimental hooks support in `Codex >= 0.114.0`.
+- `codex_hooks = true`: required flag for direct hook parity.
 - `[mcp_servers.<name>]`: project-level MCP entries for Codex.
+- Project-level config эффективен только в trusted projects.
+- Система не должна автоматически писать user-specific `[windows]`, auth или sandbox preference в repo config.
 
 ## Codex Hooks Config (`.codex/hooks.json`)
 
@@ -29,8 +31,46 @@ args = ["-y", "octocode-mcp@latest"]
         "hooks": [
           {
             "type": "command",
-            "command": "node .dev-pomogator/tools/example/session_start.js",
+            "command": "node .dev-pomogator/tools/codex-dispatch/session-start.js",
             "statusMessage": "Preparing Codex session...",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .dev-pomogator/tools/codex-dispatch/user-prompt-submit.js",
+            "statusMessage": "Checking prompt policy...",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .dev-pomogator/tools/codex-dispatch/pre-tool-bash.js",
+            "statusMessage": "Checking shell command...",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .dev-pomogator/tools/codex-dispatch/post-tool-bash.js",
+            "statusMessage": "Processing shell result...",
             "timeout": 10
           }
         ]
@@ -41,7 +81,7 @@ args = ["-y", "octocode-mcp@latest"]
         "hooks": [
           {
             "type": "command",
-            "command": "node .dev-pomogator/tools/example/stop.js",
+            "command": "node .dev-pomogator/tools/codex-dispatch/stop.js",
             "statusMessage": "Running stop automation...",
             "timeout": 10
           }
@@ -53,13 +93,15 @@ args = ["-y", "octocode-mcp@latest"]
 ```
 
 - `hooks`: корневой объект hook configuration.
-- `SessionStart`: список hook groups, запускаемых на старте сессии.
-- `Stop`: список hook groups, запускаемых на завершении/stop.
+- `SessionStart`, `Stop`: доступны с `Codex >= 0.114.0`.
+- `UserPromptSubmit`: доступен с `Codex >= 0.116.0`.
+- `PreToolUse`, `PostToolUse`: доступны с `Codex >= 0.117.0`, matcher currently meaningful only for `Bash`.
 - `type`: в MVP ожидается `command`.
 - `command`: выполняемая команда.
 - `statusMessage`: текст для UX during hook execution.
 - `timeout`: upper bound выполнения hook команды.
-- Baseline: schema рассчитана на `Codex >= 0.114.0`.
+- Managed design rule: один managed dispatcher на event, а не много отдельных extension hooks.
+- Global `~/.codex/hooks.json` и project `<repo>/.codex/hooks.json` могут сосуществовать additively.
 
 ## Managed Merge Report
 
@@ -95,27 +137,38 @@ args = ["-y", "octocode-mcp@latest"]
 
 ```json
 {
-  "extension": "prompt-suggest",
-  "included": true,
+  "extension": "specs-workflow",
+  "supportLevel": "partial",
+  "minimumCodexVersion": "0.117.0",
   "paritySurfaces": [
-    "Stop",
-    "skill",
-    "AGENTS"
+    "AGENTS",
+    "skills",
+    "mcp_servers",
+    "UserPromptSubmit"
   ],
-  "excludedReason": null
+  "blockedCapabilities": [
+    "Write/Edit interception outside Bash",
+    "Claude-style phase gate parity"
+  ],
+  "excludedReason": null,
+  "notes": "Partial parity until non-Bash guard replacement exists."
 }
 ```
 
 - `extension`: имя extension manifest.
-- `included`: входит ли extension в Codex support matrix.
+- `supportLevel`: `supported`, `partial`, `excluded`.
+- `minimumCodexVersion`: минимальная версия Codex для заявленной route, если applicable.
 - `paritySurfaces`: подтверждённые Codex-native surfaces, через которые реализуется parity.
+- `blockedCapabilities`: известные неснятые ограничения.
 - `excludedReason`: причина исключения; для `test-statusline` должна быть заполнена.
+- `notes`: краткое пояснение для human review.
 
 ## Правила валидации
 
 - `.codex/hooks.json` не должен содержать event names кроме подтверждённых в спецификации без дополнительного research proof.
-- Hook-driven scenarios должны требовать `Codex >= 0.114.0` и project-level `codex_hooks = true`.
+- Hook-driven scenarios должны быть version-gated (`0.114.0`, `0.116.0`, `0.117.0`, `0.120.0+` where applicable).
+- Managed hooks для одного event должны materialize как один dispatcher, а не как набор независимых extension hooks.
+- `PreToolUse`/`PostToolUse` не должны использоваться в design как универсальный эквивалент interception для `Write`, `MCP`, `WebSearch` и других non-Bash tools.
 - `.codex/config.toml` не должен содержать auth secrets или user-level login data.
 - Любой file conflict в `AGENTS.md`, `CLAUDE.md`, `.codex/*`, `.agents/skills/*` должен оставлять trace в merge report.
-- Support matrix обязана явно содержать `test-statusline` как excluded extension и все остальные текущие installable extensions как included или explicitly routed.
-
+- Support matrix обязана явно содержать `test-statusline` как `excluded` extension и все остальные текущие installable extensions как `supported`, `partial` или `excluded`.

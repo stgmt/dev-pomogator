@@ -5,19 +5,22 @@ All notable changes to this feature will be documented in this file.
 ## [Unreleased]
 
 ### Added
-- Split BDD suite: core scenarios and one `.feature` file per plugin parity path instead of one monolithic Codex feature file.
-- Explicit implementation tasks for `tests/e2e/helpers.ts`, `Dockerfile.test`, `src/installer/memory.ts` and `extensions/specs-workflow/tools/mcp-setup/setup-mcp.py`.
-- Dedicated traceability section for the new core/plugin feature layout.
+- Version-aware Codex capability model instead of a frozen `0.114.0` snapshot.
+- Trusted-project and additive global-layer requirements for `.codex/*`.
+- Hook dispatcher requirement to avoid concurrent managed hook races on shared events.
+- Support matrix semantics `supported` / `partial` / `excluded` with version floors and limitations.
+- Explicit upstream watchlist for missing Codex capabilities to revisit later (`Write/Edit` hooks, plan-mode event, status line surface, ordered hook chain, Windows hook clarity).
+- Explicit note that `ExitPlanMode` was not found in primary Codex sources as of 2026-04-18, so it cannot be used as a current design assumption.
 
 ### Changed
-- `TASKS.md` now follows split BDD structure, aligns core paths with existing repo conventions and explicitly creates missing plugin suite directories where they do not exist yet.
-- `FILE_CHANGES.md` now reflects manifest normalization, Codex CLI Docker harness, MCP setup adaptation and Claude-memory coupling as first-class work items.
-- `README.md` now documents the feature suite as a core/plugin matrix instead of a single feature file.
+- `README.md`, `RESEARCH.md`, `FR.md`, `NFR.md`, `ACCEPTANCE_CRITERIA.md`, `DESIGN.md` and `TASKS.md` are being rewritten around the current Codex docs surface.
+- Windows strategy changed from outdated `bash/sh` assumption to native-first with WSL fallback.
+- Hook and parity model now distinguishes Bash-only tool interception from broader Claude-only semantics.
 
 ### Fixed
-- Eliminated the outdated assumption that one giant `codex-cli-support.feature` is the right testing boundary for Codex support.
-- Closed spec gaps around Windows universal bootstrap entrypoint, dual-platform-only test helpers and Codex-unaware MCP setup tooling.
-- Restored explicit BDD coverage for the shared `v0.114.0` hook entry schema contract after feature suite splitting.
+- Removed the outdated assumption that Codex only supports `SessionStart` and `Stop`.
+- Corrected the role of `AGENTS.md` vs `CLAUDE.md` in Codex instruction discovery.
+- Closed spec gaps around trust onboarding, global hook coexistence and false full-parity claims for Claude-only plugin behavior.
 
 ## [0.1.0] - TBD
 

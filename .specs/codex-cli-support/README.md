@@ -1,24 +1,46 @@
 # Codex CLI Support
 
-Project-level поддержка `Codex CLI` в `dev-pomogator`: новая платформа `codex` с локальными артефактами репозитория, безопасным merge/back-up пользовательских файлов, `Codex hooks`, `AGENTS.md`, `.agents/skills`, `.codex/config.toml` и parity для всех текущих расширений, кроме `test-statusline`.
+Project-level поддержка `Codex CLI` в `dev-pomogator`: новая платформа `codex` с repo-local артефактами, merge-safe coexistence с пользовательскими файлами, version-aware hooks, `AGENTS.md`, `.agents/skills`, `.codex/config.toml` и честной support matrix по каждому текущему расширению.
 
 ## Ключевые идеи
 
-- `Codex` проектируется как третья first-class платформа рядом с `Cursor` и `Claude Code`, а не как alias существующей платформы.
-- Для `Codex` materialize только project-level артефакты: `.codex/*`, `AGENTS.md`, `.agents/skills/`, `.dev-pomogator/tools/`. Запись в `~/.codex/*` запрещена.
-- Hook-driven parity в MVP опирается на experimental `Codex hooks` из `v0.114.0+` с включением `features.codex_hooks=true`.
-- Существующие `AGENTS.md`, `CLAUDE.md`, `.codex/config.toml`, `.codex/hooks.json` и `.agents/skills/*` рассматриваются как high-risk merge surface: только backup + warning + merge guidance, без silent overwrite.
-- BDD-слой фичи больше не монолитный: core-сценарии и parity каждого plugin описаны отдельными `.feature` файлами, чтобы их можно было независимо реализовывать и тестировать.
-- Текущая кодовая база еще не реализует `Codex`, но уже содержит reusable substrate в `src/installer/shared.ts`, `src/updater/index.ts` и project-level installer path для Claude; спецификация теперь учитывает это как исходное состояние.
+- `Codex` проектируется как third first-class платформа рядом с `Cursor` и `Claude Code`, а не как alias существующей платформы.
+- Managed project артефакты для `Codex`: `.codex/config.toml`, `.codex/hooks.json`, `AGENTS.md`, `.agents/skills/`, `.dev-pomogator/tools/`. Запись в `~/.codex/*` и user-level security/auth настройки запрещена.
+- Project-level `.codex/*` работают только в trusted projects. Инсталлер может materialize repo-local файлы, но обязан предупредить, что до trust onboarding Codex их будет игнорировать.
+- Hook surface versioned, а не статичный:
+  - `0.114.0+`: `SessionStart`, `Stop`
+  - `0.116.0+`: `UserPromptSubmit`
+  - `0.117.0+`: `PreToolUse`, `PostToolUse`, но только для `Bash`
+  - `0.120.0+`: Windows hook gate снят по changelog; при этом docs частично расходятся, значит нужен capability resolver, а не жёстко захардкоженная модель
+- `AGENTS.md` для Codex является primary guidance surface. `CLAUDE.md` остаётся legacy glossary/index и optional fallback concern, но не core artifact, на котором должна держаться parity.
+- Skills в Codex читаются не только из repo root: `.agents/skills` сканируется от текущей директории вверх до корня репозитория, а одинаковые `name` не merge-ятся. Значит упаковка skills должна быть collision-aware.
+- Matching hooks одного события запускаются concurrently. Поэтому `dev-pomogator` не должен materialize несколько независимых managed hooks на один и тот же event; нужен единый dispatcher per event с deterministic fan-out внутри managed слоя.
+- Support matrix больше не бинарная. Для каждого extension должно быть явно указано: `supported`, `partial` или `excluded`, version floor, parity surfaces и причина ограничений.
+
+## Upstream Watchlist
+
+Ниже зафиксированы upstream gaps Codex, из-за которых часть parity сейчас сознательно остаётся `partial` или `excluded`. Это не “забытые задачи”, а deferred re-check points.
+
+- Нет `PreToolUse` / `PostToolUse` для non-Bash tools:
+  Нужны `Write`, `Edit`, `ApplyPatch`, `WebSearch`, `MCP` и эквивалентные tool events.
+  Блокирует full parity для `specs-workflow`, `plan-pomogator`, частично `tui-test-runner`.
+- Нет event-а уровня `ExitPlanMode` или другого plan-mode lifecycle hook.
+  Блокирует full parity для `plan-pomogator`.
+- Нет native status line / status bar surface.
+  Блокирует `test-statusline`; `notify` и `tui.notifications` не считаются эквивалентом.
+- Нет ordered / priority-based execution model для matching hooks.
+  Пока hooks concurrent, нужен dispatcher; если Codex позже даст deterministic chain, дизайн можно упростить.
+- Windows hooks docs и changelog частично расходятся.
+  Нужно повторно проверить при следующем revisit, можно ли снять часть capability gates.
 
 ## BDD Suite
 
 ### Core
 
-- `features/core/codex-platform.feature` — first-class platform, project-level only install, Windows bootstrap
-- `features/core/codex-protection.feature` — backup, merge-safe guidance/config coexistence
+- `features/core/codex-platform.feature` — first-class platform, trusted project model, native Windows / WSL strategy
+- `features/core/codex-protection.feature` — backup, merge-safe coexistence для project files
 - `features/core/codex-update.feature` — managed reinstall/update, stale cleanup
-- `features/core/codex-hooks-schema.feature` — cross-cutting contract для `v0.114.0` hook entry shape
+- `features/core/codex-hooks-schema.feature` — version-aware hook contract, additive layering и dispatcher discipline
 
 ### Plugins
 
@@ -46,22 +68,22 @@ Project-level поддержка `Codex CLI` в `dev-pomogator`: новая пл
 | Файл | Содержимое |
 |------|------------|
 | [USER_STORIES.md](USER_STORIES.md) | Ключевые пользовательские истории |
-| [USE_CASES.md](USE_CASES.md) | Основные сценарии установки, merge и update |
-| [RESEARCH.md](RESEARCH.md) | Внешние и внутренние архитектурные выводы по Codex |
-| [REQUIREMENTS.md](REQUIREMENTS.md) | Traceability matrix FR/AC/@feature и layout BDD suite |
+| [USE_CASES.md](USE_CASES.md) | Основные сценарии установки, layering, update и parity routing |
+| [RESEARCH.md](RESEARCH.md) | Актуальный ресерч по Codex hooks, trust, AGENTS, skills и Windows |
+| [REQUIREMENTS.md](REQUIREMENTS.md) | Traceability matrix FR/AC/@feature и support-matrix expectations |
 | [FR.md](FR.md) | Functional requirements для платформы `codex` |
 | [NFR.md](NFR.md) | Нефункциональные требования |
 | [ACCEPTANCE_CRITERIA.md](ACCEPTANCE_CRITERIA.md) | EARS-критерии приемки |
-| [DESIGN.md](DESIGN.md) | Архитектура installer/update path, manifest normalization, hooks, skills, merge flow |
+| [DESIGN.md](DESIGN.md) | Архитектура installer/update path, trust/layering, dispatch, skills, MCP и parity routing |
 | [FILE_CHANGES.md](FILE_CHANGES.md) | Целевые изменения по коду, manifests и test harness |
-| [TASKS.md](TASKS.md) | TDD-порядок реализации с split feature suite |
+| [TASKS.md](TASKS.md) | TDD-порядок реализации с version-aware Codex capability model |
 | [CHANGELOG.md](CHANGELOG.md) | Изменения спецификации |
-| [features/core/codex-platform.feature](features/core/codex-platform.feature) | Core BDD: платформа и bootstrap |
+| [features/core/codex-platform.feature](features/core/codex-platform.feature) | Core BDD: platform target, trust и Windows strategy |
 | [features/core/codex-protection.feature](features/core/codex-protection.feature) | Core BDD: backup и coexistence |
 | [features/core/codex-update.feature](features/core/codex-update.feature) | Core BDD: reinstall/update |
-| [features/core/codex-hooks-schema.feature](features/core/codex-hooks-schema.feature) | Core BDD: schema contract для `.codex/hooks.json` |
-| `features/plugins/*.feature` | Plugin-level BDD files для независимой parity реализации |
-| [codex-cli-support_SCHEMA.md](codex-cli-support_SCHEMA.md) | Контракты артефактов `.codex/*`, merge report и support matrix |
+| [features/core/codex-hooks-schema.feature](features/core/codex-hooks-schema.feature) | Core BDD: versioned hook contract и dispatcher discipline |
+| `features/plugins/*.feature` | Plugin-level BDD files для независимой и честной parity оценки |
+| [codex-cli-support_SCHEMA.md](codex-cli-support_SCHEMA.md) | Контракты `.codex/*`, merge report и support matrix |
 
 ## Связанные правила
 

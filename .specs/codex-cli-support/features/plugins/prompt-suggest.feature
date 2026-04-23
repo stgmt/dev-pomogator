@@ -4,9 +4,10 @@ Feature: Codex parity for prompt-suggest
     Given dev-pomogator is installed
     And a git repository project exists
 
-  Scenario: prompt-suggest gets an explicit parity route beyond direct hooks
-    Given prompt-suggest requires behavior beyond only SessionStart and Stop
+  Scenario: prompt-suggest uses UserPromptSubmit and Stop when supported
+    Given Codex version 0.116.0 or newer is installed
     When Codex support matrix is generated
     Then prompt-suggest should have an explicit parity route
-    And the parity route should name hooks, skills, AGENTS, exec or automations as applicable
+    And the parity route should name "UserPromptSubmit" and "Stop" when available
+    And the parity route should also name a non-hook fallback for older versions or restricted environments
     And prompt-suggest should NOT be omitted silently
