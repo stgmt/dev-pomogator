@@ -1,0 +1,30 @@
+{
+  "_description": "Mock Subagent output for fake-nextjs-frontend fixture. F-12.",
+  "subagent_A_manifest_env": {
+    "manifests_found": ["package.json", "tsconfig.json", "next.config.ts"],
+    "languages": [{ "name": "typescript", "version": "5.3", "usage": "all" }],
+    "frameworks": [
+      { "name": "Next.js", "version": "14.2", "role": "app framework" },
+      { "name": "React", "version": "18.3", "role": "ui library" }
+    ],
+    "package_managers": ["npm"],
+    "env_files": [],
+    "required_env_vars": [],
+    "ci_configs": []
+  },
+  "subagent_B_tests_configs": {
+    "test_framework": "vitest",
+    "test_commands": ["npm test", "vitest run"],
+    "bdd_present": false,
+    "existing_ai_configs": [],
+    "vitest_config_location": "vitest.config.ts"
+  },
+  "subagent_C_entry_points": {
+    "entry_points": [
+      { "file": "src/app/page.tsx", "role": "root route" },
+      { "file": "src/app/api/hello/route.ts", "role": "hello API endpoint" }
+    ],
+    "top_level_dirs": ["src"],
+    "architecture_hint": "Next.js App Router with colocated routes"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "_description": "Mock Subagent output for fake-empty fixture (EC-4). F-14.",
+  "subagent_A_manifest_env": {
+    "manifests_found": [],
+    "languages": [],
+    "frameworks": [],
+    "package_managers": [],
+    "env_files": [],
+    "required_env_vars": [],
+    "ci_configs": []
+  },
+  "subagent_B_tests_configs": {
+    "test_framework": null,
+    "test_commands": [],
+    "bdd_present": false,
+    "existing_ai_configs": []
+  },
+  "subagent_C_entry_points": {
+    "entry_points": [],
+    "top_level_dirs": [],
+    "architecture_hint": "minimal — only README"
+  }
+}

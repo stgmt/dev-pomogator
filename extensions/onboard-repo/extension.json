@@ -1,0 +1,59 @@
+{
+  "name": "onboard-repo",
+  "version": "0.1.0",
+  "description": "Phase 0 Repo Onboarding: автоматический AI-first онбординг target репо при первом /create-spec. Создаёт .specs/.onboarding.json (17-block AI-first schema) + .specs/.onboarding.md (6-section prose report) + managed rule .claude/rules/onboarding-context.md + PreToolUse hook в .claude/settings.local.json. Archetype-first routing, parallel Explore subagents, git-SHA cache, baseline test run через /run-tests.",
+  "platforms": [
+    "claude"
+  ],
+  "category": "workflow",
+  "dependsOn": [
+    "specs-workflow",
+    "tui-test-runner"
+  ],
+  "crossExtensionModifies": [
+    ".claude/rules/specs-workflow/specs-management.md",
+    ".claude/skills/create-spec/SKILL.md",
+    "extensions/specs-workflow/tools/specs-generator/spec-status.ts",
+    "extensions/specs-workflow/extension.json"
+  ],
+  "commandFiles": {
+    "claude": []
+  },
+  "skills": {},
+  "skillFiles": {},
+  "ruleFiles": {
+    "claude": [
+      ".claude/rules/onboard-repo/onboarding-artifact-ai-centric.md",
+      ".claude/rules/onboard-repo/commands-via-skill-reference.md"
+    ]
+  },
+  "tools": {
+    "onboard-repo": ".dev-pomogator/tools/onboard-repo"
+  },
+  "toolFiles": {
+    "onboard-repo": [
+      "tools/onboard-repo/phase0.ts",
+      "tools/onboard-repo/steps/archetype-triage.ts",
+      "tools/onboard-repo/steps/parallel-recon.ts",
+      "tools/onboard-repo/steps/ingestion.ts",
+      "tools/onboard-repo/steps/baseline-tests.ts",
+      "tools/onboard-repo/steps/scratch-findings.ts",
+      "tools/onboard-repo/steps/text-gate.ts",
+      "tools/onboard-repo/steps/finalize.ts",
+      "tools/onboard-repo/renderers/render-rule.ts",
+      "tools/onboard-repo/renderers/compile-hook.ts",
+      "tools/onboard-repo/lib/git-sha-cache.ts",
+      "tools/onboard-repo/lib/schema-validator.ts",
+      "tools/onboard-repo/lib/subagent-merge.ts",
+      "tools/onboard-repo/lib/ignore-parser.ts",
+      "tools/onboard-repo/lib/secret-redaction.ts",
+      "tools/onboard-repo/schemas/onboarding.schema.json",
+      "tools/onboard-repo/templates/onboarding.md.template",
+      "tools/onboard-repo/templates/onboarding-context.md.template",
+      "tools/onboard-repo/templates/pretool-hook.json.template",
+      "tools/onboard-repo/templates/archetype-signals.json"
+    ]
+  },
+  "hooks": [],
+  "envRequirements": []
+}
