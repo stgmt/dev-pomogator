@@ -1,0 +1,19 @@
+{
+  "_marker": "managed-by-dev-pomogator-onboard-repo",
+  "_source": ".specs/.onboarding.json",
+  "_regenerate": "/create-spec <slug> --refresh-onboarding",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "onboard-repo-guard",
+            "_entries": []
+          }
+        ]
+      }
+    ]
+  }
+}

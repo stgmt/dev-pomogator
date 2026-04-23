@@ -1,0 +1,7 @@
+{
+  "name": "fake-no-git",
+  "version": "0.1.0",
+  "description": "Node.js fixture for non-git-tracked repo (EC-1 mtime fallback)",
+  "main": "index.js",
+  "private": true
+}

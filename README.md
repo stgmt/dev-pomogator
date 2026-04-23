@@ -55,6 +55,7 @@ npx github:stgmt/dev-pomogator uninstall --project [--dry-run]
 | `personal-pomogator` | Персональная установка через `.claude/settings.local.json` + gitignore guard |
 | `prompt-suggest` | Предложения промптов на основе контекста |
 | `claude-mem-health` | Health-check для интеграции с claude-mem |
+| `onboard-repo` | Phase 0 Repo Onboarding (AI-first артефакт + PreToolUse hook) для `/create-spec` workflow |
 
 Подробнее: `extensions/*/README.md`.
 

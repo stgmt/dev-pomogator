@@ -1,0 +1,44 @@
+{
+  "$schema": "../../../extensions/onboard-repo/tools/onboard-repo/schemas/onboarding.schema.json",
+  "schema_version": "1.0",
+  "version": "1.0",
+  "last_indexed_sha": "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+  "indexed_at": "2020-01-01T00:00:00Z",
+  "generated_by": "dev-pomogator/onboard-repo/0.1.0",
+  "cache_policy": {
+    "invalidate_on_sha_drift": true,
+    "drift_threshold_commits": 5,
+    "invalidate_on_file_change": []
+  },
+  "project": {
+    "name": "fake-python-api",
+    "purpose": "Stale onboarding from outdated SHA",
+    "domain_problem": "Drift test fixture",
+    "audience": [],
+    "scope_boundaries": ""
+  },
+  "tech_context": {
+    "languages": [],
+    "frameworks": [],
+    "package_managers": [],
+    "runtime_versions": {},
+    "technical_constraints": []
+  },
+  "commands": {},
+  "rules_index": [],
+  "skills_registry": [],
+  "hooks_registry": [],
+  "mcp_servers": [],
+  "boundaries": { "always": [], "ask_first": [], "never": [] },
+  "gotchas": [],
+  "env_requirements": { "required": [], "optional": [], "secrets_never_in_code": [] },
+  "verification": { "primary_command": "", "success_criteria": "", "manual_checks": [] },
+  "ignore": { "ai_excluded_paths": [], "index_only_excluded": [], "external_configs_found": [] },
+  "glossary": [],
+  "archetype": "python-api",
+  "archetype_confidence": "low",
+  "archetype_evidence": "stale",
+  "baseline_tests": { "framework": null, "command": "", "via_skill": null, "passed": 0, "failed": 0, "skipped": 0, "duration_s": 0, "failed_test_ids": [], "reason_if_null": "stale", "skipped_by_user": false },
+  "phase0_duration_ms": 0,
+  "existing_ai_configs": []
+}
