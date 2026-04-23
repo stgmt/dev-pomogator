@@ -1,0 +1,7 @@
+# Stub docker-compose file for fix-bg-output-loss integration tests.
+# Not used to actually run Docker — mock-docker.sh intercepts all docker calls.
+# This file exists only so docker-test.sh's `-f docker-compose.test.yml` arg resolves successfully.
+services:
+  test:
+    image: busybox
+    command: ["echo", "stub-service-placeholder"]

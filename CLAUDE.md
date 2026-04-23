@@ -59,7 +59,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | no-test-helper-duplication | Запрет дублирования helpers в тестах; shared → `tests/e2e/helpers.ts` (extension: test-quality) | `.claude/rules/test-quality/no-test-helper-duplication.md` |
 | verify-render-target | Перед редактированием render/statusline кода — проверить какой файл реально вызывается (compact_bar.py, не statusline_render.cjs) | `.claude/rules/pomogator/verify-render-target.md` |
 | screenshot-driven-verification | КАЖДЫЙ скриншот реально анализировать: описать что видно, сравнить с ожиданием, формат CONFIRMED/DENIED | `.claude/rules/pomogator/screenshot-driven-verification.md` |
-| no-blocking-on-tests | Docker тесты 7-12 мин; НИКОГДА не блокировать сессию; run_in_background + продолжать работу | `.claude/rules/pomogator/no-blocking-on-tests.md` |
+| no-blocking-on-tests | Docker тесты 7-12 мин; НИКОГДА не блокировать сессию; run_in_background + продолжать работу; запрет naked `\| tail` в bg (используй `\| tee <path> \| tail -N`) | `.claude/rules/pomogator/no-blocking-on-tests.md` |
 | post-edit-verification | После КАЖДОГО изменения кода: build, copy installed, /run-tests background, screenshot если UI | `.claude/rules/pomogator/post-edit-verification.md` |
 | skill-allowed-tools-audit | При создании/модификации skill — проверь что allowed-tools покрывает ВСЕ инструменты workflow | `.claude/rules/checklists/skill-allowed-tools-audit.md` |
 | installer-hook-formats | extension.json hooks имеют 3 формата (string, object, array) — обрабатывать все 3 | `.claude/rules/gotchas/installer-hook-formats.md` |
