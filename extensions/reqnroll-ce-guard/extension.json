@@ -1,0 +1,28 @@
+{
+  "name": "reqnroll-ce-guard",
+  "version": "1.0.0",
+  "description": "PreToolUse hook blocks C# Reqnroll step definitions where unescaped / in Cucumber Expression pattern breaks the parser (Alternative may not be empty)",
+  "category": "automation",
+  "platforms": ["claude"],
+  "ruleFiles": {
+    "claude": [
+      ".claude/rules/reqnroll-ce-guard/reqnroll-ce-slash.md"
+    ]
+  },
+  "tools": {
+    "reqnroll-ce-guard": "tools/reqnroll-ce-guard"
+  },
+  "toolFiles": {
+    "reqnroll-ce-guard": [
+      ".dev-pomogator/tools/reqnroll-ce-guard/ce_slash_guard.ts"
+    ]
+  },
+  "hooks": {
+    "claude": {
+      "PreToolUse": {
+        "matcher": "Write|Edit",
+        "command": "npx tsx .dev-pomogator/tools/reqnroll-ce-guard/ce_slash_guard.ts"
+      }
+    }
+  }
+}
