@@ -112,10 +112,46 @@
 |------|--------|--------|
 | `src/updater/index.ts` | edit (optional) | Updater может опционально вызывать `runDoctor({quiet:true})` после успешного update чтобы предупредить если что-то сломалось post-update. Nice-to-have, не блокирующее. |
 
-## Summary
+## Post-Launch Hardening — NEW (2026-04-20)
 
-- **Create**: 33 files
-- **Edit**: 10 files (6 extension.json, src/index.ts, package.json, README.md, CLAUDE.md + updater optional)
-- **Total**: 43 file operations
+> Добавляются при реализации FR-26..FR-34. Ссылка: TASKS.md Phase 8.
 
-Полный mapping FR → implementation file см. в TASKS.md Phase 1-4.
+| Path | Action | Reason |
+|------|--------|--------|
+| `src/doctor/checks/hook-command-integrity.ts` | create | [FR-26](FR.md#fr-26-hook-command-integrity-check-feature12): парсер settings.local.json hooks + fs.existsSync per extracted script path |
+| `src/doctor/checks/managed-files-integrity.ts` | create | [FR-27](FR.md#fr-27-managed-files-hash-integrity-check-feature12): итерация managed.tools[] + sha256 compare + 1MB size guard |
+| `src/doctor/checks/stale-managed.ts` | create | [FR-34](FR.md#fr-34-stale-managed-entries-detection-feature12): cross-ref installed names ↔ managed.tools first-segment |
+
+## Post-Launch Hardening — EDIT existing (2026-04-20)
+
+| Path | Action | Reason |
+|------|--------|--------|
+| `src/doctor/checks/hooks-registry.ts` | edit | [FR-31](FR.md#fr-31-hooks-registry-path-correction-feature2): fix JSON path → `installedExtensions[*].managed[projectRoot].hooks` aggregation + duplicate detection |
+| `src/doctor/checks/plugin-loader.ts` | edit | [FR-28](FR.md#fr-28-plugin-manifest-presence-for-installed-projects-feature10): missing plugin.json для installed project → critical (было silent ok) |
+| `src/doctor/checks/version-match.ts` | edit | [FR-32](FR.md#fr-32-configjson-toplevel-version-field-feature2): updated hint when top-level version field missing |
+| `src/doctor/checks/mcp-probe.ts` | edit | [FR-33](FR.md#fr-33-mcp-probe-timeout--error-categorization-feature4): 10s timeout, warning vs critical categorization, ENOENT/EACCES/exit-code hints |
+| `src/doctor/checks/index.ts` | edit | Append C20 (hook-command-integrity), C21 (managed-files-integrity), C22 (stale-managed) to phase2Checks array |
+| `src/doctor/runner.ts` | edit | [FR-30](FR.md#fr-30-allprojects-flag-feature8): export `executeChecksAllProjects` с `p-limit(4)` |
+| `src/doctor/reporter.ts` | edit | [FR-30](FR.md#fr-30-allprojects-flag-feature8): new mode "all-projects" + JSON nested projects object |
+| `src/doctor/constants.ts` | edit | [FR-33](FR.md#fr-33-mcp-probe-timeout--error-categorization-feature4): PROBE_MS = 10_000 (was 3_000) |
+| `src/doctor/index.ts` | edit | [FR-30](FR.md#fr-30-allprojects-flag-feature8): `runDoctor({allProjects:true, ...})` overload |
+| `src/index.ts` | edit | [FR-30](FR.md#fr-30-allprojects-flag-feature8): CLI parse `--all-projects` flag |
+| `src/config/index.ts` | edit | [FR-32](FR.md#fr-32-configjson-toplevel-version-field-feature2): writer injects top-level `version: pkg.version` on save + backfill |
+| `src/installer/index.ts` | edit | [FR-32](FR.md#fr-32-configjson-toplevel-version-field-feature2): pass version to config writer; [FR-29](FR.md#fr-29-pomogator-doctor-self-install-in-all-projectpaths-feature12): ensure pomogator-doctor installed by default |
+| `src/installer/extensions.ts` | edit | [FR-29](FR.md#fr-29-pomogator-doctor-self-install-in-all-projectpaths-feature12): add `pomogator-doctor` to default-install list with `alwaysInstall: true` semantic |
+| `extensions/pomogator-doctor/extension.json` | edit | [FR-29](FR.md#fr-29-pomogator-doctor-self-install-in-all-projectpaths-feature12): add `category: "infrastructure"` + `alwaysInstall: true` field |
+| `extensions/pomogator-doctor/tools/pomogator-doctor/doctor-hook.ts` | edit | Enhanced banner — если ≥3 C20/C21 critical, message специфичен к "hook/tool files missing" |
+| `tests/fixtures/pomogator-doctor/temp-home-builder.ts` | edit | Add preset `"webapp-like"` (F-14) + options `missingPluginManifest`, `configWithoutVersion`, `staleManagedEntries`, `hashMismatch`, `fileOver1MB` |
+| `tests/fixtures/pomogator-doctor/fake-mcp-server.ts` | edit | Add preset `"nonexistent-command"` to test spawn ENOENT path |
+| `tests/features/plugins/pomogator-doctor/doctor-integrity.test.ts` | create | New test file for scenarios 16..21, 30, 31 (C20/C21/C22 integrity checks) |
+| `tests/features/plugins/pomogator-doctor/doctor-selfinstall.test.ts` | create | New test file for scenarios 22, 23 (plugin manifest + self-install) |
+| `tests/features/plugins/pomogator-doctor/doctor-allprojects.test.ts` | create | New test file for scenario 24 (--all-projects flag) |
+| `tests/features/plugins/pomogator-doctor/doctor-regression.test.ts` | create | New test file for scenarios 25, 26, 27, 28, 29 (fixed existing checks) |
+
+## Summary (updated)
+
+- **Create (initial + post-launch)**: 33 + 4 = 37 files
+- **Edit (initial + post-launch)**: 10 + 16 = 26 files
+- **Total**: 63 file operations
+
+Полный mapping FR → implementation file см. в TASKS.md (Phase 1-7 initial + Phase 8 post-launch).

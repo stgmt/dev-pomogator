@@ -23,3 +23,19 @@
 
 ## US-8 @feature11
 Как **пользователь с частичной установкой** (только 3 из 18 extensions), я хочу чтобы доктор проверял зависимости **только для моих installed extensions** — не кричал "Bun missing" если у меня нет `claude-mem`, и не требовал `pyyaml` если `forbid-root-artifacts` не установлен.
+
+---
+
+## Post-Launch User Stories (2026-04-20)
+
+## US-9 @feature12
+Как **пользователь у которого хуки выдают стену ошибок** после каждого ответа Claude (22 сломанных хука × 5 events, реальный кейс webapp от 2026-04-20), я хочу чтобы доктор прочитал `settings.local.json → hooks` и точно показал какие command paths ссылаются на отсутствующие файлы — чтобы понять что надо реинсталлить или удалить stale-регистрацию, а не гадать по stack traces.
+
+## US-10 @feature12
+Как **пользователь с несколькими проектами** (dev-pomogator и webapp оба в `installedExtensions[*].projectPaths`), я хочу команду `dev-pomogator --doctor --all-projects` которая обойдёт все известные установки и покажет агрегированный traffic-light отчёт — чтобы не переключаться в каждый cwd вручную и не узнать про сломанный webapp только когда спам хуков уже придёт в чат.
+
+## US-11 @feature12
+Как **maintainer dev-pomogator**, я хочу чтобы доктор ловил hash drift: `auto_commit_stop.ts` в dev-pomogator имеет один sha256, в webapp — другой, оба managed → хоть один drift, хоть user edit — warning с указанием файла и предложением сравнить с source в `extensions/{ext}/tools/`. Чтобы не затирать user changes при reinstall без его ведома.
+
+## US-12 @feature12
+Как **пользователь broken install** у которого в `webapp` doctor hook не зарегистрирован (pomogator-doctor extension не попал в projectPaths при исходной установке), я хочу чтобы installer автоматически регистрировал SessionStart doctor hook во всех target проектах — чтобы проактивный баннер срабатывал без моего явного opt-in, иначе я могу никогда не узнать что `/pomogator-doctor` существует.

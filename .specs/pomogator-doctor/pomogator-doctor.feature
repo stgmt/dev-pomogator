@@ -190,3 +190,148 @@ Feature: POMOGATORDOCTOR001_pomogator-doctor_diagnostic_command
     And process exits with code 0
     And ~/.dev-pomogator/logs/doctor.log contains the error
     And the session is NOT blocked
+
+  # ============================================================
+  # Post-Launch Hardening scenarios (2026-04-20, @feature12)
+  # ============================================================
+
+  # @feature12
+  Scenario: POMOGATORDOCTOR001_16 Hook command references missing script file
+    Given temp home fixture "valid" is loaded (F-1)
+    And projectRoot has .claude/settings.local.json with hook command 'node -e "require(...)" -- ".dev-pomogator/tools/auto-commit/auto_commit_stop.ts"' under Stop event
+    And .dev-pomogator/tools/auto-commit/auto_commit_stop.ts does NOT exist on disk
+    When I run `dev-pomogator --doctor --json`
+    Then results contains check id starting with "C20" with severity "critical" and reinstallable=true
+    And that check message contains "Stop:" and ".dev-pomogator/tools/auto-commit/auto_commit_stop.ts"
+    And that check hint mentions "reinstall"
+
+  # @feature12
+  Scenario: POMOGATORDOCTOR001_17 Hook storm — 22 missing commands across 5 events aggregated
+    Given temp home fixture "webapp-like" (F-14) with settings.local.json containing 22 hook commands across events Stop(8), SessionStart(4), PreToolUse(4), UserPromptSubmit(4), PostToolUse(2)
+    And projectRoot has empty .dev-pomogator/tools/ directory
+    When I run `dev-pomogator --doctor --json`
+    Then results contains per-event critical entries grouped by event
+    And Stop-event missing count equals 8
+    And SessionStart-event missing count equals 4
+    And summary.critical is at least 5
+
+  # @feature12
+  Scenario: POMOGATORDOCTOR001_18 Shell hook (bash .sh) also parsed
+    Given temp home fixture "valid" is loaded (F-1)
+    And projectRoot has hook command 'bash .dev-pomogator/tools/bg-task-guard/stop-guard.sh' registered under Stop event
+    And .dev-pomogator/tools/bg-task-guard/stop-guard.sh does NOT exist
+    When I run `dev-pomogator --doctor --json`
+    Then results contains critical check mentioning "stop-guard.sh"
+
+  # @feature12
+  Scenario: POMOGATORDOCTOR001_19 Managed file hash mismatch emits warning
+    Given temp home fixture "valid" is loaded (F-1)
+    And config.installedExtensions[auto-commit].managed[projectRoot].tools[].path=".dev-pomogator/tools/auto-commit/auto_commit_core.ts" with hash "abc123"
+    And the file exists on disk with different content hashing to "def456"
+    When I run `dev-pomogator --doctor --json`
+    Then results contains check id starting with "C21" with severity "warning" and reinstallable=false
+    And that check hint contains "user edit or version drift"
+
+  # @feature12
+  Scenario: POMOGATORDOCTOR001_20 Managed file missing emits critical reinstallable
+    Given temp home fixture "valid" is loaded (F-1)
+    And config.installedExtensions[auto-commit].managed[projectRoot].tools[].path=".dev-pomogator/tools/auto-commit/auto_commit_llm.ts" with hash "zzz"
+    And that file does NOT exist on disk
+    When I run `dev-pomogator --doctor --json`
+    Then results contains check id starting with "C21" with severity "critical" and reinstallable=true
+    And reinstallableIssues includes the C21 entry
+
+  # @feature12
+  Scenario: POMOGATORDOCTOR001_21 Managed hash skipped for files over 1MB
+    Given temp home fixture "valid" is loaded (F-1)
+    And config tracks a managed file with size > 1MB
+    When I run `dev-pomogator --doctor --json`
+    Then the corresponding C21 check is severity "ok"
+    And message or details note "skipped hash (file > 1MB)"
+
+  # @feature10
+  Scenario: POMOGATORDOCTOR001_22 Plugin.json missing in installed project emits critical
+    Given temp home fixture "valid" is loaded (F-1)
+    And config.installedExtensions[*].projectPaths includes current projectRoot
+    And path.join(projectRoot, ".dev-pomogator/.claude-plugin/plugin.json") does NOT exist
+    When I run `dev-pomogator --doctor --json`
+    Then check C15 severity is "critical" and reinstallable=true
+    And check C15 hint contains "plugin manifest missing"
+    And check C15 hint contains "Claude Code cannot load commands/skills"
+
+  # @feature12
+  Scenario: POMOGATORDOCTOR001_23 pomogator-doctor self-install hook missing emits warning
+    Given temp home fixture "valid" is loaded (F-1)
+    And config.installedExtensions does NOT contain any extension named "pomogator-doctor"
+    When I run `dev-pomogator --doctor --json`
+    Then results contains a warning check about "proactive broken-install detection disabled"
+    And that check is reinstallable=true
+
+  # @feature12
+  Scenario: POMOGATORDOCTOR001_24 --all-projects iterates installed projectPaths
+    Given temp home fixture "valid" (F-1) with installedExtensions[*].projectPaths union = ["D:/repos/projA", "D:/repos/projB"]
+    And projA is healthy
+    And projB has 3 missing hook command files
+    When I run `dev-pomogator --doctor --all-projects --json`
+    Then stdout is a JSON object with top-level key "projects"
+    And projects contains exactly keys "D:/repos/projA" and "D:/repos/projB"
+    And projects["D:/repos/projB"] contains critical entries
+    And aggregate.critical is at least 3
+    And process exits with code 2
+
+  # @feature2
+  Scenario: POMOGATORDOCTOR001_25 Hooks registry check reads correct JSON path (regression)
+    Given temp home fixture "valid" (F-1) with fully synced hooks between config.installedExtensions[*].managed[projectRoot].hooks and settings.local.json
+    When I run `dev-pomogator --doctor --json`
+    Then check C6 severity is "ok"
+    And check C6 message does NOT contain "unexpected keys"
+
+  # @feature2
+  Scenario: POMOGATORDOCTOR001_26 Hooks registry detects duplicate registrations
+    Given temp home fixture "valid" (F-1)
+    And config.installedExtensions[extA].managed[projectRoot].hooks.Stop contains command "X"
+    And config.installedExtensions[extB].managed[projectRoot].hooks.Stop contains identical command "X"
+    When I run `dev-pomogator --doctor --json`
+    Then check C6 severity is "warning"
+    And check C6 message contains "duplicate hook registration"
+
+  # @feature2
+  Scenario: POMOGATORDOCTOR001_27 config.version missing emits warning
+    Given temp home fixture "valid" (F-1)
+    And ~/.dev-pomogator/config.json has no top-level "version" field
+    When I run `dev-pomogator --doctor --json`
+    Then check C13 severity is "warning" and reinstallable=true
+    And check C13 hint contains "lacks top-level version"
+
+  # @feature4
+  Scenario: POMOGATORDOCTOR001_28 MCP probe timeout is warning not critical at 10s
+    Given temp home fixture "valid" (F-1)
+    And fake MCP server "hanging" is spawned (F-7) that never responds to initialize
+    And .mcp.json references the hanging server
+    When I run `dev-pomogator --doctor --json`
+    Then check C12 severity is "warning" (not "critical")
+    And check C12 hint contains "probe did not complete in 10s"
+    And check C12 durationMs is between 9500 and 11000
+
+  # @feature4
+  Scenario: POMOGATORDOCTOR001_29 MCP spawn ENOENT emits critical with PATH hint
+    Given temp home fixture "valid" (F-1)
+    And .mcp.json references a server with command="does-not-exist-xyz"
+    When I run `dev-pomogator --doctor --json`
+    Then check C12 severity is "critical"
+    And check C12 hint contains "PATH"
+
+  # @feature12
+  Scenario: POMOGATORDOCTOR001_30 Stale managed entries orphan warning
+    Given temp home fixture "valid" (F-1)
+    And config.installedExtensions[*].managed[projectRoot].tools[].path="/dev-pomogator/tools/legacy-tool/old.ts" while no extension named "legacy-tool" is installed and legacy-tool is NOT declared as sub-tool of any installed extension.json
+    When I run `dev-pomogator --doctor --json`
+    Then results contains a warning mentioning "legacy-tool" and "orphaned"
+
+  # @feature12
+  Scenario: POMOGATORDOCTOR001_31 Sub-tool directories not flagged as stale (specs-validator case)
+    Given temp home fixture "valid" (F-1) with specs-workflow extension installed
+    And config.installedExtensions[specs-workflow].managed[projectRoot].tools[].path contains "/dev-pomogator/tools/specs-validator/validate-specs.ts"
+    And extensions/specs-workflow/extension.json declares tools.specs-validator=tools/specs-validator
+    When I run `dev-pomogator --doctor --json`
+    Then no warning check mentions "specs-validator" as orphaned

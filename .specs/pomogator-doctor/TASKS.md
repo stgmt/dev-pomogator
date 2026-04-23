@@ -170,6 +170,171 @@
 - [ ] Verify: doctor-entry scenarios 04 (silent) + 05 (banner) + 15 (fail-soft) → Green
   @feature4
 
+## Phase 8: Post-Launch Hardening (Red→Green) — Edge Cases from Real-World Usage
+
+> Добавлено 2026-04-20 после webapp incident (22 broken хука). Fixes D1–D4 дефектов и покрывает B1–B5 blind spots. Каждая задача ссылается на новый FR-26..FR-34 и BDD сценарий из POMOGATORDOCTOR001_16..31.
+
+### BDD Red foundation (Phase 8.0)
+
+- [ ] Дополнить `tests/fixtures/pomogator-doctor/temp-home-builder.ts` — новая preset F-14 `"webapp-like"`: 22 hooks across 5 events, empty `.dev-pomogator/tools/`, config.installedExtensions tracks webapp projectPath
+  _Source: FIXTURES.md F-14 (new)_
+  @feature12
+- [ ] Расширить `tests/fixtures/pomogator-doctor/temp-home-builder.ts` — опции `missingPluginManifest`, `configWithoutVersion`, `staleManagedEntries`, `hashMismatch`, `fileOver1MB` для новых сценариев
+  @feature12 @feature2 @feature10
+- [ ] Дополнить `tests/fixtures/pomogator-doctor/fake-mcp-server.ts` — preset `"nonexistent-command"` для spawn ENOENT теста
+  _Source: FR-33_
+  @feature4
+- [ ] Наполнить pending scenarios 16..31 в pomogator-doctor.feature — it.skip с NotImplementedError
+- [ ] Verify: 16 новых scenarios в RED state
+
+### Fix existing check: hooks-registry (Phase 8.1) — FR-31, AC-31
+
+- [ ] Edit `src/doctor/checks/hooks-registry.ts` — заменить `ctx.config?.managed?.[ctx.projectRoot]?.hooks` на aggregation `installedExtensions[*].managed[projectRoot]?.hooks` (union per event)
+  _Requirements: [FR-31](FR.md#fr-31-hooks-registry-path-correction-feature2)_
+  _Evidence: live run показал false-positive critical на всех installations — `RESEARCH.md` секция `Post-Launch Edge Cases`_
+  @feature2
+- [ ] Добавить duplicate detection — если одна и та же command string появляется ≥2 раз в union → warning
+  _Requirements: [AC-31](ACCEPTANCE_CRITERIA.md#ac-31-fr-31)_
+  @feature2
+- [ ] Test migration: existing scenarios 02, 17 должны продолжать работать. Scenarios 25, 26 — Green
+  @feature2
+
+### New check: hook-command-integrity (Phase 8.2) — FR-26, AC-26
+
+- [ ] Создать `src/doctor/checks/hook-command-integrity.ts` — id=C20, group=self-sufficient
+  _Requirements: [FR-26](FR.md#fr-26-hook-command-integrity-check-feature12)_
+  @feature12
+- [ ] Parser для 3 hook форматов (string/object/array) — reference к `.claude/rules/gotchas/installer-hook-formats.md`
+  _Requirements: [AC-26](ACCEPTANCE_CRITERIA.md#ac-26-fr-26)_
+  @feature12
+- [ ] Regex extractors для: (a) tsx-runner pattern `node -e "..." -- "PATH"`, (b) shell pattern `bash PATH.sh`, (c) direct node `node PATH.js`
+  @feature12
+- [ ] Group results by event: `id=C20:{event}` с message перечисляющим до 5 missing paths
+  @feature12
+- [ ] Append to `src/doctor/checks/index.ts` → phase2Checks array
+- [ ] Verify: scenarios 16, 17, 18 — Green
+  @feature12
+
+### New check: managed-files-integrity (Phase 8.3) — FR-27, AC-27
+
+- [ ] Создать `src/doctor/checks/managed-files-integrity.ts` — id=C21, group=self-sufficient
+  _Requirements: [FR-27](FR.md#fr-27-managed-files-hash-integrity-check-feature12)_
+  @feature12
+- [ ] Iterate `installedExtensions[*].managed[projectRoot].tools[]`, skip если projectRoot ∉ managed
+  @feature12
+- [ ] Missing file → severity=critical; hash mismatch → severity=warning (reinstallable=no)
+  @feature12
+- [ ] Size guard: skip hash check если file > 1MB — emit ok с note `"skipped hash (file > 1MB)"`
+  _Requirements: NFR-P-1 preservation_
+  @feature12
+- [ ] Use `crypto.createHash('sha256')` streaming для files < 1MB; `fs.readFileSync` acceptable given size cap
+  @feature12
+- [ ] Verify: scenarios 19, 20, 21 — Green
+  @feature12
+
+### Fix existing check: plugin-loader (Phase 8.4) — FR-28, AC-28
+
+- [ ] Edit `src/doctor/checks/plugin-loader.ts` — если `manifest === null` AND current projectRoot ∈ `installedExtensions[*].projectPaths` → severity=critical (не silent ok)
+  _Requirements: [FR-28](FR.md#fr-28-plugin-manifest-presence-for-installed-projects-feature10)_
+  @feature10
+- [ ] Hint: "plugin manifest missing — Claude Code cannot load commands/skills; run reinstall"
+  _Requirements: [AC-28](ACCEPTANCE_CRITERIA.md#ac-28-fr-28)_
+- [ ] Verify: scenario 22 — Green
+  @feature10
+
+### Installer change: pomogator-doctor self-install (Phase 8.5) — FR-29, AC-29
+
+- [ ] Edit `src/installer/extensions.ts` — добавить `pomogator-doctor` в list of extensions устанавливаемых по умолчанию при любом `npx dev-pomogator` (нет opt-in flag)
+  _Requirements: [FR-29](FR.md#fr-29-pomogator-doctor-self-install-in-all-projectpaths-feature12)_
+  @feature12
+- [ ] Обновить `extensions/pomogator-doctor/extension.json` → category="infrastructure", `alwaysInstall: true`
+- [ ] Добавить check в doctor: C29 self-install verification — (a) extension ∈ installedExtensions, (b) projectRoot ∈ projectPaths, (c) SessionStart hook содержит substring "pomogator-doctor/doctor-hook"
+  @feature12
+- [ ] Verify: scenario 23 — Green
+  @feature12
+
+### CLI flag: --all-projects (Phase 8.6) — FR-30, AC-30
+
+- [ ] Edit `src/doctor/runner.ts` — добавить экспорт `executeChecksAllProjects(options, checks)` который использует `p-limit(4)` по `installedExtensions[*].projectPaths` deduplicated
+  _Requirements: [FR-30](FR.md#fr-30-allprojects-flag-feature8)_
+  @feature8
+- [ ] Edit `src/doctor/reporter.ts` — новый mode `"all-projects"`: per-project section headers + aggregate summary + top-level exit code = max
+  @feature8
+- [ ] Edit `src/index.ts` — parse `--all-projects` flag, route to `executeChecksAllProjects`
+  @feature8
+- [ ] JSON mode: output `{"projects": {<path>: CheckResult[]}, "aggregate": {...}}`
+  _Requirements: [FR-24](FR.md#fr-24-json-output-mode-feature8) + [AC-30](ACCEPTANCE_CRITERIA.md#ac-30-fr-30)_
+  @feature8
+- [ ] Verify: scenario 24 — Green
+  @feature8
+
+### Installer change: write top-level config.version (Phase 8.7) — FR-32, AC-32
+
+- [ ] Edit `src/config/index.ts` — writer функции (`saveConfig`, `updateConfig`) SHALL include top-level `version: packageVersion` key
+  _Requirements: [FR-32](FR.md#fr-32-configjson-toplevel-version-field-feature2)_
+  @feature2
+- [ ] Edit `src/installer/index.ts` — передавать `version` явно при initial config write
+  @feature2
+- [ ] Edit `src/doctor/checks/version-match.ts` — update hint если `ctx.config?.version` отсутствует: severity=warning, hint="lacks top-level version"
+  _Requirements: [AC-32](ACCEPTANCE_CRITERIA.md#ac-32-fr-32)_
+  @feature2
+- [ ] Migration: первый install после upgrade автоматически добавит field (backfill logic через `if (!config.version) config.version = pkg.version`)
+- [ ] Verify: scenario 27 — Green
+  @feature2
+
+### MCP probe retune (Phase 8.8) — FR-33, AC-33
+
+- [ ] Edit `src/doctor/constants.ts` — `DOCTOR_TIMEOUTS.PROBE_MS = 10_000` (было 3_000)
+  _Requirements: [FR-33](FR.md#fr-33-mcp-probe-timeout--error-categorization-feature4)_
+  @feature4
+- [ ] Edit `src/doctor/checks/mcp-probe.ts` — error categorization:
+  - timeout → severity=warning (was critical)
+  - spawn `ENOENT` → severity=critical + PATH-specific hint
+  - spawn `EACCES` → severity=critical + permission hint
+  - exit-before-handshake → severity=critical + exit code in hint
+  _Requirements: [AC-33](ACCEPTANCE_CRITERIA.md#ac-33-fr-33)_
+  @feature4
+- [ ] Edit `fake-mcp-server.ts` fixture → добавить preset `"nonexistent"` для testing ENOENT path
+  @feature4
+- [ ] Verify: scenarios 28, 29 — Green
+  @feature4
+
+### New check: stale-managed-detect (Phase 8.9) — FR-34, AC-34
+
+- [ ] Создать `src/doctor/checks/stale-managed.ts` — id=C22, group=self-sufficient
+  _Requirements: [FR-34](FR.md#fr-34-stale-managed-entries-detection-feature12)_
+  @feature12
+- [ ] Build валидный набор tool-directory names:
+  - installed extension names из `config.installedExtensions[*].name`
+  - sub-tool directories из `extensions/{ext}/extension.json → tools` (discovered via глоббинг source repo) — fallback: hardcoded map для известных cases (specs-workflow → [specs-generator, specs-validator, steps-validator, mcp-setup], test-statusline → [test-statusline, bg-task-guard])
+  @feature12
+- [ ] Extract actual tool-dirs из `managed.tools[].path` (first segment after `.dev-pomogator/tools/`)
+- [ ] Diff: orphans = actual - valid; if non-empty → warning
+  @feature12
+- [ ] Verify: scenarios 30, 31 — Green
+  @feature12
+
+### SessionStart banner enhancement (Phase 8.10)
+
+- [ ] Edit `extensions/pomogator-doctor/tools/pomogator-doctor/doctor-hook.ts` — при problems banner format:
+  - Если ≥3 C20/C21 critical — message `"⚠ dev-pomogator: N hook/tool files missing in project. Run /pomogator-doctor"`
+  - Иначе — generic `"⚠ pomogator-doctor: N issue(s) detected, /pomogator-doctor for details"`
+  _Requirements: improved UX for webapp-style scenarios_
+  @feature4
+- [ ] Respect 100 char limit (NFR-U-4)
+  @feature4
+
+### Full re-verification (Phase 8.11)
+
+- [ ] Integration E2E `tests/e2e/pomogator-doctor.test.ts` — add case "webapp-like broken install detected without false-positives"
+  _Rule: integration-tests-first_
+- [ ] Regression run: `/run-tests --grep pomogator-doctor` — все 31 scenario GREEN
+- [ ] Manual verification: `cd webapp && dev-pomogator --doctor` → expected 21+ critical findings из C20/C21, reinstall offer, no false-positive C6
+- [ ] Manual verification: `cd dev-pomogator && dev-pomogator --doctor --all-projects` → report про webapp без переключения cwd
+- [ ] Update `AUDIT_REPORT.md` с re-audit findings после P0 fixes
+
+---
+
 ## Phase 7: Refactor + E2E + docs
 
 - [ ] Full E2E integration test `tests/e2e/pomogator-doctor.test.ts` — install → doctor → verify report
