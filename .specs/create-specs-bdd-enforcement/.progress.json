@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "featureSlug": "create-specs-bdd-enforcement",
+  "createdAt": "2026-04-20T16:43:21.490Z",
+  "currentPhase": "Complete",
+  "phases": {
+    "Discovery": {
+      "completedAt": "2026-04-20T16:45:17.683Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-20T16:45:17.683Z"
+    },
+    "Context": {
+      "completedAt": "2026-04-20T16:45:17.683Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-20T16:45:46.022Z"
+    },
+    "Requirements": {
+      "completedAt": "2026-04-20T16:52:32.910Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-20T16:52:32.909Z"
+    },
+    "Finalization": {
+      "completedAt": "2026-04-20T16:55:44.625Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-20T16:55:44.625Z"
+    }
+  }
+}
