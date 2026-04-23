@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "featureSlug": "verify-generic-scope-fix",
+  "createdAt": "2026-04-23T10:07:00.745Z",
+  "currentPhase": "Complete",
+  "phases": {
+    "Discovery": {
+      "completedAt": "2026-04-23T10:13:14.395Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-23T10:14:00.023Z"
+    },
+    "Context": {
+      "completedAt": "2026-04-23T10:13:14.395Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-23T10:14:35.181Z"
+    },
+    "Requirements": {
+      "completedAt": "2026-04-23T10:25:52.450Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-23T10:25:52.450Z"
+    },
+    "Finalization": {
+      "completedAt": "2026-04-23T10:29:32.567Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-23T10:29:32.566Z"
+    }
+  }
+}
