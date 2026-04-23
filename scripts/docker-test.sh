@@ -5,6 +5,14 @@
 
 set -o pipefail
 
+# Persistent log: defense-in-depth against silent output loss in long-running
+# background Bash tasks (see .specs/fix-bg-output-loss/RESEARCH.md). The log
+# file survives harness capture drops, docker compose -T buffering, and
+# Git-Bash pipe races.
+LOG_DIR=".dev-pomogator/.docker-status"
+LOG_FILE="${LOG_DIR}/test-run-$(date +%s).log"
+mkdir -p "$LOG_DIR"
+
 SESSION="${TEST_STATUSLINE_SESSION:-}"
 # If no SESSION in env, read from host session.env (written by SessionStart hook)
 if [ -z "$SESSION" ]; then
@@ -66,7 +74,8 @@ fi
 # Dockerfile CMD already includes wrapper (test_runner_wrapper.cjs).
 # Custom args override CMD, so vitest runs directly — wrapper YAML comes
 # from the Dockerfile CMD path only (full test suite).
+echo "[docker-test] Log: $LOG_FILE"
 docker compose -f docker-compose.test.yml run --rm -T \
   -e PYTHONUNBUFFERED=1 \
   "${SESSION_ARGS[@]}" \
-  test "$@"
+  test "$@" 2>&1 | tee -a "$LOG_FILE"

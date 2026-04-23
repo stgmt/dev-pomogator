@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "featureSlug": "fix-bg-output-loss",
+  "createdAt": "2026-04-23T11:59:06.602Z",
+  "currentPhase": "Complete",
+  "phases": {
+    "Discovery": {
+      "completedAt": "2026-04-23T12:02:25.646Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-23T12:07:50.145Z"
+    },
+    "Context": {
+      "completedAt": "2026-04-23T12:02:25.646Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-23T12:07:56.067Z"
+    },
+    "Requirements": {
+      "completedAt": "2026-04-23T12:23:34.369Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-23T12:23:34.369Z"
+    },
+    "Finalization": {
+      "completedAt": "2026-04-23T12:28:04.510Z",
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    }
+  }
+}
