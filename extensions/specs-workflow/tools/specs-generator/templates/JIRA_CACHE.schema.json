@@ -1,0 +1,272 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://dev-pomogator/specs-workflow/jira-cache.schema.json",
+  "title": "Jira Cache — structured extractions",
+  "description": "Machine-readable companion to JIRA_SOURCE.md + ATTACHMENTS.md. Contains pre-parsed errors/UI-observations/video-steps/config/schema from attachments, plus metadata for drift detection. Created by jira-intake Phase 4c/5g; updated by jira-intake-resync; read by validator (JIRA_SOURCE_PRESERVED) and audit (JIRA_DRIFT).",
+  "type": "object",
+  "required": ["schema_version", "jira_key", "jira_url", "last_fetch_at"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Schema version for forward-compatibility. Current: 1."
+    },
+    "jira_key": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9]+-[0-9]+$",
+      "description": "Jira issue key in PROJECT-NNNNN format."
+    },
+    "jira_url": {
+      "type": "string",
+      "format": "uri",
+      "description": "Full Jira issue URL."
+    },
+    "last_fetch_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when this cache was last written. Used by JIRA_DRIFT to detect staleness."
+    },
+    "issue_updated_at": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "Jira issue.updated field at fetch time. Drift check: compare against current issue.updated."
+    },
+    "comment_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of comments at fetch time. Drift check: compare against current."
+    },
+    "attachments": {
+      "type": "array",
+      "description": "One entry per attachment. Empty array if issue has no attachments.",
+      "items": {
+        "type": "object",
+        "required": ["id", "filename", "hash", "size", "role"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Jira attachment ID (stable across re-fetches)."
+          },
+          "filename": {
+            "type": "string",
+            "description": "Original filename as uploaded to Jira (may contain non-ASCII)."
+          },
+          "hash": {
+            "type": "string",
+            "pattern": "^sha256:[a-f0-9]{64}$",
+            "description": "SHA-256 of downloaded file content, prefixed sha256:."
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "File size in bytes."
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "error-evidence",
+              "ui-reference",
+              "reproduction-flow",
+              "data-sample",
+              "env-config",
+              "design-spec",
+              "api-trace",
+              "other"
+            ],
+            "description": "Role tag determining how attachment is used in subsequent spec phases. See ATTACHMENTS.md Role Legend."
+          },
+          "mime_type": {
+            "type": ["string", "null"]
+          },
+          "downloaded_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "redacted": {
+            "type": "boolean",
+            "default": false,
+            "description": "True if content contained secrets (tokens, passwords) and was NOT extracted to structured_extractions."
+          }
+        }
+      }
+    },
+    "structured_extractions": {
+      "type": "object",
+      "description": "Pre-parsed content from attachments organized by role. Populated per-role in jira-intake Phase 5g. Validators/audit query this instead of re-parsing binaries.",
+      "additionalProperties": false,
+      "properties": {
+        "errors": {
+          "type": "array",
+          "description": "Extracted from error-evidence role attachments (logs, stack traces).",
+          "items": {
+            "type": "object",
+            "required": ["source_file", "line", "message"],
+            "additionalProperties": false,
+            "properties": {
+              "source_file": { "type": "string" },
+              "line": { "type": "integer" },
+              "level": {
+                "type": "string",
+                "enum": ["error", "exception", "fatal", "warn", "info"]
+              },
+              "message": { "type": "string" },
+              "stack": { "type": ["string", "null"] },
+              "timestamp": { "type": ["string", "null"] }
+            }
+          }
+        },
+        "ui_observations": {
+          "type": "array",
+          "description": "Extracted from ui-reference role attachments (screenshots).",
+          "items": {
+            "type": "object",
+            "required": ["source_file"],
+            "additionalProperties": false,
+            "properties": {
+              "source_file": { "type": "string" },
+              "screen_name": { "type": ["string", "null"] },
+              "visible_elements": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "text_blocks": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "color_observations": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
+          }
+        },
+        "video_steps": {
+          "type": "array",
+          "description": "Extracted from reproduction-flow role attachments (videos).",
+          "items": {
+            "type": "object",
+            "required": ["source_file", "timestamp"],
+            "additionalProperties": false,
+            "properties": {
+              "source_file": { "type": "string" },
+              "timestamp": { "type": "string", "description": "HH:MM:SS or MM:SS" },
+              "action": { "type": "string" },
+              "element": { "type": ["string", "null"] },
+              "outcome": { "type": ["string", "null"] },
+              "frame_ref": {
+                "type": ["string", "null"],
+                "description": "Path to extracted PNG frame in .artifact-cache/, if captured."
+              }
+            }
+          }
+        },
+        "data_schema": {
+          "type": "array",
+          "description": "Extracted from data-sample role attachments (DBs, CSVs).",
+          "items": {
+            "type": "object",
+            "required": ["source_file", "table"],
+            "additionalProperties": false,
+            "properties": {
+              "source_file": { "type": "string" },
+              "table": { "type": "string" },
+              "columns": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["name"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "name": { "type": "string" },
+                    "type": { "type": ["string", "null"] },
+                    "sample_values": {
+                      "type": "array",
+                      "items": { "type": ["string", "number", "boolean", "null"] }
+                    }
+                  }
+                }
+              },
+              "row_count": { "type": ["integer", "null"] },
+              "relations": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
+          }
+        },
+        "config_values": {
+          "type": "object",
+          "description": "Extracted from env-config role attachments. Key = source filename, value = dictionary of config key→value pairs.",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": { "type": ["string", "number", "boolean", "null"] }
+          }
+        }
+      }
+    },
+    "directives": {
+      "type": "array",
+      "description": "Extracted imperative directives from Jira description (pattern: 'все X кроме Y', 'all X except Y'). Optional — populated if jira-intake detector recognizes pattern. Phase 2 Requirements agent MUST map each directive to FR or [WAIVED].",
+      "items": {
+        "type": "object",
+        "required": ["id", "severity", "imperative", "jira_quote"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^D-[0-9]+$",
+            "description": "Directive identifier, D-N."
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["CRITICAL", "WARNING", "NORMAL"],
+            "description": "Derived from emphasis markers: red/bold/!!! → CRITICAL, orange/strong → WARNING, else NORMAL."
+          },
+          "imperative": {
+            "type": "string",
+            "description": "Imperative clause extracted from Jira (e.g., 'блокировать добавление товара если его нет на остатках')."
+          },
+          "scope": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Scope enumeration if 'все X кроме Y' pattern detected. Example: all 9 doctypes."
+          },
+          "exclusions": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Excluded items from 'кроме Y' clause."
+          },
+          "jira_quote": {
+            "type": "string",
+            "description": "Verbatim quote from JIRA_SOURCE.md with emphasis markers preserved."
+          },
+          "enumeration_source": {
+            "type": ["string", "null"],
+            "description": "Where scope enumeration comes from — e.g., data_schema table reference, or 'manual: user confirmed'."
+          }
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Misc Jira metadata for drift checks.",
+      "additionalProperties": false,
+      "properties": {
+        "status": { "type": ["string", "null"] },
+        "priority": { "type": ["string", "null"] },
+        "labels": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "components": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "assignee": { "type": ["string", "null"] },
+        "reporter": { "type": ["string", "null"] }
+      }
+    }
+  }
+}
