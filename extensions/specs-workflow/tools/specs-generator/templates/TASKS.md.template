@@ -21,9 +21,27 @@
 > Создать .feature файл, step definitions, и BDD hooks ПЕРЕД реализацией бизнес-логики.
 > Все сценарии должны FAIL (Red) на этом этапе.
 >
-> **Если DESIGN.md содержит `TEST_DATA_ACTIVE`** — Phase 0 ОБЯЗАН содержать задачу
-> для каждого hook из DESIGN.md "Новые hooks" и каждого fixture из "Test Data & Fixtures".
-> Если `TEST_DATA_NONE` — hook-задачи не нужны.
+> **Если DESIGN.md `**Framework:**` = "framework missing" (Evidence = not installed)** — Phase 0 ОБЯЗАН содержать **bootstrap block** из 3 task в строгой последовательности (все implementation tasks зависят от последней):
+>
+> ```
+> - [ ] Install {framework}: {installCommand}          — id: install-bdd-framework
+>   _Source: DESIGN.md "## BDD Test Infrastructure" > Install Command_
+> - [ ] Bootstrap Hooks folder {hookFileHints}         — id: bootstrap-bdd-hooks
+>   _depends: install-bdd-framework_
+>   _Stubs: BeforeAll / AfterAll / BeforeScenario / AfterScenario per framework convention_
+>   _Reqnroll: `[BeforeScenario]` / `[AfterScenario]` attributes; Cucumber.js: `Before()` / `After()`; Behave: `before_scenario` в environment.py; pytest-bdd: fixtures с `autouse=True`_
+> - [ ] Create fixtures folder {fixturesFolderHint} + framework config {configFileHint}  — id: bootstrap-bdd-fixtures-config
+>   _depends: bootstrap-bdd-hooks_
+>   _Min valid content: `{}` для reqnroll.json; `module.exports = {}` для cucumber.js; `[behave]\nshow_skipped=false` для behave.ini; `[pytest]\nbdd_features_base_dir=features/` для pytest.ini_
+> ```
+>
+> Все implementation tasks (Phase 1+) SHALL содержать `_depends: bootstrap-bdd-fixtures-config_`.
+>
+> **Если Framework уже установлен (Evidence positive)** — bootstrap block заменяется одной строкой:
+> `(BDD foundation already in place, verified in DESIGN.md Evidence: {evidence_line})`
+>
+> **Если DESIGN.md содержит `TEST_DATA_ACTIVE`** — добавить задачу для каждого hook из DESIGN.md "Новые hooks" и каждого fixture из "Test Data & Fixtures" (в дополнение к bootstrap block).
+> Если `TEST_DATA_NONE` — дополнительные hook/fixture задачи не нужны (bootstrap block всё равно обязателен при missing framework).
 
 - [ ] {Создать/обновить .feature файл с BDD сценариями}
 - [ ] {Создать step definitions (заглушки с PendingStepException/throw)}

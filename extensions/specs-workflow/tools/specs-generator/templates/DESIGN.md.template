@@ -37,20 +37,32 @@
 
 ## BDD Test Infrastructure (ОБЯЗАТЕЛЬНО)
 
-> Секция НЕ может быть удалена. Агент обязан классифицировать фичу по Test Data Impact.
+> Секция НЕ может быть удалена. Агент обязан классифицировать фичу по ДВУМ осям: TEST_DATA (данные) + TEST_FORMAT (формат тестов).
 >
-> **4 вопроса классификации** (ДА/НЕТ):
+> **Step 6.1a — TEST_DATA** (ДА/НЕТ на 4 вопроса):
 > 1. Фича создаёт, изменяет или удаляет данные через API/БД/файлы?
 > 2. Фича изменяет состояние системы, которое нужно откатить после теста?
 > 3. BDD сценарии из .feature требуют предустановленных данных (Given-шаги с данными)?
 > 4. Фича взаимодействует с внешними сервисами, требующими mock/stub на уровне теста?
 >
 > Хотя бы 1 ДА → `TEST_DATA_ACTIVE` (заполнить все подсекции ниже).
-> Все НЕТ → `TEST_DATA_NONE` (указать Evidence и Verdict, подсекции не нужны).
+> Все НЕТ → `TEST_DATA_NONE` (указать Evidence, подсекции не нужны).
+>
+> **Step 6.1b — TEST_FORMAT**:
+> - `BDD` (дефолт для всех языков) — `.feature` сценарии + step definitions + hooks через BDD framework.
+> - `UNIT` — escape hatch, требует непустую `## Risks` секцию с обоснованием. Используется только в крайних случаях (legacy, embedded, framework несовместим).
+>
+> **Step 6.1c — Framework** (только если TEST_FORMAT=BDD):
+> Запустить `bdd-framework-detector` на target test-projects из FILE_CHANGES.md. Записать результат.
+> Поддерживаемые: `Reqnroll | SpecFlow` (C#), `Cucumber.js | Playwright BDD` (TS), `Behave | pytest-bdd` (Python).
+> Если framework НЕ установлен — это remediation target: TASKS.md Phase 0 будет содержать bootstrap block (install + hooks + fixtures + config).
 
-**Classification:** {TEST_DATA_ACTIVE | TEST_DATA_NONE}
-**Evidence:** {1-2 предложения — почему такая классификация, ответы на 4 вопроса}
-**Verdict:** {Краткий вывод: какие hooks нужны / hooks не требуются}
+**TEST_DATA:** {TEST_DATA_ACTIVE | TEST_DATA_NONE}
+**TEST_FORMAT:** {BDD | UNIT}
+**Framework:** {Reqnroll | SpecFlow | Cucumber.js | Playwright BDD | Behave | pytest-bdd | N/A при UNIT}
+**Install Command:** {actual команда, например `dotnet add package Reqnroll` или "already installed"}
+**Evidence:** {grep output или detector evidence — путь + строка + snippet, либо reference на RESEARCH.md "Existing Patterns"}
+**Verdict:** {Краткий вывод: какие hooks/fixtures нужны; при TEST_DATA_NONE — "no hooks required"}
 
 <!-- Подсекции ниже заполнять ТОЛЬКО при TEST_DATA_ACTIVE. При TEST_DATA_NONE — удалить подсекции. -->
 
