@@ -83,3 +83,7 @@
 - [ ] Каждая ячейка: тест ID или `[OUT_OF_SCOPE: причина]`
 - [ ] Gap report с summary (covered % и список gaps)
 - [ ] Нет ячеек с `???` — все закрыты
+
+## See also
+
+- `.claude/rules/scope-gate/when-to-verify.md` — per-case codepath reach verification (scope-gate extension). Смежное правило: cross-scope-coverage покрывает matrix scope × variant (test coverage); scope-gate покрывает per-case codepath reach (prevents structurally no-op fixes при enum/switch expansion).

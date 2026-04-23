@@ -72,6 +72,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | tui-debug-verification | TUI/statusline изменения: screenshot второго монитора + cross-verify YAML age + container; SKIP_BUILD запрещён после wrapper changes | `.claude/rules/pomogator/tui-debug-verification.md` |
 | onboarding-artifact-ai-centric | `.specs/.onboarding.json` — AI-first artifact: обязательны rules_index/skills_registry/hooks_registry/mcp_servers/boundaries/gotchas/glossary/verification. Generic project metadata без AI-specific секций — violation | `.claude/rules/onboard-repo/onboarding-artifact-ai-centric.md` |
 | commands-via-skill-reference | `.onboarding.json.commands.*` обязаны ссылаться на skill-обёртку через `via_skill` если она существует; `forbidden_if_skill_present=true + via_skill set` требует non-empty `raw_pattern_to_block` (AJV custom keyword) | `.claude/rules/onboard-repo/commands-via-skill-reference.md` |
+| scope-gate/when-to-verify | Триггер map для `/verify-generic-scope-fix` skill: когда invoke (guard/policy файлы + enum/switch expansion) + hard-OUT signals (prevent H1 over-application) | `.claude/rules/scope-gate/when-to-verify.md` |
+| scope-gate/escape-hatch-audit | Audit workflow + anti-gaming guidance для `[skip-scope-verify:]` escape hatch через `.claude/logs/scope-gate-escapes.jsonl` | `.claude/rules/scope-gate/escape-hatch-audit.md` |
 
 ### Triggered
 

@@ -1,0 +1,42 @@
+{
+  "name": "scope-gate",
+  "version": "0.1.0",
+  "description": "PreToolUse gate that blocks commits touching guard/policy code without running /verify-generic-scope-fix skill. Prevents structurally no-op scope expansions (adding variants whose creation flow bypasses the gate). Motivated by webapp MR !100 PRODUCTS-20218 incident.",
+  "platforms": [
+    "claude"
+  ],
+  "category": "verification",
+  "stability": "beta",
+  "skills": {
+    "verify-generic-scope-fix": ".claude/skills/verify-generic-scope-fix"
+  },
+  "skillFiles": {
+    "verify-generic-scope-fix": [
+      ".claude/skills/verify-generic-scope-fix/SKILL.md"
+    ]
+  },
+  "tools": {
+    "scope-gate": "tools/scope-gate"
+  },
+  "toolFiles": {
+    "scope-gate": [
+      ".dev-pomogator/tools/scope-gate/scope-gate-guard.ts",
+      ".dev-pomogator/tools/scope-gate/analyze-diff.ts"
+    ]
+  },
+  "ruleFiles": {
+    "claude": [
+      ".claude/rules/scope-gate/when-to-verify.md",
+      ".claude/rules/scope-gate/escape-hatch-audit.md"
+    ]
+  },
+  "hooks": {
+    "claude": {
+      "PreToolUse": {
+        "matcher": "Bash",
+        "command": "npx tsx .dev-pomogator/tools/scope-gate/scope-gate-guard.ts",
+        "timeout": 5
+      }
+    }
+  }
+}
