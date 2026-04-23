@@ -256,6 +256,8 @@ export function parseChkRows(content: string): ChkRow[] {
     if (cells.length < 5) continue;
     const [id, requirement, tracesTo, verificationMethod, status, notes = ''] = cells;
     if (!/^CHK-/.test(id)) continue;
+    // Skip header row: literal "CHK-ID" column label (appears once per table).
+    if (id === 'CHK-ID') continue;
 
     const idValid = CHK_ID_VALID.test(id);
     const tracesValid =

@@ -59,12 +59,39 @@ function deny(reason: string, filepath: string): never {
 }
 
 /**
- * Extract form-guard names from a JSON manifest text. Uses string scan
- * (not JSON.parse) to tolerate malformed JSON and partial edits. Returns
- * the subset of PROTECTED_HOOKS whose basename appears in the text.
+ * Extract form-guard names **present in hooks.PreToolUse commands** (not in
+ * other sections like toolFiles). Parses JSON; on parse error, falls back to
+ * string scan (fail-safe — malformed JSON is not our concern, installer will
+ * catch it).
+ *
+ * Protection scope is hooks.PreToolUse specifically: if a form-guard is
+ * removed from the hooks array while still listed in toolFiles, the installer
+ * would stop running it → that's the exact attack surface we guard.
  */
 function listProtectedPresent(text: string): string[] {
-  return PROTECTED_HOOKS.filter((name) => text.includes(name));
+  try {
+    const parsed = JSON.parse(text);
+    const hookSpecs: unknown[] = [];
+    const preTool = parsed?.hooks?.claude?.PreToolUse ?? parsed?.hooks?.PreToolUse;
+    if (Array.isArray(preTool)) {
+      for (const group of preTool) {
+        if (group?.hooks && Array.isArray(group.hooks)) {
+          hookSpecs.push(...group.hooks);
+        } else if (group?.command) {
+          hookSpecs.push(group);
+        }
+      }
+    } else if (preTool && typeof preTool === 'object') {
+      hookSpecs.push(preTool);
+    }
+    const commands = hookSpecs
+      .map((h) => (typeof (h as { command?: unknown }).command === 'string' ? (h as { command: string }).command : ''))
+      .join(' ');
+    return PROTECTED_HOOKS.filter((name) => commands.includes(name));
+  } catch {
+    // Fallback: string scan (tolerates malformed JSON).
+    return PROTECTED_HOOKS.filter((name) => text.includes(name));
+  }
 }
 
 /**
