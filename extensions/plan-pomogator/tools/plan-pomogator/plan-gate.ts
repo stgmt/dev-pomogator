@@ -24,6 +24,7 @@ import {
   isTaskNotification,
   readPromptFile,
 } from './prompt-store.ts';
+import { detectGuardFiles } from '../_shared/scope-gate-score-diff.ts';
 
 interface PreToolUseInput {
   session_id?: string;
@@ -238,6 +239,35 @@ async function main(): Promise<void> {
 
   const planName = path.basename(planFile);
   const planContent = fs.readFileSync(planFile, 'utf-8');
+
+  // Scope-gate advisory (non-blocking) — runs FIRST, before any deny-gates, so it
+  // surfaces regardless of plan validity. Plans touching guard/policy files get a
+  // stderr hint to run /verify-generic-scope-fix during implementation.
+  // Motivation: reference_stocktaking-incident-products-20218 (structurally no-op fix).
+  try {
+    const fileChangesMatch = planContent.match(/##\s+[^\n]*File Changes[^\n]*\n([\s\S]*?)(?=\n##\s|$)/i);
+    if (fileChangesMatch) {
+      const rows = fileChangesMatch[1].split(/\r?\n/);
+      const paths = rows
+        .map((r) => {
+          const cols = r.split('|').map((c) => c.trim()).filter(Boolean);
+          return cols[0]?.replace(/`/g, '');
+        })
+        .filter((p): p is string => Boolean(p) && p !== 'Path' && !/^-+$/.test(p));
+
+      const guardHits = detectGuardFiles(paths);
+      if (guardHits.length > 0) {
+        const hits = guardHits.slice(0, 5).map((p) => `  • ${p}`).join('\n');
+        const more = guardHits.length > 5 ? `\n  … +${guardHits.length - 5} more` : '';
+        process.stderr.write(
+          `[plan-gate] scope-gate advisory (non-blocking):\n` +
+          `  Plan touches guard/policy files:\n${hits}${more}\n` +
+          `  💡 During implementation run: /verify-generic-scope-fix before commit\n` +
+          `     See: .claude/rules/scope-gate/when-to-verify.md\n`,
+        );
+      }
+    }
+  } catch { /* fail-open */ }
 
   // Phase 0: Duplicate Detection
   try {

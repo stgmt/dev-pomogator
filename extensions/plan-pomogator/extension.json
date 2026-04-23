@@ -1,7 +1,7 @@
 {
   "name": "plan-pomogator",
-  "version": "2.0.0",
-  "description": "BREAKING: Two-Stage Plan Presentation — mandatory ## 💬 Простыми словами section first (chat summary before monster plan dialog). Rich markdown планы (emoji заголовки, ### todo blocks, blockquotes) + 5-фазная валидация (deterministic planFilePath, Phase 0 duplicate, Phase 2.5 prompt relevance) + session-isolated prompt cache (per-session_id, task-notification filter)",
+  "version": "2.1.0",
+  "description": "BREAKING: Two-Stage Plan Presentation — mandatory ## 💬 Простыми словами section first (chat summary before monster plan dialog). Rich markdown планы (emoji заголовки, ### todo blocks, blockquotes) + 5-фазная валидация (deterministic planFilePath, Phase 0 duplicate, Phase 2.5 prompt relevance) + session-isolated prompt cache (per-session_id, task-notification filter) + Phase 5 scope-gate advisory (non-blocking) via _shared/scope-gate-score-diff.ts — surfaces recommendation to run /verify-generic-scope-fix when File Changes table touches guard/policy files (Service.ts / Gate.ts / Policy.ts / etc).",
   "platforms": [
     "claude"
   ],
