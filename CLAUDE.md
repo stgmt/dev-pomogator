@@ -70,6 +70,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | spec-test-sync | При тестах в File Changes — спеки обязательны; при багфиксе — BDD .feature обязателен | `.claude/rules/plan-pomogator/spec-test-sync.md` |
 | integration-tests-first | Тесты ОБЯЗАНЫ быть интеграционными (runInstaller/spawnSync); unit допустим как доп, не как замена | `.claude/rules/integration-tests-first.md` |
 | tui-debug-verification | TUI/statusline изменения: screenshot второго монитора + cross-verify YAML age + container; SKIP_BUILD запрещён после wrapper changes | `.claude/rules/pomogator/tui-debug-verification.md` |
+| onboarding-artifact-ai-centric | `.specs/.onboarding.json` — AI-first artifact: обязательны rules_index/skills_registry/hooks_registry/mcp_servers/boundaries/gotchas/glossary/verification. Generic project metadata без AI-specific секций — violation | `.claude/rules/onboard-repo/onboarding-artifact-ai-centric.md` |
+| commands-via-skill-reference | `.onboarding.json.commands.*` обязаны ссылаться на skill-обёртку через `via_skill` если она существует; `forbidden_if_skill_present=true + via_skill set` требует non-empty `raw_pattern_to_block` (AJV custom keyword) | `.claude/rules/onboard-repo/commands-via-skill-reference.md` |
 
 ### Triggered
 
