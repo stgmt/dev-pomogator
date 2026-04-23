@@ -1997,6 +1997,39 @@ function commandAuditSpec(argv) {
     }
   }
 
+  log('INFO', 'Running SCOPE_GATE_CANDIDATE check...');
+  // Detects when spec FILE_CHANGES.md touches guard/policy files that would benefit
+  // from /verify-generic-scope-fix skill during implementation.
+  // Regex mirrors _shared/scope-gate-score-diff.ts isGuardFile() — keep in sync.
+  {
+    const fileChangesContent = getFileContent('FILE_CHANGES.md');
+    if (fileChangesContent) {
+      const GUARD_FILE_SUFFIX = /(Service|Validator|Gate|Guard|Policy|Rule|Predicate|Filter)\.(ts|tsx|cs|java|kt|py|rb|go)$/i;
+      const GUARD_PATH = /\/(domain|policies|validation)\//i;
+      const tableRowRegex = /\|\s*`?([^`|\s]+\.[a-z]{1,5})`?\s*\|/gi;
+      const hits = new Set();
+      let m;
+      while ((m = tableRowRegex.exec(fileChangesContent)) !== null) {
+        const p = m[1];
+        if (GUARD_FILE_SUFFIX.test(p) || GUARD_PATH.test(p)) {
+          hits.add(p);
+        }
+      }
+      if (hits.size > 0) {
+        const preview = [...hits].slice(0, 3).join(', ');
+        const more = hits.size > 3 ? ` (+${hits.size - 3} more)` : '';
+        findings.push({
+          check: 'SCOPE_GATE_CANDIDATE',
+          category: 'LOGIC_GAPS',
+          severity: 'INFO',
+          message: `Spec FILE_CHANGES.md touches guard/policy files: ${preview}${more}`,
+          details: 'Implementation phase should run /verify-generic-scope-fix before each commit touching these files (see .claude/rules/scope-gate/when-to-verify.md). Add reference to TASKS.md Phase 0 if appropriate.',
+        });
+        log('INFO', `SCOPE_GATE_CANDIDATE: ${hits.size} guard files detected`);
+      }
+    }
+  }
+
   log('INFO', 'Running PARTIAL_IMPL_DETECTION check...');
   if (frContent && tasksContent) {
     const partialMarkers = [
