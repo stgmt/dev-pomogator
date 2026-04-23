@@ -35,6 +35,22 @@
 - Request: `{описание запроса}`
 - Response: `{описание ответа}`
 
+## Key Decisions
+
+> Auto-populated by Skill `requirements-chk-matrix` during Phase 2. Hook `design-decision-guard` enforces format:
+> each `### Decision:` block must include **Rationale:**, **Trade-off:**, **Alternatives considered:** with ≥2 `- {alt}` bullets.
+> Files without any `### Decision:` heading pass unblocked — section is optional but strongly recommended for Phase 2.
+
+### Decision: {short, specific title — the outcome, not the question}
+
+**Rationale:** {Why this choice is better for the current context}
+
+**Trade-off:** {What we give up — be honest, name the specific downside}
+
+**Alternatives considered:**
+- {Alt 1} — rejected because {specific reason tied to this project, not generic}
+- {Alt 2} — rejected because {specific reason}
+
 ## BDD Test Infrastructure (ОБЯЗАТЕЛЬНО)
 
 > Секция НЕ может быть удалена. Агент обязан классифицировать фичу по ДВУМ осям: TEST_DATA (данные) + TEST_FORMAT (формат тестов).

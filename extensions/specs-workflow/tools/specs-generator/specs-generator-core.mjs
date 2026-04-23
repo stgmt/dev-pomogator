@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
-const SUPPORTED_FORMATS = new Set(['json', 'text', 'human']);
+const SUPPORTED_FORMATS = new Set(['json', 'text', 'human', 'task-table']);
 const PHASE_ORDER = ['Discovery', 'Context', 'Requirements', 'Finalization'];
 
 class CliError extends Error {
@@ -254,8 +254,77 @@ function emitResult(format, result, textRenderer) {
 
 function assertFormat(format) {
   if (!SUPPORTED_FORMATS.has(format)) {
-    throw new CliError(`Invalid value for -Format. Allowed: json, text, human`, 2);
+    throw new CliError(`Invalid value for -Format. Allowed: json, text, human, task-table`, 2);
   }
+}
+
+/**
+ * Parse TASKS.md and build summary rows used by spec-status -Format task-table.
+ * Supports both bullet (`- [ ] title`) and heading (`### 📋 \`task-id\``) formats.
+ * Used by task-board-forms skill for idempotent Task Summary Table generation.
+ */
+function parseTasksForTable(content) {
+  const lines = content.replace(/\r\n/g, '\n').split('\n');
+  const rows = [];
+  let currentPhase = '';
+  let bulletCounter = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const phaseMatch = line.match(/^##\s+(Phase\s+[-\d]+\S*.*?)$/i);
+    if (phaseMatch) {
+      currentPhase = phaseMatch[1].trim();
+      continue;
+    }
+    const bulletMatch = line.match(/^-\s+\[([ x])\]\s+(.+)$/);
+    const headingMatch = line.match(/^###\s+📋\s+`([^`]+)`/);
+    if (!bulletMatch && !headingMatch) continue;
+
+    let id, title, status = 'TODO';
+    if (bulletMatch) {
+      bulletCounter++;
+      title = bulletMatch[2].split('—')[0].trim();
+      // derive ID from phase + counter
+      const phaseTag = currentPhase.match(/Phase\s+(-?\d+)/i);
+      id = phaseTag ? `T${phaseTag[1]}-${String(bulletCounter).padStart(2, '0')}` : `T${bulletCounter}`;
+      if (bulletMatch[1] === 'x') status = 'DONE';
+    } else {
+      id = headingMatch[1];
+      // find the blockquote description
+      const nextLine = lines[i + 1] || '';
+      title = nextLine.replace(/^>\s*/, '').trim() || id;
+    }
+
+    // Gather body for status/est/depends
+    let j = i + 1;
+    for (; j < lines.length; j++) {
+      if (/^##\s/.test(lines[j])) break;
+      if (bulletMatch && /^-\s+\[[ x]\]/.test(lines[j]) && !/^\s/.test(lines[j])) break;
+      if (headingMatch && /^###\s+📋/.test(lines[j])) break;
+    }
+    const body = lines.slice(i, j).join('\n');
+    const statusMatch = body.match(/Status:\s*(TODO|IN_PROGRESS|DONE|BLOCKED)/);
+    if (statusMatch) status = statusMatch[1];
+    const estMatch = body.match(/Est:\s*(\d+\s*m)/i);
+    const est = estMatch ? estMatch[1] : '—';
+    const depsMatch = body.match(/(?:depends|_depends:)[\s*_]*([^_\n]+)/i);
+    const depends = depsMatch ? depsMatch[1].replace(/\*/g, '').trim() : '—';
+
+    rows.push({ id, title: title.slice(0, 80), status, depends, phase: currentPhase || '—', est });
+  }
+  return rows;
+}
+
+/**
+ * Render the parsed tasks as a markdown table.
+ */
+function renderTaskTable(rows) {
+  const header = '| ID | Title | Status | Depends | Phase | Est. |\n|----|-------|--------|---------|-------|------|';
+  const body = rows
+    .map(
+      (r) => `| ${r.id} | ${r.title} | ${r.status} | ${r.depends} | ${r.phase} | ${r.est} |`,
+    )
+    .join('\n');
+  return rows.length > 0 ? `${header}\n${body}` : header;
 }
 
 /**
@@ -378,8 +447,11 @@ function readJsonIfExists(filePath) {
 }
 
 function createDefaultProgressState(targetDir, currentPhase) {
+  // Schema v3 — spec-generator-v3 form-guards feature.
+  // Form-guard hooks (user-story-form-guard etc.) activate only when version >= 3,
+  // so new specs get strict validation while existing v1/v2 specs pass unblocked.
   return {
-    version: 1,
+    version: 3,
     featureSlug: path.basename(targetDir),
     createdAt: new Date().toISOString(),
     currentPhase,
@@ -1088,6 +1160,20 @@ function commandSpecStatus(argv) {
     const result = makeErrorResult(`Spec folder not found: ${options.inputPath}`);
     emitResult(options.format, result, (value) => `ERROR: ${value.error}`);
     return 1;
+  }
+
+  // task-table format: parse TASKS.md and emit markdown table (no progress logic).
+  // Used by task-board-forms skill for idempotent Task Summary Table generation.
+  if (options.format === 'task-table') {
+    const tasksPath = path.join(targetDir, 'TASKS.md');
+    if (!fs.existsSync(tasksPath)) {
+      process.stderr.write(`ERROR: TASKS.md not found in ${options.inputPath}\n`);
+      return 1;
+    }
+    const content = fs.readFileSync(tasksPath, 'utf-8');
+    const rows = parseTasksForTable(content);
+    process.stdout.write(renderTaskTable(rows) + '\n');
+    return 0;
   }
 
   const phases = {

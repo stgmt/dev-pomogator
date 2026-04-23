@@ -157,9 +157,9 @@ Each USE_CASE MUST reference attachment (`Evidence: {filename}`) или Jira quo
 
 1. Создать структуру: `./.dev-pomogator/tools/specs-generator/scaffold-spec.ts -Name "{feature}"`
 2. Опросить пользователя о целях и ролях (**в Jira-mode:** уточнить только то, что НЕ покрыто JIRA_SOURCE.md — не переспрашивать reporter)
-3. Заполнить USER_STORIES.md
+3. Заполнить USER_STORIES.md — **вызвать `Skill("discovery-forms")`** (spec-generator-v3). Skill заполняет USER_STORIES.md блоками с Priority+Why+Independent Test+Acceptance Scenarios и добавляет `## Risk Assessment` таблицу в RESEARCH.md. Если skill недоступен — заполнить вручную в том же v3-формате (hook `user-story-form-guard` блокирует Write без Priority/Why/IT/AC).
 4. Заполнить USE_CASES.md
-5. Заполнить RESEARCH.md (если нужен ресерч). В Jira-mode секция `## Problem` ссылается на JIRA_SOURCE.md: `См. JIRA_SOURCE.md ## Description (Verbatim)` — не дублировать текст.
+5. Заполнить RESEARCH.md (если нужен ресерч). В Jira-mode секция `## Problem` ссылается на JIRA_SOURCE.md: `См. JIRA_SOURCE.md ## Description (Verbatim)` — не дублировать текст. Секция `## Risk Assessment` уже добавлена `discovery-forms` skill'ом на шаге 3 — при ручном заполнении hook `risk-assessment-guard` требует ≥2 non-placeholder rows.
 6. Проверить статус: `./.dev-pomogator/tools/specs-generator/spec-status.ts -Path ".specs/{feature}"`
 
 **СТОП #1:** Показать результаты Discovery, спросить подтверждение.
@@ -260,8 +260,9 @@ Scenario: SPECJIRA001_01 Picking blocks over-limit qty
 1. Заполнить FR.md (формат: ## FR-N: {Название}). В Jira-mode — каждый FR со строкой `Jira imperative:`.
 2. Заполнить NFR.md (секции: Performance, Security, Reliability, Usability). В Jira-mode — constraints из `.jira-cache.json` `config_values` cross-checked.
 3. Заполнить ACCEPTANCE_CRITERIA.md (EARS формат). В Jira-mode — каждый AC со строкой `Jira acceptance:` или `Evidence:`.
-4. Заполнить REQUIREMENTS.md (индекс ссылок)
-5. Заполнить DESIGN.md
+4. Заполнить REQUIREMENTS.md (индекс ссылок).
+4b. **Вызвать `Skill("requirements-chk-matrix")`** (spec-generator-v3) — skill строит CHK traceability matrix в REQUIREMENTS.md (`CHK-FR{n}-{nn}` rows + Verification Process + Summary Counts) И populates `## Key Decisions` блоки в DESIGN.md с Rationale/Trade-off/Alternatives considered. Hook `requirements-chk-guard` enforces CHK format; `design-decision-guard` enforces Key Decisions format.
+5. Заполнить DESIGN.md — при ручном редактировании дополнить `## Key Decisions` из skill-output; hook `design-decision-guard` блокирует decisions без Alternatives.
 5a. **OUT OF SCOPE пропагация (ОБЯЗАТЕЛЬНО):**
     Если FR помечен `> OUT OF SCOPE`, агент ОБЯЗАН пометить связанные UC, AC и User Stories.
     Формат: `> OUT OF SCOPE — см. FR-N`
@@ -462,7 +463,7 @@ Re-read `JIRA_SOURCE.md` Description + `.jira-cache.json` `directives[]` + `ATTA
 - **_Jira:_** "все доступные сейчас доктайпы, КРОМЕ INBOUND" (JIRA_SOURCE.md Description)
 ```
 
-1. Заполнить TASKS.md **по TDD-порядку:**
+1. Заполнить TASKS.md **по TDD-порядку** (см. структуру ниже), затем на шаге 1b **вызвать `Skill("task-board-forms")`** (spec-generator-v3) — skill добавляет `**Done When:**` блок + `Status:` + `Est:` per task и регенерирует `## Task Summary Table` в начале файла через `spec-status.ts -Format task-table`. Hook `task-form-guard` блокирует TASKS.md без Done When/Status/Est (Phase -1 relaxed). Структура:
    - **Phase -1 (Infrastructure):** Если DESIGN.md упоминает БД, docker, .env, secrets — добавить Phase -1: Infrastructure Prerequisites. Env vars пометить `[VERIFIED: source]`.
    - **Phase 0 (Red):** .feature файл + step definitions + hooks (заглушки) -- ПЕРВЫЕ задачи
    - **Phase 1-N (Green):** Реализация бизнес-логики, где каждая группа задач привязана к @featureN сценариям
