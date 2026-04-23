@@ -1,0 +1,17 @@
+diff --git a/src/services/StockValidationService.ts b/src/services/StockValidationService.ts
+index 1234567..abcdefg 100644
+--- a/src/services/StockValidationService.ts
++++ b/src/services/StockValidationService.ts
+@@ -43,7 +43,8 @@ export class StockValidationService {
+       'pickandship',
+       'picking',
+       'goodsreturn',
+       'shipping',
+       'writeoff',
+       'movetoanotherlocation',
+-      'movetoanotherwarehouse'
++      'movetoanotherwarehouse',
++      'stocktaking'
+     ].includes(normalizedType);
+   }
+ }

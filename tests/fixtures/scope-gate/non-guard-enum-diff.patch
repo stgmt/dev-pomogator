@@ -1,0 +1,14 @@
+diff --git a/src/utils/ColorPalette.ts b/src/utils/ColorPalette.ts
+index 1a1a1a1..2b2b2b2 100644
+--- a/src/utils/ColorPalette.ts
++++ b/src/utils/ColorPalette.ts
+@@ -5,6 +5,8 @@ export const PRESET_COLORS = [
+   'red',
+   'green',
+   'blue',
+   'yellow',
+-  'orange'
++  'orange',
++  'hotpink',
++  'teal'
+ ];

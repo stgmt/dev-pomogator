@@ -1,0 +1,13 @@
+diff --git a/src/services/DocumentGate.ts b/src/services/DocumentGate.ts
+index aaaa111..bbbb222 100644
+--- a/src/services/DocumentGate.ts
++++ b/src/services/DocumentGate.ts
+@@ -20,6 +20,8 @@ export function shouldValidateStock(documentType: string): boolean {
+     case 'Shipping':
+     case 'Picking':
+     case 'Receiving':
++    case 'StockTaking':
++      return true;
+     default:
+       return false;
+   }

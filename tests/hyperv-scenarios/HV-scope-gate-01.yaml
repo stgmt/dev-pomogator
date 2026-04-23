@@ -1,0 +1,130 @@
+id: HV-scope-gate-01
+name: scope-gate-regression
+description: |
+  Regression scenario для scope-gate extension. В чистой Win VM:
+  1) Устанавливает dev-pomogator + scope-gate extension
+  2) Инициализирует тестовый репозиторий
+  3) Stage-ит stocktaking-diff fixture (тот же паттерн что в webapp MR !100)
+  4) Запускает Claude Code с prompt-ом на "git commit -m 'fix: add stocktaking'"
+  5) Скриншотит deny message от hook
+  6) Проверяет что commit заблокирован (exit code != 0)
+
+  Целевое поведение: hook matcher "Bash" должен детектить enum expansion
+  в *Service.ts файле, вернуть permissionDecision=deny + exit 2.
+
+tags:
+  - scope-gate
+  - regression
+  - products-20218
+  - p2
+
+preconditions:
+  checkpoint: baseline-clean
+  fixture: typical-claude-user
+
+steps:
+  - name: copy fixture
+    cmd: |
+      if (Test-Path C:\test-project) { Remove-Item C:\test-project -Recurse -Force }
+      Copy-Item -Path C:\fixture-source -Destination C:\test-project -Recurse -Force
+    timeout_seconds: 30
+
+  - name: init git
+    cmd: |
+      Set-Location C:\test-project
+      git init -q
+      git add -A
+      git -c user.name=test -c user.email=test@test.local commit -q -m "fixture baseline"
+    timeout_seconds: 30
+
+  - name: install dev-pomogator with scope-gate
+    cmd: |
+      Set-Location C:\test-project
+      npx --yes dev-pomogator --claude --extension scope-gate 2>&1
+    screenshot: true
+    timeout_seconds: 240
+    expect_exit: 0
+
+  - name: create minimal Service.ts with enum
+    cmd: |
+      Set-Location C:\test-project
+      New-Item -ItemType Directory -Path "src\services" -Force | Out-Null
+      @'
+      export class StockValidationService {
+        static isOutboundDocument(type: string): boolean {
+          return [
+            'pickandship',
+            'picking',
+            'shipping',
+            'writeoff'
+          ].includes(type);
+        }
+      }
+      '@ | Out-File -Encoding utf8 "src\services\StockValidationService.ts"
+      git add src/services/StockValidationService.ts
+      git -c user.name=test -c user.email=test@test.local commit -q -m "add initial service"
+    timeout_seconds: 30
+
+  - name: stage stocktaking expansion
+    cmd: |
+      Set-Location C:\test-project
+      @'
+      export class StockValidationService {
+        static isOutboundDocument(type: string): boolean {
+          return [
+            'pickandship',
+            'picking',
+            'shipping',
+            'writeoff',
+            'stocktaking'
+          ].includes(type);
+        }
+      }
+      '@ | Out-File -Encoding utf8 "src\services\StockValidationService.ts"
+      git add src/services/StockValidationService.ts
+    timeout_seconds: 30
+
+  - name: attempt commit (should be blocked by hook)
+    cmd: |
+      Set-Location C:\test-project
+      # Directly invoke hook — simulate Claude Code Bash PreToolUse flow
+      $input = '{"tool_name":"Bash","tool_input":{"command":"git commit -m \"fix: add stocktaking\""},"cwd":"C:/test-project","session_id":"hv-scope-01"}'
+      $result = $input | npx tsx .dev-pomogator/tools/scope-gate/scope-gate-guard.ts 2>&1
+      Write-Output "HOOK_EXIT=$LASTEXITCODE"
+      Write-Output "HOOK_STDOUT=$result"
+    screenshot: true
+    timeout_seconds: 60
+
+assertions:
+  - type: exit_code
+    step: install dev-pomogator with scope-gate
+    equals: 0
+
+  - type: file_exists
+    path: C:\test-project\.dev-pomogator\tools\scope-gate\scope-gate-guard.ts
+
+  - type: file_exists
+    path: C:\test-project\.claude\skills\verify-generic-scope-fix\SKILL.md
+
+  - type: file_exists
+    path: C:\test-project\.claude\rules\scope-gate\when-to-verify.md
+
+  - type: text_contains
+    path: C:\test-project\.claude\settings.local.json
+    value: scope-gate-guard
+
+  - type: screenshot_match
+    step: attempt commit (should be blocked by hook)
+    expect: |
+      PowerShell terminal showing the hook output. Visible в окне:
+      - Строка "HOOK_EXIT=2" (exit code = 2 = deny)
+      - JSON-подобный output содержащий "permissionDecision":"deny"
+      - Строка содержащая "/verify-generic-scope-fix"
+      No red error text indicating hook crash (fail-open bypass).
+      No interactive prompts blocking the terminal.
+
+post_test:
+  revert: baseline-clean
+  collect_logs:
+    - C:\test-project\.claude\settings.local.json
+    - C:\test-project\.claude\logs\scope-gate-escapes.jsonl

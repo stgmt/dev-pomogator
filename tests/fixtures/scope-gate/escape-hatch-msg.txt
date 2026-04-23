@@ -1,0 +1,1 @@
+chore: refactor dead-code path [skip-scope-verify: dead-code path confirmed with reviewer evolkov — no runtime reach]

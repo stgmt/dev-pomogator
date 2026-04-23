@@ -1210,6 +1210,65 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
         dupFindings.some((f: any) => f.message.includes('Duplicated config block'))
       ).toBe(true);
     });
+
+    // @feature_scope_gate
+    it('should detect SCOPE_GATE_CANDIDATE when FILE_CHANGES.md touches guard files', async () => {
+      // Write a FILE_CHANGES.md that references a guard-file pattern
+      const fileChangesPath = path.join(auditFixturePath, 'FILE_CHANGES.md');
+      await fs.writeFile(
+        fileChangesPath,
+        '# File Changes\n\n| Path | Action | Reason |\n|------|--------|--------|\n' +
+          '| `src/services/StockValidationService.ts` | edit | Add stocktaking variant |\n' +
+          '| `src/utils/helper.ts` | edit | Utility tweak |\n'
+      );
+
+      const result = runShellScript(
+        getSpecsGeneratorPath('audit-spec.ts'),
+        ['-Path', '.specs/audit-new-checks-test']
+      );
+
+      expect(result.exitCode).toBe(0);
+
+      const scopeGateFindings = (result.json.findings || []).filter(
+        (f: any) => f.check === 'SCOPE_GATE_CANDIDATE'
+      );
+      expect(scopeGateFindings.length).toBeGreaterThan(0);
+      expect(
+        scopeGateFindings.some((f: any) =>
+          f.message.includes('StockValidationService.ts')
+        )
+      ).toBe(true);
+      expect(
+        scopeGateFindings.some((f: any) =>
+          f.details.includes('verify-generic-scope-fix')
+        )
+      ).toBe(true);
+    });
+
+    // @feature_scope_gate
+    it('should NOT fire SCOPE_GATE_CANDIDATE when FILE_CHANGES.md has only non-guard files', async () => {
+      // Overwrite FILE_CHANGES.md with only non-guard paths
+      const fileChangesPath = path.join(auditFixturePath, 'FILE_CHANGES.md');
+      await fs.writeFile(
+        fileChangesPath,
+        '# File Changes\n\n| Path | Action | Reason |\n|------|--------|--------|\n' +
+          '| `src/utils/helper.ts` | edit | Utility tweak |\n' +
+          '| `src/components/Button.tsx` | create | New button component |\n' +
+          '| `README.md` | edit | Docs update |\n'
+      );
+
+      const result = runShellScript(
+        getSpecsGeneratorPath('audit-spec.ts'),
+        ['-Path', '.specs/audit-new-checks-test']
+      );
+
+      expect(result.exitCode).toBe(0);
+
+      const scopeGateFindings = (result.json.findings || []).filter(
+        (f: any) => f.check === 'SCOPE_GATE_CANDIDATE'
+      );
+      expect(scopeGateFindings.length).toBe(0);
+    });
   });
 
   // Path validation - prevent .progress.json outside .specs/<feature>/
