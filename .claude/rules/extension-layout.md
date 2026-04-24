@@ -42,27 +42,45 @@ extensions/{extension-name}/
   "name": "my-extension",
   "ruleFiles": {
     "claude": [
-      ".claude/rules/my-extension/my-rule.md"   ← repo-root relative, указывает на SOURCE
+      ".claude/rules/my-extension/my-rule.md"   ← SOURCE path (dev-pomogator repo root)
     ]
   },
   "skills": {
-    "my-skill": ".claude/skills/my-skill"        ← repo-root relative
+    "my-skill": ".claude/skills/my-skill"        ← SOURCE dir (dev-pomogator repo root)
   },
   "skillFiles": {
     "my-skill": [
-      ".claude/skills/my-skill/SKILL.md"
+      ".claude/skills/my-skill/SKILL.md"          ← TARGET paths (куда установлено)
     ]
   },
   "tools": {
-    "my-tool": "tools/my-tool"                    ← relative to extension dir (extensions/{name}/)
+    "my-tool": "tools/my-tool"                    ← SOURCE subdir of extension (relative to extensions/{name}/)
   },
   "toolFiles": {
     "my-tool": [
-      ".dev-pomogator/tools/my-tool/script.ts"   ← INSTALLED location в target (used by tsx-runner etc)
+      ".dev-pomogator/tools/my-tool/script.ts"   ← TARGET paths для managed tracking
     ]
   }
 }
 ```
+
+### SOURCE vs TARGET paths — не перепутать
+
+Installer обрабатывает поля по-разному:
+
+| Field | Type | Что это | Resolution |
+|-------|------|---------|------------|
+| `ruleFiles.claude` | **SOURCE** | Где файл сейчас в dev-pomogator repo | `packageRoot + path` — должен существовать |
+| `skills.{name}` | **SOURCE dir** | Директория в dev-pomogator repo | `packageRoot + path` — директория должна существовать |
+| `tools.{name}` | **SOURCE dir** | Подпапка extension-а | `extensions/{ext}/ + path` |
+| `skillFiles.{name}` | **TARGET paths** | Где файлы окажутся после install, для managed tracking | Installer вычисляет hash после copy |
+| `toolFiles.{name}` | **TARGET paths** | Где tool-файлы в target, для integrity check | Installer вычисляет hash после copy |
+
+**Не путать направление:** SOURCE fields = где искать файлы сейчас. TARGET fields = где файлы будут после установки.
+
+### Нестандартный case — extension-local skills namespace
+
+Specs-workflow использует `extensions/specs-workflow/.claude/skills/<skill>/` для **private child skills** (discovery-forms, requirements-chk-matrix, task-board-forms). Это легитимный pattern когда skills являются internal helpers конкретного extension, а не top-level skills. Installer всё равно копирует их в target `.claude/skills/{name}/` через `skills.{name}` source path. `extension.json.skills.{name}` просто указывает на extension-local SOURCE path.
 
 ## Чеклист (при создании extension)
 

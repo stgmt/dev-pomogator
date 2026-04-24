@@ -115,18 +115,24 @@ export function validateExtensionLayout(
       }
     }
 
-    // Check skillFiles paths exist
+    // Note: skillFiles entries are TARGET paths (where files will land after install),
+    // not source paths. The source dir is resolved via manifest.skills.{name}; installer
+    // copies the entire dir. Validation of skillFiles as source-existence would be a
+    // false positive (entries intentionally point at non-existent repo-root paths).
+    //
+    // Instead, warn if skillFiles target path convention is wrong (must start with
+    // .claude/skills/{name}/).
     const skillFiles: Record<string, string[]> = manifest.skillFiles || {};
     for (const [name, files] of Object.entries(skillFiles)) {
       for (const f of files) {
-        const src = path.join(packageRoot, f);
-        if (!fs.existsSync(src)) {
+        const expectedPrefix = `.claude/skills/${name}/`;
+        if (!f.startsWith(expectedPrefix)) {
           findings.push({
-            severity: 'error',
+            severity: 'warning',
             extension: extName,
             path: f,
-            message: `extension.json skillFiles.${name} path does not exist at source: ${f}`,
-            hint: `Create file at ${src} OR remove from skillFiles`,
+            message: `extension.json skillFiles.${name} entry does not start with ${expectedPrefix}`,
+            hint: `Target-path convention: entries must be under .claude/skills/<skill-name>/ (installed location). Use ${expectedPrefix}${path.basename(f)} or similar.`,
           });
         }
       }
