@@ -203,16 +203,26 @@ export function getExtensionFiles(
 }
 
 /**
- * Get absolute paths to rule files for an extension.
- * Uses ruleFiles format (repo-root relative paths).
+ * Get absolute paths to rule SOURCE files for an extension.
+ *
+ * Rule paths in extension.json (e.g. ".claude/rules/scope-gate/rule.md") are
+ * resolved against the dev-pomogator **package root** (source), not the target
+ * project's repoRoot. The installer then copies them into the target project's
+ * .claude/rules/{subfolder}/.
+ *
+ * Previous bug: `path.join(repoRoot, r)` resolved to `target/.claude/rules/...`
+ * which doesn't exist when installing cross-repo → silent skip.
+ *
+ * @param _repoRoot ignored (retained for backward compatibility of signature)
  */
 export function getExtensionRules(
   extension: Extension,
   platform: 'claude',
-  repoRoot: string
+  _repoRoot: string
 ): string[] {
   const ruleFiles = extension.ruleFiles?.[platform] || [];
-  return ruleFiles.map((r) => path.join(repoRoot, r));
+  const packageRoot = path.resolve(__dirname, '..', '..');
+  return ruleFiles.map((r) => path.join(packageRoot, r));
 }
 
 /**
@@ -231,17 +241,26 @@ export async function getExtensionTools(
 }
 
 /**
- * Get map of skill_name -> absolute_path for extension skills (Claude Code only).
- * Skills paths are repo-root relative (starting with .claude/).
+ * Get map of skill_name -> absolute SOURCE path for extension skills (Claude Code).
+ *
+ * Skill paths in extension.json (e.g. ".claude/skills/my-skill") are resolved
+ * against the dev-pomogator **package root** (source), not the target project's
+ * repoRoot. Installer copies them into target's .claude/skills/{name}/.
+ *
+ * Previous bug: `path.join(repoRoot, relativePath)` resolved to target path →
+ * skill silently not copied during cross-repo install.
+ *
+ * @param _repoRoot ignored (retained for backward compatibility of signature)
  */
 export function getExtensionSkills(
   extension: Extension,
-  repoRoot: string
+  _repoRoot: string
 ): Map<string, string> {
   const skills = new Map<string, string>();
   if (extension.skills) {
+    const packageRoot = path.resolve(__dirname, '..', '..');
     for (const [name, relativePath] of Object.entries(extension.skills)) {
-      skills.set(name, path.join(repoRoot, relativePath));
+      skills.set(name, path.join(packageRoot, relativePath));
     }
   }
   return skills;
