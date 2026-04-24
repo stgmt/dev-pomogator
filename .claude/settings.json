@@ -172,6 +172,16 @@
             "timeout": 30
           }
         ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner-bootstrap.cjs'))\" -- \".dev-pomogator/tools/_shared/extension-layout-guard.ts\"",
+            "timeout": 15
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [

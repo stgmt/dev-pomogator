@@ -74,6 +74,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | commands-via-skill-reference | `.onboarding.json.commands.*` обязаны ссылаться на skill-обёртку через `via_skill` если она существует; `forbidden_if_skill_present=true + via_skill set` требует non-empty `raw_pattern_to_block` (AJV custom keyword) | `.claude/rules/onboard-repo/commands-via-skill-reference.md` |
 | scope-gate/when-to-verify | Триггер map для `/verify-generic-scope-fix` skill: когда invoke (guard/policy файлы + enum/switch expansion) + hard-OUT signals (prevent H1 over-application) | `.claude/rules/scope-gate/when-to-verify.md` |
 | scope-gate/escape-hatch-audit | Audit workflow + anti-gaming guidance для `[skip-scope-verify:]` escape hatch через `.claude/logs/scope-gate-escapes.jsonl` | `.claude/rules/scope-gate/escape-hatch-audit.md` |
+| extension-layout | Rules/skills extensions ОБЯЗАНЫ жить в `.claude/rules/{ext}/` + `.claude/skills/{name}/` (dev-pomogator repo root), НЕ в `extensions/{ext}/rules\|skills/` — installer не найдёт. Enforced via `_shared/extension-layout-guard.ts` PreToolUse Write\|Edit hook + validator `_shared/extension-layout-validate.ts` | `.claude/rules/extension-layout.md` |
 
 ### Triggered
 
