@@ -42,16 +42,16 @@
 - `scaffold-spec -TestFormat unit` создаёт `SCENARIOS.md` (doc-only) вместо `.feature`
 - Validator выдаёт ERROR если Risks пустая/короткая
 
-## Integration with specs-management
+## Integration с create-spec workflow
 
-Этот rule работает совместно с:
-- `specs-management.md` Phase 2 Step 6.1a/b/c — классификация (TEST_DATA + TEST_FORMAT + Framework)
-- `specs-management.md` Phase 1.5 Шаг 4a — детект framework через `bdd-framework-detector`
-- `specs-validation.md` правило `BDD_INFRA_CLASSIFICATION_COMPLETE` (severity ERROR)
+Этот reference работает совместно с:
+- [`phase2_requirements-and-design.md`](phase2_requirements-and-design.md) Step 6.1a/b/c — классификация (TEST_DATA + TEST_FORMAT + Framework)
+- [`phase1.5_project-context.md`](phase1.5_project-context.md) Шаг 4a — детект framework через `bdd-framework-detector`
+- [`specs-validation.md`](specs-validation.md) правило `BDD_INFRA_CLASSIFICATION_COMPLETE` (severity ERROR)
 - State machine gate в `spec-status.ts -ConfirmStop Requirements` — exit code 1 без Classification
 
 ## См. также
 
-- [.specs/create-specs-bdd-enforcement/](../../../.specs/create-specs-bdd-enforcement/) — полная спека с 9 FR и 6 BDD сценариями SBDE001_01..06
-- [.specs/spec-phase-gate/](../../../.specs/spec-phase-gate/) — phase-gate hook architecture (reference)
+- [.specs/create-specs-bdd-enforcement/](../../../../.specs/create-specs-bdd-enforcement/) — полная спека с 9 FR и 6 BDD сценариями SBDE001_01..06
+- [.specs/spec-phase-gate/](../../../../.specs/spec-phase-gate/) — phase-gate hook architecture (reference)
 - `extensions/specs-workflow/tools/specs-generator/bdd-framework-detector.ts` — shared module для детекта

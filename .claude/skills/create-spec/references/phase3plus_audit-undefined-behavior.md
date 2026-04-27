@@ -1,14 +1,34 @@
----
-globs:
-  - ".specs/**"
-description: Taxonomy of 9 undefined behavior categories for systematic spec audit + BVA boundary values + combined failure scenarios
----
+# Audit Category 6: UNDEFINED_BEHAVIOR
 
-# Undefined Behavior Taxonomy
+## Contents
+
+- [Что это](#что-это)
+- [How to use](#how-to-use)
+- [9 Categories](#9-categories)
+- [BVA Boundary Values](#bva-boundary-values)
+- [12 Combined Failure Scenarios](#12-combined-failure-scenarios)
+
+## Что это
+
+Непокрытые edge cases в спеке — спека не описывает что должно происходить при null/empty input, network failures, auth issues, resource state, boundary values, concurrency, logic errors, format issues, external dependencies. Этот файл содержит full taxonomy с 9 категориями + BVA + 12 combined failures.
 
 > Source: extracted from defaulter-skill (Баженов), adapted for Claude native analysis. Python scripts not needed — Claude applies taxonomy directly.
 
-При Phase 3+ Audit спеки — для каждого FR проверь релевантные категории из таблицы ниже. Для каждого непокрытого случая добавь finding как `UNDEFINED_BEHAVIOR` в AUDIT_REPORT.md.
+## How to use
+
+При Phase 3+ Audit спеки:
+
+1. Прочитай FR.md и USE_CASES.md — извлеки "шаги" workflow (действия системы)
+2. Для каждого шага определи релевантные категории из 9 (не все применимы к каждому шагу)
+3. Подставь имя шага в question templates
+4. Проверь: спека (AC, FR, `.feature`) отвечает на этот вопрос?
+5. Если НЕТ — это finding `UNDEFINED_BEHAVIOR`:
+   - node: имя шага
+   - category: id категории
+   - question: конкретный вопрос
+   - severity: из таблицы (critical/high/medium/low)
+6. BVA values использовать при написании edge case сценариев в `.feature`
+7. Combined failures проверять для ЗАВИСИМЫХ шагов (не brute-force все пары)
 
 ## 9 Categories
 
@@ -98,7 +118,7 @@ description: Taxonomy of 9 undefined behavior categories for systematic spec aud
 | Что если у `{node}` закончилось место на диске? | SaveAttachment при полном диске? | high |
 | Что если `{node}` потерял соединение с БД? | SaveOrder теряет DB connection mid-transaction? | critical |
 
-## BVA Boundary Values (для тестов)
+## BVA Boundary Values
 
 ### Числовые
 
@@ -152,19 +172,3 @@ description: Taxonomy of 9 undefined behavior categories for systematic spec aud
 | fail_stale | Stale Data | resource | Данные устарели/stale |
 | fail_concurrent | Concurrent Modification | concurrency | Ресурс модифицирован другим процессом |
 | fail_duplicate | Duplicate Operation | concurrency | Операция выполнена дважды |
-
-## How to Use (инструкция для Claude)
-
-При **Phase 3+ Audit** спеки:
-
-1. Прочитай FR.md и USE_CASES.md — извлеки "шаги" workflow (действия системы)
-2. Для каждого шага определи релевантные категории из 9 (не все применимы к каждому шагу)
-3. Подставь имя шага в question templates
-4. Проверь: спека (AC, FR, .feature) отвечает на этот вопрос?
-5. Если НЕТ — это finding `UNDEFINED_BEHAVIOR`:
-   - node: имя шага
-   - category: id категории
-   - question: конкретный вопрос
-   - severity: из таблицы (critical/high/medium/low)
-6. BVA values использовать при написании edge case сценариев в .feature
-7. Combined failures проверять для ЗАВИСИМЫХ шагов (не brute-force все пары)

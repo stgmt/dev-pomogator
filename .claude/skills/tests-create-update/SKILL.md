@@ -192,4 +192,4 @@ When reviewing existing test code (update mode), scan for these regex patterns:
 - `.claude/rules/test-quality/no-test-helper-duplication.md` — helper dedup policy
 - `.claude/rules/extension-test-quality.md` — naming conventions, 1:1 mapping
 - `.claude/rules/integration-tests-first.md` — integration-first testing policy
-- `.claude/rules/specs-workflow/no-mocks-fallbacks.md` — no mocks, fail-fast
+- `.claude/skills/create-spec/references/no-mocks-fallbacks.md` — no mocks, fail-fast (migrated from rule to create-spec skill reference)

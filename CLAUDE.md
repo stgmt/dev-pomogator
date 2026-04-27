@@ -80,8 +80,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 | Rule | Trigger | Path |
 |------|---------|------|
-| specs-management | "создай/сделай/набросай/напиши спеки", "обнови/покажи спеки", "create/make/draft/write specs", "spec out", "scaffold a spec", "update/show specs" | `.claude/rules/specs-workflow/specs-management.md` |
-| specs-validation | Работа с файлами в `.specs/` или `tests/features/` | `.claude/rules/specs-workflow/specs-validation.md` |
-| no-mocks-fallbacks | Реализация по спекам / написание тестов | `.claude/rules/specs-workflow/no-mocks-fallbacks.md` |
-| research-workflow | "исследуй", "найди", "погугли", "ресерч" | `.claude/rules/specs-workflow/research-workflow.md` |
 | centralized-test-runner | Запуск тестов — только через `/run-tests`; прямые `npm test`/`pytest`/`dotnet test` блокируются hook-ом | `.claude/rules/tui-test-runner/centralized-test-runner.md` |
+
+> **Note:** specs management workflow перенесён из rules в Claude Code skill `create-spec` (см. `.claude/skills/create-spec/SKILL.md`). Стандалоне skill `research-workflow` (`.claude/skills/research-workflow/SKILL.md`) триггерится на "исследуй / найди / погугли / ресерч". Skills грузятся on-demand через метаданные — не индексируются в этой таблице per `claude-md-glossary` rule.

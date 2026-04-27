@@ -1,65 +1,96 @@
 ---
 name: create-spec
 description: |
-  Use this skill whenever the user wants to kickstart a new feature by generating its spec documents before any code is written. The intent signature: user names a feature (often as a slug) and asks for specs/спеки/спека/спецификация to be written, created, drafted, sketched, outlined, or made — sometimes listing desired artifacts (user stories, FR, NFR, AC, design, tasks, BDD `.feature` files, phase 0, TDD order), sometimes explaining they want tests and code to follow from them afterward. Handles English and Russian phrasing equally, including terse requests like "спеки по фиче сделай" or "spec out this feature". The core tell is: feature-naming + creation verb + spec vocabulary. Do NOT use for reading, showing, editing, reviewing, or deleting existing `.specs` content, for explaining what `.specs` is, or for writing development plans (that's plan-pomogator).
-allowed-tools: Bash, Write, Read
-argument-hint: "<feature-name>"
+  Creates and manages feature specifications under .specs/{slug}/ via 13-file scaffold + 4-phase STOP-confirmed workflow (Discovery → Context → Requirements+Design → Finalization) + Phase 3+ Audit. EN triggers: "create / make / draft / write / sketch / outline specs", "spec out X", "scaffold a spec", "update / show / status specs". RU triggers: "создай / сделай / набросай / напиши / опиши спеки", "новые спеки для X", "спеки по фиче", "обнови / покажи / статус спеков". Matches terse phrasings like "ок спеки по фиче сделай". Invokes Skill("research-workflow") during Phase 1 step 5 for technical research. Do NOT use for plan-pomogator development plans, read-only spec viewing, or non-spec workflows.
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion, Skill, Agent, WebFetch, WebSearch
+argument-hint: "<feature-slug>"
 ---
 
-# /create-spec — Scaffold a new feature spec folder
+# create-spec — Manage feature specifications
 
-Создаёт структуру папки спецификации в `.specs/{feature-slug}/`.
+Полный 4-фазный workflow для создания и обновления спецификаций. Этот SKILL.md — overview + navigation. Детали каждой фазы лежат в `references/`.
 
-## Использование
+## Структура спецификации
 
-Укажи название фичи в kebab-case:
+Каждая спека располагается в `.specs/{feature-slug}/` и содержит до 15 файлов: README, USER_STORIES, USE_CASES, RESEARCH, REQUIREMENTS, FR, NFR, ACCEPTANCE_CRITERIA, DESIGN, TASKS, FILE_CHANGES, CHANGELOG, FIXTURES, `*_SCHEMA.md`, `{slug}.feature`. Полный список см. `references/phase1_discovery.md`.
+
+## Скрипты-инструменты
+
+| Скрипт | Назначение |
+|--------|------------|
+| `.dev-pomogator/tools/specs-generator/scaffold-spec.ts -Name "X"` | Создать структуру `.specs/X/` |
+| `.dev-pomogator/tools/specs-generator/validate-spec.ts -Path ".specs/X"` | Валидация форматов |
+| `.dev-pomogator/tools/specs-generator/spec-status.ts -Path ".specs/X"` | Прогресс + state machine |
+| `.dev-pomogator/tools/specs-generator/spec-status.ts -Path ".specs/X" -ConfirmStop Discovery` | Подтверждение STOP-точки |
+| `.dev-pomogator/tools/specs-generator/audit-spec.ts -Path ".specs/X"` | Phase 3+ автоматический аудит |
+| `.dev-pomogator/tools/specs-generator/analyze-features.ts -Format text` | Паттерны существующих `.feature` |
+
+`.progress.json` создаётся ТОЛЬКО через `spec-status.ts`. ЗАПРЕЩЕНО создавать его через Write tool, вручную или напрямую. Аргумент `-Path` ОБЯЗАН указывать на `.specs/<feature>/`.
+
+## Phase navigation
+
+| Phase | Reference | Что делает |
+|-------|-----------|------------|
+| **1. Discovery** | [`references/phase1_discovery.md`](references/phase1_discovery.md) | USER_STORIES, USE_CASES, RESEARCH; вызывает `Skill("research-workflow")` для технических находок |
+| **1.5. Project Context** | [`references/phase1.5_project-context.md`](references/phase1.5_project-context.md) | Сканирование `.claude/rules/` + `extensions/*/extension.json` + BDD framework detection |
+| **2. Requirements + Design** | [`references/phase2_requirements-and-design.md`](references/phase2_requirements-and-design.md) | FR, NFR, AC (EARS), REQUIREMENTS, DESIGN, FILE_CHANGES, `.feature`; вызывает `Skill("requirements-chk-matrix")` |
+| **2 (BDD subsection)** | [`references/phase2_bdd-test-infrastructure.md`](references/phase2_bdd-test-infrastructure.md) | TEST_DATA / TEST_FORMAT classification, hooks design, FIXTURES.md |
+| **3. Finalization** | [`references/phase3_finalization.md`](references/phase3_finalization.md) | TASKS (TDD-порядок), README, CHANGELOG; вызывает `Skill("task-board-forms")` |
+| **3+. Audit (entry)** | [`references/phase3plus_audit-overview.md`](references/phase3plus_audit-overview.md) | Workflow аудита + dispatch к 7 категориям + AUDIT_REPORT.md |
+
+Sub-skill ecosystem (вызываются через `Skill(...)`): `discovery-forms` (Phase 1 step 3), `requirements-chk-matrix` (Phase 2 step 4b), `task-board-forms` (Phase 3 step 1b), `research-workflow` (Phase 1 step 5).
+
+## Алгоритм запуска
+
+1. **Если запрос на создание новой спеки** ("сделай спеку для X", "create spec for X" и т.д.):
+   - Получи feature-slug от пользователя (kebab-case)
+   - Запусти `.dev-pomogator/tools/specs-generator/scaffold-spec.ts -Name "{slug}"`
+   - Покажи Starter Message (см. ниже)
+   - Прочти `references/phase1_discovery.md` и следуй Phase 1
+
+2. **Если запрос на продолжение существующей спеки** ("продолжи спеку X", "обнови X"):
+   - Прочти `.specs/{slug}/.progress.json` чтобы определить currentPhase
+   - Прочти соответствующий `references/phaseN_*.md` файл
+   - Продолжи с текущей фазы
+
+3. **Если запрос на чтение/просмотр** ("покажи спеку", "статус"):
+   - Запусти `spec-status.ts -Path ".specs/{slug}"`
+   - НЕ запускай scaffold-spec; не модифицируй файлы
+
+## Progress display
+
+После каждого заполненного spec файла выводи (≤4 строки):
 
 ```
-/create-spec my-feature
+📊 Spec Progress: {slug} — Phase N/4: {phase_name}
+Files: {done}/{total} complete — Next: {next_action}
 ```
 
-Skill также автоматически срабатывает по натуральному языку (без `/`):
-- "сделай спеки для hyperv-test-runner"
-- "create spec for billing webhook idempotency"
-- "набросай новые спеки по фиче notification-throttle"
-- "напиши спецификацию для виндовс билд агента"
+Перед каждой STOP-точкой выводи Executive Summary (`## 💬 Ключевые решения фазы` с 3-5 bullets, детали по ссылкам на FR.md / DESIGN.md). Подробнее про формат — `references/phase1_discovery.md`.
 
-## Что будет создано
+## Starter Message (при первом запуске)
 
 ```
-.specs/my-feature/
-├── README.md
-├── USER_STORIES.md
-├── USE_CASES.md
-├── RESEARCH.md
-├── REQUIREMENTS.md
-├── FR.md
-├── NFR.md
-├── ACCEPTANCE_CRITERIA.md
-├── DESIGN.md
-├── TASKS.md
-├── FILE_CHANGES.md
-└── my-feature.feature
+📊 Создаём спеку: {feature-slug}
+4 фазы с подтверждением на каждой:
+1️⃣ Discovery — определяем кто, зачем, что (USER_STORIES, USE_CASES, RESEARCH)
+2️⃣ Context — ограничения проекта, существующие паттерны
+3️⃣ Requirements — формальные FR/AC/NFR + DESIGN + BDD .feature
+4️⃣ Finalization — план задач TASKS + README + CHANGELOG
++ Phase 3+ Audit (автоматически после STOP #3)
+Начинаем с Phase 1: Discovery.
 ```
 
-## Скрипт
+## Conditional Jira-first mode
 
-Команда вызывает shell-скрипт:
+Если `.specs/{slug}/JIRA_SOURCE.md` существует — активируется Jira-first workflow. Каждая фаза начинается со Step 0 (re-read 3 Jira-артефактов: `JIRA_SOURCE.md`, `ATTACHMENTS.md`, `.jira-cache.json`). Полная семантика и format Jira trace в FR/AC/BDD/TASKS — см. [`references/jira-mode.md`](references/jira-mode.md). Если файла нет — раздел no-op.
 
-```sh
-./.dev-pomogator/tools/specs-generator/scaffold-spec.ts -Name "{feature-slug}"
-```
+## Topic references (loaded on demand)
 
-## Инструкция для агента
+- [`bdd-enforcement.md`](references/bdd-enforcement.md), [`no-mocks-fallbacks.md`](references/no-mocks-fallbacks.md), [`specs-validation.md`](references/specs-validation.md), [`feature-creation-rules.md`](references/feature-creation-rules.md), [`validation-rules.md`](references/validation-rules.md), [`jira-mode.md`](references/jira-mode.md)
 
-1. Получи название фичи от пользователя (или из аргумента команды)
-2. Преобразуй в kebab-case если нужно
-3. Запусти скрипт: `./.dev-pomogator/tools/specs-generator/scaffold-spec.ts -Name "{feature-slug}"`
-4. Покажи результат создания
-5. Предложи перейти к заполнению USER_STORIES.md (первый файл workflow)
-6. Затем читать `.claude/rules/specs-workflow/specs-management.md` для полного 4-фазного workflow с STOP-точками
+## Запреты
 
-## Связанные правила
-
-- `specs-management.md` — полный 4-фазный workflow управления спеками с STOP-точками
-- `plan-pomogator.md` — формат планов разработки (НЕ путать со спеками — план это roadmap, спека это требования + дизайн + тесты)
+- НЕ создавай `.progress.json` через Write — только через `spec-status.ts`
+- НЕ копируй секции из других спек — каждая создаётся с нуля
+- НЕ пиши тесты без `.feature` сценария (TDD: Red → Green → Refactor; см. [`references/phase3_finalization.md`](references/phase3_finalization.md))

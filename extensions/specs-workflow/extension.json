@@ -1,7 +1,7 @@
 {
   "name": "specs-workflow",
-  "version": "1.17.0",
-  "description": "Управление спецификациями: 4-фазный workflow + spec-generator-v3 form-guards (USER_STORIES/TASKS/DESIGN/REQUIREMENTS/RESEARCH) + 3 private child skills (discovery-forms, requirements-chk-matrix, task-board-forms) + meta-guard на extension.json + audit log с UserPromptSubmit summary. Migration guard: form-guards активируются только для specs с .progress.json version >= 3; existing v1/v2 specs pass-through.",
+  "version": "1.18.0",
+  "description": "Управление спецификациями: 4-фазный workflow упакован в create-spec skill (SKILL.md + 19 references) с прогрессивным раскрытием. Standalone research-workflow skill (исследуй/найди/погугли/ресерч triggers) вызывается create-spec через Skill('research-workflow') в Phase 1 step 5. Spec-generator-v3 form-guards (USER_STORIES/TASKS/DESIGN/REQUIREMENTS/RESEARCH) + 3 private child skills (discovery-forms, requirements-chk-matrix, task-board-forms) + meta-guard на extension.json + audit log с UserPromptSubmit summary. Migration guard: form-guards активируются только для specs с .progress.json version >= 3; existing v1/v2 specs pass-through.",
   "platforms": [
     "claude"
   ],
@@ -11,13 +11,36 @@
   },
   "skills": {
     "create-spec": ".claude/skills/create-spec",
+    "research-workflow": ".claude/skills/research-workflow",
     "discovery-forms": "extensions/specs-workflow/.claude/skills/discovery-forms",
     "requirements-chk-matrix": "extensions/specs-workflow/.claude/skills/requirements-chk-matrix",
     "task-board-forms": "extensions/specs-workflow/.claude/skills/task-board-forms"
   },
   "skillFiles": {
     "create-spec": [
-      ".claude/skills/create-spec/SKILL.md"
+      ".claude/skills/create-spec/SKILL.md",
+      ".claude/skills/create-spec/references/phase1_discovery.md",
+      ".claude/skills/create-spec/references/phase1.5_project-context.md",
+      ".claude/skills/create-spec/references/phase2_requirements-and-design.md",
+      ".claude/skills/create-spec/references/phase2_bdd-test-infrastructure.md",
+      ".claude/skills/create-spec/references/phase3_finalization.md",
+      ".claude/skills/create-spec/references/phase3plus_audit-overview.md",
+      ".claude/skills/create-spec/references/phase3plus_audit-errors.md",
+      ".claude/skills/create-spec/references/phase3plus_audit-logic-gaps.md",
+      ".claude/skills/create-spec/references/phase3plus_audit-inconsistency.md",
+      ".claude/skills/create-spec/references/phase3plus_audit-rudiments.md",
+      ".claude/skills/create-spec/references/phase3plus_audit-fantasies.md",
+      ".claude/skills/create-spec/references/phase3plus_audit-undefined-behavior.md",
+      ".claude/skills/create-spec/references/phase3plus_audit-jira-drift.md",
+      ".claude/skills/create-spec/references/feature-creation-rules.md",
+      ".claude/skills/create-spec/references/jira-mode.md",
+      ".claude/skills/create-spec/references/validation-rules.md",
+      ".claude/skills/create-spec/references/bdd-enforcement.md",
+      ".claude/skills/create-spec/references/no-mocks-fallbacks.md",
+      ".claude/skills/create-spec/references/specs-validation.md"
+    ],
+    "research-workflow": [
+      ".claude/skills/research-workflow/SKILL.md"
     ],
     "discovery-forms": [
       ".claude/skills/discovery-forms/SKILL.md"
@@ -30,12 +53,7 @@
     ]
   },
   "ruleFiles": {
-    "claude": [
-      ".claude/rules/specs-workflow/specs-management.md",
-      ".claude/rules/specs-workflow/no-mocks-fallbacks.md",
-      ".claude/rules/specs-workflow/research-workflow.md",
-      ".claude/rules/specs-workflow/specs-validation.md"
-    ]
+    "claude": []
   },
   "tools": {
     "specs-generator": "tools/specs-generator",

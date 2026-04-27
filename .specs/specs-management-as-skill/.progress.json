@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "featureSlug": "specs-management-as-skill",
+  "createdAt": "2026-04-26T17:21:53.671Z",
+  "currentPhase": "Complete",
+  "phases": {
+    "Discovery": {
+      "completedAt": "2026-04-26T17:36:25.318Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-26T17:43:38.175Z"
+    },
+    "Context": {
+      "completedAt": "2026-04-26T17:36:25.319Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-26T17:47:58.895Z"
+    },
+    "Requirements": {
+      "completedAt": "2026-04-26T18:04:02.358Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-26T18:53:26.797Z",
+      "bddInfraClassificationComplete": true,
+      "bddFrameworkSelected": "vitest with custom `.feature` loader (existing dev-pomogator pattern; `tests/e2e/"
+    },
+    "Finalization": {
+      "completedAt": "2026-04-26T18:59:04.790Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-26T18:59:04.790Z"
+    }
+  }
+}
