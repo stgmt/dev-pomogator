@@ -42,6 +42,70 @@ export interface AntipatternDef {
   fix: string;
 }
 
+// ── Skill-side interfaces (FR-1, FR-4, FR-8) ────────────────────────────────
+
+/**
+ * Generic asset interface — common base для rule (.claude/rules/ markdown) и
+ * skill (.claude/skills/{name}/SKILL.md). FR-8 unified scoring engine.
+ */
+export interface Asset {
+  type: 'rule' | 'skill';
+  path: string;
+  frontmatter: Record<string, unknown>;
+  body: string;
+  tokens: number;
+  lines: number;
+  sha256: string;
+}
+
+/**
+ * Skill audit finding с error/warning code, file location + actionable suggestion.
+ */
+export interface SkillFinding {
+  code: string; // e.g. "FRONTMATTER_NAME_FORBIDDEN_TOKEN", "ALLOWED_TOOLS_MISSING", "OVERSIZE"
+  path: string;
+  severity: 'error' | 'warning';
+  message: string;
+  suggestion?: string;
+  details?: Record<string, unknown>;
+}
+
+/**
+ * Per-skill audit entry в `details[]` поле SkillAuditResult.
+ */
+export interface SkillAuditEntry {
+  path: string;
+  name: string;
+  tokens: number;
+  lines: number;
+  frontmatter: Record<string, unknown>;
+  hasFrontmatter: boolean;
+  errors: string[]; // codes
+  warnings: string[]; // codes
+}
+
+/**
+ * Overlap detection result (FR-4 triple-axis Jaccard).
+ */
+export interface OverlapPair {
+  a: string; // skill name (basename of dir)
+  b: string;
+  axis: 'trigger' | 'sections' | 'functional';
+  similarity: number; // 0.0–1.0 Jaccard
+  recommendation: 'merge' | 'cross-reference' | 'reorganize' | 'keep separate';
+}
+
+/**
+ * Skill audit result (FR-1 output JSON shape).
+ */
+export interface SkillAuditResult {
+  totalSkills: number;
+  withErrors: SkillFinding[];
+  withWarnings: SkillFinding[];
+  overlaps: OverlapPair[];
+  details: SkillAuditEntry[];
+}
+
 // ── Canonical antipattern definitions ───────────────────────────────────────
 
 export const ANTIPATTERNS: AntipatternDef[] = [
@@ -136,6 +200,79 @@ export function collectMdFiles(dir: string): string[] {
       results.push(...collectMdFiles(fullPath));
     } else if (entry.isFile() && extname(entry.name).toLowerCase() === '.md') {
       results.push(fullPath);
+    }
+  }
+  return results;
+}
+
+/**
+ * Parse YAML frontmatter and return the full object (rule + skill compatible).
+ *
+ * Returns:
+ *   - `{}` if no frontmatter found
+ *   - parsed object (any keys) if frontmatter present and valid YAML
+ *   - `{}` if YAML malformed (warning logged when filePath provided)
+ *
+ * Used by both rule (`paths:`) и skill (`name`, `description`, `allowed-tools`)
+ * pipelines. FR-8 unified scoring engine.
+ */
+export function parseFrontmatterFlexible(
+  content: string,
+  filePath?: string,
+): { frontmatter: Record<string, unknown>; hasFrontmatter: boolean; body: string } {
+  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
+  if (!match) {
+    return { frontmatter: {}, hasFrontmatter: false, body: content };
+  }
+
+  try {
+    const parsed = parseYaml(match[1]);
+    const fm = parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : {};
+    return { frontmatter: fm, hasFrontmatter: true, body: match[2] ?? '' };
+  } catch (e) {
+    if (filePath) {
+      console.warn(`Warning: malformed YAML frontmatter in ${filePath}: ${(e as Error).message}`);
+    }
+    return { frontmatter: {}, hasFrontmatter: true, body: match[2] ?? '' };
+  }
+}
+
+/**
+ * Build Asset from file content (FR-8 unified asset model).
+ */
+export function buildAsset(
+  filePath: string,
+  type: 'rule' | 'skill',
+): Asset {
+  const content = readFileSync(filePath, 'utf-8');
+  const { frontmatter, body } = parseFrontmatterFlexible(content, filePath);
+  return {
+    type,
+    path: filePath,
+    frontmatter,
+    body,
+    tokens: estimateTokens(content),
+    lines: content.split(/\r?\n/).length,
+    sha256: computeSha256(content),
+  };
+}
+
+/**
+ * Collect all skill directories under given parent dir. Returns paths to
+ * SKILL.md files. Each skill lives in `<parent>/<name>/SKILL.md`.
+ */
+export function collectSkillDirs(parentDir: string): string[] {
+  const results: string[] = [];
+  if (!existsSync(parentDir)) return results;
+
+  const entries = readdirSync(parentDir, { withFileTypes: true });
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    const skillPath = join(parentDir, entry.name, 'SKILL.md');
+    if (existsSync(skillPath) && statSync(skillPath).isFile()) {
+      results.push(skillPath);
     }
   }
   return results;
