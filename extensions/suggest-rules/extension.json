@@ -1,6 +1,6 @@
 {
   "name": "suggest-rules",
-  "version": "1.8.0",
+  "version": "1.10.0",
   "description": "Анализ сессии и предложение правил, skills и hooks для IDE",
   "platforms": [
     "claude"
@@ -37,7 +37,7 @@
   },
   "skills": {
     "deep-insights": ".claude/skills/deep-insights",
-    "rules-optimizer": ".claude/skills/rules-optimizer"
+    "skills-rules-optimizer": ".claude/skills/skills-rules-optimizer"
   },
   "skillFiles": {
     "deep-insights": [
@@ -45,14 +45,14 @@
       ".claude/skills/deep-insights/scripts/aggregate-facets.sh",
       ".claude/skills/deep-insights/references/facets-schema.md"
     ],
-    "rules-optimizer": [
-      ".claude/skills/rules-optimizer/SKILL.md",
-      ".claude/skills/rules-optimizer/scripts/shared.ts",
-      ".claude/skills/rules-optimizer/scripts/audit.ts",
-      ".claude/skills/rules-optimizer/scripts/check-antipatterns.ts",
-      ".claude/skills/rules-optimizer/scripts/report.ts",
-      ".claude/skills/rules-optimizer/references/path-inference-table.md",
-      ".claude/skills/rules-optimizer/references/known-antipatterns.md"
+    "skills-rules-optimizer": [
+      ".claude/skills/skills-rules-optimizer/SKILL.md",
+      ".claude/skills/skills-rules-optimizer/scripts/shared.ts",
+      ".claude/skills/skills-rules-optimizer/scripts/audit.ts",
+      ".claude/skills/skills-rules-optimizer/scripts/check-antipatterns.ts",
+      ".claude/skills/skills-rules-optimizer/scripts/report.ts",
+      ".claude/skills/skills-rules-optimizer/references/path-inference-table.md",
+      ".claude/skills/skills-rules-optimizer/references/known-antipatterns.md"
     ]
   },
   "requiresClaudeMem": true

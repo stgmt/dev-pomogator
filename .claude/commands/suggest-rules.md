@@ -411,20 +411,28 @@ Project domains: [zoho, ef-core, postgres, docker, csharp]
 - Всегда извлекай ⚠️ gotcha `command-retry-gotcha`
 - Если это `curl` — дополни 📋 checklist `curl-args-checklist`
 
-### Decision Tree: Rule vs Skill vs Hook (MUTUAL EXCLUSIVITY)
+### Decision Tree: Skill-Merge → Hook → Skill → Rule (MUTUAL EXCLUSIVITY)
 
 > **Принцип:** Одна находка → ОДИН тип. Rule и hook на один аспект = дублирование.
-> Если можно автоматизировать → hook (не rule). Если требует суждения → rule (не hook).
+> **ПЕРВЫЙ check всегда — существующий skill.** Если находка относится к scope существующего skill — MERGE в SKILL.md, НЕ создавать новый rule/checklist.
 
 ```
 Находка из сессии
+│
+├── [ПЕРВЫЙ узел] Относится ли к scope существующего skill?
+│   │   (test runner, build, deploy, dependency mgmt, formatting, spec workflow, ...)
+│   │   Glob `.claude/skills/*/SKILL.md` + match по trigger phrases / mission / steps.
+│   │
+│   ├── ДА → 🔀 SKILL_MERGE — добавить в `.claude/skills/{existing}/SKILL.md`
+│   │   (НЕ создавать новый rule/checklist на ту же тему)
+│   └── НЕТ → следующий узел
 │
 ├── Можно полностью автоматизировать? (детерминистичная проверка, чёткий event)
 │   ├── ДА + есть IDE event trigger → 🪝 HOOK (НЕ создавать rule на ту же тему!)
 │   └── ДА + нет чёткого event → 📋 CHECKLIST
 │
 ├── Это multi-step workflow с 3+ шагами, повторённый 2+ раз?
-│   └── ДА → 🎯 SKILL (НЕ checklist — skill содержит процедурное знание)
+│   └── ДА → 🎯 SKILL (новый, НЕ checklist — skill содержит процедурное знание)
 │
 ├── Требует суждения Claude / контекстного решения?
 │   ├── Запрет (что НЕ делать) → 🔴 ANTIPATTERN
@@ -434,6 +442,21 @@ Project domains: [zoho, ef-core, postgres, docker, csharp]
 │
 └── Не подходит ни под что → пропустить
 ```
+
+### Skill scope detection — trigger map
+
+При проверке "относится ли к существующему skill", искать совпадения:
+
+| Находка про... | Существующий skill | Куда мерджить |
+|----------------|--------------------|---------------|
+| тесты, test runner, vitest/pytest/jest invocation, test-guard hook, host-vs-docker bypass, test wrapper invocation | `run-tests` | `.claude/skills/run-tests/SKILL.md` |
+| spec файлы, `.specs/{slug}/`, FR/AC/TASKS/feature workflow, audit categories | `create-spec` | `.claude/skills/create-spec/SKILL.md` |
+| исследование библиотек, MCP/web search, hypothesis verification | `research-workflow` | `.claude/skills/research-workflow/SKILL.md` |
+| screenshot, visual verification, TUI/UI debug | `debug-screenshot` | `.claude/skills/debug-screenshot/SKILL.md` |
+| docker-compose, Dockerfile optimization | `docker-optimize` | `.claude/skills/docker-optimize/SKILL.md` |
+| variant matrix, polymorphic FR detection | `variant-matrix-build` | `.claude/skills/variant-matrix-build/SKILL.md` |
+
+**Эвристика:** если кандидат — про command-line invocation / configuration / workflow / "как правильно вызывать X" — **всегда** Glob `.claude/skills/*/SKILL.md` ПРЕЖДЕ чем предлагать rule/checklist.
 
 **Порог evidence** (из Claude Coach):
 - Hook candidate: 1 event (command failure) или 2 events (verification question)
@@ -696,7 +719,25 @@ Project domains: [zoho, ef-core, postgres, docker, csharp]
 
 **Для каждого кандидата с confidence ≥40%:**
 
-### Cross-Type Dedup (MUTUAL EXCLUSIVITY — проверять ПЕРВЫМ)
+### Skill-Merge Check (MUTUAL EXCLUSIVITY — проверять ПЕРВЫМ ИЗ ПЕРВЫХ)
+
+> **Принцип:** Существующие skills уже владеют доменными workflow. Кандидат rule/checklist который описывает workflow внутри scope существующего skill — это дополнение к skill, а не отдельный rule.
+
+Алгоритм для КАЖДОГО rule/checklist/gotcha кандидата:
+
+1. **Glob** `.claude/skills/*/SKILL.md` — список существующих skills с trigger phrases.
+2. **Match** по trigger map (см. Phase 1.5 "Skill scope detection") + по domain keywords из mission/steps.
+3. **Если match** → статус `🔀 SKILL_MERGE`, target = найденный SKILL.md, изменить тип кандидата на skill_section.
+
+| Ситуация | Результат |
+|----------|-----------|
+| checklist "host-safe test invocation" + `run-tests` skill exists | → 🔀 SKILL_MERGE в `run-tests/SKILL.md` (раздел "Host-bypass for non-destructive tests") |
+| gotcha "spec audit category VARIANT_COVERAGE" + `create-spec` skill | → 🔀 SKILL_MERGE в `create-spec/SKILL.md` references |
+| antipattern "no direct prod DB edits" | → НЕТ skill match → продолжить как antipattern |
+
+**Эвристика match:** если 2+ keywords из кандидата перекрываются с trigger phrases / mission / steps существующего skill — считать match.
+
+### Cross-Type Dedup (MUTUAL EXCLUSIVITY — проверять ВТОРЫМ)
 
 Перед проверкой within-type дубликатов, проверить cross-type конфликты:
 
@@ -736,8 +777,9 @@ Project domains: [zoho, ef-core, postgres, docker, csharp]
 
 | Статус | Совпадение | Действие |
 |--------|------------|----------|
-| 🆕 NEW | <30% | Создать новый файл |
-| 🔀 MERGE | 30-80% | Дополнить существующий (смежный аспект) |
+| 🆕 NEW | <30% (rule-rule), no skill match | Создать новый файл в `.claude/rules/...` |
+| 🔀 MERGE | 30-80% (rule-rule) | Дополнить существующий rule (смежный аспект) |
+| 🔀 SKILL_MERGE | match с existing skill | Дополнить `.claude/skills/{name}/SKILL.md` (НЕ создавать rule) |
 | ⚠️ DUP | >80% | Пропустить (тот же аспект) |
 
 ### Smart Merge стратегии
@@ -1006,9 +1048,16 @@ allowed-tools: Read, Write, Grep, Bash
 | 🟢 pattern | `.claude/rules/patterns/<name>.md` |
 | 📋 checklist | `.claude/rules/checklists/<name>.md` |
 | ⚠️ gotcha | `.claude/rules/gotchas/<name>.md` |
-| 🎯 skill | `.claude/skills/<name>/SKILL.md` |
+| 🎯 skill (новый) | `.claude/skills/<name>/SKILL.md` |
+| 🔀 SKILL_MERGE | дополнить `.claude/skills/<existing>/SKILL.md` (Edit/Append, не Write) |
 | 🪝 hook (spec) | `.claude/rules/hooks/<name>-hook.md` |
 | 📁 project-specific | `.claude/rules/<domain>/<name>.md` |
+
+**Для 🔀 SKILL_MERGE:**
+1. Read target SKILL.md → определить логичное место для нового раздела (Steps / References / Gotchas внутри skill)
+2. Edit (НЕ Write — preserve остальной контент)
+3. Добавить раздел с подзаголовком и cross-ref на источник находки (turn # + цитата)
+4. Если SKILL.md перевалил ~2000 слов — вынести расширение в `references/<topic>.md` и сослаться
 
 ---
 
@@ -1028,7 +1077,7 @@ resolve-library-id("claude-code") -> query-docs(id, "rules frontmatter paths for
 ### 6.2: Аудит
 
 ```bash
-npx tsx .claude/skills/rules-optimizer/scripts/audit.ts --dir .claude/rules --save audit_before.json
+npx tsx .claude/skills/skills-rules-optimizer/scripts/audit.ts --dir .claude/rules --save audit_before.json
 ```
 
 Показать результат: файлы без paths, кандидаты на merge, антипаттерны.
@@ -1044,7 +1093,7 @@ npx tsx .claude/skills/rules-optimizer/scripts/audit.ts --dir .claude/rules --sa
 ### 6.4: Исправить антипаттерны
 
 ```bash
-npx tsx .claude/skills/rules-optimizer/scripts/check-antipatterns.ts --dir .claude/rules
+npx tsx .claude/skills/skills-rules-optimizer/scripts/check-antipatterns.ts --dir .claude/rules
 ```
 
 Для каждого найденного — применить фикс из `references/known-antipatterns.md`.
@@ -1059,8 +1108,8 @@ npx tsx .claude/skills/rules-optimizer/scripts/check-antipatterns.ts --dir .clau
 ### 6.6: Финальный отчёт
 
 ```bash
-npx tsx .claude/skills/rules-optimizer/scripts/audit.ts --dir .claude/rules --save audit_after.json
-npx tsx .claude/skills/rules-optimizer/scripts/report.ts --before audit_before.json --after audit_after.json
+npx tsx .claude/skills/skills-rules-optimizer/scripts/audit.ts --dir .claude/rules --save audit_after.json
+npx tsx .claude/skills/skills-rules-optimizer/scripts/report.ts --before audit_before.json --after audit_after.json
 ```
 
 Показать summary что было оптимизировано.
@@ -1147,6 +1196,7 @@ npx tsx .claude/skills/rules-optimizer/scripts/report.ts --before audit_before.j
 7. **Self-contained** — понятно без контекста сессии
 8. **Path-scoped frontmatter** — scoped rules создаются сразу с `paths:` в YAML frontmatter, global rules без frontmatter
 9. **SKILL vs RULE vs HOOK** — используй Decision Tree из Phase 1.5. Не предлагай rule когда нужен skill, не предлагай checklist когда нужен hook
+9.1. **SKILL-MERGE-FIRST** — ПЕРЕД предложением rule/checklist/gotcha **ВСЕГДА** Glob `.claude/skills/*/SKILL.md`. Если кандидат описывает workflow/configuration/command-line который относится к scope существующего skill (test runner, build, deploy, spec workflow) — это `🔀 SKILL_MERGE` в существующий SKILL.md, НЕ новый rule. Ловить это в Phase 2.5 ПЕРВЫМ шагом dedup. Антипример: checklist "host-safe test invocation" должен идти в `run-tests/SKILL.md`, а не в `.claude/rules/checklists/`
 10. **НИКОГДА не пропускай pipeline из-за размера контекста** — модель с 1M context window обязана выполнить ВСЕ фазы. Запрещено: "контекст слишком длинный", "сессию нужно завершить", "сокращённый анализ". Если MCP/insights недоступны — пропускай только эти конкретные шаги, остальные фазы выполняй полностью
 
 ---

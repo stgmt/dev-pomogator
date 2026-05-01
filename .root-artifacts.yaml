@@ -18,3 +18,4 @@ allow:
 - vitest.config.ts
 - vitest.unit.config.ts
 - .npmignore
+- .mcp.json

@@ -1,5 +1,5 @@
 /**
- * Shared utilities for rules-optimizer scripts.
+ * Shared utilities for skills-rules-optimizer scripts.
  */
 
 import { readFileSync, readdirSync, statSync, existsSync } from 'fs';

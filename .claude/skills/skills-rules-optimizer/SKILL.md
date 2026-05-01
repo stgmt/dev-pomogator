@@ -1,9 +1,12 @@
 ---
-name: rules-optimizer
+name: skills-rules-optimizer
 description: >
-  Optimizes .claude/rules/ — adds path-scoped YAML frontmatter for lazy loading,
-  merges small related files, fixes deprecated syntax. Called automatically from
-  suggest-rules Phase 6 after rule creation. Can also be invoked manually.
+  Optimizes .claude/rules/ AND .claude/skills/ — audit (token count, frontmatter
+  validation, allowed-tools coverage, oversize cap), triple-axis Jaccard overlap
+  detection between skills, LLM-driven merge synthesis through Claude Code
+  sub-agent, ratchet (regression prevention) via independent scorer. Called
+  automatically from suggest-rules Phase 6 after rule creation. Can also be
+  invoked manually.
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash, mcp__context7__resolve-library-id, mcp__context7__query-docs
 ---
 
@@ -37,7 +40,7 @@ resolve-library-id("claude-code") -> query-docs(id, "rules frontmatter paths for
 ### Step 1: Audit current rules
 
 ```bash
-npx tsx .claude/skills/rules-optimizer/scripts/audit.ts --dir .claude/rules --save audit_before.json
+npx tsx .claude/skills/skills-rules-optimizer/scripts/audit.ts --dir .claude/rules --save audit_before.json
 ```
 
 Review output:
@@ -70,7 +73,7 @@ paths:
 ### Step 3: Fix antipatterns
 
 ```bash
-npx tsx .claude/skills/rules-optimizer/scripts/check-antipatterns.ts --dir .claude/rules
+npx tsx .claude/skills/skills-rules-optimizer/scripts/check-antipatterns.ts --dir .claude/rules
 ```
 
 For each detected antipattern, apply the fix described in `references/known-antipatterns.md`.
@@ -91,8 +94,8 @@ From audit merge candidates:
 ### Step 5: Final report
 
 ```bash
-npx tsx .claude/skills/rules-optimizer/scripts/audit.ts --dir .claude/rules --save audit_after.json
-npx tsx .claude/skills/rules-optimizer/scripts/report.ts --before audit_before.json --after audit_after.json
+npx tsx .claude/skills/skills-rules-optimizer/scripts/audit.ts --dir .claude/rules --save audit_after.json
+npx tsx .claude/skills/skills-rules-optimizer/scripts/report.ts --before audit_before.json --after audit_after.json
 ```
 
 ## Error Handling
