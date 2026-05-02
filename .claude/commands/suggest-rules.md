@@ -1074,13 +1074,34 @@ allowed-tools: Read, Write, Grep, Bash
 resolve-library-id("claude-code") -> query-docs(id, "rules frontmatter paths format")
 ```
 
-### 6.2: Аудит
+### 6.2: Аудит (rules + skills)
+
+**Rules side** (FR-9 backward compat — output byte-identical к pre-rename baseline):
 
 ```bash
 npx tsx .claude/skills/skills-rules-optimizer/scripts/audit.ts --dir .claude/rules --save audit_before.json
 ```
 
 Показать результат: файлы без paths, кандидаты на merge, антипаттерны.
+
+**Skills side** (NEW — FR-1, FR-2, FR-3):
+
+```bash
+npx tsx .claude/skills/skills-rules-optimizer/scripts/audit.ts --dir .claude/skills --save audit_skills.json
+```
+
+Показать findings:
+- `withErrors[]` — frontmatter validation (forbidden tokens, name length, allowed-tools coverage)
+- `withWarnings[]` — oversize SKILL.md (>500 lines per Anthropic cap)
+- `details[]` — per-skill metrics
+
+**Skills overlap detection** (FR-4):
+
+```bash
+npx tsx .claude/skills/skills-rules-optimizer/scripts/detect-overlap.ts --dir .claude/skills
+```
+
+Показать `overlaps[]` — pairs flagged как candidates для merge. Recommendation tier ≥0.7=merge, ≥0.5=cross-reference, ≥0.3=reorganize.
 
 ### 6.3: Добавить path-scoped frontmatter
 
