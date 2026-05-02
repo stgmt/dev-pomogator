@@ -78,9 +78,9 @@ Installer обрабатывает поля по-разному:
 
 **Не путать направление:** SOURCE fields = где искать файлы сейчас. TARGET fields = где файлы будут после установки.
 
-### Нестандартный case — extension-local skills namespace
+### Все skills — централизованно в `.claude/skills/`
 
-Specs-workflow использует `extensions/specs-workflow/.claude/skills/<skill>/` для **private child skills** (discovery-forms, requirements-chk-matrix, task-board-forms). Это легитимный pattern когда skills являются internal helpers конкретного extension, а не top-level skills. Installer всё равно копирует их в target `.claude/skills/{name}/` через `skills.{name}` source path. `extension.json.skills.{name}` просто указывает на extension-local SOURCE path.
+ВСЕ skills (включая private child skills extension-а — discovery-forms, requirements-chk-matrix, task-board-forms, variant-matrix-build) ОБЯЗАНЫ жить в `.claude/skills/{name}/` корня dev-pomogator repo. Размещение в `extensions/{ext}/.claude/skills/` — **запрещено**, даже если skill «приватен» к extension. Это упрощает discovery, единообразит installer paths, исключает duplicate trees.
 
 ## Чеклист (при создании extension)
 

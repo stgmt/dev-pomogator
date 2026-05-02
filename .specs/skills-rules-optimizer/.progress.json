@@ -1,0 +1,28 @@
+{
+  "version": 3,
+  "featureSlug": "skills-rules-optimizer",
+  "createdAt": "2026-05-01T14:18:37.622Z",
+  "currentPhase": "Complete",
+  "phases": {
+    "Discovery": {
+      "completedAt": "2026-05-01T14:35:26.822Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-05-01T18:31:27.474Z"
+    },
+    "Context": {
+      "completedAt": "2026-05-01T14:35:26.822Z",
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    },
+    "Requirements": {
+      "completedAt": "2026-05-01T18:38:02.202Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-05-01T18:38:02.202Z"
+    },
+    "Finalization": {
+      "completedAt": "2026-05-01T21:59:16.823Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-05-01T21:59:16.822Z"
+    }
+  }
+}

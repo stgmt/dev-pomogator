@@ -83,8 +83,10 @@ Build the command using the dispatch table:
 Wrap with `test_runner_wrapper.cjs` for YAML status tracking. **Always pass `--framework`** so the wrapper uses the correct adapter (auto-detection can fail in Docker or nested projects):
 
 ```bash
-bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.cjs --framework <detected-framework> -- <test-command>
+node .dev-pomogator/tools/test-statusline/test_runner_wrapper.cjs --framework <detected-framework> -- <test-command>
 ```
+
+**ВАЖНО — `node`, не `bash`:** файл имеет расширение `.cjs` и shebang `#!/usr/bin/env node`. Запуск через `bash file.cjs` пытается распарсить файл как shell-скрипт и валится с `syntax error near unexpected token '('`. Используй `node file.cjs` (либо `./file.cjs` если executable bit стоит — на Windows не работает, поэтому `node` — кросс-платформенный default).
 
 If `--docker` flag, check if `scripts/docker-test.sh` exists in the project root:
 
@@ -117,7 +119,7 @@ bash scripts/docker-test.sh "npx vitest run -t auth"
 **If `scripts/docker-test.sh` does NOT exist** (fallback for other projects):
 
 ```bash
-bash .dev-pomogator/tools/test-statusline/test_runner_wrapper.cjs --framework <detected-framework> -- docker compose -f docker-compose.test.yml run --rm test <test-command>
+node .dev-pomogator/tools/test-statusline/test_runner_wrapper.cjs --framework <detected-framework> -- docker compose -f docker-compose.test.yml run --rm test <test-command>
 ```
 
 **Cross-platform note:** The wrapper uses `cross-spawn` for transparent cross-platform command resolution on all OSes.
@@ -154,6 +156,58 @@ command: "bash .dev-pomogator/tools/tui-test-runner/test-monitor.sh .dev-pomogat
 ```
 
 **On Monitor timeout:** If the Monitor times out before tests finish, re-arm it — the startup snapshot logic seamlessly picks up the active run from current state.
+
+### Step 3.6: Host-bypass для non-destructive тестов (dev-pomogator-specific)
+
+> **Применимо только к dev-pomogator repo** (его собственный test suite). В target проектах не нужно — там нет ensure-docker.ts setup.
+
+В dev-pomogator существует `tests/setup/ensure-docker.ts` который throw-ит при запуске вне Docker. Причина — большинство e2e тестов dеструктивны: удаляют `~/.claude/`, `~/.dev-pomogator/`, `.claude/settings.json` через `setupCleanState()`. На host это убьёт активную сессию пользователя.
+
+**Но некоторые тесты — pure unit / pure logic** (не вызывают `setupCleanState()`, не трогают HOME): например `tests/e2e/specs-generator-variant-matrix.test.ts` импортирует модули и проверяет regex/audit логику. Такие тесты безопасно запустить host без Docker overhead (351ms vs 7-12 минут Docker run).
+
+**Когда применять host-bypass:**
+
+- Тест-файл импортирует модули напрямую и НЕ вызывает `setupCleanState()` / `runInstaller()` / `spawnSync`
+- Pure logic / regex / parser тесты в одном файле
+- Iterative debug-loop где хочется fast feedback на единственный тест
+
+**Когда НЕ применять (использовать Docker через `--docker`):**
+
+- Любой `*-installer*.test.ts`, `claude-installer.test.ts` — destructive
+- Тесты с `setupCleanState()` / `initGitRepo()` / writes в `~/.claude/`
+- Любой тест который spawnSync-ит installer / hooks
+- Если не уверен — Docker
+
+**Команда host-bypass:**
+
+```bash
+DEVPOM_ALLOW_HOST_TESTS=1 SKIP_BUILD_CHECK=1 \
+  node .dev-pomogator/tools/test-statusline/test_runner_wrapper.cjs \
+  --framework vitest -- npx vitest run tests/e2e/<file>.test.ts
+```
+
+**Что делает каждый env / флаг:**
+
+| Часть команды | Зачем |
+|---------------|-------|
+| `DEVPOM_ALLOW_HOST_TESTS=1` | Bypass `tests/setup/ensure-docker.ts` throw — explicit opt-in для host run |
+| `SKIP_BUILD_CHECK=1` | Bypass PreToolUse `build_guard.ts` (если src/ новее dist/, иначе блок) |
+| `node` (НЕ `bash`) | Wrapper это `.cjs` с `#!/usr/bin/env node` shebang — bash не парсит |
+| `--framework vitest` | Wrapper auto-detection ненадёжен; явный флаг надёжнее |
+| `--` separator | Всё после идёт как-есть в test runner |
+| `npx vitest run tests/e2e/<file>.test.ts` | Файловый filter — runs только конкретный тест |
+
+**Пример (variant-matrix unit тесты):**
+
+```bash
+DEVPOM_ALLOW_HOST_TESTS=1 SKIP_BUILD_CHECK=1 \
+  node .dev-pomogator/tools/test-statusline/test_runner_wrapper.cjs \
+  --framework vitest -- npx vitest run tests/e2e/specs-generator-variant-matrix.test.ts
+```
+
+Результат: 17/17 passed за 351ms vs ~10 минут Docker run.
+
+**Гарантии test-guard hook:** прямой `npx vitest` блокируется (centralized-test-runner rule). Через wrapper — разрешено, потому что wrapper и есть централизованный entry point.
 
 ### Step 4: Report results
 
