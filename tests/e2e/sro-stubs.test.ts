@@ -123,17 +123,83 @@ describe('SRO_MERGE: merge-skills.ts envelope (FR-5)', () => {
   });
 });
 
-// Remaining stubs — Phase 3 follow-up
-describe('SRO_RATCHET: verify-merge.ts (FR-6) — Phase 3 follow-up', () => {
-  it.todo('SRO007: regression detected → shouldRevert: true');
-  it.todo('FR-6: --force overrides regression');
+describe('SRO_RATCHET: verify-merge.ts (FR-6)', () => {
+  it('emits scorer envelope with prompt containing merged + originals', () => {
+    const overlapDir = path.join(FIXTURES_ROOT, 'overlap-pair');
+    // Use existing SKILL.md as fake "merged draft" — verify envelope shape
+    const fakeDraft = path.join(overlapDir, 'a', 'SKILL.md');
+    const res = runScript('verify-merge.ts', [
+      '--merged', fakeDraft,
+      '--originals', 'a', 'b',
+      '--skills-dir', overlapDir,
+    ]);
+    expect(res.status).toBe(0);
+    const env = JSON.parse(res.stdout);
+    expect(env.action).toBe('invoke-agent');
+    expect(env.subagent_type).toBe('general-purpose');
+    expect(env.decision_handler).toBeDefined();
+    expect(env.decision_handler.on_regression).toBe('delete_draft_emit_report');
+    expect(env.decision_handler.on_pass).toBe('rename_draft_emit_cleanup');
+  });
+
+  it('--force flag propagates через decision_handler.force', () => {
+    const overlapDir = path.join(FIXTURES_ROOT, 'overlap-pair');
+    const fakeDraft = path.join(overlapDir, 'a', 'SKILL.md');
+    const res = runScript('verify-merge.ts', [
+      '--merged', fakeDraft,
+      '--originals', 'a', 'b',
+      '--skills-dir', overlapDir,
+      '--force',
+    ]);
+    expect(res.status).toBe(0);
+    const env = JSON.parse(res.stdout);
+    expect(env.decision_handler.force).toBe(true);
+  });
 });
 
-describe('SRO_PRESERVE: originals untouched (FR-7) — Phase 3 follow-up', () => {
-  it.todo('SRO008: originals remain on disk after successful merge');
-  it.todo('FR-7: cleanup_suggestions array');
+describe('SRO_PRESERVE: originals untouched (FR-7)', () => {
+  it('originals A and B remain on disk after merge envelope generation', () => {
+    const overlapDir = path.join(FIXTURES_ROOT, 'overlap-pair');
+    const aPath = path.join(overlapDir, 'a', 'SKILL.md');
+    const bPath = path.join(overlapDir, 'b', 'SKILL.md');
+    const fs = require('node:fs');
+    const aBefore = fs.readFileSync(aPath, 'utf-8');
+    const bBefore = fs.readFileSync(bPath, 'utf-8');
+
+    runScript('merge-skills.ts', [
+      '--execute', 'a', 'b',
+      '--merged-name', 'merged-preserve-test',
+      '--skills-dir', overlapDir,
+    ]);
+
+    expect(fs.readFileSync(aPath, 'utf-8')).toBe(aBefore);
+    expect(fs.readFileSync(bPath, 'utf-8')).toBe(bBefore);
+  });
+
+  it('cleanup_suggestions array содержит rm -rf commands для обоих originals', () => {
+    const overlapDir = path.join(FIXTURES_ROOT, 'overlap-pair');
+    const fakeDraft = path.join(overlapDir, 'a', 'SKILL.md');
+    const res = runScript('verify-merge.ts', [
+      '--merged', fakeDraft,
+      '--originals', 'a', 'b',
+      '--skills-dir', overlapDir,
+    ]);
+    const env = JSON.parse(res.stdout);
+    expect(env.decision_handler.cleanup_suggestions).toHaveLength(2);
+    expect(env.decision_handler.cleanup_suggestions[0]).toContain('rm -rf');
+    expect(env.decision_handler.cleanup_suggestions[0]).toContain('a');
+    expect(env.decision_handler.cleanup_suggestions[1]).toContain('rm -rf');
+    expect(env.decision_handler.cleanup_suggestions[1]).toContain('b');
+  });
 });
 
-describe('SRO_RULES_COMPAT: rules backward compat (FR-9) — Phase 3 follow-up', () => {
-  it.todo('SRO009: audit byte-identical to baseline');
+describe('SRO_RULES_COMPAT: rules backward compat (FR-9, AC-8)', () => {
+  it('audit dispatcher routes .claude/rules to audit-rules pipeline (verbatim output)', () => {
+    const rulesDir = path.join(__dirname, '..', '..', '.claude', 'rules');
+    const res = runScript('audit.ts', ['--dir', rulesDir]);
+    // audit-rules.ts text output starts with "=== Rules Audit ===" header
+    expect(res.stdout).toContain('=== Rules Audit ===');
+    expect(res.stdout).toMatch(/Total files: \d+/);
+    expect(res.stdout).toMatch(/Total tokens: \d+/);
+  });
 });

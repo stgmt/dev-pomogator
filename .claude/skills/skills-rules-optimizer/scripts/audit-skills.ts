@@ -21,8 +21,8 @@
  * Output JSON shape: SkillAuditResult (see shared.ts).
  */
 
-import { writeFileSync } from 'fs';
-import { resolve, basename, dirname } from 'path';
+import { writeFileSync, readFileSync, existsSync } from 'fs';
+import { resolve, basename, dirname, join } from 'path';
 
 import {
   buildAsset,
@@ -222,6 +222,43 @@ function checkOversize(asset: Asset): SkillFinding | null {
   };
 }
 
+/**
+ * T07 — Detect transitive references (Anthropic anti-pattern: depth >1).
+ * Walks references/*.md mentioned в SKILL.md body; if any referenced file
+ * itself contains references/*.md links → flag.
+ */
+function checkTransitiveReferences(asset: Asset): SkillFinding | null {
+  const skillDir = asset.path.replace(/[\\/]SKILL\.md$/, '');
+  const refRegex = /references\/([a-zA-Z0-9_-]+\.md)/g;
+  const directRefs = new Set<string>();
+  let m: RegExpExecArray | null;
+  while ((m = refRegex.exec(asset.body)) !== null) directRefs.add(m[1]);
+
+  for (const refFile of directRefs) {
+    const refPath = join(skillDir, 'references', refFile);
+    if (!existsSync(refPath)) continue;
+    const refContent = readFileSync(refPath, 'utf-8');
+    const nestedRefs: string[] = [];
+    refRegex.lastIndex = 0;
+    let n: RegExpExecArray | null;
+    while ((n = refRegex.exec(refContent)) !== null) {
+      if (n[1] !== refFile) nestedRefs.push(n[1]);
+    }
+    if (nestedRefs.length > 0) {
+      return {
+        code: 'TRANSITIVE_REFERENCES',
+        path: asset.path,
+        severity: 'warning',
+        message: `references chain depth > 1: SKILL.md → ${refFile} → ${nestedRefs.join(', ')}`,
+        details: { chain: ['SKILL.md', refFile, ...nestedRefs] },
+        suggestion: 'Anthropic spec: references one-level-deep only. Inline B.md content into A.md или собирай в SKILL.md.',
+      };
+    }
+  }
+
+  return null;
+}
+
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 /**
@@ -300,6 +337,13 @@ function audit(parentDir: string): SkillAuditResult {
     if (oversizeFinding) {
       withWarnings.push(oversizeFinding);
       warnings.push(oversizeFinding.code);
+    }
+
+    // T07 transitive references chain (Anthropic anti-pattern)
+    const transitiveFinding = checkTransitiveReferences(asset);
+    if (transitiveFinding) {
+      withWarnings.push(transitiveFinding);
+      warnings.push(transitiveFinding.code);
     }
 
     details.push({

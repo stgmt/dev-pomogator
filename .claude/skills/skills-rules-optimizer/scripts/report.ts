@@ -169,6 +169,57 @@ function main() {
   const after = validateAudit(afterData, 'after');
 
   generateReport(before, after);
+
+  // T12 — append optional skills audit section
+  const skillsArg = process.argv.indexOf('--skills');
+  if (skillsArg !== -1) {
+    const skillsPath = process.argv[skillsArg + 1];
+    if (skillsPath && existsSync(resolve(skillsPath))) {
+      try {
+        const skillsData = JSON.parse(readFileSync(resolve(skillsPath), 'utf-8'));
+        appendSkillsSection(skillsData);
+      } catch (e) {
+        console.error(`Warning: could not parse --skills file: ${(e as Error).message}`);
+      }
+    }
+  }
+}
+
+interface SkillsAuditShape {
+  totalSkills?: number;
+  withErrors?: Array<{ code: string; path: string; message: string }>;
+  withWarnings?: Array<{ code: string; path: string; message: string }>;
+  overlaps?: Array<{ a: string; b: string; axis: string; similarity: number; recommendation: string }>;
+}
+
+function appendSkillsSection(data: unknown): void {
+  if (!data || typeof data !== 'object') return;
+  const s = data as SkillsAuditShape;
+
+  console.log('\n## Skills Audit\n');
+  console.log(`- Total skills: ${s.totalSkills ?? 0}`);
+  console.log(`- Errors: ${s.withErrors?.length ?? 0}`);
+  console.log(`- Warnings: ${s.withWarnings?.length ?? 0}`);
+  console.log(`- Overlap candidates: ${s.overlaps?.length ?? 0}`);
+
+  if (s.withErrors && s.withErrors.length > 0) {
+    console.log('\n### Errors\n');
+    for (const f of s.withErrors) {
+      console.log(`- **${f.code}** \`${f.path}\` — ${f.message}`);
+    }
+  }
+  if (s.withWarnings && s.withWarnings.length > 0) {
+    console.log('\n### Warnings\n');
+    for (const f of s.withWarnings) {
+      console.log(`- **${f.code}** \`${f.path}\` — ${f.message}`);
+    }
+  }
+  if (s.overlaps && s.overlaps.length > 0) {
+    console.log('\n### Overlap Candidates\n');
+    for (const o of s.overlaps) {
+      console.log(`- \`${o.a}\` ↔ \`${o.b}\` (${o.axis}, ${(o.similarity * 100).toFixed(0)}%) → **${o.recommendation}**`);
+    }
+  }
 }
 
 main();
