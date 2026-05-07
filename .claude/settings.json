@@ -246,6 +246,16 @@
             "timeout": 60
           }
         ]
+      },
+      {
+        "matcher": "Skill",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner-bootstrap.cjs'))\" -- \"tools/research-workflow-marker-guard/research-workflow-marker-guard.ts\"",
+            "timeout": 10
+          }
+        ]
       }
     ]
   },

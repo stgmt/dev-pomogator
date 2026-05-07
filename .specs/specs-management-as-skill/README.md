@@ -1,5 +1,7 @@
 # Specs Management As Skill
 
+> **Migration Note (v2.0, 2026-05-07):** Эта спека описывает migration `specs-management` к `create-spec` skill — независимо от canonical refactor v2.0 (см. `.specs/dev-pomogator-canonical-plugin/`). Однако references на `updater-managed-cleanup` + `updater-sync-tools-hooks` mechanisms описывают v1 installer infrastructure которая выпиливается в v2.0; новый install через canonical Anthropic mechanism handles atomic distribution через `/plugin install`. Skill itself остаётся valid под v2.0 — distributed как часть dev-pomogator plugin.
+
 Migrate the 670-line `specs-management.md` rule (currently auto-loaded into every Claude Code session, costing ~10k tokens) to a properly-structured `create-spec` skill with progressive disclosure via `references/` subdirectory. Target: 97% startup token reduction for non-spec sessions; 60% reduction during active spec work.
 
 ## Ключевые идеи

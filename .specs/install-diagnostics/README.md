@@ -1,5 +1,7 @@
 # Install Diagnostics
 
+> **Migration Note (v2.0, 2026-05-07):** Эта спека описывает diagnostics для **npx-based install path** (v1). После canonical refactor v2.0 (см. `.specs/dev-pomogator-canonical-plugin/`) npm distribution выпиливается; install через `/plugin marketplace add stgmt/dev-pomogator` + `/plugin install dev-pomogator@stgmt` — Anthropic-managed flow. Этот npx silent-failure scenario больше не applicable. Скил `/install-diagnostics` либо deprecated, либо переориентируется на canonical install troubleshooting (e.g., «marketplace add fails», «`/reload-plugins` не активирует skills»). AC ниже preserved as historical record для legacy v1 install troubleshooting.
+
 Diagnostics & regression tests for npx silent install failure on Windows. Эта спека документирует:
 1. **Bug**: `npx github:stgmt/dev-pomogator --claude --all` молча завершается с exit code 2 на Windows из-за npm reify EPERM на cleanup `@inquirer/external-editor` files
 2. **Skill**: `/install-diagnostics` slash command для interactive диагностики при столкновении с silent install failure
