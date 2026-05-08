@@ -1,7 +1,32 @@
 # Tests Impact Report
 
 **Generated:** 2026-05-07 by Phase 0c audit
-**Plan reference:** `~/.claude/plans/dev-pomogator-sparkling-cocoa.md` Phase 0c (audit-tests-references)
+**Updated:** 2026-05-08 — F1-3 execution outcomes documented
+**Plan reference:** `~/.claude/plans/dev-pomogator-sparkling-cocoa.md` Phase 0c (audit-tests-references) + F1-3 (tests fix)
+
+## F1-3 Execution Summary (2026-05-08)
+
+**Deleted (6 files):**
+- `tests/e2e/bundled-scripts.test.ts` — tested deleted tsx-runner installation
+- `tests/e2e/claude-installer.test.ts` — tested deleted src/installer/claude.ts
+- `tests/e2e/updater-404-silent.test.ts` — tested deleted src/updater/github.ts
+- `tests/e2e/cli-integration.test.ts` — tested deleted bin/cli.js + dist/index.js
+- `tests/features/core/CORE003_claude-installer.feature` — BDD scenarios для deleted installer
+- `tests/features/core/CORE007_bundled-scripts.feature` — BDD scenarios для deleted tsx-runner
+
+**Known-failing tests (deferred к v2 rewrite, NOT executed in F1-3):**
+~50 test files в `tests/e2e/` reference deleted paths transitively через `tests/e2e/helpers.ts:42` (`spawnSync('node', ['dist/index.js', ...])` — dist/ deleted). Tests testing surviving features (skills, hooks, plugin install) need rewrite для canonical Anthropic plugin model. Task tracked в follow-up TODO «v2 test rewrite — separate spec».
+
+**Survives unchanged (no installer dependency):**
+- `tests/e2e/doctor-core.test.ts`, `tests/e2e/doctor-entry.test.ts` — pomogator-doctor engine tests (engine moved к `.claude/skills/pomogator-doctor/scripts/engine/`)
+- `tests/unit/plan-gate-scope-advisory.test.ts`, `tests/unit/score-diff.test.ts` — unit tests not depending on deleted infrastructure
+
+## Verdict
+
+F1-3 partial. 6 obvious-dead tests removed (DELETE-candidates). Remaining ~50 tests с stale path references via helpers.ts → known broken, marked as v2-rewrite-deferred. CI will surface failures explicitly; не silent regression.
+
+---
+
 
 ## Summary
 
