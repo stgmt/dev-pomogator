@@ -1,0 +1,32 @@
+{
+  "$schema": "https://anthropic.com/schemas/claude-code-marketplace.json",
+  "name": "stgmt",
+  "owner": {
+    "name": "stgmt"
+  },
+  "description": "stgmt's Claude Code plugins",
+  "plugins": [
+    {
+      "name": "dev-pomogator",
+      "source": "./",
+      "description": "Team coding standards and workflows for Claude Code (skills, rules, hooks, MCP servers)",
+      "version": "2.0.0",
+      "author": {
+        "name": "stgmt"
+      },
+      "homepage": "https://github.com/stgmt/dev-pomogator",
+      "repository": "https://github.com/stgmt/dev-pomogator",
+      "license": "MIT",
+      "keywords": [
+        "claude-code",
+        "rules",
+        "standards",
+        "tdd",
+        "workflow",
+        "ai-coding",
+        "skills",
+        "hooks"
+      ]
+    }
+  ]
+}

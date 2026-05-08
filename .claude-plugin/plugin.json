@@ -1,0 +1,27 @@
+{
+  "$schema": "https://anthropic.com/schemas/claude-code-plugin.json",
+  "name": "dev-pomogator",
+  "version": "2.0.0",
+  "description": "Team coding standards and workflows for Claude Code: skills (create-spec, run-tests, plan-pomogator, etc.), rules, hooks, and MCP servers — distributed via canonical Anthropic marketplace.",
+  "author": {
+    "name": "stgmt",
+    "url": "https://github.com/stgmt"
+  },
+  "homepage": "https://github.com/stgmt/dev-pomogator",
+  "repository": "https://github.com/stgmt/dev-pomogator",
+  "license": "MIT",
+  "keywords": [
+    "claude-code",
+    "rules",
+    "standards",
+    "tdd",
+    "workflow",
+    "ai-coding",
+    "skills",
+    "hooks"
+  ],
+  "skills": ".claude/skills",
+  "commands": ".claude/commands",
+  "hooks": ".claude-plugin/hooks.json",
+  "mcpServers": ".mcp.json"
+}
