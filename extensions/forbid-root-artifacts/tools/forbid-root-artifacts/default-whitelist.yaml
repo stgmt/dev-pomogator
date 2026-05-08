@@ -27,3 +27,104 @@ files:
 patterns:
   - "*.sln"
   - "*.csproj"
+
+# Default trash patterns — used by classifier (FR-2 / FR-4) to flag obvious
+# build artifacts, IDE state and deprecated formats. Users can disable the
+# whole list via `use_default_trash_patterns: false` in `.root-artifacts.yaml`.
+# Researched + verified in `.specs/forbid-root-artifacts/RESEARCH.md`
+# (## Технические находки — VS legacy patterns, [VERIFIED] x4).
+trash_patterns_default:
+  # Temp / backup
+  - "*.tmp"
+  - "*.temp"
+  - "*.bak"
+  - "*.swp"
+  - "*.swo"
+  - "*.orig"
+  - "*.backup"
+  - "*~"
+  - "*.old"
+  # Logs
+  - "*.log"
+  - "*.logs"
+  - "npm-debug.log*"
+  - "yarn-debug.log*"
+  - "yarn-error.log*"
+  - "lerna-debug.log*"
+  - "debug.log"
+  # Cache / compiled
+  - "*.cache"
+  - "*.pyc"
+  - "*.pyo"
+  - "*.pyd"
+  - "__pycache__"
+  - "*.class"
+  - "*.o"
+  - "*.obj"
+  - "*.exe"
+  - "*.dll"
+  - "*.so"
+  # OS junk
+  - ".DS_Store"
+  - "Thumbs.db"
+  - "desktop.ini"
+  - "*.lnk"
+  # IDE junk
+  - "*.sublime-workspace"
+  - ".idea"
+  - "*.iml"
+  # Misc rare extensions
+  - "*.cal"
+  - "*.bkp"
+  - "*.gho"
+  - "*.iso"
+  # Build artifacts
+  - "*.min.js"
+  - "*.min.css"
+  - "*.map"
+  # Test artifacts
+  - "coverage"
+  - ".nyc_output"
+  - "junit.xml"
+  # Misc junk JSON
+  - "*.json.bak"
+  - "*.json.tmp"
+  - "*.json.old"
+  # Spec progress state (belongs in .specs/<feature>/, not root)
+  - ".progress.json"
+  # Visual Studio legacy artifacts (researched: GitHub gitignore + Microsoft Learn)
+  - "*.vssscc"
+  - "*.vspscc"
+  - "*.testsettings"
+  - "UpgradeLog*.htm"
+  - "UpgradeLog*.XML"
+  - "*.suo"
+  - "*.user"
+
+# Default config patterns — files likely to be legitimate project config.
+# Used by classifier (FR-2 / FR-4) to suggest "ask user" path for non-whitelisted
+# files instead of treating them as trash.
+config_patterns_default:
+  # Configs (well-known)
+  - "package.json"
+  - "tsconfig.json"
+  - "jsconfig.json"
+  - "*.config.js"
+  - "*.config.ts"
+  - "*.config.mjs"
+  - "*.yaml"
+  - "*.yml"
+  - "*.toml"
+  - "Makefile"
+  - "Dockerfile*"
+  - "docker-compose*"
+  - "*.md"
+  - "LICENSE*"
+  - "CHANGELOG*"
+  - "*.env"
+  - "*.env.*"
+  # Scripts
+  - "*.sh"
+  - "*.ps1"
+  - "*.bat"
+  - "*.cmd"

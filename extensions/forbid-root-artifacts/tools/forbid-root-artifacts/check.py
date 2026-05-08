@@ -15,6 +15,7 @@ from __future__ import annotations
 import fnmatch
 import subprocess
 import sys
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
@@ -150,70 +151,78 @@ def matches_pattern(filename: str, patterns: list[str]) -> bool:
 
 
 # =============================================================================
-# AI Agent Classification
+# Classifier (loaded from _classifier.py — yaml-driven)
 # =============================================================================
+#
+# Patterns now live in:
+#   extensions/forbid-root-artifacts/tools/forbid-root-artifacts/default-whitelist.yaml
+#       → trash_patterns_default
+#       → config_patterns_default
+#   .root-artifacts.yaml (user, in target repo)
+#       → trash_patterns
+#       → config_patterns
+#
+# See `.specs/forbid-root-artifacts/FR.md` (FR-2, FR-4) for design rationale.
 
-# Files that are DEFINITELY trash - delete without asking
-TRASH_PATTERNS = [
-    # Temp/backup files
-    "*.tmp", "*.temp", "*.bak", "*.swp", "*.swo", "*.orig",
-    "*.backup", "*~", "*.old",
-    # Logs
-    "*.log", "*.logs", "npm-debug.log*", "yarn-debug.log*",
-    "yarn-error.log*", "lerna-debug.log*", "debug.log",
-    # Cache/compiled
-    "*.cache", "*.pyc", "*.pyo", "*.pyd", "__pycache__",
-    "*.class", "*.o", "*.obj", "*.exe", "*.dll", "*.so",
-    # OS junk
-    ".DS_Store", "Thumbs.db", "desktop.ini", "*.lnk",
-    # IDE junk (not in .gitignore)
-    "*.sublime-workspace", ".idea", "*.iml",
-    # Random extensions that are never config
-    "*.cal", "*.bkp", "*.gho", "*.iso",
-    # Build artifacts
-    "*.min.js", "*.min.css", "*.map",
-    # Test artifacts
-    "coverage", ".nyc_output", "junit.xml",
-    # Misc junk JSON (not package.json, tsconfig.json, etc.)
-    "*.json.bak", "*.json.tmp", "*.json.old",
-    # Spec progress state (belongs in .specs/<feature>/, not root)
-    ".progress.json",
-]
+try:
+    from _classifier import (
+        ClassifierConfig,
+        classify_file,
+        find_stale_allow_entries,
+        is_testsettings,
+        load_classifier_config,
+    )
+except ImportError as _classifier_import_err:
+    # Graceful degradation for broken upgrade scenarios (UC-7, NFR-Reliability-1).
+    # Embedded fallback is intentionally minimal — clear intent that this is a
+    # safety net, not a drift target. Full pattern lists live in
+    # `default-whitelist.yaml` (yaml-driven, see _classifier.py).
+    print(
+        "WARNING: classifier module missing — using fallback "
+        f"({_classifier_import_err})",
+        file=sys.stderr,
+    )
 
-# Files that MAY be important - ask user
-CONFIG_PATTERNS = [
-    # Configs (known)
-    "package.json", "tsconfig.json", "jsconfig.json",
-    "*.config.js", "*.config.ts", "*.config.mjs",
-    "*.yaml", "*.yml", "*.toml",
-    "Makefile", "Dockerfile*", "docker-compose*",
-    "*.md", "LICENSE*", "CHANGELOG*",
-    "*.env", "*.env.*",
-    # Scripts
-    "*.sh", "*.ps1", "*.bat", "*.cmd",
-]
+    _FALLBACK_TRASH_PATTERNS = [
+        "*.tmp", "*.bak", "*.log", "*.swp", "*.suo", "*.user",
+    ]
 
+    @dataclass
+    class ClassifierConfig:  # type: ignore[no-redef]
+        mode: str = "config"
+        trash_patterns: list = field(default_factory=lambda: list(_FALLBACK_TRASH_PATTERNS))
+        config_patterns: list = field(default_factory=list)
+        use_default_trash: bool = True
+        auto_prune_enabled: bool = True
+        llm_cli: str = "claude"
+        llm_timeout_seconds: int = 30
+        llm_cache_ttl_seconds: int = 86400
 
-def classify_file(filename: str) -> str:
-    """
-    Classify file for AI agent instructions.
-    
-    Returns:
-        'trash' - obvious junk, delete without asking
-        'config' - likely important, ask user
-        'unknown' - analyze content to decide
-    """
-    name_lower = filename.lower()
-    
-    for pattern in TRASH_PATTERNS:
-        if fnmatch.fnmatch(name_lower, pattern.lower()):
-            return "trash"
-    
-    for pattern in CONFIG_PATTERNS:
-        if fnmatch.fnmatch(name_lower, pattern.lower()):
-            return "config"
-    
-    return "unknown"
+    def load_classifier_config(repo_root, plugin_dir):  # type: ignore[no-redef]
+        return ClassifierConfig()
+
+    def classify_file(filename: str, config=None, cache_path=None) -> str:  # type: ignore[no-redef]
+        name_lower = filename.lower()
+        for pattern in _FALLBACK_TRASH_PATTERNS:
+            if fnmatch.fnmatch(name_lower, pattern.lower()):
+                return "trash"
+        return "unknown"
+
+    def find_stale_allow_entries(repo_root, allow_list):  # type: ignore[no-redef]
+        stale = []
+        for entry in allow_list:
+            if not isinstance(entry, str):
+                continue
+            if any(t in entry for t in ("/", "\\", "..", "\0")) or not entry:
+                print(f"WARNING: skipping non-basename allow entry: {entry}", file=sys.stderr)
+                continue
+            if not (repo_root / entry).exists():
+                stale.append(entry)
+        stale.sort(key=str.lower)
+        return stale
+
+    def is_testsettings(name: str) -> bool:  # type: ignore[no-redef]
+        return fnmatch.fnmatch(name.lower(), "*.testsettings")
 
 
 def find_violations(
@@ -262,6 +271,148 @@ def find_violations(
     return violations
 
 
+_DEFAULT_YAML_HEADER = (
+    "# Configuration for forbid-root-artifacts pre-commit hook\n"
+    "# Documentation: https://github.com/stgmt/dev-pomogator/tree/main/extensions/forbid-root-artifacts\n\n"
+)
+
+
+def _extract_existing_header(text: str) -> Optional[str]:
+    """Extract the leading comment block from a yaml file (C2).
+
+    Returns the verbatim sequence of lines from start of file up to (but not
+    including) the first non-comment, non-blank line — including any trailing
+    blank line. Returns None if the file has no header (first non-blank line
+    is yaml content, e.g. `mode: extend`).
+
+    This preserves user-customised headers (license blocks, copyright,
+    "owned by team X" notes) byte-for-byte across auto-prune rewrites.
+    """
+    lines = text.splitlines(keepends=True)
+    header_lines: list[str] = []
+    for line in lines:
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            header_lines.append(line)
+        else:
+            break
+    if not header_lines:
+        return None
+    # Trim purely-blank lines from the very top to keep header tight,
+    # but preserve any internal blank-line separators.
+    while header_lines and not header_lines[0].strip():
+        header_lines.pop(0)
+    if not header_lines:
+        return None
+    # Ensure the header ends with a single blank line separator before yaml body
+    if header_lines and header_lines[-1].strip():
+        header_lines.append("\n")
+    return "".join(header_lines)
+
+
+@contextmanager
+def _file_lock(lock_path: Path):
+    """Cross-platform file lock for concurrent-process protection (H3).
+
+    Holds an exclusive lock on a sibling `.lock` file for the duration of
+    the with-block. Lock is released when the context exits, even on
+    exception. On Windows uses `msvcrt.locking`; on POSIX uses `fcntl.flock`.
+
+    Best-effort: if locking is unavailable on the platform (extremely rare),
+    falls back to no-op so the operation still proceeds.
+    """
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    fd = None
+    try:
+        fd = open(lock_path, "a+")
+        try:
+            if sys.platform == "win32":
+                import msvcrt  # noqa: PLC0415
+                # Lock 1 byte at offset 0 — Windows requires non-zero length
+                msvcrt.locking(fd.fileno(), msvcrt.LK_LOCK, 1)
+            else:
+                import fcntl  # noqa: PLC0415
+                fcntl.flock(fd.fileno(), fcntl.LOCK_EX)
+        except OSError:
+            # Best-effort: continue without lock if syscall unsupported
+            pass
+        yield
+    finally:
+        if fd is not None:
+            try:
+                if sys.platform == "win32":
+                    try:
+                        import msvcrt  # noqa: PLC0415
+                        fd.seek(0)
+                        msvcrt.locking(fd.fileno(), msvcrt.LK_UNLCK, 1)
+                    except OSError:
+                        pass
+                # POSIX: closing fd releases flock automatically
+                fd.close()
+            except OSError:
+                pass
+
+
+def _save_yaml_preserving_keys(yaml_path: Path, mutated_key: str, mutated_value) -> None:
+    """
+    Atomically rewrite yaml file, mutating just one top-level key.
+
+    Holds a file lock during read-modify-write to prevent concurrent
+    pre-commit processes from clobbering each other's changes (H3).
+    Preserves the existing header comment block byte-for-byte (C2 — user
+    custom license/copyright notes are kept). Inline comments inside yaml
+    sections are still lost (PyYAML limitation; documented in README).
+
+    Uses temp file + fsync + os.replace for the atomic-write step
+    (NFR-Security-3).
+    """
+    import os as _os
+
+    lock_path = yaml_path.with_name(yaml_path.name + ".lock")
+    with _file_lock(lock_path):
+        existing_text = ""
+        if yaml_path.exists():
+            with open(yaml_path, "r", encoding="utf-8") as f:
+                existing_text = f.read()
+
+        # Re-parse INSIDE the lock so we mutate the freshest state on disk
+        try:
+            raw = yaml.safe_load(existing_text) or {}
+        except yaml.YAMLError:
+            raw = {}
+        if not isinstance(raw, dict):
+            raw = {}
+
+        # Mutate (or remove if empty list provided)
+        if isinstance(mutated_value, list) and not mutated_value:
+            raw.pop(mutated_key, None)
+        else:
+            raw[mutated_key] = mutated_value
+
+        # C2: preserve existing user header byte-for-byte; fall back to default
+        # only if file has no leading comment block (e.g. brand-new yaml).
+        header = _extract_existing_header(existing_text)
+        if header is None:
+            header = _DEFAULT_YAML_HEADER
+        body = yaml.dump(raw, default_flow_style=False, allow_unicode=True, sort_keys=False)
+
+        # Atomic write inside the lock
+        tmp_path = yaml_path.with_name(yaml_path.name + ".tmp")
+        try:
+            with open(tmp_path, "w", encoding="utf-8") as f:
+                f.write(header)
+                f.write(body)
+                f.flush()
+                _os.fsync(f.fileno())
+            _os.replace(tmp_path, yaml_path)
+        finally:
+            if tmp_path.exists():
+                try:
+                    tmp_path.unlink()
+                except OSError:
+                    pass
+
+
 def main() -> int:
     """Main entry point."""
     try:
@@ -271,18 +422,65 @@ def main() -> int:
         return 2
     
     script_dir = get_script_dir()
-    
+
     # Load configurations
     defaults = load_default_whitelist(script_dir)
     user_config = load_user_config(repo_root)
-    
+
     # Build whitelist
     allowed_files, patterns = build_whitelist(defaults, user_config)
     allowed_directories = user_config.allowed_directories if user_config else None
-    
-    # Find violations
+
+    # Load classifier config (yaml-driven; FR-2/FR-4)
+    classifier_cfg = load_classifier_config(repo_root, script_dir)
+
+    # C1: Check both signals (violations + auto-prune) BEFORE deciding on the
+    # exit path, so we can emit a combined report instead of split-screen UX
+    # (auto-prune fires → user re-stages → SECOND run shows violations).
     violations = find_violations(repo_root, allowed_files, patterns, allowed_directories)
-    
+
+    # Auto-prune stale allow entries (FR-1, AC-1, AC-2)
+    pruned_entries: list[str] = []
+    prune_failed = False
+    if classifier_cfg.auto_prune_enabled and user_config is not None and user_config.allow:
+        stale = find_stale_allow_entries(repo_root, list(user_config.allow))
+        if stale:
+            stale_set = {s.lower() for s in stale}
+            user_config.allow = [a for a in user_config.allow if a.lower() not in stale_set]
+            try:
+                _save_yaml_preserving_keys(repo_root / ".root-artifacts.yaml", "allow", user_config.allow)
+            except OSError as ex:
+                prune_failed = True
+                print(
+                    f"WARNING: failed to save auto-pruned yaml ({ex}); skipping prune",
+                    file=sys.stderr,
+                )
+            else:
+                pruned_entries = stale
+
+    # Combined report: report both auto-prune AND violations in same exit-1.
+    # Order: violations first (most actionable), then auto-prune notice.
+    if not violations and not pruned_entries:
+        return 0
+
+    if pruned_entries and not violations:
+        # Pure auto-prune case (no violations)
+        stale_list = ", ".join(pruned_entries)
+        print(
+            f"forbid-root-artifacts auto-pruned {len(pruned_entries)} stale entries "
+            f"from .root-artifacts.yaml: {stale_list}",
+            file=sys.stderr,
+        )
+        print(
+            "Run: git add .root-artifacts.yaml && git commit "
+            "(yaml changes will be included in commit)",
+            file=sys.stderr,
+        )
+        return 1
+
+    # If we get here: violations are present (with or without prune). Fall
+    # through to existing violation-report path; emit auto-prune notice
+    # afterward so user sees BOTH in a single run.
     if not violations:
         return 0
     
@@ -315,9 +513,15 @@ def main() -> int:
     print("=" * 60)
     print()
     
-    trash_files = [v for v in violations if classify_file(v.filename) == "trash"]
-    config_files = [v for v in violations if classify_file(v.filename) == "config"]
-    unknown_files = [v for v in violations if classify_file(v.filename) == "unknown"]
+    # M1: classify each violation once, not 3× (was three list comprehensions)
+    cache_path = repo_root / ".dev-pomogator" / ".classifier-cache.json"
+    classified: dict[str, list] = {"trash": [], "config": [], "unknown": []}
+    for v in violations:
+        bucket = classify_file(v.filename, classifier_cfg, cache_path)
+        classified.setdefault(bucket, []).append(v)
+    trash_files = classified["trash"]
+    config_files = classified["config"]
+    unknown_files = classified["unknown"]
     
     if trash_files:
         print("### AUTO-DELETE (obvious trash):")
@@ -358,7 +562,21 @@ def main() -> int:
     print()
     print("After fixing, retry: git add . && git commit")
     print()
-    
+
+    # C1: emit auto-prune notice on stderr in the SAME run as the violation
+    # report, so the user sees both signals together (not split-screen).
+    if pruned_entries:
+        stale_list = ", ".join(pruned_entries)
+        print(
+            f"forbid-root-artifacts also auto-pruned {len(pruned_entries)} stale entries "
+            f"from .root-artifacts.yaml: {stale_list}",
+            file=sys.stderr,
+        )
+        print(
+            "Run: git add .root-artifacts.yaml together with your fix.",
+            file=sys.stderr,
+        )
+
     return 1
 
 
