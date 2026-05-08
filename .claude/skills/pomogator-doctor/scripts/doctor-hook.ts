@@ -49,18 +49,11 @@ async function main(): Promise<void> {
   try {
     await drainStdin();
 
-    const devPomHome = path.join(os.homedir(), '.dev-pomogator');
-    if (!fs.existsSync(path.join(devPomHome, 'config.json'))) {
-      writeOutput({ continue: true, suppressOutput: true });
-      return;
-    }
-
-    const doctorPath = path.join(
-      devPomHome,
-      'tools',
-      'pomogator-doctor',
-      'doctor-entry.mjs',
-    );
+    // Canonical plugin location: engine/index.ts is co-located in same skill scripts/ dir.
+    // Resolves relative к __dirname (этот script). Works в plugin cache (~/.claude/plugins/cache/.../scripts/)
+    // и dogfood (.claude/skills/pomogator-doctor/scripts/) одинаково.
+    const __dirname = path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'));
+    const doctorPath = path.join(__dirname, 'engine', 'index.ts');
 
     if (fs.existsSync(doctorPath)) {
       const mod = (await import(doctorPath)) as {

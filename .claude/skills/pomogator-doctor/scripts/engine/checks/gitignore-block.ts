@@ -1,7 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { MARKER_BEGIN, MARKER_END } from '../../installer/gitignore.js';
 import type { CheckContext, CheckDefinition, CheckResult } from '../types.js';
+
+// Inlined from former src/installer/gitignore.ts (deleted in Phase 1 destructive cleanup).
+// Kept here for legacy v1 install detection — checks if user's project still has the v1 marker block.
+const MARKER_BEGIN = '# >>> dev-pomogator (managed — do not edit) >>>';
+const MARKER_END = '# <<< dev-pomogator (managed — do not edit) <<<';
 
 export const gitignoreBlockCheck: CheckDefinition = {
   id: 'C14',
