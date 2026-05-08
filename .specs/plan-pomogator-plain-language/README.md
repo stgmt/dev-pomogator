@@ -1,5 +1,7 @@
 # Plan Pomogator Plain Language
 
+> **Migration Note (v2.0, 2026-05-08):** Эта спека описывает plan format для plan-pomogator skill. Сама фича plan format остаётся valid под v2.0 — plan-pomogator distributed как часть canonical Claude Code plugin (см. `.specs/dev-pomogator-canonical-plugin/`). Examples ниже могут использовать `npx dev-pomogator` references из v1; canonical equivalents — `/plugin install dev-pomogator@stgmt` + invoke skills через `Skill("create-spec")` etc. Plan format itself unchanged.
+
 Добавление обязательной top-level секции `## 💬 Простыми словами` в шапку каждого монстр-плана plan-pomogator. Секция содержит три подсекции (Сейчас / Как должно быть / Правильно понял?) с интерпретацией задачи живым языком — для быстрого human review без чтения 9 технических секций (Context / FR / AC / NFR / Todos / File Changes / ...). AI обязан выводить содержимое секции в чат как обычное сообщение перед ExitPlanMode и дождаться подтверждения от пользователя.
 
 ## Ключевые идеи
