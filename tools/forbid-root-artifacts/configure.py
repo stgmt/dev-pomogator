@@ -15,6 +15,7 @@ import fnmatch
 import shutil
 import subprocess
 import sys
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
@@ -24,6 +25,40 @@ try:
 except ImportError:
     print("ERROR: pyyaml is required. Install with: pip install pyyaml", file=sys.stderr)
     sys.exit(2)
+
+# Shared classifier (FR-2, FR-3, FR-4) — single source of trash/config classification.
+# Falls back to 'unknown' for everything if module is missing (graceful degradation).
+try:
+    from _classifier import (
+        classify_file as _classify_file,
+        is_testsettings as _is_testsettings,
+        load_classifier_config as _load_classifier_config,
+    )
+    _CLASSIFIER_AVAILABLE = True
+except ImportError as _classifier_err:
+    print(
+        f"WARNING: classifier module missing — trash filter disabled ({_classifier_err})",
+        file=sys.stderr,
+    )
+    _CLASSIFIER_AVAILABLE = False
+
+    def _classify_file(filename, config=None, cache_path=None):  # type: ignore[no-redef]
+        return "unknown"
+
+    def _is_testsettings(name):  # type: ignore[no-redef]
+        return fnmatch.fnmatch(name.lower(), "*.testsettings")
+
+    def _load_classifier_config(repo_root, plugin_dir):  # type: ignore[no-redef]
+        class _Stub:
+            mode = "config"
+            trash_patterns: list = []
+            config_patterns: list = []
+            use_default_trash = True
+            auto_prune_enabled = True
+            llm_cli = "claude"
+            llm_timeout_seconds = 30
+            llm_cache_ttl_seconds = 86400
+        return _Stub()
 
 
 @dataclass
@@ -308,35 +343,67 @@ def matches_pattern(filename: str, patterns: list[str]) -> bool:
     return False
 
 
+_TESTSETTINGS_MIGRATOR_URL = (
+    "https://learn.microsoft.com/en-us/visualstudio/test/migrate-testsettings-to-runsettings"
+)
+
+
 def find_files_not_in_whitelist(
     repo_root: Path,
     allowed_files: set[str],
     patterns: list[str],
+    plugin_dir: Optional[Path] = None,
+    allow_trash: bool = False,
 ) -> list[str]:
-    """Find files in repository root that are not in whitelist."""
+    """Find files in repository root that are not in whitelist.
+
+    Trash-classified files (FR-2) are filtered out and a stdout hint is printed
+    suggesting `.gitignore` (or Microsoft SettingsMigrator for `*.testsettings`).
+    Pass ``allow_trash=True`` to bypass the trash filter (UC-6 override).
+    """
     not_in_whitelist: list[str] = []
     always_allowed_dirs = {".git", ".svn", ".hg"}
-    
+
+    classifier_cfg = None
+    cache_path = None
+    if not allow_trash and _CLASSIFIER_AVAILABLE:
+        plugin_dir = plugin_dir or Path(__file__).parent.resolve()
+        classifier_cfg = _load_classifier_config(repo_root, plugin_dir)
+        cache_path = repo_root / ".dev-pomogator" / ".classifier-cache.json"
+
     for entry in repo_root.iterdir():
         name = entry.name
         name_lower = name.lower()
-        
+
         # Skip directories
         if entry.is_dir():
             if name_lower not in always_allowed_dirs:
                 # We could add directory handling here if needed
                 pass
             continue
-        
+
         # Check if file is in whitelist
         if name_lower in allowed_files:
             continue
-        
+
         if matches_pattern(name, patterns):
             continue
-        
+
+        # Trash filter (FR-2; AC-4, AC-5, AC-6)
+        if classifier_cfg is not None:
+            cls = _classify_file(name, classifier_cfg, cache_path)
+            if cls == "trash":
+                if _is_testsettings(name):
+                    print(
+                        f"  ⚠ {name}: deprecated VS test settings — "
+                        f"see {_TESTSETTINGS_MIGRATOR_URL}"
+                    )
+                else:
+                    print(f"  ⚠ {name}: trash — add to .gitignore instead")
+                continue
+
         not_in_whitelist.append(name)
-    
+
     not_in_whitelist.sort(key=str.lower)
     return not_in_whitelist
 
@@ -398,29 +465,138 @@ def fallback_select(files: list[str]) -> list[str]:
     return selected
 
 
+_DEFAULT_HEADER = (
+    "# Configuration for forbid-root-artifacts pre-commit hook\n"
+    "# Documentation: https://github.com/stgmt/dev-pomogator/tree/main/extensions/forbid-root-artifacts\n\n"
+)
+
+
+def _extract_existing_header(text: str) -> Optional[str]:
+    """Extract leading comment block byte-for-byte (C2 — preserve user header)."""
+    lines = text.splitlines(keepends=True)
+    header_lines: list[str] = []
+    for line in lines:
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            header_lines.append(line)
+        else:
+            break
+    if not header_lines:
+        return None
+    while header_lines and not header_lines[0].strip():
+        header_lines.pop(0)
+    if not header_lines:
+        return None
+    if header_lines and header_lines[-1].strip():
+        header_lines.append("\n")
+    return "".join(header_lines)
+
+
+@contextmanager
+def _file_lock(lock_path: Path):
+    """Cross-platform file lock for concurrent-process protection (H3)."""
+    import os as _os
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    fd = None
+    try:
+        fd = open(lock_path, "a+")
+        try:
+            if sys.platform == "win32":
+                import msvcrt  # noqa: PLC0415
+                msvcrt.locking(fd.fileno(), msvcrt.LK_LOCK, 1)
+            else:
+                import fcntl  # noqa: PLC0415
+                fcntl.flock(fd.fileno(), fcntl.LOCK_EX)
+        except OSError:
+            pass
+        yield
+    finally:
+        if fd is not None:
+            try:
+                if sys.platform == "win32":
+                    try:
+                        import msvcrt  # noqa: PLC0415
+                        fd.seek(0)
+                        msvcrt.locking(fd.fileno(), msvcrt.LK_UNLCK, 1)
+                    except OSError:
+                        pass
+                fd.close()
+            except OSError:
+                pass
+
+
 def save_user_config(repo_root: Path, config: UserConfig) -> None:
-    """Save user configuration to .root-artifacts.yaml."""
+    """Save user configuration to .root-artifacts.yaml atomically (NFR-Security-3).
+
+    Holds a file lock during read-modify-write (H3) to prevent concurrent
+    pre-commit / configure runs from clobbering each other's changes.
+    Preserves the existing header comment block byte-for-byte (C2 — user
+    custom license/copyright notes are kept). Inline comments inside
+    sections are still lost (PyYAML limitation; documented in README).
+
+    Pattern: temp file → fsync → os.replace (atomic on POSIX and Windows).
+    Preserves any unknown/future fields already present in the file
+    (e.g. classifier, auto_prune, trash_patterns).
+    """
+    import os as _os
+
     config_path = repo_root / ".root-artifacts.yaml"
-    
-    data: dict = {"mode": config.mode}
-    
-    if config.allow:
-        data["allow"] = config.allow
-    
-    if config.deny:
-        data["deny"] = config.deny
-    
-    if config.allowed_directories is not None:
-        data["allowed_directories"] = config.allowed_directories
-    
-    if config.ignore_patterns:
-        data["ignore_patterns"] = config.ignore_patterns
-    
-    with open(config_path, "w", encoding="utf-8") as f:
-        f.write("# Configuration for forbid-root-artifacts\n")
-        f.write("# See: https://github.com/user/dev-pomogator\n\n")
-        yaml.dump(data, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
-    
+    lock_path = config_path.with_name(config_path.name + ".lock")
+
+    with _file_lock(lock_path):
+        # Re-read INSIDE the lock to mutate the freshest state on disk
+        existing_text = ""
+        if config_path.exists():
+            try:
+                with open(config_path, "r", encoding="utf-8") as f:
+                    existing_text = f.read()
+            except OSError:
+                existing_text = ""
+
+        try:
+            loaded = yaml.safe_load(existing_text) or {}
+        except yaml.YAMLError:
+            loaded = {}
+        existing = loaded if isinstance(loaded, dict) else {}
+
+        # Modeled fields (overwrite with current state)
+        existing["mode"] = config.mode
+        if config.allow:
+            existing["allow"] = config.allow
+        else:
+            existing.pop("allow", None)
+        if config.deny:
+            existing["deny"] = config.deny
+        else:
+            existing.pop("deny", None)
+        if config.allowed_directories is not None:
+            existing["allowed_directories"] = config.allowed_directories
+        if config.ignore_patterns:
+            existing["ignore_patterns"] = config.ignore_patterns
+        else:
+            existing.pop("ignore_patterns", None)
+
+        # C2: preserve user header byte-for-byte; fall back only if absent
+        header = _extract_existing_header(existing_text)
+        if header is None:
+            header = _DEFAULT_HEADER
+        body = yaml.dump(existing, default_flow_style=False, allow_unicode=True, sort_keys=False)
+
+        tmp_path = config_path.with_name(config_path.name + ".tmp")
+        try:
+            with open(tmp_path, "w", encoding="utf-8") as f:
+                f.write(header)
+                f.write(body)
+                f.flush()
+                _os.fsync(f.fileno())
+            _os.replace(tmp_path, config_path)
+        finally:
+            if tmp_path.exists():
+                try:
+                    tmp_path.unlink()
+                except OSError:
+                    pass
+
     print(f"\n✓ Saved configuration to {config_path.name}")
 
 
@@ -432,7 +608,15 @@ def main() -> int:
         action="store_true",
         help="Add all existing files to whitelist without prompting",
     )
+    parser.add_argument(
+        "--allow-trash",
+        action="store_true",
+        help="Disable trash filter (legitimate edge case override; FR-2 / UC-6)",
+    )
     args = parser.parse_args()
+
+    if args.allow_trash:
+        print("⚠ WARNING: --allow-trash enabled, trash files will be whitelisted")
     
     print("\n🔧 Setting up forbid-root-artifacts...\n")
     
@@ -461,8 +645,12 @@ def main() -> int:
     # Build whitelist
     allowed_files, patterns = build_whitelist(defaults, user_config)
     
-    # Find files not in whitelist
-    not_in_whitelist = find_files_not_in_whitelist(repo_root, allowed_files, patterns)
+    # Find files not in whitelist (trash filter applied unless --allow-trash; FR-2)
+    not_in_whitelist = find_files_not_in_whitelist(
+        repo_root, allowed_files, patterns,
+        plugin_dir=script_dir,
+        allow_trash=args.allow_trash,
+    )
     
     if not not_in_whitelist:
         print("✓ All files in repository root are already in whitelist.")
