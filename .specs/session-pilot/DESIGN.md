@@ -2,115 +2,150 @@
 
 ## Реализуемые требования
 
-- [FR-1: {Название}](FR.md#fr-1-{название})
-- [FR-2: {Название}](FR.md#fr-2-{название})
+См. полный список в [FR.md](FR.md). Этот файл документирует **архитектурные решения** и обоснование выбора альтернатив.
 
-## Компоненты
+## Architecture
 
-- `{Компонент 1}` — {описание}
-- `{Компонент 2}` — {описание}
+session-pilot — **read-mostly aggregator dashboard**, отдельный от терминала:
 
-## Где лежит реализация
+```
+┌──────────────────────────────────────────────────┐
+│  Browser (Edge / Chrome) — Tabulator UI          │
+│   localStorage SWR cache                         │
+└────────┬───────────────────────┬─────────────────┘
+         │ HTTP                   │
+         ▼                        ▼
+┌─────────────────┐       ┌─────────────────────┐
+│  :8083          │       │  :8082 Zellij Web   │
+│  session-pilot  │ exec  │  Client             │
+│  Python server  ├──────▶│  (terminal access)  │
+└────────┬────────┘       └─────────────────────┘
+         │ scan
+         ▼
+┌──────────────────────────────────────────────────┐
+│  ~/.claude/projects/<encoded>/<uuid>.jsonl       │
+│  /mnt/c/Users/.../  (Windows mount)              │
+│  + git worktree list per repo                    │
+└──────────────────────────────────────────────────┘
+```
 
-- App-код: `{путь/к/коду}`
-- Wiring: `{путь/к/wiring}`
+Two-port pairing: dashboard (8083) — навигатор, Zellij Web Client (8082) — рабочая среда. Мы не reinvent terminal embedding.
 
-## Директории и файлы
+---
 
-- `{путь/к/файлу1}`
-- `{путь/к/файлу2}`
+## Key decisions
 
-## Алгоритм
+### KD-1: Move (not rewrite) prototype to plugin
 
-1. {Шаг 1}
-2. {Шаг 2}
-3. {Шаг 3}
+**Rationale**: Прототип `worktree-dashboard.py` (700 LOC) был iteratively validated пользователем. Rewrite в 11 модулей с новым API surface — high regression risk.
 
-## API
+**Trade-off**: Принимаем temporary tech debt (single file harder to test) в обмен на velocity (Phase 1 за 1ч вместо 6ч refactor) и lower regression risk.
 
-### {Endpoint 1}
+**Alternatives considered**:
+- ❌ Rewrite в 11 модулей: high regression risk
+- ❌ Stay в `.dev-pomogator/bin/`: not version-tracked
+- ✅ MOVE → version-track → refactor opportunistically
 
-- Method: `{GET/POST/PUT/DELETE}`
-- Path: `{путь}`
-- Request: `{описание запроса}`
-- Response: `{описание ответа}`
+### KD-2: Pagination — Alt A (top-20 priority) for v0.1.0; Alt B planned for v0.2
 
-## Key Decisions
+| Alt | Description | Pros | Cons | First-paint |
+|---|---|---|---|---|
+| **A** ✅ chosen | Top-20 priority queue + rest in background | Predictable; simplest code | Wasted I/O on offscreen rows | ~1s for 20 / ~4s full |
+| **B** v0.2 | LIVE-only first paint + IntersectionObserver lazy | Bounded I/O | Scroll triggers fetches → potential jank | ~500ms initial / on-demand |
+| **C** v0.3+ | Pre-built SQLite index daemon | Server response near-zero | Extra moving part; index lag | ~100ms server / 500ms total |
 
-> Auto-populated by Skill `requirements-chk-matrix` during Phase 2. Hook `design-decision-guard` enforces format:
-> each `### Decision:` block must include **Rationale:**, **Trade-off:**, **Alternatives considered:** with ≥2 `- {alt}` bullets.
-> Files without any `### Decision:` heading pass unblocked — section is optional but strongly recommended for Phase 2.
+**Why Alt A для v0.1.0**: Lowest LOC, no new architectural component, sufficient for `<50` worktrees. User setup = 45 worktrees (in tolerance).
 
-### Decision: {short, specific title — the outcome, not the question}
+**Trigger to switch to Alt B**: >100 worktrees OR observable jank on first paint.
+**Trigger to consider Alt C**: `/api/index` exceeds 500ms warm (current ~150ms).
 
-**Rationale:** {Why this choice is better for the current context}
+### KD-3: Zellij command injection — `action write-chars` for existing, `-n` flag for new
 
-**Trade-off:** {What we give up — be honest, name the specific downside}
+**Critical Zellij CLI gotcha** (discovered Phase 3): `zellij -s NAME -l FILE` interprets as «add as new tab to existing session NAME» — fails with «Session NAME not found» if session doesn't exist. Must use `-n FILE -s NAME` (`--new-session-with-layout`) which always creates new.
 
-**Alternatives considered:**
-- {Alt 1} — rejected because {specific reason tied to this project, not generic}
-- {Alt 2} — rejected because {specific reason}
+For existing sessions: `zellij --session NAME action focus-pane-id terminal_1 && action write-chars "<cmd>\n"`. Focus-first prevents race с previously-shifted focus.
 
-## BDD Test Infrastructure (ОБЯЗАТЕЛЬНО)
+**Trade-off**: 5-second idempotency lock prevents double-inject on rapid clicks. User loses ability to inject same command twice within 5s — acceptable.
 
-> Секция НЕ может быть удалена. Агент обязан классифицировать фичу по ДВУМ осям: TEST_DATA (данные) + TEST_FORMAT (формат тестов).
->
-> **Step 6.1a — TEST_DATA** (ДА/НЕТ на 4 вопроса):
-> 1. Фича создаёт, изменяет или удаляет данные через API/БД/файлы?
-> 2. Фича изменяет состояние системы, которое нужно откатить после теста?
-> 3. BDD сценарии из .feature требуют предустановленных данных (Given-шаги с данными)?
-> 4. Фича взаимодействует с внешними сервисами, требующими mock/stub на уровне теста?
->
-> Хотя бы 1 ДА → `TEST_DATA_ACTIVE` (заполнить все подсекции ниже).
-> Все НЕТ → `TEST_DATA_NONE` (указать Evidence, подсекции не нужны).
->
-> **Step 6.1b — TEST_FORMAT**:
-> - `BDD` (дефолт для всех языков) — `.feature` сценарии + step definitions + hooks через BDD framework.
-> - `UNIT` — escape hatch, требует непустую `## Risks` секцию с обоснованием. Используется только в крайних случаях (legacy, embedded, framework несовместим).
->
-> **Step 6.1c — Framework** (только если TEST_FORMAT=BDD):
-> Запустить `bdd-framework-detector` на target test-projects из FILE_CHANGES.md. Записать результат.
-> Поддерживаемые: `Reqnroll | SpecFlow` (C#), `Cucumber.js | Playwright BDD` (TS), `Behave | pytest-bdd` (Python).
-> Если framework НЕ установлен — это remediation target: TASKS.md Phase 0 будет содержать bootstrap block (install + hooks + fixtures + config).
+### KD-4: SWR cache — server ETag + client localStorage with mtime versioning
 
-**TEST_DATA:** {TEST_DATA_ACTIVE | TEST_DATA_NONE}
-**TEST_FORMAT:** {BDD | UNIT}
-**Framework:** {Reqnroll | SpecFlow | Cucumber.js | Playwright BDD | Behave | pytest-bdd | N/A при UNIT}
-**Install Command:** {actual команда, например `dotnet add package Reqnroll` или "already installed"}
-**Evidence:** {grep output или detector evidence — путь + строка + snippet, либо reference на RESEARCH.md "Existing Patterns"}
-**Verdict:** {Краткий вывод: какие hooks/fixtures нужны; при TEST_DATA_NONE — "no hooks required"}
+**Inspired by**: Vercel's [SWR](https://swr.vercel.app/) + HTTP ETag/If-None-Match.
 
-<!-- Подсекции ниже заполнять ТОЛЬКО при TEST_DATA_ACTIVE. При TEST_DATA_NONE — удалить подсекции. -->
+**Implementation**:
+- Server: ETag = `W/"<int(max_jsonl_mtime)>"` per /api/claude path. If-None-Match match → 304 + 0 bytes.
+- Client: `localStorage["session_pilot_v1_<id>"] = {mtime, etag, data}`. Reload: instant render → fetch /api/index → compare per-row mtime → skip unchanged rows.
 
-### Существующие hooks
+**Result**: 38/45 rows skip fetch on warm reload. 7 stale rows hit 304 path (5ms). Total reload <300ms.
 
-| Hook файл | Тип | Тег/Scope | Что делает | Можно переиспользовать? |
-|-----------|-----|-----------|------------|------------------------|
-| `{путь}` | {Before/AfterScenario} | {тег} | {описание} | {Да/Нет + причина} |
+### KD-5: Cross-OS path encoding — multiple variants per worktree
 
-> Если hooks не найдены в проекте — записать: `Не найдены в проекте`.
+**Problem**: Claude Code on Windows writes JSONL to `D--repos-foo` even когда CWD = `/mnt/d/repos/foo`. WSL Claude writes to `-mnt-d-repos-foo`. Same worktree, different encoded directories.
 
-### Новые hooks
+**Solution**: `encode_path_for_claude(p)` returns ALL plausible variants. Dashboard scans both `~/.claude/projects` (WSL) и `/mnt/c/Users/.../  .claude/projects` (Windows mount).
 
-| Hook файл | Тип | Тег/Scope | Что делает | По аналогии с |
-|-----------|-----|-----------|------------|---------------|
-| `{путь}` | {AfterScenario} | {тег} | {cleanup} | {существующий hook или N/A} |
+**Mitigation for unforeseen variants**: `--diagnose-livecycle <path>` CLI dumps actual scan results.
 
-> Каждый новый hook ОБЯЗАН быть указан в FILE_CHANGES.md (action=create) и в TASKS.md Phase 0.
+### KD-6: 300s LIVE threshold (not 90s)
 
-### Cleanup Strategy
+**Empirical observation**: Claude Code batches JSONL writes every 2-3 минуты during active typing. 90s threshold misses real activity (B-1 incident: lm-saas idle while user typing, youngest JSONL 146s old).
 
-{Порядок удаления тестовых данных, каскадные зависимости, rollback при ошибках}
+**Default 300s** balances freshness signal against false negatives. Override via `LIVE_THRESHOLD_SEC` env var.
 
-### Test Data & Fixtures
+### KD-7: Vendored libs (Tabulator + marked.js), no external CDN
 
-| Fixture/Data | Путь | Назначение | Lifecycle |
-|-------------|------|------------|-----------|
-| `{имя}` | `{путь}` | {описание} | {per-scenario/per-feature/shared} |
+**Why not CDN**: privacy (User-Agent leakage), offline support, no ToS lock-in.
 
-### Shared Context / State Management
+**Why Tabulator**: built-in shift+click multi-key sort (zero custom code), virtual DOM, frozen columns, setFilter for vi-style `/`.
 
-| Ключ | Тип | Записывается в | Читается в | Назначение |
-|------|-----|----------------|------------|------------|
-| `{ключ}` | `{тип}` | `{step/hook}` | `{step/hook}` | {описание} |
+### KD-8: Native `<dialog>` element для modal
 
+**Why**: ESC-close, focus management, accessibility, backdrop-click-close — all built in. Browser support since March 2022.
+
+### KD-9: SessionStart hook for autostart (not systemd)
+
+**Why not systemd**: WSL2 default disables it; needs separate setup per OS.
+
+**Why SessionStart hook**: every Claude Code launch triggers it; idempotent PID-lock check; works on Windows native + WSL + Linux native identically.
+
+---
+
+## Pagination strategy decision (Phase 4 deliverable)
+
+After evaluation on user's 45-worktree setup:
+
+| Metric | Alt A (current v0.1.0) | Alt B (v0.2 candidate) | Alt C (v0.3 candidate) |
+|---|---|---|---|
+| Cold first paint top-20 | ~1.0s | ~0.5s | ~0.5s |
+| Cold full enrichment | ~4s (4 workers) | on-demand | <1s SQL |
+| Warm reload (SWR hit) | <300ms | <300ms | <300ms |
+| LOC delta vs v0.1.0 | 0 | +30 (IntersectionObserver) | +400 (daemon+SQLite) |
+| Reliability risk | low | medium (scroll race) | high (daemon health, index lag) |
+| Recommended for | <50 worktrees | 50–200 | >200 |
+
+**Decision**: ship v0.1.0 с Alt A. Track Alt B as next iteration. Alt C deferred unless adoption justifies.
+
+---
+
+## API contract summary
+
+| Endpoint | Method | Cache | Latency target |
+|---|---|---|---|
+| `/` | GET | none | <50ms |
+| `/api/health` | GET | none | <5ms |
+| `/api/index` | GET | server 5s | <150ms warm |
+| `/api/claude?path=` | GET | server 8s, ETag | <300ms cold / 5ms 304 |
+| `/api/launch` | POST | 5s idempotency lock | <2s (zellij spawn) |
+| `/api/open-vscode` | POST | none | instant |
+| `/api/message?path=&session=&index=` | GET | none yet | <50ms |
+| `/api/git-status?path=` | GET | server 10s | <100ms |
+
+---
+
+## Out-of-scope (rationale)
+
+- **Multi-CLI** (Codex/Gemini): scope creep v0.1.0; defer v0.2 when core stable.
+- **Diff viewer per agent**: orthogonal to dashboard mission; defer v0.3.
+- **Inline diff comments**: needs bidirectional integration with running session.
+- **Mobile-responsive PWA**: usage pattern unclear; v0.4 if demand.
+- **Remote tunnel docs**: until network architecture matures.
+- **Tool permission UI**: ToS questions about programmatic permission grants.
