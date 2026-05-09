@@ -1,0 +1,28 @@
+{
+  "version": 3,
+  "featureSlug": "session-pilot",
+  "createdAt": "2026-05-09T21:29:26.139Z",
+  "currentPhase": "Discovery",
+  "phases": {
+    "Discovery": {
+      "completedAt": "2026-05-09T21:33:00.271Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-05-09T21:33:31.761Z"
+    },
+    "Context": {
+      "completedAt": null,
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    },
+    "Requirements": {
+      "completedAt": null,
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    },
+    "Finalization": {
+      "completedAt": null,
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    }
+  }
+}
