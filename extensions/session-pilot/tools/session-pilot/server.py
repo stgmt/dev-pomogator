@@ -240,6 +240,98 @@ def claude_sessions_for(worktree_path: str) -> dict:
     }
 
 
+_START_TIME = time.time()
+_launch_lock: dict = {}  # (session, uuid) -> timestamp; 5s idempotency window
+LAUNCH_LOCK_TTL = 5.0
+LAYOUTS_DIR = Path(__file__).parent / "layouts"
+UUID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.I)
+
+
+def _zellij_session_exists(name: str) -> bool:
+    try:
+        out = subprocess.run(
+            [ZELLIJ_BIN, "list-sessions", "--no-formatting"],
+            capture_output=True, text=True, timeout=5, check=False,
+        )
+    except Exception:
+        return False
+    if out.returncode != 0:
+        return False
+    for line in out.stdout.splitlines():
+        m = re.match(r"^(\S+)", line)
+        if m and m.group(1) == name:
+            return True
+    return False
+
+
+def _zellij_inject(session: str, command: str) -> dict:
+    """Inject command into existing Zellij session via action write-chars."""
+    try:
+        # Focus first pane to avoid race-condition (focus might be elsewhere)
+        subprocess.run([ZELLIJ_BIN, "--session", session, "action", "focus-pane-id", "terminal_1"],
+                       capture_output=True, timeout=3, check=False)
+        # Inject keystrokes (\n triggers execution)
+        out = subprocess.run([ZELLIJ_BIN, "--session", session, "action", "write-chars", command + "\n"],
+                             capture_output=True, text=True, timeout=3, check=False)
+        if out.returncode != 0:
+            return {"ok": False, "error": f"write-chars failed: {out.stderr[:200]}"}
+    except Exception as e:
+        return {"ok": False, "error": f"zellij action failed: {e}"}
+    return {"ok": True, "method": "write-chars"}
+
+
+def _zellij_spawn_with_layout(session: str, worktree_path: str, mode: str, uuid: str | None) -> dict:
+    """Spawn new Zellij session with KDL layout running claude.
+
+    Uses setsid to detach from HTTP backend, schedules tmp file cleanup."""
+    import tempfile, shlex
+    tmpl_name = "claude-resume.kdl.tmpl" if mode == "resume" else "claude-fresh.kdl.tmpl"
+    tmpl = (LAYOUTS_DIR / tmpl_name).read_text(encoding="utf-8")
+    rendered = tmpl.replace("__CWD__", worktree_path).replace("__NAME__", session)
+    if mode == "resume" and uuid:
+        rendered = rendered.replace("__UUID__", uuid)
+
+    # Write to /tmp with mkstemp (mode 0600) for safety
+    fd, kdl_path = tempfile.mkstemp(prefix="sp-", suffix=".kdl", dir="/tmp")
+    try:
+        os.write(fd, rendered.encode("utf-8"))
+    finally:
+        os.close(fd)
+
+    # Spawn detached. Zellij needs a TTY to start, so we use `script` (allocates pty).
+    # CRITICAL: use -n / --new-session-with-layout (NOT -l) for new sessions —
+    # `-l` interprets as "add tab to existing session NAMED arg", which fails if session doesn't exist.
+    # `-n` always creates a new session with the layout.
+    inner = f"{shlex.quote(ZELLIJ_BIN)} -s {shlex.quote(session)} -n {shlex.quote(kdl_path)}"
+    cmd = f"setsid script -qfc {shlex.quote(inner)} /dev/null </dev/null >/dev/null 2>&1 &"
+    subprocess.Popen(["bash", "-c", cmd], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    # Schedule cleanup
+    import threading
+    def _cleanup():
+        try: os.unlink(kdl_path)
+        except OSError: pass
+    threading.Timer(60.0, _cleanup).start()
+
+    return {"ok": True, "method": "new-layout", "kdl_path": kdl_path}
+
+
+def _open_vscode(path: str) -> dict:
+    """Open path in VSCode/Cursor via 'code' CLI. Path must be whitelisted."""
+    try:
+        subprocess.Popen(["code", path], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except FileNotFoundError:
+        return {"ok": False, "error": "'code' CLI not found in PATH. Install VSCode/Cursor or use Open-Folder."}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+    return {"ok": True}
+
+
+def _whitelisted_paths() -> set[str]:
+    """All paths from current /api/index — used for /api/launch and /api/open-vscode whitelist."""
+    return {r["worktree_path"] for r in build_index_cached()["rows"]}
+
+
 _index_cache: dict = {"ts": 0.0, "data": None}
 _claude_cache: dict = {}
 CACHE_TTL_INDEX = 5.0
@@ -355,6 +447,7 @@ def build_claude_for_path(worktree_path: str) -> dict:
 
 HTML = """<!doctype html>
 <html lang="ru"><head><meta charset="utf-8"><title>Worktree Dashboard</title>
+<script>const ZELLIJ_WEB_URL_JS = '__ZELLIJ_WEB_URL__';</script>
 <style>
   body { background: #0e0e10; color: #e6e6e6; font: 14px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", monospace; margin: 0; padding: 24px; }
   h1 { margin: 0 0 8px; font-size: 22px; }
@@ -394,6 +487,17 @@ HTML = """<!doctype html>
   td.num { text-align: right; color: #aaa; font-family: monospace; }
   .role-user { color: #60a5fa; font-weight: 600; }
   .role-assistant { color: #f472b6; font-weight: 600; }
+  td.actions { white-space: nowrap; min-width: 130px; }
+  .act-btn {
+    display: inline-block; min-width: 28px; height: 28px; padding: 2px 6px;
+    margin-right: 3px; border: 1px solid #444; border-radius: 4px;
+    background: #2a2a2e; color: #ddd; cursor: pointer;
+    text-align: center; line-height: 22px; text-decoration: none;
+    font-size: 14px; transition: background 0.15s;
+  }
+  .act-btn:hover:not(.disabled):not(:disabled) { background: #3a3a3e; border-color: #666; }
+  .act-btn.disabled, .act-btn:disabled { background: #1a1a1e; color: #555; cursor: not-allowed; border-color: #333; }
+  .act-btn[href] { line-height: 22px; }
   .progress-wrap { background: #1a1a1e; border: 1px solid #333; border-radius: 4px; height: 6px; margin: 8px 0 16px; overflow: hidden; }
   .progress-bar { background: linear-gradient(90deg, #2563eb, #22c55e); height: 100%; width: 0%; transition: width 0.3s ease; }
   .progress-text { color: #888; font-size: 11px; margin-bottom: 6px; }
@@ -590,10 +694,26 @@ function render() {
       <td class="last-msg ${loadingCell}">${row._claude_loaded ? (role ? `<span class="role-${role}">${role}:</span> ` : '') + escapeHtml(lastText) : 'scanning JSONL…'}</td>
       <td class="num">${row._claude_loaded ? (top?.msg_count ?? '—') : '…'}</td>
       <td class="session ${row.session_active ? 'active' : 'inactive'}">${escapeHtml(row.session_name)}${row.session_active ? ' ●' : ''}</td>
-      <td>${row.session_attach_url
-        ? `<a class="open-link" href="${row.session_attach_url}" target="_blank">Open in Zellij</a>`
-        : `<span class="open-link disabled">—</span>`
-      }</td>
+      <td class="actions">
+        ${(() => {
+          const top = (row.claude_sessions || [])[0];
+          const uuid = top?.uuid;
+          const canResume = !!uuid;
+          const sess = encodeURIComponent(row.session_name);
+          const wt = encodeURIComponent(row.worktree_path);
+          const zURL = `${ZELLIJ_WEB_URL_JS}/?session=${sess}`;
+          return `
+            <button class="act-btn ${canResume ? '' : 'disabled'}" title="Resume claude --resume ${uuid?.slice(0,8) || '?'}…"
+                    ${canResume ? `onclick="actLaunch(this, ${JSON.stringify(row.worktree_path)}, ${JSON.stringify(row.session_name)}, 'resume', ${JSON.stringify(uuid)})"` : 'disabled'}>▶</button>
+            <button class="act-btn" title="Fresh claude (no resume) in ${row.worktree_path}"
+                    onclick="actLaunch(this, ${JSON.stringify(row.worktree_path)}, ${JSON.stringify(row.session_name)}, 'fresh', null)">✨</button>
+            <button class="act-btn" title="Open in VSCode/Cursor (code ${row.worktree_path})"
+                    onclick="actVSCode(this, ${JSON.stringify(row.worktree_path)})">📂</button>
+            <a class="act-btn" title="Open Zellij Web Client (no command injection — for revisiting running session)"
+               href="${zURL}" target="_blank" rel="noopener">🪟</a>
+          `;
+        })()}
+      </td>
     </tr>`;
   }
   html += '</tbody>';
@@ -644,6 +764,55 @@ window.addEventListener('keydown', (e) => {
     loadIndex();
   }
 });
+
+// Action button handlers — Phase 3
+async function actLaunch(btn, worktree_path, session_name, mode, uuid) {
+  const orig = btn.textContent;
+  btn.disabled = true; btn.textContent = '⏳';
+  try {
+    const r = await fetch('/api/launch', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({worktree_path, session_name, mode, uuid}),
+    });
+    const data = await r.json();
+    if (!data.ok) {
+      alert('Launch failed: ' + (data.error || JSON.stringify(data)));
+      btn.textContent = '❌';
+      setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 2000);
+      return;
+    }
+    btn.textContent = '✓';
+    // Open Zellij URL in new tab. mcp__claude-in-chrome__navigate (when available)
+    // would be preferred but is only callable from Claude Code agent context.
+    // From browser JS we use window.open which is best-effort.
+    window.open(data.url, '_blank', 'noopener');
+    setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 1500);
+    // Trigger refresh to update LIVE indicator
+    setTimeout(loadIndex, 2000);
+  } catch (e) {
+    alert('Network error: ' + e.message);
+    btn.textContent = '❌';
+    setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 2000);
+  }
+}
+
+async function actVSCode(btn, path) {
+  const orig = btn.textContent;
+  btn.disabled = true; btn.textContent = '⏳';
+  try {
+    const r = await fetch('/api/open-vscode', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({path}),
+    });
+    const data = await r.json();
+    btn.textContent = data.ok ? '✓' : '❌';
+    if (!data.ok) alert('VSCode launch failed: ' + (data.error || ''));
+    setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 1500);
+  } catch (e) {
+    btn.textContent = '❌'; alert('Network error: ' + e.message);
+    setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 2000);
+  }
+}
 </script>
 </body></html>
 """
@@ -660,6 +829,79 @@ def _send_json(handler, payload, status=200):
 
 
 class Handler(BaseHTTPRequestHandler):
+    def do_POST(self):
+        url = urlparse(self.path)
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+            body_raw = self.rfile.read(length) if length else b""
+            body = json.loads(body_raw.decode("utf-8")) if body_raw else {}
+        except Exception:
+            _send_json(self, {"error": "invalid JSON body"}, 400); return
+
+        if url.path == "/api/launch":
+            self._handle_launch(body)
+        elif url.path == "/api/open-vscode":
+            self._handle_open_vscode(body)
+        else:
+            self.send_response(404); self.end_headers()
+
+    def _handle_launch(self, body: dict) -> None:
+        wt = body.get("worktree_path", "")
+        sess = body.get("session_name", "")
+        mode = body.get("mode", "resume")
+        uuid_v = body.get("uuid")
+
+        # Path whitelist (security)
+        if wt not in _whitelisted_paths():
+            _send_json(self, {"ok": False, "error": "worktree_path not in current index whitelist"}, 403); return
+        # Session name sanity (alphanum + _ + - only)
+        if not re.match(r"^[A-Za-z0-9_-]+$", sess) or len(sess) > 80:
+            _send_json(self, {"ok": False, "error": "invalid session_name"}, 400); return
+        # Mode
+        if mode not in ("resume", "fresh"):
+            _send_json(self, {"ok": False, "error": "mode must be 'resume' or 'fresh'"}, 400); return
+        # UUID validation (only required for resume mode)
+        if mode == "resume":
+            if not uuid_v or not UUID_RE.match(uuid_v):
+                _send_json(self, {"ok": False, "error": "invalid uuid (must match ^[0-9a-f-]{36}$)"}, 400); return
+
+        # Idempotency lock
+        key = (sess, uuid_v or "fresh")
+        now = time.time()
+        last = _launch_lock.get(key, 0.0)
+        if now - last < LAUNCH_LOCK_TTL:
+            _send_json(self, {"ok": True, "method": "cached", "session": sess,
+                              "url": f"{ZELLIJ_WEB_URL}/?session={sess}",
+                              "note": f"idempotency lock — last action {int(now - last)}s ago"}); return
+        _launch_lock[key] = now
+
+        # Build command
+        cmd = f"claude --resume {uuid_v}" if mode == "resume" else "claude"
+
+        # Decision tree
+        if _zellij_session_exists(sess):
+            result = _zellij_inject(sess, cmd)
+        else:
+            result = _zellij_spawn_with_layout(sess, wt, mode, uuid_v)
+
+        if not result.get("ok"):
+            _send_json(self, result, 500); return
+
+        _send_json(self, {
+            "ok": True,
+            "method": result["method"],
+            "session": sess,
+            "url": f"{ZELLIJ_WEB_URL}/?session={sess}",
+            "command": cmd,
+        })
+
+    def _handle_open_vscode(self, body: dict) -> None:
+        wt = body.get("path", "")
+        if wt not in _whitelisted_paths():
+            _send_json(self, {"ok": False, "error": "path not in current index whitelist"}, 403); return
+        result = _open_vscode(wt)
+        _send_json(self, result, 200 if result["ok"] else 500)
+
     def do_GET(self):
         url = urlparse(self.path)
         qs = parse_qs(url.query)
@@ -667,7 +909,10 @@ class Handler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.end_headers()
-            self.wfile.write(HTML.encode("utf-8"))
+            html_rendered = HTML.replace("__ZELLIJ_WEB_URL__", ZELLIJ_WEB_URL)
+            self.wfile.write(html_rendered.encode("utf-8"))
+        elif url.path == "/api/health":
+            _send_json(self, {"status": "ok", "version": "0.1.0", "uptime_sec": int(time.time() - _START_TIME)})
         elif url.path == "/api/index":
             _send_json(self, build_index_cached())
         elif url.path == "/api/claude":

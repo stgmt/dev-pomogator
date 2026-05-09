@@ -1,0 +1,12 @@
+// Zellij KDL layout — claude --resume <uuid> in given worktree
+// Placeholders (substituted by server.py before write to /tmp/sp-<rand>.kdl):
+//   __CWD__   — absolute path to worktree
+//   __UUID__  — Claude session UUID to resume
+//   __NAME__  — pane title (typically "<repo>__<branch>")
+layout {
+    pane name="__NAME__" {
+        cwd "__CWD__"
+        command "claude"
+        args "--resume" "__UUID__"
+    }
+}
