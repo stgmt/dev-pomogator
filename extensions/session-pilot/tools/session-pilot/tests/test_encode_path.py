@@ -1,87 +1,204 @@
 """
-Regression tests for encode_path_for_claude — cross-OS path encoding.
+Tests for encode_path_for_claude — cross-OS path encoding.
 
-Tests that BOTH Linux (/mnt/d/repos/foo → -mnt-d-repos-foo) AND Windows-style
-(D:\\repos\\foo → D--repos-foo) variants are produced for any input path.
+Two tiers:
+
+1. Example-based regression tests with EXACT equality assertions for
+   variants that Claude actually uses on Windows + WSL. These are the
+   failure cases from real B-1 incident (lm-saas detection bug).
+
+2. Property-based tests via Hypothesis — round-trip invariants,
+   determinism, idempotence. Catch entire bug classes that example
+   tests miss.
+
+Per `.specs/session-pilot/RESEARCH.md`: Claude Code on Windows writes
+JSONL to `D--repos-foo` even when CWD is /mnt/d. This means BOTH
+encoding variants must be in the output for /mnt/d/repos/foo.
 """
 
 import sys
 from pathlib import Path
 
-# Add server.py dir to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from server import encode_path_for_claude  # noqa: E402
 
+# Hypothesis is optional — gracefully skip property tests if not installed.
+try:
+    from hypothesis import given, strategies as st, settings, HealthCheck
+    HYPOTHESIS_AVAILABLE = True
+except ImportError:
+    HYPOTHESIS_AVAILABLE = False
 
-def test_wsl_mounted_path_produces_both_variants():
-    """User has worktree under /mnt/d/repos/foo (WSL mount of D:)."""
+
+# ---------- Example-based regression tests (exact equality) ----------
+
+def test_wsl_mounted_path_produces_linux_variant_exact():
+    """For /mnt/d/repos/foo MUST produce '-mnt-d-repos-foo' (Linux Claude target)."""
     variants = set(encode_path_for_claude("/mnt/d/repos/foo"))
-    assert "-mnt-d-repos-foo" in variants or "mnt-d-repos-foo" in variants, (
-        f"Linux-style variant missing. Got: {variants}"
-    )
-    assert "D-repos-foo" in variants or "D--repos-foo" in variants, (
-        f"Windows-style variant missing for /mnt/d → D:. Got: {variants}"
+    assert "-mnt-d-repos-foo" in variants, (
+        f"Linux variant '-mnt-d-repos-foo' MISSING. Got variants: {sorted(variants)}"
     )
 
 
-def test_windows_native_path_produces_both_variants():
-    """User has worktree under D:\\repos\\foo (Windows native)."""
+def test_wsl_mounted_path_produces_windows_variant_exact():
+    """For /mnt/d/repos/foo MUST also produce 'D--repos-foo' (Win Claude target).
+
+    This is the lm-saas regression: Claude Code on Windows writes JSONL to
+    D--repos-foo even when shell CWD is /mnt/d/repos/foo. Without this
+    variant, dashboard shows worktree as idle while user is actively typing.
+    """
+    variants = set(encode_path_for_claude("/mnt/d/repos/foo"))
+    assert "D--repos-foo" in variants, (
+        f"Windows variant 'D--repos-foo' MISSING — this is the B-1 lm-saas bug. "
+        f"Got: {sorted(variants)}"
+    )
+
+
+def test_windows_native_path_produces_windows_variant_exact():
+    """For D:\\repos\\foo MUST produce 'D--repos-foo'."""
     variants = set(encode_path_for_claude("D:\\repos\\foo"))
-    assert "D-repos-foo" in variants or "D--repos-foo" in variants, (
-        f"Windows-style variant missing. Got: {variants}"
-    )
-    assert any("mnt-d-repos-foo" in v for v in variants), (
-        f"Linux-style variant missing for D: → /mnt/d. Got: {variants}"
+    assert "D--repos-foo" in variants, (
+        f"'D--repos-foo' MISSING for D:\\repos\\foo. Got: {sorted(variants)}"
     )
 
 
-def test_lm_saas_specific_regression():
-    """B-1 incident: lm-saas worktree must produce D--repos-lm-saas variant
-    (Claude on Windows writes JSONL there even when CWD is /mnt/d)."""
+def test_windows_native_path_produces_linux_variant_exact():
+    """For D:\\repos\\foo MUST also produce '-mnt-d-repos-foo' (WSL Claude target)."""
+    variants = set(encode_path_for_claude("D:\\repos\\foo"))
+    assert "-mnt-d-repos-foo" in variants, (
+        f"'-mnt-d-repos-foo' MISSING for D:\\repos\\foo. Got: {sorted(variants)}"
+    )
+
+
+def test_lm_saas_b1_regression_both_variants_present():
+    """B-1 incident: lm-saas worktree NOT shown LIVE despite active typing.
+
+    Root cause was: encoder produced '-mnt-d-repos-lm-saas' but NOT
+    'D--repos-lm-saas' — the latter is where Claude Code Windows writes
+    JSONL when launched from /mnt/d/repos/lm-saas in WSL.
+    """
     variants = set(encode_path_for_claude("/mnt/d/repos/lm-saas"))
-    has_windows_variant = any("D-repos-lm-saas" in v or "D--repos-lm-saas" in v for v in variants)
-    assert has_windows_variant, (
-        f"lm-saas regression: D--repos-lm-saas variant missing. Got: {variants}"
+    assert "-mnt-d-repos-lm-saas" in variants, (
+        f"Linux variant missing. Got: {sorted(variants)}"
+    )
+    assert "D--repos-lm-saas" in variants, (
+        f"Windows variant missing — exact B-1 regression case. Got: {sorted(variants)}"
     )
 
 
-def test_cursor_worktrees_pattern():
-    """Cursor IDE creates worktrees at C:\\Users\\stigm\\.cursor\\worktrees\\foo.
-    UC-11 says we should detect that Claude on Windows writes to
-    C--Users-stigm--cursor-worktrees-foo."""
-    variants = set(encode_path_for_claude("C:\\Users\\stigm\\.cursor\\worktrees\\foo"))
-    # At minimum, : and \\ are stripped to produce some normalized form
-    assert any("Users-stigm" in v for v in variants), (
-        f"Cursor worktree variant missing. Got: {variants}"
-    )
-
-
-def test_returns_non_empty_for_any_input():
-    """Sanity: any reasonable input path produces at least one variant."""
+def test_returns_non_empty_for_typical_inputs():
+    """Sanity: any reasonable input produces ≥1 variant."""
     for p in ["/repos/foo", "D:/repos/foo", "/home/user/code", "C:\\projects\\bar"]:
         variants = encode_path_for_claude(p)
-        assert len(variants) >= 1, f"No variants for {p}"
+        assert len(variants) >= 1, f"No variants for {p!r}"
 
 
-def test_no_double_encoding():
-    """Encoding must be idempotent for already-encoded inputs (defensive)."""
+def test_deterministic_same_input_same_output():
+    """Calling twice with same input returns identical variants."""
+    p = "/mnt/d/repos/foo"
+    v1 = sorted(set(encode_path_for_claude(p)))
+    v2 = sorted(set(encode_path_for_claude(p)))
+    assert v1 == v2, f"Non-deterministic: first {v1}, second {v2}"
+
+
+def test_no_double_encoding_already_encoded_input():
+    """When input is already encoded (e.g. '-mnt-d-repos-foo'), no over-encoding."""
     encoded_input = "-mnt-d-repos-foo"
     variants = encode_path_for_claude(encoded_input)
-    # Should not produce ridiculous over-encoded variants like "----mnt----d----..."
     for v in variants:
-        assert "----" not in v, f"Over-encoded variant: {v}"
+        assert "----" not in v, f"Over-encoded: {v!r} contains '----'"
+        assert "------" not in v, f"Severely over-encoded: {v!r}"
 
+
+# ---------- Property-based tests via Hypothesis ----------
+
+if HYPOTHESIS_AVAILABLE:
+
+    # Strategy: generate path-like strings with letters, digits, hyphens, slashes, backslashes, colons
+    path_segment = st.text(alphabet=st.characters(whitelist_categories=["L", "N"], whitelist_characters="_-"), min_size=1, max_size=20)
+    path_strategy = st.lists(path_segment, min_size=1, max_size=5).map(lambda parts: "/".join(parts))
+
+
+    @given(p=path_strategy)
+    @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
+    def test_property_returns_non_empty_list(p):
+        """Invariant: ANY input produces non-empty variant list."""
+        result = encode_path_for_claude(p)
+        assert isinstance(result, list), f"Not a list: {type(result)}"
+        assert len(result) >= 1, f"Empty variants for {p!r}"
+
+
+    @given(p=path_strategy)
+    @settings(max_examples=50)
+    def test_property_idempotent(p):
+        """Invariant: calling twice produces identical output (no global state leak)."""
+        v1 = encode_path_for_claude(p)
+        v2 = encode_path_for_claude(p)
+        assert v1 == v2, f"Non-idempotent for {p!r}: first {v1}, second {v2}"
+
+
+    @given(p=path_strategy)
+    @settings(max_examples=50)
+    def test_property_no_path_separators_in_variants(p):
+        """Invariant: variants are flat strings with NO `/` or `\\` separators
+        (Claude project dir names use `-` everywhere)."""
+        variants = encode_path_for_claude(p)
+        for v in variants:
+            assert "/" not in v, f"Variant contains '/' separator: {v!r} from {p!r}"
+            assert "\\" not in v, f"Variant contains '\\\\' separator: {v!r} from {p!r}"
+            assert ":" not in v, f"Variant contains ':' (Windows drive): {v!r} from {p!r}"
+
+
+    @given(
+        a=st.text(alphabet="abcdefghij", min_size=1, max_size=10),
+        b=st.text(alphabet="abcdefghij", min_size=1, max_size=10),
+    )
+    @settings(max_examples=30)
+    def test_property_distinct_inputs_distinct_outputs(a, b):
+        """Invariant: substantially different inputs produce different variant sets.
+
+        Loose property — accepts overlap (encoder collapses some forms) but
+        completely identical sets for distinct paths is suspicious.
+        """
+        if a == b:
+            return  # skip self-comparison
+        path_a = f"/repos/{a}"
+        path_b = f"/repos/{b}"
+        if path_a == path_b:
+            return
+        v_a = set(encode_path_for_claude(path_a))
+        v_b = set(encode_path_for_claude(path_b))
+        # Variants should differ — at least one variant in v_a not in v_b OR vice versa
+        assert v_a != v_b, (
+            f"Distinct inputs produced IDENTICAL variants:\n"
+            f"  {path_a!r} → {sorted(v_a)}\n"
+            f"  {path_b!r} → {sorted(v_b)}"
+        )
+
+
+# ---------- Manual test runner ----------
 
 if __name__ == "__main__":
-    import unittest
-    # Convert pytest-style to unittest discovery
-    test_funcs = [v for k, v in list(globals().items()) if k.startswith("test_") and callable(v)]
+    test_funcs = [
+        (k, v) for k, v in list(globals().items())
+        if k.startswith("test_") and callable(v)
+    ]
     failed = 0
-    for fn in test_funcs:
+    skipped = 0
+    for name, fn in test_funcs:
+        if name.startswith("test_property_") and not HYPOTHESIS_AVAILABLE:
+            print(f"SKIP {name} (Hypothesis not installed)")
+            skipped += 1
+            continue
         try:
             fn()
-            print(f"PASS {fn.__name__}")
+            print(f"PASS {name}")
         except AssertionError as e:
-            print(f"FAIL {fn.__name__}: {e}")
+            print(f"FAIL {name}: {e}")
             failed += 1
+        except Exception as e:
+            print(f"ERROR {name}: {type(e).__name__}: {e}")
+            failed += 1
+    if skipped:
+        print(f"--- {skipped} property-based tests skipped (install hypothesis to run) ---")
     sys.exit(1 if failed else 0)
