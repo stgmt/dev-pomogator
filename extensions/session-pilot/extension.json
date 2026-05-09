@@ -1,0 +1,23 @@
+{
+  "name": "session-pilot",
+  "version": "0.1.0",
+  "description": "Live multi-repo worktree dashboard with Claude session indicators (LIVE/idle/none), one-click claude --resume launch into Zellij Web Client, multi-key shift+click sort, virtual-scrolled table, full-message modal, parallel JSONL scan with SWR cache. Pairs with Zellij Web Client (port 8082) on dashboard port 8083.",
+  "platforms": ["claude"],
+  "category": "developer-experience",
+  "tools": {
+    "session-pilot": "tools/session-pilot"
+  },
+  "toolFiles": {
+    "session-pilot": [
+      ".dev-pomogator/tools/session-pilot/server.py",
+      ".dev-pomogator/tools/session-pilot/start-server.sh",
+      ".dev-pomogator/tools/session-pilot/zclaude",
+      ".dev-pomogator/tools/session-pilot/scripts/demo-zellij-install.sh",
+      ".dev-pomogator/tools/session-pilot/scripts/demo-zellij-setup.sh",
+      ".dev-pomogator/tools/session-pilot/scripts/demo-spawn-sessions.sh",
+      ".dev-pomogator/tools/session-pilot/scripts/demo-dump-sessions.sh",
+      ".dev-pomogator/tools/session-pilot/tests/check-api.py",
+      ".dev-pomogator/tools/session-pilot/tests/test-etag.sh"
+    ]
+  }
+}
