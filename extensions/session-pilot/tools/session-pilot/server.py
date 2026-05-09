@@ -27,7 +27,7 @@ CLAUDE_PROJECTS_DIRS = [
     Path.home() / ".claude" / "projects",                     # WSL/Linux Claude
     Path("/mnt/c/Users") / os.environ.get("WINUSER", "stigm") / ".claude" / "projects",  # Windows native
 ]
-RUNNING_THRESHOLD_SEC = 90  # JSONL modified in last 90s = "running now"
+RUNNING_THRESHOLD_SEC = int(os.environ.get("LIVE_THRESHOLD_SEC", "300"))  # JSONL modified in last Ns = "running now". Default 300 (5 min) because Claude Code batches JSONL writes ~every 2-3 min during active typing — 90s misses real activity
 
 
 def discover_repos() -> list[Path]:
@@ -627,6 +627,23 @@ function applySort(rows) {
 }
 loadIndex();
 setInterval(loadIndex, 30000);
+
+// Refresh on tab focus (Chrome throttles setInterval on hidden tabs)
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) {
+    setProgress(0, 'Tab focused — refreshing…');
+    loadIndex();
+  }
+});
+
+// Force-clear cache button (for SWR debugging / stale states)
+window.addEventListener('keydown', (e) => {
+  if (e.ctrlKey && e.shiftKey && e.key === 'Backspace') {
+    Object.keys(localStorage).filter(k => k.startsWith('wtdash_v3_')).forEach(k => localStorage.removeItem(k));
+    setProgress(0, 'Cache cleared. Reloading…');
+    loadIndex();
+  }
+});
 </script>
 </body></html>
 """
@@ -690,7 +707,87 @@ class Handler(BaseHTTPRequestHandler):
         pass
 
 
+def diagnose_livecycle(worktree_path: str) -> int:
+    """Diagnostic CLI: dump every encoding variant + glob match + per-file mtime for a worktree.
+
+    Usage: python server.py --diagnose-livecycle /mnt/d/repos/lm-saas
+    """
+    print(f"=== diagnose-livecycle for: {worktree_path}")
+    variants = encode_path_for_claude(worktree_path)
+    print(f"\nEncoding variants ({len(variants)}):")
+    for v in sorted(set(variants)):
+        print(f"  - {v}")
+
+    print(f"\nClaude project base dirs ({len(CLAUDE_PROJECTS_DIRS)}):")
+    for d in CLAUDE_PROJECTS_DIRS:
+        exists = "✓ exists" if d.exists() else "✗ missing"
+        print(f"  - {d}  [{exists}]")
+
+    now = time.time()
+    total_jsonls = 0
+    matches: list[dict] = []
+    for base in CLAUDE_PROJECTS_DIRS:
+        if not base.exists():
+            continue
+        for proj in base.iterdir():
+            name = proj.name
+            match = (
+                name in variants
+                or any(name.endswith(v.lstrip("-")) for v in variants if len(v) > 4)
+                or any(v.lstrip("-").endswith(name) for v in variants if len(name) > 8)
+            )
+            if not match:
+                continue
+            for jsonl in proj.glob("*.jsonl"):
+                try:
+                    st = jsonl.stat()
+                    age = now - st.st_mtime
+                    matches.append({
+                        "path": str(jsonl), "size": st.st_size,
+                        "mtime": st.st_mtime, "age_sec": int(age),
+                    })
+                    total_jsonls += 1
+                except OSError:
+                    pass
+
+    print(f"\nMatched JSONLs ({len(matches)}):")
+    matches.sort(key=lambda m: m["age_sec"])
+    for m in matches[:20]:
+        live_marker = "🟢 LIVE" if m["age_sec"] < RUNNING_THRESHOLD_SEC else f"   {m['age_sec']}s"
+        print(f"  {live_marker:10s}  {m['size']:>8}b  {m['path']}")
+    if len(matches) > 20:
+        print(f"  ... and {len(matches) - 20} more")
+
+    if not matches:
+        print(f"\n❌ NO MATCHES — investigate. Encoding variants don't match any Claude project dir name.")
+        print(f"   List Claude project dirs found:")
+        for base in CLAUDE_PROJECTS_DIRS:
+            if base.exists():
+                names = sorted([p.name for p in base.iterdir() if p.is_dir()])[:30]
+                print(f"   {base}:")
+                for n in names:
+                    print(f"     {n}")
+        return 1
+
+    youngest = matches[0]["age_sec"]
+    print(f"\nVerdict:")
+    if youngest < RUNNING_THRESHOLD_SEC:
+        print(f"  🟢 LIVE — youngest JSONL is {youngest}s old (< {RUNNING_THRESHOLD_SEC}s threshold)")
+    else:
+        print(f"  ⚪ idle — youngest JSONL is {youngest}s old (> {RUNNING_THRESHOLD_SEC}s threshold)")
+        print(f"     If you're actively typing, raise threshold via: LIVE_THRESHOLD_SEC=300 python server.py")
+
+    return 0
+
+
 if __name__ == "__main__":
+    import sys
+    if len(sys.argv) >= 2 and sys.argv[1] == "--diagnose-livecycle":
+        if len(sys.argv) < 3:
+            print("Usage: python server.py --diagnose-livecycle <worktree-path>", file=sys.stderr)
+            sys.exit(2)
+        sys.exit(diagnose_livecycle(sys.argv[2]))
+
     bind = os.environ.get("WT_DASHBOARD_BIND", "0.0.0.0")
     print(f"Worktree dashboard listening on http://{bind}:{PORT}", flush=True)
     HTTPServer((bind, PORT), Handler).serve_forever()
