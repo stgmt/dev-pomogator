@@ -136,11 +136,15 @@ def encode_path_for_claude(p: str) -> list[str]:
         rest = p[6:]
         win = f"{drive}-{rest.replace('/', '-').replace(':', '')}"
         variants.add(win)
-    # If path starts with X:/, also try -mnt-x-... encoding
+    # If path starts with X:/, also try -mnt-x-... encoding (WSL Claude target)
+    # AND X--rest encoding (Windows Claude canonical with DOUBLE dash between drive and rest —
+    # this is what Claude actually writes; single-dash form misses real JSONL dirs)
     if len(p) >= 3 and p[1] == ":" and p[2] in ("/", "\\"):
-        drive = p[0].lower()
+        drive_lo = p[0].lower()
+        drive_up = p[0].upper()
         rest = p[3:].replace("\\", "-").replace("/", "-")
-        variants.add(f"-mnt-{drive}-{rest}")
+        variants.add(f"-mnt-{drive_lo}-{rest}")
+        variants.add(f"{drive_up}--{rest}")  # canonical Windows form: D--repos-foo
     return [v.lstrip("-") for v in variants] + [v for v in variants if v.startswith("-")] + list(variants)
 
 
