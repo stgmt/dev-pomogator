@@ -932,7 +932,7 @@ function render() {
       <td class="ts ${loadingCell}">${row._claude_loaded ? escapeHtml(lastTs ? lastTs.replace('T',' ').slice(0, 19) : '—') : '…'}</td>
       <td class="last-msg ${loadingCell}" ${top?.uuid ? `onclick="openMsgModal(${JSON.stringify(row.worktree_path)}, ${JSON.stringify(top.uuid)}, ${(top.msg_count || 1) - 1})" title="Click to view full message + neighbours"` : ''}>${row._claude_loaded ? (role ? `<span class="role-${role}">${role}:</span> ` : '') + escapeHtml(lastText) : 'scanning JSONL…'}</td>
       <td class="num">${row._claude_loaded ? (top?.msg_count ?? '—') : '…'}</td>
-      <td class="git" id="git-${escapeHtml(row.worktree_path)}">${formatGitStatus(row._git_status)}</td>
+      <td class="git">${formatGitStatus(row._git_status)}</td>
       <td class="session ${row.session_active ? 'active' : 'inactive'}">${escapeHtml(row.session_name)}${row.session_active ? ' ●' : ''}</td>
       <td class="actions">
         ${(() => {
