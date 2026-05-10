@@ -102,7 +102,8 @@ jobs:
             > /tmp/sp-server.log 2>&1 < /dev/null &
           echo $! > /tmp/sp-server.pid
           sleep 2
-          curl -fsS http://127.0.0.1:8083/api/index | python3 -c "import json,sys; d=json.load(sys.stdin); print(f'rows: {len(d[chr(34)+chr(114)+chr(111)+chr(119)+chr(115)+chr(34)])}')"
+          curl -fsS http://127.0.0.1:8083/api/index > /tmp/sp-index.json
+          python3 -c "import json; d=json.load(open('/tmp/sp-index.json')); print(f'rows: {len(d[\"rows\"])}')"
 
       - name: Run unit + integration + e2e tests
         run: |
