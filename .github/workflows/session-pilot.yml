@@ -128,9 +128,13 @@ jobs:
         run: |
           set -e
           VENV=$HOME/.cache/session-pilot-venv
-          MUT=$GITHUB_WORKSPACE/extensions/session-pilot/tools/session-pilot/tests/mutation_target
-          # Refresh mutation_target with latest source
-          bash $GITHUB_WORKSPACE/.dev-pomogator-mutmut-prep.sh
+          T=$GITHUB_WORKSPACE/extensions/session-pilot/tools/session-pilot/tests
+          MUT=$T/mutation_target
+          # Refresh mutation_target with latest source from tests/ — inline
+          # because the previous helper script was gitignored as scratch (see
+          # /.dev-pomogator-*.sh entry in .gitignore — never committed).
+          cp "$T/encode_path_module.py" "$MUT/encode_path_module.py"
+          cp "$T/test_encode_path_module.py" "$MUT/test_encode_path_module.py"
           cd $MUT
           rm -rf mutants
           PATH="$VENV/bin:$PATH" timeout 300 mutmut run 2>&1 | tail -3 || true
