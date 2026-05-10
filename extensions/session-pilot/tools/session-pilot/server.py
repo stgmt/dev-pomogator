@@ -668,7 +668,7 @@ function render() {
     else if (row.claude_running_now) status = '<span class="status live">● LIVE</span>';
     else if (row.claude_last_modified) {
       const ageMin = Math.floor((Date.now()/1000 - new Date(row.claude_last_modified).getTime()/1000) / 60);
-      status = `<span class="status idle">idle ${ageMin}m</span>`;
+      status = `<span class="status idle">idle ${formatIdle(ageMin)}</span>`;
     }
     else status = '<span class="status none">—</span>';
     const top = (row.claude_sessions || [])[0];
@@ -712,6 +712,17 @@ function render() {
   document.getElementById('tbl').innerHTML = html;
 }
 function escapeHtml(s) { return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function formatIdle(totalMin) {
+  // Human-readable idle duration. <60m: "Nm". <24h: "Nh Mm". >=24h: "Nd Hh Mm".
+  const m = Math.max(0, Math.floor(totalMin));
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  const mins = m % 60;
+  if (h < 24) return mins ? `${h}h ${mins}m` : `${h}h`;
+  const d = Math.floor(h / 24);
+  const hours = h % 24;
+  return mins ? `${d}d ${hours}h ${mins}m` : (hours ? `${d}d ${hours}h` : `${d}d`);
+}
 function sortHdr(label, key) {
   const arrow = window._sortBy === key ? (window._sortDir === 'asc' ? ' ▲' : ' ▼') : '';
   return `<th class="sortable" onclick="setSort('${key}')">${label}${arrow}</th>`;

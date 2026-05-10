@@ -105,7 +105,17 @@ def test_cli_no_match_path_returns_exit_1_with_diagnostic():
 
 
 def test_cli_dev_pomogator_finds_jsonls_for_active_session():
-    """Smoke test: dev-pomogator worktree (this conversation lives there) MUST have ≥1 JSONL match."""
+    """Smoke test: dev-pomogator worktree (this conversation lives there) MUST have ≥1 JSONL match.
+
+    Environment-gated: only meaningful where Claude history actually exists.
+    Skips cleanly on CI/clean runners that have no ~/.claude/projects (otherwise
+    the test would always fail there — false negative, not encoding regression).
+    """
+    home_claude = Path.home() / ".claude" / "projects"
+    if not home_claude.exists():
+        print(f"SKIP test_cli_dev_pomogator_finds_jsonls_for_active_session: "
+              f"{home_claude} does not exist (CI/clean runner — no Claude history)")
+        return
     rc, stdout, _ = _run_diagnose("/mnt/d/repos/dev-pomogator")
     # Active session ⇒ should have matches; no matches would be suspicious
     if "NO MATCHES" in stdout:
