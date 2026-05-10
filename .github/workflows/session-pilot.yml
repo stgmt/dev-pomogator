@@ -1,0 +1,182 @@
+name: session-pilot tests
+
+on:
+  push:
+    branches:
+      - feat/session-pilot
+      - main
+    paths:
+      - 'extensions/session-pilot/**'
+      - '.github/workflows/session-pilot.yml'
+  pull_request:
+    paths:
+      - 'extensions/session-pilot/**'
+      - '.github/workflows/session-pilot.yml'
+
+jobs:
+  test:
+    name: Backend + frontend + mutation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Cache venv
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/session-pilot-venv
+            ~/.cache/ms-playwright
+          key: ${{ runner.os }}-sp-venv-${{ hashFiles('.github/workflows/session-pilot.yml') }}
+
+      - name: Setup venv (hypothesis + mutmut + playwright)
+        run: |
+          set -e
+          VENV=$HOME/.cache/session-pilot-venv
+          if [ ! -d "$VENV" ]; then
+            python3 -m venv "$VENV"
+          fi
+          "$VENV/bin/pip" install --quiet --upgrade pip
+          "$VENV/bin/pip" install --quiet hypothesis mutmut playwright
+          "$VENV/bin/playwright" install firefox
+
+      - name: Install Zellij (musl prebuilt)
+        run: |
+          set -e
+          ZJ_VERSION=0.44.2
+          mkdir -p ~/.local/bin
+          curl -fsSL "https://github.com/zellij-org/zellij/releases/download/v${ZJ_VERSION}/zellij-x86_64-unknown-linux-musl.tar.gz" \
+            | tar -xz -C ~/.local/bin
+          chmod +x ~/.local/bin/zellij
+          ~/.local/bin/zellij --version
+          # Enable web client (needed by /api/launch URLs but not strictly tested in CI)
+          mkdir -p ~/.config/zellij
+          cat > ~/.config/zellij/config.kdl <<EOF
+          web_server true
+          web_sharing "on"
+          web_server_ip "127.0.0.1"
+          web_server_port 8082
+          EOF
+
+      - name: Start session-pilot server (background)
+        run: |
+          set -e
+          SCRIPT=$GITHUB_WORKSPACE/extensions/session-pilot/tools/session-pilot/server.py
+          # Bind to 127.0.0.1 only (tests use SP_SERVER=http://localhost:8083)
+          WT_DASHBOARD_BIND=127.0.0.1 setsid python3 "$SCRIPT" > /tmp/sp-server.log 2>&1 < /dev/null &
+          echo $! > /tmp/sp-server.pid
+          # Wait for /api/health
+          for i in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:8083/api/health >/dev/null 2>&1; then
+              echo "server ready (PID $(cat /tmp/sp-server.pid))"
+              exit 0
+            fi
+            sleep 0.5
+          done
+          echo "server failed to start; log:"
+          cat /tmp/sp-server.log
+          exit 1
+
+      - name: Configure synthetic worktree (CI runner has no real repos)
+        run: |
+          set -e
+          # CI runner has only this repo. Add 1-2 synthetic dirs so /api/index has rows
+          # and tests that depend on _first_worktree() succeed.
+          mkdir -p ~/repos/synthetic-foo ~/repos/synthetic-bar
+          (cd ~/repos/synthetic-foo && git init -q && git config user.email ci@x && git config user.name ci && git commit -q --allow-empty -m initial)
+          (cd ~/repos/synthetic-bar && git init -q && git config user.email ci@x && git config user.name ci && git commit -q --allow-empty -m initial)
+          # REPOS env var on later steps tells server.py where to scan
+          echo "REPOS=$HOME/repos/synthetic-foo:$HOME/repos/synthetic-bar:$GITHUB_WORKSPACE" >> $GITHUB_ENV
+          # Restart server with REPOS env active
+          kill $(cat /tmp/sp-server.pid) 2>/dev/null || true
+          sleep 1
+          REPOS="$HOME/repos/synthetic-foo:$HOME/repos/synthetic-bar:$GITHUB_WORKSPACE" \
+            WT_DASHBOARD_BIND=127.0.0.1 \
+            setsid python3 "$GITHUB_WORKSPACE/extensions/session-pilot/tools/session-pilot/server.py" \
+            > /tmp/sp-server.log 2>&1 < /dev/null &
+          echo $! > /tmp/sp-server.pid
+          sleep 2
+          curl -fsS http://127.0.0.1:8083/api/index | python3 -c "import json,sys; d=json.load(sys.stdin); print(f'rows: {len(d[chr(34)+chr(114)+chr(111)+chr(119)+chr(115)+chr(34)])}')"
+
+      - name: Run unit + integration + e2e tests
+        run: |
+          set -e
+          VENV=$HOME/.cache/session-pilot-venv
+          T=$GITHUB_WORKSPACE/extensions/session-pilot/tools/session-pilot/tests
+          PASS=0
+          FAIL=0
+          for f in test_encode_path test_launch_idempotent test_e2e test_diagnose_cli test_frontend_smoke test_encode_path_module test_frontend_e2e; do
+            r=$("$VENV/bin/python" "$T/$f.py" 2>&1) || true
+            p=$(echo "$r" | grep -c "^PASS" || true)
+            fl=$(echo "$r" | grep -c -E "^(FAIL|ERROR)" || true)
+            printf "%-30s pass=%2s fail=%s\n" "$f" "$p" "$fl"
+            if [ "$fl" != "0" ]; then echo "$r"; fi
+            PASS=$((PASS+p))
+            FAIL=$((FAIL+fl))
+          done
+          echo "TOTAL pass=$PASS fail=$FAIL"
+          if [ "$FAIL" != "0" ]; then exit 1; fi
+
+      - name: Run mutation testing (mutmut)
+        run: |
+          set -e
+          VENV=$HOME/.cache/session-pilot-venv
+          MUT=$GITHUB_WORKSPACE/extensions/session-pilot/tools/session-pilot/tests/mutation_target
+          # Refresh mutation_target with latest source
+          bash $GITHUB_WORKSPACE/.dev-pomogator-mutmut-prep.sh
+          cd $MUT
+          rm -rf mutants
+          PATH="$VENV/bin:$PATH" timeout 300 mutmut run 2>&1 | tail -3 || true
+
+          # Parse meta JSON for kill rate
+          PATH="$VENV/bin:$PATH" python3 <<'PY'
+          import json, sys, pathlib
+          meta = pathlib.Path("mutants/encode_path_module.py.meta")
+          if not meta.exists():
+              print("ERROR: mutmut meta missing"); sys.exit(1)
+          d = json.loads(meta.read_text())
+          codes = d.get("exit_code_by_key", {})
+          total = len(codes)
+          killed = sum(1 for v in codes.values() if v == 1)
+          survived = sum(1 for v in codes.values() if v == 0)
+          rate = 100 * killed / total if total else 0
+          print(f"Total: {total} | Killed: {killed} | Survived: {survived} | Rate: {rate:.1f}%")
+          # Fail if below threshold
+          THRESHOLD = 70.0
+          if rate < THRESHOLD:
+              print(f"FAIL: kill rate {rate:.1f}% < threshold {THRESHOLD}%")
+              sys.exit(1)
+          PY
+
+      - name: Spec audit (read-only)
+        run: |
+          set -e
+          if [ -d .specs/session-pilot ]; then
+            cd $GITHUB_WORKSPACE
+            npx --yes tsx extensions/specs-workflow/tools/specs-generator/audit-spec.ts -Path .specs/session-pilot \
+              | python3 -c "import json,sys; d=json.load(sys.stdin); errs=sum(1 for f in d['findings'] if f['severity']=='ERROR'); print(f'severity=ERROR: {errs}'); sys.exit(1 if errs else 0)"
+          fi
+
+      - name: Extension layout validation
+        run: npx --yes tsx extensions/_shared/extension-layout-validate.ts
+
+      - name: Show server log on failure
+        if: failure()
+        run: |
+          echo "--- /tmp/sp-server.log ---"
+          cat /tmp/sp-server.log || true
+
+      - name: Cleanup
+        if: always()
+        run: |
+          kill $(cat /tmp/sp-server.pid 2>/dev/null) 2>/dev/null || true
+          # Delete any test Zellij sessions
+          for s in $(~/.local/bin/zellij list-sessions --no-formatting 2>/dev/null | awk '{print $1}' | grep '^sp-' || true); do
+            ~/.local/bin/zellij delete-session --force "$s" 2>/dev/null || true
+          done
