@@ -3,7 +3,7 @@
 > Each story uses the User Story Form (v3). Required fields per block:
 > `(Priority: P1|P2|P3)` in heading + **Why:** + **Independent Test:** + **Acceptance Scenarios:** (inline Given/When/Then).
 
-### User Story 1: Multi-repo worktree dashboard with meaningful info (Priority: P1)
+### User Story 1: Multi-repo worktree dashboard with meaningful info @feature1 @feature2 @feature3 @feature6 @feature9 @feature12 @feature14 @feature17 (Priority: P1)
 
 As a developer with 10+ active worktrees, I want to see all my Claude sessions in one browser page with repo + branch + worktree path + HEAD + last activity + last message preview, чтобы быстро вспомнить над чем работал.
 
@@ -19,7 +19,7 @@ Then table shows all git worktrees from configured repos with all 10 columns pop
 
 ---
 
-### User Story 2: One-click Claude resume (Priority: P1)
+### User Story 2: One-click Claude resume @feature4 @feature11 (Priority: P1)
 
 As a developer, I want to click [▶ Resume] button in a row to launch `claude --resume <uuid>` in a Zellij session for that worktree, чтобы не печатать команду руками.
 
@@ -39,7 +39,7 @@ And browser navigates to `http://localhost:8082/?session=<repo>__<branch>` via `
 
 ---
 
-### User Story 3: Reboot survival via SessionStart hook (Priority: P1)
+### User Story 3: Reboot survival via SessionStart hook @feature7 @feature13 (Priority: P1)
 
 As a developer who reboots Windows daily, I want dashboard server to autostart on login + Zellij sessions to be restorable, чтобы не настраивать всё заново после каждого reboot.
 
@@ -58,7 +58,7 @@ And Zellij Web Client at localhost:8082 shows previously-active sessions (via Ze
 
 ---
 
-### User Story 4: Pagination — top 20 first paint (Priority: P1)
+### User Story 4: Pagination — top 20 first paint @feature8 @feature9 (Priority: P1)
 
 As a developer with 45 worktrees, I want top 20 most-recent sessions to appear within 1 second, остальные подгружаются прозрачно в фоне без блокировки UI.
 
@@ -77,7 +77,7 @@ And background workers continue enrichment without blocking UI scroll/sort/filte
 
 ---
 
-### User Story 5: Modal for full last message (Priority: P2)
+### User Story 5: Modal for full last message @feature5 @feature10 (Priority: P2)
 
 As a developer, I want to click on the truncated "Last message" cell to see full message in a modal with prev/next navigation, чтобы вспомнить контекст.
 
@@ -96,7 +96,7 @@ And ESC key closes the dialog (browser default)
 
 ---
 
-### User Story 6: Multi-key sort with libs (Priority: P2)
+### User Story 6: Multi-key sort with libs @feature8 (Priority: P2)
 
 As a developer, I want shift+click multi-key sort: primary by Repo, secondary by Last Activity, чтобы увидеть мои репо сгруппированно с свежими сверху.
 
@@ -116,7 +116,7 @@ And secondary sort by Last Activity DESC within each Repo group
 
 ---
 
-### User Story 7: Plugin distribution + skill (Priority: P2)
+### User Story 7: Plugin distribution + skill @feature16 @feature18 @feature19 @feature20 (Priority: P2)
 
 As a maintainer, I want session-pilot delivered as a versioned dev-pomogator extension with paired skill + spec, чтобы новые контрибы могли работать с ним без потери знаний.
 
@@ -135,7 +135,7 @@ And `Skill("session-pilot")` triggers respond to "open dashboard" / "launch clau
 
 ---
 
-### User Story 8: Cross-OS access (Priority: P2)
+### User Story 8: Cross-OS access @feature15 @feature17 (Priority: P2)
 
 As a developer using both WSL Ubuntu (for the server) and Windows host (for the browser), I want dashboard accessible from BOTH localhost endpoints, чтобы не настраивать proxy руками.
 
@@ -150,25 +150,6 @@ And `netsh portproxy add v4tov4 listenport=8083 connectaddress=<WSL_IP>` configu
 When user opens browser on Windows host
 Then `http://localhost:8083` returns dashboard HTML
 And `http://localhost:8083/api/index` returns JSON same as from WSL curl
-
-## Feature tag map (US ↔ @featureN)
-
-For traceability between user stories and BDD scenarios in
-[session-pilot.feature](session-pilot.feature). Audit
-FEATURE_TAG_PROPAGATION verifies every @featureN in .feature
-appears in this file.
-
-| User Story | Covered features |
-|------------|------------------|
-| US-1: Multi-repo dashboard | @feature1 @feature2 @feature9 @feature17 |
-| US-2: One-click Resume | @feature4 @feature11 |
-| US-3: Reboot survival | @feature13 @feature7 |
-| US-4: Pagination top-20 | @feature9 @feature8 |
-| US-5: Modal viewer | @feature5 @feature10 |
-| US-6: Multi-key sort | @feature8 |
-| US-7: Plugin distribution | @feature16 @feature18 @feature19 @feature20 |
-| US-8: Cross-OS access | @feature15 @feature17 |
-| Cross-cutting | @feature3 @feature6 @feature12 @feature14 |
 
 ## Risk Assessment
 

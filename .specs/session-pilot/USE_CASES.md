@@ -1,6 +1,6 @@
 # Use Cases
 
-## UC-1: Open dashboard and see all worktrees with last activity
+## UC-1: Open dashboard and see all worktrees with last activity @feature1 @feature2 @feature12 @feature18
 
 Developer with 10+ active worktrees opens `http://localhost:8083` to find which worktree has recent Claude activity.
 
@@ -9,7 +9,7 @@ Developer with 10+ active worktrees opens `http://localhost:8083` to find which 
 - See LIVE 🟢 indicators on currently-active worktrees
 - Click row to inspect last_message preview
 
-## UC-2: Reload dashboard quickly via SWR cache
+## UC-2: Reload dashboard quickly via SWR cache @feature9
 
 Developer reloads dashboard frequently throughout day (alt-tab, switch windows). Most reloads hit localStorage cache.
 
@@ -18,7 +18,7 @@ Developer reloads dashboard frequently throughout day (alt-tab, switch windows).
 - Only 7 stale rows trigger fetch with If-None-Match → server returns 304
 - Total reload <300ms
 
-## UC-3: Launch claude --resume in Zellij with one click
+## UC-3: Launch claude --resume in Zellij with one click @feature4
 
 Developer wants to continue work on feature/auth worktree from yesterday.
 
@@ -28,7 +28,7 @@ Developer wants to continue work on feature/auth worktree from yesterday.
 - `mcp__claude-in-chrome__navigate` opens `http://localhost:8082/?session=<repo>__feature_auth`
 - Developer is in Zellij with claude bootstrapped
 
-## UC-4: Inspect full last message in modal
+## UC-4: Inspect full last message in modal @feature5 @feature10
 
 Developer sees truncated last_message preview in row, wants full context.
 
@@ -37,7 +37,7 @@ Developer sees truncated last_message preview in row, wants full context.
 - Click [Prev]/[Next] to navigate adjacent messages in same session
 - Press Esc to close
 
-## UC-5: View per-worktree git status
+## UC-5: View per-worktree git status @feature6
 
 Developer wants to know which worktree has uncommitted changes before switching.
 
@@ -45,7 +45,7 @@ Developer wants to know which worktree has uncommitted changes before switching.
 - Sort by git status to find dirtiest worktree first
 - Open in VSCode via [📂 VSCode] action button
 
-## UC-6: SessionStart autostart after reboot
+## UC-6: SessionStart autostart after reboot @feature7 @feature13
 
 Developer reboots Windows daily.
 
@@ -54,7 +54,7 @@ Developer reboots Windows daily.
 - Script: read PID, kill -0 check; if dead → setsid python3 server.py &
 - `curl http://localhost:8083/api/health` returns 200 within 2s
 
-## UC-7: Multi-key shift+click sort
+## UC-7: Multi-key shift+click sort @feature8
 
 Developer with 8 repos × 5 worktrees = 40 rows wants to group by repo, sorted by activity within.
 
@@ -62,7 +62,7 @@ Developer with 8 repos × 5 worktrees = 40 rows wants to group by repo, sorted b
 - Shift+click "Last Activity" header → secondary sort DESC within each repo
 - Tabulator handles natively, no custom code
 
-## UC-8: Spawn fresh Claude in new worktree
+## UC-8: Spawn fresh Claude in new worktree @feature11
 
 Developer creates new feature branch, wants fresh Claude (no resume).
 
@@ -72,7 +72,7 @@ Developer creates new feature branch, wants fresh Claude (no resume).
 - Backend creates Zellij session named `<repo>__feat_X` with KDL layout `command "claude" cwd "<wt>"`
 - Open Zellij, claude is running
 
-## UC-9: Cross-OS access from Windows browser to WSL server
+## UC-9: Cross-OS access from Windows browser to WSL server @feature15 @feature16 @feature17
 
 Developer's server runs in WSL Ubuntu, browser is on Windows.
 
@@ -80,7 +80,7 @@ Developer's server runs in WSL Ubuntu, browser is on Windows.
 - Open `http://localhost:8083` in Edge on Windows
 - Same response as from `curl http://127.0.0.1:8083` inside WSL
 
-## UC-10: Diagnose missing LIVE indicator
+## UC-10: Diagnose missing LIVE indicator @feature3 @feature19 @feature20
 
 Developer is actively working in lm-saas but dashboard shows it as idle.
 
@@ -89,7 +89,7 @@ Developer is actively working in lm-saas but dashboard shows it as idle.
 - Set `LIVE_THRESHOLD_SEC=300` and restart server
 - Verify lm-saas now LIVE 🟢 in dashboard
 
-## UC-11: Edge — JSONL written to unexpected encoding
+## UC-11: Edge — JSONL written to unexpected encoding @feature14
 
 Developer's Cursor IDE creates worktree at `C:\Users\stigm\.cursor\worktrees\foo` — Claude JSONL written to `C--Users-stigm--cursor-worktrees-foo`.
 
@@ -97,23 +97,3 @@ Developer's Cursor IDE creates worktree at `C:\Users\stigm\.cursor\worktrees\foo
 - Add new variant generation rule to `encode_path_for_claude()` covering `\\.cursor\\worktrees\\` paths
 - Regression test in `tests/test_encode_path.py`
 
-## Feature tag map (UC ↔ @featureN)
-
-For traceability between use cases and BDD scenarios in
-[session-pilot.feature](session-pilot.feature). Audit
-FEATURE_TAG_PROPAGATION verifies every @featureN in .feature
-appears here.
-
-| Use Case | Covered features |
-|----------|------------------|
-| UC-1: Dashboard cold-start scan | @feature1 @feature2 |
-| UC-2: Click Resume → Zellij detach | @feature4 @feature11 |
-| UC-3: Reboot → Zellij autostart | @feature7 @feature13 |
-| UC-4: Pagination top-20 + background fill | @feature9 |
-| UC-5: Modal viewer for last_message | @feature5 @feature10 |
-| UC-6: Multi-key sort | @feature8 |
-| UC-7: Plugin install via dev-pomogator | @feature16 @feature18 @feature19 @feature20 |
-| UC-8: Cross-OS access from Windows host | @feature15 @feature17 |
-| UC-9: Idle time human format | @feature6 |
-| UC-10: LIVE 🟢 threshold tuning | @feature3 @feature12 |
-| UC-11: Unforeseen encoding variant | @feature14 |
