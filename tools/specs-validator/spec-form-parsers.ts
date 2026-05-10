@@ -405,17 +405,6 @@ export function extractSpecInfo(filePath: string): SpecInfo | null {
 }
 
 /**
- * Read file content from new_string (Edit) or content (Write) tool_input.
- * Returns empty string if neither available.
- */
-export function extractWriteContent(toolInput: Record<string, unknown> | undefined): string {
-  if (!toolInput) return '';
-  if (typeof toolInput.content === 'string') return toolInput.content;
-  if (typeof toolInput.new_string === 'string') return toolInput.new_string;
-  return '';
-}
-
-/**
  * Read current on-disk content for diff-aware hooks (meta-guard).
  */
 export function readCurrentContent(filePath: string): string | null {
@@ -425,4 +414,37 @@ export function readCurrentContent(filePath: string): string | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Return the post-edit file content the hook should validate.
+ *
+ * - Write tool: `content` IS the full file → return as-is.
+ * - Edit tool: validating only `new_string` is a bug (issue #18) — heading-only
+ *   edits would falsely fail body checks (missing Why/Independent Test/etc.)
+ *   because the fragment lacks the body. Reconstruct the post-edit file by
+ *   applying old_string → new_string against the current on-disk content.
+ *   `replace_all` honoured if set.
+ * - Neither field present → empty string (caller handles).
+ *
+ * If the on-disk file cannot be read (new-file Edit, permission), fall back to
+ * `new_string` to preserve previous behaviour rather than silently allow.
+ */
+export function extractWriteContent(
+  toolInput: Record<string, unknown> | undefined,
+  filePath?: string,
+): string {
+  if (!toolInput) return '';
+  if (typeof toolInput.content === 'string') return toolInput.content;
+  const newStr = typeof toolInput.new_string === 'string' ? toolInput.new_string : null;
+  const oldStr = typeof toolInput.old_string === 'string' ? toolInput.old_string : null;
+  if (newStr === null) return '';
+  if (oldStr === null || !filePath) return newStr;
+  const current = readCurrentContent(filePath);
+  if (current === null) return newStr;
+  const replaceAll = toolInput.replace_all === true;
+  if (replaceAll) return current.split(oldStr).join(newStr);
+  const idx = current.indexOf(oldStr);
+  if (idx === -1) return newStr; // can't apply diff cleanly — fail-safe to fragment
+  return current.slice(0, idx) + newStr + current.slice(idx + oldStr.length);
 }

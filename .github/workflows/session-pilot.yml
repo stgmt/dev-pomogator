@@ -125,9 +125,8 @@ jobs:
           if [ "$FAIL" != "0" ]; then exit 1; fi
 
       - name: Run mutation testing (mutmut)
-        continue-on-error: true  # mutmut env issues should not block PR — local run captured 81% (commit 6ef76b2); fix tracked separately
         run: |
-          set -e
+          set -eo pipefail  # pipefail so `mutmut … | tail` propagates mutmut's failure
           VENV=$HOME/.cache/session-pilot-venv
           T=$GITHUB_WORKSPACE/extensions/session-pilot/tools/session-pilot/tests
           MUT=$T/mutation_target
@@ -136,14 +135,12 @@ jobs:
           # /.dev-pomogator-*.sh entry in .gitignore — never committed).
           cp "$T/encode_path_module.py" "$MUT/encode_path_module.py"
           cp "$T/test_encode_path_module.py" "$MUT/test_encode_path_module.py"
-          cd $MUT
+          cd "$MUT"
           rm -rf mutants
-          # mutmut 3.x reads paths_to_mutate from setup.cfg [mutmut]; some
-          # versions need explicit --paths-to-mutate. Try both.
-          ls -la setup.cfg encode_path_module.py 2>&1 || true
-          cat setup.cfg 2>&1 || true
-          PATH="$VENV/bin:$PATH" timeout 300 mutmut run --paths-to-mutate encode_path_module.py 2>&1 | tail -5 || \
-            PATH="$VENV/bin:$PATH" timeout 300 mutmut run 2>&1 | tail -5 || true
+          # mutmut 3.x: paths_to_mutate read from setup.cfg [mutmut] section in CWD.
+          # No --paths-to-mutate CLI flag (mutmut 3.5 click decorator has only
+          # --max-children); the previous fallback attempt was buggy and is removed.
+          PATH="$VENV/bin:$PATH" timeout 300 mutmut run 2>&1 | tail -10
 
           # Parse meta JSON for kill rate
           PATH="$VENV/bin:$PATH" python3 <<'PY'
