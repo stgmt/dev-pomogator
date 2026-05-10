@@ -1,0 +1,6 @@
+# Mutmut cache — regenerated on each `mutmut run`
+mutants/
+mutation_target/mutants/
+mutation_target/setup.cfg
+__pycache__/
+*.pyc
