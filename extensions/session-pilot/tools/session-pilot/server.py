@@ -125,17 +125,15 @@ def encode_path_for_claude(p: str) -> list[str]:
     """
     variants = set()
     p = p.rstrip("/").rstrip("\\")
-    # Linux-style
-    variants.add(p.replace("/", "-").replace(":", "").replace("\\", "-"))
-    # Windows-style: replace : with empty, \\ with -, also handle /
-    win_form = p.replace(":", "").replace("\\", "-").replace("/", "-")
-    variants.add(win_form)
-    # If path starts with /mnt/X/, also try X:-... encoding
+    # Generic char-stripping form. Single line replaces 3 chars (/, \\, :) with - / empty.
+    # (Earlier code had two equivalent variants here from chain-order differences;
+    # mutmut survivors showed they were equivalent mutants — collapsed to one.)
+    variants.add(p.replace(":", "").replace("\\", "-").replace("/", "-"))
+    # If path starts with /mnt/X/, also try X-... encoding (Windows Claude target)
     if p.startswith("/mnt/") and len(p) > 6:
         drive = p[5].upper()
         rest = p[6:]
-        win = f"{drive}-{rest.replace('/', '-').replace(':', '')}"
-        variants.add(win)
+        variants.add(f"{drive}-{rest.replace('/', '-').replace(':', '')}")
     # If path starts with X:/, also try -mnt-x-... encoding (WSL Claude target)
     # AND X--rest encoding (Windows Claude canonical with DOUBLE dash between drive and rest —
     # this is what Claude actually writes; single-dash form misses real JSONL dirs)
