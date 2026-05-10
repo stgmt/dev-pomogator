@@ -4,6 +4,22 @@
   "description": "Live multi-repo worktree dashboard with Claude session indicators (LIVE/idle/none), one-click claude --resume launch into Zellij Web Client, multi-key shift+click sort, virtual-scrolled table, full-message modal, parallel JSONL scan with SWR cache. Pairs with Zellij Web Client (port 8082) on dashboard port 8083.",
   "platforms": ["claude"],
   "category": "developer-experience",
+  "skills": {
+    "session-pilot": ".claude/skills/session-pilot"
+  },
+  "skillFiles": {
+    "session-pilot": [
+      ".claude/skills/session-pilot/SKILL.md"
+    ]
+  },
+  "ruleFiles": {
+    "claude": [
+      ".claude/rules/session-pilot/action-button-injection.md",
+      ".claude/rules/session-pilot/claude-projects-encoding.md",
+      ".claude/rules/session-pilot/perf-budget.md",
+      ".claude/rules/session-pilot/mcp-chrome-only.md"
+    ]
+  },
   "tools": {
     "session-pilot": "tools/session-pilot"
   },
@@ -12,12 +28,30 @@
       ".dev-pomogator/tools/session-pilot/server.py",
       ".dev-pomogator/tools/session-pilot/start-server.sh",
       ".dev-pomogator/tools/session-pilot/zclaude",
+      ".dev-pomogator/tools/session-pilot/layouts/claude-resume.kdl.tmpl",
+      ".dev-pomogator/tools/session-pilot/layouts/claude-fresh.kdl.tmpl",
       ".dev-pomogator/tools/session-pilot/scripts/demo-zellij-install.sh",
       ".dev-pomogator/tools/session-pilot/scripts/demo-zellij-setup.sh",
       ".dev-pomogator/tools/session-pilot/scripts/demo-spawn-sessions.sh",
       ".dev-pomogator/tools/session-pilot/scripts/demo-dump-sessions.sh",
       ".dev-pomogator/tools/session-pilot/tests/check-api.py",
-      ".dev-pomogator/tools/session-pilot/tests/test-etag.sh"
+      ".dev-pomogator/tools/session-pilot/tests/test-etag.sh",
+      ".dev-pomogator/tools/session-pilot/tests/conftest.py",
+      ".dev-pomogator/tools/session-pilot/tests/encode_path_module.py",
+      ".dev-pomogator/tools/session-pilot/tests/test_encode_path.py",
+      ".dev-pomogator/tools/session-pilot/tests/test_encode_path_module.py",
+      ".dev-pomogator/tools/session-pilot/tests/test_launch_idempotent.py",
+      ".dev-pomogator/tools/session-pilot/tests/test_e2e.py",
+      ".dev-pomogator/tools/session-pilot/tests/test_diagnose_cli.py",
+      ".dev-pomogator/tools/session-pilot/tests/test_frontend_smoke.py",
+      ".dev-pomogator/tools/session-pilot/tests/test_frontend_e2e.py",
+      ".dev-pomogator/tools/session-pilot/tests/setup.cfg",
+      ".dev-pomogator/tools/session-pilot/tests/.gitignore"
     ]
+  },
+  "hooks": {
+    "claude": {
+      "SessionStart": "bash .dev-pomogator/tools/session-pilot/start-server.sh"
+    }
   }
 }
