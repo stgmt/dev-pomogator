@@ -40,6 +40,7 @@
 - **NFR-Compat-3** Browsers: Chrome/Edge ≥120, Firefox ≥115, Safari ≥17 (для native `<dialog>` support)
 - **NFR-Compat-4** Vendored libs: Tabulator 6.x (MIT, ~150KB), marked.js 12.x (MIT, ~30KB)
 - **NFR-Compat-5** Python stdlib only — нет внешних pip dependencies (для лёгкого install)
+- **NFR-Compat-6** Playwright frontend e2e (`test_frontend_e2e.py`) is best-effort on WSL2 due to documented browser-teardown vs `setsid` race in the HTTP handler thread — see RESEARCH.md Risk table for revisit triggers (Popen `start_new_session=True`, off-thread spawn worker, WSL2-primary CI shift). Test validates the JS→fetch→backend chain (POST 200 / `ok: true` / valid `method`) as the actual contract; trailing spawn verification gracefully degrades to `SKIP-spawn-verify` with diagnostic dump. Backend correctness is independently asserted by `test_e2e.py` via curl (deterministic, no browser).
 
 ## Anti-Halyava (без халявы)
 

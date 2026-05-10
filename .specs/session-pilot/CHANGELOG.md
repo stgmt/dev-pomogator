@@ -15,7 +15,7 @@ Tracking for v0.2 spec evolution. No spec changes pending — current 0.1.0 is t
 - **FR.md** — 20 functional requirements with @feature1..@feature20 tags + cross-refs to ACs and Use Cases
 - **NFR.md** — Performance/Security/Reliability/Usability/Compatibility + 4-rule «Anti-халява» section enforcing skill scenario verification
 - **ACCEPTANCE_CRITERIA.md** — 20 EARS-format acceptance criteria with FR cross-references
-- **session-pilot.feature** — 17 BDD scenarios (SP002..SP017) covering all FRs
+- **session-pilot.feature** — 22 BDD scenarios (SP002..SP017 implemented Phase 1-7 + SP018..SP023 deferred to v0.2 with @v02 tag) covering all FRs
 - **RESEARCH.md** — Zellij action injection findings, cross-OS path encoding analysis, Claude write-batching empirical observation, SWR pattern, pagination alternatives, 6-row Risk Assessment
 - **DESIGN.md** — 9 key decisions (KD-1: MOVE not rewrite, KD-2: pagination Alt A→B→C progression with decision matrix, KD-3: Zellij `-n` flag gotcha, KD-4: SWR ETag+localStorage, KD-5: cross-OS encoding, KD-6: 300s LIVE threshold, KD-7: vendored libs, KD-8: native `<dialog>`, KD-9: SessionStart hook over systemd)
 - **REQUIREMENTS.md** — 40-row CHK verification matrix (28 Verified Phase 1-7, 12 Draft for v0.2)

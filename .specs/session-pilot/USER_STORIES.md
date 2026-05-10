@@ -151,6 +151,25 @@ When user opens browser on Windows host
 Then `http://localhost:8083` returns dashboard HTML
 And `http://localhost:8083/api/index` returns JSON same as from WSL curl
 
+## Feature tag map (US ↔ @featureN)
+
+For traceability between user stories and BDD scenarios in
+[session-pilot.feature](session-pilot.feature). Audit
+FEATURE_TAG_PROPAGATION verifies every @featureN in .feature
+appears in this file.
+
+| User Story | Covered features |
+|------------|------------------|
+| US-1: Multi-repo dashboard | @feature1 @feature2 @feature9 @feature17 |
+| US-2: One-click Resume | @feature4 @feature11 |
+| US-3: Reboot survival | @feature13 @feature7 |
+| US-4: Pagination top-20 | @feature9 @feature8 |
+| US-5: Modal viewer | @feature5 @feature10 |
+| US-6: Multi-key sort | @feature8 |
+| US-7: Plugin distribution | @feature16 @feature18 @feature19 @feature20 |
+| US-8: Cross-OS access | @feature15 @feature17 |
+| Cross-cutting | @feature3 @feature6 @feature12 @feature14 |
+
 ## Risk Assessment
 
 (Auto-populated by `discovery-forms` skill — see `RESEARCH.md ## Risk Assessment` for cross-cutting risks identified during Phase 1.)

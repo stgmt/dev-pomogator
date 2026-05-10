@@ -133,3 +133,67 @@ Feature: SP001_session_pilot_dashboard
     When server checks running_now flag for lm-saas
     Then claude_running_now SHALL be true (146 < 300)
     And dashboard SHALL show LIVE 🟢 indicator
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Implemented Phase 3 — backfilled scenarios for previously-untagged
+  # features. T06/T07 already DONE; covered by tests/test_e2e.py.
+  # ─────────────────────────────────────────────────────────────────────
+
+  # @feature7
+  Scenario: SP020_health_endpoint_returns_uptime_and_live_flag
+    Given server has been running for 1234 seconds
+    And lm-saas youngest JSONL is 86 seconds old
+    When client requests GET /api/health
+    Then response SHALL contain {ok: true, uptime_sec: 1234, live: true}
+
+  # @feature11
+  Scenario: SP021_open_vscode_endpoint_spawns_code_with_path
+    Given worktree at /mnt/d/repos/foo exists
+    When client POSTs /api/open-vscode {path: "/mnt/d/repos/foo"}
+    Then server SHALL spawn "code /mnt/d/repos/foo" detached
+    And SHALL return {ok: true, method: "spawn"}
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Documentation-only stubs — no Cucumber/pytest-bdd runner is wired
+  # for `.feature` execution in this project; these scenarios encode
+  # acceptance criteria in prose form so audit FR_BDD_COVERAGE traces
+  # FR ↔ BDD before implementation lands. Implementation lives in
+  # TASKS.md tasks T28..T34 (v0.2 backlog). When a runner is wired in
+  # T26+, these scenarios will need step-definitions written; until
+  # then they are reference text, not executable tests.
+  # ─────────────────────────────────────────────────────────────────────
+
+  @v02
+  # @feature5
+  Scenario: SP018_get_message_endpoint_returns_msg_with_neighbors
+    Given session has 50 messages indexed at /api/message?session=X&index=42
+    When client requests GET /api/message?session=X&index=42&context=2
+    Then response SHALL contain target message at index 42
+    And SHALL contain prev neighbors at indices 40, 41
+    And SHALL contain next neighbors at indices 43, 44
+
+  @v02
+  # @feature6
+  Scenario: SP019_git_status_endpoint_returns_dirty_ahead_behind
+    Given worktree at /mnt/d/repos/foo has 3 staged files, 1 commit ahead, 0 behind
+    When client requests GET /api/git-status?path=/mnt/d/repos/foo
+    Then response SHALL contain {added: 3, deleted: 0, ahead: 1, behind: 0}
+
+  @v02
+  # @feature16
+  Scenario: SP022_skill_chrome_extension_verification
+    Given .claude/skills/session-pilot/SKILL.md is installed
+    When user invokes Skill("session-pilot") with verify task
+    Then skill SHALL use mcp__claude-in-chrome__* (not local Playwright)
+    And SHALL screenshot dashboard from real Chrome on Windows host
+    And SHALL report row count + LIVE 🟢 indicator presence
+
+  @v02
+  # @feature18
+  Scenario: SP023_competitive_analysis_artifact_present
+    Given .specs/session-pilot/COMPETITIVE_ANALYSIS.md exists
+    When auditor reads the file
+    Then it SHALL enumerate >=7 alternatives (vibe-kanban, agent-of-empires, ccmanager, kanna, claudito, claude-code-web, claudecodeui)
+    And SHALL contain a 30-feature master matrix
+    And SHALL contain "Features WE LACK" backlog with P0/P1/P2/P3 priorities
+    And SHALL contain "Features WE HAVE that they lack" differentiation list
