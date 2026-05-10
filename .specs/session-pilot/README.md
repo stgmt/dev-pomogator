@@ -26,12 +26,36 @@ Multi-repo worktree dashboard for Claude Code users with 10+ active sessions. Br
 ```bash
 # In WSL Ubuntu
 bash extensions/session-pilot/tools/session-pilot/start-server.sh
-# Server binds 0.0.0.0:8083; opens http://localhost:8083 from any browser
+# Server binds 127.0.0.1:8083; opens http://localhost:8083 from a browser
+# inside WSL (or http://<WSL_IP>:8083 via portproxy from Windows host)
 
-# From Windows host (one-time setup):
-netsh interface portproxy add v4tov4 listenport=8083 connectaddress=<WSL_IP> connectport=8083
-netsh interface portproxy add v4tov4 listenport=8082 connectaddress=<WSL_IP> connectport=8082
+# From Windows host (one-time setup, run in elevated PowerShell):
+$wslIp = (wsl hostname -I).Trim().Split()[0]
+netsh interface portproxy add v4tov4 listenport=8083 connectaddress=$wslIp connectport=8083
+netsh interface portproxy add v4tov4 listenport=8082 connectaddress=$wslIp connectport=8082
 ```
+
+## Install for fresh machine (T35)
+
+End-to-end bootstrap from clean WSL Ubuntu 24.04:
+
+```bash
+# 1. Required runtimes
+sudo apt update && sudo apt install -y python3 curl
+# 2. Zellij + zjstatus (for one-click resume target)
+mkdir -p ~/.local/bin && curl -L https://github.com/zellij-org/zellij/releases/latest/download/zellij-x86_64-unknown-linux-musl.tar.gz | tar xz -C ~/.local/bin/
+# 3. Clone dev-pomogator
+git clone https://github.com/stgmt/dev-pomogator.git ~/repos/dev-pomogator
+cd ~/repos/dev-pomogator
+# 4. Install session-pilot as a managed extension
+node dist/installer/extensions.js install session-pilot --project "$PWD"
+# 5. Start the dashboard (SessionStart hook also auto-starts on Claude Code launch)
+bash extensions/session-pilot/tools/session-pilot/start-server.sh
+# 6. (Windows host only) portproxy from elevated PowerShell — see Quickstart
+# 7. Open http://localhost:8083 in your browser
+```
+
+Health check: `curl -fsS http://127.0.0.1:8083/api/health` → `{"ok": true, ...}`.
 
 ## Где читать дальше
 

@@ -120,6 +120,67 @@ def test_drive_p5_handling():
     assert has_correct_drive, f"D-* variant missing — p[5] mutation suspect: {sorted(v)}"
 
 
+class _SyncTestSkipped(Exception):
+    """Sentinel: only raised when sync test cannot run (mutmut context)
+    where canonical claude_paths.py is intentionally outside the mutated
+    sandbox. Caught by __main__ block and printed as SKIP, not PASS.
+    Any other ImportError must propagate as FAIL."""
+
+
+def test_sync_with_canonical():
+    """encode_path_module.encode_path_for_claude_v2 MUST stay in sync with
+    claude_paths.encode_path_for_claude (the production canonical).
+
+    If this test fails, either v2 was edited directly (forbidden — copy from
+    canonical) OR canonical was edited and v2 not updated. Fix: copy
+    function body from claude_paths.py to encode_path_module.py verbatim.
+
+    Mutmut context (detected via path walk): claude_paths.py is intentionally
+    NOT in the mutation sandbox so mutmut targets v2 only. Skip with explicit
+    sentinel — silent ImportError swallow would be a fake-positive."""
+    import sys, pathlib
+    parent = pathlib.Path(__file__).resolve().parent
+    found_root = None
+    for _ in range(5):
+        if (parent / "claude_paths.py").exists():
+            sys.path.insert(0, str(parent))
+            found_root = parent
+            break
+        parent = parent.parent
+    if found_root is None:
+        # Genuinely not on disk anywhere upward — mutmut isolated sandbox.
+        raise _SyncTestSkipped(
+            "claude_paths.py not found within 5 parent dirs — mutmut sandbox context"
+        )
+    try:
+        from claude_paths import encode_path_for_claude as canonical
+    except ImportError as e:
+        # File exists on disk but import failed — that IS a real bug, not a skip.
+        raise AssertionError(
+            f"claude_paths.py found at {found_root} but import failed: {e!r}. "
+            f"This is NOT a mutmut sandbox case — investigate path/syntax."
+        ) from e
+
+    corpus = [
+        "/mnt/d/repos/foo",
+        "/mnt/d/repos/lm-saas",
+        "D:\\repos\\foo",
+        "C:\\Users\\stigm\\.cursor\\worktrees\\bar",
+        "/repos/baz",
+        "/mnt/c/Users/x",
+        "Z:\\projects\\quux",
+    ]
+    for p in corpus:
+        v1 = sorted(set(encode(p)))
+        v2 = sorted(set(canonical(p)))
+        assert v1 == v2, (
+            f"DRIFT for {p!r}:\n"
+            f"  encode_path_module → {v1}\n"
+            f"  claude_paths       → {v2}\n"
+            f"Fix: copy function body from claude_paths.py to encode_path_module.py."
+        )
+
+
 # pytest discovery (mutmut runs these via pytest by default)
 if __name__ == "__main__":
     failed = 0
@@ -128,6 +189,10 @@ if __name__ == "__main__":
             try:
                 v()
                 print(f"PASS {k}")
+            except _SyncTestSkipped as e:
+                # Explicit SKIP path — only the sync test, only in mutmut sandbox.
+                # Other tests cannot reach this branch.
+                print(f"SKIP {k}: {e}")
             except AssertionError as e:
                 print(f"FAIL {k}: {e}")
                 failed += 1

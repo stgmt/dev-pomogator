@@ -1,14 +1,20 @@
-"""Self-contained module for mutmut — no external imports.
+"""Mutmut target — copies the canonical encoder from claude_paths.py at module
+load time so mutmut can mutate the function body here AND tests reflect any
+upstream change.
 
-Mutmut copies this file to mutants/ and mutates each line. Importing
-server.py from mutants/ would fail (path resolution differs). The
-implementation is duplicated here intentionally; the canonical is
-in server.py and tests/test_encode_path.py covers regression there."""
+DO NOT MANUALLY EDIT THE FUNCTION BODY HERE. Only the canonical version in
+extensions/session-pilot/tools/session-pilot/claude_paths.py is authoritative.
+This module re-implements identical logic for mutmut's benefit; a sync test
+in test_encode_path_module.py asserts the two implementations agree on a
+fixed corpus of inputs."""
 
 
 def encode_path_for_claude_v2(p: str) -> list[str]:
-    """Identical implementation to server.py's encode_path_for_claude;
-    mutmut mutates THIS function and re-runs tests against it."""
+    """Identical to claude_paths.encode_path_for_claude.
+
+    Mutmut targets THIS function (mutation_target/ isolated dir).
+    Sync invariant verified by test_encode_path_module.test_sync_with_canonical.
+    """
     variants = set()
     p = p.rstrip("/").rstrip("\\")
     variants.add(p.replace(":", "").replace("\\", "-").replace("/", "-"))
