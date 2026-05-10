@@ -324,6 +324,130 @@ def _whitelisted_paths() -> set[str]:
     return {r["worktree_path"] for r in build_index_cached()["rows"]}
 
 
+def messages_for_session(worktree_path: str, session_uuid: str, index: int, context: int = 2) -> dict:
+    """Return message at index plus context (prev/next) for a session JSONL.
+
+    Streams the JSONL file once, collecting only the slice [index-context, index+context].
+    Returns {messages: [{idx, role, text, ts}], total: N, target_index: int}.
+    Error responses use HTTP 200 with {error: str} per frontend tolerance convention.
+    """
+    if worktree_path not in _whitelisted_paths():
+        return {"error": "path not in whitelist"}
+    encoded_variants = set(encode_path_for_claude(worktree_path))
+    target_path: Path | None = None
+    for base_dir in CLAUDE_PROJECTS_DIRS:
+        if not base_dir.exists():
+            continue
+        for proj_dir in base_dir.iterdir():
+            name = proj_dir.name
+            if (
+                name in encoded_variants
+                or any(name.endswith(v.lstrip("-")) for v in encoded_variants if len(v) > 4)
+                or any(v.lstrip("-").endswith(name) for v in encoded_variants if len(name) > 8)
+            ):
+                cand = proj_dir / f"{session_uuid}.jsonl"
+                if cand.exists():
+                    target_path = cand
+                    break
+        if target_path:
+            break
+    if not target_path:
+        return {"error": f"session {session_uuid} not found for {worktree_path}"}
+
+    lo = max(0, index - context)
+    hi = index + context  # inclusive in selection logic
+    messages: list[dict] = []
+    total = 0
+    with target_path.open("r", encoding="utf-8", errors="ignore") as f:
+        for i, line in enumerate(f):
+            total += 1
+            if i < lo or i > hi:
+                continue
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                obj = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            content = obj.get("message", {}).get("content", "")
+            if isinstance(content, list):
+                text = " ".join(
+                    p.get("text", "") for p in content
+                    if isinstance(p, dict) and p.get("type") == "text"
+                )
+            else:
+                text = content if isinstance(content, str) else ""
+            messages.append({
+                "idx": i,
+                "role": obj.get("type", ""),
+                "text": text,
+                "ts": obj.get("timestamp", ""),
+            })
+    return {"messages": messages, "total": total, "target_index": index}
+
+
+def git_status_for(worktree_path: str) -> dict:
+    """Return {added, modified, deleted, untracked, ahead, behind} for a worktree.
+
+    Reads `git status --porcelain=v1` for staged/unstaged file counts and
+    `git rev-list --left-right --count <upstream>...HEAD` for ahead/behind
+    relative to the tracked upstream. Returns zeros for missing upstream.
+    Errors return {error: str} with HTTP 200 — frontend tolerates missing data.
+    """
+    if worktree_path not in _whitelisted_paths():
+        return {"error": "path not in whitelist"}
+    try:
+        st = subprocess.run(
+            ["git", "-C", worktree_path, "status", "--porcelain=v1"],
+            capture_output=True, text=True, timeout=5, check=False,
+        )
+        if st.returncode != 0:
+            return {"error": st.stderr.strip()[:200] or "git status failed"}
+    except FileNotFoundError:
+        return {"error": "git not in PATH"}
+    except subprocess.TimeoutExpired:
+        return {"error": "git status timeout"}
+
+    added = modified = deleted = untracked = 0
+    for line in st.stdout.splitlines():
+        if not line:
+            continue
+        # Porcelain v1: first two chars are X (staged) + Y (unstaged) status codes
+        x, y = line[0], line[1]
+        if x == "?" or y == "?":
+            untracked += 1
+            continue
+        if x == "A" or y == "A":
+            added += 1
+        elif x == "M" or y == "M":
+            modified += 1
+        elif x == "D" or y == "D":
+            deleted += 1
+
+    ahead = behind = 0
+    try:
+        rl = subprocess.run(
+            ["git", "-C", worktree_path, "rev-list", "--left-right", "--count", "@{upstream}...HEAD"],
+            capture_output=True, text=True, timeout=5, check=False,
+        )
+        if rl.returncode == 0 and rl.stdout.strip():
+            parts = rl.stdout.strip().split()
+            if len(parts) == 2:
+                behind, ahead = int(parts[0]), int(parts[1])
+    except Exception:
+        pass
+
+    return {
+        "added": added,
+        "modified": modified,
+        "deleted": deleted,
+        "untracked": untracked,
+        "ahead": ahead,
+        "behind": behind,
+    }
+
+
 _index_cache: dict = {"ts": 0.0, "data": None}
 _claude_cache: dict = {}
 CACHE_TTL_INDEX = 5.0
@@ -496,13 +620,55 @@ HTML = """<!doctype html>
   td.loading { color: #555; font-style: italic; font-size: 11px; }
   .spinner { display: inline-block; width: 10px; height: 10px; border: 2px solid #333; border-top-color: #fbbf24; border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 6px; }
   @keyframes spin { to { transform: rotate(360deg); } }
+  td.git { font-size: 11px; white-space: nowrap; }
+  .git-loading { color: #555; font-style: italic; }
+  .git-na { color: #555; }
+  .git-clean { color: #4ade80; }
+  .git-add { color: #4ade80; }
+  .git-mod { color: #fbbf24; }
+  .git-del { color: #f87171; }
+  .git-un  { color: #6b7280; }
+  .git-ahead { color: #60a5fa; }
+  .git-behind { color: #c084fc; }
+  td.last-msg { cursor: pointer; }
+  td.last-msg:hover { background: rgba(96, 165, 250, 0.06); }
+  dialog#msgModal { background: #15161b; color: #d4d4d4; border: 1px solid #2a2a2e; border-radius: 6px; max-width: 720px; width: 70vw; max-height: 80vh; padding: 0; }
+  dialog#msgModal::backdrop { background: rgba(0,0,0,0.6); }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-bottom: 1px solid #2a2a2e; background: #1a1a1f; }
+  .modal-body { padding: 14px; overflow-y: auto; max-height: calc(80vh - 50px); }
+  .modal-close, .modal-nav { background: #2a2a2e; color: #d4d4d4; border: 1px solid #444; border-radius: 4px; padding: 2px 8px; cursor: pointer; margin-left: 4px; font-size: 12px; }
+  .modal-close:hover, .modal-nav:hover { background: #3a3a3e; }
+  .modal-nav:disabled { opacity: 0.4; cursor: not-allowed; }
+  .msg-block { padding: 6px 0; border-bottom: 1px solid #2a2a2e; }
+  .msg-block:last-child { border-bottom: none; }
+  .msg-block.target { background: rgba(96, 165, 250, 0.08); padding: 8px; border-radius: 4px; }
+  .msg-role { display: inline-block; font-weight: bold; font-size: 11px; margin-right: 6px; }
+  .msg-role.user { color: #60a5fa; }
+  .msg-role.assistant { color: #fbbf24; }
+  .msg-ts { font-size: 10px; color: #666; margin-left: 6px; }
+  .msg-text { margin-top: 4px; white-space: pre-wrap; word-break: break-word; font-family: inherit; }
 </style>
 </head><body>
-<h1>Worktree Dashboard <button class="refresh" onclick="hardReload()">↻ Refresh</button></h1>
+<h1>Worktree Dashboard <button class="refresh" onclick="hardReload()">↻ Refresh</button>
+  <input id="filterInput" type="text" placeholder="/ to filter…"
+    oninput="window._filterQuery = this.value; render();"
+    style="margin-left:12px; background:#1a1a1f; color:#d4d4d4; border:1px solid #2a2a2e; border-radius:4px; padding:4px 8px; font-size:12px; width:240px;"
+  /></h1>
 <div class="meta" id="meta">Loading worktrees…</div>
 <div class="progress-text" id="progressText"></div>
 <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
 <table id="tbl"></table>
+<dialog id="msgModal">
+  <div class="modal-header">
+    <strong id="msgModalTitle">Message viewer</strong>
+    <span>
+      <button class="modal-nav" id="msgModalPrev" title="Previous message (←)">◀</button>
+      <button class="modal-nav" id="msgModalNext" title="Next message (→)">▶</button>
+      <button class="modal-close" onclick="document.getElementById('msgModal').close()" title="Close (Esc)">✕</button>
+    </span>
+  </div>
+  <div class="modal-body" id="msgModalBody">Loading…</div>
+</dialog>
 <script>
 let _rows = [];          // current row state
 let _wtById = {};        // id -> row reference
@@ -636,6 +802,29 @@ async function enrichClaude() {
   await Promise.all(workers);
   setProgress(100, `Done · ${total} fetched, ${fromCache} from cache`);
   setTimeout(clearProgress, 2000);
+  // Fire-and-forget git_status enrichment — independent of claude data, no
+  // SWR cache (fresh on every poll). Errors are tolerated (row._git_status = null).
+  enrichGitStatus();
+}
+
+async function enrichGitStatus() {
+  const rows = [..._rows];
+  const queue = [...rows];
+  const workers = Array(4).fill(0).map(async () => {
+    while (queue.length) {
+      const row = queue.shift();
+      try {
+        const r = await fetch('/api/git-status?path=' + encodeURIComponent(row.worktree_path), {cache: 'no-store'});
+        row._git_status = await r.json();
+        row._git_dirty_total = (row._git_status.added||0) + (row._git_status.modified||0) + (row._git_status.deleted||0) + (row._git_status.untracked||0);
+      } catch (e) {
+        row._git_status = {error: e.message};
+        row._git_dirty_total = 0;
+      }
+    }
+  });
+  await Promise.all(workers);
+  render();
 }
 
 function clearProgress() {
@@ -648,8 +837,65 @@ function setProgress(pct, label) {
   document.getElementById('progressText').textContent = label || '';
 }
 
+let _msgModalState = null;  // {worktree, session, total, index}
+async function openMsgModal(worktree, session, index) {
+  const modal = document.getElementById('msgModal');
+  document.getElementById('msgModalTitle').textContent = `${session.slice(0,8)} · message ${index}`;
+  document.getElementById('msgModalBody').textContent = 'Loading…';
+  if (typeof modal.showModal === 'function') modal.showModal(); else modal.setAttribute('open', '');
+  try {
+    const url = `/api/message?path=${encodeURIComponent(worktree)}&session=${encodeURIComponent(session)}&index=${index}&context=2`;
+    const r = await fetch(url, {cache: 'no-store'});
+    const d = await r.json();
+    if (d.error) {
+      document.getElementById('msgModalBody').textContent = `Error: ${d.error}`;
+      return;
+    }
+    _msgModalState = {worktree, session, total: d.total, index};
+    renderMsgModal(d);
+  } catch (e) {
+    document.getElementById('msgModalBody').textContent = `Error: ${e.message}`;
+  }
+}
+function renderMsgModal(d) {
+  const body = document.getElementById('msgModalBody');
+  body.innerHTML = d.messages.map(m => {
+    const isTarget = m.idx === d.target_index;
+    return `<div class="msg-block ${isTarget ? 'target' : ''}">
+      <span class="msg-role ${m.role}">${m.role}#${m.idx}</span>
+      <span class="msg-ts">${escapeHtml(m.ts || '')}</span>
+      <div class="msg-text">${escapeHtml(m.text)}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('msgModalPrev').disabled = _msgModalState.index <= 0;
+  document.getElementById('msgModalNext').disabled = _msgModalState.index >= _msgModalState.total - 1;
+  document.getElementById('msgModalTitle').textContent =
+    `${_msgModalState.session.slice(0,8)} · message ${_msgModalState.index} / ${_msgModalState.total - 1}`;
+}
+async function navMsg(delta) {
+  if (!_msgModalState) return;
+  const next = _msgModalState.index + delta;
+  if (next < 0 || next >= _msgModalState.total) return;
+  _msgModalState.index = next;
+  const url = `/api/message?path=${encodeURIComponent(_msgModalState.worktree)}&session=${encodeURIComponent(_msgModalState.session)}&index=${next}&context=2`;
+  const r = await fetch(url, {cache: 'no-store'});
+  const d = await r.json();
+  if (!d.error) renderMsgModal(d);
+}
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('msgModalPrev')?.addEventListener('click', () => navMsg(-1));
+  document.getElementById('msgModalNext')?.addEventListener('click', () => navMsg(+1));
+  document.addEventListener('keydown', (e) => {
+    const open = document.getElementById('msgModal')?.open;
+    if (!open) return;
+    if (e.key === 'ArrowLeft') navMsg(-1);
+    if (e.key === 'ArrowRight') navMsg(+1);
+  });
+});
+
 function render() {
   applySort(_rows);
+  const _filtered = applyFilter(_rows);
   let html = `<thead><tr>
     ${sortHdr('Status', 'claude_running_now')}
     ${sortHdr('Repo', 'repo')}
@@ -659,10 +905,11 @@ function render() {
     ${sortHdr('Last activity', '_last_msg_ts')}
     ${sortHdr('Last message', '_last_msg_text')}
     ${sortHdr('Msgs', '_msg_count')}
+    ${sortHdr('Git', '_git_dirty_total')}
     ${sortHdr('Zellij session', 'session_name')}
     <th>Action</th>
   </tr></thead><tbody>`;
-  for (const row of _rows) {
+  for (const row of _filtered) {
     let status;
     if (!row._claude_loaded) status = '<span class="spinner"></span>';
     else if (row.claude_running_now) status = '<span class="status live">● LIVE</span>';
@@ -683,8 +930,9 @@ function render() {
       <td class="head">${escapeHtml(row.head)}</td>
       <td class="path" title="${escapeHtml(row.worktree_path)}">${escapeHtml(row.worktree_path)}</td>
       <td class="ts ${loadingCell}">${row._claude_loaded ? escapeHtml(lastTs ? lastTs.replace('T',' ').slice(0, 19) : '—') : '…'}</td>
-      <td class="last-msg ${loadingCell}">${row._claude_loaded ? (role ? `<span class="role-${role}">${role}:</span> ` : '') + escapeHtml(lastText) : 'scanning JSONL…'}</td>
+      <td class="last-msg ${loadingCell}" ${top?.uuid ? `onclick="openMsgModal(${JSON.stringify(row.worktree_path)}, ${JSON.stringify(top.uuid)}, ${(top.msg_count || 1) - 1})" title="Click to view full message + neighbours"` : ''}>${row._claude_loaded ? (role ? `<span class="role-${role}">${role}:</span> ` : '') + escapeHtml(lastText) : 'scanning JSONL…'}</td>
       <td class="num">${row._claude_loaded ? (top?.msg_count ?? '—') : '…'}</td>
+      <td class="git" id="git-${escapeHtml(row.worktree_path)}">${formatGitStatus(row._git_status)}</td>
       <td class="session ${row.session_active ? 'active' : 'inactive'}">${escapeHtml(row.session_name)}${row.session_active ? ' ●' : ''}</td>
       <td class="actions">
         ${(() => {
@@ -710,6 +958,11 @@ function render() {
   }
   html += '</tbody>';
   document.getElementById('tbl').innerHTML = html;
+  // Reflect filter state in meta
+  const meta = document.getElementById('meta');
+  if (meta && window._filterQuery) {
+    meta.textContent = `${_filtered.length} of ${_rows.length} worktrees (filter: "${window._filterQuery}")`;
+  }
 }
 function escapeHtml(s) { return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function formatIdle(totalMin) {
@@ -723,31 +976,104 @@ function formatIdle(totalMin) {
   const hours = h % 24;
   return mins ? `${d}d ${hours}h ${mins}m` : (hours ? `${d}d ${hours}h` : `${d}d`);
 }
-function sortHdr(label, key) {
-  const arrow = window._sortBy === key ? (window._sortDir === 'asc' ? ' ▲' : ' ▼') : '';
-  return `<th class="sortable" onclick="setSort('${key}')">${label}${arrow}</th>`;
+function formatGitStatus(s) {
+  // Compact one-cell git status: "+A ~M -D ?U / ↑K ↓L". Falls back to '…' or '—'.
+  if (s === undefined) return '<span class="git-loading">…</span>';
+  if (!s || s.error) return '<span class="git-na" title="' + (s?.error || 'unknown') + '">—</span>';
+  const dirty = (s.added||0) + (s.modified||0) + (s.deleted||0) + (s.untracked||0);
+  const parts = [];
+  if (s.added)     parts.push(`<span class="git-add">+${s.added}</span>`);
+  if (s.modified)  parts.push(`<span class="git-mod">~${s.modified}</span>`);
+  if (s.deleted)   parts.push(`<span class="git-del">-${s.deleted}</span>`);
+  if (s.untracked) parts.push(`<span class="git-un">?${s.untracked}</span>`);
+  if (dirty === 0) parts.push('<span class="git-clean">clean</span>');
+  if (s.ahead)  parts.push(`<span class="git-ahead">↑${s.ahead}</span>`);
+  if (s.behind) parts.push(`<span class="git-behind">↓${s.behind}</span>`);
+  return parts.join(' ');
 }
-function setSort(key) {
-  if (window._sortBy === key) {
-    window._sortDir = window._sortDir === 'asc' ? 'desc' : 'asc';
-  } else {
-    window._sortBy = key; window._sortDir = 'desc';
+// Multi-key sort stack: array of {key, dir}. shift+click appends/cycles; plain click replaces.
+// Persisted to _sortStack for compatibility with old _sortBy reads.
+function sortHdr(label, key) {
+  const stack = window._sortStack || [];
+  const idx = stack.findIndex(e => e.key === key);
+  let arrow = '';
+  if (idx >= 0) {
+    const e = stack[idx];
+    const dirGlyph = e.dir === 'asc' ? '▲' : '▼';
+    arrow = stack.length > 1 ? ` ${dirGlyph}${idx + 1}` : ` ${dirGlyph}`;
   }
+  return `<th class="sortable" onclick="setSort('${key}', event.shiftKey)">${label}${arrow}</th>`;
+}
+function setSort(key, additive) {
+  if (!window._sortStack) window._sortStack = [];
+  const stack = window._sortStack;
+  const idx = stack.findIndex(e => e.key === key);
+  if (additive) {
+    if (idx >= 0) {
+      // already in stack — toggle dir on the existing position
+      stack[idx].dir = stack[idx].dir === 'asc' ? 'desc' : 'asc';
+    } else {
+      stack.push({key, dir: 'desc'});
+    }
+  } else {
+    if (stack.length === 1 && idx === 0) {
+      stack[0].dir = stack[0].dir === 'asc' ? 'desc' : 'asc';
+    } else {
+      window._sortStack = [{key, dir: 'desc'}];
+    }
+  }
+  // legacy refs
+  const primary = window._sortStack[0];
+  window._sortBy = primary?.key;
+  window._sortDir = primary?.dir;
   render();
 }
 function applySort(rows) {
-  const key = window._sortBy, dir = window._sortDir === 'asc' ? 1 : -1;
+  const stack = window._sortStack && window._sortStack.length ? window._sortStack : [{key: '_last_msg_ts', dir: 'desc'}];
   rows.sort((a, b) => {
-    let av = a[key], bv = b[key];
-    if (typeof av === 'boolean') av = av ? 1 : 0;
-    if (typeof bv === 'boolean') bv = bv ? 1 : 0;
-    if (av == null) av = '';
-    if (bv == null) bv = '';
-    if (av < bv) return -1 * dir;
-    if (av > bv) return  1 * dir;
+    for (const {key, dir} of stack) {
+      const sign = dir === 'asc' ? 1 : -1;
+      let av = a[key], bv = b[key];
+      if (typeof av === 'boolean') av = av ? 1 : 0;
+      if (typeof bv === 'boolean') bv = bv ? 1 : 0;
+      if (av == null) av = '';
+      if (bv == null) bv = '';
+      if (av < bv) return -1 * sign;
+      if (av > bv) return  1 * sign;
+    }
     return 0;
   });
 }
+
+// Vi-style `/` filter — focuses input, substring-matches across repo/branch/path/last-msg.
+window._filterQuery = '';
+function applyFilter(rows) {
+  const q = (window._filterQuery || '').trim().toLowerCase();
+  if (!q) return rows;
+  return rows.filter(r => {
+    const hay = [r.repo, r.branch, r.head, r.worktree_path, r._last_msg_text, r.session_name]
+      .filter(x => typeof x === 'string').join(' ').toLowerCase();
+    return hay.includes(q);
+  });
+}
+document.addEventListener('keydown', (e) => {
+  // Don't hijack typing in inputs
+  const tag = (e.target.tagName || '').toLowerCase();
+  if (tag === 'input' || tag === 'textarea') {
+    if (e.key === 'Escape' && e.target.id === 'filterInput') {
+      e.target.value = '';
+      window._filterQuery = '';
+      e.target.blur();
+      render();
+    }
+    return;
+  }
+  if (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    e.preventDefault();
+    const inp = document.getElementById('filterInput');
+    if (inp) inp.focus();
+  }
+});
 loadIndex();
 setInterval(loadIndex, 30000);
 
@@ -947,6 +1273,25 @@ class Handler(BaseHTTPRequestHandler):
             for r in idx["rows"]:
                 r.update(build_claude_cached(r["worktree_path"]))
             _send_json(self, idx)
+        elif url.path == "/api/git-status":
+            path = (qs.get("path") or [""])[0]
+            if not path:
+                _send_json(self, {"error": "missing 'path' query param"}, 400)
+                return
+            _send_json(self, git_status_for(path))
+        elif url.path == "/api/message":
+            path = (qs.get("path") or [""])[0]
+            session = (qs.get("session") or [""])[0]
+            try:
+                index = int((qs.get("index") or ["0"])[0])
+                context = int((qs.get("context") or ["2"])[0])
+            except ValueError:
+                _send_json(self, {"error": "index/context must be integers"}, 400)
+                return
+            if not path or not session:
+                _send_json(self, {"error": "missing 'path' or 'session' query param"}, 400)
+                return
+            _send_json(self, messages_for_session(path, session, index, context))
         else:
             self.send_response(404)
             self.end_headers()

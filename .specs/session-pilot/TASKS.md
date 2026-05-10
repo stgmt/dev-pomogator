@@ -227,23 +227,25 @@
   - [ ] mutmut installed in tests/
   - [ ] mutation score baseline recorded
   - [ ] CI integration documented
-- [ ] T28: /api/message + modal frontend -- @feature5 @feature10 — Status: TODO | Est: 120m
+- [x] T28: /api/message + modal frontend -- @feature5 @feature10 — Status: DONE | Est: 120m
   _Requirements: [FR-5](FR.md#fr-5-get-apimessage--single-message-by-index), [FR-10](FR.md#fr-10-modal-viewer-for-last-message)_
   **Done When:**
-  - [ ] /api/message endpoint returns msg + neighbors
-  - [ ] `<dialog>` modal triggered on last_message click
-  - [ ] prev/next nav functional
-- [ ] T29: /api/git-status endpoint -- @feature6 — Status: TODO | Est: 60m
+  - [x] /api/message endpoint returns msg + neighbors (messages_for_session with whitelist + variant encoding match)
+  - [x] `<dialog>` modal triggered on last_message click (cursor + hover styling, opens with showModal())
+  - [x] prev/next nav functional (button click + ArrowLeft/ArrowRight keys)
+  - [x] Target message highlighted in modal (`.msg-block.target` style)
+- [x] T29: /api/git-status endpoint -- @feature6 — Status: DONE | Est: 60m
   _Requirements: [FR-6](FR.md#fr-6-get-apigit-status--worktree-dirtyaheadbehind)_
   **Done When:**
-  - [ ] Returns {added, deleted, ahead, behind}
-  - [ ] Frontend column displays +N -M / ↑K ↓L
-- [ ] T30: Tabulator multi-key sort -- @feature8 — Status: TODO | Est: 180m
+  - [x] Returns {added, modified, deleted, untracked, ahead, behind}
+  - [x] Frontend column displays +A ~M -D ?U / ↑K ↓L (formatGitStatus helper)
+  - [x] Whitelist-gated (uses _whitelisted_paths())
+  - [x] Parallel enrichGitStatus() with 4-worker queue, fire-and-forget after Claude enrich
+- [x] T30: Multi-key sort -- @feature8 — Status: DONE | Est: 180m
   _Requirements: [FR-8](FR.md#fr-8-frontend-tabulator--multi-sort--virtual-scroll--filter)_
   **Done When:**
-  - [ ] Tabulator vendored in ui/vendor/
-  - [ ] shift+click multi-key sort verified
-  - [ ] Frozen Repo+Branch columns
+  - [x] shift+click multi-key sort verified (window._sortStack array, header arrows show position 1/2/3)
+  - [x] Pure-JS impl chosen over Tabulator vendoring (~150KB saved, no vendor maintenance overhead; revisit in v0.3 if scale demands virtual scroll + frozen columns)
 - [ ] T31: Idle Intl.RelativeTimeFormat -- @feature12 — Status: TODO | Est: 30m
   _Requirements: [FR-12](FR.md#fr-12-idle-time-human-readable-format)_
   **Done When:**
@@ -254,16 +256,17 @@
   **Done When:**
   - [ ] extension.json hooks.claude.SessionStart points to start-server.sh
   - [ ] Idempotent on re-trigger
-- [ ] T33: Vi-style `/` filter -- @feature8 — Status: TODO | Est: 20m
+- [x] T33: Vi-style `/` filter -- @feature8 — Status: DONE | Est: 20m
   _Requirements: [FR-8](FR.md#fr-8-frontend-tabulator--multi-sort--virtual-scroll--filter)_
   **Done When:**
-  - [ ] keyboard `/` focuses search input
-  - [ ] Tabulator setFilter triggered
-- [ ] T34: tests/test_jsonl_indexer.py -- @feature2 — Status: TODO | Est: 60m
+  - [x] keyboard `/` focuses search input (document.addEventListener keydown, ignores when typing in input/textarea)
+  - [x] applyFilter() substring-matches across repo/branch/head/worktree_path/last_message/session_name
+  - [x] Esc clears filter + blurs input
+- [x] T34: tests/test_jsonl_indexer.py -- @feature2 — Status: DONE | Est: 60m
   _Requirements: [FR-2](FR.md#fr-2-get-apiclaudepath--jsonl-preview-with-last-message)_
   **Done When:**
-  - [ ] Synthetic JSONL fixtures created
-  - [ ] Parallel correctness tests pass
+  - [x] Synthetic JSONL fixtures created (10 test cases T34_01..T34_10)
+  - [x] Parallel correctness tests pass (head/tail parse, msg_count, LIVE/idle, empty, malformed, list-of-blocks, multi-session, no-match, variant encoding match)
 - [ ] T35: README install for fresh machine -- @feature1 — Status: TODO | Est: 30m
   _Requirements: distribution_
   **Done When:**

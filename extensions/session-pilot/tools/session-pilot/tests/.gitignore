@@ -1,6 +1,8 @@
 # Mutmut cache — regenerated on each `mutmut run`
 mutants/
 mutation_target/mutants/
-mutation_target/setup.cfg
+# setup.cfg IS committed — it's the mutmut config (paths_to_mutate +
+# tests_dir). Earlier we erroneously ignored it as cache; CI failed
+# because mutmut couldn't find paths_to_mutate. Keep tracked.
 __pycache__/
 *.pyc

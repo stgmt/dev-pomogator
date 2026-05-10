@@ -153,6 +153,22 @@ Feature: SP001_session_pilot_dashboard
     Then server SHALL spawn "code /mnt/d/repos/foo" detached
     And SHALL return {ok: true, method: "spawn"}
 
+  # @feature6
+  Scenario: SP019_git_status_endpoint_returns_dirty_ahead_behind
+    Given worktree at /mnt/d/repos/foo has 1 added file, 4 modified files, 1 untracked, 0 ahead, 0 behind
+    And the worktree path is in the dashboard whitelist
+    When client requests GET /api/git-status?path=/mnt/d/repos/foo
+    Then response SHALL contain {added: 1, modified: 4, deleted: 0, untracked: 1, ahead: 0, behind: 0}
+    And SHALL return HTTP 200
+
+  # @feature5
+  Scenario: SP018_get_message_endpoint_returns_msg_with_neighbors
+    Given session has 10 messages indexed at /api/message?path=...&session=X&index=5
+    And the worktree path is in the dashboard whitelist
+    When client requests GET /api/message?path=/mnt/d/repos/foo&session=X&index=5&context=2
+    Then response SHALL contain {messages: [{idx, role, text, ts}], total: 10, target_index: 5}
+    And SHALL include 5 entries (target ± 2) with indices 3..7
+
   # ─────────────────────────────────────────────────────────────────────
   # Documentation-only stubs — no Cucumber/pytest-bdd runner is wired
   # for `.feature` execution in this project; these scenarios encode
@@ -162,22 +178,6 @@ Feature: SP001_session_pilot_dashboard
   # T26+, these scenarios will need step-definitions written; until
   # then they are reference text, not executable tests.
   # ─────────────────────────────────────────────────────────────────────
-
-  @v02
-  # @feature5
-  Scenario: SP018_get_message_endpoint_returns_msg_with_neighbors
-    Given session has 50 messages indexed at /api/message?session=X&index=42
-    When client requests GET /api/message?session=X&index=42&context=2
-    Then response SHALL contain target message at index 42
-    And SHALL contain prev neighbors at indices 40, 41
-    And SHALL contain next neighbors at indices 43, 44
-
-  @v02
-  # @feature6
-  Scenario: SP019_git_status_endpoint_returns_dirty_ahead_behind
-    Given worktree at /mnt/d/repos/foo has 3 staged files, 1 commit ahead, 0 behind
-    When client requests GET /api/git-status?path=/mnt/d/repos/foo
-    Then response SHALL contain {added: 3, deleted: 0, ahead: 1, behind: 0}
 
   @v02
   # @feature16
