@@ -59,10 +59,16 @@ def test_cli_lists_encoding_variants():
 
 
 def test_cli_lists_claude_project_base_dirs():
-    """Section 'Claude project base dirs' enumerates scanned directories."""
+    """Section 'Claude project base dirs' enumerates scanned directories.
+
+    Path separator is OS-native (forward slash on Linux/WSL, backslash on
+    Windows native Python), so assert tokens separately rather than the
+    literal joined path.
+    """
     rc, stdout, _ = _run_diagnose("/mnt/d/repos/dev-pomogator")
     assert "Claude project base dirs" in stdout, "base dirs section missing"
-    assert "/.claude/projects" in stdout, "expected ~/.claude/projects path in output"
+    assert ".claude" in stdout, "expected .claude path component in output"
+    assert "projects" in stdout, "expected projects path component in output"
 
 
 def test_cli_dumps_matched_jsonls_section():
