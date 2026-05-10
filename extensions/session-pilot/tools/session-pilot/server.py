@@ -1035,6 +1035,7 @@ if __name__ == "__main__":
             sys.exit(2)
         sys.exit(diagnose_livecycle(sys.argv[2]))
 
-    bind = os.environ.get("WT_DASHBOARD_BIND", "0.0.0.0")
+    # Default 127.0.0.1 per NFR-Sec-3 — opt-in 0.0.0.0 via env for cross-host access
+    bind = os.environ.get("WT_DASHBOARD_BIND", "127.0.0.1")
     print(f"Worktree dashboard listening on http://{bind}:{PORT}", flush=True)
     HTTPServer((bind, PORT), Handler).serve_forever()
