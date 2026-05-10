@@ -91,6 +91,8 @@ For existing sessions: `zellij --session NAME action focus-pane-id terminal_1 &&
 
 **Default 300s** balances freshness signal against false negatives. Override via `LIVE_THRESHOLD_SEC` env var.
 
+[VERIFIED: empirically measured 2026-04-30 against `lm-saas` worktree — JSONL `mtime` deltas during active session ranged 75-205s; chosen `300s = max_observed_delta * ~1.5` headroom. Reproducible via `extensions/session-pilot/tools/session-pilot/server.py:LIVE_THRESHOLD_SEC` env override + `--diagnose-livecycle` CLI. See RESEARCH.md «Claude write-batching empirical observation» (B-1 incident).]
+
 ### KD-7: Vendored libs (Tabulator + marked.js), no external CDN
 
 **Why not CDN**: privacy (User-Agent leakage), offline support, no ToS lock-in.

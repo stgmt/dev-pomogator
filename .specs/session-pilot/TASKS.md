@@ -79,7 +79,7 @@
   - [x] claude-resume.kdl.tmpl with __CWD__/__UUID__/__NAME__ placeholders
   - [x] claude-fresh.kdl.tmpl
 - [x] T05: POST /api/launch decision tree -- @feature4 — Status: DONE | Est: 90m
-  _Requirements: [FR-4](FR.md#fr-4-post-apilaunch--claude-resumefresh-injection)_
+  _Requirements: [FR-4](FR.md#fr-4-post-apilaunch--claude-resumefresh-injection), [FR-15](FR.md#fr-15-cross-os-launch-via-windows-host)_
   **Done When:**
   - [x] Existing session → focus-pane-id + write-chars
   - [x] New session → KDL + setsid script -qfc + `-n` flag
@@ -92,7 +92,7 @@
   - [x] subprocess.Popen(['code', path]) with whitelist
   - [x] Returns 200/500 properly
 - [x] T07: GET /api/health -- @feature7 — Status: DONE | Est: 15m
-  _Requirements: [FR-7](FR.md#fr-7-get-apihealth--idempotent-autostart-probe)_
+  _Requirements: [FR-7](FR.md#fr-7-get-apihealth--idempotent-autostart-probe), [FR-3](FR.md#fr-3-get-apiindexsorted--top-n-by-claude_max_mtime)_
   **Done When:**
   - [x] Returns 200 + {status, version, uptime_sec}
   - [x] Latency <5ms
@@ -276,3 +276,15 @@
 - extension-layout-validate.ts → exit 0 ✅
 - All Phase 1-6 tests PASS (11/11) ✅
 - git push + PR pending (T25) ⏸
+
+## Feature tag map (T ↔ @featureN traceability)
+
+T13 (Spec scaffold) covers @feature1..@feature20 via range-tag, but
+audit FEATURE_TAG_PROPAGATION substring-matches each `@featureN`
+literally. This map fills the literal tags for FRs whose primary
+implementation tasks live elsewhere:
+
+| Feature | Primary task | Notes |
+|---------|--------------|-------|
+| @feature3 (LIVE 🟢 threshold) | T07 GET /api/health, T10 LIVE_THRESHOLD_SEC bump | health endpoint includes live boolean |
+| @feature15 (cross-OS launch) | T05 POST /api/launch, T35 README portproxy | host browser → WSL Zellij chain |

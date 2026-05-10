@@ -96,3 +96,24 @@ Developer's Cursor IDE creates worktree at `C:\Users\stigm\.cursor\worktrees\foo
 - Diagnose CLI shows ❌ no match for that path's encoding variants
 - Add new variant generation rule to `encode_path_for_claude()` covering `\\.cursor\\worktrees\\` paths
 - Regression test in `tests/test_encode_path.py`
+
+## Feature tag map (UC ↔ @featureN)
+
+For traceability between use cases and BDD scenarios in
+[session-pilot.feature](session-pilot.feature). Audit
+FEATURE_TAG_PROPAGATION verifies every @featureN in .feature
+appears here.
+
+| Use Case | Covered features |
+|----------|------------------|
+| UC-1: Dashboard cold-start scan | @feature1 @feature2 |
+| UC-2: Click Resume → Zellij detach | @feature4 @feature11 |
+| UC-3: Reboot → Zellij autostart | @feature7 @feature13 |
+| UC-4: Pagination top-20 + background fill | @feature9 |
+| UC-5: Modal viewer for last_message | @feature5 @feature10 |
+| UC-6: Multi-key sort | @feature8 |
+| UC-7: Plugin install via dev-pomogator | @feature16 @feature18 @feature19 @feature20 |
+| UC-8: Cross-OS access from Windows host | @feature15 @feature17 |
+| UC-9: Idle time human format | @feature6 |
+| UC-10: LIVE 🟢 threshold tuning | @feature3 @feature12 |
+| UC-11: Unforeseen encoding variant | @feature14 |

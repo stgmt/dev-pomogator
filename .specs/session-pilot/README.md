@@ -17,7 +17,7 @@ Multi-repo worktree dashboard for Claude Code users with 10+ active sessions. Br
 - **App-код**: `extensions/session-pilot/tools/session-pilot/server.py` (single-file Phase 1, refactor candidate Phase 5)
 - **KDL templates**: `extensions/session-pilot/tools/session-pilot/layouts/{claude-resume,claude-fresh}.kdl.tmpl`
 - **Wiring**: `extensions/session-pilot/extension.json` (manifest with toolFiles array)
-- **Skill**: `.claude/skills/session-pilot/SKILL.md` (4 scenarios with `mcp__claude-in-chrome__*` verification)
+- **Skill**: `.claude/skills/session-pilot/SKILL.md` (verification scenarios with `mcp__claude-in-chrome__*`)
 - **Rules**: `.claude/rules/session-pilot/{action-button-injection, claude-projects-encoding, perf-budget, mcp-chrome-only}.md`
 - **Tests**: `extensions/session-pilot/tools/session-pilot/tests/{test_encode_path,test_launch_idempotent}.py` (11 tests pass; review notes Phase 6c — strengthen via mutation testing v0.2)
 
@@ -48,7 +48,7 @@ netsh interface portproxy add v4tov4 listenport=8082 connectaddress=<WSL_IP> con
 - [FILE_CHANGES.md](FILE_CHANGES.md) — 30 files mapped to FR refs
 - [FIXTURES.md](FIXTURES.md) — test fixture inventory + expected encoding variants
 - [session-pilot_SCHEMA.md](session-pilot_SCHEMA.md) — full API contract (7 endpoints) + localStorage cache schema + env vars
-- [session-pilot.feature](session-pilot.feature) — 17 BDD scenarios
+- [session-pilot.feature](session-pilot.feature) — 22 BDD scenarios (SP002..SP017 implemented + SP018..SP023 deferred to v0.2 with @v02 tag)
 
 ## Status
 

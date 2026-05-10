@@ -116,34 +116,24 @@ def zellij_sessions() -> list[str]:
     return sessions
 
 
-def encode_path_for_claude(p: str) -> list[str]:
-    """
-    Claude encodes project path differently per OS:
-      Linux:   /mnt/d/repos/foo      -> -mnt-d-repos-foo
-      Windows: D:\\repos\\foo         -> D--repos-foo
-    Same worktree may be referenced by both (when /mnt/d -> D:\\). Return all variants.
-    """
-    variants = set()
-    p = p.rstrip("/").rstrip("\\")
-    # Generic char-stripping form. Single line replaces 3 chars (/, \\, :) with - / empty.
-    # (Earlier code had two equivalent variants here from chain-order differences;
-    # mutmut survivors showed they were equivalent mutants — collapsed to one.)
-    variants.add(p.replace(":", "").replace("\\", "-").replace("/", "-"))
-    # If path starts with /mnt/X/, also try X-... encoding (Windows Claude target)
-    if p.startswith("/mnt/") and len(p) > 6:
-        drive = p[5].upper()
-        rest = p[6:]
-        variants.add(f"{drive}-{rest.replace('/', '-').replace(':', '')}")
-    # If path starts with X:/, also try -mnt-x-... encoding (WSL Claude target)
-    # AND X--rest encoding (Windows Claude canonical with DOUBLE dash between drive and rest —
-    # this is what Claude actually writes; single-dash form misses real JSONL dirs)
-    if len(p) >= 3 and p[1] == ":" and p[2] in ("/", "\\"):
-        drive_lo = p[0].lower()
-        drive_up = p[0].upper()
-        rest = p[3:].replace("\\", "-").replace("/", "-")
-        variants.add(f"-mnt-{drive_lo}-{rest}")
-        variants.add(f"{drive_up}--{rest}")  # canonical Windows form: D--repos-foo
-    return [v.lstrip("-") for v in variants] + [v for v in variants if v.startswith("-")] + list(variants)
+# encode_path_for_claude lives in claude_paths.py as single source of truth
+# (mutmut test target imports identical body — sync invariant guarded by
+# tests/test_encode_path_module.test_sync_with_canonical).
+# Load via importlib spec rather than mutating sys.path: avoids shadowing if
+# user happens to have a sibling claude_paths.py earlier in their path.
+def _load_encode_path_for_claude():
+    import importlib.util
+    from pathlib import Path
+    src = Path(__file__).parent / "claude_paths.py"
+    spec = importlib.util.spec_from_file_location("session_pilot_claude_paths", src)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"claude_paths.py not loadable at {src}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.encode_path_for_claude
+
+
+encode_path_for_claude = _load_encode_path_for_claude()
 
 
 def claude_sessions_for(worktree_path: str) -> dict:
