@@ -1,0 +1,5 @@
+#!/bin/bash
+# Fixture F-10: Docker probe mock — always fails with connection error.
+# Used in HSCMD001_03 (environmental blocker detection) tests.
+echo "Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?" >&2
+exit 1
