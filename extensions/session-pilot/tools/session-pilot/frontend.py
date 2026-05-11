@@ -473,7 +473,33 @@ function buildTabulator() {
     cfg.responsiveLayout = 'collapse';
   }
   document.getElementById('meta').setAttribute('data-layout-variant', variant);
+  // Save selected repo filter to localStorage on every change.
+  // dataFiltering fires when any header filter changes — extract Repo value
+  // and persist. setHeaderFilters/setHeaderFilterValue triggers same event,
+  // so restore-on-init also writes itself back (no-op net effect).
+  cfg.dataFiltering = function(filters) {
+    try {
+      const repoFilter = (filters || []).find(f => f.field === 'repo');
+      if (repoFilter && Array.isArray(repoFilter.value) && repoFilter.value.length > 0) {
+        localStorage.setItem('wtdash_filter_v1_repo', JSON.stringify(repoFilter.value));
+      } else {
+        localStorage.removeItem('wtdash_filter_v1_repo');
+      }
+    } catch (e) { /* localStorage may be unavailable (private mode, quota) */ }
+  };
   return new Tabulator("#tbl", cfg);
+}
+
+function _restoreRepoFilter() {
+  try {
+    const raw = localStorage.getItem('wtdash_filter_v1_repo');
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+    if (!Array.isArray(saved) || saved.length === 0) return;
+    _tabulator.setHeaderFilterValue('repo', saved);
+  } catch (e) {
+    try { localStorage.removeItem('wtdash_filter_v1_repo'); } catch {}
+  }
 }
 
 function render() {
@@ -483,6 +509,9 @@ function render() {
     _tabulator.on("tableBuilt", () => {
       _tabulator.replaceData(_rows);
       applyTabulatorFilter();
+      // Restore saved repo filter from previous session (after data is in,
+      // because valuesLookup="active" needs rows to enumerate dropdown items).
+      _restoreRepoFilter();
     });
     return;
   }

@@ -261,6 +261,10 @@ def build_worktree_index() -> dict:
             wt_path = wt.get("path", "")
             if not wt_path or wt_path in seen_paths:
                 continue
+            # Cursor editor stores its linked worktrees under <repo>/.cursor/worktrees/<id>.
+            # These are not for Claude — filter them out so dashboard stays Claude-focused.
+            if "/.cursor/worktrees/" in wt_path.replace("\\", "/"):
+                continue
             seen_paths.add(wt_path)
             branch = wt.get("branch", "(unknown)")
             head = wt.get("head", "")[:7]
@@ -272,7 +276,13 @@ def build_worktree_index() -> dict:
                 "branch": branch,
                 "head": head,
                 "worktree_path": wt_path,
-                "is_main_worktree": str(repo) == wt_path,
+                # Two normalizations needed: (1) slash style — str(WindowsPath)
+                # emits `\`, git emits `/`; (2) symlink/junction resolution —
+                # discover_repos may scan via `~/repos` which is often a junction
+                # to the real drive (e.g. D:/repos). git always returns resolved
+                # real path. Without .resolve() the equality always fails on
+                # symlinked scan roots → `(main)` label never appears.
+                "is_main_worktree": str(repo.resolve()).replace("\\", "/") == wt_path.replace("\\", "/"),
                 # v0.3: session_name/session_active/session_attach_url отсутствуют — нет Zellij
                 "claude_max_mtime": int(mtime),
                 "has_claude_history": mtime > 0,

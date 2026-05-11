@@ -125,6 +125,90 @@ def test_IDX_INV_04_end_to_end_no_cartesian_explosion(monkeypatch):
         )
         assert len(paths) == 3, f"cartesian explosion: got {len(paths)} rows: {paths}"
 
+        # is_main_worktree invariant: exactly one row should be marked main
+        # (the row whose worktree_path equals the discovered repo path, after
+        # cross-platform slash normalization). Before fix: str(WindowsPath) on
+        # Windows uses `\`, git emits `/`, so equality always returned false →
+        # `(main)` label never appeared on dashboard.
+        main_rows = [r for r in idx["rows"] if r["is_main_worktree"]]
+        assert len(main_rows) == 1, (
+            f"Expected exactly 1 main worktree, got {len(main_rows)}: "
+            f"{[(r['worktree_path'], r['is_main_worktree']) for r in idx['rows']]}"
+        )
+        assert norm(main_rows[0]["worktree_path"]) == norm(str(main.resolve())), (
+            f"Wrong row marked as main: {main_rows[0]['worktree_path']} "
+            f"vs expected {main.resolve()}"
+        )
+
+
+def test_IDX_INV_06_is_main_worktree_through_symlink(monkeypatch):
+    """Real-world repro: on Windows `~/repos` is often a junction/symlink to
+    the real drive (e.g. D:/repos). discover_repos returns the symlink path
+    (str = C:/Users/.../repos/foo), git always returns the resolved real path
+    (D:/repos/foo). Naive str equality misses this case → `(main)` label
+    never appears on dashboard.
+
+    Skipped on platforms without symlink privilege (Windows non-admin).
+    """
+    with tempfile.TemporaryDirectory(prefix="idx-inv-sym-") as td:
+        root = Path(td)
+        real_repo = root / "real_main"
+        sym_repo = root / "sym_main"
+        _init_repo_with_commit(real_repo)
+        try:
+            sym_repo.symlink_to(real_repo, target_is_directory=True)
+        except (OSError, NotImplementedError):
+            import pytest
+            pytest.skip("symlinks not available on this platform/user")
+
+        # Feed discover_repos the SYMLINK path; build_worktree_index should
+        # still mark the row as main_worktree because git returns the real path.
+        monkeypatch.setattr(indexer, "discover_repos", lambda: [sym_repo])
+        monkeypatch.setattr(indexer, "claude_max_mtime_for", lambda p: 0.0)
+
+        idx = indexer.build_worktree_index()
+        main_rows = [r for r in idx["rows"] if r["is_main_worktree"]]
+        assert len(main_rows) == 1, (
+            f"Symlinked scan root broke is_main_worktree comparison. "
+            f"Rows: {[(r['worktree_path'], r['is_main_worktree']) for r in idx['rows']]}"
+        )
+
+
+def test_IDX_INV_05_cursor_worktrees_filtered_out(monkeypatch):
+    """Cursor editor manages its own linked worktrees under <repo>/.cursor/worktrees/<id>.
+    Those are for Cursor, not Claude — they should never appear on the dashboard.
+
+    Real-world reproduction: user's machine had ~16 such Cursor worktrees in
+    `git worktree list` output for `zoho` and `presentation-ai-pomogator` repos,
+    cluttering the dashboard with paths like
+    `C:/Users/stigm/.cursor/worktrees/zoho/drt` that the user never opens in
+    Claude.
+    """
+    with tempfile.TemporaryDirectory(prefix="idx-inv-cursor-") as td:
+        root = Path(td)
+        main = root / "main"
+        normal_wt = root / "feat-normal"
+        # Build a fake cursor worktree under <root>/.cursor/worktrees/<id>
+        cursor_wt = root / ".cursor" / "worktrees" / "cursor-id-abc"
+        _init_repo_with_commit(main)
+        _git("worktree", "add", "-b", "feat-normal", str(normal_wt), cwd=main)
+        cursor_wt.parent.mkdir(parents=True, exist_ok=True)
+        _git("worktree", "add", "-b", "feat-cursor", str(cursor_wt), cwd=main)
+
+        monkeypatch.setenv("REPOS", str(main))
+        monkeypatch.setattr(indexer, "claude_max_mtime_for", lambda p: 0.0)
+
+        idx = indexer.build_worktree_index()
+        paths = [r["worktree_path"] for r in idx["rows"]]
+        # Cursor worktree MUST NOT appear; normal worktree must
+        for p in paths:
+            assert "/.cursor/worktrees/" not in p.replace("\\", "/"), (
+                f"Cursor worktree leaked into dashboard: {p}"
+            )
+        assert any("feat-normal" in p for p in paths), (
+            f"Normal worktree was filtered too aggressively: {paths}"
+        )
+
 
 if __name__ == "__main__":
     # Stand-alone runner (no pytest required)
