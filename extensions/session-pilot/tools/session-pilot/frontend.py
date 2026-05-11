@@ -4,13 +4,12 @@ This module exports `HTML`: a single string containing the full dashboard SPA
 (inline `<style>` and `<script>` blocks). Tabulator 6.x is loaded from
 `/vendor/tabulator.min.{js,css}` served by the parent process.
 
-Server substitutes `__ZELLIJ_WEB_URL__` with `os.environ["ZELLIJ_WEB_URL"]`
-before serving on `GET /`.
+v0.3 (Windows-native): served as-is — no template substitution. The legacy
+`__ZELLIJ_WEB_URL__` placeholder removed when Zellij was dropped from spec.
 """
 
 HTML = """<!doctype html>
 <html lang="ru"><head><meta charset="utf-8"><title>Worktree Dashboard</title>
-<script>const ZELLIJ_WEB_URL_JS = '__ZELLIJ_WEB_URL__';</script>
 <link rel="stylesheet" href="/vendor/tabulator_midnight.min.css">
 <script src="/vendor/tabulator.min.js"></script>
 <style>
@@ -159,7 +158,7 @@ async function loadIndex() {
     const r = await fetch('/api/index', {cache: 'no-store'});
     const data = await r.json();
     document.getElementById('meta').textContent =
-      `${data.rows.length} worktrees · ${data.all_zellij_sessions.length} live Zellij sessions · generated ${data.generated_at}`;
+      `${data.rows.length} worktrees · generated ${data.generated_at}`;
     if (data.rows.length === 0) {
       document.getElementById('tbl').innerHTML = '<tr><td class="empty">No git worktrees found.</td></tr>';
       setProgress(100, 'Done');
@@ -404,27 +403,18 @@ function buildTabulator() {
       {title: "Git", field: "_git_dirty_total", width: 180, headerSort: true, formatter(cell) {
         return formatGitStatus(cell.getRow().getData()._git_status);
       }},
-      {title: "Zellij session", field: "session_name", width: 200, headerSort: true, formatter(cell) {
-        const r = cell.getRow().getData();
-        const klass = r.session_active ? "session active" : "session inactive";
-        return `<span class="${klass}">${escapeHtml(cell.getValue() || '')}${r.session_active ? ' ●' : ''}</span>`;
-      }},
-      {title: "Action", field: "_action", width: 160, headerSort: false, formatter(cell) {
+      {title: "Action", field: "_action", width: 130, headerSort: false, formatter(cell) {
         const row = cell.getRow().getData();
         const top = (row.claude_sessions || [])[0];
         const uuid = top?.uuid;
         const canResume = !!uuid;
-        const sess = encodeURIComponent(row.session_name);
-        const zURL = `${ZELLIJ_WEB_URL_JS}/?session=${sess}`;
         return `
           <button class="act-btn ${canResume ? '' : 'disabled'}" title="Resume claude --resume ${uuid?.slice(0,8) || '?'}…"
-                  ${canResume ? `onclick="actLaunch(this, ${JSON.stringify(row.worktree_path)}, ${JSON.stringify(row.session_name)}, 'resume', ${JSON.stringify(uuid)})"` : 'disabled'}>▶</button>
+                  ${canResume ? `onclick="actLaunch(this, ${JSON.stringify(row.worktree_path)}, 'resume', ${JSON.stringify(uuid)})"` : 'disabled'}>▶</button>
           <button class="act-btn" title="Fresh claude (no resume) in ${row.worktree_path}"
-                  onclick="actLaunch(this, ${JSON.stringify(row.worktree_path)}, ${JSON.stringify(row.session_name)}, 'fresh', null)">✨</button>
+                  onclick="actLaunch(this, ${JSON.stringify(row.worktree_path)}, 'fresh', null)">✨</button>
           <button class="act-btn" title="Open in VSCode/Cursor (code ${row.worktree_path})"
                   onclick="actVSCode(this, ${JSON.stringify(row.worktree_path)})">📂</button>
-          <a class="act-btn" title="Open Zellij Web Client (no command injection — for revisiting running session)"
-             href="${zURL}" target="_blank" rel="noopener">🪟</a>
         `;
       }},
     ],
@@ -469,7 +459,6 @@ function applyTabulatorFilter() {
       {field: "head",            type: "like", value: q},
       {field: "worktree_path",   type: "like", value: q},
       {field: "_last_msg_text",  type: "like", value: q},
-      {field: "session_name",    type: "like", value: q},
     ],
   ]);
 }
@@ -540,14 +529,14 @@ window.addEventListener('keydown', (e) => {
   }
 });
 
-// Action button handlers — Phase 3
-async function actLaunch(btn, worktree_path, session_name, mode, uuid) {
+// Action button handlers — v0.3 (Windows Terminal spawn)
+async function actLaunch(btn, worktree_path, mode, uuid) {
   const orig = btn.textContent;
   btn.disabled = true; btn.textContent = '⏳';
   try {
     const r = await fetch('/api/launch', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({worktree_path, session_name, mode, uuid}),
+      body: JSON.stringify({worktree_path, mode, uuid}),
     });
     const data = await r.json();
     if (!data.ok) {
@@ -557,10 +546,8 @@ async function actLaunch(btn, worktree_path, session_name, mode, uuid) {
       return;
     }
     btn.textContent = '✓';
-    // Open Zellij URL in new tab. mcp__claude-in-chrome__navigate (when available)
-    // would be preferred but is only callable from Claude Code agent context.
-    // From browser JS we use window.open which is best-effort.
-    window.open(data.url, '_blank', 'noopener');
+    // v0.3: server spawn-нул detached Windows Terminal окно. Никакой URL не открываем
+    // (нет Zellij Web Client). data.method = "wt-spawn-pwsh"|"cmd-fallback-..."|"cached".
     setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 1500);
     // Trigger refresh to update LIVE indicator
     setTimeout(loadIndex, 2000);

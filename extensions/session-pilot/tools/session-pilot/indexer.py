@@ -88,23 +88,10 @@ def git_worktree_list(repo: Path) -> list[dict]:
 
 
 def zellij_sessions() -> list[str]:
-    """Return list of session names from `zellij list-sessions`."""
-    import server
-    try:
-        out = subprocess.run(
-            [server.ZELLIJ_BIN, "list-sessions", "--no-formatting"],
-            capture_output=True, text=True, check=False, timeout=5,
-        )
-    except Exception:
-        return []
-    if out.returncode != 0:
-        return []
-    sessions = []
-    for line in out.stdout.splitlines():
-        m = re.match(r"^(\S+)", line)
-        if m:
-            sessions.append(m.group(1))
-    return sessions
+    """v0.3: Zellij удалён. Stub возвращает [] чтобы build_worktree_index
+    не ломался при чтении server.zellij_sessions(). Удалить целиком когда
+    build_worktree_index перестанет вызывать."""
+    return []
 
 
 def claude_sessions_for(worktree_path: str) -> dict:
@@ -228,10 +215,8 @@ def claude_max_mtime_for(worktree_path: str) -> float:
 
 
 def build_worktree_index() -> dict:
-    """Fast: git worktree list + zellij sessions + per-path mtime; no JSONL parse."""
-    import server
+    """Fast: git worktree list + per-path mtime; no JSONL parse. v0.3 — no Zellij."""
     repos = discover_repos()
-    sessions_set = set(zellij_sessions())
     rows = []
     for repo in repos:
         repo_name = repo.name
@@ -240,8 +225,6 @@ def build_worktree_index() -> dict:
             wt_path = wt.get("path", "")
             branch = wt.get("branch", "(unknown)")
             head = wt.get("head", "")[:7]
-            session_name_clean = re.sub(r"[^a-zA-Z0-9_-]", "_", f"{repo_name}__{branch}").rstrip("_")
-            session_active = session_name_clean in sessions_set
             mtime = claude_max_mtime_for(wt_path)
             rows.append({
                 "id": f"{repo_name}__{branch}__{wt_path}",
@@ -251,16 +234,13 @@ def build_worktree_index() -> dict:
                 "head": head,
                 "worktree_path": wt_path,
                 "is_main_worktree": str(repo) == wt_path,
-                "session_name": session_name_clean,
-                "session_active": session_active,
-                "session_attach_url": f"{server.ZELLIJ_WEB_URL}/?session={session_name_clean}" if session_active else None,
+                # v0.3: session_name/session_active/session_attach_url отсутствуют — нет Zellij
                 "claude_max_mtime": int(mtime),
                 "has_claude_history": mtime > 0,
             })
     return {
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "rows": rows,
-        "all_zellij_sessions": sorted(sessions_set),
     }
 
 
