@@ -86,6 +86,40 @@ def test_lm_saas_b1_regression_both_variants_present():
     )
 
 
+def test_dot_folder_produces_double_dash_around_dot_dir():
+    """Claude Code replaces `.` in dot-folders (e.g. `.claude`) with `-`,
+    producing `--claude-` in project dir names (NOT `-.claude-`).
+
+    Without this variant the dashboard misses session data for any worktree
+    that contains a dot-folder in its path (e.g. linked worktrees under
+    `<repo>/.claude/worktrees/<name>` or `<repo>/.cursor/worktrees/<name>`).
+    """
+    variants = set(encode_path_for_claude("D:/repos/foo/.claude/bar"))
+    assert "D--repos-foo--claude-bar" in variants, (
+        f"Dot-folder variant 'D--repos-foo--claude-bar' MISSING. "
+        f"Got variants: {sorted(variants)}"
+    )
+
+
+def test_dot_folder_real_products_20340_regression():
+    """Exact path from real user dashboard: dev-pomogator's linked worktree
+    at /.claude/worktrees/products-20340-spec-fixes maps to claude project
+    dir `D--repos-dev-pomogator--claude-worktrees-products-20340-spec-fixes`
+    (double-dash around .claude, then single-dash separators).
+
+    Before fix: encoder produced `-.claude-` (literal dot) which never matched
+    Claude's real folder name. After fix: variant with `--claude-` is present.
+    """
+    real_path = "D:/repos/dev-pomogator/.claude/worktrees/products-20340-spec-fixes"
+    real_claude_dir = "D--repos-dev-pomogator--claude-worktrees-products-20340-spec-fixes"
+    variants = set(encode_path_for_claude(real_path))
+    assert real_claude_dir in variants, (
+        f"Real-world regression: variant for products-20340 worktree missing.\n"
+        f"  Expected variant: {real_claude_dir!r}\n"
+        f"  Got: {sorted(v for v in variants if 'products-20340' in v)}"
+    )
+
+
 def test_returns_non_empty_for_typical_inputs():
     """Sanity: any reasonable input produces ≥1 variant."""
     for p in ["/repos/foo", "D:/repos/foo", "/home/user/code", "C:\\projects\\bar"]:

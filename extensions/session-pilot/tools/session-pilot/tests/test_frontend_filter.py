@@ -165,6 +165,29 @@ def test_FILT_03_no_invalid_tabulator_filter_option_combos():
                 )
 
 
+def test_FILT_04_repo_filter_persists_to_localstorage():
+    """Selected repo filter must survive page refresh.
+
+    Asserts the frontend code contains both save-on-change and
+    restore-on-init paths against localStorage key wtdash_filter_v1_repo.
+    Without this, user has to re-select repos every time they F5.
+
+    This is a static HTML smoke test — full round-trip is verified via
+    Claude-in-Chrome MCP browser test (see manual verification step).
+    """
+    html = _load_html_template()
+    # Save path — must reference localStorage and the versioned key
+    assert "wtdash_filter_v1_repo" in html, (
+        "localStorage key 'wtdash_filter_v1_repo' missing from HTML — filter won't persist"
+    )
+    assert "localStorage.setItem" in html, "no localStorage.setItem call in HTML"
+    # Restore path — must read on init and apply via setHeaderFilterValue
+    assert "localStorage.getItem" in html, "no localStorage.getItem call in HTML"
+    assert "setHeaderFilterValue" in html, (
+        "setHeaderFilterValue call missing — filter loaded from localStorage won't apply to Tabulator"
+    )
+
+
 if __name__ == "__main__":
     failed = 0
     for name, fn in list(globals().items()):
