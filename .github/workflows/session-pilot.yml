@@ -159,21 +159,32 @@ jobs:
           if survived:
               print("--- Surviving mutants (exit_code=0) ---")
               survivors = [k for k, v in sorted(codes.items()) if v == 0]
-              mutants_src = pathlib.Path("mutants/encode_path_module/__init__.py")
-              src_text = mutants_src.read_text() if mutants_src.exists() else ""
+              # mutmut 3.x layout: mutants/encode_path_module.py with all mutants inlined.
+              import subprocess
+              print("--- mutants/ layout ---")
+              subprocess.run(["find", "mutants", "-type", "f", "-name", "*.py"], check=False)
+              candidate_files = [
+                  pathlib.Path("mutants/encode_path_module.py"),
+                  pathlib.Path("mutants/encode_path_module/__init__.py"),
+              ]
+              src_text = ""
+              for cf in candidate_files:
+                  if cf.exists():
+                      print(f"--- using {cf} ({cf.stat().st_size} bytes) ---")
+                      src_text = cf.read_text()
+                      break
+              import re
               for k in survivors:
                   print(f"  SURVIVED: {k}")
-                  # Each mutant lives as a function `x_encode_path_for_claude_v2__mutmut_N`.
-                  # Extract its body for diff against canonical.
-                  fname = k.split(".")[-1]  # e.g. x_encode_path_for_claude_v2__mutmut_32
-                  import re
+                  fname = k.split(".")[-1]
                   m = re.search(rf"^def {re.escape(fname)}\(.*?\n(.*?)(?=^def |\Z)", src_text, re.MULTILINE | re.DOTALL)
                   if m:
                       body = m.group(1).rstrip()
-                      # Print just first 6 non-empty lines for context
-                      lines = [ln for ln in body.splitlines() if ln.strip()][:6]
+                      lines = [ln for ln in body.splitlines() if ln.strip()][:8]
                       for ln in lines:
                           print(f"    {ln}")
+                  else:
+                      print(f"    [no body found for {fname} in src ({len(src_text)} bytes)]")
                   print()
           # Fail if below threshold
           THRESHOLD = 70.0
