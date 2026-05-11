@@ -42,16 +42,20 @@ def _make_fake_zellij(tmp: Path, output_file: Path) -> Path:
     """Build a tiny bash 'zellij' stub that dumps {pid, pgid, ppgid, isatty}
     to output_file then sleeps 30s. Lets us assert on the child's group state."""
     bin_path = tmp / "fake_zellij"
+    # TTY checks must be done BEFORE redirecting stdout to file (else fd 1
+    # inside the `{...} > file` block is the file, not the original PTY).
+    # Capture state into variables first.
     script = f"""#!/bin/bash
+[ -t 0 ] && _stdin_t="yes" || _stdin_t="no"
+[ -t 1 ] && _stdout_t="yes" || _stdout_t="no"
 {{
   echo "pid=$$"
   echo "pgid=$(ps -o pgid= -p $$)"
   ppid=$PPID
   echo "ppid=$ppid"
   echo "ppgid=$(ps -o pgid= -p $ppid 2>/dev/null || echo missing)"
-  # tty detection — write to fd 0; if isatty, tty command prints path; else "not a tty"
-  if [ -t 0 ]; then echo "stdin_is_tty=yes"; else echo "stdin_is_tty=no"; fi
-  if [ -t 1 ]; then echo "stdout_is_tty=yes"; else echo "stdout_is_tty=no"; fi
+  echo "stdin_is_tty=$_stdin_t"
+  echo "stdout_is_tty=$_stdout_t"
 }} > {output_file}
 sleep 30
 """
