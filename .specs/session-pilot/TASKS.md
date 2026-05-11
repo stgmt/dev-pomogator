@@ -206,6 +206,22 @@
   _Requirements: extension-layout rule_
   **Done When:**
   - [x] exit 0
+- [x] T37: Strong tests — mutation kill rate 81% → 97.8% -- @feature17 — Status: DONE | Est: 120m
+  _Requirements: NFR-Anti-1, NFR-Anti-3, strong-tests skill 12-point self-eval_
+  **Done When:**
+  - [x] CI mutmut dump enhanced to print surviving mutant signatures + mutated source
+  - [x] 10 targeted killer tests added (M7/M8/M32/M33/M50/M51/M61/M81/M82/M89/M91)
+  - [x] M54/M55 documented as [EQUIVALENT_SUSPECT] (rstrip eliminates len-3 boundary case)
+  - [x] Final rate 97.8% (Total=92, Killed=90, Survived=2 equivalent)
+
+- [x] T38: Refactor server.py — extract HTML + diagnose into modules -- @feature1 — Status: DONE | Est: 60m
+  _Requirements: server.py single-file size cap (Phase 5 deferred work, KD-1)_
+  **Done When:**
+  - [x] frontend.py — 593 LOC HTML/CSS/JS chunk extracted
+  - [x] diagnose.py — diagnose_livecycle moved with dependency-injection signature
+  - [x] server.py reduced 1463 → 829 LOC (−43%)
+  - [x] Tests stay green (62/62) — re-exports via `from frontend import HTML` keep monkey-patches working
+
 - [x] T36: Race fix — Playwright spawn isolation -- @feature4 — Status: DONE | Est: 60m
   _Requirements: NFR-Compat-6, RESEARCH.md spawn-race Risk row_
   **Done When:**
