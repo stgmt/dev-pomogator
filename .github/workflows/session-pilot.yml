@@ -155,12 +155,26 @@ jobs:
           survived = sum(1 for v in codes.values() if v == 0)
           rate = 100 * killed / total if total else 0
           print(f"Total: {total} | Killed: {killed} | Survived: {survived} | Rate: {rate:.1f}%")
-          # Dump surviving mutant keys for strong-tests audit
+          # Dump surviving mutant keys + their mutated source for strong-tests audit
           if survived:
               print("--- Surviving mutants (exit_code=0) ---")
-              for k, v in sorted(codes.items()):
-                  if v == 0:
-                      print(f"  SURVIVED: {k}")
+              survivors = [k for k, v in sorted(codes.items()) if v == 0]
+              mutants_src = pathlib.Path("mutants/encode_path_module/__init__.py")
+              src_text = mutants_src.read_text() if mutants_src.exists() else ""
+              for k in survivors:
+                  print(f"  SURVIVED: {k}")
+                  # Each mutant lives as a function `x_encode_path_for_claude_v2__mutmut_N`.
+                  # Extract its body for diff against canonical.
+                  fname = k.split(".")[-1]  # e.g. x_encode_path_for_claude_v2__mutmut_32
+                  import re
+                  m = re.search(rf"^def {re.escape(fname)}\(.*?\n(.*?)(?=^def |\Z)", src_text, re.MULTILINE | re.DOTALL)
+                  if m:
+                      body = m.group(1).rstrip()
+                      # Print just first 6 non-empty lines for context
+                      lines = [ln for ln in body.splitlines() if ln.strip()][:6]
+                      for ln in lines:
+                          print(f"    {ln}")
+                  print()
           # Fail if below threshold
           THRESHOLD = 70.0
           if rate < THRESHOLD:
