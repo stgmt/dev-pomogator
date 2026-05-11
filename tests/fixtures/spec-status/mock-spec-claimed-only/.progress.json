@@ -1,0 +1,12 @@
+{
+  "version": 3,
+  "featureSlug": "mock-spec-claimed-only",
+  "createdAt": "2026-05-11T00:00:00.000Z",
+  "currentPhase": "Finalization",
+  "phases": {
+    "Discovery": { "completedAt": "2026-05-11T00:10:00.000Z", "stopConfirmed": true, "stopConfirmedAt": "2026-05-11T00:11:00.000Z" },
+    "Context": { "completedAt": "2026-05-11T00:11:00.000Z", "stopConfirmed": true, "stopConfirmedAt": "2026-05-11T00:12:00.000Z" },
+    "Requirements": { "completedAt": "2026-05-11T00:20:00.000Z", "stopConfirmed": true, "stopConfirmedAt": "2026-05-11T00:21:00.000Z" },
+    "Finalization": { "completedAt": "2026-05-11T00:30:00.000Z", "stopConfirmed": true, "stopConfirmedAt": "2026-05-11T00:31:00.000Z" }
+  }
+}

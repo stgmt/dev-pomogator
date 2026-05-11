@@ -1,0 +1,22 @@
+version: 2
+session_id: fresh001
+pid: 12345
+started_at: "2026-05-11T00:00:00.000Z"
+updated_at: "2026-05-11T00:00:30.000Z"
+state: passed
+framework: vitest
+total: 6
+passed: 6
+failed: 0
+skipped: 0
+running: 0
+percent: 100
+duration_ms: 30000
+error_message: ""
+log_file: .dev-pomogator/.test-status/test.fresh001.log
+suites: []
+phases:
+  - name: tests
+    status: completed
+    started_at: "2026-05-11T00:00:00.000Z"
+    duration_ms: 30000
