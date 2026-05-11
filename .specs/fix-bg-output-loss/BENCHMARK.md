@@ -12,6 +12,7 @@
 | Skill trigger rate (v0.2.0 description, control) | 3/3 (100%) |
 | Wrapper startup overhead | ~780ms median (irrelevant for long bg) |
 | YAML status accuracy (vitest, after path bug fix) | 6/6 = 100% match с ground truth |
+| Adapter parsing reliability (5 frameworks + generic) | 6/6 = 100% (FBOL003_01..06 synthetic) |
 | Path mangling bug | **Fixed in scope** — tui_session_start.ts forward-slash normalization |
 
 **Key insight**: synthetic fresh sub-agent baseline is 100% for both old and new descriptions — does NOT differentiate. **Real failure mode (goal-focused behavior in extended context) requires in-conversation A/B test**, not isolated trials. This benchmark therefore validates structural correctness of skill mechanism but does not measure realistic trigger rate improvement.
@@ -198,10 +199,27 @@ After applying fix + unsetting old env var:
 
 **Reliability benchmark PASSED for vitest framework.** Path bug fixed in same commit. Activates for new sessions when `tui_session_start.ts` runs. Current shell session env var remains mangled until next SessionStart — workaround for current session: `export TEST_STATUSLINE_PROJECT="D:/repos/dev-pomogator"`.
 
+### Adapter parsing reliability (5 other frameworks + generic)
+
+Real test suites for jest/pytest/dotnet/rust/go not available в dev-pomogator (vitest-only). Proxy: feed each adapter known framework output samples, verify TestEvent parsing correctness. Implemented в `tests/e2e/adapters-reliability.test.ts` (FBOL003_01..06).
+
+| Adapter | Test | Sample input | Expected events | Result |
+|---------|------|-------------|-----------------|--------|
+| JestAdapter | FBOL003_01 | `PASS file`, `✓ test (5ms)`, `✕ test (10ms)`, `○ skip`, `Tests: 1 failed, 1 passed, 1 skipped, 3 total` | suite_start, test_pass, test_fail, test_skip, summary | ✓ 5 events, summary={passed:1, failed:1, total:3} |
+| PytestAdapter | FBOL003_02 | `file::test PASSED [33%]`, `... FAILED [66%]`, `... SKIPPED [100%]` | test_pass, test_fail, test_skip | ✓ 3 events |
+| DotnetAdapter | FBOL003_03 | `Passed Test1 [5ms]`, `Failed Test2 [12ms]`, `Skipped Test3` | test_pass, test_fail, test_skip | ✓ 3+ events |
+| CargoAdapter | FBOL003_04 | `test foo ... ok`, `test bar ... FAILED`, `test baz ... ignored` | test_pass, test_fail, test_skip | ✓ 3+ events |
+| GoTestAdapter | FBOL003_05 | `=== RUN`/`--- PASS`/`--- FAIL`/`--- SKIP` lines | test_pass, test_fail, test_skip | ✓ 3+ events |
+| GenericAdapter | FBOL003_06 | 6 mixed lines (including Jest-shaped strings) | All null (passthrough) | ✓ 6/6 returned null |
+
+**Total: 6/6 adapter reliability tests pass.** All 5 framework parsers validate expected event types. Generic adapter correctly returns null for all input, confirming passthrough semantics.
+
 ### Limitations remaining
 
-- Only vitest framework tested in reliability check; other 5 frameworks (jest/pytest/dotnet/rust/go) not yet measured against ground truth — would need framework-specific test suite + reporter for each
-- Wall-clock validation only — no checks for finer-grained accuracy (per-test duration deltas, etc.)
+- **Synthetic input**: real framework outputs may have edge cases not in samples (e.g. multiline error stacks, encoded chars, locale variations)
+- **Single-line parsing only**: no multi-event aggregation tested
+- **No ground-truth count comparison** for non-vitest frameworks — would need actual test projects in each language
+- For full e2e reliability per framework, future spec should create sample projects in `tests/fixtures/{jest,pytest,dotnet,cargo,go}/` and run real test command vs wrapper
 
 ---
 
