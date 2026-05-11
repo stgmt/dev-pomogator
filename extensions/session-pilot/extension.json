@@ -45,6 +45,13 @@
       ".dev-pomogator/tools/session-pilot/tests/test_diagnose_cli.py",
       ".dev-pomogator/tools/session-pilot/tests/test_frontend_smoke.py",
       ".dev-pomogator/tools/session-pilot/tests/test_frontend_e2e.py",
+      ".dev-pomogator/tools/session-pilot/tests/test_jsonl_indexer.py",
+      ".dev-pomogator/tools/session-pilot/tests/test_new_endpoints.py",
+      ".dev-pomogator/tools/session-pilot/tests/test_zellij_spawn_isolation.py",
+      ".dev-pomogator/tools/session-pilot/tests/mutation_target/setup.cfg",
+      ".dev-pomogator/tools/session-pilot/claude_paths.py",
+      ".dev-pomogator/tools/session-pilot/ui/vendor/tabulator.min.js",
+      ".dev-pomogator/tools/session-pilot/ui/vendor/tabulator_midnight.min.css",
       ".dev-pomogator/tools/session-pilot/tests/setup.cfg",
       ".dev-pomogator/tools/session-pilot/tests/.gitignore"
     ]

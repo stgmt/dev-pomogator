@@ -40,7 +40,7 @@
 - **NFR-Compat-3** Browsers: Chrome/Edge ≥120, Firefox ≥115, Safari ≥17 (для native `<dialog>` support)
 - **NFR-Compat-4** Vendored libs: Tabulator 6.x (MIT, ~150KB), marked.js 12.x (MIT, ~30KB)
 - **NFR-Compat-5** Python stdlib only — нет внешних pip dependencies (для лёгкого install)
-- **NFR-Compat-6** Playwright frontend e2e (`test_frontend_e2e.py`) is best-effort on WSL2 due to documented browser-teardown vs `setsid` race in the HTTP handler thread — see RESEARCH.md Risk table for revisit triggers (Popen `start_new_session=True`, off-thread spawn worker, WSL2-primary CI shift). Test validates the JS→fetch→backend chain (POST 200 / `ok: true` / valid `method`) as the actual contract; trailing spawn verification gracefully degrades to `SKIP-spawn-verify` with diagnostic dump. Backend correctness is independently asserted by `test_e2e.py` via curl (deterministic, no browser).
+- **NFR-Compat-6** Playwright frontend e2e (`test_frontend_e2e.py`) — race **FIXED in v0.2** by rewriting `_zellij_spawn_with_layout` to use native Python `subprocess.Popen(start_new_session=True, close_fds=True)` with own-allocated `pty.openpty()` master parked in module-global `_PTY_MASTERS`. Diagnosis refined: root cause was fd inheritance (PTY master tied to HTTP handler lifetime via `script` wrapper), NOT SIGPIPE propagation (research 2026-05-11). See RESEARCH.md Risk row. Regression test `test_zellij_spawn_isolation.py` asserts: (a) child pgid ≠ server pgid (setsid worked); (b) child survives simulated parent socket close. The graceful `SKIP-spawn-verify` fallback in `test_frontend_e2e.py` stays as belt-and-suspenders in case the fix regresses on future WSL2 kernel updates.
 
 ## Anti-Halyava (без халявы)
 

@@ -206,6 +206,16 @@
   _Requirements: extension-layout rule_
   **Done When:**
   - [x] exit 0
+- [x] T36: Race fix — Playwright spawn isolation -- @feature4 — Status: DONE | Est: 60m
+  _Requirements: NFR-Compat-6, RESEARCH.md spawn-race Risk row_
+  **Done When:**
+  - [x] Research-workflow run 2026-05-11 refined diagnosis (fd inheritance + libfuse #27 race, not SIGPIPE)
+  - [x] _zellij_spawn_with_layout rewritten to native Python Popen with start_new_session=True + own pty.openpty()
+  - [x] PTY master parked in module-global _PTY_MASTERS (kernel cleanup on server exit)
+  - [x] close_fds=True prevents HTTP socket inheritance
+  - [x] test_zellij_spawn_isolation.py: 4 cases (pgid isolation, master parked, stdio is TTY, child survives master close); Linux-only, skip on Windows
+  - [x] RESEARCH.md Risk row + NFR-Compat-6 updated to "FIXED v0.2" with mechanism explained + sources cited
+
 - [ ] T25: git push + open PR -- @feature1 — Status: TODO | Est: 10m
   _Requirements: PR delivery_
   **Done When:**
@@ -241,11 +251,15 @@
   - [x] Frontend column displays +A ~M -D ?U / ↑K ↓L (formatGitStatus helper)
   - [x] Whitelist-gated (uses _whitelisted_paths())
   - [x] Parallel enrichGitStatus() with 4-worker queue, fire-and-forget after Claude enrich
-- [x] T30: Multi-key sort -- @feature8 — Status: DONE | Est: 180m
+- [x] T30: Tabulator vendored + multi-key sort -- @feature8 — Status: DONE | Est: 180m
   _Requirements: [FR-8](FR.md#fr-8-frontend-tabulator--multi-sort--virtual-scroll--filter)_
   **Done When:**
-  - [x] shift+click multi-key sort verified (window._sortStack array, header arrows show position 1/2/3)
-  - [x] Pure-JS impl chosen over Tabulator vendoring (~150KB saved, no vendor maintenance overhead; revisit in v0.3 if scale demands virtual scroll + frozen columns)
+  - [x] Tabulator 6.3.1 MIT vendored under `ui/vendor/{tabulator.min.js,tabulator_midnight.min.css}`
+  - [x] Server serves `/vendor/*` route with whitelist gating + path-traversal protection (`_serve_vendor`)
+  - [x] render() builds Tabulator instance with column definitions, frozen Repo+Branch columns, formatters for status/last-msg/git/action
+  - [x] Built-in Shift+click multi-column sort (Tabulator native)
+  - [x] setFilter wired to vi-style `/` input (multiple OR fields: repo/branch/head/path/last-msg/session)
+  - [x] Dead pure-JS sort/filter helpers removed (sortHdr/setSort/applySort/applyFilter) — replaced by Tabulator's API
 - [ ] T31: Idle Intl.RelativeTimeFormat -- @feature12 — Status: TODO | Est: 30m
   _Requirements: [FR-12](FR.md#fr-12-idle-time-human-readable-format)_
   **Done When:**
