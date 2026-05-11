@@ -190,7 +190,7 @@ jobs:
                       # Skip docstring lines (start with " or trailing ") and print code lines
                       shown = 0
                       in_docstring = False
-                      for ln in all_lines[def_line_idx + 1 : def_line_idx + 50]:
+                      for ln in all_lines[def_line_idx + 1 : def_line_idx + 60]:
                           if ln.startswith("def ") and shown > 0:
                               break
                           s = ln.strip()
@@ -201,7 +201,7 @@ jobs:
                               continue
                           sys.stdout.write(f"  | {ln.rstrip()}\n")
                           shown += 1
-                          if shown >= 10:
+                          if shown >= 20:
                               break
                   sys.stdout.flush()
           # Fail if below threshold
