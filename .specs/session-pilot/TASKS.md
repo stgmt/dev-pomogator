@@ -214,13 +214,17 @@
   - [x] M54/M55 documented as [EQUIVALENT_SUSPECT] (rstrip eliminates len-3 boundary case)
   - [x] Final rate 97.8% (Total=92, Killed=90, Survived=2 equivalent)
 
-- [x] T38: Refactor server.py — extract HTML + diagnose into modules -- @feature1 — Status: DONE | Est: 60m
-  _Requirements: server.py single-file size cap (Phase 5 deferred work, KD-1)_
+- [x] T38: Refactor server.py — full module split (Phase 5 complete) -- @feature1 — Status: DONE | Est: 180m
+  _Requirements: server.py single-file size cap (KD-1)_
   **Done When:**
-  - [x] frontend.py — 593 LOC HTML/CSS/JS chunk extracted
-  - [x] diagnose.py — diagnose_livecycle moved with dependency-injection signature
-  - [x] server.py reduced 1463 → 829 LOC (−43%)
-  - [x] Tests stay green (62/62) — re-exports via `from frontend import HTML` keep monkey-patches working
+  - [x] frontend.py (593 LOC) — HTML/CSS/JS dashboard SPA
+  - [x] diagnose.py (84 LOC) — diagnose_livecycle CLI with explicit DI
+  - [x] zellij_util.py (118 LOC) — _zellij_* functions, _PTY_MASTERS, _open_vscode
+  - [x] indexer.py (386 LOC) — discover_repos, claude_sessions_for, git_status_for, messages_for_session, build_*_cached, claude_max_mtime_for
+  - [x] handlers.py (194 LOC) — _send_json, Handler class with all routes
+  - [x] server.py reduced 1463 → 143 LOC (−90%); pure entry + env globals + re-exports
+  - [x] All 62 Python tests green throughout (test_encode_path/encode_path_module/diagnose_cli/jsonl_indexer/new_endpoints/zellij_spawn_isolation)
+  - [x] Re-export pattern: extracted modules read `import server` at call time (late binding), so test monkey-patches via `server.CLAUDE_PROJECTS_DIRS = ...` continue to work without re-architecture
 
 - [x] T36: Race fix — Playwright spawn isolation -- @feature4 — Status: DONE | Est: 60m
   _Requirements: NFR-Compat-6, RESEARCH.md spawn-race Risk row_
