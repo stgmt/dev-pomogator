@@ -1,7 +1,7 @@
 {
   "name": "session-pilot",
-  "version": "0.1.0",
-  "description": "Live multi-repo worktree dashboard with Claude session indicators (LIVE/idle/none), one-click claude --resume launch into Zellij Web Client, multi-key shift+click sort, virtual-scrolled table, full-message modal, parallel JSONL scan with SWR cache. Pairs with Zellij Web Client (port 8082) on dashboard port 8083.",
+  "version": "0.3.0",
+  "description": "Windows-native multi-repo worktree dashboard with Claude session indicators (LIVE/idle/none), one-click claude --resume launch into a new Windows Terminal window, multi-key shift+click sort, virtual-scrolled table, full-message modal, parallel JSONL scan with SWR cache. Single port 8083. v0.3+ — no Zellij, no WSL.",
   "platforms": ["claude"],
   "category": "developer-experience",
   "skills": {
@@ -26,44 +26,34 @@
   "toolFiles": {
     "session-pilot": [
       ".dev-pomogator/tools/session-pilot/server.py",
-      ".dev-pomogator/tools/session-pilot/start-server.sh",
-      ".dev-pomogator/tools/session-pilot/zclaude",
-      ".dev-pomogator/tools/session-pilot/layouts/claude-resume.kdl.tmpl",
-      ".dev-pomogator/tools/session-pilot/layouts/claude-fresh.kdl.tmpl",
-      ".dev-pomogator/tools/session-pilot/scripts/demo-zellij-install.sh",
-      ".dev-pomogator/tools/session-pilot/scripts/demo-zellij-setup.sh",
-      ".dev-pomogator/tools/session-pilot/scripts/demo-spawn-sessions.sh",
-      ".dev-pomogator/tools/session-pilot/scripts/demo-dump-sessions.sh",
-      ".dev-pomogator/tools/session-pilot/tests/check-api.py",
-      ".dev-pomogator/tools/session-pilot/tests/test-etag.sh",
+      ".dev-pomogator/tools/session-pilot/start-server.ps1",
+      ".dev-pomogator/tools/session-pilot/claude_paths.py",
+      ".dev-pomogator/tools/session-pilot/frontend.py",
+      ".dev-pomogator/tools/session-pilot/diagnose.py",
+      ".dev-pomogator/tools/session-pilot/terminal_launcher.py",
+      ".dev-pomogator/tools/session-pilot/indexer.py",
+      ".dev-pomogator/tools/session-pilot/handlers.py",
+      ".dev-pomogator/tools/session-pilot/ui/vendor/tabulator.min.js",
+      ".dev-pomogator/tools/session-pilot/ui/vendor/tabulator_midnight.min.css",
       ".dev-pomogator/tools/session-pilot/tests/conftest.py",
       ".dev-pomogator/tools/session-pilot/tests/encode_path_module.py",
       ".dev-pomogator/tools/session-pilot/tests/test_encode_path.py",
       ".dev-pomogator/tools/session-pilot/tests/test_encode_path_module.py",
-      ".dev-pomogator/tools/session-pilot/tests/test_launch_idempotent.py",
       ".dev-pomogator/tools/session-pilot/tests/test_e2e.py",
       ".dev-pomogator/tools/session-pilot/tests/test_diagnose_cli.py",
       ".dev-pomogator/tools/session-pilot/tests/test_frontend_smoke.py",
       ".dev-pomogator/tools/session-pilot/tests/test_frontend_e2e.py",
       ".dev-pomogator/tools/session-pilot/tests/test_jsonl_indexer.py",
       ".dev-pomogator/tools/session-pilot/tests/test_new_endpoints.py",
-      ".dev-pomogator/tools/session-pilot/tests/test_zellij_spawn_isolation.py",
+      ".dev-pomogator/tools/session-pilot/tests/test_terminal_launcher.py",
       ".dev-pomogator/tools/session-pilot/tests/mutation_target/setup.cfg",
-      ".dev-pomogator/tools/session-pilot/claude_paths.py",
-      ".dev-pomogator/tools/session-pilot/frontend.py",
-      ".dev-pomogator/tools/session-pilot/diagnose.py",
-      ".dev-pomogator/tools/session-pilot/zellij_util.py",
-      ".dev-pomogator/tools/session-pilot/indexer.py",
-      ".dev-pomogator/tools/session-pilot/handlers.py",
-      ".dev-pomogator/tools/session-pilot/ui/vendor/tabulator.min.js",
-      ".dev-pomogator/tools/session-pilot/ui/vendor/tabulator_midnight.min.css",
       ".dev-pomogator/tools/session-pilot/tests/setup.cfg",
       ".dev-pomogator/tools/session-pilot/tests/.gitignore"
     ]
   },
   "hooks": {
     "claude": {
-      "SessionStart": "bash .dev-pomogator/tools/session-pilot/start-server.sh"
+      "SessionStart": "pwsh.exe -NoProfile -ExecutionPolicy Bypass -File .dev-pomogator/tools/session-pilot/start-server.ps1"
     }
   }
 }

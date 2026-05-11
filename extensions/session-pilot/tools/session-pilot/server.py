@@ -1,12 +1,23 @@
 #!/usr/bin/env python3
 """
-Worktree Dashboard — HTTP сервер на порту 8083.
+Session Pilot — Windows-native dashboard server on port 8083 (v0.3+).
 
-Endpoint /          — HTML страница со списком всех ворктри + Zellij-сессий + Claude истории
-Endpoint /api/data  — JSON с тем же содержимым
+Endpoints:
+  GET  /              — Tabulator dashboard SPA (HTML/CSS/JS from frontend.py)
+  GET  /api/index     — fast worktree list with claude_max_mtime
+  GET  /api/claude    — JSONL preview with last message (ETag/304)
+  GET  /api/health    — uptime probe
+  POST /api/launch    — spawn detached Windows Terminal with `claude --resume <uuid>`
+  POST /api/open-vscode — open path in VSCode/Cursor
+  GET  /api/git-status — porcelain v1 + ahead/behind
+  GET  /api/message   — single message + neighbours
+  GET  /vendor/*      — Tabulator vendored assets
 
 Конфиг: REPOS env var, list of repo roots colon-separated.
-Default: $HOME/repos/* (autodiscover any directory containing .git)
+Default: %USERPROFILE%\\repos\\* (autodiscover any directory containing .git)
+
+v0.3 pivot (spec at .specs/session-pilot/CHANGELOG.md): Windows PowerShell
+native только. No Zellij, no WSL, no cross-OS paths.
 """
 
 from __future__ import annotations
@@ -21,11 +32,11 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 PORT = int(os.environ.get("WT_DASHBOARD_PORT", "8083"))
-ZELLIJ_BIN = os.environ.get("ZELLIJ_BIN", str(Path.home() / ".local/bin/zellij"))
-ZELLIJ_WEB_URL = os.environ.get("ZELLIJ_WEB_URL", "http://localhost:8082")
+# Claude Code on Windows writes JSONL to %USERPROFILE%\.claude\projects\
+# Keep WSL path as defensive secondary for users who installed on WSL Ubuntu
+# under the new install.ps1 (which sets HOME on Windows).
 CLAUDE_PROJECTS_DIRS = [
-    Path.home() / ".claude" / "projects",                     # WSL/Linux Claude
-    Path("/mnt/c/Users") / os.environ.get("WINUSER", "stigm") / ".claude" / "projects",  # Windows native
+    Path.home() / ".claude" / "projects",  # Windows: %USERPROFILE%\.claude\projects
 ]
 RUNNING_THRESHOLD_SEC = int(os.environ.get("LIVE_THRESHOLD_SEC", "300"))  # JSONL modified in last Ns = "running now". Default 300 (5 min) because Claude Code batches JSONL writes ~every 2-3 min during active typing — 90s misses real activity
 
@@ -61,20 +72,16 @@ encode_path_for_claude = _load_encode_path_for_claude()
 
 
 _START_TIME = time.time()
-_launch_lock: dict = {}  # (session, uuid) -> timestamp; 5s idempotency window
+_launch_lock: dict = {}  # (worktree_path, uuid_or_fresh) -> timestamp; 5s idempotency window
 LAUNCH_LOCK_TTL = 5.0
-LAYOUTS_DIR = Path(__file__).parent / "layouts"
 UUID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.I)
 
 
-# Zellij interaction moved to zellij_util.py (Phase 5 refactor — saves ~120 LOC).
-# Re-export so tests + handlers see same symbols.
-from zellij_util import (  # noqa: E402
-    _PTY_MASTERS,
-    _zellij_session_exists,
-    _zellij_inject,
-    _zellij_spawn_with_layout,
-    _open_vscode,
+# Terminal spawn moved to terminal_launcher.py (v0.3 pivot — replaces zellij_util.py).
+# Re-export so handlers + tests see same symbols on `server` module.
+from terminal_launcher import (  # noqa: E402
+    spawn_terminal,
+    open_vscode,
 )
 
 

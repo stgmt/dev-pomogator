@@ -47,37 +47,37 @@ class Handler(BaseHTTPRequestHandler):
             self.send_response(404); self.end_headers()
 
     def _handle_launch(self, body: dict) -> None:
+        """v0.3: spawn detached Windows Terminal с `claude --resume <uuid>` или `claude`.
+
+        Request body: {worktree_path: str, mode: 'resume'|'fresh', uuid?: str}.
+        session_name больше не требуется (был для Zellij; Windows Terminal не имеет
+        концепта named-session).
+        """
         import server
         wt = body.get("worktree_path", "")
-        sess = body.get("session_name", "")
         mode = body.get("mode", "resume")
         uuid_v = body.get("uuid")
 
         if wt not in server._whitelisted_paths():
             _send_json(self, {"ok": False, "error": "worktree_path not in current index whitelist"}, 403); return
-        if not re.match(r"^[A-Za-z0-9_-]+$", sess) or len(sess) > 80:
-            _send_json(self, {"ok": False, "error": "invalid session_name"}, 400); return
         if mode not in ("resume", "fresh"):
             _send_json(self, {"ok": False, "error": "mode must be 'resume' or 'fresh'"}, 400); return
         if mode == "resume":
             if not uuid_v or not server.UUID_RE.match(uuid_v):
                 _send_json(self, {"ok": False, "error": "invalid uuid (must match ^[0-9a-f-]{36}$)"}, 400); return
 
-        key = (sess, uuid_v or "fresh")
+        # Idempotency lock per (worktree_path, uuid_or_fresh). Window 5s.
+        key = (wt, uuid_v or "fresh")
         now = time.time()
         last = server._launch_lock.get(key, 0.0)
         if now - last < server.LAUNCH_LOCK_TTL:
-            _send_json(self, {"ok": True, "method": "cached", "session": sess,
-                              "url": f"{server.ZELLIJ_WEB_URL}/?session={sess}",
-                              "note": f"idempotency lock — last action {int(now - last)}s ago"}); return
+            _send_json(self, {
+                "ok": True, "method": "cached",
+                "note": f"idempotency lock — last action {int(now - last)}s ago",
+            }); return
         server._launch_lock[key] = now
 
-        cmd = f"claude --resume {uuid_v}" if mode == "resume" else "claude"
-
-        if server._zellij_session_exists(sess):
-            result = server._zellij_inject(sess, cmd)
-        else:
-            result = server._zellij_spawn_with_layout(sess, wt, mode, uuid_v)
+        result = server.spawn_terminal(wt, mode, uuid_v)
 
         if not result.get("ok"):
             _send_json(self, result, 500); return
@@ -85,9 +85,9 @@ class Handler(BaseHTTPRequestHandler):
         _send_json(self, {
             "ok": True,
             "method": result["method"],
-            "session": sess,
-            "url": f"{server.ZELLIJ_WEB_URL}/?session={sess}",
-            "command": cmd,
+            "pid": result.get("pid"),
+            "worktree_path": wt,
+            "mode": mode,
         })
 
     def _handle_open_vscode(self, body: dict) -> None:
@@ -95,7 +95,7 @@ class Handler(BaseHTTPRequestHandler):
         wt = body.get("path", "")
         if wt not in server._whitelisted_paths():
             _send_json(self, {"ok": False, "error": "path not in current index whitelist"}, 403); return
-        result = server._open_vscode(wt)
+        result = server.open_vscode(wt)
         _send_json(self, result, 200 if result["ok"] else 500)
 
     def _serve_vendor(self, url_path: str):
@@ -135,12 +135,12 @@ class Handler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.end_headers()
-            html_rendered = server.HTML.replace("__ZELLIJ_WEB_URL__", server.ZELLIJ_WEB_URL)
-            self.wfile.write(html_rendered.encode("utf-8"))
+            # v0.3: no template substitution — HTML served as-is.
+            self.wfile.write(server.HTML.encode("utf-8"))
         elif url.path.startswith("/vendor/"):
             self._serve_vendor(url.path)
         elif url.path == "/api/health":
-            _send_json(self, {"status": "ok", "version": "0.1.0",
+            _send_json(self, {"status": "ok", "version": "0.3.0",
                               "uptime_sec": int(time.time() - server._START_TIME)})
         elif url.path == "/api/index":
             _send_json(self, server.build_index_cached())

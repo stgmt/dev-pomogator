@@ -206,6 +206,21 @@
   _Requirements: extension-layout rule_
   **Done When:**
   - [x] exit 0
+- [x] T39: v0.3 implementation — Windows PowerShell native (drop Zellij) -- @feature4 @feature11 @feature13 @feature15 @feature17 — Status: DONE | Est: 180m
+  _Requirements: FR-4, FR-11, FR-13, FR-15, FR-17 (v0.3 pivot)_
+  **Done When:**
+  - [x] `terminal_launcher.py` (177 LOC) replaces `zellij_util.py`: spawn chain wt.exe → cmd.exe → SP_TERMINAL_CMD override
+  - [x] `start-server.ps1` (idempotent PID lock + Start-Process detached spawn)
+  - [x] `install.ps1` (Python version check + hook registration in settings.local.json + health probe ≤5s)
+  - [x] Dropped: `zellij_util.py`, `start-server.sh`, `layouts/*.kdl.tmpl`, `test_zellij_spawn_isolation.py`, `test_launch_idempotent.py`
+  - [x] Server.py + handlers.py: launch via `spawn_terminal()` instead of zellij; no `session_name` in API; no `ZELLIJ_WEB_URL` template
+  - [x] Frontend: 3-button Action column (Resume / Fresh / VSCode), drop Zellij column + 🪟 button, drop ZELLIJ_WEB_URL_JS
+  - [x] CLAUDE_PROJECTS_DIRS reduced to single `~/.claude/projects` (Windows only)
+  - [x] `/api/health` version bumped 0.1.0 → 0.3.0
+  - [x] `extension.json` v0.3.0 + PowerShell SessionStart hook
+  - [x] CI workflow updated; new `test_terminal_launcher.py` (7 cases) added
+  - [x] All 69 Python tests pass
+
 - [x] T37: Strong tests — mutation kill rate 81% → 97.8% -- @feature17 — Status: DONE | Est: 120m
   _Requirements: NFR-Anti-1, NFR-Anti-3, strong-tests skill 12-point self-eval_
   **Done When:**

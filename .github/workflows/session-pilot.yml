@@ -112,7 +112,7 @@ jobs:
           T=$GITHUB_WORKSPACE/extensions/session-pilot/tools/session-pilot/tests
           PASS=0
           FAIL=0
-          for f in test_encode_path test_launch_idempotent test_e2e test_diagnose_cli test_frontend_smoke test_encode_path_module test_frontend_e2e test_jsonl_indexer test_new_endpoints test_zellij_spawn_isolation; do
+          for f in test_encode_path test_e2e test_diagnose_cli test_frontend_smoke test_encode_path_module test_frontend_e2e test_jsonl_indexer test_new_endpoints test_terminal_launcher; do
             r=$("$VENV/bin/python" "$T/$f.py" 2>&1) || true
             p=$(echo "$r" | grep -c "^PASS" || true)
             fl=$(echo "$r" | grep -c -E "^(FAIL|ERROR)" || true)
