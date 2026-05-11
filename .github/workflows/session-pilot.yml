@@ -175,17 +175,17 @@ jobs:
                       break
               import re
               for k in survivors:
-                  print(f"  SURVIVED: {k}")
                   fname = k.split(".")[-1]
-                  m = re.search(rf"^def {re.escape(fname)}\(.*?\n(.*?)(?=^def |\Z)", src_text, re.MULTILINE | re.DOTALL)
+                  m = re.search(rf"^def {re.escape(fname)}\b.*?\n((?:    .*\n)+)", src_text, re.MULTILINE)
                   if m:
-                      body = m.group(1).rstrip()
-                      lines = [ln for ln in body.splitlines() if ln.strip()][:8]
-                      for ln in lines:
-                          print(f"    {ln}")
+                      body_lines = m.group(1).splitlines()
+                      first_lines = body_lines[:8]
+                      sys.stdout.write(f"=MUTANT= {k}\n")
+                      for ln in first_lines:
+                          sys.stdout.write(f"={k.split('_')[-1]}= {ln}\n")
                   else:
-                      print(f"    [no body found for {fname} in src ({len(src_text)} bytes)]")
-                  print()
+                      sys.stdout.write(f"=MUTANT= {k} NO_BODY src={len(src_text)}\n")
+                  sys.stdout.flush()
           # Fail if below threshold
           THRESHOLD = 70.0
           if rate < THRESHOLD:
