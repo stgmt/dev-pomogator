@@ -174,17 +174,35 @@ jobs:
                       src_text = cf.read_text()
                       break
               import re
+              all_lines = src_text.splitlines()
               for k in survivors:
                   fname = k.split(".")[-1]
-                  m = re.search(rf"^def {re.escape(fname)}\b.*?\n((?:    .*\n)+)", src_text, re.MULTILINE)
-                  if m:
-                      body_lines = m.group(1).splitlines()
-                      first_lines = body_lines[:8]
-                      sys.stdout.write(f"=MUTANT= {k}\n")
-                      for ln in first_lines:
-                          sys.stdout.write(f"={k.split('_')[-1]}= {ln}\n")
+                  # Find the def line, then dump 20 raw lines after it (full function fits).
+                  def_line_idx = None
+                  for i, ln in enumerate(all_lines):
+                      if ln.startswith(f"def {fname}(") or ln.startswith(f"def {fname} ("):
+                          def_line_idx = i
+                          break
+                  sys.stdout.write(f"=MUTANT= {k}\n")
+                  if def_line_idx is None:
+                      sys.stdout.write(f"  [def line not found]\n")
                   else:
-                      sys.stdout.write(f"=MUTANT= {k} NO_BODY src={len(src_text)}\n")
+                      # Skip docstring lines (start with " or trailing ") and print code lines
+                      shown = 0
+                      in_docstring = False
+                      for ln in all_lines[def_line_idx + 1 : def_line_idx + 50]:
+                          if ln.startswith("def ") and shown > 0:
+                              break
+                          s = ln.strip()
+                          if s.startswith('"""') or s.startswith("'''"):
+                              in_docstring = not in_docstring
+                              continue
+                          if in_docstring or not s or s.startswith("#"):
+                              continue
+                          sys.stdout.write(f"  | {ln.rstrip()}\n")
+                          shown += 1
+                          if shown >= 10:
+                              break
                   sys.stdout.flush()
           # Fail if below threshold
           THRESHOLD = 70.0
