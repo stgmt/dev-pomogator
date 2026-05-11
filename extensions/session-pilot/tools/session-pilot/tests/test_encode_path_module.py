@@ -201,12 +201,70 @@ def test_rstrip_only_strips_path_separators():
     Mutants strip the chars 'X' and '/' (M7) or 'X' and '\\' (M8). Input ending in
     literal 'X' (uppercase) must NOT have the 'X' stripped — only true separators are.
     """
-    # Path ending in 'X' (uppercase letter, NOT a separator)
     v = set(encode("/mnt/d/repos/fooX"))
-    # At least one variant must end with X (the rstrip preserved it)
     assert any(variant.endswith("X") for variant in v), (
         f"trailing 'X' was stripped (M7/M8 suspect — rstrip is matching too broadly): {sorted(v)}"
     )
+
+
+def test_windows_rest_replace_forward_slash_to_dash():
+    """Kills M81 (`rest.replace("/", "-")` → `rest.replace("XX/XX", "-")`) and
+    M82 (`rest.replace("/", "-")` → `rest.replace("/", "XX-XX")`).
+    Path 'D:\\foo/bar' has forward slash inside the rest. Original replaces it
+    with '-' → 'D--foo-bar'. M81 leaves '/' in place. M82 swaps '/' to literal 'XX-XX'.
+    """
+    v = set(encode("D:\\foo/bar"))
+    assert "D--foo-bar" in v, f"Windows rest with mixed separators must produce D--foo-bar: {sorted(v)}"
+    for variant in v:
+        assert "/" not in variant, f"forward slash leaked into Windows variant (M81 suspect): {variant!r}"
+        assert "XX-XX" not in variant, f"M82 placeholder leaked: {variant!r}"
+
+
+def test_lstrip_only_strips_dashes_not_letters():
+    """Kills M89 (`v.lstrip("-")` → `v.lstrip("XX-XX")` which collapses to lstrip set
+    {`-`, `X`}). For input 'X:\\foo', the generic variant 'X-foo' would become bare
+    'foo' under the mutant (strips 'X' then '-'). Original keeps the 'X' prefix.
+    """
+    v = encode("X:\\foo")
+    # Original: 'X-foo'.lstrip('-') = 'X-foo' (no leading dash). 'X--foo'.lstrip('-') = 'X--foo'.
+    # Mutant lstrip('-X'): both reduce to 'foo'. Bare 'foo' must NOT appear.
+    assert "foo" not in v, (
+        f"bare 'foo' leaked — lstrip stripped 'X' as if it were a dash (M89 suspect): {v}"
+    )
+
+
+def test_return_includes_duplicate_dash_prefixed_variants():
+    """Kills M91 (middle filter `v.startswith("-")` → `v.startswith("XX-XX")`).
+    The return assembles three lists; the middle one is the SUBSET of variants
+    starting with '-'. Mutant changes the predicate to a string that no real variant
+    can start with → middle list is empty → result length drops by N (where N is the
+    number of dash-prefixed variants).
+
+    For input 'D:\\\\foo' (single backslash inside Python string = D:\\foo):
+      - generic variant 'D-foo' (no leading dash)
+      - Windows branch adds '-mnt-d-foo' (leading dash) and 'D--foo' (no leading dash)
+      Expected len = 3 (lstripped) + 1 (the one starting with '-') + 3 (raw) = 7.
+      Mutant: 3 + 0 + 3 = 6.
+    """
+    result = encode("D:\\foo")
+    # Count occurrences of the dash-prefixed variant. Original yields it TWICE
+    # (once in the middle filter, once in the trailing raw list).
+    dash_prefixed_count = sum(1 for v in result if v.startswith("-mnt-"))
+    assert dash_prefixed_count >= 2, (
+        f"dash-prefixed variant should appear ≥2 times in return (middle filter + raw list, M91 suspect): "
+        f"got {dash_prefixed_count} in {result}"
+    )
+
+
+# ---------- Equivalent mutants (documented; no test added) ----------
+# M54 (`len(p) >= 3` → `> 3`) and M55 (`>= 3` → `>= 4`): both flip the boundary
+# for the Windows branch from len≥3 to len≥4. The branch additionally requires
+# p[1]==":" and p[2] in ("/", "\\"). A real len-3 input matching all conditions
+# would be e.g. "X:/" — but the FIRST line of encode_path_for_claude_v2 is
+# `p = p.rstrip("/").rstrip("\\")`, which strips that trailing "/" → len 2.
+# Therefore an input of EXACTLY len 3 after rstrip that triggers this branch
+# cannot exist. M54+M55 are EQUIVALENT_SUSPECT mutants for this function's
+# input domain. Marked here per strong-tests skill convention.
 
 
 class _SyncTestSkipped(Exception):
