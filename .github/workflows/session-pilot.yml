@@ -155,6 +155,12 @@ jobs:
           survived = sum(1 for v in codes.values() if v == 0)
           rate = 100 * killed / total if total else 0
           print(f"Total: {total} | Killed: {killed} | Survived: {survived} | Rate: {rate:.1f}%")
+          # Dump surviving mutant keys for strong-tests audit
+          if survived:
+              print("--- Surviving mutants (exit_code=0) ---")
+              for k, v in sorted(codes.items()):
+                  if v == 0:
+                      print(f"  SURVIVED: {k}")
           # Fail if below threshold
           THRESHOLD = 70.0
           if rate < THRESHOLD:
