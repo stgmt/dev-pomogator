@@ -12,24 +12,24 @@ session-pilot — **read-mostly aggregator dashboard**, отдельный от 
 ┌──────────────────────────────────────────────────┐
 │  Browser (Edge / Chrome) — Tabulator UI          │
 │   localStorage SWR cache                         │
-└────────┬───────────────────────┬─────────────────┘
-         │ HTTP                   │
-         ▼                        ▼
-┌─────────────────┐       ┌─────────────────────┐
-│  :8083          │       │  :8082 Zellij Web   │
-│  session-pilot  │ exec  │  Client             │
-│  Python server  ├──────▶│  (terminal access)  │
-└────────┬────────┘       └─────────────────────┘
-         │ scan
+└────────┬─────────────────────────────────────────┘
+         │ HTTP
          ▼
-┌──────────────────────────────────────────────────┐
-│  ~/.claude/projects/<encoded>/<uuid>.jsonl       │
-│  /mnt/c/Users/.../  (Windows mount)              │
-│  + git worktree list per repo                    │
-└──────────────────────────────────────────────────┘
+┌──────────────────────┐
+│  :8083               │   POST /api/launch
+│  session-pilot       ├──────────────────────────┐
+│  Python server (Win) │   Popen detached         │
+└────────┬─────────────┘                          ▼
+         │ scan                          ┌────────────────────┐
+         ▼                               │  Windows Terminal  │
+┌──────────────────────────────────────┐ │  wt.exe -d <cwd>   │
+│  %USERPROFILE%\.claude\projects\     │ │  -- pwsh -NoExit   │
+│  D--repos-foo\<uuid>.jsonl           │ │  claude --resume   │
+│  + git worktree list per repo        │ │  <uuid>            │
+└──────────────────────────────────────┘ └────────────────────┘
 ```
 
-Two-port pairing: dashboard (8083) — навигатор, Zellij Web Client (8082) — рабочая среда. Мы не reinvent terminal embedding.
+Single-port dashboard (8083). Каждый ▶ Resume / ✨ Fresh — отдельное Windows Terminal окно, detached. v0.3+ — no Zellij, no WSL.
 
 ---
 
@@ -59,13 +59,19 @@ Two-port pairing: dashboard (8083) — навигатор, Zellij Web Client (80
 **Trigger to switch to Alt B**: >100 worktrees OR observable jank on first paint.
 **Trigger to consider Alt C**: `/api/index` exceeds 500ms warm (current ~150ms).
 
-### KD-3: Zellij command injection — `action write-chars` for existing, `-n` flag for new
+### KD-3: Windows Terminal spawn chain — wt.exe → cmd.exe → env override
 
-**Critical Zellij CLI gotcha** (discovered Phase 3): `zellij -s NAME -l FILE` interprets as «add as new tab to existing session NAME» — fails with «Session NAME not found» if session doesn't exist. Must use `-n FILE -s NAME` (`--new-session-with-layout`) which always creates new.
+**Decision (v0.3 pivot from KD-3 v0.2)**: spawn detached `wt.exe -d <cwd> -- pwsh.exe -NoExit -Command "<claude-cmd>"`. Fallback chain если `wt` нет на PATH: `cmd.exe /c start "" pwsh.exe -NoExit -Command "..."`. Env override `$env:SP_TERMINAL_CMD` для пользовательских терминалов (Alacritty/WezTerm/kitty).
 
-For existing sessions: `zellij --session NAME action focus-pane-id terminal_1 && action write-chars "<cmd>\n"`. Focus-first prevents race с previously-shifted focus.
+[UNVERIFIED: `$env:SP_TERMINAL_CMD` template format (placeholders `{cwd}` и `{cmd}`) — design choice, не из external sources. To verify когда implementation lands: integration test что `$env:SP_TERMINAL_CMD = "alacritty --working-directory {cwd} -e pwsh -NoExit -c '{cmd}'"` действительно открывает Alacritty с правильным cwd + command.]
 
-**Trade-off**: 5-second idempotency lock prevents double-inject on rapid clicks. User loses ability to inject same command twice within 5s — acceptable.
+**Why `wt.exe` приоритет**: preinstalled на Windows 11; tab support; современный rendering. На Win 10 1809+ — устанавливается из Store или присутствует в Win 10 21H2+ updates. Fallback `cmd.exe /c start` гарантирует запуск даже без Windows Terminal.
+
+**Why no command injection in running terminal**: Windows native не имеет zellij-style `action write-chars`. Альтернативы (SendKeys через WinAPI / OS automation) — hacky, требуют focus on target window. Modeled instead на «idempotent spawn»: каждый клик [▶ Resume] → новое окно с `claude --resume <uuid>`. Claude сам подхватывает JSONL state и продолжает разговор. User закрывает старое окно вручную если нужно.
+
+**Trade-off**: каждый Resume плодит новое окно (если пользователь много раз кликает — много окон). 5-second idempotency lock per `(worktree_path, uuid)` смягчает: повторный клик в течение 5s возвращает `{method: "cached"}` без spawn.
+
+**Removed in v0.3**: KDL layout files (Zellij-specific), `_PTY_MASTERS` parking (race-fix больше не нужен — нет PTY allocation в новой архитектуре), `zellij_util.py` целиком.
 
 ### KD-4: SWR cache — server ETag + client localStorage with mtime versioning
 
@@ -77,11 +83,11 @@ For existing sessions: `zellij --session NAME action focus-pane-id terminal_1 &&
 
 **Result**: 38/45 rows skip fetch on warm reload. 7 stale rows hit 304 path (5ms). Total reload <300ms.
 
-### KD-5: Cross-OS path encoding — multiple variants per worktree
+### KD-5: Windows-native path encoding
 
-**Problem**: Claude Code on Windows writes JSONL to `D--repos-foo` even когда CWD = `/mnt/d/repos/foo`. WSL Claude writes to `-mnt-d-repos-foo`. Same worktree, different encoded directories.
+**v0.3 pivot from KD-5 v0.2**: Windows-native paths only. `encode_path_for_claude("D:\\repos\\foo")` returns `D--repos-foo` (canonical Claude Code на Windows). Defensive fallbacks (`D-repos-foo`, char-stripped variants) для edge cases с символами вне `[A-Za-z0-9_-]`.
 
-**Solution**: `encode_path_for_claude(p)` returns ALL plausible variants. Dashboard scans both `~/.claude/projects` (WSL) и `/mnt/c/Users/.../  .claude/projects` (Windows mount).
+**Removed**: WSL variants (`-mnt-d-repos-foo`, `mnt-d-repos-foo`) — out-of-scope для v0.3 (Windows-only target). Encoder function код их всё ещё поддерживает defensively (если пользователь runs v0.3 на WSL, оно работает), но production-paths их не используют.
 
 **Mitigation for unforeseen variants**: `--diagnose-livecycle <path>` CLI dumps actual scan results.
 
@@ -103,11 +109,11 @@ For existing sessions: `zellij --session NAME action focus-pane-id terminal_1 &&
 
 **Why**: ESC-close, focus management, accessibility, backdrop-click-close — all built in. Browser support since March 2022.
 
-### KD-9: SessionStart hook for autostart (not systemd)
+### KD-9: SessionStart hook for autostart (not Windows Task Scheduler)
 
-**Why not systemd**: WSL2 default disables it; needs separate setup per OS.
+**Why not Task Scheduler**: requires manual setup; per-user registration; admin rights в некоторых конфигурациях; не очевидно где смотреть если не запускается.
 
-**Why SessionStart hook**: every Claude Code launch triggers it; idempotent PID-lock check; works on Windows native + WSL + Linux native identically.
+**Why SessionStart hook**: every Claude Code launch triggers it; idempotent PID-lock check через `$env:LOCALAPPDATA\session-pilot\server.pid` + `Get-Process -Id`. Script: `pwsh.exe -NoProfile -ExecutionPolicy Bypass -File start-server.ps1`. Fallback на `powershell.exe` если PS7 не установлен.
 
 ---
 
@@ -136,7 +142,7 @@ After evaluation on user's 45-worktree setup:
 | `/api/health` | GET | none | <5ms |
 | `/api/index` | GET | server 5s | <150ms warm |
 | `/api/claude?path=` | GET | server 8s, ETag | <300ms cold / 5ms 304 |
-| `/api/launch` | POST | 5s idempotency lock | <2s (zellij spawn) |
+| `/api/launch` | POST | 5s idempotency lock per (wt_path, uuid) | <500ms (wt.exe spawn) |
 | `/api/open-vscode` | POST | none | instant |
 | `/api/message?path=&session=&index=` | GET | none yet | <50ms |
 | `/api/git-status?path=` | GET | server 10s | <100ms |

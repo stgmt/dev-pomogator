@@ -4,7 +4,29 @@ All notable changes to this **spec** are documented here. For implementation cha
 
 ## [Unreleased]
 
-Tracking for v0.2 spec evolution. No spec changes pending — current 0.1.0 is the v0.1.0 implementation contract.
+### Changed — v0.3 pivot to Windows PowerShell native (2026-05-11)
+
+Спека переведена с WSL+Zellij+cross-OS на чистую Windows. Реализация v0.2 (Zellij, KDL layouts, race-fix `_PTY_MASTERS`, netsh portproxy, cross-OS path encoding) остаётся в git history (commit диапазон v0.1.0..v0.2.x).
+
+**Что меняется в спеке**:
+
+- **FR-4** (POST /api/launch) — было `zellij action write-chars` / `setsid zellij --layout`; стало `wt.exe -d <cwd> -- pwsh -NoExit -Command "claude --resume <uuid>"` с fallback на `cmd.exe /c start` и override через `$env:SP_TERMINAL_CMD`.
+- **FR-11** (Action column) — было 4 кнопки `[▶ Resume] [✨ Fresh] [📂 VSCode] [🪟 Zellij]`; стало 3: `[▶ Resume] [✨ Fresh] [📂 VSCode]`. Zellij Web button удалена.
+- **FR-13** (SessionStart autostart) — было `bash start-server.sh`; стало `pwsh.exe -NoProfile -ExecutionPolicy Bypass -File start-server.ps1` с PowerShell 5.1 fallback.
+- **FR-15** (Cross-OS access) — было WSL→Windows netsh portproxy bridge; стало one-command `install.ps1` для свежей Windows машины.
+- **FR-17** (Cross-OS path encoding) — было дуальные варианты `/mnt/d/...` ↔ `D--...`; стало Windows-native canonical `D--repos-foo` (WSL варианты убраны).
+- **NFR-Compat** — Win 10 (1809+) / Win 11 only. WSL/Linux/macOS marked OUT-OF-SCOPE для v0.3. Кросс-платформа — см. cross-platform-research отчёт (node-pty + xterm.js, не планируется в этой итерации).
+- **DESIGN.md** — KD-3 (Windows Terminal spawn chain заменяет Zellij injection); KD-5 (Windows-native path encoding); KD-9 (PowerShell SessionStart hook).
+- **session-pilot.feature** — SP005/SP006 (was Zellij existing/new) переписаны под wt.exe / cmd fallback. SP014 (was netsh cross-OS) переписан под `install.ps1`. SP015/SP016 — Windows path `D:\repos\...` примеры.
+- **USER_STORIES.md** — US-2 (one-click resume in Windows Terminal), US-3 (reboot survival via PS hook), US-8 (one-command Windows install).
+
+**Что НЕ меняется**:
+
+- FR-1, FR-2, FR-3, FR-5, FR-6, FR-8, FR-9, FR-10, FR-12, FR-14, FR-18, FR-19, FR-20 — серверная логика, кеши, frontend Tabulator, диагностический CLI, LIVE threshold.
+- Архитектура `server.py` 7-модулей (frontend/indexer/handlers/diagnose/claude_paths + новый `terminal_launcher.py` вместо `zellij_util.py`).
+- Tests: 62 Python suite + 6 vitest. Mutation 97.8%.
+
+**Имплементация v0.3 — отдельный PR**, в этой PR-итерации только spec changes.
 
 ## [0.1.0] - 2026-05-10
 
