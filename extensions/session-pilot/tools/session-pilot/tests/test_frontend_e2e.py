@@ -99,31 +99,33 @@ def test_frontend_renders_and_table_populated():
             browser.close()
 
 
-def test_frontend_url_substitution():
-    """ZELLIJ_WEB_URL_JS const set correctly (template substituted)."""
+def test_frontend_no_legacy_zellij_globals():
+    """v0.3: ZELLIJ_WEB_URL_JS global should NOT exist (legacy from Zellij Web Client)."""
     if not PLAYWRIGHT_OK:
-        print("SKIP test_frontend_url_substitution (playwright not installed)")
+        print("SKIP test_frontend_no_legacy_zellij_globals (playwright not installed)")
         return
     with sync_playwright() as p:
         browser = p.firefox.launch(headless=True)
         try:
             page = browser.new_page()
             page.goto(f"{SERVER}/?fe-e2e-url")
-            url_value = page.evaluate("typeof ZELLIJ_WEB_URL_JS !== 'undefined' ? ZELLIJ_WEB_URL_JS : null")
-            assert url_value is not None and url_value.startswith("http"), f"ZELLIJ_WEB_URL_JS bad: {url_value!r}"
-            assert "__ZELLIJ_WEB_URL__" not in url_value
+            zellij_url = page.evaluate("typeof ZELLIJ_WEB_URL_JS !== 'undefined' ? ZELLIJ_WEB_URL_JS : null")
+            assert zellij_url is None, f"v0.3 dropped Zellij — ZELLIJ_WEB_URL_JS should not be defined, got {zellij_url!r}"
         finally:
             browser.close()
 
 
 def test_frontend_actLaunch_handler_chain():
-    """Full chain: invoke page-context actLaunch() with test-prefixed session →
-    POST /api/launch fires → Zellij session created → cleanup."""
+    """Full chain: invoke page-context actLaunch() → POST /api/launch fires.
+
+    v0.3: terminal spawn requires wt.exe/cmd.exe (Windows-only). On Linux CI
+    the spawn will fail with `cmd.exe not found` — assert the POST fired
+    correctly (network chain), tolerate spawn failure as expected on Linux.
+    """
     if not PLAYWRIGHT_OK:
         print("SKIP test_frontend_actLaunch_handler_chain (playwright not installed)")
         return
 
-    test_session = f"sp-fe-e2e-{int(time.time())}-{uuid_module.uuid4().hex[:6]}"
     wt = _first_worktree_via_api()
 
     with sync_playwright() as p:
@@ -144,15 +146,11 @@ def test_frontend_actLaunch_handler_chain():
             page.goto(f"{SERVER}/?fe-e2e-launch", wait_until="domcontentloaded", timeout=30000)
             page.wait_for_selector(".tabulator-row", timeout=10000)
 
-            # Suppress window.open popup which Firefox blocks anyway
-            page.evaluate("window.open = () => null")
-
-            # Invoke handler directly via page-context — safer than clicking real-row buttons
+            # v0.3 actLaunch signature: (btn, worktree_path, mode, uuid)
             page.evaluate(f"""
                 actLaunch(
                     {{disabled: false, textContent: 'test', tagName: 'BUTTON'}},
                     {repr(wt)},
-                    {repr(test_session)},
                     'fresh',
                     null
                 );
@@ -163,59 +161,29 @@ def test_frontend_actLaunch_handler_chain():
             while time.time() < deadline and not launch_responses:
                 page.wait_for_timeout(200)
             assert launch_responses, (
-                f"POST /api/launch never fired after actLaunch() invocation. "
-                f"Console errors logged? Check page.on('console')."
+                f"POST /api/launch never fired after actLaunch() invocation."
             )
             r = launch_responses[0]
-            assert r["status"] == 200, f"/api/launch {r['status']}: {r['body']}"
-            assert r["body"]["ok"] is True, f"ok != true: {r['body']}"
-            assert r["body"]["session"] == test_session, (
-                f"session mismatch: {r['body']['session']} != {test_session}"
-            )
-            assert r["body"]["method"] in ("write-chars", "new-layout", "cached"), (
-                f"unexpected method: {r['body']['method']}"
-            )
-            print(f"  ✓ POST /api/launch fired, method={r['body']['method']}")
-
-            # Verify real Zellij session.
-            # 25s budget — under WSL2 load, setsid spawn from HTTP handler can
-            # take 8-15s+ to register due to TTY allocation latency, especially
-            # when triggered by browser fetch (HTTP teardown vs server fork ordering).
-            deadline = time.time() + 25
-            while time.time() < deadline:
-                if _zellij_session_exists(test_session):
-                    break
-                time.sleep(0.5)
-            if not _zellij_session_exists(test_session):
-                # Diagnostic dump — what DOES list-sessions show?
-                out = subprocess.run(
-                    [ZELLIJ_BIN, "list-sessions", "--no-formatting"],
-                    capture_output=True, text=True, timeout=5, check=False,
+            # On Windows: status 200 + method=wt-spawn-* or cmd-fallback-*.
+            # On Linux CI: status 500 + method=cmd-fallback-* + error="cmd.exe not found".
+            # Both paths prove the frontend → backend chain is wired correctly.
+            if r["status"] == 200:
+                assert r["body"]["ok"] is True
+                assert r["body"]["method"].startswith("wt-spawn") or r["body"]["method"].startswith("cmd-fallback") or r["body"]["method"] == "cached"
+                print(f"  ✓ POST /api/launch 200 method={r['body']['method']} (Windows host)")
+            elif r["status"] == 500:
+                # Linux CI — terminal launcher fails because no wt.exe / cmd.exe.
+                # Frontend chain is still proven (POST fired with correct payload).
+                err = r["body"].get("error", "")
+                assert "cmd.exe not found" in err or "wt.exe not found" in err, (
+                    f"unexpected 500 error: {err}"
                 )
-                print(f"  DIAG zellij list-sessions stdout:\n{out.stdout}")
-                print(f"  DIAG zellij list-sessions stderr:\n{out.stderr}")
-                print(f"  DIAG /tmp/sp-*.kdl:")
-                ls = subprocess.run(["bash", "-c", "ls -la /tmp/sp-*.kdl 2>&1 | tail -5"],
-                                    capture_output=True, text=True, check=False)
-                print(f"  {ls.stdout}")
-                # Known-flaky on WSL2 due to browser teardown vs setsid race.
-                # Backend chain verified by test_e2e.py with 5s deadline.
-                # Frontend → backend → POST verification IS confirmed by the
-                # earlier asserts in this same test (POST fired, 200, ok=true).
-                # Only the trailing spawn verification flakes — print SKIP marker
-                # rather than FAIL so CI doesn't block on infrastructure flake.
-                print(
-                    f"  SKIP-spawn-verify: session {test_session!r} not seen after 25s; "
-                    f"backend POST chain succeeded (see earlier asserts). "
-                    f"Manual curl reproduction works (see test_e2e.py)."
-                )
-                return  # treat as PASS for the JS→fetch→backend chain we verified
-            print(f"  ✓ Zellij session {test_session} alive")
+                print(f"  ✓ POST /api/launch 500 (expected on Linux — no wt.exe/cmd.exe)")
+            else:
+                raise AssertionError(f"/api/launch unexpected status {r['status']}: {r['body']}")
 
         finally:
             browser.close()
-            _zellij_delete(test_session)
-            print(f"--- cleanup: {test_session} deleted ---")
 
 
 if __name__ == "__main__":
