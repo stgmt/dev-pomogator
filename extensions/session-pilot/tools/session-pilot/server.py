@@ -272,40 +272,81 @@ def _zellij_inject(session: str, command: str) -> dict:
     return {"ok": True, "method": "write-chars"}
 
 
+# Keep PTY master fds alive for the lifetime of the server so spawned Zellij
+# children never receive SIGHUP from a closed master. The kernel cleans up
+# when the server itself exits. Without this list, Python GC closes the master
+# fd shortly after Popen returns → Zellij sees EOF on its controlling TTY →
+# dies. See RESEARCH.md / NFR-Compat-6 spawn race notes.
+_PTY_MASTERS: list[int] = []
+
+
 def _zellij_spawn_with_layout(session: str, worktree_path: str, mode: str, uuid: str | None) -> dict:
     """Spawn new Zellij session with KDL layout running claude.
 
-    Uses setsid to detach from HTTP backend, schedules tmp file cleanup."""
-    import tempfile, shlex
+    Race-resistant spawn (was: `bash -c "setsid script -qfc ... /dev/null &"`).
+    Switched to native Python Popen with:
+      - `start_new_session=True` — Popen calls setsid() in child between fork
+        and execve, atomically (CPython _posixsubprocess.c L763-779). Same
+        guarantee as the old shell `setsid`, no shell hop, no race window.
+      - `pty.openpty()` — allocates a controlling TTY for Zellij. Slave fd
+        becomes child stdin/stdout/stderr. Master fd is parked in module
+        global `_PTY_MASTERS` so GC doesn't close it (which would deliver
+        EOF/SIGHUP to Zellij during the WSL2 Playwright teardown race).
+      - `close_fds=True` — child does NOT inherit HTTP handler socket fds.
+    """
+    import tempfile, pty
     tmpl_name = "claude-resume.kdl.tmpl" if mode == "resume" else "claude-fresh.kdl.tmpl"
     tmpl = (LAYOUTS_DIR / tmpl_name).read_text(encoding="utf-8")
     rendered = tmpl.replace("__CWD__", worktree_path).replace("__NAME__", session)
     if mode == "resume" and uuid:
         rendered = rendered.replace("__UUID__", uuid)
 
-    # Write to /tmp with mkstemp (mode 0600) for safety
     fd, kdl_path = tempfile.mkstemp(prefix="sp-", suffix=".kdl", dir="/tmp")
     try:
         os.write(fd, rendered.encode("utf-8"))
     finally:
         os.close(fd)
 
-    # Spawn detached. Zellij needs a TTY to start, so we use `script` (allocates pty).
-    # CRITICAL: use -n / --new-session-with-layout (NOT -l) for new sessions —
-    # `-l` interprets as "add tab to existing session NAMED arg", which fails if session doesn't exist.
-    # `-n` always creates a new session with the layout.
-    inner = f"{shlex.quote(ZELLIJ_BIN)} -s {shlex.quote(session)} -n {shlex.quote(kdl_path)}"
-    cmd = f"setsid script -qfc {shlex.quote(inner)} /dev/null </dev/null >/dev/null 2>&1 &"
-    subprocess.Popen(["bash", "-c", cmd], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    # Allocate PTY pair. Zellij requires a controlling terminal to start —
+    # without one it bails with "Zellij detected the current environment is
+    # not a terminal". The slave fd is the child's stdio; master stays in
+    # the server process (parked in _PTY_MASTERS).
+    master_fd, slave_fd = pty.openpty()
 
-    # Schedule cleanup
+    try:
+        proc = subprocess.Popen(
+            [ZELLIJ_BIN, "-s", session, "-n", kdl_path],
+            stdin=slave_fd,
+            stdout=slave_fd,
+            stderr=slave_fd,
+            start_new_session=True,
+            close_fds=True,
+        )
+    except FileNotFoundError as e:
+        os.close(master_fd); os.close(slave_fd)
+        return {"ok": False, "error": f"zellij not found at {ZELLIJ_BIN}: {e}"}
+    finally:
+        # Slave is now owned by the child (it inherits a duplicate of the fd).
+        # Close our end so the kernel reclaims it when the child exits.
+        os.close(slave_fd)
+
+    # Park master fd — keep it open for the server's lifetime. Without this,
+    # GC closes master → kernel sends EOF/SIGHUP to Zellij → spawn race.
+    _PTY_MASTERS.append(master_fd)
+
+    # Schedule cleanup of KDL temp file
     import threading
     def _cleanup():
         try: os.unlink(kdl_path)
         except OSError: pass
     threading.Timer(60.0, _cleanup).start()
 
-    return {"ok": True, "method": "new-layout", "kdl_path": kdl_path}
+    return {
+        "ok": True,
+        "method": "new-layout",
+        "kdl_path": kdl_path,
+        "child_pid": proc.pid,
+    }
 
 
 def _open_vscode(path: str) -> dict:
@@ -564,6 +605,8 @@ def build_claude_for_path(worktree_path: str) -> dict:
 HTML = """<!doctype html>
 <html lang="ru"><head><meta charset="utf-8"><title>Worktree Dashboard</title>
 <script>const ZELLIJ_WEB_URL_JS = '__ZELLIJ_WEB_URL__';</script>
+<link rel="stylesheet" href="/vendor/tabulator_midnight.min.css">
+<script src="/vendor/tabulator.min.js"></script>
 <style>
   body { background: #0e0e10; color: #e6e6e6; font: 14px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", monospace; margin: 0; padding: 24px; }
   h1 { margin: 0 0 8px; font-size: 22px; }
@@ -657,7 +700,7 @@ HTML = """<!doctype html>
 <div class="meta" id="meta">Loading worktrees…</div>
 <div class="progress-text" id="progressText"></div>
 <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
-<table id="tbl"></table>
+<div id="tbl"></div>
 <dialog id="msgModal">
   <div class="modal-header">
     <strong id="msgModalTitle">Message viewer</strong>
@@ -731,8 +774,7 @@ async function loadIndex() {
     });
     _wtById = {};
     _rows.forEach(r => _wtById[r.id] = r);
-    if (!window._sortBy) { window._sortBy = '_last_msg_ts'; window._sortDir = 'desc'; }
-    render(); // INSTANT render with whatever's in cache
+    render(); // INSTANT render with whatever's in cache (Tabulator handles sort)
     enrichClaude();  // revalidate only what's stale
   } catch (e) {
     setProgress(0, 'Failed: ' + e.message);
@@ -893,76 +935,137 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
+// Tabulator-backed render. First call builds the table; subsequent calls
+// replace data and re-apply filter. Tabulator handles multi-column sort
+// natively (Shift+click), virtual DOM, and frozen columns.
+let _tabulator = null;
+function buildTabulator() {
+  return new Tabulator("#tbl", {
+    layout: "fitDataStretch",
+    placeholder: "Scanning worktrees…",
+    height: "calc(100vh - 160px)",
+    movableColumns: true,
+    initialSort: [{column: "_last_msg_ts", dir: "desc"}],
+    columns: [
+      {title: "Status", field: "claude_running_now", width: 100, headerSort: true, formatter(cell) {
+        const row = cell.getRow().getData();
+        if (!row._claude_loaded) return '<span class="spinner"></span>';
+        if (row.claude_running_now) return '<span class="status live">● LIVE</span>';
+        if (row.claude_last_modified) {
+          const ageMin = Math.floor((Date.now()/1000 - new Date(row.claude_last_modified).getTime()/1000) / 60);
+          return `<span class="status idle">idle ${formatIdle(ageMin)}</span>`;
+        }
+        return '<span class="status none">—</span>';
+      }},
+      {title: "Repo", field: "repo", frozen: true, headerSort: true, formatter(cell) {
+        const r = cell.getRow().getData();
+        return `<span class="repo">${escapeHtml(r.repo)}</span>${r.is_main_worktree ? ' <span style="color:#888">(main)</span>' : ''}`;
+      }},
+      {title: "Branch", field: "branch", frozen: true, headerSort: true, formatter(cell) {
+        const v = cell.getValue();
+        const klass = v === 'main' || v === 'master' ? 'branch main' : 'branch';
+        return `<span class="${klass}">${escapeHtml(v)}</span>`;
+      }},
+      {title: "HEAD", field: "head", width: 90, headerSort: true, formatter(cell) {
+        return `<span class="head">${escapeHtml(cell.getValue() || '')}</span>`;
+      }},
+      {title: "Worktree path", field: "worktree_path", headerSort: true, formatter(cell) {
+        const v = cell.getValue() || '';
+        return `<span class="path" title="${escapeHtml(v)}">${escapeHtml(v)}</span>`;
+      }},
+      {title: "Last activity", field: "_last_msg_ts", width: 160, headerSort: true, formatter(cell) {
+        const row = cell.getRow().getData();
+        if (!row._claude_loaded) return '<span class="loading">…</span>';
+        const v = cell.getValue();
+        return escapeHtml(v ? v.replace('T', ' ').slice(0, 19) : '—');
+      }},
+      {title: "Last message", field: "_last_msg_text", widthGrow: 2, headerSort: true, formatter(cell) {
+        const row = cell.getRow().getData();
+        if (!row._claude_loaded) return '<span class="loading">scanning JSONL…</span>';
+        const top = (row.claude_sessions || [])[0] || {};
+        const role = top.last_message_role || '';
+        const text = cell.getValue() || '';
+        return (role ? `<span class="role-${role}">${role}:</span> ` : '') + escapeHtml(text);
+      }, cellClick(e, cell) {
+        const row = cell.getRow().getData();
+        const top = (row.claude_sessions || [])[0];
+        if (top?.uuid) openMsgModal(row.worktree_path, top.uuid, (top.msg_count || 1) - 1);
+      }, cssClass: "tabulator-last-msg"},
+      {title: "Msgs", field: "_msg_count", width: 70, hozAlign: "right", headerSort: true, formatter(cell) {
+        const row = cell.getRow().getData();
+        return row._claude_loaded ? (cell.getValue() ?? '—') : '…';
+      }},
+      {title: "Git", field: "_git_dirty_total", width: 180, headerSort: true, formatter(cell) {
+        return formatGitStatus(cell.getRow().getData()._git_status);
+      }},
+      {title: "Zellij session", field: "session_name", width: 200, headerSort: true, formatter(cell) {
+        const r = cell.getRow().getData();
+        const klass = r.session_active ? "session active" : "session inactive";
+        return `<span class="${klass}">${escapeHtml(cell.getValue() || '')}${r.session_active ? ' ●' : ''}</span>`;
+      }},
+      {title: "Action", field: "_action", width: 160, headerSort: false, formatter(cell) {
+        const row = cell.getRow().getData();
+        const top = (row.claude_sessions || [])[0];
+        const uuid = top?.uuid;
+        const canResume = !!uuid;
+        const sess = encodeURIComponent(row.session_name);
+        const zURL = `${ZELLIJ_WEB_URL_JS}/?session=${sess}`;
+        return `
+          <button class="act-btn ${canResume ? '' : 'disabled'}" title="Resume claude --resume ${uuid?.slice(0,8) || '?'}…"
+                  ${canResume ? `onclick="actLaunch(this, ${JSON.stringify(row.worktree_path)}, ${JSON.stringify(row.session_name)}, 'resume', ${JSON.stringify(uuid)})"` : 'disabled'}>▶</button>
+          <button class="act-btn" title="Fresh claude (no resume) in ${row.worktree_path}"
+                  onclick="actLaunch(this, ${JSON.stringify(row.worktree_path)}, ${JSON.stringify(row.session_name)}, 'fresh', null)">✨</button>
+          <button class="act-btn" title="Open in VSCode/Cursor (code ${row.worktree_path})"
+                  onclick="actVSCode(this, ${JSON.stringify(row.worktree_path)})">📂</button>
+          <a class="act-btn" title="Open Zellij Web Client (no command injection — for revisiting running session)"
+             href="${zURL}" target="_blank" rel="noopener">🪟</a>
+        `;
+      }},
+    ],
+    rowFormatter(row) {
+      if (row.getData().claude_running_now) {
+        row.getElement().classList.add("row-live");
+      }
+    },
+  });
+}
+
 function render() {
-  applySort(_rows);
-  const _filtered = applyFilter(_rows);
-  let html = `<thead><tr>
-    ${sortHdr('Status', 'claude_running_now')}
-    ${sortHdr('Repo', 'repo')}
-    ${sortHdr('Branch', 'branch')}
-    ${sortHdr('HEAD', 'head')}
-    ${sortHdr('Worktree path', 'worktree_path')}
-    ${sortHdr('Last activity', '_last_msg_ts')}
-    ${sortHdr('Last message', '_last_msg_text')}
-    ${sortHdr('Msgs', '_msg_count')}
-    ${sortHdr('Git', '_git_dirty_total')}
-    ${sortHdr('Zellij session', 'session_name')}
-    <th>Action</th>
-  </tr></thead><tbody>`;
-  for (const row of _filtered) {
-    let status;
-    if (!row._claude_loaded) status = '<span class="spinner"></span>';
-    else if (row.claude_running_now) status = '<span class="status live">● LIVE</span>';
-    else if (row.claude_last_modified) {
-      const ageMin = Math.floor((Date.now()/1000 - new Date(row.claude_last_modified).getTime()/1000) / 60);
-      status = `<span class="status idle">idle ${formatIdle(ageMin)}</span>`;
-    }
-    else status = '<span class="status none">—</span>';
-    const top = (row.claude_sessions || [])[0];
-    const lastTs = top?.last_message_ts || row.claude_last_modified || '';
-    const lastText = top?.last_message || top?.first_message || '';
-    const role = top?.last_message_role || '';
-    const loadingCell = !row._claude_loaded ? 'loading' : '';
-    html += `<tr class="${row.claude_running_now ? 'row-live' : ''}">
-      <td>${status}</td>
-      <td class="repo">${escapeHtml(row.repo)}${row.is_main_worktree ? ' <span style="color:#888">(main)</span>' : ''}</td>
-      <td class="branch ${row.branch === 'main' || row.branch === 'master' ? 'main' : ''}">${escapeHtml(row.branch)}</td>
-      <td class="head">${escapeHtml(row.head)}</td>
-      <td class="path" title="${escapeHtml(row.worktree_path)}">${escapeHtml(row.worktree_path)}</td>
-      <td class="ts ${loadingCell}">${row._claude_loaded ? escapeHtml(lastTs ? lastTs.replace('T',' ').slice(0, 19) : '—') : '…'}</td>
-      <td class="last-msg ${loadingCell}" ${top?.uuid ? `onclick="openMsgModal(${JSON.stringify(row.worktree_path)}, ${JSON.stringify(top.uuid)}, ${(top.msg_count || 1) - 1})" title="Click to view full message + neighbours"` : ''}>${row._claude_loaded ? (role ? `<span class="role-${role}">${role}:</span> ` : '') + escapeHtml(lastText) : 'scanning JSONL…'}</td>
-      <td class="num">${row._claude_loaded ? (top?.msg_count ?? '—') : '…'}</td>
-      <td class="git">${formatGitStatus(row._git_status)}</td>
-      <td class="session ${row.session_active ? 'active' : 'inactive'}">${escapeHtml(row.session_name)}${row.session_active ? ' ●' : ''}</td>
-      <td class="actions">
-        ${(() => {
-          const top = (row.claude_sessions || [])[0];
-          const uuid = top?.uuid;
-          const canResume = !!uuid;
-          const sess = encodeURIComponent(row.session_name);
-          const wt = encodeURIComponent(row.worktree_path);
-          const zURL = `${ZELLIJ_WEB_URL_JS}/?session=${sess}`;
-          return `
-            <button class="act-btn ${canResume ? '' : 'disabled'}" title="Resume claude --resume ${uuid?.slice(0,8) || '?'}…"
-                    ${canResume ? `onclick="actLaunch(this, ${JSON.stringify(row.worktree_path)}, ${JSON.stringify(row.session_name)}, 'resume', ${JSON.stringify(uuid)})"` : 'disabled'}>▶</button>
-            <button class="act-btn" title="Fresh claude (no resume) in ${row.worktree_path}"
-                    onclick="actLaunch(this, ${JSON.stringify(row.worktree_path)}, ${JSON.stringify(row.session_name)}, 'fresh', null)">✨</button>
-            <button class="act-btn" title="Open in VSCode/Cursor (code ${row.worktree_path})"
-                    onclick="actVSCode(this, ${JSON.stringify(row.worktree_path)})">📂</button>
-            <a class="act-btn" title="Open Zellij Web Client (no command injection — for revisiting running session)"
-               href="${zURL}" target="_blank" rel="noopener">🪟</a>
-          `;
-        })()}
-      </td>
-    </tr>`;
+  if (!_tabulator) {
+    _tabulator = buildTabulator();
+    // Wait for table-built event before first replaceData, otherwise rows are lost
+    _tabulator.on("tableBuilt", () => {
+      _tabulator.replaceData(_rows);
+      applyTabulatorFilter();
+    });
+    return;
   }
-  html += '</tbody>';
-  document.getElementById('tbl').innerHTML = html;
-  // Reflect filter state in meta
+  _tabulator.replaceData(_rows);
+  applyTabulatorFilter();
   const meta = document.getElementById('meta');
   if (meta && window._filterQuery) {
-    meta.textContent = `${_filtered.length} of ${_rows.length} worktrees (filter: "${window._filterQuery}")`;
+    const filtered = _tabulator.getDataCount("active");
+    meta.textContent = `${filtered} of ${_rows.length} worktrees (filter: "${window._filterQuery}")`;
   }
+}
+
+function applyTabulatorFilter() {
+  if (!_tabulator) return;
+  const q = (window._filterQuery || '').trim().toLowerCase();
+  if (!q) {
+    _tabulator.clearFilter();
+    return;
+  }
+  _tabulator.setFilter([
+    [
+      {field: "repo",            type: "like", value: q},
+      {field: "branch",          type: "like", value: q},
+      {field: "head",            type: "like", value: q},
+      {field: "worktree_path",   type: "like", value: q},
+      {field: "_last_msg_text",  type: "like", value: q},
+      {field: "session_name",    type: "like", value: q},
+    ],
+  ]);
 }
 function escapeHtml(s) { return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function formatIdle(totalMin) {
@@ -991,80 +1094,17 @@ function formatGitStatus(s) {
   if (s.behind) parts.push(`<span class="git-behind">↓${s.behind}</span>`);
   return parts.join(' ');
 }
-// Multi-key sort stack: array of {key, dir}. shift+click appends/cycles; plain click replaces.
-// Persisted to _sortStack for compatibility with old _sortBy reads.
-function sortHdr(label, key) {
-  const stack = window._sortStack || [];
-  const idx = stack.findIndex(e => e.key === key);
-  let arrow = '';
-  if (idx >= 0) {
-    const e = stack[idx];
-    const dirGlyph = e.dir === 'asc' ? '▲' : '▼';
-    arrow = stack.length > 1 ? ` ${dirGlyph}${idx + 1}` : ` ${dirGlyph}`;
-  }
-  return `<th class="sortable" onclick="setSort('${key}', event.shiftKey)">${label}${arrow}</th>`;
-}
-function setSort(key, additive) {
-  if (!window._sortStack) window._sortStack = [];
-  const stack = window._sortStack;
-  const idx = stack.findIndex(e => e.key === key);
-  if (additive) {
-    if (idx >= 0) {
-      // already in stack — toggle dir on the existing position
-      stack[idx].dir = stack[idx].dir === 'asc' ? 'desc' : 'asc';
-    } else {
-      stack.push({key, dir: 'desc'});
-    }
-  } else {
-    if (stack.length === 1 && idx === 0) {
-      stack[0].dir = stack[0].dir === 'asc' ? 'desc' : 'asc';
-    } else {
-      window._sortStack = [{key, dir: 'desc'}];
-    }
-  }
-  // legacy refs
-  const primary = window._sortStack[0];
-  window._sortBy = primary?.key;
-  window._sortDir = primary?.dir;
-  render();
-}
-function applySort(rows) {
-  const stack = window._sortStack && window._sortStack.length ? window._sortStack : [{key: '_last_msg_ts', dir: 'desc'}];
-  rows.sort((a, b) => {
-    for (const {key, dir} of stack) {
-      const sign = dir === 'asc' ? 1 : -1;
-      let av = a[key], bv = b[key];
-      if (typeof av === 'boolean') av = av ? 1 : 0;
-      if (typeof bv === 'boolean') bv = bv ? 1 : 0;
-      if (av == null) av = '';
-      if (bv == null) bv = '';
-      if (av < bv) return -1 * sign;
-      if (av > bv) return  1 * sign;
-    }
-    return 0;
-  });
-}
-
-// Vi-style `/` filter — focuses input, substring-matches across repo/branch/path/last-msg.
+// Vi-style `/` filter — focuses Tabulator filter input on `/`. Multi-key sort
+// is handled by Tabulator natively (Shift+click on column headers).
 window._filterQuery = '';
-function applyFilter(rows) {
-  const q = (window._filterQuery || '').trim().toLowerCase();
-  if (!q) return rows;
-  return rows.filter(r => {
-    const hay = [r.repo, r.branch, r.head, r.worktree_path, r._last_msg_text, r.session_name]
-      .filter(x => typeof x === 'string').join(' ').toLowerCase();
-    return hay.includes(q);
-  });
-}
 document.addEventListener('keydown', (e) => {
-  // Don't hijack typing in inputs
   const tag = (e.target.tagName || '').toLowerCase();
   if (tag === 'input' || tag === 'textarea') {
     if (e.key === 'Escape' && e.target.id === 'filterInput') {
       e.target.value = '';
       window._filterQuery = '';
       e.target.blur();
-      render();
+      if (_tabulator) _tabulator.clearFilter();
     }
     return;
   }
@@ -1231,6 +1271,40 @@ class Handler(BaseHTTPRequestHandler):
         result = _open_vscode(wt)
         _send_json(self, result, 200 if result["ok"] else 500)
 
+    def _serve_vendor(self, url_path: str):
+        """Serve static vendored assets from ui/vendor/ — whitelist-gated by
+        filename (no `..` traversal, only known extensions)."""
+        from pathlib import Path as _P
+        # Strip /vendor/ prefix and reject any path containing '..'
+        rel = url_path[len("/vendor/"):]
+        if ".." in rel or rel.startswith("/") or "\\" in rel:
+            self.send_response(403); self.end_headers(); return
+        vendor_root = _P(__file__).parent / "ui" / "vendor"
+        target = (vendor_root / rel).resolve()
+        # Confirm target stays inside vendor_root after resolution
+        try:
+            target.relative_to(vendor_root.resolve())
+        except ValueError:
+            self.send_response(403); self.end_headers(); return
+        if not target.is_file():
+            self.send_response(404); self.end_headers(); return
+        # Content-type by extension
+        ext = target.suffix.lower()
+        ctype = {
+            ".js":  "application/javascript; charset=utf-8",
+            ".css": "text/css; charset=utf-8",
+            ".woff2": "font/woff2",
+            ".woff":  "font/woff",
+            ".ttf":   "font/ttf",
+        }.get(ext, "application/octet-stream")
+        body = target.read_bytes()
+        self.send_response(200)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Cache-Control", "public, max-age=86400")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
     def do_GET(self):
         url = urlparse(self.path)
         qs = parse_qs(url.query)
@@ -1240,6 +1314,8 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             html_rendered = HTML.replace("__ZELLIJ_WEB_URL__", ZELLIJ_WEB_URL)
             self.wfile.write(html_rendered.encode("utf-8"))
+        elif url.path.startswith("/vendor/"):
+            self._serve_vendor(url.path)
         elif url.path == "/api/health":
             _send_json(self, {"status": "ok", "version": "0.1.0", "uptime_sec": int(time.time() - _START_TIME)})
         elif url.path == "/api/index":
