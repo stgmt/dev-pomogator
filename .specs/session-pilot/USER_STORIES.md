@@ -7,9 +7,9 @@
 
 As a developer with 10+ active worktrees, I want to see all my Claude sessions in one browser page with repo + branch + worktree path + HEAD + last activity + last message preview, чтобы быстро вспомнить над чем работал.
 
-**Why:** Current Zellij Session Manager shows random animal-name sessions ("glowing-platypus") with no repo/branch info — impossible to know which session belongs to which worktree.
+**Why:** Без дашборда — невозможно понять какая сессия Claude Code какому worktree-у принадлежит без ручного `dir ~\.claude\projects\` и парсинга JSONL файлов.
 
-**Independent Test:** Open `http://localhost:8083`, verify table renders with columns Status / Repo / Branch / HEAD / Worktree path / Last activity / Last message / Msgs / Zellij session / Action.
+**Independent Test:** Open `http://127.0.0.1:8083`, verify table renders with columns Status / Repo / Branch / HEAD / Worktree path / Last activity / Last message / Msgs / Git / Action.
 
 **Acceptance Scenarios:**
 
@@ -19,42 +19,45 @@ Then table shows all git worktrees from configured repos with all 10 columns pop
 
 ---
 
-### User Story 2: One-click Claude resume @feature4 @feature11 (Priority: P1)
+### User Story 2: One-click Claude resume in Windows Terminal @feature4 @feature11 (Priority: P1)
 
-As a developer, I want to click [▶ Resume] button in a row to launch `claude --resume <uuid>` in a Zellij session for that worktree, чтобы не печатать команду руками.
+As a developer on Windows, I want to click [▶ Resume] button in a row to launch `claude --resume <uuid>` in a new Windows Terminal window for that worktree, чтобы не печатать команду руками.
 
-**Why:** Currently the Action button only opens Zellij URL — does NOT inject the command. User has to type `claude --resume <uuid>` manually in each session.
+**Why:** Без one-click надо: вручную открыть Windows Terminal, `cd D:\repos\<wt>`, найти UUID, набрать `claude --resume <uuid>`. Дашборд знает всё это — должен делать сам.
 
-**Independent Test:** Click [▶ Resume] on a row with known UUID, verify Zellij session is created/attached AND `claude --resume <uuid>` command is running in the focused pane.
+**Independent Test:** Click [▶ Resume] on a row with known UUID. Verify new Windows Terminal window opens with cwd set to worktree path AND `claude --resume <uuid>` running in it.
 
 **Acceptance Scenarios:**
 
 Given a worktree row with claude_running_now=False but having JSONL history
 And UUID `abc-def-...` is the latest session for that worktree
 When user clicks [▶ Resume] button
-Then backend POST /api/launch returns ok=true
-And Zellij session named `<repo>__<branch>` exists (visible in `zellij list-sessions`)
-And the Zellij pane is running `claude --resume abc-def-...`
-And browser navigates to `http://localhost:8082/?session=<repo>__<branch>` via `mcp__claude-in-chrome__navigate`
+Then backend POST /api/launch returns ok=true with method ∈ {wt-spawn, cmd-fallback, env-override}
+And a new Windows Terminal (or PowerShell) window opens detached from the server process
+And the new terminal's cwd is `D:\repos\<wt>`
+And `claude --resume abc-def-...` is the active running command in that terminal
 
 ---
 
-### User Story 3: Reboot survival via SessionStart hook @feature7 @feature13 (Priority: P1)
+### User Story 3: Reboot survival via SessionStart PowerShell hook @feature7 @feature13 (Priority: P1)
 
-As a developer who reboots Windows daily, I want dashboard server to autostart on login + Zellij sessions to be restorable, чтобы не настраивать всё заново после каждого reboot.
+As a developer who reboots Windows daily, I want dashboard server to autostart on Claude Code startup, чтобы не настраивать всё заново после каждого reboot.
 
-**Why:** Manual restart of dashboard + remembering which `claude --resume <uuid>` to run for each worktree is the original "10+ окон" pain.
+**Why:** Manual restart of dashboard + remembering which `claude --resume <uuid>` to run for each worktree is the original "10+ окон" pain. After reboot dashboard должен быть готов мгновенно — открыл браузер, увидел список, кликнул [▶ Resume].
 
-**Independent Test:** Reboot machine, login, open dashboard URL — verify server is alive (200 from /api/health) AND Zellij sessions list contains previously-active sessions.
+(Замечание: terminal windows c Claude не выживают reboot — это OK, дашборд показывает JSONL state and one-click Resume восстанавливает разговор через `claude --resume <uuid>`.)
+
+**Independent Test:** Reboot machine, login, launch Claude Code → SessionStart hook fires → open `http://127.0.0.1:8083` → dashboard renders.
 
 **Acceptance Scenarios:**
 
-Given dashboard was running before reboot
+Given dashboard server was running before reboot
 When user reboots Windows
 And logs back in
-Then SessionStart hook starts dashboard server idempotently
-And `curl http://localhost:8083/api/health` returns 200
-And Zellij Web Client at localhost:8082 shows previously-active sessions (via Zellij session resurrection)
+And launches Claude Code
+Then SessionStart hook executes `pwsh.exe -File start-server.ps1` idempotently
+And `Invoke-WebRequest http://127.0.0.1:8083/api/health` returns 200 within 2s
+And dashboard at http://127.0.0.1:8083 renders all worktrees with their last JSONL state preserved
 
 ---
 
@@ -135,21 +138,22 @@ And `Skill("session-pilot")` triggers respond to "open dashboard" / "launch clau
 
 ---
 
-### User Story 8: Cross-OS access @feature15 @feature17 (Priority: P2)
+### User Story 8: One-command Windows install @feature15 @feature17 (Priority: P2)
 
-As a developer using both WSL Ubuntu (for the server) and Windows host (for the browser), I want dashboard accessible from BOTH localhost endpoints, чтобы не настраивать proxy руками.
+As a Windows developer setting up session-pilot for the first time, I want one PowerShell command that installs everything, чтобы не возиться вручную.
 
-**Why:** WSL2 NAT mode doesn't always forward localhost — `netsh portproxy add v4tov4` is needed.
+**Why:** Manual install — установка Python, прописывание hook в settings.json, проверка что порт свободен, запуск сервера — error-prone и плохо документируется. Single `install.ps1` делает всё за пользователя.
 
-**Independent Test:** From WSL: `curl http://localhost:8083/api/health` → 200. From Windows PowerShell: `Invoke-WebRequest http://localhost:8083/api/health` → 200.
+**Independent Test:** On a fresh Windows VM, run `pwsh -File install.ps1`. Verify: deps installed, hook registered, server up на :8083, dashboard renders в браузере.
 
 **Acceptance Scenarios:**
 
-Given dashboard server bound to 0.0.0.0:8083 in WSL
-And `netsh portproxy add v4tov4 listenport=8083 connectaddress=<WSL_IP>` configured
-When user opens browser on Windows host
-Then `http://localhost:8083` returns dashboard HTML
-And `http://localhost:8083/api/index` returns JSON same as from WSL curl
+Given a fresh Windows machine with Python ≥3.10 and PowerShell ≥5.1
+When user runs `pwsh -File extensions/session-pilot/install.ps1`
+Then script installs Python deps idempotently
+And script writes `pwsh.exe -File start-server.ps1` SessionStart hook into Claude Code settings.json
+And script verifies `Invoke-WebRequest http://127.0.0.1:8083/api/health` returns 200 within 5s
+And on re-run script detects existing install and exits 0 без модификации
 
 ## Risk Assessment
 

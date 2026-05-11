@@ -22,7 +22,7 @@ WHEN client sends `GET /api/claude?path=X` with `If-None-Match: W/"<mtime>"` mat
 
 **Требование:** [FR-4](FR.md#fr-4-post-apilaunch--claude-resumefresh-injection)
 
-WHEN user POSTs to `/api/launch` with `{worktree_path, session_name, mode: "resume", uuid: "abc-123-def"}` AND session `<repo>__<branch>` exists in `zellij list-sessions` THEN system SHALL execute `zellij --session <name> action focus-pane-id terminal_1 && action write-chars "claude --resume abc-123-def\n"` AND respond with `{ok: true, method: "write-chars", url: "http://localhost:8082/?session=<name>"}`.
+WHEN user POSTs to `/api/launch` with `{worktree_path: "D:\\repos\\foo", mode: "resume", uuid: "abc-123-def"}` THEN system SHALL spawn detached `wt.exe -d D:\repos\foo -- pwsh.exe -NoExit -Command "claude --resume abc-123-def"` AND respond with `{ok: true, method: "wt-spawn", pid: int}`. WHEN `wt.exe` not in PATH THEN system SHALL fallback to `cmd.exe /c start "" pwsh.exe -NoExit -Command "..."` AND respond with `method: "cmd-fallback"`. WHEN `$env:SP_TERMINAL_CMD` is set THEN system SHALL use that template instead AND respond with `method: "env-override"`.
 
 ## AC-5 (FR-5)
 
@@ -64,7 +64,9 @@ WHEN user clicks "Last message" cell в any row THEN `<dialog>` element SHALL op
 
 **Требование:** [FR-11](FR.md#fr-11-4-button-action-column)
 
-WHEN user clicks [▶ Resume] button THEN system SHALL POST /api/launch with mode=resume + open Zellij URL via `mcp__claude-in-chrome__navigate`. WHEN user clicks [✨ Fresh] THEN system SHALL POST with mode=fresh. WHEN user clicks [📂 VSCode] THEN system SHALL POST /api/open-vscode → `subprocess.Popen(['code', path])`. WHEN user clicks [🪟 Zellij] THEN system SHALL navigate to URL only without command injection.
+WHEN user clicks [▶ Resume] button THEN system SHALL POST /api/launch with mode=resume → backend spawns Windows Terminal с `claude --resume <uuid>`. WHEN user clicks [✨ Fresh] THEN system SHALL POST with mode=fresh → spawns Windows Terminal с bare `claude`. WHEN user clicks [📂 VSCode] THEN system SHALL POST /api/open-vscode → `subprocess.Popen(['code.cmd', path])`.
+
+Кнопка Zellij Web (была в v0.2) удалена — v0.3 не использует Zellij.
 
 ## AC-12 (FR-12)
 
@@ -76,7 +78,7 @@ WHEN row has `claude_last_modified` 1777 minutes ago (29h 37m) THEN UI SHALL dis
 
 **Требование:** [FR-13](FR.md#fr-13-sessionstart-hook-idempotent-autostart)
 
-WHEN Claude Code session starts AND server is not running THEN SessionStart hook SHALL execute `bash start-server.sh` AND server SHALL bind to port 8083 within 2 seconds. WHEN server is already running (PID file + alive) THEN start-server.sh SHALL exit 0 without spawning duplicate.
+WHEN Claude Code session starts on Windows AND server is not running THEN SessionStart hook SHALL execute `pwsh.exe -NoProfile -ExecutionPolicy Bypass -File start-server.ps1` (fallback `powershell.exe -File ...` if PS7 absent) AND server SHALL bind to port 8083 within 2 seconds. WHEN server is already running (PID in `$env:LOCALAPPDATA\session-pilot\server.pid` + `Get-Process` alive) THEN script SHALL exit 0 without spawning duplicate.
 
 ## AC-14 (FR-14)
 
@@ -86,9 +88,9 @@ WHEN user reloads dashboard with filled localStorage AND server's `claude_max_mt
 
 ## AC-15 (FR-15)
 
-**Требование:** [FR-15](FR.md#fr-15-cross-os-dashboard-access)
+**Требование:** [FR-15](FR.md#fr-15-powershell-installation-script)
 
-WHEN user opens browser on Windows host AND `netsh portproxy add v4tov4 listenport=8083 connectaddress=<WSL_IP>` configured THEN `http://localhost:8083` from Windows SHALL return same response as `http://127.0.0.1:8083` from inside WSL.
+WHEN user runs `pwsh -File extensions/session-pilot/install.ps1` (or remote `iex (irm ...)`) AND Python ≥3.10 присутствует THEN script SHALL: (1) install Python deps, (2) register SessionStart hook in Claude Code settings, (3) verify `http://127.0.0.1:8083/api/health` returns 200 within 5s, (4) exit 0. WHEN script re-run AND hook already registered AND server alive THEN script SHALL detect idempotency, log "already installed", exit 0 без модификации настроек.
 
 ## AC-16 (FR-16)
 
@@ -98,9 +100,9 @@ WHEN skill scenario verifies dashboard state THEN it SHALL use `mcp__claude-in-c
 
 ## AC-17 (FR-17)
 
-**Требование:** [FR-17](FR.md#fr-17-cross-os-path-encoding)
+**Требование:** [FR-17](FR.md#fr-17-windows-native-path-encoding)
 
-WHEN `encode_path_for_claude("/mnt/d/repos/lm-saas")` is called THEN return value SHALL include both `-mnt-d-repos-lm-saas` AND `D--repos-lm-saas` variants (because Claude Code on Windows writes JSONLs to the latter when cwd=/mnt/d/...).
+WHEN `encode_path_for_claude("D:\\repos\\lm-saas")` (Windows-native path) is called THEN return value SHALL include `D--repos-lm-saas` (canonical Claude Code on Windows directory name). Generic char-strip fallbacks (`D-repos-lm-saas`, `mnt-d-repos-lm-saas`) MAY also appear for defensive matching — they не должны влиять на production lookups.
 
 ## AC-18 (FR-18)
 
@@ -112,7 +114,7 @@ WHEN reviewer opens `.specs/session-pilot/COMPETITIVE_ANALYSIS.md` THEN file SHA
 
 **Требование:** [FR-19](FR.md#fr-19-diagnostic-cli---diagnose-livecycle)
 
-WHEN user runs `python server.py --diagnose-livecycle /mnt/d/repos/lm-saas` THEN output SHALL list all encoding variants AND all base dirs scanned AND per-JSONL match (path/mtime/age/size) AND verdict 🟢 LIVE / ⚪ idle / ❌ no match.
+WHEN user runs `python server.py --diagnose-livecycle D:\repos\lm-saas` THEN output SHALL list all encoding variants AND all base dirs scanned (`%USERPROFILE%\.claude\projects`) AND per-JSONL match (path/mtime/age/size) AND verdict 🟢 LIVE / ⚪ idle / ❌ no match.
 
 ## AC-20 (FR-20)
 

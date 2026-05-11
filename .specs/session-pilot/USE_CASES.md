@@ -18,15 +18,15 @@ Developer reloads dashboard frequently throughout day (alt-tab, switch windows).
 - Only 7 stale rows trigger fetch with If-None-Match → server returns 304
 - Total reload <300ms
 
-## UC-3: Launch claude --resume in Zellij with one click @feature4
+## UC-3: Launch claude --resume in a new Windows Terminal window @feature4
 
 Developer wants to continue work on feature/auth worktree from yesterday.
 
 - Find row for `feature/auth` worktree (sorted by last activity)
 - Click [▶ Resume] button
-- Backend POST /api/launch injects `claude --resume <last-uuid>` via Zellij `action write-chars`
-- `mcp__claude-in-chrome__navigate` opens `http://localhost:8082/?session=<repo>__feature_auth`
-- Developer is in Zellij with claude bootstrapped
+- Backend POST /api/launch spawns detached `wt.exe -d D:\repos\foo -- pwsh -NoExit -Command "claude --resume <uuid>"`
+- New Windows Terminal window opens; cwd set to worktree path; Claude Code reads JSONL state and continues conversation
+- Closing the window terminates Claude. Re-clicking [▶ Resume] later spawns another window — Claude re-reads same JSONL, conversation continues.
 
 ## UC-4: Inspect full last message in modal @feature5 @feature10
 
@@ -45,14 +45,14 @@ Developer wants to know which worktree has uncommitted changes before switching.
 - Sort by git status to find dirtiest worktree first
 - Open in VSCode via [📂 VSCode] action button
 
-## UC-6: SessionStart autostart after reboot @feature7 @feature13
+## UC-6: SessionStart autostart after Windows reboot @feature7 @feature13
 
 Developer reboots Windows daily.
 
 - After login, Claude Code session starts
-- SessionStart hook executes `bash start-server.sh`
-- Script: read PID, kill -0 check; if dead → setsid python3 server.py &
-- `curl http://localhost:8083/api/health` returns 200 within 2s
+- SessionStart hook executes `pwsh.exe -NoProfile -ExecutionPolicy Bypass -File start-server.ps1`
+- Script: read `$env:LOCALAPPDATA\session-pilot\server.pid`, run `Get-Process -Id $pid -ErrorAction SilentlyContinue`; if dead/missing → `Start-Process -WindowStyle Hidden python.exe -ArgumentList server.py` and write new PID
+- `Invoke-WebRequest http://127.0.0.1:8083/api/health` returns 200 within 2s
 
 ## UC-7: Multi-key shift+click sort @feature8
 
@@ -69,24 +69,25 @@ Developer creates new feature branch, wants fresh Claude (no resume).
 - `git worktree add ../feature-X -b feat/X`
 - Dashboard shows new row (no Claude history yet)
 - Click [✨ Fresh] button
-- Backend creates Zellij session named `<repo>__feat_X` with KDL layout `command "claude" cwd "<wt>"`
-- Open Zellij, claude is running
+- Backend POST /api/launch with mode=fresh → spawns `wt.exe -d <wt-path> -- pwsh -NoExit -Command "claude"`
+- New Windows Terminal window opens, bare `claude` running (no --resume, no prior context)
 
-## UC-9: Cross-OS access from Windows browser to WSL server @feature15 @feature16 @feature17
+## UC-9: Install on fresh Windows machine @feature15 @feature16 @feature17
 
-Developer's server runs in WSL Ubuntu, browser is on Windows.
+Developer just got new work laptop, wants session-pilot up in 5 minutes.
 
-- Run `netsh portproxy add v4tov4 listenport=8083 connectaddress=<WSL_IP>`
-- Open `http://localhost:8083` in Edge on Windows
-- Same response as from `curl http://127.0.0.1:8083` inside WSL
+- Open PowerShell 7 (or Windows PowerShell 5.1)
+- Run `iex (irm https://raw.githubusercontent.com/.../install.ps1)` (or local `pwsh -File install.ps1`)
+- Script verifies: Python ≥3.10 → installs deps → registers SessionStart hook → probes /api/health
+- Open Edge/Chrome → `http://127.0.0.1:8083` → dashboard renders
 
 ## UC-10: Diagnose missing LIVE indicator @feature3 @feature19 @feature20
 
 Developer is actively working in lm-saas but dashboard shows it as idle.
 
-- Run `python3 server.py --diagnose-livecycle /mnt/d/repos/lm-saas`
+- Run `python server.py --diagnose-livecycle D:\repos\lm-saas`
 - Output shows youngest JSONL is 146s old (> default 90s threshold)
-- Set `LIVE_THRESHOLD_SEC=300` and restart server
+- Set `$env:LIVE_THRESHOLD_SEC=300; python server.py` and restart server
 - Verify lm-saas now LIVE 🟢 in dashboard
 
 ## UC-11: Edge — JSONL written to unexpected encoding @feature14
@@ -94,6 +95,6 @@ Developer is actively working in lm-saas but dashboard shows it as idle.
 Developer's Cursor IDE creates worktree at `C:\Users\stigm\.cursor\worktrees\foo` — Claude JSONL written to `C--Users-stigm--cursor-worktrees-foo`.
 
 - Diagnose CLI shows ❌ no match for that path's encoding variants
-- Add new variant generation rule to `encode_path_for_claude()` covering `\\.cursor\\worktrees\\` paths
+- Add new variant generation rule to `encode_path_for_claude()` covering `\.cursor\worktrees\` paths
 - Regression test in `tests/test_encode_path.py`
 

@@ -1,10 +1,9 @@
 Feature: SP001_session_pilot_dashboard
-  Multi-repo worktree dashboard with Claude session indicators, one-click claude --resume launch into Zellij Web Client
+  Windows-native multi-repo worktree dashboard with Claude session indicators, one-click `claude --resume` launch into a new Windows Terminal window. v0.3+ — no Zellij, no WSL.
 
   Background:
-    Given session-pilot server is running on port 8083
-    And Zellij Web Client is running on port 8082
-    And there are git worktrees configured under D:/repos/
+    Given session-pilot server is running on port 8083 (Python native on Windows)
+    And there are git worktrees configured under D:\repos\
 
   # @feature1
   Scenario: SP002_fast_index_response
@@ -16,8 +15,8 @@ Feature: SP001_session_pilot_dashboard
 
   # @feature2
   Scenario: SP003_claude_endpoint_returns_top5
-    Given a worktree at /mnt/d/repos/foo has 8 JSONL files in ~/.claude/projects
-    When user requests "GET /api/claude?path=/mnt/d/repos/foo"
+    Given a worktree at D:\repos\foo has 8 JSONL files in %USERPROFILE%\.claude\projects\D--repos-foo
+    When user requests "GET /api/claude?path=D:\repos\foo"
     Then response SHALL contain claude_sessions array with 5 most-recently modified entries
     And each entry SHALL include uuid, last_message, last_message_role, last_message_ts, msg_count
 
@@ -30,20 +29,20 @@ Feature: SP001_session_pilot_dashboard
     And response time SHALL be less than 5ms
 
   # @feature4
-  Scenario: SP005_action_button_resume_existing_session
-    Given Zellij session "foo__main" exists
-    And UUID "abc-def-1234-5678" is the last session for /mnt/d/repos/foo
-    When user POSTs to "/api/launch" with body {worktree_path: "/mnt/d/repos/foo", session_name: "foo__main", mode: "resume", uuid: "abc-def-1234-5678"}
-    Then backend SHALL execute "zellij --session foo__main action focus-pane-id terminal_1 && action write-chars 'claude --resume abc-def-1234-5678\n'"
-    And response SHALL be {ok: true, method: "write-chars", url: "http://localhost:8082/?session=foo__main"}
+  Scenario: SP005_action_button_resume_via_windows_terminal
+    Given UUID "abc-def-1234-5678" is the last session for D:\repos\foo
+    And `wt.exe` is on PATH
+    When user POSTs to "/api/launch" with body {worktree_path: "D:\\repos\\foo", mode: "resume", uuid: "abc-def-1234-5678"}
+    Then backend SHALL spawn detached process: `wt.exe -d D:\repos\foo -- pwsh.exe -NoExit -Command "claude --resume abc-def-1234-5678"`
+    And response SHALL be {ok: true, method: "wt-spawn", pid: <int>}
+    And a new Windows Terminal window SHALL be visible with cwd=D:\repos\foo running claude
 
   # @feature4
-  Scenario: SP006_action_button_resume_new_session
-    Given Zellij session "bar__feat_x" does NOT exist
-    When user POSTs to "/api/launch" with mode "resume" for that session
-    Then backend SHALL render KDL layout to "/tmp/sp-<rand>.kdl"
-    And SHALL execute "setsid zellij --session bar__feat_x --layout /tmp/sp-<rand>.kdl"
-    And SHALL schedule unlink of temp file after 60 seconds
+  Scenario: SP006_action_button_resume_fallback_when_no_wt
+    Given `wt.exe` is NOT on PATH (older Windows 10 without Windows Terminal)
+    When user POSTs to "/api/launch" with mode "resume" for D:\repos\bar
+    Then backend SHALL spawn detached: `cmd.exe /c start "" pwsh.exe -NoExit -Command "claude --resume <uuid>"`
+    And response SHALL be {ok: true, method: "cmd-fallback", pid: <int>}
 
   # @feature4
   Scenario: SP007_action_button_idempotency_lock
@@ -103,26 +102,28 @@ Feature: SP001_session_pilot_dashboard
     And only 7 stale rows SHALL trigger /api/claude fetch with If-None-Match header
 
   # @feature15
-  Scenario: SP014_cross_os_access_from_windows
-    Given dashboard binds to 0.0.0.0:8083 in WSL
-    And "netsh portproxy add v4tov4 listenport=8083 connectaddress=<WSL_IP>" is configured
-    When user opens "http://localhost:8083" from Windows browser
-    Then response SHALL be identical to "http://127.0.0.1:8083" from inside WSL
+  Scenario: SP014_powershell_install_idempotent
+    Given fresh Windows machine with Python 3.10+ and PowerShell 5.1+
+    And session-pilot package downloaded
+    When user runs `pwsh -File extensions/session-pilot/install.ps1`
+    Then script SHALL install Python deps idempotently
+    And SHALL register SessionStart hook in Claude Code settings.json
+    And `Invoke-WebRequest http://127.0.0.1:8083/api/health` SHALL return 200 within 5s
+    And re-running the same script SHALL detect existing install and exit 0 без модификации
 
   # @feature17
-  Scenario: SP015_path_encoding_covers_both_os_variants
-    Given worktree path is "/mnt/d/repos/lm-saas"
+  Scenario: SP015_path_encoding_windows_native
+    Given worktree path is "D:\repos\lm-saas"
     When encode_path_for_claude is called
-    Then return value SHALL include "-mnt-d-repos-lm-saas"
-    And SHALL include "D--repos-lm-saas"
-    Because Claude Code on Windows writes JSONLs to D--repos-* when cwd is /mnt/d
+    Then return value SHALL include "D--repos-lm-saas"
+    Because Claude Code on Windows writes JSONLs to %USERPROFILE%\.claude\projects\D--repos-lm-saas
 
   # @feature19
   Scenario: SP016_diagnostic_cli_lm_saas
     Given lm-saas worktree has youngest JSONL 26 seconds old
-    When user runs "python3 server.py --diagnose-livecycle /mnt/d/repos/lm-saas"
+    When user runs `python server.py --diagnose-livecycle D:\repos\lm-saas`
     Then output SHALL list all encoding variants generated for the path
-    And SHALL list all base dirs scanned
+    And SHALL list all base dirs scanned (%USERPROFILE%\.claude\projects)
     And SHALL list per-JSONL match with full path, mtime, age, size
     And SHALL print verdict "🟢 LIVE — youngest JSONL is 26s old (< 300s threshold)"
 
@@ -148,16 +149,16 @@ Feature: SP001_session_pilot_dashboard
 
   # @feature11
   Scenario: SP021_open_vscode_endpoint_spawns_code_with_path
-    Given worktree at /mnt/d/repos/foo exists
-    When client POSTs /api/open-vscode {path: "/mnt/d/repos/foo"}
-    Then server SHALL spawn "code /mnt/d/repos/foo" detached
+    Given worktree at D:\repos\foo exists and is whitelisted
+    When client POSTs /api/open-vscode {path: "D:\\repos\\foo"}
+    Then server SHALL spawn "code.cmd D:\repos\foo" detached
     And SHALL return {ok: true, method: "spawn"}
 
   # @feature6
   Scenario: SP019_git_status_endpoint_returns_dirty_ahead_behind
-    Given worktree at /mnt/d/repos/foo has 1 added file, 4 modified files, 1 untracked, 0 ahead, 0 behind
+    Given worktree at D:\repos\foo has 1 added file, 4 modified files, 1 untracked, 0 ahead, 0 behind
     And the worktree path is in the dashboard whitelist
-    When client requests GET /api/git-status?path=/mnt/d/repos/foo
+    When client requests GET /api/git-status?path=D:\repos\foo
     Then response SHALL contain {added: 1, modified: 4, deleted: 0, untracked: 1, ahead: 0, behind: 0}
     And SHALL return HTTP 200
 
@@ -165,7 +166,7 @@ Feature: SP001_session_pilot_dashboard
   Scenario: SP018_get_message_endpoint_returns_msg_with_neighbors
     Given session has 10 messages indexed at /api/message?path=...&session=X&index=5
     And the worktree path is in the dashboard whitelist
-    When client requests GET /api/message?path=/mnt/d/repos/foo&session=X&index=5&context=2
+    When client requests GET /api/message?path=D:\repos\foo&session=X&index=5&context=2
     Then response SHALL contain {messages: [{idx, role, text, ts}], total: 10, target_index: 5}
     And SHALL include 5 entries (target ± 2) with indices 3..7
 

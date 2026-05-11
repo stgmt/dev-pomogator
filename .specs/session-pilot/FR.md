@@ -1,10 +1,16 @@
 # Functional Requirements (FR)
 
+> **Scope pivot (v0.3, 2026-05-11):** session-pilot теперь Windows-native только.
+> WSL + Zellij + cross-OS работали в v0.2 (см. git history), v0.3 переписан под
+> Windows PowerShell. Терминал — `wt.exe` (Windows Terminal) с fallback на
+> `powershell.exe` / `cmd.exe`. Дашборд остаётся pure Python в `python.exe` на
+> хосте, без WSL слоя.
+
 ## FR-1: GET /api/index — fast worktree list with claude_max_mtime
 
 > @feature1
 
-Endpoint returns all git worktrees from configured repos + per-row `claude_max_mtime` (cheap stat, no JSONL parse) + Zellij session names. Bound by ThreadPoolExecutor parallel git stat.
+Endpoint returns all git worktrees from configured repos + per-row `claude_max_mtime` (cheap stat, no JSONL parse). Bound by ThreadPoolExecutor parallel git stat.
 
 **Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1)
 **Use Case:** [UC-1](USE_CASES.md#uc-1)
@@ -27,15 +33,19 @@ GET /api/claude supports `If-None-Match: W/"<mtime>"`. Server compares against c
 **Связанные AC:** [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3)
 **Use Case:** [UC-2](USE_CASES.md#uc-2)
 
-## FR-4: POST /api/launch — claude resume/fresh injection
+## FR-4: POST /api/launch — Windows terminal spawn
 
 > @feature4
 
-POST endpoint accepts JSON `{worktree_path, session_name, mode: 'resume'|'fresh', uuid?}`. Decision tree:
-- Existing session → `zellij --session NAME action focus-pane-id terminal_1 && action write-chars "<cmd>\n"`
-- New session → render KDL layout to `/tmp/sp-<rand>.kdl` → `setsid zellij --session NAME --layout <file>` → unlink temp after 60s
+POST endpoint accepts JSON `{worktree_path, mode: 'resume'|'fresh', uuid?}`. Spawns a NEW Windows terminal window with `claude --resume <uuid>` (resume mode) or `claude` (fresh mode) running in `worktree_path`. Detached от Python сервера — закрытие сервера НЕ убивает терминал.
 
-5-second idempotency lock per `(session, uuid)` tuple.
+Chain (first available wins):
+1. `wt.exe -d <worktree_path> -- pwsh.exe -NoExit -Command "claude ..."` (Windows Terminal preferred)
+2. `wt.exe -d <worktree_path> -- powershell.exe -NoExit -Command "claude ..."` (Windows PowerShell 5.1 fallback)
+3. `cmd.exe /c start "" pwsh.exe -NoExit -Command "claude ..."` (fallback if `wt` not on PATH)
+4. Override via `$env:SP_TERMINAL_CMD` template (e.g. `"alacritty.exe --working-directory {cwd} -e pwsh -NoExit -c '{cmd}'"`).
+
+5-second idempotency lock per `(worktree_path, uuid)` — повторный клик в течение 5s не плодит дубли. Persistence terminate at user's discretion — закрытие окна = конец сессии Claude. Реоткрытие через `claude --resume <uuid>` подхватывает JSONL state.
 
 **Связанные AC:** [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4)
 **Use Case:** [UC-3](USE_CASES.md#uc-3)
@@ -62,7 +72,7 @@ Per-worktree git status `{added, deleted, ahead, behind}` via `git status --shor
 
 > @feature7
 
-`200 {"status":"ok"}` for SessionStart hook autostart logic. <5ms regardless of cache.
+`200 {"status":"ok", "version": "0.3.0", "uptime_sec": int}` for autostart probe — клиент (PowerShell installer / SessionStart hook) ждёт сервер до 2s после spawn. <5ms regardless of cache.
 
 **Связанные AC:** [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7)
 **Use Case:** [UC-6](USE_CASES.md#uc-6)
@@ -94,11 +104,13 @@ Click "Last message" cell → native `<dialog>` + marked.js render + [Prev]/[Nex
 **Связанные AC:** [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-10)
 **Use Case:** [UC-4](USE_CASES.md#uc-4)
 
-## FR-11: 4-button Action column
+## FR-11: 3-button Action column
 
 > @feature11
 
-Per row: [▶ Resume] [✨ Fresh] [📂 VSCode] [🪟 Zellij]. Resume/Fresh inject command via /api/launch. VSCode opens via `subprocess.Popen(['code', path])`. Zellij navigates to URL only.
+Per row: [▶ Resume] [✨ Fresh] [📂 VSCode]. Resume/Fresh spawn новое окно Windows Terminal через /api/launch (см. FR-4). VSCode opens via `subprocess.Popen(['code.cmd', path])` или `code.exe` если CLI shim не на PATH.
+
+Кнопка Zellij Web из v0.2 удалена (мы больше не используем Zellij).
 
 **Связанные AC:** [AC-11](ACCEPTANCE_CRITERIA.md#ac-11-fr-11)
 **Use Case:** [UC-3](USE_CASES.md#uc-3)
@@ -116,7 +128,7 @@ Per row: [▶ Resume] [✨ Fresh] [📂 VSCode] [🪟 Zellij]. Resume/Fresh inje
 
 > @feature13
 
-Extension's `extension.json` registers SessionStart hook → `bash start-server.sh`. Idempotent: PID lock + `kill -0` check.
+Extension's `extension.json` registers SessionStart hook → `pwsh.exe -File start-server.ps1` (PowerShell 7) or `powershell.exe -File start-server.ps1` (PS 5.1 fallback). Idempotent: PID lock в `$env:LOCALAPPDATA\session-pilot\server.pid` + `Get-Process -Id` liveness check.
 
 **Связанные AC:** [AC-13](ACCEPTANCE_CRITERIA.md#ac-13-fr-13)
 **Use Case:** [UC-8](USE_CASES.md#uc-8)
@@ -130,11 +142,17 @@ Extension's `extension.json` registers SessionStart hook → `bash start-server.
 **Связанные AC:** [AC-14](ACCEPTANCE_CRITERIA.md#ac-14-fr-14)
 **Use Case:** [UC-9](USE_CASES.md#uc-9)
 
-## FR-15: Cross-OS dashboard access
+## FR-15: PowerShell installation script
 
 > @feature15
 
-Server bind `0.0.0.0:8083` (env `WT_DASHBOARD_BIND`). `netsh portproxy add v4tov4 listenport=8083 connectaddress=<WSL_IP>` makes Windows `localhost:8083` reach WSL.
+`install.ps1` идемпотентно настраивает session-pilot на Windows: проверяет Python ≥3.10, ставит зависимости, регистрирует SessionStart hook в Claude Code settings, создаёт ярлык в `$env:APPDATA\Microsoft\Windows\Start Menu\Programs\` (опционально). НЕ требует WSL, admin rights, ни Zellij/tmux.
+
+```pwsh
+iex (irm https://raw.githubusercontent.com/.../install.ps1)
+# или offline:
+pwsh -File extensions/session-pilot/install.ps1
+```
 
 **Связанные AC:** [AC-15](ACCEPTANCE_CRITERIA.md#ac-15-fr-15)
 **Use Case:** [UC-10](USE_CASES.md#uc-10)
@@ -148,11 +166,13 @@ Skill scenarios use `mcp__claude-in-chrome__navigate / screenshot / read_page` f
 **Связанные AC:** [AC-16](ACCEPTANCE_CRITERIA.md#ac-16-fr-16)
 **Use Case:** [UC-3](USE_CASES.md#uc-3)
 
-## FR-17: Cross-OS path encoding
+## FR-17: Windows-native path encoding
 
 > @feature17
 
-`encode_path_for_claude(path)` returns ALL variants: `/mnt/d/repos/foo` → matches both `-mnt-d-repos-foo` AND `D--repos-foo` (because Claude Code on Windows writes to the latter from /mnt/d cwd).
+`encode_path_for_claude(path)` для Windows-native пути `D:\repos\foo` производит `D--repos-foo` — формат который Claude Code использует для `~\.claude\projects\` директорий на Windows. Дополнительные варианты (generic char-strip) оставлены как defensive fallback.
+
+WSL-варианты (`/mnt/X/...` → `-mnt-X-...`) удалены — v0.3 не таргетит WSL. (Encoder функция кодово поддерживает все варианты, но в production-paths их быть не должно.)
 
 **Связанные AC:** [AC-17](ACCEPTANCE_CRITERIA.md#ac-17-fr-17)
 **Use Case:** [UC-1](USE_CASES.md#uc-1)
