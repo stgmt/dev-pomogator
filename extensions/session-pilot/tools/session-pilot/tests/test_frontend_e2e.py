@@ -89,10 +89,11 @@ def test_frontend_renders_and_table_populated():
             page = browser.new_page()
             page.goto(f"{SERVER}/?fe-e2e-render", wait_until="domcontentloaded", timeout=30000)
             assert "Worktree Dashboard" in page.title()
-            page.wait_for_selector("tbody tr", timeout=15000)
-            assert page.locator("tbody tr").count() > 0
-            # Action column buttons
-            buttons = page.locator("tbody tr").first.locator("td.actions button.act-btn")
+            # Tabulator renders rows as div.tabulator-row (not tbody tr)
+            page.wait_for_selector(".tabulator-row", timeout=15000)
+            assert page.locator(".tabulator-row").count() > 0
+            # Action column buttons — Tabulator cells are div.tabulator-cell
+            buttons = page.locator(".tabulator-row").first.locator(".tabulator-cell button.act-btn")
             assert buttons.count() >= 3, f"expected ≥3 action buttons (Resume/Fresh/VSCode), got {buttons.count()}"
         finally:
             browser.close()
@@ -141,7 +142,7 @@ def test_frontend_actLaunch_handler_chain():
             page.on("response", on_response)
 
             page.goto(f"{SERVER}/?fe-e2e-launch", wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_selector("tbody tr", timeout=10000)
+            page.wait_for_selector(".tabulator-row", timeout=10000)
 
             # Suppress window.open popup which Firefox blocks anyway
             page.evaluate("window.open = () => null")
