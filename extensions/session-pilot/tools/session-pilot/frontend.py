@@ -47,6 +47,9 @@ HTML = """<!doctype html>
   th.sortable { cursor: pointer; user-select: none; }
   th.sortable:hover { color: #fbbf24; }
   td.last-msg { max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #ccc; }
+  /* v0.3 layout-fix: ellipsis on long Tabulator cells (last-message, worktree path) */
+  .tabulator-cell { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tabulator-cell .last-msg, .tabulator-cell .path { overflow: hidden; text-overflow: ellipsis; }
   td.ts { font-family: monospace; color: #888; font-size: 11px; white-space: nowrap; }
   td.num { text-align: right; color: #aaa; font-family: monospace; }
   .role-user { color: #60a5fa; font-weight: 600; }
@@ -343,10 +346,20 @@ document.addEventListener('DOMContentLoaded', () => {
 // Tabulator-backed render. First call builds the table; subsequent calls
 // replace data and re-apply filter. Tabulator handles multi-column sort
 // natively (Shift+click), virtual DOM, and frozen columns.
+//
+// Layout variants — switchable via ?layout=A|B|C|D query param for A/B testing:
+//   A — fitColumns (squeeze all into viewport, no horizontal scroll)
+//   B — fitColumns + responsiveLayout: "collapse" (auto-hide on narrow + expand)
+//   C — fitDataStretch + maxWidth/ellipsis on long cells (legacy + truncation)
+//   D — fitColumns + responsiveLayout + ellipsis (gibrid, default)
 let _tabulator = null;
+function _layoutVariant() {
+  const v = new URLSearchParams(location.search).get('layout');
+  return ['A', 'B', 'C', 'D'].includes(v) ? v : 'A';
+}
 function buildTabulator() {
-  return new Tabulator("#tbl", {
-    layout: "fitDataStretch",
+  const variant = _layoutVariant();
+  const cfg = {
     placeholder: "Scanning worktrees…",
     height: "calc(100vh - 160px)",
     movableColumns: true,
@@ -362,19 +375,30 @@ function buildTabulator() {
         }
         return '<span class="status none">—</span>';
       }},
-      {title: "Repo", field: "repo", frozen: true, headerSort: true, formatter(cell) {
-        const r = cell.getRow().getData();
-        return `<span class="repo">${escapeHtml(r.repo)}</span>${r.is_main_worktree ? ' <span style="color:#888">(main)</span>' : ''}`;
+      {title: "Repo", field: "repo", frozen: true, headerSort: true,
+        headerFilter: "list",
+        // Tabulator 6.x: multiselect взаимно исключает autocomplete/listOnEmpty/placeholderEmpty.
+        // Берём чистый multiselect — список репо короткий, поиск-по-буквам не нужен.
+        headerFilterParams: {valuesLookup: "active", multiselect: true, clearable: true, sort: "asc"},
+        headerFilterFunc: "in",
+        formatter(cell) {
+          const r = cell.getRow().getData();
+          return `<span class="repo">${escapeHtml(r.repo)}</span>${r.is_main_worktree ? ' <span style="color:#888">(main)</span>' : ''}`;
       }},
-      {title: "Branch", field: "branch", frozen: true, headerSort: true, formatter(cell) {
-        const v = cell.getValue();
-        const klass = v === 'main' || v === 'master' ? 'branch main' : 'branch';
-        return `<span class="${klass}">${escapeHtml(v)}</span>`;
+      {title: "Branch", field: "branch", frozen: true, headerSort: true,
+        headerFilter: "input",
+        headerFilterPlaceholder: "filter branch…",
+        formatter(cell) {
+          const v = cell.getValue();
+          const klass = v === 'main' || v === 'master' ? 'branch main' : 'branch';
+          return `<span class="${klass}">${escapeHtml(v)}</span>`;
       }},
-      {title: "HEAD", field: "head", width: 90, headerSort: true, formatter(cell) {
+      {title: "HEAD", field: "head", width: 90, headerSort: true, responsive: 5, formatter(cell) {
+        // responsive: 5 — hide first when viewport narrows (short hash, low info-density)
         return `<span class="head">${escapeHtml(cell.getValue() || '')}</span>`;
       }},
-      {title: "Worktree path", field: "worktree_path", headerSort: true, formatter(cell) {
+      {title: "Worktree path", field: "worktree_path", headerSort: true, responsive: 4, formatter(cell) {
+        // responsive: 4 — hide second (long, can be inferred from Repo+Branch)
         const v = cell.getValue() || '';
         return `<span class="path" title="${escapeHtml(v)}">${escapeHtml(v)}</span>`;
       }},
@@ -382,7 +406,17 @@ function buildTabulator() {
         const row = cell.getRow().getData();
         if (!row._claude_loaded) return '<span class="loading">…</span>';
         const v = cell.getValue();
-        return escapeHtml(v ? v.replace('T', ' ').slice(0, 19) : '—');
+        if (!v) return '—';
+        // TZ fix: Claude Code writes JSONL timestamps in UTC with Z suffix.
+        // Parse and render in user's LOCAL timezone via toLocaleString.
+        try {
+          const d = new Date(v);
+          if (isNaN(d.getTime())) return escapeHtml(v.replace('T', ' ').slice(0, 19));
+          const opts = {year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false};
+          return escapeHtml(d.toLocaleString(navigator.language || 'ru-RU', opts).replace(',', ''));
+        } catch (e) {
+          return escapeHtml(v.replace('T', ' ').slice(0, 19));
+        }
       }},
       {title: "Last message", field: "_last_msg_text", widthGrow: 2, headerSort: true, formatter(cell) {
         const row = cell.getRow().getData();
@@ -396,11 +430,11 @@ function buildTabulator() {
         const top = (row.claude_sessions || [])[0];
         if (top?.uuid) openMsgModal(row.worktree_path, top.uuid, (top.msg_count || 1) - 1);
       }, cssClass: "tabulator-last-msg"},
-      {title: "Msgs", field: "_msg_count", width: 70, hozAlign: "right", headerSort: true, formatter(cell) {
+      {title: "Msgs", field: "_msg_count", width: 70, hozAlign: "right", headerSort: true, responsive: 3, formatter(cell) {
         const row = cell.getRow().getData();
         return row._claude_loaded ? (cell.getValue() ?? '—') : '…';
       }},
-      {title: "Git", field: "_git_dirty_total", width: 180, headerSort: true, formatter(cell) {
+      {title: "Git", field: "_git_dirty_total", width: 180, headerSort: true, responsive: 3, formatter(cell) {
         return formatGitStatus(cell.getRow().getData()._git_status);
       }},
       {title: "Action", field: "_action", width: 130, headerSort: false, formatter(cell) {
@@ -423,7 +457,23 @@ function buildTabulator() {
         row.getElement().classList.add("row-live");
       }
     },
-  });
+  };
+  // Apply layout variant
+  if (variant === 'A') {
+    cfg.layout = 'fitColumns';
+  } else if (variant === 'B') {
+    cfg.layout = 'fitColumns';
+    cfg.responsiveLayout = 'collapse';
+  } else if (variant === 'C') {
+    cfg.layout = 'fitDataStretch';
+    // Truncation handled per-column via formatter ellipsis (see CSS .tabulator-cell)
+  } else {
+    // D — default: fitColumns + responsive collapse
+    cfg.layout = 'fitColumns';
+    cfg.responsiveLayout = 'collapse';
+  }
+  document.getElementById('meta').setAttribute('data-layout-variant', variant);
+  return new Tabulator("#tbl", cfg);
 }
 
 function render() {

@@ -37,13 +37,22 @@ _MTIME_TTL = 2.0
 
 
 def discover_repos() -> list[Path]:
-    """Find git repos. Default: scan ~/repos and /mnt/d/repos for any .git directories."""
+    """Find git **main** worktrees (not linked worktrees) under scan roots.
+
+    Linked git worktrees have `.git` as a file (gitdir pointer) — including
+    those produces N×M cartesian explosion in `build_worktree_index` because
+    each linked worktree's `git worktree list` returns ALL siblings. Filter
+    on `.git` being a directory to keep only main worktrees.
+    """
     repos: list[Path] = []
     explicit = os.environ.get("REPOS")
     if explicit:
-        for p in explicit.split(":"):
+        # Use os.pathsep — ':' clashes with Windows drive letters (C:/...).
+        for p in explicit.split(os.pathsep):
+            if not p:
+                continue
             p = Path(p)
-            if p.exists() and (p / ".git").exists():
+            if p.is_dir() and (p / ".git").is_dir():
                 repos.append(p)
         return repos
     candidates = [Path.home() / "repos", Path("/mnt/d/repos"), Path("/mnt/c/repos")]
@@ -51,7 +60,7 @@ def discover_repos() -> list[Path]:
         if not root.exists():
             continue
         for child in root.iterdir():
-            if child.is_dir() and (child / ".git").exists():
+            if child.is_dir() and (child / ".git").is_dir():
                 repos.append(child)
     return repos
 
@@ -131,8 +140,28 @@ def claude_sessions_for(worktree_path: str) -> dict:
                         f.seek(0, 2); size = f.tell()
                         f.seek(max(0, size - 256 * 1024))
                         tail_bytes = f.read()
-                    with open(jsonl, "rb") as f:
-                        msg_count = sum(1 for _ in f)
+                    # msg_count = user/assistant сообщения С НЕПУСТЫМ текстом.
+                    # Claude Code пишет в JSONL много шума: system/attachment chrome,
+                    # а ещё user/assistant сообщения где content — это tool_use или
+                    # tool_result блоки без текста. Всё это не имеет смысла для
+                    # «Last message» модалки — UI хочет реальные обмены.
+                    with open(jsonl, "r", encoding="utf-8", errors="ignore") as f:
+                        for line in f:
+                            line = line.strip()
+                            if not line: continue
+                            try:
+                                lobj = json.loads(line)
+                            except json.JSONDecodeError:
+                                continue
+                            if lobj.get("type") not in ("user", "assistant"):
+                                continue
+                            lc = lobj.get("message", {}).get("content", "")
+                            if isinstance(lc, list):
+                                ltxt = " ".join(p.get("text", "") for p in lc if isinstance(p, dict) and p.get("type") == "text").strip()
+                            else:
+                                ltxt = lc.strip() if isinstance(lc, str) else ""
+                            if ltxt:
+                                msg_count += 1
                     for line in head_bytes.decode("utf-8", errors="ignore").split("\n"):
                         if not line.strip(): continue
                         try: obj = json.loads(line)
@@ -215,14 +244,24 @@ def claude_max_mtime_for(worktree_path: str) -> float:
 
 
 def build_worktree_index() -> dict:
-    """Fast: git worktree list + per-path mtime; no JSONL parse. v0.3 — no Zellij."""
+    """Fast: git worktree list + per-path mtime; no JSONL parse. v0.3 — no Zellij.
+
+    Invariant: each `worktree_path` appears at most once in `rows`. Even after
+    `discover_repos` filters to main worktrees only, defensive dedup guards
+    against scan-root overlap (e.g. ~/repos and /mnt/d/repos pointing at the
+    same physical tree).
+    """
     repos = discover_repos()
     rows = []
+    seen_paths: set[str] = set()
     for repo in repos:
         repo_name = repo.name
         for wt in git_worktree_list(repo):
             if "error" in wt: continue
             wt_path = wt.get("path", "")
+            if not wt_path or wt_path in seen_paths:
+                continue
+            seen_paths.add(wt_path)
             branch = wt.get("branch", "(unknown)")
             head = wt.get("head", "")[:7]
             mtime = claude_max_mtime_for(wt_path)
@@ -278,7 +317,19 @@ def build_claude_cached(path: str) -> dict:
 
 
 def messages_for_session(worktree_path: str, session_uuid: str, index: int, context: int = 2) -> dict:
-    """Streams JSONL once, collects slice [index-context, index+context]."""
+    """Read JSONL, filter to user/assistant only, return slice around `index`.
+
+    `index` and the returned `target_index` / `total` are in the
+    **user/assistant-only frame** — not in raw-JSONL-line-frame. Claude Code
+    interleaves user/assistant messages with system/attachment chrome that
+    has no readable text (or has tool-result blobs unrelated to the human
+    conversation). For the dashboard "Last message" modal we want a clean
+    conversation timeline, not raw JSONL.
+
+    Returns:
+      {messages: [{idx, role, text, ts}], total, target_index}
+      where idx is the position in the user/assistant subsequence.
+    """
     import server
     if worktree_path not in server._whitelisted_paths():
         return {"error": "path not in whitelist"}
@@ -300,26 +351,41 @@ def messages_for_session(worktree_path: str, session_uuid: str, index: int, cont
         if target_path: break
     if not target_path:
         return {"error": f"session {session_uuid} not found for {worktree_path}"}
-    lo = max(0, index - context)
-    hi = index + context
-    messages: list[dict] = []
-    total = 0
+
+    # Pass 1: enumerate user/assistant messages WITH non-empty text. Claude
+    # Code stores some user/assistant lines as pure tool_use / tool_result
+    # blocks with no readable text — those would render as empty bubbles in
+    # the modal (the bug pattern: assistant#4374 with msg-text="").
+    ua_messages: list[dict] = []
     with target_path.open("r", encoding="utf-8", errors="ignore") as f:
-        for i, line in enumerate(f):
-            total += 1
-            if i < lo or i > hi: continue
+        for line in f:
             line = line.strip()
             if not line: continue
             try:
                 obj = json.loads(line)
             except json.JSONDecodeError:
                 continue
+            if obj.get("type") not in ("user", "assistant"):
+                continue
             content = obj.get("message", {}).get("content", "")
             if isinstance(content, list):
-                text = " ".join(p.get("text", "") for p in content if isinstance(p, dict) and p.get("type") == "text")
+                text = " ".join(p.get("text", "") for p in content if isinstance(p, dict) and p.get("type") == "text").strip()
             else:
-                text = content if isinstance(content, str) else ""
-            messages.append({"idx": i, "role": obj.get("type", ""), "text": text, "ts": obj.get("timestamp", "")})
+                text = content.strip() if isinstance(content, str) else ""
+            if not text:
+                continue  # skip tool-only turns — no human-readable content
+            ua_messages.append({"role": obj.get("type", ""), "text": text, "ts": obj.get("timestamp", "")})
+
+    total = len(ua_messages)
+    if total == 0:
+        return {"messages": [], "total": 0, "target_index": 0}
+
+    # Clamp index into UA frame (frontend may pass stale msg_count - 1)
+    if index < 0: index = 0
+    if index >= total: index = total - 1
+    lo = max(0, index - context)
+    hi = min(total - 1, index + context)
+    messages = [{"idx": i, **ua_messages[i]} for i in range(lo, hi + 1)]
     return {"messages": messages, "total": total, "target_index": index}
 
 
