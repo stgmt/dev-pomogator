@@ -14,6 +14,7 @@ const DISPATCH: Record<TestFramework, string> = {
   rust: 'cargo test',
   go: 'go test ./...',
   unknown: '',
+  generic: '',
 };
 
 /** Filter argument format per framework */
@@ -25,6 +26,7 @@ const FILTER_FORMAT: Record<TestFramework, (filter: string) => string> = {
   rust: (f) => `-- ${f}`,
   go: (f) => `-run "${f}"`,
   unknown: () => '',
+  generic: () => '',
 };
 
 /** Wrapper lives in test-statusline and delegates to the canonical TS writer. */
@@ -113,6 +115,7 @@ export function getFrameworkInfo(framework: TestFramework): string {
     rust: 'Cargo test (Cargo.toml)',
     go: 'Go test (go.mod)',
     unknown: 'Unknown (no config detected)',
+    generic: 'Generic passthrough (non-test long bg command)',
   };
   return info[framework];
 }

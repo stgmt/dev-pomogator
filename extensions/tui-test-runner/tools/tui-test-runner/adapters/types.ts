@@ -2,7 +2,7 @@
  * Canonical status v2 schema shared by the wrapper, statusline, and TUI.
  */
 
-export type TestFramework = 'vitest' | 'jest' | 'pytest' | 'dotnet' | 'rust' | 'go' | 'unknown';
+export type TestFramework = 'vitest' | 'jest' | 'pytest' | 'dotnet' | 'rust' | 'go' | 'unknown' | 'generic';
 
 export type TestState = 'idle' | 'building' | 'running' | 'passed' | 'failed' | 'error';
 

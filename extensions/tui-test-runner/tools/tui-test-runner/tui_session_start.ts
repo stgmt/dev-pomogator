@@ -72,12 +72,18 @@ async function main(): Promise<void> {
       try { fs.unlinkSync(tuiPidFile); } catch { /* gone already */ }
     } catch { /* no tui.pid — nothing to clean */ }
 
-    // Write env vars to CLAUDE_ENV_FILE
+    // Write env vars to CLAUDE_ENV_FILE.
+    // Windows paths use backslashes which bash strips when `source $CLAUDE_ENV_FILE` is
+    // evaluated (`\r`/`\d`/etc become literal `r`/`d`, breaking path resolution downstream
+    // — observed as `D:reposdev-pomogator` instead of `D:\repos\dev-pomogator`).
+    // Normalize to forward slashes — Node fs handles both on Windows, bash treats them as
+    // literal characters. (Spec: fix-bg-output-loss v0.3.0 path mangling fix.)
+    const cwdPosix = cwd.replace(/\\/g, '/');
     const envFile = process.env.CLAUDE_ENV_FILE;
     if (envFile) {
       const envLines = [
         `TEST_STATUSLINE_SESSION=${prefix}`,
-        `TEST_STATUSLINE_PROJECT=${cwd}`,
+        `TEST_STATUSLINE_PROJECT=${cwdPosix}`,
       ].join('\n') + '\n';
       fs.appendFileSync(envFile, envLines, 'utf-8');
       log('INFO', `Wrote TEST_STATUSLINE env vars to ${envFile}`);

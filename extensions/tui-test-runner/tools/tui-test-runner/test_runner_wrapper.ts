@@ -9,6 +9,7 @@ import * as path from 'node:path';
 import type { TestEvent, TestFramework } from './adapters/types.ts';
 import { CargoAdapter } from './adapters/cargo_adapter.ts';
 import { DotnetAdapter } from './adapters/dotnet_adapter.ts';
+import { GenericAdapter } from './adapters/generic_adapter.ts';
 import { GoTestAdapter } from './adapters/go_test_adapter.ts';
 import { JestAdapter } from './adapters/jest_adapter.ts';
 import { PytestAdapter } from './adapters/pytest_adapter.ts';
@@ -27,6 +28,7 @@ const KNOWN_FRAMEWORKS = new Set<TestFramework>([
   'rust',
   'go',
   'unknown',
+  'generic',
 ]);
 
 interface ParsedArgs {
@@ -95,6 +97,8 @@ function getAdapter(framework: TestFramework): { parseLine: (line: string) => Te
       return new CargoAdapter();
     case 'go':
       return new GoTestAdapter();
+    case 'generic':
+      return new GenericAdapter();
     default:
       throw new Error(`Unsupported framework adapter: ${framework}`);
   }

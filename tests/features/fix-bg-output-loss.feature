@@ -46,3 +46,4 @@ Feature: FBOL001_Fix_Background_Output_Loss_docker-test_tee_persistence
     Given ".gitignore" already contains ".dev-pomogator/" entry
     When a new log file is created at ".dev-pomogator/.docker-status/test-run-1745000000.log"
     Then git status does not report the new log file as untracked
+
