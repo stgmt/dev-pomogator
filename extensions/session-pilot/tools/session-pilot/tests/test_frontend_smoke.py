@@ -39,24 +39,19 @@ def test_html_renders_with_doctype_and_title():
     assert "<title>Worktree Dashboard</title>" in html, "title missing"
 
 
-def test_zellij_web_url_template_substituted_not_placeholder():
-    """ZELLIJ_WEB_URL_JS must be substituted server-side, NOT raw __ZELLIJ_WEB_URL__."""
+def test_no_legacy_zellij_template_placeholders():
+    """v0.3: __ZELLIJ_WEB_URL__ placeholder and ZELLIJ_WEB_URL_JS const removed."""
     html = _get_html()
-    assert "__ZELLIJ_WEB_URL__" not in html, (
-        "Template placeholder __ZELLIJ_WEB_URL__ leaked unsubstituted"
-    )
-    # Must have substituted value as JS const
-    m = re.search(r"const ZELLIJ_WEB_URL_JS = ['\"]([^'\"]+)['\"]", html)
-    assert m, "ZELLIJ_WEB_URL_JS const not found in HTML"
-    url = m.group(1)
-    assert url.startswith("http"), f"substituted URL not http(s): {url!r}"
+    assert "__ZELLIJ_WEB_URL__" not in html, "legacy template placeholder leaked"
+    assert "ZELLIJ_WEB_URL_JS" not in html, "legacy JS const leaked"
 
 
-def test_action_column_renders_4_buttons_template():
-    """Frontend code must reference 4 button glyphs [▶][✨][📂][🪟]."""
+def test_action_column_renders_3_buttons_template():
+    """v0.3: Action column has 3 buttons [▶ Resume] [✨ Fresh] [📂 VSCode]. No 🪟 Zellij."""
     html = _get_html()
-    for glyph, name in [("▶", "Resume"), ("✨", "Fresh"), ("📂", "VSCode"), ("🪟", "Zellij")]:
+    for glyph, name in [("▶", "Resume"), ("✨", "Fresh"), ("📂", "VSCode")]:
         assert glyph in html, f"button glyph {glyph} for {name} missing in rendered HTML"
+    assert "🪟" not in html, "v0.3 dropped Zellij Web button — 🪟 glyph must not appear"
 
 
 def test_action_handlers_actLaunch_and_actVSCode_defined():
