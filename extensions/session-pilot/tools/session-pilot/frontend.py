@@ -152,6 +152,28 @@ function cacheSet(id, entry) {
   try { localStorage.setItem(CACHE_KEY_PREFIX + id, JSON.stringify(entry)); } catch {}
 }
 
+function computeStatusSort(row) {
+  // Synthetic numeric for Status column sort. Lower = higher priority.
+  // priority * 1e10 + (-mtime) so within same priority, newer mtime sorts FIRST.
+  // 1e10 > max plausible unix timestamp (~1.8e9) — no priority crossover.
+  let priority;
+  const LIVE_THRESHOLD_SEC = 300;
+  const now = Math.floor(Date.now() / 1000);
+  const age = row.claude_max_mtime ? (now - row.claude_max_mtime) : null;
+  if (row.claude_running_now || (age !== null && age >= 0 && age < LIVE_THRESHOLD_SEC)) {
+    priority = 0;  // LIVE
+  } else if (row.claude_window_open) {
+    priority = 1;  // 💡 Open
+  } else if (row.claude_max_mtime) {
+    priority = 2;  // idle with history
+  } else {
+    priority = 3;  // never ran / no history
+  }
+  // Sub-sort: newer mtime first within same priority.
+  // Score = priority * 1e10 - mtime → lower priority wins, then lower-score-with-higher-mtime wins.
+  return priority * 1e10 - (row.claude_max_mtime || 0);
+}
+
 function applyCachedClaude(row) {
   const cached = cacheGet(row.id);
   if (!cached) return false;
@@ -172,6 +194,7 @@ function applyCachedClaude(row) {
   row._last_msg_ts = s.last_message_ts || c.claude_last_modified || '';
   row._msg_count = s.msg_count || 0;
   row._age_sec = s.age_sec ?? 9e9;
+  row._status_sort = computeStatusSort(row);
   return true;
 }
 
@@ -187,17 +210,22 @@ async function loadIndex() {
       setProgress(100, 'Done');
       return;
     }
-    // Init rows. Pull data from cache instantly per row.
+    // Init rows. Pull data from cache instantly per row + compute synthetic
+    // _status_sort field for Status column sorting (FR-25/FR-26).
     _rows = data.rows.map(r => {
       const merged = Object.assign({}, r, {
         claude_sessions: [],
-        claude_running_now: false,
+        // Note: claude_running_now from /api/index is per-session (FR-26).
+        // Don't reset to false here — preserve backend value.
+        _status_sort: 0,
         claude_last_modified: null,
         _claude_loaded: false,
       });
       // Rows without Claude history are "loaded" immediately — nothing to fetch
       if (!r.has_claude_history) merged._claude_loaded = true;
       applyCachedClaude(merged); // fills from localStorage if available
+      // Compute Status sort key for every row (cache hit or miss).
+      merged._status_sort = computeStatusSort(merged);
       return merged;
     });
     _wtById = {};
@@ -267,6 +295,7 @@ async function enrichClaude() {
           row._last_msg_ts = s.last_message_ts || c.claude_last_modified || '';
           row._msg_count = s.msg_count || 0;
           row._age_sec = s.age_sec ?? 9e9;
+          row._status_sort = computeStatusSort(row);
           // Persist per-row cache entry (each row.id unique by UUID suffix)
           if (c.claude_max_mtime !== undefined) {
             cacheSet(row.id, {mtime: c.claude_max_mtime, etag: c.etag || (probe?.etag), data: {
@@ -403,23 +432,15 @@ function buildTabulator() {
     movableColumns: true,
     initialSort: [{column: "_last_msg_ts", dir: "desc"}],
     columns: [
-      {title: "Status", field: "claude_running_now", width: 100, headerSort: true,
-        // FR-25/FR-26: sort by composite Status priority (LIVE > Open > idle-with-history > none),
-        // sub-sort by claude_max_mtime DESC within same status. Without this, sorting by
-        // `claude_running_now` boolean lumps all non-LIVE rows together unordered.
-        sorter(a, b, aRow, bRow, column, dir, params) {
-          function priority(row) {
-            if (row.claude_running_now) return 0;  // LIVE — top
-            if (row.claude_window_open) return 1;   // Open (window alive, idle)
-            if (row.claude_max_mtime) return 2;     // idle with history
-            return 3;                                // no history / never ran
-          }
-          const ar = aRow.getData(), br = bRow.getData();
-          const ap = priority(ar), bp = priority(br);
-          if (ap !== bp) return ap - bp;
-          // Same status — newer mtime first (within group)
-          return (br.claude_max_mtime || 0) - (ar.claude_max_mtime || 0);
-        },
+      {title: "Status", field: "_status_sort", width: 100, headerSort: true, sorter: "number",
+        // FR-25/FR-26: Status sort by SYNTHETIC numeric field `_status_sort` —
+        // computed per row in loadIndex/enrichClaude as composite of priority
+        // (LIVE=0, Open=1, idle=2, none=3) × big-number + inverse mtime so
+        // within same priority newer-mtime sorts first. Plain numeric sort
+        // handles asc/desc clicks natively (Tabulator built-in sorter).
+        // Why not custom sorter: Tabulator 6.x custom sorter directional
+        // semantics are unreliable when many ties (boolean field tied at false
+        // for all non-LIVE rows). Synthetic numeric field avoids the issue.
         formatter(cell) {
         const row = cell.getRow().getData();
         if (!row._claude_loaded) return '<span class="spinner"></span>';
