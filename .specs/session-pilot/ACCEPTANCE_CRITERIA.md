@@ -150,6 +150,75 @@ WHEN user runs `python server.py --diagnose-livecycle D:\repos\lm-saas` THEN out
 
 WHEN `LIVE_THRESHOLD_SEC=300` (default) AND lm-saas worktree's youngest JSONL is 26 seconds old THEN server SHALL mark worktree as `claude_running_now: true`. WHEN env `LIVE_THRESHOLD_SEC=600` is set THEN threshold SHALL be 600s instead.
 
+## AC-26 (FR-26)
+
+**Требование:** [FR-26](FR.md#fr-26-per-session-rows-expand-1-row-per-cwd-to-1-row-per-jsonl-uuid)
+
+WHEN `~/.claude/projects/D--repos-dev-pomogator/` contains 3 JSONL files (UUIDs A, B, C) AND user requests `GET /api/index` THEN response SHALL include **3 separate row entries** with:
+- All 3 rows have `worktree_path == "D:\\repos\\dev-pomogator"`
+- All 3 rows have same `repo_name`, `branch`, `head_sha`, `git_status`
+- Row 1: `session_uuid == "A"`, `claude_max_mtime` from A.jsonl, last_message from A
+- Row 2: `session_uuid == "B"`, `claude_max_mtime` from B.jsonl, last_message from B
+- Row 3: `session_uuid == "C"`, `claude_max_mtime` from C.jsonl, last_message from C
+
+WHEN user clicks [▶ Resume] на row with `session_uuid == "B"` THEN backend SHALL POST /api/launch с `{worktree_path: "D:\\repos\\dev-pomogator", mode: "resume", uuid: "B"}` AND spawn `claude --resume B` (NOT A or C — row's UUID).
+
+WHEN sorting by `claude_max_mtime DESC` AND 3 sessions exist в one cwd with ages [12s, 25s, 120s] THEN frontend SHALL display them as 3 consecutive rows in that order (newest first).
+
+WHEN git worktree exists WITHOUT any JSONL (Source C from FR-24) THEN row SHALL have `session_uuid == null` AND [▶ Resume] button SHALL be disabled with tooltip "No session history" AND [✨ Fresh] button SHALL remain enabled.
+
+WHEN encoded dir contains 100 JSONLs (extreme case) THEN /api/index response SHALL include all 100 rows (no truncation) AND Tabulator virtual scroll SHALL handle rendering within performance budget (NFR-Perf).
+
+## AC-25 (FR-25)
+
+**Требование:** [FR-25](FR.md#fr-25-process-based-open-window-indicator--separate-signal-from-jsonl-mtime-live)
+
+WHEN server scans claude.exe processes AND finds ≥1 process with cwd matching row's `worktree_path` (via parent process tree CommandLine analysis on Windows / `/proc/<pid>/cwd` on Linux / `lsof` on macOS) THEN /api/index row SHALL include:
+- `claude_window_open: true`
+- `claude_window_pids: [<list of PIDs>]`
+
+WHEN row has `claude_running_now == true` AND `claude_window_open == true` THEN frontend SHALL display `🟢 LIVE` (LIVE takes priority over Open).
+
+WHEN row has `claude_running_now == false` AND `claude_window_open == true` THEN frontend SHALL display `💡 Open` (NEW indicator — distinct from `idle Xs ago`).
+
+WHEN row has both signals false THEN frontend SHALL display `idle Xs ago` (existing behavior).
+
+WHEN process scan exceeds 100ms cold (no cache) THEN server SHALL log warning AND continue; never block /api/index response on process scan failure (fail-open).
+
+WHEN multiple claude.exe processes have same cwd THEN row SHALL emit single entry with `claude_window_pids` listing all PIDs.
+
+WHEN claude.exe process detected but its cwd is `<install-dir>` (e.g. `C:\Program Files\Claude\`, not a user work cwd) THEN process SHALL be ignored (it's the Claude desktop app, not a CLI session).
+
+## AC-24 (FR-24)
+
+**Требование:** [FR-24](FR.md#fr-24-session-centric-rows--orphan-claude-sessions-resumable-independently-of-git-worktree)
+
+WHEN dashboard server scans `~/.claude/projects/` AND finds encoded dir whose decoded cwd is NOT inside any git repo (e.g. `~/.claude/projects/C--Users-stigm-Desktop/`) THEN /api/index response SHALL include a row for that session with:
+- `is_orphan: true`
+- `repo_name: ""` (empty string)
+- `branch: ""`
+- `worktree_path: "C:\Users\stigm\Desktop"` (decoded cwd)
+- `claude_max_mtime: <newest jsonl mtime>`
+- `claude_running_now: true` if mtime < 300s
+
+WHEN frontend renders an orphan row THEN Repo / Branch / HEAD / Git columns SHALL display `—` placeholder AND Worktree path column SHALL show decoded cwd AND Action column SHALL show [▶ Resume] + [✨ Fresh] + [📂 VSCode] buttons same as git rows.
+
+WHEN user clicks [▶ Resume] на orphan row THEN backend SHALL spawn `wt.exe -d <decoded-cwd> -- pwsh.exe -NoExit -Command "claude --resume <uuid>"` (identical mechanism к git row Resume) AND respond with `{ok: true, method: "wt-spawn-pwsh", pid: int}`.
+
+WHEN decoded cwd no longer exists on disk (deleted folder) THEN row SHALL include `is_stale: true` AND frontend SHALL disable action buttons with tooltip "Path no longer exists".
+
+WHEN encoded dir is under `~/.claude/projects/C--Users-<user>--claude-*` (Claude Code's own meta state dir) THEN row SHALL be excluded from /api/index (these are not user work sessions).
+
+WHEN orphan row exists in /api/index AND ALSO a git worktree row exists pointing at the same decoded cwd THEN orphan row SHALL be SUPPRESSED (deduplication — git row takes precedence). Implementation: build set of cwds from git worktree rows first, skip orphan rows whose decoded cwd is in the set.
+
+WHEN a git worktree exists в `git worktree list` of any configured repo AND that worktree has NO corresponding `~/.claude/projects/<encoded>/` dir (i.e. Claude Code was never invoked there) THEN /api/index SHALL still include row for that worktree with:
+- `is_orphan: false`
+- `repo_name`, `branch`, `head_sha`, `git_status` filled normally (same as FR-1)
+- `claude_max_mtime: null` AND `claude_sessions: []`
+- Action buttons enabled: [▶ Resume] disabled (no UUID to resume); [✨ Fresh] enabled (spawns bare claude); [📂 VSCode] enabled.
+
+This preserves FR-1 worktree visibility — all configured worktrees remain in dashboard, even those without Claude history. Orphan-session support (Source B) is ADDITIVE, not replacement.
+
 ## AC-23 (FR-23)
 
 **Требование:** [FR-23](FR.md#fr-23-taskbar--dock-launcher-installer-create-launcher)

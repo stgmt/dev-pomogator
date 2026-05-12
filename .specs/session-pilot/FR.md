@@ -237,6 +237,136 @@ Encoder reads `sys.platform`, identifies canonical variant first (= production l
 **Связанные AC:** [AC-20](ACCEPTANCE_CRITERIA.md#ac-20-fr-20)
 **Use Case:** [UC-1](USE_CASES.md#uc-1)
 
+## FR-26: Per-session rows (expand 1-row-per-cwd to 1-row-per-JSONL-uuid)
+
+> @feature26
+
+Current row granularity = **per encoded cwd directory**. Multiple JSONLs (sessions with different UUIDs) within same `~/.claude/projects/<encoded>/` collapse into single row with newest mtime. Hides per-session detail when user has multiple Claude Code instances в same cwd.
+
+**Real diagnostic 2026-05-13** (motivating evidence):
+- User opened 2 separate `claude` invocations in `D:\repos\dev-pomogator` — both LIVE (12s + 25s ago).
+- I'm in same encoded dir via EnterWorktree (UUID 1339c50d-...).
+- Total: **3 distinct LIVE JSONL UUIDs in one `D--repos-dev-pomogator/` directory**.
+- Dashboard shows **1 row** ("LIVE 12s ago") — hides 2 of 3 sessions.
+
+**Behavior**: explode rows. For each `~/.claude/projects/<encoded>/<uuid>.jsonl` file emit **separate row** with:
+- `worktree_path`: decoded cwd (same for all sessions sharing encoded dir)
+- `session_uuid`: per-row unique
+- `claude_max_mtime`: this JSONL's mtime (not directory-newest)
+- `claude_running_now`: per-JSONL (mtime < 300s)
+- `last_message_preview` + `msg_count`: from this JSONL
+- `repo_name`/`branch`/`head_sha`: same git-derived values for all rows sharing cwd (computed once per cwd, attached to each row)
+- `is_orphan`/`is_stale`: same per cwd
+- `claude_window_open`/`claude_window_pids`: per cwd (FR-25 process scan groups by cwd, attached to all rows)
+
+**Row count budget**: with average 3 JSONLs per cwd × 50 cwds = 150 rows max realistic. Already within Tabulator virtual scroll budget (FR-8). Cold load top-20 priority budget (FR-9) unchanged — top-20 by newest mtime regardless of source dir.
+
+**Sort default**: `claude_max_mtime DESC` → 3 LIVE sessions в `D--repos-dev-pomogator` появятся как **3 separate consecutive rows** with descending age (newest first).
+
+**Resume button per row**: each row's `[▶ Resume]` spawns `claude --resume <session_uuid>` (FR-4) with **this row's UUID**, не newest. Multiple sessions in same cwd resumable independently.
+
+**Backwards compat**: Field `worktree_path` retains same semantics (decoded cwd). New required field `session_uuid`. Existing field `claude_max_mtime` per-row (was per-cwd previously). API contract change — `/api/index` response shape adds `session_uuid` to each row, removes `claude_sessions` nested array (sessions now top-level rows).
+
+**Edge case — git worktrees without Claude history (Source C from FR-24)**: emit row with `session_uuid: null`. Resume button disabled, Fresh button still enabled (spawns bare claude → creates new session).
+
+**Связанные AC:** [AC-26](ACCEPTANCE_CRITERIA.md#ac-26-fr-26)
+**Use Case:** [UC-16](USE_CASES.md#uc-16)
+
+## FR-25: Process-based "open window" indicator — separate signal from JSONL-mtime LIVE
+
+> @feature25
+
+Current LIVE indicator (FR-20 / KD-6 / `claude_running_now`) shows **«writing JSONL within last 300s»**. Это miss-ит **открытые окна где Claude Code ждёт ввода** (часами) — JSONL не пишется → mtime stale → row показывает «idle Xh». Юзер реально работает (окно открыто на taskbar) но dashboard показывает idle — confusing UX.
+
+**Add second independent signal** `claude_window_open: bool` — based on **process existence**, not file mtime.
+
+**Per-OS implementation**:
+
+| OS | Detection mechanism | cwd extraction |
+|----|---------------------|----------------|
+| Windows | `Get-CimInstance Win32_Process -Filter "Name='claude.exe'"` (PowerShell from Python via subprocess) — list all running claude.exe + their parent process tree | Walk parent chain: `claude.exe` → `pwsh.exe` / `cmd.exe` → `WindowsTerminal.exe` (parent of WT often holds cwd in CommandLine `wt -d <cwd>`). Parse `--app` / `-d <cwd>` from parent's CommandLine. If no cwd found in chain → check claude.exe's own `ExecutablePath` parent dir as last resort. |
+| Linux | `pgrep claude` → for each PID read `/proc/<pid>/cwd` symlink | Direct — `/proc/<pid>/cwd` is canonical cwd |
+| macOS | `lsof -p <pid> \| awk '/cwd/{print $NF}'` OR `ps -E <pid>` | `lsof` is reliable cross-mac |
+
+**Row schema additions**:
+- `claude_window_open: bool` — true if any claude.exe process found with cwd matching row's `worktree_path` (decoded if orphan).
+- `claude_window_pids: [int]` — list of PIDs (for debugging / future "Focus existing window" action).
+
+**Frontend Status column rendering** (3-state):
+
+| State | Signal | Display |
+|-------|--------|---------|
+| **LIVE (writing now)** | `claude_running_now=true` (JSONL mtime < 300s) | `🟢 LIVE` (current behavior) |
+| **OPEN (idle window)** | `claude_running_now=false` AND `claude_window_open=true` | `💡 Open` |
+| **IDLE** | both false | `idle Xs ago` (current behavior) |
+
+**Priority**: LIVE > OPEN > IDLE. Если оба true → show LIVE.
+
+**Performance budget** (per NFR-Perf): process scan cost ≤ 100ms warm для /api/index. Cache scan result for 5s (ThreadPoolExecutor + memoize). Process tree walk cost dominated by WMI queries on Windows (~10-50ms per claude.exe). With 4 claude.exe processes total — well under budget.
+
+**Edge cases**:
+- Multiple claude.exe with SAME cwd → `claude_window_pids` lists all; row remains single (deduped by cwd, not PID).
+- Claude.exe process exists but cwd extraction fails (chain broken / parent dead) → emit `claude_window_open: false` + warning в --diagnose-livecycle.
+- Process running but cwd is NOT a `~/.claude/projects/*` decoded match (e.g. running from `C:\Program Files\Claude\` itself) → don't emit row (это Claude Code desktop app, not CLI session).
+
+**Связанные AC:** [AC-25](ACCEPTANCE_CRITERIA.md#ac-25-fr-25)
+**Use Case:** [UC-15](USE_CASES.md#uc-15)
+
+## FR-24: UNION model — all git worktrees AND all Claude sessions, merged & deduplicated
+
+> @feature24
+
+Dashboard rows = **UNION** двух источников:
+- **A**: `git worktree list` для каждого configured git root (current v0.3 behavior — РАБОТАЕТ дальше).
+- **B**: `~/.claude/projects/*` directories (NEW — picks up orphan Claude sessions in non-git cwds).
+
+**Dedup**: если A и B имеют одинаковый decoded cwd → merge в **один** row (git fields из A + Claude session data из B). НЕ замена — обогащение.
+
+**Visible rows breakdown** (после union + dedup):
+1. **Git worktree WITH Claude history** — row has всё: Repo/Branch/HEAD/Git columns + Last activity + Last message + Action buttons. Это majority case. (A ∩ B)
+2. **Git worktree WITHOUT Claude history** — row has Repo/Branch/HEAD/Git filled, Claude columns empty/`—`, Action buttons disabled OR show only [✨ Fresh] (because no UUID для Resume). Это unchanged v0.3 behavior. (A − B)
+3. **Orphan Claude session (cwd not in any git worktree)** — NEW. Row has Repo/Branch/HEAD/Git empty `—`, Worktree path = decoded cwd, Last activity + Last message + Action buttons (all 3 enabled including Resume). (B − A)
+
+**Motivation** (real evidence from 2026-05-13 diagnostic on real Windows 11 host):
+- Of 7 project dirs in `~/.claude/projects/`, **2 are not git worktrees**:
+  - `C--Users-stigm-Desktop` ← user invoked `cd ~/Desktop && claude`
+  - `D--repos` ← user invoked `cd /d/repos && claude` (parent of repos folder, not a repo itself)
+- Both are **resumable** via `claude --resume <uuid>` from the decoded cwd, but **currently invisible** in dashboard because `git worktree list` does not enumerate them.
+- User loses 1-click recall for these sessions.
+
+**Behavior**:
+
+1. **Source of rows**: indexer scans `~/.claude/projects/*` (Windows `%USERPROFILE%\.claude\projects\*` + POSIX `~/.claude/projects/*` + Windows `/mnt/c/Users/<user>/.claude/projects/*` if accessed via WSL).
+2. **For each encoded dir**: decode to path via inverse of `encode_path_for_claude` (replace `--` → path separator, handle drive letter prefix). Multiple decodes possible (e.g. `D--repos-foo` → `D:\repos\foo` on Windows OR `/d/repos/foo` on POSIX) — try in order, first existing cwd wins.
+3. **Git status probe**: for decoded cwd, run `git -C <cwd> rev-parse --show-toplevel` + `git rev-parse --abbrev-ref HEAD`. If exit 0 → git-attached session (fill Repo/Branch/HEAD/Git columns same as FR-1). If non-zero → **orphan session** (cwd is not in any git repo).
+4. **Orphan row rendering**: Repo/Branch/HEAD/Git fields empty (display `—` placeholder); Worktree path field shows decoded cwd; Last activity / Last message / Msgs / Action columns work normally — Resume button still spawns `claude --resume <uuid>` in decoded cwd.
+5. **Action button on orphan**: `[▶ Resume]` works identically — `wt.exe -d <decoded-cwd> -- pwsh -NoExit -Command "claude --resume <uuid>"`. `[✨ Fresh]` works (bare `claude` in decoded cwd). `[📂 VSCode]` may or may not work depending on whether VS Code recognizes the path as a workspace — but still spawns `code <path>`.
+6. **Mixed sort**: orphan rows interleave with git rows in unified table; sorted by `claude_max_mtime` DESC (same as FR-9). User can filter via `/` keystroke to show only orphan rows (filter by empty Repo column).
+
+**Row sources — UNION, не замена** (это критично; worktree list НЕ исчезает):
+
+| Source | Examples | What fills row |
+|--------|----------|----------------|
+| **A. `~/.claude/projects/*` with matching git worktree** | `D--repos-bhph-early-warning` → `D:\repos\bhph-early-warning` (registered git worktree) | All git fields + claude_max_mtime + sessions. Same UX as v0.3 worktree rows. |
+| **B. `~/.claude/projects/*` orphan (decoded cwd NOT in any git repo)** | `C--Users-stigm-Desktop` → `C:\Users\stigm\Desktop`; `D--repos` → `D:\repos` (parent folder, not a repo) | `is_orphan: true`, empty repo_name/branch/head_sha, only worktree_path + claude_max_mtime + sessions |
+| **C. `git worktree list` worktree WITHOUT Claude history** | `D:\repos\new-feature-just-created` — fresh worktree, user не запускал claude там никогда | All git fields filled (repo_name/branch/head_sha/git_status) + `claude_max_mtime: null` + no sessions. Action buttons still work (Fresh spawns claude there for first time). |
+
+Total rows = A ∪ B ∪ C. Dedup: if A and C describe the same cwd, A wins (has session history).
+
+**Backwards-compat with FR-1 / AC-1 / AC-14**:
+- ВСЕ git worktrees из configured repos продолжают появляться в `/api/index` (Source A для worktrees где Claude уже запускался + Source C для worktrees где не запускался). Никакая worktree не исчезает.
+- **Добавляются**: orphan rows из Source B (Claude session в не-git cwd).
+- Per-row new fields: `"is_orphan": bool` (true = no git status), `"is_stale": bool` (true = decoded cwd no longer on disk).
+- Existing fields (`repo_name`, `branch`, `worktree_path`) — Source A + C have them filled; Source B has `repo_name=""`, `branch=""`, `worktree_path=<decoded cwd>`.
+
+**Edge cases**:
+- Decoded cwd no longer exists on disk (deleted folder) → row marked `"is_stale": true`, action buttons disabled with tooltip "Path no longer exists".
+- Encoded dir decodes ambiguously (e.g. `D--repos-foo` matches both `D:\repos\foo` AND `/mnt/d/repos/foo` on WSL) → emit BOTH rows OR pick first that `Test-Path` (impl choice, document in DESIGN).
+- Orphan cwd starts with `C:\Users\<user>\.claude\` (Claude Code's own state dir) → filter out (these are session-pilot's own meta-projects, not user work).
+
+**Связанные AC:** [AC-24](ACCEPTANCE_CRITERIA.md#ac-24-fr-24)
+**Use Case:** [UC-14](USE_CASES.md#uc-14)
+
 ## FR-23: Taskbar / Dock launcher installer (`create-launcher`)
 
 > @feature23

@@ -129,9 +129,20 @@ async function hardReload() {
   loadIndex();
 }
 
-// SWR-style cache in localStorage. Keyed by row.id, stores:
+// SWR-style cache in localStorage. v4: keyed by row.id which now includes
+// session_uuid suffix (FR-26 per-session rows). Stored shape unchanged.
 //   { mtime: <claude_max_mtime>, etag: 'W/"…"', data: {claude_sessions, claude_running_now, claude_last_modified} }
-const CACHE_KEY_PREFIX = 'wtdash_v3_';
+const CACHE_KEY_PREFIX = 'wtdash_v4_';
+
+// One-shot purge of legacy v3 cache (per-worktree row.id format).
+// Stale v3 entries would copy wrong-UUID data onto v4 per-session rows.
+(function purgeV3Cache() {
+  try {
+    const keys = Object.keys(localStorage).filter(k => k.startsWith('wtdash_v3_'));
+    keys.forEach(k => localStorage.removeItem(k));
+    if (keys.length) console.log('[session-pilot] purged ' + keys.length + ' legacy wtdash_v3_* cache entries');
+  } catch {}
+})();
 
 function cacheGet(id) {
   try { return JSON.parse(localStorage.getItem(CACHE_KEY_PREFIX + id) || 'null'); }
@@ -145,13 +156,22 @@ function applyCachedClaude(row) {
   const cached = cacheGet(row.id);
   if (!cached) return false;
   const c = cached.data;
+  // FR-26: claude_running_now is now AUTHORITATIVE on row level (from /api/index
+  // per-session). Don't let /api/claude (per-worktree aggregate) overwrite it.
+  // We keep claude_sessions / claude_last_modified for the message lookup,
+  // but skip claude_running_now.
+  const liveBefore = row.claude_running_now;
   Object.assign(row, c, {_claude_loaded: true, _from_cache: true, _cached_etag: cached.etag});
-  const top = (c.claude_sessions || [])[0] || {};
-  row._last_msg_text = top.last_message || top.first_message || '';
-  row._last_msg_role = top.last_message_role || '';
-  row._last_msg_ts = top.last_message_ts || c.claude_last_modified || '';
-  row._msg_count = top.msg_count || 0;
-  row._age_sec = top.age_sec ?? 9e9;
+  row.claude_running_now = liveBefore;
+  // FR-26: pick the session matching THIS row's session_uuid (not newest).
+  // Fallback to first session if UUID not found (could happen if cache stale).
+  const sessions = c.claude_sessions || [];
+  const s = (row.session_uuid && sessions.find(x => x.uuid === row.session_uuid)) || sessions[0] || {};
+  row._last_msg_text = s.last_message || s.first_message || '';
+  row._last_msg_role = s.last_message_role || '';
+  row._last_msg_ts = s.last_message_ts || c.claude_last_modified || '';
+  row._msg_count = s.msg_count || 0;
+  row._age_sec = s.age_sec ?? 9e9;
   return true;
 }
 
@@ -190,62 +210,80 @@ async function loadIndex() {
 }
 
 async function enrichClaude() {
-  // SWR: skip rows whose server-reported mtime matches our cached mtime AND we have data
-  const stale = _rows.filter(row => {
-    if (!row.has_claude_history) return false;            // never had Claude — skip
+  // FR-26: per-session rows share worktree_path → dedupe fetches by cwd.
+  // Build map cwd → list of rows; 1 fetch per unique cwd applies to N rows.
+  const staleRows = _rows.filter(row => {
+    if (!row.has_claude_history) return false;
     const cached = cacheGet(row.id);
-    if (!cached) return true;                              // no cache — must fetch
-    if (cached.mtime !== row.claude_max_mtime) return true;// changed — must fetch
-    return false;                                          // cache fresh, skip
+    if (!cached) return true;
+    if (cached.mtime !== row.claude_max_mtime) return true;
+    return false;
   });
-  const total = stale.length;
-  if (total === 0) {
+  if (staleRows.length === 0) {
     const cached = _rows.filter(r => r._from_cache && r.has_claude_history).length;
     const noHist = _rows.filter(r => !r.has_claude_history).length;
     setProgress(100, `Instant: ${cached} from cache · ${noHist} no history · 0 fetched`);
     setTimeout(clearProgress, 2000);
     return;
   }
+  // Group by cwd (worktree_path)
+  const byPath = {};
+  staleRows.forEach(r => {
+    (byPath[r.worktree_path] = byPath[r.worktree_path] || []).push(r);
+  });
+  const paths = Object.keys(byPath);
+  const total = paths.length;
   let done = 0;
-  // Compute real categories
-  const totalRows = _rows.length;
   const noHistory = _rows.filter(r => !r.has_claude_history).length;
   const fromCache = _rows.filter(r => r._from_cache && r.has_claude_history).length;
-  setProgress(0, `Fetching ${total} stale · ${fromCache} from cache · ${noHistory} no history`);
-  const queue = [...stale];
+  setProgress(0, `Fetching ${total} cwds (${staleRows.length} rows) · ${fromCache} from cache · ${noHistory} no history`);
+  const queue = [...paths];
   const workers = Array(4).fill(0).map(async () => {
     while (queue.length) {
-      const row = queue.shift();
+      const path = queue.shift();
+      const rowsForPath = byPath[path];
       try {
-        const cached = cacheGet(row.id);
+        // Use first row's cache etag as If-None-Match probe (all rows for
+        // same cwd share same /api/claude response, hence same etag).
+        const probe = cacheGet(rowsForPath[0].id);
         const headers = {};
-        if (cached?.etag) headers['If-None-Match'] = cached.etag;
-        const r = await fetch('/api/claude?path=' + encodeURIComponent(row.worktree_path), {cache: 'no-store', headers});
-        if (r.status === 304 && cached) {
-          // Server confirmed: nothing changed. Just use cache.
-          applyCachedClaude(row);
+        if (probe?.etag) headers['If-None-Match'] = probe.etag;
+        const r = await fetch('/api/claude?path=' + encodeURIComponent(path), {cache: 'no-store', headers});
+        let c = null;
+        if (r.status === 304 && probe) {
+          c = probe.data;
         } else {
-          const c = await r.json();
-          Object.assign(row, c, {_claude_loaded: true, _from_cache: false});
-          const top = (c.claude_sessions || [])[0] || {};
-          row._last_msg_text = top.last_message || top.first_message || '';
-          row._last_msg_role = top.last_message_role || '';
-          row._last_msg_ts = top.last_message_ts || c.claude_last_modified || '';
-          row._msg_count = top.msg_count || 0;
-          row._age_sec = top.age_sec ?? 9e9;
-          // Persist
-          cacheSet(row.id, {mtime: c.claude_max_mtime, etag: c.etag, data: {
-            claude_sessions: c.claude_sessions,
-            claude_running_now: c.claude_running_now,
-            claude_last_modified: c.claude_last_modified,
-          }});
+          c = await r.json();
         }
+        // Apply to every row sharing this cwd; lookup per-row session by uuid.
+        rowsForPath.forEach(row => {
+          const liveBefore = row.claude_running_now;
+          Object.assign(row, c, {_claude_loaded: true, _from_cache: (r.status === 304)});
+          row.claude_running_now = liveBefore;  // keep /api/index per-session value
+          const sessions = c.claude_sessions || [];
+          const s = (row.session_uuid && sessions.find(x => x.uuid === row.session_uuid)) || sessions[0] || {};
+          row._last_msg_text = s.last_message || s.first_message || '';
+          row._last_msg_role = s.last_message_role || '';
+          row._last_msg_ts = s.last_message_ts || c.claude_last_modified || '';
+          row._msg_count = s.msg_count || 0;
+          row._age_sec = s.age_sec ?? 9e9;
+          // Persist per-row cache entry (each row.id unique by UUID suffix)
+          if (c.claude_max_mtime !== undefined) {
+            cacheSet(row.id, {mtime: c.claude_max_mtime, etag: c.etag || (probe?.etag), data: {
+              claude_sessions: c.claude_sessions,
+              claude_running_now: c.claude_running_now,
+              claude_last_modified: c.claude_last_modified,
+            }});
+          }
+        });
       } catch (e) {
-        row._claude_loaded = true;
-        row._error = e.message;
+        rowsForPath.forEach(row => {
+          row._claude_loaded = true;
+          row._error = e.message;
+        });
       }
       done++;
-      setProgress((done / total) * 100, `Fetching (${done}/${total}) · ${fromCache} from cache · ${noHistory} no history`);
+      setProgress((done / total) * 100, `Fetching cwd (${done}/${total}) · ${rowsForPath.length} rows`);
       if (done % 3 === 0 || done === total) render();
     }
   });
@@ -368,33 +406,45 @@ function buildTabulator() {
       {title: "Status", field: "claude_running_now", width: 100, headerSort: true, formatter(cell) {
         const row = cell.getRow().getData();
         if (!row._claude_loaded) return '<span class="spinner"></span>';
+        // FR-25 3-state priority: LIVE > Open > idle/none
         if (row.claude_running_now) return '<span class="status live">● LIVE</span>';
+        if (row.claude_window_open) {
+          const pids = (row.claude_window_pids || []).join(',');
+          return `<span class="status open" title="Window open · PIDs: ${pids}">💡 Open</span>`;
+        }
         if (row.claude_last_modified) {
           const ageMin = Math.floor((Date.now()/1000 - new Date(row.claude_last_modified).getTime()/1000) / 60);
+          return `<span class="status idle">idle ${formatIdle(ageMin)}</span>`;
+        }
+        if (row.claude_max_mtime) {
+          const ageMin = Math.floor((Date.now()/1000 - row.claude_max_mtime) / 60);
           return `<span class="status idle">idle ${formatIdle(ageMin)}</span>`;
         }
         return '<span class="status none">—</span>';
       }},
       {title: "Repo", field: "repo", frozen: true, headerSort: true,
         headerFilter: "list",
-        // Tabulator 6.x: multiselect взаимно исключает autocomplete/listOnEmpty/placeholderEmpty.
-        // Берём чистый multiselect — список репо короткий, поиск-по-буквам не нужен.
         headerFilterParams: {valuesLookup: "active", multiselect: true, clearable: true, sort: "asc"},
         headerFilterFunc: "in",
         formatter(cell) {
           const r = cell.getRow().getData();
+          // FR-24: orphan rows (cwd not in any git repo) render — placeholder
+          if (r.is_orphan) return '<span class="orphan-cell">—</span>';
           return `<span class="repo">${escapeHtml(r.repo)}</span>${r.is_main_worktree ? ' <span style="color:#888">(main)</span>' : ''}`;
       }},
       {title: "Branch", field: "branch", frozen: true, headerSort: true,
         headerFilter: "input",
         headerFilterPlaceholder: "filter branch…",
         formatter(cell) {
+          const r = cell.getRow().getData();
+          if (r.is_orphan) return '<span class="orphan-cell">—</span>';
           const v = cell.getValue();
           const klass = v === 'main' || v === 'master' ? 'branch main' : 'branch';
           return `<span class="${klass}">${escapeHtml(v)}</span>`;
       }},
       {title: "HEAD", field: "head", width: 90, headerSort: true, responsive: 5, formatter(cell) {
-        // responsive: 5 — hide first when viewport narrows (short hash, low info-density)
+        const r = cell.getRow().getData();
+        if (r.is_orphan) return '<span class="orphan-cell">—</span>';
         return `<span class="head">${escapeHtml(cell.getValue() || '')}</span>`;
       }},
       {title: "Worktree path", field: "worktree_path", headerSort: true, responsive: 4, formatter(cell) {
@@ -421,14 +471,17 @@ function buildTabulator() {
       {title: "Last message", field: "_last_msg_text", widthGrow: 2, headerSort: true, formatter(cell) {
         const row = cell.getRow().getData();
         if (!row._claude_loaded) return '<span class="loading">scanning JSONL…</span>';
-        const top = (row.claude_sessions || [])[0] || {};
-        const role = top.last_message_role || '';
+        // FR-26: use row-level _last_msg_role (populated by applyCachedClaude
+        // from row's matching session, not always newest). Falls back to
+        // legacy claude_sessions[0] if row hasn't been enriched yet.
+        const role = row._last_msg_role || (row.claude_sessions || [])[0]?.last_message_role || '';
         const text = cell.getValue() || '';
         return (role ? `<span class="role-${role}">${role}:</span> ` : '') + escapeHtml(text);
       }, cellClick(e, cell) {
         const row = cell.getRow().getData();
-        const top = (row.claude_sessions || [])[0];
-        if (top?.uuid) openMsgModal(row.worktree_path, top.uuid, (top.msg_count || 1) - 1);
+        // FR-26: openMsgModal uses row.session_uuid (this row's UUID), not newest.
+        const uuid = row.session_uuid || (row.claude_sessions || [])[0]?.uuid;
+        if (uuid) openMsgModal(row.worktree_path, uuid, (row._msg_count || 1) - 1);
       }, cssClass: "tabulator-last-msg"},
       {title: "Msgs", field: "_msg_count", width: 70, hozAlign: "right", headerSort: true, responsive: 3, formatter(cell) {
         const row = cell.getRow().getData();
@@ -439,11 +492,24 @@ function buildTabulator() {
       }},
       {title: "Action", field: "_action", width: 130, headerSort: false, formatter(cell) {
         const row = cell.getRow().getData();
-        const top = (row.claude_sessions || [])[0];
-        const uuid = top?.uuid;
+        // FR-24: stale rows (decoded cwd no longer on disk) — all 3 buttons disabled
+        if (row.is_stale) {
+          const t = 'Path no longer exists on disk';
+          return `
+            <button class="act-btn disabled" title="${t}" disabled>▶</button>
+            <button class="act-btn disabled" title="${t}" disabled>✨</button>
+            <button class="act-btn disabled" title="${t}" disabled>📂</button>
+          `;
+        }
+        // FR-26: Resume uses row.session_uuid (per-row UUID). null for Source C
+        // (git worktree, no Claude history) — Resume disabled, Fresh still enabled.
+        const uuid = row.session_uuid;
         const canResume = !!uuid;
+        const resumeTitle = canResume
+          ? `Resume claude --resume ${uuid.slice(0,8)}…`
+          : 'No session history — use Fresh to start';
         return `
-          <button class="act-btn ${canResume ? '' : 'disabled'}" title="Resume claude --resume ${uuid?.slice(0,8) || '?'}…"
+          <button class="act-btn ${canResume ? '' : 'disabled'}" title="${resumeTitle}"
                   ${canResume ? `onclick="actLaunch(this, ${JSON.stringify(row.worktree_path)}, 'resume', ${JSON.stringify(uuid)})"` : 'disabled'}>▶</button>
           <button class="act-btn" title="Fresh claude (no resume) in ${row.worktree_path}"
                   onclick="actLaunch(this, ${JSON.stringify(row.worktree_path)}, 'fresh', null)">✨</button>

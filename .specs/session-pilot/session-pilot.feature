@@ -311,6 +311,133 @@ Feature: SP001_session_pilot_dashboard
   # then they are reference text, not executable tests.
   # ─────────────────────────────────────────────────────────────────────
 
+  # @feature24
+  Scenario: SP034_orphan_session_row_visible_in_index
+    Given ~/.claude/projects/C--Users-stigm-Desktop/abc-def.jsonl exists with mtime 1 hour ago
+    And path "C:\Users\stigm\Desktop" exists on disk
+    And path "C:\Users\stigm\Desktop" is NOT inside any git repository
+    When user requests "GET /api/index"
+    Then response rows SHALL include one entry with worktree_path == "C:\Users\stigm\Desktop"
+    And that row SHALL have is_orphan == true
+    And that row SHALL have repo_name == "" AND branch == "" AND head_sha == ""
+    And that row SHALL have claude_max_mtime == <mtime of newest JSONL>
+    And that row SHALL have claude_running_now == false (because age > 300s)
+
+  # @feature24
+  Scenario: SP035_orphan_session_resume_spawns_in_correct_cwd
+    Given orphan row exists for "C:\Users\stigm\Desktop" with uuid "abc-def-1234"
+    When user POSTs to "/api/launch" with body {worktree_path: "C:\\Users\\stigm\\Desktop", mode: "resume", uuid: "abc-def-1234"}
+    Then backend SHALL accept the path (it's in /api/index whitelist)
+    And SHALL spawn `wt.exe -d C:\Users\stigm\Desktop -- pwsh.exe -NoExit -Command "claude --resume abc-def-1234"`
+    And response SHALL be {ok: true, method: "wt-spawn-pwsh", pid: <int>}
+    And new Windows Terminal window SHALL open at Desktop folder running claude
+
+  # @feature24
+  Scenario: SP036_orphan_row_deduplicated_when_git_worktree_exists
+    Given ~/.claude/projects/D--repos-foo/<uuid>.jsonl exists
+    And "D:\repos\foo" IS a registered git worktree (per `git worktree list` of a configured repo)
+    When user requests "GET /api/index"
+    Then response SHALL include exactly ONE row for path "D:\repos\foo"
+    And that row SHALL be the git-attached version (repo_name + branch filled)
+    And SHALL NOT also include an orphan row for the same path
+
+  # @feature24
+  Scenario: SP037_stale_orphan_row_path_no_longer_exists
+    Given ~/.claude/projects/D--temp-deleted-folder/<uuid>.jsonl exists
+    And path "D:\temp\deleted-folder" does NOT exist on disk
+    When user requests "GET /api/index"
+    Then response SHALL include row with worktree_path == "D:\temp\deleted-folder"
+    And that row SHALL have is_stale == true
+    And frontend SHALL render action buttons disabled with tooltip "Path no longer exists"
+
+  # @feature26
+  Scenario: SP044_multiple_sessions_same_cwd_render_as_separate_rows
+    Given ~/.claude/projects/D--repos-dev-pomogator/ contains 3 JSONL files
+    And the UUIDs are f09a4ecb-..., 1e8f7350-..., 1339c50d-...
+    And all 3 have JSONL mtime within last 300s
+    When user requests "GET /api/index"
+    Then response SHALL include exactly 3 row entries with worktree_path == "D:\repos\dev-pomogator"
+    And each row SHALL have a distinct session_uuid field
+    And each row SHALL have its own claude_max_mtime (from that JSONL specifically)
+    And each row SHALL have same repo_name, branch, head_sha (git-derived per cwd, attached to all rows)
+
+  # @feature26
+  Scenario: SP045_resume_targets_row_specific_uuid
+    Given dashboard renders 3 rows for D:\repos\dev-pomogator (UUIDs A, B, C)
+    When user clicks [▶ Resume] on the row with session_uuid="B"
+    Then frontend SHALL POST /api/launch with body {worktree_path: "D:\\repos\\dev-pomogator", mode: "resume", uuid: "B"}
+    And backend SHALL spawn `wt.exe -d D:\repos\dev-pomogator -- pwsh -NoExit -Command "claude --resume B"`
+    And the spawned claude.exe SHALL receive --resume argument value "B" (NOT A or C)
+
+  # @feature26
+  Scenario: SP046_git_worktree_without_session_history_renders_one_row
+    Given "D:\repos\new-feature" is in git worktree list
+    And ~/.claude/projects/D--repos-new-feature/ does NOT exist
+    When user requests "GET /api/index"
+    Then response SHALL include exactly 1 row entry for "D:\repos\new-feature"
+    And that row SHALL have session_uuid == null
+    And frontend SHALL render [▶ Resume] disabled with tooltip "No session history"
+    And frontend SHALL render [✨ Fresh] enabled
+
+  # @feature25
+  Scenario: SP039_open_window_indicator_idle_session
+    Given user has WindowsTerminal window open with `wt -d D:\repos\zoho cmd /k claude-pane.cmd` for 3 hours
+    And the Claude Code in that window has been waiting for user input — no JSONL writes in 3h
+    When user requests "GET /api/index"
+    Then row for "D:\repos\zoho" SHALL have claude_running_now == false (JSONL stale, age > 300s)
+    And the row SHALL have claude_window_open == true
+    And claude_window_pids SHALL contain the running claude.exe PID
+    And frontend SHALL display `💡 Open` in Status column (NOT `idle 3h`)
+
+  # @feature25
+  Scenario: SP040_open_and_live_simultaneously
+    Given Claude Code is actively typing in worktree "D:\repos\bhph-early-warning"
+    And both JSONL mtime < 300s AND running claude.exe with this cwd exists
+    When user requests "GET /api/index"
+    Then row SHALL have claude_running_now == true AND claude_window_open == true
+    And frontend SHALL display `🟢 LIVE` (LIVE priority over Open)
+
+  # @feature25
+  Scenario: SP041_no_window_no_writes
+    Given no claude.exe process exists with cwd "D:\repos\old-feature"
+    And ~/.claude/projects/D--repos-old-feature/<uuid>.jsonl exists but mtime 7d ago
+    When user requests "GET /api/index"
+    Then row SHALL have claude_running_now == false AND claude_window_open == false
+    And frontend SHALL display `idle 7d ago` (existing behavior)
+
+  # @feature25
+  Scenario: SP042_dedupe_multiple_processes_same_cwd
+    Given two claude.exe PIDs both have cwd "D:\repos\foo" (e.g. parent + helper child)
+    When server emits row for that path
+    Then row SHALL be single entry (deduped by cwd, not PID)
+    And claude_window_pids SHALL contain both PIDs
+
+  # @feature25
+  Scenario: SP043_filter_out_desktop_app
+    Given claude.exe process running from "C:\Program Files\WindowsApps\Claude_1.6608.2.0_x64__pzs8sxrjxfjjc\app\Claude.exe"
+    And its cwd is the install dir (not a user work cwd)
+    When server scans processes
+    Then this process SHALL be EXCLUDED from any row emission
+    Because it's the Claude.ai desktop app, not a Claude Code CLI session
+
+  # @feature24 @feature1
+  Scenario: SP038A_worktree_without_claude_history_still_visible
+    Given "D:\repos\new-feature" is registered in `git worktree list` of a configured repo
+    And there is NO directory ~/.claude/projects/D--repos-new-feature (Claude never ran there)
+    When user requests "GET /api/index"
+    Then response rows SHALL include one entry with worktree_path == "D:\repos\new-feature"
+    And that row SHALL have is_orphan == false
+    And that row SHALL have repo_name + branch + head_sha + git_status filled (Source C)
+    And that row SHALL have claude_max_mtime == null AND claude_sessions == []
+    And frontend SHALL render [▶ Resume] DISABLED (no UUID) AND [✨ Fresh] + [📂 VSCode] enabled
+
+  # @feature24
+  Scenario: SP038_claude_meta_dirs_filtered_out
+    Given ~/.claude/projects/C--Users-stigm--claude-projects/<uuid>.jsonl exists (meta state dir)
+    When user requests "GET /api/index"
+    Then response SHALL NOT include row for that path
+    Because it's Claude Code's own meta-state dir, not user work
+
   # @feature23 @windows
   Scenario: SP029_launcher_windows_creates_desktop_lnk
     Given sys.platform is "win32"

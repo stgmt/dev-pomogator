@@ -203,11 +203,67 @@ def claude_sessions_for(worktree_path: str) -> dict:
                 except Exception:
                     continue
     sessions.sort(key=lambda s: s["modified"], reverse=True)
+    # FR-26: drop [:5] cap so /api/claude returns ALL sessions; frontend uses
+    # the list as a lookup table to enrich per-session rows from /api/index
+    # (rows now exploded 1-per-JSONL-UUID — see build_session_index).
     return {
-        "sessions": sessions[:5],
+        "sessions": sessions,
         "running_now": running_now,
         "last_modified": datetime.fromtimestamp(last_mtime).isoformat(timespec="seconds") if last_mtime else None,
     }
+
+
+def _claude_jsonls_lightweight(worktree_path: str) -> list[dict]:
+    """FR-26: enumerate ALL JSONL files for a worktree path with cheap stat-only fields.
+
+    Distinct from `claude_sessions_for`: no head/tail parse, no msg_count, no
+    first/last message extraction. Only fields derivable from `os.stat` +
+    filename (UUID). Cheap enough to run for every worktree in /api/index
+    without blowing the 150ms perf budget.
+
+    Returns list of dicts:
+      {uuid, source, size_bytes, mtime_unix, modified_iso, age_sec, running_now}
+
+    Sorted by mtime desc (newest first). NO [:5] cap.
+    """
+    import server
+    encoded_variants = set(server.encode_path_for_claude(worktree_path))
+    out: list[dict] = []
+    now = time.time()
+    threshold = server.RUNNING_THRESHOLD_SEC
+    for base_dir in server.CLAUDE_PROJECTS_DIRS:
+        if not base_dir.exists():
+            continue
+        for proj_dir in base_dir.iterdir():
+            name = proj_dir.name
+            # Same fuzzy matching as claude_sessions_for to stay consistent
+            # with existing semantics — exact match OR suffix overlap for the
+            # cross-platform encoding cases (WSL `-mnt-d-foo` ↔ Windows
+            # `D--foo`).
+            match = (
+                name in encoded_variants
+                or any(name.endswith(v.lstrip("-")) for v in encoded_variants if len(v) > 4)
+                or any(v.lstrip("-").endswith(name) for v in encoded_variants if len(name) > 8)
+            )
+            if not match:
+                continue
+            for jsonl in proj_dir.glob("*.jsonl"):
+                try:
+                    st = jsonl.stat()
+                    age = int(now - st.st_mtime)
+                    out.append({
+                        "uuid": jsonl.stem,
+                        "source": str(base_dir),
+                        "size_bytes": st.st_size,
+                        "mtime_unix": int(st.st_mtime),
+                        "modified_iso": datetime.fromtimestamp(st.st_mtime).isoformat(timespec="seconds"),
+                        "age_sec": age,
+                        "running_now": age < threshold,
+                    })
+                except OSError:
+                    continue
+    out.sort(key=lambda s: s["mtime_unix"], reverse=True)
+    return out
 
 
 def _claude_max_mtime_uncached(worktree_path: str) -> float:
@@ -291,6 +347,269 @@ def build_worktree_index() -> dict:
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "rows": rows,
     }
+
+
+def _decode_claude_dir_name(name: str) -> list[str]:
+    """FR-24: Inverse of encode_path_for_claude — emit candidate cwd paths.
+
+    Encoded names lose information (single dash means either separator or
+    literal char in source). Emit multiple plausible decodes; consumer probes
+    Path.exists() to pick the real one.
+
+    Examples:
+      "D--repos-foo"            → ["D:/repos/foo", "D:\\repos\\foo"]
+      "-mnt-d-repos-foo"        → ["/mnt/d/repos/foo", "D:/repos/foo"]
+      "C--Users-stigm-Desktop"  → ["C:/Users/stigm/Desktop", "C:\\Users\\stigm\\Desktop"]
+      "-home-user-foo"          → ["/home/user/foo"]
+    """
+    out: list[str] = []
+    if not name:
+        return out
+    # Pattern: "<DRIVE>--<rest>" — Windows-canonical (DOUBLE dash marks drive)
+    if len(name) >= 4 and name[1:3] == "--" and name[0].isalpha():
+        drive = name[0].upper()
+        rest = name[3:].replace("-", "/")
+        out.append(f"{drive}:/{rest}")
+        out.append(f"{drive}:\\{rest.replace('/', chr(92))}")
+        return out
+    # Pattern: "-mnt-<drive>-<rest>" — WSL canonical (LEADING dash)
+    if name.startswith("-mnt-") and len(name) > 6:
+        drive = name[5]
+        rest_with_lead = name[5:]  # "d-repos-foo"
+        parts = rest_with_lead.split("-")
+        if parts and len(parts[0]) == 1:
+            posix = "/mnt/" + "/".join(parts)
+            out.append(posix)
+            # Also Windows-side view
+            rest = "/".join(parts[1:])
+            out.append(f"{drive.upper()}:/{rest}")
+        return out
+    # Pattern: "-<segment>-<segment>..." — POSIX absolute path (leading slash → leading dash)
+    if name.startswith("-"):
+        out.append("/" + name[1:].replace("-", "/"))
+        return out
+    # Generic fallback — treat all dashes as separators
+    out.append(name.replace("-", "/"))
+    return out
+
+
+def build_session_index() -> dict:
+    """FR-26 + FR-25 + FR-24: per-session rows + process scan + UNION model.
+
+    Sources:
+      A. Per worktree × per JSONL — main case. For each git worktree, find all
+         matching JSONLs in ~/.claude/projects/<encoded>/ and emit 1 row per UUID.
+      B. Orphan sessions — ~/.claude/projects/<encoded>/ where decoded cwd is
+         NOT inside any Source A worktree (e.g. C:\\Users\\stigm\\Desktop, D:\\repos).
+         Emitted with is_orphan=true, empty repo/branch.
+      C. Per worktree without history — git worktree exists but no JSONLs match
+         → emit 1 row with session_uuid=None so frontend still shows the
+         worktree (with [✨ Fresh] enabled).
+      Dedup: A wins over B for same cwd; C is per-worktree fallback when no A.
+
+    FR-25 attachment: process_scanner.scan_claude_processes() runs once per
+    build; each row gets claude_window_open + claude_window_pids based on cwd.
+
+    Schema (additive over build_worktree_index):
+      legacy: id, repo, repo_path, branch, head, worktree_path, is_main_worktree,
+              claude_max_mtime, has_claude_history
+      NEW (per-session): session_uuid, claude_running_now, age_sec, size_bytes
+      NEW (per-cwd): claude_window_open, claude_window_pids, is_orphan, is_stale.
+    """
+    # FR-25: scan running claude.exe processes once per build (cached internally 5s)
+    try:
+        import process_scanner
+        proc_map = process_scanner.scan_claude_processes()
+    except Exception as e:  # noqa: BLE001 — fail-open per NFR-Perf
+        import sys as _sys
+        print(f"[indexer] process_scanner failed: {e}", file=_sys.stderr)
+        proc_map = {}
+
+    def _proc_for_cwd(cwd: str) -> tuple[bool, list]:
+        """Return (open, pids) for normalized cwd. Both slash forms tried."""
+        if not cwd:
+            return False, []
+        norm1 = cwd.replace("\\", "/").rstrip("/")
+        if len(norm1) >= 2 and norm1[1] == ":":
+            norm1 = norm1[0].upper() + norm1[1:]
+        pids = proc_map.get(norm1, [])
+        return bool(pids), list(pids)
+
+    repos = discover_repos()
+    rows: list[dict] = []
+    seen_paths: set[str] = set()
+    a_cwds: set[str] = set()  # Source A cwds (normalized) — for B dedup
+    # FR-24 reverse-lookup: forward-encode each Source A worktree → encoded variants;
+    # use this to dedup Source B (avoids decoder ambiguity for cwds with literal dashes
+    # in dir names like `dev-pomogator` which decoder can't distinguish from `dev/pomogator`).
+    import server as _server
+    a_encoded_variants: set[str] = set()
+    for repo in repos:
+        repo_name = repo.name
+        repo_path_norm = str(repo.resolve()).replace("\\", "/")
+        for wt in git_worktree_list(repo):
+            if "error" in wt:
+                continue
+            wt_path = wt.get("path", "")
+            if not wt_path or wt_path in seen_paths:
+                continue
+            # Same Cursor-worktree filter as build_worktree_index — these aren't
+            # for Claude (FR-1 dedup invariant).
+            if "/.cursor/worktrees/" in wt_path.replace("\\", "/"):
+                continue
+            seen_paths.add(wt_path)
+            wt_path_norm = wt_path.replace("\\", "/").rstrip("/")
+            a_cwds.add(wt_path_norm)
+            # Forward-encode this worktree to all variants; use for Source B dedup.
+            for v in _server.encode_path_for_claude(wt_path):
+                a_encoded_variants.add(v)
+            branch = wt.get("branch", "(unknown)")
+            head = wt.get("head", "")[:7]
+            is_main = repo_path_norm == wt_path.replace("\\", "/")
+            window_open, window_pids = _proc_for_cwd(wt_path)
+
+            jsonls = _claude_jsonls_lightweight(wt_path)
+            if jsonls:
+                # Source A: one row per JSONL.
+                for j in jsonls:
+                    rows.append({
+                        "id": f"{repo_name}__{branch}__{wt_path}__{j['uuid']}",
+                        "repo": repo_name,
+                        "repo_path": str(repo),
+                        "branch": branch,
+                        "head": head,
+                        "worktree_path": wt_path,
+                        "is_main_worktree": is_main,
+                        "claude_max_mtime": j["mtime_unix"],
+                        "has_claude_history": True,
+                        # FR-26 per-session fields:
+                        "session_uuid": j["uuid"],
+                        "claude_running_now": j["running_now"],
+                        "age_sec": j["age_sec"],
+                        "size_bytes": j["size_bytes"],
+                        # FR-25 per-cwd window detection:
+                        "claude_window_open": window_open,
+                        "claude_window_pids": window_pids,
+                        # FR-24 orphan/stale flags:
+                        "is_orphan": False,
+                        "is_stale": False,
+                    })
+            else:
+                # Source C: worktree exists but no JSONLs — emit single row with
+                # session_uuid=None. Frontend disables [▶ Resume] (no UUID to
+                # resume) but [✨ Fresh] + [📂 VSCode] remain enabled.
+                rows.append({
+                    "id": f"{repo_name}__{branch}__{wt_path}__none",
+                    "repo": repo_name,
+                    "repo_path": str(repo),
+                    "branch": branch,
+                    "head": head,
+                    "worktree_path": wt_path,
+                    "is_main_worktree": is_main,
+                    "claude_max_mtime": 0,
+                    "has_claude_history": False,
+                    "session_uuid": None,
+                    "claude_running_now": False,
+                    "age_sec": None,
+                    "size_bytes": 0,
+                    "claude_window_open": window_open,
+                    "claude_window_pids": window_pids,
+                    "is_orphan": False,
+                    "is_stale": False,
+                })
+
+    # FR-24 Source B: scan ~/.claude/projects/* for orphan sessions.
+    # Dedup vs Source A via FORWARD encoder lookup (avoids decoder ambiguity).
+    # Filter out Claude Code meta dirs (C--Users-*--claude-*).
+    now_ts = time.time()
+    threshold = _server.RUNNING_THRESHOLD_SEC
+    for base_dir in _server.CLAUDE_PROJECTS_DIRS:
+        if not base_dir.exists():
+            continue
+        for proj_dir in base_dir.iterdir():
+            if not proj_dir.is_dir():
+                continue
+            name = proj_dir.name
+            # Skip Claude Code own meta state dirs (e.g. C--Users-stigm--claude-projects)
+            if "--claude-" in name and "Users" in name:
+                continue
+            # Dedup vs Source A: if this encoded name is one of Source A's
+            # forward-encoded variants → already covered, skip silently.
+            if name in a_encoded_variants:
+                continue
+            candidates = _decode_claude_dir_name(name)
+            decoded = None
+            decoded_exists = False
+            for c in candidates:
+                from pathlib import Path as _P
+                cp = _P(c)
+                if cp.exists():
+                    decoded = c
+                    decoded_exists = True
+                    break
+            if not decoded:
+                # Use first candidate but flag stale
+                decoded = candidates[0] if candidates else f"<unknown:{name}>"
+                decoded_exists = False
+            decoded_norm = decoded.replace("\\", "/").rstrip("/")
+            # Match jsonls for this exact encoded dir (no fuzzy — orphan is exact)
+            jsonls_for_dir: list[dict] = []
+            for jsonl in proj_dir.glob("*.jsonl"):
+                try:
+                    st = jsonl.stat()
+                    age = int(now_ts - st.st_mtime)
+                    jsonls_for_dir.append({
+                        "uuid": jsonl.stem,
+                        "mtime_unix": int(st.st_mtime),
+                        "age_sec": age,
+                        "running_now": age < threshold,
+                        "size_bytes": st.st_size,
+                    })
+                except OSError:
+                    continue
+            if not jsonls_for_dir:
+                continue
+            jsonls_for_dir.sort(key=lambda s: s["mtime_unix"], reverse=True)
+            window_open_b, window_pids_b = _proc_for_cwd(decoded_norm)
+            for j in jsonls_for_dir:
+                rows.append({
+                    "id": f"orphan__{name}__{j['uuid']}",
+                    "repo": "",
+                    "repo_path": "",
+                    "branch": "",
+                    "head": "",
+                    "worktree_path": decoded_norm,
+                    "is_main_worktree": False,
+                    "claude_max_mtime": j["mtime_unix"],
+                    "has_claude_history": True,
+                    "session_uuid": j["uuid"],
+                    "claude_running_now": j["running_now"],
+                    "age_sec": j["age_sec"],
+                    "size_bytes": j["size_bytes"],
+                    "claude_window_open": window_open_b,
+                    "claude_window_pids": window_pids_b,
+                    "is_orphan": True,
+                    "is_stale": not decoded_exists,
+                })
+            seen_paths.add(decoded_norm)
+    return {
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "rows": rows,
+    }
+
+
+_session_index_cache: dict = {"ts": 0.0, "data": None}
+
+
+def build_session_index_cached() -> dict:
+    """5s TTL cache mirror of build_index_cached — FR-26 per-session index."""
+    now = time.time()
+    if _session_index_cache["data"] is not None and (now - _session_index_cache["ts"]) < CACHE_TTL_INDEX:
+        return _session_index_cache["data"]
+    data = build_session_index()
+    _session_index_cache["ts"] = now
+    _session_index_cache["data"] = data
+    return data
 
 
 def build_claude_for_path(worktree_path: str) -> dict:
