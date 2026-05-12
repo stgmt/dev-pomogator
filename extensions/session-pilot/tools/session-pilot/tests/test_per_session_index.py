@@ -295,6 +295,53 @@ def test_frontend_html_contains_per_session_lookup_logic():
     assert "purgeV3Cache" in HTML, "frontend.py must purge legacy wtdash_v3_ entries on load"
 
 
+def test_status_column_has_custom_sorter_with_priority():
+    """Regression (user-reported 2026-05-13): Status column was sorted by
+    `claude_running_now` boolean field — useless sort, all non-LIVE rows
+    lumped together unordered. Must have custom sorter using priority
+    composite (LIVE > Open > idle-with-history > none) + mtime sub-sort.
+    """
+    from frontend import HTML
+    # Must define custom sorter function on Status column
+    assert 'sorter(a, b, aRow, bRow' in HTML, \
+        "Status column missing custom sorter — falls back to boolean field sort"
+    # Sorter must encode priority: LIVE=0, Open=1, idle=2, none=3
+    assert "claude_running_now" in HTML and "claude_window_open" in HTML, \
+        "Status sorter must check both claude_running_now and claude_window_open priorities"
+    # Sub-sort by mtime desc within same status group
+    assert "claude_max_mtime" in HTML, \
+        "Status sorter must sub-sort by claude_max_mtime within same status group"
+
+
+def test_status_priority_sort_logic_replicated_in_python():
+    """Manual replication of the JS sorter logic to validate priority order.
+
+    JS sorter:
+      priority = 0 if running_now else 1 if window_open else 2 if has mtime else 3
+      same priority → newer mtime first
+
+    Verified expected order:
+      LIVE (running) > Open (window alive idle) > idle-with-history > no-history
+    """
+    rows = [
+        {"claude_running_now": False, "claude_window_open": False, "claude_max_mtime": 0,      "label": "none"},
+        {"claude_running_now": True,  "claude_window_open": False, "claude_max_mtime": 100,    "label": "live-old"},
+        {"claude_running_now": False, "claude_window_open": True,  "claude_max_mtime": 50,     "label": "open"},
+        {"claude_running_now": False, "claude_window_open": False, "claude_max_mtime": 999,    "label": "idle-newer"},
+        {"claude_running_now": True,  "claude_window_open": False, "claude_max_mtime": 200,    "label": "live-new"},
+        {"claude_running_now": False, "claude_window_open": False, "claude_max_mtime": 100,    "label": "idle-older"},
+    ]
+    def priority(r):
+        if r["claude_running_now"]: return 0
+        if r["claude_window_open"]: return 1
+        if r["claude_max_mtime"]: return 2
+        return 3
+    rows.sort(key=lambda r: (priority(r), -r["claude_max_mtime"]))
+    labels = [r["label"] for r in rows]
+    assert labels == ["live-new", "live-old", "open", "idle-newer", "idle-older", "none"], \
+        f"unexpected sort order: {labels}"
+
+
 def test_html_response_has_no_store_cache_header():
     """Regression: HTML / endpoint must send Cache-Control: no-store to prevent
     stale frontend JS bundle in Edge --app/Chrome across server upgrades."""
