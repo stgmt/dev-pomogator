@@ -241,6 +241,90 @@ def test_fr24_meta_claude_dir_filtered_out(monkeypatch, tmp_path):
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+def test_fr25_pid_attributed_only_to_newest_jsonl_per_cwd(monkeypatch, tmp_path):
+    """Regression (user-reported 2026-05-13 round 3): bhph-early-warning showed
+    2 LIVE/Open rows when only 1 claude.exe was actually running. claude.exe
+    writes to ONE specific JSONL (active session UUID); old JSONLs in same cwd
+    are CLOSED sessions even though cwd has a PID running.
+
+    Fix: distribute PIDs to top-K NEWEST rows per cwd where K = len(pids).
+    Other rows in same cwd get claude_window_open=False + empty pids.
+    """
+    repo = tmp_path / "repo-attribution"
+    _init_git_repo(repo)
+    encoded = str(repo).replace(":", "").replace("\\", "-").replace("/", "-")
+    proj_dir = tmp_path / "claude_projects" / encoded
+    # Create 3 JSONLs with different ages (old to new)
+    _make_jsonl(proj_dir, "old-session-aaaa", age_sec=3600)   # 1 hour old
+    _make_jsonl(proj_dir, "mid-session-bbbb", age_sec=600)    # 10 min old
+    _make_jsonl(proj_dir, "new-session-cccc", age_sec=10)     # 10s — currently active
+
+    monkeypatch.setenv("REPOS", str(repo))
+    monkeypatch.setattr(server, "CLAUDE_PROJECTS_DIRS", [tmp_path / "claude_projects"])
+    # Mock process_scanner: 1 PID for this cwd (only 1 active session)
+    repo_norm = str(repo).replace("\\", "/").rstrip("/")
+    if len(repo_norm) >= 2 and repo_norm[1] == ":":
+        repo_norm = repo_norm[0].upper() + repo_norm[1:]
+    monkeypatch.setattr(process_scanner, "scan_claude_processes",
+                        lambda **kwargs: {repo_norm: [99999]})
+    _reset_indexer_caches()
+
+    idx = indexer.build_session_index()
+    rows = sorted(
+        [r for r in idx["rows"] if r["repo"] == "repo-attribution"],
+        key=lambda r: r.get("claude_max_mtime") or 0,
+        reverse=True,
+    )
+    # Top row (newest mtime = cccc) gets the PID
+    assert rows[0]["session_uuid"] == "new-session-cccc"
+    assert rows[0]["claude_window_open"] is True
+    assert rows[0]["claude_window_pids"] == [99999]
+    # Older rows get nothing — even though cwd has PID
+    assert rows[1]["session_uuid"] == "mid-session-bbbb"
+    assert rows[1]["claude_window_open"] is False
+    assert rows[1]["claude_window_pids"] == []
+    assert rows[2]["session_uuid"] == "old-session-aaaa"
+    assert rows[2]["claude_window_open"] is False
+    assert rows[2]["claude_window_pids"] == []
+
+
+def test_fr25_multiple_pids_distributed_to_top_k_rows(monkeypatch, tmp_path):
+    """When cwd has K PIDs and N JSONLs (K < N), top-K newest rows get PIDs (1 each)."""
+    repo = tmp_path / "repo-multi-pid"
+    _init_git_repo(repo)
+    encoded = str(repo).replace(":", "").replace("\\", "-").replace("/", "-")
+    proj_dir = tmp_path / "claude_projects" / encoded
+    _make_jsonl(proj_dir, "uuid-1-newest", age_sec=10)
+    _make_jsonl(proj_dir, "uuid-2-mid", age_sec=60)
+    _make_jsonl(proj_dir, "uuid-3-older", age_sec=600)
+    _make_jsonl(proj_dir, "uuid-4-oldest", age_sec=3600)
+
+    monkeypatch.setenv("REPOS", str(repo))
+    monkeypatch.setattr(server, "CLAUDE_PROJECTS_DIRS", [tmp_path / "claude_projects"])
+    repo_norm = str(repo).replace("\\", "/").rstrip("/")
+    if len(repo_norm) >= 2 and repo_norm[1] == ":":
+        repo_norm = repo_norm[0].upper() + repo_norm[1:]
+    # 2 PIDs for the cwd → top 2 newest rows get them
+    monkeypatch.setattr(process_scanner, "scan_claude_processes",
+                        lambda **kwargs: {repo_norm: [101, 102]})
+    _reset_indexer_caches()
+
+    idx = indexer.build_session_index()
+    rows = sorted(
+        [r for r in idx["rows"] if r["repo"] == "repo-multi-pid"],
+        key=lambda r: r.get("claude_max_mtime") or 0,
+        reverse=True,
+    )
+    open_rows = [r for r in rows if r["claude_window_open"]]
+    closed_rows = [r for r in rows if not r["claude_window_open"]]
+    assert len(open_rows) == 2, f"expected 2 open rows (1 per PID), got {len(open_rows)}"
+    assert len(closed_rows) == 2
+    # Open rows are the 2 newest
+    open_uuids = {r["session_uuid"] for r in open_rows}
+    assert open_uuids == {"uuid-1-newest", "uuid-2-mid"}, \
+        f"PIDs should attribute to 2 newest sessions, got {open_uuids}"
+
+
 def test_fr25_scanner_failopen_on_disable_env(monkeypatch):
     """SP_DISABLE_PROCESS_SCAN=1 → scanner returns {} without running subprocess."""
     monkeypatch.setenv("SP_DISABLE_PROCESS_SCAN", "1")
