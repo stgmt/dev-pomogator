@@ -403,11 +403,35 @@ function buildTabulator() {
     movableColumns: true,
     initialSort: [{column: "_last_msg_ts", dir: "desc"}],
     columns: [
-      {title: "Status", field: "claude_running_now", width: 100, headerSort: true, formatter(cell) {
+      {title: "Status", field: "claude_running_now", width: 100, headerSort: true,
+        // FR-25/FR-26: sort by composite Status priority (LIVE > Open > idle-with-history > none),
+        // sub-sort by claude_max_mtime DESC within same status. Without this, sorting by
+        // `claude_running_now` boolean lumps all non-LIVE rows together unordered.
+        sorter(a, b, aRow, bRow, column, dir, params) {
+          function priority(row) {
+            if (row.claude_running_now) return 0;  // LIVE — top
+            if (row.claude_window_open) return 1;   // Open (window alive, idle)
+            if (row.claude_max_mtime) return 2;     // idle with history
+            return 3;                                // no history / never ran
+          }
+          const ar = aRow.getData(), br = bRow.getData();
+          const ap = priority(ar), bp = priority(br);
+          if (ap !== bp) return ap - bp;
+          // Same status — newer mtime first (within group)
+          return (br.claude_max_mtime || 0) - (ar.claude_max_mtime || 0);
+        },
+        formatter(cell) {
         const row = cell.getRow().getData();
         if (!row._claude_loaded) return '<span class="spinner"></span>';
-        // FR-25 3-state priority: LIVE > Open > idle/none
-        if (row.claude_running_now) return '<span class="status live">● LIVE</span>';
+        // FR-25 3-state priority: LIVE > Open > idle/none.
+        // Client-side LIVE override: if mtime fresh (<300s) but server response
+        // stale-cached with running_now=false → still show LIVE. Closes the
+        // 5s cache-lag window where freshly-written JSONL displays as "idle 0m".
+        const LIVE_THRESHOLD_SEC = 300;
+        const ageS = row.claude_max_mtime ? (Math.floor(Date.now()/1000) - row.claude_max_mtime) : null;
+        if (row.claude_running_now || (ageS !== null && ageS >= 0 && ageS < LIVE_THRESHOLD_SEC)) {
+          return '<span class="status live">● LIVE</span>';
+        }
         if (row.claude_window_open) {
           const pids = (row.claude_window_pids || []).join(',');
           return `<span class="status open" title="Window open · PIDs: ${pids}">💡 Open</span>`;
