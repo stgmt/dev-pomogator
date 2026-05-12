@@ -138,6 +138,80 @@ Primary (TS + Python — covered in detail below). Other stacks (Java / C# / Go 
 | Go | `go.mod` + `*_test.go` files | testing | `gopter` | `go-mutesting` | see references/ |
 | Rust | `Cargo.toml` `[dev-dependencies]` | built-in `#[test]` | `proptest` | `cargo-mutants` | see references/ |
 
+### Framework selection UX (v0.5.0+)
+
+**Skill does NOT do heavy auto-detection.** For polyglot repositories (e.g., C# + Go like lm-saas), auto-detection picks one stack based on first match — обычно not what caller wants. Instead skill exposes **enumerated framework list** через `AskUserQuestion` pattern, calling-side (AI agent или user) picks.
+
+Established pattern in 9 dev-pomogator skills using `AskUserQuestion` для enumerated selection: `discovery-forms`, `hyperv-test-runner`, `docker-optimize`, `install-diagnostics`, `run-tests`, `fewer-permission-prompts`, `dev-pomogator-uninstall`, `simplify`, `dedup-tests`.
+
+**Caller-side invocation pattern:**
+
+```typescript
+// Calling side (AI agent OR user-invoked):
+const choice = await AskUserQuestion({
+  question: "Choose mutation testing framework",
+  header: "Framework",
+  options: [
+    { label: "TypeScript + Stryker + vitest", description: "TS/JS/TSX projects" },
+    { label: "Python + mutmut + pytest", description: "Python projects" },
+    { label: "C# + Stryker.NET + xUnit/NUnit", description: ".NET projects" },
+    { label: "Go + go-mutesting", description: "Go projects (manual setup)" },
+  ],
+});
+// Then dispatch:
+await Skill("strong-tests", { framework: choice });
+```
+
+**Auto-detection fallback:** `run-mutation.ts` still has `detectStack()` heuristic — but only used when caller doesn't pass framework arg AND target has unambiguous stack signal (single `package.json` или single `*.csproj`). Polyglot fallback emits warning + uses first match.
+
+### Test classification policy (v0.5.0+)
+
+**Default skip Integration/E2E tests in Stryker dispatch.** Real-world experience (lm-saas/AiPomogator field verification): integration tests с live DB / auth / HTTP API dependencies block Stryker initial test run (см. `FIELD_VERIFICATION.md`). Solution — categorize tests:
+
+```csharp
+[Trait("Category", "Unit")]     // ← Stryker runs these BY DEFAULT
+public class PricingCalculatorTests { ... }
+
+[Trait("Category", "Integration")]   // ← Stryker SKIPS by default (use --include-integration to override)
+public class DatabaseIntegrationTests { ... }
+
+[Trait("Category", "E2E")]   // ← Stryker SKIPS by default (use --include-e2e to override)
+public class FullStackE2ETests { ... }
+```
+
+```python
+import pytest
+
+@pytest.mark.unit  # ← default Stryker scope
+def test_pure_logic(): ...
+
+@pytest.mark.integration  # ← skipped unless --include-integration
+def test_db_query(): ...
+```
+
+```typescript
+// vitest: use describe.skipIf for category gating
+describe.skipIf(process.env.STRYKER_INTEGRATION !== '1')('Integration: Database', () => { ... });
+```
+
+```go
+// Go: build tags
+//go:build unit
+// or
+//go:build integration
+```
+
+**Override flags** (passed to `run-mutation.ts`):
+- `--include-integration` — append `Category=Integration` к Stryker test-case-filter
+- `--include-e2e` — append `Category=E2E`
+
+**Why this policy:**
+1. Stryker requires green baseline. Integration tests с live infra часто fail в Stryker sandbox (no DB, no auth).
+2. E2E tests slow — mutation × test-suite-runtime is polynomial cost. На 400 mutants × 5-min E2E = 33 hours.
+3. Mutation testing measures **unit/integration test strength**, не end-to-end coverage. Two different surfaces.
+
+If your repo doesn't have Category Traits yet — invoke `Skill("strong-tests --mode=classify")` (см. §6 sub-modes) для AI-suggested classification.
+
 ### TS detail
 
 ```typescript
@@ -164,6 +238,31 @@ Mutation tool invocation:
 npx stryker run
 # Output: reports/mutation/mutation.json — JSON parsed by scripts/run-mutation.ts
 ```
+
+### Regex-equivalent survivors (high noise category)
+
+Stryker `Regex` mutator generates character-class shuffles, anchor flips, and quantifier changes inside regex literals. Empirically (на этом скилле dogfooding: 124 of 171 = 72% survivors были regex), **большая часть равноэквивалентны**: переупорядочивание элементов внутри `[abc]`/`[a-z]` производит functionally identical regex; quantifier `+` ↔ `*` зачастую дают same matches на realistic inputs.
+
+Если регексы доминируют в коде (parsers, lexers, validators) — kill rate будет искусственно занижен через regex equivalents. Не симптом слабых тестов — симптом mutation tool noise.
+
+**Mitigation в `stryker.config.mjs`:**
+
+```javascript
+export default {
+  // ... rest of config
+  mutator: {
+    excludedMutations: ['Regex'],
+  },
+  mutator_comment: 'Exclude Regex mutator — character-class shuffles внутри [...] почти всегда equivalent. Если код regex-heavy (parsers, lexers, validators) — Regex mutations создают noise, не signal. Использовать ТОЛЬКО когда mutation score падает >15pp из-за regex survivors AND проверено что survivors реально equivalent.',
+};
+```
+
+**Не отключай Regex mutations если:**
+- Регексы — критический бизнес-код (security validation, financial parsing)
+- Kill rate < threshold даже без regex (real gaps существуют)
+- Single regex имеет 5+ semantically distinct branches (each char class matters)
+
+**Альтернатива:** split monolithic regex на typed sub-patterns с unit tests на каждую часть отдельно. Mutation noise падает естественно потому что каждый sub-pattern имеет конкретные test guards.
 
 ### Python detail
 
@@ -268,6 +367,134 @@ Trigger: `$ARGUMENTS` contains `--mutate` OR user prompt mentions "mutation test
    - If killRate ≥ threshold → emit success report + 12-point self-eval + STOP.
    - For each survivor: emit proposed test via Edit. Flag `[EQUIVALENT_SUSPECT]` for cosmetic/dead-code diffs.
 4. N++. If N > max-iter → emit `[GAP]` report listing remaining survivors with rationale + 12-point self-eval + STOP.
+
+#### Prerequisite — Module-import layer (CRITICAL для TS+vitest)
+
+Stryker (TS / JS / TSX) ОБЯЗАТЕЛЬНО требует **import chain** между test file и mutated source file. Это не optional — без import chain Stryker `vitest-runner` exits с error:
+
+```
+WARN VitestTestRunner Vitest failed to find test files related to mutated files.
+ERROR Stryker No tests were executed.
+```
+
+Корень проблемы: vitest `--related` (используется внутри Stryker даже при `coverageAnalysis: 'off'`) фильтрует тесты по AST-уровню import graph. Если все ваши тесты — integration-first через `spawnSync` / `execSync` (никакого `import { fn } from './source.ts'`) — Stryker не видит coverage и считает ВСЕ тесты unrelated.
+
+**Решение — Import Guard pattern** (per `.claude/rules/extension-test-quality.md`):
+
+Шаг 1. CLI-script делишь на два слоя:
+
+```typescript
+// Before — non-testable: main() runs unconditionally on require
+function main() { /* ... CLI logic ... */ }
+main();
+
+// After — testable: export functions + import-guarded main
+export { scan, detectStack, suggestInvariants };
+export type { Stack, Candidate };
+
+function main() { /* ... CLI logic ... */ }
+
+const isDirectRun =
+  process.argv[1]?.endsWith('your-script.ts') ||
+  process.argv[1]?.endsWith('your-script.js');
+if (isDirectRun) {
+  main();
+}
+```
+
+Шаг 2. Добавь **второй test file** который импортирует module напрямую:
+
+```typescript
+// tests/your-script-unit.test.ts (sibling integration test остаётся)
+import { describe, it, expect } from 'vitest';
+import { scan, detectStack } from '../scripts/your-script.ts';
+
+describe('your-script module API', () => {
+  it('FAILS if X', () => {
+    expect(detectStack('/foo.ts')).toBe('ts');
+  });
+  // ... ≥10 unit tests per public function
+});
+```
+
+Шаг 3. Integration tests (spawnSync) **остаются** — они верифицируют real CLI invocation contract. Unit tests дают Stryker import chain. **НЕ удаляй integration tests** — это нарушает `.claude/rules/integration-tests-first.md`.
+
+**Empirical numbers** (этот скилл dogfooding):
+- Before Import Guard refactor: Stryker `No tests were executed` — kill rate undefined
+- After: 405 mutants, 51.08% baseline
+- After +10 killer tests targeting survivors: 56.83% (+5.75pp в одной итерации)
+
+**Python / mutmut** не имеет этого constraint — mutmut работает через AST instrumentation независимо от test invocation pattern. Только TS+Stryker требует import chain.
+
+#### Vitest discovery cache contamination workaround
+
+Если ваш test runner wrapper (e.g., dev-pomogator `test_runner_wrapper.cjs`, custom wrapper, или CI script) запускает `vitest list --json` для discovery — output может затереть test file на диске при определённых race conditions (наблюдали 2 раза в одной сессии на Windows + Git-Bash).
+
+**Симптом:** integration test file внезапно содержит JSON array `[{"name": "...", "file": "..."}, ...]` вместо TypeScript кода. Vitest следующий run: `Error: No test suite found in file <path>`.
+
+**Mitigation:**
+
+1. **Запускай файлы тестов раздельно**, не batch: `vitest run file1.test.ts` затем `vitest run file2.test.ts`. Хуже UX, но safer.
+2. **Используй `--no-cache` агрессивно** — `npx vitest run --no-cache <path>`. Не предотвращает 100%, снижает частоту.
+3. **Backup перед mutation runs** — `git stash` или `git diff HEAD > pre-stryker.patch` ДО `npx stryker run`. Если файл порвало — `git checkout HEAD -- tests/<file>.test.ts` restore.
+4. **Изолируй wrapper invocations** — если запускаешь Stryker через CI wrapper который сам вызывает vitest, run wrapper **только на unit test file** (не на integration). Integration файл не нужен Stryker — он его не покрывает анyway.
+
+Корневая причина не подтверждена 100% (см. `.claude/rules/pomogator/tui-debug-verification.md` #3) — три плауsible hypotheses: capture handle drop / pipe buffer race / block-vs-line buffering. Если репро на вашем проекте — open issue в vitest GitHub + cross-link сюда.
+
+#### Autopilot loop (v0.6.0+ roadmap, не v0.5.0)
+
+User спрашивал: «Mutation-feedback autopilot loop поясни не понял». Mechanics:
+
+```
+iter = 1
+while iter <= max_iter AND killRate < threshold:
+    1. Run mutation tool (Stryker / mutmut / Stryker.NET)
+    2. Parse mutation.json → extract survivors[]
+    3. For each survivor (или batch):
+         a. Read source code at survivor.file:line
+         b. Invoke Skill("strong-tests --mode=write-killer-test --survivor=<context>")
+         c. Skill emits test code targeting the specific mutation
+         d. Append generated test to test file
+    4. Re-run mutation tool
+    5. New killRate measured
+    6. If killRate >= threshold OR iter == max_iter: exit
+    7. iter++
+
+Output: final mutation report + iteration trace showing kill rate progression
+```
+
+**Example progression** (per [OutSight AI case study](https://medium.com/@outsightai/the-truth-about-ai-generated-unit-tests-why-coverage-lies-and-mutations-dont-fcd5b5f6a267)):
+
+| Iteration | Kill rate | Survivors | New tests added |
+|---|---|---|---|
+| 1 (baseline) | 4% | 200 | — |
+| 2 (after AI killers iter 1) | 51% | 100 | 50 |
+| 3 (after AI killers iter 2) | 67% | 50 | 30 |
+| 4 (after AI killers iter 3) | 78% | 15 | 20 |
+| Exit: threshold 70% met OR max_iter 5 reached | — | — | — |
+
+**Why not in v0.5.0:** требует sub-skill `strong-tests --mode=write-killer-test` который сам по себе новая complex feature. v0.5.0 шиппит **building blocks** для autopilot:
+- ✅ Stryker.NET dispatch (Chunk 3)
+- ✅ Survivor extraction в structured JSON
+- ✅ `--analyze-survivors` flag для LLM context reconstruction (Chunk 9)
+- ✅ Composition-chain detection (Chunk 1) — нужен для понимания survivor patterns
+
+**Autopilot integration на их основе — v0.6.0 milestone.** Reasonable defer чтобы избежать scope creep в v0.5.0.
+
+**Manual autopilot вручную** (для пользователя который хочет уже сейчас):
+
+```bash
+# Iter 1
+npx tsx run-mutation.ts <target>  # → mutation.json
+# Read survivors, ask LLM to write killer tests via Skill("strong-tests")
+# Apply tests, re-run
+
+# Iter 2
+npx tsx run-mutation.ts <target>  # → new mutation.json with improved kill rate
+# Repeat until threshold met
+```
+
+Это **manual loop** который v0.6.0 автоматизирует. Skill уже даёт все pieces для manual workflow в v0.5.0.
 
 ### 6.4 JiT (Just-in-Time) auto-trigger mode (FR-7)
 

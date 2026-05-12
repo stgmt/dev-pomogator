@@ -63,6 +63,18 @@
 | CHK-FR7-05 | FR-7 NFR: detector p95 latency under 500ms on files up to 2000 LOC | FR-7, AC-7, @feature7 | Integration test | Verified | NFR-P4 perf |
 | CHK-FR7-06 | FR-7 NFR: detector errors do not fail Write or Edit (exit 0 unconditional) | FR-7, AC-7, @feature7 | Integration test | Verified | NFR-R5 graceful degradation |
 | CHK-FR7-07 | FR-7 covered v0.3.0: C# detection path identifies collection-returning function with nested for/foreach loops; Tests/ folder + Steps.cs/Tests.cs excluded; suppression comment skips with audit log | FR-7, AC-7, @feature7, UC-1 | BDD scenario | Draft | C# detection path v0.3.0 |
+| CHK-FR11-01 | FR-11 composition-chain detection в scan() assigns kind correctly when ≥2 chained method calls detected | FR-11, AC-7, @feature7 | Unit test | Verified | TS .filter().map().reduce() and C# LINQ smoke confirmed |
+| CHK-FR11-02 | FR-11 detection priority correct nxm-overlap takes precedence over composition-chain when nestedFor ≥2 | FR-11, AC-7, @feature7 | Unit test | Verified | TESTQUAL001_11b ProcessItems composition-chain CartesianProduct nxm-overlap |
+| CHK-FR12-01 | FR-12 Stryker.NET dispatch runStrykerNet function exists in run-mutation.ts | FR-12, AC-3, @feature3 | Integration test | Verified | TESTQUAL001_11 dry-run returns stack csharp tool stryker-net |
+| CHK-FR12-02 | FR-12 Stryker.NET template references/stryker-net.config.template.json with TODO placeholders | FR-12, AC-3, @feature3 | Manual review | Verified | Template created with full schema documentation |
+| CHK-FR12-03 | FR-12 detection augmented Stryker.NET tool detected via PackageReference OR stryker-config.json | FR-12, AC-3, @feature3 | Integration test | Verified | detectStack expanded with existsSync check |
+| CHK-FR13-01 | FR-13 default skip Integration E2E runStrykerNet applies Category Unit filter by default | FR-13, AC-3, @feature3 | Integration test | Verified | Filter args explicit plus log line emit when override |
+| CHK-FR14-01 | FR-14 ast-grep TS branch getTsFunctionsViaAstGrep integrated with regex fallback | FR-14, AC-1, @feature1 | Integration test | Verified | 47 unit tests pass with NAPI loaded regex fallback if NAPI fails |
+| CHK-FR14-02 | FR-14 NAPI module load try catch on require ast-grep napi graceful degradation | FR-14, AC-1, @feature1 | Integration test | Verified | astGrepModule null fallback path |
+| CHK-FR15-01 | FR-15 LLM survivor stub annotateSurvivorsForLlmReview preserves cardinality 1-to-1 | FR-15, AC-3, @feature3 | Integration test | Draft | input length equals output length invariant tested via integration |
+| CHK-FR15-02 | FR-15 reconstructedContext 3 lines around mutation point read from disk | FR-15, AC-3, @feature3 | Integration test | Draft | File not readable graceful path emits null context |
+| CHK-FR16-01 | FR-16 Ghostwriter integration runGhostwriter function spawns hypothesis write subprocess | FR-16, AC-1, @feature1 | Integration test | Draft | Pre-flight hypothesis version check plus STDOUT parse |
+| CHK-FR17-01 | FR-17 framework selection documented in SKILL.md section 3 with AskUserQuestion pattern plus 6 frameworks enumerated | FR-17, AC-4, @feature4 | Manual review | Verified | Cross-link to 9 established skills |
 
 ## Verification Process
 
@@ -84,8 +96,8 @@
 
 ## Summary Counts
 
-- Total CHKs: 22
-- Verified: 6
+- Total CHKs: 34
+- Verified: 16
 - In Progress: 0
-- Draft: 16
+- Draft: 18
 - Blocked: 0

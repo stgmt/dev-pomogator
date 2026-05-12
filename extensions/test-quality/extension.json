@@ -25,6 +25,7 @@
       ".claude/skills/strong-tests/SKILL.md",
       ".claude/skills/strong-tests/references/anti-patterns.md",
       ".claude/skills/strong-tests/references/tooling-setup.md",
+      ".claude/skills/strong-tests/references/stryker.config.template.mjs",
       ".claude/skills/strong-tests/scripts/run-mutation.ts",
       ".claude/skills/strong-tests/scripts/detect-invariant-candidates.ts"
     ]

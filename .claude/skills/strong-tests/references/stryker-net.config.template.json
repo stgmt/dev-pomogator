@@ -1,0 +1,42 @@
+{
+  "_comment": "Stryker.NET config TEMPLATE — copy to <project-root>/stryker-config.json and customize. Parallel JSON variant of stryker.config.template.mjs (TS) — Stryker.NET uses JSON not JS config syntax.",
+  "_usage": [
+    "1. dotnet tool install -g dotnet-stryker (version 4.14+ required)",
+    "2. Replace {{TODO}} placeholders with your project values",
+    "3. Run: dotnet-stryker --config-file stryker-config.json",
+    "4. Override default Category=Unit filter via run-mutation.ts flags: --include-integration or --include-e2e"
+  ],
+  "_prerequisites": [
+    "Test project MUST have green initial test run (no external infra deps in default scope)",
+    "If integration tests require live DB/auth/services — they are SKIPPED by default via Category=Unit filter",
+    "To make tests Stryker-ready: mark them with [Trait(\"Category\", \"Unit\")] for pure unit tests"
+  ],
+  "stryker-config": {
+    "project": "{{TODO: YourProject.csproj — production project to mutate}}",
+    "test-projects": [
+      "{{TODO: YourProject.Tests/YourProject.UnitTests.csproj — test project with [Trait Category=Unit] markers}}"
+    ],
+    "test-case-filter": "Category=Unit",
+    "_test-case-filter_comment": "DEFAULT skip Integration/E2E. Override via run-mutation.ts --include-integration / --include-e2e flags which append to filter.",
+    "additional-timeout": 30000,
+    "_additional-timeout_comment": "Per-mutant test timeout (NOT timeout-ms — that's invalid key in Stryker.NET).",
+    "concurrency": 4,
+    "_concurrency_comment": "Tune based on CPU. 4 is safe baseline; bump to half of cores. Don't max out — host vitest workers + test process pool compete.",
+    "mutation-level": "Standard",
+    "_mutation-level_comment": "Options: Basic / Standard / Advanced / Complete. Standard = good baseline coverage. Advanced/Complete для critical paths.",
+    "thresholds": {
+      "high": 80,
+      "low": 60,
+      "break": 50,
+      "_comment": "Empirical defaults from OutSight AI case study. Critical paths ≥70%, standard ≥50%, experimental ≥30%."
+    },
+    "reporters": [
+      "html",
+      "json",
+      "progress",
+      "cleartext"
+    ],
+    "verbosity": "Info",
+    "_env_passthrough_comment": "Stryker.NET inherits process env. Set repo-specific vars BEFORE dotnet-stryker — e.g., ASPNETCORE_ENVIRONMENT=Test, CI=true. Stryker config 'env' field is UNSUPPORTED — must be in shell."
+  }
+}

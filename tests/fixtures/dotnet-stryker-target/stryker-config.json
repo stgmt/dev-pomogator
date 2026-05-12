@@ -1,0 +1,25 @@
+{
+  "_comment": "Fixture Stryker.NET config — targets Library.Shared.csproj with Category=Unit filter (skip Integration/E2E by default).",
+  "stryker-config": {
+    "project": "Library.Shared.csproj",
+    "test-projects": [
+      "UnitTests/UnitTests.csproj"
+    ],
+    "test-case-filter": "Category=Unit",
+    "additional-timeout": 30000,
+    "concurrency": 4,
+    "mutation-level": "Standard",
+    "thresholds": {
+      "high": 80,
+      "low": 60,
+      "break": 50
+    },
+    "reporters": [
+      "html",
+      "json",
+      "progress",
+      "cleartext"
+    ],
+    "verbosity": "Info"
+  }
+}

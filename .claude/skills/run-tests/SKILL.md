@@ -226,3 +226,28 @@ After execution completes (or when Monitor emits DONE), report:
 - Exit code (0 = passed, non-zero = failed)
 - Framework detected
 - If YAML status file exists, read final status for summary (passed/failed/skipped counts)
+
+### Step 5: Compositional follow-up — strong-tests audit hint
+
+После того как test run завершился (exit 0 или non-zero), check было ли test file editing в текущей сессии — это означает что user/AI правил тесты и может пропустить mutation-resistance audit.
+
+**Detection:**
+```bash
+git diff --name-only HEAD~1 HEAD -- '*.test.*' '*_test.*' '*Tests.cs' '*Steps.cs' '*_test.go' 2>/dev/null
+```
+
+**Если non-empty output (test files changed)** — emit hint в completion summary:
+
+```
+✅ Tests passed (45/45). Test files were modified in this session:
+  - tests/e2e/auth.test.ts (3 lines)
+  - tests/e2e/users.test.ts (12 lines)
+
+→ Run `Skill("strong-tests")` to verify mutation resistance + 12-point self-eval.
+  Coverage % alone is not proof of test strength (per OutSight AI case study,
+  100% coverage / 4% mutation score is achievable).
+```
+
+**Если test files НЕ changed (только production code edited)** — skip hint (не спамить user).
+
+Cross-link: `.claude/skills/strong-tests/SKILL.md` для skill workflow + thresholds (default 70% kill rate для critical paths).

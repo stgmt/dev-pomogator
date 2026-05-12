@@ -37,8 +37,8 @@ interface DetectorOutput {
   astGrepVersion: string | null;
 }
 
-const PRODUCTION_INCLUDE = /\.(ts|tsx|py|cs)$/i;
-const TEST_EXCLUDE = /(?:[/\\]tests?[/\\]|[/\\]Tests[/\\]|__tests__|\.test\.tsx?$|\.spec\.tsx?$|_test\.py$|\.test\.cs$|Steps\.cs$|Tests\.cs$|Test\.cs$|_test\.cs$|\.feature$|\.md$)/i;
+const PRODUCTION_INCLUDE = /\.(ts|tsx|py|cs|go)$/i;
+const TEST_EXCLUDE = /(?:[/\\]tests?[/\\]|[/\\]Tests[/\\]|__tests__|\.test\.tsx?$|\.spec\.tsx?$|_test\.py$|\.test\.cs$|Steps\.cs$|Tests\.cs$|Test\.cs$|_test\.cs$|_test\.go$|\.feature$|\.md$)/i;
 
 function readStdin(): Promise<string> {
   return new Promise((resolve) => {
