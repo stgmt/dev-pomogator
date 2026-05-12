@@ -19,9 +19,43 @@ Then table shows all git worktrees from configured repos with all 10 columns pop
 
 ---
 
-### User Story 2: One-click Claude resume in Windows Terminal @feature4 @feature11 (Priority: P1)
+> **v0.4 notes:**
+> — Cross-platform de-pivot adds @feature21 (OS detection + dispatch architecture) which manifests in US-2 (one-click resume) и US-8 (one-command install). Each spawn from Resume/Fresh now dispatches per-OS via terminal_launcher.py.
+> — @feature22 (on-demand worktree bootstrap skill — US-9 below) sibling to dashboard recall: dashboard closes "no-session" gap для existing worktrees, bootstrap-skill closes "no-tools" gap для orphan worktrees.
 
-As a developer on Windows, I want to click [▶ Resume] button in a row to launch `claude --resume <uuid>` in a new Windows Terminal window for that worktree, чтобы не печатать команду руками.
+### User Story 9: On-demand orphan worktree bootstrap @feature22 (Priority: P2)
+
+As a developer who creates git worktrees manually via `git worktree add` (без `claude --worktree` autobootstrap), I want a skill `/sp-bootstrap` which я вызываю **only когда нужно** (видя `ERR_MODULE_NOT_FOUND` в hook output), to install dev-pomogator's `.dev-pomogator/tools/` artefacts в текущем worktree, чтобы stop hooks (auto-commit, simplify, dedup, tui, prompt-suggest, capture, bg-task-guard, test-spec-gate) перестали падать.
+
+**Why:** dev-pomogator hooks paths указывают на `.dev-pomogator/tools/*.ts` (installer-output, gitignored). Свежий `git worktree add` создаёт checkout без installer state — hooks падают `ERR_MODULE_NOT_FOUND`. Не хочу auto-fire bootstrap на каждый `git worktree add` (медленно ~50s, не всегда нужен — иногда worktree throwaway); хочу skill on-demand.
+
+**Independent Test:** В orphan worktree (без `.dev-pomogator/tools/`) вызвать `/sp-bootstrap`, выбрать Bootstrap, дождаться "bootstrap complete", trigger Stop event (e.g. через любой prompt → response cycle), убедиться что 8 stop hooks больше не пишут `ERR_MODULE_NOT_FOUND`.
+
+**Acceptance Scenarios:**
+
+Given cwd is orphan worktree без `.dev-pomogator/tools/auto-commit/auto_commit_stop.ts`
+When user invokes skill `session-pilot-bootstrap`
+Then skill presents AskUserQuestion {Bootstrap, Skip npm install, Cancel}
+When user chooses Bootstrap
+Then skill runs `npm install --no-audit --no-fund` (if node_modules absent) + `npm run build` + `node bin/cli.js install .`
+And responds "bootstrap complete"
+And next Stop event runs hooks cleanly
+
+Given cwd is main worktree (already bootstrapped via dev workflow)
+When user invokes skill `session-pilot-bootstrap`
+Then skill responds "main worktree already bootstrapped; skip"
+And exits without action
+
+Given cwd is orphan worktree already bootstrapped previously
+When user re-invokes skill (without --force)
+Then skill responds "already bootstrapped"
+And exits without re-running installer
+
+---
+
+### User Story 2: One-click Claude resume in native terminal (cross-platform) @feature4 @feature11 @feature21 (Priority: P1)
+
+As a developer on Windows OR Linux OR macOS, I want to click [▶ Resume] button in a row to launch `claude --resume <uuid>` in a new native terminal window (или background-detached процесс на headless Linux) for that worktree, чтобы не печатать команду руками — независимо от того с какой ОС работаю.
 
 **Why:** Без one-click надо: вручную открыть Windows Terminal, `cd D:\repos\<wt>`, найти UUID, набрать `claude --resume <uuid>`. Дашборд знает всё это — должен делать сам.
 

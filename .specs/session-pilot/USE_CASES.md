@@ -18,7 +18,7 @@ Developer reloads dashboard frequently throughout day (alt-tab, switch windows).
 - Only 7 stale rows trigger fetch with If-None-Match → server returns 304
 - Total reload <300ms
 
-## UC-3: Launch claude --resume in a new Windows Terminal window @feature4
+## UC-3: Launch claude --resume in a new native terminal window @feature4 @feature21
 
 Developer wants to continue work on feature/auth worktree from yesterday.
 
@@ -62,7 +62,7 @@ Developer with 8 repos × 5 worktrees = 40 rows wants to group by repo, sorted b
 - Shift+click "Last Activity" header → secondary sort DESC within each repo
 - Tabulator handles natively, no custom code
 
-## UC-8: Spawn fresh Claude in new worktree @feature11
+## UC-8: Spawn fresh Claude in new worktree @feature11 @feature21
 
 Developer creates new feature branch, wants fresh Claude (no resume).
 
@@ -89,6 +89,33 @@ Developer is actively working in lm-saas but dashboard shows it as idle.
 - Output shows youngest JSONL is 146s old (> default 90s threshold)
 - Set `$env:LIVE_THRESHOLD_SEC=300; python server.py` and restart server
 - Verify lm-saas now LIVE 🟢 in dashboard
+
+## UC-13: One-click taskbar launcher для dashboard @feature23
+
+Developer открывает dashboard 10+ раз в день (alt-tab between worktrees). Browser bookmark workflow = 3-click chain каждый раз. Хочет one-click icon на taskbar.
+
+- Developer runs `pwsh -File extensions/session-pilot/tools/session-pilot/create-launcher.ps1` (Windows) / `bash create-launcher.sh` (Linux/macOS).
+- Script detects browser (Edge/Chrome/Chromium/Brave), creates platform-specific launcher artifact:
+  - Windows: `~/Desktop/Session Pilot.lnk` pointing at `msedge.exe --app=http://127.0.0.1:8083/`
+  - Linux: `~/.local/share/applications/session-pilot.desktop`
+  - macOS: `~/Applications/Session Pilot.app`
+- На Windows script auto-opens Explorer at Desktop with icon highlighted.
+- Developer right-clicks icon → "Pin to taskbar" (Windows) / drags to Dock (macOS) / right-click "Pin to Task Manager" (KDE).
+- One-click thereafter — иконка opens dashboard в standalone window (no browser tabs, dedicated taskbar entry).
+
+## UC-12: Bootstrap orphan worktree via skill @feature22
+
+Developer creates new worktree manually via `git worktree add ../dev-pomogator-feat-x -b feat/x main` (без `claude --worktree` autobootstrap, без installer-run). Открывает Claude Code в новом worktree. На первом `Stop` event 8 hooks падают с `ERR_MODULE_NOT_FOUND` — `.dev-pomogator/tools/*.ts` gitignored и не существует в свежем worktree. Hooks non-blocking, но засоряют output.
+
+- Developer notices repeated `ERR_MODULE_NOT_FOUND` в hook output.
+- Developer запоминает: «у меня orphan worktree, нет installer state».
+- Developer вызывает skill: «забутстрапь worktree» / `/sp-bootstrap`.
+- Skill detect-ит cwd = orphan worktree (через `git worktree list` + missing sentinel `.dev-pomogator/tools/auto-commit/auto_commit_stop.ts`).
+- Skill AskUserQuestion: Bootstrap / Skip npm install / Cancel.
+- User выбирает Bootstrap.
+- Skill runs `npm install` (~30s, if node_modules absent) + `npm run build` (~15s, tsc) + `node bin/cli.js install .` (~5s, installer).
+- Skill verifies: `.dev-pomogator/tools/auto-commit/auto_commit_stop.ts` present → "bootstrap complete".
+- Next Stop event — hooks run cleanly, no ERR_MODULE_NOT_FOUND.
 
 ## UC-11: Edge — JSONL written to unexpected encoding @feature14
 

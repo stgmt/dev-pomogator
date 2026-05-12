@@ -20,9 +20,18 @@ WHEN client sends `GET /api/claude?path=X` with `If-None-Match: W/"<mtime>"` mat
 
 ## AC-4 (FR-4)
 
-**Требование:** [FR-4](FR.md#fr-4-post-apilaunch--claude-resumefresh-injection)
+**Требование:** [FR-4](FR.md#fr-4-post-apilaunch--cross-platform-native-terminal-spawn)
 
-WHEN user POSTs to `/api/launch` with `{worktree_path: "D:\\repos\\foo", mode: "resume", uuid: "abc-123-def"}` THEN system SHALL spawn detached `wt.exe -d D:\repos\foo -- pwsh.exe -NoExit -Command "claude --resume abc-123-def"` AND respond with `{ok: true, method: "wt-spawn", pid: int}`. WHEN `wt.exe` not in PATH THEN system SHALL fallback to `cmd.exe /c start "" pwsh.exe -NoExit -Command "..."` AND respond with `method: "cmd-fallback"`. WHEN `$env:SP_TERMINAL_CMD` is set THEN system SHALL use that template instead AND respond with `method: "env-override"`.
+WHEN user POSTs to `/api/launch` with `{worktree_path, mode: "resume", uuid}` THEN system SHALL spawn detached native terminal AND respond with `{ok: true, method: <label>, pid: int}` where `<label>` depends on platform:
+
+- **WHEN** `sys.platform == "win32"` AND `wt.exe` is on PATH **THEN** spawn `wt.exe -d <cwd> -- pwsh.exe -NoExit -Command "claude --resume <uuid>"` AND `method == "wt-spawn-pwsh"`.
+- **WHEN** `sys.platform == "win32"` AND `wt.exe` NOT on PATH **THEN** fallback `cmd.exe /c start "" pwsh.exe -NoExit -Command "..."` AND `method == "cmd-fallback"`.
+- **WHEN** `sys.platform == "linux"` AND `$DISPLAY` (or `$WAYLAND_DISPLAY`) is set AND `gnome-terminal` on PATH **THEN** spawn `gnome-terminal --working-directory=<cwd> -- bash -c "claude --resume <uuid>; exec bash"` AND `method == "linux-gnome-terminal"`. WHEN any other Linux terminal in priority chain hits first THEN `method` reflects that (`linux-konsole` / `linux-alacritty` / etc.).
+- **WHEN** `sys.platform == "linux"` AND both `$DISPLAY` AND `$WAYLAND_DISPLAY` empty (OR all GUI terminals absent) **THEN** spawn `setsid nohup bash -c "cd <cwd> && claude --resume <uuid>" </dev/null >/dev/null 2>&1 &` AND `method == "headless-setsid"`.
+- **WHEN** `sys.platform == "darwin"` AND iTerm2 process running **THEN** spawn via `osascript -e 'tell app "iTerm2" to create window ...'` AND `method == "darwin-iterm2"`.
+- **WHEN** `sys.platform == "darwin"` AND iTerm2 not running **THEN** spawn via `osascript -e 'tell app "Terminal" to do script "cd <cwd> && claude ..."'` AND `method == "darwin-terminal"`.
+- **WHEN** `$SP_TERMINAL_CMD` env var is set (any OS) **THEN** template substituted with `{cwd}` and `{cmd}` placeholders, decomposed to argv via `shlex.split` (POSIX) / list-form (Windows), spawned via Popen AND `method == "env-override"`.
+- **WHEN** none of the above match (no terminal found on any platform) **THEN** respond `{ok: false, error: "no terminal found", tried: [...]}` with HTTP 503.
 
 ## AC-5 (FR-5)
 
@@ -40,7 +49,7 @@ WHEN user requests `GET /api/git-status?path=X` THEN system SHALL return `{added
 
 **Требование:** [FR-7](FR.md#fr-7-get-apihealth--idempotent-autostart-probe)
 
-WHEN start-server.sh launches AND user requests `GET /api/health` THEN system SHALL respond with HTTP 200 + `{"status": "ok"}` within 5ms.
+WHEN start-server.ps1 (Windows) OR start-server.sh (Linux/macOS) launches AND user requests `GET /api/health` THEN system SHALL respond with HTTP 200 + `{"status": "ok", "version": "0.4.0", "uptime_sec": int, "platform": "win32"|"linux"|"darwin"}` within 5ms.
 
 ## AC-8 (FR-8)
 
@@ -76,9 +85,14 @@ WHEN row has `claude_last_modified` 1777 minutes ago (29h 37m) THEN UI SHALL dis
 
 ## AC-13 (FR-13)
 
-**Требование:** [FR-13](FR.md#fr-13-sessionstart-hook-idempotent-autostart)
+**Требование:** [FR-13](FR.md#fr-13-sessionstart-hook-idempotent-autostart-cross-platform)
 
-WHEN Claude Code session starts on Windows AND server is not running THEN SessionStart hook SHALL execute `pwsh.exe -NoProfile -ExecutionPolicy Bypass -File start-server.ps1` (fallback `powershell.exe -File ...` if PS7 absent) AND server SHALL bind to port 8083 within 2 seconds. WHEN server is already running (PID in `$env:LOCALAPPDATA\session-pilot\server.pid` + `Get-Process` alive) THEN script SHALL exit 0 without spawning duplicate.
+WHEN Claude Code session starts AND server is not running THEN SessionStart hook SHALL execute platform-specific start script AND server SHALL bind to port 8083 within 2 seconds:
+
+- **WHEN** `sys.platform == "win32"` **THEN** hook runs `pwsh.exe -NoProfile -ExecutionPolicy Bypass -File start-server.ps1` (fallback `powershell.exe -File ...` if PS7 absent). PID lock в `$env:LOCALAPPDATA\session-pilot\server.pid` + `Get-Process -Id $pid -ErrorAction SilentlyContinue` alive check.
+- **WHEN** `sys.platform == "linux"` OR `sys.platform == "darwin"` **THEN** hook runs `bash start-server.sh`. PID lock в `${XDG_STATE_HOME:-$HOME/.local/state}/session-pilot/server.pid` + `kill -0 $pid 2>/dev/null` alive check.
+
+WHEN server is already running (PID file exists AND PID alive) THEN script SHALL log "already running" AND exit 0 without spawning duplicate, regardless of OS.
 
 ## AC-14 (FR-14)
 
@@ -88,9 +102,14 @@ WHEN user reloads dashboard with filled localStorage AND server's `claude_max_mt
 
 ## AC-15 (FR-15)
 
-**Требование:** [FR-15](FR.md#fr-15-powershell-installation-script)
+**Требование:** [FR-15](FR.md#fr-15-cross-platform-installation-scripts)
 
-WHEN user runs `pwsh -File extensions/session-pilot/install.ps1` (or remote `iex (irm ...)`) AND Python ≥3.10 присутствует THEN script SHALL: (1) install Python deps, (2) register SessionStart hook in Claude Code settings, (3) verify `http://127.0.0.1:8083/api/health` returns 200 within 5s, (4) exit 0. WHEN script re-run AND hook already registered AND server alive THEN script SHALL detect idempotency, log "already installed", exit 0 без модификации настроек.
+WHEN user runs installer matching host OS AND Python ≥3.10 присутствует THEN script SHALL: (1) install Python deps (stdlib-only → no-op for v0.4), (2) register SessionStart hook in Claude Code settings.json with platform-specific command, (3) verify `http://127.0.0.1:8083/api/health` returns 200 within 5s, (4) exit 0:
+
+- **WHEN** host is Windows AND user runs `pwsh -File extensions/session-pilot/install.ps1` (или remote `iex (irm ...)`) **THEN** SessionStart hook registered as `pwsh.exe -NoProfile -ExecutionPolicy Bypass -File start-server.ps1`.
+- **WHEN** host is Linux OR macOS AND user runs `bash extensions/session-pilot/install.sh` (или remote `curl -fsSL ... | bash`) **THEN** SessionStart hook registered as `bash start-server.sh`.
+
+WHEN installer re-run AND hook already registered AND `/api/health` returns 200 THEN script SHALL detect idempotency, log "already installed", exit 0 без модификации settings.json, regardless of OS.
 
 ## AC-16 (FR-16)
 
@@ -100,9 +119,18 @@ WHEN skill scenario verifies dashboard state THEN it SHALL use `mcp__claude-in-c
 
 ## AC-17 (FR-17)
 
-**Требование:** [FR-17](FR.md#fr-17-windows-native-path-encoding)
+**Требование:** [FR-17](FR.md#fr-17-cross-platform-claude-path-encoding)
 
-WHEN `encode_path_for_claude("D:\\repos\\lm-saas")` (Windows-native path) is called THEN return value SHALL include `D--repos-lm-saas` (canonical Claude Code on Windows directory name). Generic char-strip fallbacks (`D-repos-lm-saas`, `mnt-d-repos-lm-saas`) MAY also appear for defensive matching — they не должны влиять на production lookups.
+WHEN `encode_path_for_claude(path)` is called THEN return value SHALL be a list `[canonical, ...defensive_fallbacks]` where:
+
+- **WHEN** path is `D:\repos\lm-saas` AND `sys.platform == "win32"` **THEN** result[0] == `"D--repos-lm-saas"` (canonical Windows).
+- **WHEN** path is `/home/user/repos/foo` AND `sys.platform == "linux"` **THEN** result[0] == `"-home-user-repos-foo"` (canonical Linux).
+- **WHEN** path is `/Users/stigm/repos/foo` AND `sys.platform == "darwin"` **THEN** result[0] == `"-Users-stigm-repos-foo"` (canonical macOS).
+- **WHEN** path is `/mnt/d/repos/foo` (WSL view) **THEN** result SHALL contain BOTH `"-mnt-d-repos-foo"` AND `"D--repos-foo"` — caller can match either side.
+- **WHEN** path is `\\wsl.localhost\Ubuntu\home\user\foo` (Windows view of WSL) **THEN** result SHALL contain BOTH `"--wsl.localhost-Ubuntu-home-user-foo"` AND `"-home-user-foo"`.
+- **WHEN** path is `C:\Users\stigm\.cursor\worktrees\bar` (Cursor IDE Windows worktree) **THEN** result[0] == `"C--Users-stigm--cursor-worktrees-bar"` (dot-prefixed dirs preserve dots).
+
+Result list MUST be ordered: canonical first, fallbacks after. Scanner uses first hit found on filesystem to determine display row.
 
 ## AC-18 (FR-18)
 
@@ -121,3 +149,51 @@ WHEN user runs `python server.py --diagnose-livecycle D:\repos\lm-saas` THEN out
 **Требование:** [FR-20](FR.md#fr-20-configurable-live-threshold)
 
 WHEN `LIVE_THRESHOLD_SEC=300` (default) AND lm-saas worktree's youngest JSONL is 26 seconds old THEN server SHALL mark worktree as `claude_running_now: true`. WHEN env `LIVE_THRESHOLD_SEC=600` is set THEN threshold SHALL be 600s instead.
+
+## AC-23 (FR-23)
+
+**Требование:** [FR-23](FR.md#fr-23-taskbar--dock-launcher-installer-create-launcher)
+
+WHEN user runs platform-matching launcher installer:
+- **WHEN** `sys.platform == "win32"` AND user runs `pwsh -File create-launcher.ps1` AND `msedge.exe` (or `chrome.exe`) exists в standard install path **THEN** script SHALL create `%USERPROFILE%\Desktop\Session Pilot.lnk` with `TargetPath` set to browser exe AND `Arguments` containing `--app=http://127.0.0.1:<port>/ --user-data-dir=%LOCALAPPDATA%\session-pilot\browser-profile` AND open Explorer with the icon highlighted for user pin step.
+- **WHEN** `sys.platform == "linux"` AND user runs `bash create-launcher.sh` AND any of {google-chrome, chromium, chromium-browser, microsoft-edge, brave-browser} on PATH **THEN** script SHALL create `~/.local/share/applications/session-pilot.desktop` valid XDG Desktop Entry with `Exec=<browser> --app=<url> --user-data-dir=...` AND `chmod +x` the file AND optionally run `update-desktop-database` if installed.
+- **WHEN** `sys.platform == "darwin"` AND user runs `bash create-launcher.sh` AND any browser `.app` bundle exists в `/Applications/` **THEN** script SHALL create `~/Applications/Session Pilot.app` containing valid `Info.plist` + executable `Contents/MacOS/launcher` shell script which exec-s browser с `--app=URL`.
+
+WHEN no Chromium-family browser found на host THEN script SHALL exit non-zero with explanatory message ("Edge or Chrome not found... Install one of them, or bookmark URL manually") AND NOT create partial launcher artifact.
+
+WHEN script re-run на same host THEN it SHALL overwrite existing launcher file (idempotent) with current settings AND exit 0.
+
+Port override: `WT_DASHBOARD_PORT` env var OR `-Port` arg (Windows) controls URL port — default 8083.
+
+## AC-22 (FR-22)
+
+**Требование:** [FR-22](FR.md#fr-22-on-demand-worktree-bootstrap-skill-session-pilot-bootstrap)
+
+WHEN user invokes skill `session-pilot-bootstrap` (slash `/sp-bootstrap`) AND cwd is git worktree registered in `git worktree list` AND cwd != main worktree AND `.dev-pomogator/tools/auto-commit/auto_commit_stop.ts` is absent THEN skill SHALL:
+
+1. Present AskUserQuestion: {Bootstrap, Skip npm install, Cancel}.
+2. **WHEN** user chooses Bootstrap **THEN** skill SHALL run: `npm install --no-audit --no-fund` (only if `node_modules/` absent), `npm run build`, `node bin/cli.js install .` — in this exact order.
+3. **WHEN** all 3 commands exit 0 THEN skill SHALL verify `.dev-pomogator/tools/auto-commit/auto_commit_stop.ts` теперь present AND respond "bootstrap complete".
+4. **WHEN** any command exits non-zero THEN skill SHALL respond `{ok: false, failed_step: <step-name>, exit_code: int, stderr: <tail>}` AND NOT attempt rollback (installer is itself idempotent — partial install acceptable, user can re-invoke).
+
+WHEN skill invoked AND cwd is main worktree (matches first row из `git worktree list`) THEN skill SHALL respond "main worktree already bootstrapped (via dev workflow); skip" AND exit 0 без действий.
+
+WHEN skill invoked AND `.dev-pomogator/tools/auto-commit/auto_commit_stop.ts` IS present (already bootstrapped) THEN skill SHALL respond "already bootstrapped" AND exit 0, UNLESS user provided `--force` arg in which case re-run installer.
+
+WHEN skill invoked AND cwd is NOT inside any git repo (per `git rev-parse --show-toplevel`) THEN skill SHALL respond `{ok: false, error: "not a git repository"}` AND exit 0 (non-fatal — user invoked accidentally outside repo).
+
+Cross-platform: skill workflow uses only `npm` / `node` / `git` commands which are cross-platform. No OS-specific branches — skill behavior identical on Windows/Linux/macOS.
+
+## AC-21 (FR-21)
+
+**Требование:** [FR-21](FR.md#fr-21-os-detection--platform-dispatched-module-architecture)
+
+WHEN `terminal_launcher.launch(worktree_path, mode, uuid)` is called THEN function SHALL dispatch to handler based on `sys.platform`:
+
+- **WHEN** `$SP_TERMINAL_CMD` env is set (any OS) **THEN** function SHALL invoke `_launch_env_override` BEFORE any OS-specific handler.
+- **WHEN** `sys.platform == "win32"` **THEN** function SHALL invoke `_launch_windows`.
+- **WHEN** `sys.platform == "linux"` **THEN** function SHALL invoke `_launch_linux` which SHALL further dispatch to `_launch_linux_gui` (if `$DISPLAY` OR `$WAYLAND_DISPLAY` set AND some terminal on PATH) OR `_launch_linux_headless` (otherwise).
+- **WHEN** `sys.platform == "darwin"` **THEN** function SHALL invoke `_launch_darwin` which SHALL further dispatch to iTerm2 if running, Terminal.app otherwise.
+- **WHEN** `sys.platform` is anything else (e.g. `freebsd`, `cygwin`) **THEN** function SHALL respond `{ok: false, error: "unsupported platform: <name>"}` without crashing.
+
+Test `tests/test_terminal_launcher.py` SHALL parametrize platform via `monkeypatch.setattr(sys, "platform", X)` AND mock `shutil.which` to control terminal availability AND assert correct handler invocation + response shape for each (platform, terminal-availability) combination.

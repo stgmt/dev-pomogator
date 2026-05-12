@@ -6,30 +6,47 @@
 
 ## Architecture
 
-session-pilot — **read-mostly aggregator dashboard**, отдельный от терминала:
+session-pilot — **read-mostly aggregator dashboard**, отдельный от терминала. Cross-platform native — один Python server (stdlib only), platform-dispatched terminal spawn:
 
 ```
 ┌──────────────────────────────────────────────────┐
-│  Browser (Edge / Chrome) — Tabulator UI          │
-│   localStorage SWR cache                         │
+│  Browser (Chrome / Edge / Firefox / Safari)      │
+│  Tabulator UI + localStorage SWR cache           │
 └────────┬─────────────────────────────────────────┘
-         │ HTTP
+         │ HTTP :8083
          ▼
-┌──────────────────────┐
-│  :8083               │   POST /api/launch
-│  session-pilot       ├──────────────────────────┐
-│  Python server (Win) │   Popen detached         │
-└────────┬─────────────┘                          ▼
-         │ scan                          ┌────────────────────┐
-         ▼                               │  Windows Terminal  │
-┌──────────────────────────────────────┐ │  wt.exe -d <cwd>   │
-│  %USERPROFILE%\.claude\projects\     │ │  -- pwsh -NoExit   │
-│  D--repos-foo\<uuid>.jsonl           │ │  claude --resume   │
-│  + git worktree list per repo        │ │  <uuid>            │
-└──────────────────────────────────────┘ └────────────────────┘
+┌─────────────────────────────────────────┐
+│  session-pilot Python server (any OS)   │   POST /api/launch
+│  stdlib only — no pip deps              ├──────────────┐
+│  terminal_launcher.py: sys.platform     │              │
+│   dispatch                              │              │
+└────────┬────────────────────────────────┘              │
+         │ scan ~/.claude/projects                       │
+         ▼                                               │
+┌──────────────────────────────────────┐                 │
+│  Windows: %USERPROFILE%\.claude\…\   │                 │
+│           D--repos-foo\<uuid>.jsonl  │                 │
+│  Linux:   ~/.claude/projects/        │                 │
+│           -home-user-repos-foo/…     │                 │
+│  macOS:   ~/.claude/projects/        │                 │
+│           -Users-stigm-repos-foo/…   │                 │
+│  + git worktree list per repo        │                 │
+└──────────────────────────────────────┘                 │
+                                                         ▼
+                              ┌──────────────────────────────────────┐
+                              │  Platform-dispatched spawn (FR-4):   │
+                              │  Windows: wt.exe → pwsh/cmd          │
+                              │  Linux:   gnome/konsole/alacritty/   │
+                              │           kitty/wezterm/xterm/...    │
+                              │  Linux*:  setsid nohup (headless)    │
+                              │  macOS:   osascript Terminal/iTerm2  │
+                              │  Override: $SP_TERMINAL_CMD          │
+                              │   → spawns `claude --resume <uuid>`  │
+                              │     in worktree cwd, detached        │
+                              └──────────────────────────────────────┘
 ```
 
-Single-port dashboard (8083). Каждый ▶ Resume / ✨ Fresh — отдельное Windows Terminal окно, detached. v0.3+ — no Zellij, no WSL.
+Single-port dashboard (8083, default `127.0.0.1` bind). Каждый ▶ Resume / ✨ Fresh — независимое native окно (или background detached на headless Linux), detached от Python сервера. v0.4 — no Zellij, no tmux, no WSL bridge — каждая ОС использует её native terminal stack.
 
 ---
 
@@ -59,19 +76,30 @@ Single-port dashboard (8083). Каждый ▶ Resume / ✨ Fresh — отдел
 **Trigger to switch to Alt B**: >100 worktrees OR observable jank on first paint.
 **Trigger to consider Alt C**: `/api/index` exceeds 500ms warm (current ~150ms).
 
-### KD-3: Windows Terminal spawn chain — wt.exe → cmd.exe → env override
+### KD-3: Cross-platform native terminal spawn chain (v0.4)
 
-**Decision (v0.3 pivot from KD-3 v0.2)**: spawn detached `wt.exe -d <cwd> -- pwsh.exe -NoExit -Command "<claude-cmd>"`. Fallback chain если `wt` нет на PATH: `cmd.exe /c start "" pwsh.exe -NoExit -Command "..."`. Env override `$env:SP_TERMINAL_CMD` для пользовательских терминалов (Alacritty/WezTerm/kitty).
+**Decision (v0.4 de-pivot from v0.3 Windows-only KD-3)**: spawn detached native terminal per-OS — никаких universal layers (нет Zellij, нет tmux dependency, нет WSL bridge). `terminal_launcher.py` ветвится через `sys.platform`:
 
-[UNVERIFIED: `$env:SP_TERMINAL_CMD` template format (placeholders `{cwd}` и `{cmd}`) — design choice, не из external sources. To verify когда implementation lands: integration test что `$env:SP_TERMINAL_CMD = "alacritty --working-directory {cwd} -e pwsh -NoExit -c '{cmd}'"` действительно открывает Alacritty с правильным cwd + command.]
+- **Windows** (`win32`): `wt.exe -d <cwd> -- pwsh.exe -NoExit -Command "<claude-cmd>"` → fallback `wt.exe ... -- powershell.exe -NoExit ...` (PS 5.1) → fallback `cmd.exe /c start "" pwsh.exe -NoExit -Command "..."` (no-WT). Env override `$SP_TERMINAL_CMD` (single var; renamed from v0.3 `$env:SP_TERMINAL_CMD` to platform-neutral `SP_TERMINAL_CMD` accessed via `os.environ`).
+- **Linux GUI** (`linux` + `$DISPLAY` or `$WAYLAND_DISPLAY`): probe chain `$TERMINAL` → `gnome-terminal` → `konsole` → `alacritty` → `kitty` → `wezterm` → `xfce4-terminal` → `tilix` → `terminator` → `xterm`. Каждый terminal имеет свой синтаксис передачи cwd+command (см. FR-4 table). Detection через `shutil.which`. First hit wins.
+- **Linux headless** (`linux` + DISPLAY+WAYLAND both empty OR all GUI terminals absent): `subprocess.Popen(["setsid", "nohup", "bash", "-c", f"cd {cwd} && claude --resume {uuid}"], stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL, start_new_session=True)` — true daemon detach. PID captured via `.pid`.
+- **macOS** (`darwin`): iTerm2 detection через `osascript -e 'tell app "System Events" to (name of processes) contains "iTerm2"'` (1-call check, <50ms) → если running, `osascript -e 'tell app "iTerm2" to create window with default profile command "claude ..."'`. Else `osascript -e 'tell app "Terminal" to do script "cd <cwd> && claude ..."'`.
+- **All platforms**: `$SP_TERMINAL_CMD` env var template (placeholders `{cwd}` + `{cmd}`) — decomposed to argv via `shlex.split` (POSIX) или native list-form (Windows). Never invoked through `shell=True`. [VERIFIED 2026-05-12 research-workflow session: env var naming convention `SP_` prefix matches v0.3 convention `WT_DASHBOARD_BIND → SP_DASHBOARD_BIND` rename for platform-neutrality; template-substitution + argv-decomposition pattern matches research-workflow Linux/macOS spawn analysis. `WAYLAND_DISPLAY` is standard Wayland session env var per [Wayland docs](https://wayland.freedesktop.org/) — `$DISPLAY` is X11 standard. `XDG_STATE_HOME` is XDG Base Directory Specification per [freedesktop.org spec](https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html) §3 — default `$HOME/.local/state`.]
 
-**Why `wt.exe` приоритет**: preinstalled на Windows 11; tab support; современный rendering. На Win 10 1809+ — устанавливается из Store или присутствует в Win 10 21H2+ updates. Fallback `cmd.exe /c start` гарантирует запуск даже без Windows Terminal.
+**Why per-OS native instead of universal layer (Zellij/tmux)**:
+- Zellij (v0.2) — fragile injection, `action write-chars` races, PTY parking workarounds. v0.3 dropped это правильно.
+- tmux — Linux/macOS only, no Windows native. Forcing user install adds friction.
+- Native terminals (`wt`/`gnome-terminal`/`Terminal.app`) preinstalled, no extra deps.
 
-**Why no command injection in running terminal**: Windows native не имеет zellij-style `action write-chars`. Альтернативы (SendKeys через WinAPI / OS automation) — hacky, требуют focus on target window. Modeled instead на «idempotent spawn»: каждый клик [▶ Resume] → новое окно с `claude --resume <uuid>`. Claude сам подхватывает JSONL state и продолжает разговор. User закрывает старое окно вручную если нужно.
+**Why headless fallback (Linux)**: CI/SSH/server use case — agent работает в репо без X11/Wayland (e.g. cloud dev box, GitHub Codespaces без code-server). `setsid nohup` гарантирует процесс переживёт parent server restart.
 
-**Trade-off**: каждый Resume плодит новое окно (если пользователь много раз кликает — много окон). 5-second idempotency lock per `(worktree_path, uuid)` смягчает: повторный клик в течение 5s возвращает `{method: "cached"}` без spawn.
+**Why no command injection in running terminal**: ни одна из 3 ОС не имеет robust IPC `action write-chars` equivalent. SendKeys/AppleScript-keystroke hacks требуют window focus + хрупкие. Modeled instead как «idempotent spawn»: каждый клик [▶ Resume] → новое окно с `claude --resume <uuid>`. Claude подхватывает JSONL state. User закрывает старые вручную.
 
-**Removed in v0.3**: KDL layout files (Zellij-specific), `_PTY_MASTERS` parking (race-fix больше не нужен — нет PTY allocation в новой архитектуре), `zellij_util.py` целиком.
+**Trade-off**: multiple clicks → multiple windows. 5-second idempotency lock per `(worktree_path, uuid)` смягчает — повторный клик в течение 5s возвращает `{method: "cached"}` без spawn.
+
+[VERIFIED 2026-05-12 cross-platform research session]: Windows spawn pattern `Start-Process pwsh -PassThru -WorkingDirectory` (Azure SDK convention) — но Python `subprocess.Popen([wt, ...])` эквивалентен с прямой PID capture. Linux chain validated через ≥3 independent angles (gnome-terminal docs / konsole man / Alacritty release notes). macOS osascript validated через Apple Developer docs Terminal AppleScript dictionary.
+
+**Removed in v0.3 (still removed in v0.4)**: KDL layout files (Zellij-specific), `_PTY_MASTERS` parking, `zellij_util.py`. v0.4 adds `terminal_launcher.py` per-OS handlers but does NOT resurrect Zellij.
 
 ### KD-4: SWR cache — server ETag + client localStorage with mtime versioning
 
@@ -83,11 +111,26 @@ Single-port dashboard (8083). Каждый ▶ Resume / ✨ Fresh — отдел
 
 **Result**: 38/45 rows skip fetch on warm reload. 7 stale rows hit 304 path (5ms). Total reload <300ms.
 
-### KD-5: Windows-native path encoding
+### KD-5: Cross-platform Claude path encoding (v0.4)
 
-**v0.3 pivot from KD-5 v0.2**: Windows-native paths only. `encode_path_for_claude("D:\\repos\\foo")` returns `D--repos-foo` (canonical Claude Code на Windows). Defensive fallbacks (`D-repos-foo`, char-stripped variants) для edge cases с символами вне `[A-Za-z0-9_-]`.
+**Decision (v0.4 de-pivot)**: per-OS canonical encoding rule + defensive cross-platform fallbacks. Encoder reads `sys.platform`, computes canonical primary (= production lookup path), then appends fallbacks для shared-worktree сценариев (WSL + Windows host share `/mnt/d/...` ↔ `D:\...`).
 
-**Removed**: WSL variants (`-mnt-d-repos-foo`, `mnt-d-repos-foo`) — out-of-scope для v0.3 (Windows-only target). Encoder function код их всё ещё поддерживает defensively (если пользователь runs v0.3 на WSL, оно работает), но production-paths их не используют.
+| Source path | Canonical (primary) | Defensive fallbacks emitted |
+|-------------|---------------------|------------------------------|
+| `D:\repos\foo` (Windows-native) | `D--repos-foo` | (empty; Windows path не имеет POSIX-side ambiguity) |
+| `/home/user/repos/foo` (Linux-native) | `-home-user-repos-foo` | (empty) |
+| `/Users/stigm/repos/foo` (macOS-native) | `-Users-stigm-repos-foo` | (empty) |
+| `/mnt/d/repos/foo` (WSL view of D-drive) | `-mnt-d-repos-foo` | `D--repos-foo` (Windows-side view) |
+| `\\wsl.localhost\Ubuntu\home\user\foo` (Windows view of WSL filesystem) | `--wsl.localhost-Ubuntu-home-user-foo` | `-home-user-foo` (WSL-side view) |
+| `C:\Users\stigm\.cursor\worktrees\bar` (Cursor IDE Windows) | `C--Users-stigm--cursor-worktrees-bar` | (empty — dot-prefixed дирs preserve dots; double-hyphen перед `.cursor` due to leading dot) |
+
+Encoder API: `encode_path_for_claude(path: str) -> list[str]` — returns list where `result[0]` = canonical, `result[1:]` = defensive fallbacks. Scanner iterates list, first hit determines display row. Если ни один variant не найден, `--diagnose-livecycle <path>` показывает все попытки.
+
+**Why cross-platform encoder есть, не платформенно-конкретный**: shared-worktree scenarios real — user работает с Windows-native cwd на хосте но иногда заходит в WSL Bash в тот же git worktree через `/mnt/d/`. Claude Code пишет JSONLs в одну из двух dirs (зависит от с какой стороны был запущен claude). Encoder generates BOTH variants → scanner находит независимо от стороны запуска.
+
+[VERIFIED]: `D--repos-foo` encoding empirically observed in this session — Claude Code's tool-result file path is `C:\Users\stigm\.claude\projects\D--repos-dev-pomogator\...` from cwd `D:\repos\dev-pomogator`. Linux/macOS POSIX rule [ASSUMED] from Claude Code общая convention "replace separators with `-`"; should be validated by running `claude` in Linux dir и checking `~/.claude/projects/` structure during implementation.
+
+**Removed in v0.3 (now re-added in v0.4)**: WSL variants `/mnt/X/...` → `-mnt-X-...`. Они снова в production-paths потому что v0.4 поддерживает Linux/WSL.
 
 **Mitigation for unforeseen variants**: `--diagnose-livecycle <path>` CLI dumps actual scan results.
 
@@ -109,11 +152,105 @@ Single-port dashboard (8083). Каждый ▶ Resume / ✨ Fresh — отдел
 
 **Why**: ESC-close, focus management, accessibility, backdrop-click-close — all built in. Browser support since March 2022.
 
-### KD-9: SessionStart hook for autostart (not Windows Task Scheduler)
+### KD-11: On-demand bootstrap skill (not auto-fire post-checkout, not symlink) (v0.4 addition)
 
-**Why not Task Scheduler**: requires manual setup; per-user registration; admin rights в некоторых конфигурациях; не очевидно где смотреть если не запускается.
+**Decision**: orphan-worktree recovery — **standalone Claude Code skill** `session-pilot-bootstrap` (slash `/sp-bootstrap`) которым пользователь explicit вызывает когда видит `ERR_MODULE_NOT_FOUND` в hook output. **НЕ auto-fire** на `git worktree add`, **НЕ git post-checkout hook**, **НЕ symlink из main worktree**.
 
-**Why SessionStart hook**: every Claude Code launch triggers it; idempotent PID-lock check через `$env:LOCALAPPDATA\session-pilot\server.pid` + `Get-Process -Id`. Script: `pwsh.exe -NoProfile -ExecutionPolicy Bypass -File start-server.ps1`. Fallback на `powershell.exe` если PS7 не установлен.
+**Why not auto-fire on `git worktree add` / post-checkout**:
+- Adds ~50s latency на каждый `worktree add` (npm install + build + installer) даже если worktree throwaway или юзер не хочет hooks.
+- `git worktree add` часто запускается из scripts / automation — silent slow side-effect не нужен.
+- Юзер часто **уже знает** что хочет throwaway worktree (быстрый test branch) — bootstrap его раздражает.
+
+**Why not git post-checkout hook**:
+- Per-worktree `.git` is dir, не файл — `core.hookspath` shared across worktrees. Невозможно «only for new worktrees, not main».
+- Hook fires также при `git checkout <branch>` в существующем worktree — false positives.
+
+**Why not symlink/junction `.dev-pomogator/`**:
+- Branches may have different extension versions; tools из main могут не работать на feature branch.
+- Windows junction quirks across drives (`D:\` vs `C:\`).
+- Невозможно для read-write tools (e.g. `.dev-pomogator/.docker-status/`) — race conditions при parallel sessions.
+
+**Why on-demand skill is correct**:
+- User-controlled timing — bootstrap только когда нужно.
+- Idempotent re-run safe (если случайно вызван дважды).
+- Skill — cross-platform по design (markdown + Bash + AskUserQuestion), zero OS-specific code.
+- Discoverable: trigger phrases `«забутстрапь worktree»` / `«fix hooks here»` — естественный language для проблемы.
+- Synergy с session-pilot family: dashboard (FR-1..14) закрывает «no session for existing worktree», bootstrap-skill (FR-22) закрывает «no tools for orphan worktree». Два failure modes — два skill'а в одной family.
+
+**Skill architecture** (live at `.claude/skills/session-pilot-bootstrap/SKILL.md`):
+```yaml
+---
+name: session-pilot-bootstrap
+description: |
+  Bootstrap orphan git worktree by running dev-pomogator installer
+  in cwd. Use when stop hooks fail with ERR_MODULE_NOT_FOUND because
+  `.dev-pomogator/tools/*.ts` are gitignored and missing in this worktree.
+
+  Triggers (RU): "забутстрапь worktree", "поставь dev-pomogator
+  в этот worktree", "почини hooks в worktree", "инициализируй worktree".
+
+  Triggers (EN): "bootstrap worktree", "install dev-pomogator here",
+  "fix hooks in this worktree", "initialize orphan worktree".
+
+  Skip when: cwd is main repo worktree (already installed via dev workflow),
+  cwd not in git repo, user declined.
+allowed-tools:
+  - Bash               # git, npm, node commands
+  - AskUserQuestion    # {Bootstrap, Skip npm install, Cancel}
+  - Read               # verify sentinel file presence
+---
+```
+
+Body: 6-step workflow per FR-22 — preflight → detect orphan → AskUserQuestion → run installer chain → verify sentinel → exit.
+
+**Trade-off**: skill needs to be **installed** to be invokable. Bootstrap-skill itself doesn't help if dev-pomogator package not yet known to Claude Code session. Mitigation: skill is part of `dev-pomogator` package — once user runs `dev-pomogator install` once anywhere (main worktree), skill is registered globally for that session's user. Subsequent worktree-creation events can invoke `/sp-bootstrap` even before that worktree's tools are installed.
+
+[ASSUMED]: skill discovery mechanism (Claude Code reads `~/.claude/skills/` + installed extension skills) propagates to all spawned sessions including those in orphan worktrees. Not directly verified — needs implementation test confirming `/sp-bootstrap` available even в session spawned внутри orphan worktree без prior `.dev-pomogator/tools/`.
+
+### KD-10: Per-platform module dispatch architecture (v0.4 addition)
+
+**Decision**: keep cross-platform branching surgically localized — only **2 modules** know OS, rest of codebase is OS-agnostic:
+
+```
+extensions/session-pilot/tools/session-pilot/
+├── server.py             ← OS-agnostic; HTTP routing only
+├── indexer.py            ← OS-agnostic; reads ~/.claude/projects/* (path is platform-resolved by Python)
+├── handlers.py           ← OS-agnostic; calls terminal_launcher.launch(...)
+├── frontend.py           ← OS-agnostic; serves static HTML
+├── claude_paths.py       ← **KNOWS OS** for canonical encoder rule (KD-5)
+├── terminal_launcher.py  ← **KNOWS OS** for spawn dispatch (KD-3)
+├── diagnose.py           ← OS-agnostic CLI wrapper around claude_paths + indexer
+└── ui/                   ← OS-agnostic web assets
+```
+
+Two **isolation points** for OS-specific code = surface area for bugs is small + easy to test (parametrize `sys.platform` via monkeypatch in `tests/test_terminal_launcher.py` and `tests/test_encode_path.py`).
+
+**Why not duck-type per-OS via separate command subclasses** (`WindowsLauncher`, `LinuxLauncher`, `DarwinLauncher`): adds complexity without benefit at our scale (~200 LOC total in launcher). Flat `if/elif` через `sys.platform` плюс private `_launch_<os>` функции — simpler, faster grep, no inheritance ceremony.
+
+**Why not use existing cross-platform terminal libraries** (e.g. `python-terminado`, `pyterm`): all assume PTY allocation in-process (heavy, kills detach semantics). We want fire-and-forget native window, so `subprocess.Popen` + per-OS argv list is sufficient.
+
+[ASSUMED]: module split не verified through implementation yet — should be confirmed when v0.4 PR lands. Risk: если cross-cutting OS-conditional logic утечёт за пределы `claude_paths.py` + `terminal_launcher.py`, isolation broken.
+
+### KD-9: SessionStart hook for autostart (cross-platform, not Task Scheduler / systemd / launchd)
+
+**Why not platform-specific service manager** (Windows Task Scheduler / systemd user units / macOS launchd):
+- All three требуют per-user setup ceremony (admin для systemd system unit, plist syntax для launchd, GUI или schtasks.exe для Task Scheduler).
+- Three different installer flows multiply maintenance burden.
+- Not obvious where to look когда сервис не запускается — каждая ОС имеет свой logs path.
+- Doesn't survive Claude Code update (paths могут смениться).
+
+**Why SessionStart hook**: every Claude Code launch triggers it on every OS. Single mechanism (Claude Code settings.json `hooks.SessionStart`) — config-as-code, version-controlled, OS-agnostic at registration level. Per-OS only **command** differs:
+
+- **Windows**: `pwsh.exe -NoProfile -ExecutionPolicy Bypass -File start-server.ps1` → fallback `powershell.exe -NoProfile -File start-server.ps1`. PID lock в `$env:LOCALAPPDATA\session-pilot\server.pid` + `Get-Process -Id $pid -ErrorAction SilentlyContinue`.
+- **Linux/macOS**: `bash start-server.sh`. PID lock в `${XDG_STATE_HOME:-$HOME/.local/state}/session-pilot/server.pid` (XDG Base Directory spec compliant) + `kill -0 $pid 2>/dev/null` liveness check.
+
+Both scripts share the **4-step idempotency contract** (см. FR-13):
+1. Read PID from state file.
+2. Если alive → "already running" → exit 0.
+3. Если stale/missing → spawn `python server.py` detached, write new PID.
+4. Poll `http://127.0.0.1:8083/api/health` until 200 (timeout 2s) → exit 0.
+
+Installer (FR-15) registers the right command per detected platform. `extension.json` hook entry uses Claude Code's hook command format which resolves through shell — installer chooses script extension based on host OS.
 
 ---
 
