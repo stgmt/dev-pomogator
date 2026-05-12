@@ -592,6 +592,33 @@ def build_session_index() -> dict:
                     "is_stale": not decoded_exists,
                 })
             seen_paths.add(decoded_norm)
+
+    # FR-25 post-processing: PID-to-session attribution.
+    # claude.exe writes to ONE specific JSONL (active session UUID). Old JSONLs
+    # in same cwd are CLOSED sessions even though cwd has PID(s) running.
+    # Distribute available PIDs to top-K NEWEST rows per cwd (K = len(pids));
+    # other rows in same cwd get window_open=False + empty pids regardless of
+    # whether proc_map has the cwd.
+    rows_by_cwd: dict[str, list[dict]] = {}
+    for r in rows:
+        cwd_norm = r["worktree_path"].replace("\\", "/").rstrip("/")
+        rows_by_cwd.setdefault(cwd_norm, []).append(r)
+    for cwd, cwd_rows in rows_by_cwd.items():
+        # Get PIDs for this cwd (already computed during Source A/B emission,
+        # but we re-distribute fresh from proc_map for clarity + accuracy).
+        norm = cwd if (len(cwd) < 2 or cwd[1] != ":") else cwd[0].upper() + cwd[1:]
+        pids_for_cwd = list(proc_map.get(norm, []))
+        # Sort rows by mtime DESC — newest first
+        sorted_rows = sorted(cwd_rows, key=lambda x: x.get("claude_max_mtime") or 0, reverse=True)
+        # Top-K get the PIDs (1 PID per row); rest get cleared.
+        for i, r in enumerate(sorted_rows):
+            if i < len(pids_for_cwd):
+                r["claude_window_open"] = True
+                r["claude_window_pids"] = [pids_for_cwd[i]]
+            else:
+                r["claude_window_open"] = False
+                r["claude_window_pids"] = []
+
     return {
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "rows": rows,
