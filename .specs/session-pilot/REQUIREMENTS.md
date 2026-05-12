@@ -7,7 +7,7 @@
 | [FR-1](FR.md#fr-1-get-apiindex--fast-worktree-list-with-claude_max_mtime) | GET /api/index — fast worktree list | [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1) | @feature1 | Implemented |
 | [FR-2](FR.md#fr-2-get-apiclaudepath--jsonl-preview-with-last-message) | GET /api/claude — JSONL preview | [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2) | @feature2 | Implemented |
 | [FR-3](FR.md#fr-3-etag304-conditional-response-on-apiclaude) | ETag/304 conditional | [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3) | @feature3 | Implemented |
-| [FR-4](FR.md#fr-4-post-apilaunch--claude-resumefresh-injection) | POST /api/launch | [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4) | @feature4 | Implemented |
+| [FR-4](FR.md#fr-4-post-apilaunch--cross-platform-native-terminal-spawn) | POST /api/launch — cross-platform native terminal spawn | [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4) | @feature4 | Implemented (Windows); Draft (Linux/macOS) v0.4 |
 | [FR-5](FR.md#fr-5-get-apimessage--single-message-by-index) | GET /api/message | [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5) | @feature5 | Draft (Phase 5) |
 | [FR-6](FR.md#fr-6-get-apigit-status--worktree-dirtyaheadbehind) | GET /api/git-status | [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6) | @feature6 | Draft (v0.2) |
 | [FR-7](FR.md#fr-7-get-apihealth--idempotent-autostart-probe) | GET /api/health | [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7) | @feature7 | Implemented |
@@ -16,21 +16,24 @@
 | [FR-10](FR.md#fr-10-modal-viewer-for-last-message) | Modal viewer | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-10) | @feature10 | Draft (Phase 5) |
 | [FR-11](FR.md#fr-11-4-button-action-column) | 4-button action column | [AC-11](ACCEPTANCE_CRITERIA.md#ac-11-fr-11) | @feature11 | Implemented |
 | [FR-12](FR.md#fr-12-idle-time-human-readable-format) | Idle human-readable | [AC-12](ACCEPTANCE_CRITERIA.md#ac-12-fr-12) | @feature12 | Draft (Phase 5) |
-| [FR-13](FR.md#fr-13-sessionstart-hook-idempotent-autostart) | SessionStart hook autostart | [AC-13](ACCEPTANCE_CRITERIA.md#ac-13-fr-13) | @feature13 | Draft (Phase 5) |
+| [FR-13](FR.md#fr-13-sessionstart-hook-idempotent-autostart-cross-platform) | SessionStart hook autostart (cross-platform) | [AC-13](ACCEPTANCE_CRITERIA.md#ac-13-fr-13) | @feature13 | Draft (v0.4) |
 | [FR-14](FR.md#fr-14-swr-client-cache-via-localstorage) | SWR localStorage cache | [AC-14](ACCEPTANCE_CRITERIA.md#ac-14-fr-14) | @feature14 | Implemented |
-| [FR-15](FR.md#fr-15-cross-os-dashboard-access) | Cross-OS access (WSL+Windows) | [AC-15](ACCEPTANCE_CRITERIA.md#ac-15-fr-15) | @feature15 | Implemented |
+| [FR-15](FR.md#fr-15-cross-platform-installation-scripts) | Cross-platform installation scripts | [AC-15](ACCEPTANCE_CRITERIA.md#ac-15-fr-15) | @feature15 | Implemented (install.ps1); Draft (install.sh) v0.4 |
 | [FR-16](FR.md#fr-16-skill-uses-mcp__claude-in-chrome__-for-browser) | Skill uses MCP claude-in-chrome | [AC-16](ACCEPTANCE_CRITERIA.md#ac-16-fr-16) | @feature16 | Implemented |
-| [FR-17](FR.md#fr-17-cross-os-path-encoding) | Cross-OS path encoding | [AC-17](ACCEPTANCE_CRITERIA.md#ac-17-fr-17) | @feature17 | Implemented |
+| [FR-17](FR.md#fr-17-cross-platform-claude-path-encoding) | Cross-platform Claude path encoding | [AC-17](ACCEPTANCE_CRITERIA.md#ac-17-fr-17) | @feature17 | Implemented (Windows + WSL); Draft (Linux/macOS canonical) v0.4 |
 | [FR-18](FR.md#fr-18-dedicated-competitor-analysis-artifact) | Competitor analysis artifact | [AC-18](ACCEPTANCE_CRITERIA.md#ac-18-fr-18) | @feature18 | Implemented |
 | [FR-19](FR.md#fr-19-diagnostic-cli---diagnose-livecycle) | --diagnose-livecycle CLI | [AC-19](ACCEPTANCE_CRITERIA.md#ac-19-fr-19) | @feature19 | Implemented |
 | [FR-20](FR.md#fr-20-configurable-live-threshold) | Configurable LIVE threshold | [AC-20](ACCEPTANCE_CRITERIA.md#ac-20-fr-20) | @feature20 | Implemented |
+| [FR-21](FR.md#fr-21-os-detection--platform-dispatched-module-architecture) | OS detection + platform-dispatched module architecture | [AC-21](ACCEPTANCE_CRITERIA.md#ac-21-fr-21) | @feature21 | Draft (v0.4) |
+| [FR-22](FR.md#fr-22-on-demand-worktree-bootstrap-skill-session-pilot-bootstrap) | On-demand worktree bootstrap skill (session-pilot-bootstrap) | [AC-22](ACCEPTANCE_CRITERIA.md#ac-22-fr-22) | @feature22 | Draft (v0.4) |
+| [FR-23](FR.md#fr-23-taskbar--dock-launcher-installer-create-launcher) | Taskbar / Dock launcher installer (cross-platform create-launcher.ps1 + create-launcher.sh) | [AC-23](ACCEPTANCE_CRITERIA.md#ac-23-fr-23) | @feature23 | Implemented (Windows .ps1 + POSIX .sh shipped in this PR); Draft (manual pin step automation) |
 
 ## Functional Requirements
 
 - [FR-1: GET /api/index — fast worktree list](FR.md#fr-1-get-apiindex--fast-worktree-list-with-claude_max_mtime)
 - [FR-2: GET /api/claude — JSONL preview](FR.md#fr-2-get-apiclaudepath--jsonl-preview-with-last-message)
 - [FR-3: ETag/304 conditional response](FR.md#fr-3-etag304-conditional-response-on-apiclaude)
-- [FR-4: POST /api/launch — claude resume/fresh](FR.md#fr-4-post-apilaunch--claude-resumefresh-injection)
+- [FR-4: POST /api/launch — cross-platform native terminal spawn](FR.md#fr-4-post-apilaunch--cross-platform-native-terminal-spawn)
 - [FR-5: GET /api/message — single message by index](FR.md#fr-5-get-apimessage--single-message-by-index)
 - [FR-6: GET /api/git-status — worktree dirty/ahead/behind](FR.md#fr-6-get-apigit-status--worktree-dirtyaheadbehind)
 - [FR-7: GET /api/health — idempotent autostart probe](FR.md#fr-7-get-apihealth--idempotent-autostart-probe)
@@ -39,14 +42,17 @@
 - [FR-10: Modal viewer for last message](FR.md#fr-10-modal-viewer-for-last-message)
 - [FR-11: 4-button Action column](FR.md#fr-11-4-button-action-column)
 - [FR-12: Idle time human-readable format](FR.md#fr-12-idle-time-human-readable-format)
-- [FR-13: SessionStart hook idempotent autostart](FR.md#fr-13-sessionstart-hook-idempotent-autostart)
+- [FR-13: SessionStart hook idempotent autostart (cross-platform)](FR.md#fr-13-sessionstart-hook-idempotent-autostart-cross-platform)
 - [FR-14: SWR client cache via localStorage](FR.md#fr-14-swr-client-cache-via-localstorage)
-- [FR-15: Cross-OS dashboard access](FR.md#fr-15-cross-os-dashboard-access)
+- [FR-15: Cross-platform installation scripts](FR.md#fr-15-cross-platform-installation-scripts)
 - [FR-16: Skill uses mcp__claude-in-chrome__* for browser](FR.md#fr-16-skill-uses-mcp__claude-in-chrome__-for-browser)
-- [FR-17: Cross-OS path encoding](FR.md#fr-17-cross-os-path-encoding)
+- [FR-17: Cross-platform Claude path encoding](FR.md#fr-17-cross-platform-claude-path-encoding)
 - [FR-18: Dedicated competitor analysis artifact](FR.md#fr-18-dedicated-competitor-analysis-artifact)
 - [FR-19: Diagnostic CLI --diagnose-livecycle](FR.md#fr-19-diagnostic-cli---diagnose-livecycle)
 - [FR-20: Configurable LIVE threshold](FR.md#fr-20-configurable-live-threshold)
+- [FR-21: OS detection + platform-dispatched module architecture](FR.md#fr-21-os-detection--platform-dispatched-module-architecture)
+- [FR-22: On-demand worktree bootstrap skill](FR.md#fr-22-on-demand-worktree-bootstrap-skill-session-pilot-bootstrap)
+- [FR-23: Taskbar / Dock launcher installer](FR.md#fr-23-taskbar--dock-launcher-installer-create-launcher)
 
 ## Non-Functional Requirements
 
@@ -54,7 +60,7 @@
 - [Security](NFR.md#security) — path whitelist, UUID regex, bind 127.0.0.1 default
 - [Reliability](NFR.md#reliability) — PID lock, KDL cleanup, fail-open hooks
 - [Usability](NFR.md#usability) — keyboard accessible, native `<dialog>` Esc-close, high-contrast mode
-- [Compatibility](NFR.md#compatibility) — Win11+WSL2 / Linux native; vendored libs
+- [Compatibility](NFR.md#compatibility) — Cross-platform: Windows 10+ / Linux (X11+Wayland+headless) / macOS 12+ / WSL as Linux target; vendored libs; Python stdlib only
 
 ## Acceptance Criteria
 
@@ -78,6 +84,9 @@
 - [AC-18 (FR-18): COMPETITIVE_ANALYSIS.md ≥1500 words](ACCEPTANCE_CRITERIA.md#ac-18-fr-18)
 - [AC-19 (FR-19): --diagnose-livecycle dumps variants/glob/mtime/verdict](ACCEPTANCE_CRITERIA.md#ac-19-fr-19)
 - [AC-20 (FR-20): 300s default LIVE threshold catches lm-saas](ACCEPTANCE_CRITERIA.md#ac-20-fr-20)
+- [AC-21 (FR-21): terminal_launcher.launch dispatches on sys.platform](ACCEPTANCE_CRITERIA.md#ac-21-fr-21)
+- [AC-22 (FR-22): session-pilot-bootstrap skill detects orphan worktree + runs installer + verifies state](ACCEPTANCE_CRITERIA.md#ac-22-fr-22)
+- [AC-23 (FR-23): create-launcher creates per-OS pin-able artifact (Windows .lnk / Linux .desktop / macOS .app bundle)](ACCEPTANCE_CRITERIA.md#ac-23-fr-23)
 
 ## Verification Matrix (CHK)
 
@@ -127,6 +136,36 @@
 | CHK-FR19-01 | --diagnose-livecycle CLI dumps encoding + glob + mtime + verdict | FR-19, AC-19, @feature19, UC-11 | Integration test | Verified | manual run on lm-saas confirmed all 4 sections |
 | CHK-FR20-01 | LIVE_THRESHOLD_SEC defaults 300 | FR-20, AC-20, @feature20, UC-1 | Unit test | Verified | code review server.py constant |
 | CHK-FR20-02 | env override changes threshold | FR-20, AC-20, @feature20 | Manual review | Verified | int(os.environ.get(...)) implementation |
+| CHK-FR4-07 | Windows wt.exe spawn path returns method: wt-spawn | FR-4, AC-4, @feature4 @windows, UC-3 | Integration test | Verified | v0.3 implementation, Windows-host run |
+| CHK-FR4-08 | Linux GUI spawn returns method: linux-<term> for each of 9 terminals | FR-4, AC-4, @feature4 @linux, UC-3 | Integration test | Draft | v0.4 — parametrize via monkeypatch shutil.which |
+| CHK-FR4-09 | Linux headless spawn returns method: headless-setsid; PID survives server restart | FR-4, AC-4, @feature4 @linux @headless, UC-3 | Integration test | Draft | v0.4 — test via CI runner without DISPLAY |
+| CHK-FR4-10 | macOS spawn returns method: darwin-iterm2 (if running) или darwin-terminal | FR-4, AC-4, @feature4 @darwin, UC-3 | Integration test | Draft | v0.4 — requires macOS host или mocked osascript |
+| CHK-FR4-11 | $SP_TERMINAL_CMD env override takes precedence on any OS, returns method: env-override | FR-4, AC-4, @feature4 | Integration test | Draft | v0.4 — argv decomposition via shlex.split tested per-OS |
+| CHK-FR4-12 | Unsupported platform (e.g. freebsd) returns clean error, no crash | FR-4, AC-4, @feature4 | Unit test | Draft | v0.4 — monkeypatch sys.platform="freebsd" |
+| CHK-FR13-02 | Windows SessionStart hook: pwsh start-server.ps1 + Get-Process liveness | FR-13, AC-13, @feature13 @windows, UC-6 | Integration test | Draft | v0.4 — verify via probe after Claude Code restart |
+| CHK-FR13-03 | POSIX SessionStart hook: bash start-server.sh + kill -0 liveness; XDG state dir | FR-13, AC-13, @feature13 @linux @darwin, UC-6 | Integration test | Draft | v0.4 |
+| CHK-FR15-03 | install.sh idempotent on Linux + macOS, registers bash start-server.sh hook | FR-15, AC-15, @feature15 @linux @darwin, UC-10 | Integration test | Draft | v0.4 — re-run after install completes returns "already installed" |
+| CHK-FR17-04 | Linux canonical encoding: /home/user/repos/foo → -home-user-repos-foo | FR-17, AC-17, @feature17 @linux | Unit test | Draft | v0.4 — extend test_encode_path.py with POSIX params |
+| CHK-FR17-05 | macOS canonical encoding: /Users/stigm/repos/foo → -Users-stigm-repos-foo | FR-17, AC-17, @feature17 @darwin | Unit test | Draft | v0.4 |
+| CHK-FR17-06 | WSL view path /mnt/d/repos/foo emits BOTH -mnt-d-repos-foo + D--repos-foo | FR-17, AC-17, @feature17 @wsl | Unit test | Verified | already passes via test_wsl_mounted_path_produces_both_variants (covers v0.4 contract) |
+| CHK-FR17-07 | UNC path \\\\wsl.localhost\\Ubuntu\\home\\user\\foo emits both Windows + POSIX variants | FR-17, AC-17, @feature17 @windows @wsl | Unit test | Draft | v0.4 — new test case |
+| CHK-FR21-01 | terminal_launcher.launch dispatches via sys.platform to correct handler | FR-21, AC-21, @feature21, UC-3 | Unit test | Draft | v0.4 — monkeypatch sys.platform, assert correct internal call |
+| CHK-FR21-02 | $SP_TERMINAL_CMD env override invoked BEFORE OS-specific handler regardless of platform | FR-21, AC-21, @feature21 | Unit test | Draft | v0.4 |
+| CHK-FR21-03 | Linux handler internal dispatch: GUI (with DISPLAY+terminal) vs headless (no DISPLAY or no terminal) | FR-21, AC-21, @feature21 @linux | Unit test | Draft | v0.4 |
+| CHK-FR22-01 | Skill detects orphan worktree via missing sentinel + git worktree list cross-check | FR-22, AC-22, @feature22, UC-12 | Integration test | Draft | v0.4 — verify в worktree без .dev-pomogator/tools/ |
+| CHK-FR22-02 | Skill presents AskUserQuestion {Bootstrap, Skip npm install, Cancel} | FR-22, AC-22, @feature22 | Manual review | Draft | v0.4 — confirm UI prompt structure |
+| CHK-FR22-03 | Bootstrap sequence runs npm install (conditional) → npm run build → node bin/cli.js install . in order | FR-22, AC-22, @feature22 | Integration test | Draft | v0.4 — assert exit codes + creates sentinel file |
+| CHK-FR22-04 | Idempotent re-invocation without --force skips installer and responds "already bootstrapped" | FR-22, AC-22, @feature22 | Integration test | Draft | v0.4 |
+| CHK-FR22-05 | Main worktree detection skips bootstrap with explicit message | FR-22, AC-22, @feature22 | Integration test | Draft | v0.4 — match cwd vs first row git worktree list |
+| CHK-FR22-06 | Failed step (e.g. npm run build fail) returns {ok: false, failed_step, exit_code, stderr} without rollback | FR-22, AC-22, @feature22 | Integration test | Draft | v0.4 |
+| CHK-FR22-07 | Non-git-repo invocation returns {ok: false, error: "not a git repository"} non-fatal | FR-22, AC-22, @feature22 | Integration test | Draft | v0.4 |
+| CHK-FR22-08 | Cross-platform consistency — skill behavior identical on Windows/Linux/macOS (no OS-specific branches) | FR-22, AC-22, @feature22 | Manual review | Draft | v0.4 |
+| CHK-FR23-01 | Windows create-launcher.ps1 creates valid Desktop\Session Pilot.lnk with msedge.exe TargetPath + `--app=URL` Arguments | FR-23, AC-23, @feature23 @windows, UC-13 | Integration test | Verified | v0.4 — direct artifact inspection: WScript.Shell.CreateShortcut |
+| CHK-FR23-02 | Linux create-launcher.sh creates valid XDG Desktop Entry (~/.local/share/applications/session-pilot.desktop) | FR-23, AC-23, @feature23 @linux, UC-13 | Integration test | Draft | v0.4 — test on Ubuntu host |
+| CHK-FR23-03 | macOS create-launcher.sh creates minimal .app bundle with Info.plist + Contents/MacOS/launcher | FR-23, AC-23, @feature23 @darwin, UC-13 | Integration test | Draft | v0.4 — test on macOS host |
+| CHK-FR23-04 | Browser detection chain: Edge → Chrome → (Linux only) Chromium/Brave; clean error if none found | FR-23, AC-23, @feature23 | Integration test | Draft | v0.4 |
+| CHK-FR23-05 | Idempotent re-run overwrites artifact with current $WT_DASHBOARD_PORT settings | FR-23, AC-23, @feature23 | Integration test | Draft | v0.4 |
+| CHK-FR23-06 | Browser profile isolation via --user-data-dir=<state-dir>/browser-profile prevents cookie sharing with main browser session | FR-23, AC-23, @feature23 | Manual review | Draft | v0.4 |
 
 ## Verification Process
 
@@ -148,10 +187,10 @@
 
 ## Summary Counts
 
-- Total CHKs: 40
-- Verified: 28 (70%)
+- Total CHKs: 70 (40 v0.3 + 30 v0.4: 16 cross-platform + 8 bootstrap-skill + 6 launcher)
+- Verified: 30 (43%) — CHK-FR17-06 (v0.4 WSL contract) + CHK-FR23-01 (Windows launcher shipped this PR)
 - In Progress: 0
-- Draft: 12 (Phase 5 / v0.2 deferred features)
+- Draft: 40 (12 Phase 5 / v0.2 deferred + 15 v0.4 cross-platform + 8 v0.4 bootstrap-skill + 5 v0.4 launcher)
 - Blocked: 0
 
 ## Phase mapping

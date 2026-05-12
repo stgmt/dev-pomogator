@@ -74,12 +74,12 @@
 ## Phase 3: Action button + MCP (Green)
 
 - [x] T04: KDL layout templates -- @feature4 — Status: DONE | Est: 15m
-  _Requirements: [FR-4](FR.md#fr-4-post-apilaunch--claude-resumefresh-injection)_
+  _Requirements: [FR-4](FR.md#fr-4-post-apilaunch--cross-platform-native-terminal-spawn)_
   **Done When:**
   - [x] claude-resume.kdl.tmpl with __CWD__/__UUID__/__NAME__ placeholders
   - [x] claude-fresh.kdl.tmpl
 - [x] T05: POST /api/launch decision tree -- @feature4 @feature15 — Status: DONE | Est: 90m
-  _Requirements: [FR-4](FR.md#fr-4-post-apilaunch--claude-resumefresh-injection), [FR-15](FR.md#fr-15-cross-os-launch-via-windows-host)_
+  _Requirements: [FR-4](FR.md#fr-4-post-apilaunch--cross-platform-native-terminal-spawn), [FR-15](FR.md#fr-15-cross-platform-installation-scripts)_
   **Done When:**
   - [x] Existing session → focus-pane-id + write-chars
   - [x] New session → KDL + setsid script -qfc + `-n` flag
@@ -182,12 +182,12 @@
 ## Phase 6c: Tests + CLAUDE.md (Refactor)
 
 - [x] T20: tests/test_encode_path.py -- @feature17 — Status: DONE | Est: 20m
-  _Requirements: [FR-17](FR.md#fr-17-cross-os-path-encoding)_
+  _Requirements: [FR-17](FR.md#fr-17-cross-platform-claude-path-encoding)_
   **Done When:**
   - [x] 6 tests covering WSL/Win + lm-saas regression + Cursor pattern
   - [x] All 6 PASS
 - [x] T21: tests/test_launch_idempotent.py -- @feature4 — Status: DONE | Est: 30m
-  _Requirements: [FR-4](FR.md#fr-4-post-apilaunch--claude-resumefresh-injection)_
+  _Requirements: [FR-4](FR.md#fr-4-post-apilaunch--cross-platform-native-terminal-spawn)_
   **Done When:**
   - [x] 5 integration tests against running server
   - [x] All 5 PASS
@@ -301,7 +301,7 @@
   - [ ] <24h shows "3 hours ago"
   - [ ] >24h shows "1d 5h 37m"
 - [ ] T32: SessionStart hook -- @feature13 — Status: TODO | Est: 15m
-  _Requirements: [FR-13](FR.md#fr-13-sessionstart-hook-idempotent-autostart)_
+  _Requirements: [FR-13](FR.md#fr-13-sessionstart-hook-idempotent-autostart-cross-platform)_
   **Done When:**
   - [ ] extension.json hooks.claude.SessionStart points to start-server.sh
   - [ ] Idempotent on re-trigger
@@ -321,6 +321,102 @@
   **Done When:**
   - [ ] Step-by-step from clean WSL Ubuntu install
   - [ ] Includes netsh portproxy command for Windows host access
+
+## v0.4 backlog: cross-platform restoration
+
+- [ ] T36: Implement `_launch_linux_gui` handler in terminal_launcher.py -- @feature4 @feature21 — Status: TODO | Est: 90m
+  _Requirements: [FR-4](FR.md#fr-4-post-apilaunch--cross-platform-native-terminal-spawn), [FR-21](FR.md#fr-21-os-detection--platform-dispatched-module-architecture)_
+  **Done When:**
+  - [ ] Probe chain: `$TERMINAL` → gnome-terminal → konsole → alacritty → kitty → wezterm → xfce4-terminal → tilix → terminator → xterm
+  - [ ] Per-terminal argv build verified for each of 9 terminals
+  - [ ] Unit tests parametrized over `shutil.which` mock for each terminal
+  - [ ] Integration test on Ubuntu 22.04 host with at least gnome-terminal installed
+- [ ] T37: Implement `_launch_linux_headless` handler -- @feature4 @feature21 — Status: TODO | Est: 30m
+  _Requirements: [FR-4](FR.md#fr-4-post-apilaunch--cross-platform-native-terminal-spawn), [FR-21](FR.md#fr-21-os-detection--platform-dispatched-module-architecture)_
+  **Done When:**
+  - [ ] `subprocess.Popen(["setsid","nohup","bash","-c","cd <cwd> && claude ..."], start_new_session=True, stdin/stdout/stderr=DEVNULL)`
+  - [ ] PID captured and survives server restart (verified via `kill -0` после server stop)
+  - [ ] Detection: $DISPLAY AND $WAYLAND_DISPLAY both empty OR all GUI terminals missing
+- [ ] T38: Implement `_launch_darwin` handler -- @feature4 @feature21 — Status: TODO | Est: 45m
+  _Requirements: [FR-4](FR.md#fr-4-post-apilaunch--cross-platform-native-terminal-spawn), [FR-21](FR.md#fr-21-os-detection--platform-dispatched-module-architecture)_
+  **Done When:**
+  - [ ] iTerm2 detection via `osascript -e 'tell app "System Events" to (name of processes) contains "iTerm2"'`
+  - [ ] Terminal.app via `osascript -e 'tell app "Terminal" to do script ...'`
+  - [ ] iTerm2 via `osascript -e 'tell app "iTerm2" to create window ...'`
+  - [ ] Tested on macOS 12+ host or mocked osascript in CI
+- [ ] T39: Implement `_launch_env_override` handler -- @feature4 @feature21 — Status: TODO | Est: 30m
+  _Requirements: [FR-4](FR.md#fr-4-post-apilaunch--cross-platform-native-terminal-spawn), [FR-21](FR.md#fr-21-os-detection--platform-dispatched-module-architecture)_
+  **Done When:**
+  - [ ] Template substitution `{cwd}` and `{cmd}` placeholders
+  - [ ] `shlex.split` on POSIX / list-form on Windows
+  - [ ] NEVER `shell=True`
+  - [ ] Tests on all 3 OS with sample templates (alacritty / wt.exe / Terminal-via-osascript)
+- [ ] T40: Extend `claude_paths.encode_path_for_claude` to return list[str] with per-OS canonical + cross-platform fallbacks -- @feature17 — Status: TODO | Est: 60m
+  _Requirements: [FR-17](FR.md#fr-17-cross-platform-claude-path-encoding)_
+  **Done When:**
+  - [ ] Windows: `D:\repos\foo` → `["D--repos-foo"]`
+  - [ ] Linux: `/home/user/repos/foo` → `["-home-user-repos-foo"]`
+  - [ ] macOS: `/Users/stigm/repos/foo` → `["-Users-stigm-repos-foo"]`
+  - [ ] WSL view: `/mnt/d/repos/foo` → `["-mnt-d-repos-foo", "D--repos-foo"]`
+  - [ ] UNC: `\\wsl.localhost\Ubuntu\home\user\foo` → `["--wsl.localhost-Ubuntu-home-user-foo", "-home-user-foo"]`
+  - [ ] Cursor IDE: `C:\Users\stigm\.cursor\worktrees\bar` → `["C--Users-stigm--cursor-worktrees-bar"]`
+  - [ ] Unit tests for each row in AC-17 examples table
+- [ ] T41: Create `install.sh` sibling installer -- @feature15 — Status: TODO | Est: 45m
+  _Requirements: [FR-15](FR.md#fr-15-cross-platform-installation-scripts)_
+  **Done When:**
+  - [ ] `bash extensions/session-pilot/install.sh` runs on Ubuntu 22.04+ and macOS 12+
+  - [ ] Python ≥3.10 check via `python3 --version` parse
+  - [ ] Register SessionStart hook (`bash start-server.sh`) в `~/.claude/settings.json`
+  - [ ] Idempotent: re-run detects existing install + alive server → exit 0
+  - [ ] `set -euo pipefail`; bash ≥4.x
+- [ ] T42: Create `start-server.sh` POSIX autostart -- @feature13 — Status: TODO | Est: 30m
+  _Requirements: [FR-13](FR.md#fr-13-sessionstart-hook-idempotent-autostart-cross-platform)_
+  **Done When:**
+  - [ ] PID lock в `${XDG_STATE_HOME:-$HOME/.local/state}/session-pilot/server.pid`
+  - [ ] `kill -0 $pid 2>/dev/null` liveness check
+  - [ ] `setsid nohup python3 server.py >/dev/null 2>&1 &` for spawn
+  - [ ] Poll `/api/health` until 200 (timeout 2s)
+- [ ] T43: Update `extension.json` для platform-conditional hook registration -- @feature13 — Status: TODO | Est: 15m
+  _Requirements: [FR-13](FR.md#fr-13-sessionstart-hook-idempotent-autostart-cross-platform)_
+  **Done When:**
+  - [ ] Installer chooses ps1 vs sh based on host OS detection
+  - [ ] Manifest enumerates BOTH scripts via `toolFiles`
+- [ ] T44: Add `platform` field to `/api/health` response -- @feature7 — Status: TODO | Est: 5m
+  _Requirements: [FR-7](FR.md#fr-7-get-apihealth--idempotent-autostart-probe)_
+  **Done When:**
+  - [ ] `{"status":"ok","version":"0.4.0","uptime_sec":int,"platform":"win32"|"linux"|"darwin"}`
+- [ ] T45: Rename env var `WT_DASHBOARD_BIND` → `SP_DASHBOARD_BIND` -- @feature15 — Status: TODO | Est: 10m
+  _Requirements: NFR-Sec-3_
+  **Done When:**
+  - [ ] All references updated; deprecation alias `WT_DASHBOARD_BIND` warns + reads value for backward-compat (one release cycle)
+- [ ] T46: Implement skill `session-pilot-bootstrap` (on-demand orphan worktree bootstrap) -- @feature22 — Status: TODO | Est: 60m
+  _Requirements: [FR-22](FR.md#fr-22-on-demand-worktree-bootstrap-skill-session-pilot-bootstrap)_
+  **Done When:**
+  - [ ] `.claude/skills/session-pilot-bootstrap/SKILL.md` created с frontmatter (name, description с RU+EN triggers, allowed-tools: Bash + AskUserQuestion + Read)
+  - [ ] Workflow body: detect orphan (git worktree list + sentinel file check) → AskUserQuestion {Bootstrap, Skip npm install, Cancel} → run installer chain → verify sentinel created
+  - [ ] Idempotent: re-invocation without --force returns "already bootstrapped"
+  - [ ] Main worktree detection: cwd == first row git worktree list → skip
+  - [ ] Non-git-repo: return {ok: false, error: "not a git repository"}
+  - [ ] Failure handling: any step exit non-zero → respond {ok: false, failed_step, exit_code, stderr_tail}; no rollback
+  - [ ] Integration test reproduces orphan worktree scenario: `git worktree add /tmp/test-wt main && cd /tmp/test-wt && rm -rf .dev-pomogator/tools && invoke skill && assert sentinel exists`
+  - [ ] Cross-platform smoke: workflow uses only npm/node/git — no OS branches
+  - [ ] extension.json лист skillFiles для session-pilot-bootstrap
+- [ ] T47: Add session-pilot-bootstrap skill to extension manifest -- @feature22 — Status: TODO | Est: 10m
+  _Requirements: [FR-22](FR.md#fr-22-on-demand-worktree-bootstrap-skill-session-pilot-bootstrap)_
+  **Done When:**
+  - [ ] `extensions/session-pilot/extension.json` → `skills.session-pilot-bootstrap` source path entry
+  - [ ] `skillFiles.session-pilot-bootstrap` enumerates SKILL.md path
+  - [ ] Installer test verifies skill is installed на target after `node bin/cli.js install .`
+- [x] T48: Create launcher installer scripts (create-launcher.ps1 + create-launcher.sh) -- @feature23 — Status: DONE | Est: 60m
+  _Requirements: [FR-23](FR.md#fr-23-taskbar--dock-launcher-installer-create-launcher)_
+  **Done When:**
+  - [x] `extensions/session-pilot/tools/session-pilot/create-launcher.ps1` — Windows Desktop .lnk creator (Edge/Chrome detection, msedge.exe `--app=URL` mode, opens Explorer at icon, optional `-Pin` flag for legacy COM verb)
+  - [x] `extensions/session-pilot/tools/session-pilot/create-launcher.sh` — Linux/macOS via `uname -s` branch: Linux XDG `.desktop` entry, macOS `.app` bundle with Info.plist + launcher shell exec
+  - [x] Browser profile isolation: `--user-data-dir=<state-dir>/session-pilot/browser-profile`
+  - [x] Port override via `WT_DASHBOARD_PORT` env / `-Port` arg
+  - [x] Idempotent re-run overwrites artifact
+  - [ ] Manifest entries: `extensions/session-pilot/extension.json` adds create-launcher.ps1 + .sh to toolFiles
+  - [ ] Integration test for Windows .lnk artifact contents (TargetPath + Arguments)
 
 ## Final verification (informational, не tasks)
 

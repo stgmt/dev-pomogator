@@ -19,6 +19,102 @@ session-pilot is a worktree dashboard plugin that emerged iteratively from a wor
 
 ## Технические находки
 
+### Cross-platform spawn research (v0.4, 2026-05-12)
+
+Standalone research session via `research-workflow` skill, 4 parallel sub-agents, ≥3 independent sources per hypothesis. Triggered после v0.3 Windows-only pivot чтобы de-pivot к cross-platform — но БЕЗ Zellij/WSL bridge которые мы dropped.
+
+#### Claude Code CLI flags relevant к spawn dispatch
+
+**Source**: code.claude.com/docs/en/cli-reference (fetched verbatim), docs.anthropic.com/en/docs/claude-code mirror.
+
+- `claude --cwd <path>` **[FALSIFIED]**: не существует. [Issue #26287](https://github.com/anthropics/claude-code/issues/26287) — feature request closed inactive. Positional path argument тоже отсутствует. Workaround: `cd <path> && claude` в shell перед launch.
+- `claude --worktree <name>` / `-w` **[VERIFIED]**: native Anthropic worktree mechanism. Quote: *"Start Claude in an isolated git worktree at `<repo>/.claude/worktrees/<name>`. If no name is given, one is auto-generated"*. Cross-platform — работает на любой ОС где Claude Code запускается.
+- `claude --resume <uuid>` / `-r`: верифицировано — подхватывает session по UUID. Inherits shell cwd. Эта механика — основа сессии в session-pilot dashboard (FR-4).
+- `claude --add-dir <path>`: **only** добавляет dir в read/edit scope, НЕ меняет cwd (важный edge для headless detached спавна — мы не используем).
+
+#### Session cwd cannot change mid-process
+
+**[VERIFIED]** через 3 angles:
+- Anthropic CONTRIBUTOR `rboyce-ant` в [#1628](https://github.com/anthropics/claude-code/issues/1628): *"if you need to change the original working directory, the best way to do that is to exit Claude Code and start a new session"*.
+- [#42844 OPEN regression](https://github.com/anthropics/claude-code/issues/42844): Bash `cd` сбрасывается каждой командой ("Shell cwd was reset to ..."). 
+- 4 ещё открытых feature requests на `/cd` slash command — ни один не merged.
+
+Implication для session-pilot: каждый ▶ Resume / ✨ Fresh MUST spawn **новый процесс** (новое terminal окно / новый headless setsid). Reload/recall существующей сессии без spawn невозможен на любой ОС.
+
+#### Windows spawn pattern — `Start-Process -PassThru` canonical
+
+**[VERIFIED]** через 3 angles:
+- MS Learn `Start-Process` docs: *"`-PassThru` Returns a process object for each process that the cmdlet started"* + *"By default on Windows, PowerShell opens a new window"* + *"the launched process lives on independent from the calling process"* (Windows-specific вы детач).
+- Real-world: `Azure/azure-sdk-for-net` `eng/common/mcp/azure-sdk-mcp.ps1` — `$proc = Start-Process -PassThru -WorkingDirectory $RunDirectory ...`.
+- Inside Python: `subprocess.Popen([wt, ...])` эквивалентен — возвращает Popen object с `.pid`, detached от parent при `start_new_session=False` (default) + Popen-managed lifetime.
+
+`wt.exe -d <path>` нравится UX но **PID теряется** ([microsoft/terminal#8856](https://github.com/microsoft/terminal/issues/8856)): wt.exe shim hands off to WindowsTerminal.exe service, спавненный pwsh child PID unknowable. Solution: use `wt.exe` для UX, track wt.exe shim PID (а не pwsh child) — достаточно для liveness check.
+
+#### Linux terminal detection chain
+
+**[VERIFIED]** через man pages + release notes + community examples:
+
+| Terminal | cwd arg | command arg | Detection (which) |
+|----------|---------|-------------|-------------------|
+| `gnome-terminal` | `--working-directory=<path>` | `-- bash -c "..."` | shutil.which("gnome-terminal") |
+| `konsole` | `--workdir <path>` | `-e bash -c "..."` | shutil.which("konsole") |
+| `alacritty` | `--working-directory <path>` | `-e bash -c "..."` | shutil.which("alacritty") |
+| `kitty` | `--directory <path>` | `bash -c "..."` (positional) | shutil.which("kitty") |
+| `wezterm` | `start --cwd <path>` | `-- bash -c "..."` | shutil.which("wezterm") |
+| `xfce4-terminal` | `--working-directory=<path>` | `-e "bash -c '...'"` | shutil.which("xfce4-terminal") |
+| `tilix` | `-w <path>` | `-e "bash -c '...'"` | shutil.which("tilix") |
+| `terminator` | `--working-directory=<path>` | `-e "bash -c '...'"` | shutil.which("terminator") |
+| `xterm` | (none) | `-e "cd <path> && ..."` | shutil.which("xterm") |
+
+Order matters: `$TERMINAL` env var first (user opt-in override), then desktop-environment-preferred (gnome → konsole → alacritty), then minimal fallback (xterm).
+
+**Headless detection**: `$DISPLAY` AND `$WAYLAND_DISPLAY` обе пустые ИЛИ no GUI terminal found → `setsid nohup bash -c "cd <path> && claude" </dev/null >/dev/null 2>&1 &` через `subprocess.Popen(start_new_session=True)`. PID капчуру через Popen `.pid`. `start_new_session=True` calls `setsid()` в child atomically (CPython `_posixsubprocess.c` L763-779) [VERIFIED].
+
+#### macOS osascript pattern
+
+**[VERIFIED]** через Apple Developer docs Terminal AppleScript dictionary + iTerm2 docs:
+
+- Terminal.app: `osascript -e 'tell application "Terminal" to do script "cd <cwd> && claude --resume <uuid>"'` — opens new tab/window with command running.
+- iTerm2: `osascript -e 'tell application "iTerm2" to create window with default profile command "claude --resume <uuid>"'` — separate AppleScript dictionary, requires iTerm2 запущен или auto-launches.
+- iTerm2 detection: `osascript -e 'tell application "System Events" to (name of processes) contains "iTerm2"'` returns `true`/`false` <50ms. Single call before spawn decides which path.
+
+Security: argv-based — `-e` flag принимает script string as arg, ssscript itself не interpolates shell vars (osascript evaluates AppleScript inside). UUID validation через regex `^[0-9a-f-]{36}$` still required чтобы uuid не содержал quote characters which would break AppleScript string literal.
+
+#### Worktree dir conventions (informational, не applicable к session-pilot)
+
+session-pilot читает существующие worktrees (через `git worktree list`), не создаёт их. Но research выявил dominant convention:
+
+- `.worktrees/<branch>` нестед — **dominant** (49+ репов в .gitignore search), включая Claude-aware dotfiles.
+- `<repo>-worktrees/<branch>` sibling — secondary.
+- `~/worktrees/<repo>/<branch>` centralized — rare, advocated для AI-agent fleets.
+
+Anthropic native `claude -w` creates worktrees в `<repo>/.claude/worktrees/<name>` — это subset of nested convention. `.gitignore` обязан содержать `.claude/worktrees/` чтобы worktree files не trackались.
+
+#### Prior art (8 projects, none Windows-native)
+
+| Repo | Stars | Подход | OS gap |
+|------|-------|--------|--------|
+| automazeio/ccpm | 8089 | multi-agent один worktree, GitHub Issues sync | mac/linux only |
+| smtg-ai/claude-squad | 7421 | tmux pane per agent | mac/linux (Windows tmux file есть но не функциональный) |
+| stravu/crystal | 3050 | Electron multi-window | mac/linux only |
+| njbrake/agent-of-empires | 2172 | tmux + Web UI mobile | mac/linux only |
+| Priivacy-ai/spec-kitty | 1208 | Kanban dashboard | mac/linux only |
+| craigsc/cmux | 531 | process-per-worktree, .worktrees/<br>nested | mac/linux (pure bash) |
+| baixianger/claude-orchestration-in-cmux | <50 | Claude orchestrates Claude via cmux | mac/linux only |
+| umputun/ralphex | <200 | one process per plan | mac/linux + Docker |
+
+**Implication**: session-pilot v0.4 cross-platform — competitive moat. Никто из 8 existing tools не имеет Windows-native support. Session-pilot уже имеет Windows (v0.3 work); добавление Linux+macOS native (без tmux dependency) — unique positioning.
+
+#### Claude Code project memory location
+
+**[VERIFIED via direct observation in this session]**: Claude Code derives memory dir slug по rule "drive colon stripped + each path separator → `-`":
+
+- Windows: `D:\repos\dev-pomogator` → `~/.claude/projects/D--repos-dev-pomogator/`
+- Linux (assumed by symmetry, not directly observed): `/home/user/repos/foo` → `~/.claude/projects/-home-user-repos-foo/`
+- macOS (assumed): `/Users/stigm/repos/foo` → `~/.claude/projects/-Users-stigm-repos-foo/`
+
+This encoding rule = canonical для FR-17 (path encoder). Docs не enumerate the rule explicitly ([anthropics/claude-code#25947](https://github.com/anthropics/claude-code/issues/25947) confirms existence of `<encoded-project-path>` slug but не documents encoding) — Linux/macOS variants [ASSUMED] from Windows-observed pattern и общая Claude Code convention. Implementation должен validate против `~/.claude/projects/` content during install.
+
 ### Zellij action injection — 2 paths
 
 `zellij --session NAME action write-chars "<cmd>\n"` injects keystrokes into focused pane. Works whether attached or not (focused pane persists across detach). Race condition: if focus shifted after call, the keystrokes go to wrong pane. Mitigation: `zellij --session NAME action focus-pane-id terminal_1` THEN write-chars.
