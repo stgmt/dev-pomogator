@@ -121,13 +121,38 @@ HTML = """<!doctype html>
   <div class="modal-body" id="msgModalBody">Loading…</div>
 </dialog>
 <script>
+// Frontend code version. Bumped on every breaking schema change. On load,
+// poll /api/health periodically — if server.version > FRONTEND_VERSION, the
+// browser is running stale JS (Edge --app keeps in-memory state across reloads
+// since Cache-Control: no-store only stops disk caching, not in-memory).
+// Force a full reload to pull fresh HTML/JS.
+const FRONTEND_VERSION = '0.4.0';
+
 let _rows = [];          // current row state
 let _wtById = {};        // id -> row reference
+
+async function checkServerVersion() {
+  try {
+    const r = await fetch('/api/health', {cache: 'no-store'});
+    const h = await r.json();
+    if (h.version && h.version !== FRONTEND_VERSION) {
+      console.warn(`[session-pilot] frontend v${FRONTEND_VERSION} vs server v${h.version} — reloading`);
+      // Bypass any in-memory cache: location.reload(true) is non-standard but
+      // hint to browsers; appending cache-buster query param forces fresh GET.
+      location.href = '/?v=' + h.version + '&t=' + Date.now();
+    }
+  } catch {}
+}
 
 async function hardReload() {
   // Force re-fetch ignoring cache. Server itself caches 5/8s; we just retry.
   loadIndex();
 }
+
+// Run version check immediately + every 30s. Catches the case when user keeps
+// Edge --app window open across server upgrades (most common stale-cache cause).
+checkServerVersion();
+setInterval(checkServerVersion, 30000);
 
 // SWR-style cache in localStorage. v4: keyed by row.id which now includes
 // session_uuid suffix (FR-26 per-session rows). Stored shape unchanged.

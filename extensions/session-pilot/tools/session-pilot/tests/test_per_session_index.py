@@ -450,6 +450,26 @@ def test_status_sort_key_python_replica():
         f"DESC must reverse ASC exactly:\n  ASC : {asc_labels}\n  DESC: {desc_labels}"
 
 
+def test_frontend_version_self_reload_present():
+    """Regression (user-reported 2026-05-13 round 5): user kept Edge --app
+    window open across multiple server upgrades. Cache-Control: no-store only
+    stops disk caching — the OPEN tab keeps loaded JS in memory until force-reload.
+    User sees stale UI (e.g. yesterday's bhph session shown as LIVE because old JS
+    cached frontend logic from before claude_running_now=false fix).
+
+    Fix: frontend has FRONTEND_VERSION constant; polls /api/health every 30s;
+    if server.version > FRONTEND_VERSION → auto-reload with cache-buster query.
+    """
+    from frontend import HTML
+    assert "FRONTEND_VERSION" in HTML, "frontend missing FRONTEND_VERSION constant"
+    assert "checkServerVersion" in HTML, "frontend missing checkServerVersion polling function"
+    assert "setInterval(checkServerVersion" in HTML, \
+        "checkServerVersion must be polled periodically (not just once)"
+    # On version mismatch, must trigger location reload with cache-buster
+    assert "location.href" in HTML and "v=" in HTML, \
+        "version mismatch path must reload page with cache-buster query param"
+
+
 def test_html_response_has_no_store_cache_header():
     """Regression: HTML / endpoint must send Cache-Control: no-store to prevent
     stale frontend JS bundle in Edge --app/Chrome across server upgrades."""
