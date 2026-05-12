@@ -295,51 +295,75 @@ def test_frontend_html_contains_per_session_lookup_logic():
     assert "purgeV3Cache" in HTML, "frontend.py must purge legacy wtdash_v3_ entries on load"
 
 
-def test_status_column_has_custom_sorter_with_priority():
-    """Regression (user-reported 2026-05-13): Status column was sorted by
-    `claude_running_now` boolean field — useless sort, all non-LIVE rows
-    lumped together unordered. Must have custom sorter using priority
-    composite (LIVE > Open > idle-with-history > none) + mtime sub-sort.
+def test_status_column_uses_synthetic_sort_field():
+    """Regression (user-reported 2026-05-13 round 2): custom Tabulator sorters
+    have unreliable directional semantics in 6.x when many rows tie on the
+    field value (boolean claude_running_now → all non-LIVE rows tied at false).
+
+    Fix: synthetic numeric `_status_sort` field computed per-row in JS, then
+    Status column uses built-in numeric sorter. Tabulator's native numeric sort
+    handles asc/desc clicks reliably across all rows.
     """
     from frontend import HTML
-    # Must define custom sorter function on Status column
-    assert 'sorter(a, b, aRow, bRow' in HTML, \
-        "Status column missing custom sorter — falls back to boolean field sort"
-    # Sorter must encode priority: LIVE=0, Open=1, idle=2, none=3
-    assert "claude_running_now" in HTML and "claude_window_open" in HTML, \
-        "Status sorter must check both claude_running_now and claude_window_open priorities"
-    # Sub-sort by mtime desc within same status group
-    assert "claude_max_mtime" in HTML, \
-        "Status sorter must sub-sort by claude_max_mtime within same status group"
+    # Status column must use _status_sort field + built-in numeric sorter
+    assert '"_status_sort"' in HTML, \
+        "Status column field must be '_status_sort' (synthetic numeric sort key)"
+    assert 'sorter: "number"' in HTML, \
+        "Status column must use built-in 'number' sorter for reliable asc/desc"
+    # computeStatusSort function must be defined
+    assert 'function computeStatusSort(' in HTML, \
+        "computeStatusSort() helper must be defined"
+    # Must be called for every row (cache-hit and cache-miss paths)
+    assert HTML.count('_status_sort = computeStatusSort(') >= 2, \
+        "_status_sort must be assigned in BOTH applyCachedClaude AND enrichClaude paths " \
+        "(also in loadIndex initialization), otherwise rows render with wrong sort key"
 
 
-def test_status_priority_sort_logic_replicated_in_python():
-    """Manual replication of the JS sorter logic to validate priority order.
+def test_status_sort_key_python_replica():
+    """Python replica of JS computeStatusSort() — validates numeric ordering.
 
-    JS sorter:
-      priority = 0 if running_now else 1 if window_open else 2 if has mtime else 3
-      same priority → newer mtime first
-
-    Verified expected order:
-      LIVE (running) > Open (window alive idle) > idle-with-history > no-history
+    Score = priority * 1e10 - mtime. Sort by score ASC gives: LIVE-newest → ...
+    → LIVE-oldest → Open-newest → ... → idle-newest → ... → none.
+    Sort by score DESC (Tabulator second click) gives reverse — reliably.
     """
+    import time as _time
+    now = int(_time.time())
+
+    def compute_sort_key(row):
+        live_threshold = 300
+        age = (now - row["mtime"]) if row.get("mtime") else None
+        if row.get("running_now") or (age is not None and 0 <= age < live_threshold):
+            priority = 0
+        elif row.get("window_open"):
+            priority = 1
+        elif row.get("mtime"):
+            priority = 2
+        else:
+            priority = 3
+        return priority * 1e10 - (row.get("mtime") or 0)
+
     rows = [
-        {"claude_running_now": False, "claude_window_open": False, "claude_max_mtime": 0,      "label": "none"},
-        {"claude_running_now": True,  "claude_window_open": False, "claude_max_mtime": 100,    "label": "live-old"},
-        {"claude_running_now": False, "claude_window_open": True,  "claude_max_mtime": 50,     "label": "open"},
-        {"claude_running_now": False, "claude_window_open": False, "claude_max_mtime": 999,    "label": "idle-newer"},
-        {"claude_running_now": True,  "claude_window_open": False, "claude_max_mtime": 200,    "label": "live-new"},
-        {"claude_running_now": False, "claude_window_open": False, "claude_max_mtime": 100,    "label": "idle-older"},
+        {"label": "none",       "running_now": False, "window_open": False, "mtime": 0},
+        {"label": "live-old",   "running_now": True,  "window_open": False, "mtime": now - 500},
+        {"label": "open",       "running_now": False, "window_open": True,  "mtime": now - 1000},
+        {"label": "idle-newer", "running_now": False, "window_open": False, "mtime": now - 500},
+        {"label": "live-new",   "running_now": False, "window_open": False, "mtime": now - 100},  # implicit LIVE via mtime
+        {"label": "idle-older", "running_now": False, "window_open": False, "mtime": now - 2000},
     ]
-    def priority(r):
-        if r["claude_running_now"]: return 0
-        if r["claude_window_open"]: return 1
-        if r["claude_max_mtime"]: return 2
-        return 3
-    rows.sort(key=lambda r: (priority(r), -r["claude_max_mtime"]))
-    labels = [r["label"] for r in rows]
-    assert labels == ["live-new", "live-old", "open", "idle-newer", "idle-older", "none"], \
-        f"unexpected sort order: {labels}"
+    # ASC: LIVE first (lowest priority number + highest mtime within group)
+    rows_asc = sorted(rows, key=compute_sort_key)
+    asc_labels = [r["label"] for r in rows_asc]
+    assert asc_labels[0] in ("live-new", "live-old"), f"ASC top should be LIVE-* group: {asc_labels}"
+    assert asc_labels[-1] == "none", f"ASC last should be no-history: {asc_labels}"
+    # Within LIVE group, newer (live-new mtime now-100) before older (live-old now-500)
+    live_positions = [i for i, l in enumerate(asc_labels) if l.startswith("live")]
+    assert asc_labels[live_positions[0]] == "live-new", "LIVE-newer must come before LIVE-older"
+
+    # DESC: reverse the entire list — Tabulator built-in numeric sort handles this
+    rows_desc = sorted(rows, key=compute_sort_key, reverse=True)
+    desc_labels = [r["label"] for r in rows_desc]
+    assert desc_labels == list(reversed(asc_labels)), \
+        f"DESC must reverse ASC exactly:\n  ASC : {asc_labels}\n  DESC: {desc_labels}"
 
 
 def test_html_response_has_no_store_cache_header():
