@@ -271,6 +271,42 @@ def test_fr25_desktop_app_filter():
         )
 
 
+def test_frontend_html_contains_per_session_lookup_logic():
+    """Regression: frontend inline JS must do per-row UUID lookup, not fallback to sessions[0].
+
+    User-reported bug 2026-05-13: dashboard showed 2 visually identical rows
+    for same cwd because old frontend (cached in browser) used `sessions[0]`
+    for all rows in same cwd. After fix, must look up by row.session_uuid.
+
+    This test verifies the SOURCE code contains the lookup expression — it
+    doesn't drive a browser. Real-browser verification is manual (Ctrl+Shift+R
+    on dashboard after server upgrade).
+    """
+    from frontend import HTML
+    # Must look up session by row.session_uuid (not just take sessions[0])
+    assert "sessions.find(x => x.uuid === row.session_uuid)" in HTML, \
+        "frontend.py missing per-uuid session lookup — would render duplicate last_message across rows in same cwd"
+    # Must use row.session_uuid for Resume button (not nested top.uuid)
+    assert "const uuid = row.session_uuid" in HTML, \
+        "frontend.py Resume button must use row.session_uuid, not nested sessions[0].uuid"
+    # Cache key bumped to v4 (v3 entries don't have session_uuid in id)
+    assert "wtdash_v4_" in HTML, "frontend.py cache key prefix must be v4 for FR-26 schema"
+    # One-shot v3 purge present
+    assert "purgeV3Cache" in HTML, "frontend.py must purge legacy wtdash_v3_ entries on load"
+
+
+def test_html_response_has_no_store_cache_header():
+    """Regression: HTML / endpoint must send Cache-Control: no-store to prevent
+    stale frontend JS bundle in Edge --app/Chrome across server upgrades."""
+    # Module-level import of handlers + simulate / GET
+    # Spawn server inline would be heavy; just verify _serve_root sends the header.
+    # Read handlers.py source as a sanity check (it's a small file).
+    handlers_src = (Path(__file__).parent.parent / "handlers.py").read_text(encoding="utf-8")
+    # Look for cache control set in / route
+    assert 'Cache-Control' in handlers_src and 'no-store' in handlers_src, \
+        "handlers.py / route must set Cache-Control: no-store to prevent stale HTML in browsers"
+
+
 def test_fr25_scanner_failopen_on_subprocess_timeout(monkeypatch):
     """Subprocess timeout → scanner returns {} not crash."""
     def _raise_timeout(*args, **kwargs):

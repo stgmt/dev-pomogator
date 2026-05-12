@@ -134,8 +134,14 @@ class Handler(BaseHTTPRequestHandler):
         if url.path == "/":
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
+            # v0.4: prevent Edge --app + browsers from caching stale HTML/JS
+            # across server upgrades. /api/* responses use ETag/304 for cheap
+            # revalidation, but the inline-JS bundle has no version marker —
+            # must force re-fetch на every load чтобы v3→v4 changes apply.
+            self.send_header("Cache-Control", "no-store, must-revalidate")
+            self.send_header("Pragma", "no-cache")
+            self.send_header("Expires", "0")
             self.end_headers()
-            # v0.3: no template substitution — HTML served as-is.
             self.wfile.write(server.HTML.encode("utf-8"))
         elif url.path.startswith("/vendor/"):
             self._serve_vendor(url.path)
