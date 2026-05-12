@@ -25,3 +25,43 @@ deny: []
 ignore_patterns: []
   # - "*.tmp"
   # - "*.bak"
+
+# ---------------------------------------------------------------------------
+# Classification (FR-2 / FR-4) — what counts as "trash" vs "config"
+# ---------------------------------------------------------------------------
+# User trash patterns (override / extend default-whitelist trash_patterns_default).
+# Files matching these are not offered for whitelist by configure.py.
+# trash_patterns: []
+#   # - "*.testsettings"
+#   # - "*.vssscc"
+
+# User config patterns (override / extend default-whitelist config_patterns_default).
+# Files matching these are treated as legitimate config (not trash).
+# config_patterns: []
+#   # - "*.toml"
+#   # - "pyproject.toml"
+
+# Disable default plugin-shipped trash patterns (Visual Studio legacy, temp/log etc.)
+# Default: true. Set to false if your project legitimately uses files matching
+# the default list (e.g. you actively maintain *.testsettings via SettingsMigrator).
+# use_default_trash_patterns: true
+
+# Classifier mode: 'config' (yaml only), 'llm' (Claude CLI for everything),
+# 'hybrid' (yaml first, Claude CLI for unmatched). Default: hybrid.
+# classifier:
+#   mode: hybrid
+#   llm:
+#     cli: claude          # Claude Code CLI binary in PATH (uses subscription, no API key)
+#     timeout_seconds: 30
+#     cache_ttl_seconds: 86400   # 24h LLM result cache
+
+# ---------------------------------------------------------------------------
+# Auto-prune (FR-1) — pre-commit auto-removes stale `allow:` entries
+# ---------------------------------------------------------------------------
+# When `check.py` runs (e.g. as pre-commit hook), it removes entries from
+# `allow:` whose files no longer exist on disk. Hook fails the commit with
+# "files modified by hook" → run `git add .root-artifacts.yaml && git commit`
+# to include yaml changes in the same commit (atomic, git revert friendly).
+# Default: enabled. Set to false to disable auto-prune entirely.
+# auto_prune:
+#   enabled: true

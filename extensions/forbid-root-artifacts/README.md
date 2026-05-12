@@ -77,7 +77,93 @@ allowed_directories:
 ignore_patterns:
   - "*.tmp"
   - "*.bak"
+
+# ─── New in v1.1.0: classification + auto-prune (all optional) ──────────────
+
+# User-defined trash patterns (override / extend plugin defaults).
+# Files matching these are NOT offered for whitelist by configure.py.
+trash_patterns:
+  - "*.testsettings"
+  - "*.vssscc"
+
+# User-defined config patterns (override / extend plugin defaults).
+config_patterns:
+  - "*.toml"
+
+# Disable plugin-shipped trash defaults (Visual Studio legacy + temp/log etc.).
+# Default: true. Set to false if your project legitimately uses files matching
+# the default list.
+use_default_trash_patterns: true
+
+# Classifier mode: 'config' (yaml only), 'llm' (Claude CLI for everything),
+# 'hybrid' (yaml first, Claude CLI for unmatched). Default: hybrid.
+classifier:
+  mode: hybrid
+  llm:
+    cli: claude          # Claude Code CLI binary in PATH (uses subscription, no API key)
+    timeout_seconds: 30
+    cache_ttl_seconds: 86400   # 24h LLM result cache
+
+# Auto-prune stale `allow:` entries on pre-commit.
+# Default: DISABLED (opt-in). See "Auto-prune behavior" below.
+auto_prune:
+  enabled: true
 ```
+
+## Auto-prune behavior (v1.1.0+) — opt-in
+
+When `auto_prune.enabled: true` (**default is `false`** — opt-in), `check.py`
+running as a pre-commit hook automatically removes entries from `allow:`
+whose files no longer exist on disk. Workflow:
+
+1. You delete `foo.txt` from your repo and run `git commit -m "remove foo.txt"`.
+2. Pre-commit runs `check.py`. It detects `foo.txt` is in `allow:` but missing on disk.
+3. `check.py` rewrites `.root-artifacts.yaml` (atomically, with file lock) without `foo.txt`.
+4. Pre-commit fails with: *"forbid-root-artifacts auto-pruned 1 stale entries..."*
+5. You run `git add .root-artifacts.yaml && git commit` to retry.
+6. Both the file deletion and the yaml change land in the **same commit** —
+   `git revert HEAD` will atomically restore both.
+
+This follows the standard pre-commit framework "hooks that modify files"
+pattern (same as `prettier --write`, `black`, `ruff format`).
+
+### Why opt-in?
+
+`auto_prune` modifies user yaml on every pre-commit run — semantically a
+breaking behavior change vs 1.0.0. Existing downstream users who upgrade
+get exactly the same `check.py` semantics they had before, unless they
+explicitly enable auto-prune.
+
+If both `auto_prune.enabled: true` AND a real whitelist violation are
+detected in the same run, the hook reports BOTH in a single exit-1 — no
+split-screen "fix yaml first, then see violations".
+
+### Known limitation: inline yaml comments
+
+The atomic save preserves your top-of-file header comment block byte-for-byte
+(license / copyright / team notes), but **inline comments inside yaml
+sections are lost** on auto-prune rewrite (PyYAML limitation). Work-around:
+keep important comments in the file header.
+
+## LLM classification (Claude CLI subscription)
+
+When `classifier.mode` is `hybrid` or `llm` and a file in repo root is not
+matched by any user/default trash or config pattern, the plugin invokes
+the Claude Code CLI you're already logged into:
+
+```sh
+claude -p "Classify the file 'weird.unknownext'..." --output-format json
+```
+
+- **Zero API keys** — uses your existing Claude Code subscription.
+- **Cached** for 24h in `.dev-pomogator/.classifier-cache.json` (per-project).
+- **Graceful fallback** — if `claude` is not in `PATH` (e.g. CI without Claude
+  Code), classification returns `'unknown'` and the plugin emits a single
+  WARN to stderr. No crashes, no exit failures.
+
+For deprecated formats like `*.testsettings`, the plugin prints a
+specialized hint with a link to Microsoft's
+[SettingsMigrator](https://learn.microsoft.com/en-us/visualstudio/test/migrate-testsettings-to-runsettings).
 
 ## Default Whitelist
 

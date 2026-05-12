@@ -1,0 +1,28 @@
+{
+  "version": 3,
+  "featureSlug": "forbid-root-artifacts",
+  "createdAt": "2026-05-07T10:27:35.394Z",
+  "currentPhase": "Finalization",
+  "phases": {
+    "Discovery": {
+      "completedAt": "2026-05-07T10:39:54.331Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-05-07T10:39:54.331Z"
+    },
+    "Context": {
+      "completedAt": "2026-05-07T10:44:26.261Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-05-07T10:44:26.261Z"
+    },
+    "Requirements": {
+      "completedAt": "2026-05-08T10:41:44.178Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-05-08T10:41:44.177Z"
+    },
+    "Finalization": {
+      "completedAt": null,
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    }
+  }
+}

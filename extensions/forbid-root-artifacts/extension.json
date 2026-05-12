@@ -1,7 +1,7 @@
 {
   "name": "forbid-root-artifacts",
-  "version": "1.0.0",
-  "description": "Pre-commit хук для контроля файлов в корне репозитория",
+  "version": "1.1.0",
+  "description": "Pre-commit хук для контроля файлов в корне репозитория: yaml-driven trash/config классификация (с опциональной Claude Code CLI subscription LLM-classification в hybrid mode), auto-prune stale allow entries в pre-commit.",
   "platforms": [
     "claude"
   ],
@@ -17,6 +17,7 @@
   "toolFiles": {
     "forbid-root-artifacts": [
       ".dev-pomogator/tools/forbid-root-artifacts/.root-artifacts.yaml.template",
+      ".dev-pomogator/tools/forbid-root-artifacts/_classifier.py",
       ".dev-pomogator/tools/forbid-root-artifacts/check.py",
       ".dev-pomogator/tools/forbid-root-artifacts/configure.py",
       ".dev-pomogator/tools/forbid-root-artifacts/default-whitelist.yaml",
