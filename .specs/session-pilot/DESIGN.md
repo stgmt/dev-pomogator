@@ -152,6 +152,40 @@ Encoder API: `encode_path_for_claude(path: str) -> list[str]` — returns list w
 
 **Why**: ESC-close, focus management, accessibility, backdrop-click-close — all built in. Browser support since March 2022.
 
+### KD-12: Session-centric pivot — rows from ~/.claude/projects/, not from git worktree list (v0.4 addition, post-diagnostic 2026-05-13)
+
+**Decision (v0.4 mid-iteration, after real-host diagnostic 2026-05-13)**: invert source-of-truth for dashboard rows. Was: `git worktree list` of configured repos → rows. Becomes: `~/.claude/projects/*` directories → rows, with `git worktree list` as **enrichment** (fills Repo/Branch/HEAD/Git columns if decoded cwd is in any worktree).
+
+**Why pivot**:
+- Real-host scan revealed Claude Code allows invocation from ANY cwd — not only git repos. Users routinely run `cd ~/Desktop && claude` for one-shot exploration, `cd ~ && claude` for general help, `cd /d/repos && claude` from repos-parent folder.
+- These sessions leave JSONL state in `~/.claude/projects/C--Users-stigm-Desktop/` (etc.) — fully resumable via `claude --resume <uuid>` from decoded cwd.
+- Previous worktree-centric dashboard **invisibly drops** these sessions — user loses 1-click recall, must remember UUID + cwd manually.
+- Diagnostic data point: out of 7 project dirs found in `~/.claude/projects/`, 2 (~29%) were non-git cwds. Not edge case — common UX.
+
+**Why git enrichment still needed**:
+- Git-attached sessions are vast majority of "important" work — Repo/Branch/HEAD give critical context for switching between worktrees.
+- Removing git data from worktree rows would be regression.
+
+**Implementation approach** (changes to `indexer.py`):
+1. Phase 1 — scan `~/.claude/projects/*`, emit base row per dir with decoded cwd + claude_max_mtime + msg_count + uuid.
+2. Phase 2 — for each base row, decode cwd → run `git -C <cwd> rev-parse --show-toplevel` + `--abbrev-ref HEAD` → if exit 0, attach git fields (repo_name from toplevel basename, branch from HEAD); else mark `is_orphan: true`.
+3. Phase 3 — scan configured git roots' `git worktree list` to find worktrees NOT YET in row set (i.e. worktrees that exist on disk but Claude was never run there) → emit additional rows with all git fields filled but `claude_max_mtime: null` (idle, no Claude history).
+4. Phase 4 — dedup: if Phase 3 produces row for cwd already in Phase 1 result, prefer Phase 1 (has session history).
+
+**Trade-off**:
+- (+) Captures all Claude work surfaces.
+- (+) Backwards-compatible: git rows still work as before.
+- (−) Indexer becomes slightly more complex (two-phase scan + git probe per row).
+- (−) Number of rows can balloon if user has many one-shot sessions in tmp dirs. Mitigation: filter `~/.claude/projects/` entries by age (default 7 days; configurable `SP_MAX_AGE_DAYS=7` env).
+- (−) Decode ambiguity: `D--repos-foo` on cross-platform WSL host could match both `D:\repos\foo` AND `/mnt/d/repos/foo`. Choose first `Test-Path` match; both decode candidates documented in `--diagnose-livecycle` output.
+
+**Backwards-compat with FR-1 / AC-1 / AC-14**:
+- `/api/index` response schema gains `is_orphan: bool`, `is_stale: bool` per row.
+- Existing fields (`repo_name`, `branch`, `worktree_path`, `claude_max_mtime`) retain same semantics; orphan rows have empty `repo_name` + `branch` (NOT null — empty string preserves shape).
+- SWR cache (FR-14) keying unchanged — keyed by row uuid or worktree_path.
+
+[VERIFIED via real-host diagnostic 2026-05-13 — observed exact orphan pattern (C--Users-stigm-Desktop, D--repos) in user's ~/.claude/projects. Decision driven by empirical UX gap, not speculation.]
+
 ### KD-11: On-demand bootstrap skill (not auto-fire post-checkout, not symlink) (v0.4 addition)
 
 **Decision**: orphan-worktree recovery — **standalone Claude Code skill** `session-pilot-bootstrap` (slash `/sp-bootstrap`) которым пользователь explicit вызывает когда видит `ERR_MODULE_NOT_FOUND` в hook output. **НЕ auto-fire** на `git worktree add`, **НЕ git post-checkout hook**, **НЕ symlink из main worktree**.

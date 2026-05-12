@@ -90,6 +90,47 @@ Developer is actively working in lm-saas but dashboard shows it as idle.
 - Set `$env:LIVE_THRESHOLD_SEC=300; python server.py` and restart server
 - Verify lm-saas now LIVE 🟢 in dashboard
 
+## UC-16: Resume specific session when multiple Claude sessions share same cwd @feature26
+
+Developer открыл 2 параллельных Claude Code session в `D:\repos\dev-pomogator` (например один для feature work, другой для review). У них **разные UUIDs** но **одна** encoded dir в `~/.claude/projects/D--repos-dev-pomogator/`. Через час хочет вернуться **именно к review session**, не к feature session.
+
+- **До FR-26**: dashboard показывает 1 row "D:\repos\dev-pomogator — LIVE 12s ago — last msg: <newest>" — developer не знает какая из двух sessions, [▶ Resume] возьмёт newest UUID.
+- **После FR-26**: dashboard показывает **2 separate rows**:
+  - Row 1: `D:\repos\dev-pomogator` UUID `f09a4ecb...` last msg "Fixed pagination bug" 12s ago
+  - Row 2: `D:\repos\dev-pomogator` UUID `1e8f7350...` last msg "Reviewed FR-24 spec changes" 25s ago
+- Developer кликает [▶ Resume] на row 2 → `claude --resume 1e8f7350...` → продолжает именно review session.
+
+## UC-15: Find open Claude windows even when they're idle (waiting for user) @feature25
+
+Developer открыл 4 окна Claude Code (один в каждом активном worktree), работает с ними весь день. В каждый момент времени активно печатает только в одном окне — остальные **ждут** его ответа. На dashboard:
+
+- **Перед FR-25**: только окно где Claude **прямо сейчас** пишет JSONL показывается LIVE. Остальные 3 показываются «idle Xh» — developer думает что они dead/closed.
+- **После FR-25**: dashboard показывает:
+  - 🟢 LIVE — окно где Claude печатает в этот момент
+  - 💡 Open — 3 окна которые открыты но idle (waiting for user)
+  - idle Xh — worktrees без открытого окна
+
+Developer видит точную картину **что реально открыто** vs **где Claude активен** vs **что просто запомнено в JSONL**. Может switch via Resume buttons или Alt-tab к существующему окну.
+
+## UC-14: Resume orphan Claude session (cwd not in git repo) @feature24
+
+Developer запустил Claude Code из `~/Desktop` чтобы исследовать какие-то файлы на десктопе (cd ~/Desktop && claude). Session завершилась — окно закрыто, но JSONL в `~/.claude/projects/C--Users-stigm-Desktop/<uuid>.jsonl` остался. Через час developer хочет продолжить тот разговор.
+
+- Developer opens dashboard на `http://127.0.0.1:8083/`.
+- В таблице видит row:
+  - Status: idle 1h 3m
+  - Repo: `—` (orphan — нет git)
+  - Branch: `—`
+  - HEAD: `—`
+  - Worktree path: `C:\Users\stigm\Desktop`
+  - Last activity: 1h 3m ago
+  - Last message: "Found 23 PDF files..."
+  - Msgs: 47
+  - Git: `—`
+  - Action: [▶ Resume] [✨ Fresh] [📂 VSCode]
+- Кликает [▶ Resume] → backend POST /api/launch → spawns `wt.exe -d C:\Users\stigm\Desktop -- pwsh.exe -NoExit -Command "claude --resume <uuid>"`.
+- New Windows Terminal окно открывается с cwd = Desktop, Claude Code продолжает беседу.
+
 ## UC-13: One-click taskbar launcher для dashboard @feature23
 
 Developer открывает dashboard 10+ раз в день (alt-tab between worktrees). Browser bookmark workflow = 3-click chain каждый раз. Хочет one-click icon на taskbar.

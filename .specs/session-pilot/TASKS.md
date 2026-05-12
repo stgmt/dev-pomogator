@@ -407,6 +407,63 @@
   - [ ] `extensions/session-pilot/extension.json` → `skills.session-pilot-bootstrap` source path entry
   - [ ] `skillFiles.session-pilot-bootstrap` enumerates SKILL.md path
   - [ ] Installer test verifies skill is installed на target after `node bin/cli.js install .`
+- [ ] T49: Implement session-centric indexer (FR-24) — rows from ~/.claude/projects/* with git enrichment -- @feature24 — Status: TODO | Est: 90m
+  _Requirements: [FR-24](FR.md#fr-24-session-centric-rows--orphan-claude-sessions-resumable-independently-of-git-worktree)_
+  **Done When:**
+  - [ ] `indexer.py` scans `~/.claude/projects/*` first (Phase 1)
+  - [ ] Per row: decode encoded dir → cwd; run `git -C <cwd> rev-parse --show-toplevel` to probe git
+  - [ ] If git OK → attach `repo_name` (toplevel basename) + `branch` + `head_sha` + `git_status`
+  - [ ] If not git → set `is_orphan: true`, `repo_name=""`, `branch=""`, `head_sha=""`
+  - [ ] Phase 3: emit "Claude-never-run" git worktree rows (claude_max_mtime: null) from configured git roots
+  - [ ] Dedup: if Phase 3 cwd already in Phase 1 → skip Phase 3 row (Phase 1 wins, has session history)
+  - [ ] Stale path detection: `if not Path(cwd).exists() → is_stale: true`
+  - [ ] Filter out `~/.claude/projects/C--Users-*--claude-*` meta dirs
+  - [ ] Configurable max-age via `SP_MAX_AGE_DAYS` env (default 7) — filter very-old idle sessions
+- [ ] T50: Update frontend (app.js / index.html) to render orphan rows -- @feature24 — Status: TODO | Est: 30m
+  _Requirements: [FR-24](FR.md#fr-24-session-centric-rows--orphan-claude-sessions-resumable-independently-of-git-worktree)_
+  **Done When:**
+  - [ ] Tabulator column formatters render `—` placeholder for empty repo_name/branch/head_sha when is_orphan=true
+  - [ ] Worktree path column still shows decoded cwd
+  - [ ] Action buttons enabled for orphan rows (Resume/Fresh/VSCode)
+  - [ ] If is_stale=true: action buttons disabled with title attr="Path no longer exists"
+  - [ ] CSS subtle visual differentiation (grey-out repo/branch cells for orphan rows)
+- [ ] T52: Implement process-based "open window" detection (FR-25) -- @feature25 — Status: TODO | Est: 90m
+  _Requirements: [FR-25](FR.md#fr-25-process-based-open-window-indicator--separate-signal-from-jsonl-mtime-live)_
+  **Done When:**
+  - [ ] New module `extensions/session-pilot/tools/session-pilot/process_scanner.py` with `scan_claude_processes() -> dict[cwd_path, list[pid]]`
+  - [ ] Windows impl: subprocess pwsh `Get-CimInstance Win32_Process -Filter "Name='claude.exe'"`; walk parent process tree (claude → pwsh/cmd → wt.exe) parsing CommandLine for `-d <cwd>` / `--working-directory`
+  - [ ] Linux impl: `pgrep -x claude` + read `/proc/<pid>/cwd` symlink via os.readlink
+  - [ ] macOS impl: `lsof -p <pid>` + grep cwd line
+  - [ ] Filter out: processes whose cwd starts with install dir (WindowsApps Claude_, /Applications/Claude.app, etc.)
+  - [ ] Cache result for 5s (TTL); fail-open if scan > 100ms
+  - [ ] indexer.py integrates: per row, set `claude_window_open: bool` + `claude_window_pids: list[int]` from scan result
+  - [ ] Test fixture: simulate Win32_Process output + parent chain; assert correct cwd extraction
+- [ ] T54: Implement per-session rows (FR-26) -- @feature26 — Status: TODO | Est: 60m
+  _Requirements: [FR-26](FR.md#fr-26-per-session-rows-expand-1-row-per-cwd-to-1-row-per-jsonl-uuid)_
+  **Done When:**
+  - [ ] `indexer.py` changed: emit 1 row per JSONL file (not per encoded dir)
+  - [ ] Row schema gains `session_uuid` field (from JSONL filename)
+  - [ ] Per-cwd computed fields (repo_name, branch, head_sha, git_status, is_orphan, claude_window_open, claude_window_pids) cached per cwd and attached to each row
+  - [ ] Per-JSONL computed fields (claude_max_mtime, claude_running_now, last_message, last_message_role, last_message_ts, msg_count) extracted from each JSONL separately
+  - [ ] Git-only worktree (Source C) → emit 1 row with session_uuid=null
+  - [ ] Frontend POST /api/launch on Resume uses row.session_uuid
+  - [ ] Stress test: 100 JSONLs in single dir → 100 rows rendered via Tabulator virtual scroll
+- [ ] T53: Frontend 3-state Status column rendering (FR-25) -- @feature25 — Status: TODO | Est: 20m
+  _Requirements: [FR-25](FR.md#fr-25-process-based-open-window-indicator--separate-signal-from-jsonl-mtime-live)_
+  **Done When:**
+  - [ ] Status column formatter checks `claude_running_now > claude_window_open > else` priority
+  - [ ] Renders `🟢 LIVE` / `💡 Open` / `idle Xs ago` accordingly
+  - [ ] CSS class per state for color differentiation
+  - [ ] Tooltip on `💡 Open` shows "Claude Code window open, idle" + PID list
+- [ ] T51: Add tests for session-centric indexer + orphan handling -- @feature24 — Status: TODO | Est: 45m
+  _Requirements: [FR-24](FR.md#fr-24-session-centric-rows--orphan-claude-sessions-resumable-independently-of-git-worktree)_
+  **Done When:**
+  - [ ] Test fixture: `tmpdir/projects/D--repos-foo/<uuid>.jsonl` + matching real git worktree → row has full git fields, is_orphan=false
+  - [ ] Test fixture: `tmpdir/projects/D--temp-orphan/<uuid>.jsonl` + decoded cwd is non-git folder → row is_orphan=true
+  - [ ] Test fixture: deleted-path → is_stale=true
+  - [ ] Test fixture: meta dir `C--Users-x--claude-projects/<uuid>.jsonl` → excluded from /api/index
+  - [ ] Test fixture: Phase 3 git worktree without Claude history → claude_max_mtime=null row emitted
+  - [ ] Dedup test: same cwd in both Phase 1 + Phase 3 → only Phase 1 row in response
 - [x] T48: Create launcher installer scripts (create-launcher.ps1 + create-launcher.sh) -- @feature23 — Status: DONE | Est: 60m
   _Requirements: [FR-23](FR.md#fr-23-taskbar--dock-launcher-installer-create-launcher)_
   **Done When:**

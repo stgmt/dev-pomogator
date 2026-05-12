@@ -27,6 +27,9 @@
 | [FR-21](FR.md#fr-21-os-detection--platform-dispatched-module-architecture) | OS detection + platform-dispatched module architecture | [AC-21](ACCEPTANCE_CRITERIA.md#ac-21-fr-21) | @feature21 | Draft (v0.4) |
 | [FR-22](FR.md#fr-22-on-demand-worktree-bootstrap-skill-session-pilot-bootstrap) | On-demand worktree bootstrap skill (session-pilot-bootstrap) | [AC-22](ACCEPTANCE_CRITERIA.md#ac-22-fr-22) | @feature22 | Draft (v0.4) |
 | [FR-23](FR.md#fr-23-taskbar--dock-launcher-installer-create-launcher) | Taskbar / Dock launcher installer (cross-platform create-launcher.ps1 + create-launcher.sh) | [AC-23](ACCEPTANCE_CRITERIA.md#ac-23-fr-23) | @feature23 | Implemented (Windows .ps1 + POSIX .sh shipped in this PR); Draft (manual pin step automation) |
+| [FR-24](FR.md#fr-24-union-model--all-git-worktrees-and-all-claude-sessions-merged--deduplicated) | UNION model — all worktrees AND all sessions, merged + deduplicated | [AC-24](ACCEPTANCE_CRITERIA.md#ac-24-fr-24) | @feature24 | Draft (v0.4) — discovered via real-host diagnostic 2026-05-13 |
+| [FR-25](FR.md#fr-25-process-based-open-window-indicator--separate-signal-from-jsonl-mtime-live) | Process-based "open window" indicator (separate from JSONL mtime LIVE) | [AC-25](ACCEPTANCE_CRITERIA.md#ac-25-fr-25) | @feature25 | Draft (v0.4) — fixes idle-but-open-window UX gap |
+| [FR-26](FR.md#fr-26-per-session-rows-expand-1-row-per-cwd-to-1-row-per-jsonl-uuid) | Per-session rows (expand 1-row-per-cwd to 1-row-per-JSONL-uuid) | [AC-26](ACCEPTANCE_CRITERIA.md#ac-26-fr-26) | @feature26 | Draft (v0.4) — fixes hidden-sessions-in-same-cwd UX gap (diagnostic 2026-05-13: 3 LIVE UUIDs collapsed to 1 row) |
 
 ## Functional Requirements
 
@@ -53,6 +56,9 @@
 - [FR-21: OS detection + platform-dispatched module architecture](FR.md#fr-21-os-detection--platform-dispatched-module-architecture)
 - [FR-22: On-demand worktree bootstrap skill](FR.md#fr-22-on-demand-worktree-bootstrap-skill-session-pilot-bootstrap)
 - [FR-23: Taskbar / Dock launcher installer](FR.md#fr-23-taskbar--dock-launcher-installer-create-launcher)
+- [FR-24: UNION model — all worktrees AND all sessions, merged + deduplicated](FR.md#fr-24-union-model--all-git-worktrees-and-all-claude-sessions-merged--deduplicated)
+- [FR-25: Process-based "open window" indicator](FR.md#fr-25-process-based-open-window-indicator--separate-signal-from-jsonl-mtime-live)
+- [FR-26: Per-session rows (1 row per JSONL UUID, not per cwd)](FR.md#fr-26-per-session-rows-expand-1-row-per-cwd-to-1-row-per-jsonl-uuid)
 
 ## Non-Functional Requirements
 
@@ -87,6 +93,9 @@
 - [AC-21 (FR-21): terminal_launcher.launch dispatches on sys.platform](ACCEPTANCE_CRITERIA.md#ac-21-fr-21)
 - [AC-22 (FR-22): session-pilot-bootstrap skill detects orphan worktree + runs installer + verifies state](ACCEPTANCE_CRITERIA.md#ac-22-fr-22)
 - [AC-23 (FR-23): create-launcher creates per-OS pin-able artifact (Windows .lnk / Linux .desktop / macOS .app bundle)](ACCEPTANCE_CRITERIA.md#ac-23-fr-23)
+- [AC-24 (FR-24): /api/index UNION = worktrees + sessions + dedup; orphan rows is_orphan=true; stale-path detection; FR-1 worktree visibility preserved](ACCEPTANCE_CRITERIA.md#ac-24-fr-24)
+- [AC-25 (FR-25): claude_window_open + claude_window_pids fields; frontend 3-state status `🟢 LIVE` / `💡 Open` / `idle Xs`; per-OS process scan (Win32_Process / /proc/<pid>/cwd / lsof); fail-open under 100ms budget](ACCEPTANCE_CRITERIA.md#ac-25-fr-25)
+- [AC-26 (FR-26): /api/index emits 1 row per JSONL UUID (not per cwd); session_uuid per row; Resume targets row-specific UUID; git-only worktree without history → 1 row with session_uuid=null + Resume disabled](ACCEPTANCE_CRITERIA.md#ac-26-fr-26)
 
 ## Verification Matrix (CHK)
 
@@ -166,6 +175,27 @@
 | CHK-FR23-04 | Browser detection chain: Edge → Chrome → (Linux only) Chromium/Brave; clean error if none found | FR-23, AC-23, @feature23 | Integration test | Draft | v0.4 |
 | CHK-FR23-05 | Idempotent re-run overwrites artifact with current $WT_DASHBOARD_PORT settings | FR-23, AC-23, @feature23 | Integration test | Draft | v0.4 |
 | CHK-FR23-06 | Browser profile isolation via --user-data-dir=<state-dir>/browser-profile prevents cookie sharing with main browser session | FR-23, AC-23, @feature23 | Manual review | Draft | v0.4 |
+| CHK-FR24-01 | Indexer scans ~/.claude/projects/* AND emits row for each encoded dir | FR-24, AC-24, @feature24, UC-14 | Integration test | Draft | v0.4 — verified via diagnostic 2026-05-13: 7 dirs found |
+| CHK-FR24-02 | Non-git decoded cwd produces row with is_orphan=true + empty repo_name/branch/head_sha | FR-24, AC-24, @feature24, UC-14 | Integration test | Draft | v0.4 — concrete cases: C--Users-stigm-Desktop, D--repos |
+| CHK-FR24-03 | Orphan row Resume button works identically to git row (wt.exe -d <decoded> + pwsh + claude --resume <uuid>) | FR-24, AC-24, @feature24, UC-14 | Integration test | Draft | v0.4 |
+| CHK-FR24-04 | Dedup: when both git worktree row AND orphan row exist for same decoded cwd, only git row emitted | FR-24, AC-24, @feature24 | Unit test | Draft | v0.4 |
+| CHK-FR24-05 | Stale path detection: decoded cwd no longer on disk → is_stale=true + frontend disables action buttons | FR-24, AC-24, @feature24 | Integration test | Draft | v0.4 |
+| CHK-FR24-06 | Claude meta state dirs (~/.claude/projects/C--Users-*--claude-*) filtered out of /api/index | FR-24, AC-24, @feature24 | Unit test | Draft | v0.4 |
+| CHK-FR24-07 | Encoded dir ambiguous decode (D--repos-foo → both D:\repos\foo AND /mnt/d/repos/foo) — first Test-Path wins | FR-24, AC-24, @feature24 | Unit test | Draft | v0.4 — depends on platform |
+| CHK-FR24-08 | Git worktree without Claude history (Source C) still appears in /api/index with full git fields + claude_max_mtime=null | FR-24, AC-24, @feature24 @feature1, UC-14 | Integration test | Draft | v0.4 — preserves FR-1 visibility guarantee |
+| CHK-FR25-01 | Server enumerates claude.exe processes via Win32_Process (Windows) / pgrep+/proc (Linux) / lsof (macOS) | FR-25, AC-25, @feature25, UC-15 | Integration test | Draft | v0.4 |
+| CHK-FR25-02 | Process cwd extracted via parent chain analysis (Windows) / direct /proc symlink (Linux) / lsof line (macOS) | FR-25, AC-25, @feature25 | Integration test | Draft | v0.4 |
+| CHK-FR25-03 | Row emits claude_window_open=true when ≥1 claude.exe found with matching cwd | FR-25, AC-25, @feature25, UC-15 | Integration test | Draft | v0.4 — verified manually 2026-05-13 (4 windows on taskbar but only 2 LIVE = motivating use case) |
+| CHK-FR25-04 | Frontend 3-state Status column: 🟢 LIVE > 💡 Open > idle Xs priority | FR-25, AC-25, @feature25, UC-15 | Manual review | Draft | v0.4 |
+| CHK-FR25-05 | Process scan cost ≤ 100ms warm (cache TTL 5s); fail-open if exceeds | FR-25, AC-25, @feature25 | Integration test | Draft | v0.4 — NFR-Perf compliance |
+| CHK-FR25-06 | claude.exe processes whose cwd is install dir (e.g. WindowsApps Claude_*) excluded — only CLI sessions counted | FR-25, AC-25, @feature25 | Integration test | Draft | v0.4 — prevents Claude.ai desktop app polluting rows |
+| CHK-FR25-07 | Multiple PIDs same cwd deduplicate to single row + claude_window_pids lists all | FR-25, AC-25, @feature25 | Unit test | Draft | v0.4 |
+| CHK-FR26-01 | N JSONL files in one encoded dir → N rows emitted (not 1) | FR-26, AC-26, @feature26, UC-16 | Integration test | Draft | v0.4 — verified manually 2026-05-13 (3 LIVE UUIDs в D--repos-dev-pomogator) |
+| CHK-FR26-02 | Each row has distinct session_uuid + own claude_max_mtime + own last_message | FR-26, AC-26, @feature26 | Integration test | Draft | v0.4 |
+| CHK-FR26-03 | Rows sharing cwd carry same repo_name/branch/head_sha (git computed once per cwd, attached to all rows) | FR-26, AC-26, @feature26 | Integration test | Draft | v0.4 |
+| CHK-FR26-04 | Resume button POST uses row-specific session_uuid (not newest) | FR-26, AC-26, @feature26, UC-16 | Integration test | Draft | v0.4 |
+| CHK-FR26-05 | Git worktree without JSONL (Source C from FR-24) → 1 row with session_uuid=null + Resume disabled | FR-26, AC-26, @feature26 @feature24 | Unit test | Draft | v0.4 |
+| CHK-FR26-06 | 100 JSONLs in single dir → 100 rows; Tabulator virtual scroll handles within NFR-Perf budget | FR-26, AC-26, @feature26 | Integration test | Draft | v0.4 — stress case |
 
 ## Verification Process
 
@@ -187,10 +217,10 @@
 
 ## Summary Counts
 
-- Total CHKs: 70 (40 v0.3 + 30 v0.4: 16 cross-platform + 8 bootstrap-skill + 6 launcher)
-- Verified: 30 (43%) — CHK-FR17-06 (v0.4 WSL contract) + CHK-FR23-01 (Windows launcher shipped this PR)
+- Total CHKs: 91 (40 v0.3 + 51 v0.4: 16 cross-platform + 8 bootstrap + 6 launcher + 8 union + 7 process-open + 6 per-session)
+- Verified: 30 (33%) — CHK-FR17-06 (WSL contract) + CHK-FR23-01 (Windows launcher shipped this PR)
 - In Progress: 0
-- Draft: 40 (12 Phase 5 / v0.2 deferred + 15 v0.4 cross-platform + 8 v0.4 bootstrap-skill + 5 v0.4 launcher)
+- Draft: 61 (12 v0.2 deferred + 15 v0.4 cross-platform + 8 v0.4 bootstrap + 5 v0.4 launcher + 8 v0.4 union + 7 v0.4 process-open + 6 v0.4 per-session)
 - Blocked: 0
 
 ## Phase mapping

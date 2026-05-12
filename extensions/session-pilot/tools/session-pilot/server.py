@@ -86,8 +86,12 @@ from terminal_launcher import (  # noqa: E402
 
 
 def _whitelisted_paths() -> set[str]:
-    """All paths from current /api/index — used for /api/launch and /api/open-vscode whitelist."""
-    return {r["worktree_path"] for r in build_index_cached()["rows"]}
+    """All paths from current /api/index — used for /api/launch and /api/open-vscode whitelist.
+
+    FR-26: /api/index now returns per-session rows via build_session_index_cached;
+    set() comprehension naturally dedupes N sessions sharing one cwd → 1 entry.
+    """
+    return {r["worktree_path"] for r in build_session_index_cached()["rows"]}
 
 
 # Re-export indexer functions so tests + handlers see same symbols on `server`.
@@ -101,6 +105,8 @@ from indexer import (  # noqa: E402
     claude_max_mtime_for,
     _claude_max_mtime_uncached,
     build_worktree_index,
+    build_session_index,           # FR-26: per-session rows
+    build_session_index_cached,    # FR-26
     build_claude_for_path,
     build_index_cached,
     build_claude_cached,

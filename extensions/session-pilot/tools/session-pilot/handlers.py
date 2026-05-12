@@ -140,10 +140,15 @@ class Handler(BaseHTTPRequestHandler):
         elif url.path.startswith("/vendor/"):
             self._serve_vendor(url.path)
         elif url.path == "/api/health":
-            _send_json(self, {"status": "ok", "version": "0.3.0",
+            import sys as _sys
+            _send_json(self, {"status": "ok", "version": "0.4.0",
+                              "platform": _sys.platform,
                               "uptime_sec": int(time.time() - server._START_TIME)})
         elif url.path == "/api/index":
-            _send_json(self, server.build_index_cached())
+            # FR-26: per-session rows (1 row per JSONL UUID). Existing
+            # /api/data continues to call build_index_cached for legacy
+            # per-worktree shape if anyone needs it.
+            _send_json(self, server.build_session_index_cached())
         elif url.path == "/api/claude":
             path = (qs.get("path") or [""])[0]
             if not path:
