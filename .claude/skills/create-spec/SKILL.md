@@ -40,6 +40,8 @@ argument-hint: "<feature-slug>"
 
 Sub-skill ecosystem (вызываются через `Skill(...)`): `discovery-forms` (Phase 1 step 3), `requirements-chk-matrix` (Phase 2 step 4b), `task-board-forms` (Phase 3 step 1b), `research-workflow` (Phase 1 step 5).
 
+> **Pre-STOP semantic check:** before each `ConfirmStop` (#1/#2/#3), run `Skill("spec-review")` to catch external-claim drift, name collisions, antipattern violations, and 10 other categories that `audit-spec.ts` does not detect. See [`.claude/skills/spec-review/SKILL.md`](../spec-review/SKILL.md).
+
 ## Алгоритм запуска
 
 1. **Если запрос на создание новой спеки** ("сделай спеку для X", "create spec for X" и т.д.):
@@ -78,6 +80,15 @@ Files: {done}/{total} complete — Next: {next_action}
 3️⃣ Requirements — формальные FR/AC/NFR + DESIGN + BDD .feature
 4️⃣ Finalization — план задач TASKS + README + CHANGELOG
 + Phase 3+ Audit (автоматически после STOP #3)
+
+⚠️ Pre-Write Verification Checklist — ОБЯЗАТЕЛЬНО в Phase 1 (3 пункта)
+   и Phase 2 (8 пунктов). Цель: поймать факты-ошибки на генерации, не на ревью.
+   - CL-1: Read project memory feedback_*.md перед первым Write
+   - CL-2: Каждый file path — Read first, без verification claim не пишется
+   - CL-3: Каждая CLI команда — Bash --help first
+   (Phase 2 добавляет: API verify, namespace collision, cross-ref consistency)
+   См. references/phase1_discovery.md и references/phase2_requirements-and-design.md.
+
 Начинаем с Phase 1: Discovery.
 ```
 

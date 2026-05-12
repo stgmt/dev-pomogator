@@ -19,3 +19,4 @@ allow:
 - vitest.unit.config.ts
 - .npmignore
 - .mcp.json
+- stryker.config.mjs

@@ -3,11 +3,124 @@
 ## Contents
 
 - [Step 0 (Jira-mode)](#step-0-jira-mode)
+- [Pre-Write Verification Checklist (ОБЯЗАТЕЛЬНО)](#pre-write-verification-checklist-обязательно)
 - [Алгоритм](#алгоритм)
 - [Правила создания .feature](#правила-создания-feature)
 - [STOP #2](#stop-2)
 
 **Файлы:** REQUIREMENTS.md, FR.md, NFR.md, ACCEPTANCE_CRITERIA.md, DESIGN.md, FILE_CHANGES.md, `{slug}_SCHEMA.md`, `*.feature`
+
+## Pre-Write Verification Checklist (ОБЯЗАТЕЛЬНО)
+
+Перед написанием FR/AC/DESIGN — выполнить **все** проверки ниже. Каждый item фиксирует класс ошибок, регулярно всплывающий на spec-review. Цель — **поймать на genertion, не на review**.
+
+> **Контекст:** в session 2026-05-12 ревью spec `worktree-setup` обнаружил 3 P0 + 2 P1 которые могли быть пойманы на генерации:
+> - Wrong file claim (`tsx-runner-bootstrap.cjs` вместо `tsx-runner.js`) — не Read'нул файл
+> - Hardcoded identifier (`stgmt/dev-pomogator`) — игнор own feedback memory
+> - Wrong CLI semantics (`git worktree add <path> <branch>`) — не Bash'нул `--help`
+> - Namespace collision (`GH_HOST` vs gh CLI's own env var) — не проверил reserved names
+> - Missed env-first pattern — не загрузил feedback memory pre-write
+
+### CL-1: Memory-aware context priming
+
+ДО написания первого FR/Design claim — выполнить:
+
+```bash
+# Derive project-encoded cwd: Claude Code заменяет '/', '\', ':' на '-' в pwd
+# Пример: D:\repos\dev-pomogator → D--repos-dev-pomogator
+encoded=$(pwd | sed 's|[:/\\]|-|g')
+ls ~/.claude/projects/${encoded}/memory/feedback_*.md 2>/dev/null
+```
+
+Если файлы существуют — **прочитать каждый Read tool-ом**. Это constraints применимые к ЭТОЙ spec (например `feedback_no-hardcoded-*`, `feedback_env-first-*`, `feedback_integration-tests-*`).
+
+Каждая загруженная memory становится **active constraint** при написании spec:
+- Если memory говорит "no hardcoded X" — spec ОБЯЗАН не содержать литерал X
+- Если memory говорит "env file before asking" — spec ОБЯЗАН использовать env-first паттерн в design
+
+При финальной проверке (CL-7 ниже) — grep spec body против literals упомянутых в memory.
+
+### CL-2: Verify every file path before claiming behavior
+
+Для **каждого** absolute или relative path упоминаемого в FR/DESIGN/SCHEMA:
+
+- Read tool на этот path → verify file existence, structure
+- Сохранить line number range в RESEARCH.md "Где лежит реализация" или DESIGN.md "Где лежит реализация"
+- Без verified file content — НЕ писать claim про поведение этого файла
+
+Запрещено: claim "файл X делает Y" если file X не был Read в текущей session.
+
+### CL-3: Verify every external CLI command via `--help`
+
+Для **каждой** внешней CLI команды (git, gh, node, npm, npx, dotnet, pytest, docker, etc.) упомянутой в FR/AC/DESIGN:
+
+- Bash `{cmd} --help 2>&1 | head -N` ИЛИ `{cmd} -h`
+- Цитировать relevant usage line в RESEARCH.md "Технические находки" или DESIGN.md как `[VERIFIED: {cmd} --help → "{quote}"]`
+- Если flag/option упомянут — verify он существует в actual help output
+
+Запрещено: claim "команда X с флагом Y делает Z" без verification что флаг Y реально существует и делает Z.
+
+### CL-4: Verify external API surface (Step 5b expansion)
+
+Шаг 5b алгоритма (External Service Verification) переносится сюда как **pre-FR** проверка, не post-design. Для каждого внешнего сервиса (gh API, GitHub REST, OpenAI, Stripe, etc.):
+
+- WebFetch на официальную доку ИЛИ Bash на CLI команду для verification
+- Цитировать field names / endpoint paths / response shapes в SCHEMA.md или RESEARCH.md
+- Каждый API claim → `[VERIFIED: <source>]` или `[UNVERIFIED]`
+
+Запрещено: claim "API возвращает {field}" без verification.
+
+### CL-5: Namespace collision check для новых env vars / config keys
+
+Для **каждого** нового env var name или config key упомянутого в spec:
+
+- grep против reserved namespaces для common tools (gh: `GH_TOKEN`, `GH_HOST`, `GH_ENTERPRISE_*`; npm: `NPM_TOKEN`, `NPM_CONFIG_*`; AWS: `AWS_*`; Node: `NODE_*`; etc.)
+- Если коллизия найдена — добавить namespace prefix (e.g., `WT_GH_*` для worktree-setup, `MYAPP_*` для app-level)
+- Документировать namespace choice в SCHEMA.md с обоснованием
+
+Запрещено: использовать общеупотребительные имена (`HOST`, `TOKEN`, `USER`, `PATH`, `HOME`) без префикса.
+
+### CL-6: Verify file paths after writing — pre-STOP grep
+
+Перед `spec-status -ConfirmStop Requirements`:
+
+```bash
+# Найти все absolute paths и file references в spec, verify existence
+grep -roE "(~|/|\.\.?\/|[A-Z]:[\\/])[a-zA-Z0-9._\\/-]+" .specs/{slug}/ | \
+  awk -F: '{print $3}' | sort -u | \
+  while read p; do [ -e "$(echo $p | sed "s|^~|$HOME|")" ] || echo "MISSING: $p"; done
+```
+
+Каждый `MISSING:` — либо truly missing (P0 — wrong claim) либо futur creation (OK если в FILE_CHANGES.md action=create). Если последнее — добавить в FILE_CHANGES.
+
+### CL-7: Memory constraint compliance — pre-STOP grep
+
+Перед `spec-status -ConfirmStop Requirements`:
+
+Для каждой loaded в CL-1 memory:
+- Extract forbidden literals / required patterns (e.g., memory "no-hardcoded-stgmt" → forbidden `stgmt/`)
+- grep `.specs/{slug}/` на forbidden literals
+- Если match — P0 finding, must fix
+
+```bash
+# Пример для no-hardcoded-* memories
+for memo in ~/.claude/projects/$(pwd | sed 's|[/:]|-|g')/memory/feedback_no-hardcoded-*.md; do
+  literal=$(grep -oE 'literal[s]? `[^`]+`' "$memo" | head -1 | sed 's/.*`\(.*\)`.*/\1/')
+  [ -n "$literal" ] && grep -rn "$literal" .specs/{slug}/ && echo "VIOLATION: $literal mentioned in $memo"
+done
+```
+
+### CL-8: Cross-reference consistency
+
+- Каждый @featureN в `.feature` ↔ есть в REQUIREMENTS.md Traceability Matrix ↔ есть FR-N
+- Каждый CHK-FR{n}-{nn} в REQUIREMENTS.md Verification Matrix ↔ Traces To существует
+- Каждый file path в FILE_CHANGES.md ↔ упомянут в TASKS.md или Implementation Plan
+
+Поймает before-STOP cross-file inconsistencies которые иначе всплывут в Phase 3+ audit.
+
+---
+
+После прохождения **всех 8 пунктов** — приступать к Алгоритму ниже. Каждый Write tool call после этого — already-verified content.
 
 ## Step 0 (Jira-mode)
 
