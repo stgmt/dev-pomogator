@@ -288,6 +288,45 @@ def test_fr25_pid_attributed_only_to_newest_jsonl_per_cwd(monkeypatch, tmp_path)
     assert rows[2]["claude_window_pids"] == []
 
 
+def test_fr25_source_c_row_never_gets_window_open(monkeypatch, tmp_path):
+    """Regression (user-reported 2026-05-13 round 6): dashboard showed 6 active
+    rows for 5 Claude windows. The "extra" was a Source C row (git worktree
+    without Claude history) with window_open=true because the user's session-pilot
+    worktree had a claude.exe PID running there — but that PID's JSONL is keyed
+    under the START cwd (dev-pomogator), not session-pilot.
+
+    Result: 1 user process = 2 dashboard rows ("shadow" duplicate). EnterWorktree
+    quirk: process cwd != JSONL memory dir. Fix: Source C rows (session_uuid=None)
+    never get window_open=true. The real session is already shown LIVE under its
+    JSONL memory dir; an extra Open marker on the empty worktree is misleading.
+    """
+    repo = tmp_path / "repo-source-c-window"
+    _init_git_repo(repo)
+    # No JSONL — Source C path
+    empty_projects = tmp_path / "empty_claude_projects"
+    empty_projects.mkdir()
+
+    monkeypatch.setenv("REPOS", str(repo))
+    monkeypatch.setattr(server, "CLAUDE_PROJECTS_DIRS", [empty_projects])
+    repo_norm = str(repo).replace("\\", "/").rstrip("/")
+    if len(repo_norm) >= 2 and repo_norm[1] == ":":
+        repo_norm = repo_norm[0].upper() + repo_norm[1:]
+    # process_scanner says there's a claude.exe alive in this cwd
+    monkeypatch.setattr(process_scanner, "scan_claude_processes",
+                        lambda **kwargs: {repo_norm: [54321]})
+    _reset_indexer_caches()
+
+    idx = indexer.build_session_index()
+    rows = [r for r in idx["rows"] if r["repo"] == "repo-source-c-window"]
+    assert len(rows) == 1
+    src_c = rows[0]
+    assert src_c["session_uuid"] is None, "should be Source C (no JSONL)"
+    # CRITICAL: even though PID exists for cwd, Source C row stays Open=False.
+    assert src_c["claude_window_open"] is False, \
+        "Source C rows must NEVER set window_open=true (EnterWorktree shadow-row prevention)"
+    assert src_c["claude_window_pids"] == []
+
+
 def test_fr25_multiple_pids_distributed_to_top_k_rows(monkeypatch, tmp_path):
     """When cwd has K PIDs and N JSONLs (K < N), top-K newest rows get PIDs (1 each)."""
     repo = tmp_path / "repo-multi-pid"
