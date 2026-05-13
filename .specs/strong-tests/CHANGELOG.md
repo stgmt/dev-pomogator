@@ -11,6 +11,13 @@ All notable changes to this feature will be documented in this file.
 - Phase 4 Implementation (planned): skill body at .claude/skills/strong-tests/ — SKILL.md (8 sections), references/anti-patterns.md, references/tooling-setup.md, scripts/run-mutation.ts
 - Phase 5 Verification (planned): extension.json wiring, layout-validate, skills-rules-optimizer audit, bidirectional cross-link with tests-create-update
 - Phase 6 Report (planned): .specs/strong-tests/report.html (8 sections, semantic HTML5, light/dark CSS, no JS, no emojis)
+- Phase 10.1 v0.5.1 — LLM-driven survivor analysis full workflow (2026-05-13):
+  - **FR-15 finalized** — moved from stub (v0.5.0) to full workflow. Added 2 new helper scripts: `survivors-batch-prompt.ts` (Meta ACH-style prompt batching + cost guard $2/budget) + `merge-survivor-verdicts.ts` (verdict merge back into MutationReport.gaps[] with survivorAnalysis summary).
+  - Workflow documented в SKILL.md §6.3 with 4-step orchestration: run-mutation.ts --analyze-survivors → batch-prompt → Agent() per batch → merge-verdicts. AI agent invokes Agent(subagent_type="general-purpose") with Meta ACH prompt (0.95 precision target per engineering.fb.com 2025-09-30).
+  - vitest TESTQUAL001_12..16 (5 new tests): batching into chunks of 50, budget guard abort, verdict merge with equivalentSuspect+confidence+rationale, unmatched verdicts warning, gaps[] preference over raw survivors[].
+  - Anti-gaming guard §8 hard-NO #6 preserved: LLM verdicts are suggestions not assertions; reviewer spot-check required для equivalentSuspect:true flags.
+  - CHK-FR15-01/02 → Verified; +CHK-FR15-03 new. Summary Counts: 34→35 (Verified 16→19, Draft 18→16).
+
 - Phase 10 v0.5.0 — composition-chain + Stryker.NET + ast-grep + LLM survivor + Ghostwriter + fixture (2026-05-13):
   - **FR-11 Composition-chain detection** finally implemented в `detect-invariant-candidates.ts` scan() — declared с v0.1.0 в TypeScript types + SKILL.md §6.4 но 0 строк implementation. Added CHAIN_TS / CHAIN_CS / CHAIN_PY / CHAIN_GO regex constants + chainRegexFor() + chainCount() helpers. Detection priority: nxm-overlap → composition-chain → collection-returning fallback. Smoke verified: TS `.filter().map().reduce()` → composition-chain; C# LINQ `.Where().Select().OrderBy().ToList()` → composition-chain.
   - **FR-12 Stryker.NET dispatch** добавлен в `run-mutation.ts` как `runStrykerNet()` parallel к existing runStryker (TS) / runMutmut (Python). Pre-flight: dotnet-stryker --help check + stryker-config.json existence. Parallel JSON template `references/stryker-net.config.template.json` с {{TODO}} placeholders.

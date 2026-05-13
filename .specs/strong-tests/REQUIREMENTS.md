@@ -71,8 +71,9 @@
 | CHK-FR13-01 | FR-13 default skip Integration E2E runStrykerNet applies Category Unit filter by default | FR-13, AC-3, @feature3 | Integration test | Verified | Filter args explicit plus log line emit when override |
 | CHK-FR14-01 | FR-14 ast-grep TS branch getTsFunctionsViaAstGrep integrated with regex fallback | FR-14, AC-1, @feature1 | Integration test | Verified | 47 unit tests pass with NAPI loaded regex fallback if NAPI fails |
 | CHK-FR14-02 | FR-14 NAPI module load try catch on require ast-grep napi graceful degradation | FR-14, AC-1, @feature1 | Integration test | Verified | astGrepModule null fallback path |
-| CHK-FR15-01 | FR-15 LLM survivor stub annotateSurvivorsForLlmReview preserves cardinality 1-to-1 | FR-15, AC-3, @feature3 | Integration test | Draft | input length equals output length invariant tested via integration |
-| CHK-FR15-02 | FR-15 reconstructedContext 3 lines around mutation point read from disk | FR-15, AC-3, @feature3 | Integration test | Draft | File not readable graceful path emits null context |
+| CHK-FR15-01 | FR-15 LLM survivor stub annotateSurvivorsForLlmReview preserves cardinality 1-to-1 | FR-15, AC-3, @feature3 | Integration test | Verified | TESTQUAL001_12-16 verify batching cost guard merge unmatched preference |
+| CHK-FR15-02 | FR-15 reconstructedContext 3 lines around mutation point read from disk | FR-15, AC-3, @feature3 | Integration test | Verified | annotateSurvivorsForLlmReview reads file emits null if not readable |
+| CHK-FR15-03 | FR-15 v0.5.1 full workflow batch-prompt cost guard plus merge-verdicts Meta ACH pattern | FR-15, AC-3, @feature3 | Integration test | Verified | TESTQUAL001_LLM_SURVIVOR 5 tests green budget abort warning unmatched |
 | CHK-FR16-01 | FR-16 Ghostwriter integration runGhostwriter function spawns hypothesis write subprocess | FR-16, AC-1, @feature1 | Integration test | Draft | Pre-flight hypothesis version check plus STDOUT parse |
 | CHK-FR17-01 | FR-17 framework selection documented in SKILL.md section 3 with AskUserQuestion pattern plus 6 frameworks enumerated | FR-17, AC-4, @feature4 | Manual review | Verified | Cross-link to 9 established skills |
 
@@ -96,8 +97,8 @@
 
 ## Summary Counts
 
-- Total CHKs: 34
-- Verified: 16
+- Total CHKs: 35
+- Verified: 19
 - In Progress: 0
-- Draft: 18
+- Draft: 16
 - Blocked: 0

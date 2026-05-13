@@ -441,6 +441,100 @@ describe('your-script module API', () => {
 
 Корневая причина не подтверждена 100% (см. `.claude/rules/pomogator/tui-debug-verification.md` #3) — три плауsible hypotheses: capture handle drop / pipe buffer race / block-vs-line buffering. Если репро на вашем проекте — open issue в vitest GitHub + cross-link сюда.
 
+#### LLM-driven survivor analysis (v0.5.1 full workflow)
+
+Per Meta ACH Equivalence Detector pattern (engineering.fb.com 2025-09-30, 0.95 precision target) — auto-flag mutation survivors as equivalent (cosmetic / dead-code / mathematically identical) vs real test coverage gaps. Reduces manual review load 70%.
+
+**3-step workflow** (skill orchestrates через Agent() tool):
+
+**Step 1: Run mutation with annotation flag**
+
+```bash
+npx tsx run-mutation.ts <target> --analyze-survivors > report.json
+```
+
+Output `report.json` contains `gaps[]` array with each survivor annotated с:
+- Original fields (file, line, mutator, replacement)
+- `equivalentSuspect: 'NEEDS_HUMAN_REVIEW'` initial marker
+- `reconstructedContext` (±3 lines around mutation point read from disk)
+
+**Step 2: Generate prompt batches**
+
+```bash
+npx tsx scripts/survivors-batch-prompt.ts report.json --batch-size=50 --budget-usd=2 > batches.jsonl
+```
+
+Output `batches.jsonl` — one JSON line per batch. Each entry:
+- `batch_id` (e.g., "1/8")
+- `survivors_count` (≤50)
+- `estimated_cost_usd` per batch
+- `cumulative_cost_usd` (aborts if exceeds budget)
+- `prompt` — full Meta ACH-style instruction + survivors batch JSON
+
+Cost guard built-in: aborts emit if cumulative > `--budget-usd` default $2 (~200-400 survivors на Sonnet 4.6 batch pricing).
+
+**Step 3: Invoke Agent() per batch, save verdicts**
+
+Skill workflow (this is what AI agent executes when running `/strong-tests --analyze-survivors`):
+
+```
+For each batch entry in batches.jsonl:
+  1. Invoke Agent(subagent_type="general-purpose") with batch.prompt
+  2. Parse Agent's JSON response (array of verdicts):
+     [{ "survivor_id": "file:line:col",
+        "equivalentSuspect": true | false,
+        "confidence": "high" | "medium" | "low",
+        "rationale": "..." }]
+  3. Write to verdicts-batch-N.json
+```
+
+**Step 4: Merge verdicts back into report**
+
+```bash
+npx tsx scripts/merge-survivor-verdicts.ts report.json verdicts-batch-*.json > enriched-report.json
+```
+
+Output `enriched-report.json` имеет structure:
+- All original fields
+- `gaps[]` enriched с `equivalentSuspect: boolean + confidence + rationale` per survivor
+- `survivorAnalysis: { totalVerdicts, mergedIntoGaps, unmatchedVerdicts, equivalentSuspectCount, realGapCount }`
+
+**Anti-gaming guard per §8 hard-NO #6** (added in v0.4.0): LLM verdicts are **suggestions**, not assertions. Reviewer SHALL spot-check `equivalentSuspect: true` flagged mutants — false positives suppress real gaps from human attention. Per Meta ACH precision 0.95 means ~5% мutants flagged equivalent incorrectly — non-zero false positive rate.
+
+**Example output** на dotnet-stryker fixture (8 survivors from 80% baseline):
+
+```json
+{
+  "stack": "csharp",
+  "tool": "stryker-net",
+  "killRate": 0.8048780487804879,
+  "totalMutants": 48,
+  "survivedMutants": 8,
+  "gaps": [
+    {
+      "file": "CollectionPipeline.cs", "line": 10, "mutator": "Equality mutation",
+      "mutatedCode": "i.Price > minPrice",
+      "equivalentSuspect": false, "confidence": "high",
+      "rationale": "Real gap: test asserts `>=` boundary behavior (price exactly equal to minPrice) — missing edge case for that specific equality."
+    },
+    {
+      "file": "PricingCalculator.cs", "line": 47, "mutator": "ConditionalExpression",
+      "mutatedCode": "true",
+      "equivalentSuspect": true, "confidence": "medium",
+      "rationale": "Mutation makes early-return guard always trigger — but guarded code path is exception-throw which is also tested by negative-path test. Mutation effectively dead-code on test surface."
+    }
+  ],
+  "survivorAnalysis": {
+    "totalVerdicts": 8,
+    "mergedIntoGaps": 8,
+    "equivalentSuspectCount": 3,
+    "realGapCount": 5
+  }
+}
+```
+
+Reviewer focuses на 5 `realGap` entries для test improvements; 3 `equivalentSuspect` flagged для quick human verification.
+
 #### Autopilot loop (v0.6.0+ roadmap, не v0.5.0)
 
 User спрашивал: «Mutation-feedback autopilot loop поясни не понял». Mechanics:
