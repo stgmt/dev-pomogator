@@ -1,3 +1,7 @@
+# session-pilot dev-iteration scratch helpers (worktree-only, not for main repo)
+/.dev-pomogator-*.sh
+/COMMIT_MSG.txt
+
 # Dependencies
 node_modules/
 

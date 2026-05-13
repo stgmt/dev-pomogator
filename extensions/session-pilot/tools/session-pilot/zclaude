@@ -1,0 +1,79 @@
+#!/bin/bash
+# zclaude — открыть Zellij-сессию для конкретного ворктри
+# Имя сессии: <repo>__<branch> (sanitized)
+# Опционально стартует `claude --resume` если передан --resume <uuid>
+set -e
+
+usage() {
+  cat <<EOF
+Usage: zclaude [--resume <uuid>] [<worktree-path>]
+
+  worktree-path  путь к git working tree (default: pwd)
+  --resume       UUID сессии Claude из ~/.claude/projects/<encoded>/<uuid>.jsonl
+
+Примеры:
+  zclaude                                       # текущий ворктри, новая Claude
+  zclaude /repos/foo/.git/worktrees/feat-auth   # ворктри с авто-именованием
+  zclaude --resume 9a3f...0ab3 /repos/bar       # вернуться в Claude session
+EOF
+  exit 1
+}
+
+RESUME=""
+WT="$PWD"
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --resume) RESUME="$2"; shift 2 ;;
+    -h|--help) usage ;;
+    *) WT="$1"; shift ;;
+  esac
+done
+
+cd "$WT"
+
+if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  echo "Not a git worktree: $WT" >&2; exit 2
+fi
+
+# Find canonical repo name (top of common dir)
+GITDIR=$(git rev-parse --git-common-dir)
+REPO_ROOT=$(cd "$GITDIR/.." && pwd)
+REPO_NAME=$(basename "$REPO_ROOT")
+BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "detached")
+
+# Sanitize for session name: only [a-zA-Z0-9_-]
+SESSION="${REPO_NAME}__${BRANCH}"
+SESSION=$(echo "$SESSION" | tr -c 'a-zA-Z0-9_-' '_' | sed 's/_*$//')
+
+ZJ=$HOME/.local/bin/zellij
+
+if [ -n "$RESUME" ]; then
+  CMD="claude --resume $RESUME"
+else
+  CMD="claude"
+fi
+
+echo "Repo:    $REPO_NAME"
+echo "Branch:  $BRANCH"
+echo "Worktree: $WT"
+echo "Session: $SESSION"
+echo "Cmd:     $CMD"
+
+# Attach existing OR create new with claude command running on start
+if "$ZJ" list-sessions 2>/dev/null | grep -q "^$SESSION\b"; then
+  echo "Attaching to existing session..."
+  exec "$ZJ" attach "$SESSION"
+else
+  echo "Creating new session..."
+  # Use --layout-string to start with claude already running in pane
+  cat >/tmp/zclaude-layout.kdl <<EOF
+layout {
+    pane name="${REPO_NAME} :: ${BRANCH}" {
+        cwd "${WT}"
+        // command "bash"
+        // args "-c" "${CMD}"
+    }
+}
+EOF
+  exec "$ZJ" --session "$SESSION" --layout /tmp/zclaude-layout.kdl
+fi

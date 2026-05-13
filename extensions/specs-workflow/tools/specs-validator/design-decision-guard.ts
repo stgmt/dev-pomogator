@@ -60,7 +60,7 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
-  const content = extractWriteContent(data.tool_input as Record<string, unknown>);
+  const content = extractWriteContent(data.tool_input as Record<string, unknown>, filePath);
   if (!content.trim()) process.exit(0);
 
   const decisions = parseDecisionBlocks(content);
