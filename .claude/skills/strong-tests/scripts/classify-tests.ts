@@ -52,6 +52,17 @@ interface ParsedArgs {
   testDir: string;
   format: 'json' | 'markdown';
   language: 'auto' | Language;
+  apply: boolean;
+  dryRun: boolean;
+  confidenceThreshold: Confidence;
+}
+
+interface ApplyResult {
+  file: string;
+  action: 'applied' | 'skipped' | 'would-apply';
+  reason: string;
+  category?: Category;
+  diff?: string;
 }
 
 // E2E signals — definitive: hits live infra
@@ -254,7 +265,14 @@ function walkDir(dir: string, results: string[]): void {
 }
 
 function parseArgs(argv: string[]): ParsedArgs {
-  const args: ParsedArgs = { testDir: '', format: 'json', language: 'auto' };
+  const args: ParsedArgs = {
+    testDir: '',
+    format: 'json',
+    language: 'auto',
+    apply: false,
+    dryRun: false,
+    confidenceThreshold: 'high',
+  };
   for (const a of argv) {
     if (a.startsWith('--format=')) {
       const v = a.slice('--format='.length);
@@ -268,14 +286,110 @@ function parseArgs(argv: string[]): ParsedArgs {
         throw new Error(`Invalid --language: ${v}.`);
       }
       args.language = v;
+    } else if (a === '--apply') {
+      args.apply = true;
+    } else if (a === '--dry-run') {
+      args.dryRun = true;
+    } else if (a.startsWith('--confidence=')) {
+      const v = a.slice('--confidence='.length);
+      if (v !== 'high' && v !== 'medium' && v !== 'low') {
+        throw new Error(`Invalid --confidence: ${v}. Must be high|medium|low.`);
+      }
+      args.confidenceThreshold = v;
     } else if (!a.startsWith('--') && !args.testDir) {
       args.testDir = a;
     }
   }
   if (!args.testDir) {
-    throw new Error('Usage: classify-tests.ts <test-dir> [--format=json|markdown] [--language=auto|csharp|python|typescript|go]');
+    throw new Error('Usage: classify-tests.ts <test-dir> [--format=json|markdown] [--language=auto|csharp|python|typescript|go] [--apply [--dry-run] [--confidence=high|medium|low]]');
   }
   return args;
+}
+
+function meetsConfidence(actual: Confidence, threshold: Confidence): boolean {
+  const order: Record<Confidence, number> = { low: 0, medium: 1, high: 2 };
+  return order[actual] >= order[threshold];
+}
+
+// strong-tests:skip pure string manipulation: inject Trait above first class declaration; cardinality preserved (1 file in, 1 file out)
+function injectCSharpTrait(content: string, category: Category): string {
+  // Find first public/internal/private class declaration; insert Trait attribute above it
+  const classMatch = content.match(/^([ \t]*)(?:public\s+|internal\s+|private\s+|protected\s+)*(?:abstract\s+|sealed\s+|static\s+)*class\s+\w+/m);
+  if (!classMatch || classMatch.index === undefined) {
+    throw new Error('No class declaration found — cannot inject Trait');
+  }
+  const indent = classMatch[1];
+  const insertion = `${indent}[Trait("Category", "${category}")]\n`;
+  return content.slice(0, classMatch.index) + insertion + content.slice(classMatch.index);
+}
+
+// strong-tests:skip pure injection: inject pytestmark at module-level after imports
+function injectPythonMarker(content: string, category: Category): string {
+  const lower = category.toLowerCase();
+  // Insert AFTER imports block + initial docstring; before first def/class
+  const lines = content.split('\n');
+  let insertIdx = 0;
+  let inDocstring = false;
+  let inImportBlock = true;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (i === 0 && (line.startsWith('"""') || line.startsWith("'''"))) {
+      inDocstring = !line.endsWith('"""') || line === '"""';
+      continue;
+    }
+    if (inDocstring) {
+      if (line.endsWith('"""') || line.endsWith("'''")) inDocstring = false;
+      continue;
+    }
+    if (line.startsWith('import ') || line.startsWith('from ')) {
+      insertIdx = i + 1;
+      continue;
+    }
+    if (line === '' && inImportBlock) {
+      insertIdx = i + 1;
+      continue;
+    }
+    inImportBlock = false;
+    break;
+  }
+  lines.splice(insertIdx, 0, `pytestmark = pytest.mark.${lower}`, '');
+  // Ensure pytest import present
+  const result = lines.join('\n');
+  if (!result.match(/^import\s+pytest|^from\s+pytest/m)) {
+    return 'import pytest\n' + result;
+  }
+  return result;
+}
+
+function applyClassification(classification: Classification, dryRun: boolean): ApplyResult {
+  const { file, suggested, language, current_marker } = classification;
+  if (current_marker !== null) {
+    return { file, action: 'skipped', reason: `existing marker '${current_marker}' — no overwrite` };
+  }
+  let updatedContent: string;
+  const originalContent = fs.readFileSync(file, 'utf-8');
+  try {
+    if (language === 'csharp') {
+      updatedContent = injectCSharpTrait(originalContent, suggested);
+    } else if (language === 'python') {
+      updatedContent = injectPythonMarker(originalContent, suggested);
+    } else {
+      return { file, action: 'skipped', reason: `--apply not implemented for ${language} (v0.6.1 roadmap)` };
+    }
+  } catch (e) {
+    return { file, action: 'skipped', reason: `injection failed: ${(e as Error).message}` };
+  }
+  if (originalContent === updatedContent) {
+    return { file, action: 'skipped', reason: 'injection produced no change (unexpected)' };
+  }
+  // Generate compact diff snippet (first 5 added lines for review)
+  const addedLines = updatedContent.split('\n').slice(0, 10).filter((l, i) => l !== originalContent.split('\n')[i]).slice(0, 3);
+  const diff = addedLines.length > 0 ? `+ ${addedLines.join('\n+ ')}` : '';
+  if (dryRun) {
+    return { file, action: 'would-apply', reason: `would inject Category=${suggested} marker`, category: suggested, diff };
+  }
+  fs.writeFileSync(file, updatedContent, 'utf-8');
+  return { file, action: 'applied', reason: `injected Category=${suggested} marker`, category: suggested, diff };
 }
 
 function emitMarkdown(classifications: Classification[]): string {
@@ -323,6 +437,40 @@ function main(): void {
     } catch (e) {
       process.stderr.write(`Failed to read ${filePath}: ${(e as Error).message}\n`);
     }
+  }
+
+  if (args.apply) {
+    const applyResults: ApplyResult[] = [];
+    let appliedCount = 0;
+    let skippedCount = 0;
+    let belowThreshold = 0;
+    for (const c of classifications) {
+      if (!meetsConfidence(c.confidence, args.confidenceThreshold)) {
+        belowThreshold++;
+        applyResults.push({
+          file: c.file,
+          action: 'skipped',
+          reason: `confidence ${c.confidence} below threshold ${args.confidenceThreshold}`,
+        });
+        continue;
+      }
+      const result = applyClassification(c, args.dryRun);
+      applyResults.push(result);
+      if (result.action === 'applied' || result.action === 'would-apply') appliedCount++;
+      else skippedCount++;
+    }
+    const summary = {
+      mode: args.dryRun ? 'dry-run' : 'apply',
+      confidenceThreshold: args.confidenceThreshold,
+      total: classifications.length,
+      applied: args.dryRun ? 0 : appliedCount,
+      wouldApply: args.dryRun ? appliedCount : 0,
+      skipped: skippedCount,
+      belowThreshold,
+      results: applyResults,
+    };
+    process.stdout.write(JSON.stringify(summary, null, 2));
+    process.exit(0);
   }
 
   if (args.format === 'markdown') {

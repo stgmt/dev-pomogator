@@ -307,6 +307,60 @@ Out of 79 untagged tests, 52 can immediately run through Stryker.NET без infr
 5. After application: re-run scanner to verify all files now have current_marker populated
 ```
 
+### --apply flag (v0.5.3) — automated marker injection
+
+For large test suites (e.g., 514 untagged tests в smarts) manual marker application непрактично. Use `--apply` flag:
+
+```bash
+# Step 1: dry-run preview (safe — no files modified)
+npx tsx classify-tests.ts <test-dir> --apply --dry-run
+
+# Step 2: review preview output, confirm classifications reasonable
+
+# Step 3: actually inject markers
+npx tsx classify-tests.ts <test-dir> --apply
+
+# Optional: lower confidence threshold (default high, max safety)
+npx tsx classify-tests.ts <test-dir> --apply --confidence=medium
+```
+
+**Safety mechanisms** (per anti-gaming §8 hard-NO #7):
+
+1. **Default `--confidence=high` only** — medium and low confidence classifications skipped по умолчанию. Override via `--confidence=medium` или `--confidence=low` (NOT recommended).
+2. **Skip files with existing markers** — files where `current_marker !== null` skipped с reason `existing marker '<X>' — no overwrite`. Prevents accidental overwrite of intentional classifications.
+3. **Per-file logging** — each file logged как `applied | skipped | would-apply` с reason in JSON output.
+4. **Dry-run mandatory** — first invocation должна быть с `--dry-run` per workflow доc выше.
+5. **Per-language injection**:
+   - **C#**: inject `[Trait("Category", "<X>")]` above first class declaration (preserves indentation)
+   - **Python**: inject `pytestmark = pytest.mark.<x>` at module level after imports; auto-adds `import pytest` if missing
+   - **TypeScript/Go**: not implemented в v0.5.3 — roadmap v0.6.1 (TS needs describe.skipIf wrapping; Go needs //go:build tag at file top)
+
+**Output schema** (--apply):
+
+```json
+{
+  "mode": "apply" | "dry-run",
+  "confidenceThreshold": "high",
+  "total": 10,
+  "applied": 6,
+  "wouldApply": 0,
+  "skipped": 0,
+  "belowThreshold": 4,
+  "results": [
+    { "file": "Tests/PureSteps.cs", "action": "applied", "reason": "injected Category=Unit marker", "category": "Unit", "diff": "+ [Trait(\"Category\", \"Unit\")]" },
+    { "file": "Tests/HttpSteps.cs", "action": "skipped", "reason": "confidence medium below threshold high" }
+  ]
+}
+```
+
+**Real-world test** (AiPomogator Steps batch of 10 untagged files):
+
+```
+mode=apply applied=6 skipped=0 belowThreshold=4
+```
+
+6 high-confidence Unit classifications auto-applied. 4 medium-confidence skipped — preserved для manual review.
+
 ### Test classification policy (v0.5.0+)
 
 **Default skip Integration/E2E tests in Stryker dispatch.** Real-world experience (lm-saas/AiPomogator field verification): integration tests с live DB / auth / HTTP API dependencies block Stryker initial test run (см. `FIELD_VERIFICATION.md`). Solution — categorize tests:

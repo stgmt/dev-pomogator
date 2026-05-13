@@ -189,6 +189,106 @@ def test_uses_mock(mock_api):
     }
   });
 
+  // @feature4 — v0.5.3 --apply flag
+  it('TESTQUAL001_24: --apply --dry-run produces wouldApply count without modifying files', () => {
+    const tmp = makeTempDir();
+    try {
+      const file = path.join(tmp, 'Pure.test.cs');
+      const original = `using Xunit;\npublic class PureTests {\n    [Fact]\n    public void Add() { Assert.Equal(3, 1 + 2); }\n}\n`;
+      fs.writeFileSync(file, original);
+      const r = runClassify(tmp, ['--apply', '--dry-run']);
+      expect(r.exit).toBe(0);
+      const out = r.out as any;
+      expect(out.mode).toBe('dry-run');
+      expect(out.wouldApply).toBe(1);
+      expect(out.applied).toBe(0);
+      // File NOT modified
+      expect(fs.readFileSync(file, 'utf-8')).toBe(original);
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  // @feature4 — v0.5.3 --apply flag
+  it('TESTQUAL001_25: --apply injects [Trait("Category", "Unit")] above C# class', () => {
+    const tmp = makeTempDir();
+    try {
+      const file = path.join(tmp, 'Pure.test.cs');
+      const original = `using Xunit;\npublic class PureTests {\n    [Fact]\n    public void Add() { Assert.Equal(3, 1 + 2); }\n}\n`;
+      fs.writeFileSync(file, original);
+      const r = runClassify(tmp, ['--apply']);
+      expect(r.exit).toBe(0);
+      const out = r.out as any;
+      expect(out.mode).toBe('apply');
+      expect(out.applied).toBe(1);
+      const updated = fs.readFileSync(file, 'utf-8');
+      expect(updated).toContain('[Trait("Category", "Unit")]');
+      expect(updated).toContain('public class PureTests');
+      // Trait must appear BEFORE class declaration
+      const traitIdx = updated.indexOf('[Trait');
+      const classIdx = updated.indexOf('public class');
+      expect(traitIdx).toBeGreaterThan(0);
+      expect(traitIdx).toBeLessThan(classIdx);
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  // @feature4 — v0.5.3 --apply flag
+  it('TESTQUAL001_26: --apply skips files with existing [Trait("Category", ...)] marker', () => {
+    const tmp = makeTempDir();
+    try {
+      const file = path.join(tmp, 'Already.test.cs');
+      const original = `using Xunit;\n[Trait("Category", "Integration")]\npublic class AlreadyTaggedTests {\n    [Fact]\n    public void Foo() {}\n}\n`;
+      fs.writeFileSync(file, original);
+      const r = runClassify(tmp, ['--apply']);
+      expect(r.exit).toBe(0);
+      const out = r.out as any;
+      expect(out.applied).toBe(0);
+      expect(out.skipped).toBe(1);
+      expect(out.results[0].reason).toContain('existing marker');
+      // File NOT modified
+      expect(fs.readFileSync(file, 'utf-8')).toBe(original);
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  // @feature4 — v0.5.3 --apply flag
+  it('TESTQUAL001_27: --apply --confidence=high skips medium confidence Integration', () => {
+    const tmp = makeTempDir();
+    try {
+      // Single E2E signal → medium confidence
+      const file = path.join(tmp, 'Medium.test.cs');
+      const original = `using Xunit;\npublic class MediumTests {\n    private readonly HttpClient _http = new HttpClient();\n    [Fact]\n    public void Foo() {}\n}\n`;
+      fs.writeFileSync(file, original);
+      const r = runClassify(tmp, ['--apply', '--confidence=high']);
+      expect(r.exit).toBe(0);
+      const out = r.out as any;
+      expect(out.belowThreshold).toBe(1);
+      expect(fs.readFileSync(file, 'utf-8')).toBe(original);
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  // @feature4 — v0.5.3 --apply flag
+  it('TESTQUAL001_28: --apply injects pytestmark for Python with pytest import auto-added', () => {
+    const tmp = makeTempDir();
+    try {
+      const file = path.join(tmp, 'test_pure.py');
+      const original = `def test_add():\n    assert 1 + 2 == 3\n`;
+      fs.writeFileSync(file, original);
+      const r = runClassify(tmp, ['--apply']);
+      expect(r.exit).toBe(0);
+      const updated = fs.readFileSync(file, 'utf-8');
+      expect(updated).toContain('import pytest');
+      expect(updated).toContain('pytestmark = pytest.mark.unit');
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
   // @feature4
   it('TESTQUAL001_23: emits empty array if no test files found', () => {
     const tmp = makeTempDir();

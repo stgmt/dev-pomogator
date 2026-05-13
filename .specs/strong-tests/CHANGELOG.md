@@ -11,6 +11,23 @@ All notable changes to this feature will be documented in this file.
 - Phase 4 Implementation (planned): skill body at .claude/skills/strong-tests/ — SKILL.md (8 sections), references/anti-patterns.md, references/tooling-setup.md, scripts/run-mutation.ts
 - Phase 5 Verification (planned): extension.json wiring, layout-validate, skills-rules-optimizer audit, bidirectional cross-link with tests-create-update
 - Phase 6 Report (planned): .specs/strong-tests/report.html (8 sections, semantic HTML5, light/dark CSS, no JS, no emojis)
+- Phase 10.3 v0.5.3 — Classification --apply flag (2026-05-13):
+  - **FR-13 extended** with --apply automation — closes gap identified by FIELD_VERIFICATION_MULTI.md HIGH priority (smarts 514 markers непрактично manually).
+  - **New --apply flag** в classify-tests.ts — auto-injects Trait/marker per language:
+    - C#: `[Trait("Category", "<X>")]` above first class declaration (preserves indentation)
+    - Python: `pytestmark = pytest.mark.<x>` at module level after imports; auto-adds `import pytest` if missing
+    - TypeScript / Go: NOT implemented в v0.5.3 — roadmap v0.6.1
+  - **Safety mechanisms** (per §8 hard-NO #7):
+    - Default `--confidence=high` only (override via --confidence=medium|low)
+    - Skip files with existing markers (current_marker !== null) — no overwrite
+    - Per-file logging: applied / skipped / would-apply с reason
+    - `--dry-run` flag emits wouldApply count без modifying files
+  - **Output schema**: mode + confidenceThreshold + total + applied + wouldApply + skipped + belowThreshold + results[]
+  - **vitest TESTQUAL001_24..28** — 5 new integration tests covering dry-run preview, real C# Trait injection, existing marker skip, confidence threshold respect, Python pytestmark auto-add.
+  - **Real-world test**: 10 untagged AiPomogator Steps files → 6 high-confidence auto-applied, 4 medium-confidence skipped. Safety threshold prevents over-application.
+  - **CHK-FR13-04** Verified; Summary Counts: 37→38 (Verified 21→22).
+  - **SKILL.md §3** elaborated с --apply workflow + safety mechanisms list + output schema + real-world example.
+
 - Phase 10.2 v0.5.2 — Test classification scanner (2026-05-13):
   - **FR-13 expanded** — beyond policy (default Category=Unit filter) added automated scanner. Closes documented-but-not-implemented gap from v0.5.0.
   - **New script** `scripts/classify-tests.ts` — heuristic-based per-file Unit/Integration/E2E classification scanner. Per-language regex patterns:
