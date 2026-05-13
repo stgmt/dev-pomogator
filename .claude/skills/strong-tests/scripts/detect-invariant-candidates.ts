@@ -125,11 +125,56 @@ function nestedLoopCount(body: string, stack: Stack): number {
 
 // ast-grep TS function detection — returns map line→name for ALL function-like nodes in file
 // (single parse, cached, used by findFunctionAt for ts stack instead of regex)
+interface FunctionBoundary {
+  name: string;
+  startLine: number;
+  endLine: number;
+}
 interface AstGrepCacheEntry {
   contentHash: string;
   functionsByLine: Map<number, string>;
+  boundaries: FunctionBoundary[]; // sorted by startLine
 }
 let astGrepCache: AstGrepCacheEntry | null = null;
+
+// Find function boundary (end line) для given startLine — returns startLine + offset to closing brace
+// Uses ast-grep cache от getTsFunctionsViaAstGrep if available; fallback к brace-counting heuristic
+function findFunctionEndLine(lines: string[], startLine: number, stack: Stack, fallbackOffset: number): number {
+  if (stack === 'ts' && astGrepCache) {
+    const boundary = astGrepCache.boundaries.find((b) => b.startLine === startLine);
+    if (boundary) return boundary.endLine;
+  }
+  // Brace-counting fallback (works for TS / C# / Go / Python indent-based skipped)
+  if (stack === 'python') {
+    // Python: track indent — function ends when indent <= startIndent AND non-empty
+    const startLineContent = lines[startLine] ?? '';
+    const startIndentMatch = startLineContent.match(/^(\s*)/);
+    const startIndent = startIndentMatch ? startIndentMatch[1].length : 0;
+    for (let i = startLine + 1; i < lines.length; i++) {
+      const line = lines[i];
+      if (line.trim() === '') continue;
+      const indentMatch = line.match(/^(\s*)/);
+      const indent = indentMatch ? indentMatch[1].length : 0;
+      if (indent <= startIndent) return i - 1;
+    }
+    return Math.min(lines.length - 1, startLine + fallbackOffset);
+  }
+  // Brace-based languages (TS / C# / Go)
+  let depth = 0;
+  let seenOpen = false;
+  for (let i = startLine; i < lines.length; i++) {
+    for (const ch of lines[i]) {
+      if (ch === '{') {
+        depth++;
+        seenOpen = true;
+      } else if (ch === '}') {
+        depth--;
+        if (seenOpen && depth === 0) return i;
+      }
+    }
+  }
+  return Math.min(lines.length - 1, startLine + fallbackOffset);
+}
 
 // strong-tests:skip pure AST traversal — Map keys = AST node line numbers (unique by construction); composition invariants tested via integration test that ast-grep output matches regex fallback on same fixture
 function getTsFunctionsViaAstGrep(content: string): Map<number, string> | null {
@@ -143,12 +188,15 @@ function getTsFunctionsViaAstGrep(content: string): Map<number, string> | null {
     const root = astGrepModule.parse(astGrepModule.Lang.TypeScript, content);
     const node = root.root();
     const functionsByLine = new Map<number, string>();
+    const boundaries: FunctionBoundary[] = [];
     // Find named function declarations: `function foo(...)` and arrow functions assigned to const
     for (const match of node.findAll({ rule: { kind: 'function_declaration' } }) ?? []) {
       const nameNode = match.field?.('name');
       if (nameNode) {
-        const line = match.range().start.line;
+        const range = match.range();
+        const line = range.start.line;
         functionsByLine.set(line, nameNode.text());
+        boundaries.push({ name: nameNode.text(), startLine: line, endLine: range.end.line });
       }
     }
     for (const match of node.findAll({ rule: { kind: 'lexical_declaration' } }) ?? []) {
@@ -159,12 +207,14 @@ function getTsFunctionsViaAstGrep(content: string): Map<number, string> | null {
       if (valueNode && (valueNode.kind() === 'arrow_function' || valueNode.kind() === 'function_expression')) {
         const nameNode = declarator.field?.('name');
         if (nameNode) {
-          const line = match.range().start.line;
+          const range = match.range();
+          const line = range.start.line;
           functionsByLine.set(line, nameNode.text());
+          boundaries.push({ name: nameNode.text(), startLine: line, endLine: range.end.line });
         }
       }
     }
-    astGrepCache = { contentHash: hash, functionsByLine };
+    astGrepCache = { contentHash: hash, functionsByLine, boundaries };
     return functionsByLine;
   } catch {
     return null;
@@ -235,7 +285,7 @@ function scan(content: string, stack: Stack): { candidates: Candidate[]; suppres
     const typeMatch = typeRe.exec(window);
     if (!typeMatch) continue;
     const returnType = typeMatch[1].trim();
-    const endLine = Math.min(lines.length - 1, i + 40);
+    const endLine = findFunctionEndLine(lines, i, stack, 40);
     const body = lines.slice(i, endLine + 1).join('\n');
     const nestedFor = nestedLoopCount(body, stack);
     const chains = chainCount(body, stack);

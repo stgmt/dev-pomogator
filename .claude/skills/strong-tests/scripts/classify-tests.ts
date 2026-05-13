@@ -177,8 +177,8 @@ const TEST_FILE_PATTERNS: Record<Language, RegExp> = {
 const EXISTING_TRAIT_PATTERNS: Record<Language, RegExp[]> = {
   csharp: [/\[Trait\s*\(\s*["']Category["']\s*,\s*["'](\w+)["']/],
   python: [/@pytest\.mark\.(\w+)/, /pytestmark\s*=\s*pytest\.mark\.(\w+)/],
-  typescript: [/describe\.skipIf|\/\/\s*@category\s+(\w+)/],
-  go: [/\/\/\s*\+build\s+(unit|integration|e2e)/],
+  typescript: [/\/\/\s*@category:?\s+(\w+)/i, /describe\.skipIf/],
+  go: [/\/\/go:build\s+(\w+)/, /\/\/\s*\+build\s+(\w+)/],
 };
 
 function detectLanguage(filePath: string): Language | null {
@@ -361,6 +361,27 @@ function injectPythonMarker(content: string, category: Category): string {
   return result;
 }
 
+// strong-tests:skip pure injection: prepend `// @category: <X>` line above first non-comment content
+function injectTypeScriptMarker(content: string, category: Category): string {
+  // Idempotency check — skip if already has @category marker
+  if (/\/\/\s*@category:?\s+\w+/i.test(content)) return content;
+  return `// @category: ${category}\n${content}`;
+}
+
+// strong-tests:skip pure injection: prepend `//go:build <category>` build tag before package decl
+function injectGoBuildTag(content: string, category: Category): string {
+  const lower = category.toLowerCase();
+  // Idempotency check
+  if (/\/\/go:build\s+\w+/.test(content)) return content;
+  // Insert before package declaration with required blank line per Go spec
+  const packageMatch = content.match(/^package\s+\w+/m);
+  if (!packageMatch || packageMatch.index === undefined) {
+    throw new Error('No package declaration found — cannot inject build tag');
+  }
+  const buildTag = `//go:build ${lower}\n\n`;
+  return content.slice(0, packageMatch.index) + buildTag + content.slice(packageMatch.index);
+}
+
 function applyClassification(classification: Classification, dryRun: boolean): ApplyResult {
   const { file, suggested, language, current_marker } = classification;
   if (current_marker !== null) {
@@ -373,8 +394,12 @@ function applyClassification(classification: Classification, dryRun: boolean): A
       updatedContent = injectCSharpTrait(originalContent, suggested);
     } else if (language === 'python') {
       updatedContent = injectPythonMarker(originalContent, suggested);
+    } else if (language === 'typescript') {
+      updatedContent = injectTypeScriptMarker(originalContent, suggested);
+    } else if (language === 'go') {
+      updatedContent = injectGoBuildTag(originalContent, suggested);
     } else {
-      return { file, action: 'skipped', reason: `--apply not implemented for ${language} (v0.6.1 roadmap)` };
+      return { file, action: 'skipped', reason: `--apply not implemented for ${language}` };
     }
   } catch (e) {
     return { file, action: 'skipped', reason: `injection failed: ${(e as Error).message}` };
