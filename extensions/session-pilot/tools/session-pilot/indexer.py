@@ -599,25 +599,38 @@ def build_session_index() -> dict:
     # Distribute available PIDs to top-K NEWEST rows per cwd (K = len(pids));
     # other rows in same cwd get window_open=False + empty pids regardless of
     # whether proc_map has the cwd.
+    #
+    # Source C rows (session_uuid=None, git worktree without Claude history)
+    # NEVER get window_open. EnterWorktree quirk: user's actual session may have
+    # process cwd in session-pilot worktree but JSONL keyed under start cwd
+    # (dev-pomogator). The JSONL row already shows LIVE; an additional "Open"
+    # marker on the Source C worktree row creates a confusing shadow duplicate
+    # (1 process = 2 dashboard rows). Skip Source C window detection entirely.
     rows_by_cwd: dict[str, list[dict]] = {}
     for r in rows:
         cwd_norm = r["worktree_path"].replace("\\", "/").rstrip("/")
         rows_by_cwd.setdefault(cwd_norm, []).append(r)
     for cwd, cwd_rows in rows_by_cwd.items():
-        # Get PIDs for this cwd (already computed during Source A/B emission,
-        # but we re-distribute fresh from proc_map for clarity + accuracy).
         norm = cwd if (len(cwd) < 2 or cwd[1] != ":") else cwd[0].upper() + cwd[1:]
         pids_for_cwd = list(proc_map.get(norm, []))
-        # Sort rows by mtime DESC — newest first
-        sorted_rows = sorted(cwd_rows, key=lambda x: x.get("claude_max_mtime") or 0, reverse=True)
-        # Top-K get the PIDs (1 PID per row); rest get cleared.
-        for i, r in enumerate(sorted_rows):
+        # Only consider rows that have a real session_uuid (Source A or orphan).
+        # Source C rows are skipped from PID attribution (set window_open=False
+        # unconditionally — see comment above).
+        session_rows = [r for r in cwd_rows if r.get("session_uuid")]
+        source_c_rows = [r for r in cwd_rows if not r.get("session_uuid")]
+        sorted_session_rows = sorted(
+            session_rows, key=lambda x: x.get("claude_max_mtime") or 0, reverse=True
+        )
+        for i, r in enumerate(sorted_session_rows):
             if i < len(pids_for_cwd):
                 r["claude_window_open"] = True
                 r["claude_window_pids"] = [pids_for_cwd[i]]
             else:
                 r["claude_window_open"] = False
                 r["claude_window_pids"] = []
+        for r in source_c_rows:
+            r["claude_window_open"] = False
+            r["claude_window_pids"] = []
 
     return {
         "generated_at": datetime.now().isoformat(timespec="seconds"),
