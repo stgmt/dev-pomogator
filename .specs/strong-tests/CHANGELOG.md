@@ -11,6 +11,19 @@ All notable changes to this feature will be documented in this file.
 - Phase 4 Implementation (planned): skill body at .claude/skills/strong-tests/ — SKILL.md (8 sections), references/anti-patterns.md, references/tooling-setup.md, scripts/run-mutation.ts
 - Phase 5 Verification (planned): extension.json wiring, layout-validate, skills-rules-optimizer audit, bidirectional cross-link with tests-create-update
 - Phase 6 Report (planned): .specs/strong-tests/report.html (8 sections, semantic HTML5, light/dark CSS, no JS, no emojis)
+- Phase 10.2 v0.5.2 — Test classification scanner (2026-05-13):
+  - **FR-13 expanded** — beyond policy (default Category=Unit filter) added automated scanner. Closes documented-but-not-implemented gap from v0.5.0.
+  - **New script** `scripts/classify-tests.ts` — heuristic-based per-file Unit/Integration/E2E classification scanner. Per-language regex patterns:
+    - **E2E signals**: Docker, Testcontainers, raw HttpClient(), WebApplicationFactory, Process.Start, Npgsql, Selenium/Playwright, BaseAddress localhost
+    - **Integration signals**: Moq/Mock/FakeItEasy/NSubstitute, IClassFixture, UseInMemoryDatabase, unittest.mock, vi.mock/jest.mock, gomock
+    - **Unit**: zero E2E + zero Integration signals + no live infra imports
+    - **Mixed signals**: conservative Integration with low confidence + manual review note
+  - **Output formats**: JSON (default) с classifications array + per-file evidence + current_marker detection; markdown с sections per category + Stryker.NET integration hint.
+  - **Real-world validation**: scanner на lm-saas/AiPomogator.Tests 79 test files → 52 Unit / 8 Integration / 19 E2E classified в seconds. Actionable insight для test infrastructure debt remediation (out of 79 untagged tests, 52 ready для Stryker.NET immediately).
+  - **SKILL.md §3** documents scanner workflow + heuristics table + real-world example + anti-gaming guard (output is suggestion, manual review required before applying [Trait] markers).
+  - **vitest TESTQUAL001_17..23** — 7 new tests covering pure Unit C#, Integration with Moq+IClassFixture, E2E with WebApplicationFactory+Process+Docker, existing marker detection, Python pytest mock, markdown format output, empty directory.
+  - **Spec entries**: CHK-FR13-02/03 → Verified; Summary Counts: 35→37 (Verified 19→21).
+
 - Phase 10.1 v0.5.1 — LLM-driven survivor analysis full workflow (2026-05-13):
   - **FR-15 finalized** — moved from stub (v0.5.0) to full workflow. Added 2 new helper scripts: `survivors-batch-prompt.ts` (Meta ACH-style prompt batching + cost guard $2/budget) + `merge-survivor-verdicts.ts` (verdict merge back into MutationReport.gaps[] with survivorAnalysis summary).
   - Workflow documented в SKILL.md §6.3 with 4-step orchestration: run-mutation.ts --analyze-survivors → batch-prompt → Agent() per batch → merge-verdicts. AI agent invokes Agent(subagent_type="general-purpose") with Meta ACH prompt (0.95 precision target per engineering.fb.com 2025-09-30).

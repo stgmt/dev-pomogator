@@ -230,6 +230,83 @@ await Skill("strong-tests", { framework: choice });
 
 **Auto-detection fallback:** `run-mutation.ts` still has `detectStack()` heuristic — but only used when caller doesn't pass framework arg AND target has unambiguous stack signal (single `package.json` или single `*.csproj`). Polyglot fallback emits warning + uses first match.
 
+### Test classification scanner (v0.5.2)
+
+**Automated classification via `scripts/classify-tests.ts`:**
+
+```bash
+# Scan all test files in a directory, emit per-file suggested Category Trait
+npx tsx .claude/skills/strong-tests/scripts/classify-tests.ts <test-dir>
+
+# Markdown report grouped by category
+npx tsx .claude/skills/strong-tests/scripts/classify-tests.ts <test-dir> --format=markdown
+
+# Lock to specific language (skip auto-detect)
+npx tsx .claude/skills/strong-tests/scripts/classify-tests.ts <test-dir> --language=csharp
+```
+
+**Heuristics** (per language — regex over file content):
+
+| Signal | Classification |
+|---|---|
+| `Docker` / `Testcontainers` / `new HttpClient()` / `WebApplicationFactory` / `Process.Start` / `Npgsql` / `Selenium` / `Playwright` | **E2E** (high if ≥2 signals; medium if 1) |
+| `Moq` / `Mock<` / `FakeItEasy` / `NSubstitute` / `IClassFixture` / `UseInMemoryDatabase` / `unittest.mock` / `vi.mock` / `jest.mock` / `gomock` | **Integration** (high if ≥2; medium if 1) |
+| Empty match для E2E + Integration patterns AND no `HttpClient`/`DbContext`/`Process`/network imports | **Unit** (high confidence) |
+
+**Output schema** (JSON, default format):
+
+```json
+[
+  {
+    "file": "Tests/Domain/PricingCalculatorTests.cs",
+    "suggested": "Unit",
+    "confidence": "high",
+    "evidence": ["No HttpClient/DbContext/Process signals", "No mock infrastructure", "Pure logic test"],
+    "current_marker": null,
+    "language": "csharp"
+  },
+  {
+    "file": "Tests/Integration/UserApiTests.cs",
+    "suggested": "Integration",
+    "confidence": "high",
+    "evidence": ["2 Integration signals (mocks / fixtures)", "Sample: Moq"],
+    "current_marker": null,
+    "language": "csharp"
+  },
+  {
+    "file": "Tests/E2E/CheckoutFlowTests.cs",
+    "suggested": "E2E",
+    "confidence": "high",
+    "evidence": ["3 E2E signals (Docker / HttpClient / Process)", "Sample: WebApplicationFactory"],
+    "current_marker": null,
+    "language": "csharp"
+  }
+]
+```
+
+**Real-world example** (lm-saas/AiPomogator.Tests scanner, 79 test files):
+
+```
+Unit: 52 / Integration: 8 / E2E: 19
+```
+
+Out of 79 untagged tests, 52 can immediately run through Stryker.NET без infra setup. **Actionable insight** для test infrastructure debt remediation.
+
+**Anti-gaming guard** (per §8 hard-NO #7): classifier output is **suggestion**, NOT auto-applied. Reviewer SHALL spot-check before applying `[Trait("Category", "Unit")]` markers via Edit. False classification has cascading effect — Unit-marked Integration test can lock Stryker baseline в same dead-end as we saw на AiPomogator (live infra deps).
+
+**Workflow integration** (when AI invokes via `/strong-tests --mode=classify`):
+
+```
+1. AI runs classify-tests.ts <test-dir> --format=json
+2. AI reads per-file output
+3. For each high/medium confidence Unit suggestion:
+   a. Open file via Read
+   b. Verify no oversights (e.g., test uses fixture that lives in another file)
+   c. Apply [Trait("Category", "Unit")] marker via Edit
+4. For Integration/E2E suggestions: emit summary, let user decide
+5. After application: re-run scanner to verify all files now have current_marker populated
+```
+
 ### Test classification policy (v0.5.0+)
 
 **Default skip Integration/E2E tests in Stryker dispatch.** Real-world experience (lm-saas/AiPomogator field verification): integration tests с live DB / auth / HTTP API dependencies block Stryker initial test run (см. `FIELD_VERIFICATION.md`). Solution — categorize tests:
