@@ -71,3 +71,51 @@ WHEN AI invokes Write or Edit on a C# production file `src/Services/IndexerServi
 WHEN AI invokes Write or Edit on a C# test file matching one of `*Steps.cs` (Reqnroll) / `*Tests.cs` (xUnit) / `*Test.cs` (NUnit) / `_test.cs` / file under capital `Tests/` directory, THEN hook SHALL exit 0 without emitting additionalContext (test-file exclusion path).
 
 IF a C# function has comment `// strong-tests:skip <reason ≥8 chars>` immediately above method signature OR on the same line as signature, THEN detector SHALL skip that function from detection AND append JSONL entry to `.claude/logs/strong-tests-skips.jsonl` with `warning` field null when reason length ≥8.
+
+## AC-11 (FR-11) — Composition-chain detection v0.5.0
+
+WHEN AI invokes Write or Edit on a TypeScript file containing `.filter().map().reduce()` chained method calls inside a function body returning `Array<T>`, THEN detector SHALL assign kind `composition-chain` (NOT `collection-returning`) AND `suggestedInvariants` array SHALL contain `monotonicity` per existing taxonomy mapping at `detect-invariant-candidates.ts:suggestInvariants()`.
+
+WHEN AI invokes Write or Edit on a C# file containing LINQ chain `.Where(...).Select(...).OrderBy(...).ToList()` inside method body, THEN detector SHALL assign kind `composition-chain` AND `rationale` field SHALL include `composition chain detected (N chained call site(s))` format.
+
+IF function body contains BOTH ≥2 nested for-loops AND ≥1 chained method call, THEN detector SHALL prioritize kind `nxm-overlap` over `composition-chain` per priority rules в scan() — verified by test fixture `tests/fixtures/dotnet-stryker-target/Library.Shared/CollectionPipeline.cs` (composition-chain) vs `CartesianProduct.cs` (nxm-overlap).
+
+## AC-12 (FR-12) — Stryker.NET dispatch v0.5.0
+
+WHEN AI invokes `npx tsx run-mutation.ts <C#-target-dir>` AND target contains `*.csproj` with `<PackageReference Include="xunit"` AND either `stryker-config.json` exists OR `<PackageReference Include="Stryker.NET"` present, THEN run-mutation.ts SHALL detect stack=`csharp` tool=`stryker-net` AND dispatch `dotnet-stryker --config-file stryker-config.json` через spawnSync.
+
+WHEN dotnet-stryker binary missing from PATH, THEN runStrykerNet SHALL emit warning `Install: dotnet tool install -g dotnet-stryker` AND exit с warning state (no crash).
+
+WHEN Stryker.NET completes successfully, THEN run-mutation.ts SHALL parse `StrykerOutput/<latest-timestamp>/reports/mutation-report.json` AND emit standardized MutationReport JSON с killRate / totalMutants / killedMutants / survivedMutants / survivors[] fields populated.
+
+## AC-13 (FR-13) — Test classification policy v0.5.0
+
+WHEN run-mutation.ts dispatches Stryker.NET without `--include-integration` OR `--include-e2e` flags, THEN command SHALL apply default test-case-filter `Category=Unit` AND emit log line `Default: Category=Unit filter (skip Integration/E2E). Pass --include-integration / --include-e2e to override.`
+
+WHEN AI passes `--include-integration` flag, THEN filter SHALL become `Category=Unit|Category=Integration` (union, not replacement) AND log line SHALL reflect applied filter explicitly.
+
+## AC-14 (FR-14) — ast-grep migration TS branch v0.5.0
+
+WHEN detect-invariant-candidates.ts processes a TypeScript file AND `@ast-grep/napi` library loads successfully, THEN getTsFunctionsViaAstGrep() SHALL be used for function detection в preference к regex FUNCTION_TS.
+
+WHEN `@ast-grep/napi` NAPI binary fails to load (incompatible platform, missing prebuild), THEN module require SHALL be wrapped in try/catch returning null, AND detector SHALL gracefully fallback к regex FUNCTION_TS path.
+
+## AC-15 (FR-15) — LLM survivor analysis full workflow v0.5.1
+
+WHEN AI runs `npx tsx run-mutation.ts <target> --analyze-survivors`, THEN MutationReport `gaps[]` array SHALL be populated с each survivor annotated containing original fields + `equivalentSuspect: 'NEEDS_HUMAN_REVIEW'` initial marker + `reconstructedContext` field with ±3 lines around mutation point read from disk.
+
+WHEN AI runs `npx tsx scripts/survivors-batch-prompt.ts <report.json> --batch-size=50 --budget-usd=2`, THEN script SHALL emit JSON lines on stdout, one per batch, each containing `batch_id` / `survivors_count` / `estimated_cost_usd` / `cumulative_cost_usd` / `prompt` fields AND prompt SHALL contain Meta ACH-style instruction asking LLM to flag EQUIVALENT vs REAL_GAP.
+
+IF cumulative_cost_usd exceeds budget threshold mid-emission, THEN survivors-batch-prompt.ts SHALL abort with exit code 3 AND emit stderr error `Budget exceeded at batch N/M`.
+
+WHEN AI runs `npx tsx scripts/merge-survivor-verdicts.ts <report.json> <verdicts-1.json> [<verdicts-2.json> ...]`, THEN merged report SHALL include enriched `gaps[]` с each verdict-matched survivor получив `equivalentSuspect: boolean + confidence + rationale` fields AND `survivorAnalysis` summary object с counts (totalVerdicts / mergedIntoGaps / unmatchedVerdicts / equivalentSuspectCount / realGapCount).
+
+## AC-16 (FR-16) — Hypothesis Ghostwriter integration v0.5.0
+
+WHEN run-mutation.ts invokes runGhostwriter(cwd, functionRef) for Python target, THEN function SHALL first check `hypothesis --version` availability AND return `{success: false, error: 'Hypothesis not installed. Install: pip install hypothesis'}` if missing.
+
+WHEN hypothesis binary available AND `hypothesis write <module.function>` subprocess exits 0, THEN function SHALL locate `from hypothesis` import line в stdout AND return slice от that line до end-of-output as `scaffold` field.
+
+## AC-17 (FR-17) — Framework selection UX v0.5.0
+
+WHEN AI invokes Skill("strong-tests") on polyglot repository (multiple stacks detected via run-mutation.ts detectStack), THEN skill workflow SHALL invoke AskUserQuestion с enumerated 6-framework list (vitest+Stryker, jest+Stryker, pytest+mutmut, xUnit+Stryker.NET, NUnit+Stryker.NET, go test+go-mutesting) BEFORE dispatching mutation tool.

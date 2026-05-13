@@ -264,3 +264,143 @@ Skipped — strong-tests skill не требует новых сервисов/�
   - [x] vitest run includes `strong-tests-jit` scenarios; all 4 PASS (TESTQUAL001_06/07/08/06b)
   - [x] Manual smoke: hook smoke test with simulated stdin JSON containing C# `.cs` file_path emits valid `additionalContext` JSON shape with exit 0
   - [x] `audit-spec.ts -Path .specs/strong-tests` returns 0 findings post-Phase-4
+
+## Phase 6: Go expansion + cross-skill composition + field verification (v0.4.0) [Phase 9 in CHANGELOG]
+
+> v0.4.0 ships Go detector (4th stack) + cross-skill composition wires + lm-saas field verification + INVARIANTS.md catalogue. Commit `6836052`.
+
+- [x] T29: Add Go stack detection to detect-invariant-candidates.ts (COLLECTION_GO + FUNCTION_GO + SUPPRESS_GO regex constants) -- @feature7 — Status: DONE | Est: 60m _(Verified: 2026-05-13)_
+  _Requirements: FR-7 v0.4.0_
+  **Done When:**
+  - [x] Go function signatures with pointer receiver detected: `func (s *Service) Method() []T`
+  - [x] Slice / map / channel return types covered by COLLECTION_GO regex
+  - [x] Nested for-range + C-style for + bare-for loops all counted by nestedLoopCount('go')
+  - [x] vitest TESTQUAL001_10 integration test (Go fixture + nested loops) PASS
+
+- [x] T30: Cross-skill composition wires in 3 places -- Status: DONE | Est: 45m _(Verified: 2026-05-13)_
+  _Requirements: FR-4 multi-skill integration_
+  **Done When:**
+  - [x] `.claude/rules/auto-simplify/simplify-extended.md` — Strong-tests integration section triggers Skill("strong-tests") audit when test files in diff
+  - [x] `.claude/skills/run-tests/SKILL.md` Step 5 — completion-time hint via git diff detection
+  - [x] `.claude/skills/create-spec/references/phase3_finalization.md` Step 1c — optional Skill("strong-tests") recommendation after task-board-forms
+
+- [x] T31: INVARIANTS.md catalogue per §2 item 1 — ≥5 invariants per public function -- Status: DONE | Est: 30m _(Verified: 2026-05-13)_
+  _Requirements: skill §2 Pre-write checklist item 1_
+  **Done When:**
+  - [x] `.specs/strong-tests/INVARIANTS.md` created with sections for detectStack / nestedLoopCount / suggestInvariants / scan / NFR-R5 invariants
+  - [x] Each public function documented with ≥5 invariants + test guard mapping
+  - [x] Includes mutation testing results table (51.08% → 56.83% baseline)
+
+- [x] T32: FIELD_VERIFICATION.md — lm-saas/AiPomogator + new-api-modified install + smoke verification -- Status: DONE | Est: 90m _(Verified: 2026-05-13)_
+  _Requirements: validation real-world target_
+  **Done When:**
+  - [x] Install via `npx dev-pomogator --plugins=test-quality` on lm-saas root — verified files copied + hook registered
+  - [x] Smoke test detector on 3 production .cs files (CommaSeparatedListConverter / PricingCatalog / BillingAggregate) — all returned valid candidates
+  - [x] Smoke test on 5 production .go files in new-api-modified — 4/5 produced valid candidates (5th was gin handlers — correctly 0)
+  - [x] Stryker.NET attempt on AiPomogator — BLOCKED by test infra deps (auth/DB/HTTP); documented honestly as application-level concern not skill bug
+
+## Phase 10: v0.5.0 expansion (composition-chain + Stryker.NET + ast-grep + classification + Ghostwriter)
+
+> v0.5.0 closes 8 declared-but-not-working features. Commit `6836052`.
+
+- [x] T33: Composition-chain detection — declared since v0.1.0 in types + SKILL.md but 0 lines implementation -- @feature7 — Status: DONE | Est: 90m _(Verified: 2026-05-13)_
+  _Requirements: FR-11_
+  **Done When:**
+  - [x] CHAIN_TS / CHAIN_CS / CHAIN_PY / CHAIN_GO regex constants added
+  - [x] chainRegexFor() + chainCount() helpers
+  - [x] scan() priority: nxm-overlap > composition-chain > collection-returning
+  - [x] Smoke: TS `.filter().map().reduce()` → composition-chain; C# LINQ `.Where().Select().OrderBy().ToList()` → composition-chain
+
+- [x] T34: Stryker.NET dispatch in run-mutation.ts -- Status: DONE | Est: 120m _(Verified: 2026-05-13)_
+  _Requirements: FR-12_
+  **Done When:**
+  - [x] runStrykerNet() function parallel to runStryker/runMutmut
+  - [x] dotnet-stryker --help pre-flight check + stryker-config.json existence guard
+  - [x] StrykerOutput/<timestamp>/reports/mutation-report.json parsing
+  - [x] Parallel JSON template `references/stryker-net.config.template.json` с {{TODO}} placeholders
+  - [x] Smoke on fixture: 80.49% kill rate, 41 mutants, HTML+JSON reports generated in 15.4s
+
+- [x] T35: Test classification policy — default Category=Unit filter -- Status: DONE | Est: 30m _(Verified: 2026-05-13)_
+  _Requirements: FR-13_
+  **Done When:**
+  - [x] runStrykerNet args include --test-case-filter "Category=Unit" by default
+  - [x] --include-integration / --include-e2e CLI flags override (union filter)
+  - [x] Documented в SKILL.md §3 Test classification policy section
+
+- [x] T36: ast-grep migration TS branch via @ast-grep/napi NAPI -- Status: DONE | Est: 90m _(Verified: 2026-05-13)_
+  _Requirements: FR-14_
+  **Done When:**
+  - [x] @ast-grep/napi installed as devDep
+  - [x] getTsFunctionsViaAstGrep() cached function with content hash invalidation
+  - [x] try/catch require for graceful NAPI load failure (regex fallback)
+  - [x] 47 unit tests pass with NAPI loaded; Python/Go/C# remain regex (v0.5.1+ roadmap)
+
+- [x] T37: LLM survivor analysis stub — annotateSurvivorsForLlmReview() -- Status: DONE | Est: 60m _(Verified: 2026-05-13)_
+  _Requirements: FR-15 v0.5.0 stub_
+  **Done When:**
+  - [x] --analyze-survivors CLI flag added to parseArgs
+  - [x] Each survivor annotated с equivalentSuspect: NEEDS_HUMAN_REVIEW + reconstructedContext (±3 lines)
+  - [x] Pure 1-to-1 mapping (cardinality preserved)
+  - [x] AI orchestrator pattern documented в SKILL.md
+
+- [x] T38: Hypothesis Ghostwriter integration -- Status: DONE | Est: 45m _(Verified: 2026-05-13)_
+  _Requirements: FR-16_
+  **Done When:**
+  - [x] runGhostwriter(cwd, functionRef) function spawns `hypothesis write <module.function>`
+  - [x] Pre-flight `hypothesis --version` check + install hint if missing
+  - [x] STDOUT parse looks for `from hypothesis` import line as scaffold start
+
+- [x] T39: Framework selection UX through AskUserQuestion -- Status: DONE | Est: 30m _(Verified: 2026-05-13)_
+  _Requirements: FR-17_
+  **Done When:**
+  - [x] SKILL.md §3 documents enumerated 6-framework list pattern
+  - [x] Cross-link to 9 established skills using AskUserQuestion enumerated selections
+  - [x] No heavy auto-detection — calling side picks
+
+- [x] T40: .NET fixture project at tests/fixtures/dotnet-stryker-target/ -- Status: DONE | Est: 60m _(Verified: 2026-05-13)_
+  _Requirements: FR-12 self-test infrastructure_
+  **Done When:**
+  - [x] Library.Shared.csproj + UnitTests.csproj created
+  - [x] PricingCalculator + CollectionPipeline + CartesianProduct demonstrating composition-chain + nxm-overlap kinds
+  - [x] 23 unit tests with [Trait("Category", "Unit")] markers
+  - [x] stryker-config.json + .gitignore for build artifacts
+  - [x] dotnet build succeeds, dotnet test succeeds
+  - [x] vitest TESTQUAL001_11 / 11b / 11c / 11d integration tests PASS
+
+## Phase 10.1: v0.5.1 LLM-driven survivor analysis full workflow
+
+> v0.5.1 closes FR-15 stub with complete 4-step orchestration. Commit `72b6684`.
+
+- [x] T41: survivors-batch-prompt.ts helper script -- Status: DONE | Est: 60m _(Verified: 2026-05-13)_
+  _Requirements: FR-15 v0.5.1 batching_
+  **Done When:**
+  - [x] Reads MutationReport JSON, batches survivors into chunks of 50 (configurable)
+  - [x] Emits one JSON line per batch с Meta ACH-style prompt + cost estimate
+  - [x] Cost guard: aborts emit if cumulative > --budget-usd default $2
+
+- [x] T42: merge-survivor-verdicts.ts helper script -- Status: DONE | Est: 60m _(Verified: 2026-05-13)_
+  _Requirements: FR-15 v0.5.1 merge_
+  **Done When:**
+  - [x] Takes original report + N verdict JSON files, merges into enriched report
+  - [x] Each verdict merged into MutationReport.gaps[] with equivalentSuspect + confidence + rationale
+  - [x] survivorAnalysis summary с counts (totalVerdicts / mergedIntoGaps / unmatched / equivalent / realGap)
+  - [x] Unmatched verdict warning emit to stderr
+
+- [x] T43: SKILL.md §6.3 LLM survivor analysis workflow doc -- Status: DONE | Est: 45m _(Verified: 2026-05-13)_
+  _Requirements: FR-15 v0.5.1 workflow documentation_
+  **Done When:**
+  - [x] 4-step workflow: run-mutation.ts --analyze-survivors → batch-prompt → Agent() per batch → merge-verdicts
+  - [x] Agent() prompt template + Meta ACH pattern explanation
+  - [x] Cost guard documentation ($2 budget default, ~200-400 survivors на Sonnet 4.6 batch)
+  - [x] Example output на dotnet-stryker fixture (8 survivors → 5 real gaps + 3 equivalent suspects)
+  - [x] §8 hard-NO #6 preserved — verdicts are suggestions not assertions
+
+- [x] T44: vitest TESTQUAL001_12..16 integration tests -- Status: DONE | Est: 60m _(Verified: 2026-05-13)_
+  _Requirements: FR-15 verification_
+  **Done When:**
+  - [x] TESTQUAL001_12 batching into chunks of 50 with cost estimate
+  - [x] TESTQUAL001_13 budget guard aborts when cumulative exceeds budget
+  - [x] TESTQUAL001_14 verdict merge populates equivalentSuspect + confidence + rationale
+  - [x] TESTQUAL001_15 unmatched verdicts emit warning
+  - [x] TESTQUAL001_16 gaps[] preferred over raw survivors[] when both present
+  - [x] All 5 PASS in 5.4s

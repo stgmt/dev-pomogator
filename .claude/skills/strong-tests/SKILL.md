@@ -21,6 +21,72 @@ allowed-tools: Read, Write, Edit, Grep, Glob, Bash, AskUserQuestion, Skill
 
 # /strong-tests — Mutation-Resistant Test Generation and Audit
 
+## 0. Quick start — что/как юзать (v0.5.1)
+
+**Skill ходит в 4 режимах + auto-trigger:**
+
+| Режим | Когда инвокировать | Команда |
+|---|---|---|
+| **§6.1 Greenfield** | Пишешь новый production code → хочешь сразу strong tests | `Skill("strong-tests")` + указать path |
+| **§6.2 Audit** | Подозреваешь существующие тесты слабые / fake-positive | `Skill("strong-tests")` на test file/dir |
+| **§6.3 Mutation-feedback** | Хочешь formal kill rate baseline + survivor analysis | `Skill("strong-tests --mode=mutate")` |
+| **§6.4 JiT auto-trigger** | Автоматически — PostToolUse hook on Write/Edit | (нет команды — hook fires сам) |
+
+**Supported stacks (v0.5.0+):** TypeScript / Python / C# .NET / Go.
+
+**Cross-skill invocation patterns (v0.4.0+ wired):**
+
+| Calling context | Вызов | Зачем |
+|---|---|---|
+| `/simplify` review с changed test files | `Skill("strong-tests")` audit | Mutation-resistance check complement к structural review |
+| `/run-tests` Step 5 если test files modified | hint: invoke `Skill("strong-tests")` | Post-test-run mutation score verification |
+| `/create-spec` Phase 3 если TASKS has test items | hint: invoke `Skill("strong-tests")` | Pre-implementation invariant suggestions для tests |
+
+**Quick recipes:**
+
+```bash
+# Recipe A: получить mutation kill rate baseline (на C# project, v0.5.0+)
+cd <target-project-with-stryker-config.json>
+npx tsx <dev-pomogator>/.claude/skills/strong-tests/scripts/run-mutation.ts --analyze-survivors
+
+# Recipe B: full LLM survivor analysis workflow (v0.5.1)
+npx tsx run-mutation.ts <target> --analyze-survivors > report.json
+npx tsx scripts/survivors-batch-prompt.ts report.json > batches.jsonl
+# AI agent: spawn Agent() per batch с batch.prompt; save verdicts-N.json
+npx tsx scripts/merge-survivor-verdicts.ts report.json verdicts-*.json > enriched.json
+
+# Recipe C: classify tests Unit vs Integration vs E2E (default Stryker scope = Unit)
+# AI scans test files, adds [Trait("Category", "Unit")] markers; Stryker uses --test-case-filter
+
+# Recipe D: skip Integration/E2E tests during Stryker run
+npx tsx run-mutation.ts <target>
+# Default behavior. Override: add --include-integration / --include-e2e flags
+
+# Recipe E: hypothesis Ghostwriter for new Python function (greenfield)
+hypothesis write mymodule:myfunc  # OR через runGhostwriter() в run-mutation.ts
+```
+
+**Skill files map** (после `npx dev-pomogator --plugins=test-quality`):
+
+| Path | Purpose |
+|---|---|
+| `.claude/skills/strong-tests/SKILL.md` | This file — workflow + 12-point eval |
+| `.claude/skills/strong-tests/scripts/detect-invariant-candidates.ts` | JiT detector — composition-chain, nxm-overlap, collection-returning |
+| `.claude/skills/strong-tests/scripts/run-mutation.ts` | Auto-dispatch Stryker (TS) / mutmut (Python) / Stryker.NET (C#) |
+| `.claude/skills/strong-tests/scripts/survivors-batch-prompt.ts` | v0.5.1: Batch survivors → LLM-ready prompts |
+| `.claude/skills/strong-tests/scripts/merge-survivor-verdicts.ts` | v0.5.1: Merge LLM verdicts back into report |
+| `.claude/skills/strong-tests/references/anti-patterns.md` | 8 anti-patterns catalogue + grep regex |
+| `.claude/skills/strong-tests/references/tooling-setup.md` | Install + thresholds per 6 stacks |
+| `.claude/skills/strong-tests/references/stryker.config.template.mjs` | Template для Stryker (TS) |
+| `.claude/skills/strong-tests/references/stryker-net.config.template.json` | v0.5.0: Template для Stryker.NET (C#) |
+| `.dev-pomogator/tools/test-quality/posttool-jit.ts` | JiT hook — fires PostToolUse on Write/Edit |
+
+**Exit codes** (для `run-mutation.ts`):
+- `0` — threshold met OR --dry-run completed
+- `1` — threshold not met (data, не error)
+- `2` — no stack/tool detected, prerequisite missing
+- `3` — tool execution failure
+
 ## 1. Why this exists
 
 Coverage is a vanity metric. Mutation score and property-based testing (PBT) are what actually measure test strength.
