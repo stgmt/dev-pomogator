@@ -245,14 +245,35 @@ function runStryker(cwd: string, target: string | null, threshold: number, dryRu
     );
   }
 
-  const args = ['stryker', 'run', '--reporters', 'json,clear-text'];
+  // If the project defines `scripts.mutation` in package.json, prefer it over
+  // direct `npx stryker run`. Projects use this hook to wrap Stryker with
+  // environment-specific glue (e.g. Docker container, custom env, isolated
+  // workspace) without having to alter the skill.
+  let cmd: string;
+  let args: string[];
+  let hasNpmScript = false;
+  try {
+    const pkgPath = join(cwd, 'package.json');
+    if (existsSync(pkgPath)) {
+      const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
+      hasNpmScript = typeof pkg?.scripts?.mutation === 'string';
+    }
+  } catch { /* fall through to default invocation */ }
+
+  if (hasNpmScript) {
+    cmd = 'npm';
+    args = ['run', 'mutation', '--', '--reporters', 'json,clear-text'];
+  } else {
+    cmd = 'npx';
+    args = ['stryker', 'run', '--reporters', 'json,clear-text'];
+  }
   if (target) args.push('--mutate', target);
 
   // Env propagation: spawnSync inherits process.env by default. Document it explicitly
   // for clarity — Stryker passes env through to test workers, so repo-specific
   // vars (e.g., SKIP_BUILD_CHECK, NODE_ENV) just work if set in the parent shell
   // BEFORE invoking run-mutation.ts.
-  const proc = spawnSync('npx', args, {
+  const proc = spawnSync(cmd, args, {
     cwd,
     encoding: 'utf-8',
     timeout: 30 * 60_000,

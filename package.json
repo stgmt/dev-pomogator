@@ -36,6 +36,7 @@
     "test:all": "bash scripts/docker-test.sh",
     "test:e2e:docker": "vitest run tests/e2e --reporter=verbose",
     "test:tui": "python3 -m pytest tests/tui/ -v",
+    "mutation": "bash scripts/docker-mutation.sh",
     "prepare": "npm run build"
   },
   "dependencies": {
