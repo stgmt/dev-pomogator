@@ -1,0 +1,402 @@
+# Design
+
+## Реализуемые требования
+
+- [FR-1: Phase 0 cucumber-js BDD migration](FR.md#fr-1)
+- [FR-2: SpecGraph builder](FR.md#fr-2)
+- [FR-3: Custom MD parser dual-anchor](FR.md#fr-3)
+- [FR-4: MCP server get_trace](FR.md#fr-4)
+- [FR-5: PreToolUse HARD hooks](FR.md#fr-5)
+- [FR-6: PostToolUse always-push throttle](FR.md#fr-6)
+- [FR-7: Marksman bundle install](FR.md#fr-7)
+- [FR-8: LLM semantic drift check (opt-in)](FR.md#fr-8)
+- [FR-9: Multi-language BDD support](FR.md#fr-9)
+- [FR-10: SQLite cross-session (Phase 4)](FR.md#fr-10)
+- [FR-11: Migration helper v3→v4](FR.md#fr-11)
+- [FR-12: architecture-research-workflow skill](FR.md#fr-12)
+- [FR-13: Orphan resolution policy](FR.md#fr-13)
+- [FR-14: Devcontainer / multi-env support](FR.md#fr-14)
+- [FR-15: Side-channel conformance log](FR.md#fr-15)
+- [FR-16: GitHub Codespaces support](FR.md#fr-16)
+
+## Компоненты
+
+### Core
+- `SpecGraph` (in-memory) — типизированные nodes (FR/NFR/AC/SCEN/TASK/UC/RISK/File) + typed edges (refs/covers/tested-by/tagged-by/implements/last-result)
+- `MdParser` — `unified` + `remark-parse` + `remark-frontmatter` + `remark-wiki-link` + `unist-util-visit`; dual-anchor registration via configurable regex `anchor_patterns`
+- `GherkinParser` — `@cucumber/gherkin` + `@cucumber/gherkin-utils` (AST walker, tag inheritance)
+- `NdjsonIngester` — `@cucumber/messages` (canonical NDJSON parser/serializer), reads `reqnroll_report.ndjson`-compatible files
+- `ConformanceChecker` — структурные checks (UNCOVERED_FR / ORPHAN_TASK / BROKEN_REF / DUPLICATE_DEFINITION / SCENARIO_TAG_ORPHAN / UNTAGGED_SCENARIO / STALE_NDJSON / FR_REGRESSION)
+- `GraphBuilder` — orchestrates parsers, merges trees → SpecGraph, runs incremental rebuild on chokidar events
+
+### MCP layer
+- `McpServer` — `@modelcontextprotocol/sdk` stdio MCP, exposes 11 tools (`get_trace`, `get_node`, `find_by_tags`, `find_by_type`, `conformance_check`, `blast_radius`, `list_orphans`, `broken_refs`, `git_diff_impact`, `search`, `overview`)
+- `LspBridge` (optional) — spawns Marksman subprocess, proxies LSP `textDocument/references`/`textDocument/definition` requests for MD subgraph navigation
+
+### Hooks (PreToolUse / PostToolUse)
+- `spec-conformance-guard` (PreToolUse) — HARD invariants: DUPLICATE_DEFINITION, MALFORMED_FRONTMATTER, MALFORMED_GHERKIN, INVALID_ANCHOR_PATTERN
+- `spec-conformance-push` (PostToolUse) — async push: incremental reindex + conformance_check + 3s throttle + aggregation + `<system-reminder>` injection
+- `bash-post-test-ingest` (PostToolUse on Bash) — detects `dotnet test`/`npm run test:bdd` completion → invokes `ingest-ndjson` MCP tool → splits master NDJSON per spec
+
+### Subagent (Phase 3+)
+- `claude-cli-bridge` — spawns `claude -p "..."` subprocess for semantic checks (Haiku model)
+- `SemanticDriftCheck` — caches by `hash(fr_text + scenario_text)`, async
+
+### Infrastructure
+- `FileWatcher` — `chokidar` with auto-polling fallback (touch test at startup)
+- `MultiEnvLock` — `.dev-pomogator/.mcp-lock.json` atomic create + pid+env tracking
+- `SqliteIndex` (Phase 4 opt-in) — `better-sqlite3` WAL mode, FTS5 для full-text search
+
+## Где лежит реализация
+
+- Core graph + parsers: `extensions/specs-workflow/tools/spec-graph/` (NEW directory in existing extension)
+- MCP server: `extensions/specs-workflow/tools/spec-mcp-server/` (NEW)
+- Hooks: `extensions/specs-workflow/tools/spec-conformance-guard/`, `extensions/specs-workflow/tools/spec-conformance-push/` (NEW)
+- Subagent bridge: `extensions/specs-workflow/tools/claude-cli-bridge/` (NEW, Phase 3+)
+- Marksman binary: `.dev-pomogator/bin/marksman` (per-platform, installed by postInstall script)
+- Migration script: `extensions/specs-workflow/tools/migrate-v3-to-v4/` (NEW, Phase 5)
+- New skill: `.claude/skills/architecture-research-workflow/` (NEW, Phase 6)
+- Existing patterns reused: `extensions/specs-workflow/tools/specs-generator/{validate-spec,audit-spec,bdd-framework-detector,scaffold-spec}.ts`
+
+## Директории и файлы
+
+См. [FILE_CHANGES.md](FILE_CHANGES.md) — полный список ~40 файлов across 7 phases.
+
+## Алгоритм
+
+### Boot sequence (MCP server startup)
+
+1. Read `.spec-config.json` (defaults if absent)
+2. Acquire `.dev-pomogator/.mcp-lock.json` atomic (env+pid+session_id)
+3. Spawn Marksman LSP subprocess (if bundled binary available)
+4. Initialize chokidar watcher + run touch test (auto-detect polling need)
+5. Initial SpecGraph build: glob `.specs/**/*.md` + `**/*.feature` → parse → merge → in-memory graph
+6. Read `.dev-pomogator/.last-test-run.ndjson` if exists → enrich graph with TestResult nodes/edges
+7. MCP server `initialize` LSP-style handshake with Claude Code client
+8. Ready to serve tool calls
+
+### `get_trace(node_id)` request flow
+
+1. Validate `node_id` shape (regex match against known patterns)
+2. Lookup in `definitions` map → if not found, fuzzy-match (Levenshtein top-3 suggestions)
+3. Resolve `backlinks[node_id]` → list of citing locations
+4. For Scenario nodes: lookup `pickleId` → `testCase.id` → `testCaseStarted.id` → latest `testStepFinished.testStepResult`
+5. For FR/NFR nodes: walk edges to collect AC + Scenarios + Tasks + Code refs (via step bindings)
+6. Generate `explanation_for_agent` (template-based, ≤500 chars, includes counts + failing step if any)
+7. Return structured tree + explanation
+
+### PostToolUse hook flow
+
+1. Hook receives `tool_input.file_path` after Write/Edit success
+2. Match path against `.specs/**/*.md` or `**/*.feature` — skip if no match
+3. Send `affected_file` to MCP via internal IPC → MCP runs incremental reindex
+4. Run `conformance_check(scope: affected_node_ids)` → collect findings
+5. Throttle: queue findings in 3s window keyed by `spec_slug`
+6. After window closes: dedupe (same finding_code + location) → assemble `<system-reminder>` text
+7. Return to Claude Code harness as `permissionDecision: "allow"` with `hookSpecificOutput.additionalContext = "<system-reminder>...</system-reminder>"`
+
+### Migration v3→v4 flow
+
+1. CLI parse `--suggest-only` flag
+2. Scan `.specs/*/FR.md`, `.specs/*/ACCEPTANCE_CRITERIA.md`, `.specs/*/*.feature`
+3. For each file: detect legacy patterns (`### Requirement: FR-N`, untagged scenarios, missing frontmatter)
+4. Generate per-file diff (heading conversion, frontmatter add, tag predictions)
+5. `--suggest-only`: print all diffs to stdout, exit
+6. Interactive mode: prompt per file (approve/skip/edit) with 30s default-skip timeout
+7. Apply approved diffs atomically (temp file + move)
+8. Bump `.progress.json::version: 4` only on successful spec migration
+9. Print summary: N files migrated, M skipped, K errors
+
+## API
+
+### MCP tools (canonical list)
+
+См. [spec-generator-v4_SCHEMA.md](spec-generator-v4_SCHEMA.md) для полных input/output JSON schemas.
+
+| Tool | Input | Output schema |
+|------|-------|---------------|
+| `get_node(id)` | `{ id: string }` | `Node` (type-aware payload) |
+| `get_trace(id, depth?)` | `{ id: string, depth?: number }` | `TraceResponse` (structured tree + explanation_for_agent) |
+| `find_by_tags(tags, operator?)` | `{ tags: string[], operator?: "AND"\|"OR" }` | `Node[]` |
+| `find_by_type(type, slug?)` | `{ type: NodeType, slug?: string }` | `Node[]` |
+| `conformance_check(scope?, severity?, semantic?)` | `{ scope?: string, severity?: Severity[], semantic?: boolean }` | `Finding[]` |
+| `blast_radius(node_id, change_type)` | `{ node_id: string, change_type: "delete"\|"modify"\|"rename" }` | `BlastResponse` |
+| `list_orphans(type?)` | `{ type?: NodeType }` | `Node[]` |
+| `broken_refs(scope?)` | `{ scope?: string }` | `BrokenRef[]` |
+| `git_diff_impact(rev?)` | `{ rev?: string }` | `ImpactResponse` |
+| `search(query, filter?)` | `{ query: string, filter?: NodeFilter }` | `SearchResult[]` |
+| `overview(slug?)` | `{ slug?: string }` | `Overview` |
+
+## Key Decisions
+
+> Auto-populated by Skill `requirements-chk-matrix` during Phase 2. Hook `design-decision-guard` enforces format:
+> each `### Decision:` block must include **Rationale:**, **Trade-off:**, **Alternatives considered:** with ≥2 `- {alt}` bullets.
+
+### Decision: In-memory storage only for Phase 2
+
+**Rationale:** Simplicity wins for the 30-spec scale typical of v4 first deployment. Pure JS implementation has zero native dependencies (`better-sqlite3` requires platform-specific compile), making install trivial on devcontainer / Codespaces / WSL where bind-mount FS lock semantics are unreliable. Cold-start rebuild at 1-2s is acceptable for single Claude Code session lifecycle. Source-of-truth always lives in `.specs/**/*.md` (git-committed) — in-memory index is purely derived, loss = 1-2s rebuild not data loss.
+
+**Trade-off:** No cross-session sharing — each Claude Code session pays the 1-2s rebuild cost. Multi-session scenarios (developer running two terminals on same project) cannot share SpecGraph state without going through filesystem.
+
+**Alternatives considered:**
+- SQLite FTS5 (rejected for Phase 2) — devcontainer bind-mount lock corruption risk (Docker Desktop on Windows/Mac), `better-sqlite3` native compile complicates install matrix, schema migrations add maintenance burden, cross-session benefit not justified at single-session scale. Deferred to Phase 4 opt-in via config flag.
+- LMDB / RocksDB (rejected) — same native-deps issue plus less common in JS ecosystem, harder to debug for users.
+- Persistent JSON file (rejected) — atomic write/lock semantics same problem as SQLite, no query performance benefit over in-memory, only marginal cold-start savings.
+
+### Decision: Dual-anchor heading convention (FR-001 + fr-001-login)
+
+**Rationale:** Marksman LSP generates wiki-link slugs from heading text natively (`### FR-001: Login` → `fr-001-login`), enabling IDE Ctrl+Click navigation without custom plugins. Compact `[[FR-001]]` form preferred by agents for dense cross-refs. Registering BOTH anchors satisfies both human readers (descriptive `[[fr-001-login]]`) and agent context efficiency (`[[FR-001]]`). Legacy v3 `### Requirement: FR-001 Login` continues to work via triple-anchor registration in our custom parser — no breaking change.
+
+**Trade-off:** Parser complexity (regex `anchor_patterns` config + triple-registration during indexing) adds ~150 lines of code vs single-anchor approach. Slight indexing overhead (~5ms per heading vs 1ms).
+
+**Alternatives considered:**
+- Status quo `### Requirement: FR-N` only (rejected) — no IDE wiki-link navigation in Marksman / VS Code, slugs unusable (`requirement-fr-001-login` too long).
+- Short heading only `### FR-N: ...` without backward compat (rejected) — breaks 30+ existing v3 specs across the dev-pomogator user base; forced migration too invasive.
+- HTML anchor markers `<a name="FR-001"></a>` adjacent to headings (rejected) — clutters MD source, requires migration script to add markers to all existing specs anyway, no advantage over regex parser.
+- Full restructure files-per-FR (`.specs/auth/fr-001.md`) (rejected) — too invasive, loses spec cohesion, breaks audit/validation tooling.
+
+### Decision: MCP and LSP as separate layers, not nested
+
+**Rationale:** LSP is reactive (responds to file events / Read tool enrichment), MCP is pull-based (agent explicitly calls tools). Different ментальные модели и activation patterns. Forcing MCP-wraps-LSP would lose MCP's autonomous initiation capability (e.g., `conformance_check` doesn't map to any standard LSP request). Keeping them parallel: agent uses LSP-backed tools (`FindReferences`) for known symbol queries, MCP for domain queries (`get_trace`).
+
+**Trade-off:** Some capability duplication — `FindReferences` (LSP) and `backlinks` (MCP) overlap. Cost: two implementations to maintain. Benefit: each layer optimized for its access pattern.
+
+**Alternatives considered:**
+- Pure LSP-as-MCP-wrap (rejected) — loses MCP's autonomous pull-based initiation, all calls become reactive, complicates conformance_check (no natural LSP equivalent).
+- Pure MCP only (no LSP backing) (rejected) — loses 900× speedup on cross-file symbol queries (`textDocument/references` vs grep), wastes agent context on large match sets.
+- LSP only, no MCP (rejected) — no way to expose domain-specific queries (`get_trace`, `blast_radius`); LSP standard not extensible enough.
+
+### Decision: PostToolUse always-push with 3s throttle
+
+**Rationale:** Pull-only conformance check requires agent to remember to call `conformance_check` after every spec edit. Empirical observation (session 2026-05-17): agents forget. Push-based with throttling guarantees conformance feedback reaches agent context within bounded time, eliminating silent drift between spec edit and detection. 3-second throttle balances real-time feedback against bulk-edit spam.
+
+**Trade-off:** Red-phase TDD noise — agent intentionally writing failing tests sees push warnings. Mitigated via `_no_push_check: true` frontmatter escape hatch + `_no_push_check` exempt list in config. Some shift in user expectation: previously silent, now chatty.
+
+**Alternatives considered:**
+- Pull-only (rejected) — proven agent forgetfulness in 30+ turn session; primary v4 value prop lost.
+- Side-channel JSONL only (rejected — moved to Phase 4 supplementary feature) — log persists but agent doesn't see; same forgetfulness problem.
+- HARD-block only (rejected) — covers syntax invariants but misses soft drift (UNCOVERED_FR, semantic mismatch).
+- Configurable threshold (push only on `error` severity) (deferred) — could be added as `post_tool_use.severity_filter` config in Phase 2.5; default is push all severities.
+
+### Decision: cucumber-js as Phase 0 canonical BDD runner
+
+**Rationale:** Only TypeScript-compatible BDD runner emitting canonical Cucumber Messages NDJSON (the same schema Reqnroll v3+ produces for .NET). Single schema across languages = simplified NDJSON ingester in Phase 1, no per-runner adapters in Phase 3. Mature ecosystem (`@cucumber/cucumber`, `@cucumber/messages`, `@cucumber/gherkin-utils` все official, MIT, stable).
+
+**Trade-off:** Migration burden for dev-pomogator: existing vitest pseudo-BDD (`.feature` as docs only, tests in vitest) must convert to real cucumber-js. Estimated 1-2 days of work for ~30 scenarios. Vitest unit tests stay untouched (additive setup), but CI now runs two test suites.
+
+**Alternatives considered:**
+- `@amiceli/vitest-cucumber` (rejected) — custom output format, not Cucumber Messages NDJSON; would block v4 trace pipeline.
+- QuickPickle (rejected) — Cucumber Messages output support unclear/unverified; smaller community = higher risk of NDJSON breaking changes.
+- `jest-cucumber` (rejected) — jest-specific, dev-pomogator uses vitest; would require jest install or wholesale framework change.
+- Keep vitest pseudo-BDD (rejected) — no runtime test trace = v4 graph cannot link FR→Scenario→TestResult, defeats core v4 value.
+
+### Decision: Marksman bundle install (always silent default)
+
+**Rationale:** IDE wiki-link navigation (Ctrl+Click on `[[FR-001]]` in VS Code) is critical for human-readable spec workflow. Opt-in postInstall introduces friction — users skip and lose IDE features without realizing. Silent bundle = "just works" out of the box. Binary size +15MB is acceptable trade-off for adoption.
+
+**Trade-off:** +15MB to dev-pomogator install footprint per platform. Slightly slower `npm install` (single binary download). Network dependency at install time (mitigated: fallback to custom JS MD LSP if download fails).
+
+**Alternatives considered:**
+- Opt-in postInstall (`dev-pomogator install-marksman`) (rejected) — user friction, most won't run it, IDE features silently absent.
+- Custom JS MD LSP only (no Marksman) (rejected) — incomplete feature set (no broken-link diagnostics, no rename refactoring); reimplementing Marksman from scratch is 6-12 months of work.
+- VS Code extension instead of LSP (rejected) — VS Code-specific, breaks Neovim/Helix/Sublime users; LSP is editor-agnostic standard.
+
+### Decision: Phase 6 added — architecture-research-workflow skill (meta-deliverable)
+
+**Rationale:** This v4 spec itself took 30+ turns of manual user pushback to reach quality (session 2026-05-17). The pattern (pain validation → research → variants → decision Q&A → phases) is reusable for future major features (v5, v6). Encoding it as a skill means future arch features take 5-8 turns instead of 30+. The skill calls existing `research-workflow` as a primitive for individual research bursts, adding meta-stages (variants, decisions, phases) on top.
+
+**Trade-off:** Skill creep risk — 7 stages may be overkill for medium features. Mitigated via complexity heuristic in `create-spec` (auto-invoke only on "архитектур"/"v\d+"/"rebuild" keywords or ≥3 components detected).
+
+**Alternatives considered:**
+- Extend existing `research-workflow` skill (rejected) — mixes "find facts" with "design architecture" mental models, bloats skill to 800+ строк, breaks current `create-spec` integration.
+- Single combined skill (rejected) — same bloating concern; loss of modularity (research-workflow can be invoked standalone for simple lookups).
+- Manual pattern per major feature (status quo, rejected) — proven 30+ turn cost per feature, doesn't scale; the pattern IS the deliverable.
+
+## BDD Test Infrastructure (ОБЯЗАТЕЛЬНО)
+
+**TEST_DATA:** TEST_DATA_ACTIVE
+**TEST_FORMAT:** BDD
+**Framework:** Cucumber.js (`@cucumber/cucumber`) for dev-pomogator self-test; Reqnroll for C# target projects; behave for Python target projects (Phase 3+)
+**Install Command:** `npm install --save-dev @cucumber/cucumber @cucumber/messages @cucumber/gherkin @cucumber/gherkin-utils` (Phase 0 bootstrap)
+**Evidence:** RESEARCH.md Appendix J BDD framework detection table; bdd-framework-detector output (csharp/Reqnroll detected in fixture); current vitest pseudo-BDD requires Phase 0 migration
+**Verdict:** Phase 0 bootstrap block in TASKS.md MUST install cucumber-js + create `tests/step_definitions/` + `cucumber.json` config + Before/AfterScenario hooks for test isolation + per-spec NDJSON output configuration. Fixture copy from existing `.specs/personal-pomogator/`, `.specs/codex-cli-support/`, `.specs/spec-generator-v3/` for self-test.
+
+### Существующие hooks
+
+| Hook файл | Тип | Тег/Scope | Что делает | Можно переиспользовать? |
+|-----------|-----|-----------|------------|------------------------|
+| `extensions/specs-workflow/tools/specs-generator/user-story-form-guard.ts` | PreToolUse | Write\|Edit USER_STORIES.md | Validates v3 form fields | Yes — pattern direct copy for spec-conformance-guard |
+| `extensions/specs-workflow/tools/specs-generator/task-form-guard.ts` | PreToolUse | Write\|Edit TASKS.md | Done When/Status/Est fields | Yes — pattern reuse for new guards |
+| `extensions/specs-workflow/tools/specs-generator/design-decision-guard.ts` | PreToolUse | Write\|Edit DESIGN.md | Key Decisions Rationale/Trade-off/Alternatives | Yes — direct reuse, no changes |
+| `extensions/specs-workflow/tools/specs-generator/requirements-chk-guard.ts` | PreToolUse | Write\|Edit REQUIREMENTS.md | CHK matrix format | Yes — direct reuse |
+| `extensions/specs-workflow/tools/specs-generator/risk-assessment-guard.ts` | PreToolUse | Write\|Edit RESEARCH.md | Risk Assessment ≥2 rows | Yes — direct reuse |
+| `extensions/specs-workflow/tools/specs-generator/extension-json-meta-guard.ts` | PreToolUse | Write\|Edit extension.json | Protects manifest from tampering | Yes — extend pattern for meta-guard on new components |
+
+### Новые hooks
+
+| Hook файл | Тип | Тег/Scope | Что делает | По аналогии с |
+|-----------|-----|-----------|------------|---------------|
+| `extensions/specs-workflow/tools/spec-conformance-guard/spec-conformance-guard.ts` | PreToolUse | Write\|Edit `.specs/**/*.md`, `**/*.feature` | HARD invariants: DUPLICATE_DEFINITION, MALFORMED_FRONTMATTER, MALFORMED_GHERKIN, INVALID_ANCHOR_PATTERN | user-story-form-guard pattern |
+| `extensions/specs-workflow/tools/spec-conformance-push/spec-conformance-push.ts` | PostToolUse | Write\|Edit `.specs/**/*.md`, `**/*.feature` | Incremental reindex + conformance_check + 3s throttle + push findings | new pattern; uses MCP IPC |
+| `extensions/specs-workflow/tools/bash-post-test-ingest/bash-post-test-ingest.ts` | PostToolUse | Bash `dotnet test\|npm test\|npm run test:bdd` | Detect test run completion, invoke MCP ingest-ndjson + split per spec | new pattern; pattern after `tui-test-runner` post-hook |
+
+### Cleanup Strategy
+
+В test fixture для self-test (v4 development): чистая копия `.specs/personal-pomogator/`, `.specs/codex-cli-support/`, `.specs/spec-generator-v3/` живёт в `tests/fixtures/v4-self-test/`. Каждый BDD scenario: Before — copy fixture to temp dir, set CWD; After — cleanup temp dir + reset MCP server state via `clear_index` admin tool.
+
+Cleanup порядок для production (target projects):
+1. После теста: in-memory graph НЕ persists (по definition Phase 2)
+2. SQLite (Phase 4): тестовая база `tests/.spec-index.test.sqlite`, удаляется after suite
+3. NDJSON test fixtures в `tests/fixtures/ndjson/` — read-only, no cleanup
+4. Temp files (graph rebuild artifacts): автоудаление через `os.tmpdir()` lifecycle
+
+### Test Data & Fixtures
+
+См. [FIXTURES.md](FIXTURES.md) для полного перечня. Ключевые fixtures:
+
+| Fixture/Data | Путь | Назначение | Lifecycle |
+|-------------|------|------------|-----------|
+| `v4-self-test/.specs/` | `tests/fixtures/v4-self-test/.specs/` | Copy of 3 real specs for parser regression | shared (read-only) |
+| `v4-self-test/.feature` | `tests/fixtures/v4-self-test/features/` | Real .feature files for Gherkin parser | shared |
+| `cucumber-messages-sample.ndjson` | `tests/fixtures/ndjson/sample.ndjson` | Pre-recorded canonical NDJSON for ingester unit-tests | shared |
+| `corrupt-frontmatter.md` | `tests/fixtures/error-cases/corrupt-frontmatter.md` | Trigger MALFORMED_FRONTMATTER finding | per-scenario |
+| `duplicate-fr.md` | `tests/fixtures/error-cases/duplicate-fr.md` | Trigger DUPLICATE_DEFINITION finding | per-scenario |
+| `orphan-tagged.feature` | `tests/fixtures/error-cases/orphan-tagged.feature` | `@FR-999` Scenario for SCENARIO_TAG_ORPHAN | per-scenario |
+| `large-spec/` | `tests/fixtures/large-spec/` | Synthetic 30 specs, 300 MDs, для NFR-Performance benchmarks | shared (read-only) |
+
+### Shared Context / State Management
+
+| Ключ | Тип | Записывается в | Читается в | Назначение |
+|------|-----|----------------|------------|------------|
+| `currentSpecGraph` | `SpecGraph` | `BeforeScenario` (build from fixture) | Steps (`get_trace`, `conformance_check`) | Shared graph state for each scenario |
+| `mcpProcess` | `ChildProcess` | `BeforeFeature` (spawn MCP server subprocess) | Steps (send JSON-RPC requests) | MCP server subprocess for integration tests |
+| `lastFindings` | `Finding[]` | `When conformance_check ran` step | `Then findings should include` step | Carry findings between Given/When/Then |
+| `pushedReminders` | `string[]` | PostToolUse hook simulation | `Then agent context should contain` step | Capture push notifications |
+| `lockFileState` | `LockFileContent` | `Given MCP server in env X` step | `Then second start denies with reason` step | Multi-env conflict scenarios |
+
+---
+
+## Cross-spec reconciliation architecture (Phase 7)
+
+This section describes the design for FR-17 (`cross-spec-reconcile`) and FR-18 (`cross-spec-resolve`). Implementation is scheduled as Phase 7 of TASKS.md. The 28 finding codes, YAML schema, and SARIF mapping live in `spec-generator-v4_SCHEMA.md`.
+
+### (a) Skill flow diagram
+
+```
+create-spec workflow
+   ├── Phase 2 step 4d  ──┐
+   ├── Phase 3 step 1c  ──┼──>  Skill("cross-spec-reconcile", mode: "light")
+   └── Phase 3+ Audit ────┘                  │
+                                             ▼
+                            ┌─────────────────────────────┐
+                            │  build-graph.ts             │  parse .specs/*/*.md + .feature
+                            │  └ per-spec concept index   │  (FR titles, paths, symbols, identifiers)
+                            ├─────────────────────────────┤
+                            │  check-cross-spec.ts        │  Jaccard, exact-match, levenshtein
+                            │  check-impl-drift.ts        │  fs.exists, grep, extension.json parse
+                            │  code-shape-index.ts        │  exports, ports, MCP tools, hooks
+                            ├─────────────────────────────┤
+                            │  semantic-judge.ts          │  pre-filter (concept overlap ≥3 nouns)
+                            │  └ Agent subagent dispatch  │  cached by sha256(spec_a+spec_b content)
+                            ├─────────────────────────────┤
+                            │  write-yaml-report.ts       │  atomic temp+rename, merge preserve
+                            │  write-sarif-report.ts      │  SARIF 2.1.0 (opt-in via --sarif)
+                            ├─────────────────────────────┤
+                            │  CRITICAL prompt step       │  AskUserQuestion header "⚠️ CRIT"
+                            └─────────────────────────────┘
+                                             │
+                                             ▼
+                            .specs/{slug}/consistency-report.yaml
+                            .specs/{slug}/consistency-report.sarif (optional)
+                            .claude/logs/cross-spec-overrides.jsonl (on override)
+
+/cross-spec-resolve  ──>  load YAML → group → explain → AskUserQuestion confirm → Edit/Write
+                                                                              │
+                                                                              ▼
+                                                            batch re-invoke reconcile mode=full
+                                                            update resolution_status per finding
+```
+
+### (b) Subagent isolation (R-4 mitigation)
+
+The Agent tool subagent invoked by `semantic-judge.ts` runs in an isolated context — it CANNOT call `AskUserQuestion` to reach the outer user. The subagent returns structured JSON (`{verdict: contradiction|overlap|complementary, confidence: 0..1, snippets: [...]}`) ONLY. All AskUserQuestion orchestration — CRITICAL blocking prompts, per-finding confirms, Path A/B/C alternatives, foreign-spec banners — happens in the OUTER skill (`cross-spec-reconcile` or `cross-spec-resolve`). This is a hard invariant; subagent prompt template `references/semantic-judge-prompt.md` instructs the subagent NOT to attempt interactive prompts and to return findings as data only.
+
+### (c) ARCHITECTURAL_DECISION_VS_REALITY detection algorithm
+
+The novel finding class `impl-drift/architectural-decision-vs-reality` requires comparing prose architectural claims in DESIGN.md against actual code shape. The algorithm has two stages:
+
+1. **Code-shape pre-indexing** (`code-shape-index.ts`) — glob `src/**/*.{ts,py,go}` + `extensions/**/*.{ts,json}`. For each file extract:
+   - Exports: regex `export\s+(?:async\s+)?(?:function|class|const|type)\s+(\w+)` → list of exported symbols
+   - Module boundaries: top-level directory under `src/` or `extensions/` → module name
+   - Declared HTTP ports: grep `\.listen\(\s*(\d+)`, `port\s*[:=]\s*(\d+)`
+   - MCP tools registered: grep `server\.tool\(\s*['"]([\w_-]+)['"]`
+   - Hooks registered: parse `extensions/*/extension.json` `hooks` blocks → list of `{event, matcher, command}`
+   
+   Output: in-memory `CodeShape` object passed to subagent.
+
+2. **LLM semantic compare** — for each spec's `DESIGN.md` extract architectural-claim phrases (regex on stock phrases: «inline TS service», «separate agent on port N», «PreToolUse hook», «MCP tool X exposed», «module path Y owns Z»). Send `{spec_claim, code_shape}` to Agent subagent with `references/semantic-judge-prompt.md` prompt; subagent returns `{verdict: "contradiction"|"matches"|"unclear", path_alternatives: [{label, pros, cons, impacted_files}, ...]}`. Outer skill packs this into the YAML finding with `class: orphaned` (claim has no code) or `class: covered` (claim matches code) per OpenFastTrace 4-class mapping.
+
+The `path_alternatives` array (when subagent emits one) drives the Path A/B/C AskUserQuestion in `cross-spec-resolve`.
+
+### (d) YAML schema overview
+
+See `spec-generator-v4_SCHEMA.md` section «Consistency Report YAML» for full schema. Top-level fields: `version`, `generated_at`, `spec_slug`, `mode`, `dry_run`, `partial`, `scope`, `summary` (dashboard with `by_severity` + `by_class` + `by_namespace` + `totals`), `findings[]`, `recommendations[]`, `acknowledged[]`.
+
+### (e) CRITICAL prompt rendering caveat
+
+The blocking AskUserQuestion uses `header: "⚠️ CRIT"` (≤12 chars). Actual color rendering (red/yellow/default) depends on the Claude Code client (terminal ANSI, web CSS, IDE plugin theme). System guarantees only the ⚠️ glyph + CAPS string telegraphs severity — there is NO guarantee of red color. Per AskUserQuestion tool schema, `header` is rendered as a chip/tag; longer text goes in the `question` field. Question text uses literal phrase «⚠️ CRITICAL CROSS-SPEC CONFLICTS — RESOLVE BEFORE PROCEED» in CAPS for visual reinforcement.
+
+### (f) Lightweight CRITICAL subset
+
+`light` mode (Phase 2 step 4d, Phase 3 step 1c) only fires CRITICAL severity for a curated hard-conflict subset of 3 finding codes:
+
+- `cross-spec/runtime-identifier-drift` — guaranteed runtime breakage if shipped (e.g. self-improve filter scope drift)
+- `cross-spec/module-ownership-conflict` — guaranteed merge conflict
+- `cross-spec/contradictory-fr` — semantically incompatible direct contradiction
+
+All other 25 finding codes in light mode default to WARNING severity. `full` mode (Phase 3+ Audit) uses the full severity matrix from `references/finding-codes.md`. This avoids spurious STOP-blocks during early authoring while ensuring the worst classes still gate.
+
+### (g) Partial reconciliation behavior
+
+If the Agent subagent fails on some pairs (timeout, error, rate-limit) but succeeds on others, the YAML report writes `partial: true` flag and a `warnings[]` entry listing the failed pairs. The report is NOT considered an error — it is a partial result that the user can act on for the resolved pairs while a follow-up run retries the failed ones. The mechanical checks (file existence, terminology Jaccard, etc.) always succeed independently of subagent state and contribute findings regardless.
+
+### (h) Finding code naming convention (Spectral)
+
+All 28 finding codes follow Spectral convention `namespace/kebab-case-rule`:
+
+- `cross-spec/*` — 15 codes for cross-spec conflicts (runtime-identifier-drift, terminology-drift, fr-overlap, module-ownership-conflict, contradictory-fr, nfr-conflict, duty-delegation-ambiguity, integration-contract-drift, schema-drift, naming-convention-drift, priority-inversion, skill-trigger-collision, cascading-interaction, stale-spec-outstanding-but-done, stale-spec-roadmap-drift)
+- `impl-drift/*` — 13 codes for spec-vs-implementation drift (missing-file, missing-symbol, output-not-exposed, data-shape-incompatible, stale-reference, mcp-tool-drift, hook-registration-drift, scenario-no-step-def, test-missing, type-drift, architectural-decision-vs-reality, duplicate-infrastructure, cold-start-ux-gap)
+
+Project `.spec-config.json` may include `disabled_rules[]: string[]` listing namespace-prefixed codes to suppress. This mirrors Spectral's selective-disable ergonomic and prevents rule sprawl when teams disagree on a specific check.
+
+### (i) OpenFastTrace 4-class summary grouping
+
+Each finding's `class` field maps to one of four classes (OpenFastTrace inspired): `covered` (spec claim matches code), `uncovered` (spec claim has no code counterpart), `orphaned` (code has no spec claim describing it), `outdated` (spec claim describes obsolete code). The YAML `summary.by_class` block aggregates counts per class for the dashboard view. This 4-class layer sits ABOVE the 28 fine-grained codes and gives reviewers a quick covered/uncovered status without reading every finding.
+
+### (j) Concurrency semantics (resolve vs reconcile)
+
+`cross-spec-resolve` skill reads `.specs/{slug}/consistency-report.yaml` once at step 1 of its execution (see FR-18) and operates on that snapshot for the rest of the session. `cross-spec-reconcile` writes YAML atomically (temp file + rename per NFR-Reliability-7), so a concurrent reconcile run cannot produce a partially-written file readable by resolve mid-update — readers always see a complete prior version OR a complete new version.
+
+**Race scenarios + behavior:**
+
+- **Reconcile starts after resolve has already loaded YAML in memory** — Resolve continues processing the snapshot it loaded. After batch completion, resolve invokes `Skill("cross-spec-reconcile", mode: "full")` in step 7, overwriting whatever the concurrent run produced. Last writer wins. User-visible effect: resolve fixes get attributed to the slug they were invoked under; concurrent reconcile run's results are discarded by step 7.
+- **Reconcile starts while resolve is mid-batch (after some Edits applied)** — Concurrent reconcile observes the in-progress code/spec state and may emit findings that reflect partial fix application. Its YAML output is then clobbered by resolve's step 7 batch re-check.
+- **Two resolves concurrently on different slugs** — Each operates on its own `.specs/{slug}/consistency-report.yaml`; no shared mutable state in the YAML files themselves. Foreign-spec edits (FR-18 step 6) on the SAME other-slug could collide — both resolves edit the same foreign README/CHANGELOG. Mitigation: foreign-spec confirmation prompt makes the user aware; git merge will catch true conflicts on commit.
+
+**Explicit guidance** (documented in skill SKILL.md once implemented): «Не запускай `/cross-spec-resolve` пока активен create-spec Phase 2/3 reconcile (lightweight). Подожди завершения lightweight reconcile, потом запускай resolve». In CI/automation contexts where this guarantee is hard to enforce, the atomic-write semantics provide eventual consistency — last writer wins, no corruption.
+
+A future enhancement (out of scope for v0.2.0) could introduce a `.specs/{slug}/consistency-report.lock` file using the same `flag: 'wx'` pattern as MCP server lock per `atomic-update-lock.md` — but v0.2.0 deliberately keeps it lockless to avoid stale-lock recovery complexity.
+
+### (k) Prior art adoption rationale
+
+Design borrows the following patterns from prior art (see RESEARCH.md «Prior art» subsection for full survey):
+
+- **SARIF 2.1.0 secondary output** (Spectral precedent) — opt-in via `--sarif` flag; 1:1 rule-id mapping to finding codes enables GitHub Code Scanning + IDE integration without bespoke schema work.
+- **`--dry-run` mode** (mex precedent) — prints summary + first 10 findings to stdout, skips file writes; lets author preview impact before committing YAML/SARIF artifacts.
+- **Coverage Summary Table dashboard** (GitHub spec-kit `/speckit.analyze` precedent) — `summary` block at YAML top with `by_severity` / `by_class` / `by_namespace` / `totals` keys; users see a snapshot without scrolling the findings list.
+- **Append-only JSONL audit log** (existing dev-pomogator `scope-gate/escape-hatch-audit.md` precedent) — `.claude/logs/cross-spec-overrides.jsonl` for CRITICAL acknowledge-and-override choices; cross-spec mirrors the same JSON shape and audit workflow.
+- **Two-skill separation** (shinpr/claude-code-workflows precedent) — `cross-spec-reconcile` (detection) and `cross-spec-resolve` (fix loop) are separate skills with a shared YAML contract. The novel addition vs shinpr is the schema-driven contract itself; shinpr emits prose, we emit structured findings.
+
+Avoided patterns (also see RESEARCH.md): ESLint `--fix` style semantic-breaking auto-apply (we always explain-then-confirm); Dependabot per-finding-PR fatigue (we batch findings per spec slug in a single YAML); mex single-shot AI fix without alternatives (we present Path A/B/C); OpenFastTrace `// [impl->REQ-N]` code-annotation requirement (we parse prose claims directly).
+
+The `verify-divergent-contracts.md` rule (test-vs-eval-vs-spec divergence pattern in dev-pomogator) describes the exact class of failure this reconcile feature is designed to detect across the cross-spec axis. See RESEARCH.md «Related sprint work» for the post-render-eval ↔ closed-loop-hardening ↔ pipeline/agent.ts case study that motivated the work.

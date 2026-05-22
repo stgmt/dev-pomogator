@@ -249,9 +249,9 @@ function runStryker(cwd: string, target: string | null, threshold: number, dryRu
   if (target) args.push('--mutate', target);
 
   // Env propagation: spawnSync inherits process.env by default. Document it explicitly
-  // for clarity — Stryker passes env through to test workers, so repo-specific bypass
-  // vars (e.g., SKIP_BUILD_CHECK, DEVPOM_ALLOW_HOST_TESTS, NODE_ENV) just work if set
-  // in the parent shell BEFORE invoking run-mutation.ts.
+  // for clarity — Stryker passes env through to test workers, so repo-specific
+  // vars (e.g., SKIP_BUILD_CHECK, NODE_ENV) just work if set in the parent shell
+  // BEFORE invoking run-mutation.ts.
   const proc = spawnSync('npx', args, {
     cwd,
     encoding: 'utf-8',

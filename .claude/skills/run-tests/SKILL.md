@@ -189,34 +189,19 @@ command: "bash .dev-pomogator/tools/tui-test-runner/test-monitor.sh .dev-pomogat
 - Любой тест который spawnSync-ит installer / hooks
 - Если не уверен — Docker
 
-**Команда host-bypass:**
+**Host-bypass УДАЛЁН** (incident 2026-05-22). Env var `DEVPOM_ALLOW_HOST_TESTS=1` снесён из `tests/setup/ensure-docker.ts` — единственный способ запустить e2e тесты теперь Docker (`npm test`). Причина: тесты с `setupCleanState()` или `fs.remove(appPath('.specs'))` сносили реальные данные репозитория когда запускались на хосте с bypass.
 
-```bash
-DEVPOM_ALLOW_HOST_TESTS=1 SKIP_BUILD_CHECK=1 \
-  node .dev-pomogator/tools/test-statusline/test_runner_wrapper.cjs \
-  --framework vitest -- npx vitest run tests/e2e/<file>.test.ts
-```
+**Если тебе нужно гонять конкретный тест на хосте для быстрой итерации** — единственный способ это написать его tmpdir-only: использовать `os.tmpdir()` + `fs.mkdtempSync()` для всех файловых операций, не трогать `appPath(...)`. Образец — `tests/e2e/mcp-config.test.ts` (32 теста, 285ms, изолированный tmpdir per case).
 
-**Что делает каждый env / флаг:**
+**Когда тест безопасен для host-run:**
 
-| Часть команды | Зачем |
-|---------------|-------|
-| `DEVPOM_ALLOW_HOST_TESTS=1` | Bypass `tests/setup/ensure-docker.ts` throw — explicit opt-in для host run |
-| `SKIP_BUILD_CHECK=1` | Bypass PreToolUse `build_guard.ts` (если src/ новее dist/, иначе блок) |
-| `node` (НЕ `bash`) | Wrapper это `.cjs` с `#!/usr/bin/env node` shebang — bash не парсит |
-| `--framework vitest` | Wrapper auto-detection ненадёжен; явный флаг надёжнее |
-| `--` separator | Всё после идёт как-есть в test runner |
-| `npx vitest run tests/e2e/<file>.test.ts` | Файловый filter — runs только конкретный тест |
-
-**Пример (variant-matrix unit тесты):**
-
-```bash
-DEVPOM_ALLOW_HOST_TESTS=1 SKIP_BUILD_CHECK=1 \
-  node .dev-pomogator/tools/test-statusline/test_runner_wrapper.cjs \
-  --framework vitest -- npx vitest run tests/e2e/specs-generator-variant-matrix.test.ts
-```
-
-Результат: 17/17 passed за 351ms vs ~10 минут Docker run.
+| Признак | Безопасно? |
+|---------|-----------|
+| Использует только `os.tmpdir()` + `fs.mkdtempSync()` | ✅ да |
+| Direct import production функций + чистые юнит-проверки | ✅ да |
+| Вызывает `setupCleanState()` / `initGitRepo()` | ❌ Docker |
+| Делает `fs.remove(appPath(...))` или пишет в `~/.claude/` | ❌ Docker |
+| Spawn-ит installer / hooks с `appPath()` cwd | ❌ Docker |
 
 **Гарантии test-guard hook:** прямой `npx vitest` блокируется (centralized-test-runner rule). Через wrapper — разрешено, потому что wrapper и есть централизованный entry point.
 

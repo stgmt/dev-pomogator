@@ -121,7 +121,7 @@ export default {
  *   NODE_ENV=test npx stryker run
  *
  *   # dev-pomogator example
- *   DEVPOM_ALLOW_HOST_TESTS=1 SKIP_BUILD_CHECK=1 npx stryker run
+ *   SKIP_BUILD_CHECK=1 npx stryker run
  *
  *   # CI environment
  *   CI=true STRYKER_DASHBOARD_API_KEY=xxx npx stryker run

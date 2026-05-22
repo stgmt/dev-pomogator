@@ -99,8 +99,7 @@ All notable changes to this feature will be documented in this file.
 - **35/35 tests GREEN** (16 BDD scenarios HVTR001..HVTR016, 35 individual `it()` blocks)
 - Включая PowerShell AST parsing checks которые actually parse все 6 .ps1 scripts через
   `[Parser]::ParseFile` — все валидны без syntax errors
-- Test runner: `DEVPOM_ALLOW_HOST_TESTS=1 TEST_SKIP_DISCOVERY=1 node test_runner_wrapper.cjs
-  --framework vitest -- npx vitest run tests/e2e/hyperv-test-runner.test.ts`
+- Test runner (historical, bypass removed 2026-05-23): `DEVPOM_ALLOW_HOST_TESTS=1 TEST_SKIP_DISCOVERY=1 node test_runner_wrapper.cjs --framework vitest -- npx vitest run tests/e2e/hyperv-test-runner.test.ts`. Сейчас только `npm test` (Docker).
 - `TEST_SKIP_DISCOVERY=1` обходит баг с `vitest list --json` discovery каскадом
 
 ### Files

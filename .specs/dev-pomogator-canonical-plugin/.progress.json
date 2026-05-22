@@ -1,0 +1,28 @@
+{
+  "version": 3,
+  "featureSlug": "dev-pomogator-canonical-plugin",
+  "createdAt": "2026-05-05T17:40:43.799Z",
+  "currentPhase": "Complete",
+  "phases": {
+    "Discovery": {
+      "completedAt": "2026-05-05T17:47:09.424Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-05-06T01:30:27.277Z"
+    },
+    "Context": {
+      "completedAt": "2026-05-05T17:47:09.425Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-05-06T01:30:54.127Z"
+    },
+    "Requirements": {
+      "completedAt": "2026-05-06T01:39:04.500Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-05-06T01:39:17.234Z"
+    },
+    "Finalization": {
+      "completedAt": "2026-05-06T01:44:29.557Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-05-06T01:44:41.952Z"
+    }
+  }
+}

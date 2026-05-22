@@ -22,9 +22,9 @@ export default {
   ],
   testRunnerNodeArgs: [],
   env: {
-    DEVPOM_ALLOW_HOST_TESTS: '1',
     SKIP_BUILD_CHECK: '1',
   },
+  env_comment: 'No DEVPOM_ALLOW_HOST_TESTS bypass — that env var was removed after a 2026-05-22 incident where host-run e2e tests wiped real .specs/. If mutation testing needs vitest to bypass the Docker guard, restructure target tests to be tmpdir-only (see tests/e2e/mcp-config.test.ts) or run stryker itself inside Docker.',
   thresholds: {
     high: 80,
     low: 60,
