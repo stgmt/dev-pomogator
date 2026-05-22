@@ -25,6 +25,7 @@ import { isDevPomogatorRepo } from './self-guard.js';
 import { removeManagedGitignoreBlock } from './gitignore.js';
 import { stripDevPomogatorFromSettingsLocal } from './settings-local.js';
 import { resolveWithinProject } from '../utils/path-safety.js';
+import { removeServerEntry } from './mcp-config.js';
 
 export interface UninstallReport {
   deletedFiles: string[];
@@ -33,6 +34,8 @@ export interface UninstallReport {
   gitignoreBlockRemoved: boolean;
   settingsLocalCleaned: boolean;
   configUpdated: boolean;
+  /** MCP server entries removed from `.mcp.json`. */
+  mcpServersRemoved: string[];
 }
 
 export interface UninstallOptions {
@@ -59,6 +62,7 @@ export async function uninstallFromProject(
     gitignoreBlockRemoved: false,
     settingsLocalCleaned: false,
     configUpdated: false,
+    mcpServersRemoved: [],
   };
 
   // Step 1: Self-guard refuse
@@ -73,10 +77,11 @@ export async function uninstallFromProject(
     return report;
   }
 
-  // Step 3: Collect all managed files + hook commands + env keys for this repoRoot
+  // Step 3: Collect all managed files + hook commands + env keys + MCP server keys for this repoRoot
   const managedFiles: string[] = [];
   const managedHookCommands = new Set<string>();
   const managedEnvKeys = new Set<string>();
+  const managedMcpServerNames = new Set<string>();
 
   for (const ext of config.installedExtensions) {
     const projectManaged = ext.managed?.[repoRoot];
@@ -92,6 +97,12 @@ export async function uninstallFromProject(
         if (Array.isArray(commands)) {
           for (const cmd of commands) managedHookCommands.add(cmd);
         }
+      }
+    }
+
+    if (projectManaged.mcpServers) {
+      for (const serverName of Object.keys(projectManaged.mcpServers)) {
+        managedMcpServerNames.add(serverName);
       }
     }
   }
@@ -175,6 +186,24 @@ export async function uninstallFromProject(
     }
   } else {
     report.settingsLocalCleaned = true;
+  }
+
+  // Step 7b: Remove managed mcpServers entries from .mcp.json
+  // Preserves user-authored entries and other extensions' MCP servers.
+  if (!options.dryRun) {
+    for (const serverName of managedMcpServerNames) {
+      try {
+        const { removed } = await removeServerEntry(repoRoot, serverName);
+        if (removed) report.mcpServersRemoved.push(serverName);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        report.errors.push(`Failed to remove MCP server '${serverName}': ${msg}`);
+      }
+    }
+  } else {
+    for (const serverName of managedMcpServerNames) {
+      report.mcpServersRemoved.push(serverName);
+    }
   }
 
   // Step 8: Update config — remove repoRoot from projectPaths and managed[repoRoot]

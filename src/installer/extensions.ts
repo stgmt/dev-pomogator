@@ -23,6 +23,16 @@ export interface ExtensionHooks {
   };
 }
 
+/**
+ * MCP server entry as declared in extension.json.mcpServers.{serverName}.
+ * Written by installer into target project's `.mcp.json` (atomic smart-merge).
+ */
+export interface McpServerConfig {
+  command: string;
+  args?: string[];
+  env?: Record<string, string>;
+}
+
 export interface PostInstallHook {
   command: string;       // Command to run (relative to repoRoot)
   interactive?: boolean; // Requires terminal input (default: true)
@@ -50,6 +60,10 @@ export interface Extension {
   // Skills to install to project/.claude/skills/ (Claude Code only)
   skills?: {
     [skillName: string]: string; // name -> relative path in extension
+  };
+  // MCP servers to register in target project's `.mcp.json` (Claude Code only)
+  mcpServers?: {
+    [serverName: string]: McpServerConfig;
   };
   // IDE hooks to install
   hooks?: ExtensionHooks;

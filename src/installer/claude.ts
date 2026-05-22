@@ -19,6 +19,7 @@ import { writeManagedGitignoreBlock, collapseToDirectoryEntries } from './gitign
 import { migrateLegacySettingsJson, writeHooksToSettingsLocal } from './settings-local.js';
 import { detectGitTrackedCollisions } from './collisions.js';
 import { checkMcpJsonForSecrets, printSecretWarnings } from './mcp-security.js';
+import { writeServerEntry } from './mcp-config.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -249,6 +250,31 @@ export async function installClaude(options: ClaudeOptions = {}): Promise<void> 
     }
     if (managedSkills.length > 0) {
       managedByExtension.get(extension.name)!.skills = managedSkills;
+    }
+  }
+
+  // 4b. Register MCP servers from extensions that declare them in extension.json.
+  //     Atomic smart-merge into target project's .mcp.json — preserves user keys.
+  for (const extension of extensionsToInstall) {
+    if (!extension.mcpServers) continue;
+
+    const mcpManaged: Record<string, { configHash: string }> = {};
+    for (const [serverName, serverConfig] of Object.entries(extension.mcpServers)) {
+      try {
+        const { configHash } = await writeServerEntry(repoRoot, serverName, serverConfig);
+        console.log(`  ✓ Registered MCP server: ${serverName}`);
+        mcpManaged[serverName] = { configHash };
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.log(chalk.yellow(`  ⚠ Failed to register MCP server '${serverName}' for ${extension.name}: ${msg}`));
+      }
+    }
+
+    if (Object.keys(mcpManaged).length > 0) {
+      if (!managedByExtension.has(extension.name)) {
+        managedByExtension.set(extension.name, {});
+      }
+      managedByExtension.get(extension.name)!.mcpServers = mcpManaged;
     }
   }
 
