@@ -107,7 +107,11 @@ export async function uninstallFromProject(
     }
   }
 
-  if (managedFiles.length === 0 && managedHookCommands.size === 0) {
+  if (
+    managedFiles.length === 0 &&
+    managedHookCommands.size === 0 &&
+    managedMcpServerNames.size === 0
+  ) {
     report.errors.push(`No managed entries found for project ${repoRoot}`);
     return report;
   }

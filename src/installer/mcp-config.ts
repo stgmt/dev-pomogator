@@ -9,7 +9,8 @@
  * servers, MCP servers written by other extensions).
  */
 import { createHash } from 'crypto';
-import { writeJsonAtomic, readJsonSafe } from '../utils/atomic-json.js';
+import fs from 'fs-extra';
+import { writeJsonAtomic } from '../utils/atomic-json.js';
 import { resolveWithinProject } from '../utils/path-safety.js';
 import type { McpServerConfig } from './extensions.js';
 
@@ -31,6 +32,28 @@ function resolveMcpJsonPath(targetProject: string): string {
     );
   }
   return resolved;
+}
+
+// Missing file = empty config; parse error = fail-fast (don't silently overwrite
+// user-edited broken JSON). Falls back to .bak only on parse error.
+async function readMcpJsonStrict(filePath: string): Promise<McpJsonShape> {
+  try {
+    return await fs.readJson(filePath) as McpJsonShape;
+  } catch (err: unknown) {
+    const code = (err as { code?: string }).code;
+    if (code === 'ENOENT') return {};
+    const bakPath = filePath + '.bak';
+    try {
+      const recovered = await fs.readJson(bakPath) as McpJsonShape;
+      console.warn(`  [WARN] Recovered .mcp.json from backup: ${bakPath}`);
+      await fs.copy(bakPath, filePath, { overwrite: true });
+      return recovered;
+    } catch { /* .bak also unusable */ }
+    throw new Error(
+      `MCPConfigWriteError: cannot parse ${filePath} — fix the JSON syntax error before re-running. ` +
+      `Underlying: ${(err as Error).message}`
+    );
+  }
 }
 
 /**
@@ -60,11 +83,10 @@ export async function writeServerEntry(
   targetProject: string,
   serverName: string,
   config: McpServerConfig
-): Promise<{ configHash: string; created: boolean }> {
+): Promise<{ configHash: string }> {
   const filePath = resolveMcpJsonPath(targetProject);
 
-  const existing = await readJsonSafe<McpJsonShape>(filePath, {});
-  const created = !existing.mcpServers || Object.keys(existing).length === 0;
+  const existing = await readMcpJsonStrict(filePath);
 
   if (existing.mcpServers && typeof existing.mcpServers !== 'object') {
     throw new Error(
@@ -86,10 +108,7 @@ export async function writeServerEntry(
 
   await writeJsonAtomic(filePath, merged);
 
-  return {
-    configHash: hashMcpServerConfig(config),
-    created,
-  };
+  return { configHash: hashMcpServerConfig(config) };
 }
 
 /**
@@ -106,7 +125,9 @@ export async function removeServerEntry(
 ): Promise<{ removed: boolean }> {
   const filePath = resolveMcpJsonPath(targetProject);
 
-  const existing = await readJsonSafe<McpJsonShape>(filePath, {});
+  if (!(await fs.pathExists(filePath))) return { removed: false };
+
+  const existing = await readMcpJsonStrict(filePath);
   if (!existing.mcpServers || typeof existing.mcpServers !== 'object') {
     return { removed: false };
   }
@@ -128,8 +149,7 @@ export async function removeServerEntry(
  */
 export async function readMcpJson(targetProject: string): Promise<McpJsonShape | null> {
   const filePath = resolveMcpJsonPath(targetProject);
-  const data = await readJsonSafe<McpJsonShape | null>(filePath, null as unknown as McpJsonShape);
-  if (data === null) return null;
-  if (typeof data !== 'object') return null;
+  if (!(await fs.pathExists(filePath))) return null;
+  const data = await readMcpJsonStrict(filePath);
   return data;
 }
