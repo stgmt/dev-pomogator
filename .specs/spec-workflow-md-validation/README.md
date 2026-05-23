@@ -22,9 +22,11 @@
 
 ## Status
 
+**Released 0.1.0 — 2026-05-23.** See [CHANGELOG.md](CHANGELOG.md).
+
 | Phase | Status |
 |-------|--------|
 | Discovery | Complete |
 | Requirements | Complete |
-| Implementation | In Progress |
-| Testing | Pending |
+| Implementation | Complete |
+| Testing | Complete (10 e2e + 11 BDD scenarios) |
