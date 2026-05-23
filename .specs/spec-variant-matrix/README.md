@@ -1,5 +1,7 @@
 # Spec Variant Matrix
 
+**Status: shipped 0.1.0 — 2026-05-23.** specs-workflow plugin v1.19.0 wires `Skill("variant-matrix-build")` в create-spec Phase 2 step 4c + audit category VARIANT_COVERAGE блокирует STOP #3. См. [CHANGELOG.md](CHANGELOG.md).
+
 Universal prevention механизм для класса факапов "shared pipeline + polymorphic dispatch + per-variant coverage gap" при составлении спеки. Триггер — incident Stocktaking MR / Warehouse Transfer (QA Лилия 2026-04-27): `formData.warehouseId || undefined` silently degraded для одного из 7 доктайпов потому что spec не enforce-ил variant matrix в тасках и тестах.
 
 ## Ключевые идеи

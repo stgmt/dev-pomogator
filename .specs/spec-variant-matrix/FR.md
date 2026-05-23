@@ -55,6 +55,8 @@ New skill at `extensions/specs-workflow/.claude/skills/variant-matrix-build/SKIL
 
 ## FR-9: PreToolUse form-guard на Write/Edit FR.md — OUT OF SCOPE
 
+**Связанные AC:** [AC-9](ACCEPTANCE_CRITERIA.md#out-of-scope-fr-9-deferred-to-v020) (FR помечен OUT OF SCOPE, см. ссылку для контекста)
+
 > OUT OF SCOPE — defer to v0.2.0
 >
 > v0.1.0 audit-only достаточно для prevention. Добавит form-guard variant-matrix-guard.ts если post-launch usage data покажет что audit-only ловит факапы слишком поздно. Связанные UC, AC и User Stories также должны быть помечены `> OUT OF SCOPE — см. FR-9`.

@@ -41,3 +41,9 @@ WHEN audit emits any VARIANT_COVERAGE finding с severity >= WARNING THEN spec-s
 **Требование:** [FR-2](FR.md#fr-2-hard-out-signals-anti-over-application)
 
 WHEN spec contains zero polymorphic FRs (все FRs либо single-variant либо без trigger phrases) THEN audit category VARIANT_COVERAGE SHALL emit zero findings (no over-application — H1 mitigation).
+
+## Out of Scope: FR-9 deferred to v0.2.0
+
+**Требование:** [FR-9](FR.md#fr-9-pretooluse-form-guard-на-writeedit-frmd--out-of-scope)
+
+> OUT OF SCOPE — см. FR-9. Form-guard variant-matrix-guard.ts откладывается до v0.2.0; в v0.1.0 audit-only catch достаточен.
