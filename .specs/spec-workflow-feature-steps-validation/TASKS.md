@@ -1,5 +1,7 @@
 # Задачи реализации
 
+> **Status: всё закрыто (2026-05-23).** Реализация в `extensions/specs-workflow/tools/steps-validator/` (9 файлов: validate-steps.ts entry, detector.ts auto-lang, parsers/{typescript,python,csharp}-parser.ts, analyzer.ts assertion-detect, reporter.ts md+stdout, config.ts YAML, logger.ts). 33 e2e теста в `tests/e2e/steps-validator.test.ts` на 3-х языковых фикстурах (`tests/fixtures/steps-validator/{csharp,python,typescript}/`). **Hook добавлен сейчас:** `Stop → validate-steps.ts` в `extensions/specs-workflow/extension.json` (bump v1.19.0 → v1.20.0). Audit-spec: 0 ERRORS / 0 WARNINGS.
+
 ## Зависимости задач
 
 ```
@@ -65,14 +67,14 @@
 **Приоритет:** High
 **Зависимости:** Нет
 
-- [ ] Определить `Language` type
-- [ ] Определить `StepType` type
-- [ ] Определить `QualityStatus` type
-- [ ] Определить `StepDefinition` interface
-- [ ] Определить `AnalyzedStep` interface
-- [ ] Определить `StepQuality` interface
-- [ ] Определить `ValidationResult` interface
-- [ ] Определить `ValidatorConfig` interface
+- [x] Определить `Language` type
+- [x] Определить `StepType` type
+- [x] Определить `QualityStatus` type
+- [x] Определить `StepDefinition` interface
+- [x] Определить `AnalyzedStep` interface
+- [x] Определить `StepQuality` interface
+- [x] Определить `ValidationResult` interface
+- [x] Определить `ValidatorConfig` interface
 
 ---
 
@@ -80,9 +82,9 @@
 **Приоритет:** High
 **Зависимости:** Нет
 
-- [ ] Реализовать `getLogDir()` (кроссплатформенно)
-- [ ] Реализовать `logError(error)` — записать в файл
-- [ ] Создать директорию логов если не существует
+- [x] Реализовать `getLogDir()` (кроссплатформенно)
+- [x] Реализовать `logError(error)` — записать в файл
+- [x] Создать директорию логов если не существует
 
 ---
 
@@ -90,10 +92,10 @@
 **Приоритет:** High
 **Зависимости:** TASK-1
 
-- [ ] Определить дефолтный конфиг
-- [ ] Реализовать `loadConfig(root)` — загрузка YAML
-- [ ] Мержить с дефолтом
-- [ ] Обработка отсутствия файла
+- [x] Определить дефолтный конфиг
+- [x] Реализовать `loadConfig(root)` — загрузка YAML
+- [x] Мержить с дефолтом
+- [x] Обработка отсутствия файла
 
 ---
 
@@ -101,11 +103,11 @@
 **Приоритет:** High
 **Зависимости:** TASK-1, TASK-3
 
-- [ ] Реализовать `detectLanguage(root, config)`
-- [ ] Проверка TypeScript паттернов
-- [ ] Проверка Python паттернов
-- [ ] Проверка C# паттернов
-- [ ] Возврат `null` если не найдено
+- [x] Реализовать `detectLanguage(root, config)`
+- [x] Проверка TypeScript паттернов
+- [x] Проверка Python паттернов
+- [x] Проверка C# паттернов
+- [x] Возврат `null` если не найдено
 
 ---
 
@@ -113,12 +115,12 @@
 **Приоритет:** High
 **Зависимости:** TASK-1
 
-- [ ] Regex для Given/When/Then
-- [ ] Извлечение паттерна
-- [ ] Извлечение тела функции (с учётом вложенных скобок)
-- [ ] Определение номера строки
-- [ ] Реализовать `parseFile(path)` → `StepDefinition[]`
-- [ ] Реализовать `parseAll(root, config)` — найти и распарсить все
+- [x] Regex для Given/When/Then
+- [x] Извлечение паттерна
+- [x] Извлечение тела функции (с учётом вложенных скобок)
+- [x] Определение номера строки
+- [x] Реализовать `parseFile(path)` → `StepDefinition[]`
+- [x] Реализовать `parseAll(root, config)` — найти и распарсить все
 
 ---
 
@@ -126,12 +128,12 @@
 **Приоритет:** High
 **Зависимости:** TASK-1
 
-- [ ] Regex для @given/@when/@then
-- [ ] Извлечение паттерна из декоратора
-- [ ] Извлечение тела функции (по индентации)
-- [ ] Определение номера строки
-- [ ] Реализовать `parseFile(path)` → `StepDefinition[]`
-- [ ] Реализовать `parseAll(root, config)`
+- [x] Regex для @given/@when/@then
+- [x] Извлечение паттерна из декоратора
+- [x] Извлечение тела функции (по индентации)
+- [x] Определение номера строки
+- [x] Реализовать `parseFile(path)` → `StepDefinition[]`
+- [x] Реализовать `parseAll(root, config)`
 
 ---
 
@@ -139,12 +141,12 @@
 **Приоритет:** High
 **Зависимости:** TASK-1
 
-- [ ] Regex для [Given]/[When]/[Then] атрибутов
-- [ ] Извлечение паттерна из атрибута
-- [ ] Извлечение тела метода (по скобкам)
-- [ ] Определение номера строки
-- [ ] Реализовать `parseFile(path)` → `StepDefinition[]`
-- [ ] Реализовать `parseAll(root, config)`
+- [x] Regex для [Given]/[When]/[Then] атрибутов
+- [x] Извлечение паттерна из атрибута
+- [x] Извлечение тела метода (по скобкам)
+- [x] Определение номера строки
+- [x] Реализовать `parseFile(path)` → `StepDefinition[]`
+- [x] Реализовать `parseAll(root, config)`
 
 ---
 
@@ -152,8 +154,8 @@
 **Приоритет:** Medium
 **Зависимости:** TASK-5, TASK-6, TASK-7
 
-- [ ] Фабрика `getParser(language)` → Parser
-- [ ] Общий интерфейс Parser
+- [x] Фабрика `getParser(language)` → Parser
+- [x] Общий интерфейс Parser
 
 ---
 
@@ -161,11 +163,11 @@
 **Приоритет:** High
 **Зависимости:** TASK-1
 
-- [ ] Определить assertion patterns для каждого языка
-- [ ] Определить bad patterns для каждого языка
-- [ ] Реализовать `analyzeStep(step, language, config)` → `AnalyzedStep`
-- [ ] Реализовать `analyzeSteps(steps[], language, config)` → `ValidationResult`
-- [ ] Логика строгости для Then vs Given/When
+- [x] Определить assertion patterns для каждого языка
+- [x] Определить bad patterns для каждого языка
+- [x] Реализовать `analyzeStep(step, language, config)` → `AnalyzedStep`
+- [x] Реализовать `analyzeSteps(steps[], language, config)` → `ValidationResult`
+- [x] Логика строгости для Then vs Given/When
 
 ---
 
@@ -173,12 +175,12 @@
 **Приоритет:** Medium
 **Зависимости:** TASK-1
 
-- [ ] Реализовать `generateReport(root, result)` — Markdown файл
-- [ ] Секция Summary
-- [ ] Секция BAD steps
-- [ ] Секция WARNING steps
-- [ ] Секция GOOD steps (collapsible)
-- [ ] Реализовать `printWarnings(result)` — stdout
+- [x] Реализовать `generateReport(root, result)` — Markdown файл
+- [x] Секция Summary
+- [x] Секция BAD steps
+- [x] Секция WARNING steps
+- [x] Секция GOOD steps (collapsible)
+- [x] Реализовать `printWarnings(result)` — stdout
 
 ---
 
@@ -186,10 +188,10 @@
 **Приоритет:** High
 **Зависимости:** TASK-2, TASK-3, TASK-4, TASK-8, TASK-9, TASK-10
 
-- [ ] Реализовать `readStdin()` — парсинг hook input
-- [ ] Реализовать `validateProject(root)`
-- [ ] Реализовать `main()` с try/catch
-- [ ] Обработка нескольких workspace roots
+- [x] Реализовать `readStdin()` — парсинг hook input
+- [x] Реализовать `validateProject(root)`
+- [x] Реализовать `main()` с try/catch
+- [x] Обработка нескольких workspace roots
 
 ---
 
@@ -197,10 +199,10 @@
 **Приоритет:** Medium
 **Зависимости:** Нет
 
-- [ ] `tests/fixtures/steps-validator/typescript/package.json`
-- [ ] `features/sample.feature`
-- [ ] `steps/good.steps.ts` — с assertions
-- [ ] `steps/bad.steps.ts` — без assertions
+- [x] `tests/fixtures/steps-validator/typescript/package.json`
+- [x] `features/sample.feature`
+- [x] `steps/good.steps.ts` — с assertions
+- [x] `steps/bad.steps.ts` — без assertions
 
 ---
 
@@ -208,10 +210,10 @@
 **Приоритет:** Medium
 **Зависимости:** Нет
 
-- [ ] `tests/fixtures/steps-validator/python/requirements.txt`
-- [ ] `features/sample.feature`
-- [ ] `features/steps/good_steps.py` — с assert
-- [ ] `features/steps/bad_steps.py` — без assert
+- [x] `tests/fixtures/steps-validator/python/requirements.txt`
+- [x] `features/sample.feature`
+- [x] `features/steps/good_steps.py` — с assert
+- [x] `features/steps/bad_steps.py` — без assert
 
 ---
 
@@ -219,10 +221,10 @@
 **Приоритет:** Medium
 **Зависимости:** Нет
 
-- [ ] `tests/fixtures/steps-validator/csharp/Project.csproj`
-- [ ] `Features/Sample.feature`
-- [ ] `StepDefinitions/GoodSteps.cs` — с Should()
-- [ ] `StepDefinitions/BadSteps.cs` — без assertions
+- [x] `tests/fixtures/steps-validator/csharp/Project.csproj`
+- [x] `Features/Sample.feature`
+- [x] `StepDefinitions/GoodSteps.cs` — с Should()
+- [x] `StepDefinitions/BadSteps.cs` — без assertions
 
 ---
 
@@ -230,11 +232,11 @@
 **Приоритет:** High
 **Зависимости:** TASK-11, TASK-12, TASK-13, TASK-14
 
-- [ ] Тест TypeScript фикстуры
-- [ ] Тест Python фикстуры
-- [ ] Тест C# фикстуры
-- [ ] Тест opt-out через конфиг
-- [ ] Тест graceful error handling
+- [x] Тест TypeScript фикстуры
+- [x] Тест Python фикстуры
+- [x] Тест C# фикстуры
+- [x] Тест opt-out через конфиг
+- [x] Тест graceful error handling
 
 ---
 
@@ -242,9 +244,9 @@
 **Приоритет:** High
 **Зависимости:** TASK-11
 
-- [ ] Добавить Stop хук для Cursor
-- [ ] Добавить Stop хук для Claude
-- [ ] Добавить tool entry
+- [x] Добавить Stop хук для Cursor
+- [x] Добавить Stop хук для Claude
+- [x] Добавить tool entry
 
 ---
 
@@ -252,9 +254,9 @@
 **Приоритет:** High
 **Зависимости:** TASK-16
 
-- [ ] Добавить `copyValidateStepsScript()`
-- [ ] Вызвать при установке
-- [ ] Обновить проверку установленных хуков
+- [x] Добавить `copyValidateStepsScript()`
+- [x] Вызвать при установке
+- [x] Обновить проверку установленных хуков
 
 ---
 
@@ -262,8 +264,8 @@
 **Приоритет:** Medium
 **Зависимости:** TASK-15
 
-- [ ] `PLUGIN006_steps-validator.feature`
-- [ ] Сценарии для каждого @featureN
+- [x] `PLUGIN006_steps-validator.feature`
+- [x] Сценарии для каждого @featureN
 
 ---
 

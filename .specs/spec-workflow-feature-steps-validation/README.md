@@ -1,5 +1,7 @@
 # Feature: Steps Validation Hook
 
+**Status: shipped 0.1.0 — 2026-05-23.** specs-workflow plugin v1.20.0 wires `Stop → validate-steps.ts`. См. [CHANGELOG.md](CHANGELOG.md).
+
 ## Обзор
 
 Хук валидации качества BDD step definitions. Проверяет что степы не пустые и содержат assertions.

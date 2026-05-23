@@ -1,6 +1,8 @@
 # Acceptance Criteria (EARS формат)
 
 ## AC-1: Определение языка проекта
+
+→ [FR-1](FR.md#fr-1-автоматическое-определение-языка-проекта)
 @feature1
 
 **WHEN** хук запускается на stop событие,
@@ -12,6 +14,8 @@
 ---
 
 ## AC-2: Парсинг TypeScript степов
+
+→ [FR-2](FR.md#fr-2-парсинг-typescript-step-definitions)
 @feature2
 
 **WHEN** обнаружен TypeScript проект,
@@ -29,6 +33,8 @@ Given|When|Then('pattern', async function() { body });
 ---
 
 ## AC-3: Парсинг Python степов
+
+→ [FR-3](FR.md#fr-3-парсинг-python-step-definitions)
 @feature3
 
 **WHEN** обнаружен Python проект,
@@ -42,6 +48,8 @@ def step_name(context):
 ---
 
 ## AC-4: Парсинг C# степов
+
+→ [FR-4](FR.md#fr-4-парсинг-c-step-definitions)
 @feature4
 
 **WHEN** обнаружен C# проект,
@@ -54,6 +62,8 @@ public void MethodName() { body }
 ---
 
 ## AC-5: Определение BAD Then степа (TypeScript)
+
+→ [FR-5](FR.md#fr-5-определение-качества-then-степов)
 @feature5
 
 **WHEN** Then степ в TypeScript проекте **не содержит** ни одного из паттернов:
@@ -68,6 +78,8 @@ public void MethodName() { body }
 ---
 
 ## AC-6: Определение BAD Then степа (Python)
+
+→ [FR-5](FR.md#fr-5-определение-качества-then-степов)
 @feature5
 
 **WHEN** Then степ в Python проекте **не содержит** ни одного из паттернов:
@@ -80,6 +92,8 @@ public void MethodName() { body }
 ---
 
 ## AC-7: Определение BAD Then степа (C#)
+
+→ [FR-5](FR.md#fr-5-определение-качества-then-степов)
 @feature5
 
 **WHEN** Then степ в C# проекте **не содержит** ни одного из паттернов:
@@ -92,6 +106,8 @@ public void MethodName() { body }
 ---
 
 ## AC-8: Определение WARNING степа
+
+→ [FR-5](FR.md#fr-5-определение-качества-then-степов)
 @feature5
 
 **WHEN** степ содержит один из паттернов:
@@ -104,6 +120,8 @@ public void MethodName() { body }
 ---
 
 ## AC-9: Генерация отчёта
+
+→ [FR-6](FR.md#fr-6-генерация-отчёта)
 @feature6
 
 **WHEN** валидация завершена,
@@ -118,6 +136,8 @@ public void MethodName() { body }
 ---
 
 ## AC-10: Вывод в stdout при BAD степах
+
+→ [FR-7](FR.md#fr-7-вывод-предупреждений-в-stdout)
 @feature7
 
 **WHEN** найден хотя бы один BAD степ,
@@ -131,6 +151,8 @@ See steps-validation-report.md for details.
 ---
 
 ## AC-11: Отключение через конфигурацию
+
+→ [FR-8](FR.md#fr-8-конфигурация-через-yaml)
 @feature8
 
 **WHEN** файл `.steps-validator.yaml` содержит `enabled: false`,
@@ -139,6 +161,8 @@ See steps-validation-report.md for details.
 ---
 
 ## AC-12: Opt-out активация
+
+→ [FR-9](FR.md#fr-9-opt-out-активация)
 @feature9
 
 **IF** step definition файлы найдены,
@@ -148,6 +172,8 @@ See steps-validation-report.md for details.
 ---
 
 ## AC-13: Graceful error handling
+
+→ [FR-10](FR.md#fr-10-тихая-работа-при-ошибках)
 @feature10
 
 **WHEN** возникает ошибка парсинга файла,
