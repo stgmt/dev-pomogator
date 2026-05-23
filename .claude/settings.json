@@ -116,6 +116,26 @@
         "hooks": [
           {
             "type": "command",
+            "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner-bootstrap.cjs'))\" -- \".dev-pomogator/tools/pomogator-doctor/doctor-hook.ts\"",
+            "timeout": 120
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner-bootstrap.cjs'))\" -- \".dev-pomogator/tools/skill-listing-budget/apply_skill_budget.ts\"",
+            "timeout": 120
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
             "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner-bootstrap.cjs'))\" -- \".dev-pomogator/tools/test-statusline/statusline_session_start.ts\"",
             "timeout": 120
           }
@@ -140,6 +160,21 @@
             "type": "command",
             "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner-bootstrap.cjs'))\" -- \".dev-pomogator/tools/plan-pomogator/plan-gate.ts\"",
             "timeout": 60
+          },
+          {
+            "type": "command",
+            "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner-bootstrap.cjs'))\" -- \".dev-pomogator/tools/spec-reality-check/verify-hook.ts\"",
+            "timeout": 60
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner-bootstrap.cjs'))\" -- \".dev-pomogator/tools/reqnroll-ce-guard/ce_slash_guard.ts\"",
+            "timeout": 60
           }
         ]
       },
@@ -149,6 +184,66 @@
           {
             "type": "command",
             "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner-bootstrap.cjs'))\" -- \".dev-pomogator/tools/specs-validator/phase-gate.ts\"",
+            "timeout": 60
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner-bootstrap.cjs'))\" -- \".dev-pomogator/tools/specs-validator/user-story-form-guard.ts\"",
+            "timeout": 60
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner-bootstrap.cjs'))\" -- \".dev-pomogator/tools/specs-validator/task-form-guard.ts\"",
+            "timeout": 60
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner-bootstrap.cjs'))\" -- \".dev-pomogator/tools/specs-validator/design-decision-guard.ts\"",
+            "timeout": 60
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner-bootstrap.cjs'))\" -- \".dev-pomogator/tools/specs-validator/requirements-chk-guard.ts\"",
+            "timeout": 60
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner-bootstrap.cjs'))\" -- \".dev-pomogator/tools/specs-validator/risk-assessment-guard.ts\"",
+            "timeout": 60
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner-bootstrap.cjs'))\" -- \".dev-pomogator/tools/specs-validator/extension-json-meta-guard.ts\"",
             "timeout": 60
           }
         ]
@@ -172,14 +267,36 @@
             "timeout": 30
           }
         ]
-      },
+      }
+    ],
+    "PostToolUse": [
       {
-        "matcher": "Write|Edit|MultiEdit",
+        "matcher": "Write|Edit",
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner-bootstrap.cjs'))\" -- \".dev-pomogator/tools/_shared/extension-layout-guard.ts\"",
-            "timeout": 15
+            "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner-bootstrap.cjs'))\" -- \".dev-pomogator/tools/test-quality/compliance_check.ts\"",
+            "timeout": 60
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner-bootstrap.cjs'))\" -- \".dev-pomogator/tools/test-quality/posttool-jit.ts\"",
+            "timeout": 60
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner-bootstrap.cjs'))\" -- \".dev-pomogator/tools/bg-task-guard/mark-bg-task.ts\"",
+            "timeout": 60
           }
         ]
       }
@@ -221,28 +338,6 @@
           {
             "type": "command",
             "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner-bootstrap.cjs'))\" -- \".dev-pomogator/tools/learnings-capture/capture.ts\" --event UserPromptSubmit",
-            "timeout": 60
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Write|Edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner-bootstrap.cjs'))\" -- \".dev-pomogator/tools/test-quality/compliance_check.ts\"",
-            "timeout": 60
-          }
-        ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner-bootstrap.cjs'))\" -- \".dev-pomogator/tools/bg-task-guard/mark-bg-task.ts\"",
             "timeout": 60
           }
         ]

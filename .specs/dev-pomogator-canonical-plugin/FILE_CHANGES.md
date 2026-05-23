@@ -17,11 +17,9 @@
 | `tools/migrate-v1-to-v2.ts` | create | [FR-7](FR.md#fr-7-migration-v1-v2-documentation--optional-cleanup-script) — standalone cleanup script для users переходящих с v1 |
 | `package.json` | edit | [FR-3](FR.md#fr-3-distribution-через-plugin-marketplace-add), [FR-8](FR.md#fr-8-cursor-support-removal) — remove npm-based install path; add `build:plugin` script; remove "Cursor" из description+keywords |
 | `extensions/edge-debug-port/extension.json` | edit | [FR-8](FR.md#fr-8-cursor-support-removal) — `platforms: ["claude", "cursor"]` → `["claude"]` |
-| `src/installer/cursor.ts` | delete | [FR-8](FR.md#fr-8-cursor-support-removal) — cursor поддержка вырезается (если файл существует) |
+<!-- [REMOVED 2026-05-24 per reality-check]: src/installer/cursor.ts уже удалён в предыдущем спринте; row не нужен в активной FILE_CHANGES table; см. CHANGELOG.md cleanup entry -->
 | `src/index.ts` | edit | [FR-8](FR.md#fr-8-cursor-support-removal) — update cursor rejection message: "Cursor support was removed in v2.0. Use canonical install: /plugin marketplace add stgmt/dev-pomogator." |
-| `src/installer/install-user-scope.ts` | delete | Старый v2 design (postinstall + custom user-scope writer) больше не нужен — canonical Anthropic mechanism handles |
-| `src/installer/git-exclude.ts` | delete | Старый v2 design — `.git/info/exclude` writer больше не нужен (canonical install не пишет в проект) |
-| `bin/postinstall.js` | delete | Старый v2 design — npm postinstall больше не нужен (canonical distribution через `/plugin marketplace add`) |
+<!-- [REMOVED 2026-05-24 per reality-check]: src/installer/install-user-scope.ts, src/installer/git-exclude.ts, bin/postinstall.js — все three already deleted в предыдущем спринте (v2 design abandoned для canonical-plugin); rows removed из активной table; см. CHANGELOG.md cleanup entry -->
 | `src/config/schema.ts` | edit | Удалить добавленные в старом v2 поля `installScope`, `gitignoreMarker` (canonical mechanism handles automatically) |
 | `src/installer/gitignore.ts` | edit | Simplify: вернуть к v1 поведению ИЛИ удалить если не используется в migration script |
 | `src/installer/uninstall-project.ts` | edit | Simplify: оставить только cleanup logic используемый migration script (FR-7) |

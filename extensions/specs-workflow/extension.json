@@ -1,6 +1,6 @@
 {
   "name": "specs-workflow",
-  "version": "1.20.0",
+  "version": "1.21.0",
   "description": "Управление спецификациями: 4-фазный workflow упакован в create-spec skill (SKILL.md + 20 references) с прогрессивным раскрытием. Standalone research-workflow skill (исследуй/найди/погугли/ресерч triggers) вызывается create-spec через Skill('research-workflow') в Phase 1 step 5. Spec-generator-v3 form-guards (USER_STORIES/TASKS/DESIGN/REQUIREMENTS/RESEARCH) + 4 private child skills (discovery-forms, requirements-chk-matrix, task-board-forms, variant-matrix-build) + meta-guard на extension.json + audit log с UserPromptSubmit summary. v1.19.0 adds variant-matrix-build skill (Phase 2 step 4c) + VARIANT_COVERAGE audit category (8th, blocks STOP #3 на polymorphic FRs без enumerated matrix) per .specs/spec-variant-matrix/. Migration guard: form-guards активируются только для specs с .progress.json version >= 3; existing v1/v2 specs pass-through.",
   "platforms": [
     "claude"
@@ -16,7 +16,8 @@
     "requirements-chk-matrix": ".claude/skills/requirements-chk-matrix",
     "task-board-forms": ".claude/skills/task-board-forms",
     "variant-matrix-build": ".claude/skills/variant-matrix-build",
-    "spec-review": ".claude/skills/spec-review"
+    "spec-review": ".claude/skills/spec-review",
+    "spec-reality-check": ".claude/skills/spec-reality-check"
   },
   "skillFiles": {
     "create-spec": [
@@ -63,6 +64,12 @@
       ".claude/skills/spec-review/references/antipattern-triggers.md",
       ".claude/skills/spec-review/references/lessons-learned.md",
       ".claude/skills/spec-review/scripts/check_external_claims.py"
+    ],
+    "spec-reality-check": [
+      ".claude/skills/spec-reality-check/SKILL.md",
+      ".claude/skills/spec-reality-check/scripts/verify.ts",
+      ".claude/skills/spec-reality-check/scripts/verify-hook.ts",
+      ".claude/skills/spec-reality-check/references/checks.md"
     ]
   },
   "ruleFiles": {
@@ -168,6 +175,12 @@
             { "type": "command", "command": "npx tsx .dev-pomogator/tools/specs-validator/requirements-chk-guard.ts" },
             { "type": "command", "command": "npx tsx .dev-pomogator/tools/specs-validator/risk-assessment-guard.ts" },
             { "type": "command", "command": "npx tsx .dev-pomogator/tools/specs-validator/extension-json-meta-guard.ts" }
+          ]
+        },
+        {
+          "matcher": "ExitPlanMode",
+          "hooks": [
+            { "type": "command", "command": "npx tsx .dev-pomogator/tools/spec-reality-check/verify-hook.ts" }
           ]
         }
       ]

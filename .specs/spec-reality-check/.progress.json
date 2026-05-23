@@ -1,0 +1,28 @@
+{
+  "version": 3,
+  "featureSlug": "spec-reality-check",
+  "createdAt": "2026-05-23T22:50:02.924Z",
+  "currentPhase": "Complete",
+  "phases": {
+    "Discovery": {
+      "completedAt": "2026-05-23T23:00:43.577Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-05-23T23:13:17.124Z"
+    },
+    "Context": {
+      "completedAt": "2026-05-23T23:13:17.124Z",
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    },
+    "Requirements": {
+      "completedAt": "2026-05-23T23:14:08.535Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-05-23T23:14:08.534Z"
+    },
+    "Finalization": {
+      "completedAt": "2026-05-23T23:15:48.212Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-05-23T23:15:56.670Z"
+    }
+  }
+}

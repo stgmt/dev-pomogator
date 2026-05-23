@@ -2,6 +2,13 @@
 
 All notable changes to this feature will be documented in this file.
 
+## [Unreleased] — 2026-05-24 spec-reality-check cleanup
+
+### Changed
+
+- **FILE_CHANGES.md — удалены 4 stale `action=delete` rows** обнаружены через `Skill("spec-reality-check")`: `src/installer/cursor.ts`, `src/installer/install-user-scope.ts`, `src/installer/git-exclude.ts`, `bin/postinstall.js`. Все файлы уже удалены в предыдущих спринтах (v2 design abandoned); rows эмитили `FC_DELETE_MISSING` ERROR. Removed из активной table, заменены HTML-комментариями с пометкой `[REMOVED 2026-05-24 per reality-check]`.
+- **REALITY_CHECK_REPORT.md** — добавлен полный markdown report от `verify.ts --format markdown` (one-time artifact для historical reference).
+
 ## [Unreleased] — 2026-05-23 spec update
 
 ### Added (spec-only, no code changes)
