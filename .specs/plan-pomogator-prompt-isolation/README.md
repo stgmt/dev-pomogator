@@ -1,5 +1,7 @@
 # Plan Pomogator Prompt Isolation
 
+**Status: shipped 0.1.0** (плагин-версия v1.8.1, дальше bump до 2.1.0 другими фичами). Регрессионные тесты + BDD scenarios зелёные. Audit-spec: 0 ERRORS, 0 WARNINGS.
+
 Багфикс для plan-pomogator hooks `prompt-capture.ts` и `plan-gate.ts`. Устраняет cross-session leak в Phase 2 deny-сообщении plan-gate, когда показывались промпты из других задач/сессий, а также фильтрует системные псевдо-промпты `<task-notification>` от background задач.
 
 ## Ключевые идеи
