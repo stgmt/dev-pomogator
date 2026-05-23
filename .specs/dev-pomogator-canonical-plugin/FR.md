@@ -125,6 +125,61 @@ Cursor-related код удаляется полностью:
 **Связанные AC:** [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8)
 **Use Case:** [UC-7](USE_CASES.md#uc-7-cursor-flag-rejection-regression-protection)
 
+## FR-8a: Exhaustive Cursor purge — 59 файлов
+
+> Added 2026-05-23. Расширение FR-8 после exhaustive grep audit показавшего что FILE_CHANGES.md недосчитывает на 51% (заявлено 39 файлов, реально 59).
+
+Реальный scope cleanup-а: **59 файлов** с упоминаниями `cursor`/`Cursor` в mainstream коде (без node_modules, .stryker-tmp, worktrees, .specs/backlog/). Команда для воспроизведения inventory:
+
+```bash
+grep -rln -i "cursor" \
+  --include="*.ts" --include="*.js" --include="*.mjs" --include="*.cjs" \
+  --include="*.json" --include="*.md" --include="*.py" --include="*.mdc" \
+  --include="*.feature" --include="*.yaml" --include="*.yml" --include="*.sh" \
+  --include="*.ps1" --include="*.bat" \
+  extensions/ src/ scripts/ bin/ .claude/ tests/ \
+  | grep -v "node_modules\|.stryker-tmp\|worktrees\|/backlog/"
+```
+
+### Категории (фактический inventory 2026-05-23)
+
+| Категория | Кол-во | Файлы (samples) |
+|-----------|--------|-----------------|
+| (a) Root | 3 | `package.json`, `README.md`, `CHANGELOG.md` |
+| (b) Mainstream extensions | ~12 | `extensions/auto-commit/*`, `extensions/edge-debug-port/extension.json`, `extensions/specs-workflow/{tools/mcp-setup/*,tools/specs-validator/validate-specs.ts,tools/steps-validator/validate-steps.ts,extension.json,README.md}`, `extensions/onboard-repo/tools/onboard-repo/{lib/ignore-parser.ts,steps/parallel-recon.ts}`, `extensions/forbid-root-artifacts/*`, `extensions/plan-pomogator/*`, `extensions/suggest-rules/*` |
+| (c) src/ | 1 | `src/index.ts` (main entry) |
+| (d) .claude/ rules+commands | 3 | `.claude/commands/suggest-rules.md`, `.claude/rules/claude-md-glossary.md`, `.claude/rules/extension-manifest-integrity.md` |
+| (e) tests/ | ~28 | `tests/e2e/{cursor-dead-code-cleanup,helpers,auto-commit,claude-installer,claude-mem-*,cli-integration,mcp-setup,onboard-repo/*}.test.ts`, `tests/features/{core,plugins/*,onboard-repo}/*.feature` |
+| (f) scripts/ | 1 | `scripts/build-test-base.sh` |
+| **Total** | **~59** | — |
+
+### Классификация per file (обязательная phase 3 procedure)
+
+Каждый из 59 файлов проходит **классификацию** одним из трёх вариантов:
+
+1. **DELETE-content** — удалить cursor-specific блок/строку/секцию (e.g. `"platforms": [..., "cursor"]` → удалить `"cursor"`, оставить остальное).
+2. **EDIT-content** — заменить cursor mention на neutral wording или Claude-only equivalent (e.g. `"description": "for Cursor and Claude Code"` → `"description": "for Claude Code"`; tests которые проверяют cursor-rejection остаются, но переписываются под error message v2.0).
+3. **KEEP-historical** — оставить как есть; это исторический artefact:
+   - Spec slug `cursor-dead-code-cleanup` (имя файла теста / feature — артефакт прошлой работы)
+   - CHANGELOG.md entries про прошлые versions где Cursor поддерживался
+   - Commit messages / git history references
+   - Acceptance limit: ≤5 файлов в KEEP-historical после Phase 3.
+
+### Acceptance
+
+После Phase 3 cleanup повторный exhaustive grep:
+
+```bash
+grep -rln -i "cursor" --include="*.ts" ... extensions/ src/ scripts/ bin/ .claude/ tests/ \
+  | grep -v "node_modules\|.stryker-tmp\|worktrees\|/backlog/" \
+  | wc -l
+```
+
+→ Результат ≤ 5 (только KEEP-historical файлы). CI test проверяет threshold после release.
+
+**Связанные AC:** [AC-8a](ACCEPTANCE_CRITERIA.md#ac-8a-fr-8a)
+**Use Case:** [UC-7](USE_CASES.md#uc-7-cursor-flag-rejection-regression-protection)
+
 ## FR-9: Single canonical plugin manifest
 
 Один `.claude-plugin/plugin.json` объединяет ВСЕ 26 extensions как агрегированные skills/commands/hooks/MCP. `extensions/*/extension.json` остаются source-of-truth для **build-time** агрегации (per `extension-manifest-integrity` rule), но **runtime не зависит от них** — Claude Code читает только canonical `plugin.json`. Это делает plugin self-contained для marketplace distribution.

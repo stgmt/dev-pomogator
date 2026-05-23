@@ -206,15 +206,106 @@ my-plugin/
 
 ## Risk Assessment
 
-> Auto-populated by Skill `discovery-forms` during Phase 1. Hook `risk-assessment-guard` enforces:
-> when `## Risk Assessment` heading is present, the table below must have ≥2 non-placeholder rows
-> with Likelihood ∈ (Low/Medium/High), Impact ∈ (Low/Medium/High), and non-empty Mitigation.
+> Original 6 risks auto-populated by Skill `discovery-forms` during Phase 1. **Expanded 2026-05-23** с 10-domain audit (25+ rows) + concrete proofs (file paths, line numbers, grep counts, GitHub issue links). Hook `risk-assessment-guard` enforces format: Likelihood ∈ (Low/Medium/High), Impact ∈ (Low/Medium/High), non-empty Mitigation.
+
+### Top-5 critical (cross-domain)
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|------------|--------|------------|
-| Claude Desktop требует рестарт после plugin install — пользователи не понимают почему skills не появились | Medium | Low | Документировать в release notes UX flow; CLI выводит hint после install: "Restart Claude Desktop to pick up new plugin" |
-| `npm i -g` без sudo на Linux/Mac → permission denied — postinstall fails silent → пользователь думает "молча установился" | High | Medium | Postinstall fail-soft с громким warning + manual fallback инструкция; intall-diagnostics skill детектит silent fail |
-| Migration v1→v2 теряет user-mods при auto-overwrite (если content-hash mismatch) | Medium | High | Backup в `.dev-pomogator/.user-overrides/<rel-path>` перед overwrite (existing pattern из `updater-managed-cleanup`); migration log в `~/.dev-pomogator/last-update-report.md` |
-| `.git/info/exclude` не существует если в проекте нет `.git/` (проект инициализирован но без git) | Low | Medium | Pre-flight check: detect `.git/` директорию; если нет — error "use --scope user OR git init"; явная диагностика, не silent fail |
-| MCP `--scope user` баг (#54803) — если v2 регистрирует MCP в user-scope, они невидимы в `claude mcp list` | Low | Medium | Регистрировать MCP в plugin's `.mcp.json` (`<plugin>/.mcp.json`), не через `claude mcp add --scope user` — bypassим баг |
-| Существующие cursor-using teams (если есть) — breaking при v2 upgrade | Low | Low | Cursor support уже отвергается с v1.5 (`src/index.ts:44-47`); фактических пользователей не должно быть; CHANGELOG.md явно фиксирует removal |
+| **1. `plugin.json` ↔ `marketplace.json` version desync** при ручной правке версии в одном файле — `/plugin marketplace update` показывает phantom skip | High | High | `buildCanonicalPlugin()` атомарно пишет обе версии из single source. Pre-commit hook валидирует sync. CI fails на mismatch. **Proof:** существующий v1 `.dev-pomogator/.claude-plugin/plugin.json:3` уже имеет `"version": "1.5.0"` независимо от `package.json` — рассинхрон-pattern уже есть |
+| **2. Silent v1+v2 duplication** — user ставит v2 поверх v1, hooks double-fire, skills двоятся | Medium | High | Migration script детектит v1 по 3 маркерам (`.dev-pomogator/.claude-plugin/plugin.json` + `~/.dev-pomogator/` + `.gitignore` marker block). v2 plugin SessionStart hook печатает warning если v1 artifact detected. **Proof:** v1 artifact живёт в `.dev-pomogator/.claude-plugin/plugin.json` (~2.3KB, версия 1.5.0, лист 23 extensions) |
+| **3. Marketplace schema validation fail** — опечатка → Anthropic UI silent reject → весь release невидим | Medium | High | `validateMarketplaceSchema()` в build pipeline. CI fail-fast. Local `npm run build:plugin` обязателен перед коммитом. **Proof:** Anthropic `plugin-marketplaces.md` specify strict schema; нет existing validator в репе |
+| **4. Stale `plugin.json` в git** — dev забыл `npm run build:plugin`, фичи отправлены но не активны | Medium | High | Pre-commit hook regenerate + git add автоматически. CI test в PR. **Proof:** существующий v1 artifact регенерировался manually — нет hook'а |
+| **5. Migration script на Windows — path separator / glob issues** | Medium | Medium | **Defensive coding**: `path.join()` / `path.resolve()` вместо string concat; `glob` package с native sep handling. **Automated Windows test ВНЕ scope этой итерации** — Docker test infra Linux-only (`tests/setup/ensure-docker.ts:14` блокирует e2e на хосте; нет Windows pipeline). Manual cross-platform check перед release. **Proof:** `npm test` → `bash scripts/docker-test.sh` → Linux container only |
+
+### Domain 1: Distribution / Marketplace (4)
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|------------|--------|------------|
+| 1.1 plugin.json↔marketplace.json version desync | High | High | См. Top-5 #1 |
+| 1.2 marketplace.json schema validation fail | Medium | High | См. Top-5 #3 |
+| 1.3 `source: "./"` resolution fail на non-GitHub forks | Low | Low | README документирует fork pattern; migration script подсказывает path. **Proof:** Anthropic `plugin-marketplaces.md` описывает только GitHub anchor |
+| 1.4 Cascade fail — один сломанный skill из 26 ломает весь плагин | Medium | High | `buildCanonicalPlugin()` валидирует каждый skill/command/hook перед агрегацией (read file, check required fields); fail-fast с clear error. **Proof:** 26 extensions в `extensions/` — любой broken manifest валит build |
+
+### Domain 2: Backward Compatibility — v1 users (4)
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|------------|--------|------------|
+| 2.1 Silent v1+v2 duplication | Medium | High | См. Top-5 #2 |
+| 2.2 Orphaned `~/.dev-pomogator/` не cleanup-ится | Medium | Low | Migration script удаляет `~/.dev-pomogator/` целиком (backup в `.user-overrides/`); документирует что removed. **Proof:** `~/.dev-pomogator/` ref-ится в `src/installer/index.ts`, `src/installer/shared.ts`, `src/installer/mcp-config.ts`, `src/doctor/checks/pomogator-home.ts`, `src/doctor/checks/version-match.ts` — пять call sites |
+| 2.3 Migration script не идемпотентен на partial v1 install | Medium | Medium | Iterate по known managed file list, skip missing файлы gracefully; report summary; exit 0 если nothing to clean |
+| 2.4 Stale `~/.dev-pomogator/config.json` после migration | Low | Low | Migration script удаляет `config.json` целиком; v2 не использует |
+
+### Domain 3: MCP Servers (3)
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|------------|--------|------------|
+| 3.1 Anthropic issue #54803 — user-scope MCPs невидимы в `claude mcp list` | Low | Low | dev-pomogator НЕ использует `claude mcp add`; MCPs объявлены в `.mcp.json` плагина. README explicit |
+| 3.2 Conflict MCP server names с existing | Medium | Medium | README документирует names; conflict detection helper в plugin install hook (опц.). **Proof:** `src/installer/mcp-config.ts` имеет smart-merge `writeServerEntry`, но не conflict detection |
+| 3.3 `.mcp.json` merge с project-existing MCPs | Medium | Medium | Smart-merge переиспользовать из `src/installer/mcp-config.ts:writeServerEntry` — он preserves user entries при write. **Proof:** `src/installer/mcp-config.ts:55-89` написан именно для этого case |
+
+### Domain 4: Cursor Removal — scope обновлён 2026-05-23 (3)
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|------------|--------|------------|
+| 4.1 **Incomplete cursor cleanup — реальное число файлов 59 (не 39 как в FILE_CHANGES.md)** | High | Medium | **FILE_CHANGES.md недокаунтит на 51%.** Exhaustive grep команда: `grep -rln -i "cursor" --include=*.{ts,js,mjs,cjs,json,md,py,mdc,feature,yaml,yml,sh,ps1,bat} extensions/ src/ scripts/ bin/ .claude/ tests/` (исключая node_modules / .stryker-tmp / worktrees / backlog) → **59 файлов**. Категории: (a) **Корень** (3): `package.json` (description "for Cursor and Claude Code" + keyword `"cursor"`), `README.md`, `CHANGELOG.md`; (b) **Mainstream extensions** (~12): `extensions/auto-commit/*`, `extensions/edge-debug-port/extension.json`, `extensions/specs-workflow/{tools/mcp-setup/*,tools/specs-validator/validate-specs.ts,tools/steps-validator/validate-steps.ts,extension.json}`, `extensions/onboard-repo/tools/onboard-repo/{lib/ignore-parser.ts,steps/parallel-recon.ts}`, `extensions/forbid-root-artifacts/*`, `extensions/plan-pomogator/*`, `extensions/suggest-rules/*`; (c) **src/** (1): `src/index.ts`; (d) **.claude/** (3 правила/команды): `.claude/commands/suggest-rules.md`, `.claude/rules/claude-md-glossary.md`, `.claude/rules/extension-manifest-integrity.md`; (e) **tests/** (~28): `tests/e2e/{cursor-dead-code-cleanup,helpers,auto-commit,claude-installer,claude-mem-*,cli-integration,mcp-setup,onboard-repo/*}.test.ts`, `tests/features/{core,plugins/*,onboard-repo}/*.feature`. **Mitigation:** Phase 3 (Cursor removal) запускает полный exhaustive grep команду, обходит все 59 файлов поштучно, классифицирует каждый ref как DELETE / EDIT-content / KEEP-historical (historical: `cursor-dead-code-cleanup` test name + явные commit/changelog references). Acceptance: повторный grep → ≤5 files (только historical names). Добавлен **FR-8a "Exhaustive Cursor purge — обход всех 59 файлов"** в FR.md. CI test проверяет threshold после release |
+| 4.2 Existing Cursor users tries v2 install | Low | Low | Cursor отвергается с v1.5 (`src/index.ts:44-47`); CHANGELOG explicit |
+| 4.3 Stale `extensions/{name}/cursor/` references в FILE_CHANGES.md | Low | Low | Физических `cursor/` dirs не существует; только text refs внутри файлов. **Proof:** `ls extensions/*/cursor/` пусто; FILE_CHANGES.md упоминает несуществующие пути типа `extensions/specs-workflow/cursor/commands/specs-workflow.md` — заведомо stale |
+
+### Domain 5: Build & CI (3)
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|------------|--------|------------|
+| 5.1 Stale plugin.json в git | Medium | High | См. Top-5 #4 |
+| 5.2 Generated artifact `.claude-plugin/plugin.json` merge conflicts в git | Medium | Medium | **Решение:** keep `.claude-plugin/` в git, pre-commit hook regenerate + stage. `git clone` даёт рабочий плагин без `npm install` — важно для marketplace `source: "./"` resolution |
+| 5.3 `npm run build:plugin` slow в Docker CI timeout | Low | Low | `build:plugin` — pure local, без network. Tests в background per `no-blocking-on-tests` rule. **Proof:** `scripts/docker-test.sh` уже background pattern |
+
+### Domain 6: Migration Tooling (3)
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|------------|--------|------------|
+| 6.1 `.user-overrides/` backup disk junk | Low | Low | Migration script печатает path + hint; hash-based dedup на repeated runs |
+| 6.2 Migration script Windows path issues | Medium | Medium | См. Top-5 #5. Automated Windows test ВНЕ scope (Docker Linux-only) |
+| 6.3 Migration lock file stuck после `kill -9` | Low | Low | Lock pattern `flag: 'wx'` + stale timeout 1 час (process alive check). **Proof:** existing pattern в `extensions/_shared/scope-gate-marker-store.ts`, `src/doctor/lock.ts`, `extensions/suggest-rules/tools/learnings-capture/queue.ts` — three call sites |
+
+### Domain 7: Desktop UI / Plugin Activation (3)
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|------------|--------|------------|
+| 7.1 Desktop требует restart, users не знают | Medium | Low | CLI prominent hint после `/plugin install`; CHANGELOG explicit (legacy risk) |
+| 7.2 Desktop UI schema silent skip | Medium | High | См. Top-5 #3 — schema validation в build |
+| 7.3 Orphan settings.json entries при manual edit | Low | Low | CLI warning "use /plugin uninstall"; documentation |
+
+### Domain 8: Repo Hygiene (3)
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|------------|--------|------------|
+| 8.1 `.claude-plugin/plugin.json` merge conflicts | Medium | Medium | См. 5.2 |
+| 8.2 `extensions/*/cursor/` git history | Low | Low | History в old commits; CHANGELOG references commit SHA. **Proof:** физических `cursor/` dirs уже нет — только text refs |
+| 8.3 Migration markers `.migrated-to-v2` user-deletable | Low | Low | Comment в marker файл "do not delete" + doc в migration script |
+
+### Domain 9: User Communication (2)
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|------------|--------|------------|
+| 9.1 v1 users никогда не узнают про migration | Medium | Medium | **Phase 6.5:** v1.5.1 release с SessionStart hook что печатает ONCE warning "v2.0 released, see CHANGELOG". **Proof:** v1 install имеет SessionStart hook в `~/.claude/settings.json` — мы можем туда добавить notice |
+| 9.2 Migration script npx URL fragile при GitHub outage | Low | Low | Migration guide включает BOTH `npx tsx https://...` AND local clone option |
+
+### Domain 10: Spec Coverage Gaps (3)
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|------------|--------|------------|
+| 10.1 Min Claude Code version | Low | Low | README + `marketplace.json.description` указывает min CC version |
+| 10.2 `--scope` flag может переименоваться Anthropic-side | Low | Low | Documentation: "follow Claude Code CLI syntax"; не hardcode |
+| 10.3 FR-11 Desktop integration — no automated test | Medium | Medium | Manual smoke перед release; checklist в release runbook. **Automated test ВНЕ scope** (Desktop тестируется через actual UI) |
+
+### Legacy risks (сохранены)
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|------------|--------|------------|
+| Claude Desktop требует рестарт после plugin install | Medium | Low | См. 7.1 |
+| `npm i -g` без sudo silent fail | High | Medium | Postinstall fail-soft + install-diagnostics skill детектит. **NB:** в v2 postinstall удаляется целиком (canonical install — без npm), риск становится N/A |
+| Migration v1→v2 теряет user-mods при auto-overwrite | Medium | High | См. 2.2 — backup в `.user-overrides/` (pattern из `updater-managed-cleanup` rule) |
+| `.git/info/exclude` не существует если в проекте нет `.git/` | Low | Medium | Pre-flight check; canonical install не пишет в project (cache в `~/.claude/plugins/`), риск становится N/A для v2 |
+| MCP `--scope user` баг (#54803) | Low | Medium | См. 3.1 |
+| Существующие cursor-using teams breaking при v2 upgrade | Low | Low | См. 4.2 |

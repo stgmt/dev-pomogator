@@ -227,6 +227,80 @@ dev-pomogator/
 - Separate marketplace repo (stgmt/claude-marketplace) + plugin repo (stgmt/dev-pomogator) — rejected потому что adds complexity для single-plugin use case; user setup требует понимания two repos
 - Marketplace репо где dev-pomogator — один из многих плагинов community — rejected потому что добавляет maintenance overhead и слабее brand; pure dev-pomogator repo cleaner
 
+### Decision: Version sync — single source of truth + pre-commit enforcement
+
+> Added 2026-05-23 as mitigation Top-5 risk #1.
+
+**Rationale:** `buildCanonicalPlugin()` читает версию из ОДНОГО источника (`package.json:version`) и atomically пишет ту же версию в `.claude-plugin/plugin.json` И `.claude-plugin/marketplace.json/plugins[0].version`. Pre-commit hook бежит build; CI test в PR проверяет no-drift. Без этого manual edit одного файла создаёт phantom updates у users — proof: существующий v1 `.dev-pomogator/.claude-plugin/plugin.json:3 = 1.5.0` уже out-of-sync с `package.json` (different file lifecycle).
+
+**Trade-off:** Lock-step coupling между npm version и plugin version — features не bugs (consistency guarantee). Bump = run build перед коммитом; pre-commit hook делает это автоматически (`git add` обновлённых артефактов).
+
+**Alternatives considered:**
+- Manual bump в обоих файлах с trust dev-discipline — rejected, observed history разсинхронизуется без enforcement.
+- Separate version в plugin.json (independent от npm) — rejected, two-source усложняет release; users проще ассоциировать одну версию.
+
+### Decision: Schema validation в build — fail-fast перед commit
+
+> Added 2026-05-23 as mitigation Top-5 risk #3.
+
+**Rationale:** `buildCanonicalPlugin()` валидирует каждый сгенерированный artifact против Anthropic schemas (известных по `plugins-reference.md` + `plugin-marketplaces.md`). Если ошибка — exit non-zero до записи на диск; dev видит exact error message с field+location. Без этого ошибка проявится только в Desktop UI как silent skip.
+
+**Trade-off:** Anthropic schemas могут эволюционировать; наш hardcoded schema может застаревать. Mitigation: schema references published Anthropic docs URL + date verified в комментарии; CHANGELOG fixируется при schema-update bumps.
+
+**Alternatives considered:**
+- Trust JSON.stringify output без validation — rejected per Top-5 #3.
+- Validate только в CI, не локально — rejected: dev должен видеть error до push.
+- Anthropic-provided validator (если npm-published) — checked 2026-05-23 — нет. Используем local JSON Schema validator (`ajv` уже в devDeps).
+
+### Decision: Cross-platform migration script — defensive coding, без automated Windows test
+
+> Added 2026-05-23 as mitigation Top-5 risk #5.
+
+**Rationale:** Migration script (`tools/migrate-v1-to-v2.ts`) использует только: `path.join()` / `path.resolve()`, `glob` package с native sep handling, `fs.promises` API. НЕ string-concat для путей. **Automated cross-platform CI ВНЕ scope этой итерации** — Docker test infra только Linux (`tests/setup/ensure-docker.ts:14` enforces). Manual cross-platform smoke перед release (developer запускает script на Windows локально, документирует в release runbook).
+
+**Trade-off:** Windows-specific bugs могут проскочить (например, CRLF line endings в `.gitignore` handling). Mitigation: release runbook включает manual Windows checklist; первый bug-report от Windows user приоритизируется как hotfix.
+
+**Alternatives considered:**
+- Wire up `hyperv-test-runner` skill для автоматизированных Windows VM tests — rejected: pipeline не настроен на 2026-05-23 (skill доступен, setup — отдельная задача).
+- Skip Windows support целиком — rejected: cross-platform — baseline (см. `bun-oom-guard` extension для Windows OOM).
+- Port на Bash — rejected: TS/Node consistency с остальным codebase.
+
+### Decision: Generated `.claude-plugin/` committed в git с pre-commit regeneration
+
+> Added 2026-05-23 as mitigation Top-5 risk #4 + risk 5.2.
+
+**Rationale:** Marketplace.json `source: "./"` requires `.claude-plugin/plugin.json` exist в clone — иначе `git clone` + `/plugin marketplace add ./` ломается. Поэтому: keep `.claude-plugin/` в git, pre-commit hook regenerate + git add автоматически.
+
+**Trade-off:** Generated файл в git → merge conflict risk при parallel feature dev в разных extensions. Mitigation: pre-commit hook regenerate из source manifests resolves 90% случаев. Если конфликт остался — `npm run build:plugin && git add .claude-plugin/` resolves.
+
+**Alternatives considered:**
+- Gitignore `.claude-plugin/`, regenerate в CI release — rejected: `git clone` не даёт рабочий плагин (marketplace `source: "./"` ломается).
+- `.gitattributes merge=ours` для `.claude-plugin/` — rejected: silent override чужих изменений, не idiomatic.
+
+### Decision: v1 detection — triple-marker check
+
+> Added 2026-05-23 as mitigation Top-5 risk #2.
+
+**Rationale:** Migration script определяет v1 install по комбинации 3 признаков (boolean confidence): (1) `<project>/.dev-pomogator/.claude-plugin/plugin.json` exists AND `version <2.0`; (2) `~/.dev-pomogator/` exists AND содержит `config.json`; (3) `<project>/.gitignore` содержит managed marker block `# >>> dev-pomogator managed >>>`. Если ≥2 из 3 — HIGH confidence, cleanup runs. Если 1 — partial install, interactive confirm перед cleanup. Если 0 — exit "no v1 install detected".
+
+**Trade-off:** False-positive если user случайно имитировал один из маркеров. Mitigation: interactive confirm на 1-marker case, цена FP — user отказывается, exit.
+
+**Alternatives considered:**
+- Single-marker (только `plugin.json` exists) — rejected: partial uninstall edge case даёт false-negative; миграция не запустится.
+- Always-run cleanup без detection — rejected: idempotent на v2-only проекте OK, но психологически dev/user пугается "что оно удаляет".
+
+### Decision: Exhaustive Cursor purge — 59 файлов (FR-8a)
+
+> Added 2026-05-23 as mitigation risk 4.1.
+
+**Rationale:** Initial FR-8 underspecified scope. Exhaustive grep 2026-05-23 показал 59 файлов с cursor refs (vs FILE_CHANGES.md заявленных 39 — undercount на 51%). FR-8a explicitly extends с (a) exhaustive grep command (reproducible), (b) категоризация в 6 групп (root / extensions / src / .claude/ rules+commands / tests / scripts), (c) per-file classification в одну из 3 actions (DELETE-content / EDIT-content / KEEP-historical), (d) acceptance ≤5 KEEP-historical files после Phase 3.
+
+**Trade-off:** Phase 3 work expands с ~3 файлов (per orig FILE_CHANGES.md) до ~54 files actual cleanup + ~5 historical-keep. Mitigation: разделить Phase 3 на 3 sub-phases (3a: root + src/, 3b: extensions/, 3c: .claude/ + tests/) — каждая sub-phase shippable independently.
+
+**Alternatives considered:**
+- Stick с orig FR-8 (3-файла scope) — rejected: leaves 56 файлов с stale cursor refs, partial cleanup gives false sense of completeness.
+- Delete cursor-related tests целиком (тесты `cursor-dead-code-cleanup.test.ts` и `CORE018_cursor-dead-code-cleanup.feature`) — rejected: эти тесты protect regression (verify cursor support DOESN'T return), оставляем под KEEP-historical.
+
 ## BDD Test Infrastructure (ОБЯЗАТЕЛЬНО)
 
 > Секция НЕ может быть удалена.

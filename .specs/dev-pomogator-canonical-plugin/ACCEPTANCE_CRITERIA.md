@@ -84,3 +84,25 @@ WHEN кто-либо запускает legacy CLI entry point (если ост�
 THEN CLI SHALL exit с non-zero exit code (≥1)
 AND stderr SHALL содержать message "Cursor support was removed in v2.0. Use canonical install: /plugin marketplace add stgmt/dev-pomogator."
 AND no install actions SHALL быть выполнены.
+
+## AC-8a (FR-8a)
+
+**Требование:** [FR-8a](FR.md#fr-8a-exhaustive-cursor-purge--59-файлов)
+
+WHEN Phase 3 (Cursor removal) завершена и release prepared
+AND запущена команда:
+
+```bash
+grep -rln -i "cursor" \
+  --include="*.ts" --include="*.js" --include="*.mjs" --include="*.cjs" \
+  --include="*.json" --include="*.md" --include="*.py" --include="*.mdc" \
+  --include="*.feature" --include="*.yaml" --include="*.yml" --include="*.sh" \
+  --include="*.ps1" --include="*.bat" \
+  extensions/ src/ scripts/ bin/ .claude/ tests/ \
+  | grep -v "node_modules\|.stryker-tmp\|worktrees\|/backlog/" \
+  | wc -l
+```
+
+THEN результат SHALL быть ≤ 5
+AND оставшиеся файлы SHALL быть классифицированы как KEEP-historical в Phase 3 cleanup log
+AND каждый оставшийся файл SHALL иметь объяснение (commit message / file comment) почему ref оставлен.
