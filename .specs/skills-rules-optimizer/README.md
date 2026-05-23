@@ -1,5 +1,7 @@
 # Skills Rules Optimizer
 
+**Status: shipped 0.1.0 — 2026-05-23.** Skill `.claude/skills/skills-rules-optimizer/` + 9 scripts. Phase 6 интеграция: `/suggest-rules` автозапускает `audit.ts` после rule creation. См. [CHANGELOG.md](CHANGELOG.md).
+
 Расширение существующего `rules-optimizer` skill чтобы покрывать также `.claude/skills/*/SKILL.md`, не только `.claude/rules/*.md`. Детектирование overlapping skills, oversize SKILL.md (per Anthropic 500-line cap), missing `allowed-tools`, transitive references — с LLM-driven merge synthesis через Claude Code sub-agent + ratchet (regression prevention).
 
 ## Driver

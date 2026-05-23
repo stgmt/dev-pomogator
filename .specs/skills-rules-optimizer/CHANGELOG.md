@@ -2,6 +2,17 @@
 
 All notable changes to this feature will be documented in this file.
 
+## [0.1.0] — 2026-05-23
+
+> Shipped as `.claude/skills/skills-rules-optimizer/` (SKILL.md + references/ + 9 scripts: audit.ts, audit-rules.ts, audit-skills.ts, detect-overlap.ts, merge-skills.ts, verify-merge.ts, check-antipatterns.ts, report.ts, shared.ts). Phase 6 integration in `.claude/commands/suggest-rules.md` calls `audit.ts` automatically after rule creation. 5-stage pipeline: audit → detect overlap → merge → ratchet → apply.
+>
+> FR-10 (embedding-based semantic merge) explicitly OUT OF SCOPE — deferred to v0.2.0 (Jaccard + LLM judge sufficient for v0.1.0).
+> FR-11 (auto-apply без human review) explicitly OUT OF SCOPE — design choice never (safety boundary).
+>
+> Tests: `tests/e2e/sro-stubs.test.ts` + fixtures `tests/fixtures/skills-rules-optimizer/`.
+>
+> Audit-spec: 0 ERRORS / 4 WARNINGS (MISSING_AC stubs for OUT-OF-SCOPE FR-10/FR-11, DESIGN classification format, term variants — all cosmetic).
+
 ## [Unreleased]
 
 ### Added
