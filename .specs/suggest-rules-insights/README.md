@@ -1,5 +1,7 @@
 # Suggest Rules Insights
 
+**Status: shipped 1.4.0 (2026-02-22) / closeout 2026-05-23.** Phase -0.5 живёт в `.claude/commands/suggest-rules.md` lines 180-313. Все 10 FR покрыты — частью через `Skill("deep-insights")` invocation, частью через прямой `Read(report.html)` Legacy Mode fallback. См. [CHANGELOG.md](CHANGELOG.md).
+
 Phase -0.5 enhancement for the `suggest-rules` command that reads Claude Code's `/insights` report (`~/.claude/usage-data/report.html`) to extract cross-session friction patterns, CLAUDE.md suggestions, wins, and usage patterns as additional rule candidates.
 
 ## Status

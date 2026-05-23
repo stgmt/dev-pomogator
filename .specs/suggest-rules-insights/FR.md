@@ -39,7 +39,7 @@
 
 Система должна извлекать project areas из `.project-area` элементов (`.area-name` + `.area-count`). Данные используются для обогащения списка доменов в Phase 0.5 (Domain Detection), а не как самостоятельные кандидаты правил.
 
-**Связанные AC:** Нет прямого AC (входные данные для Phase 0.5)
+**Связанные AC:** [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-6) (data-flow вход в Phase 0.5 Domain Detection; нет dedicated AC, проверяется в составе AC-5)
 **Use Case:** [UC-1](USE_CASES.md#uc-1-свежий-отчёт-insights-доступен)
 
 ## FR-7: Создание pre-candidates с оценкой релевантности @feature7
