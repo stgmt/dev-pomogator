@@ -81,6 +81,25 @@ function stripBackticksAndCodeBlocks(content: string): string {
   return stripped;
 }
 
+export function isPlaceholderPath(p: string): boolean {
+  if (!p) return false;
+  if (/\{[^}]+\}/.test(p)) return true;
+  if (/<[^>]+>/.test(p)) return true;
+  if (/^TBD$/i.test(p.trim())) return true;
+  if (/\bTBD\b/.test(p)) return true;
+  if (/^\.\.\./.test(p.trim())) return true;
+  return false;
+}
+
+export function isGlobPath(p: string): boolean {
+  if (!p) return false;
+  if (/\*\*/.test(p)) return true;
+  if (/\/\*\.|\/\*\//.test(p)) return true;
+  if (/\[.+\]/.test(p) && !/\.[a-z]+$/i.test(p)) return true;
+  if (/\?/.test(p)) return true;
+  return false;
+}
+
 export function parseFileChangesTable(content: string): { rows: FcRow[]; findings: AuditFinding[] } {
   const findings: AuditFinding[] = [];
   const rows: FcRow[] = [];
@@ -118,9 +137,9 @@ export function parseFileChangesTable(content: string): { rows: FcRow[]; finding
       inTable = false;
       continue;
     }
-    const pathIdx = headerColumns.findIndex((h) => /^path|file$/.test(h));
-    const actionIdx = headerColumns.findIndex((h) => /^action$/.test(h));
-    const reasonIdx = headerColumns.findIndex((h) => /^reason|note|notes$/.test(h));
+    const pathIdx = headerColumns.findIndex((h) => /^(path|file|файл|файлы|путь|пути|имя)$/.test(h));
+    const actionIdx = headerColumns.findIndex((h) => /^(action|действие|операция)$/.test(h));
+    const reasonIdx = headerColumns.findIndex((h) => /^(reason|note|notes|описание|причина|комментарий)$/.test(h));
     if (pathIdx < 0) {
       findings.push({
         check: 'FC_PARSE_UNPARSEABLE',
@@ -145,6 +164,30 @@ export function parseFileChangesTable(content: string): { rows: FcRow[]; finding
       });
       continue;
     }
+    if (isPlaceholderPath(cleanPath)) {
+      findings.push({
+        check: 'FC_PLACEHOLDER_PATH',
+        category: 'FILE_CHANGES_VERIFY',
+        severity: 'INFO',
+        message: `FILE_CHANGES row ${i + 1} contains unfilled placeholder: ${cleanPath}`,
+        details: 'Path looks like scaffold template (e.g. `{slug}`, `<name>`, `TBD`). Spec is incomplete; FC drift checks skipped for this row.',
+        file: cleanPath,
+        line: i + 1,
+      });
+      continue;
+    }
+    if (isGlobPath(cleanPath)) {
+      findings.push({
+        check: 'FC_GLOB_PATTERN',
+        category: 'FILE_CHANGES_VERIFY',
+        severity: 'INFO',
+        message: `FILE_CHANGES row ${i + 1} contains glob pattern: ${cleanPath}`,
+        details: 'Glob patterns (e.g. `**`, `*`, `?`) cannot be checked against filesystem. Skill skips FC drift checks for this row. Consider listing concrete paths.',
+        file: cleanPath,
+        line: i + 1,
+      });
+      continue;
+    }
     rows.push({
       path: cleanPath,
       action: cellAction?.toLowerCase().replace(/\s+/g, '').replace(/[`*]/g, ''),
@@ -153,8 +196,8 @@ export function parseFileChangesTable(content: string): { rows: FcRow[]; finding
     });
   }
 
-  const hasUnparseableFindings = findings.some((f) => f.check === 'FC_PARSE_UNPARSEABLE');
-  if (rows.length === 0 && content.trim().length > 0 && !hasUnparseableFindings) {
+  const hasSkippedRows = findings.some((f) => f.check === 'FC_PARSE_UNPARSEABLE' || f.check === 'FC_PLACEHOLDER_PATH' || f.check === 'FC_GLOB_PATTERN');
+  if (rows.length === 0 && content.trim().length > 0 && !hasSkippedRows) {
     findings.push({
       check: 'FC_EMPTY',
       category: 'FILE_CHANGES_VERIFY',
@@ -249,6 +292,8 @@ export function checkNarrativePaths(specDir: string, repoRoot: string): AuditFin
     for (const ref of refs) {
       const segments = ref.value.split(/[\\/]/);
       if (segments.length === 1) continue;
+      if (isPlaceholderPath(ref.value)) continue;
+      if (isGlobPath(ref.value)) continue;
       const resolved = path.resolve(repoRoot, ref.value);
       if (fs.existsSync(resolved)) continue;
       if (resolved.startsWith(specDir)) continue;
