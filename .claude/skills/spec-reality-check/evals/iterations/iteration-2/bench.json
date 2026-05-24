@@ -1,0 +1,138 @@
+{
+  "ran_at": "2026-05-24T02:00:37.347Z",
+  "platform": "win32",
+  "node_version": "v20.19.6",
+  "skill_root": ".claude/skills/spec-reality-check",
+  "runs_per_size": 5,
+  "method": "runChecks() called directly in-process via import; no npx spawn",
+  "nfr_performance_bound_seconds": 30,
+  "results": [
+    {
+      "rows": 10,
+      "runs": 5,
+      "runs_ms": [
+        4.1601,
+        1.1211,
+        1.4179,
+        0.9575,
+        0.8147
+      ],
+      "mean_ms": 1.69,
+      "p50_ms": 1.12,
+      "p95_ms": 3.61,
+      "min_ms": 0.81,
+      "max_ms": 4.16,
+      "findings_count": 17
+    },
+    {
+      "rows": 100,
+      "runs": 5,
+      "runs_ms": [
+        4.7998,
+        5.2729,
+        4.75,
+        4.0344,
+        3.3336
+      ],
+      "mean_ms": 4.44,
+      "p50_ms": 4.75,
+      "p95_ms": 5.18,
+      "min_ms": 3.33,
+      "max_ms": 5.27,
+      "findings_count": 167
+    },
+    {
+      "rows": 500,
+      "runs": 5,
+      "runs_ms": [
+        11.573,
+        11.2056,
+        10.2014,
+        10.1853,
+        9.8695
+      ],
+      "mean_ms": 10.61,
+      "p50_ms": 10.2,
+      "p95_ms": 11.5,
+      "min_ms": 9.87,
+      "max_ms": 11.57,
+      "findings_count": 834
+    },
+    {
+      "rows": 1000,
+      "runs": 5,
+      "runs_ms": [
+        18.407,
+        17.0152,
+        20.4125,
+        16.7867,
+        16.0614
+      ],
+      "mean_ms": 17.74,
+      "p50_ms": 17.02,
+      "p95_ms": 20.01,
+      "min_ms": 16.06,
+      "max_ms": 20.41,
+      "findings_count": 1667
+    },
+    {
+      "rows": 2000,
+      "runs": 5,
+      "runs_ms": [
+        32.7372,
+        37.2434,
+        33.4386,
+        35.3858,
+        29.1982
+      ],
+      "mean_ms": 33.6,
+      "p50_ms": 33.44,
+      "p95_ms": 36.87,
+      "min_ms": 29.2,
+      "max_ms": 37.24,
+      "findings_count": 3334
+    }
+  ],
+  "scaling_analysis": [
+    {
+      "rows": 10,
+      "mean_ms": 1.69,
+      "vs_prev": "baseline"
+    },
+    {
+      "rows": 100,
+      "mean_ms": 4.44,
+      "rows_x_vs_prev": 10,
+      "time_x_vs_prev": 2.63,
+      "verdict": "linear-or-better"
+    },
+    {
+      "rows": 500,
+      "mean_ms": 10.61,
+      "rows_x_vs_prev": 5,
+      "time_x_vs_prev": 2.39,
+      "verdict": "linear-or-better"
+    },
+    {
+      "rows": 1000,
+      "mean_ms": 17.74,
+      "rows_x_vs_prev": 2,
+      "time_x_vs_prev": 1.67,
+      "verdict": "linear-or-better"
+    },
+    {
+      "rows": 2000,
+      "mean_ms": 33.6,
+      "rows_x_vs_prev": 2,
+      "time_x_vs_prev": 1.89,
+      "verdict": "linear-or-better"
+    }
+  ],
+  "nfr_verdict": {
+    "largest_size": 2000,
+    "largest_mean_ms": 33.6,
+    "nfr_bound_ms": 30000,
+    "headroom_x": 892.86,
+    "passes_nfr": true
+  }
+}

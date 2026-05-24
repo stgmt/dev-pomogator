@@ -45,6 +45,7 @@ interface EvalCase {
   setup?: {
     create_files?: string[];
     git_init?: boolean;
+    git_init_empty?: boolean;
     git_commits?: Array<{ files: Record<string, string>; message: string }>;
   };
   expected_error?: number;
@@ -173,11 +174,11 @@ function setupFixture(c: EvalCase): { specDir: string; repoRoot: string; tmpDir:
       fs.writeFileSync(p, 'pre-existing fixture file');
     }
   }
-  if (c.setup?.git_init) {
+  if (c.setup?.git_init || c.setup?.git_init_empty) {
     spawnSync('git', ['init', '-q'], { cwd: repoRoot, encoding: 'utf-8' });
     spawnSync('git', ['config', 'user.email', 'test@test.com'], { cwd: repoRoot });
     spawnSync('git', ['config', 'user.name', 'Test'], { cwd: repoRoot });
-    if (c.setup.git_commits) {
+    if (c.setup?.git_init && c.setup.git_commits) {
       for (const commit of c.setup.git_commits) {
         for (const [filePath, content] of Object.entries(commit.files)) {
           const p = path.join(repoRoot, filePath);
@@ -260,11 +261,46 @@ function scoreVerifyEval(c: EvalCase, parsed: any): { passed: number; total: num
     const forbidden = c.forbidden_codes.filter((code) => actualCodes.includes(code));
     if (forbidden.length > 0) {
       failures.push(`forbidden codes present: ${forbidden.join(',')}`);
-      score = Math.max(0, score - 1);
+      score = 0;
     }
   }
 
   return { passed: score, total: 6, failures, actualCodes, counts };
+}
+
+// strong-tests:skip invariants covered by assertExtractCodesInvariants() below — runs on script start
+function extractCodesFromReason(reason: string): string[] {
+  const codes = new Set<string>();
+  const regex = /\[([A-Z][A-Z0-9_]+)\]/g;
+  let m: RegExpExecArray | null;
+  while ((m = regex.exec(reason)) !== null) {
+    codes.add(m[1]);
+  }
+  return [...codes];
+}
+
+function assertExtractCodesInvariants(): void {
+  const empty = extractCodesFromReason('');
+  if (empty.length !== 0) throw new Error(`extractCodesFromReason empty input: expected [], got ${JSON.stringify(empty)}`);
+  const single = extractCodesFromReason('  • [FC_EDIT_MISSING] foo');
+  if (single.length !== 1 || single[0] !== 'FC_EDIT_MISSING') throw new Error(`single: ${JSON.stringify(single)}`);
+  const dup = extractCodesFromReason('[FC_EDIT_MISSING] x [FC_EDIT_MISSING] y');
+  if (dup.length !== 1) throw new Error(`uniqueness violated: ${JSON.stringify(dup)}`);
+  const noise = extractCodesFromReason('words [lowercase] [123] [FOO_BAR]');
+  if (noise.length !== 1 || noise[0] !== 'FOO_BAR') throw new Error(`filter violated: ${JSON.stringify(noise)}`);
+  const multi = extractCodesFromReason('[A_B] mid [C_D] end [E_F]');
+  if (multi.length !== 3) throw new Error(`cardinality violated: ${JSON.stringify(multi)}`);
+}
+
+function parseDenyReason(stdout: string): { decision: string | null; reason: string; codes: string[] } {
+  try {
+    const parsed = JSON.parse(stdout);
+    const decision = parsed?.hookSpecificOutput?.permissionDecision ?? null;
+    const reason = parsed?.hookSpecificOutput?.permissionDecisionReason ?? '';
+    return { decision, reason, codes: extractCodesFromReason(reason) };
+  } catch {
+    return { decision: null, reason: '', codes: [] };
+  }
 }
 
 function runOne(c: EvalCase): EvalResult {
@@ -281,26 +317,52 @@ function runOne(c: EvalCase): EvalResult {
         const dest = path.join(tmpDir, '.specs', path.basename(c.fixture_to_copy));
         copyDir(path.resolve(REPO_ROOT, c.fixture_to_copy), dest);
         cwd = tmpDir;
+        if (c.setup?.create_files) {
+          for (const f of c.setup.create_files) {
+            const p = path.join(tmpDir, f);
+            fs.mkdirSync(path.dirname(p), { recursive: true });
+            fs.writeFileSync(p, 'pre-existing fixture file');
+          }
+        }
+        if (c.setup?.git_init || c.setup?.git_init_empty) {
+          spawnSync('git', ['init', '-q'], { cwd: tmpDir, encoding: 'utf-8' });
+          spawnSync('git', ['config', 'user.email', 'test@test.com'], { cwd: tmpDir });
+          spawnSync('git', ['config', 'user.name', 'Test'], { cwd: tmpDir });
+        }
       }
       const inputStr = c.hook_input_raw !== undefined
         ? c.hook_input_raw
         : JSON.stringify({ cwd, ...(c.hook_input || {}) });
       const result = runHook(inputStr, cwd);
       let passed = 0;
-      const total = c.expected_reason_substrings ? 3 : 2;
+      const hasCodeCheck = !!(c.expected_codes && c.expected_codes.length > 0);
+      const hasSubstringCheck = !!(c.expected_reason_substrings && c.expected_reason_substrings.length > 0);
+      const hasForbiddenCheck = !!(c.forbidden_codes && c.forbidden_codes.length > 0);
+      const total = 2 + (hasCodeCheck ? 1 : 0) + (hasSubstringCheck ? 1 : 0) + (hasForbiddenCheck ? 1 : 0);
       if (result.status === 0) passed++;
       else failures.push(`hook exit=${result.status}`);
-      const isDeny = (result.stdout || '').includes('"permissionDecision":"deny"') || (result.stdout || '').includes('"permissionDecision": "deny"');
+      const parsed = parseDenyReason(result.stdout || '');
+      const isDeny = parsed.decision === 'deny';
       const isPermit = !(result.stdout || '').trim();
       if (c.expected_hook_outcome === 'deny') {
         if (isDeny) passed++; else failures.push(`expected deny, got: ${(result.stdout || '').slice(0, 80)}`);
       } else if (c.expected_hook_outcome === 'permit') {
         if (isPermit) passed++; else failures.push(`expected permit, got: ${(result.stdout || '').slice(0, 80)}`);
       }
-      if (c.expected_reason_substrings) {
-        const missing = c.expected_reason_substrings.filter((s) => !(result.stdout || '').includes(s));
+      if (hasCodeCheck) {
+        const missing = (c.expected_codes || []).filter((code) => !parsed.codes.includes(code));
+        if (missing.length === 0) passed++;
+        else failures.push(`missing codes in reason: ${missing.join(',')}; actual codes: [${parsed.codes.join(',')}]`);
+      }
+      if (hasSubstringCheck) {
+        const missing = (c.expected_reason_substrings || []).filter((s) => !(result.stdout || '').includes(s));
         if (missing.length === 0) passed++;
         else failures.push(`missing reason substrings: ${missing.join(',')}`);
+      }
+      if (hasForbiddenCheck) {
+        const forbidden = (c.forbidden_codes || []).filter((code) => parsed.codes.includes(code));
+        if (forbidden.length === 0) passed++;
+        else failures.push(`forbidden codes present in reason: ${forbidden.join(',')}`);
       }
       return {
         id: c.id,
@@ -309,12 +371,12 @@ function runOne(c: EvalCase): EvalResult {
         passed,
         total,
         duration_ms: Date.now() - start,
-        actual_codes: [],
-        expected_codes: [],
+        actual_codes: parsed.codes,
+        expected_codes: c.expected_codes || [],
         error_count: 0,
         warning_count: 0,
         info_count: 0,
-        total_findings: 0,
+        total_findings: parsed.codes.length,
         failures,
       };
     } finally {
@@ -397,7 +459,7 @@ function runOne(c: EvalCase): EvalResult {
   }
 }
 
-function aggregate(results: EvalResult[]): AggregateResult {
+function aggregate(results: EvalResult[], iteration: number): AggregateResult {
   const passed = results.filter((r) => r.passed === r.total).length;
   const failed = results.length - passed;
   const totalScore = results.reduce((s, r) => s + r.passed, 0);
@@ -410,7 +472,7 @@ function aggregate(results: EvalResult[]): AggregateResult {
     else by_category[r.category].failed++;
   }
   return {
-    iteration: 1,
+    iteration,
     ran_at: new Date().toISOString(),
     skill_name: 'spec-reality-check',
     verify_script: '.claude/skills/spec-reality-check/scripts/verify.ts',
@@ -426,6 +488,12 @@ function aggregate(results: EvalResult[]): AggregateResult {
 }
 
 function main(): number {
+  try {
+    assertExtractCodesInvariants();
+  } catch (e: any) {
+    console.error(`Self-check failed: ${e.message}`);
+    return 2;
+  }
   if (!fs.existsSync(EVALS_JSON)) {
     console.error(`evals.json not found: ${EVALS_JSON}`);
     return 1;
@@ -449,7 +517,7 @@ function main(): number {
     }
   }
 
-  const agg = aggregate(results);
+  const agg = aggregate(results, iteration);
   const outPath = path.join(outDir, 'aggregate.json');
   fs.writeFileSync(outPath, JSON.stringify(agg, null, 2) + '\n');
   console.log(`\nAggregate written to: ${outPath}`);

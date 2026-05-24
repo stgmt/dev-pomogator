@@ -17,13 +17,15 @@
     "task-board-forms": ".claude/skills/task-board-forms",
     "variant-matrix-build": ".claude/skills/variant-matrix-build",
     "spec-review": ".claude/skills/spec-review",
-    "spec-reality-check": ".claude/skills/spec-reality-check"
+    "spec-reality-check": ".claude/skills/spec-reality-check",
+    "architecture-decision-builder": ".claude/skills/architecture-decision-builder"
   },
   "skillFiles": {
     "create-spec": [
       ".claude/skills/create-spec/SKILL.md",
       ".claude/skills/create-spec/references/phase1_discovery.md",
       ".claude/skills/create-spec/references/phase1.5_project-context.md",
+      ".claude/skills/create-spec/references/phase1.75_architecture-decisions.md",
       ".claude/skills/create-spec/references/phase2_requirements-and-design.md",
       ".claude/skills/create-spec/references/phase2_bdd-test-infrastructure.md",
       ".claude/skills/create-spec/references/phase3_finalization.md",
@@ -36,6 +38,7 @@
       ".claude/skills/create-spec/references/phase3plus_audit-undefined-behavior.md",
       ".claude/skills/create-spec/references/phase3plus_audit-jira-drift.md",
       ".claude/skills/create-spec/references/phase3plus_audit-variant-coverage.md",
+      ".claude/skills/create-spec/references/phase3plus_audit-architecture-coverage.md",
       ".claude/skills/create-spec/references/feature-creation-rules.md",
       ".claude/skills/create-spec/references/jira-mode.md",
       ".claude/skills/create-spec/references/validation-rules.md",
@@ -73,13 +76,27 @@
       ".claude/skills/spec-reality-check/evals/README.md",
       ".claude/skills/spec-reality-check/evals/evals.json",
       ".claude/skills/spec-reality-check/evals/run-evals.ts",
-      ".claude/skills/spec-reality-check/evals/iterations/iteration-1/aggregate.json"
+      ".claude/skills/spec-reality-check/evals/bench-synthetic.ts",
+      ".claude/skills/spec-reality-check/evals/iterations/iteration-1/aggregate.json",
+      ".claude/skills/spec-reality-check/evals/iterations/iteration-2/aggregate.json",
+      ".claude/skills/spec-reality-check/evals/iterations/iteration-2/bench.json",
+      ".claude/skills/spec-reality-check/evals/iterations/iteration-2/DIFF_vs_iteration-1.md"
+    ],
+    "architecture-decision-builder": [
+      ".claude/skills/architecture-decision-builder/SKILL.md",
+      ".claude/skills/architecture-decision-builder/references/axis-catalog.md",
+      ".claude/skills/architecture-decision-builder/references/variant-format-spec.md",
+      ".claude/skills/architecture-decision-builder/references/html-style-guide.md",
+      ".claude/skills/architecture-decision-builder/evals/evals.json",
+      ".claude/skills/architecture-decision-builder/evals/rubric.json"
     ]
   },
   "ruleFiles": {
     "claude": [
       ".claude/rules/specs-workflow/variant-matrix/when-to-build-matrix.md",
-      ".claude/rules/specs-workflow/variant-matrix/escape-hatch-audit.md"
+      ".claude/rules/specs-workflow/variant-matrix/escape-hatch-audit.md",
+      ".claude/rules/specs-workflow/architecture-decision/when-to-build-architecture.md",
+      ".claude/rules/specs-workflow/architecture-decision/escape-hatch-audit.md"
     ]
   },
   "tools": {
@@ -119,7 +136,18 @@
       ".dev-pomogator/tools/specs-generator/templates/USE_CASES.md.template",
       ".dev-pomogator/tools/specs-generator/templates/USER_STORIES.md.template",
       ".dev-pomogator/tools/specs-generator/templates/CHANGELOG.md.template",
-      ".dev-pomogator/tools/specs-generator/templates/AUDIT_REPORT.md.template"
+      ".dev-pomogator/tools/specs-generator/templates/AUDIT_REPORT.md.template",
+      ".dev-pomogator/tools/specs-generator/templates/ARCHITECTURE_AXIS.md.template",
+      ".dev-pomogator/tools/specs-generator/templates/ARCHITECTURE_INDEX.md.template",
+      ".dev-pomogator/tools/specs-generator/architecture-decision/axis-detector.ts",
+      ".dev-pomogator/tools/specs-generator/architecture-decision/artefact-generator.ts",
+      ".dev-pomogator/tools/specs-generator/architecture-decision/html-renderer.ts",
+      ".dev-pomogator/tools/specs-generator/architecture-decision/open-in-browser.ts",
+      ".dev-pomogator/tools/specs-generator/architecture-decision/index-compiler.ts",
+      ".dev-pomogator/tools/specs-generator/architecture-decision/live-fetch.ts",
+      ".dev-pomogator/tools/specs-generator/architecture-decision/escape-log.ts",
+      ".dev-pomogator/tools/specs-generator/architecture-decision/audit.ts",
+      ".dev-pomogator/tools/specs-generator/architecture-decision/architecture-decision-cli.ts"
     ],
     "specs-validator": [
       ".dev-pomogator/tools/specs-validator/completeness.ts",

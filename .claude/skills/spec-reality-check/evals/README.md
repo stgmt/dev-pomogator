@@ -1,25 +1,34 @@
 # spec-reality-check evals
 
-14-eval suite covering all 6 checks + 3 output formats + 3 hook scenarios + 2 regression baselines.
+21-eval suite covering all 6 checks + 3 output formats + 4 hook scenarios + 2 regression baselines + **6 negative/mutation evals** + **isolated per-check fixtures** (iteration-2).
 
 ## How to reproduce
 
 ```bash
 # From repo root
+# 1) Functional evals (21 cases via spawned verify.ts/verify-hook.ts)
 npx tsx .claude/skills/spec-reality-check/evals/run-evals.ts
+
+# 2) In-process algorithm bench (no spawn overhead — measures real check cost)
+npx tsx .claude/skills/spec-reality-check/evals/bench-synthetic.ts
 ```
 
-Runner reads `evals.json`, materializes each fixture in `os.tmpdir()`, spawns `verify.ts` / `verify-hook.ts`, scores per 6-point rubric, writes `iterations/iteration-N/aggregate.json`.
+Runner reads `evals.json`, materializes each fixture in `os.tmpdir()`, spawns `verify.ts` / `verify-hook.ts`, scores per rubric, writes `iterations/iteration-N/aggregate.json`. Bench measures `runChecks()` directly via import for 10/100/500/1000/2000 FC rows × 5 runs each, writes `iterations/iteration-N/bench.json`.
 
-## Current iteration-1 results
+## Current iteration-2 results
 
-| Metric | Value |
-|--------|-------|
-| Total evals | 14 |
-| Fully passed (6/6 or 2-3/3 for hook) | **14** |
-| Failed | **0** |
-| Pass rate (points) | **100%** |
-| Total duration | **~25s** |
+| Metric | iter-1 | iter-2 |
+|--------|--------|--------|
+| Total evals | 14 | **21** (+7) |
+| Categories | 7 | **11** (+4 negative) |
+| Negative / mutation evals | 0 | **6** |
+| Fixtures isolated (1 check each) | shared (parasitic) | **per-check** |
+| forbidden_codes enforcement | soft (-1pt) | **hard (score=0)** |
+| Hook eval code extraction | substring only | **regex from reason** |
+| Pass rate (points) | 100% (73/73) | **100% (132/132)** |
+| Total duration | ~25s | ~64s |
+
+Detailed iter-1 vs iter-2 comparison + bugs caught by iter-2: [`iterations/iteration-2/DIFF_vs_iteration-1.md`](iterations/iteration-2/DIFF_vs_iteration-1.md).
 
 ### By category
 
@@ -54,17 +63,29 @@ Runner reads `evals.json`, materializes each fixture in `os.tmpdir()`, spawns `v
 
 > Note: `npx tsx` startup is ~1.2-1.5s per invocation on Windows + Node 20.19.6. Per-eval verify call dominates; real-world skill latency on a single spec is ~1.5-3s end-to-end.
 
-### Performance benchmark (verify.ts standalone)
+### Performance benchmark — in-process (bench-synthetic.ts, iteration-2)
 
-On real shipped specs (no eval-runner overhead):
+`runChecks()` called via import — NO npx/tsx spawn overhead. Synthetic specs with N FILE_CHANGES rows × 5 runs each:
 
-| Spec | Findings | Duration |
-|------|----------|----------|
-| `.specs/spec-workflow-md-validation/` (clean) | 38 (0E/4W/34I) | ~1.1s |
-| `.specs/spec-reality-check/` (self-test) | 62 (4E/32W/26I) | ~1.4s |
-| `.specs/dev-pomogator-canonical-plugin/` (post-cleanup) | 101 (0E/90W/11I) | ~1.3s |
+| FC rows | mean ms | p50 ms | p95 ms | findings | scaling |
+|---------|---------|--------|--------|----------|---------|
+| 10 | 1.69 | 1.12 | 3.61 | 17 | baseline |
+| 100 | 4.44 | 4.75 | 5.18 | 167 | 2.6× / 10× rows (sublinear) |
+| 500 | 10.61 | 10.20 | 11.50 | 834 | 2.4× / 5× rows (linear) |
+| 1000 | 17.74 | 17.02 | 20.01 | 1667 | 1.67× / 2× rows (sublinear) |
+| 2000 | 33.60 | 33.44 | 36.87 | 3334 | 1.9× / 2× rows (linear) |
 
-Performance NFR met: ≤30s on typical spec (≤20 FILE_CHANGES rows). Real specs measured 1.1-1.4s — well under bound.
+**Algorithm verdict:** O(N) in FC rows. At 2000-row spec = **33.6ms**. NFR (≤30s) headroom = **892×**.
+
+**Real bottleneck**: `npx tsx` cold-start ~1.5s dominates. End-to-end CLI latency on real specs:
+
+| Spec | Findings | CLI ms (spawn+algo) |
+|------|----------|--------------------|
+| `.specs/spec-workflow-md-validation/` (clean) | 38 (0E/4W/34I) | ~1100 |
+| `.specs/spec-reality-check/` (self-test) | 62 (4E/32W/26I) | ~1400 |
+| `.specs/dev-pomogator-canonical-plugin/` (post-cleanup) | 101 (0E/90W/11I) | ~1300 |
+
+In iter-1 README I claimed "real-world latency 1.5-3s = algorithm time" — that was wrong. iteration-2 separated the two: spawn dominates 95%+ of wall time; algo is sub-100ms even on 1000-row specs.
 
 ## 6-point scoring rubric (verify evals)
 

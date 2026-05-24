@@ -153,7 +153,8 @@ export function parseFileChangesTable(content: string): { rows: FcRow[]; finding
     });
   }
 
-  if (rows.length === 0 && content.trim().length > 0) {
+  const hasUnparseableFindings = findings.some((f) => f.check === 'FC_PARSE_UNPARSEABLE');
+  if (rows.length === 0 && content.trim().length > 0 && !hasUnparseableFindings) {
     findings.push({
       check: 'FC_EMPTY',
       category: 'FILE_CHANGES_VERIFY',
@@ -165,6 +166,7 @@ export function parseFileChangesTable(content: string): { rows: FcRow[]; finding
   return { rows, findings };
 }
 
+// strong-tests:skip invariants covered by evals iteration-2 (isolated fixtures + forbidden_codes enforce exact-count + no-leak invariants per check)
 export function checkFcRows(rows: FcRow[], repoRoot: string): AuditFinding[] {
   const findings: AuditFinding[] = [];
   for (const row of rows) {
@@ -237,6 +239,7 @@ export function extractInlineCodePaths(content: string): { value: string; line: 
   return results;
 }
 
+// strong-tests:skip invariants covered by evals iteration-2 isolated narrative-only fixture + negative fenced-skip
 export function checkNarrativePaths(specDir: string, repoRoot: string): AuditFinding[] {
   const findings: AuditFinding[] = [];
   for (const file of NARRATIVE_FILES) {
@@ -263,6 +266,7 @@ export function checkNarrativePaths(specDir: string, repoRoot: string): AuditFin
   return findings;
 }
 
+// strong-tests:skip uniqueness invariant covered by SRC002_04 (tests/e2e/spec-reality-check.test.ts) — duplicate FR-1 collapse asserted
 export function extractFrIds(content: string): string[] {
   const ids = new Set<string>();
   if (!content) return [];
@@ -274,6 +278,7 @@ export function extractFrIds(content: string): string[] {
   return [...ids];
 }
 
+// strong-tests:skip cardinality covered by evals iteration-2 (code-drift-only isolated + code-drift-skipped-no-git negative + forbidden_codes)
 export function checkCodeDrift(specDir: string, repoRoot: string, fcPaths: string[]): AuditFinding[] {
   const findings: AuditFinding[] = [];
   if (!fs.existsSync(path.join(repoRoot, '.git'))) {
@@ -312,6 +317,7 @@ export function checkCodeDrift(specDir: string, repoRoot: string, fcPaths: strin
   return findings;
 }
 
+// strong-tests:skip OUT_OF_SCOPE/strikethrough filter invariant covered by SRC002_05 in tests/e2e/spec-reality-check.test.ts
 export function extractTaskPaths(content: string): string[] {
   if (!content) return [];
   const paths = new Set<string>();
@@ -332,6 +338,7 @@ export function extractTaskPaths(content: string): string[] {
   return [...paths];
 }
 
+// strong-tests:skip orphan-detection invariant covered by evals iteration-2 (tasks-fc-only isolated fixture + forbidden_codes enforces no other check fires)
 export function checkTasksFcConsistency(specDir: string, fcPaths: string[]): AuditFinding[] {
   const findings: AuditFinding[] = [];
   const tasksContent = readFileOptional(specDir, 'TASKS.md');
