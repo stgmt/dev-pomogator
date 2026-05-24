@@ -227,7 +227,7 @@
       "fixture": ".specs/spec-workflow-md-validation",
       "real_spec": true,
       "expected_error": 0,
-      "expected_codes_optional": ["NARRATIVE_PATH_MISSING", "CODE_DRIFT_FR_ALREADY_DONE", "FC_PARSE_UNPARSEABLE", "FC_PLACEHOLDER_PATH", "FC_GLOB_PATTERN", "TASKS_FC_CONSISTENCY", "CODE_DRIFT_SKIPPED"],
+      "expected_codes_optional": ["NARRATIVE_PATH_MISSING", "CODE_DRIFT_FR_ALREADY_DONE", "FC_PARSE_UNPARSEABLE", "FC_PLACEHOLDER_PATH", "FC_GLOB_PATTERN", "FC_ACTION_UNCHECKED", "TASKS_FC_CONSISTENCY", "CODE_DRIFT_SKIPPED"],
       "forbidden_codes": ["FC_CREATE_EXISTS", "FC_EDIT_MISSING", "FC_DELETE_MISSING"],
       "category": "regression-baseline-pinned"
     },
@@ -238,7 +238,7 @@
       "fixture": ".specs/dev-pomogator-canonical-plugin",
       "real_spec": true,
       "expected_error": 0,
-      "expected_codes_optional": ["NARRATIVE_PATH_MISSING", "CODE_DRIFT_FR_ALREADY_DONE", "TASKS_FC_CONSISTENCY", "FC_PARSE_UNPARSEABLE", "FC_PLACEHOLDER_PATH", "FC_GLOB_PATTERN", "CODE_DRIFT_SKIPPED"],
+      "expected_codes_optional": ["NARRATIVE_PATH_MISSING", "CODE_DRIFT_FR_ALREADY_DONE", "TASKS_FC_CONSISTENCY", "FC_PARSE_UNPARSEABLE", "FC_PLACEHOLDER_PATH", "FC_GLOB_PATTERN", "FC_ACTION_UNCHECKED", "CODE_DRIFT_SKIPPED"],
       "forbidden_codes": ["FC_CREATE_EXISTS", "FC_EDIT_MISSING", "FC_DELETE_MISSING"],
       "category": "regression-baseline-pinned"
     },
@@ -279,6 +279,29 @@
       "hook_input_raw": "!!! not json !!!",
       "expected_hook_outcome": "permit",
       "category": "hook-parsed"
+    },
+    {
+      "id": 27,
+      "name": "v2-narrative-runtime-paths-skip-NEGATIVE",
+      "prompt": "Bug 10 caught: runtime paths (~/, $VAR, %VAR%, /etc/, C:\\) in narrative backticks fired false NARRATIVE_PATH_MISSING. Real-world hit: pomogator-doctor spec emitted false WARNING on `~/.dev-pomogator/config.json` and `~/.claude/mcp.json` (runtime user-home artifacts, not repo files).",
+      "fixture": "tests/fixtures/spec-reality-check/v2/fc-runtime-paths-skip",
+      "setup": { "git_init_empty": true },
+      "expected_error": 0,
+      "forbidden_codes": ["NARRATIVE_PATH_MISSING"],
+      "category": "negative-runtime-path"
+    },
+    {
+      "id": 26,
+      "name": "v2-fc-non-standard-actions-FC_ACTION_UNCHECKED",
+      "prompt": "Bug 7 caught: actions rename/reuse/preserve/create+edit silently ignored by parser (parser only checked create/edit/delete; other actions fell through with no finding). Now all non-{create,edit,delete} actions emit FC_ACTION_UNCHECKED INFO so user knows row was parsed but drift not verified. Real-world hit: skills-rules-optimizer (rename rows), and reuse/preserve/create+edit found in corpus scan.",
+      "fixture": "tests/fixtures/spec-reality-check/v2/fc-non-standard-actions",
+      "setup": { "git_init_empty": true },
+      "expected_total": 4,
+      "expected_error": 0,
+      "expected_info": 4,
+      "expected_codes": ["FC_ACTION_UNCHECKED"],
+      "forbidden_codes": ["FC_CREATE_EXISTS", "FC_EDIT_MISSING", "FC_DELETE_MISSING", "FC_EMPTY", "FC_PARSE_UNPARSEABLE"],
+      "category": "non-standard-actions"
     },
     {
       "id": 23,

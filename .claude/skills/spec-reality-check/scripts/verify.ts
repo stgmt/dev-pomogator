@@ -227,6 +227,19 @@ export function checkFcRows(rows: FcRow[], repoRoot: string): AuditFinding[] {
     const resolved = path.resolve(repoRoot, row.path);
     const exists = fs.existsSync(resolved);
     const a = row.action;
+    const STANDARD_ACTIONS = new Set(['create', 'edit', 'delete']);
+    if (!STANDARD_ACTIONS.has(a)) {
+      findings.push({
+        check: 'FC_ACTION_UNCHECKED',
+        category: 'FILE_CHANGES_VERIFY',
+        severity: 'INFO',
+        message: `FILE_CHANGES row ${row.rowNumber}: action="${a}" not in {create, edit, delete} — drift check skipped`,
+        details: `Path=${row.path} action=${a}. Standard CRUD actions are checked. Variants like rename/move/replace/reuse/preserve/create+edit need source+target paths which single-column FC tables don't express. Consider splitting into standard rows.`,
+        file: row.path,
+        line: row.rowNumber,
+      });
+      continue;
+    }
     if (a === 'create' && exists) {
       findings.push({
         check: 'FC_CREATE_EXISTS',
@@ -262,6 +275,16 @@ export function checkFcRows(rows: FcRow[], repoRoot: string): AuditFinding[] {
   return findings;
 }
 
+export function isRuntimePath(p: string): boolean {
+  if (!p) return false;
+  if (p.startsWith('~')) return true;
+  if (/^\$[A-Z_]+/.test(p)) return true;
+  if (/^%[A-Z_]+%/.test(p)) return true;
+  if (path.isAbsolute(p)) return true;
+  if (/^[A-Za-z]:[\\/]/.test(p)) return true;
+  return false;
+}
+
 export function extractInlineCodePaths(content: string): { value: string; line: number }[] {
   const stripped = stripBackticksAndCodeBlocks(content);
   const results: { value: string; line: number }[] = [];
@@ -294,6 +317,7 @@ export function checkNarrativePaths(specDir: string, repoRoot: string): AuditFin
       if (segments.length === 1) continue;
       if (isPlaceholderPath(ref.value)) continue;
       if (isGlobPath(ref.value)) continue;
+      if (isRuntimePath(ref.value)) continue;
       const resolved = path.resolve(repoRoot, ref.value);
       if (fs.existsSync(resolved)) continue;
       if (resolved.startsWith(specDir)) continue;

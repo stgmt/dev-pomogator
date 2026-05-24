@@ -85,3 +85,20 @@ See [references/checks.md](references/checks.md) for full reference: check IDs, 
 - Does NOT auto-fix drift — only detects and reports.
 - LLM-driven semantic drift (narrative text claims behavior the code does not have) is out of scope for v0.1.0.
 - Cross-spec drift (one spec references another that moved) is out of scope for v0.1.0.
+
+## Maintenance — required when editing this skill
+
+⚠️ When editing `scripts/verify.ts` / `scripts/verify-hook.ts` / fixtures / this SKILL.md / `references/checks.md`:
+
+1. Sync installed copy: `cp .claude/skills/spec-reality-check/scripts/verify*.ts .dev-pomogator/tools/spec-reality-check/`
+2. Run all three verification artifacts:
+
+```bash
+npx tsx .claude/skills/spec-reality-check/evals/run-evals.ts        # 25/25 must pass
+npx tsx .claude/skills/spec-reality-check/evals/bulk-run.ts         # surface false positives on real corpus
+npx tsx .claude/skills/spec-reality-check/evals/bench-synthetic.ts  # NFR ≤30s; algorithm O(N)
+```
+
+3. If `regression-baseline-pinned` evals fail OR `bulk-run` clean-spec count decreases → unfixed regression; DO NOT commit.
+
+Full discipline + anti-patterns in `.claude/rules/spec-reality-check/maintain-evals-on-edit.md` (always-apply rule).

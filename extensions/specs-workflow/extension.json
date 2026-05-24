@@ -96,7 +96,8 @@
       ".claude/rules/specs-workflow/variant-matrix/when-to-build-matrix.md",
       ".claude/rules/specs-workflow/variant-matrix/escape-hatch-audit.md",
       ".claude/rules/specs-workflow/architecture-decision/when-to-build-architecture.md",
-      ".claude/rules/specs-workflow/architecture-decision/escape-hatch-audit.md"
+      ".claude/rules/specs-workflow/architecture-decision/escape-hatch-audit.md",
+      ".claude/rules/spec-reality-check/maintain-evals-on-edit.md"
     ]
   },
   "tools": {
