@@ -87,13 +87,57 @@ Feature: ARCH001_Architecture_Decision_Builder
   @feature12
   Scenario: ARCH005_05 COMPLETENESS_COVERAGE blocks STOP on pending dimension
     Given a completeness ledger where the "compliance-privacy" dimension is pending
-    When the audit command runs
+    When the audit-completeness command runs
     Then it should emit a COMPLETENESS_COVERAGE finding with code DIMENSION_PENDING and severity WARNING
     And a missing COMPLETENESS.md file should be treated as all 8 dimensions pending
 
   @feature13
   Scenario: ARCH005_06 COMPLETENESS_COMPLETE positive signal and reason guard
     Given a completeness ledger where all 8 dimensions are addressed or out-of-scope
-    When the audit command runs
+    When the audit-completeness command runs
     Then it should emit exactly one COMPLETENESS_COMPLETE finding with severity INFO
     And an out-of-scope dimension whose reason is shorter than 12 chars should emit WARNING_REASON_TOO_SHORT
+
+  @feature14
+  Scenario: ARCH007_01 Cross-axis synthesis produces emergent insight
+    Given a spec with two resolved axes whose choices interact
+    When the synthesis command runs
+    Then SYNTHESIS.md should be created
+    And each insight should reference at least two axis ids
+
+  @feature15
+  Scenario: ARCH007_02 Correction-log renders only when non-empty
+    Given a variant with a non-empty correction_log
+    When the axis artefact is generated
+    Then the markdown should contain a Corrections section
+    And a variant without correction_log should produce no Corrections section
+
+  @feature18
+  Scenario: ARCH001_06 stack-locked prose still enumerates axes (completeness can run)
+    Given a PRD that says the stack is already chosen but has no build manifest
+    When I run detect-axes on it
+    Then axes should still be enumerated (not hard-OUT to 0)
+    And the result should flag stack_locked true
+    And a PRD containing a real build manifest should still hard-OUT to 0 axes
+
+  @feature19
+  Scenario: ARCH005_07 addressed dimension without a pointer is flagged (non-blocking)
+    Given a completeness ledger where "compliance-privacy" is addressed but has an empty pointer
+    When the audit-completeness command runs
+    Then it should emit an ADDRESSED_WITHOUT_POINTER finding with severity INFO
+    And it should still emit COMPLETENESS_COMPLETE because INFO does not block
+
+  @feature16
+  Scenario: ARCH007_03 Live context7 marks proofs honestly
+    Given the skill builds a technical claim for a variant
+    When the library resolves in context7
+    Then the claim should be marked VERIFIED via context7 with library and version
+    And a library with no context7 match should be marked UNVERIFIED Context7 no match
+
+  @feature17
+  Scenario: ARCH007_04 Selection policy drives recommendation
+    Given an axis whose variants have different policy_fit tags
+    When the selected policy is mvp-poc versus production-grade
+    Then the recommended variant should differ between the two policies
+    And the artefact should render a variant-by-policy demonstration table
+    And an unset policy should default to mvp-poc

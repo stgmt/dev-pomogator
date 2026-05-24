@@ -119,8 +119,37 @@ Audit emit findings (mirror ARCHITECTURE_COVERAGE / VARIANT_COVERAGE shape, cate
 - `DIMENSION_PENDING` severity **WARNING** (блокирует STOP) — измерение `pending`, ОТСУТСТВУЕТ в ledger, ИЛИ ledger-файл не создан (отсутствие файла = все 8 pending)
 - `COMPLETENESS_COMPLETE` severity **INFO** (positive signal) — все 8 измерений `addressed`/`out-of-scope`
 - escape `[skip-completeness-dimension: <reason ≥12>]` → запись в `.claude/logs/spec-completeness-escapes.jsonl` (reuse FR-10 JSONL writer, поле `axis_id` несёт dimension-id); reason < 12 → `WARNING_REASON_TOO_SHORT` severity INFO
+- `ADDRESSED_WITHOUT_POINTER` severity **INFO** (non-blocking) — измерение `addressed`, но колонка-указатель пустая или placeholder (`—`); требует цитировать design pointer, не голую галочку (закрывает «addressed без доказательства»)
 
 Детерминированная проверка — **presence/status**, НЕ семантическое качество (качество измерений — rubric R13-R20, qualitative layer). Cost-quota измерение (R19) рекомендуется ставить ДО lock осей — единственное которое может изменить axis-решение. Гейт заставляет explicit consideration каждого измерения (`addressed` или сознательно `out-of-scope` с reason) → закрывает silent omission. Расширяет ответственность скила: «выбрать стек» → «выбрать стек И сертифицировать полноту архитектуры». Метод per CorrectBench/DeepVerifier (см. FR-11 R13-R20 note): детерминированный structured gate, не intrinsic «не забудь проверить».
 
 **Связанные AC:** [AC-12](ACCEPTANCE_CRITERIA.md#ac-12-fr-12)
 **Use Case:** [UC-2](USE_CASES.md#uc-2-inside-create-spec--phase-175-happy-path)
+
+## FR-13: Cross-axis synthesis
+
+После per-axis loop команда `synthesis <spec-dir>` собирает frontmatter всех `AXIS-*.md` → emergent insights ПОПЕРЁК осей (cross-axis dependencies, избыточность компонента, вторичные эффекты) → `SYNTHESIS.md` + секция в INDEX.html. Insight shape: `{axes[], title, description, recommendation, trade_off}`. Пример (реальный bhph): «n8n избыточен — Supabase primitives (cron+pgmq+pg_net+Edge) покрывают ВСЕ его роли» — вывод из пересечения осей scheduling+queue+webhook, который per-axis анализ не даёт. Helper собирает/рендерит, контент insights заполняет skill (LLM), mirror artefact-generator split. 0 insights допустимо для 1-axis spec.
+
+**Связанные AC:** [AC-13](ACCEPTANCE_CRITERIA.md#ac-13-fr-13)
+**Use Case:** [UC-2](USE_CASES.md#uc-2-inside-create-spec--phase-175-happy-path)
+
+## FR-14: Correction-log (reasoning journey)
+
+VariantModel.correction_log[] фиксирует «assumption → discovered → corrected because» (mirror iteration-log из реального ARCHITECTURE_PROPOSAL.md где 2 major корректировки родились из диалога). Рендерится секцией `## Corrections` в axis md/html если non-empty. Опционально (вариант без корректировок → секция отсутствует, не ломает render). Закрывает gap: артефакт фиксирует не только финал, но путь с честными «было неправо→исправлено».
+
+**Связанные AC:** [AC-14](ACCEPTANCE_CRITERIA.md#ac-14-fr-14)
+**Use Case:** [UC-1](USE_CASES.md#uc-1-standalone--выбор-стека-для-greenfield-проекта-happy-path)
+
+## FR-15: Live context7 пруфы
+
+При построении вариантов (per-axis, skill-workflow) skill дёргает `mcp__context7__resolve-library-id` + `query-docs` для СВЕЖИХ пруфов тех-заявлений вместо second-hand. Маркер `[VERIFIED via context7:<lib> <ver>]`; нет матча библиотеки → `[UNVERIFIED — Context7 no match]` (честнее fabricated). Это **skill-workflow concern** (MCP, LLM-layer) — НЕ CLI-helper (helpers остаются pure Bash-callable для eval-детерминизма). allowed-tools += `mcp__context7__resolve-library-id`, `mcp__context7__query-docs`. Усиливает R3 anti-hallucination (дисциплина re-research при challenge: при сомнении — свежий context7, не защита посылки).
+
+**Связанные AC:** [AC-15](ACCEPTANCE_CRITERIA.md#ac-15-fr-15)
+**Use Case:** [UC-1](USE_CASES.md#uc-1-standalone--выбор-стека-для-greenfield-проекта-happy-path)
+
+## FR-16: Selection policy (default mvp-poc)
+
+Skill предлагает выбрать **политику рекомендации** (AskUserQuestion, ОДИН раз глобально перед per-axis loop, default `mvp-poc`): `mvp-poc` / `production-grade` / `cost-optimal` / `scale-ready` / `portability`. VariantModel.policy_fit[] = под какие политики вариант оптимален. AxisModel.selected_policy задаёт активную. recommended-вариант = тот, чей policy_fit включает selected_policy (fallback на is_recommended если ни один не fit). Артефакт **демонстрирует** политику: таблица «вариант × 5 политик → ✓» + policy-badge «Recommended under {policy}» на recommended-card. Default `mvp-poc` обоснован: рекомендовать самый простой/быстрый вариант → сокращает time-to-market (для MVP/PoC переинженеринг вреден). Политика глобальна (не per-axis) — согласуется с auto-mode (один выбор в начале, дальше auto per-axis под политикой). Демонстрация делает явным: «лучший» вариант зависит от цели, не догма.
+
+**Связанные AC:** [AC-16](ACCEPTANCE_CRITERIA.md#ac-16-fr-16)
+**Use Case:** [UC-1](USE_CASES.md#uc-1-standalone--выбор-стека-для-greenfield-проекта-happy-path)

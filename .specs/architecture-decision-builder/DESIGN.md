@@ -14,19 +14,24 @@
 - [FR-10: Escape hatch](FR.md#fr-10-escape-hatch-с-audit-trail)
 - [FR-11: Eval suite (debug + benchmark)](FR.md#fr-11-eval-suite--debug--benchmark-качества-2-слоя)
 - [FR-12: COMPLETENESS_COVERAGE audit + ledger](FR.md#fr-12-audit-category-completeness_coverage--completeness-ledger)
+- [FR-13: Cross-axis synthesis](FR.md#fr-13-cross-axis-synthesis)
+- [FR-14: Correction-log (reasoning journey)](FR.md#fr-14-correction-log-reasoning-journey)
+- [FR-15: Live context7 пруфы](FR.md#fr-15-live-context7-пруфы)
+- [FR-16: Selection policy (default mvp-poc)](FR.md#fr-16-selection-policy-default-mvp-poc)
 
 ## Компоненты
 
 - `SKILL.md` — mission + 4 команды (enumerate / next-axis / compile-index / audit) + contract. Mirror `variant-matrix-build/SKILL.md`.
 - `axis-detector.ts` — `detectAxes(prdContent, opts) → AxisCandidate[]`; 3-layer detection + hard-OUT brownfield.
 - `artefact-generator.ts` — `generateAxisArtefact(axis, ctx) → {mdPath, htmlPath}`; Fisher-Yates seeded randomization, word-budget.
-- `html-renderer.ts` — `renderAxisHtml(model)` / `renderIndexHtml(axes)`; pure template-literal, inline CSS.
+- `html-renderer.ts` — `renderAxisHtml(model)` / `renderIndexHtml(axes)` / `renderSynthesisHtml(insights)` (FR-13); pure template-literal, inline CSS. `VariantModel` несёт опц. `policy_fit[]` (FR-16) + `correction_log[]` (FR-14); `AxisModel` несёт опц. `selected_policy` (FR-16). Policy-badge на recommended-card + demonstration-таблица (вариант × 5 политик).
 - `index-compiler.ts` — glob AXIS-*.md frontmatter → status matrix (AUTOGEN markers).
 - `open-in-browser.ts` — `openInBrowser(path) → {launched, fallback?}`; cross-platform, ENOENT-safe.
 - `live-fetch.ts` — версии latest stable, 24h cache в `.architecture-cache.json`.
 - `escape-log.ts` — JSONL append-only writer.
 - `audit.ts` — ARCHITECTURE_COVERAGE (FR-9) + COMPLETENESS_COVERAGE (FR-12) category logic; latter reads `COMPLETENESS.md` ledger via `collectCompletenessRows`.
-- `architecture-decision-cli.ts` — dispatcher для 4 команд.
+- `synthesis.ts` (FR-13) — `synthesize(specDir) → {insights[]}` парсит AXIS-*.md frontmatter → собирает cross-axis insights (skill-LLM заполняет `insights`, helper рендерит/собирает) → пишет `SYNTHESIS.md`. Mirror artefact-generator split (helper = механика, LLM = проза).
+- `architecture-decision-cli.ts` — dispatcher для команд (FR-13 добавляет `synthesis`).
 
 ## Где лежит реализация
 
@@ -61,6 +66,8 @@
 - Method: `compile-index <spec-path>` → JSON `{indexMd, indexHtml, axes_total, axes_pending}` (exit 0)
 - Method: `open-browser <html-path>` → JSON `{launched, fallback?}` (exit 0)
 - Method: `audit <spec-path>` → JSON `{findings: [{code, severity, axis_id}]}` (exit 0)
+- Method: `audit-completeness <spec-path>` → JSON `{findings[]}` (COMPLETENESS_COVERAGE, FR-12) (exit 0)
+- Method: `synthesis <spec-path>` → JSON `{synthesisMd, insights_count}` (FR-13) (exit 0)
 
 Все команды: JSON в stdout, диагностика в stderr. Exit codes: 0 success / 1 generic / 2 usage / 3 PRD missing / 4 cascading-depth-exceeded.
 
@@ -140,6 +147,37 @@
 - Семантический audit (грепом детектить «есть ли compliance enforcement») — rejected because completeness семантична; механический греп даёт false-pass/false-fail (та же галлюцинация что у free-form self-critique по CorrectBench)
 - Отдельный плагин completeness-gate (Stop hook + /gap-audit для любого design-doc) — rejected для ЭТОЙ задачи because 12 дыр родились именно в architecture-flow, ledger живёт рядом с AXIS-артефактами, bench `scenario-bhph` уже здесь; generic Stop-hook вариант остаётся открытым для не-architecture документов (отдельная задача)
 - Только qualitative rubric R13-R20 без deterministic gate — rejected because возвращает к «надежде что модель вспомнит» — ровно провал инициировавший задачу
+
+### Decision: Selection policy через policy_fit-теги (не numeric scores), глобально (не per-axis), default mvp-poc
+
+**Rationale:** Рекомендация не абсолютна — зависит от цели проекта. Юзер потребовал: skill предлагает выбрать политику и default — «MVP/PoC» (рекомендовать самый простой/быстрый вариант → time-to-market↓). Вариант несёт `policy_fit: PolicyId[]` (под какие из 5 политик он оптимален); recommended = тот, чей `policy_fit` включает `selected_policy` (fallback `is_recommended`). Demonstration-таблица (вариант × 5 политик) делает зависимость выбора от цели явной для ревьюера. Default `mvp-poc` не требует ответа (auto-mode сохранён).
+
+**Trade-off:** `policy_fit` ставит LLM субъективно (нет численной формулы) — два прогона могут разойтись в тегах; demonstration-таблица митигирует (ревьюер видит и оспаривает), но не устраняет субъективность.
+
+**Alternatives considered:**
+- Numeric weighted-scoring per policy (вес × критерий) — rejected because требует калибровки весов, даёт ложную точность, демонстрирует зависимость не лучше чем теги, усложняет helper
+- Policy per-axis (каждая ось своя политика) — rejected because противоречит auto-mode (5-6 AskUserQuestion вместо одного) и реальный кейс — одна цель на проект (весь MVP, не «БД под прод, hosting под прототип»)
+- Без политики, абсолютная рекомендация (исходный дизайн) — rejected because юзер прямо: рекомендация должна учитывать «для чего» (прототип vs прод), иначе переинженеринг
+
+### Decision: Cross-axis synthesis — отдельный артефакт SYNTHESIS.md после per-axis loop
+
+**Rationale:** Главное эталонное решение bhph (Variant F Supabase-native) было **emergent** — родилось из синтеза поперёк осей («раз hosting=Supabase и auth=Supabase → n8n-orchestrator избыточен»), а не из любой одной оси изолированно. Per-axis артефакты структурно не ловят такие выводы. Отдельная команда `synthesis` собирает все AXIS-*.md → emergent insights (cross-axis dependency / избыточность компонента / вторичный эффект), каждый ссылается на ≥2 axis-id. Mirror artefact-generator split: helper парсит/рендерит, LLM заполняет insights.
+
+**Trade-off:** Synthesis запускается после lock осей — если инсайт меняет axis-решение, нужен повторный проход (не блокируется автоматически); 0 insights допустимо для 1-axis spec (не ложно-падает).
+
+**Alternatives considered:**
+- Synthesis внутри compile-index (не отдельная команда) — rejected because смешивает детерминированный status-matrix с LLM-прозой, ломает eval-детерминизм INDEX (как было с FR-12 merge-регрессией)
+- Cross-axis секция внутри каждого AXIS-md — rejected because дублирует инсайт N раз, нет единого места «вид сверху», и инсайт по определению cross-axis (не принадлежит одной оси)
+
+### Decision: Correction-log опционален, рендерится только при непустом
+
+**Rationale:** Reasoning journey («предполагал X → обнаружил Y → исправил потому что Z», mirror bhph iteration-log) ценен для честности артефакта (R14), но не каждый вариант проходит через корректировку. `VariantModel.correction_log[]` опционален; секция `## Corrections` рендерится только если непустой — отсутствие не ломает render и не создаёт пустых секций.
+
+**Trade-off:** Опциональность означает что LLM может просто не заполнять correction_log (нет принуждения) — честность держится на дисциплине SKILL.md, не на gate.
+
+**Alternatives considered:**
+- Обязательный correction_log на каждый вариант — rejected because форсит фейковые «корректировки» где их не было (шум, обратное честности)
+- Correction-log как отдельный файл — rejected because корректировка привязана к конкретному варианту оси, место — рядом с вариантом, не в отдельном артефакте
 
 ## Eval & Debug (FR-11)
 

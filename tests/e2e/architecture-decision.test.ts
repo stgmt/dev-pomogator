@@ -94,6 +94,21 @@ describe('ARCH001: Axis detection', () => {
       expect(ids.has(expected)).toBe(true);
     }
   });
+
+  it('ARCH001_06: stack-locked prose enumerates axes + flags stack_locked (not hard-OUT)', () => {
+    const prd = [
+      '# PRD — locked stack, no code yet',
+      'Users need persistent relational data and an HTTP API.',
+      'The stack is already chosen (Supabase + Twilio) and is not being reconsidered.',
+    ].join('\n');
+    const r = detectAxes(prd);
+    // locked PROSE must NOT hard-OUT (only a build manifest does) — axes still enumerated so
+    // the completeness layer applies even when variant-picking is moot.
+    expect(r.axes_detected).toBeGreaterThanOrEqual(1);
+    expect(r.stack_locked).toBe(true);
+    // contrast: a real build manifest still hard-OUTs to 0 axes
+    expect(detectAxes('deps live in package.json').axes_detected).toBe(0);
+  });
 });
 
 describe('ARCH002: Artefact generation', () => {
@@ -293,5 +308,33 @@ describe('ARCH005: CLI integration (spawnSync)', () => {
     // reason "short" (5 chars) < 12 → WARNING_REASON_TOO_SHORT, and escape logged to sibling file
     expect(findings.some((f) => f.code === 'WARNING_REASON_TOO_SHORT')).toBe(true);
     expect(fs.existsSync(path.join(dir, 'spec-completeness-escapes.jsonl'))).toBe(true);
+  });
+
+  it('ARCH005_07: addressed dimension with empty pointer → ADDRESSED_WITHOUT_POINTER (INFO, non-blocking)', () => {
+    const dir = tmp();
+    writeLedger(dir, {
+      'internal-consistency': 'addressed | diagram synced',
+      'flow-completeness': 'addressed | all flows listed',
+      'compliance-privacy': 'addressed | ', // addressed but NO pointer cited
+      'auth-secrets': 'addressed | signature auth',
+      observability: 'addressed | system_errors table',
+      'data-lifecycle': 'addressed | cleanup cron',
+      'cost-quota': 'addressed | budget modelled',
+      'deploy-ops': 'addressed | CI/CD documented',
+    });
+    const res = runCli(['audit-completeness', dir]);
+    expect(res.status).toBe(0);
+    const findings = JSON.parse(res.stdout).findings as Array<{
+      code: string;
+      severity: string;
+      dimension_id?: string;
+    }>;
+    const noPtr = findings.filter((f) => f.code === 'ADDRESSED_WITHOUT_POINTER');
+    expect(noPtr).toHaveLength(1);
+    expect(noPtr[0].dimension_id).toBe('compliance-privacy');
+    expect(noPtr[0].severity).toBe('INFO');
+    // INFO does not block: the ledger is still "complete" (no pending dimensions)
+    expect(findings.some((f) => f.code === 'COMPLETENESS_COMPLETE')).toBe(true);
+    expect(findings.some((f) => f.code === 'DIMENSION_PENDING')).toBe(false);
   });
 });

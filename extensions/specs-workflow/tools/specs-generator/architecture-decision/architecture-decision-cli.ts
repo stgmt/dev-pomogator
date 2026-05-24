@@ -16,7 +16,8 @@ import { generateAxisArtefact } from './artefact-generator.ts';
 import { openInBrowser } from './open-in-browser.ts';
 import { compileIndex } from './index-compiler.ts';
 import { checkArchitectureCoverage, checkCompletenessCoverage } from './audit.ts';
-import type { AxisModel } from './html-renderer.ts';
+import { synthesize } from './synthesis.ts';
+import type { AxisModel, Insight } from './html-renderer.ts';
 
 function fail(code: number, msg: string): never {
   process.stderr.write(`architecture-decision-cli error: ${msg}\n`);
@@ -78,6 +79,28 @@ async function main(): Promise<void> {
       if (!specDir) fail(2, 'audit-completeness requires <spec-dir>');
       if (!fs.existsSync(specDir)) fail(3, `spec-dir not found: ${specDir}`);
       process.stdout.write(JSON.stringify({ findings: checkCompletenessCoverage(specDir) }));
+      break;
+    }
+    case 'synthesis': {
+      // FR-13: synthesis <spec-dir> [insights.json]. Insights are authored by the
+      // skill/LLM (cross-axis prose); helper validates (≥2 known axes) + renders.
+      const specDir = process.argv[3];
+      const insightsPath = process.argv[4];
+      if (!specDir) fail(2, 'synthesis requires <spec-dir> [insights.json]');
+      if (!fs.existsSync(specDir)) fail(3, `spec-dir not found: ${specDir}`);
+      let insights: Insight[] = [];
+      if (insightsPath) {
+        if (!fs.existsSync(insightsPath)) fail(3, `insights file not found: ${insightsPath}`);
+        insights = JSON.parse(fs.readFileSync(insightsPath, 'utf-8')) as Insight[];
+      }
+      const r = synthesize(specDir, insights);
+      process.stdout.write(
+        JSON.stringify({
+          synthesisMd: r.synthesisMd,
+          insights_count: r.insights_count,
+          rejected: r.rejected,
+        }),
+      );
       break;
     }
     default:

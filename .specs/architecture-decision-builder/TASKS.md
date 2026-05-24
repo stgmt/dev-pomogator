@@ -35,6 +35,11 @@
 | T3-28 | Обновить CLAUDE.md (2 rule в таблицу) | TODO | — | Phase 3: Refactor & Polish | 10m |
 | T3-29 | Рефакторинг + jscpd baseline | TODO | — | Phase 3: Refactor & Polish | 30m |
 | T3-30 | Final verification (validate+audit+build+smoke) | TODO | — | Phase 3: Refactor & Polish | 15m |
+| T4-31 | FR-13 synthesis.ts + CLI synthesis + SYNTHESIS template | DONE | — | Phase 4: Policy + Synthesis | 45m |
+| T4-32 | FR-16 policy renderer (pickRecommended + demonstration table + badge) | DONE | — | Phase 4: Policy + Synthesis | 45m |
+| T4-33 | FR-14 correction_log render + FR-15 live-context7 дисциплины | DONE | — | Phase 4: Policy + Synthesis | 30m |
+| T4-34 | SKILL.md workflow (policy step 1.5 + synthesis step 3.5 + context7 allowed-tools) | DONE | — | Phase 4: Policy + Synthesis | 30m |
+| T4-35 | eval-10/11 + rubric R21-R23 + extension.json bump 1.22.0 | DONE | — | Phase 4: Policy + Synthesis | 30m |
 <!-- end auto-generated -->
 
 > Regenerate via `Skill("task-board-forms")` or `npx tsx extensions/specs-workflow/tools/specs-generator/spec-status.ts -Path .specs/architecture-decision-builder -Format task-table` and splice between markers.
@@ -220,3 +225,38 @@
   - [ ] `validate-spec.ts -Path .specs/architecture-decision-builder` → 0 errors
   - [ ] `audit-spec.ts -Path .specs/architecture-decision-builder` → 0 findings
   - [ ] `npm run build` clean + standalone smoke на bhph PRD
+
+## Phase 4: Selection policy + Cross-axis synthesis (FR-13..16)
+
+> Доработка после live-прогона на bhph: selection policy (FR-16, default mvp-poc), cross-axis synthesis (FR-13), correction-log (FR-14), live-context7 (FR-15). Eval 29/29 (старые 9 cases + eval-10 synthesis + eval-11 policy).
+
+- [x] FR-13 synthesis.ts + CLI `synthesis` + SYNTHESIS.md.template -- @feature14 — Status: DONE | Est: 45m
+  _Requirements: [FR-13](FR.md#fr-13-cross-axis-synthesis)_
+  _Leverage: index-compiler.ts collectRows pattern, artefact-generator render split_
+  **Done When:**
+  - [x] `synthesize(specDir, insights)` валидирует ≥2 known axis-id, рендерит SYNTHESIS.md+html
+  - [x] `synthesis <spec-dir> [insights.json]` команда; insights_count=0 валидно
+  - [x] eval-10 green (1 valid + 2 rejected insights)
+- [x] FR-16 policy renderer (pickRecommended + demonstration table + badge) -- @feature17 — Status: DONE | Est: 45m
+  _Requirements: [FR-16](FR.md#fr-16-selection-policy-default-mvp-poc)_
+  _Leverage: html-renderer VariantModel/AxisModel, artefact-generator renderAxisMarkdown_
+  **Done When:**
+  - [x] PolicyId (5), pickRecommended (policy_fit ∋ selected_policy, fallback is_recommended)
+  - [x] demonstration-таблица (вариант × 5 политик) в md + html, default mvp-poc
+  - [x] eval-11 green (mvp-poc→serverless, production-grade→k8s, recommendations differ)
+- [x] FR-14 correction_log render + FR-15 live-context7 дисциплины -- @feature15 — Status: DONE | Est: 30m
+  _Requirements: [FR-14](FR.md#fr-14-correction-log-reasoning-journey), [FR-15](FR.md#fr-15-live-context7-пруфы)_
+  **Done When:**
+  - [x] correction_log непустой → `## Corrections` (md) + `<details>` (html); пустой → нет секции
+  - [x] FR-15 live-context7 дисциплина в SKILL.md (allowed-tools += context7 MCP)
+- [x] SKILL.md workflow (policy step 1.5 + synthesis step 3.5 + context7) -- @feature16 — Status: DONE | Est: 30m
+  _Requirements: [FR-15](FR.md#fr-15-live-context7-пруфы), [FR-16](FR.md#fr-16-selection-policy-default-mvp-poc)_
+  **Done When:**
+  - [x] step 1.5 policy AskUserQuestion (default mvp-poc), step 3.5 synthesis
+  - [x] variant-format-spec + phase1.75 reference обновлены
+- [x] eval-10/11 + rubric R21-R23 + extension.json bump 1.22.0 -- @feature17 — Status: DONE | Est: 30m
+  _Requirements: [FR-13](FR.md#fr-13-cross-axis-synthesis), [FR-16](FR.md#fr-16-selection-policy-default-mvp-poc)_
+  **Done When:**
+  - [x] eval-runner grade_synthesis/grade_policy + 2 command branches; 29/29 green
+  - [x] rubric R21 policy-selected / R22 policy-demonstration / R23 cross-axis-synthesis
+  - [x] extension.json: synthesis.ts + SYNTHESIS.md.template в toolFiles, v1.22.0

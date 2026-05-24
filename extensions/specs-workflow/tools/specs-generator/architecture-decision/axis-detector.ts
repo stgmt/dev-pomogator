@@ -31,6 +31,9 @@ export interface DetectResult {
   axes_detected: number;
   axes: AxisCandidate[];
   skipped_reason?: string;
+  /** Stack chosen in prose (no build manifest). Axes still enumerated; variant-picking moot,
+   *  completeness layer (FR-12) still applies. */
+  stack_locked?: boolean;
 }
 
 // L1 — BMAD seed catalog (closed list) + the keywords that activate each axis (L2).
@@ -49,7 +52,7 @@ const SEED_AXES: SeedAxis[] = [
   { id: 'auth', name: 'Authentication / access', category: 'Auth-Security', tier: 'Critical', why_needed: 'User login and data isolation', keywords: /\b(auth(entication|orization)?|log[ -]?in|sign[ -]?in|tenant|RLS|access control|isolation)\b/i },
   { id: 'api', name: 'HTTP API layer', category: 'API-Communication', tier: 'Critical', why_needed: 'Client talks to backend over an API', keywords: /\b(HTTP|REST|GraphQL|API|endpoint|webhook)\b/i },
   { id: 'frontend', name: 'Web frontend', category: 'Frontend', tier: 'Important', why_needed: 'User-facing dashboard / UI', keywords: /\b(frontend|front[ -]end|web client|dashboard|UI|SPA|web app)\b/i },
-  { id: 'hosting', name: 'Hosting / deployment', category: 'Infra-Deployment', tier: 'Critical', why_needed: 'Where the system runs', keywords: /\b(deploy|hosting|server|managed service|infrastructure|cloud)\b/i },
+  { id: 'hosting', name: 'Hosting / deployment', category: 'Infra-Deployment', tier: 'Critical', why_needed: 'Where the system runs', keywords: /\b(deploy|hosting|server|managed services?|infrastructure|cloud|PaaS|serverless)\b/i },
   { id: 'background-jobs', name: 'Background jobs / scheduling', category: 'Infra-Deployment', tier: 'Important', why_needed: 'Scheduled / async work (cron, digests)', keywords: /\b(background job|cron|schedule[ds]?|daily digest|batch|queue|worker)\b/i },
   { id: 'email', name: 'Email channel', category: 'API-Communication', tier: 'Important', why_needed: 'Outbound/inbound email handling', keywords: /\b(e[ -]?mail|notification|digest|SMTP|inbound mail)\b/i },
   { id: 'llm', name: 'LLM / AI reasoning', category: 'Other', tier: 'Deferred', why_needed: 'AI-assisted feature', keywords: /\b(LLM|GPT|Claude|OpenRouter|AI[ -](model|reasoning)|classif)\b/i },
@@ -63,9 +66,14 @@ const SEED_AXES: SeedAxis[] = [
   { id: 'data-pipeline', name: 'Data pipeline / ingestion', category: 'Data', tier: 'Important', why_needed: 'Batch/stream data ingestion + transform', keywords: /\b(ETL|data pipeline|ingest|stream processing|Kafka|Airflow|batch job processing|конвейер данных|обработка потока)\b/i },
 ];
 
-// Brownfield hard-OUT signals — stack already chosen / not being reconsidered.
-const BROWNFIELD_SIGNALS: RegExp[] = [
+// Hard-OUT ONLY on a real build manifest (code already exists → true brownfield).
+const MANIFEST_SIGNALS: RegExp[] = [
   /\b(package\.json|pyproject\.toml|Cargo\.toml|go\.mod|[A-Za-z0-9_.-]+\.csproj|requirements\.txt|build\.gradle|pom\.xml)\b/i,
+];
+// Stack decided in PROSE (no code yet). NOT a hard-OUT — axes are still enumerated so the
+// completeness layer (FR-12) runs even when variant-picking is moot. Was a bug: locked-stack
+// greenfield projects (e.g. bhph) skipped the whole skill incl. the completeness gate.
+const STACK_LOCK_SIGNALS: RegExp[] = [
   /\b(existing (stack|codebase)|stack (is )?(already )?(chosen|locked|fixed))\b/i,
   /\bnot being reconsidered\b/i,
   /\bdo not (introduce|change) (new )?(infrastructure|stack|hosting|database)\b/i,
@@ -73,27 +81,34 @@ const BROWNFIELD_SIGNALS: RegExp[] = [
 
 function harvestNeedsClarification(content: string): AxisCandidate[] {
   const out: AxisCandidate[] = [];
-  const re = /(?:NEEDS CLARIFICATION|\bTBD\b)[^\n.]*/gi;
-  const matches = content.match(re) ?? [];
-  for (const m of matches) {
-    // only surface as an axis-candidate if it references a tech-choice noun
-    if (/\b(LLM|model|provider|database|hosting|email|queue|storage|auth)\b/i.test(m)) {
+  // Marker and tech noun may appear in EITHER order on the line:
+  //   "Which LLM … is NEEDS CLARIFICATION."  OR  "NEEDS CLARIFICATION: which LLM".
+  // So test the whole line for both, not just the text after the marker.
+  const markerRe = /NEEDS CLARIFICATION|\bTBD\b/i;
+  const techRe = /\b(LLM|model|provider|database|hosting|email|queue|storage|auth)\b/i;
+  for (const rawLine of content.split('\n')) {
+    if (markerRe.test(rawLine) && techRe.test(rawLine)) {
+      const text = rawLine.replace(/^[\s\-*>\d.]+/, '').trim();
       out.push({
         id: 'clarify-' + out.length,
-        name: 'Needs clarification: ' + m.trim().slice(0, 60),
+        name: 'Needs clarification: ' + text.slice(0, 60),
         category: 'Other',
         tier: 'Deferred',
         why_needed: 'PRD flagged this as an open tech decision',
-        evidence_quotes: [m.trim()],
+        evidence_quotes: [text],
       });
     }
   }
   return out;
 }
 
-export function detectAxes(prdContent: string): DetectResult {
-  // Hard-OUT: brownfield
-  for (const sig of BROWNFIELD_SIGNALS) {
+export function detectAxes(
+  prdContent: string,
+  opts?: { ignoreLock?: boolean },
+): DetectResult {
+  // Hard-OUT only on a build manifest (real code). Stack-locked PROSE does NOT hard-OUT —
+  // completeness must still run for locked-stack greenfield projects.
+  for (const sig of MANIFEST_SIGNALS) {
     const hit = prdContent.match(sig);
     if (hit) {
       return {
@@ -132,5 +147,21 @@ export function detectAxes(prdContent: string): DetectResult {
     axes.push(c);
   }
 
-  return { axes_detected: axes.length, axes };
+  // Stack-locked-in-prose: enumerate axes anyway (completeness still applies) but flag so the
+  // workflow skips variant-picking and goes straight to the COMPLETENESS.md ledger + audit.
+  let stackLocked = false;
+  if (!opts?.ignoreLock) {
+    for (const sig of STACK_LOCK_SIGNALS) {
+      if (sig.test(prdContent)) {
+        stackLocked = true;
+        break;
+      }
+    }
+  }
+
+  return {
+    axes_detected: axes.length,
+    axes,
+    ...(stackLocked ? { stack_locked: true } : {}),
+  };
 }

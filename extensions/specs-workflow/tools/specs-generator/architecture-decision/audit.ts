@@ -121,7 +121,11 @@ export type CompletenessStatus = 'addressed' | 'out-of-scope' | 'pending';
 
 export interface CompletenessFinding {
   category: 'COMPLETENESS_COVERAGE';
-  code: 'DIMENSION_PENDING' | 'COMPLETENESS_COMPLETE' | 'WARNING_REASON_TOO_SHORT';
+  code:
+    | 'DIMENSION_PENDING'
+    | 'COMPLETENESS_COMPLETE'
+    | 'WARNING_REASON_TOO_SHORT'
+    | 'ADDRESSED_WITHOUT_POINTER';
   severity: 'WARNING' | 'INFO';
   message: string;
   dimension_id?: string;
@@ -135,19 +139,35 @@ const LEDGER_FILENAME = 'COMPLETENESS.md';
  * (mirror index-compiler parseFrontmatter). Rows for unknown dimension keys are ignored;
  * known dimensions absent from the table are treated as `pending` by the caller.
  */
-export function collectCompletenessRows(specDir: string): Map<string, CompletenessStatus> {
-  const out = new Map<string, CompletenessStatus>();
+export interface CompletenessRow {
+  status: CompletenessStatus;
+  /** The "reason / design pointer" cell. Empty / em-dash placeholder = no real pointer. */
+  pointer: string;
+}
+
+/** A non-empty pointer is anything left after stripping dashes / em-dashes / whitespace. */
+function hasPointer(cell: string): boolean {
+  return cell.replace(/[—\-\s]/g, '').length > 0;
+}
+
+export function collectCompletenessRows(specDir: string): Map<string, CompletenessRow> {
+  const out = new Map<string, CompletenessRow>();
   const ledgerPath = path.join(specDir, LEDGER_FILENAME);
   if (!fs.existsSync(ledgerPath)) return out;
   const content = fs.readFileSync(ledgerPath, 'utf-8');
   const known = COMPLETENESS_DIMENSIONS as readonly string[];
   for (const line of content.split(/\r?\n/)) {
-    // | dimension | status | reason |
-    const m = line.match(/^\|\s*([a-z-]+)\s*\|\s*(addressed|out-of-scope|pending)\s*\|/i);
+    // | dimension | status | reason/pointer |
+    const m = line.match(
+      /^\|\s*([a-z-]+)\s*\|\s*(addressed|out-of-scope|pending)\s*\|\s*([^|]*)\|/i,
+    );
     if (m) {
       const dim = m[1].trim().toLowerCase();
       if (known.includes(dim)) {
-        out.set(dim, m[2].trim().toLowerCase() as CompletenessStatus);
+        out.set(dim, {
+          status: m[2].trim().toLowerCase() as CompletenessStatus,
+          pointer: (m[3] ?? '').trim(),
+        });
       }
     }
   }
@@ -196,13 +216,22 @@ export function checkCompletenessCoverage(specDir: string): CompletenessFinding[
   const rows = collectCompletenessRows(specDir);
 
   for (const dim of COMPLETENESS_DIMENSIONS) {
-    const status = rows.get(dim) ?? 'pending';
-    if (status === 'pending') {
+    const row = rows.get(dim) ?? { status: 'pending' as CompletenessStatus, pointer: '' };
+    if (row.status === 'pending') {
       findings.push({
         category: 'COMPLETENESS_COVERAGE',
         code: 'DIMENSION_PENDING',
         severity: 'WARNING',
         message: `Completeness dimension "${dim}" is pending — address or mark out-of-scope before STOP`,
+        dimension_id: dim,
+      });
+    } else if (row.status === 'addressed' && !hasPointer(row.pointer)) {
+      // An "addressed" stamp with no design pointer is unverifiable — surface it (INFO, non-blocking).
+      findings.push({
+        category: 'COMPLETENESS_COVERAGE',
+        code: 'ADDRESSED_WITHOUT_POINTER',
+        severity: 'INFO',
+        message: `Completeness dimension "${dim}" is "addressed" but cites no design pointer — add where it is covered`,
         dimension_id: dim,
       });
     }

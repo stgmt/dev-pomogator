@@ -56,14 +56,14 @@
       "name": "completeness-all-addressed-complete",
       "command": "audit-completeness",
       "setup_ledger": [
-        { "dimension": "internal-consistency", "status": "addressed" },
-        { "dimension": "flow-completeness", "status": "addressed" },
-        { "dimension": "compliance-privacy", "status": "addressed" },
-        { "dimension": "auth-secrets", "status": "addressed" },
-        { "dimension": "observability", "status": "addressed" },
+        { "dimension": "internal-consistency", "status": "addressed", "reason": "diagram matches Variant F decision" },
+        { "dimension": "flow-completeness", "status": "addressed", "reason": "all flows in workflow section" },
+        { "dimension": "compliance-privacy", "status": "addressed", "reason": "opt-out + footer in digest fn" },
+        { "dimension": "auth-secrets", "status": "addressed", "reason": "webhook signature + Vault secrets" },
+        { "dimension": "observability", "status": "addressed", "reason": "system_errors + Telegram alerts" },
         { "dimension": "data-lifecycle", "status": "out-of-scope", "reason": "no unbounded growth in MVP" },
-        { "dimension": "cost-quota", "status": "addressed" },
-        { "dimension": "deploy-ops", "status": "addressed" }
+        { "dimension": "cost-quota", "status": "addressed", "reason": "per-SMS cost + quota modelled" },
+        { "dimension": "deploy-ops", "status": "addressed", "reason": "CI/CD + migrations documented" }
       ],
       "expect": { "codes": ["COMPLETENESS_COMPLETE"], "warning": 0, "info": 1 },
       "category": "fr12-positive-signal"
@@ -73,13 +73,13 @@
       "name": "completeness-one-pending-blocks",
       "command": "audit-completeness",
       "setup_ledger": [
-        { "dimension": "internal-consistency", "status": "addressed" },
-        { "dimension": "flow-completeness", "status": "addressed" },
-        { "dimension": "compliance-privacy", "status": "addressed" },
-        { "dimension": "auth-secrets", "status": "addressed" },
-        { "dimension": "observability", "status": "addressed" },
-        { "dimension": "data-lifecycle", "status": "addressed" },
-        { "dimension": "cost-quota", "status": "addressed" },
+        { "dimension": "internal-consistency", "status": "addressed", "reason": "diagram matches decision" },
+        { "dimension": "flow-completeness", "status": "addressed", "reason": "all flows listed" },
+        { "dimension": "compliance-privacy", "status": "addressed", "reason": "opt-out + footer" },
+        { "dimension": "auth-secrets", "status": "addressed", "reason": "signature + Vault" },
+        { "dimension": "observability", "status": "addressed", "reason": "system_errors + alerts" },
+        { "dimension": "data-lifecycle", "status": "addressed", "reason": "cleanup cron" },
+        { "dimension": "cost-quota", "status": "addressed", "reason": "cost + quota modelled" },
         { "dimension": "deploy-ops", "status": "pending" }
       ],
       "expect": { "codes": ["DIMENSION_PENDING"], "warning": 1, "info": 0 },
@@ -92,6 +92,55 @@
       "fixture": "tests/fixtures/architecture-decision/vpn-router-prd.md",
       "expect": { "axes_detected_min": 4, "categories_include": ["Networking", "Hardware"] },
       "category": "non-webapp-coverage"
+    },
+    {
+      "id": 10,
+      "name": "synthesis-cross-axis-valid-and-rejected",
+      "command": "synthesis",
+      "setup_axes": [
+        { "id": "hosting", "status": "accepted", "chosen": "supabase" },
+        { "id": "auth", "status": "accepted", "chosen": "supabase-auth" }
+      ],
+      "insights": [
+        { "axes": ["hosting", "auth"], "title": "n8n orchestrator redundant", "description": "Both hosting and auth on Supabase → Edge Functions cover orchestration.", "recommendation": "Drop n8n; orchestrate in Supabase Edge Functions." },
+        { "axes": ["hosting"], "title": "single-axis not cross", "description": "x", "recommendation": "y" },
+        { "axes": ["hosting", "ghost-axis"], "title": "unknown ref", "description": "x", "recommendation": "y" }
+      ],
+      "expect": { "insights_count": 1, "rejected_count": 2 },
+      "category": "fr13-synthesis"
+    },
+    {
+      "id": 11,
+      "name": "policy-drives-recommendation",
+      "command": "generate-axis-policy",
+      "axis_model": {
+        "axis_id": "hosting",
+        "axis_name": "Hosting",
+        "context": "Where the app runs.",
+        "variants": [
+          { "id": "serverless", "name": "Serverless", "y_statement": "y", "maturity_ring": "Adopt", "cost_chip": "$", "good": ["fast setup"], "neutral": [], "bad": [], "when_to_choose": "w", "when_not_to_choose": "n", "is_recommended": true, "policy_fit": ["mvp-poc", "cost-optimal"] },
+          { "id": "k8s", "name": "Kubernetes", "y_statement": "y", "maturity_ring": "Adopt", "cost_chip": "$$$", "good": ["scales hard"], "neutral": [], "bad": [], "when_to_choose": "w", "when_not_to_choose": "n", "is_recommended": false, "policy_fit": ["production-grade", "scale-ready"] }
+        ]
+      },
+      "expect": { "recommended_by_policy": { "mvp-poc": "serverless", "production-grade": "k8s" } },
+      "category": "fr16-policy"
+    },
+    {
+      "id": 12,
+      "name": "completeness-addressed-without-pointer",
+      "command": "audit-completeness",
+      "setup_ledger": [
+        { "dimension": "internal-consistency", "status": "addressed", "reason": "diagram synced" },
+        { "dimension": "flow-completeness", "status": "addressed", "reason": "all flows listed" },
+        { "dimension": "compliance-privacy", "status": "addressed", "reason": "opt-out + footer" },
+        { "dimension": "auth-secrets", "status": "addressed", "reason": "sig + secrets" },
+        { "dimension": "observability", "status": "addressed" },
+        { "dimension": "data-lifecycle", "status": "addressed", "reason": "cleanup cron" },
+        { "dimension": "cost-quota", "status": "addressed", "reason": "cost modelled" },
+        { "dimension": "deploy-ops", "status": "addressed", "reason": "CI/CD documented" }
+      ],
+      "expect": { "codes": ["ADDRESSED_WITHOUT_POINTER", "COMPLETENESS_COMPLETE"], "warning": 0, "info": 2 },
+      "category": "fr12-evidence-guard"
     }
   ]
 }

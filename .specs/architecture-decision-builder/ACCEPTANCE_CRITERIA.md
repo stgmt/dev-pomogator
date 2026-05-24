@@ -90,10 +90,48 @@ IF тех-заявление в артефакте не имеет [VERIFIED]/[U
 
 **Требование:** [FR-12](FR.md#fr-12-audit-category-completeness_coverage--completeness-ledger)
 
-WHEN команда `audit` выполняется AND хотя бы одно из 8 completeness-измерений в `COMPLETENESS.md` имеет status `pending` (или ledger-файл отсутствует) THEN audit SHALL emit `COMPLETENESS_COVERAGE` finding с code `DIMENSION_PENDING` severity WARNING (блокирует STOP) для каждого незакрытого измерения.
+WHEN команда `audit-completeness` выполняется AND хотя бы одно из 8 completeness-измерений в `COMPLETENESS.md` имеет status `pending` (или ledger-файл отсутствует) THEN audit-completeness SHALL emit `COMPLETENESS_COVERAGE` finding с code `DIMENSION_PENDING` severity WARNING (блокирует STOP) для каждого незакрытого измерения.
 
 WHEN все 8 измерений имеют status `addressed` или `out-of-scope` THEN audit SHALL emit ровно один `COMPLETENESS_COMPLETE` finding severity INFO.
 
 WHEN измерение содержит `[skip-completeness-dimension: <reason>]` THEN skill SHALL записать запись в `.claude/logs/spec-completeness-escapes.jsonl`.
 
 IF reason < 12 chars THEN audit SHALL emit `WARNING_REASON_TOO_SHORT` finding severity INFO.
+
+WHEN измерение имеет status `addressed` но колонка-указатель пустая или placeholder (`—`) THEN audit-completeness SHALL emit `ADDRESSED_WITHOUT_POINTER` finding severity INFO (non-blocking — не мешает `COMPLETENESS_COMPLETE`).
+
+## AC-13 (FR-13)
+
+**Требование:** [FR-13](FR.md#fr-13-cross-axis-synthesis)
+
+WHEN per-axis loop завершён AND команда `synthesis <spec-dir>` выполняется THEN skill SHALL создать `SYNTHESIS.md` со списком cross-axis insights (≥0; 0 допустимо для 1-axis spec).
+
+WHEN insight сформирован THEN он SHALL ссылаться на ≥2 axis-id в поле `axes[]` (cross-axis по определению).
+
+## AC-14 (FR-14)
+
+**Требование:** [FR-14](FR.md#fr-14-correction-log-reasoning-journey)
+
+WHEN вариант имеет непустой `correction_log` THEN axis md/html SHALL содержать секцию `## Corrections` с записями.
+
+IF `correction_log` пуст/отсутствует THEN секция Corrections SHALL отсутствовать (не ломает render).
+
+## AC-15 (FR-15)
+
+**Требование:** [FR-15](FR.md#fr-15-live-context7-пруфы)
+
+WHEN skill строит тех-заявление варианта AND библиотека резолвится в context7 THEN маркер SHALL быть `[VERIFIED via context7:<lib> <ver>]`.
+
+IF context7 не нашёл библиотеку THEN маркер SHALL быть `[UNVERIFIED — Context7 no match]`, НЕ fabricated claim.
+
+## AC-16 (FR-16)
+
+**Требование:** [FR-16](FR.md#fr-16-selection-policy-default-mvp-poc)
+
+WHEN политика не выбрана THEN skill SHALL применить `mvp-poc` по умолчанию.
+
+WHEN selected_policy = X AND вариант V имеет X в policy_fit THEN renderAxisMarkdown SHALL пометить V как recommended (pinned top + policy-badge «Recommended under X»).
+
+WHEN ось имеет варианты с разными policy_fit THEN артефакт SHALL содержать demonstration-таблицу (вариант × 5 политик).
+
+IF ни один вариант не имеет selected_policy в policy_fit THEN recommended SHALL fallback на is_recommended.

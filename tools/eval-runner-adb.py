@@ -89,6 +89,46 @@ def grade_detect(output, expect):
     return exps
 
 
+def grade_synthesis(output, expect):
+    """FR-13: insights_count + rejected_count from synthesis output."""
+    parsed = json.loads(output)
+    exps = []
+    if "insights_count" in expect:
+        exps.append({
+            "text": f"insights_count == {expect['insights_count']}",
+            "passed": parsed.get("insights_count") == expect["insights_count"],
+            "evidence": f"actual={parsed.get('insights_count')}",
+        })
+    if "rejected_count" in expect:
+        rc = len(parsed.get("rejected", []))
+        exps.append({
+            "text": f"rejected_count == {expect['rejected_count']}",
+            "passed": rc == expect["rejected_count"],
+            "evidence": f"actual={rc}; reasons={[r.get('reason') for r in parsed.get('rejected', [])]}",
+        })
+    return exps
+
+
+def grade_policy(recommended_by_policy, expect):
+    """FR-16: recommended variant id differs per selected_policy."""
+    exps = []
+    for policy, want in expect["recommended_by_policy"].items():
+        got = recommended_by_policy.get(policy)
+        exps.append({
+            "text": f"policy '{policy}' → recommended '{want}'",
+            "passed": got == want,
+            "evidence": f"actual={got}",
+        })
+    # cross-check: the recommendations actually differ (policy is doing work, not constant)
+    distinct = set(recommended_by_policy.values())
+    exps.append({
+        "text": "recommendations differ across policies",
+        "passed": len(distinct) > 1,
+        "evidence": f"recommended_by_policy={recommended_by_policy}",
+    })
+    return exps
+
+
 def grade_audit(output, expect):
     parsed = json.loads(output)
     findings = parsed.get("findings", [])
@@ -131,6 +171,28 @@ for ev in evals["evals"]:
             proc = run_cli(["audit-completeness", str(spec_dir)], log_dir)
             output = proc.stdout
             exps = grade_audit(output, ev["expect"])
+        elif ev["command"] == "synthesis":
+            spec_dir = Path(tempfile.mkdtemp(prefix=f"adb-eval-{ev['id']}-"))
+            write_setup_axes(spec_dir, ev["setup_axes"])
+            insights_path = spec_dir / "insights.json"
+            insights_path.write_text(json.dumps(ev["insights"]), encoding="utf-8")
+            proc = run_cli(["synthesis", str(spec_dir), str(insights_path)], log_dir)
+            output = proc.stdout
+            exps = grade_synthesis(output, ev["expect"])
+        elif ev["command"] == "generate-axis-policy":
+            # FR-16: render the same axis under each policy, read recommended id from md frontmatter.
+            recommended_by_policy = {}
+            for policy in ev["expect"]["recommended_by_policy"]:
+                pdir = Path(tempfile.mkdtemp(prefix=f"adb-eval-{ev['id']}-{policy}-"))
+                model = {**ev["axis_model"], "selected_policy": policy}
+                model_path = pdir / "axis-model.json"
+                model_path.write_text(json.dumps(model), encoding="utf-8")
+                proc = run_cli(["generate-axis", str(model_path), str(pdir)], log_dir)
+                md = (pdir / f"AXIS-{model['axis_id']}.md").read_text(encoding="utf-8")
+                m = [ln for ln in md.splitlines() if ln.startswith("recommended:")]
+                recommended_by_policy[policy] = m[0].split(":", 1)[1].strip() if m else None
+            output = json.dumps({"recommended_by_policy": recommended_by_policy})
+            exps = grade_policy(recommended_by_policy, ev["expect"])
         else:
             raise ValueError(f"unknown command {ev['command']}")
     except Exception as e:

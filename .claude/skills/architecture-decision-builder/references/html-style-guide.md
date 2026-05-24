@@ -19,7 +19,11 @@ Self-contained HTML (FR-2) — implemented in `html-renderer.ts` BASE_CSS. This 
 
 ## Layout
 
-- **Recommended card pinned top** — `border: 2px solid var(--rec)` + `✅ RECOMMENDED` badge, ALWAYS first in DOM regardless of variant grid shuffle order (position-bias mitigation, FR-8).
+- **Recommended card pinned top** — `border: 2px solid var(--rec)` + `✅ RECOMMENDED` badge + `policy-badge` (under which policy, FR-16) + maturity/cost chips + **proof block** (precedents), ALWAYS first in DOM regardless of variant grid shuffle order (position-bias mitigation, FR-8).
 - **Variant grid** — `repeat(auto-fit, minmax(300px, 1fr))`.
-- Per variant: name, Y-statement (italic muted), chips (maturity ring + cost), Good/Neutral/Bad lists with ✅/◐/❌, failure-modes (if present), When-to-choose, When-NOT-to-choose (red), Confirmation.
-- **INDEX.html** — status matrix table (Axis | Status | Chosen).
+- Per variant: name, Y-statement (italic muted), chips (maturity ring + cost), Good/Neutral/Bad lists with ✅/◐/❌, failure-modes (if present), **Proof — real-world precedent**, When-to-choose, When-NOT-to-choose (red), Confirmation, Corrections (if `correction_log`, FR-14).
+- **Proofs are first-class, not buried (fixes "пруфов нет" feedback):**
+  - `[VERIFIED via <src>]` / `[UNVERIFIED ...]` markers inside Good/Neutral/Bad bullets are **lifted out into a coloured chip** (`.proof.v` green ✓ / `.proof.u` amber ?) — not left as grey inline text. `title` carries the full marker.
+  - `real_world_precedent[]` renders as a `📎` list of clickable repo links + star count (`74k★`) — the evidence behind the pick. Defined in `VariantModel` and MUST be rendered (was a silent gap pre-fix).
+- **Demonstration table (FR-16)** — when variants have differing `policy_fit`, a `variant × 5 policies` matrix renders above the grid; active policy column highlighted, recommended row marked `★`.
+- **INDEX.html** — status matrix table (Axis | Status | Chosen). **SYNTHESIS.html** (FR-13) — cross-axis insight cards.

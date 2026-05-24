@@ -4,17 +4,22 @@
 
 | ID | Name | Linked AC | @featureN | Status |
 |----|------|-----------|-----------|--------|
-| [FR-1](FR.md#fr-1-axis-enumeration-из-prd) | Axis enumeration | [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1) | @feature1 | Draft |
-| [FR-2](FR.md#fr-2-per-axis-artefact-markdown--self-contained-html) | Per-axis artefact (md+html) | [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2) | @feature2 | Draft |
-| [FR-3](FR.md#fr-3-browser-auto-open-cross-platform-enoent-safe) | Browser auto-open | [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3) | @feature3 | Draft |
-| [FR-4](FR.md#fr-4-итеративный-выбор-через-askuserquestion) | Iterative choice | [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4) | @feature4 | Draft |
-| [FR-5](FR.md#fr-5-index-compile-idempotent-status-matrix) | INDEX compile | [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5) | @feature5 | Draft |
-| [FR-6](FR.md#fr-6-cascading-implications-bmad-pattern) | Cascading implications | [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6) | @feature6 | Draft |
-| [FR-7](FR.md#fr-7-два-режима-запуска-standalone--create-spec-phase-175) | Two run modes | [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7) | @feature7 | Draft |
-| [FR-8](FR.md#fr-8-anti-bias-guardrails) | Anti-bias guardrails | [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8) | @feature8 | Draft |
-| [FR-9](FR.md#fr-9-audit-category-architecture_coverage) | ARCHITECTURE_COVERAGE audit | [AC-9](ACCEPTANCE_CRITERIA.md#ac-9-fr-9) | @feature9 | Draft |
-| [FR-10](FR.md#fr-10-escape-hatch-с-audit-trail) | Escape hatch + audit trail | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-10) | @feature10 | Draft |
-| [FR-11](FR.md#fr-11-eval-suite--debug--benchmark-качества-2-слоя) | Eval suite (debug + benchmark) | [AC-11](ACCEPTANCE_CRITERIA.md#ac-11-fr-11) | @feature11 | Draft |
+| [FR-1](FR.md#fr-1-axis-enumeration-из-prd) | Axis enumeration | [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1) | @feature1 | Done |
+| [FR-2](FR.md#fr-2-per-axis-artefact-markdown--self-contained-html) | Per-axis artefact (md+html) | [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2) | @feature2 | Done |
+| [FR-3](FR.md#fr-3-browser-auto-open-cross-platform-enoent-safe) | Browser auto-open | [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3) | @feature3 | Done |
+| [FR-4](FR.md#fr-4-итеративный-выбор-через-askuserquestion) | Iterative choice | [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4) | @feature4 | Done |
+| [FR-5](FR.md#fr-5-index-compile-idempotent-status-matrix) | INDEX compile | [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5) | @feature5 | Done |
+| [FR-6](FR.md#fr-6-cascading-implications-bmad-pattern) | Cascading implications | [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6) | @feature6 | Done |
+| [FR-7](FR.md#fr-7-два-режима-запуска-standalone--create-spec-phase-175) | Two run modes | [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7) | @feature7 | Done |
+| [FR-8](FR.md#fr-8-anti-bias-guardrails) | Anti-bias guardrails | [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8) | @feature8 | Done |
+| [FR-9](FR.md#fr-9-audit-category-architecture_coverage) | ARCHITECTURE_COVERAGE audit | [AC-9](ACCEPTANCE_CRITERIA.md#ac-9-fr-9) | @feature9 | Done |
+| [FR-10](FR.md#fr-10-escape-hatch-с-audit-trail) | Escape hatch + audit trail | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-10) | @feature10 | Done |
+| [FR-11](FR.md#fr-11-eval-suite--debug--benchmark-качества-2-слоя) | Eval suite (debug + benchmark) | [AC-11](ACCEPTANCE_CRITERIA.md#ac-11-fr-11) | @feature11 | Done |
+| [FR-12](FR.md#fr-12-audit-category-completeness_coverage--completeness-ledger) | COMPLETENESS_COVERAGE audit | [AC-12](ACCEPTANCE_CRITERIA.md#ac-12-fr-12) | @feature12 | Done |
+| [FR-13](FR.md#fr-13-cross-axis-synthesis) | Cross-axis synthesis | [AC-13](ACCEPTANCE_CRITERIA.md#ac-13-fr-13) | @feature14 | Done |
+| [FR-14](FR.md#fr-14-correction-log-reasoning-journey) | Correction-log | [AC-14](ACCEPTANCE_CRITERIA.md#ac-14-fr-14) | @feature15 | Done |
+| [FR-15](FR.md#fr-15-live-context7-пруфы) | Live context7 пруфы | [AC-15](ACCEPTANCE_CRITERIA.md#ac-15-fr-15) | @feature16 | Done |
+| [FR-16](FR.md#fr-16-selection-policy-default-mvp-poc) | Selection policy (mvp-poc default) | [AC-16](ACCEPTANCE_CRITERIA.md#ac-16-fr-16) | @feature17 | Done |
 
 ## Functional Requirements
 
@@ -29,6 +34,11 @@
 - [FR-9: ARCHITECTURE_COVERAGE audit](FR.md#fr-9-audit-category-architecture_coverage)
 - [FR-10: Escape hatch + audit trail](FR.md#fr-10-escape-hatch-с-audit-trail)
 - [FR-11: Eval suite (debug + benchmark)](FR.md#fr-11-eval-suite--debug--benchmark-качества-2-слоя)
+- [FR-12: COMPLETENESS_COVERAGE audit](FR.md#fr-12-audit-category-completeness_coverage--completeness-ledger)
+- [FR-13: Cross-axis synthesis](FR.md#fr-13-cross-axis-synthesis)
+- [FR-14: Correction-log](FR.md#fr-14-correction-log-reasoning-journey)
+- [FR-15: Live context7 пруфы](FR.md#fr-15-live-context7-пруфы)
+- [FR-16: Selection policy (mvp-poc default)](FR.md#fr-16-selection-policy-default-mvp-poc)
 
 ## Non-Functional Requirements
 
@@ -50,6 +60,11 @@
 - [AC-9 (FR-9): ARCHITECTURE_COVERAGE audit](ACCEPTANCE_CRITERIA.md#ac-9-fr-9)
 - [AC-10 (FR-10): Escape hatch](ACCEPTANCE_CRITERIA.md#ac-10-fr-10)
 - [AC-11 (FR-11): Eval suite](ACCEPTANCE_CRITERIA.md#ac-11-fr-11)
+- [AC-12 (FR-12): COMPLETENESS_COVERAGE audit](ACCEPTANCE_CRITERIA.md#ac-12-fr-12)
+- [AC-13 (FR-13): Cross-axis synthesis](ACCEPTANCE_CRITERIA.md#ac-13-fr-13)
+- [AC-14 (FR-14): Correction-log](ACCEPTANCE_CRITERIA.md#ac-14-fr-14)
+- [AC-15 (FR-15): Live context7](ACCEPTANCE_CRITERIA.md#ac-15-fr-15)
+- [AC-16 (FR-16): Selection policy](ACCEPTANCE_CRITERIA.md#ac-16-fr-16)
 
 ## Verification Matrix (CHK)
 
@@ -60,21 +75,27 @@
 
 | CHK-ID | Requirement | Traces To (FR+SC) | Verification Method | Status | Notes |
 |--------|-------------|-------------------|---------------------|--------|-------|
-| CHK-FR1-01 | Axis enumeration детектит ≥1 ось на greenfield PRD | FR-1, AC-1, @feature1 | Integration test | Draft | ARCH001 |
-| CHK-FR1-02 | Brownfield build-manifest → axes_detected=0 | FR-1, AC-1, @feature1 | Integration test | Draft | ARCH001 hard-OUT |
-| CHK-FR2-01 | Per-axis md+html с ≥3 вариантами + When-NOT | FR-2, AC-2, @feature2 | Integration test | Draft | ARCH002 |
-| CHK-FR2-02 | Seeded randomization + recommendation pinned top | FR-2, AC-2, @feature2 | Integration test | Draft | ARCH002 |
-| CHK-FR3-01 | Cross-platform browser launch (start/open/xdg-open) | FR-3, AC-3, @feature3 | Integration test | Draft | ARCH004 mocked |
-| CHK-FR3-02 | ENOENT → launched=false + fallback, без throw | FR-3, AC-3, @feature3 | Integration test | Draft | ARCH004 |
-| CHK-FR4-01 | AskUserQuestion с [Беру рекомендацию] + запись выбора | FR-4, AC-4, @feature4 | Integration test | Draft | ARCH005 cli |
-| CHK-FR5-01 | INDEX compile idempotent (AUTOGEN markers) | FR-5, AC-5, @feature5 | Integration test | Draft | ARCH003 |
-| CHK-FR6-01 | Cascading add to QUEUE + depth cap 2 | FR-6, AC-6, @feature6 | Integration test | Draft | ARCH005 |
-| CHK-FR7-01 | create-spec Phase 1.75 invocation + v<4 no-op | FR-7, AC-7, @feature7 | Integration test | Draft | ARCH005 |
-| CHK-FR8-01 | ≥1 non-default variant + [VERIFIED]/[UNVERIFIED] markers | FR-8, AC-8, @feature8 | Integration test | Draft | ARCH002 |
-| CHK-FR9-01 | Pending ось → ARCHITECTURE_COVERAGE WARNING | FR-9, AC-9, @feature9 | Integration test | Draft | ARCH005 audit |
-| CHK-FR10-01 | Escape hatch → JSONL log + short-reason WARNING | FR-10, AC-10, @feature10 | Integration test | Draft | ARCH001 |
-| CHK-FR11-01 | Deterministic eval → grading.json + aggregate.json | FR-11, AC-11, @feature11 | Integration test | Draft | ARCH006 eval |
-| CHK-FR11-02 | Artifact-bench rubric R3 fail на тех-заявлении без [VERIFIED] marker | FR-11, AC-11, @feature11 | Integration test | Draft | ARCH006 anti-hallucination |
+| CHK-FR1-01 | Axis enumeration детектит ≥1 ось на greenfield PRD | FR-1, AC-1, @feature1 | Integration test | Done | ARCH001 |
+| CHK-FR1-02 | Brownfield build-manifest → axes_detected=0 | FR-1, AC-1, @feature1 | Integration test | Done | ARCH001 hard-OUT |
+| CHK-FR2-01 | Per-axis md+html с ≥3 вариантами + When-NOT | FR-2, AC-2, @feature2 | Integration test | Done | ARCH002 |
+| CHK-FR2-02 | Seeded randomization + recommendation pinned top | FR-2, AC-2, @feature2 | Integration test | Done | ARCH002 |
+| CHK-FR3-01 | Cross-platform browser launch (start/open/xdg-open) | FR-3, AC-3, @feature3 | Integration test | Done | ARCH004 mocked |
+| CHK-FR3-02 | ENOENT → launched=false + fallback, без throw | FR-3, AC-3, @feature3 | Integration test | Done | ARCH004 |
+| CHK-FR4-01 | AskUserQuestion с [Беру рекомендацию] + запись выбора | FR-4, AC-4, @feature4 | Integration test | Done | ARCH005 cli |
+| CHK-FR5-01 | INDEX compile idempotent (AUTOGEN markers) | FR-5, AC-5, @feature5 | Integration test | Done | ARCH003 |
+| CHK-FR6-01 | Cascading add to QUEUE + depth cap 2 | FR-6, AC-6, @feature6 | Integration test | Done | ARCH005 |
+| CHK-FR7-01 | create-spec Phase 1.75 invocation + v<4 no-op | FR-7, AC-7, @feature7 | Integration test | Done | ARCH005 |
+| CHK-FR8-01 | ≥1 non-default variant + [VERIFIED]/[UNVERIFIED] markers | FR-8, AC-8, @feature8 | Integration test | Done | ARCH002 |
+| CHK-FR9-01 | Pending ось → ARCHITECTURE_COVERAGE WARNING | FR-9, AC-9, @feature9 | Integration test | Done | ARCH005 audit |
+| CHK-FR10-01 | Escape hatch → JSONL log + short-reason WARNING | FR-10, AC-10, @feature10 | Integration test | Done | ARCH001 |
+| CHK-FR11-01 | Deterministic eval → grading.json + aggregate.json | FR-11, AC-11, @feature11 | Integration test | Done | ARCH006 eval |
+| CHK-FR11-02 | Artifact-bench rubric R3 fail на тех-заявлении без [VERIFIED] marker | FR-11, AC-11, @feature11 | Integration test | Done | ARCH006 anti-hallucination |
+| CHK-FR12-01 | audit-completeness: pending dimension → DIMENSION_PENDING WARNING; all addressed → COMPLETENESS_COMPLETE | FR-12, AC-12, @feature12 | Integration test | Done | eval-7/8 |
+| CHK-FR13-01 | synthesis → SYNTHESIS.md; insight ссылается на ≥2 axis-id | FR-13, AC-13, @feature14 | Integration test | Done | eval-10 |
+| CHK-FR14-01 | correction_log непустой → секция Corrections; пустой → отсутствует | FR-14, AC-14, @feature15 | Integration test | Done | ARCH002 render |
+| CHK-FR15-01 | context7 match → [VERIFIED via context7]; no match → [UNVERIFIED — Context7 no match] | FR-15, AC-15, @feature16 | Manual review | Done | skill-workflow MCP |
+| CHK-FR16-01 | selected_policy ∈ policy_fit → recommended + badge; default mvp-poc | FR-16, AC-16, @feature17 | Integration test | Done | eval-11 |
+| CHK-FR16-02 | mvp-poc vs production → different recommended (demonstration table) | FR-16, AC-16, @feature17 | Integration test | Done | eval-11 |
 
 ## Verification Process
 
@@ -96,8 +117,8 @@
 
 ## Summary Counts
 
-- Total CHKs: 15
+- Total CHKs: 22
 - Verified: 0
 - In Progress: 0
-- Draft: 15
+- Draft: 22
 - Blocked: 0
