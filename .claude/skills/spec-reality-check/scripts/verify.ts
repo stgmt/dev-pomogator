@@ -393,18 +393,37 @@ export function checkCodeDrift(specDir: string, repoRoot: string, fcPaths: strin
 export function extractTaskPaths(content: string): string[] {
   if (!content) return [];
   const paths = new Set<string>();
-  const lines = content.split(/\r?\n/);
+  const stripped = content.replace(/```[\s\S]*?```/g, '');
+  const lines = stripped.split(/\r?\n/);
+  const inlineExtRegex = /`([^`\s]+\.[A-Za-z][A-Za-z0-9]{1,8})`/g;
   for (const line of lines) {
     if (/\[OUT_OF_SCOPE/i.test(line)) continue;
     if (/~~[^~]+~~/.test(line)) continue;
     const filesMatch = line.match(/\*\*files?:\*\*\s*(.+)/i);
-    if (!filesMatch) continue;
-    const tail = filesMatch[1];
-    const pathRegex = /`([^`]+)`/g;
+    if (filesMatch) {
+      const tail = filesMatch[1];
+      const pathRegex = /`([^`]+)`/g;
+      let m: RegExpExecArray | null;
+      while ((m = pathRegex.exec(tail)) !== null) {
+        const cleaned = m[1].replace(/\s*\([a-z]+\)\s*$/i, '').trim();
+        if (cleaned && !isPlaceholderPath(cleaned) && !isGlobPath(cleaned) && !isRuntimePath(cleaned)) {
+          paths.add(cleaned);
+        }
+      }
+      continue;
+    }
     let m: RegExpExecArray | null;
-    while ((m = pathRegex.exec(tail)) !== null) {
-      const cleaned = m[1].replace(/\s*\([a-z]+\)\s*$/i, '').trim();
-      if (cleaned) paths.add(cleaned);
+    inlineExtRegex.lastIndex = 0;
+    while ((m = inlineExtRegex.exec(line)) !== null) {
+      const candidate = m[1];
+      const ext = path.extname(candidate).toLowerCase();
+      if (!TRACKED_EXTENSIONS.has(ext)) continue;
+      if (candidate.includes('://')) continue;
+      if (isPlaceholderPath(candidate)) continue;
+      if (isGlobPath(candidate)) continue;
+      if (isRuntimePath(candidate)) continue;
+      if (!candidate.includes('/') && !candidate.includes('\\')) continue;
+      paths.add(candidate);
     }
   }
   return [...paths];

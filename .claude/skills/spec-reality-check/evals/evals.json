@@ -281,6 +281,17 @@
       "category": "hook-parsed"
     },
     {
+      "id": 29,
+      "name": "v2-tasks-inline-paths-recognized",
+      "prompt": "Bug 13 caught: TASKS.md уmempion-ит file paths inline в backticks (a-la GitHub issue checkbox style), не only в `**files:**` блоках. extractTaskPaths видел только `**files:**` → 113 false INFO orphan-FC на spec-generator-v4. Fix: also extract inline backtick paths with file extensions from TASKS.md. Eval: TASKS mentions `src/inline_task_v2.ts` inline; FC has same path; consistency check should match → 0 TASKS_FC_CONSISTENCY findings for that pair.",
+      "fixture": "tests/fixtures/spec-reality-check/v2/tasks-inline-paths",
+      "setup": { "create_files": ["src/inline_task_v2.ts"], "git_init_empty": true },
+      "expected_error": 0,
+      "expected_codes_optional": ["TASKS_FC_CONSISTENCY", "NARRATIVE_PATH_MISSING"],
+      "forbidden_codes": ["FC_EDIT_MISSING"],
+      "category": "tasks-inline"
+    },
+    {
       "id": 28,
       "name": "v2-narrative-planned-create-reconciled",
       "prompt": "Bug 12 caught: spec narrative referenced files it ALSO planned in FC (action=create) — narrative WARN-ed 'missing' creating duplicate signal. Now narrative check receives plannedCreatePaths set and skips refs already covered by FC plan. Real-world hit: worktree-setup spec had 18 NARRATIVE WARN for its own planned skill files; dropped to 2 after fix.",
