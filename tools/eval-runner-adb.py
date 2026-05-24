@@ -78,6 +78,14 @@ def grade_detect(output, expect):
             "passed": expect["skipped_contains"] in sr,
             "evidence": f"actual={sr!r}",
         })
+    if "categories_include" in expect:
+        cats = {a.get("category") for a in parsed.get("axes", [])}
+        for want in expect["categories_include"]:
+            exps.append({
+                "text": f"axes include category '{want}'",
+                "passed": want in cats,
+                "evidence": f"actual_categories={sorted(c for c in cats if c)}",
+            })
     return exps
 
 

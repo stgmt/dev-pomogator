@@ -14,6 +14,8 @@ export type Category =
   | 'API-Communication'
   | 'Frontend'
   | 'Infra-Deployment'
+  | 'Networking'
+  | 'Hardware'
   | 'Other';
 
 export interface AxisCandidate {
@@ -51,6 +53,14 @@ const SEED_AXES: SeedAxis[] = [
   { id: 'background-jobs', name: 'Background jobs / scheduling', category: 'Infra-Deployment', tier: 'Important', why_needed: 'Scheduled / async work (cron, digests)', keywords: /\b(background job|cron|schedule[ds]?|daily digest|batch|queue|worker)\b/i },
   { id: 'email', name: 'Email channel', category: 'API-Communication', tier: 'Important', why_needed: 'Outbound/inbound email handling', keywords: /\b(e[ -]?mail|notification|digest|SMTP|inbound mail)\b/i },
   { id: 'llm', name: 'LLM / AI reasoning', category: 'Other', tier: 'Deferred', why_needed: 'AI-assisted feature', keywords: /\b(LLM|GPT|Claude|OpenRouter|AI[ -](model|reasoning)|classif)\b/i },
+  // --- non-webapp domains (networking / hardware / messaging / devtools / data) ---
+  { id: 'network-transport', name: 'Network transport / VPN protocol', category: 'Networking', tier: 'Critical', why_needed: 'How traffic is tunnelled/obfuscated', keywords: /\b(VPN|WireGuard|AmneziaWG|VLESS|OpenVPN|proxy|tunnel|обфускац|обход|туннел|transport protocol)\b/i },
+  { id: 'dns-resolution', name: 'DNS resolution / filtering', category: 'Networking', tier: 'Important', why_needed: 'Name resolution + ad/DPI filtering policy', keywords: /\b(DNS|resolver|DoH|DoT|AdGuard|adblock|NextDNS|fakeip|hijack|разрешение имён)\b/i },
+  { id: 'routing-strategy', name: 'Routing strategy (split vs full tunnel)', category: 'Networking', tier: 'Critical', why_needed: 'Which traffic goes via VPN vs direct', keywords: /\b(split[ -]?tunnel|full[ -]?tunnel|routing|split tunneling|маршрутизац|DPI bypass|Zapret|policy[ -]?routing)\b/i },
+  { id: 'hardware-platform', name: 'Hardware / firmware platform', category: 'Hardware', tier: 'Critical', why_needed: 'Physical device + firmware/OS the system runs on', keywords: /\b(router|OpenWrt|OpenWRT|Keenetic|firmware|прошивк|SBC|Raspberry|ARM board|embedded|роутер|железо)\b/i },
+  { id: 'messaging-channel', name: 'Messaging channel (SMS / voice / push)', category: 'API-Communication', tier: 'Important', why_needed: 'Non-email comms transport', keywords: /\b(SMS|voice call|push notification|Twilio|telephony|IVR|голосов|звонок|messaging channel)\b/i },
+  { id: 'packaging-distribution', name: 'Packaging / distribution', category: 'Infra-Deployment', tier: 'Important', why_needed: 'How the artefact is built/shipped/installed', keywords: /\b(CLI|binary|package manager|npm publish|installer|distribution|release artifact|homebrew|apt|сборк|дистрибут)\b/i },
+  { id: 'data-pipeline', name: 'Data pipeline / ingestion', category: 'Data', tier: 'Important', why_needed: 'Batch/stream data ingestion + transform', keywords: /\b(ETL|data pipeline|ingest|stream processing|Kafka|Airflow|batch job processing|конвейер данных|обработка потока)\b/i },
 ];
 
 // Brownfield hard-OUT signals — stack already chosen / not being reconsidered.

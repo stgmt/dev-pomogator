@@ -84,6 +84,14 @@
       ],
       "expect": { "codes": ["DIMENSION_PENDING"], "warning": 1, "info": 0 },
       "category": "fr12-coverage"
+    },
+    {
+      "id": 9,
+      "name": "non-webapp-domain-detection",
+      "command": "detect-axes",
+      "fixture": "tests/fixtures/architecture-decision/vpn-router-prd.md",
+      "expect": { "axes_detected_min": 4, "categories_include": ["Networking", "Hardware"] },
+      "category": "non-webapp-coverage"
     }
   ]
 }
