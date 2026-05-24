@@ -69,7 +69,11 @@
       ".claude/skills/spec-reality-check/SKILL.md",
       ".claude/skills/spec-reality-check/scripts/verify.ts",
       ".claude/skills/spec-reality-check/scripts/verify-hook.ts",
-      ".claude/skills/spec-reality-check/references/checks.md"
+      ".claude/skills/spec-reality-check/references/checks.md",
+      ".claude/skills/spec-reality-check/evals/README.md",
+      ".claude/skills/spec-reality-check/evals/evals.json",
+      ".claude/skills/spec-reality-check/evals/run-evals.ts",
+      ".claude/skills/spec-reality-check/evals/iterations/iteration-1/aggregate.json"
     ]
   },
   "ruleFiles": {

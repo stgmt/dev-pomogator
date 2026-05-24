@@ -1,0 +1,183 @@
+{
+  "skill_name": "spec-reality-check",
+  "iteration": 1,
+  "notes": "Iteration-1: 13 evals covering 6 checks + 3 output formats + 3 hook scenarios + 1 baseline regression. Per-eval score = 6 points (total/error/warning/info counts + codes present + no unexpected). Aggregate runner: evals/run-evals.ts. Fixtures: tests/fixtures/spec-reality-check/.",
+  "verify_script": ".claude/skills/spec-reality-check/scripts/verify.ts",
+  "hook_script": ".claude/skills/spec-reality-check/scripts/verify-hook.ts",
+  "scoring": {
+    "points_per_eval": 6,
+    "breakdown": [
+      "total count matches",
+      "error count matches",
+      "warning count matches",
+      "info count matches",
+      "all expected codes present in actual",
+      "no codes outside expected_codes_optional union expected_codes"
+    ]
+  },
+  "evals": [
+    {
+      "id": 1,
+      "name": "fc-create-exists-stale-create",
+      "prompt": "Run verify on stale-create fixture (action=create on pre-existing file). Expect 1 ERROR FC_CREATE_EXISTS.",
+      "fixture": "tests/fixtures/spec-reality-check/stale-create",
+      "setup": { "create_files": ["EXISTING_FILE.txt"] },
+      "expected_error": 1,
+      "expected_warning": 0,
+      "expected_info_min": 1,
+      "expected_codes": ["FC_CREATE_EXISTS"],
+      "expected_codes_optional": ["CODE_DRIFT_SKIPPED", "TASKS_FC_CONSISTENCY"],
+      "category": "fc-checks"
+    },
+    {
+      "id": 2,
+      "name": "fc-edit-and-delete-missing",
+      "prompt": "Run verify on missing-edit fixture (action=edit + action=delete both on missing files). Expect 1 ERROR FC_EDIT_MISSING + 1 ERROR FC_DELETE_MISSING.",
+      "fixture": "tests/fixtures/spec-reality-check/missing-edit",
+      "expected_error": 2,
+      "expected_warning": 0,
+      "expected_info_min": 1,
+      "expected_codes": ["FC_EDIT_MISSING", "FC_DELETE_MISSING"],
+      "expected_codes_optional": ["CODE_DRIFT_SKIPPED", "TASKS_FC_CONSISTENCY"],
+      "category": "fc-checks"
+    },
+    {
+      "id": 3,
+      "name": "narrative-path-missing",
+      "prompt": "Run verify on narrative-drift fixture (FR.md inline backtick path on missing file). Expect ≥1 WARNING NARRATIVE_PATH_MISSING.",
+      "fixture": "tests/fixtures/spec-reality-check/narrative-drift",
+      "expected_error": 0,
+      "expected_warning_min": 1,
+      "expected_info_min": 1,
+      "expected_codes": ["NARRATIVE_PATH_MISSING"],
+      "expected_codes_optional": ["CODE_DRIFT_SKIPPED", "TASKS_FC_CONSISTENCY", "FC_CREATE_EXISTS"],
+      "category": "narrative-check"
+    },
+    {
+      "id": 4,
+      "name": "code-drift-positive-git-commits-present",
+      "prompt": "Run verify on code-drift fixture with tmp git repo seeded with FR-1 commit (file created by setup → no FC_EDIT_MISSING). Expect 1 WARNING CODE_DRIFT_FR_ALREADY_DONE, 0 ERROR.",
+      "fixture": "tests/fixtures/spec-reality-check/code-drift",
+      "setup": { "git_init": true, "git_commits": [{ "files": { "src/feature.ts": "// FR-1 implementation\nexport const x = 1;" }, "message": "FR-1: implement feature" }] },
+      "expected_error": 0,
+      "expected_warning_min": 1,
+      "expected_codes": ["CODE_DRIFT_FR_ALREADY_DONE"],
+      "expected_codes_optional": ["TASKS_FC_CONSISTENCY"],
+      "category": "code-drift"
+    },
+    {
+      "id": 5,
+      "name": "code-drift-skipped-no-git",
+      "prompt": "Run verify on code-drift fixture WITHOUT git init. Expect INFO CODE_DRIFT_SKIPPED + zero CODE_DRIFT_FR_ALREADY_DONE.",
+      "fixture": "tests/fixtures/spec-reality-check/code-drift",
+      "expected_error": 1,
+      "expected_warning": 0,
+      "expected_info_min": 1,
+      "expected_codes": ["CODE_DRIFT_SKIPPED"],
+      "expected_codes_optional": ["FC_EDIT_MISSING", "TASKS_FC_CONSISTENCY"],
+      "forbidden_codes": ["CODE_DRIFT_FR_ALREADY_DONE"],
+      "category": "code-drift"
+    },
+    {
+      "id": 6,
+      "name": "tasks-fc-orphan-warning",
+      "prompt": "Run verify on task-orphan fixture (TASKS file not in FC). Expect WARNING TASKS_FC_CONSISTENCY for orphan TASK.",
+      "fixture": "tests/fixtures/spec-reality-check/task-orphan",
+      "expected_error": 1,
+      "expected_warning_min": 1,
+      "expected_codes": ["TASKS_FC_CONSISTENCY"],
+      "expected_codes_optional": ["FC_EDIT_MISSING", "CODE_DRIFT_SKIPPED", "NARRATIVE_PATH_MISSING"],
+      "category": "tasks-fc-check"
+    },
+    {
+      "id": 7,
+      "name": "format-json-valid-output",
+      "prompt": "Spawn verify.ts --format json on missing-edit fixture. Expect stdout parses as JSON with shape {findings: [], summary: {total, by_severity, by_check}}.",
+      "fixture": "tests/fixtures/spec-reality-check/missing-edit",
+      "format_check": "json",
+      "expected_error": 2,
+      "expected_codes": ["FC_EDIT_MISSING"],
+      "expected_codes_optional": ["FC_DELETE_MISSING", "CODE_DRIFT_SKIPPED", "TASKS_FC_CONSISTENCY"],
+      "category": "output-format"
+    },
+    {
+      "id": 8,
+      "name": "format-human-readable-output",
+      "prompt": "Spawn verify.ts --format human on missing-edit fixture. Expect stdout contains 'Reality check:' header + 'FC_EDIT_MISSING' check name.",
+      "fixture": "tests/fixtures/spec-reality-check/missing-edit",
+      "format_check": "human",
+      "format_substrings": ["Reality check:", "FC_EDIT_MISSING"],
+      "expected_error": 2,
+      "expected_codes": ["FC_EDIT_MISSING"],
+      "expected_codes_optional": ["FC_DELETE_MISSING", "CODE_DRIFT_SKIPPED", "TASKS_FC_CONSISTENCY"],
+      "category": "output-format"
+    },
+    {
+      "id": 9,
+      "name": "format-markdown-valid-table",
+      "prompt": "Spawn verify.ts --format markdown on missing-edit fixture. Expect stdout contains markdown table header + finding row.",
+      "fixture": "tests/fixtures/spec-reality-check/missing-edit",
+      "format_check": "markdown",
+      "format_substrings": ["| Check | Severity | File | Message", "| FC_EDIT_MISSING |"],
+      "expected_error": 2,
+      "expected_codes": ["FC_EDIT_MISSING"],
+      "expected_codes_optional": ["FC_DELETE_MISSING", "CODE_DRIFT_SKIPPED", "TASKS_FC_CONSISTENCY"],
+      "category": "output-format"
+    },
+    {
+      "id": 10,
+      "name": "baseline-clean-shipped-spec-zero-errors",
+      "prompt": "Run verify on real shipped clean spec .specs/spec-workflow-md-validation/. Expect 0 ERRORs (regression baseline).",
+      "fixture": ".specs/spec-workflow-md-validation",
+      "real_spec": true,
+      "expected_error": 0,
+      "category": "regression-baseline"
+    },
+    {
+      "id": 11,
+      "name": "baseline-canonical-plugin-after-cleanup-zero-errors",
+      "prompt": "Run verify on .specs/dev-pomogator-canonical-plugin/ AFTER 2026-05-24 cleanup. Expect 0 ERRORs (regression — cleanup must not regress).",
+      "fixture": ".specs/dev-pomogator-canonical-plugin",
+      "real_spec": true,
+      "expected_error": 0,
+      "category": "regression-baseline"
+    },
+    {
+      "id": 12,
+      "name": "hook-deny-on-spec-with-errors",
+      "prompt": "Spawn verify-hook.ts with stdin tool_name=ExitPlanMode, plan referencing .specs/missing-edit/. Expect deny output with FC_EDIT_MISSING in permissionDecisionReason.",
+      "hook_test": true,
+      "fixture_to_copy": "tests/fixtures/spec-reality-check/missing-edit",
+      "hook_input": {
+        "hook_event_name": "PreToolUse",
+        "tool_name": "ExitPlanMode",
+        "tool_input": { "plan": "Implement features in .specs/missing-edit/ and modify code." }
+      },
+      "expected_hook_outcome": "deny",
+      "expected_reason_substrings": ["FC_EDIT_MISSING"],
+      "category": "hook"
+    },
+    {
+      "id": 13,
+      "name": "hook-permit-on-clean-plan",
+      "prompt": "Spawn verify-hook.ts with stdin plan having no spec refs. Expect empty stdout (permit).",
+      "hook_test": true,
+      "hook_input": {
+        "hook_event_name": "PreToolUse",
+        "tool_name": "ExitPlanMode",
+        "tool_input": { "plan": "Generic plan with no spec references." }
+      },
+      "expected_hook_outcome": "permit",
+      "category": "hook"
+    },
+    {
+      "id": 14,
+      "name": "hook-failopen-on-invalid-stdin",
+      "prompt": "Spawn verify-hook.ts with malformed stdin. Expect exit 0 + empty stdout (fail-open).",
+      "hook_test": true,
+      "hook_input_raw": "!!! not json !!!",
+      "expected_hook_outcome": "permit",
+      "category": "hook"
+    }
+  ]
+}

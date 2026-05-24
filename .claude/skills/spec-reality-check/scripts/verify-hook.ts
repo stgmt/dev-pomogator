@@ -85,10 +85,15 @@ export function runVerifyOnSpec(specRelativeOrAbsolute: string, cwd: string, ver
     ? specRelativeOrAbsolute
     : path.resolve(cwd, specRelativeOrAbsolute);
   if (!fs.existsSync(specPath)) return [];
-  const result = spawnSync('npx', ['tsx', verifyScript, specPath, '--format', 'json'], {
+  const isWin = process.platform === 'win32';
+  const quote = (s: string) => isWin ? `"${s.replace(/"/g, '\\"')}"` : `'${s.replace(/'/g, "'\\''")}'`;
+  const cmd = `npx tsx ${quote(verifyScript)} ${quote(specPath)} --format json`;
+  const result = spawnSync(cmd, {
     cwd,
     encoding: 'utf-8',
     windowsHide: true,
+    shell: true,
+    maxBuffer: 10 * 1024 * 1024,
   });
   if (result.error || result.status !== 0) return [];
   try {
