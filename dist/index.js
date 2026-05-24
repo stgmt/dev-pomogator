@@ -34,6 +34,7 @@ Available plugins:
   specs-workflow          Specs management with 3-phase workflow
   plan-pomogator          Plan format, template, and validator
   forbid-root-artifacts   Control files allowed in repository root
+  answer-simple           Self-check template + /answer-simple slash command for draft audit
 `);
         process.exit(0);
     }

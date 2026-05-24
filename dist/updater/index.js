@@ -19,6 +19,7 @@ import { writeGlobalStatusLine, isManagedStatusLineCommand } from '../utils/stat
 import { resolveWithinProject, normalizeRelativePath } from '../utils/path-safety.js';
 import { updateSharedFiles, hasMissingSharedDir } from './shared-sync.js';
 import { writePluginJson } from '../installer/plugin-json.js';
+import { writeServerEntry, removeServerEntry, hashMcpServerConfig } from '../installer/mcp-config.js';
 // `resolveWithinProject` and `normalizeRelativePath` extracted to
 // `src/utils/path-safety.ts` so the same security primitive is shared with
 // `src/installer/uninstall-project.ts` (per .claude/rules/no-unvalidated-manifest-paths.md).
@@ -371,6 +372,48 @@ async function updateClaudeHooksForProject(repoRoot, hooks, previousManagedHooks
     return nextManagedHooks;
 }
 /**
+ * Sync `.mcp.json` mcpServers entries for one project against the latest
+ * manifest. Re-writes drifted entries (configHash mismatch), removes entries
+ * that disappeared from the manifest, leaves user/other-extension keys alone.
+ */
+async function updateMcpServersForProject(projectPath, remoteMcpServers, previousManaged) {
+    const next = {};
+    const remote = remoteMcpServers ?? {};
+    const previous = previousManaged ?? {};
+    for (const [serverName, serverConfig] of Object.entries(remote)) {
+        const newHash = hashMcpServerConfig(serverConfig);
+        const prevHash = previous[serverName]?.configHash;
+        if (prevHash === newHash) {
+            next[serverName] = { configHash: prevHash };
+            continue;
+        }
+        try {
+            const { configHash } = await writeServerEntry(projectPath, serverName, serverConfig);
+            next[serverName] = { configHash };
+        }
+        catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            logger.warn(`  [updater] Failed to write MCP server '${serverName}' for ${projectPath}: ${msg}`);
+            // Preserve previous tracking so a future retry sees drift.
+            if (prevHash)
+                next[serverName] = { configHash: prevHash };
+        }
+    }
+    // Remove entries that disappeared from the manifest.
+    for (const serverName of Object.keys(previous)) {
+        if (Object.prototype.hasOwnProperty.call(remote, serverName))
+            continue;
+        try {
+            await removeServerEntry(projectPath, serverName);
+        }
+        catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            logger.warn(`  [updater] Failed to remove stale MCP server '${serverName}' for ${projectPath}: ${msg}`);
+        }
+    }
+    return next;
+}
+/**
  * Update statusLine config in global ~/.claude/settings.json
  * Delegates to shared writeGlobalStatusLine helper.
  */
@@ -529,6 +572,13 @@ export async function checkUpdate(options = {}) {
                         const previousHooks = managedEntry.hooks ?? {};
                         const updatedHooks = await updateClaudeHooksForProject(projectPath, hooks, previousHooks);
                         managedEntry.hooks = updatedHooks;
+                        const nextMcpServers = await updateMcpServersForProject(projectPath, remote.mcpServers, managedEntry.mcpServers);
+                        if (Object.keys(nextMcpServers).length > 0) {
+                            managedEntry.mcpServers = nextMcpServers;
+                        }
+                        else {
+                            delete managedEntry.mcpServers;
+                        }
                         // Migrate: remove project-level statusLine (now global)
                         {
                             const projectSettingsPath = path.join(projectPath, '.claude', 'settings.json');

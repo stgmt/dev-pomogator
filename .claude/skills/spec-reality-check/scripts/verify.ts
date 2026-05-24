@@ -218,8 +218,8 @@ export function checkFcRows(rows: FcRow[], repoRoot: string): AuditFinding[] {
         check: 'FC_PARSE_UNPARSEABLE',
         category: 'FILE_CHANGES_VERIFY',
         severity: 'INFO',
-        message: `FILE_CHANGES row ${row.rowNumber} has no Action column; FC check skipped`,
-        details: `path: ${row.path}`,
+        message: `FILE_CHANGES row ${row.rowNumber} has empty or missing Action; FC check skipped`,
+        details: `path: ${row.path}. Either Action column is absent from table header, or cell is empty/stripped to empty.`,
         line: row.rowNumber,
       });
       continue;

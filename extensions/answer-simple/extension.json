@@ -1,0 +1,22 @@
+{
+  "name": "answer-simple",
+  "version": "1.0.0",
+  "description": "Always-apply 5-step self-check template forcing micro-story format on agent responses + /answer-simple slash command for explicit draft audit (jargon, internal codes, multi-select detection)",
+  "platforms": [
+    "claude"
+  ],
+  "category": "workflow",
+  "ruleFiles": {
+    "claude": [
+      ".claude/rules/answer-simple/clear-questions-to-user.md"
+    ]
+  },
+  "skills": {
+    "answer-simple": ".claude/skills/answer-simple"
+  },
+  "skillFiles": {
+    "answer-simple": [
+      ".claude/skills/answer-simple/SKILL.md"
+    ]
+  }
+}

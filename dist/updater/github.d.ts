@@ -22,6 +22,16 @@ export interface ExtensionManifest {
     hooks?: {
         claude?: Record<string, string>;
     };
+    /**
+     * MCP server entries to register in target project's `.mcp.json`.
+     * Updater observes this field to detect drift between declared pinned
+     * version and last-installed configHash; mismatch → re-write entry.
+     */
+    mcpServers?: Record<string, {
+        command: string;
+        args?: string[];
+        env?: Record<string, string>;
+    }>;
     statusLine?: {
         claude?: {
             type: string;

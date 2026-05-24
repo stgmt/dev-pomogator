@@ -18,6 +18,15 @@ export interface ManagedFiles {
     tools?: ManagedFileItem[];
     skills?: ManagedFileItem[];
     hooks?: Record<string, string[]>;
+    /**
+     * MCP server entries written into target project's `.mcp.json` by the
+     * extension installer. Keyed by server-name (= the JSON key in
+     * `mcpServers`). `configHash` is `sha256(JSON.stringify(serverConfig))`
+     * — used by updater to detect drift / re-write on bumped pinned versions.
+     */
+    mcpServers?: Record<string, {
+        configHash: string;
+    }>;
 }
 /** Extract plain paths from a mixed ManagedFileItem array. */
 export declare function getManagedPaths(items: ManagedFileItem[] | undefined): string[];

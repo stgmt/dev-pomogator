@@ -15,6 +15,15 @@ export interface ExtensionHooks {
         [hookName: string]: HookValue;
     };
 }
+/**
+ * MCP server entry as declared in extension.json.mcpServers.{serverName}.
+ * Written by installer into target project's `.mcp.json` (atomic smart-merge).
+ */
+export interface McpServerConfig {
+    command: string;
+    args?: string[];
+    env?: Record<string, string>;
+}
 export interface PostInstallHook {
     command: string;
     interactive?: boolean;
@@ -37,6 +46,9 @@ export interface Extension {
     };
     skills?: {
         [skillName: string]: string;
+    };
+    mcpServers?: {
+        [serverName: string]: McpServerConfig;
     };
     hooks?: ExtensionHooks;
     statusLine?: {

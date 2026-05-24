@@ -1,0 +1,47 @@
+{
+  "skill_name": "answer-simple",
+  "evals": [
+    {
+      "id": 0,
+      "name": "jargon-multi-select-wave-codes",
+      "prompt": "/answer-simple \"Wave 14 (gates+OpenRouter) ПЕРЕД Wave 11 — Keep / Swap / Parallel?\"",
+      "expected_output": "Должен вернуть 'Переформулировано:' (вопрос простыми словами с ≤2 опций, BYTE-FAITHFUL — не выдумывает что значат Wave 14/11) + 'Найдено проблем:' с 5+ проблемами (Wave 14, Wave 11, gates, OpenRouter, multi-select 3>2)",
+      "files": []
+    },
+    {
+      "id": 1,
+      "name": "short-no-structure-готово",
+      "prompt": "/answer-simple \"Готово. Обновил FR-12 и подключил VARIANT_COVERAGE category.\"",
+      "expected_output": "Должен вернуть BYTE-FAITHFUL короткую версию (НЕ выдумывает 'STOP #3' / 'polymorphic FR' / 'матрицу вариантов' / 'прогон') + 'Найдено проблем:' с FR-12, VARIANT_COVERAGE, missing structure, missing causal links",
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "mixed-english-jargon-with-internal-refs",
+      "prompt": "/answer-simple \"After deploying v0.2.5 (see Wave 14 in foo-bar spec), migrate Adapter X to new FR-8 semantics — this depends on FR-3 from baz-quux\"",
+      "expected_output": "BYTE-FAITHFUL — НЕ выдумывает что Adapter X 'связывает с внешним API' или что FR-3 'описывает контракт'. Идентифицирует все 6 internal codes (Wave 14, FR-8, FR-3, foo-bar, baz-quux, v0.2.5)",
+      "files": []
+    },
+    {
+      "id": 3,
+      "name": "clean-micro-story-should-pass",
+      "prompt": "/answer-simple \"После того как ты сказал переделать правило на шаблон самопроверки, я переписал на 5 шагов — что понял, черновик, самооценка, шаблон ответа, переписать если не прошло. Сейчас правило в .claude/rules/answer-simple/. Дальше — применяю в каждом ответе.\"",
+      "expected_output": "Должен вернуть 'Проблем не найдено' с краткой подсказкой какие критерии пройдены. НЕ выдумывает проблемы.",
+      "files": []
+    },
+    {
+      "id": 4,
+      "name": "two-word-trivial-готово",
+      "prompt": "/answer-simple \"Готово.\"",
+      "expected_output": "Тривиальный ответ — должен gracefully отметить что критерии неприменимы (НЕ генерить 10 проблем). По Правилу 2 — однословный ответ пропускает переформулировку.",
+      "files": []
+    },
+    {
+      "id": 5,
+      "name": "empty-invocation-usage-hint",
+      "prompt": "/answer-simple",
+      "expected_output": "Должен вернуть Usage hint с примерами вызова. НЕ генерить пустой output или фантазии. AC-2 строка 3 в spec.",
+      "files": []
+    }
+  ]
+}
