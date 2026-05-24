@@ -306,8 +306,9 @@ export function extractInlineCodePaths(content: string): { value: string; line: 
 }
 
 // strong-tests:skip invariants covered by evals iteration-2 isolated narrative-only fixture + negative fenced-skip
-export function checkNarrativePaths(specDir: string, repoRoot: string): AuditFinding[] {
+export function checkNarrativePaths(specDir: string, repoRoot: string, plannedCreatePaths: Set<string> = new Set()): AuditFinding[] {
   const findings: AuditFinding[] = [];
+  const plannedNormalized = new Set([...plannedCreatePaths].map((p) => p.replace(/\\/g, '/')));
   for (const file of NARRATIVE_FILES) {
     const content = readFileOptional(specDir, file);
     if (!content) continue;
@@ -318,6 +319,8 @@ export function checkNarrativePaths(specDir: string, repoRoot: string): AuditFin
       if (isPlaceholderPath(ref.value)) continue;
       if (isGlobPath(ref.value)) continue;
       if (isRuntimePath(ref.value)) continue;
+      const normalized = ref.value.replace(/\\/g, '/');
+      if (plannedNormalized.has(normalized)) continue;
       const resolved = path.resolve(repoRoot, ref.value);
       if (fs.existsSync(resolved)) continue;
       if (resolved.startsWith(specDir)) continue;
@@ -455,7 +458,8 @@ export function runChecks(specDir: string, repoRoot: string): RunResult {
   const { rows, findings: parseFindings } = parseFileChangesTable(fcContent || '');
   findings.push(...parseFindings);
   findings.push(...checkFcRows(rows, repoRoot));
-  findings.push(...checkNarrativePaths(specDir, repoRoot));
+  const plannedCreatePaths = new Set(rows.filter((r) => r.action === 'create').map((r) => r.path));
+  findings.push(...checkNarrativePaths(specDir, repoRoot, plannedCreatePaths));
   findings.push(...checkCodeDrift(specDir, repoRoot, rows.map((r) => r.path)));
   findings.push(...checkTasksFcConsistency(specDir, rows.map((r) => r.path)));
 

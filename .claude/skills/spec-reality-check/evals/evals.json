@@ -281,6 +281,17 @@
       "category": "hook-parsed"
     },
     {
+      "id": 28,
+      "name": "v2-narrative-planned-create-reconciled",
+      "prompt": "Bug 12 caught: spec narrative referenced files it ALSO planned in FC (action=create) — narrative WARN-ed 'missing' creating duplicate signal. Now narrative check receives plannedCreatePaths set and skips refs already covered by FC plan. Real-world hit: worktree-setup spec had 18 NARRATIVE WARN for its own planned skill files; dropped to 2 after fix.",
+      "fixture": "tests/fixtures/spec-reality-check/v2/narrative-planned-create-skip",
+      "setup": { "git_init_empty": true },
+      "expected_error": 0,
+      "expected_codes": ["NARRATIVE_PATH_MISSING"],
+      "expected_codes_optional": [],
+      "category": "narrative-fc-reconcile"
+    },
+    {
       "id": 27,
       "name": "v2-narrative-runtime-paths-skip-NEGATIVE",
       "prompt": "Bug 10 caught: runtime paths (~/, $VAR, %VAR%, /etc/, C:\\) in narrative backticks fired false NARRATIVE_PATH_MISSING. Real-world hit: pomogator-doctor spec emitted false WARNING on `~/.dev-pomogator/config.json` and `~/.claude/mcp.json` (runtime user-home artifacts, not repo files).",
