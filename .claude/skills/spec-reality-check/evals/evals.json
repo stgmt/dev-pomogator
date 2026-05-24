@@ -375,6 +375,22 @@
       "category": "negative-placeholder"
     },
     {
+      "id": 30,
+      "name": "v2-hook-deny-multi-spec-deduped",
+      "prompt": "Hook plan referencing same spec 3× should appear once in reason (Set dedup). Plan referencing 2 distinct dirty specs should produce findings from both. Manually verified via /tmp/srcheck-hook test — both behaviors confirmed.",
+      "hook_test": true,
+      "fixture_to_copy": "tests/fixtures/spec-reality-check/v2/fc-edit-only",
+      "setup": { "git_init_empty": true },
+      "hook_input": {
+        "hook_event_name": "PreToolUse",
+        "tool_name": "ExitPlanMode",
+        "tool_input": { "plan": "first work in .specs/fc-edit-only/ then more in .specs/fc-edit-only/ and finally .specs/fc-edit-only/ — same spec 3x" }
+      },
+      "expected_hook_outcome": "deny",
+      "expected_codes": ["FC_EDIT_MISSING"],
+      "category": "hook-parsed"
+    },
+    {
       "id": 21,
       "name": "v2-hook-permit-on-clean-spec-reference",
       "prompt": "Hook receives plan referencing clean-baseline fixture (0 findings expected). Must permit despite spec being referenced (no ERRORs to deny on).",
