@@ -15,7 +15,12 @@ import {
   collectRows,
 } from '../../extensions/specs-workflow/tools/specs-generator/architecture-decision/index-compiler.ts';
 import { checkArchitectureCoverage } from '../../extensions/specs-workflow/tools/specs-generator/architecture-decision/audit.ts';
-import type { AxisModel } from '../../extensions/specs-workflow/tools/specs-generator/architecture-decision/html-renderer.ts';
+import {
+  renderAxisHtml,
+  pickRecommended,
+  type AxisModel,
+  type VariantModel,
+} from '../../extensions/specs-workflow/tools/specs-generator/architecture-decision/html-renderer.ts';
 
 const FIXTURES = path.join(__dirname, '..', 'fixtures', 'architecture-decision');
 const CLI = path.join(
@@ -53,6 +58,30 @@ afterEach(() => {
     }
   }
 });
+
+function runCli(args: string[], env?: Record<string, string>) {
+  return spawnSync('npx', ['tsx', CLI, ...args], {
+    encoding: 'utf-8',
+    shell: process.platform === 'win32',
+    env: env ? { ...process.env, ...env } : process.env,
+  });
+}
+
+// Minimal valid variant for render-contract tests (ARCH007 correction/context7/policy).
+function mkVariant(over: Partial<VariantModel> & Pick<VariantModel, 'id' | 'name'>): VariantModel {
+  return {
+    y_statement: 'y',
+    maturity_ring: 'Adopt',
+    cost_chip: '$',
+    good: [],
+    neutral: [],
+    bad: [],
+    when_to_choose: 'w',
+    when_not_to_choose: 'n',
+    is_recommended: false,
+    ...over,
+  };
+}
 
 describe('ARCH001: Axis detection', () => {
   it('ARCH001_01: greenfield PRD yields ≥1 axis with valid tiers', () => {
@@ -206,14 +235,6 @@ describe('ARCH004: Browser launch (ENOENT-safe)', () => {
 });
 
 describe('ARCH005: CLI integration (spawnSync)', () => {
-  function runCli(args: string[], env?: Record<string, string>) {
-    return spawnSync('npx', ['tsx', CLI, ...args], {
-      encoding: 'utf-8',
-      shell: process.platform === 'win32',
-      env: env ? { ...process.env, ...env } : process.env,
-    });
-  }
-
   function writeLedger(dir: string, rows: Record<string, string>): void {
     const lines = [
       '| Dimension | Status | Pointer / Reason |',
@@ -336,5 +357,91 @@ describe('ARCH005: CLI integration (spawnSync)', () => {
     // INFO does not block: the ledger is still "complete" (no pending dimensions)
     expect(findings.some((f) => f.code === 'COMPLETENESS_COMPLETE')).toBe(true);
     expect(findings.some((f) => f.code === 'DIMENSION_PENDING')).toBe(false);
+  });
+});
+
+describe('ARCH007: synthesis / correction-log / context7 proof / selection policy', () => {
+  // @feature14
+  it('ARCH007_01: synthesis emits SYNTHESIS.md; insight needs ≥2 known axes (others rejected)', () => {
+    const dir = tmp();
+    fs.writeFileSync(path.join(dir, 'AXIS-hosting.md'), '---\naxis_id: hosting\nstatus: accepted\n---\n# Hosting\n');
+    fs.writeFileSync(path.join(dir, 'AXIS-auth.md'), '---\naxis_id: auth\nstatus: accepted\n---\n# Auth\n');
+    const insights = [
+      { axes: ['hosting', 'auth'], title: 'n8n redundant', description: 'both on supabase', recommendation: 'drop n8n' },
+      { axes: ['hosting'], title: 'single', description: 'x', recommendation: 'y' }, // <2 axes → rejected
+      { axes: ['hosting', 'ghost'], title: 'bad ref', description: 'x', recommendation: 'y' }, // unknown axis → rejected
+    ];
+    const insPath = path.join(dir, 'insights.json');
+    fs.writeFileSync(insPath, JSON.stringify(insights));
+    const res = runCli(['synthesis', dir, insPath]);
+    expect(res.status).toBe(0);
+    const out = JSON.parse(res.stdout) as { insights_count: number; rejected: unknown[] };
+    expect(out.insights_count).toBe(1); // only the cross-axis one survives
+    expect(out.rejected).toHaveLength(2);
+    expect(fs.existsSync(path.join(dir, 'SYNTHESIS.md'))).toBe(true);
+    const md = fs.readFileSync(path.join(dir, 'SYNTHESIS.md'), 'utf-8');
+    expect(md).toContain('hosting');
+    expect(md).toContain('auth'); // insight references ≥2 axis ids
+  });
+
+  // @feature15
+  it('ARCH007_02: correction_log renders a Corrections section; empty → none', () => {
+    const axisWith: AxisModel = {
+      axis_id: 'x',
+      axis_name: 'X',
+      context: 'c',
+      variants: [mkVariant({ id: 'a', name: 'A', is_recommended: true, correction_log: ['предполагал X → нашёл Y → исправил'] })],
+    };
+    expect(renderAxisMarkdown(axisWith)).toContain('Corrections');
+
+    const axisWithout: AxisModel = {
+      axis_id: 'x',
+      axis_name: 'X',
+      context: 'c',
+      variants: [mkVariant({ id: 'a', name: 'A', is_recommended: true })],
+    };
+    expect(renderAxisMarkdown(axisWithout)).not.toContain('Corrections');
+  });
+
+  // @feature16
+  it('ARCH007_03: VERIFIED-via-context7 marker → verified proof chip; no-match → unverified chip', () => {
+    const mk = (bullet: string): AxisModel => ({
+      axis_id: 'x',
+      axis_name: 'X',
+      context: 'c',
+      variants: [mkVariant({ id: 'a', name: 'A', is_recommended: true, good: [bullet] })],
+    });
+    const verified = renderAxisHtml(mk('fast setup [VERIFIED via context7:supabase 2.x]'));
+    expect(verified).toContain('class="proof v"');
+    expect(verified).toContain('context7:supabase');
+    // marker lifted OUT of raw bullet text (not left as inline [VERIFIED ...])
+    expect(verified).not.toContain('[VERIFIED via context7');
+
+    const unverified = renderAxisHtml(mk('maybe [UNVERIFIED — Context7 no match]'));
+    expect(unverified).toContain('class="proof u"');
+  });
+
+  // @feature17
+  it('ARCH007_04: selected policy flips recommended; demonstration table renders; unset → mvp-poc', () => {
+    const variants: VariantModel[] = [
+      mkVariant({ id: 'serverless', name: 'Serverless', is_recommended: true, policy_fit: ['mvp-poc', 'cost-optimal'] }),
+      mkVariant({ id: 'k8s', name: 'Kubernetes', cost_chip: '$$$', policy_fit: ['production-grade', 'scale-ready'] }),
+    ];
+    const axis = (policy?: AxisModel['selected_policy']): AxisModel => ({
+      axis_id: 'h',
+      axis_name: 'Hosting',
+      context: 'c',
+      variants,
+      selected_policy: policy,
+    });
+    const mvp = renderAxisMarkdown(axis('mvp-poc'));
+    const prod = renderAxisMarkdown(axis('production-grade'));
+    expect(mvp).toMatch(/^recommended: serverless$/m);
+    expect(prod).toMatch(/^recommended: k8s$/m);
+    expect(mvp).not.toEqual(prod); // policy actually changes the artefact
+    // demonstration table (variant × policy) renders when policy_fit differs
+    expect(mvp).toContain('Recommendation depends on goal');
+    // unset policy defaults to mvp-poc
+    expect(pickRecommended(axis(undefined))?.id).toBe('serverless');
   });
 });

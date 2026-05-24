@@ -33,7 +33,7 @@
 | `.claude/skills/create-spec/references/phase1.5_project-context.md` | edit | [FR-7](FR.md#fr-7-два-режима-запуска-standalone--create-spec-phase-175) — переход в 1.75 (shipped) |
 | `.claude/skills/create-spec/references/phase3plus_audit-overview.md` | edit | [FR-9](FR.md#fr-9-audit-category-architecture_coverage) + [FR-12](FR.md#fr-12-audit-category-completeness_coverage--completeness-ledger) — 9-я + 10-я категории (shipped) |
 | `extensions/specs-workflow/extension.json` | edit | [FR-7](FR.md#fr-7-два-режима-запуска-standalone--create-spec-phase-175) — регистрация skill/rules/tools; + [FR-13](FR.md#fr-13-cross-axis-synthesis) synthesis.ts + SYNTHESIS.md.template в toolFiles, bump v1.22.0 (shipped) |
-| `tests/e2e/architecture-decision.test.ts` | edit | ARCH001-005 (консолидированы в один файл, не отдельные) + invariants (shipped) |
+| `tests/e2e/architecture-decision.test.ts` | edit | ARCH001-005 (консолидированы) + invariants; + ARCH007_01-04 (synthesis/correction/context7/policy) 1:1 с @feature14-17 — закрывает тест-пробро FR-13..16 (shipped) |
 | `tests/fixtures/architecture-decision/greenfield-prd.md` | edit | Fixture — greenfield detection (shipped) |
 | `tests/fixtures/architecture-decision/brownfield-prd.md` | edit | Fixture — hard-OUT skip (shipped) |
 | `tests/fixtures/architecture-decision/expected-axes.json` | edit | Golden output axis-detector (shipped) |

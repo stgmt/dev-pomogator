@@ -228,7 +228,7 @@
 
 ## Phase 4: Selection policy + Cross-axis synthesis (FR-13..16)
 
-> Доработка после live-прогона на bhph: selection policy (FR-16, default mvp-poc), cross-axis synthesis (FR-13), correction-log (FR-14), live-context7 (FR-15). Eval 29/29 (старые 9 cases + eval-10 synthesis + eval-11 policy).
+> Доработка после live-прогона на bhph: selection policy (FR-16, default mvp-poc), cross-axis synthesis (FR-13), correction-log (FR-14), live-context7 (FR-15). Eval-runner 32/32 + vitest ARCH007_01-04 (1:1 с @feature14-17, закрывает тест-пробел FR-13..16).
 
 - [x] FR-13 synthesis.ts + CLI `synthesis` + SYNTHESIS.md.template -- @feature14 — Status: DONE | Est: 45m
   _Requirements: [FR-13](FR.md#fr-13-cross-axis-synthesis)_
