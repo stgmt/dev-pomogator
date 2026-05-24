@@ -1,0 +1,297 @@
+import { describe, it, expect, afterEach } from 'vitest';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { detectAxes } from '../../extensions/specs-workflow/tools/specs-generator/architecture-decision/axis-detector.ts';
+import {
+  generateAxisArtefact,
+  seededShuffle,
+  renderAxisMarkdown,
+} from '../../extensions/specs-workflow/tools/specs-generator/architecture-decision/artefact-generator.ts';
+import { openInBrowser } from '../../extensions/specs-workflow/tools/specs-generator/architecture-decision/open-in-browser.ts';
+import {
+  compileIndex,
+  collectRows,
+} from '../../extensions/specs-workflow/tools/specs-generator/architecture-decision/index-compiler.ts';
+import { checkArchitectureCoverage } from '../../extensions/specs-workflow/tools/specs-generator/architecture-decision/audit.ts';
+import type { AxisModel } from '../../extensions/specs-workflow/tools/specs-generator/architecture-decision/html-renderer.ts';
+
+const FIXTURES = path.join(__dirname, '..', 'fixtures', 'architecture-decision');
+const CLI = path.join(
+  __dirname,
+  '..',
+  '..',
+  'extensions',
+  'specs-workflow',
+  'tools',
+  'specs-generator',
+  'architecture-decision',
+  'architecture-decision-cli.ts',
+);
+
+function readFixture(name: string): string {
+  return fs.readFileSync(path.join(FIXTURES, name), 'utf-8');
+}
+function sampleAxis(): AxisModel {
+  return JSON.parse(readFixture('sample-axis-model.json'));
+}
+
+const tmpDirs: string[] = [];
+function tmp(): string {
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'arch-test-'));
+  tmpDirs.push(d);
+  return d;
+}
+afterEach(() => {
+  while (tmpDirs.length) {
+    const d = tmpDirs.pop()!;
+    try {
+      fs.rmSync(d, { recursive: true, force: true });
+    } catch {
+      /* ignore */
+    }
+  }
+});
+
+describe('ARCH001: Axis detection', () => {
+  it('ARCH001_01: greenfield PRD yields ≥1 axis with valid tiers', () => {
+    const r = detectAxes(readFixture('greenfield-prd.md'));
+    expect(r.axes_detected).toBeGreaterThanOrEqual(1);
+    // invariant: cardinality — axes_detected == axes.length
+    expect(r.axes_detected).toBe(r.axes.length);
+    for (const a of r.axes) {
+      expect(['Critical', 'Important', 'Deferred']).toContain(a.tier);
+    }
+  });
+
+  it('ARCH001_02: brownfield PRD → hard-OUT, axes_detected=0', () => {
+    const r = detectAxes(readFixture('brownfield-prd.md'));
+    expect(r.axes_detected).toBe(0);
+    expect(r.axes).toHaveLength(0);
+    expect(r.skipped_reason).toMatch(/brownfield/);
+  });
+
+  it('ARCH001_03: seed axis ids are unique (no duplicate detection)', () => {
+    const r = detectAxes(readFixture('greenfield-prd.md'));
+    const seedIds = r.axes.filter((a) => !a.id.startsWith('clarify-')).map((a) => a.id);
+    // invariant: uniqueness — each seed axis detected at most once
+    expect(new Set(seedIds).size).toBe(seedIds.length);
+  });
+
+  it('ARCH001_04: NEEDS CLARIFICATION harvested as deferred axis', () => {
+    const r = detectAxes(readFixture('greenfield-prd.md'));
+    const clarify = r.axes.filter((a) => a.id.startsWith('clarify-'));
+    expect(clarify.length).toBeGreaterThanOrEqual(1);
+    expect(clarify.every((a) => a.tier === 'Deferred')).toBe(true);
+  });
+
+  it('ARCH001_05: matches golden expected-axes snapshot', () => {
+    const golden = JSON.parse(readFixture('expected-axes.json'));
+    const r = detectAxes(readFixture('greenfield-prd.md'));
+    const ids = new Set(r.axes.map((a) => a.id));
+    for (const expected of golden.expected_seed_axis_ids) {
+      expect(ids.has(expected)).toBe(true);
+    }
+  });
+});
+
+describe('ARCH002: Artefact generation', () => {
+  it('ARCH002_01: generates self-contained md + html with recommendation', () => {
+    const out = tmp();
+    const r = generateAxisArtefact(sampleAxis(), out);
+    expect(fs.existsSync(r.mdPath)).toBe(true);
+    expect(fs.existsSync(r.htmlPath)).toBe(true);
+    const html = fs.readFileSync(r.htmlPath, 'utf-8');
+    expect(html).not.toMatch(/<link\b/); // self-contained: no external stylesheet
+    expect(html).toContain('RECOMMENDED');
+  });
+
+  it('ARCH002_02: seededShuffle conserves the multiset (no loss/dup)', () => {
+    const input = ['a', 'b', 'c', 'd', 'e'];
+    const out = seededShuffle(input, 'database');
+    // invariant: conservation — same length, same set
+    expect(out).toHaveLength(input.length);
+    expect([...out].sort()).toEqual([...input].sort());
+  });
+
+  it('ARCH002_03: seededShuffle is deterministic for the same seed', () => {
+    const input = ['a', 'b', 'c', 'd', 'e'];
+    expect(seededShuffle(input, 'x')).toEqual(seededShuffle(input, 'x'));
+  });
+
+  it('ARCH002_04: recommendation pinned top regardless of variant order', () => {
+    const md = renderAxisMarkdown(sampleAxis());
+    const recIdx = md.indexOf('✅ Recommended');
+    expect(recIdx).toBeGreaterThan(-1);
+    // recommendation section appears before the per-variant cards
+    expect(recIdx).toBeLessThan(md.indexOf('## Neon'));
+  });
+
+  it('ARCH002_05: word-budget within ±15% for balanced variants', () => {
+    const r = generateAxisArtefact(sampleAxis(), tmp());
+    expect(r.wordBudgetOk).toBe(true);
+  });
+});
+
+describe('ARCH003: Index compile', () => {
+  function seedAxisFile(dir: string, id: string, status: string): void {
+    fs.writeFileSync(
+      path.join(dir, `AXIS-${id}.md`),
+      `---\naxis_id: ${id}\nstatus: ${status}\nchosen: null\n---\n# ${id} axis\n`,
+    );
+  }
+
+  it('ARCH003_01: collectRows cardinality — N axis files = N rows', () => {
+    const dir = tmp();
+    seedAxisFile(dir, 'a', 'pending');
+    seedAxisFile(dir, 'b', 'accepted');
+    seedAxisFile(dir, 'c', 'pending');
+    const rows = collectRows(dir);
+    expect(rows).toHaveLength(3);
+    expect(new Set(rows.map((r) => r.axis_id)).size).toBe(3);
+  });
+
+  it('ARCH003_02: compile-index is idempotent', () => {
+    const dir = tmp();
+    seedAxisFile(dir, 'a', 'pending');
+    const first = compileIndex(dir, 'spec');
+    const firstMd = fs.readFileSync(path.join(dir, 'INDEX.md'), 'utf-8');
+    const second = compileIndex(dir, 'spec');
+    const secondMd = fs.readFileSync(path.join(dir, 'INDEX.md'), 'utf-8');
+    expect(secondMd).toBe(firstMd);
+    expect(second.axes_total).toBe(first.axes_total);
+  });
+
+  it('ARCH003_03: splice preserves user content outside AUTOGEN markers', () => {
+    const dir = tmp();
+    seedAxisFile(dir, 'a', 'pending');
+    compileIndex(dir, 'spec');
+    const withUser =
+      fs.readFileSync(path.join(dir, 'INDEX.md'), 'utf-8') + '\n## My notes\nkeep me\n';
+    fs.writeFileSync(path.join(dir, 'INDEX.md'), withUser);
+    compileIndex(dir, 'spec');
+    expect(fs.readFileSync(path.join(dir, 'INDEX.md'), 'utf-8')).toContain('keep me');
+  });
+});
+
+describe('ARCH004: Browser launch (ENOENT-safe)', () => {
+  it('ARCH004_01: never throws, returns launched boolean', async () => {
+    const r = await openInBrowser('/nonexistent/path.html', 'linux');
+    expect(typeof r.launched).toBe('boolean');
+  });
+
+  it('ARCH004_02: unknown binary → launched=false with file:// fallback', async () => {
+    // 'linux' launcher uses xdg-open; on a CI box without it → ENOENT → fallback.
+    const r = await openInBrowser('C:/x/y.html', 'linux');
+    if (!r.launched) {
+      expect(r.fallback).toMatch(/^file:\/\//);
+    }
+  });
+});
+
+describe('ARCH005: CLI integration (spawnSync)', () => {
+  function runCli(args: string[], env?: Record<string, string>) {
+    return spawnSync('npx', ['tsx', CLI, ...args], {
+      encoding: 'utf-8',
+      shell: process.platform === 'win32',
+      env: env ? { ...process.env, ...env } : process.env,
+    });
+  }
+
+  function writeLedger(dir: string, rows: Record<string, string>): void {
+    const lines = [
+      '| Dimension | Status | Pointer / Reason |',
+      '|-----------|--------|------------------|',
+      ...Object.entries(rows).map(([dim, cell]) => `| ${dim} | ${cell} |`),
+      '',
+    ];
+    fs.writeFileSync(path.join(dir, 'COMPLETENESS.md'), lines.join('\n'));
+  }
+
+  it('ARCH005_01: detect-axes on greenfield → JSON axes, exit 0', () => {
+    const res = runCli(['detect-axes', path.join(FIXTURES, 'greenfield-prd.md')]);
+    expect(res.status).toBe(0);
+    const out = JSON.parse(res.stdout);
+    expect(out.axes_detected).toBeGreaterThanOrEqual(1);
+  });
+
+  it('ARCH005_02: detect-axes on brownfield → axes_detected=0', () => {
+    const res = runCli(['detect-axes', path.join(FIXTURES, 'brownfield-prd.md')]);
+    expect(res.status).toBe(0);
+    expect(JSON.parse(res.stdout).axes_detected).toBe(0);
+  });
+
+  it('ARCH005_03: missing arg → exit 2', () => {
+    const res = runCli(['detect-axes']);
+    expect(res.status).toBe(2);
+  });
+
+  it('ARCH005_04: audit pending axis → ARCHITECTURE_COVERAGE WARNING', () => {
+    const dir = tmp();
+    fs.writeFileSync(
+      path.join(dir, 'AXIS-x.md'),
+      '---\naxis_id: x\nstatus: pending\n---\n# x\n',
+    );
+    const res = runCli(['audit', dir]);
+    expect(res.status).toBe(0);
+    const findings = JSON.parse(res.stdout).findings;
+    expect(findings.some((f: { code: string }) => f.code === 'AXIS_PENDING')).toBe(true);
+  });
+
+  it('ARCH005_05: COMPLETENESS_COVERAGE blocks STOP on pending dimension', () => {
+    const dir = tmp();
+    writeLedger(dir, {
+      'internal-consistency': 'addressed | diagram synced',
+      'flow-completeness': 'addressed | all flows listed',
+      'compliance-privacy': 'pending | ',
+      'auth-secrets': 'addressed | signature auth',
+      observability: 'addressed | system_errors table',
+      'data-lifecycle': 'addressed | cleanup cron',
+      'cost-quota': 'addressed | budget modelled',
+      'deploy-ops': 'addressed | CI/CD documented',
+    });
+    const res = runCli(['audit-completeness', dir]);
+    expect(res.status).toBe(0);
+    const findings = JSON.parse(res.stdout).findings as Array<{
+      code: string;
+      severity: string;
+      dimension_id?: string;
+    }>;
+    const pending = findings.filter((f) => f.code === 'DIMENSION_PENDING');
+    expect(pending).toHaveLength(1);
+    expect(pending[0].dimension_id).toBe('compliance-privacy');
+    expect(pending[0].severity).toBe('WARNING');
+    // invariant: not "complete" while any dimension pending
+    expect(findings.some((f) => f.code === 'COMPLETENESS_COMPLETE')).toBe(false);
+
+    // missing COMPLETENESS.md → all 8 dimensions pending (cardinality invariant)
+    const empty = tmp();
+    const res2 = runCli(['audit-completeness', empty]);
+    const f2 = JSON.parse(res2.stdout).findings as Array<{ code: string }>;
+    expect(f2.filter((f) => f.code === 'DIMENSION_PENDING')).toHaveLength(8);
+  });
+
+  it('ARCH005_06: all dimensions resolved → one COMPLETENESS_COMPLETE; short escape reason → WARNING_REASON_TOO_SHORT', () => {
+    const dir = tmp();
+    writeLedger(dir, {
+      'internal-consistency': 'addressed | diagram synced',
+      'flow-completeness': 'addressed | all flows listed',
+      'compliance-privacy': 'out-of-scope | [skip-completeness-dimension: short]',
+      'auth-secrets': 'addressed | signature auth',
+      observability: 'addressed | system_errors table',
+      'data-lifecycle': 'addressed | cleanup cron',
+      'cost-quota': 'addressed | budget modelled',
+      'deploy-ops': 'addressed | CI/CD documented',
+    });
+    const res = runCli(['audit-completeness', dir], { ARCHITECTURE_LOG_DIR: dir });
+    expect(res.status).toBe(0);
+    const findings = JSON.parse(res.stdout).findings as Array<{ code: string }>;
+    // invariant: COMPLETENESS_COMPLETE appears at most once
+    expect(findings.filter((f) => f.code === 'COMPLETENESS_COMPLETE')).toHaveLength(1);
+    expect(findings.some((f) => f.code === 'DIMENSION_PENDING')).toBe(false);
+    // reason "short" (5 chars) < 12 → WARNING_REASON_TOO_SHORT, and escape logged to sibling file
+    expect(findings.some((f) => f.code === 'WARNING_REASON_TOO_SHORT')).toBe(true);
+    expect(fs.existsSync(path.join(dir, 'spec-completeness-escapes.jsonl'))).toBe(true);
+  });
+});

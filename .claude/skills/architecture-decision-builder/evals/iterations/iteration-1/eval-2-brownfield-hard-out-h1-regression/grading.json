@@ -1,0 +1,14 @@
+{
+  "expectations": [
+    {
+      "text": "axes_detected == 0",
+      "passed": true,
+      "evidence": "actual=0"
+    },
+    {
+      "text": "skipped_reason contains 'brownfield'",
+      "passed": true,
+      "evidence": "actual='brownfield-signals: matched \"pyproject.toml\"'"
+    }
+  ]
+}

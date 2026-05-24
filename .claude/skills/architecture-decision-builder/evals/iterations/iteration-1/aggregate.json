@@ -1,0 +1,63 @@
+{
+  "total": 21,
+  "passed": 21,
+  "failed": 0,
+  "details": [
+    {
+      "id": 1,
+      "name": "greenfield-detect-positive",
+      "passed": 1,
+      "total": 1,
+      "duration_ms": 906
+    },
+    {
+      "id": 2,
+      "name": "brownfield-hard-out-h1-regression",
+      "passed": 2,
+      "total": 2,
+      "duration_ms": 855
+    },
+    {
+      "id": 3,
+      "name": "audit-pending-blocks",
+      "passed": 3,
+      "total": 3,
+      "duration_ms": 861
+    },
+    {
+      "id": 4,
+      "name": "audit-all-accepted-complete",
+      "passed": 3,
+      "total": 3,
+      "duration_ms": 857
+    },
+    {
+      "id": 5,
+      "name": "escape-hatch-short-reason-info",
+      "passed": 3,
+      "total": 3,
+      "duration_ms": 795
+    },
+    {
+      "id": 6,
+      "name": "escape-hatch-valid-reason",
+      "passed": 3,
+      "total": 3,
+      "duration_ms": 812
+    },
+    {
+      "id": 7,
+      "name": "completeness-all-addressed-complete",
+      "passed": 3,
+      "total": 3,
+      "duration_ms": 813
+    },
+    {
+      "id": 8,
+      "name": "completeness-one-pending-blocks",
+      "passed": 3,
+      "total": 3,
+      "duration_ms": 864
+    }
+  ]
+}

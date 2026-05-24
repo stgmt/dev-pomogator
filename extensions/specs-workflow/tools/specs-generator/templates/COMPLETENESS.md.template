@@ -1,0 +1,18 @@
+# Completeness ledger — {slug}
+
+> FR-12 COMPLETENESS_COVERAGE. 8 system-completeness dimensions. Each must be `addressed`
+> (+ design pointer), `out-of-scope` (+ reason ≥12 chars), or `pending` (blocks STOP #3).
+> Audit: `architecture-decision-cli.ts audit-completeness <spec-dir>`.
+
+| dimension | status | reason |
+|-----------|--------|--------|
+| internal-consistency | pending | <!-- R13: diagrams/tables/prose vs accepted decisions --> |
+| flow-completeness | pending | <!-- R14: each integration inbound+outbound+status+error+trigger --> |
+| compliance-privacy | pending | <!-- R15: opt-out/TCPA, CAN-SPAM, PII enforcement point --> |
+| auth-secrets | pending | <!-- R16: authn per public endpoint + secret storage --> |
+| observability | pending | <!-- R17: error/violation surfacing + alerting --> |
+| data-lifecycle | pending | <!-- R18: retention/cleanup for unbounded growth --> |
+| cost-quota | pending | <!-- R19: per-unit variable cost + provider quotas, set BEFORE axis lock --> |
+| deploy-ops | pending | <!-- R20: local dev / migrations / seed / staging / CI-CD / backups --> |
+
+<!-- Escape an inapplicable dimension: [skip-completeness-dimension: <reason ≥12 chars>] -->

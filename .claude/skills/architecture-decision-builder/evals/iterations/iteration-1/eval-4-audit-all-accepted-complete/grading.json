@@ -1,0 +1,19 @@
+{
+  "expectations": [
+    {
+      "text": "codes == ['MATRIX_COMPLETE']",
+      "passed": true,
+      "evidence": "actual=['MATRIX_COMPLETE']"
+    },
+    {
+      "text": "WARNING == 0",
+      "passed": true,
+      "evidence": "actual=0"
+    },
+    {
+      "text": "INFO == 1",
+      "passed": true,
+      "evidence": "actual=1"
+    }
+  ]
+}

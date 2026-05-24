@@ -36,9 +36,9 @@ Skill("spec-reality-check")
 
 После cleanup — повторить Step 1 (`audit-spec.ts`) и продолжить к Step 2.
 
-## Step 2: AI семантический анализ (8 категорий)
+## Step 2: AI семантический анализ (10 категорий)
 
-Агент ОБЯЗАН выполнить проверки по 8 категориям, читая файлы спеки И реальный код проекта. Каждая категория — отдельный reference-файл с описанием checks и remediation:
+Агент ОБЯЗАН выполнить проверки по 10 категориям, читая файлы спеки И реальный код проекта. Каждая категория — отдельный reference-файл с описанием checks и remediation:
 
 | Category | Reference | Severity scope |
 |----------|-----------|----------------|
@@ -50,8 +50,10 @@ Skill("spec-reality-check")
 | UNDEFINED_BEHAVIOR | [`phase3plus_audit-undefined-behavior.md`](phase3plus_audit-undefined-behavior.md) | Непокрытые edge cases (taxonomy с 9 категориями + BVA + 12 combined failures inlined) |
 | JIRA_DRIFT (только Jira-mode) | [`phase3plus_audit-jira-drift.md`](phase3plus_audit-jira-drift.md) | Drift между spec и Jira source |
 | VARIANT_COVERAGE | [`phase3plus_audit-variant-coverage.md`](phase3plus_audit-variant-coverage.md) | Polymorphic FRs без enumerated variant matrix (AC Decision Table + Examples + per-variant tasks) |
+| ARCHITECTURE_COVERAGE | [`phase3plus_audit-architecture-coverage.md`](phase3plus_audit-architecture-coverage.md) | Greenfield architecture axes (Phase 1.75) в статусе pending — blocks STOP #3 |
+| COMPLETENESS_COVERAGE | [`phase3plus_audit-completeness-coverage.md`](phase3plus_audit-completeness-coverage.md) | Greenfield: 8 system-completeness измерений (COMPLETENESS.md ledger) в статусе pending — blocks STOP #3 |
 
-Загружай только relevant category файлы — не все 8 одновременно.
+Загружай только relevant category файлы — не все 10 одновременно.
 
 ## Step 3: Исправление найденных проблем
 
@@ -64,6 +66,8 @@ Skill("spec-reality-check")
 5. **ФАНТАЗИИ** — пометить непроверенные допущения как `[UNVERIFIED]`, добавить задачу live API verification в TASKS.md
 6. **UNDEFINED_BEHAVIOR** — для critical/high findings: добавить FR/AC/BDD сценарий покрывающий edge case. Для medium/low: добавить `[KNOWN_UB: {category}]` пометку в FR/AC и задачу в TASKS.md
 7. **VARIANT_COVERAGE** — для каждого polymorphic FR без complete matrix: emit AC Decision Table (через Skill `variant-matrix-build`), Gherkin Scenario Outline + Examples в .feature, per-variant tasks в TASKS.md. Если matrix не applicable — добавить escape hatch `[skip-variant-matrix: <reason ≥8 chars>]` в FR body. См. `phase3plus_audit-variant-coverage.md` для resolution guide.
+8. **ARCHITECTURE_COVERAGE** (greenfield only) — для каждой оси в статусе `pending`: выбрать вариант (auto-mode рекомендация или override) ИЛИ добавить `[skip-architecture-axis: <reason ≥12 chars>]`. Применимо только если `.specs/{slug}/ARCHITECTURE/` существует (Phase 1.75 ran). См. `phase3plus_audit-architecture-coverage.md`.
+9. **COMPLETENESS_COVERAGE** (greenfield only) — для каждого из 8 измерений в `ARCHITECTURE/COMPLETENESS.md` ledger в статусе `pending`: пометить `addressed` (+ pointer) / `out-of-scope` (+ reason ≥12) ИЛИ `[skip-completeness-dimension: <reason ≥12>]`. Прогон `architecture-decision-cli.ts audit-completeness <spec-dir>`. См. `phase3plus_audit-completeness-coverage.md`.
 
 ## Step 4: Повторный аудит
 

@@ -1,0 +1,28 @@
+{
+  "rubric_for": "architecture-decision-builder qualitative artifact-bench",
+  "notes": "Applied to a generated ARCHITECTURE_PROPOSAL.md / per-axis artefact. R1-R9 = per-axis variant decision quality; R10-R12 = per-variant design discipline (from real bhph failure modes, see memory feedback_design-research-discipline); R13-R20 = system-completeness layer (from the 12 real scenario-bhph gaps → AWS Well-Architected pillars). R3 is BLOCKING (anti-hallucination). LLM-judge or manual grading; golden bench scenario-bhph is the oracle. Deterministic enforcement of the R13-R20 layer is the COMPLETENESS_COVERAGE audit (FR-12, COMPLETENESS.md ledger) — this rubric judges quality, the audit gates presence.",
+  "criteria": [
+    { "id": "R1", "name": "variant-count", "check": "≥3 variants per axis", "blocking": false },
+    { "id": "R2", "name": "concrete-not-vibe", "check": "each pro/con is a concrete property (license/benchmark/SLA/cost), not an adjective like 'faster'", "blocking": false },
+    { "id": "R3", "name": "anti-hallucination", "check": "every technical claim carries [VERIFIED via <source>] or [UNVERIFIED] marker", "blocking": true },
+    { "id": "R4", "name": "cost-cited", "check": "cost is cited with source OR marked [UNVERIFIED — knowledge cutoff]; never bare confident numbers", "blocking": false },
+    { "id": "R5", "name": "honest-recommendation", "check": "recommendation states the chosen variant + the ONE driver that broke the tie + 'reconsider if' condition", "blocking": false },
+    { "id": "R6", "name": "when-not-to-choose", "check": "each variant has an explicit When-NOT-to-choose (KEP Non-Goals pattern)", "blocking": false },
+    { "id": "R7", "name": "decision-recorded", "check": "chosen decision + rationale recorded in frontmatter/body (пометь выборы и причины)", "blocking": false },
+    { "id": "R8", "name": "non-default-variant", "check": "≥1 variant outside the agent's first-instinct popular stack (popular-stack bias mitigation)", "blocking": false },
+    { "id": "R9", "name": "progressive-disclosure", "check": "new variants surfaced as the user's questions deepen, not all dumped flat (bhph A→F evolution)", "blocking": false },
+    { "id": "R10", "name": "failure-modes", "check": "each variant enumerates failure modes — crash mid-operation / duplicate side-effect / poison-infinite-retry / race; 'exactly-once delivery' ≠ idempotent side-effect", "blocking": true },
+    { "id": "R11", "name": "best-practice-verified", "check": "each tech choice verified as vendor-RECOMMENDED [cite doc], not merely 'feasible'; deviations explicitly justified", "blocking": false },
+    { "id": "R12", "name": "integration-timing", "check": "each external integration checks webhook timeout / required-response-time (respond-immediately if handler slower), sync-vs-async semantics, rate limits, per-resource queue limits", "blocking": true },
+    { "id": "R13", "name": "internal-consistency", "check": "diagrams/stack-tables/prose do not contradict accepted decisions; a stale artefact after a decision change = fail", "blocking": false },
+    { "id": "R14", "name": "flow-completeness", "check": "each external integration enumerates inbound handler + outbound call + status/delivery callback + error/timeout path + trigger/scheduler (not just happy inbound)", "blocking": false },
+    { "id": "R15", "name": "compliance-privacy", "check": "each legal/privacy constraint (opt-out/TCPA, CAN-SPAM, PII at-rest/in-transit) has an explicit enforcement point in the design, not implicit", "blocking": false },
+    { "id": "R16", "name": "auth-secrets", "check": "each public endpoint declares its authn (webhook signature vs JWT); each secret declares where it is stored and is not exposed (no service-role key in a public function)", "blocking": false },
+    { "id": "R17", "name": "observability", "check": "where failures / validator-violations surface, the alert channel, and who is paged — not 'monitoring' unbound to a component", "blocking": false },
+    { "id": "R18", "name": "data-lifecycle", "check": "each growing table/queue/log has a retention or cleanup story (unbounded growth = fail)", "blocking": false },
+    { "id": "R19", "name": "cost-quota", "check": "per-unit variable cost (LLM/SMS/voice/STT per event) + provider quota/limit checked where a design choice consumes it, flagging when a choice blows budget/quota; evaluate BEFORE locking axes", "blocking": false },
+    { "id": "R20", "name": "deploy-ops", "check": "local dev (supabase start / functions serve), migration workflow, seed data, staging, CI/CD for functions, backups/PITR are present", "blocking": false }
+  ],
+  "blocking_criteria": ["R3", "R10", "R12"],
+  "golden_bench": "evals/artifact-bench/scenario-bhph/ARCHITECTURE_PROPOSAL.md"
+}

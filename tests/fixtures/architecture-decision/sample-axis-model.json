@@ -1,0 +1,82 @@
+{
+  "axis_id": "database",
+  "axis_name": "Database / persistence",
+  "context": "TaskFlow needs relational storage for workspaces, users, tasks, comments. 20 workspaces pilot, budget-sensitive, one developer, future SaaS phase.",
+  "variants": [
+    {
+      "id": "supabase",
+      "name": "Supabase (managed Postgres)",
+      "y_statement": "In the context of a 20-workspace pilot, facing one-dev maintainability, use Supabase managed Postgres and reject self-hosting, to achieve zero-ops + bundled Auth/Storage, accepting vendor-specific surface.",
+      "maturity_ring": "Adopt",
+      "cost_chip": "$$",
+      "good": [
+        "Good, because bundled Auth + Storage + RLS in one project [VERIFIED via supabase.com/docs]",
+        "Good, because managed backups + zero-ops for a solo dev"
+      ],
+      "neutral": [
+        "Neutral, because Postgres-the-DB is portable; only Supabase-specific APIs lock in"
+      ],
+      "bad": [
+        "Bad, because Pro tier $25/mo floor [UNVERIFIED — knowledge cutoff Jan 2026]"
+      ],
+      "failure_modes": [
+        "Crash mid-migration → use transactional migrations (idempotent); Supabase runs each in a tx",
+        "Vendor outage → managed SLA only; no self-host fallback without rewrite"
+      ],
+      "when_to_choose": "Solo dev, wants bundled auth, future SaaS dashboard.",
+      "when_not_to_choose": "Hard requirement for self-hosted DB or air-gapped deploy.",
+      "confirmation": "Day-7: restore-to-staging dry-run verifies managed backup works.",
+      "is_recommended": true
+    },
+    {
+      "id": "neon",
+      "name": "Neon (serverless Postgres)",
+      "y_statement": "In the context of the same pilot, facing portability preference, use Neon serverless Postgres and reject bundling, to achieve standard Postgres + scale-to-zero, accepting separate Auth/Storage choices.",
+      "maturity_ring": "Adopt",
+      "cost_chip": "$",
+      "good": [
+        "Good, because pure Postgres, zero vendor lock beyond connection string",
+        "Good, because scale-to-zero pricing suits low pilot traffic [UNVERIFIED — knowledge cutoff]"
+      ],
+      "neutral": [
+        "Neutral, because Auth + Storage chosen separately (more wiring)"
+      ],
+      "bad": [
+        "Bad, because cold-start on scale-to-zero adds first-query latency"
+      ],
+      "failure_modes": [
+        "Cold-start timeout under burst → keep a warm connection / disable scale-to-zero",
+        "Crash mid-migration → same transactional-migration mitigation as any Postgres"
+      ],
+      "when_to_choose": "Want maximum portability, comfortable wiring Auth/Storage yourself.",
+      "when_not_to_choose": "Want bundled Auth/Storage out-of-box.",
+      "confirmation": "Load test 100 RPS for 1h, p99 < 200ms after warm-up.",
+      "is_recommended": false
+    },
+    {
+      "id": "self-hosted-pg",
+      "name": "Self-hosted Postgres (VPS)",
+      "y_statement": "In the context of the pilot, facing full-control preference, run Postgres on a VPS and reject managed services, to achieve zero vendor lock + lowest cost, accepting full ops burden.",
+      "maturity_ring": "Trial",
+      "cost_chip": "$",
+      "good": [
+        "Good, because no vendor lock at all, cheapest raw compute"
+      ],
+      "neutral": [
+        "Neutral, because requires a VPS you already manage"
+      ],
+      "bad": [
+        "Bad, because backups/patching/HA are all your responsibility — heavy for solo dev",
+        "Bad, because no bundled Auth/Storage"
+      ],
+      "failure_modes": [
+        "Disk full / no backup → data loss; you own backup cron + monitoring",
+        "Crash recovery → you own WAL archiving + restore runbook"
+      ],
+      "when_to_choose": "You already run VPS infra and need air-gapped/full control.",
+      "when_not_to_choose": "Solo dev who values time over raw cost — ops burden too high.",
+      "confirmation": "Documented restore-from-backup runbook executed successfully once.",
+      "is_recommended": false
+    }
+  ]
+}

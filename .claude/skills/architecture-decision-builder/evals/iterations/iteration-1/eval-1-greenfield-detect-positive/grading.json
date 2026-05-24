@@ -1,0 +1,9 @@
+{
+  "expectations": [
+    {
+      "text": "axes_detected >= 8",
+      "passed": true,
+      "evidence": "actual=8"
+    }
+  ]
+}

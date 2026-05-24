@@ -1,0 +1,89 @@
+{
+  "skill_name": "architecture-decision-builder",
+  "iteration": 1,
+  "notes": "Iteration-1 deterministic evals. detect-axes cases use static PRD fixtures; audit cases use inline setup_axes (runner writes temp AXIS-*.md). Host-run, no Docker.",
+  "evals": [
+    {
+      "id": 1,
+      "name": "greenfield-detect-positive",
+      "command": "detect-axes",
+      "fixture": "tests/fixtures/architecture-decision/greenfield-prd.md",
+      "expect": { "axes_detected_min": 8 },
+      "category": "detection-accuracy"
+    },
+    {
+      "id": 2,
+      "name": "brownfield-hard-out-h1-regression",
+      "command": "detect-axes",
+      "fixture": "tests/fixtures/architecture-decision/brownfield-prd.md",
+      "expect": { "axes_detected": 0, "skipped_contains": "brownfield" },
+      "category": "h1-regression"
+    },
+    {
+      "id": 3,
+      "name": "audit-pending-blocks",
+      "command": "audit",
+      "setup_axes": [{ "id": "hosting", "status": "pending" }],
+      "expect": { "codes": ["AXIS_PENDING"], "warning": 1, "info": 0 },
+      "category": "coverage"
+    },
+    {
+      "id": 4,
+      "name": "audit-all-accepted-complete",
+      "command": "audit",
+      "setup_axes": [{ "id": "hosting", "status": "accepted", "chosen": "supabase" }],
+      "expect": { "codes": ["MATRIX_COMPLETE"], "warning": 0, "info": 1 },
+      "category": "positive-signal"
+    },
+    {
+      "id": 5,
+      "name": "escape-hatch-short-reason-info",
+      "command": "audit",
+      "setup_axes": [{ "id": "email", "status": "pending", "escape": "ok" }],
+      "expect": { "codes": ["AXIS_PENDING", "WARNING_REASON_TOO_SHORT"], "warning": 1, "info": 1 },
+      "category": "fr10-edge-case"
+    },
+    {
+      "id": 6,
+      "name": "escape-hatch-valid-reason",
+      "command": "audit",
+      "setup_axes": [{ "id": "email", "status": "accepted", "chosen": "ses", "escape": "covered by parametrized doctype helper" }],
+      "expect": { "codes": ["ESCAPE_HATCH_USED", "MATRIX_COMPLETE"], "warning": 0, "info": 2 },
+      "category": "boundary-case"
+    },
+    {
+      "id": 7,
+      "name": "completeness-all-addressed-complete",
+      "command": "audit-completeness",
+      "setup_ledger": [
+        { "dimension": "internal-consistency", "status": "addressed" },
+        { "dimension": "flow-completeness", "status": "addressed" },
+        { "dimension": "compliance-privacy", "status": "addressed" },
+        { "dimension": "auth-secrets", "status": "addressed" },
+        { "dimension": "observability", "status": "addressed" },
+        { "dimension": "data-lifecycle", "status": "out-of-scope", "reason": "no unbounded growth in MVP" },
+        { "dimension": "cost-quota", "status": "addressed" },
+        { "dimension": "deploy-ops", "status": "addressed" }
+      ],
+      "expect": { "codes": ["COMPLETENESS_COMPLETE"], "warning": 0, "info": 1 },
+      "category": "fr12-positive-signal"
+    },
+    {
+      "id": 8,
+      "name": "completeness-one-pending-blocks",
+      "command": "audit-completeness",
+      "setup_ledger": [
+        { "dimension": "internal-consistency", "status": "addressed" },
+        { "dimension": "flow-completeness", "status": "addressed" },
+        { "dimension": "compliance-privacy", "status": "addressed" },
+        { "dimension": "auth-secrets", "status": "addressed" },
+        { "dimension": "observability", "status": "addressed" },
+        { "dimension": "data-lifecycle", "status": "addressed" },
+        { "dimension": "cost-quota", "status": "addressed" },
+        { "dimension": "deploy-ops", "status": "pending" }
+      ],
+      "expect": { "codes": ["DIMENSION_PENDING"], "warning": 1, "info": 0 },
+      "category": "fr12-coverage"
+    }
+  ]
+}

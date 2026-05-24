@@ -1,0 +1,14 @@
+{
+  "_comment": "Golden snapshot — seed axis ids expected from greenfield-prd.md. clarify-* axes excluded (count varies with PRD wording).",
+  "expected_seed_axis_ids": [
+    "database",
+    "file-storage",
+    "auth",
+    "api",
+    "frontend",
+    "hosting",
+    "background-jobs",
+    "email"
+  ],
+  "expected_min_total": 8
+}

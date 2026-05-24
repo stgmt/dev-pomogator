@@ -33,12 +33,13 @@ argument-hint: "<feature-slug>"
 |-------|-----------|------------|
 | **1. Discovery** | [`references/phase1_discovery.md`](references/phase1_discovery.md) | USER_STORIES, USE_CASES, RESEARCH; вызывает `Skill("research-workflow")` для технических находок |
 | **1.5. Project Context** | [`references/phase1.5_project-context.md`](references/phase1.5_project-context.md) | Сканирование `.claude/rules/` + `extensions/*/extension.json` + BDD framework detection |
+| **1.75. Architecture Decisions** (greenfield only) | [`references/phase1.75_architecture-decisions.md`](references/phase1.75_architecture-decisions.md) | Greenfield-only: enumerate tech-stack axes + auto-apply рекомендаций (auto-mode, без блокирующего STOP); вызывает `Skill("architecture-decision-builder")` |
 | **2. Requirements + Design** | [`references/phase2_requirements-and-design.md`](references/phase2_requirements-and-design.md) | FR, NFR, AC (EARS), REQUIREMENTS, DESIGN, FILE_CHANGES, `.feature`; вызывает `Skill("requirements-chk-matrix")` |
 | **2 (BDD subsection)** | [`references/phase2_bdd-test-infrastructure.md`](references/phase2_bdd-test-infrastructure.md) | TEST_DATA / TEST_FORMAT classification, hooks design, FIXTURES.md |
 | **3. Finalization** | [`references/phase3_finalization.md`](references/phase3_finalization.md) | TASKS (TDD-порядок), README, CHANGELOG; вызывает `Skill("task-board-forms")` |
 | **3+. Audit (entry)** | [`references/phase3plus_audit-overview.md`](references/phase3plus_audit-overview.md) | Workflow аудита + dispatch к 7 категориям + AUDIT_REPORT.md |
 
-Sub-skill ecosystem (вызываются через `Skill(...)`): `discovery-forms` (Phase 1 step 3), `requirements-chk-matrix` (Phase 2 step 4b), `task-board-forms` (Phase 3 step 1b), `research-workflow` (Phase 1 step 5).
+Sub-skill ecosystem (вызываются через `Skill(...)`): `discovery-forms` (Phase 1 step 3), `requirements-chk-matrix` (Phase 2 step 4b), `task-board-forms` (Phase 3 step 1b), `research-workflow` (Phase 1 step 5), `architecture-decision-builder` (Phase 1.75, greenfield only — enumerate + per-axis).
 
 > **Pre-STOP semantic check:** before each `ConfirmStop` (#1/#2/#3), run `Skill("spec-review")` to catch external-claim drift, name collisions, antipattern violations, and 10 other categories that `audit-spec.ts` does not detect. See [`.claude/skills/spec-review/SKILL.md`](../spec-review/SKILL.md).
 
