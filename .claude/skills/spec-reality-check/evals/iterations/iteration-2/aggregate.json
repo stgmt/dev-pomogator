@@ -1,14 +1,14 @@
 {
   "iteration": 2,
-  "ran_at": "2026-05-24T16:51:56.587Z",
+  "ran_at": "2026-05-24T17:21:50.727Z",
   "skill_name": "spec-reality-check",
   "verify_script": ".claude/skills/spec-reality-check/scripts/verify.ts",
   "hook_script": ".claude/skills/spec-reality-check/scripts/verify-hook.ts",
-  "total": 30,
-  "passed": 30,
+  "total": 31,
+  "passed": 31,
   "failed": 0,
   "pass_rate_pct": 100,
-  "duration_total_ms": 52305,
+  "duration_total_ms": 54293,
   "by_category": {
     "fc-checks-isolated": {
       "total": 3,
@@ -56,8 +56,8 @@
       "failed": 0
     },
     "regression-baseline-pinned": {
-      "total": 2,
-      "passed": 2,
+      "total": 3,
+      "passed": 3,
       "failed": 0
     },
     "hook-parsed": {
@@ -108,7 +108,7 @@
       "category": "fc-checks-isolated",
       "passed": 6,
       "total": 6,
-      "duration_ms": 1554,
+      "duration_ms": 1656,
       "actual_codes": [
         "FC_CREATE_EXISTS"
       ],
@@ -127,7 +127,7 @@
       "category": "fc-checks-isolated",
       "passed": 6,
       "total": 6,
-      "duration_ms": 1541,
+      "duration_ms": 1654,
       "actual_codes": [
         "FC_EDIT_MISSING"
       ],
@@ -146,7 +146,7 @@
       "category": "fc-checks-isolated",
       "passed": 6,
       "total": 6,
-      "duration_ms": 1551,
+      "duration_ms": 1669,
       "actual_codes": [
         "FC_DELETE_MISSING"
       ],
@@ -165,7 +165,7 @@
       "category": "narrative-isolated",
       "passed": 6,
       "total": 6,
-      "duration_ms": 1566,
+      "duration_ms": 1657,
       "actual_codes": [
         "NARRATIVE_PATH_MISSING"
       ],
@@ -184,7 +184,7 @@
       "category": "negative-fenced-skip",
       "passed": 6,
       "total": 6,
-      "duration_ms": 1613,
+      "duration_ms": 1548,
       "actual_codes": [],
       "expected_codes": [],
       "error_count": 0,
@@ -199,7 +199,7 @@
       "category": "code-drift-isolated",
       "passed": 6,
       "total": 6,
-      "duration_ms": 1606,
+      "duration_ms": 1615,
       "actual_codes": [
         "CODE_DRIFT_FR_ALREADY_DONE"
       ],
@@ -218,7 +218,7 @@
       "category": "code-drift-isolated",
       "passed": 6,
       "total": 6,
-      "duration_ms": 1492,
+      "duration_ms": 1472,
       "actual_codes": [
         "FC_EDIT_MISSING",
         "CODE_DRIFT_SKIPPED"
@@ -239,7 +239,7 @@
       "category": "tasks-fc-isolated",
       "passed": 6,
       "total": 6,
-      "duration_ms": 1534,
+      "duration_ms": 1532,
       "actual_codes": [
         "TASKS_FC_CONSISTENCY"
       ],
@@ -258,7 +258,7 @@
       "category": "baseline-clean",
       "passed": 6,
       "total": 6,
-      "duration_ms": 1505,
+      "duration_ms": 1595,
       "actual_codes": [],
       "expected_codes": [],
       "error_count": 0,
@@ -273,7 +273,7 @@
       "category": "negative-parser",
       "passed": 6,
       "total": 6,
-      "duration_ms": 1544,
+      "duration_ms": 1526,
       "actual_codes": [
         "FC_PARSE_UNPARSEABLE"
       ],
@@ -292,7 +292,7 @@
       "category": "negative-edit-not-create",
       "passed": 6,
       "total": 6,
-      "duration_ms": 1517,
+      "duration_ms": 1597,
       "actual_codes": [],
       "expected_codes": [],
       "error_count": 0,
@@ -307,7 +307,7 @@
       "category": "negative-parser",
       "passed": 6,
       "total": 6,
-      "duration_ms": 1531,
+      "duration_ms": 1615,
       "actual_codes": [
         "FC_EMPTY"
       ],
@@ -326,7 +326,7 @@
       "category": "output-format",
       "passed": 6,
       "total": 6,
-      "duration_ms": 1508,
+      "duration_ms": 1563,
       "actual_codes": [
         "FC_EDIT_MISSING"
       ],
@@ -345,7 +345,7 @@
       "category": "output-format",
       "passed": 6,
       "total": 6,
-      "duration_ms": 3051,
+      "duration_ms": 3115,
       "actual_codes": [
         "FC_EDIT_MISSING"
       ],
@@ -364,7 +364,7 @@
       "category": "output-format",
       "passed": 6,
       "total": 6,
-      "duration_ms": 3042,
+      "duration_ms": 3065,
       "actual_codes": [
         "FC_EDIT_MISSING"
       ],
@@ -383,7 +383,7 @@
       "category": "regression-baseline-pinned",
       "passed": 6,
       "total": 6,
-      "duration_ms": 1355,
+      "duration_ms": 1198,
       "actual_codes": [
         "CODE_DRIFT_FR_ALREADY_DONE",
         "FC_PLACEHOLDER_PATH",
@@ -398,12 +398,31 @@
       "failures": []
     },
     {
+      "id": 31,
+      "name": "v2-baseline-pinned-spec-reality-check-self",
+      "category": "regression-baseline-pinned",
+      "passed": 6,
+      "total": 6,
+      "duration_ms": 1417,
+      "actual_codes": [
+        "NARRATIVE_PATH_MISSING",
+        "CODE_DRIFT_FR_ALREADY_DONE",
+        "TASKS_FC_CONSISTENCY"
+      ],
+      "expected_codes": [],
+      "error_count": 0,
+      "warning_count": 30,
+      "info_count": 2,
+      "total_findings": 32,
+      "failures": []
+    },
+    {
       "id": 17,
       "name": "v2-baseline-pinned-canonical-plugin-post-cleanup",
       "category": "regression-baseline-pinned",
       "passed": 6,
       "total": 6,
-      "duration_ms": 1241,
+      "duration_ms": 1319,
       "actual_codes": [
         "NARRATIVE_PATH_MISSING",
         "CODE_DRIFT_FR_ALREADY_DONE",
@@ -424,7 +443,7 @@
       "category": "hook-parsed",
       "passed": 4,
       "total": 4,
-      "duration_ms": 3028,
+      "duration_ms": 3126,
       "actual_codes": [
         "FC_EDIT_MISSING"
       ],
@@ -443,7 +462,7 @@
       "category": "hook-parsed",
       "passed": 2,
       "total": 2,
-      "duration_ms": 764,
+      "duration_ms": 761,
       "actual_codes": [],
       "expected_codes": [],
       "error_count": 0,
@@ -458,7 +477,7 @@
       "category": "hook-parsed",
       "passed": 2,
       "total": 2,
-      "duration_ms": 776,
+      "duration_ms": 749,
       "actual_codes": [],
       "expected_codes": [],
       "error_count": 0,
@@ -473,7 +492,7 @@
       "category": "tasks-inline",
       "passed": 6,
       "total": 6,
-      "duration_ms": 1656,
+      "duration_ms": 1593,
       "actual_codes": [
         "NARRATIVE_PATH_MISSING",
         "TASKS_FC_CONSISTENCY"
@@ -491,7 +510,7 @@
       "category": "narrative-fc-reconcile",
       "passed": 6,
       "total": 6,
-      "duration_ms": 1659,
+      "duration_ms": 1607,
       "actual_codes": [
         "NARRATIVE_PATH_MISSING"
       ],
@@ -510,7 +529,7 @@
       "category": "negative-runtime-path",
       "passed": 6,
       "total": 6,
-      "duration_ms": 1623,
+      "duration_ms": 1563,
       "actual_codes": [],
       "expected_codes": [],
       "error_count": 0,
@@ -525,7 +544,7 @@
       "category": "non-standard-actions",
       "passed": 6,
       "total": 6,
-      "duration_ms": 1618,
+      "duration_ms": 1613,
       "actual_codes": [
         "FC_ACTION_UNCHECKED"
       ],
@@ -544,7 +563,7 @@
       "category": "negative-glob",
       "passed": 6,
       "total": 6,
-      "duration_ms": 1578,
+      "duration_ms": 1609,
       "actual_codes": [
         "FC_GLOB_PATTERN"
       ],
@@ -563,7 +582,7 @@
       "category": "i18n-header",
       "passed": 6,
       "total": 6,
-      "duration_ms": 1550,
+      "duration_ms": 1605,
       "actual_codes": [
         "FC_EDIT_MISSING"
       ],
@@ -582,7 +601,7 @@
       "category": "negative-glob",
       "passed": 6,
       "total": 6,
-      "duration_ms": 1550,
+      "duration_ms": 1558,
       "actual_codes": [],
       "expected_codes": [],
       "error_count": 0,
@@ -597,7 +616,7 @@
       "category": "negative-placeholder",
       "passed": 6,
       "total": 6,
-      "duration_ms": 1563,
+      "duration_ms": 1547,
       "actual_codes": [
         "FC_PLACEHOLDER_PATH"
       ],
@@ -616,7 +635,7 @@
       "category": "hook-parsed",
       "passed": 3,
       "total": 3,
-      "duration_ms": 3067,
+      "duration_ms": 3049,
       "actual_codes": [
         "FC_EDIT_MISSING"
       ],
@@ -635,7 +654,7 @@
       "category": "hook-parsed",
       "passed": 2,
       "total": 2,
-      "duration_ms": 3122,
+      "duration_ms": 3100,
       "actual_codes": [],
       "expected_codes": [],
       "error_count": 0,

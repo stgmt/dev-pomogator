@@ -232,6 +232,17 @@
       "category": "regression-baseline-pinned"
     },
     {
+      "id": 31,
+      "name": "v2-baseline-pinned-spec-reality-check-self",
+      "prompt": "Pinned baseline — .specs/spec-reality-check/ (own spec). After 2026-05-24 self-cleanup of stale `action=create` rows for shipped files (FILE_CHANGES.md commented HTML block). ERROR must remain 0; warning code set should be NARRATIVE/CODE_DRIFT/TASKS_FC — any new FC ERR = regression in skill OR uncleaned new create rows.",
+      "fixture": ".specs/spec-reality-check",
+      "real_spec": true,
+      "expected_error": 0,
+      "expected_codes_optional": ["NARRATIVE_PATH_MISSING", "CODE_DRIFT_FR_ALREADY_DONE", "TASKS_FC_CONSISTENCY", "FC_PARSE_UNPARSEABLE", "FC_PLACEHOLDER_PATH", "FC_GLOB_PATTERN", "FC_ACTION_UNCHECKED", "CODE_DRIFT_SKIPPED"],
+      "forbidden_codes": ["FC_CREATE_EXISTS", "FC_EDIT_MISSING", "FC_DELETE_MISSING"],
+      "category": "regression-baseline-pinned"
+    },
+    {
       "id": 17,
       "name": "v2-baseline-pinned-canonical-plugin-post-cleanup",
       "prompt": "Pinned baseline — .specs/dev-pomogator-canonical-plugin/ after 2026-05-24 cleanup. ERROR must remain 0; warning code set frozen — any new FC_*_MISSING ERROR = regression.",

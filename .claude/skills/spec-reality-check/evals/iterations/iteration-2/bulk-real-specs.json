@@ -1,11 +1,11 @@
 {
-  "ran_at": "2026-05-24T16:42:53.753Z",
+  "ran_at": "2026-05-24T17:19:39.883Z",
   "specs_total": 45,
   "crashed_count": 0,
-  "erroring_count": 33,
-  "clean_count": 12,
-  "duration_total_ms": 20630.35,
-  "duration_wall_ms": 20639,
+  "erroring_count": 32,
+  "clean_count": 13,
+  "duration_total_ms": 19814.41,
+  "duration_wall_ms": 19822,
   "crashed": [],
   "erroring": [
     {
@@ -19,7 +19,7 @@
         "CODE_DRIFT_FR_ALREADY_DONE": 1,
         "TASKS_FC_CONSISTENCY": 4
       },
-      "duration_ms": 191.45
+      "duration_ms": 191.37
     },
     {
       "slug": "architecture-decision-builder",
@@ -30,7 +30,7 @@
         "CODE_DRIFT_FR_ALREADY_DONE": 10,
         "TASKS_FC_CONSISTENCY": 35
       },
-      "duration_ms": 638.71
+      "duration_ms": 565.14
     },
     {
       "slug": "auto-capture",
@@ -42,7 +42,7 @@
         "CODE_DRIFT_FR_ALREADY_DONE": 1,
         "TASKS_FC_CONSISTENCY": 13
       },
-      "duration_ms": 455.34
+      "duration_ms": 487.16
     },
     {
       "slug": "bg-task-guard",
@@ -52,7 +52,7 @@
         "NARRATIVE_PATH_MISSING": 1,
         "CODE_DRIFT_FR_ALREADY_DONE": 6
       },
-      "duration_ms": 499.72
+      "duration_ms": 469.79
     },
     {
       "slug": "claude-mem-integration",
@@ -62,7 +62,7 @@
         "CODE_DRIFT_FR_ALREADY_DONE": 2,
         "TASKS_FC_CONSISTENCY": 3
       },
-      "duration_ms": 225.04
+      "duration_ms": 264.5
     },
     {
       "slug": "create-specs-bdd-enforcement",
@@ -73,7 +73,7 @@
         "CODE_DRIFT_FR_ALREADY_DONE": 8,
         "TASKS_FC_CONSISTENCY": 20
       },
-      "duration_ms": 410.95
+      "duration_ms": 383.69
     },
     {
       "slug": "cursor-dead-code-cleanup",
@@ -83,7 +83,7 @@
         "CODE_DRIFT_FR_ALREADY_DONE": 1,
         "TASKS_FC_CONSISTENCY": 2
       },
-      "duration_ms": 212.12
+      "duration_ms": 214.3
     },
     {
       "slug": "docker-win-test",
@@ -94,7 +94,7 @@
         "FC_ACTION_UNCHECKED": 2,
         "TASKS_FC_CONSISTENCY": 5
       },
-      "duration_ms": 150.76
+      "duration_ms": 130.09
     },
     {
       "slug": "extension-beta-flag",
@@ -104,7 +104,7 @@
         "CODE_DRIFT_FR_ALREADY_DONE": 6,
         "TASKS_FC_CONSISTENCY": 2
       },
-      "duration_ms": 220.21
+      "duration_ms": 216.65
     },
     {
       "slug": "fix-bg-output-loss",
@@ -115,7 +115,7 @@
         "CODE_DRIFT_FR_ALREADY_DONE": 1,
         "TASKS_FC_CONSISTENCY": 5
       },
-      "duration_ms": 607.07
+      "duration_ms": 606.47
     },
     {
       "slug": "hyperv-test-runner",
@@ -127,7 +127,7 @@
         "TASKS_FC_CONSISTENCY": 19,
         "FC_ACTION_UNCHECKED": 3
       },
-      "duration_ms": 468.4
+      "duration_ms": 503.96
     },
     {
       "slug": "install-diagnostics",
@@ -141,7 +141,7 @@
         "FC_GLOB_PATTERN": 1,
         "FC_ACTION_UNCHECKED": 1
       },
-      "duration_ms": 443.17
+      "duration_ms": 454.68
     },
     {
       "slug": "onboard-repo-phase0",
@@ -155,7 +155,7 @@
         "FC_PARSE_UNPARSEABLE": 2,
         "FC_ACTION_UNCHECKED": 1
       },
-      "duration_ms": 1052.15
+      "duration_ms": 993.21
     },
     {
       "slug": "personal-pomogator",
@@ -166,7 +166,7 @@
         "CODE_DRIFT_FR_ALREADY_DONE": 15,
         "TASKS_FC_CONSISTENCY": 28
       },
-      "duration_ms": 822.37
+      "duration_ms": 771.52
     },
     {
       "slug": "plan-pomogator-prompt-isolation",
@@ -176,7 +176,7 @@
         "CODE_DRIFT_FR_ALREADY_DONE": 7,
         "TASKS_FC_CONSISTENCY": 3
       },
-      "duration_ms": 296.53
+      "duration_ms": 281.72
     },
     {
       "slug": "pomogator-doctor",
@@ -189,7 +189,7 @@
         "FC_GLOB_PATTERN": 1,
         "FC_ACTION_UNCHECKED": 2
       },
-      "duration_ms": 1666.33
+      "duration_ms": 1696
     },
     {
       "slug": "prompt-suggest",
@@ -198,7 +198,7 @@
         "FC_CREATE_EXISTS": 6,
         "TASKS_FC_CONSISTENCY": 6
       },
-      "duration_ms": 289.19
+      "duration_ms": 346.97
     },
     {
       "slug": "skill-listing-budget",
@@ -210,7 +210,7 @@
         "TASKS_FC_CONSISTENCY": 16,
         "FC_ACTION_UNCHECKED": 3
       },
-      "duration_ms": 224.24
+      "duration_ms": 240.68
     },
     {
       "slug": "skills-rules-optimizer",
@@ -222,7 +222,7 @@
         "TASKS_FC_CONSISTENCY": 30,
         "FC_ACTION_UNCHECKED": 3
       },
-      "duration_ms": 445.99
+      "duration_ms": 566.25
     },
     {
       "slug": "spec-generator-v3",
@@ -234,7 +234,7 @@
         "CODE_DRIFT_FR_ALREADY_DONE": 16,
         "TASKS_FC_CONSISTENCY": 38
       },
-      "duration_ms": 764.41
+      "duration_ms": 710.57
     },
     {
       "slug": "spec-generator-v4",
@@ -247,7 +247,7 @@
         "FC_PARSE_UNPARSEABLE": 10,
         "FC_ACTION_UNCHECKED": 1
       },
-      "duration_ms": 744.25
+      "duration_ms": 724.38
     },
     {
       "slug": "spec-phase-gate",
@@ -258,18 +258,7 @@
         "CODE_DRIFT_FR_ALREADY_DONE": 5,
         "TASKS_FC_CONSISTENCY": 6
       },
-      "duration_ms": 634.34
-    },
-    {
-      "slug": "spec-reality-check",
-      "error": 19,
-      "codes": {
-        "FC_CREATE_EXISTS": 19,
-        "NARRATIVE_PATH_MISSING": 8,
-        "CODE_DRIFT_FR_ALREADY_DONE": 12,
-        "TASKS_FC_CONSISTENCY": 26
-      },
-      "duration_ms": 775.19
+      "duration_ms": 573.76
     },
     {
       "slug": "spec-variant-matrix",
@@ -279,7 +268,7 @@
         "CODE_DRIFT_FR_ALREADY_DONE": 2,
         "TASKS_FC_CONSISTENCY": 25
       },
-      "duration_ms": 390.64
+      "duration_ms": 407.87
     },
     {
       "slug": "specs-management-as-skill",
@@ -292,7 +281,7 @@
         "TASKS_FC_CONSISTENCY": 32,
         "FC_PARSE_UNPARSEABLE": 6
       },
-      "duration_ms": 731.07
+      "duration_ms": 692.33
     },
     {
       "slug": "stale-build-guard",
@@ -302,7 +291,7 @@
         "CODE_DRIFT_FR_ALREADY_DONE": 7,
         "TASKS_FC_CONSISTENCY": 3
       },
-      "duration_ms": 284.71
+      "duration_ms": 240.59
     },
     {
       "slug": "strong-tests",
@@ -313,7 +302,7 @@
         "CODE_DRIFT_FR_ALREADY_DONE": 7,
         "TASKS_FC_CONSISTENCY": 11
       },
-      "duration_ms": 650.44
+      "duration_ms": 642.84
     },
     {
       "slug": "test-statusline",
@@ -325,7 +314,7 @@
         "CODE_DRIFT_FR_ALREADY_DONE": 8,
         "TASKS_FC_CONSISTENCY": 18
       },
-      "duration_ms": 522.86
+      "duration_ms": 531.5
     },
     {
       "slug": "tests-create-update",
@@ -335,7 +324,7 @@
         "CODE_DRIFT_FR_ALREADY_DONE": 1,
         "TASKS_FC_CONSISTENCY": 2
       },
-      "duration_ms": 299.1
+      "duration_ms": 304.04
     },
     {
       "slug": "tui-statusline-mode",
@@ -348,7 +337,7 @@
         "CODE_DRIFT_FR_ALREADY_DONE": 4,
         "TASKS_FC_CONSISTENCY": 6
       },
-      "duration_ms": 342.76
+      "duration_ms": 348.07
     },
     {
       "slug": "tui-test-runner",
@@ -359,7 +348,7 @@
         "CODE_DRIFT_FR_ALREADY_DONE": 6,
         "TASKS_FC_CONSISTENCY": 25
       },
-      "duration_ms": 596.85
+      "duration_ms": 594.35
     },
     {
       "slug": "tui-test-runner-v2",
@@ -370,7 +359,7 @@
         "CODE_DRIFT_FR_ALREADY_DONE": 1,
         "TASKS_FC_CONSISTENCY": 10
       },
-      "duration_ms": 434.49
+      "duration_ms": 384.13
     },
     {
       "slug": "verify-generic-scope-fix",
@@ -381,13 +370,13 @@
         "CODE_DRIFT_FR_ALREADY_DONE": 9,
         "TASKS_FC_CONSISTENCY": 44
       },
-      "duration_ms": 445.82
+      "duration_ms": 404.16
     }
   ],
   "slowest": [
     {
       "slug": "pomogator-doctor",
-      "duration_ms": 1666.33,
+      "duration_ms": 1696,
       "total": 83,
       "error": 30,
       "warning": 28,
@@ -406,7 +395,7 @@
     },
     {
       "slug": "onboard-repo-phase0",
-      "duration_ms": 1052.15,
+      "duration_ms": 993.21,
       "total": 156,
       "error": 52,
       "warning": 69,
@@ -426,7 +415,7 @@
     },
     {
       "slug": "personal-pomogator",
-      "duration_ms": 822.37,
+      "duration_ms": 771.52,
       "total": 73,
       "error": 24,
       "warning": 31,
@@ -442,17 +431,19 @@
       "has_tasks_md": true
     },
     {
-      "slug": "spec-reality-check",
-      "duration_ms": 775.19,
-      "total": 65,
-      "error": 19,
-      "warning": 27,
-      "info": 19,
+      "slug": "spec-generator-v4",
+      "duration_ms": 724.38,
+      "total": 134,
+      "error": 4,
+      "warning": 26,
+      "info": 104,
       "codes": {
-        "FC_CREATE_EXISTS": 19,
-        "NARRATIVE_PATH_MISSING": 8,
-        "CODE_DRIFT_FR_ALREADY_DONE": 12,
-        "TASKS_FC_CONSISTENCY": 26
+        "FC_EDIT_MISSING": 4,
+        "NARRATIVE_PATH_MISSING": 20,
+        "TASKS_FC_CONSISTENCY": 98,
+        "FC_GLOB_PATTERN": 1,
+        "FC_PARSE_UNPARSEABLE": 10,
+        "FC_ACTION_UNCHECKED": 1
       },
       "has_fr_md": true,
       "has_fc_md": true,
@@ -460,7 +451,7 @@
     },
     {
       "slug": "spec-generator-v3",
-      "duration_ms": 764.41,
+      "duration_ms": 710.57,
       "total": 88,
       "error": 24,
       "warning": 29,
@@ -478,12 +469,12 @@
     }
   ],
   "code_frequency": {
-    "FC_CREATE_EXISTS": 434,
+    "FC_CREATE_EXISTS": 415,
     "FC_DELETE_MISSING": 10,
     "FC_EDIT_MISSING": 14,
     "NARRATIVE_PATH_MISSING": 373,
-    "CODE_DRIFT_FR_ALREADY_DONE": 262,
-    "TASKS_FC_CONSISTENCY": 717,
+    "CODE_DRIFT_FR_ALREADY_DONE": 261,
+    "TASKS_FC_CONSISTENCY": 704,
     "FC_PLACEHOLDER_PATH": 5,
     "FC_GLOB_PATTERN": 5,
     "FC_ACTION_UNCHECKED": 17,
@@ -492,7 +483,7 @@
   "per_spec": [
     {
       "slug": "answer-simple",
-      "duration_ms": 191.45,
+      "duration_ms": 191.37,
       "total": 21,
       "error": 6,
       "warning": 13,
@@ -511,7 +502,7 @@
     },
     {
       "slug": "architecture-decision-builder",
-      "duration_ms": 638.71,
+      "duration_ms": 565.14,
       "total": 74,
       "error": 26,
       "warning": 13,
@@ -528,7 +519,7 @@
     },
     {
       "slug": "auto-capture",
-      "duration_ms": 455.34,
+      "duration_ms": 487.16,
       "total": 41,
       "error": 19,
       "warning": 17,
@@ -546,7 +537,7 @@
     },
     {
       "slug": "bg-task-guard",
-      "duration_ms": 499.72,
+      "duration_ms": 469.79,
       "total": 11,
       "error": 4,
       "warning": 7,
@@ -562,7 +553,7 @@
     },
     {
       "slug": "claim-sanity-check",
-      "duration_ms": 0.59,
+      "duration_ms": 0.6,
       "total": 3,
       "error": 0,
       "warning": 0,
@@ -576,7 +567,7 @@
     },
     {
       "slug": "claude-mem-integration",
-      "duration_ms": 225.04,
+      "duration_ms": 264.5,
       "total": 6,
       "error": 1,
       "warning": 5,
@@ -592,7 +583,7 @@
     },
     {
       "slug": "codex-cli-support",
-      "duration_ms": 559.08,
+      "duration_ms": 602.09,
       "total": 63,
       "error": 0,
       "warning": 51,
@@ -609,7 +600,7 @@
     },
     {
       "slug": "create-specs-bdd-enforcement",
-      "duration_ms": 410.95,
+      "duration_ms": 383.69,
       "total": 45,
       "error": 10,
       "warning": 22,
@@ -626,7 +617,7 @@
     },
     {
       "slug": "cursor-dead-code-cleanup",
-      "duration_ms": 212.12,
+      "duration_ms": 214.3,
       "total": 5,
       "error": 2,
       "warning": 1,
@@ -642,7 +633,7 @@
     },
     {
       "slug": "dev-pomogator-canonical-plugin",
-      "duration_ms": 436,
+      "duration_ms": 407.97,
       "total": 40,
       "error": 0,
       "warning": 35,
@@ -660,7 +651,7 @@
     },
     {
       "slug": "docker-win-test",
-      "duration_ms": 150.76,
+      "duration_ms": 130.09,
       "total": 10,
       "error": 2,
       "warning": 1,
@@ -677,7 +668,7 @@
     },
     {
       "slug": "extension-beta-flag",
-      "duration_ms": 220.21,
+      "duration_ms": 216.65,
       "total": 10,
       "error": 2,
       "warning": 8,
@@ -693,7 +684,7 @@
     },
     {
       "slug": "fix-bg-output-loss",
-      "duration_ms": 607.07,
+      "duration_ms": 606.47,
       "total": 21,
       "error": 4,
       "warning": 16,
@@ -710,7 +701,7 @@
     },
     {
       "slug": "global-dir-guard",
-      "duration_ms": 175.54,
+      "duration_ms": 187.06,
       "total": 10,
       "error": 0,
       "warning": 7,
@@ -725,7 +716,7 @@
     },
     {
       "slug": "hyperv-test-runner",
-      "duration_ms": 468.4,
+      "duration_ms": 503.96,
       "total": 62,
       "error": 24,
       "warning": 18,
@@ -743,7 +734,7 @@
     },
     {
       "slug": "install-diagnostics",
-      "duration_ms": 443.17,
+      "duration_ms": 454.68,
       "total": 53,
       "error": 15,
       "warning": 18,
@@ -775,7 +766,7 @@
     },
     {
       "slug": "lsp-setup",
-      "duration_ms": 437.49,
+      "duration_ms": 302.26,
       "total": 16,
       "error": 0,
       "warning": 6,
@@ -791,7 +782,7 @@
     },
     {
       "slug": "onboard-repo-phase0",
-      "duration_ms": 1052.15,
+      "duration_ms": 993.21,
       "total": 156,
       "error": 52,
       "warning": 69,
@@ -811,7 +802,7 @@
     },
     {
       "slug": "personal-pomogator",
-      "duration_ms": 822.37,
+      "duration_ms": 771.52,
       "total": 73,
       "error": 24,
       "warning": 31,
@@ -828,7 +819,7 @@
     },
     {
       "slug": "plan-pomogator-plain-language",
-      "duration_ms": 348.9,
+      "duration_ms": 306.8,
       "total": 9,
       "error": 0,
       "warning": 8,
@@ -843,7 +834,7 @@
     },
     {
       "slug": "plan-pomogator-prompt-isolation",
-      "duration_ms": 296.53,
+      "duration_ms": 281.72,
       "total": 11,
       "error": 1,
       "warning": 7,
@@ -859,7 +850,7 @@
     },
     {
       "slug": "pomogator-doctor",
-      "duration_ms": 1666.33,
+      "duration_ms": 1696,
       "total": 83,
       "error": 30,
       "warning": 28,
@@ -878,7 +869,7 @@
     },
     {
       "slug": "prompt-suggest",
-      "duration_ms": 289.19,
+      "duration_ms": 346.97,
       "total": 12,
       "error": 6,
       "warning": 6,
@@ -893,7 +884,7 @@
     },
     {
       "slug": "skill-listing-budget",
-      "duration_ms": 224.24,
+      "duration_ms": 240.68,
       "total": 34,
       "error": 6,
       "warning": 16,
@@ -911,7 +902,7 @@
     },
     {
       "slug": "skills-rules-optimizer",
-      "duration_ms": 445.99,
+      "duration_ms": 566.25,
       "total": 57,
       "error": 12,
       "warning": 14,
@@ -929,7 +920,7 @@
     },
     {
       "slug": "spec-generator-v3",
-      "duration_ms": 764.41,
+      "duration_ms": 710.57,
       "total": 88,
       "error": 24,
       "warning": 29,
@@ -947,7 +938,7 @@
     },
     {
       "slug": "spec-generator-v4",
-      "duration_ms": 744.25,
+      "duration_ms": 724.38,
       "total": 134,
       "error": 4,
       "warning": 26,
@@ -966,7 +957,7 @@
     },
     {
       "slug": "spec-phase-gate",
-      "duration_ms": 634.34,
+      "duration_ms": 573.76,
       "total": 22,
       "error": 3,
       "warning": 17,
@@ -983,16 +974,15 @@
     },
     {
       "slug": "spec-reality-check",
-      "duration_ms": 775.19,
-      "total": 65,
-      "error": 19,
-      "warning": 27,
-      "info": 19,
+      "duration_ms": 564.93,
+      "total": 32,
+      "error": 0,
+      "warning": 30,
+      "info": 2,
       "codes": {
-        "FC_CREATE_EXISTS": 19,
         "NARRATIVE_PATH_MISSING": 8,
-        "CODE_DRIFT_FR_ALREADY_DONE": 12,
-        "TASKS_FC_CONSISTENCY": 26
+        "CODE_DRIFT_FR_ALREADY_DONE": 11,
+        "TASKS_FC_CONSISTENCY": 13
       },
       "has_fr_md": true,
       "has_fc_md": true,
@@ -1000,7 +990,7 @@
     },
     {
       "slug": "spec-variant-matrix",
-      "duration_ms": 390.64,
+      "duration_ms": 407.87,
       "total": 46,
       "error": 19,
       "warning": 3,
@@ -1016,7 +1006,7 @@
     },
     {
       "slug": "spec-workflow-feature-steps-validation",
-      "duration_ms": 425.99,
+      "duration_ms": 389.96,
       "total": 68,
       "error": 0,
       "warning": 17,
@@ -1032,7 +1022,7 @@
     },
     {
       "slug": "spec-workflow-md-validation",
-      "duration_ms": 452.68,
+      "duration_ms": 432.2,
       "total": 26,
       "error": 0,
       "warning": 1,
@@ -1049,7 +1039,7 @@
     },
     {
       "slug": "spec-workflow-vmodel",
-      "duration_ms": 0.48,
+      "duration_ms": 0.35,
       "total": 0,
       "error": 0,
       "warning": 0,
@@ -1061,7 +1051,7 @@
     },
     {
       "slug": "specs-management-as-skill",
-      "duration_ms": 731.07,
+      "duration_ms": 692.33,
       "total": 108,
       "error": 39,
       "warning": 40,
@@ -1080,7 +1070,7 @@
     },
     {
       "slug": "stale-build-guard",
-      "duration_ms": 284.71,
+      "duration_ms": 240.59,
       "total": 14,
       "error": 4,
       "warning": 10,
@@ -1096,7 +1086,7 @@
     },
     {
       "slug": "strong-tests",
-      "duration_ms": 650.44,
+      "duration_ms": 642.84,
       "total": 49,
       "error": 9,
       "warning": 36,
@@ -1113,7 +1103,7 @@
     },
     {
       "slug": "suggest-rules-insights",
-      "duration_ms": 301.21,
+      "duration_ms": 290.34,
       "total": 20,
       "error": 0,
       "warning": 19,
@@ -1130,7 +1120,7 @@
     },
     {
       "slug": "test-statusline",
-      "duration_ms": 522.86,
+      "duration_ms": 531.5,
       "total": 35,
       "error": 5,
       "warning": 21,
@@ -1148,7 +1138,7 @@
     },
     {
       "slug": "tests-create-update",
-      "duration_ms": 299.1,
+      "duration_ms": 304.04,
       "total": 7,
       "error": 4,
       "warning": 2,
@@ -1164,7 +1154,7 @@
     },
     {
       "slug": "tui-statusline-mode",
-      "duration_ms": 342.76,
+      "duration_ms": 348.07,
       "total": 27,
       "error": 7,
       "warning": 16,
@@ -1183,7 +1173,7 @@
     },
     {
       "slug": "tui-test-runner",
-      "duration_ms": 596.85,
+      "duration_ms": 594.35,
       "total": 101,
       "error": 29,
       "warning": 70,
@@ -1200,7 +1190,7 @@
     },
     {
       "slug": "tui-test-runner-v2",
-      "duration_ms": 434.49,
+      "duration_ms": 384.13,
       "total": 42,
       "error": 12,
       "warning": 30,
@@ -1217,7 +1207,7 @@
     },
     {
       "slug": "verify-generic-scope-fix",
-      "duration_ms": 445.82,
+      "duration_ms": 404.16,
       "total": 103,
       "error": 34,
       "warning": 41,
@@ -1234,7 +1224,7 @@
     },
     {
       "slug": "worktree-setup",
-      "duration_ms": 555.65,
+      "duration_ms": 387.04,
       "total": 17,
       "error": 0,
       "warning": 11,
