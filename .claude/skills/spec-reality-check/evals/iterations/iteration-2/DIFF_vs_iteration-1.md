@@ -70,7 +70,49 @@ Previously claimed in iter-1 README: "real-world latency 1.5-3s" — actually th
 - **Cross-spec drift** (one spec references slug of another moved spec) — out of scope for v0.1.0 per spec FR.
 - **LLM-semantic drift** (narrative text claims behavior code doesn't have) — also v0.1.0 OOS.
 - **Concurrency / parallel hook invocation** — hook is single-process by design; would need stress test.
-- **Real Unicode/encoding edge cases** in spec paths — fixtures all ASCII.
-- **Performance on hot/cold disk** — bench uses tmpfs/native fs; no SSD vs HDD comparison.
+- **Performance on hot/cold disk** — bench uses native fs; no SSD vs HDD comparison.
 
 Candidates for iter-3 if needed.
+
+## Bugs discovered AFTER iter-2 publication (via bulk-run on real corpus)
+
+iter-2 published with 21 evals. Bulk-run on all 45 `.specs/` then found these
+real-world false positives that isolated evals didn't catch:
+
+| Bug | Discovery spec | Fix |
+|-----|----------------|-----|
+| 1. FC_PLACEHOLDER_PATH | claim-sanity-check | `isPlaceholderPath()` skip; new INFO code |
+| 2. FC_GLOB_PATTERN (FC) | codex-cli-support `extensions/*/extension.json` | `isGlobPath()` in FC parser; new INFO code |
+| 3. Narrative globs | spec-workflow-feature-steps-validation `steps/**/*.ts` | Same `isGlobPath()` in narrative check |
+| 4. Cyrillic header | spec-workflow-feature-steps-validation `Файл \| Описание` | Header regex extended |
+| 5. FC_EMPTY misfire | self-test on bug-1 fixture | `hasSkippedRows` guard |
+| 7. Non-std actions silent | skills-rules-optimizer `rename` rows | `FC_ACTION_UNCHECKED` INFO для rename/move/replace/reuse/preserve/+combined |
+| 10. Runtime `~/` paths | pomogator-doctor `~/.dev-pomogator/config.json` | `isRuntimePath()` skip |
+| 12. Narrative-vs-FC dupe | worktree-setup planning own skill files | `plannedCreatePaths` Set passed to narrative check |
+| 13. TASKS inline backticks | spec-generator-v4 (GitHub-issue-style TASKS) | `extractTaskPaths` broadened to inline backticks with path separator |
+| 14. Empty action message | edge fixture (action cell stripped to empty) | Clearer FC_PARSE_UNPARSEABLE message |
+
+Eval count: 21 → **31** (+47%). 4 new isolated negative categories: negative-placeholder, negative-glob, negative-runtime-path, narrative-fc-reconcile, tasks-inline, non-standard-actions, i18n-header.
+
+Real corpus impact:
+- TASKS_FC_CONSISTENCY: **925 → 704** (-24%, ~221 false positives eliminated)
+- Clean specs (0 ERROR): **10 → 13**
+- Specs with ERRORs: **35 → 32** (claim-sanity-check, codex-cli-support, spec-reality-check own moved to clean)
+
+## In-process bench (current, iteration-2 post-bug-fix state)
+
+| FC rows | mean ms | p50 ms | p95 ms | findings | scaling |
+|---------|---------|--------|--------|----------|---------|
+| 10 | 1.43 | 0.9 | 2.88 | 13 | baseline |
+| 100 | 4.77 | 4.75 | 5.75 | 150 | linear |
+| 500 | 11.53 | 11.05 | 13.43 | 817 | linear |
+| 1000 | 21.23 | 20.98 | 23.74 | 1650 | sub-linear |
+| 2000 | 36.44 | 37.22 | 41.09 | 3317 | linear |
+
+After 3 new guard functions (isPlaceholderPath/isGlobPath/isRuntimePath), bench slightly slower than initial measurement (33.6ms → 36.44ms @ 2000 rows = +8%) but still NFR (≤30s) headroom **822×**. Algorithm remains O(N) linear.
+
+Note findings count slightly lower than iteration-2 initial (3334 → 3317 @ 2000 rows) because narrative-vs-FC reconciliation (bug 12) suppresses some narrative WARNs that match FC create rows.
+
+## Maintenance discipline (new this iter)
+
+`.claude/rules/spec-reality-check/maintain-evals-on-edit.md` (always-apply) requires `run-evals.ts + bulk-run.ts + bench-synthetic.ts` after every skill edit. This rule was created in response to iter-2 finding 4 systemic bugs via bulk-run that 25 isolated evals missed. SKILL.md links to it.
