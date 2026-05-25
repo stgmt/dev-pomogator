@@ -253,3 +253,11 @@ Meta: `reinstallable: yes`.
 
 **Связанные AC:** [AC-34](ACCEPTANCE_CRITERIA.md#ac-34-fr-34)
 **Use Case:** [UC-18](USE_CASES.md#uc-18-stale-managed-entries-feature12)
+
+## FR-35: Legacy npm Claude install check (win32) @feature1
+
+WHEN платформа Windows, Doctor SHALL проверить legacy npm-global установку `@anthropic-ai/claude-code` в `%USERPROFILE%\.npm-global` (артефакты `claude.cmd`, `claude` shim, `node_modules/@anthropic-ai/claude-code`). IF любой stale-артефакт существует THEN Doctor SHALL emit check `C30` severity=warning, reinstallable=no, message: npm-дистрибуция deprecated + stale shims могут заслонять (shadow) native `~/.local/bin/claude.exe` в зависимости от порядка PATH, hint = команда удаления (`Remove-Item -Recurse -Force ...`) + `irm https://claude.ai/install.ps1 | iex`. IF stale-артефактов нет THEN severity=ok. WHEN платформа ≠ win32 THEN check `C30` SHALL быть gated out (`relevant=false`, reason упоминает Windows `%USERPROFILE%\.npm-global` layout). Group: `self-sufficient`.
+
+Meta: `reinstallable: no`.
+
+**Связанные AC:** [AC-35](ACCEPTANCE_CRITERIA.md#ac-35-fr-35)

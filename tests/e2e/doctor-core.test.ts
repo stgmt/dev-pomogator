@@ -34,6 +34,9 @@ describe('POMOGATORDOCTOR001 — Core checks (FR-1..FR-14)', () => {
       expect(ids.has('C7')).toBe(true);
       expect(ids.has('C13')).toBe(true);
       expect(ids.has('C14')).toBe(true);
+      if (process.platform === 'win32') {
+        expect(ids.has('C30')).toBe(true);
+      }
       expect(report.installedExtensions).toContain('auto-commit');
     } finally {
       home.cleanup();

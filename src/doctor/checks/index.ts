@@ -1,5 +1,6 @@
 import type { CheckDefinition } from '../types.js';
 import { bunCheck } from './bun.js';
+import { claudeBinPriorityCheck } from './claude-bin-priority.js';
 import { dockerCheck } from './docker.js';
 import { envExampleCheck } from './env-example.js';
 import { envVarsCheck } from './env-vars.js';
@@ -23,16 +24,22 @@ export const phase2Checks: CheckDefinition[] = [
   envExampleCheck,
   versionMatchCheck,
   gitignoreBlockCheck,
+  claudeBinPriorityCheck,
 ];
 
 export const phase3Checks: CheckDefinition[] = [bunCheck, pythonCheck, dockerCheck];
 
 export const phase4Checks: CheckDefinition[] = [mcpParseCheck, mcpProbeCheck, pluginLoaderCheck];
 
-export const allChecks: CheckDefinition[] = [...phase2Checks, ...phase3Checks, ...phase4Checks];
+export const allChecks: CheckDefinition[] = [
+  ...phase2Checks,
+  ...phase3Checks,
+  ...phase4Checks,
+];
 
 export {
   bunCheck,
+  claudeBinPriorityCheck,
   dockerCheck,
   envExampleCheck,
   envVarsCheck,

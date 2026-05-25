@@ -104,6 +104,7 @@
 | FR-29 | C29 | Post-launch: Self-install verification |
 | FR-31 | C6 (fix) | Post-launch: Hooks registry path correction |
 | FR-34 | C22 | Post-launch: Stale managed entries |
+| FR-35 | C30 | Post-launch: Legacy npm Claude install (win32) |
 
 ## Post-Launch FR/AC Index (2026-04-20)
 

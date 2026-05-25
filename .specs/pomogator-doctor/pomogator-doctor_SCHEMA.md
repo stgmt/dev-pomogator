@@ -4,7 +4,7 @@ TypeScript interfaces для `src/doctor/types.ts` + JSON output schema для `
 
 ## CheckResult
 
-Результат одной проверки (C1..C17 / FR-1..FR-14).
+Результат одной проверки (C1..C30 / FR-1..FR-35; IDs не contiguous — см. REQUIREMENTS traceability).
 
 ```typescript
 export type Severity = 'ok' | 'warning' | 'critical';
@@ -12,7 +12,7 @@ export type Severity = 'ok' | 'warning' | 'critical';
 export type CheckGroup = 'self-sufficient' | 'needs-env' | 'needs-external';
 
 export interface CheckResult {
-  /** Stable check ID (C1, C2, ..., C17) — machine-readable */
+  /** Stable check ID (C1, C2, ..., C30) — machine-readable */
   id: string;
   /** FR reference (FR-1..FR-14) — traceability to spec */
   fr: string;

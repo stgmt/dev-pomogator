@@ -335,3 +335,11 @@ Feature: POMOGATORDOCTOR001_pomogator-doctor_diagnostic_command
     And extensions/specs-workflow/extension.json declares tools.specs-validator=tools/specs-validator
     When I run `dev-pomogator --doctor --json`
     Then no warning check mentions "specs-validator" as orphaned
+
+  # @feature1
+  Scenario: POMOGATORDOCTOR001_32 Legacy npm Claude install on Windows emits warning (C30)
+    Given platform is win32
+    And a legacy npm-global artifact exists at "%USERPROFILE%\.npm-global\claude.cmd"
+    When I run `dev-pomogator --doctor --json`
+    Then results contains check C30 severity warning mentioning "Legacy npm" and "native installer"
+    And on a non-Windows platform check C30 is gated out with relevant=false
