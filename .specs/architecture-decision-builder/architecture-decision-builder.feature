@@ -158,3 +158,12 @@ Feature: ARCH001_Architecture_Decision_Builder
     And it should render team time-costs (to_market, to_feature, to_test, to_support)
     And it should render the exit cost
     And a one-way door axis should render a reversibility banner
+
+  @feature22
+  Scenario: ARCH009_01 Full-report assembles one self-contained ARCHITECTURE.html via renderers
+    Given two generated axes with persisted AXIS-*.model.json plus a COMPLETENESS.md
+    When I run full-report with cross-axis insights
+    Then a single ARCHITECTURE.html should be written with one DOCTYPE
+    And it should contain an index matrix anchoring each axis, every axis section, a synthesis section and a completeness table
+    And axis sections should carry the rich content (business band, comparison matrix, reality) inherited from renderAxisSection
+    And the document should be self-contained with no external link tags

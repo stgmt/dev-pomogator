@@ -512,3 +512,73 @@ describe('ARCH008: two-lens artefact + decision economics (R24/R25)', () => {
     expect(html).toContain('Необратимое решение'); // one-way door banner (reversibility)
   });
 });
+
+describe('ARCH009: full-report ARCHITECTURE.html (FR-19)', () => {
+  // @feature22
+  it('ARCH009_01: assembles one self-contained ARCHITECTURE.html via renderers (spawnSync CLI)', () => {
+    const dir = tmp();
+    const hosting: AxisModel = {
+      axis_id: 'hosting',
+      axis_name: 'Hosting',
+      context: 'c',
+      door_type: 'one-way',
+      variants: [
+        mkVariant({
+          id: 'supabase',
+          name: 'Supabase',
+          is_recommended: true,
+          business_summary: { gets: 'БД+auth', time_to_market: '1-2 дня', cost: '$0→$25', risk: 'lock-in' },
+          scorecard: [
+            { criterion: 'Лёгкость интеграции', verdict: 'good', value: 'из коробки' },
+            { criterion: 'Vendor lock-in', verdict: 'bad', value: 'высокий' },
+          ],
+          reality_check: ['SSL авто на свой домен'],
+        }),
+        mkVariant({
+          id: 'vps',
+          name: 'VPS',
+          scorecard: [
+            { criterion: 'Лёгкость интеграции', verdict: 'bad', value: 'руками' },
+            { criterion: 'Vendor lock-in', verdict: 'good', value: 'нет' },
+          ],
+        }),
+      ],
+    };
+    const auth: AxisModel = {
+      axis_id: 'auth',
+      axis_name: 'Auth',
+      context: 'c',
+      variants: [mkVariant({ id: 'supabase-auth', name: 'Supabase Auth', is_recommended: true })],
+    };
+    // generate-axis persists AXIS-*.model.json (the source the full-report re-renders from)
+    generateAxisArtefact(hosting, dir);
+    generateAxisArtefact(auth, dir);
+    fs.writeFileSync(
+      path.join(dir, 'COMPLETENESS.md'),
+      '| dimension | status | pointer |\n|---|---|---|\n| auth-secrets | addressed | Vault |\n',
+    );
+    const insPath = path.join(dir, 'insights.json');
+    fs.writeFileSync(
+      insPath,
+      JSON.stringify([{ axes: ['hosting', 'auth'], title: 'n8n redundant', description: 'both supabase', recommendation: 'drop n8n' }]),
+    );
+
+    const res = runCli(['full-report', dir, insPath]);
+    expect(res.status).toBe(0);
+    const out = JSON.parse(res.stdout) as { axes_count: number; insights_count: number };
+    expect(out.axes_count).toBe(2);
+    expect(out.insights_count).toBe(1);
+
+    const html = fs.readFileSync(path.join(dir, 'ARCHITECTURE.html'), 'utf-8');
+    expect((html.match(/<!DOCTYPE/g) ?? []).length).toBe(1); // single self-contained doc
+    expect(html).toContain('href="#axis-hosting"'); // index matrix anchors
+    expect(html).toContain('id="axis-hosting"');
+    expect(html).toContain('id="axis-auth"'); // every axis section present
+    expect(html).toContain('💼 Для бизнеса'); // rich content inherited via renderAxisSection
+    expect(html).toContain('Карта сравнения');
+    expect(html).toContain('Необратимое решение'); // door banner inherited
+    expect(html).toContain('Cross-axis synthesis'); // synthesis section
+    expect(html).toContain('System completeness'); // completeness table
+    expect(html).not.toMatch(/<link\b/); // self-contained
+  });
+});

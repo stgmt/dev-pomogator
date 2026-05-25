@@ -33,6 +33,7 @@ export interface GenerateResult {
   axis_id: string;
   mdPath: string;
   htmlPath: string;
+  modelPath: string;
   wordsPerVariant: number[];
   wordBudgetOk: boolean;
 }
@@ -211,14 +212,19 @@ export function generateAxisArtefact(
   const base = `AXIS-${axis.axis_id}`;
   const mdPath = path.join(outDir, `${base}.md`);
   const htmlPath = path.join(outDir, `${base}.html`);
+  // Persist the (ordered) AxisModel so the full-report (FR-19) can re-render via renderers
+  // instead of scraping per-axis HTML. Source of truth for ARCHITECTURE.html.
+  const modelPath = path.join(outDir, `${base}.model.json`);
 
   fs.writeFileSync(mdPath, renderAxisMarkdown(ordered), 'utf-8');
   fs.writeFileSync(htmlPath, renderAxisHtml(ordered), 'utf-8');
+  fs.writeFileSync(modelPath, JSON.stringify(ordered, null, 2), 'utf-8');
 
   return {
     axis_id: axis.axis_id,
     mdPath,
     htmlPath,
+    modelPath,
     wordsPerVariant: budget.counts,
     wordBudgetOk: budget.ok,
   };

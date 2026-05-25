@@ -280,3 +280,10 @@
   **Done When:**
   - [x] @feature12 ARCH005_05 (DIMENSION_PENDING) / @feature13 ARCH005_06 (COMPLETENESS_COMPLETE)
   - [x] @feature18 ARCH001_06 (stack_locked) / @feature19 ARCH005_07 (ADDRESSED_WITHOUT_POINTER) — vitest зелёные
+- [x] FR-19 full-report: единый ARCHITECTURE.html через renderers + AXIS-model.json персист -- @feature22 — Status: DONE | Est: 60m
+  _Requirements: [FR-19](FR.md#fr-19-единый-self-contained-architecturehtml-full-report)_
+  _Leverage: html-renderer renderAxisSection/renderSynthesisSection, audit collectCompletenessRows_
+  **Done When:**
+  - [x] html-renderer рефактор wrapDoc + renderAxisSection/renderSynthesisSection; renderFullReport
+  - [x] generate-axis персистит AXIS-{id}.model.json; full-report.ts buildFullReport; CLI `full-report`
+  - [x] ARCH009_01 vitest (single doc + index anchors + rich секции + synthesis + completeness + self-contained); extension.json v1.23.0

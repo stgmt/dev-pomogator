@@ -68,6 +68,7 @@ CLI: `extensions/specs-workflow/tools/specs-generator/architecture-decision/arch
 - **`audit <spec-dir>`** → `{findings[]}`. ARCHITECTURE_COVERAGE (FR-9, 9-я категория): pending axis→WARNING, accepted→MATRIX_COMPLETE, escape→ESCAPE_HATCH_USED/WARNING_REASON_TOO_SHORT.
 - **`audit-completeness <spec-dir>`** → `{findings[]}`. COMPLETENESS_COVERAGE (FR-12, 10-я категория): читает `COMPLETENESS.md` ledger (8 dimensions) — pending/missing→DIMENSION_PENDING WARNING, all addressed/out-of-scope→COMPLETENESS_COMPLETE, escape `[skip-completeness-dimension:]`→WARNING_REASON_TOO_SHORT. **Отдельная команда** (не merged в audit — architecture audit unmixed для eval determinism).
 - **`synthesis <spec-dir> [insights.json]`** → `{synthesisMd, insights_count, rejected[]}`. FR-13 cross-axis synthesis: ты авторишь `insights[]` (`{axes[≥2], title, description, recommendation, trade_off?}`) в JSON, helper валидирует (каждый insight ссылается на ≥2 РЕАЛЬНЫХ axis-id) + рендерит `SYNTHESIS.md`+`.html`. Невалидные → `rejected[]` с причиной (не silently). `insights_count=0` валидно (1-axis spec).
+- **`full-report <spec-dir> [insights.json]`** → `{reportPath, axes_count, insights_count, completeness_count}`. FR-19: собирает ЕДИНЫЙ self-contained `ARCHITECTURE.html` из `AXIS-*.model.json` (пишутся generate-axis автоматически) + insights + `COMPLETENESS.md` → index-матрица + каждая ось (богатые карточки: 2 линзы + scorecard + reality + экономика) + synthesis + completeness. Рендерится через те же `renderAxisSection`/`renderSynthesisSection` (НЕ скрейп HTML) — отчёт наследует весь rich-контент. Запускать ПОСЛЕ всех generate-axis + synthesis.
 
 ## Workflow (auto-mode default — FR-4)
 
@@ -82,13 +83,14 @@ CLI: `extensions/specs-workflow/tools/specs-generator/architecture-decision/arch
    - **Заполняй ledger ОТДЕЛЬНЫМ свежим под-агентом** (`Agent` tool), который НЕ писал архитектуру — настоящая вторая пара глаз, не самопроверка. Дай ему ТОЛЬКО 8 пунктов + PRD + дизайн (не свои выводы), попроси для КАЖДОГО пункта сверить «PRD требует X — закрыт ли X реальным компонентом дизайна?» и вернуть `status` + пруф-ссылку (`addressed` без пруфа = подозрительно). «PRD хочет, компонента нет» = `pending`. Self-grade замылен — подтверждено research (CorrectBench/DeepVerifier) И слепым прогоном bhph (автор пропустил 3 дыры, свежий агент нашёл за проход).
 3.5. **Cross-axis synthesis (FR-13).** Когда все оси resolved — прочитай все AXIS-*.md side-by-side и найди emergent-выводы поперёк осей (cross-axis dependency / избыточность компонента / вторичный эффект). Главный кейс bhph «Variant F» был именно такой: hosting=Supabase + auth=Supabase → n8n-orchestrator избыточен. Заавторь `insights[]` (каждый `axes[]` ≥2 реальных axis-id) в JSON → `synthesis <spec-dir> insights.json` → SYNTHESIS.md+html. Проверь `rejected[]` в ответе (insight с <2 осями или unknown axis-id отклонён). 0 insights валидно (независимые оси / 1-axis spec).
 4. **Audit перед STOP — две раздельные команды.** `audit <spec-dir>` (ARCHITECTURE_COVERAGE — нет pending осей) И `audit-completeness <spec-dir>` (COMPLETENESS_COVERAGE — все 8 измерений addressed/out-of-scope). Любой `AXIS_PENDING` / `DIMENSION_PENDING` WARNING блокирует STOP — закрой ось/измерение, отметь `out-of-scope` с reason, или escape. Команды раздельны намеренно: architecture audit остаётся unmixed для eval-детерминизма.
-5. **Финал:** открыть INDEX.html, одним сообщением показать все авто-выборы. Юзер переопределяет в свободной форме («ось hosting — возьми Variant B»).
+5. **Финал:** `full-report <spec-dir> [insights.json]` → единый `ARCHITECTURE.html` (index-матрица + все оси с богатыми карточками + synthesis + completeness, self-contained). `open-browser` на него. Одним сообщением показать все авто-выборы. Юзер переопределяет в свободной форме («ось hosting — возьми Variant B»). INDEX.html остаётся как лёгкая статус-матрица; ARCHITECTURE.html — полный отчёт «всё в одном».
 6. **Interactive-mode** (`--interactive`): на каждой оси AskUserQuestion `[Беру рекомендацию] / [Variant B] / [Variant C] / [Отложить]`.
 
 ## Output location
 
-- create-spec mode: `.specs/{slug}/ARCHITECTURE/AXIS-NN-{id}.md|.html` + `INDEX.md|.html` + `COMPLETENESS.md` + `SYNTHESIS.md|.html`
-- standalone: `./architecture-decisions/{slug}/` (incl. `COMPLETENESS.md`, `SYNTHESIS.md`)
+- create-spec mode: `.specs/{slug}/ARCHITECTURE/AXIS-NN-{id}.md|.html|.model.json` + `INDEX.md|.html` + `COMPLETENESS.md` + `SYNTHESIS.md|.html` + `ARCHITECTURE.html` (full-report)
+- standalone: `./architecture-decisions/{slug}/` (incl. `COMPLETENESS.md`, `SYNTHESIS.md`, `ARCHITECTURE.html`)
+- `AXIS-*.model.json` — persisted AxisModel (источник для full-report re-render; не для глаз)
 
 ## Hard-OUT (НЕ запускать)
 
@@ -116,6 +118,7 @@ CLI: `extensions/specs-workflow/tools/specs-generator/architecture-decision/arch
 | audit | `{findings[]}` (ARCHITECTURE_COVERAGE) |
 | audit-completeness | `{findings[]}` (COMPLETENESS_COVERAGE, FR-12) |
 | synthesis | `{synthesisMd, insights_count, rejected[]}` (FR-13 cross-axis) |
+| full-report | `{reportPath, axes_count, insights_count, completeness_count}` (FR-19 ARCHITECTURE.html) |
 
 ## Related
 

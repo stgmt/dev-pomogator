@@ -17,6 +17,7 @@ import { openInBrowser } from './open-in-browser.ts';
 import { compileIndex } from './index-compiler.ts';
 import { checkArchitectureCoverage, checkCompletenessCoverage } from './audit.ts';
 import { synthesize } from './synthesis.ts';
+import { buildFullReport } from './full-report.ts';
 import type { AxisModel, Insight } from './html-renderer.ts';
 
 function fail(code: number, msg: string): never {
@@ -101,6 +102,20 @@ async function main(): Promise<void> {
           rejected: r.rejected,
         }),
       );
+      break;
+    }
+    case 'full-report': {
+      // FR-19: single self-contained ARCHITECTURE.html from AXIS-*.model.json + insights + COMPLETENESS.md.
+      const specDir = process.argv[3];
+      const insightsPath = process.argv[4];
+      if (!specDir) fail(2, 'full-report requires <spec-dir> [insights.json]');
+      if (!fs.existsSync(specDir)) fail(3, `spec-dir not found: ${specDir}`);
+      let insights: Insight[] = [];
+      if (insightsPath) {
+        if (!fs.existsSync(insightsPath)) fail(3, `insights file not found: ${insightsPath}`);
+        insights = JSON.parse(fs.readFileSync(insightsPath, 'utf-8')) as Insight[];
+      }
+      process.stdout.write(JSON.stringify(buildFullReport(specDir, insights)));
       break;
     }
     default:

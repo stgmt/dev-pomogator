@@ -201,6 +201,8 @@ table{border-collapse:collapse;width:100%;margin-top:8px}td,th{border:1px solid 
 .prec .rel{color:var(--muted);font-size:.78rem;display:block;margin-left:18px}
 .time dl{margin:4px 0 0;display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:.82rem}
 .time dt{color:var(--muted);white-space:nowrap}.time dd{margin:0}
+.axis{border-top:2px solid #334155;margin-top:28px;padding-top:8px}.axis>h2{font-size:1.35rem}
+.synthesis{border-top:2px solid var(--rec);margin-top:28px;padding-top:8px}
 `;
 
 /** Turn a trailing [VERIFIED ...] / [UNVERIFIED ...] marker into a visible proof chip. */
@@ -369,7 +371,18 @@ function demonstrationTable(axis: AxisModel): string {
 <table><thead><tr><th>Variant</th>${head}</tr></thead><tbody>${rows}</tbody></table></section>`;
 }
 
-export function renderAxisHtml(axis: AxisModel): string {
+/** Self-contained HTML document wrapper (shared head + inline CSS). */
+function wrapDoc(title: string, bodyInner: string): string {
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(title)}</title>
+<style>${BASE_CSS}</style></head><body>
+${bodyInner}
+</body></html>`;
+}
+
+/** Axis content as an embeddable section (h2 + anchor) — reused by standalone page AND full report. */
+export function renderAxisSection(axis: AxisModel): string {
   const policy = axis.selected_policy ?? DEFAULT_POLICY;
   const rec = pickRecommended(axis);
   const recBlock = rec
@@ -391,11 +404,8 @@ export function renderAxisHtml(axis: AxisModel): string {
   const sens = axis.sensitivity?.length
     ? `<div class="sens"><div class="sens-h">Когда рекомендация меняется</div><ul>${axis.sensitivity.map((s) => `<li>${esc(s)}</li>`).join('')}</ul></div>`
     : '';
-  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(axis.axis_name)} — architecture decision</title>
-<style>${BASE_CSS}</style></head><body>
-<h1>${esc(axis.axis_name)}</h1>
+  return `<section class="axis" id="axis-${esc(axis.axis_id)}">
+<h2>${esc(axis.axis_name)}</h2>
 <p class="ctx">${esc(axis.context)}</p>
 ${door}
 ${recBlock}
@@ -403,10 +413,15 @@ ${sens}
 ${matrix}
 ${demo}
 <div class="grid">${cards}</div>
-</body></html>`;
+</section>`;
 }
 
-export function renderSynthesisHtml(slug: string, insights: Insight[]): string {
+export function renderAxisHtml(axis: AxisModel): string {
+  return wrapDoc(`${axis.axis_name} — architecture decision`, renderAxisSection(axis));
+}
+
+/** Cross-axis synthesis as an embeddable section. */
+export function renderSynthesisSection(insights: Insight[]): string {
   const cards = insights.length
     ? insights
         .map(
@@ -420,28 +435,80 @@ export function renderSynthesisHtml(slug: string, insights: Insight[]): string {
         )
         .join('\n')
     : '<p class="ctx">No cross-axis insights — single-axis spec or axes are independent.</p>';
-  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(slug)} — cross-axis synthesis</title>
-<style>${BASE_CSS}</style></head><body>
-<h1>Cross-axis synthesis — ${esc(slug)}</h1>
+  return `<section class="synthesis"><h2>Cross-axis synthesis</h2>
 <p class="ctx">Emergent insights spanning ≥2 decision axes (dependencies, redundancy, secondary effects).</p>
-<div class="grid">${cards}</div>
-</body></html>`;
+<div class="grid">${cards}</div></section>`;
 }
 
-export function renderIndexHtml(slug: string, rows: IndexAxisRow[]): string {
+export function renderSynthesisHtml(slug: string, insights: Insight[]): string {
+  return wrapDoc(
+    `${slug} — cross-axis synthesis`,
+    `<h1>Cross-axis synthesis — ${esc(slug)}</h1>${renderSynthesisSection(insights)}`,
+  );
+}
+
+function indexTableSection(rows: IndexAxisRow[]): string {
   const trs = rows
     .map(
       (r) =>
-        `<tr><td>${esc(r.axis_name)}</td><td>${esc(r.status)}</td><td>${esc(r.chosen ?? '—')}</td></tr>`,
+        `<tr><td><a href="#axis-${esc(r.axis_id)}">${esc(r.axis_name)}</a></td><td>${esc(r.status)}</td><td>${esc(r.chosen ?? '—')}</td></tr>`,
     )
     .join('');
-  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(slug)} — architecture decisions</title>
-<style>${BASE_CSS}</style></head><body>
-<h1>Architecture decisions — ${esc(slug)}</h1>
-<table><thead><tr><th>Axis</th><th>Status</th><th>Chosen</th></tr></thead><tbody>${trs}</tbody></table>
-</body></html>`;
+  return `<table><thead><tr><th>Axis</th><th>Status</th><th>Chosen</th></tr></thead><tbody>${trs}</tbody></table>`;
+}
+
+export function renderIndexHtml(slug: string, rows: IndexAxisRow[]): string {
+  return wrapDoc(
+    `${slug} — architecture decisions`,
+    `<h1>Architecture decisions — ${esc(slug)}</h1>${indexTableSection(rows)}`,
+  );
+}
+
+export interface CompletenessRow {
+  dimension: string;
+  status: string;
+  pointer?: string;
+}
+
+function completenessSection(rows: CompletenessRow[]): string {
+  if (!rows.length) return '';
+  const trs = rows
+    .map((r) => {
+      const cls = r.status === 'pending' ? 'bad' : r.status === 'out-of-scope' ? 'ok' : 'good';
+      return `<tr><td class="crit">${esc(r.dimension)}</td><td class="${cls}">${esc(r.status)}</td><td>${esc(r.pointer ?? '—')}</td></tr>`;
+    })
+    .join('');
+  return `<section class="matrix"><h2>System completeness</h2>
+<table><thead><tr><th class="crit">Dimension</th><th>Status</th><th>Pointer / Reason</th></tr></thead><tbody>${trs}</tbody></table></section>`;
+}
+
+export interface FullReportOpts {
+  insights?: Insight[];
+  completeness?: CompletenessRow[];
+}
+
+/**
+ * FR-19: single self-contained ARCHITECTURE.html — index status matrix + EVERY axis section
+ * (rich: two lenses + economics) + cross-axis synthesis + completeness. Composed via the SAME
+ * renderers (renderAxisSection/renderSynthesisSection) — NOT scraped from per-axis HTML, so the
+ * report inherits business/scorecard/reality/cost/time/door content for free.
+ */
+export function renderFullReport(slug: string, axes: AxisModel[], opts: FullReportOpts = {}): string {
+  const rows: IndexAxisRow[] = axes.map((a) => ({
+    axis_id: a.axis_id,
+    axis_name: a.axis_name,
+    status: a.status ?? 'pending',
+    chosen: a.chosen ?? null,
+  }));
+  const body = [
+    `<h1>Architecture — ${esc(slug)}</h1>`,
+    `<p class="ctx">Полный отчёт: статус-матрица осей, по каждой оси варианты (две линзы + экономика), cross-axis synthesis, completeness.</p>`,
+    indexTableSection(rows),
+    ...axes.map(renderAxisSection),
+    opts.insights ? renderSynthesisSection(opts.insights) : '',
+    opts.completeness ? completenessSection(opts.completeness) : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
+  return wrapDoc(`Architecture — ${slug}`, body);
 }

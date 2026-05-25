@@ -14,7 +14,11 @@
                   [synthesis] → SYNTHESIS.md (cross-axis insights, FR-13)
                                                                     ↓
                   [audit + audit-completeness] → ARCHITECTURE_COVERAGE + COMPLETENESS_COVERAGE findings
+                                                                    ↓
+                  [full-report] → ARCHITECTURE.html (FR-19: index + все оси + synthesis + completeness, self-contained)
 ```
+
+> `generate-axis` пишет `AXIS-{id}.model.json` (persisted AxisModel) рядом с md/html — источник для `full-report`, который re-рендерит через `renderAxisSection`/`renderSynthesisSection` (НЕ скрейп HTML). `full-report <spec-dir> [insights.json]` → `{reportPath, axes_count, insights_count, completeness_count}`.
 
 > Selection policy (FR-16) выбирается ОДИН раз глобально перед per-axis loop (default `mvp-poc`); влияет на recommended-вариант каждой оси.
 

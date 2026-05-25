@@ -159,3 +159,13 @@ WHEN ось рендерится THEN артефакт SHALL показать `d
 WHEN вариант имеет `real_world_precedent` THEN каждый precedent SHALL нести `relevance` (почему релевантен проекту), не только звёзды.
 
 IF вариант costed точечно (cost без cost_at_scale) ИЛИ без time_costs THEN rubric R25 SHALL fail.
+
+## AC-19 (FR-19)
+
+**Требование:** [FR-19](FR.md#fr-19-единый-self-contained-architecturehtml-full-report)
+
+WHEN `full-report <spec-dir>` выполняется AND присутствуют `AXIS-*.model.json` THEN skill SHALL записать `ARCHITECTURE.html` — ОДИН `<!DOCTYPE>` документ с index-матрицей (якорь `#axis-{id}` на каждую ось) + секцией каждой оси + (если insights) synthesis-секцией + (если COMPLETENESS.md) completeness-таблицей.
+
+WHEN отчёт рендерится THEN секции осей SHALL содержать тот же rich-контент что per-axis страницы (business band, comparison matrix, reality, cost ladder, door banner) — собрано через `renderAxisSection`, не скрейпом.
+
+WHEN отчёт рендерится THEN он SHALL быть self-contained (inline CSS, нет внешних `<link>`).

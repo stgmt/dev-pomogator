@@ -22,6 +22,7 @@
 | [FR-16](FR.md#fr-16-selection-policy-default-mvp-poc) | Selection policy (mvp-poc default) | [AC-16](ACCEPTANCE_CRITERIA.md#ac-16-fr-16) | @feature17 | Done |
 | [FR-17](FR.md#fr-17-две-линзы--scorecard--reality-check-r24-blocking) | Две линзы + scorecard + reality (R24) | [AC-17](ACCEPTANCE_CRITERIA.md#ac-17-fr-17) | @feature20 | Done |
 | [FR-18](FR.md#fr-18-экономика-решения--деньги-время-обратимость-r25-blocking) | Экономика: деньги/время/обратимость (R25) | [AC-18](ACCEPTANCE_CRITERIA.md#ac-18-fr-18) | @feature21 | Done |
+| [FR-19](FR.md#fr-19-единый-self-contained-architecturehtml-full-report) | Единый ARCHITECTURE.html (full-report) | [AC-19](ACCEPTANCE_CRITERIA.md#ac-19-fr-19) | @feature22 | Done |
 
 ## Functional Requirements
 
