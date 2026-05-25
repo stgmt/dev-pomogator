@@ -54,6 +54,16 @@
         "hooks": [
           {
             "type": "command",
+            "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner-bootstrap.cjs'))\" -- \".dev-pomogator/tools/answer-simple/answer_simple_stop.ts\"",
+            "timeout": 60
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
             "command": "node -e \"require(require('path').join(require('os').homedir(),'.dev-pomogator','scripts','tsx-runner-bootstrap.cjs'))\" -- \".dev-pomogator/tools/learnings-capture/capture.ts\" --event Stop",
             "timeout": 60
           }

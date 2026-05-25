@@ -49,3 +49,27 @@ Feature: PLUGIN017_answer-simple
     And валидатор `extensions/_shared/extension-layout-validate.ts` SHALL вернуть exit 0
     And dev-pomogator source repo SHALL содержать CLAUDE.md глоссарий-запись с путём `.claude/rules/answer-simple/clear-questions-to-user.md`
     And dev-pomogator source repo SHALL не содержать старый путь `.claude/rules/clear-questions-to-user.md`
+
+  # @feature4 — US-1 / FR-8 / AC-8 (Stop-hook runtime enforcement of plain language)
+
+  Scenario: PLUGIN017_06: детектор блокирует ответ-стену из внутренних кодов независимо от длины
+    Given финальный ответ агента содержит >2 различных внутренних кода (FR-N, ARCH-N, SCREAMING_CODE) в прозе
+    When detectJargon анализирует текст
+    Then результат SHALL иметь block=true
+    And reasons SHALL называть найденные коды бытовой формулировкой "стена внутренних кодов"
+
+  Scenario: PLUGIN017_07: детектор пропускает чистую прозу и hard-OUT для кода/короткого
+    Given ответ — чистая проза без внутренних кодов, либо преимущественно блок кода, либо короткий и чистый
+    When detectJargon анализирует текст
+    Then результат SHALL иметь block=false (ложноположительные исключены)
+
+  Scenario: PLUGIN017_08: Stop-хук блокирует жаргонную стену с понятной причиной, пропускает чистый ответ
+    Given answer_simple_stop.ts установлен и подключён как Stop-hook
+    When на Stop приходит финальный ответ-стена из кодов
+    Then хук SHALL вернуть `{"decision":"block"}` с reason на простом русском "Перепиши ответ проще"
+    And на чистый ответ хук SHALL вернуть `{}` (разрешить)
+
+  Scenario: PLUGIN017_09: Stop-хук защищён от петли — повтор того же текста и stop_hook_active пропускаются
+    Given хук уже заблокировал конкретный ответ один раз
+    When тот же текст приходит повторно ИЛИ stop_hook_active=true
+    Then хук SHALL вернуть `{}` (не блокировать снова, исключая бесконечный цикл)

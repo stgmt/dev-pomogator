@@ -61,3 +61,15 @@ WHEN миграция rule выполнена THEN путь `.claude/rules/clear
 WHEN миграция завершена THEN строка в CLAUDE.md глоссарий-таблице (always-apply rules секция) SHALL указывать на новый путь `.claude/rules/answer-simple/clear-questions-to-user.md` И не должно быть orphan строки на старый путь.
 
 WHEN миграция завершена THEN memory `~/.claude/projects/D--repos-dev-pomogator/memory/feedback_no-jargon-questions-to-user.md` cross-reference в body к rule path SHALL быть обновлён на новый путь.
+
+## AC-8 (FR-8)
+
+**Требование:** [FR-8](FR.md#fr-8-runtime-принуждение-простого-языка-через-stop-hook)
+
+WHEN финальный ответ агента содержит >2 различных внутренних кода в прозе THEN Stop-hook SHALL вернуть `{"decision":"block"}` с reason на простом русском, начинающимся «Перепиши ответ проще».
+
+WHEN ответ — чистая проза без кодов ИЛИ преимущественно code-блок/таблица ИЛИ короткий и чистый THEN Stop-hook SHALL вернуть `{}` (разрешить) — ложноположительные исключены.
+
+IF тот же текст ответа приходит повторно (hash совпал) ИЛИ превышен лимит попыток в окне cooldown ИЛИ `stop_hook_active=true` THEN Stop-hook SHALL вернуть `{}` (anti-loop, не блокировать снова).
+
+IF при выполнении хука возникла ошибка THEN хук SHALL завершиться exit 0 (fail-open) и не блокировать ответ.

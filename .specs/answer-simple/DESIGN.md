@@ -78,6 +78,8 @@ Hook `design-decision-guard` enforces format: each `### Decision:` block has Rat
 - TypeScript tool в `extensions/answer-simple/tools/` с PreToolUse-hook'ом проверяющим финальный output — rejected, потому что Claude Code не имеет hook на финальный agent message (только на tool calls), и runtime checking текста на "соответствие микроистории" потребовал бы второй LLM-вызов с заметным latency.
 - Cucumber/Reqnroll style validation framework — rejected как overkill для guidance rule.
 
+> **SUPERSEDED в v1.1.0:** посылка «Claude Code не имеет hook на финальный agent message» — ложная. Stop-hook получает финальный ответ (поле `output` + `transcript_path`) и блокирует через `{"decision":"block","reason":...}` (проверено через claude-code-guide по официальной документации hooks). Runtime-проверка делается детерминированным детектором (regex по внутренним кодам + длина прозы), без второго LLM-вызова — latency-возражение тоже снято. v1.1.0 добавляет `tools/answer-simple/`. См. FR-8.
+
 ### Decision: Мигрировать существующий rule в extension-specific path вместо дублирования
 
 **Rationale:** Rule уже создан в этой сессии в root `.claude/rules/clear-questions-to-user.md`. Оставлять копию в обоих местах = двойной maintenance и риск drift. Перенос в `.claude/rules/answer-simple/` группирует rule под extension и оставляет единственный source-of-truth.
@@ -97,6 +99,8 @@ Hook `design-decision-guard` enforces format: each `### Decision:` block has Rat
 **Alternatives considered:**
 - PostToolUse hook на Bash tool — rejected, не tool output надо проверять а agent message.
 - UserPromptSubmit hook — rejected, событие приходит ДО того как агент генерирует ответ; не подходит для post-check ответа.
+
+> **SUPERSEDED в v1.1.0:** Stop-hook — это и есть нужный event (срабатывает ПОСЛЕ генерации финального ответа, до показа пользователю), который тогда упустили. v1.1.0 добавляет `Stop` hook в `extension.json` (`hooks.claude.Stop`). Anti-loop: тот же текст / превышен лимит попыток / `stop_hook_active` → пропустить. См. FR-8 + AC-8.
 
 ## BDD Test Infrastructure (ОБЯЗАТЕЛЬНО)
 

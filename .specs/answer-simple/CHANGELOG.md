@@ -5,6 +5,7 @@ All notable changes to this feature will be documented in this file.
 ## [Unreleased]
 
 ### Added (post-implementation iterations)
+- **FR-8 + Stop-hook (v1.1.0)** — runtime-принуждение простого языка. Добавлены `tools/answer-simple/jargon_detector.ts` (чистый детектор: regex по внутренним кодам + длина прозы, hard-OUT для code/таблиц/короткого) и `answer_simple_stop.ts` (Stop-hook: блокирует ответ-стену кодов через `{"decision":"block"}` с reason на простом русском, anti-loop через marker + `stop_hook_active`, fail-open). extension.json: +tools/toolFiles/hooks, version 1.0.0→1.1.0. **Разворачивает** исходное решение «no hooks» которое стояло на ложной посылке «Claude Code не имеет hook на финальный ответ» (Stop-hook его видит — проверено). Тесты PLUGIN017_06..09. См. DESIGN.md SUPERSEDED-пометки.
 - **FR-6** (consistency reformulation ↔ findings) — добавлен после iter-3 evals выявили self-contradiction в eval-8 (skill расшифровал AJV inline но flag-нул как "без расшифровки").
 - **FR-7** (internal codes vs general engineering vocabulary) — добавлен после iter-3 evals выявили over-flagging staging/prod/QPS/SRE/planned-downtime в eval-6.
 - SKILL.md обновлён с 5 правилами (Правило 1 BYTE-FAITHFUL strict, Правило 2 question vs statement, Правило 3 empty invocation, Правило 4 consistency, Правило 5 vocab discrimination).
