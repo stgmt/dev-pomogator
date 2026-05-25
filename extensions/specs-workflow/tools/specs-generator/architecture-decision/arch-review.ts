@@ -17,8 +17,16 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 const REPO = process.cwd();
-const SPEC = '.specs/architecture-decision-builder';
 const CLI = 'extensions/specs-workflow/tools/specs-generator/architecture-decision/architecture-decision-cli.ts';
+
+// --spec <slug> generalizes the battery to ANY .specs/<slug>. Default architecture-decision-builder.
+// eval-runner is architecture-specific → runs only for that slug.
+const args = process.argv.slice(2);
+const specIdx = args.indexOf('--spec');
+const SLUG = specIdx >= 0 && args[specIdx + 1] ? args[specIdx + 1] : 'architecture-decision-builder';
+const SPEC = `.specs/${SLUG}`;
+const positional = args.filter((a, i) => a !== '--spec' && args[i - 1] !== '--spec');
+const RUN_EVAL = SLUG === 'architecture-decision-builder';
 
 interface Finding {
   code: string;
@@ -62,8 +70,8 @@ function isAccepted(code: string, message: string): boolean {
 
 const checks: Check[] = [];
 
-// 1) eval-runner (deterministic skill behaviour)
-{
+// 1) eval-runner (deterministic skill behaviour) — architecture-decision-builder only
+if (RUN_EVAL) {
   const r = run('python', ['tools/eval-runner-adb.py']);
   const m = r.stdout.match(/(\d+)\/(\d+) assertions passed/);
   const ok = r.code === 0 && !!m && m[1] === m[2];
@@ -123,7 +131,7 @@ const checks: Check[] = [];
 }
 
 // 4) generated-artefact audits (only if a dir is passed + has AXIS files)
-const target = process.argv[2];
+const target = positional[0];
 if (target && fs.existsSync(target) && fs.readdirSync(target).some((f) => /^AXIS-.*\.md$/.test(f))) {
   for (const cmd of ['audit', 'audit-completeness', 'audit-markers']) {
     const r = run('npx', ['tsx', CLI, cmd, target]);
@@ -152,7 +160,7 @@ const verdict = blocking.length === 0 ? 'PASS' : 'FINDINGS';
 
 process.stdout.write(JSON.stringify({ verdict, checks, finding_count: allFindings.length }, null, 2));
 process.stderr.write(
-  `\n=== arch-review: ${verdict} ===\n` +
+  `\n=== arch-review [${SLUG}]: ${verdict} ===\n` +
     checks.map((c) => `  ${c.ok ? '✅' : '❌'} ${c.name}: ${c.summary}`).join('\n') +
     (blocking.length
       ? `\n\nTO FIX (${blocking.length} check(s)):\n` +

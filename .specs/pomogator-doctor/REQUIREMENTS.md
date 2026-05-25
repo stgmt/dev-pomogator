@@ -121,3 +121,4 @@
 | [FR-32](FR.md#fr-32-configjson-toplevel-version-field-feature2) | config.json top-level version | [AC-32](ACCEPTANCE_CRITERIA.md#ac-32-fr-32) | (regression fix) | — | 27 |
 | [FR-33](FR.md#fr-33-mcp-probe-timeout--error-categorization-feature4) | MCP probe retune | [AC-33](ACCEPTANCE_CRITERIA.md#ac-33-fr-33) | (UX fix) | — | 28, 29 |
 | [FR-34](FR.md#fr-34-stale-managed-entries-detection-feature12) | Stale managed entries (C22) | [AC-34](ACCEPTANCE_CRITERIA.md#ac-34-fr-34) | (maintainer) | [UC-18](USE_CASES.md#uc-18-stale-managed-entries-feature12) | 30, 31 |
+| [FR-35](FR.md#fr-35-legacy-npm-claude-install-check-win32-feature1) | Legacy npm Claude install (win32, C30) | [AC-35](ACCEPTANCE_CRITERIA.md#ac-35-fr-35-feature1) | (maintainer) | — | 32 |

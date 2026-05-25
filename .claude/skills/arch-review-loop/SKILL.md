@@ -19,14 +19,15 @@ health of architecture-decision-builder; this skill loops on it: run → triage 
 findings → re-run → repeat until **PASS** (or only known-false-positives + genuine design forks
 remain). Report once at the end with the iteration log, not after every step.
 
-## The driver (one command = the whole battery)
+## The driver (one command = the whole battery — ANY spec)
 
 ```
-npx tsx extensions/specs-workflow/tools/specs-generator/architecture-decision/arch-review.ts [ARCHITECTURE-dir]
+npx tsx extensions/specs-workflow/tools/specs-generator/architecture-decision/arch-review.ts [--spec <slug>] [ARCHITECTURE-dir]
 ```
 
-- no arg → **skill-source health** (eval-runner + validate-spec + audit-spec). This is the loop's PASS condition.
-- with an `ARCHITECTURE/` dir → also runs `audit` / `audit-completeness` / `audit-markers` on that generated artefact (informational about that run, not skill-source).
+- **`--spec <slug>`** → runs the battery for `.specs/<slug>` (default `architecture-decision-builder`). Generic: validate-spec + audit-spec work for ANY spec; eval-runner runs only for architecture-decision-builder (it's the only one with `eval-runner-adb.py`). Use it to self-review any spec — e.g. `--spec pomogator-doctor` (caught real FR-link + scenario-count drift from a sibling commit).
+- no `ARCHITECTURE-dir` → **skill/spec-source health** (eval if applicable + validate-spec + audit-spec). This is the loop's PASS condition.
+- with an `ARCHITECTURE/` dir → also runs `audit` / `audit-completeness` / `audit-markers` on that generated artefact (informational about that run, not source).
 
 Returns JSON `{verdict: PASS|FINDINGS, checks[], finding_count}` to stdout + a human TO-FIX list to stderr. Exit 0 = PASS, 1 = FINDINGS.
 

@@ -34,7 +34,7 @@
 
 **Implementation план**: [TASKS.md](TASKS.md) (TDD Phase 0 Red → Phase 1-7 Green + Refactor → Phase 8 Post-Launch Hardening) → [FILE_CHANGES.md](FILE_CHANGES.md) (63 операций: 37 create + 26 edit)
 
-**BDD сценарии**: [pomogator-doctor.feature](pomogator-doctor.feature) — 31 scenarios POMOGATORDOCTOR001_01..31 покрывающие все UC + reliability edge cases + post-launch integrity checks
+**BDD сценарии**: [pomogator-doctor.feature](pomogator-doctor.feature) — 32 scenarios POMOGATORDOCTOR001_01..32 покрывающие все UC + reliability edge cases + post-launch integrity checks
 
 **Background research**: [RESEARCH.md](RESEARCH.md) — portability analysis 17 категорий, Extension Dependency Matrix, MCP Full probe protocol, community patterns (Claude Code /doctor, npm doctor, Expo Doctor, mise), Project Context (9 relevant rules + 9 reuse patterns)
 
