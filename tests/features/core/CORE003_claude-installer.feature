@@ -135,6 +135,14 @@ Feature: CORE003 Claude Code Installer
     Then every rule listed in every manifest should exist in .claude/rules/
     And no rule file should be empty (size > 0)
 
+  # @feature36
+  Scenario: CORE003_20 Every installed extension hook reaches an installed settings file
+    Given dev-pomogator installs for Claude Code with --all
+    When I check each INSTALLED extension's extension.json claude hooks
+    Then every hook command should appear in .claude/settings.local.json or the global ~/.claude/settings.json
+    And beta/uninstalled extensions (e.g. scope-gate) should be excluded from the check
+    And the answer-simple Stop hook answer_simple_stop.ts should be present
+
   Scenario: CORE003_REPORT Installation generates structured report
     Given dev-pomogator installs for Claude Code with --all
     Then ~/.dev-pomogator/last-install-report.md should exist

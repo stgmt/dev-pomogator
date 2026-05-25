@@ -1031,6 +1031,61 @@ describe('CORE003: Personal-mode non-dogfood path', () => {
       expect(content).not.toContain('.dev-pomogator/tools/');
     }
   });
+
+  // Dynamic: declared ≠ installed. For every extension that --all ACTUALLY installed, each hook
+  // command in its extension.json must reach the target's settings.local.json (or the global
+  // ~/.claude/settings.json for SessionStart). Scoped to installed extensions so beta/uninstalled
+  // ones (e.g. scope-gate, stability:beta) don't false-fail. Covers any NEW installed hook
+  // automatically — see rule hook-install-verification.md.
+  it('CORE003_20: every INSTALLED extension hook command reaches an installed settings file (dynamic)', async () => {
+    const configPath = homePath('.dev-pomogator', 'config.json');
+    const installedNames = new Set<string>(
+      ((await fs.pathExists(configPath) ? (await fs.readJson(configPath)).installedExtensions ?? [] : []) as Array<{ name: string }>)
+        .map((e) => e.name),
+    );
+
+    const localPath = appPath('.claude', 'settings.local.json');
+    const globalPath = homePath('.claude', 'settings.json');
+    const installed =
+      JSON.stringify((await fs.pathExists(localPath)) ? (await fs.readJson(localPath)).hooks ?? {} : {}) +
+      JSON.stringify((await fs.pathExists(globalPath)) ? (await fs.readJson(globalPath)).hooks ?? {} : {});
+
+    const extensionsDir = appPath('extensions');
+    const missing: string[] = [];
+
+    for (const entry of await fs.readdir(extensionsDir)) {
+      const manifestPath = path.join(extensionsDir, entry, 'extension.json');
+      if (!(await fs.pathExists(manifestPath))) continue;
+      const manifest = await fs.readJson(manifestPath);
+      if (!installedNames.has(manifest.name)) continue; // only verify what --all actually installed
+      const hooks = manifest.hooks?.claude;
+      if (!hooks) continue;
+
+      for (const rawHook of Object.values(hooks) as unknown[]) {
+        const cmds: string[] = [];
+        if (typeof rawHook === 'string') cmds.push(rawHook);
+        else if (Array.isArray(rawHook)) {
+          for (const g of rawHook) {
+            if (g.command) cmds.push(g.command);
+            for (const h of (g.hooks ?? [])) if (h.command) cmds.push(h.command);
+          }
+        } else if ((rawHook as { command?: string }).command) {
+          cmds.push((rawHook as { command: string }).command);
+        }
+
+        for (const cmd of cmds) {
+          // Match by script basename — portable conversion rewrites the wrapper prefix but keeps the name.
+          const m = cmd.match(/([\w.-]+\.(?:ts|cjs|js|sh|mjs))\b/);
+          const token = m ? m[1] : cmd;
+          if (!installed.includes(token)) missing.push(`${manifest.name}:${token}`);
+        }
+      }
+    }
+
+    expect(missing, `installed-extension hooks missing from settings: ${missing.join(', ')}`).toEqual([]);
+    // Non-vacuous + the concrete hook this coverage was added for:
+    expect(installed).toContain('answer_simple_stop.ts');
+  });
 });
 
 // @feature16
