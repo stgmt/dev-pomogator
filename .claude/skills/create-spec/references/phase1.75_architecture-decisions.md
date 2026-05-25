@@ -10,7 +10,7 @@
 **Full skip (hard-OUT):**
 - Repo содержит build-manifest в корне (`package.json`/`*.csproj`/`pyproject.toml`/`Cargo.toml`/`go.mod`) → true brownfield (код уже есть).
 - `architecture-decision-cli.ts detect-axes` вернул `axes_detected: 0`.
-- Спека `.progress.json` version < 4 → Phase 1.75 no-op (migration guard).
+- Спека `.progress.json` version < 4 → Phase 1.75 no-op (migration guard). Новые спеки штампуются `version: 4` (`createDefaultProgressState`), поэтому architecture-gate срабатывает на них; pre-architecture v1–v3 grandfathered.
 
 **Completeness-only (НЕ full skip):** если `detect-axes` вернул `stack_locked: true` (стек зафиксирован в PRD-прозе — «Stack locked» / «existing stack» — но кода/манифеста ещё нет) → **НЕ пропускать фазу целиком**. Пропустить только variant-picking (стек выбран, сравнивать нечего), НО всё равно построить `ARCHITECTURE/COMPLETENESS.md` ledger и прогнать `audit-completeness`. Иначе completeness-gate (FR-12) никогда не срабатывает для locked-stack проектов — ровно там, где он нужен (реальный провал: bhph с «Stack locked» пропускал весь скил вместе с completeness-проверкой; `detect-axes` теперь возвращает 14 осей + `stack_locked`, не `0`).
 

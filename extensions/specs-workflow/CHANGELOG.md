@@ -2,6 +2,12 @@
 
 All notable changes to the `specs-workflow` extension are documented here.
 
+## [1.27.0] - 2026-05-25
+
+### Fixed
+
+- **`.progress.json` schema bumped v3 → v4 (architecture-gate activation)** — `createDefaultProgressState` (`specs-generator-core.mjs`) now stamps `version: 4` for newly scaffolded specs. The `architecture-gate.ts` PreToolUse hook (FR-21) no-ops when `version < 4`; with the old v3 stamp the gate **never fired on any real scaffolded spec** — the FR-21 "Phase 1.75 guaranteed" was a silent no-op. v4 makes the gate fire on new greenfield specs; pre-architecture v1–v3 specs stay grandfathered (gate no-op, won't block editing their FR). Form-guard activation floor stays `>= 3` (`PROGRESS_SCHEMA_VERSION`), so v4 specs keep strict form validation. Caught by new e2e ARCH012 (real scaffold → v4 assert → gate deny → real `generate-axis` → gate allow + version-boundary grandfather case).
+
 ## [1.17.0] - 2026-04-23
 
 ### Added

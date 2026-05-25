@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -447,11 +448,13 @@ function readJsonIfExists(filePath) {
 }
 
 function createDefaultProgressState(targetDir, currentPhase) {
-  // Schema v3 — spec-generator-v3 form-guards feature.
-  // Form-guard hooks (user-story-form-guard etc.) activate only when version >= 3,
-  // so new specs get strict validation while existing v1/v2 specs pass unblocked.
+  // Schema v4 — architecture-gate era (FR-21). New specs stamp v4 so architecture-gate.ts
+  // (PreToolUse, no-op when version < 4) actually fires on freshly-scaffolded greenfield specs;
+  // pre-architecture v1-v3 specs are grandfathered (gate no-ops, won't block editing their FR).
+  // Form-guards activate at version >= 3 (PROGRESS_SCHEMA_VERSION) — independent floor — so v4
+  // specs still get strict form validation while existing v1/v2 specs pass unblocked.
   return {
-    version: 3,
+    version: 4,
     featureSlug: path.basename(targetDir),
     createdAt: new Date().toISOString(),
     currentPhase,
@@ -2673,12 +2676,47 @@ function commandAuditSpec(argv) {
     }
   }
 
+  log('INFO', 'Running VARIANT_COVERAGE check...');
+  try {
+    const variantCliPath = path.join(SCRIPT_DIR, 'variant-matrix', 'variant-matrix-cli.ts');
+    if (fs.existsSync(variantCliPath)) {
+      const result = spawnSync('npx', ['tsx', variantCliPath, targetDir], {
+        encoding: 'utf-8',
+        cwd: context.repoRoot,
+        shell: process.platform === 'win32',
+      });
+      if (result.status === 0 && result.stdout) {
+        try {
+          const parsed = JSON.parse(result.stdout);
+          if (Array.isArray(parsed.findings)) {
+            for (const f of parsed.findings) {
+              findings.push({
+                check: 'VARIANT_COVERAGE',
+                category: 'VARIANT_COVERAGE',
+                severity: f.severity ?? 'WARNING',
+                message: `${f.code}: ${f.message}`,
+                details: f.frId ? `${f.frId} in ${f.file ?? 'spec'}` : undefined,
+              });
+            }
+          }
+        } catch {
+          log('WARN', 'VARIANT_COVERAGE: failed to parse CLI output');
+        }
+      } else if (result.stderr) {
+        log('WARN', `VARIANT_COVERAGE: ${result.stderr.trim()}`);
+      }
+    }
+  } catch (err) {
+    log('WARN', `VARIANT_COVERAGE: ${err.message}`);
+  }
+
   const categoryCount = {
     ERRORS: 0,
     LOGIC_GAPS: 0,
     INCONSISTENCY: 0,
     RUDIMENTS: 0,
     FANTASIES: 0,
+    VARIANT_COVERAGE: 0,
   };
 
   for (const finding of findings) {

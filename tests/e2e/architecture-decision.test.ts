@@ -720,3 +720,76 @@ describe('ARCH011: architecture-gate guarantees Phase 1.75 (PreToolUse hook)', (
     expect(runGate(path.join(dir, 'USER_STORIES.md')).status).toBe(0);
   });
 });
+
+describe('ARCH012: architecture-gate × real scaffolded spec (version boundary)', () => {
+  const GATE = path.join(
+    __dirname, '..', '..',
+    'extensions', 'specs-workflow', 'tools', 'specs-validator', 'architecture-gate.ts',
+  );
+  const CORE = path.join(
+    __dirname, '..', '..',
+    'extensions', 'specs-workflow', 'tools', 'specs-generator', 'specs-generator-core.mjs',
+  );
+  function runGate(filePath: string): { status: number; stdout: string } {
+    const r = spawnSync('npx', ['tsx', GATE], {
+      input: JSON.stringify({ tool_name: 'Write', tool_input: { file_path: filePath } }),
+      encoding: 'utf-8',
+      shell: process.platform === 'win32',
+    });
+    return { status: r.status ?? 0, stdout: r.stdout ?? '' };
+  }
+  // Drive the REAL scaffolder into an isolated tmp "repo". core.mjs resolves its write target via
+  // findRepoRoot(SCRIPT_DIR) — so we copy the (node-builtin-only, dependency-free) core into tmp and
+  // drop a package.json marker; it then scaffolds tmp/.specs/<slug>, never the dev-pomogator repo.
+  function scaffoldRealSpec(slug: string): { dir: string; fr: string; progress: string } {
+    const root = tmp();
+    fs.writeFileSync(path.join(root, 'package.json'), '{"name":"arch-e2e-fixture"}\n');
+    fs.copyFileSync(CORE, path.join(root, 'specs-generator-core.mjs'));
+    const r = spawnSync('node', [path.join(root, 'specs-generator-core.mjs'), 'scaffold-spec', '-Name', slug], {
+      cwd: root, encoding: 'utf-8', shell: process.platform === 'win32',
+    });
+    expect(r.status).toBe(0);
+    const dir = path.join(root, '.specs', slug);
+    // Greenfield stack content so the gate's detect-axes greenfield test finds stack axes.
+    fs.writeFileSync(
+      path.join(dir, 'USER_STORIES.md'),
+      '# US\nNeed a Postgres database, user authentication/login, transactional email, and cloud hosting/deploy.\n',
+    );
+    return { dir, fr: path.join(dir, 'FR.md'), progress: path.join(dir, '.progress.json') };
+  }
+
+  it('ARCH012_01: real scaffold stamps v4; gate DENIES FR write until real generate-axis creates ARCHITECTURE/', () => {
+    const { dir, fr, progress } = scaffoldRealSpec('gf-stack');
+
+    // (a) The bump: a freshly-scaffolded spec is v4 — the version the gate actually enforces.
+    expect(JSON.parse(fs.readFileSync(progress, 'utf-8')).version).toBe(4);
+
+    // (b) v4 greenfield, no ARCHITECTURE/ → DENY. (A v3 stamp would have no-op'd this — the bug.)
+    const denied = runGate(fr);
+    expect(denied.status).toBe(2);
+    expect(denied.stdout).toContain('"permissionDecision":"deny"');
+
+    // (c) Run the REAL skill helper to produce ARCHITECTURE artefacts (not a hand-written INDEX).
+    const archDir = path.join(dir, 'ARCHITECTURE');
+    fs.mkdirSync(archDir, { recursive: true });
+    const modelPath = path.join(dir, 'axis-model.json');
+    fs.writeFileSync(modelPath, JSON.stringify(sampleAxis()));
+    const gen = runCli(['generate-axis', modelPath, archDir]);
+    expect(gen.status).toBe(0);
+    expect(fs.readdirSync(archDir).some((f) => /^AXIS-.*\.md$/.test(f))).toBe(true);
+
+    // (d) ARCHITECTURE/ now holds real artefacts → ALLOW.
+    expect(runGate(fr).status).toBe(0);
+  });
+
+  it('ARCH012_02: version boundary — pre-v4 specs are grandfathered (gate no-op), locking in why the bump was needed', () => {
+    const { fr, progress } = scaffoldRealSpec('gf-legacy');
+    const state = JSON.parse(fs.readFileSync(progress, 'utf-8'));
+    state.version = 3; // simulate a pre-architecture spec
+    fs.writeFileSync(progress, JSON.stringify(state));
+    // Greenfield, NO ARCHITECTURE — yet the gate ALLOWS, because version < 4 grandfathers it.
+    // Had the scaffold default stayed v3, EVERY real spec would hit this no-op and the FR-21
+    // guarantee would be dead. ARCH012_01's v4 assertion is the other half of this boundary.
+    expect(runGate(fr).status).toBe(0);
+  });
+});
