@@ -67,7 +67,8 @@ const SEED_AXES: SeedAxis[] = [
   { id: 'routing-strategy', name: 'Routing strategy (split vs full tunnel)', category: 'Networking', tier: 'Critical', why_needed: 'Which traffic goes via VPN vs direct', keywords: /\b(split[ -]?tunnel|full[ -]?tunnel|split tunneling|traffic routing|маршрутизац|DPI bypass|Zapret|policy[ -]?routing)\b/i },
   { id: 'hardware-platform', name: 'Hardware / firmware platform', category: 'Hardware', tier: 'Critical', why_needed: 'Physical device + firmware/OS the system runs on', keywords: /\b(router|OpenWrt|OpenWRT|Keenetic|firmware|прошивк|SBC|Raspberry|ARM board|embedded|роутер|железо)\b/i },
   { id: 'messaging-channel', name: 'Messaging channel (SMS / voice / push)', category: 'API-Communication', tier: 'Important', why_needed: 'Non-email comms transport', keywords: /\b(SMS|voice call|push notification|Twilio|telephony|IVR|голосов|звонок|messaging channel)\b/i },
-  { id: 'packaging-distribution', name: 'Packaging / distribution', category: 'Infra-Deployment', tier: 'Important', why_needed: 'How the artefact is built/shipped/installed', keywords: /\b(CLI|binary|package manager|npm publish|installer|distribution|release artifact|homebrew|apt|сборк|дистрибут)\b/i },
+  // NB: bare CLI/binary/distribution removed — over-matched non-tooling PRDs. Require packaging-specific terms.
+  { id: 'packaging-distribution', name: 'Packaging / distribution', category: 'Infra-Deployment', tier: 'Important', why_needed: 'How the artefact is built/shipped/installed', keywords: /\b(package manager|npm publish|installer|release artifact|homebrew|apt[ -]get|binary distribution|code signing|auto[ -]?update|сборк[аи] (бинар|пакет)|дистрибутив)\b/i },
   { id: 'data-pipeline', name: 'Data pipeline / ingestion', category: 'Data', tier: 'Important', why_needed: 'Batch/stream data ingestion + transform', keywords: /\b(ETL|data pipeline|ingest|stream processing|Kafka|Airflow|batch job processing|конвейер данных|обработка потока)\b/i },
 ];
 

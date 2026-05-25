@@ -287,3 +287,16 @@
   - [x] html-renderer рефактор wrapDoc + renderAxisSection/renderSynthesisSection; renderFullReport
   - [x] generate-axis персистит AXIS-{id}.model.json; full-report.ts buildFullReport; CLI `full-report`
   - [x] ARCH009_01 vitest (single doc + index anchors + rich секции + synthesis + completeness + self-contained); extension.json v1.23.0
+
+## Phase 6: Anti-hallucination integrity (FR-20)
+
+> Root-cause «presence ≠ truth»: verify-log + marker-guard + detect-precision + model-validation. Self-review loop (arch-review.ts) гоняет fix→verify автономно.
+
+- [x] FR-20 verify-log + audit-markers + detect confidence/domain-gate + validateAxisModel + cost-disclaimer -- @feature23 — Status: DONE | Est: 90m
+  _Requirements: [FR-20](FR.md#fr-20-anti-hallucination-integrity--verify-log--unbacked-marker-guard)_
+  _Leverage: scope-gate escape-log pattern, audit.ts findings shape_
+  **Done When:**
+  - [x] verify-log.ts (recordVerification + checkVerifiedMarkers) + CLI record-verify/audit-markers; UNBACKED_VERIFIED_MARKER ловит фейки (поймал 8 на live-bhph)
+  - [x] axis-detector confidence + domain-gating (Networking/Hardware ≥2); ужесточены routing/DNS/packaging keywords
+  - [x] validateAxisModel fail-clear; cost «оценка · knowledge-cutoff»; word-budget surface
+  - [x] ARCH001_07/ARCH002_07/ARCH010_01 vitest зелёные в Docker; arch-review.ts self-review driver + arch-review-loop skill

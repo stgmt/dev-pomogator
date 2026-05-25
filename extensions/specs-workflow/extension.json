@@ -1,6 +1,6 @@
 {
   "name": "specs-workflow",
-  "version": "1.24.0",
+  "version": "1.25.0",
   "description": "Управление спецификациями: 4-фазный workflow упакован в create-spec skill (SKILL.md + 20 references) с прогрессивным раскрытием. Standalone research-workflow skill (исследуй/найди/погугли/ресерч triggers) вызывается create-spec через Skill('research-workflow') в Phase 1 step 5. Spec-generator-v3 form-guards (USER_STORIES/TASKS/DESIGN/REQUIREMENTS/RESEARCH) + 4 private child skills (discovery-forms, requirements-chk-matrix, task-board-forms, variant-matrix-build) + meta-guard на extension.json + audit log с UserPromptSubmit summary. v1.19.0 adds variant-matrix-build skill (Phase 2 step 4c) + VARIANT_COVERAGE audit category (8th, blocks STOP #3 на polymorphic FRs без enumerated matrix) per .specs/spec-variant-matrix/. Migration guard: form-guards активируются только для specs с .progress.json version >= 3; existing v1/v2 specs pass-through.",
   "platforms": [
     "claude"
@@ -18,7 +18,8 @@
     "variant-matrix-build": ".claude/skills/variant-matrix-build",
     "spec-review": ".claude/skills/spec-review",
     "spec-reality-check": ".claude/skills/spec-reality-check",
-    "architecture-decision-builder": ".claude/skills/architecture-decision-builder"
+    "architecture-decision-builder": ".claude/skills/architecture-decision-builder",
+    "arch-review-loop": ".claude/skills/arch-review-loop"
   },
   "skillFiles": {
     "create-spec": [
@@ -90,6 +91,9 @@
       ".claude/skills/architecture-decision-builder/references/html-style-guide.md",
       ".claude/skills/architecture-decision-builder/evals/evals.json",
       ".claude/skills/architecture-decision-builder/evals/rubric.json"
+    ],
+    "arch-review-loop": [
+      ".claude/skills/arch-review-loop/SKILL.md"
     ]
   },
   "ruleFiles": {
@@ -154,6 +158,7 @@
       ".dev-pomogator/tools/specs-generator/architecture-decision/synthesis.ts",
       ".dev-pomogator/tools/specs-generator/architecture-decision/full-report.ts",
       ".dev-pomogator/tools/specs-generator/architecture-decision/verify-log.ts",
+      ".dev-pomogator/tools/specs-generator/architecture-decision/arch-review.ts",
       ".dev-pomogator/tools/specs-generator/architecture-decision/architecture-decision-cli.ts"
     ],
     "specs-validator": [

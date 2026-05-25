@@ -5,7 +5,7 @@ All notable changes to this feature will be documented in this file.
 ## [Unreleased]
 
 ### Added
-- Спека architecture-decision-builder: 19 FR, 19 AC (EARS), 18 CHK, 9 Key Decisions, SCHEMA (PolicyId + Insight + policy_fit/correction_log/selected_policy + business_summary/scorecard/reality_check/cost_at_scale/time_costs/exit_cost/door_type/sensitivity + full-report/AXIS-model.json), 22 BDD scenarios (@feature1..@feature22), 35 TASKS (TDD-порядок)
+- Спека architecture-decision-builder: 20 FR, 20 AC (EARS), 18 CHK, 9 Key Decisions, SCHEMA (PolicyId + Insight + policy_fit/correction_log/selected_policy + business_summary/scorecard/reality_check/cost_at_scale/time_costs/exit_cost/door_type/sensitivity + full-report/AXIS-model.json + verify-log/confidence), 23 BDD scenarios (@feature1..@feature23), 35 TASKS (TDD-порядок)
 - FR-11 Eval suite: 2-слойный debug/benchmark (deterministic CLI evals + qualitative rubric R1-R23 с R3 anti-hallucination); golden bench scenario-bhph
 - **FR-16 Selection policy** (default `mvp-poc`): рекомендация зависит от цели проекта — 5 политик (mvp-poc/production-grade/cost-optimal/scale-ready/portability), `policy_fit[]` per variant, demonstration-таблица «вариант × политика», policy-badge. Default mvp-poc = проще/быстрее → time-to-market↓
 - **FR-13 Cross-axis synthesis**: команда `synthesis` собирает AXIS-*.md → emergent insights поперёк осей (≥2 axis-id), SYNTHESIS.md+html. Главный кейс bhph «Variant F» был emergent
