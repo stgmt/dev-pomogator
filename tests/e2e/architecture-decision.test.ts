@@ -151,6 +151,34 @@ describe('ARCH002: Artefact generation', () => {
     expect(html).toContain('RECOMMENDED');
   });
 
+  it('ARCH002_06: missing optional fields never crash the render (null-safe)', () => {
+    // Regression: a variant lacking when_to_choose / when_not_to_choose (optional) must NOT
+    // throw an opaque esc(undefined) — it should render, omitting those blocks.
+    const minimal: AxisModel = {
+      axis_id: 'x',
+      axis_name: 'X',
+      context: 'c',
+      variants: [
+        {
+          id: 'a',
+          name: 'A',
+          y_statement: 'y',
+          maturity_ring: 'Adopt',
+          cost_chip: '$',
+          good: [],
+          neutral: [],
+          bad: [],
+          is_recommended: true,
+        } as VariantModel,
+      ],
+    };
+    expect(() => renderAxisHtml(minimal)).not.toThrow();
+    expect(() => renderAxisMarkdown(minimal)).not.toThrow();
+    const html = renderAxisHtml(minimal);
+    expect(html).not.toContain('When to choose'); // block omitted, not crashed
+    expect(html).not.toContain('undefined'); // no undefined leaked into output
+  });
+
   it('ARCH002_02: seededShuffle conserves the multiset (no loss/dup)', () => {
     const input = ['a', 'b', 'c', 'd', 'e'];
     const out = seededShuffle(input, 'database');

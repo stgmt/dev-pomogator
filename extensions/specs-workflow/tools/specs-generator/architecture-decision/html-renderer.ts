@@ -78,8 +78,8 @@ export interface VariantModel {
   good: string[];
   neutral: string[];
   bad: string[];
-  when_to_choose: string;
-  when_not_to_choose: string;
+  when_to_choose?: string;
+  when_not_to_choose?: string;
   failure_modes?: string[]; // R10
   real_world_precedent?: Precedent[];
   confirmation?: string;
@@ -141,8 +141,9 @@ export interface Insight {
   trade_off?: string;
 }
 
-function esc(s: string): string {
-  return s
+function esc(s: unknown): string {
+  // Null-safe: a missing/optional field must never crash the whole render — coerce to ''.
+  return String(s ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
@@ -337,8 +338,8 @@ function variantCard(v: VariantModel): string {
   ${realityBlock(v)}
   ${exitCostLine(v)}
   ${precedentBlock(v)}
-  <div class="label">When to choose</div><p class="when">${esc(v.when_to_choose)}</p>
-  <div class="label">When NOT to choose</div><p class="when no">${esc(v.when_not_to_choose)}</p>
+  ${v.when_to_choose ? `<div class="label">When to choose</div><p class="when">${esc(v.when_to_choose)}</p>` : ''}
+  ${v.when_not_to_choose ? `<div class="label">When NOT to choose</div><p class="when no">${esc(v.when_not_to_choose)}</p>` : ''}
   ${v.confirmation ? `<div class="label">Confirmation</div><p class="when">${esc(v.confirmation)}</p>` : ''}
   ${
     v.correction_log?.length

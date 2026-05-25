@@ -188,8 +188,8 @@ export function renderAxisMarkdown(axis: AxisModel): string {
         .join('\n');
       parts.push(`\n**Proof — real-world precedent:**\n${prec}`);
     }
-    parts.push(`\n**When to choose:** ${v.when_to_choose}`);
-    parts.push(`**When NOT to choose:** ${v.when_not_to_choose}`);
+    if (v.when_to_choose) parts.push(`\n**When to choose:** ${v.when_to_choose}`);
+    if (v.when_not_to_choose) parts.push(`**When NOT to choose:** ${v.when_not_to_choose}`);
     if (v.confirmation) parts.push(`**Confirmation:** ${v.confirmation}`);
     if (v.correction_log?.length) parts.push(`\n**Corrections:**\n${bullets(v.correction_log, '↻')}`);
     parts.push('');
