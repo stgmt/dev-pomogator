@@ -34,6 +34,7 @@ describe('POMOGATORDOCTOR001 — Core checks (FR-1..FR-14)', () => {
       expect(ids.has('C7')).toBe(true);
       expect(ids.has('C13')).toBe(true);
       expect(ids.has('C14')).toBe(true);
+      expect(ids.has('C31')).toBe(true);
       if (process.platform === 'win32') {
         expect(ids.has('C30')).toBe(true);
       }
@@ -83,4 +84,40 @@ describe('POMOGATORDOCTOR001 — Core checks (FR-1..FR-14)', () => {
       home.cleanup();
     }
   }, 10_000);
+
+  // @feature18 — FR-36 / AC-36: per-command hook sync (C31)
+  it('POMOGATORDOCTOR001_33: C31 flags an installed extension whose manifest hook is NOT wired (warning)', async () => {
+    // answer-simple is installed but its Stop hook command is absent from settings.local.json.
+    const home = buildTempHome({ installedExtensions: [{ name: 'answer-simple' }] });
+    try {
+      const report = await runDoctor({ homeDir: home.homeDir, projectRoot: home.projectDir });
+      const c31 = report.results.find((r) => r.id === 'C31');
+      expect(c31).toBeDefined();
+      expect(c31?.severity).toBe('warning');
+      expect(c31?.message).toMatch(/answer_simple_stop\.ts/);
+      expect(c31?.reinstallable).toBe(true);
+    } finally {
+      home.cleanup();
+    }
+  });
+
+  it('POMOGATORDOCTOR001_34: C31 passes (ok) when the manifest hook command IS wired into settings', async () => {
+    const home = buildTempHome({
+      installedExtensions: [
+        {
+          name: 'answer-simple',
+          managedHooks: {
+            Stop: 'node -e "require(...bootstrap)" -- ".dev-pomogator/tools/answer-simple/answer_simple_stop.ts"',
+          },
+        },
+      ],
+    });
+    try {
+      const report = await runDoctor({ homeDir: home.homeDir, projectRoot: home.projectDir });
+      const c31 = report.results.find((r) => r.id === 'C31');
+      expect(c31?.severity).toBe('ok');
+    } finally {
+      home.cleanup();
+    }
+  });
 });

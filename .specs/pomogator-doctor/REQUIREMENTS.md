@@ -105,6 +105,7 @@
 | FR-31 | C6 (fix) | Post-launch: Hooks registry path correction |
 | FR-34 | C22 | Post-launch: Stale managed entries |
 | FR-35 | C30 | Post-launch: Legacy npm Claude install (win32) |
+| FR-36 | C31 | Post-launch: Per-command hook sync (manifest vs settings) |
 
 ## Post-Launch FR/AC Index (2026-04-20)
 
@@ -122,3 +123,4 @@
 | [FR-33](FR.md#fr-33-mcp-probe-timeout--error-categorization-feature4) | MCP probe retune | [AC-33](ACCEPTANCE_CRITERIA.md#ac-33-fr-33) | (UX fix) | — | 28, 29 |
 | [FR-34](FR.md#fr-34-stale-managed-entries-detection-feature12) | Stale managed entries (C22) | [AC-34](ACCEPTANCE_CRITERIA.md#ac-34-fr-34) | (maintainer) | [UC-18](USE_CASES.md#uc-18-stale-managed-entries-feature12) | 30, 31 |
 | [FR-35](FR.md#fr-35-legacy-npm-claude-install-check-win32-feature1) | Legacy npm Claude install (win32, C30) | [AC-35](ACCEPTANCE_CRITERIA.md#ac-35-fr-35-feature1) | (maintainer) | — | 32 |
+| [FR-36](FR.md#fr-36-per-command-hook-sync-manifest-vs-settings-feature18) | Per-command hook sync (C31) | [AC-36](ACCEPTANCE_CRITERIA.md#ac-36-fr-36-feature18) | (maintainer) | — | 33, 34 |

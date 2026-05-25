@@ -261,3 +261,13 @@ WHEN платформа Windows, Doctor SHALL проверить legacy npm-glob
 Meta: `reinstallable: no`.
 
 **Связанные AC:** [AC-35](ACCEPTANCE_CRITERIA.md#ac-35-fr-35)
+
+## FR-36: Per-command hook sync (manifest vs settings) @feature18
+
+WHEN в проекте установлен ≥1 extension, Doctor SHALL для КАЖДОГО установленного extension прочитать его хуки из АКТУАЛЬНОГО манифеста пакета (`listExtensions()` + `getExtensionHooks(ext, 'claude')`) и проверить что КАЖДАЯ команда хука (сверка по basename скрипта, т.к. установщик переписывает префикс в portable `tsx-runner-bootstrap`) присутствует в `.claude/settings.local.json` ЛИБО глобальном `~/.claude/settings.json` (SessionStart check-update живёт там). IF хотя бы одна команда не найдена THEN Doctor SHALL emit check `C31` severity=warning, reinstallable=yes, message перечисляет `{extension}/{script}` ненайденных + поясняет что плагин установлен но хук не вписан (напр. установлен до добавления хука) → фича молча не работает, hint = `npx dev-pomogator` для re-wire. IF все команды найдены THEN severity=ok. WHEN установленных extension нет (`installedExtensions` пуст) THEN check `C31` SHALL быть gated out (`relevant=false`). IF манифесты пакета недоступны (`listExtensions()` throws) THEN severity=ok (fail-open, не ложная тревога). Group: `self-sufficient`.
+
+Отличие от `C6` (FR-4 hooks-registry): C6 сверяет `config.managed.hooks` ↔ settings на уровне ИМЁН СОБЫТИЙ (Stop/PreToolUse) — ловит drift настроек от записанного при установке, но НЕ ловит хук который никогда не устанавливался (config его тоже не записал). C31 сверяет МАНИФЕСТ (source of truth) ↔ settings на уровне КОМАНД — ловит declared-but-never-wired. Комплементарны.
+
+Meta: `reinstallable: yes`.
+
+**Связанные AC:** [AC-36](ACCEPTANCE_CRITERIA.md#ac-36-fr-36)

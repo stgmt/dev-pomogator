@@ -4,6 +4,12 @@ All notable changes to the pomogator-doctor feature will be documented in this f
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), [SemVer](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - C31 per-command hook sync (2026-05-26)
+
+### Added (FR-36, AC-36, @feature18, scenarios POMOGATORDOCTOR001_33..34)
+
+- **C31 — Per-command hook sync (manifest vs settings).** Doctor now reads each INSTALLED extension's hooks from the current package manifest (`listExtensions()` + `getExtensionHooks`) and verifies every hook command (by script basename) is wired into `.claude/settings.local.json` or the global `~/.claude/settings.json`. Missing → warning + reinstall hint; naming `{extension}/{script}`. Closes the gap left by C6 (which compares config↔settings at event-KEY level and cannot detect a hook that was never installed — e.g. installed before the hook was added). Gated out when no extensions installed; fail-open if manifests unreadable. Source: `src/doctor/checks/hook-command-sync.ts`. Counts: 36 FR / 36 AC / 34 scenarios.
+
 ## [Unreleased] - Post-launch hardening spec update (2026-04-20)
 
 ### Added (FR-26..FR-34, AC-26..AC-34, US-9..US-12, UC-13..UC-18)

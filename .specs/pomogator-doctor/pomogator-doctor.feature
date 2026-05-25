@@ -343,3 +343,20 @@ Feature: POMOGATORDOCTOR001_pomogator-doctor_diagnostic_command
     When I run `dev-pomogator --doctor --json`
     Then results contains check C30 severity warning mentioning "Legacy npm" and "native installer"
     And on a non-Windows platform check C30 is gated out with relevant=false
+
+  # @feature18
+  Scenario: POMOGATORDOCTOR001_33 Installed extension whose manifest hook is not wired emits warning (C31)
+    Given extension "answer-simple" is installed in the project
+    And its manifest declares a Stop hook "answer_simple_stop.ts"
+    And settings.local.json does NOT contain that hook command
+    When I run `dev-pomogator --doctor --json`
+    Then results contains check C31 severity warning listing "answer-simple/answer_simple_stop.ts"
+    And C31 is reinstallable=yes with hint to run `npx dev-pomogator`
+
+  # @feature18
+  Scenario: POMOGATORDOCTOR001_34 Wired manifest hook command passes (C31 ok)
+    Given extension "answer-simple" is installed in the project
+    And settings.local.json contains the hook command for "answer_simple_stop.ts"
+    When I run `dev-pomogator --doctor --json`
+    Then results contains check C31 severity ok
+    And when no extensions are installed check C31 is gated out with relevant=false

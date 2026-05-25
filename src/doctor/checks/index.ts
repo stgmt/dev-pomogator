@@ -6,6 +6,7 @@ import { envExampleCheck } from './env-example.js';
 import { envVarsCheck } from './env-vars.js';
 import { gitCheck } from './git.js';
 import { gitignoreBlockCheck } from './gitignore-block.js';
+import { hookCommandSyncCheck } from './hook-command-sync.js';
 import { hooksRegistryCheck } from './hooks-registry.js';
 import { mcpParseCheck } from './mcp-parse.js';
 import { mcpProbeCheck } from './mcp-probe.js';
@@ -25,6 +26,7 @@ export const phase2Checks: CheckDefinition[] = [
   versionMatchCheck,
   gitignoreBlockCheck,
   claudeBinPriorityCheck,
+  hookCommandSyncCheck,
 ];
 
 export const phase3Checks: CheckDefinition[] = [bunCheck, pythonCheck, dockerCheck];
@@ -45,6 +47,7 @@ export {
   envVarsCheck,
   gitCheck,
   gitignoreBlockCheck,
+  hookCommandSyncCheck,
   hooksRegistryCheck,
   mcpParseCheck,
   mcpProbeCheck,
