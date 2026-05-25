@@ -445,3 +445,70 @@ describe('ARCH007: synthesis / correction-log / context7 proof / selection polic
     expect(pickRecommended(axis(undefined))?.id).toBe('serverless');
   });
 });
+
+describe('ARCH008: two-lens artefact + decision economics (R24/R25)', () => {
+  // @feature20
+  it('ARCH008_01: renders business band + comparison matrix + reality section', () => {
+    const axis: AxisModel = {
+      axis_id: 'hosting',
+      axis_name: 'Hosting',
+      context: 'c',
+      variants: [
+        mkVariant({
+          id: 'supabase',
+          name: 'Supabase',
+          is_recommended: true,
+          business_summary: { gets: 'БД+auth+API', time_to_market: '1-2 дня', cost: '$0→$25', risk: 'lock-in' },
+          scorecard: [
+            { criterion: 'Лёгкость интеграции', verdict: 'good', value: 'из коробки' },
+            { criterion: 'Vendor lock-in', verdict: 'bad', value: 'высокий' },
+          ],
+          reality_check: ['SSL — авто на свой домен', 'Бэкапы — pg_dump cron на free-плане'],
+        }),
+        mkVariant({
+          id: 'vps',
+          name: 'VPS',
+          scorecard: [
+            { criterion: 'Лёгкость интеграции', verdict: 'bad', value: 'всё руками' },
+            { criterion: 'Vendor lock-in', verdict: 'good', value: 'нет' },
+          ],
+        }),
+      ],
+    };
+    const html = renderAxisHtml(axis);
+    expect(html).toContain('💼 Для бизнеса'); // business lens
+    expect(html).toContain('Карта сравнения'); // comparison matrix (criteria × variants)
+    expect(html).toContain('Лёгкость интеграции');
+    expect(html).toContain('Реальность — что руками'); // reality-check section
+  });
+
+  // @feature21
+  it('ARCH008_02: renders cost-at-scale ladder + time-costs + exit-cost + reversibility banner', () => {
+    const axis: AxisModel = {
+      axis_id: 'hosting',
+      axis_name: 'Hosting',
+      context: 'c',
+      door_type: 'one-way',
+      variants: [
+        mkVariant({
+          id: 'supabase',
+          name: 'Supabase',
+          is_recommended: true,
+          cost_at_scale: [
+            { tier: 'MVP/100', cost: '$0' },
+            { tier: '10k', cost: '$25' },
+            { tier: '100k', cost: '$300+' },
+          ],
+          time_costs: { to_market: '1-2 дня', to_feature: 'часы', to_test: 'встроено', to_support: '~2ч/мес' },
+          exit_cost: 'Postgres легко, Auth+RLS ~2 нед',
+        }),
+      ],
+    };
+    const html = renderAxisHtml(axis);
+    expect(html).toContain('Стоимость на масштабе'); // cost-at-scale ladder
+    expect(html).toContain('$300+'); // top tier visible (MVP-cheap-then-explodes)
+    expect(html).toContain('⏱ Время команды'); // time-costs block
+    expect(html).toContain('class="exit"'); // exit-cost line
+    expect(html).toContain('Необратимое решение'); // one-way door banner (reversibility)
+  });
+});

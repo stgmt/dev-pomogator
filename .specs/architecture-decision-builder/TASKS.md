@@ -260,3 +260,23 @@
   - [x] eval-runner grade_synthesis/grade_policy + 2 command branches; 29/29 green
   - [x] rubric R21 policy-selected / R22 policy-demonstration / R23 cross-axis-synthesis
   - [x] extension.json: synthesis.ts + SYNTHESIS.md.template в toolFiles, v1.22.0
+
+## Phase 5: Rich artefact — two lenses + decision economics (FR-17/18, R24/R25)
+
+> Фикс обратной связи: артефакт малоинформативен, две роли не разделены, источников мало, реал не подсвечен, время/обратимость не учтены. Verify: ARCH007_01-04 + ARCH008_01/02 зелёные в Docker; host-смоук 14/14 + 9/9.
+
+- [x] FR-17 две линзы + scorecard карта-сравнение + reality-check (R24, BLOCKING) -- @feature20 — Status: DONE | Est: 45m
+  _Requirements: [FR-17](FR.md#fr-17-две-линзы--scorecard--reality-check-r24-blocking)_
+  **Done When:**
+  - [x] business_summary лента + scorecard матрица (критерии×варианты) + reality_check секция в html/md
+  - [x] rubric R24 blocking; ARCH008_01 vitest
+- [x] FR-18 экономика: cost_at_scale + time_costs + exit_cost + door_type + sensitivity (R25, BLOCKING) -- @feature21 — Status: DONE | Est: 45m
+  _Requirements: [FR-18](FR.md#fr-18-экономика-решения--деньги-время-обратимость-r25-blocking)_
+  **Done When:**
+  - [x] cost_at_scale ladder + time_costs (market/feature/test/support) + exit_cost + one-way/two-way banner + sensitivity + precedent.relevance
+  - [x] rubric R25 blocking; ARCH008_02 vitest
+- [x] Completeness-сценарии coverage (другая сессия 84f3042e, FR-12) -- @feature12 @feature13 @feature18 @feature19 — Status: DONE | Est: 5m
+  _Requirements: [FR-12](FR.md#fr-12-audit-category-completeness_coverage--completeness-ledger)_
+  **Done When:**
+  - [x] @feature12 ARCH005_05 (DIMENSION_PENDING) / @feature13 ARCH005_06 (COMPLETENESS_COMPLETE)
+  - [x] @feature18 ARCH001_06 (stack_locked) / @feature19 ARCH005_07 (ADDRESSED_WITHOUT_POINTER) — vitest зелёные

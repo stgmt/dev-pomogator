@@ -135,3 +135,27 @@ WHEN selected_policy = X AND вариант V имеет X в policy_fit THEN re
 WHEN ось имеет варианты с разными policy_fit THEN артефакт SHALL содержать demonstration-таблицу (вариант × 5 политик).
 
 IF ни один вариант не имеет selected_policy в policy_fit THEN recommended SHALL fallback на is_recommended.
+
+## AC-17 (FR-17)
+
+**Требование:** [FR-17](FR.md#fr-17-две-линзы--scorecard--reality-check-r24-blocking)
+
+WHEN вариант рендерится THEN артефакт SHALL содержать `business_summary` (gets/time_to_market/cost/risk) бизнес-лентой.
+
+WHEN ≥2 варианта оси имеют scorecard с разными verdict'ами THEN артефакт SHALL рендерить матрицу критерии×варианты (Стоимость/Лёгкость интеграции/Кривая обучения/Ops/SSL-HTTPS/Масштаб/Vendor lock-in/Экосистема), ячейка цветная по verdict.
+
+WHEN вариант имеет непустой `reality_check` THEN артефакт SHALL содержать секцию «Реальность — что руками» (SSL/HTTPS, бэкапы+restore, мониторинг, secrets, обновления ОС, склейка).
+
+IF вариант несёт только good/bad буллеты без `reality_check` THEN rubric R24 SHALL fail.
+
+## AC-18 (FR-18)
+
+**Требование:** [FR-18](FR.md#fr-18-экономика-решения--деньги-время-обратимость-r25-blocking)
+
+WHEN вариант рендерится THEN артефакт SHALL содержать `cost_at_scale` (≥2 tier-точки, не одна) И `time_costs` (to_market + to_feature + to_test + to_support) И `exit_cost`.
+
+WHEN ось рендерится THEN артефакт SHALL показать `door_type` (one-way/two-way баннер) И `sensitivity[]` («рекомендация меняется если…») если заданы.
+
+WHEN вариант имеет `real_world_precedent` THEN каждый precedent SHALL нести `relevance` (почему релевантен проекту), не только звёзды.
+
+IF вариант costed точечно (cost без cost_at_scale) ИЛИ без time_costs THEN rubric R25 SHALL fail.

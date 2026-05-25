@@ -141,3 +141,20 @@ Feature: ARCH001_Architecture_Decision_Builder
     Then the recommended variant should differ between the two policies
     And the artefact should render a variant-by-policy demonstration table
     And an unset policy should default to mvp-poc
+
+  @feature20
+  Scenario: ARCH008_01 Two-lens artefact — business summary + scorecard matrix + reality-check
+    Given an axis whose variants carry business_summary, scorecard and reality_check
+    When the axis artefact is rendered
+    Then it should render a business summary band for the variant
+    And it should render a comparison matrix of criteria by variant
+    And a variant with reality_check should render a "Реальность" section
+
+  @feature21
+  Scenario: ARCH008_02 Decision economics — cost-at-scale, time-costs, exit-cost, reversibility
+    Given an axis whose variants carry cost_at_scale, time_costs and exit_cost
+    When the axis artefact is rendered
+    Then it should render a cost-at-scale ladder with at least two tiers
+    And it should render team time-costs (to_market, to_feature, to_test, to_support)
+    And it should render the exit cost
+    And a one-way door axis should render a reversibility banner

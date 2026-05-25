@@ -20,6 +20,8 @@
 | [FR-14](FR.md#fr-14-correction-log-reasoning-journey) | Correction-log | [AC-14](ACCEPTANCE_CRITERIA.md#ac-14-fr-14) | @feature15 | Done |
 | [FR-15](FR.md#fr-15-live-context7-пруфы) | Live context7 пруфы | [AC-15](ACCEPTANCE_CRITERIA.md#ac-15-fr-15) | @feature16 | Done |
 | [FR-16](FR.md#fr-16-selection-policy-default-mvp-poc) | Selection policy (mvp-poc default) | [AC-16](ACCEPTANCE_CRITERIA.md#ac-16-fr-16) | @feature17 | Done |
+| [FR-17](FR.md#fr-17-две-линзы--scorecard--reality-check-r24-blocking) | Две линзы + scorecard + reality (R24) | [AC-17](ACCEPTANCE_CRITERIA.md#ac-17-fr-17) | @feature20 | Done |
+| [FR-18](FR.md#fr-18-экономика-решения--деньги-время-обратимость-r25-blocking) | Экономика: деньги/время/обратимость (R25) | [AC-18](ACCEPTANCE_CRITERIA.md#ac-18-fr-18) | @feature21 | Done |
 
 ## Functional Requirements
 
