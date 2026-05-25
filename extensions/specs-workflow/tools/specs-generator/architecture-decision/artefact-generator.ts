@@ -36,6 +36,46 @@ export interface GenerateResult {
   modelPath: string;
   wordsPerVariant: number[];
   wordBudgetOk: boolean;
+  warnings: string[];
+}
+
+/**
+ * Validate an AxisModel BEFORE render. Throws a CLEAR error on structural breakage
+ * (naming the variant + field) instead of an opaque downstream crash; returns soft
+ * warnings (quality issues that don't block render) for the caller to surface.
+ */
+export function validateAxisModel(axis: AxisModel): string[] {
+  const errs: string[] = [];
+  if (!axis?.axis_id) errs.push('axis_id missing');
+  if (!axis?.axis_name) errs.push('axis_name missing');
+  if (!Array.isArray(axis?.variants) || axis.variants.length === 0) errs.push('variants[] is empty');
+  (axis?.variants ?? []).forEach((v, i) => {
+    const tag = v?.id ? ` '${v.id}'` : '';
+    if (!v?.id) errs.push(`variant[${i}] missing id`);
+    if (!v?.name) errs.push(`variant[${i}]${tag} missing name`);
+  });
+  if (errs.length) throw new Error(`Invalid AxisModel '${axis?.axis_id ?? '?'}': ${errs.join('; ')}`);
+
+  const warns: string[] = [];
+  if (axis.variants.length < 3) {
+    warns.push(`only ${axis.variants.length} variant(s) — rubric R8 expects ≥3 incl. ≥1 non-default`);
+  }
+  const recCount = axis.variants.filter((v) => v.is_recommended).length;
+  const anyPolicyFit = axis.variants.some((v) => v.policy_fit && v.policy_fit.length > 0);
+  if (recCount === 0 && !anyPolicyFit) {
+    warns.push('no is_recommended flag and no policy_fit — recommendation will be empty');
+  }
+  if (recCount > 1) {
+    warns.push(`${recCount} variants flagged is_recommended (expected ≤1; policy resolves the pick)`);
+  }
+  const scored = axis.variants.filter((v) => v.scorecard && v.scorecard.length > 0);
+  if (scored.length >= 2) {
+    const sig = (v: VariantModel) => (v.scorecard ?? []).map((s) => s.criterion).sort().join('|');
+    if (new Set(scored.map(sig)).size > 1) {
+      warns.push('scorecard criteria differ across variants — comparison matrix will have gaps');
+    }
+  }
+  return warns;
 }
 
 // Deterministic seeded shuffle (mulberry32 from string seed) — reproducible per axis.id.
@@ -159,7 +199,7 @@ export function renderAxisMarkdown(axis: AxisModel): string {
     }
     if (v.cost_at_scale?.length) {
       const ladder = v.cost_at_scale.map((c) => `${c.tier}: ${c.cost}`).join(' → ');
-      parts.push(`**Стоимость на масштабе:** ${ladder}\n`);
+      parts.push(`**Стоимость на масштабе** _(оценка · knowledge-cutoff · verify before lock)_**:** ${ladder}\n`);
     }
     if (v.time_costs) {
       const t = v.time_costs;
@@ -202,11 +242,13 @@ export function generateAxisArtefact(
   outDir: string,
   opts: { shuffle?: boolean } = {},
 ): GenerateResult {
+  const warnings = validateAxisModel(axis); // throws on structural breakage (clear message)
   const ordered: AxisModel = {
     ...axis,
     variants: opts.shuffle === false ? axis.variants : seededShuffle(axis.variants, axis.axis_id),
   };
   const budget = checkWordBudget(axis.variants);
+  if (!budget.ok) warnings.push('word-budget skew >±15% across variants (position-bias risk, FR-8)');
 
   fs.mkdirSync(outDir, { recursive: true });
   const base = `AXIS-${axis.axis_id}`;
@@ -227,5 +269,6 @@ export function generateAxisArtefact(
     modelPath,
     wordsPerVariant: budget.counts,
     wordBudgetOk: budget.ok,
+    warnings,
   };
 }

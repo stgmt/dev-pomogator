@@ -25,6 +25,9 @@ export interface AxisCandidate {
   tier: Tier;
   why_needed: string;
   evidence_quotes: string[];
+  /** Distinct PRD lines matching this axis. high = ≥2 (confident); low = 1 (weak signal). */
+  confidence: 'high' | 'low';
+  match_count: number;
 }
 
 export interface DetectResult {
@@ -58,8 +61,10 @@ const SEED_AXES: SeedAxis[] = [
   { id: 'llm', name: 'LLM / AI reasoning', category: 'Other', tier: 'Deferred', why_needed: 'AI-assisted feature', keywords: /\b(LLM|GPT|Claude|OpenRouter|AI[ -](model|reasoning)|classif)\b/i },
   // --- non-webapp domains (networking / hardware / messaging / devtools / data) ---
   { id: 'network-transport', name: 'Network transport / VPN protocol', category: 'Networking', tier: 'Critical', why_needed: 'How traffic is tunnelled/obfuscated', keywords: /\b(VPN|WireGuard|AmneziaWG|VLESS|OpenVPN|proxy|tunnel|обфускац|обход|туннел|transport protocol)\b/i },
-  { id: 'dns-resolution', name: 'DNS resolution / filtering', category: 'Networking', tier: 'Important', why_needed: 'Name resolution + ad/DPI filtering policy', keywords: /\b(DNS|resolver|DoH|DoT|AdGuard|adblock|NextDNS|fakeip|hijack|разрешение имён)\b/i },
-  { id: 'routing-strategy', name: 'Routing strategy (split vs full tunnel)', category: 'Networking', tier: 'Critical', why_needed: 'Which traffic goes via VPN vs direct', keywords: /\b(split[ -]?tunnel|full[ -]?tunnel|routing|split tunneling|маршрутизац|DPI bypass|Zapret|policy[ -]?routing)\b/i },
+  // NB: bare `DNS` / `routing` removed — they over-matched non-VPN PRDs ("scaffold infra (DNS, A2P)",
+  // "Twilio number routing"). Require domain-qualified forms.
+  { id: 'dns-resolution', name: 'DNS resolution / filtering', category: 'Networking', tier: 'Important', why_needed: 'Name resolution + ad/DPI filtering policy', keywords: /\b(DNS[ -](resolver|filtering|over|server|leak)|DoH|DoT|AdGuard|adblock|NextDNS|fakeip|DNS hijack|разрешение имён|DNS-фильтрац)\b/i },
+  { id: 'routing-strategy', name: 'Routing strategy (split vs full tunnel)', category: 'Networking', tier: 'Critical', why_needed: 'Which traffic goes via VPN vs direct', keywords: /\b(split[ -]?tunnel|full[ -]?tunnel|split tunneling|traffic routing|маршрутизац|DPI bypass|Zapret|policy[ -]?routing)\b/i },
   { id: 'hardware-platform', name: 'Hardware / firmware platform', category: 'Hardware', tier: 'Critical', why_needed: 'Physical device + firmware/OS the system runs on', keywords: /\b(router|OpenWrt|OpenWRT|Keenetic|firmware|прошивк|SBC|Raspberry|ARM board|embedded|роутер|железо)\b/i },
   { id: 'messaging-channel', name: 'Messaging channel (SMS / voice / push)', category: 'API-Communication', tier: 'Important', why_needed: 'Non-email comms transport', keywords: /\b(SMS|voice call|push notification|Twilio|telephony|IVR|голосов|звонок|messaging channel)\b/i },
   { id: 'packaging-distribution', name: 'Packaging / distribution', category: 'Infra-Deployment', tier: 'Important', why_needed: 'How the artefact is built/shipped/installed', keywords: /\b(CLI|binary|package manager|npm publish|installer|distribution|release artifact|homebrew|apt|сборк|дистрибут)\b/i },
@@ -96,6 +101,8 @@ function harvestNeedsClarification(content: string): AxisCandidate[] {
         tier: 'Deferred',
         why_needed: 'PRD flagged this as an open tech decision',
         evidence_quotes: [text],
+        confidence: 'low',
+        match_count: 1,
       });
     }
   }
@@ -124,22 +131,30 @@ export function detectAxes(
 
   for (const seed of SEED_AXES) {
     const evidence: string[] = [];
+    let matchCount = 0;
     for (const line of lines) {
       if (seed.keywords.test(line)) {
-        evidence.push(line.trim());
-        if (evidence.length >= 2) break;
+        matchCount++;
+        if (evidence.length < 2) evidence.push(line.trim()); // keep first 2 quotes, keep counting
       }
     }
-    if (evidence.length > 0) {
-      axes.push({
-        id: seed.id,
-        name: seed.name,
-        category: seed.category,
-        tier: seed.tier,
-        why_needed: seed.why_needed,
-        evidence_quotes: evidence,
-      });
-    }
+    if (matchCount === 0) continue;
+    const confidence: 'high' | 'low' = matchCount >= 2 ? 'high' : 'low';
+    // Domain-gating: specialized non-webapp domains (Networking/Hardware) need ≥2 distinct
+    // signals to emit. A single stray keyword (e.g. one "tunnel"/"proxy") on an unrelated PRD
+    // must NOT promote a whole VPN/router axis. Core webapp axes emit on ≥1 (broadly applicable).
+    const specialized = seed.category === 'Networking' || seed.category === 'Hardware';
+    if (specialized && confidence === 'low') continue;
+    axes.push({
+      id: seed.id,
+      name: seed.name,
+      category: seed.category,
+      tier: seed.tier,
+      why_needed: seed.why_needed,
+      evidence_quotes: evidence,
+      confidence,
+      match_count: matchCount,
+    });
   }
 
   // L3 — NEEDS CLARIFICATION (dedup against already-detected llm etc. is fine; они Deferred)

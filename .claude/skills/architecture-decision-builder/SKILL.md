@@ -68,6 +68,8 @@ CLI: `extensions/specs-workflow/tools/specs-generator/architecture-decision/arch
 - **`audit <spec-dir>`** → `{findings[]}`. ARCHITECTURE_COVERAGE (FR-9, 9-я категория): pending axis→WARNING, accepted→MATRIX_COMPLETE, escape→ESCAPE_HATCH_USED/WARNING_REASON_TOO_SHORT.
 - **`audit-completeness <spec-dir>`** → `{findings[]}`. COMPLETENESS_COVERAGE (FR-12, 10-я категория): читает `COMPLETENESS.md` ledger (8 dimensions) — pending/missing→DIMENSION_PENDING WARNING, all addressed/out-of-scope→COMPLETENESS_COMPLETE, escape `[skip-completeness-dimension:]`→WARNING_REASON_TOO_SHORT. **Отдельная команда** (не merged в audit — architecture audit unmixed для eval determinism).
 - **`synthesis <spec-dir> [insights.json]`** → `{synthesisMd, insights_count, rejected[]}`. FR-13 cross-axis synthesis: ты авторишь `insights[]` (`{axes[≥2], title, description, recommendation, trade_off?}`) в JSON, helper валидирует (каждый insight ссылается на ≥2 РЕАЛЬНЫХ axis-id) + рендерит `SYNTHESIS.md`+`.html`. Невалидные → `rejected[]` с причиной (не silently). `insights_count=0` валидно (1-axis spec).
+- **`record-verify <spec-dir> <lib> [ver]`** → `{recorded}`. FR-20 anti-hallucination: вызывай ПОСЛЕ реального context7-вызова, чтобы подкрепить `[VERIFIED via context7:<lib>]` маркер. Пишет в `.architecture-verify.jsonl`.
+- **`audit-markers <spec-dir>`** → `{findings[]}`. FR-20: сканит AXIS-*.md на `[VERIFIED via context7:<lib>]`, сверяет с verify-log; маркер без записи → `UNBACKED_VERIFIED_MARKER` WARNING (фабрикованный пруф). Presence маркера ≠ правдивость — gate делает R3/R15 аудируемыми, не trust-based.
 - **`full-report <spec-dir> [insights.json]`** → `{reportPath, axes_count, insights_count, completeness_count}`. FR-19: собирает ЕДИНЫЙ self-contained `ARCHITECTURE.html` из `AXIS-*.model.json` (пишутся generate-axis автоматически) + insights + `COMPLETENESS.md` → index-матрица + каждая ось (богатые карточки: 2 линзы + scorecard + reality + экономика) + synthesis + completeness. Рендерится через те же `renderAxisSection`/`renderSynthesisSection` (НЕ скрейп HTML) — отчёт наследует весь rich-контент. Запускать ПОСЛЕ всех generate-axis + synthesis.
 
 ## Workflow (auto-mode default — FR-4)
@@ -119,6 +121,8 @@ CLI: `extensions/specs-workflow/tools/specs-generator/architecture-decision/arch
 | audit-completeness | `{findings[]}` (COMPLETENESS_COVERAGE, FR-12) |
 | synthesis | `{synthesisMd, insights_count, rejected[]}` (FR-13 cross-axis) |
 | full-report | `{reportPath, axes_count, insights_count, completeness_count}` (FR-19 ARCHITECTURE.html) |
+| record-verify | `{recorded}` (FR-20 back a real context7 verification) |
+| audit-markers | `{findings[]}` (FR-20 UNBACKED_VERIFIED_MARKER) |
 
 ## Related
 

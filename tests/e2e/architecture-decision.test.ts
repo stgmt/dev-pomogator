@@ -8,7 +8,12 @@ import {
   generateAxisArtefact,
   seededShuffle,
   renderAxisMarkdown,
+  validateAxisModel,
 } from '../../extensions/specs-workflow/tools/specs-generator/architecture-decision/artefact-generator.ts';
+import {
+  checkVerifiedMarkers,
+  recordVerification,
+} from '../../extensions/specs-workflow/tools/specs-generator/architecture-decision/verify-log.ts';
 import { openInBrowser } from '../../extensions/specs-workflow/tools/specs-generator/architecture-decision/open-in-browser.ts';
 import {
   compileIndex,
@@ -101,6 +106,27 @@ describe('ARCH001: Axis detection', () => {
     expect(r.skipped_reason).toMatch(/brownfield/);
   });
 
+  it('ARCH001_07: specialized-domain over-match suppressed (regression: bhph VPN false-positives)', () => {
+    // A non-VPN PRD mentioning "routing" (SMS number routing) and "DNS" (email infra) once each
+    // must NOT promote networking axes. Bare keywords were over-matching (routing-strategy/dns).
+    const prd = [
+      '# Fintech alerts service',
+      'Persistent Postgres database for loans.',
+      'Dealer-specific Twilio number routing for SMS alerts.',
+      'Blocking for scaffold infra (DNS, A2P brand registration).',
+      'Hosting on managed cloud, cron for nightly scoring.',
+    ].join('\n');
+    const r = detectAxes(prd);
+    const ids = r.axes.map((a) => a.id);
+    expect(ids).not.toContain('routing-strategy'); // "number routing" ≠ VPN routing
+    expect(ids).not.toContain('dns-resolution'); // "(DNS, A2P)" ≠ DNS filtering
+    expect(ids).toContain('database'); // core webapp axis still detected
+    // confidence field present + low-confidence specialized axes never leak
+    expect(r.axes.every((a) => a.confidence === 'high' || a.confidence === 'low')).toBe(true);
+    const networking = r.axes.filter((a) => a.category === 'Networking' || a.category === 'Hardware');
+    expect(networking.every((a) => a.confidence === 'high')).toBe(true);
+  });
+
   it('ARCH001_03: seed axis ids are unique (no duplicate detection)', () => {
     const r = detectAxes(readFixture('greenfield-prd.md'));
     const seedIds = r.axes.filter((a) => !a.id.startsWith('clarify-')).map((a) => a.id);
@@ -177,6 +203,20 @@ describe('ARCH002: Artefact generation', () => {
     const html = renderAxisHtml(minimal);
     expect(html).not.toContain('When to choose'); // block omitted, not crashed
     expect(html).not.toContain('undefined'); // no undefined leaked into output
+  });
+
+  it('ARCH002_07: validateAxisModel throws CLEAR error on structural breakage, warns on soft issues', () => {
+    // Hard error (not opaque crash): names the variant + missing field.
+    expect(() => validateAxisModel({ axis_id: 'x', axis_name: 'X', context: 'c', variants: [{ id: 'a' } as never] })).toThrow(/variant\[0\] 'a' missing name/);
+    expect(() => validateAxisModel({ axis_id: 'x', axis_name: 'X', context: 'c', variants: [] })).toThrow(/variants\[\] is empty/);
+    // Soft warnings (no throw): <3 variants surfaced.
+    const warns = validateAxisModel({
+      axis_id: 'x',
+      axis_name: 'X',
+      context: 'c',
+      variants: [mkVariant({ id: 'a', name: 'A', is_recommended: true }), mkVariant({ id: 'b', name: 'B' })],
+    });
+    expect(warns.some((w) => /only 2 variant/.test(w))).toBe(true);
   });
 
   it('ARCH002_02: seededShuffle conserves the multiset (no loss/dup)', () => {
@@ -608,5 +648,31 @@ describe('ARCH009: full-report ARCHITECTURE.html (FR-19)', () => {
     expect(html).toContain('Cross-axis synthesis'); // synthesis section
     expect(html).toContain('System completeness'); // completeness table
     expect(html).not.toMatch(/<link\b/); // self-contained
+  });
+});
+
+describe('ARCH010: anti-hallucination — unbacked context7-VERIFIED marker guard', () => {
+  it('ARCH010_01: fabricated [VERIFIED via context7:X] flagged; record-verify backs it', () => {
+    const dir = tmp();
+    fs.writeFileSync(
+      path.join(dir, 'AXIS-hosting.md'),
+      '---\naxis_id: hosting\n---\n# Hosting\n- Good [VERIFIED via context7:supabase 2.x]\n- Also [VERIFIED via context7:railway]\n',
+    );
+    // No verify-log yet → both markers are fabricated → flagged
+    const f1 = checkVerifiedMarkers(dir);
+    const unbacked1 = f1.filter((f) => f.code === 'UNBACKED_VERIFIED_MARKER').map((f) => f.lib);
+    expect(unbacked1.sort()).toEqual(['railway', 'supabase']);
+
+    // Record a real verification for supabase → only railway remains unbacked
+    recordVerification(dir, 'supabase', '2.x');
+    const f2 = checkVerifiedMarkers(dir);
+    const unbacked2 = f2.filter((f) => f.code === 'UNBACKED_VERIFIED_MARKER').map((f) => f.lib);
+    expect(unbacked2).toEqual(['railway']);
+
+    // Back railway too → all markers backed → MARKERS_BACKED INFO, no warnings
+    recordVerification(dir, 'railway');
+    const f3 = checkVerifiedMarkers(dir);
+    expect(f3.some((f) => f.code === 'UNBACKED_VERIFIED_MARKER')).toBe(false);
+    expect(f3.some((f) => f.code === 'MARKERS_BACKED')).toBe(true);
   });
 });

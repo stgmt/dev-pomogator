@@ -167,3 +167,11 @@ Feature: ARCH001_Architecture_Decision_Builder
     And it should contain an index matrix anchoring each axis, every axis section, a synthesis section and a completeness table
     And axis sections should carry the rich content (business band, comparison matrix, reality) inherited from renderAxisSection
     And the document should be self-contained with no external link tags
+
+  @feature23
+  Scenario: ARCH010_01 Unbacked context7-VERIFIED marker is flagged; record-verify backs it
+    Given an axis artefact with a "[VERIFIED via context7:supabase]" marker and no verify-log entry
+    When audit-markers runs
+    Then it should emit an UNBACKED_VERIFIED_MARKER finding for supabase
+    And after record-verify records a real supabase verification the marker should no longer be flagged
+    And when all context7 markers are backed it should emit one MARKERS_BACKED finding

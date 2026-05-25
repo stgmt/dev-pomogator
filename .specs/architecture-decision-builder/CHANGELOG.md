@@ -18,6 +18,7 @@ All notable changes to this feature will be documented in this file.
 - **FR-19 Единый ARCHITECTURE.html (full-report)** — команда `full-report` собирает self-contained отчёт (index-матрица + все оси богатыми карточками + synthesis + completeness) через `renderAxisSection`/`renderSynthesisSection` (не скрейп HTML); `generate-axis` теперь персистит `AXIS-{id}.model.json` как источник; ARCH009_01 vitest (@feature22)
 - ARCH007_01-04 vitest (synthesis/correction/context7/policy) 1:1 с @feature14-17; runCli хойстнут на модульный scope
 - html-renderer рефактор: `wrapDoc` + `renderAxisSection`/`renderSynthesisSection` (секции переиспользуются standalone-страницами И full-report)
+- **FR-20 Anti-hallucination integrity pass** (root-cause «presence ≠ truth»): (1) verify-log + `audit-markers` ловит фабрикованные `[VERIFIED via context7:X]` (поймал 8 моих фейков на live-bhph); `record-verify` бэкает реальную верификацию; (2) detect-axes confidence + domain-gating — Networking/Hardware-оси требуют ≥2 сигналов, ужесточены keywords (убрано голое `routing`/`DNS`) → bhph больше не выдаёт VPN-оси; (3) `validateAxisModel` fail-clear (битая модель → внятная ошибка, не opaque esc-crash); (4) cost-числа помечены «оценка · knowledge-cutoff»; (5) word-budget skew surface в warnings. Тесты ARCH001_07/ARCH002_07/ARCH010_01
 
 ### Changed
 - FR-4 + FR-7: Phase 1.75 теперь auto-mode по умолчанию — авто-применение рекомендации без блокирующего STOP на каждой оси (паттерн «делай/начинай»); interactive-mode opt-in через `--interactive`. Override через финальный batch-review

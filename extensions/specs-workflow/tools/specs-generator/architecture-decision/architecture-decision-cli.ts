@@ -18,6 +18,7 @@ import { compileIndex } from './index-compiler.ts';
 import { checkArchitectureCoverage, checkCompletenessCoverage } from './audit.ts';
 import { synthesize } from './synthesis.ts';
 import { buildFullReport } from './full-report.ts';
+import { recordVerification, checkVerifiedMarkers } from './verify-log.ts';
 import type { AxisModel, Insight } from './html-renderer.ts';
 
 function fail(code: number, msg: string): never {
@@ -46,7 +47,9 @@ async function main(): Promise<void> {
       if (!modelPath || !outDir) fail(2, 'generate-axis requires <axis-model.json> <outDir>');
       if (!fs.existsSync(modelPath)) fail(3, `axis-model not found: ${modelPath}`);
       const axis = JSON.parse(fs.readFileSync(modelPath, 'utf-8')) as AxisModel;
-      process.stdout.write(JSON.stringify(generateAxisArtefact(axis, outDir)));
+      const genResult = generateAxisArtefact(axis, outDir); // throws clear error on invalid model
+      for (const w of genResult.warnings) process.stderr.write(`architecture-decision warn [${axis.axis_id}]: ${w}\n`);
+      process.stdout.write(JSON.stringify(genResult));
       break;
     }
     case 'open-browser': {
@@ -116,6 +119,25 @@ async function main(): Promise<void> {
         insights = JSON.parse(fs.readFileSync(insightsPath, 'utf-8')) as Insight[];
       }
       process.stdout.write(JSON.stringify(buildFullReport(specDir, insights)));
+      break;
+    }
+    case 'record-verify': {
+      // Anti-hallucination: call AFTER a REAL context7 verification to back a [VERIFIED via context7:<lib>] marker.
+      const specDir = process.argv[3];
+      const lib = process.argv[4];
+      const ver = process.argv[5];
+      if (!specDir || !lib) fail(2, 'record-verify requires <spec-dir> <lib> [version]');
+      if (!fs.existsSync(specDir)) fail(3, `spec-dir not found: ${specDir}`);
+      recordVerification(specDir, lib, ver);
+      process.stdout.write(JSON.stringify({ recorded: { lib, ver: ver ?? null } }));
+      break;
+    }
+    case 'audit-markers': {
+      // Scans AXIS-*.md for context7-VERIFIED markers; flags fabricated (unbacked) citations.
+      const specDir = process.argv[3];
+      if (!specDir) fail(2, 'audit-markers requires <spec-dir>');
+      if (!fs.existsSync(specDir)) fail(3, `spec-dir not found: ${specDir}`);
+      process.stdout.write(JSON.stringify({ findings: checkVerifiedMarkers(specDir) }));
       break;
     }
     default:

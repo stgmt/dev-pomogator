@@ -199,6 +199,7 @@ table{border-collapse:collapse;width:100%;margin-top:8px}td,th{border:1px solid 
 .ladder .rung{font-size:.78rem;background:#0f172a;border:1px solid #334155;border-radius:6px;padding:2px 8px}
 .ladder .rung b{color:var(--fg)}.ladder .rung .t{color:var(--muted)}
 .exit{font-size:.84rem;margin:6px 0 0;color:#fca5a5}.exit::before{content:"🚪 Выход: ";color:var(--muted)}
+.est{color:var(--muted);font-weight:400;font-size:.7rem;text-transform:none;letter-spacing:0}
 .prec .rel{color:var(--muted);font-size:.78rem;display:block;margin-left:18px}
 .time dl{margin:4px 0 0;display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:.82rem}
 .time dt{color:var(--muted);white-space:nowrap}.time dd{margin:0}
@@ -307,7 +308,7 @@ function costLadder(v: VariantModel): string {
   const rungs = v.cost_at_scale
     .map((c) => `<span class="rung"><span class="t">${esc(c.tier)}:</span> <b>${esc(c.cost)}</b></span>`)
     .join('');
-  return `<div class="label">Стоимость на масштабе</div><div class="ladder">${rungs}</div>`;
+  return `<div class="label">Стоимость на масштабе <span class="est">(оценка · knowledge-cutoff · verify before lock)</span></div><div class="ladder">${rungs}</div>`;
 }
 
 function exitCostLine(v: VariantModel): string {
