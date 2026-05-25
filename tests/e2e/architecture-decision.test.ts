@@ -676,3 +676,47 @@ describe('ARCH010: anti-hallucination — unbacked context7-VERIFIED marker guar
     expect(f3.some((f) => f.code === 'MARKERS_BACKED')).toBe(true);
   });
 });
+
+describe('ARCH011: architecture-gate guarantees Phase 1.75 (PreToolUse hook)', () => {
+  const GATE = path.join(
+    __dirname, '..', '..',
+    'extensions', 'specs-workflow', 'tools', 'specs-validator', 'architecture-gate.ts',
+  );
+  function runGate(filePath: string): { status: number; stdout: string } {
+    const r = spawnSync('npx', ['tsx', GATE], {
+      input: JSON.stringify({ tool_name: 'Write', tool_input: { file_path: filePath } }),
+      encoding: 'utf-8',
+      shell: process.platform === 'win32',
+    });
+    return { status: r.status ?? 0, stdout: r.stdout ?? '' };
+  }
+  function gfSpec(): { dir: string; fr: string } {
+    const root = tmp();
+    const dir = path.join(root, '.specs', 'gf');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'USER_STORIES.md'), '# US\nNeed a Postgres database, auth/login, REST API endpoints, cloud hosting.\n');
+    return { dir, fr: path.join(dir, 'FR.md') };
+  }
+
+  it('ARCH011_01: greenfield + no ARCHITECTURE → deny; with artefacts/skip → allow; non-Requirements/brownfield → allow', () => {
+    const { dir, fr } = gfSpec();
+    // 1) greenfield, no ARCHITECTURE → DENY
+    const denied = runGate(fr);
+    expect(denied.status).toBe(2);
+    expect(denied.stdout).toContain('"permissionDecision":"deny"');
+    expect(denied.stdout).toContain('architecture-decision-builder');
+
+    // 2) ARCHITECTURE/ with an artefact → ALLOW
+    fs.mkdirSync(path.join(dir, 'ARCHITECTURE'), { recursive: true });
+    fs.writeFileSync(path.join(dir, 'ARCHITECTURE', 'INDEX.md'), '# idx\n');
+    expect(runGate(fr).status).toBe(0);
+
+    // 3) skip marker (no ARCHITECTURE) → ALLOW
+    fs.rmSync(path.join(dir, 'ARCHITECTURE'), { recursive: true, force: true });
+    fs.appendFileSync(path.join(dir, 'USER_STORIES.md'), '\n[skip-architecture-axis: throwaway prototype scope]\n');
+    expect(runGate(fr).status).toBe(0);
+
+    // 4) Discovery file is never gated → ALLOW
+    expect(runGate(path.join(dir, 'USER_STORIES.md')).status).toBe(0);
+  });
+});

@@ -3,7 +3,7 @@
 **Когда:** между Phase 1.5 (Project Context) и Phase 2 (Requirements). **Greenfield only.**
 **Цель:** зафиксировать стек ДО написания FR/DESIGN, чтобы они опирались на выбранную архитектуру, а не писались в вакууме.
 
-> **Auto-фаза без блокирующего STOP.** В отличие от STOP #1/#1.5/#2/#3, Phase 1.75 НЕ имеет `ConfirmStop` gate в `core.mjs` PHASE_ORDER. Это workflow-step: skill авто-применяет рекомендации по осям, показывает финальный INDEX, и create-spec продолжает в Phase 2. Юзер переопределяет в свободной форме. Паттерн «делай / начинай» (FR-4 auto-mode).
+> **Auto-фаза без блокирующего STOP, НО механически гарантирована (FR-21).** В отличие от STOP #1/#1.5/#2/#3, Phase 1.75 НЕ имеет `ConfirmStop` gate в `core.mjs` PHASE_ORDER — это workflow-step (auto-mode, паттерн «делай/начинай», FR-4). Гарантия не через STOP, а через `architecture-gate.ts` (PreToolUse Write|Edit hook): для greenfield-спеки запись Requirements-артефактов (`FR.md`/`DESIGN.md`/...) ЗАБЛОКИРОВАНА пока `ARCHITECTURE/` не создан (1.75 отработал) или нет явного skip (`[skip-architecture-axis:]` / `ARCHITECTURE/.skip`). То есть нельзя проскочить 1.75 и писать FR/DESIGN в стек-вакууме — hook не даст. brownfield/version<4 не гейтятся; fail-open.
 
 ## Когда пропустить (full hard-OUT) vs completeness-only
 

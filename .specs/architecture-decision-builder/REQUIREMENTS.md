@@ -24,6 +24,7 @@
 | [FR-18](FR.md#fr-18-экономика-решения--деньги-время-обратимость-r25-blocking) | Экономика: деньги/время/обратимость (R25) | [AC-18](ACCEPTANCE_CRITERIA.md#ac-18-fr-18) | @feature21 | Done |
 | [FR-19](FR.md#fr-19-единый-self-contained-architecturehtml-full-report) | Единый ARCHITECTURE.html (full-report) | [AC-19](ACCEPTANCE_CRITERIA.md#ac-19-fr-19) | @feature22 | Done |
 | [FR-20](FR.md#fr-20-anti-hallucination-integrity--verify-log--unbacked-marker-guard) | Anti-hallucination: verify-log + marker guard + detect-precision + model-validation | [AC-20](ACCEPTANCE_CRITERIA.md#ac-20-fr-20) | @feature23 | Done |
+| [FR-21](FR.md#fr-21-гарантированный-phase-175--architecture-gate-pretooluse-не-trust-based) | Guaranteed Phase 1.75 — architecture-gate PreToolUse hook | [AC-21](ACCEPTANCE_CRITERIA.md#ac-21-fr-21) | @feature24 | Done |
 
 ## Functional Requirements
 

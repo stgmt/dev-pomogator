@@ -175,3 +175,11 @@ Feature: ARCH001_Architecture_Decision_Builder
     Then it should emit an UNBACKED_VERIFIED_MARKER finding for supabase
     And after record-verify records a real supabase verification the marker should no longer be flagged
     And when all context7 markers are backed it should emit one MARKERS_BACKED finding
+
+  @feature24
+  Scenario: ARCH011_01 architecture-gate guarantees Phase 1.75 for greenfield specs
+    Given a greenfield spec (detect-axes finds stack axes) without an ARCHITECTURE/ directory
+    When a PreToolUse Write of FR.md is evaluated by architecture-gate
+    Then it should deny with an actionable reason naming the skill and the skip marker
+    And once ARCHITECTURE/ has artefacts or a skip marker exists it should allow
+    And Discovery/Context files and brownfield specs should never be gated

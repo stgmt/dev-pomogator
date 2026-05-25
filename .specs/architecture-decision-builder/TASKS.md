@@ -300,3 +300,10 @@
   - [x] axis-detector confidence + domain-gating (Networking/Hardware ≥2); ужесточены routing/DNS/packaging keywords
   - [x] validateAxisModel fail-clear; cost «оценка · knowledge-cutoff»; word-budget surface
   - [x] ARCH001_07/ARCH002_07/ARCH010_01 vitest зелёные в Docker; arch-review.ts self-review driver + arch-review-loop skill
+- [x] FR-21 architecture-gate — гарантированный Phase 1.75 (PreToolUse hook) -- @feature24 — Status: DONE | Est: 45m
+  _Requirements: [FR-21](FR.md#fr-21-гарантированный-phase-175--architecture-gate-pretooluse-не-trust-based)_
+  _Leverage: phase-gate.ts hook contract, detect-axes greenfield-сигнал_
+  **Done When:**
+  - [x] architecture-gate.ts: greenfield + Requirements-file + нет ARCHITECTURE/нет skip → deny; brownfield/discovery/v<4 → allow; fail-open
+  - [x] зарегистрирован в PreToolUse Write|Edit hooks + toolFiles; phase1.75 ref помечен enforced
+  - [x] ARCH011_01 vitest (deny/allow пути); host-verify 4/4
