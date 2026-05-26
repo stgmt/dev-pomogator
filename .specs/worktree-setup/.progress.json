@@ -15,6 +15,10 @@
     {
       "at": "2026-05-26",
       "reason": "FR-12 devcontainer integration added during plugin implementation: --devcontainer flag (docker compose build/up unique ports) + post-create.sh npm install/build; AC-12, CHK-FR12-01..04, NFR-R9/P6, @feature11 CORE024_30..33"
+    },
+    {
+      "at": "2026-05-26",
+      "reason": "Canonical plugin test strategy decision added (DESIGN + BDD-infra + T6-2): claude plugin validate + --plugin-dir + direct tool invocation, drop legacy installer-based e2e; researched vs official Claude Code plugin docs + plugin-validator; cross-ref migration PR #24"
     }
   ],
   "currentPhase": "Complete",

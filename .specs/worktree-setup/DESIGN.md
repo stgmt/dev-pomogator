@@ -190,6 +190,23 @@
 - Only post-create build (no `--devcontainer` flag) — rejected: nothing would start the container automatically after `/worktree`; user must manually reopen.
 - Auto-run devcontainer always (no flag) — rejected: forces Docker on every worktree, slow and invasive; opt-in flag respects the host-only workflow.
 
+### Decision: Test via canonical Claude Code plugin mechanisms, not the legacy installer
+
+**Rationale:** dev-pomogator is migrating to Anthropic's native plugin format (`.claude-plugin/`, marketplace), which drops the custom installer (`dist/index.js`, `runInstaller`). Verified against official docs + Anthropic's own `plugin-validator` agent: a Claude Code plugin is tested in three layers, no installer needed —
+1. **Structure** — `claude plugin validate` (the same check Anthropic's submission CI runs): validates `.claude-plugin/plugin.json`, `marketplace.json`, `hooks/hooks.json`, and skills/commands layout.
+2. **Behavior** — invoke the plugin's tools directly (`npx tsx .claude/skills/worktree-setup/scripts/orchestrate.ts …`, `node …/worktree-doctor.cjs`) and assert output. The worktree-setup e2e already works this way (CORE024_* spawn the real scripts).
+3. **Runtime wiring** — `claude --plugin-dir ./<plugin>` (or `--plugin-url <zip>` for a CI artifact) loads the plugin into a real session to verify skills/commands/hooks are discovered and fire; `/reload-plugins` picks up edits.
+
+Hook/skill paths reference `${CLAUDE_PLUGIN_ROOT}` (portable, must start with `./`), not installed `.dev-pomogator/tools/` paths.
+
+**Trade-off:** the structure and runtime layers need the Claude Code CLI in CI (not just vitest). Mitigated: structure + behavior cover the bulk via vitest/spawnSync (no CLI); the `--plugin-dir` runtime layer is the only one needing the CLI and can be a single smoke check.
+
+**Alternatives considered:**
+- Keep installer-based e2e (`runInstaller` → `dist/index.js`) — rejected: the canonical migration deletes the installer; those tests would exercise removed code.
+- Structure-only (`claude plugin validate`) — rejected as insufficient: doesn't exercise tool behavior; keep the direct-invocation behavior tests.
+
+**Cross-ref:** plugin-migration PR #24 (Anthropic plugin format); research evidence — [Create plugins docs](https://code.claude.com/docs/en/plugins) + `anthropics/claude-code` `plugin-validator` agent.
+
 ## BDD Test Infrastructure (ОБЯЗАТЕЛЬНО)
 
 **Classification:** TEST_DATA_ACTIVE
@@ -199,6 +216,8 @@
 **Install Command:** already installed (vitest, ts-node via existing `package.json` dev-dependencies)
 **Evidence:** `tests/e2e/auth.test.ts` (existing pattern); `package.json` contains `vitest` in `devDependencies`; existing fixtures under `tests/fixtures/`.
 **Verdict:** hooks required for worktree lifecycle (create-on-Before / cleanup-on-After) and env-file isolation per scenario (write to temp HOME dir, not user's real `~/.dev-pomogator/`).
+
+**Canonical plugin test layers (post-migration):** once the project lands on the Anthropic plugin format, the harness shifts off installer-based e2e to: `claude plugin validate` (structure) + direct tool invocation via spawnSync (behavior, vitest — already used by CORE024_*) + `claude --plugin-dir ./<plugin>` smoke (runtime wiring). No `runInstaller`/`dist/index.js`; hook paths via `${CLAUDE_PLUGIN_ROOT}`. See the "Test via canonical Claude Code plugin mechanisms" Key Decision above.
 
 ### Существующие hooks
 

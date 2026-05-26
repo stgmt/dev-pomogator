@@ -299,4 +299,6 @@
   **Done When:**
   - [ ] `npx tsx .dev-pomogator/tools/specs-generator/validate-spec.ts -Path .specs/worktree-setup` → 0 errors
   - [ ] `npx tsx .dev-pomogator/tools/specs-generator/audit-spec.ts -Path .specs/worktree-setup` → 0 P0/P1 findings
+  - [ ] (canonical plugin layout) `claude plugin validate` → 0 errors on the plugin manifest/structure
+  - [ ] (canonical plugin layout) `claude --plugin-dir .` loads the plugin; `/worktree` command + `worktree-setup` skill appear and hooks fire
   - [ ] CHANGELOG.md updated with implementation summary + PR link

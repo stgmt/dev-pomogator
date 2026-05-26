@@ -2,6 +2,12 @@
 
 All notable changes to this feature will be documented in this file.
 
+## [Unreleased] — 2026-05-26 (amendment #4: canonical plugin test strategy)
+
+### Design
+
+- **Test strategy decision** added — the suite validates the plugin via canonical Claude Code mechanisms: `claude plugin validate` (structure, same check as Anthropic's submission CI) + direct tool invocation via spawnSync (behavior, already used by CORE024_*) + `claude --plugin-dir ./<plugin>` (runtime wiring). NOT the legacy installer (`runInstaller` → `dist/index.js`, which the plugin migration deletes). Hook paths via `${CLAUDE_PLUGIN_ROOT}`. New DESIGN Key Decision + BDD-infra note + T6-2 verification steps. Researched against official Claude Code plugin docs + Anthropic's `plugin-validator` agent. Cross-ref plugin-migration PR #24.
+
 ## [Unreleased] — 2026-05-26 (amendment #3: FR-12 devcontainer integration)
 
 ### Specification
