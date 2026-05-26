@@ -11,13 +11,22 @@ const os = require('node:os');
 const { spawnSync } = require('node:child_process');
 
 const scriptDir = __dirname;
-// Resolve project root: .dev-pomogator/tools/X -> 3 up; extensions/X/tools/X -> 4 up
+// Resolve project root across layouts:
+//   .dev-pomogator/tools/X -> 3 up  (legacy installed copy)
+//   extensions/X/tools/X    -> 4 up  (legacy source tree)
+//   tools/X                 -> 2 up  (canonical plugin v2 — tools at repo root)
 const repoRoot = scriptDir.includes('.dev-pomogator')
   ? path.resolve(scriptDir, '..', '..', '..')
-  : path.resolve(scriptDir, '..', '..', '..', '..');
+  : scriptDir.includes('extensions')
+    ? path.resolve(scriptDir, '..', '..', '..', '..')
+    : path.resolve(scriptDir, '..', '..');
 
-const tuiWrapper = path.join(repoRoot, '.dev-pomogator', 'tools', 'tui-test-runner', 'test_runner_wrapper.ts');
-const tuiWrapperSrc = path.join(repoRoot, 'extensions', 'tui-test-runner', 'tools', 'tui-test-runner', 'test_runner_wrapper.ts');
+// Candidate locations for the tui-test-runner .ts wrapper, canonical v2 first.
+const tuiWrapperCandidates = [
+  path.join(repoRoot, 'tools', 'tui-test-runner', 'test_runner_wrapper.ts'),
+  path.join(repoRoot, '.dev-pomogator', 'tools', 'tui-test-runner', 'test_runner_wrapper.ts'),
+  path.join(repoRoot, 'extensions', 'tui-test-runner', 'tools', 'tui-test-runner', 'test_runner_wrapper.ts'),
+];
 const tsxRunner = path.join(os.homedir(), '.dev-pomogator', 'scripts', 'tsx-runner.js');
 
 const args = process.argv.slice(2);
@@ -73,10 +82,8 @@ function runDirect() {
   process.exit(result.status ?? (result.signal ? 1 : 0));
 }
 
-// Try installed wrapper first, then source, then direct fallback
-const wrapperPath = fs.existsSync(tuiWrapper) ? tuiWrapper
-  : fs.existsSync(tuiWrapperSrc) ? tuiWrapperSrc
-  : null;
+// Try canonical/installed/source wrapper locations, then direct fallback.
+const wrapperPath = tuiWrapperCandidates.find((p) => fs.existsSync(p)) || null;
 
 if (wrapperPath) {
   if (fs.existsSync(tsxRunner)) {
