@@ -1,5 +1,5 @@
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
-import { runDoctor } from '../../src/doctor/index.ts';
+import { runDoctor } from '../../.claude/skills/pomogator-doctor/scripts/engine/index.ts';
 import { killAllChildren } from '../fixtures/pomogator-doctor/child-registry.ts';
 import { buildTempHome } from '../fixtures/pomogator-doctor/temp-home-builder.ts';
 

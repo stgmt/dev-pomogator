@@ -52,7 +52,9 @@ describe('GUARD002: Build Guard Hook', () => {
   // =========================================================================
 
   // @feature1
-  it('GUARD002_01: deny when TypeScript src newer than dist', () => {
+  // Skipped in plugin v2: no root src//dist build (tools run as .ts via tsx), so the
+  // src-newer-than-dist staleness path is not exercised here. Tracked for rewrite.
+  it.skip('GUARD002_01: deny when TypeScript src newer than dist', () => {
     // Setup: touch a src file to be newer than dist
     const srcFile = appPath('src/index.ts');
     const distFile = appPath('dist/index.js');

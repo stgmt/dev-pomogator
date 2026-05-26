@@ -510,7 +510,9 @@ describe('SPECGEN003: spec-generator-v3 form-guards + skills + audit log', () =>
   // ========== meta-guard (FR-11) ==========
 
   // @feature7
-  it('SPECGEN003_25: meta-guard denies removing form-guard from extension.json (integration)', () => {
+  // Skipped (not vacuously passed) in plugin v2: extensions/specs-workflow/extension.json
+  // was removed, so the meta-guard's "deny removing form-guards" path has nothing to guard.
+  it.skip('SPECGEN003_25: meta-guard denies removing form-guard from extension.json (integration)', () => {
     const extensionJson = path.join(APP_DIR, 'extensions', 'specs-workflow', 'extension.json');
     // Simulate Edit removing user-story-form-guard entry from hooks.PreToolUse
     if (!existsSync(extensionJson)) return; // extension.json manifest removed in plugin v2
@@ -530,7 +532,8 @@ describe('SPECGEN003: spec-generator-v3 form-guards + skills + audit log', () =>
   });
 
   // @feature7
-  it('SPECGEN003_26: meta-guard allows adding new unrelated hook (integration)', () => {
+  // Skipped (not vacuously passed) in plugin v2: extension.json manifest removed.
+  it.skip('SPECGEN003_26: meta-guard allows adding new unrelated hook (integration)', () => {
     const extensionJson = path.join(APP_DIR, 'extensions', 'specs-workflow', 'extension.json');
     if (!existsSync(extensionJson)) return; // extension.json manifest removed in plugin v2
     const current = readFileSync(extensionJson, 'utf-8');
