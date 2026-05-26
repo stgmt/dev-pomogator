@@ -86,7 +86,7 @@ async function createIncompleteSpec(name: string): Promise<string> {
  * Get path to validate-specs.ts script
  */
 function getValidateSpecsPath(): string {
-  return appPath('.dev-pomogator', 'tools', 'specs-validator', 'validate-specs.ts');
+  return appPath('tools', 'specs-validator', 'validate-specs.ts');
 }
 
 /**
