@@ -25,7 +25,7 @@ $logFile = Join-Path $stateDir 'server.log'
 if (Test-Path $pidFile) {
   $existingPid = Get-Content $pidFile -ErrorAction SilentlyContinue | Select-Object -First 1
   if ($existingPid -match '^\d+$') {
-    $alive = Get-Process -Id [int]$existingPid -ErrorAction SilentlyContinue
+    $alive = Get-Process -Id ([int]$existingPid) -ErrorAction SilentlyContinue
     if ($alive -and $alive.ProcessName -match 'python') {
       # Server already running — quiet exit
       exit 0
