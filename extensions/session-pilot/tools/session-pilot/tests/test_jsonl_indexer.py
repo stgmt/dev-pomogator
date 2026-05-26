@@ -21,6 +21,7 @@ Coverage:
   T34_09: no matching project dir — sessions=[], running_now=False
   T34_10: variant encoding match — WSL-style worktree path matches Windows-encoded dir
   T34_11: preview strips ```fence markers + collapses whitespace before truncating
+  T34_12: /api/claude ETag folds in preview-format version (idle-session 304 cache-bust)
 """
 
 import importlib
@@ -241,6 +242,23 @@ def test_T34_11_preview_strips_fence_and_whitespace():
             assert "\n" not in val, f"{field} still has newline: {val!r}"
         assert '"reason": "the verdict"' in s["last_message"], s["last_message"]
         assert s["last_message_role"] == "assistant"
+
+
+def test_T34_12_etag_carries_preview_version():
+    """Regression: the /api/claude ETag must fold in the preview-format version,
+    not just mtime. An idle session (unchanged JSONL → unchanged mtime) otherwise
+    keeps returning 304, so the client never picks up cleaned previews after a
+    _clean_preview format change — the "top row still shows ```json" bug."""
+    import indexer
+    with _with_tmpdir() as td:
+        tmp = Path(td)
+        proj = _setup_project(tmp, "/mnt/d/repos/etagtest")
+        _make_jsonl(proj / "et.jsonl", [_msg("assistant", "hello", "2026-05-10T10:00:00Z")])
+        data = server.build_claude_for_path("/mnt/d/repos/etagtest")
+        etag = data["etag"]
+        assert indexer._PREVIEW_FORMAT_VERSION in etag, f"etag missing preview version: {etag}"
+        mtime = data["claude_max_mtime"]
+        assert etag != f'W/"{mtime}"', "etag must differ from legacy mtime-only form (would 304-serve stale)"
 
 
 # ---------- runner ----------

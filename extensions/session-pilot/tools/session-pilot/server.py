@@ -27,7 +27,7 @@ import re
 import subprocess
 import time
 from datetime import datetime
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import HTTPServer, ThreadingHTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
@@ -153,4 +153,8 @@ if __name__ == "__main__":
     # Default 127.0.0.1 per NFR-Sec-3 — opt-in 0.0.0.0 via env for cross-host access
     bind = os.environ.get("WT_DASHBOARD_BIND", "127.0.0.1")
     print(f"Worktree dashboard listening on http://{bind}:{PORT}", flush=True)
-    HTTPServer((bind, PORT), Handler).serve_forever()
+    # ThreadingHTTPServer (one thread per request, daemon) — the single-threaded
+    # HTTPServer blocked all requests during a slow process_scanner sweep (1-2s
+    # over many claude.exe), so concurrent probes got connection-refused. Module
+    # caches are SWR/advisory (GIL-atomic dict ops) — stale reads are tolerated.
+    ThreadingHTTPServer((bind, PORT), Handler).serve_forever()

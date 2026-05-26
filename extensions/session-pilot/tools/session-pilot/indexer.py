@@ -44,6 +44,14 @@ def _clean_preview(text: str, limit: int = 140) -> str:
     return cleaned[:limit]
 
 
+# Preview-format version — folded into the /api/claude ETag. The ETag is otherwise
+# mtime-only, so an idle session (unchanged JSONL) keeps returning 304 and the
+# client never picks up a change in HOW previews are rendered. Bump this whenever
+# _clean_preview's output format changes so stale 304s are invalidated. Keep in
+# sync with frontend.py CACHE_KEY_PREFIX (localStorage) version bump.
+_PREVIEW_FORMAT_VERSION = "p2"
+
+
 # Cache state (module-level, shared across calls)
 _index_cache: dict = {"ts": 0.0, "data": None}
 _claude_cache: dict = {}
@@ -678,7 +686,7 @@ def build_claude_for_path(worktree_path: str) -> dict:
         "claude_running_now": info["running_now"],
         "claude_last_modified": info["last_modified"],
         "claude_max_mtime": int(mtime),
-        "etag": f'W/"{int(mtime)}"',
+        "etag": f'W/"{int(mtime)}-{_PREVIEW_FORMAT_VERSION}"',
     }
 
 

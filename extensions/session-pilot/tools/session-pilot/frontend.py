@@ -154,18 +154,20 @@ async function hardReload() {
 checkServerVersion();
 setInterval(checkServerVersion, 30000);
 
-// SWR-style cache in localStorage. v4: keyed by row.id which now includes
-// session_uuid suffix (FR-26 per-session rows). Stored shape unchanged.
+// SWR-style cache in localStorage. v5: bumped to invalidate v4 entries that
+// cached pre-cleanup message previews (raw ```json fences in last_message).
+// Keyed by row.id (includes session_uuid suffix, FR-26). Stored shape unchanged.
 //   { mtime: <claude_max_mtime>, etag: 'W/"…"', data: {claude_sessions, claude_running_now, claude_last_modified} }
-const CACHE_KEY_PREFIX = 'wtdash_v4_';
+// Keep this version in sync with indexer.py _PREVIEW_FORMAT_VERSION (ETag bump).
+const CACHE_KEY_PREFIX = 'wtdash_v5_';
 
-// One-shot purge of legacy v3 cache (per-worktree row.id format).
-// Stale v3 entries would copy wrong-UUID data onto v4 per-session rows.
-(function purgeV3Cache() {
+// One-shot purge of legacy cache versions (v3 per-worktree id; v4 pre-preview-cleanup).
+// Stale entries would copy wrong-UUID / fence-polluted previews onto v5 rows.
+(function purgeLegacyCache() {
   try {
-    const keys = Object.keys(localStorage).filter(k => k.startsWith('wtdash_v3_'));
+    const keys = Object.keys(localStorage).filter(k => k.startsWith('wtdash_v3_') || k.startsWith('wtdash_v4_'));
     keys.forEach(k => localStorage.removeItem(k));
-    if (keys.length) console.log('[session-pilot] purged ' + keys.length + ' legacy wtdash_v3_* cache entries');
+    if (keys.length) console.log('[session-pilot] purged ' + keys.length + ' legacy wtdash cache entries');
   } catch {}
 })();
 
@@ -738,7 +740,7 @@ document.addEventListener('visibilitychange', () => {
 // Force-clear cache button (for SWR debugging / stale states)
 window.addEventListener('keydown', (e) => {
   if (e.ctrlKey && e.shiftKey && e.key === 'Backspace') {
-    Object.keys(localStorage).filter(k => k.startsWith('wtdash_v3_')).forEach(k => localStorage.removeItem(k));
+    Object.keys(localStorage).filter(k => k.startsWith('wtdash_v')).forEach(k => localStorage.removeItem(k));
     setProgress(0, 'Cache cleared. Reloading…');
     loadIndex();
   }
