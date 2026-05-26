@@ -11,7 +11,7 @@ import {
  * PLUGIN012: DevContainer Extension Tests
  *
  * Tests that the devcontainer extension installs correctly:
- * - Tool files copied to .dev-pomogator/tools/devcontainer/
+ * - Tool files copied to tools/devcontainer/
  * - Templates have valid structure and placeholders
  * - Extension manifest is complete
  * - Docker-in-Docker, accessibility, and dynamic ports are configured
@@ -29,7 +29,7 @@ describe('PLUGIN012: DevContainer Extension', () => {
 
   // @feature1 — Tool files installed
   describe('Scenario: Tool files are installed after clean installation', () => {
-    it('should create .dev-pomogator/tools/devcontainer/ directory', async () => {
+    it('should create tools/devcontainer/ directory', async () => {
       expect(await fs.pathExists(toolsBase())).toBe(true);
     });
 
@@ -204,8 +204,8 @@ describe('PLUGIN012: DevContainer Extension', () => {
       const toolFiles = (manifest.toolFiles as Record<string, string[]>)?.devcontainer || [];
       expect(toolFiles.length).toBeGreaterThanOrEqual(20);
       // Check key files are listed
-      expect(toolFiles).toContain('.dev-pomogator/tools/devcontainer/postinstall.ts');
-      expect(toolFiles).toContain('.dev-pomogator/tools/devcontainer/launch-worktree.ps1');
+      expect(toolFiles).toContain('tools/devcontainer/postinstall.ts');
+      expect(toolFiles).toContain('tools/devcontainer/launch-worktree.ps1');
       expect(
         toolFiles.some((f: string) => f.includes('templates/Dockerfile')),
       ).toBe(true);

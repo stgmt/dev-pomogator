@@ -705,7 +705,7 @@ describe('PLUGIN007_20 Rule contains pre-flight checklist', () => {
   // @feature1
   it('PLUGIN007_24: rule contains active instruction to read template', () => {
     expect(ruleContent).toContain('Перед написанием плана');
-    expect(ruleContent).toContain('.dev-pomogator/tools/plan-pomogator/template.md');
+    expect(ruleContent).toContain('tools/plan-pomogator/template.md');
   });
 
   // @feature1

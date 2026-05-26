@@ -236,8 +236,8 @@ describe('CEGUARD001: Reqnroll CE Slash Guard Hook', () => {
     });
 
     // @feature6
-    it('CEGUARD001_15: installer copies hook script to .dev-pomogator/tools/', () => {
-      const hookFile = appPath('.dev-pomogator/tools/reqnroll-ce-guard/ce_slash_guard.ts');
+    it('CEGUARD001_15: installer copies hook script to tools/', () => {
+      const hookFile = appPath('tools/reqnroll-ce-guard/ce_slash_guard.ts');
       expect(fs.existsSync(hookFile), `hook file missing: ${hookFile}`).toBe(true);
     });
   });

@@ -19,7 +19,7 @@ const DOCKER_STATUS_DIR = '.dev-pomogator/.docker-status';
 const FIXTURES_DIR = 'tests/fixtures/tui-statusline';
 const WRAPPER_SCRIPT = 'tools/test-statusline/test_runner_wrapper.cjs';
 // Use installed path where _shared/hook-utils.js is available (extensions/ lacks _shared/ at this level)
-const SESSION_HOOK = '.dev-pomogator/tools/test-statusline/statusline_session_start.ts';
+const SESSION_HOOK = 'tools/test-statusline/statusline_session_start.ts';
 // Read statusLine type from the real extension manifest (not hardcoded)
 const EXT_MANIFEST = fs.readJsonSync(appPath('extensions/test-statusline/extension.json'));
 const MANIFEST_STATUSLINE_TYPE = EXT_MANIFEST.statusLine?.claude?.type ?? 'command';
@@ -286,7 +286,7 @@ describe('PLUGIN011: TUI Statusline', () => {
 
   describe('SessionStart Hook (@feature4)', () => {
     // Isolated state setup: previous test files (notably personal-pomogator)
-    // call setupCleanState multiple times which empties .dev-pomogator/tools/.
+    // call setupCleanState multiple times which empties tools/.
     // Last install in personal-pomogator may use --plugins=... (not --all),
     // leaving test-statusline tool absent. Re-install before SessionStart tests
     // to guarantee statusline_session_start.ts and _shared/ are present.
@@ -510,7 +510,7 @@ describe('PLUGIN011: TUI Statusline', () => {
 
     // @feature8
     it('PLUGIN011_22: old managed statusLine is replaced with ccstatusline', () => {
-      const oldManaged = 'bash /old/path/.dev-pomogator/tools/test-statusline/statusline_render.cjs';
+      const oldManaged = 'bash /old/path/tools/test-statusline/statusline_render.cjs';
 
       expect(isManagedStatusLineCommand(oldManaged)).toBe(true);
 
@@ -639,7 +639,7 @@ describe('PLUGIN011: TUI Statusline', () => {
         // Pre-populate project settings with old project-level statusLine
         await fs.ensureDir(path.dirname(projectSettingsPath));
         await fs.writeJson(projectSettingsPath, {
-          statusLine: { type: 'command', command: 'node /old/project/.dev-pomogator/tools/test-statusline/statusline_render.cjs' },
+          statusLine: { type: 'command', command: 'node /old/project/tools/test-statusline/statusline_render.cjs' },
         }, { spaces: 2 });
 
         const result = await runInstaller('--claude --all');
@@ -1141,7 +1141,7 @@ print('STATE=' + (status.state.value if status else 'NONE'))
     // @feature15
     it('PLUGIN011_89: Launcher passes docker-status as fallback directory', async () => {
       // Use installed path where _shared/hook-utils.js exists
-      const mod = await import('../../.dev-pomogator/tools/tui-test-runner/launcher.ts');
+      const mod = await import('../../tools/tui-test-runner/launcher.ts');
       const args = mod.buildTuiLaunchArgs(
         '/project/.dev-pomogator/.test-status/status.abc12345.yaml',
         '/project/log.txt',
@@ -1158,9 +1158,9 @@ print('STATE=' + (status.state.value if status else 'NONE'))
   // TUI Stop Hook (@feature16)
   // =========================================================================
   describe('TUI Stop Hook (@feature16)', () => {
-    // Use installed paths (.dev-pomogator/tools/) where _shared/hook-utils.js is available
-    const TUI_STOP_HOOK = '.dev-pomogator/tools/tui-test-runner/tui_stop.ts';
-    const TUI_SESSION_HOOK = '.dev-pomogator/tools/tui-test-runner/tui_session_start.ts';
+    // Use installed paths (tools/) where _shared/hook-utils.js is available
+    const TUI_STOP_HOOK = 'tools/tui-test-runner/tui_stop.ts';
+    const TUI_SESSION_HOOK = 'tools/tui-test-runner/tui_session_start.ts';
 
     function runStopHook(stdinJson: Record<string, unknown>, env: Record<string, string> = {}) {
       return runTsx(TUI_STOP_HOOK, { input: stdinJson, env });

@@ -266,8 +266,8 @@ describe('VSGF001: Verify Generic Scope Fix gate (e2e)', () => {
 
     expect(manifest.toolFiles?.['scope-gate']).toEqual(
       expect.arrayContaining([
-        '.dev-pomogator/tools/scope-gate/scope-gate-guard.ts',
-        '.dev-pomogator/tools/scope-gate/analyze-diff.ts',
+        'tools/scope-gate/scope-gate-guard.ts',
+        'tools/scope-gate/analyze-diff.ts',
       ]),
     );
     // _shared/scope-gate-*.ts are auto-copied by installer (no explicit toolFiles listing per convention)

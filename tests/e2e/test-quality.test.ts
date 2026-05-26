@@ -6,9 +6,9 @@ import { appPath, runTsx } from './helpers';
 // --- Constants ---
 
 // Use INSTALLED location: source path lacks `_shared/` neighbor (installer
-// copies extensions/_shared/ → .dev-pomogator/tools/_shared/ at install time).
+// copies extensions/_shared/ → tools/_shared/ at install time).
 // Running source directly fails with ERR_MODULE_NOT_FOUND.
-const DEDUP_HOOK = '.dev-pomogator/tools/test-quality/dedup_stop.ts';
+const DEDUP_HOOK = 'tools/test-quality/dedup_stop.ts';
 const MANIFEST_PATH = 'extensions/test-quality/extension.json';
 
 function runDedupHook(

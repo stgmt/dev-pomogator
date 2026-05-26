@@ -9,7 +9,7 @@ import { appPath, getPythonRunner, runPythonJson, runTsx } from './helpers';
 const STATUS_DIR = '.dev-pomogator/.test-status';
 const FIXTURES_DIR = 'tests/fixtures/tui-test-runner';
 // Use installed path where _shared/hook-utils.js is available (extensions/ lacks _shared/ at this level)
-const SESSION_HOOK = '.dev-pomogator/tools/tui-test-runner/tui_session_start.ts';
+const SESSION_HOOK = 'tools/tui-test-runner/tui_session_start.ts';
 const WRAPPER = 'tools/tui-test-runner/test_runner_wrapper.ts';
 const TUI_ROOT = 'tools/tui-test-runner';
 

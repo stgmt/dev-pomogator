@@ -67,7 +67,7 @@ describe('GUARD002: Build Guard Hook', () => {
     }
 
     const result = runBuildGuard(
-      'node .dev-pomogator/tools/test-statusline/test_runner_wrapper.cjs --framework vitest -- npx vitest run',
+      'node tools/test-statusline/test_runner_wrapper.cjs --framework vitest -- npx vitest run',
     );
     expect(result.status).toBe(2);
     const output = JSON.parse(result.stdout);
@@ -120,7 +120,7 @@ describe('GUARD002: Build Guard Hook', () => {
     }
 
     const result = runBuildGuard(
-      'node .dev-pomogator/tools/test-statusline/test_runner_wrapper.cjs --framework vitest -- npx vitest run',
+      'node tools/test-statusline/test_runner_wrapper.cjs --framework vitest -- npx vitest run',
     );
     expect(result.status).toBe(0);
   });
