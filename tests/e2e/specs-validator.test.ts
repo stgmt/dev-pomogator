@@ -8,7 +8,7 @@ import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import { execSync } from 'child_process';
-import { runInstaller, appPath, initGitRepo } from './helpers';
+import { runInstaller, appPath, initGitRepo, pluginHookCommands } from './helpers';
 
 // ============================================================================
 // Test Fixtures and Helpers
@@ -199,18 +199,12 @@ describe('PLUGIN005: Specs Validator Hook', () => {
 
   // @feature2
   describe('Claude Hook Registration', () => {
-    it('should have validate-specs defined in extension.json claude hooks', async () => {
-      const extJsonPath = appPath(
-        'extensions',
-        'specs-workflow',
-        'extension.json'
-      );
-
-      expect(await fs.pathExists(extJsonPath)).toBe(true);
-      const extJson = await fs.readJson(extJsonPath);
-
-      expect(extJson.hooks).toBeDefined();
-      expect(extJson.hooks.claude.UserPromptSubmit).toContain('validate-specs');
+    it('should register validate-specs in the plugin UserPromptSubmit hooks', () => {
+      expect(
+        pluginHookCommands('UserPromptSubmit').some((c) =>
+          c.includes('specs-validator/validate-specs.ts'),
+        ),
+      ).toBe(true);
     });
   });
 

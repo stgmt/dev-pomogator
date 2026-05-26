@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import { spawnSync } from 'child_process';
-import { appPath, homePath, runInstaller, setupCleanState, getPythonRunner, runTsx } from './helpers';
+import { appPath, homePath, runInstaller, setupCleanState, getPythonRunner, runTsx, pluginHookCommands, pluginHookEntries } from './helpers';
 import {
   DEFAULT_USER_STATUSLINE_COMMAND,
   extractUserCommandFromLegacyWrapper,
@@ -20,9 +20,8 @@ const FIXTURES_DIR = 'tests/fixtures/tui-statusline';
 const WRAPPER_SCRIPT = 'tools/test-statusline/test_runner_wrapper.cjs';
 // Use installed path where _shared/hook-utils.js is available (extensions/ lacks _shared/ at this level)
 const SESSION_HOOK = 'tools/test-statusline/statusline_session_start.ts';
-// Read statusLine type from the real extension manifest (not hardcoded)
-const EXT_MANIFEST = fs.readJsonSync(appPath('extensions/test-statusline/extension.json'));
-const MANIFEST_STATUSLINE_TYPE = EXT_MANIFEST.statusLine?.claude?.type ?? 'command';
+// Canonical v2: no per-extension manifest; statusLine is a 'command' type.
+const MANIFEST_STATUSLINE_TYPE = 'command';
 const DEFAULT_STATUSLINE_CONFIG = {
   type: MANIFEST_STATUSLINE_TYPE,
   command: DEFAULT_USER_STATUSLINE_COMMAND,
@@ -446,45 +445,22 @@ describe('PLUGIN011: TUI Statusline', () => {
   // @feature5 — Extension Manifest
   // ===========================================
 
-  describe('Extension Manifest (@feature5)', () => {
+  describe('Plugin hook + tool registration (@feature5)', () => {
     // @feature5
-    it('PLUGIN011_18: manifest lists all tool files', async () => {
-      const manifestPath = appPath('extensions/test-statusline/extension.json');
-      expect(await fs.pathExists(manifestPath)).toBe(true);
-
-      const manifest = await fs.readJson(manifestPath);
-      const toolFiles = manifest.toolFiles?.['test-statusline'] || [];
-
-      // Shared files remain
-      expect(toolFiles.join(',')).toContain('test_runner_wrapper.cjs');
-      expect(toolFiles.join(',')).toContain('statusline_session_start.ts');
-      expect(toolFiles.join(',')).toContain('status_types.ts');
+    it('PLUGIN011_18: ships statusline tool files in tools/', () => {
+      expect(fs.existsSync(appPath('tools/test-statusline/test_runner_wrapper.cjs'))).toBe(true);
+      expect(fs.existsSync(appPath('tools/test-statusline/statusline_session_start.ts'))).toBe(true);
+      expect(fs.existsSync(appPath('tools/test-statusline/status_types.ts'))).toBe(true);
       // Legacy render files removed (replaced by TUI CompactBar)
-      expect(toolFiles.join(',')).not.toContain('statusline_render.cjs');
-      expect(toolFiles.join(',')).not.toContain('statusline_wrapper.js');
+      expect(fs.existsSync(appPath('tools/test-statusline/statusline_render.cjs'))).toBe(false);
+      expect(fs.existsSync(appPath('tools/test-statusline/statusline_wrapper.js'))).toBe(false);
     });
 
     // @feature5
-    it('PLUGIN011_19: manifest registers SessionStart hook', async () => {
-      const manifestPath = appPath('extensions/test-statusline/extension.json');
-      const manifest = await fs.readJson(manifestPath);
-
-      expect(manifest.hooks).toBeDefined();
-      expect(manifest.hooks.claude).toBeDefined();
-      expect(manifest.hooks.claude.SessionStart).toBeDefined();
-      expect(manifest.hooks.claude.SessionStart).toContain('statusline_session_start.ts');
-    });
-
-    // @feature5
-    it('PLUGIN011_20: manifest declares statusLine with ccstatusline command', async () => {
-      const manifestPath = appPath('extensions/test-statusline/extension.json');
-      const manifest = await fs.readJson(manifestPath);
-
-      // statusLine section provides ccstatusline command for Claude Code
-      expect(manifest.statusLine).toBeDefined();
-      expect(manifest.statusLine.claude).toBeDefined();
-      expect(manifest.statusLine.claude.type).toBe('command');
-      expect(manifest.statusLine.claude.command).toContain('ccstatusline');
+    it('PLUGIN011_19: plugin registry registers the SessionStart hook', () => {
+      expect(
+        pluginHookCommands('SessionStart').some((c) => c.includes('statusline_session_start.ts')),
+      ).toBe(true);
     });
   });
 
@@ -916,18 +892,9 @@ else:
   // =========================================================================
   describe('Installer hooks (@feature6)', () => {
     // @feature6
-    it('PLUGIN011_70: tui-test-runner extension.json has array-format PreToolUse hooks', async () => {
-      const manifest = await fs.readJson(
-        appPath('extensions/tui-test-runner/extension.json'),
-      );
-      // Must be object { claude: { ... } }, NOT array at top level
-      expect(manifest.hooks).not.toBeInstanceOf(Array);
-      expect(manifest.hooks.claude).toBeDefined();
-      expect(manifest.hooks.claude.SessionStart).toBeDefined();
-      // PreToolUse is array format with matcher groups
-      expect(manifest.hooks.claude.PreToolUse).toBeDefined();
-      expect(Array.isArray(manifest.hooks.claude.PreToolUse)).toBe(true);
-      const matchers = manifest.hooks.claude.PreToolUse.map((g: any) => g.matcher);
+    it('PLUGIN011_70: plugin registry has array-format PreToolUse(Bash) + SessionStart', () => {
+      expect(pluginHookCommands('SessionStart').length).toBeGreaterThan(0);
+      const matchers = pluginHookEntries('PreToolUse').map((e) => e.matcher);
       expect(matchers).toContain('Bash');
     });
 

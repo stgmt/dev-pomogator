@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
-import { appPath, runTsx } from './helpers';
+import { appPath, runTsx, pluginHookCommands } from './helpers';
 
 // --- Constants ---
 
@@ -75,22 +75,17 @@ describe('PLUGIN014: Test Quality', () => {
   // @feature2 — Extension Manifest
   // ===========================================
 
-  describe('Extension Manifest (@feature2)', () => {
+  describe('Plugin hook + skill registration (@feature2)', () => {
     // @feature2
-    it('PLUGIN014_06: manifest registers Stop hook', async () => {
-      const manifestPath = appPath(MANIFEST_PATH);
-      const stat = await fs.stat(manifestPath);
-      expect(stat.size).toBeGreaterThan(0);
-
-      const manifest = await fs.readJson(manifestPath);
-      expect(manifest).toHaveProperty('hooks.claude.Stop');
-      expect(manifest.hooks.claude.Stop).toContain('dedup_stop.ts');
+    it('PLUGIN014_06: plugin registry registers the dedup Stop hook', () => {
+      expect(
+        pluginHookCommands('Stop').some((c) => c.includes('test-quality/dedup_stop.ts')),
+      ).toBe(true);
     });
 
     // @feature2
-    it('PLUGIN014_07: manifest declares dedup-tests skill', async () => {
-      const manifest = await fs.readJson(appPath(MANIFEST_PATH));
-      expect(manifest).toHaveProperty('skills.dedup-tests');
+    it('PLUGIN014_07: dedup-tests skill is installed', () => {
+      expect(fs.existsSync(appPath('.claude/skills/dedup-tests/SKILL.md'))).toBe(true);
     });
   });
 

@@ -5,6 +5,7 @@ import {
   runInstaller,
   appPath,
   setupCleanState,
+  pluginHookEntries,
 } from './helpers';
 
 /**
@@ -90,26 +91,17 @@ describe('PLUGIN016: Tests Create Update Skill', () => {
   });
 
   // @feature5
-  it('PLUGIN016_05: extension.json registers skill', async () => {
-    const extPath = path.resolve(__dirname, '../../extensions/test-quality/extension.json');
-    const manifest = await fs.readJson(extPath);
-    expect(manifest.skills['tests-create-update']).toBe('.claude/skills/tests-create-update');
-    expect(manifest.skillFiles['tests-create-update']).toContain('.claude/skills/tests-create-update/SKILL.md');
+  it('PLUGIN016_05: tests-create-update skill is installed', () => {
+    expect(fs.existsSync(appPath('.claude/skills/tests-create-update/SKILL.md'))).toBe(true);
   });
 
   // @feature8
-  it('PLUGIN016_06: extension.json registers PostToolUse hook', async () => {
-    const extPath = path.resolve(__dirname, '../../extensions/test-quality/extension.json');
-    const manifest = await fs.readJson(extPath);
-    const postToolUse = manifest.hooks?.claude?.PostToolUse;
-    expect(postToolUse).toBeDefined();
-    expect(Array.isArray(postToolUse)).toBe(true);
-
-    const complianceHook = postToolUse.find((entry: any) =>
-      entry.hooks?.some((h: any) => h.command?.includes('compliance_check'))
+  it('PLUGIN016_06: plugin registry has compliance_check PostToolUse(Write|Edit)', () => {
+    const compliance = pluginHookEntries('PostToolUse').find((e) =>
+      e.commands.some((c) => c.includes('compliance_check')),
     );
-    expect(complianceHook, 'PostToolUse must have compliance_check hook').toBeDefined();
-    expect(complianceHook.matcher).toBe('Write|Edit');
+    expect(compliance, 'PostToolUse must register compliance_check').toBeDefined();
+    expect(compliance!.matcher).toBe('Write|Edit');
   });
 
   // @feature8

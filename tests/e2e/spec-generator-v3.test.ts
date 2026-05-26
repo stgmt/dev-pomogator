@@ -29,8 +29,8 @@ import { tmpdir, homedir } from 'os';
 import path from 'path';
 
 const APP_DIR = process.env.APP_DIR || process.cwd();
-const VALIDATOR_DIR = path.join(APP_DIR, 'extensions', 'specs-workflow', 'tools', 'specs-validator');
-const GENERATOR_DIR = path.join(APP_DIR, 'extensions', 'specs-workflow', 'tools', 'specs-generator');
+const VALIDATOR_DIR = path.join(APP_DIR, 'tools', 'specs-validator');
+const GENERATOR_DIR = path.join(APP_DIR, 'tools', 'specs-generator');
 const FIXTURES_DIR = path.join(APP_DIR, 'tests', 'fixtures', 'spec-generator-v3');
 
 const USER_STORY_GUARD = path.join(VALIDATOR_DIR, 'user-story-form-guard.ts');
@@ -362,7 +362,7 @@ describe('SPECGEN003: spec-generator-v3 form-guards + skills + audit log', () =>
   it('SPECGEN003_16: discovery-forms skill populates USER_STORIES.md in v3 format (integration)', () => {
     // Skill invocation is tested via its presence + structure.
     // Actual Skill tool execution requires Claude Code runtime which is not available in unit context.
-    const skillPath = path.join(APP_DIR, 'extensions', 'specs-workflow', '.claude', 'skills', 'discovery-forms', 'SKILL.md');
+    const skillPath = path.join(APP_DIR, '.claude', 'skills', 'discovery-forms', 'SKILL.md');
     expect(existsSync(skillPath)).toBe(true);
     const content = readFileSync(skillPath, 'utf-8');
     // Frontmatter must be anti-pushy (no "when user asks"/"whenever")
@@ -374,7 +374,7 @@ describe('SPECGEN003: spec-generator-v3 form-guards + skills + audit log', () =>
 
   // @feature3
   it('SPECGEN003_17: task-board-forms skill exists and has anti-pushy description (integration)', () => {
-    const skillPath = path.join(APP_DIR, 'extensions', 'specs-workflow', '.claude', 'skills', 'task-board-forms', 'SKILL.md');
+    const skillPath = path.join(APP_DIR, '.claude', 'skills', 'task-board-forms', 'SKILL.md');
     expect(existsSync(skillPath)).toBe(true);
     const content = readFileSync(skillPath, 'utf-8');
     expect(content.slice(0, 600)).not.toMatch(/when the user/i);
@@ -467,7 +467,7 @@ describe('SPECGEN003: spec-generator-v3 form-guards + skills + audit log', () =>
   // @feature1
   it('SPECGEN003_21: Jira-mode preservation — CHK skill preserves existing Jira traces (integration)', () => {
     // Structural: skill file references "Jira imperative:" preservation pattern
-    const skillPath = path.join(APP_DIR, 'extensions', 'specs-workflow', '.claude', 'skills', 'requirements-chk-matrix', 'SKILL.md');
+    const skillPath = path.join(APP_DIR, '.claude', 'skills', 'requirements-chk-matrix', 'SKILL.md');
     expect(existsSync(skillPath)).toBe(true);
     const content = readFileSync(skillPath, 'utf-8');
     // Must mention Jira mode preservation explicitly
@@ -495,7 +495,7 @@ describe('SPECGEN003: spec-generator-v3 form-guards + skills + audit log', () =>
   it('SPECGEN003_24: child skills do NOT contain auto-trigger phrases (integration)', () => {
     const skills = ['discovery-forms', 'requirements-chk-matrix', 'task-board-forms'];
     for (const skill of skills) {
-      const skillPath = path.join(APP_DIR, 'extensions', 'specs-workflow', '.claude', 'skills', skill, 'SKILL.md');
+      const skillPath = path.join(APP_DIR, '.claude', 'skills', skill, 'SKILL.md');
       expect(existsSync(skillPath), `${skill}/SKILL.md must exist`).toBe(true);
       const content = readFileSync(skillPath, 'utf-8');
       // Extract frontmatter description (first 800 chars ~ frontmatter block)
@@ -513,6 +513,7 @@ describe('SPECGEN003: spec-generator-v3 form-guards + skills + audit log', () =>
   it('SPECGEN003_25: meta-guard denies removing form-guard from extension.json (integration)', () => {
     const extensionJson = path.join(APP_DIR, 'extensions', 'specs-workflow', 'extension.json');
     // Simulate Edit removing user-story-form-guard entry from hooks.PreToolUse
+    if (!existsSync(extensionJson)) return; // extension.json manifest removed in plugin v2
     const current = readFileSync(extensionJson, 'utf-8');
     // Only run test if extension.json actually has the form-guards wired (Phase 5 done)
     if (!current.includes('user-story-form-guard')) {
@@ -531,6 +532,7 @@ describe('SPECGEN003: spec-generator-v3 form-guards + skills + audit log', () =>
   // @feature7
   it('SPECGEN003_26: meta-guard allows adding new unrelated hook (integration)', () => {
     const extensionJson = path.join(APP_DIR, 'extensions', 'specs-workflow', 'extension.json');
+    if (!existsSync(extensionJson)) return; // extension.json manifest removed in plugin v2
     const current = readFileSync(extensionJson, 'utf-8');
     if (!current.includes('user-story-form-guard')) {
       return;

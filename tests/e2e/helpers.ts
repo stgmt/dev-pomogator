@@ -1702,6 +1702,38 @@ export function runShellScript(
   }
 }
 
+// ============================================================================
+// Canonical plugin v2 hook registry (.claude-plugin/hooks.json)
+// ============================================================================
+// In the plugin model there is no per-extension extension.json manifest; all
+// hooks are registered centrally in .claude-plugin/hooks.json. These helpers
+// replace the old `fs.readJson('extensions/<ext>/extension.json')` reads.
+
+export interface PluginHookGroup {
+  matcher: string;
+  hooks: Array<{ type?: string; command: string; timeout?: number }>;
+}
+
+/** Read the central hooks registry → { <Event>: HookGroup[] }. */
+export function readPluginHooks(): Record<string, PluginHookGroup[]> {
+  return fs.readJsonSync(appPath('.claude-plugin', 'hooks.json')).hooks || {};
+}
+
+/** All registered command strings for an event (e.g. 'Stop', 'PreToolUse'). */
+export function pluginHookCommands(event: string): string[] {
+  return (readPluginHooks()[event] || []).flatMap((g) =>
+    (g.hooks || []).map((h) => h.command || ''),
+  );
+}
+
+/** Matcher + command list per registered group for an event. */
+export function pluginHookEntries(event: string): Array<{ matcher: string; commands: string[] }> {
+  return (readPluginHooks()[event] || []).map((g) => ({
+    matcher: g.matcher ?? '',
+    commands: (g.hooks || []).map((h) => h.command || ''),
+  }));
+}
+
 /**
  * Get path to specs-generator scripts.
  *

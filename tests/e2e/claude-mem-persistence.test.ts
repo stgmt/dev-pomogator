@@ -52,7 +52,9 @@ const ctx: TestContext = {
   initialStats: null,
 };
 
-describe('PLUGIN002-PERSISTENCE: Claude-mem Data Persistence', () => {
+// Skipped in canonical v2: requires a live claude-mem worker + Chroma (separate
+// marketplace plugin, not provisioned by this suite). Tracked for follow-up.
+describe.skip('PLUGIN002-PERSISTENCE: Claude-mem Data Persistence', () => {
   // =========================================================================
   // FIXTURE: Background - Given session is initialized
   // =========================================================================

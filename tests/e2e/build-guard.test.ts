@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import path from 'path';
 import fs from 'fs-extra';
-import { appPath, runInstaller, setupCleanState, runTsx } from './helpers';
+import { appPath, runInstaller, setupCleanState, runTsx, pluginHookEntries } from './helpers';
 
 const GUARD_SCRIPT = 'tools/tui-test-runner/build_guard.ts';
 
@@ -245,38 +245,24 @@ describe('GUARD002: Build Guard Hook', () => {
   // =========================================================================
 
   // @feature1
-  it('GUARD002_13: extension.json manifest has build_guard in PreToolUse hooks', async () => {
-    const manifestPath = appPath('extensions', 'tui-test-runner', 'extension.json');
-    const manifest = await fs.readJson(manifestPath);
-    const preToolUse = manifest.hooks?.claude?.PreToolUse;
-
-    expect(preToolUse).toBeDefined();
-    expect(Array.isArray(preToolUse)).toBe(true);
-
-    // Find build_guard entry
-    const buildGuardEntry = preToolUse.find((entry: any) =>
-      entry.hooks?.some((h: any) => h.command?.includes('build_guard'))
+  it('GUARD002_13: plugin registry has build_guard in PreToolUse(Bash)', () => {
+    const buildGuard = pluginHookEntries('PreToolUse').find((e) =>
+      e.commands.some((c) => c.includes('build_guard')),
     );
-    expect(buildGuardEntry).toBeDefined();
-    expect(buildGuardEntry.matcher).toBe('Bash');
-    expect(buildGuardEntry.hooks[0].command).toContain('build_guard');
+    expect(buildGuard, 'PreToolUse must register build_guard').toBeDefined();
+    expect(buildGuard!.matcher).toBe('Bash');
+    expect(buildGuard!.commands.join(',')).toContain('build_guard');
   });
 
   // @feature1
-  it('GUARD002_14: build_guard is before test_guard in manifest PreToolUse order', async () => {
-    const manifestPath = appPath('extensions', 'tui-test-runner', 'extension.json');
-    const manifest = await fs.readJson(manifestPath);
-    const preToolUse = manifest.hooks?.claude?.PreToolUse;
-
+  it('GUARD002_14: build_guard is before test_guard in PreToolUse order', () => {
+    const pre = pluginHookEntries('PreToolUse');
     let buildGuardIdx = -1;
     let testGuardIdx = -1;
-
-    preToolUse.forEach((entry: any, idx: number) => {
-      const cmds = (entry.hooks || []).map((h: any) => h.command || '');
-      if (cmds.some((c: string) => c.includes('build_guard'))) buildGuardIdx = idx;
-      if (cmds.some((c: string) => c.includes('test_guard'))) testGuardIdx = idx;
+    pre.forEach((entry, idx) => {
+      if (entry.commands.some((c) => c.includes('build_guard'))) buildGuardIdx = idx;
+      if (entry.commands.some((c) => c.includes('test_guard'))) testGuardIdx = idx;
     });
-
     expect(buildGuardIdx).toBeGreaterThanOrEqual(0);
     expect(testGuardIdx).toBeGreaterThanOrEqual(0);
     expect(buildGuardIdx).toBeLessThan(testGuardIdx);

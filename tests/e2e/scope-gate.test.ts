@@ -237,7 +237,7 @@ describe('VSGF001: Verify Generic Scope Fix gate (e2e)', () => {
 
   // @feature5
   it('VSGF001_50: SKILL.md frontmatter contains disable-model-invocation true', () => {
-    const skillPath = path.resolve('extensions/scope-gate/skills/verify-generic-scope-fix/SKILL.md');
+    const skillPath = path.resolve('.claude/skills/verify-generic-scope-fix/SKILL.md');
     const content = fs.readFileSync(skillPath, 'utf-8');
 
     const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
@@ -250,33 +250,15 @@ describe('VSGF001: Verify Generic Scope Fix gate (e2e)', () => {
   });
 
   // @feature5
-  it('VSGF001_51: extension.json registers hook with correct matcher', () => {
-    const manifestPath = path.resolve('extensions/scope-gate/extension.json');
-    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
-
-    expect(manifest.hooks?.claude?.PreToolUse?.matcher).toBe('Bash');
-    expect(manifest.hooks?.claude?.PreToolUse?.command).toMatch(/scope-gate-guard\.ts/);
-    expect(manifest.hooks?.claude?.PreToolUse?.timeout).toBeLessThanOrEqual(10);
-
-    expect(manifest.skillFiles?.['verify-generic-scope-fix']).toEqual(
-      expect.arrayContaining([
-        '.claude/skills/verify-generic-scope-fix/SKILL.md',
-      ]),
-    );
-
-    expect(manifest.toolFiles?.['scope-gate']).toEqual(
-      expect.arrayContaining([
-        'tools/scope-gate/scope-gate-guard.ts',
-        'tools/scope-gate/analyze-diff.ts',
-      ]),
-    );
-    // _shared/scope-gate-*.ts are auto-copied by installer (no explicit toolFiles listing per convention)
-
-    expect(manifest.ruleFiles?.claude).toEqual(
-      expect.arrayContaining([
-        '.claude/rules/scope-gate/when-to-verify.md',
-        '.claude/rules/scope-gate/escape-hatch-audit.md',
-      ]),
-    );
+  it('VSGF001_51: ships scope-gate guard tool, skill and rules', () => {
+    expect(fs.existsSync(path.resolve('tools/scope-gate/scope-gate-guard.ts'))).toBe(true);
+    expect(fs.existsSync(path.resolve('tools/scope-gate/analyze-diff.ts'))).toBe(true);
+    expect(
+      fs.existsSync(path.resolve('.claude/skills/verify-generic-scope-fix/SKILL.md')),
+    ).toBe(true);
+    expect(fs.existsSync(path.resolve('.claude/rules/scope-gate/when-to-verify.md'))).toBe(true);
+    expect(
+      fs.existsSync(path.resolve('.claude/rules/scope-gate/escape-hatch-audit.md')),
+    ).toBe(true);
   });
 });

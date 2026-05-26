@@ -25,7 +25,7 @@ describe('PLUGIN012: DevContainer Extension', () => {
   });
 
   const toolsBase = (...segments: string[]) =>
-    appPath('.dev-pomogator', 'tools', 'devcontainer', ...segments);
+    appPath('tools', 'devcontainer', ...segments);
 
   // @feature1 — Tool files installed
   describe('Scenario: Tool files are installed after clean installation', () => {
@@ -180,49 +180,16 @@ describe('PLUGIN012: DevContainer Extension', () => {
   });
 
   // @feature4 — Extension manifest completeness
-  describe('Scenario: Extension manifest is complete', () => {
-    let manifest: Record<string, unknown>;
-
-    beforeAll(async () => {
-      const manifestPath = path.resolve(
-        __dirname,
-        '../../extensions/devcontainer/extension.json',
-      );
-      manifest = await fs.readJson(manifestPath);
+  describe('Scenario: devcontainer tool + templates are present', () => {
+    it('should ship the devcontainer entrypoint scripts', () => {
+      expect(fs.existsSync(toolsBase('postinstall.ts'))).toBe(true);
+      expect(fs.existsSync(toolsBase('launch-worktree.ps1'))).toBe(true);
     });
 
-    it('should declare devcontainer tool', () => {
-      expect(manifest.tools).toHaveProperty('devcontainer');
-    });
-
-    it('should have postInstall for claude platform', () => {
-      const postInstall = manifest.postInstall as Record<string, unknown>;
-      expect(postInstall).toHaveProperty('claude');
-    });
-
-    it('should list all template files in toolFiles', () => {
-      const toolFiles = (manifest.toolFiles as Record<string, string[]>)?.devcontainer || [];
-      expect(toolFiles.length).toBeGreaterThanOrEqual(20);
-      // Check key files are listed
-      expect(toolFiles).toContain('tools/devcontainer/postinstall.ts');
-      expect(toolFiles).toContain('tools/devcontainer/launch-worktree.ps1');
-      expect(
-        toolFiles.some((f: string) => f.includes('templates/Dockerfile')),
-      ).toBe(true);
-      expect(
-        toolFiles.some((f: string) => f.includes('templates/docker-compose.yml')),
-      ).toBe(true);
-    });
-
-    it('should have every toolFile existing on disk', async () => {
-      const toolFiles = (manifest.toolFiles as Record<string, string[]>)?.devcontainer || [];
-      for (const relPath of toolFiles) {
-        const fullPath = appPath(relPath);
-        expect(
-          await fs.pathExists(fullPath),
-          `Missing toolFile: ${relPath}`,
-        ).toBe(true);
-      }
+    it('should ship the core devcontainer templates', () => {
+      expect(fs.existsSync(toolsBase('templates', 'Dockerfile'))).toBe(true);
+      expect(fs.existsSync(toolsBase('templates', 'docker-compose.yml'))).toBe(true);
+      expect(fs.existsSync(toolsBase('templates', 'devcontainer.json'))).toBe(true);
     });
   });
 

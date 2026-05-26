@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import path from 'path';
 import fs from 'fs-extra';
-import { appPath, runInstaller, setupCleanState, runTsx } from './helpers';
+import { appPath, runInstaller, setupCleanState, runTsx, pluginHookEntries, pluginHookCommands } from './helpers';
 
 const GUARD_SCRIPT = 'tools/tui-test-runner/test_guard.ts';
 
@@ -93,17 +93,12 @@ describe('GUARD001: Test Guard Hook', () => {
   // =========================================================================
 
   // @feature3
-  it('GUARD001_12: extension.json has hooks in correct object format', async () => {
-    const manifest = await fs.readJson(
-      appPath('extensions/tui-test-runner/extension.json'),
-    );
-    // Must be object format { claude: { EventName: ... } }, not array
-    expect(manifest.hooks).not.toBeInstanceOf(Array);
-    expect(manifest.hooks.claude).toBeDefined();
-    expect(manifest.hooks.claude.SessionStart).toBeDefined();
-    expect(manifest.hooks.claude.PreToolUse).toBeDefined();
-    // PreToolUse is array format with matcher objects
-    expect(Array.isArray(manifest.hooks.claude.PreToolUse)).toBe(true);
-    expect(manifest.hooks.claude.PreToolUse[0].matcher).toBe('Bash');
+  it('GUARD001_12: plugin registry declares SessionStart + PreToolUse(Bash) test_guard', () => {
+    expect(pluginHookCommands('SessionStart').length).toBeGreaterThan(0);
+    const pre = pluginHookEntries('PreToolUse');
+    expect(pre.length).toBeGreaterThan(0);
+    const testGuard = pre.find((e) => e.commands.some((c) => c.includes('test_guard')));
+    expect(testGuard, 'PreToolUse must register test_guard').toBeDefined();
+    expect(testGuard!.matcher).toBe('Bash');
   });
 });

@@ -14,6 +14,7 @@ import path from 'path';
 import { validatePlan, validatePlanPhased, REQUIRED_SECTIONS, findHeadingIndex, type ValidationError } from '../../tools/plan-pomogator/validate-plan';
 import { readTemplateContent, checkDuplicatePlan, scorePromptRelevance, resolvePlanFile, formatPromptsFromFile, loadUserPrompts } from '../../tools/plan-pomogator/plan-gate';
 import { PROMPT_FILE_PREFIX } from '../../tools/plan-pomogator/prompt-store';
+import { pluginHookEntries, pluginHookCommands } from './helpers';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -906,15 +907,8 @@ describe('PLUGIN007_36: Proactive-investigation rule', () => {
   });
 
   // @feature36
-  it('PLUGIN007_36_05: extension manifest includes proactive-investigation', () => {
-    const manifestPath = path.resolve(
-      __dirname,
-      '../../extensions/plan-pomogator/extension.json',
-    );
-    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
-    expect(manifest.ruleFiles.claude).toEqual(
-      expect.arrayContaining([expect.stringContaining('proactive-investigation.md')]),
-    );
+  it('PLUGIN007_36_05: proactive-investigation rule is shipped', () => {
+    expect(ruleContent.length).toBeGreaterThan(0);
   });
 
   // @feature36
@@ -929,22 +923,15 @@ describe('PLUGIN007_36: Proactive-investigation rule', () => {
 // ---------------------------------------------------------------------------
 
 describe('PLUGIN007_42: Installer normalizes array matcher to pipe string', () => {
-  it('PLUGIN007_42_01: extension.json claude hooks contain PreToolUse and UserPromptSubmit', () => {
-    const manifestPath = path.resolve(
-      __dirname,
-      '../../extensions/plan-pomogator/extension.json',
+  it('PLUGIN007_42_01: plugin registry has plan-pomogator PreToolUse + UserPromptSubmit', () => {
+    const exitPlan = pluginHookEntries('PreToolUse').find((e) =>
+      e.commands.some((c) => c.includes('plan-pomogator/plan-gate.ts')),
     );
-    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
-    const claudeHooks = manifest.hooks?.claude;
-
-    // Verify plan-pomogator hooks: PreToolUse for ExitPlanMode, UserPromptSubmit for prompt-capture
-    // PostToolUse for mark-plan-session was removed (planFilePath is now deterministic)
-    expect(claudeHooks).toBeDefined();
-    expect(claudeHooks.PreToolUse).toBeDefined();
-    expect(claudeHooks.PreToolUse.matcher).toBe('ExitPlanMode');
-    expect(claudeHooks.UserPromptSubmit).toBeDefined();
-    // PostToolUse hook for mark-plan-session.sh was removed
-    expect(claudeHooks.PostToolUse).toBeUndefined();
+    expect(exitPlan, 'PreToolUse must register plan-gate').toBeDefined();
+    expect(exitPlan!.matcher).toBe('ExitPlanMode');
+    expect(
+      pluginHookCommands('UserPromptSubmit').some((c) => c.includes('plan-pomogator/prompt-capture.ts')),
+    ).toBe(true);
   });
 });
 

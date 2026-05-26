@@ -255,25 +255,14 @@ describe('SPECJIRA001 Optional Jira-first Workflow', () => {
   });
 
   // @feature7
-  it('SPECJIRA001_07: Templates referenced in extension.json exist on disk', async () => {
-    const extJsonPath = appPath('extensions', 'specs-workflow', 'extension.json');
-    const extJson = JSON.parse(await fs.readFile(extJsonPath, 'utf-8'));
+  it('SPECJIRA001_07: Jira templates exist on disk', async () => {
     const expectedTemplates = [
       'JIRA_SOURCE.md.template',
       'ATTACHMENTS.md.template',
       'JIRA_CACHE.schema.json',
     ];
-    const toolFiles: string[] = extJson.toolFiles['specs-generator'];
     for (const tpl of expectedTemplates) {
-      expect(toolFiles.some((p) => p.endsWith(tpl))).toBe(true);
-      const onDisk = appPath(
-        'extensions',
-        'specs-workflow',
-        'tools',
-        'specs-generator',
-        'templates',
-        tpl,
-      );
+      const onDisk = appPath('tools', 'specs-generator', 'templates', tpl);
       expect(await fs.pathExists(onDisk)).toBe(true);
     }
   });

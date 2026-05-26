@@ -21,10 +21,10 @@ import path from 'path';
 
 const APP_DIR = process.env.APP_DIR || process.cwd();
 const FIXTURES_DIR = path.join(APP_DIR, 'tests', 'fixtures', 'bdd-enforcement');
-const DETECTOR = path.join(APP_DIR, 'extensions', 'specs-workflow', 'tools', 'specs-generator', 'bdd-framework-detector.ts');
-const SCAFFOLD = path.join(APP_DIR, 'extensions', 'specs-workflow', 'tools', 'specs-generator', 'scaffold-spec.ts');
-const SPEC_STATUS = path.join(APP_DIR, 'extensions', 'specs-workflow', 'tools', 'specs-generator', 'spec-status.ts');
-const CORE = path.join(APP_DIR, 'extensions', 'specs-workflow', 'tools', 'specs-generator', 'specs-generator-core.mjs');
+const DETECTOR = path.join(APP_DIR, 'tools', 'specs-generator', 'bdd-framework-detector.ts');
+const SCAFFOLD = path.join(APP_DIR, 'tools', 'specs-generator', 'scaffold-spec.ts');
+const SPEC_STATUS = path.join(APP_DIR, 'tools', 'specs-generator', 'spec-status.ts');
+const CORE = path.join(APP_DIR, 'tools', 'specs-generator', 'specs-generator-core.mjs');
 
 function runTsx(scriptPath: string, args: string[], opts: { cwd?: string } = {}) {
   return spawnSync('npx', ['tsx', scriptPath, ...args], {
