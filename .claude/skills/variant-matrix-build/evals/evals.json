@@ -1,0 +1,73 @@
+{
+  "skill_name": "variant-matrix-build",
+  "iteration": 2,
+  "notes": "Iteration-2: audit.ts now emits MATRIX_COMPLETE / HARD_OUT_DETECTED / ESCAPE_HATCH_USED INFO findings + triggers/axis в shape + JSONL escape log. Expected counts updated.",
+  "evals": [
+    {
+      "id": 1,
+      "name": "polymorphic-fr-complete-positive",
+      "prompt": "Run variant-matrix audit on polymorphic-fr-complete fixture. Expect MATRIX_COMPLETE INFO finding (positive signal, doesn't block).",
+      "fixture": "tests/fixtures/specs-generator/variant-matrix/polymorphic-fr-complete",
+      "expected_total": 1,
+      "expected_warning": 0,
+      "expected_info": 1,
+      "expected_codes": ["MATRIX_COMPLETE"],
+      "category": "detection-accuracy"
+    },
+    {
+      "id": 2,
+      "name": "polymorphic-fr-no-matrix-gap-detected",
+      "prompt": "Run variant-matrix audit on polymorphic-fr-no-matrix fixture. Expect 1 WARNING — AC_DECISION_TABLE_MISSING с triggers + axis populated.",
+      "fixture": "tests/fixtures/specs-generator/variant-matrix/polymorphic-fr-no-matrix",
+      "expected_total": 1,
+      "expected_warning": 1,
+      "expected_info": 0,
+      "expected_codes": ["AC_DECISION_TABLE_MISSING"],
+      "category": "detection-accuracy"
+    },
+    {
+      "id": 3,
+      "name": "polymorphic-fr-hard-out-h1-regression",
+      "prompt": "Run variant-matrix audit on polymorphic-fr-hard-out fixture (single-variant 'только'). Expect HARD_OUT_DETECTED INFO finding (visibility) — NOT WARNING (H1 mitigation).",
+      "fixture": "tests/fixtures/specs-generator/variant-matrix/polymorphic-fr-hard-out",
+      "expected_total": 1,
+      "expected_warning": 0,
+      "expected_info": 1,
+      "expected_codes": ["HARD_OUT_DETECTED"],
+      "category": "h1-regression"
+    },
+    {
+      "id": 4,
+      "name": "polymorphic-fr-ru-mixed-cross-language",
+      "prompt": "Run variant-matrix audit on polymorphic-fr-ru-mixed fixture (RU 'переиспользуем'). Expect 1 WARNING с RU phrases в triggers array.",
+      "fixture": "tests/fixtures/specs-generator/variant-matrix/polymorphic-fr-ru-mixed",
+      "expected_total": 1,
+      "expected_warning": 1,
+      "expected_info": 0,
+      "expected_codes": ["AC_DECISION_TABLE_MISSING"],
+      "category": "cross-language"
+    },
+    {
+      "id": 5,
+      "name": "escape-hatch-short-reason-info",
+      "prompt": "Run variant-matrix audit on escape-hatch-short-reason fixture (reason='ok' 2 chars). Expect WARNING_REASON_TOO_SHORT INFO + AC_DECISION_TABLE_MISSING WARNING (short reason не bypass-ит). JSONL log entry должен быть appended.",
+      "fixture": "tests/fixtures/specs-generator/variant-matrix/escape-hatch-short-reason",
+      "expected_total": 2,
+      "expected_warning": 1,
+      "expected_info": 1,
+      "expected_codes": ["WARNING_REASON_TOO_SHORT", "AC_DECISION_TABLE_MISSING"],
+      "category": "fr-7-edge-case"
+    },
+    {
+      "id": 6,
+      "name": "escape-hatch-boundary-8-chars",
+      "prompt": "Run variant-matrix audit on escape-hatch-boundary-8 fixture (reason='12345678' exactly 8 chars). Expect ESCAPE_HATCH_USED INFO (valid escape, bypass downstream). JSONL log entry appended.",
+      "fixture": "tests/fixtures/specs-generator/variant-matrix/escape-hatch-boundary-8",
+      "expected_total": 1,
+      "expected_warning": 0,
+      "expected_info": 1,
+      "expected_codes": ["ESCAPE_HATCH_USED"],
+      "category": "boundary-case"
+    }
+  ]
+}
