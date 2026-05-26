@@ -1,0 +1,15 @@
+{
+  "eval_id": 7,
+  "eval_name": "mixed-ru-en-inline",
+  "prompt": "/answer-simple \"<mixed RU+EN draft about migration v0.3.1>\"",
+  "assertions": [
+    {"text": "Output contains 'Переформулировано:' header"},
+    {"text": "Output contains 'Найдено проблем:' header"},
+    {"text": "v0.3.1 and v0.2 flagged as internal codes"},
+    {"text": "legacy config flagged as needing explanation"},
+    {"text": "✨NEW Правило 1: 'tenant' preserved byte-as-is (NOT translated to 'клиенты')"},
+    {"text": "✨NEW Правило 1: 'rollback' and 'skip' preserved byte-as-is (with parenthetical label only)"},
+    {"text": "✨NEW Правило 5: staging/prod NOT flagged (general vocab)"},
+    {"text": "BYTE-FAITHFUL: does NOT invent meaning of legacy config / edge case"}
+  ]
+}

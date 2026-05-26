@@ -1,0 +1,11 @@
+{
+  "expectations": [
+    {"text": "Output contains 'Переформулировано:' header", "passed": false, "evidence": "Output: 'Принято. Хочешь, чтобы я что-то дополнительно проверил...' — no header"},
+    {"text": "Output contains 'Найдено проблем:' header", "passed": false, "evidence": "No audit block, baseline offers follow-up actions"},
+    {"text": "Output identifies 'FR-12' as undefined internal code", "passed": false, "evidence": "FR-12 used as known reference ('проверил по FR-12'), not flagged"},
+    {"text": "Output identifies 'VARIANT_COVERAGE' as undefined internal code", "passed": false, "evidence": "VARIANT_COVERAGE used as known ('подключению VARIANT_COVERAGE'), not flagged"},
+    {"text": "Output identifies missing micro-story structure or missing causal links", "passed": false, "evidence": "Micro-story concept not mentioned"},
+    {"text": "BYTE-FAITHFUL: does NOT invent 'STOP #3', 'polymorphic FR', 'матрица вариантов', 'блокирует переход', 'прогон' (Правило 1)", "passed": false, "evidence": "Baseline invents follow-up tasks: 'прогнал аудит спеки', 'category корректно эмитит findings', 'trigger-detection на текущем FR.md'"}
+  ],
+  "summary": {"passed": 0, "failed": 6, "total": 6, "pass_rate": 0.0}
+}

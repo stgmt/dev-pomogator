@@ -1,0 +1,11 @@
+{
+  "expectations": [
+    {"text": "Output contains 'Переформулировано:' header", "passed": false, "evidence": "Output: 'Понял задачу. Ниже разбор плана...' — no header"},
+    {"text": "Output contains 'Найдено проблем:' header", "passed": false, "evidence": "No audit block. Baseline gives migration strategy analysis with sections"},
+    {"text": "Skill identifies v0.3.1 / v0.2 / tenant as needing context", "passed": false, "evidence": "Baseline uses all terms as known: 'pre-v0.2 tenants', 'migration_status=failed'"},
+    {"text": "Skill flags mixed RU+EN code-switching as readability problem", "passed": false, "evidence": "Baseline doesn't address language mixing, itself responds in mixed RU+EN"},
+    {"text": "BYTE-FAITHFUL: skill does NOT invent what legacy config / edge case mean", "passed": false, "evidence": "Baseline invents extensive specifics: 'continue-on-failure with quarantine', 'feature flag по migration_status', 'shared-nothing tenants', 'cross-tenant references' — all fabricated"},
+    {"text": "Skill correctly identifies 2-option dilemma (rollback/skip) as within threshold (not flagged as multi-select violation)", "passed": false, "evidence": "Baseline treats it as engineering decision, not text-quality issue"}
+  ],
+  "summary": {"passed": 0, "failed": 6, "total": 6, "pass_rate": 0.0}
+}

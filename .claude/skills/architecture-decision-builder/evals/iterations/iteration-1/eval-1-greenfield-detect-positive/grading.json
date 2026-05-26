@@ -3,7 +3,7 @@
     {
       "text": "axes_detected >= 8",
       "passed": true,
-      "evidence": "actual=8"
+      "evidence": "actual=11"
     }
   ]
 }

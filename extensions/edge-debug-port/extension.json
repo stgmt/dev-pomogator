@@ -1,0 +1,26 @@
+{
+  "name": "edge-debug-port",
+  "version": "1.0.0",
+  "description": "Permanently configure Microsoft Edge to launch with --remote-debugging-port=9222 across all entry points (taskbar, Start Menu, Quick Launch shortcuts + MSEdgeHTM/MSEdgeMHT/MSEdgePDF/microsoft-edge: registry handlers). Lets Playwright/Puppeteer connectOverCDP attach to user's REAL Edge profile (cookies, extensions, sessions) instead of launching empty disposable profile via chromium.launch({channel:'msedge'}). Reversible via -Revert flag with JSON backup.",
+  "platforms": ["claude", "cursor"],
+  "category": "automation",
+  "tools": {
+    "edge-debug-port": "tools/edge-debug-port"
+  },
+  "toolFiles": {
+    "edge-debug-port": [
+      ".dev-pomogator/tools/edge-debug-port/setup-edge-debug-port.ps1",
+      ".dev-pomogator/tools/edge-debug-port/connect-over-cdp.example.mjs",
+      ".dev-pomogator/tools/edge-debug-port/README.md"
+    ]
+  },
+  "skills": {
+    "edge-debug-port": ".claude/skills/edge-debug-port"
+  },
+  "skillFiles": {
+    "edge-debug-port": [
+      ".claude/skills/edge-debug-port/SKILL.md"
+    ]
+  },
+  "hooks": []
+}

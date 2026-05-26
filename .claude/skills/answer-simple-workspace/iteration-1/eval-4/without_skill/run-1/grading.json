@@ -1,0 +1,7 @@
+{
+  "expectations": [
+    {"text": "Output handles trivial 1-word input gracefully (does not generate 10 problems)", "passed": true, "evidence": "Baseline: 'Принято. Если нужна дальнейшая помощь — дай знать'. 1 line, no fabricated problems"},
+    {"text": "Output either returns usage hint OR notes that criteria are not applicable for 1-word text", "passed": false, "evidence": "Baseline gives generic acknowledgment, doesn't explain why criteria N/A for 1-word; treats /answer-simple as just chat input"}
+  ],
+  "summary": {"passed": 1, "failed": 1, "total": 2, "pass_rate": 0.5}
+}

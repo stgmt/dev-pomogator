@@ -1,0 +1,10 @@
+{
+  "expectations": [
+    {"text": "Output contains 'Переформулировано:' header", "passed": true, "evidence": "Line 1: 'Переформулировано: Ты просил доработать требование к покрытию вариантов...'"},
+    {"text": "Output contains 'Найдено проблем:' header", "passed": true, "evidence": "Line 3: 'Найдено проблем:' with 4 bullets"},
+    {"text": "Output identifies 'FR-12' as undefined internal code", "passed": true, "evidence": "Line 4: 'Внутренний код \"FR-12\" без расшифровки — читатель не знает что это за требование'"},
+    {"text": "Output identifies 'VARIANT_COVERAGE' as undefined internal code", "passed": true, "evidence": "Line 5: 'Внутренний код \"VARIANT_COVERAGE category\" без расшифровки — непонятно что это audit-категория'"},
+    {"text": "Output identifies missing micro-story structure or missing causal links", "passed": true, "evidence": "Lines 6-7: identifies missing micro-story AND missing causal links"}
+  ],
+  "summary": {"passed": 5, "failed": 0, "total": 5, "pass_rate": 1.0}
+}

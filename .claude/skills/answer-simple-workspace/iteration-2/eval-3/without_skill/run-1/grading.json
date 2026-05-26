@@ -1,0 +1,8 @@
+{
+  "expectations": [
+    {"text": "Output contains 'Проблем не найдено' verdict", "passed": false, "evidence": "Baseline gives advice: 'Отлично, звучит как разумная итерация!' — no audit verdict"},
+    {"text": "Output does NOT fabricate fake problems on clean draft", "passed": true, "evidence": "Baseline didn't audit at all, so didn't fabricate problems. Trivially passes."},
+    {"text": "Output lists passed criteria (5 anchor points / no jargon / causal link present)", "passed": false, "evidence": "No criteria checklist; baseline gives 4 improvement suggestions instead"}
+  ],
+  "summary": {"passed": 1, "failed": 2, "total": 3, "pass_rate": 0.3333}
+}

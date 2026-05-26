@@ -1,0 +1,378 @@
+{
+  "metadata": {
+    "skill_name": "answer-simple",
+    "skill_path": "D:/repos/dev-pomogator/.claude/skills/answer-simple",
+    "executor_model": "<model-name>",
+    "analyzer_model": "<model-name>",
+    "timestamp": "2026-05-24T16:46:53Z",
+    "evals_run": [
+      6,
+      7,
+      8
+    ],
+    "runs_per_configuration": 3
+  },
+  "runs": [
+    {
+      "eval_id": 6,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 8,
+        "failed": 0,
+        "total": 8,
+        "time_seconds": 33.622,
+        "tokens": 91300,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Output contains '\u041f\u0435\u0440\u0435\u0444\u043e\u0440\u043c\u0443\u043b\u0438\u0440\u043e\u0432\u0430\u043d\u043e:' header",
+          "passed": true,
+          "evidence": "Line 1: '\u041f\u0435\u0440\u0435\u0444\u043e\u0440\u043c\u0443\u043b\u0438\u0440\u043e\u0432\u0430\u043d\u043e: \u041f\u043e\u0441\u043b\u0435 \u0442\u043e\u0433\u043e \u043a\u0430\u043a \u043c\u044b \u0437\u0430\u0440\u0435\u043b\u0438\u0437\u0438\u043b\u0438 v0.2.5...'"
+        },
+        {
+          "text": "Output contains '\u041d\u0430\u0439\u0434\u0435\u043d\u043e \u043f\u0440\u043e\u0431\u043b\u0435\u043c:' header",
+          "passed": true,
+          "evidence": "Line 3: '\u041d\u0430\u0439\u0434\u0435\u043d\u043e \u043f\u0440\u043e\u0431\u043b\u0435\u043c:' with 2 bullets (vs iter-3's 5 \u2014 over-flagging fixed)"
+        },
+        {
+          "text": "Service names (payments, billing, invoicing, analytics, reports, dashboards) NOT flagged as internal codes",
+          "passed": true,
+          "evidence": "None of service names appear in findings list"
+        },
+        {
+          "text": "v0.2.5 and gates flagged as project-specific codes",
+          "passed": true,
+          "evidence": "Line 4: '\u0412\u043d\u0443\u0442\u0440\u0435\u043d\u043d\u0438\u0439 \u043a\u043e\u0434 v0.2.5'; Line 5: '\u0412\u043d\u0443\u0442\u0440\u0435\u043d\u043d\u0438\u0439 \u043a\u043e\u0434 gates'"
+        },
+        {
+          "text": "\u2728NEW \u041f\u0440\u0430\u0432\u0438\u043b\u043e 5: general engineering vocab (staging, prod, QPS, SRE, planned downtime, rollback playbook) NOT flagged",
+          "passed": true,
+          "evidence": "iter-3 flagged all of these; iter-4 lists only v0.2.5 + gates. staging/prod/QPS/SRE/planned downtime/rollback playbook absent from findings. \u041f\u0440\u0430\u0432\u0438\u043b\u043e 5 working as intended."
+        },
+        {
+          "text": "\u2728NEW \u041f\u0440\u0430\u0432\u0438\u043b\u043e 1 strict: exact numbers preserved (30 \u043c\u0438\u043d\u0443\u0442, 12 \u0441\u0435\u0440\u0432\u0438\u0441\u043e\u0432, 2 \u043d\u0435\u0434\u0435\u043b\u0438, 24 \u0447\u0430\u0441\u0430) \u2014 no '\u043f\u0440\u0438\u043c\u0435\u0440\u043d\u043e' added",
+          "passed": true,
+          "evidence": "Reformulation line 1: '12 \u043c\u0438\u043a\u0440\u043e\u0441\u0435\u0440\u0432\u0438\u0441\u043e\u0432', '2 \u043d\u0435\u0434\u0435\u043b\u0438', '30 \u043c\u0438\u043d\u0443\u0442 \u043d\u0430 \u0441\u0435\u0440\u0432\u0438\u0441', '\u043c\u0438\u043d\u0438\u043c\u0443\u043c 24 \u0447\u0430\u0441\u0430' \u2014 all exact, no quantifier dilution"
+        },
+        {
+          "text": "\u2728NEW \u041f\u0440\u0430\u0432\u0438\u043b\u043e 1 strict: no implicit predicates added (no '\u043f\u043e\u044f\u0432\u0438\u043b\u0430\u0441\u044c', '\u0432\u043e\u0437\u043d\u0438\u043a\u043b\u0430' etc.)",
+          "passed": true,
+          "evidence": "Iter-3 had '\u043f\u043e\u044f\u0432\u0438\u043b\u0430\u0441\u044c \u043d\u043e\u0432\u0430\u044f \u0441\u0438\u0441\u0442\u0435\u043c\u0430'. Iter-4 reformulation does NOT contain '\u043f\u043e\u044f\u0432\u0438\u043b\u0430\u0441\u044c/\u0432\u043e\u0437\u043d\u0438\u043a\u043b\u0430/\u0431\u044b\u043b\u043e \u0441\u0434\u0435\u043b\u0430\u043d\u043e'. Preserves '\u0437\u0430\u0440\u0435\u043b\u0438\u0437\u0438\u043b\u0438' from source."
+        },
+        {
+          "text": "\u2728NEW \u041f\u0440\u0430\u0432\u0438\u043b\u043e 4: consistency \u2014 if term decoded inline, finding phrased differently (not '\u0431\u0435\u0437 \u0440\u0430\u0441\u0448\u0438\u0444\u0440\u043e\u0432\u043a\u0438')",
+          "passed": true,
+          "evidence": "v0.2.5 / gates labeled with parenthetical (\u0432 \u043f\u0440\u043e\u0435\u043a\u0442\u0435 \u0442\u0430\u043a \u043d\u0430\u0437\u044b\u0432\u0430\u0435\u0442\u0441\u044f...) \u2014 finding for gates correctly notes '\u043e\u0431\u0449\u0435\u0435 \u043e\u0431\u044a\u044f\u0441\u043d\u0435\u043d\u0438\u0435 \u0432 \u0438\u0441\u0442\u043e\u0447\u043d\u0438\u043a\u0435 \u0434\u0430\u043d\u043e, \u043d\u043e \u0441\u0430\u043c \u0442\u0435\u0440\u043c\u0438\u043d \u0432\u043d\u0443\u0442\u0440\u0435\u043d\u043d\u0438\u0439 \u0434\u043b\u044f \u043f\u0440\u043e\u0435\u043a\u0442\u0430'. No self-contradiction."
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 7,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 8,
+        "failed": 0,
+        "total": 8,
+        "time_seconds": 46.336,
+        "tokens": 91938,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Output contains '\u041f\u0435\u0440\u0435\u0444\u043e\u0440\u043c\u0443\u043b\u0438\u0440\u043e\u0432\u0430\u043d\u043e:' header",
+          "passed": true,
+          "evidence": "Line 1: '\u041f\u0435\u0440\u0435\u0444\u043e\u0440\u043c\u0443\u043b\u0438\u0440\u043e\u0432\u0430\u043d\u043e: \u041f\u043e\u0441\u043b\u0435 \u0432\u044b\u043f\u0443\u0441\u043a\u0430 \u043d\u043e\u0432\u043e\u0439 \u0432\u0435\u0440\u0441\u0438\u0438 (\u0432 \u043f\u0440\u043e\u0435\u043a\u0442\u0435 \u043d\u0430\u0437\u044b\u0432\u0430\u0435\u0442\u0441\u044f v0.3.1)...'"
+        },
+        {
+          "text": "Output contains '\u041d\u0430\u0439\u0434\u0435\u043d\u043e \u043f\u0440\u043e\u0431\u043b\u0435\u043c:' header",
+          "passed": true,
+          "evidence": "Line 3: '\u041d\u0430\u0439\u0434\u0435\u043d\u043e \u043f\u0440\u043e\u0431\u043b\u0435\u043c:' with 5 bullets (vs iter-3's 9 \u2014 fixed over-flagging)"
+        },
+        {
+          "text": "v0.3.1 and v0.2 flagged as internal codes",
+          "passed": true,
+          "evidence": "Lines 4-5: '\u0412\u043d\u0443\u0442\u0440\u0435\u043d\u043d\u0438\u0439 \u043a\u043e\u0434 v0.3.1', '\u0412\u043d\u0443\u0442\u0440\u0435\u043d\u043d\u0438\u0439 \u043a\u043e\u0434 v0.2'"
+        },
+        {
+          "text": "legacy config flagged as needing explanation",
+          "passed": true,
+          "evidence": "Line 6: '\u0422\u0435\u0445\u043d\u0438\u0447\u0435\u0441\u043a\u0438\u0439 \u0442\u0435\u0440\u043c\u0438\u043d legacy config (pre-v0.2 format) \u0431\u0435\u0437 \u043e\u0431\u044a\u044f\u0441\u043d\u0435\u043d\u0438\u044f \u2014 \u0447\u0438\u0442\u0430\u0442\u0435\u043b\u044c \u043d\u0435 \u0437\u043d\u0430\u0435\u0442 \u0447\u0435\u043c \u0441\u0442\u0430\u0440\u044b\u0439 \u0444\u043e\u0440\u043c\u0430\u0442 \u043e\u0442\u043b\u0438\u0447\u0430\u0435\u0442\u0441\u044f \u043e\u0442 \u043d\u043e\u0432\u043e\u0433\u043e'"
+        },
+        {
+          "text": "\u2728NEW \u041f\u0440\u0430\u0432\u0438\u043b\u043e 1: 'tenant' preserved byte-as-is (NOT translated to '\u043a\u043b\u0438\u0435\u043d\u0442\u044b')",
+          "passed": true,
+          "evidence": "Reformulation: '\u0434\u043b\u044f \u0432\u0441\u0435\u0445 tenant'\u043e\u0432', '\u0443 tenant', '\u0432\u0441\u0435 tenant'\u044b \u043c\u0438\u0433\u0440\u0438\u0440\u043e\u0432\u0430\u043d\u044b', '\u0443\u043f\u0430\u0434\u0451\u0442 \u043d\u0430 \u043a\u043e\u043d\u043a\u0440\u0435\u0442\u043d\u043e\u043c tenant' \u2014 tenant preserved 4 times. iter-3 translated to '\u043a\u043b\u0438\u0435\u043d\u0442\u044b'."
+        },
+        {
+          "text": "\u2728NEW \u041f\u0440\u0430\u0432\u0438\u043b\u043e 1: 'rollback' and 'skip' preserved byte-as-is (with parenthetical label only)",
+          "passed": true,
+          "evidence": "Line 1: '\u043e\u0442\u043a\u0430\u0442\u044b\u0432\u0430\u0442\u044c \u0432\u0441\u0451 (rollback) \u0438\u043b\u0438 \u043f\u0440\u043e\u043f\u0443\u0441\u0442\u0438\u0442\u044c \u044d\u0442\u043e\u0433\u043e tenant \u0438 \u0438\u0434\u0442\u0438 \u0434\u0430\u043b\u044c\u0448\u0435 (skip)?' \u2014 terms preserved with explanatory parentheticals"
+        },
+        {
+          "text": "\u2728NEW \u041f\u0440\u0430\u0432\u0438\u043b\u043e 5: staging/prod NOT flagged (general vocab)",
+          "passed": true,
+          "evidence": "iter-3 flagged 'staging \u0438 prod \u0431\u0435\u0437 \u043a\u043e\u043d\u0442\u0435\u043a\u0441\u0442\u0430'. iter-4 does NOT \u2014 staging/prod absent from findings list. \u041f\u0440\u0430\u0432\u0438\u043b\u043e 5 working."
+        },
+        {
+          "text": "BYTE-FAITHFUL: does NOT invent meaning of legacy config / edge case",
+          "passed": true,
+          "evidence": "Reformulation labels legacy config as '\u043a\u043e\u043d\u0444\u0438\u0433 \u0441\u0442\u0430\u0440\u043e\u0433\u043e \u0444\u043e\u0440\u043c\u0430\u0442\u0430 (\u0432 \u043f\u0440\u043e\u0435\u043a\u0442\u0435 \u043d\u0430\u0437\u044b\u0432\u0430\u0435\u0442\u0441\u044f pre-v0.2 format / legacy config)' \u2014 preserves the unknown without inventing specific format details"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 8,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.8571,
+        "passed": 6,
+        "failed": 1,
+        "total": 7,
+        "time_seconds": 49.37,
+        "tokens": 92171,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Output contains '\u041f\u0435\u0440\u0435\u0444\u043e\u0440\u043c\u0443\u043b\u0438\u0440\u043e\u0432\u0430\u043d\u043e:' header",
+          "passed": true,
+          "evidence": "Line 1: '\u041f\u0435\u0440\u0435\u0444\u043e\u0440\u043c\u0443\u043b\u0438\u0440\u043e\u0432\u0430\u043d\u043e: \u0413\u043e\u0442\u043e\u0432\u043e, \u0434\u043e\u0431\u0430\u0432\u0438\u0442\u044c helper \u0434\u043b\u044f \u0432\u0430\u043b\u0438\u0434\u0430\u0446\u0438\u0438 \u043a\u043e\u043d\u0444\u0438\u0433\u0430...'"
+        },
+        {
+          "text": "Output contains '\u041d\u0430\u0439\u0434\u0435\u043d\u043e \u043f\u0440\u043e\u0431\u043b\u0435\u043c:' header",
+          "passed": true,
+          "evidence": "Line 3: '\u041d\u0430\u0439\u0434\u0435\u043d\u043e \u043f\u0440\u043e\u0431\u043b\u0435\u043c:' with 3 bullets"
+        },
+        {
+          "text": "\u2728NEW \u041f\u0440\u0430\u0432\u0438\u043b\u043e 1: file path 'src/config/loader.ts' preserved byte-as-is (NOT translated to '\u0444\u0430\u0439\u043b \u0437\u0430\u0433\u0440\u0443\u0437\u0447\u0438\u043a\u0430 \u043a\u043e\u043d\u0444\u0438\u0433\u0430')",
+          "passed": true,
+          "evidence": "Reformulation line 1: '\u043f\u043e\u0434\u043a\u043b\u044e\u0447\u0438\u043b \u0435\u0433\u043e \u0432 src/config/loader.ts \u0441\u0442\u0440\u043e\u043a\u0430 42' \u2014 path preserved exactly. iter-3 had '\u0444\u0430\u0439\u043b\u0435 \u0437\u0430\u0433\u0440\u0443\u0437\u0447\u0438\u043a\u0430 \u043a\u043e\u043d\u0444\u0438\u0433\u0430 (src/config/loader.ts...)'. Fixed."
+        },
+        {
+          "text": "\u2728NEW \u041f\u0440\u0430\u0432\u0438\u043b\u043e 1: verb '\u0434\u043e\u0431\u0430\u0432\u0438\u0442\u044c' NOT shifted to '\u0434\u043e\u0431\u0430\u0432\u043b\u044e' (verb form preserved)",
+          "passed": true,
+          "evidence": "Reformulation line 1: '\u0414\u0430\u043b\u044c\u0448\u0435 \u2014 \u0434\u043e\u0431\u0430\u0432\u0438\u0442\u044c error reporting' \u2014 preserves infinitive '\u0434\u043e\u0431\u0430\u0432\u0438\u0442\u044c' from source. iter-3 shifted to '\u0434\u043e\u0431\u0430\u0432\u043b\u044e'. Fixed."
+        },
+        {
+          "text": "\u2728NEW \u041f\u0440\u0430\u0432\u0438\u043b\u043e 4: AJV consistency \u2014 if decoded inline, NOT flagged as '\u0431\u0435\u0437 \u0440\u0430\u0441\u0448\u0438\u0444\u0440\u043e\u0432\u043a\u0438' in findings",
+          "passed": true,
+          "evidence": "Reformulation decodes AJV as '(\u044d\u0442\u043e \u0431\u0438\u0431\u043b\u0438\u043e\u0442\u0435\u043a\u0430 \u0434\u043b\u044f JSON schema validation)' inline. Findings list does NOT contain 'AJV \u0431\u0435\u0437 \u0440\u0430\u0441\u0448\u0438\u0444\u0440\u043e\u0432\u043a\u0438' \u2014 \u041f\u0440\u0430\u0432\u0438\u043b\u043e 4 consistency working. iter-3 self-contradicted by flagging AJV after decoding."
+        },
+        {
+          "text": "Identifiers inside code block (validateConfig, ConfigSchema, ValidationResult, ajv, schemaV2, cfg) NOT flagged",
+          "passed": true,
+          "evidence": "None of these identifiers appear in findings list. Only validateConfig mentioned in reformulation as proper noun preservation."
+        },
+        {
+          "text": "\u2728NEW \u041f\u0440\u0430\u0432\u0438\u043b\u043e 5: 'JSON schema validation' should NOT be flagged as needing explanation (basic engineering vocab)",
+          "passed": false,
+          "evidence": "Finding line 6 DID flag: '\u0422\u0435\u0445\u043d\u0438\u0447\u0435\u0441\u043a\u0438\u0439 \u0442\u0435\u0440\u043c\u0438\u043d JSON schema validation \u0431\u0435\u0437 \u0431\u044b\u0442\u043e\u0432\u043e\u0433\u043e \u043e\u0431\u044a\u044f\u0441\u043d\u0435\u043d\u0438\u044f \u2014 \u0447\u0438\u0442\u0430\u0442\u0435\u043b\u044c \u043d\u0435 \u0438\u0437 \u0434\u043e\u043c\u0435\u043d\u0430 \u043d\u0435 \u043f\u043e\u0439\u043c\u0451\u0442'. This violates \u041f\u0440\u0430\u0432\u0438\u043b\u043e 5 (JSON, schema, validation are basic vocab for technical reader; default is technical audience). HONEST: skill still over-flags one general term."
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 6,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.1667,
+        "passed": 1,
+        "failed": 5,
+        "total": 6,
+        "time_seconds": 40.785,
+        "tokens": 84927,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Output contains '\u041f\u0435\u0440\u0435\u0444\u043e\u0440\u043c\u0443\u043b\u0438\u0440\u043e\u0432\u0430\u043d\u043e:' header",
+          "passed": false,
+          "evidence": "Output: '\u0421\u043f\u0430\u0441\u0438\u0431\u043e \u0437\u0430 \u043f\u043e\u0434\u0440\u043e\u0431\u043d\u044b\u0439 \u043f\u043b\u0430\u043d! \u0417\u0432\u0443\u0447\u0438\u0442 \u0441\u0442\u0440\u0443\u043a\u0442\u0443\u0440\u0438\u0440\u043e\u0432\u0430\u043d\u043d\u043e.' \u2014 no header"
+        },
+        {
+          "text": "Output contains '\u041d\u0430\u0439\u0434\u0435\u043d\u043e \u043f\u0440\u043e\u0431\u043b\u0435\u043c:' header",
+          "passed": false,
+          "evidence": "No audit block. Baseline gives structured review with '\u041e\u0431\u0449\u0430\u044f \u0441\u0442\u0440\u0443\u043a\u0442\u0443\u0440\u0430 \u0432\u043e\u043b\u043d' / '\u0427\u0442\u043e \u044f \u0431\u044b \u0443\u0442\u043e\u0447\u043d\u0438\u043b' / '\u0427\u0442\u043e \u0431\u044b \u0434\u043e\u0431\u0430\u0432\u0438\u043b' sections."
+        },
+        {
+          "text": "Skill does NOT flag service names (payments, billing, invoicing, analytics, reports, dashboards) as internal codes",
+          "passed": true,
+          "evidence": "Baseline doesn't flag at all \u2014 trivially passes. But uses service names contextually as known entities."
+        },
+        {
+          "text": "Skill flags v0.2.5 / gates / QPS / SRE as needing explanation",
+          "passed": false,
+          "evidence": "Baseline uses 'high QPS' as known term, doesn't flag SRE or gates"
+        },
+        {
+          "text": "BYTE-FAITHFUL: reformulation does not invent context not present in source",
+          "passed": false,
+          "evidence": "Baseline invents extensive content: 'Pre-migration checklist', 'Communication plan', 'Buffer week', 'blue-green or canary', 'blast radius' \u2014 all fabricated suggestions"
+        },
+        {
+          "text": "Reformulation preserves the micro-story structure already present in source",
+          "passed": false,
+          "evidence": "No reformulation produced"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 7,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.0,
+        "passed": 0,
+        "failed": 6,
+        "total": 6,
+        "time_seconds": 44.288,
+        "tokens": 85215,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Output contains '\u041f\u0435\u0440\u0435\u0444\u043e\u0440\u043c\u0443\u043b\u0438\u0440\u043e\u0432\u0430\u043d\u043e:' header",
+          "passed": false,
+          "evidence": "Output: '\u041f\u043e\u043d\u044f\u043b \u0437\u0430\u0434\u0430\u0447\u0443. \u041d\u0438\u0436\u0435 \u0440\u0430\u0437\u0431\u043e\u0440 \u043f\u043b\u0430\u043d\u0430...' \u2014 no header"
+        },
+        {
+          "text": "Output contains '\u041d\u0430\u0439\u0434\u0435\u043d\u043e \u043f\u0440\u043e\u0431\u043b\u0435\u043c:' header",
+          "passed": false,
+          "evidence": "No audit block. Baseline gives migration strategy analysis with sections"
+        },
+        {
+          "text": "Skill identifies v0.3.1 / v0.2 / tenant as needing context",
+          "passed": false,
+          "evidence": "Baseline uses all terms as known: 'pre-v0.2 tenants', 'migration_status=failed'"
+        },
+        {
+          "text": "Skill flags mixed RU+EN code-switching as readability problem",
+          "passed": false,
+          "evidence": "Baseline doesn't address language mixing, itself responds in mixed RU+EN"
+        },
+        {
+          "text": "BYTE-FAITHFUL: skill does NOT invent what legacy config / edge case mean",
+          "passed": false,
+          "evidence": "Baseline invents extensive specifics: 'continue-on-failure with quarantine', 'feature flag \u043f\u043e migration_status', 'shared-nothing tenants', 'cross-tenant references' \u2014 all fabricated"
+        },
+        {
+          "text": "Skill correctly identifies 2-option dilemma (rollback/skip) as within threshold (not flagged as multi-select violation)",
+          "passed": false,
+          "evidence": "Baseline treats it as engineering decision, not text-quality issue"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 8,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.3333,
+        "passed": 2,
+        "failed": 4,
+        "total": 6,
+        "time_seconds": 36.488,
+        "tokens": 84836,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Output contains '\u041f\u0435\u0440\u0435\u0444\u043e\u0440\u043c\u0443\u043b\u0438\u0440\u043e\u0432\u0430\u043d\u043e:' header",
+          "passed": false,
+          "evidence": "Output: '\u041f\u043e\u043d\u044f\u043b. \u041d\u0435\u0441\u043a\u043e\u043b\u044c\u043a\u043e \u043c\u044b\u0441\u043b\u0435\u0439 \u043f\u043e \u0441\u0434\u0435\u043b\u0430\u043d\u043d\u043e\u043c\u0443 \u0438 \u043f\u043e \u0441\u043b\u0435\u0434\u0443\u044e\u0449\u0435\u043c\u0443 \u0448\u0430\u0433\u0443:' \u2014 no header"
+        },
+        {
+          "text": "Output contains '\u041d\u0430\u0439\u0434\u0435\u043d\u043e \u043f\u0440\u043e\u0431\u043b\u0435\u043c:' header",
+          "passed": false,
+          "evidence": "No audit block. Baseline gives code review with TypeScript suggestions"
+        },
+        {
+          "text": "Skill does NOT flag identifiers INSIDE code block as internal codes",
+          "passed": true,
+          "evidence": "Baseline treats identifiers as code naturally \u2014 trivially passes since no audit"
+        },
+        {
+          "text": "Skill does NOT flag file paths as internal codes",
+          "passed": true,
+          "evidence": "Same \u2014 file paths treated normally"
+        },
+        {
+          "text": "Skill may legitimately flag AJV as needing context for non-technical readers",
+          "passed": false,
+          "evidence": "Baseline doesn't flag AJV, dives into AJV API specifics"
+        },
+        {
+          "text": "Reformulation preserves code block content intact (BYTE-FAITHFUL)",
+          "passed": false,
+          "evidence": "No reformulation. Baseline invents improved version of code (with ajv.compile pattern, allErrors:true config) \u2014 fabricates beyond source"
+        }
+      ],
+      "notes": []
+    }
+  ],
+  "run_summary": {
+    "with_skill": {
+      "pass_rate": {
+        "mean": 0.9524,
+        "stddev": 0.0825,
+        "min": 0.8571,
+        "max": 1.0
+      },
+      "time_seconds": {
+        "mean": 43.1093,
+        "stddev": 8.3551,
+        "min": 33.622,
+        "max": 49.37
+      },
+      "tokens": {
+        "mean": 91803.0,
+        "stddev": 450.9202,
+        "min": 91300,
+        "max": 92171
+      }
+    },
+    "without_skill": {
+      "pass_rate": {
+        "mean": 0.1667,
+        "stddev": 0.1667,
+        "min": 0.0,
+        "max": 0.3333
+      },
+      "time_seconds": {
+        "mean": 40.5203,
+        "stddev": 3.9067,
+        "min": 36.488,
+        "max": 44.288
+      },
+      "tokens": {
+        "mean": 84992.6667,
+        "stddev": 197.8493,
+        "min": 84836,
+        "max": 85215
+      }
+    },
+    "delta": {
+      "pass_rate": "+0.79",
+      "time_seconds": "+2.6",
+      "tokens": "+6810"
+    }
+  },
+  "notes": []
+}

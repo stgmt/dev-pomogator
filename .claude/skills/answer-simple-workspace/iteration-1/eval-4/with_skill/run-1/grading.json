@@ -1,0 +1,7 @@
+{
+  "expectations": [
+    {"text": "Output handles trivial 1-word input gracefully (does not generate 10 problems)", "passed": true, "evidence": "Output returns 'Проблем не найдено' + note about minimal text. No fabricated problems list"},
+    {"text": "Output either returns usage hint OR notes that criteria are not applicable for 1-word text", "passed": true, "evidence": "Line 4-7: 'Текст слишком короткий (1 слово) для оценки структуры микроистории — критерий неприменим'; line 9: 'Примечание: черновик Готово представляет собой минимальное подтверждение завершения действия'"}
+  ],
+  "summary": {"passed": 2, "failed": 0, "total": 2, "pass_rate": 1.0}
+}

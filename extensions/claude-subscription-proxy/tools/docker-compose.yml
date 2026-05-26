@@ -1,0 +1,64 @@
+services:
+  meridian:
+    # Build from local Dockerfile (fork of upstream Meridian Dockerfile with
+    # claude.exe symlink fix for Linux runtime). First `up` clones meridian
+    # source + bun install + bun build + alpine layers (~2-3 min). Subsequent
+    # runs use Docker layer cache.
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Pin meridian version. Bump when upstream releases.
+        MERIDIAN_REF: main
+    image: claude-proxy-meridian:local
+    container_name: claude-proxy-meridian
+
+    # Always restart on failure or Docker Desktop start.
+    # Combined with Docker Desktop autostart on Windows login = "always alive".
+    restart: unless-stopped
+
+    # Bind only to loopback. Credentials inside meridian = your Claude Max
+    # subscription. Do NOT expose to 0.0.0.0 unless you also set MERIDIAN_API_KEY.
+    ports:
+      - "127.0.0.1:${PROXY_PORT:-3456}:3456"
+
+    # Mount Claude Code OAuth credentials (read-write — meridian refreshes
+    # tokens automatically). On Windows Docker Desktop you may need to enable
+    # file sharing for C:\Users\<you> in Docker Desktop → Settings → Resources.
+    #
+    # The refresh-token write-back means containers survive credential expiry
+    # without manual `claude login` (until refresh token itself expires
+    # after weeks of inactivity).
+    volumes:
+      - ${HOME:-${USERPROFILE}}/.claude:/home/claude/.claude
+
+    environment:
+      # Passthrough: meridian returns tool_use blocks to client instead of
+      # executing them. Required for LangGraph / custom agent loops where
+      # tool routing happens in your code, not in Claude Code SDK.
+      - MERIDIAN_PASSTHROUGH=1
+
+      # Bind to all container interfaces (port forward to host loopback above).
+      - MERIDIAN_HOST=0.0.0.0
+      - MERIDIAN_PORT=3456
+
+      # Optional: protect proxy with shared secret (uncomment + set in .env).
+      # When set, clients must send ANTHROPIC_API_KEY=<this-value>.
+      # - MERIDIAN_API_KEY=${MERIDIAN_API_KEY}
+
+      # Optional: per-session limits.
+      - MERIDIAN_MAX_CONCURRENT=${MERIDIAN_MAX_CONCURRENT:-10}
+
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3456/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+    # Logs: rotate to avoid filling disk over long uptime.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

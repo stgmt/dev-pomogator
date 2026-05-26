@@ -1,0 +1,11 @@
+{
+  "expectations": [
+    {"text": "Output contains 'Переформулировано:' header", "passed": true, "evidence": "Line 1: 'Переформулировано: У нас два больших куска работы — один про дешёвый LLM...'"},
+    {"text": "Output contains 'Найдено проблем:' header", "passed": true, "evidence": "Line 3: 'Найдено проблем:' followed by 7 bullet items"},
+    {"text": "Output identifies 'Wave 14' as undefined internal code", "passed": true, "evidence": "Line 4: 'Внутренний код \"Wave 14\" без расшифровки — читатель не знает что это за этап'"},
+    {"text": "Output identifies 'Wave 11' as undefined internal code", "passed": true, "evidence": "Line 5: 'Внутренний код \"Wave 11\" без расшифровки'"},
+    {"text": "Output identifies multi-select with 3+ options as exceeding threshold of 2", "passed": true, "evidence": "Line 8: 'Multi-select с 3 опциями (Keep / Swap / Parallel) — превышение порога 2'"},
+    {"text": "Output identifies missing micro-story structure (no 5 anchor points)", "passed": true, "evidence": "Line 9: 'Отсутствует структура микроистории (нет \"откуда пришли\" / \"что произошло\" / \"где сейчас\" / \"дальше\")'"}
+  ],
+  "summary": {"passed": 6, "failed": 0, "total": 6, "pass_rate": 1.0}
+}

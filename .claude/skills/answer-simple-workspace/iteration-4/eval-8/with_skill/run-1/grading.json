@@ -1,0 +1,12 @@
+{
+  "expectations": [
+    {"text": "Output contains 'Переформулировано:' header", "passed": true, "evidence": "Line 1: 'Переформулировано: Готово, добавить helper для валидации конфига...'"},
+    {"text": "Output contains 'Найдено проблем:' header", "passed": true, "evidence": "Line 3: 'Найдено проблем:' with 3 bullets"},
+    {"text": "✨NEW Правило 1: file path 'src/config/loader.ts' preserved byte-as-is (NOT translated to 'файл загрузчика конфига')", "passed": true, "evidence": "Reformulation line 1: 'подключил его в src/config/loader.ts строка 42' — path preserved exactly. iter-3 had 'файле загрузчика конфига (src/config/loader.ts...)'. Fixed."},
+    {"text": "✨NEW Правило 1: verb 'добавить' NOT shifted to 'добавлю' (verb form preserved)", "passed": true, "evidence": "Reformulation line 1: 'Дальше — добавить error reporting' — preserves infinitive 'добавить' from source. iter-3 shifted to 'добавлю'. Fixed."},
+    {"text": "✨NEW Правило 4: AJV consistency — if decoded inline, NOT flagged as 'без расшифровки' in findings", "passed": true, "evidence": "Reformulation decodes AJV as '(это библиотека для JSON schema validation)' inline. Findings list does NOT contain 'AJV без расшифровки' — Правило 4 consistency working. iter-3 self-contradicted by flagging AJV after decoding."},
+    {"text": "Identifiers inside code block (validateConfig, ConfigSchema, ValidationResult, ajv, schemaV2, cfg) NOT flagged", "passed": true, "evidence": "None of these identifiers appear in findings list. Only validateConfig mentioned in reformulation as proper noun preservation."},
+    {"text": "✨NEW Правило 5: 'JSON schema validation' should NOT be flagged as needing explanation (basic engineering vocab)", "passed": false, "evidence": "Finding line 6 DID flag: 'Технический термин JSON schema validation без бытового объяснения — читатель не из домена не поймёт'. This violates Правило 5 (JSON, schema, validation are basic vocab for technical reader; default is technical audience). HONEST: skill still over-flags one general term."}
+  ],
+  "summary": {"passed": 6, "failed": 1, "total": 7, "pass_rate": 0.8571}
+}

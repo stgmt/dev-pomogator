@@ -1,5 +1,15 @@
 # Cross-Scope Test Coverage Matrix
 
+## Step 0: Spec-time application (priority gate)
+
+Если spec был создан после `specs-workflow` v1.19.0 — variant matrix уже built на spec stage через `Skill("variant-matrix-build")` (Phase 2 step 4c) + audit category `VARIANT_COVERAGE` (Phase 3+). Этот rule остаётся как **plan-time fallback** для:
+
+- Legacy specs созданных до v1.19.0 без spec-variant-matrix enforcement.
+- Plans без spec (когда задача напрямую переходит из Jira/issue в plan-pomogator development plan без полного `.specs/` workflow).
+- Plans которые охватывают changes за рамки одного spec (cross-cutting refactors).
+
+При наличии spec с variant matrix — этот rule complementary, не дублирующий: spec covers per-variant *call-site mapping*, plan-pomogator covers *test breadth* (scope × variant matrix). См. cross-link на `.claude/rules/specs-workflow/variant-matrix/when-to-build-matrix.md`.
+
 ## Правило
 
 При работе с фичей, которая реализована в нескольких scope-ах (сервисы, модули, endpoints, платформы, доктайпы — любая ось вариации проекта), агент ОБЯЗАН построить coverage matrix перед объявлением тестов завершёнными.
@@ -87,3 +97,4 @@
 ## See also
 
 - `.claude/rules/scope-gate/when-to-verify.md` — per-case codepath reach verification (scope-gate extension). Смежное правило: cross-scope-coverage покрывает matrix scope × variant (test coverage); scope-gate покрывает per-case codepath reach (prevents structurally no-op fixes при enum/switch expansion).
+- `.claude/rules/specs-workflow/variant-matrix/when-to-build-matrix.md` — spec-time primary gate (specs-workflow ≥1.19.0). Триггерится при создании spec; этот rule (cross-scope-coverage) — plan-time fallback.

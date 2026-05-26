@@ -1,0 +1,9 @@
+{
+  "eval_id": 4,
+  "eval_name": "two-word-trivial-готово",
+  "prompt": "/answer-simple \"Готово.\"",
+  "assertions": [
+    {"text": "Output handles trivial 1-word input gracefully (does not generate 10 problems)"},
+    {"text": "Output explicitly follows Правило 2 (skips reformulation for 1-word, notes criteria not applicable)"}
+  ]
+}

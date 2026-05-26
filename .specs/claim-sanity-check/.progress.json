@@ -1,0 +1,28 @@
+{
+  "version": 3,
+  "featureSlug": "claim-sanity-check",
+  "createdAt": "2026-05-23T03:33:59.591Z",
+  "currentPhase": "Discovery",
+  "phases": {
+    "Discovery": {
+      "completedAt": null,
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    },
+    "Context": {
+      "completedAt": null,
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    },
+    "Requirements": {
+      "completedAt": null,
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    },
+    "Finalization": {
+      "completedAt": null,
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    }
+  }
+}

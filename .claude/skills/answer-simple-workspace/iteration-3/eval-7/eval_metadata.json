@@ -1,0 +1,13 @@
+{
+  "eval_id": 7,
+  "eval_name": "mixed-ru-en-inline",
+  "prompt": "/answer-simple \"<mixed RU+EN draft about migration v0.3.1>\"",
+  "assertions": [
+    {"text": "Output contains 'Переформулировано:' header"},
+    {"text": "Output contains 'Найдено проблем:' header"},
+    {"text": "Skill identifies v0.3.1 / v0.2 / tenant as needing context"},
+    {"text": "Skill flags mixed RU+EN code-switching as readability problem"},
+    {"text": "BYTE-FAITHFUL: skill does NOT invent what legacy config / edge case mean"},
+    {"text": "Skill correctly identifies 2-option dilemma (rollback/skip) as within threshold (not flagged as multi-select violation)"}
+  ]
+}

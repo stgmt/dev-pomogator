@@ -1,0 +1,7 @@
+{
+  "expectations": [
+    {"text": "Output handles trivial 1-word input gracefully (does not generate 10 problems)", "passed": true, "evidence": "Output is 5 lines total — 1-line note + 2 short bullets. No fabricated problem flood."},
+    {"text": "Output explicitly follows Правило 2 (skips reformulation for 1-word, notes criteria not applicable)", "passed": true, "evidence": "Line 1: 'Текст слишком короткий для оценки структуры (однословный ответ) — переформулировка пропущена по Правилу 2.' Explicit reference to Правило 2."}
+  ],
+  "summary": {"passed": 2, "failed": 0, "total": 2, "pass_rate": 1.0}
+}
