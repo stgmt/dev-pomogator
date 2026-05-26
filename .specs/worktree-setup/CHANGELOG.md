@@ -7,6 +7,7 @@ All notable changes to this feature will be documented in this file.
 ### Design
 
 - **Test strategy decision** added — the suite validates the plugin via canonical Claude Code mechanisms: `claude plugin validate` (structure, same check as Anthropic's submission CI) + direct tool invocation via spawnSync (behavior, already used by CORE024_*) + `claude --plugin-dir ./<plugin>` (runtime wiring). NOT the legacy installer (`runInstaller` → `dist/index.js`, which the plugin migration deletes). Hook paths via `${CLAUDE_PLUGIN_ROOT}`. New DESIGN Key Decision + BDD-infra note + T6-2 verification steps. Researched against official Claude Code plugin docs + Anthropic's `plugin-validator` agent. Cross-ref plugin-migration PR #24.
+- **BDD-infra + Phase-0 realigned** to match the decision and reality: removed installer-based hooks (`setupTempProject`/`runInstaller`), static fixtures (`fresh-main`/`gh-mock`/tsx-runner snapshot) and Cucumber step-def framing; documented the actual `worktree-helpers.ts` API (`makeTempGitRepo`/`makeTempDir`/`isolateHome`/`cleanupTempPaths`/`gitAvailable`) and on-the-fly temp git repos + PATH-shim mocks across DESIGN, TASKS Phase 0, and FILE_CHANGES.
 
 ## [Unreleased] — 2026-05-26 (amendment #3: FR-12 devcontainer integration)
 

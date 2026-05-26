@@ -6,10 +6,10 @@
 | ID | Title | Status | Depends | Phase | Est. |
 |----|-------|--------|---------|-------|------|
 | T0-1 | Write step definitions for worktree-setup.feature | TODO | — | Phase 0 | 60m |
-| T0-2 | Create test hooks (setupWorktreeFixture / cleanupWorktreeFixture / isolateEnv) | TODO | T0-1 | Phase 0 | 45m |
-| T0-3 | Create fixtures (fresh-main / gh-mock / tsx-runner-bootstrap-original) | TODO | T0-1 | Phase 0 | 30m |
-| T0-4 | Step definitions + fixtures for @feature9 (env-sync) | TODO | T0-1 | Phase 0 | 30m |
-| T0-5 | Step definitions + fixtures for @feature10 (build-sync) + dir-collision + ancestor | TODO | T0-1 | Phase 0 | 30m |
+| T0-2 | Create integration harness tests/e2e/worktree-helpers.ts (makeTempGitRepo / isolateHome / cleanupTempPaths) | TODO | T0-1 | Phase 0 | 30m |
+| T0-3 | Build test data on the fly (no static fixtures) — temp git repos + PATH-shim mocks | TODO | T0-1 | Phase 0 | 15m |
+| T0-4 | Integration cases + on-the-fly test data for @feature9 (env-sync) | TODO | T0-1 | Phase 0 | 30m |
+| T0-5 | Integration cases + on-the-fly test data for @feature10 (build-sync) + dir-collision + ancestor | TODO | T0-1 | Phase 0 | 30m |
 | T1-1 | Slug validator + branch pre-flight | TODO | T0-3 | Phase 1 | 45m |
 | T1-2 | git worktree add -b orchestration | TODO | T1-1 | Phase 1 | 45m |
 | T1-3 | Invocation-from-sibling warn flow | TODO | T1-2 | Phase 1 | 45m |
@@ -40,7 +40,9 @@
 
 ## TDD Workflow
 
-Задачи организованы по TDD: Red → Green → Refactor. Phase 0 пишет .feature + hooks + fixtures (все scenarios FAIL = Red). Phase 1–5 — implementation per @feature group (Green). Phase 6 — refactor. Framework: Cucumber.js/vitest **already installed** (per DESIGN.md). Bootstrap block НЕ нужен.
+Задачи организованы по TDD: Red → Green → Refactor. Phase 0 пишет `.feature` + integration-харнес (`tests/e2e/worktree-helpers.ts`) — все сценарии FAIL = Red. Phase 1–5 — implementation per @feature group (Green). Phase 6 — refactor.
+
+Тесты — **vitest integration** (`describe`/`it` CORE024_NN), которые спавнят реальные скрипты (`spawnSync npx tsx orchestrate.ts`, `node worktree-doctor.cjs`) и импортируют чистые функции — НЕ Cucumber step-defs, НЕ `runInstaller`/`dist/index.js` (установщика в плагин-модели нет — см. DESIGN «Test via canonical Claude Code plugin mechanisms»). Окружение строится на лету через `makeTempGitRepo`/`isolateHome` — **статических фикстур нет**. vitest **already installed**.
 
 ## Phase -1: Infrastructure Prerequisites
 
@@ -48,55 +50,38 @@
 
 ## Phase 0: BDD Foundation (Red)
 
-- [ ] **T0-1: Write step definitions for worktree-setup.feature** -- @feature1–@feature8 — Status: TODO | Est: 60m
-  _Requirements: [FR-1..FR-8](FR.md), `.specs/worktree-setup/worktree-setup.feature` already exists with 18 scenarios_
+- [ ] **T0-1: Write integration test cases for worktree-setup.feature** -- @feature1–@feature8 — Status: TODO | Est: 60m
+  _Requirements: [FR-1..FR-8](FR.md), `.specs/worktree-setup/worktree-setup.feature`_
   **Done When:**
-  - [ ] `tests/e2e/worktree-setup.test.ts` contains step-def stubs throwing `PendingStepException` for all 18 scenarios from .feature
-  - [ ] `npx vitest run tests/e2e/worktree-setup.test.ts` → all 18 scenarios FAIL with PendingStepException (Red)
-  - [ ] No production code touched yet
+  - [ ] `tests/e2e/worktree-setup.test.ts` has `describe`/`it` CORE024_NN cases that spawn the real scripts (`spawnSync npx tsx orchestrate.ts`, `node worktree-doctor.cjs`) or import pure functions — no Cucumber step-defs, no `runInstaller`
+  - [ ] Before production code exists, the behavior cases fail (Red); structural cases (manifest/skill present) may already pass
+  - [ ] No production code touched in this task
 
-- [ ] **T0-2a: Create hook `tests/e2e/worktree-helpers.ts:setupWorktreeFixture`** -- @feature1–@feature8 — Status: TODO | Est: 20m
-  _Source: DESIGN.md "BDD Test Infrastructure" > "Новые hooks" row 1_
-  _Reuse: `tests/e2e/helpers.ts:setupTempProject` as model_
+- [ ] **T0-2: Create integration harness `tests/e2e/worktree-helpers.ts`** -- @feature1–@feature11 — Status: TODO | Est: 30m
+  _Source: DESIGN.md "BDD Test Infrastructure" > "Новые helpers"_
   **Done When:**
-  - [ ] Export `setupWorktreeFixture` creates isolated git repo in tmp dir + simulates main worktree (clones over F-1 fresh-main fixture)
-  - [ ] Returns `{tmpMainWorktree, tmpHome}` for use by tests
-  - [ ] beforeEach binding usable in CORE024_01..18 scenarios
+  - [ ] Exports `makeTempGitRepo(files, gitignore)` (real `git init` temp repo), `makeTempDir(prefix)`, `isolateHome()` (sets HOME+USERPROFILE, returns `restore()`), `cleanupTempPaths()` (afterEach), `gitAvailable()` (guard)
+  - [ ] No `setupTempProject`/`runInstaller` reuse (installer-based); env-isolation via temp HOME
+  - [ ] Usable across CORE024_* scenarios
 
-- [ ] **T0-2b: Create hook `tests/e2e/worktree-helpers.ts:cleanupWorktreeFixture`** -- @feature1–@feature8 — Status: TODO | Est: 15m
-  _Source: DESIGN.md "BDD Test Infrastructure" > "Новые hooks" row 2_
-  _Reuse: `tests/e2e/helpers.ts:cleanupTempProject` as model_
-  **Done When:**
-  - [ ] Export `cleanupWorktreeFixture` removes all created sibling worktrees via `git worktree remove --force`
-  - [ ] Force-deletes branches `git branch -D feat/<slug>` for accumulated `pushedBranches` and `createdSiblings`
-  - [ ] Removes tmp HOME `~/.dev-pomogator/worktree-setup.env` + `orphan-worktrees.jsonl`
-  - [ ] Continues on cleanup errors (warnings, not hard fails)
-
-- [ ] **T0-2c: Create hook `tests/e2e/worktree-helpers.ts:isolateEnv`** -- @feature4 — Status: TODO | Est: 10m
-  _Source: DESIGN.md "BDD Test Infrastructure" > "Новые hooks" row 3_
-  **Done When:**
-  - [ ] Export `isolateEnv` sets `process.env.HOME = tmpHome` for the test scope
-  - [ ] Restores original HOME in afterEach
-  - [ ] At least 2 `@feature4` scenarios exercise it (env file isolation verified)
-
-- [ ] **T0-3: Create fixtures (fresh-main / gh-mock / tsx-runner-bootstrap-original)** -- @feature1–@feature8 — Status: TODO | Est: 30m
+- [ ] **T0-3: (no static fixtures) build test data on the fly** -- @feature1–@feature11 — Status: TODO | Est: 15m
   _Source: DESIGN.md "BDD Test Infrastructure" > "Test Data & Fixtures"_
   **Done When:**
-  - [ ] `tests/fixtures/worktree-setup/fresh-main/` contains skeleton dev-pomogator repo (package.json + .git/ init)
-  - [ ] `tests/fixtures/worktree-setup/gh-mock/` contains pre-recorded `gh repo view` JSON outputs for synthetic owners
-  - [ ] `tests/fixtures/worktree-setup/tsx-runner-bootstrap-original.cjs` snapshot exists
+  - [ ] Tests construct main repos per-case via `makeTempGitRepo({...}, gitignore)` (no `tests/fixtures/worktree-setup/` directory)
+  - [ ] External commands mocked via PATH-shim temp `bin/` (echo-recording `npm`; no-op `git`/`gh`/`docker`/`python3`) — no `gh-mock` JSON files, no tsx-runner snapshot
+  - [ ] Self-heal regression covered by direct tsx-runner invocation (CORE024_06/07/08), not a fixture snapshot
 
-- [ ] **T0-4: Step definitions + fixtures for @feature9 (env-sync)** -- @feature9 — Status: TODO | Est: 30m
+- [ ] **T0-4: Integration cases + on-the-fly test data for @feature9 (env-sync)** -- @feature9 — Status: TODO | Est: 30m
   _Requirements: [FR-10](FR.md#fr-10-local-envconfig-file-synchronization-into-fresh-worktree), [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-10), `.specs/worktree-setup/worktree-setup.feature` scenarios CORE024_19..23_
   **Done When:**
-  - [ ] Step-def stubs for CORE024_19..23 added to `tests/e2e/worktree-setup.test.ts` (Red = PendingStepException)
+  - [ ] Step-def stubs for CORE024_19..23 added to `tests/e2e/worktree-setup.test.ts` as vitest integration cases (Red before impl)
   - [ ] `tests/fixtures/worktree-setup/env-sync/` contains: main with gitignored `.env.test`, main with custom-named `.env.local`, main with secret-bearing env, main with `.devcontainer/.env`
   - [ ] All 5 @feature9 scenarios FAIL initially (Red)
 
-- [ ] **T0-5: Step definitions + fixtures for @feature10 (build-sync) + @feature11 (devcontainer) + dir-collision + ancestor** -- @feature10 + @feature11 + @feature1 + @feature2 — Status: TODO | Est: 40m
+- [ ] **T0-5: Integration cases + on-the-fly test data for @feature10 (build-sync) + @feature11 (devcontainer) + dir-collision + ancestor** -- @feature10 + @feature11 + @feature1 + @feature2 — Status: TODO | Est: 40m
   _Requirements: [FR-11](FR.md#fr-11-build-and-dependency-synchronization), [FR-12](FR.md#fr-12-devcontainer-integration), [FR-1](FR.md#fr-1-atomic-worktreebranch-creation-from-main), [FR-2](FR.md#fr-2-full-installer-bootstrap-with-global-config-registration), scenarios CORE024_24..33_
   **Done When:**
-  - [ ] Step-def stubs for CORE024_24..33 added to `tests/e2e/worktree-setup.test.ts` (Red = PendingStepException)
+  - [ ] Step-def stubs for CORE024_24..33 added to `tests/e2e/worktree-setup.test.ts` as vitest integration cases (Red before impl)
   - [ ] Fixtures: worktree without `node_modules`/`dist`, worktree with stale `dist`, occupied-target-dir, worktree nested under outer git repo, worktree with `.devcontainer/docker-compose.yml` (mock docker), post-create.sh fixture
   - [ ] All 10 new scenarios FAIL initially (Red)
 

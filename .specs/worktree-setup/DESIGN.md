@@ -223,20 +223,21 @@ Hook/skill paths reference `${CLAUDE_PLUGIN_ROOT}` (portable, must start with `.
 
 | Hook файл | Тип | Тег/Scope | Что делает | Можно переиспользовать? |
 |-----------|-----|-----------|------------|------------------------|
-| `tests/e2e/helpers.ts` | beforeEach (vitest) | global | resets tmp dir, copies fixtures | Да — reuse `setupTempProject()` helper |
-| `tests/e2e/helpers.ts:cleanupTempProject` | afterEach | global | removes tmp dir | Да — reuse |
+| `tests/e2e/helpers.ts:appPath` | helper | global | resolve a path inside the repo | Да — для путей к plugin-скриптам |
 
-> Existing helpers cover generic temp-dir lifecycle; worktree-specific cleanup needs new hook (see below).
+> Canonical mode does NOT reuse `runInstaller`/`setupTempProject` (installer-based — the plugin model has no installer). worktree-setup tests build real temp git repos on the fly via `worktree-helpers.ts` (below) and invoke tools directly via spawnSync.
 
-### Новые hooks
+### Новые helpers (`tests/e2e/worktree-helpers.ts`)
 
-| Hook файл | Тип | Тег/Scope | Что делает | По аналогии с |
-|-----------|-----|-----------|------------|---------------|
-| `tests/e2e/worktree-helpers.ts:setupWorktreeFixture` | beforeEach | `@feature1`–`@feature8` | create isolated git repo + simulate main worktree in tmp dir; clone over fixture | `setupTempProject` |
-| `tests/e2e/worktree-helpers.ts:cleanupWorktreeFixture` | afterEach | same scope | `git worktree remove --force <path>` for any created siblings; `git branch -D feat/<slug>`; rm temp HOME `~/.dev-pomogator/worktree-setup.env` | `cleanupTempProject` |
-| `tests/e2e/worktree-helpers.ts:isolateEnv` | beforeEach | `@feature4` | sets `HOME` env var to tmp dir so skill writes env file to test-controlled location | new pattern |
+| Helper | Тип | Что делает |
+|--------|-----|------------|
+| `makeTempGitRepo(files, gitignore)` | factory | real `git init` temp repo with given files + `.gitignore` (so `git check-ignore`/`git worktree` behave) — replaces static fixtures |
+| `makeTempDir(prefix)` | factory | empty temp dir (target worktree, mock `bin/`, etc.) |
+| `isolateHome()` | per-test | sets `HOME`+`USERPROFILE` to a temp dir so skill writes (env stub, run-log, orphan log) land in test-controlled HOME; returns `restore()` |
+| `cleanupTempPaths()` | afterEach | removes every temp path created in the run |
+| `gitAvailable()` | guard | skip git-dependent tests where git is unavailable |
 
-> Каждый новый hook ОБЯЗАН быть указан в FILE_CHANGES.md (action=create) и в TASKS.md Phase 0.
+> Каждый helper ОБЯЗАН быть указан в FILE_CHANGES.md (action=create) и в TASKS.md Phase 0.
 
 ### Cleanup Strategy
 
@@ -253,17 +254,18 @@ Rollback on error: even if any cleanup step fails (e.g., `gh pr close` rejected 
 
 ### Test Data & Fixtures
 
-| Fixture/Data | Путь | Назначение | Lifecycle |
-|-------------|------|------------|-----------|
-| `worktree-setup-fresh-main` | `tests/fixtures/worktree-setup/fresh-main/` | Skeleton dev-pomogator repo with `package.json` + `.git/` initialized + no installed extensions; serves as main-worktree starting point | per-feature copy to tmp dir |
-| `gh-mock-responses` | `tests/fixtures/worktree-setup/gh-mock/` | Pre-recorded `gh repo view` JSON outputs for synthetic owners/repos used in Layer 2 validation tests | shared across scenarios via env override `GH_MOCK_DIR` |
-| `tsx-runner-bootstrap-pre-patched` | `tests/fixtures/worktree-setup/tsx-runner-bootstrap-original.cjs` | Snapshot of existing file before our patch, for regression testing of the strategy fallback path | shared, read-only |
+No static fixture directory — tests build everything on the fly (more robust, no drift):
+
+| Data | Как создаётся | Назначение |
+|------|---------------|------------|
+| main repo | `makeTempGitRepo({...}, gitignore)` per test | real git repo with exactly the files a scenario needs (`.env*`, `package.json`, `.devcontainer/.env`, nested-under-ancestor) |
+| external commands | PATH-shim temp `bin/` (echo-recording `npm`; no-op `git`/`gh`/`docker`/`python3`/…) | exercise `post-create.sh` and orchestrate without real Docker/gh/installer |
+| isolated HOME | `isolateHome()` | `worktree-setup.env`, run-log and orphan-log land in temp HOME, not the real one |
 
 ### Shared Context / State Management
 
 | Ключ | Тип | Записывается в | Читается в | Назначение |
 |------|-----|----------------|------------|------------|
-| `tmpHome` | string (path) | `isolateEnv` beforeEach | env-resolver tests, doctor tests | tmp HOME dir for HOME-isolated runs |
-| `tmpMainWorktree` | string (path) | `setupWorktreeFixture` beforeEach | git/skill orchestration tests | path to mocked main worktree |
-| `createdSiblings` | string[] (paths) | skill orchestration tests | `cleanupWorktreeFixture` afterEach | accumulated list of sibling worktrees for teardown |
-| `pushedBranches` | string[] (branch names) | PR-flow tests | cleanup hook | branches that were pushed to origin during test, for remote cleanup |
+| `home` | string (path) | `isolateHome()` per test | env-resolver / doctor / orchestrate tests | temp HOME for HOME-isolated runs (returns `restore()`) |
+| `main` | string (path) | `makeTempGitRepo(...)` per test | git/skill orchestration tests | the temp main repo a scenario operates on |
+| tracked temp paths | string[] (paths) | every `makeTempGitRepo`/`makeTempDir` | `cleanupTempPaths()` afterEach | accumulated temp dirs removed at teardown |
