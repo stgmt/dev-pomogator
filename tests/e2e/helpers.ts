@@ -1712,16 +1712,14 @@ export function runShellScript(
 }
 
 /**
- * Get path to specs-generator scripts
+ * Get path to specs-generator scripts.
+ *
+ * Canonical plugin model (v2): tools live in the repo at `tools/<name>/`, not
+ * copied to `.dev-pomogator/tools/` by an installer. Tests invoke them directly
+ * with cwd=APP_DIR — no install step needed.
  */
 export function getSpecsGeneratorPath(script: string): string {
-  return path.join(
-    APP_DIR,
-    '.dev-pomogator',
-    'tools',
-    'specs-generator',
-    script
-  );
+  return path.join(APP_DIR, 'tools', 'specs-generator', script);
 }
 
 /**
