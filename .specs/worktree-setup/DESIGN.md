@@ -236,6 +236,10 @@ Hook/skill paths reference `${CLAUDE_PLUGIN_ROOT}` (portable, must start with `.
 | `isolateHome()` | per-test | sets `HOME`+`USERPROFILE` to a temp dir so skill writes (env stub, run-log, orphan log) land in test-controlled HOME; returns `restore()` |
 | `cleanupTempPaths()` | afterEach | removes every temp path created in the run |
 | `gitAvailable()` | guard | skip git-dependent tests where git is unavailable |
+| `makeMockBin(scripts)` | factory | temp `bin/` of shell shims + a PATH with it prepended — mock `gh`/`docker` (e.g. `gh auth status` fail, `docker compose build` fail) |
+| `writeMockInstaller(main, mode)` | factory | writes a mock `bin/cli.js` that records its cwd into `<HOME>/.dev-pomogator/config.json` — simulates bootstrap registration: `register` (ok) / `none` (unregistered) / `ancestor` (parent path → ancestor-guard) |
+
+> These mocks let the bootstrap (FR-2), gh-auth (FR-5), PR-resolution (FR-4) and devcontainer (FR-12) scenarios run as real integration tests with no real installer/gh/Docker — replacing the earlier `it.skip` placeholders. `makeTempGitRepo` also makes an initial commit so `git worktree add` has a HEAD.
 
 > Каждый helper ОБЯЗАН быть указан в FILE_CHANGES.md (action=create) и в TASKS.md Phase 0.
 

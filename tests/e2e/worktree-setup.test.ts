@@ -20,10 +20,12 @@ import {
   isolateHome,
   cleanupTempPaths,
   gitAvailable,
+  makeMockBin,
+  writeMockInstaller,
 } from './worktree-helpers';
 import { syncEnvFiles, nextDevcontainerPorts } from '../../.claude/skills/worktree-setup/scripts/env-sync';
-import { parseRemoteUrl, ensureEnvFile } from '../../.claude/skills/worktree-setup/scripts/env-resolver';
-import { composeProjectName } from '../../.claude/skills/worktree-setup/scripts/devcontainer';
+import { parseRemoteUrl, ensureEnvFile, resolveRepo } from '../../.claude/skills/worktree-setup/scripts/env-resolver';
+import { composeProjectName, bringUpDevcontainer } from '../../.claude/skills/worktree-setup/scripts/devcontainer';
 
 const SKILL_SCRIPTS = appPath('.claude', 'skills', 'worktree-setup', 'scripts');
 const ORCHESTRATE = path.join(SKILL_SCRIPTS, 'orchestrate.ts');
@@ -365,14 +367,146 @@ describe('CORE024: worktree-setup plugin', () => {
     }
   });
 
-  // ----- External-dependency scenarios (Docker / gh / full installer) -----
-  // These require a fully-installed dev-pomogator main (bin/cli.js), a GitHub
-  // token, or a Docker daemon — not available in the isolated test harness.
-  // The underlying logic is covered above (ancestor-guard via config parse,
-  // PR repo resolution via parseRemoteUrl, devcontainer via composeProjectName).
-  it.skip('CORE024_04/05: installer bootstrap + projectPath registration (needs dev-pomogator main bin/cli.js)', () => {});
-  it.skip('CORE024_29: ancestor-guard refuses nested-worktree bootstrap (needs full installer)', () => {});
-  it.skip('CORE024_10/11/12/13: PR three-layer resolution + gh pr create (needs gh auth)', () => {});
-  it.skip('CORE024_16: session-pilot doctor --quick contract (covered by CORE024_15; consumer is separate branch)', () => {});
-  it.skip('CORE024_31/32: --devcontainer docker compose build/up (needs Docker daemon)', () => {});
+  // ----- @feature2 / FR-2: bootstrap + ancestor-guard (mock installer bin/cli.js) -----
+  const siblingPath = (main: string, slug: string) =>
+    path.join(path.dirname(main), `${path.basename(main)}-${slug}`);
+  function runOrchestrate(main: string, args: string[], home: string) {
+    return spawnSync('npx', ['tsx', ORCHESTRATE, ...args], {
+      cwd: main,
+      encoding: 'utf-8',
+      env: { ...process.env, HOME: home, USERPROFILE: home },
+    });
+  }
+  function cleanupWorktree(main: string, sib: string) {
+    spawnSync('git', ['-C', main, 'worktree', 'remove', '--force', sib]);
+    try { fs.removeSync(sib); } catch { /* best-effort */ }
+  }
+
+  it('CORE024_04: bootstrap registers the new worktree projectPath in global config', () => {
+    if (!gitAvailable()) return;
+    const home = isolateHome();
+    const main = makeTempGitRepo({}, '');
+    writeMockInstaller(main, 'register');
+    const sib = siblingPath(main, 'wtfour');
+    try {
+      const r = runOrchestrate(main, ['wtfour', '--skip-build'], home.home);
+      expect(r.stdout + r.stderr).toMatch(/✓ bootstrapped/);
+      const cfg = JSON.parse(fs.readFileSync(path.join(home.home, '.dev-pomogator', 'config.json'), 'utf-8'));
+      const paths = cfg.installedExtensions.flatMap((e: { projectPaths: string[] }) => e.projectPaths);
+      expect(paths.map((p: string) => path.resolve(p))).toContain(path.resolve(sib));
+    } finally {
+      cleanupWorktree(main, sib);
+      home.restore();
+    }
+  });
+
+  it('CORE024_05: missing projectPath registration surfaces a retry hint', () => {
+    if (!gitAvailable()) return;
+    const home = isolateHome();
+    const main = makeTempGitRepo({}, '');
+    writeMockInstaller(main, 'none');
+    const sib = siblingPath(main, 'wtfive');
+    try {
+      const r = runOrchestrate(main, ['wtfive', '--skip-build'], home.home);
+      expect(r.stdout).toMatch(/✗ bootstrapped/);
+      expect(r.stdout).toMatch(/projectPath not registered\. Retry:/);
+    } finally {
+      cleanupWorktree(main, sib);
+      home.restore();
+    }
+  });
+
+  it('CORE024_29: ancestor-guard refuses a bootstrap that resolved to an ancestor repo', () => {
+    if (!gitAvailable()) return;
+    const home = isolateHome();
+    const main = makeTempGitRepo({}, '');
+    writeMockInstaller(main, 'ancestor');
+    const sib = siblingPath(main, 'wtanc');
+    try {
+      const r = runOrchestrate(main, ['wtanc', '--skip-build'], home.home);
+      expect(r.stdout).toMatch(/✗ bootstrapped/);
+      expect(r.stdout).toMatch(/ancestor repo, not/);
+    } finally {
+      cleanupWorktree(main, sib);
+      home.restore();
+    }
+  });
+
+  // ----- @feature5 / FR-5: gh auth pre-flight (mock gh) -----
+  it('CORE024_13: gh auth failure refuses (exit 3) before any git op', () => {
+    if (!gitAvailable()) return;
+    const home = isolateHome();
+    const main = makeTempGitRepo({}, '');
+    const gh = makeMockBin({ gh: 'if [ "$1" = "auth" ]; then exit 1; fi\nexit 0' });
+    try {
+      const r = spawnSync('npx', ['tsx', ORCHESTRATE, 'wtauth', '--pr=draft'], {
+        cwd: main,
+        encoding: 'utf-8',
+        env: { ...process.env, HOME: home.home, USERPROFILE: home.home, PATH: gh.path },
+      });
+      expect(r.status).toBe(3);
+      expect(r.stdout + r.stderr).toMatch(/gh auth login/);
+      expect(fs.existsSync(siblingPath(main, 'wtauth'))).toBe(false);
+    } finally {
+      home.restore();
+    }
+  });
+
+  // ----- @feature4 / FR-4: env-resolver Layer 2 (git remote → gh repo view, mocked) -----
+  it('CORE024_11: resolveRepo derives owner/repo from git remote and validates via gh', () => {
+    if (!gitAvailable()) return;
+    const home = isolateHome();
+    const main = makeTempGitRepo({}, '');
+    spawnSync('git', ['-C', main, 'remote', 'add', 'origin', 'https://github.com/acme/widget.git']);
+    const gh = makeMockBin({ gh: 'exit 0' }); // gh repo view → success
+    const prevPath = process.env.PATH;
+    process.env.PATH = gh.path;
+    try {
+      const res = resolveRepo(main);
+      expect(res.needsInput).toBe(false);
+      expect(res.owner).toBe('acme');
+      expect(res.repo).toBe('widget');
+      expect(res.source).toBe('git-remote');
+    } finally {
+      process.env.PATH = prevPath;
+      home.restore();
+    }
+  });
+
+  // ----- @feature7 / FR-7: doctor --quick contract surface for session-pilot -----
+  it('CORE024_16: doctor --quick exposes tools_present (session-pilot contract)', () => {
+    if (!gitAvailable()) return;
+    const repo = makeTempGitRepo(
+      { 'package.json': JSON.stringify({ name: 'dev-pomogator' }), '.dev-pomogator/tools/.keep': '' },
+      '',
+    );
+    const r = spawnSync('node', [DOCTOR, '--quick'], { cwd: repo, encoding: 'utf-8' });
+    expect(r.stdout).toMatch(/^tools_present=(true|false)$/m);
+    expect([0, 1]).toContain(r.status);
+  });
+
+  // ----- @feature11 / FR-12a: devcontainer bring-up (mock docker) -----
+  it('CORE024_31: docker failure is best-effort — manual hint, no abort', () => {
+    const wt = makeTempDir('wt-dc-');
+    fs.ensureDirSync(path.join(wt, '.devcontainer'));
+    fs.writeFileSync(path.join(wt, '.devcontainer', 'docker-compose.yml'), 'services: {}\n');
+    const docker = makeMockBin({ docker: 'if [ "$1" = "--version" ]; then exit 0; fi\nexit 1' });
+    const prevPath = process.env.PATH;
+    process.env.PATH = docker.path;
+    try {
+      const res = bringUpDevcontainer(wt);
+      expect(res.ran).toBe(true);
+      expect(res.ok).toBe(false);
+      expect(res.message).toMatch(/docker compose up -d --build/);
+    } finally {
+      process.env.PATH = prevPath;
+    }
+  });
+
+  it('CORE024_32: no compose file → bring-up is a no-op, no docker invoked', () => {
+    const wt = makeTempDir('wt-dc2-');
+    const res = bringUpDevcontainer(wt);
+    expect(res.ran).toBe(false);
+    expect(res.message).toMatch(/skipped devcontainer/);
+  });
 });

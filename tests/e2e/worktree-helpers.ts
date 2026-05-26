@@ -27,6 +27,11 @@ export function makeTempGitRepo(
     fs.ensureDirSync(path.dirname(full));
     fs.writeFileSync(full, content);
   }
+  // Initial commit so HEAD exists (`git worktree add` needs it). Gitignored
+  // files (e.g. .env*) stay as working-tree-only, which is exactly the env-sync scenario.
+  const gitId = ['-c', 'user.email=test@example.com', '-c', 'user.name=test'];
+  spawnSync('git', [...gitId, 'add', '-A'], { cwd: dir });
+  spawnSync('git', [...gitId, 'commit', '--allow-empty', '-q', '-m', 'init'], { cwd: dir });
   return dir;
 }
 
@@ -69,4 +74,45 @@ export function cleanupTempPaths(): void {
 /** True if `git` is usable in this environment. */
 export function gitAvailable(): boolean {
   return spawnSync('git', ['--version'], { encoding: 'utf-8' }).status === 0;
+}
+
+/**
+ * Make a temp `bin/` dir of executable shell shims and return a PATH string with
+ * it prepended. `scripts` maps command name → shell body (after the shebang).
+ * Used to mock `gh`/`docker` for canonical (no-installer) integration tests.
+ */
+export function makeMockBin(scripts: Record<string, string>): { bin: string; path: string } {
+  const bin = makeTempDir('wt-mockbin-');
+  for (const [name, body] of Object.entries(scripts)) {
+    const f = path.join(bin, name);
+    fs.writeFileSync(f, `#!/bin/sh\n${body}\n`);
+    fs.chmodSync(f, 0o755);
+  }
+  return { bin, path: `${bin}${path.delimiter}${process.env.PATH}` };
+}
+
+/**
+ * Write a mock `bin/cli.js` (Node) into a temp main repo, simulating the installer:
+ * it records its cwd (the worktree) into `<HOME>/.dev-pomogator/config.json`.
+ * `mode`: register the worktree (ok), register nothing (unregistered), or register
+ * the parent dir (ancestor mismatch).
+ */
+export function writeMockInstaller(mainRepo: string, mode: 'register' | 'none' | 'ancestor'): void {
+  const reg =
+    mode === 'register'
+      ? 'process.cwd()'
+      : mode === 'ancestor'
+        ? 'require("path").dirname(process.cwd())'
+        : 'null';
+  const body = `#!/usr/bin/env node
+const fs=require('fs'),os=require('os'),path=require('path');
+const dir=path.join(os.homedir(),'.dev-pomogator');
+fs.mkdirSync(dir,{recursive:true});
+const reg=${reg};
+const cfg={installedExtensions:[{name:'mock',projectPaths:reg?[reg]:[]}]};
+fs.writeFileSync(path.join(dir,'config.json'),JSON.stringify(cfg,null,2));
+`;
+  const binDir = path.join(mainRepo, 'bin');
+  fs.ensureDirSync(binDir);
+  fs.writeFileSync(path.join(binDir, 'cli.js'), body);
 }
