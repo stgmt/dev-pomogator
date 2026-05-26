@@ -122,6 +122,21 @@ function runValidateSpecs(workspaceRoot: string): string {
   fs.writeFileSync(tempFile, stdinJson, 'utf-8');
   
   try {
+    // Isolate from the shared form-guards audit log (other test files populate
+    // ~/.dev-pomogator/logs/form-guards.log); otherwise validate-specs prints a
+    // "Form guards (24h)" summary and these expect('') checks fail.
+    try {
+      fs.removeSync(
+        path.join(
+          process.env.HOME || process.env.USERPROFILE || '',
+          '.dev-pomogator',
+          'logs',
+          'form-guards.log',
+        ),
+      );
+    } catch {
+      /* best-effort */
+    }
     // Use npx tsx for cross-platform TypeScript execution
     // Cat temp file to stdin
     const result = execSync(

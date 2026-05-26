@@ -71,7 +71,11 @@ function makeTempSpec(opts: {
   files?: Record<string, string>;
   progressVersion?: number | 'missing' | 'no-version-field';
 }): { specDir: string; cleanup: () => void } {
-  const specDir = mkdtempSync(path.join(tmpdir(), 'spec-v3-test-'));
+  // The form-guards only inspect files under .specs/<slug>/ (extractSpecInfo
+  // short-circuits to allow otherwise), so the fixture must live there.
+  const root = mkdtempSync(path.join(tmpdir(), 'spec-v3-test-'));
+  const specDir = path.join(root, '.specs', 'test-spec');
+  mkdirSync(specDir, { recursive: true });
   if (opts.files) {
     for (const [name, content] of Object.entries(opts.files)) {
       writeFileSync(path.join(specDir, name), content, 'utf-8');
@@ -92,7 +96,7 @@ function makeTempSpec(opts: {
       'utf-8'
     );
   }
-  return { specDir, cleanup: () => rmSync(specDir, { recursive: true, force: true }) };
+  return { specDir, cleanup: () => rmSync(root, { recursive: true, force: true }) };
 }
 
 describe('SPECGEN003: spec-generator-v3 form-guards + skills + audit log', () => {

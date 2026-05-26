@@ -36,6 +36,8 @@
     "test:tui": "python3 -m pytest tests/tui/ -v"
   },
   "dependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
     "chalk": "^5.3.0",
     "cross-spawn": "^7.0.6",
     "fs-extra": "^11.2.0",
