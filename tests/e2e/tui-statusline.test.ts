@@ -10,14 +10,14 @@ import {
   isManagedStatusLineCommand,
   resolveClaudeStatusLine,
 } from '../../src/utils/statusline.js';
-import { VitestAdapter } from '../../extensions/tui-test-runner/tools/tui-test-runner/adapters/vitest_adapter.js';
+import { VitestAdapter } from '../../tools/tui-test-runner/adapters/vitest_adapter.js';
 
 // --- Helpers ---
 
 const STATUS_DIR = '.dev-pomogator/.test-status';
 const DOCKER_STATUS_DIR = '.dev-pomogator/.docker-status';
 const FIXTURES_DIR = 'tests/fixtures/tui-statusline';
-const WRAPPER_SCRIPT = 'extensions/test-statusline/tools/test-statusline/test_runner_wrapper.cjs';
+const WRAPPER_SCRIPT = 'tools/test-statusline/test_runner_wrapper.cjs';
 // Use installed path where _shared/hook-utils.js is available (extensions/ lacks _shared/ at this level)
 const SESSION_HOOK = '.dev-pomogator/tools/test-statusline/statusline_session_start.ts';
 // Read statusLine type from the real extension manifest (not hardcoded)
@@ -694,7 +694,7 @@ describe('PLUGIN011: TUI Statusline', () => {
   // Compact Mode (@feature1) — CompactBar render tests
   // =========================================================================
   describe('Compact Mode (@feature1)', () => {
-    const TUI_DIR = 'extensions/tui-test-runner/tools/tui-test-runner';
+    const TUI_DIR = 'tools/tui-test-runner';
     const COMPACT_RENDER_SCRIPT = `
 import sys, json
 sys.path.insert(0, '${TUI_DIR}')
@@ -894,7 +894,7 @@ else:
   // Statusline Render Removal (@feature5) — verify legacy files removed
   // =========================================================================
   describe('Statusline Render Removal (@feature5)', () => {
-    const TEST_STATUSLINE_DIR = 'extensions/test-statusline/tools/test-statusline';
+    const TEST_STATUSLINE_DIR = 'tools/test-statusline';
 
     // @feature5
     it('PLUGIN011_68: legacy render files removed from extension', async () => {
@@ -938,7 +938,7 @@ else:
       // Run wrapper with a test session and a quick command (echo)
       const session = 'e2etest1';
       const result = spawnSync('node', [
-        appPath('extensions/test-statusline/tools/test-statusline/test_runner_wrapper.cjs'),
+        appPath('tools/test-statusline/test_runner_wrapper.cjs'),
         'echo', 'hello',
       ], {
         encoding: 'utf-8',
@@ -1047,7 +1047,7 @@ else:
         return;
       }
 
-      const tuiDir = appPath('extensions/tui-test-runner/tools/tui-test-runner');
+      const tuiDir = appPath('tools/tui-test-runner');
       const primaryFile = path.join(appPath(), STATUS_DIR, 'status.fallbk.yaml');
 
       // Use different filename in fallback dir to verify dir-scan (not same-name lookup)
@@ -1094,7 +1094,7 @@ print('STATE=' + (status.state.value if status else 'NONE'))
         return;
       }
 
-      const tuiDir = appPath('extensions/tui-test-runner/tools/tui-test-runner');
+      const tuiDir = appPath('tools/tui-test-runner');
       const primaryFile = path.join(testStatusDir, 'status.oldsess.yaml');
 
       const result = spawnSync(python, ['-c', `
@@ -1123,7 +1123,7 @@ print('STATE=' + (status.state.value if status else 'NONE'))
         return;
       }
 
-      const tuiDir = appPath('extensions/tui-test-runner/tools/tui-test-runner');
+      const tuiDir = appPath('tools/tui-test-runner');
       const nonexistentFile = path.join(appPath(), STATUS_DIR, 'status.noexist.yaml');
       const nonexistentFallback = path.join(appPath(), DOCKER_STATUS_DIR);
 

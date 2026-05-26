@@ -14,7 +14,7 @@ import { runAfterEach } from './hooks/after-each.ts';
 import {
   runIngestion,
   type IngestionDeps,
-} from '../../../extensions/onboard-repo/tools/onboard-repo/steps/ingestion.ts';
+} from '../../../tools/onboard-repo/steps/ingestion.ts';
 
 
 function depsWithRepomix(fakeOutput: string): IngestionDeps {

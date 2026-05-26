@@ -4,7 +4,7 @@ import path from 'path';
 import crossSpawn from 'cross-spawn';
 import { appPath, runInstaller, setupCleanState, runTsx } from './helpers';
 
-const GUARD_SCRIPT = 'extensions/reqnroll-ce-guard/tools/reqnroll-ce-guard/ce_slash_guard.ts';
+const GUARD_SCRIPT = 'tools/reqnroll-ce-guard/ce_slash_guard.ts';
 
 interface HookResult {
   status: number;

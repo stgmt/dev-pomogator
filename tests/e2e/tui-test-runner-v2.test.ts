@@ -10,7 +10,7 @@ import { cleanupTuiV2 } from './helpers/tui-v2-cleanup';
 const STATUS_DIR = '.dev-pomogator/.test-status';
 const FIXTURES_DIR = 'tests/fixtures/tui-test-runner';
 const FIXTURE_PROJECT_DIR = path.join(FIXTURES_DIR, 'project');
-const TUI_DIR = 'extensions/tui-test-runner/tools/tui-test-runner/tui';
+const TUI_DIR = 'tools/tui-test-runner/tui';
 const ANALYST_DIR = path.join(TUI_DIR, 'analyst');
 
 // --- Setup / Cleanup ---

@@ -11,7 +11,7 @@ import {
   type TextGateContext,
   type TextGateDeps,
   MAX_ITERATIONS,
-} from '../../../extensions/onboard-repo/tools/onboard-repo/steps/text-gate.ts';
+} from '../../../tools/onboard-repo/steps/text-gate.ts';
 
 
 function makeContext(overrides: Partial<TextGateContext> = {}): TextGateContext {

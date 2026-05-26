@@ -115,7 +115,7 @@ describe('PLUGIN016: Tests Create Update Skill', () => {
   // @feature8
   it('PLUGIN016_07: compliance_check.ts exists and is non-empty', async () => {
     const hookPath = path.resolve(
-      __dirname, '../../extensions/test-quality/tools/test-quality/compliance_check.ts'
+      __dirname, '../../tools/test-quality/compliance_check.ts'
     );
     const stat = await fs.stat(hookPath);
     expect(stat.size, 'compliance_check.ts must be > 1000 bytes').toBeGreaterThan(1000);
@@ -128,7 +128,7 @@ describe('PLUGIN016: Tests Create Update Skill', () => {
   // @feature1
   it('PLUGIN016_08: compliance hook detects pathExists-only pattern', async () => {
     const hookPath = path.resolve(
-      __dirname, '../../extensions/test-quality/tools/test-quality/compliance_check.ts'
+      __dirname, '../../tools/test-quality/compliance_check.ts'
     );
     // Import the scan function to test detection
     // For now: verify the regex pattern exists in hook source
@@ -140,7 +140,7 @@ describe('PLUGIN016: Tests Create Update Skill', () => {
   // @feature2
   it('PLUGIN016_09: compliance hook detects weak toBeDefined pattern', async () => {
     const hookPath = path.resolve(
-      __dirname, '../../extensions/test-quality/tools/test-quality/compliance_check.ts'
+      __dirname, '../../tools/test-quality/compliance_check.ts'
     );
     const content = await fs.readFile(hookPath, 'utf-8');
     expect(content).toContain('weak-assertion');
@@ -150,7 +150,7 @@ describe('PLUGIN016: Tests Create Update Skill', () => {
   // @feature8
   it('PLUGIN016_10: compliance hook has isTestFile with correct patterns', async () => {
     const hookPath = path.resolve(
-      __dirname, '../../extensions/test-quality/tools/test-quality/compliance_check.ts'
+      __dirname, '../../tools/test-quality/compliance_check.ts'
     );
     const content = await fs.readFile(hookPath, 'utf-8');
     expect(content).toContain('test\\.ts');
@@ -161,7 +161,7 @@ describe('PLUGIN016: Tests Create Update Skill', () => {
   // @feature8
   it('PLUGIN016_11: compliance hook has cooldown via marker', async () => {
     const hookPath = path.resolve(
-      __dirname, '../../extensions/test-quality/tools/test-quality/compliance_check.ts'
+      __dirname, '../../tools/test-quality/compliance_check.ts'
     );
     const content = await fs.readFile(hookPath, 'utf-8');
     expect(content).toContain('COOLDOWN_MINUTES');

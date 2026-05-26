@@ -381,7 +381,7 @@ describe('PLUGIN005: Specs Validator Hook', () => {
     // @feature10
     it('PLUGIN005_10: parseTestFile extracts test case IDs from .test.ts', async () => {
       const { parseTestFile } = await import(
-        '../../extensions/specs-workflow/tools/specs-validator/parsers/test-parser'
+        '../../tools/specs-validator/parsers/test-parser'
       );
 
       // Write a fixture test file
@@ -419,10 +419,10 @@ describe('PLUGIN005: Specs Validator Hook', () => {
     // @feature11
     it('PLUGIN005_11: matchTestFeature detects aligned and misaligned IDs', async () => {
       const { matchTestFeature } = await import(
-        '../../extensions/specs-workflow/tools/specs-validator/matcher'
+        '../../tools/specs-validator/matcher'
       );
       const { parseTestFile } = await import(
-        '../../extensions/specs-workflow/tools/specs-validator/parsers/test-parser'
+        '../../tools/specs-validator/parsers/test-parser'
       );
 
       const fixtureDir = appPath('.test-fixtures-align');

@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs-extra';
 import { appPath, runInstaller, setupCleanState, runTsx } from './helpers';
 
-const GUARD_SCRIPT = 'extensions/tui-test-runner/tools/tui-test-runner/build_guard.ts';
+const GUARD_SCRIPT = 'tools/tui-test-runner/build_guard.ts';
 
 function runBuildGuard(
   command: string,

@@ -15,7 +15,7 @@ import {
   checkPhaseAllowed,
   readProgressState,
   type ProgressState,
-} from '../../extensions/specs-workflow/tools/specs-validator/phase-constants';
+} from '../../tools/specs-validator/phase-constants';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -325,7 +325,7 @@ describe('readProgressState', () => {
 import { runTsx, appPath } from './helpers';
 
 describe('Integration: phase-gate.ts', () => {
-  const PHASE_GATE_SCRIPT = 'extensions/specs-workflow/tools/specs-validator/phase-gate.ts';
+  const PHASE_GATE_SCRIPT = 'tools/specs-validator/phase-gate.ts';
 
   function runPhaseGate(stdin: Record<string, unknown>) {
     return runTsx(PHASE_GATE_SCRIPT, { input: stdin });

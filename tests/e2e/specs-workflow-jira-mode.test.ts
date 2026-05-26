@@ -10,7 +10,7 @@ import {
   checkJiraDrift,
   runAllChecks,
   type JiraLiveState,
-} from '../../extensions/specs-workflow/tools/specs-validator/audit-checks';
+} from '../../tools/specs-validator/audit-checks';
 
 const SPEC_SLUG = 'jira-mode-test';
 const SPEC_DIR = appPath('.specs', SPEC_SLUG);

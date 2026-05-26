@@ -4,7 +4,7 @@ import path from 'path';
 import { execSync } from 'child_process';
 import { runTsx, appPath, homePath } from './helpers';
 
-const AUTO_COMMIT_TOOL_PATH = 'extensions/auto-commit/tools/auto-commit';
+const AUTO_COMMIT_TOOL_PATH = 'tools/auto-commit';
 
 /**
  * Create a temporary git repo for testing

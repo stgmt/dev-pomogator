@@ -5,8 +5,8 @@ import os from 'os';
 import { spawnSync } from 'child_process';
 import { appPath } from './helpers';
 
-const MARK_HOOK = 'extensions/test-statusline/tools/bg-task-guard/mark-bg-task.ts';
-const STOP_HOOK = 'extensions/test-statusline/tools/bg-task-guard/stop-guard.sh';
+const MARK_HOOK = 'tools/bg-task-guard/mark-bg-task.ts';
+const STOP_HOOK = 'tools/bg-task-guard/stop-guard.sh';
 const MARKER_FILE = '.dev-pomogator/.bg-task-active';
 
 // Temp directory for test isolation — all markers/YAML/session.env go here, not in real .dev-pomogator/

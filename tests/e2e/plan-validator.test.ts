@@ -11,9 +11,9 @@ import { spawnSync } from 'child_process';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { validatePlan, validatePlanPhased, REQUIRED_SECTIONS, findHeadingIndex, type ValidationError } from '../../extensions/plan-pomogator/tools/plan-pomogator/validate-plan';
-import { readTemplateContent, checkDuplicatePlan, scorePromptRelevance, resolvePlanFile, formatPromptsFromFile, loadUserPrompts } from '../../extensions/plan-pomogator/tools/plan-pomogator/plan-gate';
-import { PROMPT_FILE_PREFIX } from '../../extensions/plan-pomogator/tools/plan-pomogator/prompt-store';
+import { validatePlan, validatePlanPhased, REQUIRED_SECTIONS, findHeadingIndex, type ValidationError } from '../../tools/plan-pomogator/validate-plan';
+import { readTemplateContent, checkDuplicatePlan, scorePromptRelevance, resolvePlanFile, formatPromptsFromFile, loadUserPrompts } from '../../tools/plan-pomogator/plan-gate';
+import { PROMPT_FILE_PREFIX } from '../../tools/plan-pomogator/prompt-store';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -21,7 +21,7 @@ import { PROMPT_FILE_PREFIX } from '../../extensions/plan-pomogator/tools/plan-p
 
 const FIXTURE_PATH = path.resolve(
   __dirname,
-  '../../extensions/plan-pomogator/tools/plan-pomogator/fixtures/valid.plan.md',
+  '../../tools/plan-pomogator/fixtures/valid.plan.md',
 );
 
 function getValidPlan(): string {
@@ -628,7 +628,7 @@ describe('PLUGIN007_16 Phase gating: validatePlan backward compatibility', () =>
 describe('PLUGIN007_17 resolvePlanFile', () => {
   it('PLUGIN007_17_01: returns planFilePath when file exists', () => {
     // Use a known existing file as test
-    const existingFile = path.resolve(__dirname, '../../extensions/plan-pomogator/tools/plan-pomogator/plan-gate.ts');
+    const existingFile = path.resolve(__dirname, '../../tools/plan-pomogator/plan-gate.ts');
     const result = resolvePlanFile({ planFilePath: existingFile });
     expect(result).toBe(existingFile);
   });
@@ -647,7 +647,7 @@ describe('PLUGIN007_17 resolvePlanFile', () => {
   it('PLUGIN007_17_04: handles path with native separators', () => {
     // On Windows, Claude Code sends backslash paths; on Linux, forward slashes.
     // resolvePlanFile passes the path to fs.accessSync which handles both natively.
-    const existingFile = path.resolve(__dirname, '../../extensions/plan-pomogator/tools/plan-pomogator/plan-gate.ts');
+    const existingFile = path.resolve(__dirname, '../../tools/plan-pomogator/plan-gate.ts');
     const result = resolvePlanFile({ planFilePath: existingFile });
     expect(result).toBe(existingFile);
   });
@@ -956,7 +956,7 @@ describe('PLUGIN007_42: Installer normalizes array matcher to pipe string', () =
 describe('PLUGIN007_43: prompt-capture & plan-gate session isolation', () => {
   const captureScript = path.resolve(
     __dirname,
-    '../../extensions/plan-pomogator/tools/plan-pomogator/prompt-capture.ts',
+    '../../tools/plan-pomogator/prompt-capture.ts',
   );
 
   let tmpHome: string;
@@ -1173,7 +1173,7 @@ describe('PLUGIN015: Spec-Test Sync Enforcement', () => {
 describe('CLI Integration: validate-plan.ts', () => {
   it('returns exit 0 for valid plan fixture (integration)', () => {
     const result = require('child_process').spawnSync(
-      'npx', ['tsx', 'extensions/plan-pomogator/tools/plan-pomogator/validate-plan.ts', FIXTURE_PATH],
+      'npx', ['tsx', 'tools/plan-pomogator/validate-plan.ts', FIXTURE_PATH],
       { encoding: 'utf-8', cwd: process.env.APP_DIR || process.cwd(), timeout: 30000 },
     );
     expect(result.status).toBe(0);
@@ -1183,7 +1183,7 @@ describe('CLI Integration: validate-plan.ts', () => {
     const brokenPlan = '# No sections at all\nJust text.';
     const tmpFile = writeTempPlan(brokenPlan);
     const result = require('child_process').spawnSync(
-      'npx', ['tsx', 'extensions/plan-pomogator/tools/plan-pomogator/validate-plan.ts', tmpFile],
+      'npx', ['tsx', 'tools/plan-pomogator/validate-plan.ts', tmpFile],
       { encoding: 'utf-8', cwd: process.env.APP_DIR || process.cwd(), timeout: 30000 },
     );
     expect(result.status).not.toBe(0);

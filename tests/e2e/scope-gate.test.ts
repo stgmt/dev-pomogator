@@ -15,7 +15,7 @@ import { createHash } from 'crypto';
  * 1:1 with .feature scenarios VSGF001_NN per @featureN tags.
  */
 
-const HOOK_PATH = path.resolve('extensions/scope-gate/tools/scope-gate/scope-gate-guard.ts');
+const HOOK_PATH = path.resolve('tools/scope-gate/scope-gate-guard.ts');
 const FIXTURES_DIR = path.resolve('tests/fixtures/scope-gate');
 
 let tmpRepo: string;

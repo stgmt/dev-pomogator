@@ -2,12 +2,12 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import fs from 'fs-extra';
 import { appPath, runTsx } from './helpers';
 
-const POSTINSTALL_SCRIPT = 'extensions/context-menu/tools/context-menu/postinstall.ts';
+const POSTINSTALL_SCRIPT = 'tools/context-menu/postinstall.ts';
 
 // Import real module once (uses import guard — no side effects)
-let postinstall: typeof import('../../extensions/context-menu/tools/context-menu/postinstall');
+let postinstall: typeof import('../../tools/context-menu/postinstall');
 beforeAll(async () => {
-  postinstall = await import('../../extensions/context-menu/tools/context-menu/postinstall');
+  postinstall = await import('../../tools/context-menu/postinstall');
 });
 
 describe('CTXMENU001: Context Menu Setup', () => {

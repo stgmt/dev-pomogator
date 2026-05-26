@@ -27,7 +27,7 @@ import {
 // Test Configuration
 // ============================================================================
 
-const SCRIPTS_DIR = 'extensions/specs-workflow/tools/specs-generator';
+const SCRIPTS_DIR = 'tools/specs-generator';
 
 // ============================================================================
 // Test Suite

@@ -18,8 +18,8 @@ import {
   buildReconPrompts,
   runParallelRecon,
   type ReconPrompts,
-} from '../../../extensions/onboard-repo/tools/onboard-repo/steps/parallel-recon.ts';
-import type { ParallelReconOutput } from '../../../extensions/onboard-repo/tools/onboard-repo/lib/types.ts';
+} from '../../../tools/onboard-repo/steps/parallel-recon.ts';
+import type { ParallelReconOutput } from '../../../tools/onboard-repo/lib/types.ts';
 
 
 describe('Phase 3: Parallel recon (@feature7)', () => {

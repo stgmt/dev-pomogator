@@ -18,7 +18,7 @@ import {
   driftExceedsThreshold,
   isGitRepo,
   getHeadSha,
-} from '../../../extensions/onboard-repo/tools/onboard-repo/lib/git-sha-cache.ts';
+} from '../../../tools/onboard-repo/lib/git-sha-cache.ts';
 
 
 describe('Phase 1: Cache invalidation (@feature4)', () => {

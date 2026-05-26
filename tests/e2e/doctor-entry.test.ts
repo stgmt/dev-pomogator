@@ -7,7 +7,7 @@ import { buildTempHome } from '../fixtures/pomogator-doctor/temp-home-builder.ts
 
 const HOOK_PATH = path.resolve(
   process.cwd(),
-  'extensions/pomogator-doctor/tools/pomogator-doctor/doctor-hook.ts',
+  'tools/pomogator-doctor/doctor-hook.ts',
 );
 
 const NODE_MAJOR = parseInt(process.versions.node.split('.')[0], 10);

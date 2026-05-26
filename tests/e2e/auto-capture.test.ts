@@ -7,7 +7,7 @@ import { runTsx, appPath } from './helpers';
 // Helpers
 // ---------------------------------------------------------------------------
 
-const CAPTURE_TOOL_PATH = 'extensions/suggest-rules/tools/learnings-capture';
+const CAPTURE_TOOL_PATH = 'tools/learnings-capture';
 const QUEUE_PATH = '.dev-pomogator/learnings-queue.json';
 const LOCK_PATH = '.dev-pomogator/learnings-queue.lock';
 const FIXTURES_DIR = 'tests/fixtures/learnings-capture';

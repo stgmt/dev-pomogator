@@ -9,11 +9,11 @@ import * as path from "path";
 import * as fs from "fs/promises";
 
 // Import validator components
-import { loadConfig } from "../../extensions/specs-workflow/tools/steps-validator/config";
-import { detectLanguage } from "../../extensions/specs-workflow/tools/steps-validator/detector";
-import { getParser } from "../../extensions/specs-workflow/tools/steps-validator/parsers";
-import { analyzeSteps } from "../../extensions/specs-workflow/tools/steps-validator/analyzer";
-import type { ValidationResult } from "../../extensions/specs-workflow/tools/steps-validator/types";
+import { loadConfig } from "../../tools/steps-validator/config";
+import { detectLanguage } from "../../tools/steps-validator/detector";
+import { getParser } from "../../tools/steps-validator/parsers";
+import { analyzeSteps } from "../../tools/steps-validator/analyzer";
+import type { ValidationResult } from "../../tools/steps-validator/types";
 
 const FIXTURES_DIR = path.join(__dirname, "..", "fixtures", "steps-validator");
 
@@ -379,7 +379,7 @@ custom_assertions:
 import { spawnSync } from "child_process";
 
 describe("Integration: validate-steps.ts CLI", () => {
-  const SCRIPT_PATH = "extensions/specs-workflow/tools/steps-validator/validate-steps.ts";
+  const SCRIPT_PATH = "tools/steps-validator/validate-steps.ts";
   const appDir = process.env.APP_DIR || process.cwd();
 
   it("runs validate-steps.ts on C# fixture and exits 0 (integration)", () => {

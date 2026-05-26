@@ -10,36 +10,36 @@ import * as path from 'node:path';
 import * as fsExtra from 'fs-extra';
 import { runBeforeEach, type BeforeEachContext } from './hooks/before-each.ts';
 import { runAfterEach } from './hooks/after-each.ts';
-import { getHeadSha } from '../../../extensions/onboard-repo/tools/onboard-repo/lib/git-sha-cache.ts';
-import { mergeRecon } from '../../../extensions/onboard-repo/tools/onboard-repo/lib/subagent-merge.ts';
+import { getHeadSha } from '../../../tools/onboard-repo/lib/git-sha-cache.ts';
+import { mergeRecon } from '../../../tools/onboard-repo/lib/subagent-merge.ts';
 import {
   composeOnboardingJson,
   finalize,
   type ComposeContext,
-} from '../../../extensions/onboard-repo/tools/onboard-repo/steps/finalize.ts';
+} from '../../../tools/onboard-repo/steps/finalize.ts';
 import {
   SchemaViolationError,
   validateOnboardingJson,
   validateOrThrow,
-} from '../../../extensions/onboard-repo/tools/onboard-repo/lib/schema-validator.ts';
+} from '../../../tools/onboard-repo/lib/schema-validator.ts';
 import {
   compilePreToolUseBlock,
   evaluateBashCommand,
   MANAGED_MARKER,
   mergeHookIntoSettingsLocal,
-} from '../../../extensions/onboard-repo/tools/onboard-repo/renderers/compile-hook.ts';
+} from '../../../tools/onboard-repo/renderers/compile-hook.ts';
 import {
   MANAGED_MARKER_START,
   MANAGED_MARKER_END,
   renderOnboardingContext,
   renderOnboardingMd,
-} from '../../../extensions/onboard-repo/tools/onboard-repo/renderers/render-rule.ts';
+} from '../../../tools/onboard-repo/renderers/render-rule.ts';
 import type {
   CommandBlock,
   ParallelReconOutput,
   Phase0State,
   BaselineTestResult,
-} from '../../../extensions/onboard-repo/tools/onboard-repo/lib/types.ts';
+} from '../../../tools/onboard-repo/lib/types.ts';
 
 
 function fakeRecon(): ParallelReconOutput {

@@ -17,7 +17,7 @@ import {
   BaselineAbortError,
   type BaselineTestsDeps,
   type RunTestsInvocationResult,
-} from '../../../extensions/onboard-repo/tools/onboard-repo/steps/baseline-tests.ts';
+} from '../../../tools/onboard-repo/steps/baseline-tests.ts';
 
 
 function depsReturning(result: RunTestsInvocationResult): BaselineTestsDeps {
