@@ -7,9 +7,11 @@
 | Path | Action | Reason |
 |------|--------|--------|
 | `.claude/skills/worktree-setup/SKILL.md` | create | Skill entry point with frontmatter (allowed-tools, description, triggers), workflow steps, env-file resolution instructions — [FR-1](FR.md#fr-1-atomic-worktreebranch-creation-from-main), [FR-4](FR.md#fr-4-pr-creation-via-three-layer-config-resolution), [FR-8](FR.md#fr-8-invocation-from-sibling-worktree--warn--offer-continue) |
-| `.claude/skills/worktree-setup/scripts/orchestrate.ts` | create | Top-level orchestration: validate slug → pre-flights → git ops → bootstrap → doctor → optional PR — implements [FR-1](FR.md), [FR-2](FR.md), [FR-5](FR.md), [FR-6](FR.md), [FR-8](FR.md) |
+| `.claude/skills/worktree-setup/scripts/orchestrate.ts` | create | Top-level orchestration: validate slug → pre-flights (branch + dir collision) → git ops → bootstrap (+ ancestor-guard) → env-sync → build/deps-sync → doctor → optional PR → run-log — implements [FR-1](FR.md), [FR-2](FR.md), [FR-5](FR.md), [FR-6](FR.md), [FR-8](FR.md), [FR-11](FR.md#fr-11-build-and-dependency-synchronization) |
+| `.claude/commands/worktree.md` | create | Thin slash-command wrapper `/worktree <slug> [--pr=draft] [--skip-build]` invoking the worktree-setup skill (equivalent to phrase triggers) — [FR-1](FR.md), [FR-11](FR.md#fr-11-build-and-dependency-synchronization) |
 | `.claude/skills/worktree-setup/scripts/env-resolver.ts` | create | Three-layer config resolution (env → investigate → ask) + env file create-on-absent stub — [FR-4](FR.md#fr-4-pr-creation-via-three-layer-config-resolution) |
 | `.claude/skills/worktree-setup/scripts/pr-creator.ts` | create | Git push + `gh pr create` invocation with resolved owner/repo — [FR-4](FR.md) |
+| `.claude/skills/worktree-setup/scripts/env-sync.ts` | create | Copy gitignored root `.env*` (minus `.env.example`) into the new worktree, regenerate `.devcontainer/.env` with unique ports, warn on secret-bearing files, skip existing targets — [FR-10](FR.md#fr-10-local-envconfig-file-synchronization-into-fresh-worktree) |
 | `extensions/worktree-setup/extension.json` | create | Installer manifest registering global artifacts (worktree-doctor.cjs) + skill (SKILL.md + scripts) as managed files with SHA-256 tracking |
 | `extensions/worktree-setup/tools/worktree-setup/worktree-doctor.cjs` | create | Standalone CJS source-of-truth; installer copies to `~/.dev-pomogator/scripts/worktree-doctor.cjs` — [FR-6](FR.md#fr-6-worktree-doctorcjs-standalone-diagnostic) |
 | `src/scripts/tsx-runner.js` | edit | Insert orphan-detect block immediately after `resolveScriptPath()` (current line 107): if `args[0].startsWith('.dev-pomogator/') && !fs.existsSync(scriptPath)` → append JSONL + dedup-checked stderr hint → `process.exit(0)` — [FR-3](FR.md#fr-3-self-heal-hint-for-orphan-worktrees-via-tsx-runner-js) |
@@ -18,7 +20,10 @@
 | `tests/fixtures/worktree-setup/fresh-main/.gitkeep` | create | Placeholder for fresh-main fixture skeleton directory (real files added in test scaffold step) |
 | `tests/fixtures/worktree-setup/gh-mock/README.md` | create | Documentation of gh-mock-responses fixture layout (pre-recorded `gh repo view` JSON outputs) |
 | `tests/fixtures/worktree-setup/tsx-runner-bootstrap-original.cjs` | create | Snapshot of pre-patch tsx-runner-bootstrap.cjs for regression testing of strategy fallback |
-| `.specs/worktree-setup/worktree-setup.feature` | edit | BDD scenarios @feature1–@feature8 mapped to 8 FRs (will fill in Phase 2 step 14) |
+| `tests/fixtures/worktree-setup/env-sync/` | create | Fixtures for @feature9 env-sync: repos containing `.env.test`, a custom-named `.env.local`, a secret-bearing env, and a `.devcontainer/.env` — [FR-10](FR.md#fr-10-local-envconfig-file-synchronization-into-fresh-worktree) |
+| `.claude/skills/worktree-setup/scripts/devcontainer.ts` | create | FR-12 `--devcontainer`: `docker compose build && up` for new worktree with unique project name/ports (reuse launch-worktree.ps1 port logic) — [FR-12](FR.md#fr-12-devcontainer-integration) |
+| `extensions/devcontainer/tools/devcontainer/templates/scripts/post-create.sh` | edit | FR-12 add idempotent `npm install` + `npm run build` after existing git/MCP setup so Reopen-in-Container yields a built env — [FR-12](FR.md#fr-12-devcontainer-integration) |
+| `.specs/worktree-setup/worktree-setup.feature` | edit | BDD scenarios @feature1–@feature11 mapped to FR-1..FR-8 + FR-10 + FR-11 + FR-12 (CORE024_01..33) |
 | `CLAUDE.md` | edit | Add `worktree-setup` skill row to extension list per `claude-md-glossary` rule |
 | `.gitignore` | edit | Add `~/.dev-pomogator/worktree-setup.env` and `~/.dev-pomogator/orphan-worktrees.jsonl` to gitignore if they leak into a repo (defensive; they live in HOME so normally outside repo) |
 

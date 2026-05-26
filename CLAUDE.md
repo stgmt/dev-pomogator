@@ -19,6 +19,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `/reflect` | Просмотр и управление очередью автозахваченных сигналов |
 | `/simplify` | Стоковый Claude Code review (код + спеки + тесты через правило simplify-extended, auto-trigger на Stop) |
 | `/pomogator-doctor` | Диагностика окружения: 17 проверок в 🟢🟡🔴 группах (canonical skill, не deprecated CLI) |
+| `/worktree <slug> [--pr=draft] [--skip-build] [--devcontainer]` | Создать готовый git worktree: ветка + bootstrap + env-sync + build + doctor + опц. draft PR / devcontainer (skill `worktree-setup`, спека `.specs/worktree-setup/`) |
 
 ## Distribution (v2.0 canonical)
 

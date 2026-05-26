@@ -1,0 +1,35 @@
+{
+  "name": "worktree-setup",
+  "version": "0.1.0",
+  "description": "One-command git worktree creation for parallel work: atomic branch+worktree, dev-pomogator bootstrap, lost env-file sync, npm install+build, standalone doctor, optional draft PR, optional devcontainer bring-up. Self-heal hint for orphan worktrees via tsx-runner. Skill /worktree.",
+  "platforms": [
+    "claude"
+  ],
+  "category": "workflow",
+  "skills": {
+    "worktree-setup": ".claude/skills/worktree-setup"
+  },
+  "skillFiles": {
+    "worktree-setup": [
+      ".claude/skills/worktree-setup/SKILL.md",
+      ".claude/skills/worktree-setup/scripts/orchestrate.ts",
+      ".claude/skills/worktree-setup/scripts/env-sync.ts",
+      ".claude/skills/worktree-setup/scripts/env-resolver.ts",
+      ".claude/skills/worktree-setup/scripts/pr-creator.ts",
+      ".claude/skills/worktree-setup/scripts/devcontainer.ts"
+    ]
+  },
+  "tools": {
+    "worktree-setup": "tools/worktree-setup"
+  },
+  "toolFiles": {
+    "worktree-setup": [
+      ".dev-pomogator/tools/worktree-setup/worktree-doctor.cjs"
+    ]
+  },
+  "commandFiles": {
+    "claude": [
+      ".claude/commands/worktree.md"
+    ]
+  }
+}

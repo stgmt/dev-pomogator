@@ -10,12 +10,18 @@
 - [FR-6: worktree-doctor.cjs standalone diagnostic](FR.md#fr-6-worktree-doctorcjs-standalone-diagnostic)
 - [FR-7: session-pilot integration contract](FR.md#fr-7-session-pilot-integration-contract)
 - [FR-8: Invocation-from-sibling warn flow](FR.md#fr-8-invocation-from-sibling-worktree--warn--offer-continue)
+- [FR-10: Local env/config file synchronization](FR.md#fr-10-local-envconfig-file-synchronization-into-fresh-worktree)
+- [FR-11: Build and dependency synchronization](FR.md#fr-11-build-and-dependency-synchronization)
+- [FR-12: DevContainer integration](FR.md#fr-12-devcontainer-integration)
 
 ## Компоненты
 
 - `Skill (worktree-setup)` — orchestration слой, читает USER intent (slug + flags), вызывает git/installer/doctor sequentially, прокладывает three-layer config resolution для PR flow. Живёт в `.claude/skills/worktree-setup/` (committed в dev-pomogator repo).
 - `worktree-doctor.cjs` — standalone CJS диагностика, 6 checks с stable exit-code mapping, `--quick` mode для session-pilot hot-path. Установлен в `~/.dev-pomogator/scripts/` через installer (managed artifact с SHA-256 hash tracking).
 - `tsx-runner.js` (extended) — existing script-resolution layer в global hook chain, к нему добавляется orphan-detect block (FR-3) сразу после `resolveScriptPath()` (line 107). Patch минимальный: один `fs.existsSync` + dedup-check + JSONL append + одна stderr line. (Note: `tsx-runner-bootstrap.cjs` — тонкий loader, только `require`-ит `tsx-runner.js`; патч НЕ туда — там нет strategy fallback и нет access к scriptPath.)
+- `env-sync` (`.claude/skills/worktree-setup/scripts/env-sync.ts`) — копирует gitignored root `.env*` (минус `.env.example`) из main в новый worktree, регенерит `.devcontainer/.env` с уникальными портами, предупреждает о секрет-содержащих файлах, пропускает существующие цели. Вызывается из `orchestrate.ts` между FR-2 bootstrap и FR-6 doctor (FR-10).
+- `build-sync` (шаг в `orchestrate.ts`) — после env-sync делает `npm install` (если нет `node_modules`) и `npm run build` (если нет/устарел `dist`) в worktree, опт-аут `--skip-build`, best-effort при сбое (FR-11). Без него worktree не собирается и `build_guard` режет тесты.
+- `devcontainer` (`.claude/skills/worktree-setup/scripts/devcontainer.ts`) — при флаге `--devcontainer` делает `docker compose build && up -d` в `<worktree>/.devcontainer` с уникальным project-name и портами из `.devcontainer/.env` (reuse `Get-NextPorts`/`Invoke-RebuildWorktree` логики launch-worktree.ps1), best-effort. Контейнерная половина FR-12 — правка `post-create.sh` (npm install + build на create).
 - `worktree-setup.env` — user-scoped persistent config в `~/.dev-pomogator/`, создаётся skill-ом со stub-template, заполняется после успешной резолюции owner/repo.
 - `session-pilot integration` (контракт only; реализация в отдельной ветке) — indexer/handlers/frontend changes в `extensions/session-pilot/tools/session-pilot/` версии 0.4.0.
 
@@ -34,6 +40,9 @@
 - `.claude/skills/worktree-setup/scripts/orchestrate.ts` (NEW)
 - `.claude/skills/worktree-setup/scripts/env-resolver.ts` (NEW)
 - `.claude/skills/worktree-setup/scripts/pr-creator.ts` (NEW)
+- `.claude/skills/worktree-setup/scripts/env-sync.ts` (NEW — FR-10 local env/config sync)
+- `.claude/skills/worktree-setup/scripts/devcontainer.ts` (NEW — FR-12 `--devcontainer` docker compose build/up)
+- `extensions/devcontainer/tools/devcontainer/templates/scripts/post-create.sh` (EDIT — FR-12 npm install + build на container create)
 - `extensions/worktree-setup/extension.json` (NEW — manifest для installer-managed артефактов)
 - `~/.dev-pomogator/scripts/worktree-doctor.cjs` (NEW, installed by installer)
 - `~/.dev-pomogator/scripts/tsx-runner.js` (EDIT — insert orphan-detect block after `resolveScriptPath()` line 107)
@@ -52,6 +61,9 @@
 6. **Branch pre-flight** — `git show-ref --verify --quiet refs/heads/feat/<slug>` → if exists, UC-4 idempotency
 7. **Atomic worktree creation** — `git -C <main> worktree add -b feat/<slug> <main-parent>/<main-basename>-<slug>`
 8. **Bootstrap** — `node <main>/bin/cli.js --claude --all` with cwd=new-worktree
+8b. **Env-sync** (FR-10) — copy gitignored root `.env*` (minus `.env.example`) from main; regenerate `.devcontainer/.env` with unique ports; warn on secret-bearing files; skip existing targets
+8c. **Build/deps-sync** (FR-11) — `npm install` if `node_modules` absent, `npm run build` if `dist` absent/stale; `--skip-build` opt-out; best-effort (failure → hint + continue)
+8d. **DevContainer up** (FR-12, only if `--devcontainer`) — `docker compose build && up -d` in `<worktree>/.devcontainer` with unique project name + ports; best-effort (docker failure → hint + continue)
 9. **Doctor verification** — `node ~/.dev-pomogator/scripts/worktree-doctor.cjs` (full mode) in new worktree
 10. **PR flow** (if `--pr=draft`) — three-layer resolution (env → investigate → ask) → push + `gh pr create`
 11. **Final summary** — print new worktree path, branch, doctor verdict, PR URL (if any), suggested `wt -d <path> claude` command
@@ -62,7 +74,8 @@
 
 - Trigger phrases (RU): "создай worktree для X", "новый worktree X", "сделай PR + worktree для X"
 - Trigger phrases (EN): "create worktree for X", "new worktree X", "PR + worktree X"
-- Slot extraction: `slug` from phrase context; `--pr=draft` from "+ PR" / "with PR" / "+ pr"
+- Slash command (optional surface): `/worktree <slug> [--pr=draft] [--skip-build]` — thin command wrapper (`.claude/commands/worktree.md`) that invokes the same skill; phrase-trigger and command are equivalent entry points
+- Slot extraction: `slug` from phrase context; `--pr=draft` from "+ PR" / "with PR" / "+ pr"; `--skip-build` from explicit flag or "without build" / "skip build"
 - Output to user: text summary block (no JSON to user; JSON only in test harness via spawnSync)
 
 ### worktree-doctor.cjs CLI
@@ -134,6 +147,48 @@
 **Alternatives considered:**
 - Encrypt env file — rejected because complexity outweighs threat (no secrets stored).
 - World-readable (0644) — rejected because future may add user-specific paths (e.g., login hints) that shouldn't leak cross-user.
+
+### Decision: Copy lost local env files (not symlink), regenerate `.devcontainer/.env`
+
+**Rationale:** `git worktree add` checks out only committed files, so gitignored local config (`.env.test`, etc.) is absent in a fresh worktree and tests/tooling silently misbehave. Env-sync (FR-10) restores them. Copy (not symlink) is chosen because on Windows file/dir symlinks require elevated privileges or developer mode (`New-Item -ItemType SymbolicLink` fails for non-admins), whereas a plain byte copy always works and isolates worktree-local edits from main. User explicitly chose copy over symlink.
+
+**Trade-off:** A copied secret-bearing file (e.g. `.env.test` with an API key) is duplicated on disk, and edits to one copy do not propagate to the other (drift). Mitigated by NFR-S6 secret warning and by the fact that copies remain gitignored (no commit-exposure) and live on the same machine/user.
+
+**Alternatives considered:**
+- Symlink/junction main→worktree — rejected: Windows file symlinks need privileges; a junction is directory-only; and a shared file means a worktree edit silently mutates main's config.
+- Leave env files absent — rejected: the E2E suite needs `.env.test`; a fresh worktree would fail tests with a confusing "missing key" error.
+- Copy `.devcontainer/.env` verbatim — rejected: it carries main's `HOST_NOVNC_PORT`/`HOST_VNC_PORT`; duplicate ports collide on `docker compose up`. Hence regenerate-with-unique-ports instead (mirrors `New-WorktreeEnv` in `launch-worktree.ps1`).
+
+### Decision: Auto-run `npm install` + `npm run build` by default (opt-out via `--skip-build`)
+
+**Rationale:** The FR-2 installer copies tools and runs `npm install --ignore-scripts` for tool dependencies only — it does NOT install the worktree's root deps or build, and explicitly warns "run npm run build first" (`src/installer/shared.ts:276,330,407`). A fresh worktree therefore has no root `node_modules`/`dist`, so `npm test`/`npm run build` fail and `build_guard` blocks all tests. To deliver a worktree that actually works for development, the skill runs install+build by default (FR-11). Time is excluded from the perf budget (NFR-P5), same as installer.
+
+**Trade-off:** `npm install` + `npm run build` can take tens of seconds to minutes, making the skill non-instant. Mitigated by `--skip-build` for users who only need the worktree checked out (e.g. docs-only edits), and by best-effort semantics (failure prints retry + continues, NFR-R3) so a build error never strands the worktree.
+
+**Alternatives considered:**
+- Report-only (print the commands, don't run) — rejected as default: leaves the worktree non-functional and shifts a mandatory manual step onto the user; offered instead via `--skip-build`.
+- Always run regardless of state — rejected: re-building an already-built worktree wastes minutes; the `node_modules`-absent / `dist`-stale guards keep it idempotent.
+
+### Decision: Coexist with `launch-worktree.ps1` rather than supersede it
+
+**Rationale:** `extensions/devcontainer/tools/devcontainer/launch-worktree.ps1` already creates worktrees (`New-Worktree`), but for a different audience: the DevContainer/Docker workflow with per-worktree noVNC/VNC port isolation and `Reopen in Container`. The `worktree-setup` skill targets local dev — bootstrap dev-pomogator artifacts, env/build sync, optional draft PR. They serve distinct workflows, so both remain. The skill REUSES `launch-worktree.ps1`'s port logic (`New-WorktreeEnv`/`Get-NextPorts`) for `.devcontainer/.env` regeneration (FR-10) rather than reimplementing it.
+
+**Trade-off:** Two entry points that both run `git worktree add` could confuse a maintainer into deduping them. Documented here to prevent that: the overlap is intentional (different audiences), and the shared piece (port allocation) is already reused, not duplicated.
+
+**Alternatives considered:**
+- Skill supersedes/deletes `launch-worktree.ps1` — rejected: would drop the Docker/VNC multi-container workflow (merge analysis, conflict matrix, health checks) that the skill does not cover.
+- Reimplement port logic inside the skill — rejected: duplicates `New-WorktreeEnv`/`Get-NextPorts`; reuse keeps a single source of truth for port allocation.
+
+### Decision: DevContainer integration on BOTH sides (skill brings up + container builds on create)
+
+**Rationale:** A worktree devcontainer is useless two ways unless both are addressed. Host-side: nothing starts the container after worktree creation, so the skill gains an opt-in `--devcontainer` flag that runs `docker compose build && up -d` with the unique ports env-sync already wrote. Container-side: the existing `post-create.sh` configures git/zsh/MCP but never installs/builds the project, so a reopened container has no `node_modules`/`dist` — we add idempotent `npm install` + `npm run build` to `post-create.sh`. Together they give a one-command, ready-to-work containerized worktree.
+
+**Trade-off:** Two surfaces to maintain (skill TS + container bash), and the skill path requires Docker present. Mitigated by best-effort semantics on the skill side (docker failure → hint + continue, NFR-R3) and idempotency guards on the container side (skip install/build when already done). `--devcontainer` is opt-in, so non-Docker users are unaffected.
+
+**Alternatives considered:**
+- Only skill-side build/up (no post-create change) — rejected: "Reopen in Container" (without the skill) would still yield an unbuilt container.
+- Only post-create build (no `--devcontainer` flag) — rejected: nothing would start the container automatically after `/worktree`; user must manually reopen.
+- Auto-run devcontainer always (no flag) — rejected: forces Docker on every worktree, slow and invasive; opt-in flag respects the host-only workflow.
 
 ## BDD Test Infrastructure (ОБЯЗАТЕЛЬНО)
 

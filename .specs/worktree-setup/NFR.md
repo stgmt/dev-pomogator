@@ -6,6 +6,8 @@
 - **NFR-P2:** `worktree-doctor.cjs --quick` SHALL complete in <50ms per invocation. Justified by FR-7 budget: session-pilot indexer calls doctor N times (once per worktree); at 5 worktrees this is 250ms total which fits within dashboard SWR cycle.
 - **NFR-P3:** tsx-runner.js self-heal block (FR-3, inserted after `resolveScriptPath` line 107) SHALL add ≤5ms overhead per hook invocation in the happy path (target file exists → no JSONL write, no stderr emission). Implementation: single `fs.existsSync` check before strategy iteration.
 - **NFR-P4:** Installer time (`node bin/cli.js --claude --all`) is out of NFR scope — bounded by installer's own NFR (this spec does not regress it).
+- **NFR-P5:** Build/deps-sync time (FR-11 `npm install` + `npm run build`) is out of the 5-second end-to-end budget (NFR-P1), same exclusion rationale as installer time (NFR-P4): these are inherently multi-second-to-minute operations on a fresh worktree. Skill SHALL print a progress line before each so the wait is not silent.
+- **NFR-P6:** DevContainer bring-up time (FR-12 `docker compose build && up`) is out of the performance budget (image build can take minutes), same exclusion as installer/build. Only invoked under explicit `--devcontainer`; skill SHALL print a progress line before invoking Docker.
 
 ## Security
 
@@ -14,6 +16,7 @@
 - **NFR-S3:** `/api/bootstrap` endpoint (session-pilot FR-7) MUST validate `worktree_path` against the indexer's whitelist (reuse handlers.py `_send_json(self, {"ok": False, "error": "worktree_path not in current index whitelist"}, 403)` pattern). Rejects any path not currently enumerated by indexer.
 - **NFR-S4:** Skill MUST NOT auto-create the GitHub repo if `gh repo view {owner}/{repo}` returns 404. User-facing hint suggests `gh repo create` but skill never invokes it (avoids accidental public-exposure of private code).
 - **NFR-S5:** No hardcoded GitHub owner/repo, no hardcoded paths to maintainer-specific worktrees. All identifiers derived from runtime context (env file, git remote, gh api, cwd). Enforced via pre-commit grep: pattern `stgmt/dev-pomogator` MUST NOT appear in `.claude/skills/worktree-setup/` or `~/.dev-pomogator/scripts/worktree-doctor.cjs` (excluded: documentation referring to the pattern itself as a detection target).
+- **NFR-S6:** When env-sync (FR-10) copies a local env file whose contents match a secret pattern (`password`/`secret`/`api[_-]?key`/`token`/private-key header), skill SHALL emit exactly one stderr warning naming the file and SHALL NOT print or log the secret value. Copies stay local (same machine/user) and remain gitignored in the worktree (it shares main's `.gitignore`), so env-sync creates no new commit-exposure surface. `.devcontainer/.env` is always regenerated with worktree-unique ports, never byte-copied, so main's ports are never duplicated into the worktree.
 
 ## Reliability
 
@@ -22,6 +25,10 @@
 - **NFR-R3:** Bootstrap failure (FR-2 `bin/cli.js` non-zero exit) SHALL NOT auto-delete the half-created worktree. Skill prints retry command and preserves the partial state so user can debug. Justified by `updater-managed-cleanup` rule: never delete user-touched state without explicit consent.
 - **NFR-R4:** Doctor exit-code mapping SHALL be stable across versions (OK=0, TOOLS_MISSING=1, PARTIAL_INSTALL=2, NOT_APPLICABLE=3). Any new failure mode adds new exit codes; existing codes are never repurposed. Enforced by integration test asserting exit-code-to-status mapping.
 - **NFR-R5:** Self-heal hint deduplication (FR-3) MUST survive process restarts within session — keyed on `CLAUDE_SESSION_ID` env var (which the harness sets per session, stable across hook invocations). Fallback to PID of parent claude process if env var absent.
+- **NFR-R6:** Env-sync (FR-10) SHALL be best-effort: a per-file failure (permission denied, file locked, source unreadable) SHALL emit a stderr warning and continue with remaining candidates, never aborting worktree creation. Re-running env-sync on an existing worktree SHALL skip files already present (no overwrite), keeping the operation idempotent per NFR-R2.
+- **NFR-R7:** Each skill invocation SHALL append exactly one JSON line summarizing the run to `~/.dev-pomogator/logs/worktree-setup.jsonl` (see SCHEMA "skill run log"): slug, worktree path, per-step status, outcome, duration. Append-only, atomic O_APPEND; failure to write the log SHALL NOT fail the run (observability is non-critical).
+- **NFR-R8:** Port allocation for `.devcontainer/.env` regeneration (FR-10) SHALL be collision-safe under concurrency: when two skill invocations create worktrees simultaneously, each SHALL re-scan existing worktree `.devcontainer/.env` ports (via the `New-WorktreeEnv`/`Get-NextPorts` logic in `launch-worktree.ps1`) immediately before claiming, so two new worktrees do not receive the same `HOST_NOVNC_PORT`/`HOST_VNC_PORT` pair. A residual race is acceptable degraded behavior (Docker reports the bind conflict); the requirement is best-effort re-scan, not a global lock.
+- **NFR-R9:** DevContainer bring-up (FR-12 `--devcontainer`) SHALL be best-effort: IF Docker is unavailable or `docker compose build`/`up` exits non-zero THEN skill SHALL print the failure plus the manual command and CONTINUE without aborting worktree creation (consistent with NFR-R3). The container-side `post-create.sh` install/build SHALL be idempotent (skip when already done) so repeated container creation does not redo work.
 
 ## Usability
 
@@ -30,3 +37,4 @@
 - **NFR-U3:** Skill output SHALL include final summary block with: new worktree path, branch name, doctor verdict, PR URL (if `--pr`), and suggested `wt -d <path> claude` command for opening claude in the new worktree (Windows Terminal CLI — user copies and runs manually, satisfying user's preference against session auto-migration per Q3).
 - **NFR-U4:** AskUserQuestion calls (FR-4 Layer 3, FR-8 invocation-from-sibling) SHALL populate the suggested-default field with the best derived value, never blank. Justifies the user clicking "OK on default" 90%+ of the time.
 - **NFR-U5:** Self-heal stderr hint (FR-3) SHALL be at most one line — no multi-line banners. Prevents clutter when many hooks fire in sequence.
+- **NFR-U6:** The final summary block (NFR-U3) SHALL report a per-step status line for each major step — created / bootstrapped / env-synced / built / doctor / PR — each marked ✓ done, ⚠ skipped, or ✗ failed. On a partial failure the user SHALL be able to see exactly which step failed and the retry command for that step, rather than a single opaque error.

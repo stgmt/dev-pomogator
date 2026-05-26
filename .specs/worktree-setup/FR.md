@@ -2,7 +2,7 @@
 
 ## FR-1: Atomic worktree+branch creation from main
 
-Skill SHALL create a new git worktree at a sibling path `<main-parent>/<main-basename>-<slug>` on a new local branch `feat/<slug>` via a single `git worktree add -b feat/<slug> <path>` invocation (atomic — branch and worktree created together off current HEAD of main). Slug validation: kebab-case, length 1–50, regex `^[a-z][a-z0-9-]*[a-z0-9]$`. Pre-flight: if branch `feat/<slug>` already exists (verified via `git show-ref --verify --quiet refs/heads/feat/<slug>` exit 0), skill SHALL offer reuse path via UC-4 idempotency flow instead of failing.
+Skill SHALL create a new git worktree at a sibling path `<main-parent>/<main-basename>-<slug>` on a new local branch `feat/<slug>` via a single `git worktree add -b feat/<slug> <path>` invocation (atomic — branch and worktree created together off current HEAD of main). Slug validation: kebab-case, length 1–50, regex `^[a-z][a-z0-9-]*[a-z0-9]$`. Pre-flight: if branch `feat/<slug>` already exists (verified via `git show-ref --verify --quiet refs/heads/feat/<slug>` exit 0), skill SHALL offer reuse path via UC-4 idempotency flow instead of failing. Additionally, skill SHALL pre-flight the target DIRECTORY: if `<main-parent>/<main-basename>-<slug>` already exists on disk AND is NOT a registered git worktree (not present in `git worktree list --porcelain`), skill SHALL refuse with error `Target path <path> already exists and is not a worktree — remove it or choose a different slug` and exit code 2, rather than letting `git worktree add` fail with an opaque message. An existing path that IS a registered worktree routes to the UC-4 reuse flow.
 
 **Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1)
 **Use Cases:** [UC-1](USE_CASES.md#uc-1-happy-path), [UC-3](USE_CASES.md#uc-3-skill-invoked-from-inside-a-sibling-worktree-not-main--warn--offer-continue), [UC-4](USE_CASES.md#uc-4-idempotent-re-run-on-existing-worktree-path)
@@ -11,6 +11,8 @@ Skill SHALL create a new git worktree at a sibling path `<main-parent>/<main-bas
 ## FR-2: Full installer bootstrap with global config registration
 
 After worktree creation, skill SHALL invoke `node <main>/bin/cli.js --claude --all` with cwd set to the new worktree path. `<main>` MUST be resolved at runtime (never hardcoded) — derived from `git worktree list --porcelain` first entry. After installer completes, skill SHALL verify that `~/.dev-pomogator/config.json` `installedExtensions[].projectPaths[]` contains the absolute path of the new worktree (proof that registration occurred). If verification fails, skill SHALL print "Bootstrap incomplete — installer did not register projectPath" with the exact retry command.
+
+The installer MUST target the NEW worktree, not an ancestor repository. `installClaude()` resolves its target via `findRepoRoot()` (`src/utils/repo.ts:13-36`), which returns the TOPMOST git root walking up the tree (comment: "install into the outermost project"). For a sibling worktree (`<main-parent>/<main-basename>-<slug>`) whose parent is not itself a git repo, this resolves to the worktree correctly; but if the worktree lands nested under another git repository, `findRepoRoot()` would resolve to that ancestor and the installer would populate the wrong tree. Therefore skill SHALL verify the registered projectPath equals the new worktree path exactly; IF the registered path is an ANCESTOR of (or otherwise not equal to) the worktree, skill SHALL refuse with `Installer resolved to <resolved-root>, not the worktree <worktree-path> — worktree is nested under another git repo; create it as a sibling of main` rather than silently bootstrapping the wrong root.
 
 **Связанные AC:** [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2)
 **Use Case:** [UC-1](USE_CASES.md#uc-1-happy-path), [UC-6](USE_CASES.md#uc-6-bootstrap-fails-midway--doctor-reports-specific-failure)
@@ -90,6 +92,42 @@ When skill detects current CWD is not the main worktree path (compared via `git 
 **Связанные AC:** [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8)
 **Use Case:** [UC-3](USE_CASES.md#uc-3-skill-invoked-from-inside-a-sibling-worktree-not-main--warn--offer-continue)
 **User Stories:** US-1 (edge case AC)
+
+## FR-10: Local env/config file synchronization into fresh worktree
+
+After FR-2 bootstrap completes and before FR-6 doctor verification, skill SHALL copy local gitignored env/config files from the main worktree into the new worktree, because `git worktree add` checks out only committed files and therefore omits the test/runtime config the worktree needs. The candidate set SHALL be derived at runtime (never a hardcoded filename list): enumerate repo-root files matching include-globs `.env` and `.env.*` that are gitignored (verified via `git -C <main> check-ignore <file>` exit 0), MINUS an exclude-list — `.env.example` (committed template) and `.devcontainer/.env` (handled separately below). For each remaining candidate, skill SHALL copy it to the same relative path in the new worktree via a byte-identical file copy (not symlink — Windows file/dir symlinks require elevated privileges; copy works without them and isolates worktree-local edits from main).
+
+Skill SHALL NOT byte-copy `.devcontainer/.env`. Instead, IF main contains `.devcontainer/.env` THEN skill SHALL regenerate it in the new worktree with worktree-unique ports, mirroring `New-WorktreeEnv` in `extensions/devcontainer/tools/devcontainer/launch-worktree.ps1` (`HOST_NOVNC_PORT`/`HOST_VNC_PORT` set to the next free pair, `HOST_REPOS_PATH` to main's parent). Copying it verbatim would duplicate main's ports and collide on `docker compose up`.
+
+IF a copied file's contents match a secret pattern (`password`, `secret`, `api[_-]?key`, `token`, `BEGIN (RSA |EC |DSA )?PRIVATE KEY` — same set as `Test-SensitiveContent` in `launch-worktree.ps1`) THEN skill SHALL emit exactly one stderr WARNING line naming the file and SHALL NOT print or log the secret value itself; the copy still proceeds (user chose the copy strategy). IF a target env file already exists in the new worktree THEN skill SHALL skip it (no overwrite), preserving worktree-local edits and keeping re-runs idempotent. Env-sync is best-effort: a per-file failure (permission denied, file locked) SHALL emit a stderr warning and continue, never aborting worktree creation. Each action SHALL be recorded as one env-sync audit JSONL line (see SCHEMA) with `action` ∈ `copied|regenerated|skipped|warned`.
+
+**Связанные AC:** [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-10)
+**Use Case:** [UC-1](USE_CASES.md#uc-1-happy-path)
+**User Stories:** US-1
+
+## FR-11: Build and dependency synchronization
+
+After FR-10 env-sync and before FR-6 doctor verification, skill SHALL ensure the new worktree is buildable, because `git worktree add` carries no gitignored build artifacts and the FR-2 installer only runs `npm install --ignore-scripts` for tool dependencies (it does NOT run the worktree's root install or build — it warns "run npm run build first", verified `src/installer/shared.ts:276,330,407`). Concretely: IF the worktree root `package.json` exists AND `node_modules/` is absent THEN skill SHALL run `npm install` in the worktree; IF `dist/` is absent OR stale (any `src/` file newer than the newest `dist/` file) THEN skill SHALL run `npm run build`. Without these, the worktree fails `npm test`/`npm run build` and the `build_guard` hook (rule `centralized-test-runner`) blocks all tests on a missing/stale `dist/`.
+
+IF the user passes `--skip-build` THEN skill SHALL skip both `npm install` and `npm run build`, and SHALL print the exact manual commands (`cd <worktree> && npm install && npm run build`) so the user can run them later. Build/deps-sync is best-effort: IF `npm install` or `npm run build` exits non-zero THEN skill SHALL print the failure and the retry command and CONTINUE (no rollback of the worktree, consistent with NFR-R3) — the worktree is preserved for debugging. The time spent in `npm install`/`npm run build` is excluded from the skill performance budget (NFR-P5), same as installer time.
+
+**Связанные AC:** [AC-11](ACCEPTANCE_CRITERIA.md#ac-11-fr-11)
+**Use Case:** [UC-1](USE_CASES.md#uc-1-happy-path), [UC-6](USE_CASES.md#uc-6-bootstrap-fails-midway--doctor-reports-specific-failure)
+**User Stories:** US-1, US-4
+
+## FR-12: DevContainer integration
+
+The skill SHALL integrate with the `devcontainer` extension in two complementary ways.
+
+**(a) Skill brings the container up (`--devcontainer` flag).** WHEN the user passes `--devcontainer` AND the new worktree contains `.devcontainer/docker-compose.yml` THEN, after build/deps-sync (FR-11) and before doctor (FR-6), skill SHALL run `docker compose build` then `docker compose up -d` with cwd set to `<worktree>/.devcontainer`, using a compose project name derived from the worktree directory (sanitized lowercase, `[^a-z0-9]` stripped — same convention as `launch-worktree.ps1:162`) and the worktree-unique ports already written to `.devcontainer/.env` by FR-10 env-sync (which mirrors `New-WorktreeEnv`/`Get-NextPorts`). This is best-effort: IF Docker is unavailable or `docker compose` exits non-zero THEN skill SHALL print the failure plus the manual command (`cd <worktree>/.devcontainer && docker compose up -d --build`) and CONTINUE without aborting (NFR-R3). Without `--devcontainer`, skill SHALL NOT invoke Docker.
+
+**(b) The container builds the project on create (`post-create.sh`).** The devcontainer lifecycle currently configures git/zsh/MCP but does NOT install or build the project, so a reopened container has no root `node_modules`/`dist`. The devcontainer template `extensions/devcontainer/tools/devcontainer/templates/scripts/post-create.sh` SHALL, after its existing setup, run `npm install` then `npm run build` when a root `package.json` exists, idempotently (skip install if `node_modules` present and lockfile unchanged; skip build if `dist` fresh). This makes "Reopen in Container" yield a ready-to-work environment and mirrors the host-side FR-11 contract inside the container.
+
+Both halves keep the existing `launch-worktree.ps1` workflow intact (coexistence — see DESIGN); the skill reuses its port allocation and rebuild logic rather than duplicating it.
+
+**Связанные AC:** [AC-12](ACCEPTANCE_CRITERIA.md#ac-12-fr-12)
+**Use Case:** [UC-1](USE_CASES.md#uc-1-happy-path)
+**User Stories:** US-1
 
 ## FR-9: Out of Scope (explicit)
 
