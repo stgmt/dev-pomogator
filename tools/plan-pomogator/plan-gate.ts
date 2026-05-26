@@ -140,16 +140,24 @@ const TEMPLATE_MAX_CHARS = 8192;
  */
 export function readTemplateContent(cwd?: string): string {
   if (!cwd) return '';
-  try {
-    const templatePath = path.join(cwd, '.dev-pomogator/tools/plan-pomogator/template.md');
-    const content = fs.readFileSync(templatePath, 'utf-8');
-    const trimmed = content.length > TEMPLATE_MAX_CHARS
-      ? content.substring(0, TEMPLATE_MAX_CHARS) + '\n...(truncated)'
-      : content;
-    return `\nШаблон правильного формата:\n${trimmed}\n`;
-  } catch {
-    return '';
+  // Canonical plugin v2 ships the template at tools/plan-pomogator/template.md;
+  // fall back to the legacy installed location for backward compatibility.
+  const candidates = [
+    path.join(cwd, 'tools/plan-pomogator/template.md'),
+    path.join(cwd, '.dev-pomogator/tools/plan-pomogator/template.md'),
+  ];
+  for (const templatePath of candidates) {
+    try {
+      const content = fs.readFileSync(templatePath, 'utf-8');
+      const trimmed = content.length > TEMPLATE_MAX_CHARS
+        ? content.substring(0, TEMPLATE_MAX_CHARS) + '\n...(truncated)'
+        : content;
+      return `\nШаблон правильного формата:\n${trimmed}\n`;
+    } catch {
+      // try next candidate
+    }
   }
+  return '';
 }
 
 const STOPWORDS = new Set([
