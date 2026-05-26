@@ -147,7 +147,7 @@ class Handler(BaseHTTPRequestHandler):
             self._serve_vendor(url.path)
         elif url.path == "/api/health":
             import sys as _sys
-            _send_json(self, {"status": "ok", "version": "0.4.0",
+            _send_json(self, {"status": "ok", "version": "0.5.0",
                               "platform": _sys.platform,
                               "uptime_sec": int(time.time() - server._START_TIME)})
         elif url.path == "/api/index":

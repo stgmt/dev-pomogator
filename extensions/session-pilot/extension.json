@@ -1,6 +1,6 @@
 {
   "name": "session-pilot",
-  "version": "0.3.0",
+  "version": "0.5.0",
   "description": "Windows-native multi-repo worktree dashboard with Claude session indicators (LIVE/idle/none), one-click claude --resume launch into a new Windows Terminal window, multi-key shift+click sort, virtual-scrolled table, full-message modal, parallel JSONL scan with SWR cache. Single port 8083. v0.3+ — no Zellij, no WSL.",
   "platforms": ["claude"],
   "category": "developer-experience",
@@ -17,7 +17,8 @@
       ".claude/rules/session-pilot/action-button-injection.md",
       ".claude/rules/session-pilot/claude-projects-encoding.md",
       ".claude/rules/session-pilot/perf-budget.md",
-      ".claude/rules/session-pilot/mcp-chrome-only.md"
+      ".claude/rules/session-pilot/mcp-chrome-only.md",
+      ".claude/rules/session-pilot/single-instance-launcher.md"
     ]
   },
   "tools": {
@@ -27,6 +28,8 @@
     "session-pilot": [
       ".dev-pomogator/tools/session-pilot/server.py",
       ".dev-pomogator/tools/session-pilot/start-server.ps1",
+      ".dev-pomogator/tools/session-pilot/sp-common.ps1",
+      ".dev-pomogator/tools/session-pilot/create-launcher.ps1",
       ".dev-pomogator/tools/session-pilot/claude_paths.py",
       ".dev-pomogator/tools/session-pilot/frontend.py",
       ".dev-pomogator/tools/session-pilot/diagnose.py",
@@ -44,6 +47,7 @@
       ".dev-pomogator/tools/session-pilot/tests/test_frontend_smoke.py",
       ".dev-pomogator/tools/session-pilot/tests/test_frontend_e2e.py",
       ".dev-pomogator/tools/session-pilot/tests/test_jsonl_indexer.py",
+      ".dev-pomogator/tools/session-pilot/tests/test_launcher.py",
       ".dev-pomogator/tools/session-pilot/tests/test_new_endpoints.py",
       ".dev-pomogator/tools/session-pilot/tests/test_terminal_launcher.py",
       ".dev-pomogator/tools/session-pilot/tests/mutation_target/setup.cfg",

@@ -101,6 +101,20 @@ Single-port dashboard (8083, default `127.0.0.1` bind). Каждый ▶ Resume 
 
 **Removed in v0.3 (still removed in v0.4)**: KDL layout files (Zellij-specific), `_PTY_MASTERS` parking, `zellij_util.py`. v0.4 adds `terminal_launcher.py` per-OS handlers but does NOT resurrect Zellij.
 
+### KD-13: Single-instance dashboard launcher + standalone-app identity (v0.5, Windows)
+
+**Problem (v0.4)**: the launcher ran `msedge --app=URL` on every click with no "is it already open?" check, so users accumulated 10-20 dashboard windows. The window also had no identity of its own — browser icon, grouped under Edge on the taskbar.
+
+**Decision**: keep the `--app` window (KD-3 rationale holds — no PWA manifest, no install step) but front it with a **single-instance launcher** and give it a **distinct, pinnable taskbar identity**. All config + helpers centralized in `tools/session-pilot/sp-common.ps1` (dot-sourced by `launch.ps1`, `create-launcher.ps1`, `start-server.ps1`).
+
+- **Single-instance** (`Get-SpDashboardProcess`): the dashboard always runs in a dedicated `--user-data-dir`, so any `msedge`/`chrome` process whose command line contains that profile dir AND owns a window IS the dashboard. `launch.ps1` focuses it (`ShowWindow(SW_RESTORE)` + `SetForegroundWindow`) instead of spawning a 2nd. The match predicate `Test-SpProfileMatch` is extracted as a pure function for deterministic testing.
+- **Icon** (`Ensure-SpIcon`): a `session-pilot.ico` is drawn at install via `System.Drawing` into `%LOCALAPPDATA%\session-pilot\` — self-contained, no binary asset committed.
+- **AppUserModelID** (`Set-SpShortcutAppId`): `ClaudeCode.SessionPilot` stamped on the `.lnk` via `IShellLink`+`IPropertyStore` (PKEY_AppUserModel_ID). PROPVARIANT(VT_LPWSTR) is built manually rather than via `InitPropVariantFromString` (that propsys.dll export is not resolvable by name on all Windows builds — confirmed on the dev host). Failure is non-fatal (icon + single-instance still deliver the core fix).
+
+**Latency note**: the two Add-Type C# blocks in sp-common (window P/Invoke + shortcut COM interop) are compiled **lazily** (only when their functions are first called), so `start-server.ps1` — a SessionStart hook with a <200ms budget — can dot-source sp-common for constants without paying the compile cost.
+
+**Trade-off / best-effort**: perfect consolidation of the pinned `.lnk` button and the running Edge `--app` window into a single taskbar button is not guaranteed — Chromium derives the window's own AppUserModelID. Matching the `.lnk` AUMID is best-effort; the user accepted this over a PWA install (which would give OS-native single-instance but requires a one-time manual "Install" click, since Edge cannot silently install an arbitrary URL as a PWA from the CLI).
+
 ### KD-4: SWR cache — server ETag + client localStorage with mtime versioning
 
 **Inspired by**: Vercel's [SWR](https://swr.vercel.app/) + HTTP ETag/If-None-Match.

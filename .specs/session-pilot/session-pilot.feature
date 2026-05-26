@@ -485,6 +485,41 @@ Feature: SP001_session_pilot_dashboard
     And SHALL exit 0
     And the new artifact SHALL reflect current $WT_DASHBOARD_PORT env override if set
 
+  # @feature27 @windows
+  Scenario: SP047_launcher_first_click_opens_one_window
+    Given sys.platform is "win32"
+    And no browser process references the dedicated session-pilot --user-data-dir profile
+    When user runs "pwsh -File extensions/session-pilot/launch.ps1"
+    Then the server SHALL be ensured up (started if /api/health does not respond)
+    And exactly one Edge/Chrome "--app" window SHALL open against the dashboard URL
+    And that window SHALL use "--user-data-dir=%LOCALAPPDATA%\session-pilot\browser-profile"
+
+  # @feature27 @windows
+  Scenario: SP048_launcher_single_instance_focuses_existing
+    Given a dashboard window is already open (a browser process references the dedicated profile and owns a window)
+    When user runs "pwsh -File extensions/session-pilot/launch.ps1" again
+    Then launch.ps1 SHALL restore and foreground the existing window
+    And SHALL print "already open — focusing existing window"
+    And SHALL NOT spawn a second --app window/process group
+    And the count of dashboard windows (MainWindowHandle != 0) SHALL remain 1
+
+  # @feature23 @windows
+  Scenario: SP049_shortcut_has_custom_icon_and_appusermodelid
+    Given sys.platform is "win32"
+    When user runs "pwsh -File extensions/session-pilot/tools/session-pilot/create-launcher.ps1"
+    Then the .lnk TargetPath SHALL be a version-stable PowerShell exe
+    And the .lnk Arguments SHALL contain "-File" with "launch.ps1"
+    And the .lnk IconLocation SHALL point to "%LOCALAPPDATA%\session-pilot\session-pilot.ico"
+    And the .lnk System.AppUserModel.ID property SHALL equal "ClaudeCode.SessionPilot"
+    And the icon file SHALL exist and be non-empty
+
+  # @feature27 @windows
+  Scenario: SP050_profile_match_predicate_drives_single_instance
+    Given the dedicated profile dir $SpProfileDir
+    When Test-SpProfileMatch is called with a browser command line
+    Then it SHALL return true when the command line contains the profile dir (case-insensitive)
+    And it SHALL return false when the command line lacks the profile dir
+
   # @feature22
   Scenario: SP024_bootstrap_skill_orphan_worktree
     Given cwd is /home/user/repos/dev-pomogator-feat-x

@@ -4,6 +4,18 @@ All notable changes to this **spec** are documented here. For implementation cha
 
 ## [Unreleased]
 
+### Added — v0.5 single-instance standalone launcher (Windows, 2026-05-27)
+
+Make the dashboard behave like a real standalone Windows app: one window, distinct pinnable taskbar identity, click-to-open/focus. Chosen approach: scripted single-instance launcher (no PWA install).
+
+- **FR-27 NEW** — Single-instance dashboard window. Before v0.5 every launcher click ran `msedge --app=URL` unconditionally → 10-20 windows. Now `launch.ps1` detects an already-open dashboard (any `msedge`/`chrome` process whose command line references the dedicated `--user-data-dir` profile AND owns a window) and focuses it (`ShowWindow(SW_RESTORE)`+`SetForegroundWindow`) instead of spawning a 2nd. Pure match predicate `Test-SpProfileMatch` extracted for deterministic testing.
+- **FR-23 EXTEND** — Windows launcher now carries standalone-app identity: `.lnk` targets hidden `pwsh -File launch.ps1` (so single-instance applies on every click), with a generated `session-pilot.ico` (System.Drawing) and AppUserModelID `ClaudeCode.SessionPilot` (`IShellLink`+`IPropertyStore`, manual PROPVARIANT to avoid the non-resolvable propsys.dll `InitPropVariantFromString` export).
+- **Refactor** — all launcher config + helpers centralized in `tools/session-pilot/sp-common.ps1`, dot-sourced by `launch.ps1` / `create-launcher.ps1` / `start-server.ps1` (removes 8083/profile duplication). Add-Type C# compiled lazily so the SessionStart hook keeps its <200ms budget. Server now `ThreadingHTTPServer` (concurrent requests no longer refuse during a slow process scan). extension.json bumped 0.4.0 → 0.5.0; launcher scripts added to toolFiles; `/api/health` version synced.
+- **NFR-Use-6 NEW** — at most one dashboard window per host; distinct pinnable taskbar identity.
+- **Tests** — `tests/test_launcher.py` (SP_LAUNCHER_01..05): app-id constant, dedicated profile dir, profile-match predicate, icon generation, live AppUserModelID set→read roundtrip.
+- **Verified live**: 3 sequential `launch.ps1` runs → exactly 1 "Worktree Dashboard" window; shortcut shows custom icon + AUMID read-back `ClaudeCode.SessionPilot`.
+- **Trade-off**: perfect taskbar-button consolidation of the pinned `.lnk` and the Edge `--app` window is best-effort (Chromium owns the window identity); accepted over a one-time-manual-install PWA. macOS/Linux launchers unchanged this iteration.
+
 ### Changed — v0.4 de-pivot back to cross-platform (2026-05-12)
 
 Спека снова cross-platform — Windows + Linux + macOS — после v0.3 Windows-only pivot. **Возврат к идее v0.2 но БЕЗ Zellij/WSL bridge**: каждая ОС использует native terminal stack (Windows: wt/pwsh/cmd; Linux: gnome-terminal/konsole/alacritty/kitty/wezterm/xfce4-terminal/tilix/terminator/xterm + setsid headless fallback; macOS: Terminal.app/iTerm2 via osascript). Python stdlib dashboard unmodified — изменился только `terminal_launcher.py` (OS-dispatched) и `claude_paths.py` (per-OS canonical encoding).

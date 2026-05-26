@@ -16,7 +16,11 @@
 
 $ErrorActionPreference = 'Stop'
 
-$stateDir = Join-Path $env:LOCALAPPDATA 'session-pilot'
+# Shared constants ($SpStateDir, $SpPort, …). Cheap: Add-Type is lazy in sp-common,
+# so dot-sourcing here does NOT compile C# — keeps the SessionStart latency budget.
+. (Join-Path $PSScriptRoot 'sp-common.ps1')
+
+$stateDir = $SpStateDir
 if (-not (Test-Path $stateDir)) { New-Item -ItemType Directory -Path $stateDir | Out-Null }
 $pidFile = Join-Path $stateDir 'server.pid'
 $logFile = Join-Path $stateDir 'server.log'

@@ -382,7 +382,7 @@ Per-OS sibling scripts which create a **pin-able launcher entry** на taskbar (
 
 | OS | Script | Creates | Pin mechanism |
 |----|--------|---------|----------------|
-| Windows | `create-launcher.ps1` | `%USERPROFILE%\Desktop\Session Pilot.lnk` → `msedge.exe --app=http://127.0.0.1:<port>/ --user-data-dir=%LOCALAPPDATA%\session-pilot\browser-profile` | User right-click → "Show more options" → "Pin to taskbar" (Win 10 1809+ blocks programmatic Pin) |
+| Windows | `create-launcher.ps1` | `%USERPROFILE%\Desktop\Session Pilot.lnk` → hidden `pwsh -File launch.ps1` (single-instance, v0.5); custom `session-pilot.ico` + AppUserModelID `ClaudeCode.SessionPilot`. launch.ps1 opens `msedge.exe --app=http://127.0.0.1:<port>/ --user-data-dir=%LOCALAPPDATA%\session-pilot\browser-profile` | User right-click → "Show more options" → "Pin to taskbar" (Win 10 1809+ blocks programmatic Pin) |
 | Linux | `create-launcher.sh` | `~/.local/share/applications/session-pilot.desktop` (XDG Desktop Entry) | DE-specific: GNOME drag to Favourites / KDE right-click "Pin to Task Manager" / XFCE drag to panel |
 | macOS | `create-launcher.sh` (`uname -s` branches) | `~/Applications/Session Pilot.app` (minimal .app bundle с `launcher` shell exec) | Drag to Dock; right-click "Keep in Dock" |
 
@@ -397,7 +397,26 @@ Per-OS sibling scripts which create a **pin-able launcher entry** на taskbar (
 
 **Trade-off**: на Windows последняя версия Pin-to-taskbar requires manual right-click step (`Show more options → Pin to taskbar`); legacy COM verb blocked since Win 10 1809. Script auto-opens Explorer at Desktop with icon highlighted to minimize friction. На Linux/macOS pin происходит native drag/menu.
 
+**Windows standalone-app identity (v0.5)**: the `.lnk` no longer targets the browser directly — it targets a hidden `pwsh -File launch.ps1` so single-instance is enforced on every click (see FR-27). The shortcut carries a generated `session-pilot.ico` (System.Drawing, drawn at install into `%LOCALAPPDATA%\session-pilot\`) instead of the browser icon, and an explicit AppUserModelID `ClaudeCode.SessionPilot` (set via `IShellLink`+`IPropertyStore`) so the dashboard reads as its own pinnable taskbar app, not "Edge". Best-effort consolidation between the pinned `.lnk` and the running Edge `--app` window via matching AppUserModelID — perfect single-button merge is not guaranteed (Chromium owns the window's identity).
+
 **Связанные AC:** [AC-23](ACCEPTANCE_CRITERIA.md#ac-23-fr-23)
+**Use Case:** [UC-13](USE_CASES.md#uc-13)
+
+## FR-27: Single-instance dashboard window (Windows)
+
+> @feature27
+
+Launching the dashboard MUST be single-instance: a click on the launcher/shortcut SHALL focus an already-open dashboard window rather than spawning a second one. Before v0.5 every click ran `msedge --app=URL` unconditionally, accumulating 10-20 windows.
+
+**Detection key**: the dashboard always runs in a dedicated `--user-data-dir` (`%LOCALAPPDATA%\session-pilot\browser-profile`). Therefore any `msedge.exe`/`chrome.exe` process whose command line references that profile dir AND owns a top-level window (`MainWindowHandle != 0`) IS the dashboard window — a reliable detection key that needs no fragile title matching (window `<title>` "Worktree Dashboard" is a secondary signal only).
+
+**Behavior** (`launch.ps1` via `Get-SpDashboardProcess` / `Show-SpWindow` in `sp-common.ps1`):
+1. If a dashboard window is found → `ShowWindow(SW_RESTORE)` + `SetForegroundWindow`, exit. Never spawn a 2nd window.
+2. Otherwise ensure the server is up (`start-server.ps1` if `/api/health` down), then open exactly one `--app` window.
+
+Stale/dead windows naturally don't match (their process is gone), so a crashed window doesn't block a fresh launch.
+
+**Связанные AC:** [AC-27](ACCEPTANCE_CRITERIA.md#ac-27-fr-27)
 **Use Case:** [UC-13](USE_CASES.md#uc-13)
 
 ## FR-22: On-demand worktree bootstrap skill (`session-pilot-bootstrap`)

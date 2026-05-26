@@ -126,7 +126,7 @@ HTML = """<!doctype html>
 // browser is running stale JS (Edge --app keeps in-memory state across reloads
 // since Cache-Control: no-store only stops disk caching, not in-memory).
 // Force a full reload to pull fresh HTML/JS.
-const FRONTEND_VERSION = '0.4.0';
+const FRONTEND_VERSION = '0.5.0';
 
 let _rows = [];          // current row state
 let _wtById = {};        // id -> row reference

@@ -88,6 +88,17 @@ argument-hint: "<scenario-name>"
    - **JSONL exists but message structure unfamiliar** → server.py JSONL parse logic needs update
 4. **Verification**: после fix re-run diagnostic, confirm 🟢 LIVE verdict + screenshot dashboard showing LIVE indicator
 
+## Scenario 5: Standalone-лаунчер / закрепить на таскбаре (Windows, v0.5+)
+
+**Когда триггерится**: «сделай ярлык», «закрепи на таскбаре», «создай лаунчер», «открывается 10/20 окон», «окно мерцает».
+
+**Шаги**:
+1. `pwsh -File extensions/session-pilot/tools/session-pilot/create-launcher.ps1` — создаёт Desktop `.lnk` → hidden `launch.ps1` (single-instance) со своей иконкой `session-pilot.ico` + AppUserModelID `ClaudeCode.SessionPilot`.
+2. Юзер закрепляет вручную: right-click → «Show more options» → «Pin to taskbar».
+3. Поведение: клик → окно открыто → фокус; закрыто → ровно одно. Детект окна — по выделенному `--user-data-dir` профилю (`Get-SpDashboardProcess`).
+4. **Если плодятся окна ИЛИ мерцает без интерфейса** → см. `single-instance-launcher.md`: мерцание = рассинхрон версии в 3 местах (extension.json + handlers.py + frontend.py FRONTEND_VERSION) → цикл перезагрузки.
+5. **Verification**: `SP_GUI_TEST=1 python extensions/session-pilot/tools/session-pilot/tests/test_launcher.py` → SP047/SP048 PASS; затем открыть окно + `mcp__claude-in-chrome__screenshot` → CONFIRMED интерфейс виден (не мерцает).
+
 ## Anti-халява rules (mandatory для каждого scenario)
 
 1. **Никаких fire-and-forget** — каждый scenario MUST end with verification step
@@ -104,6 +115,8 @@ argument-hint: "<scenario-name>"
 - `subprocess.Popen` с `stdin=DEVNULL` без TTY → Zellij hangs at startup.
 - Cross-OS encoding: `D--repos-foo` (Windows-cwd) AND `-mnt-d-repos-foo` (WSL-cwd) — обе variants нужны.
 - WSL2 NAT mode: `netsh portproxy add v4tov4 listenport=8083 connectaddress=<WSL_IP>` для access from Windows host.
+- **Версия в 3 местах** (extension.json + handlers.py `/api/health` + frontend.py `FRONTEND_VERSION`) — менять ВМЕСТЕ, иначе фронт уходит в цикл перезагрузки (мерцание, интерфейса не видно). Проверять на живой странице, не только `/api/health`.
+- **Single-instance лаунчер**: окно детектится по выделенному `--user-data-dir` профилю; повторный запуск фокусирует, не плодит. Считай ОКНА (`MainWindowHandle != 0`), не процессы Edge (~13 на одно окно).
 
 ## Поддерживаемые extensions
 
@@ -112,6 +125,7 @@ argument-hint: "<scenario-name>"
 - `.claude/rules/session-pilot/claude-projects-encoding.md` — path encoding gotchas
 - `.claude/rules/session-pilot/perf-budget.md` — latency targets per endpoint
 - `.claude/rules/session-pilot/mcp-chrome-only.md` — verification must use claude-in-chrome MCP
+- `.claude/rules/session-pilot/single-instance-launcher.md` — one-window launcher, dedicated-profile detection, 3-place version sync (v0.5+)
 
 ## Не делает skill
 

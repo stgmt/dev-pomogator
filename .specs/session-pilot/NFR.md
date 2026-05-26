@@ -34,6 +34,7 @@
 - **NFR-Use-3** No external CDN dependencies — Tabulator + marked.js vendored locally в `ui/vendor/` для offline + privacy
 - **NFR-Use-4** Tooltips on action buttons (hover) — explains каждую кнопку (Resume / Fresh / VSCode)
 - **NFR-Use-5** Sort indicators visible (▲/▼ arrows on column headers) — Tabulator default
+- **NFR-Use-6** Single-instance (Windows, v0.5): at most one dashboard window per host — a launcher click on an already-open dashboard focuses the existing window instead of spawning another. Distinct taskbar identity via custom `.ico` + AppUserModelID `ClaudeCode.SessionPilot` so it reads as its own pinnable app (not "Edge").
 
 ## Compatibility
 

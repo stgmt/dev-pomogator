@@ -224,7 +224,7 @@ This preserves FR-1 worktree visibility — all configured worktrees remain in d
 **Требование:** [FR-23](FR.md#fr-23-taskbar--dock-launcher-installer-create-launcher)
 
 WHEN user runs platform-matching launcher installer:
-- **WHEN** `sys.platform == "win32"` AND user runs `pwsh -File create-launcher.ps1` AND `msedge.exe` (or `chrome.exe`) exists в standard install path **THEN** script SHALL create `%USERPROFILE%\Desktop\Session Pilot.lnk` with `TargetPath` set to browser exe AND `Arguments` containing `--app=http://127.0.0.1:<port>/ --user-data-dir=%LOCALAPPDATA%\session-pilot\browser-profile` AND open Explorer with the icon highlighted for user pin step.
+- **WHEN** `sys.platform == "win32"` AND user runs `pwsh -File create-launcher.ps1` **THEN** script SHALL create `%USERPROFILE%\Desktop\Session Pilot.lnk` with `TargetPath` set to a version-stable PowerShell exe AND `Arguments` running `-WindowStyle Hidden -File <launch.ps1>` (single-instance launcher, v0.5) AND `IconLocation` set to the generated `%LOCALAPPDATA%\session-pilot\session-pilot.ico` AND AppUserModelID `ClaudeCode.SessionPilot` stamped on the shortcut AND open Explorer with the icon highlighted for user pin step. (launch.ps1 itself opens `msedge.exe --app=http://127.0.0.1:<port>/ --user-data-dir=%LOCALAPPDATA%\session-pilot\browser-profile`, Chrome fallback.)
 - **WHEN** `sys.platform == "linux"` AND user runs `bash create-launcher.sh` AND any of {google-chrome, chromium, chromium-browser, microsoft-edge, brave-browser} on PATH **THEN** script SHALL create `~/.local/share/applications/session-pilot.desktop` valid XDG Desktop Entry with `Exec=<browser> --app=<url> --user-data-dir=...` AND `chmod +x` the file AND optionally run `update-desktop-database` if installed.
 - **WHEN** `sys.platform == "darwin"` AND user runs `bash create-launcher.sh` AND any browser `.app` bundle exists в `/Applications/` **THEN** script SHALL create `~/Applications/Session Pilot.app` containing valid `Info.plist` + executable `Contents/MacOS/launcher` shell script which exec-s browser с `--app=URL`.
 
@@ -233,6 +233,18 @@ WHEN no Chromium-family browser found на host THEN script SHALL exit non-zero 
 WHEN script re-run на same host THEN it SHALL overwrite existing launcher file (idempotent) with current settings AND exit 0.
 
 Port override: `WT_DASHBOARD_PORT` env var OR `-Port` arg (Windows) controls URL port — default 8083.
+
+## AC-27 (FR-27)
+
+**Требование:** [FR-27](FR.md#fr-27-single-instance-dashboard-window-windows)
+
+WHEN a dashboard window is already open (a browser process references the dedicated `--user-data-dir` profile AND owns a window) AND the user runs the launcher THEN it SHALL restore + focus that existing window AND SHALL NOT spawn a second window/process group.
+
+WHEN no dashboard window exists AND the user runs the launcher THEN it SHALL ensure the server is up (start it if `/api/health` does not respond) AND open exactly one `--app` window.
+
+WHEN the dashboard window's process is dead (stale) THEN detection SHALL NOT match it AND the launcher SHALL open a fresh window (a crashed window does not block relaunch).
+
+The match predicate `Test-SpProfileMatch` SHALL be case-insensitive on the profile path AND SHALL NOT match a browser command line that lacks the dedicated profile.
 
 ## AC-22 (FR-22)
 
