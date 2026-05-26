@@ -20,6 +20,7 @@ Coverage:
   T34_08: multiple sessions in same project dir — all returned, sorted by mtime
   T34_09: no matching project dir — sessions=[], running_now=False
   T34_10: variant encoding match — WSL-style worktree path matches Windows-encoded dir
+  T34_11: preview strips ```fence markers + collapses whitespace before truncating
 """
 
 import importlib
@@ -216,6 +217,30 @@ def test_T34_10_variant_encoding_match():
         info = server.claude_sessions_for("/mnt/d/repos/foo")
         assert len(info["sessions"]) == 1, info
         assert info["sessions"][0]["last_message"].startswith("cross-os")
+
+
+def test_T34_11_preview_strips_fence_and_whitespace():
+    """Regression: assistant replies wrapped in a ```json fence or spanning
+    multiple lines must not leak the ``` markers / newlines into the
+    first_message / last_message preview (dashboard "Last message" column
+    showed `assistant: ```json { "reason": ...`). Body content is preserved,
+    just flattened to one line."""
+    with _with_tmpdir() as td:
+        tmp = Path(td)
+        proj = _setup_project(tmp, "/mnt/d/repos/fence")
+        raw = '```json\n{\n  "reason": "the verdict",\n  "ok": true\n}\n```'
+        _make_jsonl(proj / "fence.jsonl", [
+            _msg("user", "```python\nprint(1)\n```", "2026-05-10T10:00:00Z"),
+            _msg("assistant", raw, "2026-05-10T10:05:00Z"),
+        ])
+        info = server.claude_sessions_for("/mnt/d/repos/fence")
+        s = info["sessions"][0]
+        for field in ("first_message", "last_message"):
+            val = s[field]
+            assert "```" not in val, f"{field} still has fence: {val!r}"
+            assert "\n" not in val, f"{field} still has newline: {val!r}"
+        assert '"reason": "the verdict"' in s["last_message"], s["last_message"]
+        assert s["last_message_role"] == "assistant"
 
 
 # ---------- runner ----------

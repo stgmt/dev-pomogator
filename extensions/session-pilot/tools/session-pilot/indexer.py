@@ -27,6 +27,23 @@ from datetime import datetime
 from pathlib import Path
 
 
+# Message-preview cleanup (first_message / last_message). Assistant replies often
+# start with a ```json fence or span many lines, so a raw txt[:140] slice shows
+# "```json { "reason": ..." garbage in the dashboard "Last message" column. Drop
+# the fence markers + language tag (keep the body) and flatten whitespace to one
+# line before truncating.
+_FENCE_RE = re.compile(r"```+[a-zA-Z0-9_+-]*")
+_WS_RE = re.compile(r"\s+")
+
+
+def _clean_preview(text: str, limit: int = 140) -> str:
+    if not text:
+        return ""
+    cleaned = _FENCE_RE.sub(" ", text)
+    cleaned = _WS_RE.sub(" ", cleaned).strip()
+    return cleaned[:limit]
+
+
 # Cache state (module-level, shared across calls)
 _index_cache: dict = {"ts": 0.0, "data": None}
 _claude_cache: dict = {}
@@ -172,7 +189,7 @@ def claude_sessions_for(worktree_path: str) -> dict:
                                 i.get("text","") for i in content if isinstance(i, dict) and i.get("type")=="text"
                             ) if isinstance(content, list) else ""
                             if txt:
-                                first_msg = txt[:140]; break
+                                first_msg = _clean_preview(txt); break
                     tail_lines = tail_bytes.decode("utf-8", errors="ignore").split("\n")
                     for line in reversed(tail_lines):
                         if not line.strip(): continue
@@ -184,7 +201,7 @@ def claude_sessions_for(worktree_path: str) -> dict:
                                 i.get("text","") for i in content if isinstance(i, dict) and i.get("type")=="text"
                             ) if isinstance(content, list) else ""
                             if txt:
-                                last_msg = txt[:140]
+                                last_msg = _clean_preview(txt)
                                 last_msg_role = obj.get("type")
                                 last_msg_ts = obj.get("timestamp", "")
                                 break
