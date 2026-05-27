@@ -58,6 +58,22 @@ describe('CANON001: canonical plugin manifest integrity + migration', () => {
     expect(Object.keys(hooks).length, 'hooks.json declares no events').toBeGreaterThan(0);
   });
 
+  // @feature1 — component fields MUST be arrays, not strings.
+  // A bare string passes `claude plugin marketplace validate` but makes
+  // `claude plugin install` fail ("skills/commands/hooks/mcpServers: Invalid input"),
+  // so the plugin would never install for users. Verified against claude 2.1.152.
+  // See .claude/skills/verify-plugin-install/SKILL.md.
+  it('CANON001_11: plugin.json component fields are arrays (claude plugin install schema)', () => {
+    const plugin = fs.readJsonSync(appPath('.claude-plugin', 'plugin.json'));
+    for (const k of ['skills', 'commands', 'hooks', 'mcpServers']) {
+      if (plugin[k] === undefined) continue; // optional — auto-discovery if omitted
+      expect(
+        Array.isArray(plugin[k]),
+        `plugin.json "${k}" must be an array of path strings (a bare string fails \`claude plugin install\`)`,
+      ).toBe(true);
+    }
+  });
+
   // @feature9 — drift: manifest → disk
   it('CANON001_90: every hooks.json command references an existing script under tools/', () => {
     // The shared loader every hook bootstraps through must exist.

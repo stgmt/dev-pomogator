@@ -32,6 +32,8 @@ __pycache__/
 
 # dev-pomogator runtime (tools, backups)
 .dev-pomogator/
+# scratch / e2e harness (plugin-install Docker test, logs)
+.dev-pomogator-tmp/
 # hyperv-test-runner artifacts: .dev-pomogator/hyperv-runs/ (per-run logs + screenshots)
 # RDP file (contains VM IP, user-specific)
 claude-test.rdp

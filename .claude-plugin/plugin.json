@@ -20,8 +20,8 @@
     "skills",
     "hooks"
   ],
-  "skills": ".claude/skills",
-  "commands": ".claude/commands",
-  "hooks": ".claude-plugin/hooks.json",
-  "mcpServers": ".mcp.json"
+  "skills": ["./.claude/skills"],
+  "commands": ["./.claude/commands"],
+  "hooks": ["./.claude-plugin/hooks.json"],
+  "mcpServers": ["./.mcp.json"]
 }
