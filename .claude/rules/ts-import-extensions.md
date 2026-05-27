@@ -1,11 +1,11 @@
 # TS Import Extensions — `.ts`, не `.js`
 
-В исходниках расширений (`extensions/**/*.ts`) **все relative imports** обязаны указывать на реальное расширение файла на диске, то есть `.ts`, а не `.js`.
+В исходниках инструментов (`tools/**/*.ts`) **все relative imports** обязаны указывать на реальное расширение файла на диске, то есть `.ts`, а не `.js`.
 
 ## Правильно
 
 ```typescript
-// extensions/auto-commit/tools/auto-commit/auto_commit_stop.ts
+// tools/auto-commit/auto_commit_stop.ts
 import { log } from '../_shared/hook-utils.ts';
 import { runCore } from './auto_commit_core.ts';
 ```
@@ -40,9 +40,9 @@ loadOrImport (node:internal/modules/esm/loader:242:38)
 
 ## Связь с tsc-convention
 
-Стандартная "tsc convention" — писать `.js` в импортах, потому что компилятор эмитит `.js` файлы и под рантайм спецификатор валиден. Эта convention НЕ работает с native Node strip-types. Для проектов которые **не компилируют** код через tsc (как dev-pomogator — extensions запускаются напрямую через tsx), нужна **обратная** convention: писать `.ts` в импортах.
+Стандартная "tsc convention" — писать `.js` в импортах, потому что компилятор эмитит `.js` файлы и под рантайм спецификатор валиден. Эта convention НЕ работает с native Node strip-types. Для проектов которые **не компилируют** код через tsc (как dev-pomogator — tools запускаются напрямую через tsx), нужна **обратная** convention: писать `.ts` в импортах.
 
-Если когда-нибудь dev-pomogator начнёт компилировать extensions через tsc — добавить в `tsconfig.json`:
+Если когда-нибудь dev-pomogator начнёт компилировать tools через tsc — добавить в `tsconfig.json`:
 
 ```jsonc
 {
@@ -57,20 +57,18 @@ loadOrImport (node:internal/modules/esm/loader:242:38)
 
 ## Чеклист (для PR review и self-check)
 
-- [ ] Все relative imports в `extensions/**/*.ts` используют `.ts` extension
+- [ ] Все relative imports в `tools/**/*.ts` используют `.ts` extension
 - [ ] Никаких `.js` спецификаторов на sibling-файлы
-- [ ] Регрессионный тест `CORE007_11` проходит — `grep -rn "from '\.[./a-zA-Z_-]*\.js'" extensions/**/*.ts` пусто
+- [ ] Регрессионный тест `CORE007_11` проходит — `grep -rn "from '\.[./a-zA-Z_-]*\.js'" tools/**/*.ts` пусто
 - [ ] Если код запускается через tsc — `tsconfig.json` содержит `allowImportingTsExtensions: true`
 
 ## Известные исключения
 
 - **Bare imports пакетов** (`import 'fs-extra'`, `import 'fs/promises'`) — не затронуты, они проходят через node_modules resolver и не имеют relative path.
-- **`src/` (главный TypeScript codebase)** — компилируется через `tsc`, поэтому `.js` спецификаторы там корректны: tsc эмитит `.js` файлы в `dist/`. Это правило **только для `extensions/`**.
+- **`src/` (главный TypeScript codebase)** — компилируется через `tsc`, поэтому `.js` спецификаторы там корректны: tsc эмитит `.js` файлы в `dist/`. Это правило **только для `tools/`**.
 
 ## История
 
 - До commit `97a7c86`: всё валилось у Node 22.6+ пользователей с `loadOrImport` трейсом.
 - После `97a7c86`: tsx-runner делает fall-through, хуки работают, но 200-500ms тратится впустую.
 - После миграции на `.ts` спецификаторы: Strategy 0 реально работает, cold start ~50ms.
-
-См. также: `.claude/rules/extension-manifest-integrity.md`, `.claude/rules/updater-sync-tools-hooks.md`.

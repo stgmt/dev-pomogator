@@ -6,7 +6,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 | Command | Description |
 |---------|-------------|
-| `npm run build` | Compile TypeScript + bundle standalone check-update script |
 | `npm run lint` | ESLint on `.claude/` and `tools/` |
 | `npm test` | E2E tests via Docker (isolated, safe) |
 | `npm run test:all` | E2E + TUI tests via Docker |
@@ -57,7 +56,6 @@ dev-pomogator distributed как canonical Claude Code marketplace plugin (per A
 | jira-smart-commit-one-line | Smart Commit парсится только если ключ Jira и команда в первой строке, одна строка | `.claude/rules/jira-smart-commit-one-line.md` |
 | atomic-config-save | Конфиги через temp file + atomic move, не прямой writeJson | `.claude/rules/atomic-config-save.md` |
 | atomic-update-lock | Lock через `flag: 'wx'` (O_EXCL), не exists-check + write | `.claude/rules/atomic-update-lock.md` |
-| no-unvalidated-manifest-paths | Пути из манифеста валидировать через resolve + startsWith(projectPath) | `.claude/rules/no-unvalidated-manifest-paths.md` |
 | claude-md-glossary | CLAUDE.md = глоссарий/индекс на rules; при добавлении/удалении правил обновлять таблицу | `.claude/rules/claude-md-glossary.md` |
 | clear-questions-to-user | Перед каждым ответом/вопросом — шаблон самопроверки: (1) что я понял бытовым языком, (2) черновик, (3) самооценка "поймёт?", (4) ответ = микроистория с 5 опорными точками (откуда пришли → что юзер сказал → что сделал и почему → где сейчас → дальше), (5) переписать если не прошло. При "не понял" — СТОП, прогнать шаблон заново. Часть extension `answer-simple` (skill для on-demand аудита) | `.claude/rules/answer-simple/clear-questions-to-user.md` |
 | self-improving | Real-time детекция ситуаций для новых rules/skills/hooks (триггеры T2/T3/T4/T6 + automation hints) | `.claude/rules/suggest-rules/self-improving.md` |
@@ -71,12 +69,9 @@ dev-pomogator distributed как canonical Claude Code marketplace plugin (per A
 | no-blocking-on-tests | Docker тесты 7-12 мин; НИКОГДА не блокировать сессию; run_in_background + продолжать работу; запрет naked `\| tail` в bg (используй `\| tee <path> \| tail -N`) | `.claude/rules/pomogator/no-blocking-on-tests.md` |
 | post-edit-verification | После КАЖДОГО изменения кода: build, copy installed, /run-tests background, screenshot если UI | `.claude/rules/pomogator/post-edit-verification.md` |
 | skill-allowed-tools-audit | При создании/модификации skill — проверь что allowed-tools покрывает ВСЕ инструменты workflow | `.claude/rules/checklists/skill-allowed-tools-audit.md` |
-| hook-install-verification | Добавил хук в extension.json — declared ≠ installed; проверь код-путь установщика (claude.ts→settings.local.json), впиши в settings.json для dogfood, CORE003_19 динамически покрывает что хук доезжает | `.claude/rules/checklists/hook-install-verification.md` |
-| installer-hook-formats | extension.json hooks имеют 3 формата (string, object, array) — обрабатывать все 3 | `.claude/rules/gotchas/installer-hook-formats.md` |
 | docker-no-git-repo | Docker тесты без .git — git команды fail, использовать env override | `.claude/rules/gotchas/docker-no-git-repo.md` |
 | proactive-investigation | Не спрашивай разрешение исследовать — делай сам; каждое утверждение с evidence; [UNVERIFIED] для непроверяемого | `.claude/rules/plan-pomogator/proactive-investigation.md` |
 | cross-scope-coverage | При multi-scope фичах: coverage matrix scope×variant, gap report, [OUT_OF_SCOPE] для пропусков | `.claude/rules/plan-pomogator/cross-scope-coverage.md` |
-| manifest-test-coverage | При добавлении rule/tool в extension.json — динамический тест CORE003_RULES покрывает автоматически | `.claude/rules/checklists/manifest-test-coverage.md` |
 | spec-test-sync | При тестах в File Changes — спеки обязательны; при багфиксе — BDD .feature обязателен | `.claude/rules/plan-pomogator/spec-test-sync.md` |
 | integration-tests-first | Тесты ОБЯЗАНЫ быть интеграционными (runInstaller/spawnSync); unit допустим как доп, не как замена | `.claude/rules/integration-tests-first.md` |
 | tui-debug-verification | TUI/statusline изменения: screenshot второго монитора + cross-verify YAML age + container; SKIP_BUILD запрещён после wrapper changes | `.claude/rules/pomogator/tui-debug-verification.md` |

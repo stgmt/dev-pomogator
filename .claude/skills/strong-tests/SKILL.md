@@ -789,7 +789,7 @@ npx tsx run-mutation.ts <target>  # → new mutation.json with improved kill rat
 
 ### 6.4 JiT (Just-in-Time) auto-trigger mode (FR-7)
 
-Trigger: **PostToolUse hook** on `Write|Edit` of production code files. Registered in `extensions/test-quality/extension.json` per array-with-nested-hooks format per `.claude/rules/gotchas/installer-hook-formats.md`. Matchers (v0.1.0): `*.ts` / `*.py`; excludes `*test*` / `__tests__` / `tests/` / `*.test.ts` / `*_test.py` / `*.feature` / `*.md`.
+Trigger: **PostToolUse hook** on `Write|Edit` of production code files. Registered in `.claude-plugin/hooks.json` (PostToolUse `Write|Edit`). Matchers (v0.1.0): `*.ts` / `*.py`; excludes `*test*` / `__tests__` / `tests/` / `*.test.ts` / `*_test.py` / `*.feature` / `*.md`.
 
 **Что детектит** (через ast-grep):
 
