@@ -2,8 +2,9 @@
 /**
  * extension-json-meta-guard — PreToolUse hook.
  *
- * Protects `extension.json` and installed `.claude/settings.local.json`
+ * Protects `.claude/settings.json` and `.claude/settings.local.json`
  * from having form-guards removed from `hooks.PreToolUse`.
+ * (v2: the legacy `extension.json` target was removed — it no longer exists.)
  *
  * Policy: additive-only for form-guard entries. Adding unrelated hooks is OK.
  * Removing or renaming any form-guard → DENY with message pointing to
@@ -96,13 +97,12 @@ function listProtectedPresent(text: string): string[] {
 
 /**
  * Decide whether this path is a manifest we guard.
- * Protects:
- *  - source: `extensions/specs-workflow/extension.json`
- *  - installed: `.claude/settings.local.json` (any depth, inside project)
+ * Protects (v2 — no extension.json):
+ *  - `.claude/settings.json`
+ *  - `.claude/settings.local.json` (any depth, inside project)
  */
 function isGuardedManifest(filePath: string): boolean {
   const norm = filePath.replace(/\\/g, '/');
-  if (norm.endsWith('/extensions/specs-workflow/extension.json')) return true;
   if (norm.endsWith('/.claude/settings.local.json')) return true;
   if (norm.endsWith('/.claude/settings.json')) return true;
   return false;
