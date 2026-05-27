@@ -11,7 +11,7 @@
 ## Step 1: Автоматические проверки
 
 ```
-.dev-pomogator/tools/specs-generator/audit-spec.ts -Path ".specs/{feature}" -Format json
+tools/specs-generator/audit-spec.ts -Path ".specs/{feature}" -Format json
 ```
 
 Скрипт проверяет:
@@ -77,7 +77,7 @@ Skill("spec-reality-check")
 
 ## Step 5: Генерация AUDIT_REPORT.md
 
-1. Создать `.specs/{feature}/AUDIT_REPORT.md` по шаблону `.dev-pomogator/tools/specs-generator/templates/AUDIT_REPORT.md.template`
+1. Создать `.specs/{feature}/AUDIT_REPORT.md` по шаблону `tools/specs-generator/templates/AUDIT_REPORT.md.template`
 2. Записать ВСЕ найденные и исправленные проблемы (что было → что исправлено)
 3. Показать summary таблицу пользователю
 

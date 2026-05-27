@@ -37,7 +37,7 @@ Tasks in Phase -1 (Infrastructure) are exempt from Done When by form-guard desig
 
 ### Step 1 — Parse existing task blocks
 
-Use the shared parser in `extensions/specs-workflow/tools/specs-validator/spec-form-parsers.ts` (`parseTaskBlocks`) to get the current shape:
+Use the shared parser in `tools/specs-validator/spec-form-parsers.ts` (`parseTaskBlocks`) to get the current shape:
 
 - Title, enclosing Phase, current Status/Est/Done When flags, waiver flag.
 - Detect both formats: `- [ ] ...` bullets and `### 📋 \`task-id\`` headings.
@@ -100,7 +100,7 @@ Use Edit (not Write) to preserve unrelated content (Phase descriptions, notes, J
 Invoke the shared script and splice its stdout into TASKS.md:
 
 ```bash
-npx tsx extensions/specs-workflow/tools/specs-generator/spec-status.ts \
+npx tsx tools/specs-generator/spec-status.ts \
   -Path .specs/{slug} \
   -Format task-table
 ```
@@ -127,7 +127,7 @@ If the markers exist, replace the block between them. If they don't, insert the 
 ### Step 6 — Dry-run against task-form-guard
 
 ```bash
-npx tsx extensions/specs-workflow/tools/specs-validator/spec-form-parsers.ts \
+npx tsx tools/specs-validator/spec-form-parsers.ts \
   --check tasks .specs/{slug}/TASKS.md
 ```
 

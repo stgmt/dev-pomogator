@@ -3,29 +3,29 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { detectAxes } from '../../extensions/specs-workflow/tools/specs-generator/architecture-decision/axis-detector.ts';
+import { detectAxes } from '../../tools/specs-generator/architecture-decision/axis-detector.ts';
 import {
   generateAxisArtefact,
   seededShuffle,
   renderAxisMarkdown,
   validateAxisModel,
-} from '../../extensions/specs-workflow/tools/specs-generator/architecture-decision/artefact-generator.ts';
+} from '../../tools/specs-generator/architecture-decision/artefact-generator.ts';
 import {
   checkVerifiedMarkers,
   recordVerification,
-} from '../../extensions/specs-workflow/tools/specs-generator/architecture-decision/verify-log.ts';
-import { openInBrowser } from '../../extensions/specs-workflow/tools/specs-generator/architecture-decision/open-in-browser.ts';
+} from '../../tools/specs-generator/architecture-decision/verify-log.ts';
+import { openInBrowser } from '../../tools/specs-generator/architecture-decision/open-in-browser.ts';
 import {
   compileIndex,
   collectRows,
-} from '../../extensions/specs-workflow/tools/specs-generator/architecture-decision/index-compiler.ts';
-import { checkArchitectureCoverage } from '../../extensions/specs-workflow/tools/specs-generator/architecture-decision/audit.ts';
+} from '../../tools/specs-generator/architecture-decision/index-compiler.ts';
+import { checkArchitectureCoverage } from '../../tools/specs-generator/architecture-decision/audit.ts';
 import {
   renderAxisHtml,
   pickRecommended,
   type AxisModel,
   type VariantModel,
-} from '../../extensions/specs-workflow/tools/specs-generator/architecture-decision/html-renderer.ts';
+} from '../../tools/specs-generator/architecture-decision/html-renderer.ts';
 
 const FIXTURES = path.join(__dirname, '..', 'fixtures', 'architecture-decision');
 const CLI = path.join(

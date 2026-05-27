@@ -18,12 +18,12 @@ argument-hint: "<feature-slug>"
 
 | Скрипт | Назначение |
 |--------|------------|
-| `.dev-pomogator/tools/specs-generator/scaffold-spec.ts -Name "X"` | Создать структуру `.specs/X/` |
-| `.dev-pomogator/tools/specs-generator/validate-spec.ts -Path ".specs/X"` | Валидация форматов |
-| `.dev-pomogator/tools/specs-generator/spec-status.ts -Path ".specs/X"` | Прогресс + state machine |
-| `.dev-pomogator/tools/specs-generator/spec-status.ts -Path ".specs/X" -ConfirmStop Discovery` | Подтверждение STOP-точки |
-| `.dev-pomogator/tools/specs-generator/audit-spec.ts -Path ".specs/X"` | Phase 3+ автоматический аудит |
-| `.dev-pomogator/tools/specs-generator/analyze-features.ts -Format text` | Паттерны существующих `.feature` |
+| `tools/specs-generator/scaffold-spec.ts -Name "X"` | Создать структуру `.specs/X/` |
+| `tools/specs-generator/validate-spec.ts -Path ".specs/X"` | Валидация форматов |
+| `tools/specs-generator/spec-status.ts -Path ".specs/X"` | Прогресс + state machine |
+| `tools/specs-generator/spec-status.ts -Path ".specs/X" -ConfirmStop Discovery` | Подтверждение STOP-точки |
+| `tools/specs-generator/audit-spec.ts -Path ".specs/X"` | Phase 3+ автоматический аудит |
+| `tools/specs-generator/analyze-features.ts -Format text` | Паттерны существующих `.feature` |
 
 `.progress.json` создаётся ТОЛЬКО через `spec-status.ts`. ЗАПРЕЩЕНО создавать его через Write tool, вручную или напрямую. Аргумент `-Path` ОБЯЗАН указывать на `.specs/<feature>/`.
 
@@ -47,7 +47,7 @@ Sub-skill ecosystem (вызываются через `Skill(...)`): `discovery-f
 
 1. **Если запрос на создание новой спеки** ("сделай спеку для X", "create spec for X" и т.д.):
    - Получи feature-slug от пользователя (kebab-case)
-   - Запусти `.dev-pomogator/tools/specs-generator/scaffold-spec.ts -Name "{slug}"`
+   - Запусти `tools/specs-generator/scaffold-spec.ts -Name "{slug}"`
    - Покажи Starter Message (см. ниже)
    - Прочти `references/phase1_discovery.md` и следуй Phase 1
 

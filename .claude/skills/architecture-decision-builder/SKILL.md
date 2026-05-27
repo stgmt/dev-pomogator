@@ -59,7 +59,7 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent, AskUserQuestion, WebF
 
 ## Commands (stateless RPC, state в QUEUE.json)
 
-CLI: `extensions/specs-workflow/tools/specs-generator/architecture-decision/architecture-decision-cli.ts`
+CLI: `tools/specs-generator/architecture-decision/architecture-decision-cli.ts`
 
 - **`detect-axes <prd-path>`** → `{axes_detected, axes[], skipped_reason?}`. 3-layer detection (BMAD seed + keyword + NEEDS CLARIFICATION). Brownfield build-manifest → axes_detected=0.
 - **`generate-axis <axis-model.json> <outDir>`** → `{mdPath, htmlPath, wordBudgetOk}`. Рендерит AxisModel (варианты заполнены тобой) в md+html. Recommendation pinned top.

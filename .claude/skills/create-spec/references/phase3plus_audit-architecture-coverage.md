@@ -25,5 +25,5 @@ Only if `.specs/{slug}/ARCHITECTURE/` exists (Phase 1.75 ran). Brownfield/skippe
 ## Related
 
 - Phase 1.75: [phase1.75_architecture-decisions.md](phase1.75_architecture-decisions.md)
-- Audit logic: `extensions/specs-workflow/tools/specs-generator/architecture-decision/audit.ts`
+- Audit logic: `tools/specs-generator/architecture-decision/audit.ts`
 - Mirror: [phase3plus_audit-variant-coverage.md](phase3plus_audit-variant-coverage.md)

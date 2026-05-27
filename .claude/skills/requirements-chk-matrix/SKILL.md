@@ -133,10 +133,10 @@ Rules:
 ### Step 5 — Dry-run against form-guards (optional)
 
 ```bash
-npx tsx extensions/specs-workflow/tools/specs-validator/spec-form-parsers.ts \
+npx tsx tools/specs-validator/spec-form-parsers.ts \
   --check chk-rows .specs/{slug}/REQUIREMENTS.md
 
-npx tsx extensions/specs-workflow/tools/specs-validator/spec-form-parsers.ts \
+npx tsx tools/specs-validator/spec-form-parsers.ts \
   --check decisions .specs/{slug}/DESIGN.md
 ```
 

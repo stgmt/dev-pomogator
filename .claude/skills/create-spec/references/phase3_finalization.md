@@ -76,7 +76,7 @@
 После подтверждения:
 
 ```
-.dev-pomogator/tools/specs-generator/spec-status.ts -Path ".specs/{feature}" -ConfirmStop Finalization
+tools/specs-generator/spec-status.ts -Path ".specs/{feature}" -ConfirmStop Finalization
 ```
 
 ## Next phase (автоматически)

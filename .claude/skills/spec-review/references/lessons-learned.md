@@ -154,7 +154,7 @@ grep -c '\[A\]' .specs/{slug}/*.md
 
 **Урок:** Перед каждой правкой плана:
 
-1. `Read .dev-pomogator/tools/plan-pomogator/template.md`
+1. `Read tools/plan-pomogator/template.md`
 2. `ls ~/.claude/plans/` для определения активного plan-файла
 3. Прочитать "Plan File Info:" из system prompt — единственный source of truth куда писать
 
@@ -168,7 +168,7 @@ grep -nE '[A-Z]:\\|/Users/|/home/' "{plan-file}"
 grep -nE '^- description:' "{plan-file}"
 
 # Validate
-npx tsx .dev-pomogator/tools/plan-pomogator/validate-plan.ts "{plan-file}"
+npx tsx tools/plan-pomogator/validate-plan.ts "{plan-file}"
 ```
 
 ---

@@ -38,7 +38,7 @@
 
 ## См. также
 
-- `.dev-pomogator/tools/specs-generator/validate-spec.ts` — структурный валидатор
-- `.dev-pomogator/tools/specs-generator/audit-spec.ts` — семантический аудит (Phase 3+)
+- `tools/specs-generator/validate-spec.ts` — структурный валидатор
+- `tools/specs-generator/audit-spec.ts` — семантический аудит (Phase 3+)
 - [`specs-validation.md`](specs-validation.md) — синхронизация через @featureN теги (используется UserPromptSubmit hook)
 - [`bdd-enforcement.md`](bdd-enforcement.md) — BDD-default policy

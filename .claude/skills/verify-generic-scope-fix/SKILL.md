@@ -74,7 +74,7 @@ For each variant produce a verdict:
 Run the helper:
 
 ```bash
-npx tsx .dev-pomogator/tools/scope-gate/analyze-diff.ts
+npx tsx tools/scope-gate/analyze-diff.ts
 ```
 
 The helper writes `.claude/.scope-verified/<session_id>-<shortdiffsha>.json` with per-variant classification. If ANY variant is `unreachable`, marker has `should_ship: false` and the hook will still deny commit.

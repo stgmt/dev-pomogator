@@ -48,7 +48,7 @@ Skip когда:
 | 5 | Open Questions stale | P1 | RESEARCH.md `## Open Questions` checked/migrated | Phase 1 (before ConfirmStop) |
 | 6 | @featureN cross-file consistency | P0 | multi-grep across USER_STORIES/USE_CASES/FR/AC/.feature | Phase 2+ |
 | 7 | Tooling mismatch | P1 | PowerShell-grammar в bash; `dotnet test` vs `/run-tests`; raw find/grep/cat в TASKS | Phase 2+ |
-| 8 | Plan-gate template compliance | P1 | diff против `.dev-pomogator/tools/plan-pomogator/template.md` | Phase 2 (если есть план) |
+| 8 | Plan-gate template compliance | P1 | diff против `tools/plan-pomogator/template.md` | Phase 2 (если есть план) |
 | 9 | BDD Test Infrastructure → Phase 0 | P0 | DESIGN.classification == TEST_DATA_ACTIVE → TASKS Phase 0 + FILE_CHANGES | Phase 2+ |
 | 10 | Hallucination/fluff smell | P2 | paragraphs >5 sentences без code/table refs; "fast/stable" без чисел | any |
 | 11 | Spec ↔ code drift | P1 | spec говорит "X via ServiceA" — реально ServiceB | post-impl only |
@@ -226,7 +226,7 @@ Details: .specs/{slug}/REVIEW_NOTES.md
 ## Cross-references
 
 - `create-spec` SKILL.md cross-link: «before each STOP, run `Skill("spec-review")` for semantic check»
-- Структурный аудит: `.dev-pomogator/tools/specs-generator/audit-spec.ts` — Phase 3+ автоматический, дополняет spec-review
+- Структурный аудит: `tools/specs-generator/audit-spec.ts` — Phase 3+ автоматический, дополняет spec-review
 - Antipattern rules: `.claude/rules/antipatterns/*.md` (если существуют в target проекте) — источник triggers для категории #3
-- Plan template: `.dev-pomogator/tools/plan-pomogator/template.md` — source-of-truth для категории #8
+- Plan template: `tools/plan-pomogator/template.md` — source-of-truth для категории #8
 - Lessons learned: [`references/lessons-learned.md`](references/lessons-learned.md) — 15 case studies из реальных PR sessions

@@ -17,7 +17,7 @@ REPO = Path(__file__).resolve().parent.parent
 SKILL = REPO / ".claude/skills/architecture-decision-builder"
 EVAL_FILE = SKILL / "evals/evals.json"
 WS = SKILL / "evals/iterations/iteration-1"
-CLI = REPO / "extensions/specs-workflow/tools/specs-generator/architecture-decision/architecture-decision-cli.ts"
+CLI = REPO / "tools/specs-generator/architecture-decision/architecture-decision-cli.ts"
 
 WS.mkdir(parents=True, exist_ok=True)
 evals = json.loads(EVAL_FILE.read_text(encoding="utf-8"))

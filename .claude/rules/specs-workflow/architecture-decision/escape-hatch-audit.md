@@ -48,6 +48,6 @@ jq -r '.reason' .claude/logs/spec-architecture-escapes.jsonl | awk -F: '{print $
 ## Related
 
 - Trigger rule: [when-to-build-architecture.md](when-to-build-architecture.md)
-- Audit logic: `extensions/specs-workflow/tools/specs-generator/architecture-decision/audit.ts` (`checkArchitectureCoverage` + `checkCompletenessCoverage`)
+- Audit logic: `tools/specs-generator/architecture-decision/audit.ts` (`checkArchitectureCoverage` + `checkCompletenessCoverage`)
 - Completeness audit ref: `.claude/skills/create-spec/references/phase3plus_audit-completeness-coverage.md`
 - Mirror: `.claude/rules/specs-workflow/variant-matrix/escape-hatch-audit.md`

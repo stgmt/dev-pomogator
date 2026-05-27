@@ -278,4 +278,4 @@ Skill вызывается **`create-spec` skill во время Phase 1 step 5*
 1. Проверить наличие `.specs/{feature}/RESEARCH.md`
 2. Записать verified findings + markers + schema enumeration
 3. Если есть `[UNVERIFIED]` или `[SINGLE_SOURCE]` — emit warning к user: «N findings require re-confirmation before FR.md finalization»
-4. Использовать скрипт: `.dev-pomogator/tools/specs-generator/spec-status.ts`
+4. Использовать скрипт: `tools/specs-generator/spec-status.ts`

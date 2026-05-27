@@ -17,7 +17,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 const REPO = process.cwd();
-const CLI = 'extensions/specs-workflow/tools/specs-generator/architecture-decision/architecture-decision-cli.ts';
+const CLI = 'tools/specs-generator/architecture-decision/architecture-decision-cli.ts';
 
 // --spec <slug> generalizes the battery to ANY .specs/<slug>. Default architecture-decision-builder.
 // eval-runner is architecture-specific → runs only for that slug.

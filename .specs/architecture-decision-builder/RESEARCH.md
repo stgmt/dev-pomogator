@@ -80,7 +80,7 @@ Skeleton рабочий (dry-run попал в реальный выбор Ivan)
 
 ### Architectural Constraints Summary
 
-Phase 1.5 дополнит. Базово: subskill ОБЯЗАН жить в `.claude/skills/` (extension-layout); helper scripts в `extensions/specs-workflow/tools/specs-generator/architecture-decision/` с `.ts` imports; всё перечислено в extension.json; тесты integration-first 1:1 с .feature.
+Phase 1.5 дополнит. Базово: subskill ОБЯЗАН жить в `.claude/skills/` (extension-layout); helper scripts в `tools/specs-generator/architecture-decision/` с `.ts` imports; всё перечислено в extension.json; тесты integration-first 1:1 с .feature.
 
 ## Risk Assessment
 

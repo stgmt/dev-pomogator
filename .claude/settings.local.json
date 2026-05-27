@@ -19,7 +19,7 @@
       "mcp__plugin_claude-mem_mcp-search__get_observations",
       "Skill(create-spec)",
       "Skill(run-tests)",
-      "Bash(npx tsx ./extensions/specs-workflow/tools/specs-generator/scaffold-spec.ts -Name \"cross-spawn-migration\")",
+      "Bash(npx tsx tools/specs-generator/scaffold-spec.ts -Name \"cross-spawn-migration\")",
       "Bash(cp src/scripts/tsx-runner.js dist/tsx-runner.js)",
       "Bash(node bin/cli.js --claude --all)",
       "Bash(ls -d \"D:/repos/dev-pomogator/extensions/\"*/skills/)",

@@ -34,7 +34,7 @@
 5. **Step 4a: Детект BDD framework в target test-projects** — ОБЯЗАТЕЛЬНО если FILE_CHANGES будет упоминать `tests/**/*.test.*` или `**/Tests/**/*.cs` или `**/*_steps.py`. Для каждого target test-project:
 
    ```
-   npx tsx extensions/specs-workflow/tools/specs-generator/bdd-framework-detector.ts {projectPath} [testProjectHints...]
+   npx tsx tools/specs-generator/bdd-framework-detector.ts {projectPath} [testProjectHints...]
    ```
 
    Записать DetectionResult (JSON) в RESEARCH.md `### Existing Patterns & Extensions`:
@@ -58,7 +58,7 @@
    - `### Existing Patterns & Extensions` — таблица: Source | Path | What It Provides | Relevance (включая строки DetectionResult из шага 5)
    - `### Architectural Constraints Summary` — как ограничения влияют на будущие FR/NFR
 
-9. **Проверить статус:** `.dev-pomogator/tools/specs-generator/spec-status.ts -Path ".specs/{feature}"`
+9. **Проверить статус:** `tools/specs-generator/spec-status.ts -Path ".specs/{feature}"`
 
 ## STOP #1.5
 
@@ -67,7 +67,7 @@
 После подтверждения:
 
 ```
-.dev-pomogator/tools/specs-generator/spec-status.ts -Path ".specs/{feature}" -ConfirmStop Context
+tools/specs-generator/spec-status.ts -Path ".specs/{feature}" -ConfirmStop Context
 ```
 
 ## Next phase

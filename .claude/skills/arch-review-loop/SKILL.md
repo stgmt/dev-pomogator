@@ -22,7 +22,7 @@ remain). Report once at the end with the iteration log, not after every step.
 ## The driver (one command = the whole battery — ANY spec)
 
 ```
-npx tsx extensions/specs-workflow/tools/specs-generator/architecture-decision/arch-review.ts [--spec <slug>] [ARCHITECTURE-dir]
+npx tsx tools/specs-generator/architecture-decision/arch-review.ts [--spec <slug>] [ARCHITECTURE-dir]
 ```
 
 - **`--spec <slug>`** → runs the battery for `.specs/<slug>` (default `architecture-decision-builder`). Generic: validate-spec + audit-spec work for ANY spec; eval-runner runs only for architecture-decision-builder (it's the only one with `eval-runner-adb.py`). Use it to self-review any spec — e.g. `--spec pomogator-doctor` (caught real FR-link + scenario-count drift from a sibling commit).
@@ -66,6 +66,6 @@ Only surface design forks + the accepted-false-positive list. Do not narrate eve
 
 ## Related
 
-- Driver: `extensions/specs-workflow/tools/specs-generator/architecture-decision/arch-review.ts`
+- Driver: `tools/specs-generator/architecture-decision/arch-review.ts`
 - Skill under review: `.claude/skills/architecture-decision-builder/SKILL.md`
 - Memory: `never-fabricate-verification-markers`, `self-review-must-be-default-not-prompted`

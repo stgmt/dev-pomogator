@@ -111,7 +111,7 @@ Simulate the form-guards to catch any format slip before returning control. This
 
 ```bash
 # dry-run parser on the generated content
-npx tsx extensions/specs-workflow/tools/specs-validator/spec-form-parsers.ts \
+npx tsx tools/specs-validator/spec-form-parsers.ts \
   --check user-stories .specs/{slug}/USER_STORIES.md
 ```
 

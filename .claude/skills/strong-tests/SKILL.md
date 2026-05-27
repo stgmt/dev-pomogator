@@ -79,7 +79,7 @@ hypothesis write mymodule:myfunc  # OR через runGhostwriter() в run-mutati
 | `.claude/skills/strong-tests/references/tooling-setup.md` | Install + thresholds per 6 stacks |
 | `.claude/skills/strong-tests/references/stryker.config.template.mjs` | Template для Stryker (TS) |
 | `.claude/skills/strong-tests/references/stryker-net.config.template.json` | v0.5.0: Template для Stryker.NET (C#) |
-| `.dev-pomogator/tools/test-quality/posttool-jit.ts` | JiT hook — fires PostToolUse on Write/Edit |
+| `tools/test-quality/posttool-jit.ts` | JiT hook — fires PostToolUse on Write/Edit |
 
 **Exit codes** (для `run-mutation.ts`):
 - `0` — threshold met OR --dry-run completed

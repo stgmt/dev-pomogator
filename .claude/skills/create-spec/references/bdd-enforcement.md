@@ -54,4 +54,4 @@
 
 - [.specs/create-specs-bdd-enforcement/](../../../../.specs/create-specs-bdd-enforcement/) — полная спека с 9 FR и 6 BDD сценариями SBDE001_01..06
 - [.specs/spec-phase-gate/](../../../../.specs/spec-phase-gate/) — phase-gate hook architecture (reference)
-- `extensions/specs-workflow/tools/specs-generator/bdd-framework-detector.ts` — shared module для детекта
+- `tools/specs-generator/bdd-framework-detector.ts` — shared module для детекта

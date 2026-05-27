@@ -36,7 +36,7 @@
 ## Где лежит реализация
 
 - Skill: `.claude/skills/architecture-decision-builder/SKILL.md` + `references/{axis-catalog,variant-format-spec,html-style-guide}.md`
-- Helpers: `extensions/specs-workflow/tools/specs-generator/architecture-decision/*.ts`
+- Helpers: `tools/specs-generator/architecture-decision/*.ts`
 - Templates: `extensions/specs-workflow/tools/specs-generator/templates/ARCHITECTURE_{AXIS,INDEX}.md.template`
 - Rules: `.claude/rules/specs-workflow/architecture-decision/{when-to-build-architecture,escape-hatch-audit}.md`
 - create-spec integration: `.claude/skills/create-spec/references/phase1.75_architecture-decisions.md`
@@ -45,7 +45,7 @@
 ## Директории и файлы
 
 - `.claude/skills/architecture-decision-builder/` — skill core
-- `extensions/specs-workflow/tools/specs-generator/architecture-decision/` — 9 helper scripts
+- `tools/specs-generator/architecture-decision/` — 9 helper scripts
 - `.claude/rules/specs-workflow/architecture-decision/` — 2 rules
 - Output (create-spec mode): `.specs/{slug}/ARCHITECTURE/AXIS-NN-{slug}.md|.html` + `INDEX.md|.html` + `QUEUE.json` + `COMPLETENESS.md` (ledger, FR-12)
 - Output (standalone mode): `./architecture-decisions/{slug}/` (cwd-local) + `COMPLETENESS.md`
