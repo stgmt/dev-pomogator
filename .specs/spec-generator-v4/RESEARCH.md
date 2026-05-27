@@ -225,7 +225,7 @@
 - **Validators**: `extensions/specs-workflow/tools/specs-generator/validate-spec.ts` + `audit-spec.ts` — structural checks
 - **Form-guards (v3)**: 6 PreToolUse hooks в `extensions/specs-workflow/tools/specs-generator/` — proven enforcement pattern
 - **BDD framework detector**: `extensions/specs-workflow/tools/specs-generator/bdd-framework-detector.ts`
-- **Variant matrix builder (v3)**: `extensions/specs-workflow/tools/specs-generator/variant-matrix/`
+- **Variant matrix builder (v3)**: `tools/specs-generator/variant-matrix/`
 - **Spec convention**: `### Requirement: FR-N` headings, `#### Scenario: ...`, `@featureN` теги — уже совместимо с OpenSpec convention, и cucumber gherkin tag inheritance работает поверх
 
 ### External libraries (npm) для v4

@@ -48,7 +48,7 @@ Dry-run на bhph показал: реальный greenfield = 4-6 связан
 ## Где лежит реализация
 
 - Reference shape (mirror): `.claude/skills/variant-matrix-build/SKILL.md` — структура subskill (mission/preconditions/inputs/execution/contract/fallback/hard-OUT/escape-hatch) [VERIFIED — прочитан]
-- Helper scripts pattern: `extensions/specs-workflow/tools/specs-generator/variant-matrix/` (trigger-phrases.ts, parsers.ts, audit.ts, escape-log.ts, variant-matrix-cli.ts) [VERIFIED — в extension.json toolFiles]
+- Helper scripts pattern: `tools/specs-generator/variant-matrix/` (trigger-phrases.ts, parsers.ts, audit.ts, escape-log.ts, variant-matrix-cli.ts) [VERIFIED — в extension.json toolFiles]
 - create-spec integration: `.claude/skills/create-spec/SKILL.md` Phase navigation [VERIFIED — прочитан]
 - Manifest: `extensions/specs-workflow/extension.json` v1.20.0 [VERIFIED — прочитан]
 - Dry-run артефакт: `D:\repos\bhph-early-warning\ARCHITECTURE_PROPOSAL.md` (валидация формата)

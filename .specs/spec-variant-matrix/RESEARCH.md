@@ -51,7 +51,7 @@ API contract per consumer/provider. Specmatic explicitly отмечает polymo
 
 ## Где лежит реализация
 
-- App-код tools: `extensions/specs-workflow/tools/specs-generator/variant-matrix/`
+- App-код tools: `tools/specs-generator/variant-matrix/`
 - Skill: `extensions/specs-workflow/.claude/skills/variant-matrix-build/`
 - Rules: `.claude/rules/specs-workflow/variant-matrix/`
 - Wiring: `extensions/specs-workflow/tools/specs-generator/specs-generator-core.mjs` (commandAuditSpec ~line 1611, categoryCount ~line 2676)

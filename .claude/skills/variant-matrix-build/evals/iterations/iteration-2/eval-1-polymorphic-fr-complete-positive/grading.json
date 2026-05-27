@@ -1,0 +1,34 @@
+{
+  "expectations": [
+    {
+      "text": "Total findings = 1",
+      "passed": true,
+      "evidence": "actual=1"
+    },
+    {
+      "text": "WARNING count = 0",
+      "passed": true,
+      "evidence": "actual=0"
+    },
+    {
+      "text": "INFO count = 1",
+      "passed": true,
+      "evidence": "actual=1"
+    },
+    {
+      "text": "Finding codes = ['MATRIX_COMPLETE']",
+      "passed": true,
+      "evidence": "actual=['MATRIX_COMPLETE']"
+    },
+    {
+      "text": "All findings include `triggers` array",
+      "passed": true,
+      "evidence": "yes"
+    },
+    {
+      "text": "Polymorphic findings include `axis` field",
+      "passed": true,
+      "evidence": "yes"
+    }
+  ]
+}

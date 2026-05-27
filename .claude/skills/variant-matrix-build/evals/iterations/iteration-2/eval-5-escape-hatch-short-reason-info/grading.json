@@ -1,0 +1,34 @@
+{
+  "expectations": [
+    {
+      "text": "Total findings = 2",
+      "passed": true,
+      "evidence": "actual=2"
+    },
+    {
+      "text": "WARNING count = 1",
+      "passed": true,
+      "evidence": "actual=1"
+    },
+    {
+      "text": "INFO count = 1",
+      "passed": true,
+      "evidence": "actual=1"
+    },
+    {
+      "text": "Finding codes = ['AC_DECISION_TABLE_MISSING', 'WARNING_REASON_TOO_SHORT']",
+      "passed": true,
+      "evidence": "actual=['AC_DECISION_TABLE_MISSING', 'WARNING_REASON_TOO_SHORT']"
+    },
+    {
+      "text": "All findings include `triggers` array",
+      "passed": true,
+      "evidence": "yes"
+    },
+    {
+      "text": "Polymorphic findings include `axis` field",
+      "passed": true,
+      "evidence": "yes"
+    }
+  ]
+}

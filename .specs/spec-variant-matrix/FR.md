@@ -2,7 +2,7 @@
 
 ## FR-1: Polymorphic trigger detection через mechanical regex
 
-Module `extensions/specs-workflow/tools/specs-generator/variant-matrix/trigger-phrases.ts` экспортирует функцию `detectPolymorphicFRs(frContent)`. Detection mechanically (regex), no LLM в logic. Closed list polymorphism-axis nouns (14 items: doctype, type, kind, variant, provider, adapter, tenant, locale, channel, method, role, version, backend, driver). Threshold ≥2 hits OR 1 hit + axis enumeration signal elsewhere в FR.
+Module `tools/specs-generator/variant-matrix/trigger-phrases.ts` экспортирует функцию `detectPolymorphicFRs(frContent)`. Detection mechanically (regex), no LLM в logic. Closed list polymorphism-axis nouns (14 items: doctype, type, kind, variant, provider, adapter, tenant, locale, channel, method, role, version, backend, driver). Threshold ≥2 hits OR 1 hit + axis enumeration signal elsewhere в FR.
 
 **Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1)
 **Use Case:** [UC-1](USE_CASES.md#uc-1-happy-path-polymorphic-fr-с-complete-matrix)
@@ -34,7 +34,7 @@ Required columns: `# | Variant | Trigger condition | Expected param | Test ref (
 
 ## FR-6: Audit category VARIANT_COVERAGE (8-я категория)
 
-Phase 3+ Audit checks 4 conditions: (1) FR-trigger ↔ AC-table presence; (2) AC ↔ Examples 1:1 row count; (3) AC ↔ TASKS-or-OUT_OF_SCOPE; (4) escape-hatch reason length. Emit findings, blocks STOP #3 если matrix incomplete (severity ≥ WARNING). Implementation: `extensions/specs-workflow/tools/specs-generator/variant-matrix/audit.ts` exports `checkVariantCoverage(specPath): AuditFinding[]`. Wired в `specs-generator-core.mjs` commandAuditSpec ~line 1611 + categoryCount ~line 2676.
+Phase 3+ Audit checks 4 conditions: (1) FR-trigger ↔ AC-table presence; (2) AC ↔ Examples 1:1 row count; (3) AC ↔ TASKS-or-OUT_OF_SCOPE; (4) escape-hatch reason length. Emit findings, blocks STOP #3 если matrix incomplete (severity ≥ WARNING). Implementation: `tools/specs-generator/variant-matrix/audit.ts` exports `checkVariantCoverage(specPath): AuditFinding[]`. Wired в `specs-generator-core.mjs` commandAuditSpec ~line 1611 + categoryCount ~line 2676.
 
 **Связанные AC:** [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3), [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4), [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6)
 **Use Case:** [UC-2](USE_CASES.md#uc-2-gap-detected-incomplete-matrix)
