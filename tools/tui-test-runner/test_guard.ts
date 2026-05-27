@@ -46,7 +46,7 @@ const ALLOWED_PATTERNS = [
 /** Build a ready-to-paste wrapper invocation from raw test command.
  *  Returns string suitable for direct copy into Bash tool. */
 function buildConvertedCommand(originalCommand: string, framework: string): string {
-  const wrapperPath = '.dev-pomogator/tools/test-statusline/test_runner_wrapper.cjs';
+  const wrapperPath = 'tools/test-statusline/test_runner_wrapper.cjs';
   // Pass framework explicitly + original command as separate argument list after --
   return `node ${wrapperPath} --framework ${framework} -- ${originalCommand.trim()}`;
 }

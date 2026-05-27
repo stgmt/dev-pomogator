@@ -1,6 +1,6 @@
 /**
  * YAML Status File Protocol — flat fields for statusline_render.sh
- * Canonical schema: extensions/tui-test-runner/tools/tui-test-runner/adapters/types.ts (TestStatusV2)
+ * Canonical schema: tools/tui-test-runner/adapters/types.ts (TestStatusV2)
  * This file documents the minimal contract; statusline reads flat top-level fields only.
  */
 

@@ -32,7 +32,7 @@ argument-hint: "<feature-slug>"
 | Phase | Reference | Что делает |
 |-------|-----------|------------|
 | **1. Discovery** | [`references/phase1_discovery.md`](references/phase1_discovery.md) | USER_STORIES, USE_CASES, RESEARCH; вызывает `Skill("research-workflow")` для технических находок |
-| **1.5. Project Context** | [`references/phase1.5_project-context.md`](references/phase1.5_project-context.md) | Сканирование `.claude/rules/` + `extensions/*/extension.json` + BDD framework detection |
+| **1.5. Project Context** | [`references/phase1.5_project-context.md`](references/phase1.5_project-context.md) | Сканирование `.claude/rules/` + `.claude/skills/` + BDD framework detection |
 | **1.75. Architecture Decisions** (greenfield only) | [`references/phase1.75_architecture-decisions.md`](references/phase1.75_architecture-decisions.md) | Greenfield-only: enumerate tech-stack axes + auto-apply рекомендаций (auto-mode, без блокирующего STOP); вызывает `Skill("architecture-decision-builder")` |
 | **2. Requirements + Design** | [`references/phase2_requirements-and-design.md`](references/phase2_requirements-and-design.md) | FR, NFR, AC (EARS), REQUIREMENTS, DESIGN, FILE_CHANGES, `.feature`; вызывает `Skill("requirements-chk-matrix")` |
 | **2 (BDD subsection)** | [`references/phase2_bdd-test-infrastructure.md`](references/phase2_bdd-test-infrastructure.md) | TEST_DATA / TEST_FORMAT classification, hooks design, FIXTURES.md |

@@ -97,8 +97,15 @@ else
 fi
 
 # MCP servers setup (oculos, desktop, context7, octocode)
+# v2: dev-pomogator ships as a Claude Code plugin — mcp-setup lives in the plugin
+# tree, not the v1 `.dev-pomogator/tools/` install path (which no longer exists).
 echo "Setting up MCP servers..."
-python3 .dev-pomogator/tools/mcp-setup/setup-mcp.py --platform claude --force 2>&1 || echo "[WARN] MCP setup failed"
+MCP_SETUP="${CLAUDE_PLUGIN_ROOT:-}/tools/mcp-setup/setup-mcp.py"
+if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "$MCP_SETUP" ]; then
+    python3 "$MCP_SETUP" --platform claude --force 2>&1 || echo "[WARN] MCP setup failed"
+else
+    echo "[INFO] MCP setup skipped (dev-pomogator plugin path not resolved; v2 devcontainer MCP integration TBD)"
+fi
 
 # Docker check
 if command -v docker &>/dev/null; then

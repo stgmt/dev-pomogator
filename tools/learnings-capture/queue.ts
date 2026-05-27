@@ -1,5 +1,5 @@
 // Auto-Capture Learnings — Atomic Queue Operations
-// Reuse patterns: src/updater/lock.ts (flag 'wx'), src/config/index.ts (atomic write)
+// Reuse patterns: atomic lock via flag 'wx' (O_EXCL); atomic config write via temp file + rename
 
 import { promises as nodeFs } from 'node:fs';
 import path from 'path';

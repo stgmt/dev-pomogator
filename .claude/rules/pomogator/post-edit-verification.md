@@ -1,7 +1,6 @@
 ---
 paths:
-  - "extensions/**"
-  - "src/**"
+  - "tools/**"
   - "**/compact_bar.py"
   - "**/yaml_writer.ts"
   - "**/test_runner_wrapper.*"

@@ -6,7 +6,7 @@
  * without a fresh scope-verification marker AND without an explicit escape hatch.
  *
  * Spec: .specs/verify-generic-scope-fix/FR.md (FR-2 + FR-3 + FR-4 + FR-5 + FR-7)
- * Template: extensions/plan-pomogator/tools/plan-pomogator/plan-gate.ts (stdin+exit pattern)
+ * Template: tools/plan-pomogator/plan-gate.ts (stdin+exit pattern)
  *
  * Exit codes:
  *   0 — allow (pass-through)

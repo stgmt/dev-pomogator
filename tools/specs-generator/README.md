@@ -5,7 +5,7 @@
 ## Обзор инструментов
 
 ```
-.dev-pomogator/tools/specs-generator/
+tools/specs-generator/
 ├── README.md              # Этот файл
 ├── scaffold-spec.ts       # Создание структуры папки с шаблонами
 ├── validate-spec.ts       # Валидация структуры и форматов
@@ -22,25 +22,25 @@
 
 ```sh
 # Создать новую спеку
-./.dev-pomogator/tools/specs-generator/scaffold-spec.ts -Name "my-feature"
+./tools/specs-generator/scaffold-spec.ts -Name "my-feature"
 
 # Проверить статус
-./.dev-pomogator/tools/specs-generator/spec-status.ts -Path ".specs/my-feature"
+./tools/specs-generator/spec-status.ts -Path ".specs/my-feature"
 
 # Валидация
-./.dev-pomogator/tools/specs-generator/validate-spec.ts -Path ".specs/my-feature"
+./tools/specs-generator/validate-spec.ts -Path ".specs/my-feature"
 
 # Список всех спеков
-./.dev-pomogator/tools/specs-generator/list-specs.ts
+./tools/specs-generator/list-specs.ts
 
 # Аудит кросс-ссылок
-./.dev-pomogator/tools/specs-generator/audit-spec.ts -Path ".specs/my-feature"
+./tools/specs-generator/audit-spec.ts -Path ".specs/my-feature"
 
 # Анализ паттернов .feature файлов (ПЕРЕД написанием .feature)
-./.dev-pomogator/tools/specs-generator/analyze-features.ts -Format text
+./tools/specs-generator/analyze-features.ts -Format text
 
 # Анализ с поиском кандидатов
-./.dev-pomogator/tools/specs-generator/analyze-features.ts -FeatureSlug "my-feature" -Format text
+./tools/specs-generator/analyze-features.ts -FeatureSlug "my-feature" -Format text
 ```
 
 ## Скрипты
@@ -248,7 +248,7 @@
 
 ## Логирование
 
-Все скрипты пишут логи в `.dev-pomogator/tools/specs-generator/logs/`.
+Все скрипты пишут логи в `tools/specs-generator/logs/`.
 
 **Формат:** `[YYYY-MM-DD HH:mm:ss] [LEVEL] Message`
 

@@ -30,7 +30,7 @@ const FILTER_FORMAT: Record<TestFramework, (filter: string) => string> = {
 };
 
 /** Wrapper lives in test-statusline and delegates to the canonical TS writer. */
-const WRAPPER_PATH = '.dev-pomogator/tools/test-statusline/test_runner_wrapper.cjs';
+const WRAPPER_PATH = 'tools/test-statusline/test_runner_wrapper.cjs';
 
 export interface TestCommand {
   /** Full command string to execute */
