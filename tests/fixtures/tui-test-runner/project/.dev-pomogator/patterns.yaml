@@ -1,0 +1,23 @@
+# User pattern overrides for the tui-test-runner-v2 fixture project.
+# Matching algorithm (analyst/patterns.py): regex first → keyword ALL → first wins.
+# Order matters: regex_keyword_bootstrap must precede keyword_handshake so a
+# "bootstrap handshake" error matches via regex+keywords, while a keyword-only
+# "handshake" error (no "bootstrap") skips it and falls through to keyword_handshake.
+patterns:
+  - id: timeout
+    match: 'Timeout of \d+ms'
+    hint: 'Custom timeout hint from project override'
+    category: timeout
+  - id: regex_keyword_bootstrap
+    match: 'bootstrap'
+    hint: 'Bootstrap handshake failure detected'
+    category: startup
+    keywords:
+      - handshake
+  - id: keyword_handshake
+    match: ''
+    hint: 'Connection handshake failure'
+    category: connection
+    keywords:
+      - handshake
+      - connection

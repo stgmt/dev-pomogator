@@ -34,6 +34,10 @@ __pycache__/
 .dev-pomogator/
 # scratch / e2e harness (plugin-install Docker test, logs)
 .dev-pomogator-tmp/
+# but DO track intentional test fixtures that live under a .dev-pomogator/ path
+# (e.g. tui-test-runner user-patterns override) — otherwise fresh clones/CI fail those tests
+!tests/fixtures/**/.dev-pomogator/
+!tests/fixtures/**/.dev-pomogator/**
 # hyperv-test-runner artifacts: .dev-pomogator/hyperv-runs/ (per-run logs + screenshots)
 # RDP file (contains VM IP, user-specific)
 claude-test.rdp
