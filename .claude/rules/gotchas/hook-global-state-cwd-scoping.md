@@ -1,8 +1,7 @@
 ---
 paths:
-  - "extensions/*/tools/**/*gate*.ts"
-  - "extensions/*/tools/**/*hook*.ts"
-  - ".dev-pomogator/tools/**/*gate*.ts"
+  - "tools/**/*gate*.ts"
+  - "tools/**/*hook*.ts"
 ---
 
 # Hook Global State — CWD Scoping

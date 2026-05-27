@@ -17,9 +17,10 @@
 
 ## Компоненты
 
-- **`buildCanonicalPlugin()`** (`src/installer/plugin-canonical.ts`) — build-time aggregator. Читает `extensions/*/extension.json`, генерирует `.claude-plugin/plugin.json` + копирует skills/rules/commands/hooks/mcp в canonical paths repo. Запускается через `npm run build:plugin`. Pure function (read source manifests + write canonical artifacts), no runtime.
-- **`marketplace.json`** (`.claude-plugin/marketplace.json`) — static catalog file, hand-maintained или generated. Объявляет dev-pomogator plugin available для install. Schema per Anthropic plugin-marketplaces.md.
-- **`migrate-v1-to-v2.ts`** (`tools/migrate-v1-to-v2.ts`) — standalone cleanup script для пользователей переходящих с v1. User-driven (запускается explicitly), не часть plugin install flow.
+- **`.claude-plugin/plugin.json`** + **`.claude-plugin/hooks.json`** + **`.claude-plugin/marketplace.json`** — три hand-authored canonical manifest файла в repo root. Поддерживаются вручную (committed static files), не генерируются build-step'ом. `plugin.json` — canonical plugin manifest; `hooks.json` — aggregated hooks config; `marketplace.json` — catalog объявляющий dev-pomogator plugin available для install. Schema per Anthropic plugin-marketplaces.md.
+- **Tools tree** (`tools/<tool>/`) — все tool/hook скрипты лежат top-level в `tools/`. `hooks.json` ссылается на эти on-disk скрипты.
+- **Drift test** (`tests/e2e/canonical-plugin.test.ts`) — guard синхронизации между hand-maintained манифестами и реальными on-disk tools. Assert'ит что каждая hook-команда в `hooks.json` резолвится в существующий скрипт под `tools/` (и vice-versa), плюс schema validity манифестов. Замена build-step'а: вместо генерации — verification.
+- **`migrate-v1-to-v2.ts`** (`tools/migrate-v1-to-v2/migrate-v1-to-v2.ts`) — standalone cleanup script для пользователей переходящих с v1. User-driven (запускается explicitly), не часть plugin install flow.
 - **Anthropic-managed components** (no dev-pomogator code):
   - Plugin install/uninstall/update lifecycle
   - `enabledPlugins` settings.json updates
@@ -29,25 +30,24 @@
 
 ## Где лежит реализация
 
-- Build-time:
-  - `src/installer/plugin-canonical.ts` (NEW) — `buildCanonicalPlugin()` aggregator
-  - `src/installer/extensions.ts` (EDIT) — refactor existing aggregation logic в shared utility, используется plugin-canonical.ts
+- Hand-authored canonical manifests (committed в repo root, maintained вручную):
+  - `.claude-plugin/plugin.json` — canonical plugin manifest
+  - `.claude-plugin/marketplace.json` — marketplace catalog
+  - `.claude-plugin/hooks.json` — aggregated hooks config (ссылается на `tools/<tool>/` скрипты)
 - Plugin artifacts (committed в repo):
-  - `.claude-plugin/plugin.json` (NEW or UPDATE) — canonical plugin manifest
-  - `.claude-plugin/marketplace.json` (NEW) — marketplace catalog
-  - `skills/<name>/SKILL.md` — aggregated skills (mirror `.claude/skills/`)
-  - `commands/*.md` — aggregated commands
-  - `hooks/hooks.json` — aggregated hooks
-  - `.mcp.json` — aggregated MCP servers
-  - `agents/*.md` — aggregated agents (where applicable)
+  - `skills/<name>/SKILL.md` — skills tree
+  - `commands/*.md` — commands
+  - `.mcp.json` — MCP servers
+  - `agents/*.md` — agents (where applicable)
+  - `tools/<tool>/` — top-level tool/hook скрипты (после удаления `src/` и `extensions/` это единственное место кода)
 - Migration utility:
-  - `tools/migrate-v1-to-v2.ts` (NEW) — v1 cleanup script
+  - `tools/migrate-v1-to-v2/migrate-v1-to-v2.ts` (NEW) — v1 cleanup script
 - Documentation:
   - `README.md` (EDIT) — install commands, migration guide, Desktop integration
   - `CLAUDE.md` (EDIT) — architecture notes, development workflow
   - `.specs/dev-pomogator-canonical-plugin/CHANGELOG.md` (UPDATE) — v2.0 BREAKING + migration steps
 - Tests:
-  - `tests/e2e/canonical-plugin-build.test.ts` (NEW) — assertions на `buildCanonicalPlugin()` output
+  - `tests/e2e/canonical-plugin.test.ts` (NEW) — drift test: каждая hook-команда в `hooks.json` резолвится в on-disk скрипт под `tools/` и vice-versa, + manifest schema validity
   - `tests/e2e/marketplace-json.test.ts` (NEW) — schema validation
   - `tests/e2e/migration-v1-to-v2.test.ts` (NEW) — cleanup script behavior
   - `tests/e2e/cursor-removal.test.ts` (NEW) — regression
@@ -60,22 +60,19 @@
 ```
 dev-pomogator/
 ├── .claude-plugin/
-│   ├── plugin.json          ← canonical plugin manifest
-│   └── marketplace.json     ← marketplace catalog (NEW в v2)
-├── skills/                   ← canonical skills tree (built from .claude/skills/)
+│   ├── plugin.json          ← canonical plugin manifest (hand-authored)
+│   ├── marketplace.json     ← marketplace catalog (hand-authored, NEW в v2)
+│   └── hooks.json           ← aggregated hooks config (hand-authored)
+├── skills/                   ← canonical skills tree
 │   └── <name>/SKILL.md
 ├── commands/                 ← canonical commands
-├── hooks/
-│   └── hooks.json            ← aggregated hooks
-├── .mcp.json                 ← aggregated MCP
+├── .mcp.json                 ← MCP config
 ├── agents/                   ← где applicable
-├── extensions/               ← source-of-truth для build (preserved)
-│   └── <ext-name>/extension.json
-├── src/                      ← build tools (TypeScript)
-│   └── installer/plugin-canonical.ts
-├── tools/
-│   └── migrate-v1-to-v2.ts   ← standalone migration utility
-├── package.json              ← npm package (deprecated install path; build tooling only)
+├── tools/                    ← top-level tool/hook scripts (src/ и extensions/ удалены в v2)
+│   ├── <tool>/...            ← скрипты на которые ссылается hooks.json
+│   └── migrate-v1-to-v2/migrate-v1-to-v2.ts  ← standalone migration utility
+├── tests/e2e/canonical-plugin.test.ts  ← drift test (hooks.json ↔ tools/ sync)
+├── package.json              ← npm package (deprecated install path; tooling only)
 └── README.md
 ```
 
@@ -89,9 +86,9 @@ dev-pomogator/
 │           └── dev-pomogator/
 │               └── 2.0.0/    ← Claude Code clones repo here
 │                   ├── .claude-plugin/plugin.json
+│                   ├── .claude-plugin/hooks.json
 │                   ├── skills/<name>/SKILL.md
 │                   ├── commands/*.md
-│                   ├── hooks/hooks.json
 │                   └── .mcp.json
 └── settings.json             ← contains enabledPlugins entry
 ```
@@ -141,27 +138,29 @@ dev-pomogator/
    - Prints canonical install commands
 4. User делает `/plugin marketplace add stgmt/dev-pomogator` + `/plugin install`
 
-### Build flow (для maintainers)
+### Maintenance flow (для maintainers)
 
-1. dev-pomogator developer редактирует `extensions/<ext>/extension.json` или `.claude/skills/<name>/SKILL.md`
-2. `npm run build:plugin`:
-   - `buildCanonicalPlugin()` reads все 26 extension manifests
-   - Aggregates skills/commands/hooks/mcp в canonical layout
-   - Writes `.claude-plugin/plugin.json` + skills/, commands/, hooks/hooks.json, .mcp.json в repo root
-   - Updates `version` field synchronized в обоих manifestах
-3. `git commit && git push` — users получат update через `/plugin marketplace update stgmt` (FR-10)
+Манифеста НЕ генерируются — поддерживаются вручную. При добавлении/изменении skill/command/hook/tool:
+
+1. dev-pomogator developer редактирует `skills/<name>/SKILL.md`, `commands/*.md`, `tools/<tool>/...`, или hook-скрипт
+2. Если затронут hook — вручную обновляет `.claude-plugin/hooks.json` (command → on-disk `tools/<tool>/` путь)
+3. При release — вручную bump'ит `version` synchronized в `.claude-plugin/plugin.json` AND `.claude-plugin/marketplace.json`
+4. Запускает drift test (`tests/e2e/canonical-plugin.test.ts`) — assert'ит что каждая hooks.json команда резолвится в on-disk скрипт под `tools/` (и vice-versa) + manifest schema validity
+5. `git commit && git push` — users получат update через `/plugin marketplace update stgmt` (FR-10)
 
 ## API
 
-Этот плагин не экспортирует HTTP/network API. Внутренний build-time TypeScript API:
+Этот плагин не экспортирует HTTP/network API. Build-step нет (манифеста hand-authored). Внутренний TypeScript API — drift test + migration:
 
-### `buildCanonicalPlugin(): Promise<BuildResult>`
+### Drift test (`tests/e2e/canonical-plugin.test.ts`)
 
-- Input: none (читает `extensions/*/extension.json` из текущего repo)
-- Output: `BuildResult { manifest: PluginManifest, marketplace: MarketplaceManifest, writtenPaths: string[], skippedPaths: string[] }`
-- Side effects: writes `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `skills/<name>/SKILL.md`, `commands/*.md`, `hooks/hooks.json`, `.mcp.json` в repo root
-- Idempotent: re-running с unchanged sources → no-op (content hash compare)
-- Pure read of source: НЕ читает `~/.claude/`, не пишет вне repo
+- Input: none (читает `.claude-plugin/hooks.json` + `.claude-plugin/plugin.json` + `.claude-plugin/marketplace.json` + сканирует on-disk `tools/`)
+- Assertions:
+  - Каждая hook-команда в `hooks.json` резолвится в существующий on-disk скрипт под `tools/`
+  - Каждый hook-скрипт под `tools/` (который должен быть зарегистрирован) присутствует в `hooks.json` (vice-versa)
+  - `plugin.json`/`marketplace.json`/`hooks.json` schema-valid per Anthropic spec
+  - `plugin.json.version` == `marketplace.json plugins[].version`
+- Read-only: НЕ пишет файлы, только verification
 
 ### `runMigrationV1ToV2(projectPath: string, opts?): Promise<MigrationResult>`
 
@@ -227,80 +226,6 @@ dev-pomogator/
 - Separate marketplace repo (stgmt/claude-marketplace) + plugin repo (stgmt/dev-pomogator) — rejected потому что adds complexity для single-plugin use case; user setup требует понимания two repos
 - Marketplace репо где dev-pomogator — один из многих плагинов community — rejected потому что добавляет maintenance overhead и слабее brand; pure dev-pomogator repo cleaner
 
-### Decision: Version sync — single source of truth + pre-commit enforcement
-
-> Added 2026-05-23 as mitigation Top-5 risk #1.
-
-**Rationale:** `buildCanonicalPlugin()` читает версию из ОДНОГО источника (`package.json:version`) и atomically пишет ту же версию в `.claude-plugin/plugin.json` И `.claude-plugin/marketplace.json/plugins[0].version`. Pre-commit hook бежит build; CI test в PR проверяет no-drift. Без этого manual edit одного файла создаёт phantom updates у users — proof: существующий v1 `.dev-pomogator/.claude-plugin/plugin.json:3 = 1.5.0` уже out-of-sync с `package.json` (different file lifecycle).
-
-**Trade-off:** Lock-step coupling между npm version и plugin version — features не bugs (consistency guarantee). Bump = run build перед коммитом; pre-commit hook делает это автоматически (`git add` обновлённых артефактов).
-
-**Alternatives considered:**
-- Manual bump в обоих файлах с trust dev-discipline — rejected, observed history разсинхронизуется без enforcement.
-- Separate version в plugin.json (independent от npm) — rejected, two-source усложняет release; users проще ассоциировать одну версию.
-
-### Decision: Schema validation в build — fail-fast перед commit
-
-> Added 2026-05-23 as mitigation Top-5 risk #3.
-
-**Rationale:** `buildCanonicalPlugin()` валидирует каждый сгенерированный artifact против Anthropic schemas (известных по `plugins-reference.md` + `plugin-marketplaces.md`). Если ошибка — exit non-zero до записи на диск; dev видит exact error message с field+location. Без этого ошибка проявится только в Desktop UI как silent skip.
-
-**Trade-off:** Anthropic schemas могут эволюционировать; наш hardcoded schema может застаревать. Mitigation: schema references published Anthropic docs URL + date verified в комментарии; CHANGELOG fixируется при schema-update bumps.
-
-**Alternatives considered:**
-- Trust JSON.stringify output без validation — rejected per Top-5 #3.
-- Validate только в CI, не локально — rejected: dev должен видеть error до push.
-- Anthropic-provided validator (если npm-published) — checked 2026-05-23 — нет. Используем local JSON Schema validator (`ajv` уже в devDeps).
-
-### Decision: Cross-platform migration script — defensive coding, без automated Windows test
-
-> Added 2026-05-23 as mitigation Top-5 risk #5.
-
-**Rationale:** Migration script (`tools/migrate-v1-to-v2.ts`) использует только: `path.join()` / `path.resolve()`, `glob` package с native sep handling, `fs.promises` API. НЕ string-concat для путей. **Automated cross-platform CI ВНЕ scope этой итерации** — Docker test infra только Linux (`tests/setup/ensure-docker.ts:14` enforces). Manual cross-platform smoke перед release (developer запускает script на Windows локально, документирует в release runbook).
-
-**Trade-off:** Windows-specific bugs могут проскочить (например, CRLF line endings в `.gitignore` handling). Mitigation: release runbook включает manual Windows checklist; первый bug-report от Windows user приоритизируется как hotfix.
-
-**Alternatives considered:**
-- Wire up `hyperv-test-runner` skill для автоматизированных Windows VM tests — rejected: pipeline не настроен на 2026-05-23 (skill доступен, setup — отдельная задача).
-- Skip Windows support целиком — rejected: cross-platform — baseline (см. `bun-oom-guard` extension для Windows OOM).
-- Port на Bash — rejected: TS/Node consistency с остальным codebase.
-
-### Decision: Generated `.claude-plugin/` committed в git с pre-commit regeneration
-
-> Added 2026-05-23 as mitigation Top-5 risk #4 + risk 5.2.
-
-**Rationale:** Marketplace.json `source: "./"` requires `.claude-plugin/plugin.json` exist в clone — иначе `git clone` + `/plugin marketplace add ./` ломается. Поэтому: keep `.claude-plugin/` в git, pre-commit hook regenerate + git add автоматически.
-
-**Trade-off:** Generated файл в git → merge conflict risk при parallel feature dev в разных extensions. Mitigation: pre-commit hook regenerate из source manifests resolves 90% случаев. Если конфликт остался — `npm run build:plugin && git add .claude-plugin/` resolves.
-
-**Alternatives considered:**
-- Gitignore `.claude-plugin/`, regenerate в CI release — rejected: `git clone` не даёт рабочий плагин (marketplace `source: "./"` ломается).
-- `.gitattributes merge=ours` для `.claude-plugin/` — rejected: silent override чужих изменений, не idiomatic.
-
-### Decision: v1 detection — triple-marker check
-
-> Added 2026-05-23 as mitigation Top-5 risk #2.
-
-**Rationale:** Migration script определяет v1 install по комбинации 3 признаков (boolean confidence): (1) `<project>/.dev-pomogator/.claude-plugin/plugin.json` exists AND `version <2.0`; (2) `~/.dev-pomogator/` exists AND содержит `config.json`; (3) `<project>/.gitignore` содержит managed marker block `# >>> dev-pomogator managed >>>`. Если ≥2 из 3 — HIGH confidence, cleanup runs. Если 1 — partial install, interactive confirm перед cleanup. Если 0 — exit "no v1 install detected".
-
-**Trade-off:** False-positive если user случайно имитировал один из маркеров. Mitigation: interactive confirm на 1-marker case, цена FP — user отказывается, exit.
-
-**Alternatives considered:**
-- Single-marker (только `plugin.json` exists) — rejected: partial uninstall edge case даёт false-negative; миграция не запустится.
-- Always-run cleanup без detection — rejected: idempotent на v2-only проекте OK, но психологически dev/user пугается "что оно удаляет".
-
-### Decision: Exhaustive Cursor purge — 59 файлов (FR-8a)
-
-> Added 2026-05-23 as mitigation risk 4.1.
-
-**Rationale:** Initial FR-8 underspecified scope. Exhaustive grep 2026-05-23 показал 59 файлов с cursor refs (vs FILE_CHANGES.md заявленных 39 — undercount на 51%). FR-8a explicitly extends с (a) exhaustive grep command (reproducible), (b) категоризация в 6 групп (root / extensions / src / .claude/ rules+commands / tests / scripts), (c) per-file classification в одну из 3 actions (DELETE-content / EDIT-content / KEEP-historical), (d) acceptance ≤5 KEEP-historical files после Phase 3.
-
-**Trade-off:** Phase 3 work expands с ~3 файлов (per orig FILE_CHANGES.md) до ~54 files actual cleanup + ~5 historical-keep. Mitigation: разделить Phase 3 на 3 sub-phases (3a: root + src/, 3b: extensions/, 3c: .claude/ + tests/) — каждая sub-phase shippable independently.
-
-**Alternatives considered:**
-- Stick с orig FR-8 (3-файла scope) — rejected: leaves 56 файлов с stale cursor refs, partial cleanup gives false sense of completeness.
-- Delete cursor-related tests целиком (тесты `cursor-dead-code-cleanup.test.ts` и `CORE018_cursor-dead-code-cleanup.feature`) — rejected: эти тесты protect regression (verify cursor support DOESN'T return), оставляем под KEEP-historical.
-
 ## BDD Test Infrastructure (ОБЯЗАТЕЛЬНО)
 
 > Секция НЕ может быть удалена.
@@ -317,6 +242,6 @@ dev-pomogator/
 - DROPPED: git-exclude writer test (no .git/info/exclude в новой архитектуре)
 - DROPPED: gitignore-marker config test (no project file writes)
 - ADDED: marketplace.json schema validation test
-- ADDED: buildCanonicalPlugin output validation test
+- ADDED: drift test (`canonical-plugin.test.ts`) — hooks.json commands ↔ on-disk tools/ sync + manifest schema validity
 - KEPT: migration script test (re-scoped — теперь cleanup-only, не copy-to-user-scope)
 - KEPT: cursor-removal regression test

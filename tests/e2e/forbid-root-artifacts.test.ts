@@ -5,8 +5,8 @@ import { execSync } from 'child_process';
 import os from 'os';
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
-const PLUGIN_DIR = path.join(ROOT_DIR, 'extensions', 'forbid-root-artifacts');
-const TOOLS_DIR = path.join(PLUGIN_DIR, 'tools', 'forbid-root-artifacts');
+const PLUGIN_DIR = path.join(ROOT_DIR, 'tools', 'forbid-root-artifacts');
+const TOOLS_DIR = path.join(ROOT_DIR, 'tools', 'forbid-root-artifacts');
 
 // Temp directory for test repositories
 let tempDir: string;
@@ -74,13 +74,9 @@ describe('PLUGIN004: Forbid Root Artifacts', () => {
   });
 
   describe('Plugin Structure', () => {
-    it('should have extension.json', async () => {
-      const extPath = path.join(PLUGIN_DIR, 'extension.json');
-      expect(await fs.pathExists(extPath)).toBe(true);
-      
-      const ext = await fs.readJson(extPath);
-      expect(ext.name).toBe('forbid-root-artifacts');
-      expect(ext.platforms).toContain('claude');
+    it('should ship the forbid-root-artifacts tool scripts', async () => {
+      expect(await fs.pathExists(path.join(TOOLS_DIR, 'check.py'))).toBe(true);
+      expect(await fs.pathExists(path.join(TOOLS_DIR, 'setup.py'))).toBe(true);
     });
 
     // .claude-plugin removed - marketplace approach deprecated

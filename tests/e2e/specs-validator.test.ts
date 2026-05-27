@@ -8,7 +8,7 @@ import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import { execSync } from 'child_process';
-import { runInstaller, appPath, initGitRepo } from './helpers';
+import { appPath, initGitRepo, pluginHookCommands } from './helpers';
 
 // ============================================================================
 // Test Fixtures and Helpers
@@ -86,7 +86,7 @@ async function createIncompleteSpec(name: string): Promise<string> {
  * Get path to validate-specs.ts script
  */
 function getValidateSpecsPath(): string {
-  return appPath('.dev-pomogator', 'tools', 'specs-validator', 'validate-specs.ts');
+  return appPath('tools', 'specs-validator', 'validate-specs.ts');
 }
 
 /**
@@ -122,6 +122,21 @@ function runValidateSpecs(workspaceRoot: string): string {
   fs.writeFileSync(tempFile, stdinJson, 'utf-8');
   
   try {
+    // Isolate from the shared form-guards audit log (other test files populate
+    // ~/.dev-pomogator/logs/form-guards.log); otherwise validate-specs prints a
+    // "Form guards (24h)" summary and these expect('') checks fail.
+    try {
+      fs.removeSync(
+        path.join(
+          process.env.HOME || process.env.USERPROFILE || '',
+          '.dev-pomogator',
+          'logs',
+          'form-guards.log',
+        ),
+      );
+    } catch {
+      /* best-effort */
+    }
     // Use npx tsx for cross-platform TypeScript execution
     // Cat temp file to stdin
     const result = execSync(
@@ -179,11 +194,8 @@ async function getValidationReport(specName: string): Promise<string> {
 
 describe('PLUGIN005: Specs Validator Hook', () => {
   beforeAll(async () => {
-    // Initialize git repo (required for installer)
+    // Initialize git repo (findRepoRoot needs it)
     await initGitRepo();
-    
-    // Run installer to set up hooks and scripts
-    await runInstaller('--claude --all');
   });
 
   beforeEach(async () => {
@@ -199,18 +211,12 @@ describe('PLUGIN005: Specs Validator Hook', () => {
 
   // @feature2
   describe('Claude Hook Registration', () => {
-    it('should have validate-specs defined in extension.json claude hooks', async () => {
-      const extJsonPath = appPath(
-        'extensions',
-        'specs-workflow',
-        'extension.json'
-      );
-
-      expect(await fs.pathExists(extJsonPath)).toBe(true);
-      const extJson = await fs.readJson(extJsonPath);
-
-      expect(extJson.hooks).toBeDefined();
-      expect(extJson.hooks.claude.UserPromptSubmit).toContain('validate-specs');
+    it('should register validate-specs in the plugin UserPromptSubmit hooks', () => {
+      expect(
+        pluginHookCommands('UserPromptSubmit').some((c) =>
+          c.includes('specs-validator/validate-specs.ts'),
+        ),
+      ).toBe(true);
     });
   });
 
@@ -381,7 +387,7 @@ describe('PLUGIN005: Specs Validator Hook', () => {
     // @feature10
     it('PLUGIN005_10: parseTestFile extracts test case IDs from .test.ts', async () => {
       const { parseTestFile } = await import(
-        '../../extensions/specs-workflow/tools/specs-validator/parsers/test-parser'
+        '../../tools/specs-validator/parsers/test-parser'
       );
 
       // Write a fixture test file
@@ -419,10 +425,10 @@ describe('PLUGIN005: Specs Validator Hook', () => {
     // @feature11
     it('PLUGIN005_11: matchTestFeature detects aligned and misaligned IDs', async () => {
       const { matchTestFeature } = await import(
-        '../../extensions/specs-workflow/tools/specs-validator/matcher'
+        '../../tools/specs-validator/matcher'
       );
       const { parseTestFile } = await import(
-        '../../extensions/specs-workflow/tools/specs-validator/parsers/test-parser'
+        '../../tools/specs-validator/parsers/test-parser'
       );
 
       const fixtureDir = appPath('.test-fixtures-align');

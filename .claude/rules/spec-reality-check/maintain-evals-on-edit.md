@@ -34,11 +34,10 @@ Bulk-run на real corpus в session 2026-05-24 поймал **4 systemic false-
 
 ## При изменении verify.ts/verify-hook.ts
 
-После каждого Edit:
-1. Скопировать в installed copy: `cp .claude/skills/spec-reality-check/scripts/verify*.ts .dev-pomogator/tools/spec-reality-check/`
-2. Запустить evals (см. выше)
-3. Запустить bulk-run
-4. Если regression-baseline-pinned ИЛИ bulk clean count fell — НЕ коммитить пока не починено
+После каждого Edit (скрипты запускаются прямо из директории скила — в v2 нет installed-копии):
+1. Запустить evals (см. выше)
+2. Запустить bulk-run
+3. Если regression-baseline-pinned ИЛИ bulk clean count fell — НЕ коммитить пока не починено
 
 ## При добавлении нового check
 

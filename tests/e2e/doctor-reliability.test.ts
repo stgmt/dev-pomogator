@@ -1,8 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
-import { acquireLock, LockHeldError } from '../../src/doctor/lock.ts';
-import { runDoctor } from '../../src/doctor/index.ts';
+import { acquireLock, LockHeldError } from '../../.claude/skills/pomogator-doctor/scripts/engine/lock.ts';
+import { runDoctor } from '../../.claude/skills/pomogator-doctor/scripts/engine/index.ts';
 import { killAllChildren } from '../fixtures/pomogator-doctor/child-registry.ts';
 import { buildTempHome } from '../fixtures/pomogator-doctor/temp-home-builder.ts';
 

@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { JestAdapter } from '../../extensions/tui-test-runner/tools/tui-test-runner/adapters/jest_adapter.ts';
-import { PytestAdapter } from '../../extensions/tui-test-runner/tools/tui-test-runner/adapters/pytest_adapter.ts';
-import { DotnetAdapter } from '../../extensions/tui-test-runner/tools/tui-test-runner/adapters/dotnet_adapter.ts';
-import { CargoAdapter } from '../../extensions/tui-test-runner/tools/tui-test-runner/adapters/cargo_adapter.ts';
-import { GoTestAdapter } from '../../extensions/tui-test-runner/tools/tui-test-runner/adapters/go_test_adapter.ts';
-import { GenericAdapter } from '../../extensions/tui-test-runner/tools/tui-test-runner/adapters/generic_adapter.ts';
+import { JestAdapter } from '../../tools/tui-test-runner/adapters/jest_adapter.ts';
+import { PytestAdapter } from '../../tools/tui-test-runner/adapters/pytest_adapter.ts';
+import { DotnetAdapter } from '../../tools/tui-test-runner/adapters/dotnet_adapter.ts';
+import { CargoAdapter } from '../../tools/tui-test-runner/adapters/cargo_adapter.ts';
+import { GoTestAdapter } from '../../tools/tui-test-runner/adapters/go_test_adapter.ts';
+import { GenericAdapter } from '../../tools/tui-test-runner/adapters/generic_adapter.ts';
 
 // FBOL003 — Adapter parsing reliability (5 frameworks + generic)
 // Synthetic-input reliability benchmark (FR-15 expansion v0.3.0).

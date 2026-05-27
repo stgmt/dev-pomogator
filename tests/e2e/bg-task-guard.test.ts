@@ -3,10 +3,10 @@ import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
 import { spawnSync } from 'child_process';
-import { appPath } from './helpers';
+import { appPath, pluginHookEntries, pluginHookCommands } from './helpers';
 
-const MARK_HOOK = 'extensions/test-statusline/tools/bg-task-guard/mark-bg-task.ts';
-const STOP_HOOK = 'extensions/test-statusline/tools/bg-task-guard/stop-guard.sh';
+const MARK_HOOK = 'tools/bg-task-guard/mark-bg-task.ts';
+const STOP_HOOK = 'tools/bg-task-guard/stop-guard.sh';
 const MARKER_FILE = '.dev-pomogator/.bg-task-active';
 
 // Temp directory for test isolation — all markers/YAML/session.env go here, not in real .dev-pomogator/
@@ -258,36 +258,24 @@ describe('GUARD002: Background Task Guard', () => {
 
   describe('Extension Manifest', () => {
     // @feature1
-    it('GUARD002_07: manifest declares PostToolUse and Stop hooks', async () => {
-      const manifest = await fs.readJson(
-        appPath('extensions/test-statusline/extension.json'),
+    it('GUARD002_07: registers PostToolUse and Stop hooks in plugin registry', () => {
+      // PostToolUse: a Bash-matched group running mark-bg-task.ts
+      const mark = pluginHookEntries('PostToolUse').find((e) =>
+        e.commands.some((c) => c.includes('bg-task-guard/mark-bg-task.ts')),
       );
+      expect(mark, 'PostToolUse must register mark-bg-task.ts').toBeDefined();
+      expect(mark!.matcher).toBe('Bash');
 
-      expect(manifest.hooks.claude.PostToolUse).toBeDefined();
-      expect(manifest.hooks.claude.Stop).toBeDefined();
-
-      // PostToolUse should be array with Bash matcher
-      const postToolUse = manifest.hooks.claude.PostToolUse;
-      expect(Array.isArray(postToolUse)).toBe(true);
-      expect(postToolUse[0].matcher).toBe('Bash');
-      expect(postToolUse[0].hooks[0].command).toContain('mark-bg-task.ts');
-
-      // Stop should be array
-      const stop = manifest.hooks.claude.Stop;
-      expect(Array.isArray(stop)).toBe(true);
-      expect(stop[0].hooks[0].command).toContain('stop-guard.sh');
+      // Stop: stop-guard.sh
+      expect(
+        pluginHookCommands('Stop').some((c) => c.includes('bg-task-guard/stop-guard.sh')),
+      ).toBe(true);
     });
 
     // @feature1
-    it('GUARD002_08: toolFiles includes bg-task-guard scripts', async () => {
-      const manifest = await fs.readJson(
-        appPath('extensions/test-statusline/extension.json'),
-      );
-
-      const toolFiles = manifest.toolFiles['bg-task-guard'];
-      expect(toolFiles).toBeDefined();
-      expect(toolFiles.join(',')).toContain('mark-bg-task.ts');
-      expect(toolFiles.join(',')).toContain('stop-guard.sh');
+    it('GUARD002_08: bg-task-guard tool scripts exist in tools/', () => {
+      expect(fs.existsSync(appPath('tools/bg-task-guard/mark-bg-task.ts'))).toBe(true);
+      expect(fs.existsSync(appPath('tools/bg-task-guard/stop-guard.sh'))).toBe(true);
     });
   });
 

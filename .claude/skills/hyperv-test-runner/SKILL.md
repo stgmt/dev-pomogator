@@ -17,7 +17,7 @@ description: >
 
   Skill orchestrates host PowerShell scripts in tools/hyperv-test-runner/
   via Bash, parses YAML test scenarios from tests/hyperv-scenarios/, and uses
-  the existing extensions/debug-screenshot/skills/debug-screenshot/scripts/screenshot.ps1
+  the existing .claude/skills/debug-screenshot/scripts/screenshot.ps1
   for visual capture (multimodal Read of PNG → CONFIRMED/DENIED).
 allowed-tools: Bash, Read, Edit, Write, Glob, Grep, AskUserQuestion
 ---
@@ -99,7 +99,7 @@ The helper script:
 3. Reverts VM to scenario.preconditions.checkpoint via `04-revert-and-launch.ps1 -NoVMConnect`
 4. Copies the fixture into VM via `Copy-VMFile -VMName claude-test`
 5. For each step: `Invoke-Command -VMName claude-test -ScriptBlock { ... }` with timeout
-6. For steps with `screenshot: true`: invokes `extensions/debug-screenshot/skills/debug-screenshot/scripts/screenshot.ps1`
+6. For steps with `screenshot: true`: invokes `.claude/skills/debug-screenshot/scripts/screenshot.ps1`
 7. Emits one JSON line per step / assertion to stdout (prefix `STEP_RESULT:`, `ASSERTION_RESULT:`)
 8. In `finally`: reverts VM to `scenario.post_test.revert`
 9. Writes `report.md` and emits `RUN_REPORT: <abs path>` as last line
@@ -235,7 +235,7 @@ Show the generated yaml + run results. Do NOT auto-commit.
 ## Visual verification workflow (used by Trigger 1 step 1.5)
 
 This skill **reuses** the existing screenshot helper at
-`extensions/debug-screenshot/skills/debug-screenshot/scripts/screenshot.ps1`
+`.claude/skills/debug-screenshot/scripts/screenshot.ps1`
 (also installed at `.claude/skills/debug-screenshot/scripts/screenshot.ps1` in
 target projects). DO NOT define a custom `Add-Type System.Drawing` helper here.
 
@@ -280,5 +280,5 @@ The flow per `screenshot_match` assertion:
 - Spec: `.specs/hyperv-test-runner/`
 - PowerShell scripts: `tools/hyperv-test-runner/`
 - Test catalog: `tests/hyperv-scenarios/`
-- Visual capture helper: `extensions/debug-screenshot/skills/debug-screenshot/scripts/screenshot.ps1`
+- Visual capture helper: `.claude/skills/debug-screenshot/scripts/screenshot.ps1`
 - Target fixture: `tests/fixtures/typical-claude-user/`

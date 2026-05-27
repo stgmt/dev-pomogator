@@ -15,7 +15,7 @@ import {
   pruneScratchArchives,
   readScratch,
   SCRATCH_THRESHOLD,
-} from '../../../extensions/onboard-repo/tools/onboard-repo/steps/scratch-findings.ts';
+} from '../../../tools/onboard-repo/steps/scratch-findings.ts';
 
 
 async function createManyFiles(dir: string, count: number): Promise<void> {

@@ -29,3 +29,11 @@ PowerShell скрипты для автоматизации работы со с
 ```
 User → Script → FileSystem → JSON Output
 ```
+
+## BDD Test Infrastructure
+
+**Classification:** TEST_DATA_NONE
+**TEST_FORMAT:** BDD
+**Framework:** N/A
+**Evidence:** stateless CLI scripts, no fixture data required
+**Verdict:** stateless

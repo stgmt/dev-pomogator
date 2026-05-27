@@ -94,7 +94,7 @@ Build the command using the dispatch table:
 Wrap with `test_runner_wrapper.cjs` for YAML status tracking. **Always pass `--framework`** so the wrapper uses the correct adapter (auto-detection can fail in Docker or nested projects):
 
 ```bash
-node .dev-pomogator/tools/test-statusline/test_runner_wrapper.cjs --framework <detected-framework> -- <test-command>
+node tools/test-statusline/test_runner_wrapper.cjs --framework <detected-framework> -- <test-command>
 ```
 
 **ВАЖНО — `node`, не `bash`:** файл имеет расширение `.cjs` и shebang `#!/usr/bin/env node`. Запуск через `bash file.cjs` пытается распарсить файл как shell-скрипт и валится с `syntax error near unexpected token '('`. Используй `node file.cjs` (либо `./file.cjs` если executable bit стоит — на Windows не работает, поэтому `node` — кросс-платформенный default).
@@ -130,7 +130,7 @@ bash scripts/docker-test.sh "npx vitest run -t auth"
 **If `scripts/docker-test.sh` does NOT exist** (fallback for other projects):
 
 ```bash
-node .dev-pomogator/tools/test-statusline/test_runner_wrapper.cjs --framework <detected-framework> -- docker compose -f docker-compose.test.yml run --rm test <test-command>
+node tools/test-statusline/test_runner_wrapper.cjs --framework <detected-framework> -- docker compose -f docker-compose.test.yml run --rm test <test-command>
 ```
 
 **Cross-platform note:** The wrapper uses `cross-spawn` for transparent cross-platform command resolution on all OSes.
@@ -143,7 +143,7 @@ After launching tests with `run_in_background: true`, start a Monitor to get rea
 
 ```
 Monitor(
-  command: "bash .dev-pomogator/tools/tui-test-runner/test-monitor.sh",
+  command: "bash tools/tui-test-runner/test-monitor.sh",
   description: "Test progress: failures and completion",
   persistent: true,
   timeout_ms: 1800000
@@ -163,7 +163,7 @@ The monitor script polls the YAML status file and emits filtered events:
 
 **Docker tests:** The monitor auto-detects `.dev-pomogator/.docker-status/` (Docker volume-mounted YAML). Pass the directory explicitly if needed:
 ```
-command: "bash .dev-pomogator/tools/tui-test-runner/test-monitor.sh .dev-pomogator/.docker-status"
+command: "bash tools/tui-test-runner/test-monitor.sh .dev-pomogator/.docker-status"
 ```
 
 **On Monitor timeout:** If the Monitor times out before tests finish, re-arm it — the startup snapshot logic seamlessly picks up the active run from current state.

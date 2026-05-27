@@ -3,7 +3,7 @@ import * as os from 'node:os';
 import * as crypto from 'node:crypto';
 import { spawnSync, type SpawnSyncReturns } from 'node:child_process';
 import * as fsExtra from 'fs-extra';
-import type { OnboardingJson, Archetype } from '../../../extensions/onboard-repo/tools/onboard-repo/lib/types.ts';
+import type { OnboardingJson, Archetype } from '../../../tools/onboard-repo/lib/types.ts';
 
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');

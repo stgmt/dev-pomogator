@@ -5,22 +5,19 @@
 ## Pipeline diagram
 
 ```
-[dev-pomogator developer edits extensions/<ext>/extension.json or .claude/skills/<name>/SKILL.md]
+[dev-pomogator developer edits skills/<name>/SKILL.md, commands/*.md, tools/<tool>/..., or a hook script]
         ↓
-[npm run build:plugin]
+[Maintainer hand-edits canonical manifests in .claude-plugin/ (no build-step):]
+   ├ .claude-plugin/plugin.json     ← canonical manifest (hand-authored)
+   ├ .claude-plugin/marketplace.json ← marketplace catalog (hand-authored)
+   └ .claude-plugin/hooks.json      ← hooks config (hand-authored; commands → tools/<tool>/ scripts)
         ↓
-[buildCanonicalPlugin()] reads все extensions/*/extension.json
-        ↓
-[Aggregator] merges skills/commands/hooks/mcp в PluginTree
-        ↓
-[Writer] generates:
-   ├ .claude-plugin/plugin.json    ← canonical manifest
-   ├ .claude-plugin/marketplace.json ← marketplace catalog
-   ├ skills/<name>/SKILL.md         ← canonical skills
-   ├ commands/*.md                  ← canonical commands
-   ├ hooks/hooks.json               ← aggregated hooks
-   └ .mcp.json                      ← aggregated MCP
-        ↓
+[Drift test: tests/e2e/canonical-plugin.test.ts]
+   ├ every hooks.json command resolves to an on-disk script under tools/
+   ├ every registered hook script under tools/ is present in hooks.json
+   ├ plugin.json / marketplace.json / hooks.json schema-valid per Anthropic spec
+   └ plugin.json.version == marketplace.json plugins[].version
+        ↓ (drift test PASS — manifests in sync with disk)
 [git commit + push к dev-pomogator repo]
         ↓
 [User]: /plugin marketplace add stgmt/dev-pomogator
@@ -227,7 +224,9 @@ dev-pomogator использует **relative path `"./"`** (single-plugin marke
 - `exitCode` — 0 success или informational (no v1 detected); 1 если error.
 - `nextSteps[]` — printed instructions для user.
 
-## PluginTree (build-time aggregation, internal type)
+## ManifestSet (drift-test parsed view of on-disk hand-maintained manifests)
+
+Drift test (`tests/e2e/canonical-plugin.test.ts`) parses the three hand-authored manifests + scans on-disk `tools/` to assert sync. There is no build aggregator and no source→target mapping — manifests are authored directly.
 
 ```json
 {
@@ -242,20 +241,17 @@ dev-pomogator использует **relative path `"./"`** (single-plugin marke
     "owner": { "name": "stgmt" },
     "plugins": [{ "name": "dev-pomogator", "source": "./", "version": "2.0.0" }]
   },
-  "skills": [
-    { "name": "create-spec", "sourcePath": ".claude/skills/create-spec/", "targetPath": "skills/create-spec/" }
-  ],
-  "commands": [
-    { "name": "run-tests.md", "sourcePath": ".claude/commands/run-tests.md", "targetPath": "commands/run-tests.md" }
-  ],
   "hooks": [
-    { "event": "PreToolUse", "matcher": "Bash", "command": "node -e ...", "extension": "tui-test-runner" }
+    { "event": "PreToolUse", "matcher": "Bash", "command": "tools/tui-test-runner/centralized-test-runner-guard.ts", "resolvedOnDisk": true }
   ],
-  "mcp": {
-    "context7": { "command": "npx", "args": ["@context7/mcp-server"] }
-  }
+  "toolScriptsOnDisk": [
+    "tools/tui-test-runner/centralized-test-runner-guard.ts"
+  ]
 }
 ```
+
+- `hooks[].command` ОБЯЗАН резолвиться в путь присутствующий в `toolScriptsOnDisk` (drift assertion).
+- `toolScriptsOnDisk[]` — фактический скан `tools/` дерева; каждый зарегистрированный hook-скрипт ОБЯЗАН иметь соответствующую запись в `hooks[]` (vice-versa assertion).
 
 ## enabledPlugins entry format (managed by Claude Code, not dev-pomogator)
 

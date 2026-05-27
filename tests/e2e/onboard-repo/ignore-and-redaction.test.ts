@@ -14,21 +14,21 @@ import {
   normalizePath,
   ALWAYS_EXCLUDE_PATTERNS,
   SUPPORTED_IGNORE_FILES,
-} from '../../../extensions/onboard-repo/tools/onboard-repo/lib/ignore-parser.ts';
+} from '../../../tools/onboard-repo/lib/ignore-parser.ts';
 import {
   detectSecrets,
   redactSecrets,
   assertNoSecretsInContent,
   assertNoSecretsInObject,
   SecretLeakageError,
-} from '../../../extensions/onboard-repo/tools/onboard-repo/lib/secret-redaction.ts';
-import { finalize } from '../../../extensions/onboard-repo/tools/onboard-repo/steps/finalize.ts';
+} from '../../../tools/onboard-repo/lib/secret-redaction.ts';
+import { finalize } from '../../../tools/onboard-repo/steps/finalize.ts';
 import type {
   ParallelReconOutput,
   Phase0State,
   BaselineTestResult,
   CommandBlock,
-} from '../../../extensions/onboard-repo/tools/onboard-repo/lib/types.ts';
+} from '../../../tools/onboard-repo/lib/types.ts';
 
 
 function fakeRecon(): ParallelReconOutput {

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import { spawnSync } from 'child_process';
-import { appPath, homePath, runInstaller, setupCleanState, getPythonRunner, runTsx } from './helpers';
+import { appPath, homePath, setupCleanState, getPythonRunner, runTsx, pluginHookCommands, pluginHookEntries } from './helpers';
 import {
   DEFAULT_USER_STATUSLINE_COMMAND,
   extractUserCommandFromLegacyWrapper,
@@ -10,19 +10,18 @@ import {
   isManagedStatusLineCommand,
   resolveClaudeStatusLine,
 } from '../../src/utils/statusline.js';
-import { VitestAdapter } from '../../extensions/tui-test-runner/tools/tui-test-runner/adapters/vitest_adapter.js';
+import { VitestAdapter } from '../../tools/tui-test-runner/adapters/vitest_adapter.js';
 
 // --- Helpers ---
 
 const STATUS_DIR = '.dev-pomogator/.test-status';
 const DOCKER_STATUS_DIR = '.dev-pomogator/.docker-status';
 const FIXTURES_DIR = 'tests/fixtures/tui-statusline';
-const WRAPPER_SCRIPT = 'extensions/test-statusline/tools/test-statusline/test_runner_wrapper.cjs';
+const WRAPPER_SCRIPT = 'tools/test-statusline/test_runner_wrapper.cjs';
 // Use installed path where _shared/hook-utils.js is available (extensions/ lacks _shared/ at this level)
-const SESSION_HOOK = '.dev-pomogator/tools/test-statusline/statusline_session_start.ts';
-// Read statusLine type from the real extension manifest (not hardcoded)
-const EXT_MANIFEST = fs.readJsonSync(appPath('extensions/test-statusline/extension.json'));
-const MANIFEST_STATUSLINE_TYPE = EXT_MANIFEST.statusLine?.claude?.type ?? 'command';
+const SESSION_HOOK = 'tools/test-statusline/statusline_session_start.ts';
+// Canonical v2: no per-extension manifest; statusLine is a 'command' type.
+const MANIFEST_STATUSLINE_TYPE = 'command';
 const DEFAULT_STATUSLINE_CONFIG = {
   type: MANIFEST_STATUSLINE_TYPE,
   command: DEFAULT_USER_STATUSLINE_COMMAND,
@@ -286,16 +285,12 @@ describe('PLUGIN011: TUI Statusline', () => {
 
   describe('SessionStart Hook (@feature4)', () => {
     // Isolated state setup: previous test files (notably personal-pomogator)
-    // call setupCleanState multiple times which empties .dev-pomogator/tools/.
+    // call setupCleanState multiple times which empties tools/.
     // Last install in personal-pomogator may use --plugins=... (not --all),
     // leaving test-statusline tool absent. Re-install before SessionStart tests
     // to guarantee statusline_session_start.ts and _shared/ are present.
     beforeAll(async () => {
       await setupCleanState('claude');
-      const installResult = await runInstaller('--claude --all');
-      if (installResult.exitCode !== 0) {
-        throw new Error(`Failed to install for SessionStart tests: ${installResult.logs}`);
-      }
     });
 
     // @feature4
@@ -446,45 +441,22 @@ describe('PLUGIN011: TUI Statusline', () => {
   // @feature5 — Extension Manifest
   // ===========================================
 
-  describe('Extension Manifest (@feature5)', () => {
+  describe('Plugin hook + tool registration (@feature5)', () => {
     // @feature5
-    it('PLUGIN011_18: manifest lists all tool files', async () => {
-      const manifestPath = appPath('extensions/test-statusline/extension.json');
-      expect(await fs.pathExists(manifestPath)).toBe(true);
-
-      const manifest = await fs.readJson(manifestPath);
-      const toolFiles = manifest.toolFiles?.['test-statusline'] || [];
-
-      // Shared files remain
-      expect(toolFiles.join(',')).toContain('test_runner_wrapper.cjs');
-      expect(toolFiles.join(',')).toContain('statusline_session_start.ts');
-      expect(toolFiles.join(',')).toContain('status_types.ts');
+    it('PLUGIN011_18: ships statusline tool files in tools/', () => {
+      expect(fs.existsSync(appPath('tools/test-statusline/test_runner_wrapper.cjs'))).toBe(true);
+      expect(fs.existsSync(appPath('tools/test-statusline/statusline_session_start.ts'))).toBe(true);
+      expect(fs.existsSync(appPath('tools/test-statusline/status_types.ts'))).toBe(true);
       // Legacy render files removed (replaced by TUI CompactBar)
-      expect(toolFiles.join(',')).not.toContain('statusline_render.cjs');
-      expect(toolFiles.join(',')).not.toContain('statusline_wrapper.js');
+      expect(fs.existsSync(appPath('tools/test-statusline/statusline_render.cjs'))).toBe(false);
+      expect(fs.existsSync(appPath('tools/test-statusline/statusline_wrapper.js'))).toBe(false);
     });
 
     // @feature5
-    it('PLUGIN011_19: manifest registers SessionStart hook', async () => {
-      const manifestPath = appPath('extensions/test-statusline/extension.json');
-      const manifest = await fs.readJson(manifestPath);
-
-      expect(manifest.hooks).toBeDefined();
-      expect(manifest.hooks.claude).toBeDefined();
-      expect(manifest.hooks.claude.SessionStart).toBeDefined();
-      expect(manifest.hooks.claude.SessionStart).toContain('statusline_session_start.ts');
-    });
-
-    // @feature5
-    it('PLUGIN011_20: manifest declares statusLine with ccstatusline command', async () => {
-      const manifestPath = appPath('extensions/test-statusline/extension.json');
-      const manifest = await fs.readJson(manifestPath);
-
-      // statusLine section provides ccstatusline command for Claude Code
-      expect(manifest.statusLine).toBeDefined();
-      expect(manifest.statusLine.claude).toBeDefined();
-      expect(manifest.statusLine.claude.type).toBe('command');
-      expect(manifest.statusLine.claude.command).toContain('ccstatusline');
+    it('PLUGIN011_19: plugin registry registers the SessionStart hook', () => {
+      expect(
+        pluginHookCommands('SessionStart').some((c) => c.includes('statusline_session_start.ts')),
+      ).toBe(true);
     });
   });
 
@@ -510,7 +482,7 @@ describe('PLUGIN011: TUI Statusline', () => {
 
     // @feature8
     it('PLUGIN011_22: old managed statusLine is replaced with ccstatusline', () => {
-      const oldManaged = 'bash /old/path/.dev-pomogator/tools/test-statusline/statusline_render.cjs';
+      const oldManaged = 'bash /old/path/tools/test-statusline/statusline_render.cjs';
 
       expect(isManagedStatusLineCommand(oldManaged)).toBe(true);
 
@@ -630,28 +602,7 @@ describe('PLUGIN011: TUI Statusline', () => {
       expect(resolved.command).toContain('ccstatusline');
     });
 
-    // @feature9
-    it('PLUGIN011_44: installer deletes project-level statusLine (migration)', async () => {
-      const projectSettingsPath = projectClaudeSettingsPath();
-
-      await setupCleanState('claude');
-      try {
-        // Pre-populate project settings with old project-level statusLine
-        await fs.ensureDir(path.dirname(projectSettingsPath));
-        await fs.writeJson(projectSettingsPath, {
-          statusLine: { type: 'command', command: 'node /old/project/.dev-pomogator/tools/test-statusline/statusline_render.cjs' },
-        }, { spaces: 2 });
-
-        const result = await runInstaller('--claude --all');
-        expect(result.exitCode).toBe(0);
-
-        // Project settings should have statusLine REMOVED (migrated to global)
-        const projectSettings = await fs.readJson(projectSettingsPath);
-        expect(projectSettings.statusLine).toBeUndefined();
-      } finally {
-        await setupCleanState('claude');
-      }
-    });
+    // PLUGIN011_44: installer deletes project-level statusLine (migration) — REMOVED in v2 (no installer; statusLine migration was an installer side-effect that no longer exists)
 
     // @feature9
     it('PLUGIN011_48: extra fields like padding are preserved in resolution', () => {
@@ -678,23 +629,14 @@ describe('PLUGIN011: TUI Statusline', () => {
     // PLUGIN011_49: portable managed command test — REMOVED in v3.0.0 (managed render script deleted)
     // PLUGIN011_50: portable wrapped command test — REMOVED in v3.0.0 (wrapping removed)
 
-    // @feature9
-    it('PLUGIN011_51: installer writes ccstatusline to global settings.json', async () => {
-      await setupCleanState('claude');
-      const result = await runInstaller('--claude --all');
-      expect(result.exitCode).toBe(0);
-
-      const globalSettings = await fs.readJson(homePath('.claude', 'settings.json'));
-      expect(globalSettings.statusLine).toBeDefined();
-      expect(globalSettings.statusLine.command).toContain('ccstatusline');
-    });
+    // PLUGIN011_51: installer writes ccstatusline to global settings.json — REMOVED in v2 (no installer writes global settings; ccstatusline resolution is covered by PLUGIN011_43/_48)
   });
 
   // =========================================================================
   // Compact Mode (@feature1) — CompactBar render tests
   // =========================================================================
   describe('Compact Mode (@feature1)', () => {
-    const TUI_DIR = 'extensions/tui-test-runner/tools/tui-test-runner';
+    const TUI_DIR = 'tools/tui-test-runner';
     const COMPACT_RENDER_SCRIPT = `
 import sys, json
 sys.path.insert(0, '${TUI_DIR}')
@@ -894,7 +836,7 @@ else:
   // Statusline Render Removal (@feature5) — verify legacy files removed
   // =========================================================================
   describe('Statusline Render Removal (@feature5)', () => {
-    const TEST_STATUSLINE_DIR = 'extensions/test-statusline/tools/test-statusline';
+    const TEST_STATUSLINE_DIR = 'tools/test-statusline';
 
     // @feature5
     it('PLUGIN011_68: legacy render files removed from extension', async () => {
@@ -916,18 +858,9 @@ else:
   // =========================================================================
   describe('Installer hooks (@feature6)', () => {
     // @feature6
-    it('PLUGIN011_70: tui-test-runner extension.json has array-format PreToolUse hooks', async () => {
-      const manifest = await fs.readJson(
-        appPath('extensions/tui-test-runner/extension.json'),
-      );
-      // Must be object { claude: { ... } }, NOT array at top level
-      expect(manifest.hooks).not.toBeInstanceOf(Array);
-      expect(manifest.hooks.claude).toBeDefined();
-      expect(manifest.hooks.claude.SessionStart).toBeDefined();
-      // PreToolUse is array format with matcher groups
-      expect(manifest.hooks.claude.PreToolUse).toBeDefined();
-      expect(Array.isArray(manifest.hooks.claude.PreToolUse)).toBe(true);
-      const matchers = manifest.hooks.claude.PreToolUse.map((g: any) => g.matcher);
+    it('PLUGIN011_70: plugin registry has array-format PreToolUse(Bash) + SessionStart', () => {
+      expect(pluginHookCommands('SessionStart').length).toBeGreaterThan(0);
+      const matchers = pluginHookEntries('PreToolUse').map((e) => e.matcher);
       expect(matchers).toContain('Bash');
     });
 
@@ -938,7 +871,7 @@ else:
       // Run wrapper with a test session and a quick command (echo)
       const session = 'e2etest1';
       const result = spawnSync('node', [
-        appPath('extensions/test-statusline/tools/test-statusline/test_runner_wrapper.cjs'),
+        appPath('tools/test-statusline/test_runner_wrapper.cjs'),
         'echo', 'hello',
       ], {
         encoding: 'utf-8',
@@ -1047,7 +980,7 @@ else:
         return;
       }
 
-      const tuiDir = appPath('extensions/tui-test-runner/tools/tui-test-runner');
+      const tuiDir = appPath('tools/tui-test-runner');
       const primaryFile = path.join(appPath(), STATUS_DIR, 'status.fallbk.yaml');
 
       // Use different filename in fallback dir to verify dir-scan (not same-name lookup)
@@ -1094,7 +1027,7 @@ print('STATE=' + (status.state.value if status else 'NONE'))
         return;
       }
 
-      const tuiDir = appPath('extensions/tui-test-runner/tools/tui-test-runner');
+      const tuiDir = appPath('tools/tui-test-runner');
       const primaryFile = path.join(testStatusDir, 'status.oldsess.yaml');
 
       const result = spawnSync(python, ['-c', `
@@ -1123,7 +1056,7 @@ print('STATE=' + (status.state.value if status else 'NONE'))
         return;
       }
 
-      const tuiDir = appPath('extensions/tui-test-runner/tools/tui-test-runner');
+      const tuiDir = appPath('tools/tui-test-runner');
       const nonexistentFile = path.join(appPath(), STATUS_DIR, 'status.noexist.yaml');
       const nonexistentFallback = path.join(appPath(), DOCKER_STATUS_DIR);
 
@@ -1141,7 +1074,7 @@ print('STATE=' + (status.state.value if status else 'NONE'))
     // @feature15
     it('PLUGIN011_89: Launcher passes docker-status as fallback directory', async () => {
       // Use installed path where _shared/hook-utils.js exists
-      const mod = await import('../../.dev-pomogator/tools/tui-test-runner/launcher.ts');
+      const mod = await import('../../tools/tui-test-runner/launcher.ts');
       const args = mod.buildTuiLaunchArgs(
         '/project/.dev-pomogator/.test-status/status.abc12345.yaml',
         '/project/log.txt',
@@ -1158,9 +1091,9 @@ print('STATE=' + (status.state.value if status else 'NONE'))
   // TUI Stop Hook (@feature16)
   // =========================================================================
   describe('TUI Stop Hook (@feature16)', () => {
-    // Use installed paths (.dev-pomogator/tools/) where _shared/hook-utils.js is available
-    const TUI_STOP_HOOK = '.dev-pomogator/tools/tui-test-runner/tui_stop.ts';
-    const TUI_SESSION_HOOK = '.dev-pomogator/tools/tui-test-runner/tui_session_start.ts';
+    // Use installed paths (tools/) where _shared/hook-utils.js is available
+    const TUI_STOP_HOOK = 'tools/tui-test-runner/tui_stop.ts';
+    const TUI_SESSION_HOOK = 'tools/tui-test-runner/tui_session_start.ts';
 
     function runStopHook(stdinJson: Record<string, unknown>, env: Record<string, string> = {}) {
       return runTsx(TUI_STOP_HOOK, { input: stdinJson, env });

@@ -15,7 +15,7 @@ import {
   validateOrThrow,
   SchemaViolationError,
   resetValidatorCache,
-} from '../../../extensions/onboard-repo/tools/onboard-repo/lib/schema-validator.ts';
+} from '../../../tools/onboard-repo/lib/schema-validator.ts';
 
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');

@@ -9,14 +9,14 @@ import * as path from 'node:path';
 import * as fsExtra from 'fs-extra';
 import { runBeforeEach, type BeforeEachContext } from './hooks/before-each.ts';
 import { runAfterEach } from './hooks/after-each.ts';
-import { archetypeTriage } from '../../../extensions/onboard-repo/tools/onboard-repo/steps/archetype-triage.ts';
-import { finalize } from '../../../extensions/onboard-repo/tools/onboard-repo/steps/finalize.ts';
+import { archetypeTriage } from '../../../tools/onboard-repo/steps/archetype-triage.ts';
+import { finalize } from '../../../tools/onboard-repo/steps/finalize.ts';
 import type {
   ParallelReconOutput,
   Phase0State,
   BaselineTestResult,
   CommandBlock,
-} from '../../../extensions/onboard-repo/tools/onboard-repo/lib/types.ts';
+} from '../../../tools/onboard-repo/lib/types.ts';
 
 
 function makeBaseCtx(tmpdir: string) {

@@ -15,12 +15,12 @@ COPY --chown=testuser:testuser package.json package-lock.json ./
 RUN npm config set cache /tmp/.npm \
     && for i in 1 2 3; do npm install --ignore-scripts && break || echo "[retry] npm install attempt $i failed" && sleep 5; done
 
-# Layer 2: Source code + build (invalidated by CACHEBUST on every run)
+# Layer 2: Source code (canonical plugin layout — no build/compile step;
+# tools run as .ts via tsx, so there is no `npm run build`)
 ARG CACHEBUST=1
 COPY --chown=testuser:testuser . .
-RUN npm run build
 
 ENV HOME=/home/testuser
 
-ENTRYPOINT ["/usr/bin/tini", "--", "node", ".dev-pomogator/tools/test-statusline/test_runner_wrapper.cjs", "--framework", "vitest", "--"]
+ENTRYPOINT ["/usr/bin/tini", "--", "node", "tools/test-statusline/test_runner_wrapper.cjs", "--framework", "vitest", "--"]
 CMD ["npm", "run", "test:e2e:docker"]

@@ -7,7 +7,7 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
   So that install/update/uninstall managed by Claude Code itself, no custom postinstall hacks, full Desktop compatibility
 
   Background:
-    Given dev-pomogator repo built с canonical artifacts: .claude-plugin/plugin.json + .claude-plugin/marketplace.json + skills/, commands/, hooks/, .mcp.json
+    Given dev-pomogator repo with hand-maintained canonical manifests: .claude-plugin/plugin.json + .claude-plugin/marketplace.json + .claude-plugin/hooks.json, plus skills/, commands/, .mcp.json, tools/
     And dev-pomogator marketplace name = "stgmt"
     And dev-pomogator plugin name = "dev-pomogator"
 
@@ -17,7 +17,7 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
 
   # @feature1
   Scenario: CANON001_10 plugin.json contains canonical required fields
-    Given dev-pomogator repo built via "npm run build:plugin"
+    Given dev-pomogator repo with hand-maintained .claude-plugin/ manifests
     When I read .claude-plugin/plugin.json
     Then file should contain field "name" equal to "dev-pomogator"
     And field "version" matching semver "2.x.x"
@@ -25,19 +25,19 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
     And field "author" with object structure
 
   # @feature1
-  Scenario: CANON001_11 Canonical sub-directories exist after build
-    Given dev-pomogator repo built
+  Scenario: CANON001_11 Canonical sub-directories and hooks config exist
+    Given dev-pomogator repo with hand-maintained .claude-plugin/ manifests
     Then skills/ directory should exist with at least one <name>/SKILL.md file
     And commands/ directory should exist
-    And hooks/hooks.json should exist
+    And .claude-plugin/hooks.json should exist
     And .mcp.json should exist
     And agents/ may or may not exist (optional)
 
   # @feature1
-  Scenario: CANON001_12 .claude-plugin contains only plugin.json and marketplace.json
-    Given dev-pomogator repo built
+  Scenario: CANON001_12 .claude-plugin contains only plugin.json, marketplace.json and hooks.json
+    Given dev-pomogator repo with hand-maintained .claude-plugin/ manifests
     When I list .claude-plugin/ directory contents
-    Then directory should contain only "plugin.json" and "marketplace.json"
+    Then directory should contain only "plugin.json", "marketplace.json" and "hooks.json"
     And directory should NOT contain "skills/", "commands/", "agents/" sub-directories
 
   # =========================================================================
@@ -46,7 +46,7 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
 
   # @feature2
   Scenario: CANON001_20 marketplace.json valid per Anthropic schema
-    Given dev-pomogator repo built
+    Given dev-pomogator repo with hand-maintained .claude-plugin/ manifests
     When I read .claude-plugin/marketplace.json
     Then file should contain top-level field "name" equal to "stgmt"
     And field "owner" with required "name" sub-field
@@ -189,11 +189,11 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
     And stderr should suggest "Use canonical install: /plugin marketplace add stgmt/dev-pomogator"
 
   # @feature8
-  Scenario: CANON001_81 No extension manifest contains cursor platform
-    Given dev-pomogator v2 source repository
-    When I grep extensions/*/extension.json для "cursor" string
-    Then no extension.json should contain "cursor" в platforms array
-    And edge-debug-port extension.json should have platforms equal to ["claude"]
+  Scenario: CANON001_81 No cursor references remain in the repo
+    Given dev-pomogator v2 source repository (no extensions/ or extension.json — deleted)
+    When I grep the whole repo (tools/, .claude/, package.json, .claude-plugin/) for "cursor"
+    Then no functional cursor reference should remain
+    And any match should be only a historical note ("removed in v2")
 
   # @feature8
   Scenario: CANON001_82 package.json description and keywords have no Cursor
@@ -203,17 +203,16 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
     And "keywords" array should not contain "cursor"
 
   # =========================================================================
-  # @feature9 — buildCanonicalPlugin aggregation (FR-9)
+  # @feature9 — Manifest integrity / drift test (FR-9)
   # =========================================================================
 
   # @feature9
-  Scenario: CANON001_90 buildCanonicalPlugin aggregates all extensions
-    Given dev-pomogator repo с 26 extensions
-    When I run "npm run build:plugin"
-    Then .claude-plugin/plugin.json should be generated/updated
-    And skills/ directory should contain SKILL.md from all extensions с skills declared
-    And commands/ should contain all commands from extensions
-    And hooks/hooks.json should aggregate hooks from extension manifests
+  Scenario: CANON001_90 drift test asserts hooks.json commands resolve to on-disk tools
+    Given dev-pomogator repo with hand-maintained .claude-plugin/ manifests
+    When I run the drift test "tests/e2e/canonical-plugin.test.ts"
+    Then every hook command in .claude-plugin/hooks.json should resolve to an existing script under tools/
+    And every registered hook script under tools/ should be present in .claude-plugin/hooks.json
+    And .claude-plugin/plugin.json, marketplace.json and hooks.json should be schema-valid per Anthropic spec
 
   # =========================================================================
   # @feature10 — Update path (FR-10)
@@ -221,7 +220,7 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
 
   # @feature10
   Scenario: CANON001_100 marketplace.json and plugin.json versions synchronized
-    Given dev-pomogator repo built
+    Given dev-pomogator repo with hand-maintained .claude-plugin/ manifests
     When I read .claude-plugin/marketplace.json plugin entry version
     And I read .claude-plugin/plugin.json version
     Then both version strings should be equal

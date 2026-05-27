@@ -192,7 +192,7 @@ Format Jira trace в FR/AC/BDD/Tasks — см. [`jira-mode.md`](jira-mode.md).
 13. **Step 8: Анализ паттернов .feature (ОБЯЗАТЕЛЬНО перед написанием .feature):**
 
     ```
-    .dev-pomogator/tools/specs-generator/analyze-features.ts -Format text [-FeatureSlug "{slug}"] [-DomainCode "{DOMAIN}"]
+    tools/specs-generator/analyze-features.ts -Format text [-FeatureSlug "{slug}"] [-DomainCode "{DOMAIN}"]
     ```
 
     На основе отчёта:
@@ -203,7 +203,7 @@ Format Jira trace в FR/AC/BDD/Tasks — см. [`jira-mode.md`](jira-mode.md).
 
 14. **Создать `{feature-slug}.feature`** (по правилам [`feature-creation-rules.md`](feature-creation-rules.md), опираясь на отчёт `analyze-features.ts`).
 
-15. **Валидация:** `.dev-pomogator/tools/specs-generator/validate-spec.ts -Path ".specs/{feature}"` — исправить ошибки если есть.
+15. **Валидация:** `tools/specs-generator/validate-spec.ts -Path ".specs/{feature}"` — исправить ошибки если есть.
 
 ## Правила создания .feature
 
@@ -216,7 +216,7 @@ Format Jira trace в FR/AC/BDD/Tasks — см. [`jira-mode.md`](jira-mode.md).
 После подтверждения:
 
 ```
-.dev-pomogator/tools/specs-generator/spec-status.ts -Path ".specs/{feature}" -ConfirmStop Requirements
+tools/specs-generator/spec-status.ts -Path ".specs/{feature}" -ConfirmStop Requirements
 ```
 
 ## Next phase

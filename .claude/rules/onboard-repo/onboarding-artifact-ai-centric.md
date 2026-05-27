@@ -4,7 +4,7 @@
 
 ## Когда применяется
 
-Edit/Write в `.specs/.onboarding.json`, `extensions/onboard-repo/tools/onboard-repo/steps/finalize.ts`, `extensions/onboard-repo/tools/onboard-repo/schemas/onboarding.schema.json` или любые renderer-ы.
+Edit/Write в `.specs/.onboarding.json`, `tools/onboard-repo/steps/finalize.ts`, `tools/onboard-repo/schemas/onboarding.schema.json` или любые renderer-ы.
 
 ## Обязательные AI-specific секции
 

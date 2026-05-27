@@ -1,5 +1,7 @@
 # Personal Pomogator
 
+> **Migration Note (v2.0, 2026-05-07):** Эта спека написана под v1 архитектуру (custom installer, `extensions/` слой, `npm i -g dev-pomogator`, `tsx-runner` global scripts, managed `.gitignore` block). После canonical refactor v2.0 (см. `.specs/dev-pomogator-canonical-plugin/`) распределение через Anthropic plugin marketplace (`/plugin marketplace add stgmt/dev-pomogator` + `/plugin install dev-pomogator@stgmt`) — npm install path и custom installer выпиливаются. Многие AC ниже описывают v1 поведение которое больше не актуально (но preserved as historical record). Активный contract — в canonical-plugin spec FRs.
+
 Гарантирует что **ничего** установленного dev-pomogator в target-проект (tools, hooks, rules, commands, skills, MCP config, env vars) **не может случайно попасть в git** команды. Личное у developer'а — остаётся личным.
 
 ## Ключевые идеи

@@ -1,4 +1,4 @@
-import type { BaselineTestResult } from '../../../extensions/onboard-repo/tools/onboard-repo/lib/types.ts';
+import type { BaselineTestResult } from '../../../tools/onboard-repo/lib/types.ts';
 
 
 export interface RunTestsMockConfig {

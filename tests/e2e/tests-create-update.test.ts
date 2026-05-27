@@ -2,9 +2,9 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import {
-  runInstaller,
   appPath,
   setupCleanState,
+  pluginHookEntries,
 } from './helpers';
 
 /**
@@ -19,8 +19,8 @@ let installed = false;
 describe('PLUGIN016: Tests Create Update Skill', () => {
   beforeAll(async () => {
     await setupCleanState('claude');
-    const result = await runInstaller('--claude --all');
-    installed = result.exitCode === 0;
+    // v2: the plugin (incl. this skill) loads from the repo tree — nothing to install.
+    installed = true;
   });
 
   // @feature1
@@ -90,32 +90,23 @@ describe('PLUGIN016: Tests Create Update Skill', () => {
   });
 
   // @feature5
-  it('PLUGIN016_05: extension.json registers skill', async () => {
-    const extPath = path.resolve(__dirname, '../../extensions/test-quality/extension.json');
-    const manifest = await fs.readJson(extPath);
-    expect(manifest.skills['tests-create-update']).toBe('.claude/skills/tests-create-update');
-    expect(manifest.skillFiles['tests-create-update']).toContain('.claude/skills/tests-create-update/SKILL.md');
+  it('PLUGIN016_05: tests-create-update skill is installed', () => {
+    expect(fs.existsSync(appPath('.claude/skills/tests-create-update/SKILL.md'))).toBe(true);
   });
 
   // @feature8
-  it('PLUGIN016_06: extension.json registers PostToolUse hook', async () => {
-    const extPath = path.resolve(__dirname, '../../extensions/test-quality/extension.json');
-    const manifest = await fs.readJson(extPath);
-    const postToolUse = manifest.hooks?.claude?.PostToolUse;
-    expect(postToolUse).toBeDefined();
-    expect(Array.isArray(postToolUse)).toBe(true);
-
-    const complianceHook = postToolUse.find((entry: any) =>
-      entry.hooks?.some((h: any) => h.command?.includes('compliance_check'))
+  it('PLUGIN016_06: plugin registry has compliance_check PostToolUse(Write|Edit)', () => {
+    const compliance = pluginHookEntries('PostToolUse').find((e) =>
+      e.commands.some((c) => c.includes('compliance_check')),
     );
-    expect(complianceHook, 'PostToolUse must have compliance_check hook').toBeDefined();
-    expect(complianceHook.matcher).toBe('Write|Edit');
+    expect(compliance, 'PostToolUse must register compliance_check').toBeDefined();
+    expect(compliance!.matcher).toBe('Write|Edit');
   });
 
   // @feature8
   it('PLUGIN016_07: compliance_check.ts exists and is non-empty', async () => {
     const hookPath = path.resolve(
-      __dirname, '../../extensions/test-quality/tools/test-quality/compliance_check.ts'
+      __dirname, '../../tools/test-quality/compliance_check.ts'
     );
     const stat = await fs.stat(hookPath);
     expect(stat.size, 'compliance_check.ts must be > 1000 bytes').toBeGreaterThan(1000);
@@ -128,7 +119,7 @@ describe('PLUGIN016: Tests Create Update Skill', () => {
   // @feature1
   it('PLUGIN016_08: compliance hook detects pathExists-only pattern', async () => {
     const hookPath = path.resolve(
-      __dirname, '../../extensions/test-quality/tools/test-quality/compliance_check.ts'
+      __dirname, '../../tools/test-quality/compliance_check.ts'
     );
     // Import the scan function to test detection
     // For now: verify the regex pattern exists in hook source
@@ -140,7 +131,7 @@ describe('PLUGIN016: Tests Create Update Skill', () => {
   // @feature2
   it('PLUGIN016_09: compliance hook detects weak toBeDefined pattern', async () => {
     const hookPath = path.resolve(
-      __dirname, '../../extensions/test-quality/tools/test-quality/compliance_check.ts'
+      __dirname, '../../tools/test-quality/compliance_check.ts'
     );
     const content = await fs.readFile(hookPath, 'utf-8');
     expect(content).toContain('weak-assertion');
@@ -150,7 +141,7 @@ describe('PLUGIN016: Tests Create Update Skill', () => {
   // @feature8
   it('PLUGIN016_10: compliance hook has isTestFile with correct patterns', async () => {
     const hookPath = path.resolve(
-      __dirname, '../../extensions/test-quality/tools/test-quality/compliance_check.ts'
+      __dirname, '../../tools/test-quality/compliance_check.ts'
     );
     const content = await fs.readFile(hookPath, 'utf-8');
     expect(content).toContain('test\\.ts');
@@ -161,7 +152,7 @@ describe('PLUGIN016: Tests Create Update Skill', () => {
   // @feature8
   it('PLUGIN016_11: compliance hook has cooldown via marker', async () => {
     const hookPath = path.resolve(
-      __dirname, '../../extensions/test-quality/tools/test-quality/compliance_check.ts'
+      __dirname, '../../tools/test-quality/compliance_check.ts'
     );
     const content = await fs.readFile(hookPath, 'utf-8');
     expect(content).toContain('COOLDOWN_MINUTES');

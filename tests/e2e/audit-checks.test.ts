@@ -8,7 +8,7 @@ import {
   checkFrSplitConsistency,
   checkBddScenarioScope,
   runAllChecks,
-} from '../../extensions/specs-workflow/tools/specs-validator/audit-checks';
+} from '../../tools/specs-validator/audit-checks';
 
 let tmpDir: string;
 
@@ -178,7 +178,7 @@ describe('runAllChecks', () => {
 import crossSpawn from 'cross-spawn';
 
 describe('Integration: audit-spec.ts', () => {
-  const AUDIT_SCRIPT = 'extensions/specs-workflow/tools/specs-generator/audit-spec.ts';
+  const AUDIT_SCRIPT = 'tools/specs-generator/audit-spec.ts';
   const appDir = process.env.APP_DIR || process.cwd();
 
   // audit-spec.ts requires -Path to be inside .specs/<feature>/ of the repo.

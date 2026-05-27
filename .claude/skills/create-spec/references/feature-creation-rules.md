@@ -52,7 +52,7 @@
 Перед написанием `.feature`:
 
 ```
-.dev-pomogator/tools/specs-generator/analyze-features.ts -Format text [-FeatureSlug "{slug}"] [-DomainCode "{DOMAIN}"]
+tools/specs-generator/analyze-features.ts -Format text [-FeatureSlug "{slug}"] [-DomainCode "{DOMAIN}"]
 ```
 
 На основе отчёта:

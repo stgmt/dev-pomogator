@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
-import { runTsx, appPath } from './helpers';
+import { runTsx, appPath, pluginHookCommands } from './helpers';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-const CAPTURE_TOOL_PATH = 'extensions/suggest-rules/tools/learnings-capture';
+const CAPTURE_TOOL_PATH = 'tools/learnings-capture';
 const QUEUE_PATH = '.dev-pomogator/learnings-queue.json';
 const LOCK_PATH = '.dev-pomogator/learnings-queue.lock';
 const FIXTURES_DIR = 'tests/fixtures/learnings-capture';
@@ -476,20 +476,17 @@ describe('PLUGIN009: Auto-Capture Learnings', () => {
     });
 
     // @feature4
-    it('should have hooks in extension.json', async () => {
-      const extJson = await fs.readJson(appPath('extensions/suggest-rules/extension.json'));
-      expect(extJson).toHaveProperty('hooks');
-      expect(extJson).toHaveProperty('hooks.claude');
-      expect(extJson.hooks.claude.UserPromptSubmit).toContain('capture.ts');
-      expect(extJson.hooks.claude.Stop).toContain('capture.ts');
+    it('should register capture hooks in the plugin registry', () => {
+      expect(
+        pluginHookCommands('UserPromptSubmit').some((c) => c.includes('learnings-capture/capture.ts')),
+      ).toBe(true);
+      expect(
+        pluginHookCommands('Stop').some((c) => c.includes('learnings-capture/capture.ts')),
+      ).toBe(true);
     });
 
     // @feature4
-    it('should have reflect.md command for claude platform', async () => {
-      const extJson = await fs.readJson(appPath('extensions/suggest-rules/extension.json'));
-      const claudeCommands = extJson.commandFiles?.claude || [];
-      expect(claudeCommands).toContain('.claude/commands/reflect.md');
-
+    it('should ship the reflect.md command for claude', async () => {
       const claudeReflect = appPath('.claude/commands/reflect.md');
       const statClaude = await fs.stat(claudeReflect);
       expect(statClaude.size).toBeGreaterThan(0);

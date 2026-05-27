@@ -7,7 +7,7 @@
  */
 
 import { loadSubagentOutput } from '../helpers.ts';
-import type { ParallelReconOutput } from '../../../../extensions/onboard-repo/tools/onboard-repo/lib/types.ts';
+import type { ParallelReconOutput } from '../../../../tools/onboard-repo/lib/types.ts';
 
 
 class MockSubagents {

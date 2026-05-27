@@ -2,38 +2,13 @@
 
 All notable changes to this feature will be documented in this file.
 
-## [Unreleased] — 2026-05-24 spec-reality-check cleanup
-
-### Changed
-
-- **FILE_CHANGES.md — удалены 4 stale `action=delete` rows** обнаружены через `Skill("spec-reality-check")`: `src/installer/cursor.ts`, `src/installer/install-user-scope.ts`, `src/installer/git-exclude.ts`, `bin/postinstall.js`. Все файлы уже удалены в предыдущих спринтах (v2 design abandoned); rows эмитили `FC_DELETE_MISSING` ERROR. Removed из активной table, заменены HTML-комментариями с пометкой `[REMOVED 2026-05-24 per reality-check]`.
-- **REALITY_CHECK_REPORT.md** — добавлен полный markdown report от `verify.ts --format markdown` (one-time artifact для historical reference).
-
-## [Unreleased] — 2026-05-23 spec update
-
-### Added (spec-only, no code changes)
-- **Risk Assessment expanded** в RESEARCH.md с 6 → 25+ рисков по 10 доменам (Distribution / Backward Compat / MCP / Cursor Removal / Build & CI / Migration / Desktop UI / Repo Hygiene / User Communication / Spec Gaps) с concrete proofs (file:line, grep counts, GitHub issue links). Top-5 cross-domain critical pre-risks called out.
-- **FR-8a "Exhaustive Cursor purge — 59 файлов"** добавлен в FR.md как explicit extension FR-8. Exhaustive grep команда reproducible; categorization 6 групп; per-file classification (DELETE / EDIT / KEEP-historical); acceptance ≤5 historical files. **Proof:** original FILE_CHANGES.md заявлял 39 файлов, реальный grep 2026-05-23 показывает 59 (undercount 51%).
-- **AC-8a** в ACCEPTANCE_CRITERIA.md с EARS criteria + reproducible grep command для CI verification.
-- **6 новых Key Decisions** в DESIGN.md как mitigations Top-5 рисков:
-  1. Version sync — single source of truth + pre-commit enforcement (risk #1)
-  2. Schema validation в build — fail-fast перед commit (risk #3)
-  3. Cross-platform migration — defensive coding, без automated Windows test (risk #5, Docker test infra Linux-only)
-  4. Generated `.claude-plugin/` committed в git с pre-commit regeneration (risk #4 + 5.2)
-  5. v1 detection — triple-marker check (risk #2)
-  6. Exhaustive Cursor purge 59 файлов (risk 4.1)
-
-### Notes
-- Automated Windows VM test ВНЕ scope этой итерации — Docker test infra Linux-only (`tests/setup/ensure-docker.ts:14` enforces). Manual cross-platform smoke перед release.
-- hyperv-test-runner skill доступен, но pipeline не настроен — отдельная задача.
-
 ## [2.0.0] - TBD (BREAKING — canonical marketplace distribution)
 
 ### Added
 - **Canonical Claude Code marketplace plugin distribution** — dev-pomogator теперь раздаётся через canonical Anthropic mechanism: `/plugin marketplace add stgmt/dev-pomogator` + `/plugin install dev-pomogator@stgmt`. Это работает в CLI и в Claude Desktop (через UI «+ → Plugins»). Verified per Anthropic plugins.md, plugins-reference.md, plugin-marketplaces.md, discover-plugins.md.
 - **`.claude-plugin/marketplace.json`** — marketplace catalog manifest объявляющий dev-pomogator plugin available для install. Schema валидна per Anthropic plugin-marketplaces.md (name, owner, plugins[], optional metadata fields). FR-2.
 - **`.claude-plugin/plugin.json`** — canonical plugin manifest с required name + optional version/description/author per Anthropic plugins-reference.md. FR-1, FR-9.
-- **`buildCanonicalPlugin()`** в `src/installer/plugin-canonical.ts` — build-time aggregator читающий `extensions/*/extension.json` и генерирующий canonical artifacts (`plugin.json`, `marketplace.json`, `skills/`, `commands/`, `hooks/hooks.json`, `.mcp.json`). Запускается через `npm run build:plugin`. FR-1, FR-9.
+- **Hand-authored canonical манифеста** в `.claude-plugin/` (`plugin.json`, `marketplace.json`, `hooks.json`) — поддерживаются вручную, не генерируются. Drift test (`tests/e2e/canonical-plugin.test.ts`) guard'ит синхронизацию: каждая hooks.json команда резолвится в on-disk скрипт под `tools/` (и vice-versa) + manifest schema validity. FR-1, FR-9.
 - **`tools/migrate-v1-to-v2.ts`** — standalone optional cleanup script для пользователей переходящих с v1 install. User-driven (запускается explicitly через `npx tsx`), не часть plugin install flow (Anthropic plugin model запрещает project file writes из plugin runtime). FR-7.
 - **Scope-aware install** через canonical `--scope user|project|local` flags Anthropic mechanism. Default = user (per plugin-marketplaces.md). FR-5.
 - **Desktop UI integration** through canonical «**+** → Plugins» browser. Verified per `desktop-quickstart.md`. FR-11.

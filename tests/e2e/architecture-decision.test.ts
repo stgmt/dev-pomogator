@@ -3,37 +3,35 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { detectAxes } from '../../extensions/specs-workflow/tools/specs-generator/architecture-decision/axis-detector.ts';
+import { detectAxes } from '../../tools/specs-generator/architecture-decision/axis-detector.ts';
 import {
   generateAxisArtefact,
   seededShuffle,
   renderAxisMarkdown,
   validateAxisModel,
-} from '../../extensions/specs-workflow/tools/specs-generator/architecture-decision/artefact-generator.ts';
+} from '../../tools/specs-generator/architecture-decision/artefact-generator.ts';
 import {
   checkVerifiedMarkers,
   recordVerification,
-} from '../../extensions/specs-workflow/tools/specs-generator/architecture-decision/verify-log.ts';
-import { openInBrowser } from '../../extensions/specs-workflow/tools/specs-generator/architecture-decision/open-in-browser.ts';
+} from '../../tools/specs-generator/architecture-decision/verify-log.ts';
+import { openInBrowser } from '../../tools/specs-generator/architecture-decision/open-in-browser.ts';
 import {
   compileIndex,
   collectRows,
-} from '../../extensions/specs-workflow/tools/specs-generator/architecture-decision/index-compiler.ts';
-import { checkArchitectureCoverage } from '../../extensions/specs-workflow/tools/specs-generator/architecture-decision/audit.ts';
+} from '../../tools/specs-generator/architecture-decision/index-compiler.ts';
+import { checkArchitectureCoverage } from '../../tools/specs-generator/architecture-decision/audit.ts';
 import {
   renderAxisHtml,
   pickRecommended,
   type AxisModel,
   type VariantModel,
-} from '../../extensions/specs-workflow/tools/specs-generator/architecture-decision/html-renderer.ts';
+} from '../../tools/specs-generator/architecture-decision/html-renderer.ts';
 
 const FIXTURES = path.join(__dirname, '..', 'fixtures', 'architecture-decision');
 const CLI = path.join(
   __dirname,
   '..',
   '..',
-  'extensions',
-  'specs-workflow',
   'tools',
   'specs-generator',
   'architecture-decision',
@@ -680,7 +678,7 @@ describe('ARCH010: anti-hallucination — unbacked context7-VERIFIED marker guar
 describe('ARCH011: architecture-gate guarantees Phase 1.75 (PreToolUse hook)', () => {
   const GATE = path.join(
     __dirname, '..', '..',
-    'extensions', 'specs-workflow', 'tools', 'specs-validator', 'architecture-gate.ts',
+    'tools', 'specs-validator', 'architecture-gate.ts',
   );
   function runGate(filePath: string): { status: number; stdout: string } {
     const r = spawnSync('npx', ['tsx', GATE], {
@@ -724,11 +722,11 @@ describe('ARCH011: architecture-gate guarantees Phase 1.75 (PreToolUse hook)', (
 describe('ARCH012: architecture-gate × real scaffolded spec (version boundary)', () => {
   const GATE = path.join(
     __dirname, '..', '..',
-    'extensions', 'specs-workflow', 'tools', 'specs-validator', 'architecture-gate.ts',
+    'tools', 'specs-validator', 'architecture-gate.ts',
   );
   const CORE = path.join(
     __dirname, '..', '..',
-    'extensions', 'specs-workflow', 'tools', 'specs-generator', 'specs-generator-core.mjs',
+    'tools', 'specs-generator', 'specs-generator-core.mjs',
   );
   function runGate(filePath: string): { status: number; stdout: string } {
     const r = spawnSync('npx', ['tsx', GATE], {

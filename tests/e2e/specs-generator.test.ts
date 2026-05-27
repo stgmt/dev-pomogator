@@ -19,7 +19,6 @@ import {
   getSpecsGeneratorPath,
   getSpecsGeneratorFixturePath,
   appPath,
-  runInstaller,
   setupCleanState,
 } from './helpers';
 
@@ -27,7 +26,7 @@ import {
 // Test Configuration
 // ============================================================================
 
-const SCRIPTS_DIR = 'extensions/specs-workflow/tools/specs-generator';
+const SCRIPTS_DIR = 'tools/specs-generator';
 
 // ============================================================================
 // Test Suite
@@ -36,8 +35,6 @@ const SCRIPTS_DIR = 'extensions/specs-workflow/tools/specs-generator';
 describe('PLUGIN006: Specs Generator Scripts', () => {
   beforeAll(async () => {
     await setupCleanState('claude');
-    const result = await runInstaller('--claude --plugins=specs-workflow');
-    expect(result.exitCode).toBe(0);
   });
 
   // ==========================================================================
@@ -942,7 +939,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       expect(fs.existsSync(progressPath)).toBe(true);
 
       const progress = fs.readJsonSync(progressPath);
-      expect(progress.version).toBe(2);
+      expect(progress.version).toBe(4);
       expect(progress.featureSlug).toBe(progressTestName);
       expect(progress.currentPhase).toBe('Discovery');
       expect(progress.phases.Discovery.stopConfirmed).toBe(false);
@@ -965,7 +962,7 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       );
 
       expect(result.exitCode).toBe(0);
-      expect(result.json.progress_state.version).toBe(2);
+      expect(result.json.progress_state.version).toBe(4);
 
       // File should be created
       expect(fs.existsSync(path.join(destPath, '.progress.json'))).toBe(true);

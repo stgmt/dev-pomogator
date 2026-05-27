@@ -9,9 +9,9 @@ import { appPath, getPythonRunner, runPythonJson, runTsx } from './helpers';
 const STATUS_DIR = '.dev-pomogator/.test-status';
 const FIXTURES_DIR = 'tests/fixtures/tui-test-runner';
 // Use installed path where _shared/hook-utils.js is available (extensions/ lacks _shared/ at this level)
-const SESSION_HOOK = '.dev-pomogator/tools/tui-test-runner/tui_session_start.ts';
-const WRAPPER = 'extensions/tui-test-runner/tools/tui-test-runner/test_runner_wrapper.ts';
-const TUI_ROOT = 'extensions/tui-test-runner/tools/tui-test-runner';
+const SESSION_HOOK = 'tools/tui-test-runner/tui_session_start.ts';
+const WRAPPER = 'tools/tui-test-runner/test_runner_wrapper.ts';
+const TUI_ROOT = 'tools/tui-test-runner';
 
 let testStatusDir: string;
 
@@ -111,7 +111,7 @@ describe('PLUGIN012: TUI Test Runner', () => {
     // @feature6
     it('YamlWriter keeps live counters accurate and round-trips escaped payloads', async () => {
       const { YamlWriter } = await importAdapterModule(
-        'extensions/tui-test-runner/tools/tui-test-runner/yaml_writer.ts',
+        'tools/tui-test-runner/yaml_writer.ts',
       );
 
       const statusPath = appPath(STATUS_DIR, 'status.writer.yaml');
@@ -178,7 +178,7 @@ describe('PLUGIN012: TUI Test Runner', () => {
     // @feature11
     it('YamlWriter.write() is no-op after finalize() — duration frozen', async () => {
       const { YamlWriter } = await importAdapterModule(
-        'extensions/tui-test-runner/tools/tui-test-runner/yaml_writer.ts',
+        'tools/tui-test-runner/yaml_writer.ts',
       );
 
       const statusPath = appPath(STATUS_DIR, 'status.frozen.yaml');
@@ -212,7 +212,7 @@ describe('PLUGIN012: TUI Test Runner', () => {
     // @feature12
     it('YamlWriter uses discoveryTotal for real progress during running', async () => {
       const { YamlWriter } = await importAdapterModule(
-        'extensions/tui-test-runner/tools/tui-test-runner/yaml_writer.ts',
+        'tools/tui-test-runner/yaml_writer.ts',
       );
 
       const statusPath = appPath(STATUS_DIR, 'status.discovery.yaml');
@@ -239,7 +239,7 @@ describe('PLUGIN012: TUI Test Runner', () => {
     // @feature12
     it('YamlWriter uses total=0 during running without discovery or summary', async () => {
       const { YamlWriter } = await importAdapterModule(
-        'extensions/tui-test-runner/tools/tui-test-runner/yaml_writer.ts',
+        'tools/tui-test-runner/yaml_writer.ts',
       );
 
       const statusPath = appPath(STATUS_DIR, 'status.nodiscovery.yaml');
@@ -364,7 +364,7 @@ describe('PLUGIN012: TUI Test Runner', () => {
     // @feature6
     it('Vitest adapter parses pass/fail/skip events from fixture output', async () => {
       const { VitestAdapter } = await importAdapterModule(
-        'extensions/tui-test-runner/tools/tui-test-runner/adapters/vitest_adapter.ts',
+        'tools/tui-test-runner/adapters/vitest_adapter.ts',
       );
       const adapter = new VitestAdapter();
       const events = Array.from(adapter.processLines(readFixture('vitest-output.txt').split(/\r?\n/)));
@@ -384,11 +384,11 @@ describe('PLUGIN012: TUI Test Runner', () => {
         { CargoAdapter },
         { GoTestAdapter },
       ] = await Promise.all([
-        importAdapterModule('extensions/tui-test-runner/tools/tui-test-runner/adapters/jest_adapter.ts'),
-        importAdapterModule('extensions/tui-test-runner/tools/tui-test-runner/adapters/pytest_adapter.ts'),
-        importAdapterModule('extensions/tui-test-runner/tools/tui-test-runner/adapters/dotnet_adapter.ts'),
-        importAdapterModule('extensions/tui-test-runner/tools/tui-test-runner/adapters/cargo_adapter.ts'),
-        importAdapterModule('extensions/tui-test-runner/tools/tui-test-runner/adapters/go_test_adapter.ts'),
+        importAdapterModule('tools/tui-test-runner/adapters/jest_adapter.ts'),
+        importAdapterModule('tools/tui-test-runner/adapters/pytest_adapter.ts'),
+        importAdapterModule('tools/tui-test-runner/adapters/dotnet_adapter.ts'),
+        importAdapterModule('tools/tui-test-runner/adapters/cargo_adapter.ts'),
+        importAdapterModule('tools/tui-test-runner/adapters/go_test_adapter.ts'),
       ]);
 
       const jestEvents = Array.from(new JestAdapter().processLines(readFixture('jest-output-sample.txt').split(/\r?\n/)));
@@ -409,7 +409,7 @@ describe('PLUGIN012: TUI Test Runner', () => {
     // @feature10
     it('Dotnet adapter parses verbose output with leading-whitespace summary', async () => {
       const { DotnetAdapter } = await importAdapterModule(
-        'extensions/tui-test-runner/tools/tui-test-runner/adapters/dotnet_adapter.ts',
+        'tools/tui-test-runner/adapters/dotnet_adapter.ts',
       );
       const adapter = new DotnetAdapter();
       const events = Array.from(
@@ -436,7 +436,7 @@ describe('PLUGIN012: TUI Test Runner', () => {
     // @feature10
     it('Dotnet adapter parses minimal single-line summary', async () => {
       const { DotnetAdapter } = await importAdapterModule(
-        'extensions/tui-test-runner/tools/tui-test-runner/adapters/dotnet_adapter.ts',
+        'tools/tui-test-runner/adapters/dotnet_adapter.ts',
       );
       const adapter = new DotnetAdapter();
       const events = Array.from(
@@ -463,12 +463,12 @@ describe('PLUGIN012: TUI Test Runner', () => {
         { CargoAdapter },
         { GoTestAdapter },
       ] = await Promise.all([
-        importAdapterModule('extensions/tui-test-runner/tools/tui-test-runner/adapters/vitest_adapter.ts'),
-        importAdapterModule('extensions/tui-test-runner/tools/tui-test-runner/adapters/jest_adapter.ts'),
-        importAdapterModule('extensions/tui-test-runner/tools/tui-test-runner/adapters/pytest_adapter.ts'),
-        importAdapterModule('extensions/tui-test-runner/tools/tui-test-runner/adapters/dotnet_adapter.ts'),
-        importAdapterModule('extensions/tui-test-runner/tools/tui-test-runner/adapters/cargo_adapter.ts'),
-        importAdapterModule('extensions/tui-test-runner/tools/tui-test-runner/adapters/go_test_adapter.ts'),
+        importAdapterModule('tools/tui-test-runner/adapters/vitest_adapter.ts'),
+        importAdapterModule('tools/tui-test-runner/adapters/jest_adapter.ts'),
+        importAdapterModule('tools/tui-test-runner/adapters/pytest_adapter.ts'),
+        importAdapterModule('tools/tui-test-runner/adapters/dotnet_adapter.ts'),
+        importAdapterModule('tools/tui-test-runner/adapters/cargo_adapter.ts'),
+        importAdapterModule('tools/tui-test-runner/adapters/go_test_adapter.ts'),
       ]);
 
       // Vitest from fixture
@@ -541,7 +541,7 @@ describe('PLUGIN012: TUI Test Runner', () => {
       process.env.TEST_STATUSLINE_SESSION = 'dispatch1';
 
       const { buildTestCommand } = await importAdapterModule(
-        'extensions/tui-test-runner/tools/tui-test-runner/dispatch.ts',
+        'tools/tui-test-runner/dispatch.ts',
       );
       const command = buildTestCommand({ framework: 'pytest', filter: 'auth', docker: true });
 

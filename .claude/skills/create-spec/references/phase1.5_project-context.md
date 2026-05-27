@@ -27,14 +27,14 @@
 
 2. **Просканировать `.claude/rules/*.md`** — найти правила, релевантные ключевым словам.
 
-3. **Просканировать `extensions/*/extension.json`** — найти расширения, пересекающиеся по домену фичи.
+3. **Просканировать `.claude/skills/*/SKILL.md` + `tools/`** — найти существующие скилы/инструменты, пересекающиеся по домену фичи (v2: `extension.json` больше нет).
 
 4. **Просканировать существующий код, упомянутый в USE_CASES** — найти паттерны для reuse (через `Glob` / `Grep` / `Read`).
 
 5. **Step 4a: Детект BDD framework в target test-projects** — ОБЯЗАТЕЛЬНО если FILE_CHANGES будет упоминать `tests/**/*.test.*` или `**/Tests/**/*.cs` или `**/*_steps.py`. Для каждого target test-project:
 
    ```
-   npx tsx extensions/specs-workflow/tools/specs-generator/bdd-framework-detector.ts {projectPath} [testProjectHints...]
+   npx tsx tools/specs-generator/bdd-framework-detector.ts {projectPath} [testProjectHints...]
    ```
 
    Записать DetectionResult (JSON) в RESEARCH.md `### Existing Patterns & Extensions`:
@@ -58,7 +58,7 @@
    - `### Existing Patterns & Extensions` — таблица: Source | Path | What It Provides | Relevance (включая строки DetectionResult из шага 5)
    - `### Architectural Constraints Summary` — как ограничения влияют на будущие FR/NFR
 
-9. **Проверить статус:** `.dev-pomogator/tools/specs-generator/spec-status.ts -Path ".specs/{feature}"`
+9. **Проверить статус:** `tools/specs-generator/spec-status.ts -Path ".specs/{feature}"`
 
 ## STOP #1.5
 
@@ -67,7 +67,7 @@
 После подтверждения:
 
 ```
-.dev-pomogator/tools/specs-generator/spec-status.ts -Path ".specs/{feature}" -ConfirmStop Context
+tools/specs-generator/spec-status.ts -Path ".specs/{feature}" -ConfirmStop Context
 ```
 
 ## Next phase

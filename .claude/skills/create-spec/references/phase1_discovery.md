@@ -38,7 +38,7 @@ ls ~/.claude/projects/${encoded}/memory/feedback_*.md 2>/dev/null
 
 ## Алгоритм
 
-1. **Создать структуру:** `.dev-pomogator/tools/specs-generator/scaffold-spec.ts -Name "{feature-slug}"` — создаст 13 файлов в `.specs/{slug}/`.
+1. **Создать структуру:** `tools/specs-generator/scaffold-spec.ts -Name "{feature-slug}"` — создаст 13 файлов в `.specs/{slug}/`.
 
 2. **Опросить пользователя о целях и ролях.** В Jira-mode — уточнить только то, что НЕ покрыто `JIRA_SOURCE.md` (не переспрашивать reporter).
 
@@ -54,7 +54,7 @@ ls ~/.claude/projects/${encoded}/memory/feedback_*.md 2>/dev/null
 
    `research-workflow` skill пройдёт 4 фазы (Уточнение → Исследование → Верификация → Отчёт) и вернёт verifed findings — их вписать в `RESEARCH.md` секцию `## Технические находки`. В Jira-mode секция `## Problem` ссылается на `JIRA_SOURCE.md`: `См. JIRA_SOURCE.md ## Description (Verbatim)` — не дублировать текст. Секция `## Risk Assessment` уже добавлена `discovery-forms` skill'ом на шаге 3 — при ручном заполнении hook `risk-assessment-guard` требует ≥2 non-placeholder rows.
 
-6. **Проверить статус:** `.dev-pomogator/tools/specs-generator/spec-status.ts -Path ".specs/{feature}"`
+6. **Проверить статус:** `tools/specs-generator/spec-status.ts -Path ".specs/{feature}"`
 
 ## STOP #1
 
@@ -73,7 +73,7 @@ ls ~/.claude/projects/${encoded}/memory/feedback_*.md 2>/dev/null
 После подтверждения пользователем:
 
 ```
-.dev-pomogator/tools/specs-generator/spec-status.ts -Path ".specs/{feature}" -ConfirmStop Discovery
+tools/specs-generator/spec-status.ts -Path ".specs/{feature}" -ConfirmStop Discovery
 ```
 
 ## Progress display

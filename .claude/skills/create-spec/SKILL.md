@@ -18,12 +18,12 @@ argument-hint: "<feature-slug>"
 
 | Скрипт | Назначение |
 |--------|------------|
-| `.dev-pomogator/tools/specs-generator/scaffold-spec.ts -Name "X"` | Создать структуру `.specs/X/` |
-| `.dev-pomogator/tools/specs-generator/validate-spec.ts -Path ".specs/X"` | Валидация форматов |
-| `.dev-pomogator/tools/specs-generator/spec-status.ts -Path ".specs/X"` | Прогресс + state machine |
-| `.dev-pomogator/tools/specs-generator/spec-status.ts -Path ".specs/X" -ConfirmStop Discovery` | Подтверждение STOP-точки |
-| `.dev-pomogator/tools/specs-generator/audit-spec.ts -Path ".specs/X"` | Phase 3+ автоматический аудит |
-| `.dev-pomogator/tools/specs-generator/analyze-features.ts -Format text` | Паттерны существующих `.feature` |
+| `tools/specs-generator/scaffold-spec.ts -Name "X"` | Создать структуру `.specs/X/` |
+| `tools/specs-generator/validate-spec.ts -Path ".specs/X"` | Валидация форматов |
+| `tools/specs-generator/spec-status.ts -Path ".specs/X"` | Прогресс + state machine |
+| `tools/specs-generator/spec-status.ts -Path ".specs/X" -ConfirmStop Discovery` | Подтверждение STOP-точки |
+| `tools/specs-generator/audit-spec.ts -Path ".specs/X"` | Phase 3+ автоматический аудит |
+| `tools/specs-generator/analyze-features.ts -Format text` | Паттерны существующих `.feature` |
 
 `.progress.json` создаётся ТОЛЬКО через `spec-status.ts`. ЗАПРЕЩЕНО создавать его через Write tool, вручную или напрямую. Аргумент `-Path` ОБЯЗАН указывать на `.specs/<feature>/`.
 
@@ -32,7 +32,7 @@ argument-hint: "<feature-slug>"
 | Phase | Reference | Что делает |
 |-------|-----------|------------|
 | **1. Discovery** | [`references/phase1_discovery.md`](references/phase1_discovery.md) | USER_STORIES, USE_CASES, RESEARCH; вызывает `Skill("research-workflow")` для технических находок |
-| **1.5. Project Context** | [`references/phase1.5_project-context.md`](references/phase1.5_project-context.md) | Сканирование `.claude/rules/` + `extensions/*/extension.json` + BDD framework detection |
+| **1.5. Project Context** | [`references/phase1.5_project-context.md`](references/phase1.5_project-context.md) | Сканирование `.claude/rules/` + `.claude/skills/` + BDD framework detection |
 | **1.75. Architecture Decisions** (greenfield only) | [`references/phase1.75_architecture-decisions.md`](references/phase1.75_architecture-decisions.md) | Greenfield-only: enumerate tech-stack axes + auto-apply рекомендаций (auto-mode, без блокирующего STOP); вызывает `Skill("architecture-decision-builder")` |
 | **2. Requirements + Design** | [`references/phase2_requirements-and-design.md`](references/phase2_requirements-and-design.md) | FR, NFR, AC (EARS), REQUIREMENTS, DESIGN, FILE_CHANGES, `.feature`; вызывает `Skill("requirements-chk-matrix")` |
 | **2 (BDD subsection)** | [`references/phase2_bdd-test-infrastructure.md`](references/phase2_bdd-test-infrastructure.md) | TEST_DATA / TEST_FORMAT classification, hooks design, FIXTURES.md |
@@ -47,7 +47,7 @@ Sub-skill ecosystem (вызываются через `Skill(...)`): `discovery-f
 
 1. **Если запрос на создание новой спеки** ("сделай спеку для X", "create spec for X" и т.д.):
    - Получи feature-slug от пользователя (kebab-case)
-   - Запусти `.dev-pomogator/tools/specs-generator/scaffold-spec.ts -Name "{slug}"`
+   - Запусти `tools/specs-generator/scaffold-spec.ts -Name "{slug}"`
    - Покажи Starter Message (см. ниже)
    - Прочти `references/phase1_discovery.md` и следуй Phase 1
 

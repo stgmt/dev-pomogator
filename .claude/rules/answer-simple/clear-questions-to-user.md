@@ -125,7 +125,7 @@ User: "я ниче не понял в вопросах слишком сложн
 
 ## Связь с extension answer-simple
 
-Это правило — часть extension `answer-simple` (см. `.specs/answer-simple/`). Extension добавляет slash-команду `/answer-simple <черновик>` для on-demand аудита черновиков по тем же 4 критериям что описаны в шаге 3 шаблона. Skill определён в `.claude/skills/answer-simple/SKILL.md`. Manifest — `extensions/answer-simple/extension.json`.
+Это правило — часть extension `answer-simple` (см. `.specs/answer-simple/`). Extension добавляет slash-команду `/answer-simple <черновик>` для on-demand аудита черновиков по тем же 4 критериям что описаны в шаге 3 шаблона. Skill определён в `.claude/skills/answer-simple/SKILL.md`. Stop хук подключён в `.claude-plugin/hooks.json`; инструмент — `tools/answer-simple/`.
 
 ## История
 

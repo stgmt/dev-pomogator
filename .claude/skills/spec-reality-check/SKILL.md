@@ -90,8 +90,7 @@ See [references/checks.md](references/checks.md) for full reference: check IDs, 
 
 ⚠️ When editing `scripts/verify.ts` / `scripts/verify-hook.ts` / fixtures / this SKILL.md / `references/checks.md`:
 
-1. Sync installed copy: `cp .claude/skills/spec-reality-check/scripts/verify*.ts .dev-pomogator/tools/spec-reality-check/`
-2. Run all three verification artifacts:
+1. Run all three verification artifacts (scripts run directly from the skill dir — no installed copy in v2):
 
 ```bash
 npx tsx .claude/skills/spec-reality-check/evals/run-evals.ts        # 25/25 must pass

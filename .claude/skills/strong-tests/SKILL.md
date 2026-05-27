@@ -79,7 +79,7 @@ hypothesis write mymodule:myfunc  # OR через runGhostwriter() в run-mutati
 | `.claude/skills/strong-tests/references/tooling-setup.md` | Install + thresholds per 6 stacks |
 | `.claude/skills/strong-tests/references/stryker.config.template.mjs` | Template для Stryker (TS) |
 | `.claude/skills/strong-tests/references/stryker-net.config.template.json` | v0.5.0: Template для Stryker.NET (C#) |
-| `.dev-pomogator/tools/test-quality/posttool-jit.ts` | JiT hook — fires PostToolUse on Write/Edit |
+| `tools/test-quality/posttool-jit.ts` | JiT hook — fires PostToolUse on Write/Edit |
 
 **Exit codes** (для `run-mutation.ts`):
 - `0` — threshold met OR --dry-run completed
@@ -789,7 +789,7 @@ npx tsx run-mutation.ts <target>  # → new mutation.json with improved kill rat
 
 ### 6.4 JiT (Just-in-Time) auto-trigger mode (FR-7)
 
-Trigger: **PostToolUse hook** on `Write|Edit` of production code files. Registered in `extensions/test-quality/extension.json` per array-with-nested-hooks format per `.claude/rules/gotchas/installer-hook-formats.md`. Matchers (v0.1.0): `*.ts` / `*.py`; excludes `*test*` / `__tests__` / `tests/` / `*.test.ts` / `*_test.py` / `*.feature` / `*.md`.
+Trigger: **PostToolUse hook** on `Write|Edit` of production code files. Registered in `.claude-plugin/hooks.json` (PostToolUse `Write|Edit`). Matchers (v0.1.0): `*.ts` / `*.py`; excludes `*test*` / `__tests__` / `tests/` / `*.test.ts` / `*_test.py` / `*.feature` / `*.md`.
 
 **Что детектит** (через ast-grep):
 

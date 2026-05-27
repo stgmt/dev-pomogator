@@ -4,7 +4,7 @@ import path from 'path';
 import { execSync } from 'child_process';
 import { homePath, appPath } from './helpers';
 
-const MCP_SETUP_SCRIPT = 'extensions/specs-workflow/tools/mcp-setup/setup-mcp.py';
+const MCP_SETUP_SCRIPT = 'tools/mcp-setup/setup-mcp.py';
 
 /**
  * Run the MCP setup script

@@ -7,19 +7,19 @@ Refactor dev-pomogator из кастомной installer-системы (`npm i 
 - **Canonical marketplace distribution** — `.claude-plugin/marketplace.json` объявляет dev-pomogator plugin, пользователь делает `/plugin marketplace add stgmt/dev-pomogator` (CLI или Desktop UI), затем `/plugin install dev-pomogator@stgmt`. Anthropic-managed cache + `enabledPlugins` + reload. Schema valid per `plugin-marketplaces.md`.
 - **Canonical plugin layout** — `.claude-plugin/plugin.json` + `skills/`, `commands/`, `hooks/`, `.mcp.json`, `agents/` per Anthropic plugin spec.
 - **Default install scope = user** (Anthropic canonical default) — доступно во всех проектах + видимо в Claude Desktop. Project и local scopes доступны через `--scope` flag.
-- **Build pipeline**: `npm run build:plugin` запускает `buildCanonicalPlugin()` который читает 26 `extensions/*/extension.json` и генерирует canonical artifacts в repo root для distribution.
+- **Hand-maintained manifests + drift test**: три canonical манифеста (`.claude-plugin/plugin.json`, `marketplace.json`, `hooks.json`) поддерживаются вручную в repo root. Drift test (`tests/e2e/canonical-plugin.test.ts`) guard'ит синхронизацию — каждая hooks.json команда резолвится в on-disk скрипт под `tools/` (и vice-versa) + manifest schema validity. Build-step'а нет.
 - **Migration v1 → v2**: documentation-first + optional standalone cleanup script (`tools/migrate-v1-to-v2.ts`) запускаемый user'ом через `npx tsx` без npm install. Anthropic plugin model запрещает project file writes из plugin runtime, поэтому migration не automatic.
 - **Cursor support удалён полностью** — manifests, code paths, `package.json` metadata. CLI legacy entry point (если remains для migration utility) обновляет error message с canonical install hint.
 
 ## Где лежит реализация
 
-- **Build tools**: `src/installer/plugin-canonical.ts` (NEW) — `buildCanonicalPlugin()` aggregator. `src/installer/extensions.ts` (EDIT) — refactor aggregation в shared utility.
-- **Plugin artifacts** (committed в repo, generated): `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `skills/<name>/SKILL.md`, `commands/*.md`, `hooks/hooks.json`, `.mcp.json`.
-- **Source-of-truth (preserved)**: `extensions/<ext-name>/extension.json` остаются canonical source per `extension-manifest-integrity` rule.
-- **Migration utility**: `tools/migrate-v1-to-v2.ts` (NEW) — standalone cleanup script.
+- **Canonical manifests** (committed в repo, hand-authored): `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `.claude-plugin/hooks.json`. Поддерживаются вручную, не генерируются.
+- **Plugin artifacts** (committed в repo): `skills/<name>/SKILL.md`, `commands/*.md`, `.mcp.json`, `tools/<tool>/...` (top-level tool/hook скрипты — `src/` и `extensions/` удалены в этой миграции).
+- **Drift test**: `tests/e2e/canonical-plugin.test.ts` (NEW) — guard sync между hand-maintained манифестами и on-disk скриптами под `tools/`.
+- **Migration utility**: `tools/migrate-v1-to-v2/migrate-v1-to-v2.ts` (NEW) — standalone cleanup script.
 - **Tests**: `tests/e2e/canonical-plugin-build.test.ts`, `tests/e2e/marketplace-json.test.ts`, `tests/e2e/migration-v1-to-v2.test.ts`, `tests/e2e/cursor-removal.test.ts`, `tests/features/dev-pomogator-canonical-plugin.feature`, `tests/fixtures/v1-install/**`.
 - **Docs**: `CLAUDE.md` (architecture + build commands), `README.md` (canonical install commands + migration guide).
-- **Removed (старый v2 design)**: `bin/postinstall.js`, `src/installer/install-user-scope.ts`, `src/installer/git-exclude.ts`, custom config fields `installScope`/`gitignoreMarker`. См. CHANGELOG.
+- **Removed**: весь `src/` каталог и `extensions/` дерево (installer-система, postinstall, gitignore/git-exclude writers, cursor code, custom config fields). Tools переехали top-level в `tools/`. См. CHANGELOG.
 
 ## Где читать дальше
 
@@ -28,7 +28,7 @@ Refactor dev-pomogator из кастомной installer-системы (`npm i 
 - [RESEARCH.md](RESEARCH.md) — Anthropic guidelines (plugins.md, plugins-reference.md, marketplace-spec, desktop docs), 11 relevant rules, 6 рисков с Mitigation
 - [REQUIREMENTS.md](REQUIREMENTS.md) — traceability matrix + 24 CHK-FR rows с Verification Method (mix integration/manual)
 - [FR.md](FR.md), [NFR.md](NFR.md), [ACCEPTANCE_CRITERIA.md](ACCEPTANCE_CRITERIA.md) — formal requirements (12 FRs, 8 ACs)
-- [DESIGN.md](DESIGN.md) — components, build pipeline algorithm, 4 Key Decisions с Trade-offs (canonical distribution, documentation-first migration, default user-scope, dual-role repo)
+- [DESIGN.md](DESIGN.md) — components, maintenance flow + drift test, 4 Key Decisions с Trade-offs (canonical distribution, documentation-first migration, default user-scope, dual-role repo)
 - [dev-pomogator-canonical-plugin_SCHEMA.md](dev-pomogator-canonical-plugin_SCHEMA.md) — pipeline diagram + JSON shapes (plugin.json, marketplace.json, V1InstallInfo, MigrationResult, PluginTree, enabledPlugins entry format)
 - [dev-pomogator-canonical-plugin.feature](dev-pomogator-canonical-plugin.feature) — 22 BDD сценария CANON001_10..120 покрывающих @feature1..@feature12 (mix automated and @manual для Anthropic-managed flows)
 - [TASKS.md](TASKS.md) — TDD-плана, 8 фаз (Phase -1 Infra → Phase 0 BDD foundation → Phase 1 Build pipeline → Phase 2 Migration → Phase 3 Cursor removal → Phase 4 Cleanup старого v2 design → Phase 5 Docs → Phase 6 Refactor + Final verification)

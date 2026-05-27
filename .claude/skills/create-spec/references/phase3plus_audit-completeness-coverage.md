@@ -38,5 +38,5 @@ Only if `ARCHITECTURE/` exists (Phase 1.75 ran, greenfield). Brownfield/skipped 
 ## Related
 
 - Sibling: [phase3plus_audit-architecture-coverage.md](phase3plus_audit-architecture-coverage.md)
-- Audit logic: `extensions/specs-workflow/tools/specs-generator/architecture-decision/audit.ts` (`checkCompletenessCoverage`)
+- Audit logic: `tools/specs-generator/architecture-decision/audit.ts` (`checkCompletenessCoverage`)
 - Phase 1.75: [phase1.75_architecture-decisions.md](phase1.75_architecture-decisions.md)

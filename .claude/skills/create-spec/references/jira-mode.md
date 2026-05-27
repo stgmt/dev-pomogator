@@ -19,7 +19,7 @@
 |------|------------|-----------|
 | `JIRA_SOURCE.md` | Verbatim Jira description + comments с preserved эмфазой (`{color:red}` → `**🔴 CRITICAL:**`) | Создаётся jira-intake Phase 4b. Обновляется `/jira-intake-resync`. Не редактируется вручную. |
 | `ATTACHMENTS.md` | Committed каталог аттачей: file/role/purpose/evidence/hash/size | Создаётся jira-intake Phase 5g. Binaries (`attachments/`) gitignored. |
-| `.jira-cache.json` | Structured extractions: errors/ui_observations/video_steps/data_schema/config_values + attachment hashes | Schema: `extensions/specs-workflow/tools/specs-generator/templates/JIRA_CACHE.schema.json`. Читается validator/audit для cross-check. |
+| `.jira-cache.json` | Structured extractions: errors/ui_observations/video_steps/data_schema/config_values + attachment hashes | Schema: `tools/specs-generator/templates/JIRA_CACHE.schema.json`. Читается validator/audit для cross-check. |
 
 ## Поведенческие эффекты
 

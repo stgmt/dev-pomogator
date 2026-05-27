@@ -1,18 +1,18 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
-import { runTsx, appPath } from './helpers';
+import { runTsx, appPath, pluginHookCommands } from './helpers';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-// Use INSTALLED location (.dev-pomogator/tools/) — source path
-// `extensions/auto-simplify/tools/auto-simplify/` lacks `_shared/` neighbor
-// because installer copies extensions/_shared/ → .dev-pomogator/tools/_shared/.
+// Use INSTALLED location (tools/) — source path
+// `tools/auto-simplify/` lacks `_shared/` neighbor
+// because installer copies extensions/_shared/ → tools/_shared/.
 // Per .claude/rules/docker-no-git-repo.md: hooks use git, so test env runs them
 // from installed location which has the _shared sibling resolved.
-const HOOK_PATH = '.dev-pomogator/tools/auto-simplify/simplify_stop.ts';
+const HOOK_PATH = 'tools/auto-simplify/simplify_stop.ts';
 const MARKER_PATH = '.dev-pomogator/.simplify-marker.json';
 
 interface HookResult {
@@ -182,34 +182,15 @@ describe('Auto-Simplify Stop Hook', () => {
     });
   });
 
-  describe('Extension manifest', () => {
-    const manifestPath = 'extensions/auto-simplify/extension.json';
-
-    it('should exist and be valid JSON', async () => {
-      const content = await fs.readFile(appPath(manifestPath), 'utf-8');
-      const manifest = JSON.parse(content);
-      expect(manifest.name).toBe('auto-simplify');
+  describe('Plugin hook registration', () => {
+    it('should register the auto-simplify Stop hook', () => {
+      expect(
+        pluginHookCommands('Stop').some((c) => c.includes('auto-simplify/simplify_stop.ts')),
+      ).toBe(true);
     });
 
-    it('should declare Stop hook', async () => {
-      const content = await fs.readFile(appPath(manifestPath), 'utf-8');
-      const manifest = JSON.parse(content);
-      expect(manifest.hooks?.claude?.Stop).toContain('simplify_stop.ts');
-    });
-
-    it('should not override stock simplify skill', async () => {
-      const content = await fs.readFile(appPath(manifestPath), 'utf-8');
-      const manifest = JSON.parse(content);
-      expect(manifest.skills).toBeUndefined();
-      expect(manifest.skillFiles).toBeUndefined();
-    });
-
-    it('should declare toolFiles', async () => {
-      const content = await fs.readFile(appPath(manifestPath), 'utf-8');
-      const manifest = JSON.parse(content);
-      expect(manifest.toolFiles?.['auto-simplify']).toContain(
-        '.dev-pomogator/tools/auto-simplify/simplify_stop.ts'
-      );
+    it('should ship the simplify_stop tool script', () => {
+      expect(fs.existsSync(appPath('tools/auto-simplify/simplify_stop.ts'))).toBe(true);
     });
   });
 });

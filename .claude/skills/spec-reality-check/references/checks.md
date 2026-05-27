@@ -1,6 +1,6 @@
 # Checks reference — 10 codes
 
-Each finding emits `AuditFinding` shape: `{check, category, severity, message, details, file?, line?}` (interface imported from `extensions/specs-workflow/tools/specs-validator/audit-checks.ts:14`).
+Each finding emits `AuditFinding` shape: `{check, category, severity, message, details, file?, line?}` (interface imported from `tools/specs-validator/audit-checks.ts:14`).
 
 ## Drift checks (ERROR / WARNING)
 

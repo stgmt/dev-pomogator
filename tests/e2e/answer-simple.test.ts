@@ -3,8 +3,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import os from 'node:os';
 import { spawnSync } from 'node:child_process';
-import { runInstaller } from './helpers';
-import { detectJargon } from '../../extensions/answer-simple/tools/answer-simple/jargon_detector.ts';
+import { detectJargon } from '../../tools/answer-simple/jargon_detector.ts';
 
 const APP_DIR = process.env.APP_DIR || process.cwd();
 const appPath = (rel: string = ''): string => path.join(APP_DIR, rel);
@@ -13,7 +12,6 @@ const appPath = (rel: string = ''): string => path.join(APP_DIR, rel);
 // after this PR/spec implementation is committed
 const RULE_PATH = '.claude/rules/answer-simple/clear-questions-to-user.md';
 const SKILL_PATH = '.claude/skills/answer-simple/SKILL.md';
-const MANIFEST_PATH = 'extensions/answer-simple/extension.json';
 
 describe('PLUGIN017_answer-simple', () => {
   // ---------------------------------------------------------------------------
@@ -109,26 +107,19 @@ describe('PLUGIN017_answer-simple', () => {
   // @feature3 — FR-3 / FR-5 (extension structure + atomic migration)
   // ---------------------------------------------------------------------------
 
-  it('PLUGIN017_05: extension manifest is well-formed, old rule path removed, CLAUDE.md updated', async () => {
-    // (a) Manifest exists and structure correct (FR-3)
-    const manifestPath = appPath(MANIFEST_PATH);
-    expect(await fs.pathExists(manifestPath), `Manifest must exist at ${MANIFEST_PATH}`).toBe(true);
-
-    const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf-8'));
-    expect(manifest.name).toBe('answer-simple');
-    expect(manifest.platforms).toContain('claude');
-    expect(manifest.ruleFiles.claude).toContain(RULE_PATH);
-    expect(manifest.skills['answer-simple']).toBe('.claude/skills/answer-simple');
-    expect(manifest.skillFiles['answer-simple']).toContain(SKILL_PATH);
-
-    // v1.1.0: extension now ships a Stop-hook enforcement tool (reversed from the original
-    // "declarative, no hooks" decision — that was posited on the false belief that Claude Code
-    // has no hook on the final agent message; the Stop hook does see it). See DESIGN.md.
-    expect(manifest.tools['answer-simple']).toBe('tools/answer-simple');
-    expect(manifest.toolFiles['answer-simple']).toContain(
-      '.dev-pomogator/tools/answer-simple/answer_simple_stop.ts',
+  it('PLUGIN017_05: v2 wiring (Stop hook in hooks.json + skill/tool present), old rule path removed, CLAUDE.md updated', async () => {
+    // (a) v2 canonical wiring: no per-extension extension.json. The Stop hook is
+    // declared in .claude-plugin/hooks.json; the skill + tool live in the repo tree.
+    const hooks = JSON.parse(await fs.readFile(appPath('.claude-plugin/hooks.json'), 'utf-8')).hooks;
+    const stopCmds = ((hooks.Stop as { hooks?: { command?: string }[] }[]) || []).flatMap(
+      (g) => (g.hooks || []).map((h) => h.command || ''),
     );
-    expect(manifest.hooks.claude.Stop).toMatch(/answer_simple_stop\.ts/);
+    expect(
+      stopCmds.some((c) => /tools\/answer-simple\/answer_simple_stop\.ts/.test(c)),
+      'answer-simple Stop hook must be wired in .claude-plugin/hooks.json',
+    ).toBe(true);
+    expect(await fs.pathExists(appPath('tools/answer-simple/answer_simple_stop.ts'))).toBe(true);
+    expect(await fs.pathExists(appPath(SKILL_PATH))).toBe(true);
 
     // (b) Old rule path must NOT exist after migration (FR-5)
     const oldRulePath = appPath('.claude/rules/clear-questions-to-user.md');
@@ -188,9 +179,9 @@ describe('PLUGIN017_answer-simple', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'answer-simple-'));
     const toolDir = path.join(root, 'answer-simple');
     fs.mkdirSync(toolDir, { recursive: true });
-    fs.copySync(appPath('extensions/answer-simple/tools/answer-simple/jargon_detector.ts'), path.join(toolDir, 'jargon_detector.ts'));
-    fs.copySync(appPath('extensions/answer-simple/tools/answer-simple/answer_simple_stop.ts'), path.join(toolDir, 'answer_simple_stop.ts'));
-    fs.copySync(appPath('extensions/_shared'), path.join(root, '_shared'));
+    fs.copySync(appPath('tools/answer-simple/jargon_detector.ts'), path.join(toolDir, 'jargon_detector.ts'));
+    fs.copySync(appPath('tools/answer-simple/answer_simple_stop.ts'), path.join(toolDir, 'answer_simple_stop.ts'));
+    fs.copySync(appPath('tools/_shared'), path.join(root, '_shared'));
     return { hook: path.join(toolDir, 'answer_simple_stop.ts'), root };
   }
   function runHook(hook: string, input: object): { status: number; stdout: string } {

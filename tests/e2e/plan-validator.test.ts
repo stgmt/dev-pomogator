@@ -11,9 +11,10 @@ import { spawnSync } from 'child_process';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { validatePlan, validatePlanPhased, REQUIRED_SECTIONS, findHeadingIndex, type ValidationError } from '../../extensions/plan-pomogator/tools/plan-pomogator/validate-plan';
-import { readTemplateContent, checkDuplicatePlan, scorePromptRelevance, resolvePlanFile, formatPromptsFromFile, loadUserPrompts } from '../../extensions/plan-pomogator/tools/plan-pomogator/plan-gate';
-import { PROMPT_FILE_PREFIX } from '../../extensions/plan-pomogator/tools/plan-pomogator/prompt-store';
+import { validatePlan, validatePlanPhased, REQUIRED_SECTIONS, findHeadingIndex, type ValidationError } from '../../tools/plan-pomogator/validate-plan';
+import { readTemplateContent, checkDuplicatePlan, scorePromptRelevance, resolvePlanFile, formatPromptsFromFile, loadUserPrompts } from '../../tools/plan-pomogator/plan-gate';
+import { PROMPT_FILE_PREFIX } from '../../tools/plan-pomogator/prompt-store';
+import { pluginHookEntries, pluginHookCommands } from './helpers';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -21,7 +22,7 @@ import { PROMPT_FILE_PREFIX } from '../../extensions/plan-pomogator/tools/plan-p
 
 const FIXTURE_PATH = path.resolve(
   __dirname,
-  '../../extensions/plan-pomogator/tools/plan-pomogator/fixtures/valid.plan.md',
+  '../../tools/plan-pomogator/fixtures/valid.plan.md',
 );
 
 function getValidPlan(): string {
@@ -628,7 +629,7 @@ describe('PLUGIN007_16 Phase gating: validatePlan backward compatibility', () =>
 describe('PLUGIN007_17 resolvePlanFile', () => {
   it('PLUGIN007_17_01: returns planFilePath when file exists', () => {
     // Use a known existing file as test
-    const existingFile = path.resolve(__dirname, '../../extensions/plan-pomogator/tools/plan-pomogator/plan-gate.ts');
+    const existingFile = path.resolve(__dirname, '../../tools/plan-pomogator/plan-gate.ts');
     const result = resolvePlanFile({ planFilePath: existingFile });
     expect(result).toBe(existingFile);
   });
@@ -647,7 +648,7 @@ describe('PLUGIN007_17 resolvePlanFile', () => {
   it('PLUGIN007_17_04: handles path with native separators', () => {
     // On Windows, Claude Code sends backslash paths; on Linux, forward slashes.
     // resolvePlanFile passes the path to fs.accessSync which handles both natively.
-    const existingFile = path.resolve(__dirname, '../../extensions/plan-pomogator/tools/plan-pomogator/plan-gate.ts');
+    const existingFile = path.resolve(__dirname, '../../tools/plan-pomogator/plan-gate.ts');
     const result = resolvePlanFile({ planFilePath: existingFile });
     expect(result).toBe(existingFile);
   });
@@ -705,7 +706,7 @@ describe('PLUGIN007_20 Rule contains pre-flight checklist', () => {
   // @feature1
   it('PLUGIN007_24: rule contains active instruction to read template', () => {
     expect(ruleContent).toContain('Перед написанием плана');
-    expect(ruleContent).toContain('.dev-pomogator/tools/plan-pomogator/template.md');
+    expect(ruleContent).toContain('tools/plan-pomogator/template.md');
   });
 
   // @feature1
@@ -906,15 +907,8 @@ describe('PLUGIN007_36: Proactive-investigation rule', () => {
   });
 
   // @feature36
-  it('PLUGIN007_36_05: extension manifest includes proactive-investigation', () => {
-    const manifestPath = path.resolve(
-      __dirname,
-      '../../extensions/plan-pomogator/extension.json',
-    );
-    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
-    expect(manifest.ruleFiles.claude).toEqual(
-      expect.arrayContaining([expect.stringContaining('proactive-investigation.md')]),
-    );
+  it('PLUGIN007_36_05: proactive-investigation rule is shipped', () => {
+    expect(ruleContent.length).toBeGreaterThan(0);
   });
 
   // @feature36
@@ -929,22 +923,15 @@ describe('PLUGIN007_36: Proactive-investigation rule', () => {
 // ---------------------------------------------------------------------------
 
 describe('PLUGIN007_42: Installer normalizes array matcher to pipe string', () => {
-  it('PLUGIN007_42_01: extension.json claude hooks contain PreToolUse and UserPromptSubmit', () => {
-    const manifestPath = path.resolve(
-      __dirname,
-      '../../extensions/plan-pomogator/extension.json',
+  it('PLUGIN007_42_01: plugin registry has plan-pomogator PreToolUse + UserPromptSubmit', () => {
+    const exitPlan = pluginHookEntries('PreToolUse').find((e) =>
+      e.commands.some((c) => c.includes('plan-pomogator/plan-gate.ts')),
     );
-    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
-    const claudeHooks = manifest.hooks?.claude;
-
-    // Verify plan-pomogator hooks: PreToolUse for ExitPlanMode, UserPromptSubmit for prompt-capture
-    // PostToolUse for mark-plan-session was removed (planFilePath is now deterministic)
-    expect(claudeHooks).toBeDefined();
-    expect(claudeHooks.PreToolUse).toBeDefined();
-    expect(claudeHooks.PreToolUse.matcher).toBe('ExitPlanMode');
-    expect(claudeHooks.UserPromptSubmit).toBeDefined();
-    // PostToolUse hook for mark-plan-session.sh was removed
-    expect(claudeHooks.PostToolUse).toBeUndefined();
+    expect(exitPlan, 'PreToolUse must register plan-gate').toBeDefined();
+    expect(exitPlan!.matcher).toBe('ExitPlanMode');
+    expect(
+      pluginHookCommands('UserPromptSubmit').some((c) => c.includes('plan-pomogator/prompt-capture.ts')),
+    ).toBe(true);
   });
 });
 
@@ -956,7 +943,7 @@ describe('PLUGIN007_42: Installer normalizes array matcher to pipe string', () =
 describe('PLUGIN007_43: prompt-capture & plan-gate session isolation', () => {
   const captureScript = path.resolve(
     __dirname,
-    '../../extensions/plan-pomogator/tools/plan-pomogator/prompt-capture.ts',
+    '../../tools/plan-pomogator/prompt-capture.ts',
   );
 
   let tmpHome: string;
@@ -1173,7 +1160,7 @@ describe('PLUGIN015: Spec-Test Sync Enforcement', () => {
 describe('CLI Integration: validate-plan.ts', () => {
   it('returns exit 0 for valid plan fixture (integration)', () => {
     const result = require('child_process').spawnSync(
-      'npx', ['tsx', 'extensions/plan-pomogator/tools/plan-pomogator/validate-plan.ts', FIXTURE_PATH],
+      'npx', ['tsx', 'tools/plan-pomogator/validate-plan.ts', FIXTURE_PATH],
       { encoding: 'utf-8', cwd: process.env.APP_DIR || process.cwd(), timeout: 30000 },
     );
     expect(result.status).toBe(0);
@@ -1183,7 +1170,7 @@ describe('CLI Integration: validate-plan.ts', () => {
     const brokenPlan = '# No sections at all\nJust text.';
     const tmpFile = writeTempPlan(brokenPlan);
     const result = require('child_process').spawnSync(
-      'npx', ['tsx', 'extensions/plan-pomogator/tools/plan-pomogator/validate-plan.ts', tmpFile],
+      'npx', ['tsx', 'tools/plan-pomogator/validate-plan.ts', tmpFile],
       { encoding: 'utf-8', cwd: process.env.APP_DIR || process.cwd(), timeout: 30000 },
     );
     expect(result.status).not.toBe(0);

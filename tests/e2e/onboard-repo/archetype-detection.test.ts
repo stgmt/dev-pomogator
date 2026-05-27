@@ -7,7 +7,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { runBeforeEach, type BeforeEachContext } from './hooks/before-each.ts';
 import { runAfterEach } from './hooks/after-each.ts';
-import { archetypeTriage } from '../../../extensions/onboard-repo/tools/onboard-repo/steps/archetype-triage.ts';
+import { archetypeTriage } from '../../../tools/onboard-repo/steps/archetype-triage.ts';
 
 
 describe('Phase 2: Archetype triage (@feature8)', () => {

@@ -321,7 +321,7 @@ grep -nE '^\s*(\$ )?(find|grep|cat|head|tail|sed|awk)\s' .specs/{slug}/TASKS.md
 
 ### Trigger
 
-Если есть active plan file (`~/.claude/plans/{name}.md` mentioned в session) — diff против `.dev-pomogator/tools/plan-pomogator/template.md`.
+Если есть active plan file (`~/.claude/plans/{name}.md` mentioned в session) — diff против `tools/plan-pomogator/template.md`.
 
 ### Method
 
@@ -330,7 +330,7 @@ grep -nE '^\s*(\$ )?(find|grep|cat|head|tail|sed|awk)\s' .specs/{slug}/TASKS.md
 2. Read template:
 
    ```bash
-   cat .dev-pomogator/tools/plan-pomogator/template.md
+   cat tools/plan-pomogator/template.md
    ```
 
 3. Read plan и проверить:
@@ -344,7 +344,7 @@ grep -nE '^\s*(\$ )?(find|grep|cat|head|tail|sed|awk)\s' .specs/{slug}/TASKS.md
 4. Run validator:
 
    ```bash
-   npx tsx .dev-pomogator/tools/plan-pomogator/validate-plan.ts <path-to-plan>
+   npx tsx tools/plan-pomogator/validate-plan.ts <path-to-plan>
    ```
 
 ### Severity rule

@@ -9,7 +9,7 @@ Already installed if you ran `npx dev-pomogator --claude --plugins=test-quality`
 
 ```bash
 ls .claude/skills/strong-tests/    # SKILL.md + scripts/ + references/
-ls .dev-pomogator/tools/test-quality/posttool-jit.ts    # hook handler
+ls tools/test-quality/posttool-jit.ts    # hook handler
 ```
 
 ### Step 2: invoke skill

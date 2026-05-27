@@ -20,7 +20,7 @@
 
 ## Запрещено
 
-- **Inline-копии production кода** — дублирование логики из extension tools в тесте. Если `generateNss()` изменится, а тест содержит копию — тест пройдёт (ложнопозитивный)
+- **Inline-копии production кода** — дублирование логики из `tools/` в тесте. Если `generateNss()` изменится, а тест содержит копию — тест пройдёт (ложнопозитивный)
 - **Тесты без feature-покрытия** — каждый it() обязан иметь парный Scenario
 - **Feature без теста** — каждый Scenario обязан иметь парный it()
 
@@ -31,7 +31,7 @@
 ### Import (для модулей с export)
 
 ```typescript
-import { generateNss } from '../../extensions/context-menu/tools/context-menu/postinstall';
+import { generateNss } from '../../tools/context-menu/postinstall';
 
 it('CTXMENU001_01: generates valid NSS content', () => {
   const nss = generateNss('/test/project');

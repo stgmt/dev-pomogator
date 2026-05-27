@@ -2,9 +2,9 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import { execSync } from 'child_process';
-import { runTsx, appPath, homePath } from './helpers';
+import { runTsx, appPath, homePath, pluginHookCommands } from './helpers';
 
-const AUTO_COMMIT_TOOL_PATH = 'extensions/auto-commit/tools/auto-commit';
+const AUTO_COMMIT_TOOL_PATH = 'tools/auto-commit';
 
 /**
  * Create a temporary git repo for testing
@@ -151,31 +151,27 @@ describe('PLUGIN006: Auto-Commit', () => {
   });
 
   describe('Extension Configuration', () => {
-    it('should have extension.json with stop hooks', async () => {
-      const extPath = path.join(appPath(), 'extensions/auto-commit/extension.json');
-      expect(await fs.pathExists(extPath)).toBe(true);
-
-      const ext = await fs.readJson(extPath);
-
-      expect(ext.name).toBe('auto-commit');
-      expect(ext.version).toBe('2.3.0');
-      expect(ext.hooks.claude.Stop).toContain('auto_commit_stop.ts');
+    it('should register auto-commit stop hook in the plugin hook registry', () => {
+      const stop = pluginHookCommands('Stop');
+      expect(stop.some((c) => c.includes('auto-commit/auto_commit_stop.ts'))).toBe(true);
     });
 
-    it('should use npx tsx to run TypeScript', async () => {
-      const extPath = path.join(appPath(), 'extensions/auto-commit/extension.json');
-      const ext = await fs.readJson(extPath);
-
-      expect(ext.hooks.claude.Stop).toContain('npx tsx');
+    it('should invoke the hook via the plugin bootstrap shim', () => {
+      const cmd = pluginHookCommands('Stop').find((c) =>
+        c.includes('auto-commit/auto_commit_stop.ts'),
+      );
+      expect(cmd).toBeDefined();
+      // Canonical v2 runs tools through tools/_shared/bootstrap.cjs (not `npx tsx`).
+      expect(cmd).toContain('bootstrap.cjs');
     });
   });
 
   describe('Integration: stop hook', () => {
     it('should exit 0 and skip when no API key (integration)', () => {
       // Use installed location: source path lacks _shared/ neighbor.
-      // Installer copies extensions/_shared/ → .dev-pomogator/tools/_shared/.
+      // Installer copies extensions/_shared/ → tools/_shared/.
       const result = runTsx(
-        '.dev-pomogator/tools/auto-commit/auto_commit_stop.ts',
+        'tools/auto-commit/auto_commit_stop.ts',
         { input: { conversation_id: 'test', workspace_roots: [testRepoPath] } },
       );
       expect(result.status).toBe(0);

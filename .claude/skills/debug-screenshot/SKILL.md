@@ -25,7 +25,7 @@ allowed-tools: Bash, Read
 Run the bundled PowerShell script (Windows only):
 
 ```bash
-powershell -ExecutionPolicy Bypass -File extensions/debug-screenshot/skills/debug-screenshot/scripts/screenshot.ps1 -Label "description"
+powershell -ExecutionPolicy Bypass -File .claude/skills/debug-screenshot/scripts/screenshot.ps1 -Label "description"
 ```
 
 The script saves to `.dev-pomogator/screenshots/screen-{timestamp}-{label}.png` and prints the path.
@@ -55,7 +55,7 @@ Hypothesis: TUI compact bar should show "🔄 vitest 38✅ 2❌" after running t
 Take a screenshot with a descriptive label:
 
 ```bash
-powershell -ExecutionPolicy Bypass -File extensions/debug-screenshot/skills/debug-screenshot/scripts/screenshot.ps1 -Label "after-wrapper-run"
+powershell -ExecutionPolicy Bypass -File .claude/skills/debug-screenshot/scripts/screenshot.ps1 -Label "after-wrapper-run"
 ```
 
 ### 3. Analyze

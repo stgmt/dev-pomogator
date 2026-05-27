@@ -50,7 +50,7 @@
 4. Генерирует `.specs/{feature}/validation-report.md`
 5. Показывает предупреждения в начале промпта
 
-> **Important:** хук читает `.specs/` файлы напрямую через `extensions/specs-workflow/tools/specs-validator/validate-specs.ts` — этот reference-файл является документацией FOR Claude, не data dependency для hook кода. Перенос rule-файла в references/ не влияет на работу hook.
+> **Important:** хук читает `.specs/` файлы напрямую через `tools/specs-validator/validate-specs.ts` — этот reference-файл является документацией FOR Claude, не data dependency для hook кода. Перенос rule-файла в references/ не влияет на работу hook.
 
 ## Типы проблем
 

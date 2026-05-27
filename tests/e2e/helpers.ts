@@ -24,37 +24,6 @@ function getEnhancedPath(): string {
   return currentPath;
 }
 
-export interface InstallerResult {
-  logs: string;
-  exitCode: number;
-}
-
-/**
- * Run the dev-pomogator installer
- * Note: Use --all flag to install all plugins in non-interactive mode
- */
-export async function runInstaller(
-  args: string = '--claude --all',
-  extraEnv: Record<string, string> = {},
-): Promise<InstallerResult> {
-  // spawnSync never throws — surface spawn errors directly so callers can
-  // distinguish "installer exited non-zero" from "node binary not found".
-  const result = spawnSync('node', ['dist/index.js', ...args.split(/\s+/).filter(Boolean)], {
-    encoding: 'utf-8',
-    cwd: APP_DIR,
-    env: {
-      ...process.env,
-      FORCE_COLOR: '0',
-      ...extraEnv,
-    },
-  });
-  if (result.error) {
-    return { logs: `spawn failed: ${result.error.message}`, exitCode: -1 };
-  }
-  const logs = (result.stdout || '') + (result.stderr || '');
-  return { logs, exitCode: result.status ?? -1 };
-}
-
 // ============================================================================
 // runInstallerViaNpx — for CORE003_18 / CORE003_19 silent install regression
 // ============================================================================
@@ -1711,17 +1680,47 @@ export function runShellScript(
   }
 }
 
+// ============================================================================
+// Canonical plugin v2 hook registry (.claude-plugin/hooks.json)
+// ============================================================================
+// In the plugin model there is no per-extension extension.json manifest; all
+// hooks are registered centrally in .claude-plugin/hooks.json. These helpers
+// replace the old `fs.readJson('extensions/<ext>/extension.json')` reads.
+
+export interface PluginHookGroup {
+  matcher: string;
+  hooks: Array<{ type?: string; command: string; timeout?: number }>;
+}
+
+/** Read the central hooks registry → { <Event>: HookGroup[] }. */
+export function readPluginHooks(): Record<string, PluginHookGroup[]> {
+  return fs.readJsonSync(appPath('.claude-plugin', 'hooks.json')).hooks || {};
+}
+
+/** All registered command strings for an event (e.g. 'Stop', 'PreToolUse'). */
+export function pluginHookCommands(event: string): string[] {
+  return (readPluginHooks()[event] || []).flatMap((g) =>
+    (g.hooks || []).map((h) => h.command || ''),
+  );
+}
+
+/** Matcher + command list per registered group for an event. */
+export function pluginHookEntries(event: string): Array<{ matcher: string; commands: string[] }> {
+  return (readPluginHooks()[event] || []).map((g) => ({
+    matcher: g.matcher ?? '',
+    commands: (g.hooks || []).map((h) => h.command || ''),
+  }));
+}
+
 /**
- * Get path to specs-generator scripts
+ * Get path to specs-generator scripts.
+ *
+ * Canonical plugin model (v2): tools live in the repo at `tools/<name>/`, not
+ * copied to `.dev-pomogator/tools/` by an installer. Tests invoke them directly
+ * with cwd=APP_DIR — no install step needed.
  */
 export function getSpecsGeneratorPath(script: string): string {
-  return path.join(
-    APP_DIR,
-    '.dev-pomogator',
-    'tools',
-    'specs-generator',
-    script
-  );
+  return path.join(APP_DIR, 'tools', 'specs-generator', script);
 }
 
 /**

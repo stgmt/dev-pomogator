@@ -13,7 +13,10 @@ const SRC_DIR = path.resolve(__dirname, '..', '..', 'src');
 const MEMORY_TS = path.join(SRC_DIR, 'installer', 'memory.ts');
 const UPDATER_TS = path.join(SRC_DIR, 'updater', 'index.ts');
 
-describe('CORE018: Cursor Dead Code Cleanup', () => {
+// Skipped in plugin v2: this verifies dead Cursor code was removed from src/installer
+// and src/updater — but the entire src/ tree (installer + updater + cursor support) was
+// deleted in the migration, so there is nothing left to inspect. Obsolete by design.
+describe.skip('CORE018: Cursor Dead Code Cleanup', () => {
   let memoryContent: string;
   let updaterContent: string;
 

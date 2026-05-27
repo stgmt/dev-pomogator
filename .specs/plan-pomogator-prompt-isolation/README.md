@@ -2,6 +2,8 @@
 
 **Status: shipped 0.1.0** (плагин-версия v1.8.1, дальше bump до 2.1.0 другими фичами). Регрессионные тесты + BDD scenarios зелёные. Audit-spec: 0 ERRORS, 0 WARNINGS.
 
+> **Migration Note (v2.0, 2026-05-08):** Эта спека описывает багфикс hooks `prompt-capture.ts` + `plan-gate.ts` под v1 архитектуру (`extensions/plan-pomogator/tools/`). После canonical refactor v2.0 (см. `.specs/dev-pomogator-canonical-plugin/`): paths переехали к `tools/plan-pomogator/{prompt-capture,plan-gate}.ts`. Hook commands в `.claude-plugin/hooks.json` references новых paths через `tools/_shared/bootstrap.cjs`. Bug fix logic preserved — только hook execution paths изменились.
+
 Багфикс для plan-pomogator hooks `prompt-capture.ts` и `plan-gate.ts`. Устраняет cross-session leak в Phase 2 deny-сообщении plan-gate, когда показывались промпты из других задач/сессий, а также фильтрует системные псевдо-промпты `<task-notification>` от background задач.
 
 ## Ключевые идеи
