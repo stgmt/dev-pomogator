@@ -24,13 +24,19 @@
 | 0 references к deleted paths (src/installer, src/updater, src/index, bin/cli, dist/, ~/.dev-pomogator/scripts/tsx-runner-bootstrap.cjs) в hooks/manifests | ✅ |
 | Plugin schema fields (skills override, commands override, hooks path, mcpServers path) match Anthropic plugins-reference.md | ✅ |
 
-## End-to-end smoke test (DEFERRED)
+## End-to-end smoke test (EXECUTED — PASSED, 2026-05-27)
 
-Actual `/plugin install dev-pomogator@stgmt` execution **deferred** к user-driven testing because:
+Run **automated and non-interactive** in a clean Docker container (`node:22` + `@anthropic-ai/claude-code` 2.1.152) via the real `claude plugin` CLI. The earlier "cannot be invoked programmatically" assumption was wrong — Claude Code 2.1.x ships a full non-interactive plugin CLI (`claude plugin marketplace add / install / list / validate`) plus `--plugin-dir`. Auth via the local subscription proxy (`host.docker.internal:3456`). Method captured in skill `verify-plugin-install`; harness in `.dev-pomogator-tmp/plugin-e2e/`.
 
-1. Slash commands (`/plugin marketplace add`, `/plugin install`, `/reload-plugins`) are interactive Claude Code features executed в session context — cannot be invoked programmatically from automation
-2. Test requires fresh Claude Code session OR Desktop application — current session has accumulated state (plugins enabled, settings cached) that would conflict
-3. Verification requires user observation (skills appear в Skill picker, hooks fire без errors) — visual confirmation step
+| Step | Result |
+|------|--------|
+| `claude plugin validate /plugin` (marketplace manifest) | ✅ passed |
+| `claude plugin marketplace add /plugin` (local directory) | ✅ added marketplace "stgmt" |
+| `claude plugin install dev-pomogator@stgmt --scope user` | ✅ installed + enabled (after fix below) |
+| `claude plugin list --json` | ✅ dev-pomogator@stgmt, version 2.0.0, enabled:true |
+| headless `claude -p` load check | ✅ init event lists all 20 `dev-pomogator:<skill>` skills; result OK; no MODULE_NOT_FOUND |
+
+**Bug found + fixed (commit `8bb67b5`):** `plugin.json` declared `skills/commands/hooks/mcpServers` as bare strings. That passes `marketplace validate` but `claude plugin install` rejected it (`…: Invalid input`) — the plugin would NOT have installed for any user. Fixed to arrays of path strings; drift test `CANON001_11` now guards it (runs in the normal suite, no Docker/auth needed).
 
 ## User-driven smoke test procedure (для reviewer)
 
@@ -46,9 +52,10 @@ Expected: Claude Code clones/registers marketplace «stgmt», `/plugin marketpla
 ```
 /plugin install dev-pomogator@stgmt
 ```
-Expected:
+Expected (verified real layout, claude 2.1.152):
 - `~/.claude/plugins/cache/stgmt/dev-pomogator/<version>/` directory created
-- `~/.claude/settings.json` `enabledPlugins` contains `"dev-pomogator@stgmt": true`
+- `~/.claude/plugins/installed_plugins.json` lists `dev-pomogator@stgmt` (enabled), `known_marketplaces.json` has `stgmt`
+  (NOTE: `enabledPlugins` in `settings.json` does NOT drive install — the `claude plugin`/`/plugin` flow does)
 - Stdout shows install success message
 
 ### Step 3 — Activate
@@ -95,7 +102,7 @@ Expected: shows v1 install detection, lists files которые would be remove
 
 ## Conclusion
 
-Structural verification PASSED. End-to-end user-driven smoke test deferred — required для merge-readiness confirmation. Branch `refactor/canonical-plugin-v2` ready для PR creation; recommended проверить smoke test перед merge to main.
+Structural verification PASSED. End-to-end smoke test **EXECUTED and PASSED** (automated, Docker, real `claude plugin install` — 2026-05-27), and caught + fixed a real install-blocking bug (`plugin.json` string→array fields). Branch `refactor/canonical-plugin-v2` is merge-ready on the e2e gate. The Desktop visibility check (Step 5) remains optional/manual.
 
 ## Recommended next steps
 

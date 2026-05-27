@@ -6,9 +6,9 @@
 
 ## Источник требований и копипаст-шаблон
 
-- Спецификация требований к формату планов: `.dev-pomogator/tools/plan-pomogator/requirements.md`
-- **Перед написанием плана** прочитай шаблон: `.dev-pomogator/tools/plan-pomogator/template.md`
-- **Specs Management**: `.claude/rules/pomogator/specs-management.md` (structure `.specs/`, scripts `.dev-pomogator/tools/specs-generator/`)
+- Спецификация требований к формату планов: `tools/plan-pomogator/requirements.md`
+- **Перед написанием плана** прочитай шаблон: `tools/plan-pomogator/template.md`
+- **Specs Management**: `.claude/rules/pomogator/specs-management.md` (structure `.specs/`, scripts `tools/specs-generator/`)
 
 > Примечание (render-safe): плейсхолдеры вида `<роль>` могут интерпретироваться как HTML-теги и пропадать в рендере. Используй `{роль}` / `{цель}` / `{ценность}`.
 
@@ -118,7 +118,7 @@ Form submit handler не имеет loading state management через React us
 
    - Каждый найденный файл ОБЯЗАН быть в File Changes ИЛИ явно исключён с обоснованием:
      - `[excluded: historical research, not code]` — допустимо для `.specs/*/RESEARCH.md`
-     - `[excluded: auto-generated, will regenerate]` — допустимо для `.dev-pomogator/tools/`
+     - `[excluded: auto-generated, will regenerate]` — допустимо для `.dev-pomogator/` (runtime: status/logs/backups)
    - Если план содержит только `create`/`edit` — секция может содержать `N/A — нет удалений/переименований`.
    - **ЗАПРЕЩЕНО**: формировать File Changes без предварительного Impact Analysis для планов с удалениями/переименованиями.
 
@@ -172,7 +172,7 @@ Form submit handler не имеет loading state management через React us
 ## 📁 File Changes
 | Path | Action | Reason |
 |------|--------|--------|
-| `.dev-pomogator/tools/plan-pomogator/requirements.md` | create | Зафиксировать требования к формату планов с примерами good/bad. |
+| `tools/plan-pomogator/requirements.md` | create | Зафиксировать требования к формату планов с примерами good/bad. |
 ```
 
 Пример (некорректно — пустая таблица):
@@ -185,7 +185,7 @@ Form submit handler не имеет loading state management через React us
 ## Валидация плана (ручная)
 
 - Перед завершением плана запусти валидатор структуры:
-  - `npx tsx .dev-pomogator/tools/plan-pomogator/validate-plan.ts <path-to-plan.md>`
+  - `npx tsx tools/plan-pomogator/validate-plan.ts <path-to-plan.md>`
 - Валидатор проверяет **формат и структуру**, но не оценивает доменную корректность.
 
 ## Phase 2: Валидация требований

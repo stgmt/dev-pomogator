@@ -4,7 +4,7 @@
 
 ## Когда применяется
 
-Edit/Write в `.specs/.onboarding.json` поле `commands`, `extensions/onboard-repo/tools/onboard-repo/steps/finalize.ts`, `extensions/onboard-repo/tools/onboard-repo/renderers/compile-hook.ts`.
+Edit/Write в `.specs/.onboarding.json` поле `commands`, `tools/onboard-repo/steps/finalize.ts`, `tools/onboard-repo/renderers/compile-hook.ts`.
 
 ## Структура одной команды
 

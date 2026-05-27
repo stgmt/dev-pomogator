@@ -13,10 +13,7 @@ paths:
 
 ## Чеклист
 
-- [ ] `npm run build` — компиляция без ошибок
-- [ ] Скопировать изменённые файлы в installed location:
-  - `extensions/*/tools/` → `.dev-pomogator/tools/`
-  - `src/scripts/tsx-runner.js` → `~/.dev-pomogator/scripts/tsx-runner.js`
+- [ ] `npm run lint` — без ошибок (v2: build-шага нет; tools/skills запускаются из исходников/кэша плагина напрямую — копировать в installed location не нужно)
 - [ ] Запустить тесты (`/run-tests`) в background
 - [ ] Если UI/statusline изменения — сделать screenshot через `/debug-screenshot`
 - [ ] Screenshot анализ: описать что ВИДНО, сравнить с ОЖИДАНИЕМ

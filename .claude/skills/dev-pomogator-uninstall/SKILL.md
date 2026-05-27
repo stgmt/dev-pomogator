@@ -8,6 +8,19 @@ allowed-tools: Read, Bash, Edit, Glob, Grep
 
 This skill guides an AI agent through **safely removing dev-pomogator** from a target project. Do **not** execute destructive commands without user confirmation. Follow the 5-step algorithm below in order.
 
+## v2 (canonical plugin) — primary path
+
+If dev-pomogator is installed as a Claude Code **plugin** (v2, the current model — check with `claude plugin list`), uninstall is one command and the manual steps below are NOT needed:
+
+```bash
+claude plugin uninstall dev-pomogator@stgmt   # removes the plugin: skills, rules, hooks, commands
+claude plugin marketplace remove stgmt        # optional: also forget the marketplace
+```
+
+The steps below are the **v1 fallback** — only for legacy projects installed by the old installer (managed files under `.dev-pomogator/tools/`, a `.gitignore` marker block, hooks in `.claude/settings.local.json`, config in `~/.config/dev-pomogator/`). None of that exists in a v2 plugin install.
+
+---
+
 Background: dev-pomogator installs managed files (tools, commands, rules, skills) and writes hooks to `.claude/settings.local.json`, plus adds a marker block to `.gitignore`. This skill cleanly removes all of that without touching user-authored files or the `~/.dev-pomogator/` global directory (unless user explicitly asks for full removal).
 
 ---
