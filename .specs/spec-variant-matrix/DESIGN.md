@@ -24,7 +24,7 @@
 
 ## Где лежит реализация
 
-- App-код tools: `extensions/specs-workflow/tools/specs-generator/variant-matrix/`
+- App-код tools: `tools/specs-generator/variant-matrix/`
 - Skill: `extensions/specs-workflow/.claude/skills/variant-matrix-build/`
 - Rules: `.claude/rules/specs-workflow/variant-matrix/`
 - Audit reference: `.claude/skills/create-spec/references/phase3plus_audit-variant-coverage.md`
@@ -33,10 +33,10 @@
 
 ## Директории и файлы
 
-- `extensions/specs-workflow/tools/specs-generator/variant-matrix/trigger-phrases.ts`
-- `extensions/specs-workflow/tools/specs-generator/variant-matrix/parsers.ts`
-- `extensions/specs-workflow/tools/specs-generator/variant-matrix/audit.ts`
-- `extensions/specs-workflow/tools/specs-generator/variant-matrix/escape-log.ts`
+- `tools/specs-generator/variant-matrix/trigger-phrases.ts`
+- `tools/specs-generator/variant-matrix/parsers.ts`
+- `tools/specs-generator/variant-matrix/audit.ts`
+- `tools/specs-generator/variant-matrix/escape-log.ts`
 - `extensions/specs-workflow/.claude/skills/variant-matrix-build/SKILL.md`
 - `.claude/rules/specs-workflow/variant-matrix/when-to-build-matrix.md`
 - `.claude/rules/specs-workflow/variant-matrix/escape-hatch-audit.md`

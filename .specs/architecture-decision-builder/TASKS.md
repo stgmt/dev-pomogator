@@ -87,7 +87,7 @@
 
 - [ ] Реализовать `axis-detector.ts` (detectAxes 3-layer + hard-OUT brownfield) -- @feature1 — Status: TODO | Est: 45m
   _Requirements: [FR-1](FR.md#fr-1-axis-enumeration-из-prd)_
-  _Leverage: extensions/specs-workflow/tools/specs-generator/variant-matrix/trigger-phrases.ts_
+  _Leverage: tools/specs-generator/variant-matrix/trigger-phrases.ts_
   _Config: см. DESIGN.md секция "Компоненты" + SCHEMA AxisCandidate_
   **Done When:**
   - [ ] detectAxes возвращает ≥1 axis на greenfield-prd fixture

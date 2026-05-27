@@ -18,7 +18,7 @@ All notable changes to this feature will be documented in this file.
 
 ## [0.1.0] — 2026-05-23
 
-> Shipped via `extensions/specs-workflow/tools/specs-generator/variant-matrix/` (5 files: trigger-phrases.ts EN+RU mechanical regex + 14 axis nouns, parsers.ts, escape-log.ts JSONL audit, audit.ts VARIANT_COVERAGE category, variant-matrix-cli.ts) + skill `.claude/skills/variant-matrix-build/SKILL.md` invoked from create-spec Phase 2 step 4c (`.claude/skills/create-spec/references/phase2_requirements-and-design.md`). 19 tests in `tests/e2e/specs-generator-variant-matrix.test.ts`. Escape hatch `[skip-variant-matrix: <reason>]` audited at `.claude/logs/spec-variant-matrix-escapes.jsonl`. specs-workflow plugin bump 1.18.0 → 1.19.0 covered this work.
+> Shipped via `tools/specs-generator/variant-matrix/` (5 files: trigger-phrases.ts EN+RU mechanical regex + 14 axis nouns, parsers.ts, escape-log.ts JSONL audit, audit.ts VARIANT_COVERAGE category, variant-matrix-cli.ts) + skill `.claude/skills/variant-matrix-build/SKILL.md` invoked from create-spec Phase 2 step 4c (`.claude/skills/create-spec/references/phase2_requirements-and-design.md`). 19 tests in `tests/e2e/specs-generator-variant-matrix.test.ts`. Escape hatch `[skip-variant-matrix: <reason>]` audited at `.claude/logs/spec-variant-matrix-escapes.jsonl`. specs-workflow plugin bump 1.18.0 → 1.19.0 covered this work.
 >
 > 8 FRs shipped, FR-9 (PreToolUse form-guard) explicitly OUT OF SCOPE — deferred to v0.2.0 (audit-only catch sufficient for v0.1.0 per Risk Assessment).
 >

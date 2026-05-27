@@ -4,7 +4,7 @@
 
 ## Что проверяет
 
-Для каждого FR в `.specs/{slug}/FR.md` который detection module flags as polymorphic (через `extensions/specs-workflow/tools/specs-generator/variant-matrix/trigger-phrases.ts:detectPolymorphicFRs`):
+Для каждого FR в `.specs/{slug}/FR.md` который detection module flags as polymorphic (через `tools/specs-generator/variant-matrix/trigger-phrases.ts:detectPolymorphicFRs`):
 
 ### Check 1: AC Decision Table presence
 
@@ -134,8 +134,8 @@ System validates format across all locales.
 
 ## Related
 
-- Detection module: `extensions/specs-workflow/tools/specs-generator/variant-matrix/trigger-phrases.ts`
-- Audit library: `extensions/specs-workflow/tools/specs-generator/variant-matrix/audit.ts`
+- Detection module: `tools/specs-generator/variant-matrix/trigger-phrases.ts`
+- Audit library: `tools/specs-generator/variant-matrix/audit.ts`
 - Skill: [`extensions/specs-workflow/.claude/skills/variant-matrix-build/SKILL.md`](../../../../extensions/specs-workflow/.claude/skills/variant-matrix-build/SKILL.md)
 - Trigger map: [`.claude/rules/specs-workflow/variant-matrix/when-to-build-matrix.md`](../../../../.claude/rules/specs-workflow/variant-matrix/when-to-build-matrix.md)
 - Escape hatch audit: [`.claude/rules/specs-workflow/variant-matrix/escape-hatch-audit.md`](../../../../.claude/rules/specs-workflow/variant-matrix/escape-hatch-audit.md)

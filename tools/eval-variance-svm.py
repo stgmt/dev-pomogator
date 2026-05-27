@@ -9,7 +9,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 EVAL_FILE = REPO / "extensions/specs-workflow/.claude/skills/variant-matrix-build/evals/evals.json"
-CLI = REPO / "extensions/specs-workflow/tools/specs-generator/variant-matrix/variant-matrix-cli.ts"
+CLI = REPO / "tools/specs-generator/variant-matrix/variant-matrix-cli.ts"
 N_RUNS = 3
 
 evals = json.loads(EVAL_FILE.read_text(encoding="utf-8"))

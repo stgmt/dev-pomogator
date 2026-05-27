@@ -14,7 +14,7 @@ Universal prevention механизм для класса факапов "shared
 
 ## Где лежит реализация
 
-- **App-код**: `extensions/specs-workflow/tools/specs-generator/variant-matrix/`
+- **App-код**: `tools/specs-generator/variant-matrix/`
 - **Skill**: `extensions/specs-workflow/.claude/skills/variant-matrix-build/`
 - **Rules**: `.claude/rules/specs-workflow/variant-matrix/`
 - **Wiring**: `extensions/specs-workflow/tools/specs-generator/specs-generator-core.mjs` (commandAuditSpec ~line 1611, categoryCount ~line 2676)

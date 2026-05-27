@@ -6,10 +6,10 @@
 
 | Path | Action | Reason |
 |------|--------|--------|
-| `extensions/specs-workflow/tools/specs-generator/variant-matrix/trigger-phrases.ts` | create | [FR-1](FR.md#fr-1-polymorphic-trigger-detection-через-mechanical-regex), [FR-2](FR.md#fr-2-hard-out-signals-anti-over-application) |
-| `extensions/specs-workflow/tools/specs-generator/variant-matrix/parsers.ts` | create | [FR-3](FR.md#fr-3-ac-decision-table-обязательна-per-polymorphic-fr), [FR-4](FR.md#fr-4-gherkin-scenario-outline-в-feature-11-с-ac), [FR-5](FR.md#fr-5-tasksmd-per-variant) |
-| `extensions/specs-workflow/tools/specs-generator/variant-matrix/audit.ts` | create | [FR-6](FR.md#fr-6-audit-category-variant_coverage-8-я-категория) |
-| `extensions/specs-workflow/tools/specs-generator/variant-matrix/escape-log.ts` | create | [FR-7](FR.md#fr-7-escape-hatch-с-audit-log) |
+| `tools/specs-generator/variant-matrix/trigger-phrases.ts` | create | [FR-1](FR.md#fr-1-polymorphic-trigger-detection-через-mechanical-regex), [FR-2](FR.md#fr-2-hard-out-signals-anti-over-application) |
+| `tools/specs-generator/variant-matrix/parsers.ts` | create | [FR-3](FR.md#fr-3-ac-decision-table-обязательна-per-polymorphic-fr), [FR-4](FR.md#fr-4-gherkin-scenario-outline-в-feature-11-с-ac), [FR-5](FR.md#fr-5-tasksmd-per-variant) |
+| `tools/specs-generator/variant-matrix/audit.ts` | create | [FR-6](FR.md#fr-6-audit-category-variant_coverage-8-я-категория) |
+| `tools/specs-generator/variant-matrix/escape-log.ts` | create | [FR-7](FR.md#fr-7-escape-hatch-с-audit-log) |
 | `extensions/specs-workflow/tools/specs-generator/specs-generator-core.mjs` | edit | [FR-6](FR.md#fr-6-audit-category-variant_coverage-8-я-категория) — wire VARIANT_COVERAGE category в commandAuditSpec ~line 1611 + categoryCount ~line 2676 |
 | `extensions/specs-workflow/.claude/skills/variant-matrix-build/SKILL.md` | create | [FR-8](FR.md#fr-8-phase-2-sub-skill-variant-matrix-build) |
 | `.claude/rules/specs-workflow/variant-matrix/when-to-build-matrix.md` | create | [FR-2](FR.md#fr-2-hard-out-signals-anti-over-application) — trigger map с hard-OUT signals |

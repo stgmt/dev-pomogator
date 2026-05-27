@@ -40,7 +40,7 @@ Driver: Stocktaking MR / Warehouse Transfer (QA Лилия Михайлова, 2
 ### Step 1: Detect polymorphic FRs
 
 ```bash
-npx tsx extensions/specs-workflow/tools/specs-generator/variant-matrix/variant-matrix-cli.ts <spec-path>
+npx tsx tools/specs-generator/variant-matrix/variant-matrix-cli.ts <spec-path>
 ```
 
 Returns JSON `{findings: [...]}`. Если findings содержит `code: AC_DECISION_TABLE_MISSING` для каждого polymorphic FR — переходить к Step 2. Если detection вернул пусто или все FRs hardOut → skill exits с `{frs_with_matrix: 0, ...}` (no-op fallback).
@@ -48,7 +48,7 @@ Returns JSON `{findings: [...]}`. Если findings содержит `code: AC_D
 Также можно использовать direct module import в TypeScript context:
 
 ```ts
-import { detectPolymorphicFRs } from 'extensions/specs-workflow/tools/specs-generator/variant-matrix/trigger-phrases.ts';
+import { detectPolymorphicFRs } from 'tools/specs-generator/variant-matrix/trigger-phrases.ts';
 const result = detectPolymorphicFRs(frContent);
 ```
 

@@ -3,14 +3,14 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import {
   detectPolymorphicFRs,
-} from '../../extensions/specs-workflow/tools/specs-generator/variant-matrix/trigger-phrases.ts';
+} from '../../tools/specs-generator/variant-matrix/trigger-phrases.ts';
 import {
   parseDecisionTable,
   parseExamplesTable,
   parseVariantTasks,
-} from '../../extensions/specs-workflow/tools/specs-generator/variant-matrix/parsers.ts';
-import { checkVariantCoverage } from '../../extensions/specs-workflow/tools/specs-generator/variant-matrix/audit.ts';
-import { appendEscapeLog } from '../../extensions/specs-workflow/tools/specs-generator/variant-matrix/escape-log.ts';
+} from '../../tools/specs-generator/variant-matrix/parsers.ts';
+import { checkVariantCoverage } from '../../tools/specs-generator/variant-matrix/audit.ts';
+import { appendEscapeLog } from '../../tools/specs-generator/variant-matrix/escape-log.ts';
 
 const FIXTURES_ROOT = path.join(
   __dirname,
