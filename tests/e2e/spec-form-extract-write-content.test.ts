@@ -23,8 +23,8 @@ import fs from 'fs-extra';
 import os from 'os';
 import { runTsx } from './helpers';
 
-const USER_STORY_GUARD = 'extensions/specs-workflow/tools/specs-validator/user-story-form-guard.ts';
-const TASK_GUARD = 'extensions/specs-workflow/tools/specs-validator/task-form-guard.ts';
+const USER_STORY_GUARD = 'tools/specs-validator/user-story-form-guard.ts';
+const TASK_GUARD = 'tools/specs-validator/task-form-guard.ts';
 
 let tmpRoot: string;
 let specDir: string;
