@@ -47,3 +47,15 @@ WHEN merge-skills.ts succeeds AND ratchet passes THEN original directories `.cla
 **Требование:** [FR-9](FR.md#fr-9-backward-compatibility-для-rules-side)
 
 WHEN `/suggest-rules` Phase 6 invokes `audit.ts --dir .claude/rules --save audit_before.json` (старая команда c обновлённым skill path) THEN output JSON SHALL be byte-identical to current rules-optimizer behaviour (totalFiles, totalTokens, withPaths, withoutPaths, mergeCandidates, antipatternFiles).
+
+## Out of Scope: FR-10 deferred to v0.2.0
+
+**Требование:** [FR-10](FR.md#fr-10-embedding-based-semantic-merge--out-of-scope)
+
+> OUT OF SCOPE — см. FR-10. Embedding-based semantic merge откладывается до v0.2.0; в v0.1.0 Jaccard + LLM judge sufficient.
+
+## Out of Scope: FR-11 design choice never
+
+**Требование:** [FR-11](FR.md#fr-11-auto-apply-без-human-review--out-of-scope)
+
+> OUT OF SCOPE — см. FR-11. Auto-apply без `--execute` flag — намеренный design choice ради safety, never implementing.

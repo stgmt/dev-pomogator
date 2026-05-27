@@ -193,3 +193,8 @@ When reviewing existing test code (update mode), scan for these regex patterns:
 - `.claude/rules/extension-test-quality.md` — naming conventions, 1:1 mapping
 - `.claude/rules/integration-tests-first.md` — integration-first testing policy
 - `.claude/skills/create-spec/references/no-mocks-fallbacks.md` — no mocks, fail-fast (migrated from rule to create-spec skill reference)
+
+## Related Skills
+
+- **`strong-tests`** — post-write strength verification via mutation testing + property-based testing (PBT) + 12-point self-eval. After this skill (`tests-create-update`) ensures your test code is well-formed, invoke `Skill("strong-tests")` to verify the tests actually catch bugs. Two distinct surfaces: write-time prevention (here) + post-write strength (there). Both should be used together for new test work. See `.claude/skills/strong-tests/SKILL.md`.
+- **`strong-tests` JiT auto-trigger** (v0.2.0+, FR-7) — also auto-fires via PostToolUse hook on Write|Edit of production code (`*.ts` / `*.py`). The hook detects collection-returning functions, N×M nested loops, and composition chains, and emits an `additionalContext` nudge with suggested invariants (cardinality / uniqueness / conservation per `.claude/rules/testing/output-invariants-first.md` taxonomy). When this `tests-create-update` skill is invoked WHILE editing production code that triggered the JiT hook, prefer writing invariant tests alongside the per-input tests — composition bugs (e.g., 5 worktrees × 5 entries = 25 rows) require both. To suppress legitimate exceptions: `// strong-tests:skip <reason ≥8 chars>` on signature line. See `.claude/skills/strong-tests/SKILL.md` §6.4 JiT auto-trigger mode.

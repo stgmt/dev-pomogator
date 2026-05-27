@@ -144,7 +144,7 @@ function runGate(planFilePath: string): GateResult {
     input,
     encoding: 'utf-8',
     shell: true,
-    env: { ...process.env, DEVPOM_ALLOW_HOST_TESTS: '1' },
+    env: { ...process.env },
   });
   return {
     stdout: result.stdout || '',

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "claude-in-chrome": {
+      "command": "node",
+      "args": ["./mock-cic.mjs"]
+    }
+  }
+}

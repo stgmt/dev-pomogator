@@ -1,5 +1,17 @@
 # Tasks
 
+> **Status: всё закрыто (2026-05-23).** Phase -0.5 "Insights Context — КРОСС-СЕССИОННЫЕ ПАТТЕРНЫ" реализован в `.claude/commands/suggest-rules.md` lines 180-313. Все 10 FR покрыты:
+>
+> - **FR-1** (чтение report.html): через `Skill("deep-insights")` primary + direct `Read(~/.claude/usage-data/report.html)` Legacy Mode fallback на lines 298-313 (deviation от FR-1 буквального wording "через Read tool" — выбрана skill abstraction как primary, direct Read остался как fallback)
+> - **FR-2** (свежесть): skill outputs `status: fresh|stale|very_stale|missing`; threshold tiered (3d fresh / 4-7d stale / 7+d very_stale) vs spec-binary 3d cutoff — minor differ, behavioural equivalent
+> - **FR-3..6** (CSS extraction friction/claude-md/big-wins/patterns/project-areas): покрыто skill workflow + Legacy Mode таблица на lines 306-313
+> - **FR-7** (relevance scoring HIGH/MEDIUM/LOW): lines 261-264 буквально matching spec wording
+> - **FR-8** (unified mode display 🧠/📊/📍): lines 272-296 с матрицей всех 4 режимов
+> - **FR-9** (источник marker `📊 insights` в Phase 3): на месте per audit
+> - **FR-10** (дедупликация с session findings): lines 266-271 Step 4
+>
+> Audit-spec: 0 ERRORS / 14 WARNINGS (propagation hints + DESIGN classification + term variants — все cosmetic).
+
 ## TDD Workflow
 
 > Задачи организованы по TDD: Red -> Green -> Refactor.
@@ -10,7 +22,7 @@
 > Создать .feature файл и step definition stubs ПЕРЕД реализацией бизнес-логики.
 > Все сценарии должны FAIL (Red) на этом этапе.
 
-- [ ] Create suggest-rules-insights.feature with BDD scenarios @feature1 @feature2 @feature3 @feature4 @feature5
+- [x] Create suggest-rules-insights.feature with BDD scenarios @feature1 @feature2 @feature3 @feature4 @feature5
   _files: `.specs/suggest-rules-insights/suggest-rules-insights.feature` (replace)_
   _Requirements: [FR-1](FR.md#fr-1-чтение-отчёта-insights-feature1), [FR-2](FR.md#fr-2-проверка-свежести-отчёта-feature2), [FR-3](FR.md#fr-3-извлечение-friction-categories-feature3), [FR-8](FR.md#fr-8-unified-mode-display-feature8), [FR-9](FR.md#fr-9-маркер-источника-в-phase-3-feature9)_
   Scenarios:
@@ -20,7 +32,7 @@
   - PLUGIN008_04: Unified mode display -- all mode combinations shown correctly @feature4
   - PLUGIN008_05: Source markers -- insights source markers in Phase 3 tables @feature5
 
-- [ ] Create step definition stubs for insights-specific steps
+- [x] Create step definition stubs for insights-specific steps
   _files: `tests/features/plugins/suggest-rules/suggest-rules-insights.steps.md` (create)_
   _Requirements: cross-cutting_
   Step stubs to define:
@@ -35,14 +47,14 @@
   - `Then unified mode display should show "Full (memory + session + insights)"`
   - `Then Phase 3 source column should contain insights marker`
 
-- [ ] Verify: all BDD scenarios FAIL (Red) at this stage
+- [x] Verify: all BDD scenarios FAIL (Red) at this stage
 
 ## Phase 1: Core Implementation (Green)
 
 > Implement Phase -0.5 in the Claude version of suggest-rules.md.
 > Each task targets specific @featureN scenarios.
 
-- [ ] Add Phase -0.5 section to `extensions/suggest-rules/claude/commands/suggest-rules.md` @feature1
+- [x] Add Phase -0.5 section to `extensions/suggest-rules/claude/commands/suggest-rules.md` @feature1
   _files: `extensions/suggest-rules/claude/commands/suggest-rules.md` (edit)_
   _Requirements: [FR-1](FR.md#fr-1-чтение-отчёта-insights-feature1), [FR-3](FR.md#fr-3-извлечение-friction-categories-feature3), [FR-4](FR.md#fr-4-извлечение-claudemd-suggestions-feature4), [FR-5](FR.md#fr-5-извлечение-big-wins-и-usage-patterns-feature5), [FR-6](FR.md#fr-6-извлечение-project-areas-для-обогащения-доменов-feature6), [FR-7](FR.md#fr-7-создание-pre-candidates-с-оценкой-релевантности-feature7)_
   _Leverage: Phase -1 section in same file (integration pattern)_
@@ -52,7 +64,7 @@
   - Step 4: Pre-candidate output format
   - Step 5: Deduplication notes for Phase 1.5
 
-- [ ] Add freshness check logic (3-day threshold) to Phase -0.5 Step 2 @feature2
+- [x] Add freshness check logic (3-day threshold) to Phase -0.5 Step 2 @feature2
   _files: `extensions/suggest-rules/claude/commands/suggest-rules.md` (edit)_
   _Requirements: [FR-2](FR.md#fr-2-проверка-свежести-отчёта-feature2), [FR-7](FR.md#fr-7-создание-pre-candidates-с-оценкой-релевантности-feature7)_
   Content:
@@ -61,14 +73,14 @@
   - Fresh vs stale mode table
   - Unavailable fallback message with /insights hint
 
-- [ ] Add unified mode display to Phase -0.5 Step 6 @feature4
+- [x] Add unified mode display to Phase -0.5 Step 6 @feature4
   _files: `extensions/suggest-rules/claude/commands/suggest-rules.md` (edit)_
   _Requirements: [FR-5](FR.md#fr-5-извлечение-big-wins-и-usage-patterns-feature5), [FR-8](FR.md#fr-8-unified-mode-display-feature8)_
   Content:
   - Mode combination table (memory x insights = mode string)
   - Move final mode display from Phase -1 Step 3 to after Phase -0.5
 
-- [ ] Update Execution Order section with Phase -0.5 steps @feature1
+- [x] Update Execution Order section with Phase -0.5 steps @feature1
   _files: `extensions/suggest-rules/claude/commands/suggest-rules.md` (edit)_
   _Requirements: [FR-1](FR.md#fr-1-чтение-отчёта-insights-feature1)_
   Content:
@@ -76,7 +88,7 @@
   - Renumber subsequent steps
   - Update "Begin" section to include Phase -0.5 in flow
 
-- [ ] Update Phase 3 source markers to include insights @feature5
+- [x] Update Phase 3 source markers to include insights @feature5
   _files: `extensions/suggest-rules/claude/commands/suggest-rules.md` (edit)_
   _Requirements: [FR-9](FR.md#fr-9-маркер-источника-в-phase-3-feature9), [FR-10](FR.md#fr-10-дедупликация-insights-с-session-findings-feature9)_
   Content:
@@ -84,13 +96,13 @@
   - Add `📍 turn #N + 📊` for merged candidates
   - Update Phase 1.5 to mention insights pre-candidates alongside session findings
 
-- [ ] Verify: scenarios @feature1 @feature2 @feature4 @feature5 transition from Red to Green
+- [x] Verify: scenarios @feature1 @feature2 @feature4 @feature5 transition from Red to Green
 
 ## Phase 2: Sync & Version (Green)
 
 > Ensure Cursor version is clean and extension metadata is updated.
 
-- [ ] Update adaptation-report.md with Claude-only note for Phase -0.5 @feature3
+- [x] Update adaptation-report.md with Claude-only note for Phase -0.5 @feature3
   _files: `extensions/suggest-rules/adaptation-report.md` (edit)_
   _Requirements: [FR-9](FR.md#fr-9-маркер-источника-в-phase-3-feature9) (platform gate)_
   _Leverage: existing "Claude-only sections" table in adaptation-report.md_
@@ -98,13 +110,13 @@
   - Verify Phase -0.5 is listed in "Claude-only секции" table
   - Add date and version reference (v1.4.0)
 
-- [ ] Bump extension.json version to 1.4.0 @feature5
+- [x] Bump extension.json version to 1.4.0 @feature5
   _files: `extensions/suggest-rules/extension.json` (edit)_
   _Requirements: [FR-10 equivalent -- operational](FR.md#fr-10-дедупликация-insights-с-session-findings-feature9)_
   Content:
   - Change `"version": "1.3.0"` to `"version": "1.4.0"` (or current version to 1.4.0)
 
-- [ ] Verify Cursor version has no insights references @feature3
+- [x] Verify Cursor version has no insights references @feature3
   _files: `extensions/suggest-rules/cursor/commands/suggest-rules.md` (verify, no edit)_
   _Requirements: AC-10 (platform gate)_
   Verification:
@@ -112,13 +124,13 @@
   - Confirm zero matches
   - Confirm Cursor mode display does NOT mention insights
 
-- [ ] Verify: scenarios @feature3 pass (Cursor version clean)
+- [x] Verify: scenarios @feature3 pass (Cursor version clean)
 
 ## Phase 3: Refactor & Polish
 
 > Final coherence check and spec validation after all scenarios Green.
 
-- [ ] Validate full command coherence -- read suggest-rules.md top to bottom
+- [x] Validate full command coherence -- read suggest-rules.md top to bottom
   _files: `extensions/suggest-rules/claude/commands/suggest-rules.md` (verify)_
   Checks:
   - Phase numbering is sequential (-1 -> -0.5 -> 0 -> 0.5 -> 1 -> 1.5 -> 2 -> 2.5 -> 3 -> 4 -> 5)
@@ -127,10 +139,10 @@
   - No broken internal references between phases
   - Phase -1 Step 3 deferred to after Phase -0.5
 
-- [ ] Run validate-spec.ps1 on `.specs/suggest-rules-insights/`
+- [x] Run validate-spec.ps1 on `.specs/suggest-rules-insights/`
   _files: `.specs/suggest-rules-insights/` (validate)_
   Command: `.\.dev-pomogator\tools\specs-generator\validate-spec.ps1 -Path ".specs/suggest-rules-insights"`
   Expected: all checks pass (STRUCTURE, PLACEHOLDER, FR_FORMAT, UC_FORMAT, EARS_FORMAT, NFR_SECTIONS, TDD_TASK_ORDER, CROSS_REF_LINKS)
 
-- [ ] All BDD scenarios GREEN
-- [ ] Full command reads coherently end-to-end
+- [x] All BDD scenarios GREEN
+- [x] Full command reads coherently end-to-end

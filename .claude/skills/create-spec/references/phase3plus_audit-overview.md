@@ -24,9 +24,21 @@
 - Терминологическую консистентность (PascalCase / camelCase варианты)
 - **JIRA_DRIFT (только Jira-mode):** `checkJiraDrift` из `audit-checks.ts` сравнивает `.jira-cache.json` vs live Jira (если MCP доступен). Без MCP → INFO "skipped".
 
-## Step 2: AI семантический анализ (7 категорий)
+## Step 1.5: Reality drift check (preventative)
 
-Агент ОБЯЗАН выполнить проверки по 7 категориям, читая файлы спеки И реальный код проекта. Каждая категория — отдельный reference-файл с описанием checks и remediation:
+Перед Step 2 AI семантический анализ — invoke `Skill("spec-reality-check")` для current spec. Skill проверяет реальность утверждений спеки против файловой системы + git history (6 checks: FC_CREATE_EXISTS / FC_EDIT_MISSING / FC_DELETE_MISSING / NARRATIVE_PATH_MISSING / CODE_DRIFT_FR_ALREADY_DONE / TASKS_FC_CONSISTENCY).
+
+**Preventative path:** drift не возникает в новых спеках на стадии создания. Если skill emits ≥1 ERROR — Phase 3 НЕ confirm-ится пока drift не починен в spec docs (FILE_CHANGES paths, narrative refs). Этот шаг complement к Category 15 spec-review (которая делает то же curatively во время ConfirmStop существующих спеков).
+
+```
+Skill("spec-reality-check")
+```
+
+После cleanup — повторить Step 1 (`audit-spec.ts`) и продолжить к Step 2.
+
+## Step 2: AI семантический анализ (10 категорий)
+
+Агент ОБЯЗАН выполнить проверки по 10 категориям, читая файлы спеки И реальный код проекта. Каждая категория — отдельный reference-файл с описанием checks и remediation:
 
 | Category | Reference | Severity scope |
 |----------|-----------|----------------|
@@ -37,8 +49,11 @@
 | ФАНТАЗИИ (Fantasies) | [`phase3plus_audit-fantasies.md`](phase3plus_audit-fantasies.md) | Непроверенные допущения |
 | UNDEFINED_BEHAVIOR | [`phase3plus_audit-undefined-behavior.md`](phase3plus_audit-undefined-behavior.md) | Непокрытые edge cases (taxonomy с 9 категориями + BVA + 12 combined failures inlined) |
 | JIRA_DRIFT (только Jira-mode) | [`phase3plus_audit-jira-drift.md`](phase3plus_audit-jira-drift.md) | Drift между spec и Jira source |
+| VARIANT_COVERAGE | [`phase3plus_audit-variant-coverage.md`](phase3plus_audit-variant-coverage.md) | Polymorphic FRs без enumerated variant matrix (AC Decision Table + Examples + per-variant tasks) |
+| ARCHITECTURE_COVERAGE | [`phase3plus_audit-architecture-coverage.md`](phase3plus_audit-architecture-coverage.md) | Greenfield architecture axes (Phase 1.75) в статусе pending — blocks STOP #3 |
+| COMPLETENESS_COVERAGE | [`phase3plus_audit-completeness-coverage.md`](phase3plus_audit-completeness-coverage.md) | Greenfield: 8 system-completeness измерений (COMPLETENESS.md ledger) в статусе pending — blocks STOP #3 |
 
-Загружай только relevant category файлы — не все 7 одновременно.
+Загружай только relevant category файлы — не все 10 одновременно.
 
 ## Step 3: Исправление найденных проблем
 
@@ -50,6 +65,9 @@
 4. **РУДИМЕНТЫ** — закрыть решённые open questions (`- [x]`), удалить дублирующие UC, убрать client-side требования из серверной спеки
 5. **ФАНТАЗИИ** — пометить непроверенные допущения как `[UNVERIFIED]`, добавить задачу live API verification в TASKS.md
 6. **UNDEFINED_BEHAVIOR** — для critical/high findings: добавить FR/AC/BDD сценарий покрывающий edge case. Для medium/low: добавить `[KNOWN_UB: {category}]` пометку в FR/AC и задачу в TASKS.md
+7. **VARIANT_COVERAGE** — для каждого polymorphic FR без complete matrix: emit AC Decision Table (через Skill `variant-matrix-build`), Gherkin Scenario Outline + Examples в .feature, per-variant tasks в TASKS.md. Если matrix не applicable — добавить escape hatch `[skip-variant-matrix: <reason ≥8 chars>]` в FR body. См. `phase3plus_audit-variant-coverage.md` для resolution guide.
+8. **ARCHITECTURE_COVERAGE** (greenfield only) — для каждой оси в статусе `pending`: выбрать вариант (auto-mode рекомендация или override) ИЛИ добавить `[skip-architecture-axis: <reason ≥12 chars>]`. Применимо только если `.specs/{slug}/ARCHITECTURE/` существует (Phase 1.75 ran). См. `phase3plus_audit-architecture-coverage.md`.
+9. **COMPLETENESS_COVERAGE** (greenfield only) — для каждого из 8 измерений в `ARCHITECTURE/COMPLETENESS.md` ledger в статусе `pending`: пометить `addressed` (+ pointer) / `out-of-scope` (+ reason ≥12) ИЛИ `[skip-completeness-dimension: <reason ≥12>]`. Прогон `architecture-decision-cli.ts audit-completeness <spec-dir>`. См. `phase3plus_audit-completeness-coverage.md`.
 
 ## Step 4: Повторный аудит
 

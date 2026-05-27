@@ -21,9 +21,16 @@
 
 ## Status
 
-**Phase 3 / READY FOR IMPLEMENTATION** — спека полная (USER_STORIES, USE_CASES, RESEARCH с Decisions/Rejected Alternatives, FR (8), NFR, ACCEPTANCE_CRITERIA (8 EARS), REQUIREMENTS traceability, DESIGN с TEST_DATA_NONE classification, FILE_CHANGES (8 файлов реализации), .feature (6 BDD сценариев PLUGIN007_43..48), TASKS (7 phases TDD), CHANGELOG, README). Phase 3+ Audit ещё не запущен.
+**Shipped — plugin v2.0.0 BREAKING (с тех пор bump до 2.1.0).** Финализация спеки — 2026-05-23.
 
-Реализация — отдельный план/трек после готовности этой спеки.
+Что в проде:
+- Шаблон `template.md` имеет `## 💬 Простыми словами` первой top-level секцией.
+- `validate-plan.ts` — запись в `REQUIRED_SECTIONS` + функция `validateHumanSummarySection` в Phase 1 mandatory.
+- Фикстура `valid.plan.md` — с реальным контентом в трёх подсекциях.
+- Правило `.claude/rules/plan-pomogator/plan-pomogator.md` — секция `## Two-Stage Plan Presentation Workflow` + запрет ExitPlanMode без Step 1.
+- BDD сценарии `PLUGIN007_44_01..06` (исходно планировались `PLUGIN007_43..48` — слот 43 ушёл соседней спеке prompt-isolation).
+- Три e2e теста в `tests/e2e/plan-validator.test.ts` — зелёные.
+- Audit-spec: 0 ERRORS / 0 WARNINGS.
 
 ## Где читать дальше
 

@@ -1,21 +1,32 @@
 ---
 name: run-tests
 description: >
-  Centralized test runner. Auto-detects framework (vitest/jest/pytest/dotnet/rust/go),
-  runs tests through wrapper for statusline & TUI monitoring. Use instead of direct test commands.
-allowed-tools: Read, Bash, Glob, Monitor
+  Centralized wrapper for ANY long-running command — test frameworks
+  (vitest/jest/pytest/dotnet/rust/go) AND non-test long bg via `--framework generic`
+  (npm run build, dotnet ef migrations, sleep). Provides persistent log on disk
+  + YAML status tracking — survives Claude Code Bash tool bg capture drops on Windows.
+  INVOKE PROACTIVELY whenever you plan to run `npm test`, `pytest`, `dotnet test`,
+  `cargo test`, `go test`, `vitest`, `jest` — especially in background. Also use
+  for any non-test long bg command (build, migrations, smoke runs) via generic mode.
+  Detects framework from project config files. Wraps with statusline/TUI monitoring.
+allowed-tools: Read, Bash, Glob, Skill, Monitor
 ---
 
 # /run-tests — Centralized Test Runner
 
 ## Mission
 
-Run tests through the centralized wrapper that provides YAML status tracking for statusline and TUI monitoring. Auto-detects the test framework from project config files.
+Run tests through the centralized wrapper that provides YAML status tracking for statusline and TUI monitoring. Detects the test framework from project config files. Also supports `--framework generic` for non-test long bg commands (npm build, migrations, sleep) — uses the same wrapper infrastructure for unified persistent log + YAML status.
 
 ## When triggered
 
 - **Manually**: User runs `/run-tests [args]`
-- **Instead of**: Direct `npm test`, `pytest`, `dotnet test`, `cargo test`, `go test` (blocked by test-guard hook)
+- **Proactive auto-invocation** (PREFERRED): AI calls `Skill("run-tests")` whenever planning to run `npm test`, `pytest`, `dotnet test`, `cargo test`, `go test`, `vitest`, `jest` via Bash tool — **especially with `run_in_background: true`**. Avoids Anthropic Claude Code Bash tool bugs (#16305, #21915, #36915, #50616) that drop bg stdout capture on Windows + Git Bash.
+- **Smart converter fallback**: if raw `dotnet test`/`pytest`/etc invocation reaches Bash tool, `test_guard.ts` PreToolUse hook denies + returns ready-to-paste wrapper command in `permissionDecisionReason`. AI copies the converted command.
+- **Generic mode for non-test long bg**: AI invokes `/run-tests --framework generic -- <command>` for builds, migrations, or any command expected to run > 60 seconds. Examples:
+  - `/run-tests --framework generic -- npm run build`
+  - `/run-tests --framework generic -- dotnet ef migrations add InitialMigration`
+  - `/run-tests --framework generic -- sleep 60`
 
 ## Arguments
 
@@ -178,34 +189,19 @@ command: "bash .dev-pomogator/tools/tui-test-runner/test-monitor.sh .dev-pomogat
 - Любой тест который spawnSync-ит installer / hooks
 - Если не уверен — Docker
 
-**Команда host-bypass:**
+**Host-bypass УДАЛЁН** (incident 2026-05-22). Env var `DEVPOM_ALLOW_HOST_TESTS=1` снесён из `tests/setup/ensure-docker.ts` — единственный способ запустить e2e тесты теперь Docker (`npm test`). Причина: тесты с `setupCleanState()` или `fs.remove(appPath('.specs'))` сносили реальные данные репозитория когда запускались на хосте с bypass.
 
-```bash
-DEVPOM_ALLOW_HOST_TESTS=1 SKIP_BUILD_CHECK=1 \
-  node .dev-pomogator/tools/test-statusline/test_runner_wrapper.cjs \
-  --framework vitest -- npx vitest run tests/e2e/<file>.test.ts
-```
+**Если тебе нужно гонять конкретный тест на хосте для быстрой итерации** — единственный способ это написать его tmpdir-only: использовать `os.tmpdir()` + `fs.mkdtempSync()` для всех файловых операций, не трогать `appPath(...)`. Образец — `tests/e2e/mcp-config.test.ts` (32 теста, 285ms, изолированный tmpdir per case).
 
-**Что делает каждый env / флаг:**
+**Когда тест безопасен для host-run:**
 
-| Часть команды | Зачем |
-|---------------|-------|
-| `DEVPOM_ALLOW_HOST_TESTS=1` | Bypass `tests/setup/ensure-docker.ts` throw — explicit opt-in для host run |
-| `SKIP_BUILD_CHECK=1` | Bypass PreToolUse `build_guard.ts` (если src/ новее dist/, иначе блок) |
-| `node` (НЕ `bash`) | Wrapper это `.cjs` с `#!/usr/bin/env node` shebang — bash не парсит |
-| `--framework vitest` | Wrapper auto-detection ненадёжен; явный флаг надёжнее |
-| `--` separator | Всё после идёт как-есть в test runner |
-| `npx vitest run tests/e2e/<file>.test.ts` | Файловый filter — runs только конкретный тест |
-
-**Пример (variant-matrix unit тесты):**
-
-```bash
-DEVPOM_ALLOW_HOST_TESTS=1 SKIP_BUILD_CHECK=1 \
-  node .dev-pomogator/tools/test-statusline/test_runner_wrapper.cjs \
-  --framework vitest -- npx vitest run tests/e2e/specs-generator-variant-matrix.test.ts
-```
-
-Результат: 17/17 passed за 351ms vs ~10 минут Docker run.
+| Признак | Безопасно? |
+|---------|-----------|
+| Использует только `os.tmpdir()` + `fs.mkdtempSync()` | ✅ да |
+| Direct import production функций + чистые юнит-проверки | ✅ да |
+| Вызывает `setupCleanState()` / `initGitRepo()` | ❌ Docker |
+| Делает `fs.remove(appPath(...))` или пишет в `~/.claude/` | ❌ Docker |
+| Spawn-ит installer / hooks с `appPath()` cwd | ❌ Docker |
 
 **Гарантии test-guard hook:** прямой `npx vitest` блокируется (centralized-test-runner rule). Через wrapper — разрешено, потому что wrapper и есть централизованный entry point.
 
@@ -215,3 +211,28 @@ After execution completes (or when Monitor emits DONE), report:
 - Exit code (0 = passed, non-zero = failed)
 - Framework detected
 - If YAML status file exists, read final status for summary (passed/failed/skipped counts)
+
+### Step 5: Compositional follow-up — strong-tests audit hint
+
+После того как test run завершился (exit 0 или non-zero), check было ли test file editing в текущей сессии — это означает что user/AI правил тесты и может пропустить mutation-resistance audit.
+
+**Detection:**
+```bash
+git diff --name-only HEAD~1 HEAD -- '*.test.*' '*_test.*' '*Tests.cs' '*Steps.cs' '*_test.go' 2>/dev/null
+```
+
+**Если non-empty output (test files changed)** — emit hint в completion summary:
+
+```
+✅ Tests passed (45/45). Test files were modified in this session:
+  - tests/e2e/auth.test.ts (3 lines)
+  - tests/e2e/users.test.ts (12 lines)
+
+→ Run `Skill("strong-tests")` to verify mutation resistance + 12-point self-eval.
+  Coverage % alone is not proof of test strength (per OutSight AI case study,
+  100% coverage / 4% mutation score is achievable).
+```
+
+**Если test files НЕ changed (только production code edited)** — skip hint (не спамить user).
+
+Cross-link: `.claude/skills/strong-tests/SKILL.md` для skill workflow + thresholds (default 70% kill rate для critical paths).

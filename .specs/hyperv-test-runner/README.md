@@ -73,7 +73,7 @@
 
 **Файлов**: 14 created + 1 edited (.gitignore). Reused без изменений: extensions/debug-screenshot/skills/debug-screenshot/scripts/screenshot.ps1, tests/fixtures/typical-claude-user/, .claude/skills/dev-pomogator-uninstall/SKILL.md (как pattern reference).
 
-**Тесты**: запуск через test_runner_wrapper.cjs с DEVPOM_ALLOW_HOST_TESTS=1 и TEST_SKIP_DISCOVERY=1 → **35 passed (35)** на Windows host, 13 из 16 BDD сценариев GREEN в Docker (PowerShell AST parsing checks автоматически skip на Linux).
+**Тесты**: исторически запускались на Windows host через wrapper с DEVPOM_ALLOW_HOST_TESTS bypass — **35 passed**. Bypass удалён 2026-05-23 (host-run снёс реальные `.specs/` через `setupCleanState()`). Сейчас единственный способ — Docker (`npm test`), 13 из 16 BDD сценариев GREEN, PowerShell AST parsing checks автоматически skip на Linux.
 
 ## Quick Start
 

@@ -1,0 +1,522 @@
+# User Stories
+
+> Each story uses the User Story Form (v3). Required fields per block:
+> `(Priority: P1|P2|P3)` in heading + **Why:** + **Independent Test:** + **Acceptance Scenarios:** (inline Given/When/Then).
+> Skill `discovery-forms` auto-populates this file during Phase 1. Hook `user-story-form-guard` enforces the form at Write/Edit time.
+
+---
+
+### User Story 1: Phase 0 — Real BDD with NDJSON output (Priority: P1)
+
+As a Developer working in dev-pomogator (TypeScript), I want real cucumber-js BDD with NDJSON output, so that v4 graph builder has machine-readable test trace data instead of vitest pseudo-BDD (.feature as documentation only).
+
+**Why:** Without canonical Cucumber Messages NDJSON, v4 cannot trace FR → Scenario → TestCase → PASS/FAIL automatically; agent has to grep stdout, error-prone and slow.
+
+**Independent Test:** Run `npm run test:bdd` in dev-pomogator after migration → produces `.dev-pomogator/.last-test-run.ndjson` parseable via `@cucumber/messages` package; per-spec split lands `.specs/{slug}/.test-results.ndjson` files.
+
+**Acceptance Scenarios:**
+
+Given dev-pomogator has migrated from vitest pseudo-BDD to cucumber-js
+When the developer runs the BDD test suite
+Then a Cucumber Messages NDJSON file is generated at `.dev-pomogator/.last-test-run.ndjson`
+
+Given the master NDJSON file exists after a test run
+When v4 post-processing splits it by spec slug
+Then each `.specs/{slug}/.test-results.ndjson` contains only pickle/testCase events relevant to that spec
+
+Given a TS target project installing dev-pomogator v4
+When the project has existing vitest unit tests
+Then cucumber-js BDD is mandatory additive (not replace) — both test suites run in CI
+
+---
+
+### User Story 2: Phase 1 — Full SpecGraph in one call (Priority: P1)
+
+As an AI agent (Claude Code) working on a feature spec, I want to get the full SpecGraph slice (FR ↔ AC ↔ Scenario ↔ TestResult ↔ code refs) via a single MCP call, so that I don't waste context on N sequential Read operations and don't hallucinate connections.
+
+**Why:** Current pain (validated externally via OpenSpec issue #901): agent reads N MD files sequentially, misses cross-refs, fails conformance checks silently. One graph call eliminates this.
+
+**Independent Test:** Invoke MCP tool `get_trace("FR-001")` against a fixture spec → response contains structured tree (acceptance_criteria, scenarios with lastResult, tasks, code_impl, related_nodes) + natural-language `explanation_for_agent` field; agent does not need follow-up Read calls.
+
+**Acceptance Scenarios:**
+
+Given the SpecGraph is populated from `.specs/auth/*.md` + `tests/Auth.feature` + `.dev-pomogator/.last-test-run.ndjson`
+When the agent calls MCP tool `get_trace("FR-001")`
+Then the response contains FR-001 metadata, linked ACs, scenarios with last test status, related FRs, and a natural-language summary
+
+Given FR-001 has no related scenarios
+When `get_trace("FR-001")` is called
+Then response indicates `scenarios: []` and `explanation_for_agent` mentions "no test coverage detected"
+
+Given FR-001 references FR-005 via wiki-link
+When `get_trace("FR-001")` is called
+Then `related_nodes` includes FR-005 with `reason` field explaining the link type
+
+---
+
+### User Story 3: Phase 1 — Dual-anchor custom MD parser with backward compat (Priority: P1)
+
+As a Developer migrating from v3 specs, I want both `[[fr-001-login]]` (Marksman-native) and `[[FR-001]]` (compact alias) wiki-links to resolve to the same heading, so that I can use whichever form is appropriate for context and existing v3 `### Requirement: FR-N` headings keep working.
+
+**Why:** Pure Marksman generates long slugs like `requirement-fr-001-login`; agents prefer short `[[FR-001]]`; humans sometimes want descriptive long form. Dual-anchor satisfies both without breaking v3 backward compat.
+
+**Independent Test:** Custom MD parser on fixture `.specs/auth/FR.md` with heading `### FR-001: Login` → resolves both `[[FR-001]]` and `[[fr-001-login]]` to same anchor (file:line); on legacy heading `### Requirement: FR-001 Login` — additionally resolves `[[requirement-fr-001-login]]`.
+
+**Acceptance Scenarios:**
+
+Given a spec file contains heading `### FR-001: Login`
+When the custom MD parser indexes the file
+Then both anchors `FR-001` and `fr-001-login` point to the same heading
+
+Given a legacy v3 spec contains `### Requirement: FR-001 Login`
+When the parser indexes the file
+Then the triple-anchor registration (`FR-001`, `fr-001-login`, `requirement-fr-001-login`) all resolve to same heading
+
+Given a wiki-link `[[FR-001]]` in `DESIGN.md`
+When the link is resolved
+Then it correctly navigates to `### FR-001: Login` heading in `FR.md`
+
+---
+
+### User Story 4: Phase 2 — MCP server `get_trace` with natural-language explanation (Priority: P1)
+
+As an AI agent, I want MCP `get_trace(node_id)` to return both structured data AND a natural-language `explanation_for_agent` field, so that I can immediately understand context without reasoning over raw JSON.
+
+**Why:** Structured data alone forces agent to interpret — that's where hallucinations creep in. Pre-written explanation grounds the agent in fact.
+
+**Independent Test:** Call `get_trace("FR-001")` against fixture spec where SCEN-login-locked is FAILED; response `explanation_for_agent` contains: FR title, count of ACs/scenarios/tasks, latest test status, failing step name + error location.
+
+**Acceptance Scenarios:**
+
+Given SCEN-login-locked has lastResult FAILED with NullReferenceException at AuthService.cs:88
+When `get_trace("FR-001")` is called
+Then `explanation_for_agent` field mentions "SCEN-login-locked FAILED — NullReferenceException at AuthService.cs:88"
+
+Given FR-001 has 2 ACs, 3 scenarios, 2 tasks
+When `get_trace("FR-001")` is called
+Then `explanation_for_agent` summary opens with concrete counts (e.g., "2 AC, 3 scenarios, 2 tasks")
+
+---
+
+### User Story 5: Phase 2 — PreToolUse HARD hooks for syntax invariants (Priority: P1)
+
+As a Developer, I want PreToolUse hooks to BLOCK Write/Edit on spec files when the change introduces syntax errors, duplicate FR-N IDs, or malformed YAML frontmatter, so that I never commit broken graph integrity.
+
+**Why:** Soft warnings get ignored (agent and human). Hard invariants must be enforced sync-time, not async — same proven pattern as v3 form-guards.
+
+**Independent Test:** Attempt Write to `.specs/auth/FR.md` containing duplicate `### FR-001: Login` headings (one already exists) → hook DENIES with finding `DUPLICATE_DEFINITION` + actionable hint suggesting rename.
+
+**Acceptance Scenarios:**
+
+Given `.specs/auth/FR.md` already contains heading `### FR-001: Login`
+When the agent attempts Write that adds a second `### FR-001: ...` heading
+Then PreToolUse hook DENIES with finding code `DUPLICATE_DEFINITION` and lists both locations
+
+Given the agent attempts Write with malformed YAML frontmatter (missing `---` close)
+When the hook runs
+Then PreToolUse DENIES with finding code `MALFORMED_FRONTMATTER` + line number
+
+Given the agent attempts Write that creates a wiki-link `[[FR-999]]` to non-existent FR
+When the hook runs (this is HARD invariant only if FR-999 was previously valid and was renamed)
+Then hook decision depends on configured policy (default: soft warn, not block)
+
+---
+
+### User Story 6: Phase 2 — PostToolUse always-push conformance feedback (Priority: P1)
+
+As a Developer, I want PostToolUse hook to automatically inject conformance check findings into agent context after each Edit on `.specs/**/*.md` or `**/*.feature`, throttled to max 1 push per 3 seconds with aggregation, so that the agent sees drift immediately without forgetting to call `conformance_check` manually.
+
+**Why:** Pull-only (agent must call MCP) means agent forgets. Push with 3s throttle balances real-time feedback against bulk-edit spam.
+
+**Independent Test:** Edit `.specs/auth/FR.md` → after 3s window, agent context receives `<system-reminder>` with conformance findings for affected scope (e.g., FR-001 modified, 3 scenarios with @FR-001 tag may need review).
+
+**Acceptance Scenarios:**
+
+Given the agent makes 5 sequential Edits to `.specs/auth/*.md` within 2 seconds
+When PostToolUse hook fires for each
+Then findings are batched in a 3-second window, deduplicated, and pushed as one aggregated `<system-reminder>` after the window closes
+
+Given conformance_check finds 0 issues after the Edit
+When PostToolUse hook completes
+Then NO push is generated (silent success — avoid noise)
+
+Given the user has set `_no_push_check: true` in spec frontmatter
+When PostToolUse fires on that spec
+Then the push is silenced for that file (escape hatch for red phase / bulk migration)
+
+---
+
+### User Story 7: Phase 2 — Marksman bundle install for IDE-rich features (Priority: P2)
+
+As a Developer using VS Code / Neovim / Obsidian / any LSP-compatible editor, I want Marksman LSP installed silently by default as part of dev-pomogator install, so that I get hover, goto-definition, find-references, and broken-link diagnostics for `[[FR-001]]`-style wiki-links out of the box.
+
+**Why:** Without Marksman, wiki-link navigation requires opening MCP tools — slow. With Marksman, IDE Ctrl+Click jumps directly. +15MB binary is acceptable trade-off.
+
+**Independent Test:** After `npx dev-pomogator install`, check `.dev-pomogator/bin/marksman` (or platform-equivalent) exists and responds to LSP `initialize` request; opening a spec file in VS Code with Marksman LSP plugin shows wiki-link diagnostics.
+
+**Acceptance Scenarios:**
+
+Given a fresh install of dev-pomogator v4
+When the installer completes
+Then `.dev-pomogator/bin/marksman` binary is present and executable for the current platform
+
+Given Marksman binary download fails during install (no network, offline)
+When the installer completes
+Then install does not fail; Marksman is marked as unavailable in `.dev-pomogator/install-log.json`; MCP server falls back to custom JS-based MD LSP for navigation
+
+Given a Developer opens `.specs/auth/FR.md` in VS Code with Marksman LSP plugin enabled
+When they Ctrl+Click on `[[FR-005]]` wiki-link in DESIGN.md
+Then VS Code navigates to `### FR-005: ...` heading
+
+---
+
+### User Story 8: Phase 3 — LLM-as-judge semantic drift check (opt-in) (Priority: P3)
+
+As a Developer who wants stronger spec-test alignment, I want an opt-in semantic drift check via Haiku subagent that verifies whether Scenario Given/When/Then text semantically matches the FR description, so that I catch cases where tests technically pass but don't actually validate the requirement.
+
+**Why:** Structural checks miss semantic gaps (test calls auth API but FR says "redirect to login page" — both pass syntactic check, semantically misaligned). Opt-in because subagent calls cost tokens.
+
+**Independent Test:** Run `conformance_check(scope: "FR-001", semantic: true)` → MCP spawns `claude` CLI subprocess with FR text + scenario text → result includes `SEMANTIC_DRIFT` finding with explanation when mismatch detected.
+
+**Acceptance Scenarios:**
+
+Given FR-001 text mentions "redirect to /login page on expired session"
+And SCEN-login-ok tests "Given expired session, When click profile, Then API returns 401"
+When `conformance_check(scope: "FR-001", semantic: true)` is called
+Then result includes finding `SEMANTIC_DRIFT` with explanation "Scenario tests API contract but FR specifies UI redirect behavior"
+
+Given semantic check is disabled (default config)
+When PostToolUse fires after spec Edit
+Then only structural checks run; no subagent invocation; no LLM token spend
+
+---
+
+### User Story 9: Phase 3 — Multi-language BDD support (C#/Python/Java) (Priority: P3)
+
+As a Developer working in a non-TypeScript project (C#, Python, or Java), I want the same v4 graph + MCP + conformance flow to work with Reqnroll (C#), behave (Python), or Cucumber-JVM (Java), so that v4 isn't locked to TS only.
+
+**Why:** Cucumber Messages NDJSON is a language-agnostic standard; all major BDD runners emit it. v4 should leverage that, not duplicate logic per language.
+
+**Independent Test:** Configure dev-pomogator v4 on a C# project using Reqnroll → run `dotnet test` → `.dev-pomogator/.last-test-run.ndjson` is generated; `get_trace("FR-001")` works identically to TS project.
+
+**Acceptance Scenarios:**
+
+Given a C# project with Reqnroll v3+ and dev-pomogator v4 installed
+When `dotnet test` completes
+Then `.dev-pomogator/.last-test-run.ndjson` is in canonical Cucumber Messages format
+
+Given a Python project with `behave` configured to emit Cucumber Messages
+When BDD tests run
+Then v4 NDJSON ingester parses the file successfully and populates SpecGraph
+
+---
+
+### User Story 10: Phase 4 — SQLite cross-session shared spec graph (Priority: P3)
+
+As a Developer running multiple Claude Code sessions on the same project (e.g., one for feature work, one for debugging), I want a persistent SQLite spec index shared across sessions, so that I don't pay 1-2s rebuild cost per session start and findings are consistent.
+
+**Why:** In-memory only (Phase 2) means each session rebuilds. Persistent SQLite eliminates cold-start cost; consistent state across sessions avoids "session A says X, session B says Y" confusion.
+
+**Independent Test:** Start two Claude Code sessions on same project → both connect to same MCP server (via lock file) → `get_trace("FR-001")` returns identical result in both sessions instantly (no rebuild).
+
+**Acceptance Scenarios:**
+
+Given session A starts MCP server with SQLite persistence enabled
+When session B starts on the same project
+Then session B detects existing MCP via lock file and reuses it (no second MCP process)
+
+Given session A makes spec edits
+When session B calls `get_trace("FR-001")` immediately after
+Then session B sees the latest state (SQLite single-writer ensures consistency)
+
+Given SQLite file becomes corrupt (rare)
+When MCP server detects corruption
+Then automatic fallback to in-memory rebuild + warning logged
+
+---
+
+### User Story 11: Phase 5 — Migration helper v3→v4 (Priority: P2)
+
+As an existing dev-pomogator v3 user with 20+ feature specs, I want a `dev-pomogator migrate-v3-to-v4` command with interactive diff approval and "suggestion mode" (preview without applying), so that I can upgrade without manually editing every spec.
+
+**Why:** Forcing manual migration across 20+ specs is a non-starter. Auto-migration with consent is acceptable; silent auto-rewrite is risky.
+
+**Independent Test:** Run `dev-pomogator migrate-v3-to-v4 --suggest-only` on a v3 project → output lists per-file diffs (heading conversions, frontmatter additions, anchor changes) without modifying files; running without `--suggest-only` prompts approval per file.
+
+**Acceptance Scenarios:**
+
+Given an existing v3 project with `.specs/auth/FR.md` containing `### Requirement: FR-001 Login`
+When the user runs `dev-pomogator migrate-v3-to-v4 --suggest-only`
+Then a diff is printed showing conversion to `### FR-001: Login` with explanation, but no file is modified
+
+Given the user runs migration without `--suggest-only`
+When the migration encounters a spec file with ambiguous structure
+Then it interactively prompts: approve/skip/edit; default `skip` if no input within 30s
+
+Given migration detects untagged `.feature` scenarios
+When suggestion mode is active
+Then it predicts FR tags via naming heuristic (e.g., `Scenario: User logs in` → suggest `@FR-001` if FR-001 mentions "login")
+
+---
+
+### User Story 12: Phase 6 — `architecture-research-workflow` skill (Priority: P2)
+
+As a Maintainer of dev-pomogator, I want a 7-stage `architecture-research-workflow` skill that encapsulates pain validation → broad research → focused pushback → variant generation → decision locking → phased rollout → hand-off to create-spec, so that future major features take 5-8 turns instead of 30+.
+
+**Why:** This spec (v4) took 30+ turns of manual pushback. Encoding the meta-pattern as a skill prevents that bottleneck for future v5/v6/etc.
+
+**Independent Test:** Invoke `Skill("architecture-research-workflow")` with a synthetic feature description → skill produces all 7 stage outputs in `.specs/{slug}/.architecture-research/` and consolidated `RESEARCH.md`; calls `Skill("research-workflow")` as underlying primitive.
+
+**Acceptance Scenarios:**
+
+Given a synthetic feature description "build distributed cache layer"
+When the maintainer invokes `Skill("architecture-research-workflow")`
+Then 7 stage outputs are written to `.specs/{slug}/.architecture-research/` in committed (not gitignored) form
+
+Given Stage 4 generates 4 architecture variants
+When the user reveals a new constraint in Stage 5
+Then the skill suggests `restart-from-stage 4` with explicit audit trail in decisions-locked.md
+
+Given a small feature (single file change, no architecture decisions)
+When create-spec runs heuristic detection
+Then it invokes regular `research-workflow` (not `architecture-research-workflow`) to avoid 7-stage overhead
+
+---
+
+### User Story 13: Orphan resolution policy (warn-default, not block) (Priority: P2)
+
+As a Developer in red-phase TDD, I want orphan scenarios (Scenario with `@FR-N` tag where FR-N doesn't exist) and untagged scenarios to surface as warnings (default), not blocking errors, so that I can write failing tests first without the tooling getting in my way.
+
+**Why:** Forcing every test to have a matching FR upfront breaks the TDD red-green-refactor cycle. Default-warn allows red phase; teams can escalate to block via config.
+
+**Independent Test:** Add Scenario tagged `@FR-999` (non-existent FR) → `conformance_check` returns finding `SCENARIO_TAG_ORPHAN` with severity `warning`; no Write is blocked.
+
+**Acceptance Scenarios:**
+
+Given a `.feature` file contains `@FR-999\nScenario: ...` and FR-999 does not exist in any MD spec
+When `conformance_check` runs
+Then result includes finding code `SCENARIO_TAG_ORPHAN` with severity `warning` (not error), message lists existing similar IDs
+
+Given the user has configured `orphan_policy.scenario_tag_orphan: block` in `.spec-config.json`
+When the same conformance check runs
+Then severity is `error` and the user is prompted to resolve before commit
+
+Given a Scenario has no `@FR-`/`@NFR-`/`@AC-` tags at all
+When `conformance_check` runs
+Then result includes finding code `UNTAGGED_SCENARIO` with severity `warning`
+
+---
+
+### User Story 15: Phase 4 — Side-channel conformance log (Priority: P3)
+
+As a Developer / team lead, I want all conformance findings to be appended to a persistent log `.dev-pomogator/.spec-check-log/<timestamp>.jsonl`, so that I can grep history, run analytics (e.g., "which FRs failed conformance most often"), and audit spec drift over time without flooding agent context.
+
+**Why:** PostToolUse push gives real-time feedback but disappears. Persistent log enables retrospective analysis + team audit + ML training data for future LLM-based checks (Phase 3+).
+
+**Independent Test:** Trigger 5 distinct conformance failures over time → check `.dev-pomogator/.spec-check-log/` contains 5 JSONL entries with timestamps, finding codes, locations, severity; `grep ORPHAN_TASK .dev-pomogator/.spec-check-log/*.jsonl` returns relevant entries chronologically.
+
+**Acceptance Scenarios:**
+
+Given conformance_check produces a finding `SCENARIO_TAG_ORPHAN` for SCEN-x
+When PostToolUse hook completes
+Then a JSONL line is appended to `.dev-pomogator/.spec-check-log/<YYYY-MM-DD>.jsonl` containing { timestamp, finding_code, severity, location, message }
+
+Given the log file exceeds 10MB
+When the next append happens
+Then the file is rotated to `.spec-check-log/<YYYY-MM-DD>-<N>.jsonl` and a new file starts (size-based rotation, не дата)
+
+Given the user runs `dev-pomogator spec-check-log --since 7d --grep ORPHAN_TASK`
+When the CLI processes the request
+Then it returns aggregated counts per FR + per file with last occurrence timestamp
+
+---
+
+### User Story 16: Phase 4 — GitHub Codespaces support (Priority: P3)
+
+As a Developer using GitHub Codespaces (cloud devcontainer with persistent volume), I want dev-pomogator v4 MCP server to start automatically in Codespaces lifecycle, handle persistent volume FS semantics correctly, and survive container hibernation/restart, so that Codespaces user gets same workflow as local devcontainer.
+
+**Why:** Codespaces has unique constraints: ephemeral CPU (hibernation), persistent `/workspaces/` volume (not bind-mount), built-in port forwarding, postCreate/postStart lifecycle hooks. Generic devcontainer support (US-14) covers most but Codespaces specifics need explicit verification.
+
+**Independent Test:** Spin up GitHub Codespaces from a repo with dev-pomogator v4 installed → verify MCP server auto-starts via `postStartCommand` in `.devcontainer/devcontainer.json` → run `get_trace("FR-001")` → hibernate codespace → resume → verify MCP server resumes with intact spec graph (rebuild ≤2s).
+
+**Acceptance Scenarios:**
+
+Given a Codespaces environment with dev-pomogator v4 in `.devcontainer/devcontainer.json`
+When the codespace starts (cold or warm)
+Then `postStartCommand` launches MCP server and writes lock file `.dev-pomogator/.mcp-lock.json` with `env: "codespaces:<machine-id>"`
+
+Given Codespace hibernates after 30 minutes of inactivity
+When user resumes the codespace
+Then MCP server auto-restarts via postStart hook + reuses in-memory rebuild from persistent `/workspaces/` files within 2s
+
+Given Codespaces persistent volume (`/workspaces/`) is used (not bind-mount)
+When chokidar runs touch test
+Then native FS events work (no polling fallback needed); test passes within 500ms
+
+---
+
+### User Story 17: Phase 7 — Cross-spec conflict detection during spec authoring (Priority: P1)
+
+As a spec author drafting a new `.specs/{slug}/`, I want create-spec workflow to automatically detect conflicts between my draft and existing specs in `.specs/*/` — runtime identifier drift (e.g. my spec writes `sessionToken` while another spec uses `session_token` for the same concept), module ownership conflicts (two specs claim `src/auth/jwt.ts`), contradictory FRs, NFR budget mismatches — so that I learn about cross-spec collisions during Phase 2/3 STOP gates rather than discovering them weeks later during implementation merge.
+
+**Why:** Cases like post-render-eval ↔ closed-loop-hardening (2026-05) showed two parallel agents authoring overlapping specs unknowingly: duplicate memory layer storage, feedback key mismatch breaking self-improve scope filter (`mp4_content_grounded` vs `content-grounding`). Cost of detecting at implementation = code rework + spec rewrite + retracing AC/CHK chains. Detection at authoring = 5-second mechanical check.
+
+**Independent Test:** Create `.specs/scratch-test-a/FR.md` declaring `feedback_key = "session_token"` referencing `src/auth/jwt.ts`. Then create `.specs/scratch-test-b/FR.md` declaring `feedback_key = "sessionToken"` referencing same file. At Phase 2 step 4d of create-spec on scratch-test-b, expect: lightweight reconcile invoked, `cross-spec/runtime-identifier-drift` finding severity=CRITICAL emitted, AskUserQuestion with `header: "⚠️ CRIT"` blocks STOP, options include «Abort STOP».
+
+**Acceptance Scenarios:**
+
+Given two specs `.specs/spec-a/` and `.specs/spec-b/` declare the same concept under different runtime identifiers
+When `create-spec` Phase 2 step 4d invokes `Skill("cross-spec-reconcile", mode: "light")` on spec-b
+Then the YAML report `.specs/spec-b/consistency-report.yaml` contains a finding with `code: cross-spec/runtime-identifier-drift`, `severity: CRITICAL`, `spec_a: spec-a`, `spec_b: spec-b`, `suggested_fix` referencing the canonical identifier
+
+Given a lightweight reconcile run finds ≥1 CRITICAL hard-conflict finding
+When the skill reaches step 5 of its execution
+Then it emits AskUserQuestion with `header: "⚠️ CRIT"` (≤12 chars) and options «Fix now via /cross-spec-resolve» / «Acknowledge & override» / «Abort STOP»
+
+Given user selects «Acknowledge & override» with a non-empty reason
+When the override is committed
+Then `findings[0].acknowledged_by` is `user`, `override_reason` is the supplied text, `override_timestamp` is ISO 8601 in YAML, and an entry is appended to `.claude/logs/cross-spec-overrides.jsonl`
+
+---
+
+### User Story 18: Phase 7 — Spec-vs-implementation drift surfaces before implementation starts (Priority: P1)
+
+As a spec author finalizing `.specs/{slug}/DESIGN.md`, I want the reconcile skill to verify that claims in my DESIGN.md (file paths, exported symbols, MCP tool names, hook registrations declared in extension.json) actually exist in the codebase, so that I do not specify implementation against ghost code (file renamed, symbol removed, hook not registered).
+
+**Why:** Spec drift compounds — DESIGN.md ages 6 months while code refactor renames files; specs reference functions that no longer export. Implementor follows spec, hits ERR_MODULE_NOT_FOUND, has to re-trace which spec is wrong. Cost is multiplied across N implementations referencing the stale claim.
+
+**Independent Test:** Author `.specs/scratch-test/DESIGN.md` referencing path `extensions/missing/tools/ghost.ts` and symbol `validateToken()`. Invoke `Skill("cross-spec-reconcile", mode: "full")` directly. Verify two findings: `impl-drift/missing-file` (severity=WARNING, `expected_path: "extensions/missing/tools/ghost.ts"`) and `impl-drift/missing-symbol` (severity=WARNING, `referenced_in: "DESIGN.md:<line>"`, `expected_symbol: "validateToken"`).
+
+**Acceptance Scenarios:**
+
+Given `DESIGN.md` references file path `extensions/missing/tools/ghost.ts` that does not exist on disk
+When reconcile checks impl-drift
+Then findings include `code: impl-drift/missing-file`, `severity: WARNING`, `class: uncovered`, `referenced_in: "DESIGN.md:<line>"`, `expected_path: "extensions/missing/tools/ghost.ts"`, `suggested_fix: "Either create file or remove reference from DESIGN.md"`
+
+Given DESIGN.md references MCP tool name `validate_user` that is not exported from any `*-mcp-server/index.ts` file
+When reconcile checks impl-drift
+Then findings include `code: impl-drift/mcp-tool-drift`, `severity: WARNING` with `expected_tool: "validate_user"` and locations enumerating all MCP server entry-points checked
+
+Given reconcile runs in `full` mode with SpecGraph + MCP server unavailable (Phase 1 not yet shipped)
+When skill operates in degraded mode
+Then YAML report includes `partial: true` flag and uses fs+remark+glob to parse `.specs/*/*.md` directly without erroring
+
+---
+
+### User Story 19: Phase 7 — Resolver explains and confirms each fix before applying (Priority: P1)
+
+As a spec author with `.specs/{slug}/consistency-report.yaml` produced by reconcile, I want `/cross-spec-resolve` skill to walk me through each finding — explain the finding code, target files with line ranges, what will change in plain language, WHY this fix follows from the finding, and offer Apply/Skip/Defer options — so that I never silently apply a fix I do not understand, especially when the fix touches another team's spec or the implementation code.
+
+**Why:** Auto-fix tools (eslint --fix, prettier --write, mex sync) often break semantics or apply heuristic fixes that look right but introduce regressions. Per prior art (eslint `no-implicit-coercion` semantic break, Dependabot fatigue), the explain-then-confirm middle ground prevents both silent damage and review fatigue.
+
+**Independent Test:** Run `/cross-spec-resolve` against a YAML containing one `impl-drift/missing-file` finding. Verify skill emits a 5-field explanation block (code+severity, files+line ranges, what-will-change, why-from-finding, options) BEFORE any Edit/Write tool call. Mock AskUserQuestion response = «Skip» and verify NO Edit tool call occurred. Mock «Apply» and verify exactly one Edit tool call with the predicted diff.
+
+**Acceptance Scenarios:**
+
+Given `consistency-report.yaml` contains a finding requiring an Edit
+When the resolve skill reaches step 3 of execution
+Then it emits a fenced code block containing 5 fields (code + severity + class, files + line ranges, plain-language change, WHY-from-finding rationale, suggested options) BEFORE invoking any Edit or Write tool
+
+Given the resolve skill is about to apply a fix to a file path beginning with `.specs/{other-slug}/` where `other-slug` differs from the current invocation's slug
+When the explanation block is rendered
+Then it includes a banner line literally containing «⚠️ This edits foreign spec: .specs/{other-slug}/{file}» and an additional confirm AskUserQuestion appears beyond the per-finding confirm
+
+Given user chooses «Defer» on a finding with a reason
+When the resolve skill records the deferral
+Then YAML is updated with `findings[i].resolution_status: deferred`, `defer_reason: <text>` AND no Edit tool is invoked for that finding
+
+---
+
+### User Story 20: Phase 7 — Architect resolves Path A/B/C forks for architectural conflicts (Priority: P2)
+
+As an architect reviewing a reconcile report that contains an `impl-drift/architectural-decision-vs-reality` finding (e.g., spec says «separate agent on port 8005», code says «inline TS service in pipeline/agent.ts»), I want the resolve skill to present 2-3 Path alternatives with trade-offs (pros, cons, impacted files) and let me explicitly choose the direction, so that architectural divergences are routed through human judgment rather than auto-fixed or dumped as a passive finding.
+
+**Why:** Per arXiv 2602.07609 + prior art survey (spec-kit, mex, OpenFastTrace, Spectral), the largest gap is that existing tools either dump findings and walk away or apply one auto-fix path. Architectural decisions inherently require human routing — LLMs perform well on code-inferable decisions but poorly on implicit/deployment decisions. Path A/B/C surfacing of the choice IS the novel UX contribution.
+
+**Independent Test:** Author `.specs/scratch-test/DESIGN.md` claiming «separate agent on port 8005 with its own memory» while the actual `pipeline/agent.ts` shows inline service. Run reconcile full mode, then `/cross-spec-resolve`. Verify AskUserQuestion appears with ≥2 path options (e.g. Path A «evaluator in existing agents/eval» Recommended, Path B «keep separate agent») with each option's `description` containing pros/cons/impacted-files prose.
+
+**Acceptance Scenarios:**
+
+Given resolve processes an `impl-drift/architectural-decision-vs-reality` finding
+When the skill reaches the per-finding handler
+Then it emits AskUserQuestion containing ≥2 Path options where each option's `description` field includes explicit pros, cons, and an impacted-files list
+
+Given the architect selects Path A (Recommended) via AskUserQuestion
+When the resolve skill records the choice and generates the patch plan
+Then each impacted file is presented as a separate confirm prompt (one Apply per file) and any foreign-spec edit additionally fires the «⚠️ This edits foreign spec» banner
+
+Given all findings in the batch are processed (Applied, Skipped, or Deferred)
+When the resolve skill reaches step 7
+Then `Skill("cross-spec-reconcile", mode: "full")` is invoked once and each original finding's `resolution_status` is updated to `resolved` / `still_present` / `transformed` based on presence in the new report
+
+---
+
+### User Story 14: Devcontainer / multi-env support (Priority: P2)
+
+As a Developer working in a VS Code devcontainer (or WSL, Codespaces, Hyper-V VM), I want dev-pomogator v4 MCP server to work out of the box with correct path handling and file watching, so that I don't have to manually configure paths or worry about bind-mount FS events.
+
+**Why:** Devcontainer / WSL / Codespaces are increasingly common; failing to support them silently breaks user experience without obvious cause.
+
+**Independent Test:** Install dev-pomogator v4 inside a devcontainer (bind-mounted workspace) → MCP server starts, paths in tool responses are relative to repo root (not container-absolute), file watcher uses polling fallback when bind-mount FS events are unreliable.
+
+**Acceptance Scenarios:**
+
+Given dev-pomogator v4 runs inside a VS Code devcontainer with bind-mounted workspace
+When `get_trace("FR-001")` is called
+Then all file paths in response are relative (e.g., `.specs/auth/FR.md`), never absolute (`/workspace/...` or `D:\...`)
+
+Given chokidar file watcher fails to detect file events within 500ms touch test
+When the MCP server starts
+Then watcher auto-falls-back to polling mode with 1s interval and logs the decision
+
+Given the user opens the same worktree in two different environments (host + container) accidentally
+When the second MCP server tries to start
+Then it detects existing lock file with different `env` tag and DENIES with clear message "MCP already running in env X, restart Claude Code in same env"
+
+---
+
+### User Story 15: Phase 4 — Side-channel conformance log (Priority: P3)
+
+As a Developer / team lead, I want all conformance findings to be appended to a persistent log `.dev-pomogator/.spec-check-log/<timestamp>.jsonl`, so that I can grep history, run analytics (e.g., "which FRs failed conformance most often"), and audit spec drift over time without flooding agent context.
+
+**Why:** PostToolUse push gives real-time feedback but disappears. Persistent log enables retrospective analysis + team audit + ML training data для future LLM-based checks (Phase 3+).
+
+**Independent Test:** Trigger 5 distinct conformance failures over time → check `.dev-pomogator/.spec-check-log/` contains 5 JSONL entries with timestamps, finding codes, locations, severity; `grep ORPHAN_TASK .dev-pomogator/.spec-check-log/*.jsonl` returns relevant entries chronologically.
+
+**Acceptance Scenarios:**
+
+Given conformance_check produces a finding `SCENARIO_TAG_ORPHAN` for SCEN-x
+When PostToolUse hook completes
+Then a JSONL line is appended to `.dev-pomogator/.spec-check-log/<YYYY-MM-DD>.jsonl` containing timestamp + finding_code + severity + location + message
+
+Given the log file exceeds 10MB
+When the next append happens
+Then the file is rotated to `.spec-check-log/<YYYY-MM-DD>-<N>.jsonl` and a new file starts (size-based rotation)
+
+Given the user runs `dev-pomogator spec-check-log --since 7d --grep ORPHAN_TASK`
+When the CLI processes the request
+Then it returns aggregated counts per FR + per file with last occurrence timestamp
+
+---
+
+### User Story 16: Phase 4 — GitHub Codespaces support (Priority: P3)
+
+As a Developer using GitHub Codespaces (cloud devcontainer with persistent volume), I want dev-pomogator v4 MCP server to start automatically in Codespaces lifecycle, handle persistent volume FS semantics correctly, and survive container hibernation/restart, so that Codespaces user gets same workflow as local devcontainer.
+
+**Why:** Codespaces has unique constraints: ephemeral CPU (hibernation), persistent `/workspaces/` volume (not bind-mount), built-in port forwarding, postCreate/postStart lifecycle hooks. Generic devcontainer support (US-14) covers most but Codespaces specifics need explicit verification.
+
+**Independent Test:** Spin up GitHub Codespaces from a repo with dev-pomogator v4 installed → verify MCP server auto-starts via `postStartCommand` в `.devcontainer/devcontainer.json` → run `get_trace("FR-001")` → hibernate codespace → resume → verify MCP server resumes with intact spec graph (rebuild ≤2s).
+
+**Acceptance Scenarios:**
+
+Given a Codespaces environment with dev-pomogator v4 в `.devcontainer/devcontainer.json`
+When the codespace starts (cold or warm)
+Then `postStartCommand` launches MCP server and writes lock file `.dev-pomogator/.mcp-lock.json` with env `codespaces:<machine-id>`
+
+Given Codespace hibernates after 30 minutes of inactivity
+When user resumes the codespace
+Then MCP server auto-restarts via postStart hook + reuses in-memory rebuild from persistent `/workspaces/` files within 2s
+
+Given Codespaces persistent volume (`/workspaces/`) is used (not bind-mount)
+When chokidar runs touch test
+Then native FS events work (no polling fallback needed); test passes within 500ms

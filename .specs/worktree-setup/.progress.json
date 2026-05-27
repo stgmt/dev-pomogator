@@ -1,0 +1,28 @@
+{
+  "version": 3,
+  "featureSlug": "worktree-setup",
+  "createdAt": "2026-05-12T14:33:47.017Z",
+  "currentPhase": "Complete",
+  "phases": {
+    "Discovery": {
+      "completedAt": "2026-05-12T17:46:19.450Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-05-12T21:08:16.161Z"
+    },
+    "Context": {
+      "completedAt": "2026-05-12T17:46:19.450Z",
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    },
+    "Requirements": {
+      "completedAt": "2026-05-12T22:11:32.388Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-05-12T22:11:32.388Z"
+    },
+    "Finalization": {
+      "completedAt": "2026-05-12T22:15:27.523Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-05-12T22:15:51.001Z"
+    }
+  }
+}

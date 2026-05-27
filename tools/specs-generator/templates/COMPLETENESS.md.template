@@ -1,0 +1,21 @@
+# Completeness ledger — {slug}
+
+> FR-12 COMPLETENESS_COVERAGE. 8 system-completeness dimensions. Each must be `addressed`
+> (+ a concrete design pointer — an `addressed` row with an empty pointer is flagged), `out-of-scope`
+> (+ reason ≥12 chars), or `pending` (blocks STOP #3).
+> FILL THIS AS A FRESH REVIEWER, not the architecture author. For EACH probe ask:
+> "the PRD requires X — does a real design component actually bind X?" — "PRD wants it" + "no component" = `pending`.
+> Audit: `architecture-decision-cli.ts audit-completeness <spec-dir>`.
+
+| dimension | status | reason (design pointer, or why out-of-scope) |
+|-----------|--------|--------|
+| internal-consistency | pending | <!-- R13: diagrams/tables/prose vs accepted decisions AND vs the PRD (schedule/scope) — a stale artefact OR a design↔PRD drift (e.g. digest "Mon-Sat" in design vs "Mon-Fri" in PRD) = fail --> |
+| flow-completeness | pending | <!-- R14: per integration (SMS / voice / email / inbound) ALL of: inbound handler + outbound call + status/delivery callback + error/timeout path + trigger/scheduler — missing any one = pending --> |
+| compliance-privacy | pending | <!-- R15: check EACH legal item SEPARATELY — opt-out/STOP; CAN-SPAM footer bound to the sender function; PII at-rest + in-transit. "PRD mandates it" + "no component emits/enforces it" = pending --> |
+| auth-secrets | pending | <!-- R16: authn declared per PUBLIC endpoint (webhook signature vs JWT); each secret's storage location; no service-role/API key exposed to clients --> |
+| observability | pending | <!-- R17: WHERE failures/validator-violations surface + the alert channel + who is paged — bound to a real component, not "we will monitor" --> |
+| data-lifecycle | pending | <!-- R18: the GROWING BUSINESS tables (interactions / events / digests / transcripts / sessions) — NOT just infra queues/logs — have a retention or cleanup story; "stores everything indefinitely" = pending --> |
+| cost-quota | pending | <!-- R19: per-unit variable cost (per SMS / voice-min / LLM call / STT) + provider quota vs a design choice (e.g. polling cadence) — flag if a choice exceeds the stated budget or a quota; evaluate BEFORE locking axes --> |
+| deploy-ops | pending | <!-- R20: local dev + DB migrations + seed + staging + CI/CD + backups/PITR with a tested restore procedure (an asserted "daily backups" line ≠ a verified restore) --> |
+
+<!-- Escape an inapplicable dimension: [skip-completeness-dimension: <reason ≥12 chars>] -->

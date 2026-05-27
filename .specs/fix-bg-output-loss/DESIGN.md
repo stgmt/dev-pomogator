@@ -2,11 +2,86 @@
 
 ## Реализуемые требования
 
+### v0.1.0 (docker-test.sh)
+
 - [FR-1: Persistent log для docker-test.sh output](FR.md#fr-1-persistent-log-для-docker-testsh-output)
 - [FR-2: Обновить rule `no-blocking-on-tests`](FR.md#fr-2-обновить-rule-no-blocking-on-tests--запрет-naked--tail-в-bg)
 - [FR-3: Directory lifecycle](FR.md#fr-3-directory-lifecycle--dev-pomogatordocker-status-создаётся-безопасно)
 - [FR-4: Gitignore verification](FR.md#fr-4-log-rotation--gitignore--не-коммитить-test-run-log)
 - [FR-5: Exit code preservation](FR.md#fr-5-exit-code-preservation--regression-guard)
+
+### v0.2.0 (generic non-docker)
+
+- ~~FR-7: Generic bg-log.sh wrapper~~ DEPRECATED v0.3.0 — replaced by FR-11
+- FR-8: Rule update — confirmed Anthropic bug citations
+- FR-9: PreToolUse bg-pipe-guard hook (OUT OF SCOPE)
+
+### v0.3.0 (refactor — integrate into existing test_runner_wrapper)
+
+- FR-10: Cleanup duplicate bg-log.sh (rollback FR-7)
+- FR-11: Generic passthrough adapter в test_runner_wrapper
+- FR-12: Smart converter hook (test_guard generates wrapper command)
+- FR-13: /run-tests SKILL.md description + triggers
+- FR-14: Skill trigger analysis report
+- FR-15: Three-benchmark report
+- FR-16: Installer hook path fix (conditional)
+
+## v0.3.0 architecture — generic adapter integration
+
+### Data flow (any long bg command)
+
+```
+Claude harness (run_in_background: true)
+  └─ Skill("run-tests") OR direct Bash (denied + smart-converted by test_guard)
+       └─ node test_runner_wrapper.cjs --framework <fw> -- <cmd> <args>
+            └─ wrapper.ts:
+                 - Resolves framework (vitest/jest/pytest/dotnet/rust/go/generic)
+                 - Creates .dev-pomogator/.test-status/test.<prefix>.log
+                 - Spawns <cmd> as child process
+                 - Forwards stdout → parent + logStream.write(file)
+                 - GenericAdapter.parseLine() returns null (no test events)
+                 - YAML status: state building → running → passed/failed
+                 - Heartbeat every 2s
+```
+
+### Why generic adapter (not standalone script)
+
+| Concern | Standalone bg-log.sh (v0.2.0) | Generic adapter (v0.3.0) |
+|---------|------------------------------|--------------------------|
+| Persistent log | Duplicate of logStream.write() | Reuses existing infrastructure |
+| YAML status | Not provided | Inherited from wrapper |
+| Statusline / TUI monitoring | Not integrated | Auto-integrated |
+| bg-task marker | Not provided | Inherited from wrapper |
+| Discovery | Not applicable | Returns 0 for generic (no test count) |
+| Maintenance burden | Two parallel systems | One unified wrapper |
+
+### Smart converter hook (FR-12)
+
+`test_guard.ts` reuses BLOCKED_PATTERNS for detection, adds `framework` field per entry, builds converted command on deny:
+
+```typescript
+const BLOCKED_PATTERNS: Array<{ pattern: RegExp; framework: string }> = [
+  { pattern: /\bdotnet\s+test\b/, framework: 'dotnet' },
+  // ... 8 more patterns
+];
+
+function buildConvertedCommand(originalCommand: string, framework: string): string {
+  const wrapperPath = '.dev-pomogator/tools/test-statusline/test_runner_wrapper.cjs';
+  return `node ${wrapperPath} --framework ${framework} -- ${originalCommand.trim()}`;
+}
+```
+
+Output (excerpt from `permissionDecisionReason`):
+
+```
+🚫 Direct test command blocked: "dotnet test --filter MBIL001"
+
+✅ Copy this exact wrapper invocation (smart-converter v0.3.0):
+
+  node .dev-pomogator/tools/test-statusline/test_runner_wrapper.cjs --framework dotnet -- dotnet test --filter MBIL001
+```
+
+AI copies the line, runs it through Bash — теперь wrapped, persistent log, YAML status работают.
 
 ## Компоненты
 
@@ -74,12 +149,64 @@ N/A — feature не добавляет API endpoints.
 
 <!-- Подсекции Existing hooks / New hooks / Cleanup Strategy / Test Data & Fixtures / Shared Context удалены из-за TEST_DATA_NONE — не заполняются. -->
 
+## Generic bg-log.sh architecture (v0.2.0)
+
+### Why prefer direct redirect over `tee` pipe
+
+`scripts/docker-test.sh` v0.1.0 использовал `... 2>&1 | tee -a "$LOG_FILE"`. Это работает для docker (process не Windows-native Bash subprocess), но для generic case (`dotnet test`, `pytest` напрямую) попадает в issue #16305 (pipeline data loss when pipeline is last element). v0.2.0 использует **прямой redirect без pipe** (`"$@" > "$LOG_FILE" 2>&1`) — обходит #16305 полностью, плюс exit code propagates через стандартный bash exit behavior без необходимости `set -o pipefail`.
+
+### Data flow diagram
+
+```
+Claude Code Bash tool (run_in_background: true)
+  └─ bash scripts/bg-log.sh <slug> <cmd> <args...>
+       ├─ validates $# >= 2, sanitizes slug via `tr -cd 'A-Za-z0-9_-'`
+       ├─ mkdir -p .dev-pomogator/.bg-logs/
+       ├─ LOG_FILE=.dev-pomogator/.bg-logs/<epoch>-<slug>.log
+       ├─ echo "[bg-log] Log: $LOG_FILE"   ← AI sees this in capture (single line)
+       └─ "$@" > "$LOG_FILE" 2>&1          ← cmd output direct redirect, NO PIPE
+            └─ <cmd> (dotnet test / pytest / cargo / sleep / anything)
+                 └─ stdout+stderr → $LOG_FILE (на disk)
+                 └─ exit code → bg-log.sh exit code (preserved)
+```
+
+### Why this beats 4 Anthropic bugs simultaneously
+
+| Bug | Why redirect helps |
+|-----|--------------------|
+| [#16305](https://github.com/anthropics/claude-code/issues/16305) Pipeline lost | Нет pipe — нет потери |
+| [#21915](https://github.com/anthropics/claude-code/issues/21915) Windows empty output | Output живёт в disk file, capture file `bg-log.sh` имеет всего одну строку (path) — почти всегда capture'ится корректно |
+| [#36915](https://github.com/anthropics/claude-code/issues/36915) ConPTY leak | Subprocess получает fd 1 = direct file (no PTY chain) |
+| [#50616](https://github.com/anthropics/claude-code/issues/50616) Windows hang | Если CLI hang'ает на capture — log file сохраняется до момента hang'а, можно диагностировать |
+
+### Algorithm (bg-log.sh)
+
+1. **Validate**: `[[ $# -lt 2 ]] && { echo "Usage: bg-log.sh <slug> <cmd> [args...]" >&2; exit 2; }`
+2. **Sanitize slug**: `slug=$(echo "$1" | tr -cd 'A-Za-z0-9_-'); shift`
+3. **Setup log**: `LOG_DIR=".dev-pomogator/.bg-logs"`; `mkdir -p "$LOG_DIR"`; `LOG_FILE="${LOG_DIR}/$(date +%s)-${slug}.log"`
+4. **Announce path**: `echo "[bg-log] Log: $LOG_FILE"`
+5. **Execute**: `"$@" > "$LOG_FILE" 2>&1` — exit code оригинальной команды becomes script exit code (нет pipe, нет pipefail need)
+
+### Algorithm (rule update FR-8)
+
+1. Сохранить existing секции v0.1.0: "Правильно" / "Неправильно" / "Anti-pattern: naked `| tail` в bg" / чеклист
+2. После Anti-pattern добавить subsection `## Confirmed Anthropic bugs (post-incident 2026-05-10)` — таблица 4×3 (issue, status, why-it-applies)
+3. Добавить subsection `## Preferred pattern: file redirect (Windows-safe)` с 3 examples (dotnet test, pytest, cargo test) + reference на `scripts/bg-log.sh`
+4. Расширить чеклист пунктом `[ ] Не-docker bg → > file 2>&1 (БЕЗ pipe) ИЛИ scripts/bg-log.sh`
+
 ## Out of Scope propagation
 
+### v0.1.0
 - **FR-6** (feedback memory) — OUT OF SCOPE. User Story #4 также OUT OF SCOPE.
 - Reproduction test H1 vs H2 vs H3 — OUT OF SCOPE (22-минутный run; defense-in-depth решение закрывает все три без подтверждения).
 - Upstream Anthropic feature request (bg capture sentinel) — OUT OF SCOPE (filed separately).
 - Log rotation policy (старше X дней) — OUT OF SCOPE (user manual cleanup; < 500KB typical size).
+
+### v0.2.0
+- **FR-9** (PreToolUse bg-pipe-guard hook) — OUT OF SCOPE (defer to follow-up spec). Reason: premature без baseline usage data + risk over-blocking legitimate piped commands.
+- WSL fallback workflow documentation — OUT OF SCOPE (environment-level recommendation, не код этой спеки).
+- Migration of existing `docker-test.sh` от `tee` pipe к direct redirect — OUT OF SCOPE (v0.1.0 паттерн уже работает для docker case; не ломаем).
+- Log rotation для `.dev-pomogator/.bg-logs/` (cleanup старых runs) — OUT OF SCOPE для v0.2.0 (manual cleanup как в v0.1.0).
 
 ## Risks
 

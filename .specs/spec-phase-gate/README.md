@@ -1,5 +1,7 @@
 # Spec Phase Gate
 
+**Status: shipped 0.1.0** (2026-05-23). PreToolUse hook + 4 audit-checks live in `extensions/specs-workflow/tools/specs-validator/`. 35 e2e tests + 22 BDD scenarios. Audit-spec: 0 ERRORs.
+
 Anti-hallucination architecture for the `/create-spec` workflow: physically blocks Claude from writing future-phase spec files until the current STOP point is confirmed.
 
 **Status:** In Progress
@@ -40,7 +42,7 @@ Layer 3 (Audit + Rules)      -- retrospective: detect partial impl, FR split gap
 | [TASKS.md](TASKS.md) | TDD tasks: Phase 0 (Red) + Phases 1-5 (Green + Refactor) |
 | [FILE_CHANGES.md](FILE_CHANGES.md) | 9 files: 2 create, 7 edit |
 | [CHANGELOG.md](CHANGELOG.md) | Change history |
-| [spec-phase-gate.feature](spec-phase-gate.feature) | 23 BDD scenarios across 4 feature groups |
+| [spec-phase-gate.feature](spec-phase-gate.feature) | 22 BDD scenarios across 4 feature groups |
 
 ## Where Implementation Lives
 

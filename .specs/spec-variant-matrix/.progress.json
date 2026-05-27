@@ -1,0 +1,28 @@
+{
+  "version": 3,
+  "featureSlug": "spec-variant-matrix",
+  "createdAt": "2026-04-28T20:37:47.202Z",
+  "currentPhase": "Complete",
+  "phases": {
+    "Discovery": {
+      "completedAt": "2026-04-28T20:42:43.068Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-28T20:42:43.068Z"
+    },
+    "Context": {
+      "completedAt": "2026-04-28T20:42:43.068Z",
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    },
+    "Requirements": {
+      "completedAt": "2026-04-28T20:48:15.166Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-28T20:48:15.166Z"
+    },
+    "Finalization": {
+      "completedAt": "2026-04-28T20:49:37.390Z",
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    }
+  }
+}

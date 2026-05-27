@@ -240,3 +240,15 @@ WHEN MCP probe executes THEN timeout SHALL be 10_000 ms (not 3_000). Severity ma
 **Требование:** [FR-34](FR.md#fr-34-stale-managed-entries-detection-feature12)
 
 WHEN Doctor extracts distinct tool-directory names (first path segment after `.dev-pomogator/tools/`) from `installedExtensions[*].managed[projectRoot].tools[].path` AND name ∉ (installedExtensions names ∪ declared sub-tool names из `extensions/{ext}/extension.json → tools`) THEN Doctor SHALL emit severity=warning, reinstallable=yes, message lists orphaned names, hint starts with "managed entries orphaned from removed/renamed extension". Known validated case: `specs-validator` is declared as sub-tool of `specs-workflow` extension → NOT orphan.
+
+## AC-35 (FR-35) @feature1
+
+**Требование:** [FR-35](FR.md#fr-35-legacy-npm-claude-install-check-win32-feature1)
+
+WHEN platform=win32 AND a legacy npm-global Claude artifact exists (`~/.npm-global/claude.cmd`, `~/.npm-global/claude`, or `~/.npm-global/node_modules/@anthropic-ai/claude-code`) THEN Doctor SHALL emit check `C30` severity=warning, reinstallable=no, hint includes the removal command + native installer URL `irm https://claude.ai/install.ps1 | iex`. IF no stale artifact exists THEN check `C30` severity=ok. WHEN platform≠win32 THEN check `C30` SHALL be gated out (relevant=false, reason mentions Windows `%USERPROFILE%\.npm-global` layout).
+
+## AC-36 (FR-36) @feature18
+
+**Требование:** [FR-36](FR.md#fr-36-per-command-hook-sync-manifest-vs-settings-feature18)
+
+WHEN an installed extension's manifest (read via `listExtensions()`) declares a claude hook whose command script basename is absent from BOTH `.claude/settings.local.json` and `~/.claude/settings.json` THEN Doctor SHALL emit check `C31` severity=warning, reinstallable=yes, message listing `{extension}/{script}` and hint `npx dev-pomogator`. IF every installed-extension hook command is present in either settings file THEN check `C31` severity=ok. WHEN `installedExtensions` is empty THEN check `C31` SHALL be gated out (relevant=false). IF `listExtensions()` throws (package manifests unreadable) THEN severity=ok (fail-open).

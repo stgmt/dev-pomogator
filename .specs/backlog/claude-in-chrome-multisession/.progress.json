@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "featureSlug": "claude-in-chrome-multisession",
+  "createdAt": "2026-04-28T20:49:21.568Z",
+  "currentPhase": "Complete",
+  "phases": {
+    "Discovery": {
+      "completedAt": "2026-04-28T21:11:01.182Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-28T21:11:01.181Z"
+    },
+    "Context": {
+      "completedAt": "2026-04-28T21:11:01.182Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-28T21:11:03.998Z"
+    },
+    "Requirements": {
+      "completedAt": "2026-04-28T21:14:44.599Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-28T21:14:44.598Z",
+      "bddInfraClassificationComplete": true,
+      "bddFrameworkSelected": "vitest 4.1.0 + custom 1:1 .feature mapping per `extension-test-quality` rule. Convention: `tests/features/plugins/EXT/DOMAIN_EXT.feature` aligned 1:1 c `tests/e2e/EXT-"
+    },
+    "Finalization": {
+      "completedAt": "2026-04-28T21:15:53.722Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-28T21:15:53.722Z"
+    }
+  }
+}

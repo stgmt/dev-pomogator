@@ -20,3 +20,4 @@ allow:
 - stryker.config.mjs
 - .npmignore
 - .mcp.json
+- stryker.config.mjs

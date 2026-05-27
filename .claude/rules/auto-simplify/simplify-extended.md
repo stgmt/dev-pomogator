@@ -21,6 +21,35 @@
 4. **Несоответствие naming** — имя describe/it не совпадает с .feature сценарием
 5. **Неиспользованные helpers** — импортированные но не вызванные функции из helpers.ts
 
+## Strong-tests integration (compositional check)
+
+When `/simplify` review involves test files в diff — simplify проверяет **структурное качество** (duplication / magic numbers / edge cases / naming). `strong-tests` skill — **поведенческое качество** (mutation resistance / fake-positive detection / 12-point self-eval). Two complementary surfaces.
+
+**Trigger condition:** AI/user runs `/simplify` AND diff contains files matching:
+- `*.test.ts` / `*.test.tsx` (vitest / jest)
+- `*_test.py` / `tests/test_*.py` (pytest)
+- `*Tests.cs` / `*Test.cs` / `*Steps.cs` / `*.test.cs` (xUnit / NUnit / Reqnroll)
+- `*_test.go` (Go)
+
+**Action:** invoke `Skill("strong-tests")` with input describing the changed test files. Skill produces:
+- 12-point self-eval table (PASS/FAIL/PARTIAL per item)
+- Mutation gutcheck recommendations
+- Anti-pattern findings via grep on 8 catalogued smells (см. `references/anti-patterns.md`)
+
+Findings prepended to simplify output, не replace structural checks.
+
+**Example:**
+```
+/simplify
+→ Detected test file changes: tests/e2e/auth.test.ts
+→ Running structural checks (this rule)...
+→ Invoking Skill("strong-tests") for behavioural audit on test file
+→ Strong-tests output: 12-point self-eval result + survivors list
+→ Combined report: structural + behavioural findings
+```
+
+**Skip condition:** test files not in diff → skip strong-tests invocation (это не unconditional check, только при relevant changes).
+
 ## Systemic vs One-Off Classification
 
 При обнаружении проблем в спеках/тестах РАЗЛИЧАЙ:

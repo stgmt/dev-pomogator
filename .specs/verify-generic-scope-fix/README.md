@@ -98,8 +98,12 @@ Later: Bash "git commit -m ..." → PreToolUse hook fires (matcher: "Bash")
 
 ## Status
 
+**Shipped 0.1.0 — 2026-05-23.** Подробности в [CHANGELOG.md](CHANGELOG.md).
+
 - Phase 1 Discovery: ✓ complete
 - Phase 1.5 Context: ✓ complete
 - Phase 2 Requirements: ✓ complete
-- Phase 3 Finalization: ⚙ in progress
-- Phase 3+ Audit: ⏳ pending
+- Phase 3 Finalization: ✓ complete
+- Phase 3+ Audit: ✓ 0 ERRORS / 1 WARNING (meta-recursive, non-blocking)
+
+Реальная имплементация: `extensions/scope-gate/tools/scope-gate/{scope-gate-guard,analyze-diff}.ts` + shared utilities в `extensions/_shared/{scope-gate-score-diff,scope-gate-marker-store}.ts` + skill `.claude/skills/verify-generic-scope-fix/SKILL.md` + 2 правила `.claude/rules/scope-gate/`. 5 тестов зелёные.

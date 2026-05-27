@@ -7,6 +7,35 @@
 
 Если `.specs/{slug}/JIRA_SOURCE.md` существует — выполнить Step 0 из [`jira-mode.md`](jira-mode.md) для Phase 1 (extract roles, user goals, reproduction flow). Если файла нет — пропустить.
 
+## Pre-Write Verification Checklist (ОБЯЗАТЕЛЬНО)
+
+Перед написанием USER_STORIES/USE_CASES/RESEARCH — выполнить **3 минимальные** проверки. Полный 8-пункт checklist в [`phase2_requirements-and-design.md`](phase2_requirements-and-design.md); для Discovery достаточно:
+
+### CL-1: Memory-aware context priming
+
+ДО первого Write — выполнить:
+
+```bash
+# Derive project-encoded cwd: Claude Code заменяет '/', '\', ':' на '-' в pwd
+# Пример: D:\repos\dev-pomogator → D--repos-dev-pomogator
+encoded=$(pwd | sed 's|[:/\\]|-|g')
+ls ~/.claude/projects/${encoded}/memory/feedback_*.md 2>/dev/null
+```
+
+Если файлы существуют — **прочитать каждый Read tool-ом**. Они содержат active constraints для этой spec (no-hardcoded patterns, env-first patterns, anti-patterns user wants avoided). Применять при написании USER_STORIES "Why" / "Independent Test" + RESEARCH "Risk Assessment".
+
+### CL-2: Verify external file paths cited in RESEARCH.md
+
+Каждый file path упоминаемый в `RESEARCH.md "Где лежит реализация"` — Read tool сначала. Без verified content — НЕ писать claim про architecture / behavior этого файла. (Phase 2 расширяет это на CLI + API claims.)
+
+### CL-3: Verify CLI commands cited in independent tests
+
+Каждый CLI command в USER_STORIES "Independent Test" (`gh ...`, `git ...`, `node ...`) — Bash `--help` first. Цитировать relevant usage в RESEARCH.md. Без verification — claim не пишется.
+
+---
+
+После этих 3 пунктов — приступать к Алгоритму ниже. Полный checklist в Phase 2 reference.
+
 ## Алгоритм
 
 1. **Создать структуру:** `.dev-pomogator/tools/specs-generator/scaffold-spec.ts -Name "{feature-slug}"` — создаст 13 файлов в `.specs/{slug}/`.

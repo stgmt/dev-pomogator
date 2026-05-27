@@ -3,6 +3,8 @@
 ## FR-1: Автоматическое определение языка проекта
 @feature1
 
+→ [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-определение-языка-проекта)
+
 **Описание:** Система должна автоматически определять язык проекта по наличию step definition файлов.
 
 **Критерии:**
@@ -15,6 +17,8 @@
 
 ## FR-2: Парсинг TypeScript step definitions
 @feature2
+
+→ [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-парсинг-typescript-степов)
 
 **Описание:** Система должна извлекать step definitions из TypeScript файлов.
 
@@ -35,6 +39,8 @@ Then('pattern', async function() { ... });
 
 ## FR-3: Парсинг Python step definitions
 @feature3
+
+→ [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-парсинг-python-степов)
 
 **Описание:** Система должна извлекать step definitions из Python файлов.
 
@@ -60,6 +66,8 @@ def step_name(context):
 ## FR-4: Парсинг C# step definitions
 @feature4
 
+→ [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-парсинг-c-степов)
+
 **Описание:** Система должна извлекать step definitions из C# файлов.
 
 **Формат:**
@@ -81,6 +89,8 @@ public void MethodName() { ... }
 
 ## FR-5: Определение качества Then степов
 @feature5
+
+→ [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-определение-bad-then-степа-typescript)
 
 **Описание:** Система должна определять наличие assertions в Then степах.
 
@@ -105,6 +115,8 @@ public void MethodName() { ... }
 ## FR-6: Генерация отчёта
 @feature6
 
+→ [AC-9](ACCEPTANCE_CRITERIA.md#ac-9-генерация-отчёта)
+
 **Описание:** Система должна генерировать Markdown отчёт о качестве степов.
 
 **Содержание отчёта:**
@@ -122,6 +134,8 @@ public void MethodName() { ... }
 ## FR-7: Вывод предупреждений в stdout
 @feature7
 
+→ [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-вывод-в-stdout-при-bad-степах)
+
 **Описание:** При обнаружении BAD степов система должна выводить предупреждение.
 
 **Формат:**
@@ -137,6 +151,8 @@ See steps-validation-report.md for details.
 ## FR-8: Конфигурация через YAML
 @feature8
 
+→ [AC-11](ACCEPTANCE_CRITERIA.md#ac-11-отключение-через-конфигурацию)
+
 **Описание:** Система должна поддерживать конфигурацию через `.steps-validator.yaml`.
 
 **Параметры:**
@@ -151,6 +167,8 @@ See steps-validation-report.md for details.
 ## FR-9: Opt-out активация
 @feature9
 
+→ [AC-12](ACCEPTANCE_CRITERIA.md#ac-12-opt-out-активация)
+
 **Описание:** Хук должен автоматически запускаться если найдены step definitions, но может быть отключён через конфигурацию.
 
 **Логика:**
@@ -163,6 +181,8 @@ See steps-validation-report.md for details.
 
 ## FR-10: Тихая работа при ошибках
 @feature10
+
+→ [AC-13](ACCEPTANCE_CRITERIA.md#ac-13-graceful-error-handling)
 
 **Описание:** Хук не должен блокировать работу пользователя при ошибках парсинга.
 

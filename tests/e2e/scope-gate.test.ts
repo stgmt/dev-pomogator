@@ -81,7 +81,7 @@ function spawnHook(input: object): HookResult {
   const result = spawnSync('npx', ['tsx', HOOK_PATH], {
     input: JSON.stringify(input),
     encoding: 'utf-8',
-    env: { ...process.env, DEVPOM_ALLOW_HOST_TESTS: '1' },
+    env: { ...process.env },
   });
   const stdout = result.stdout || '';
   const stderr = result.stderr || '';

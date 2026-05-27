@@ -1,0 +1,33 @@
+{
+  "name": "chrome-devtools-mcp-mux",
+  "version": "0.2.0",
+  "stability": "beta",
+  "description": "[BETA — BROKEN ON WINDOWS] MCP server registration for chrome-devtools-mcp-mux multiplexer. Upstream package fails on Windows with EACCES on socket binding. Use claude-in-chrome-multisession instead for multi-session safety on Windows. Kept for non-Windows platforms where upstream may work; multi-session safety unverified there.",
+  "platforms": ["claude"],
+  "category": "automation",
+  "mcpServers": {
+    "chrome-devtools-mcp-mux": {
+      "command": "npx",
+      "args": ["-y", "chrome-devtools-mcp-mux@0.2.2"]
+    }
+  },
+  "tools": {
+    "chrome-devtools-mcp-mux": "tools/chrome-devtools-mcp-mux"
+  },
+  "toolFiles": {
+    "chrome-devtools-mcp-mux": [
+      ".dev-pomogator/tools/chrome-devtools-mcp-mux/smoke-test.mjs",
+      ".dev-pomogator/tools/chrome-devtools-mcp-mux/configure-browser.mjs",
+      ".dev-pomogator/tools/chrome-devtools-mcp-mux/README.md"
+    ]
+  },
+  "skills": {
+    "chrome-devtools-mcp-mux": ".claude/skills/chrome-devtools-mcp-mux"
+  },
+  "skillFiles": {
+    "chrome-devtools-mcp-mux": [
+      ".claude/skills/chrome-devtools-mcp-mux/SKILL.md"
+    ]
+  },
+  "hooks": []
+}

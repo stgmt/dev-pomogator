@@ -253,3 +253,21 @@ Meta: `reinstallable: yes`.
 
 **Связанные AC:** [AC-34](ACCEPTANCE_CRITERIA.md#ac-34-fr-34)
 **Use Case:** [UC-18](USE_CASES.md#uc-18-stale-managed-entries-feature12)
+
+## FR-35: Legacy npm Claude install check (win32) @feature1
+
+WHEN платформа Windows, Doctor SHALL проверить legacy npm-global установку `@anthropic-ai/claude-code` в `%USERPROFILE%\.npm-global` (артефакты `claude.cmd`, `claude` shim, `node_modules/@anthropic-ai/claude-code`). IF любой stale-артефакт существует THEN Doctor SHALL emit check `C30` severity=warning, reinstallable=no, message: npm-дистрибуция deprecated + stale shims могут заслонять (shadow) native `~/.local/bin/claude.exe` в зависимости от порядка PATH, hint = команда удаления (`Remove-Item -Recurse -Force ...`) + `irm https://claude.ai/install.ps1 | iex`. IF stale-артефактов нет THEN severity=ok. WHEN платформа ≠ win32 THEN check `C30` SHALL быть gated out (`relevant=false`, reason упоминает Windows `%USERPROFILE%\.npm-global` layout). Group: `self-sufficient`.
+
+Meta: `reinstallable: no`.
+
+**Связанные AC:** [AC-35](ACCEPTANCE_CRITERIA.md#ac-35-fr-35)
+
+## FR-36: Per-command hook sync (manifest vs settings) @feature18
+
+WHEN в проекте установлен ≥1 extension, Doctor SHALL для КАЖДОГО установленного extension прочитать его хуки из АКТУАЛЬНОГО манифеста пакета (`listExtensions()` + `getExtensionHooks(ext, 'claude')`) и проверить что КАЖДАЯ команда хука (сверка по basename скрипта, т.к. установщик переписывает префикс в portable `tsx-runner-bootstrap`) присутствует в `.claude/settings.local.json` ЛИБО глобальном `~/.claude/settings.json` (SessionStart check-update живёт там). IF хотя бы одна команда не найдена THEN Doctor SHALL emit check `C31` severity=warning, reinstallable=yes, message перечисляет `{extension}/{script}` ненайденных + поясняет что плагин установлен но хук не вписан (напр. установлен до добавления хука) → фича молча не работает, hint = `npx dev-pomogator` для re-wire. IF все команды найдены THEN severity=ok. WHEN установленных extension нет (`installedExtensions` пуст) THEN check `C31` SHALL быть gated out (`relevant=false`). IF манифесты пакета недоступны (`listExtensions()` throws) THEN severity=ok (fail-open, не ложная тревога). Group: `self-sufficient`.
+
+Отличие от `C6` (FR-4 hooks-registry): C6 сверяет `config.managed.hooks` ↔ settings на уровне ИМЁН СОБЫТИЙ (Stop/PreToolUse) — ловит drift настроек от записанного при установке, но НЕ ловит хук который никогда не устанавливался (config его тоже не записал). C31 сверяет МАНИФЕСТ (source of truth) ↔ settings на уровне КОМАНД — ловит declared-but-never-wired. Комплементарны.
+
+Meta: `reinstallable: yes`.
+
+**Связанные AC:** [AC-36](ACCEPTANCE_CRITERIA.md#ac-36-fr-36)

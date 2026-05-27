@@ -1,0 +1,28 @@
+{
+  "version": 3,
+  "featureSlug": "architecture-decision-builder",
+  "createdAt": "2026-05-23T19:10:35.142Z",
+  "currentPhase": "Complete",
+  "phases": {
+    "Discovery": {
+      "completedAt": "2026-05-23T19:16:36.179Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-05-23T20:49:46.699Z"
+    },
+    "Context": {
+      "completedAt": "2026-05-23T19:16:36.179Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-05-23T20:51:18.381Z"
+    },
+    "Requirements": {
+      "completedAt": "2026-05-23T21:42:59.544Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-05-23T21:42:59.543Z"
+    },
+    "Finalization": {
+      "completedAt": "2026-05-23T22:16:40.929Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-05-23T22:16:40.929Z"
+    }
+  }
+}

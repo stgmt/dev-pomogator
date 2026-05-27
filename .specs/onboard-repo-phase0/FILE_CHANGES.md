@@ -43,8 +43,7 @@
 
 | Path | Action | Reason |
 |------|--------|--------|
-| `.claude/rules/specs-workflow/specs-management.md` | edit | [FR-1](FR.md#fr-1-auto-trigger-phase-0-при-первом-create-spec-в-репо-feature1) — add `### PHASE 0: Repo Onboarding` перед `### PHASE 1: Discovery`. Document triggering logic, cache policy, 7 steps. |
-| `.claude/skills/create-spec/SKILL.md` | edit | [FR-1](FR.md#fr-1-auto-trigger-phase-0-при-первом-create-spec-в-репо-feature1) — add detection logic: если `.specs/.onboarding.json` missing → invoke Phase 0 before Phase 1. Handle `--onboard` / `--refresh-onboarding` / `--skip-onboarding` flags. |
+| `.claude/skills/create-spec/SKILL.md` | edit | [FR-1](FR.md#fr-1-auto-trigger-phase-0-при-первом-create-spec-в-репо-feature1) — Phase 0 trigger logic + cache policy + 7-step flow. Originally planned as a separate `.claude/rules/specs-workflow/specs-management.md` edit + this skill edit; consolidated into the skill bundle alone (single source where the workflow lives). Detection: `.specs/.onboarding.json` missing → invoke Phase 0 before Phase 1. Flags: `--onboard` / `--refresh-onboarding` / `--skip-onboarding`. |
 | `extensions/specs-workflow/tools/specs-generator/spec-status.ts` | edit | [FR-1](FR.md#fr-1-auto-trigger-phase-0-при-первом-create-spec-в-репо-feature1) — add state `Onboarding` перед `Discovery` в state machine. Handle `-ConfirmStop Onboarding`. Update `.progress.json` schema. |
 | `extensions/specs-workflow/extension.json` | edit | [FR-13](FR.md#fr-13-delivered-as-dev-pomogator-extension-feature13) — declare `consumedBy: ["onboard-repo"]` cross-reference для manifest integrity |
 | `src/updater/managed-registry.ts` (или эквивалент) | edit | [FR-19](FR.md#fr-19-managed-files-tracking-через-sha-256) — register 5 new managed paths types: `.specs/.onboarding.json`, `.specs/.onboarding.md`, `.specs/.onboarding-history/**`, `.claude/rules/onboarding-context.md`, hook block identifier |

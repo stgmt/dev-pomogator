@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "featureSlug": "chrome-devtools-mcp-mux",
+  "createdAt": "2026-04-27T20:46:57.183Z",
+  "currentPhase": "Complete",
+  "phases": {
+    "Discovery": {
+      "completedAt": "2026-04-27T20:54:16.870Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-27T21:00:44.833Z"
+    },
+    "Context": {
+      "completedAt": "2026-04-27T20:54:16.870Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-27T21:01:43.579Z"
+    },
+    "Requirements": {
+      "completedAt": "2026-04-27T21:08:30.982Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-27T21:48:06.510Z",
+      "bddInfraClassificationComplete": true,
+      "bddFrameworkSelected": "vitest 4.1.0 + custom `.feature` 1:1 mapping convention (per `extension-test-quality` rule). Convention: `tests/features/plugins/EXT/DOMAIN_EXT.feature` aligned 1:1 c `tests/features/plugins/EXT/"
+    },
+    "Finalization": {
+      "completedAt": "2026-04-27T21:50:51.007Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-27T21:51:02.902Z"
+    }
+  }
+}

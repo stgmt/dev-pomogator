@@ -4,6 +4,14 @@ All notable changes to this feature will be documented in this file.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.1.0] — 2026-05-23
+
+> Shipped via `extensions/scope-gate/` (PreToolUse hook `scope-gate-guard.ts` matched on Bash commits, plus `analyze-diff.ts` for skill-driven scope analysis). Shared utilities `scoreDiff` + marker-store live in `extensions/_shared/` (architecture deviation from the flat layout originally planned in this spec — cleaner: cross-extension primitives belong in `_shared/`).
+>
+> Skill `.claude/skills/verify-generic-scope-fix/SKILL.md` + rules `.claude/rules/scope-gate/{when-to-verify,escape-hatch-audit}.md` enforce the workflow. Tests: 5 files (`score-diff.test.ts`, `marker-store.test.ts`, `scope-gate.test.ts`, `stocktaking-incident.test.ts`, `plan-gate-scope-advisory.test.ts`) — all GREEN. Stocktaking-incident regression pin is the canonical reproducer that motivated this spec.
+>
+> Audit-spec on this spec: 0 ERRORS, 1 WARNING (meta-recursive — audit complains that this spec's own FR-1 is polymorphic across "variants" but lacks a Decision Table; the spec is itself ABOUT generic scope verification, so the warning is self-referential and non-blocking).
+
 ## [Unreleased]
 
 ### Added

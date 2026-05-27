@@ -1,0 +1,18 @@
+# Cross-axis synthesis — {slug}
+
+> FR-13 cross-axis synthesis. Emergent insights spanning ≥2 decision axes — things no single
+> axis surfaces in isolation: cross-axis dependencies, component redundancy, secondary effects.
+> The bhph "Variant F (Supabase-native)" decision was emergent here: "hosting=Supabase AND
+> auth=Supabase → the n8n orchestrator is redundant" only appears when you read axes together.
+> FILL AS A REVIEWER reading all AXIS-*.md side by side. Each insight MUST reference ≥2 axis ids.
+> Render: `architecture-decision-cli.ts synthesis <spec-dir> insights.json` (insights authored here).
+
+<!-- Per insight:
+## {short title}
+**Axes:** {axis-id-a}, {axis-id-b}    <!-- ≥2, must match real AXIS-*.md axis_id -->
+{what spanning the axes reveals — the emergent observation}
+**Recommendation:** {what to do — e.g. "drop n8n, orchestrate inside Supabase Edge Functions"}
+**Trade-off:** {the compromise / risk of acting on this insight}
+-->
+
+_No cross-axis insights yet — fill above, or leave empty for a single-axis spec (0 insights is valid)._

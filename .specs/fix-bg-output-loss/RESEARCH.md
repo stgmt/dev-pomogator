@@ -88,6 +88,53 @@ Safe pattern:
 3. **Rule-обновление важнее скрипта** — docker-test.sh это единственный вызов, но anti-pattern `| tail` в bg применим ко **всем** long-running командам. Без правила AI сгенерирует naked `| tail` снова.
 4. **Regression risk minimal**: `tee` — POSIX, присутствует в Git-Bash и всех Linux/Docker контейнерах. Добавление `tee` в pipeline не меняет exit code (first-command pipeline success via `set -o pipefail` уже активен в docker-test.sh:6).
 
+## Confirmed root causes (post-incident 2026-05-10)
+
+После incident #2 (`dotnet test --filter MBIL001` через `run_in_background: true` висел 25 минут с 0-byte capture) — поиск в `anthropics/claude-code` GitHub issues подтвердил что **все три plausible hypotheses из v0.1.0 RESEARCH — это три разных confirmed bugs**, плюс четвёртый Windows-specific.
+
+### Mapping v0.1.0 hypotheses → confirmed Anthropic issues
+
+| v0.1.0 Hypothesis | GitHub Issue | Title | Status (на 2026-05-11) | Confirmation |
+|-------------------|--------------|-------|------------------------|--------------|
+| H1 (harness capture handle drop) | [#21915](https://github.com/anthropics/claude-code/issues/21915) | Bash tool produces no output on Windows — commands run but output files remain empty | **closed: not planned** | Точное совпадение: bg task создаёт `claude/[task-id].output` file, но он 0 bytes; status "running" до timeout; команды успешно выполняются на ФС |
+| H2 (Git-Bash pipe EOF race) | [#16305](https://github.com/anthropics/claude-code/issues/16305) | Sandbox Bash tool loses pipe data when pipeline is last element | **closed: not planned** | Точное совпадение: `seq 2 \| cat` → 0 output. Workaround: trailing `;`, `(...)`, `bash -c "..."`. Linux только подтверждено, но pattern совпадает |
+| H3 (docker compose -T block buffering) | [#36915](https://github.com/anthropics/claude-code/issues/36915) | VSCode + Git Bash: bash stdout не возвращается | closed as duplicate | Точное совпадение: ConPTY leaks PTY в bash subprocess chain; bash stdout (fd 1) → `/dev/pty0` который Claude не читает. Workaround: redirect в файл потом Read tool |
+| (новое) Windows CLI hang | [#50616](https://github.com/anthropics/claude-code/issues/50616) | Windows: Claude Code CLI hangs since 2026-04-18 | **open** | Windows-specific regression v2.1.98+; CLI/extension hang forever; единственный workaround — WSL Ubuntu |
+
+### Дополнительные связанные issues
+
+- [#26983](https://github.com/anthropics/claude-code/issues/26983) — Feature request "Stream Bash tool output in real-time" (closed as duplicate, нет timeline от Anthropic)
+- [#20236](https://github.com/anthropics/claude-code/issues/20236) — TaskOutput `block=true` hangs after agent completes (workaround: Esc)
+- [#19663](https://github.com/anthropics/claude-code/issues/19663) — macOS: Bash tool returns no output
+- [#28407](https://github.com/anthropics/claude-code/issues/28407) — Bash tool output suppressed when child spawns `claude -p`
+- [#2734](https://github.com/anthropics/claude-code/issues/2734) — Stderr/Stdout interleaving broken
+- [#16306](https://github.com/anthropics/claude-code/issues/16306) — Claude Code hangs when /dev/stdin read
+
+### Implication для v0.2.0 design
+
+Универсальный workaround обходящий все 4 confirmed bugs одним приёмом: **`cmd > file 2>&1` без pipe**.
+
+- Нет pipe → нет #16305 (pipeline data loss)
+- Output живёт в disk file → не зависит от capture handle stability (#21915, #36915)
+- Single-line stdout (только announce path) → почти всегда capture'ится корректно даже на Windows
+- При #50616 hang — log file сохраняется до момента hang'а, можно открыть после kill
+
+Это и есть основание для FR-7 (`scripts/bg-log.sh`) и FR-8 (rule update). v0.1.0 решение через `tee` остаётся для `docker-test.sh` (там pipe идёт в `tee` который пишет в файл — обходит #16305 через intermediate file write, но это subtle и не работает для arbitrary `dotnet test`). v0.2.0 redirect — proще и универсальнее.
+
+### Anthropic position
+
+Все 4 bug issue закрыты как "not planned" или "duplicate" — официальный fix со стороны Anthropic **не ожидается**. Defense-in-depth на стороне application code (dev-pomogator scripts) — единственное стабильное решение.
+
+### Sources
+
+- [Issue #16305](https://github.com/anthropics/claude-code/issues/16305)
+- [Issue #21915](https://github.com/anthropics/claude-code/issues/21915)
+- [Issue #36915](https://github.com/anthropics/claude-code/issues/36915)
+- [Issue #50616](https://github.com/anthropics/claude-code/issues/50616)
+- [Issue #26983 (feature request)](https://github.com/anthropics/claude-code/issues/26983)
+- [Pipe Terminal Output to Claude (clipgate blog)](https://clipgate.github.io/blog/pipe-terminal-output-to-claude-cursor-aider/)
+- [jonhoo/avdl CLAUDE.md — community workaround documentation citing cc-16305](https://github.com/jonhoo/avdl)
+
 ## Project Context & Constraints
 
 ### Relevant Rules

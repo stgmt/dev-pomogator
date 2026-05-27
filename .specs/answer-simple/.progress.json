@@ -1,0 +1,28 @@
+{
+  "version": 3,
+  "featureSlug": "answer-simple",
+  "createdAt": "2026-05-23T18:41:34.265Z",
+  "currentPhase": "Complete",
+  "phases": {
+    "Discovery": {
+      "completedAt": "2026-05-23T18:48:20.589Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-05-23T19:13:07.385Z"
+    },
+    "Context": {
+      "completedAt": "2026-05-23T18:48:20.589Z",
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    },
+    "Requirements": {
+      "completedAt": "2026-05-23T19:29:00.853Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-05-23T19:33:28.103Z"
+    },
+    "Finalization": {
+      "completedAt": "2026-05-23T19:35:54.496Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-05-23T19:37:42.457Z"
+    }
+  }
+}

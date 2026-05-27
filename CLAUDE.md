@@ -59,6 +59,7 @@ dev-pomogator distributed как canonical Claude Code marketplace plugin (per A
 | atomic-update-lock | Lock через `flag: 'wx'` (O_EXCL), не exists-check + write | `.claude/rules/atomic-update-lock.md` |
 | no-unvalidated-manifest-paths | Пути из манифеста валидировать через resolve + startsWith(projectPath) | `.claude/rules/no-unvalidated-manifest-paths.md` |
 | claude-md-glossary | CLAUDE.md = глоссарий/индекс на rules; при добавлении/удалении правил обновлять таблицу | `.claude/rules/claude-md-glossary.md` |
+| clear-questions-to-user | Перед каждым ответом/вопросом — шаблон самопроверки: (1) что я понял бытовым языком, (2) черновик, (3) самооценка "поймёт?", (4) ответ = микроистория с 5 опорными точками (откуда пришли → что юзер сказал → что сделал и почему → где сейчас → дальше), (5) переписать если не прошло. При "не понял" — СТОП, прогнать шаблон заново. Часть extension `answer-simple` (skill для on-demand аудита) | `.claude/rules/answer-simple/clear-questions-to-user.md` |
 | self-improving | Real-time детекция ситуаций для новых rules/skills/hooks (триггеры T2/T3/T4/T6 + automation hints) | `.claude/rules/suggest-rules/self-improving.md` |
 | simplify-extended | При /simplify проверять спеки (нечёткие FR, reuse) и тесты (setup duplication, naming); различать systemic vs one-off issues (extension: auto-simplify) | `.claude/rules/auto-simplify/simplify-extended.md` |
 | tui-pilot-tests | TUI тесты через Textual Pilot API; запрет file-inspection тестов для виджетов | `.claude/rules/tui-pilot-tests.md` |
@@ -70,6 +71,7 @@ dev-pomogator distributed как canonical Claude Code marketplace plugin (per A
 | no-blocking-on-tests | Docker тесты 7-12 мин; НИКОГДА не блокировать сессию; run_in_background + продолжать работу; запрет naked `\| tail` в bg (используй `\| tee <path> \| tail -N`) | `.claude/rules/pomogator/no-blocking-on-tests.md` |
 | post-edit-verification | После КАЖДОГО изменения кода: build, copy installed, /run-tests background, screenshot если UI | `.claude/rules/pomogator/post-edit-verification.md` |
 | skill-allowed-tools-audit | При создании/модификации skill — проверь что allowed-tools покрывает ВСЕ инструменты workflow | `.claude/rules/checklists/skill-allowed-tools-audit.md` |
+| hook-install-verification | Добавил хук в extension.json — declared ≠ installed; проверь код-путь установщика (claude.ts→settings.local.json), впиши в settings.json для dogfood, CORE003_19 динамически покрывает что хук доезжает | `.claude/rules/checklists/hook-install-verification.md` |
 | installer-hook-formats | extension.json hooks имеют 3 формата (string, object, array) — обрабатывать все 3 | `.claude/rules/gotchas/installer-hook-formats.md` |
 | docker-no-git-repo | Docker тесты без .git — git команды fail, использовать env override | `.claude/rules/gotchas/docker-no-git-repo.md` |
 | proactive-investigation | Не спрашивай разрешение исследовать — делай сам; каждое утверждение с evidence; [UNVERIFIED] для непроверяемого | `.claude/rules/plan-pomogator/proactive-investigation.md` |
@@ -82,6 +84,10 @@ dev-pomogator distributed как canonical Claude Code marketplace plugin (per A
 | commands-via-skill-reference | `.onboarding.json.commands.*` обязаны ссылаться на skill-обёртку через `via_skill` если она существует; `forbidden_if_skill_present=true + via_skill set` требует non-empty `raw_pattern_to_block` (AJV custom keyword) | `.claude/rules/onboard-repo/commands-via-skill-reference.md` |
 | scope-gate/when-to-verify | Триггер map для `/verify-generic-scope-fix` skill: когда invoke (guard/policy файлы + enum/switch expansion) + hard-OUT signals (prevent H1 over-application) | `.claude/rules/scope-gate/when-to-verify.md` |
 | scope-gate/escape-hatch-audit | Audit workflow + anti-gaming guidance для `[skip-scope-verify:]` escape hatch через `.claude/logs/scope-gate-escapes.jsonl` | `.claude/rules/scope-gate/escape-hatch-audit.md` |
+| architecture-decision/when-to-build | Триггер map для `architecture-decision-builder` skill (greenfield stack choice): invoke когда нет build-manifest + greenfield triggers; hard-OUT brownfield/locked stack (prevent H1) | `.claude/rules/specs-workflow/architecture-decision/when-to-build-architecture.md` |
+| architecture-decision/escape-hatch-audit | Audit + anti-gaming для `[skip-architecture-axis:]` escape hatch через `.claude/logs/spec-architecture-escapes.jsonl` | `.claude/rules/specs-workflow/architecture-decision/escape-hatch-audit.md` |
+| extension-layout | Rules/skills ОБЯЗАНЫ жить в `.claude/rules/{ext}/` + `.claude/skills/{name}/` (repo root). v2: `extensions/` удалён — premise про `extensions/{ext}/` устарела, проверить в Phase 5 tails | `.claude/rules/extension-layout.md` |
+| spec-reality-check/maintain-evals-on-edit | При изменении `spec-reality-check` skill — ОБЯЗАТЕЛЬНО прогнать `run-evals.ts` + `bulk-run.ts` + `bench-synthetic.ts`. Bulk-run на 45 real specs поймал 4 false-positive bugs за 1 проход; isolated evals их не видят | `.claude/rules/spec-reality-check/maintain-evals-on-edit.md` |
 
 ### Triggered
 

@@ -10,6 +10,15 @@
 | [FR-4](FR.md#fr-4-log-rotation--gitignore--не-коммитить-test-run-log) | Gitignore verification | [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-4) | @feature3 | Draft |
 | [FR-5](FR.md#fr-5-exit-code-preservation--regression-guard) | Exit code preservation через pipefail | [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-5) | @feature1 | Draft |
 | [FR-6](FR.md#fr-6-feedback-memory--anti-pattern-зафиксирован-в-personal-memory--out-of-scope-частично) | Feedback memory | N/A | N/A | OUT OF SCOPE |
+| FR-7 | ~~Generic bg-log.sh wrapper~~ DEPRECATED v0.3.0 | ~~AC-7~~ | ~~@feature7~~ | DEPRECATED (replaced by FR-11) |
+| FR-8 | Rule update — confirmed Anthropic bug citations | [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8) | N/A | v0.2.0 |
+| FR-10 | Cleanup duplicate bg-log.sh (refactor) | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-10) | N/A | v0.3.0 |
+| FR-11 | Generic passthrough adapter | [AC-11](ACCEPTANCE_CRITERIA.md#ac-11-fr-11) | @feature11 | v0.3.0 |
+| FR-12 | Smart converter hook | [AC-12](ACCEPTANCE_CRITERIA.md#ac-12-fr-12) | @feature12 | v0.3.0 |
+| FR-13 | /run-tests SKILL.md description | [AC-13](ACCEPTANCE_CRITERIA.md#ac-13-fr-13) | N/A | v0.3.0 |
+| FR-14 | Skill trigger analysis report | [AC-14](ACCEPTANCE_CRITERIA.md#ac-14-fr-14) | N/A | v0.3.0 |
+| FR-15 | Three-benchmark report | [AC-15](ACCEPTANCE_CRITERIA.md#ac-15-fr-15) | N/A | v0.3.0 |
+| FR-16 | Installer hook path fix (conditional) | [AC-16](ACCEPTANCE_CRITERIA.md#ac-16-fr-16) | N/A | conditional |
 
 ## Functional Requirements
 
@@ -19,6 +28,15 @@
 - [FR-4: Log rotation / gitignore](FR.md#fr-4-log-rotation--gitignore--не-коммитить-test-run-log)
 - [FR-5: Exit code preservation](FR.md#fr-5-exit-code-preservation--regression-guard)
 - [FR-6: Feedback memory (OUT OF SCOPE)](FR.md#fr-6-feedback-memory--anti-pattern-зафиксирован-в-personal-memory--out-of-scope-частично)
+- ~~FR-7: Generic bg-log.sh wrapper (v0.2.0)~~ DEPRECATED v0.3.0 — replaced by FR-11
+- FR-8: Rule update — confirmed Anthropic bug citations (v0.2.0)
+- FR-10: Cleanup duplicate bg-log.sh (v0.3.0 refactor)
+- FR-11: Generic passthrough adapter (v0.3.0)
+- FR-12: Smart converter hook (v0.3.0)
+- FR-13: /run-tests SKILL.md description (v0.3.0)
+- FR-14: Skill trigger analysis report (v0.3.0)
+- FR-15: Three-benchmark report (v0.3.0)
+- FR-16: Installer hook path fix (v0.3.0 conditional)
 
 ## Non-Functional Requirements
 
@@ -35,3 +53,12 @@
 - [AC-4 (FR-3): mkdir -p перед write'ом](ACCEPTANCE_CRITERIA.md#ac-4-fr-3)
 - [AC-5 (FR-4): gitignore проверен](ACCEPTANCE_CRITERIA.md#ac-5-fr-4)
 - [AC-6 (FR-5): exit code сохраняется](ACCEPTANCE_CRITERIA.md#ac-6-fr-5)
+- ~~AC-7 (FR-7): bg-log.sh smoke + exit code + mkdir + sanitization + no-args~~ DEPRECATED v0.3.0 (replaced by AC-11)
+- [AC-10 (FR-10): cleanup verified](ACCEPTANCE_CRITERIA.md#ac-10-fr-10)
+- [AC-11 (FR-11): generic adapter smoke + integration](ACCEPTANCE_CRITERIA.md#ac-11-fr-11)
+- [AC-12 (FR-12): smart converter deny-message](ACCEPTANCE_CRITERIA.md#ac-12-fr-12)
+- [AC-13 (FR-13): SKILL.md keywords + Generic mode section](ACCEPTANCE_CRITERIA.md#ac-13-fr-13)
+- [AC-14 (FR-14): analysis report saved](ACCEPTANCE_CRITERIA.md#ac-14-fr-14)
+- [AC-15 (FR-15): benchmark report saved](ACCEPTANCE_CRITERIA.md#ac-15-fr-15)
+- [AC-16 (FR-16): installer hook path bug (conditional)](ACCEPTANCE_CRITERIA.md#ac-16-fr-16-conditional)
+- [AC-8 (FR-8): rule 4 issue links + file-redirect pattern + bg-log.sh reference](ACCEPTANCE_CRITERIA.md#ac-8-fr-8)

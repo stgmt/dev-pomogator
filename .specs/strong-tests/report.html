@@ -1,0 +1,1451 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>strong-tests — отчёт сборки v2</title>
+<style>
+:root {
+  --bg: #fafaf9; --fg: #18181b; --muted: #71717a; --border: #e4e4e7;
+  --accent: #0369a1; --accent-soft: #e0f2fe; --card-bg: #ffffff;
+  --code-bg: #f4f4f5; --stripe: #f7f7f6;
+  --explainer-bg: #fef9c3; --explainer-fg: #713f12; --explainer-border: #eab308;
+  --ok: #15803d; --warn: #b45309; --err: #b91c1c; --skip: #6b7280;
+  --weak-bg: #fef2f2; --weak-border: #ef4444;
+  --strong-bg: #f0fdf4; --strong-border: #22c55e;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f0f10; --fg: #f4f4f5; --muted: #a1a1aa; --border: #2a2a2e;
+    --accent: #38bdf8; --accent-soft: #0c4a6e; --card-bg: #18181b;
+    --code-bg: #27272a; --stripe: #1a1a1d;
+    --explainer-bg: #422006; --explainer-fg: #fde68a; --explainer-border: #ca8a04;
+    --ok: #4ade80; --warn: #fbbf24; --err: #f87171; --skip: #a1a1aa;
+    --weak-bg: #3a0e0e; --weak-border: #ef4444;
+    --strong-bg: #052e16; --strong-border: #22c55e;
+  }
+}
+* { box-sizing: border-box; }
+html { font-size: 17px; scroll-behavior: smooth; scroll-padding-top: 1rem; }
+body {
+  margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+  background: var(--bg); color: var(--fg); line-height: 1.7;
+}
+header, main, footer { max-width: 940px; margin: 0 auto; padding: 1.5rem 1.75rem; }
+header { padding-bottom: 0.5rem; }
+header h1 { font-size: 2.2rem; margin: 0 0 0.4rem; letter-spacing: -0.02em; }
+header .subtitle { color: var(--muted); margin: 0 0 1.2rem; font-size: 1.05rem; }
+header .v2-tag { display: inline-block; background: var(--accent); color: white; padding: 0.1rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; margin-left: 0.5rem; vertical-align: middle; }
+
+nav.toc {
+  display: flex; flex-wrap: wrap; gap: 0.4rem;
+  padding: 0.6rem 0.8rem; background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: 8px; font-size: 0.92rem;
+}
+nav.toc a { color: var(--accent); text-decoration: none; padding: 0.15rem 0.5rem; border-radius: 4px; }
+nav.toc a:hover { background: var(--accent-soft); }
+
+main { padding-top: 0.5rem; }
+section { margin: 3rem 0; }
+h2 {
+  font-size: 1.55rem; margin: 0 0 0.6rem; padding-bottom: 0.4rem;
+  border-bottom: 2px solid var(--accent); letter-spacing: -0.01em;
+}
+h3 { font-size: 1.15rem; margin: 1.8rem 0 0.6rem; color: var(--fg); }
+h4 { font-size: 1rem; margin: 0.8rem 0 0.4rem; }
+p { margin: 0.6rem 0; }
+p.lead { font-size: 1.05rem; color: var(--muted); max-width: 65ch; }
+
+code {
+  background: var(--code-bg); padding: 0.1rem 0.35rem; border-radius: 3px;
+  font-family: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace; font-size: 0.88em;
+}
+pre {
+  background: var(--code-bg); padding: 0.9rem 1rem; border-radius: 6px;
+  overflow-x: auto; font-size: 0.85em; line-height: 1.55; border: 1px solid var(--border);
+}
+pre code { background: none; padding: 0; font-size: 1em; }
+
+a { color: var(--accent); }
+a:hover { text-decoration: underline; }
+
+.explainer {
+  background: var(--explainer-bg); color: var(--explainer-fg);
+  border-left: 4px solid var(--explainer-border); border-radius: 0 6px 6px 0;
+  padding: 0.85rem 1.1rem; margin: 0.8rem 0 1.4rem;
+  font-size: 1rem; line-height: 1.6;
+}
+.explainer .tag {
+  font-size: 0.78rem; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; margin-right: 0.4rem; opacity: 0.85;
+}
+.explainer p { margin: 0; }
+.explainer p + p { margin-top: 0.5rem; }
+.explainer strong { color: var(--explainer-fg); }
+
+.explainer-top {
+  background: var(--explainer-bg); color: var(--explainer-fg);
+  border: 1px solid var(--explainer-border); border-left-width: 4px;
+  border-radius: 8px; padding: 1rem 1.25rem; margin: 1rem 0 2rem;
+}
+.explainer-top h2 { margin: 0 0 0.4rem; font-size: 1.15rem; border: none; padding: 0; color: var(--explainer-fg); }
+
+.stats-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.8rem; margin: 1.2rem 0;
+}
+.stat { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 1rem 1.1rem; }
+.stat .number { font-size: 1.7rem; font-weight: 700; color: var(--accent); letter-spacing: -0.02em; line-height: 1.15; }
+.stat .label { font-size: 0.85rem; color: var(--muted); margin-top: 0.3rem; line-height: 1.45; }
+
+.cards-2col { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0.8rem; margin: 1rem 0; }
+.card {
+  background: var(--card-bg); border: 1px solid var(--border);
+  border-left: 3px solid var(--accent); border-radius: 6px;
+  padding: 0.9rem 1.1rem;
+}
+.card p { font-size: 0.95rem; color: var(--fg); margin: 0.3rem 0; }
+.card a { font-size: 0.85rem; word-break: break-all; }
+.card.new { border-left-color: var(--ok); }
+.card.new::before { content: "NEW"; display: inline-block; font-size: 0.65rem; font-weight: 700; background: var(--ok); color: white; padding: 0.1rem 0.4rem; border-radius: 3px; letter-spacing: 0.05em; margin-bottom: 0.3rem; }
+
+.callout {
+  background: var(--card-bg); border-left: 4px solid var(--warn);
+  border-radius: 0 6px 6px 0; padding: 1rem 1.2rem; margin: 1rem 0;
+}
+.callout h4 { margin-top: 0; color: var(--warn); }
+
+.table-wrap { overflow-x: auto; margin: 0.8rem 0; }
+table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+th, td { padding: 0.55rem 0.7rem; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { font-weight: 600; color: var(--muted); font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.04em; }
+tbody tr:nth-child(even) { background: var(--stripe); }
+
+.pill {
+  display: inline-block; padding: 0.15rem 0.6rem; border-radius: 99px;
+  font-size: 0.72rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap;
+}
+.pill.ok    { background: rgba(21,128,61,0.15); color: var(--ok); }
+.pill.warn  { background: rgba(180,83,9,0.15); color: var(--warn); }
+.pill.err   { background: rgba(185,28,28,0.15); color: var(--err); }
+.pill.skip  { background: rgba(107,114,128,0.15); color: var(--skip); }
+
+details {
+  margin: 0.8rem 0; border: 1px solid var(--border); border-radius: 6px; background: var(--card-bg);
+}
+details summary {
+  cursor: pointer; padding: 0.7rem 1rem; font-weight: 600; color: var(--accent); user-select: none;
+}
+details summary:hover { background: var(--accent-soft); border-radius: 6px; }
+details[open] summary { border-bottom: 1px solid var(--border); border-radius: 6px 6px 0 0; }
+details > *:not(summary) { padding: 0 1rem 0.6rem; }
+details > .table-wrap { padding: 0 0.5rem 0.6rem; }
+
+.diagram { margin: 1rem 0; text-align: center; color: var(--fg); }
+.diagram svg { max-width: 100%; height: auto; }
+
+ul.checks { list-style: none; padding-left: 0; }
+ul.checks li { padding: 0.25rem 0 0.25rem 1.6rem; position: relative; }
+ul.checks li::before { content: ""; position: absolute; left: 0; top: 0.5rem; width: 1.1rem; }
+ul.checks li.ok::before  { content: "✓"; color: var(--ok); font-weight: 700; }
+ul.checks li.skip::before { content: "—"; color: var(--skip); }
+
+/* WEAK vs STRONG side-by-side */
+.ws-pair { display: grid; grid-template-columns: 1fr; gap: 0.6rem; margin: 0.6rem 0 1rem; }
+@media (min-width: 720px) { .ws-pair { grid-template-columns: 1fr 1fr; } }
+.ws-block { border-radius: 6px; padding: 0.6rem 0.8rem; }
+.ws-block.weak { background: var(--weak-bg); border: 1px solid var(--weak-border); border-left-width: 4px; }
+.ws-block.strong { background: var(--strong-bg); border: 1px solid var(--strong-border); border-left-width: 4px; }
+.ws-block h4 { margin: 0 0 0.3rem; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.ws-block.weak h4 { color: var(--err); }
+.ws-block.strong h4 { color: var(--ok); }
+.ws-block pre { margin: 0.2rem 0 0; background: var(--code-bg); border: none; }
+.mutation-note {
+  background: var(--card-bg); border-left: 3px solid var(--warn);
+  padding: 0.6rem 0.9rem; margin: 0.4rem 0 0.6rem; font-size: 0.92rem;
+}
+.mutation-note strong { color: var(--warn); }
+
+/* Academic chain ribbon */
+.chain {
+  display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 1rem 0;
+  font-size: 0.82rem;
+}
+.chain-step {
+  background: var(--card-bg); border: 1px solid var(--border); border-radius: 4px;
+  padding: 0.3rem 0.55rem; white-space: nowrap;
+}
+.chain-step strong { color: var(--accent); }
+.chain-sep { color: var(--muted); align-self: center; }
+
+footer {
+  border-top: 1px solid var(--border); color: var(--muted);
+  font-size: 0.88rem; padding-top: 1.5rem; padding-bottom: 3rem;
+}
+
+@media print {
+  body { background: white; color: black; }
+  nav.toc, details summary { display: none; }
+  details > *:not(summary) { display: block !important; padding: 0 !important; }
+  section { page-break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>strong-tests <span class="v2-tag">research v2</span></h1>
+  <p class="subtitle">Skill для генерации mutation-устойчивых тестов в dev-pomogator. Phase 4–6 deliverable + расширенный research, 11 мая 2026.</p>
+  <nav class="toc" aria-label="Оглавление">
+    <a href="#tldr">TL;DR</a>
+    <a href="#why">Зачем</a>
+    <a href="#examples">Примеры WEAK→STRONG</a>
+    <a href="#existing">Чужие скиллы</a>
+    <a href="#motivation">Мотивация</a>
+    <a href="#spec">Спека + альтернативы</a>
+    <a href="#arch">Архитектура</a>
+    <a href="#tools">Mutation-tools</a>
+    <a href="#verify">Проверка</a>
+    <a href="#revisions">Что переосмыслили</a>
+    <a href="#limits">Не вошло</a>
+  </nav>
+
+  <aside class="explainer-top">
+    <h2>💬 Что в этом файле — простыми словами</h2>
+    <p>Это отчёт о том, что мы собрали в этой сессии: новый плагин для Claude Code под названием <code>strong-tests</code>. Зачем он нужен — заставлять AI писать <em>качественные</em> тесты, а не «тесты которые проходят, а баг всё равно случился».</p>
+    <p><strong>Версия v2</strong>: после первого ревью user сказал «ресерч слаботват, мало примеров и вариантов решения». Поэтому теперь: <strong>8 peer-reviewed источников</strong> (вместо 5 блогов), <strong>11 конкретных WEAK→STRONG примеров кода</strong>, <strong>4–7 альтернатив на каждое решение</strong>, и таблицы <strong>альтернативных mutation-тулов</strong> для каждого стэка.</p>
+    <p><strong>Как читать:</strong> сверху TL;DR. Дальше детали по разделам. В начале <strong>каждого раздела</strong> — жёлтый блок «💬 простыми словами», который объясняет суть. Если жёлтый блок понятен и хватает — детали в этом разделе можно пропустить.</p>
+  </aside>
+</header>
+
+<main>
+
+<!-- ====================================================== -->
+<section id="tldr">
+<h2>1. TL;DR</h2>
+<div class="explainer">
+  <p><span class="tag">💬 Простыми словами</span> Самое главное за 30 секунд. <strong>Четыре цифры</strong> из настоящих исследований показывают, почему задача вообще существует (LLM пишет много слабых тестов). <strong>Пять пунктов</strong> — что мы в итоге сделали, чтобы эту проблему чинить.</p>
+</div>
+
+<div class="stats-grid">
+  <div class="stat">
+    <div class="number">74.99%</div>
+    <div class="label">из всех багов, которые тесты от AI <strong>не ловят</strong>, такая доля — потому что AI забыл подать в тест нужные входные значения (пустую строку, <code>null</code>, очень большое число, юникод). <em>Schäfer arXiv 2406.18181 §3.4.</em></div>
+  </div>
+  <div class="stat">
+    <div class="number">100% → 4%</div>
+    <div class="label">конкретный кейс: Llama-3.3 на HumanEval-Java id_81 (date validator) дала <strong>100% покрытие строк и веток</strong> — но реально ловила только <strong>4% мутаций</strong>. Пропустила Feb 29 leap year boundary. <em>MutGen arXiv 2506.02954 (Jun 2025).</em></div>
+  </div>
+  <div class="stat">
+    <div class="number">73%</div>
+    <div class="label">LLM-тестов инженеры Meta приняли в продакшен — но <strong>только после</strong> того, как AI прогнал свои тесты через mutation-tool и докрутил то, что не ловило баги. <em>Meta ACH FSE 2025.</em></div>
+  </div>
+  <div class="stat">
+    <div class="number">≥70%</div>
+    <div class="label">пороговое значение: сколько подломов в коде тест должен ловить, чтобы для критичного кода (auth, billing) считаться достаточным. <em>OutSight + Meta + Levnikolaevich consensus.</em></div>
+  </div>
+</div>
+
+<details>
+<summary>📖 Глоссарий — что значат термины выше</summary>
+<dl style="margin:0.5rem 0;">
+  <dt style="font-weight:600;color:var(--accent);margin-top:0.6rem;">Coverage (покрытие)</dt>
+  <dd style="margin:0.2rem 0 0 1rem;">Сколько строк кода тест выполняет. <strong>Не</strong> то же самое, что «сколько багов тест ловит». Можно иметь 100% coverage и пропускать большинство багов (см. CORE007_04 ниже и MutGen 2025 пример).</dd>
+  <dt style="font-weight:600;color:var(--accent);margin-top:0.6rem;">Mutation testing</dt>
+  <dd style="margin:0.2rem 0 0 1rem;">Тул <strong>намеренно ломает</strong> код (меняет <code>&gt;</code> на <code>&gt;=</code>, инвертирует <code>if</code>, удаляет строку, и т.д.) и проверяет — упал ли тест. Если тест проходит на сломанном коде — тест бесполезный. Доля пойманных подломов = <strong>mutation score / kill rate</strong>.</dd>
+  <dt style="font-weight:600;color:var(--accent);margin-top:0.6rem;">PBT — Property-Based Testing</dt>
+  <dd style="margin:0.2rem 0 0 1rem;">Вместо «проверь что <code>f(2) === 4</code>» пишешь «проверь что <code>f(x)</code> всегда возвращает положительное при положительном <code>x</code>» — тул сам гоняет 100–1000 случайных входов, включая злые (<code>0</code>, <code>null</code>, MAX_INT, юникод).</dd>
+  <dt style="font-weight:600;color:var(--accent);margin-top:0.6rem;">Реальные mutation-тулы для каждого стэка</dt>
+  <dd style="margin:0.2rem 0 0 1rem;">
+    <ul style="margin:0;padding-left:1.2rem;">
+      <li><strong>TypeScript / JavaScript</strong> — <code>Stryker.js</code> (2.9k stars, обновляется ежемесячно). Работает с vitest / jest / mocha / jasmine / karma / cypress.</li>
+      <li><strong>Python</strong> — <code>mutmut</code> (1.3k stars, активен). Альтернатива для опытных: <code>cosmic-ray</code> (632 stars).</li>
+      <li><strong>Java</strong> — <code>PIT</code> (Pitest, 1.8k stars). Работает с JUnit / TestNG. Платная альтернатива с расширенным набором мутаций: ArcMutate.</li>
+      <li><strong>C# / .NET</strong> — <code>Stryker.NET</code> (2.0k stars, обновляется ежемесячно). Работает с xUnit / NUnit / MSTest / Fixie.</li>
+      <li><strong>Rust</strong> — <code>cargo-mutants</code> (1.2k stars, обновляется раз в 2 недели). Единственный живой выбор; mutagen и mutpy умерли.</li>
+      <li><strong>Go</strong> — <strong>2 живых тула</strong>: <code>gremlins</code> для микросервисов (335 stars, но «часы на больших модулях») + <code>avito-tech/go-mutesting</code> для монолитов (форк stale-репы, 669 stars).</li>
+    </ul>
+    Скилл сам определяет стэк по manifests (package.json / pyproject.toml / *.csproj / go.mod / Cargo.toml / pom.xml) и запускает нужный тул.
+  </dd>
+  <dt style="font-weight:600;color:var(--accent);margin-top:0.6rem;">fast-check / Hypothesis</dt>
+  <dd style="margin:0.2rem 0 0 1rem;">Реальные тулы для PBT. fast-check — для TS. Hypothesis — для Python. Скилл их подключает в новые тесты.</dd>
+  <dt style="font-weight:600;color:var(--accent);margin-top:0.6rem;">Shrinking</dt>
+  <dd style="margin:0.2rem 0 0 1rem;">Когда PBT находит failing input — он его «ужимает» до минимального примера. Бывает <em>integrated</em> (Hypothesis/Hedgehog/fast-check/proptest — лучшее качество) и <em>manual</em> (классика QuickCheck/ScalaCheck — устаревший подход).</dd>
+</dl>
+</details>
+
+<h3>Что построено</h3>
+<ul>
+  <li>4 файла в <code>.claude/skills/strong-tests/</code>: <code>SKILL.md</code>, <code>references/anti-patterns.md</code>, <code>references/tooling-setup.md</code>, <code>scripts/run-mutation.ts</code>.</li>
+  <li>Регистрация в <code>extensions/test-quality/extension.json</code> рядом со skill'ами <code>dedup-tests</code> и <code>tests-create-update</code>.</li>
+  <li>3 режима работы: <strong>Greenfield</strong> (PBT + новые тесты), <strong>Audit</strong> (8 анти-паттернов), <strong>Mutation-feedback</strong> (loop до ≥70%).</li>
+  <li>12-point self-eval как non-skippable final gate.</li>
+  <li>Auto-detect 6 стэков по manifests. TS+Python — full dispatch, Java/C#/Go/Rust — пока только документация в references/.</li>
+</ul>
+
+<p class="lead"><strong>Ключевая идея:</strong> «покрытие 92% строк» НЕ значит «тесты ловят 92% багов». Реально измерить силу теста можно только так: <strong>(1)</strong> намеренно сломать код в N местах и проверить — упадёт ли тест (= mutation testing), <strong>(2)</strong> вместо одного захардкоженного примера прогнать функцию на сотнях случайных входов (= PBT). Все цифры выше — из peer-reviewed исследований.</p>
+</section>
+
+<!-- ====================================================== -->
+<section id="why">
+<h2>2. Зачем — эмпирическая база (расширенная)</h2>
+<div class="explainer">
+  <p><span class="tag">💬 Простыми словами</span> Доказательства, что проблема — настоящая. <strong>Не один блог</strong>, а <strong>20 лет академических исследований</strong>: 8 peer-reviewed работ через ICSE / FSE / ISSTA / TSE плюс свежие LLM×mutation исследования 2024–2025. Полная таблица из 18 источников — в спойлере ниже.</p>
+</div>
+
+<h3>20-летняя эмпирическая цепочка</h3>
+<p class="lead">Идея «mutation testing работает» — не новая. Восемь рецензированных научных работ за 20 лет:</p>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Год</th><th>Автор</th><th>Что показано простыми словами</th></tr></thead>
+<tbody>
+<tr><td><strong>2005</strong></td><td>Andrews</td><td>«Намеренно сломать код в N местах» (мутации) — валидный способ проверять тесты. Это не синтетические баги, они ведут себя как реальные.</td></tr>
+<tr><td><strong>2014</strong></td><td>Just</td><td>На 357 настоящих багов: чем больше мутаций тест ловит — тем больше реальных багов он же ловит. <strong>Coverage этого не предсказывает.</strong></td></tr>
+<tr><td><strong>2014</strong></td><td>Inozemtseva &amp; Holmes</td><td><strong>Главная работа</strong>: на 5 крупных Java-проектах доказали что % покрытия НЕ коррелирует с тем, насколько тесты эффективны. Получила академическую награду MIP в 2024.</td></tr>
+<tr><td><strong>2016</strong></td><td>Coles</td><td>Описал инструмент PIT — первый практический mutation tool для Java на скорости «минуты вместо дней».</td></tr>
+<tr><td><strong>2018</strong></td><td>Petrović (Google)</td><td>Google внедрил mutation testing в свой CI на 6000 разработчиков. Чтобы не падало по производительности — стали проверять только изменённые строки + игнорировать «неинтересные» мутации.</td></tr>
+<tr><td><strong>2021</strong></td><td>Petrović (Google)</td><td>Через 3 года: уже 24000 разработчиков, 1000 проектов, 500 миллионов тестов в день. Подход выдержал scale.</td></tr>
+<tr><td><strong>2024</strong></td><td>MuTAP</td><td>Первая академическая статья которая описала: «давайте после прогона LLM сразу прогоним mutation testing и скормим обратно AI выжившие мутанты». Тот же loop что у OutSight в блоге, но peer-reviewed.</td></tr>
+<tr><td><strong>2025</strong></td><td>MutGen + Meta ACH</td><td><strong>Финальная валидация:</strong> Meta развернула LLM↔mutation loop в проде на FB/Instagram/WhatsApp — 73% сгенерированных тестов приняли инженеры. MutGen — точная цифра «100% покрытие / 4% mutation» на конкретной задаче.</td></tr>
+</tbody>
+</table>
+</div>
+<p style="font-size:0.85rem;color:var(--muted);"><em>ICSE / FSE / ISSTA — топовые академические конференции по software engineering. TSE — научный журнал. arXiv — онлайн-архив препринтов. «peer-reviewed» = прошло рецензию учёных до публикации.</em></p>
+
+<div class="cards-2col">
+  <div class="card new">
+    <h4>Coverage врёт — каноническое доказательство</h4>
+    <p><em>Inozemtseva &amp; Holmes, 2014 (научная конференция ICSE)</em></p>
+    <p>Прогнали <strong>5 крупных Java-проектов × 100 тыс. строк кода × 1000+ тестов = 31000 наборов тестов</strong>. Вердикт прямой цитатой: «<strong>высокое покрытие не значит что набор тестов эффективен</strong>». Тип покрытия не важен — строчное и ветвевое предсказывают одинаково плохо. Получила награду «Самая влиятельная статья» (Most Influential Paper) на конференции ICSE в 2024.</p>
+    <a href="https://www.cs.ubc.ca/~rtholmes/papers/icse_2014_inozemtseva.pdf">скачать статью (PDF)</a>
+  </div>
+  <div class="card new">
+    <h4>А мутации — это не просто синтетические баги?</h4>
+    <p><em>Just et al., 2014 (научная конференция FSE)</em></p>
+    <p>Этот вопрос возникает естественно. Авторы проверили на <strong>357 реальных багах</strong> в 5 open-source проектах (321 тыс. строк кода). Вывод прямой цитатой: «<strong>статистически значимая корреляция между поимкой мутаций и поимкой реальных багов, причём независимо от покрытия</strong>». Получила награду ACM SIGSOFT Distinguished + «Самая влиятельная статья FSE 2024».</p>
+    <a href="https://homes.cs.washington.edu/~mernst/pubs/mutation-effectiveness-fse2014-abstract.html">страница статьи</a>
+  </div>
+  <div class="card new">
+    <h4>Google внедрил mutation testing в свой CI на 24000 человек</h4>
+    <p><em>Petrović et al., 2018 + 2021 (научные журналы ICSE-SEIP и IEEE TSE)</em></p>
+    <p>Через 3 года после первого внедрения: <strong>24000 разработчиков</strong>, <strong>1000+ проектов</strong>, <strong>2 миллиарда строк кода</strong>, <strong>500 млн тестов в день</strong>. Чтобы это масштабировалось, ввели два приёма: (1) проверять только изменённые файлы в коммите (не весь репо); (2) фильтровать «неинтересные» мутации (например в комментариях).</p>
+    <a href="https://arxiv.org/abs/2102.11378">препринт статьи</a>
+  </div>
+  <div class="card new">
+    <h4>Главная цифра «100% покрытие / 4% mutation» — теперь из науки</h4>
+    <p><em>MutGen, июнь 2025 (рецензированный препринт на arXiv)</em></p>
+    <p>Раньше эту цифру брали из блога. Теперь — из рецензированной статьи. Модель Llama-3.3 написала тесты для валидатора дат (задача HumanEval-Java id_81): получила <strong>100% покрытия строк и веток</strong>, но реально ловила только <strong>4% подломов в коде</strong>. Промах — функция не проверяла что 29 февраля 2025 невалидная дата (2025 не високосный).</p>
+    <a href="https://arxiv.org/abs/2506.02954">статья на arXiv</a>
+  </div>
+  <div class="card new">
+    <h4>Volvo: 3000 страниц спеки → 200+ найденных багов</h4>
+    <p><em>Hughes &amp; Quviq, 2016 (Springer book chapter)</em></p>
+    <p>Крупнейший задокументированный <strong>не-AI индустриальный случай</strong> property-based testing. AUTOSAR — стандарт для электронных блоков управления в автомобилях. <strong>3000 страниц текстовой спеки</strong> скомпилированы в исполнимые модели на QuickCheck. <strong>200+ багов</strong> найдено у Volvo и поставщиков. Метод официально признан «эффективнее, корректнее, дешевле» прежнего ручного.</p>
+    <a href="https://link.springer.com/chapter/10.1007/978-3-319-30936-1_9">Springer — Testing the Hard Stuff</a>
+  </div>
+  <div class="card">
+    <h4>34–62% AI-тестов невалидны, 75% багов проходят мимо</h4>
+    <p><em>Schäfer et al., 2024 (препринт arXiv 2406.18181)</em></p>
+    <p>34.44–61.78% тестов от LLM не компилируются. Из тех багов которые тесты пропускают, <strong>74.99%</strong> — потому что AI забыл подать в тест нужный тип входа. GPT-4: покрывает 40.43% строк против EvoSuite (классический генератор) 78.91%. <em>87.13% багов не детектятся из-за того что тесты вообще не запустились (compilation errors).</em></p>
+    <a href="https://arxiv.org/html/2406.18181v1">препринт</a>
+  </div>
+  <div class="card">
+    <h4>Реальный случай: 92% покрытия и баг в проде 2 недели</h4>
+    <p><em>OutSight AI, 2025 (blog post)</em></p>
+    <p>Reconciliation workflow (свод платежей) — 92% покрытия, 140 unit-тестов, всё зелёное. И две недели в проде молча дублировал line items. AI сравнивал объекты по ссылке (<code>===</code>), а должен был — по бизнес-ключу. После того как прогнали через mutation tool и докрутили: <strong>70% → 78%</strong>.</p>
+    <a href="https://medium.com/@outsightai/the-truth-about-ai-generated-unit-tests-why-coverage-lies-and-mutations-dont-fcd5b5f6a267">пост на Medium</a>
+  </div>
+  <div class="card">
+    <h4>Meta развернула в проде на FB/Instagram/WhatsApp</h4>
+    <p><em>Meta ACH, 2025 (конференция FSE)</em></p>
+    <p>Инструмент ACH (Automated Compliance Hardening) — LLM генерирует тесты, mutation tool проверяет их силу, AI докручивает выжившие мутации. Запустили в проде на Facebook, Instagram, WhatsApp, Quest. <strong>73%</strong> сгенерированных тестов приняли privacy-инженеры. Точность детектора эквивалентных мутаций <strong>0.95</strong> после предобработки.</p>
+    <a href="https://engineering.fb.com/2025/09/30/security/llms-are-the-key-to-mutation-testing-and-better-compliance/">статья на engineering.fb.com</a>
+  </div>
+</div>
+
+<details>
+<summary>Полная таблица источников (20 записей)</summary>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Год</th><th>Автор</th><th>Что доказали / показали</th><th>Конкретное число</th></tr></thead>
+<tbody>
+<tr><td>2005</td><td>Andrews</td><td>Намеренные мутации в коде — валидный способ проверять тесты, ведут себя как реальные баги</td><td>Hand-seeded баги ловятся хуже мутаций — мутации более консервативный proxy</td></tr>
+<tr><td>2014</td><td>Just</td><td>Поимка мутаций коррелирует с поимкой реальных багов независимо от покрытия</td><td>357 реальных багов в 5 OSS-проектах, 321 тыс. строк</td></tr>
+<tr><td>2014</td><td>Inozemtseva</td><td>Высокое покрытие НЕ значит эффективные тесты — каноническая работа</td><td>5 Java-проектов × 100K+ LOC, награда MIP 2024</td></tr>
+<tr><td>2016</td><td>Coles</td><td>PIT — первый практический mutation tool для Java, на байт-коде</td><td>«Минуты вместо дней» по сравнению с прежними</td></tr>
+<tr><td>2018</td><td>Petrović (Google)</td><td>Mutation testing в Google CI: только изменённые строки + фильтр «неинтересных» мутаций</td><td>6000 разработчиков, 30% диффов покрыты</td></tr>
+<tr><td>2021</td><td>Petrović (Google)</td><td>Через 3 года: подход выдержал scale</td><td>24K разработчиков, 1K проектов, 500M тестов/день</td></tr>
+<tr><td>2024</td><td>MuTAP</td><td>Первая академическая статья описавшая loop «LLM → mutation → обратно AI»</td><td>Academic version of OutSight blog loop</td></tr>
+<tr><td>2024</td><td>arXiv 2406.09843</td><td>Comprehensive study: LLM как mutation generator</td><td>87.98% поимки багов vs rule-based 41.64%</td></tr>
+<tr><td>2025</td><td>MutGen</td><td>Главный источник для «100%/4%» — Llama-3.3 на валидаторе дат</td><td>89.5% kill rate vs vanilla LLM 77.9% (1144 мутации)</td></tr>
+<tr><td>2025</td><td>Meta ACH</td><td>LLM↔mutation loop в проде Facebook/Instagram/WhatsApp</td><td>73% acceptance, детектор эквивалентных 0.95</td></tr>
+<tr><td>2000</td><td>Claessen &amp; Hughes</td><td>Изобретение QuickCheck (PBT) — Haskell, ICFP</td><td>~300 строк кода, ~40 портов в разные языки</td></tr>
+<tr><td>2019</td><td>Hughes</td><td>«How to Specify It!» — 5 категорий PBT-свойств</td><td>postcondition / metamorphic / inductive / model-based / algebraic</td></tr>
+<tr><td>2019</td><td>MacIver &amp; Hatfield-Dodds</td><td>Hypothesis — internal byte-stream shrinking (новый подход)</td><td>&gt;100 тыс. скачиваний в неделю на момент публикации</td></tr>
+<tr><td>2016</td><td>Hughes &amp; Quviq</td><td>Volvo AUTOSAR: PBT в автомобильном проде</td><td>3000 страниц спеки → 200+ найденных багов</td></tr>
+<tr><td>2024</td><td>Schäfer</td><td>Тесты от LLM часто не компилируются и пропускают баги из-за отсутствующих входов</td><td>34–62% невалидны, 74.99% — missing-input</td></tr>
+<tr><td>2024</td><td>Ouédraogo</td><td>Доминирующие anti-pattern в LLM-тестах</td><td>Assertion Roulette + Magic Number — самые частые</td></tr>
+<tr><td>2021</td><td>Aljedaani</td><td>Распространённость Assertion Roulette в реальных тестах</td><td>54% в сгенерированных JUnit-тестах, &gt;50% в OSS Android</td></tr>
+<tr><td>2026</td><td>Anthropic Red Team</td><td>Поиск багов в Python-пакетах через Hypothesis</td><td>984 отчёта, 5 патчей приняты (NumPy, Lambda Powertools и др.)</td></tr>
+<tr><td>2025</td><td>OutSight AI (блог)</td><td>Реальный случай: 92% покрытия, баг в проде</td><td>92% line / 4% mutation; loop поднял 70%→78%</td></tr>
+<tr><td>2024</td><td>Ghiringhelli (блог)</td><td>Эксперимент со Stryker</td><td>93.1% покрытия / 58.62% mutation → 93.10% после 3 итераций</td></tr>
+</tbody>
+</table>
+<p style="font-size:0.85rem;color:var(--muted);margin-top:0.6rem;"><em>Сокращения в колонке Автор:</em> ICSE / FSE / ISSTA / TSE / ICFP / JOSS / IST / SEIP — названия конференций и журналов в которых статья опубликована. ACM SIGSOFT и IEEE — профессиональные организации присуждающие награды («Distinguished Paper», «Most Influential Paper»).</p>
+</div>
+</details>
+</section>
+
+<!-- ====================================================== -->
+<section id="examples">
+<h2>3. Конкретные примеры — «слабый» vs «крепкий» тест</h2>
+<div class="explainer">
+  <p><span class="tag">💬 Простыми словами</span> До этого было много цифр. А как это <strong>выглядит в коде</strong>? Ниже — <strong>11 пар «слабый тест → крепкий тест»</strong>. Для каждой: показано какую <strong>конкретную mutation слабая версия НЕ ловит</strong> и как крепкая её ловит. Все примеры — настоящий TypeScript / Python, не abstract foo/bar. Раскрывайте по очереди.</p>
+</div>
+
+<p>8 примеров — это анти-паттерны из catalogue. Плюс 3 реальных incident-класса: STRUCTURAL_INVARIANT (когда нужен PBT), PII_REDACTION (GDPR-class баг), MONEY_REFERENCE_EQUALITY (точно та ошибка которая случилась у OutSight).</p>
+
+<details>
+<summary>1. PERMISSIVE_MATCHING — <code>toBeDefined()</code> вместо <code>toEqual()</code></summary>
+<div class="ws-pair">
+  <div class="ws-block weak">
+    <h4>Слабый</h4>
+<pre><code>import { test, expect } from 'vitest';
+import { getUser } from '../src/users';
+
+test('getUser returns a user', async () =&gt; {
+  const user = await getUser(123);
+  expect(user).toBeDefined();
+  expect(user).toBeTruthy();
+});</code></pre>
+  </div>
+  <div class="ws-block strong">
+    <h4>Крепкий</h4>
+<pre><code>test('getUser(123) returns Alice with admin role', async () =&gt; {
+  const user = await getUser(123);
+  expect(user).toEqual({
+    id: 123,
+    email: 'alice@example.com',
+    role: 'admin',
+    createdAt: expect.any(Date),
+  });
+});</code></pre>
+  </div>
+</div>
+<div class="mutation-note"><strong>Выживает на слабом:</strong> Stryker <code>ObjectLiteral</code> mutator на <code>return</code> в getUser — замена объекта на <code>{}</code>. Слабый проходит (<code>{}</code> defined и truthy). Крепкий падает на equality.</div>
+</details>
+
+<details>
+<summary>2. ASSERTION_ROULETTE — 5 ассертов без сообщений</summary>
+<div class="ws-pair">
+  <div class="ws-block weak">
+    <h4>Слабый</h4>
+<pre><code>def test_user_profile():
+    profile = get_user_profile(user_id=42)
+    assert profile is not None
+    assert profile.email == "bob@example.com"
+    assert profile.role == "user"
+    assert profile.last_login_at is not None
+    assert profile.subscription.tier == "pro"</code></pre>
+  </div>
+  <div class="ws-block strong">
+    <h4>Крепкий</h4>
+<pre><code>def test_user_profile_returns_full_profile_for_id_42():
+    profile = get_user_profile(user_id=42)
+    assert profile is not None, "expected profile for user 42, got None"
+    assert profile.email == "bob@example.com", f"unexpected email: {profile.email}"
+    assert profile.role == "user", f"unexpected role: {profile.role}"
+    assert profile.last_login_at is not None, "user 42 should have logged in at least once"
+    assert profile.subscription.tier == "pro", f"unexpected tier: {profile.subscription.tier}"</code></pre>
+  </div>
+</div>
+<div class="mutation-note"><strong>Выживает на слабом:</strong> mutmut <code>string</code> mutator на <code>"user"</code> → <code>"XX"</code>. Тест падает на 3-й строке с пустым AssertionError — developer не знает что упало. С messages — мгновенный triage. <em>Эмпирика: Aljedaani arXiv 2104.14640 — Assertion Roulette в <strong>54%</strong> generated JUnit и &gt;50% OSS Android.</em></div>
+</details>
+
+<details>
+<summary>3. MAGIC_NUMBER — захардкоженная константа без комментария</summary>
+<div class="ws-pair">
+  <div class="ws-block weak">
+    <h4>Слабый</h4>
+<pre><code>test('retirement age for a 1965 birth year', () =&gt; {
+  expect(computeRetirementAge(1965)).toBe(65);
+});</code></pre>
+  </div>
+  <div class="ws-block strong">
+    <h4>Крепкий</h4>
+<pre><code>const BIRTH_YEAR_1965 = 1965;
+// Per UK State Pension Act 2014, anyone born in 1965 retires at 67
+// (not 65 — that was pre-2014 law)
+const EXPECTED_RETIREMENT_AGE_FOR_1965_COHORT = 67;
+
+test('cohort born 1965 retires at 67 per UK Pension Act 2014', () =&gt; {
+  expect(computeRetirementAge(BIRTH_YEAR_1965))
+    .toBe(EXPECTED_RETIREMENT_AGE_FOR_1965_COHORT);
+});</code></pre>
+  </div>
+</div>
+<div class="mutation-note"><strong>Выживает на слабом:</strong> Stryker <code>NumberLiteral</code> mutator на <code>return 65</code> → <code>return 64</code>. Слабый падает, но reviewer не знает 65 правильно или legacy. Крепкий цитирует regulation — можно сверить со статутом. Реальный UK pension policy инцидент 2016.</div>
+</details>
+
+<details>
+<summary>4. HAPPY_PATH_ONLY — только удачный сценарий (тест на 29 февраля выявляет баг)</summary>
+<div class="ws-pair">
+  <div class="ws-block weak">
+    <h4>Слабый</h4>
+<pre><code>def test_parse_iso_timestamp():
+    result = parse_iso_timestamp("2026-05-11T10:00:00Z")
+    assert result.year == 2026
+    assert result.month == 5
+    assert result.day == 11</code></pre>
+  </div>
+  <div class="ws-block strong">
+    <h4>Крепкий — example + boundary + PBT</h4>
+<pre><code>import pytest
+from hypothesis import given, strategies as st
+
+def test_parse_iso_timestamp_rejects_feb_29_non_leap():
+    with pytest.raises(ValueError, match="invalid date"):
+        parse_iso_timestamp("2025-02-29T00:00:00Z")  # 2025 not leap
+
+def test_parse_iso_timestamp_accepts_feb_29_leap():
+    result = parse_iso_timestamp("2024-02-29T00:00:00Z")
+    assert result.day == 29
+
+@given(st.datetimes(min_value=datetime(1900, 1, 1),
+                    max_value=datetime(2100, 12, 31)))
+def test_parse_iso_timestamp_roundtrip(dt):
+    iso = dt.replace(tzinfo=timezone.utc).isoformat().replace("+00:00", "Z")
+    assert parse_iso_timestamp(iso) == dt.replace(tzinfo=timezone.utc)</code></pre>
+  </div>
+</div>
+<div class="mutation-note"><strong>Выживает на слабом:</strong> mutmut <code>comparison</code> на validator <code>if month &gt; 12: raise</code> → <code>if month &gt;= 12: raise</code>. Слабый никогда не достигает границы. PBT находит off-by-one. <em>Этот же кейс — точно HumanEval-Java id_81 из MutGen 2025.</em></div>
+</details>
+
+<details>
+<summary>5. TAUTOLOGICAL — <code>expect(x).toBe(x)</code></summary>
+<div class="ws-pair">
+  <div class="ws-block weak">
+    <h4>Слабый</h4>
+<pre><code>test('shouldRetry returns the right boolean', () =&gt; {
+  const error = new HttpError(503);
+  const result = shouldRetry(error);
+  // mistake: comparing result to itself
+  expect(result).toBe(result);
+});</code></pre>
+  </div>
+  <div class="ws-block strong">
+    <h4>Крепкий</h4>
+<pre><code>test('shouldRetry returns true for 503 Service Unavailable', () =&gt; {
+  expect(shouldRetry(new HttpError(503))).toBe(true);
+});
+
+test('shouldRetry returns false for 400 Bad Request', () =&gt; {
+  expect(shouldRetry(new HttpError(400))).toBe(false);
+});</code></pre>
+  </div>
+</div>
+<div class="mutation-note"><strong>Выживает на слабом:</strong> Stryker <code>BooleanLiteral</code> mutator на <code>return true</code> → <code>return false</code>. Слабый проходит независимо — <code>x.toBe(x)</code> vacuously true.</div>
+</details>
+
+<details>
+<summary>6. TRIVIAL_INPUT — реальный CORE007_04 из dev-pomogator</summary>
+<div class="ws-pair">
+  <div class="ws-block weak">
+    <h4>Слабый — историческое</h4>
+<pre><code>test('logger.info writes structured log entry', () =&gt; {
+  logger.info('OK');
+  expect(captureLog()).toBe('OK');
+});</code></pre>
+  </div>
+  <div class="ws-block strong">
+    <h4>Крепкий</h4>
+<pre><code>test('logger.info writes structured entry with timestamp, level, context', () =&gt; {
+  const before = Date.now();
+  logger.info('user.login.failed', { userId: 42, reason: 'invalid_password' });
+  const after = Date.now();
+
+  const entry = captureLog();
+  expect(entry).toMatchObject({
+    level: 'info',
+    message: 'user.login.failed',
+    context: { userId: 42, reason: 'invalid_password' },
+  });
+  const ts = Date.parse(entry.timestamp);
+  expect(ts).toBeGreaterThanOrEqual(before);
+  expect(ts).toBeLessThanOrEqual(after);
+});</code></pre>
+  </div>
+</div>
+<div class="mutation-note"><strong>Выживает на слабом:</strong> Stryker <code>StringLiteral</code> на format template — replace <code>"{timestamp} [{level}] {message}"</code> на <code>""</code>. Слабый проходит (round-trip <code>'OK'</code> trivially). Крепкий проверяет каждое структурное поле + timestamp range — kill всех format/level/context mutations. <em>Это и есть тот самый случай из dev-pomogator commit 97a7c86.</em></div>
+</details>
+
+<details>
+<summary>7. SILENT_SKIP — <code>except: pass</code></summary>
+<div class="ws-pair">
+  <div class="ws-block weak">
+    <h4>Слабый</h4>
+<pre><code>def test_user_can_upload_avatar():
+    try:
+        response = client.post('/users/42/avatar', files={'file': ('avatar.png', b'&lt;png&gt;')})
+        assert response.status_code == 200
+    except Exception:
+        pass  # network flaky, ignore</code></pre>
+  </div>
+  <div class="ws-block strong">
+    <h4>Крепкий</h4>
+<pre><code>def test_user_can_upload_avatar():
+    response = client.post('/users/42/avatar', files={'file': ('avatar.png', b'&lt;png&gt;')})
+    assert response.status_code == 200, f"upload failed: {response.status_code} {response.text}"
+    assert response.json()['avatar_url'].endswith('.png')
+
+def test_user_avatar_upload_rejects_missing_file():
+    response = client.post('/users/42/avatar', files={})
+    assert response.status_code == 422
+
+def test_user_avatar_upload_rejects_oversized_file():
+    big = b'X' * (10 * 1024 * 1024 + 1)  # 10 MB + 1 byte over limit
+    response = client.post('/users/42/avatar', files={'file': ('big.png', big)})
+    assert response.status_code == 413</code></pre>
+  </div>
+</div>
+<div class="mutation-note"><strong>Выживает на слабом:</strong> mutmut <code>function-body</code> — replace endpoint handler на <code>raise NotImplementedError()</code>. Слабый всё ещё проходит (exception caught). Крепкий валится с конкретным status mismatch.</div>
+</details>
+
+<details>
+<summary>8. MISSING_AWAIT — забытый <code>await</code></summary>
+<div class="ws-pair">
+  <div class="ws-block weak">
+    <h4>Слабый</h4>
+<pre><code>test('createOrder persists the order', async () =&gt; {
+  // forgot `await` — assertion runs on Promise, not result
+  expect(createOrder({ userId: 42, items: ['SKU-1'] })).toBeDefined();
+});</code></pre>
+  </div>
+  <div class="ws-block strong">
+    <h4>Крепкий</h4>
+<pre><code>test('createOrder persists order and returns DB row with id', async () =&gt; {
+  const order = await createOrder({ userId: 42, items: ['SKU-1'] });
+  expect(order.id).toMatch(/^ord_[a-z0-9]{12}$/);
+  expect(order.userId).toBe(42);
+  expect(order.items).toEqual(['SKU-1']);
+  expect(order.status).toBe('pending');
+
+  const fromDb = await db.orders.findById(order.id);
+  expect(fromDb).toEqual(order);
+});</code></pre>
+  </div>
+</div>
+<div class="mutation-note"><strong>Выживает на слабом:</strong> Stryker <code>BlockStatement</code> mutator — replace <code>createOrder</code> body на <code>{}</code>. Слабый проходит (Promise всегда defined). Крепкий awaits + проверяет DB persistence — kill body-deletion.</div>
+</details>
+
+<details>
+<summary>9. STRUCTURAL_INVARIANT — example-based vs PBT (roundtrip)</summary>
+<div class="ws-pair">
+  <div class="ws-block weak">
+    <h4>Слабый — один пример</h4>
+<pre><code>test('serialize/deserialize round trips for a simple user', () =&gt; {
+  const original = { id: 1, name: 'Alice' };
+  expect(JSON.parse(JSON.stringify(original))).toEqual(original);
+});</code></pre>
+  </div>
+  <div class="ws-block strong">
+    <h4>Крепкий — PBT</h4>
+<pre><code>import fc from 'fast-check';
+
+test('serialize/deserialize is identity for all JSON-shaped users', () =&gt; {
+  fc.assert(fc.property(
+    fc.record({
+      id: fc.integer({ min: 1, max: 2 ** 31 - 1 }),
+      name: fc.string({ minLength: 1, maxLength: 200 }),
+      email: fc.emailAddress(),
+      roles: fc.array(fc.constantFrom('admin', 'user', 'guest'), { maxLength: 5 }),
+    }),
+    (user) =&gt; {
+      expect(deserialize(serialize(user))).toEqual(user);
+    },
+  ), { numRuns: 200, seed: 42 });
+});</code></pre>
+  </div>
+</div>
+<div class="mutation-note"><strong>Выживает на слабом:</strong> Stryker мутация на <code>JSON.stringify</code> replacer — dropping normalization для mixed-case keys. Example-based проходит (no normalization needed). PBT генерирует mixed-case строки → fails.</div>
+</details>
+
+<details>
+<summary>10. PII_REDACTION — partial redaction leaks email</summary>
+<div class="ws-pair">
+  <div class="ws-block weak">
+    <h4>Слабый</h4>
+<pre><code>def test_redact_email():
+    text = "Contact alice@example.com for details"
+    result = redact_pii(text)
+    assert "alice" not in result</code></pre>
+  </div>
+  <div class="ws-block strong">
+    <h4>Крепкий</h4>
+<pre><code>@pytest.mark.parametrize("email", [
+    "alice@example.com",
+    "bob.smith+filter@sub.example.co.uk",
+    "user@xn--bcher-kva.example",  # IDN
+])
+def test_redact_pii_replaces_email_with_marker(email):
+    text = f"Contact {email} for details"
+    result = redact_pii(text)
+    assert email not in result
+    assert "[REDACTED-EMAIL]" in result
+    assert "Contact [REDACTED-EMAIL] for details" == result
+
+@given(st.emails())
+def test_redact_pii_never_leaks_any_generated_email(email):
+    result = redact_pii(f"prefix {email} suffix")
+    assert email not in result, f"leaked email: {email}"
+    assert "@" not in result, f"@-symbol survived for: {email}"</code></pre>
+  </div>
+</div>
+<div class="mutation-note"><strong>Выживает на слабом:</strong> mutmut <code>function-body</code> — replace <code>redact_pii</code> на <code>return text.replace("alice", "[REDACTED]")</code>. Слабый проходит ("alice" нет), но <code>@example.com</code> утёк. Крепкий: <code>email not in result AND @ not in result</code> — kill partial-redaction. <em>GDPR/CCPA audit-class инцидент.</em></div>
+</details>
+
+<details>
+<summary>11. MONEY_REFERENCE_EQUALITY — реальный OutSight reconciliation bug</summary>
+<div class="ws-pair">
+  <div class="ws-block weak">
+    <h4>Слабый — точно OutSight pattern</h4>
+<pre><code>test('reconciliation matches duplicate line items', () =&gt; {
+  const a = { amount: 99.99, sku: 'SKU-1' };
+  const b = { amount: 99.99, sku: 'SKU-1' };
+  // BUG: compares object identity, not business equality
+  expect(isDuplicate(a, b)).toBe(true);
+});
+
+// Production code accidentally:
+function isDuplicate(a, b) { return a === b; }  // reference equality</code></pre>
+  </div>
+  <div class="ws-block strong">
+    <h4>Крепкий — example + симметрия через PBT</h4>
+<pre><code>test('isDuplicate identifies items with same sku + amount + currency', () =&gt; {
+  const a = { amount: 99.99, sku: 'SKU-1', currency: 'USD' };
+  const b = { amount: 99.99, sku: 'SKU-1', currency: 'USD' };
+  const c = { amount: 99.99, sku: 'SKU-1', currency: 'EUR' };
+  const d = { amount: 100.0,  sku: 'SKU-1', currency: 'USD' };
+
+  expect(isDuplicate(a, a)).toBe(true);
+  expect(isDuplicate(a, b)).toBe(true);   // structural equals
+  expect(isDuplicate(a, c)).toBe(false);  // currency differs
+  expect(isDuplicate(a, d)).toBe(false);  // amount differs
+});
+
+test('isDuplicate is symmetric', () =&gt; {
+  fc.assert(fc.property(
+    fc.record({ amount: fc.float({ min: 0, max: 1e9 }), sku: fc.string({ minLength: 1 }),
+                currency: fc.constantFrom('USD', 'EUR', 'GBP') }),
+    fc.record({ amount: fc.float({ min: 0, max: 1e9 }), sku: fc.string({ minLength: 1 }),
+                currency: fc.constantFrom('USD', 'EUR', 'GBP') }),
+    (a, b) =&gt; expect(isDuplicate(a, b)).toBe(isDuplicate(b, a)),
+  ));
+});</code></pre>
+  </div>
+</div>
+<div class="mutation-note"><strong>Выживает на слабом:</strong> если код использует <code>a === b</code> — на свежих объектах <em>fails</em>, но в проде объекты могли передаваться через цикл с одним и тем же reference, и тест проходит spuriously. <em>Это и есть OutSight bug — 92% coverage, 140 тестов, две недели дублей в проде.</em> Крепкий: разные instances + симметрия как PBT property — guaranteed catch.</div>
+</details>
+</section>
+
+<!-- ====================================================== -->
+<section id="existing">
+<h2>4. Аудит чужих скиллов — расширенная версия</h2>
+<div class="explainer">
+  <p><span class="tag">💬 Простыми словами</span> Первая версия аудита смотрела только на <strong>отдельные репозитории-скиллы</strong>. После замечания user'а («они мб не отдельным репо, а в составе») — прошлись шире. Нашли <strong>14 новых скиллов</strong> в местах где не смотрели: внутри dotfiles, multi-skill marketplaces, личных коллекций, Anthropic research artifacts.</p>
+  <p><strong>Главный итог:</strong> наша ниша «strong-tests» — комбинация (mutation feedback loop + PBT + 12-point checklist + «no fake-positive» discipline) — <strong>уникальна</strong>. Никто не собирает всё это в один workflow. Отдельные куски — есть, но фрагментированы по разным репам.</p>
+</div>
+
+<h3>Где они прячутся (4 типа хостинга)</h3>
+
+<div class="cards-2col">
+  <div class="card"><h4>Standalone репозитории</h4><p>7 (уже было в v1) + 1 новый — <strong>spec-shaker</strong>. Это классический формат: один репо = один skill.</p></div>
+  <div class="card"><h4>Multi-skill marketplaces</h4><p>5 крупных коллекций: <strong>obra/superpowers</strong> (185k★!), rohitg00, jeremylongshore, levnikolaevich, dykyi-roman. По 20-2810 скиллов в каждой.</p></div>
+  <div class="card"><h4>Personal dotfiles</h4><p>3 ключевых: <strong>citypaul/.dotfiles</strong> (655★ — главная находка), ChrisWiles, mcclowes. Скиллы лежат в <code>claude/.claude/skills/</code>.</p></div>
+  <div class="card"><h4>Anthropic ecosystem</h4><p>1 — <strong>mmaaz-git/agentic-pbt</strong>: published by Anthropic researchers с paper'ом (arXiv 2510.09907) и blog post на red.anthropic.com.</p></div>
+</div>
+
+<h3>Главные находки v2</h3>
+
+<details open>
+<summary><strong>citypaul/.dotfiles</strong> (655★) — самая богатая test-quality сборка из всех</summary>
+<p>6+ скиллов в одной dotfiles-репе:</p>
+<ul>
+  <li><code>mutation-testing/SKILL.md</code> + <code>resources/mutator-rules.md</code> — <strong>готовый каталог операторов мутации</strong> для JS/TS: arithmetic, boundary, boolean, equality, logical, string/array, method, optional chaining. Можем напрямую переиспользовать в <code>references/anti-patterns.md</code> нашего скилла.</li>
+  <li><code>test-design-reviewer/SKILL.md</code> — Dave Farley «8 свойств хорошего теста» + Farley Score (числовая оценка 0-10 с weighted формулой). <em>Origin концепции у Andrea Laforgia, см. ниже.</em></li>
+  <li><code>characterisation-tests/SKILL.md</code> — для legacy-кода без тестов (golden-master подход).</li>
+  <li><code>find-gaps/SKILL.md</code> — поиск пропусков в спеке и acceptance criteria. Не coverage, а семантический gap.</li>
+  <li><code>tdd/SKILL.md</code> — TDD-цикл RED-GREEN-<strong>MUTATE-KILL</strong>-REFACTOR. Mutation встроен в каждый TDD-tick.</li>
+  <li><code>react-testing/SKILL.md</code> — vitest-browser-react анти-паттерны.</li>
+</ul>
+<p><strong>Вердикт: взяли несколько паттернов</strong>. Особенно operator catalogue (мутации для JS/TS) и Farley Score (как rubric для нашего 12-point checklist).</p>
+</details>
+
+<details open>
+<summary><strong>lydiazbaziny/spec-shaker</strong> — другая парадигма mutation testing</summary>
+<p>Apache-2.0. Триггер: фраза «shake my spec».</p>
+<p>В отличие от Stryker/mutmut (которые мутируют через AST синтаксически — меняют <code>&gt;</code> на <code>&gt;=</code>) — spec-shaker использует <strong>LLM для генерации semantically broken implementations</strong>. Т.е. AI генерит «как бы реально написал бы этот код плохой программист» — это ближе к реальным багам чем синтаксические мутации.</p>
+<p><strong>Вердикт: взяли как companion-подход</strong>. AST-mutation (Stryker) ловит mechanical bugs; semantic-mutation (spec-shaker) ловит «человеческие» баги. Можно использовать вместе.</p>
+</details>
+
+<details open>
+<summary><strong>mmaaz-git/agentic-pbt</strong> (61★) — Anthropic research artifact с paper'ом</summary>
+<p>Custom command <code>/hypo &lt;target&gt;</code> — автономно пишет property-based тесты с Hypothesis. <strong>Mining properties из docstrings, type annotations, function names и comments</strong> — этот pattern мы можем взять для нашей Greenfield mode.</p>
+<p>Sandbox architecture: per-package venv, restricted permissions. Опубликован Anthropic researchers — есть paper (arXiv 2510.09907) и blog post (red.anthropic.com/2026/property-based-testing/). 56% bug reports valid; 32% reportable-quality. <strong>Запатчены NumPy, SciPy, Pandas, AWS Lambda Powertools.</strong></p>
+<p><strong>Вердикт: взяли паттерн</strong> mining properties из метаданных функции — это решает «AI не подал нужный input» проблему Schäfer 74.99%.</p>
+</details>
+
+<h3>Полная таблица — все 21 проверенных скиллов</h3>
+
+<h4>Standalone репозитории (7 старых + 1 новый)</h4>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Skill / репо</th><th>Звёзды</th><th>Вердикт</th><th>Почему</th></tr></thead>
+<tbody>
+<tr><td><code>honnibal/claude-skills/mutation-testing</code></td><td>~</td><td><span class="pill ok">взяли</span></td><td>8-категорийный mutation catalogue + diagnostic-quality rating</td></tr>
+<tr><td><code>honnibal/claude-skills/hypothesis-tests</code></td><td>~</td><td><span class="pill ok">взяли</span></td><td>Input-strategy + roundtrip/idempotence archetypes</td></tr>
+<tr><td><code>lydiazbaziny/spec-shaker</code> <span class="pill ok">NEW</span></td><td>~</td><td><span class="pill ok">взяли паттерн</span></td><td>LLM-driven semantic mutations вместо AST. Apache-2.0.</td></tr>
+<tr><td><code>levnikolaevich/claude-code-skills</code></td><td>464</td><td><span class="pill ok">взяли</span></td><td>Подтвердили 75% threshold</td></tr>
+<tr><td><code>clear-solutions/unit-tests-skills</code></td><td>~</td><td><span class="pill skip">мимо</span></td><td>Java/JUnit only, без mutation/PBT</td></tr>
+<tr><td><code>lackeyjb/playwright-skill</code></td><td>~</td><td><span class="pill skip">мимо</span></td><td>Browser e2e — другой домен</td></tr>
+<tr><td><code>trailofbits/skills/property-based-testing</code></td><td>~</td><td><span class="pill ok">взяли</span></td><td>Multi-language PBT (Hypothesis/fast-check/proptest/quickcheck/rapid/jqwik/ScalaCheck + Echidna для smart contracts). Включает их собственный mewt framework — mutation testing для C++/Go/JS/TS/Rust/Solidity/Sui Move.</td></tr>
+<tr><td><code>omkamal/pypict-claude-skill</code></td><td>~</td><td><span class="pill err">нейрослоп</span></td><td>Обёртка над одной либой, слабая description</td></tr>
+</tbody>
+</table>
+</div>
+
+<h4>Multi-skill marketplaces (5 — все новые)</h4>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Marketplace</th><th>Звёзды</th><th>Relevant skill(s)</th><th>Вердикт</th></tr></thead>
+<tbody>
+<tr><td><code>obra/superpowers</code></td><td><strong>185k</strong></td><td><code>test-driven-development</code>, <code>verification-before-completion</code>, <code>condition-based-waiting</code></td><td><span class="pill ok">взяли как baseline</span></td></tr>
+<tr><td><code>rohitg00/awesome-claude-code-toolkit</code></td><td>71</td><td><code>tdd-mastery</code>, <code>testing-strategies</code>, <code>plugins/mutation-tester/</code> (shim)</td><td><span class="pill warn">частично</span></td></tr>
+<tr><td><code>jeremylongshore/claude-code-plugins-plus-skills</code></td><td>~</td><td>425 plugins, 26 в категории testing (mutation-test-runner, test-coverage-analyzer, ...)</td><td><span class="pill err">нейрослоп</span></td></tr>
+<tr><td><code>dykyi-roman/awesome-claude-code</code></td><td>~</td><td><strong><code>detect-test-smells/</code> — 15 PHP test smells</strong> + <code>check-test-quality</code> (8 dimensions) + Test Data Builder + Object Mother patterns</td><td><span class="pill ok">взяли</span></td></tr>
+<tr><td><code>levnikolaevich/claude-code-skills/ln-630-test-auditor</code></td><td>464</td><td><strong>7 параллельных аудиторов</strong> + Kent Beck «12 properties of valuable tests» + Risk-Based Testing Guide (6 Test Usefulness Criteria)</td><td><span class="pill ok">взяли паттерн</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<h4>Personal dotfiles (3 — все новые)</h4>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Repo</th><th>Звёзды</th><th>Skills relevant for us</th><th>Вердикт</th></tr></thead>
+<tbody>
+<tr><td><strong><code>citypaul/.dotfiles</code></strong></td><td><strong>655</strong></td><td><code>mutation-testing</code> + <code>test-design-reviewer</code> + <code>characterisation-tests</code> + <code>find-gaps</code> + <code>tdd</code> + <code>react-testing</code> (см. callout выше)</td><td><span class="pill ok">главная находка</span></td></tr>
+<tr><td><code>glebis/claude-skills</code></td><td>~</td><td><code>tdd/references/anti_patterns.md</code> — <strong>18 TDD анти-паттернов</strong> (tautological, over-mocking, god test, fragile fixtures, ...)</td><td><span class="pill ok">взяли catalogue</span></td></tr>
+<tr><td><code>ChrisWiles/claude-code-showcase</code></td><td>~</td><td><code>testing-patterns/SKILL.md</code> — Jest + factories + mocking</td><td><span class="pill skip">мимо</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<h4>Personal agent-skills коллекции (3 — все новые)</h4>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Repo</th><th>Звёзды</th><th>Relevant content</th><th>Вердикт</th></tr></thead>
+<tbody>
+<tr><td><strong><code>andlaf-ak/claude-code-agents</code></strong></td><td>188</td><td><strong>Origin Farley Score концепции.</strong> 26 agents для software dev: <code>alf-test-design-reviewer</code>, <code>alf-code-smell-detector</code>, <code>alf-refactoring-advisor</code>. Andrea Laforgia.</td><td><span class="pill ok">взяли как reference</span></td></tr>
+<tr><td><strong><code>jwilger/agent-skills</code></strong></td><td>2</td><td>CC0-1.0. <code>mutation-testing</code> skill с <strong>100% kill rate enforcement</strong>. Tool detection: Rust→cargo mutants, TS→stryker, Python→mutmut, <strong>Elixir→mix muzak</strong>. Phase=ship.</td><td><span class="pill ok">взяли</span></td></tr>
+<tr><td><code>secondsky/claude-skills</code></td><td>140</td><td>MIT. <code>mutation-testing</code> — Stryker + <strong>Bun native runner support</strong> + mutmut. Target 80%+ kill rate.</td><td><span class="pill warn">частично</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<h4>Anthropic ecosystem + остальное (новое)</h4>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Repo</th><th>Звёзды</th><th>Что внутри</th><th>Вердикт</th></tr></thead>
+<tbody>
+<tr><td><strong><code>mmaaz-git/agentic-pbt</code></strong></td><td>61</td><td>Anthropic-published. <code>/hypo</code> command, Hypothesis PBT, mining properties из docstrings/types. Paper: arXiv 2510.09907. Запатчены NumPy/SciPy/Pandas/Lambda Powertools.</td><td><span class="pill ok">взяли паттерн</span></td></tr>
+<tr><td><code>mattpocock/skills</code></td><td>~</td><td>Matt Pocock TS-эксперт. <code>engineering/tdd</code> + <code>engineering/diagnose</code></td><td><span class="pill warn">частично</span></td></tr>
+<tr><td><code>tuist/tuist/skills/fix-flaky-tests</code></td><td>5.6k</td><td>Swift-bias, но flaky-test категории и methodology applicable cross-language</td><td><span class="pill warn">частично</span></td></tr>
+<tr><td><code>LambdaTest/agent-skills</code></td><td>270</td><td>46 skills для test automation (E2E, unit, BDD)</td><td><span class="pill skip">мимо</span></td></tr>
+<tr><td><code>fugazi/test-automation-skills-agents</code></td><td>133</td><td>10 skills — Playwright + Selenium + a11y</td><td><span class="pill skip">мимо</span></td></tr>
+<tr><td>Anthropic skill-development meta-skill</td><td>~</td><td>3-tier progressive disclosure pattern</td><td><span class="pill ok">скопировали паттерн</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>Negative findings (что НЕ нашли)</h3>
+<ul>
+  <li><strong>Нет ни одного скилла под именем «strong-tests» / «no-fake-positive» / «fake-positive tests»</strong> — наша ниша свободна.</li>
+  <li><strong>Нет dedicated скиллов для PIT (Java)</strong> — упоминается только в составе multi-stack mutation skills.</li>
+  <li><strong>Нет dedicated скиллов для QuickCheck (Haskell)</strong> в Claude Code ecosystem.</li>
+  <li><strong>Нет dedicated скиллов для Echidna / smart contract fuzzing</strong> вне trailofbits.</li>
+  <li><strong>Что не проверили из-за времени:</strong> полный enumeration <code>anthropics/claude-plugins-official</code>, <code>sickn33/antigravity-awesome-skills</code> (1400+ skills), <code>travisvn/awesome-claude-skills</code> curated list (только bибиlibrary сослался не вошёл).</li>
+</ul>
+
+<h3>Наша уникальная ниша</h3>
+<p class="lead"><strong>Никто не комбинирует</strong> в один workflow: <strong>(1)</strong> mutation feedback loop с auto-tool dispatch, <strong>(2)</strong> PBT primary для invariants, <strong>(3)</strong> non-skippable 12-point self-eval gate, <strong>(4)</strong> явный «no fake-positive» framing. Отдельные куски разбросаны: citypaul делает mutation+Farley, jwilger делает 100% kill rate, spec-shaker делает LLM-mutation, mmaaz-git делает PBT — но ни у кого нет всего вместе. Это и есть value strong-tests.</p>
+</section>
+
+<!-- ====================================================== -->
+<section id="motivation">
+<h2>5. Что мотивировало именно в dev-pomogator</h2>
+<div class="explainer">
+  <p><span class="tag">💬 Простыми словами</span> Чтобы не казалось «это про чужие проекты». Реальный incident в этом репо — тест <code>CORE007_04</code> зеленел месяцами с trivial input пока боевые хуки были сломаны. Плюс таблица аудита 258+ слабых тестов в dev-pomogator + ZohoIntegrationClient.</p>
+</div>
+
+<div class="callout">
+<h4>CORE007_04 — канонический «passes for the WRONG reason»</h4>
+<p><code>tests/e2e/tsx-runner.test.ts:CORE007_04</code> тестировал runner с trivial input <code>console.log("OK")</code>. Тест зеленел месяцами, пока реальные хуки с local imports были сломаны на Node 22.6+ native strip-types. Fix: коммит <code>97a7c86</code>.</p>
+<p>Это ровно то, что 12-point items <strong>#11 (Trivial Input)</strong> и <strong>#12 (Self-Challenge)</strong> ловят. См. пример 6 в Section 3 выше — реальное BEFORE/AFTER этого инцидента.</p>
+</div>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>Категория issue</th><th>dev-pomogator (TS)</th><th>ZohoIntegrationClient (C#)</th><th>Всего</th></tr></thead>
+<tbody>
+<tr><td>Unit-only / source scan</td><td>35</td><td>0</td><td>35</td></tr>
+<tr><td><code>pathExists</code> / NotNull only</td><td>33</td><td>20+</td><td>53+</td></tr>
+<tr><td>Слабые ассерты</td><td>28</td><td>40+</td><td>68+</td></tr>
+<tr><td>Response status only</td><td>11</td><td>40+</td><td>51+</td></tr>
+<tr><td>Silent skip / catch {}</td><td>10</td><td>25</td><td>35</td></tr>
+<tr><td><strong>Итого</strong></td><td><strong>117</strong></td><td><strong>125+</strong></td><td><strong>258+</strong></td></tr>
+</tbody>
+</table>
+</div>
+</section>
+
+<!-- ====================================================== -->
+<section id="spec">
+<h2>6. Спека + альтернативы рассмотренные</h2>
+<div class="explainer">
+  <p><span class="tag">💬 Простыми словами</span> Что обещали сделать (FR-1..FR-5 + 1 OOS) и — по запросу user — <strong>4–7 альтернатив на каждое решение</strong> (раньше было только 2). Прозрачно показано: что ещё рассматривали и почему именно отвергли.</p>
+</div>
+
+<div class="cards-2col">
+  <div class="card"><h4>FR-1 — Greenfield + PBT</h4><p>Invariant-driven fast-check / Hypothesis. Negative:positive ratio ≥1:2.</p></div>
+  <div class="card"><h4>FR-2 — Audit existing</h4><p>8 анти-паттернов: PERMISSIVE_MATCHING, ASSERTION_ROULETTE, MAGIC_NUMBER, HAPPY_PATH_ONLY, TAUTOLOGICAL, TRIVIAL_INPUT, SILENT_SKIP, MISSING_AWAIT.</p></div>
+  <div class="card"><h4>FR-3 — Mutation-loop</h4><p>Auto-detect Stryker/mutmut, итерации до max-iter=5, <code>[GAP]</code>-отчёт при ceiling. Fallback на honnibal-каталог.</p></div>
+  <div class="card"><h4>FR-4 — Multi-stack auto-detect</h4><p>Сигналы из package.json / pyproject.toml / pom.xml / *.csproj / Cargo.toml / go.mod.</p></div>
+  <div class="card"><h4>FR-5 — 12-point self-eval gate</h4><p>PASS/FAIL/N_A per item + Remediation per FAIL + <code>Kill-rate-readiness</code> summary.</p></div>
+  <div class="card" style="border-left-color: var(--warn)"><h4>FR-6 <span class="pill warn">OOS</span></h4><p>Deep integration PIT / Stryker.NET / cargo-mutants / go-mutesting — только в references/. v0.1.0 dispatches TS/Python.</p></div>
+</div>
+
+<h3>5 Key Decisions с расширенными альтернативами</h3>
+
+<details>
+<summary><strong>Decision 1</strong> — Mutation testing over coverage-only <span class="pill ok">7 альтернатив</span></summary>
+<p><strong>Выбрали:</strong> mutation testing как основную метрику для FR-3 и FR-5.</p>
+<p><strong>Rationale:</strong> Inozemtseva ICSE 2014 + MutGen 2025 + OutSight + Ghiringhelli — coverage не коррелирует с effectiveness independently of suite size.</p>
+<div class="table-wrap">
+<table>
+<thead><tr><th>#</th><th>Альтернатива</th><th>Почему отвергнуто</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Line / statement / branch coverage only</td><td>Inozemtseva: "doesn't seem to matter what type of coverage you use". MutGen id_81: 100% line cov / 4% mutation.</td></tr>
+<tr><td>2</td><td>MCDC (aviation-grade DO-178B)</td><td>Inozemtseva: branch и statement coverage perform одинаково — MCDC не даёт measurable gain. Дорогой.</td></tr>
+<tr><td>3</td><td>Search-based testing (EvoSuite/Pex)</td><td>Stack-specific (Java/.NET). EvoSuite сам использует mutation как fitness — валидирует mutation-as-metric, не alternative metric.</td></tr>
+<tr><td>4</td><td>Symbolic execution (KLEE)</td><td>Cadar &amp; Sen 2013: не масштабируется на non-linear constraints, fails на linked lists/trees — типичный TS/Python код.</td></tr>
+<tr><td>5</td><td>LLM-judge of test quality</td><td>Schäfer 2024: LLM-тесты имеют systematic gaps; LLM-evaluator наследует те же gaps. MutGen/Meta-ACH комбинируют LLM с mutation именно поэтому.</td></tr>
+<tr><td>6</td><td>Diff-coverage-only ratchet</td><td>Не решает assertion-strength problem. Высокая diff coverage со слабыми ассертами = OutSight bug.</td></tr>
+<tr><td>7</td><td>PBT without mutation</td><td>PBT verifies только properties о которых developer подумал. Just FSE 2014: real faults не все — property violations. Mutation supplies "what did you forget" signal.</td></tr>
+</tbody>
+</table>
+</div>
+</details>
+
+<details>
+<summary><strong>Decision 2</strong> — PBT как основной подход для инвариантов <span class="pill ok">7 альтернатив</span></summary>
+<p><strong>Picked:</strong> Property-based testing (fast-check / Hypothesis) как default Greenfield для функций со structural invariants.</p>
+<div class="table-wrap">
+<table>
+<thead><tr><th>#</th><th>Альтернатива</th><th>Почему отвергнуто</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Example-only с 12-point checklist</td><td>Schäfer 74.99% — не escape missing-input gap без invariant reasoning.</td></tr>
+<tr><td>2</td><td>Fuzzing (libFuzzer/AFL)</td><td>Oracle problem: fuzzer reports crashes, но logic bugs (wrong values) silent. Crowbar = AFL+QuickCheck — falls back на properties.</td></tr>
+<tr><td>3</td><td>Metamorphic testing</td><td>"Metamorphic = specialized form of PBT" (Hillel Wayne). PBT subsumes — отдельно не нужно.</td></tr>
+<tr><td>4</td><td>Contract-based (Eiffel / JML / Code Contracts)</td><td>Stack-narrow; invasive source changes; runtime cost; .NET Code Contracts EOL 2019.</td></tr>
+<tr><td>5</td><td>TLA+ model checking</td><td>Заменяет <em>design docs</em>, не unit tests. <strong>Companion</strong>, не alternative — TLA+ at design → PBT verifies impl.</td></tr>
+<tr><td>6</td><td>Runtime invariants (TS decorators / Python Protocol)</td><td>High overhead; catches only bugs which run in prod; same oracle gap as fuzzing.</td></tr>
+<tr><td>7</td><td>Stryker mutators-as-property-source</td><td>Это и есть MuTAP/MutGen/Meta-ACH — adopted в FR-3 Mutation-feedback mode. Companion для Audit, не alternative для Greenfield.</td></tr>
+</tbody>
+</table>
+</div>
+</details>
+
+<details>
+<summary><strong>Decision 3</strong> — Threshold 70% <span class="pill ok">8 альтернатив</span></summary>
+<p><strong>Picked:</strong> Default kill rate threshold 70% для FR-3.</p>
+<div class="table-wrap">
+<table>
+<thead><tr><th>#</th><th>Threshold / стратегия</th><th>Почему отвергнуто (или partially adopted)</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>60%</td><td>Ниже OutSight critical-path recommendation; пропускает слишком много слабых тестов.</td></tr>
+<tr><td>2</td><td>75%</td><td>Marginal benefit; ~30% более итераций per Ghiringhelli.</td></tr>
+<tr><td>3</td><td>80% (PIT default)</td><td>Petrović 2021 не endorse fixed %; что работает в Google не = single-repo. <code>--strict</code> opt-in.</td></tr>
+<tr><td>4</td><td>90%+</td><td>Diminishing returns: каждый round +10pp, последние 5pp требуют equivalent-mutant filtering &gt;&gt; test-strengthening.</td></tr>
+<tr><td>5</td><td>Variable per-file by criticality</td><td>OutSight tier (≥70% / ≥50% / ≥30%). <strong>PARTIAL ADOPTION</strong> — v2 add <code>priority.json</code>.</td></tr>
+<tr><td>6</td><td>Ratchet (delta from baseline)</td><td>Лучше для legacy. <code>--ratchet</code> flag — mirror Google diff approach.</td></tr>
+<tr><td>7</td><td>Per-mutator-class threshold</td><td>High coordination cost; taxonomies differ Stryker/mutmut/PIT.</td></tr>
+<tr><td>8</td><td>MSI vs MSC vs PMS scoring</td><td>Use <strong>MSC</strong> (mutation coverage). MSI excludes equivalent — expensive. PMS — Petrović productivity metric, не unit test fitness.</td></tr>
+</tbody>
+</table>
+</div>
+</details>
+
+<details>
+<summary><strong>Decision 4</strong> — TS + Python как основные в SKILL.md (остальные стэки — в references/) <span class="pill ok">6 альтернатив</span></summary>
+<div class="table-wrap">
+<table>
+<thead><tr><th>#</th><th>Альтернатива</th><th>Почему отвергнуто</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>TS-only</td><td>dev-pomogator = платформа; target users — polyglot repos.</td></tr>
+<tr><td>2</td><td>Python-only</td><td>То же. Канонические тулы (PIT, Stryker.NET) вне Python ecosystem.</td></tr>
+<tr><td>3</td><td>All 6 stacks в body</td><td>~14K tokens, выше 8K soft cap. Progressive disclosure более sustainable.</td></tr>
+<tr><td>4</td><td>Dynamic loading via Skill argument</td><td>Anthropic Skills не поддерживают runtime args этим способом.</td></tr>
+<tr><td>5</td><td>Per-extension matrix (strong-tests-ts, strong-tests-py)</td><td>Violates extension-layout.md (один extension per scope); duplicate catalogue 6×.</td></tr>
+<tr><td>6</td><td>TS + Python + Java (3 стэка в body)</td><td>Java не используется в самом dev-pomogator — нет CI чтобы проверять. Документация быстро устареет.</td></tr>
+</tbody>
+</table>
+</div>
+</details>
+
+<details>
+<summary><strong>Decision 5</strong> — Отдельный skill от tests-create-update <span class="pill ok">6 альтернатив</span></summary>
+<div class="table-wrap">
+<table>
+<thead><tr><th>#</th><th>Альтернатива</th><th>Почему отвергнуто</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Merge в один mega-skill</td><td>Combined SKILL.md &gt;&gt; 8K tokens. Different triggers (write-time vs post-write). Conflates prevention vs verification.</td></tr>
+<tr><td>2</td><td><code>--mode strong</code> flag</td><td>Не решает token budget. Anthropic activation keyword-based; sub-mode flag требует preload — worst of both worlds.</td></tr>
+<tr><td>3</td><td>Shared workflow doc</td><td>Hidden coupling. Cross-link в SKILL.md preamble проще.</td></tr>
+<tr><td>4</td><td>Sibling subagent invocation</td><td>Doubles runtime cost; users want strong-tests на legacy тестах тоже. Independent invocation — capability.</td></tr>
+<tr><td>5</td><td>Hook-based auto-trigger</td><td>High false-positive rate (setup files, helpers, fixtures). Лучше opt-in workflow. <em>Кандидат на v3 когда mutation runtime &lt;30s для diff-scope.</em></td></tr>
+<tr><td>6</td><td>Single skill с deferred mutation</td><td>Splits user journey без advantage — user invoke второй flow всё равно.</td></tr>
+</tbody>
+</table>
+</div>
+</details>
+</section>
+
+<!-- ====================================================== -->
+<section id="arch">
+<h2>7. Архитектура skill'а</h2>
+<div class="explainer">
+  <p><span class="tag">💬 Простыми словами</span> Как skill устроен. 3 режима → один gate из 12 пунктов. Skill сам определяет стэк. <strong>Новая колонка</strong> в PBT-таблице: <em>Shrinking</em> (integrated vs manual) — это quality dimension которая раньше была не показана.</p>
+</div>
+
+<h3>3 режима → один финальный gate</h3>
+<div class="diagram" role="img" aria-label="Three-mode workflow diagram">
+<svg viewBox="0 0 800 220" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    text { font-family: -apple-system, "Inter", sans-serif; fill: currentColor; }
+    .box { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.5; }
+    .arrow { stroke: var(--muted); stroke-width: 1.5; fill: none; }
+    .gate { fill: var(--accent); stroke: var(--accent); }
+    .gate-text { fill: white; }
+  </style>
+  <rect class="box" x="20" y="40" width="200" height="90" rx="10"/>
+  <text x="120" y="72" text-anchor="middle" font-weight="600" font-size="16">Greenfield</text>
+  <text x="120" y="94" text-anchor="middle" font-size="12">PBT + invariants</text>
+  <text x="120" y="112" text-anchor="middle" font-size="12">для нового кода</text>
+
+  <rect class="box" x="300" y="40" width="200" height="90" rx="10"/>
+  <text x="400" y="72" text-anchor="middle" font-weight="600" font-size="16">Audit</text>
+  <text x="400" y="94" text-anchor="middle" font-size="12">8 анти-паттернов</text>
+  <text x="400" y="112" text-anchor="middle" font-size="12">strength score 0–100</text>
+
+  <rect class="box" x="580" y="40" width="200" height="90" rx="10"/>
+  <text x="680" y="72" text-anchor="middle" font-weight="600" font-size="16">Mutation-feedback</text>
+  <text x="680" y="94" text-anchor="middle" font-size="12">loop до ≥70%</text>
+  <text x="680" y="112" text-anchor="middle" font-size="12">max-iter 5</text>
+
+  <rect class="gate" x="220" y="170" width="360" height="40" rx="8"/>
+  <text class="gate-text" x="400" y="195" text-anchor="middle" font-weight="700" font-size="14">12-Point Self-Eval — non-skippable gate</text>
+
+  <path class="arrow" d="M 120 130 L 120 155 L 320 155 L 320 170" marker-end="url(#arr)"/>
+  <path class="arrow" d="M 400 130 L 400 170" marker-end="url(#arr)"/>
+  <path class="arrow" d="M 680 130 L 680 155 L 480 155 L 480 170" marker-end="url(#arr)"/>
+
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/>
+    </marker>
+  </defs>
+</svg>
+</div>
+
+<details>
+<summary>12-point self-eval checklist</summary>
+<div class="table-wrap">
+<table>
+<thead><tr><th>#</th><th>Пункт</th><th>Как проверить</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Mutation gutcheck</td><td>Флипнуть одну ветку — ≥1 тест должен упасть.</td></tr>
+<tr><td>2</td><td>Assertion specificity</td><td>Каждый <code>expect</code> — точное значение.</td></tr>
+<tr><td>3</td><td>Negative:positive ratio</td><td>≥1 negative на positive.</td></tr>
+<tr><td>4</td><td>Error-path coverage</td><td>На каждое error condition — ≥1 тест.</td></tr>
+<tr><td>5</td><td>Invariants ≥5</td><td>Per Hughes "How to Specify It" 5 категорий.</td></tr>
+<tr><td>6</td><td>Input boundaries</td><td>Min, max, empty, null, very-large, unicode.</td></tr>
+<tr><td>7</td><td>Failure messages</td><td>Descriptive message string у каждого assert.</td></tr>
+<tr><td>8</td><td>Round-trip</td><td>Roundtrip-инвариант имеет тест.</td></tr>
+<tr><td>9</td><td>No parallel-impl</td><td>Тест НЕ импортирует production helpers для expected.</td></tr>
+<tr><td>10</td><td>No tautology</td><td>Никаких <code>x === x</code>.</td></tr>
+<tr><td>11</td><td>No trivial input</td><td>Realistic, не <code>"OK"</code> / <code>""</code> / <code>0</code>.</td></tr>
+<tr><td>12</td><td>Self-challenge per assertion</td><td>Фраза "эта проверка УПАЛА БЫ если бы production делал X".</td></tr>
+</tbody>
+</table>
+</div>
+</details>
+
+<details>
+<summary>Framework matrix с Shrinking column (NEW)</summary>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Стэк</th><th>Test FW</th><th>PBT</th><th><strong>Shrinking</strong></th><th>Mutation</th><th>v0.1.0</th></tr></thead>
+<tbody>
+<tr><td>TypeScript</td><td>vitest / jest</td><td>fast-check</td><td><span class="pill ok">integrated</span></td><td>Stryker</td><td><span class="pill ok">основной</span></td></tr>
+<tr><td>Python</td><td>pytest</td><td>Hypothesis</td><td><span class="pill ok">integrated (byte-stream)</span></td><td>mutmut</td><td><span class="pill ok">основной</span></td></tr>
+<tr><td>Java</td><td>JUnit 5</td><td>jqwik (новый)</td><td><span class="pill ok">integrated</span></td><td>PIT</td><td><span class="pill warn">только doc</span></td></tr>
+<tr><td>Java (legacy)</td><td>JUnit 4</td><td>junit-quickcheck</td><td><span class="pill warn">manual</span></td><td>PIT</td><td>—</td></tr>
+<tr><td>C# / .NET</td><td>xUnit / NUnit</td><td>FsCheck</td><td><span class="pill warn">manual+derivation</span></td><td>Stryker.NET</td><td><span class="pill warn">только doc</span></td></tr>
+<tr><td>Rust</td><td><code>#[test]</code></td><td>proptest</td><td><span class="pill ok">integrated (rose tree)</span></td><td>cargo-mutants</td><td><span class="pill warn">только doc</span></td></tr>
+<tr><td>Go</td><td>testing</td><td>gopter / rapid</td><td><span class="pill warn">manual / <span class="pill ok">integrated</span></span></td><td>gremlins + go-mutesting</td><td><span class="pill warn">только doc</span></td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Почему integrated shrinking важен:</strong> <a href="https://well-typed.com/blog/2019/05/integrated-shrinking/">Well-Typed blog 2019</a> — manual shrinkers могут violate invariants generated values; integrated shrinking (Hedgehog/Hypothesis/fast-check/proptest rose-tree) гарантирует shrunk value всё ещё валиден. Для пользователя — counterexamples значительно более minimal и actionable.</p>
+</details>
+</section>
+
+<!-- ====================================================== -->
+<section id="tools">
+<h2>8. Альтернативные mutation-tools per stack</h2>
+<div class="explainer">
+  <p><span class="tag">💬 Простыми словами</span> Под каждый стэк есть несколько mutation-тулов. Что выбрали и почему. Stars, last-release, mutators — всё через GitHub API проверено. <strong>Особое внимание Go</strong>: там 2 живых тула с разными trade-offs, и <strong>Rust mutagen умер</strong> — не пользуйтесь.</p>
+</div>
+
+<h3>TypeScript / JavaScript</h3>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Tool</th><th>Stars</th><th>Last release</th><th>Mutators</th><th>Активен?</th></tr></thead>
+<tbody>
+<tr><td><strong>Stryker.js ★ выбран</strong></td><td>2.9k</td><td>v9.6.1 (Apr 2026)</td><td>50+ default, plugin arch</td><td><span class="pill ok">обновляется ежемес.</span></td></tr>
+<tr><td>Mutode</td><td>~300</td><td>2021-12</td><td>const/operator only</td><td><span class="pill skip">заброшен 3 года</span></td></tr>
+<tr><td>Mull (LLVM IR)</td><td>~700</td><td>2025</td><td>IR-level</td><td><span class="pill skip">C/C++ only</span></td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Вердикт:</strong> Stryker.js — единственный credible выбор. Работает с vitest / jest / mocha / jasmine / karma / cypress. JSON / HTML / dashboard.</p>
+
+<h3>Python</h3>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Tool</th><th>Stars</th><th>Last release</th><th>Detection rate</th><th>Активен?</th></tr></thead>
+<tbody>
+<tr><td><strong>mutmut ★ выбран</strong></td><td>1.3k</td><td>v57.x</td><td><strong>88.5%</strong> (Breu 2021)</td><td><span class="pill ok">активен</span></td></tr>
+<tr><td>cosmic-ray</td><td>632</td><td>v8.4.6 (Apr 2026)</td><td>82.7%</td><td><span class="pill ok">активен</span></td></tr>
+<tr><td>MutPy</td><td>~250</td><td>2019</td><td>—</td><td><span class="pill skip">заброшен</span></td></tr>
+<tr><td>Mutatest</td><td>~250</td><td>2021</td><td>—</td><td><span class="pill skip">supplanted</span></td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Вердикт:</strong> mutmut — за простоту использования и активность. cosmic-ray — для опытных (уникальная интеграция со сборочными системами). Запасной вариант указан в <code>references/tooling-setup.md</code>.</p>
+
+<h3>Java</h3>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Tool</th><th>Stars</th><th>Last release</th><th>Mutators</th><th>Активен?</th></tr></thead>
+<tbody>
+<tr><td><strong>PIT (Pitest) ★ выбран</strong></td><td>1.8k</td><td>v1.23.1 (Apr 2026)</td><td>18+ default + extensible</td><td><span class="pill ok">обновляется ежемес.</span></td></tr>
+<tr><td>Major</td><td>~150</td><td>2022</td><td>150K мутантов на 200K LOC</td><td><span class="pill warn">academic</span></td></tr>
+<tr><td>ArcMutate (платный)</td><td>—</td><td>активен</td><td>Форк PIT + расширенный набор мутаций</td><td><span class="pill ok">коммерческий</span></td></tr>
+<tr><td>MuJava, Jumble, Judy</td><td>—</td><td>2011-2015</td><td>—</td><td><span class="pill skip">заброшен 10-15 лет</span></td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Вердикт:</strong> PIT для OSS. ArcMutate если бюджет позволяет Kotlin + extended mutators.</p>
+
+<h3>C# / .NET</h3>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Tool</th><th>Stars</th><th>Last release</th><th>Mutators</th><th>Активен?</th></tr></thead>
+<tbody>
+<tr><td><strong>Stryker.NET ★ выбран</strong></td><td>2.0k</td><td>v4.14.1 (Apr 2026)</td><td>Roslyn-based, full operator set</td><td><span class="pill ok">обновляется ежемес.</span></td></tr>
+<tr><td>VisualMutator</td><td>—</td><td>2017</td><td>Roslyn</td><td><span class="pill skip">заброшен, только VS plugin</span></td></tr>
+<tr><td>NinjaTurtles</td><td>—</td><td>2014</td><td>IL-level</td><td><span class="pill skip">заброшен 11 лет</span></td></tr>
+<tr><td>Fettle</td><td>&lt;100</td><td>2020</td><td>Roslyn niche</td><td><span class="pill skip">почти заброшен</span></td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Вердикт:</strong> Stryker.NET uncontested. xUnit/NUnit/MSTest/Fixie все поддерживаются.</p>
+
+<h3>Rust</h3>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Tool</th><th>Stars</th><th>Last release</th><th>Активен?</th></tr></thead>
+<tbody>
+<tr><td><strong>cargo-mutants ★ выбран</strong></td><td>1.2k</td><td>v27.0.0 (Mar 2026)</td><td><span class="pill ok">обновляется раз в 2 нед.</span></td></tr>
+<tr><td>mutagen</td><td>—</td><td>—</td><td><span class="pill err">404 — репо удалён</span></td></tr>
+<tr><td>necessist</td><td>&lt;500</td><td>2024</td><td><span class="pill warn">минимальный — только удаление операторов</span></td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Вердикт:</strong> cargo-mutants — единственный credible выбор. <strong>⚠️ Не указывайте mutagen в documentation — репо удалено / archived.</strong></p>
+
+<h3>Go — 2 живых тула с разными trade-offs</h3>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Tool</th><th>Stars</th><th>Last release</th><th>Когда использовать</th></tr></thead>
+<tbody>
+<tr><td><strong>gremlins</strong></td><td>335</td><td>v0.6.0 (Dec 2025)</td><td>Microservices, modern. <em>Ограничение: «hours on big modules».</em></td></tr>
+<tr><td><strong>avito-tech/go-mutesting (форк)</strong></td><td>669</td><td>активный форк</td><td>Большие монолиты. Оригинальный zimmski/go-mutesting не обновлялся с 2021.</td></tr>
+<tr><td>ooze</td><td>&lt;100</td><td>2020</td><td><span class="pill skip">заброшен</span></td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Вердикт:</strong> gremlins для small services; avito-tech/go-mutesting fork для monoliths с более mature mutator catalogue. <em>Это non-trivial UX detail — пользователь не должен сам открывать.</em></p>
+</section>
+
+<!-- ====================================================== -->
+<section id="verify">
+<h2>9. Проверка</h2>
+<div class="explainer">
+  <p><span class="tag">💬 Простыми словами</span> Что прогнали, чтобы убедиться что не накосячили. <strong>Шесть проверок — все зелёные</strong>. Плюс dog-food: новый skill <code>spec-review</code> три раза проверил спеку этого strong-tests. 0 блокеров.</p>
+</div>
+
+<ul class="checks">
+  <li class="ok"><code>validate-spec.ts</code> → 17/17 файлов валидны, 0 errors, 0 warnings</li>
+  <li class="ok"><code>audit-spec.ts</code> → ERRORS=0, LOGIC_GAPS=0, INCONSISTENCY=0, RUDIMENTS=0, FANTASIES=0, VARIANT_COVERAGE=0</li>
+  <li class="ok"><code>extension-layout-validate.ts</code> → strong-tests PASS</li>
+  <li class="ok"><code>skills-rules-optimizer</code> audit → tokens=4832 (под cap 8K), errors=[], warnings=[], overlaps=0</li>
+  <li class="ok"><code>tsc --noEmit --strict</code> на <code>run-mutation.ts</code> → 0 type errors</li>
+  <li class="ok">Cross-link NFR-U4 — двусторонний между <code>strong-tests</code> и <code>tests-create-update</code></li>
+</ul>
+
+<h3>Dog-food: <code>Skill("spec-review")</code> прогнан 3 раза на собственной спеке</h3>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Проход</th><th>P0</th><th>P1</th><th>P2</th><th>P3</th><th>Verdict</th></tr></thead>
+<tbody>
+<tr><td>Phase 2 (mid-phase smoke)</td><td>0</td><td>0</td><td>2</td><td>0</td><td><span class="pill ok">ready</span></td></tr>
+<tr><td>Phase 3 (Finalization)</td><td>0</td><td>0</td><td>0</td><td>0</td><td><span class="pill ok">ready</span></td></tr>
+<tr><td>Post-implementation</td><td>0</td><td>0</td><td>2</td><td>0</td><td><span class="pill ok">ready</span></td></tr>
+</tbody>
+</table>
+</div>
+</section>
+
+<!-- ====================================================== -->
+<section id="revisions">
+<h2>10. Что переосмыслили после deep research</h2>
+<div class="explainer">
+  <p><span class="tag">💬 Простыми словами</span> Первый research был ОК, но поверхностный. После глубокого прохода нашли 8 уточнений. Для каждого: <strong>что было</strong>, <strong>что стало</strong>, и главное — <strong>«Значит:»</strong> зачем тебе это знать.</p>
+  <p><em>Что такое «peer-reviewed»</em> — статья прошла рецензию учёных перед публикацией. Это противоположность блогпосту, который может написать кто угодно. <em>ICSE / FSE / ISSTA / TSE</em> — названия топовых академических конференций и журналов по разработке софта (примерно как «Шампионс лиг» в академмире). <em>arXiv</em> — онлайн-архив научных препринтов.</p>
+</div>
+
+<h3>Группа A: укрепили источники</h3>
+
+<details open>
+<summary>1. Главная цифра «100% покрытие / 4% mutation» — теперь из научной статьи, не из блога</summary>
+<p><strong>Было:</strong> ссылались на блог-пост OutSight AI (компания, без рецензии).</p>
+<p><strong>Стало:</strong> ссылаемся на научную статью MutGen (опубликована на arXiv в июне 2025, рецензированная). Там конкретный кейс — модель Llama-3.3 написала тесты для валидатора дат и получила 100% покрытия строк и веток, но реально ловила только 4% подломов. Промах — функция не проверяла что «29 февраля 2025» это невалидная дата (2025 — не високосный год).</p>
+<p><strong>Значит:</strong> если кто-то скажет «это маркетинговый блог, я не верю» — теперь есть peer-reviewed ссылка с конкретным воспроизводимым кейсом. Аргумент стал научно жёстче.</p>
+</details>
+
+<details open>
+<summary>2. Показали 20-летнюю академическую цепочку, а не одну ссылку</summary>
+<p><strong>Было:</strong> 5 ссылок, часть из которых блоги. Можно было упрекнуть «modная идея AI-эры».</p>
+<p><strong>Стало:</strong> 8 рецензированных работ за 20 лет — с 2005 (Andrews — «mutation testing валидно как proxy реальных багов») до 2025 (MutGen + Meta ACH). Все опубликованы на топ-конференциях по software engineering: ICSE (International Conference on Software Engineering), FSE (Foundations of SE), ISSTA (Symposium on Software Testing &amp; Analysis), TSE (журнал IEEE Transactions on Software Engineering).</p>
+<p><strong>Значит:</strong> mutation testing — не хайп 2024-го, а 20-летняя validated техника. Бьёт по аргументу «вы просто на AI-волне».</p>
+</details>
+
+<details>
+<summary>3. Поправили опечатку в названии конференции (косметика)</summary>
+<p><strong>Было:</strong> у одного из источников (статья 2018 года про то как Google использует mutation testing) была написана конференция «FSE 2018».</p>
+<p><strong>Стало:</strong> правильно — «ICSE-SEIP 2018». Это разные конференции. SEIP — «Software Engineering in Practice» под-трек ICSE для индустриальных докладов.</p>
+<p><strong>Значит:</strong> ничего по существу. Если будешь сам цитировать — теперь правильно. Реальный читатель этой разницы не заметит.</p>
+</details>
+
+<h3>Группа B: исправили таблицу инструментов</h3>
+
+<details open>
+<summary>4. Go: оказалось 2 живых инструмента, не один</summary>
+<p><strong>Было:</strong> в спеке упоминался один тул — go-mutesting. Но его основная репа (на zimmski) не обновлялась с 2021 года.</p>
+<p><strong>Стало:</strong> на самом деле живых тула два: (1) <strong>gremlins</strong> — современный, активный, но «занимает часы на больших модулях» (для микросервисов ОК); (2) <strong>avito-tech/go-mutesting</strong> — это форк от Avito от старой репы, поддерживается, более mature catalogue мутаций. Для монолитов лучше.</p>
+<p><strong>Значит:</strong> если у тебя проект на Go — конкретная рекомендация: gremlins для микросервисов, avito-fork для монолитов. Не наугад.</p>
+</details>
+
+<details open>
+<summary>5. Rust mutagen — мёртв, не упоминать</summary>
+<p><strong>Было:</strong> в некоторых обзорах mutation-тулов для Rust упоминается mutagen.</p>
+<p><strong>Стало:</strong> его репа удалена (404). Активный остался только cargo-mutants — он и так был основным выбором.</p>
+<p><strong>Значит:</strong> если найдёшь старую документацию ссылающуюся на mutagen — это dead link. Не направляй туда пользователей.</p>
+</details>
+
+<h3>Группа C: добавили новые design dimensions</h3>
+
+<details open>
+<summary>6. В таблице PBT-фреймворков добавили колонку Shrinking</summary>
+<p><strong>Что такое shrinking:</strong> когда PBT (property-based testing) находит вход на котором функция падает — тул пытается «ужать» этот вход до минимально-сломанного примера. Например, нашёл что код падает на строке из 200 случайных символов — shrinker сужает до «а на пустой строке тоже падает». Без shrinking — counterexamples нечитаемые.</p>
+<p><strong>Было:</strong> в таблице фреймворков (fast-check, Hypothesis, jqwik, FsCheck, proptest, gopter) не была показана эта характеристика.</p>
+<p><strong>Стало:</strong> добавлена колонка с разделением: <strong>integrated</strong> (тул сам ужимает корректно — Hedgehog, Hypothesis, fast-check, proptest) vs <strong>manual</strong> (программист пишет shrinker сам — классический QuickCheck, ScalaCheck до 2018, junit-quickcheck).</p>
+<p><strong>Значит:</strong> при выборе PBT-фреймворка предпочитай тот где integrated. Это напрямую влияет на качество failure messages когда твой тест падает в проде.</p>
+</details>
+
+<details open>
+<summary>7. Diff-scope mutation как default — нужно сделать в v1.1</summary>
+<p><strong>Что такое diff-scope:</strong> запускать mutation testing только на тех файлах которые изменились в текущем коммите/PR, а не на всём репо. Иначе на большом проекте — часы.</p>
+<p><strong>Было:</strong> <code>run-mutation.ts</code> запускает mutation на полном файле который ему скормили.</p>
+<p><strong>Стало:</strong> увидели что Google (статья 2018), Stryker.js (<code>--since</code>), cargo-mutants (<code>--in-diff</code>) и PIT (<code>scmMutationCoverage</code>) — все сошлись на этом паттерне как индустриальном default. Пока не сделали — это todo v1.1.</p>
+<p><strong>Значит:</strong> в v0.1 если запускаешь mutation — single-file mode обязателен (default scope), иначе будет долго. v1.1 — автоматически возьмёт git-дифф.</p>
+</details>
+
+<details>
+<summary>8. Точная цифра распространённости Assertion Roulette: 54%</summary>
+<p><strong>Что такое Assertion Roulette:</strong> анти-паттерн когда в одном тесте 5+ ассертов без сообщений — когда какой-то падает, неясно какой именно (тест файлит на «3-й строке» и всё).</p>
+<p><strong>Было:</strong> ссылались на общее исследование которое говорит «Assertion Roulette часто встречается в LLM-тестах».</p>
+<p><strong>Стало:</strong> нашли точное число — статья Aljedaani 2021: <strong>54%</strong> сгенерированных JUnit-тестов содержат Assertion Roulette; <strong>&gt;50%</strong> в OSS Android-приложениях.</p>
+<p><strong>Значит:</strong> в FR-2 (audit existing tests) скилл может показывать конкретный %: «вероятность что у тебя есть Assertion Roulette — больше половины». Точно вместо «часто бывает».</p>
+</details>
+</section>
+
+<!-- ====================================================== -->
+<section id="limits">
+<h2>11. Что не вошло в v0.1.0</h2>
+<div class="explainer">
+  <p><span class="tag">💬 Простыми словами</span> Честный список — что НЕ сделали и почему. Чтобы ревьюер не искал отсутствующее по диффу.</p>
+</div>
+
+<div class="cards-2col">
+  <div class="card"><h4>FR-6 OOS — Java/C#/Go/Rust dispatch</h4><p><code>run-mutation.ts</code> диспатчит только Stryker (TS) и mutmut (Python). PIT / Stryker.NET / cargo-mutants / go-mutesting парсеры не написаны — follow-up спекой.</p></div>
+  <div class="card"><h4>Mutation медленный 5–30 мин</h4><p>Stryker на средней TS-кодовой базе 5–20 мин; mutmut 10–30 мин. Default scope — single-file. Runs &gt;2 мин через <code>run_in_background</code> + persistent log.</p></div>
+  <div class="card"><h4>Equivalent mutants — handheld</h4><p>Маркер <code>[EQUIVALENT_SUSPECT]</code> для ручного ревью. Meta ACH Equivalence Detector (0.95 precision) — не в scope v0.1.0.</p></div>
+  <div class="card"><h4>vitest E2E suite — пока stubs</h4><p><code>tests/e2e/strong-tests.test.ts</code> зашаффолжен в TASKS.md. Green-state реализация — Phase 4-implementation.</p></div>
+  <div class="card"><h4>honnibal manual-mutation — без автоматизации</h4><p>8-category catalogue задокументирован в references/. Автоматический harness (Edit → re-run → git checkout) — намеренное сокращение scope.</p></div>
+  <div class="card"><h4>Threshold tier — single value</h4><p>Один threshold. Auto-detect «critical-path vs standard» по path globs — кандидат на follow-up.</p></div>
+  <div class="card"><h4>Diff-based mutation scope</h4><p><strong>Новый follow-up из v2 research:</strong> Google + Stryker + cargo-mutants все используют diff-scope как default. <code>run-mutation.ts</code> v1.1 должен defaultить туда.</p></div>
+</div>
+</section>
+
+<section id="jit-auto-trigger">
+<h2>12. JiT auto-trigger (v0.2.0)</h2>
+<div class="explainer">
+  <p><span class="tag">Простыми словами</span> Скилл теперь активируется не только через <code>/strong-tests</code>, но и автоматически — в момент когда AI пишет или редактирует production-код. PostToolUse hook на Write|Edit запускает regex детектор, тот находит подозрительные функции (возвращающие коллекцию, с N×M циклами, с цепочкой композиций) — и эмитит additionalContext с suggested invariants. Идея взята из Meta JiT Testing (engineering.fb.com 2026-02 + arXiv 2601.22832), которые показали 4× catch generation rate vs hardening tests.</p>
+</div>
+
+<h3>Архитектура</h3>
+<p>Triggered через <code>extensions/test-quality/extension.json</code> <code>hooks.claude.PostToolUse</code> с matcher <code>Write|Edit</code>. Handler <code>posttool-jit.ts</code> читает <code>tool_input.file_path</code> из stdin JSON, фильтрует production-code пути (PRODUCTION_INCLUDE regex), запускает детектор <code>detect-invariant-candidates.ts</code> как subprocess через <code>spawnSync</code>, парсит JSON output, эмитит <code>additionalContext</code> в Claude Code hook protocol JSON shape. Hook emit-only — exit 0 unconditionally, никогда не блокирует Write|Edit (NFR-R5).</p>
+
+<h3>Detection scope (v0.3.0)</h3>
+<p>Три стека через regex (ast-grep migration в roadmap v0.4.0+):</p>
+<ul>
+  <li><strong>TypeScript</strong> — <code>Array&lt;T&gt;</code>, <code>T[]</code>, <code>Set&lt;T&gt;</code>, <code>Map&lt;K,V&gt;</code>, <code>Iterator&lt;T&gt;</code>; nested <code>for (...)</code> ≥2</li>
+  <li><strong>Python</strong> — <code>list[T]</code>, <code>dict[K,V]</code>, <code>set[T]</code>, <code>tuple[...]</code>, <code>pd.DataFrame</code>; nested <code>for X in Y:</code> ≥2</li>
+  <li><strong>C# / .NET (v0.3.0)</strong> — <code>List&lt;T&gt;</code>, <code>IList&lt;T&gt;</code>, <code>IEnumerable&lt;T&gt;</code>, <code>IReadOnlyList&lt;T&gt;</code>, <code>Dictionary&lt;K,V&gt;</code>, <code>HashSet&lt;T&gt;</code>, <code>T[]</code> с async <code>Task&lt;...&gt;</code> wrapper; nested <code>for (...)</code> + <code>foreach (...)</code> ≥2</li>
+</ul>
+
+<h3>Suppression mechanism</h3>
+<p>Legitimate exceptions через comment marker:</p>
+<pre><code>// strong-tests:skip pure-leaf reducer — type system enforces
+function leafReducer(items: Item[]): number { return items.length; }
+
+# strong-tests:skip pure-leaf mapping returning fixed taxonomy
+def suggest_invariants(kind: str) -> list[str]:
+    return ["cardinality", "uniqueness"]</code></pre>
+<p>Same-line OR above-line форма. Reason ≥8 chars → entry без warning; &lt;8 → <code>warning: "REASON_TOO_SHORT"</code>. Audit log: <code>.claude/logs/strong-tests-skips.jsonl</code> (append-only, gitignored). Anti-gaming guidance — НЕ использовать suppress для bypass; legitimate cases — pure-leaf функции, generated code, refactor с semantic equivalence.</p>
+</section>
+
+<section id="behavioural-prior">
+<h2>13. Behavioural prior (§1.5)</h2>
+<div class="explainer">
+  <p><span class="tag">Простыми словами</span> Документ в файле не становится поведенческим prior автоматически. Real-session evidence: тот же агент написал <code>output-invariants-first.md</code> rule и через 2 часа в той же сессии нарушил его — 2 раунда подряд, оба раза с пинком юзера. SKILL.md §1.5 решает это через инлайн загрузку 3 anti-patterns + 2 пинка + closing principle при каждом skill load.</p>
+</div>
+
+<h3>Session-pilot incident summary (2026-05-11)</h3>
+<p>3 раунда работы над session-pilot dashboard:</p>
+<ul>
+  <li><strong>Раунд 1 (B+)</strong> — тесты написаны проактивно потому что юзер явно сформулировал требование. Не показатель внутренней дисциплины.</li>
+  <li><strong>Раунд 2 (D)</strong> — добавил Tabulator filter без тестов, доложил «работает» без проверки в браузере. Tabulator silently degraded multiselect → single-select. <strong>Пинок #1: «тестов нет нихуя не работает».</strong></li>
+  <li><strong>Раунд 3 (D+)</strong> — починил Last Message modal с 6 тестами, доложил «16/16 PASS». Но MSG_04 использовал happy-path fixture (только <code>attachment(text="")</code>), реальные tool-only user/assistant turns не покрыты. <strong>Пинок #2: «нажимаю на ласт меседж и нихуя. почему тестов опять нет».</strong></li>
+</ul>
+
+<h3>3 anti-patterns A/B/C</h3>
+<ul>
+  <li><strong>A. Доложил без проверки в реальности</strong> — 16/16 unit PASS, но Tabulator silently degraded в браузере. Урок: перед фразой «работает» — открыть и проверить минимум 1 happy path в реальной среде (browser MCP, debug-screenshot, реальный fixture).</li>
+  <li><strong>B. Happy-path fixture как доказательство покрытия</strong> — fixture не включал класс пустых сообщений который реально встречается в JSONL. Урок: fixture <strong>должен</strong> включать минимум один экземпляр <strong>каждого</strong> "проблемного" варианта. Реальные данные — основа fixture, не учебная картинка.</li>
+  <li><strong>C. Реактивная дисциплина — пока не пнут</strong> — правило <code>output-invariants-first.md</code> написано тем же агентом за 2 часа до того как он его нарушил. Урок: правило применяется к <strong>следующему действию</strong> агента; skill загружен → действует по умолчанию до конца сессии.</li>
+</ul>
+
+<h3>Главный системный вывод</h3>
+<p style="font-size: 1.1rem; font-style: italic; padding: 1rem; background: var(--accent-soft); border-radius: 6px;">«Знание правила ≠ применение правила. Документ на диске не становится prior автоматически. Skill load обязан активировать behavioural prior на <strong>следующее действие</strong> агента, не только когда explicitly запрошен mutation testing.»</p>
+
+<p>Sample dialogue snippets (3 пары positive/negative) для supervised fine-tuning датасета — см. <code>dev-pomogator-session-pilot/.specs/session-pilot/POSTMORTEM-test-discipline.md</code> §9.</p>
+</section>
+
+<section id="dotnet-support">
+<h2>14. .NET / C# support (v0.3.0)</h2>
+<div class="explainer">
+  <p><span class="tag">Простыми словами</span> Третий стек после TS+Python. C# / .NET — большая часть индустрии (Stryker.NET + FsCheck.Xunit + xUnit покрывают значительную долю production кода). Детектор узнаёт все стандартные коллекционные типы, считает nested <code>for</code> + <code>foreach</code>, исключает test файлы (Reqnroll Steps, xUnit Tests, NUnit Test, capital Tests/ folder convention).</p>
+</div>
+
+<h3>Detection signals (verified в tooling-setup.md lines 128-162)</h3>
+<table>
+  <thead><tr><th>Component</th><th>Tool</th><th>Detection signal</th></tr></thead>
+  <tbody>
+    <tr><td>Mutation testing</td><td><code>dotnet-stryker</code></td><td>install via <code>dotnet tool install -g dotnet-stryker</code></td></tr>
+    <tr><td>Property-based testing</td><td><code>FsCheck.Xunit</code></td><td><code>dotnet add package FsCheck.Xunit</code></td></tr>
+    <tr><td>Test framework</td><td>xUnit</td><td><code>&lt;PackageReference Include="xunit"</code> в <code>.csproj</code></td></tr>
+    <tr><td>Threshold default</td><td>70%</td><td>в <code>stryker-config.json</code> как <code>"break": 70</code></td></tr>
+  </tbody>
+</table>
+
+<h3>C# regex grammar (single-line method signatures)</h3>
+<pre><code>// Recognized return types (regex captured)
+List&lt;T&gt;, IList&lt;T&gt;, IEnumerable&lt;T&gt;,
+IReadOnlyList&lt;T&gt;, IReadOnlyCollection&lt;T&gt;, IReadOnlyDictionary&lt;K,V&gt;,
+ICollection&lt;T&gt;, Dictionary&lt;K,V&gt;, IDictionary&lt;K,V&gt;,
+HashSet&lt;T&gt;, ISet&lt;T&gt;, Queue&lt;T&gt;, Stack&lt;T&gt;,
+T[]  // arrays
+
+// Async wrappers (unwrapped to check inner)
+Task&lt;List&lt;T&gt;&gt;, ValueTask&lt;Dictionary&lt;K,V&gt;&gt;
+
+// Access modifiers recognized
+public, private, protected, internal, static, async,
+virtual, override, abstract, partial, sealed, new, readonly</code></pre>
+
+<h3>Test file exclusion patterns</h3>
+<ul>
+  <li><code>*.test.cs</code> — vitest-style naming convention в .NET projects</li>
+  <li><code>*Steps.cs</code> — Reqnroll / SpecFlow step definitions</li>
+  <li><code>*Tests.cs</code> — xUnit test class convention</li>
+  <li><code>*Test.cs</code> — NUnit test class convention</li>
+  <li><code>_test.cs</code> — alternate convention</li>
+  <li>capital <code>Tests/</code> folder — common .NET project structure (Microsoft sample projects)</li>
+  <li>lowercase <code>tests/</code> folder — existing TS+Python exclusion preserved</li>
+</ul>
+
+<h3>Smoke-tested fixture (TESTQUAL001_09)</h3>
+<pre><code>public class IndexerService
+{
+    public List&lt;WorktreeEntry&gt; BuildIndex(List&lt;string&gt; repos, List&lt;string&gt; worktrees)
+    {
+        var output = new List&lt;WorktreeEntry&gt;();
+        for (int i = 0; i &lt; repos.Count; i++)
+            foreach (var wt in worktrees)
+                output.Add(new WorktreeEntry { Path = wt });
+        return output;
+    }
+}</code></pre>
+<p>Detector output: <code>stack: "csharp"</code> + <code>BuildIndex</code> candidate с <code>kind: "nxm-overlap"</code> + suggestedInvariants <code>cardinality / uniqueness / conservation</code>. vitest TESTQUAL001_09 + 09b — 6/6 PASS.</p>
+
+<h3>Known limitations (out of scope v0.3.0)</h3>
+<ul>
+  <li><strong>Multi-line method signatures</strong> (e.g., <code>public async Task&lt;List&lt;T&gt;&gt;<br>  GetAsync(...)</code>) — regex single-line only; documented в TASKS T28</li>
+  <li><strong>Expression-bodied properties</strong> (<code>public List&lt;T&gt; Items =&gt; _items;</code>) — getters редко имеют composition bugs</li>
+  <li><strong>LINQ chain detection</strong> (<code>.SelectMany().GroupBy()</code>) — отдельный класс bugs; v0.5.0+ roadmap</li>
+  <li><strong>ast-grep migration</strong> — заменить regex на AST queries; требует binary install; v0.4.0+ roadmap</li>
+</ul>
+</section>
+
+</main>
+
+<footer role="contentinfo">
+  <p>Сгенерирован 2026-05-11 (research v2) для сборки skill'а <code>strong-tests</code> в <code>.claude/skills/strong-tests/</code>. Спека: <a href="./README.md"><code>.specs/strong-tests/</code></a>. Deep research: <code>.dev-pomogator-tmp/strong-tests-deep-research.md</code> (789 строк). Workflow: <code>create-spec</code>. Audit: <code>audit-spec.ts</code> + <code>skills-rules-optimizer</code> + <code>spec-review</code>.</p>
+</footer>
+
+</body>
+</html>

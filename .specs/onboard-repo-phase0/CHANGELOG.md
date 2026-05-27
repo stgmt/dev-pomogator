@@ -4,6 +4,18 @@ All notable changes to this feature will be documented in this file.
 
 Формат: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), семантика версий: [SemVer](https://semver.org/).
 
+## [0.1.0] — 2026-05-23
+
+> Shipped via `extensions/onboard-repo/` (package v0.1.0, full layout: tools/onboard-repo/{lib,renderers,schemas,steps,templates}). 7 step modules (archetype-triage, baseline-tests, finalize, ingestion, parallel-recon, scratch-findings, text-gate) + 2 renderers (compile-hook, render-rule). Schema `onboarding.schema.json` Draft 2020-12 enforces 30+ required AI-centric fields. Cross-extension dependencies declared via `crossExtensionModifies` in extension.json.
+>
+> Two enforcement rules: `.claude/rules/onboard-repo/onboarding-artifact-ai-centric.md` (AI-specific sections required, not generic metadata) + `commands-via-skill-reference.md` (skill-wrapping over hardcoded raw commands).
+>
+> 12 e2e test files in `tests/e2e/onboard-repo/` cover archetype detection, baseline tests, cache invalidation, coexistence with existing setups, finalize, ignore patterns + redaction, ingestion, parallel recon + helpers.
+>
+> Phase 0 integration with create-spec lives in `.claude/skills/create-spec/SKILL.md` (originally planned as a separate `.claude/rules/specs-workflow/specs-management.md` edit — consolidated into the skill bundle).
+>
+> Audit-spec: 0 ERRORS / 5 WARNINGS (cosmetic).
+
 ## [Unreleased]
 
 ### Added

@@ -314,7 +314,11 @@ async function main(): Promise<void> {
       const relevanceScore = scorePromptRelevance(planContent, promptTexts);
       if (relevanceScore <= -20) {
         denyAndExit(planName, 'Phase 2.5 — релевантность',
-          ['План не соответствует текущей задаче (overlap < 20%). Extracted Requirements должны отражать ТЕКУЩИЙ запрос пользователя.'],
+          [{
+            line: 0,
+            message: 'План не соответствует текущей задаче (overlap < 20%). Extracted Requirements должны отражать ТЕКУЩИЙ запрос пользователя.',
+            hint: 'Перепиши Extracted Requirements с прямыми ссылками на ключевые слова из последних 3 пользовательских сообщений.',
+          }],
           '\nНЕ копируй содержимое из других планов. Создай план С НУЛЯ по шаблону.\n' + loadUserPrompts(data.session_id));
       }
     }

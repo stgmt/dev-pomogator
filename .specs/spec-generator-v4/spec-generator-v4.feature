@@ -1,0 +1,395 @@
+Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
+  As a dev-pomogator maintainer / developer
+  I want an in-memory SpecGraph + MCP server exposing get_trace tool + Marksman LSP + cucumber-js BDD with NDJSON
+  So that AI agents trace FR↔Scenario↔TestResult automatically without hallucinating spec connections
+
+  Background:
+    Given dev-pomogator v4 is installed
+    And specs-workflow extension is enabled with MCP server registered
+    And the project has at least one spec in `.specs/`
+
+  # @feature1
+  Scenario: SPECGEN004_01 Phase 0 — cucumber-js generates canonical NDJSON output
+    Given dev-pomogator package.json has `@cucumber/cucumber` and `@cucumber/messages` deps installed
+    And `cucumber.json` config has `format: "message:.dev-pomogator/.last-test-run.ndjson"`
+    And `tests/step_definitions/` contains step impls for `.feature` files
+    When the developer runs `npm run test:bdd`
+    Then `.dev-pomogator/.last-test-run.ndjson` is created
+    And the file is parseable via `@cucumber/messages` package
+    And the file contains `gherkinDocument`, `pickle`, `testCase`, `testCaseStarted`, `testStepFinished`, `testCaseFinished` envelopes
+
+  # @feature1
+  Scenario: SPECGEN004_02 Phase 0 — per-spec NDJSON split after test run
+    Given the master `.dev-pomogator/.last-test-run.ndjson` exists after a test run
+    And the file contains pickles from `.specs/auth/*.feature` and `.specs/billing/*.feature`
+    When the bash-post-test-ingest hook fires
+    Then `.specs/auth/.test-results.ndjson` is created containing only auth-related pickles
+    And `.specs/billing/.test-results.ndjson` is created containing only billing-related pickles
+    And master NDJSON is preserved
+
+  # @feature2
+  Scenario: SPECGEN004_03 SpecGraph cold start under 2 seconds for 30 specs
+    Given the project contains 30 spec directories with average 10 MD files each + 3 .feature files
+    When the MCP server starts cold (no SQLite cache)
+    Then the SpecGraph build completes in ≤2 seconds
+    And `get_trace("FR-001")` returns non-empty result immediately after
+
+  # @feature2
+  Scenario: SPECGEN004_04 Incremental reindex under 100ms on single-file change
+    Given the MCP server is running with SpecGraph populated for 30 specs
+    When a single spec file `.specs/auth/FR.md` is modified
+    And chokidar `change` event fires
+    Then the affected subgraph is updated in ≤100ms p95
+    And other specs' nodes are not re-parsed
+
+  # @feature3
+  Scenario: SPECGEN004_05 Custom MD parser registers dual-anchor for new heading
+    Given a spec file `.specs/auth/FR.md` contains heading `### FR-001: Login`
+    When the MD parser indexes the file
+    Then anchor `FR-001` is registered pointing to file:line
+    And anchor `fr-001-login` is registered pointing to same file:line
+    And wiki-link `[[FR-001]]` resolves to the heading
+    And wiki-link `[[fr-001-login]]` resolves to the heading
+
+  # @feature3
+  Scenario: SPECGEN004_06 Custom MD parser registers triple-anchor for legacy v3 heading
+    Given a legacy v3 spec file `.specs/legacy/FR.md` contains `### Requirement: FR-001 Login`
+    When the MD parser indexes the file with backward-compat mode
+    Then anchors `FR-001`, `fr-001-login`, `requirement-fr-001-login` all resolve to the same heading
+    And no migration is required for legacy spec to function
+
+  # @feature4
+  Scenario: SPECGEN004_07 get_trace returns structured tree with natural-language explanation
+    Given FR-001 exists in `.specs/auth/FR.md` with 2 ACs and 3 linked scenarios
+    And SCEN-login-ok has lastResult PASSED, SCEN-login-locked has lastResult FAILED
+    When agent calls MCP tool `get_trace("FR-001")`
+    Then the response contains `node`, `tree.acceptance_criteria`, `tree.scenarios`, `tree.tasks`, `tree.related_nodes`
+    And `explanation_for_agent` field contains FR title, counts, latest test status, failing step location
+    And `explanation_for_agent` length is ≤500 characters
+
+  # @feature4
+  Scenario: SPECGEN004_08 get_trace includes failing scenario error in explanation
+    Given SCEN-login-locked has lastResult FAILED with NullReferenceException at AuthService.cs:88
+    When agent calls `get_trace("FR-001")`
+    Then `explanation_for_agent` mentions "SCEN-login-locked FAILED — NullReferenceException at AuthService.cs:88"
+
+  # @feature5
+  Scenario: SPECGEN004_09 PreToolUse hook denies Write with duplicate FR-N
+    Given `.specs/auth/FR.md` already contains heading `### FR-001: Login`
+    When the agent attempts Write to add second `### FR-001: ...` heading
+    Then PreToolUse hook returns `permissionDecision: "deny"`
+    And `permissionDecisionReason` contains code `DUPLICATE_DEFINITION`
+    And the reason lists both heading locations
+    And the Write does not occur
+
+  # @feature5
+  Scenario: SPECGEN004_10 PreToolUse hook denies Write with malformed YAML frontmatter
+    Given the agent attempts Write to `.specs/auth/FR.md` with frontmatter missing closing `---`
+    When the hook runs
+    Then PreToolUse returns `permissionDecision: "deny"`
+    And `permissionDecisionReason` contains code `MALFORMED_FRONTMATTER`
+    And the reason includes the offending line number
+
+  # @feature5
+  Scenario: SPECGEN004_11 PreToolUse hook denies Write with malformed Gherkin
+    Given the agent attempts Write to `tests/Auth.feature` with invalid Gherkin syntax
+    When the hook runs and @cucumber/gherkin parser throws
+    Then PreToolUse returns `permissionDecision: "deny"`
+    And `permissionDecisionReason` contains code `MALFORMED_GHERKIN`
+    And the reason includes the parser error message
+
+  # @feature6
+  Scenario: SPECGEN004_12 PostToolUse hook pushes conformance findings within 3s window
+    Given the agent edits `.specs/auth/FR.md` and a conformance check produces 1 finding
+    When PostToolUse hook fires
+    Then within 3 seconds the agent context receives a `<system-reminder>` message
+    And the message contains the finding code, location, and suggested actions
+
+  # @feature6
+  Scenario: SPECGEN004_13 PostToolUse hook aggregates and deduplicates findings in bulk edit
+    Given the agent makes 5 sequential Edits to `.specs/auth/*.md` within 2 seconds
+    When PostToolUse hook fires for each
+    Then findings are batched in the 3-second throttle window
+    And duplicate findings (same code + location) are deduplicated
+    And only one aggregated `<system-reminder>` is pushed after the window closes
+
+  # @feature6
+  Scenario: SPECGEN004_14 PostToolUse push silenced when frontmatter flag set
+    Given a spec file frontmatter contains `_no_push_check: true`
+    When the agent edits that file
+    And PostToolUse hook fires
+    Then no `<system-reminder>` is pushed for that file
+    And the findings are still logged to `.dev-pomogator/.spec-check-log/`
+
+  # @feature7
+  Scenario: SPECGEN004_15 Marksman binary installed silently during npm install
+    Given a fresh `npx dev-pomogator install` invocation
+    When the postInstall script completes
+    Then `.dev-pomogator/bin/marksman` (or platform equivalent) exists and is executable
+    And the binary responds to LSP `initialize` request
+
+  # @feature7
+  Scenario: SPECGEN004_16 MCP server falls back to JS LSP when Marksman unavailable
+    Given the Marksman binary download fails during install (no network)
+    When the MCP server starts
+    Then it detects missing Marksman binary
+    And `.dev-pomogator/install-log.json` is updated with marksman_available=false
+    And MCP server initializes custom JS-based MD LSP fallback
+    And wiki-link navigation still works through MCP `find_refs` tool
+
+  # @feature8
+  Scenario: SPECGEN004_17 LLM semantic drift check detects FR↔Scenario mismatch (opt-in Phase 3)
+    Given `.spec-config.json::conformance_checks.semantic_drift.enabled = true`
+    And FR-001 text says "redirect to /login page on expired session"
+    And SCEN-login-ok tests only API contract (no UI redirect)
+    When `conformance_check(scope: "FR-001", semantic: true)` is called
+    Then result includes finding code `SEMANTIC_DRIFT`
+    And the finding explanation mentions the mismatch (FR mentions UI redirect, scenario tests API)
+    And a Haiku subagent was spawned via `claude -p` subprocess
+
+  # @feature8
+  Scenario: SPECGEN004_18 LLM semantic check is disabled by default
+    Given `.spec-config.json::conformance_checks.semantic_drift.enabled = false` (default)
+    When PostToolUse fires after spec edit
+    Then only structural checks run
+    And no `claude` subprocess is spawned
+    And no LLM tokens are consumed
+
+  # @feature9
+  Scenario: SPECGEN004_19 Multi-language — Reqnroll C# NDJSON ingested correctly
+    Given a C# project with Reqnroll v3+ installed and dev-pomogator v4
+    When `dotnet test` completes and emits `reqnroll_report.ndjson`
+    Then the NDJSON ingester parses the file successfully
+    And SpecGraph contains TestCase nodes with `step_bindings` pointing to `.cs:line`
+    And `get_trace("FR-001")` returns code_impl references from C# source files
+
+  # @feature9
+  Scenario: SPECGEN004_20 Multi-language — behave Python NDJSON ingested correctly
+    Given a Python project with `behave` configured to emit Cucumber Messages format
+    When BDD tests run and emit NDJSON
+    Then v4 NDJSON ingester parses the file successfully
+    And SpecGraph contains TestCase results with status PASSED/FAILED per scenario
+
+  # @feature10
+  Scenario: SPECGEN004_21 SQLite cross-session: session B reuses session A's MCP server (Phase 4)
+    Given `.spec-config.json::storage.sqlite_enabled = true`
+    And session A starts MCP server and writes `.mcp-lock.json` with pid=A, env=host
+    When session B starts on the same project
+    Then session B detects existing lock and pid is alive
+    And session B connects to session A's MCP server (no second process started)
+    And both sessions see consistent SpecGraph state
+
+  # @feature10
+  Scenario: SPECGEN004_22 SQLite cross-session: edits from session A visible in session B immediately
+    Given session A and session B share an MCP server with SQLite persistence
+    When session A makes a spec edit at `.specs/auth/FR.md`
+    And session B calls `get_trace("FR-001")` immediately after
+    Then session B sees the latest state (post-edit)
+    And SQLite single-writer (`BEGIN IMMEDIATE`) ensures no race condition
+
+  # @feature10
+  Scenario: SPECGEN004_23 SQLite corruption: auto-fallback to in-memory rebuild
+    Given `.dev-pomogator/.spec-index.sqlite` file is corrupt (PRAGMA integrity_check fails)
+    When the MCP server starts
+    Then corruption is detected at startup
+    And the corrupt file is moved to `.dev-pomogator/.spec-index.sqlite.corrupt-{timestamp}`
+    And MCP server falls back to in-memory rebuild
+    And a warning is logged to `.dev-pomogator/logs/sqlite.log`
+
+  # @feature11
+  Scenario: SPECGEN004_24 Migration helper — suggest-only mode prints diff without modifying
+    Given an existing v3 project with `.specs/auth/FR.md` containing `### Requirement: FR-001 Login`
+    When the user runs `dev-pomogator migrate-v3-to-v4 --suggest-only`
+    Then per-file diffs are printed to stdout showing conversion to `### FR-001: Login`
+    And the file is NOT modified
+    And `.progress.json::version` is NOT bumped
+
+  # @feature11
+  Scenario: SPECGEN004_25 Migration helper — interactive mode with 30s default-skip timeout
+    Given the user runs `dev-pomogator migrate-v3-to-v4` (no flag)
+    And the migration encounters a spec file with ambiguous structure
+    When the migration prompts approve/skip/edit
+    And the user provides no input for 30 seconds
+    Then the default action `skip` is applied
+    And the file is left unchanged
+    And the migration proceeds to the next file
+
+  # @feature12
+  Scenario: SPECGEN004_26 architecture-research-workflow skill produces 7 stage outputs (Phase 6)
+    Given the maintainer invokes `Skill("architecture-research-workflow")` with a feature description
+    When the skill completes all 7 stages
+    Then 7 stage output files are written to `.specs/{slug}/.architecture-research/`
+    And files are committable (NOT in .gitignore)
+    And final RESEARCH.md contains one Appendix per stage
+
+  # @feature12
+  Scenario: SPECGEN004_27 architecture-research-workflow skill suggests rewind on new constraint
+    Given Stage 4 has generated 4 architecture variants
+    When the user reveals a new constraint in Stage 5 decision Q&A loop
+    Then the skill suggests `restart-from-stage 4`
+    And an audit-trail entry is recorded in `5-decisions-locked.md` as `[REWIND] Stage 5 → Stage 4: <reason>`
+    And a 3-rewind hard limit prevents infinite loops
+
+  # @feature12
+  Scenario: SPECGEN004_28 create-spec uses regular research-workflow for small feature (complexity heuristic)
+    Given a small feature description (single file change, no architecture decisions)
+    When `create-spec` runs complexity heuristic detection
+    Then the heuristic does NOT match (no "архитектур"/"v\d+"/"rebuild" keywords AND <3 components)
+    And `create-spec` invokes regular `Skill("research-workflow")` instead of `architecture-research-workflow`
+    And 7-stage overhead is avoided
+
+  # @feature13
+  Scenario: SPECGEN004_29 Orphan scenario tag returns warn-severity finding by default
+    Given a `.feature` file contains `@FR-999\nScenario: Some test` and FR-999 doesn't exist
+    When `conformance_check` runs
+    Then result includes finding code `SCENARIO_TAG_ORPHAN`
+    And severity is `warning` (default policy)
+    And `suggestions[]` lists existing similar IDs (top-3 by Levenshtein distance)
+    And the Write of the .feature file is NOT blocked
+
+  # @feature13
+  Scenario: SPECGEN004_30 Orphan policy escalation to block via config
+    Given `.spec-config.json::orphan_policy.scenario_tag_orphan = "block"`
+    And a `.feature` file contains `@FR-999` Scenario for non-existent FR
+    When `conformance_check` runs
+    Then severity is `error` (escalated from default warn)
+    And PostToolUse push or PreToolUse hook (depending on context) blocks the operation
+    And the user is prompted to resolve before commit
+
+  # @feature14
+  Scenario: SPECGEN004_31 Devcontainer — MCP returns relative paths in tool responses
+    Given dev-pomogator v4 runs inside a VS Code devcontainer with bind-mounted workspace
+    When agent calls `get_trace("FR-001")` from inside the container
+    Then all file paths in response are relative to repo root
+    And no absolute paths (`/workspace/...` or `D:\...`) appear in any field
+
+  # @feature14
+  Scenario: SPECGEN004_32 Devcontainer — chokidar auto-polling fallback when events unreliable
+    Given the workspace is bind-mounted from Docker Desktop on Windows
+    When the MCP server starts and runs touch test
+    And the touch event is not received within 500ms
+    Then the chokidar watcher auto-falls-back to polling mode (1s interval)
+    And the decision is logged to `.dev-pomogator/logs/watcher.log`
+    And subsequent file changes are detected via polling
+
+  # @feature14
+  Scenario: SPECGEN004_33 Multi-env — second MCP start in different env is denied
+    Given session A is running MCP server with `env: "host"` in `.mcp-lock.json`
+    When session B tries to start MCP from inside a container on the same worktree
+    Then session B detects the existing lock has different `env` tag
+    And session B exits with clear message "MCP already running in env host (pid X), restart Claude Code in same env"
+    And no second MCP process is spawned
+
+  # @feature15
+  Scenario: SPECGEN004_34 Side-channel log appends JSONL entry on each finding (Phase 4)
+    Given a conformance_check produces a finding `SCENARIO_TAG_ORPHAN` for SCEN-x
+    When PostToolUse hook completes
+    Then a JSONL line is appended to `.dev-pomogator/.spec-check-log/<YYYY-MM-DD>.jsonl`
+    And the line contains `timestamp`, `finding_code`, `severity`, `location`, `message`, `spec_slug`
+    And the JSONL line is valid JSON parseable line-by-line
+
+  # @feature15
+  Scenario: SPECGEN004_35 Side-channel log rotates when size exceeds 10MB
+    Given the current `.spec-check-log/<YYYY-MM-DD>.jsonl` file size is 9.5MB
+    When the next append would exceed 10MB
+    Then the file is rotated to `.spec-check-log/<YYYY-MM-DD>-1.jsonl`
+    And a new file `.spec-check-log/<YYYY-MM-DD>-2.jsonl` starts for subsequent appends
+    And previous files are not modified
+
+  # @feature16
+  Scenario: SPECGEN004_36 Codespaces — MCP server auto-starts via postStartCommand
+    Given a Codespaces environment with dev-pomogator v4 installed
+    And `.devcontainer/devcontainer.json` contains `postStartCommand` for MCP startup
+    When the codespace starts (cold or warm)
+    Then the MCP server is launched automatically
+    And `.mcp-lock.json` is written with `env: "codespaces:<machine-id>"`
+
+  # @feature16
+  Scenario: SPECGEN004_37 Codespaces — MCP server resumes after hibernation within 2s
+    Given a Codespaces environment is hibernated after 30 minutes of inactivity
+    When the user resumes the codespace
+    Then the MCP server auto-restarts via postStartCommand
+    And the SpecGraph is rebuilt from persistent `/workspaces/` files in ≤2 seconds
+    And the lock file `env` tag remains `codespaces:<machine-id>`
+
+  # @feature17
+  Scenario: SPECGEN004_38 Cross-spec reconcile light mode detects missing file
+    Given a spec fixture `tests/fixtures/cross-spec-corpus/spec-c/` declares MCP tool `validate_user`
+    And no file matching `src/mcp/validate_user*.ts` exists on disk
+    When `Skill("cross-spec-reconcile", mode: "light")` is invoked with `spec_slug: spec-c`
+    Then `.specs/spec-c/consistency-report.yaml` is written within 5 seconds
+    And `findings[]` contains an entry with `code: "impl-drift/missing-file"`, `severity: "WARNING"`, `class: "uncovered"`
+    And the finding includes `referenced_in`, `expected_path`, and `suggested_fix` fields
+
+  # @feature17
+  Scenario: SPECGEN004_39 Cross-spec reconcile full mode detects runtime identifier drift
+    Given fixture spec-a declares `feedback_key = "session_token"`
+    And fixture spec-b declares the same concept as `sessionToken`
+    When `Skill("cross-spec-reconcile", mode: "full")` is invoked
+    Then `findings[]` contains an entry with `code: "cross-spec/runtime-identifier-drift"`, `severity: "CRITICAL"`
+    And the finding's `spec_a` and `spec_b` fields name the two fixture specs
+
+  # @feature17
+  Scenario: SPECGEN004_40 CRITICAL hard-conflict subset blocks STOP via CAPS prompt
+    Given a lightweight reconcile run produced one CRITICAL finding from the hard-conflict subset
+    When the skill reaches step 5 of execution
+    Then AskUserQuestion is invoked with `header: "⚠️ CRIT"`
+    And the options list includes literally «Abort STOP»
+    And selecting «Abort STOP» causes the skill to exit with non-zero status
+
+  # @feature17
+  Scenario: SPECGEN004_41 Acknowledge & override writes JSONL audit entry
+    Given a CRITICAL prompt is awaiting user choice
+    When the user selects «Acknowledge & override» with reason text "covered by parametrized test runner"
+    Then the YAML finding gets `acknowledged_by: user`, `override_reason: "covered by parametrized test runner"`, `override_timestamp: <iso>`
+    And a new line is appended to `.claude/logs/cross-spec-overrides.jsonl` with the same reason and a session_id
+
+  # @feature17
+  Scenario: SPECGEN004_42 Dry-run mode skips file writes
+    Given a reconcile invocation with `--dry-run` flag
+    When the skill completes its checks
+    Then a summary block and the first 10 findings are printed to stdout
+    And neither `consistency-report.yaml` nor `consistency-report.sarif` exists on disk afterward
+
+  # @feature17
+  Scenario: SPECGEN004_43 SARIF secondary output written when --sarif flag passed
+    Given a reconcile invocation with `--sarif` flag against the fixture corpus
+    When the skill completes
+    Then `.specs/{slug}/consistency-report.sarif` exists alongside `consistency-report.yaml`
+    And the SARIF `runs[0].tool.driver.rules[].id` field matches finding codes one-to-one
+
+  # @feature18
+  Scenario: SPECGEN004_44 Resolve emits 5-field explanation before any edit
+    Given `.specs/{slug}/consistency-report.yaml` contains an `impl-drift/missing-file` finding
+    When the user runs `/cross-spec-resolve`
+    Then the skill emits an explanation block containing code+severity, files+lines, plain-language change, WHY-from-finding rationale, and option list
+    And NO Edit or Write tool is invoked until the user confirms «Apply» via AskUserQuestion
+
+  # @feature18
+  Scenario: SPECGEN004_45 Resolve foreign-spec edit fires additional confirm
+    Given a finding's target file path begins with `.specs/spec-other/` while current resolve slug is `spec-current`
+    When the resolve skill reaches the per-finding handler
+    Then the explanation block includes a literal banner «⚠️ This edits foreign spec: .specs/spec-other/README.md»
+    And the skill requires a second AskUserQuestion confirm distinct from the per-finding confirm
+
+  # @feature18
+  Scenario: SPECGEN004_46 Resolve presents Path A/B/C for architectural decision
+    Given a finding with `code: "impl-drift/architectural-decision-vs-reality"` and populated `path_alternatives[]`
+    When resolve processes the finding
+    Then AskUserQuestion is invoked with at least two Path options
+    And each option's `description` field contains pros, cons, and impacted_files prose
+
+  # @feature18
+  Scenario: SPECGEN004_47 Resolve missing report exits with hint
+    Given `.specs/{slug}/consistency-report.yaml` does not exist
+    When the user runs `/cross-spec-resolve`
+    Then the skill exits with non-zero status
+    And stdout includes literally the hint «Run /cross-spec-reconcile first»
+
+  # @feature18
+  Scenario: SPECGEN004_48 Batch re-check updates resolution_status
+    Given the resolve skill has processed all confirmed findings via Edit/Write
+    When the skill reaches step 7 of execution
+    Then `Skill("cross-spec-reconcile", mode: "full")` is invoked exactly once
+    And each original finding's `resolution_status` is updated to `resolved`, `still_present`, or `transformed`
+    And the YAML is written atomically via temp file + rename

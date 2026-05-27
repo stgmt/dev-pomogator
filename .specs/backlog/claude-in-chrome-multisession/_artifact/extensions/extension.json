@@ -1,0 +1,39 @@
+{
+  "name": "claude-in-chrome-multisession",
+  "version": "0.1.0",
+  "description": "Multi-session safety for the official `claude-in-chrome` Chrome extension MCP — PreToolUse + PostToolUse hooks track per-session tab ownership and DENY cross-session navigate/close/read operations. Skill instructs Claude on the protocol (always create own tab first; only operate on owned tabs). Solves the 'all Claude Code sessions share single MCP tab group' problem without modifying the upstream extension.",
+  "platforms": ["claude"],
+  "category": "automation",
+  "tools": {
+    "claude-in-chrome-multisession": "tools/claude-in-chrome-multisession"
+  },
+  "toolFiles": {
+    "claude-in-chrome-multisession": [
+      ".dev-pomogator/tools/claude-in-chrome-multisession/cims-guard.ts",
+      ".dev-pomogator/tools/claude-in-chrome-multisession/claim-tab.mjs",
+      ".dev-pomogator/tools/claude-in-chrome-multisession/README.md"
+    ]
+  },
+  "skills": {
+    "claude-in-chrome-multisession": ".claude/skills/claude-in-chrome-multisession"
+  },
+  "skillFiles": {
+    "claude-in-chrome-multisession": [
+      ".claude/skills/claude-in-chrome-multisession/SKILL.md"
+    ]
+  },
+  "hooks": {
+    "claude": {
+      "PreToolUse": {
+        "matcher": "mcp__claude-in-chrome__.*",
+        "command": "npx tsx .dev-pomogator/tools/claude-in-chrome-multisession/cims-guard.ts",
+        "timeout": 10
+      },
+      "PostToolUse": {
+        "matcher": "mcp__claude-in-chrome__.*",
+        "command": "npx tsx .dev-pomogator/tools/claude-in-chrome-multisession/cims-guard.ts",
+        "timeout": 10
+      }
+    }
+  }
+}

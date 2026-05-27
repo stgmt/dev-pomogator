@@ -1,5 +1,7 @@
 # onboard-repo-phase0
 
+**Status: shipped 0.1.0 — 2026-05-23.** `extensions/onboard-repo/` v0.1.0 — 7 step modules + 2 renderers + JSON schema + 2 enforcement rules + 12 e2e tests. См. [CHANGELOG.md](CHANGELOG.md).
+
 **Phase 0 Repo Onboarding** — автоматический AI-first онбординг target репо при первом `/create-spec`. Добавляется как новая фаза ПЕРЕД Phase 1 Discovery в существующем `specs-workflow`. Результат: `.specs/.onboarding.json` (typed 17-блочная schema) + `.specs/.onboarding.md` (6-секционный prose report) + управляемое правило `.claude/rules/onboarding-context.md` + PreToolUse hook в `.claude/settings.local.json`.
 
 ## Ключевые идеи

@@ -1,0 +1,36 @@
+{
+  "name": "answer-simple",
+  "version": "1.1.0",
+  "description": "Plain-language guard: always-apply 5-step self-check rule + /answer-simple draft audit skill + Stop hook (answer_simple_stop.ts) that mechanically BLOCKS the agent's final message when it is a wall of internal codes (FR-N/ARCH-N/SCREAMING_CODE) or excessively verbose prose, feeding back a plain-language rewrite reason. Closes the trust-based gap the rule alone left (agent could skip self-check under pressure).",
+  "platforms": [
+    "claude"
+  ],
+  "category": "workflow",
+  "ruleFiles": {
+    "claude": [
+      ".claude/rules/answer-simple/clear-questions-to-user.md"
+    ]
+  },
+  "skills": {
+    "answer-simple": ".claude/skills/answer-simple"
+  },
+  "skillFiles": {
+    "answer-simple": [
+      ".claude/skills/answer-simple/SKILL.md"
+    ]
+  },
+  "tools": {
+    "answer-simple": "tools/answer-simple"
+  },
+  "toolFiles": {
+    "answer-simple": [
+      ".dev-pomogator/tools/answer-simple/jargon_detector.ts",
+      ".dev-pomogator/tools/answer-simple/answer_simple_stop.ts"
+    ]
+  },
+  "hooks": {
+    "claude": {
+      "Stop": "npx tsx .dev-pomogator/tools/answer-simple/answer_simple_stop.ts"
+    }
+  }
+}

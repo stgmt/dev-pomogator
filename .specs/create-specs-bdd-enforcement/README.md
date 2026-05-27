@@ -1,5 +1,7 @@
 # Create Specs BDD Enforcement
 
+**Status: shipped 0.1.0 — 2026-05-23.** Реализация: `extensions/specs-workflow/tools/specs-generator/bdd-framework-detector.ts` (6 recipes: Reqnroll/SpecFlow/Cucumber.js/Playwright/Behave/pytest-bdd). Тесты: 6 SBDE001 интеграционных в `tests/e2e/create-specs-bdd-enforcement.test.ts` — зелёные. Правило BDD-as-default — `.claude/skills/create-spec/references/bdd-enforcement.md` (консолидировано в skill bundle вместо 4 mirror-файлов как планировалось). Audit-spec: 0 ERRORS, 2 WARNINGS (cosmetic).
+
 Фича для плагина `specs-workflow`: делает Phase 2 Step 6 «BDD Test Infrastructure Assessment» непропускаемым через state machine; добавляет классификацию TEST_FORMAT (BDD дефолт везде, UNIT — emergency escape с обязательным обоснованием); форсит в Phase 0 TASKS.md обязательный bootstrap block «install BDD framework + hooks + fixtures + config» когда framework отсутствует в target test-project; расширяет `analyze-features.ts` multi-folder recursive scan.
 
 ## Ключевые идеи

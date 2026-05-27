@@ -1,0 +1,14 @@
+# .NET build artifacts
+bin/
+obj/
+
+# Stryker.NET output
+StrykerOutput/
+
+# IDE files
+*.user
+*.suo
+.vs/
+
+# NuGet packages cache
+packages/

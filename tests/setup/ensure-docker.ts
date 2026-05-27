@@ -2,25 +2,26 @@
  * Enforce Docker isolation for E2E tests.
  *
  * Tests destroy HOME-level directories (~/.claude/, ~/.dev-pomogator/) and
- * project files (.claude/settings.json) as part of setupCleanState().
- * Running on host kills the active Claude Code session (auth, hooks).
+ * project files (.specs/, .claude/settings.json) as part of setupCleanState().
+ * Running on host wipes real project data — incident 2026-05-22 cost a week of
+ * untracked spec work via fs.remove('.specs/') in specs-validator.test.ts.
  *
- * Set DEV_POMOGATOR_TEST_IN_DOCKER=1 to bypass (set automatically in Docker).
- * For intentional host runs: npm run test:host (at your own risk).
+ * `DEV_POMOGATOR_TEST_IN_DOCKER=1` is set automatically by the Docker entrypoint.
+ * No bypass env var exists by design — if you need to run a test on host, copy
+ * it to a tmpdir-only variant (see tests/e2e/mcp-config.test.ts for a safe
+ * pattern that uses os.tmpdir() instead of appPath()).
  */
 
 const inDocker = process.env.DEV_POMOGATOR_TEST_IN_DOCKER === '1';
-const forceHost = process.env.DEVPOM_ALLOW_HOST_TESTS === '1';
 
-if (!inDocker && !forceHost) {
+if (!inDocker) {
   throw new Error(
     '\n\n' +
     '========================================\n' +
     '  E2E tests MUST run inside Docker.\n' +
-    '  Tests delete ~/.claude/ and project hooks.\n' +
+    '  Tests delete ~/.claude/, ~/.dev-pomogator/, .specs/, and project hooks.\n' +
     '\n' +
-    '  Use:  npm test          (Docker)\n' +
-    '  Or:   npm run test:host (host, DANGEROUS)\n' +
+    '  Run via:  npm test     (docker-test.sh)\n' +
     '========================================\n'
   );
 }

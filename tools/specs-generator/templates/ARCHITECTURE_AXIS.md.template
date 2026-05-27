@@ -1,0 +1,34 @@
+---
+axis_id: {axis-id}
+status: pending
+chosen: null
+recommended: {recommended-variant-id}
+---
+
+# {Axis Name}
+
+{Context: what this axis decides, the project constraints that shape it.}
+
+## ✅ Recommended: {Variant Name}
+
+{Y-statement: In the context of X, facing Y, use Z and reject W, to achieve V, accepting U.}
+
+## {Variant Name} ✅
+
+_{Y-statement}_
+
+**Maturity:** {Adopt|Trial|Assess|Hold} · **Cost:** {$|$$|$$$}
+
+✅ Good, because {concrete property} [VERIFIED via {source}]
+◐ Neutral, because {wash fact}
+❌ Bad, because {concrete cost} [VERIFIED|UNVERIFIED]
+
+**Failure modes:**
+❌ {crash mid-op → mitigation}
+❌ {duplicate side-effect → idempotency key}
+
+**When to choose:** {one scenario}
+**When NOT to choose:** {one scenario}
+**Confirmation:** {fitness function}
+
+<!-- repeat per variant; exactly one is_recommended -->

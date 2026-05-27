@@ -15,3 +15,7 @@ services:
     volumes:
       # Separate dir for Docker YAML output — tests don't touch this, only wrapper writes here
       - ./.dev-pomogator/.docker-status:/home/testuser/app/.dev-pomogator/.docker-status
+      # Persist mutation testing artifacts (reports/mutation/*.html|json) + Stryker sandbox.
+      # Empty on regular `npm test`; only Stryker writes here.
+      - ./reports:/home/testuser/app/reports
+      - ./.stryker-tmp:/home/testuser/app/.stryker-tmp

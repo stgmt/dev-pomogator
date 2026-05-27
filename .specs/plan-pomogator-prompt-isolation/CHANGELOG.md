@@ -2,7 +2,9 @@
 
 All notable changes to this feature will be documented in this file.
 
-## [Unreleased] — 2026-04-09
+## [0.1.0] — 2026-04-09
+
+> Shipped as `extensions/plan-pomogator/extension.json` v1.8.1. Spec docs finalized 2026-05-23 (TASKS.md closeout — all 28 items marked done after verifying fixes are in mainstream code + 5 regression suite blocks pass).
 
 ### Added
 - Initial spec for plan-pomogator prompt isolation bugfix (4 root cause bugs documented in RESEARCH.md)

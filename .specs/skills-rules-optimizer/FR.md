@@ -112,11 +112,15 @@ System SHALL preserve current `rules-optimizer` API surface unchanged:
 
 ## FR-10: Embedding-based semantic merge — OUT OF SCOPE
 
+**Связанные AC:** [AC-10 stub](ACCEPTANCE_CRITERIA.md#out-of-scope-fr-10-deferred-to-v020) (FR помечен OUT OF SCOPE)
+
 > OUT OF SCOPE — оптимизация Jaccard через `text-embedding-3` cosine distance. Текущий MVP использует Jaccard (cheap) + LLM judge (semantic). Embedding pre-filter может быть быстрее Jaccard и точнее, но добавляет dependency на OpenAI/Anthropic embedding API. Откладывается на v0.2.0.
 >
 > Связанные UC, AC и User Stories отсутствуют (deferred).
 
 ## FR-11: Auto-apply без human review — OUT OF SCOPE
+
+**Связанные AC:** [AC-11 stub](ACCEPTANCE_CRITERIA.md#out-of-scope-fr-11-design-choice-never) (FR помечен OUT OF SCOPE)
 
 > OUT OF SCOPE — system never auto-merges skills без explicit `--execute` flag от user. Detection — automatic, execution — manual. Это design choice ради safety, не technical limitation.
 >

@@ -1,0 +1,28 @@
+{
+  "version": 3,
+  "featureSlug": "skill-listing-budget",
+  "createdAt": "2026-05-11T01:00:04.104Z",
+  "currentPhase": "Complete",
+  "phases": {
+    "Discovery": {
+      "completedAt": "2026-05-11T02:02:45.421Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-05-11T02:36:35.693Z"
+    },
+    "Context": {
+      "completedAt": "2026-05-11T02:02:45.421Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-05-11T02:36:57.458Z"
+    },
+    "Requirements": {
+      "completedAt": "2026-05-11T02:41:31.315Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-05-11T02:41:31.315Z"
+    },
+    "Finalization": {
+      "completedAt": "2026-05-11T02:42:42.886Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-05-11T02:42:42.885Z"
+    }
+  }
+}

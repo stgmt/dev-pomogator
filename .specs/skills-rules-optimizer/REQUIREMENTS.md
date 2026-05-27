@@ -25,8 +25,8 @@
 - [FR-7: Preserve originals](FR.md#fr-7-preserve-originals-no-auto-delete)
 - [FR-8: Unified scoring engine](FR.md#fr-8-unified-scoring-engine-для-rules--skills)
 - [FR-9: Backward compatibility (rules)](FR.md#fr-9-backward-compatibility-для-rules-side)
-- ~~FR-10: Embeddings — OUT OF SCOPE~~ (deferred to v0.2.0)
-- ~~FR-11: Auto-apply — OUT OF SCOPE~~ (design choice, never)
+- ~~[FR-10: Embedding-based semantic merge](FR.md#fr-10-embedding-based-semantic-merge--out-of-scope)~~ — OUT OF SCOPE (deferred to v0.2.0)
+- ~~[FR-11: Auto-apply без human review](FR.md#fr-11-auto-apply-без-human-review--out-of-scope)~~ — OUT OF SCOPE (design choice, never)
 
 ## Non-Functional Requirements
 

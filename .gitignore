@@ -53,3 +53,7 @@ nul
 .env
 .env.*
 !.env.example
+
+# strong-tests JiT runtime audit log (suppression entries; per .specs/strong-tests/ NFR-S4)
+.claude/logs/strong-tests-skips.jsonl
+.claude/logs/

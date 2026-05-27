@@ -72,4 +72,6 @@
 
 ## Next phase
 
-После STOP #1.5 → перейти к [`phase2_requirements-and-design.md`](phase2_requirements-and-design.md).
+После STOP #1.5:
+- **Если greenfield** (нет build-manifest в repo root, `detect-axes` вернёт оси) → сначала [`phase1.75_architecture-decisions.md`](phase1.75_architecture-decisions.md) (зафиксировать стек), затем Phase 2.
+- **Иначе** (brownfield/стек выбран) → сразу [`phase2_requirements-and-design.md`](phase2_requirements-and-design.md).
