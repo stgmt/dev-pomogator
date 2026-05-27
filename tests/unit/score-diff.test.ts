@@ -5,7 +5,7 @@ import {
   scoreDiff,
   isDocsOrTestsOnly,
   parseFilesFromDiff,
-} from '../../extensions/_shared/scope-gate-score-diff.ts';
+} from '../../tools/_shared/scope-gate-score-diff.ts';
 
 const FIXTURES_DIR = path.resolve('tests/fixtures/scope-gate');
 

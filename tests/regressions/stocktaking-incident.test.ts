@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
 import path from 'path';
-import { scoreDiff } from '../../extensions/_shared/scope-gate-score-diff.ts';
+import { scoreDiff } from '../../tools/_shared/scope-gate-score-diff.ts';
 
 /**
  * Regression pin: stocktaking diff from webapp MR !100 must always score >= 4.

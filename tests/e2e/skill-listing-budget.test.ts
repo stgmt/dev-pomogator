@@ -174,17 +174,9 @@ describe('CORE023: skill-listing-budget', () => {
     });
   });
 
-  // ============================================================================
-  // E2E via runInstaller — verifies extension wiring (postInstall + tool copy).
-  // ============================================================================
-  describe('Wired into installer (via extension)', () => {
-    it('runInstaller writes skillListingBudgetFraction=1.0 to ~/.claude/settings.json', async () => {
-      await setupCleanState('claude');
-      const result = await runInstaller('--claude --all');
-
-      expect(result.exitCode).toBe(0);
-      const globalSettings = await fs.readJson(homePath('.claude', 'settings.json'));
-      expect(globalSettings.skillListingBudgetFraction).toBe(1.0);
-    });
-  });
+  // NOTE: the v1 "wired into installer (via extension)" E2E test was removed in v2 —
+  // there is no installer. The budget is applied by the SessionStart hook
+  // (tools/skill-listing-budget/apply_skill_budget.ts, wired in .claude-plugin/hooks.json,
+  // verified by the canonical-plugin drift test) and the core logic is covered by the
+  // direct ensureSkillListingBudget() unit tests above.
 });

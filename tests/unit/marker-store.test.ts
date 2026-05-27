@@ -13,7 +13,7 @@ import {
   TTL_MS,
   GC_STALE_MS,
   type Marker,
-} from '../../extensions/_shared/scope-gate-marker-store.ts';
+} from '../../tools/_shared/scope-gate-marker-store.ts';
 
 let tmpRoot: string;
 

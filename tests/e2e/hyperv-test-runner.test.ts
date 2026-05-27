@@ -339,7 +339,7 @@ describe('CORE_HVTR000: HyperV Test Runner', () => {
       const content = readIfExists(SKILL_MD);
       expect(content, 'SKILL.md missing').not.toBeNull();
       expect(content!).toMatch(
-        /(\.claude\/skills\/debug-screenshot|extensions\/debug-screenshot[\\\/].*?)scripts[\\\/]screenshot\.ps1/,
+        /\.claude[\\\/]skills[\\\/]debug-screenshot[\\\/]scripts[\\\/]screenshot\.ps1/,
       );
     });
 
