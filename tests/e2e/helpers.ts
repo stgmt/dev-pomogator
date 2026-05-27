@@ -1904,3 +1904,68 @@ export function runPythonJson<T = Record<string, unknown>>(
     throw new Error(`runPythonJson: invalid JSON output. stdout: ${stdout.substring(0, 200)}`);
   }
 }
+
+/**
+ * Create a fake `claude` CLI stub for forbid-root-artifacts LLM tests.
+ *
+ * Used by PLUGIN004_LLM_* scenarios (FR-3) to mock the Claude Code CLI
+ * subscription path without invoking the real binary. The stub:
+ *   - Logs each invocation (argv) to `invocationLogPath` as a JSON line
+ *   - Prints the configured `jsonResult` to stdout (mimics `claude -p --output-format json`)
+ *   - Exits 0
+ *
+ * No precedent in the codebase for fake-binary-in-PATH testing — this helper
+ * invents the cross-platform pattern. Tests typically pass `binDir` to
+ * `execSync` via `env: { PATH: binDir + path.delimiter + process.env.PATH }`.
+ *
+ * @param dir Parent directory in which the `_stubs/` subdir will be created
+ * @param jsonResult Object that the fake CLI will print as its stdout JSON
+ * @returns binDir to prepend to PATH, and invocationLogPath to inspect after
+ */
+export function createFakeClaudeStub(
+  dir: string,
+  jsonResult: object,
+): { binDir: string; invocationLogPath: string } {
+  const binDir = path.join(dir, '_stubs');
+  fs.ensureDirSync(binDir);
+  const invocationLogPath = path.join(binDir, 'invocations.log');
+  // Reset log on each stub creation so tests start clean
+  fs.writeFileSync(invocationLogPath, '');
+
+  const jsonOut = JSON.stringify(jsonResult).replace(/'/g, "'\\''");
+  const escapedLogPath = invocationLogPath.replace(/\\/g, '\\\\');
+
+  if (process.platform === 'win32') {
+    // Windows: .cmd shim. argv encoded via temp file to avoid quoting hell.
+    // Logs argv joined by NUL char alternative (use ||| to separate args).
+    const cmdPath = path.join(binDir, 'claude.cmd');
+    const cmdContent =
+      '@echo off\r\n' +
+      'setlocal enabledelayedexpansion\r\n' +
+      'set "ARGS="\r\n' +
+      ':argloop\r\n' +
+      'if "%~1"=="" goto :done\r\n' +
+      'if defined ARGS (set "ARGS=!ARGS!|||%~1") else (set "ARGS=%~1")\r\n' +
+      'shift\r\n' +
+      'goto :argloop\r\n' +
+      ':done\r\n' +
+      `>>"${invocationLogPath}" echo !ARGS!\r\n` +
+      `echo ${jsonOut.replace(/[<>&|^]/g, '^$&')}\r\n` +
+      'exit /b 0\r\n';
+    fs.writeFileSync(cmdPath, cmdContent);
+    // Also write a `claude` (no extension) wrapper invoking cmd —
+    // some tools call the bare name; on Windows .cmd extension auto-resolves.
+  } else {
+    // POSIX: shell script
+    const scriptPath = path.join(binDir, 'claude');
+    const script =
+      '#!/bin/sh\n' +
+      `printf '%s\\n' "$*" >> '${escapedLogPath}'\n` +
+      `cat <<'STUBJSON'\n${JSON.stringify(jsonResult)}\nSTUBJSON\n` +
+      'exit 0\n';
+    fs.writeFileSync(scriptPath, script);
+    fs.chmodSync(scriptPath, 0o755);
+  }
+
+  return { binDir, invocationLogPath };
+}
