@@ -85,7 +85,7 @@ if (RUN_EVAL) {
 
 // 2) validate-spec (structure)
 {
-  const r = run('npx', ['tsx', 'extensions/specs-workflow/tools/specs-generator/validate-spec.ts', '-Path', SPEC]);
+  const r = run('npx', ['tsx', 'tools/specs-generator/validate-spec.ts', '-Path', SPEC]);
   let errors = -1;
   try {
     errors = JSON.parse(r.stdout).summary.files_with_errors;
@@ -102,7 +102,7 @@ if (RUN_EVAL) {
 
 // 3) audit-spec (semantic — ERROR/WARNING only; INFO is noise)
 {
-  const r = run('npx', ['tsx', 'extensions/specs-workflow/tools/specs-generator/audit-spec.ts', '-Path', SPEC]);
+  const r = run('npx', ['tsx', 'tools/specs-generator/audit-spec.ts', '-Path', SPEC]);
   const findings: Finding[] = [];
   let acceptedCount = 0;
   try {

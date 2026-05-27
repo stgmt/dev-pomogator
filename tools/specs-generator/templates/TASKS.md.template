@@ -8,7 +8,7 @@
 | TBD-1 | {first task} | TODO | — | Phase 0 | 30m |
 <!-- end auto-generated -->
 
-> Regenerate via `Skill("task-board-forms")` or `npx tsx extensions/specs-workflow/tools/specs-generator/spec-status.ts -Path .specs/{slug} -Format task-table` and splice between markers.
+> Regenerate via `Skill("task-board-forms")` or `npx tsx tools/specs-generator/spec-status.ts -Path .specs/{slug} -Format task-table` and splice between markers.
 
 ## TDD Workflow
 

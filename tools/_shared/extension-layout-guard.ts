@@ -63,7 +63,7 @@ function denyAndExit(filePath: string, rule: 'rules' | 'skills'): never {
     '',
     `  Docs:   .claude/rules/extension-layout.md`,
     '',
-    `  Validator: npx tsx extensions/_shared/extension-layout-validate.ts`,
+    `  Validator: npx tsx tools/_shared/extension-layout-validate.ts`,
   ].join('\n');
 
   const output = {

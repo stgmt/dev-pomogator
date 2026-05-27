@@ -231,13 +231,15 @@ def find_violations(
     for entry in repo_root.iterdir():
         name = entry.name
         name_lower = name.lower()
-        
+
+        # Always allow VCS infra first — in git worktrees/submodules `.git` is a
+        # FILE (gitlink), not a directory, so it must be skipped before the
+        # is_dir() branch or it gets flagged as a stray root file.
+        if name_lower in always_allowed_dirs:
+            continue
+
         # Check directories
         if entry.is_dir():
-            # Always allow system directories
-            if name_lower in always_allowed_dirs:
-                continue
-            
             if allowed_directories is not None:
                 if name_lower not in {d.lower() for d in allowed_directories}:
                     violations.append(Violation(
