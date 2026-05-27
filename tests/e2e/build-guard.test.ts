@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import path from 'path';
 import fs from 'fs-extra';
-import { appPath, runInstaller, setupCleanState, runTsx, pluginHookEntries } from './helpers';
+import { appPath, setupCleanState, runTsx, pluginHookEntries } from './helpers';
 
 const GUARD_SCRIPT = 'tools/tui-test-runner/build_guard.ts';
 

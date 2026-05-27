@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import crossSpawn from 'cross-spawn';
-import { appPath, runInstaller, setupCleanState, runTsx } from './helpers';
+import { appPath, setupCleanState, runTsx } from './helpers';
 
 const GUARD_SCRIPT = 'tools/reqnroll-ce-guard/ce_slash_guard.ts';
 
@@ -207,8 +207,6 @@ describe('CEGUARD001: Reqnroll CE Slash Guard Hook', () => {
   describe('Installer integration', () => {
     beforeAll(async () => {
       await setupCleanState('claude');
-      const { exitCode } = await runInstaller('--claude --all');
-      expect(exitCode).toBe(0);
     }, 90000);
 
     // @feature6

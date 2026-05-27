@@ -24,28 +24,6 @@ function getEnhancedPath(): string {
   return currentPath;
 }
 
-export interface InstallerResult {
-  logs: string;
-  exitCode: number;
-}
-
-/**
- * Run the dev-pomogator installer
- * Note: Use --all flag to install all plugins in non-interactive mode
- */
-export async function runInstaller(
-  _args: string = '--claude --all',
-  _extraEnv: Record<string, string> = {},
-): Promise<InstallerResult> {
-  // No-op in the canonical plugin model (v2). There is no installer: the plugin
-  // is loaded directly from the repo (`.claude-plugin/` + `tools/` at root), so
-  // there is nothing to "install" into a target project. Tool/hook tests invoke
-  // scripts straight from `tools/<name>/…` (cwd=APP_DIR). Tests that genuinely
-  // exercised the deleted installer/updater were removed in this migration; this
-  // shim keeps the remaining tool-behaviour tests' beforeAll() hooks green.
-  return { logs: '', exitCode: 0 };
-}
-
 // ============================================================================
 // runInstallerViaNpx — for CORE003_18 / CORE003_19 silent install regression
 // ============================================================================

@@ -19,7 +19,6 @@ import {
   getSpecsGeneratorPath,
   getSpecsGeneratorFixturePath,
   appPath,
-  runInstaller,
   setupCleanState,
 } from './helpers';
 
@@ -36,8 +35,6 @@ const SCRIPTS_DIR = 'tools/specs-generator';
 describe('PLUGIN006: Specs Generator Scripts', () => {
   beforeAll(async () => {
     await setupCleanState('claude');
-    const result = await runInstaller('--claude --plugins=specs-workflow');
-    expect(result.exitCode).toBe(0);
   });
 
   // ==========================================================================

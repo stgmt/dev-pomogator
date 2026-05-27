@@ -2,7 +2,6 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import {
-  runInstaller,
   appPath,
   setupCleanState,
   pluginHookEntries,
@@ -20,8 +19,8 @@ let installed = false;
 describe('PLUGIN016: Tests Create Update Skill', () => {
   beforeAll(async () => {
     await setupCleanState('claude');
-    const result = await runInstaller('--claude --all');
-    installed = result.exitCode === 0;
+    // v2: the plugin (incl. this skill) loads from the repo tree — nothing to install.
+    installed = true;
   });
 
   // @feature1

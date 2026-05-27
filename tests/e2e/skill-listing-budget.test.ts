@@ -3,7 +3,7 @@ import fs from 'fs-extra';
 import os from 'os';
 import path from 'path';
 import { ensureSkillListingBudget } from '../../tools/skill-listing-budget/apply_skill_budget.ts';
-import { runInstaller, homePath, setupCleanState } from './helpers';
+import { homePath, setupCleanState } from './helpers';
 
 /**
  * CORE023: Skill Listing Budget (extension)

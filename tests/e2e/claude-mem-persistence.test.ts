@@ -5,7 +5,6 @@ import {
   stopWorker,
   runHookWithParams,
   runHookExpectSuccess,
-  runInstaller,
   homePath,
   getStatsTyped,
   getProjectsList,
@@ -73,13 +72,9 @@ describe.skip('PLUGIN002-PERSISTENCE: Claude-mem Data Persistence', () => {
       'worker-service.cjs'
     );
 
-    if (!(await fs.pathExists(workerServicePath))) {
-      console.log('[persistence] claude-mem not installed, running installer...');
-      const result = await runInstaller('--cursor --all');
-      if (result.exitCode !== 0) {
-        throw new Error(`Installer failed: ${result.logs}`);
-      }
-    }
+    // claude-mem (thedotmack plugin) is provided by the test image; the v1 installer
+    // that set it up was removed in the canonical-plugin migration. If the worker is
+    // absent, startWorker() below surfaces it.
 
     // Start worker
     await startWorker();

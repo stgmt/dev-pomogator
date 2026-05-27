@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import { spawnSync } from 'child_process';
-import { appPath, homePath, runInstaller, setupCleanState, getPythonRunner, runTsx, pluginHookCommands, pluginHookEntries } from './helpers';
+import { appPath, homePath, setupCleanState, getPythonRunner, runTsx, pluginHookCommands, pluginHookEntries } from './helpers';
 import {
   DEFAULT_USER_STATUSLINE_COMMAND,
   extractUserCommandFromLegacyWrapper,
@@ -291,10 +291,6 @@ describe('PLUGIN011: TUI Statusline', () => {
     // to guarantee statusline_session_start.ts and _shared/ are present.
     beforeAll(async () => {
       await setupCleanState('claude');
-      const installResult = await runInstaller('--claude --all');
-      if (installResult.exitCode !== 0) {
-        throw new Error(`Failed to install for SessionStart tests: ${installResult.logs}`);
-      }
     });
 
     // @feature4
@@ -606,28 +602,7 @@ describe('PLUGIN011: TUI Statusline', () => {
       expect(resolved.command).toContain('ccstatusline');
     });
 
-    // @feature9
-    it('PLUGIN011_44: installer deletes project-level statusLine (migration)', async () => {
-      const projectSettingsPath = projectClaudeSettingsPath();
-
-      await setupCleanState('claude');
-      try {
-        // Pre-populate project settings with old project-level statusLine
-        await fs.ensureDir(path.dirname(projectSettingsPath));
-        await fs.writeJson(projectSettingsPath, {
-          statusLine: { type: 'command', command: 'node /old/project/tools/test-statusline/statusline_render.cjs' },
-        }, { spaces: 2 });
-
-        const result = await runInstaller('--claude --all');
-        expect(result.exitCode).toBe(0);
-
-        // Project settings should have statusLine REMOVED (migrated to global)
-        const projectSettings = await fs.readJson(projectSettingsPath);
-        expect(projectSettings.statusLine).toBeUndefined();
-      } finally {
-        await setupCleanState('claude');
-      }
-    });
+    // PLUGIN011_44: installer deletes project-level statusLine (migration) — REMOVED in v2 (no installer; statusLine migration was an installer side-effect that no longer exists)
 
     // @feature9
     it('PLUGIN011_48: extra fields like padding are preserved in resolution', () => {
@@ -654,16 +629,7 @@ describe('PLUGIN011: TUI Statusline', () => {
     // PLUGIN011_49: portable managed command test — REMOVED in v3.0.0 (managed render script deleted)
     // PLUGIN011_50: portable wrapped command test — REMOVED in v3.0.0 (wrapping removed)
 
-    // @feature9
-    it('PLUGIN011_51: installer writes ccstatusline to global settings.json', async () => {
-      await setupCleanState('claude');
-      const result = await runInstaller('--claude --all');
-      expect(result.exitCode).toBe(0);
-
-      const globalSettings = await fs.readJson(homePath('.claude', 'settings.json'));
-      expect(globalSettings.statusLine).toBeDefined();
-      expect(globalSettings.statusLine.command).toContain('ccstatusline');
-    });
+    // PLUGIN011_51: installer writes ccstatusline to global settings.json — REMOVED in v2 (no installer writes global settings; ccstatusline resolution is covered by PLUGIN011_43/_48)
   });
 
   // =========================================================================

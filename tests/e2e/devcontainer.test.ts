@@ -2,7 +2,6 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import {
-  runInstaller,
   appPath,
   setupCleanState,
 } from './helpers';
@@ -21,7 +20,6 @@ import {
 describe('PLUGIN012: DevContainer Extension', () => {
   beforeAll(async () => {
     await setupCleanState('claude');
-    await runInstaller('--claude --all');
   });
 
   const toolsBase = (...segments: string[]) =>

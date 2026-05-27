@@ -8,7 +8,7 @@ import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import { execSync } from 'child_process';
-import { runInstaller, appPath, initGitRepo, pluginHookCommands } from './helpers';
+import { appPath, initGitRepo, pluginHookCommands } from './helpers';
 
 // ============================================================================
 // Test Fixtures and Helpers
@@ -194,11 +194,8 @@ async function getValidationReport(specName: string): Promise<string> {
 
 describe('PLUGIN005: Specs Validator Hook', () => {
   beforeAll(async () => {
-    // Initialize git repo (required for installer)
+    // Initialize git repo (findRepoRoot needs it)
     await initGitRepo();
-    
-    // Run installer to set up hooks and scripts
-    await runInstaller('--claude --all');
   });
 
   beforeEach(async () => {

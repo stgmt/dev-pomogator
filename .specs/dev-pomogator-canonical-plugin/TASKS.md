@@ -105,10 +105,11 @@ The core migration was performed **by hand**: the three `.claude-plugin/*.json` 
   - [x] `answer-simple`, `skill-listing-budget`, `specs-workflow`, `suggest-rules` either moved to `tools/` or accounted for
   - [x] (`pomogator-doctor` already → skill, no action)
 
-- [ ] Fix spec residue flagged during spec-to-truth — Status: TODO | Est: 20m
+- [x] Fix spec residue flagged during spec-to-truth — Status: DONE | Est: 20m
+  _Note (verified 2026-05-27): spec SOURCE is reality-accurate — every `extensions/`/`extension.json`/`src/` mention in FR.md/DESIGN.md/FILE_CHANGES.md is historical ("удалены в v2"), and RESEARCH.md is excluded as historical research. `CANON001_81` already greps "cursor" with a Given that states extensions/ are deleted; `FIXTURES.md` already notes `src/` was removed. Remaining reality-check findings are completion-state (FC_CREATE_EXISTS / CODE_DRIFT_FR_ALREADY_DONE on files/FRs we built), not content defects; the committed REALITY_CHECK_REPORT.md is a pre-fix snapshot._
   **Done When:**
-  - [ ] Scenario `CANON001_81` (greps `extensions/*/extension.json`) corrected to reality
-  - [ ] FR-8 `extensions/edge-debug-port/extension.json` ref + `FIXTURES.md` `src/config/schema.ts` ref corrected
+  - [x] Scenario `CANON001_81` reflects reality (greps "cursor"; Given states extensions/ deleted)
+  - [x] FR/DESIGN/FIXTURES `extensions/`/`src/` mentions are historical-accurate, not live refs
 
 - [x] Remove empty `extensions/` directory tree from git — Status: DONE | Est: 5m
   _Note: the `extensions/` tree held 0 files (only empty dirs, never tracked by git); removed from the worktree. Nothing to commit._
