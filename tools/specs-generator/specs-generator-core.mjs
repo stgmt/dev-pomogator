@@ -111,7 +111,7 @@ function listDirectoryEntries(dirPath, type) {
     });
 }
 
-function collectFilesRecursive(dirPath, matcher) {
+function collectFilesRecursive(dirPath, matcher, skipDir) {
   const results = [];
 
   if (!fs.existsSync(dirPath)) {
@@ -122,6 +122,9 @@ function collectFilesRecursive(dirPath, matcher) {
     for (const entry of fs.readdirSync(currentDir, { withFileTypes: true })) {
       const fullPath = path.join(currentDir, entry.name);
       if (entry.isDirectory()) {
+        if (typeof skipDir === 'function' && skipDir(entry.name, fullPath)) {
+          continue;
+        }
         walk(fullPath);
       } else if (!matcher || matcher(fullPath, entry)) {
         results.push(fullPath);
@@ -560,12 +563,25 @@ function commandScaffoldSpec(argv) {
     { flag: '-Name', key: 'name', type: 'string', required: true },
     { flag: '-Domain', key: 'domain', type: 'string', default: '' },
     { flag: '-Force', key: 'force', type: 'boolean', default: false },
+    {
+      flag: '-TestFormat',
+      key: 'testFormat',
+      type: 'string',
+      default: 'auto',
+      validate: (value) => ['auto', 'bdd', 'unit'].includes(String(value).toLowerCase()),
+      errorMessage: 'Invalid value for -TestFormat. Allowed: auto, bdd, unit',
+    },
     { flag: '-VerboseOutput', key: 'verboseOutput', type: 'boolean', default: false },
     { flag: '-Verbose', key: 'verboseOutput', type: 'boolean', default: false },
     { flag: '-LogFile', key: 'logFile', type: 'string', default: '' },
     { flag: '-Format', key: 'format', type: 'string', default: 'json' },
   ]);
   assertFormat(options.format);
+
+  const testFormat = String(options.testFormat || 'auto').toLowerCase();
+  // 'unit' = no executable BDD: emit SCENARIOS.md doc instead of an executable .feature.
+  // 'auto'/'bdd' keep the default .feature scaffold (BDD-first projects).
+  const useUnitFormat = testFormat === 'unit';
 
   const context = createCommandContext(options);
   const { log } = context;
@@ -642,6 +658,12 @@ function commandScaffoldSpec(argv) {
   const createdFiles = [];
 
   for (const [templateName, targetName] of templateMappings) {
+    // -TestFormat unit: skip the executable .feature scaffold; a SCENARIOS.md
+    // doc is written instead below.
+    if (useUnitFormat && templateName === 'feature.template') {
+      continue;
+    }
+
     const templatePath = path.join(templatesDir, templateName);
     const targetPath = path.join(targetDir, targetName);
 
@@ -660,9 +682,40 @@ function commandScaffoldSpec(argv) {
       content = content.replace(/\{DOMAIN\}/g, options.domain);
     }
 
+    if (templateName === 'DESIGN.md.template' && useUnitFormat) {
+      // Record the chosen test format so downstream phases know there is no
+      // executable BDD (TEST_FORMAT marker). Idempotent: only append if absent.
+      if (!/\*\*TEST_FORMAT:\*\*/i.test(content)) {
+        content += `\n**TEST_FORMAT:** UNIT\n`;
+      }
+    }
+
     fs.writeFileSync(targetPath, content, 'utf8');
     log('INFO', `Copying template: ${templateName} -> ${targetName}`);
     createdFiles.push(targetName);
+  }
+
+  if (useUnitFormat) {
+    const scenariosPath = path.join(targetDir, 'SCENARIOS.md');
+    const scenariosContent = [
+      `# Scenarios — ${toTitleFromSlug(options.name)}`,
+      '',
+      '> DOC ONLY — no executable BDD in this project.',
+      '>',
+      '> This project uses unit/integration tests (TEST_FORMAT: UNIT), not executable',
+      '> .feature files. Document acceptance scenarios here for traceability; implement',
+      '> them as unit/integration tests referenced from TASKS.md.',
+      '',
+      '## Scenario 1: {название}',
+      '',
+      '- **Given** {предусловие}',
+      '- **When** {действие}',
+      '- **Then** {ожидаемый результат}',
+      '',
+    ].join('\n');
+    fs.writeFileSync(scenariosPath, scenariosContent, 'utf8');
+    log('INFO', 'Created SCENARIOS.md (TEST_FORMAT: UNIT — DOC ONLY)');
+    createdFiles.push('SCENARIOS.md');
   }
 
   const progressPath = path.join(targetDir, '.progress.json');
@@ -1053,6 +1106,81 @@ function commandValidateSpec(argv) {
     }
   }
 
+  // JIRA_SOURCE_PRESERVED rule (Jira-first workflow, opt-in via JIRA_SOURCE.md presence).
+  // Emits WARNINGs (never errors → exit code unaffected) when a Jira-originated spec
+  // has FR/AC/BDD artefacts that lack a verbatim Jira trace line. No-op when the spec
+  // has no JIRA_SOURCE.md (opt-out). See .specs/.../SPECJIRA001 feature + audit-checks JIRA_DRIFT.
+  if (existingFiles.includes('JIRA_SOURCE.md')) {
+    log('INFO', 'Checking JIRA_SOURCE_PRESERVED rule...');
+
+    // FR.md: every `## FR-N:` heading SHALL have a `Jira imperative:` trace within 15 lines.
+    if (existingFiles.includes('FR.md')) {
+      const frLines = safeReadLines(path.join(targetDir, 'FR.md'));
+      frLines.forEach((line, lineIndex) => {
+        if (!/^##\s+FR-\d+:/i.test(line)) {
+          return;
+        }
+        const windowLines = frLines.slice(lineIndex, lineIndex + 15);
+        const hasTrace = windowLines.some((l) => /Jira imperative:/i.test(l));
+        if (!hasTrace) {
+          const heading = line.replace(/^#+\s*/, '').trim();
+          warnings.push({
+            file: 'FR.md',
+            line: lineIndex + 1,
+            rule: 'JIRA_SOURCE_PRESERVED',
+            message: `JIRA_SOURCE.md present but "${heading}" has no "Jira imperative:" trace line within 15 lines. Add a verbatim Jira quote to preserve traceability.`,
+          });
+          log('WARN', `FR.md line ${lineIndex + 1}: missing Jira imperative trace for ${heading}`);
+        }
+      });
+    }
+
+    // ACCEPTANCE_CRITERIA.md: every `## AC-N` heading SHALL have a `Jira acceptance:` OR `Evidence:` trace within 15 lines.
+    if (existingFiles.includes('ACCEPTANCE_CRITERIA.md')) {
+      const acLines = safeReadLines(path.join(targetDir, 'ACCEPTANCE_CRITERIA.md'));
+      acLines.forEach((line, lineIndex) => {
+        if (!/^##\s+AC-\d+/i.test(line)) {
+          return;
+        }
+        const windowLines = acLines.slice(lineIndex, lineIndex + 15);
+        const hasTrace = windowLines.some((l) => /(Jira acceptance:|Evidence:)/i.test(l));
+        if (!hasTrace) {
+          const heading = line.replace(/^#+\s*/, '').trim();
+          warnings.push({
+            file: 'ACCEPTANCE_CRITERIA.md',
+            line: lineIndex + 1,
+            rule: 'JIRA_SOURCE_PRESERVED',
+            message: `JIRA_SOURCE.md present but "${heading}" has no "Jira acceptance:" or "Evidence:" trace line within 15 lines.`,
+          });
+          log('WARN', `ACCEPTANCE_CRITERIA.md line ${lineIndex + 1}: missing Jira acceptance/Evidence trace for ${heading}`);
+        }
+      });
+    }
+
+    // *.feature: every `Scenario:` SHALL have a `# Jira trace:` comment within 10 preceding lines.
+    for (const featureFile of featureFiles) {
+      const featureLines = safeReadLines(path.join(targetDir, featureFile));
+      featureLines.forEach((line, lineIndex) => {
+        if (!/^\s*Scenario(?: Outline)?:/.test(line)) {
+          return;
+        }
+        const start = Math.max(0, lineIndex - 10);
+        const precedingLines = featureLines.slice(start, lineIndex);
+        const hasTrace = precedingLines.some((l) => /#\s*Jira trace:/i.test(l));
+        if (!hasTrace) {
+          const scenarioName = line.replace(/^\s*Scenario(?: Outline)?:\s*/, '').trim();
+          warnings.push({
+            file: featureFile,
+            line: lineIndex + 1,
+            rule: 'JIRA_SOURCE_PRESERVED',
+            message: `JIRA_SOURCE.md present but scenario "${scenarioName}" has no "# Jira trace:" comment within 10 preceding lines.`,
+          });
+          log('WARN', `${featureFile} line ${lineIndex + 1}: missing Jira trace comment for scenario "${scenarioName}"`);
+        }
+      });
+    }
+  }
+
   log('INFO', 'Checking CROSS_REF_LINKS rule...');
 
   const anchorIndex = {};
@@ -1275,6 +1403,26 @@ function commandSpecStatus(argv) {
   }
 
   if (options.confirmStop) {
+    // BDD-enforcement gate (SBDE001_02): confirming the Requirements STOP requires
+    // DESIGN.md to carry a `## BDD Test Infrastructure` section WITH a
+    // `**Classification:**` field (TEST_DATA_ACTIVE / TEST_DATA_NONE). This forces the
+    // Phase 2 Step 6 test-infrastructure assessment before the spec can advance.
+    // Block (exit 1, leave stopConfirmed=false) when the section/classification is absent.
+    if (options.confirmStop === 'Requirements') {
+      const designContent = safeReadText(path.join(targetDir, 'DESIGN.md')) ?? '';
+      const hasSection = /##\s+BDD Test Infrastructure/i.test(designContent);
+      const hasClassification = /\*\*Classification:\*\*\s*(TEST_DATA_ACTIVE|TEST_DATA_NONE)/i.test(designContent);
+      if (!hasSection || !hasClassification) {
+        process.stderr.write(
+          'ERROR: DESIGN.md missing BDD Test Infrastructure Classification ' +
+          '(expected "## BDD Test Infrastructure" section with "**Classification:** TEST_DATA_ACTIVE|TEST_DATA_NONE"). ' +
+          'Run Phase 2 Step 6 assessment before confirming the Requirements STOP.\n',
+        );
+        log('ERROR', 'ConfirmStop Requirements blocked: DESIGN.md missing BDD Test Infrastructure Classification');
+        return 1;
+      }
+    }
+
     const phaseState = progressState.phases[options.confirmStop];
     if (phaseState) {
       phaseState.stopConfirmed = true;
@@ -2771,25 +2919,48 @@ function commandAnalyzeFeatures(argv) {
     throw new CliError(`Repository root not found from ${SCRIPT_DIR}`, 1);
   }
 
-  const { log, repoRoot } = context;
+  const { log } = context;
   log('INFO', 'Analyzing feature files...');
 
-  const searchPaths = [
-    path.join(repoRoot, 'tests', 'features'),
-    path.join(repoRoot, '.specs'),
-  ];
+  // Scan the *analyzed project* (cwd), not dev-pomogator's own repo. This lets the
+  // tool discover .feature files in arbitrary multi-folder layouts (e.g.
+  // Cloud/.../Features/X.feature, src/.../Features/Y.feature) rather than only the
+  // conventional tests/features + .specs roots. Relative paths are reported against
+  // the scan root. Build dirs and dependency trees are excluded (FR: exclude
+  // node_modules/bin/obj). Falls back to the script's repo root if cwd is unusable.
+  const scanRoot = (context.repoRoot && fs.existsSync(process.cwd()))
+    ? process.cwd()
+    : (context.repoRoot || process.cwd());
 
+  const EXCLUDED_DIRS = new Set([
+    'node_modules', 'bin', 'obj', '.git', 'dist', 'build', 'out',
+    '.dev-pomogator', '.vs', '.idea', 'packages', 'TestResults',
+  ]);
+  const skipDir = (name) => EXCLUDED_DIRS.has(name);
+
+  const searchPaths = [scanRoot];
+
+  const seen = new Set();
   const featureFiles = [];
   for (const searchPath of searchPaths) {
     if (!fs.existsSync(searchPath)) {
       continue;
     }
 
-    const foundFiles = collectFilesRecursive(searchPath, (fullPath) => fullPath.endsWith('.feature'));
+    const foundFiles = collectFilesRecursive(
+      searchPath,
+      (fullPath) => fullPath.endsWith('.feature'),
+      skipDir,
+    );
     for (const fullPath of foundFiles) {
-      const relativePath = normalizeSlashes(path.relative(repoRoot, fullPath));
+      if (seen.has(fullPath)) {
+        continue;
+      }
+      seen.add(fullPath);
+
+      const relativePath = normalizeSlashes(path.relative(scanRoot, fullPath));
       let type = 'production';
-      if (/^\.specs\//.test(relativePath)) {
+      if (/(^|\/)\.specs\//.test(relativePath)) {
         type = 'spec';
       }
       if (/fixtures\//.test(relativePath)) {
@@ -3250,7 +3421,7 @@ function commandAnalyzeFeatures(argv) {
   const result = {
     timestamp: formatLocalTimestamp(),
     totalFeatures: analyzedFeatures.length,
-    searchPaths: searchPaths.map((searchPath) => normalizeSlashes(path.relative(repoRoot, searchPath))),
+    searchPaths: searchPaths.map((searchPath) => normalizeSlashes(path.relative(scanRoot, searchPath)) || '.'),
     distribution: {
       production: analyzedFeatures.filter((feature) => feature.type === 'production').length,
       spec: analyzedFeatures.filter((feature) => feature.type === 'spec').length,

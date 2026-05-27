@@ -24,8 +24,8 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { spawnSync } from 'child_process';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync, appendFileSync } from 'fs';
-import { tmpdir, homedir } from 'os';
+import { mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from 'fs';
+import { homedir } from 'os';
 import path from 'path';
 
 const APP_DIR = process.env.APP_DIR || process.cwd();
@@ -71,10 +71,15 @@ function makeTempSpec(opts: {
   files?: Record<string, string>;
   progressVersion?: number | 'missing' | 'no-version-field';
 }): { specDir: string; cleanup: () => void } {
-  // The form-guards only inspect files under .specs/<slug>/ (extractSpecInfo
-  // short-circuits to allow otherwise), so the fixture must live there.
-  const root = mkdtempSync(path.join(tmpdir(), 'spec-v3-test-'));
-  const specDir = path.join(root, '.specs', 'test-spec');
+  // The fixture must live under the repo's .specs/<slug>/ for two reasons:
+  //  1. form-guards (extractSpecInfo) only inspect files matching .specs/<slug>/.
+  //  2. spec-status.ts (assertSpecSubdir) rejects any -Path that is not a
+  //     subdirectory of <repoRoot>/.specs/ — an OS-tmpdir path resolves to a
+  //     ".."-prefixed relative path and exits 1. Rooting under APP_DIR/.specs/
+  //     satisfies both contracts. A unique slug + per-spec cleanup avoids
+  //     collisions and leaves the repo .specs/ untouched after the run.
+  const slug = `spec-v3-test-${process.pid}-${Math.random().toString(36).slice(2, 10)}`;
+  const specDir = path.join(APP_DIR, '.specs', slug);
   mkdirSync(specDir, { recursive: true });
   if (opts.files) {
     for (const [name, content] of Object.entries(opts.files)) {
@@ -96,7 +101,7 @@ function makeTempSpec(opts: {
       'utf-8'
     );
   }
-  return { specDir, cleanup: () => rmSync(root, { recursive: true, force: true }) };
+  return { specDir, cleanup: () => rmSync(specDir, { recursive: true, force: true }) };
 }
 
 describe('SPECGEN003: spec-generator-v3 form-guards + skills + audit log', () => {
@@ -592,20 +597,28 @@ describe('SPECGEN003: spec-generator-v3 form-guards + skills + audit log', () =>
       `${nowIso} ALLOW_AFTER_MIGRATION task-form-guard /tmp/f v2 pass-through`,
     ].join('\n') + '\n';
     mkdirSync(path.dirname(AUDIT_LOG), { recursive: true });
-    // Preserve existing log + append
-    const existing = existsSync(AUDIT_LOG) ? readFileSync(AUDIT_LOG, 'utf-8') : '';
-    writeFileSync(AUDIT_LOG, existing + synthetic, 'utf-8');
+    // Seed a CLEAN log with ONLY the synthetic events so the exact-count assertions
+    // below are deterministic. The earlier form-guard tests in this suite append real
+    // DENY/PARSER_CRASH events to the same global log (~/.dev-pomogator/logs/form-guards.log);
+    // appending here would let those pollute the 24h counts (e.g. "13 DENY" vs the
+    // expected 3). Preserve + restore the original so we don't clobber unrelated state.
+    const original = existsSync(AUDIT_LOG) ? readFileSync(AUDIT_LOG, 'utf-8') : null;
+    try {
+      writeFileSync(AUDIT_LOG, synthetic, 'utf-8');
 
-    const payload = { hook_event_name: 'UserPromptSubmit', prompt: 'hello', cwd: APP_DIR };
-    const result = spawnSync('npx', ['tsx', VALIDATE_SPECS], {
-      encoding: 'utf-8', input: JSON.stringify(payload),
-      cwd: APP_DIR, env: { ...process.env, FORCE_COLOR: '0' },
-    });
-    expect(result.status).toBe(0);
-    const combined = (result.stdout || '') + (result.stderr || '');
-    expect(combined).toMatch(/Form guards \(24h\)/);
-    expect(combined).toMatch(/3 DENY|DENY:\s*3/);
-    expect(combined).toMatch(/1 PARSER_CRASH|PARSER_CRASH:\s*1/);
-    expect(combined).toMatch(/2 ALLOW_AFTER_MIGRATION|ALLOW_AFTER_MIGRATION:\s*2/);
+      const payload = { hook_event_name: 'UserPromptSubmit', prompt: 'hello', cwd: APP_DIR };
+      const result = spawnSync('npx', ['tsx', VALIDATE_SPECS], {
+        encoding: 'utf-8', input: JSON.stringify(payload),
+        cwd: APP_DIR, env: { ...process.env, FORCE_COLOR: '0' },
+      });
+      expect(result.status).toBe(0);
+      const combined = (result.stdout || '') + (result.stderr || '');
+      expect(combined).toMatch(/Form guards \(24h\)/);
+      expect(combined).toMatch(/3 DENY|DENY:\s*3/);
+      expect(combined).toMatch(/1 PARSER_CRASH|PARSER_CRASH:\s*1/);
+      expect(combined).toMatch(/2 ALLOW_AFTER_MIGRATION|ALLOW_AFTER_MIGRATION:\s*2/);
+    } finally {
+      if (original !== null) writeFileSync(AUDIT_LOG, original, 'utf-8');
+    }
   });
 });

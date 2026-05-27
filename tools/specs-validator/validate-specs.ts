@@ -38,6 +38,9 @@ interface HookInput {
   conversation_id: string;
   workspace_roots: string[];
   prompt?: string;
+  /** Claude Code UserPromptSubmit sends `cwd` instead of Cursor's `workspace_roots`. */
+  cwd?: string;
+  hook_event_name?: string;
 }
 
 /**
@@ -320,15 +323,25 @@ async function main(): Promise<void> {
       return; // No input, exit silently
     }
 
-    const workspaceRoots = input.workspace_roots || [];
-    if (workspaceRoots.length === 0) {
-      return; // No workspace roots
-    }
-
     // 1.5 Form-guards summary runs independently of .specs/ discovery
     // — so that it fires even on projects without any .specs/ folder
-    // but with form-guards events recorded globally.
+    // but with form-guards events recorded globally. Must run BEFORE the
+    // empty-roots early-return below; otherwise the Claude Code UserPromptSubmit
+    // payload (which carries `cwd`, not Cursor's `workspace_roots`) would skip it
+    // entirely and FR-13's "on every prompt" summary would never fire in practice.
     renderFormGuardsSummary();
+
+    // Accept both the Cursor shape (`workspace_roots`) and the Claude Code shape
+    // (`cwd`). Falling back to `cwd` lets spec discovery work under Claude Code too.
+    const workspaceRoots =
+      input.workspace_roots && input.workspace_roots.length > 0
+        ? input.workspace_roots
+        : input.cwd
+          ? [input.cwd]
+          : [];
+    if (workspaceRoots.length === 0) {
+      return; // No workspace roots (and no cwd) — nothing further to discover
+    }
 
     // 2. Find .specs/ folder
     const specsRoot = findSpecsFolder(workspaceRoots);

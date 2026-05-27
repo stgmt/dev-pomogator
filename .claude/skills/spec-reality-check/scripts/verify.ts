@@ -396,7 +396,19 @@ export function extractTaskPaths(content: string): string[] {
   const stripped = content.replace(/```[\s\S]*?```/g, '');
   const lines = stripped.split(/\r?\n/);
   const inlineExtRegex = /`([^`\s]+\.[A-Za-z][A-Za-z0-9]{1,8})`/g;
+  // Track when a top-level task bullet is marked [OUT_OF_SCOPE] so its indented
+  // child lines (e.g. `  - **files:** ...`) are skipped too — the marker sits on
+  // the task line, but the path lives on the child line. A new top-level bullet
+  // (no leading whitespace) ends the out-of-scope block.
+  let inOutOfScopeBlock = false;
   for (const line of lines) {
+    // A top-level task bullet has no leading whitespace; it opens (or closes) an
+    // out-of-scope block. Indented child lines inherit the current block's state.
+    const isTopLevelBullet = /^[-*+]\s/.test(line);
+    if (isTopLevelBullet) {
+      inOutOfScopeBlock = /\[OUT_OF_SCOPE/i.test(line);
+    }
+    if (inOutOfScopeBlock) continue;
     if (/\[OUT_OF_SCOPE/i.test(line)) continue;
     if (/~~[^~]+~~/.test(line)) continue;
     const filesMatch = line.match(/\*\*files?:\*\*\s*(.+)/i);

@@ -50,7 +50,9 @@ function readStdin(): Promise<string> {
 export function extractSpecRefs(text: string): string[] {
   if (!text) return [];
   const refs = new Set<string>();
-  const regex = /\.specs\/(?:backlog\/)?([A-Za-z0-9][A-Za-z0-9_-]+)/g;
+  // Slug is one-or-more chars: a leading alnum followed by zero+ alnum/_/-.
+  // The trailing `*` (not `+`) lets single-character slugs like `.specs/a/` match.
+  const regex = /\.specs\/(?:backlog\/)?([A-Za-z0-9][A-Za-z0-9_-]*)/g;
   let m: RegExpExecArray | null;
   while ((m = regex.exec(text)) !== null) {
     const slug = m[1];
