@@ -27,7 +27,7 @@ param([switch]$Pin)
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'sp-common.ps1')
 
-# launch.ps1 lives two levels up (extensions/session-pilot/launch.ps1)
+# launch.ps1 lives two levels up (tools/session-pilot/launch.ps1)
 $launch = (Resolve-Path (Join-Path $PSScriptRoot '..\..\launch.ps1')).Path
 
 # A standalone --app window needs Edge/Chrome; warn (launch.ps1 falls back to default browser)

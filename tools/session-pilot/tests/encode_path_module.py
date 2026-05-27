@@ -3,7 +3,7 @@ load time so mutmut can mutate the function body here AND tests reflect any
 upstream change.
 
 DO NOT MANUALLY EDIT THE FUNCTION BODY HERE. Only the canonical version in
-extensions/session-pilot/tools/session-pilot/claude_paths.py is authoritative.
+tools/session-pilot/claude_paths.py is authoritative.
 This module re-implements identical logic for mutmut's benefit; a sync test
 in test_encode_path_module.py asserts the two implementations agree on a
 fixed corpus of inputs."""

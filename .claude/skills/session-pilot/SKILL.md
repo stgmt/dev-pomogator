@@ -35,7 +35,7 @@ argument-hint: "<scenario-name>"
 
 **Шаги**:
 1. `curl -fsS http://localhost:8083/api/health 2>/dev/null` — если 200 OK → server alive, идём к step 4
-2. Если fail → `bash extensions/session-pilot/tools/session-pilot/start-server.sh` (idempotent)
+2. Если fail → `bash tools/session-pilot/start-server.sh` (idempotent)
 3. Wait 2s, retry curl. Если fail повторно → `cat /tmp/sp-server.log` и report problem
 4. **Verification (anti-халява, обязательно)**: `mcp__claude-in-chrome__navigate` to `http://localhost:8083`, then `mcp__claude-in-chrome__screenshot` to confirm UI loaded. Format: «CONFIRMED: dashboard UI rendered with N worktrees» / «DENIED: <reason>»
 
@@ -81,7 +81,7 @@ argument-hint: "<scenario-name>"
 
 **Шаги**:
 1. Получить worktree path X
-2. `python3 extensions/session-pilot/tools/session-pilot/server.py --diagnose-livecycle <path>` — full diagnostic
+2. `python3 tools/session-pilot/server.py --diagnose-livecycle <path>` — full diagnostic
 3. Анализировать output:
    - **No matches found** → encoding variant пропущен. Расширить `encode_path_for_claude()` rules. Add regression test in `tests/test_encode_path.py`.
    - **Youngest JSONL > threshold** → Claude batches writes; `LIVE_THRESHOLD_SEC=600 python3 server.py` для retry, OR document baseline behavior to user
@@ -93,11 +93,11 @@ argument-hint: "<scenario-name>"
 **Когда триггерится**: «сделай ярлык», «закрепи на таскбаре», «создай лаунчер», «открывается 10/20 окон», «окно мерцает».
 
 **Шаги**:
-1. `pwsh -File extensions/session-pilot/tools/session-pilot/create-launcher.ps1` — создаёт Desktop `.lnk` → hidden `launch.ps1` (single-instance) со своей иконкой `session-pilot.ico` + AppUserModelID `ClaudeCode.SessionPilot`.
+1. `pwsh -File tools/session-pilot/create-launcher.ps1` — создаёт Desktop `.lnk` → hidden `launch.ps1` (single-instance) со своей иконкой `session-pilot.ico` + AppUserModelID `ClaudeCode.SessionPilot`.
 2. Юзер закрепляет вручную: right-click → «Show more options» → «Pin to taskbar».
 3. Поведение: клик → окно открыто → фокус; закрыто → ровно одно. Детект окна — по выделенному `--user-data-dir` профилю (`Get-SpDashboardProcess`).
 4. **Если плодятся окна ИЛИ мерцает без интерфейса** → см. `single-instance-launcher.md`: мерцание = рассинхрон версии в 3 местах (extension.json + handlers.py + frontend.py FRONTEND_VERSION) → цикл перезагрузки.
-5. **Verification**: `SP_GUI_TEST=1 python extensions/session-pilot/tools/session-pilot/tests/test_launcher.py` → SP047/SP048 PASS; затем открыть окно + `mcp__claude-in-chrome__screenshot` → CONFIRMED интерфейс виден (не мерцает).
+5. **Verification**: `SP_GUI_TEST=1 python tools/session-pilot/tests/test_launcher.py` → SP047/SP048 PASS; затем открыть окно + `mcp__claude-in-chrome__screenshot` → CONFIRMED интерфейс виден (не мерцает).
 
 ## Anti-халява rules (mandatory для каждого scenario)
 

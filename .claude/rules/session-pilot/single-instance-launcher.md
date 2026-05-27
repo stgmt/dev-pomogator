@@ -17,7 +17,7 @@
 
 При смене версии обнови все три синхронно:
 
-1. `extensions/session-pilot/extension.json` → `"version"`
+1. `tools/session-pilot/extension.json` → `"version"`
 2. `tools/session-pilot/handlers.py` → `/api/health` `"version"`
 3. `tools/session-pilot/frontend.py` → `const FRONTEND_VERSION`
 

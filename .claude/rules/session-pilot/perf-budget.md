@@ -85,7 +85,7 @@ console.log(performance.getEntriesByName('render')[0].duration);
 # Cold timing (kill server, restart, single request)
 pkill python3 -f session-pilot/server.py
 sleep 1
-bash extensions/session-pilot/tools/session-pilot/start-server.sh
+bash tools/session-pilot/start-server.sh
 sleep 2
 time curl -s http://localhost:8083/api/index >/dev/null
 

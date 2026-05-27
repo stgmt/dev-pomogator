@@ -17,10 +17,10 @@
   Re-register hook even if already present.
 
 .EXAMPLE
-  pwsh -File extensions/session-pilot/install.ps1
+  pwsh -File tools/session-pilot/install.ps1
 
 .EXAMPLE
-  iex (irm https://raw.githubusercontent.com/stgmt/dev-pomogator/main/extensions/session-pilot/install.ps1)
+  iex (irm https://raw.githubusercontent.com/stgmt/dev-pomogator/main/tools/session-pilot/install.ps1)
 
 .NOTES
   Per FR-15 (.specs/session-pilot/FR.md) + AC-15. v0.3 pivot — Windows-only.
@@ -61,7 +61,7 @@ Write-Ok "skipped (stdlib only)"
 
 # -- Step 3: Locate session-pilot bundle --------------------------------------
 if (-not $ProjectRoot) {
-  # Default: assume script lives in extensions/session-pilot/, walk up 2 levels
+  # Default: assume script lives in tools/session-pilot/, walk up 2 levels
   $ProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 }
 $serverPy = Join-Path $ProjectRoot 'extensions\session-pilot\tools\session-pilot\server.py'

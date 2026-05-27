@@ -17,7 +17,7 @@ Pairs with **Zellij Web Client** at `http://localhost:8082` for actual terminal 
 
 ```bash
 # In WSL Ubuntu
-bash extensions/session-pilot/tools/session-pilot/start-server.sh
+bash tools/session-pilot/start-server.sh
 # Open http://localhost:8083 in any browser (also accessible from Windows host
 # if you set up `netsh portproxy add v4tov4 listenport=8083 connectaddress=<WSL_IP> connectport=8083`)
 ```

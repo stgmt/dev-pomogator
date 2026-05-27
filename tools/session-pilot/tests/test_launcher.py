@@ -27,7 +27,7 @@ from pathlib import Path
 
 _HERE = Path(__file__).resolve()
 COMMON = _HERE.parent.parent / "sp-common.ps1"            # tools/session-pilot/sp-common.ps1
-LAUNCH = _HERE.parents[3] / "launch.ps1"                  # extensions/session-pilot/launch.ps1
+LAUNCH = _HERE.parents[3] / "launch.ps1"                  # tools/session-pilot/launch.ps1
 _PWSH = shutil.which("pwsh") or shutil.which("powershell")
 _GUI = os.environ.get("SP_GUI_TEST") == "1"
 
