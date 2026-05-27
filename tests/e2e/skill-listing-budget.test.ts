@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import os from 'os';
 import path from 'path';
-import { ensureSkillListingBudget } from '../../extensions/skill-listing-budget/tools/skill-listing-budget/apply_skill_budget.ts';
+import { ensureSkillListingBudget } from '../../tools/skill-listing-budget/apply_skill_budget.ts';
 import { runInstaller, homePath, setupCleanState } from './helpers';
 
 /**

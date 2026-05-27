@@ -21,7 +21,7 @@
  * Refs: .specs/dev-pomogator-canonical-plugin/FR.md FR-7
  */
 
-import { existsSync, readFileSync, rmSync, statSync, writeFileSync, mkdirSync, copyFileSync } from 'node:fs';
+import { existsSync, readFileSync, rmSync, statSync, writeFileSync, mkdirSync, copyFileSync, readdirSync, renameSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
 
@@ -165,16 +165,9 @@ function backupUserModifiedFiles(projectRoot: string, result: MigrationResult, d
 
 function walkDir(dir: string, callback: (file: string) => void): void {
   if (!existsSync(dir)) return;
-  const items = readFileSync; // dummy reference to silence unused
-  void items;
-  // Use require to avoid additional imports complexity
-  const { readdirSync, statSync: statDirSync } = require('node:fs') as {
-    readdirSync: (p: string) => string[];
-    statSync: (p: string) => { isDirectory(): boolean; isFile(): boolean };
-  };
   for (const entry of readdirSync(dir)) {
     const full = join(dir, entry);
-    const st = statDirSync(full);
+    const st = statSync(full);
     if (st.isDirectory()) walkDir(full, callback);
     else if (st.isFile()) callback(full);
   }
@@ -233,7 +226,6 @@ function smartMergeSettingsRemoval(settingsPath: string, removePredicate: (cmd: 
   const tmp = settingsPath + '.tmp';
   try {
     writeFileSync(tmp, JSON.stringify(parsed, null, 2) + '\n', 'utf-8');
-    const { renameSync } = require('node:fs') as { renameSync: (a: string, b: string) => void };
     renameSync(tmp, settingsPath);
   } catch (err: unknown) {
     result.warnings.push(`Failed to write ${settingsPath}: ${(err as Error).message}`);

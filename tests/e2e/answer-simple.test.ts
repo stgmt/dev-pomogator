@@ -4,7 +4,7 @@ import path from 'path';
 import os from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { runInstaller } from './helpers';
-import { detectJargon } from '../../extensions/answer-simple/tools/answer-simple/jargon_detector.ts';
+import { detectJargon } from '../../tools/answer-simple/jargon_detector.ts';
 
 const APP_DIR = process.env.APP_DIR || process.cwd();
 const appPath = (rel: string = ''): string => path.join(APP_DIR, rel);
@@ -188,8 +188,8 @@ describe('PLUGIN017_answer-simple', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'answer-simple-'));
     const toolDir = path.join(root, 'answer-simple');
     fs.mkdirSync(toolDir, { recursive: true });
-    fs.copySync(appPath('extensions/answer-simple/tools/answer-simple/jargon_detector.ts'), path.join(toolDir, 'jargon_detector.ts'));
-    fs.copySync(appPath('extensions/answer-simple/tools/answer-simple/answer_simple_stop.ts'), path.join(toolDir, 'answer_simple_stop.ts'));
+    fs.copySync(appPath('tools/answer-simple/jargon_detector.ts'), path.join(toolDir, 'jargon_detector.ts'));
+    fs.copySync(appPath('tools/answer-simple/answer_simple_stop.ts'), path.join(toolDir, 'answer_simple_stop.ts'));
     fs.copySync(appPath('extensions/_shared'), path.join(root, '_shared'));
     return { hook: path.join(toolDir, 'answer_simple_stop.ts'), root };
   }

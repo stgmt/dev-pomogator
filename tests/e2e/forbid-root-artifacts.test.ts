@@ -5,7 +5,7 @@ import { execSync } from 'child_process';
 import os from 'os';
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
-const PLUGIN_DIR = path.join(ROOT_DIR, 'extensions', 'forbid-root-artifacts');
+const PLUGIN_DIR = path.join(ROOT_DIR, 'tools', 'forbid-root-artifacts');
 const TOOLS_DIR = path.join(ROOT_DIR, 'tools', 'forbid-root-artifacts');
 
 // Temp directory for test repositories

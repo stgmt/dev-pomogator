@@ -32,8 +32,6 @@ const CLI = path.join(
   __dirname,
   '..',
   '..',
-  'extensions',
-  'specs-workflow',
   'tools',
   'specs-generator',
   'architecture-decision',
@@ -680,7 +678,7 @@ describe('ARCH010: anti-hallucination — unbacked context7-VERIFIED marker guar
 describe('ARCH011: architecture-gate guarantees Phase 1.75 (PreToolUse hook)', () => {
   const GATE = path.join(
     __dirname, '..', '..',
-    'extensions', 'specs-workflow', 'tools', 'specs-validator', 'architecture-gate.ts',
+    'tools', 'specs-validator', 'architecture-gate.ts',
   );
   function runGate(filePath: string): { status: number; stdout: string } {
     const r = spawnSync('npx', ['tsx', GATE], {
@@ -724,11 +722,11 @@ describe('ARCH011: architecture-gate guarantees Phase 1.75 (PreToolUse hook)', (
 describe('ARCH012: architecture-gate × real scaffolded spec (version boundary)', () => {
   const GATE = path.join(
     __dirname, '..', '..',
-    'extensions', 'specs-workflow', 'tools', 'specs-validator', 'architecture-gate.ts',
+    'tools', 'specs-validator', 'architecture-gate.ts',
   );
   const CORE = path.join(
     __dirname, '..', '..',
-    'extensions', 'specs-workflow', 'tools', 'specs-generator', 'specs-generator-core.mjs',
+    'tools', 'specs-generator', 'specs-generator-core.mjs',
   );
   function runGate(filePath: string): { status: number; stdout: string } {
     const r = spawnSync('npx', ['tsx', GATE], {
