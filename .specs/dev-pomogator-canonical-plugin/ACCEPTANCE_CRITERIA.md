@@ -4,10 +4,11 @@
 
 **Требование:** [FR-1](FR.md#fr-1-canonical-plugin-layout), [FR-9](FR.md#fr-9-single-canonical-plugin-manifest)
 
-WHEN dev-pomogator repo build выполняется (`npm run build:plugin` или manual)
-THEN repo SHALL содержать `.claude-plugin/plugin.json` со всеми обязательными полями (name=dev-pomogator, version=2.x, description, author)
-AND repo SHALL содержать canonical sub-directories: `skills/<name>/SKILL.md`, `commands/*.md`, `hooks/hooks.json`, `.mcp.json`
-AND `.claude-plugin/` директория SHALL содержать ТОЛЬКО `plugin.json` И `marketplace.json` (no other files per Anthropic spec).
+WHEN drift test (`tests/e2e/canonical-plugin.test.ts`) выполняется на dev-pomogator repo
+THEN repo SHALL содержать hand-maintained `.claude-plugin/plugin.json` со всеми обязательными полями (name=dev-pomogator, version=2.x, description, author), schema-valid per Anthropic spec
+AND repo SHALL содержать canonical sub-directories: `skills/<name>/SKILL.md`, `commands/*.md`, `.mcp.json`, плюс hooks config `.claude-plugin/hooks.json`
+AND каждая hook-команда в `.claude-plugin/hooks.json` SHALL резолвиться в существующий on-disk скрипт под `tools/` (и каждый зарегистрированный hook-скрипт под `tools/` SHALL присутствовать в `hooks.json`)
+AND `.claude-plugin/` директория SHALL содержать ТОЛЬКО `plugin.json`, `marketplace.json` И `hooks.json` (no other files per Anthropic spec).
 
 ## AC-2 (FR-2, FR-3)
 

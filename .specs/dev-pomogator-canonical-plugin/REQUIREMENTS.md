@@ -59,9 +59,9 @@
 
 | CHK-ID | Requirement | Traces To (FR+SC) | Verification Method | Status | Notes |
 |--------|-------------|-------------------|---------------------|--------|-------|
-| CHK-FR1-01 | `.claude-plugin/plugin.json` имеет required fields name/version/description/author | FR-1, AC-1, @feature1 | Integration test | Draft | tests/e2e/canonical-plugin-build.test.ts |
-| CHK-FR1-02 | Repo содержит canonical sub-dirs skills/, commands/, hooks/, .mcp.json после build | FR-1, AC-1, @feature1 | Integration test | Draft | filesystem assertions |
-| CHK-FR1-03 | `.claude-plugin/` contains ONLY plugin.json + marketplace.json (no other files) | FR-1, AC-1, @feature1 | Unit test | Draft | directory listing assertion |
+| CHK-FR1-01 | `.claude-plugin/plugin.json` имеет required fields name/version/description/author | FR-1, AC-1, @feature1 | Integration test | Draft | tests/e2e/canonical-plugin.test.ts |
+| CHK-FR1-02 | Repo содержит canonical sub-dirs skills/, commands/, .mcp.json + `.claude-plugin/hooks.json` | FR-1, AC-1, @feature1 | Integration test | Draft | filesystem assertions |
+| CHK-FR1-03 | `.claude-plugin/` contains ONLY plugin.json + marketplace.json + hooks.json (no other files) | FR-1, AC-1, @feature1 | Unit test | Draft | directory listing assertion |
 | CHK-FR2-01 | `.claude-plugin/marketplace.json` valid per Anthropic schema | FR-2, AC-2, @feature2 | Integration test | Draft | tests/e2e/marketplace-json.test.ts schema validation |
 | CHK-FR2-02 | marketplace.json содержит required name/owner/plugins fields | FR-2, AC-2, @feature2 | Unit test | Draft | parse + assert |
 | CHK-FR2-03 | Plugin entry source="./" resolves correctly to repo root | FR-2, AC-2, @feature2 | Manual review | Draft | manual `/plugin install` smoke test |
@@ -80,7 +80,7 @@
 | CHK-FR8-01 | edge-debug-port manifest has platforms=["claude"] (no cursor) | FR-8, AC-8, @feature8 | Unit test | Draft | tests/e2e/cursor-removal.test.ts |
 | CHK-FR8-02 | --cursor on legacy CLI exits non-zero с v2 error message | FR-8, AC-8, @feature8 | Integration test | Draft | spawnSync assertion |
 | CHK-FR8-03 | package.json description and keywords have no Cursor | FR-8, @feature8 | Unit test | Draft | parse + assert |
-| CHK-FR9-01 | buildCanonicalPlugin() aggregates все 26 extensions | FR-9, AC-1, @feature9 | Integration test | Draft | count skills/commands matches source extensions |
+| CHK-FR9-01 | hand-maintained manifest set complete; drift test asserts hooks.json↔disk | FR-9, AC-1, @feature9 | Integration test | Draft | tests/e2e/canonical-plugin.test.ts — каждая hooks.json команда резолвится в on-disk tools/ скрипт и vice-versa |
 | CHK-FR10-01 | marketplace.json version field synchronized с plugin.json version | FR-10, @feature10 | Unit test | Draft | parse оба + assert equal |
 | CHK-FR11-01 | Skills visible в Claude Desktop after canonical install | FR-11, AC-7, @feature11 | Manual review | Draft | Desktop UI verification |
 | CHK-FR12-01 | `/plugin uninstall dev-pomogator@stgmt` removes cache + enabledPlugins entry | FR-12, AC-6, @feature12 | Manual review | Draft | post-uninstall filesystem check |
