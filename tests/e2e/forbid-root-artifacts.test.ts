@@ -6,8 +6,8 @@ import os from 'os';
 import { createFakeClaudeStub } from './helpers';
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
-const PLUGIN_DIR = path.join(ROOT_DIR, 'extensions', 'forbid-root-artifacts');
-const TOOLS_DIR = path.join(PLUGIN_DIR, 'tools', 'forbid-root-artifacts');
+const PLUGIN_DIR = path.join(ROOT_DIR, 'tools', 'forbid-root-artifacts');
+const TOOLS_DIR = PLUGIN_DIR;
 
 // Temp directory for test repositories
 let tempDir: string;
@@ -112,15 +112,6 @@ describe('PLUGIN004: Forbid Root Artifacts', () => {
   });
 
   describe('Plugin Structure', () => {
-    it('should have extension.json', async () => {
-      const extPath = path.join(PLUGIN_DIR, 'extension.json');
-      expect(await fs.pathExists(extPath)).toBe(true);
-      
-      const ext = await fs.readJson(extPath);
-      expect(ext.name).toBe('forbid-root-artifacts');
-      expect(ext.platforms).toContain('claude');
-    });
-
     // .claude-plugin removed - marketplace approach deprecated
     // it('should have .claude-plugin/plugin.json', ...)
 
