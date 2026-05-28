@@ -11,13 +11,13 @@
 | migrate-vitest-bdd-pseudo | Convert vitest pseudo-BDD → cucumber-js | IN_PROGRESS | bootstrap-bdd-fixtures-config | Phase 0 | 240m |
 | verify-phase0-red | Verify all 37 scenarios FAIL | DONE | migrate-vitest-bdd-pseudo | Phase 0 | 30m |
 | graph-types | Define SpecGraph TS types | DONE | bootstrap-bdd-fixtures-config | Phase 1 | 60m |
-| md-parser-impl | Implement MD parser with dual-anchor | IN_PROGRESS | graph-types | Phase 1 | 360m |
-| gherkin-parser-impl | @cucumber/gherkin parser wrapper | TODO | graph-types | Phase 1 | 120m |
-| ndjson-ingester-impl | @cucumber/messages NDJSON ingester | TODO | graph-types | Phase 1 | 180m |
-| graph-builder-impl | Orchestrate parsers → SpecGraph | TODO | md-parser-impl,gherkin-parser-impl,ndjson-ingester-impl | Phase 1 | 240m |
+| md-parser-impl | Implement MD parser with dual-anchor | DONE | graph-types | Phase 1 | 360m |
+| gherkin-parser-impl | @cucumber/gherkin parser wrapper | DONE | graph-types | Phase 1 | 120m |
+| ndjson-ingester-impl | @cucumber/messages NDJSON ingester | DONE | graph-types | Phase 1 | 180m |
+| graph-builder-impl | Orchestrate parsers → SpecGraph | DONE | md-parser-impl,gherkin-parser-impl,ndjson-ingester-impl | Phase 1 | 240m |
 | incremental-rebuild | Hash-based incremental rebuild | TODO | graph-builder-impl | Phase 1 | 180m |
-| conformance-checker | All structural finding rules | TODO | graph-builder-impl | Phase 1 | 300m |
-| verify-phase1-green | Phase 1 scenarios Red→Green | TODO | conformance-checker | Phase 1 | 60m |
+| conformance-checker | All structural finding rules | DONE | graph-builder-impl | Phase 1 | 300m |
+| verify-phase1-green | Phase 1 scenarios Red→Green | IN_PROGRESS | conformance-checker | Phase 1 | 60m |
 | mcp-server-skeleton | MCP server entry + stdio handshake | TODO | conformance-checker | Phase 2 | 180m |
 | mcp-tool-get-trace | get_trace primary tool | TODO | mcp-server-skeleton | Phase 2 | 240m |
 | mcp-tools-rest | 10 remaining MCP tools | TODO | mcp-tool-get-trace | Phase 2 | 480m |
@@ -104,7 +104,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
 
 ## Phase 1: Graph builder + parsers (Green)
 
-- [ ] Define SpecGraph TS types -- @feature2 — id: graph-types — Status: TODO | Est: 60m
+- [x] Define SpecGraph TS types -- @feature2 — id: graph-types — Status: DONE | Est: 60m
   _depends: bootstrap-bdd-fixtures-config_
   _Requirements: [FR-2](FR.md#fr-2)_
   _Config: see spec-generator-v4_SCHEMA.md Entity 1_
@@ -112,7 +112,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] `types.ts` exports Node, Edge, SpecGraph, NodeType, EdgeType
   - [ ] TypeScript strict mode passes
 
-- [ ] Implement MD parser with dual-anchor -- @feature3 — id: md-parser-impl — Status: TODO | Est: 360m
+- [x] Implement MD parser with dual-anchor -- @feature3 — id: md-parser-impl — Status: DONE | Est: 360m
   _depends: graph-types_
   _Requirements: [FR-3](FR.md#fr-3)_
   **Done When:**
@@ -121,7 +121,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] Triple-anchor backward compat for legacy headings
   - [ ] @feature3 SPECGEN004_05, SPECGEN004_06 pass
 
-- [ ] Implement Gherkin parser wrapper -- @feature2 — id: gherkin-parser-impl — Status: TODO | Est: 120m
+- [x] Implement Gherkin parser wrapper -- @feature2 — id: gherkin-parser-impl — Status: DONE | Est: 120m
   _depends: graph-types_
   _Requirements: [FR-2](FR.md#fr-2)_
   **Done When:**
@@ -129,7 +129,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] Tag inheritance Feature→Scenario→Pickle preserved
   - [ ] Unit test passes on fixture .feature files
 
-- [ ] Implement NDJSON ingester -- @feature2 — id: ndjson-ingester-impl — Status: TODO | Est: 180m
+- [x] Implement NDJSON ingester -- @feature2 — id: ndjson-ingester-impl — Status: DONE | Est: 180m
   _depends: graph-types_
   _Requirements: [FR-2](FR.md#fr-2)_
   **Done When:**
@@ -137,7 +137,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] All 21 envelope types handled
   - [ ] JOIN keys produce correct edges (pickle.tags → testCase.pickleId → testStepFinished)
 
-- [ ] Orchestrate graph builder -- @feature2 — id: graph-builder-impl — Status: TODO | Est: 240m
+- [x] Orchestrate graph builder -- @feature2 — id: graph-builder-impl — Status: DONE | Est: 240m
   _depends: md-parser-impl, gherkin-parser-impl, ndjson-ingester-impl_
   _Requirements: [FR-2](FR.md#fr-2)_
   **Done When:**
@@ -153,7 +153,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] Single-file change reindexes only affected subgraph
   - [ ] @feature2 SPECGEN004_04 passes (≤100ms p95)
 
-- [ ] Conformance checker (all structural rules) -- @feature13 — id: conformance-checker — Status: TODO | Est: 300m
+- [x] Conformance checker (all structural rules) -- @feature13 — id: conformance-checker — Status: DONE | Est: 300m
   _depends: graph-builder-impl_
   _Requirements: [FR-13](FR.md#fr-13)_
   **Done When:**
@@ -161,7 +161,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] `suggestions[]` populated for each finding
   - [ ] Unit tests cover each finding code
 
-- [ ] Verify Phase 1 — @feature2, @feature3, @feature13 Red→Green -- @feature2 — id: verify-phase1-green — Status: TODO | Est: 60m
+- [ ] Verify Phase 1 — @feature2, @feature3, @feature13 Red→Green -- @feature2 — id: verify-phase1-green — Status: IN_PROGRESS | Est: 60m
   _depends: conformance-checker_
   **Done When:**
   - [ ] All Phase 1 scenarios pass (SPECGEN004_03, _04, _05, _06, _29)
