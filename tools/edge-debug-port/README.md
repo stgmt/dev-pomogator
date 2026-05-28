@@ -9,7 +9,7 @@ PowerShell script that permanently configures Microsoft Edge to launch with `--r
 ### Apply
 
 ```powershell
-pwsh .dev-pomogator/tools/edge-debug-port/setup-edge-debug-port.ps1
+pwsh tools/edge-debug-port/setup-edge-debug-port.ps1
 ```
 
 What it changes:
@@ -21,7 +21,7 @@ After the script finishes, **close all Edge windows and reopen** for the changes
 ### Custom port
 
 ```powershell
-pwsh .dev-pomogator/tools/edge-debug-port/setup-edge-debug-port.ps1 -Port 9333
+pwsh tools/edge-debug-port/setup-edge-debug-port.ps1 -Port 9333
 ```
 
 ### Verify
@@ -37,7 +37,7 @@ Should return JSON with `Browser: "Edg/<version>"`.
 ### Revert
 
 ```powershell
-pwsh .dev-pomogator/tools/edge-debug-port/setup-edge-debug-port.ps1 -Revert
+pwsh tools/edge-debug-port/setup-edge-debug-port.ps1 -Revert
 ```
 
 Reads `~/.edge-debug-port-backup.json` and restores all original shortcut Arguments and registry `(Default)` values.

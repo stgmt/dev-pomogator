@@ -33,7 +33,7 @@ decisions (sibling-invocation warning, PR owner/repo confirmation) that a script
    (plain question, one line) for the feature slug.
 2. **Run the orchestrator** (non-interactive steps):
    ```bash
-   npx tsx .dev-pomogator/tools/worktree-setup/orchestrate.ts <slug> [--pr=draft] [--skip-build] [--devcontainer]
+   npx tsx tools/worktree-setup/orchestrate.ts <slug> [--pr=draft] [--skip-build] [--devcontainer]
    ```
    In the dev-pomogator source repo the path is `.claude/skills/worktree-setup/scripts/orchestrate.ts`.
    The orchestrator prints a per-step summary and, when it needs a human decision, prints a line
@@ -71,7 +71,7 @@ decisions (sibling-invocation warning, PR owner/repo confirmation) that a script
   worktree is preserved for debugging (NFR-R3).
 - **No hardcoded identifiers**: owner/repo derived at runtime (env → git remote → gh api → ask); works on forks (NFR-S5).
 - **Idempotent**: re-running on an existing worktree enters reuse, skips already-present env files, skips up-to-date build.
-- **Coexists** with `extensions/devcontainer/.../launch-worktree.ps1` (Docker/VNC workflow) — reuses its port logic, does not replace it.
+- **Coexists** with `tools/devcontainer/.../launch-worktree.ps1` (Docker/VNC workflow) — reuses its port logic, does not replace it.
 
 ## References
 

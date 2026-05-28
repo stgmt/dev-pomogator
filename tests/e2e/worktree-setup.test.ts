@@ -29,10 +29,10 @@ import { composeProjectName, bringUpDevcontainer } from '../../.claude/skills/wo
 
 const SKILL_SCRIPTS = appPath('.claude', 'skills', 'worktree-setup', 'scripts');
 const ORCHESTRATE = path.join(SKILL_SCRIPTS, 'orchestrate.ts');
-const DOCTOR = appPath('extensions', 'worktree-setup', 'tools', 'worktree-setup', 'worktree-doctor.cjs');
-const TSX_RUNNER = appPath('src', 'scripts', 'tsx-runner.js');
+const DOCTOR = appPath('tools', 'worktree-setup', 'worktree-doctor.cjs');
+const TSX_RUNNER = appPath('tools', '_shared', 'tsx-runner.js');
 const POST_CREATE = appPath(
-  'extensions', 'devcontainer', 'tools', 'devcontainer', 'templates', 'scripts', 'post-create.sh',
+  'tools', 'devcontainer', 'templates', 'scripts', 'post-create.sh',
 );
 
 afterEach(() => cleanupTempPaths());
@@ -40,12 +40,11 @@ afterEach(() => cleanupTempPaths());
 // ---------------------------------------------------------------------------
 describe('CORE024: worktree-setup plugin', () => {
   // ----- packaging / scaffold -----
-  it('CORE024_M1: extension.json parses and declares skill + tool + command', async () => {
-    const manifest = await fs.readJson(appPath('extensions', 'worktree-setup', 'extension.json'));
-    expect(manifest.name).toBe('worktree-setup');
-    expect(manifest.skills).toHaveProperty('worktree-setup');
-    expect(manifest.toolFiles['worktree-setup'].some((p: string) => p.endsWith('worktree-doctor.cjs'))).toBe(true);
-    expect(manifest.commandFiles.claude).toContain('.claude/commands/worktree.md');
+  it('CORE024_M1: v2 canonical artifacts present (skill + tool + command)', async () => {
+    // v2: no per-extension extension.json — verify the canonical artifacts directly.
+    expect(await fs.pathExists(appPath('.claude', 'skills', 'worktree-setup', 'SKILL.md'))).toBe(true);
+    expect(await fs.pathExists(appPath('tools', 'worktree-setup', 'worktree-doctor.cjs'))).toBe(true);
+    expect(await fs.pathExists(appPath('.claude', 'commands', 'worktree.md'))).toBe(true);
   });
 
   it('CORE024_M2: SKILL.md has frontmatter name + allowed-tools, command exists', async () => {

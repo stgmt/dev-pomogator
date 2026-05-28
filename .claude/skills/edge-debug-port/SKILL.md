@@ -53,7 +53,7 @@ Symptom after applying this skill: `mcp__claude-in-chrome__*` tools return `Brow
 ### 1. Apply
 
 ```powershell
-pwsh .dev-pomogator/tools/edge-debug-port/setup-edge-debug-port.ps1
+pwsh tools/edge-debug-port/setup-edge-debug-port.ps1
 ```
 
 Modifies on disk:
@@ -91,7 +91,7 @@ Use `chromium.connectOverCDP('http://localhost:9222')` (Playwright) or any CDP c
 ### 5. Revert
 
 ```powershell
-pwsh .dev-pomogator/tools/edge-debug-port/setup-edge-debug-port.ps1 -Revert
+pwsh tools/edge-debug-port/setup-edge-debug-port.ps1 -Revert
 ```
 
 ## Hard rules (anti-patterns)

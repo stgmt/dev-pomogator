@@ -14,7 +14,7 @@ Built on [Meridian](https://github.com/rynfar/meridian) (official
 - `proxy-up` — operations: check / start / restart / diagnose proxy
 - `use-claude-subscription` — wire any project's `.env` to use the proxy
 
-**Tools** (in `.dev-pomogator/tools/claude-subscription-proxy/`):
+**Tools** (in `tools/claude-subscription-proxy/`):
 - `Dockerfile` — patched Meridian image with Linux musl binary fix
 - `docker-compose.yml` — passthrough mode, loopback bind, restart unless-stopped, healthcheck, log rotation
 - `scripts/{start,stop,health}.{sh,ps1}` — cross-platform lifecycle
@@ -28,7 +28,7 @@ npm install -g @anthropic-ai/claude-code   # if not installed
 claude login                                # browser OAuth, saves ~/.claude/.credentials.json
 
 # Bring up the proxy
-bash .dev-pomogator/tools/claude-subscription-proxy/scripts/start.sh
+bash tools/claude-subscription-proxy/scripts/start.sh
 # Windows: powershell .\.dev-pomogator\tools\claude-subscription-proxy\scripts\start.ps1
 ```
 
@@ -69,7 +69,7 @@ container crash.
 
 ```bash
 sudo systemctl enable --now docker
-bash .dev-pomogator/tools/claude-subscription-proxy/scripts/start.sh
+bash tools/claude-subscription-proxy/scripts/start.sh
 ```
 
 ## Operations
@@ -77,11 +77,11 @@ bash .dev-pomogator/tools/claude-subscription-proxy/scripts/start.sh
 | Task | Command |
 |---|---|
 | Health | `curl http://127.0.0.1:3456/health` |
-| Logs | `docker compose -f .dev-pomogator/tools/claude-subscription-proxy/docker-compose.yml logs -f meridian` |
+| Logs | `docker compose -f tools/claude-subscription-proxy/docker-compose.yml logs -f meridian` |
 | Telemetry dashboard | open `http://127.0.0.1:3456/telemetry` in browser |
 | Manual OAuth refresh | `curl -X POST http://127.0.0.1:3456/auth/refresh` |
 | Re-auth (refresh token expired) | `claude login`, then restart proxy |
-| Stop | `bash .dev-pomogator/tools/claude-subscription-proxy/scripts/stop.sh` |
+| Stop | `bash tools/claude-subscription-proxy/scripts/stop.sh` |
 
 ## Troubleshooting
 
