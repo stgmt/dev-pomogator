@@ -580,13 +580,16 @@ function buildTabulator() {
         const resumeTitle = canResume
           ? `Resume claude --resume ${uuid.slice(0,8)}…`
           : 'No session history — use Fresh to start';
+        // onclick attribute MUST be single-quoted: JSON.stringify emits
+        // double-quoted strings, so a double-quoted attribute would be closed
+        // by the first arg's quote → truncated handler → dead button (every row).
         return `
           <button class="act-btn ${canResume ? '' : 'disabled'}" title="${resumeTitle}"
-                  ${canResume ? `onclick="actLaunch(this, ${JSON.stringify(row.worktree_path)}, 'resume', ${JSON.stringify(uuid)})"` : 'disabled'}>▶</button>
+                  ${canResume ? `onclick='actLaunch(this, ${JSON.stringify(row.worktree_path)}, "resume", ${JSON.stringify(uuid)})'` : 'disabled'}>▶</button>
           <button class="act-btn" title="Fresh claude (no resume) in ${row.worktree_path}"
-                  onclick="actLaunch(this, ${JSON.stringify(row.worktree_path)}, 'fresh', null)">✨</button>
+                  onclick='actLaunch(this, ${JSON.stringify(row.worktree_path)}, "fresh", null)'>✨</button>
           <button class="act-btn" title="Open in VSCode/Cursor (code ${row.worktree_path})"
-                  onclick="actVSCode(this, ${JSON.stringify(row.worktree_path)})">📂</button>
+                  onclick='actVSCode(this, ${JSON.stringify(row.worktree_path)})'>📂</button>
         `;
       }},
     ],

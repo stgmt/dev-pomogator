@@ -21,6 +21,7 @@ import re
 import sys
 import urllib.error
 import urllib.request
+from pathlib import Path
 
 SERVER = os.environ.get("SP_SERVER", "http://localhost:8083")
 
@@ -122,6 +123,28 @@ def test_html_includes_meta_charset_utf8():
     assert 'charset="utf-8"' in html.lower() or "charset='utf-8'" in html.lower(), (
         "missing meta charset utf-8"
     )
+
+
+def test_action_button_onclick_uses_single_quoted_attribute():
+    """Regression — dashboard Action buttons were dead (▶ ✨ 📂 did nothing).
+
+    The onclick handlers embed ${JSON.stringify(row.worktree_path)}, which emits a
+    DOUBLE-quoted JS string. If the onclick ATTRIBUTE is also double-quoted, the
+    first arg's quote closes the attribute early -> the browser parses onclick as
+    just `actLaunch(this, ` -> SyntaxError on click -> every button silently no-ops.
+    The attribute MUST be single-quoted. Read from source (no server needed).
+    """
+    src = (Path(__file__).resolve().parents[1] / "frontend.py").read_text(encoding="utf-8")
+    assert 'onclick="actLaunch' not in src, (
+        "actLaunch onclick must be single-quoted ('...'): double quotes collide with "
+        "the JSON.stringify() argument and truncate the handler"
+    )
+    assert 'onclick="actVSCode' not in src, (
+        "actVSCode onclick must be single-quoted ('...'): double quotes collide with "
+        "the JSON.stringify() argument and truncate the handler"
+    )
+    assert "onclick='actLaunch" in src, "actLaunch button not wired with single-quoted onclick"
+    assert "onclick='actVSCode" in src, "actVSCode button not wired with single-quoted onclick"
 
 
 if __name__ == "__main__":
