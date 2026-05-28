@@ -1,0 +1,11 @@
+{
+  "expectations": [
+    {"text": "Output contains 'Переформулировано:' header", "passed": true, "evidence": "Line 1: 'Переформулировано: Готовы изменения...'"},
+    {"text": "Output contains 'Найдено проблем:' header", "passed": true, "evidence": "Line 3: 'Найдено проблем:'"},
+    {"text": "Output identifies 'FR-12' as undefined internal code", "passed": true, "evidence": "Line 4: 'Внутренний код FR-12 без расшифровки'"},
+    {"text": "Output identifies 'VARIANT_COVERAGE' as undefined internal code", "passed": true, "evidence": "Line 5: 'Внутренний код VARIANT_COVERAGE без расшифровки'"},
+    {"text": "Output identifies missing micro-story structure or missing causal links", "passed": true, "evidence": "Lines 6-7: identifies BOTH missing structure AND missing causal links"},
+    {"text": "BYTE-FAITHFUL: does NOT invent 'STOP #3', 'polymorphic FR', 'матрица вариантов', 'блокирует переход', 'прогон' (Правило 1)", "passed": true, "evidence": "Reformulation is 1 short faithful sentence: 'обновлено требование (FR-12) и подключена категория проверок VARIANT_COVERAGE'. No invented context. Compare to iter-1 which had all 5 hallucinations."}
+  ],
+  "summary": {"passed": 6, "failed": 0, "total": 6, "pass_rate": 1.0}
+}

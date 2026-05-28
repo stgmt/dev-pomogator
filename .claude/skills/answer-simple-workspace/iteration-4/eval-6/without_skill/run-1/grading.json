@@ -1,0 +1,11 @@
+{
+  "expectations": [
+    {"text": "Output contains 'Переформулировано:' header", "passed": false, "evidence": "Output: 'Спасибо за подробный план! Звучит структурированно.' — no header"},
+    {"text": "Output contains 'Найдено проблем:' header", "passed": false, "evidence": "No audit block. Baseline gives structured review with 'Общая структура волн' / 'Что я бы уточнил' / 'Что бы добавил' sections."},
+    {"text": "Skill does NOT flag service names (payments, billing, invoicing, analytics, reports, dashboards) as internal codes", "passed": true, "evidence": "Baseline doesn't flag at all — trivially passes. But uses service names contextually as known entities."},
+    {"text": "Skill flags v0.2.5 / gates / QPS / SRE as needing explanation", "passed": false, "evidence": "Baseline uses 'high QPS' as known term, doesn't flag SRE or gates"},
+    {"text": "BYTE-FAITHFUL: reformulation does not invent context not present in source", "passed": false, "evidence": "Baseline invents extensive content: 'Pre-migration checklist', 'Communication plan', 'Buffer week', 'blue-green or canary', 'blast radius' — all fabricated suggestions"},
+    {"text": "Reformulation preserves the micro-story structure already present in source", "passed": false, "evidence": "No reformulation produced"}
+  ],
+  "summary": {"passed": 1, "failed": 5, "total": 6, "pass_rate": 0.1667}
+}

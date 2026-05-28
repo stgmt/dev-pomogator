@@ -1,0 +1,11 @@
+{
+  "expectations": [
+    {"text": "Output contains 'Переформулировано:' header", "passed": false, "evidence": "Output: 'Понял. Несколько мыслей по сделанному и по следующему шагу:' — no header"},
+    {"text": "Output contains 'Найдено проблем:' header", "passed": false, "evidence": "No audit block. Baseline gives code review with TypeScript suggestions"},
+    {"text": "Skill does NOT flag identifiers INSIDE code block as internal codes", "passed": true, "evidence": "Baseline treats identifiers as code naturally — trivially passes since no audit"},
+    {"text": "Skill does NOT flag file paths as internal codes", "passed": true, "evidence": "Same — file paths treated normally"},
+    {"text": "Skill may legitimately flag AJV as needing context for non-technical readers", "passed": false, "evidence": "Baseline doesn't flag AJV, dives into AJV API specifics"},
+    {"text": "Reformulation preserves code block content intact (BYTE-FAITHFUL)", "passed": false, "evidence": "No reformulation. Baseline invents improved version of code (with ajv.compile pattern, allErrors:true config) — fabricates beyond source"}
+  ],
+  "summary": {"passed": 2, "failed": 4, "total": 6, "pass_rate": 0.3333}
+}

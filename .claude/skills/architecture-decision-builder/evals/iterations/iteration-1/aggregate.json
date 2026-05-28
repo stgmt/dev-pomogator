@@ -1,6 +1,6 @@
 {
-  "total": 24,
-  "passed": 24,
+  "total": 32,
+  "passed": 32,
   "failed": 0,
   "details": [
     {
@@ -8,63 +8,84 @@
       "name": "greenfield-detect-positive",
       "passed": 1,
       "total": 1,
-      "duration_ms": 806
+      "duration_ms": 1591
     },
     {
       "id": 2,
       "name": "brownfield-hard-out-h1-regression",
       "passed": 2,
       "total": 2,
-      "duration_ms": 805
+      "duration_ms": 1294
     },
     {
       "id": 3,
       "name": "audit-pending-blocks",
       "passed": 3,
       "total": 3,
-      "duration_ms": 749
+      "duration_ms": 1296
     },
     {
       "id": 4,
       "name": "audit-all-accepted-complete",
       "passed": 3,
       "total": 3,
-      "duration_ms": 744
+      "duration_ms": 1358
     },
     {
       "id": 5,
       "name": "escape-hatch-short-reason-info",
       "passed": 3,
       "total": 3,
-      "duration_ms": 734
+      "duration_ms": 1265
     },
     {
       "id": 6,
       "name": "escape-hatch-valid-reason",
       "passed": 3,
       "total": 3,
-      "duration_ms": 756
+      "duration_ms": 1241
     },
     {
       "id": 7,
       "name": "completeness-all-addressed-complete",
       "passed": 3,
       "total": 3,
-      "duration_ms": 765
+      "duration_ms": 1309
     },
     {
       "id": 8,
       "name": "completeness-one-pending-blocks",
       "passed": 3,
       "total": 3,
-      "duration_ms": 740
+      "duration_ms": 1343
     },
     {
       "id": 9,
       "name": "non-webapp-domain-detection",
       "passed": 3,
       "total": 3,
-      "duration_ms": 771
+      "duration_ms": 1350
+    },
+    {
+      "id": 10,
+      "name": "synthesis-cross-axis-valid-and-rejected",
+      "passed": 2,
+      "total": 2,
+      "duration_ms": 1361
+    },
+    {
+      "id": 11,
+      "name": "policy-drives-recommendation",
+      "passed": 3,
+      "total": 3,
+      "duration_ms": 2717
+    },
+    {
+      "id": 12,
+      "name": "completeness-addressed-without-pointer",
+      "passed": 3,
+      "total": 3,
+      "duration_ms": 1340
     }
   ]
 }

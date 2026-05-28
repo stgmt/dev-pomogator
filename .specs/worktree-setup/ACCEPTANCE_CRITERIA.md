@@ -10,6 +10,8 @@ IF slug fails regex validation THEN skill SHALL refuse with error `Invalid slug:
 
 IF branch `feat/<slug>` already exists THEN skill SHALL invoke UC-4 idempotency flow (ask whether to reuse existing branch or abort).
 
+IF the target directory `<main-parent>/<main-basename>-<slug>` already exists on disk AND is NOT a registered git worktree (absent from `git worktree list --porcelain`) THEN skill SHALL refuse with `Target path <path> already exists and is not a worktree — remove it or choose a different slug` and exit code 2, without invoking `git worktree add`.
+
 ## AC-2 (FR-2)
 
 **Требование:** [FR-2](FR.md#fr-2-full-installer-bootstrap-with-global-config-registration)
@@ -19,6 +21,8 @@ WHEN `git worktree add` (AC-1) succeeded THEN skill SHALL execute `node <main>/b
 WHEN installer exits with code 0 THEN skill SHALL read `~/.dev-pomogator/config.json` and verify `installedExtensions[].projectPaths[]` contains the absolute path of the new worktree.
 
 IF projectPath registration is absent after successful installer exit (config-write race, partial install) THEN skill SHALL print `Bootstrap incomplete — installer did not register projectPath. Retry: cd <worktree> && node <main>/bin/cli.js --claude --all`.
+
+IF the projectPath registered by the installer is an ANCESTOR of the new worktree (or otherwise not equal to it) — i.e. `findRepoRoot()` resolved to an enclosing git repo because the worktree is nested — THEN skill SHALL refuse with `Installer resolved to <resolved-root>, not the worktree <worktree-path> — worktree is nested under another git repo; create it as a sibling of main` instead of accepting the wrong-root bootstrap.
 
 ## AC-3 (FR-3)
 
@@ -93,6 +97,44 @@ WHEN skill detects `process.cwd()` is not equal to the first `worktree <path>` l
 WHEN user selects `Continue from main` THEN skill SHALL execute ALL subsequent `git worktree add` and `node bin/cli.js` operations with cwd set to main worktree path (operations rooted at main, not at the invocation CWD). New sibling worktree SHALL be created relative to main's parent dir, never relative to the current sibling.
 
 WHEN user selects `Abort` THEN skill SHALL exit cleanly with code 0 AND print hint `Switch to main first: cd <main> && claude` AND perform no git/installer/env side effects.
+
+## AC-10 (FR-10)
+
+**Требование:** [FR-10](FR.md#fr-10-local-envconfig-file-synchronization-into-fresh-worktree)
+
+WHEN worktree creation and FR-2 bootstrap succeeded AND main worktree contains a gitignored root `.env.test` THEN skill SHALL copy it to `<new-worktree>/.env.test` with byte-identical content (AC-10.1).
+
+WHEN main worktree contains `.devcontainer/.env` THEN skill SHALL NOT byte-copy it; instead skill SHALL write `<new-worktree>/.devcontainer/.env` with `HOST_NOVNC_PORT`/`HOST_VNC_PORT` differing from main's (next free port pair) and `HOST_REPOS_PATH` set to main's parent directory (AC-10.2).
+
+IF a copied file's contents match a secret pattern (`password|secret|api[_-]?key|token|BEGIN (RSA |EC |DSA )?PRIVATE KEY`) THEN skill SHALL emit exactly one stderr WARNING line naming the file WITHOUT printing the secret value (AC-10.3).
+
+IF a target env file already exists in the new worktree THEN skill SHALL skip the copy (no overwrite) and record `action: skipped` in the env-sync audit log, keeping re-runs idempotent (AC-10.4).
+
+WHEN the candidate set is computed THEN selection SHALL be runtime-derived via include-globs `.env`/`.env.*` + `git check-ignore` minus the exclude-list, with NO hardcoded `.env.test` literal in production logic — verified by an integration test on a repo whose env file has a different name (AC-10.5).
+
+## AC-11 (FR-11)
+
+**Требование:** [FR-11](FR.md#fr-11-build-and-dependency-synchronization)
+
+WHEN worktree creation and bootstrap succeeded AND the worktree root `package.json` exists AND `node_modules/` is absent THEN skill SHALL run `npm install` with cwd set to the new worktree before doctor verification (AC-11.1).
+
+WHEN `node_modules/` is present AND (`dist/` is absent OR any `src/` file is newer than the newest `dist/` file) THEN skill SHALL run `npm run build` in the worktree (AC-11.2).
+
+IF the user passes `--skip-build` THEN skill SHALL NOT run `npm install` or `npm run build`, and SHALL print the manual commands `cd <worktree> && npm install && npm run build` (AC-11.3).
+
+IF `npm install` or `npm run build` exits non-zero THEN skill SHALL print the failure plus the retry command and CONTINUE without deleting the worktree (best-effort, no rollback) (AC-11.4).
+
+## AC-12 (FR-12)
+
+**Требование:** [FR-12](FR.md#fr-12-devcontainer-integration)
+
+WHEN the user passes `--devcontainer` AND the new worktree contains `.devcontainer/docker-compose.yml` THEN skill SHALL run `docker compose build` then `docker compose up -d` with cwd `<worktree>/.devcontainer`, using a compose project name derived from the worktree directory and the unique ports in `.devcontainer/.env` (AC-12.1).
+
+IF Docker is unavailable OR `docker compose` exits non-zero THEN skill SHALL print the failure plus the manual command and CONTINUE without aborting worktree creation (AC-12.2).
+
+WHEN the skill is invoked WITHOUT `--devcontainer` THEN skill SHALL NOT invoke any `docker` command (AC-12.3).
+
+WHEN the devcontainer is created via "Reopen in Container" AND a root `package.json` exists THEN `post-create.sh` SHALL run `npm install` then `npm run build` idempotently (skip install when `node_modules` present and lockfile unchanged; skip build when `dist` fresh) (AC-12.4).
 
 ## AC-9 (FR-9)
 

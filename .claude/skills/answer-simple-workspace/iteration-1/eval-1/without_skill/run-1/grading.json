@@ -1,0 +1,10 @@
+{
+  "expectations": [
+    {"text": "Output contains 'Переформулировано:' header", "passed": false, "evidence": "Output starts with 'Отлично, спасибо за апдейт!' — no audit headers"},
+    {"text": "Output contains 'Найдено проблем:' header", "passed": false, "evidence": "No problem-list block, baseline asks clarifying questions about spec slug"},
+    {"text": "Output identifies 'FR-12' as undefined internal code", "passed": false, "evidence": "FR-12 treated as known reference ('какой именно spec?'), not flagged as undefined code"},
+    {"text": "Output identifies 'VARIANT_COVERAGE' as undefined internal code", "passed": false, "evidence": "VARIANT_COVERAGE acknowledged as 'audit category for Phase 3+' — used as known term, not flagged"},
+    {"text": "Output identifies missing micro-story structure or missing causal links", "passed": false, "evidence": "Micro-story not mentioned"}
+  ],
+  "summary": {"passed": 0, "failed": 5, "total": 5, "pass_rate": 0.0}
+}

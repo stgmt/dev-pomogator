@@ -1,0 +1,13 @@
+{
+  "expectations": [
+    {"text": "Output contains 'Переформулировано:' header", "passed": false, "evidence": "Output starts with 'I can help with this migration task, but I need to clarify a few things' — no audit headers"},
+    {"text": "Output contains 'Найдено проблем:' header", "passed": false, "evidence": "Baseline uses 'What I understand / What I need to clarify / Proposed next steps' — not audit format"},
+    {"text": "Output identifies 'Wave 14' as internal code", "passed": false, "evidence": "Wave 14 treated as roadmap reference ('what does v0.2.5 actually deliver') without flagging as jargon"},
+    {"text": "Output identifies 'FR-8' as internal code", "passed": false, "evidence": "FR-8 referenced as known artifact, not flagged"},
+    {"text": "Output identifies 'FR-3' as internal code", "passed": false, "evidence": "FR-3 referenced as 'dependency on FR-3 from baz-quux spec', not flagged"},
+    {"text": "Output identifies 'foo-bar' as internal spec reference", "passed": false, "evidence": "foo-bar treated as real spec name, baseline plans to read `.specs/foo-bar/`"},
+    {"text": "Output identifies 'baz-quux' as internal spec reference", "passed": false, "evidence": "baz-quux treated as real spec, baseline plans to read `.specs/baz-quux/FR.md`"},
+    {"text": "Output identifies missing micro-story structure", "passed": false, "evidence": "Micro-story not mentioned"}
+  ],
+  "summary": {"passed": 0, "failed": 8, "total": 8, "pass_rate": 0.0}
+}

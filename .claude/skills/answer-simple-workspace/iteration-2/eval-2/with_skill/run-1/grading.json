@@ -1,0 +1,13 @@
+{
+  "expectations": [
+    {"text": "Output contains 'Переформулировано:' header", "passed": true, "evidence": "Line 1: 'Переформулировано: После выпуска версии v0.2.5...'"},
+    {"text": "Output contains 'Найдено проблем:' header", "passed": true, "evidence": "Line 3: 'Найдено проблем:' with 9 bullets"},
+    {"text": "Output identifies 'Wave 14' as internal code", "passed": true, "evidence": "Line 5: 'Внутренний код Wave 14 без расшифровки'"},
+    {"text": "Output identifies 'FR-8' as internal code", "passed": true, "evidence": "Line 8: 'Внутренний код FR-8 без расшифровки'"},
+    {"text": "Output identifies 'FR-3' as internal code", "passed": true, "evidence": "Line 9: 'Внутренний код FR-3 без расшифровки'"},
+    {"text": "Output identifies 'foo-bar' as internal spec reference", "passed": true, "evidence": "Line 6: 'Внутренний код foo-bar spec без расшифровки'"},
+    {"text": "Output identifies 'baz-quux' as internal spec reference", "passed": true, "evidence": "Line 10: 'Внутренний код baz-quux без расшифровки'"},
+    {"text": "BYTE-FAITHFUL: does NOT invent 'Adapter X связывает с внешним API' or 'FR-3 описывает контракт' or 'v0.2.5 большая работа инфраструктуры' (Правило 1)", "passed": true, "evidence": "Reformulation is straight paraphrase without invented context. Adapter X kept as quoted name without explaining function. FR-3 dependency mentioned as 'зависит' without inventing 'контракт' mechanism. v0.2.5 just 'версии', not 'инфраструктура'. Compare iter-1 which invented 'связывает нашу систему с внешним API'."}
+  ],
+  "summary": {"passed": 8, "failed": 0, "total": 8, "pass_rate": 1.0}
+}

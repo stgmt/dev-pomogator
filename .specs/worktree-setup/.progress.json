@@ -2,6 +2,25 @@
   "version": 3,
   "featureSlug": "worktree-setup",
   "createdAt": "2026-05-12T14:33:47.017Z",
+  "amendedAt": "2026-05-26",
+  "amendments": [
+    {
+      "at": "2026-05-25",
+      "reason": "FR-10 env-sync added: lost gitignored local env files copied into fresh worktree (copy strategy, .devcontainer/.env regenerated with unique ports, secret-warning)"
+    },
+    {
+      "at": "2026-05-26",
+      "reason": "FR-11 build/deps-sync added (npm install + npm run build, --skip-build, best-effort); FR-1 dir-collision pre-flight; FR-2 installer-ancestor guard; NFR-P5/R7/R8/U6; launch-worktree.ps1 coexistence decision; /worktree command"
+    },
+    {
+      "at": "2026-05-26",
+      "reason": "FR-12 devcontainer integration added during plugin implementation: --devcontainer flag (docker compose build/up unique ports) + post-create.sh npm install/build; AC-12, CHK-FR12-01..04, NFR-R9/P6, @feature11 CORE024_30..33"
+    },
+    {
+      "at": "2026-05-26",
+      "reason": "Canonical plugin test strategy decision added (DESIGN + BDD-infra + T6-2): claude plugin validate + --plugin-dir + direct tool invocation, drop legacy installer-based e2e; researched vs official Claude Code plugin docs + plugin-validator; cross-ref migration PR #24"
+    }
+  ],
   "currentPhase": "Complete",
   "phases": {
     "Discovery": {

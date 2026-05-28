@@ -1,0 +1,7 @@
+{
+  "expectations": [
+    {"text": "Output handles trivial 1-word input gracefully (does not generate 10 problems)", "passed": true, "evidence": "Baseline: 'Команда /answer-simple мне неизвестна... Если вы хотели...' — 3 numbered options as clarification, no fabricated problems"},
+    {"text": "Output explicitly follows Правило 2 (skips reformulation for 1-word, notes criteria not applicable)", "passed": false, "evidence": "Baseline doesn't know about Правило 2; asks clarifying questions instead"}
+  ],
+  "summary": {"passed": 1, "failed": 1, "total": 2, "pass_rate": 0.5}
+}

@@ -6,16 +6,24 @@
 | ID | Title | Status | Depends | Phase | Est. |
 |----|-------|--------|---------|-------|------|
 | T0-1 | Write step definitions for worktree-setup.feature | TODO | — | Phase 0 | 60m |
-| T0-2 | Create test hooks (setupWorktreeFixture / cleanupWorktreeFixture / isolateEnv) | TODO | T0-1 | Phase 0 | 45m |
-| T0-3 | Create fixtures (fresh-main / gh-mock / tsx-runner-bootstrap-original) | TODO | T0-1 | Phase 0 | 30m |
+| T0-2 | Create integration harness tests/e2e/worktree-helpers.ts (makeTempGitRepo / isolateHome / cleanupTempPaths) | TODO | T0-1 | Phase 0 | 30m |
+| T0-3 | Build test data on the fly (no static fixtures) — temp git repos + PATH-shim mocks | TODO | T0-1 | Phase 0 | 15m |
+| T0-4 | Integration cases + on-the-fly test data for @feature9 (env-sync) | TODO | T0-1 | Phase 0 | 30m |
+| T0-5 | Integration cases + on-the-fly test data for @feature10 (build-sync) + dir-collision + ancestor | TODO | T0-1 | Phase 0 | 30m |
 | T1-1 | Slug validator + branch pre-flight | TODO | T0-3 | Phase 1 | 45m |
 | T1-2 | git worktree add -b orchestration | TODO | T1-1 | Phase 1 | 45m |
 | T1-3 | Invocation-from-sibling warn flow | TODO | T1-2 | Phase 1 | 45m |
-| T1-V | Verify Phase 1 scenarios Red→Green | TODO | T1-1,T1-2,T1-3 | Phase 1 | 15m |
+| T1-4 | Directory-collision pre-flight (FR-1) | TODO | T1-1 | Phase 1 | 30m |
+| T1-V | Verify Phase 1 scenarios Red→Green | TODO | T1-1,T1-2,T1-3,T1-4 | Phase 1 | 15m |
 | T2-1 | Bootstrap step (installer invocation) | TODO | T1-2 | Phase 2 | 30m |
 | T2-2 | worktree-doctor.cjs full + --quick | TODO | T0-3 | Phase 2 | 90m |
 | T2-3 | Installer wires worktree-doctor.cjs as managed | TODO | T2-2 | Phase 2 | 30m |
-| T2-V | Verify Phase 2 scenarios Red→Green | TODO | T2-1,T2-2,T2-3 | Phase 2 | 15m |
+| T2-4 | env-sync.ts (copy root env, regenerate devcontainer .env, secret-warn, idempotent skip) | TODO | T2-1,T0-4 | Phase 2 | 75m |
+| T2-5 | build/deps-sync (npm install + npm run build, --skip-build, best-effort) | TODO | T2-1,T0-5 | Phase 2 | 60m |
+| T2-6 | Installer ancestor-guard (FR-2 worktree-not-ancestor) | TODO | T2-1,T0-5 | Phase 2 | 30m |
+| T2-7 | devcontainer.ts --devcontainer build/up (FR-12a) | TODO | T2-5,T0-5 | Phase 2 | 60m |
+| T2-8 | post-create.sh npm install + build (FR-12b) | TODO | T0-5 | Phase 2 | 30m |
+| T2-V | Verify Phase 2 scenarios Red→Green | TODO | T2-1,T2-2,T2-3,T2-4,T2-5,T2-6,T2-7,T2-8 | Phase 2 | 15m |
 | T3-1 | Patch tsx-runner.js with self-heal block | TODO | T0-3 | Phase 3 | 60m |
 | T3-2 | JSONL append + dedup + stderr hint | TODO | T3-1 | Phase 3 | 45m |
 | T3-V | Verify Phase 3 scenarios Red→Green | TODO | T3-1,T3-2 | Phase 3 | 15m |
@@ -32,7 +40,9 @@
 
 ## TDD Workflow
 
-Задачи организованы по TDD: Red → Green → Refactor. Phase 0 пишет .feature + hooks + fixtures (все scenarios FAIL = Red). Phase 1–5 — implementation per @feature group (Green). Phase 6 — refactor. Framework: Cucumber.js/vitest **already installed** (per DESIGN.md). Bootstrap block НЕ нужен.
+Задачи организованы по TDD: Red → Green → Refactor. Phase 0 пишет `.feature` + integration-харнес (`tests/e2e/worktree-helpers.ts`) — все сценарии FAIL = Red. Phase 1–5 — implementation per @feature group (Green). Phase 6 — refactor.
+
+Тесты — **vitest integration** (`describe`/`it` CORE024_NN), которые спавнят реальные скрипты (`spawnSync npx tsx orchestrate.ts`, `node worktree-doctor.cjs`) и импортируют чистые функции — НЕ Cucumber step-defs, НЕ `runInstaller`/`dist/index.js` (установщика в плагин-модели нет — см. DESIGN «Test via canonical Claude Code plugin mechanisms»). Окружение строится на лету через `makeTempGitRepo`/`isolateHome` — **статических фикстур нет**. vitest **already installed**.
 
 ## Phase -1: Infrastructure Prerequisites
 
@@ -40,43 +50,40 @@
 
 ## Phase 0: BDD Foundation (Red)
 
-- [ ] **T0-1: Write step definitions for worktree-setup.feature** -- @feature1–@feature8 — Status: TODO | Est: 60m
-  _Requirements: [FR-1..FR-8](FR.md), `.specs/worktree-setup/worktree-setup.feature` already exists with 18 scenarios_
+- [ ] **T0-1: Write integration test cases for worktree-setup.feature** -- @feature1–@feature8 — Status: TODO | Est: 60m
+  _Requirements: [FR-1..FR-8](FR.md), `.specs/worktree-setup/worktree-setup.feature`_
   **Done When:**
-  - [ ] `tests/e2e/worktree-setup.test.ts` contains step-def stubs throwing `PendingStepException` for all 18 scenarios from .feature
-  - [ ] `npx vitest run tests/e2e/worktree-setup.test.ts` → all 18 scenarios FAIL with PendingStepException (Red)
-  - [ ] No production code touched yet
+  - [ ] `tests/e2e/worktree-setup.test.ts` has `describe`/`it` CORE024_NN cases that spawn the real scripts (`spawnSync npx tsx orchestrate.ts`, `node worktree-doctor.cjs`) or import pure functions — no Cucumber step-defs, no `runInstaller`
+  - [ ] Before production code exists, the behavior cases fail (Red); structural cases (manifest/skill present) may already pass
+  - [ ] No production code touched in this task
 
-- [ ] **T0-2a: Create hook `tests/e2e/worktree-helpers.ts:setupWorktreeFixture`** -- @feature1–@feature8 — Status: TODO | Est: 20m
-  _Source: DESIGN.md "BDD Test Infrastructure" > "Новые hooks" row 1_
-  _Reuse: `tests/e2e/helpers.ts:setupTempProject` as model_
+- [ ] **T0-2: Create integration harness `tests/e2e/worktree-helpers.ts`** -- @feature1–@feature11 — Status: TODO | Est: 30m
+  _Source: DESIGN.md "BDD Test Infrastructure" > "Новые helpers"_
   **Done When:**
-  - [ ] Export `setupWorktreeFixture` creates isolated git repo in tmp dir + simulates main worktree (clones over F-1 fresh-main fixture)
-  - [ ] Returns `{tmpMainWorktree, tmpHome}` for use by tests
-  - [ ] beforeEach binding usable in CORE024_01..18 scenarios
+  - [ ] Exports `makeTempGitRepo(files, gitignore)` (real `git init` temp repo), `makeTempDir(prefix)`, `isolateHome()` (sets HOME+USERPROFILE, returns `restore()`), `cleanupTempPaths()` (afterEach), `gitAvailable()` (guard)
+  - [ ] No `setupTempProject`/`runInstaller` reuse (installer-based); env-isolation via temp HOME
+  - [ ] Usable across CORE024_* scenarios
 
-- [ ] **T0-2b: Create hook `tests/e2e/worktree-helpers.ts:cleanupWorktreeFixture`** -- @feature1–@feature8 — Status: TODO | Est: 15m
-  _Source: DESIGN.md "BDD Test Infrastructure" > "Новые hooks" row 2_
-  _Reuse: `tests/e2e/helpers.ts:cleanupTempProject` as model_
-  **Done When:**
-  - [ ] Export `cleanupWorktreeFixture` removes all created sibling worktrees via `git worktree remove --force`
-  - [ ] Force-deletes branches `git branch -D feat/<slug>` for accumulated `pushedBranches` and `createdSiblings`
-  - [ ] Removes tmp HOME `~/.dev-pomogator/worktree-setup.env` + `orphan-worktrees.jsonl`
-  - [ ] Continues on cleanup errors (warnings, not hard fails)
-
-- [ ] **T0-2c: Create hook `tests/e2e/worktree-helpers.ts:isolateEnv`** -- @feature4 — Status: TODO | Est: 10m
-  _Source: DESIGN.md "BDD Test Infrastructure" > "Новые hooks" row 3_
-  **Done When:**
-  - [ ] Export `isolateEnv` sets `process.env.HOME = tmpHome` for the test scope
-  - [ ] Restores original HOME in afterEach
-  - [ ] At least 2 `@feature4` scenarios exercise it (env file isolation verified)
-
-- [ ] **T0-3: Create fixtures (fresh-main / gh-mock / tsx-runner-bootstrap-original)** -- @feature1–@feature8 — Status: TODO | Est: 30m
+- [ ] **T0-3: (no static fixtures) build test data on the fly** -- @feature1–@feature11 — Status: TODO | Est: 15m
   _Source: DESIGN.md "BDD Test Infrastructure" > "Test Data & Fixtures"_
   **Done When:**
-  - [ ] `tests/fixtures/worktree-setup/fresh-main/` contains skeleton dev-pomogator repo (package.json + .git/ init)
-  - [ ] `tests/fixtures/worktree-setup/gh-mock/` contains pre-recorded `gh repo view` JSON outputs for synthetic owners
-  - [ ] `tests/fixtures/worktree-setup/tsx-runner-bootstrap-original.cjs` snapshot exists
+  - [ ] Tests construct main repos per-case via `makeTempGitRepo({...}, gitignore)` (no `tests/fixtures/worktree-setup/` directory)
+  - [ ] External commands mocked via PATH-shim temp `bin/` (echo-recording `npm`; no-op `git`/`gh`/`docker`/`python3`) — no `gh-mock` JSON files, no tsx-runner snapshot
+  - [ ] Self-heal regression covered by direct tsx-runner invocation (CORE024_06/07/08), not a fixture snapshot
+
+- [ ] **T0-4: Integration cases + on-the-fly test data for @feature9 (env-sync)** -- @feature9 — Status: TODO | Est: 30m
+  _Requirements: [FR-10](FR.md#fr-10-local-envconfig-file-synchronization-into-fresh-worktree), [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-10), `.specs/worktree-setup/worktree-setup.feature` scenarios CORE024_19..23_
+  **Done When:**
+  - [ ] Step-def stubs for CORE024_19..23 added to `tests/e2e/worktree-setup.test.ts` as vitest integration cases (Red before impl)
+  - [ ] `tests/fixtures/worktree-setup/env-sync/` contains: main with gitignored `.env.test`, main with custom-named `.env.local`, main with secret-bearing env, main with `.devcontainer/.env`
+  - [ ] All 5 @feature9 scenarios FAIL initially (Red)
+
+- [ ] **T0-5: Integration cases + on-the-fly test data for @feature10 (build-sync) + @feature11 (devcontainer) + dir-collision + ancestor** -- @feature10 + @feature11 + @feature1 + @feature2 — Status: TODO | Est: 40m
+  _Requirements: [FR-11](FR.md#fr-11-build-and-dependency-synchronization), [FR-12](FR.md#fr-12-devcontainer-integration), [FR-1](FR.md#fr-1-atomic-worktreebranch-creation-from-main), [FR-2](FR.md#fr-2-full-installer-bootstrap-with-global-config-registration), scenarios CORE024_24..33_
+  **Done When:**
+  - [ ] Step-def stubs for CORE024_24..33 added to `tests/e2e/worktree-setup.test.ts` as vitest integration cases (Red before impl)
+  - [ ] Fixtures: worktree without `node_modules`/`dist`, worktree with stale `dist`, occupied-target-dir, worktree nested under outer git repo, worktree with `.devcontainer/docker-compose.yml` (mock docker), post-create.sh fixture
+  - [ ] All 10 new scenarios FAIL initially (Red)
 
 ## Phase 1: Worktree creation core (Green @feature1 + @feature8)
 
@@ -103,10 +110,18 @@
   - [ ] AskUserQuestion fires with options "Continue from main" / "Abort"
   - [ ] CORE024_17, CORE024_18 scenarios pass
 
-- [ ] **T1-V: Verify Phase 1 scenarios Red→Green** -- @feature1 + @feature8 — Status: TODO | Est: 15m
-  _depends: T1-1, T1-2, T1-3_
+- [ ] **T1-4: Directory-collision pre-flight (FR-1)** -- @feature1 — Status: TODO | Est: 30m
+  _Requirements: [FR-1](FR.md#fr-1-atomic-worktreebranch-creation-from-main), [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1)_
+  _depends: T1-1_
   **Done When:**
-  - [ ] CORE024_01, _02, _03, _17, _18 all PASS via `npx vitest run`
+  - [ ] `orchestrate.ts` checks target dir existence via `git worktree list --porcelain` before `git worktree add`; existing non-worktree dir → refuse exit 2
+  - [ ] Existing registered worktree path routes to UC-4 reuse (not refusal)
+  - [ ] CORE024_28 scenario passes Red→Green
+
+- [ ] **T1-V: Verify Phase 1 scenarios Red→Green** -- @feature1 + @feature8 — Status: TODO | Est: 15m
+  _depends: T1-1, T1-2, T1-3, T1-4_
+  **Done When:**
+  - [ ] CORE024_01, _02, _03, _17, _18, _28 all PASS via `npx vitest run`
   - [ ] No flaky behavior across 3 consecutive test runs
 
 ## Phase 2: Bootstrap + doctor (Green @feature2 + @feature6)
@@ -137,10 +152,51 @@
   - [ ] Installer copies to `~/.dev-pomogator/scripts/worktree-doctor.cjs` on install
   - [ ] Updater regenerates on version bump (preserves user mods via existing backup pattern)
 
-- [ ] **T2-V: Verify Phase 2 scenarios Red→Green** -- @feature2 + @feature6 — Status: TODO | Est: 15m
-  _depends: T2-1, T2-2, T2-3_
+- [ ] **T2-4: env-sync.ts (copy root env, regenerate devcontainer .env, secret-warn, idempotent skip)** -- @feature9 — Status: TODO | Est: 75m
+  _Requirements: [FR-10](FR.md#fr-10-local-envconfig-file-synchronization-into-fresh-worktree), [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-10), [NFR-S6](NFR.md#security), [NFR-R6](NFR.md#reliability)_
+  _depends: T2-1, T0-4_
+  _Config: см. SCHEMA.md "env-sync candidate selection" + "env-sync audit JSONL entry"_
   **Done When:**
-  - [ ] CORE024_04, _05, _14, _15, _16 all PASS
+  - [ ] `.claude/skills/worktree-setup/scripts/env-sync.ts` enumerates candidates at runtime (include-globs `.env`/`.env.*` + `git check-ignore`, minus `.env.example`/`.devcontainer/.env`)
+  - [ ] Byte-copies candidates; regenerates `.devcontainer/.env` with unique ports (mirrors `New-WorktreeEnv`); skips existing targets; warns on secret-bearing files without printing values
+  - [ ] Writes env-sync audit JSONL; called from `orchestrate.ts` after the bootstrap step and before doctor verification
+  - [ ] CORE024_19, _20, _21, _22, _23 pass Red→Green
+
+- [ ] **T2-5: build/deps-sync (npm install + npm run build, --skip-build, best-effort)** -- @feature10 — Status: TODO | Est: 60m
+  _Requirements: [FR-11](FR.md#fr-11-build-and-dependency-synchronization), [AC-11](ACCEPTANCE_CRITERIA.md#ac-11-fr-11), [NFR-P5](NFR.md#performance), [NFR-R3](NFR.md#reliability)_
+  _depends: T2-1, T0-5_
+  **Done When:**
+  - [ ] `orchestrate.ts` runs `npm install` when worktree `node_modules` absent and `npm run build` when `dist` absent/stale, with cwd=worktree, after env-sync and before doctor
+  - [ ] `--skip-build` skips both and prints manual commands; non-zero exit prints retry hint and continues without rollback
+  - [ ] CORE024_24, _25, _26, _27 pass Red→Green
+
+- [ ] **T2-6: Installer ancestor-guard (FR-2 worktree-not-ancestor)** -- @feature2 — Status: TODO | Est: 30m
+  _Requirements: [FR-2](FR.md#fr-2-full-installer-bootstrap-with-global-config-registration), [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2)_
+  _depends: T2-1, T0-5_
+  **Done When:**
+  - [ ] After bootstrap, `orchestrate.ts` verifies registered projectPath equals the worktree (not an ancestor resolved by `findRepoRoot()`); mismatch → refuse with hint
+  - [ ] CORE024_29 scenario passes Red→Green
+
+- [ ] **T2-7: devcontainer.ts --devcontainer build/up (FR-12a)** -- @feature11 — Status: TODO | Est: 60m
+  _Requirements: [FR-12](FR.md#fr-12-devcontainer-integration), [AC-12](ACCEPTANCE_CRITERIA.md#ac-12-fr-12), [NFR-R3](NFR.md#reliability)_
+  _depends: T2-5, T0-5_
+  **Done When:**
+  - [ ] `devcontainer.ts` runs `docker compose build` then `docker compose up -d` in `<worktree>/.devcontainer` with sanitized project name + unique ports from `.devcontainer/.env` when `--devcontainer` passed
+  - [ ] Docker failure → manual-command hint + continue; no `--devcontainer` → zero docker calls
+  - [ ] CORE024_30, _31, _32 pass Red→Green
+
+- [ ] **T2-8: post-create.sh npm install + build (FR-12b)** -- @feature11 — Status: TODO | Est: 30m
+  _Requirements: [FR-12](FR.md#fr-12-devcontainer-integration), [AC-12](ACCEPTANCE_CRITERIA.md#ac-12-fr-12)_
+  _depends: T0-5_
+  **Done When:**
+  - [ ] `extensions/devcontainer/tools/devcontainer/templates/scripts/post-create.sh` runs `npm install` + `npm run build` when root `package.json` exists, after existing git/MCP setup
+  - [ ] Idempotent: skip install when node_modules present + lockfile unchanged, skip build when dist fresh
+  - [ ] CORE024_33 passes Red→Green
+
+- [ ] **T2-V: Verify Phase 2 scenarios Red→Green** -- @feature2 + @feature6 + @feature9 + @feature10 + @feature11 — Status: TODO | Est: 15m
+  _depends: T2-1, T2-2, T2-3, T2-4, T2-5, T2-6, T2-7, T2-8_
+  **Done When:**
+  - [ ] CORE024_04, _05, _14, _15, _16, _19, _20, _21, _22, _23, _24, _25, _26, _27, _29, _30, _31, _32, _33 all PASS
   - [ ] Doctor `--quick` duration measured ≤50ms in test report
 
 ## Phase 3: Self-heal in tsx-runner.js (Green @feature3)
@@ -228,4 +284,6 @@
   **Done When:**
   - [ ] `npx tsx .dev-pomogator/tools/specs-generator/validate-spec.ts -Path .specs/worktree-setup` → 0 errors
   - [ ] `npx tsx .dev-pomogator/tools/specs-generator/audit-spec.ts -Path .specs/worktree-setup` → 0 P0/P1 findings
+  - [ ] (canonical plugin layout) `claude plugin validate` → 0 errors on the plugin manifest/structure
+  - [ ] (canonical plugin layout) `claude --plugin-dir .` loads the plugin; `/worktree` command + `worktree-setup` skill appear and hooks fire
   - [ ] CHANGELOG.md updated with implementation summary + PR link

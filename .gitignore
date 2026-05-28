@@ -67,3 +67,9 @@ nul
 # strong-tests JiT runtime audit log (suppression entries; per .specs/strong-tests/ NFR-S4)
 .claude/logs/strong-tests-skips.jsonl
 .claude/logs/
+
+# Temp / runtime artifacts (mutation sandbox, scratch, embedded worktrees, runtime locks)
+.stryker-tmp/
+.dev-pomogator-tmp/
+.claude/worktrees/
+.claude/scheduled_tasks.lock

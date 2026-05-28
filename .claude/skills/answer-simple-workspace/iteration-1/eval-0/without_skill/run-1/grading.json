@@ -1,0 +1,11 @@
+{
+  "expectations": [
+    {"text": "Output contains 'Переформулировано:' header", "passed": false, "evidence": "No 'Переформулировано:' in output. Output starts with 'I don't recognize /answer-simple as a built-in slash command'"},
+    {"text": "Output contains 'Найдено проблем:' header", "passed": false, "evidence": "No 'Найдено проблем:' in output. Baseline asks clarifying questions instead of auditing"},
+    {"text": "Output identifies 'Wave 14' as undefined internal code", "passed": false, "evidence": "Wave 14 treated as roadmap topic ('Wave 14 which bundles gates + OpenRouter integration'), not flagged as internal jargon"},
+    {"text": "Output identifies 'Wave 11' as undefined internal code", "passed": false, "evidence": "Wave 11 not flagged; question 'What's in Wave 11?' asked instead"},
+    {"text": "Output identifies multi-select with 3+ options as exceeding threshold of 2", "passed": false, "evidence": "Multi-select 3 options not flagged at all"},
+    {"text": "Output identifies missing micro-story structure (no 5 anchor points)", "passed": false, "evidence": "Micro-story concept not mentioned"}
+  ],
+  "summary": {"passed": 0, "failed": 6, "total": 6, "pass_rate": 0.0}
+}

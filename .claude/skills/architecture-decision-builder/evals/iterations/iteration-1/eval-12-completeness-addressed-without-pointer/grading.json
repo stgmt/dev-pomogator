@@ -1,0 +1,19 @@
+{
+  "expectations": [
+    {
+      "text": "codes == ['ADDRESSED_WITHOUT_POINTER', 'COMPLETENESS_COMPLETE']",
+      "passed": true,
+      "evidence": "actual=['ADDRESSED_WITHOUT_POINTER', 'COMPLETENESS_COMPLETE']"
+    },
+    {
+      "text": "WARNING == 0",
+      "passed": true,
+      "evidence": "actual=0"
+    },
+    {
+      "text": "INFO == 2",
+      "passed": true,
+      "evidence": "actual=2"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "expectations": [
+    {"text": "Output contains 'Переформулировано:' header", "passed": true, "evidence": "Line 1: 'Переформулировано: После выпуска новой версии (в проекте называется v0.3.1)...'"},
+    {"text": "Output contains 'Найдено проблем:' header", "passed": true, "evidence": "Line 3: 'Найдено проблем:' with 5 bullets (vs iter-3's 9 — fixed over-flagging)"},
+    {"text": "v0.3.1 and v0.2 flagged as internal codes", "passed": true, "evidence": "Lines 4-5: 'Внутренний код v0.3.1', 'Внутренний код v0.2'"},
+    {"text": "legacy config flagged as needing explanation", "passed": true, "evidence": "Line 6: 'Технический термин legacy config (pre-v0.2 format) без объяснения — читатель не знает чем старый формат отличается от нового'"},
+    {"text": "✨NEW Правило 1: 'tenant' preserved byte-as-is (NOT translated to 'клиенты')", "passed": true, "evidence": "Reformulation: 'для всех tenant'ов', 'у tenant', 'все tenant'ы мигрированы', 'упадёт на конкретном tenant' — tenant preserved 4 times. iter-3 translated to 'клиенты'."},
+    {"text": "✨NEW Правило 1: 'rollback' and 'skip' preserved byte-as-is (with parenthetical label only)", "passed": true, "evidence": "Line 1: 'откатывать всё (rollback) или пропустить этого tenant и идти дальше (skip)?' — terms preserved with explanatory parentheticals"},
+    {"text": "✨NEW Правило 5: staging/prod NOT flagged (general vocab)", "passed": true, "evidence": "iter-3 flagged 'staging и prod без контекста'. iter-4 does NOT — staging/prod absent from findings list. Правило 5 working."},
+    {"text": "BYTE-FAITHFUL: does NOT invent meaning of legacy config / edge case", "passed": true, "evidence": "Reformulation labels legacy config as 'конфиг старого формата (в проекте называется pre-v0.2 format / legacy config)' — preserves the unknown without inventing specific format details"}
+  ],
+  "summary": {"passed": 8, "failed": 0, "total": 8, "pass_rate": 1.0}
+}

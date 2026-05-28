@@ -112,6 +112,27 @@ if command -v docker &>/dev/null; then
     docker version --format 'Docker {{.Server.Version}}' 2>/dev/null || echo "Docker not accessible"
 fi
 
+# Project dependencies + build (worktree-setup FR-12b)
+# A reopened devcontainer brings the committed source but no node_modules/dist;
+# install + build idempotently so the container is ready to work.
+if [ -f package.json ]; then
+    if [ ! -d node_modules ]; then
+        echo "Installing npm dependencies..."
+        npm install 2>&1 || echo "[WARN] npm install failed"
+    else
+        echo "node_modules present — skipping npm install"
+    fi
+    if [ -f package.json ] && grep -q '"build"' package.json 2>/dev/null; then
+        # Build if dist is absent OR any src file is newer than dist.
+        if [ ! -d dist ] || [ -n "$(find src -newer dist -type f -print -quit 2>/dev/null)" ]; then
+            echo "Building project..."
+            npm run build 2>&1 || echo "[WARN] npm run build failed"
+        else
+            echo "dist is up to date — skipping npm run build"
+        fi
+    fi
+fi
+
 # Environment info
 echo ""
 echo "Environment:"

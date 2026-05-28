@@ -107,6 +107,97 @@ function resolveScriptPath(rawPath) {
 const scriptPath = resolveScriptPath(args[0]);
 const scriptArgs = args.slice(1);
 
+// ===== Orphan worktree self-heal (worktree-setup FR-3) =====
+// When a hook targets a .dev-pomogator/ script that does not exist, this is
+// almost always a fresh git worktree that was created without bootstrap
+// (committed .claude/settings.json references gitignored .dev-pomogator/tools/).
+// Emit one JSONL audit line per firing + one stderr hint per (worktree, session),
+// then silently no-op the hook. Best-effort: any error here falls through to
+// normal execution. Adds a single fs.existsSync in the happy path (NFR-P3).
+(function selfHealOrphanWorktree() {
+  try {
+    const rawTarget = args[0] || '';
+    if (!rawTarget.startsWith('.dev-pomogator/')) return;
+    if (fs.existsSync(scriptPath)) return; // target resolved fine — normal path
+
+    const osMod = require('os');
+    const worktreePath = process.cwd();
+    const sessionId = process.env.CLAUDE_SESSION_ID || `pid:${process.ppid}`;
+    const hookEvent = process.env.CLAUDE_HOOK_EVENT || 'unknown';
+    const logDir = path.join(osMod.homedir(), '.dev-pomogator');
+    const logFile = path.join(logDir, 'orphan-worktrees.jsonl');
+
+    // Dedup the stderr hint per (worktree_path, session_id) within this session.
+    let hintAlreadyShown = false;
+    try {
+      if (fs.existsSync(logFile)) {
+        const prior = fs.readFileSync(logFile, 'utf-8').split('\n').filter(Boolean);
+        hintAlreadyShown = prior.some((line) => {
+          try {
+            const o = JSON.parse(line);
+            return o.worktree_path === worktreePath && o.session_id === sessionId;
+          } catch {
+            return false;
+          }
+        });
+      }
+    } catch {
+      /* read failure — treat as not-shown */
+    }
+
+    // Always append the audit line (full trail).
+    try {
+      fs.mkdirSync(logDir, { recursive: true });
+      fs.appendFileSync(
+        logFile,
+        JSON.stringify({
+          ts: new Date().toISOString(),
+          worktree_path: worktreePath,
+          missing_script: rawTarget,
+          hook_event: hookEvent,
+          session_id: sessionId,
+        }) + '\n',
+      );
+    } catch {
+      /* non-fatal */
+    }
+
+    // Find a living dev-pomogator main install from the global config (no hardcoded URL).
+    let livingMain = null;
+    try {
+      const cfg = JSON.parse(
+        fs.readFileSync(path.join(osMod.homedir(), '.dev-pomogator', 'config.json'), 'utf-8'),
+      );
+      const projectPaths = (cfg.installedExtensions || []).flatMap((e) => e.projectPaths || []);
+      for (const p of projectPaths) {
+        if (fs.existsSync(path.join(p, 'bin', 'cli.js'))) {
+          livingMain = p;
+          break;
+        }
+      }
+    } catch {
+      /* no config */
+    }
+
+    if (!hintAlreadyShown) {
+      if (livingMain) {
+        process.stderr.write(
+          `[dev-pomogator] Orphan worktree detected at ${worktreePath}. Bootstrap with: node ${path.join(livingMain, 'bin', 'cli.js')} --claude --all\n`,
+        );
+      } else {
+        process.stderr.write(
+          `[dev-pomogator] Orphan worktree at ${worktreePath}. No living dev-pomogator main install found in registered projectPaths. Re-install via your package manager first.\n`,
+        );
+      }
+    }
+
+    process.exit(0); // silent no-op for the hook
+  } catch {
+    /* fall through to normal execution on any unexpected error */
+  }
+})();
+// ===== End orphan worktree self-heal =====
+
 /**
  * Check if an error looks like a corrupted npx cache issue.
  */

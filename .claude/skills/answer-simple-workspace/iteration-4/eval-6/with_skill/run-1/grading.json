@@ -1,0 +1,13 @@
+{
+  "expectations": [
+    {"text": "Output contains 'Переформулировано:' header", "passed": true, "evidence": "Line 1: 'Переформулировано: После того как мы зарелизили v0.2.5...'"},
+    {"text": "Output contains 'Найдено проблем:' header", "passed": true, "evidence": "Line 3: 'Найдено проблем:' with 2 bullets (vs iter-3's 5 — over-flagging fixed)"},
+    {"text": "Service names (payments, billing, invoicing, analytics, reports, dashboards) NOT flagged as internal codes", "passed": true, "evidence": "None of service names appear in findings list"},
+    {"text": "v0.2.5 and gates flagged as project-specific codes", "passed": true, "evidence": "Line 4: 'Внутренний код v0.2.5'; Line 5: 'Внутренний код gates'"},
+    {"text": "✨NEW Правило 5: general engineering vocab (staging, prod, QPS, SRE, planned downtime, rollback playbook) NOT flagged", "passed": true, "evidence": "iter-3 flagged all of these; iter-4 lists only v0.2.5 + gates. staging/prod/QPS/SRE/planned downtime/rollback playbook absent from findings. Правило 5 working as intended."},
+    {"text": "✨NEW Правило 1 strict: exact numbers preserved (30 минут, 12 сервисов, 2 недели, 24 часа) — no 'примерно' added", "passed": true, "evidence": "Reformulation line 1: '12 микросервисов', '2 недели', '30 минут на сервис', 'минимум 24 часа' — all exact, no quantifier dilution"},
+    {"text": "✨NEW Правило 1 strict: no implicit predicates added (no 'появилась', 'возникла' etc.)", "passed": true, "evidence": "Iter-3 had 'появилась новая система'. Iter-4 reformulation does NOT contain 'появилась/возникла/было сделано'. Preserves 'зарелизили' from source."},
+    {"text": "✨NEW Правило 4: consistency — if term decoded inline, finding phrased differently (not 'без расшифровки')", "passed": true, "evidence": "v0.2.5 / gates labeled with parenthetical (в проекте так называется...) — finding for gates correctly notes 'общее объяснение в источнике дано, но сам термин внутренний для проекта'. No self-contradiction."}
+  ],
+  "summary": {"passed": 8, "failed": 0, "total": 8, "pass_rate": 1.0}
+}

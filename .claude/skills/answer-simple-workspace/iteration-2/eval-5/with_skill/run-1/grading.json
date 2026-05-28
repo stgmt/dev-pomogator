@@ -1,0 +1,8 @@
+{
+  "expectations": [
+    {"text": "Output returns Usage hint (contains 'Usage:' or 'Использование')", "passed": true, "evidence": "Line 1: 'Usage: /answer-simple <ваш черновик>'"},
+    {"text": "Output does NOT generate fake audit blocks (no 'Переформулировано:' / 'Найдено проблем:' on empty input)", "passed": true, "evidence": "No audit headers anywhere in output"},
+    {"text": "Output includes at least 1 example invocation", "passed": true, "evidence": "Lines 6-7: '- /answer-simple Готово. Обновил FR-12.' and '- /answer-simple Wave 14 vs Wave 11 — Keep / Swap?'"}
+  ],
+  "summary": {"passed": 3, "failed": 0, "total": 3, "pass_rate": 1.0}
+}
