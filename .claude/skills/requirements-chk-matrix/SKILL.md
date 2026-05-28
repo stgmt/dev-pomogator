@@ -3,7 +3,7 @@ name: requirements-chk-matrix
 description: >
   Builds CHK traceability matrix (CHK-FR{n}-{nn} rows linked to FR + AC/@feature/UC)
   in REQUIREMENTS.md and populates ## Key Decisions with Rationale + Trade-off + Alternatives
-  blocks in DESIGN.md. Called by specs-management.md Phase 2 (Requirements + Design)
+  blocks in DESIGN.md. Called by create-spec Phase 2 (Requirements + Design)
   step 4b. Preserves Jira trace lines byte-for-byte. Returns JSON summary of CHKs and decisions.
 allowed-tools: Read, Write, Edit, Bash, AskUserQuestion
 ---

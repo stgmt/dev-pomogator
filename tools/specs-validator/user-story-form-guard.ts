@@ -10,7 +10,8 @@
  * No env var bypass — agents cannot disable. To recover from a buggy parser,
  * humans edit extension.json outside Claude Code.
  *
- * @see .specs/spec-generator-v3/FR.md FR-4, FR-9, FR-10, FR-12
+ * @see .specs/spec-generator-v4/DESIGN.md «(o) Inherited design decisions from v3»
+ * @see .specs/spec-generator-v4/legacy-v3.feature SPECGEN003_01..03 (form contract)
  */
 
 import { isV3Spec } from './phase-constants.ts';

@@ -13,7 +13,8 @@
  * Rationale: agents tempted to disable protection via manifest edit.
  * This guard makes manifest itself non-editable for the form-guard subset.
  *
- * @see .specs/spec-generator-v3/FR.md FR-11, FR-12
+ * @see .specs/spec-generator-v4/FR.md FR-24 (meta-guard preservation + extension)
+ * @see .specs/spec-generator-v4/DESIGN.md «(o) Inherited design decisions from v3»
  */
 
 import fs from 'fs';

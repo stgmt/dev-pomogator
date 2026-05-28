@@ -393,3 +393,52 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then `Skill("cross-spec-reconcile", mode: "full")` is invoked exactly once
     And each original finding's `resolution_status` is updated to `resolved`, `still_present`, or `transformed`
     And the YAML is written atomically via temp file + rename
+
+  # @feature19
+  Scenario: SPECGEN004_49 Hard tier startup crash exits 1 and blocks Write
+    Given `spec-conformance-guard` config file is malformed YAML
+    When the agent invokes Write/Edit on any `.specs/**/*.md`
+    Then the guard exits with status 1
+    And stderr contains a non-empty actionable error message
+    And the PreToolUse decision is deny
+
+  # @feature19
+  Scenario: SPECGEN004_50 Hard tier file-parse crash logs to JSONL and allows Write
+    Given `spec-conformance-guard` parses a `.feature` file that triggers a Gherkin parser exception
+    When the agent invokes Write/Edit on that file
+    Then the guard exits with status 0
+    And the latest `.dev-pomogator/.spec-check-log/<YYYY-MM-DD>.jsonl` gains a new JSON line with `{timestamp, hook_id, file_path, error_message, error_stack}`
+    And the PreToolUse decision is allow
+
+  # @feature22
+  Scenario: SPECGEN004_51 Version gate skips hard guard on legacy spec
+    Given a spec at `.specs/legacy-feature/` whose `.progress.json::version` is `2`
+    When the agent invokes Write on `.specs/legacy-feature/FR.md` that would otherwise violate DUPLICATE_DEFINITION
+    Then `spec-conformance-guard` exits with status 0
+    And spec-check-log appends a JSONL entry `{kind: "ALLOW_AFTER_MIGRATION", reason: "spec_version", target: ".specs/legacy-feature/FR.md", observed_version: 2}`
+    And the agent's Write proceeds
+
+  # @feature25
+  Scenario: SPECGEN004_52 v4 install over v3 preserves all v3 hook entries
+    Given a project with dev-pomogator v3 installed (5 v3 form-guard hook entries in `plugin.json`)
+    When the user runs `claude plugin install dev-pomogator-v4`
+    Then the post-install `plugin.json` contains all 5 prior v3 entries unchanged
+    And at least 3 new v4 hook entries are appended (`spec-conformance-guard`, `spec-conformance-push`, `bash-post-test-ingest`)
+    And `length(hooks.claude.PreToolUse_post) ≥ length(hooks.claude.PreToolUse_prior) + 1`
+
+  # @feature26
+  Scenario: SPECGEN004_53 LLM-as-judge skips deny-list match with explicit finding
+    Given a spec FR body containing the substring `API_KEY=sk_live_abcdef1234567890`
+    When `conformance_check(scope, semantic: true)` is invoked for that FR
+    Then no `claude -p` subprocess is spawned
+    And spec-check-log gains a JSON entry with `finding_code: "SEMANTIC_CHECK_SKIPPED_DENY_LIST"` and severity `INFO`
+    And the caller does NOT receive a `NO_DRIFT_DETECTED` result for that FR
+
+  # @feature27
+  Scenario: SPECGEN004_54 Marksman download sha mismatch aborts install
+    Given `package.json::marksmanHashes` pins sha256 `aaaa…aaaa` for the current platform/arch/version triple
+    And the actual downloaded binary's sha256 is `bbbb…bbbb`
+    When `postInstall` runs the verification step
+    Then install exits with non-zero status
+    And the error message contains both hash values literally (`expected aaaa…aaaa`, `got bbbb…bbbb`)
+    And the downloaded binary file is deleted before exit

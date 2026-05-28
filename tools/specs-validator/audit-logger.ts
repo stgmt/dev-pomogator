@@ -1,5 +1,6 @@
 /**
- * Audit Logger for form-guards (spec-generator-v3).
+ * Audit Logger for form-guards (originally spec-generator-v3 era; now the soft
+ * tier of v4 per .specs/spec-generator-v4/DESIGN.md paragraph (o)).
  *
  * Append-only writer for ~/.dev-pomogator/logs/form-guards.log.
  * Format per line: `{ISO-8601}Z {event} {hookName} {filepath} {reason?}`
@@ -10,7 +11,7 @@
  * than 30 days, truncates stale entries. Best-effort; failure to log
  * is never surfaced to the caller (no throw).
  *
- * @see .specs/spec-generator-v3/FR.md FR-12
+ * @see .specs/spec-generator-v4/NFR.md NFR-Legacy-2/3 (latency + retention budgets)
  */
 
 import fs from 'fs';

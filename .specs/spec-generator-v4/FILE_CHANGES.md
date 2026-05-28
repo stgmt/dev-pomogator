@@ -13,7 +13,7 @@
 | `tests/step_definitions/` | create | Directory for TS step impls migrated from vitest pseudo-BDD ([FR-1](FR.md#fr-1)) |
 | `tests/step_definitions/common.ts` | create | Shared step defs (Given/When/Then for common assertions) ([FR-1](FR.md#fr-1)) |
 | `tests/hooks/before-after.ts` | create | BeforeScenario/AfterScenario hooks (temp dir setup, MCP server spawn) ([FR-1](FR.md#fr-1)) |
-| `tests/fixtures/v4-self-test/.specs/` | create | Copy of `.specs/personal-pomogator/`, `.specs/codex-cli-support/`, `.specs/spec-generator-v3/` for self-test ([FR-1](FR.md#fr-1)) |
+| `tests/fixtures/v4-self-test/.specs/` | create | Copy of `.specs/personal-pomogator/` + `.specs/codex-cli-support/` (two real v3-format specs) + a minimal synthesized v3-format sample for self-test ([FR-1](FR.md#fr-1)). The former `.specs/spec-generator-v3/` was consolidated into this v4 spec on 2026-05-28; v3 BDD scenarios live in `.specs/spec-generator-v4/legacy-v3.feature`. |
 | `tests/fixtures/v4-self-test/features/` | create | Real `.feature` files from existing specs for Gherkin parser tests ([FR-1](FR.md#fr-1)) |
 | `tests/fixtures/ndjson/sample.ndjson` | create | Pre-recorded canonical NDJSON for ingester unit-tests ([FR-1](FR.md#fr-1)) |
 | `tests/fixtures/error-cases/` | create | Negative-case fixtures (corrupt-frontmatter, duplicate-fr, orphan-tagged) ([FR-5](FR.md#fr-5), [FR-13](FR.md#fr-13)) |
@@ -169,6 +169,25 @@
 | `extensions/specs-workflow/README.md` | edit | Update with v4 features ([FR-4](FR.md#fr-4)) |
 | `dist/installer/extensions.js` | edit | Recompiled after extension.json change (automated by `npm run build`) ([FR-7](FR.md#fr-7)) |
 
+## Round 3 patch (v3→v4 transition — 10 closed gaps)
+
+This block enumerates the spec-doc edits applied as part of the v3→v4 transition closure (FR-19..FR-28). All edits are markdown / SKILL.md frontmatter only — no production code is changed by this patch.
+
+| Path | Action | Reason |
+|------|--------|--------|
+| `.specs/spec-generator-v4/FR.md` | edit | Append FR-19..FR-28 (10 new FR blocks) — hook failure tiers, summary surfacing, CLI compat, version gate, log inventory, meta-guard, manifest survival, LLM-as-judge boundary, LSP supply-chain, throttle semantics |
+| `.specs/spec-generator-v4/NFR.md` | edit | Add NFR-Performance-6, NFR-Performance-7, NFR-Security-7, NFR-Security-8, NFR-Reliability-8 cross-linked to FR-19/20/26/27/28 |
+| `.specs/spec-generator-v4/DESIGN.md` | edit | Add architecture paragraphs (l) Hook failure-mode tiers, (m) Log file inventory, (n) Conformance summary surfacing options |
+| `.specs/spec-generator-v4/ACCEPTANCE_CRITERIA.md` | edit | Add AC-19.1, AC-19.2, AC-19.3, AC-20.1, AC-20.2, AC-21.1, AC-22.1, AC-24.1, AC-25.1, AC-25.2, AC-26.1, AC-26.2, AC-27.1 (EARS form, paired to new FRs) |
+| `.specs/spec-generator-v4/spec-generator-v4.feature` | edit | Add SPECGEN004_49..SPECGEN004_54 (6 new BDD scenarios tagged @feature19/@feature22/@feature25/@feature26/@feature27) |
+| `.specs/spec-generator-v4/REVIEW_NOTES.md` | edit | Add Round 3 decision log: v3 FR → v4 FR mapping table + Key decisions in this patch + What this patch does NOT change |
+| `.specs/spec-generator-v4/README.md` | edit | Add «v3 → v4 doc reorganization» section documenting `specs-management.md` as historical v3 planning artifact never shipped live |
+| `.specs/spec-generator-v4/FILE_CHANGES.md` | edit | This block — record patch entries + bump Total counts |
+| `.specs/spec-generator-v4/TASKS.md` | edit | Add Phase «v3-Transition Closure» with tasks T-Trans.1..T-Trans.10 (one per new FR) + regenerate Task Summary Table |
+| `.claude/skills/discovery-forms/SKILL.md` | edit | Replace stale «Called by `specs-management.md` Phase 1 (Discovery) step 3» → «Called by `create-spec` Phase 1 (Discovery) step 3» |
+| `.claude/skills/requirements-chk-matrix/SKILL.md` | edit | Replace stale «Called by `specs-management.md` Phase 2 (Requirements + Design) step 4b» → «Called by `create-spec` Phase 2 (Requirements + Design) step 4b» |
+| `.claude/skills/task-board-forms/SKILL.md` | edit | Replace stale «Called by `specs-management.md` Phase 3 (Finalization) step 1b» → «Called by `create-spec` Phase 3 (Finalization) step 1b» |
+
 ## Total counts
 
 | Phase | Files |
@@ -182,4 +201,5 @@
 | Phase 6 | 17 (13 create + 4 edit) |
 | Phase 7 | 31 (26 create + 5 edit) |
 | Cross-phase docs | 5 (all edit) |
-| **Total** | **118 files (~101 create + 17 edit)** |
+| Round 3 patch (v3→v4 transition) | 12 (all edit; 9 v4-spec files + 3 SKILL.md frontmatter) |
+| **Total** | **130 files (~101 create + 29 edit)** |

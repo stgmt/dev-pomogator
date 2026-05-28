@@ -2,7 +2,7 @@
 name: discovery-forms
 description: >
   Populates USER_STORIES.md with v3-form blocks (Priority + Why + Independent Test + Acceptance Scenarios)
-  and appends ## Risk Assessment to RESEARCH.md. Called by specs-management.md Phase 1 (Discovery) step 3.
+  and appends ## Risk Assessment to RESEARCH.md. Called by create-spec Phase 1 (Discovery) step 3.
   Returns structured JSON summary listing stories populated, risks added, and files touched.
 allowed-tools: Read, Write, Edit, Bash, AskUserQuestion
 ---

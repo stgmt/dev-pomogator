@@ -11,7 +11,8 @@
  * REQUIREMENTS.md without any CHK rows passes — CHK matrix is added by
  * `requirements-chk-matrix` skill in Phase 2, not at spec creation.
  *
- * @see .specs/spec-generator-v3/FR.md FR-7, FR-9, FR-10, FR-12
+ * @see .specs/spec-generator-v4/DESIGN.md «(o) Inherited design decisions from v3»
+ * @see .specs/spec-generator-v4/legacy-v3.feature SPECGEN003_10..12 (form contract)
  */
 
 import { isV3Spec } from './phase-constants.ts';

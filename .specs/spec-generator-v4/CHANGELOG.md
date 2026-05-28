@@ -4,6 +4,27 @@ All notable changes to this feature will be documented in this file.
 
 ## [Unreleased]
 
+## [0.1.0-v3] — Production form-guards (consolidated from spec-generator-v3 on 2026-05-28)
+
+> Predecessor release. This entry consolidates the v3 release history from `.specs/spec-generator-v3/CHANGELOG.md` (now deleted) so that v4 carries the institutional record forward. The code described below shipped in PR #14 (specs-workflow v1.17.0) and remains in production as the **soft tier** of v4's hook system (see FR-19, FR-22, FR-24, FR-25 + DESIGN paragraph (o)).
+
+### Added
+
+- **Phase 0 (BDD Foundation):** `.feature` with 28 scenarios `SPECGEN003_01..28` + vitest e2e test translator. The scenarios are preserved in v4 as `.specs/spec-generator-v4/legacy-v3.feature` and continue to be tested by `tests/e2e/spec-generator-v3.test.ts`.
+- **Phase 1 (shared):** `spec-form-parsers.ts` (5 parsers), `audit-logger.ts` (30d retention + 10MB rotation), `phase-constants.ts` v3 helpers (`getProgressVersion`, `isV3Spec`, `PROGRESS_SCHEMA_VERSION`), `scaffold-spec.ts` stamps `version: 3`.
+- **Phase 2 (form-guards):** 6 PreToolUse hooks — `user-story-form-guard`, `task-form-guard`, `design-decision-guard`, `requirements-chk-guard`, `risk-assessment-guard`, `extension-json-meta-guard`. These are the SOFT TIER preserved verbatim by v4 (FR-19).
+- **Phase 3 (child skills):** `discovery-forms`, `requirements-chk-matrix`, `task-board-forms` with anti-pushy descriptions (per DESIGN paragraph (o)).
+- **Phase 4 (templates + runtime):** 5 templates updated, `spec-status.ts -Format task-table` (locked as backward-compat contract in v4 FR-21), `validate-specs.ts` UserPromptSubmit summary (v4 FR-20 replaces with threshold-only B3 + on-demand B4).
+- **Phase 5 (manifest + docs):** `extension.json` v1.17.0 with array-of-groups hooks, `CHANGELOG` 1.17.0 entry, `specs-management.md` Skill wiring (v4 distributes this across `create-spec` SKILL.md per README «v3 → v4 doc reorganization»).
+- **Phase 6 (dogfood):** `.specs/spec-generator-v3/` itself, authored in v3 format (now consolidated into this v4 spec and removed).
+
+### Security
+
+- **No env-var bypass.** `SPEC_FORM_GUARDS_DISABLE` does not exist; agents cannot disable form-guards. v4 NFR-Security-1 preserves this for the hard tier too.
+- **Meta-guard protects manifest.** Removing a form-guard from `extension.json` / `.claude/settings.local.json` → DENY with a human-review message. v4 FR-24 extends the protection to `plugin.json` MCP-tool registrations.
+- **Audit log surfaces bypass attempts.** Every DENY / PARSER_CRASH event is recorded in `~/.dev-pomogator/logs/form-guards.log`; the UserPromptSubmit summary shows counts to the maintainer. v4 FR-23 keeps this log file alive alongside the new `.dev-pomogator/.spec-check-log/<DATE>.jsonl`.
+- **Fail-open on parser exception.** A regex bug does not block a legitimate Write — PARSER_CRASH is logged and the hook exits 0. v4 FR-19 preserves this verbatim for the soft tier.
+
 ## v0.2.0 — 2026-05-20 — Cross-spec reconciliation (spec-only update)
 
 **This release is a spec-only update.** Implementation deferred to Phase 7 of `TASKS.md`.
@@ -37,7 +58,7 @@ All notable changes to this feature will be documented in this file.
 ### Added
 
 - **Spec authored 2026-05-16 → 2026-05-18** (this v4 spec itself):
-  - 16 FRs + 21 NFRs + 38 ACs + 41 CHKs + 37 BDD scenarios
+  - 28 FRs + 30 NFRs + 65 ACs + 41 CHKs + 54 BDD scenarios (Round 3 patch: +10 FR / +5 NFR / +15 AC / +6 scenarios)
   - 7 phases planned (Phase 0 cucumber-js migration → Phase 6 architecture-research-workflow skill)
   - RESEARCH.md 1300+ lines / 17 appendices documenting: external pain validation (OpenSpec issue #901), variant analysis (4 architectures), decision history (in-memory vs SQLite, MCP vs LSP layering, throttling), devcontainer constraints, anchor convention evolution
   - Spec workflow took 30+ turns → motivated Phase 6 meta-deliverable (architecture-research-workflow skill)

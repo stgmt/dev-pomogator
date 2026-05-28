@@ -1,5 +1,6 @@
 /**
- * Shared regex parsers for spec-generator-v3 form-guards.
+ * Shared regex parsers for the soft-tier form-guards (originally spec-generator-v3
+ * era; preserved verbatim by v4 per .specs/spec-generator-v4/DESIGN.md (o)).
  *
  * Each parser takes markdown content and returns an array of block descriptors
  * with line numbers and presence flags for required sub-fields. Used by all
@@ -11,7 +12,7 @@
  * - Tolerant: whitespace, Windows line endings, BOM.
  * - Deterministic: identical input → identical output (idempotent).
  *
- * @see .specs/spec-generator-v3/FR.md FR-4..FR-8, FR-11
+ * @see .specs/spec-generator-v4/legacy-v3.feature (28 scenarios that drive this code)
  */
 
 import fs from 'fs';

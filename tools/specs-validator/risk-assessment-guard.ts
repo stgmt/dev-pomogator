@@ -9,7 +9,8 @@
  * RESEARCH.md without `## Risk Assessment` heading passes — risks section
  * is added by `discovery-forms` skill in Phase 1 once it has content.
  *
- * @see .specs/spec-generator-v3/FR.md FR-8, FR-9, FR-10, FR-12
+ * @see .specs/spec-generator-v4/DESIGN.md «(o) Inherited design decisions from v3»
+ * @see .specs/spec-generator-v4/legacy-v3.feature SPECGEN003_13..14 (form contract)
  */
 
 import { isV3Spec } from './phase-constants.ts';

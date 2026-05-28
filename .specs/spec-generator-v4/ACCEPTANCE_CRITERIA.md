@@ -259,3 +259,78 @@ WHEN resolve completes the batch of applied fixes (all confirmed findings proces
 **Требование:** [FR-18](FR.md#fr-18)
 
 WHEN resolve proposes an edit whose target path begins with `.specs/{other-slug}/` where `other-slug` differs from the current resolve invocation slug THEN the explanation block SHALL include a banner line containing literally «⚠️ This edits foreign spec: .specs/{other-slug}/{file}» AND skill SHALL request an additional confirm distinct from the per-finding confirm before invoking Edit.
+
+## AC-19.1 (FR-19)
+**Требование:** [FR-19](FR.md#fr-19)
+
+WHEN `spec-conformance-guard` (FR-5) is invoked AND a startup or config-load exception is thrown (malformed config, missing dependency, IO error reading guard config) THEN the guard SHALL exit with status 1 AND write a non-empty actionable error message to stderr AND the calling Write/Edit tool SHALL be blocked (PreToolUse decision: deny).
+
+## AC-19.2 (FR-19)
+**Требование:** [FR-19](FR.md#fr-19)
+
+WHEN `spec-conformance-guard` (FR-5) is invoked AND a per-file content-parse exception is thrown (Gherkin parser exception on .feature, remark parser exception on .md) THEN the guard SHALL append a JSON entry `{timestamp, hook_id, file_path, error_message, error_stack}` to the latest `.dev-pomogator/.spec-check-log/<YYYY-MM-DD>.jsonl` (OR to `~/.dev-pomogator/logs/form-guards.log` with `kind: "hard_tier_file_parse"` discriminator if the FR-15 writer is not yet available) AND exit with status 0 (allow operation).
+
+## AC-19.3 (FR-19)
+**Требование:** [FR-19](FR.md#fr-19)
+
+WHEN any soft-tier hook (`user-story-form-guard`, `task-form-guard`, `design-decision-guard`, `requirements-chk-guard`, `risk-assessment-guard`, `extension-json-meta-guard`) catches an exception of any kind during its check THEN the hook SHALL append a line to `~/.dev-pomogator/logs/form-guards.log` containing `{ISO timestamp} {hook_id} PARSER_CRASH {target_path} {error_message}` AND exit with status 0 (allow operation through).
+
+## AC-20.1 (FR-20)
+**Требование:** [FR-20](FR.md#fr-20)
+
+WHEN `UserPromptSubmit` hook fires AND the count of DENY-class events in `~/.dev-pomogator/logs/form-guards.log` plus latest `.dev-pomogator/.spec-check-log/*.jsonl` since `last_summary_ack.json::ack_timestamp` is ≥1 THEN the hook SHALL emit a single-line summary to agent context formatted as «📊 Spec conformance: {n} unresolved DENY since {ack timestamp human-readable}». WHEN the count is 0 THEN the line SHALL be omitted entirely.
+
+## AC-20.2 (FR-20)
+**Требование:** [FR-20](FR.md#fr-20)
+
+WHEN the FR-20 summary renderer runs THEN it SHALL complete within 50 milliseconds p95 (wall-clock from hook fire to line emission) for a corpus of ≤1000 entries per source file. Threshold-tracker reads and writes to `~/.dev-pomogator/state/last-summary-ack.json` MUST be atomic via temp-file-rename (NFR-Reliability-2).
+
+## AC-21.1 (FR-21)
+**Требование:** [FR-21](FR.md#fr-21)
+
+WHEN `npx tsx tools/specs-generator/spec-status.ts -Path .specs/<slug> -Format task-table` is invoked for any spec slug regardless of the underlying implementation (direct MD parse OR MCP-routed `get_trace`) THEN the stdout output SHALL byte-equal the fixture at `tools/specs-generator/__fixtures__/task-table.baseline.md` after substituting `{slug}` and dynamic timestamps, AND the vitest contract test `tools/specs-generator/__tests__/task-table-contract.test.ts` SHALL pass.
+
+## AC-22.1 (FR-22)
+**Требование:** [FR-22](FR.md#fr-22)
+
+WHEN `spec-conformance-guard` (FR-5) receives a target file inside a spec whose `.progress.json::version` field is `< 4` OR is null OR the `.progress.json` file is absent THEN the guard SHALL exit with status 0 AND append a JSONL entry `{kind: "ALLOW_AFTER_MIGRATION", reason: "spec_version", target: <path>, observed_version: <value_or_null>}` to the latest `.dev-pomogator/.spec-check-log/<YYYY-MM-DD>.jsonl`. The guard SHALL fire normally ONLY when `.progress.json::version >= 4`.
+
+## AC-24.1 (FR-24)
+**Требование:** [FR-24](FR.md#fr-24)
+
+WHEN any Write/Edit tool call targets `extension.json` OR `plugin.json` OR `.claude/settings.local.json` AND the proposed change removes any registration in the protected set (5 v3 form-guards + `extension-json-meta-guard` + `spec-conformance-guard` + the MCP server `dev-pomogator-specs` tool registrations) THEN `extension-json-meta-guard` SHALL deny the tool call with PreToolUse decision deny AND a `permissionDecisionReason` naming the registration being removed AND append a tamper-attempt entry to `.dev-pomogator/logs/meta-guard.log`.
+
+## AC-25.1 (FR-25)
+**Требование:** [FR-25](FR.md#fr-25)
+
+WHEN `claude plugin install dev-pomogator-v4` is run in a project that already has dev-pomogator v3 installed AND the prior `plugin.json` contains the 5 v3 form-guard PreToolUse hook entries identified by their `name` field THEN the resulting post-install `plugin.json` SHALL contain ALL 5 prior v3 entries unchanged AND ≥3 additional new v4 hook entries (FR-5 `spec-conformance-guard`, FR-6 `spec-conformance-push`, `bash-post-test-ingest`).
+
+## AC-25.2 (FR-25)
+**Требование:** [FR-25](FR.md#fr-25)
+
+WHEN the v4 install procedure detects existing v3 hook entries during merge THEN matching SHALL be performed by `name` field equality only — NOT by array index AND NOT by `command` substring match. The integration test `tests/e2e/v4-install-additive-merge.test.ts` SHALL verify `length(hooks.claude.PreToolUse_post) ≥ length(hooks.claude.PreToolUse_prior) + 1` AND zero pre-existing entries were removed.
+
+## AC-26.1 (FR-26)
+**Требование:** [FR-26](FR.md#fr-26)
+
+WHEN FR-8 `claude -p` subprocess is about to be invoked for a semantic-drift check AND the assembled prompt would contain text matching any deny-list pattern (file-name glob OR body-content regex from FR-26) THEN the subprocess invocation SHALL be skipped AND a JSONL entry `{finding_code: "SEMANTIC_CHECK_SKIPPED_DENY_LIST", severity: "INFO", location, message: "matched pattern: <pattern>", spec_slug}` SHALL be appended to spec-check-log AND the call site SHALL NOT report a `NO_DRIFT_DETECTED` result.
+
+## AC-26.2 (FR-26)
+**Требование:** [FR-26](FR.md#fr-26)
+
+WHEN a spec frontmatter contains `spec_llm_judge_deny: true` THEN ALL FR-8 semantic-drift subprocess invocations targeting any FR/scenario in that spec SHALL be skipped unconditionally regardless of content matching, with JSONL finding code `SEMANTIC_CHECK_SKIPPED_OPT_OUT`. No allow-list override SHALL be honored.
+
+## AC-27.1 (FR-27)
+**Требование:** [FR-27](FR.md#fr-27)
+
+WHEN `postInstall` downloads the Marksman LSP binary for the current platform/arch/version AND the sha256 of the downloaded file does NOT equal the pinned hash in `package.json::marksmanHashes[platform][arch][version]` (or sibling `marksman-hashes.json`) THEN install SHALL abort with non-zero exit AND the error message SHALL contain literally both hash values (expected and actual) AND the downloaded file SHALL be deleted before exit.
+
+## AC-23.1 (FR-23)
+**Требование:** [FR-23](FR.md#fr-23)
+
+WHEN v4 install completes on a clean machine THEN both log file paths SHALL be either present or createable on first write: `~/.dev-pomogator/logs/form-guards.log` (soft-tier consumer) AND `.dev-pomogator/.spec-check-log/<YYYY-MM-DD>.jsonl` (hard-tier consumer). DESIGN.md «(m) Log file inventory» table SHALL match the observed file paths/schemas/retention; no orphan or third log path SHALL be introduced.
+
+## AC-28.1 (FR-28)
+**Требование:** [FR-28](FR.md#fr-28)
+
+WHEN the PostToolUse hook (FR-6) fires for a sequence of qualifying edits at times t=0, t=1.0s, t=2.0s, t=2.9s (all within the throttle window opened at t=0) THEN a single batched push SHALL occur at t=throttle_ms (default 3000ms ± 100ms tolerance). WHEN a subsequent edit fires at t=throttle_ms+ε (ε>0) THEN a NEW window SHALL open at that timestamp AND the next push SHALL occur at t=2·throttle_ms+ε (NOT at t=throttle_ms extended). The throttle SHALL NOT exhibit sliding-window or debounce behavior.
