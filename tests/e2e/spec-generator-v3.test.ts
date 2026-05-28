@@ -1,7 +1,7 @@
 /**
  * Integration tests for spec-generator-v3 feature (SPECGEN003).
  *
- * Covers 28 scenarios from .specs/spec-generator-v3/spec-generator-v3.feature:
+ * Covers 28 scenarios from .specs/spec-generator-v4/legacy-v3.feature (v3-era contract preserved by v4):
  * - SPECGEN003_01..04: user-story-form-guard (deny + allow + migration + fail-open)
  * - SPECGEN003_05..07: task-form-guard
  * - SPECGEN003_08..09: design-decision-guard

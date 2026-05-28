@@ -1,3 +1,29 @@
+# --------------------------------------------------------------------------
+# Legacy v3 BDD scenarios — preserved here on 2026-05-28 as part of the
+# v3 → v4 spec consolidation. The original file lived at
+# .specs/spec-generator-v3/spec-generator-v3.feature (now deleted).
+#
+# Why this file is kept:
+# - These 28 scenarios are the canonical test contract for the v3 form-guards
+#   that v4 explicitly preserves as the SOFT TIER (see v4 FR-19, DESIGN
+#   paragraph (o) «Inherited design decisions from v3»).
+# - The integration test `tests/e2e/spec-generator-v3.test.ts` references
+#   these scenarios via @feature tags. Deleting them would orphan the test.
+# - v3's @featureN tag numbers (here @feature1 / @feature3 / @feature4 /
+#   @feature5 / @feature7 / @feature8) refer to v3's old user-story
+#   numbering. They do NOT collide with v4's @feature1..@feature28 because
+#   v4's tagging is namespaced to `spec-generator-v4.feature`; tags in this
+#   file remain scoped to spec-generator-v3.test.ts.
+#
+# What you should NOT do:
+# - Don't renumber the scenarios — the test file relies on SPECGEN003_NN.
+# - Don't merge scenarios into spec-generator-v4.feature — v4's runner
+#   (cucumber-js per FR-1) is separate from the vitest runner that drives
+#   this file via spec-generator-v3.test.ts. Mixing breaks both runners.
+# - Don't change @featureN tags — they wire into the legacy USER_STORIES
+#   structure that v3 form-guards still validate in production.
+# --------------------------------------------------------------------------
+
 Feature: SPECGEN003 Spec Generator v3 — form-guards, child skills, audit log
   As a dev-pomogator maintainer
   I want blocking PreToolUse hooks + private child skills + audit log

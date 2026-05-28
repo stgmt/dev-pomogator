@@ -219,7 +219,7 @@
 **Framework:** Cucumber.js (`@cucumber/cucumber`) for dev-pomogator self-test; Reqnroll for C# target projects; behave for Python target projects (Phase 3+)
 **Install Command:** `npm install --save-dev @cucumber/cucumber @cucumber/messages @cucumber/gherkin @cucumber/gherkin-utils` (Phase 0 bootstrap)
 **Evidence:** RESEARCH.md Appendix J BDD framework detection table; bdd-framework-detector output (csharp/Reqnroll detected in fixture); current vitest pseudo-BDD requires Phase 0 migration
-**Verdict:** Phase 0 bootstrap block in TASKS.md MUST install cucumber-js + create `tests/step_definitions/` + `cucumber.json` config + Before/AfterScenario hooks for test isolation + per-spec NDJSON output configuration. Fixture copy from existing `.specs/personal-pomogator/`, `.specs/codex-cli-support/`, `.specs/spec-generator-v3/` for self-test.
+**Verdict:** Phase 0 bootstrap block in TASKS.md MUST install cucumber-js + create `tests/step_definitions/` + `cucumber.json` config + Before/AfterScenario hooks for test isolation + per-spec NDJSON output configuration. Fixture copy from existing `.specs/personal-pomogator/` + `.specs/codex-cli-support/` (two real v3-format specs in this repo) + a synthesized minimal v3-format sample for self-test. (The former `.specs/spec-generator-v3/` was consolidated into this v4 spec on 2026-05-28; v3 BDD scenarios live in `.specs/spec-generator-v4/legacy-v3.feature`.)
 
 ### Существующие hooks
 
@@ -242,7 +242,7 @@
 
 ### Cleanup Strategy
 
-В test fixture для self-test (v4 development): чистая копия `.specs/personal-pomogator/`, `.specs/codex-cli-support/`, `.specs/spec-generator-v3/` живёт в `tests/fixtures/v4-self-test/`. Каждый BDD scenario: Before — copy fixture to temp dir, set CWD; After — cleanup temp dir + reset MCP server state via `clear_index` admin tool.
+В test fixture для self-test (v4 development): чистые копии `.specs/personal-pomogator/` + `.specs/codex-cli-support/` (два реальных v3-format спека в этом репо) + синтезированный минимальный v3-format sample живут в `tests/fixtures/v4-self-test/`. (Бывшая папка `.specs/spec-generator-v3/` сконсолидирована в этот v4-spec 2026-05-28; v3 BDD-сценарии в `.specs/spec-generator-v4/legacy-v3.feature`.) Каждый BDD scenario: Before — copy fixture to temp dir, set CWD; After — cleanup temp dir + reset MCP server state via `clear_index` admin tool.
 
 Cleanup порядок для production (target projects):
 1. После теста: in-memory graph НЕ persists (по definition Phase 2)
@@ -400,3 +400,57 @@ Design borrows the following patterns from prior art (see RESEARCH.md «Prior ar
 Avoided patterns (also see RESEARCH.md): ESLint `--fix` style semantic-breaking auto-apply (we always explain-then-confirm); Dependabot per-finding-PR fatigue (we batch findings per spec slug in a single YAML); mex single-shot AI fix without alternatives (we present Path A/B/C); OpenFastTrace `// [impl->REQ-N]` code-annotation requirement (we parse prose claims directly).
 
 The `verify-divergent-contracts.md` rule (test-vs-eval-vs-spec divergence pattern in dev-pomogator) describes the exact class of failure this reconcile feature is designed to detect across the cross-spec axis. See RESEARCH.md «Related sprint work» for the post-render-eval ↔ closed-loop-hardening ↔ pipeline/agent.ts case study that motivated the work.
+
+### (l) Hook failure-mode tiers (FR-19)
+
+v4 PreToolUse hooks split into **two operational tiers** with distinct failure semantics. Single-tier «all fail-open» was explicitly rejected because it creates a bypass: an attacker crafts a `.md` whose content reliably crashes the hard guard's parser and thereafter Writes are unprotected on every file.
+
+| Tier | Members | Startup/config crash | Per-file content-parse crash | Log path |
+|------|---------|----------------------|------------------------------|----------|
+| **Soft** | `user-story-form-guard`, `task-form-guard`, `design-decision-guard`, `requirements-chk-guard`, `risk-assessment-guard`, `extension-json-meta-guard` (FR-24) | exit 0, log entry (fail-open) — same as per-file | exit 0, log entry (fail-open). Pattern preserved verbatim from v3 FR-10. | `~/.dev-pomogator/logs/form-guards.log` |
+| **Hard** | `spec-conformance-guard` (FR-5) | **exit 1** + stderr (fail-CLOSED — broken install must surface; user's Write blocked until repair) | exit 0, log entry (fail-open — one confused file does not DoS authoring) | `.dev-pomogator/.spec-check-log/<YYYY-MM-DD>.jsonl` (FR-15) |
+
+**Cross-phase dependency note**: FR-15 JSONL writer ships in Phase 4 per current TASKS.md ordering. Hard tier ships with FR-5 in Phase 2. Resolution options:
+
+1. **Lift FR-15 writer to Phase 2** (recommended): the JSONL writer is small (append-only, atomic-via-write, daily rotation) and decoupling it from FR-15's CLI consumer is trivial.
+2. **Fallback path** until Phase 4: hard tier per-file events write to `~/.dev-pomogator/logs/form-guards.log` with `kind: "hard_tier_file_parse"` discriminator; FR-15 CLI consumes both files in Phase 4.
+
+The patch (FR-19 introducing this tiering) is agnostic between options; Phase 2 implementer chooses based on dependency-graph cost.
+
+### (m) Log file inventory (FR-23)
+
+v4 ships with **two distinct log files**, intentionally NOT unified. Each has its own schema, retention, and consumer. Form-guard decisions (DENY/ALLOW_AFTER_MIGRATION/PARSER_CRASH) and conformance findings (DUPLICATE_DEFINITION/UNCOVERED_FR/SCENARIO_TAG_ORPHAN) are different event taxonomies with different downstream tooling — unification would create incompatibility for v3 consumers without a clear gain.
+
+| Path | Origin | Writer | Schema | Retention / rotation | Consumer |
+|------|--------|--------|--------|----------------------|----------|
+| `~/.dev-pomogator/logs/form-guards.log` | v3, kept | soft-tier hooks (FR-19); fallback for hard-tier file-parse (during Phase 2-3 if Option 2 chosen) | text line: `{ISO ts} {hook_id} {decision} {target_path} {message}` | 30 days OR 10MB cap, whichever hits first; rotation handled by `validate-specs.ts` (v3 pattern) | `renderFormGuardsSummary()` (FR-20 threshold check + on-demand `/spec-status` skill) |
+| `.dev-pomogator/.spec-check-log/<YYYY-MM-DD>.jsonl` | v4, new (FR-15) | hard-tier `spec-conformance-guard`, PostToolUse push (FR-6) | JSONL: `{timestamp, finding_code, severity, location: {path,line,col}, message, spec_slug}` | rotate at 10MB → `-<N>.jsonl` suffix (FR-15) | `dev-pomogator spec-check-log` CLI (FR-15) + FR-20 summary reader + analytics tooling |
+
+Schema migration / unification tooling is OUT OF SCOPE for v4. v5+ may consolidate.
+
+### (n) Conformance summary surfacing options (FR-20)
+
+Four candidate UXes were considered for replacing v3's «every prompt prints 24h aggregate». Recommended combo: **B3 + B4**.
+
+| Option | UX | Pros | Cons | Verdict |
+|--------|----|------|------|---------|
+| **B1** | Render 24h aggregate at every UserPromptSubmit (v3 verbatim) | familiar to v3 users | per-prompt latency (file-scan cost on every prompt); noise even when nothing changed | **rejected** — regression on latency-conscious users |
+| **B2** | Deprecate summary entirely; require user to invoke a CLI for status | clean v4 architecture (no UserPromptSubmit hook) | silent UX regression — users miss alerts that v3 surfaced inline | **rejected** — regression on alerting |
+| **B3** | Threshold-only: render summary at UserPromptSubmit ONLY when unresolved DENY events ≥1 since last acknowledgment | zero-noise default; alerts only when there's signal; preserves prompt-time visibility | requires state tracker (`~/.dev-pomogator/state/last-summary-ack.json`); ack semantics need definition | **recommended** (combined with B4) |
+| **B4** | On-demand pull via `/spec-status` skill + tiny statusline indicator | always available; explicit user action; no hook overhead for «I want full picture» | doesn't alert if user never asks | **recommended** (combined with B3) |
+
+Combined B3+B4 satisfies both regression cases: threshold-only B3 catches «something needs attention» surface; on-demand B4 provides «show me everything» when author wants the full picture.
+
+State file `last-summary-ack.json` schema: `{ack_timestamp: ISO8601, ack_event_count: int, ack_session_id: uuid}`. Ack is triggered explicitly by user invoking `/spec-status` OR by clicking on the rendered B3 line (future Claude Code UX); never implicit. The state file is per-machine (`~/`), not per-repo.
+
+### (o) Inherited design decisions from v3 (consolidated 2026-05-28)
+
+The four design decisions below shipped in spec-generator-v3 (production via PR #14) and are PRESERVED VERBATIM by v4. Cross-references: FR-19 (soft tier preserves v3 fail-open + hook chain), FR-22 (version gate mirrors v3 migration guard), FR-24 (meta-guard extension preserves v3 protection scope), FR-25 (additive merge preserves v3 hook registrations). These decisions are reproduced here so that v3's spec folder can be deleted without losing the institutional rationale.
+
+**Decision: anti-pushy description pattern for hidden child skills.** Rationale: Claude Code has no native `internal: true` frontmatter; the proven workaround is description-without-trigger-phrases (no «when the user», no «whenever»). Trade-off: no hard guarantee against edge-case auto-trigger; SPECGEN003_24 negative test (now `tests/e2e/spec-generator-v3.test.ts`) checks against real-world prompts. Alternatives rejected: `internal: true` frontmatter (doesn't exist; upstream patch out of scope); `plugin-dev/` subdirectory placement (cosmetic, doesn't change auto-trigger); monolith skill (bloats description, breaks anti-pushy principle).
+
+**Decision: meta-guard protects `extension.json` AND `.claude/settings.local.json` (extended by v4 FR-24 to cover `plugin.json` MCP-tool registrations).** Rationale: agents kept finding env-var bypass (`SPEC_FORM_GUARDS_DISABLE`) and forgetting to remove it. Env-var bypass was DELETED in v3 and the meta-guard now denies removal of any form-guard entry from the manifest. Trade-off: legitimate manifest changes (rename, consolidate extensions) require human editing outside Claude Code. Alternatives rejected: keep env-var bypass (trivially circumvented); read-only filesystem flag on `extension.json` (blocks install-time updates); cryptographic signature on manifest (over-engineering; no key-management infra).
+
+**Decision: migration guard via `.progress.json::version >= 3` (extended by v4 FR-22 to gate on `version >= 4`).** Rationale: 30+ existing v1/v2 specs are not ready for the new form enforcement; need migration isolation without a forced dev-company upgrade. `scaffold-spec.ts` stamps `version: 3` for new specs; hooks check the version immediately after the matcher filter. Trade-off: existing specs stay v1/v2 forever (or until manual migration); enforcement cannot be applied retroactively. Alternatives rejected: WARNING-only period followed by ERROR-switch (agents ignore warnings — 1.5-year track record per `validate-specs.ts`); bulk migration of all existing specs (days of manual work + risk of breaking completed specs); opt-in via explicit env var (`.progress.version` is the natural version marker; no new config files).
+
+**Decision: 3 skills split by Phase, not 7 atomic or 1 monolith.** Rationale: each skill = one mental unit + one workflow Phase. Aligns with STOP gates in the spec workflow. Claude switches between skills once per Phase. Trade-off: Risk Assessment + User Stories are bundled in `discovery-forms` (Phase 1) — not pure single-responsibility. CHK matrix + Key Decisions are bundled in `requirements-chk-matrix` — same compromise. Alternatives rejected: 7 atomic skills, 1 per artifact (Skill-invocation overhead; parent makes 7 calls in series); 1 monolith skill (bloated SKILL.md, pushy description, breaks skill-creator best practices).

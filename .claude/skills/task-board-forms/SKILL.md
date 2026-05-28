@@ -3,7 +3,7 @@ name: task-board-forms
 description: >
   Enriches TASKS.md with Done When / Status / Est fields per task and regenerates
   the ## Task Summary Table header via spec-status.ts -Format task-table. Idempotent
-  (replaces auto-generated block between markers). Called by specs-management.md Phase 3
+  (replaces auto-generated block between markers). Called by create-spec Phase 3
   (Finalization) step 1b. Returns JSON summary of tasks enriched.
 allowed-tools: Read, Write, Edit, Bash
 ---

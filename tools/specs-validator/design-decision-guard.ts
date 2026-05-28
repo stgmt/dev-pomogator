@@ -7,7 +7,8 @@
  * Files without any `### Decision:` heading pass unblocked — Key Decisions
  * section is optional.
  *
- * @see .specs/spec-generator-v3/FR.md FR-6, FR-9, FR-10, FR-12
+ * @see .specs/spec-generator-v4/DESIGN.md «(o) Inherited design decisions from v3»
+ * @see .specs/spec-generator-v4/legacy-v3.feature SPECGEN003_08..09 (form contract)
  */
 
 import { isV3Spec } from './phase-constants.ts';

@@ -294,7 +294,7 @@ function findAllSpecDirs(specsRoot: string): string[] {
  * Silent skip if log missing / empty / no events within window.
  * Also calls rotateLog() once per session for retention cleanup.
  *
- * @see .specs/spec-generator-v3/FR.md FR-13
+ * @see .specs/spec-generator-v4/FR.md FR-20 (threshold-only B3 + on-demand B4 supersede every-prompt v3 aggregate)
  */
 function renderFormGuardsSummary(): void {
   try {

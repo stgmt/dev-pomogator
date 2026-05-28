@@ -4,7 +4,7 @@
 
 BDD fixtures for v4 self-test cover parser regression + scenario isolation. Three main categories:
 
-1. **Real-world spec copies** — `.specs/personal-pomogator/`, `.specs/codex-cli-support/`, `.specs/spec-generator-v3/` skopированы как fixture для parser regression. Гарантирует backward compat (v4 на existing v3 specs работает).
+1. **Real-world spec copies** — `.specs/personal-pomogator/` + `.specs/codex-cli-support/` (both real v3-format specs in this repo) + a synthesized minimal v3-format sample under `tests/fixtures/v3-format-sample/` are copied as fixtures for parser regression. Guarantees backward compat (v4 works on existing v3-format specs). The former `.specs/spec-generator-v3/` was consolidated into v4 on 2026-05-28; v3 BDD contract lives at `.specs/spec-generator-v4/legacy-v3.feature`.
 2. **Synthetic large-spec benchmark** — generated 30 specs × ~10 MDs × 3 .feature files для NFR-Performance-1/2 benchmarks (cold start ≤2s, incremental ≤100ms).
 3. **Error-case fixtures** — namespace для PreToolUse HARD hook regression (DUPLICATE_DEFINITION, MALFORMED_FRONTMATTER, MALFORMED_GHERKIN) + orphan policy scenarios.
 4. **Cucumber Messages NDJSON samples** — canonical NDJSON pre-recorded для ingester unit-tests (без необходимости запускать full BDD).
@@ -15,7 +15,7 @@ BDD fixtures for v4 self-test cover parser regression + scenario isolation. Thre
 |----|------|------|------|-------|-------|
 | F-1 | personal-pomogator spec copy | static | `tests/fixtures/v4-self-test/.specs/personal-pomogator/` | shared | BeforeAll hook |
 | F-2 | codex-cli-support spec copy | static | `tests/fixtures/v4-self-test/.specs/codex-cli-support/` | shared | BeforeAll hook |
-| F-3 | spec-generator-v3 spec copy | static | `tests/fixtures/v4-self-test/.specs/spec-generator-v3/` | shared | BeforeAll hook |
+| F-3 | v3-format spec sample | static | `tests/fixtures/v4-self-test/.specs/v3-format-sample/` (synthesized minimal v3 spec; the former `.specs/spec-generator-v3/` was consolidated into this v4 spec on 2026-05-28) | shared | BeforeAll hook |
 | F-4 | Real .feature files | static | `tests/fixtures/v4-self-test/features/*.feature` | shared | BeforeAll hook |
 | F-5 | Canonical NDJSON sample | static | `tests/fixtures/ndjson/sample.ndjson` | shared | BeforeAll hook |
 | F-6 | NDJSON with FAILED scenarios | static | `tests/fixtures/ndjson/failed-cases.ndjson` | shared | BeforeAll hook |
@@ -82,7 +82,7 @@ BDD fixtures for v4 self-test cover parser regression + scenario isolation. Thre
 - **Format:** Node.js process spawned via `child_process.spawn('node', ['.dev-pomogator/bin/spec-mcp-server.js'])` with stdio pipes
 - **Setup:** `BeforeFeature` hook spawns process, establishes JSON-RPC connection, awaits `initialize` response
 - **Teardown:** `AfterFeature` hook sends `shutdown` request + `exit` notification, awaits process exit
-- **Dependencies:** F-3 (spec-generator-v3 copy or other fixtures depending on scenario)
+- **Dependencies:** F-3 (v3-format sample or other fixtures depending on scenario)
 - **Used by:** All scenarios that call MCP tools (~25 of 37)
 - **Assumptions:** MCP server binary built and present in `.dev-pomogator/bin/`
 
@@ -132,7 +132,7 @@ F-14 (large-spec) ────────► NFR benchmarks
 | @feature9 | SPECGEN004_20 (behave NDJSON) | F-20 | none |
 | @feature10 | SPECGEN004_21/_22 (SQLite cross-session) | F-15 multi-instance + F-18 sqlite-on | gap: Phase 4 deliverable, Phase 2 covers in-memory only |
 | @feature10 | SPECGEN004_23 (SQLite corruption recovery) | Synthetic corrupt SQLite file fixture (TBD) | gap: fixture not in inventory yet; add F-21 in Phase 4 |
-| @feature11 | SPECGEN004_24/_25 (migration helper) | F-3 (spec-generator-v3 as migration source) | none |
+| @feature11 | SPECGEN004_24/_25 (migration helper) | F-3 (v3-format sample as migration source) | none |
 | @feature12 | SPECGEN004_26/_27/_28 (arch-research skill) | Synthetic feature description fixtures (TBD) | gap: add F-22 in Phase 6 (synthetic feature inputs for dogfood test) |
 | @feature13 | SPECGEN004_29 (orphan warn default) | F-11 + F-18 (default) | none |
 | @feature13 | SPECGEN004_30 (orphan block escalation) | F-11 + F-18 (strict-orphans config) | none |

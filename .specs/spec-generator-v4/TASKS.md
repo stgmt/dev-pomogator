@@ -582,6 +582,95 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] Scenario 5: batch re-check updates resolution_status — after fix, second reconcile run + update-yaml-resolution sets `resolution_status: resolved`
   - [ ] Uses spawnSync/runInstaller per `.claude/rules/integration-tests-first.md` (NOT mocks)
 
+## v3-Transition Closure (FR-19..FR-28 — Round 3 patch validation)
+
+> This Phase validates the 10 new FRs introduced by the v3→v4 transition patch (Round 3). Each task is one new FR; verification is integration-level (no mocks) per `.claude/rules/integration-tests-first.md`. Schedules into Phase 2 / Phase 3 / Phase 5 of the main TDD timeline (see TASKS.md FR-19..FR-28 cross-refs in REVIEW_NOTES.md Round 3).
+
+- [ ] T-Trans.1 verify FR-19 two-tier hook failure-mode — id: verify-fr-19-failure-tiers — Status: TODO | Est: 90m
+  _Requirements: [FR-19](FR.md#fr-19), [AC-19.1](ACCEPTANCE_CRITERIA.md#ac-19-1), [AC-19.2](ACCEPTANCE_CRITERIA.md#ac-19-2), [AC-19.3](ACCEPTANCE_CRITERIA.md#ac-19-3)_
+  **Done When:**
+  - [ ] Hard tier startup-crash test: malform `spec-conformance-guard` config → spawn guard → expect exit 1 + non-empty stderr + PreToolUse deny
+  - [ ] Hard tier file-parse-crash test: craft malformed `.feature` file → spawn guard → expect exit 0 + new JSONL entry in `.dev-pomogator/.spec-check-log/<today>.jsonl`
+  - [ ] Soft tier exception test: force one v3 form-guard to throw → expect exit 0 + new line in `~/.dev-pomogator/logs/form-guards.log` matching `{ts} {hook_id} PARSER_CRASH …`
+  - [ ] Uses spawnSync per `.claude/rules/integration-tests-first.md`
+
+- [ ] T-Trans.2 verify FR-20 threshold-only summary + on-demand /spec-status — id: verify-fr-20-summary — Status: TODO | Est: 60m
+  _Requirements: [FR-20](FR.md#fr-20), [AC-20.1](ACCEPTANCE_CRITERIA.md#ac-20-1), [AC-20.2](ACCEPTANCE_CRITERIA.md#ac-20-2)_
+  **Done When:**
+  - [ ] Threshold-zero test: empty `form-guards.log` and empty `spec-check-log` → UserPromptSubmit emits NOTHING
+  - [ ] Threshold-≥1 test: seed 1 DENY entry → UserPromptSubmit emits a single line matching `📊 Spec conformance: \d+ unresolved DENY since`
+  - [ ] Ack test: invoke `/spec-status` skill once → `~/.dev-pomogator/state/last-summary-ack.json` updated → next prompt emits NOTHING for the seeded entry
+  - [ ] Latency: render duration measured ≤50ms p95 across 100 trials with 1000-entry corpus
+  - [ ] Atomic write of `last_summary_ack.json` verified via concurrent invocation test
+
+- [ ] T-Trans.3 verify FR-21 spec-status.ts task-table CLI contract — id: verify-fr-21-cli-contract — Status: TODO | Est: 60m
+  _Requirements: [FR-21](FR.md#fr-21), [AC-21.1](ACCEPTANCE_CRITERIA.md#ac-21-1)_
+  **Done When:**
+  - [ ] Fixture exists at `tools/specs-generator/__fixtures__/task-table.baseline.md`
+  - [ ] vitest contract test `tools/specs-generator/__tests__/task-table-contract.test.ts` byte-compares CLI output to fixture
+  - [ ] Test passes for direct-MD-parse implementation
+  - [ ] Test passes for MCP-routed implementation (when MCP server running)
+  - [ ] Degraded-mode test: kill MCP server → CLI still produces fixture-shape output
+
+- [ ] T-Trans.4 verify FR-22 version gate for spec-conformance-guard — id: verify-fr-22-version-gate — Status: TODO | Est: 60m
+  _Requirements: [FR-22](FR.md#fr-22), [AC-22.1](ACCEPTANCE_CRITERIA.md#ac-22-1)_
+  **Done When:**
+  - [ ] Legacy version test: spec with `.progress.json::version: 2` containing DUPLICATE_DEFINITION → guard exit 0 + `ALLOW_AFTER_MIGRATION` JSONL entry
+  - [ ] Null version test: spec missing `.progress.json` → guard exit 0 + `ALLOW_AFTER_MIGRATION` JSONL entry
+  - [ ] Current version test: spec with `.progress.json::version: 4` containing DUPLICATE_DEFINITION → guard exit 1 + deny (gate bypassed)
+  - [ ] Test covers all 4 hard invariants (DUPLICATE_DEFINITION, MALFORMED_FRONTMATTER, MALFORMED_GHERKIN, INVALID_ANCHOR_PATTERN)
+
+- [ ] T-Trans.5 verify FR-23 log-file inventory contract — id: verify-fr-23-log-inventory — Status: TODO | Est: 30m
+  _Requirements: [FR-23](FR.md#fr-23)_
+  **Done When:**
+  - [ ] After fresh v4 install, both log paths exist (or are creatable on first write): `~/.dev-pomogator/logs/form-guards.log` AND `.dev-pomogator/.spec-check-log/<YYYY-MM-DD>.jsonl`
+  - [ ] Soft-tier event writes only to form-guards.log (no JSONL entry)
+  - [ ] Hard-tier event writes only to JSONL (no form-guards.log line) — except fallback mode if Phase 2 chose Option 2 (FR-19 cross-phase note)
+  - [ ] DESIGN.md «(m) Log file inventory» table reflects observed file paths/schemas/retention
+
+- [ ] T-Trans.6 verify FR-24 meta-guard preservation + extension — id: verify-fr-24-meta-guard — Status: TODO | Est: 60m
+  _Requirements: [FR-24](FR.md#fr-24), [AC-24.1](ACCEPTANCE_CRITERIA.md#ac-24-1)_
+  **Done When:**
+  - [ ] Removal of v3 form-guard from `extension.json` denied + tamper-log entry
+  - [ ] Removal of v4 `spec-conformance-guard` from `plugin.json` denied + tamper-log entry
+  - [ ] Removal of MCP-tool registration (`get_trace`) from `plugin.json` denied + tamper-log entry
+  - [ ] Meta-guard self-protection: removal of meta-guard's own registration denied
+
+- [ ] T-Trans.7 verify FR-25 v3 hooks survival on v4 install — id: verify-fr-25-additive-merge — Status: TODO | Est: 90m
+  _Requirements: [FR-25](FR.md#fr-25), [AC-25.1](ACCEPTANCE_CRITERIA.md#ac-25-1), [AC-25.2](ACCEPTANCE_CRITERIA.md#ac-25-2)_
+  **Done When:**
+  - [ ] `tests/e2e/v4-install-additive-merge.test.ts` exists and runs in CI
+  - [ ] Test seeds a v3-state project (`plugin.json` with 5 v3 form-guard entries) and invokes `claude plugin install dev-pomogator-v4`
+  - [ ] Post-install assertion: all 5 prior entries present unchanged AND ≥3 new entries added AND zero pre-existing entries removed
+  - [ ] Matching-by-name verified (NOT array index, NOT command substring)
+  - [ ] Uses spawnSync per integration-tests-first
+
+- [ ] T-Trans.8 verify FR-26 LLM-as-judge content boundary — id: verify-fr-26-llm-deny-list — Status: TODO | Est: 60m
+  _Requirements: [FR-26](FR.md#fr-26), [AC-26.1](ACCEPTANCE_CRITERIA.md#ac-26-1), [AC-26.2](ACCEPTANCE_CRITERIA.md#ac-26-2)_
+  **Done When:**
+  - [ ] File-name deny test: spec frontmatter pointing at `.env` → no `claude -p` subprocess spawn + `SEMANTIC_CHECK_SKIPPED_DENY_LIST` JSONL entry
+  - [ ] Body-content deny tests: each regex pattern (API_KEY, BEARER, SECRET_KEY, PRIVATE KEY, PASSWORD=, TOKEN=) triggers skip with matching pattern logged
+  - [ ] Opt-out test: spec with `spec_llm_judge_deny: true` frontmatter → ALL invocations skipped regardless of content → `SEMANTIC_CHECK_SKIPPED_OPT_OUT`
+  - [ ] False-positive guard: clean spec content does NOT trigger skip
+  - [ ] Subprocess spy: verify zero `claude -p` invocations across all deny scenarios
+
+- [ ] T-Trans.9 verify FR-27 Marksman LSP supply-chain sha verification — id: verify-fr-27-marksman-sha — Status: TODO | Est: 60m
+  _Requirements: [FR-27](FR.md#fr-27), [AC-27.1](ACCEPTANCE_CRITERIA.md#ac-27-1)_
+  **Done When:**
+  - [ ] Happy path: download with matching sha → install proceeds
+  - [ ] Mismatch test: mock download with wrong sha → install aborts non-zero + error message contains both hash values + downloaded file deleted
+  - [ ] Missing hash pin: download for platform not present in `marksmanHashes` → install aborts with explicit «no pinned hash for <platform>/<arch>/<version>» error
+  - [ ] Hash update CLI test: `dev-pomogator update-marksman-hashes` prompts maintainer for upstream sha and updates package.json
+
+- [ ] T-Trans.10 verify FR-28 PostToolUse fixed-window throttle — id: verify-fr-28-fixed-window — Status: TODO | Est: 45m
+  _Requirements: [FR-28](FR.md#fr-28)_
+  **Done When:**
+  - [ ] Single edit at t=0 → push at t=3.0s
+  - [ ] Burst: edits at t=0, 1.0, 2.0, 2.9 → single batched push at t=3.0s
+  - [ ] Window boundary: edit at t=3.1s starts new window → push at t=6.1s (NOT t=3.0s extended)
+  - [ ] No sliding behavior: edit at t=2.5s does NOT defer the t=3.0s push to t=5.5s
+  - [ ] Latency upper-bound assertion: from first edit to push ≤ throttle_ms (3000ms default) + 100ms tolerance
+
 ## Refactor & Polish (final)
 
 - [ ] Refactor + dedup across phases — id: final-refactor — Status: TODO | Est: 480m

@@ -1432,4 +1432,48 @@ Also surveyed (less relevant): vale (single-file prose linter), textlint (single
 
 **Not novel** (don't oversell): per-finding severity (Spectral / OFT), JSON/YAML output (oasdiff), dry-run mode (mex), agent-based fix (mex). Our value is the synthesis.
 
+## Appendix Z — v3 Research & Risks (consolidated 2026-05-28)
+
+This appendix preserves the research and risk-assessment content from `.specs/spec-generator-v3/RESEARCH.md` so that the v3 spec folder can be deleted without losing institutional knowledge. The decisions and risks below shipped in spec-generator-v3 (PR #14) and are inherited by v4 as soft-tier behavior (FR-19), version gate (FR-22), meta-guard extension (FR-24), and additive merge invariant (FR-25).
+
+### Z.1 v3 sources and upstream context
+
+- github.com/github/spec-kit v0.7.0 (upstream templates `spec.md` / `plan.md` / `tasks.md`).
+- Wiki custom preset on top of upstream: Done When, Task Summary Table, CHK matrix, Risk Assessment, Key Decisions blocks.
+- dev-pomogator existing hooks at v3 design time: `phase-gate.ts`, `reqnroll-ce-guard`, `pre-edit-skill-guard` (pattern references for the new form-guards).
+- Anthropic skill-creator: anti-pushy description pattern, proven by `rules-optimizer` and `deep-insights` skills.
+
+### Z.2 v3 technical findings (kept as background for v4)
+
+- **Upstream vs custom preset.** Upstream v0.7.0 has `User Story N (Priority: Pn)` + Why + Independent Test + Acceptance Scenarios inline; `Success Criteria SC-N`; `Complexity Tracking` (not «Risk Assessment»). The wiki preset added Done When per task, Task Summary Table, CHK traceability matrix `CHK-FR{n}-{nn}`, `## Risk Assessment` table with Likelihood/Impact/Mitigation, Key Decisions with Rationale/Trade-off/Alternatives considered.
+- **Hidden-skills pattern (no native API).** Claude Code's SKILL.md frontmatter has no `internal: true` / `private: true` / `visibility: parent-only` field. The proven workaround is the anti-pushy description (DESIGN paragraph (o) of this spec).
+- **Hallucination-proof hook architecture.** Pattern from `phase-gate.ts`: stdin JSON parse → matcher filter → validation → exit 0 / exit 2 with `hookSpecificOutput.permissionDecision: 'deny'` JSON + `process.stderr.write` human-readable message. Fail-open: `main().catch(e => exit(0))` so a hook bug never blocks. Exit 2 = deny; exit 0 = allow. v4 inherits this as the soft-tier policy in FR-19.
+- **Migration guard via `.progress.json::version`.** `readProgressState` + `getProgressVersion` + `isV3Spec` decided enforcement on a per-spec basis. `scaffold-spec.ts` stamps `version: 3` for new specs. Forward-compatible: `readProgressState` ignores unknown fields. v4 extends to `version >= 4` in FR-22.
+
+### Z.3 v3 architectural constraints (preserved in v4)
+
+- Hooks MUST fail-open at the soft tier (FR-19 keeps this verbatim).
+- No env-var bypass (NFR-Security-1 preserves this for hard-tier too).
+- Migration guard first — short-circuit on legacy `.progress.json::version` before any work (FR-22).
+- Installer hook format: `hooks.PreToolUse` MUST be array-of-groups per `installer-hook-formats.md` (FR-25 additive merge depends on this shape).
+- The 13-file spec scaffold is not changed; new fields land in existing files.
+
+### Z.4 v3 risk assessment (inherited, v4 mitigations cross-linked)
+
+| Risk (from v3) | Likelihood | Impact | Mitigation (v3) | Mitigation in v4 |
+|----------------|------------|--------|-----------------|------------------|
+| Parser regex false-positive on emoji/unicode in titles | High | High | Fail-open wrapper + audit log PARSER_CRASH for telemetry; unit-test parsers on 28+ existing specs before activation | FR-19 soft-tier fail-open verbatim; v4 SpecGraph parser (FR-2) replaces v3 regex over time |
+| Child skills auto-trigger despite anti-pushy description | Medium | Medium | Verbatim description from `rules-optimizer`; SPECGEN003_24 negative test | Unchanged — same descriptions, same test |
+| Serial chain of 7 PreToolUse hooks slows Write/Edit | Medium | Low | Short-circuit on filename in the first 3 lines of each hook; benchmark ≤180ms budget | NFR-Performance-4 inherits the 180ms budget for the soft-tier chain |
+| Dogfood spec blocked by its own guards during creation | High | Medium | In `.dev-pomogator/` worktree the form-guards aren't installed; bootstrap commit order: code → dogfood → manifest activation | Same flow; v4 install over v3 (FR-25 additive merge) preserves this |
+| `.progress.json::version` bump breaks existing installer readers | Low | High | `readProgressState` ignores unknown fields; additive schema change | Same approach for `version: 4` (FR-22) |
+| Jira-mode traces lost when a skill rewrites a file | Medium | High | Skills read-first patch-second (Edit, never Write over the whole file); SPECGEN003_21 round-trip test | Unchanged — same skills, same test |
+| Meta-guard false-DENY on a legitimate manifest add-new-extension | Medium | Medium | Additive-only policy: meta-guard denies ONLY removal of protected hooks; SPECGEN003_26 allow-test | v4 FR-24 extends scope to `plugin.json` MCP-tool registrations with the same additive-only policy |
+| Agent bypasses meta-guard via `settings.local.json` | Medium | High | Meta-guard checks both source `extension.json` and installed `settings.local.json`; audit log + UserPromptSubmit summary | v4 FR-24 covers `plugin.json` too; FR-20 surfaces tamper attempts via the threshold summary |
+| Audit log grows without bound | Low | Low | `rotateLog()` deletes >30 days + truncates >10MB; called from `validate-specs.ts` once per session | v3 log path preserved per FR-23 inventory; v4 spec-check-log JSONL has its own 10MB rotation (FR-15) |
+
+### Z.5 What lives where after consolidation
+
+Source code for v3 form-guards remains at `tools/specs-validator/*.ts` (production). The four design decisions are reproduced in DESIGN.md paragraph (o). The 28 BDD scenarios are preserved at `.specs/spec-generator-v4/legacy-v3.feature` and continue to be tested by `tests/e2e/spec-generator-v3.test.ts`. v3's performance budgets are preserved in NFR.md under «Legacy v3 budgets». The v3 production release entry is preserved in CHANGELOG.md as `[0.1.0-v3]`.
+
 

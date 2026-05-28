@@ -7,7 +7,8 @@
  * Phase -1 (Infrastructure) tasks are relaxed — only warned, never denied.
  * Tasks explicitly marked `_waived: {reason}_` are allowed.
  *
- * @see .specs/spec-generator-v3/FR.md FR-5, FR-9, FR-10, FR-12
+ * @see .specs/spec-generator-v4/DESIGN.md «(o) Inherited design decisions from v3»
+ * @see .specs/spec-generator-v4/legacy-v3.feature SPECGEN003_05..07 (form contract)
  */
 
 import { isV3Spec } from './phase-constants.ts';

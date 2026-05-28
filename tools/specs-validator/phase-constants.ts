@@ -57,7 +57,7 @@ export const STOP_LABELS: Record<string, string> = {
  * Current schema version for newly created specs.
  * v1 — original (no version field or version: 1)
  * v2 — bdd-enforcement era
- * v3 — spec-generator-v3 (form-guards + child skills + CHK matrix)
+ * v3 — form-guards + child skills + CHK matrix enforcement (soft tier preserved by v4)
  */
 export const PROGRESS_SCHEMA_VERSION = 3;
 
@@ -85,8 +85,9 @@ export function readProgressState(specPath: string): ProgressState | null {
  * Returns null when file missing OR when `version` field is absent/invalid
  * (pre-v3 specs do not have this field — that's the migration marker).
  *
- * Used by form-guards (spec-generator-v3): if < 3 → hook exits 0
- * without validation (existing specs are grandfathered).
+ * Used by soft-tier form-guards: if `< 3` → hook exits 0 without validation
+ * (existing specs are grandfathered). v4 spec-conformance-guard uses an
+ * analogous gate at `< 4` per FR-22.
  */
 export function getProgressVersion(specPath: string): number | null {
   const progress = readProgressState(specPath);
@@ -96,7 +97,7 @@ export function getProgressVersion(specPath: string): number | null {
 }
 
 /**
- * Returns true iff spec was scaffolded with spec-generator-v3 (version ≥ 3).
+ * Returns true iff spec was scaffolded with form-guards-era schema (version ≥ 3).
  * Used as migration guard in every form-guard hook.
  */
 export function isV3Spec(specPath: string): boolean {
