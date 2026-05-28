@@ -10,8 +10,8 @@
 | bootstrap-bdd-fixtures-config | Create cucumber.json + fixtures | DONE | bootstrap-bdd-hooks | Phase 0 | 45m |
 | migrate-vitest-bdd-pseudo | Convert vitest pseudo-BDD → cucumber-js | IN_PROGRESS | bootstrap-bdd-fixtures-config | Phase 0 | 240m |
 | verify-phase0-red | Verify all 37 scenarios FAIL | DONE | migrate-vitest-bdd-pseudo | Phase 0 | 30m |
-| graph-types | Define SpecGraph TS types | TODO | bootstrap-bdd-fixtures-config | Phase 1 | 60m |
-| md-parser-impl | Implement MD parser with dual-anchor | TODO | graph-types | Phase 1 | 360m |
+| graph-types | Define SpecGraph TS types | DONE | bootstrap-bdd-fixtures-config | Phase 1 | 60m |
+| md-parser-impl | Implement MD parser with dual-anchor | IN_PROGRESS | graph-types | Phase 1 | 360m |
 | gherkin-parser-impl | @cucumber/gherkin parser wrapper | TODO | graph-types | Phase 1 | 120m |
 | ndjson-ingester-impl | @cucumber/messages NDJSON ingester | TODO | graph-types | Phase 1 | 180m |
 | graph-builder-impl | Orchestrate parsers → SpecGraph | TODO | md-parser-impl,gherkin-parser-impl,ndjson-ingester-impl | Phase 1 | 240m |
