@@ -270,3 +270,46 @@ Plan said «Related sprint work + Prior art subsection» as two separate section
 ### Net effect
 
 Spec is now internally consistent on effort estimates, has explicit concurrency contract for v0.2.0, and has a forward-looking schema version migration policy. Implementation Phase 7 has unambiguous answers to «what happens if reconcile + resolve race?» and «how to handle YAML schema evolution?» — both questions surfaced during self-review.
+
+## Round 3 (2026-05-28) — v3→v4 transition patch (10 closed gaps)
+
+This round closed 10 silent gaps and risks discovered when honestly diffing v3 (in production, PR #14) against v4 (this spec). The investigation was triggered by a user request «найти что уникального есть в в3 чего нет в в4 и сделать отчёт» and escalated to «полный патч глубокий с рисками» after the first report turned up false-positives (6 of the originally-flagged 9 «soft gaps» were intentionally kept verbatim — discovery-forms / requirements-chk-matrix / task-board-forms skills + 5 v3 form-guards — so the patch focuses only on real silent omissions).
+
+### v3 FR → v4 FR mapping
+
+| v3 FR | v3 concern | v4 disposition before this patch | v4 disposition after this patch |
+|-------|-----------|-----------------------------------|----------------------------------|
+| FR-1..3 | discovery-forms / requirements-chk-matrix / task-board-forms skills | KEPT verbatim (`USER_STORIES.md:5`, `DESIGN.md:132`, `TASKS.md:60`) | no change — confirmed in patch context |
+| FR-4..8 | 5 form-guards | KEPT verbatim (`DESIGN.md:228-232` «direct reuse, no changes») | no change — confirmed; FR-19 (this patch) adds explicit failure-mode policy on top |
+| FR-9 | Migration guard / version gate | OMITTED for new hard guard | NEW **FR-22** (version gate for `spec-conformance-guard`, mirrors v3 FR-9) |
+| FR-10 | Fail-open hook policy | OMITTED (NFR-Security-1 covered no-env-bypass but not crash semantics) | NEW **FR-19** (two-tier failure policy: soft fail-open everywhere, hard fail-CLOSED on startup + fail-OPEN on file parse) + **NFR-Reliability-8** |
+| FR-11 | extension-json-meta-guard | mentioned abstractly in NFR-Security-2 | NEW **FR-24** (meta-guard preservation + scope extension to v4 `plugin.json`) |
+| FR-12 | form-guards.log retention | OMITTED (v4 FR-15 introduces a DIFFERENT JSONL log) | NEW **FR-23** (log-file inventory: two log files intentionally not unified) + DESIGN.md «(m) Log file inventory» |
+| FR-13 | UserPromptSubmit 24h summary | DROPPED without explicit decision | NEW **FR-20** (threshold-only B3 + on-demand B4 combo) + **NFR-Performance-6** + DESIGN.md «(n) Conformance summary surfacing» |
+| FR-14 | spec-status.ts -Format task-table CLI | OMITTED as a contract (used in TASKS.md but unspecified) | NEW **FR-21** (stable public CLI contract + fixture-based test) |
+| FR-15 | specs-management.md workflow doc | REPLACED by distributed SKILL.md but migration not documented | README.md gains «v3 → v4 doc reorganization» section (this patch); 3 SKILL.md frontmatter cleaned of stale `specs-management.md` references |
+| FR-16 | manifest update via additive merge | OMITTED as an invariant | NEW **FR-25** (v3 hook entries SHALL survive v4 install) |
+| (v4 FR-8 introduced risk) | LLM-as-judge privacy | OMITTED (NFR-Security-6 covered only cross-spec-reconcile) | NEW **FR-26** (deny-list + per-spec opt-out) + **NFR-Security-7** |
+| (v4 FR-7 introduced risk) | Marksman LSP supply-chain | OMITTED (no SHA verification policy) | NEW **FR-27** + **NFR-Security-8** |
+| (v4 FR-6 introduced risk) | PostToolUse throttle semantics | UNDERSPECIFIED («3s throttle» without window-type) | NEW **FR-28** + **NFR-Performance-7** (fixed-window explicitly) |
+
+### Key decisions in this patch
+
+- **Why two-tier fail-open (not «all fail-open»)** — single-tier creates a known bypass vector: attacker crafts a `.md` whose content reliably crashes the hard guard's parser, gaining unprotected Writes thereafter. Two-tier keeps v3 robustness on soft tier (fail-open for ALL exceptions) while making hard tier's startup contract honest (broken install fails CLOSED so user notices). Per-file content crashes still fail-open because one confused file should not DoS authoring. See FR-19 + NFR-Reliability-8 + DESIGN «(l) Hook failure-mode tiers».
+- **Why B3+B4 combo for the summary, not B1 or B2** — B1 (every-prompt aggregate, v3 verbatim) re-introduces latency cost on EVERY prompt regardless of signal. B2 (deprecate-only) is a silent UX regression for users relying on the prompt-time alert. B3 (threshold-only) gives zero-noise default and alerts only when there's signal; B4 (`/spec-status` on-demand) gives the «show me everything» surface for paranoid checks. Both are needed; either alone leaves a gap. See FR-20 + DESIGN «(n) Conformance summary surfacing».
+- **Why a version gate (FR-22), not «migrate everyone before v4 ships»** — dev-pomogator users have 30+ legacy specs at versions 1/2/3 authored when v4's hard invariants did not exist. Forcing migration before v4 install would create a forced-update event affecting every existing user. The gate (mirror of v3 FR-9 pattern that handled v2→v3 transition) lets v4 install without false-positive DoS, then users migrate at their own pace via FR-11.
+- **Why two log files, not unified (FR-23)** — form-guard decisions (DENY/ALLOW_AFTER_MIGRATION/PARSER_CRASH) and conformance findings (DUPLICATE_DEFINITION/UNCOVERED_FR/SCENARIO_TAG_ORPHAN) are different event taxonomies with different downstream consumers (v3 summary renderer vs new CLI analytics). Unification would break v3 consumers AND would not materially help v4 consumers. Schema convergence is an explicit OUT_OF_SCOPE for v4; v5+ may revisit.
+- **Why README note, not deprecate-in-place for `specs-management.md`** — the file does NOT exist live in `.claude/rules/` (verified during patch investigation; only appears in v3 spec text + `.stryker-tmp/` sandbox). Treating a never-shipped artifact as something to deprecate would create more confusion than the gap itself. Honest path: a README note documenting it as a v3 planning artifact + fixing the 3 SKILL.md frontmatter descriptions that still reference it. See readme-v3-to-v4-reorg-note section + 3 frontmatter fixes.
+
+### What this patch does NOT change
+
+- v4's architectural shape (SpecGraph + MCP + LSP + cucumber-js + JSONL log) is preserved as-is — patch only adds requirements that were previously silent.
+- Phase ordering and effort estimates are unchanged — new FRs map to existing phases (FR-19 → Phase 2 alongside FR-5; FR-20 → Phase 2 alongside FR-6; FR-21 → Phase 5 alongside FR-11; FR-22 → Phase 2 alongside FR-5; FR-23/24 → cross-phase doc artifacts; FR-25 → Phase 5 alongside FR-11; FR-26 → Phase 3 alongside FR-8; FR-27 → Phase 2 alongside FR-7; FR-28 → Phase 2 alongside FR-6).
+- No new tools or skills introduced beyond what v4 already names — patch tightens contracts on existing surfaces.
+- The 6 «soft gaps» from the first report (form-skills + form-guards) are NOT lifted to FRs — they are intentionally already preserved by v4 and codifying them again would be duplication.
+
+### Validators after Round 3 patch
+
+- `validate-spec.ts -Path .specs/spec-generator-v4` → expected exit 0 (10 new FRs + 13 new AC + 6 new BDD scenarios all structurally valid).
+- `audit-spec.ts -Path .specs/spec-generator-v4` → expected 0 ERRORS / 0 OMISSIONS; new @feature19/@feature22/@feature25/@feature26/@feature27 tags each have paired FR + AC + Scenario.
+- `grep -l "specs-management.md" .claude/skills/` → expected empty (3 SKILL.md descriptions cleaned).

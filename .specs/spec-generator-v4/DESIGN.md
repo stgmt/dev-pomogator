@@ -400,3 +400,45 @@ Design borrows the following patterns from prior art (see RESEARCH.md «Prior ar
 Avoided patterns (also see RESEARCH.md): ESLint `--fix` style semantic-breaking auto-apply (we always explain-then-confirm); Dependabot per-finding-PR fatigue (we batch findings per spec slug in a single YAML); mex single-shot AI fix without alternatives (we present Path A/B/C); OpenFastTrace `// [impl->REQ-N]` code-annotation requirement (we parse prose claims directly).
 
 The `verify-divergent-contracts.md` rule (test-vs-eval-vs-spec divergence pattern in dev-pomogator) describes the exact class of failure this reconcile feature is designed to detect across the cross-spec axis. See RESEARCH.md «Related sprint work» for the post-render-eval ↔ closed-loop-hardening ↔ pipeline/agent.ts case study that motivated the work.
+
+### (l) Hook failure-mode tiers (FR-19)
+
+v4 PreToolUse hooks split into **two operational tiers** with distinct failure semantics. Single-tier «all fail-open» was explicitly rejected because it creates a bypass: an attacker crafts a `.md` whose content reliably crashes the hard guard's parser and thereafter Writes are unprotected on every file.
+
+| Tier | Members | Startup/config crash | Per-file content-parse crash | Log path |
+|------|---------|----------------------|------------------------------|----------|
+| **Soft** | `user-story-form-guard`, `task-form-guard`, `design-decision-guard`, `requirements-chk-guard`, `risk-assessment-guard`, `extension-json-meta-guard` (FR-24) | exit 0, log entry (fail-open) — same as per-file | exit 0, log entry (fail-open). Pattern preserved verbatim from v3 FR-10. | `~/.dev-pomogator/logs/form-guards.log` |
+| **Hard** | `spec-conformance-guard` (FR-5) | **exit 1** + stderr (fail-CLOSED — broken install must surface; user's Write blocked until repair) | exit 0, log entry (fail-open — one confused file does not DoS authoring) | `.dev-pomogator/.spec-check-log/<YYYY-MM-DD>.jsonl` (FR-15) |
+
+**Cross-phase dependency note**: FR-15 JSONL writer ships in Phase 4 per current TASKS.md ordering. Hard tier ships with FR-5 in Phase 2. Resolution options:
+
+1. **Lift FR-15 writer to Phase 2** (recommended): the JSONL writer is small (append-only, atomic-via-write, daily rotation) and decoupling it from FR-15's CLI consumer is trivial.
+2. **Fallback path** until Phase 4: hard tier per-file events write to `~/.dev-pomogator/logs/form-guards.log` with `kind: "hard_tier_file_parse"` discriminator; FR-15 CLI consumes both files in Phase 4.
+
+The patch (FR-19 introducing this tiering) is agnostic between options; Phase 2 implementer chooses based on dependency-graph cost.
+
+### (m) Log file inventory (FR-23)
+
+v4 ships with **two distinct log files**, intentionally NOT unified. Each has its own schema, retention, and consumer. Form-guard decisions (DENY/ALLOW_AFTER_MIGRATION/PARSER_CRASH) and conformance findings (DUPLICATE_DEFINITION/UNCOVERED_FR/SCENARIO_TAG_ORPHAN) are different event taxonomies with different downstream tooling — unification would create incompatibility for v3 consumers without a clear gain.
+
+| Path | Origin | Writer | Schema | Retention / rotation | Consumer |
+|------|--------|--------|--------|----------------------|----------|
+| `~/.dev-pomogator/logs/form-guards.log` | v3, kept | soft-tier hooks (FR-19); fallback for hard-tier file-parse (during Phase 2-3 if Option 2 chosen) | text line: `{ISO ts} {hook_id} {decision} {target_path} {message}` | 30 days OR 10MB cap, whichever hits first; rotation handled by `validate-specs.ts` (v3 pattern) | `renderFormGuardsSummary()` (FR-20 threshold check + on-demand `/spec-status` skill) |
+| `.dev-pomogator/.spec-check-log/<YYYY-MM-DD>.jsonl` | v4, new (FR-15) | hard-tier `spec-conformance-guard`, PostToolUse push (FR-6) | JSONL: `{timestamp, finding_code, severity, location: {path,line,col}, message, spec_slug}` | rotate at 10MB → `-<N>.jsonl` suffix (FR-15) | `dev-pomogator spec-check-log` CLI (FR-15) + FR-20 summary reader + analytics tooling |
+
+Schema migration / unification tooling is OUT OF SCOPE for v4. v5+ may consolidate.
+
+### (n) Conformance summary surfacing options (FR-20)
+
+Four candidate UXes were considered for replacing v3's «every prompt prints 24h aggregate». Recommended combo: **B3 + B4**.
+
+| Option | UX | Pros | Cons | Verdict |
+|--------|----|------|------|---------|
+| **B1** | Render 24h aggregate at every UserPromptSubmit (v3 verbatim) | familiar to v3 users | per-prompt latency (file-scan cost on every prompt); noise even when nothing changed | **rejected** — regression on latency-conscious users |
+| **B2** | Deprecate summary entirely; require user to invoke a CLI for status | clean v4 architecture (no UserPromptSubmit hook) | silent UX regression — users miss alerts that v3 surfaced inline | **rejected** — regression on alerting |
+| **B3** | Threshold-only: render summary at UserPromptSubmit ONLY when unresolved DENY events ≥1 since last acknowledgment | zero-noise default; alerts only when there's signal; preserves prompt-time visibility | requires state tracker (`~/.dev-pomogator/state/last-summary-ack.json`); ack semantics need definition | **recommended** (combined with B4) |
+| **B4** | On-demand pull via `/spec-status` skill + tiny statusline indicator | always available; explicit user action; no hook overhead for «I want full picture» | doesn't alert if user never asks | **recommended** (combined with B3) |
+
+Combined B3+B4 satisfies both regression cases: threshold-only B3 catches «something needs attention» surface; on-demand B4 provides «show me everything» when author wants the full picture.
+
+State file `last-summary-ack.json` schema: `{ack_timestamp: ISO8601, ack_event_count: int, ack_session_id: uuid}`. Ack is triggered explicitly by user invoking `/spec-status` OR by clicking on the rendered B3 line (future Claude Code UX); never implicit. The state file is per-machine (`~/`), not per-repo.

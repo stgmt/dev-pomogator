@@ -37,7 +37,7 @@ All notable changes to this feature will be documented in this file.
 ### Added
 
 - **Spec authored 2026-05-16 → 2026-05-18** (this v4 spec itself):
-  - 16 FRs + 21 NFRs + 38 ACs + 41 CHKs + 37 BDD scenarios
+  - 28 FRs + 30 NFRs + 65 ACs + 41 CHKs + 54 BDD scenarios (Round 3 patch: +10 FR / +5 NFR / +15 AC / +6 scenarios)
   - 7 phases planned (Phase 0 cucumber-js migration → Phase 6 architecture-research-workflow skill)
   - RESEARCH.md 1300+ lines / 17 appendices documenting: external pain validation (OpenSpec issue #901), variant analysis (4 architectures), decision history (in-memory vs SQLite, MCP vs LSP layering, throttling), devcontainer constraints, anchor convention evolution
   - Spec workflow took 30+ turns → motivated Phase 6 meta-deliverable (architecture-research-workflow skill)

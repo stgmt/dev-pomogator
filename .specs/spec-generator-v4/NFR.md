@@ -22,6 +22,12 @@ System hook fires within `throttle_ms` budget (default 3000ms). Within window: i
 ### NFR-Performance-5: Cross-spec reconcile budget (Phase 7)
 `Skill("cross-spec-reconcile", mode: "light")` SHALL complete within 5 seconds for a 30-spec corpus (mechanical-only checks: glob + remark parse + Jaccard concept overlap + file existence + identifier extraction regex). `mode: "full"` has no time budget but SHALL cache pairwise semantic-judge results in `.dev-pomogator/.cross-spec-cache/<sha256(spec_a_content + spec_b_content)>.json` to avoid re-evaluating unchanged pairs across runs. Pre-filter SHALL skip Agent subagent invocation for pairs with <3 concept-noun overlap to bound N×N cost.
 
+### NFR-Performance-6: UserPromptSubmit summary render budget (FR-20)
+FR-20 threshold-only summary renderer SHALL complete in **≤50ms p95** between `UserPromptSubmit` hook invocation and the line being emitted to agent context. Reads from `~/.dev-pomogator/logs/form-guards.log` AND latest `.dev-pomogator/.spec-check-log/<YYYY-MM-DD>.jsonl` are capped at last 1000 entries per file to bound scan cost. Threshold-tracker state (`~/.dev-pomogator/state/last-summary-ack.json`) is read+written atomically via temp-file-rename pattern (NFR-Reliability-2).
+
+### NFR-Performance-7: PostToolUse throttle is fixed-window (FR-28)
+FR-6 PostToolUse 3-second throttle SHALL be implemented as a **fixed window** (not sliding, not debounce). First qualifying event at `t0` opens a window `[t0, t0 + throttle_ms]`; subsequent events within the window batch into it; at window close the aggregated findings push once and the throttle resets. New event at `t0 + throttle_ms + ε` opens a fresh window. Latency upper-bound for the author: `throttle_ms` from the first edit in a burst (default 3000ms). Sliding-window / debounce semantics are explicitly out of scope — they could indefinitely defer push during continuous edits.
+
 ## Security
 
 ### NFR-Security-1: No env-var bypass for HARD hooks
@@ -41,6 +47,12 @@ When SQLite persistence enabled — `.dev-pomogator/.spec-index.sqlite` file mod
 
 ### NFR-Security-6: Cross-spec reconcile respects boundaries (Phase 7)
 Reconcile skill MUST NOT read secret files even when globbed by its `.specs/*/` + impl-tree scan. It SHALL honor `boundaries.never[]` array from `.specs/.onboarding.json` if present (e.g. `.env`, `*.pem`, `credentials.json`, `~/.config/**`); else falls back to a hardcoded deny-list (`.env`, `.env.*`, `*.pem`, `*.key`, `*credentials*`, `**/secrets/**`). Override audit log `.claude/logs/cross-spec-overrides.jsonl` SHALL never contain secret values — only finding codes + reason text + session_id.
+
+### NFR-Security-7: LLM-as-judge content boundary (FR-26)
+FR-8 semantic-drift `claude -p` subprocess MUST NOT receive content matching the deny-list defined in FR-26 (file-name globs + body-content regex covering API keys, bearer tokens, private keys, password assignments). Matched inputs SKIP the subprocess invocation entirely and emit a `SEMANTIC_CHECK_SKIPPED_DENY_LIST` finding — never substituting a false «no drift detected» result. Per-spec opt-out (`spec_llm_judge_deny: true` frontmatter) FORCES skip regardless of content; no «allow-list override» exists. Extends NFR-Security-6 boundary policy from reconcile to FR-8's subprocess channel.
+
+### NFR-Security-8: Marksman LSP supply-chain verification (FR-27)
+FR-7 Marksman binary `postInstall` download MUST verify sha256 against the pinned hash in `package.json::marksmanHashes` (or sibling `marksman-hashes.json`) for the current platform/arch/version triple. Mismatch → install ABORTS with explicit error message naming both hashes; downloaded file deleted. Hash list updates require explicit `dev-pomogator update-marksman-hashes` CLI invocation with maintainer-provided upstream sha256 — no auto-update from GitHub releases API.
 
 ## Reliability
 
@@ -64,6 +76,9 @@ If bundled Marksman LSP subprocess crashes during runtime — MCP server detects
 
 ### NFR-Reliability-7: Cross-spec reconcile graceful degradation (Phase 7)
 Reconcile YAML write SHALL be atomic (temp file `consistency-report.yaml.tmp` + rename, per `.claude/rules/atomic-config-save.md`). Agent subagent invocations SHALL have a 120-second per-pair timeout; on timeout fallback to mechanical-only mode + log warning. If subagent completes on some pairs but fails on others, YAML `partial: true` flag set + warning emitted; system does NOT fail-loud. If SpecGraph + MCP server (Phase 1) unavailable, reconcile operates in degraded mode reading `.specs/*/*.md` directly via `fs` + `remark` + `glob`. Existing `acknowledged_by` / `resolution_status` fields are preserved on merge writes (never overwritten by new run).
+
+### NFR-Reliability-8: Two-tier hook failure-mode invariants (FR-19)
+PreToolUse hooks SHALL follow the two-tier failure policy defined in FR-19. SOFT tier (5 v3 form-guards + meta-guard): on ANY exception (parse, IO, runtime, timeout) MUST log to `~/.dev-pomogator/logs/form-guards.log` AND exit 0 (allow operation). HARD tier (`spec-conformance-guard`, FR-5): startup/config crash → exit 1 + stderr (hard fail surfaces broken install); per-file content-parse exception → log to spec-check-log JSONL + exit 0 (graceful per-file degradation). Rationale documented in DESIGN.md «Hook failure-mode tiers» paragraph. Single-tier «all fail-open» creates a known bypass vector (malicious .md crashes hard guard → unprotected Writes everywhere) and is explicitly rejected.
 
 ## Usability
 

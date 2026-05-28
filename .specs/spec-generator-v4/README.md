@@ -58,8 +58,20 @@ Total: ~35-46 days effort.
 - [DESIGN.md](DESIGN.md) — Components, Algorithm, API, Key Decisions (Rationale+Trade-off+Alternatives), BDD Test Infrastructure, Cross-spec reconciliation architecture
 - [spec-generator-v4_SCHEMA.md](spec-generator-v4_SCHEMA.md) — 7 base entities + Consistency Report YAML schema + 28 Cross-Spec Finding Codes + SARIF mapping
 - [FILE_CHANGES.md](FILE_CHANGES.md) — 87 files across 8 phases (75 create + 12 edit) — Phase 7 implementation files described in TASKS.md
-- [spec-generator-v4.feature](spec-generator-v4.feature) — 48 SPECGEN004 scenarios mapped 1:1 to @feature1..@feature18
+- [spec-generator-v4.feature](spec-generator-v4.feature) — 54 SPECGEN004 scenarios mapped 1:1 to @feature1..@feature18 + Round 3 @feature19/@feature22/@feature25/@feature26/@feature27
 - [TASKS.md](TASKS.md) — 64 tasks TDD-ordered with Done When / Status / Est / dependencies (14 new Phase 7 tasks)
 - [FIXTURES.md](FIXTURES.md) — BDD fixtures inventory + Gap analysis + cross-spec-corpus fixture for Phase 7
 - [REVIEW_NOTES.md](REVIEW_NOTES.md) — Phase 1 + Phase 2 spec-review findings (0 P0/P1, recommendations logged) + 2026-05-20 cross-spec reconciliation tracking entry
 - [CHANGELOG.md](CHANGELOG.md) — feature change log
+
+## v3 → v4 doc reorganization
+
+The v3 ROADMAP referenced a central rule file at `.claude/rules/specs-workflow/specs-management.md` that documented the spec author's Phase 1 (Discovery) → Phase 2 (Requirements + Design) → Phase 3 (Finalization) workflow in one place. **That file was a v3 planning artifact and was NEVER shipped to live `.claude/rules/` installations.** (Verified during the Round 3 patch: the file appears only in v3 spec text and in `.stryker-tmp/sandbox-*/` mutation-testing copies; the live `.claude/rules/specs-workflow/` directory contains only `architecture-decision/` and `variant-matrix/` subdirectories — no top-level `specs-management.md`.)
+
+In v4 the same workflow is distributed across the SKILL.md files of three skills:
+
+- `create-spec` — drives the 4-phase STOP-confirmed workflow (Discovery → Context → Requirements + Design → Finalization) and now invokes `discovery-forms`, `requirements-chk-matrix`, and `task-board-forms` directly at the appropriate Phase steps.
+- `cross-spec-reconcile` (FR-17) — invoked from `create-spec` Phase 2 step 4d, Phase 3 step 1c, and Phase 3+ Audit category CROSS_SPEC_CONSISTENCY.
+- `cross-spec-resolve` (FR-18) — invoked explicitly by the user via `/cross-spec-resolve` when conflicts surface.
+
+> **Footnote:** Three skill SKILL.md frontmatter descriptions previously referenced «Called by `specs-management.md` Phase N step M» (a v3 planning-artifact reference that was never live). The Round 3 patch corrected these to «Called by `create-spec` Phase N step M» — see frontmatter of `.claude/skills/discovery-forms/SKILL.md`, `.claude/skills/requirements-chk-matrix/SKILL.md`, and `.claude/skills/task-board-forms/SKILL.md`.
