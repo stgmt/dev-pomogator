@@ -64,7 +64,7 @@ if (-not $ProjectRoot) {
   # Default: assume script lives in tools/session-pilot/, walk up 2 levels
   $ProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 }
-$serverPy = Join-Path $ProjectRoot 'extensions\session-pilot\tools\session-pilot\server.py'
+$serverPy = Join-Path $ProjectRoot 'tools\session-pilot\server.py'
 if (-not (Test-Path $serverPy)) {
   throw "server.py not found at expected path $serverPy. Pass -ProjectRoot <path-to-dev-pomogator>."
 }

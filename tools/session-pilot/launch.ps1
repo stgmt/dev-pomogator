@@ -20,7 +20,7 @@
 param()
 
 $ErrorActionPreference = 'Stop'
-. (Join-Path $PSScriptRoot 'tools\session-pilot\sp-common.ps1')
+. (Join-Path $PSScriptRoot 'sp-common.ps1')
 Set-SpProcessAppId   # best-effort taskbar grouping under $SpAppId
 
 # -- 1: single-instance — focus existing window if one is already open ---------
