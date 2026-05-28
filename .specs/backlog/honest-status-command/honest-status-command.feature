@@ -2,7 +2,7 @@
 Feature: HSCMD001_Honest_Spec_Status_Command
 
   Background:
-    Given dev-pomogator repo с .dev-pomogator/tools/specs-generator/spec-status.ts present
+    Given dev-pomogator repo с tools/specs-generator/spec-status.ts present
     And Agent tool (subagent_type=general-purpose) available
     And `.claude/skills/spec-status/` skill installed
 
