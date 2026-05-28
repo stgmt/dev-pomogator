@@ -442,7 +442,7 @@ Feature: SP001_session_pilot_dashboard
   Scenario: SP029_launcher_windows_creates_desktop_lnk
     Given sys.platform is "win32"
     And msedge.exe exists at "C:\Program Files\Microsoft\Edge\Application\msedge.exe"
-    When user runs "pwsh -File extensions/session-pilot/tools/session-pilot/create-launcher.ps1"
+    When user runs "pwsh -File tools/session-pilot/create-launcher.ps1"
     Then file "$env:USERPROFILE\Desktop\Session Pilot.lnk" SHALL exist
     And the .lnk TargetPath SHALL be the located msedge.exe path
     And the .lnk Arguments SHALL contain "--app=http://127.0.0.1:8083/"
@@ -506,7 +506,7 @@ Feature: SP001_session_pilot_dashboard
   # @feature23 @windows
   Scenario: SP049_shortcut_has_custom_icon_and_appusermodelid
     Given sys.platform is "win32"
-    When user runs "pwsh -File extensions/session-pilot/tools/session-pilot/create-launcher.ps1"
+    When user runs "pwsh -File tools/session-pilot/create-launcher.ps1"
     Then the .lnk TargetPath SHALL be a version-stable PowerShell exe
     And the .lnk Arguments SHALL contain "-File" with "launch.ps1"
     And the .lnk IconLocation SHALL point to "%LOCALAPPDATA%\session-pilot\session-pilot.ico"
@@ -519,6 +519,15 @@ Feature: SP001_session_pilot_dashboard
     When Test-SpProfileMatch is called with a browser command line
     Then it SHALL return true when the command line contains the profile dir (case-insensitive)
     And it SHALL return false when the command line lacks the profile dir
+
+  # @feature27
+  Scenario: SP051_launcher_paths_resolve_after_v2_canonical_migration
+    Given the bundle lives at tools/session-pilot/ (v2 canonical layout, extensions/ removed)
+    When the launcher scripts are inspected for their relative path references
+    Then create-launcher.ps1 SHALL resolve launch.ps1 to an existing sibling via $PSScriptRoot
+    And launch.ps1 SHALL dot-source sp-common.ps1 as an existing sibling via $PSScriptRoot
+    And install.ps1 SHALL resolve server.py under tools/session-pilot/
+    And no launcher script SHALL reference the deleted v1 "extensions/session-pilot" path
 
   # @feature22
   Scenario: SP024_bootstrap_skill_orphan_worktree

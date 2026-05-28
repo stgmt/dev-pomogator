@@ -27,7 +27,7 @@ from pathlib import Path
 
 _HERE = Path(__file__).resolve()
 COMMON = _HERE.parent.parent / "sp-common.ps1"            # tools/session-pilot/sp-common.ps1
-LAUNCH = _HERE.parents[3] / "launch.ps1"                  # tools/session-pilot/launch.ps1
+LAUNCH = _HERE.parents[1] / "launch.ps1"                  # tools/session-pilot/launch.ps1
 _PWSH = shutil.which("pwsh") or shutil.which("powershell")
 _GUI = os.environ.get("SP_GUI_TEST") == "1"
 
@@ -142,6 +142,46 @@ def test_SP050_profile_match_predicate():
         "\"$hit|$miss|$ci\""
     )
     assert out == "True|False|True", f"predicate wrong: {out}"
+
+
+# ---------- SP051: launcher path integrity after v2 canonical migration ----------
+def test_SP051_launcher_paths_resolve_to_existing_siblings():
+    """Deterministic, ungated regression guard for the v1->v2 path break.
+
+    The canonical migration moved the bundle from extensions/session-pilot/... to
+    tools/session-pilot/. The launcher scripts kept v1-relative paths (`..\\..\\launch.ps1`,
+    `tools\\session-pilot\\sp-common.ps1`, `extensions\\session-pilot\\...\\server.py`),
+    so the Desktop shortcut launched a non-existent script and failed silently. The
+    GUI tests that exercise launch.ps1 are SP_GUI_TEST-gated, so nothing caught it.
+    This test runs everywhere (file reads only) and fails if any launcher script
+    references a sibling that does not resolve, or still carries the v1 prefix.
+    """
+    sp_dir = _HERE.parents[1]  # tools/session-pilot
+    # 1. The siblings every launcher script depends on must exist in tools/session-pilot.
+    for f in ("launch.ps1", "sp-common.ps1", "server.py", "start-server.ps1", "create-launcher.ps1"):
+        assert (sp_dir / f).is_file(), f"missing launcher sibling: {f}"
+
+    # 2. No launcher script may carry the v1 'extensions/session-pilot' prefix.
+    scripts = ["launch.ps1", "create-launcher.ps1", "install.ps1", "start-server.ps1", "session-pilot.bat"]
+    for name in scripts:
+        text = (sp_dir / name).read_text(encoding="utf-8")
+        assert "extensions\\session-pilot" not in text and "extensions/session-pilot" not in text, \
+            f"{name} still references the deleted v1 extensions/session-pilot path"
+
+    # 3. The same-dir $PSScriptRoot references must resolve to existing files
+    #    (emulate PowerShell: $PSScriptRoot == the script's own directory).
+    import re
+    create = (sp_dir / "create-launcher.ps1").read_text(encoding="utf-8")
+    m = re.search(r"Join-Path \$PSScriptRoot '([^']*launch\.ps1)'", create)
+    assert m, "create-launcher.ps1 no longer joins launch.ps1 via $PSScriptRoot"
+    assert (sp_dir / m.group(1)).resolve().is_file(), \
+        f"create-launcher.ps1 launch.ps1 path does not resolve: {m.group(1)}"
+
+    launch = (sp_dir / "launch.ps1").read_text(encoding="utf-8")
+    m = re.search(r"Join-Path \$PSScriptRoot '([^']*sp-common\.ps1)'", launch)
+    assert m, "launch.ps1 no longer dot-sources sp-common.ps1 via $PSScriptRoot"
+    assert (sp_dir / m.group(1)).resolve().is_file(), \
+        f"launch.ps1 sp-common.ps1 path does not resolve: {m.group(1)}"
 
 
 # ---------- runner ----------
