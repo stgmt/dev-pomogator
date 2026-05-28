@@ -1,0 +1,11 @@
+{
+  "default": {
+    "paths": [".specs/spec-generator-v4/spec-generator-v4.feature"],
+    "import": ["tests/step_definitions/**/*.ts", "tests/hooks/**/*.ts"],
+    "format": [
+      "message:.dev-pomogator/.last-test-run.ndjson",
+      "progress-bar"
+    ],
+    "publishQuiet": true
+  }
+}
