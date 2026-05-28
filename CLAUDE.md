@@ -69,6 +69,7 @@ dev-pomogator distributed как canonical Claude Code marketplace plugin (per A
 | screenshot-driven-verification | КАЖДЫЙ скриншот реально анализировать: описать что видно, сравнить с ожиданием, формат CONFIRMED/DENIED | `.claude/rules/pomogator/screenshot-driven-verification.md` |
 | no-blocking-on-tests | Docker тесты 7-12 мин; НИКОГДА не блокировать сессию; run_in_background + продолжать работу; запрет naked `\| tail` в bg (используй `\| tee <path> \| tail -N`) | `.claude/rules/pomogator/no-blocking-on-tests.md` |
 | post-edit-verification | После КАЖДОГО изменения кода: build, copy installed, /run-tests background, screenshot если UI | `.claude/rules/pomogator/post-edit-verification.md` |
+| post-merge-cleanup | После влитого PR (mergedAt non-null): удалить свой worktree (`--force`) + локальную (`-D` для squash) + удалённую ветку + `git fetch origin main:main`; перед merge на красном сьюте доказать что падения предсуществующие | `.claude/rules/pomogator/post-merge-cleanup.md` |
 | skill-allowed-tools-audit | При создании/модификации skill — проверь что allowed-tools покрывает ВСЕ инструменты workflow | `.claude/rules/checklists/skill-allowed-tools-audit.md` |
 | docker-no-git-repo | Docker тесты без .git — git команды fail, использовать env override | `.claude/rules/gotchas/docker-no-git-repo.md` |
 | proactive-investigation | Не спрашивай разрешение исследовать — делай сам; каждое утверждение с evidence; [UNVERIFIED] для непроверяемого | `.claude/rules/plan-pomogator/proactive-investigation.md` |
