@@ -1,8 +1,10 @@
 # Domain code HSCMD001 — Honest Spec Status Command
+# Source: .specs/honest-status-command/honest-status-command.feature (1:1 mirror)
+# See .specs/honest-status-command/TASKS.md T-0.1 for context.
 Feature: HSCMD001_Honest_Spec_Status_Command
 
   Background:
-    Given dev-pomogator repo с tools/specs-generator/spec-status.ts present
+    Given dev-pomogator repo с .dev-pomogator/tools/specs-generator/spec-status.ts present
     And Agent tool (subagent_type=general-purpose) available
     And `.claude/skills/spec-status/` skill installed
 
