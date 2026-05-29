@@ -41,6 +41,15 @@ const FR_HEADING_RE = /^FR-(\d+):\s*(.+)$/;
 const NFR_HEADING_RE = /^NFR(?:-([A-Za-z][A-Za-z0-9]*))?-(\d+):\s*(.+)$/;
 const AC_HEADING_RE = /^AC-(\d+(?:\.\d+)?)\s*\(FR-(\d+)\)\s*:?\s*(.*)$/;
 
+// FR-3 legacy backward compat — v3 spec headings of the form
+// `Requirement: FR-001 Login flow` register a triple anchor so the same
+// node is reachable via three aliases:
+//   • compact id            FR-001
+//   • modern slug           fr-001-login-flow
+//   • legacy "requirement-" slug   requirement-fr-001-login-flow
+// All three resolve to the SAME canonical id (FR-001).
+const LEGACY_FR_HEADING_RE = /^Requirement:\s*FR-(\d+)\s+(.+)$/;
+
 /** Normalise a heading title into the slug component of the dual anchor. */
 function slugify(text: string): string {
   return text
@@ -83,8 +92,36 @@ export function parseMarkdown(mdSource: string, relativePath: string): ParserOut
     const line = heading.position.start.line;
     const location = { file: relativePath, line };
 
-    // FR — the most common heading.
-    let m = text.match(FR_HEADING_RE);
+    // Legacy v3 form — `Requirement: FR-001 Login flow` → triple anchor.
+    // Must match BEFORE the modern FR_HEADING_RE (the modern form uses
+    // colon-after-id while the legacy form uses space-after-id).
+    let m = text.match(LEGACY_FR_HEADING_RE);
+    if (m) {
+      const num = m[1];
+      const title = m[2].trim();
+      const compact = `FR-${num}`;
+      const modernSlug = `fr-${num}-${slugify(title)}`;
+      const legacySlug = `requirement-fr-${num}-${slugify(title)}`;
+      const node: FrNode = {
+        id: compact,
+        type: 'FR',
+        title,
+        file: relativePath,
+        line,
+        anchors: [compact, modernSlug, legacySlug],
+        body: text,
+      };
+      nodes.push(node);
+      anchors.push(
+        { alias: compact, canonicalId: compact, location },
+        { alias: modernSlug, canonicalId: compact, location },
+        { alias: legacySlug, canonicalId: compact, location },
+      );
+      continue;
+    }
+
+    // FR — the modern (v4) form: `FR-N: Title`.
+    m = text.match(FR_HEADING_RE);
     if (m) {
       const num = m[1];
       const title = m[2].trim();

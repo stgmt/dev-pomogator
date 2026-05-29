@@ -264,31 +264,54 @@ Then('wiki-link `{}` resolves to the heading', function (
   assert.ok(this.graph.definitions.has(alias), `wiki-link target ${alias} not in definitions`);
 });
 
-// ─── SPECGEN004_06 ────────────────────────────────────────────────────────
-// Legacy v3 `### Requirement: FR-N <title>` triple-anchor support is
-// deferred to a follow-up Phase 1 sub-PR — the parser slice that recognises
-// the legacy heading shape ships there. Mark the relevant Given/When/Then
-// steps as PENDING so cucumber-js shows SPECGEN004_06 as awaiting-impl
-// rather than as a broken assertion.
+// ─── SPECGEN004_06 — triple-anchor support implemented in Phase 5 ──────
 
 Given(
   'a legacy v3 spec file `{word}` contains `{}`',
-  function (_relPath: string, _heading: string) {
-    return 'pending';
+  function (this: Phase1World, relPath: string, heading: string) {
+    const abs = path.join(this.tempDir, relPath);
+    fs.mkdirSync(path.dirname(abs), { recursive: true });
+    fs.writeFileSync(abs, `${heading}\n`);
+    this.changedFile = relPath;
   },
 );
 
-When('the MD parser indexes the file with backward-compat mode', function () {
-  return 'pending';
+When('the MD parser indexes the file with backward-compat mode', function (this: Phase1World) {
+  // Backward-compat is always on — the parser auto-detects legacy headings.
+  const abs = path.join(this.tempDir, this.changedFile!);
+  const source = fs.readFileSync(abs, 'utf8');
+  const slice = parseMarkdown(source, this.changedFile!);
+  this.graph = buildGraph({
+    repoRoot: this.tempDir,
+    mdRoots: [path.dirname(this.changedFile!)],
+    featureRoots: [],
+    skipNdjson: true,
+  });
+  for (const a of slice.anchors) {
+    if (!this.graph.definitions.has(a.alias)) {
+      this.graph.definitions.set(a.alias, a.location);
+    }
+  }
 });
 
 Then(
   'anchors `{word}`, `{word}`, `{word}` all resolve to the same heading',
-  function (_a: string, _b: string, _c: string) {
-    return 'pending';
+  function (this: Phase1World, a: string, b: string, c: string) {
+    assert.ok(this.graph, 'graph not built');
+    const locs = [a, b, c].map((alias) => {
+      const loc = this.graph!.definitions.get(alias);
+      assert.ok(loc, `alias "${alias}" not registered`);
+      return `${loc!.file}:${loc!.line}`;
+    });
+    // All three locations must be identical.
+    assert.equal(new Set(locs).size, 1, `expected one shared location, got ${locs.join(', ')}`);
   },
 );
 
-Then('no migration is required for legacy spec to function', function () {
-  return 'pending';
+Then('no migration is required for legacy spec to function', function (this: Phase1World) {
+  // The triple-anchor parser is transparent — the legacy heading reaches
+  // a working FR node with all three aliases. No `.progress.json` bump,
+  // no file rewrite. Surfacing the parser ran + node exists is enough.
+  assert.ok(this.graph, 'graph not built');
+  assert.ok(this.graph.nodes.has('FR-001'), 'FR-001 must exist after parse');
 });
