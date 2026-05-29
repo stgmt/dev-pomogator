@@ -480,11 +480,10 @@ Given(
 );
 
 When('the MCP server starts', function (this: MarksmanWorld) {
-  // Stand-in: read the install-log written by the offline-failing install
-  // above. The Phase-2 MCP server boots regardless of marksman state;
-  // FR-7 says it must fall back to JS LSP when marksman is unavailable.
-  const log = readMarksmanLog(this.tempDir);
-  assert.ok(log, 'expected install-log to exist after install attempt');
+  // Generic no-op marker — multiple Phase-2/Phase-4 scenarios share this
+  // Gherkin step. Specific assertions live in the Then steps:
+  //   • SPECGEN004_16 → reads marksman install-log
+  //   • SPECGEN004_23 → opens SQLite + integrity check
 });
 
 Then(

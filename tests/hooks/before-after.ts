@@ -45,7 +45,17 @@ Before(async function (this: V4World) {
 
 After(async function (this: V4World) {
   if (this.tempDir && fs.existsSync(this.tempDir)) {
-    fs.rmSync(this.tempDir, { recursive: true, force: true });
+    // Windows holds SQLite/file locks briefly after close — use retries so
+    // EBUSY doesn't fail the scenario when the test ran SQLite or chokidar.
+    // EBUSY on a leftover tempDir is a cleanup nuisance, NOT a test failure —
+    // catch it and let the OS reclaim the dir later.
+    try {
+      fs.rmSync(this.tempDir, { recursive: true, force: true, maxRetries: 8, retryDelay: 150 });
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code !== 'EBUSY' && code !== 'EPERM') throw err;
+      // best-effort cleanup; tmpdir will be reclaimed on next OS sweep
+    }
   }
 });
 

@@ -10,10 +10,15 @@
 
 FROM dev-pomogator-test-base:local
 
-# Layer 1: Dependencies (cached until package.json or package-lock.json change)
+# Layer 1: Dependencies (cached until package.json or package-lock.json change).
+# `--ignore-scripts` keeps the install fast + reproducible, but native bindings
+# need their install script to fetch the prebuilt binary. `better-sqlite3`
+# (Phase 4 FR-10) is the one such package — npm rebuild for it triggers
+# prebuild-install which downloads the linux-x64 binding (no compile from source).
 COPY --chown=testuser:testuser package.json package-lock.json ./
 RUN npm config set cache /tmp/.npm \
-    && for i in 1 2 3; do npm install --ignore-scripts && break || echo "[retry] npm install attempt $i failed" && sleep 5; done
+    && for i in 1 2 3; do npm install --ignore-scripts && break || echo "[retry] npm install attempt $i failed" && sleep 5; done \
+    && (npm rebuild better-sqlite3 2>&1 | tail -5 || echo "[warn] better-sqlite3 rebuild failed — SQLite tests will stub")
 
 # Layer 2: Source code (canonical plugin layout — no build/compile step;
 # tools run as .ts via tsx, so there is no `npm run build`)
