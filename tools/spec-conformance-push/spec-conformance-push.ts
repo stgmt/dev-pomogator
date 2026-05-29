@@ -28,6 +28,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { buildGraph } from '../spec-graph/builder.ts';
 import { checkConformance, type Finding } from '../spec-graph/conformance.ts';
+import { appendFindings } from '../spec-check-log/writer.ts';
 
 interface HookInput {
   tool_name?: string;
@@ -163,12 +164,41 @@ export function decidePush(opts: {
  * Stateful runner — reads state, decides, persists/clears. Returns the
  * payload that the hook should print to stdout (empty string = silent).
  */
-export function runPush(repoRoot: string, changedFile: string | null, now: number): string {
+export interface RunPushOptions {
+  /** Optional session id propagated into the spec-check-log envelope (FR-15). */
+  sessionId?: string;
+}
+
+export function runPush(
+  repoRoot: string,
+  changedFile: string | null,
+  now: number,
+  options: RunPushOptions = {},
+): string {
   if (changedFile && isOptedOut(changedFile, repoRoot)) {
     return '';
   }
   const graph = buildGraph({ repoRoot, skipNdjson: true });
   const newFindings = checkConformance(graph);
+
+  // FR-15 wire-up: every finding the hook sees gets persisted to the
+  // side-channel JSONL log, even if the throttle window decides to stay
+  // silent on the agent-facing emit. The journal is the durable record;
+  // the system-reminder push is the noisy surface. Failures here are
+  // best-effort — the FR-19 soft tier guarantees the hook never blocks.
+  if (newFindings.length > 0) {
+    try {
+      appendFindings(newFindings, {
+        repoRoot,
+        source: 'spec-conformance-push',
+        sessionId: options.sessionId,
+        now: new Date(now),
+      });
+    } catch {
+      // Soft tier — log unavailable disk → silently continue.
+    }
+  }
+
   const previous = readState(repoRoot);
   const decision = decidePush({ now, previous, newFindings });
   if (decision.newState) writeState(repoRoot, decision.newState);
@@ -196,7 +226,7 @@ async function main(): Promise<void> {
   const repoRoot = process.env.CLAUDE_PLUGIN_ROOT ?? process.env.DEV_POMOGATOR_REPO_ROOT ?? process.cwd();
   const input = await readStdinJson();
   const fp = input.tool_input?.file_path ?? null;
-  const out = runPush(repoRoot, fp, Date.now());
+  const out = runPush(repoRoot, fp, Date.now(), { sessionId: input.session_id });
   if (out) process.stdout.write(out);
   // SOFT tier per FR-19: even on internal error the agent path stays open.
 }

@@ -87,4 +87,51 @@ describe('runPush — stateful runner', () => {
     const out = runPush(root, '.specs/x/FR.md', 1_700_000_000_000);
     expect(out).toBe('');
   });
+
+  it('appends each finding into the spec-check-log JSONL (FR-15 wire-up)', () => {
+    runPush(root, '.specs/x/FR.md', 1_700_000_000_000, { sessionId: 'sess-test' });
+    // The throttle window keeps the agent-facing emit silent on the first
+    // call, but the journal is the durable record — assert one line per
+    // finding with the session_id stamped on.
+    const dir = path.join(root, '.dev-pomogator', '.spec-check-log');
+    expect(fs.existsSync(dir)).toBe(true);
+    const shards = fs.readdirSync(dir).filter((n) => n.endsWith('.jsonl'));
+    expect(shards.length).toBeGreaterThanOrEqual(1);
+    const raw = fs.readFileSync(path.join(dir, shards[0]), 'utf8');
+    const lines = raw.split('\n').filter(Boolean);
+    expect(lines.length).toBeGreaterThanOrEqual(1);
+    const obj = JSON.parse(lines[0]) as {
+      finding_code: string;
+      session_id?: string;
+      source: string;
+    };
+    expect(obj.finding_code).toBe('UNCOVERED_FR');
+    expect(obj.session_id).toBe('sess-test');
+    expect(obj.source).toBe('spec-conformance-push');
+  });
+
+  it('does NOT append anything when there are zero findings', () => {
+    // Replace the uncovered FR with a covered one (FR-1 with AC).
+    fs.writeFileSync(
+      path.join(root, '.specs/x/FR.md'),
+      '## FR-1: Covered\n',
+    );
+    fs.writeFileSync(
+      path.join(root, '.specs/x/ACCEPTANCE_CRITERIA.md'),
+      '## AC-1 (FR-1)\n',
+    );
+    fs.mkdirSync(path.join(root, 'tests', 'features'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'tests/features/x.feature'),
+      '@FR-1\nFeature: X\n  Scenario: Y\n    Given x\n',
+    );
+    runPush(root, '.specs/x/FR.md', 1_700_000_000_000);
+    const dir = path.join(root, '.dev-pomogator', '.spec-check-log');
+    // Either dir missing or empty — both are "no entries".
+    if (!fs.existsSync(dir)) return;
+    const shards = fs.readdirSync(dir).filter((n) => n.endsWith('.jsonl'));
+    for (const s of shards) {
+      expect(fs.readFileSync(path.join(dir, s), 'utf8').trim()).toBe('');
+    }
+  });
 });
