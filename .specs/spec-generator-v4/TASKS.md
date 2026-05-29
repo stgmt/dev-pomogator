@@ -15,7 +15,7 @@
 | gherkin-parser-impl | @cucumber/gherkin parser wrapper | DONE | graph-types | Phase 1 | 120m |
 | ndjson-ingester-impl | @cucumber/messages NDJSON ingester | DONE | graph-types | Phase 1 | 180m |
 | graph-builder-impl | Orchestrate parsers → SpecGraph | DONE | md-parser-impl,gherkin-parser-impl,ndjson-ingester-impl | Phase 1 | 240m |
-| incremental-rebuild | Hash-based incremental rebuild | TODO | graph-builder-impl | Phase 1 | 180m |
+| incremental-rebuild | chokidar watcher + applyChange/applyUnlink | DONE | graph-builder-impl | Phase 1 | 180m |
 | conformance-checker | All structural finding rules | DONE | graph-builder-impl | Phase 1 | 300m |
 | verify-phase1-green | Phase 1 scenarios Red→Green | IN_PROGRESS | conformance-checker | Phase 1 | 60m |
 | mcp-server-skeleton | MCP server entry + stdio handshake | TODO | conformance-checker | Phase 2 | 180m |
@@ -145,7 +145,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] Cold start ≤2s on 30-spec fixture (NFR-Performance-1)
   - [ ] @feature2 SPECGEN004_03 passes
 
-- [ ] Incremental rebuild logic -- @feature2 — id: incremental-rebuild — Status: TODO | Est: 180m
+- [x] Incremental rebuild logic -- @feature2 — id: incremental-rebuild — Status: DONE | Est: 180m
   _depends: graph-builder-impl_
   _Requirements: [FR-2](FR.md#fr-2)_
   **Done When:**

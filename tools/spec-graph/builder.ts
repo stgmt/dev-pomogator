@@ -185,6 +185,27 @@ export function buildGraph(opts: BuildOptions): SpecGraph {
 }
 
 /**
+ * Wipe and recompute `graph.backlinks` from `graph.edges`.
+ *
+ * Exported for the incremental rebuilder (`./incremental.ts`) so a watcher
+ * patch can keep the backlink index consistent without re-running the
+ * whole `buildGraph`. The shape matches step 4 of `buildGraph` — same
+ * `pushBacklink({file: '', line: 0, type})` placeholder, same dedup-by-id
+ * semantics.
+ */
+export function rebuildBacklinks(graph: SpecGraph): void {
+  graph.backlinks.clear();
+  for (const e of graph.edges) {
+    let list = graph.backlinks.get(e.from);
+    if (!list) {
+      list = [];
+      graph.backlinks.set(e.from, list);
+    }
+    list.push({ file: '', line: 0, type: e.type });
+  }
+}
+
+/**
  * Convenience entry — build a graph from the current working directory.
  * Useful for CLI / benchmarking. Wraps `buildGraph` with sane defaults.
  */
