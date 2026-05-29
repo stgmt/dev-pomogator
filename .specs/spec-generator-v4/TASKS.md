@@ -17,7 +17,7 @@
 | graph-builder-impl | Orchestrate parsers → SpecGraph | DONE | md-parser-impl,gherkin-parser-impl,ndjson-ingester-impl | Phase 1 | 240m |
 | incremental-rebuild | chokidar watcher + applyChange/applyUnlink | DONE | graph-builder-impl | Phase 1 | 180m |
 | conformance-checker | All structural finding rules | DONE | graph-builder-impl | Phase 1 | 300m |
-| verify-phase1-green | Phase 1 scenarios Red→Green | IN_PROGRESS | conformance-checker | Phase 1 | 60m |
+| verify-phase1-green | Phase 1 scenarios Red→Green | DONE | conformance-checker | Phase 1 | 60m |
 | mcp-server-skeleton | MCP server entry + stdio handshake | TODO | conformance-checker | Phase 2 | 180m |
 | mcp-tool-get-trace | get_trace primary tool | TODO | mcp-server-skeleton | Phase 2 | 240m |
 | mcp-tools-rest | 10 remaining MCP tools | TODO | mcp-tool-get-trace | Phase 2 | 480m |
@@ -161,7 +161,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] `suggestions[]` populated for each finding
   - [ ] Unit tests cover each finding code
 
-- [ ] Verify Phase 1 — @feature2, @feature3, @feature13 Red→Green -- @feature2 — id: verify-phase1-green — Status: IN_PROGRESS | Est: 60m
+- [x] Verify Phase 1 — @feature2, @feature3, @feature13 Red→Green -- @feature2 — id: verify-phase1-green — Status: DONE | Est: 60m
   _depends: conformance-checker_
   **Done When:**
   - [ ] All Phase 1 scenarios pass (SPECGEN004_03, _04, _05, _06, _29)
