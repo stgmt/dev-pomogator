@@ -29,6 +29,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import https from 'node:https';
+import { pathToFileURL } from 'node:url';
 import { writeLog, type MarksmanState, type Reason } from './install-log.ts';
 
 interface HashEntry {
@@ -197,7 +198,7 @@ async function main(): Promise<void> {
   process.exit(0);
 }
 
-if (import.meta.url === `file://${process.argv[1]?.replace(/\\/g, '/')}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().catch((err) => {
     process.stderr.write(`[marksman-installer] unexpected: ${err instanceof Error ? err.message : String(err)}\n`);
     process.exit(0);

@@ -30,6 +30,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { parseMarkdown } from '../spec-graph/parsers/md.ts';
 import { parseGherkin } from '../spec-graph/parsers/gherkin.ts';
 
@@ -216,7 +217,7 @@ async function main(): Promise<void> {
   process.stdout.write(JSON.stringify(out));
 }
 
-if (import.meta.url === `file://${process.argv[1]?.replace(/\\/g, '/')}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().catch((err) => {
     // FR-19 hard-tier: startup crash → fail-CLOSED with exit 1.
     process.stderr.write(`[spec-conformance-guard] startup crash: ${err instanceof Error ? err.stack ?? err.message : String(err)}\n`);

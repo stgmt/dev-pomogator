@@ -28,6 +28,9 @@
     ".mcp.json",
     "audit-reports"
   ],
+  "bin": {
+    "dev-pomogator-spec-check-log": "tools/spec-check-log/bin.cjs"
+  },
   "scripts": {
     "lint": "eslint .claude tools",
     "test": "bash scripts/docker-test.sh",

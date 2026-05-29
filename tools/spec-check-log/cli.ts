@@ -18,6 +18,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import type { LogEntry } from './writer.ts';
 
 const SEV_RANK: Record<LogEntry['severity'], number> = { error: 0, warning: 1, info: 2 };
@@ -177,7 +178,14 @@ export function run(argv: string[], now: number = Date.now()): RunResult {
   return { matched, text };
 }
 
-if (import.meta.url === `file://${process.argv[1]?.replace(/\\/g, '/')}`) {
+// CLI entry guard: argv[1] is a possibly-relative path on Node CLI invocation,
+// so resolve it to a `file://` URL the same way `import.meta.url` is shaped.
+function isMainModule(): boolean {
+  if (!process.argv[1]) return false;
+  return import.meta.url === pathToFileURL(process.argv[1]).href;
+}
+
+if (isMainModule()) {
   try {
     const { text } = run(process.argv.slice(2));
     process.stdout.write(text);

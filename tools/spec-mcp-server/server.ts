@@ -16,6 +16,7 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { pathToFileURL } from 'node:url';
 import { startLifecycle, type LifecycleHandle } from './lifecycle.ts';
 import { buildToolRegistry } from './tools.ts';
 
@@ -73,7 +74,7 @@ async function main(): Promise<void> {
   // clean shutdown signal — the parent agent decided we're done.
 }
 
-if (import.meta.url === `file://${process.argv[1]?.replace(/\\/g, '/')}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().catch((err) => {
     process.stderr.write(`[${PRODUCT_NAME}] fatal: ${err instanceof Error ? err.stack ?? err.message : String(err)}\n`);
     process.exit(1);
