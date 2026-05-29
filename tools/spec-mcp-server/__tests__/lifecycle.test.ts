@@ -1,0 +1,89 @@
+/**
+ * Integration tests for the MCP server lifecycle orchestrator.
+ *
+ * The watcher branch is timing-sensitive (chokidar fires async on real FS
+ * events), so these tests cover the deterministic surface: lock acquisition,
+ * cold-build graph wiring, and graceful shutdown order. The single watcher-
+ * event test uses chokidar's polling backend with a tiny stability window so
+ * it stays reliable on every host.
+ */
+
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
+import os from 'node:os';
+import { randomUUID } from 'node:crypto';
+import { startLifecycle } from '../lifecycle.ts';
+import { readLock } from '../lock-manager.ts';
+
+describe('startLifecycle', () => {
+  let root: string;
+  beforeEach(() => {
+    root = path.join(os.tmpdir(), `mcp-lifecycle-${randomUUID()}`);
+    fs.mkdirSync(path.join(root, '.specs', 'auth'), { recursive: true });
+    fs.writeFileSync(path.join(root, '.specs/auth/FR.md'), '## FR-1: Login\n');
+  });
+  afterEach(() => fs.rmSync(root, { recursive: true, force: true }));
+
+  it('acquires the lock and cold-builds a graph with the seeded FR', async () => {
+    const handle = await startLifecycle({ repoRoot: root, env: 'host', skipNdjson: true });
+    try {
+      expect(handle.graph.nodes.has('FR-1')).toBe(true);
+      const lock = readLock(root);
+      expect(lock).not.toBeNull();
+      expect(lock!.pid).toBe(process.pid);
+    } finally {
+      await handle.shutdown();
+    }
+  });
+
+  it('shutdown() releases the lock and closes the watcher', async () => {
+    const handle = await startLifecycle({ repoRoot: root, env: 'host', skipNdjson: true });
+    await handle.shutdown();
+    expect(readLock(root)).toBeNull();
+    // Idempotent — second call must not throw.
+    await expect(handle.shutdown()).resolves.toBeUndefined();
+  });
+
+  it('rejects a second lifecycle on the same repo while the first is live', async () => {
+    const first = await startLifecycle({ repoRoot: root, env: 'host', skipNdjson: true });
+    try {
+      await expect(
+        startLifecycle({ repoRoot: root, env: 'host', skipNdjson: true }),
+      ).rejects.toThrow(/already held/);
+    } finally {
+      await first.shutdown();
+    }
+  });
+
+  it('reflects a single file change through the watcher into onPatch + graph', async () => {
+    const patches: Array<{ kind: string; file: string }> = [];
+    const handle = await startLifecycle({
+      repoRoot: root,
+      env: 'host',
+      skipNdjson: true,
+      usePolling: true,
+      onPatch: (e) => patches.push({ kind: e.kind, file: e.file }),
+    });
+    try {
+      // Bring chokidar fully ready before issuing the change.
+      await new Promise((r) => setTimeout(r, 250));
+
+      const target = path.join(root, '.specs/auth/FR.md');
+      fs.writeFileSync(target, '## FR-1: Login (revised)\n');
+
+      // Wait for the polling watcher to surface the change.
+      const deadline = Date.now() + 5_000;
+      while (Date.now() < deadline && patches.length === 0) {
+        await new Promise((r) => setTimeout(r, 100));
+      }
+
+      expect(patches.length).toBeGreaterThanOrEqual(1);
+      expect(patches[0].file.endsWith('.specs/auth/FR.md')).toBe(true);
+      // Graph reflects the new heading.
+      expect(handle.graph.definitions.get('fr-1-login-revised')).toBeDefined();
+    } finally {
+      await handle.shutdown();
+    }
+  });
+});

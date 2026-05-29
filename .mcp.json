@@ -1,3 +1,15 @@
 {
-  "mcpServers": {}
+  "mcpServers": {
+    "dev-pomogator-specs": {
+      "command": "node",
+      "args": [
+        "--import",
+        "tsx",
+        "tools/spec-mcp-server/server.ts"
+      ],
+      "env": {
+        "DEV_POMOGATOR_REPO_ROOT": "${workspaceFolder}"
+      }
+    }
+  }
 }
