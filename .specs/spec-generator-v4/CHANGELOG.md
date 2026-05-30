@@ -19,6 +19,62 @@ All notable changes to this feature will be documented in this file.
     `cross-spec/enum-divergence`, `cross-spec/module-ownership-conflict`.
   19 of the 28-code matrix now ship; 9 remain as small follow-ups.
 
+### Fixed (batch-10 — readiness-audit tuning, 99% CRITICAL noise reduction from rc1)
+
+Ran v4 production-readiness workflow (`wmemk9buw`: 4 parallel audit
+agents + 1 release-readiness synthesizer, 587k subagent tokens, 95
+tool uses, 322s). Synthesizer verdict: **SHIP WITH NOTES** — engine
+is sound, noise tunings are the remaining UX gap. Applied top-3
+recommendations:
+
+**1. `cross-spec/concept-overlap` threshold + stoplist**
+
+- `CONCEPT_OVERLAP_MIN_SHARED` bumped 5 → 10. Earlier batch-9 bump
+  3 → 5 wasn't enough on real corpora.
+- `CONCEPT_NOUN_STOPLIST` expanded 34 → 84 entries: design-pattern
+  nouns (Builder/Handler/Manager/Factory/Provider/Runner/Validator/
+  Parser/Strategy/Observer/Adapter/Registry/Store/Cache/Queue/Service/
+  Controller/Component/Module + 30 more) plus Keep-a-Changelog vocab
+  surfaced during the pass-2 dogfood (Unreleased/Added/Changed/
+  Removed/Fixed/Claude/Code/Discovery/Spec/Test).
+- Dogfood: 2149 → 2082 (-67). Modest because real corpus has many
+  pairs sharing 15+ non-stoplisted nouns. Acceptable as-is at INFO.
+
+**2. `DEFAULT_OWNERSHIP_STOPLIST` expanded 11 → 21 paths**
+
+Added corpus-derived shared-infra paths: `tools/specs-generator/`,
+`tools/specs-validator/`, `tools/auto-commit/`, `tools/plan-pomogator/`,
+`tools/migrate-v1-to-v2/`, `tools/marksman-installer/`,
+`tools/spec-graph/`, `.claude/skills/`, `.claude/rules/`,
+`.claude/commands/`, `.dev-pomogator/`, `.devcontainer/`, `scripts/`,
+`Dockerfile.test`, `docker-compose.test.yml`. Also widened
+`tests/e2e/helpers.ts` → `tests/e2e/` (and sibling dirs `unit/`,
+`hooks/`, `step_definitions/`) since test files are routinely
+referenced by multiple specs.
+
+Dogfood: 554 → 444 CRITICAL ownership-conflict findings (-110).
+
+**3. `impl-drift/missing-test` phase-gated**
+
+Now reads `.specs/<slug>/.progress.json::phase_index`. Only emits
+when `phase_index >= 2`. Phase 0/1 specs intentionally define FRs
+before .feature mapping; firing missing-test there is noise.
+
+Dogfood: 196 → 0 missing-test findings. Cleanest single fix in the
+batch.
+
+**Final dogfood numbers** (rc1 baseline → batch-9 → batch-10):
+  Total findings: 38,453 → 4,251 → **3,878 (-90% vs rc1)**
+  CRITICAL:       33,860 → 596 → **486 (-99% vs rc1)**
+
+5 new regression tests pin the new behaviors + 1 existing batch-9
+test re-keyed for the bumped threshold.
+
+Deferred to v4.0.1 (per readiness audit):
+- Replace cheap glob with `glob` npm library in `pathExistsResolving`
+- Cache `readSpecMd` across detectors (single orchestrator pass)
+- NFR-keyword multi-token context match (`API latency` vs `UI latency`)
+
 ### Fixed (batch-9 — dogfood revealed FR-namespace design bug + noise reduction)
 
 Ran the analyzer against this repo's own `.specs/` corpus (48 specs) —

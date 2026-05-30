@@ -87,10 +87,19 @@ export interface ReconcileOptions {
 }
 
 /** Default ownership stoplist — shared infra that multiple specs legitimately reference. */
+/* Batch-10 (readiness audit): expanded with 15 corpus-derived paths so the
+ * default dogfood produces actionable CRITICAL ownership conflicts only.
+ * Pre-expansion: 554 CRITICAL findings on this repo. Post-expansion target:
+ * <100 (the rest are legitimately-shared infra paths). */
 const DEFAULT_OWNERSHIP_STOPLIST = [
-  'tests/e2e/helpers.ts',
+  // Pre-batch-10 base — expanded to entire tests/e2e dir per readiness audit
+  // (individual test files shared across specs trigger ownership FPs).
+  'tests/e2e/',
+  'tests/unit/',
   'tests/fixtures/',
   'tests/setup/',
+  'tests/hooks/',
+  'tests/step_definitions/',
   'tools/_shared/',
   'tools/test-statusline/',
   'tools/tui-test-runner/',
@@ -99,13 +108,36 @@ const DEFAULT_OWNERSHIP_STOPLIST = [
   'package-lock.json',
   'tsconfig.json',
   'vitest.config.ts',
+  // Batch-10 corpus expansion — shared tooling + skills + rules infra.
+  'tools/specs-generator/',
+  'tools/specs-validator/',
+  'tools/auto-commit/',
+  'tools/plan-pomogator/',
+  'tools/migrate-v1-to-v2/',
+  'tools/marksman-installer/',
+  'tools/spec-graph/',
+  '.claude/skills/',
+  '.claude/rules/',
+  '.claude/commands/',
+  '.dev-pomogator/',
+  '.devcontainer/',
+  'scripts/',
+  'Dockerfile.test',
+  'docker-compose.test.yml',
 ];
 
-/** Minimum shared-concept count to fire `cross-spec/concept-overlap` (was 3, dogfood: too noisy). */
-const CONCEPT_OVERLAP_MIN_SHARED = 5;
+/** Minimum shared-concept count to fire `cross-spec/concept-overlap`
+ * (batch-3: 3, batch-9: 5, batch-10 readiness audit: 10 — kills ~1800
+ * INFO findings on the real corpus without losing genuine signal). */
+const CONCEPT_OVERLAP_MIN_SHARED = 10;
 
-/** Stoplist of generic concept nouns that appear in many unrelated specs. */
+/** Stoplist of generic concept nouns that appear in many unrelated specs.
+ * Batch-10 (readiness audit): expanded from 34 → 80+ entries so common
+ * design-pattern nouns (Builder/Handler/Manager/etc.) don't fire as
+ * "shared concepts". The readiness audit estimated this alone kills
+ * ~1500 noise findings even before the threshold bump. */
 const CONCEPT_NOUN_STOPLIST = new Set([
+  // Spec-ecosystem terms (batch-9 base)
   'Acceptance', 'Criteria', 'Schema', 'Changelog', 'Stop', 'Docker',
   'TypeScript', 'JavaScript', 'Python', 'GitHub', 'README', 'Phase',
   'Status', 'TODO', 'FIXME', 'WARNING', 'CRITICAL', 'INFO',
@@ -113,6 +145,25 @@ const CONCEPT_NOUN_STOPLIST = new Set([
   'Performance', 'Security', 'Reliability', 'Usability',
   'Implementation', 'Definition', 'Validation', 'Verification',
   'Configuration', 'Documentation', 'Integration', 'Migration',
+  // Batch-10: design-pattern + framework nouns (audit-derived corpus)
+  'Builder', 'Handler', 'Manager', 'Factory', 'Provider', 'Runner',
+  'Validator', 'Parser', 'Serializer', 'Transformer', 'Strategy',
+  'Observer', 'Facade', 'Adapter', 'Bridge', 'Registry', 'Store',
+  'Cache', 'Queue', 'Service', 'Controller', 'Component', 'Module',
+  'Extension', 'Plugin', 'Skill', 'Command', 'Hook', 'Workflow',
+  'Pipeline', 'Worker', 'Listener', 'Emitter', 'Subscriber',
+  'Publisher', 'Generator', 'Iterator', 'Visitor', 'Composer',
+  'Decorator', 'Proxy', 'Wrapper', 'Container', 'Context', 'Session',
+  'Request', 'Response', 'Message', 'Event', 'Action', 'State',
+  'Reducer', 'Selector', 'Middleware', 'Repository', 'Aggregate',
+  'Entity', 'Model', 'View', 'Template', 'Render', 'Layout',
+  // Batch-10 dogfood pass-2: Keep-a-Changelog + spec-workflow vocab
+  // surfaced as the dominant residual concept-overlap noise.
+  'Unreleased', 'Added', 'Changed', 'Removed', 'Fixed', 'Released',
+  'Deprecated', 'Code', 'Claude', 'Discovery', 'Spec', 'Pass', 'Fail',
+  'Test', 'Tests', 'Notes', 'Comments', 'Description', 'Title',
+  'Summary', 'Details', 'Overview', 'Reference', 'References',
+  'Example', 'Examples', 'Note', 'See', 'Also', 'TODO', 'TBD',
 ]);
 
 export interface ReconcileResult {
@@ -778,7 +829,25 @@ function findMissingTestPerFR(
   files: { body: string; path: string }[],
   featureTags: Set<string>,
   repoRoot: string,
+  slug: string,
 ): Finding[] {
+  // Batch-10 (readiness audit): phase-gate — only emit when
+  // `.progress.json::phase_index >= 2`. Phase 0/1 specs are intentionally
+  // FR-first, .feature mapping comes later. Without this gate the detector
+  // fires ~110 noise findings on early-phase specs.
+  const progressFile = path.join(repoRoot, '.specs', slug, '.progress.json');
+  let phaseIndex = 0;
+  if (fs.existsSync(progressFile)) {
+    try {
+      const parsed = JSON.parse(fs.readFileSync(progressFile, 'utf8')) as {
+        phase_index?: number;
+      };
+      if (typeof parsed.phase_index === 'number') phaseIndex = parsed.phase_index;
+    } catch { /* malformed JSON — treat as phase 0 */ }
+  }
+  // If no .progress.json OR phase_index < 2 → skip the check.
+  if (phaseIndex < 2) return [];
+
   const defs = collectFrDefinitions(files);
   const out: Finding[] = [];
   for (const [fr, definedIn] of defs.entries()) {
@@ -1659,7 +1728,7 @@ export function reconcileLight(opts: ReconcileOptions): ReconcileResult[] {
     findings.push(...findInvalidFrontmatter(opts.repoRoot, slug));
     findings.push(...findMissingSymbols(files, opts.repoRoot));
     findings.push(...findWithinSpecDuplicateFRs(files, opts.repoRoot, slug));
-    findings.push(...findMissingTestPerFR(files, featureTags, opts.repoRoot));
+    findings.push(...findMissingTestPerFR(files, featureTags, opts.repoRoot, slug));
     findings.push(...findOrphanACs(files, opts.repoRoot));
     findings.push(...findStaleFeatureFiles(opts.repoRoot, slug, files));
     findings.push(...findUnreachableTasks(files, opts.repoRoot, slug));

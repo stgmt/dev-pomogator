@@ -66,13 +66,16 @@ describe('reconcileLight — finding-code coverage', () => {
     expect(drift!.spec_b).toContain('sessionToken');
   });
 
-  it('cross-spec/concept-overlap fires when two specs share ≥5 capitalised concept-nouns (post batch-9)', () => {
-    // Batch-9 bumped threshold 3 → 5 to suppress framework-name FPs.
+  it('cross-spec/concept-overlap fires when two specs share ≥10 capitalised concept-nouns (post batch-10)', () => {
+    // Threshold history: batch-3 = 3, batch-9 = 5, batch-10 = 10.
+    // Fixture needs 10+ shared NON-stoplisted PascalCase nouns to fire.
+    const sharedTen =
+      'AuthFlow LoginPath TokenStorage SessionInfo UserProfile AccessRole EmailToken PasswordHash ResetLink VerifyCode';
     seedSpec(root, 'spec-x', {
-      'FR.md': '## FR-1\n\nAuthService LoginController SessionManager TokenCache UserStore CartPipeline\n',
+      'FR.md': `## FR-1\n\n${sharedTen} UniqueAlpha UniqueBeta UniqueGamma\n`,
     });
     seedSpec(root, 'spec-y', {
-      'FR.md': '## FR-2\n\nAuthService LoginController SessionManager TokenCache UserStore InventoryQueue\n',
+      'FR.md': `## FR-2\n\n${sharedTen} DifferentDelta DifferentEpsilon DifferentZeta\n`,
     });
     const reports = reconcileLight({ repoRoot: root });
     const overlap = reports
@@ -784,6 +787,81 @@ describe('reconcileLight — finding-code coverage', () => {
     });
     seedSpec(root, 'sp-co-b', {
       'FR.md': '## FR-2\nSchema definition. Changelog entries. Acceptance Criteria. Stop hook.\n',
+    });
+    const reports = reconcileLight({ repoRoot: root });
+    expect(
+      reports.flatMap((r) => r.findings).find((f) => f.code === 'cross-spec/concept-overlap'),
+    ).toBeUndefined();
+  });
+
+  // ---- Batch-10 readiness-audit fixes ----
+
+  it('AUDIT: missing-test gated by phase_index < 2 — suppressed for Phase 0/1 specs', () => {
+    seedSpec(root, 'sp-mt-p0', {
+      'FR.md': '## FR-1: Login\n## FR-2: Logout\n',
+      'sp-mt-p0.feature': 'Feature: x\n  @feature1\n  Scenario: x\n    Given step\n',
+      '.progress.json': '{"phase_index": 0}',
+    });
+    const [report] = reconcileLight({ repoRoot: root, slugs: ['sp-mt-p0'] });
+    // FR-2 lacks @feature2 but spec is Phase 0 → suppressed.
+    expect(report.findings.find((f) => f.code === 'impl-drift/missing-test')).toBeUndefined();
+  });
+
+  it('AUDIT: missing-test still fires when phase_index >= 2', () => {
+    seedSpec(root, 'sp-mt-p2', {
+      'FR.md': '## FR-1: Login\n## FR-2: Logout\n',
+      'sp-mt-p2.feature': 'Feature: x\n  @feature1\n  Scenario: x\n    Given step\n',
+      '.progress.json': '{"phase_index": 2}',
+    });
+    const [report] = reconcileLight({ repoRoot: root, slugs: ['sp-mt-p2'] });
+    const missing = report.findings.filter((f) => f.code === 'impl-drift/missing-test');
+    expect(missing).toHaveLength(1);
+    expect(missing[0].suggested_fix).toContain('FR-2');
+  });
+
+  it('AUDIT: missing-test suppressed when .progress.json missing (defaults to phase 0)', () => {
+    seedSpec(root, 'sp-mt-nop', {
+      'FR.md': '## FR-1: Login\n## FR-2: Logout\n',
+      'sp-mt-nop.feature': 'Feature: x\n  @feature1\n  Scenario: x\n    Given step\n',
+    });
+    const [report] = reconcileLight({ repoRoot: root, slugs: ['sp-mt-nop'] });
+    expect(report.findings.find((f) => f.code === 'impl-drift/missing-test')).toBeUndefined();
+  });
+
+  it('AUDIT: ownership stoplist expanded — tools/specs-generator/ paths suppressed by default', () => {
+    seedSpec(root, 'sp-own-genA', {
+      'FR.md': '## FR-1\nUses `tools/specs-generator/validate-spec.ts` extensively.\n',
+    });
+    seedSpec(root, 'sp-own-genB', {
+      'FR.md': '## FR-2\nAlso uses `tools/specs-generator/validate-spec.ts`.\n',
+    });
+    const reports = reconcileLight({ repoRoot: root });
+    expect(
+      reports.flatMap((r) => r.findings).find((f) => f.code === 'cross-spec/module-ownership-conflict'),
+    ).toBeUndefined();
+  });
+
+  it('AUDIT: ownership stoplist — .claude/skills/ paths suppressed', () => {
+    seedSpec(root, 'sp-own-skA', {
+      'FR.md': '## FR-1\nDefines `.claude/skills/my-skill/SKILL.md`.\n',
+    });
+    seedSpec(root, 'sp-own-skB', {
+      'FR.md': '## FR-2\nReferences `.claude/skills/my-skill/SKILL.md`.\n',
+    });
+    const reports = reconcileLight({ repoRoot: root });
+    expect(
+      reports.flatMap((r) => r.findings).find((f) => f.code === 'cross-spec/module-ownership-conflict'),
+    ).toBeUndefined();
+  });
+
+  it('AUDIT: concept-overlap threshold bumped 5→10 — five shared nouns no longer fires', () => {
+    // 5 shared design-pattern nouns + 5 unique each = 5 shared. Old threshold 5
+    // would have fired. Batch-10 threshold 10 suppresses.
+    seedSpec(root, 'sp-th-a', {
+      'FR.md': '## FR-1\nAuthService LoginCtrl SessionMgr TokenCache UserStore UniqueA UniqueB UniqueC\n',
+    });
+    seedSpec(root, 'sp-th-b', {
+      'FR.md': '## FR-2\nAuthService LoginCtrl SessionMgr TokenCache UserStore DifferentX DifferentY DifferentZ\n',
     });
     const reports = reconcileLight({ repoRoot: root });
     expect(
