@@ -138,6 +138,82 @@ export function classify(slug: string, finding: InputFinding): ClassificationRes
     };
   }
 
+  // Extended routes (added after dogfood pass-2 surfaced 974 unrecognised).
+  if (code === 'impl-drift/missing-file') {
+    // Same family as dead-link — sibling spec file claimed but missing.
+    // Route to ac-author for AC.md targets, fr-author for FR.md, link-fixer otherwise.
+    const target = finding.expected_path ?? '';
+    if (/ACCEPTANCE_CRITERIA\.md|^AC\.md/.test(target)) {
+      return {
+        verdict: 'BACKLOG',
+        entry: {
+          slug, code,
+          category: 'missing-spec-file',
+          evidence: { file: finding.referenced_in, target },
+          suggested_resolver: 'ac-author',
+          difficulty: 'medium',
+        },
+      };
+    }
+    return {
+      verdict: 'BACKLOG',
+      entry: {
+        slug, code,
+        category: 'dead-link-typo',
+        evidence: { file: finding.referenced_in, target },
+        suggested_resolver: 'link-fixer',
+        difficulty: 'easy',
+      },
+    };
+  }
+  if (code === 'spec-only/unreachable-task' || code === 'impl-drift/test-result-stale') {
+    // Both are INFO/WARNING signals where action is intentional design or
+    // CI-environment-dependent — no resolver can mechanically fix.
+    return {
+      verdict: 'NOISE',
+      noiseReason: code === 'spec-only/unreachable-task'
+        ? 'Tasks targeting future phases ARE intentionally flagged per design — advance phase_index manually.'
+        : 'Git clone resets mtimes — false positive in CI / fresh checkouts.',
+    };
+  }
+  if (code === 'spec-only/orphan-task') {
+    return {
+      verdict: 'BACKLOG',
+      entry: {
+        slug, code,
+        category: 'missing-fr-section',
+        evidence: { file: finding.referenced_in },
+        suggested_resolver: 'fr-author',
+        difficulty: 'medium',
+      },
+    };
+  }
+  if (code === 'spec-only/uncovered-AC' || code === 'spec-only/orphan-FR' || code === 'impl-drift/test-without-fr') {
+    return {
+      verdict: 'BACKLOG',
+      entry: {
+        slug, code,
+        category: 'missing-test',
+        evidence: { file: finding.referenced_in },
+        suggested_resolver: 'scenario-writer',
+        difficulty: 'medium',
+      },
+    };
+  }
+  if (code === 'spec-only/duplicate-fr-id') {
+    // Cannot safely auto-rename — needs human decision which FR keeps the id.
+    return {
+      verdict: 'BACKLOG',
+      entry: {
+        slug, code,
+        category: 'unrecognised',
+        evidence: { file: finding.referenced_in },
+        suggested_resolver: 'human',
+        difficulty: 'hard',
+      },
+    };
+  }
+
   // Unrecognised — bucket into backlog with a generic resolver so nothing
   // is silently dropped. Specialist may take over later.
   return {
