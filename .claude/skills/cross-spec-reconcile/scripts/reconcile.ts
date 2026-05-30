@@ -70,7 +70,11 @@ export interface ReconcileResult {
 }
 
 const PATH_REF_RE = /`(?:src|tools|tests|lib)\/[\w./-]+\*?(?:\.[\w]+)?`/g;
-const IDENTIFIER_LINE_RE = /\b(\w+_key|\w+_id|\w+_token|\w+_path)\s*=\s*["']([^"']+)["']/g;
+// Catches both snake_case (`session_token`) and camelCase (`sessionToken`)
+// identifier names ending in the canonical suffixes. The lemma normaliser
+// in `normalizeIdentifierKey` collapses them to the same key so two specs
+// using divergent casing for the same concept register as drift.
+const IDENTIFIER_LINE_RE = /\b(\w+(?:_key|_id|_token|_path|Key|Id|Token|Path))\s*=\s*["']([^"']+)["']/g;
 const CONCEPT_NOUN_RE = /\b[A-Z][a-z]{3,}(?:[A-Z][a-z]{2,}){0,3}\b/g;
 // FR heading match — both v4 (`## FR-N: title`) and legacy triple-anchor
 // forms (`### Requirement: FR-N title`) survive parsing via the spec-graph
@@ -101,24 +105,42 @@ function readSpecMd(repoRoot: string, slug: string): { path: string; body: strin
   return out;
 }
 
+export interface PathResolveResult {
+  exists: boolean;
+  /** True iff the path is a glob AND its prefix dir doesn't exist (UX hint). */
+  globPrefixMissing: boolean;
+}
+
 /** Resolve a glob-ish path (supports trailing `*`) against the repo. */
-function pathExistsResolving(repoRoot: string, ref: string, implRoots?: string[]): boolean {
+function pathExistsResolvingDetail(
+  repoRoot: string,
+  ref: string,
+  implRoots?: string[],
+): PathResolveResult {
   const cleanRef = ref.replace(/`/g, '');
   const candidates = (implRoots ?? ['.']).map((r) => path.join(repoRoot, r, cleanRef));
+  let anyGlobPrefixMissing = false;
   for (const c of candidates) {
-    if (!c.includes('*') && fs.existsSync(c)) return true;
+    if (!c.includes('*') && fs.existsSync(c)) return { exists: true, globPrefixMissing: false };
     if (c.includes('*')) {
       // Cheap glob: strip everything after the last `*` and confirm the
       // prefix dir exists with at least one matching entry.
       const star = c.lastIndexOf('*');
       const prefixDir = path.dirname(c.slice(0, star));
       const baseName = path.basename(c.slice(0, star));
-      if (!fs.existsSync(prefixDir)) continue;
+      if (!fs.existsSync(prefixDir)) {
+        anyGlobPrefixMissing = true;
+        continue;
+      }
       const matches = fs.readdirSync(prefixDir).some((f) => f.startsWith(baseName));
-      if (matches) return true;
+      if (matches) return { exists: true, globPrefixMissing: false };
     }
   }
-  return false;
+  return { exists: false, globPrefixMissing: anyGlobPrefixMissing };
+}
+
+function pathExistsResolving(repoRoot: string, ref: string, implRoots?: string[]): boolean {
+  return pathExistsResolvingDetail(repoRoot, ref, implRoots).exists;
 }
 
 function findMissingFileReferences(
@@ -133,15 +155,18 @@ function findMissingFileReferences(
       const matches = lines[i].match(PATH_REF_RE);
       if (!matches) continue;
       for (const ref of matches) {
-        if (pathExistsResolving(repoRoot, ref, implRoots)) continue;
+        const detail = pathExistsResolvingDetail(repoRoot, ref, implRoots);
+        if (detail.exists) continue;
+        const hint = detail.globPrefixMissing
+          ? 'Add the implementation, OR mark the FR as OUT_OF_SCOPE, OR remove the reference. (Glob prefix dir does not exist — was the parent directory removed or renamed?)'
+          : 'Add the implementation, OR mark the FR as OUT_OF_SCOPE, OR remove the reference.';
         out.push({
           code: 'impl-drift/missing-file',
           class: 'uncovered',
           severity: 'WARNING',
           referenced_in: `${path.relative(repoRoot, file.path)}:${i + 1}`,
           expected_path: ref.replace(/`/g, ''),
-          suggested_fix:
-            'Add the implementation, OR mark the FR as OUT_OF_SCOPE, OR remove the reference.',
+          suggested_fix: hint,
         });
       }
     }
@@ -149,17 +174,32 @@ function findMissingFileReferences(
   return out;
 }
 
+/** Strip fenced code blocks (```...```) — they hold examples, not decisions. */
+function stripFencedBlocks(body: string): string {
+  return body.replace(/```[\s\S]*?```/g, '');
+}
+
+/** Normalize key name: snake_case + camelCase + kebab → same key. */
+function normalizeIdentifierKey(key: string): string {
+  return key.toLowerCase().replace(/[_-]/g, '');
+}
+
 function collectIdentifiers(
   files: { body: string; path: string }[],
-): Map<string, { value: string; where: string }> {
-  const out = new Map<string, { value: string; where: string }>();
+): Map<string, { value: string; where: string; originalKey: string }> {
+  // Adversarial-review fixes:
+  //   • strip fenced code blocks — assignments inside `````ts ...` ` ` blocks
+  //     are examples, not decisions (HIGH FP)
+  //   • normalize snake_case vs camelCase to the same lemma so
+  //     `session_token` and `sessionToken` register the same concept (HIGH FN)
+  const out = new Map<string, { value: string; where: string; originalKey: string }>();
   for (const f of files) {
+    const cleanBody = stripFencedBlocks(f.body);
     let m: RegExpExecArray | null;
     IDENTIFIER_LINE_RE.lastIndex = 0;
-    while ((m = IDENTIFIER_LINE_RE.exec(f.body)) !== null) {
-      // Concept = identifier key minus suffix; value = the literal.
-      const concept = m[1];
-      out.set(concept, { value: m[2], where: f.path });
+    while ((m = IDENTIFIER_LINE_RE.exec(cleanBody)) !== null) {
+      const lemma = normalizeIdentifierKey(m[1]);
+      out.set(lemma, { value: m[2], where: f.path, originalKey: m[1] });
     }
   }
   return out;
@@ -174,19 +214,21 @@ function findRuntimeIdentifierDrift(
     for (let j = i + 1; j < slugs.length; j++) {
       const a = bySlug.get(slugs[i])!;
       const b = bySlug.get(slugs[j])!;
-      for (const concept of a.keys()) {
-        if (!b.has(concept)) continue;
-        const va = a.get(concept)!;
-        const vb = b.get(concept)!;
-        if (va.value !== vb.value) {
+      for (const lemma of a.keys()) {
+        if (!b.has(lemma)) continue;
+        const va = a.get(lemma)!;
+        const vb = b.get(lemma)!;
+        if (va.value !== vb.value || va.originalKey !== vb.originalKey) {
           out.push({
             code: 'cross-spec/runtime-identifier-drift',
             class: 'runtime-identifier-drift',
             severity: 'CRITICAL',
-            spec_a: `${va.where} (${concept} = "${va.value}")`,
-            spec_b: `${vb.where} (${concept} = "${vb.value}")`,
+            spec_a: `${va.where} (${va.originalKey} = "${va.value}")`,
+            spec_b: `${vb.where} (${vb.originalKey} = "${vb.value}")`,
             suggested_fix:
-              'Pick one canonical name + update both specs in lockstep.',
+              va.originalKey !== vb.originalKey
+                ? `Concept normalises to "${lemma}" but spelled "${va.originalKey}" / "${vb.originalKey}". Pick one canonical key + update both specs in lockstep.`
+                : 'Pick one canonical name + update both specs in lockstep.',
           });
         }
       }
@@ -200,8 +242,14 @@ function findRuntimeIdentifierDrift(
 const URL_PATH_RE = /["'`](\/(?:api|v\d+|\.well-known|webhook|hook|callback)[\w/{}\-.]*?)["'`]/g;
 // CLI flags: `--scope`, `--target-dir`. Must start with `--` to avoid catching `-N` numbers.
 const CLI_FLAG_RE = /\B(--[a-z][a-z0-9-]+)\b/g;
-// TS export-name detection — `export {X, Y}`, `export const X`, `export function X`.
+// TS export-name detection — `export {X, Y}`, `export const X`, `export function X`,
+// `export default X`, `export default function X()`, `export default class X`.
 const TS_EXPORT_RE = /\bexport\s+(?:(?:default\s+)?(?:const|let|var|function|class|interface|type|enum)\s+(\w+)|\{\s*([^}]+)\s*\})/g;
+// Bare `export default <expression>` — captures the identifier when it's a simple name.
+const TS_DEFAULT_EXPORT_RE = /\bexport\s+default\s+(\w+)\s*;?/g;
+// `export * from './x'` — star re-export. Cannot resolve symbol names without
+// recursing into the re-exported file; treat as opt-out (suppress missing-symbol findings).
+const TS_STAR_REEXPORT_RE = /\bexport\s*\*\s*from\s*['"]/;
 const TS_IMPORT_RE = /import\s+\{\s*([^}]+)\s*\}\s+from\s+['"]([^'"]+)['"]/g;
 // Enum-like definition in MD: `Values: A | B | C` or bullet list `- A` / `- B` after «values:» / «enum:» header.
 const ENUM_HEADER_RE = /(?:^|\n)\s*(?:Values|Enum|Options|Allowed):\s*([\w |,/-]+)/g;
@@ -248,6 +296,11 @@ function findMissingSymbols(
       }
       if (!resolved) continue;
       const tsBody = fs.readFileSync(resolved, 'utf8');
+      // `export * from './x'` re-exports an unknown set of symbols. Cannot
+      // verify membership without recursing, so suppress missing-symbol
+      // for the whole import statement to avoid noisy false-positives
+      // (adversarial-review finding HIGH-FP).
+      if (TS_STAR_REEXPORT_RE.test(tsBody)) continue;
       const exported = new Set<string>();
       let em: RegExpExecArray | null;
       TS_EXPORT_RE.lastIndex = 0;
@@ -260,6 +313,19 @@ function findMissingSymbols(
           }
         }
       }
+      // `export default <ident>` — captured separately, and `default` is
+      // imported via `import { default as X }` shape (handled by symbol parse).
+      TS_DEFAULT_EXPORT_RE.lastIndex = 0;
+      let dm: RegExpExecArray | null;
+      let hasDefault = false;
+      while ((dm = TS_DEFAULT_EXPORT_RE.exec(tsBody)) !== null) {
+        exported.add(dm[1]);
+        hasDefault = true;
+      }
+      if (/\bexport\s+default\s+(?:function|class|async\s+function)/.test(tsBody)) {
+        hasDefault = true;
+      }
+      if (hasDefault) exported.add('default');
       for (const sym of symbols) {
         if (exported.has(sym)) continue;
         out.push({
@@ -304,10 +370,23 @@ function findUrlShapeDrift(
   const urlsBySlug = collectUrlsBySlug(filesBySlug);
   // Build a normalised-suffix index: `/foo` -> [{url, slug}].
   const bySuffix = new Map<string, Array<{ url: string; slug: string }>>();
+  // Generic action verbs / list/index words — too noisy to use as a sole
+  // last-segment matcher (would flag `/admin/users/list` vs `/api/users/list`
+  // as drift, which is wrong — they're unrelated routes).
+  const GENERIC_LAST_SEGMENTS = new Set([
+    'list', 'get', 'add', 'set', 'post', 'put', 'delete', 'patch',
+    'all', 'new', 'edit', 'create', 'remove', 'update', 'index',
+    'show', 'view', 'find', 'search', 'query',
+  ]);
   for (const [url, slugMap] of urlsBySlug) {
-    // Suffix = last path segment + 1 more. e.g. /api/v1/foo -> /v1/foo
+    // Adversarial-review fix (HIGH FP): only register a suffix if the
+    // final segment is NOT a generic action verb — otherwise unrelated
+    // APIs collide. Domain-specific nouns (`orders`, `customers`,
+    // `inventory`) are kept; generic verbs (`list`, `get`) are dropped.
     const parts = url.split('/').filter(Boolean);
     if (parts.length < 1) continue;
+    const last = parts[parts.length - 1].toLowerCase().replace(/[{}]/g, '');
+    if (GENERIC_LAST_SEGMENTS.has(last)) continue;
     const suffix = '/' + parts.slice(-1).join('/');
     if (!bySuffix.has(suffix)) bySuffix.set(suffix, []);
     for (const slug of slugMap.keys()) bySuffix.get(suffix)!.push({ url, slug });
@@ -456,9 +535,13 @@ function findModuleOwnershipConflict(
       let m: RegExpExecArray | null;
       PATH_REF_RE.lastIndex = 0;
       while ((m = PATH_REF_RE.exec(f.body)) !== null) {
-        const ref = m[0].replace(/`/g, '').replace(/\*$/, '');
-        // Only count concrete files (not glob-only).
-        if (ref.includes('*')) continue;
+        // Adversarial-review fix (HIGH FN): normalize embedded `*` (not just
+        // trailing) to a canonical empty marker so two specs both claiming
+        // `tools/foo*/main.ts` still collide. Concrete-file references
+        // remain unchanged; pure-glob references compare as their normalised
+        // string (e.g. `tools/foo/main.ts`).
+        const raw = m[0].replace(/`/g, '');
+        const ref = raw.replace(/\*/g, '');
         pathMap.set(ref, f.path);
       }
     }
@@ -698,6 +781,38 @@ function collectFrDefinitions(
   return out;
 }
 
+/** Adversarial-review fix (HIGH FN): collect WITHIN-spec duplicate FR ids — */
+/** scan one spec at a time and emit one finding per duplicate.            */
+function findWithinSpecDuplicateFRs(
+  files: { body: string; path: string }[],
+  repoRoot: string,
+  slug: string,
+): Finding[] {
+  const seen = new Map<string, string>();
+  const out: Finding[] = [];
+  for (const f of files) {
+    let m: RegExpExecArray | null;
+    FR_HEADING_RE.lastIndex = 0;
+    while ((m = FR_HEADING_RE.exec(f.body)) !== null) {
+      const fr = m[1];
+      if (seen.has(fr)) {
+        out.push({
+          code: 'cross-spec/duplicate-fr-id',
+          class: 'contradiction',
+          severity: 'CRITICAL',
+          spec_a: `.specs/${slug} (${fr} first at ${path.basename(seen.get(fr)!)})`,
+          spec_b: `.specs/${slug} (${fr} duplicate at ${path.basename(f.path)})`,
+          suggested_fix:
+            `Two \`## ${fr}\` headings within the same spec — rename the second one or merge their content.`,
+        });
+        continue;
+      }
+      seen.set(fr, f.path);
+    }
+  }
+  return out;
+}
+
 /** Extract every FR reference (`FR-N` anywhere in the body) — both definitions and citations. */
 function collectFrReferences(files: { body: string }[]): Set<string> {
   const refs = new Set<string>();
@@ -830,7 +945,9 @@ function findContradictoryFRs(
         const bodyA = extractFrBody(filesBySlug.get(slugs[i])!, fr);
         const bodyB = extractFrBody(filesBySlug.get(slugs[j])!, fr);
         if (!bodyA || !bodyB) continue;
-        if (cheapTextOverlap(bodyA, bodyB) >= 0.4) continue;
+        // Adversarial-review fix (MEDIUM FP): raised threshold 0.4 → 0.55
+        // — generic domain vocabulary alone shouldn't suppress contradiction.
+        if (cheapTextOverlap(bodyA, bodyB) >= 0.55) continue;
         out.push({
           code: 'cross-spec/contradictory-fr',
           class: 'contradiction',
@@ -967,6 +1084,7 @@ export function reconcileLight(opts: ReconcileOptions): ReconcileResult[] {
     findings.push(...findMissingAcceptance(files, opts.repoRoot));
     findings.push(...findInvalidFrontmatter(opts.repoRoot, slug));
     findings.push(...findMissingSymbols(files, opts.repoRoot));
+    findings.push(...findWithinSpecDuplicateFRs(files, opts.repoRoot, slug));
     // Attribute cross-spec findings to BOTH specs they touch. Normalise
     // OS path separators so the `.specs/<slug>` substring match works on
     // Windows + POSIX.

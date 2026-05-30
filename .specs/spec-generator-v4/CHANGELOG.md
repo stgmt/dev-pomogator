@@ -18,6 +18,46 @@ All notable changes to this feature will be documented in this file.
     `cross-spec/url-shape-drift`, `cross-spec/cli-flag-drift`,
     `cross-spec/enum-divergence`, `cross-spec/module-ownership-conflict`.
   19 of the 28-code matrix now ship; 9 remain as small follow-ups.
+
+### Fixed (post-rc1 batch-6 — adversarial-review pass)
+
+An automated 4-skeptic / 1-synthesizer workflow attacked the 19
+finding codes with hand-crafted false-positive + false-negative
+fixtures. 28 raw suspect-findings → 14 retained → 8 HIGH-severity
+bugs surfaced, all 8 closed in this batch:
+
+- `impl-drift/missing-symbol` — `export default <ident>` now
+  recognised (new `TS_DEFAULT_EXPORT_RE` + `default` alias); `export
+  * from '...'` short-circuits the symbol-presence check so star
+  re-exports never produce false positives.
+- `impl-drift/missing-file` — when a glob path's prefix directory
+  doesn't exist (e.g. `tools/removed_dir/foo*.ts`), the hint now
+  appends `(Glob prefix dir does not exist — was the parent
+  directory removed or renamed?)`. New `pathExistsResolvingDetail`
+  return shape.
+- `cross-spec/runtime-identifier-drift` — assignments inside
+  ```` ```ts ``` ```` fenced blocks are now stripped before regex
+  scan (HIGH FP closed); `snake_case` and `camelCase` identifier
+  keys collapse to the same lemma via `normalizeIdentifierKey`, so
+  `session_token = "v1"` in spec A and `sessionToken = "v2"` in
+  spec B register as drift (HIGH FN closed). `IDENTIFIER_LINE_RE`
+  broadened to catch the camelCase suffixes (`Key/Id/Token/Path`).
+- `cross-spec/url-shape-drift` — generic terminal segments
+  (`/list`, `/get`, `/add`, ...) are excluded from suffix matching,
+  so `/api/users/list` vs `/admin/groups/list` no longer collide;
+  domain-noun terminals (`/orders`, `/customers`) still fire.
+- `cross-spec/duplicate-fr-id` — new `findWithinSpecDuplicateFRs`
+  flags two `## FR-N` headings WITHIN the same spec (HIGH FN: the
+  previous `collectFrDefinitions` silently kept only the first).
+- `cross-spec/module-ownership-conflict` — embedded glob characters
+  now stripped globally (`.replace(/\*/g, '')`), so two specs
+  claiming `tools/foo*.ts` collide on the normalised
+  `tools/foo.ts`.
+- `cross-spec/contradictory-fr` — Jaccard-overlap suppression
+  threshold raised 0.4 → 0.55. Generic domain vocabulary alone
+  no longer hides genuine contradictions.
+
+10 regression tests pin each fix (11th smoke run on batch.mjs).
 - `.claude/skills/cross-spec-reconcile/scripts/full-mode.ts` — full-mode
   wrapper that pipes same-FR pairs through `tools/spec-llm-judge` for
   `cross-spec/semantic-drift` findings beyond the mechanical heuristics.

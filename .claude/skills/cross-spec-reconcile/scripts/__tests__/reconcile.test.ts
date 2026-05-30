@@ -338,6 +338,124 @@ describe('reconcileLight — finding-code coverage', () => {
     expect(conflict!.severity).toBe('CRITICAL');
     expect(conflict!.spec_a).toContain('tools/order/main.ts');
   });
+
+  // ---- Batch-6 adversarial-review regression pins ----
+
+  it('FIX: impl-drift/missing-symbol — recognises `export default <ident>`', () => {
+    fs.mkdirSync(path.join(root, '.specs/sp-def/src'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, '.specs/sp-def/src/m.ts'),
+      'export default function Foo() { return 1; }\n',
+    );
+    seedSpec(root, 'sp-def', {
+      'IMP.md': '```ts\nimport { default as Foo } from "./src/m";\n```\n',
+    });
+    const [report] = reconcileLight({ repoRoot: root, slugs: ['sp-def'] });
+    expect(report.findings.find((f) => f.code === 'impl-drift/missing-symbol')).toBeUndefined();
+  });
+
+  it('FIX: impl-drift/missing-symbol — `export * from` suppresses the check (no FP)', () => {
+    seedSpec(root, 'sp-star', {
+      'm.ts': 'export * from "./other";\n',
+      'IMP.md': '```ts\nimport { AnythingAtAll } from "./m";\n```\n',
+    });
+    const [report] = reconcileLight({ repoRoot: root, slugs: ['sp-star'] });
+    expect(report.findings.find((f) => f.code === 'impl-drift/missing-symbol')).toBeUndefined();
+  });
+
+  it('FIX: impl-drift/missing-file — appends "Glob prefix dir does not exist" hint', () => {
+    seedSpec(root, 'sp-glob', {
+      'FR.md': '## FR-1\nSee `tools/removed_dir/foo*.ts` for impl.\n',
+    });
+    const [report] = reconcileLight({ repoRoot: root, slugs: ['sp-glob'] });
+    const found = report.findings.find((f) => f.code === 'impl-drift/missing-file');
+    expect(found).toBeDefined();
+    expect(found!.suggested_fix).toContain('Glob prefix dir');
+  });
+
+  it('FIX: runtime-identifier-drift — assignments inside ```ts``` blocks suppressed', () => {
+    seedSpec(root, 'sp-cb-a', {
+      'FR.md': '## FR-1\n```ts\nconst session_token = "v1";\n```\n',
+    });
+    seedSpec(root, 'sp-cb-b', {
+      'FR.md': '## FR-2\n```ts\nconst session_token = "v2";\n```\n',
+    });
+    const reports = reconcileLight({ repoRoot: root });
+    expect(
+      reports.flatMap((r) => r.findings).find((f) => f.code === 'cross-spec/runtime-identifier-drift'),
+    ).toBeUndefined();
+  });
+
+  it('FIX: runtime-identifier-drift — snake_case + camelCase collapse to the same lemma', () => {
+    seedSpec(root, 'sp-norm-a', {
+      'FR.md': '## FR-1\nProvision: `session_token = "v1"`\n',
+    });
+    seedSpec(root, 'sp-norm-b', {
+      'FR.md': '## FR-2\nProvision: `sessionToken = "v2"`\n',
+    });
+    const reports = reconcileLight({ repoRoot: root });
+    const drift = reports
+      .flatMap((r) => r.findings)
+      .find((f) => f.code === 'cross-spec/runtime-identifier-drift');
+    expect(drift).toBeDefined();
+    expect(drift!.suggested_fix).toContain('session_token');
+    expect(drift!.suggested_fix).toContain('sessionToken');
+  });
+
+  it('FIX: url-shape-drift — generic action segments (`/list`, `/get`) excluded', () => {
+    seedSpec(root, 'sp-url-gen-a', {
+      'FR.md': '## FR-1\nGET to "/api/users/list" returns the list.\n',
+    });
+    seedSpec(root, 'sp-url-gen-b', {
+      'FR.md': '## FR-2\nGET to "/admin/groups/list" returns the list.\n',
+    });
+    const reports = reconcileLight({ repoRoot: root });
+    expect(
+      reports.flatMap((r) => r.findings).find((f) => f.code === 'cross-spec/url-shape-drift'),
+    ).toBeUndefined();
+  });
+
+  it('FIX: cross-spec/duplicate-fr-id — fires for WITHIN-spec duplicate headings', () => {
+    seedSpec(root, 'sp-dup', {
+      'FR.md': '## FR-1: first\nA\n\n## FR-1: duplicate\nB\n',
+    });
+    const [report] = reconcileLight({ repoRoot: root, slugs: ['sp-dup'] });
+    const dup = report.findings.find((f) => f.code === 'cross-spec/duplicate-fr-id');
+    expect(dup).toBeDefined();
+    expect(dup!.spec_a).toContain('sp-dup');
+    expect(dup!.spec_b).toContain('sp-dup');
+  });
+
+  it('FIX: module-ownership — identical trailing-glob path collides', () => {
+    seedSpec(root, 'sp-glob-a', {
+      'FR.md': '## FR-1\nClaims `tools/foo*.ts`.\n',
+    });
+    seedSpec(root, 'sp-glob-b', {
+      'FR.md': '## FR-2\nClaims `tools/foo*.ts`.\n',
+    });
+    const reports = reconcileLight({ repoRoot: root });
+    const conflict = reports
+      .flatMap((r) => r.findings)
+      .find((f) => f.code === 'cross-spec/module-ownership-conflict');
+    expect(conflict).toBeDefined();
+    expect(conflict!.spec_a).toContain('tools/foo.ts');
+  });
+
+  it('FIX: contradictory-fr — borderline 0.4-0.55 overlap no longer suppressed', () => {
+    // Both share auth domain vocabulary but say different things — the OLD
+    // threshold of 0.4 would have suppressed this; 0.55 lets it through.
+    seedSpec(root, 'sp-contra-a', {
+      'FR.md': '## FR-1: Auth\nSystem validates credentials and issues authentication tokens for the user session.\n',
+    });
+    seedSpec(root, 'sp-contra-b', {
+      'FR.md': '## FR-1: Cart\nThe shopping cart system maintains customer SKU items with quantity tracking.\n',
+    });
+    const reports = reconcileLight({ repoRoot: root });
+    const contradictory = reports
+      .flatMap((r) => r.findings)
+      .find((f) => f.code === 'cross-spec/contradictory-fr');
+    expect(contradictory).toBeDefined();
+  });
 });
 
 describe('emitYaml + writeReport', () => {
