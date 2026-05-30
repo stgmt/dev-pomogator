@@ -274,7 +274,10 @@ const NFR_BUDGET_RE = /\b(response[-\s]?time|latency|throughput|availability|upt
 // Decision blocks in DECISIONS.md / DESIGN.md.
 const DECISION_BLOCK_RE = /^#{2,3}\s+Decision[:\s]+([\w-]+)([\s\S]*?)(?=\n#{2,3}\s|$)/gm;
 const DECISION_STATUS_LOCKED_RE = /\bStatus\s*[:=]\s*(?:LOCKED|FINAL)\b/i;
-const DECISION_CHOSEN_RE = /\bChosen\s*[:=]\s*([^\n(@`]+)/i;
+// Adversarial-review fix (HIGH FN): `[^\n(@`]+` greedily captured trailing
+// prose like `jsonwebtoken library for signing tokens`. Restrict to a
+// package-identifier-like token (allow `.`, `/`, `@`, `-`, scope prefix).
+const DECISION_CHOSEN_RE = /\bChosen\s*[:=]\s*(@?[\w./-]+)/i;
 const DECISION_IMPL_PATH_RE = /\bImplemented\s+in\s*[:=]\s*`([^`]+)`/i;
 const TS_FILE_IMPORT_RE = /^\s*import\s+[^'"]+['"]([^'"]+)['"]/gm;
 // TypeScript interface/type body — captures name + body until matching `}`.
@@ -451,9 +454,12 @@ function findCliFlagDrift(
   for (const [slug, files] of filesBySlug) {
     const flags = new Set<string>();
     for (const f of files) {
+      // Adversarial-review fix (HIGH FP): flags inside fenced ```ts code
+      // blocks are examples, not real CLI declarations. Strip them first.
+      const body = stripFencedBlocks(f.body);
       let m: RegExpExecArray | null;
       CLI_FLAG_RE.lastIndex = 0;
-      while ((m = CLI_FLAG_RE.exec(f.body)) !== null) flags.add(m[1]);
+      while ((m = CLI_FLAG_RE.exec(body)) !== null) flags.add(m[1]);
     }
     flagsBySlug.set(slug, flags);
   }
@@ -495,8 +501,11 @@ function collectEnumsBySlug(
   for (const [slug, files] of filesBySlug) {
     const enumMap = new Map<string, Set<string>>();
     for (const f of files) {
+      // Adversarial-review fix (HIGH FP): enum values inside fenced ```ts
+      // blocks are examples, not real schema declarations. Strip first.
+      const body = stripFencedBlocks(f.body);
       // Find headings followed by `Values:` block. Heading captures the enum name.
-      const sections = f.body.split(/(?=^#{2,4}\s+)/m);
+      const sections = body.split(/(?=^#{2,4}\s+)/m);
       for (const section of sections) {
         const headerMatch = section.match(/^#{2,4}\s+([^\n]+)/);
         if (!headerMatch) continue;
@@ -616,9 +625,15 @@ function findDeadLinks(
         if (!target) continue;
         if (/^[a-z]+:\/\//i.test(target)) continue; // absolute URL
         if (target.startsWith('mailto:')) continue;
-        const resolved = path.isAbsolute(target)
-          ? target
-          : path.resolve(path.dirname(file.path), target);
+        // Adversarial-review fix (HIGH FP): `path.isAbsolute('/GUIDE.md')`
+        // is true on POSIX and resolves from filesystem root — almost
+        // always wrong for repo links. Treat leading-`/` as repo-root
+        // relative on every OS.
+        const resolved = target.startsWith('/')
+          ? path.join(repoRoot, target.slice(1))
+          : path.isAbsolute(target)
+            ? target
+            : path.resolve(path.dirname(file.path), target);
         if (fs.existsSync(resolved)) continue;
         out.push({
           code: 'impl-drift/dead-link',
@@ -884,7 +899,10 @@ function findJsonShapeDrift(
     // Slice the body into sections under headings containing "Schema" / "Keys".
     const sections = f.body.split(/^##\s+/m);
     for (const sec of sections) {
-      if (!/Schema|Keys/i.test(sec.split(/\n/)[0] ?? '')) continue;
+      // Adversarial-review fix (MEDIUM FP): heading match was too narrow —
+      // missed `Data Shape`, `Fields`, `Structure` headings that are
+      // common in spec writing.
+      if (!/Schema|Keys|Shape|Fields|Structure/i.test(sec.split(/\n/)[0] ?? '')) continue;
       let m: RegExpExecArray | null;
       SCHEMA_KEY_BULLET_RE.lastIndex = 0;
       while ((m = SCHEMA_KEY_BULLET_RE.exec(sec)) !== null) declared.add(m[1]);
@@ -985,10 +1003,18 @@ function collectNfrBudgets(
       while ((m = NFR_BUDGET_RE.exec(body)) !== null) {
         let key = m[1].toLowerCase().replace(/[-\s]+/g, '-');
         if (key === 'response-time') key = 'latency';
-        budgets.set(`${key}|${m[3]}`, {
+        // Adversarial-review fix (MEDIUM FN): `latency|s` and `latency|ms`
+        // were bucketed separately, so `200ms vs 2s` silently passed.
+        // Normalize seconds → milliseconds in the bucket key.
+        const rawValue = parseFloat(m[2]);
+        const rawUnit = m[3].toLowerCase();
+        const isTimeUnit = rawUnit === 's' || rawUnit === 'ms';
+        const normValue = isTimeUnit && rawUnit === 's' ? rawValue * 1000 : rawValue;
+        const normUnit = isTimeUnit ? 'ms' : rawUnit;
+        budgets.set(`${key}|${normUnit}`, {
           key,
-          value: parseFloat(m[2]),
-          unit: m[3],
+          value: normValue,
+          unit: normUnit,
           context: f.path,
         });
       }
@@ -1182,9 +1208,12 @@ function findMissingFrSections(
   const defs = collectFrDefinitions(files);
   const cited = new Set<string>();
   for (const f of files) {
+    // Adversarial-review fix (HIGH FP): FR citations inside fenced ```
+    // blocks are example code — not real "this spec mentions FR-N" claims.
+    const body = stripFencedBlocks(f.body);
     let m: RegExpExecArray | null;
     FR_REF_RE.lastIndex = 0;
-    while ((m = FR_REF_RE.exec(f.body)) !== null) cited.add(m[0]);
+    while ((m = FR_REF_RE.exec(body)) !== null) cited.add(m[0]);
   }
   const out: Finding[] = [];
   for (const fr of cited) {
@@ -1266,14 +1295,15 @@ function findWithinSpecDuplicateFRs(
     while ((m = FR_HEADING_RE.exec(f.body)) !== null) {
       const fr = m[1];
       if (seen.has(fr)) {
+        // Adversarial-review fix (MEDIUM): use a distinct code so reports
+        // can tell within-spec from cross-spec duplicates at a glance.
         out.push({
-          code: 'cross-spec/duplicate-fr-id',
+          code: 'spec-only/duplicate-fr-id',
           class: 'contradiction',
           severity: 'CRITICAL',
-          spec_a: `.specs/${slug} (${fr} first at ${path.basename(seen.get(fr)!)})`,
-          spec_b: `.specs/${slug} (${fr} duplicate at ${path.basename(f.path)})`,
+          referenced_in: `${path.relative(repoRoot, f.path)} (${fr})`,
           suggested_fix:
-            `Two \`## ${fr}\` headings within the same spec — rename the second one or merge their content.`,
+            `Two \`## ${fr}\` headings within the same spec — rename the second one or merge their content. First at ${path.basename(seen.get(fr)!)}, duplicate at ${path.basename(f.path)}.`,
         });
         continue;
       }
@@ -1305,7 +1335,10 @@ function collectFeatureTags(repoRoot: string, slug: string): Set<string> {
     let m: RegExpExecArray | null;
     FEATURE_TAG_RE.lastIndex = 0;
     while ((m = FEATURE_TAG_RE.exec(body)) !== null) {
-      out.add(`FR-${m[1]}`);
+      // Adversarial-review fix (HIGH FN): `@feature05` was producing
+      // `FR-05` which never matched `FR-5` in collectFrDefinitions. Strip
+      // leading zeros via parseInt.
+      out.add(`FR-${parseInt(m[1], 10)}`);
     }
   }
   return out;
@@ -1318,19 +1351,24 @@ function findOrphanFRs(
   repoRoot: string,
 ): Finding[] {
   const defs = collectFrDefinitions(files);
-  // References = anywhere FR-N appears OUTSIDE its own heading line.
-  const refs = collectFrReferences(files);
   const out: Finding[] = [];
   for (const [fr, definedIn] of defs.entries()) {
-    // A heading counts as a definition, so we need ≥2 hits (definition + ≥1 reference)
-    // OR a matching @feature tag in the .feature corpus.
-    let hits = 0;
+    // A heading counts as a definition, so we need ≥1 reference outside
+    // the heading. Adversarial-review fix (HIGH FN): count `FR-N` hits
+    // ONLY in non-heading lines so a self-citation inside the heading
+    // (`## FR-1: See FR-1 for context`) doesn't suppress the orphan.
+    const refRe = new RegExp(`\\b${fr}\\b`, 'g');
+    const headingPrefixRe = /^#{1,6}\s/;
+    let externalRefs = 0;
     for (const f of files) {
-      const re = new RegExp(`\\b${fr}\\b`, 'g');
-      const matches = f.body.match(re);
-      if (matches) hits += matches.length;
+      for (const line of f.body.split(/\r?\n/)) {
+        if (headingPrefixRe.test(line)) continue;
+        refRe.lastIndex = 0;
+        const matches = line.match(refRe);
+        if (matches) externalRefs += matches.length;
+      }
     }
-    if (refs.has(fr) && hits >= 2) continue;
+    if (externalRefs >= 1) continue;
     if (featureTags.has(fr)) continue;
     out.push({
       code: 'spec-only/orphan-FR',

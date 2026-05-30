@@ -19,6 +19,62 @@ All notable changes to this feature will be documented in this file.
     `cross-spec/enum-divergence`, `cross-spec/module-ownership-conflict`.
   19 of the 28-code matrix now ship; 9 remain as small follow-ups.
 
+### Fixed (batch-8 — 2nd adversarial-review pass closes 8 HIGH + 2 MEDIUM bugs)
+
+Second workflow `w3au0fmaq` (5 skeptics + 1 integration auditor + 1
+synthesizer) attacked all 28 codes. 36 raw findings → 14 retained → 8
+HIGH. All 8 closed plus 2 MEDIUM with one-line fixes.
+
+- **`impl-drift/missing-test` HIGH FN** — `@feature05` produced `FR-05`
+  which never matched `FR-5`. `collectFeatureTags` now strips leading
+  zeros via `parseInt(..., 10)`.
+- **`cross-spec/cli-flag-drift` HIGH FP** — flags inside fenced
+  ```bash``` blocks fired as real CLI declarations. Added
+  `stripFencedBlocks(f.body)` before the regex scan.
+- **`cross-spec/enum-divergence` HIGH FP** — enum values inside fenced
+  blocks fired as real schema. Same `stripFencedBlocks` fix.
+- **`spec-only/missing-fr-section` HIGH FP** — FR refs inside fenced
+  blocks counted as citations. Same `stripFencedBlocks` fix.
+- **`cross-spec/decision-locked-but-reality-diverges` HIGH FN** —
+  `Chosen: jsonwebtoken library for signing tokens` matched the whole
+  trailing prose, so the import comparison always failed. Tightened
+  regex to `(@?[\\w./-]+)` so only the package id survives.
+- **`impl-drift/dead-link` HIGH FP** — `path.isAbsolute('/GUIDE.md')`
+  is true on POSIX, resolving from filesystem root. Now treats
+  leading-`/` as repo-root relative on every OS.
+- **`spec-only/orphan-FR` HIGH FN** — `## FR-1: See FR-1 for context`
+  counted the heading-line ref as external, so a self-citation in the
+  heading suppressed the orphan finding. Now counts FR-N occurrences
+  **only on non-heading lines** (`^#{1,6}\\s` lines skipped).
+- **`cross-spec/contradictory-nfr` MEDIUM FN** — `latency: 200ms` vs
+  `latency: 2s` bucketed separately and never triggered. Now
+  normalises seconds → milliseconds before composing the bucket key.
+- **`schema-drift/json-shape-drift` MEDIUM FP** — heading match was
+  too narrow (`Schema|Keys`). Widened to include `Shape|Fields|Structure`.
+- **within-spec duplicate FR id rename** — was emitting under
+  `cross-spec/duplicate-fr-id` even though both definitions live in
+  the same spec. Renamed to `spec-only/duplicate-fr-id` so reports
+  can distinguish orthogonal issues at a glance. The cross-spec code
+  remains for genuinely-cross-spec collisions.
+
+Integration auditor finding (decision-locked attribution): turned out
+to be a false alarm — `findLockedDecisionDrift` is called from the
+per-slug loop and pushed directly into `findings[]`, so it never
+touches the cross-spec attribution loop. No `spec_a`/`spec_b` needed.
+
+10 regression tests pinned in reconcile.test.ts (one per fix). Live
+smoke `.dev-pomogator-tmp/smoke-b8.mjs` verifies all 10 on real tmpdir
+fixtures.
+
+Honest take from the synthesizer (verbatim): "Solid 7/10 — fixable in
+an afternoon, not a rewrite. About a third of skeptic claims dissolved
+on close reading (code already does the right thing). However, a
+clear systemic gap remains: `stripFencedBlocks` is applied in some
+collectors (identifiers) but forgotten in CLI flags, enums, FR refs,
+JSON schema — every fenced-block-blindness FP traces back to that
+inconsistency. Single grep-and-wrap pass would close 4 findings." —
+fixed in this batch.
+
 ### Added (batch-7 — final 9 finding codes, 28-code matrix COMPLETE)
 
 Designed via parallel workflow `wzbmwybag` (3 research agents + 1

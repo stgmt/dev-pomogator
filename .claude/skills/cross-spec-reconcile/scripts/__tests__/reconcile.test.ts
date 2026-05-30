@@ -415,15 +415,16 @@ describe('reconcileLight — finding-code coverage', () => {
     ).toBeUndefined();
   });
 
-  it('FIX: cross-spec/duplicate-fr-id — fires for WITHIN-spec duplicate headings', () => {
+  it('FIX: spec-only/duplicate-fr-id — fires for WITHIN-spec duplicate headings (renamed in batch-8)', () => {
     seedSpec(root, 'sp-dup', {
       'FR.md': '## FR-1: first\nA\n\n## FR-1: duplicate\nB\n',
     });
     const [report] = reconcileLight({ repoRoot: root, slugs: ['sp-dup'] });
-    const dup = report.findings.find((f) => f.code === 'cross-spec/duplicate-fr-id');
+    // Batch-8: within-spec duplicate now emits under `spec-only/duplicate-fr-id`
+    // to distinguish from cross-spec collisions.
+    const dup = report.findings.find((f) => f.code === 'spec-only/duplicate-fr-id');
     expect(dup).toBeDefined();
-    expect(dup!.spec_a).toContain('sp-dup');
-    expect(dup!.spec_b).toContain('sp-dup');
+    expect(dup!.referenced_in).toContain('sp-dup');
   });
 
   it('FIX: module-ownership — identical trailing-glob path collides', () => {
@@ -607,6 +608,119 @@ describe('reconcileLight — finding-code coverage', () => {
     });
     const [report] = reconcileLight({ repoRoot: root, slugs: ['sp-dl-ok'] });
     expect(report.findings.find((f) => f.code === 'cross-spec/decision-locked-but-reality-diverges')).toBeUndefined();
+  });
+
+  // ---- Batch-8 adversarial-review-2 regression pins ----
+
+  it('FIX: missing-test — `@feature05` with leading zero maps to FR-5 (no false orphan)', () => {
+    seedSpec(root, 'sp-lz', {
+      'FR.md': '## FR-5: Login\n',
+      'x.feature': 'Feature: x\n  @feature05\n  Scenario: y\n    Given step\n',
+    });
+    const [report] = reconcileLight({ repoRoot: root, slugs: ['sp-lz'] });
+    expect(report.findings.find((f) => f.code === 'impl-drift/missing-test')).toBeUndefined();
+  });
+
+  it('FIX: cli-flag-drift — flags inside fenced ```bash``` blocks suppressed', () => {
+    seedSpec(root, 'sp-cli-fb-a', {
+      'FR.md': '## FR-1\n```bash\n--targetdir example\n```\n',
+    });
+    seedSpec(root, 'sp-cli-fb-b', {
+      'FR.md': '## FR-2\n```bash\n--target-dir example\n```\n',
+    });
+    const reports = reconcileLight({ repoRoot: root });
+    expect(
+      reports.flatMap((r) => r.findings).find((f) => f.code === 'cross-spec/cli-flag-drift'),
+    ).toBeUndefined();
+  });
+
+  it('FIX: enum-divergence — values inside fenced blocks suppressed', () => {
+    seedSpec(root, 'sp-en-fb-a', {
+      'FR.md': '## FR-1\n```\n### Values\nValues: a | b\n```\n',
+    });
+    seedSpec(root, 'sp-en-fb-b', {
+      'FR.md': '## FR-2\n```\n### Values\nValues: c | d\n```\n',
+    });
+    const reports = reconcileLight({ repoRoot: root });
+    expect(
+      reports.flatMap((r) => r.findings).find((f) => f.code === 'cross-spec/enum-divergence'),
+    ).toBeUndefined();
+  });
+
+  it('FIX: missing-fr-section — FR refs inside fenced ```ts``` blocks suppressed', () => {
+    seedSpec(root, 'sp-fr-fb', {
+      'FR.md': '## FR-1: Defined\n```ts\n// example referencing FR-99\n```\n',
+    });
+    const [report] = reconcileLight({ repoRoot: root, slugs: ['sp-fr-fb'] });
+    expect(report.findings.find((f) => f.code === 'spec-only/missing-fr-section')).toBeUndefined();
+  });
+
+  it('FIX: decision-locked — chosen regex now captures only package id, not trailing prose', () => {
+    fs.mkdirSync(path.join(root, 'src/auth'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'src/auth/jwt.ts'),
+      'import jose from "jose";\nexport function sign() {}\n',
+    );
+    seedSpec(root, 'sp-dl-prose', {
+      'DECISIONS.md':
+        '## Decision: jwt-library\n\nStatus: LOCKED\nChosen: jsonwebtoken library for signing tokens\nImplemented in: `src/auth/jwt.ts`\n',
+    });
+    const [report] = reconcileLight({ repoRoot: root, slugs: ['sp-dl-prose'] });
+    const drift = report.findings.find((f) => f.code === 'cross-spec/decision-locked-but-reality-diverges');
+    expect(drift).toBeDefined();
+    expect(drift!.suggested_fix).toContain('jsonwebtoken');
+  });
+
+  it('FIX: dead-link — leading-slash path resolves against repoRoot, not POSIX root', () => {
+    fs.writeFileSync(path.join(root, 'GUIDE.md'), '# Guide\n');
+    seedSpec(root, 'sp-dl-abs', {
+      'FR.md': '## FR-1\nSee [guide](/GUIDE.md).\n',
+    });
+    const [report] = reconcileLight({ repoRoot: root, slugs: ['sp-dl-abs'] });
+    expect(report.findings.find((f) => f.code === 'impl-drift/dead-link')).toBeUndefined();
+  });
+
+  it('FIX: orphan-FR — self-citation in heading no longer counts as external reference', () => {
+    seedSpec(root, 'sp-self-cite', {
+      'FR.md': '## FR-1: See FR-1 for context\nNo references in body at all.\n',
+    });
+    const [report] = reconcileLight({ repoRoot: root, slugs: ['sp-self-cite'] });
+    const orphan = report.findings.find((f) => f.code === 'spec-only/orphan-FR');
+    expect(orphan).toBeDefined();
+  });
+
+  it('FIX: contradictory-nfr — `s` and `ms` units normalised to same bucket', () => {
+    seedSpec(root, 'sp-nfr-s-a', {
+      'DESIGN.md': '## Performance\nMax API latency: 200ms target.\n',
+    });
+    seedSpec(root, 'sp-nfr-s-b', {
+      'DESIGN.md': '## Performance\nAPI latency budget: 2s enforced.\n',
+    });
+    const reports = reconcileLight({ repoRoot: root });
+    const contradiction = reports
+      .flatMap((r) => r.findings)
+      .find((f) => f.code === 'cross-spec/contradictory-nfr');
+    expect(contradiction).toBeDefined();
+    expect(contradiction!.suggested_fix).toMatch(/200ms.*2000ms|2000ms.*200ms/);
+  });
+
+  it('FIX: within-spec duplicate-fr-id now uses spec-only/duplicate-fr-id code', () => {
+    seedSpec(root, 'sp-within-dup', {
+      'FR.md': '## FR-1: first\nA\n\n## FR-1: dup\nB\n',
+    });
+    const [report] = reconcileLight({ repoRoot: root, slugs: ['sp-within-dup'] });
+    const withinDup = report.findings.find((f) => f.code === 'spec-only/duplicate-fr-id');
+    expect(withinDup).toBeDefined();
+  });
+
+  it('FIX: json-shape-drift — heading match widened to "Fields" / "Shape" / "Structure"', () => {
+    seedSpec(root, 'sp-fields', {
+      'SCHEMA.md': '## Data Fields\n\n- `version`\n- `phase`\n',
+      'data.json': JSON.stringify({ version: 4, extra: 'x' }, null, 2),
+    });
+    const [report] = reconcileLight({ repoRoot: root, slugs: ['sp-fields'] });
+    const drift = report.findings.find((f) => f.code === 'schema-drift/json-shape-drift');
+    expect(drift).toBeDefined();
   });
 });
 
