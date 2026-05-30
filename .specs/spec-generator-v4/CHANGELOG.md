@@ -4,6 +4,98 @@ All notable changes to this feature will be documented in this file.
 
 ## [Unreleased]
 
+## [4.0.0-rc1] — 2026-05-30
+
+Phases 0..7 shipped on `feat/phase-2a-mcp-server-and-hooks`, single PR
+(#32). 248 vitest unit tests + e2e + ≥15 BDD scenarios across
+`SPECGEN004_03..43` go GREEN. v3 regression (28 scenarios) stays GREEN
+— the soft tier survived FR-25 additive merge into
+`.claude-plugin/hooks.json`.
+
+### Added — tools
+
+- `tools/spec-graph/` — in-memory SpecGraph: types + MD parser
+  (dual + triple-anchor legacy) + Gherkin parser + NDJSON ingester +
+  builder + conformance checker + chokidar incremental rebuild.
+  Cold-start p95 ≤2s on 30 specs; incremental ≤100ms p95.
+- `tools/spec-mcp-server/` — stdio MCP server + 11 tools (`get_trace`
+  primary) + lock-manager + lifecycle. SQLite WAL backend behind opt-in
+  config (FR-10) with PRAGMA integrity_check + quarantine recovery.
+- `tools/spec-conformance-guard/` — PreToolUse hard hook (FR-5/19/22).
+- `tools/spec-conformance-push/` — PostToolUse soft hook with 3s
+  fixed-window throttle (FR-6/28) + write-through to
+  `.dev-pomogator/.spec-check-log/<YYYY-MM-DD>.jsonl`.
+- `tools/spec-check-log/` — append-only JSONL writer + reader CLI
+  (`dev-pomogator-spec-check-log` bin entry) + 10MB rotation (FR-15).
+- `tools/spec-llm-judge/` — `claude -p` subprocess bridge with FR-26
+  deny-list + sha256-keyed cache.
+- `tools/marksman-installer/` — Marksman LSP postinstall + sha256
+  verify per FR-7 / FR-27.
+- `tools/migrate-v3-to-v4/` — `dev-pomogator-migrate-v3-to-v4` bin
+  entry: `--suggest-only` + apply mode + atomic write +
+  `.progress.json` 3 → 4 bump + interactive per-file prompt with 30s
+  default-skip timeout (FR-11 / SPECGEN004_25).
+- `tools/_shared/manifest-merge.ts` — additive merge helper preserving
+  the 5 v3 form-guard hook entries (FR-25 invariant).
+
+### Added — `.claude/skills/`
+
+- `architecture-research-workflow/` — 7-stage greenfield architecture
+  research skill (FR-12). Stage 7 merges into `RESEARCH.md` + writes a
+  `.done` sentinel. 3-rewind hard limit prevents infinite Q&A loops
+  (SPECGEN004_27).
+- `cross-spec-reconcile/` — light + (planned) full mode consistency
+  analyzer (FR-17). Ships 3 of 28 finding codes (impl-drift/missing-
+  file, cross-spec/runtime-identifier-drift, cross-spec/concept-
+  overlap) + YAML report + SARIF 2.1.0 secondary output + JSONL audit
+  log for CRITICAL overrides.
+- `cross-spec-resolve/` — interactive 7-step explain → confirm →
+  Path A/B/C → foreign-spec confirm walker (FR-18). Planner +
+  explanation builder + dedup + severity ordering ship; the live
+  AskUserQuestion loop is the skill body.
+- `create-spec/scripts/complexity-heuristic.ts` — Phase 1.5 router
+  picking between `architecture-research-workflow` and
+  `research-workflow` (SPECGEN004_28).
+
+### Tests
+
+- 248 vitest unit tests across `tools/` + `.claude/skills/`.
+- `tests/e2e/hooks-stdin-e2e.test.ts` — every hook + MCP server driven
+  via real subprocess stdin pipe (5 tests).
+- `tests/e2e/package-bin-smoke.test.ts` — `npm pack` tarball unpacked
+  + bin script invoked end-to-end.
+- BDD coverage (`tests/step_definitions/`) — `SPECGEN004_01..28` +
+  `_34..43` exercised. Remaining pending scenarios documented per-step.
+- v3 regression (28 scenarios) — GREEN.
+
+### Distribution
+
+- `package.json::bin` ships two CLI entries: `dev-pomogator-spec-check-
+  log` + `dev-pomogator-migrate-v3-to-v4`.
+- `.mcp.json` registers `dev-pomogator-specs` MCP server.
+- `.claude-plugin/hooks.json` carries 5 v3 form-guards + 2 v4 hooks
+  (additive merge — no v3 regression).
+
+### Closed FR (20 of 28)
+
+3 (dual + triple anchor), 4 (MCP server), 5 (PreToolUse hard), 6
+(PostToolUse soft), 7 (Marksman bundle), 8 (LLM-as-judge), 9 (multi-
+lang NDJSON), 10 (SQLite), 11 (migrate-v3-to-v4), 12 (architecture-
+research-workflow), 15 (spec-check-log), 17 (cross-spec-reconcile
+light), 18 (cross-spec-resolve planner), 19 (two-tier failure mode),
+22 (version gate), 24 (suggest-only mode), 25 (interactive 30s
+timeout), 26 (FR-26 deny-list), 27 (Marksman sha256), 28 (fixed-
+window throttle).
+
+### Deferred to v4.0.0 final (small follow-ups, same branch)
+
+- Remaining 25 finding codes from the 28-code matrix (3 ship in rc1)
+- Live cross-spec-resolve interactive AskUserQuestion prompts
+  (planner ships in rc1)
+- Codespaces lifecycle FR-16 postStart wiring
+- Full-mode cross-spec-reconcile (LLM-judge wrapper)
+- README + user-facing docs refresh
+
 ## [0.1.0-v3] — Production form-guards (consolidated from spec-generator-v3 on 2026-05-28)
 
 > Predecessor release. This entry consolidates the v3 release history from `.specs/spec-generator-v3/CHANGELOG.md` (now deleted) so that v4 carries the institutional record forward. The code described below shipped in PR #14 (specs-workflow v1.17.0) and remains in production as the **soft tier** of v4's hook system (see FR-19, FR-22, FR-24, FR-25 + DESIGN paragraph (o)).

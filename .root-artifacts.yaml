@@ -21,3 +21,4 @@ allow:
 - .npmignore
 - .mcp.json
 - stryker.config.mjs
+- cucumber.json
