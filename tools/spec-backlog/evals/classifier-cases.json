@@ -131,6 +131,132 @@
       "id": "unrecognised-code-fallback",
       "input": { "code": "made-up/never-shipped", "severity": "WARNING" },
       "expected": { "verdict": "BACKLOG", "category": "unrecognised", "resolver": "human" }
+    },
+    {
+      "id": "runtime-id-drift-to-decision-arbiter",
+      "input": {
+        "code": "cross-spec/runtime-identifier-drift",
+        "severity": "CRITICAL",
+        "spec_a": ".specs/a (session_token = v1)",
+        "spec_b": ".specs/b (sessionToken = v2)"
+      },
+      "expected": { "verdict": "BACKLOG", "category": "contradictory-nfr", "resolver": "decision-arbiter" }
+    },
+    {
+      "id": "url-shape-drift-to-decision-arbiter",
+      "input": {
+        "code": "cross-spec/url-shape-drift",
+        "severity": "CRITICAL",
+        "spec_a": ".specs/a (/api/orders)",
+        "spec_b": ".specs/b (/api/v2/orders)"
+      },
+      "expected": { "verdict": "BACKLOG", "category": "contradictory-nfr", "resolver": "decision-arbiter" }
+    },
+    {
+      "id": "cli-flag-drift-to-decision-arbiter",
+      "input": {
+        "code": "cross-spec/cli-flag-drift",
+        "severity": "WARNING",
+        "spec_a": ".specs/a (--target-dir)",
+        "spec_b": ".specs/b (--targetdir)"
+      },
+      "expected": { "verdict": "BACKLOG", "category": "contradictory-nfr", "resolver": "decision-arbiter" }
+    },
+    {
+      "id": "enum-divergence-to-decision-arbiter",
+      "input": {
+        "code": "cross-spec/enum-divergence",
+        "severity": "CRITICAL",
+        "spec_a": ".specs/a (values: a|b|c)",
+        "spec_b": ".specs/b (values: a|b|d)"
+      },
+      "expected": { "verdict": "BACKLOG", "category": "contradictory-nfr", "resolver": "decision-arbiter" }
+    },
+    {
+      "id": "schema-mismatch-to-decision-arbiter",
+      "input": {
+        "code": "cross-spec/schema-mismatch",
+        "severity": "CRITICAL",
+        "spec_a": ".specs/a (AuthToken: sessionToken)",
+        "spec_b": ".specs/b (AuthToken: session_token)"
+      },
+      "expected": { "verdict": "BACKLOG", "category": "contradictory-nfr", "resolver": "decision-arbiter" }
+    },
+    {
+      "id": "decision-locked-to-decision-arbiter",
+      "input": {
+        "code": "cross-spec/decision-locked-but-reality-diverges",
+        "severity": "CRITICAL",
+        "referenced_in": ".specs/foo/DECISIONS.md",
+        "expected_path": "src/auth/jwt.ts"
+      },
+      "expected": { "verdict": "BACKLOG", "category": "contradictory-nfr", "resolver": "decision-arbiter" }
+    },
+    {
+      "id": "missing-symbol-to-link-fixer",
+      "input": {
+        "code": "impl-drift/missing-symbol",
+        "severity": "WARNING",
+        "referenced_in": ".specs/foo/FR.md:10",
+        "expected_path": "src/foo.ts::missingExport"
+      },
+      "expected": { "verdict": "BACKLOG", "category": "dead-link-typo", "resolver": "link-fixer" }
+    },
+    {
+      "id": "missing-acceptance-to-ac-author",
+      "input": {
+        "code": "spec-only/missing-acceptance",
+        "severity": "WARNING",
+        "referenced_in": ".specs/foo/FR.md"
+      },
+      "expected": { "verdict": "BACKLOG", "category": "missing-spec-file", "resolver": "ac-author" }
+    },
+    {
+      "id": "orphan-AC-to-fr-author",
+      "input": {
+        "code": "spec-only/orphan-AC",
+        "severity": "INFO",
+        "referenced_in": ".specs/foo/ACCEPTANCE_CRITERIA.md:5"
+      },
+      "expected": { "verdict": "BACKLOG", "category": "missing-fr-section", "resolver": "fr-author" }
+    },
+    {
+      "id": "missing-feature-heading-auto",
+      "input": {
+        "code": "schema-drift/missing-feature-heading",
+        "severity": "CRITICAL",
+        "referenced_in": ".specs/foo/foo.feature"
+      },
+      "expected": { "verdict": "AUTO_FIX", "category": null, "resolver": null }
+    },
+    {
+      "id": "invalid-frontmatter-noise",
+      "input": { "code": "schema-drift/invalid-frontmatter", "severity": "WARNING" },
+      "expected": { "verdict": "NOISE", "category": null, "resolver": null }
+    },
+    {
+      "id": "contradictory-fr-to-human",
+      "input": {
+        "code": "cross-spec/contradictory-fr",
+        "severity": "CRITICAL",
+        "spec_a": ".specs/a (FR-1: Auth)",
+        "spec_b": ".specs/b (FR-1: Cart)"
+      },
+      "expected": { "verdict": "BACKLOG", "category": "unrecognised", "resolver": "human" }
+    },
+    {
+      "id": "empty-code-fallback",
+      "input": { "code": "", "severity": "INFO" },
+      "expected": { "verdict": "BACKLOG", "category": "unrecognised", "resolver": "human" }
+    },
+    {
+      "id": "dead-link-empty-target",
+      "input": {
+        "code": "impl-drift/dead-link",
+        "severity": "WARNING",
+        "expected_path": ""
+      },
+      "expected": { "verdict": "BACKLOG", "category": "dead-link-typo", "resolver": "link-fixer" }
     }
   ]
 }

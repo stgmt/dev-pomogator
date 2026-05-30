@@ -83,17 +83,68 @@ function runBench(specCount: number, frPerSpec: number): BenchResult {
   }
 }
 
+/** Warm-dedup bench: same corpus but pre-populated backlog → measures the dedup hit path. */
+function runWarmDedup(specCount: number, frPerSpec: number): BenchResult {
+  const root = path.join(os.tmpdir(), `bench-warm-${randomUUID()}`);
+  fs.mkdirSync(root, { recursive: true });
+  try {
+    for (let i = 0; i < specCount; i++) seedSpec(root, `bench-spec-${i}`, frPerSpec);
+    // Cold prepass — populate backlog
+    const cold = reconcileLight({ repoRoot: root });
+    for (const r of cold) {
+      for (const f of r.findings) {
+        const v = classify(r.specSlug, f);
+        if (v.verdict !== 'BACKLOG' || !v.entry) continue;
+        const id = entryId(r.specSlug, f.code, v.entry.evidence);
+        if (readEntry(root, id)) continue;
+        appendEntry(root, v.entry);
+      }
+    }
+    // Now measure WARM run — every entry should hit dedup
+    const t0 = performance.now();
+    const reports = reconcileLight({ repoRoot: root });
+    const t1 = performance.now();
+    let dedupHits = 0;
+    let appended = 0;
+    for (const r of reports) {
+      for (const f of r.findings) {
+        const v = classify(r.specSlug, f);
+        if (v.verdict !== 'BACKLOG' || !v.entry) continue;
+        const id = entryId(r.specSlug, f.code, v.entry.evidence);
+        if (readEntry(root, id)) {
+          dedupHits++;
+          continue;
+        }
+        appendEntry(root, v.entry);
+        appended++;
+      }
+    }
+    const t3 = performance.now();
+    return {
+      specs: specCount,
+      findings_total: reports.reduce((a, r) => a + r.findings.length, 0),
+      backlog_queued: appended,
+      ms_reconcile: Math.round(t1 - t0),
+      ms_classify: 0,
+      ms_append: Math.round(t3 - t1),
+      ms_total: Math.round(t3 - t0),
+    };
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+}
+
 function main(): void {
   const SIZES = [
     { specs: 1, fr: 5 },
     { specs: 10, fr: 10 },
     { specs: 30, fr: 10 },
-    { specs: 48, fr: 15 },
+    { specs: 50, fr: 12 },
+    { specs: 100, fr: 10 },
   ];
   console.log(
-    'specs | FR/spec | findings | queued | reconcile (ms) | classify (ms) | append (ms) | total (ms)',
-  );
-  console.log(
+    '\n=== COLD-START INGEST (empty backlog) ===\n' +
+    'specs | FR/spec | findings | queued | reconcile (ms) | classify (ms) | append (ms) | total (ms)\n' +
     '------|---------|----------|--------|----------------|---------------|-------------|----------',
   );
   const results: BenchResult[] = [];
@@ -110,6 +161,25 @@ function main(): void {
         `${result.ms_total.toString().padStart(8)}`,
     );
   }
+
+  console.log(
+    '\n=== WARM-DEDUP INGEST (pre-populated backlog) ===\n' +
+    'specs | FR/spec | findings | new-queued | reconcile (ms) | dedup+append (ms) | total (ms)\n' +
+    '------|---------|----------|------------|----------------|-------------------|----------',
+  );
+  // Warm-dedup only for medium+large corpora (cold prepass cost dominates small ones)
+  for (const size of SIZES.slice(1)) {
+    const warm = runWarmDedup(size.specs, size.fr);
+    console.log(
+      `${warm.specs.toString().padStart(5)} | ${size.fr.toString().padStart(7)} | ` +
+        `${warm.findings_total.toString().padStart(8)} | ` +
+        `${warm.backlog_queued.toString().padStart(10)} | ` +
+        `${warm.ms_reconcile.toString().padStart(14)} | ` +
+        `${warm.ms_append.toString().padStart(17)} | ` +
+        `${warm.ms_total.toString().padStart(8)}`,
+    );
+  }
+
   // NFR check: 30 specs cold-start ≤ 2000 ms
   const benchmark30 = results.find((r) => r.specs === 30);
   if (benchmark30 && benchmark30.ms_total > 2000) {
@@ -119,6 +189,14 @@ function main(): void {
     process.exit(1);
   }
   console.log('\nNFR-Performance-1 budget (30 specs ≤2s): ✓');
+
+  // Soft check: 100 specs ≤ 10s (early warning for scale regression)
+  const benchmark100 = results.find((r) => r.specs === 100);
+  if (benchmark100 && benchmark100.ms_total > 10000) {
+    console.log(
+      `\n⚠️  Scale regression: 100-spec cold ${benchmark100.ms_total}ms > 10s soft budget`,
+    );
+  }
 }
 
 main();

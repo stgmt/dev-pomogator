@@ -157,6 +157,47 @@ async function main(): Promise<void> {
       .map((slug) => path.join(root, '.specs', slug, 'ACCEPTANCE_CRITERIA.md'))
       .filter(fs.existsSync);
 
+    // CONTENT check: each AC.md must contain `## AC-1 (FR-1)` for the
+    // first FR of its spec (proves resolver wrote real structured output,
+    // not just an empty file).
+    let acContentOk = 0;
+    for (const f of acFiles) {
+      const body = fs.readFileSync(f, 'utf8');
+      if (body.includes('## AC-1 (FR-1)') && body.includes('WHEN')) acContentOk++;
+    }
+
+    // PHASE 4: idempotency — re-run ingest on UNCHANGED corpus
+    // (no resolver between calls) so we measure pure dedup, not new
+    // findings that surfaced post-resolution.
+    const root2 = path.join(os.tmpdir(), `e2e-idem-${randomUUID()}`);
+    fs.mkdirSync(root2, { recursive: true });
+    try {
+      for (let i = 1; i <= 2; i++) {
+        const slug = `idem-spec-${i}`;
+        fs.mkdirSync(path.join(root2, '.specs', slug), { recursive: true });
+        fs.writeFileSync(
+          path.join(root2, '.specs', slug, 'FR.md'),
+          `## FR-1: Item ${i}\nSee [AC-1](ACCEPTANCE_CRITERIA.md#ac-1).\n`,
+        );
+      }
+      const firstQueued = ingest(root2);
+      const beforeIngest = tallyBacklog(root2).open;
+      const idempQueued = ingest(root2);
+      const afterIngest = tallyBacklog(root2).open;
+      // assertions captured below
+      var p4Detail = `firstQueued=${firstQueued}, idemQueued=${idempQueued}, open before=${beforeIngest} after=${afterIngest}`;
+      var p4Ok = idempQueued === 0 && beforeIngest === afterIngest;
+    } finally {
+      fs.rmSync(root2, { recursive: true, force: true });
+    }
+
+    // PHASE 5: AUTO_FIX negative — verify NO backlog entries for AUTO_FIX codes
+    // (cross-spec/missing-cross-ref is classified AUTO_FIX, never enters backlog)
+    const seenAutoFixCategories = new Set<string>();
+    for (const e of readOpen(root)) seenAutoFixCategories.add(e.category);
+    const autoFixLeaked =
+      seenAutoFixCategories.has('add-markdown-link-on-first-mention');
+
     console.log('\n=== E2E Pipeline Test ===\n');
     console.log(JSON.stringify(phase1, null, 2));
     console.log(JSON.stringify(phase2, null, 2));
@@ -181,6 +222,20 @@ async function main(): Promise<void> {
           (phase3.by_code['impl-drift/dead-link'] ?? 0) <
           (phase1.by_code['impl-drift/dead-link'] ?? 99),
         detail: `${phase1.by_code['impl-drift/dead-link'] ?? 0} → ${phase3.by_code['impl-drift/dead-link'] ?? 0}`,
+      },
+      {
+        name: 'P3: AC.md CONTENT correct (not just file exists)',
+        ok: acContentOk === 3,
+        detail: `${acContentOk}/3 files contain '## AC-1 (FR-1)' + 'WHEN'`,
+      },
+      {
+        name: 'P4: idempotent re-ingest queues 0 new entries (unchanged corpus)',
+        ok: p4Ok,
+        detail: p4Detail,
+      },
+      {
+        name: 'P5: AUTO_FIX codes never leak into backlog',
+        ok: !autoFixLeaked,
       },
       {
         name: 'Performance: full E2E ≤5 seconds',

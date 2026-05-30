@@ -214,6 +214,102 @@ export function classify(slug: string, finding: InputFinding): ClassificationRes
     };
   }
 
+  // Batch-16 (eval-coverage workflow w0w45s96f): the 11 cross-spec codes
+  // below were silently falling to 'unrecognised'. Route them explicitly.
+  if (
+    code === 'cross-spec/runtime-identifier-drift' ||
+    code === 'cross-spec/url-shape-drift' ||
+    code === 'cross-spec/cli-flag-drift' ||
+    code === 'cross-spec/enum-divergence' ||
+    code === 'cross-spec/schema-mismatch'
+  ) {
+    return {
+      verdict: 'BACKLOG',
+      entry: {
+        slug, code,
+        category: 'contradictory-nfr',
+        evidence: { spec_a: finding.spec_a, spec_b: finding.spec_b },
+        suggested_resolver: 'decision-arbiter',
+        difficulty: 'hard',
+      },
+    };
+  }
+  if (code === 'cross-spec/decision-locked-but-reality-diverges') {
+    return {
+      verdict: 'BACKLOG',
+      entry: {
+        slug, code,
+        category: 'contradictory-nfr',
+        evidence: { file: finding.referenced_in, target: finding.expected_path },
+        suggested_resolver: 'decision-arbiter',
+        difficulty: 'hard',
+      },
+    };
+  }
+  if (code === 'impl-drift/missing-symbol') {
+    return {
+      verdict: 'BACKLOG',
+      entry: {
+        slug, code,
+        category: 'dead-link-typo',
+        evidence: { file: finding.referenced_in, target: finding.expected_path },
+        suggested_resolver: 'link-fixer',
+        difficulty: 'medium',
+      },
+    };
+  }
+  if (code === 'spec-only/missing-acceptance') {
+    return {
+      verdict: 'BACKLOG',
+      entry: {
+        slug, code,
+        category: 'missing-spec-file',
+        evidence: { file: finding.referenced_in, target: 'ACCEPTANCE_CRITERIA.md' },
+        suggested_resolver: 'ac-author',
+        difficulty: 'medium',
+      },
+    };
+  }
+  if (code === 'spec-only/orphan-AC') {
+    return {
+      verdict: 'BACKLOG',
+      entry: {
+        slug, code,
+        category: 'missing-fr-section',
+        evidence: { file: finding.referenced_in },
+        suggested_resolver: 'fr-author',
+        difficulty: 'medium',
+      },
+    };
+  }
+  if (code === 'schema-drift/missing-feature-heading') {
+    // Mechanical fix: add `Feature: <slug>` line at top of .feature file.
+    return {
+      verdict: 'AUTO_FIX',
+      autoFixRule: 'add-feature-heading-line',
+    };
+  }
+  if (code === 'schema-drift/invalid-frontmatter') {
+    return {
+      verdict: 'NOISE',
+      noiseReason:
+        'Gherkin parsers accept missing trailing newline / language directive in practice — pedantic.',
+    };
+  }
+  if (code === 'cross-spec/contradictory-fr') {
+    // Only fires in shared-namespace mode — same-FR with divergent prose.
+    return {
+      verdict: 'BACKLOG',
+      entry: {
+        slug, code,
+        category: 'unrecognised',
+        evidence: { spec_a: finding.spec_a, spec_b: finding.spec_b },
+        suggested_resolver: 'human',
+        difficulty: 'hard',
+      },
+    };
+  }
+
   // Unrecognised — bucket into backlog with a generic resolver so nothing
   // is silently dropped. Specialist may take over later.
   return {
