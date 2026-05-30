@@ -72,6 +72,21 @@ AND writes a parallel JSONL line to
 `../cross-spec-reconcile/scripts/overrides-log.ts`. The two records
 together let an auditor reconstruct who overrode what.
 
+## Scripts
+
+- `scripts/walker.ts` — planner: reads the YAML, groups by severity →
+  class → location, builds the 5-field explanation block per finding.
+  Steps 1–3 of the loop.
+- `scripts/update-status.ts` — step-7 closer: atomically rewrites the
+  YAML to stamp `resolution_status` + `resolved_at` (+ `override_reason`
+  for CRITICAL acknowledgments) on each handled finding. Drops nothing
+  — unmatched decisions are reported via the result counters so the
+  caller can warn.
+
+The live AskUserQuestion loop (step 4) and Path A/B/C dispatch (step 5)
+stay in this skill body — the scripts give the agent the pre-shaped
+data + the audit-safe write helper, the skill provides the dialogue.
+
 ## See also
 
 - `../cross-spec-reconcile/SKILL.md` — the analyzer that produces the YAML

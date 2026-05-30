@@ -5,7 +5,7 @@
 // Produces a `consistency-report.yaml`-shaped object. Caller writes to
 // disk (see yaml-writer.ts).
 //
-// Output finding codes (rc1 + post-rc1 expansion — 8 of 28 ship):
+// Output finding codes (rc1 + post-rc1 expansion — 11 of 28 ship):
 //   • impl-drift/missing-file              — FR/AC references a path that doesn't exist
 //   • cross-spec/concept-overlap           — ≥3 shared concept-nouns between two specs without reference
 //   • cross-spec/runtime-identifier-drift  — same concept named differently in two specs
@@ -14,8 +14,11 @@
 //   • cross-spec/contradictory-fr          — same FR id in two specs with contradictory text
 //   • cross-spec/duplicate-fr-id           — two specs both define the same FR-N (collision)
 //   • impl-drift/test-without-fr           — @featureN tag in a .feature with no matching FR in any spec
+//   • spec-only/orphan-task                — TASKS.md task block with no FR-N citation
+//   • spec-only/missing-fr-section         — body cites FR-N but no `## FR-N:` heading defines it
+//   • schema-drift/missing-feature-heading — .feature file without a `Feature:` line
 //
-// The remaining 20 codes from the 28-code matrix land in the same
+// The remaining 17 codes from the 28-code matrix land in the same
 // branch as further small follow-ups; this file owns the mechanical
 // (LLM-free) subset.
 
@@ -180,6 +183,98 @@ function findRuntimeIdentifierDrift(
         }
       }
     }
+  }
+  return out;
+}
+
+/** Find TASKS.md task blocks with NO `FR-N` citation in their body. */
+function findOrphanTasks(
+  files: { body: string; path: string }[],
+  repoRoot: string,
+): Finding[] {
+  const out: Finding[] = [];
+  for (const f of files) {
+    if (!/TASKS\.md$/i.test(f.path)) continue;
+    // Split on `### ` headings (task blocks) — anything between two `### ` is one task.
+    const blocks = f.body.split(/^### /m).slice(1);
+    let lineCursor = 1;
+    for (const block of blocks) {
+      const firstLine = block.split(/\r?\n/)[0];
+      const blockLines = block.split(/\r?\n/).length;
+      const hasFrRef = /\bFR-\d+\b/.test(block);
+      if (!hasFrRef) {
+        out.push({
+          code: 'spec-only/orphan-task',
+          class: 'spec-only',
+          severity: 'WARNING',
+          referenced_in: `${path.relative(repoRoot, f.path)}:${lineCursor + 1}`,
+          suggested_fix:
+            `Task "${firstLine.slice(0, 60)}" cites no FR — add an FR-N back-reference or mark as infra-only.`,
+        });
+      }
+      lineCursor += blockLines - 1;
+    }
+  }
+  return out;
+}
+
+/** Body cites `FR-N` but no `## FR-N:` heading exists anywhere in the spec. */
+function findMissingFrSections(
+  files: { body: string; path: string }[],
+  repoRoot: string,
+): Finding[] {
+  const defs = collectFrDefinitions(files);
+  const cited = new Set<string>();
+  for (const f of files) {
+    let m: RegExpExecArray | null;
+    FR_REF_RE.lastIndex = 0;
+    while ((m = FR_REF_RE.exec(f.body)) !== null) cited.add(m[0]);
+  }
+  const out: Finding[] = [];
+  for (const fr of cited) {
+    if (defs.has(fr)) continue;
+    // Locate first citation for the actionable hint.
+    let where = '';
+    for (const f of files) {
+      const idx = f.body.search(new RegExp(`\\b${fr}\\b`));
+      if (idx === -1) continue;
+      const lineNum = f.body.slice(0, idx).split(/\r?\n/).length;
+      where = `${path.relative(repoRoot, f.path)}:${lineNum}`;
+      break;
+    }
+    out.push({
+      code: 'spec-only/missing-fr-section',
+      class: 'spec-only',
+      severity: 'WARNING',
+      referenced_in: where,
+      suggested_fix:
+        `${fr} is cited but no \`## ${fr}:\` heading exists — add the FR definition or remove the citation.`,
+    });
+  }
+  return out;
+}
+
+/** .feature file without a `Feature:` line — schema drift, parser will reject. */
+function findMissingFeatureHeadings(
+  repoRoot: string,
+  slug: string,
+): Finding[] {
+  const dir = path.join(repoRoot, '.specs', slug);
+  if (!fs.existsSync(dir)) return [];
+  const out: Finding[] = [];
+  for (const name of fs.readdirSync(dir)) {
+    if (!name.endsWith('.feature')) continue;
+    const abs = path.join(dir, name);
+    const body = fs.readFileSync(abs, 'utf8');
+    if (/^Feature:\s+\S/m.test(body)) continue;
+    out.push({
+      code: 'schema-drift/missing-feature-heading',
+      class: 'schema-drift',
+      severity: 'CRITICAL',
+      referenced_in: `.specs/${slug}/${name}`,
+      suggested_fix:
+        'Every .feature file must start with `Feature: <name>` — Gherkin parser rejects the file otherwise.',
+    });
   }
   return out;
 }
@@ -458,6 +553,9 @@ export function reconcileLight(opts: ReconcileOptions): ReconcileResult[] {
     findings.push(...findOrphanFRs(files, featureTags, opts.repoRoot));
     findings.push(...findUncoveredACs(files, featureTags, opts.repoRoot));
     findings.push(...findTestsWithoutFR(opts.repoRoot, slug, allFrDefs));
+    findings.push(...findOrphanTasks(files, opts.repoRoot));
+    findings.push(...findMissingFrSections(files, opts.repoRoot));
+    findings.push(...findMissingFeatureHeadings(opts.repoRoot, slug));
     // Attribute cross-spec findings to BOTH specs they touch. Normalise
     // OS path separators so the `.specs/<slug>` substring match works on
     // Windows + POSIX.

@@ -67,6 +67,70 @@ Canonical Claude Code marketplace plugin — командные стандарт
 | `dev-pomogator-uninstall` | Removal utility |
 | ... + others (skills/discovery-forms, requirements-chk-matrix, task-board-forms, variant-matrix-build для create-spec ecosystem) |
 
+## v4: spec-generator (rc1)
+
+The `spec-generator-v4` track ships an MCP server + two hooks + a
+mechanical cross-spec consistency analyzer on top of the existing
+form-guards (v3 soft tier, preserved). Status: rc1 on
+`feat/phase-2a-mcp-server-and-hooks` / PR #32.
+
+- **`tools/spec-mcp-server/`** — stdio MCP server registered in
+  `.mcp.json` as `dev-pomogator-specs`. 11 read-only tools over an
+  in-memory SpecGraph (`get_trace` primary, plus `find_by_tags` /
+  `conformance_check` / `search` / `get_node` / `list_phase_tasks` /
+  `get_test_result` / `find_orphans` / `get_coverage_summary` /
+  `validate_anchor` / `list_specs`). SQLite WAL backend is opt-in
+  behind `.spec-config.json::storage.sqlite_enabled = true`.
+
+- **`tools/spec-conformance-guard/`** — PreToolUse hard hook. Denies
+  writes to `.specs/<slug>/*.md` and `.feature` files that violate
+  structural invariants (duplicate FR ids / malformed frontmatter /
+  malformed Gherkin / invalid anchor pattern). Version-gated per
+  FR-22 — `.progress.json::version < 4` → allow + log.
+
+- **`tools/spec-conformance-push/`** — PostToolUse soft hook with a
+  3-second fixed-window throttle (FR-28). Pushes aggregated conformance
+  findings back into the agent context via `<system-reminder>` blocks.
+
+- **`tools/migrate-v3-to-v4/`** — `dev-pomogator-migrate-v3-to-v4` CLI.
+  `--suggest-only` mode prints a diff; apply mode prompts per file
+  with a 30-second default-skip timeout, then atomically rewrites the
+  spec MD and bumps `.progress.json::version` from 3 → 4. Legacy
+  `### Requirement: FR-N` triple-anchor headings survive parsing.
+
+- **`.claude/skills/cross-spec-reconcile/`** — mechanical (LLM-free)
+  consistency analyzer across all `.specs/<slug>/`. 11 of the 28-code
+  finding matrix ship in rc1 — `impl-drift/missing-file`,
+  `cross-spec/runtime-identifier-drift`, `cross-spec/concept-overlap`,
+  `cross-spec/duplicate-fr-id`, `cross-spec/contradictory-fr`,
+  `spec-only/orphan-FR`, `spec-only/uncovered-AC`,
+  `spec-only/orphan-task`, `spec-only/missing-fr-section`,
+  `impl-drift/test-without-fr`, `schema-drift/missing-feature-heading`.
+  YAML + SARIF 2.1.0 output, JSONL audit log for CRITICAL overrides.
+
+- **`.claude/skills/cross-spec-resolve/`** — interactive 7-step walker
+  through the YAML report. 5-field explanation block per finding
+  (code / severity / class — files+lines — plain — WHY — options),
+  Path A/B/C dispatch for `architectural-decision-vs-reality`,
+  foreign-spec extra-confirm banner, step-7 atomic
+  `resolution_status` stamper.
+
+- **`.claude/skills/architecture-research-workflow/`** — 7-stage
+  greenfield architecture-decision skill picked by a complexity
+  heuristic (`scripts/complexity-heuristic.ts`) when the prompt
+  carries `архитектур*` / `rebuild` / `v\d+` / etc. or ≥3 component
+  nouns. 3-rewind hard limit prevents infinite Stage 5 loops.
+
+- **`tools/marksman-installer/`** — Marksman LSP postinstall with
+  sha256 verification per FR-27 against a pinned
+  `marksman-hashes.json`.
+
+- **Codespaces autostart** — `.devcontainer/scripts/post-start.sh`
+  starts the MCP server automatically when `$CODESPACES=true`,
+  honouring `.dev-pomogator/.mcp-lock.json` for stale-PID recovery.
+
+See `.specs/spec-generator-v4/CHANGELOG.md` for the full per-FR ledger.
+
 ## Migration v1 → v2
 
 Existing v1 users (installed через `npm i -g dev-pomogator` или `npx github:stgmt/dev-pomogator --claude`):

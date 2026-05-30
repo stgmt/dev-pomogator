@@ -154,6 +154,47 @@ describe('reconcileLight — finding-code coverage', () => {
     expect(orphans[0].severity).toBe('WARNING');
     expect(orphans[0].referenced_in).toContain('@fr99');
   });
+
+  it('spec-only/orphan-task fires when a TASKS.md block has no FR-N citation', () => {
+    seedSpec(root, 'spec-tasks', {
+      'TASKS.md': '### task-1\nDo something without FR ref.\n\n### task-2\nThis one references FR-1 properly.\n',
+      'FR.md': '## FR-1: Defined\n',
+    });
+    const [report] = reconcileLight({ repoRoot: root, slugs: ['spec-tasks'] });
+    const orphans = report.findings.filter((f) => f.code === 'spec-only/orphan-task');
+    expect(orphans).toHaveLength(1);
+    expect(orphans[0].suggested_fix).toContain('task-1');
+  });
+
+  it('spec-only/missing-fr-section fires when body cites FR-N but no heading defines it', () => {
+    seedSpec(root, 'spec-miss', {
+      'FR.md': '## FR-1: Login\nMentioned FR-99 here but it has no heading.\n',
+    });
+    const [report] = reconcileLight({ repoRoot: root, slugs: ['spec-miss'] });
+    const missing = report.findings.filter((f) => f.code === 'spec-only/missing-fr-section');
+    expect(missing).toHaveLength(1);
+    expect(missing[0].severity).toBe('WARNING');
+    expect(missing[0].suggested_fix).toContain('FR-99');
+  });
+
+  it('schema-drift/missing-feature-heading fires on .feature without Feature: line', () => {
+    seedSpec(root, 'spec-bad', {
+      'bad.feature': '@feature1\nScenario: but no Feature heading\n  Given step\n',
+    });
+    const [report] = reconcileLight({ repoRoot: root, slugs: ['spec-bad'] });
+    const broken = report.findings.filter((f) => f.code === 'schema-drift/missing-feature-heading');
+    expect(broken).toHaveLength(1);
+    expect(broken[0].severity).toBe('CRITICAL');
+    expect(broken[0].referenced_in).toBe('.specs/spec-bad/bad.feature');
+  });
+
+  it('schema-drift/missing-feature-heading does NOT fire on valid .feature with Feature: line', () => {
+    seedSpec(root, 'spec-good', {
+      'good.feature': 'Feature: a valid one\n\n@feature1\nScenario: covered\n  Given step\n',
+    });
+    const [report] = reconcileLight({ repoRoot: root, slugs: ['spec-good'] });
+    expect(report.findings.find((f) => f.code === 'schema-drift/missing-feature-heading')).toBeUndefined();
+  });
 });
 
 describe('emitYaml + writeReport', () => {

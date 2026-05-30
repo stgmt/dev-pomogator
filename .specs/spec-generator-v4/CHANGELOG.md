@@ -6,11 +6,19 @@ All notable changes to this feature will be documented in this file.
 
 ### Added (post-rc1, en route to v4.0.0 final)
 
-- 5 more cross-spec finding codes in `reconcile.ts`:
-  `spec-only/orphan-FR`, `spec-only/uncovered-AC`,
-  `cross-spec/duplicate-fr-id`, `cross-spec/contradictory-fr`,
-  `impl-drift/test-without-fr`. 8 of the 28-code matrix ship; 20
-  remain as small follow-ups.
+- 8 more cross-spec finding codes in `reconcile.ts` across two batches:
+  - Batch 1 (5): `spec-only/orphan-FR`, `spec-only/uncovered-AC`,
+    `cross-spec/duplicate-fr-id`, `cross-spec/contradictory-fr`,
+    `impl-drift/test-without-fr`.
+  - Batch 2 (3): `spec-only/orphan-task`, `spec-only/missing-fr-section`,
+    `schema-drift/missing-feature-heading`.
+  11 of the 28-code matrix now ship; 17 remain as small follow-ups.
+- `.claude/skills/cross-spec-resolve/scripts/update-status.ts` —
+  step-7 closer for the interactive walker. Atomic temp + rename
+  YAML mutation that stamps `resolution_status` + `resolved_at`
+  (+ `override_reason` for CRITICAL acknowledgments) onto each
+  matching `findings:` block. Reports matched / unmatched counters so
+  the caller can warn on stale-batch drift.
 - `.devcontainer/scripts/post-start.sh` — FR-16 idempotent Codespaces
   MCP autostart. Only fires when `$CODESPACES=true`, respects stale
   lock files (dead PID → clean restart), logs to
