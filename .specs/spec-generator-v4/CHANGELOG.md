@@ -19,6 +19,99 @@ All notable changes to this feature will be documented in this file.
     `cross-spec/enum-divergence`, `cross-spec/module-ownership-conflict`.
   19 of the 28-code matrix now ship; 9 remain as small follow-ups.
 
+### Added (batch-12 — spec-backlog mechanism + ac-author resolver, end-to-end PoC PROVEN)
+
+Full implementation of the backlog architecture proposed in
+`BACKLOG_DESIGN.md`. End-to-end PoC verified on real corpus:
+
+1. **`tools/spec-backlog/`** — new tool tree:
+   - `types.ts` — `BacklogEntry`, `Verdict`, `ClassificationResult`
+   - `writer.ts` — append-only JSONL at
+     `.dev-pomogator/.specs-backlog/<YYYY-MM-DD>.jsonl`, latest-line-wins
+     status semantics, deterministic `entryId(slug,code,evidence)`
+     (sha256 first-12-hex)
+   - `classifier.ts` — routes each finding to `AUTO_FIX` / `BACKLOG` /
+     `NOISE` per the 6-category mapping. Unrecognised codes still
+     bucket into backlog (no silent loss).
+   - `cli.ts` + `bin.cjs` — `dev-pomogator-spec-backlog` CLI with
+     `list`, `resolve`, `ingest` subcommands. Filters `--category`,
+     `--slug`, `--all`, `--resolvers`.
+   - `resolvers/types.ts` — `Resolver` interface (`name`,
+     `description`, `resolve(opts) → ResolverResult` with `confidence`,
+     `files_changed`, `notes`, optional `bailed_out`)
+   - `resolvers/registry.ts` — name → instance lookup
+   - `resolvers/ac-author.ts` — **first specialist resolver**. Reads
+     `<slug>/FR.md`, extracts every FR-N heading (both `## FR-N:` and
+     legacy `### Requirement: FR-N` forms), generates skeleton
+     `<slug>/ACCEPTANCE_CRITERIA.md` with one EARS WHEN/THEN section
+     per FR. Idempotent — bails with `already-exists` if target file
+     present.
+
+2. **`package.json::bin`** — new entry
+   `dev-pomogator-spec-backlog → tools/spec-backlog/bin.cjs`.
+
+3. **Tests**: 22 vitest tests pinned across 3 files:
+   - `tools/spec-backlog/__tests__/writer.test.ts` — entryId
+     determinism, JSONL append, status update, malformed-line
+     tolerance, readOpen filter (7)
+   - `tools/spec-backlog/__tests__/classifier.test.ts` — 6 category
+     routes + AUTO_FIX/NOISE branches + unrecognised fallback (9)
+   - `tools/spec-backlog/resolvers/__tests__/ac-author.test.ts` —
+     generates AC skeleton, bails on missing FR.md, idempotent on
+     existing AC.md, handles legacy `### Requirement:` headings (6)
+
+**E2E PoC walkthrough** (verified live on this repo's corpus):
+
+```
+# Ingest: classify 3,883 findings → 225 AUTO_FIX + 2,082 NOISE +
+#         1,491 BACKLOG (deduped by id)
+$ dev-pomogator-spec-backlog ingest
+Ingested 3883 findings:
+  AUTO_FIX (skipped): 225
+  NOISE (skipped):    2082
+  BACKLOG (queued):   1491 (1491 new entries, rest deduped)
+
+# List missing-spec-file entries for spec-workflow-vmodel
+$ dev-pomogator-spec-backlog list --slug spec-workflow-vmodel
+  ## missing-spec-file (7)
+  11c865d5119d [open] missing-spec-file → ac-author | FR.md:80
+  ...
+
+# Resolve via ac-author
+$ dev-pomogator-spec-backlog resolve 11c865d5119d
+[11c865d5119d] running resolver "ac-author" on slug=spec-workflow-vmodel
+  ✓ confidence=0.80 files_changed=1
+    - .specs\spec-workflow-vmodel\ACCEPTANCE_CRITERIA.md
+
+# Bulk resolve siblings — idempotency proven
+$ dev-pomogator-spec-backlog resolve --category missing-spec-file --slug spec-workflow-vmodel
+[1f316ba960e0] running resolver "ac-author"
+  ⏭ bailed: already-exists
+... all 6 sibling entries bail correctly and mark resolved.
+
+# Dogfood delta: spec-workflow-vmodel's 6 dead-link findings → 0
+# (ACCEPTANCE_CRITERIA.md now resolves).
+```
+
+**Real artifact produced**: `.specs/spec-workflow-vmodel/ACCEPTANCE_CRITERIA.md`
+— 73 lines, 6 AC sections matching the 6 FRs, each with EARS
+WHEN/THEN placeholder marked `[TBD]`. The skeleton makes the
+spec-completeness gap **visible and actionable** instead of letting
+unwrap mechanically hide it (the trap batch-11 PoC v3 surfaced).
+
+### Deferred to v4.0.1 (5 more resolvers)
+
+- `scenario-writer` (missing-test) — generates `@featureN Scenario`
+  skeletons in `<slug>.feature`
+- `owner-picker` (ownership-conflict) — reads `git log` on contested
+  path, recommends canonical owner
+- `decision-arbiter` (contradictory-nfr) — greps impl for actual
+  configured values, recommends ground-truth budget
+- `fr-author` (missing-fr-section) — drafts FR-N heading + body from
+  citation context
+- `link-fixer` (dead-link-typo) — substring-match basename against
+  repo files, rewrites link target
+
 ### Fixed (batch-10 — readiness-audit tuning, 99% CRITICAL noise reduction from rc1)
 
 Ran v4 production-readiness workflow (`wmemk9buw`: 4 parallel audit

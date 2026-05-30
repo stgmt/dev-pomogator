@@ -465,10 +465,12 @@ describe('reconcileLight — finding-code coverage', () => {
 
   // ---- Batch-7: final 9 finding codes (workflow wzbmwybag design) ----
 
-  it('impl-drift/missing-test fires for FR without matching @featureN tag', () => {
+  it('impl-drift/missing-test fires for FR without matching @featureN tag (phase_index >= 2)', () => {
+    // Batch-10 phase-gate: needs .progress.json with phase_index >= 2 to emit.
     seedSpec(root, 'sp-mt', {
       'FR.md': '## FR-1: Login\n## FR-2: Logout\n',
       'sp-mt.feature': 'Feature: x\n  @feature1\n  Scenario: x\n    Given step\n',
+      '.progress.json': '{"phase_index": 2}',
     });
     const [report] = reconcileLight({ repoRoot: root, slugs: ['sp-mt'] });
     const missing = report.findings.filter((f) => f.code === 'impl-drift/missing-test');

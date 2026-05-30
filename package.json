@@ -30,7 +30,8 @@
   ],
   "bin": {
     "dev-pomogator-spec-check-log": "tools/spec-check-log/bin.cjs",
-    "dev-pomogator-migrate-v3-to-v4": "tools/migrate-v3-to-v4/bin.cjs"
+    "dev-pomogator-migrate-v3-to-v4": "tools/migrate-v3-to-v4/bin.cjs",
+    "dev-pomogator-spec-backlog": "tools/spec-backlog/bin.cjs"
   },
   "scripts": {
     "lint": "eslint .claude tools",
