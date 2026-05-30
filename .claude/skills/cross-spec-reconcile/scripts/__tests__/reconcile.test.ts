@@ -254,6 +254,90 @@ describe('reconcileLight — finding-code coverage', () => {
     expect(fm).toHaveLength(1);
     expect(fm[0].suggested_fix).toContain('xx-yy');
   });
+
+  it('impl-drift/missing-symbol fires when MD imports a name not exported by the target .ts', () => {
+    fs.mkdirSync(path.join(root, 'src'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src/order.ts'), 'export const Foo = 1;\n');
+    seedSpec(root, 'spec-imp', {
+      'IMPORTS.md': '```ts\nimport { OrderService } from "../../src/order";\n```\n',
+    });
+    const [report] = reconcileLight({ repoRoot: root, slugs: ['spec-imp'] });
+    const missing = report.findings.filter((f) => f.code === 'impl-drift/missing-symbol');
+    expect(missing).toHaveLength(1);
+    expect(missing[0].suggested_fix).toContain('OrderService');
+  });
+
+  it('impl-drift/missing-symbol does NOT fire when the symbol IS exported', () => {
+    fs.mkdirSync(path.join(root, 'src'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src/order.ts'), 'export class OrderService {}\n');
+    seedSpec(root, 'spec-imp2', {
+      'IMPORTS.md': '```ts\nimport { OrderService } from "../../src/order";\n```\n',
+    });
+    const [report] = reconcileLight({ repoRoot: root, slugs: ['spec-imp2'] });
+    expect(report.findings.find((f) => f.code === 'impl-drift/missing-symbol')).toBeUndefined();
+  });
+
+  it('cross-spec/url-shape-drift fires when two specs reference the same suffix differently', () => {
+    seedSpec(root, 'spec-url-a', {
+      'FR.md': '## FR-1\nPOST to "/api/orders" to submit.\n',
+    });
+    seedSpec(root, 'spec-url-b', {
+      'FR.md': '## FR-2\nPOST to "/api/v2/orders" to submit.\n',
+    });
+    const reports = reconcileLight({ repoRoot: root });
+    const drift = reports
+      .flatMap((r) => r.findings)
+      .find((f) => f.code === 'cross-spec/url-shape-drift');
+    expect(drift).toBeDefined();
+    expect(drift!.severity).toBe('CRITICAL');
+  });
+
+  it('cross-spec/cli-flag-drift fires when two specs name the same flag with different shapes', () => {
+    seedSpec(root, 'spec-cli-a', {
+      'FR.md': '## FR-1\nCLI: `--target-dir` works.\n',
+    });
+    seedSpec(root, 'spec-cli-b', {
+      'FR.md': '## FR-2\nCLI: `--targetdir` works.\n',
+    });
+    const reports = reconcileLight({ repoRoot: root });
+    const drift = reports
+      .flatMap((r) => r.findings)
+      .find((f) => f.code === 'cross-spec/cli-flag-drift');
+    expect(drift).toBeDefined();
+    expect(drift!.severity).toBe('WARNING');
+  });
+
+  it('cross-spec/enum-divergence fires when same enum name has different value sets', () => {
+    seedSpec(root, 'spec-enum-a', {
+      'FR.md': '## FR-1\n### Values\nValues: pending | confirmed | shipped\n',
+    });
+    seedSpec(root, 'spec-enum-b', {
+      'FR.md': '## FR-2\n### Values\nValues: pending | confirmed | cancelled\n',
+    });
+    const reports = reconcileLight({ repoRoot: root });
+    const drift = reports
+      .flatMap((r) => r.findings)
+      .find((f) => f.code === 'cross-spec/enum-divergence');
+    expect(drift).toBeDefined();
+    expect(drift!.severity).toBe('CRITICAL');
+    expect(drift!.suggested_fix).toMatch(/shipped|cancelled/);
+  });
+
+  it('cross-spec/module-ownership-conflict fires when two specs reference the same module path', () => {
+    seedSpec(root, 'spec-own-a', {
+      'FR.md': '## FR-1\nClaims `tools/order/main.ts`.\n',
+    });
+    seedSpec(root, 'spec-own-b', {
+      'FR.md': '## FR-2\nClaims `tools/order/main.ts`.\n',
+    });
+    const reports = reconcileLight({ repoRoot: root });
+    const conflict = reports
+      .flatMap((r) => r.findings)
+      .find((f) => f.code === 'cross-spec/module-ownership-conflict');
+    expect(conflict).toBeDefined();
+    expect(conflict!.severity).toBe('CRITICAL');
+    expect(conflict!.spec_a).toContain('tools/order/main.ts');
+  });
 });
 
 describe('emitYaml + writeReport', () => {

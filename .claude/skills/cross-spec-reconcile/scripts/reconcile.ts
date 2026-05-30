@@ -5,7 +5,7 @@
 // Produces a `consistency-report.yaml`-shaped object. Caller writes to
 // disk (see yaml-writer.ts).
 //
-// Output finding codes (rc1 + post-rc1 expansion — 14 of 28 ship):
+// Output finding codes (rc1 + post-rc1 expansion — 19 of 28 ship):
 //   • impl-drift/missing-file              — FR/AC references a path that doesn't exist
 //   • cross-spec/concept-overlap           — ≥3 shared concept-nouns between two specs without reference
 //   • cross-spec/runtime-identifier-drift  — same concept named differently in two specs
@@ -20,8 +20,13 @@
 //   • impl-drift/dead-link                 — MD `[label](path)` link to non-existent file
 //   • spec-only/missing-acceptance         — FR-N defined but no `## AC` / `### AC` heading anywhere in spec
 //   • schema-drift/invalid-frontmatter     — .feature with bad `# language:` or missing trailing blank line
+//   • impl-drift/missing-symbol            — `import { X } from '<path>'` where path exists but X is not exported
+//   • cross-spec/url-shape-drift           — same logical URL path (e.g. /api/foo) referenced with divergent shapes
+//   • cross-spec/cli-flag-drift            — same logical CLI flag (e.g. --scope) referenced with divergent shape/name
+//   • cross-spec/enum-divergence           — same enum name with different value sets across specs
+//   • cross-spec/module-ownership-conflict — two specs both claim ownership of the same code path
 //
-// The remaining 14 codes from the 28-code matrix land in the same
+// The remaining 9 codes from the 28-code matrix land in the same
 // branch as further small follow-ups; this file owns the mechanical
 // (LLM-free) subset.
 
@@ -190,10 +195,296 @@ function findRuntimeIdentifierDrift(
   return out;
 }
 
+// URL path references — `/api/foo`, `/v1/orders/{id}`. Matched inside
+// backticks or quoted strings to avoid catching prose like «navigate to /home».
+const URL_PATH_RE = /["'`](\/(?:api|v\d+|\.well-known|webhook|hook|callback)[\w/{}\-.]*?)["'`]/g;
+// CLI flags: `--scope`, `--target-dir`. Must start with `--` to avoid catching `-N` numbers.
+const CLI_FLAG_RE = /\B(--[a-z][a-z0-9-]+)\b/g;
+// TS export-name detection — `export {X, Y}`, `export const X`, `export function X`.
+const TS_EXPORT_RE = /\bexport\s+(?:(?:default\s+)?(?:const|let|var|function|class|interface|type|enum)\s+(\w+)|\{\s*([^}]+)\s*\})/g;
+const TS_IMPORT_RE = /import\s+\{\s*([^}]+)\s*\}\s+from\s+['"]([^'"]+)['"]/g;
+// Enum-like definition in MD: `Values: A | B | C` or bullet list `- A` / `- B` after «values:» / «enum:» header.
+const ENUM_HEADER_RE = /(?:^|\n)\s*(?:Values|Enum|Options|Allowed):\s*([\w |,/-]+)/g;
+
 // Markdown `[label](relative/path.ext)` links — only resolves relative
 // repo paths; ignores http(s)://, mailto:, anchor-only (#foo), and
 // query-string-only links.
 const MD_LINK_RE = /\[[^\]]+\]\(([^)\s]+)\)/g;
+
+/**
+ * Find spec-cited `import { X } from '<path>'` where the resolved TS file
+ * exists but does not export `X`. Scans MD code blocks (```ts ... ```)
+ * for import statements; resolves the path against the repo root + spec
+ * dir; reads the target file; greps for the export name.
+ */
+function findMissingSymbols(
+  files: { body: string; path: string }[],
+  repoRoot: string,
+): Finding[] {
+  const out: Finding[] = [];
+  for (const file of files) {
+    let m: RegExpExecArray | null;
+    TS_IMPORT_RE.lastIndex = 0;
+    while ((m = TS_IMPORT_RE.exec(file.body)) !== null) {
+      const symbols = m[1].split(',').map((s) => s.trim().split(/\s+as\s+/)[0]).filter(Boolean);
+      const importPath = m[2];
+      // Only resolve relative paths — skip bare module imports.
+      if (!importPath.startsWith('.') && !importPath.startsWith('/')) continue;
+      const candidates = [
+        importPath,
+        `${importPath}.ts`,
+        `${importPath}.tsx`,
+        `${importPath}/index.ts`,
+      ];
+      let resolved: string | null = null;
+      for (const c of candidates) {
+        const abs = path.isAbsolute(c)
+          ? path.join(repoRoot, c.replace(/^\//, ''))
+          : path.resolve(path.dirname(file.path), c);
+        if (fs.existsSync(abs) && fs.statSync(abs).isFile()) {
+          resolved = abs;
+          break;
+        }
+      }
+      if (!resolved) continue;
+      const tsBody = fs.readFileSync(resolved, 'utf8');
+      const exported = new Set<string>();
+      let em: RegExpExecArray | null;
+      TS_EXPORT_RE.lastIndex = 0;
+      while ((em = TS_EXPORT_RE.exec(tsBody)) !== null) {
+        if (em[1]) exported.add(em[1]);
+        if (em[2]) {
+          for (const part of em[2].split(',')) {
+            const name = part.trim().split(/\s+as\s+/).pop();
+            if (name) exported.add(name);
+          }
+        }
+      }
+      for (const sym of symbols) {
+        if (exported.has(sym)) continue;
+        out.push({
+          code: 'impl-drift/missing-symbol',
+          class: 'uncovered',
+          severity: 'WARNING',
+          referenced_in: `${path.relative(repoRoot, file.path)}`,
+          expected_path: `${path.relative(repoRoot, resolved)}::${sym}`,
+          suggested_fix:
+            `\`${sym}\` is imported from ${importPath} but the file exports do not include it. Add the export or fix the import.`,
+        });
+      }
+    }
+  }
+  return out;
+}
+
+/** Collect URL path references across all spec MD files. Map<url, Map<slug, file>>. */
+function collectUrlsBySlug(
+  filesBySlug: Map<string, { body: string; path: string }[]>,
+): Map<string, Map<string, string>> {
+  const out = new Map<string, Map<string, string>>();
+  for (const [slug, files] of filesBySlug) {
+    for (const f of files) {
+      let m: RegExpExecArray | null;
+      URL_PATH_RE.lastIndex = 0;
+      while ((m = URL_PATH_RE.exec(f.body)) !== null) {
+        const url = m[1];
+        if (!out.has(url)) out.set(url, new Map());
+        if (!out.get(url)!.has(slug)) out.get(url)!.set(slug, f.path);
+      }
+    }
+  }
+  return out;
+}
+
+/** Compare URL prefixes across specs — e.g. one says `/api/foo`, the other `/api/v1/foo`. */
+function findUrlShapeDrift(
+  filesBySlug: Map<string, { body: string; path: string }[]>,
+): Finding[] {
+  const out: Finding[] = [];
+  const urlsBySlug = collectUrlsBySlug(filesBySlug);
+  // Build a normalised-suffix index: `/foo` -> [{url, slug}].
+  const bySuffix = new Map<string, Array<{ url: string; slug: string }>>();
+  for (const [url, slugMap] of urlsBySlug) {
+    // Suffix = last path segment + 1 more. e.g. /api/v1/foo -> /v1/foo
+    const parts = url.split('/').filter(Boolean);
+    if (parts.length < 1) continue;
+    const suffix = '/' + parts.slice(-1).join('/');
+    if (!bySuffix.has(suffix)) bySuffix.set(suffix, []);
+    for (const slug of slugMap.keys()) bySuffix.get(suffix)!.push({ url, slug });
+  }
+  for (const [, hits] of bySuffix) {
+    if (hits.length < 2) continue;
+    const distinctUrls = new Set(hits.map((h) => h.url));
+    if (distinctUrls.size < 2) continue;
+    const distinctSlugs = new Set(hits.map((h) => h.slug));
+    if (distinctSlugs.size < 2) continue;
+    const sorted = [...hits].sort((a, b) => a.url.localeCompare(b.url));
+    out.push({
+      code: 'cross-spec/url-shape-drift',
+      class: 'runtime-identifier-drift',
+      severity: 'CRITICAL',
+      spec_a: `.specs/${sorted[0].slug} (${sorted[0].url})`,
+      spec_b: `.specs/${sorted[1].slug} (${sorted[1].url})`,
+      suggested_fix:
+        `URLs ${[...distinctUrls].join(' vs ')} share the same suffix — clients will hit one and the server may serve the other. Pick a canonical shape.`,
+    });
+  }
+  return out;
+}
+
+/** CLI flag drift — same logical name with different shapes. */
+function findCliFlagDrift(
+  filesBySlug: Map<string, { body: string; path: string }[]>,
+): Finding[] {
+  const out: Finding[] = [];
+  const flagsBySlug = new Map<string, Set<string>>();
+  for (const [slug, files] of filesBySlug) {
+    const flags = new Set<string>();
+    for (const f of files) {
+      let m: RegExpExecArray | null;
+      CLI_FLAG_RE.lastIndex = 0;
+      while ((m = CLI_FLAG_RE.exec(f.body)) !== null) flags.add(m[1]);
+    }
+    flagsBySlug.set(slug, flags);
+  }
+  // Group by lemma — strip leading `--`, normalise dashes.
+  const byLemma = new Map<string, Array<{ flag: string; slug: string }>>();
+  for (const [slug, flags] of flagsBySlug) {
+    for (const flag of flags) {
+      const lemma = flag.replace(/^--/, '').replace(/-/g, '').toLowerCase();
+      if (!byLemma.has(lemma)) byLemma.set(lemma, []);
+      byLemma.get(lemma)!.push({ flag, slug });
+    }
+  }
+  for (const [, hits] of byLemma) {
+    if (hits.length < 2) continue;
+    const distinctFlags = new Set(hits.map((h) => h.flag));
+    if (distinctFlags.size < 2) continue;
+    const distinctSlugs = new Set(hits.map((h) => h.slug));
+    if (distinctSlugs.size < 2) continue;
+    const sorted = [...hits].sort((a, b) => a.flag.localeCompare(b.flag));
+    out.push({
+      code: 'cross-spec/cli-flag-drift',
+      class: 'runtime-identifier-drift',
+      severity: 'WARNING',
+      spec_a: `.specs/${sorted[0].slug} (${sorted[0].flag})`,
+      spec_b: `.specs/${sorted[1].slug} (${sorted[1].flag})`,
+      suggested_fix:
+        `Flags ${[...distinctFlags].join(' vs ')} normalise to the same lemma — users may type either and one will fail. Pick a canonical name.`,
+    });
+  }
+  return out;
+}
+
+/** Collect enum-like definitions: `Values: A | B | C` across spec MD files. */
+function collectEnumsBySlug(
+  filesBySlug: Map<string, { body: string; path: string }[]>,
+): Map<string, Map<string, Set<string>>> {
+  // outer key: slug, inner key: enum header text (lowercase first line context), value: set of enum values
+  const out = new Map<string, Map<string, Set<string>>>();
+  for (const [slug, files] of filesBySlug) {
+    const enumMap = new Map<string, Set<string>>();
+    for (const f of files) {
+      // Find headings followed by `Values:` block. Heading captures the enum name.
+      const sections = f.body.split(/(?=^#{2,4}\s+)/m);
+      for (const section of sections) {
+        const headerMatch = section.match(/^#{2,4}\s+([^\n]+)/);
+        if (!headerMatch) continue;
+        const enumName = headerMatch[1].trim().toLowerCase().replace(/\s+/g, '-');
+        let m: RegExpExecArray | null;
+        ENUM_HEADER_RE.lastIndex = 0;
+        while ((m = ENUM_HEADER_RE.exec(section)) !== null) {
+          const values = m[1]
+            .split(/[|,/]/)
+            .map((s) => s.trim().replace(/[`"]/g, ''))
+            .filter(Boolean);
+          if (values.length < 2) continue;
+          if (!enumMap.has(enumName)) enumMap.set(enumName, new Set());
+          for (const v of values) enumMap.get(enumName)!.add(v);
+        }
+      }
+    }
+    out.set(slug, enumMap);
+  }
+  return out;
+}
+
+/** Same enum name with different value sets across specs. */
+function findEnumDivergence(
+  filesBySlug: Map<string, { body: string; path: string }[]>,
+): Finding[] {
+  const out: Finding[] = [];
+  const enumsBySlug = collectEnumsBySlug(filesBySlug);
+  const slugs = [...enumsBySlug.keys()];
+  for (let i = 0; i < slugs.length; i++) {
+    for (let j = i + 1; j < slugs.length; j++) {
+      const a = enumsBySlug.get(slugs[i])!;
+      const b = enumsBySlug.get(slugs[j])!;
+      for (const enumName of a.keys()) {
+        if (!b.has(enumName)) continue;
+        const setA = a.get(enumName)!;
+        const setB = b.get(enumName)!;
+        const symmetric: string[] = [];
+        for (const v of setA) if (!setB.has(v)) symmetric.push(v);
+        for (const v of setB) if (!setA.has(v)) symmetric.push(v);
+        if (symmetric.length === 0) continue;
+        out.push({
+          code: 'cross-spec/enum-divergence',
+          class: 'schema-drift',
+          severity: 'CRITICAL',
+          spec_a: `.specs/${slugs[i]} (${enumName}: ${[...setA].sort().join(', ')})`,
+          spec_b: `.specs/${slugs[j]} (${enumName}: ${[...setB].sort().join(', ')})`,
+          suggested_fix:
+            `Enum "${enumName}" diverges on values [${symmetric.join(', ')}] — pick one canonical set or rename one of the enums.`,
+        });
+      }
+    }
+  }
+  return out;
+}
+
+/** Two specs both claim ownership of the same code path. */
+function findModuleOwnershipConflict(
+  filesBySlug: Map<string, { body: string; path: string }[]>,
+): Finding[] {
+  const out: Finding[] = [];
+  // Collect every `path/to/x.ts`-like reference (already covered by PATH_REF_RE).
+  const pathsBySlug = new Map<string, Map<string, string>>();
+  for (const [slug, files] of filesBySlug) {
+    const pathMap = new Map<string, string>();
+    for (const f of files) {
+      let m: RegExpExecArray | null;
+      PATH_REF_RE.lastIndex = 0;
+      while ((m = PATH_REF_RE.exec(f.body)) !== null) {
+        const ref = m[0].replace(/`/g, '').replace(/\*$/, '');
+        // Only count concrete files (not glob-only).
+        if (ref.includes('*')) continue;
+        pathMap.set(ref, f.path);
+      }
+    }
+    pathsBySlug.set(slug, pathMap);
+  }
+  const slugs = [...pathsBySlug.keys()];
+  for (let i = 0; i < slugs.length; i++) {
+    for (let j = i + 1; j < slugs.length; j++) {
+      const a = pathsBySlug.get(slugs[i])!;
+      const b = pathsBySlug.get(slugs[j])!;
+      for (const refPath of a.keys()) {
+        if (!b.has(refPath)) continue;
+        out.push({
+          code: 'cross-spec/module-ownership-conflict',
+          class: 'contradiction',
+          severity: 'CRITICAL',
+          spec_a: `.specs/${slugs[i]} (claims ${refPath})`,
+          spec_b: `.specs/${slugs[j]} (claims ${refPath})`,
+          suggested_fix:
+            `Both specs reference ${refPath} as a deliverable — pick one canonical owner or split the module.`,
+        });
+      }
+    }
+  }
+  return out;
+}
 
 /** Find broken MD links pointing to nonexistent files. */
 function findDeadLinks(
@@ -655,6 +946,10 @@ export function reconcileLight(opts: ReconcileOptions): ReconcileResult[] {
   const overlapFindings = findConceptOverlap(filesBySlug);
   const duplicateFrFindings = findDuplicateFrIds(defsBySlug);
   const contradictoryFrFindings = findContradictoryFRs(defsBySlug, filesBySlug);
+  const urlDriftFindings = findUrlShapeDrift(filesBySlug);
+  const cliDriftFindings = findCliFlagDrift(filesBySlug);
+  const enumDivergenceFindings = findEnumDivergence(filesBySlug);
+  const moduleOwnershipFindings = findModuleOwnershipConflict(filesBySlug);
 
   const results: ReconcileResult[] = [];
   for (const slug of allSlugs) {
@@ -671,6 +966,7 @@ export function reconcileLight(opts: ReconcileOptions): ReconcileResult[] {
     findings.push(...findDeadLinks(files, opts.repoRoot));
     findings.push(...findMissingAcceptance(files, opts.repoRoot));
     findings.push(...findInvalidFrontmatter(opts.repoRoot, slug));
+    findings.push(...findMissingSymbols(files, opts.repoRoot));
     // Attribute cross-spec findings to BOTH specs they touch. Normalise
     // OS path separators so the `.specs/<slug>` substring match works on
     // Windows + POSIX.
@@ -681,6 +977,10 @@ export function reconcileLight(opts: ReconcileOptions): ReconcileResult[] {
       ...overlapFindings,
       ...duplicateFrFindings,
       ...contradictoryFrFindings,
+      ...urlDriftFindings,
+      ...cliDriftFindings,
+      ...enumDivergenceFindings,
+      ...moduleOwnershipFindings,
     ]) {
       const a = f.spec_a ?? '';
       const b = f.spec_b ?? '';

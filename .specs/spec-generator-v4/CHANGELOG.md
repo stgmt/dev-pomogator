@@ -14,7 +14,10 @@ All notable changes to this feature will be documented in this file.
     `schema-drift/missing-feature-heading`.
   - Batch 3 (3): `impl-drift/dead-link`, `spec-only/missing-acceptance`,
     `schema-drift/invalid-frontmatter`.
-  14 of the 28-code matrix now ship; 14 remain as small follow-ups.
+  - Batch 4 (5): `impl-drift/missing-symbol`,
+    `cross-spec/url-shape-drift`, `cross-spec/cli-flag-drift`,
+    `cross-spec/enum-divergence`, `cross-spec/module-ownership-conflict`.
+  19 of the 28-code matrix now ship; 9 remain as small follow-ups.
 - `.claude/skills/cross-spec-reconcile/scripts/full-mode.ts` — full-mode
   wrapper that pipes same-FR pairs through `tools/spec-llm-judge` for
   `cross-spec/semantic-drift` findings beyond the mechanical heuristics.
