@@ -1,0 +1,109 @@
+---
+name: cross-spec-reconcile
+description: |
+  Cross-spec consistency analyzer — scans every `.specs/<slug>/` against
+  every other and against the codebase, surfacing 28 classes of drift
+  (uncovered claims, contradictions, runtime-identifier mismatch, missing
+  files, foreign-spec edits, architectural decisions vs reality).
+  Two modes: `light` (mechanical-only, <5s, no LLM) and `full` (adds
+  LLM-semantic comparison via the Phase-3 judge with FR-26 deny-list
+  enforcement). Output: per-spec `.specs/<slug>/consistency-report.yaml`
+  + optional `consistency-report.sarif`. CRITICAL findings invoke a
+  blocking AskUserQuestion with header ⚠️ CRIT; user override is logged
+  to `.claude/logs/cross-spec-overrides.jsonl` for audit trail.
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion
+---
+
+# cross-spec-reconcile
+
+Drift-finder across the `.specs/` corpus. Runs after authoring a spec
+slice OR explicitly via `/cross-spec-reconcile`. The first phase
+("light") is mechanical and CHEAP — glob + parse + identifier extract.
+The second phase ("full") opts into LLM-semantic comparison and costs
+real subprocess time; the agent only runs it when the user asks.
+
+## When to invoke
+
+**Auto-trigger** — Phase-4 PostToolUse hook can request `light` mode
+after any `.specs/<slug>/FR.md` edit, alongside the standard
+conformance_check. Findings flow into the same JSONL log.
+
+**Manual trigger** — explicit `Skill("cross-spec-reconcile")` or
+`/cross-spec-reconcile` (slash). Default mode `light`; `mode: "full"`
+adds the semantic pass.
+
+**Hard-OUT** — single-spec edits inside an already-consistent spec
+(use `conformance_check` for the within-spec invariants).
+
+## The 28 finding-code matrix
+
+Findings carry a `code` + `class` + `severity`. Classes group related
+codes for the resolve skill:
+
+| Class                          | Severity | Example codes |
+|--------------------------------|----------|---------------|
+| uncovered                      | WARNING  | `impl-drift/missing-file`, `impl-drift/missing-symbol`, `impl-drift/missing-test` |
+| contradiction                  | CRITICAL | `cross-spec/contradictory-fr`, `cross-spec/contradictory-nfr`, `cross-spec/module-ownership-conflict` |
+| runtime-identifier-drift        | CRITICAL | `cross-spec/runtime-identifier-drift`, `cross-spec/url-shape-drift`, `cross-spec/cli-flag-drift` |
+| architectural-decision-vs-reality | CRITICAL | `cross-spec/decision-locked-but-reality-diverges` |
+| concept-overlap                | INFO     | `cross-spec/concept-overlap` (≥3 shared nouns between two specs without explicit link) |
+| spec-only                      | INFO     | `spec-only/orphan-FR`, `spec-only/orphan-AC`, `spec-only/unreachable-task` |
+| schema-drift                   | WARNING  | `cross-spec/schema-mismatch`, `cross-spec/enum-divergence` |
+
+The CRITICAL hard-conflict subset blocks `STOP` via AskUserQuestion;
+WARNING + INFO surface but never block.
+
+## Two modes
+
+| Mode  | Cost      | What it does                                  |
+|-------|-----------|-----------------------------------------------|
+| light | <5s       | Globs FRs/ACs/Scenarios; extracts identifiers via regex; compares file existence against the SpecGraph (Phase 1); produces the mechanical subset of codes |
+| full  | +30-90s   | Adds the Phase-3 LLM-as-judge for pairwise FR/AC semantic compare; cached by `sha256(spec_a + spec_b)` so re-runs are free; FR-26 deny-list applies before any spawn |
+
+## Output: `.specs/<slug>/consistency-report.yaml`
+
+```yaml
+generated_at: 2026-05-30T03:00:00Z
+mode: light
+spec_slug: spec-c
+total_findings: 3
+findings:
+  - code: impl-drift/missing-file
+    class: uncovered
+    severity: WARNING
+    referenced_in: .specs/spec-c/FR.md:42
+    expected_path: src/mcp/validate_user*.ts
+    suggested_fix: "Add the implementation OR mark the FR as OUT_OF_SCOPE"
+  - code: cross-spec/runtime-identifier-drift
+    class: runtime-identifier-drift
+    severity: CRITICAL
+    spec_a: .specs/spec-a/FR.md:12  (feedback_key = "session_token")
+    spec_b: .specs/spec-b/FR.md:8   (sessionToken)
+    suggested_fix: "Pick one canonical name + update both specs in lockstep"
+```
+
+## CRITICAL blocking
+
+When the report contains ≥1 CRITICAL finding the skill emits a blocking
+`AskUserQuestion` with `header: "⚠️ CRIT"` (max 12 chars), options
+literally include «Abort STOP» and «Acknowledge & override». Override
+appends `acknowledged_by: user`, `override_reason: <text>`, and
+`override_timestamp: <iso>` to the YAML, AND writes a parallel JSONL
+line to `.claude/logs/cross-spec-overrides.jsonl` so audit can trace
+who overrode what and why.
+
+## Flags
+
+- `--mode light|full` — default `light`
+- `--dry-run` — compute findings, print summary, do NOT write the YAML/SARIF
+- `--sarif` — also write `.specs/<slug>/consistency-report.sarif` (SARIF 2.1.0)
+- `--slug <name>` — limit to one spec (default: every `.specs/<slug>/`)
+
+## See also
+
+- `scripts/reconcile.ts` — light-mode entry (mechanical checks)
+- `scripts/full-mode.ts` — full-mode semantic pass (Phase-3 LLM judge wrapper)
+- `scripts/sarif.ts` — SARIF 2.1.0 emitter
+- `../cross-spec-resolve/SKILL.md` — sibling that walks the user through
+  resolving each finding interactively
+- `.specs/spec-generator-v4/FR.md` FR-17 (formal requirement)
