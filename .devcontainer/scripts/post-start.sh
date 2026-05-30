@@ -68,5 +68,34 @@ if [ ! -L "$CLAUDE_MEM_DEEP" ] || [ "$(readlink "$CLAUDE_MEM_DEEP")" != "$CLAUDE
     echo "Memory: $CLAUDE_MEM_DEEP -> repo/.claude/memory/"
 fi
 
+
+# === FR-16: dev-pomogator-specs MCP autostart in Codespaces ===
+# Idempotent: only fires when CODESPACES=true AND the lock file says either
+# nothing or a dead PID. Runs the MCP server in the background and writes a
+# foreground-style log so Codespaces users can `tail -f` it.
+if [ "${CODESPACES:-}" = "true" ] && [ -f tools/spec-mcp-server/server.ts ]; then
+    SP_MCP_LOCK="/workspaces/dev-pomogator/.dev-pomogator/.mcp-lock.json"
+    SP_MCP_LOG="/workspaces/dev-pomogator/.dev-pomogator/.spec-mcp-server.log"
+    SP_MCP_STALE=1
+    if [ -f "$SP_MCP_LOCK" ]; then
+        SP_MCP_PID=$(grep -oE '"pid"[[:space:]]*:[[:space:]]*[0-9]+' "$SP_MCP_LOCK" | grep -oE '[0-9]+' | head -1 || true)
+        if [ -n "${SP_MCP_PID:-}" ] && kill -0 "$SP_MCP_PID" 2>/dev/null; then
+            SP_MCP_STALE=0
+        fi
+    fi
+    if [ "$SP_MCP_STALE" = "1" ]; then
+        mkdir -p "$(dirname "$SP_MCP_LOCK")"
+        rm -f "$SP_MCP_LOCK" 2>/dev/null || true
+        # Run detached — stdio MCP doesn't need a controlling terminal because
+        # the SDK initialize handshake reads from stdin only after a client
+        # connects via the .mcp.json registration.
+        nohup node --import tsx tools/spec-mcp-server/server.ts \
+            > "$SP_MCP_LOG" 2>&1 < /dev/null &
+        echo "MCP: dev-pomogator-specs started (codespaces), log: $SP_MCP_LOG"
+    else
+        echo "MCP: dev-pomogator-specs already running (pid=$SP_MCP_PID)"
+    fi
+fi
+
 echo ""
 echo "post-start done"

@@ -84,6 +84,76 @@ describe('reconcileLight — finding-code coverage', () => {
   it('empty .specs/ folder produces no findings + no error', () => {
     expect(reconcileLight({ repoRoot: root })).toEqual([]);
   });
+
+  it('spec-only/orphan-FR fires when an FR is defined but never referenced again', () => {
+    seedSpec(root, 'spec-orph', {
+      'FR.md': '## FR-1: Login\n\n## FR-2: Logout\nDescribed at length here.\nFR-2 also used here.\n',
+    });
+    const [report] = reconcileLight({ repoRoot: root, slugs: ['spec-orph'] });
+    const orphans = report.findings.filter((f) => f.code === 'spec-only/orphan-FR');
+    // FR-1 is the orphan (one heading, zero refs, no @feature tag).
+    expect(orphans).toHaveLength(1);
+    expect(orphans[0].severity).toBe('WARNING');
+    expect(orphans[0].referenced_in).toMatch(/spec-orph\/FR\.md$/);
+  });
+
+  it('spec-only/orphan-FR does NOT fire when an @featureN tag covers the FR', () => {
+    seedSpec(root, 'spec-cov', {
+      'FR.md': '## FR-7: Test me\n',
+      'spec-cov.feature': '\n@feature7\nScenario: covered\n  Given step\n',
+    });
+    const [report] = reconcileLight({ repoRoot: root, slugs: ['spec-cov'] });
+    expect(report.findings.find((f) => f.code === 'spec-only/orphan-FR')).toBeUndefined();
+  });
+
+  it('spec-only/uncovered-AC fires when AC headings exist but the spec has zero .feature files', () => {
+    seedSpec(root, 'spec-ac', {
+      'AC.md': '### AC-1: first\n\n### AC-2: second\n',
+    });
+    const [report] = reconcileLight({ repoRoot: root, slugs: ['spec-ac'] });
+    const uncovered = report.findings.filter((f) => f.code === 'spec-only/uncovered-AC');
+    expect(uncovered).toHaveLength(1);
+    expect(uncovered[0].suggested_fix).toContain('2 AC heading');
+  });
+
+  it('cross-spec/duplicate-fr-id fires when two specs both define the same FR-N', () => {
+    seedSpec(root, 'spec-x', { 'FR.md': '## FR-1: Login\n' });
+    seedSpec(root, 'spec-y', { 'FR.md': '## FR-1: Different thing\n' });
+    const reports = reconcileLight({ repoRoot: root });
+    const dup = reports
+      .flatMap((r) => r.findings)
+      .find((f) => f.code === 'cross-spec/duplicate-fr-id');
+    expect(dup).toBeDefined();
+    expect(dup!.severity).toBe('CRITICAL');
+    expect(dup!.spec_a).toContain('FR-1');
+    expect(dup!.spec_b).toContain('FR-1');
+  });
+
+  it('cross-spec/contradictory-fr fires when the same FR id has substantially different bodies', () => {
+    seedSpec(root, 'spec-p', {
+      'FR.md': '## FR-1: Auth\n\nUsers log in with email + password, redirect to dashboard.\n',
+    });
+    seedSpec(root, 'spec-q', {
+      'FR.md': '## FR-1: Inventory\n\nWarehouse manages SKUs across multiple bins.\n',
+    });
+    const reports = reconcileLight({ repoRoot: root });
+    const contradictory = reports
+      .flatMap((r) => r.findings)
+      .find((f) => f.code === 'cross-spec/contradictory-fr');
+    expect(contradictory).toBeDefined();
+    expect(contradictory!.severity).toBe('CRITICAL');
+  });
+
+  it('impl-drift/test-without-fr fires when a @featureN tag has no matching FR in any spec', () => {
+    seedSpec(root, 'spec-orph2', {
+      'spec-orph2.feature': '\n@feature99\nScenario: orphan tag\n  Given step\n',
+    });
+    const [report] = reconcileLight({ repoRoot: root, slugs: ['spec-orph2'] });
+    const orphans = report.findings.filter((f) => f.code === 'impl-drift/test-without-fr');
+    expect(orphans).toHaveLength(1);
+    expect(orphans[0].severity).toBe('WARNING');
+    expect(orphans[0].referenced_in).toContain('@fr99');
+  });
 });
 
 describe('emitYaml + writeReport', () => {

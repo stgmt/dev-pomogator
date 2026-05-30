@@ -4,6 +4,18 @@ All notable changes to this feature will be documented in this file.
 
 ## [Unreleased]
 
+### Added (post-rc1, en route to v4.0.0 final)
+
+- 5 more cross-spec finding codes in `reconcile.ts`:
+  `spec-only/orphan-FR`, `spec-only/uncovered-AC`,
+  `cross-spec/duplicate-fr-id`, `cross-spec/contradictory-fr`,
+  `impl-drift/test-without-fr`. 8 of the 28-code matrix ship; 20
+  remain as small follow-ups.
+- `.devcontainer/scripts/post-start.sh` — FR-16 idempotent Codespaces
+  MCP autostart. Only fires when `$CODESPACES=true`, respects stale
+  lock files (dead PID → clean restart), logs to
+  `.dev-pomogator/.spec-mcp-server.log`.
+
 ## [4.0.0-rc1] — 2026-05-30
 
 Phases 0..7 shipped on `feat/phase-2a-mcp-server-and-hooks`, single PR
