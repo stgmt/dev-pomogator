@@ -5,7 +5,11 @@ export default defineConfig({
     globals: true,
     testTimeout: 300000, // 5 minutes for git clone
     hookTimeout: 300000,
-    include: ['tests/**/*.test.ts', 'tools/**/__tests__/*.test.ts'],
+    include: [
+      'tests/**/*.test.ts',
+      'tools/**/__tests__/*.test.ts',
+      '.claude/skills/**/__tests__/*.test.ts',
+    ],
     exclude: [
       'tests/fixtures/**',
       // statusline-config management (resolveClaudeStatusLine / isManagedStatusLineCommand
