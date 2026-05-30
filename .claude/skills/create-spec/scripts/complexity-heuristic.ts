@@ -13,9 +13,12 @@
 // The `--research-done` recursion guard belongs to the live skill flow;
 // this module only owns the «which skill should I call» decision.
 
+// JS regex `\b` and `\w` only recognise ASCII. Cyrillic-aware boundary:
+// the keyword must be surrounded by non-letter characters (or start/end of
+// string) on both sides. Implemented via lookaround on `[^\p{L}]`.
 const KEYWORD_PATTERNS: RegExp[] = [
-  /\bархитектур\w*/i,
-  /\bперепроектировать\b/i,
+  /(?<![\p{L}])архитектур\p{L}*/iu,
+  /(?<![\p{L}])перепроектировать(?![\p{L}])/iu,
   /\brebuild\b/i,
   /\bredesign\b/i,
   /\brewrite\b/i,

@@ -456,6 +456,158 @@ describe('reconcileLight — finding-code coverage', () => {
       .find((f) => f.code === 'cross-spec/contradictory-fr');
     expect(contradictory).toBeDefined();
   });
+
+  // ---- Batch-7: final 9 finding codes (workflow wzbmwybag design) ----
+
+  it('impl-drift/missing-test fires for FR without matching @featureN tag', () => {
+    seedSpec(root, 'sp-mt', {
+      'FR.md': '## FR-1: Login\n## FR-2: Logout\n',
+      'sp-mt.feature': 'Feature: x\n  @feature1\n  Scenario: x\n    Given step\n',
+    });
+    const [report] = reconcileLight({ repoRoot: root, slugs: ['sp-mt'] });
+    const missing = report.findings.filter((f) => f.code === 'impl-drift/missing-test');
+    expect(missing).toHaveLength(1);
+    expect(missing[0].suggested_fix).toContain('FR-2');
+    expect(missing[0].severity).toBe('INFO');
+  });
+
+  it('spec-only/orphan-AC fires when AC references an undefined FR', () => {
+    seedSpec(root, 'sp-oac', {
+      'FR.md': '## FR-1: Defined\n',
+      'ACCEPTANCE_CRITERIA.md': '## AC-1 (FR-1)\nGood.\n\n## AC-3 (FR-5)\nOrphan reference.\n',
+    });
+    const [report] = reconcileLight({ repoRoot: root, slugs: ['sp-oac'] });
+    const orphans = report.findings.filter((f) => f.code === 'spec-only/orphan-AC');
+    expect(orphans.length).toBeGreaterThanOrEqual(1);
+    expect(orphans.some((f) => f.suggested_fix!.includes('FR-5'))).toBe(true);
+  });
+
+  it('impl-drift/test-result-stale fires when .feature mtime predates spec MD mtime', () => {
+    seedSpec(root, 'sp-stale', {
+      'FR.md': '## FR-1\n',
+      'sp-stale.feature': 'Feature: x\n  @feature1\n  Scenario: x\n    Given step\n',
+    });
+    const featurePath = path.join(root, '.specs/sp-stale/sp-stale.feature');
+    const past = (Date.now() - 2 * 3600_000) / 1000;
+    fs.utimesSync(featurePath, past, past);
+    const [report] = reconcileLight({ repoRoot: root, slugs: ['sp-stale'] });
+    const stale = report.findings.filter((f) => f.code === 'impl-drift/test-result-stale');
+    expect(stale).toHaveLength(1);
+    expect(stale[0].suggested_fix).toContain('CI gotcha');
+  });
+
+  it('spec-only/unreachable-task fires when task targets a Phase higher than phase_index', () => {
+    seedSpec(root, 'sp-unr', {
+      '.progress.json': '{"phase_index": 0}',
+      'TASKS.md': [
+        '## Task Summary Table',
+        '',
+        '| ID | Title | Status | Phase | Est. |',
+        '|----|-------|--------|-------|------|',
+        '| install | Install deps | DONE | Phase 0 | 30m |',
+        '| build-schema | Build schema | TODO | Phase 5 | 120m |',
+        '',
+      ].join('\n'),
+    });
+    const [report] = reconcileLight({ repoRoot: root, slugs: ['sp-unr'] });
+    const unr = report.findings.filter((f) => f.code === 'spec-only/unreachable-task');
+    expect(unr).toHaveLength(1);
+    expect(unr[0].suggested_fix).toContain('Phase 5');
+    expect(unr[0].suggested_fix).toContain('Phase 0');
+  });
+
+  it('schema-drift/json-shape-drift fires when JSON top-level keys diverge from SCHEMA.md bullets', () => {
+    seedSpec(root, 'sp-jsd', {
+      'SCHEMA.md':
+        '## Data JSON Schema\n\nTop-level keys:\n- `version`\n- `phase`\n- `phase_index`\n- `started_at`\n',
+      'data.json': JSON.stringify({ version: 4, phase: 'Phase 3', created_at: '2026-05-30T00:00:00Z' }, null, 2),
+    });
+    const [report] = reconcileLight({ repoRoot: root, slugs: ['sp-jsd'] });
+    const drift = report.findings.filter((f) => f.code === 'schema-drift/json-shape-drift');
+    expect(drift).toHaveLength(1);
+    expect(drift[0].suggested_fix).toMatch(/phase_index|started_at/);
+    expect(drift[0].suggested_fix).toContain('created_at');
+  });
+
+  it('cross-spec/missing-cross-ref fires when slug mentioned but no markdown link', () => {
+    seedSpec(root, 'auth-mcr', {
+      'FR.md': '## FR-1: OAuth\nBuilds on user-service-mcr schema for tokens.\n',
+    });
+    seedSpec(root, 'user-service-mcr', {
+      'FR.md': '## FR-1: User CRUD\n',
+    });
+    const reports = reconcileLight({ repoRoot: root });
+    const missing = reports
+      .flatMap((r) => r.findings)
+      .find((f) => f.code === 'cross-spec/missing-cross-ref');
+    expect(missing).toBeDefined();
+    expect(missing!.suggested_fix).toContain('user-service-mcr');
+  });
+
+  it('cross-spec/contradictory-nfr fires when same NFR budget has divergent values', () => {
+    seedSpec(root, 'sp-nfr-a', {
+      'DESIGN.md': '## Performance\nMax API latency: 200ms target.\n',
+    });
+    seedSpec(root, 'sp-nfr-b', {
+      'DESIGN.md': '## Performance\nAPI latency budget: 500ms enforced.\n',
+    });
+    const reports = reconcileLight({ repoRoot: root });
+    const contradiction = reports
+      .flatMap((r) => r.findings)
+      .find((f) => f.code === 'cross-spec/contradictory-nfr');
+    expect(contradiction).toBeDefined();
+    expect(contradiction!.severity).toBe('CRITICAL');
+    expect(contradiction!.suggested_fix).toMatch(/200ms.*500ms|500ms.*200ms/);
+  });
+
+  it('cross-spec/schema-mismatch fires when same TS interface has different field sets', () => {
+    seedSpec(root, 'sp-sma', {
+      'DESIGN.md':
+        '## Schema\n\n```ts\ninterface AuthToken {\n  sessionToken: string;\n  expiresAt: number;\n}\n```\n',
+    });
+    seedSpec(root, 'sp-smb', {
+      'DESIGN.md':
+        '## Schema\n\n```ts\ninterface AuthToken {\n  session_token: string;\n  expiresAt: number;\n  refreshToken?: string;\n}\n```\n',
+    });
+    const reports = reconcileLight({ repoRoot: root });
+    const mismatch = reports
+      .flatMap((r) => r.findings)
+      .find((f) => f.code === 'cross-spec/schema-mismatch');
+    expect(mismatch).toBeDefined();
+    expect(mismatch!.severity).toBe('CRITICAL');
+    expect(mismatch!.suggested_fix).toContain('AuthToken');
+  });
+
+  it('cross-spec/decision-locked-but-reality-diverges fires when impl imports wrong package', () => {
+    fs.mkdirSync(path.join(root, 'src/auth'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'src/auth/jwt.ts'),
+      'import jose from "jose";\nexport function sign() {}\n',
+    );
+    seedSpec(root, 'sp-dl', {
+      'DECISIONS.md':
+        '## Decision: jwt-library\n\nStatus: LOCKED\nChosen: jsonwebtoken@9\nImplemented in: `src/auth/jwt.ts`\n',
+    });
+    const [report] = reconcileLight({ repoRoot: root, slugs: ['sp-dl'] });
+    const drift = report.findings.filter((f) => f.code === 'cross-spec/decision-locked-but-reality-diverges');
+    expect(drift).toHaveLength(1);
+    expect(drift[0].suggested_fix).toContain('jsonwebtoken');
+    expect(drift[0].suggested_fix).toContain('jose');
+  });
+
+  it('cross-spec/decision-locked does NOT fire when impl imports the chosen package', () => {
+    fs.mkdirSync(path.join(root, 'src/auth'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'src/auth/jwt.ts'),
+      'import jwt from "jsonwebtoken";\nexport function sign() {}\n',
+    );
+    seedSpec(root, 'sp-dl-ok', {
+      'DECISIONS.md':
+        '## Decision: jwt-library\n\nStatus: LOCKED\nChosen: jsonwebtoken@9\nImplemented in: `src/auth/jwt.ts`\n',
+    });
+    const [report] = reconcileLight({ repoRoot: root, slugs: ['sp-dl-ok'] });
+    expect(report.findings.find((f) => f.code === 'cross-spec/decision-locked-but-reality-diverges')).toBeUndefined();
+  });
 });
 
 describe('emitYaml + writeReport', () => {

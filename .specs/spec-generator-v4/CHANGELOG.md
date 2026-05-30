@@ -19,6 +19,54 @@ All notable changes to this feature will be documented in this file.
     `cross-spec/enum-divergence`, `cross-spec/module-ownership-conflict`.
   19 of the 28-code matrix now ship; 9 remain as small follow-ups.
 
+### Added (batch-7 — final 9 finding codes, 28-code matrix COMPLETE)
+
+Designed via parallel workflow `wzbmwybag` (3 research agents + 1
+synthesizer, 9 design specs returned). All 9 mechanical-only:
+
+- **`impl-drift/missing-test`** — INFO. Stricter sibling of
+  `orphan-FR`: every defined FR-N MUST have a matching `@featureN`
+  tag in the spec's .feature corpus. Reuses `collectFrDefinitions`
+  + `collectFeatureTags`.
+- **`spec-only/orphan-AC`** — INFO. AC heading references FR-N via
+  `(FR-N)` or `**Requirement:** [FR-N]` body, but the FR is not
+  defined in this spec. New `AC_TO_FR_RE`.
+- **`impl-drift/test-result-stale`** — WARNING. `.feature` mtime
+  predates the latest FR.md/ACCEPTANCE_CRITERIA.md/REQUIREMENTS.md/
+  DESIGN.md mtime (1-minute skew tolerance). Hint warns about CI
+  git-clone mtime gotcha.
+- **`spec-only/unreachable-task`** — INFO. Task row in TASKS.md
+  Summary Table targets a Phase higher than `.progress.json::phase_index`.
+  Header-driven column lookup (no hardcoded indices). DONE tasks
+  skipped.
+- **`schema-drift/json-shape-drift`** — WARNING. JSON fixture file
+  in spec dir has top-level keys diverging from `SCHEMA.md`
+  bullet-list declarations. Skips `.progress.json` (too volatile).
+- **`cross-spec/missing-cross-ref`** — INFO. Spec mentions another
+  slug by bare name but has no markdown link `](.../specs/<other>/...)`
+  anywhere in its files. Dynamic regex per slug pair.
+- **`cross-spec/contradictory-nfr`** — CRITICAL. Same NFR budget
+  (latency / throughput / availability / uptime / error-rate / cpu /
+  memory / storage / response-time) with values that differ by >10%.
+  `response-time` normalised to `latency`.
+- **`cross-spec/schema-mismatch`** — CRITICAL. Same TS
+  `interface`/`type` name with divergent field sets across specs
+  (DESIGN.md / SCHEMA.md fenced ```ts blocks). Symmetric diff in
+  hint.
+- **`cross-spec/decision-locked-but-reality-diverges`** — CRITICAL.
+  DECISIONS.md block with `Status: LOCKED` + `Chosen: <pkg>` +
+  `Implemented in: \`<path>\`` — the referenced impl file's import
+  statements don't include the chosen package. Strips version
+  suffix (`jsonwebtoken@9` → `jsonwebtoken`).
+
+**28 of 28 mechanical finding codes shipped.** Future work is full-mode
+semantic checks (already partial in `full-mode.ts`) and the unbounded
+semantic catalogue (the 28 codes are the structural matrix; semantic
+drift is its sibling system).
+
+10 regression tests pinned. Live smoke via
+`.dev-pomogator-tmp/smoke-b7.mjs` verifies all 9 on real tmpdirs.
+
 ### Fixed (post-rc1 batch-6 — adversarial-review pass)
 
 An automated 4-skeptic / 1-synthesizer workflow attacked the 19

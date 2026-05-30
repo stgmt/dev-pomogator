@@ -5,7 +5,7 @@
 // Produces a `consistency-report.yaml`-shaped object. Caller writes to
 // disk (see yaml-writer.ts).
 //
-// Output finding codes (rc1 + post-rc1 expansion — 19 of 28 ship):
+// Output finding codes (rc1 + post-rc1 expansion — all 28 mechanical codes ship):
 //   • impl-drift/missing-file              — FR/AC references a path that doesn't exist
 //   • cross-spec/concept-overlap           — ≥3 shared concept-nouns between two specs without reference
 //   • cross-spec/runtime-identifier-drift  — same concept named differently in two specs
@@ -25,10 +25,18 @@
 //   • cross-spec/cli-flag-drift            — same logical CLI flag (e.g. --scope) referenced with divergent shape/name
 //   • cross-spec/enum-divergence           — same enum name with different value sets across specs
 //   • cross-spec/module-ownership-conflict — two specs both claim ownership of the same code path
+//   • impl-drift/missing-test              — FR-N defined but no @featureN tag exists in spec's .feature files
+//   • spec-only/orphan-AC                  — AC-N references FR-N that isn't defined in the spec
+//   • impl-drift/test-result-stale         — .feature mtime older than the latest spec MD mtime
+//   • spec-only/unreachable-task           — Task with Phase N where spec's .progress.json::phase_index < N
+//   • schema-drift/json-shape-drift        — JSON fixture top-level keys diverge from declared schema bullets
+//   • cross-spec/missing-cross-ref         — spec mentions another slug by name but has no markdown link to it
+//   • cross-spec/contradictory-nfr         — same NFR budget (latency/uptime/...) with divergent numeric values
+//   • cross-spec/schema-mismatch           — same TS `interface`/`type` name with divergent field sets across specs
+//   • cross-spec/decision-locked-but-reality-diverges — LOCKED decision says "use X" but referenced impl imports Y
 //
-// The remaining 9 codes from the 28-code matrix land in the same
-// branch as further small follow-ups; this file owns the mechanical
-// (LLM-free) subset.
+// The 28-code mechanical matrix is COMPLETE. Future work is full-mode
+// semantic checks (see full-mode.ts) and SARIF/audit-log improvements.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -253,6 +261,29 @@ const TS_STAR_REEXPORT_RE = /\bexport\s*\*\s*from\s*['"]/;
 const TS_IMPORT_RE = /import\s+\{\s*([^}]+)\s*\}\s+from\s+['"]([^'"]+)['"]/g;
 // Enum-like definition in MD: `Values: A | B | C` or bullet list `- A` / `- B` after «values:» / «enum:» header.
 const ENUM_HEADER_RE = /(?:^|\n)\s*(?:Values|Enum|Options|Allowed):\s*([\w |,/-]+)/g;
+
+// AC → FR backref: matches `## AC-3 (FR-5)` heading OR `**Requirement:** [FR-5]` body line.
+const AC_TO_FR_RE = /AC-\d+[^\n]*?\(FR-(\d+)\)|\*\*Requirement:\*\*\s*\[FR-(\d+)\]/g;
+// Schema declarations in `*_SCHEMA.md` / `SCHEMA.md` — bullets under "Schema" or "Keys" headings.
+const SCHEMA_KEY_BULLET_RE = /^\s*[-*]\s+`([a-zA-Z_][\w]*)`/gm;
+// Phase column inside a TASKS.md task-table row.
+const PHASE_CELL_RE = /\bPhase\s+(\d+)\b/i;
+// NFR budget heuristics — verb-noun + numeric + unit. Order matters: more
+// specific patterns (`response-time`) before generic (`latency`).
+const NFR_BUDGET_RE = /\b(response[-\s]?time|latency|throughput|availability|uptime|error[-\s]rate|cpu|memory|storage)\b[^.\n]{0,40}?(\d+(?:\.\d+)?)\s*(ms|s|mb|gb|%|req\/s)/gi;
+// Decision blocks in DECISIONS.md / DESIGN.md.
+const DECISION_BLOCK_RE = /^#{2,3}\s+Decision[:\s]+([\w-]+)([\s\S]*?)(?=\n#{2,3}\s|$)/gm;
+const DECISION_STATUS_LOCKED_RE = /\bStatus\s*[:=]\s*(?:LOCKED|FINAL)\b/i;
+const DECISION_CHOSEN_RE = /\bChosen\s*[:=]\s*([^\n(@`]+)/i;
+const DECISION_IMPL_PATH_RE = /\bImplemented\s+in\s*[:=]\s*`([^`]+)`/i;
+const TS_FILE_IMPORT_RE = /^\s*import\s+[^'"]+['"]([^'"]+)['"]/gm;
+// TypeScript interface/type body — captures name + body until matching `}`.
+const TS_INTERFACE_RE = /(?:interface|type)\s+(\w+)\s*[={]\s*([\s\S]*?)^\s*\}/gm;
+const TS_FIELD_RE = /^\s*(?:readonly\s+)?(\w+)\s*\??\s*:/gm;
+
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
 // Markdown `[label](relative/path.ext)` links — only resolves relative
 // repo paths; ignores http(s)://, mailto:, anchor-only (#foo), and
@@ -673,6 +704,445 @@ function findInvalidFrontmatter(
   return out;
 }
 
+// ============================================================================
+// Batch-7: final 9 finding codes (per workflow wzbmwybag design spec).
+// ============================================================================
+
+/** Stricter variant of orphan-FR: every defined FR-N MUST have a matching */
+/** @featureN tag in the spec's .feature corpus.                          */
+function findMissingTestPerFR(
+  files: { body: string; path: string }[],
+  featureTags: Set<string>,
+  repoRoot: string,
+): Finding[] {
+  const defs = collectFrDefinitions(files);
+  const out: Finding[] = [];
+  for (const [fr, definedIn] of defs.entries()) {
+    if (featureTags.has(fr)) continue;
+    out.push({
+      code: 'impl-drift/missing-test',
+      class: 'uncovered',
+      severity: 'INFO',
+      referenced_in: path.relative(repoRoot, definedIn),
+      suggested_fix:
+        `Add @${fr.toLowerCase().replace('-', '')} tag + Scenario covering ${fr}, OR mark FR as [OUT_OF_SCOPE].`,
+    });
+  }
+  return out;
+}
+
+/** AC heading references an FR that this spec never defines. */
+function findOrphanACs(
+  files: { body: string; path: string }[],
+  repoRoot: string,
+): Finding[] {
+  const defs = collectFrDefinitions(files);
+  const out: Finding[] = [];
+  for (const f of files) {
+    if (!/(?:^|\/|\\)(?:ACCEPTANCE_CRITERIA|AC)\.md$/i.test(f.path)) continue;
+    const body = stripFencedBlocks(f.body);
+    const lines = body.split(/\r?\n/);
+    for (let i = 0; i < lines.length; i++) {
+      let m: RegExpExecArray | null;
+      AC_TO_FR_RE.lastIndex = 0;
+      while ((m = AC_TO_FR_RE.exec(lines[i])) !== null) {
+        const num = m[1] ?? m[2];
+        if (!num) continue;
+        const fr = `FR-${num}`;
+        if (defs.has(fr)) continue;
+        out.push({
+          code: 'spec-only/orphan-AC',
+          class: 'spec-only',
+          severity: 'INFO',
+          referenced_in: `${path.relative(repoRoot, f.path)}:${i + 1}`,
+          suggested_fix:
+            `AC references ${fr} which is not defined in this spec. Either add ${fr} to FR.md or fix the AC backref.`,
+        });
+      }
+    }
+  }
+  return out;
+}
+
+/** `.feature` files older than the latest spec MD mtime (with 1 min skew). */
+function findStaleFeatureFiles(
+  repoRoot: string,
+  slug: string,
+  files: { body: string; path: string }[],
+): Finding[] {
+  const dir = path.join(repoRoot, '.specs', slug);
+  if (!fs.existsSync(dir)) return [];
+  const MD_TARGETS = ['FR.md', 'ACCEPTANCE_CRITERIA.md', 'REQUIREMENTS.md', 'DESIGN.md'];
+  let latestSpecMtime = 0;
+  for (const f of files) {
+    if (!MD_TARGETS.some((m) => f.path.endsWith(m))) continue;
+    try {
+      const stat = fs.statSync(f.path);
+      if (stat.mtimeMs > latestSpecMtime) latestSpecMtime = stat.mtimeMs;
+    } catch {
+      // ignore missing/transient files
+    }
+  }
+  if (latestSpecMtime === 0) return [];
+  const out: Finding[] = [];
+  const SKEW_MS = 60_000;
+  for (const name of fs.readdirSync(dir)) {
+    if (!name.endsWith('.feature')) continue;
+    const abs = path.join(dir, name);
+    let featureMtime: number;
+    try {
+      featureMtime = fs.statSync(abs).mtimeMs;
+    } catch {
+      continue;
+    }
+    if (featureMtime >= latestSpecMtime - SKEW_MS) continue;
+    out.push({
+      code: 'impl-drift/test-result-stale',
+      class: 'uncovered',
+      severity: 'WARNING',
+      referenced_in: `.specs/${slug}/${name}`,
+      suggested_fix:
+        `.feature last modified ${new Date(featureMtime).toISOString()} but spec MD last modified ${new Date(latestSpecMtime).toISOString()}. Re-run scenarios and/or update .feature to reflect spec changes. (CI gotcha: git clone resets mtimes — skip this finding on fresh checkouts.)`,
+    });
+  }
+  return out;
+}
+
+/** Tasks targeting a Phase higher than `.progress.json::phase_index`. */
+function findUnreachableTasks(
+  files: { body: string; path: string }[],
+  repoRoot: string,
+  slug: string,
+): Finding[] {
+  const out: Finding[] = [];
+  const progressFile = path.join(repoRoot, '.specs', slug, '.progress.json');
+  if (!fs.existsSync(progressFile)) return [];
+  let currentPhase = 1;
+  try {
+    const progress = JSON.parse(fs.readFileSync(progressFile, 'utf8')) as {
+      phase_index?: number;
+    };
+    if (typeof progress.phase_index === 'number') currentPhase = progress.phase_index;
+  } catch {
+    return [];
+  }
+  for (const f of files) {
+    if (!/TASKS\.md$/i.test(f.path)) continue;
+    const lines = f.body.split(/\r?\n/);
+    // Find header row to locate Phase column index.
+    let phaseColIdx = -1;
+    let statusColIdx = -1;
+    let idColIdx = -1;
+    for (let i = 0; i < lines.length; i++) {
+      if (!lines[i].includes('|')) continue;
+      const cells = lines[i].split('|').map((c) => c.trim().toLowerCase());
+      const pIdx = cells.indexOf('phase');
+      if (pIdx === -1) continue;
+      phaseColIdx = pIdx;
+      statusColIdx = cells.indexOf('status');
+      idColIdx = cells.findIndex((c) => c === 'id' || c === 'task' || c === 'title');
+      // Scan subsequent rows for tasks.
+      for (let j = i + 2; j < lines.length; j++) {
+        const row = lines[j];
+        if (!row.includes('|') || /^\|[\s-:|]+\|/.test(row)) continue;
+        if (row.trim() === '') break;
+        const rowCells = row.split('|').map((c) => c.trim());
+        const phaseCell = rowCells[phaseColIdx] ?? '';
+        const statusCell = statusColIdx >= 0 ? (rowCells[statusColIdx] ?? '').toLowerCase() : '';
+        const idCell = idColIdx >= 0 ? rowCells[idColIdx] ?? '' : `row-${j}`;
+        if (statusCell === 'done') continue;
+        const phaseMatch = phaseCell.match(PHASE_CELL_RE);
+        if (!phaseMatch) continue;
+        const taskPhase = parseInt(phaseMatch[1], 10);
+        if (Number.isNaN(taskPhase) || taskPhase <= currentPhase) continue;
+        out.push({
+          code: 'spec-only/unreachable-task',
+          class: 'spec-only',
+          severity: 'INFO',
+          referenced_in: `${path.relative(repoRoot, f.path)}:${j + 1}`,
+          suggested_fix:
+            `Task "${idCell}" targets Phase ${taskPhase} but spec is at Phase ${currentPhase}. Advance phase_index, defer the task, or mark [OUT_OF_SCOPE].`,
+        });
+      }
+      break;
+    }
+  }
+  return out;
+}
+
+/** JSON fixture top-level keys diverge from declared SCHEMA.md bullets. */
+function findJsonShapeDrift(
+  files: { body: string; path: string }[],
+  repoRoot: string,
+  slug: string,
+): Finding[] {
+  const dir = path.join(repoRoot, '.specs', slug);
+  if (!fs.existsSync(dir)) return [];
+  const declared = new Set<string>();
+  for (const f of files) {
+    if (!/SCHEMA\.md$/i.test(f.path)) continue;
+    // Slice the body into sections under headings containing "Schema" / "Keys".
+    const sections = f.body.split(/^##\s+/m);
+    for (const sec of sections) {
+      if (!/Schema|Keys/i.test(sec.split(/\n/)[0] ?? '')) continue;
+      let m: RegExpExecArray | null;
+      SCHEMA_KEY_BULLET_RE.lastIndex = 0;
+      while ((m = SCHEMA_KEY_BULLET_RE.exec(sec)) !== null) declared.add(m[1]);
+    }
+  }
+  if (declared.size === 0) return [];
+  const out: Finding[] = [];
+  for (const name of fs.readdirSync(dir)) {
+    if (!name.endsWith('.json')) continue;
+    // Skip volatile state files — their shape is not the responsibility of SCHEMA.md.
+    if (name === '.progress.json') continue;
+    const abs = path.join(dir, name);
+    let observed: Set<string>;
+    try {
+      const parsed = JSON.parse(fs.readFileSync(abs, 'utf8'));
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) continue;
+      observed = new Set(Object.keys(parsed));
+    } catch {
+      continue;
+    }
+    const missing: string[] = [];
+    const extra: string[] = [];
+    for (const k of declared) if (!observed.has(k)) missing.push(k);
+    for (const k of observed) if (!declared.has(k)) extra.push(k);
+    if (missing.length === 0 && extra.length === 0) continue;
+    out.push({
+      code: 'schema-drift/json-shape-drift',
+      class: 'schema-drift',
+      severity: 'WARNING',
+      referenced_in: `.specs/${slug}/${name}`,
+      suggested_fix:
+        `JSON ${name} top-level keys diverge from SCHEMA.md. Missing: [${missing.join(', ') || '(none)'}]. Extra: [${extra.join(', ') || '(none)'}].`,
+    });
+  }
+  return out;
+}
+
+/** Slugs mentioned in body but never linked via markdown. */
+function findMissingCrossRef(
+  filesBySlug: Map<string, { body: string; path: string }[]>,
+  allSlugs: string[],
+): Finding[] {
+  const out: Finding[] = [];
+  for (const slug of allSlugs) {
+    const ownFiles = filesBySlug.get(slug) ?? [];
+    const ownBodies = ownFiles.map((f) => f.body).join('\n');
+    for (const otherSlug of allSlugs) {
+      if (otherSlug === slug) continue;
+      const mentionRe = new RegExp(`\\b${escapeRegex(otherSlug)}\\b`, 'g');
+      if (!mentionRe.test(ownBodies)) continue;
+      const linkRe = new RegExp(
+        `\\]\\([^)]*\\.specs[/\\\\]${escapeRegex(otherSlug)}[/\\\\][^)]*\\)`,
+        'g',
+      );
+      if (linkRe.test(ownBodies)) continue;
+      // Locate first mention for actionable hint.
+      let where = '';
+      mentionRe.lastIndex = 0;
+      for (const f of ownFiles) {
+        const idx = f.body.search(mentionRe);
+        if (idx === -1) continue;
+        const lineNum = f.body.slice(0, idx).split(/\r?\n/).length;
+        where = `${path.relative('.', f.path)}:${lineNum}`;
+        break;
+      }
+      out.push({
+        code: 'cross-spec/missing-cross-ref',
+        class: 'concept-overlap',
+        severity: 'INFO',
+        spec_a: `.specs/${slug}`,
+        spec_b: `.specs/${otherSlug}`,
+        referenced_in: where,
+        suggested_fix:
+          `Spec mentions "${otherSlug}" but has no markdown link. Add [...](../${otherSlug}/FR.md) to make the cross-ref explicit.`,
+      });
+    }
+  }
+  return out;
+}
+
+interface NfrBudget {
+  key: string;
+  value: number;
+  unit: string;
+  context: string;
+}
+
+function collectNfrBudgets(
+  filesBySlug: Map<string, { body: string; path: string }[]>,
+): Map<string, Map<string, NfrBudget>> {
+  const out = new Map<string, Map<string, NfrBudget>>();
+  for (const [slug, files] of filesBySlug) {
+    const budgets = new Map<string, NfrBudget>();
+    for (const f of files) {
+      const body = stripFencedBlocks(f.body);
+      let m: RegExpExecArray | null;
+      NFR_BUDGET_RE.lastIndex = 0;
+      while ((m = NFR_BUDGET_RE.exec(body)) !== null) {
+        let key = m[1].toLowerCase().replace(/[-\s]+/g, '-');
+        if (key === 'response-time') key = 'latency';
+        budgets.set(`${key}|${m[3]}`, {
+          key,
+          value: parseFloat(m[2]),
+          unit: m[3],
+          context: f.path,
+        });
+      }
+    }
+    out.set(slug, budgets);
+  }
+  return out;
+}
+
+/** Two specs declare the same NFR budget with different numeric values. */
+function findContradictoryNFR(
+  filesBySlug: Map<string, { body: string; path: string }[]>,
+): Finding[] {
+  const budgets = collectNfrBudgets(filesBySlug);
+  const out: Finding[] = [];
+  const slugs = [...budgets.keys()];
+  for (let i = 0; i < slugs.length; i++) {
+    for (let j = i + 1; j < slugs.length; j++) {
+      const a = budgets.get(slugs[i])!;
+      const b = budgets.get(slugs[j])!;
+      for (const key of a.keys()) {
+        if (!b.has(key)) continue;
+        const ba = a.get(key)!;
+        const bb = b.get(key)!;
+        // Tolerance: >10% difference fires. Same-value pairs skip.
+        const diff = Math.abs(ba.value - bb.value);
+        const max = Math.max(Math.abs(ba.value), Math.abs(bb.value), 1);
+        if (diff / max <= 0.1) continue;
+        out.push({
+          code: 'cross-spec/contradictory-nfr',
+          class: 'contradiction',
+          severity: 'CRITICAL',
+          spec_a: `.specs/${slugs[i]} (${ba.key} = ${ba.value}${ba.unit})`,
+          spec_b: `.specs/${slugs[j]} (${bb.key} = ${bb.value}${bb.unit})`,
+          suggested_fix:
+            `NFR "${ba.key}" contradicts: ${ba.value}${ba.unit} vs ${bb.value}${bb.unit}. Reconcile budgets or document why they differ.`,
+        });
+      }
+    }
+  }
+  return out;
+}
+
+function collectTsInterfaces(
+  filesBySlug: Map<string, { body: string; path: string }[]>,
+): Map<string, Map<string, Set<string>>> {
+  const out = new Map<string, Map<string, Set<string>>>();
+  for (const [slug, files] of filesBySlug) {
+    const ifaces = new Map<string, Set<string>>();
+    for (const f of files) {
+      if (!/DESIGN\.md|SCHEMA\.md/i.test(f.path)) continue;
+      let m: RegExpExecArray | null;
+      TS_INTERFACE_RE.lastIndex = 0;
+      while ((m = TS_INTERFACE_RE.exec(f.body)) !== null) {
+        const name = m[1];
+        const fields = new Set<string>();
+        let fm: RegExpExecArray | null;
+        TS_FIELD_RE.lastIndex = 0;
+        while ((fm = TS_FIELD_RE.exec(m[2])) !== null) fields.add(fm[1]);
+        if (fields.size > 0) ifaces.set(name, fields);
+      }
+    }
+    out.set(slug, ifaces);
+  }
+  return out;
+}
+
+/** Same TS type/interface name with divergent field sets across specs. */
+function findSchemaMismatch(
+  filesBySlug: Map<string, { body: string; path: string }[]>,
+): Finding[] {
+  const ifacesBySlug = collectTsInterfaces(filesBySlug);
+  const out: Finding[] = [];
+  const slugs = [...ifacesBySlug.keys()];
+  for (let i = 0; i < slugs.length; i++) {
+    for (let j = i + 1; j < slugs.length; j++) {
+      const a = ifacesBySlug.get(slugs[i])!;
+      const b = ifacesBySlug.get(slugs[j])!;
+      for (const name of a.keys()) {
+        if (!b.has(name)) continue;
+        const fieldsA = a.get(name)!;
+        const fieldsB = b.get(name)!;
+        const diff: string[] = [];
+        for (const f of fieldsA) if (!fieldsB.has(f)) diff.push(`A:${f}`);
+        for (const f of fieldsB) if (!fieldsA.has(f)) diff.push(`B:${f}`);
+        if (diff.length === 0) continue;
+        out.push({
+          code: 'cross-spec/schema-mismatch',
+          class: 'schema-drift',
+          severity: 'CRITICAL',
+          spec_a: `.specs/${slugs[i]} (${name}: ${[...fieldsA].sort().join(', ')})`,
+          spec_b: `.specs/${slugs[j]} (${name}: ${[...fieldsB].sort().join(', ')})`,
+          suggested_fix:
+            `Type "${name}" differs across specs. Symmetric diff: [${diff.join(', ')}]. Unify the schema or rename one type.`,
+        });
+      }
+    }
+  }
+  return out;
+}
+
+/** LOCKED decision claims package X, but referenced impl file imports Y. */
+function findLockedDecisionDrift(
+  files: { body: string; path: string }[],
+  repoRoot: string,
+): Finding[] {
+  const out: Finding[] = [];
+  for (const f of files) {
+    if (!/DECISIONS\.md|DESIGN\.md/i.test(f.path)) continue;
+    // Split body by `## ` or `### ` headings — first segment has the
+    // pre-heading prose (discarded), subsequent segments start with the
+    // heading text. Iterate looking for "Decision:" prefixed sections.
+    const sections = f.body.split(/^#{2,3}\s+/m);
+    // The split discards the heading marker but preserves the body. Each
+    // section starts with `<heading text>\n<body...>`. Re-scan each:
+    for (const section of sections) {
+      const firstLine = section.split(/\r?\n/)[0] ?? '';
+      const decisionMatch = firstLine.match(/^Decision[:\s]+([\w-]+)/);
+      if (!decisionMatch) continue;
+      const decisionId = decisionMatch[1];
+      const block = section.slice(firstLine.length);
+      if (!DECISION_STATUS_LOCKED_RE.test(block)) continue;
+      const chosenMatch = block.match(DECISION_CHOSEN_RE);
+      const implMatch = block.match(DECISION_IMPL_PATH_RE);
+      if (!chosenMatch || !implMatch) continue;
+      const chosen = chosenMatch[1].trim().replace(/@[\w.~^>=<*-]+$/, '');
+      const implPath = implMatch[1].trim();
+      const abs = path.isAbsolute(implPath)
+        ? implPath
+        : path.resolve(repoRoot, implPath);
+      if (!fs.existsSync(abs) || !fs.statSync(abs).isFile()) continue;
+      const code = fs.readFileSync(abs, 'utf8');
+      const imports: string[] = [];
+      let im: RegExpExecArray | null;
+      TS_FILE_IMPORT_RE.lastIndex = 0;
+      while ((im = TS_FILE_IMPORT_RE.exec(code)) !== null) imports.push(im[1]);
+      const hasChosen = imports.some(
+        (i) => i === chosen || i.startsWith(`${chosen}/`) || i.endsWith(`/${chosen}`),
+      );
+      if (hasChosen) continue;
+      out.push({
+        code: 'cross-spec/decision-locked-but-reality-diverges',
+        class: 'architectural-decision-vs-reality',
+        severity: 'CRITICAL',
+        referenced_in: `${path.relative(repoRoot, f.path)} (decision ${decisionId})`,
+        expected_path: implPath,
+        suggested_fix:
+          `LOCKED decision "${decisionId}" picks "${chosen}" but ${implPath} imports [${imports.slice(0, 3).join(', ')}…]. Update the implementation, change Status → SUPERSEDED, or update DECISIONS.md.`,
+      });
+    }
+  }
+  return out;
+}
+
 /** Find TASKS.md task blocks with NO `FR-N` citation in their body. */
 function findOrphanTasks(
   files: { body: string; path: string }[],
@@ -1067,6 +1537,9 @@ export function reconcileLight(opts: ReconcileOptions): ReconcileResult[] {
   const cliDriftFindings = findCliFlagDrift(filesBySlug);
   const enumDivergenceFindings = findEnumDivergence(filesBySlug);
   const moduleOwnershipFindings = findModuleOwnershipConflict(filesBySlug);
+  const missingCrossRefFindings = findMissingCrossRef(filesBySlug, allSlugs);
+  const contradictoryNfrFindings = findContradictoryNFR(filesBySlug);
+  const schemaMismatchFindings = findSchemaMismatch(filesBySlug);
 
   const results: ReconcileResult[] = [];
   for (const slug of allSlugs) {
@@ -1085,6 +1558,12 @@ export function reconcileLight(opts: ReconcileOptions): ReconcileResult[] {
     findings.push(...findInvalidFrontmatter(opts.repoRoot, slug));
     findings.push(...findMissingSymbols(files, opts.repoRoot));
     findings.push(...findWithinSpecDuplicateFRs(files, opts.repoRoot, slug));
+    findings.push(...findMissingTestPerFR(files, featureTags, opts.repoRoot));
+    findings.push(...findOrphanACs(files, opts.repoRoot));
+    findings.push(...findStaleFeatureFiles(opts.repoRoot, slug, files));
+    findings.push(...findUnreachableTasks(files, opts.repoRoot, slug));
+    findings.push(...findJsonShapeDrift(files, opts.repoRoot, slug));
+    findings.push(...findLockedDecisionDrift(files, opts.repoRoot));
     // Attribute cross-spec findings to BOTH specs they touch. Normalise
     // OS path separators so the `.specs/<slug>` substring match works on
     // Windows + POSIX.
@@ -1099,6 +1578,9 @@ export function reconcileLight(opts: ReconcileOptions): ReconcileResult[] {
       ...cliDriftFindings,
       ...enumDivergenceFindings,
       ...moduleOwnershipFindings,
+      ...missingCrossRefFindings,
+      ...contradictoryNfrFindings,
+      ...schemaMismatchFindings,
     ]) {
       const a = f.spec_a ?? '';
       const b = f.spec_b ?? '';
