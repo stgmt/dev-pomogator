@@ -1,0 +1,136 @@
+{
+  "name": "spec-backlog classifier evals",
+  "description": "Pin every cross-spec-reconcile finding code to its expected verdict + category + resolver. Add a new case here whenever the classifier learns to route a new code.",
+  "cases": [
+    {
+      "id": "concept-overlap-noise",
+      "input": { "code": "cross-spec/concept-overlap", "severity": "INFO" },
+      "expected": { "verdict": "NOISE", "category": null, "resolver": null }
+    },
+    {
+      "id": "missing-cross-ref-auto",
+      "input": { "code": "cross-spec/missing-cross-ref", "severity": "INFO" },
+      "expected": { "verdict": "AUTO_FIX", "category": null, "resolver": null }
+    },
+    {
+      "id": "dead-link-AC-target-to-ac-author",
+      "input": {
+        "code": "impl-drift/dead-link",
+        "severity": "WARNING",
+        "referenced_in": ".specs/foo/FR.md:10",
+        "expected_path": "ACCEPTANCE_CRITERIA.md"
+      },
+      "expected": { "verdict": "BACKLOG", "category": "missing-spec-file", "resolver": "ac-author" }
+    },
+    {
+      "id": "dead-link-case-typo-auto",
+      "input": {
+        "code": "impl-drift/dead-link",
+        "severity": "WARNING",
+        "expected_path": "guide.MD"
+      },
+      "expected": { "verdict": "AUTO_FIX", "category": null, "resolver": null }
+    },
+    {
+      "id": "dead-link-multipath-to-link-fixer",
+      "input": {
+        "code": "impl-drift/dead-link",
+        "severity": "WARNING",
+        "expected_path": "tools/spec-graph/missing.ts"
+      },
+      "expected": { "verdict": "BACKLOG", "category": "dead-link-typo", "resolver": "link-fixer" }
+    },
+    {
+      "id": "missing-test-to-scenario-writer",
+      "input": { "code": "impl-drift/missing-test", "severity": "INFO" },
+      "expected": { "verdict": "BACKLOG", "category": "missing-test", "resolver": "scenario-writer" }
+    },
+    {
+      "id": "ownership-conflict-to-owner-picker",
+      "input": {
+        "code": "cross-spec/module-ownership-conflict",
+        "severity": "CRITICAL",
+        "spec_a": ".specs/foo (claims tools/x.ts)",
+        "spec_b": ".specs/bar (claims tools/x.ts)"
+      },
+      "expected": { "verdict": "BACKLOG", "category": "ownership-conflict", "resolver": "owner-picker" }
+    },
+    {
+      "id": "contradictory-nfr-to-decision-arbiter",
+      "input": {
+        "code": "cross-spec/contradictory-nfr",
+        "severity": "CRITICAL",
+        "spec_a": ".specs/a (latency = 200ms)",
+        "spec_b": ".specs/b (latency = 500ms)"
+      },
+      "expected": { "verdict": "BACKLOG", "category": "contradictory-nfr", "resolver": "decision-arbiter" }
+    },
+    {
+      "id": "missing-fr-section-to-fr-author",
+      "input": {
+        "code": "spec-only/missing-fr-section",
+        "severity": "WARNING",
+        "referenced_in": ".specs/foo/USE_CASES.md:7"
+      },
+      "expected": { "verdict": "BACKLOG", "category": "missing-fr-section", "resolver": "fr-author" }
+    },
+    {
+      "id": "missing-file-AC-target-to-ac-author",
+      "input": {
+        "code": "impl-drift/missing-file",
+        "severity": "WARNING",
+        "expected_path": "ACCEPTANCE_CRITERIA.md"
+      },
+      "expected": { "verdict": "BACKLOG", "category": "missing-spec-file", "resolver": "ac-author" }
+    },
+    {
+      "id": "missing-file-other-target-to-link-fixer",
+      "input": {
+        "code": "impl-drift/missing-file",
+        "severity": "WARNING",
+        "expected_path": "tools/foo/bar.ts"
+      },
+      "expected": { "verdict": "BACKLOG", "category": "dead-link-typo", "resolver": "link-fixer" }
+    },
+    {
+      "id": "unreachable-task-noise",
+      "input": { "code": "spec-only/unreachable-task", "severity": "INFO" },
+      "expected": { "verdict": "NOISE", "category": null, "resolver": null }
+    },
+    {
+      "id": "test-result-stale-noise",
+      "input": { "code": "impl-drift/test-result-stale", "severity": "WARNING" },
+      "expected": { "verdict": "NOISE", "category": null, "resolver": null }
+    },
+    {
+      "id": "orphan-task-to-fr-author",
+      "input": { "code": "spec-only/orphan-task", "severity": "WARNING" },
+      "expected": { "verdict": "BACKLOG", "category": "missing-fr-section", "resolver": "fr-author" }
+    },
+    {
+      "id": "uncovered-AC-to-scenario-writer",
+      "input": { "code": "spec-only/uncovered-AC", "severity": "WARNING" },
+      "expected": { "verdict": "BACKLOG", "category": "missing-test", "resolver": "scenario-writer" }
+    },
+    {
+      "id": "orphan-FR-to-scenario-writer",
+      "input": { "code": "spec-only/orphan-FR", "severity": "WARNING" },
+      "expected": { "verdict": "BACKLOG", "category": "missing-test", "resolver": "scenario-writer" }
+    },
+    {
+      "id": "test-without-fr-to-scenario-writer",
+      "input": { "code": "impl-drift/test-without-fr", "severity": "WARNING" },
+      "expected": { "verdict": "BACKLOG", "category": "missing-test", "resolver": "scenario-writer" }
+    },
+    {
+      "id": "duplicate-fr-id-to-human",
+      "input": { "code": "spec-only/duplicate-fr-id", "severity": "CRITICAL" },
+      "expected": { "verdict": "BACKLOG", "category": "unrecognised", "resolver": "human" }
+    },
+    {
+      "id": "unrecognised-code-fallback",
+      "input": { "code": "made-up/never-shipped", "severity": "WARNING" },
+      "expected": { "verdict": "BACKLOG", "category": "unrecognised", "resolver": "human" }
+    }
+  ]
+}
