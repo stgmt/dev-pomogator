@@ -9,7 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { reconcileLight } from '../../.claude/skills/cross-spec-reconcile/scripts/reconcile.ts';
 import { classify } from './classifier.ts';
-import { appendEntry, entryId, readEntry } from './writer.ts';
+import { appendEntry, entryId, readAllIds } from './writer.ts';
 
 const MARKER_DIR = '.dev-pomogator/.specs-backlog';
 
@@ -38,6 +38,8 @@ async function main(): Promise<void> {
 
   try {
     const reports = reconcileLight({ repoRoot });
+    // Batch-17 perf fix: cache existing ids once instead of N readEntry calls.
+    const existingIds = readAllIds(repoRoot);
     let queued = 0;
     let dedupe = 0;
     let auto = 0;
@@ -61,11 +63,12 @@ async function main(): Promise<void> {
           continue;
         }
         seen.add(id);
-        if (readEntry(repoRoot, id)) {
+        if (existingIds.has(id)) {
           dedupe++;
           continue;
         }
         appendEntry(repoRoot, v.entry);
+        existingIds.add(id);
         queued++;
       }
     }

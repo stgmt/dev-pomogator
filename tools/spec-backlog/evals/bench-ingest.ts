@@ -8,7 +8,7 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { reconcileLight } from '../../../.claude/skills/cross-spec-reconcile/scripts/reconcile.ts';
 import { classify } from '../classifier.ts';
-import { appendEntry, entryId, readEntry } from '../writer.ts';
+import { appendEntry, entryId, readAllIds, readEntry } from '../writer.ts';
 
 interface BenchResult {
   specs: number;
@@ -59,12 +59,15 @@ function runBench(specCount: number, frPerSpec: number): BenchResult {
     }
     const t2 = performance.now();
 
+    // Batch-17 perf fix: bulk-id cache instead of N × readEntry()
+    const existingIds = readAllIds(root);
     for (const { slug, finding, verdict } of verdicts) {
       if (verdict.verdict !== 'BACKLOG' || !verdict.entry) continue;
       const id = entryId(slug, finding.code, verdict.entry.evidence);
-      if (seen.has(id) || readEntry(root, id)) continue;
+      if (seen.has(id) || existingIds.has(id)) continue;
       seen.add(id);
       appendEntry(root, verdict.entry);
+      existingIds.add(id);
       queued++;
     }
     const t3 = performance.now();
@@ -89,21 +92,24 @@ function runWarmDedup(specCount: number, frPerSpec: number): BenchResult {
   fs.mkdirSync(root, { recursive: true });
   try {
     for (let i = 0; i < specCount; i++) seedSpec(root, `bench-spec-${i}`, frPerSpec);
-    // Cold prepass — populate backlog
+    // Cold prepass — populate backlog (cached ids for speed)
     const cold = reconcileLight({ repoRoot: root });
+    const coldIds = readAllIds(root);
     for (const r of cold) {
       for (const f of r.findings) {
         const v = classify(r.specSlug, f);
         if (v.verdict !== 'BACKLOG' || !v.entry) continue;
         const id = entryId(r.specSlug, f.code, v.entry.evidence);
-        if (readEntry(root, id)) continue;
+        if (coldIds.has(id)) continue;
         appendEntry(root, v.entry);
+        coldIds.add(id);
       }
     }
-    // Now measure WARM run — every entry should hit dedup
+    // Now measure WARM run — every entry should hit dedup (O(1) Set lookup)
     const t0 = performance.now();
     const reports = reconcileLight({ repoRoot: root });
     const t1 = performance.now();
+    const warmIds = readAllIds(root);
     let dedupHits = 0;
     let appended = 0;
     for (const r of reports) {
@@ -111,11 +117,12 @@ function runWarmDedup(specCount: number, frPerSpec: number): BenchResult {
         const v = classify(r.specSlug, f);
         if (v.verdict !== 'BACKLOG' || !v.entry) continue;
         const id = entryId(r.specSlug, f.code, v.entry.evidence);
-        if (readEntry(root, id)) {
+        if (warmIds.has(id)) {
           dedupHits++;
           continue;
         }
         appendEntry(root, v.entry);
+        warmIds.add(id);
         appended++;
       }
     }

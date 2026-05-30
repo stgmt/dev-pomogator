@@ -122,6 +122,16 @@ export function readEntry(repoRoot: string, id: string): BacklogEntry | null {
   return readAll(repoRoot).find((e) => e.id === id) ?? null;
 }
 
+/**
+ * Batch-17 perf fix: bulk-read all ids into a Set in one disk pass.
+ * Callers loop N findings × O(1) Set.has() instead of N × readEntry()
+ * (which is N × readAll() under the hood = O(N²) at scale).
+ * Expected 11× speedup on warm-dedup at N=1200 per workflow wljjmhkm9.
+ */
+export function readAllIds(repoRoot: string): Set<string> {
+  return new Set(readAll(repoRoot).map((e) => e.id));
+}
+
 /** Read entries grouped by category. */
 export function readByCategory(repoRoot: string): Map<string, BacklogEntry[]> {
   const out = new Map<string, BacklogEntry[]>();

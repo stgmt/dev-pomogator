@@ -18,6 +18,7 @@ import {
   appendEntry,
   entryId,
   readAll,
+  readAllIds,
   readByCategory,
   readEntry,
   readOpen,
@@ -177,6 +178,9 @@ async function cmdIngest(args: string[]): Promise<number> {
   const repoRoot = getArg(args, '--root') ?? process.cwd();
   const { reconcileLight } = (await import('../../.claude/skills/cross-spec-reconcile/scripts/reconcile.ts')) as typeof import('../../.claude/skills/cross-spec-reconcile/scripts/reconcile.ts');
   const reports = reconcileLight({ repoRoot });
+  // Batch-17 perf fix: cache existing ids in one disk pass — was O(N²)
+  // via readEntry() in the loop.
+  const existingIds = readAllIds(repoRoot);
   let auto = 0;
   let backlog = 0;
   let noise = 0;
@@ -197,9 +201,10 @@ async function cmdIngest(args: string[]): Promise<number> {
       const id = entryId(r.specSlug, f.code, verdict.entry.evidence);
       if (seenIds.has(id)) continue;
       seenIds.add(id);
-      // Skip if already in backlog (any status).
-      if (readEntry(repoRoot, id)) continue;
+      // Batch-17: O(1) Set lookup instead of readEntry() disk scan.
+      if (existingIds.has(id)) continue;
       appendEntry(repoRoot, verdict.entry);
+      existingIds.add(id);
       appended++;
       backlog++;
     }

@@ -17,7 +17,29 @@ export interface InputFinding {
 }
 
 export function classify(slug: string, finding: InputFinding): ClassificationResult {
-  const code = finding.code;
+  // Batch-17 hardening (workflow wljjmhkm9 fuzz analyzer): defensive
+  // input handling. Type-guard + trim + lowercase normalize so the
+  // same finding routed via different surfaces (CLI / hook / test) maps
+  // to the same verdict regardless of whitespace / case noise.
+  const rawCode: unknown = finding.code;
+  if (typeof rawCode !== 'string' || rawCode.trim() === '') {
+    return {
+      verdict: 'BACKLOG',
+      entry: {
+        slug,
+        code: typeof rawCode === 'string' ? rawCode : String(rawCode ?? 'null-or-invalid'),
+        category: 'unrecognised',
+        evidence: { file: finding.referenced_in },
+        suggested_resolver: 'human',
+        difficulty: 'easy',
+      },
+    };
+  }
+  // Trim only (NOT lowercase): existing comparisons use canonical
+  // case literals like `'spec-only/orphan-AC'` where the AC stays
+  // uppercase. Detector emits codes in canonical case; whitespace
+  // trim is the realistic defensive measure.
+  const code = rawCode.trim();
 
   // 1. NOISE class — INFO findings on the corpus that have no
   // realistic resolver. We keep them in the report but don't backlog.
