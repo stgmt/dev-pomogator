@@ -68,7 +68,52 @@ export interface ReconcileOptions {
   slugs?: string[];
   /** Override the FS root for `impl-drift/missing-file` resolution. */
   implRoots?: string[];
+  /**
+   * FR id namespace policy across specs. Default `'per-spec'`: every spec
+   * keeps its own FR-1..N numbering, so `cross-spec/duplicate-fr-id` and
+   * `cross-spec/contradictory-fr` are NOT emitted across specs (dogfood
+   * batch-9 surfaced 33,000+ false positives on real corpora). Use
+   * `'shared'` only when the repo enforces a global FR namespace, e.g. a
+   * monolithic spec / docs-as-code setup where FR ids are assigned once.
+   */
+  crossSpecFrNamespace?: 'per-spec' | 'shared';
+  /**
+   * Path-substring stoplist for `cross-spec/module-ownership-conflict`.
+   * Paths matching any substring here are excluded from ownership
+   * comparison (avoids 900+ FPs on shared test infra like `helpers.ts`,
+   * `_shared/`, fixtures, mocks).
+   */
+  ownershipStoplist?: string[];
 }
+
+/** Default ownership stoplist — shared infra that multiple specs legitimately reference. */
+const DEFAULT_OWNERSHIP_STOPLIST = [
+  'tests/e2e/helpers.ts',
+  'tests/fixtures/',
+  'tests/setup/',
+  'tools/_shared/',
+  'tools/test-statusline/',
+  'tools/tui-test-runner/',
+  '.claude-plugin/',
+  'package.json',
+  'package-lock.json',
+  'tsconfig.json',
+  'vitest.config.ts',
+];
+
+/** Minimum shared-concept count to fire `cross-spec/concept-overlap` (was 3, dogfood: too noisy). */
+const CONCEPT_OVERLAP_MIN_SHARED = 5;
+
+/** Stoplist of generic concept nouns that appear in many unrelated specs. */
+const CONCEPT_NOUN_STOPLIST = new Set([
+  'Acceptance', 'Criteria', 'Schema', 'Changelog', 'Stop', 'Docker',
+  'TypeScript', 'JavaScript', 'Python', 'GitHub', 'README', 'Phase',
+  'Status', 'TODO', 'FIXME', 'WARNING', 'CRITICAL', 'INFO',
+  'JSON', 'YAML', 'Feature', 'Scenario', 'Requirement', 'NFR',
+  'Performance', 'Security', 'Reliability', 'Usability',
+  'Implementation', 'Definition', 'Validation', 'Verification',
+  'Configuration', 'Documentation', 'Integration', 'Migration',
+]);
 
 export interface ReconcileResult {
   generatedAt: string;
@@ -565,6 +610,7 @@ function findEnumDivergence(
 /** Two specs both claim ownership of the same code path. */
 function findModuleOwnershipConflict(
   filesBySlug: Map<string, { body: string; path: string }[]>,
+  stoplist: string[] = DEFAULT_OWNERSHIP_STOPLIST,
 ): Finding[] {
   const out: Finding[] = [];
   // Collect every `path/to/x.ts`-like reference (already covered by PATH_REF_RE).
@@ -582,6 +628,9 @@ function findModuleOwnershipConflict(
         // string (e.g. `tools/foo/main.ts`).
         const raw = m[0].replace(/`/g, '');
         const ref = raw.replace(/\*/g, '');
+        // Dogfood batch-9: skip shared infra paths (helpers.ts, fixtures,
+        // _shared/, etc.) — they are legitimately referenced by N specs.
+        if (stoplist.some((s) => ref.includes(s))) continue;
         pathMap.set(ref, f.path);
       }
     }
@@ -1525,6 +1574,10 @@ function findConceptOverlap(
       let m: RegExpExecArray | null;
       CONCEPT_NOUN_RE.lastIndex = 0;
       while ((m = CONCEPT_NOUN_RE.exec(f.body)) !== null) {
+        // Dogfood batch-9: skip generic spec-ecosystem nouns (Schema,
+        // Changelog, Acceptance, Criteria, ...) — they appear in
+        // nearly every spec and produce ~2200 noise findings.
+        if (CONCEPT_NOUN_STOPLIST.has(m[0])) continue;
         concepts.add(m[0]);
       }
     }
@@ -1537,7 +1590,9 @@ function findConceptOverlap(
       const b = conceptsBySlug.get(slugs[j])!;
       const shared: string[] = [];
       for (const c of a) if (b.has(c)) shared.push(c);
-      if (shared.length < 3) continue;
+      // Dogfood batch-9: bumped threshold 3 → 5 — three-noun overlap was
+      // routinely hit by unrelated specs sharing common framework names.
+      if (shared.length < CONCEPT_OVERLAP_MIN_SHARED) continue;
       out.push({
         code: 'cross-spec/concept-overlap',
         class: 'concept-overlap',
@@ -1569,12 +1624,20 @@ export function reconcileLight(opts: ReconcileOptions): ReconcileResult[] {
   }
   const driftFindings = findRuntimeIdentifierDrift(idsBySlug);
   const overlapFindings = findConceptOverlap(filesBySlug);
-  const duplicateFrFindings = findDuplicateFrIds(defsBySlug);
-  const contradictoryFrFindings = findContradictoryFRs(defsBySlug, filesBySlug);
+  // Dogfood batch-9: per-spec FR namespace by default — both
+  // `cross-spec/duplicate-fr-id` and `cross-spec/contradictory-fr`
+  // produce thousands of FPs when each spec uses its own FR-1..N
+  // numbering (the common case). Opt in via `crossSpecFrNamespace: 'shared'`.
+  const sharedFrNs = opts.crossSpecFrNamespace === 'shared';
+  const duplicateFrFindings = sharedFrNs ? findDuplicateFrIds(defsBySlug) : [];
+  const contradictoryFrFindings = sharedFrNs
+    ? findContradictoryFRs(defsBySlug, filesBySlug)
+    : [];
   const urlDriftFindings = findUrlShapeDrift(filesBySlug);
   const cliDriftFindings = findCliFlagDrift(filesBySlug);
   const enumDivergenceFindings = findEnumDivergence(filesBySlug);
-  const moduleOwnershipFindings = findModuleOwnershipConflict(filesBySlug);
+  const ownershipStoplist = opts.ownershipStoplist ?? DEFAULT_OWNERSHIP_STOPLIST;
+  const moduleOwnershipFindings = findModuleOwnershipConflict(filesBySlug, ownershipStoplist);
   const missingCrossRefFindings = findMissingCrossRef(filesBySlug, allSlugs);
   const contradictoryNfrFindings = findContradictoryNFR(filesBySlug);
   const schemaMismatchFindings = findSchemaMismatch(filesBySlug);

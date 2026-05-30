@@ -41,6 +41,8 @@ export interface FullModeOptions {
    * can short-circuit via this map.
    */
   denyOverrides?: Map<string, boolean>;
+  /** Forwarded to `reconcileLight` — see ReconcileOptions for semantics. */
+  crossSpecFrNamespace?: 'per-spec' | 'shared';
 }
 
 export interface FullModeResult extends ReconcileResult {
@@ -91,7 +93,14 @@ function collectFrBlocks(repoRoot: string, slugs: string[]): FrBlock[] {
 
 /** Run full-mode reconcile (mechanical + LLM-judge). Async because of subprocess calls. */
 export async function runFullMode(opts: FullModeOptions): Promise<FullModeResult[]> {
-  const mechanical = reconcileLight({ repoRoot: opts.repoRoot, slugs: opts.slugs });
+  // Full-mode forwards the shared-namespace toggle so the mechanical
+  // `cross-spec/contradictory-fr` short-circuit (line ~110) still works
+  // when the caller is operating in shared-namespace mode.
+  const mechanical = reconcileLight({
+    repoRoot: opts.repoRoot,
+    slugs: opts.slugs,
+    crossSpecFrNamespace: opts.crossSpecFrNamespace,
+  });
 
   // Already-contradictory pairs — skip the LLM call (mechanical already won).
   const alreadyFlagged = new Set<string>();

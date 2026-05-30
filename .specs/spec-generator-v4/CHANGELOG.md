@@ -19,6 +19,48 @@ All notable changes to this feature will be documented in this file.
     `cross-spec/enum-divergence`, `cross-spec/module-ownership-conflict`.
   19 of the 28-code matrix now ship; 9 remain as small follow-ups.
 
+### Fixed (batch-9 — dogfood revealed FR-namespace design bug + noise reduction)
+
+Ran the analyzer against this repo's own `.specs/` corpus (48 specs) —
+discovered **38,453 findings**, almost all false positives. Root cause:
+
+1. **`cross-spec/duplicate-fr-id` + `cross-spec/contradictory-fr` produced
+   33,756 (88%) of all findings** because every spec uses its own
+   FR-1..N numbering. The detectors had assumed a shared repo-wide FR
+   namespace. Real corpora use **per-spec namespaces** — the common case.
+
+Fix: new `ReconcileOptions.crossSpecFrNamespace: 'per-spec' | 'shared'`
+field. Default `'per-spec'` disables both cross-spec FR-id detectors.
+Set `'shared'` for monolithic spec setups where FR ids are globally
+assigned. Within-spec `spec-only/duplicate-fr-id` remains active in
+both modes (batch-8 introduced).
+
+2. **`cross-spec/module-ownership-conflict` fired 964 times** on shared
+   test infra: `tests/e2e/helpers.ts`, `tests/fixtures/`, `_shared/`,
+   `package.json`, etc. — paths multiple specs legitimately reference.
+
+Fix: new `ReconcileOptions.ownershipStoplist?: string[]`. Default
+includes 11 shared-infra path prefixes. Caller can override.
+
+3. **`cross-spec/concept-overlap` fired 2185 times** on generic
+   ecosystem nouns (`Schema`, `Changelog`, `Acceptance`, `Criteria`,
+   `Stop`, `Phase`, ...) that appear in nearly every spec.
+
+Fix: new `CONCEPT_NOUN_STOPLIST` constant (34 generic nouns). Bumped
+`CONCEPT_OVERLAP_MIN_SHARED` from 3 → 5 (lower threshold was firing on
+random framework name overlap).
+
+**Post-batch-9 dogfood**: 38,453 → **4,251 findings (-89%)**. CRITICAL:
+33,860 → **596 (-98%)**. Remaining findings are mostly INFO/WARNING
+documentation-quality signals (missing-test, missing-cross-ref,
+concept-overlap above stoplist) plus a real-bugs slice of CRITICAL
+ownership-conflict (~554 cases, mostly legitimate cross-spec testing
+infra references that the stoplist couldn't auto-detect).
+
+5 new regression tests pinned: default per-spec namespace, opt-in
+shared namespace, default ownership stoplist, custom stoplist override,
+concept stoplist suppression.
+
 ### Fixed (batch-8 — 2nd adversarial-review pass closes 8 HIGH + 2 MEDIUM bugs)
 
 Second workflow `w3au0fmaq` (5 skeptics + 1 integration auditor + 1

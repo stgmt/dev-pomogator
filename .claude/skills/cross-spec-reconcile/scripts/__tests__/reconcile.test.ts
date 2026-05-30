@@ -66,12 +66,13 @@ describe('reconcileLight — finding-code coverage', () => {
     expect(drift!.spec_b).toContain('sessionToken');
   });
 
-  it('cross-spec/concept-overlap fires when two specs share ≥3 capitalised concept-nouns', () => {
+  it('cross-spec/concept-overlap fires when two specs share ≥5 capitalised concept-nouns (post batch-9)', () => {
+    // Batch-9 bumped threshold 3 → 5 to suppress framework-name FPs.
     seedSpec(root, 'spec-x', {
-      'FR.md': '## FR-1\n\nAuthService LoginController SessionManager TokenCache UserStore\n',
+      'FR.md': '## FR-1\n\nAuthService LoginController SessionManager TokenCache UserStore CartPipeline\n',
     });
     seedSpec(root, 'spec-y', {
-      'FR.md': '## FR-2\n\nAuthService LoginController SessionManager OrderQueue Inventory\n',
+      'FR.md': '## FR-2\n\nAuthService LoginController SessionManager TokenCache UserStore InventoryQueue\n',
     });
     const reports = reconcileLight({ repoRoot: root });
     const overlap = reports
@@ -116,10 +117,10 @@ describe('reconcileLight — finding-code coverage', () => {
     expect(uncovered[0].suggested_fix).toContain('2 AC heading');
   });
 
-  it('cross-spec/duplicate-fr-id fires when two specs both define the same FR-N', () => {
+  it('cross-spec/duplicate-fr-id fires when two specs both define the same FR-N (shared namespace opt-in)', () => {
     seedSpec(root, 'spec-x', { 'FR.md': '## FR-1: Login\n' });
     seedSpec(root, 'spec-y', { 'FR.md': '## FR-1: Different thing\n' });
-    const reports = reconcileLight({ repoRoot: root });
+    const reports = reconcileLight({ repoRoot: root, crossSpecFrNamespace: 'shared' });
     const dup = reports
       .flatMap((r) => r.findings)
       .find((f) => f.code === 'cross-spec/duplicate-fr-id');
@@ -129,14 +130,14 @@ describe('reconcileLight — finding-code coverage', () => {
     expect(dup!.spec_b).toContain('FR-1');
   });
 
-  it('cross-spec/contradictory-fr fires when the same FR id has substantially different bodies', () => {
+  it('cross-spec/contradictory-fr fires when the same FR id has substantially different bodies (shared namespace opt-in)', () => {
     seedSpec(root, 'spec-p', {
       'FR.md': '## FR-1: Auth\n\nUsers log in with email + password, redirect to dashboard.\n',
     });
     seedSpec(root, 'spec-q', {
       'FR.md': '## FR-1: Inventory\n\nWarehouse manages SKUs across multiple bins.\n',
     });
-    const reports = reconcileLight({ repoRoot: root });
+    const reports = reconcileLight({ repoRoot: root, crossSpecFrNamespace: 'shared' });
     const contradictory = reports
       .flatMap((r) => r.findings)
       .find((f) => f.code === 'cross-spec/contradictory-fr');
@@ -442,16 +443,17 @@ describe('reconcileLight — finding-code coverage', () => {
     expect(conflict!.spec_a).toContain('tools/foo.ts');
   });
 
-  it('FIX: contradictory-fr — borderline 0.4-0.55 overlap no longer suppressed', () => {
+  it('FIX: contradictory-fr — borderline 0.4-0.55 overlap no longer suppressed (shared namespace opt-in)', () => {
     // Both share auth domain vocabulary but say different things — the OLD
     // threshold of 0.4 would have suppressed this; 0.55 lets it through.
+    // Batch-9: per-spec namespace is default; opt into 'shared' to test.
     seedSpec(root, 'sp-contra-a', {
       'FR.md': '## FR-1: Auth\nSystem validates credentials and issues authentication tokens for the user session.\n',
     });
     seedSpec(root, 'sp-contra-b', {
       'FR.md': '## FR-1: Cart\nThe shopping cart system maintains customer SKU items with quantity tracking.\n',
     });
-    const reports = reconcileLight({ repoRoot: root });
+    const reports = reconcileLight({ repoRoot: root, crossSpecFrNamespace: 'shared' });
     const contradictory = reports
       .flatMap((r) => r.findings)
       .find((f) => f.code === 'cross-spec/contradictory-fr');
@@ -721,6 +723,72 @@ describe('reconcileLight — finding-code coverage', () => {
     const [report] = reconcileLight({ repoRoot: root, slugs: ['sp-fields'] });
     const drift = report.findings.find((f) => f.code === 'schema-drift/json-shape-drift');
     expect(drift).toBeDefined();
+  });
+
+  // ---- Batch-9 dogfood-driven option fixes ----
+
+  it('DOGFOOD: per-spec FR namespace (default) — cross-spec/duplicate-fr-id does NOT fire', () => {
+    // Real corpus has 30+ specs each using FR-1..N. Default per-spec
+    // namespace must NOT flag them as collisions.
+    seedSpec(root, 'sp-ns-a', { 'FR.md': '## FR-1: A flow\n' });
+    seedSpec(root, 'sp-ns-b', { 'FR.md': '## FR-1: B flow\n' });
+    const reports = reconcileLight({ repoRoot: root });
+    expect(
+      reports.flatMap((r) => r.findings).find((f) => f.code === 'cross-spec/duplicate-fr-id'),
+    ).toBeUndefined();
+    expect(
+      reports.flatMap((r) => r.findings).find((f) => f.code === 'cross-spec/contradictory-fr'),
+    ).toBeUndefined();
+  });
+
+  it('DOGFOOD: shared FR namespace (opt-in) — cross-spec/duplicate-fr-id DOES fire', () => {
+    seedSpec(root, 'sp-shr-a', { 'FR.md': '## FR-1: Login\n' });
+    seedSpec(root, 'sp-shr-b', { 'FR.md': '## FR-1: Cart\n' });
+    const reports = reconcileLight({
+      repoRoot: root,
+      crossSpecFrNamespace: 'shared',
+    });
+    const dup = reports
+      .flatMap((r) => r.findings)
+      .find((f) => f.code === 'cross-spec/duplicate-fr-id');
+    expect(dup).toBeDefined();
+  });
+
+  it('DOGFOOD: module-ownership default stoplist — shared test infra suppressed', () => {
+    seedSpec(root, 'sp-own-a', {
+      'FR.md': '## FR-1\nUses `tests/e2e/helpers.ts` for setup.\n',
+    });
+    seedSpec(root, 'sp-own-b', {
+      'FR.md': '## FR-2\nAlso uses `tests/e2e/helpers.ts`.\n',
+    });
+    const reports = reconcileLight({ repoRoot: root });
+    expect(
+      reports.flatMap((r) => r.findings).find((f) => f.code === 'cross-spec/module-ownership-conflict'),
+    ).toBeUndefined();
+  });
+
+  it('DOGFOOD: module-ownership custom stoplist override fires for non-stoplisted paths', () => {
+    seedSpec(root, 'sp-own-c', { 'FR.md': '## FR-1\nClaims `tools/order/main.ts`.\n' });
+    seedSpec(root, 'sp-own-d', { 'FR.md': '## FR-2\nClaims `tools/order/main.ts`.\n' });
+    const reports = reconcileLight({ repoRoot: root, ownershipStoplist: [] });
+    const conflict = reports
+      .flatMap((r) => r.findings)
+      .find((f) => f.code === 'cross-spec/module-ownership-conflict');
+    expect(conflict).toBeDefined();
+  });
+
+  it('DOGFOOD: concept-overlap stoplist suppresses generic ecosystem nouns', () => {
+    // Both specs share Schema + Changelog + Acceptance + Criteria + Stop — all stoplisted.
+    seedSpec(root, 'sp-co-a', {
+      'FR.md': '## FR-1\nSchema definition. Changelog log. Acceptance Criteria. Stop hook.\n',
+    });
+    seedSpec(root, 'sp-co-b', {
+      'FR.md': '## FR-2\nSchema definition. Changelog entries. Acceptance Criteria. Stop hook.\n',
+    });
+    const reports = reconcileLight({ repoRoot: root });
+    expect(
+      reports.flatMap((r) => r.findings).find((f) => f.code === 'cross-spec/concept-overlap'),
+    ).toBeUndefined();
   });
 });
 

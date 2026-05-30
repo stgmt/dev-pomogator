@@ -67,13 +67,17 @@ describe('cross-spec-reconcile full mode (LLM-judge wrapper)', () => {
     ).toBeUndefined();
   });
 
-  it('still ships mechanical findings (full mode is a superset)', async () => {
+  it('still ships mechanical findings (full mode is a superset) — shared namespace opt-in', async () => {
     seedSpec(root, 'spec-a', { 'FR.md': `## FR-1: Auth\n${LONG_TEXT_A}\n` });
     seedSpec(root, 'spec-b', { 'FR.md': `## FR-1: Auth\n${LONG_TEXT_B}\n` });
     const fakeSpawn = async (_p: string) => JSON.stringify({ result: 'NO_DRIFT_DETECTED' });
-    const reports = await runFullMode({ repoRoot: root, spawn: fakeSpawn });
+    const reports = await runFullMode({
+      repoRoot: root,
+      spawn: fakeSpawn,
+      crossSpecFrNamespace: 'shared',
+    });
     const codes = new Set(reports.flatMap((r) => r.findings.map((f) => f.code)));
-    // duplicate-fr-id is the mechanical signal — must still appear.
+    // duplicate-fr-id is the mechanical signal — must still appear in shared ns mode.
     expect(codes.has('cross-spec/duplicate-fr-id')).toBe(true);
   });
 
