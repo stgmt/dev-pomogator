@@ -6,13 +6,28 @@ All notable changes to this feature will be documented in this file.
 
 ### Added (post-rc1, en route to v4.0.0 final)
 
-- 8 more cross-spec finding codes in `reconcile.ts` across two batches:
+- 11 more cross-spec finding codes in `reconcile.ts` across three batches:
   - Batch 1 (5): `spec-only/orphan-FR`, `spec-only/uncovered-AC`,
     `cross-spec/duplicate-fr-id`, `cross-spec/contradictory-fr`,
     `impl-drift/test-without-fr`.
   - Batch 2 (3): `spec-only/orphan-task`, `spec-only/missing-fr-section`,
     `schema-drift/missing-feature-heading`.
-  11 of the 28-code matrix now ship; 17 remain as small follow-ups.
+  - Batch 3 (3): `impl-drift/dead-link`, `spec-only/missing-acceptance`,
+    `schema-drift/invalid-frontmatter`.
+  14 of the 28-code matrix now ship; 14 remain as small follow-ups.
+- `.claude/skills/cross-spec-reconcile/scripts/full-mode.ts` — full-mode
+  wrapper that pipes same-FR pairs through `tools/spec-llm-judge` for
+  `cross-spec/semantic-drift` findings beyond the mechanical heuristics.
+  Honours FR-26 deny-list (subprocess never spawns), caches verdicts
+  via the existing `cache.ts` (no double-call), bounded by `maxCalls`
+  (default 50), suppresses pairs already flagged by mechanical
+  `cross-spec/contradictory-fr` (no double-count).
+- `.claude/skills/cross-spec-resolve/SKILL.md` — executable workflow
+  body. The 7-step loop now ships as an agent-runnable TypeScript
+  sketch (planResolution → AskUserQuestion → Path A/B/C dispatch →
+  foreign-spec banner → updateStatus) so the live skill body doesn't
+  have to re-infer the AskUserQuestion shape, header lengths, or
+  override-log call signature on every invocation.
 - `.claude/skills/cross-spec-resolve/scripts/update-status.ts` —
   step-7 closer for the interactive walker. Atomic temp + rename
   YAML mutation that stamps `resolution_status` + `resolved_at`

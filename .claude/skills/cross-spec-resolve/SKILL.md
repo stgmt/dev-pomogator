@@ -87,6 +87,113 @@ The live AskUserQuestion loop (step 4) and Path A/B/C dispatch (step 5)
 stay in this skill body — the scripts give the agent the pre-shaped
 data + the audit-safe write helper, the skill provides the dialogue.
 
+## Executable workflow (agent body — follow verbatim)
+
+When invoked, execute this sequence:
+
+```ts
+// Step 1: Read.
+const plan = planResolution({ repoRoot: process.cwd(), slug: SLUG });
+if (plan.missing) { return "Run /cross-spec-reconcile first"; }
+
+// Step 2 + 3: walker already deduped + ordered + built explanations.
+const decisions = [];
+for (const { finding, explanation } of plan.plan!) {
+  // Step 4: Confirm via AskUserQuestion.
+  const header =
+    finding.severity === 'CRITICAL' ? `⚠️ CRIT` :
+    finding.severity === 'WARNING'  ? `WARN`   : `INFO`;
+
+  const answer = await AskUserQuestion({
+    questions: [{
+      question: `${explanation.header}\n` +
+                `Files: ${explanation.files.join(', ')}\n` +
+                `${explanation.plain}\n` +
+                `WHY: ${explanation.why}`,
+      header,                                // ≤12 chars
+      multiSelect: false,
+      options: explanation.options.map(o => ({
+        label: o.label,
+        description: o.isDefault ? 'recommended' : '',
+      })),
+    }],
+  });
+
+  const chosen = answer[<question-key>];
+  let status: ResolutionStatus = 'skipped';
+  let overrideReason: string | undefined;
+
+  // Step 5: Path A/B/C dispatch (mechanical fixes — apply via Edit/Write).
+  if (chosen.startsWith('Apply suggested fix')) {
+    // ... mechanical Edit / Write per the finding.suggested_fix hint
+    status = 'resolved';
+  } else if (chosen.startsWith('Path A')) {
+    // ... update spec body
+    status = 'resolved';
+  } else if (chosen.startsWith('Path B')) {
+    // ... update implementation code
+    status = 'resolved';
+  } else if (chosen.startsWith('Path C')) {
+    // ... append [OUT_OF_SCOPE: <reason>] marker
+    status = 'deferred';
+  } else if (chosen.startsWith('Acknowledge')) {
+    // Step 6: extra confirm for CRITICAL override.
+    const reasonAns = await AskUserQuestion({
+      questions: [{
+        question: `Override reason for ${finding.code}? (logged to JSONL audit)`,
+        header: 'Override',
+        multiSelect: false,
+        options: [{ label: 'Type a reason below' }],
+      }],
+    });
+    overrideReason = reasonAns['Override'] ?? 'no reason provided';
+    appendOverride(process.cwd(), {
+      timestamp: new Date().toISOString(),
+      finding_code: finding.code,
+      spec_slug: SLUG,
+      reason: overrideReason,
+    });
+    status = 'acknowledged';
+  } else if (chosen.startsWith('Abort')) {
+    break;
+  }
+
+  // Step 6 (foreign-spec banner): if the fix edits another slug's file,
+  // re-confirm with the banner before committing.
+  if (explanation.requiresForeignSpecConfirm && status === 'resolved') {
+    const banner = await AskUserQuestion({
+      questions: [{
+        question: `⚠️ This edits a foreign spec. Continue?`,
+        header: 'Foreign',
+        multiSelect: false,
+        options: [{ label: 'Yes, edit it' }, { label: 'No, mark as deferred instead' }],
+      }],
+    });
+    if ((banner['Foreign'] ?? '').startsWith('No')) status = 'deferred';
+  }
+
+  decisions.push({
+    findingKey: findingKey(finding),
+    status, overrideReason,
+    timestamp: new Date().toISOString(),
+  });
+}
+
+// Step 7: Stamp the YAML.
+const res = updateStatus({ repoRoot: process.cwd(), slug: SLUG, decisions });
+return `Resolved ${res.matched} findings (${res.unmatched} stale entries dropped).`;
+```
+
+This is the agent contract — follow the structure verbatim, only the
+mechanical fix bodies (the `// ...` stubs) are filled in based on the
+specific finding code. The script imports are:
+
+```ts
+import { planResolution, findingKey } from '.claude/skills/cross-spec-resolve/scripts/walker.ts';
+import { updateStatus, type ResolutionStatus } from '.claude/skills/cross-spec-resolve/scripts/update-status.ts';
+import { appendOverride } from '.claude/skills/cross-spec-reconcile/scripts/overrides-log.ts';
+```
+
 ## See also
 
 - `../cross-spec-reconcile/SKILL.md` — the analyzer that produces the YAML

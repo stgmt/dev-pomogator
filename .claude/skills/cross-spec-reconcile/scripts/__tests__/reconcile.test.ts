@@ -195,6 +195,65 @@ describe('reconcileLight — finding-code coverage', () => {
     const [report] = reconcileLight({ repoRoot: root, slugs: ['spec-good'] });
     expect(report.findings.find((f) => f.code === 'schema-drift/missing-feature-heading')).toBeUndefined();
   });
+
+  it('impl-drift/dead-link fires when an MD link target does not exist on disk', () => {
+    seedSpec(root, 'spec-link', {
+      'FR.md': '## FR-1: Login\nSee [missing doc](./does-not-exist.md) for details.\n',
+    });
+    const [report] = reconcileLight({ repoRoot: root, slugs: ['spec-link'] });
+    const dead = report.findings.filter((f) => f.code === 'impl-drift/dead-link');
+    expect(dead).toHaveLength(1);
+    expect(dead[0].severity).toBe('WARNING');
+    expect(dead[0].expected_path).toBe('./does-not-exist.md');
+  });
+
+  it('impl-drift/dead-link ignores absolute URLs + mailto + anchor-only links', () => {
+    seedSpec(root, 'spec-good-link', {
+      'FR.md':
+        '## FR-1\nSee [docs](https://example.com/x) and [mail](mailto:a@b.c) and [anchor](#section).\n',
+    });
+    const [report] = reconcileLight({ repoRoot: root, slugs: ['spec-good-link'] });
+    expect(report.findings.find((f) => f.code === 'impl-drift/dead-link')).toBeUndefined();
+  });
+
+  it('spec-only/missing-acceptance fires when an FR is defined but no AC heading exists anywhere', () => {
+    seedSpec(root, 'spec-noac', {
+      'FR.md': '## FR-1: Login\nNo AC defined here or anywhere else.\n',
+    });
+    const [report] = reconcileLight({ repoRoot: root, slugs: ['spec-noac'] });
+    const missing = report.findings.filter((f) => f.code === 'spec-only/missing-acceptance');
+    expect(missing).toHaveLength(1);
+    expect(missing[0].suggested_fix).toContain('FR-1');
+  });
+
+  it('spec-only/missing-acceptance does NOT fire when ACCEPTANCE_CRITERIA.md has AC heading', () => {
+    seedSpec(root, 'spec-ac-ok', {
+      'FR.md': '## FR-1: Login\n',
+      'ACCEPTANCE_CRITERIA.md': '### AC-1: covered\nDetails here.\n',
+    });
+    const [report] = reconcileLight({ repoRoot: root, slugs: ['spec-ac-ok'] });
+    expect(report.findings.find((f) => f.code === 'spec-only/missing-acceptance')).toBeUndefined();
+  });
+
+  it('schema-drift/invalid-frontmatter fires when # language: is not on the first line', () => {
+    seedSpec(root, 'spec-fm', {
+      'late.feature': 'Feature: lang not first\n\n# language: en\nScenario: y\n  Given step\n',
+    });
+    const [report] = reconcileLight({ repoRoot: root, slugs: ['spec-fm'] });
+    const fm = report.findings.filter((f) => f.code === 'schema-drift/invalid-frontmatter');
+    expect(fm).toHaveLength(1);
+    expect(fm[0].suggested_fix).toContain('first line');
+  });
+
+  it('schema-drift/invalid-frontmatter fires when language code shape is invalid', () => {
+    seedSpec(root, 'spec-fm2', {
+      'bad.feature': '# language: xx-yy\nFeature: bad lang\nScenario: x\n  Given step\n',
+    });
+    const [report] = reconcileLight({ repoRoot: root, slugs: ['spec-fm2'] });
+    const fm = report.findings.filter((f) => f.code === 'schema-drift/invalid-frontmatter');
+    expect(fm).toHaveLength(1);
+    expect(fm[0].suggested_fix).toContain('xx-yy');
+  });
 });
 
 describe('emitYaml + writeReport', () => {

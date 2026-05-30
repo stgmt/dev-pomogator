@@ -5,7 +5,7 @@
 // Produces a `consistency-report.yaml`-shaped object. Caller writes to
 // disk (see yaml-writer.ts).
 //
-// Output finding codes (rc1 + post-rc1 expansion — 11 of 28 ship):
+// Output finding codes (rc1 + post-rc1 expansion — 14 of 28 ship):
 //   • impl-drift/missing-file              — FR/AC references a path that doesn't exist
 //   • cross-spec/concept-overlap           — ≥3 shared concept-nouns between two specs without reference
 //   • cross-spec/runtime-identifier-drift  — same concept named differently in two specs
@@ -17,8 +17,11 @@
 //   • spec-only/orphan-task                — TASKS.md task block with no FR-N citation
 //   • spec-only/missing-fr-section         — body cites FR-N but no `## FR-N:` heading defines it
 //   • schema-drift/missing-feature-heading — .feature file without a `Feature:` line
+//   • impl-drift/dead-link                 — MD `[label](path)` link to non-existent file
+//   • spec-only/missing-acceptance         — FR-N defined but no `## AC` / `### AC` heading anywhere in spec
+//   • schema-drift/invalid-frontmatter     — .feature with bad `# language:` or missing trailing blank line
 //
-// The remaining 17 codes from the 28-code matrix land in the same
+// The remaining 14 codes from the 28-code matrix land in the same
 // branch as further small follow-ups; this file owns the mechanical
 // (LLM-free) subset.
 
@@ -182,6 +185,115 @@ function findRuntimeIdentifierDrift(
           });
         }
       }
+    }
+  }
+  return out;
+}
+
+// Markdown `[label](relative/path.ext)` links — only resolves relative
+// repo paths; ignores http(s)://, mailto:, anchor-only (#foo), and
+// query-string-only links.
+const MD_LINK_RE = /\[[^\]]+\]\(([^)\s]+)\)/g;
+
+/** Find broken MD links pointing to nonexistent files. */
+function findDeadLinks(
+  files: { body: string; path: string }[],
+  repoRoot: string,
+): Finding[] {
+  const out: Finding[] = [];
+  for (const file of files) {
+    const lines = file.body.split(/\r?\n/);
+    for (let i = 0; i < lines.length; i++) {
+      let m: RegExpExecArray | null;
+      MD_LINK_RE.lastIndex = 0;
+      while ((m = MD_LINK_RE.exec(lines[i])) !== null) {
+        const target = m[1].split('#')[0].split('?')[0];
+        if (!target) continue;
+        if (/^[a-z]+:\/\//i.test(target)) continue; // absolute URL
+        if (target.startsWith('mailto:')) continue;
+        const resolved = path.isAbsolute(target)
+          ? target
+          : path.resolve(path.dirname(file.path), target);
+        if (fs.existsSync(resolved)) continue;
+        out.push({
+          code: 'impl-drift/dead-link',
+          class: 'uncovered',
+          severity: 'WARNING',
+          referenced_in: `${path.relative(repoRoot, file.path)}:${i + 1}`,
+          expected_path: target,
+          suggested_fix:
+            `Markdown link target "${target}" does not exist relative to ${path.basename(file.path)}. Fix the path or remove the link.`,
+        });
+      }
+    }
+  }
+  return out;
+}
+
+/** FR defined but spec has zero AC headings — coverage gap. */
+function findMissingAcceptance(
+  files: { body: string; path: string }[],
+  repoRoot: string,
+): Finding[] {
+  const defs = collectFrDefinitions(files);
+  if (defs.size === 0) return [];
+  let acFound = false;
+  for (const f of files) {
+    if (/^#{2,4}\s+(?:AC-\d+|Acceptance\s+Criteria)\b/m.test(f.body)) {
+      acFound = true;
+      break;
+    }
+  }
+  if (acFound) return [];
+  // Surface ONE finding pointed at the first FR — opening one AC.md is
+  // enough to resolve, no need to fire N warnings.
+  const [fr, file] = defs.entries().next().value as [string, string];
+  return [{
+    code: 'spec-only/missing-acceptance',
+    class: 'spec-only',
+    severity: 'WARNING',
+    referenced_in: path.relative(repoRoot, file),
+    suggested_fix:
+      `${defs.size} FR(s) defined in this spec but no AC heading found in any MD file. Add ACCEPTANCE_CRITERIA.md (start with ${fr}).`,
+  }];
+}
+
+/** .feature files with malformed `# language:` declaration (must be on first line, valid code). */
+function findInvalidFrontmatter(
+  repoRoot: string,
+  slug: string,
+): Finding[] {
+  const dir = path.join(repoRoot, '.specs', slug);
+  if (!fs.existsSync(dir)) return [];
+  const out: Finding[] = [];
+  for (const name of fs.readdirSync(dir)) {
+    if (!name.endsWith('.feature')) continue;
+    const body = fs.readFileSync(path.join(dir, name), 'utf8');
+    const langMatch = body.match(/^#\s*language\s*:\s*(\S+)/m);
+    if (!langMatch) continue;
+    // Must be ON FIRST LINE — Gherkin requires it before any other content.
+    if (!body.startsWith('#')) {
+      out.push({
+        code: 'schema-drift/invalid-frontmatter',
+        class: 'schema-drift',
+        severity: 'WARNING',
+        referenced_in: `.specs/${slug}/${name}`,
+        suggested_fix:
+          '`# language: <code>` directive must appear on the first line of the .feature file (before any blank lines or comments).',
+      });
+      continue;
+    }
+    // Validate language code shape — ISO 639-1 two-letter or two-letter-locale.
+    const lang = langMatch[1];
+    if (!/^[a-z]{2}(?:-[A-Z]{2})?$/.test(lang)) {
+      out.push({
+        code: 'schema-drift/invalid-frontmatter',
+        class: 'schema-drift',
+        severity: 'WARNING',
+        referenced_in: `.specs/${slug}/${name}`,
+        suggested_fix:
+          `"# language: ${lang}" — Gherkin expects an ISO 639-1 code (e.g. \`en\`, \`ru\`, \`fr\`).`,
+      });
     }
   }
   return out;
@@ -556,6 +668,9 @@ export function reconcileLight(opts: ReconcileOptions): ReconcileResult[] {
     findings.push(...findOrphanTasks(files, opts.repoRoot));
     findings.push(...findMissingFrSections(files, opts.repoRoot));
     findings.push(...findMissingFeatureHeadings(opts.repoRoot, slug));
+    findings.push(...findDeadLinks(files, opts.repoRoot));
+    findings.push(...findMissingAcceptance(files, opts.repoRoot));
+    findings.push(...findInvalidFrontmatter(opts.repoRoot, slug));
     // Attribute cross-spec findings to BOTH specs they touch. Normalise
     // OS path separators so the `.specs/<slug>` substring match works on
     // Windows + POSIX.
