@@ -729,12 +729,20 @@ function findDeadLinks(
         // is true on POSIX and resolves from filesystem root — almost
         // always wrong for repo links. Treat leading-`/` as repo-root
         // relative on every OS.
-        const resolved = target.startsWith('/')
+        const primary = target.startsWith('/')
           ? path.join(repoRoot, target.slice(1))
           : path.isAbsolute(target)
             ? target
             : path.resolve(path.dirname(file.path), target);
-        if (fs.existsSync(resolved)) continue;
+        if (fs.existsSync(primary)) continue;
+        // Dogfood batch-11 PoC fix: authors routinely write
+        // `../../../foo/bar.md` meaning "repo-root + foo/bar.md", but a
+        // spec living at `.specs/<slug>/file.md` only needs `../../foo/bar.md`
+        // (or, often, `foo/bar.md`). When the relative resolution misses,
+        // try `repoRoot + basename-tail` as a fallback before flagging dead.
+        const cleaned = target.replace(/^(?:\.\.[/\\])+/, '');
+        const fallback = path.join(repoRoot, cleaned);
+        if (fs.existsSync(fallback)) continue;
         out.push({
           code: 'impl-drift/dead-link',
           class: 'uncovered',
