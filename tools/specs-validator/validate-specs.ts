@@ -19,7 +19,7 @@ import { findSpecsFolder, findCompleteSpecs, type SpecCompleteness } from './com
 import { parseMdFiles } from './parsers/md-parser.ts';
 import { parseFeatureFile } from './parsers/feature-parser.ts';
 import { matchTags, matchTestFeature } from './matcher.ts';
-import { generateReport, printWarnings } from './reporter.ts';
+import { flushWarnings, generateReport, printWarnings } from './reporter.ts';
 import { parseTestFile, findTestFile } from './parsers/test-parser.ts';
 import { summarizeRecent, rotateLog } from './audit-logger.ts';
 import {
@@ -262,12 +262,39 @@ function printPhaseStatus(specName: string, progress: ProgressState): void {
     }
   }
 
+  // Batch-24 honest-audit: per-spec 4-line dump was the SECOND-largest
+  // hook prompt-spam source (after printWarnings). Aggregate into the
+  // module-level UNCONFIRMED_STOPS list; printed once at flush time.
   if (unconfirmedStop) {
-    console.log(`[specs-validator] SPEC: ${specName} | Phase: ${progress.currentPhase} | ${unconfirmedStop} not confirmed`);
-    if (allowed.length > 0) console.log(`  Allowed files: ${allowed.join(', ')}`);
-    if (blocked.length > 0) console.log(`  Blocked files: ${blocked.join(', ')}`);
-    console.log(`  Confirm: spec-status.ts -Path ".specs/${specName}" -ConfirmStop ${unconfirmedPhase}`);
+    UNCONFIRMED_STOPS.push({
+      specName, currentPhase: progress.currentPhase,
+      stopLabel: unconfirmedStop, unconfirmedPhase,
+    });
   }
+}
+
+const UNCONFIRMED_STOPS: Array<{
+  specName: string; currentPhase: string;
+  stopLabel: string; unconfirmedPhase: string;
+}> = [];
+
+/** Flush aggregated phase-status into ONE summary line. Verbose env restores full dump. */
+function flushPhaseStatus(): void {
+  if (UNCONFIRMED_STOPS.length === 0) return;
+  const verbose = process.env.SPECS_VALIDATOR_VERBOSE === '1';
+  if (!verbose) {
+    console.log(
+      `[specs-validator] ${UNCONFIRMED_STOPS.length} specs with unconfirmed STOP ` +
+      `(SPECS_VALIDATOR_VERBOSE=1 for per-spec breakdown)`,
+    );
+    UNCONFIRMED_STOPS.length = 0;
+    return;
+  }
+  for (const e of UNCONFIRMED_STOPS) {
+    console.log(`[specs-validator] SPEC: ${e.specName} | Phase: ${e.currentPhase} | ${e.stopLabel} not confirmed`);
+    console.log(`  Confirm: spec-status.ts -Path ".specs/${e.specName}" -ConfirmStop ${e.unconfirmedPhase}`);
+  }
+  UNCONFIRMED_STOPS.length = 0;
 }
 
 /**
@@ -379,6 +406,9 @@ async function main(): Promise<void> {
         }
       }
     }
+    // Batch-24: flush aggregated phase-status + warnings into single summary lines.
+    flushWarnings();
+    flushPhaseStatus();
 
   } catch (err) {
     // Log error but don't block the prompt
