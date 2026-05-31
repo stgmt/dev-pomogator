@@ -1146,8 +1146,19 @@ function findMissingCrossRef(
   allSlugs: string[],
 ): Finding[] {
   const out: Finding[] = [];
+  // Batch-23: skip auto-generated artifacts. These files (created by
+  // spec-backlog resolvers) contain slug mentions in prose by design;
+  // forcing markdown links on them is circular noise.
+  const AUTO_GENERATED_FILES = [
+    'OWNERSHIP_RECOMMENDATION.md',
+    'DECISION_RECOMMENDATION.md',
+    'CHANGELOG.md',  // Keep-a-Changelog format mentions other items in prose
+    'validation-report.md',  // specs-validator output
+  ];
   for (const slug of allSlugs) {
-    const ownFiles = filesBySlug.get(slug) ?? [];
+    const ownFiles = (filesBySlug.get(slug) ?? []).filter(
+      (f) => !AUTO_GENERATED_FILES.some((n) => f.path.endsWith(n)),
+    );
     // Batch-21 noise reduction: strip fenced code blocks before mention
     // count + require ≥2 mentions of the slug name before flagging.
     // Single mentions are routinely prose citations ("similar to what

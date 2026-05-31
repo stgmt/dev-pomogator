@@ -164,19 +164,39 @@ export function printWarnings(results: MatchResult[]): void {
     return;
   }
 
+  // Batch-23 honest-audit: summary line by default + verbose-flag escape.
+  // The full list (often 100+ lines per spec × N specs per prompt) was
+  // the single most prompt-polluting hook output. Goes to log file
+  // regardless. Opt back in via SPECS_VALIDATOR_VERBOSE=1.
+  const verbose = process.env.SPECS_VALIDATOR_VERBOSE === '1';
+  if (!verbose) {
+    const slugs = new Set<string>();
+    for (const r of [...notCovered, ...orphan]) {
+      const src = r.mdSource ?? r.featureSource;
+      if (src) {
+        const m = src.file.match(/[/\\]\.specs[/\\]([^/\\]+)[/\\]/);
+        if (m) slugs.add(m[1]);
+      }
+    }
+    console.log(
+      `[specs-validator] coverage gaps: ${notCovered.length} NOT_COVERED + ${orphan.length} ORPHAN across ${slugs.size} specs ` +
+        `(SPECS_VALIDATOR_VERBOSE=1 for full list; details in ~/.dev-pomogator/logs/specs-validator.log)`,
+    );
+    return;
+  }
   console.log('');
   console.log('[specs-validator] Обнаружены проблемы покрытия:');
 
   for (const result of notCovered) {
-    const source = result.mdSource 
-      ? `${result.mdSource.file}:${result.mdSource.line}` 
+    const source = result.mdSource
+      ? `${result.mdSource.file}:${result.mdSource.line}`
       : 'unknown';
     console.log(`  ⚠️  NOT_COVERED: ${result.tag} в ${source} не имеет Scenario`);
   }
 
   for (const result of orphan) {
-    const source = result.featureSource 
-      ? `${result.featureSource.file}:${result.featureSource.line}` 
+    const source = result.featureSource
+      ? `${result.featureSource.file}:${result.featureSource.line}`
       : 'unknown';
     console.log(`  ⚠️  ORPHAN: ${result.tag} в ${source} не имеет требования`);
   }
