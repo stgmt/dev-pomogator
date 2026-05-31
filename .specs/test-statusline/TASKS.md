@@ -118,7 +118,6 @@
 - [x] Расширить `src/utils/statusline.ts` — deterministic resolution для `project`, `global`, `managed`, `wrapped`, `user` @feature8
   _Requirements: [FR-11](FR.md#fr-11-statusline-coexistence-wrapper-feature8)_
   _Leverage: existing `resolveClaudeStatusLine()` and `buildWrappedStatusLineCommand()`_
-- [x] Обновить `src/installer/claude.ts` и `src/updater/index.ts` — использовать общий project/global resolution @feature8
   _Requirements: [FR-11](FR.md#fr-11-statusline-coexistence-wrapper-feature8)_
   _Leverage: `readJsonSafe()`, `writeJsonAtomic()`_
 - [x] Усилить `extensions/test-statusline/tools/test-statusline/statusline_wrapper.js` — fail-open при empty/error и single-line normalization @feature8

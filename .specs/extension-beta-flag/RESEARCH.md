@@ -22,7 +22,7 @@
 
 ### Installer selection UI
 
-`src/installer/index.ts:81-88` — interactive checkbox:
+`~~`src/installer/index.ts`~~ (removed in v2 migration):81-88` — interactive checkbox:
 ```typescript
 const selectedExtensions = await checkbox({
   message: 'Select extensions to install:',
@@ -36,7 +36,7 @@ const selectedExtensions = await checkbox({
 
 ### Non-interactive flow (--all)
 
-`src/installer/index.ts:33-40`:
+`~~`src/installer/index.ts`~~ (removed in v2 migration):33-40`:
 ```typescript
 if (options.plugins !== undefined) {
   availableExtensions = availableExtensions.filter(ext =>
@@ -76,9 +76,9 @@ if (options.plugins !== undefined) {
 
 | Source | Path | What It Provides | Relevance |
 |--------|------|-------------------|-----------|
-| Extension interface | `src/installer/extensions.ts` | Manifest type + listExtensions() | Добавить stability field |
+| Extension interface | ~~`src/installer/extensions.ts`~~ (removed in v2 migration) | Manifest type + listExtensions() | Добавить stability field |
 | Installer checkbox | `src/installer/index.ts:81-88` | Interactive selection UI | Изменить checked/label для beta |
-| Config schema | `src/config/schema.ts` | InstalledExtension tracking | Не нужно менять — beta tracked как обычные |
+| Config schema | ~~`src/config/schema.ts`~~ (removed in v2 migration) | InstalledExtension tracking | Не нужно менять — beta tracked как обычные |
 | docker-optimization | `extensions/docker-optimization/extension.json` | Новый плагин-кандидат на beta | Первый beta manifest |
 
 ### Architectural Constraints Summary

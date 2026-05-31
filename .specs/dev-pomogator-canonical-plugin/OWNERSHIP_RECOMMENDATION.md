@@ -4,7 +4,7 @@
 
 ## Contested Path
 
-`src/updater/hook-migration.ts`
+~~`src/updater/hook-migration.ts`~~ (removed in v2 migration)
 
 ## Analysis
 
@@ -15,7 +15,7 @@
 
 ## Recommendation
 
-The path `src/updater/hook-migration.ts` should be owned by spec `dev-pomogator-canonical-plugin`.
+The path ~~`src/updater/hook-migration.ts`~~ (removed in v2 migration) should be owned by spec `dev-pomogator-canonical-plugin`.
 Spec `skill-rule-customization` claims the same path but was created further from the file's
 first-commit date in git history. Consider updating `skill-rule-customization` to reference the
 asset via the canonical owner's module instead.

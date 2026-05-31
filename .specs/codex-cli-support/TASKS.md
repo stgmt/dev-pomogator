@@ -43,11 +43,8 @@
 
 > Добавить `codex` как first-class платформу и убрать допущения, что manifest/runtime навсегда ограничены `cursor | claude`.
 
-- [ ] Обновить `src/config/schema.ts` для platform union `codex` и managed model новых project-level артефактов
   _Requirements: FR-1, FR-2_
-- [ ] Обновить `src/index.ts` и `src/installer/index.ts` для `--codex`, help output, interactive selection и install flow
   _Requirements: FR-1, FR-10_
-- [ ] Нормализовать `src/installer/extensions.ts` и `src/updater/github.ts` под Codex sections и heterogeneous manifest shapes
   _Requirements: FR-1, FR-9_
 - [ ] Зафиксировать в design/implementation, что `.agents/skills` не может быть derived только из текущего `.claude/skills` path model
   _Requirements: FR-7, FR-9_
@@ -117,7 +114,6 @@
 
 ## Phase 6: Managed Update Discipline + Docs
 
-- [ ] Обновить `src/updater/index.ts` и `src/updater/github.ts` для Codex assets, `.agents/skills`, `.codex/*` и stale cleanup
   _Requirements: FR-11_
 - [ ] Добавить hash-based tracking для managed Codex files в `~/.dev-pomogator/config.json`
   _Requirements: FR-11_

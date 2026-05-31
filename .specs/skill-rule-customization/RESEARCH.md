@@ -38,12 +38,8 @@
 | MCP servers (`.mcp.json`) | atomic smart-merge, preserve user keys | да |
 
 Ключевые места:
-- `src/updater/index.ts:600-825` — главный цикл; semver-gate (`semver.gt`), затем update по типам файлов.
 - `src/updater/content-hash.ts:32-47` — `isModifiedByUser(filePath, storedHash)`: сравнивает текущий SHA-256 с сохранённым.
-- `src/updater/index.ts:~208-215` — при модификации: `backupUserFile(...)` → затем `fs.writeFile(destFile, content)` (**overwrite**) → `written.push({path, hash})`.
 - `src/updater/backup.ts:20-104` — копия в `USER_OVERRIDES_DIR` + отчёт в `~/.dev-pomogator/last-update-report.md` («merge your changes back if needed»).
-- `src/config/schema.ts:5-7` — `ManagedFileEntry { path: string; hash: string }`. **Хранится только hash, не контент.** ← это и есть барьер для 3-way merge.
-- `src/updater/index.ts:403-494` — единственный реальный smart-merge (хуки).
 - `src/updater/github.ts:8-56` — `ExtensionManifest`: `ruleFiles / commandFiles / tools / toolFiles / skillFiles / hooks / mcpServers / statusLine / postUpdate`. **Нет ни одного поля про override / merge-strategy / extension-points.**
 
 **Вывод:** per-skill/per-rule extension-points сегодня НЕТ. Единственная защита — backup-папка с ручным мержем (P5). 3-way merge невозможен без хранения предка (есть только хеш).

@@ -4,7 +4,7 @@
 
 ## Contested Path
 
-`src/config/schema.ts`
+~~`src/config/schema.ts`~~ (removed in v2 migration)
 
 ## Analysis
 
@@ -15,7 +15,7 @@
 
 ## Recommendation
 
-The path `src/config/schema.ts` should be owned by spec `extension-beta-flag`.
+The path ~~`src/config/schema.ts`~~ (removed in v2 migration) should be owned by spec `extension-beta-flag`.
 Spec `dev-pomogator-canonical-plugin` claims the same path but was created further from the file's
 first-commit date in git history. Consider updating `dev-pomogator-canonical-plugin` to reference the
 asset via the canonical owner's module instead.

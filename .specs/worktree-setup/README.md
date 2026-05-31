@@ -28,7 +28,6 @@ Skill `worktree-setup` создаёт новый git worktree + ветку `feat
 - **Skill orchestration**: `.claude/skills/worktree-setup/SKILL.md` + `.claude/skills/worktree-setup/scripts/orchestrate.ts`, `env-resolver.ts`, `pr-creator.ts`, `env-sync.ts`
 - **Global doctor**: `extensions/worktree-setup/tools/worktree-setup/worktree-doctor.cjs` → installed to `~/.dev-pomogator/scripts/worktree-doctor.cjs`
 - **Self-heal patch**: `src/scripts/tsx-runner.js` (insert orphan-detect block after `resolveScriptPath()` line 107)
-- **Wiring**: `extensions/worktree-setup/extension.json` + `src/installer/extensions.ts` (managed file SHA-256 hash tracking)
 - **Tests**: `tests/e2e/worktree-setup.test.ts` + `tests/e2e/worktree-helpers.ts` + `tests/fixtures/worktree-setup/`
 
 ## Где читать дальше

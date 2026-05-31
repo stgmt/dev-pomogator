@@ -11,9 +11,6 @@ Optional `stability` field в extension.json позволяет пометить
 
 ## Где лежит реализация
 
-- **Extension interface**: `src/installer/extensions.ts`
-- **Installer UI**: `src/installer/index.ts`
-- **CLI args**: `src/index.ts`
 
 ## Статистика
 

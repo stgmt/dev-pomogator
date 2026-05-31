@@ -9,7 +9,7 @@
 > - Тесты: `tests/unit/score-diff.test.ts`, `tests/unit/marker-store.test.ts`, `tests/e2e/scope-gate.test.ts`, `tests/regressions/stocktaking-incident.test.ts`, `tests/unit/plan-gate-scope-advisory.test.ts` — все 5 GREEN
 > - Skill: `.claude/skills/verify-generic-scope-fix/SKILL.md`
 > - Правила: `.claude/rules/scope-gate/when-to-verify.md` + `escape-hatch-audit.md`
-> - Helper `tests/e2e/scope-gate-helpers.ts` — не создан, helpers инлайнены в самих тестах (acceptable consolidation)
+> - Helper ~~`tests/e2e/scope-gate-helpers.ts`~~ (removed in v2 migration) — не создан, helpers инлайнены в самих тестах (acceptable consolidation)
 
 ## TDD Workflow
 
@@ -32,7 +32,6 @@ N/A — фича не требует новых сервисов, БД, конт
 - [x] **P0-1** Создать `.specs/verify-generic-scope-fix/verify-generic-scope-fix.feature` с Background + 11 VSGF001_NN сценариев — **ГОТОВО в Phase 3** ✓
   _Source: FIXTURES.md, DESIGN.md Architecture_
 
-- [x] **P0-2** Создать `tests/e2e/scope-gate-helpers.ts` с функциями `createTmpRepoWithDiff()`, `writeMarkerFile()`, `spawnHook()` — @feature1 through @feature5
   _Source: DESIGN.md "BDD Test Infrastructure" > "Новые hooks"_
   _Reuse: `tests/e2e/helpers.ts` `runInstaller()` + `spawnSync` wrappers_
 

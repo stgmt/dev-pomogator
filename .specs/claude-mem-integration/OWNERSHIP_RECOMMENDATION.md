@@ -4,7 +4,7 @@
 
 ## Contested Path
 
-`src/installer/index.ts`
+~~`src/installer/index.ts`~~ (removed in v2 migration)
 
 ## Analysis
 
@@ -15,7 +15,7 @@
 
 ## Recommendation
 
-The path `src/installer/index.ts` should be owned by spec `claude-mem-integration`.
+The path ~~`src/installer/index.ts`~~ (removed in v2 migration) should be owned by spec `claude-mem-integration`.
 Spec `codex-cli-support` claims the same path but was created further from the file's
 first-commit date in git history. Consider updating `codex-cli-support` to reference the
 asset via the canonical owner's module instead.

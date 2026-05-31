@@ -1,6 +1,6 @@
 # Cursor Dead Code Cleanup
 
-Удаление ~505 строк мёртвого Cursor-кода из `src/installer/memory.ts` и `src/updater/index.ts`.
+Удаление ~505 строк мёртвого Cursor-кода из `src/installer/memory.ts` и ~~`src/updater/index.ts`~~ (removed in v2 migration).
 
 ## Ключевые идеи
 

@@ -65,10 +65,10 @@ Evidence: memory.ts lines 258, 318, 340, 354, 475, 630 — console.log без in
 | Файл | Что |
 |------|-----|
 | `tools/steps-validator/logger.ts` | `formatErrorChain()` + `getErrorMessage()` |
-| `src/installer/index.ts` | catch логирует reason + стек в install.log, InstallReport wired |
+| ~~`src/installer/index.ts`~~ (removed in v2 migration) | catch логирует reason + стек в install.log, InstallReport wired |
 | `.claude/skills/skills-rules-optimizer/scripts/report.ts` | Новый файл — InstallReport class |
-| `src/updater/index.ts` | Silent catch → logging |
-| `src/updater/standalone.ts` | `.catch(() => {})` → logging |
+| ~~`src/updater/index.ts`~~ (removed in v2 migration) | Silent catch → logging |
+| ~~`src/updater/standalone.ts`~~ (removed in v2 migration) | `.catch(() => {})` → logging |
 | `tests/e2e/claude-installer.test.ts` | 11 новых тестов (pipeline + report + content validation) |
 | Feature files | CORE003 + PLUGIN002 updated |
 
@@ -96,7 +96,7 @@ Source: https://github.com/thedotmack/claude-mem [VERIFIED: 2026-03-28]
 
 | Source | Path | Relevance |
 |--------|------|-----------|
-| memory.ts | `src/installer/memory.ts` | 686 строк — основной код, рефакторинг |
+| memory.ts | ~~`src/installer/memory.ts`~~ (removed in v2 migration) | 686 строк — основной код, рефакторинг |
 | health-check.ts | `extensions/claude-mem-health/tools/claude-mem-health/health-check.ts` | SessionStart hook — нужен auto-install |
 | suggest-rules ext | `extensions/suggest-rules/extension.json` | requiresClaudeMem: true — trigger |
 | helpers.ts | `tests/e2e/helpers.ts` | startWorker, stopWorker, isWorkerRunning, getClaudeMemDir |

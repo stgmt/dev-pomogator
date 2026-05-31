@@ -23,7 +23,6 @@
 
 ### F-1: typical-claude-user
 
-- **Type:** static fixture (8 файлов: package.json, README.md, .gitignore, src/index.ts, .claude/settings.json, .claude/commands/lint.md, .claude/commands/test.md, .claude/rules/no-mocks.md)
 - **Format:** Mixed (JSON, TypeScript, Markdown)
 - **Setup:** Уже существует на диске, не пересоздаётся. Skill копирует в VM как `C:\test-project\` через `Copy-VMFile` или PSSession.
 - **Teardown:** В VM — не нужно (revert checkpoint удалит). На хосте — никогда не удаляется.

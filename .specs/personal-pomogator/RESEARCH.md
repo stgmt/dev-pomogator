@@ -46,7 +46,7 @@
 
 ### ManagedFileEntry уже трекает всё
 
-`src/config/schema.ts:3-25`:
+`~~`src/config/schema.ts`~~ (removed in v2 migration):3-25`:
 ```typescript
 interface ManagedFileEntry { path: string; hash: string }
 interface ManagedFiles {
@@ -111,7 +111,7 @@ Project `.mcp.json` в smarts содержит **plaintext credentials** → е�
 
 ### claude-mem MCP уже безопасен
 
-`src/installer/memory.ts:610-675` — `registerClaudeMemMcp()` пишет только в `~/.claude.json` (`path.join(os.homedir(), '.claude.json')`). Это правильное поведение, spec фиксирует как invariant.
+~~`src/installer/memory.ts:610-675`~~ (removed in v2 migration) — `registerClaudeMemMcp()` пишет только в `~/.claude.json` (`path.join(os.homedir(), '.claude.json')`). Это правильное поведение, spec фиксирует как invariant.
 
 ### git ls-files для collision detection
 
@@ -170,8 +170,8 @@ Project `.mcp.json` в smarts содержит **plaintext credentials** → е�
 
 | Source | Path | What It Provides | Relevance |
 |--------|------|-------------------|-----------|
-| `readJsonSafe` | `src/utils/atomic-json.ts` | Safe JSON read с backup recovery | Reuse для `.gitignore`, settings.local.json reads |
-| `writeJsonAtomic` | `src/utils/atomic-json.ts` | Atomic JSON write через temp + move | Reuse для settings.local.json writes |
+| `readJsonSafe` | ~~`src/utils/atomic-json.ts`~~ (removed in v2 migration) | Safe JSON read с backup recovery | Reuse для `.gitignore`, settings.local.json reads |
+| `writeJsonAtomic` | ~~`src/utils/atomic-json.ts`~~ (removed in v2 migration) | Atomic JSON write через temp + move | Reuse для settings.local.json writes |
 | `ManagedFileEntry` | `src/config/schema.ts:3-25` | Per-file path + hash tracking | Authoritative source для gitignore generation |
 | `installedHooksByExtension` | `src/installer/claude.ts:373` | Per-extension hook commands list | Authoritative source для hook identification в migration |
 | `initGitRepo` | `tests/e2e/helpers.ts` | Создание fake .git/ для тестов | Reuse в test setup |

@@ -10,7 +10,7 @@
 |------|--------|--------|
 | `src/doctor/index.ts` | create | [FR-16](FR.md#fr-16-cli-flag-devpomogator-doctor-feature8): public API `runDoctor(options)` |
 | `.claude/skills/pomogator-doctor/scripts/engine/runner.ts` | create | [FR-21](FR.md#fr-21-perextension-driving-feature11): orchestrator + per-extension gating + concurrent pool |
-| `src/doctor/reporter.ts` | create | [FR-20](FR.md#fr-20-trafficlight-grouped-output-feature9), [FR-24](FR.md#fr-24-json-output-mode-feature8), [FR-25](FR.md#fr-25-env-values-redaction-in-json-feature8): chalk/JSON/hook formatters |
+| `.claude/skills/pomogator-doctor/scripts/engine/reporter.ts` | create | [FR-20](FR.md#fr-20-trafficlight-grouped-output-feature9), [FR-24](FR.md#fr-24-json-output-mode-feature8), [FR-25](FR.md#fr-25-env-values-redaction-in-json-feature8): chalk/JSON/hook formatters |
 | `.claude/skills/pomogator-doctor/scripts/engine/reinstall.ts` | create | [FR-18](FR.md#fr-18-reinstall-integration-feature2): AskUserQuestion + spawn npx dev-pomogator |
 | `src/doctor/types.ts` | create | [FR-19](FR.md#fr-19-reinstallable-classification-meta-feature2): CheckResult/DoctorOptions/DoctorReport interfaces (см. [SCHEMA](pomogator-doctor_SCHEMA.md)) |
 | `.claude/skills/pomogator-doctor/scripts/engine/lock.ts` | create | [NFR-R-4](NFR.md#reliability): file lock против 2 concurrent runs |
@@ -132,7 +132,7 @@
 | `.claude/skills/pomogator-doctor/scripts/engine/checks/mcp-probe.ts` | edit | [FR-33](FR.md#fr-33-mcp-probe-timeout--error-categorization-feature4): 10s timeout, warning vs critical categorization, ENOENT/EACCES/exit-code hints |
 | `src/doctor/checks/index.ts` | edit | Append C20 (hook-command-integrity), C21 (managed-files-integrity), C22 (stale-managed) to phase2Checks array |
 | `.claude/skills/pomogator-doctor/scripts/engine/runner.ts` | edit | [FR-30](FR.md#fr-30-allprojects-flag-feature8): export `executeChecksAllProjects` с `p-limit(4)` |
-| `src/doctor/reporter.ts` | edit | [FR-30](FR.md#fr-30-allprojects-flag-feature8): new mode "all-projects" + JSON nested projects object |
+| `.claude/skills/pomogator-doctor/scripts/engine/reporter.ts` | edit | [FR-30](FR.md#fr-30-allprojects-flag-feature8): new mode "all-projects" + JSON nested projects object |
 | `.claude/skills/pomogator-doctor/scripts/engine/constants.ts` | edit | [FR-33](FR.md#fr-33-mcp-probe-timeout--error-categorization-feature4): PROBE_MS = 10_000 (was 3_000) |
 | `src/doctor/index.ts` | edit | [FR-30](FR.md#fr-30-allprojects-flag-feature8): `runDoctor({allProjects:true, ...})` overload |
 | `src/index.ts` | edit | [FR-30](FR.md#fr-30-allprojects-flag-feature8): CLI parse `--all-projects` flag |

@@ -244,7 +244,7 @@ if (manual.length > 0) printNonReinstallableBlock(manual);  // always show hints
 | Source | Path | What It Provides | Relevance |
 |--------|------|-------------------|-----------|
 | claude-mem-health | `extensions/claude-mem-health/` | Template SessionStart hook с JSON protocol (`{continue, suppressOutput}`), `writeOutput()` helper | Direct template для `extensions/pomogator-doctor/tools/pomogator-doctor/doctor-hook.ts` |
-| status.ts | `src/installer/status.ts:4-29` | chalk pattern для installer status output — `chalk.bold`, `chalk.gray` | Reference для `src/doctor/reporter.ts` chalk formatting |
+| status.ts | `src/installer/status.ts:4-29` | chalk pattern для installer status output — `chalk.bold`, `chalk.gray` | Reference для `.claude/skills/pomogator-doctor/scripts/engine/reporter.ts` chalk formatting |
 | env-setup.ts | `src/installer/env-setup.ts:30-43` | `getMissingRequiredEnv(extensions)` — итерирует envRequirements | **Reuse as-is** для C7 check |
 | memory.ts | `src/installer/memory.ts:44-94, 139-150` | `checkBunInstalled()`, `pipInstall()` — binary presence + auto-install | **Reuse** для C9 / C10 checks |
 | tsx-runner.js | `src/scripts/tsx-runner.js:5-12` | Multi-strategy fallback (native / local / home / global / npx) | doctor-hook.ts инициализация через tsx-runner-bootstrap |

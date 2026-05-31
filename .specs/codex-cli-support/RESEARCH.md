@@ -241,7 +241,7 @@ Docs по skills уточняют:
 
 | Source | Path | What It Provides | Relevance |
 |--------|------|-------------------|-----------|
-| Managed backup/update | `src/updater/index.ts` | Hash-based backup before overwrite + managed cleanup | Основа для safe merge Codex project files |
+| Managed backup/update | ~~`src/updater/index.ts`~~ (removed in v2 migration) | Hash-based backup before overwrite + managed cleanup | Основа для safe merge Codex project files |
 | MCP setup | `extensions/specs-workflow/tools/mcp-setup/setup-mcp.py` | Project/global config resolution, backup, atomic write | Reference для Codex TOML writer и MCP registration |
 | Claude Stop hooks | `extensions/auto-commit/`, `extensions/auto-simplify/`, `extensions/prompt-suggest/` | Existing lifecycle automation patterns on `Stop` | Reuse mapping для `Codex Stop` parity |
 | Claude SessionStart hooks | `extensions/claude-mem-health/`, `extensions/bun-oom-guard/` | Existing `SessionStart` hook patterns | Reuse mapping для `Codex SessionStart` parity |

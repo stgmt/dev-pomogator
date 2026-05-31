@@ -90,7 +90,7 @@ export async function detectGitTrackedCollisions(repoRoot: string, candidatePath
 
 ## FR-8: Per-project uninstall command @feature7
 
-Новая CLI команда `dev-pomogator uninstall --project [--dry-run]` (wire в `src/index.ts`). Реализация в новом `src/installer/uninstall-project.ts`:
+Новая CLI команда `dev-pomogator uninstall --project [--dry-run]` (wire в ~~`src/index.ts`~~ (removed in v2 migration)). Реализация в новом `src/installer/uninstall-project.ts`:
 
 ```typescript
 export async function uninstallFromProject(repoRoot: string): Promise<UninstallReport>
@@ -180,7 +180,7 @@ Installer уже поддерживает skills install через `getExtensio
 
 ## FR-12: Updater syncs `_shared/` utilities @feature10
 
-Updater (`src/updater/index.ts:checkUpdate`) SHALL sync `extensions/_shared/` to `{repoRoot}/.dev-pomogator/tools/_shared/` for every project on every update run, regardless of which extensions changed. New helper `updateSharedFiles(projectPath, previousShared)` in `src/updater/shared-sync.ts`:
+Updater (`~~`src/updater/index.ts`~~ (removed in v2 migration):checkUpdate`) SHALL sync `extensions/_shared/` to `{repoRoot}/.dev-pomogator/tools/_shared/` for every project on every update run, regardless of which extensions changed. New helper `updateSharedFiles(projectPath, previousShared)` in `src/updater/shared-sync.ts`:
 
 1. Reads static manifest `extensions/_shared/.manifest.json` (committed alongside `_shared/` source) listing all files
 2. For each file, calls `downloadExtensionFile('_shared', fileName)` (existing helper handles both local source root and GitHub raw URL fallback)
@@ -197,7 +197,7 @@ Result tracked in `Config.installedShared: Record<string, ManagedFileEntry[]>` k
 
 ## FR-13: Updater orphan dir cleanup @feature10
 
-After `updateToolFiles()` per extension returns, updater SHALL prune empty parent directories left behind by stale-file removal. New helper `pruneEmptyDirs(projectPath, removedRelativePaths)` in `src/updater/index.ts`:
+After `updateToolFiles()` per extension returns, updater SHALL prune empty parent directories left behind by stale-file removal. New helper `pruneEmptyDirs(projectPath, removedRelativePaths)` in ~~`src/updater/index.ts`~~ (removed in v2 migration):
 
 1. Computes parent dir set bottom-up from each removed file path
 2. Stops walking at `{projectPath}/.dev-pomogator/tools/` boundary (never deletes the tools root)

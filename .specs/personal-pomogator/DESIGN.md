@@ -50,9 +50,7 @@
   - `setupGlobalScripts` (line 235): добавить copy для `tsx-runner-bootstrap.cjs` после tsx-runner.js, post-install verification (FR-5)
   - `makePortableTsxCommand` (line 27-31): заменить `'tsx-runner.js'` на `'tsx-runner-bootstrap.cjs'` в require path (FR-6)
 
-- **`src/updater/hook-migration.ts`** — обновить migration чтобы таргетил `.claude/settings.local.json` после migration, не `.claude/settings.json` (consistent с FR-2)
 
-- **`src/index.ts`** — CLI parsing для `uninstall --project [--dry-run]` subcommand (FR-8)
 
 - **`scripts/build-check-update.js`** — добавить `copyToDist('src/scripts/tsx-runner-bootstrap.cjs', 'dist/tsx-runner-bootstrap.cjs')` в copy list
 
@@ -69,7 +67,6 @@
 - **Extension manifest**: `extensions/personal-pomogator/extension.json`
 - **Skill files**: `extensions/personal-pomogator/skills/dev-pomogator-uninstall/SKILL.md`
 - **Build config**: `scripts/build-check-update.js` (add bootstrap.cjs to bundle list)
-- **Wiring**: `src/installer/claude.ts` (installClaude flow), `src/index.ts` (CLI parsing)
 
 ## Директории и файлы
 
@@ -327,7 +324,6 @@ export async function checkMcpJsonForSecrets(repoRoot: string): Promise<SecretFi
 ### CLI: `dev-pomogator uninstall --project`
 
 - Command: `dev-pomogator uninstall --project [--dry-run]`
-- Parses via existing argv logic in `src/index.ts`
 - Calls `uninstallFromProject(findRepoRoot(), { dryRun: args['--dry-run'] })`
 - Prints `UninstallReport` formatted: deleted count + skipped count + errors + status
 

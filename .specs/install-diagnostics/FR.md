@@ -177,4 +177,3 @@ Marked as `[DEFERRED]` — реализация depends on whether docs fix (FR-
 
 ### Citations
 
-- **.specs\install-diagnostics\RESEARCH.md:75:75** — `7. github HEAD имеет ИСПОЛЬЗОВАНИЕ этих сущностей в `src/updater/index.ts` (comm`

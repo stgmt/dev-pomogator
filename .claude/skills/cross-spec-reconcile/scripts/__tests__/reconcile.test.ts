@@ -53,6 +53,25 @@ describe('reconcileLight — finding-code coverage', () => {
     expect(report.findings.filter((f) => f.code === 'impl-drift/missing-file')).toEqual([]);
   });
 
+  it('does NOT fire missing-file for MCP JSON-RPC method names in spec prose', () => {
+    // `tools/list`, `resources/read`, etc. share the `<noun>/<verb>` shape
+    // with repo paths and match PATH_REF_RE inside backticks. They are
+    // protocol method identifiers, NOT filesystem references — must be
+    // excluded from impl-drift/missing-file enforcement.
+    seedSpec(root, 'spec-mcp', {
+      'FR.md':
+        '## FR-1: MCP server\n\n' +
+        'Server responds to `tools/list` and `tools/call` requests.\n' +
+        'Resources are served via `resources/list` and `resources/read`.\n' +
+        'Lifecycle: `initialize`, `notifications/initialized`, `ping`.\n',
+    });
+    const [report] = reconcileLight({ repoRoot: root, slugs: ['spec-mcp'] });
+    const missing = report.findings.filter(
+      (f) => f.code === 'impl-drift/missing-file',
+    );
+    expect(missing).toEqual([]);
+  });
+
   it('cross-spec/runtime-identifier-drift fires when two specs name the same concept differently', () => {
     seedSpec(root, 'spec-a', { 'FR.md': '## FR-1\n\nfeedback_key = "session_token"\n' });
     seedSpec(root, 'spec-b', { 'FR.md': '## FR-2\n\nfeedback_key = "sessionToken"\n' });

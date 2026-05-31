@@ -62,7 +62,7 @@ Feature: PLUGIN008 Spec Phase Gate Anti-Hallucination
   # @feature1
   Scenario: Hook passes through non-spec file paths
     Given .specs/my-feature/ is scaffolded with .progress.json
-    When Claude calls Write for "src/index.ts"
+    When Claude calls Write for "~~`src/index.ts`~~ (removed in v2 migration)"
     And phase-gate.ts PreToolUse hook runs
     Then hook should exit with code 0
 

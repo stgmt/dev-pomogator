@@ -101,7 +101,7 @@ WHEN пользователь вводит `/pomogator-doctor` в Claude Code TH
 
 **Требование:** [FR-16](FR.md#fr-16-cli-flag-devpomogator-doctor-feature8)
 
-WHEN пользователь запускает `dev-pomogator --doctor` в terminal THEN `src/index.ts` SHALL распарсить flag AND вызвать `runDoctor({interactive: true})`.
+WHEN пользователь запускает `dev-pomogator --doctor` в terminal THEN ~~`src/index.ts`~~ (removed in v2 migration) SHALL распарсить flag AND вызвать `runDoctor({interactive: true})`.
 WHEN `--json` flag present THEN `{interactive: false, json: true}`.
 WHEN `--quiet` flag present THEN `{quiet: true}`.
 

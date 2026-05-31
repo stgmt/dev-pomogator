@@ -58,7 +58,6 @@
 - [ ] Реализовать `migrateLegacySettingsJson` — detect через installedHooksByExtension (authoritative) + substring fallback, move to local, clean original
 - [ ] Изменить `installExtensionHooks` в `src/installer/claude.ts:371-544` — под self-guard false route в settings.local.json, call migration first
   _Requirements: [FR-2](FR.md#fr-2-settingslocaljson-target-для-hooksenv-feature2), [FR-3](FR.md#fr-3-legacy-migration-из-settingsjson-feature2)_
-- [ ] Обновить `src/updater/hook-migration.ts` чтобы targeted `.claude/settings.local.json` для consistency
 - [ ] Verify: сценарии PERSO_20..26 (@feature2) переходят из Red в Green
 
 ## Phase 3: Loud-fail setupGlobalScripts (Green) @feature4
@@ -108,7 +107,6 @@
 - [ ] Path traversal guard через `resolveWithinProject` pattern (`.claude/rules/no-unvalidated-manifest-paths.md`)
 - [ ] Add `stripDevPomogatorFromSettingsLocal` в `src/installer/settings-local.ts` (inverse от writeHooksToSettingsLocal)
 - [ ] Поддержка `--dry-run` flag — no actual deletions, только preview report
-- [ ] Wire CLI в `src/index.ts` — parse `uninstall --project [--dry-run]` subcommand, call `uninstallFromProject(findRepoRoot(), options)`, print report
   _Requirements: [FR-8](FR.md#fr-8-per-project-uninstall-command-feature7)_
 - [ ] Verify: сценарии PERSO_70..74 (@feature7) переходят из Red в Green
 

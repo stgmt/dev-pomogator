@@ -225,6 +225,27 @@ export interface ReconcileResult {
 }
 
 const PATH_REF_RE = /`(?:src|tools|tests|lib)\/[\w./-]+\*?(?:\.[\w]+)?`/g;
+// MCP JSON-RPC method names sharing the `<noun>/<verb>` shape as path
+// references inside backticks (e.g. `tools/list`, `resources/read`).
+// PATH_REF_RE matches these because `tools/` is a recognised prefix and
+// the method name is a valid `[\w./-]+`. Exclude them from missing-file
+// detection — they are protocol method names, not filesystem paths.
+// Reference: https://spec.modelcontextprotocol.io/specification/server/tools/
+const MCP_METHOD_NAMES = new Set<string>([
+  'tools/list',
+  'tools/call',
+  'resources/list',
+  'resources/read',
+  'resources/templates/list',
+  'prompts/list',
+  'prompts/get',
+  'roots/list',
+  'sampling/createMessage',
+  'ping',
+  'initialize',
+  'notifications/initialized',
+  'notifications/cancelled',
+]);
 // Catches both snake_case (`session_token`) and camelCase (`sessionToken`)
 // identifier names ending in the canonical suffixes. The lemma normaliser
 // in `normalizeIdentifierKey` collapses them to the same key so two specs
@@ -335,6 +356,11 @@ function findMissingFileReferences(
       const matches = lines[i].match(PATH_REF_RE);
       if (!matches) continue;
       for (const ref of matches) {
+        const cleanRef = ref.replace(/`/g, '');
+        // Skip MCP JSON-RPC method names — `tools/list`, `resources/read`,
+        // etc. share the `<noun>/<verb>` shape with repo paths but are
+        // protocol identifiers, not filesystem references.
+        if (MCP_METHOD_NAMES.has(cleanRef)) continue;
         const detail = pathExistsResolvingDetail(repoRoot, ref, implRoots);
         if (detail.exists) continue;
         const hint = detail.globPrefixMissing
@@ -345,7 +371,7 @@ function findMissingFileReferences(
           class: 'uncovered',
           severity: 'WARNING',
           referenced_in: `${relPosix(repoRoot, file.path)}:${i + 1}`,
-          expected_path: ref.replace(/`/g, ''),
+          expected_path: cleanRef,
           suggested_fix: hint,
         });
       }
@@ -756,6 +782,10 @@ function findModuleOwnershipConflict(
         // string (e.g. `tools/foo/main.ts`).
         const raw = m[0].replace(/`/g, '');
         const ref = raw.replace(/\*/g, '');
+        // Skip MCP JSON-RPC method names — `tools/list`, `resources/read`,
+        // etc. share the `<noun>/<verb>` shape with repo paths but are
+        // protocol identifiers, not ownable code paths.
+        if (MCP_METHOD_NAMES.has(raw)) continue;
         // Dogfood batch-9: skip shared infra paths (helpers.ts, fixtures,
         // _shared/, etc.) — they are legitimately referenced by N specs.
         if (stoplist.some((s) => ref.includes(s))) continue;

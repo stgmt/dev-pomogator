@@ -20,12 +20,12 @@ Feature: CORE018 Cursor Dead Code Cleanup
 
   # @feature3
   Scenario: CORE018_03 updater/index.ts has no updateCursorHooksForProject
-    When I check src/updater/index.ts for dead Cursor functions
+    When I check ~~`src/updater/index.ts`~~ (removed in v2 migration) for dead Cursor functions
     Then it should not contain "updateCursorHooksForProject"
 
   # @feature4
   Scenario: CORE018_04 updater/index.ts has no CursorHooksJson
-    When I check src/updater/index.ts for dead Cursor types
+    When I check ~~`src/updater/index.ts`~~ (removed in v2 migration) for dead Cursor types
     Then it should not contain "CursorHooksJson"
 
   # @feature5

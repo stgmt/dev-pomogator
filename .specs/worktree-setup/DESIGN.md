@@ -32,7 +32,6 @@
 - Self-heal patch: `~/.dev-pomogator/scripts/tsx-runner.js` (existing file — insert block after `resolveScriptPath()` at line 107)
 - Audit log: `~/.dev-pomogator/orphan-worktrees.jsonl` (создаётся first write, append-only)
 - Env config: `~/.dev-pomogator/worktree-setup.env` (создаётся skill-ом, key=value format)
-- Wiring через installer: `extensions/_meta/` или `src/installer/extensions.ts` — register `worktree-doctor.cjs` and updated `tsx-runner.js` как managed files
 
 ## Директории и файлы
 

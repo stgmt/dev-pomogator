@@ -100,7 +100,7 @@ Doctor SHALL expose slash command `/pomogator-doctor` через `.claude/comman
 
 ## FR-16: CLI flag dev-pomogator --doctor @feature8
 
-Doctor SHALL быть доступен через `dev-pomogator --doctor` в `src/index.ts` рядом с `--status`/`--update`. Поддерживает дополнительные flags: `--json` (machine-readable), `--quiet` (JSON hook payload only), `--extension <name>` (filter checks для конкретного extension).
+Doctor SHALL быть доступен через `dev-pomogator --doctor` в ~~`src/index.ts`~~ (removed in v2 migration) рядом с `--status`/`--update`. Поддерживает дополнительные flags: `--json` (machine-readable), `--quiet` (JSON hook payload only), `--extension <name>` (filter checks для конкретного extension).
 
 **Связанные AC:** [AC-16](ACCEPTANCE_CRITERIA.md#ac-16-fr-16)
 **Use Case:** [UC-8](USE_CASES.md#uc-8-ci-mode--machine-readable-output-feature8)

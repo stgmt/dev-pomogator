@@ -275,3 +275,85 @@ Full per-target detail is in `.dev-pomogator-tmp/group-c-review-packet.md`. Clif
 41 unique files are in the staged working tree. 9 files appear in BOTH GROUP_A and GROUP_B (received both rename and delete edits — RESEARCH.md files of `claude-mem-integration`, `codex-cli-support`, `dev-pomogator-canonical-plugin`, etc.).
 
 Net diff stats (`git diff --stat HEAD -- .specs/`): **+96 / −140 lines across 41 files**, consistent with DELETE outnumbering WRAP (more lines removed than rewritten).
+
+---
+
+## Round 2 cleanup (date 2026-06-01)
+
+Follow-up pass on the three backlog buckets called out in the Recommendations section above:
+
+1. **GROUP_C rename promotions** (recs item #5) — sibling-pattern rename targets that GROUP_A's auto-applier could now handle.
+2. **GROUP_C delete promotions** (recs item #4) — bulk DELETE/WRAP of v1-deprecated targets.
+3. **GROUP_B SKIP re-pass** (recs item #3) — handle markdown-table-cell + line-drift SKIPs after working-tree shifted.
+4. **Detector fix** (recs item #4 / GROUP_C #18) — exclude MCP JSON-RPC method names from `impl-drift/missing-file`.
+
+Source artifacts:
+
+- `.dev-pomogator-tmp/group-c-rename-patches.md`
+- `.dev-pomogator-tmp/group-c-delete-patches.md`
+- `.dev-pomogator-tmp/group-b-skip-repass.md`
+- `.claude/skills/cross-spec-reconcile/scripts/reconcile.ts` + `__tests__/reconcile.test.ts`
+
+### Counts per bucket
+
+| Bucket | Findings processed | Edits applied | Files edited | Bailed / still-open |
+|--------|-------------------:|--------------:|-------------:|--------------------:|
+| GROUP_C RENAME promote | 3 | 8 | 4 | 2 (`src/installer/claude.ts`, `src/installer/memory.ts` — `needs_human`, no canonical replacement) |
+| GROUP_C DELETE promote | 148 | 110 (52 DELETE + 58 WRAP) | 44 | 38 SKIP (markdown table cells) |
+| GROUP_B SKIP re-pass | 25 | 15 WRAP | 5 | 10 phantom (path no longer in file — already cleaned in earlier passes) |
+| reconcile.ts detector fix | — | +50 LOC (engine + 1 new test) | 2 | — |
+| **Round 2 total** | **176** | **183 + 50 LOC** | **50 unique** | **50** (40 still-deferred + 10 phantom) |
+
+### Sample diffs — 5 per bucket
+
+#### Bucket 1: GROUP_C RENAME promote — `src/doctor/reporter.ts` → `.claude/skills/pomogator-doctor/scripts/engine/reporter.ts`
+
+1. `.specs/pomogator-doctor/TASKS.md:134` — `` - [ ] `src/doctor/reporter.ts` — chalk formatter с traffic-light группами `` → `.claude/skills/pomogator-doctor/scripts/engine/reporter.ts`
+2. `.specs/pomogator-doctor/TASKS.md:261` — `Edit \`src/doctor/reporter.ts\` — новый mode "all-projects"` → `.claude/skills/pomogator-doctor/scripts/engine/reporter.ts`
+3. `.specs/pomogator-doctor/RESEARCH.md:247` — `Reference для \`src/doctor/reporter.ts\` chalk formatting` → `.claude/skills/pomogator-doctor/scripts/engine/reporter.ts`
+4. `.specs/pomogator-doctor/FILE_CHANGES.md:13` — `` \| `src/doctor/reporter.ts` \| create \| `` → `.claude/skills/pomogator-doctor/scripts/engine/reporter.ts`
+5. `.specs/pomogator-doctor/DESIGN.md:11` — `` - `src/doctor/reporter.ts` — форматер output `` → `.claude/skills/pomogator-doctor/scripts/engine/reporter.ts`
+
+Bailed (2): `src/installer/claude.ts` (60 refs) and `src/installer/memory.ts` (41 refs) — `decision: needs_human` per inventory, no canonical replacement file exists on disk.
+
+#### Bucket 2: GROUP_C DELETE promote — v1 installer/updater surface removed in v2
+
+1. **DELETE** `.specs/codex-cli-support/TASKS.md:120` — `` - [ ] Обновить `src/updater/index.ts` и `src/updater/github.ts` для Codex assets, .agents/skills, .codex/* и stale cleanup `` → (line removed)
+2. **DELETE** `.specs/codex-cli-support/TASKS.md:50` — `` - [ ] Нормализовать `src/installer/extensions.ts` и `src/updater/github.ts` под Codex sections `` → (line removed)
+3. **DELETE** `.specs/codex-cli-support/TASKS.md:48` — `` - [ ] Обновить `src/index.ts` и `src/installer/index.ts` для --codex `` → (line removed)
+4. **DELETE** `.specs/codex-cli-support/DESIGN.md:52` — `` - `src/updater/index.ts` `` → (line removed)
+5. **WRAP** `.specs/codex-cli-support/DESIGN.md:37` — `` `src/index.ts` `` inside long bullet list → `` ~~`src/index.ts`~~ (removed in v2 migration) `` (other tokens on the line preserved)
+
+#### Bucket 3: GROUP_B SKIP re-pass — markdown-table-cell + line-drift WRAPs
+
+1. `.specs/claude-mem-integration/RESEARCH.md:99` `src/installer/memory.ts` — WRAP inside Existing Patterns table
+2. `.specs/claude-mem-integration/RESEARCH.md:68` `src/installer/index.ts` — WRAP inside «Что уже сделано» table
+3. `.specs/codex-cli-support/RESEARCH.md:244` `src/updater/index.ts` — WRAP after line drift 247→244
+4. `.specs/dev-pomogator-canonical-plugin/RESEARCH.md:187` `src/updater/hook-migration.ts` — WRAP after line drift 192→187
+5. `.specs/personal-pomogator/RESEARCH.md:173-174` `src/utils/atomic-json.ts` ×2 — WRAP both Existing Patterns table cells
+
+10 entries are now phantom (cited path is no longer present anywhere in the file — already removed by GROUP_A/GROUP_B passes that shifted line numbers). No action required; tracked for audit only.
+
+#### Bucket 4: reconcile.ts detector fix — exclude MCP JSON-RPC method names
+
+1. **`reconcile.ts` (engine):** added `MCP_METHOD_NAMES` Set with 13 entries (`tools/list`, `tools/call`, `resources/list`, `resources/read`, `resources/templates/list`, `prompts/list`, `prompts/get`, `roots/list`, `sampling/createMessage`, `ping`, `initialize`, `notifications/initialized`, `notifications/cancelled`).
+2. **`findMissingFileReferences()`:** strip backticks once and `continue` when the cleaned ref is in `MCP_METHOD_NAMES` — prevents `impl-drift/missing-file` false positives.
+3. **`findModuleOwnershipConflict()`:** same exclusion to prevent `module-ownership-conflict` false positives on MCP method names referenced by ≥2 specs.
+4. **New test `reconcile.test.ts`:** «does NOT fire missing-file for MCP JSON-RPC method names in spec prose» — seeds a synthetic `spec-mcp/FR.md` referencing `tools/list`, `tools/call`, `resources/list`, `resources/read`, `initialize`, `notifications/initialized`, `ping`; asserts zero `impl-drift/missing-file` findings.
+5. **Comments:** rationale anchored to MCP spec URL (`https://spec.modelcontextprotocol.io/specification/server/tools/`); explains the `<noun>/<verb>` shape collision with `PATH_REF_RE`.
+
+Net change: `+50 / -1` lines across `reconcile.ts` + `__tests__/reconcile.test.ts`.
+
+### Remaining backlog state
+
+After Round 2 the open backlog tracked in this review packet is:
+
+| Origin | Count | Classification | Action |
+|--------|------:|---------------|--------|
+| GROUP_C RENAME bails | 2 | `needs_human` (installer/claude.ts, installer/memory.ts) | Decide canonical home or convert to «historical reference» (`~~strikethrough~~`) |
+| GROUP_C DELETE SKIPs | 38 | markdown table cell | Mechanical: extend WRAP-cell handler to preserve `\| \| \|` alignment, re-run script |
+| GROUP_B SKIP phantoms | 10 | already-cleaned, no live ref | Close as no-op (paths no longer in source files) |
+| GROUP_C human-triage (recs item #6) | 10 | multi-spec decisions | Schedule review session (#2+#5, #9+#20, #13, #15, #17, #19 — see top of doc) |
+| **Total remaining** | **60** | — | 40 actionable (38 mechanical + 2 needs_human) + 10 phantoms (close) + 10 human-triage |
+
+Round 2 reduced the actionable cleanup queue from **45** (25 GROUP_B SKIPs + 20 GROUP_C UNCLEAR) to **40** (38 GROUP_C DELETE SKIPs requiring table-cell handler + 2 GROUP_C RENAME `needs_human`), plus 10 phantom entries that need no action, plus the original 10 multi-spec human-triage items. Net: **−5 actionable items, +133 mechanical edits applied, +1 detector fix locking out a 5-finding false-positive class**.

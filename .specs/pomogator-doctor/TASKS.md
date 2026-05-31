@@ -131,23 +131,22 @@
 
 ## Phase 5: Reporter + reinstall + CLI wiring (Green)
 
-- [ ] `src/doctor/reporter.ts` — chalk formatter с traffic-light группами (🟢🟡🔴)
+- [ ] `.claude/skills/pomogator-doctor/scripts/engine/reporter.ts` — chalk formatter с traffic-light группами (🟢🟡🔴)
   _Requirements: [FR-20](FR.md#fr-20-trafficlight-grouped-output-feature9), [NFR-U-2](NFR.md#usability), [NFR-U-3](NFR.md#usability)_
   _Leverage: `src/installer/status.ts` chalk pattern reference_
   @feature9
-- [ ] `src/doctor/reporter.ts` (second PR) — JSON formatter с redaction для env values
+- [ ] `.claude/skills/pomogator-doctor/scripts/engine/reporter.ts` (second PR) — JSON formatter с redaction для env values
   _Requirements: [FR-24](FR.md#fr-24-json-output-mode-feature8), [FR-25](FR.md#fr-25-env-values-redaction-in-json-feature8), [NFR-S-1](NFR.md#security), [NFR-S-2](NFR.md#security)_
   @feature8
-- [ ] `src/doctor/reporter.ts` (third PR) — hook JSON payload formatter для SessionStart
+- [ ] `.claude/skills/pomogator-doctor/scripts/engine/reporter.ts` (third PR) — hook JSON payload formatter для SessionStart
   _Requirements: [FR-17](FR.md#fr-17-sessionstart-hook-feature4)_
   _Reuse: extensions/claude-mem-health/tools/claude-mem-health/health-check.ts writeOutput pattern_
   @feature4
 - [ ] `.claude/skills/pomogator-doctor/scripts/engine/reinstall.ts` — AskUserQuestion prompt + spawn('npx', ['dev-pomogator'], {stdio:'inherit', shell:false})
   _Requirements: [FR-18](FR.md#fr-18-reinstall-integration-feature2), [NFR-S-3](NFR.md#security)_
   @feature2
-- [ ] Edit `src/index.ts` — парсинг --doctor/--json/--quiet/--extension flags → routing к runDoctor
   _Requirements: [FR-16](FR.md#fr-16-cli-flag-devpomogator-doctor-feature8), [FR-23](FR.md#fr-23-exit-codes-feature8)_
-  _Existing flags pattern: --status, --update (src/index.ts:50)_
+  _Existing flags pattern: --status, --update (~~`src/index.ts`~~ (removed in v2 migration):50)_
   @feature8
 - [ ] Verify: doctor-reinstall (02, 07, 09) + doctor-output (08, 10) + doctor-entry scenarios → Green
   @feature2 @feature8 @feature9
@@ -244,7 +243,6 @@
 
 ### Installer change: pomogator-doctor self-install (Phase 8.5) — FR-29, AC-29
 
-- [ ] Edit `src/installer/extensions.ts` — добавить `pomogator-doctor` в list of extensions устанавливаемых по умолчанию при любом `npx dev-pomogator` (нет opt-in flag)
   _Requirements: [FR-29](FR.md#fr-29-pomogator-doctor-self-install-in-all-projectpaths-feature12)_
   @feature12
 - [ ] Обновить `extensions/pomogator-doctor/extension.json` → category="infrastructure", `alwaysInstall: true`
@@ -258,9 +256,8 @@
 - [ ] Edit `.claude/skills/pomogator-doctor/scripts/engine/runner.ts` — добавить экспорт `executeChecksAllProjects(options, checks)` который использует `p-limit(4)` по `installedExtensions[*].projectPaths` deduplicated
   _Requirements: [FR-30](FR.md#fr-30-allprojects-flag-feature8)_
   @feature8
-- [ ] Edit `src/doctor/reporter.ts` — новый mode `"all-projects"`: per-project section headers + aggregate summary + top-level exit code = max
+- [ ] Edit `.claude/skills/pomogator-doctor/scripts/engine/reporter.ts` — новый mode `"all-projects"`: per-project section headers + aggregate summary + top-level exit code = max
   @feature8
-- [ ] Edit `src/index.ts` — parse `--all-projects` flag, route to `executeChecksAllProjects`
   @feature8
 - [ ] JSON mode: output `{"projects": {<path>: CheckResult[]}, "aggregate": {...}}`
   _Requirements: [FR-24](FR.md#fr-24-json-output-mode-feature8) + [AC-30](ACCEPTANCE_CRITERIA.md#ac-30-fr-30)_
@@ -273,7 +270,6 @@
 - [ ] Edit `src/config/index.ts` — writer функции (`saveConfig`, `updateConfig`) SHALL include top-level `version: packageVersion` key
   _Requirements: [FR-32](FR.md#fr-32-configjson-toplevel-version-field-feature2)_
   @feature2
-- [ ] Edit `src/installer/index.ts` — передавать `version` явно при initial config write
   @feature2
 - [ ] Edit `.claude/skills/pomogator-doctor/scripts/engine/checks/version-match.ts` — update hint если `ctx.config?.version` отсутствует: severity=warning, hint="lacks top-level version"
   _Requirements: [AC-32](ACCEPTANCE_CRITERIA.md#ac-32-fr-32)_
@@ -343,7 +339,6 @@
 - [ ] Refactor: remove duplication, inline constants, extract shared helpers
 - [ ] Edit `README.md` — добавить раздел "Doctor Command" с onboarding examples
 - [ ] Edit `CLAUDE.md` — добавить `/pomogator-doctor` в таблицу Commands
-- [ ] Optional: edit `src/updater/index.ts` — post-update вызов `runDoctor({quiet:true})` для warning если что-то сломалось после update
 - [ ] Verify: все 15 BDD scenarios GREEN через `/run-tests --grep pomogator-doctor`
 - [ ] Verify: exit codes соответствуют FR-23 (manual CI pipeline test)
 - [ ] Verify: chalk output respects NO_COLOR (NFR-U-3 — manual env test)

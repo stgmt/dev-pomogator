@@ -18,13 +18,13 @@ WHEN developer greps `src/installer/memory.ts` for `copyCheckUpdateScript` THEN 
 
 **Требование:** [FR-3](FR.md#fr-3-remove-dead-cursor-code-from-updaterindexts)
 
-WHEN developer greps `src/updater/index.ts` for `updateCursorHooksForProject` THEN grep SHALL return 0 results.
+WHEN developer greps ~~`src/updater/index.ts`~~ (removed in v2 migration) for `updateCursorHooksForProject` THEN grep SHALL return 0 results.
 
 ## AC-4 (FR-4): No .cursor ternary @feature4
 
 **Требование:** [FR-4](FR.md#fr-4-simplify-unreachable-ternary-branches)
 
-WHEN developer greps `src/updater/index.ts` for `.cursor` THEN grep SHALL return 0 results.
+WHEN developer greps ~~`src/updater/index.ts`~~ (removed in v2 migration) for `.cursor` THEN grep SHALL return 0 results.
 
 ## AC-5 (FR-5, FR-6): Shared functions intact @feature5
 

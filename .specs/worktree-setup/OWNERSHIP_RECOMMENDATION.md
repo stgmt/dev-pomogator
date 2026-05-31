@@ -4,7 +4,7 @@
 
 ## Contested Path
 
-`src/installer/extensions.ts`
+~~`src/installer/extensions.ts`~~ (removed in v2 migration)
 
 ## Analysis
 
@@ -15,7 +15,7 @@
 
 ## Recommendation
 
-The path `src/installer/extensions.ts` should be owned by spec `worktree-setup`.
+The path ~~`src/installer/extensions.ts`~~ (removed in v2 migration) should be owned by spec `worktree-setup`.
 Spec `dev-pomogator-canonical-plugin` claims the same path but was created further from the file's
 first-commit date in git history. Consider updating `dev-pomogator-canonical-plugin` to reference the
 asset via the canonical owner's module instead.

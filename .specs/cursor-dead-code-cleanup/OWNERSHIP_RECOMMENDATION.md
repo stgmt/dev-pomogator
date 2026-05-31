@@ -4,7 +4,7 @@
 
 ## Contested Path
 
-`src/updater/index.ts`
+~~`src/updater/index.ts`~~ (removed in v2 migration)
 
 ## Analysis
 
@@ -15,7 +15,7 @@
 
 ## Recommendation
 
-The path `src/updater/index.ts` should be owned by spec `cursor-dead-code-cleanup`.
+The path ~~`src/updater/index.ts`~~ (removed in v2 migration) should be owned by spec `cursor-dead-code-cleanup`.
 Spec `extension-beta-flag` claims the same path but was created further from the file's
 first-commit date in git history. Consider updating `extension-beta-flag` to reference the
 asset via the canonical owner's module instead.

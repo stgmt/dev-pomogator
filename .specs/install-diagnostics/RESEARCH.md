@@ -62,9 +62,9 @@ npm verbose code 2
 4. npm install запускает `prepare` script: `npm run build` = `tsc && node scripts/build-check-update.js`
 5. **`tsc` падает с TypeScript ошибками**:
    ```
-   src/updater/index.ts(21,61): error TS2307: Cannot find module '../utils/path-safety.js'
-   src/updater/index.ts(23,33): error TS2307: Cannot find module '../installer/plugin-json.js'
-   src/updater/index.ts(545,50): error TS2339: Property 'installedShared' does not exist on type 'Config'
+   ~~`src/updater/index.ts`~~ (removed in v2 migration)(21,61): error TS2307: Cannot find module '../utils/path-safety.js'
+   ~~`src/updater/index.ts`~~ (removed in v2 migration)(23,33): error TS2307: Cannot find module '../installer/plugin-json.js'
+   ~~`src/updater/index.ts`~~ (removed in v2 migration)(545,50): error TS2339: Property 'installedShared' does not exist on type 'Config'
    ... (multiple TS errors)
    src/updater/shared-sync.ts(26,38): error TS2307: Cannot find module '../utils/path-safety.js'
    ```
@@ -130,10 +130,10 @@ Output (релевантные строки):
 > dev-pomogator@1.5.0 build
 > tsc && node scripts/build-check-update.js
 
-src/updater/index.ts(21,61): error TS2307: Cannot find module '../utils/path-safety.js'
-src/updater/index.ts(23,33): error TS2307: Cannot find module '../installer/plugin-json.js'
-src/updater/index.ts(141,56): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
-src/updater/index.ts(545,50): error TS2339: Property 'installedShared' does not exist on type 'Config'.
+~~`src/updater/index.ts`~~ (removed in v2 migration)(21,61): error TS2307: Cannot find module '../utils/path-safety.js'
+~~`src/updater/index.ts`~~ (removed in v2 migration)(23,33): error TS2307: Cannot find module '../installer/plugin-json.js'
+~~`src/updater/index.ts`~~ (removed in v2 migration)(141,56): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+~~`src/updater/index.ts`~~ (removed in v2 migration)(545,50): error TS2339: Property 'installedShared' does not exist on type 'Config'.
 ... (multiple TS errors)
 src/updater/shared-sync.ts(26,38): error TS2307: Cannot find module '../utils/path-safety.js'
 
@@ -171,7 +171,6 @@ npm error git dep preparation failed
 ## Выводы
 
 1. Silent install failure = **дев-pomogator-specific bug**: 3 untracked файла в локальной dev-pomogator репозитории заставляют github HEAD-checkout НЕ компилироваться. Это НЕ npm bug, не Windows-specific bug, не upstream issue
-2. Bug **легко исправить** в dev-pomogator: `git add src/utils/path-safety.ts src/installer/plugin-json.ts src/config/schema.ts && git commit -m "fix(updater): commit missing path-safety, plugin-json, installedShared"`
 3. EPERM на Windows — **симптом**, не корень. После prepare failure, Windows reify rollback не может удалить busy файлы. На Linux нет EPERM, но та же tsc ошибка приводит к exit 2
 4. **CORE003_18 (Linux) и CORE003_19 (Windows) ОБА failing-by-design** на текущем github HEAD. После commit-а missing файлов оба теста должны зелёным
 5. Skill `install-diagnostics` правильно классифицирует this bug pattern: needs to be updated с Mode A=Win EPERM → Mode A=tsc prepare failure (untracked source files)

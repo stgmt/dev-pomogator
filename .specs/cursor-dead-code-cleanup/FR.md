@@ -10,7 +10,7 @@ Delete helper functions called only from dead `installCursorHooks`: `copyCheckUp
 
 ## FR-3: Remove dead Cursor code from updater/index.ts @feature3
 
-Delete `CursorHooksJson` interface and `updateCursorHooksForProject` function from `src/updater/index.ts`.
+Delete `CursorHooksJson` interface and `updateCursorHooksForProject` function from ~~`src/updater/index.ts`~~ (removed in v2 migration).
 
 ## FR-4: Simplify unreachable ternary branches @feature4
 

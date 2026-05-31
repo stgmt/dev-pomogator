@@ -35,7 +35,6 @@
 ### 📋 `auto-install-health`
 > Когда needsClaudeMem=true → автоматически ставить claude-mem-health
 
-- **files:** `src/installer/index.ts` *(edit)*
 - **changes:**
   - После `ensureClaudeMem('claude')` success: проверить `extensions.includes('claude-mem-health')`, если нет → `await installClaude({ extensions: ['claude-mem-health'], executedSharedHooks })`
   - Добавить report entry: `claude-mem/hooks: ok` или `fail`
@@ -93,7 +92,6 @@
 ### 📋 `per-component-report`
 > Install report с breakdown: worker/chroma/mcp/hooks × ok/warn/fail
 
-- **files:** `.claude/skills/skills-rules-optimizer/scripts/report.ts` *(edit)*, `src/installer/index.ts` *(edit)*
 - **changes:**
   - В index.ts: после ensureClaudeMem + auto-install health → добавить 4 report entries из validation result
   - Report format: `| claude-mem/worker | ok |`, `| claude-mem/chroma | warn | degraded mode |`, etc.
