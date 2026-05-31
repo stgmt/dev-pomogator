@@ -1170,11 +1170,13 @@ function findMissingCrossRef(
     const ownFiles = (filesBySlug.get(slug) ?? []).filter(
       (f) => !AUTO_GENERATED_FILES.some((n) => f.path.endsWith(n)),
     );
-    // Batch-21 noise reduction: strip fenced code blocks before mention
-    // count + require ≥2 mentions of the slug name before flagging.
-    // Single mentions are routinely prose citations ("similar to what
-    // foo-spec does"), not real structural cross-refs.
-    const ownBodies = ownFiles.map((f) => stripFencedBlocks(f.body)).join('\n');
+    // Batch-21/25 noise reduction: strip fenced code blocks AND inline
+    // backtick content before mention count. Slugs inside CLI examples
+    // (e.g. `npx tsx -Path .specs/<slug>/...`) are documentation, not
+    // structural cross-refs. Require ≥2 prose mentions to fire.
+    const stripInlineCode = (body: string): string =>
+      stripFencedBlocks(body).replace(/`[^`]+`/g, '');
+    const ownBodies = ownFiles.map((f) => stripInlineCode(f.body)).join('\n');
     for (const otherSlug of allSlugs) {
       if (otherSlug === slug) continue;
       const mentionRe = new RegExp(`\\b${escapeRegex(otherSlug)}\\b`, 'g');
