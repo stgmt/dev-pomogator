@@ -9,8 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { Resolver, ResolverResult } from './types.ts';
 import type { BacklogEntry } from '../types.ts';
-
-const FR_HEADING_RE = /^#{2,3}\s+(?:Requirement:\s+)?(FR-\d+)(?::?\s+([^\n]+))?/gm;
+import { parseFrHeadings } from '../../_shared/fr-parser.ts';
 
 export const scenarioWriter: Resolver = {
   name: 'scenario-writer',
@@ -37,12 +36,7 @@ function scenarioWriterImpl(repoRoot: string, entry: BacklogEntry): ResolverResu
   }
 
   const frBody = fs.readFileSync(frFile, 'utf8');
-  const frs: Array<{ id: string; title: string }> = [];
-  let m: RegExpExecArray | null;
-  FR_HEADING_RE.lastIndex = 0;
-  while ((m = FR_HEADING_RE.exec(frBody)) !== null) {
-    frs.push({ id: m[1], title: (m[2] ?? '').trim() });
-  }
+  const frs = parseFrHeadings(frBody).map((h) => ({ id: h.id, title: h.title }));
   if (frs.length === 0) {
     return {
       confidence: 0,

@@ -24,15 +24,20 @@ function mkEntry(
   };
 }
 
-describe.skip('owner-picker resolver', () => {
+describe('owner-picker resolver', () => {
   let root: string;
   beforeEach(() => {
     root = path.join(os.tmpdir(), `owner-${randomUUID()}`);
-    // Initialize a git repo
+    // Initialize a git repo. Force `main` so behaviour is identical across
+    // git versions (pre-2.28 defaults to `master`, post-2.28 honours
+    // init.defaultBranch which may be either; the resolver greps `git log`
+    // and is branch-agnostic, but committing on a deterministic branch
+    // keeps test output stable.
     fs.mkdirSync(root);
-    execSync('git init', { cwd: root });
-    execSync('git config user.email "test@example.com"', { cwd: root });
-    execSync('git config user.name "Test User"', { cwd: root });
+    execSync('git init -b main', { cwd: root, stdio: 'pipe' });
+    execSync('git config user.email "test@example.com"', { cwd: root, stdio: 'pipe' });
+    execSync('git config user.name "Test User"', { cwd: root, stdio: 'pipe' });
+    execSync('git config commit.gpgsign false', { cwd: root, stdio: 'pipe' });
 
     // Create spec directories
     fs.mkdirSync(path.join(root, '.specs/foo'), { recursive: true });
@@ -41,18 +46,27 @@ describe.skip('owner-picker resolver', () => {
   afterEach(() => fs.rmSync(root, { recursive: true, force: true }));
 
   it('recommends owner by spec creation proximity to first commit', async () => {
-    // Create a file, commit it
+    // Create a file and commit it with a FIXED author/committer date so the
+    // proximity calculation is deterministic regardless of when the test runs.
     fs.writeFileSync(path.join(root, 'shared-module.ts'), 'export const foo = 1;\n');
-    execSync('git add shared-module.ts', { cwd: root });
-    execSync('git commit -m "initial"', { cwd: root });
+    execSync('git add shared-module.ts', { cwd: root, stdio: 'pipe' });
+    execSync('git commit -m "initial"', {
+      cwd: root,
+      stdio: 'pipe',
+      env: {
+        ...process.env,
+        GIT_AUTHOR_DATE: '2026-05-24T00:00:00Z',
+        GIT_COMMITTER_DATE: '2026-05-24T00:00:00Z',
+      },
+    });
 
-    // Create specs directory with .progress.json files to control creation dates
+    // Create .progress.json files with deterministic creation dates relative
+    // to the pinned commit date (2026-05-24):
+    //   foo created 2026-05-25 → distance 1 day → closer → canonical
+    //   bar created 2026-05-29 → distance 5 days → further → loser
     const progressA = path.join(root, '.specs/foo/.progress.json');
     const progressB = path.join(root, '.specs/bar/.progress.json');
-
-    // Spec A was created 1 day after the commit
     fs.writeFileSync(progressA, JSON.stringify({ created_at: '2026-05-25T12:00:00Z' }));
-    // Spec B was created 5 days after the commit (further away)
     fs.writeFileSync(progressB, JSON.stringify({ created_at: '2026-05-29T12:00:00Z' }));
 
     const result = await ownerPicker.resolve({
@@ -61,7 +75,9 @@ describe.skip('owner-picker resolver', () => {
     });
 
     expect(result.bailed_out).toBeUndefined();
-    expect(result.files_changed).toEqual(['.specs/foo/OWNERSHIP_RECOMMENDATION.md']);
+    expect(result.files_changed.map((p) => p.replace(/\\/g, '/'))).toEqual([
+      '.specs/foo/OWNERSHIP_RECOMMENDATION.md',
+    ]);
     expect(result.confidence).toBeGreaterThan(0.5);
 
     const recommendation = fs.readFileSync(
@@ -114,12 +130,32 @@ describe.skip('owner-picker resolver', () => {
 
   it('idempotent — does NOT overwrite existing OWNERSHIP_RECOMMENDATION.md', async () => {
     fs.writeFileSync(path.join(root, 'shared.ts'), 'export const x = 1;\n');
-    execSync('git add shared.ts', { cwd: root });
-    execSync('git commit -m "init"', { cwd: root });
+    execSync('git add shared.ts', { cwd: root, stdio: 'pipe' });
+    // Pin commit date so canonical owner = foo deterministically (see test #1
+    // for the same dating scheme).
+    execSync('git commit -m "init"', {
+      cwd: root,
+      stdio: 'pipe',
+      env: {
+        ...process.env,
+        GIT_AUTHOR_DATE: '2026-05-24T00:00:00Z',
+        GIT_COMMITTER_DATE: '2026-05-24T00:00:00Z',
+      },
+    });
 
-    fs.writeFileSync(path.join(root, '.specs/foo/.progress.json'), JSON.stringify({ created_at: '2026-05-25T00:00:00Z' }));
-    fs.writeFileSync(path.join(root, '.specs/bar/.progress.json'), JSON.stringify({ created_at: '2026-05-29T00:00:00Z' }));
+    fs.writeFileSync(
+      path.join(root, '.specs/foo/.progress.json'),
+      JSON.stringify({ created_at: '2026-05-25T00:00:00Z' }),
+    );
+    fs.writeFileSync(
+      path.join(root, '.specs/bar/.progress.json'),
+      JSON.stringify({ created_at: '2026-05-29T00:00:00Z' }),
+    );
 
+    // Pre-create recommendation in the WINNING spec directory (foo) so the
+    // resolver's idempotency check (`if exists → bailed_out: already-exists`)
+    // fires. Without the deterministic commit-date pin above, `bar` could win
+    // and the resolver would write a fresh file there instead.
     const recFile = path.join(root, '.specs/foo/OWNERSHIP_RECOMMENDATION.md');
     fs.writeFileSync(recFile, '# Manually edited\n');
 
@@ -135,6 +171,21 @@ describe.skip('owner-picker resolver', () => {
   });
 
   it('bails when contested path has no commit history', async () => {
+    // Add an unrelated initial commit so `git log` doesn't fail on an empty
+    // branch (which would surface as bailed_out.reason='git-error' rather
+    // than the path-specific 'no-commit-date' we want to exercise here).
+    fs.writeFileSync(path.join(root, 'README.md'), '# repo\n');
+    execSync('git add README.md', { cwd: root, stdio: 'pipe' });
+    execSync('git commit -m "seed"', {
+      cwd: root,
+      stdio: 'pipe',
+      env: {
+        ...process.env,
+        GIT_AUTHOR_DATE: '2026-05-24T00:00:00Z',
+        GIT_COMMITTER_DATE: '2026-05-24T00:00:00Z',
+      },
+    });
+
     fs.writeFileSync(path.join(root, '.specs/foo/.progress.json'), '{}');
     fs.writeFileSync(path.join(root, '.specs/bar/.progress.json'), '{}');
 
@@ -149,11 +200,25 @@ describe.skip('owner-picker resolver', () => {
 
   it('handles spec string with slug/path format (fallback parsing)', async () => {
     fs.writeFileSync(path.join(root, 'module.ts'), 'export const y = 2;\n');
-    execSync('git add module.ts', { cwd: root });
-    execSync('git commit -m "init"', { cwd: root });
+    execSync('git add module.ts', { cwd: root, stdio: 'pipe' });
+    execSync('git commit -m "init"', {
+      cwd: root,
+      stdio: 'pipe',
+      env: {
+        ...process.env,
+        GIT_AUTHOR_DATE: '2026-05-24T00:00:00Z',
+        GIT_COMMITTER_DATE: '2026-05-24T00:00:00Z',
+      },
+    });
 
-    fs.writeFileSync(path.join(root, '.specs/foo/.progress.json'), JSON.stringify({ created_at: '2026-05-25T00:00:00Z' }));
-    fs.writeFileSync(path.join(root, '.specs/bar/.progress.json'), JSON.stringify({ created_at: '2026-05-29T00:00:00Z' }));
+    fs.writeFileSync(
+      path.join(root, '.specs/foo/.progress.json'),
+      JSON.stringify({ created_at: '2026-05-25T00:00:00Z' }),
+    );
+    fs.writeFileSync(
+      path.join(root, '.specs/bar/.progress.json'),
+      JSON.stringify({ created_at: '2026-05-29T00:00:00Z' }),
+    );
 
     const result = await ownerPicker.resolve({
       repoRoot: root,
@@ -161,6 +226,8 @@ describe.skip('owner-picker resolver', () => {
     });
 
     expect(result.bailed_out).toBeUndefined();
-    expect(result.files_changed).toEqual(['.specs/foo/OWNERSHIP_RECOMMENDATION.md']);
+    expect(result.files_changed.map((p) => p.replace(/\\/g, '/'))).toEqual([
+      '.specs/foo/OWNERSHIP_RECOMMENDATION.md',
+    ]);
   });
 });

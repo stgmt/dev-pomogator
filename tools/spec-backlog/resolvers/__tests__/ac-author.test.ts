@@ -45,7 +45,9 @@ describe('ac-author resolver', () => {
     );
     const result = await acAuthor.resolve({ repoRoot: root, entry: mkEntry('foo') });
     expect(result.bailed_out).toBeUndefined();
-    expect(result.files_changed).toEqual(['.specs/foo/ACCEPTANCE_CRITERIA.md']);
+    expect(result.files_changed.map((p) => p.replace(/\\/g, '/'))).toEqual([
+      '.specs/foo/ACCEPTANCE_CRITERIA.md',
+    ]);
     expect(result.confidence).toBeGreaterThan(0.5);
     const ac = fs.readFileSync(path.join(root, '.specs/foo/ACCEPTANCE_CRITERIA.md'), 'utf8');
     expect(ac).toContain('## AC-1 (FR-1)');

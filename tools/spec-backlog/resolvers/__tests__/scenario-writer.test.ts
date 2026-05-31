@@ -20,7 +20,7 @@ function mkEntry(slug: string): BacklogEntry {
   };
 }
 
-describe.skip('scenario-writer resolver', () => {
+describe('scenario-writer resolver', () => {
   let root: string;
   beforeEach(() => {
     root = path.join(os.tmpdir(), `scenario-${randomUUID()}`);
@@ -45,16 +45,18 @@ describe.skip('scenario-writer resolver', () => {
     );
     const result = await scenarioWriter.resolve({ repoRoot: root, entry: mkEntry('foo') });
     expect(result.bailed_out).toBeUndefined();
-    expect(result.files_changed).toEqual(['.specs/foo/foo.feature']);
+    expect(result.files_changed.map((p) => p.replace(/\\/g, '/'))).toEqual([
+      '.specs/foo/foo.feature',
+    ]);
     expect(result.confidence).toBeGreaterThan(0.5);
     const feature = fs.readFileSync(path.join(root, '.specs/foo/foo.feature'), 'utf8');
     expect(feature).toContain('Feature: foo');
     expect(feature).toContain('@feature1');
     expect(feature).toContain('@feature2');
     expect(feature).toContain('@feature3');
-    expect(feature).toContain('Scenario: FR-1: User login');
-    expect(feature).toContain('Scenario: FR-2: Password reset');
-    expect(feature).toContain('Scenario: FR-3: Session management');
+    expect(feature).toContain('Scenario: FR-1 — User login');
+    expect(feature).toContain('Scenario: FR-2 — Password reset');
+    expect(feature).toContain('Scenario: FR-3 — Session management');
     expect(feature).toContain('Given `<precondition');
     expect(feature).toContain('When `<action');
     expect(feature).toContain('Then `<expected');
@@ -118,8 +120,8 @@ describe.skip('scenario-writer resolver', () => {
     const feature = fs.readFileSync(path.join(root, '.specs/foo/foo.feature'), 'utf8');
     expect(feature).toContain('@feature1');
     expect(feature).toContain('@feature2');
-    expect(feature).toContain('Scenario: FR-1 Login');
-    expect(feature).toContain('Scenario: FR-2 Logout');
+    expect(feature).toContain('Scenario: FR-1 — Login');
+    expect(feature).toContain('Scenario: FR-2 — Logout');
   });
 
   it('creates new .feature file when it does not exist', async () => {

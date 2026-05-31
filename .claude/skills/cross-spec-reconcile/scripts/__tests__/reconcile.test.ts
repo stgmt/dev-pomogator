@@ -66,18 +66,27 @@ describe('reconcileLight — finding-code coverage', () => {
     expect(drift!.spec_b).toContain('sessionToken');
   });
 
-  it('cross-spec/concept-overlap fires when two specs share ≥10 capitalised concept-nouns (post batch-10)', () => {
-    // Threshold history: batch-3 = 3, batch-9 = 5, batch-10 = 10.
-    // Fixture needs 10+ shared NON-stoplisted PascalCase nouns to fire.
-    const sharedTen =
-      'AuthFlow LoginPath TokenStorage SessionInfo UserProfile AccessRole EmailToken PasswordHash ResetLink VerifyCode';
+  it('cross-spec/concept-overlap fires when two specs share ≥25 capitalised concept-nouns (post batch-21)', () => {
+    // Threshold history: batch-3 = 3, batch-9 = 5, batch-10 = 10, batch-21 = 25.
+    // Also: detector is opt-in via conceptOverlapEnabled (default false on
+    // dev-pomogator-shaped corpora where inherent ecosystem vocab dominates).
+    // Fixture needs 25+ shared NON-stoplisted PascalCase nouns to fire.
+    // Regex constraint (CONCEPT_NOUN_RE): first segment ≥3 lowercase chars,
+    // subsequent CamelCase parts ≥2 lowercase. `Jwt`/`Mfa` fail the prefix
+    // rule — use 4-letter prefixes that pass (`Auth`, `Webauthn`, etc.).
+    const sharedTwentyFive =
+      'AuthFlow LoginPath TokenStorage SessionInfo UserProfile AccessRole ' +
+      'EmailToken PasswordHash ResetLink VerifyCode AuthClaim RefreshFlow ' +
+      'OauthGrant SamlAssertion LdapBind RbacPolicy AbacRule AuthDevice ' +
+      'WebauthnKey TotpSecret RecoveryCode AuditEntry ConsentToken ScopeGrant ' +
+      'AudienceClaim CookieJar BearerSpec NonceValue';
     seedSpec(root, 'spec-x', {
-      'FR.md': `## FR-1\n\n${sharedTen} UniqueAlpha UniqueBeta UniqueGamma\n`,
+      'FR.md': `## FR-1\n\n${sharedTwentyFive} UniqueAlpha UniqueBeta UniqueGamma\n`,
     });
     seedSpec(root, 'spec-y', {
-      'FR.md': `## FR-2\n\n${sharedTen} DifferentDelta DifferentEpsilon DifferentZeta\n`,
+      'FR.md': `## FR-2\n\n${sharedTwentyFive} DifferentDelta DifferentEpsilon DifferentZeta\n`,
     });
-    const reports = reconcileLight({ repoRoot: root });
+    const reports = reconcileLight({ repoRoot: root, conceptOverlapEnabled: true });
     const overlap = reports
       .flatMap((r) => r.findings)
       .find((f) => f.code === 'cross-spec/concept-overlap');
@@ -211,6 +220,25 @@ describe('reconcileLight — finding-code coverage', () => {
     expect(dead[0].expected_path).toBe('./does-not-exist.md');
   });
 
+  it('impl-drift/dead-link ignores regex character-class fragments like [\\w_-]+', () => {
+    seedSpec(root, 'spec-regex-cc', {
+      // Markdown link whose target is a regex character class with quantifier
+      // — documentation of a regex, not a real path. Must NOT trigger dead-link.
+      'FR.md': '## FR-1\nID format: [pattern]([\\w_-]+) defined inline.\n',
+    });
+    const [report] = reconcileLight({ repoRoot: root, slugs: ['spec-regex-cc'] });
+    expect(report.findings.find((f) => f.code === 'impl-drift/dead-link')).toBeUndefined();
+  });
+
+  it('impl-drift/dead-link ignores regex backslash-shorthand fragments like \\d+', () => {
+    seedSpec(root, 'spec-regex-bs', {
+      // Documentation of a regex shorthand — `\d+` is not a file path.
+      'FR.md': '## FR-1\nVersion regex: [v-pattern](v\\d+\\.\\d+) for releases.\n',
+    });
+    const [report] = reconcileLight({ repoRoot: root, slugs: ['spec-regex-bs'] });
+    expect(report.findings.find((f) => f.code === 'impl-drift/dead-link')).toBeUndefined();
+  });
+
   it('impl-drift/dead-link ignores absolute URLs + mailto + anchor-only links', () => {
     seedSpec(root, 'spec-good-link', {
       'FR.md':
@@ -328,6 +356,10 @@ describe('reconcileLight — finding-code coverage', () => {
   });
 
   it('cross-spec/module-ownership-conflict fires when two specs reference the same module path', () => {
+    // Batch-21 FP reduction: ownership conflict now requires the referenced
+    // path to exist on disk (else deleted-v1 paths produce noise).
+    fs.mkdirSync(path.join(root, 'tools/order'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'tools/order/main.ts'), '');
     seedSpec(root, 'spec-own-a', {
       'FR.md': '## FR-1\nClaims `tools/order/main.ts`.\n',
     });
@@ -432,6 +464,10 @@ describe('reconcileLight — finding-code coverage', () => {
   });
 
   it('FIX: module-ownership — identical trailing-glob path collides', () => {
+    // Batch-21 FP reduction: detector normalises `*` → `tools/foo.ts` and
+    // then requires existsSync. Seed the normalised target on disk.
+    fs.mkdirSync(path.join(root, 'tools'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'tools/foo.ts'), '');
     seedSpec(root, 'sp-glob-a', {
       'FR.md': '## FR-1\nClaims `tools/foo*.ts`.\n',
     });
@@ -538,8 +574,12 @@ describe('reconcileLight — finding-code coverage', () => {
   });
 
   it('cross-spec/missing-cross-ref fires when slug mentioned but no markdown link', () => {
+    // Batch-21/25 noise reduction: requires ≥2 prose mentions of the other
+    // slug (outside fenced code + inline backticks) before firing.
     seedSpec(root, 'auth-mcr', {
-      'FR.md': '## FR-1: OAuth\nBuilds on user-service-mcr schema for tokens.\n',
+      'FR.md':
+        '## FR-1: OAuth\nBuilds on user-service-mcr schema for tokens.\n' +
+        'See user-service-mcr for token schema details.\n',
     });
     seedSpec(root, 'user-service-mcr', {
       'FR.md': '## FR-1: User CRUD\n',
@@ -559,7 +599,9 @@ describe('reconcileLight — finding-code coverage', () => {
     seedSpec(root, 'sp-nfr-b', {
       'DESIGN.md': '## Performance\nAPI latency budget: 500ms enforced.\n',
     });
-    const reports = reconcileLight({ repoRoot: root });
+    // Batch-21 honest audit: contradictoryNfrEnabled defaults to false
+    // (subsystem context missing → FP risk). Opt in for this fixture.
+    const reports = reconcileLight({ repoRoot: root, contradictoryNfrEnabled: true });
     const contradiction = reports
       .flatMap((r) => r.findings)
       .find((f) => f.code === 'cross-spec/contradictory-nfr');
@@ -703,7 +745,8 @@ describe('reconcileLight — finding-code coverage', () => {
     seedSpec(root, 'sp-nfr-s-b', {
       'DESIGN.md': '## Performance\nAPI latency budget: 2s enforced.\n',
     });
-    const reports = reconcileLight({ repoRoot: root });
+    // Batch-21 honest audit: contradictoryNfrEnabled opt-in.
+    const reports = reconcileLight({ repoRoot: root, contradictoryNfrEnabled: true });
     const contradiction = reports
       .flatMap((r) => r.findings)
       .find((f) => f.code === 'cross-spec/contradictory-nfr');
@@ -773,6 +816,9 @@ describe('reconcileLight — finding-code coverage', () => {
   });
 
   it('DOGFOOD: module-ownership custom stoplist override fires for non-stoplisted paths', () => {
+    // Batch-21 FP reduction: detector requires the referenced path to exist.
+    fs.mkdirSync(path.join(root, 'tools/order'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'tools/order/main.ts'), '');
     seedSpec(root, 'sp-own-c', { 'FR.md': '## FR-1\nClaims `tools/order/main.ts`.\n' });
     seedSpec(root, 'sp-own-d', { 'FR.md': '## FR-2\nClaims `tools/order/main.ts`.\n' });
     const reports = reconcileLight({ repoRoot: root, ownershipStoplist: [] });

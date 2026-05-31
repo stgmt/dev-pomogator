@@ -73,3 +73,7 @@ nul
 .dev-pomogator-tmp/
 .claude/worktrees/
 .claude/scheduled_tasks.lock
+
+# specs-validator auto-generated coverage snapshots (per .specs/<slug>/validation-report.md);
+# rewritten on every validate-specs run, runtime artifact, not source.
+.specs/**/validation-report.md

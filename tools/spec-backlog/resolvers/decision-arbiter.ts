@@ -10,7 +10,6 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { execSync } from 'node:child_process';
 import type { Resolver, ResolverResult } from './types.ts';
 import type { BacklogEntry } from '../types.ts';
 
@@ -38,17 +37,39 @@ function parseNfrs(text: string): Array<{ key: string; value: string }> {
 }
 
 /**
- * Grep the repo for occurrences of a value (numeric or string).
- * Returns count of matching lines.
+ * Scan repo/tools for occurrences of a value (numeric or string) inside .ts files.
+ * Returns count of matching LINES (mirrors `grep -r --include="*.ts"` line-count semantics).
+ *
+ * Pure Node fs implementation — cross-platform (no shell-out to grep, which is
+ * unavailable on stock Windows). Uses `fs.readdirSync({ recursive: true })` from
+ * Node 20+; the project already relies on Node 22+ native strip-types per
+ * `ts-import-extensions` rule.
  */
 function grepValueInRepo(repoRoot: string, value: string): number {
   try {
-    // Escape special regex chars, grep in tools/**/*.ts for the value
-    const escapedValue = value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const cmd = `grep -r "${escapedValue}" "${path.join(repoRoot, 'tools')}" --include="*.ts" 2>/dev/null || echo ""`;
-    const output = execSync(cmd, { encoding: 'utf8', stdio: 'pipe' });
-    const lines = output.trim().split('\n').filter((l) => l.length > 0);
-    return lines.length;
+    const toolsDir = path.join(repoRoot, 'tools');
+    if (!fs.existsSync(toolsDir)) return 0;
+
+    const entries = fs.readdirSync(toolsDir, { withFileTypes: true, recursive: true }) as fs.Dirent[];
+    let count = 0;
+    for (const entry of entries) {
+      if (!entry.isFile() || !entry.name.endsWith('.ts')) continue;
+      // `parentPath` is the Node 20.12+ stable name (replaces deprecated `path`).
+      const parentDir = (entry as unknown as { parentPath?: string; path?: string }).parentPath
+        ?? (entry as unknown as { path?: string }).path
+        ?? toolsDir;
+      const fullPath = path.join(parentDir, entry.name);
+      let content: string;
+      try {
+        content = fs.readFileSync(fullPath, 'utf8');
+      } catch {
+        continue;
+      }
+      for (const line of content.split(/\r?\n/)) {
+        if (line.includes(value)) count++;
+      }
+    }
+    return count;
   } catch {
     return 0;
   }

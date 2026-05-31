@@ -10,8 +10,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { Resolver, ResolverResult } from './types.ts';
 import type { BacklogEntry } from '../types.ts';
+import { parseFrHeadings } from '../../_shared/fr-parser.ts';
 
-const FR_HEADING_RE = /^#{2,3}\s+(?:Requirement:\s+)?(FR-\d+)(?::?\s+([^\n]+))?/gm;
 const FR_CITATION_RE = /FR-(\d+)/g;
 
 export const frAuthor: Resolver = {
@@ -74,8 +74,6 @@ function frAuthorImpl(repoRoot: string, entry: BacklogEntry): ResolverResult {
 
   // Collect all FR-N citations with their context (line numbers)
   const citations: Array<{ num: string; line: number; context: string }> = [];
-  let m: RegExpExecArray | null;
-  let lineNum = 0;
   FR_CITATION_RE.lastIndex = 0;
   citingBody.split('\n').forEach((lineText, idx) => {
     FR_CITATION_RE.lastIndex = 0;
@@ -101,11 +99,7 @@ function frAuthorImpl(repoRoot: string, entry: BacklogEntry): ResolverResult {
 
   // Read existing FR.md to check which FR-N sections already exist
   const frBody = fs.readFileSync(frFile, 'utf8');
-  const existingFRs = new Set<string>();
-  FR_HEADING_RE.lastIndex = 0;
-  while ((m = FR_HEADING_RE.exec(frBody)) !== null) {
-    existingFRs.add(m[1]);
-  }
+  const existingFRs = new Set(parseFrHeadings(frBody).map((h) => h.id));
 
   // Filter to only FR-N that don't exist yet
   const newFRs = citations.filter((c) => !existingFRs.has(`FR-${c.num}`));

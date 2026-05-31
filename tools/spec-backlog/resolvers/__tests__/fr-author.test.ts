@@ -20,7 +20,7 @@ function mkEntry(slug: string, citingFile: string = 'REQUIREMENTS.md'): BacklogE
   };
 }
 
-describe.skip('fr-author resolver', () => {
+describe('fr-author resolver', () => {
   let root: string;
   beforeEach(() => {
     root = path.join(os.tmpdir(), `fr-${randomUUID()}`);
@@ -39,15 +39,19 @@ describe.skip('fr-author resolver', () => {
     );
     const result = await frAuthor.resolve({ repoRoot: root, entry: mkEntry('foo') });
     expect(result.bailed_out).toBeUndefined();
-    expect(result.files_changed).toEqual(['.specs/foo/FR.md']);
+    expect(result.files_changed.map((p) => p.replace(/\\/g, '/'))).toEqual([
+      '.specs/foo/FR.md',
+    ]);
     expect(result.confidence).toBeGreaterThan(0.5);
     const fr = fs.readFileSync(path.join(root, '.specs/foo/FR.md'), 'utf8');
     expect(fr).toContain('## FR-2: [TBD title]');
     expect(fr).toContain('## FR-3: [TBD title]');
     expect(fr).toContain('[TBD description');
     expect(fr).toContain('### Citations');
-    expect(fr).toContain('REQUIREMENTS.md:2');
+    // Fixture lines (1-based, blank lines counted): 1=`# Requirements`, 2=``,
+    // 3=`FR-2 is the logout feature.`, 4=`FR-3 handles password reset.`
     expect(fr).toContain('REQUIREMENTS.md:3');
+    expect(fr).toContain('REQUIREMENTS.md:4');
   });
 
   it('bails out when FR.md is missing', async () => {
@@ -105,10 +109,11 @@ describe.skip('fr-author resolver', () => {
     // Should only have one FR-2 section, not three
     const fr2Count = (fr.match(/## FR-2:/g) || []).length;
     expect(fr2Count).toBe(1);
-    // But should cite all three lines
-    expect(fr).toContain('REQUIREMENTS.md:2');
+    // But should cite all three lines. Fixture (1-based): 1=`# Requirements`,
+    // 2=``, 3=`FR-2 is mentioned here.`, 4=`Later: FR-2 …`, 5=`And again: FR-2.`
     expect(fr).toContain('REQUIREMENTS.md:3');
     expect(fr).toContain('REQUIREMENTS.md:4');
+    expect(fr).toContain('REQUIREMENTS.md:5');
   });
 
   it('continues with generic draft when citing file is missing', async () => {
@@ -133,7 +138,9 @@ describe.skip('fr-author resolver', () => {
     const fr = fs.readFileSync(path.join(root, '.specs/foo/FR.md'), 'utf8');
     expect(fr).toContain('## FR-5: [TBD title]');
     expect(fr).toContain('## FR-7: [TBD title]');
-    expect(fr).toContain('DESIGN.md:2');
+    // Fixture (1-based): 1=`# Design`, 2=``, 3=`The system uses FR-5 for auth
+    // and FR-7 for logging.`, 4=`FR-5 must be encrypted.`
+    expect(fr).toContain('DESIGN.md:3');
     expect(fr).toContain('DESIGN.md:4');
   });
 });

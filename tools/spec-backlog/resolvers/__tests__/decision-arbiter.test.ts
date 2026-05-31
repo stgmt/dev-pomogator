@@ -20,7 +20,7 @@ function mkEntry(slug: string, specA: string, specB: string): BacklogEntry {
   };
 }
 
-describe.skip('decision-arbiter resolver', () => {
+describe('decision-arbiter resolver', () => {
   let root: string;
   beforeEach(() => {
     root = path.join(os.tmpdir(), `arb-${randomUUID()}`);
@@ -44,7 +44,9 @@ describe.skip('decision-arbiter resolver', () => {
     const result = await decisionArbiter.resolve({ repoRoot: root, entry });
 
     expect(result.bailed_out).toBeUndefined();
-    expect(result.files_changed).toEqual(['.specs/perf-spec/DECISION_RECOMMENDATION.md']);
+    expect(result.files_changed.map((p) => p.replace(/\\/g, '/'))).toEqual([
+      '.specs/perf-spec/DECISION_RECOMMENDATION.md',
+    ]);
     expect(result.confidence).toBe(0.7);
 
     const rec = fs.readFileSync(path.join(root, '.specs/perf-spec/DECISION_RECOMMENDATION.md'), 'utf8');
@@ -143,6 +145,6 @@ describe.skip('decision-arbiter resolver', () => {
 
     // Should recommend 5000 (appears 3x) over 100 (appears 1x)
     expect(rec).toContain('5000');
-    expect(rec).toMatch(/Code Occurrences.*[3]/); // At least one tally showing 3+
+    expect(rec).toMatch(/Code Occurrences[\s\S]*\|\s*3\s*\|/); // At least one tally showing 3+
   });
 });

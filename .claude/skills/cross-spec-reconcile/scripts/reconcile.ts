@@ -239,6 +239,16 @@ const AC_HEADING_RE = /^#{2,4}\s+(?:AC-\d+|Acceptance Criteria\b)/gm;
 const FR_REF_RE = /\bFR-\d+\b/g;
 const FEATURE_TAG_RE = /@feature(\d+)\b/g;
 
+/**
+ * POSIX-normalise a path string. `path.relative` on Windows produces
+ * `foo\bar\baz`; YAML/SARIF consumers and tests expect a single canonical
+ * forward-slash style. Apply to every `path.relative` call site that feeds
+ * `referenced_in` / `expected_path` / `spec_a` / `spec_b` fields.
+ */
+function relPosix(from: string, to: string): string {
+  return path.relative(from, to).replace(/\\/g, '/');
+}
+
 function listSpecs(repoRoot: string): string[] {
   const specsDir = path.join(repoRoot, '.specs');
   if (!fs.existsSync(specsDir)) return [];
@@ -334,7 +344,7 @@ function findMissingFileReferences(
           code: 'impl-drift/missing-file',
           class: 'uncovered',
           severity: 'WARNING',
-          referenced_in: `${path.relative(repoRoot, file.path)}:${i + 1}`,
+          referenced_in: `${relPosix(repoRoot, file.path)}:${i + 1}`,
           expected_path: ref.replace(/`/g, ''),
           suggested_fix: hint,
         });
@@ -528,8 +538,8 @@ function findMissingSymbols(
           code: 'impl-drift/missing-symbol',
           class: 'uncovered',
           severity: 'WARNING',
-          referenced_in: `${path.relative(repoRoot, file.path)}`,
-          expected_path: `${path.relative(repoRoot, resolved)}::${sym}`,
+          referenced_in: `${relPosix(repoRoot, file.path)}`,
+          expected_path: `${relPosix(repoRoot, resolved)}::${sym}`,
           suggested_fix:
             `\`${sym}\` is imported from ${importPath} but the file exports do not include it. Add the export or fix the import.`,
         });
@@ -807,6 +817,15 @@ function findDeadLinks(
         // Batch-25 fix: skip placeholders + regex fragments that aren't
         // real paths (`...`, `.+`, `.*`, `[\w_-]+`, `<placeholder>`).
         if (/^[.\[\]\\\+\*\(\)\{\}<>]+$/.test(target)) continue;
+        // Dead-link reclassification sub-fix: broaden regex-fragment skip
+        // to catch character classes with quantifier (`[\w_-]+`, `[a-z]*`,
+        // `[0-9]?`) AND backslash-letter regex shorthand (`\w`, `\d`,
+        // `\s`, `\b`, etc.) appearing anywhere in target. Real file paths
+        // never contain `[...]` followed by a quantifier, nor backslash-
+        // letter sequences (Windows uses backslash before path segments,
+        // not letters).
+        if (/\[[^\]]*\][+*?]/.test(target)) continue;
+        if (/\\[a-zA-Z]/.test(target)) continue;
         // Skip paths that intentionally point outside the repo (memory
         // dir at `../../../memory/...` is user-scope, never tracked).
         if (target.startsWith('../../../memory/')) continue;
@@ -832,7 +851,7 @@ function findDeadLinks(
           code: 'impl-drift/dead-link',
           class: 'uncovered',
           severity: 'WARNING',
-          referenced_in: `${path.relative(repoRoot, file.path)}:${i + 1}`,
+          referenced_in: `${relPosix(repoRoot, file.path)}:${i + 1}`,
           expected_path: target,
           suggested_fix:
             `Markdown link target "${target}" does not exist relative to ${path.basename(file.path)}. Fix the path or remove the link.`,
@@ -865,7 +884,7 @@ function findMissingAcceptance(
     code: 'spec-only/missing-acceptance',
     class: 'spec-only',
     severity: 'WARNING',
-    referenced_in: path.relative(repoRoot, file),
+    referenced_in: relPosix(repoRoot, file),
     suggested_fix:
       `${defs.size} FR(s) defined in this spec but no AC heading found in any MD file. Add ACCEPTANCE_CRITERIA.md (start with ${fr}).`,
   }];
@@ -949,7 +968,7 @@ function findMissingTestPerFR(
       code: 'impl-drift/missing-test',
       class: 'uncovered',
       severity: 'INFO',
-      referenced_in: path.relative(repoRoot, definedIn),
+      referenced_in: relPosix(repoRoot, definedIn),
       suggested_fix:
         `Add @${fr.toLowerCase().replace('-', '')} tag + Scenario covering ${fr}, OR mark FR as [OUT_OF_SCOPE].`,
     });
@@ -980,7 +999,7 @@ function findOrphanACs(
           code: 'spec-only/orphan-AC',
           class: 'spec-only',
           severity: 'INFO',
-          referenced_in: `${path.relative(repoRoot, f.path)}:${i + 1}`,
+          referenced_in: `${relPosix(repoRoot, f.path)}:${i + 1}`,
           suggested_fix:
             `AC references ${fr} which is not defined in this spec. Either add ${fr} to FR.md or fix the AC backref.`,
         });
@@ -1085,7 +1104,7 @@ function findUnreachableTasks(
           code: 'spec-only/unreachable-task',
           class: 'spec-only',
           severity: 'INFO',
-          referenced_in: `${path.relative(repoRoot, f.path)}:${j + 1}`,
+          referenced_in: `${relPosix(repoRoot, f.path)}:${j + 1}`,
           suggested_fix:
             `Task "${idCell}" targets Phase ${taskPhase} but spec is at Phase ${currentPhase}. Advance phase_index, defer the task, or mark [OUT_OF_SCOPE].`,
         });
@@ -1194,7 +1213,7 @@ function findMissingCrossRef(
         const idx = f.body.search(mentionRe);
         if (idx === -1) continue;
         const lineNum = f.body.slice(0, idx).split(/\r?\n/).length;
-        where = `${path.relative('.', f.path)}:${lineNum}`;
+        where = `${relPosix('.', f.path)}:${lineNum}`;
         break;
       }
       out.push({
@@ -1388,7 +1407,7 @@ function findLockedDecisionDrift(
         code: 'cross-spec/decision-locked-but-reality-diverges',
         class: 'architectural-decision-vs-reality',
         severity: 'CRITICAL',
-        referenced_in: `${path.relative(repoRoot, f.path)} (decision ${decisionId})`,
+        referenced_in: `${relPosix(repoRoot, f.path)} (decision ${decisionId})`,
         expected_path: implPath,
         suggested_fix:
           `LOCKED decision "${decisionId}" picks "${chosen}" but ${implPath} imports [${imports.slice(0, 3).join(', ')}…]. Update the implementation, change Status → SUPERSEDED, or update DECISIONS.md.`,
@@ -1422,7 +1441,7 @@ function findOrphanTasks(
           code: 'spec-only/orphan-task',
           class: 'spec-only',
           severity: 'WARNING',
-          referenced_in: `${path.relative(repoRoot, f.path)}:${lineCursor + 1}`,
+          referenced_in: `${relPosix(repoRoot, f.path)}:${lineCursor + 1}`,
           suggested_fix:
             `Task "${firstLine.slice(0, 60)}" cites no FR — add an FR-N back-reference or mark as infra-only.`,
         });
@@ -1457,7 +1476,7 @@ function findMissingFrSections(
       const idx = f.body.search(new RegExp(`\\b${fr}\\b`));
       if (idx === -1) continue;
       const lineNum = f.body.slice(0, idx).split(/\r?\n/).length;
-      where = `${path.relative(repoRoot, f.path)}:${lineNum}`;
+      where = `${relPosix(repoRoot, f.path)}:${lineNum}`;
       break;
     }
     out.push({
@@ -1534,7 +1553,7 @@ function findWithinSpecDuplicateFRs(
           code: 'spec-only/duplicate-fr-id',
           class: 'contradiction',
           severity: 'CRITICAL',
-          referenced_in: `${path.relative(repoRoot, f.path)} (${fr})`,
+          referenced_in: `${relPosix(repoRoot, f.path)} (${fr})`,
           suggested_fix:
             `Two \`## ${fr}\` headings within the same spec — rename the second one or merge their content. First at ${path.basename(seen.get(fr)!)}, duplicate at ${path.basename(f.path)}.`,
         });
@@ -1607,7 +1626,7 @@ function findOrphanFRs(
       code: 'spec-only/orphan-FR',
       class: 'spec-only',
       severity: 'WARNING',
-      referenced_in: path.relative(repoRoot, definedIn),
+      referenced_in: relPosix(repoRoot, definedIn),
       suggested_fix:
         `Add an AC, Scenario, or Task that references ${fr} — or mark the FR as OUT_OF_SCOPE.`,
     });
@@ -1635,7 +1654,7 @@ function findUncoveredACs(
       code: 'spec-only/uncovered-AC',
       class: 'spec-only',
       severity: 'WARNING',
-      referenced_in: path.relative(repoRoot, f.path),
+      referenced_in: relPosix(repoRoot, f.path),
       suggested_fix:
         `${acCount} AC heading(s) in this spec have no matching @featureN scenario in the spec's .feature files.`,
     });

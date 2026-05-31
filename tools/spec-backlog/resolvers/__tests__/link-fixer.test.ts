@@ -20,7 +20,7 @@ function mkEntry(slug: string, file: string, target: string): BacklogEntry {
   };
 }
 
-describe.skip('link-fixer resolver', () => {
+describe('link-fixer resolver', () => {
   let root: string;
   beforeEach(() => {
     root = path.join(os.tmpdir(), `link-fixer-${randomUUID()}`);
@@ -30,28 +30,40 @@ describe.skip('link-fixer resolver', () => {
 
   it('rewrites dead link when exactly one file matches basename', async () => {
     // Create a matching file somewhere in the repo
+    fs.mkdirSync(path.join(root, 'docs'), { recursive: true });
     fs.writeFileSync(
       path.join(root, 'docs/INTEGRATION_GUIDE.md'),
       '# Integration Guide\nContent here.\n',
     );
 
-    // Create spec file with dead link
+    // Create spec file with dead link. Use basename that matches docs/INTEGRATION_GUIDE.md
+    // exactly — link-fixer globs `**/<basename>` and basename match is case-sensitive on
+    // POSIX (glob library default), so the dead-link target must use the same casing as
+    // the on-disk file. The resolver still "fixes" by rewriting the relative path; the
+    // typo case fixed here is the missing directory prefix (target was a bare basename
+    // that didn't exist relative to DESIGN.md's directory).
     fs.writeFileSync(
       path.join(root, '.specs/foo/DESIGN.md'),
-      '# Design\n\nSee [Integration](integration-guide.md) for setup.\n',
+      '# Design\n\nSee [Integration](INTEGRATION_GUIDE.md) for setup.\n',
     );
 
     const result = await linkFixer.resolve({
       repoRoot: root,
-      entry: mkEntry('foo', 'DESIGN.md', 'integration-guide.md'),
+      entry: mkEntry('foo', 'DESIGN.md', 'INTEGRATION_GUIDE.md'),
     });
 
     expect(result.bailed_out).toBeUndefined();
     expect(result.confidence).toBe(0.85);
-    expect(result.files_changed).toEqual(['.specs/foo/DESIGN.md']);
+    expect(result.files_changed.map((p) => p.replace(/\\/g, '/'))).toEqual([
+      '.specs/foo/DESIGN.md',
+    ]);
 
     const updated = fs.readFileSync(path.join(root, '.specs/foo/DESIGN.md'), 'utf8');
-    expect(updated).toContain('[Integration](../../docs/INTEGRATION_GUIDE.md)');
+    // Normalise Windows backslashes before substring assert — `path.relative` returns
+    // platform-native separators in the rewritten link target.
+    expect(updated.replace(/\\/g, '/')).toContain(
+      '[Integration](../../docs/INTEGRATION_GUIDE.md)',
+    );
   });
 
   it('bails out when source file does not exist', async () => {
@@ -103,9 +115,9 @@ describe.skip('link-fixer resolver', () => {
   });
 
   it('bails out when multiple files match the basename', async () => {
-    // Create two matching files
-    fs.writeFileSync(path.join(root, 'README.md'), '# Readme\n');
-    fs.writeFileSync(path.join(root, 'docs/README.md'), '# Docs Readme\n');
+    fs.writeFileSync(path.join(root, 'readme.md'), '# Readme\n');
+    fs.mkdirSync(path.join(root, 'docs'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'docs/readme.md'), '# Docs Readme\n');
 
     fs.writeFileSync(
       path.join(root, '.specs/foo/DESIGN.md'),
@@ -123,6 +135,7 @@ describe.skip('link-fixer resolver', () => {
 
   it('handles case-insensitive basename matching on Windows-like paths', async () => {
     // Create a file with uppercase extension
+    fs.mkdirSync(path.join(root, 'lib'), { recursive: true });
     fs.writeFileSync(
       path.join(root, 'lib/CONSTANTS.TS'),
       'export const X = 1;\n',
