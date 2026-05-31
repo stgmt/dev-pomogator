@@ -51,8 +51,15 @@ function frAuthorImpl(repoRoot: string, entry: BacklogEntry): ResolverResult {
     };
   }
 
-  // Read the citing file to extract all FR-N citations and find line numbers
-  const citingPath = path.join(specDir, citingFile);
+  // Read the citing file to extract all FR-N citations and find line numbers.
+  // Batch-19: normalise the Windows-style `\` separators + strip `:line`
+  // suffix that the cross-spec-reconcile detector emits in
+  // `referenced_in`. Resolve absolutely from repoRoot if it's already a
+  // `.specs/<slug>/…` path (avoids double-prefixing with specDir).
+  const cleanCiting = citingFile.replace(/:\d+$/, '').replace(/\\/g, '/');
+  const citingPath = cleanCiting.startsWith('.specs/')
+    ? path.join(repoRoot, cleanCiting)
+    : path.join(specDir, cleanCiting);
   if (!fs.existsSync(citingPath)) {
     return {
       confidence: 0.3,

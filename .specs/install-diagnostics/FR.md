@@ -170,3 +170,11 @@ IF prompt-race proves to be recurring issue после FR-7 docs fix, repo MAY i
 Marked as `[DEFERRED]` — реализация depends on whether docs fix (FR-7) alone окажется достаточным. Decision point: если >1 user report в `.specs/install-diagnostics/RESEARCH.md` в течение 3 месяцев → implement; иначе skip.
 
 **Связанные AC:** [AC-11](ACCEPTANCE_CRITERIA.md#ac-11-fr-10-feature6)
+
+## FR-12: [TBD title]
+
+[TBD description — replace with actual requirement text]
+
+### Citations
+
+- **.specs\install-diagnostics\RESEARCH.md:75:75** — `7. github HEAD имеет ИСПОЛЬЗОВАНИЕ этих сущностей в `src/updater/index.ts` (comm`

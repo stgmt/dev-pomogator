@@ -410,3 +410,29 @@ Trace запускается **4 раза** — после КАЖДОЙ пары
 - Bash-версия (`build-matrix.sh`) работает корректно на тех же данных
 
 **Связанные AC:** [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6)
+
+## FR-006: [TBD title]
+
+[TBD description — replace with actual requirement text]
+
+### Citations
+
+- **.specs\spec-workflow-vmodel\RESEARCH.md:1804:2592** — `- **FR-006**: System MUST authenticate users via [NEEDS CLARIFICATION: auth meth`
+
+
+## FR-007: [TBD title]
+
+[TBD description — replace with actual requirement text]
+
+### Citations
+
+- **.specs\spec-workflow-vmodel\RESEARCH.md:1804:2593** — `- **FR-007**: System MUST retain user data for [NEEDS CLARIFICATION: retention p`
+
+
+## FR-021: [TBD title]
+
+[TBD description — replace with actual requirement text]
+
+### Citations
+
+- **.specs\spec-workflow-vmodel\RESEARCH.md:1804:1804** — `- 71 REQ с Rationale: `"US1, FR-021: Traceable identifiers..."` (backward trace)`

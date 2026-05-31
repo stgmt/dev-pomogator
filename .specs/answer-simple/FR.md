@@ -65,3 +65,13 @@ Extension ОБЯЗАН включать Stop-hook (`tools/answer-simple/answer_s
 
 **Связанные AC:** [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8)
 **Use Case:** [UC-1](USE_CASES.md#uc-1)
+
+## FR-12: [TBD title]
+
+[TBD description — replace with actual requirement text]
+
+### Citations
+
+- **.specs\answer-simple\USE_CASES.md:7:7** — `- Шаг 1: Агент готовит черновик "Готово. Обновил extension.json. Добавил FR-12. `
+- **.specs\answer-simple\USE_CASES.md:7:8** — `- Шаг 2: Срабатывает always-apply rule answer-simple, шаг 3 самопроверки "поймёт`
+- **.specs\answer-simple\USE_CASES.md:7:9** — `- Шаг 3: Срабатывает шаг 5 "переписать". Агент формирует микроисторию: "После то`
