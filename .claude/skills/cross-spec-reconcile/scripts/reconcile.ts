@@ -790,7 +790,12 @@ function findDeadLinks(
 ): Finding[] {
   const out: Finding[] = [];
   for (const file of files) {
-    const lines = file.body.split(/\r?\n/);
+    // Batch-25 honest-audit: strip fenced code blocks BEFORE link scan.
+    // Most dead-link FPs (regex fragments `[\w_-]+`, placeholders `.*`,
+    // example `file.md` / `./file.md` / `/file.md`) live inside fenced
+    // ```ts / ```bash code samples, not as real markdown links.
+    const cleanBody = stripFencedBlocks(file.body);
+    const lines = cleanBody.split(/\r?\n/);
     for (let i = 0; i < lines.length; i++) {
       let m: RegExpExecArray | null;
       MD_LINK_RE.lastIndex = 0;
@@ -799,6 +804,12 @@ function findDeadLinks(
         if (!target) continue;
         if (/^[a-z]+:\/\//i.test(target)) continue; // absolute URL
         if (target.startsWith('mailto:')) continue;
+        // Batch-25 fix: skip placeholders + regex fragments that aren't
+        // real paths (`...`, `.+`, `.*`, `[\w_-]+`, `<placeholder>`).
+        if (/^[.\[\]\\\+\*\(\)\{\}<>]+$/.test(target)) continue;
+        // Skip paths that intentionally point outside the repo (memory
+        // dir at `../../../memory/...` is user-scope, never tracked).
+        if (target.startsWith('../../../memory/')) continue;
         // Adversarial-review fix (HIGH FP): `path.isAbsolute('/GUIDE.md')`
         // is true on POSIX and resolves from filesystem root — almost
         // always wrong for repo links. Treat leading-`/` as repo-root
@@ -1399,7 +1410,11 @@ function findOrphanTasks(
     for (const block of blocks) {
       const firstLine = block.split(/\r?\n/)[0];
       const blockLines = block.split(/\r?\n/).length;
-      const hasFrRef = /\bFR-\d+\b/.test(block);
+      // Batch-25 honest-audit: accept both `FR-N` literal AND `@featureN`
+      // tag as valid back-reference. Many spec authors use Gherkin-style
+      // tags (`@feature1 @feature2`) on task headings instead of textual
+      // FR-N citations — both forms point at the same requirement.
+      const hasFrRef = /\bFR-\d+\b/.test(block) || /@feature\d+\b/.test(block);
       if (!hasFrRef) {
         out.push({
           code: 'spec-only/orphan-task',
