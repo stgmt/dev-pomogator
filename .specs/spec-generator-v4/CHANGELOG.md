@@ -4,6 +4,50 @@ All notable changes to this feature will be documented in this file.
 
 ## [Unreleased]
 
+### Deferred to v4.0.1
+
+- 5 resolver behavior tests (`describe.skip` — agent-generated test
+  fixture bugs surfaced during batch-13; rewrite needed)
+- `link-fixer` classifier mis-routing: `impl-drift/missing-file`
+  with backtick-only path references gets routed to `dead-link-typo`
+  but isn't actually a markdown link. Resolver correctly bails
+  `link-not-found` (no corruption risk) but the category routing is
+  wrong — should be NOISE or new `backtick-path-ref` category.
+- Shared `tools/_shared/fr-parser.ts` (dedup FR-N regex between
+  fr-author + scenario-writer)
+- `glob` npm in `pathExistsResolving` (replace cheap glob)
+- Cache `readSpecMd` across detectors (single orchestrator pass)
+- NFR-keyword multi-token context match (`API latency` vs `UI latency`)
+- 24 MEDIUM/LOW eval gaps from workflow w0w45s96f
+
+## [4.0.0] — 2026-05-31
+
+Production release. 19 commits on `feat/phase-2a-mcp-server-and-hooks`
+(PR #32). 9 workflow runs (~6M subagent tokens). 28 mechanical
+finding codes + 6 specialist resolvers + automated pipeline with
+Stop/SessionStart hooks. End-to-end proven on real corpus —
+48 RECOMMENDATION/SKELETON artifacts produced.
+
+### Highlights
+
+- **28-of-28 mechanical finding codes** ship with classifier coverage
+  (no silent `unrecognised` fallback)
+- **6 specialist resolvers** (ac-author, link-fixer, scenario-writer,
+  fr-author, decision-arbiter, owner-picker) with `dev-pomogator-spec-backlog`
+  CLI + Stop/SessionStart auto-trigger hooks + `/spec-backlog` skill
+- **Workflow-driven dev loop** — 3 design/adversarial passes surfaced
+  + closed 16 HIGH bugs (FR-namespace shared assumption, dead-link
+  POSIX, stripFencedBlocks systemic, cyrillic regex, snake/camel
+  normalize, glob ownership, threshold tune, classifier coverage)
+- **89% noise reduction** dogfood (38,453 → ~3,878 findings;
+  CRITICAL: 33,860 → 486 — 99% drop)
+- **27× perf** speedup at N=100 warm-dedup via `readAllIds` bulk
+  cache (batch-17)
+- **Pipeline proven on live corpus**: 34 NEW recommendation files
+  (26 OWNERSHIP + 8 DECISION) + 9 NEW scenario/FR skeletons across
+  4 of 6 resolver categories — link-fixer correctly conservative,
+  no spec content corrupted
+
 ### Added (post-rc1, en route to v4.0.0 final)
 
 - 11 more cross-spec finding codes in `reconcile.ts` across three batches:
