@@ -93,6 +93,16 @@ export interface ReconcileOptions {
    * coupling.
    */
   conceptOverlapEnabled?: boolean;
+  /**
+   * Whether to emit `cross-spec/contradictory-nfr` findings (default false).
+   * Batch-21 dogfood honest audit: detector matches keywords like
+   * `latency` without subsystem context, so `Claude API latency 30s` and
+   * `UI redraw latency 5ms` are flagged as "contradictions" when they're
+   * NFRs of completely different subsystems. v4.0.1 will add multi-token
+   * context match (`API latency` vs `UI latency`); until then, opt-in
+   * keeps the signal clean.
+   */
+  contradictoryNfrEnabled?: boolean;
 }
 
 /** Default ownership stoplist — shared infra that multiple specs legitimately reference. */
@@ -232,9 +242,24 @@ const FEATURE_TAG_RE = /@feature(\d+)\b/g;
 function listSpecs(repoRoot: string): string[] {
   const specsDir = path.join(repoRoot, '.specs');
   if (!fs.existsSync(specsDir)) return [];
+  // Batch-21 pass-2 fix: a dir is a SPEC only if it contains at least one
+  // .md file directly (i.e. it's a leaf spec). Otherwise it's a category
+  // dir like `.specs/backlog/` that nests other specs. Filtering these
+  // out fixes missing-cross-ref FPs where generic English words match
+  // category names (e.g. "backlog" appearing in prose).
   return fs
     .readdirSync(specsDir, { withFileTypes: true })
     .filter((d) => d.isDirectory() && !d.name.startsWith('.'))
+    .filter((d) => {
+      const subdir = path.join(specsDir, d.name);
+      try {
+        return fs
+          .readdirSync(subdir, { withFileTypes: true })
+          .some((e) => e.isFile() && e.name.endsWith('.md'));
+      } catch {
+        return false;
+      }
+    })
     .map((d) => d.name);
 }
 
@@ -1771,7 +1796,11 @@ export function reconcileLight(opts: ReconcileOptions): ReconcileResult[] {
   const ownershipStoplist = opts.ownershipStoplist ?? DEFAULT_OWNERSHIP_STOPLIST;
   const moduleOwnershipFindings = findModuleOwnershipConflict(filesBySlug, ownershipStoplist, opts.repoRoot);
   const missingCrossRefFindings = findMissingCrossRef(filesBySlug, allSlugs);
-  const contradictoryNfrFindings = findContradictoryNFR(filesBySlug);
+  // Batch-21 pass-2: opt-in (default off) — keyword-only match emits
+  // false positives across subsystems sharing words like `latency`.
+  const contradictoryNfrFindings = opts.contradictoryNfrEnabled
+    ? findContradictoryNFR(filesBySlug)
+    : [];
   const schemaMismatchFindings = findSchemaMismatch(filesBySlug);
 
   const results: ReconcileResult[] = [];
