@@ -40,7 +40,14 @@ function ownerPickerImpl(repoRoot: string, entry: BacklogEntry): ResolverResult 
   }
 
   const parseSpec = (spec: string): { slug: string; path: string } | null => {
-    // Try to parse "slug (path)" format
+    // Real format from reconcile.ts findModuleOwnershipConflict:
+    //   `.specs/<slug> (claims <path>)`
+    // Patch (batch-18): handle this form first.
+    const realMatch = spec.match(/^\.specs[/\\]([a-z0-9_-]+)\s*\(claims\s+(.+)\)$/i);
+    if (realMatch) {
+      return { slug: realMatch[1], path: realMatch[2] };
+    }
+    // Legacy / generic "slug (path)" format
     const match = spec.match(/^([a-z0-9_-]+)\s*\(([^)]+)\)$/);
     if (match) {
       return { slug: match[1], path: match[2] };
