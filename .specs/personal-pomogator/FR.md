@@ -232,7 +232,7 @@ After FR-3 legacy migration runs in `installExtensionHooks` (non-dogfood mode), 
 4. **Empty hooks object deleted**: if all hookName arrays are removed, the entire `settings.hooks` key SHALL be `delete`d
 5. **Team entries preserved bit-for-bit**: any hook or env entry not matching dev-pomogator criteria SHALL remain identical to its pre-migration state
 
-Implementation lives in `src/installer/settings-local.ts:migrateLegacySettingsJson`. Substring detection delegated to `isDevPomogatorCommand` from `src/installer/shared.ts` (single source of truth).
+Implementation lives in `src/installer/settings-local.ts:migrateLegacySettingsJson`. Substring detection delegated to `isDevPomogatorCommand` from `.claude/skills/skills-rules-optimizer/scripts/shared.ts` (single source of truth).
 
 **Why**: incomplete migration leaves residue that confuses both users (stale references in shared team config) and the installer on subsequent runs (which might re-detect "managed" entries that should have been migrated). Bit-tight contract is the only way to be confident downstream.
 

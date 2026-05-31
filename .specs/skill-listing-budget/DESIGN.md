@@ -11,14 +11,14 @@
 
 - `src/installer/skill-budget.ts` — новый module, единственная экспортируемая функция `ensureSkillListingBudget(homeDir?, report?): Promise<void>`. Содержит весь decision-tree (absent/equal/lower/invalid).
 - `src/installer/claude.ts` — вызов `ensureSkillListingBudget()` после основного install loop, перед формированием InstallReport.
-- `src/installer/report.ts` — добавлен метод `recordSkillBudget(line: string)` для накопления одной строки.
+- `.claude/skills/skills-rules-optimizer/scripts/report.ts` — добавлен метод `recordSkillBudget(line: string)` для накопления одной строки.
 - `src/utils/atomic-json.ts` — reuse существующих `readJsonSafe()` + `writeJsonAtomic()`. Никаких новых утилит.
 
 ## Где лежит реализация
 
 - App-код: `src/installer/skill-budget.ts` (новый)
 - Wiring: `src/installer/claude.ts` (1 вызов в существующей функции `installClaude`)
-- Report: `src/installer/report.ts` (1 новый метод + 1 строка в render)
+- Report: `.claude/skills/skills-rules-optimizer/scripts/report.ts` (1 новый метод + 1 строка в render)
 - Tests (integration): `tests/e2e/skill-listing-budget.test.ts` (новый)
 - Tests (.feature): `tests/features/core/CORE023_skill-listing-budget.feature` (новый, копия из `.specs/skill-listing-budget/skill-listing-budget.feature`)
 
@@ -26,7 +26,7 @@
 
 - `src/installer/skill-budget.ts` — новый
 - `src/installer/claude.ts` — edit (1 import + 1 вызов)
-- `src/installer/report.ts` — edit (1 метод + 1 render-строка)
+- `.claude/skills/skills-rules-optimizer/scripts/report.ts` — edit (1 метод + 1 render-строка)
 - `tests/e2e/skill-listing-budget.test.ts` — новый
 - `tests/features/core/CORE023_skill-listing-budget.feature` — новый
 

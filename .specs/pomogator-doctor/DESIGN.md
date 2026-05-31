@@ -7,11 +7,11 @@
 ## Компоненты
 
 - `src/doctor/index.ts` — публичное API `runDoctor(options)` возвращающее `DoctorReport`
-- `src/doctor/runner.ts` — orchestrator: загружает `config.installedExtensions`, drives per-extension gating (FR-21), запускает checks concurrently с bounded pool (NFR-P-3), применяет timeout (NFR-P-2, P-4)
+- `.claude/skills/pomogator-doctor/scripts/engine/runner.ts` — orchestrator: загружает `config.installedExtensions`, drives per-extension gating (FR-21), запускает checks concurrently с bounded pool (NFR-P-3), применяет timeout (NFR-P-2, P-4)
 - `src/doctor/reporter.ts` — форматер output: chalk table для interactive (traffic-light groups per FR-20), JSON для `--json` (FR-24 + FR-25 redaction), hook JSON payload для `--quiet` (FR-17)
-- `src/doctor/reinstall.ts` — AskUserQuestion prompt + `spawn('npx', ['dev-pomogator'], {stdio:'inherit', shell:false})` (FR-18)
+- `.claude/skills/pomogator-doctor/scripts/engine/reinstall.ts` — AskUserQuestion prompt + `spawn('npx', ['dev-pomogator'], {stdio:'inherit', shell:false})` (FR-18)
 - `src/doctor/types.ts` — TypeScript interfaces (CheckResult, DoctorOptions, DoctorReport) — детали в [SCHEMA](pomogator-doctor_SCHEMA.md)
-- `src/doctor/lock.ts` — file lock через `fs.writeFile(path, pid, {flag:'wx'})` против concurrent runs (NFR-R-4)
+- `.claude/skills/pomogator-doctor/scripts/engine/lock.ts` — file lock через `fs.writeFile(path, pid, {flag:'wx'})` против concurrent runs (NFR-R-4)
 - `src/doctor/checks/*.ts` — один файл на FR (14 checks: node, git, home, hooks, env, envExample, bun, python, mcpParse, mcpProbe, version, gitignore, pluginLoader, docker)
 - `extensions/pomogator-doctor/extension.json` — manifest: SessionStart hook registration
 - `extensions/pomogator-doctor/tools/pomogator-doctor/doctor-hook.ts` — thin wrapper импортирующий `runDoctor({quiet:true})` из shared core

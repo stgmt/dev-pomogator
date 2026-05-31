@@ -31,7 +31,7 @@
 - **Installer core**: `src/installer/{self-guard,gitignore,settings-local,collisions,uninstall-project,mcp-security}.ts`
 - **Runtime wrapper**: `src/scripts/tsx-runner-bootstrap.cjs`
 - **New extension**: `extensions/personal-pomogator/{extension.json, skills/dev-pomogator-uninstall/SKILL.md}`
-- **Wiring**: `src/installer/claude.ts` (main flow), `src/installer/shared.ts` (shared helpers), `src/index.ts` (CLI)
+- **Wiring**: `src/installer/claude.ts` (main flow), `.claude/skills/skills-rules-optimizer/scripts/shared.ts` (shared helpers), `src/index.ts` (CLI)
 - **MCP**: `extensions/specs-workflow/tools/mcp-setup/setup-mcp.py` (force-global)
 - **Build**: `scripts/build-check-update.js` (bundle bootstrap.cjs)
 - **Tests**: `tests/e2e/personal-pomogator.test.ts`

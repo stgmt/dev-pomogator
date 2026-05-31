@@ -44,7 +44,7 @@
 
 - [ ] Редактировать `src/installer/claude.ts` — добавить guard hook в project `.claude/settings.json` (PreToolUse или SessionStart matcher)
   _Requirements: [FR-4](FR.md#fr-4-re-registration-sessionstart-hook-feature1)_
-- [ ] Редактировать `src/installer/shared.ts` — добавить `global-dir-guard.cjs` в `setupGlobalScripts()` для копирования в `~/.dev-pomogator/scripts/`
+- [ ] Редактировать `.claude/skills/skills-rules-optimizer/scripts/shared.ts` — добавить `global-dir-guard.cjs` в `setupGlobalScripts()` для копирования в `~/.dev-pomogator/scripts/`
 - [ ] Verify: все 8 сценариев GREEN
 
 ## Phase 4: Refactor & Polish

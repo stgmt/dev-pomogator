@@ -67,8 +67,7 @@
 
 ## Где лежит реализация
 
-- Installer: `src/installer/shared.ts` (`setupGlobalScripts`, `ensureHomeTsx`)
-- Global hooks: `src/installer/claude.ts` (`setupClaudeHooks`)
+- Installer: `.claude/skills/skills-rules-optimizer/scripts/shared.ts` (`setupGlobalScripts`, `ensureHomeTsx`)
 - Check-update: `dist/check-update.bundle.cjs` (bundled, из `src/updater/`)
 - Uninstaller: `uninstall.ps1`
 - NSS генератор: `extensions/context-menu/tools/context-menu/postinstall.ts`

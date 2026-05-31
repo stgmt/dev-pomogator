@@ -123,8 +123,6 @@ Anthropic предоставляет 3 официальных LSP-плагина
 - Setup-скрипт: `extensions/lsp-setup/tools/lsp-setup/setup-lsp.ts` (будет создан)
 - Verify-скрипт: `extensions/lsp-setup/tools/lsp-setup/verify-lsp.ts` (будет создан)
 - Rule: `.claude/rules/lsp-setup/lsp-usage.md` (будет создан)
-- Инсталлер: `src/installer/extensions.ts` (существует)
-- Claude settings: `src/installer/claude.ts` (существует, инжектит env через envRequirements)
 
 ## Выводы
 

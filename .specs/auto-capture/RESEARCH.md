@@ -101,8 +101,7 @@
 
 ## Где лежит реализация
 
-- Hooks installer: `src/installer/claude.ts` → `installExtensionHooks()`
-- Portable commands: `src/installer/shared.ts` → `makePortableTsxCommand()`
+- Portable commands: `.claude/skills/skills-rules-optimizer/scripts/shared.ts` → `makePortableTsxCommand()`
 - Hook examples: `.dev-pomogator/tools/auto-commit/`, `.dev-pomogator/tools/specs-validator/`
 - Extension config: `extensions/suggest-rules/extension.json`
 - suggest-rules command: `extensions/suggest-rules/claude/commands/suggest-rules.md`

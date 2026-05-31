@@ -9,7 +9,7 @@
 - **Chroma** (port 8000) — Python vector DB для semantic search, опционален
 - **MCP server** (stdio) — mcp-server.cjs, подключается к worker через HTTP
 
-Код установки: `src/installer/memory.ts` (686 строк), 7 шагов:
+Код установки: ~~`src/installer/memory.ts`~~ (removed in v2 migration) (686 строк), 7 шагов:
 1. ensureBun → 2. installClaudeMemPlugin → 3. cloneAndBuildRepo → 4. ensureChromaExternalMode → 5. startChromaServer → 6. startClaudeMemWorker → 7. registerClaudeMemMcp
 
 ### 3 критические проблемы
@@ -64,9 +64,9 @@ Evidence: memory.ts lines 258, 318, 340, 354, 475, 630 — console.log без in
 
 | Файл | Что |
 |------|-----|
-| `src/utils/logger.ts` | `formatErrorChain()` + `getErrorMessage()` |
+| `tools/steps-validator/logger.ts` | `formatErrorChain()` + `getErrorMessage()` |
 | `src/installer/index.ts` | catch логирует reason + стек в install.log, InstallReport wired |
-| `src/installer/report.ts` | Новый файл — InstallReport class |
+| `.claude/skills/skills-rules-optimizer/scripts/report.ts` | Новый файл — InstallReport class |
 | `src/updater/index.ts` | Silent catch → logging |
 | `src/updater/standalone.ts` | `.catch(() => {})` → logging |
 | `tests/e2e/claude-installer.test.ts` | 11 новых тестов (pipeline + report + content validation) |

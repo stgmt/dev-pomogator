@@ -63,7 +63,7 @@
 
 - [ ] Создать `src/installer/codex.ts`
   _Requirements: FR-2, FR-4, FR-7, FR-8_
-- [ ] Обновить `src/constants.ts` и `src/installer/shared.ts` для `.codex`, `.agents/skills`, merge-safe helpers и project-only writers
+- [ ] Обновить `.claude/skills/pomogator-doctor/scripts/engine/constants.ts` и `.claude/skills/skills-rules-optimizer/scripts/shared.ts` для `.codex`, `.agents/skills`, merge-safe helpers и project-only writers
   _Requirements: FR-2, FR-3, FR-7_
 - [ ] Реализовать `AGENTS.md`, optional minimal `CLAUDE.md`, `.codex/config.toml`, `.codex/hooks.json`, `.agents/skills/*` как managed Codex artifact set
   _Requirements: FR-2, FR-3, FR-6, FR-7_

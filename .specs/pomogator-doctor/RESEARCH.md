@@ -207,7 +207,6 @@ if (manual.length > 0) printNonReinstallableBlock(manual);  // always show hints
 
 ## Где лежит реализация
 
-- App-код (будущий, после этой спеки): `src/doctor/`, `extensions/pomogator-doctor/`, `src/index.ts` (--doctor flag)
 - Конфигурация: `~/.dev-pomogator/config.json`, `.claude/settings.local.json`, `.env`, `.mcp.json`, `~/.claude/mcp.json`
 - Тесты (будущие): `tests/features/plugins/pomogator-doctor/*.test.ts`, `tests/e2e/pomogator-doctor.test.ts`
 
@@ -329,9 +328,7 @@ if (manual.length > 0) printNonReinstallableBlock(manual);  // always show hints
 
 3 файла + 4 edit'а покроют 90% webapp-style сценариев:
 
-1. **New** `src/doctor/checks/hook-command-integrity.ts` (~80 строк) — FR-26
-2. **New** `src/doctor/checks/managed-files-integrity.ts` (~70 строк) — FR-27
-3. **Fix** `src/doctor/checks/hooks-registry.ts` (~20 строк change) — FR-31 (critical false-positive regression)
-4. **Fix** `src/doctor/checks/plugin-loader.ts` (~10 строк change) — FR-28
+3. **Fix** `.claude/skills/pomogator-doctor/scripts/engine/checks/hooks-registry.ts` (~20 строк change) — FR-31 (critical false-positive regression)
+4. **Fix** `.claude/skills/pomogator-doctor/scripts/engine/checks/plugin-loader.ts` (~10 строк change) — FR-28
 
 P1 дополнения (MCP retune, --all-projects, self-install, config.version) — следующая итерация после P0 verify.

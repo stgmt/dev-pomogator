@@ -94,8 +94,8 @@ await registerClaudeMemMcp();
 | `isWorkerRunning()` | `src/installer/memory.ts:88` | Post-install validation |
 | `isChromaRunning()` | `src/installer/memory.ts:113` | Post-install validation |
 | `installClaude()` | `src/installer/claude.ts` | Auto-install health extension |
-| `InstallReport` | `src/installer/report.ts` | Per-component statuses |
-| `formatErrorChain` | `src/utils/logger.ts` | Error logging |
+| `InstallReport` | `.claude/skills/skills-rules-optimizer/scripts/report.ts` | Per-component statuses |
+| `formatErrorChain` | `tools/steps-validator/logger.ts` | Error logging |
 
 ## BDD Test Infrastructure
 

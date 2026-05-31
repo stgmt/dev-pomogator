@@ -45,7 +45,7 @@
   - После `addProjectPaths` (line 270): под self-guard false — `checkMcpJsonForSecrets` + warn, `writeManagedGitignoreBlock` (FR-1)
   - Helper `collectManagedPaths(managedByExt: Map)` собирает flat list paths
 
-- **`src/installer/shared.ts`**:
+- **`.claude/skills/skills-rules-optimizer/scripts/shared.ts`**:
   - `copyBundledScript` (line 212-233): добавить `REQUIRED_SCRIPTS = new Set(['tsx-runner.js', 'tsx-runner-bootstrap.cjs'])`, throw если required missing (FR-5)
   - `setupGlobalScripts` (line 235): добавить copy для `tsx-runner-bootstrap.cjs` после tsx-runner.js, post-install verification (FR-5)
   - `makePortableTsxCommand` (line 27-31): заменить `'tsx-runner.js'` на `'tsx-runner-bootstrap.cjs'` в require path (FR-6)
@@ -338,7 +338,7 @@ export async function checkMcpJsonForSecrets(repoRoot: string): Promise<SecretFi
 | `readJsonSafe` / `writeJsonAtomic` | `src/utils/atomic-json.ts` | settings.local.json reads/writes |
 | `ManagedFileEntry`, `ManagedFiles`, `InstalledExtension` | `src/config/schema.ts:3-25` | gitignore generation source, uninstall iteration |
 | `installedHooksByExtension` map | `src/installer/claude.ts:373` | Authoritative hook identification в migration |
-| `addProjectPaths`, `saveConfig`, `loadConfig` | `src/installer/shared.ts` + `src/config/index.ts` | Config atomic updates |
+| `addProjectPaths`, `saveConfig`, `loadConfig` | `.claude/skills/skills-rules-optimizer/scripts/shared.ts` + `src/config/index.ts` | Config atomic updates |
 | `findRepoRoot` | `src/utils/repo.ts:13` | CLI uninstall entry point |
 | `copyBundledScript` | `src/installer/shared.ts:212-233` | Bootstrap file copying |
 | `getExtensionSkills` flow | `src/installer/claude.ts:173-195` | Install uninstall skill через existing pipe |

@@ -69,7 +69,7 @@
   - Lines 258, 318, 340, 354, 475, 630: добавить `logger?.warn()` или `logger?.error()` рядом с existing console.log
   - Каждый log entry: step name + error message + context (port, path, command)
 - **refs:** FR-3
-- **leverage:** `formatErrorChain()` из `src/utils/logger.ts`
+- **leverage:** `formatErrorChain()` из `tools/steps-validator/logger.ts`
 - **deps:** *none*
 
 ---
@@ -93,7 +93,7 @@
 ### 📋 `per-component-report`
 > Install report с breakdown: worker/chroma/mcp/hooks × ok/warn/fail
 
-- **files:** `src/installer/report.ts` *(edit)*, `src/installer/index.ts` *(edit)*
+- **files:** `.claude/skills/skills-rules-optimizer/scripts/report.ts` *(edit)*, `src/installer/index.ts` *(edit)*
 - **changes:**
   - В index.ts: после ensureClaudeMem + auto-install health → добавить 4 report entries из validation result
   - Report format: `| claude-mem/worker | ok |`, `| claude-mem/chroma | warn | degraded mode |`, etc.

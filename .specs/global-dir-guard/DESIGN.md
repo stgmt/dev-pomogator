@@ -80,7 +80,7 @@ Guard при детекции маркера удаляет его после о
 | `setupGlobalScripts()` логика | `src/installer/shared.ts:235` | Упрощённая копия: только copy 3 файлов, без npm install |
 | `setupClaudeHooks()` логика | `src/installer/claude.ts:277` | Упрощённая: только SessionStart hook, без cleanup |
 | `writeJsonAtomic()` | `src/installer/claude.ts` | Переиспользовать для atomic settings write |
-| `makePortableScriptCommand()` | `src/installer/shared.ts` | Для генерации hook command |
+| `makePortableScriptCommand()` | `.claude/skills/skills-rules-optimizer/scripts/shared.ts` | Для генерации hook command |
 
 ## BDD Test Infrastructure
 

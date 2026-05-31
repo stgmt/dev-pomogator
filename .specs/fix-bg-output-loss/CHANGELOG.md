@@ -15,7 +15,7 @@ All notable changes to this feature will be documented in this file.
 - **FR-13: /run-tests SKILL.md update**: frontmatter description убрано misleading "Auto-detects framework", добавлены 8 trigger keywords (dotnet test, pytest, cargo test, vitest, jest, run tests, in background, long bg). Добавлена секция Generic mode с examples (`--framework generic -- npm run build`). Расширена "When triggered" с proactive auto-invocation guidance.
 - **FR-14: Skill trigger analysis report**: `.specs/fix-bg-output-loss/ANALYSIS_SKILL_TRIGGER.md` — почему `/run-tests` не auto-fired в incident 2026-05-10. Findings: skills в Claude Code не имеют built-in auto-trigger, description misleading, install path investigation.
 - **FR-15: Three-benchmark report**: `.specs/fix-bg-output-loss/BENCHMARK.md` — (a) trigger rate via 20 synthetic prompts, (b) performance overhead wrapper vs raw, (c) reliability YAML status accuracy vs `--reporter=json`.
-- **FR-16 (conditional)**: Если investigation подтвердит — fix installer hook install path bug в `src/installer/claude.ts`. **Investigated 2026-05-11**: NOT APPLICABLE (legacy install pre-FR-2, не bug). Re-run installer мигрирует.
+- **FR-16 (conditional)**: Если investigation подтвердит — fix installer hook install path bug в ~~`src/installer/claude.ts`~~ (removed in v2 migration). **Investigated 2026-05-11**: NOT APPLICABLE (legacy install pre-FR-2, не bug). Re-run installer мигрирует.
 - **FR-17: Windows path mangling fix**: `tui_session_start.ts` writes `cwd` к CLAUDE_ENV_FILE. На Windows backslashes (`D:\repos\dev-pomogator`) интерпретируются bash при `source` → mangled `D:reposdev-pomogator`. Fix: `cwd.replace(/\\\\/g, '/')` normalization. Discovered through FR-15 reliability benchmark, fixed в том же commit.
 
 ### Changed

@@ -6,17 +6,13 @@
 
 ## Источники
 
-- `src/installer/extensions.ts` — Extension interface, `listExtensions()`
-- `src/installer/index.ts` — interactive/non-interactive installer flow
-- `src/installer/claude.ts` — `installClaude()` pipeline
-- `src/config/schema.ts` — Config, InstalledExtension interfaces
 - `extensions/*/extension.json` — 12+ manifests
 
 ## Технические находки
 
 ### Extension interface (текущая)
 
-`src/installer/extensions.ts` — standard fields:
+~~`src/installer/extensions.ts`~~ (removed in v2 migration) — standard fields:
 - `name`, `version`, `description`, `platforms`, `category`
 - `tools`, `toolFiles`, `skills`, `skillFiles`, `hooks`
 - `ruleFiles`, `commandFiles`, `statusLine`, `postInstall`
@@ -57,10 +53,6 @@ if (options.plugins !== undefined) {
 
 ## Где лежит реализация
 
-- Extension interface: `src/installer/extensions.ts`
-- Installer UI: `src/installer/index.ts`
-- Install pipeline: `src/installer/claude.ts`
-- Config: `src/config/schema.ts`
 - Manifests: `extensions/*/extension.json`
 
 ## Выводы

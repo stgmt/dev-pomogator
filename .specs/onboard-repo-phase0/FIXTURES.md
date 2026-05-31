@@ -49,7 +49,7 @@
 ### F-3: fake-nextjs-frontend
 
 - **Type:** Snapshot
-- **Format:** `package.json` (Next.js 14 + React 18 + vitest), `next.config.ts`, `src/app/page.tsx`, `src/app/api/hello/route.ts`, `tsconfig.json`, `vitest.config.ts`, `src/tests/page.test.tsx`, `README.md`
+- **Format:** `package.json` (Next.js 14 + React 18 + vitest), `next.config.ts`, `src/app/page.tsx`, `tests/fixtures/onboard-repo-fake-repos/fake-nextjs-frontend/src/app/api/hello/route.ts`, `tsconfig.json`, `vitest.config.ts`, `src/tests/page.test.tsx`, `README.md`
 - **Setup:** `fs-extra.copy` + `git init && commit`
 - **Teardown:** `rm -rf {tmpdir}`
 - **Dependencies:** none

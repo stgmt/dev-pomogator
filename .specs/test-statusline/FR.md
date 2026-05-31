@@ -188,7 +188,7 @@ SessionStart hook для валидации целостности hooks в `.cl
 
 > _Leverage:_ `src/installer/claude.ts:420-427` — smart merge паттерн фильтрации managed hooks
 > _Leverage:_ `extensions/test-statusline/tools/test-statusline/statusline_session_start.ts` — readStdin + log паттерн
-> _Leverage:_ `src/installer/shared.ts` — `replaceNpxTsxWithPortable()` формат hook commands
+> _Leverage:_ `.claude/skills/skills-rules-optimizer/scripts/shared.ts` — `replaceNpxTsxWithPortable()` формат hook commands
 
 ## FR-11: StatusLine Coexistence Wrapper @feature8
 

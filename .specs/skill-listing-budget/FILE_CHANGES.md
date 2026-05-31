@@ -18,4 +18,4 @@
 | `.specs/skill-listing-budget/TASKS.md` | edit | Task board (Phase 3) |
 | `src/installer/skill-budget.ts` | NOT NEEDED | Логика жила в src/ кратко; перенесена в extension. Удалена |
 | `src/installer/index.ts` | NOT NEEDED | Inline вызов удалён — extension сам зарегистрирует postInstall + SessionStart hooks |
-| `src/installer/report.ts` | NOT NEEDED | Метод `recordSkillBudget()` удалён — extension пишет в stderr |
+| `.claude/skills/skills-rules-optimizer/scripts/report.ts` | NOT NEEDED | Метод `recordSkillBudget()` удалён — extension пишет в stderr |

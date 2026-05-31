@@ -154,9 +154,7 @@ Docs по skills уточняют:
 
 Поверх внешних docs есть внутренние constraints репозитория:
 
-- `src/config/schema.ts`, `src/index.ts`, `src/installer/extensions.ts` пока живут в модели `cursor | claude`
-- `src/constants.ts` и manifests привязаны к `.claude/skills`
-- `src/updater/index.ts` и `src/installer/shared.ts` уже дают правильные backup/update primitives
+- `.claude/skills/pomogator-doctor/scripts/engine/constants.ts` и manifests привязаны к `.claude/skills`
 - `tests/e2e/helpers.ts`, `tests/e2e/cli-integration.test.ts`, `Dockerfile.test` пока dual-platform only
 
 Значит Codex support — это одновременно platform expansion, hook-dispatch redesign, support-matrix exercise и test harness feature.
@@ -211,7 +209,6 @@ Docs по skills уточняют:
 
 ## Где лежит реализация
 
-- App-код: `src/config/schema.ts`, `src/index.ts`, `src/installer/index.ts`, `src/installer/extensions.ts`, `src/installer/shared.ts`, `src/updater/index.ts`, `src/updater/github.ts`
 - Конфигурация: `install`, `install.ps1`, `install.sh`, `README.md`, `extensions/*/extension.json`
 
 ## Выводы

@@ -68,11 +68,6 @@ npm verbose code 2
    ... (multiple TS errors)
    src/updater/shared-sync.ts(26,38): error TS2307: Cannot find module '../utils/path-safety.js'
    ```
-6. **Почему tsc падает**: на github HEAD (cad11b2) код в `src/updater/index.ts` импортирует:
-   - `../utils/path-safety.js` — файл `src/utils/path-safety.ts` есть **локально** на машине разработчика, но **НЕ закоммичен в git** (untracked)
-   - `../installer/plugin-json.js` — файл `src/installer/plugin-json.ts` есть **локально**, но **НЕ закоммичен** (untracked)
-   - `installedShared` field on Config — добавлено в `src/config/schema.ts` локально, но изменение **НЕ закоммичено**
-7. github HEAD имеет ИСПОЛЬЗОВАНИЕ этих сущностей в `src/updater/index.ts` (commit 2b22919 "force _shared/ recovery + publish FR-12") но не имеет ОПРЕДЕЛЕНИЯ
 8. tsc → exit 2 → prepare script fails → npm install exits 2 → npm exec exits 2
 9. **Bin `dev-pomogator` так и не извлечён**, потому что reify откатился до завершения unpack
 10. npx не находит bin → silent exit with code 2
@@ -184,9 +179,6 @@ npm error git dep preparation failed
 
 ## Action Items (для разработчика, не часть этой спеки)
 
-- [ ] Закоммитить `src/utils/path-safety.ts` и `src/installer/plugin-json.ts` (untracked)
-- [ ] Закоммитить изменения в `src/config/schema.ts` (добавление `installedShared` поля)
-- [ ] Закоммитить изменения в `src/updater/index.ts` и `src/updater/shared-sync.ts` если они есть
 - [ ] После commit & push: re-run CORE003_18 и CORE003_19 — оба должны PASS
 - [ ] Удалить TDD red comments из тестов и feature scenarios после fix-а
 - [ ] Обновить skill `.claude/skills/install-diagnostics/SKILL.md` Mode A description: добавить "проверь uncommitted source files" как первый шаг диагностики

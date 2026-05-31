@@ -65,7 +65,7 @@
 
 > Fix dkorotkov incident root cause.
 
-- [ ] Добавить `REQUIRED_SCRIPTS` constant в `src/installer/shared.ts` (top of file)
+- [ ] Добавить `REQUIRED_SCRIPTS` constant в `.claude/skills/skills-rules-optimizer/scripts/shared.ts` (top of file)
 - [ ] Модифицировать `copyBundledScript` (lines 212-233) — throw Error для required scripts если primary и fallbacks все отсутствуют -- @feature4
   _Requirements: [FR-5](FR.md#fr-5-loud-fail-setupglobalscripts-feature4)_
 - [ ] Добавить post-install verification в `setupGlobalScripts` (line 235+) — проверить `fs.pathExists(runnerPath)` after all copies, throw если false

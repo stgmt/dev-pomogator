@@ -141,17 +141,12 @@ my-plugin/
 ### Migration infrastructure (existing)
 
 Уже есть в репо:
-- `src/updater/hook-migration.ts` — `migrateOldProjectHooks()` переписывает старый `settings.json` hook format на portable `tsx-runner` bootstrap
-- `src/updater/content-hash.ts` — content hash tracking для drift detection (user modifications backup в `.dev-pomogator/.user-overrides/`)
-- `src/installer/uninstall-project.ts` — per-project cleanup (managed files only)
-- `src/config/schema.ts` — `ManagedFiles` dual format (string OR object with path+hash fields) для backward compat
 
 Новая migration v1→v2 может использовать эти patterns.
 
 ## Где лежит реализация
 
-- App-код: `src/installer/claude.ts`, `src/installer/extensions.ts`, `src/installer/gitignore.ts`, `src/installer/settings-local.ts`, `src/installer/uninstall-project.ts`, `src/index.ts`, `src/updater/github.ts`, `src/updater/hook-migration.ts`, `src/updater/content-hash.ts`
-- Конфигурация: `src/config/schema.ts`, `~/.dev-pomogator/config.json`, `extensions/*/extension.json`
+- App-код: ~~`src/installer/claude.ts`~~ (removed in v2 migration), ~~`src/installer/extensions.ts`~~ (removed in v2 migration), ~~`src/installer/gitignore.ts`~~ (removed in v2 migration), ~~`src/installer/settings-local.ts`~~ (removed in v2 migration), ~~`src/installer/uninstall-project.ts`~~ (removed in v2 migration), ~~`src/index.ts`~~ (removed in v2 migration), ~~`src/updater/github.ts`~~ (removed in v2 migration), ~~`src/updater/hook-migration.ts`~~ (removed in v2 migration), ~~`src/updater/content-hash.ts`~~ (removed in v2 migration)
 - Plugin manifest: `.dev-pomogator/.claude-plugin/plugin.json` (existing, требует canonical refactor)
 - Build/install: `package.json` (bin: `./bin/cli.js` → `dist/index.js`)
 - Tests: `tests/e2e/*.test.ts` (vitest), `tests/features/*.feature` (BDD)

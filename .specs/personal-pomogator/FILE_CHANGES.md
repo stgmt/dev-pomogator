@@ -48,7 +48,7 @@
 | Path | Action | Reason |
 |------|--------|--------|
 | `src/installer/claude.ts` | edit | Wire self-guard + gitignore writer + settings.local routing + collision detection + mcp-security. New helper `collectManagedPaths`. [FR-1, FR-2, FR-3, FR-4, FR-7, FR-10](FR.md) |
-| `src/installer/shared.ts` | edit | [FR-5](FR.md#fr-5-loud-fail-setupglobalscripts-feature4): loud-fail в `copyBundledScript`, post-install verify в `setupGlobalScripts`, [FR-6](FR.md#fr-6-fail-soft-hook-wrapper-feature5): bootstrap copy, `makePortableTsxCommand` → bootstrap path |
+| `.claude/skills/skills-rules-optimizer/scripts/shared.ts` | edit | [FR-5](FR.md#fr-5-loud-fail-setupglobalscripts-feature4): loud-fail в `copyBundledScript`, post-install verify в `setupGlobalScripts`, [FR-6](FR.md#fr-6-fail-soft-hook-wrapper-feature5): bootstrap copy, `makePortableTsxCommand` → bootstrap path |
 | `src/updater/hook-migration.ts` | edit | Consistent с FR-2: обновить migration чтобы таргетил `.claude/settings.local.json` не `.claude/settings.json` |
 | `src/index.ts` | edit | [FR-8](FR.md#fr-8-per-project-uninstall-command-feature7): CLI command parsing `uninstall --project [--dry-run]` |
 | `scripts/build-check-update.js` | edit | [FR-6](FR.md#fr-6-fail-soft-hook-wrapper-feature5): добавить `tsx-runner-bootstrap.cjs` в dist/ copy list |
