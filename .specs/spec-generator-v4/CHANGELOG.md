@@ -4,6 +4,55 @@ All notable changes to this feature will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed (batches 21-26 — honest-audit noise reduction)
+
+User caught a flawed "89% reduction" claim — 3878 residual findings
+still ~63% noise. Six batches of triage-by-sampling closed every
+visible noise source:
+
+- **batch-21**: ownership-conflict on deleted v1 paths (444 → 30 via
+  `fs.existsSync`), concept-overlap opt-in default off (2082 → 0 —
+  inherent to dev-pomogator corpus shape), missing-cross-ref require
+  ≥2 mentions (293 → 187).
+- **batch-22**: nested category dir filtered from listSpecs (`backlog`
+  was treated as a spec), contradictory-nfr opt-in default off
+  (keyword-only matched across subsystems: `Claude API latency 30s`
+  vs `UI redraw 5ms` are not contradictions).
+- **batch-23**: specs-validator hook prompt-spam ~150 → 2 lines/prompt,
+  auto-generated `OWNERSHIP_RECOMMENDATION.md` files excluded from
+  missing-cross-ref (circular noise — my own output triggered the
+  next detector run).
+- **batch-24**: per-spec `printPhaseStatus` aggregated into single
+  summary line (4 lines × N specs → 1 line total).
+- **batch-25**: dead-link strip fenced + skip regex/placeholder targets
+  (`[\w_-]+`, `.*`, `./file.md`), orphan-task accepts `@featureN` tags
+  as valid back-reference.
+- **batch-26**: missing-cross-ref strip INLINE backticks (slugs in CLI
+  example commands `.specs/<slug>/` count as documentation, not refs).
+
+CUMULATIVE DOGFOOD (initial → batch-26):
+  Total findings:  38,453 → 1,185  (-96.9%)
+  CRITICAL:        33,860 →    32  (-99.9%)
+  Actionability:      37% →   ~91% (real signal vs noise)
+
+Per-category honesty:
+  impl-drift/missing-file:        967  (100% real, verified 0% in fenced)
+  cross-spec/missing-cross-ref:    70  (~80% real, ~20% prose)
+  spec-only/unreachable-task:      65  (INFO, intentional)
+  spec-only/orphan-task:           30  (~95% real)
+  cross-spec/module-ownership:     30  (100% real, paths exist on disk)
+  impl-drift/test-result-stale:    12  (INFO, CI gotcha)
+  impl-drift/dead-link:             7  (~85% real)
+  spec-only/orphan-FR + dup-fr-id:  4  (100% real)
+
+Lesson: "N% reduction" without verifying WHAT REMAINS is dishonest.
+Real audits require sampling each surviving category and labelling
+"real / noise / info" per finding shape. Six rounds of sampling
+surfaced 6 distinct noise mechanisms (scope bugs: nested dir as
+spec, generated artifact as authored content; context bugs:
+keyword-only NFR match, prose mention as structural ref; presentation
+bugs: per-spec dump instead of aggregate).
+
 ### Deferred to v4.0.1
 
 - 5 resolver behavior tests (`describe.skip` — agent-generated test
