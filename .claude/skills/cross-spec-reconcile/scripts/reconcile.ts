@@ -84,6 +84,15 @@ export interface ReconcileOptions {
    * `_shared/`, fixtures, mocks).
    */
   ownershipStoplist?: string[];
+  /**
+   * Whether to emit `cross-spec/concept-overlap` findings (default false).
+   * On dev-pomogator-style corpora where every spec describes an extension
+   * of the same ecosystem, concept overlap is INHERENT to corpus shape
+   * and produces ~1800 INFO findings with no actionable signal. Opt in
+   * only on cross-domain corpora where shared vocab actually means
+   * coupling.
+   */
+  conceptOverlapEnabled?: boolean;
 }
 
 /** Default ownership stoplist — shared infra that multiple specs legitimately reference. */
@@ -127,9 +136,10 @@ const DEFAULT_OWNERSHIP_STOPLIST = [
 ];
 
 /** Minimum shared-concept count to fire `cross-spec/concept-overlap`
- * (batch-3: 3, batch-9: 5, batch-10 readiness audit: 10 — kills ~1800
- * INFO findings on the real corpus without losing genuine signal). */
-const CONCEPT_OVERLAP_MIN_SHARED = 10;
+ * (batch-3: 3, batch-9: 5, batch-10: 10, batch-21 honest audit: 25 —
+ * for dev-pomogator-style corpora where every spec describes an
+ * extension and shares 15+ ecosystem concepts inherently). */
+const CONCEPT_OVERLAP_MIN_SHARED = 25;
 
 /** Stoplist of generic concept nouns that appear in many unrelated specs.
  * Batch-10 (readiness audit): expanded from 34 → 80+ entries so common
@@ -164,6 +174,37 @@ const CONCEPT_NOUN_STOPLIST = new Set([
   'Test', 'Tests', 'Notes', 'Comments', 'Description', 'Title',
   'Summary', 'Details', 'Overview', 'Reference', 'References',
   'Example', 'Examples', 'Note', 'See', 'Also', 'TODO', 'TBD',
+  // Batch-21 honest-audit pass: words that appear in ≥50% of all
+  // specs in this corpus and dominate concept-overlap with no real
+  // signal (audit caught me claiming "89% reduction" while concept-
+  // overlap still emitted 2082 generic-vocabulary findings).
+  'Requirements', 'Decisions', 'Infrastructure', 'Pending', 'Initial',
+  'Design', 'Rule', 'Read', 'Atomic', 'Update', 'Updates', 'Updated',
+  'Create', 'Created', 'Delete', 'Deleted', 'Default', 'Defaults',
+  'File', 'Files', 'Path', 'Paths', 'Directory', 'Folder',
+  'Output', 'Input', 'Result', 'Results', 'Error', 'Errors',
+  'Warning', 'Warnings', 'Phase', 'Phases', 'Step', 'Steps',
+  'Task', 'Tasks', 'User', 'Users', 'System', 'Service',
+  'Process', 'Method', 'Function', 'Class', 'Object', 'Array',
+  'String', 'Number', 'Boolean', 'Type', 'Types', 'Value', 'Values',
+  'Key', 'Keys', 'Field', 'Fields', 'Property', 'Properties',
+  'Mode', 'Modes', 'Format', 'Formats', 'Version', 'Versions',
+  'Index', 'Order', 'List', 'Group', 'Groups', 'Section', 'Sections',
+  'Block', 'Blocks', 'Item', 'Items', 'Entry', 'Entries',
+  'Source', 'Target', 'Origin', 'Destination', 'Repo', 'Repository',
+  'Branch', 'Commit', 'Issue', 'PR', 'Local', 'Remote',
+  'Host', 'Container', 'Cluster', 'Network', 'Port', 'URL', 'URI',
+  'JSON', 'YAML', 'XML', 'HTML', 'CSS', 'Markdown', 'Text', 'Binary',
+  // Batch-21 pass-2: top-30 corpus-shared nouns from honest audit
+  'Name', 'Auto', 'Evidence', 'Project', 'Windows', 'Classification',
+  'Manifest', 'Audit', 'Report', 'Existing', 'Scope', 'Rules',
+  'Install', 'Analysis', 'SessionStart', 'Changes', 'Node', 'Bash',
+  'Research', 'Verdict', 'Generated', 'Write', 'Edit', 'Hooks',
+  'Shared', 'Matrix', 'Decision', 'UserPromptSubmit', 'Stories',
+  'Framework', 'Plugin', 'Plugins', 'Marketplace', 'Settings',
+  'Setup', 'Cleanup', 'Init', 'Final', 'Run', 'Ready', 'Done',
+  'Open', 'Close', 'Save', 'Load', 'Apply', 'Reset', 'Skip',
+  'Verify', 'Verified', 'Confirmed', 'Detected',
 ]);
 
 export interface ReconcileResult {
@@ -662,6 +703,7 @@ function findEnumDivergence(
 function findModuleOwnershipConflict(
   filesBySlug: Map<string, { body: string; path: string }[]>,
   stoplist: string[] = DEFAULT_OWNERSHIP_STOPLIST,
+  repoRoot: string = '.',
 ): Finding[] {
   const out: Finding[] = [];
   // Collect every `path/to/x.ts`-like reference (already covered by PATH_REF_RE).
@@ -682,6 +724,13 @@ function findModuleOwnershipConflict(
         // Dogfood batch-9: skip shared infra paths (helpers.ts, fixtures,
         // _shared/, etc.) — they are legitimately referenced by N specs.
         if (stoplist.some((s) => ref.includes(s))) continue;
+        // Batch-21 noise reduction: skip if the contested path doesn't
+        // actually exist on disk. A "conflict" on a deleted v1 path is
+        // not a real ownership issue — `impl-drift/missing-file` already
+        // reports the missing reference. This single check eliminated
+        // most of the 444 ownership-conflict FPs on this repo's v1→v2
+        // migration corpus (paths like `src/installer/claude.ts` deleted).
+        if (!fs.existsSync(path.join(repoRoot, ref))) continue;
         pathMap.set(ref, f.path);
       }
     }
@@ -1074,11 +1123,16 @@ function findMissingCrossRef(
   const out: Finding[] = [];
   for (const slug of allSlugs) {
     const ownFiles = filesBySlug.get(slug) ?? [];
-    const ownBodies = ownFiles.map((f) => f.body).join('\n');
+    // Batch-21 noise reduction: strip fenced code blocks before mention
+    // count + require ≥2 mentions of the slug name before flagging.
+    // Single mentions are routinely prose citations ("similar to what
+    // foo-spec does"), not real structural cross-refs.
+    const ownBodies = ownFiles.map((f) => stripFencedBlocks(f.body)).join('\n');
     for (const otherSlug of allSlugs) {
       if (otherSlug === slug) continue;
       const mentionRe = new RegExp(`\\b${escapeRegex(otherSlug)}\\b`, 'g');
-      if (!mentionRe.test(ownBodies)) continue;
+      const mentionCount = (ownBodies.match(mentionRe) ?? []).length;
+      if (mentionCount < 2) continue;
       const linkRe = new RegExp(
         `\\]\\([^)]*\\.specs[/\\\\]${escapeRegex(otherSlug)}[/\\\\][^)]*\\)`,
         'g',
@@ -1700,7 +1754,8 @@ export function reconcileLight(opts: ReconcileOptions): ReconcileResult[] {
     for (const fr of defs.keys()) allFrDefs.add(fr);
   }
   const driftFindings = findRuntimeIdentifierDrift(idsBySlug);
-  const overlapFindings = findConceptOverlap(filesBySlug);
+  // Batch-21: opt-in (default off) for dev-pomogator-style corpora
+  const overlapFindings = opts.conceptOverlapEnabled ? findConceptOverlap(filesBySlug) : [];
   // Dogfood batch-9: per-spec FR namespace by default — both
   // `cross-spec/duplicate-fr-id` and `cross-spec/contradictory-fr`
   // produce thousands of FPs when each spec uses its own FR-1..N
@@ -1714,7 +1769,7 @@ export function reconcileLight(opts: ReconcileOptions): ReconcileResult[] {
   const cliDriftFindings = findCliFlagDrift(filesBySlug);
   const enumDivergenceFindings = findEnumDivergence(filesBySlug);
   const ownershipStoplist = opts.ownershipStoplist ?? DEFAULT_OWNERSHIP_STOPLIST;
-  const moduleOwnershipFindings = findModuleOwnershipConflict(filesBySlug, ownershipStoplist);
+  const moduleOwnershipFindings = findModuleOwnershipConflict(filesBySlug, ownershipStoplist, opts.repoRoot);
   const missingCrossRefFindings = findMissingCrossRef(filesBySlug, allSlugs);
   const contradictoryNfrFindings = findContradictoryNFR(filesBySlug);
   const schemaMismatchFindings = findSchemaMismatch(filesBySlug);
