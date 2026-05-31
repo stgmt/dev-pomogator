@@ -423,7 +423,7 @@ Stale/dead windows naturally don't match (their process is gone), so a crashed w
 
 > @feature22
 
-Standalone Claude Code skill `session-pilot-bootstrap` (slash-command form: `/sp-bootstrap` или `/sp-bootstrap-worktree`) который **пользователь вызывает вручную** когда оказался в orphan worktree (worktree без `.dev-pomogator/tools/` install state). НЕ auto-fire — пользователь решает когда нужен bootstrap. Сценарий мотивации: hooks (auto-commit / simplify / dedup / tui / prompt-suggest / capture / bg-task-guard / test-spec-gate) падают с `ERR_MODULE_NOT_FOUND` на stop event'ах потому что `.dev-pomogator/tools/*.ts` gitignored AND installer ни разу в этом worktree не запускался.
+Standalone Claude Code skill `session-pilot-bootstrap` (slash-command form: `/sp-bootstrap` или `/sp-bootstrap-worktree`) который **пользователь вызывает вручную** когда оказался в orphan worktree (worktree без `.dev-pomogator/tools/` install state). НЕ auto-fire — пользователь решает когда нужен bootstrap. Сценарий мотивации: hooks (auto-commit / simplify / dedup / tui / [prompt-suggest](../prompt-suggest/FR.md) / capture / [bg-task-guard](../bg-task-guard/FR.md) / test-spec-gate) падают с `ERR_MODULE_NOT_FOUND` на stop event'ах потому что `.dev-pomogator/tools/*.ts` gitignored AND installer ни разу в этом worktree не запускался.
 
 **Trigger phrases** (skill description):
 - RU: «забутстрапь worktree», «поставь dev-pomogator в этот worktree», «почини hooks в worktree», «инициализируй worktree», «сделай orphan worktree рабочим».

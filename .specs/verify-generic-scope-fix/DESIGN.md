@@ -84,7 +84,7 @@
   - `.claude/skills/verify-generic-scope-fix/SKILL.md` + `scripts/analyze-diff.ts`
   - `.dev-pomogator/tools/scope-gate/{scope-gate-guard,score-diff,marker-store}.ts`
   - `.claude/rules/scope-gate/{when-to-verify,escape-hatch-audit}.md`
-  - Hook registration в `.claude/settings.local.json` (per personal-pomogator contract)
+  - Hook registration в `.claude/settings.local.json` (per [personal-pomogator](../personal-pomogator/FR.md) contract)
 
 ## Директории и файлы
 

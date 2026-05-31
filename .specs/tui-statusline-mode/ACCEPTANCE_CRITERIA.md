@@ -42,7 +42,7 @@ WHEN terminal height increases above 15 rows AND TUI was auto-compacted THEN TUI
 
 **Требование:** [FR-5](FR.md#fr-5-выпилить-statusline-render-из-test-statusline)
 
-WHEN test-statusline extension is installed THEN `statusline_render.cjs`, `statusline_render.sh`, and `statusline_wrapper.js` SHALL NOT be present in `.dev-pomogator/tools/test-statusline/`.
+WHEN [test-statusline](../test-statusline/FR.md) extension is installed THEN `statusline_render.cjs`, `statusline_render.sh`, and `statusline_wrapper.js` SHALL NOT be present in `.dev-pomogator/tools/test-statusline/`.
 
 WHEN test-statusline extension is installed THEN `statusline_session_start.ts` and `test_runner_wrapper.*` SHALL still be present and functional.
 

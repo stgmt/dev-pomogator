@@ -47,7 +47,9 @@ async function main(): Promise<void> {
     const seen = new Set<string>();
     for (const r of reports) {
       for (const f of r.findings) {
-        const v = classify(r.specSlug, f);
+        // Pass repoRoot so dead-link classifier can pre-flight basename
+        // glob (filters 0-match → NOISE, 2+ matches → ambiguous-link).
+        const v = classify(r.specSlug, f, repoRoot);
         if (v.verdict === 'AUTO_FIX') {
           auto++;
           continue;

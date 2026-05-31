@@ -7,6 +7,7 @@ import { scenarioWriter } from './scenario-writer.ts';
 import { frAuthor } from './fr-author.ts';
 import { decisionArbiter } from './decision-arbiter.ts';
 import { ownerPicker } from './owner-picker.ts';
+import { crossRefLinker } from './cross-ref-linker.ts';
 
 const RESOLVERS: Resolver[] = [
   acAuthor,
@@ -15,6 +16,7 @@ const RESOLVERS: Resolver[] = [
   frAuthor,
   decisionArbiter,
   ownerPicker,
+  crossRefLinker,
 ];
 
 export function findResolver(name: string): Resolver | undefined {

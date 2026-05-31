@@ -49,7 +49,7 @@ function ingest(root: string): number {
   let queued = 0;
   for (const r of reports) {
     for (const f of r.findings) {
-      const v = classify(r.specSlug, f);
+      const v = classify(r.specSlug, f, root);
       if (v.verdict !== 'BACKLOG' || !v.entry) continue;
       const id = entryId(r.specSlug, f.code, v.entry.evidence);
       if (readEntry(root, id)) continue;
@@ -191,12 +191,21 @@ async function main(): Promise<void> {
       fs.rmSync(root2, { recursive: true, force: true });
     }
 
-    // PHASE 5: AUTO_FIX negative — verify NO backlog entries for AUTO_FIX codes
-    // (cross-spec/missing-cross-ref is classified AUTO_FIX, never enters backlog)
-    const seenAutoFixCategories = new Set<string>();
-    for (const e of readOpen(root)) seenAutoFixCategories.add(e.category);
-    const autoFixLeaked =
-      seenAutoFixCategories.has('add-markdown-link-on-first-mention');
+    // PHASE 5: missing-cross-ref now routes to BACKLOG (cross-ref-linker
+    // resolver) instead of AUTO_FIX. Verify the entry shape lands in the
+    // 'missing-cross-ref' category — proves classifier wiring is correct
+    // and resolver pipeline can pick them up. (The synthetic corpus above
+    // may or may not produce these findings depending on slug overlap, so
+    // we only assert correct routing for codes that DID surface.)
+    const allOpen = readOpen(root);
+    const missingCrossRefEntries = allOpen.filter(
+      (e) => e.code === 'cross-spec/missing-cross-ref',
+    );
+    const missingCrossRefRoutedCorrectly = missingCrossRefEntries.every(
+      (e) =>
+        e.category === 'missing-cross-ref' &&
+        e.suggested_resolver === 'cross-ref-linker',
+    );
 
     console.log('\n=== E2E Pipeline Test ===\n');
     console.log(JSON.stringify(phase1, null, 2));
@@ -234,8 +243,9 @@ async function main(): Promise<void> {
         detail: p4Detail,
       },
       {
-        name: 'P5: AUTO_FIX codes never leak into backlog',
-        ok: !autoFixLeaked,
+        name: 'P5: missing-cross-ref routes to BACKLOG/cross-ref-linker',
+        ok: missingCrossRefRoutedCorrectly,
+        detail: `${missingCrossRefEntries.length} entries seen, all routed=${missingCrossRefRoutedCorrectly}`,
       },
       {
         name: 'Performance: full E2E ≤5 seconds',

@@ -4,6 +4,8 @@
 //
 // Per BACKLOG_DESIGN.md categories → resolvers mapping.
 
+import path from 'node:path';
+import { globSync } from 'glob';
 import type { ClassificationResult } from './types.ts';
 
 export interface InputFinding {
@@ -16,7 +18,39 @@ export interface InputFinding {
   suggested_fix?: string;
 }
 
-export function classify(slug: string, finding: InputFinding): ClassificationResult {
+// Mirror link-fixer.ts exclude list — same ignore globs + same post-filter
+// regex (node_modules, .git, dist, .next, build, .cache).
+const GLOB_IGNORE = ['node_modules/**', '.git/**', 'dist/**', '.next/**', 'build/**'];
+const POST_EXCLUDE_RE = /node_modules|\.git|\.next|dist|build|\.cache/;
+
+/**
+ * Count basename matches for a dead-link target in the repo, using the
+ * same exclude list link-fixer uses. Returns -1 when repoRoot is not
+ * supplied (callers that don't have repo context skip the pre-flight
+ * check and fall back to the previous routing).
+ */
+function countBasenameMatches(repoRoot: string | undefined, target: string): number {
+  if (!repoRoot || !target) return -1;
+  const basename = path.basename(target);
+  if (!basename) return -1;
+  try {
+    const matches = globSync(`**/${basename}`, {
+      cwd: repoRoot,
+      absolute: true,
+      ignore: GLOB_IGNORE,
+    }).filter((m) => !path.relative(repoRoot, m).match(POST_EXCLUDE_RE));
+    return matches.length;
+  } catch {
+    // Glob error — fall back to pre-existing routing (no pre-flight).
+    return -1;
+  }
+}
+
+export function classify(
+  slug: string,
+  finding: InputFinding,
+  repoRoot?: string,
+): ClassificationResult {
   // Batch-17 hardening (workflow wljjmhkm9 fuzz analyzer): defensive
   // input handling. Type-guard + trim + lowercase normalize so the
   // same finding routed via different surfaces (CLI / hook / test) maps
@@ -51,9 +85,25 @@ export function classify(slug: string, finding: InputFinding): ClassificationRes
     };
   }
   if (code === 'cross-spec/missing-cross-ref') {
+    // Strip `.specs/` prefix from spec_a/spec_b so resolver gets bare slugs.
+    // Detector emits `.specs/<slug>` form (see reconcile.ts:1223-1224); the
+    // cross-ref-linker resolver expects raw slugs to compute relative paths.
+    const stripSpecsPrefix = (s: string | undefined): string | undefined =>
+      s ? s.replace(/^\.?[\/\\]?\.specs[\/\\]/, '') : s;
     return {
-      verdict: 'AUTO_FIX',
-      autoFixRule: 'add-markdown-link-on-first-mention',
+      verdict: 'BACKLOG',
+      entry: {
+        slug,
+        code,
+        category: 'missing-cross-ref',
+        evidence: {
+          file: finding.referenced_in,
+          spec_a: stripSpecsPrefix(finding.spec_a),
+          spec_b: stripSpecsPrefix(finding.spec_b),
+        },
+        suggested_resolver: 'cross-ref-linker',
+        difficulty: 'easy',
+      },
     };
   }
 
@@ -87,7 +137,36 @@ export function classify(slug: string, finding: InputFinding): ClassificationRes
         },
       };
     }
-    // Otherwise — typo-class: link-fixer agent
+    // PATH C pre-flight: run the same basename glob link-fixer would
+    // run, BEFORE queueing the entry. 0 matches → no typo candidate
+    // exists, link-fixer would deterministically bail with `no-match`.
+    // Route to NOISE: keeps signal in the report without dispatching
+    // futile resolver work. 1 match → existing dead-link-typo route
+    // (link-fixer will succeed). 2+ matches → backlog as
+    // `ambiguous-link` so a future disambiguator (or human) handles it.
+    // Mirrors what impl-drift/missing-file does below.
+    const matchCount = countBasenameMatches(repoRoot, target);
+    if (matchCount === 0) {
+      return {
+        verdict: 'NOISE',
+        noiseReason:
+          'Markdown link target does not exist anywhere in repo — no typo candidate to repair. Fix by creating the file, marking OUT_OF_SCOPE, or removing the link.',
+      };
+    }
+    if (matchCount >= 2) {
+      return {
+        verdict: 'BACKLOG',
+        entry: {
+          slug,
+          code,
+          category: 'ambiguous-link',
+          evidence: { file: finding.referenced_in, target, occurrence_count: matchCount },
+          suggested_resolver: 'human',
+          difficulty: 'medium',
+        },
+      };
+    }
+    // matchCount === 1 OR repoRoot unavailable (matchCount === -1): typo-class for link-fixer
     return {
       verdict: 'BACKLOG',
       entry: {
@@ -162,8 +241,11 @@ export function classify(slug: string, finding: InputFinding): ClassificationRes
 
   // Extended routes (added after dogfood pass-2 surfaced 974 unrecognised).
   if (code === 'impl-drift/missing-file') {
-    // Same family as dead-link — sibling spec file claimed but missing.
-    // Route to ac-author for AC.md targets, fr-author for FR.md, link-fixer otherwise.
+    // Detector emits this for backtick-wrapped path references in spec prose
+    // (e.g. `tools/foo.ts`), NOT markdown link syntax. See
+    // .claude/skills/cross-spec-reconcile/scripts/reconcile.ts PATH_REF_RE
+    // and findMissingFileReferences. link-fixer only handles [label](target)
+    // syntax and bails 100% on backtick refs, so route there is wrong.
     const target = finding.expected_path ?? '';
     if (/ACCEPTANCE_CRITERIA\.md|^AC\.md/.test(target)) {
       return {
@@ -177,15 +259,14 @@ export function classify(slug: string, finding: InputFinding): ClassificationRes
         },
       };
     }
+    // No mechanical resolver can fix this — needs human creative work
+    // (create the file, mark FR as OUT_OF_SCOPE, or remove the reference).
+    // Routing to NOISE keeps the signal in the report but stops polluting
+    // the BACKLOG with entries that will deterministically bail.
     return {
-      verdict: 'BACKLOG',
-      entry: {
-        slug, code,
-        category: 'dead-link-typo',
-        evidence: { file: finding.referenced_in, target },
-        suggested_resolver: 'link-fixer',
-        difficulty: 'easy',
-      },
+      verdict: 'NOISE',
+      noiseReason:
+        'Spec references a path in backticks that does not exist on disk. No mechanical resolver applies — fix by adding the impl, marking OUT_OF_SCOPE, or removing the reference.',
     };
   }
   if (code === 'spec-only/unreachable-task' || code === 'impl-drift/test-result-stale') {

@@ -1,4 +1,4 @@
-# Аудит спецификации: tui-test-runner-v2
+# Аудит спецификации: [tui-test-runner](../tui-test-runner/FR.md)-v2
 
 Дата: 2026-03-10T04:12
 

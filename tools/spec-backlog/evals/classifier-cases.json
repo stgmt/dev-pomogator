@@ -8,9 +8,15 @@
       "expected": { "verdict": "NOISE", "category": null, "resolver": null }
     },
     {
-      "id": "missing-cross-ref-auto",
-      "input": { "code": "cross-spec/missing-cross-ref", "severity": "INFO" },
-      "expected": { "verdict": "AUTO_FIX", "category": null, "resolver": null }
+      "id": "missing-cross-ref-to-cross-ref-linker",
+      "input": {
+        "code": "cross-spec/missing-cross-ref",
+        "severity": "INFO",
+        "referenced_in": ".specs/foo/FR.md:42",
+        "spec_a": ".specs/foo",
+        "spec_b": ".specs/bar"
+      },
+      "expected": { "verdict": "BACKLOG", "category": "missing-cross-ref", "resolver": "cross-ref-linker" }
     },
     {
       "id": "dead-link-AC-target-to-ac-author",
@@ -84,13 +90,13 @@
       "expected": { "verdict": "BACKLOG", "category": "missing-spec-file", "resolver": "ac-author" }
     },
     {
-      "id": "missing-file-other-target-to-link-fixer",
+      "id": "missing-file-other-target-to-noise",
       "input": {
         "code": "impl-drift/missing-file",
         "severity": "WARNING",
         "expected_path": "tools/foo/bar.ts"
       },
-      "expected": { "verdict": "BACKLOG", "category": "dead-link-typo", "resolver": "link-fixer" }
+      "expected": { "verdict": "NOISE", "category": null, "resolver": null }
     },
     {
       "id": "unreachable-task-noise",
@@ -257,6 +263,28 @@
         "expected_path": ""
       },
       "expected": { "verdict": "BACKLOG", "category": "dead-link-typo", "resolver": "link-fixer" }
+    },
+    {
+      "id": "dead-link-no-candidate-to-noise",
+      "input": {
+        "code": "impl-drift/dead-link",
+        "severity": "WARNING",
+        "referenced_in": ".specs/foo/FR.md:42",
+        "expected_path": "tools/no-such-dir/no-such-file-xyz-12345.ts"
+      },
+      "expected": { "verdict": "NOISE", "category": null, "resolver": null },
+      "withRepoRoot": true
+    },
+    {
+      "id": "dead-link-one-candidate-to-link-fixer",
+      "input": {
+        "code": "impl-drift/dead-link",
+        "severity": "WARNING",
+        "referenced_in": ".specs/foo/FR.md:42",
+        "expected_path": "tools/spec-backlog/classifier.ts"
+      },
+      "expected": { "verdict": "BACKLOG", "category": "dead-link-typo", "resolver": "link-fixer" },
+      "withRepoRoot": true
     }
   ]
 }

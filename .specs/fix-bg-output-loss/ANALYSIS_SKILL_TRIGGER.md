@@ -9,7 +9,7 @@ The `/run-tests` skill **failed to auto-invoke** during the 2026-05-10 incident 
 
 1. **Skills don't auto-trigger reliably** — community consensus shows ~50% trigger rate baseline; AI prioritizes task completion over skill discovery
 2. **Description was misleading** — `"Auto-detects framework"` reads as auto-invoke promise but actually refers to framework detection inside the skill
-3. **test_guard hook install path bug** in `wt-manual-billing` — hooks landed in `settings.json` instead of `settings.local.json` per personal-pomogator FR-2 (likely legacy installer run pre-FR-2; **FR-16 conditional fix**)
+3. **test_guard hook install path bug** in `wt-manual-billing` — hooks landed in `settings.json` instead of `settings.local.json` per [personal-pomogator](../personal-pomogator/FR.md) FR-2 (likely legacy installer run pre-FR-2; **FR-16 conditional fix**)
 
 The recommended fix combination (v0.3.0): description rewrite + smart converter in `test_guard` + memory feedback. PreToolUse auto-redirect hook deferred as follow-up (risk over-blocking).
 

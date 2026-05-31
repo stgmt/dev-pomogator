@@ -53,7 +53,7 @@ function runBench(specCount: number, frPerSpec: number): BenchResult {
     const verdicts = [];
     for (const r of reports) {
       for (const f of r.findings) {
-        const v = classify(r.specSlug, f);
+        const v = classify(r.specSlug, f, root);
         verdicts.push({ slug: r.specSlug, finding: f, verdict: v });
       }
     }
@@ -97,7 +97,7 @@ function runWarmDedup(specCount: number, frPerSpec: number): BenchResult {
     const coldIds = readAllIds(root);
     for (const r of cold) {
       for (const f of r.findings) {
-        const v = classify(r.specSlug, f);
+        const v = classify(r.specSlug, f, root);
         if (v.verdict !== 'BACKLOG' || !v.entry) continue;
         const id = entryId(r.specSlug, f.code, v.entry.evidence);
         if (coldIds.has(id)) continue;
@@ -114,7 +114,7 @@ function runWarmDedup(specCount: number, frPerSpec: number): BenchResult {
     let appended = 0;
     for (const r of reports) {
       for (const f of r.findings) {
-        const v = classify(r.specSlug, f);
+        const v = classify(r.specSlug, f, root);
         if (v.verdict !== 'BACKLOG' || !v.entry) continue;
         const id = entryId(r.specSlug, f.code, v.entry.evidence);
         if (warmIds.has(id)) {

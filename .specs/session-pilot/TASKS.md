@@ -30,7 +30,7 @@
 | T23 | audit-spec.ts → 0 errors | DONE | Phase 7 | 5m |
 | T24 | extension-layout-validate.ts | DONE | Phase 7 | 5m |
 | T25 | git push + open PR | TODO | Phase 7 | 10m |
-| T26 | Strengthen tests per strong-tests skill | TODO | v0.2 | 120m |
+| T26 | Strengthen tests per [strong-tests](../strong-tests/FR.md) skill | TODO | v0.2 | 120m |
 | T27 | Add mutmut mutation testing | TODO | v0.2 | 60m |
 | T28 | /api/message + modal frontend | TODO | v0.2 | 120m |
 | T29 | /api/git-status endpoint | TODO | v0.2 | 60m |

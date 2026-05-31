@@ -60,7 +60,7 @@
 
 > Note: `mcp-setup` не является extension в текущем коде — это standalone setup script. Doctor FR-9/FR-10 проверяют MCP серверы через `.mcp.json` / `~/.claude/mcp.json` parsing, не через extension manifest.
 
-> Примечание: 🟢 self-sufficient extensions (auto-simplify, bg-task-guard, plan-pomogator, specs-workflow, test-quality, suggest-rules, learnings-capture) не требуют dependencies поля — treated default как self-sufficient per [FR-22](FR.md#fr-22-extensionjson-dependencies-schema-feature11).
+> Примечание: 🟢 self-sufficient extensions (auto-simplify, [bg-task-guard](../bg-task-guard/FR.md), plan-pomogator, specs-workflow, test-quality, suggest-rules, learnings-capture) не требуют dependencies поля — treated default как self-sufficient per [FR-22](FR.md#fr-22-extensionjson-dependencies-schema-feature11).
 
 ## BDD step definitions + hooks — NEW
 

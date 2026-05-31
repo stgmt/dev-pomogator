@@ -85,7 +85,7 @@ Schema `.onboarding.json` ОБЯЗАНА содержать AI-specific секц
 
 ## FR-11: Developer onboarding checklist из .onboarding.md @feature11
 
-`.specs/.onboarding.md` ДОЛЖЕН включать Section 6 "Suggested next steps" с 1-3 actionable hint'ами (например: "Prerequisites: установи AUTO_COMMIT_API_KEY из 1Password", "First task: запусти /pomogator-doctor чтобы проверить окружение"). Эти hint-ы — produced из `gotchas[]` + `env_requirements.required[]` данных. New team member читает `.onboarding.md` → следует hints → продуктивен за 30 минут вместо 2 дней.
+`.specs/.onboarding.md` ДОЛЖЕН включать Section 6 "Suggested next steps" с 1-3 actionable hint'ами (например: "Prerequisites: установи AUTO_COMMIT_API_KEY из 1Password", "First task: запусти /[pomogator-doctor](../pomogator-doctor/FR.md) чтобы проверить окружение"). Эти hint-ы — produced из `gotchas[]` + `env_requirements.required[]` данных. New team member читает `.onboarding.md` → следует hints → продуктивен за 30 минут вместо 2 дней.
 
 **Связанные AC:** [AC-11](ACCEPTANCE_CRITERIA.md#ac-11-fr-11) · **Use Case:** Поддерживает US-11
 

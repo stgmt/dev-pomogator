@@ -117,7 +117,7 @@
 - Hardcode `stgmt/dev-pomogator` — rejected because dev-pomogator is shipped via `npx` to third parties; any maintainer-specific literal would break their workflow. Documented as P0 in REVIEW_NOTES.md round 1.
 - Single Layer 2 only (no env) — rejected because every invocation would re-spawn `gh repo view` × ~5ms × N runs, adding latency without benefit when answer is stable across runs.
 
-### Decision: Standalone worktree-doctor.cjs instead of porting full pomogator-doctor
+### Decision: Standalone worktree-doctor.cjs instead of porting full [pomogator-doctor](../pomogator-doctor/FR.md)
 
 **Rationale:** Full `/pomogator-doctor` (17 checks) lives in `.dev-pomogator/tools/pomogator-doctor/` — exactly the gitignored location that is missing in orphan worktrees (chicken-and-egg). A standalone CJS in global `~/.dev-pomogator/scripts/` works regardless of worktree-local state. Scope deliberately narrow (6 checks) to keep size <300 LOC and execution <200ms full / <50ms quick.
 

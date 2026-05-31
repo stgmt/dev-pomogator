@@ -271,7 +271,7 @@ Phase 0 зависит от нескольких **внешних** инстру
 |---------|----------|--------|-------|
 | Claude Code Explore subagent | [VERIFIED: available in Claude Code 2.x] | Internal tool (Agent tool, subagent_type=Explore) | Core dependency для FR-7 parallel recon |
 | `repomix` CLI | [VERIFIED: public npm package yamadashy/repomix] | https://github.com/yamadashy/repomix | Optional (fallback if missing) |
-| `/run-tests` skill | [VERIFIED: existing in dev-pomogator tui-test-runner extension] | `.claude/skills/run-tests/SKILL.md` | Core dependency для FR-5 |
+| `/run-tests` skill | [VERIFIED: existing in dev-pomogator [tui-test-runner](../tui-test-runner/FR.md) extension] | `.claude/skills/run-tests/SKILL.md` | Core dependency для FR-5 |
 | `git` CLI | [VERIFIED: required for dev-pomogator] | `package.json engines` + README | Fallback если unavailable: mtime-based invalidation |
 | `ajv` (JSON Schema validation) | [VERIFIED: public npm package] | https://ajv.js.org/ | New dependency — add to extensions/onboard-repo/package.json OR root package.json |
 

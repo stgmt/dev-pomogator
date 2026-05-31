@@ -178,5 +178,5 @@ tests/e2e/
 **TEST_FORMAT:** BDD
 **Framework:** Cucumber.js (через vitest .feature integration — existing repo pattern)
 **Install Command:** already installed (vitest 4.x в package.json)
-**Evidence:** `tests/e2e/specs-generator-variant-matrix.test.ts` использует тот же pattern (vitest + .feature через manual scenario mapping); `package.json` уже содержит vitest dependency. См. RESEARCH.md "Existing Patterns" row "spec-variant-matrix benchmark".
+**Evidence:** `tests/e2e/specs-generator-variant-matrix.test.ts` использует тот же pattern (vitest + .feature через manual scenario mapping); `package.json` уже содержит vitest dependency. См. RESEARCH.md "Existing Patterns" row "[spec-variant-matrix](../spec-variant-matrix/FR.md) benchmark".
 **Verdict:** No hooks required. Tests reading test fixtures from `tests/fixtures/skills-rules-optimizer/` (read-only) и проверяющие audit/detect/merge output JSON structure. No state mutation, no API calls, no DB. `vitest run` straight без setup/teardown.

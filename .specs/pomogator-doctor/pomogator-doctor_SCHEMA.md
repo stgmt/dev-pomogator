@@ -162,9 +162,9 @@ export interface ExtensionManifest {
 | specs-workflow | — | — | — |
 | test-quality | — | — | — |
 | auto-commit | — | — | — |
-| prompt-suggest | — | — | — |
+| [prompt-suggest](../prompt-suggest/FR.md) | — | — | — |
 | learnings-capture | — | — | — |
-| test-statusline | — | — | — |
+| [test-statusline](../test-statusline/FR.md) | — | — | — |
 | claude-mem-health | ['chroma', 'python3'] | ['chromadb'] | — |
 | bun-oom-guard | ['bun'] | — | — |
 | context-menu | — | — | — |

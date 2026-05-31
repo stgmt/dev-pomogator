@@ -21,12 +21,18 @@ interface Case {
     category: string | null;
     resolver: string | null;
   };
+  /** When true, classifier is called with current repo root so dead-link
+   * pre-flight basename glob runs against the actual filesystem. */
+  withRepoRoot?: boolean;
 }
 
 const CASES_FILE = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
   'classifier-cases.json',
 );
+
+// Repo root = three levels above this file: evals/ -> spec-backlog/ -> tools/ -> <root>
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 
 function main(): number {
   const raw = JSON.parse(fs.readFileSync(CASES_FILE, 'utf8')) as {
@@ -37,7 +43,9 @@ function main(): number {
   const failures: string[] = [];
 
   for (const c of raw.cases) {
-    const got = classify('test-slug', c.input);
+    const got = c.withRepoRoot
+      ? classify('test-slug', c.input, REPO_ROOT)
+      : classify('test-slug', c.input);
     const gotCategory = got.entry?.category ?? null;
     const gotResolver = got.entry?.suggested_resolver ?? null;
 

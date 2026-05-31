@@ -188,7 +188,10 @@ async function cmdIngest(args: string[]): Promise<number> {
   const seenIds = new Set<string>();
   for (const r of reports) {
     for (const f of r.findings) {
-      const verdict = classify(r.specSlug, f);
+      // Pass repoRoot so dead-link classifier can run basename-glob
+      // pre-flight (filters out 0-match findings to NOISE, routes 2+
+      // matches to ambiguous-link, keeps 1-match for link-fixer).
+      const verdict = classify(r.specSlug, f, repoRoot);
       if (verdict.verdict === 'AUTO_FIX') {
         auto++;
         continue;

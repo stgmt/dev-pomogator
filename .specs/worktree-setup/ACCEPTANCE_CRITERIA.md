@@ -80,7 +80,7 @@ WHEN doctor is invoked with `--quick` flag THEN ONLY Check #3 (tools dir existen
 
 **Требование:** [FR-7](FR.md#fr-7-session-pilot-integration-contract)
 
-WHEN session-pilot indexer scans worktrees (existing behavior) THEN indexer SHALL invoke `~/.dev-pomogator/scripts/worktree-doctor.cjs --quick` for each worktree AND set field `tools_present: true` if exit 0, else `false`.
+WHEN [session-pilot](../session-pilot/FR.md) indexer scans worktrees (existing behavior) THEN indexer SHALL invoke `~/.dev-pomogator/scripts/worktree-doctor.cjs --quick` for each worktree AND set field `tools_present: true` if exit 0, else `false`.
 
 WHEN session-pilot serves `GET /api/claude` THEN response JSON SHALL contain `tools_present: boolean` for each worktree row.
 

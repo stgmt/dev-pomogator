@@ -7,6 +7,8 @@ export type BacklogCategory =
   | 'contradictory-nfr'
   | 'missing-fr-section'
   | 'dead-link-typo'
+  | 'ambiguous-link'
+  | 'missing-cross-ref'
   | 'unrecognised';
 
 export type BacklogStatus = 'open' | 'in-progress' | 'resolved' | 'wontfix';
