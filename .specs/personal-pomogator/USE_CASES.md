@@ -130,7 +130,7 @@
 **Given** target project где включён `claude-mem-health` extension
 **When** installer registers claude-mem MCP server
 
-**Then** `src/installer/memory.ts:registerClaudeMemMcp` SHALL:
+**Then** ~~`src/installer/memory.ts:registerClaudeMemMcp`~~ (removed in v2 — no canonical replacement) SHALL:
 - Писать ТОЛЬКО в `~/.claude.json` (HOME global)
 - НЕ писать в project `.mcp.json`
 - Поведение уже корректное, spec фиксирует как invariant (BDD test PERSO_84 защищает от регрессии)

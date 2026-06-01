@@ -11,7 +11,7 @@
   _Requirements: FR-1_
 - [ ] Создать `tests/e2e/beta-flag.test.ts` с заглушками для 8 scenarios -- @feature1 @feature2 @feature3 @feature4
   _Requirements: FR-1_
-  _Leverage: `tests/e2e/claude-installer.test.ts` (installer test patterns)_
+  _Leverage: ~~`tests/e2e/claude-installer.test.ts`~~ (installer test patterns)_
 - [ ] Verify: все 8 тестов FAIL (Red)
 
 ## Phase 1: Extension Interface + Manifest (Green) @feature1

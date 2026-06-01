@@ -57,7 +57,7 @@ stack=ts candidates=4 ms=1
   - getExtensionSkills() returns Map<string, string> kind=collection-returning
 ```
 
-`src/installer/claude.ts`:
+~~`src/installer/claude.ts`~~ (removed in v2 — no canonical replacement):
 
 ```
 stack=ts candidates=1

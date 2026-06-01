@@ -72,7 +72,7 @@
 | `tests/features/plugins/pomogator-doctor/doctor-output.test.ts` | create | Tests для FR-20/FR-23/FR-24/FR-25, scenarios 08, 10 |
 | `tests/features/plugins/pomogator-doctor/doctor-gating.test.ts` | create | Tests для FR-21/FR-22, scenarios 03, 11, 12 |
 | `tests/features/plugins/pomogator-doctor/doctor-reliability.test.ts` | create | Tests для NFR Reliability, scenarios 13, 14 |
-| `tests/e2e/pomogator-doctor.test.ts` | create | Full E2E: install → doctor → verify output (integration через runInstaller helper) |
+| ~~`tests/e2e/pomogator-doctor.test.ts`~~ → `tests/e2e/doctor-{core,entry,gating,output,reinstall,reliability}.test.ts` (split layout) | create | Full E2E: install → doctor → verify output (integration через runInstaller helper) |
 
 ## BDD fixtures and hooks — NEW
 

@@ -58,7 +58,7 @@
 | Path | Action | Reason |
 |------|--------|--------|
 | `tests/features/plugins/specs-workflow/PLUGIN003_specs-workflow.feature` | edit | Add scenarios for hard-cutover migration FR-4, FR-6, FR-7; research-workflow skill registration FR-5; token efficiency FR-13. Existing scenario "Skill file is installed for Claude Code" stays (still relevant). Stale Cursor scenarios at lines 22-25 NOT touched (FR-12 OUT OF SCOPE) |
-| `tests/e2e/specs-management-skill-migration.test.ts` | create | Integration test driving FR-4 / FR-6 / FR-7 / FR-11 verification via `runInstaller(updateMode=true)` + assertions on file state. Uses existing `tests/e2e/helpers.ts` |
+| ~~`tests/e2e/specs-management-skill-migration.test.ts`~~ → skill `.claude/skills/create-spec/` + `tests/e2e/create-specs-bdd-enforcement.test.ts` | create | Integration test driving FR-4 / FR-6 / FR-7 / FR-11 verification via `runInstaller(updateMode=true)` + assertions on file state. Uses existing `tests/e2e/helpers.ts` |
 | `tests/fixtures/specs-management-as-skill/sample-spec/USER_STORIES.md` | create | F-2 fixture for SPECMGT001_09 hook validation test per [FR-11](FR.md#fr-11-specs-validation-hook-unaffected-by-migration-feature4) |
 | `tests/fixtures/specs-management-as-skill/sample-spec/FR.md` | create | F-2 fixture per [FR-11](FR.md#fr-11-specs-validation-hook-unaffected-by-migration-feature4) |
 | `tests/fixtures/specs-management-as-skill/sample-spec/ACCEPTANCE_CRITERIA.md` | create | F-2 fixture per [FR-11](FR.md#fr-11-specs-validation-hook-unaffected-by-migration-feature4) |

@@ -4,7 +4,7 @@
 
 ## Contested Path
 
-`src/installer/claude.ts`
+~~`src/installer/claude.ts`~~ (removed in v2 — no canonical replacement)
 
 ## Analysis
 
@@ -15,7 +15,7 @@
 
 ## Recommendation
 
-The path `src/installer/claude.ts` should be owned by spec `auto-capture`.
+The path ~~`src/installer/claude.ts`~~ (removed in v2 — no canonical replacement) should be owned by spec `auto-capture`.
 Spec `claude-mem-integration` claims the same path but was created further from the file's
 first-commit date in git history. Consider updating `claude-mem-integration` to reference the
 asset via the canonical owner's module instead.

@@ -12,7 +12,7 @@
 
 - [x] Скопировать .feature файл в `tests/features/plugins/test-statusline/PLUGIN011_test-statusline.feature`
   _Source: `.specs/test-statusline/test-statusline.feature`_
-- [x] Создать step definitions (заглушки): `tests/e2e/test-statusline.test.ts`
+- [x] Создать step definitions (заглушки): ~~`tests/e2e/test-statusline.test.ts`~~ (renamed → `tests/e2e/tui-statusline.test.ts`)
   _Requirements: все FR_
 - [x] Создать hooks: beforeEach/afterEach в test-statusline.test.ts — создание/удаление temp .test-status/ директории
   _Source: DESIGN.md "BDD Test Infrastructure" > "Новые hooks"_
@@ -104,7 +104,7 @@
   _Leverage: `extensions/auto-simplify/extension.json` (template)_
 - [ ] Создать `extensions/hooks-integrity/tools/hooks-integrity/hooks_integrity_check.ts` — SessionStart hook @feature7
   _Requirements: [FR-10](FR.md#fr-10-hooks-integrity-guard-feature7)_
-  _Leverage: `src/installer/claude.ts:420-427` (smart merge), `extensions/test-statusline/tools/test-statusline/statusline_session_start.ts` (readStdin, log)_
+  _Leverage: ~~`src/installer/claude.ts:420-427`~~ (removed in v2 — no canonical replacement) (smart merge), `extensions/test-statusline/tools/test-statusline/statusline_session_start.ts` (readStdin, log)_
 - [ ] Зарегистрировать SessionStart hook в `.claude/settings.json` @feature7
   _Requirements: [FR-10](FR.md#fr-10-hooks-integrity-guard-feature7)_
 - [ ] Создать BDD тесты: `tests/features/plugins/hooks-integrity/PLUGIN012_hooks-integrity.feature` и `tests/e2e/hooks-integrity.test.ts` @feature7
@@ -122,7 +122,7 @@
   _Leverage: `readJsonSafe()`, `writeJsonAtomic()`_
 - [x] Усилить `extensions/test-statusline/tools/test-statusline/statusline_wrapper.js` — fail-open при empty/error и single-line normalization @feature8
   _Requirements: [FR-11](FR.md#fr-11-statusline-coexistence-wrapper-feature8)_
-- [x] Добавить e2e покрытие для project/global wrapper resolution и fail-open edge cases в `tests/e2e/test-statusline.test.ts` @feature8
+- [x] Добавить e2e покрытие для project/global wrapper resolution и fail-open edge cases в ~~`tests/e2e/test-statusline.test.ts`~~ (renamed → `tests/e2e/tui-statusline.test.ts`) @feature8
   _Requirements: [FR-11](FR.md#fr-11-statusline-coexistence-wrapper-feature8), [AC-11](ACCEPTANCE_CRITERIA.md#ac-11-fr-11-statusline-coexistence-wrapper-feature8)_
 - [x] Синхронизировать `.specs/test-statusline/*` и `tests/features/plugins/test-statusline/PLUGIN011_test-statusline.feature` с wrapper-сценариями `PLUGIN011_20+` @feature8
   _Requirements: [FR-11](FR.md#fr-11-statusline-coexistence-wrapper-feature8)_

@@ -239,6 +239,37 @@ export function classify(
     };
   }
 
+  // Deprecated-ref route — fired when a finding explicitly carries an
+  // evidence.version field (signal that the target path was REMOVED in a
+  // newer plugin/feature version with no canonical replacement). The
+  // heuristic for AUTO-deciding wrap vs delete is complex (requires
+  // knowing if an alternative exists), so this branch is intentionally
+  // narrow: only routes when both the finding.code matches AND
+  // evidence.version is present. Operators can also invoke manually via
+  // `spec-backlog resolve --category deprecated-ref`.
+  if (code === 'impl-drift/deprecated-ref') {
+    return {
+      verdict: 'BACKLOG',
+      entry: {
+        slug,
+        code,
+        category: 'deprecated-ref',
+        evidence: {
+          file: finding.referenced_in,
+          referenced_in: finding.referenced_in,
+          target_path: finding.expected_path,
+          target: finding.expected_path,
+          // The detector emits version via a non-standard channel — pass
+          // through whatever the finding carries. resolver bails with
+          // missing-evidence if version is absent.
+          version: (finding as InputFinding & { version?: string }).version,
+        },
+        suggested_resolver: 'wrap-deprecated-ref',
+        difficulty: 'easy',
+      },
+    };
+  }
+
   // Extended routes (added after dogfood pass-2 surfaced 974 unrecognised).
   if (code === 'impl-drift/missing-file') {
     // Detector emits this for backtick-wrapped path references in spec prose

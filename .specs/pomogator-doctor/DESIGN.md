@@ -21,7 +21,7 @@
 
 - App-код (shared core): `src/doctor/` (NEW)
 - Extension: `extensions/pomogator-doctor/` (NEW)
-- Tests: `tests/features/plugins/pomogator-doctor/*.test.ts` (NEW per-feature) + `tests/e2e/pomogator-doctor.test.ts` (NEW integration)
+- Tests: `tests/features/plugins/pomogator-doctor/*.test.ts` (NEW per-feature) + `tests/e2e/doctor-{core,entry,gating,output,reinstall,reliability}.test.ts` (split layout) [was: ~~`tests/e2e/pomogator-doctor.test.ts`~~]
 - Fixtures: `tests/fixtures/pomogator-doctor/` (NEW)
 
 ## Директории и файлы
@@ -41,8 +41,8 @@ src/doctor/
     ├── hooks-registry.ts    # FR-4
     ├── env-vars.ts          # FR-5 (dual location)
     ├── env-example.ts       # FR-6
-    ├── bun.ts               # FR-7 (gated). Reuse: src/installer/memory.ts:checkBunInstalled()
-    ├── python.ts            # FR-8 (gated, per-ext packages). Reuse: src/installer/memory.ts:pipInstall() fallback strategy для hint text
+    ├── bun.ts               # FR-7 (gated). Reuse: ~~`src/installer/memory.ts:checkBunInstalled()`~~ (removed in v2 — no canonical replacement)
+    ├── python.ts            # FR-8 (gated, per-ext packages). Reuse: ~~`src/installer/memory.ts:pipInstall()`~~ (removed in v2 — no canonical replacement) fallback strategy для hint text
     ├── mcp-parse.ts         # FR-9
     ├── mcp-probe.ts         # FR-10 (Full probe)
     ├── version-match.ts     # FR-11

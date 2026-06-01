@@ -81,7 +81,7 @@ WHEN `docker compose run` exits non-zero (симуляция test failure) THEN 
 
 ## AC-16 (FR-16, conditional): Installer hook path bug
 
-- IF investigation confirms bug THEN `tests/e2e/installer-hook-path.test.ts` exists AND passes; installer fix in `src/installer/claude.ts`
+- IF investigation confirms bug THEN `tests/e2e/installer-hook-path.test.ts` exists AND passes; installer fix in ~~`src/installer/claude.ts`~~ (removed in v2 — no canonical replacement)
 - ELSE section marked `[NOT APPLICABLE: investigation found no bug]` в ANALYSIS report
 
 **Resolution:** NOT APPLICABLE (legacy install pre-FR-2, not installer bug).

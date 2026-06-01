@@ -1,5 +1,7 @@
 # Tasks
 
+Status: DEFERRED — see README.md banner
+
 ## TDD Workflow
 
 > Задачи организованы по TDD: Red → Green → Refactor.
@@ -19,12 +21,12 @@
 - [ ] Запустить analyze-features: `./.dev-pomogator/tools/specs-generator/analyze-features.ts -Format text -DomainCode PERSO` — получить table patterns, step dictionary, свободный domain number
 - [ ] Создать `.specs/personal-pomogator/personal-pomogator.feature` с Background + 33 сценариями в 9 группах @feature1..@feature9 (PERSO_10..93) @feature1 @feature2 @feature3 @feature4 @feature5 @feature6 @feature7 @feature8 @feature9
   _Source: analyze-features report + DESIGN.md BDD Test Infrastructure_
-- [ ] Создать `tests/e2e/personal-pomogator.test.ts` с describe/it skeleton 1:1 mapping к .feature через @featureN теги
+- [DEFERRED] Создать `tests/e2e/personal-pomogator.test.ts` с describe/it skeleton 1:1 mapping к .feature через @featureN теги — spec shelved 2026-06-01, no test file created
   _Requirements: all FR, `.claude/rules/extension-test-quality.md`_
-- [ ] Создать beforeEach hook в `personal-pomogator.test.ts` — F-1 (target dir) + F-3 (initGitRepo) + F-2 (gitignore seed)
+- [DEFERRED] Создать beforeEach hook в `personal-pomogator.test.ts` — F-1 (target dir) + F-3 (initGitRepo) + F-2 (gitignore seed) — spec shelved 2026-06-01, no test file created
   _Source: DESIGN.md "BDD Test Infrastructure" > "Новые hooks"_
   _Reuse: `tests/e2e/helpers.ts` (appPath, homePath, initGitRepo)_
-- [ ] Создать afterEach hook в `personal-pomogator.test.ts` — cleanup temp dirs, restore HOME env
+- [DEFERRED] Создать afterEach hook в `personal-pomogator.test.ts` — cleanup temp dirs, restore HOME env — spec shelved 2026-06-01, no test file created
   _Source: DESIGN.md "BDD Test Infrastructure" > "Cleanup Strategy"_
 - [ ] Создать helper `createFakeDevPomogatorRepo(targetDir)` в `tests/e2e/helpers.ts` — F-10 fixture для FR-4 self-guard тестов
   _Source: DESIGN.md "Test Data & Fixtures" > F-10_
@@ -43,7 +45,7 @@
   _Leverage: atomic write pattern из `.claude/rules/atomic-config-save.md`_
 - [ ] Добавить `MARKER_BEGIN` / `MARKER_END` constants + block regeneration логику
 - [ ] Реализовать `collapseToDirectoryEntries` — sort + group-by-parent + collapse если все leaves managed
-- [ ] Wire в `src/installer/claude.ts` после `addProjectPaths` (~line 270) — self-guard check + collectManagedPaths helper + writeManagedGitignoreBlock call
+- [ ] Wire в ~~`src/installer/claude.ts`~~ (removed in v2 — no canonical replacement) после `addProjectPaths` (~line 270) — self-guard check + collectManagedPaths helper + writeManagedGitignoreBlock call
   _Requirements: [FR-1](FR.md#fr-1-managed-gitignore-block-feature1), [FR-4](FR.md#fr-4-self-guard-для-dev-pomogator-репо-feature3)_
 - [ ] Verify: сценарии PERSO_10..16 (@feature1 gitignore) и PERSO_30..33 (@feature3 self-guard) переходят из Red в Green
 
@@ -53,10 +55,10 @@
 
 - [ ] Создать `src/installer/settings-local.ts` с API: `writeHooksToSettingsLocal`, `migrateLegacySettingsJson`, `stripDevPomogatorFromSettingsLocal` -- @feature2
   _Requirements: [FR-2](FR.md#fr-2-settingslocaljson-target-для-hooksenv-feature2), [FR-3](FR.md#fr-3-legacy-migration-из-settingsjson-feature2)_
-  _Leverage: `src/utils/atomic-json.ts`, dedupe logic из `src/installer/claude.ts:469-494`_
+  _Leverage: `src/utils/atomic-json.ts`, dedupe logic из ~~`src/installer/claude.ts:469-494`~~ (removed in v2 — no canonical replacement)_
 - [ ] Реализовать `writeHooksToSettingsLocal` — readJsonSafe existing + merge с preserve user keys + writeJsonAtomic
 - [ ] Реализовать `migrateLegacySettingsJson` — detect через installedHooksByExtension (authoritative) + substring fallback, move to local, clean original
-- [ ] Изменить `installExtensionHooks` в `src/installer/claude.ts:371-544` — под self-guard false route в settings.local.json, call migration first
+- [ ] Изменить `installExtensionHooks` в ~~`src/installer/claude.ts:371-544`~~ (removed in v2 — no canonical replacement) — под self-guard false route в settings.local.json, call migration first
   _Requirements: [FR-2](FR.md#fr-2-settingslocaljson-target-для-hooksenv-feature2), [FR-3](FR.md#fr-3-legacy-migration-из-settingsjson-feature2)_
 - [ ] Verify: сценарии PERSO_20..26 (@feature2) переходят из Red в Green
 
@@ -91,7 +93,7 @@
 - [ ] Реализовать batched `git ls-files --` call через `execFileSync` с MSYS_NO_PATHCONV env
 - [ ] Graceful no-git handling — return empty Set если `.git/` отсутствует
 - [ ] Error handling — git non-zero exit = empty Set (не throw)
-- [ ] Wire в `src/installer/claude.ts` перед step 1 copy (line ~63) — собрать candidates для commands+rules+skills, call detect, exclude collisions from copies AND from managedByExtension
+- [ ] Wire в ~~`src/installer/claude.ts`~~ (removed in v2 — no canonical replacement) перед step 1 copy (line ~63) — собрать candidates для commands+rules+skills, call detect, exclude collisions from copies AND from managedByExtension
   _Requirements: [FR-7](FR.md#fr-7-collision-detection-через-git-ls-files-feature6), [FR-1](FR.md#fr-1-managed-gitignore-block-feature1)_
 - [ ] Добавить WARN console.warn при collision detection
 - [ ] Verify: сценарии PERSO_60..63 (@feature6) переходят из Red в Green
@@ -121,7 +123,7 @@
   _Requirements: [FR-10](FR.md#fr-10-secret-detection-в-project-mcpjson-feature8)_
   _Leverage: `readJsonSafe`_
 - [ ] Реализовать regex match `/\b(JIRA_(API_)?TOKEN|CONFLUENCE_(API_)?TOKEN|API_KEY|APIKEY|SECRET|PASSWORD|PRIVATE_KEY|AUTH_TOKEN|BEARER)\b/gi` против stringified JSON content
-- [ ] Wire в `src/installer/claude.ts` — после `addProjectPaths` (~line 270) под self-guard false — call `checkMcpJsonForSecrets` + console.warn если findings.length > 0
+- [ ] Wire в ~~`src/installer/claude.ts`~~ (removed in v2 — no canonical replacement) — после `addProjectPaths` (~line 270) под self-guard false — call `checkMcpJsonForSecrets` + console.warn если findings.length > 0
 - [ ] Verify: сценарии PERSO_80..84 (@feature8) переходят из Red в Green (PERSO_84 = claude-mem invariant, fixes current behavior without changes)
 
 ## Phase 8: Uninstall skill (Green) @feature9
@@ -134,14 +136,14 @@
   _Requirements: [FR-11](FR.md#fr-11-ai-agent-uninstall-skill-feature9)_
   _Leverage: existing skill format из `extensions/*/skills/*/SKILL.md`_
 - [ ] Написать SKILL.md тело — 5 секций (Safety Checks, Scope Selection, CLI-First, Manual Fallback, Verification) согласно DESIGN.md "SKILL.md 5-step algorithm"
-- [ ] Убедиться что installer уже подхватит skill через existing `getExtensionSkills` flow (`src/installer/claude.ts:173-195`) — no installer changes needed
+- [ ] Убедиться что installer уже подхватит skill через existing `getExtensionSkills` flow (~~`src/installer/claude.ts:173-195`~~ (removed in v2 — no canonical replacement)) — no installer changes needed
 - [ ] Verify: сценарии PERSO_90..93 (@feature9) переходят из Red в Green
 
 ## Phase 9: Tests + Docs + Refactor
 
 > Заполнить test cases, обновить документацию, финальная верификация.
 
-- [ ] Заполнить test cases PERSO_10..93 в `tests/e2e/personal-pomogator.test.ts` — replace expect.fail stubs реальной integration logic через runInstaller + filesystem assertions
+- [DEFERRED] Заполнить test cases PERSO_10..93 в `tests/e2e/personal-pomogator.test.ts` — replace expect.fail stubs реальной integration logic через runInstaller + filesystem assertions — spec shelved 2026-06-01, no test file created
   _Requirements: all FR, `.claude/rules/integration-tests-first.md`_
 - [ ] Обновить `CLAUDE.md` — Architecture секция про settings.local.json routing + MCP force-global + uninstall skill
   _Requirements: `.claude/rules/claude-md-glossary.md`_

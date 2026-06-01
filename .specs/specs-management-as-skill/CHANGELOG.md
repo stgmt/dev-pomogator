@@ -11,7 +11,7 @@ All notable changes to this feature will be documented in this file.
 - Phase 3+ Audit category-specific reference files: `phase3plus_audit-{errors,logic-gaps,inconsistency,rudiments,fantasies,undefined-behavior,jira-drift}.md` (7 files plus overview)
 - Reference file naming convention: `phaseN[.M]_descriptive-name.md` for phase-bound files
 - Skill composition: `create-spec` invokes `research-workflow` via `Skill("research-workflow")` during Phase 1 step 5 (RESEARCH.md filling)
-- Integration test `tests/e2e/specs-management-skill-migration.test.ts` driving FR-4 / FR-6 / FR-7 / FR-11 verification
+- Integration test ~~`tests/e2e/specs-management-skill-migration.test.ts`~~ → skill `.claude/skills/create-spec/` + `tests/e2e/create-specs-bdd-enforcement.test.ts` driving FR-4 / FR-6 / FR-7 / FR-11 verification
 - 14 new BDD scenarios SPECMGT001_01..14 added to `tests/features/plugins/specs-workflow/PLUGIN003_specs-workflow.feature`
 - Static fixture `tests/fixtures/specs-management-as-skill/sample-spec/` for hook validation tests
 

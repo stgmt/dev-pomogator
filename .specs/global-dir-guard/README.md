@@ -12,7 +12,7 @@
 
 - **Guard**: `src/guard/global-dir-guard.ts` → `dist/global-dir-guard.cjs`
 - **Uninstall маркер**: `uninstall.ps1`
-- **Hook wiring**: `src/installer/claude.ts`
+- **Hook wiring**: ~~`src/installer/claude.ts`~~ (removed in v2 — no canonical replacement)
 
 ## Спеки: 5 FR, 8 BDD сценариев, 4 фазы реализации
 

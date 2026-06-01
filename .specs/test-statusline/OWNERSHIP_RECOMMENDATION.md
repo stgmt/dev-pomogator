@@ -4,7 +4,7 @@
 
 ## Contested Path
 
-`src/installer/claude.ts`
+~~`src/installer/claude.ts`~~ (removed in v2 — no canonical replacement)
 
 ## Analysis
 
@@ -15,7 +15,7 @@
 
 ## Recommendation
 
-The path `src/installer/claude.ts` should be owned by spec `test-statusline`.
+The path ~~`src/installer/claude.ts`~~ (removed in v2 — no canonical replacement) should be owned by spec `test-statusline`.
 Spec `dev-pomogator-canonical-plugin` claims the same path but was created further from the file's
 first-commit date in git history. Consider updating `dev-pomogator-canonical-plugin` to reference the
 asset via the canonical owner's module instead.

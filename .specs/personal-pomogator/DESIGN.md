@@ -38,7 +38,7 @@
 
 ### Модифицированные модули (edit)
 
-- **`src/installer/claude.ts`** — wire всех новых модулей:
+- **~~`src/installer/claude.ts`~~ (removed in v2 — no canonical replacement)** — wire всех новых модулей:
   - Import `isDevPomogatorRepo`, `writeManagedGitignoreBlock`, `collapseToDirectoryEntries`, `writeHooksToSettingsLocal`, `migrateLegacySettingsJson`, `detectGitTrackedCollisions`, `checkMcpJsonForSecrets`
   - Перед step 1 copy: collision detection для commands/rules/skills candidates, exclude из copy AND из managedByExtension
   - `installExtensionHooks` (line 371): под self-guard false — route в settings.local.json (FR-2) через `writeHooksToSettingsLocal`, предварительно вызвать `migrateLegacySettingsJson` (FR-3)
@@ -58,12 +58,12 @@
 
 ### Не изменяем (invariant preservation)
 
-- **`src/installer/memory.ts:registerClaudeMemMcp`** — уже пишет только в `~/.claude.json` (HOME). FR-9 фиксирует это как invariant через BDD test PERSO_84, без изменений кода.
+- **~~`src/installer/memory.ts:registerClaudeMemMcp`~~ (removed in v2 — no canonical replacement)** — уже пишет только в `~/.claude.json` (HOME). FR-9 фиксирует это как invariant через BDD test PERSO_84, без изменений кода.
 
 ## Где лежит реализация
 
 - **App-код**: `src/installer/*.ts` (installer core), `src/scripts/*.cjs` (runtime helpers)
-- **Tests**: `tests/e2e/personal-pomogator.test.ts` (integration через runInstaller)
+- **Tests**: ~~`tests/e2e/personal-pomogator.test.ts`~~ (DEFERRED — never created)
 - **Extension manifest**: `extensions/personal-pomogator/extension.json`
 - **Skill files**: `extensions/personal-pomogator/skills/dev-pomogator-uninstall/SKILL.md`
 - **Build config**: `scripts/build-check-update.js` (add bootstrap.cjs to bundle list)
@@ -102,7 +102,7 @@ extensions/personal-pomogator/       (create, FR-11)
     └── SKILL.md
 
 tests/e2e/
-└── personal-pomogator.test.ts  (create, 33 scenarios)
+└── personal-pomogator.test.ts  (DEFERRED — never created, 33 scenarios planned)
 
 .specs/personal-pomogator/       (create via scaffold, 15 files)
 ├── USER_STORIES.md
@@ -333,15 +333,15 @@ export async function checkMcpJsonForSecrets(repoRoot: string): Promise<SecretFi
 |---|---|---|
 | `readJsonSafe` / `writeJsonAtomic` | `src/utils/atomic-json.ts` | settings.local.json reads/writes |
 | `ManagedFileEntry`, `ManagedFiles`, `InstalledExtension` | `src/config/schema.ts:3-25` | gitignore generation source, uninstall iteration |
-| `installedHooksByExtension` map | `src/installer/claude.ts:373` | Authoritative hook identification в migration |
+| `installedHooksByExtension` map | ~~`src/installer/claude.ts:373`~~ (removed in v2 — no canonical replacement) | Authoritative hook identification в migration |
 | `addProjectPaths`, `saveConfig`, `loadConfig` | `.claude/skills/skills-rules-optimizer/scripts/shared.ts` + `src/config/index.ts` | Config atomic updates |
 | `findRepoRoot` | `src/utils/repo.ts:13` | CLI uninstall entry point |
 | `copyBundledScript` | `src/installer/shared.ts:212-233` | Bootstrap file copying |
-| `getExtensionSkills` flow | `src/installer/claude.ts:173-195` | Install uninstall skill через existing pipe |
+| `getExtensionSkills` flow | ~~`src/installer/claude.ts:173-195`~~ (removed in v2 — no canonical replacement) | Install uninstall skill через existing pipe |
 | `writeJsonAtomic` | `src/utils/atomic-json.ts` | setup-mcp.py has own Python atomic write, не reuse но parallel concept |
 | `initGitRepo`, `appPath`, `homePath`, `runInstaller` | `tests/e2e/helpers.ts` | Integration test setup |
-| Dedupe logic из `installExtensionHooks` | `src/installer/claude.ts:469-494` | Extract to helper, reuse в settings-local.ts |
-| Hook 3-format handling | `src/installer/claude.ts:381-411` | Reuse в migrateLegacySettingsJson |
+| Dedupe logic из `installExtensionHooks` | ~~`src/installer/claude.ts:469-494`~~ (removed in v2 — no canonical replacement) | Extract to helper, reuse в settings-local.ts |
+| Hook 3-format handling | ~~`src/installer/claude.ts:381-411`~~ (removed in v2 — no canonical replacement) | Reuse в migrateLegacySettingsJson |
 
 ## BDD Test Infrastructure (ОБЯЗАТЕЛЬНО)
 
@@ -363,15 +363,15 @@ export async function checkMcpJsonForSecrets(repoRoot: string): Promise<SecretFi
 | `tests/e2e/helpers.ts:initGitRepo` | Helper | Global | Создаёт fake `.git/` structure (HEAD + config) | Да — для collision detection tests |
 | `tests/e2e/helpers.ts:appPath` | Helper | Global | Resolve test target path | Да — beforeEach setup |
 | `tests/e2e/helpers.ts:homePath` | Helper | Global | Resolve fake HOME path | Да — ~/.dev-pomogator tests |
-| `tests/e2e/claude-installer.test.ts:beforeEach` | Setup | Per-test | Clean temp state | Reference — pattern для personal-pomogator.test.ts |
+| ~~`tests/e2e/claude-installer.test.ts:beforeEach`~~ | Setup | Per-test | Clean temp state | Reference — pattern для ~~personal-pomogator.test.ts~~ (DEFERRED) |
 
 ### Новые hooks
 
 | Hook файл | Тип | Тег/Scope | Что делает | По аналогии с |
 |-----------|-----|-----------|------------|---------------|
-| `tests/e2e/personal-pomogator.test.ts:beforeEach` | BeforeEach | per-test | Создать temp project dir, initGitRepo, seed .gitignore с user entries, optional seed .claude/settings.json с team hook, optional seed .mcp.json с secrets | `claude-installer.test.ts` beforeEach |
-| `tests/e2e/personal-pomogator.test.ts:afterEach` | AfterEach | per-test | Удалить temp project dir, restore HOME env если менялось, cleanup fake ~/.dev-pomogator | helpers.ts cleanup patterns |
-| `tests/e2e/personal-pomogator.test.ts:describe beforeAll` | BeforeAll | per-file | Build dist если stale (чтобы runInstaller работал) | `claude-installer.test.ts` beforeAll |
+| ~~`tests/e2e/personal-pomogator.test.ts:beforeEach`~~ (DEFERRED) | BeforeEach | per-test | Создать temp project dir, initGitRepo, seed .gitignore с user entries, optional seed .claude/settings.json с team hook, optional seed .mcp.json с secrets | `claude-installer.test.ts` beforeEach |
+| ~~`tests/e2e/personal-pomogator.test.ts:afterEach`~~ (DEFERRED) | AfterEach | per-test | Удалить temp project dir, restore HOME env если менялось, cleanup fake ~/.dev-pomogator | helpers.ts cleanup patterns |
+| ~~`tests/e2e/personal-pomogator.test.ts:describe beforeAll`~~ (DEFERRED) | BeforeAll | per-file | Build dist если stale (чтобы runInstaller работал) | `claude-installer.test.ts` beforeAll |
 
 ### Cleanup Strategy
 

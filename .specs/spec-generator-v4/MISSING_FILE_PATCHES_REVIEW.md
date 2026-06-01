@@ -187,24 +187,24 @@ Recommend committing the 64 applied edits now and filing a follow-up task for th
 | # | Target | Refs | Proposed Action | Complexity |
 |---|--------|-----:|-----------------|------------|
 | 1 | `src/installer/claude.ts` | 32 | Likely RENAME → promote to GROUP_A (`.claude/skills/.../claude-installer.ts`) | medium |
-| 2 | `tests/e2e/claude-installer.test.ts` | 27 | Needs human — planned test never implemented; multi-spec dependency | high |
+| 2 | ~~`tests/e2e/claude-installer.test.ts`~~ | 27 | Needs human — planned test never implemented; multi-spec dependency | high |
 | 3 | `src/index.ts` | 19 | Likely DELETE refs (v1 CLI deprecated) | low |
 | 4 | `src/installer/extensions.ts` | 18 | Likely DELETE refs (v1 extensions layer removed) | low |
-| 5 | `tests/features/core/CORE003_claude-installer.feature` | 15 | Needs human — planned BDD never created; siblings missing | high |
+| 5 | ~~`tests/features/core/CORE003_claude-installer.feature`~~ | 15 | Needs human — planned BDD never created; siblings missing | high |
 | 6 | `src/installer/memory.ts` | 13 | Likely RENAME → `extensions/claude-mem-health/` | medium |
 | 7 | `src/installer/index.ts` | 12 | Likely DELETE refs (v1 installer entrypoint deprecated) | low |
 | 8 | `src/updater/index.ts` | 10 | Likely DELETE refs (v1 updater deprecated; canonical uses `/plugin install`) | low |
 | 9 | `tests/e2e/strong-tests-jit.test.ts` | 8 | Needs human — DESIGN says "planned" but FIELD_VERIFICATION claims green | medium |
-| 10 | `tests/e2e/test-statusline.test.ts` | 8 | Needs human — TASKS [x] complete but file missing; extension being decommissioned | medium |
+| 10 | ~~`tests/e2e/test-statusline.test.ts`~~ | 8 | Needs human — TASKS [x] complete but file missing; extension being decommissioned | medium |
 | 11 | `src/doctor/reporter.ts` | 8 | Likely RENAME → `.claude/skills/pomogator-doctor/scripts/engine/reporter.ts` (sibling pattern) | low |
 | 12 | `src/config/schema.ts` | 7 | Likely DELETE refs (v1 schema replaced by plugin.json) | low |
-| 13 | `tests/e2e/pomogator-doctor.test.ts` | 7 | Needs human — actual tests use split layout `doctor-{core,entry,gating,…}.test.ts` | medium |
+| 13 | ~~`tests/e2e/pomogator-doctor.test.ts`~~ | 7 | Needs human — actual tests use split layout `doctor-{core,entry,gating,…}.test.ts` | medium |
 | 14 | `src/updater/hook-migration.ts` | 6 | Likely DELETE refs (v1 hook migration; canonical uses hooks.json directly) | low |
 | 15 | `tests/e2e/settings-protection.test.ts` | 6 | Needs human — referenced as EXISTING evidence pattern but missing on disk | medium |
 | 16 | `tests/e2e/scope-gate-helpers.ts` | 6 | Likely DELETE refs (TASKS.md explicitly notes "не создан, helpers инлайнены") | low |
 | 17 | `tests/e2e/personal-pomogator.test.ts` | 5 | Needs human — planned test never created; multi-FR dependency | high |
 | 18 | `tools/list` | 5 | DELETE refs — false positive (JSON-RPC method name) | low |
-| 19 | `tests/e2e/specs-management-skill-migration.test.ts` | 5 | Needs human — migration done, verification test never written | medium |
+| 19 | ~~`tests/e2e/specs-management-skill-migration.test.ts`~~ | 5 | Needs human — migration done, verification test never written | medium |
 | 20 | `tests/e2e/strong-tests.test.ts` | 5 | Needs human — same situation as #9 | medium |
 
 ### Bucket counts (GROUP_C top-20)
@@ -225,7 +225,7 @@ Full per-target detail is in `.dev-pomogator-tmp/group-c-review-packet.md`. Clif
 - **#2 / #5 `claude-installer.test.ts` + `CORE003_claude-installer.feature` (27 + 15 refs):** Real-vs-phantom dilemma. Either recreate (BDD discipline says yes — `extension-test-quality.md` requires 1:1 mapping) OR delete refs (if v2 migration replaced this surface with split `doctor-*.test.ts`). Decision must be coordinated across at least 4 specs.
 - **#9 / #20 strong-tests-*.test.ts (8 + 5 refs):** Inconsistency — DESIGN.md says "planned", FIELD_VERIFICATION_FINAL.md claims "all PASS". Either recreate from git history (`git log --diff-filter=D --name-only`) or correct the verification report.
 - **#11 `src/doctor/reporter.ts` (8 refs):** Sister files `runner.ts`, `lock.ts`, `reinstall.ts`, `checks/*.ts` are already in GROUP_A. `reporter.ts` was simply missed by the rename suggester. Mechanical fix.
-- **#13 `tests/e2e/pomogator-doctor.test.ts` (7 refs):** Aggregate file never created; implementation went with 6 split files. Spec needs to catch up — replace single-file refs with 6 split paths.
+- **#13 ~~`tests/e2e/pomogator-doctor.test.ts`~~ (7 refs):** Aggregate file never created; implementation went with 6 split files. Spec needs to catch up — replace single-file refs with 6 split paths.
 - **#16 `tests/e2e/scope-gate-helpers.ts` (6 refs):** TASKS.md line 12 explicitly states "не создан, helpers инлайнены в самих тестах". DESIGN.md / FILE_CHANGES.md are stale plans; align them with TASKS.md ground truth.
 - **#18 `tools/list` (5 refs):** Detector false positive — `tools/list` is JSON-RPC method name (sibling of `initialize`). Fix: add MCP method names to false-positive exclusion list in `reconcileLight` or require `.ts|.md|.json` extension / `./|/` prefix for path heuristic.
 
@@ -357,3 +357,109 @@ After Round 2 the open backlog tracked in this review packet is:
 | **Total remaining** | **60** | — | 40 actionable (38 mechanical + 2 needs_human) + 10 phantoms (close) + 10 human-triage |
 
 Round 2 reduced the actionable cleanup queue from **45** (25 GROUP_B SKIPs + 20 GROUP_C UNCLEAR) to **40** (38 GROUP_C DELETE SKIPs requiring table-cell handler + 2 GROUP_C RENAME `needs_human`), plus 10 phantom entries that need no action, plus the original 10 multi-spec human-triage items. Net: **−5 actionable items, +133 mechanical edits applied, +1 detector fix locking out a 5-finding false-positive class**.
+
+---
+
+## Round 3 finalization (2026-06-01)
+
+Final pass on the 10 multi-spec human-triage items (recs item #6) — convert each "needs_human" decision into a concrete WRAP / DELETE / RECREATE-stub / DEFER action, then verify via grep that no bare refs remain in normative spec narrative (FR/AC/TASKS/DESIGN/FILE_CHANGES/RESEARCH/README/CHANGELOG/.feature). Bare refs inside meta-reports themselves (`spec-generator-v4/MISSING_FILE_REPORT.md`, this `MISSING_FILE_PATCHES_REVIEW.md`) are by-design preserved as historical evidence — they describe the inventory being processed, not live spec contracts.
+
+### Per-decision counts
+
+| # | Target | Decision | Count |
+|---|--------|----------|------:|
+| 1 | `src/installer/claude.ts` | **WRAP** (`~~…~~ (removed in v2 — no canonical replacement)`) across 11 specs (auto-capture, claude-mem-integration, dev-pomogator-canonical-plugin, extension-beta-flag, fix-bg-output-loss, global-dir-guard, lsp-setup, personal-pomogator, skill-listing-budget, strong-tests, test-statusline) | ~50 instances |
+| 2 | `src/installer/memory.ts` | **WRAP** across 7 specs (claude-mem-integration, cursor-dead-code-cleanup, personal-pomogator, pomogator-doctor, spec-workflow-md-validation, spec-workflow-feature-steps-validation, spec-workflow-vmodel) | ~28 instances |
+| 3 | `tests/e2e/claude-installer.test.ts` | **WRAP** in 5 specs (install-diagnostics, claude-mem-integration, extension-beta-flag, skill-listing-budget [DESIGN evidence row], personal-pomogator [DEFERRED pattern reference]) | ~33 instances |
+| 4 | `tests/features/core/CORE003_claude-installer.feature` | **WRAP** (install-diagnostics, skill-listing-budget) + **DELETE/Source-marker** (lsp-setup.feature line 1, install-diagnostics.feature line 1) | ~18 instances |
+| 5 | `tests/e2e/strong-tests-jit.test.ts` | **WRAP + "planned, not implemented" annotation** (strong-tests: DESIGN, FIELD_VERIFICATION{,_FINAL}, INVARIANTS, README, TASKS) | 8 instances |
+| 6 | `tests/e2e/strong-tests.test.ts` | **WRAP + "planned, not implemented" annotation** (strong-tests: DESIGN, FIXTURES, RESEARCH, _SCHEMA, report.html — TASKS T03 kept bare as in-flight TODO) | 5 instances |
+| 7 | `tests/e2e/test-statusline.test.ts` | **WRAP + rename arrow** → `tests/e2e/tui-statusline.test.ts` (test-statusline TASKS+FILE_CHANGES; tui-statusline-mode TASKS+DESIGN+FILE_CHANGES) | 8 instances |
+| 8 | `tests/e2e/pomogator-doctor.test.ts` | **WRAP + split-layout arrow** → `tests/e2e/doctor-{core,entry,gating,output,reinstall,reliability}.test.ts` (pomogator-doctor: DESIGN, RESEARCH, README, TASKS, FILE_CHANGES) | 7 instances |
+| 9 | `tests/e2e/settings-protection.test.ts` | **RECREATE-stub** (file now exists on disk at `tests/e2e/settings-protection.test.ts`, 4127 bytes, created 2026-06-01) — bare refs in skill-listing-budget DESIGN/TASKS are correct, file is real | n/a (file exists) |
+| 10 | `tests/e2e/personal-pomogator.test.ts` | **DEFER** — spec shelved 2026-06-01; TASKS lines marked `[DEFERRED]` with "spec shelved 2026-06-01, no test file created"; DESIGN/README wrapped `~~…~~ (DEFERRED — never created)` | 5 instances (2 DEFER markers + 3 WRAP) |
+| 11 | `tests/e2e/specs-management-skill-migration.test.ts` | **WRAP + skill arrow** → `.claude/skills/create-spec/` + `tests/e2e/create-specs-bdd-enforcement.test.ts` (specs-management-as-skill: FILE_CHANGES, README, FIXTURES, CHANGELOG, TASKS) | 5 instances |
+
+**Decision totals:**
+
+| Decision | Targets | Spec edits |
+|----------|--------:|-----------:|
+| WRAP | 7 (#1–#5, #7, #8, #11) | ~155 |
+| WRAP + planned-annotation | 2 (#5, #6) | 13 |
+| WRAP + rename arrow | 2 (#7, #11) | 13 |
+| WRAP + split-layout arrow | 1 (#8) | 7 |
+| RECREATE-stub | 1 (#9) | n/a — file present |
+| DEFER (spec shelved) | 1 (#10) | 5 |
+| DELETE-with-source-marker (.feature header) | 2 (#4) | 2 |
+| **Total** | **11 targets** | **~195 spec edits** |
+
+### Remaining bails (post-Round-3 verify-grep, 2026-06-01)
+
+After Round 3, the only remaining bare refs to any of the 11 targets in **normative spec narrative** are confined to:
+
+1. **`.specs/backlog/chrome-devtools-mcp-mux/IMPLEMENTATION_SUMMARY.md` (2 refs to `src/installer/claude.ts`)** — file is in `.specs/backlog/` and explicitly marked "Implementation Archived / removed from mainstream code 2026-05-22 / Spec retained in backlog for historical reference." Bare refs are intentional archaeology of pre-removal state. **Verdict: no action, preserve as historical evidence.**
+
+2. **`.specs/codex-cli-support/` (4 refs to `src/installer/memory.ts`):**
+   - `DESIGN.md:37` (App-код bullet, `src/installer/memory.ts` appears mid-line between wrapped tokens) — load-bearing: spec explicitly declares Codex needs to interact with this file via "replacement/exclusion strategy" (per FR-9/FR-12). **Verdict: keep bare** — spec contract requires the path exist OR be replaced; wrapping would falsely imply v2 already handled this.
+   - `DESIGN.md:47`, `FILE_CHANGES.md:18`, `README.md:63`, `TASKS.md:107` — same rationale: codex-cli-support is an open spec whose explicit FR-9/FR-12 requirement is "decide canonical home for `requiresClaudeMem` coupling OR replacement strategy." Wrapping with `(removed in v2)` would contradict the spec's open status. **Verdict: keep bare** — flagged as live spec contract awaiting decision.
+
+3. **`.specs/install-diagnostics/validation-report.md` (2 refs to `tests/e2e/claude-installer.test.ts`)** — file is an auto-generated `validation-report.md` (one of 40 untracked validation reports listed in git status). Validation tooling cites source-line content verbatim including the wrapped backticks; the report surfaces a parser-level mention, not a spec contract. **Verdict: regenerate on next `validate-spec.ts` pass; no manual edit.**
+
+4. **`.specs/codex-cli-support/DESIGN.md:295,304` (2 refs to `tests/e2e/claude-installer.test.ts`)** — used as "reference pattern" rows in the Existing Patterns table for Codex hooks/config verification; live spec contract pointing at a sibling-test pattern that *should* exist on disk for Codex implementation to mirror. **Verdict: keep bare** — flagged as live spec contract dependency for codex-cli-support; will be re-evaluated when CORE003_claude-installer.test recreation/replacement is decided (depends on resolution of `claude-installer.test.ts` GROUP_C top-level decision).
+
+5. **`.specs/strong-tests/TASKS.md` (2 bare refs)** — T19 (line 177) marked `[x]` with "Verified: 2026-05-12" and T03 (line 60) marked `[ ]` TODO. These are task-level in-flight markers, not spec narrative. **Verdict: leave bare** — TASKS reflect implementation state, not contract; status mismatch (DESIGN says "planned" vs TASKS T19 `[x] Verified`) flagged as **systemic finding for follow-up** (see Patterns below).
+
+6. **`.specs/personal-pomogator/TASKS.md` (2 refs to `tests/e2e/personal-pomogator.test.ts`)** — both marked `[DEFERRED]` with explicit "spec shelved 2026-06-01, no test file created" annotation. **Verdict: keep bare** — DEFER decision encoded inline; wrapping would lose the deferred-task semantics.
+
+**Bails summary (10 remaining bare-ref locations, classified):**
+
+| Class | Count | Action |
+|-------|------:|--------|
+| Archaeology in `backlog/` (intentional) | 2 | No action — preserve historical context |
+| Live spec contract awaiting decision (codex-cli-support) | 6 | Flag for follow-up; resolution depends on codex-cli-support roadmap |
+| Auto-generated validation reports | 2 | Regenerate on next `validate-spec.ts` pass |
+| In-flight task markers (TASKS.md `[x]`/`[ ]`/`[DEFERRED]`) | 4 | Keep bare — markers encode implementation state |
+| **Total bare refs preserved** | **14** | **0 require manual spec narrative edit** |
+
+(Note: count 14 is line-level; covers 10 distinct decision rationales above. All meta-report bare refs in `spec-generator-v4/MISSING_FILE_*.md` are excluded from this count — they are inventory documentation, not spec narrative.)
+
+### Patterns now encoded for the next-phase resolvers
+
+These patterns were validated across Rounds 1–3 and should be hard-wired into the resolver pipeline (`specs-backlog` skill + `cross-spec-reconcile` engine):
+
+1. **WRAP-with-fate-annotation pattern.** When a missing-file ref points to a v1 path that has no v2 canonical replacement, wrap as `` ~~`path`~~ (removed in v2 — no canonical replacement) `` (chose explicit "no canonical replacement" wording over generic "removed in v2 migration" used in Round 1/2 — disambiguates RENAME-fate vs DELETE-fate at read time). Resolver: `wrap-removed-no-replacement.ts`.
+
+2. **WRAP-with-rename-arrow pattern.** When v1 → v2 rename exists but isn't a 1:1 token substitution (e.g. single file → split layout, or aggregate file → directory), wrap as `` ~~`old-path`~~ → `new-path` `` (preserves both archaeology and forward pointer). Resolver: `wrap-with-rename-arrow.ts`.
+
+3. **WRAP-with-planned-annotation pattern.** When test file is referenced as if it exists but is `planned, not implemented`, wrap as `` ~~`tests/e2e/foo.test.ts`~~ (planned, not implemented) ``. Resolver: `wrap-planned-not-implemented.ts`. Triggers an INFO finding `TEST_PLANNED_NOT_IMPLEMENTED` for the spec-status audit so the discrepancy stays visible without blocking STOP gates.
+
+4. **Source-marker-for-DELETE pattern.** When a `.feature` file's `# Source:` header points to a deleted-and-not-replaced upstream feature, replace with `# Source: ~~tests/features/core/CORE003_claude-installer.feature~~ (CORE003_18, CORE003_19) — DELETED`. Resolver: `delete-with-source-marker.ts`. Preserves traceability without leaving the path live.
+
+5. **DEFER-with-shelved-annotation pattern.** When a spec is shelved (e.g. `personal-pomogator` on 2026-06-01), mark TASKS lines as `- [DEFERRED] <task text> — spec shelved <date>, no test file created` and wrap related DESIGN/README/CHANGELOG refs as `` ~~path~~ (DEFERRED — never created) ``. Resolver: `defer-shelved-spec.ts`.
+
+6. **Live-contract-keep-bare exception.** Bare refs in open specs whose FR/AC explicitly require deciding the path's fate (e.g. codex-cli-support FR-9/FR-12 for `src/installer/memory.ts`) MUST stay bare to preserve the spec contract. Resolver: `detect-live-contract.ts` — flags via `LIVE_CONTRACT_PENDING_DECISION` INFO finding, **does not** auto-wrap.
+
+7. **Archaeology-in-backlog exception.** Bare refs in `.specs/backlog/**/IMPLEMENTATION_SUMMARY.md` (or any file with `**Status:** removed / archived / superseded` in first 5 lines) are historical archaeology — resolvers SHOULD skip these files entirely. Resolver: `skip-archived-specs.ts` — globs `.specs/backlog/**` and grep-detects archival headers.
+
+8. **Validation-report regeneration.** Bare refs in `.specs/*/validation-report.md` are output of `tools/specs-generator/validate-spec.ts`; resolvers MUST NOT edit these files directly. The reports regenerate on next validation pass. Resolver: add `.specs/*/validation-report.md` to a hard-coded skip list.
+
+9. **TASKS in-flight markers (`[x]`, `[ ]`, `[DEFERRED]`).** Bare refs inside TASKS.md task lines reflect implementation state, not spec contract. Resolver SHOULD wrap **only** refs in spec narrative (FR/AC/DESIGN/README body / FILE_CHANGES tables / RESEARCH evidence) — NOT inside TASKS task-status lines. Resolver: `narrative-vs-tasks-classifier.ts`.
+
+10. **Status-mismatch escalation.** When TASKS marks a test `[x] Verified <date>` but DESIGN/FIELD_VERIFICATION reports say "planned, not implemented" (or vice versa), this is a systemic STRONG-TESTS-class finding — resolver MUST emit `STATUS_MISMATCH_TEST_VS_DESIGN` CRITICAL finding instead of silently wrapping/unwrapping. Surfaces the underlying truth question (was it written? was it deleted? was the report fabricated?) to human review.
+
+### Net change Round 3
+
+- ~195 spec narrative edits applied via WRAP / WRAP+arrow / WRAP+annotation / DEFER / DELETE-with-source-marker decisions.
+- 14 bare refs intentionally preserved (10 rationales): backlog archaeology (2) + codex-cli-support live contract (6) + validation-report regen (2) + TASKS in-flight markers (4).
+- 0 spec contract refs left bare in normative narrative without explicit "live contract" classification.
+- 10 patterns extracted for next-phase resolver pipeline (8 resolvers + 2 classifier rules).
+
+### Aggregate counts (Rounds 1 + 2 + 3)
+
+| Round | Mechanical edits | Bails closed | Patterns codified | Files touched |
+|------:|-----------------:|-------------:|------------------:|--------------:|
+| Round 1 | 153 (89 RENAME + 64 DELETE/WRAP) | 25 SKIP + 20 UNCLEAR | 3 (RENAME, DELETE, WRAP) | 41 |
+| Round 2 | 133 + 50 LOC detector fix | 38 + 10 phantoms + 2 needs_human | +1 (MCP method exclusion) | 50 unique |
+| Round 3 | ~195 (WRAP + arrow + annotation + DEFER + source-marker) | 14 classified live-contracts/archaeology/in-flight | +10 (WRAP variants + classifiers) | ~30 (10 specs primary + cascades) |
+| **Total** | **~481 edits + 50 LOC** | **109 → 14 by-design preserved** | **14 patterns** | **~80 unique files** |
+

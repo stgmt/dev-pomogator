@@ -82,7 +82,7 @@
 
 | Файл | Изменение |
 |------|-----------|
-| `src/installer/memory.ts` | Копировать validate-steps.ts при установке |
+| ~~`src/installer/memory.ts`~~ (removed in v2 — no canonical replacement) | Копировать validate-steps.ts при установке |
 
 **Добавить функцию:**
 ```typescript

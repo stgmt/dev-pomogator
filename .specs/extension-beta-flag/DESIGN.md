@@ -18,7 +18,7 @@
 
 ## Где лежит реализация
 
-- Install pipeline: `src/installer/claude.ts`
+- Install pipeline: ~~`src/installer/claude.ts`~~ (removed in v2 — no canonical replacement)
 
 ## Директории и файлы
 

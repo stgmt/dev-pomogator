@@ -180,11 +180,11 @@ const LSP_SERVERS: LspServer[] = [
 
 | Что переиспользуем | Откуда | Зачем |
 |---------------------|--------|-------|
-| envRequirements injection | `src/installer/claude.ts` (существует) | ENABLE_LSP_TOOL=1 автоматически |
+| envRequirements injection | ~~`src/installer/claude.ts`~~ (removed in v2 — no canonical replacement) (существует) | ENABLE_LSP_TOOL=1 автоматически |
 | postInstall hook execution | `src/installer/extensions.ts` (существует) | Запуск setup-lsp.ts |
 | Extension manifest format | `extensions/auto-commit/extension.json` | Шаблон для envRequirements |
-| Tool installation flow | `src/installer/claude.ts` (существует) | Copy tools → .dev-pomogator/tools/ |
-| Rule installation flow | `src/installer/claude.ts` (существует) | Copy rules → .claude/rules/ |
+| Tool installation flow | ~~`src/installer/claude.ts`~~ (removed in v2 — no canonical replacement) (существует) | Copy tools → .dev-pomogator/tools/ |
+| Rule installation flow | ~~`src/installer/claude.ts`~~ (removed in v2 — no canonical replacement) (существует) | Copy rules → .claude/rules/ |
 
 ## BDD Test Infrastructure
 

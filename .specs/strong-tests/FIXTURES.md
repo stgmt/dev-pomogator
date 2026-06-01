@@ -2,7 +2,7 @@
 
 ## Overview
 
-Per DESIGN.md `Classification: TEST_DATA_NONE` — strong-tests skill itself does not create, modify, or persist data. Tests live as vitest E2E cases (`tests/e2e/strong-tests.test.ts`) that exercise the skill workflow via spawnSync / direct invocation, using ephemeral tmp dirs for fixture inputs (per-test cleanup via vitest afterEach). No persistent fixtures, no DB seed, no global state.
+Per DESIGN.md `Classification: TEST_DATA_NONE` — strong-tests skill itself does not create, modify, or persist data. Tests live as vitest E2E cases (~~`tests/e2e/strong-tests.test.ts`~~ — planned, not implemented) that exercise the skill workflow via spawnSync / direct invocation, using ephemeral tmp dirs for fixture inputs (per-test cleanup via vitest afterEach). No persistent fixtures, no DB seed, no global state.
 
 ## Fixture Inventory
 

@@ -4,15 +4,15 @@
 
 **Требование:** [FR-1](FR.md#fr-1-remove-cursor-only-functions-from-memoryts)
 
-WHEN developer greps `src/installer/memory.ts` for `installCursorHooks` THEN grep SHALL return 0 results.
-WHEN developer greps `src/installer/memory.ts` for `areCursorHooksInstalled` THEN grep SHALL return 0 results.
-WHEN developer greps `src/installer/memory.ts` for `CursorHooksJson` THEN grep SHALL return 0 results.
+WHEN developer greps ~~`src/installer/memory.ts`~~ (removed in v2 — no canonical replacement) for `installCursorHooks` THEN grep SHALL return 0 results.
+WHEN developer greps ~~`src/installer/memory.ts`~~ (removed in v2 — no canonical replacement) for `areCursorHooksInstalled` THEN grep SHALL return 0 results.
+WHEN developer greps ~~`src/installer/memory.ts`~~ (removed in v2 — no canonical replacement) for `CursorHooksJson` THEN grep SHALL return 0 results.
 
 ## AC-2 (FR-2): No dead helpers in memory.ts @feature2
 
 **Требование:** [FR-2](FR.md#fr-2-remove-dead-helper-functions-from-memoryts)
 
-WHEN developer greps `src/installer/memory.ts` for `copyCheckUpdateScript` THEN grep SHALL return 0 results.
+WHEN developer greps ~~`src/installer/memory.ts`~~ (removed in v2 — no canonical replacement) for `copyCheckUpdateScript` THEN grep SHALL return 0 results.
 
 ## AC-3 (FR-3): No Cursor code in updater @feature3
 

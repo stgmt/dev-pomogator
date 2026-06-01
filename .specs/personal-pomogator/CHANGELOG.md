@@ -26,7 +26,7 @@ All notable changes to this feature will be documented in this file.
 
 ### Changed
 
-- **`src/installer/claude.ts:installExtensionHooks`** — routing target с `.claude/settings.json` на `.claude/settings.local.json` под self-guard false, с legacy migration
+- **~~`src/installer/claude.ts:installExtensionHooks`~~ (removed in v2 — no canonical replacement)** — routing target с `.claude/settings.json` на `.claude/settings.local.json` под self-guard false, с legacy migration
 - **`src/installer/shared.ts:copyBundledScript`** — добавлено throw для REQUIRED_SCRIPTS set (не silent warning)
 - **`src/installer/shared.ts:makePortableTsxCommand`** — hook command теперь ссылается на `tsx-runner-bootstrap.cjs` вместо `tsx-runner.js` напрямую
 - **`src/installer/shared.ts:setupGlobalScripts`** — добавлено copying `tsx-runner-bootstrap.cjs` + post-install verification что runner существует

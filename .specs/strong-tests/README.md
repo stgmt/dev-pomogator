@@ -53,7 +53,7 @@ Skill `strong-tests` для dev-pomogator закрывающий разрыв м
   - `scripts/merge-survivor-verdicts.ts` (v0.5.1 — verdict merge с survivorAnalysis summary)
 - **Test fixture:** `tests/fixtures/dotnet-stryker-target/` (Library.Shared + UnitTests + stryker-config.json; Stryker.NET self-test target)
 - **Extension manifest:** `extensions/test-quality/extension.json` (skills.strong-tests + skillFiles tracks all 9 files)
-- **Tests:** `tests/e2e/strong-tests-jit.test.ts` (9) + `detect-invariant-candidates-unit.test.ts` (47) + `strong-tests-dotnet-stryker.test.ts` (4) + `survivors-batch-and-merge.test.ts` (5) = **65 PASS**
+- **Tests:** ~~`tests/e2e/strong-tests-jit.test.ts`~~ (planned, not implemented) + `detect-invariant-candidates-unit.test.ts` (47) + `strong-tests-dotnet-stryker.test.ts` (4) + `survivors-batch-and-merge.test.ts` (5) = **56 PASS** (was 65; -9 unimplemented)
 - **HTML report:** `.specs/strong-tests/report.html` (Phase 6 deliverable)
 - **Field verification:** `.specs/strong-tests/FIELD_VERIFICATION.md` (lm-saas/AiPomogator install + smoke results)
 - **Invariants catalogue:** `.specs/strong-tests/INVARIANTS.md` (≥5 invariants per public function)

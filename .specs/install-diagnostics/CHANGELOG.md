@@ -47,8 +47,8 @@ npx --yes github:stgmt/dev-pomogator --claude
 
 ### Added
 - Spec `.specs/install-diagnostics/` с full 13-file structure
-- BDD scenarios CORE003_18 (Linux control) + CORE003_19 (Windows TDD red) в `tests/features/core/CORE003_claude-installer.feature`
-- Integration tests `describe.skipIf` блоки в `tests/e2e/claude-installer.test.ts` с парными `it()` для каждого assertion
+- BDD scenarios CORE003_18 (Linux control) + CORE003_19 (Windows TDD red) в ~~`tests/features/core/CORE003_claude-installer.feature`~~
+- Integration tests `describe.skipIf` блоки в ~~`tests/e2e/claude-installer.test.ts`~~ с парными `it()` для каждого assertion
 - Helper `runInstallerViaNpx(args, options): Promise<NpxInstallResult>` в `tests/e2e/helpers.ts` для запуска `npx --yes github:stgmt/dev-pomogator` в isolated temp dir с capture cleanup warnings
 - Diagnostic skill `.claude/skills/install-diagnostics/SKILL.md` с 4-mode classification (A=Win EPERM, B=missing dist, C=installer crash, D=top error)
 

@@ -4,7 +4,7 @@
 
 ## Contested Path
 
-`src/installer/memory.ts`
+~~`src/installer/memory.ts`~~ (removed in v2 — no canonical replacement)
 
 ## Analysis
 
@@ -15,7 +15,7 @@
 
 ## Recommendation
 
-The path `src/installer/memory.ts` should be owned by spec `spec-workflow-md-validation`.
+The path ~~`src/installer/memory.ts`~~ (removed in v2 — no canonical replacement) should be owned by spec `spec-workflow-md-validation`.
 Spec `spec-workflow-vmodel` claims the same path but was created further from the file's
 first-commit date in git history. Consider updating `spec-workflow-vmodel` to reference the
 asset via the canonical owner's module instead.

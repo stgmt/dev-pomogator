@@ -6,10 +6,10 @@
 
 ## Phase 0: BDD Foundation (Red)
 
-- [ ] Расширить test helpers в `tests/e2e/test-statusline.test.ts` для compact mode (YAML fixture creation, process cleanup) — @feature1..@feature5
-  files: `tests/e2e/test-statusline.test.ts` (edit)
+- [ ] Расширить test helpers в ~~`tests/e2e/test-statusline.test.ts`~~ → `tests/e2e/tui-statusline.test.ts` для compact mode (YAML fixture creation, process cleanup) — @feature1..@feature5
+  files: ~~`tests/e2e/test-statusline.test.ts`~~ → `tests/e2e/tui-statusline.test.ts` (edit)
   _Source: DESIGN.md "BDD Test Infrastructure" > "Новые hooks"_
-- [ ] Добавить compact mode сценарии (PLUGIN011_60..68) в `tests/e2e/test-statusline.test.ts` — @feature1..@feature5
+- [ ] Добавить compact mode сценарии (PLUGIN011_60..68) в ~~`tests/e2e/test-statusline.test.ts`~~ → `tests/e2e/tui-statusline.test.ts` — @feature1..@feature5
   _Requirements: [FR-1](FR.md#fr-1-compactbar-виджет-feature1), [FR-2](FR.md#fr-2-toggle-compactfull-mode-feature2), [FR-3](FR.md#fr-3-stop-tests-feature3), [FR-4](FR.md#fr-4-auto-compact-при-малом-terminal-height-feature4), [FR-5](FR.md#fr-5-выпилить-statusline-render-из-test-statusline-feature5)_
 - [ ] Обновить `.feature` файл с новыми сценариями
 - [ ] Убедиться что все новые сценарии FAIL (Red)

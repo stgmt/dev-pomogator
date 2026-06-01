@@ -8,7 +8,7 @@ This refactor's BDD scenarios drive installer integration tests via vitest + `te
 
 | ID | Name | Type | Path | Scope | Owner |
 |----|------|------|------|-------|-------|
-| F-1 | Pre-migration rule layout | factory | inline in `tests/e2e/specs-management-skill-migration.test.ts` | per-scenario | beforeEach in test file |
+| F-1 | Pre-migration rule layout | factory | inline in ~~`tests/e2e/specs-management-skill-migration.test.ts`~~ → skill `.claude/skills/create-spec/` + `tests/e2e/create-specs-bdd-enforcement.test.ts` | per-scenario | beforeEach in test file |
 | F-2 | Sample spec folder for hook validation | static | `tests/fixtures/specs-management-as-skill/sample-spec/` | per-scenario (read-only) | committed to repo |
 | F-3 | User-modified rule snapshot | factory | inline in test | per-scenario | beforeEach in test file |
 | F-4 | Sandboxed project root | factory | `appPath()` from `helpers.ts` | per-scenario | `setupCleanState()` helper |

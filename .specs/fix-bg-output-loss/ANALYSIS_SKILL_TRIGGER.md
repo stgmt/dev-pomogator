@@ -99,7 +99,7 @@ Per FR-13, frontmatter now contains explicit triggers (`dotnet test`, `pytest`, 
 
 > Hooks should be installed to **project's `settings.local.json`** (personal, gitignored) for target projects. Team-shared `settings.json` is never touched in target projects.
 
-`src/installer/claude.ts:504` `isDevPomogatorRepo()` check:
+~~`src/installer/claude.ts:504`~~ (removed in v2 — no canonical replacement) `isDevPomogatorRepo()` check:
 ```typescript
 const isDogfood = await isDevPomogatorRepo(repoRoot);
 const settingsPath = isDogfood

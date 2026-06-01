@@ -129,7 +129,7 @@ def on_resize(self, event):
 
 | Hook файл | Тип | Тег/Scope | Что делает | Можно переиспользовать? |
 |-----------|-----|-----------|------------|------------------------|
-| `tests/e2e/test-statusline.test.ts` helpers | BeforeEach/AfterEach | per-test | Создаёт/чистит temp dirs + YAML files | Да — расширить для compact mode тестов |
+| ~~`tests/e2e/test-statusline.test.ts`~~ → `tests/e2e/tui-statusline.test.ts` helpers | BeforeEach/AfterEach | per-test | Создаёт/чистит temp dirs + YAML files | Да — расширить для compact mode тестов |
 
 ### Новые hooks
 

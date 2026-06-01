@@ -9,13 +9,13 @@ Feature: CORE018 Cursor Dead Code Cleanup
 
   # @feature1
   Scenario: CORE018_01 memory.ts has no Cursor-specific exports
-    When I check src/installer/memory.ts for dead Cursor functions
+    When I check ~~`src/installer/memory.ts`~~ (removed in v2 — no canonical replacement) for dead Cursor functions
     Then it should not contain "installCursorHooks"
     And it should not contain "areCursorHooksInstalled"
 
   # @feature2
   Scenario: CORE018_02 memory.ts has no CursorHooksJson interface
-    When I check src/installer/memory.ts for dead Cursor types
+    When I check ~~`src/installer/memory.ts`~~ (removed in v2 — no canonical replacement) for dead Cursor types
     Then it should not contain "CursorHooksJson"
 
   # @feature3

@@ -19,7 +19,7 @@ Migrate the 670-line `specs-management.md` rule (currently auto-loaded into ever
 - **Manifest**: `extensions/specs-workflow/extension.json` — `ruleFiles.claude=[]`, `skills`/`skillFiles` extended
 - **Glossary**: `CLAUDE.md` — 4 rule rows removed from "Triggered" table
 - **Source files (deleted)**: 6 files in `.claude/rules/specs-workflow/`
-- **Tests**: `tests/features/plugins/specs-workflow/PLUGIN003_specs-workflow.feature` (extended with SPECMGT001_* scenarios) + new `tests/e2e/specs-management-skill-migration.test.ts`
+- **Tests**: `tests/features/plugins/specs-workflow/PLUGIN003_specs-workflow.feature` (extended with SPECMGT001_* scenarios) + new ~~`tests/e2e/specs-management-skill-migration.test.ts`~~ → skill `.claude/skills/create-spec/` + `tests/e2e/create-specs-bdd-enforcement.test.ts`
 
 ## Где читать дальше
 

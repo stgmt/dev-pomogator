@@ -31,10 +31,10 @@
 - `.claude/skills/strong-tests/scripts/run-mutation.ts`
 - `extensions/test-quality/extension.json` (edited)
 - `.specs/strong-tests/report.html` (Phase 6 HTML report deliverable)
-- `tests/e2e/strong-tests.test.ts` (planned BDD test)
+- ~~`tests/e2e/strong-tests.test.ts`~~ (planned, not implemented)
 - `.claude/skills/strong-tests/scripts/detect-invariant-candidates.ts` (planned — JiT detector)
 - `extensions/test-quality/tools/test-quality/posttool-jit.ts` (planned — PostToolUse hook handler source; installed to `.dev-pomogator/tools/test-quality/`)
-- `tests/e2e/strong-tests-jit.test.ts` (planned — BDD tests for JiT scenarios; ids enumerated in `strong-tests.feature` @feature7)
+- ~~`tests/e2e/strong-tests-jit.test.ts`~~ (planned, not implemented; ids enumerated in `strong-tests.feature` @feature7)
 - `.claude/logs/strong-tests-skips.jsonl` (runtime — created on first suppression; gitignored)
 
 ## Алгоритм
@@ -215,7 +215,7 @@
 
 ### Test IDs naming convention
 
-Test IDs follow `DOMAIN_CODE_NN` convention per `.claude/rules/extension-test-quality.md`. References in DESIGN.md to scenario codes are 1:1 mapped to `tests/e2e/strong-tests-jit.test.ts` `it()` blocks per BDD discipline. See `strong-tests.feature` for the canonical list of scenario codes (this DESIGN.md does not duplicate them to avoid env-var-like false positives in audit-spec FANTASIES check).
+Test IDs follow `DOMAIN_CODE_NN` convention per `.claude/rules/extension-test-quality.md`. References in DESIGN.md to scenario codes are 1:1 mapped to ~~`tests/e2e/strong-tests-jit.test.ts`~~ (planned, not implemented) `it()` blocks per BDD discipline. See `strong-tests.feature` for the canonical list of scenario codes (this DESIGN.md does not duplicate them to avoid env-var-like false positives in audit-spec FANTASIES check).
 
 ### Decision: PostToolUse hook chosen over UserPromptSubmit skill-activation-only for auto-trigger
 

@@ -91,7 +91,7 @@
 - WHEN `~/.claude.json` не существует THEN script SHALL create it с empty `{"mcpServers": {}}` structure AND add our entries.
 - IF project `.mcp.json` exists THEN script SHALL NOT modify it (no project writes at all).
 - WHEN script writes THEN console output SHALL contain `"[INFO] Writing MCP servers to global config"`.
-- WHEN `src/installer/memory.ts:registerClaudeMemMcp` runs THEN claude-mem SHALL register only в `~/.claude.json` (invariant test, no behavior change).
+- WHEN ~~`src/installer/memory.ts:registerClaudeMemMcp`~~ (removed in v2 — no canonical replacement) runs THEN claude-mem SHALL register only в `~/.claude.json` (invariant test, no behavior change).
 
 ## AC-10 (FR-10) @feature8
 

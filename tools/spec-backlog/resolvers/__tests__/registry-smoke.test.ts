@@ -1,4 +1,4 @@
-// Registry smoke test — verifies all 7 resolvers load + expose the
+// Registry smoke test — verifies all 8 resolvers load + expose the
 // Resolver interface. Per-resolver behavior tests live alongside.
 
 import { describe, it, expect } from 'vitest';
@@ -12,10 +12,11 @@ const EXPECTED_RESOLVERS = [
   'decision-arbiter',
   'owner-picker',
   'cross-ref-linker',
+  'wrap-deprecated-ref',
 ];
 
 describe('spec-backlog resolver registry — smoke', () => {
-  it('exposes all 7 resolvers from listResolvers()', () => {
+  it('exposes all 8 resolvers from listResolvers()', () => {
     const names = listResolvers().map((r) => r.name).sort();
     expect(names).toEqual([...EXPECTED_RESOLVERS].sort());
   });

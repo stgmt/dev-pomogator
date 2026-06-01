@@ -1,5 +1,13 @@
 # Personal Pomogator
 
+## ⏸ DEFERRED (2026-06-01)
+Spec was shelved without implementation. No test file, no .feature, no skill folder created.
+Re-open by:
+1. Reviewing FR.md for which requirements are still relevant
+2. Building skill folder if proceeding
+3. Removing this banner
+TODO(v4.x): decide ship-or-archive.
+
 > **Migration Note (v2.0, 2026-05-07):** Эта спека написана под v1 архитектуру (custom installer, `extensions/` слой, `npm i -g dev-pomogator`, `tsx-runner` global scripts, managed `.gitignore` block). После canonical refactor v2.0 (см. `.specs/dev-pomogator-canonical-plugin/`) распределение через Anthropic plugin marketplace (`/plugin marketplace add stgmt/dev-pomogator` + `/plugin install dev-pomogator@stgmt`) — npm install path и custom installer выпиливаются. Многие AC ниже описывают v1 поведение которое больше не актуально (но preserved as historical record). Активный contract — в canonical-plugin spec FRs.
 
 Гарантирует что **ничего** установленного dev-pomogator в target-проект (tools, hooks, rules, commands, skills, MCP config, env vars) **не может случайно попасть в git** команды. Личное у developer'а — остаётся личным.
@@ -33,7 +41,7 @@
 - **New extension**: `extensions/personal-pomogator/{extension.json, skills/dev-pomogator-uninstall/SKILL.md}`
 - **MCP**: `extensions/specs-workflow/tools/mcp-setup/setup-mcp.py` (force-global)
 - **Build**: `scripts/build-check-update.js` (bundle bootstrap.cjs)
-- **Tests**: `tests/e2e/personal-pomogator.test.ts`
+- **Tests**: ~~`tests/e2e/personal-pomogator.test.ts`~~ (DEFERRED — never created)
 - **Docs**: `CLAUDE.md`, `.claude/rules/updater-managed-cleanup.md`
 
 ## Где читать дальше

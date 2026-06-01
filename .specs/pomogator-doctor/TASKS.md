@@ -26,7 +26,7 @@
 - [ ] Создать 6 test file стабов с `describe.skip` блоками: doctor-core, doctor-entry, doctor-reinstall, doctor-output, doctor-gating, doctor-reliability
   _Source: FILE_CHANGES.md "BDD step definitions"_
 - [ ] Наполнить pending scenarios 01..15 из pomogator-doctor.feature — `it.skip('POMOGATORDOCTOR001_XX ...', () => { throw new Error('pending') })`
-- [ ] Создать integration test-entrypoint `tests/e2e/pomogator-doctor.test.ts` stub
+- [ ] Создать integration test-entrypoint ~~`tests/e2e/pomogator-doctor.test.ts`~~ → `tests/e2e/doctor-{core,entry,gating,output,reinstall,reliability}.test.ts` (split layout) stub
   _Source: FILE_CHANGES.md_
 - [ ] Убедиться `/run-tests` (через wrapper) показывает 15 failing scenarios (Red state)
   _Rule: centralized-test-runner_
@@ -101,11 +101,11 @@
 
 - [ ] `.claude/skills/pomogator-doctor/scripts/engine/checks/bun.ts` — FR-7, gated by installedExtensions.dependencies.binaries.includes('bun')
   _Requirements: [FR-7](FR.md#fr-7-bun-binary-check-extension-gated-feature11)_
-  _Leverage: `src/installer/memory.ts:checkBunInstalled`_
+  _Leverage: ~~`src/installer/memory.ts:checkBunInstalled`~~ (removed in v2 — no canonical replacement)_
   @feature11
 - [ ] `.claude/skills/pomogator-doctor/scripts/engine/checks/python.ts` — FR-8, gated, per-extension pythonPackages iteration
   _Requirements: [FR-8](FR.md#fr-8-python--perextension-packages-check-extension-gated-feature11)_
-  _Leverage: `src/installer/memory.ts:pipInstall` для hint text_
+  _Leverage: ~~`src/installer/memory.ts:pipInstall`~~ (removed in v2 — no canonical replacement) для hint text_
   @feature11
 - [ ] `.claude/skills/pomogator-doctor/scripts/engine/checks/docker.ts` — FR-14, gated by devcontainer extension
   _Requirements: [FR-14](FR.md#fr-14-docker--devcontainer-cli-check-extension-gated-feature11)_
@@ -322,7 +322,7 @@
 
 ### Full re-verification (Phase 8.11)
 
-- [ ] Integration E2E `tests/e2e/pomogator-doctor.test.ts` — add case "webapp-like broken install detected without false-positives"
+- [ ] Integration E2E ~~`tests/e2e/pomogator-doctor.test.ts`~~ → `tests/e2e/doctor-{core,entry,gating,output,reinstall,reliability}.test.ts` (split layout) — add case "webapp-like broken install detected without false-positives"
   _Rule: integration-tests-first_
 - [ ] Regression run: `/run-tests --grep pomogator-doctor` — все 31 scenario GREEN
 - [ ] Manual verification: `cd webapp && dev-pomogator --doctor` → expected 21+ critical findings из C20/C21, reinstall offer, no false-positive C6
@@ -333,7 +333,7 @@
 
 ## Phase 7: Refactor + E2E + docs
 
-- [ ] Full E2E integration test `tests/e2e/pomogator-doctor.test.ts` — install → doctor → verify report
+- [ ] Full E2E integration test ~~`tests/e2e/pomogator-doctor.test.ts`~~ → `tests/e2e/doctor-{core,entry,gating,output,reinstall,reliability}.test.ts` (split layout) — install → doctor → verify report
   _Leverage: `tests/e2e/helpers.ts:runInstaller`_
   _Rule: integration-tests-first_
 - [ ] Refactor: remove duplication, inline constants, extract shared helpers
@@ -349,7 +349,7 @@
 
 - [ ] Все 43 операции из FILE_CHANGES.md выполнены
 - [ ] 15 BDD scenarios GREEN
-- [ ] Integration test `tests/e2e/pomogator-doctor.test.ts` GREEN
+- [ ] Integration test ~~`tests/e2e/pomogator-doctor.test.ts`~~ → `tests/e2e/doctor-{core,entry,gating,output,reinstall,reliability}.test.ts` (split layout) GREEN
 - [ ] `npm run lint` 0 errors
 - [ ] `npm run build` успешно
 - [ ] 6 extension.json обновлены с dependencies field

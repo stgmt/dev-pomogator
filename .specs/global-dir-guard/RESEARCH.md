@@ -46,7 +46,7 @@
 ## Источники
 
 - `src/installer/shared.ts:235` — `setupGlobalScripts()` создаёт `~/.dev-pomogator/scripts/`
-- `src/installer/claude.ts:277` — `setupClaudeHooks()` пишет SessionStart hook в global settings
+- ~~`src/installer/claude.ts:277`~~ (removed in v2 — no canonical replacement) — `setupClaudeHooks()` пишет SessionStart hook в global settings
 - `dist/check-update.bundle.cjs:5838` — `checkUpdate()` читает config, не вызывает `setupGlobalScripts`
 - `uninstall.ps1:81` — единственное место удаления `~/.dev-pomogator/`
 - `src/installer/shared.ts:313` — `ensureHomeTsx()` ставит tsx в `~/.dev-pomogator/node_modules/`
@@ -94,7 +94,7 @@
 | Source | Path | What It Provides | Relevance |
 |--------|------|-------------------|-----------|
 | setupGlobalScripts | `src/installer/shared.ts:235` | Создание `~/.dev-pomogator/scripts/` | Переиспользовать для recovery |
-| setupClaudeHooks | `src/installer/claude.ts:277` | SessionStart hook registration | Переиспользовать для re-registration |
+| setupClaudeHooks | ~~`src/installer/claude.ts:277`~~ (removed in v2 — no canonical replacement) | SessionStart hook registration | Переиспользовать для re-registration |
 | check-update.bundle.cjs | `dist/check-update.bundle.cjs` | Фоновый апдейтер | Встроить recovery |
 | uninstall.ps1 | `uninstall.ps1` | Удаление глобальных файлов | Добавить маркер |
 

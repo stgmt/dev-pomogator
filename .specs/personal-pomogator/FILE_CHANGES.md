@@ -47,7 +47,7 @@
 
 | Path | Action | Reason |
 |------|--------|--------|
-| `src/installer/claude.ts` | edit | Wire self-guard + gitignore writer + settings.local routing + collision detection + mcp-security. New helper `collectManagedPaths`. [FR-1, FR-2, FR-3, FR-4, FR-7, FR-10](FR.md) |
+| ~~`src/installer/claude.ts`~~ (removed in v2 — no canonical replacement) | edit | Wire self-guard + gitignore writer + settings.local routing + collision detection + mcp-security. New helper `collectManagedPaths`. [FR-1, FR-2, FR-3, FR-4, FR-7, FR-10](FR.md) |
 | `.claude/skills/skills-rules-optimizer/scripts/shared.ts` | edit | [FR-5](FR.md#fr-5-loud-fail-setupglobalscripts-feature4): loud-fail в `copyBundledScript`, post-install verify в `setupGlobalScripts`, [FR-6](FR.md#fr-6-fail-soft-hook-wrapper-feature5): bootstrap copy, `makePortableTsxCommand` → bootstrap path |
 | `src/updater/hook-migration.ts` | edit | Consistent с FR-2: обновить migration чтобы таргетил `.claude/settings.local.json` не `.claude/settings.json` |
 | `src/index.ts` | edit | [FR-8](FR.md#fr-8-per-project-uninstall-command-feature7): CLI command parsing `uninstall --project [--dry-run]` |
@@ -59,7 +59,6 @@
 
 | Path | Action | Reason |
 |------|--------|--------|
-| `tests/e2e/personal-pomogator.test.ts` | create | Integration тесты 1:1 с .feature через runInstaller helpers. 33 scenarios PERSO_10..93 |
 | `tests/e2e/helpers.ts` | edit | Добавить helper `createFakeDevPomogatorRepo(targetDir)` для PERSO_30..33 self-guard tests (если не можем reuse initGitRepo) |
 | `tests/features/plugins/personal-pomogator/PERSO001_personal-pomogator.feature` | create | Симлинк или копия `.specs/personal-pomogator/personal-pomogator.feature` для specs-validator (если нужно separate tests/features path) |
 
@@ -77,7 +76,7 @@
 - **New extension files**: 2 (extension.json + SKILL.md)
 - **Modified src files**: 5 (claude.ts, shared.ts, hook-migration.ts, index.ts, build-check-update.js)
 - **Modified extensions**: 1 (setup-mcp.py)
-- **Tests**: 1 new file (personal-pomogator.test.ts), 1 edit (helpers.ts)
+- **Tests**: ~~1 new file (personal-pomogator.test.ts)~~ (DEFERRED — never created), 1 edit (helpers.ts)
 - **Docs**: 2 edits (CLAUDE.md, updater-managed-cleanup.md)
 
 **Total: 33 files** (15 spec + 7 new src + 2 new ext + 5 modified src + 1 modified ext + 2 tests + 2 docs — 1 overlap на tests/features symlink if decided против = 33)

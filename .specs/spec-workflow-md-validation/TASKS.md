@@ -50,7 +50,7 @@
 
 ## Phase 4: Installer
 
-- [x] ~~Обновить src/installer/memory.ts~~ — реализовано иначе: установка идёт через generic `toolFiles` flow в `extension.json` (20 файлов перечислены, installer копирует все). Dedicated `copyValidateSpecsScript()` не нужна — переиспользует существующий generic pipeline.
+- [x] ~~Обновить ~~`src/installer/memory.ts`~~ (removed in v2 — no canonical replacement)~~ — реализовано иначе: установка идёт через generic `toolFiles` flow в `extension.json` (20 файлов перечислены, installer копирует все). Dedicated `copyValidateSpecsScript()` не нужна — переиспользует существующий generic pipeline.
 
 ## Phase 5: Testing
 

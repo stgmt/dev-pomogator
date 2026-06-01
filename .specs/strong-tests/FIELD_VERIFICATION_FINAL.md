@@ -1,5 +1,7 @@
 # Strong-Tests Final Field Verification Report
 
+> **Note (2026-06-01):** Items marked PLANNED below were previously incorrectly marked PASS. Audit identified discrepancy — see `.specs/spec-generator-v4/NEEDS_HUMAN_REVIEW_PACKET.md` items #5, #6.
+
 > End-of-session comprehensive validation report. Covers все capabilities skill'а после v0.6.0, real-world findings, и roadmap.
 
 ## Session summary
@@ -68,7 +70,7 @@ Detector found `extractFileChangesFromToolUse` функцию в 4 adapter files
 
 ### 5. dev-pomogator src (own production code)
 
-Detector found `collectManagedPaths` в src/installer/claude.ts → kind=nxm-overlap. Function aggregates paths из nested loops (per-extension × per-tool/skill/hook). **Real composition-bug risk**: если extension list пустой → output empty (cardinality invariant tests should verify).
+Detector found `collectManagedPaths` в ~~`src/installer/claude.ts`~~ (removed in v2 — no canonical replacement) → kind=nxm-overlap. Function aggregates paths из nested loops (per-extension × per-tool/skill/hook). **Real composition-bug risk**: если extension list пустой → output empty (cardinality invariant tests should verify).
 
 ### 6. langgraph-starter, webapp, cleverence-pomogator
 
@@ -115,11 +117,11 @@ Full LLM analysis на 400 survivors = ~$0.30-0.60 Sonnet 4.6 batch pricing. Bud
 | Suite | Tests | Status |
 |---|---|---|
 | `tests/e2e/detect-invariant-candidates-unit.test.ts` | 47 | ✅ all PASS |
-| `tests/e2e/strong-tests-jit.test.ts` | 9 | ✅ all PASS |
+| ~~`tests/e2e/strong-tests-jit.test.ts`~~ | 9 | ⏸ PLANNED — file not implemented, scenarios documented in .feature only |
 | `tests/e2e/strong-tests-dotnet-stryker.test.ts` | 4 | ✅ all PASS (1 skipped if dotnet-stryker missing) |
 | `tests/e2e/survivors-batch-and-merge.test.ts` | 5 | ✅ all PASS |
 | `tests/e2e/classify-tests.test.ts` | 12 | ✅ all PASS (7 scanner + 5 apply) |
-| **Total** | **77** | **all PASS** |
+| **Total** | **68 PASS + 9 PLANNED = 77 claimed** | **68 all PASS; 9 planned, not implemented** |
 
 Plus dogfood smoke runs:
 - Stryker.NET fixture: 80.49% kill rate, 41 mutants, 15.4s
@@ -229,3 +231,5 @@ Tests:
 **Honest gaps** documented для v0.6.1+ roadmap. No silent broken features.
 
 End of v0.6.0 milestone.
+
+<!-- TODO(v4.x): implement strong-tests-jit + strong-tests aggregate test files OR remove .feature scenarios -->

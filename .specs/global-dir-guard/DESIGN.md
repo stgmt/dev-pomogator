@@ -13,14 +13,14 @@
 - `global-dir-guard.cjs` — standalone CJS скрипт, бандлится в dist/, вызывается из project hook. Детектит состояние, запускает recovery.
 - `uninstall.ps1` (edit) — добавить запись маркера перед удалением
 - `check-update.bundle.cjs` (edit) — вызвать guard перед основной логикой
-- `src/installer/claude.ts` (edit) — бандлить guard в dist/ при build
+- ~~`src/installer/claude.ts`~~ (removed in v2 — no canonical replacement) (edit) — бандлить guard в dist/ при build
 
 ## Где лежит реализация
 
 - Guard скрипт: `src/guard/global-dir-guard.ts` (новый)
 - Бандл: `dist/global-dir-guard.cjs` (собирается esbuild)
 - Uninstall маркер: `uninstall.ps1` + `uninstall.sh`
-- Hook wiring: `src/installer/claude.ts` → `setupClaudeHooks()`
+- Hook wiring: ~~`src/installer/claude.ts`~~ (removed in v2 — no canonical replacement) → `setupClaudeHooks()`
 
 ## Алгоритм global-dir-guard
 
@@ -78,8 +78,8 @@ Guard при детекции маркера удаляет его после о
 | Что переиспользуем | Откуда | Как |
 |---------------------|--------|-----|
 | `setupGlobalScripts()` логика | `src/installer/shared.ts:235` | Упрощённая копия: только copy 3 файлов, без npm install |
-| `setupClaudeHooks()` логика | `src/installer/claude.ts:277` | Упрощённая: только SessionStart hook, без cleanup |
-| `writeJsonAtomic()` | `src/installer/claude.ts` | Переиспользовать для atomic settings write |
+| `setupClaudeHooks()` логика | ~~`src/installer/claude.ts:277`~~ (removed in v2 — no canonical replacement) | Упрощённая: только SessionStart hook, без cleanup |
+| `writeJsonAtomic()` | ~~`src/installer/claude.ts`~~ (removed in v2 — no canonical replacement) | Переиспользовать для atomic settings write |
 | `makePortableScriptCommand()` | `.claude/skills/skills-rules-optimizer/scripts/shared.ts` | Для генерации hook command |
 
 ## BDD Test Infrastructure

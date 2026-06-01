@@ -51,7 +51,7 @@
 
 ## Cross-Test Coverage
 
-- BDD scenarios: `tests/features/core/CORE003_claude-installer.feature` → CORE003_18 (@feature18, парный с @feature1), CORE003_19 (@feature19, парный с @feature2), CORE003_20 (парный с @feature6 FR-9)
-- Integration tests: `tests/e2e/claude-installer.test.ts` → 3 `describe.skipIf` блока
+- BDD scenarios: ~~`tests/features/core/CORE003_claude-installer.feature`~~ → CORE003_18 (@feature18, парный с @feature1), CORE003_19 (@feature19, парный с @feature2), CORE003_20 (парный с @feature6 FR-9)
+- Integration tests: ~~`tests/e2e/claude-installer.test.ts`~~ → 3 `describe.skipIf` блока
 - Skill: `.claude/skills/install-diagnostics/SKILL.md` → diagnostic guide для interactive use, Mode A/B/A+B branching per FR-6
 - BDD в own .feature: `install-diagnostics.feature` → INSTALL_DIAG_01..09 (4 initial + 5 новых для Mode B + lint + CORE003_20 reproduction)

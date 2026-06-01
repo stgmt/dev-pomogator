@@ -19,15 +19,15 @@
 
 - Skill: `.claude/skills/install-diagnostics/SKILL.md` (создан в этой session)
 - Helper: `tests/e2e/helpers.ts` (после `runInstaller` на ~строке 55), также `getInstallLogPath` на ~строке 1198 переиспользуется
-- BDD scenarios: `tests/features/core/CORE003_claude-installer.feature` (новые сценарии добавляются в конец, после CORE003_CMEM)
-- Integration tests: `tests/e2e/claude-installer.test.ts` (новые `describe.skipIf` блоки добавляются перед `afterAll` основного `describe('CORE003: ...', ...)` блока)
+- BDD scenarios: ~~`tests/features/core/CORE003_claude-installer.feature`~~ (новые сценарии добавляются в конец, после CORE003_CMEM)
+- Integration tests: ~~`tests/e2e/claude-installer.test.ts`~~ (новые `describe.skipIf` блоки добавляются перед `afterAll` основного `describe('CORE003: ...', ...)` блока)
 
 ## Директории и файлы
 
 - `.claude/skills/install-diagnostics/SKILL.md` — диагностический skill
 - `tests/e2e/helpers.ts` — helper `runInstallerViaNpx()` и interface `NpxInstallResult`
-- `tests/e2e/claude-installer.test.ts` — 2 новых describe блока
-- `tests/features/core/CORE003_claude-installer.feature` — 2 новых scenarios CORE003_18, CORE003_19
+- ~~`tests/e2e/claude-installer.test.ts`~~ — 2 новых describe блока
+- ~~`tests/features/core/CORE003_claude-installer.feature`~~ — 2 новых scenarios CORE003_18, CORE003_19
 - `.specs/install-diagnostics/*.md` — этот спек целиком (13 файлов)
 
 ## Алгоритм
@@ -74,17 +74,17 @@ interface NpxInstallResult {
 
 | Hook файл | Тип | Тег/Scope | Что делает | Можно переиспользовать? |
 |-----------|-----|-----------|------------|------------------------|
-| `tests/e2e/claude-installer.test.ts` | beforeAll | describe('CORE003: ...') | вызывает `setupCleanState('claude')` + `runInstaller('--claude --all')` для тестов CORE003_01..CORE003_CMEM | Нет — CORE003_18/19 используют `runInstallerViaNpx()` вместо `runInstaller()` (разные code paths: spawnSync npx vs spawnSync node dist/index.js) |
+| ~~`tests/e2e/claude-installer.test.ts`~~ | beforeAll | describe('CORE003: ...') | вызывает `setupCleanState('claude')` + `runInstaller('--claude --all')` для тестов CORE003_01..CORE003_CMEM | Нет — CORE003_18/19 используют `runInstallerViaNpx()` вместо `runInstaller()` (разные code paths: spawnSync npx vs spawnSync node dist/index.js) |
 | `tests/e2e/helpers.ts` (`setupCleanState`) | utility | per-test | Удаляет HOME и project Claude artefacts | Не нужен — `runInstallerViaNpx({ fresh: true })` уже изолирует через `mkdtempSync` |
 
 ### Новые hooks
 
 | Hook файл | Тип | Тег/Scope | Что делает | По аналогии с |
 |-----------|-----|-----------|------------|---------------|
-| `tests/e2e/claude-installer.test.ts` | beforeAll | describe('CORE003_18: ...') | `runInstallerViaNpx('--claude --all', { fresh: true })`, сохраняет result в локальную переменную для it-блоков | inline-pattern существующего `beforeAll` в parent describe |
-| `tests/e2e/claude-installer.test.ts` | beforeAll | describe('CORE003_19: ...') | то же что CORE003_18, но run на Windows host (skipIf) | то же |
-| `tests/e2e/claude-installer.test.ts` | afterAll | describe('CORE003_18: ...') | `fs.rmSync(result.tempDir, { recursive: true, force: true })` + `if (result.tempCache) fs.rmSync(result.tempCache, ...)` | стандартный cleanup после интеграционного теста |
-| `tests/e2e/claude-installer.test.ts` | afterAll | describe('CORE003_19: ...') | то же | то же |
+| ~~`tests/e2e/claude-installer.test.ts`~~ | beforeAll | describe('CORE003_18: ...') | `runInstallerViaNpx('--claude --all', { fresh: true })`, сохраняет result в локальную переменную для it-блоков | inline-pattern существующего `beforeAll` в parent describe |
+| ~~`tests/e2e/claude-installer.test.ts`~~ | beforeAll | describe('CORE003_19: ...') | то же что CORE003_18, но run на Windows host (skipIf) | то же |
+| ~~`tests/e2e/claude-installer.test.ts`~~ | afterAll | describe('CORE003_18: ...') | `fs.rmSync(result.tempDir, { recursive: true, force: true })` + `if (result.tempCache) fs.rmSync(result.tempCache, ...)` | стандартный cleanup после интеграционного теста |
+| ~~`tests/e2e/claude-installer.test.ts`~~ | afterAll | describe('CORE003_19: ...') | то же | то же |
 
 ### Cleanup Strategy
 

@@ -186,7 +186,7 @@ SessionStart hook для валидации целостности hooks в `.cl
 | `extensions/hooks-integrity/extension.json` | Extension manifest |
 | `extensions/hooks-integrity/tools/hooks-integrity/hooks_integrity_check.ts` | SessionStart hook — валидация и восстановление |
 
-> _Leverage:_ `src/installer/claude.ts:420-427` — smart merge паттерн фильтрации managed hooks
+> _Leverage:_ ~~`src/installer/claude.ts:420-427`~~ (removed in v2 — no canonical replacement) — smart merge паттерн фильтрации managed hooks
 > _Leverage:_ `extensions/test-statusline/tools/test-statusline/statusline_session_start.ts` — readStdin + log паттерн
 > _Leverage:_ `.claude/skills/skills-rules-optimizer/scripts/shared.ts` — `replaceNpxTsxWithPortable()` формат hook commands
 

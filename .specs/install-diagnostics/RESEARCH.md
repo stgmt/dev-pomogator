@@ -12,7 +12,7 @@
 - npm verbose debug logs из `%LOCALAPPDATA%\npm-cache\_logs\` (rotated, max 10) — пойманы 2 файла с матчинг таймстампами
 - Inspection of `_npx/eade2dc1c54870ea/` — npx hash-папка для `github:stgmt/dev-pomogator`
 - Source code: `dist/index.js`, `dist/installer/index.js` (через `git show HEAD:`), `bin/cli.js`
-- Existing test: `tests/e2e/claude-installer.test.ts`, helpers `runInstaller()`, `getInstallLogPath()`
+- Existing test: ~~`tests/e2e/claude-installer.test.ts`~~, helpers `runInstaller()`, `getInstallLogPath()`
 
 ## Технические находки
 
@@ -165,8 +165,8 @@ npm error git dep preparation failed
 - **Install report**: `dist/installer/report.ts:19` → пишется в `finally` блоке `install()` (`dist/installer/index.js:227`)
 - **Diagnostic skill**: `.claude/skills/install-diagnostics/SKILL.md` (создан в текущей session) — содержит 4 mode (A/B/C/D) для классификации failure modes
 - **Helper для regression тестов**: `tests/e2e/helpers.ts` → `runInstallerViaNpx()` (добавляется в Phase 0 этого спека)
-- **BDD сценарии**: `tests/features/core/CORE003_claude-installer.feature` → CORE003_18 (Linux), CORE003_19 (Windows TDD red)
-- **Integration тесты**: `tests/e2e/claude-installer.test.ts` → 2 новых `describe.skipIf()` блока
+- **BDD сценарии**: ~~`tests/features/core/CORE003_claude-installer.feature`~~ → CORE003_18 (Linux), CORE003_19 (Windows TDD red)
+- **Integration тесты**: ~~`tests/e2e/claude-installer.test.ts`~~ → 2 новых `describe.skipIf()` блока
 
 ## Выводы
 
@@ -202,8 +202,8 @@ npm error git dep preparation failed
 |--------|------|-------------------|-----------|
 | Existing helper | `tests/e2e/helpers.ts:35-55` (`runInstaller`) | spawnSync('node', ['dist/index.js', ...args]) pattern | Reference impl for `runInstallerViaNpx()` |
 | Existing helper | `tests/e2e/helpers.ts:1198` (`getInstallLogPath`) | Returns `~/.dev-pomogator/logs/install.log` path | Reused in `runInstallerViaNpx()` for mtime check |
-| Existing test | `tests/e2e/claude-installer.test.ts` | `describe('CORE003: ...')` with `beforeAll(setupCleanState)` | Insertion point for new describe blocks |
-| Existing feature | `tests/features/core/CORE003_claude-installer.feature` | 17+ scenarios CORE003_01..CORE003_CMEM | Insertion point for CORE003_18/19 |
+| Existing test | ~~`tests/e2e/claude-installer.test.ts`~~ | `describe('CORE003: ...')` with `beforeAll(setupCleanState)` | Insertion point for new describe blocks |
+| Existing feature | ~~`tests/features/core/CORE003_claude-installer.feature`~~ | 17+ scenarios CORE003_01..CORE003_CMEM | Insertion point for CORE003_18/19 |
 | Diagnostic skill | `.claude/skills/install-diagnostics/SKILL.md` | 4-mode classification (A=Win EPERM, B=missing dist, C=installer crash, D=top error) | Referenced from FAIL message of CORE003_19 |
 | Existing scaffold | `extensions/specs-workflow/tools/specs-generator/scaffold-spec.ts` | Generates 13-file structure | Used in `scaffold-spec` task |
 

@@ -21,7 +21,7 @@
 ### 📋 `bdd-stubs`
 > Создать заглушки тестов
 
-- **files:** `tests/e2e/claude-installer.test.ts` *(edit)*
+- **files:** ~~`tests/e2e/claude-installer.test.ts`~~ *(edit)*
 - **changes:**
   - Добавить describe `CORE019: Claude-mem Integration` с 9 it-блоками matching scenarios
   - Все throw 'not implemented'
@@ -39,7 +39,7 @@
   - После `ensureClaudeMem('claude')` success: проверить `extensions.includes('claude-mem-health')`, если нет → `await installClaude({ extensions: ['claude-mem-health'], executedSharedHooks })`
   - Добавить report entry: `claude-mem/hooks: ok` или `fail`
 - **refs:** FR-1
-- **leverage:** `installClaude()` из `src/installer/claude.ts`
+- **leverage:** `installClaude()` из ~~`src/installer/claude.ts`~~ (removed in v2 — no canonical replacement)
 - **deps:** *none*
 
 ---
@@ -49,7 +49,7 @@
 ### 📋 `post-install-validation`
 > После ensureClaudeMem: проверить worker + chroma + MCP alive
 
-- **files:** `src/installer/memory.ts` *(edit)*
+- **files:** ~~`src/installer/memory.ts`~~ (removed in v2 — no canonical replacement) *(edit)*
 - **changes:**
   - В конце `ensureClaudeMem()` (после line 726): вызвать `isWorkerRunning()` + `isChromaRunning()` + `fs.pathExists(mcpServerPath)`
   - Вернуть validation result object `{ worker: boolean, chroma: boolean, mcpBinary: boolean }`
@@ -62,7 +62,7 @@
 ### 📋 `structured-logging`
 > Все 12 точек отказа без logging → добавить installLog
 
-- **files:** `src/installer/memory.ts` *(edit)*
+- **files:** ~~`src/installer/memory.ts`~~ (removed in v2 — no canonical replacement) *(edit)*
 - **changes:**
   - Передавать `logger` как параметр в `ensureClaudeMem(platform, logger?)`
   - Lines 258, 318, 340, 354, 475, 630: добавить `logger?.warn()` или `logger?.error()` рядом с existing console.log
@@ -78,7 +78,7 @@
 ### 📋 `graceful-degradation`
 > Worker fail → skip MCP registration; Chroma fail → warn not fail
 
-- **files:** `src/installer/memory.ts` *(edit)*
+- **files:** ~~`src/installer/memory.ts`~~ (removed in v2 — no canonical replacement) *(edit)*
 - **changes:**
   - Перед `registerClaudeMemMcp()` (line 724): guard `if (!await isWorkerRunning()) { log error; return validation; }`
   - Chroma failure: уже non-blocking (existing), убедиться что report показывает warn а не fail
@@ -105,7 +105,7 @@
 ### 📋 `tests-green`
 > Реализовать 9 тестов из CORE019
 
-- **files:** `tests/e2e/claude-installer.test.ts` *(edit)*
+- **files:** ~~`tests/e2e/claude-installer.test.ts`~~ *(edit)*
 - **changes:**
   - CORE019_01: health hooks in settings.json — readJson + check SessionStart contains health-check.ts
   - CORE019_02-03: install report per-component — readFile + toContain('claude-mem/worker') + toContain('ok')
@@ -125,7 +125,7 @@
 ### 📋 `refactor`
 > /simplify + verify
 
-- **files:** `src/installer/memory.ts` *(edit)*
+- **files:** ~~`src/installer/memory.ts`~~ (removed in v2 — no canonical replacement) *(edit)*
 - **changes:**
   - /simplify на изменённые файлы
   - npm run build

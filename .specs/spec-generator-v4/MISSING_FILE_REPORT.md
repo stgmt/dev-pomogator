@@ -152,7 +152,7 @@ Spec prose references a file that should no longer exist (v1 leftover, historica
 | `.specs/claude-mem-integration/RESEARCH.md:68` | `src/installer/index.ts` | reference in historical doc (RESEARCH/CHANGELOG) |
 | `.specs/claude-mem-integration/RESEARCH.md:70` | `src/updater/index.ts` | reference in historical doc (RESEARCH/CHANGELOG) |
 | `.specs/claude-mem-integration/RESEARCH.md:71` | `src/updater/standalone.ts` | reference in historical doc (RESEARCH/CHANGELOG) |
-| `.specs/claude-mem-integration/RESEARCH.md:72` | `tests/e2e/claude-installer.test.ts` | reference in historical doc (RESEARCH/CHANGELOG) |
+| `.specs/claude-mem-integration/RESEARCH.md:72` | ~~`tests/e2e/claude-installer.test.ts`~~ | reference in historical doc (RESEARCH/CHANGELOG) |
 | `.specs/claude-mem-integration/RESEARCH.md:99` | `src/installer/memory.ts` | reference in historical doc (RESEARCH/CHANGELOG) |
 | `.specs/codex-cli-support/RESEARCH.md:157` | `src/config/schema.ts` | reference in historical doc (RESEARCH/CHANGELOG) |
 | `.specs/codex-cli-support/RESEARCH.md:157` | `src/index.ts` | reference in historical doc (RESEARCH/CHANGELOG) |
@@ -210,7 +210,7 @@ No automated heuristic matched. Requires domain-expert review to decide.
 | `.specs/auto-capture/OWNERSHIP_RECOMMENDATION.md:18` | `src/installer/claude.ts` | no automated heuristic matched |
 | `.specs/auto-capture/TASKS.md:40` | `tests/e2e/fixtures/queue-setup.ts` | no automated heuristic matched |
 | `.specs/auto-capture/TASKS.md:43` | `tests/e2e/fixtures/queue-cleanup.ts` | no automated heuristic matched |
-| `.specs/claude-mem-integration/DESIGN.md:85` | `tests/e2e/claude-installer.test.ts` | no automated heuristic matched |
+| `.specs/claude-mem-integration/DESIGN.md:85` | ~~`tests/e2e/claude-installer.test.ts`~~ | no automated heuristic matched |
 
 ---
 
@@ -300,11 +300,11 @@ A group qualifies if it has **≥10 findings** AND the sample set shows the same
 | `.specs/auto-capture/OWNERSHIP_RECOMMENDATION.md:18` | `src/installer/claude.ts` | no automated heuristic matched |
 | `.specs/auto-capture/TASKS.md:40` | `tests/e2e/fixtures/queue-setup.ts` | no automated heuristic matched |
 | `.specs/auto-capture/TASKS.md:43` | `tests/e2e/fixtures/queue-cleanup.ts` | no automated heuristic matched |
-| `.specs/claude-mem-integration/DESIGN.md:85` | `tests/e2e/claude-installer.test.ts` | no automated heuristic matched |
+| `.specs/claude-mem-integration/DESIGN.md:85` | ~~`tests/e2e/claude-installer.test.ts`~~ | no automated heuristic matched |
 | `.specs/claude-mem-integration/DESIGN.md:96` | `src/installer/claude.ts` | no automated heuristic matched |
 | `.specs/claude-mem-integration/FILE_CHANGES.md:5` | `src/installer/index.ts` | no automated heuristic matched |
 | `.specs/claude-mem-integration/FILE_CHANGES.md:6` | `src/installer/memory.ts` | no automated heuristic matched |
-| `.specs/claude-mem-integration/FILE_CHANGES.md:8` | `tests/e2e/claude-installer.test.ts` | no automated heuristic matched |
+| `.specs/claude-mem-integration/FILE_CHANGES.md:8` | ~~`tests/e2e/claude-installer.test.ts`~~ | no automated heuristic matched |
 | `.specs/claude-mem-integration/OWNERSHIP_RECOMMENDATION.md:7` | `src/installer/index.ts` | no automated heuristic matched |
 
 ---
@@ -354,7 +354,7 @@ These are the expected paths that appear most frequently across all specs. If a 
 | Expected path | Ref count | # Specs | Sample specs |
 | --- | --- | --- | --- |
 | `src/installer/claude.ts` | 50 | 11 | auto-capture, claude-mem-integration, dev-pomogator-canonical-plugin … |
-| `tests/e2e/claude-installer.test.ts` | 33 | 6 | claude-mem-integration, codex-cli-support, extension-beta-flag … |
+| ~~`tests/e2e/claude-installer.test.ts`~~ | 33 | 6 | claude-mem-integration, codex-cli-support, extension-beta-flag … |
 | `src/index.ts` | 31 | 6 | codex-cli-support, dev-pomogator-canonical-plugin, extension-beta-flag … |
 | `src/installer/extensions.ts` | 31 | 8 | codex-cli-support, dev-pomogator-canonical-plugin, extension-beta-flag … |
 | `src/installer/memory.ts` | 28 | 7 | claude-mem-integration, codex-cli-support, cursor-dead-code-cleanup … |
@@ -362,7 +362,7 @@ These are the expected paths that appear most frequently across all specs. If a 
 | `src/installer/index.ts` | 22 | 5 | claude-mem-integration, codex-cli-support, extension-beta-flag … |
 | `src/installer/shared.ts` | 20 | 5 | auto-capture, codex-cli-support, global-dir-guard … |
 | `src/config/schema.ts` | 18 | 5 | codex-cli-support, dev-pomogator-canonical-plugin, extension-beta-flag … |
-| `tests/features/core/CORE003_claude-installer.feature` | 18 | 2 | install-diagnostics, skill-listing-budget |
+| ~~`tests/features/core/CORE003_claude-installer.feature`~~ | 18 | 2 | install-diagnostics, skill-listing-budget |
 | `src/updater/hook-migration.ts` | 13 | 3 | dev-pomogator-canonical-plugin, personal-pomogator, skill-rule-customization |
 | `src/scripts/tsx-runner.js` | 13 | 4 | personal-pomogator, test-statusline, tui-test-runner … |
 | `src/installer/report.ts` | 9 | 2 | claude-mem-integration, skill-listing-budget |
@@ -371,10 +371,10 @@ These are the expected paths that appear most frequently across all specs. If a 
 | `src/utils/atomic-json.ts` | 8 | 2 | personal-pomogator, skill-listing-budget |
 | `src/doctor/` | 8 | 1 | pomogator-doctor |
 | `src/doctor/reporter.ts` | 8 | 1 | pomogator-doctor |
-| `tests/e2e/pomogator-doctor.test.ts` | 8 | 1 | pomogator-doctor |
+| ~~`tests/e2e/pomogator-doctor.test.ts`~~ | 8 | 1 | pomogator-doctor |
 | `src/installer/skill-budget.ts` | 8 | 1 | skill-listing-budget |
 | `tests/e2e/strong-tests-jit.test.ts` | 8 | 1 | strong-tests |
-| `tests/e2e/test-statusline.test.ts` | 8 | 2 | test-statusline, tui-statusline-mode |
+| ~~`tests/e2e/test-statusline.test.ts`~~ | 8 | 2 | test-statusline, tui-statusline-mode |
 | `src/updater/github.ts` | 7 | 2 | codex-cli-support, dev-pomogator-canonical-plugin |
 | `src/installer/` | 7 | 5 | codex-cli-support, onboard-repo-phase0, personal-pomogator … |
 | `src/installer/settings-local.ts` | 7 | 2 | dev-pomogator-canonical-plugin, personal-pomogator |

@@ -89,7 +89,7 @@ Verdict for strong-tests: PARTIAL-INSPIRATION. Borrow mutation catalogue + diagn
 
 - App-код: `.claude/skills/strong-tests/SKILL.md` (main workflow), `.claude/skills/strong-tests/scripts/run-mutation.ts` (auto-detect + dispatch), `.claude/skills/strong-tests/references/anti-patterns.md` + `references/tooling-setup.md` (on-demand reference loading)
 - Конфигурация: `extensions/test-quality/extension.json` (manifest), `.dev-pomogator/tools/test-quality/` (installed tools tracking)
-- Tests: `tests/e2e/strong-tests.test.ts` (planned)
+- Tests: ~~`tests/e2e/strong-tests.test.ts`~~ (planned, not implemented)
 
 ## Cross-axis observations (deep research v2, 2026-05-11)
 

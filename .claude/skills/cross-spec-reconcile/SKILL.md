@@ -99,11 +99,40 @@ who overrode what and why.
 - `--sarif` — also write `.specs/<slug>/consistency-report.sarif` (SARIF 2.1.0)
 - `--slug <name>` — limit to one spec (default: every `.specs/<slug>/`)
 
+## Resolution Patterns
+
+When findings *do* fire, the agent (or the sibling
+`cross-spec-resolve` skill) applies one of five recurring response
+shapes. The full catalog with before/after diffs + decision rules
+lives in `references/reference_resolution-patterns.md` — summary
+below.
+
+| # | Pattern | Trigger | When to choose |
+|---|---------|---------|----------------|
+| 1 | **WRAP-deprecated** | `impl-drift/missing-file` or `missing-symbol`; referenced path removed in a major migration with NO canonical replacement | Reference is load-bearing for traceability (spec/ownership table); pure deletion would erase migration history. Example: `src/installer/claude.ts` → `~~src/installer/claude.ts~~ (removed in v2 — no canonical replacement)` |
+| 2 | **DELETE-if-alternative-exists** | `impl-drift/missing-test` or `missing-file`; equivalent exists under different name (split layout / rename / move) | A reachable replacement exists with the same coverage. Example: `tests/e2e/pomogator-doctor.test.ts` (aggregate, never created) → refs replaced with `tests/e2e/doctor-{core,entry,...}.test.ts (split layout)` |
+| 3 | **RECREATE-as-skip** | `impl-drift/missing-test`; spec/`.feature` carries load-bearing requirements; no alternative exists | BDD 1:1 mapping (`extension-test-quality`) must be preserved. Create stub `*.test.ts` with `it.skip()` blocks mirroring `.feature` scenarios + TODO comments. Example: `settings-protection.test.ts` |
+| 4 | **DEFER-spec** | Whole slug shelved: no skill, no tests, no `.feature`, multiple open `- [ ]` tasks | Add `> **Status: DEFERRED (YYYY-MM-DD)**` banner to README + mark TASKS as `[DEFERRED]`. Reconcile lowers severity for the slug. Example: `personal-pomogator` |
+| 5 | **MCP-method-name exclusion** (detection-side) | Backticked ref matches the path-ref regex but is actually a JSON-RPC method name (`tools/list`, `resources/read`, ...) | Extend `MCP_METHOD_NAMES` set in `scripts/reconcile.ts` + add a regression test in `scripts/__tests__/reconcile.test.ts`. Pattern generalises to any `<noun>/<verb>` protocol family (LSP, custom JSON-RPC). |
+
+**Selection rule when multiple patterns apply** — prefer the one
+that preserves the most context for the next agent. Order from
+richest to leanest: `WRAP-deprecated > RECREATE-as-skip >
+DELETE-redirect > DEFER-spec`. Pattern 5 is orthogonal — it
+suppresses detection before pattern selection happens.
+
+See `references/reference_resolution-patterns.md` for the full
+catalog with concrete before/after diffs, audit-footprint
+expectations (which `resolution_pattern` value to stamp on each
+finding), and extension procedure for adding new JSON-RPC families
+to the detection-side exclusion list.
+
 ## See also
 
 - `scripts/reconcile.ts` — light-mode entry (mechanical checks)
 - `scripts/full-mode.ts` — full-mode semantic pass (Phase-3 LLM judge wrapper)
 - `scripts/sarif.ts` — SARIF 2.1.0 emitter
+- `references/reference_resolution-patterns.md` — full pattern catalog with before/after diffs
 - `../cross-spec-resolve/SKILL.md` — sibling that walks the user through
   resolving each finding interactively
 - `.specs/spec-generator-v4/FR.md` FR-17 (formal requirement)

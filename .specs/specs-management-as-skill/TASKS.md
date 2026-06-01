@@ -33,9 +33,9 @@ N/A — рефактор не требует новых сервисов / БД 
 
 ### 📋 `create-integration-test`
 
-> Создать `tests/e2e/specs-management-skill-migration.test.ts` — integration test driving FR-4/FR-6/FR-7/FR-11 verification через `runInstaller(updateMode=true)` + filesystem assertions.
+> Создать ~~`tests/e2e/specs-management-skill-migration.test.ts`~~ → skill `.claude/skills/create-spec/` + `tests/e2e/create-specs-bdd-enforcement.test.ts` — integration test driving FR-4/FR-6/FR-7/FR-11 verification через `runInstaller(updateMode=true)` + filesystem assertions.
 
-- **files:** `tests/e2e/specs-management-skill-migration.test.ts` *(create)*
+- **files:** ~~`tests/e2e/specs-management-skill-migration.test.ts`~~ → skill `.claude/skills/create-spec/` + `tests/e2e/create-specs-bdd-enforcement.test.ts` *(create)*
 - **changes:**
   - Импортировать `runInstaller`, `appPath`, `homePath`, `setupCleanState` из `tests/e2e/helpers.ts`
   - Реализовать SPECMGT001_06 (hard cutover removes 4 rules), SPECMGT001_07 (manifest empty), SPECMGT001_08 (CLAUDE.md cleaned), SPECMGT001_09 (hook produces identical findings — diff fixture sample-spec before/after), SPECMGT001_14 (user-overrides backup)

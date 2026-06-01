@@ -9,6 +9,7 @@ export type BacklogCategory =
   | 'dead-link-typo'
   | 'ambiguous-link'
   | 'missing-cross-ref'
+  | 'deprecated-ref'
   | 'unrecognised';
 
 export type BacklogStatus = 'open' | 'in-progress' | 'resolved' | 'wontfix';

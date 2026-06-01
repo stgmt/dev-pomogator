@@ -8,6 +8,7 @@ import { frAuthor } from './fr-author.ts';
 import { decisionArbiter } from './decision-arbiter.ts';
 import { ownerPicker } from './owner-picker.ts';
 import { crossRefLinker } from './cross-ref-linker.ts';
+import { wrapDeprecatedRef } from './wrap-deprecated-ref.ts';
 
 const RESOLVERS: Resolver[] = [
   acAuthor,
@@ -17,6 +18,7 @@ const RESOLVERS: Resolver[] = [
   decisionArbiter,
   ownerPicker,
   crossRefLinker,
+  wrapDeprecatedRef,
 ];
 
 export function findResolver(name: string): Resolver | undefined {

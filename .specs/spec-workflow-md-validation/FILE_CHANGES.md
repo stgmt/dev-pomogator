@@ -20,7 +20,7 @@
 | Path | Change |
 |------|--------|
 | `extensions/specs-workflow/extension.json` | Add `hooks` section for cursor and claude |
-| `src/installer/memory.ts` | Add function to copy validate-specs.ts |
+| ~~`src/installer/memory.ts`~~ (removed in v2 — no canonical replacement) | Add function to copy validate-specs.ts |
 
 ## Generated Files (Runtime)
 

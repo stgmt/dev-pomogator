@@ -1,6 +1,6 @@
-# Source: tests/features/core/CORE003_claude-installer.feature (CORE003_18, CORE003_19)
+# Source: ~~tests/features/core/CORE003_claude-installer.feature~~ (CORE003_18, CORE003_19) — DELETED
 # This file documents own scenarios for the install-diagnostics SKILL behaviour.
-# Cross-platform regression scenarios live in CORE003_claude-installer.feature.
+# Cross-platform regression scenarios live in ~~CORE003_claude-installer.feature~~.
 
 Feature: INSTALL_DIAG Silent Install Diagnostics
 

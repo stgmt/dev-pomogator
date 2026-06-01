@@ -2,14 +2,14 @@
 
 ## FR-1: Managed gitignore block @feature1
 
-Installer SHALL записать marker block в `{repoRoot}/.gitignore` target-проекта после `addProjectPaths` (после step 9 в `src/installer/claude.ts:270`). Block содержит: `.claude/settings.local.json` (первой строкой) + все `ManagedFileEntry.path` из `managedByExtension`, нормализованные через `/`, отсортированные, с collapse per-tool/per-skill/per-rule-subfolder директорий. Маркеры: `# >>> dev-pomogator (managed — do not edit) >>>` / `# <<< dev-pomogator (managed — do not edit) <<<`. Atomic write через temp + `fs.move`. Если `.gitignore` не существует — создать с только marker block. Если block уже есть — регенерировать целиком (drop stale entries). Action пропускается при активном self-guard (FR-4).
+Installer SHALL записать marker block в `{repoRoot}/.gitignore` target-проекта после `addProjectPaths` (после step 9 в ~~`src/installer/claude.ts:270`~~ (removed in v2 — no canonical replacement)). Block содержит: `.claude/settings.local.json` (первой строкой) + все `ManagedFileEntry.path` из `managedByExtension`, нормализованные через `/`, отсортированные, с collapse per-tool/per-skill/per-rule-subfolder директорий. Маркеры: `# >>> dev-pomogator (managed — do not edit) >>>` / `# <<< dev-pomogator (managed — do not edit) <<<`. Atomic write через temp + `fs.move`. Если `.gitignore` не существует — создать с только marker block. Если block уже есть — регенерировать целиком (drop stale entries). Action пропускается при активном self-guard (FR-4).
 
 **Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1)
 **Use Case:** [UC-1](USE_CASES.md#uc-1-fresh-install-в-чистый-target-проект-feature1-feature2-feature3), [UC-2](USE_CASES.md#uc-2-re-install-после-удаления-extension-feature1)
 
 ## FR-2: settings.local.json target для hooks/env @feature2
 
-`installExtensionHooks` в `src/installer/claude.ts:371-544` SHALL писать dev-pomogator hooks и env entries в `{repoRoot}/.claude/settings.local.json` вместо `.claude/settings.json`. Существующий `settings.json` НЕ модифицируется — team hooks preserved. Существующий `settings.local.json` читается через `readJsonSafe` (preserve user keys), dev-pomogator entries merged через существующую dedupe логику из `claude.ts:469-494`. Atomic write через `writeJsonAtomic`. Action пропускается при активном self-guard (FR-4).
+`installExtensionHooks` в ~~`src/installer/claude.ts:371-544`~~ (removed in v2 — no canonical replacement) SHALL писать dev-pomogator hooks и env entries в `{repoRoot}/.claude/settings.local.json` вместо `.claude/settings.json`. Существующий `settings.json` НЕ модифицируется — team hooks preserved. Существующий `settings.local.json` читается через `readJsonSafe` (preserve user keys), dev-pomogator entries merged через существующую dedupe логику из `claude.ts:469-494`. Atomic write через `writeJsonAtomic`. Action пропускается при активном self-guard (FR-4).
 
 **Связанные AC:** [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2)
 **Use Case:** [UC-1](USE_CASES.md#uc-1-fresh-install-в-чистый-target-проект-feature1-feature2-feature3)
@@ -118,7 +118,7 @@ Global `~/.dev-pomogator/scripts/` и `~/.claude.json` НЕ трогает (pers
 
 Info print при save: `"[INFO] Writing MCP servers to global config ({config_path}) — personal mode"`.
 
-`src/installer/memory.ts:registerClaudeMemMcp` уже пишет только в `~/.claude.json` — инвариант сохраняется (BDD test PERSO_84 защищает от регрессии).
+~~`src/installer/memory.ts:registerClaudeMemMcp`~~ (removed in v2 — no canonical replacement) уже пишет только в `~/.claude.json` — инвариант сохраняется (BDD test PERSO_84 защищает от регрессии).
 
 **Связанные AC:** [AC-9](ACCEPTANCE_CRITERIA.md#ac-9-fr-9)
 **Use Case:** [UC-9](USE_CASES.md#uc-9-setup-mcppy-с-существующим-project-mcpjson-feature8), [UC-11](USE_CASES.md#uc-11-claude-mem-mcp-registration-invariant-feature8)
@@ -173,7 +173,7 @@ allowed-tools: Read, Bash, Edit, Glob, Grep
 
 Тело SKILL.md — 5 секций (Safety Checks → Scope Selection → CLI-First → Manual Fallback → Verification). Детали в `DESIGN.md` секции "Компоненты". Skill НЕ содержит destructive команд без user confirmation.
 
-Installer уже поддерживает skills install через `getExtensionSkills` → `src/installer/claude.ts:173-195` — дополнительных изменений в installer core не требуется.
+Installer уже поддерживает skills install через `getExtensionSkills` → ~~`src/installer/claude.ts:173-195`~~ (removed in v2 — no canonical replacement) — дополнительных изменений в installer core не требуется.
 
 **Связанные AC:** [AC-11](ACCEPTANCE_CRITERIA.md#ac-11-fr-11)
 **Use Case:** [UC-12](USE_CASES.md#uc-12-user-просит-ai-удалить-dev-pomogator-feature9)

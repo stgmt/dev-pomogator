@@ -15,5 +15,5 @@
 | `extensions/test-statusline/tools/test-statusline/statusline_render.sh` | delete | [FR-5](FR.md#fr-5-выпилить-statusline-render-из-test-statusline) |
 | `extensions/test-statusline/tools/test-statusline/statusline_wrapper.js` | delete | [FR-5](FR.md#fr-5-выпилить-statusline-render-из-test-statusline) |
 | `extensions/test-statusline/extension.json` | edit | Убрать statusLine секцию + toolFiles |
-| `tests/e2e/test-statusline.test.ts` | edit | Добавить compact mode тесты, убрать render тесты |
+| ~~`tests/e2e/test-statusline.test.ts`~~ → `tests/e2e/tui-statusline.test.ts` | edit | Добавить compact mode тесты, убрать render тесты |
 | `tests/features/plugins/test-statusline/PLUGIN011_test-statusline.feature` | edit | Добавить compact mode BDD сценарии |

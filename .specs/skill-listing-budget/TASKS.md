@@ -8,7 +8,7 @@
 | T01 | .feature → tests/features/core/CORE023_skill-listing-budget.feature | TODO | — | Phase 0 | 10m |
 | T02 | step definitions (vitest describe/it stubs) | TODO | T01 | Phase 0 | 20m |
 | T03 | Implement src/installer/skill-budget.ts | TODO | T02 | Phase 1 | 45m |
-| T04 | Wire ensureSkillListingBudget() в src/installer/claude.ts | TODO | T03 | Phase 1 | 15m |
+| T04 | Wire ensureSkillListingBudget() в ~~`src/installer/claude.ts`~~ (removed in v2 — no canonical replacement) | TODO | T03 | Phase 1 | 15m |
 | T05 | InstallReport.recordSkillBudget() + render | TODO | T03 | Phase 1 | 20m |
 | T06 | Integration test tests/e2e/skill-listing-budget.test.ts | TODO | T03,T04,T05 | Phase 1 | 60m |
 | T07 | Verify all CORE023 scenarios Red→Green | TODO | T06 | Phase 1 | 15m |
@@ -62,7 +62,7 @@ N/A — фича не требует новых сервисов / БД / env va
   - [ ] CORE023_01, CORE023_03, CORE023_04 переходят в Green
   - [ ] `npm run build` проходит без ошибок
 
-- [ ] T04: Wire в `src/installer/claude.ts` -- @feature1 — Status: TODO | Est: 15m
+- [ ] T04: Wire в ~~`src/installer/claude.ts`~~ (removed in v2 — no canonical replacement) -- @feature1 — Status: TODO | Est: 15m
   _Requirements: [FR-1](FR.md#fr-1-запись-skilllistingbudgetfraction-10-в-claudesettingsjson)_
   **Done When:**
   - [ ] Import `ensureSkillListingBudget` из `./skill-budget.js` (per `.claude/rules/ts-import-extensions.md` — `.js` спецификатор в src/ т.к. tsc-compiled)
