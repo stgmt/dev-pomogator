@@ -12,7 +12,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { validatePlan, validatePlanPhased, REQUIRED_SECTIONS, findHeadingIndex, type ValidationError } from '../../tools/plan-pomogator/validate-plan';
-import { readTemplateContent, checkDuplicatePlan, scorePromptRelevance, resolvePlanFile, formatPromptsFromFile, loadUserPrompts } from '../../tools/plan-pomogator/plan-gate';
+import { readTemplateContent, checkDuplicatePlan, scorePromptRelevance, selectRelevanceWindow, resolvePlanFile, formatPromptsFromFile, loadUserPrompts } from '../../tools/plan-pomogator/plan-gate';
 import { PROMPT_FILE_PREFIX } from '../../tools/plan-pomogator/prompt-store';
 import { pluginHookEntries, pluginHookCommands } from './helpers';
 
@@ -771,6 +771,49 @@ describe('PLUGIN007_29 scorePromptRelevance hard check', () => {
     const prompts = ['duplicate detection plan-gate SHA-256 comparison prompt relevance'];
     const score = scorePromptRelevance(planContent, prompts);
     expect(score).toBeGreaterThan(-20);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// @feature6: Phase 2.5 — precision direction is paste-immune (regression for the
+// "24KB pasted transcript makes ExitPlanMode unreachable" bug)
+// ---------------------------------------------------------------------------
+describe('PLUGIN007_29B precision direction is paste-immune', () => {
+  // @feature6
+  it('PLUGIN007_29B_01: legit plan passes even when the corpus contains a huge pasted block', () => {
+    const planContent = `## Context\n\n### Extracted Requirements\n1. Build a claim-evidence Stop hook that blocks fact-check verdicts without a tool run\n2. Cover analysis-verdict, tester and researcher claim classes in shadow mode\n`;
+    // A large pasted transcript: lots of noise + the task vocabulary buried inside.
+    const paste = 'noiseword '.repeat(2000) + ' claim evidence verdicts check tester researcher analysis shadow classes blocks';
+    const score = scorePromptRelevance(planContent, [paste, 'мне все нравится. план работ']);
+    expect(score).toBeGreaterThan(-20);
+  });
+
+  // @feature6
+  it('PLUGIN007_29B_02: contaminated plan stays denied despite a huge corpus', () => {
+    const planContent = `## Context\n\n### Extracted Requirements\n1. Implement OAuth2 authentication login flow with refresh tokens\n2. Add session middleware validating bearer credentials\n`;
+    const paste = 'claim evidence verdicts tester researcher shadow blocks analysis '.repeat(300);
+    const score = scorePromptRelevance(planContent, [paste]);
+    expect(score).toBeLessThanOrEqual(-20);
+  });
+});
+
+describe('PLUGIN007_29C selectRelevanceWindow avoids short-clarification starvation', () => {
+  // @feature6
+  it('PLUGIN007_29C_01: walks back past short clarifications to the substantive prompt', () => {
+    const substantive = 'build a claim evidence stop hook covering analysis verdict tester researcher classes shadow marker';
+    const win = selectRelevanceWindow([substantive, 'да', 'ок', '1 и 2', 'поясни']);
+    expect(win.join(' ')).toContain('claim evidence stop hook');
+  });
+
+  // @feature6
+  it('PLUGIN007_29C_02: preserves chronological order of selected prompts', () => {
+    const win = selectRelevanceWindow([
+      'first alpha bravo charlie delta echo',
+      'second golf hotel india juliet kilo',
+      'third mike november oscar papa quebec',
+    ]);
+    expect(win[0]).toContain('first');
+    expect(win[win.length - 1]).toContain('third');
   });
 });
 
