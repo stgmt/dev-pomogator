@@ -40,6 +40,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { globSync } from 'glob';
 
 export type Severity = 'CRITICAL' | 'WARNING' | 'INFO';
 export type FindingClass =
@@ -312,29 +313,35 @@ export interface PathResolveResult {
   globPrefixMissing: boolean;
 }
 
-/** Resolve a glob-ish path (supports trailing `*`) against the repo. */
+/** Resolve a glob-ish path (supports `*` wildcards) against the repo. */
 function pathExistsResolvingDetail(
   repoRoot: string,
   ref: string,
   implRoots?: string[],
 ): PathResolveResult {
   const cleanRef = ref.replace(/`/g, '');
-  const candidates = (implRoots ?? ['.']).map((r) => path.join(repoRoot, r, cleanRef));
+  const roots = implRoots ?? ['.'];
   let anyGlobPrefixMissing = false;
-  for (const c of candidates) {
-    if (!c.includes('*') && fs.existsSync(c)) return { exists: true, globPrefixMissing: false };
-    if (c.includes('*')) {
-      // Cheap glob: strip everything after the last `*` and confirm the
-      // prefix dir exists with at least one matching entry.
-      const star = c.lastIndexOf('*');
-      const prefixDir = path.dirname(c.slice(0, star));
-      const baseName = path.basename(c.slice(0, star));
-      if (!fs.existsSync(prefixDir)) {
-        anyGlobPrefixMissing = true;
-        continue;
-      }
-      const matches = fs.readdirSync(prefixDir).some((f) => f.startsWith(baseName));
-      if (matches) return { exists: true, globPrefixMissing: false };
+  for (const r of roots) {
+    const rootAbs = path.join(repoRoot, r);
+    const candidateAbs = path.join(rootAbs, cleanRef);
+    if (!cleanRef.includes('*')) {
+      if (fs.existsSync(candidateAbs)) return { exists: true, globPrefixMissing: false };
+      continue;
+    }
+    // Glob path: derive the prefix dir (substring before the first wildcard
+    // segment) and skip if it doesn't exist — surface as a UX hint.
+    const firstStar = candidateAbs.indexOf('*');
+    const prefixDir = path.dirname(candidateAbs.slice(0, firstStar));
+    if (!fs.existsSync(prefixDir)) {
+      anyGlobPrefixMissing = true;
+      continue;
+    }
+    try {
+      const matches = globSync(cleanRef, { cwd: rootAbs, nodir: false, dot: false });
+      if (matches.length > 0) return { exists: true, globPrefixMissing: false };
+    } catch {
+      // Malformed glob — treat as non-match; do not crash reconcile.
     }
   }
   return { exists: false, globPrefixMissing: anyGlobPrefixMissing };

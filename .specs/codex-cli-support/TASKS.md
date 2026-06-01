@@ -104,7 +104,7 @@
 
 - [ ] Обновить relevant `extensions/*/extension.json` для явных Codex parity sections, `supportLevel` и version floors
   _Requirements: FR-9, FR-12_
-- [ ] Разрешить `suggest-rules` / `requiresClaudeMem` coupling через `src/installer/memory.ts` или через explicit exclusion/replacement strategy для Codex
+- [ ] Разрешить `suggest-rules` / `requiresClaudeMem` coupling через ~~`src/installer/memory.ts`~~ (removed in v2 — no canonical replacement) или через explicit exclusion/replacement strategy для Codex
   _Requirements: FR-9, FR-12_
 - [ ] Зафиксировать partial support для `specs-workflow` и `plan-pomogator`, пока нет non-Bash interception replacement
   _Requirements: FR-9, FR-12_

@@ -60,7 +60,7 @@ Project-level поддержка `Codex CLI` в `dev-pomogator`: новая пл
 ## Где лежит реализация
 
 - **App-код**: `src/config/`, `src/installer/`, `src/updater/`
-- **Поддерживающие зависимости**: `src/installer/memory.ts`, `extensions/specs-workflow/tools/mcp-setup/setup-mcp.py`, `tests/e2e/helpers.ts`, `Dockerfile.test`
+- **Поддерживающие зависимости**: ~~`src/installer/memory.ts`~~ (removed in v2 — no canonical replacement), `extensions/specs-workflow/tools/mcp-setup/setup-mcp.py`, `tests/e2e/helpers.ts`, `Dockerfile.test`
 - **Wiring**: `extensions/*/extension.json`, `install`, `install.ps1`, `install.sh`, `README.md`, `tests/e2e/`
 
 ## Навигация
