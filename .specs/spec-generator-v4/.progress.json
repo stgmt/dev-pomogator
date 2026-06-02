@@ -1,0 +1,28 @@
+{
+  "version": 3,
+  "featureSlug": "spec-generator-v4",
+  "createdAt": "2026-05-29T06:56:33.000Z",
+  "currentPhase": "Finalization",
+  "phases": {
+    "Discovery": {
+      "completedAt": "2026-05-29T06:56:33.000Z",
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    },
+    "Context": {
+      "completedAt": "2026-05-29T06:56:33.000Z",
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    },
+    "Requirements": {
+      "completedAt": "2026-05-29T06:56:33.000Z",
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    },
+    "Finalization": {
+      "completedAt": null,
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    }
+  }
+}
