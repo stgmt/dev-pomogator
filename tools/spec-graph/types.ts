@@ -151,10 +151,31 @@ export type Node =
   | FileNode
   | StepBindingNode;
 
+/**
+ * Optional metadata attached to specific edge kinds.
+ *
+ * Currently used by `implements` edges (FR-29) — every implements edge carries
+ * the repo-relative file path, the source section that established the
+ * linkage (`FILE_CHANGES` table row, or `DESIGN` "App-код" / "Где код"
+ * section), and (when available) the FILE_CHANGES action verb. Other edge
+ * kinds may extend this shape in later phases; the field stays optional so
+ * existing edge-producers (md / gherkin / ndjson) remain untouched.
+ */
+export interface EdgeMetadata {
+  /** Repo-relative POSIX path of the implemented file (implements edges). */
+  file_path?: string;
+  /** Which section of the spec established the linkage. */
+  source_section?: 'FILE_CHANGES' | 'DESIGN';
+  /** FILE_CHANGES action verb when sourced from a FILE_CHANGES row. */
+  action?: 'create' | 'edit' | 'delete' | 'rename' | 'move' | 'replace';
+}
+
 export interface Edge {
   from: string;
   to: string;
   type: EdgeType;
+  /** Edge-kind-specific metadata; currently populated for `implements`. */
+  metadata?: EdgeMetadata;
 }
 
 export interface NodeLocation {

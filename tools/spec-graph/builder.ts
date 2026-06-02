@@ -24,6 +24,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import type {
   Edge,
   Node,
@@ -31,10 +32,13 @@ import type {
   BacklinkEntry,
   NodeLocation,
   ScenarioNode,
+  FileNode,
 } from './types.ts';
 import { parseMarkdownFile } from './parsers/md.ts';
 import { parseGherkinFile } from './parsers/gherkin.ts';
 import { parseNdjsonFile, applyTestResults } from './parsers/ndjson.ts';
+import { parseFileChangesFile, type FileChangeRow } from './parsers/file-changes.ts';
+import { parseDesignFile, type DesignFileRef } from './parsers/design.ts';
 
 export interface BuildOptions {
   /** Repository root (everything resolves relative to this). */
@@ -146,6 +150,135 @@ export function buildGraph(opts: BuildOptions): SpecGraph {
     for (const e of slice.edges) edges.push(e);
     for (const a of slice.anchors) {
       if (!definitions.has(a.alias)) definitions.set(a.alias, a.location);
+    }
+  }
+
+  // 2b) FILE_CHANGES.md + DESIGN.md → File nodes + implements edges (FR-29).
+  //
+  // For every spec directory under any md root, locate `FILE_CHANGES.md`
+  // and/or `DESIGN.md` and harvest (FR, path) pairs. Each unique path
+  // becomes one File node (deduplicated by path across both sources and
+  // across all specs). FILE_CHANGES.md wins on action metadata when both
+  // sources reference the same path (AC-29.3).
+  //
+  // Implementation: spec dirs are inferred from the parents of every
+  // markdown file we just scanned — any directory directly containing
+  // `FILE_CHANGES.md` or `DESIGN.md` counts as a spec dir.
+  const specDirs = new Set<string>();
+  for (const abs of mdFiles) {
+    const base = path.basename(abs);
+    if (base === 'FILE_CHANGES.md' || base === 'DESIGN.md') {
+      specDirs.add(path.dirname(abs));
+    }
+  }
+
+  // Path → File node id mapping, shared across all spec dirs so the same
+  // path produces a single File node regardless of how many specs cite it.
+  const fileNodeIdByPath = new Map<string, string>();
+  // (FR, path) → first metadata seen. FILE_CHANGES.md is processed first
+  // for every spec, so its action metadata wins over DESIGN.md.
+  const implementsSeen = new Set<string>();
+  const warnOnceState = { warned: false };
+
+  const makeFileId = (filePath: string): string => {
+    const cached = fileNodeIdByPath.get(filePath);
+    if (cached) return cached;
+    const sha = createHash('sha256').update(filePath).digest('hex').slice(0, 12);
+    const id = `FILE-${sha}`;
+    fileNodeIdByPath.set(filePath, id);
+    return id;
+  };
+
+  const ensureFileNode = (filePath: string, sourceFile: string, line: number): string => {
+    const id = makeFileId(filePath);
+    if (!nodes.has(id)) {
+      const node: FileNode = {
+        id,
+        type: 'File',
+        file: sourceFile,
+        line,
+        path: filePath,
+      };
+      nodes.set(id, node);
+    }
+    return id;
+  };
+
+  type ImplementsAction = NonNullable<NonNullable<Edge['metadata']>['action']>;
+  const ALLOWED_ACTIONS: ReadonlySet<ImplementsAction> = new Set<ImplementsAction>([
+    'create',
+    'edit',
+    'delete',
+    'rename',
+    'move',
+    'replace',
+  ]);
+
+  const emitImplements = (
+    fr: string,
+    filePath: string,
+    sourceSection: 'FILE_CHANGES' | 'DESIGN',
+    sourceFile: string,
+    line: number,
+    action?: string,
+  ): void => {
+    const key = `${fr}|${filePath}`;
+    if (implementsSeen.has(key)) return;
+    implementsSeen.add(key);
+    const fileId = ensureFileNode(filePath, sourceFile, line);
+    const edge: Edge = {
+      from: fr,
+      to: fileId,
+      type: 'implements',
+      metadata: {
+        file_path: filePath,
+        source_section: sourceSection,
+      },
+    };
+    if (action && ALLOWED_ACTIONS.has(action as ImplementsAction)) {
+      edge.metadata!.action = action as ImplementsAction;
+    }
+    edges.push(edge);
+  };
+
+  for (const specDir of specDirs) {
+    const relDir = path.relative(repoRoot, specDir).split(path.sep).join('/');
+
+    // FILE_CHANGES.md first (precedence per AC-29.3).
+    const fcAbs = path.join(specDir, 'FILE_CHANGES.md');
+    if (fs.existsSync(fcAbs)) {
+      let rows: FileChangeRow[] = [];
+      try {
+        rows = parseFileChangesFile(fcAbs, { warnOnceState });
+      } catch {
+        rows = [];
+      }
+      const relFile = `${relDir}/FILE_CHANGES.md`;
+      for (const row of rows) {
+        if (row.frs.length === 0) continue;
+        for (const fr of row.frs) {
+          emitImplements(fr, row.file_path, 'FILE_CHANGES', relFile, 1, row.action);
+        }
+      }
+    }
+
+    // DESIGN.md — emits implements edges only for (FR, path) pairs not
+    // already seen from FILE_CHANGES.md.
+    const dAbs = path.join(specDir, 'DESIGN.md');
+    if (fs.existsSync(dAbs)) {
+      let refs: DesignFileRef[] = [];
+      try {
+        refs = parseDesignFile(dAbs);
+      } catch {
+        refs = [];
+      }
+      const relFile = `${relDir}/DESIGN.md`;
+      for (const ref of refs) {
+        if (ref.frs.length === 0) continue;
+        for (const fr of ref.frs) {
+          emitImplements(fr, ref.file_path, 'DESIGN', relFile, 1);
+        }
+      }
     }
   }
 

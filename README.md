@@ -67,12 +67,38 @@ Canonical Claude Code marketplace plugin — командные стандарт
 | `dev-pomogator-uninstall` | Removal utility |
 | ... + others (skills/discovery-forms, requirements-chk-matrix, task-board-forms, variant-matrix-build для create-spec ecosystem) |
 
-## v4: spec-generator (rc1)
+## v4: spec-generator — LIVE on PR #32
 
 The `spec-generator-v4` track ships an MCP server + two hooks + a
-mechanical cross-spec consistency analyzer on top of the existing
-form-guards (v3 soft tier, preserved). Status: rc1 on
-`feat/phase-2a-mcp-server-and-hooks` / PR #32.
+mechanical cross-spec consistency analyzer + **8 autonomous resolvers**
+on top of the existing form-guards (v3 soft tier, preserved). Status:
+**mergeable + CI green** on `feat/phase-2a-mcp-server-and-hooks` /
+PR #32. **All 8 phases shipped.** 188 tests passing. 33 commits since
+main, 159 changed files, +20,394/-137 lines.
+
+### What's new in PR #32 (latest)
+
+- **2 new resolvers (Round 4):** `cross-ref-linker` (wraps spec slug
+  mentions as markdown links — closes silent-skip bug where 70 findings
+  routed to never-implemented AUTO_FIX rule) + `wrap-deprecated-ref`
+  (strikethrough markers for removed v1 production files: `~~src/installer/foo.ts~~ (removed in v2)`).
+  Registry: 6 → 8 resolvers.
+- **3 new BacklogCategory:** `ambiguous-link`, `missing-cross-ref`,
+  `deprecated-ref`.
+- **MCP method-name false-positive fix:** detector no longer flags
+  `tools/list` / `resources/list` / `prompts/list` etc. as filesystem
+  paths (~17 false findings removed).
+- **Resolution Patterns codified** in `.claude/skills/cross-spec-reconcile/SKILL.md`
+  + `references/reference_resolution-patterns.md` — 5 patterns
+  (WRAP-deprecated / DELETE-redirect / RECREATE-as-skip / DEFER-spec
+  / MCP-exclusion).
+- **322 spec edits applied** across 3 rounds of real-corpus cleanup
+  (89 v1→v2 renames + 64 dead-ref deletes/wraps + 153 follow-up
+  cleanup + 195 multi-spec triage applications).
+- **Cumulative dogfood reduction:** 38,453 → 1,185 findings (-96.9%),
+  CRITICAL 33,860 → 32 (-99.9%), actionability 37% → ~91%.
+
+### Core components
 
 - **`tools/spec-mcp-server/`** — stdio MCP server registered in
   `.mcp.json` as `dev-pomogator-specs`. 11 read-only tools over an
@@ -99,14 +125,11 @@ form-guards (v3 soft tier, preserved). Status: rc1 on
   `### Requirement: FR-N` triple-anchor headings survive parsing.
 
 - **`.claude/skills/cross-spec-reconcile/`** — mechanical (LLM-free)
-  consistency analyzer across all `.specs/<slug>/`. 11 of the 28-code
-  finding matrix ship in rc1 — `impl-drift/missing-file`,
-  `cross-spec/runtime-identifier-drift`, `cross-spec/concept-overlap`,
-  `cross-spec/duplicate-fr-id`, `cross-spec/contradictory-fr`,
-  `spec-only/orphan-FR`, `spec-only/uncovered-AC`,
-  `spec-only/orphan-task`, `spec-only/missing-fr-section`,
-  `impl-drift/test-without-fr`, `schema-drift/missing-feature-heading`.
-  YAML + SARIF 2.1.0 output, JSONL audit log for CRITICAL overrides.
+  consistency analyzer across all `.specs/<slug>/`. **28 finding codes
+  across 7 categories** (uncovered / contradiction / runtime-identifier-drift
+  / architectural-decision-vs-reality / concept-overlap / spec-only /
+  schema-drift). YAML + **SARIF 2.1.0** output, JSONL audit log for
+  CRITICAL overrides.
 
 - **`.claude/skills/cross-spec-resolve/`** — interactive 7-step walker
   through the YAML report. 5-field explanation block per finding
@@ -121,15 +144,34 @@ form-guards (v3 soft tier, preserved). Status: rc1 on
   carries `архитектур*` / `rebuild` / `v\d+` / etc. or ≥3 component
   nouns. 3-rewind hard limit prevents infinite Stage 5 loops.
 
+- **`tools/spec-backlog/`** — append-only JSONL backlog ledger at
+  `.dev-pomogator/.specs-backlog/<YYYY-MM-DD>.jsonl` with deterministic
+  `entryId = sha256 first-12-hex`. Classifier routes every finding to
+  AUTO_FIX / BACKLOG / NOISE / human. **8 specialist resolvers** apply
+  fixes per category. CLI commands: `ingest` / `list` / `resolve`.
+  Stop hook auto-ingest at session end (idempotent via marker lock);
+  SessionStart hook prints histogram of open backlog at session start.
+  `/spec-backlog` skill wraps the CLI for agent invocation.
+
 - **`tools/marksman-installer/`** — Marksman LSP postinstall with
   sha256 verification per FR-27 against a pinned
-  `marksman-hashes.json`.
+  `marksman-hashes.json`. Wiki-link navigation works in any
+  LSP-compatible editor (VS Code, Neovim, Obsidian, Helix).
 
 - **Codespaces autostart** — `.devcontainer/scripts/post-start.sh`
   starts the MCP server automatically when `$CODESPACES=true`,
   honouring `.dev-pomogator/.mcp-lock.json` for stale-PID recovery.
 
-See `.specs/spec-generator-v4/CHANGELOG.md` for the full per-FR ledger.
+### Quick try
+
+```
+/spec-backlog              # see open backlog queue
+/cross-spec-reconcile      # run full cross-spec detector
+/cross-spec-resolve        # interactive walker through findings
+```
+
+See `.specs/spec-generator-v4/README.md` and
+`.specs/spec-generator-v4/CHANGELOG.md` for the full per-FR ledger.
 
 ## Migration v1 → v2
 

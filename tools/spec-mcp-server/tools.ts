@@ -8,7 +8,7 @@
  *
  * The 11 tools per [SCHEMA Entity 3](../../.specs/spec-generator-v4/spec-generator-v4_SCHEMA.md):
  *
- *   get_trace               primary — structured tree + explanation
+ *   get_trace               primary — structured tree + code_impl + explanation
  *   find_by_tags            scenarios filtered by `@FR/@NFR/@AC` tags
  *   conformance_check       run Phase-1 conformance over current graph
  *   search                  substring scan over node ids + titles
@@ -36,6 +36,9 @@ import type {
   AcNode,
   ScenarioNode,
   TaskNode,
+  StepBindingNode,
+  Edge,
+  EdgeMetadata,
 } from '../spec-graph/types.ts';
 
 export interface ToolResult {
@@ -86,6 +89,217 @@ function summariseFrTrace(
   return clamp(s, 500);
 }
 
+/**
+ * One `code_impl[]` entry surfaced by `get_trace` per FR-30.
+ *
+ * Mirrors `EdgeMetadata` for `implements` edges (FR-29) — `file_path` is the
+ * repo-relative POSIX path, `source_section` reports whether the linkage came
+ * from `FILE_CHANGES.md` or `DESIGN.md`, and `action` is the FILE_CHANGES
+ * verb (`create` / `edit` / ...) when available.
+ *
+ * `action` is omitted (not `null`) when the edge originated from DESIGN.md
+ * (no action verb in that source) — matches the on-disk `EdgeMetadata` shape.
+ */
+interface CodeImplEntry {
+  file_path: string;
+  action?: EdgeMetadata['action'];
+  source_section: NonNullable<EdgeMetadata['source_section']>;
+}
+
+/**
+ * Compute the `code_impl[]` array surfaced for a given node per FR-30.
+ *
+ * Rules:
+ *  - FR     → all `implements` edges from this FR, in source order.
+ *  - AC     → inherits the parent FR's `code_impl` transitively.
+ *  - Scenario → StepBinding code-file refs ∪ tagged-FR `code_impl` (deduped
+ *               by `file_path`; first-seen entry wins).
+ *  - Task   → `task.files[]` ∪ each ref'd FR's `code_impl` (deduped; first
+ *             wins). `files[]` is an optional field not yet on TaskNode in
+ *             the Phase-1 schema — read defensively.
+ *  - Other  → [] (e.g. NFR, UseCase, Risk, File, StepBinding).
+ *
+ * Empty result is always an array (`[]`, never `undefined`) so the response
+ * shape stays stable per FR-30 (AC-30.1 second clause).
+ */
+function computeCodeImpl(node: Node, graph: SpecGraph): CodeImplEntry[] {
+  if (node.type === 'FR') return directImplements(node.id, graph);
+
+  if (node.type === 'AC') {
+    const parent = (node as AcNode).parentFr;
+    if (!parent) return [];
+    return directImplements(parent, graph);
+  }
+
+  if (node.type === 'Scenario') {
+    const scen = node as ScenarioNode;
+    const out: CodeImplEntry[] = [];
+    const seen = new Set<string>();
+
+    // StepBinding code files — emit BEFORE inherited FR entries so explicit
+    // step bindings win on dedup.
+    for (const edge of graph.edges) {
+      if (edge.from !== scen.id || edge.type !== 'step-binding') continue;
+      const to = graph.nodes.get(edge.to);
+      if (!to || to.type !== 'StepBinding') continue;
+      const codeFile = (to as StepBindingNode).codeFile;
+      if (codeFile && !seen.has(codeFile)) {
+        seen.add(codeFile);
+        out.push({ file_path: codeFile, source_section: 'DESIGN' });
+      }
+    }
+
+    // Inherit code_impl from every FR/NFR tagged by the scenario.
+    for (const tag of scen.tags) {
+      const bare = tag.startsWith('@') ? tag.slice(1) : tag;
+      const tagged = graph.nodes.get(bare);
+      if (!tagged) continue;
+      if (tagged.type !== 'FR' && tagged.type !== 'NFR') continue;
+      for (const entry of directImplements(tagged.id, graph)) {
+        if (!seen.has(entry.file_path)) {
+          seen.add(entry.file_path);
+          out.push(entry);
+        }
+      }
+    }
+    return out;
+  }
+
+  if (node.type === 'Task') {
+    const task = node as TaskNode & { files?: string[] };
+    const out: CodeImplEntry[] = [];
+    const seen = new Set<string>();
+
+    // task.files[] is not part of the Phase-1 TaskNode schema yet (TASKS.md
+    // parser ships in a follow-up sub-PR). Treat as optional — when absent
+    // we just fall through to ref'd FR inheritance.
+    for (const fp of task.files ?? []) {
+      if (typeof fp !== 'string' || !fp) continue;
+      if (!seen.has(fp)) {
+        seen.add(fp);
+        out.push({ file_path: fp, source_section: 'FILE_CHANGES' });
+      }
+    }
+
+    for (const refId of task.refs ?? []) {
+      const ref = graph.nodes.get(refId);
+      if (!ref || (ref.type !== 'FR' && ref.type !== 'NFR')) continue;
+      for (const entry of directImplements(ref.id, graph)) {
+        if (!seen.has(entry.file_path)) {
+          seen.add(entry.file_path);
+          out.push(entry);
+        }
+      }
+    }
+    return out;
+  }
+
+  return [];
+}
+
+/**
+ * Direct `implements` edges from a FR/NFR id → CodeImplEntry[].
+ *
+ * Walks the edge list once, materialising each `implements` edge into a
+ * `code_impl` entry from its `metadata`. Edges without metadata or with no
+ * `file_path` fall back to the target node's `path` (FileNode). This keeps
+ * the helper robust to edges produced by future parsers that may not always
+ * populate metadata.
+ */
+function directImplements(frId: string, graph: SpecGraph): CodeImplEntry[] {
+  const out: CodeImplEntry[] = [];
+  const seen = new Set<string>();
+  for (const edge of graph.edges) {
+    if (edge.from !== frId || edge.type !== 'implements') continue;
+    const entry = edgeToCodeImpl(edge, graph);
+    if (!entry) continue;
+    if (seen.has(entry.file_path)) continue;
+    seen.add(entry.file_path);
+    out.push(entry);
+  }
+  return out;
+}
+
+/** Materialise one `implements` edge into a `CodeImplEntry`, or `null` if the edge is malformed. */
+function edgeToCodeImpl(edge: Edge, graph: SpecGraph): CodeImplEntry | null {
+  const meta = edge.metadata ?? {};
+  let filePath = meta.file_path;
+  if (!filePath) {
+    const target = graph.nodes.get(edge.to);
+    if (target?.type === 'File') filePath = (target as { path: string }).path;
+  }
+  if (!filePath) return null;
+  const entry: CodeImplEntry = {
+    file_path: filePath,
+    source_section: meta.source_section ?? 'FILE_CHANGES',
+  };
+  if (meta.action) entry.action = meta.action;
+  return entry;
+}
+
+/**
+ * Shape of a malformed-edge warning surfaced inside `get_trace.warnings[]`.
+ *
+ * Emitted when an `implements` edge resolves to neither a `metadata.file_path`
+ * nor a `FileNode.path` target. Per SPECGEN004_64 the field is REQUIRED to be
+ * present and actionable — the agent needs the edge's source location to fix
+ * the offending FILE_CHANGES/DESIGN row.
+ */
+interface ImplementsWarning {
+  code: 'MALFORMED_IMPLEMENTS_EDGE';
+  from: string;
+  to: string;
+  /**
+   * Source location of the offending edge. Falls back to the source FR's file
+   * + line when the edge itself carries no anchor; the FR node is always
+   * reachable because the edge has a `from` pointing at it.
+   */
+  source: { file: string; line: number };
+  message: string;
+}
+
+/**
+ * Collect malformed `implements` edges originating from a node or its parent
+ * FR (when the node is an AC). Mirrors the dedup/inheritance rules used by
+ * `directImplements` / `computeCodeImpl` so the surfaced warnings line up with
+ * what the agent would have seen as `code_impl[]` entries had they not been
+ * dropped.
+ */
+function collectImplementsWarnings(node: Node, graph: SpecGraph): ImplementsWarning[] {
+  const out: ImplementsWarning[] = [];
+  const sources: string[] = [];
+  if (node.type === 'FR') sources.push(node.id);
+  else if (node.type === 'AC') {
+    const parent = (node as AcNode).parentFr;
+    if (parent) sources.push(parent);
+  } else if (node.type === 'Scenario') {
+    for (const tag of (node as ScenarioNode).tags) {
+      const bare = tag.startsWith('@') ? tag.slice(1) : tag;
+      const tagged = graph.nodes.get(bare);
+      if (tagged && (tagged.type === 'FR' || tagged.type === 'NFR')) sources.push(tagged.id);
+    }
+  }
+  if (sources.length === 0) return out;
+  const sourceSet = new Set(sources);
+  for (const edge of graph.edges) {
+    if (edge.type !== 'implements') continue;
+    if (!sourceSet.has(edge.from)) continue;
+    if (edgeToCodeImpl(edge, graph)) continue;
+    const fromNode = graph.nodes.get(edge.from);
+    out.push({
+      code: 'MALFORMED_IMPLEMENTS_EDGE',
+      from: edge.from,
+      to: edge.to,
+      source: {
+        file: fromNode?.file ?? '',
+        line: fromNode?.line ?? 0,
+      },
+      message: `implements edge ${edge.from} -> ${edge.to} is missing file_path metadata and target is not a File node`,
+    });
+  }
+  return out;
+}
+
 export function buildToolRegistry(getGraph: () => SpecGraph): ToolDefinition<z.ZodRawShape>[] {
   const tools: ToolDefinition<z.ZodRawShape>[] = [];
 
@@ -94,7 +308,8 @@ export function buildToolRegistry(getGraph: () => SpecGraph): ToolDefinition<z.Z
     name: 'get_trace',
     description:
       'Get the full requirement trace for a node id: AC + Scenarios + Tasks + ' +
-      'related nodes + a ≤500-char natural-language summary for the agent.',
+      'code_impl[] (implements edges per FR-30) + related nodes + a ≤500-char ' +
+      'natural-language summary for the agent.',
     inputShape: { node_id: z.string() } as const satisfies z.ZodRawShape,
     handler: async ({ node_id }) => {
       const graph = getGraph();
@@ -137,6 +352,7 @@ export function buildToolRegistry(getGraph: () => SpecGraph): ToolDefinition<z.Z
           ? summariseFrTrace(node as FrNode, acs, scenarios, tasks)
           : `${node.id} (${node.type}) at ${node.file}:${node.line}`;
 
+      const warnings = collectImplementsWarnings(node, graph);
       return asJsonResult({
         ok: true,
         node: { id: node.id, type: node.type, file: node.file, line: node.line },
@@ -150,6 +366,8 @@ export function buildToolRegistry(getGraph: () => SpecGraph): ToolDefinition<z.Z
           failingStep: s.failingStep ?? null,
         })),
         tasks: tasks.map((t) => ({ id: t.id, status: t.status, file: t.file, line: t.line })),
+        code_impl: computeCodeImpl(node, graph),
+        warnings,
         related_nodes: related,
         explanation_for_agent: explanation,
       });

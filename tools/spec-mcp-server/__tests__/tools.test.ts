@@ -17,20 +17,24 @@ import type {
   AcNode,
   ScenarioNode,
   TaskNode,
+  FileNode,
   Edge,
 } from '../../spec-graph/types.ts';
 
 function fr(id: string, title: string, file = '.specs/auth/FR.md', line = 1): FrNode {
-  return { id, type: 'FR', file, line, title, anchors: [id] };
+  return { id, type: 'FR', file, line, title, anchors: [id], body: '' };
 }
-function ac(id: string, covers: string, file = '.specs/auth/AC.md', line = 1): AcNode {
-  return { id, type: 'AC', file, line, covers };
+function ac(id: string, parentFr: string, file = '.specs/auth/AC.md', line = 1): AcNode {
+  return { id, type: 'AC', file, line, parentFr, ears: '' };
 }
 function scen(id: string, tags: string[] = [], file = '.specs/auth/auth.feature', line = 1): ScenarioNode {
   return { id, type: 'Scenario', file, line, tags, steps: [] };
 }
 function task(id: string, refs: string[], file = '.specs/auth/TASKS.md', line = 1): TaskNode {
   return { id, type: 'Task', file, line, refs, status: 'todo', title: id };
+}
+function fileNode(id: string, p: string, file = '.specs/auth/FILE_CHANGES.md', line = 1): FileNode {
+  return { id, type: 'File', file, line, path: p };
 }
 
 function makeGraph(): SpecGraph {
@@ -116,6 +120,92 @@ describe('get_trace', () => {
     const body = parseResult(r) as { ok: boolean; error: string };
     expect(body.ok).toBe(false);
     expect(body.error).toBe('NODE_NOT_FOUND');
+  });
+});
+
+describe('get_trace — code_impl[] (FR-30)', () => {
+  /**
+   * Independent fixture: FR-5 has 3 implements edges (covers AC-30.1),
+   * AC-5.1 inherits parent FR-5's entries (covers AC-30.2),
+   * FR-2 has 0 implements edges (verifies empty-array-not-omitted invariant).
+   */
+  function makeImplGraph(): SpecGraph {
+    const g: SpecGraph = {
+      version: 1,
+      builtAt: new Date('2026-06-02T00:00:00Z').toISOString(),
+      nodes: new Map(),
+      edges: [] as Edge[],
+      definitions: new Map(),
+      backlinks: new Map(),
+    };
+    g.nodes.set('FR-5', fr('FR-5', 'Auth'));
+    g.nodes.set('FR-2', fr('FR-2', 'Logout', '.specs/auth/FR.md', 20));
+    g.nodes.set('AC-5.1', ac('AC-5.1', 'FR-5'));
+    g.nodes.set('FILE-a', fileNode('FILE-a', 'src/auth/login.ts'));
+    g.nodes.set('FILE-b', fileNode('FILE-b', 'src/auth/session.ts'));
+    g.nodes.set('FILE-c', fileNode('FILE-c', 'src/auth/cookies.ts'));
+    g.edges.push({
+      from: 'FR-5', to: 'FILE-a', type: 'implements',
+      metadata: { file_path: 'src/auth/login.ts', source_section: 'FILE_CHANGES', action: 'create' },
+    });
+    g.edges.push({
+      from: 'FR-5', to: 'FILE-b', type: 'implements',
+      metadata: { file_path: 'src/auth/session.ts', source_section: 'FILE_CHANGES', action: 'edit' },
+    });
+    g.edges.push({
+      from: 'FR-5', to: 'FILE-c', type: 'implements',
+      metadata: { file_path: 'src/auth/cookies.ts', source_section: 'DESIGN' },
+    });
+    return g;
+  }
+
+  function implTool(name: string) {
+    const reg = buildToolRegistry(() => makeImplGraph());
+    const t = reg.find((x) => x.name === name);
+    if (!t) throw new Error(`tool ${name} not registered`);
+    return t;
+  }
+
+  it('AC-30.1: FR with 3 implements edges → code_impl length 3 with file_path + source_section', async () => {
+    const r = await implTool('get_trace').handler({ node_id: 'FR-5' });
+    const body = parseResult(r) as {
+      ok: boolean;
+      code_impl: Array<{ file_path: string; action?: string; source_section: string }>;
+    };
+    expect(body.ok).toBe(true);
+    expect(body.code_impl).toHaveLength(3);
+    expect(body.code_impl.map((e) => e.file_path).sort()).toEqual(
+      ['src/auth/cookies.ts', 'src/auth/login.ts', 'src/auth/session.ts'],
+    );
+    for (const entry of body.code_impl) {
+      expect(typeof entry.file_path).toBe('string');
+      expect(['FILE_CHANGES', 'DESIGN']).toContain(entry.source_section);
+    }
+    const login = body.code_impl.find((e) => e.file_path === 'src/auth/login.ts')!;
+    expect(login.source_section).toBe('FILE_CHANGES');
+    expect(login.action).toBe('create');
+    const cookies = body.code_impl.find((e) => e.file_path === 'src/auth/cookies.ts')!;
+    expect(cookies.source_section).toBe('DESIGN');
+    expect(cookies.action).toBeUndefined();
+  });
+
+  it('AC-30.2: AC inherits parent FR code_impl transitively (identical entries)', async () => {
+    const rFr = await implTool('get_trace').handler({ node_id: 'FR-5' });
+    const rAc = await implTool('get_trace').handler({ node_id: 'AC-5.1' });
+    const fromFr = (parseResult(rFr) as { code_impl: Array<{ file_path: string }> }).code_impl;
+    const fromAc = (parseResult(rAc) as { code_impl: Array<{ file_path: string }> }).code_impl;
+    expect(fromAc).toHaveLength(fromFr.length);
+    expect(fromAc.map((e) => e.file_path).sort()).toEqual(fromFr.map((e) => e.file_path).sort());
+  });
+
+  it('No implements edges → code_impl present as empty array, NOT omitted (stable shape)', async () => {
+    const r = await implTool('get_trace').handler({ node_id: 'FR-2' });
+    const body = parseResult(r) as { ok: boolean; code_impl?: unknown };
+    expect(body.ok).toBe(true);
+    // Field MUST be present (not undefined / omitted) per FR-30.
+    expect(Object.prototype.hasOwnProperty.call(body, 'code_impl')).toBe(true);
+    expect(Array.isArray(body.code_impl)).toBe(true);
+    expect(body.code_impl as unknown[]).toHaveLength(0);
   });
 });
 

@@ -41,7 +41,7 @@ Edits are STAGED IN WORKING TREE BUT NOT COMMITTED — this document is the revi
 
 | # | Finding | File · Line | Before → After |
 |---|---------|-------------|----------------|
-| 1 | `src/installer/shared.ts` | `.specs/auto-capture/RESEARCH.md:105` | `` `src/installer/shared.ts` → `makePortableTsxCommand()` `` → `` `.claude/skills/skills-rules-optimizer/scripts/shared.ts` → `makePortableTsxCommand()` `` |
+| 1 | `src/installer/shared.ts` | `.specs/auto-capture/RESEARCH.md:105` | `` `src/installer/shared.ts` → `makePortableTsxCommand()` `` → `` `.claude/skills/[skills-rules-optimizer](../skills-rules-optimizer/FR.md)/scripts/shared.ts` → `makePortableTsxCommand()` `` |
 | 2 | `src/installer/report.ts` | `.specs/claude-mem-integration/DESIGN.md:97` | `` \| `InstallReport` \| `src/installer/report.ts` \| Per-component statuses \| `` → `` \| `InstallReport` \| `.claude/skills/skills-rules-optimizer/scripts/report.ts` \| Per-component statuses \| `` |
 | 3 | `src/utils/logger.ts` | `.specs/claude-mem-integration/DESIGN.md:98` | `` \| `formatErrorChain` \| `src/utils/logger.ts` \| Error logging \| `` → `` \| `formatErrorChain` \| `tools/steps-validator/logger.ts` \| Error logging \| `` |
 | 4 | `src/installer/report.ts` | `.specs/claude-mem-integration/FILE_CHANGES.md:7` | `` \| `src/installer/report.ts` \| edit \| Per-component entries (worker/chroma/mcp/hooks) \| `` → `` \| `.claude/skills/skills-rules-optimizer/scripts/report.ts` \| edit \| Per-component entries (worker/chroma/mcp/hooks) \| `` |
@@ -223,7 +223,7 @@ Full per-target detail is in `.dev-pomogator-tmp/group-c-review-packet.md`. Clif
 
 - **#1 `src/installer/claude.ts` (32 refs):** OWNERSHIP_RECOMMENDATION.md artifacts in multiple specs confirm the file existed historically and is contested across specs. Pattern matches GROUP_A items already rewritten. Needs git-history archaeology + grep for `installClaude` symbol.
 - **#2 / #5 `claude-installer.test.ts` + `CORE003_claude-installer.feature` (27 + 15 refs):** Real-vs-phantom dilemma. Either recreate (BDD discipline says yes — `extension-test-quality.md` requires 1:1 mapping) OR delete refs (if v2 migration replaced this surface with split `doctor-*.test.ts`). Decision must be coordinated across at least 4 specs.
-- **#9 / #20 strong-tests-*.test.ts (8 + 5 refs):** Inconsistency — DESIGN.md says "planned", FIELD_VERIFICATION_FINAL.md claims "all PASS". Either recreate from git history (`git log --diff-filter=D --name-only`) or correct the verification report.
+- **#9 / #20 [strong-tests](../strong-tests/FR.md)-*.test.ts (8 + 5 refs):** Inconsistency — DESIGN.md says "planned", FIELD_VERIFICATION_FINAL.md claims "all PASS". Either recreate from git history (`git log --diff-filter=D --name-only`) or correct the verification report.
 - **#11 `src/doctor/reporter.ts` (8 refs):** Sister files `runner.ts`, `lock.ts`, `reinstall.ts`, `checks/*.ts` are already in GROUP_A. `reporter.ts` was simply missed by the rename suggester. Mechanical fix.
 - **#13 ~~`tests/e2e/pomogator-doctor.test.ts`~~ (7 refs):** Aggregate file never created; implementation went with 6 split files. Spec needs to catch up — replace single-file refs with 6 split paths.
 - **#16 `tests/e2e/scope-gate-helpers.ts` (6 refs):** TASKS.md line 12 explicitly states "не создан, helpers инлайнены в самих тестах". DESIGN.md / FILE_CHANGES.md are stale plans; align them with TASKS.md ground truth.
@@ -253,8 +253,8 @@ Full per-target detail is in `.dev-pomogator-tmp/group-c-review-packet.md`. Clif
 6. **GROUP_C multi-spec decisions — 10 items (#2, #5, #9, #10, #13, #15, #17, #19, #20).** Each requires a "recreate stub vs delete refs" call that affects multiple FRs / TASKS across coupled specs. Schedule a dedicated review session with knowledge of v2 implementation status. Pairings:
    - #2 + #5 (claude-installer test + feature)
    - #9 + #20 (strong-tests jit + main)
-   - #13 (pomogator-doctor aggregate vs split layout)
-   - #15 (settings-protection — evidence-pattern reference; load-bearing for skill-listing-budget spec validity)
+   - #13 ([pomogator-doctor](../pomogator-doctor/FR.md) aggregate vs split layout)
+   - #15 (settings-protection — evidence-pattern reference; load-bearing for [skill-listing-budget](../skill-listing-budget/FR.md) spec validity)
    - #17, #19 (personal-pomogator, specs-management-skill-migration — independent decisions)
 
 ### Suggested commit sequence
@@ -368,9 +368,9 @@ Final pass on the 10 multi-spec human-triage items (recs item #6) — convert ea
 
 | # | Target | Decision | Count |
 |---|--------|----------|------:|
-| 1 | `src/installer/claude.ts` | **WRAP** (`~~…~~ (removed in v2 — no canonical replacement)`) across 11 specs (auto-capture, claude-mem-integration, dev-pomogator-canonical-plugin, extension-beta-flag, fix-bg-output-loss, global-dir-guard, lsp-setup, personal-pomogator, skill-listing-budget, strong-tests, test-statusline) | ~50 instances |
+| 1 | `src/installer/claude.ts` | **WRAP** (`~~…~~ (removed in v2 — no canonical replacement)`) across 11 specs (auto-capture, [claude-mem-integration](../claude-mem-integration/FR.md), [dev-pomogator-canonical-plugin](../dev-pomogator-canonical-plugin/FR.md), [extension-beta-flag](../extension-beta-flag/FR.md), fix-bg-output-loss, global-dir-guard, lsp-setup, personal-pomogator, skill-listing-budget, strong-tests, [test-statusline](../test-statusline/FR.md)) | ~50 instances |
 | 2 | `src/installer/memory.ts` | **WRAP** across 7 specs (claude-mem-integration, cursor-dead-code-cleanup, personal-pomogator, pomogator-doctor, spec-workflow-md-validation, spec-workflow-feature-steps-validation, spec-workflow-vmodel) | ~28 instances |
-| 3 | `tests/e2e/claude-installer.test.ts` | **WRAP** in 5 specs (install-diagnostics, claude-mem-integration, extension-beta-flag, skill-listing-budget [DESIGN evidence row], personal-pomogator [DEFERRED pattern reference]) | ~33 instances |
+| 3 | `tests/e2e/claude-installer.test.ts` | **WRAP** in 5 specs ([install-diagnostics](../install-diagnostics/FR.md), claude-mem-integration, extension-beta-flag, skill-listing-budget [DESIGN evidence row], personal-pomogator [DEFERRED pattern reference]) | ~33 instances |
 | 4 | `tests/features/core/CORE003_claude-installer.feature` | **WRAP** (install-diagnostics, skill-listing-budget) + **DELETE/Source-marker** (lsp-setup.feature line 1, install-diagnostics.feature line 1) | ~18 instances |
 | 5 | `tests/e2e/strong-tests-jit.test.ts` | **WRAP + "planned, not implemented" annotation** (strong-tests: DESIGN, FIELD_VERIFICATION{,_FINAL}, INVARIANTS, README, TASKS) | 8 instances |
 | 6 | `tests/e2e/strong-tests.test.ts` | **WRAP + "planned, not implemented" annotation** (strong-tests: DESIGN, FIXTURES, RESEARCH, _SCHEMA, report.html — TASKS T03 kept bare as in-flight TODO) | 5 instances |
