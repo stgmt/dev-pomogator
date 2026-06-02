@@ -214,6 +214,7 @@
 
 ## BDD Test Infrastructure (ОБЯЗАТЕЛЬНО)
 
+**Classification:** TEST_DATA_ACTIVE
 **TEST_DATA:** TEST_DATA_ACTIVE
 **TEST_FORMAT:** BDD
 **Framework:** Cucumber.js (`@cucumber/cucumber`) for dev-pomogator self-test; Reqnroll for C# target projects; behave for Python target projects (Phase 3+)

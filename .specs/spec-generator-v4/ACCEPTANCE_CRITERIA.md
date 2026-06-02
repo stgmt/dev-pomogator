@@ -376,3 +376,21 @@ WHEN `multilang-ingest-roundtrip.test.ts` runs against `tests/fixtures/reqnroll-
 **Требование:** [FR-31](FR.md#fr-31)
 
 WHEN the same test ingests the fixture NDJSON into the builder AND queries MCP `get_trace` for the fixture FR THEN returned `scenarios[].lastResult` SHALL match the expected per-language statuses AND `get_test_result` SHALL return the same statuses.
+
+## AC-32.1 (FR-32)
+
+**Требование:** [FR-32](FR.md#fr-32)
+
+WHEN a task whose Done-When maps to scenario `SPECGEN004_NN` that is `UNDEFINED` in the latest `.last-test-run.ndjson` is hand-set to `Status: DONE` THEN `spec-status` SHALL emit finding `TASK_STATUS_UNVERIFIED` AND render the task's status as `IN_PROGRESS` (capped), not `DONE`.
+
+## AC-32.2 (FR-32)
+
+**Требование:** [FR-32](FR.md#fr-32)
+
+WHEN every scenario mapped to a task is `PASSED` in the latest run THEN the task's `verified_status` SHALL be `DONE` AND no `TASK_STATUS_UNVERIFIED` finding SHALL be emitted for it.
+
+## AC-32.3 (FR-32)
+
+**Требование:** [FR-32](FR.md#fr-32)
+
+WHEN MCP `get_coverage()` is invoked THEN it SHALL return, from `.last-test-run.ndjson`, per-scenario buckets `{passed|pending|undefined|ambiguous|failed}` AND a per-task `verified_status` rollup matching `spec-status`'s derivation.

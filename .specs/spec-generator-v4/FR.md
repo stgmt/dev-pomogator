@@ -441,6 +441,23 @@ Does NOT depend on FR-29 / FR-30 — purely test infrastructure; can ship indepe
 **Use Case:** [UC-3](USE_CASES.md#uc-3)
 **User Story:** US-19
 
+## FR-32: Task status SHALL be evidence-derived from the latest test run, with a honesty gate
+
+System SHALL derive each task's effective status from the latest BDD/test run (`.dev-pomogator/.last-test-run.ndjson`) instead of trusting the hand-authored `Status:` field, by mapping each task to its scenarios via the task's `@featureN` / `SPECGEN004_NN` references and FR `refs[]`:
+
+- A task's `verified_status` SHALL be `DONE` only when EVERY mapped scenario is `PASSED` in the latest run.
+- If any mapped scenario is `pending` / `undefined` / `ambiguous` / `failed`, `verified_status` SHALL be capped at `IN_PROGRESS` (never `DONE`).
+- A task with no mapped scenarios SHALL fall back to its hand-set status flagged `verified_status = "unverified"`.
+
+System SHALL emit conformance finding `TASK_STATUS_UNVERIFIED` (severity WARNING) WHEN a task's hand-set `Status: DONE` conflicts with a `verified_status < DONE` — the honesty gate. The finding `suggestions[]` SHALL name the offending scenario(s) and their bucket. `spec-status.ts -Format task-table` SHALL render `verified_status` (not the raw field) so the summary table cannot claim DONE without green scenarios.
+
+This codifies the manual discipline applied during the 2026-06-02 coverage audit (no task DONE while its BDD scenario is pending/undefined/ambiguous) into the spec-generator itself, removing the human as the enforcement point.
+
+**Зависит от:** FR-2 (SpecGraph task↔scenario edges), FR-13 (conformance findings), FR-30 (MCP node surface). Surfaced via MCP `get_coverage` (per-scenario buckets + per-task derived status) and `get_trace` (`verified_status` per node).
+**Связанные AC:** [AC-32.1](ACCEPTANCE_CRITERIA.md#ac-321-fr-32), [AC-32.2](ACCEPTANCE_CRITERIA.md#ac-322-fr-32), [AC-32.3](ACCEPTANCE_CRITERIA.md#ac-323-fr-32)
+**Use Case:** [UC-1](USE_CASES.md#uc-1)
+**User Story:** US-20
+
 ---
 
 ## Out of Scope

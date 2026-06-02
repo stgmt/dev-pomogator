@@ -559,3 +559,38 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then the test fails with non-zero exit status
     And the error message contains literally «fixture missing README.md: tests/fixtures/reqnroll-sample/»
     And the hint includes literally «document exact runner command + version»
+
+  @feature32
+  Scenario: SPECGEN004_70 spec-status derives DONE only when all mapped scenarios PASSED
+    Given a task whose Done-When references scenarios that are all `PASSED` in the latest `.last-test-run.ndjson`
+    When `spec-status -Format task-table` computes the task's status
+    Then the rendered status is `DONE`
+    And no `TASK_STATUS_UNVERIFIED` finding is emitted for that task
+
+  @feature32
+  Scenario: SPECGEN004_71 honesty gate flags hand-set DONE whose scenario is undefined
+    Given a task hand-set to `Status: DONE` whose mapped scenario is `UNDEFINED` in the latest run
+    When `spec-status` computes the verified status
+    Then a finding `TASK_STATUS_UNVERIFIED` is emitted with the offending scenario id and bucket
+    And the rendered status is capped at `IN_PROGRESS`, never `DONE`
+
+  @feature32
+  Scenario: SPECGEN004_72 get_coverage returns per-scenario buckets matching the run
+    Given a `.last-test-run.ndjson` with a mix of passed, pending, undefined and ambiguous scenarios
+    When the MCP client invokes `get_coverage()`
+    Then the response groups every scenario into exactly one of `passed`, `pending`, `undefined`, `ambiguous` or `failed`
+    And the per-bucket counts equal the cucumber summary for the same run
+
+  @feature32
+  Scenario: SPECGEN004_73 get_coverage returns per-task verified status
+    Given a spec whose tasks map to scenarios of mixed result
+    When the MCP client invokes `get_coverage()`
+    Then each task carries a `verified_status` of `DONE` only if all its mapped scenarios are `passed`
+    And tasks with any non-passed mapped scenario carry `verified_status` of `in_progress`
+
+  @feature32
+  Scenario: SPECGEN004_74 get_trace surfaces verified_status per node
+    Given a SpecGraph built from a spec with a recorded test run
+    When the MCP client invokes `get_trace({node_id: <task or FR>})`
+    Then the node includes a `verified_status` field derived from coverage
+    And it never reports `DONE` while a linked scenario is pending, undefined or ambiguous

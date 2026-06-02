@@ -90,8 +90,13 @@
 | T9-83 | T-Cov.4 Wire step-defs for orphan-policy scenarios (SPECGEN004_29/_30) | TODO | — | Phase 9 — Coverage honesty & gap-close (post-run audit 2026-06-02) | 90m |
 | T9-84 | T-Cov.5 Remove or implement empty e2e stub | TODO | e2e-test-reconcile-roundtrip | Phase 9 — Coverage honesty & gap-close (post-run audit 2026-06-02) | 30m |
 | T9-85 | T-Cov.6 Reconcile TASKS statuses + `.progress.json` to verified reality | TODO | — | Phase 9 — Coverage honesty & gap-close (post-run audit 2026-06-02) | 120m |
-| T9-86 | Refactor + dedup across phases | TODO | verify-phase6-green | Phase 9 — Coverage honesty & gap-close (post-run audit 2026-06-02) | 480m |
-| T9-87 | Final verification | TODO | final-refactor | Phase 9 — Coverage honesty & gap-close (post-run audit 2026-06-02) | 240m |
+| T10-86 | T-Cov.7 Task↔scenario mapping resolver | TODO | — | Phase 10 — Evidence-derived task status (FR-32) | 120m |
+| T10-87 | T-Cov.8 Evidence-derived status + honesty-gate finding in spec-status | TODO | task-scenario-map | Phase 10 — Evidence-derived task status (FR-32) | 240m |
+| T10-88 | T-Cov.9 MCP coverage surface (get_coverage + get_trace verified_status) | TODO | evidence-derived-status, mcp-tool-get-coverage | Phase 10 — Evidence-derived task status (FR-32) | 180m |
+| T10-89 | T-Cov.10 BDD step-defs for @feature32 | TODO | mcp-coverage-surface | Phase 10 — Evidence-derived task status (FR-32) | 90m |
+| T11-90 | T-Orch.0 Choose orchestrator architecture (general vs orchestrator+workers vs to | TODO | — | Phase 11 — Workflow orchestrator skill (self-improving) — architecture TBD | 60m |
+| T11-91 | Refactor + dedup across phases | TODO | verify-phase6-green | Phase 11 — Workflow orchestrator skill (self-improving) — architecture TBD | 480m |
+| T11-92 | Final verification | TODO | final-refactor | Phase 11 — Workflow orchestrator skill (self-improving) — architecture TBD | 240m |
 <!-- end auto-generated -->
 
 > Regenerate via `Skill("task-board-forms")` or `npx tsx extensions/specs-workflow/tools/specs-generator/spec-status.ts -Path .specs/spec-generator-v4 -Format task-table` and splice between markers.
@@ -828,6 +833,51 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - `.progress.json` populated (currently empty) with current phase + STOP state
   - Summary table regenerated via `Skill("task-board-forms")` — table matches body
   - Honesty invariant: no task claims DONE whose BDD scenario is pending/undefined/ambiguous
+
+## Phase 10 — Evidence-derived task status (FR-32)
+
+> Codifies the 2026-06-02 audit discipline into the spec-generator: task status derived from the latest run, honesty-gate finding, MCP coverage surface. Scenarios SPECGEN004_70..74 (@feature32) are red until these land.
+
+- [ ] T-Cov.7 Task↔scenario mapping resolver — id: task-scenario-map — Status: TODO | Est: 120m
+  _Requirements:_ FR-32, FR-2
+  **Done When:**
+  - maps each task to its scenarios via Done-When `SPECGEN004_NN` refs + `@featureN` + FR `refs[]`
+  - pure function with unit tests over a fixture spec (no mocks)
+
+- [ ] T-Cov.8 Evidence-derived status + honesty-gate finding in spec-status — id: evidence-derived-status — Status: TODO | Est: 240m
+  _depends: task-scenario-map_
+  _Requirements:_ FR-32, FR-13, AC-32.1, AC-32.2
+  **Done When:**
+  - `spec-status.ts` computes `verified_status` from `.last-test-run.ndjson` (DONE iff all mapped scenarios PASSED; else capped IN_PROGRESS)
+  - emits `TASK_STATUS_UNVERIFIED` when hand-set DONE conflicts with verified_status; suggestions name offending scenario+bucket
+  - `-Format task-table` renders verified_status
+  - @feature32 SPECGEN004_70, _71 pass
+
+- [ ] T-Cov.9 MCP coverage surface (get_coverage + get_trace verified_status) — id: mcp-coverage-surface — Status: TODO | Est: 180m
+  _depends: evidence-derived-status, mcp-tool-get-coverage_
+  _Requirements:_ FR-32, FR-30, AC-32.3
+  **Done When:**
+  - `get_coverage` returns per-scenario buckets + per-task verified_status from `.last-test-run.ndjson`
+  - `get_trace` node response includes `verified_status`
+  - @feature32 SPECGEN004_72, _73, _74 pass
+
+- [ ] T-Cov.10 BDD step-defs for @feature32 — id: stepdefs-fr-32 — Status: TODO | Est: 90m
+  _depends: mcp-coverage-surface_
+  _Requirements:_ FR-32, AC-32.1, AC-32.2, AC-32.3
+  **Done When:**
+  - `tests/step_definitions/feature32_evidence_status.ts` binds SPECGEN004_70..74 to real spec-status + MCP (no mocks)
+  - `npm run test:bdd` reports `@feature32` 5/5 PASSED
+
+## Phase 11 — Workflow orchestrator skill (self-improving) — architecture TBD
+
+> A meta-skill that knows the full spec-generator feature map and drives the end-to-end workflow, and self-improves by appending dated improvement notes it can later merge. Architecture (general / orchestrator+workers / tools-only) is an open decision — see the analysis options before T-Orch.1.
+
+- [ ] T-Orch.0 Choose orchestrator architecture (general vs orchestrator+workers vs tools-only) — id: orchestrator-arch-decision — Status: TODO | Est: 60m
+  _Requirements:_ FR-33
+  **Done When:**
+  - 3 options compared (pros/cons) with a recommendation recorded in DESIGN.md
+  - chosen architecture + rationale documented
+  - downstream T-Orch.1..3 detailed against the chosen pattern
 
 ## Refactor & Polish (final)
 
