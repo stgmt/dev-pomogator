@@ -442,3 +442,120 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then install exits with non-zero status
     And the error message contains both hash values literally (`expected aaaa…aaaa`, `got bbbb…bbbb`)
     And the downloaded binary file is deleted before exit
+
+  # @feature29
+  Scenario: SPECGEN004_55 FILE_CHANGES.md with 5 unique paths emits 5 File nodes + implements edges
+    Given a spec at `tests/fixtures/specs/deep-multi-fr-refs-spec/` whose `FILE_CHANGES.md` contains 5 unique `Path` cells each citing at least one `FR-N` in the `Reason` column
+    When the SpecGraph builder runs on that spec
+    Then the resulting graph contains exactly 5 nodes of type `File` (one per unique path)
+    And one `implements` edge is emitted per `(FR, path)` pair derived from the `Reason` citations
+    And every emitted `implements` edge has `source_section = 'FILE_CHANGES'`
+
+  # @feature29
+  Scenario: SPECGEN004_56 Glob path in FILE_CHANGES.md is skipped with single warn-once log
+    Given a spec whose `FILE_CHANGES.md` contains a `Path` cell with glob pattern `tools/spec-graph/*.ts`
+    When the SpecGraph builder runs on that spec
+    Then no `implements` edge is emitted for that row
+    And the build emits exactly one warn-once log line literally containing «glob path skipped: tools/spec-graph/*.ts»
+    And the builder exits without crash with non-empty graph
+
+  # @feature29
+  Scenario: SPECGEN004_57 DESIGN.md App-код section produces implements edge with source_section=DESIGN
+    Given `DESIGN.md` "App-код" section lists `src/foo.ts`
+    And FR-3 body in `FR.md` cites `src/foo.ts`
+    When the SpecGraph builder runs on that spec
+    Then the graph contains an `implements` edge from `FR-3` to `File("src/foo.ts")`
+    And the edge's `source_section` equals literally `'DESIGN'`
+
+  # @feature29
+  Scenario: SPECGEN004_58 Empty FILE_CHANGES.md table emits zero edges and zero File nodes
+    Given a spec at `tests/fixtures/specs/minimal-spec/` whose `FILE_CHANGES.md` contains only the table header with no data rows
+    When the SpecGraph builder runs on that spec
+    Then the resulting graph contains zero nodes of type `File`
+    And the resulting graph contains zero edges of type `implements`
+    And the build exits without crash
+
+  # @feature29
+  Scenario: SPECGEN004_59 Duplicate path across FILE_CHANGES.md and DESIGN.md is deduplicated to one File node
+    Given `FILE_CHANGES.md` cites `src/foo.ts` in FR-1's row
+    And `DESIGN.md` "App-код" section also lists `src/foo.ts` for FR-1
+    When the SpecGraph builder runs on that spec
+    Then the graph contains exactly one `File` node with path `src/foo.ts`
+    And the graph contains exactly one `implements` edge from `FR-1` to `File("src/foo.ts")`
+    And the edge's `source_section` equals literally `'FILE_CHANGES'` (precedence over DESIGN)
+
+  # @feature30
+  Scenario: SPECGEN004_60 get_trace on FR with 3 implements edges returns code_impl array of length 3
+    Given a spec where `FR-5` has 3 `implements` edges to files `src/a.ts`, `src/b.ts`, `src/c.ts`
+    When the MCP client invokes `get_trace({node_id: "FR-5"})`
+    Then the response field `code_impl` is an array of length 3
+    And each entry contains both `file_path` and `source_section` keys with non-empty string values
+
+  # @feature30
+  Scenario: SPECGEN004_61 AC node inherits code_impl from parent FR
+    Given a spec where `FR-5` has 2 `implements` edges to files `src/a.ts`, `src/b.ts`
+    And `AC-5.1` has no direct `implements` edges
+    When the MCP client invokes `get_trace({node_id: "AC-5.1"})`
+    Then the response field `code_impl` is an array of length 2
+    And the entries equal parent `FR-5`'s `code_impl` entries identically by `file_path`
+
+  # @feature30
+  Scenario: SPECGEN004_62 Scenario node code_impl unions all tagged FRs' code_impl
+    Given a `.feature` Scenario tagged with both `@FR-1` and `@FR-2`
+    And `FR-1` has 1 `implements` edge to `src/x.ts`
+    And `FR-2` has 1 `implements` edge to `src/y.ts`
+    When the MCP client invokes `get_trace({node_id: "SCENARIO-id"})`
+    Then the response field `code_impl` is an array of length 2 containing both `src/x.ts` and `src/y.ts` exactly once each
+
+  # @feature30
+  Scenario: SPECGEN004_63 Node with no implements edges returns code_impl as empty array
+    Given a spec where `FR-7` has zero `implements` edges
+    When the MCP client invokes `get_trace({node_id: "FR-7"})`
+    Then the response field `code_impl` is present and equals literally `[]`
+    And the field is NOT omitted from the JSON response
+
+  # @feature30
+  Scenario: SPECGEN004_64 Malformed implements edge in graph produces actionable error from get_trace
+    Given the SpecGraph contains an `implements` edge with missing `file_path` field
+    When the MCP client invokes `get_trace({node_id: "FR-5"})`
+    Then the response includes a top-level `warnings[]` array
+    And `warnings[]` contains an entry with `code = "MALFORMED_IMPLEMENTS_EDGE"` and the offending edge's source location
+
+  # @feature31
+  Scenario: SPECGEN004_65 Reqnroll NDJSON fixture roundtrips through detectRunner + parseNdjson + builder
+    Given the fixture `tests/fixtures/reqnroll-sample/output.ndjson` exists alongside its `README.md`
+    When `detectRunner` is invoked on the fixture file
+    Then `detectRunner` returns literally `'reqnroll'`
+    And `parseNdjson` produces a `TestResultPatch` containing at least 2 scenarios
+    And at least one scenario has `status = 'PASSED'` and at least one has `status = 'FAILED'`
+
+  # @feature31
+  Scenario: SPECGEN004_66 behave NDJSON fixture roundtrips and get_test_result matches per-language statuses
+    Given the fixture `tests/fixtures/behave-sample/output.ndjson` exists alongside its `README.md`
+    When the test ingests the fixture into the SpecGraph builder
+    And invokes MCP `get_trace({node_id: <fixture_fr>})`
+    Then the returned `scenarios[].lastResult` matches the expected per-language statuses
+    And invoking `get_test_result({scenario_id: <same>})` returns the same statuses
+
+  # @feature31
+  Scenario: SPECGEN004_67 JVM (cucumber-jvm) NDJSON fixture roundtrip
+    Given the fixture `tests/fixtures/jvm-sample/output.ndjson` exists alongside its `README.md`
+    When `detectRunner` is invoked on the fixture file
+    Then `detectRunner` returns literally `'jvm'`
+    And `parseNdjson` produces a `TestResultPatch` with at least 1 scenario
+    And the builder ingest does NOT throw
+
+  # @feature31
+  Scenario: SPECGEN004_68 Unknown runner NDJSON falls back to cucumber-js parser with warn
+    Given an NDJSON file with envelopes that match no known runner signature
+    When `detectRunner` is invoked on that file
+    Then `detectRunner` returns literally `'cucumber-js'` (default fallback)
+    And stderr contains literally «runner detection fell back to cucumber-js»
+
+  # @feature31
+  Scenario: SPECGEN004_69 Multi-language fixture missing README.md errors loudly with actionable hint
+    Given `tests/fixtures/reqnroll-sample/output.ndjson` exists but `tests/fixtures/reqnroll-sample/README.md` is absent
+    When the fixture-shapes test suite runs
+    Then the test fails with non-zero exit status
+    And the error message contains literally «fixture missing README.md: tests/fixtures/reqnroll-sample/»
+    And the hint includes literally «document exact runner command + version»

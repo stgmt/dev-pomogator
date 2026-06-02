@@ -334,3 +334,45 @@ WHEN v4 install completes on a clean machine THEN both log file paths SHALL be e
 **Требование:** [FR-28](FR.md#fr-28)
 
 WHEN the PostToolUse hook (FR-6) fires for a sequence of qualifying edits at times t=0, t=1.0s, t=2.0s, t=2.9s (all within the throttle window opened at t=0) THEN a single batched push SHALL occur at t=throttle_ms (default 3000ms ± 100ms tolerance). WHEN a subsequent edit fires at t=throttle_ms+ε (ε>0) THEN a NEW window SHALL open at that timestamp AND the next push SHALL occur at t=2·throttle_ms+ε (NOT at t=throttle_ms extended). The throttle SHALL NOT exhibit sliding-window or debounce behavior.
+
+## AC-29.1 (FR-29)
+
+**Требование:** [FR-29](FR.md#fr-29)
+
+WHEN builder runs on a spec whose `FILE_CHANGES.md` table contains 5 unique paths AND each row's `Reason` cites at least one `FR-N` THEN SpecGraph SHALL contain exactly 5 `File` nodes (one per unique path) AND one `implements` edge per (FR, path) pair derived from those citations.
+
+## AC-29.2 (FR-29)
+
+**Требование:** [FR-29](FR.md#fr-29)
+
+WHEN `DESIGN.md` "App-код" section lists `src/foo.ts` AND FR-3 body cites `src/foo.ts` THEN SpecGraph SHALL contain an `implements` edge from `FR-3` to `File("src/foo.ts")` with `source_section='DESIGN'`.
+
+## AC-29.3 (FR-29)
+
+**Требование:** [FR-29](FR.md#fr-29)
+
+WHEN a `Path` cell contains a glob pattern (e.g. `tools/spec-graph/*.ts`) THEN builder SHALL emit no `implements` edge for that row AND SHALL log a single warn-once entry per build run; the build SHALL NOT crash.
+
+## AC-30.1 (FR-30)
+
+**Требование:** [FR-30](FR.md#fr-30)
+
+WHEN `get_trace("FR-5")` is invoked on a spec where FR-5 has 3 `implements` edges THEN the response `code_impl` field SHALL be an array of length 3, each entry containing `file_path` and `source_section`.
+
+## AC-30.2 (FR-30)
+
+**Требование:** [FR-30](FR.md#fr-30)
+
+WHEN `get_trace("AC-5.1")` is invoked AND parent FR-5 has 2 `implements` edges THEN `AC-5.1.code_impl` SHALL equal parent FR-5's `code_impl` (length 2, identical entries by `file_path`).
+
+## AC-31.1 (FR-31)
+
+**Требование:** [FR-31](FR.md#fr-31)
+
+WHEN `multilang-ingest-roundtrip.test.ts` runs against `tests/fixtures/reqnroll-sample/output.ndjson` THEN `detectRunner` SHALL return `'reqnroll'` AND `parseNdjson` SHALL produce a `TestResultPatch` with at least 2 scenarios (≥1 `PASSED` and ≥1 `FAILED`).
+
+## AC-31.2 (FR-31)
+
+**Требование:** [FR-31](FR.md#fr-31)
+
+WHEN the same test ingests the fixture NDJSON into the builder AND queries MCP `get_trace` for the fixture FR THEN returned `scenarios[].lastResult` SHALL match the expected per-language statuses AND `get_test_result` SHALL return the same statuses.

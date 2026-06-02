@@ -33,6 +33,13 @@ BDD fixtures for v4 self-test cover parser regression + scenario isolation. Thre
 | F-18 | .spec-config.json variants | static | `tests/fixtures/configs/{default,strict-orphans,no-throttle,semantic-on}.json` | per-scenario | Before hook |
 | F-19 | Reqnroll NDJSON output sample | static | `tests/fixtures/ndjson/reqnroll-sample.ndjson` | shared | BeforeAll hook |
 | F-20 | behave NDJSON output sample | static | `tests/fixtures/ndjson/behave-sample.ndjson` | shared | BeforeAll hook |
+| F-21 | minimal-spec (empty edges) | static | `tests/fixtures/specs/minimal-spec/` | per-scenario | Before hook copy to temp |
+| F-22 | no-scenarios-spec (FRs without .feature) | static | `tests/fixtures/specs/no-scenarios-spec/` | per-scenario | Before hook copy to temp |
+| F-23 | conflicting-fr-spec (duplicate FR ID) | static | `tests/fixtures/specs/conflicting-fr-spec/` | per-scenario | Before hook copy to temp |
+| F-24 | v3-legacy-spec (mixed dual/triple anchor) | static | `tests/fixtures/specs/v3-legacy-spec/` | per-scenario | Before hook copy to temp |
+| F-25 | deep-multi-fr-refs-spec (dense cross-refs) | static | `tests/fixtures/specs/deep-multi-fr-refs-spec/` | shared | BeforeAll hook |
+
+> Note: F-21 in the original migration plan referenced SQLite corruption (line 168). Reassign that to **F-26** in the Phase 4 row (see below); use F-21..F-25 for the new shape corpus here.
 
 ## Fixture Details
 
@@ -96,6 +103,56 @@ BDD fixtures for v4 self-test cover parser regression + scenario isolation. Thre
 - **Used by:** SPECGEN004_33 (multi-env lock deny), edge cases for lock manager
 - **Assumptions:** `stale.json` has pid=99999 (guaranteed dead), other variants have alive pid=process.pid
 
+### F-21: minimal-spec (empty edges shape)
+
+- **Type:** static (file copy)
+- **Format:** `README.md` + `FR.md` (1 FR, 0 AC, 0 scenarios, 0 tasks); `FILE_CHANGES.md` with header only, zero data rows
+- **Setup:** Before hook copies fixture dir to temp workspace
+- **Teardown:** After hook removes temp dir
+- **Dependencies:** F-16 (temp workspace)
+- **Used by:** `tests/e2e/fixture-shapes.test.ts` → SHAPE001 (`SPECGEN004_58` empty FILE_CHANGES → 0 edges)
+- **Assumptions:** Builder MUST NOT crash on empty edges; returned graph has zero `File` nodes and zero `implements` edges
+
+### F-22: no-scenarios-spec (FRs without .feature)
+
+- **Type:** static (file copy)
+- **Format:** `FR.md` (5 FRs FR-1..FR-5) + `ACCEPTANCE_CRITERIA.md` (5 ACs) + NO `.feature` file
+- **Setup:** Before hook copies to temp workspace
+- **Teardown:** After hook removes temp dir
+- **Dependencies:** F-16
+- **Used by:** `tests/e2e/fixture-shapes.test.ts` → SHAPE002 (orphan + coverage queries)
+- **Assumptions:** `get_coverage_summary` returns `{scenarios: 0, fr_covered: 0}`; `find_orphans` flags all 5 FRs as `UNCOVERED`
+
+### F-23: conflicting-fr-spec (duplicate FR ID)
+
+- **Type:** static (file copy)
+- **Format:** `FR.md` containing two distinct headings `### FR-1: Login` (duplicate ID, different bodies)
+- **Setup:** Before hook copies to temp workspace
+- **Teardown:** After hook removes temp dir
+- **Dependencies:** F-16
+- **Used by:** `tests/e2e/fixture-shapes.test.ts` → SHAPE003 (PreToolUse hard hook DUPLICATE_DEFINITION DENY)
+- **Assumptions:** `spec-conformance-guard` exits PreToolUse decision = `deny` with finding code `DUPLICATE_DEFINITION` on `Write`/`Edit` attempt
+
+### F-24: v3-legacy-spec (mixed dual/triple anchor)
+
+- **Type:** static (file copy)
+- **Format:** `FR.md` containing BOTH old-format `### Requirement: FR-1 Login` AND new-format `### FR-2: Logout {#fr-2}` headings in the same file
+- **Setup:** Before hook copies to temp workspace
+- **Teardown:** After hook removes temp dir
+- **Dependencies:** F-16
+- **Used by:** `tests/e2e/fixture-shapes.test.ts` → SHAPE004 (parser regression — triple-anchor + dual-anchor coexist)
+- **Assumptions:** MD parser yields `FR` nodes for both headings; triple-anchor heading is NOT flagged as `MALFORMED_HEADING`
+
+### F-25: deep-multi-fr-refs-spec (dense cross-refs)
+
+- **Type:** static (file copy)
+- **Format:** `FR.md` (10 FRs) + `ACCEPTANCE_CRITERIA.md` (15 ACs each citing 2-3 FRs) + `<slug>.feature` (8 scenarios each tagged with 2 `@FR-N`) + `TASKS.md` (12 tasks each referencing 1-2 FRs) + `FILE_CHANGES.md` with 5 unique paths cited by FRs
+- **Setup:** BeforeAll hook (shared, immutable)
+- **Teardown:** none
+- **Dependencies:** none
+- **Used by:** `tests/e2e/fixture-shapes.test.ts` → SHAPE005; also consumed by SCENGEN004_55 (5-path File node emission); NFR-Performance density check (`get_trace` ≤200ms p95 on dense graph)
+- **Assumptions:** Graph contains 10 FR + 15 AC + 8 Scenario + 12 Task + 5 File nodes; ≥60 edges total; `get_trace` for any single FR returns within 200ms p95
+
 ## Dependencies Graph
 
 ```
@@ -141,6 +198,9 @@ F-14 (large-spec) ────────► NFR benchmarks
 | @feature14 | SPECGEN004_33 (multi-env lock deny) | F-17 (variant locks) | none |
 | @feature15 | SPECGEN004_34/_35 (side-channel log + rotation) | F-15 + log file inspection | gap: Phase 4 deliverable |
 | @feature16 | SPECGEN004_36/_37 (Codespaces) | Mocked Codespaces env (CODESPACES=true) | gap: full E2E needs actual Codespace, smoke test mocks env var |
+| @feature29 | SPECGEN004_55..SPECGEN004_59 | F-25, F-21 (empty), F-16 | none |
+| @feature30 | SPECGEN004_60..SPECGEN004_64 | F-25, F-15 | none |
+| @feature31 | SPECGEN004_65..SPECGEN004_69 | reqnroll-sample, behave-sample, jvm-sample, F-15 | none |
 
 ## Notes
 
@@ -165,8 +225,9 @@ F-14 (large-spec) ────────► NFR benchmarks
 | Phase 1 | F-8..F-13 (error cases + legacy v3) |
 | Phase 2 | F-17 (.mcp-lock variants), F-18 (.spec-config variants) |
 | Phase 3 | F-19/F-20 (Reqnroll/behave NDJSON samples) |
-| Phase 4 | F-21 (SQLite corruption), F-23 (Codespaces env mock), large-spec increase |
-| Phase 6 | F-22 (synthetic feature description for arch-research dogfood) |
+| Phase 4 | F-26 (SQLite corruption — renumbered from prior F-21), F-27 (Codespaces env mock), large-spec increase |
+| Phase 6 | F-28 (synthetic feature description for arch-research dogfood — renumbered from prior F-22) |
+| Phase 8 | F-21..F-25 (5-shape fixture corpus for FR-29/30/31 gap-close) |
 
 ### Cascading dependencies
 
@@ -195,3 +256,16 @@ Expected finding codes when reconcile is run against the full corpus:
 - `cross-spec/nfr-conflict` — spec-a vs spec-b on `/api/auth` latency (WARNING)
 - `impl-drift/missing-file` — spec-c references `src/mcp/validate_user.ts` (WARNING)
 - `impl-drift/mcp-tool-drift` — spec-c declares MCP tool not exported (WARNING)
+
+### Phase 8 fixtures (FR-29/30/31 gap-close)
+
+| Fixture | Path | Purpose | Lifecycle |
+|---------|------|---------|-----------|
+| `specs/minimal-spec/README.md` + `FR.md` + empty `FILE_CHANGES.md` | `tests/fixtures/specs/minimal-spec/` | Empty-edges shape — builder must not crash on zero `implements` (SCENGEN004_58 / SHAPE001) | per-scenario (Before hook copy) |
+| `specs/no-scenarios-spec/{FR.md,ACCEPTANCE_CRITERIA.md}` | `tests/fixtures/specs/no-scenarios-spec/` | 5 FRs + 5 ACs + zero `.feature` files; flags all FRs UNCOVERED (SHAPE002) | per-scenario |
+| `specs/conflicting-fr-spec/FR.md` | `tests/fixtures/specs/conflicting-fr-spec/` | Two `### FR-1:` headings in one file — DUPLICATE_DEFINITION hook DENY path (SHAPE003) | per-scenario |
+| `specs/v3-legacy-spec/FR.md` | `tests/fixtures/specs/v3-legacy-spec/` | Mixed old `### Requirement: FR-1` + new `### FR-2: {#fr-2}` headings — backward-compat parser proof (SHAPE004) | per-scenario |
+| `specs/deep-multi-fr-refs-spec/` (5 files) | `tests/fixtures/specs/deep-multi-fr-refs-spec/` | 10 FR × 15 AC × 8 Scenario × 12 Task × 5 File; dense cross-refs for `get_trace` perf + SCENGEN004_55 (5 unique paths → 5 File nodes) | shared (read-only) |
+| `reqnroll-sample/{output.ndjson,README.md}` | `tests/fixtures/reqnroll-sample/` | Real Reqnroll NDJSON output + reproduction README (SCENGEN004_65, FR-31 AC-31.1) | shared |
+| `behave-sample/{output.ndjson,README.md}` | `tests/fixtures/behave-sample/` | Real behave NDJSON output + reproduction README (SCENGEN004_66, FR-31 AC-31.2) | shared |
+| `jvm-sample/{output.ndjson,README.md}` | `tests/fixtures/jvm-sample/` | Real cucumber-jvm NDJSON output + reproduction README (SCENGEN004_67) | shared |

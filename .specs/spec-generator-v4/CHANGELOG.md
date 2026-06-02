@@ -4,6 +4,14 @@ All notable changes to this feature will be documented in this file.
 
 ## [Unreleased]
 
+### Planned (v4.1 — gap-close)
+
+Three structural gaps surfaced by Round 3+ patch validation against the v4 corpus + MCP response shape. Each ships as one FR + one task; integration-tested per `.claude/rules/integration-tests-first.md`.
+
+- **FR-29** — SpecGraph builder will wire `implements` edges + `File` nodes by parsing `FILE_CHANGES.md` tables (Path/Action/Reason) and `DESIGN.md` "App-код" / "Где код" sections, joining to FR anchors via `Reason` citations or task `refs[]`. Closes the `types.ts` ↔ `builder.ts` gap where `EdgeType='implements'` and `NodeType='File'` were declared but never emitted.
+- **FR-30** — `get_trace` MCP tool response shape will be extended with a `code_impl[]` field (`{file_path, action?, source_section}`); FR direct, AC inherits parent FR, Scenario unions StepBinding files + FR, Task unions task `files[]` + FR. Empty array when no implements edges (stable shape).
+- **FR-31** — Test corpus will ship real per-language NDJSON fixtures (`tests/fixtures/{reqnroll,behave,jvm}-sample/`) produced by actual Reqnroll/behave/Cucumber-JVM runners + `tests/e2e/multilang-ingest-roundtrip.test.ts` end-to-end (detectRunner → parseNdjson → builder → MCP `get_trace`/`get_test_result`), replacing inline-string NDJSON unit tests for FR-9 multi-lang.
+
 ### Fixed (batches 21-26 — honest-audit noise reduction)
 
 User caught a flawed "89% reduction" claim — 3878 residual findings

@@ -385,6 +385,62 @@ NFR-Performance-7 documents the latency invariant.
 **Use Case:** [UC-2](USE_CASES.md#uc-2)
 **User Story:** US-6
 
+## FR-29: Builder SHALL wire `implements` edges + `File` nodes from FILE_CHANGES.md and DESIGN.md
+
+System SHALL parse `FILE_CHANGES.md` tables (columns: `Path | Action | Reason`) in each spec dir AND `DESIGN.md` "Где код" / "App-код" sections to emit into SpecGraph:
+
+- 1 `File` node per unique referenced path (deduplicated across both sources)
+- 1 `implements` edge from each FR to its corresponding File node, where the FR↔file linkage is established via:
+  - `Reason` column citing `FR-N` (regex `\bFR-\d+\b`), OR
+  - Task `refs[]` containing FR-N whose `files[]` includes that path, OR
+  - DESIGN.md section citing FR-N adjacent to a file path
+- Edge metadata: `{ file_path: <repo-relative>, source_section: 'FILE_CHANGES' | 'DESIGN', action?: 'create' | 'edit' | 'delete' }`
+
+Existing `types.ts` declarations for `EdgeType='implements'` and `NodeType='File'` remain authoritative — this FR only wires `builder.ts` to emit them. Glob patterns in `Path` (e.g. `tools/spec-graph/*.ts`) SHALL be skipped with a single warn-once log entry per build; no implements edge is created for unresolved patterns.
+
+**Связанные AC:** [AC-29.1](ACCEPTANCE_CRITERIA.md#ac-291-fr-29), [AC-29.2](ACCEPTANCE_CRITERIA.md#ac-292-fr-29), [AC-29.3](ACCEPTANCE_CRITERIA.md#ac-293-fr-29)
+**Use Case:** [UC-1](USE_CASES.md#uc-1)
+**User Story:** US-17
+
+## FR-30: MCP `get_trace` response SHALL surface `code_impl[]` per node
+
+System SHALL extend the `get_trace` tool response shape to include `code_impl[]` per returned node — an array of `{ file_path, action?, source_section }` entries derived from FR-29 `implements` edges:
+
+- **FR node** → `code_impl` = all File nodes connected by `implements` edge (direct).
+- **AC node** → `code_impl` inherits parent FR's `code_impl` transitively (same entries).
+- **Scenario node** → `code_impl` = StepBinding file paths ∪ parent FR's `code_impl` (deduplicated by `file_path`).
+- **Task node** → `code_impl` = task `files[]` ∪ parent FR's `code_impl` (deduplicated).
+
+If no `implements` edges exist for a node, `code_impl` SHALL be present as an empty array `[]` (not omitted) — preserves stable shape for clients.
+
+**Зависит от:** FR-29 (no `implements` edges → `code_impl = []` for all FR/AC nodes; Scenario/Task still surface bindings/refs).
+**Связанные AC:** [AC-30.1](ACCEPTANCE_CRITERIA.md#ac-301-fr-30), [AC-30.2](ACCEPTANCE_CRITERIA.md#ac-302-fr-30)
+**Use Case:** [UC-1](USE_CASES.md#uc-1)
+**User Story:** US-18
+
+## FR-31: Test corpus SHALL include real multi-language NDJSON fixtures + e2e roundtrip
+
+System SHALL ship 3 fixture directories under `tests/fixtures/` with REAL Cucumber Messages NDJSON output produced by actual test runners (NOT synthetic inline strings):
+
+- `tests/fixtures/reqnroll-sample/output.ndjson` — from a minimal Reqnroll project (.NET) with 1 scenario `PASSED` + 1 `FAILED`
+- `tests/fixtures/behave-sample/output.ndjson` — from a minimal `behave` project (Python) with same coverage
+- `tests/fixtures/jvm-sample/output.ndjson` — from a minimal Cucumber-JVM project (Java/Maven) with same coverage
+
+Each fixture directory SHALL include a `README.md` documenting the exact runner command + version used to regenerate the fixture (reproducibility).
+
+System SHALL also ship `tests/e2e/multilang-ingest-roundtrip.test.ts` that for each fixture:
+
+1. Calls `detectRunner(fixture)` → asserts expected runner string (`reqnroll` / `behave` / `cucumber-jvm`).
+2. Calls `parseNdjson(fixture)` → asserts ≥2 scenarios with at least one `PASSED` + one `FAILED`.
+3. Ingests into SpecGraph via builder on a synthetic fixture spec, then invokes MCP `get_trace` for a known FR.
+4. Asserts response `scenarios[].lastResult` matches per-language expectations AND `get_test_result` tool returns the same statuses.
+
+Does NOT depend on FR-29 / FR-30 — purely test infrastructure; can ship independently.
+
+**Связанные AC:** [AC-31.1](ACCEPTANCE_CRITERIA.md#ac-311-fr-31), [AC-31.2](ACCEPTANCE_CRITERIA.md#ac-312-fr-31)
+**Use Case:** [UC-3](USE_CASES.md#uc-3)
+**User Story:** US-19
+
 ---
 
 ## Out of Scope

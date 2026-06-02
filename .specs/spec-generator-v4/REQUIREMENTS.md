@@ -115,6 +115,14 @@
 | CHK-FR18-03 | FR-18 Path A/B/C alternatives via AC-18.3 | FR-18, AC-18.3, @feature18, UC-20 | BDD scenario | Draft | Phase 7 — architectural fork UX |
 | CHK-FR18-04 | FR-18 batch re-check updates resolution_status via AC-18.4 | FR-18, AC-18.4, @feature18, UC-19 | Integration test | Draft | Phase 7 |
 | CHK-FR18-05 | FR-18 foreign-spec edit additional confirm via AC-18.5 | FR-18, AC-18.5, @feature18, UC-21 | BDD scenario | Draft | Phase 7 — cross-spec stale-state |
+| CHK-FR29-01 | FR-29 implements edges + File nodes via AC-29.1/29.2/29.3 | FR-29, AC-29.1, AC-29.2, AC-29.3, @feature29, UC-1 | Integration test | Draft | Gap-close — builder.ts wiring |
+| CHK-FR30-01 | FR-30 code_impl[] in get_trace via AC-30.1/30.2 | FR-30, AC-30.1, AC-30.2, @feature30, UC-1 | Integration test | Draft | Gap-close — MCP response shape; depends on FR-29 |
+| CHK-FR31-01 | FR-31 real multi-lang NDJSON fixtures + roundtrip via AC-31.1/31.2 | FR-31, AC-31.1, AC-31.2, @feature31, UC-3 | Integration test | Draft | Gap-close — replaces inline-string NDJSON unit tests |
+| CHK-FR29-02 | FR-29 BDD scenarios + step defs cover AC-29.1/29.2/29.3 | FR-29, AC-29.1, AC-29.2, AC-29.3, @feature29 | BDD scenario | Draft | Phase 8 — SCENGEN004_55..59 |
+| CHK-FR30-02 | FR-30 BDD scenarios + step defs cover AC-30.1/30.2 | FR-30, AC-30.1, AC-30.2, @feature30 | BDD scenario | Draft | Phase 8 — SCENGEN004_60..64 |
+| CHK-FR31-02 | FR-31 BDD scenarios + step defs cover AC-31.1/31.2 | FR-31, AC-31.1, AC-31.2, @feature31 | BDD scenario | Draft | Phase 8 — SCENGEN004_65..69 |
+| CHK-MANUAL-E2E-01 | Manual agent walkthrough produces MANUAL_AGENT_E2E_WALKTHROUGH.md proof artifact with tool-invocation log + per-phase verdict | FR-4, FR-29, FR-30, FR-31, UC-1 | Manual review | Draft | Phase 8 — Claude-as-agent end-to-end run |
+| CHK-FIXTURE-SHAPES-01 | 5-shape fixture corpus tested in tests/e2e/fixture-shapes.test.ts (one it() per shape) | FR-2, FR-3, FR-5, FR-29, F-21, F-22, F-23, F-24, F-25 | Integration test | Draft | Phase 8 — SHAPE001..SHAPE005 |
 
 ## Verification Process
 
@@ -136,8 +144,9 @@
 
 ## Summary Counts
 
-- Total CHKs: 54 (51 per-FR + 3 cross-FR integration tagged to FR-1/FR-11/FR-14)
+- Total CHKs: 62 (57 prior + 5 Phase 8 gap-close: FR-29-02, FR-30-02, FR-31-02, MANUAL-E2E-01, FIXTURE-SHAPES-01)
 - Verified: 0
 - In Progress: 0
-- Draft: 54
+- Draft: 62
+- Blocked: 0
 - Blocked: 0

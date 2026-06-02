@@ -55,6 +55,13 @@
 | verify-phase6-green | Phase 6 scenarios Red→Green | TODO | create-spec-heuristic,enrich-research-workflow | Phase 6 | 480m |
 | final-refactor | Refactor + dedup across phases | TODO | verify-phase6-green | Refactor | 480m |
 | final-verification | validate + audit + simplify pass | TODO | final-refactor | Refactor | 240m |
+| builder-implements-edges | Wire implements edges + File nodes (FILE_CHANGES.md + DESIGN.md) | TODO | — | Phase 8 | 210m |
+| mcp-code-impl-surface | Surface code_impl[] in MCP get_trace response | TODO | builder-implements-edges | Phase 8 | 90m |
+| multilang-real-fixtures | Real per-language NDJSON fixtures + e2e roundtrip | TODO | — | Phase 8 | 270m |
+| bdd-scenarios-fr-29-30-31 | BDD scenarios SCENGEN004_55..69 for FR-29/30/31 in spec-generator-v4.feature | TODO | builder-implements-edges | Phase 8 | 60m |
+| step-defs-fr-29-30-31 | Step definitions for @feature29/30/31 in tests/step_definitions/ | TODO | bdd-scenarios-fr-29-30-31 | Phase 8 | 120m |
+| manual-agent-e2e-walk | Manual agent-driven e2e walkthrough — proof-of-walk artifact MANUAL_AGENT_E2E_WALKTHROUGH.md | TODO | mcp-code-impl-surface,multilang-real-fixtures | Phase 8 | 180m |
+| fixture-shapes-corpus | 5-shape fixture corpus + tests/e2e/fixture-shapes.test.ts (one it() per shape) | TODO | builder-implements-edges | Phase 8 | 240m |
 <!-- end auto-generated -->
 
 > Regenerate via `Skill("task-board-forms")` or `npx tsx extensions/specs-workflow/tools/specs-generator/spec-status.ts -Path .specs/spec-generator-v4 -Format task-table` and splice between markers.
@@ -670,6 +677,77 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] Window boundary: edit at t=3.1s starts new window → push at t=6.1s (NOT t=3.0s extended)
   - [ ] No sliding behavior: edit at t=2.5s does NOT defer the t=3.0s push to t=5.5s
   - [ ] Latency upper-bound assertion: from first edit to push ≤ throttle_ms (3000ms default) + 100ms tolerance
+
+## Phase 8 — Gap-close (FR-29..FR-31)
+
+> Closes structural gaps surfaced by Round 3+ patch validation: `types.ts` declared `implements` edges + `File` nodes but builder never emitted them (FR-29); `get_trace` lacked `code_impl[]` surfacing (FR-30); multi-language NDJSON tested only via inline-string synthetic fixtures (FR-31). All three tasks are integration-level per `.claude/rules/integration-tests-first.md`; no mocks.
+
+- [ ] T-Trans.11 Wire `implements` edges + `File` nodes in SpecGraph builder — id: builder-implements-edges — Status: TODO | Est: 210m
+  _Requirements:_ FR-29, AC-29.1, AC-29.2, AC-29.3
+  **Done When:**
+  - `tools/spec-graph/parsers/file-changes.ts` parses table + glob skip
+  - `tools/spec-graph/builder.ts` emits `File` nodes + `implements` edges from FILE_CHANGES.md and DESIGN.md sources
+  - `tools/spec-graph/__tests__/builder-implements-edges.test.ts` covers AC-29.1 / 29.2 / 29.3 (5-path table, DESIGN cite, glob warn-once)
+  - Existing builder snapshot tests updated (additive edges only — no breaking changes)
+
+- [ ] T-Trans.12 Surface `code_impl[]` array in MCP `get_trace` response — id: mcp-code-impl-surface — Status: TODO | Est: 90m
+  _Requirements:_ FR-30, AC-30.1, AC-30.2
+  **Done When:**
+  - `tools/spec-mcp-server/tools.ts` extends `get_trace` response shape with `code_impl[]` (FR/AC/Scenario/Task inheritance rules)
+  - Empty array `[]` returned when no `implements` edges exist (not omitted)
+  - `tools/spec-mcp-server/__tests__/tools.test.ts` covers FR-direct (length 3), AC-inherits-FR (length 2), no-edge → `[]`
+
+- [ ] T-Trans.13 Real multi-language e2e fixtures + integration test — id: multilang-real-fixtures — Status: TODO | Est: 270m
+  _Requirements:_ FR-31, AC-31.1, AC-31.2
+  **Done When:**
+  - `tests/fixtures/reqnroll-sample/`, `behave-sample/`, `jvm-sample/` each contain `output.ndjson` produced by real runner + `README.md` documenting exact command/version
+  - `tests/e2e/multilang-ingest-roundtrip.test.ts` runs all 3 fixtures through detectRunner → parseNdjson → builder ingest → MCP `get_trace` + `get_test_result` assertions
+  - Test passes locally without Docker (host runners not required — fixture files committed; runners only needed to regenerate)
+
+- [ ] T-Trans.14 BDD scenarios for FR-29/30/31 in `spec-generator-v4.feature` — id: bdd-scenarios-fr-29-30-31 — Status: TODO | Est: 60m
+  _Requirements:_ FR-29, FR-30, FR-31, AC-29.1, AC-29.2, AC-29.3, AC-30.1, AC-30.2, AC-31.1, AC-31.2
+  **Done When:**
+  - 15 new Scenario blocks SCENGEN004_55..SPECGEN004_69 appended to `spec-generator-v4.feature` under `# @feature29`, `# @feature30`, `# @feature31` comment-tags (5 per feature, mix of happy-path + edge cases)
+  - `npx tsx tools/specs-generator/validate-spec.ts -Path .specs/spec-generator-v4` reports 0 NEW errors after addition
+  - Every new scenario has at least one Given/When/Then triple
+  - `npm run test:bdd` reports the new scenarios as UNDEFINED or FAILING (red phase precondition for T-Trans.15)
+
+- [ ] T-Trans.15 Step definitions for SCENGEN004_55..69 — id: step-defs-fr-29-30-31 — Status: TODO | Est: 120m
+  _depends: bdd-scenarios-fr-29-30-31_
+  _Requirements:_ FR-29, FR-30, FR-31, AC-29.1, AC-29.2, AC-29.3, AC-30.1, AC-30.2, AC-31.1, AC-31.2
+  **Done When:**
+  - `tests/step_definitions/feature29_implements_edges.ts` covers SCENGEN004_55..59 against real builder (no mocks) via fixtures F-21, F-25
+  - `tests/step_definitions/feature30_code_impl.ts` covers SCENGEN004_60..64 against real MCP `get_trace` over F-15 subprocess
+  - `tests/step_definitions/feature31_multilang.ts` covers SCENGEN004_65..69 using reqnroll-sample / behave-sample / jvm-sample fixtures
+  - `npm run test:bdd` for `@feature29 @feature30 @feature31` reports 15/15 PASSED
+  - Step defs follow `.claude/rules/extension-test-quality.md`: no inline-copy of production code; spawnSync or direct import only
+
+- [ ] T-Trans.16 Manual agent-driven e2e walkthrough — id: manual-agent-e2e-walk — Status: TODO | Est: 180m
+  _depends: mcp-code-impl-surface, multilang-real-fixtures_
+  _Requirements:_ FR-4, FR-29, FR-30, FR-31, CHK-MANUAL-E2E-01
+  _Rationale:_ Automated tests prove unit/integration contracts; this task proves the **agent-perceivable surface** — Claude as MCP client interacting with the real running stack against real specs, producing a proof-of-walk artifact reviewable by a human.
+  **Done When:**
+  - `.specs/spec-generator-v4/MANUAL_AGENT_E2E_WALKTHROUGH.md` exists and contains:
+    - Phase A: Start MCP server (real subprocess, command + PID + version logged)
+    - Phase B: Invoke `get_trace` against `.specs/personal-pomogator/FR.md` for at least 3 real FRs; capture full request + response JSON
+    - Phase C: Parse a real Reqnroll/behave/jvm NDJSON fixture via `parseNdjson`; capture detected runner + TestResultPatch
+    - Phase D: Invoke `Skill("cross-spec-reconcile")` in `light` mode against the live `.specs/` tree; capture report path + summary counts
+    - Phase E: Invoke `Skill("cross-spec-resolve")` on one finding from Phase D; capture chosen path (A/B/C) + applied change
+    - Each phase ends with a 3-bullet verdict: `Expected:` / `Observed:` / `CONFIRMED|DENIED — why`
+    - Final "Known bugs surfaced" section listing any deviations between spec and observed behavior with file:line references
+
+- [ ] T-Trans.17 5-shape fixture corpus + integration test — id: fixture-shapes-corpus — Status: TODO | Est: 240m
+  _depends: builder-implements-edges_
+  _Requirements:_ FR-2, FR-3, FR-5, FR-29, CHK-FIXTURE-SHAPES-01
+  **Done When:**
+  - Fixtures F-21..F-25 created under `tests/fixtures/specs/{minimal-spec,no-scenarios-spec,conflicting-fr-spec,v3-legacy-spec,deep-multi-fr-refs-spec}/` per FIXTURES.md "Phase 8 fixtures"
+  - `tests/e2e/fixture-shapes.test.ts` contains 5 `it()` blocks (SHAPE001..SHAPE005), one per fixture, calling the real builder + MCP `get_trace` via spawnSync (no mocks)
+  - SHAPE001 asserts zero `File` nodes + zero `implements` edges on minimal-spec
+  - SHAPE002 asserts `find_orphans` flags 5/5 FRs UNCOVERED on no-scenarios-spec
+  - SHAPE003 asserts `spec-conformance-guard` PreToolUse decision `deny` + finding code `DUPLICATE_DEFINITION` on conflicting-fr-spec
+  - SHAPE004 asserts both old and new heading formats parse to `FR` nodes (length ≥ 2) on v3-legacy-spec
+  - SHAPE005 asserts `get_trace` for any FR on deep-multi-fr-refs-spec returns within 200ms (`performance.now()` measured) over 10 iterations p95
+  - All 5 `it()` blocks PASS in `npm test`
 
 ## Refactor & Polish (final)
 
