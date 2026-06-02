@@ -12,6 +12,7 @@ import path from 'node:path';
 import { globSync } from 'glob';
 import type { Resolver, ResolverResult } from './types.ts';
 import type { BacklogEntry } from '../types.ts';
+import { normalizeEvidence } from './normalize-evidence.ts';
 
 // Markdown link pattern: [label](target) — capture target path
 const LINK_PATTERN = /\[([^\]]*)\]\(([^)]+)\)/g;
@@ -22,7 +23,7 @@ export const linkFixer: Resolver = {
     'Rewrites dead markdown links by globbing the repo for files matching the target basename — fixes typos and path mismatches in one pass.',
 
   async resolve(opts): Promise<ResolverResult> {
-    return linkFixerImpl(opts.repoRoot, opts.entry);
+    return linkFixerImpl(opts.repoRoot, normalizeEvidence(opts.entry));
   },
 };
 

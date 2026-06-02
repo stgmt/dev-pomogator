@@ -20,6 +20,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { Resolver, ResolverResult } from './types.ts';
 import type { BacklogEntry } from '../types.ts';
+import { normalizeEvidence } from './normalize-evidence.ts';
 
 /** Escape a string for safe embedding in a RegExp. */
 function escapeRegex(s: string): string {
@@ -84,7 +85,7 @@ export const crossRefLinker: Resolver = {
     'Wraps the first plain-text mention of a referenced spec slug with a relative markdown link to .specs/<slug>/FR.md — fixes missing cross-refs deterministically.',
 
   async resolve(opts): Promise<ResolverResult> {
-    return crossRefLinkerImpl(opts.repoRoot, opts.entry);
+    return crossRefLinkerImpl(opts.repoRoot, normalizeEvidence(opts.entry));
   },
 };
 

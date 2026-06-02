@@ -101,6 +101,21 @@ export function parseNdjson(source: string): TestResultPatch {
   /** gherkinDocument.uri → map astNodeId → line. */
   const astLineByNodeId = new Map<string, number>();
 
+  /**
+   * pickleStepId → step text. Populated from `pickle.steps[]`. Cucumber Messages
+   * embed the human-readable Gherkin step text inside the pickle envelope, so
+   * we capture it once and never need to walk the Gherkin AST.
+   */
+  const pickleStepText = new Map<string, string>();
+
+  /**
+   * testStepId → pickleStepId. Populated from `testCase.testSteps[]`. The
+   * `testStepFinished` envelope only carries `testStepId`, so this two-hop
+   * lookup (`testStepId` → `pickleStepId` → step text) is the canonical way to
+   * recover the failing step's text from a Cucumber Messages stream.
+   */
+  const testStepToPickleStep = new Map<string, string>();
+
   const byLocation = new Map<string, ScenarioResultFields>();
   /** testCaseId → tentative result accumulated during the run. */
   const testCaseResult = new Map<string, ScenarioResultFields & { startTs?: string }>();
@@ -127,7 +142,8 @@ export function parseNdjson(source: string): TestResultPatch {
       continue;
     }
 
-    // pickle — links pickleId to scenario name + tags + AST nodes
+    // pickle — links pickleId to scenario name + tags + AST nodes,
+    // and indexes each pickleStep's text for failingStep recovery.
     const pickle = env.pickle as
       | {
           id?: string;
@@ -135,6 +151,7 @@ export function parseNdjson(source: string): TestResultPatch {
           name?: string;
           tags?: Array<{ name: string }>;
           astNodeIds?: string[];
+          steps?: Array<{ id?: string; text?: string }>;
         }
       | undefined;
     if (pickle?.id) {
@@ -147,13 +164,31 @@ export function parseNdjson(source: string): TestResultPatch {
         astLine,
         tags: (pickle.tags ?? []).map((t) => t.name),
       });
+      for (const step of pickle.steps ?? []) {
+        if (step.id && typeof step.text === 'string') {
+          pickleStepText.set(step.id, step.text);
+        }
+      }
       continue;
     }
 
-    // testCase — links testCaseId to pickleId
-    const testCase = env.testCase as { id?: string; pickleId?: string } | undefined;
+    // testCase — links testCaseId to pickleId, and indexes each testStepId →
+    // pickleStepId so that `testStepFinished.testStepId` can be resolved back
+    // to the human-readable Gherkin step text via `pickleStepText`.
+    const testCase = env.testCase as
+      | {
+          id?: string;
+          pickleId?: string;
+          testSteps?: Array<{ id?: string; pickleStepId?: string }>;
+        }
+      | undefined;
     if (testCase?.id && testCase.pickleId) {
       testCaseToPickle.set(testCase.id, testCase.pickleId);
+      for (const ts of testCase.testSteps ?? []) {
+        if (ts.id && ts.pickleStepId) {
+          testStepToPickleStep.set(ts.id, ts.pickleStepId);
+        }
+      }
       continue;
     }
 
@@ -173,10 +208,15 @@ export function parseNdjson(source: string): TestResultPatch {
       continue;
     }
 
-    // testStepFinished — captures the FIRST failing step's message
+    // testStepFinished — captures the FIRST failing step's message and resolves
+    // its Gherkin step text via `testStepId → pickleStepId → pickleStepText`.
+    // The two-hop lookup is the canonical Cucumber Messages way: testStepFinished
+    // only ships `testStepId`, which is local to the testCase envelope; we cross-
+    // reference it back through `testCase.testSteps[]` → `pickle.steps[].text`.
     const stepFinished = env.testStepFinished as
       | {
           testCaseStartedId?: string;
+          testStepId?: string;
           testStepResult?: { status?: string; message?: string };
         }
       | undefined;
@@ -186,8 +226,15 @@ export function parseNdjson(source: string): TestResultPatch {
         const acc = testCaseResult.get(tcId) ?? { lastResult: 'UNKNOWN' as TestStatus };
         const status = normalizeStatus(stepFinished.testStepResult.status);
         if (status === 'FAILED' && !acc.failingStep) {
+          let stepText = '';
+          if (stepFinished.testStepId) {
+            const pickleStepId = testStepToPickleStep.get(stepFinished.testStepId);
+            if (pickleStepId) {
+              stepText = pickleStepText.get(pickleStepId) ?? '';
+            }
+          }
           acc.failingStep = {
-            step: '',
+            step: stepText,
             errorMessage: stepFinished.testStepResult.message ?? '',
           };
         }

@@ -164,6 +164,55 @@ describe('cross-ref-linker resolver', () => {
     expect(result.confidence).toBe(0);
   });
 
+  it('accepts raw reconcile finding shape (Bug #2: finding ≠ entry evidence keys)', async () => {
+    // Direct in-process callers that skip the classifier hand resolvers a raw
+    // reconcile finding shape: evidence.referenced_in instead of evidence.file,
+    // spec_a/spec_b at the top level with `.specs/` prefix. Without the
+    // forgiving normalizer at resolve() entry, this bails 'missing-evidence'.
+    fs.writeFileSync(
+      path.join(root, '.specs/foo/FR.md'),
+      [
+        '# FR — foo',
+        '',
+        '## FR-1: Integration with bar',
+        'See bar for details on how the bar interface works.',
+      ].join('\n'),
+    );
+
+    // Finding-shape entry: spec_a/spec_b carry the `.specs/` prefix (as
+    // emitted by reconcile.ts), file is absent but referenced_in is set.
+    const rawFinding = {
+      id: 'rawtest5678',
+      ts: '2026-05-31T00:00:00Z',
+      slug: 'foo',
+      code: 'cross-spec/missing-cross-ref',
+      category: 'missing-cross-ref' as const,
+      evidence: {
+        referenced_in: '.specs/foo/FR.md:4',
+      },
+      // Top-level finding fields a raw caller might hand through
+      spec_a: '.specs/foo',
+      spec_b: '.specs/bar',
+      suggested_resolver: 'cross-ref-linker',
+      difficulty: 'easy' as const,
+      status: 'open' as const,
+    } as unknown as BacklogEntry;
+
+    const result = await crossRefLinker.resolve({
+      repoRoot: root,
+      entry: rawFinding,
+    });
+
+    // The key assertion: NO bail on missing-evidence. Resolver succeeded
+    // because the normalizer mapped referenced_in→file and stripped the
+    // `.specs/` prefix from spec_a/spec_b before reading evidence keys.
+    expect(result.bailed_out).toBeUndefined();
+    expect(result.confidence).toBe(0.9);
+
+    const updated = fs.readFileSync(path.join(root, '.specs/foo/FR.md'), 'utf8');
+    expect(updated.replace(/\\/g, '/')).toContain('[bar](../bar/FR.md)');
+  });
+
   it('skips mentions already inside a markdown link span', async () => {
     // bar is mentioned 3× — once already linked (NOT to .specs/bar, so the
     // file-level idempotency check doesn't bail), once inside another link's

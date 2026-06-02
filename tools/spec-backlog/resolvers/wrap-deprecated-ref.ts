@@ -33,6 +33,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { Resolver, ResolverResult } from './types.ts';
 import type { BacklogEntry } from '../types.ts';
+import { normalizeEvidence } from './normalize-evidence.ts';
 
 /** Escape a string for safe embedding in a RegExp. */
 function escapeRegex(s: string): string {
@@ -116,7 +117,7 @@ export const wrapDeprecatedRef: Resolver = {
     'Wraps the first plain-text mention of a removed-in-vN production path with ~~strikethrough~~ + "removed in vN — no canonical replacement" annotation — preserves historical context without misleading current readers.',
 
   async resolve(opts): Promise<ResolverResult> {
-    return wrapDeprecatedRefImpl(opts.repoRoot, opts.entry);
+    return wrapDeprecatedRefImpl(opts.repoRoot, normalizeEvidence(opts.entry));
   },
 };
 
