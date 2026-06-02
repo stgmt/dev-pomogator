@@ -94,9 +94,13 @@
 | T10-87 | T-Cov.8 Evidence-derived status + honesty-gate finding in spec-status | TODO | task-scenario-map | Phase 10 — Evidence-derived task status (FR-32) | 240m |
 | T10-88 | T-Cov.9 MCP coverage surface (get_coverage + get_trace verified_status) | TODO | evidence-derived-status, mcp-tool-get-coverage | Phase 10 — Evidence-derived task status (FR-32) | 180m |
 | T10-89 | T-Cov.10 BDD step-defs for @feature32 | TODO | mcp-coverage-surface | Phase 10 — Evidence-derived task status (FR-32) | 90m |
-| T11-90 | T-Orch.0 Choose orchestrator architecture (general vs orchestrator+workers vs to | TODO | — | Phase 11 — Workflow orchestrator skill (self-improving) — architecture TBD | 60m |
-| T11-91 | Refactor + dedup across phases | TODO | verify-phase6-green | Phase 11 — Workflow orchestrator skill (self-improving) — architecture TBD | 480m |
-| T11-92 | Final verification | TODO | final-refactor | Phase 11 — Workflow orchestrator skill (self-improving) — architecture TBD | 240m |
+| T11-90 | T-Orch.0 Choose orchestrator architecture | DONE | — | Phase 11 — Workflow orchestrator skill (self-improving) — Option B chosen | 60m |
+| T11-91 | T-Orch.1 Create `spec-generator-orchestrator` skill (thin router) | TODO | orchestrator-arch-decision | Phase 11 — Workflow orchestrator skill (self-improving) — Option B chosen | 360m |
+| T11-92 | T-Orch.2 Self-improve ledger (append + nudge + apply-on-approve) | TODO | create-orchestrator-skill | Phase 11 — Workflow orchestrator skill (self-improving) — Option B chosen | 240m |
+| T11-93 | T-Orch.3 Feature-map drift guard | TODO | create-orchestrator-skill | Phase 11 — Workflow orchestrator skill (self-improving) — Option B chosen | 120m |
+| T11-94 | T-Orch.4 BDD step-defs for @feature33 | TODO | orchestrator-self-improve, orchestrator-drift-guard | Phase 11 — Workflow orchestrator skill (self-improving) — Option B chosen | 90m |
+| T11-95 | Refactor + dedup across phases | TODO | verify-phase6-green | Phase 11 — Workflow orchestrator skill (self-improving) — Option B chosen | 480m |
+| T11-96 | Final verification | TODO | final-refactor | Phase 11 — Workflow orchestrator skill (self-improving) — Option B chosen | 240m |
 <!-- end auto-generated -->
 
 > Regenerate via `Skill("task-board-forms")` or `npx tsx extensions/specs-workflow/tools/specs-generator/spec-status.ts -Path .specs/spec-generator-v4 -Format task-table` and splice between markers.
@@ -868,16 +872,47 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - `tests/step_definitions/feature32_evidence_status.ts` binds SPECGEN004_70..74 to real spec-status + MCP (no mocks)
   - `npm run test:bdd` reports `@feature32` 5/5 PASSED
 
-## Phase 11 — Workflow orchestrator skill (self-improving) — architecture TBD
+## Phase 11 — Workflow orchestrator skill (self-improving) — Option B chosen
 
-> A meta-skill that knows the full spec-generator feature map and drives the end-to-end workflow, and self-improves by appending dated improvement notes it can later merge. Architecture (general / orchestrator+workers / tools-only) is an open decision — see the analysis options before T-Orch.1.
+> Meta-skill `spec-generator-orchestrator` (FR-33): thin router over the feature map, delegates to existing workers (create-spec, cross-spec-*, spec-backlog, MCP tools); self-improves via a human-merge dated ledger (`SELF_IMPROVE.md`) with proactive reminders + auto-apply on human approval. Scenarios SPECGEN004_75..79 (@feature33) are red until these land.
 
-- [ ] T-Orch.0 Choose orchestrator architecture (general vs orchestrator+workers vs tools-only) — id: orchestrator-arch-decision — Status: TODO | Est: 60m
+- [x] T-Orch.0 Choose orchestrator architecture — id: orchestrator-arch-decision — Status: DONE | Est: 60m
   _Requirements:_ FR-33
   **Done When:**
-  - 3 options compared (pros/cons) with a recommendation recorded in DESIGN.md
-  - chosen architecture + rationale documented
-  - downstream T-Orch.1..3 detailed against the chosen pattern
+  - 3 options compared (general / orchestrator+workers / tools-only) — recorded in DESIGN.md "Decision: Workflow orchestrator architecture"
+  - chosen: Option B (thin orchestrator + existing workers); self-improve = human-merge ledger + nudge + auto-apply-on-approve
+  - downstream T-Orch.1..4 detailed below
+
+- [ ] T-Orch.1 Create `spec-generator-orchestrator` skill (thin router) — id: create-orchestrator-skill — Status: TODO | Est: 360m
+  _depends: orchestrator-arch-decision_
+  _Requirements:_ FR-33, AC-33.1
+  **Done When:**
+  - `.claude/skills/spec-generator-orchestrator/SKILL.md` with frontmatter triggers + a feature-map → worker routing table (scaffold→create-spec, coverage→get_coverage, reconcile→cross-spec-reconcile, resolve→cross-spec-resolve, fixes→spec-backlog, migrate→migrate-v3-to-v4)
+  - delegates only — no re-implementation of worker logic; allowed-tools covers Skill + MCP + Bash + Read
+  - @feature33 SPECGEN004_75 passes
+
+- [ ] T-Orch.2 Self-improve ledger (append + nudge + apply-on-approve) — id: orchestrator-self-improve — Status: TODO | Est: 240m
+  _depends: create-orchestrator-skill_
+  _Requirements:_ FR-33, AC-33.2, AC-33.3, AC-33.4
+  **Done When:**
+  - appends dated `{date, trigger, observation, proposed_change, affected_files[], confidence, status}` entries to `.specs/<slug>/SELF_IMPROVE.md`; `pending` never auto-applied
+  - session-start reminder surfaces pending count + top entries (reuse `/reflect` / `suggest-rules` mechanics, cross-link — no duplication)
+  - human `approved` → auto-apply + `status: applied` + applied-at date
+  - @feature33 SPECGEN004_76, _77, _78 pass
+
+- [ ] T-Orch.3 Feature-map drift guard — id: orchestrator-drift-guard — Status: TODO | Est: 120m
+  _depends: create-orchestrator-skill_
+  _Requirements:_ FR-33, AC-33.5
+  **Done When:**
+  - guard (test/audit) fails when a new MCP tool / worker skill / FR is unreferenced by the orchestrator feature-map; message names the capability
+  - @feature33 SPECGEN004_79 passes
+
+- [ ] T-Orch.4 BDD step-defs for @feature33 — id: stepdefs-fr-33 — Status: TODO | Est: 90m
+  _depends: orchestrator-self-improve, orchestrator-drift-guard_
+  _Requirements:_ FR-33, AC-33.1, AC-33.2, AC-33.3, AC-33.4, AC-33.5
+  **Done When:**
+  - `tests/step_definitions/feature33_orchestrator.ts` binds SPECGEN004_75..79 to the real skill + ledger + guard (no mocks)
+  - `npm run test:bdd` reports `@feature33` 5/5 PASSED
 
 ## Refactor & Polish (final)
 

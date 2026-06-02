@@ -394,3 +394,33 @@ WHEN every scenario mapped to a task is `PASSED` in the latest run THEN the task
 **Требование:** [FR-32](FR.md#fr-32)
 
 WHEN MCP `get_coverage()` is invoked THEN it SHALL return, from `.last-test-run.ndjson`, per-scenario buckets `{passed|pending|undefined|ambiguous|failed}` AND a per-task `verified_status` rollup matching `spec-status`'s derivation.
+
+## AC-33.1 (FR-33)
+
+**Требование:** [FR-33](FR.md#fr-33)
+
+WHEN the orchestrator runs a workflow step that an existing worker covers (e.g. coverage rollup) THEN it SHALL invoke that worker (`get_coverage` / skill) AND SHALL NOT contain a re-implementation of the worker's logic.
+
+## AC-33.2 (FR-33)
+
+**Требование:** [FR-33](FR.md#fr-33)
+
+WHEN the orchestrator detects a friction/gap during a run THEN it SHALL append a dated entry with `status: "pending"` to `.specs/<slug>/SELF_IMPROVE.md` AND SHALL NOT modify any spec or code file as a result of that entry.
+
+## AC-33.3 (FR-33)
+
+**Требование:** [FR-33](FR.md#fr-33)
+
+WHEN ≥1 `pending` entries exist in `SELF_IMPROVE.md` at session start THEN the orchestrator SHALL surface a reminder containing the pending count AND the top entries' observations.
+
+## AC-33.4 (FR-33)
+
+**Требование:** [FR-33](FR.md#fr-33)
+
+WHEN the human marks a ledger entry `approved` THEN the orchestrator MAY auto-apply it AND SHALL set the entry `status: "applied"` with an applied-at date; a `pending` entry SHALL NEVER be auto-applied.
+
+## AC-33.5 (FR-33)
+
+**Требование:** [FR-33](FR.md#fr-33)
+
+WHEN a new MCP tool, worker skill, or FR exists that the orchestrator feature-map does not reference THEN the drift guard SHALL fail with a message naming the unreferenced capability.

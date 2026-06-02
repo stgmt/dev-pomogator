@@ -458,6 +458,29 @@ This codifies the manual discipline applied during the 2026-06-02 coverage audit
 **Use Case:** [UC-1](USE_CASES.md#uc-1)
 **User Story:** US-20
 
+## FR-33: System SHALL provide a thin workflow-orchestrator skill over the feature map, with a self-improving merge ledger
+
+System SHALL ship a skill `spec-generator-orchestrator` (architecture: **thin orchestrator + existing workers**) that owns ONLY the feature-map and the routing/sequencing of the end-to-end workflow (scaffold → conformance → coverage → reconcile → resolve → honesty-gate). It SHALL delegate every unit of work to existing workers and SHALL NOT re-implement worker logic (reuse per repo rules):
+
+- Worker skills: `create-spec` (authoring phases), `cross-spec-reconcile` / `cross-spec-resolve`, `spec-backlog` resolvers, `architecture-research-workflow`.
+- Worker MCP tools: `get_trace`, `get_coverage`, `get_test_result`, `find_orphans`, conformance guard/push hooks.
+- Workers MAY run as isolated sub-agents for parallelism (mirrors the spec-backlog dispatch pattern).
+
+System SHALL maintain a self-improving ledger `.specs/<slug>/SELF_IMPROVE.md` under a human-merge gate:
+
+- During any run, on detecting friction/gap/idea, the orchestrator SHALL append a DATED entry `{date, trigger, observation, proposed_change, affected_files[], confidence, status: "pending"}`.
+- A `pending` entry SHALL NEVER be auto-applied to spec or code.
+- At session start (and on demand) WHEN ≥1 `pending` entries exist, the orchestrator SHALL surface a reminder (count + top entries) so they are not forgotten.
+- WHEN the human marks an entry `approved`, the orchestrator MAY auto-apply it (convert to FR/task or apply the change) and SHALL set `status: "applied"` with an applied-at date.
+- The ledger SHALL reuse `suggest-rules` / `self-improving` / `/reflect` mechanics (cross-link), not duplicate them.
+
+A drift guard SHALL fail WHEN a new MCP tool / worker skill / FR exists that the orchestrator feature-map does not reference — applying the FR-32 honesty discipline to the orchestrator itself.
+
+**Зависит от:** FR-4 (MCP tools), FR-32 (coverage/honesty surface consumed by the orchestrator), FR-17/FR-18 (cross-spec workers), FR-11 (migrate worker). Workers are existing skills/tools — no logic duplication.
+**Связанные AC:** [AC-33.1](ACCEPTANCE_CRITERIA.md#ac-331-fr-33), [AC-33.2](ACCEPTANCE_CRITERIA.md#ac-332-fr-33), [AC-33.3](ACCEPTANCE_CRITERIA.md#ac-333-fr-33), [AC-33.4](ACCEPTANCE_CRITERIA.md#ac-334-fr-33), [AC-33.5](ACCEPTANCE_CRITERIA.md#ac-335-fr-33)
+**Use Case:** [UC-1](USE_CASES.md#uc-1)
+**User Story:** US-21
+
 ---
 
 ## Out of Scope

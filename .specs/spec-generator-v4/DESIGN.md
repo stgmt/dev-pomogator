@@ -153,6 +153,16 @@
 - Status quo `### Requirement: FR-N` only (rejected) — no IDE wiki-link navigation in Marksman / VS Code, slugs unusable (`requirement-fr-001-login` too long).
 - Short heading only `### FR-N: ...` without backward compat (rejected) — breaks 30+ existing v3 specs across the dev-pomogator user base; forced migration too invasive.
 - HTML anchor markers `<a name="FR-001"></a>` adjacent to headings (rejected) — clutters MD source, requires migration script to add markers to all existing specs anyway, no advantage over regex parser.
+
+### Decision: Workflow orchestrator architecture = thin orchestrator + existing workers (Option B)
+
+**Rationale:** v4 already ships the workers (create-spec phases, cross-spec-reconcile/resolve, spec-backlog resolvers, MCP `get_trace`/`get_coverage`/`get_test_result`, conformance hooks). A thin orchestrator that owns only the feature-map + routing reuses all of them (per repo reuse rules), stays token-cheap, scales (workers run as isolated sub-agents, parallelizable), and matches the repo's proven dispatch pattern (spec-backlog specialist resolvers, cross-spec semantic subagent). Self-improvement is a human-merge dated ledger (`SELF_IMPROVE.md`): the orchestrator accumulates `pending` improvement notes, proactively reminds the human, and only auto-applies after the human marks an entry `approved` — keeping the human as the validation gate (consistent with FR-32 honesty discipline) while removing them as the memory of what's left to do.
+
+**Trade-off:** More moving parts than a single monolithic skill; sub-agent worker dispatch costs extra latency/tokens; the routing feature-map must be kept current as capabilities grow (mitigated by the FR-33 drift guard, task T-Orch.3).
+
+**Alternatives considered:**
+- Option A — single "general" monolithic playbook skill (rejected): one `SKILL.md` grows past the skill-listing budget, one context does everything → hits limits on large workflows, no parallelism; its only edge is a single update point.
+- Option C — tools-only / emergent, no central skill (rejected): no single entry point that "knows the whole workflow" (the explicit requirement), no holistic self-improve ledger, and the manual-coverage / stale-TASKS friction that motivated this recurs because nothing orchestrates the honesty discipline end-to-end.
 - Full restructure files-per-FR (`.specs/auth/fr-001.md`) (rejected) — too invasive, loses spec cohesion, breaks audit/validation tooling.
 
 ### Decision: MCP and LSP as separate layers, not nested

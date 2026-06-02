@@ -594,3 +594,38 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When the MCP client invokes `get_trace({node_id: <task or FR>})`
     Then the node includes a `verified_status` field derived from coverage
     And it never reports `DONE` while a linked scenario is pending, undefined or ambiguous
+
+  @feature33
+  Scenario: SPECGEN004_75 orchestrator delegates to a worker instead of reimplementing it
+    Given the orchestrator reaches the coverage step of the workflow
+    When it computes per-scenario coverage
+    Then it invokes the `get_coverage` MCP tool (or the coverage worker skill)
+    And the orchestrator skill body contains no re-implementation of the bucketing logic
+
+  @feature33
+  Scenario: SPECGEN004_76 friction during a run appends a pending ledger entry without touching spec or code
+    Given the orchestrator detects a gap during a run
+    When it records the observation
+    Then a dated entry with `status = "pending"` is appended to `.specs/spec-generator-v4/SELF_IMPROVE.md`
+    And no spec or code file is modified as a result of that entry
+
+  @feature33
+  Scenario: SPECGEN004_77 session start reminds the human of pending ledger entries
+    Given `SELF_IMPROVE.md` contains at least one entry with `status = "pending"`
+    When the orchestrator starts a session
+    Then it surfaces a reminder containing the pending count
+    And the reminder lists the top pending entries' observations
+
+  @feature33
+  Scenario: SPECGEN004_78 approved entry is auto-applied; pending is never auto-applied
+    Given a ledger entry marked `status = "approved"` by the human
+    When the orchestrator processes the ledger
+    Then it may auto-apply the entry and sets its `status = "applied"` with an applied-at date
+    And any entry still `status = "pending"` is left unapplied
+
+  @feature33
+  Scenario: SPECGEN004_79 drift guard fails when a capability is unreferenced by the feature-map
+    Given a new MCP tool exists that the orchestrator feature-map does not reference
+    When the drift guard runs
+    Then it fails with a non-zero status
+    And the message names the unreferenced capability
