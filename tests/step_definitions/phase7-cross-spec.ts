@@ -312,11 +312,12 @@ Then(
   },
 );
 
-// ─── SPECGEN004_44..47 — cross-spec-resolve (interactive — deferred) ───
-
-Given(/^.*\bresolve.*$/, function () {
-  return 'pending';
-});
+// ─── SPECGEN004_44..47 — cross-spec-resolve (interactive — deferred to W6) ───
+// NOTE (T-Cov.1): the broad catch-all `Given(/^.*\bresolve.*$/)` was removed —
+// it matched ANY step containing "resolve" (incl. MD-parser _05/_06
+// "resolves to the heading"), producing 4 AMBIGUOUS scenarios. The deferred
+// _44..47 Given steps stay UNDEFINED (honest red) until W6 wires the resolve
+// loop — they must NOT be re-stubbed with a catch-all.
 
 When(/^the user runs `\/cross-spec-resolve`$/, function () {
   return 'pending';
