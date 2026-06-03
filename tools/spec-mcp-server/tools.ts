@@ -40,6 +40,44 @@ import type {
   Edge,
   EdgeMetadata,
 } from '../spec-graph/types.ts';
+import {
+  computeCoverage,
+  bucketScenarios,
+  verifiedStatus,
+  mapTasksToScenarios,
+  type Bucket,
+  type ScenarioLike,
+  type TaskLike,
+} from '../spec-graph/coverage.ts';
+
+/** Build every Scenario as a ScenarioLike + an id→bucket index for FR-32 derivation. */
+function scenarioCoverageIndex(graph: SpecGraph): { scens: ScenarioLike[]; bucketById: Map<string, Bucket> } {
+  const scens: ScenarioLike[] = [];
+  for (const n of graph.nodes.values()) {
+    if (n.type === 'Scenario') {
+      const s = n as ScenarioNode;
+      scens.push({ id: s.id, tags: s.tags, result: s.lastResult });
+    }
+  }
+  const bucketById = new Map<string, Bucket>();
+  const b = bucketScenarios(scens);
+  for (const k of Object.keys(b) as Bucket[]) for (const id of b[k]) bucketById.set(id, k);
+  return { scens, bucketById };
+}
+
+/** Scenarios linked to a node (FR → @feature<N>, Task → refs map, else tested-by ids). */
+function linkedScenarioIds(node: Node, scens: ScenarioLike[], testedByIds: string[]): string[] {
+  if (node.type === 'Task') {
+    return mapTasksToScenarios([{ id: node.id, doneWhen: '', refs: (node as TaskNode).refs }], scens).get(node.id) ?? [];
+  }
+  if (node.type === 'FR') {
+    const num = node.id.match(/FR-(\d+)/i)?.[1];
+    if (!num) return testedByIds;
+    const tag = `@feature${num}`;
+    return scens.filter((s) => s.tags.map((t) => t.toLowerCase()).includes(tag)).map((s) => s.id);
+  }
+  return testedByIds;
+}
 
 export interface ToolResult {
   content: Array<{ type: 'text'; text: string }>;
@@ -353,9 +391,16 @@ export function buildToolRegistry(getGraph: () => SpecGraph): ToolDefinition<z.Z
           : `${node.id} (${node.type}) at ${node.file}:${node.line}`;
 
       const warnings = collectImplementsWarnings(node, graph);
+      // FR-32: derive verified_status for this node from the latest run — never
+      // reports DONE while a linked scenario is pending/undefined/ambiguous.
+      const { scens, bucketById } = scenarioCoverageIndex(graph);
+      const verified_status = verifiedStatus(
+        linkedScenarioIds(node, scens, scenarios.map((s) => s.id)),
+        bucketById,
+      );
       return asJsonResult({
         ok: true,
-        node: { id: node.id, type: node.type, file: node.file, line: node.line },
+        node: { id: node.id, type: node.type, file: node.file, line: node.line, verified_status },
         acceptance_criteria: acs.map((a) => ({ id: a.id, file: a.file, line: a.line })),
         scenarios: scenarios.map((s) => ({
           id: s.id,
@@ -549,6 +594,34 @@ export function buildToolRegistry(getGraph: () => SpecGraph): ToolDefinition<z.Z
           .map(([spec, counts]) => ({ spec, ...counts }))
           .sort((a, b) => a.spec.localeCompare(b.spec)),
       });
+    },
+  });
+
+  // ─── get_coverage (FR-32) ───────────────────────────────────────────────
+  tools.push({
+    name: 'get_coverage',
+    description:
+      'FR-32 honesty rollup from the latest run: per-scenario buckets ' +
+      '(passed/pending/undefined/ambiguous/failed/skipped) + per-task ' +
+      'verified_status (DONE only when EVERY mapped scenario is green). ' +
+      'Tasks map to scenarios via their FR refs (FR-N ↔ @featureN).',
+    inputShape: {} as const satisfies z.ZodRawShape,
+    handler: async () => {
+      const graph = getGraph();
+      const scenarios: ScenarioLike[] = [];
+      const tasks: TaskLike[] = [];
+      for (const node of graph.nodes.values()) {
+        if (node.type === 'Scenario') {
+          const s = node as ScenarioNode;
+          scenarios.push({ id: s.id, tags: s.tags, result: s.lastResult });
+        } else if (node.type === 'Task') {
+          const t = node as TaskNode;
+          // Graph TaskNode carries refs but not Done-When text; the explicit
+          // SPECGEN-id mapping happens in spec-status (which reads TASKS.md).
+          tasks.push({ id: t.id, doneWhen: '', refs: t.refs });
+        }
+      }
+      return asJsonResult({ ok: true, ...computeCoverage(tasks, scenarios) });
     },
   });
 
