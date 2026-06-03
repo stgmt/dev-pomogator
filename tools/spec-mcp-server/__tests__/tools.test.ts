@@ -1,5 +1,5 @@
 /**
- * Unit tests for the 11 MCP tool handlers.
+ * Unit tests for the 12 MCP tool handlers.
  *
  * Build a synthetic SpecGraph in memory, hand it to `buildToolRegistry`, then
  * call each tool's handler directly and assert on the JSON it returns.
@@ -72,14 +72,15 @@ const tool = (name: string) => {
 };
 
 describe('tool registry — shape', () => {
-  it('registers exactly 11 tools with canonical names', () => {
-    expect(registry).toHaveLength(11);
+  it('registers exactly 12 tools with canonical names', () => {
+    expect(registry).toHaveLength(12);
     const names = registry.map((t) => t.name).sort();
     expect(names).toEqual(
       [
         'conformance_check',
         'find_by_tags',
         'find_orphans',
+        'get_coverage', // FR-32 honesty rollup
         'get_coverage_summary',
         'get_node',
         'get_test_result',
