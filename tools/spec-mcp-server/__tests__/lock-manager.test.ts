@@ -55,6 +55,29 @@ describe('lock-manager', () => {
     }
   });
 
+  it('throws an env-mismatch ELOCK_HELD when a live owner holds a DIFFERENT env (SPECGEN004_33)', () => {
+    const first = acquireLock({ repoRoot: root, env: 'host' });
+    try {
+      try {
+        acquireLock({ repoRoot: root, env: 'container:cafe' });
+        throw new Error('expected acquireLock to throw');
+      } catch (e) {
+        const err = e as Error & { code: string; envMismatch: boolean };
+        expect(err.code).toBe('ELOCK_HELD');
+        expect(err.envMismatch).toBe(true);
+        expect(err.message).toContain('MCP already running in env host');
+        expect(err.message).toContain(`(pid ${process.pid})`);
+        expect(err.message).toContain('restart Claude Code in same env');
+      }
+      // No second lock was written — session A's record is intact.
+      const held = readLock(root);
+      expect(held!.pid).toBe(process.pid);
+      expect(held!.env).toBe('host');
+    } finally {
+      first.release();
+    }
+  });
+
   it('auto-cleans a stale lock written by a dead pid', () => {
     const lockFile = path.join(root, '.dev-pomogator', '.mcp-lock.json');
     fs.mkdirSync(path.dirname(lockFile), { recursive: true });

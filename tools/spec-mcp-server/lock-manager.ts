@@ -139,12 +139,25 @@ export function acquireLock(opts: AcquireOptions): LockHandle {
     if ((err as NodeJS.ErrnoException).code !== 'EEXIST') throw err;
     const existing = readLock(opts.repoRoot);
     if (existing && isPidAlive(existing.pid)) {
-      const e = new Error(
-        `MCP lock already held by pid ${existing.pid} in env ${existing.env} ` +
-          `(started ${existing.started_at}).`,
-      ) as Error & { code: string; existing: LockRecord };
+      // FR-14 / SPECGEN004_33: an alive owner in a DIFFERENT env tag is the
+      // multi-env hazard (e.g. host session A vs container session B on the
+      // same bind-mounted worktree). Surface an env-specific, actionable
+      // message; the same-env case keeps the generic "already held" wording
+      // the singleton tests pin.
+      const envMismatch = existing.env !== record.env;
+      const message = envMismatch
+        ? `MCP already running in env ${existing.env} (pid ${existing.pid}), ` +
+          `restart Claude Code in same env`
+        : `MCP lock already held by pid ${existing.pid} in env ${existing.env} ` +
+          `(started ${existing.started_at}).`;
+      const e = new Error(message) as Error & {
+        code: string;
+        existing: LockRecord;
+        envMismatch: boolean;
+      };
       e.code = 'ELOCK_HELD';
       e.existing = existing;
+      e.envMismatch = envMismatch;
       throw e;
     }
     // Stale lock — unlink + retry once.
