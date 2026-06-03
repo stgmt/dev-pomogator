@@ -52,9 +52,17 @@ agent to surface trade-offs the user might miss otherwise.
    show an extra banner («⚠️ This edits foreign spec: <slug>») and ask
    again. Foreign-spec writes are riskier — the second confirm prevents
    accidental cross-contamination.
-7. **Re-invoke reconcile** — batch fixes mean stale findings. Step 7
-   re-runs `cross-spec-reconcile` and refreshes `resolution_status` on
-   each YAML finding (resolved / acknowledged / deferred).
+7. **Re-invoke reconcile (batch re-check)** — batch fixes mean stale
+   findings. Step 7 re-runs `cross-spec-reconcile (mode: full)` exactly once
+   and diffs the fresh findings against the originals, stamping each original
+   finding's `resolution_status` with the **outcome**:
+   - `resolved` — the finding's exact key is gone from the fresh run;
+   - `still_present` — the identical finding is still emitted;
+   - `transformed` — the exact key is gone but a fresh finding shares its
+     `code` (the fix shifted rather than removed it).
+   (This OUTCOME stamp is distinct from the per-finding DECISION stamp —
+   resolved/acknowledged/deferred/skipped — written during the interactive
+   loop; see `scripts/recheck.ts` vs `scripts/update-status.ts`.)
 
 ## Acknowledge & override path
 

@@ -26,6 +26,7 @@ import {
   type ExplanationBlock,
   type ReportFinding,
 } from '../../.claude/skills/cross-spec-resolve/scripts/walker.ts';
+import { applyRecheck, type ApplyRecheckResult } from '../../.claude/skills/cross-spec-resolve/scripts/recheck.ts';
 import type { V4World } from '../hooks/before-after.ts';
 
 interface CrossSpecWorld extends V4World {
@@ -39,6 +40,9 @@ interface CrossSpecWorld extends V4World {
   resolveExplanation?: ExplanationBlock;
   reportBytesBefore?: string;
   resolveFinding?: ReportFinding;
+  executionStep?: number;
+  recheckOriginal?: ReportFinding[];
+  recheckResult?: ApplyRecheckResult;
 }
 
 const RESOLVE_CLI = path.join(
@@ -174,8 +178,11 @@ Given(
   },
 );
 
-When('the skill reaches step {int} of execution', function (_step: number) {
-  return 'pending';
+When('the skill reaches step {int} of execution', function (this: CrossSpecWorld, step: number) {
+  // Recorder — the per-scenario Then steps act on the recorded step number.
+  // _40 never reaches here (its Given is a pending stub → scenario short-circuits),
+  // so this stays a no-op-ish recorder shared with _48 (step 7 = batch re-check).
+  this.executionStep = step;
 });
 
 Then(/^AskUserQuestion is invoked with `header: "⚠️ CRIT"`$/, function () {
@@ -511,5 +518,90 @@ Then(
       assert.match(o.description!, /Cons:/);
       assert.match(o.description!, /Impacted files:/);
     }
+  },
+);
+
+// ─── SPECGEN004_48 — step-7 batch re-check stamps the OUTCOME status ────────
+// Drives the REAL recheck.applyRecheck (its own atomic stamp; deliberately
+// separate from updateStatus's decision-stamping). The single fresh reconcile
+// run is the caller's input — the signature enforces "invoked exactly once".
+
+Given(
+  /^the resolve skill has processed all confirmed findings via Edit\/Write$/,
+  function (this: CrossSpecWorld) {
+    this.resolveSlug = 'demo';
+    const dir = path.join(this.tempDir, '.specs', this.resolveSlug);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(
+      path.join(dir, 'consistency-report.yaml'),
+      [
+        'findings:',
+        '  - code: cross-spec/gone',
+        '    class: uncovered',
+        '    severity: WARNING',
+        '    referenced_in: .specs/demo/FR.md:1',
+        '  - code: cross-spec/stays',
+        '    class: uncovered',
+        '    severity: WARNING',
+        '    referenced_in: .specs/demo/FR.md:2',
+        '  - code: cross-spec/moved',
+        '    class: uncovered',
+        '    severity: WARNING',
+        '    referenced_in: .specs/demo/FR.md:3',
+        '',
+      ].join('\n'),
+    );
+    this.recheckOriginal = [
+      { code: 'cross-spec/gone', class: 'uncovered', severity: 'WARNING', referenced_in: '.specs/demo/FR.md:1' },
+      { code: 'cross-spec/stays', class: 'uncovered', severity: 'WARNING', referenced_in: '.specs/demo/FR.md:2' },
+      { code: 'cross-spec/moved', class: 'uncovered', severity: 'WARNING', referenced_in: '.specs/demo/FR.md:3' },
+    ];
+  },
+);
+
+Then(
+  /^`Skill\("cross-spec-reconcile", mode: "full"\)` is invoked exactly once$/,
+  function (this: CrossSpecWorld) {
+    assert.equal(this.executionStep, 7, 'step 7 is the batch re-check');
+    // Single fresh reconcile run: 'gone' disappears (resolved), 'stays' is
+    // identical (still_present), 'moved' keeps its code but a new line
+    // (transformed). applyRecheck consumes that one fresh set.
+    const fresh: ReportFinding[] = [
+      { code: 'cross-spec/stays', class: 'uncovered', severity: 'WARNING', referenced_in: '.specs/demo/FR.md:2' },
+      { code: 'cross-spec/moved', class: 'uncovered', severity: 'WARNING', referenced_in: '.specs/demo/FR.md:42' },
+    ];
+    this.recheckResult = applyRecheck({
+      repoRoot: this.tempDir,
+      slug: this.resolveSlug!,
+      original: this.recheckOriginal!,
+      fresh,
+      timestamp: '2026-06-03T00:00:00Z',
+    });
+  },
+);
+
+Then(
+  /^each original finding's `resolution_status` is updated to `resolved`, `still_present`, or `transformed`$/,
+  function (this: CrossSpecWorld) {
+    const s = this.recheckResult!.statuses;
+    assert.equal(s['cross-spec/gone|||.specs/demo/FR.md:1'], 'resolved');
+    assert.equal(s['cross-spec/stays|||.specs/demo/FR.md:2'], 'still_present');
+    assert.equal(s['cross-spec/moved|||.specs/demo/FR.md:3'], 'transformed');
+    const yaml = fs.readFileSync(
+      path.join(this.tempDir, '.specs', this.resolveSlug!, 'consistency-report.yaml'),
+      'utf8',
+    );
+    for (const st of ['resolved', 'still_present', 'transformed']) {
+      assert.match(yaml, new RegExp(`resolution_status: ${st}`));
+    }
+  },
+);
+
+Then(
+  /^the YAML is written atomically via temp file \+ rename$/,
+  function (this: CrossSpecWorld) {
+    const dir = path.join(this.tempDir, '.specs', this.resolveSlug!);
+    const leftovers = fs.readdirSync(dir).filter((n) => n.includes('.tmp'));
+    assert.deepEqual(leftovers, [], 'no temp file should remain after the atomic rename');
   },
 );
