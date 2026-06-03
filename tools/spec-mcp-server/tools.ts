@@ -421,6 +421,11 @@ export function buildToolRegistry(getGraph: () => SpecGraph): ToolDefinition<z.Z
           tags: s.tags,
           lastResult: s.lastResult ?? 'UNKNOWN',
           failingStep: s.failingStep ?? null,
+          // FR-30/SPECGEN004_19: per-scenario code_impl so step-binding refs
+          // (e.g. Reqnroll C# .cs files) surface in the FR's trace tree. Uses
+          // the same computeCodeImpl — additive field, node-level code_impl
+          // (and FR aggregation for _60-_64) is unchanged.
+          code_impl: computeCodeImpl(s, graph),
         })),
         tasks: tasks.map((t) => ({ id: t.id, status: t.status, file: t.file, line: t.line })),
         code_impl: computeCodeImpl(node, graph),
