@@ -15,8 +15,10 @@
  *
  * Per-spec opt-out (FR-6 last paragraph): if the FIRST line of the changed
  * file's content is `# _no_push_check: true` or the file's frontmatter
- * contains `_no_push_check: true`, the hook skips push entirely for that
- * file (red phase escape hatch).
+ * contains `_no_push_check: true`, the hook suppresses the agent-facing
+ * `<system-reminder>` push for that file (red phase escape hatch) — but the
+ * findings are STILL written to the `.spec-check-log/` journal (SPECGEN004_14):
+ * opt-out silences noise, never the durable audit record.
  *
  * @see ../spec-graph/builder.ts (cold-start)
  * @see ../spec-graph/conformance.ts
@@ -175,17 +177,17 @@ export function runPush(
   now: number,
   options: RunPushOptions = {},
 ): string {
-  if (changedFile && isOptedOut(changedFile, repoRoot)) {
-    return '';
-  }
+  const optedOut = !!(changedFile && isOptedOut(changedFile, repoRoot));
   const graph = buildGraph({ repoRoot, skipNdjson: true });
   const newFindings = checkConformance(graph);
 
   // FR-15 wire-up: every finding the hook sees gets persisted to the
   // side-channel JSONL log, even if the throttle window decides to stay
-  // silent on the agent-facing emit. The journal is the durable record;
-  // the system-reminder push is the noisy surface. Failures here are
-  // best-effort — the FR-19 soft tier guarantees the hook never blocks.
+  // silent on the agent-facing emit — AND even when the file opted out of the
+  // push (SPECGEN004_14). The journal is the durable audit record; opt-out and
+  // the throttle only gate the noisy <system-reminder> surface, never the log.
+  // Failures here are best-effort — the FR-19 soft tier guarantees the hook
+  // never blocks.
   if (newFindings.length > 0) {
     try {
       appendFindings(newFindings, {
@@ -198,6 +200,11 @@ export function runPush(
       // Soft tier — log unavailable disk → silently continue.
     }
   }
+
+  // Per-spec opt-out (`_no_push_check: true`): suppress only the agent-facing
+  // emit. The log above is already written; the throttle window is left
+  // untouched so an opted-out edit never perturbs a neighbouring file's batch.
+  if (optedOut) return '';
 
   const previous = readState(repoRoot);
   const decision = decidePush({ now, previous, newFindings });
