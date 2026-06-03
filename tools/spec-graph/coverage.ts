@@ -35,6 +35,8 @@ export interface ScenarioLike {
   tags: string[];
   /** Last run result; `undefined` → not run yet → counted as `undefined`. */
   result?: string;
+  /** Owning spec slug (from `.specs/<slug>/`). Enables same-spec tag scoping. */
+  spec?: string;
 }
 
 export interface TaskLike {
@@ -43,6 +45,18 @@ export interface TaskLike {
   doneWhen: string;
   /** FR/NFR ids the task implements (TaskNode.refs). */
   refs: string[];
+  /** Owning spec slug (from `.specs/<slug>/`). Enables same-spec tag scoping. */
+  spec?: string;
+}
+
+/**
+ * Derive the owning spec slug from a node's file path: `.specs/<slug>/...` →
+ * `<slug>`. Returns `undefined` for files outside `.specs/` (e.g.
+ * `tests/features/...`), so they never satisfy a spec-scoped tag match.
+ */
+export function specOf(file: string): string | undefined {
+  const m = file.replace(/\\/g, '/').match(/(?:^|\/)\.specs\/([^/]+)\//);
+  return m ? m[1] : undefined;
 }
 
 export interface CoverageReport {
@@ -87,6 +101,14 @@ export function bucketScenarios(scenarios: ScenarioLike[]): Record<Bucket, strin
  *   2. `@featureN` tags mentioned in Done-When,
  *   3. FR refs → scenarios tagged `@feature<N>` (FR-N ↔ @featureN convention).
  * De-dupes across all three sources (a scenario referenced twice maps once).
+ *
+ * Same-spec scoping: `@featureN` tags are NOT unique across specs (`@feature2`
+ * lives in many `.specs/<slug>/*.feature` files). When a task's `spec` is known,
+ * tag-based matches (sources 2 & 3) are restricted to scenarios in the SAME
+ * spec, so a v4 task isn't flagged by an unrun `@feature2` scenario in another
+ * spec. Explicit `SPECGEN004_NN` ids (source 1) are unambiguous and never
+ * scoped. When `spec` is absent (caller didn't supply it) the legacy
+ * un-scoped behaviour is preserved.
  */
 export function mapTasksToScenarios(
   tasks: TaskLike[],
@@ -94,7 +116,9 @@ export function mapTasksToScenarios(
 ): Map<string, string[]> {
   const byTag = new Map<string, Set<string>>();
   const byKey = new Map<string, string>(); // specgen004_NN -> scenario id
+  const scenarioSpec = new Map<string, string | undefined>();
   for (const s of scenarios) {
+    scenarioSpec.set(s.id, s.spec);
     for (const tag of s.tags) {
       const key = tag.toLowerCase();
       if (!byTag.has(key)) byTag.set(key, new Set());
@@ -107,17 +131,21 @@ export function mapTasksToScenarios(
   const out = new Map<string, string[]>();
   for (const task of tasks) {
     const ids = new Set<string>();
+    // Tag matches respect the task's spec when known (FR-N ↔ @featureN tags
+    // collide across specs). An undefined task.spec disables scoping (legacy).
+    const sameSpec = (sid: string): boolean =>
+      task.spec === undefined || scenarioSpec.get(sid) === task.spec;
     for (const m of task.doneWhen.matchAll(/s[pc]e[cn]gen004[_-]\d+/gi)) {
       const k = scenarioKey(m[0]);
       const sid = k && byKey.get(k);
-      if (sid) ids.add(sid);
+      if (sid) ids.add(sid); // explicit id — unambiguous, never scoped
     }
     for (const m of task.doneWhen.matchAll(/@feature\d+/gi)) {
-      for (const sid of byTag.get(m[0].toLowerCase()) ?? []) ids.add(sid);
+      for (const sid of byTag.get(m[0].toLowerCase()) ?? []) if (sameSpec(sid)) ids.add(sid);
     }
     for (const ref of task.refs) {
       const n = ref.match(/FR-(\d+)/i);
-      if (n) for (const sid of byTag.get(`@feature${n[1]}`) ?? []) ids.add(sid);
+      if (n) for (const sid of byTag.get(`@feature${n[1]}`) ?? []) if (sameSpec(sid)) ids.add(sid);
     }
     out.set(task.id, [...ids]);
   }

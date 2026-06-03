@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   scenarioKey,
+  specOf,
   bucketScenarios,
   mapTasksToScenarios,
   verifiedStatus,
@@ -83,6 +84,52 @@ describe('mapTasksToScenarios', () => {
     const got = mapTasksToScenarios(tasks, scenarios).get('t4')!;
     expect(new Set(got).size).toBe(got.length); // no duplicates
     expect(got).toContain('SCEN-specgen004-70-x');
+  });
+});
+
+describe('specOf', () => {
+  it('derives the spec slug from a .specs/<slug>/ path (POSIX + Windows)', () => {
+    expect(specOf('.specs/spec-generator-v4/TASKS.md')).toBe('spec-generator-v4');
+    expect(specOf('.specs\\auth\\auth.feature')).toBe('auth');
+  });
+  it('returns undefined for paths outside .specs/', () => {
+    expect(specOf('tests/features/plugins/x.feature')).toBeUndefined();
+  });
+});
+
+describe('mapTasksToScenarios — same-spec scoping (cross-spec @featureN collision)', () => {
+  // @feature2 exists in TWO specs; only specA's scenario is run (PASSED), specB's
+  // is never run (UNDEFINED). A specA task must not be dragged down by specB.
+  const scenarios: ScenarioLike[] = [
+    { id: 'SCEN-a-2', tags: ['@feature2'], result: 'PASSED', spec: 'specA' },
+    { id: 'SCEN-b-2', tags: ['@feature2'], result: 'UNDEFINED', spec: 'specB' },
+  ];
+
+  it('scopes FR-ref tag matches to the task’s own spec', () => {
+    const task: TaskLike[] = [{ id: 't', doneWhen: '', refs: ['FR-2'], spec: 'specA' }];
+    expect(mapTasksToScenarios(task, scenarios).get('t')).toEqual(['SCEN-a-2']);
+  });
+
+  it('scopes @featureN-in-DoneWhen matches to the task’s own spec', () => {
+    const task: TaskLike[] = [{ id: 't', doneWhen: 'all @feature2 green', refs: [], spec: 'specA' }];
+    expect(mapTasksToScenarios(task, scenarios).get('t')).toEqual(['SCEN-a-2']);
+  });
+
+  it('a specA task with FR-2 is DONE despite specB’s unrun @feature2 scenario', () => {
+    const tasks: TaskLike[] = [{ id: 'cross', doneWhen: '', refs: ['FR-2'], spec: 'specA' }];
+    expect(computeCoverage(tasks, scenarios).tasks['cross'].verified_status).toBe('DONE');
+  });
+
+  it('legacy behaviour preserved: an undefined task.spec is NOT scoped', () => {
+    const tasks: TaskLike[] = [{ id: 'legacy', doneWhen: '', refs: ['FR-2'] }];
+    // maps to both → one is undefined → IN_PROGRESS (old, un-scoped contract)
+    expect(computeCoverage(tasks, scenarios).tasks['legacy'].verified_status).toBe('IN_PROGRESS');
+  });
+
+  it('explicit SPECGEN id is never scoped (unambiguous direct reference)', () => {
+    const scen: ScenarioLike[] = [{ id: 'SCEN-specgen004-70-x', tags: [], result: 'PASSED', spec: 'specB' }];
+    const task: TaskLike[] = [{ id: 't', doneWhen: 'SPECGEN004_70 passes', refs: [], spec: 'specA' }];
+    expect(mapTasksToScenarios(task, scen).get('t')).toEqual(['SCEN-specgen004-70-x']);
   });
 });
 

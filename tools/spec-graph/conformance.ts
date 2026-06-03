@@ -23,7 +23,7 @@
  */
 
 import type { SpecGraph, Edge, ScenarioNode, TaskNode } from './types.ts';
-import { computeCoverage, type Bucket, type ScenarioLike, type TaskLike } from './coverage.ts';
+import { computeCoverage, specOf, type Bucket, type ScenarioLike, type TaskLike } from './coverage.ts';
 
 export type FindingCode =
   | 'UNCOVERED_FR'
@@ -157,10 +157,10 @@ export function checkConformance(
   for (const node of graph.nodes.values()) {
     if (node.type === 'Scenario') {
       const s = node as ScenarioNode;
-      scenarioLikes.push({ id: s.id, tags: s.tags, result: s.lastResult });
+      scenarioLikes.push({ id: s.id, tags: s.tags, result: s.lastResult, spec: specOf(s.file) });
     } else if (node.type === 'Task') {
       const t = node as TaskNode;
-      taskLikes.push({ id: t.id, doneWhen: t.doneWhen ?? '', refs: t.refs });
+      taskLikes.push({ id: t.id, doneWhen: t.doneWhen ?? '', refs: t.refs, spec: specOf(t.file) });
     }
   }
   if (taskLikes.length > 0) {

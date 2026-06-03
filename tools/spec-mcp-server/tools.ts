@@ -45,6 +45,7 @@ import {
   bucketScenarios,
   verifiedStatus,
   mapTasksToScenarios,
+  specOf,
   type Bucket,
   type ScenarioLike,
   type TaskLike,
@@ -56,7 +57,7 @@ function scenarioCoverageIndex(graph: SpecGraph): { scens: ScenarioLike[]; bucke
   for (const n of graph.nodes.values()) {
     if (n.type === 'Scenario') {
       const s = n as ScenarioNode;
-      scens.push({ id: s.id, tags: s.tags, result: s.lastResult });
+      scens.push({ id: s.id, tags: s.tags, result: s.lastResult, spec: specOf(s.file) });
     }
   }
   const bucketById = new Map<string, Bucket>();
@@ -67,14 +68,25 @@ function scenarioCoverageIndex(graph: SpecGraph): { scens: ScenarioLike[]; bucke
 
 /** Scenarios linked to a node (FR → @feature<N>, Task → refs map, else tested-by ids). */
 function linkedScenarioIds(node: Node, scens: ScenarioLike[], testedByIds: string[]): string[] {
+  const nodeSpec = specOf(node.file);
   if (node.type === 'Task') {
-    return mapTasksToScenarios([{ id: node.id, doneWhen: '', refs: (node as TaskNode).refs }], scens).get(node.id) ?? [];
+    return (
+      mapTasksToScenarios(
+        [{ id: node.id, doneWhen: '', refs: (node as TaskNode).refs, spec: nodeSpec }],
+        scens,
+      ).get(node.id) ?? []
+    );
   }
   if (node.type === 'FR') {
     const num = node.id.match(/FR-(\d+)/i)?.[1];
     if (!num) return testedByIds;
     const tag = `@feature${num}`;
-    return scens.filter((s) => s.tags.map((t) => t.toLowerCase()).includes(tag)).map((s) => s.id);
+    // Same-spec scoping (FR-N ↔ @featureN tags collide across specs): an FR is
+    // verified only by scenarios in its own spec when the spec is known.
+    return scens
+      .filter((s) => s.tags.map((t) => t.toLowerCase()).includes(tag))
+      .filter((s) => nodeSpec === undefined || s.spec === nodeSpec)
+      .map((s) => s.id);
   }
   return testedByIds;
 }
@@ -613,10 +625,10 @@ export function buildToolRegistry(getGraph: () => SpecGraph): ToolDefinition<z.Z
       for (const node of graph.nodes.values()) {
         if (node.type === 'Scenario') {
           const s = node as ScenarioNode;
-          scenarios.push({ id: s.id, tags: s.tags, result: s.lastResult });
+          scenarios.push({ id: s.id, tags: s.tags, result: s.lastResult, spec: specOf(s.file) });
         } else if (node.type === 'Task') {
           const t = node as TaskNode;
-          tasks.push({ id: t.id, doneWhen: t.doneWhen ?? '', refs: t.refs });
+          tasks.push({ id: t.id, doneWhen: t.doneWhen ?? '', refs: t.refs, spec: specOf(t.file) });
         }
       }
       return asJsonResult({ ok: true, ...computeCoverage(tasks, scenarios) });
