@@ -72,6 +72,24 @@ function normalizeStatus(raw: unknown): TestStatus {
   return 'UNKNOWN';
 }
 
+/**
+ * Cucumber status severity (higher = worse). A scenario's result is the
+ * worst-severity status across its steps — FAILED > AMBIGUOUS > UNDEFINED >
+ * PENDING > SKIPPED > PASSED. Used to avoid collapsing non-green scenarios to
+ * PASSED just because no step explicitly FAILED.
+ */
+function statusSeverity(s: TestStatus): number {
+  switch (s) {
+    case 'FAILED': return 6;
+    case 'AMBIGUOUS': return 5;
+    case 'UNDEFINED': return 4;
+    case 'PENDING': return 3;
+    case 'SKIPPED': return 2;
+    case 'PASSED': return 1;
+    default: return 0; // UNKNOWN
+  }
+}
+
 /** Convert a duration envelope `{seconds, nanos}` to milliseconds. */
 function durationToMs(d: unknown): number | undefined {
   if (!d || typeof d !== 'object') return undefined;
@@ -160,7 +178,10 @@ export function parseNdjson(source: string): TestResultPatch {
         .find((l): l is number => typeof l === 'number');
       pickles.set(pickle.id, {
         name: pickle.name ?? '',
-        uri: pickle.uri ?? '',
+        // Cucumber on Windows emits backslash uris (`.specs\\foo.feature`); the
+        // SpecGraph keys scenarios by POSIX path, so normalise here or the
+        // `${uri}:${line}` join never matches and every result is dropped.
+        uri: (pickle.uri ?? '').replace(/\\/g, '/'),
         astLine,
         tags: (pickle.tags ?? []).map((t) => t.name),
       });
@@ -225,6 +246,10 @@ export function parseNdjson(source: string): TestResultPatch {
       if (tcId) {
         const acc = testCaseResult.get(tcId) ?? { lastResult: 'UNKNOWN' as TestStatus };
         const status = normalizeStatus(stepFinished.testStepResult.status);
+        // Scenario result = worst-severity step status (cucumber semantics).
+        // Without this, UNDEFINED / PENDING scenarios collapse to PASSED in the
+        // testCaseFinished fallback because only FAILED was ever tracked.
+        if (statusSeverity(status) > statusSeverity(acc.lastResult)) acc.lastResult = status;
         if (status === 'FAILED' && !acc.failingStep) {
           let stepText = '';
           if (stepFinished.testStepId) {
@@ -255,8 +280,8 @@ export function parseNdjson(source: string): TestResultPatch {
         // but cucumber-js v12 also re-emits status in this envelope when present.
         const explicit = (env.testCaseFinished as { testStepResult?: { status?: string } }).testStepResult?.status;
         if (explicit) acc.lastResult = normalizeStatus(explicit);
-        else if (acc.failingStep) acc.lastResult = 'FAILED';
-        else acc.lastResult = acc.lastResult === 'UNKNOWN' ? 'PASSED' : acc.lastResult;
+        else if (acc.lastResult === 'UNKNOWN') acc.lastResult = 'PASSED'; // no steps observed
+        // (worst-of-steps status already accumulated in testStepFinished)
 
         if (tcFinished.timestamp && acc.startTs) {
           const endMs =
