@@ -11,6 +11,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { buildToolRegistry } from '../tools.ts';
+import type { BridgeHandle, Location } from '../../marksman-lsp/bridge.ts';
 import type {
   SpecGraph,
   FrNode,
@@ -72,8 +73,8 @@ const tool = (name: string) => {
 };
 
 describe('tool registry — shape', () => {
-  it('registers exactly 13 tools with canonical names', () => {
-    expect(registry).toHaveLength(13);
+  it('registers exactly 14 tools with canonical names', () => {
+    expect(registry).toHaveLength(14);
     const names = registry.map((t) => t.name).sort();
     expect(names).toEqual(
       [
@@ -88,10 +89,72 @@ describe('tool registry — shape', () => {
         'get_trace',
         'list_phase_tasks',
         'list_specs',
+        'md_references', // FR-7b Marksman-backed navigation (bridge consumer)
         'search',
         'validate_anchor',
       ].sort(),
     );
+  });
+});
+
+describe('md_references — bridge consumer + fallback (FR-7b)', () => {
+  const fakeLocations: Location[] = [
+    { uri: 'file:///repo/.specs/auth/note.md', range: { start: { line: 0, character: 0 }, end: { line: 0, character: 6 } } },
+  ];
+  // A minimal BridgeHandle stub — only references() matters for this tool.
+  const makeBridge = (over: Partial<Pick<BridgeHandle, 'references'>> = {}): BridgeHandle => ({
+    capabilities: { referencesProvider: true },
+    didOpen: () => undefined,
+    definition: async () => null,
+    references: over.references ?? (async () => fakeLocations),
+    stop: async () => undefined,
+  });
+
+  it('uses the Marksman bridge when one is available (backend=marksman)', async () => {
+    const reg = buildToolRegistry(() => makeGraph(), () => makeBridge(), '/repo');
+    const t = reg.find((x) => x.name === 'md_references')!;
+    const body = parseResult(await t.handler({ node_id: 'FR-1' })) as {
+      ok: boolean;
+      backend: string;
+      references: unknown[];
+      count: number;
+    };
+    expect(body.ok).toBe(true);
+    expect(body.backend).toBe('marksman');
+    expect(body.count).toBe(1);
+    expect(body.references).toEqual(fakeLocations);
+  });
+
+  it('falls back to the graph when no bridge is present (backend=js-fallback)', async () => {
+    const reg = buildToolRegistry(() => makeGraph()); // no bridge
+    const t = reg.find((x) => x.name === 'md_references')!;
+    const body = parseResult(await t.handler({ node_id: 'FR-1' })) as { backend: string; count: number };
+    expect(body.backend).toBe('js-fallback');
+    expect(body.count).toBeGreaterThanOrEqual(1); // FR-1 has AC-1 + SCEN + TASK refs
+  });
+
+  it('degrades to the graph when the bridge throws mid-session', async () => {
+    const reg = buildToolRegistry(
+      () => makeGraph(),
+      () => makeBridge({ references: async () => { throw new Error('bridge crashed'); } }),
+      '/repo',
+    );
+    const t = reg.find((x) => x.name === 'md_references')!;
+    const body = parseResult(await t.handler({ node_id: 'FR-1' })) as {
+      backend: string;
+      degraded_from?: string;
+      count: number;
+    };
+    expect(body.backend).toBe('js-fallback');
+    expect(body.degraded_from).toBe('marksman');
+    expect(body.count).toBeGreaterThanOrEqual(1);
+  });
+
+  it('returns ok:false for an unknown node id', async () => {
+    const reg = buildToolRegistry(() => makeGraph(), () => makeBridge(), '/repo');
+    const t = reg.find((x) => x.name === 'md_references')!;
+    const body = parseResult(await t.handler({ node_id: 'FR-nope' })) as { ok: boolean };
+    expect(body.ok).toBe(false);
   });
 });
 

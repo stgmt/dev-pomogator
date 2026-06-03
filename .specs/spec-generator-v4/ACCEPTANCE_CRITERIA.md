@@ -88,7 +88,17 @@ WHEN `npx dev-pomogator install` completes successfully THEN the Marksman binary
 ## AC-7.2 (FR-7)
 **Требование:** [FR-7](FR.md#fr-7)
 
-IF Marksman bundled binary is unavailable for current platform AND network download fails THEN the install SHALL NOT fail; Marksman MUST be marked unavailable in `.dev-pomogator/install-log.json`; MCP server SHALL fall back to custom JS-based MD LSP for wiki-link navigation.
+IF Marksman bundled binary is unavailable for current platform AND network download fails THEN the install SHALL NOT fail; Marksman MUST be marked unavailable in `.dev-pomogator/install-log.json`; MCP server SHALL fall back to custom JS-based MD LSP for wiki-link navigation. Concretely: `md_references` SHALL answer with `backend: "js-fallback"` (graph-backed `find_refs`) when no bridge is available, and `backend: "marksman"` when the bridge is live.
+
+## AC-7.3 (FR-7)
+**Требование:** [FR-7](FR.md#fr-7)
+
+WHEN the e2e suite runs inside the Docker test image (the real pinned Marksman is present per `Dockerfile.test`) THEN the bridge e2e SHALL spawn the REAL binary and verify a real `initialize` + wiki-link `references`/`definition` round-trip through the production bridge. A silent skip inside Docker SHALL be a hard FAIL (`skip-policy.ts` — silent-skip would be fake-green).
+
+## AC-7.4 (FR-7)
+**Требование:** [FR-7](FR.md#fr-7)
+
+IF a diff adds an installer / downloaded binary / external dependency WITHOUT a runtime consumer AND without an e2e against the real artifact THEN `dead-integration-guard` SHALL flag it — "installed ≠ integrated" (the exact gap FR-7 itself fell into).
 
 ## AC-8.1 (FR-8)
 **Требование:** [FR-8](FR.md#fr-8)

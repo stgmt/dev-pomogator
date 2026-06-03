@@ -78,7 +78,11 @@ System SHALL bundle Marksman LSP binary (per-platform, ~15MB) in dev-pomogator n
 
 If install fails (no network, offline, unsupported platform) — install MUST NOT fail; Marksman marked unavailable in `.dev-pomogator/install-log.json`; MCP server falls back to custom JS-based MD LSP (subset features).
 
-**Связанные AC:** [AC-7.1](ACCEPTANCE_CRITERIA.md#ac-7-1), [AC-7.2](ACCEPTANCE_CRITERIA.md#ac-7-2)
+**FR-7a (LSP bridge — the runtime consumer):** When `install-log.json` records `marksman.available = true`, the MCP server SHALL spawn the binary as an LSP server (`marksman server`), complete the `initialize`/`initialized` handshake over JSON-RPC/stdio, and expose Marksman's `definition`/`references`. The handshake MUST declare `capabilities.workspace.workspaceFolders` and the workspace MUST carry a project-root marker (`.marksman.toml`/`.git`) — otherwise Marksman rejects the folder («Workspace folder is bogus») and returns empty refs (verified by capture, Linux + Windows). Bridge startup failure SHALL degrade to the graph fallback without crashing (fail-open). `shutdown`/`exit` on server stop.
+
+**FR-7b (navigation surface):** the MCP `md_references` tool SHALL be served by the real Marksman bridge when available and by graph-backed `find_refs` when not — the `backend` field names the answering surface — so wiki-link navigation works in both modes. Marksman is the PRIMARY md-navigation surface; `find_refs` is the fallback. (Before this, the binary was downloaded but never consumed — `resolveLspMode` had zero runtime callers.)
+
+**Связанные AC:** [AC-7.1](ACCEPTANCE_CRITERIA.md#ac-7-1), [AC-7.2](ACCEPTANCE_CRITERIA.md#ac-7-2), [AC-7.3](ACCEPTANCE_CRITERIA.md#ac-7-3), [AC-7.4](ACCEPTANCE_CRITERIA.md#ac-7-4)
 **Use Case:** [UC-1](USE_CASES.md#uc-1)
 **User Story:** US-7
 

@@ -19,6 +19,9 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { pathToFileURL } from 'node:url';
 import { startLifecycle, type LifecycleHandle } from './lifecycle.ts';
 import { buildToolRegistry } from './tools.ts';
+import { resolveLspMode } from '../marksman-installer/lsp-mode.ts';
+import { readLog } from '../marksman-installer/install-log.ts';
+import { startBridge, type BridgeHandle } from '../marksman-lsp/bridge.ts';
 
 const PRODUCT_NAME = 'dev-pomogator-specs';
 const PRODUCT_VERSION = '0.1.0';
@@ -34,28 +37,48 @@ export interface BootOptions {
 export async function boot(opts: BootOptions): Promise<{
   server: McpServer;
   lifecycle: LifecycleHandle;
+  bridge: BridgeHandle | null;
 }> {
   // Enable the touch-test watch-mode probe (SPECGEN004_32): on a Docker-Desktop
   // bind mount where native fs events don't propagate, auto-fall-back to polling.
   const lifecycle = await startLifecycle({ repoRoot: opts.repoRoot, autoDetectWatchMode: true });
   const server = new McpServer({ name: PRODUCT_NAME, version: PRODUCT_VERSION });
 
-  for (const tool of buildToolRegistry(() => lifecycle.graph)) {
+  // FR-7b: the runtime CONSUMER of the installed Marksman. When the supply-chain
+  // record says the binary is available, spawn the LSP bridge so md_references is
+  // served by real Marksman; any failure degrades to the graph-backed fallback.
+  let bridge: BridgeHandle | null = null;
+  if (resolveLspMode(opts.repoRoot) === 'marksman') {
+    const binaryPath = readLog(opts.repoRoot)?.marksman.binary_path;
+    if (binaryPath) {
+      try {
+        bridge = await startBridge({ binaryPath, rootUri: pathToFileURL(opts.repoRoot).href });
+      } catch (err) {
+        process.stderr.write(
+          `[${PRODUCT_NAME}] marksman bridge failed to start, using js-fallback: ${err instanceof Error ? err.message : String(err)}\n`,
+        );
+        bridge = null;
+      }
+    }
+  }
+
+  for (const tool of buildToolRegistry(() => lifecycle.graph, () => bridge, opts.repoRoot)) {
     // SDK v1 `server.tool(name, schemaShape, handler)` — accepts raw zod
     // shape (i.e. `{key: z.string()}` not `z.object({key: ...})`).
     server.tool(tool.name, tool.description, tool.inputShape, tool.handler);
   }
 
-  return { server, lifecycle };
+  return { server, lifecycle, bridge };
 }
 
 async function main(): Promise<void> {
   // `||` (not `??`) so an empty-string env value — e.g. an unresolved
   // `${CLAUDE_PROJECT_DIR}` in some launch contexts — still falls back to cwd.
   const repoRoot = process.env.DEV_POMOGATOR_REPO_ROOT || process.cwd();
-  const { server, lifecycle } = await boot({ repoRoot });
+  const { server, lifecycle, bridge } = await boot({ repoRoot });
 
   const shutdownAndExit = async (code: number): Promise<void> => {
+    await bridge?.stop();
     await lifecycle.shutdown();
     try {
       await server.close();

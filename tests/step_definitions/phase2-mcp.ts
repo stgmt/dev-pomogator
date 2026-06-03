@@ -469,9 +469,11 @@ Then(
 );
 
 Then('the binary responds to LSP `initialize` request', function () {
-  // The synthetic fake binary doesn't actually run an LSP. Phase 2 ships
-  // the supply-chain + install side; the live-LSP smoke test is a manual
-  // verification step in the PR description, not an automated check.
+  // This BDD suite runs on the host, where the synthetic fake binary can't run
+  // a real LSP — so this step stays pending HERE. The REAL «binary responds to
+  // initialize» proof is the automated bridge e2e against the live pinned
+  // Marksman in the Docker image: tools/marksman-lsp/__tests__/bridge-e2e.test.ts
+  // (FR-7a; silent-skip inside Docker is a hard FAIL — skip-policy.ts).
   return 'pending';
 });
 

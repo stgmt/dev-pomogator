@@ -50,6 +50,9 @@ import {
   type ScenarioLike,
   type TaskLike,
 } from '../spec-graph/coverage.ts';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+import type { BridgeHandle, Location } from '../marksman-lsp/bridge.ts';
 
 /** Build every Scenario as a ScenarioLike + an id→bucket index for FR-32 derivation. */
 function scenarioCoverageIndex(graph: SpecGraph): { scens: ScenarioLike[]; bucketById: Map<string, Bucket> } {
@@ -350,7 +353,49 @@ function collectImplementsWarnings(node: Node, graph: SpecGraph): ImplementsWarn
   return out;
 }
 
-export function buildToolRegistry(getGraph: () => SpecGraph): ToolDefinition<z.ZodRawShape>[] {
+interface GraphRef {
+  id: string;
+  type: string;
+  file: string;
+  line: number;
+  relation: string;
+  direction: 'incoming' | 'outgoing';
+}
+
+/**
+ * "Find all references" over the graph's real cross-links: incoming/outgoing
+ * edges plus the task→FR refs the edge set doesn't carry. The graph-backed
+ * navigation that backs `find_refs` AND the `md_references` JS fallback.
+ */
+function collectGraphRefs(graph: SpecGraph, id: string): GraphRef[] {
+  const seen = new Set<string>();
+  const references: GraphRef[] = [];
+  const add = (
+    n: { id: string; type: string; file: string; line: number } | undefined,
+    relation: string,
+    direction: 'incoming' | 'outgoing',
+  ): void => {
+    if (!n || n.id === id) return;
+    const key = `${n.id}|${relation}|${direction}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    references.push({ id: n.id, type: n.type, file: n.file, line: n.line, relation, direction });
+  };
+  for (const e of graph.edges) {
+    if (e.from === id) add(graph.nodes.get(e.to), e.type, 'outgoing');
+    if (e.to === id) add(graph.nodes.get(e.from), e.type, 'incoming');
+  }
+  for (const n of graph.nodes.values()) {
+    if (n.type === 'Task' && (n as TaskNode).refs.includes(id)) add(n, 'refs', 'incoming');
+  }
+  return references;
+}
+
+export function buildToolRegistry(
+  getGraph: () => SpecGraph,
+  getBridge: () => BridgeHandle | null = () => null,
+  repoRoot: string = process.cwd(),
+): ToolDefinition<z.ZodRawShape>[] {
   const tools: ToolDefinition<z.ZodRawShape>[] = [];
 
   // ─── 1) get_trace ───────────────────────────────────────────────────────
@@ -681,37 +726,61 @@ export function buildToolRegistry(getGraph: () => SpecGraph): ToolDefinition<z.Z
       'wiki-link navigation per FR-7): incoming/outgoing edges plus task refs.',
     inputShape: { node_id: z.string() } as const satisfies z.ZodRawShape,
     handler: async ({ node_id }) => {
-      const graph = getGraph();
       const id = node_id as string;
-      const seen = new Set<string>();
-      const references: Array<{
-        id: string;
-        type: string;
-        file: string;
-        line: number;
-        relation: string;
-        direction: 'incoming' | 'outgoing';
-      }> = [];
-      const add = (
-        n: { id: string; type: string; file: string; line: number } | undefined,
-        relation: string,
-        direction: 'incoming' | 'outgoing',
-      ): void => {
-        if (!n || n.id === id) return;
-        const key = `${n.id}|${relation}|${direction}`;
-        if (seen.has(key)) return;
-        seen.add(key);
-        references.push({ id: n.id, type: n.type, file: n.file, line: n.line, relation, direction });
-      };
-      for (const e of graph.edges) {
-        if (e.from === id) add(graph.nodes.get(e.to), e.type, 'outgoing');
-        if (e.to === id) add(graph.nodes.get(e.from), e.type, 'incoming');
-      }
-      // Task→FR refs are tracked on TaskNode.refs, not as graph edges.
-      for (const n of graph.nodes.values()) {
-        if (n.type === 'Task' && (n as TaskNode).refs.includes(id)) add(n, 'refs', 'incoming');
-      }
+      const references = collectGraphRefs(getGraph(), id);
       return asJsonResult({ ok: true, node_id: id, references, count: references.length });
+    },
+  });
+
+  // ─── 13) md_references — Marksman-backed navigation, find_refs fallback (FR-7b) ─
+  // The runtime CONSUMER of the bridge (resolveLspMode === 'marksman'). Maps a
+  // spec node to its on-disk heading position and asks the REAL Marksman for
+  // wiki-link references; when Marksman is unavailable (js-fallback mode, or the
+  // bridge errors), it serves the same query from the graph (AC-7.2). The
+  // `backend` field tells the agent which surface answered.
+  tools.push({
+    name: 'md_references',
+    description:
+      'Find references to a spec node via Marksman LSP when available (real ' +
+      'markdown wiki-link navigation), falling back to the graph (find_refs) ' +
+      'when Marksman is unavailable. Reports which backend answered.',
+    inputShape: { node_id: z.string() } as const satisfies z.ZodRawShape,
+    handler: async ({ node_id }) => {
+      const id = node_id as string;
+      const graph = getGraph();
+      const node = graph.nodes.get(id);
+      if (!node) return asJsonResult({ ok: false, error: `unknown node id: ${id}` });
+
+      const bridge = getBridge();
+      if (bridge) {
+        try {
+          const uri = pathToFileURL(path.resolve(repoRoot, node.file)).href;
+          const position = { line: Math.max(0, node.line - 1), character: 2 };
+          const locations: Location[] = await bridge.references({ uri, position });
+          return asJsonResult({
+            ok: true,
+            backend: 'marksman',
+            node_id: id,
+            references: locations,
+            count: locations.length,
+          });
+        } catch (err) {
+          // Bridge crashed mid-session → degrade to the graph rather than error.
+          const references = collectGraphRefs(graph, id);
+          return asJsonResult({
+            ok: true,
+            backend: 'js-fallback',
+            degraded_from: 'marksman',
+            reason: err instanceof Error ? err.message : String(err),
+            node_id: id,
+            references,
+            count: references.length,
+          });
+        }
+      }
+
+      const references = collectGraphRefs(graph, id);
+      return asJsonResult({ ok: true, backend: 'js-fallback', node_id: id, references, count: references.length });
     },
   });
 
