@@ -85,6 +85,42 @@ function buildNdjsonStream(opts: {
   return lines.join('\n');
 }
 
+describe('parseNdjson — real cucumber output (regression: worst-of-steps + Windows uris)', () => {
+  // The other fixtures inject `testStepResult.status` into `testCaseFinished` —
+  // a field real cucumber-js does NOT emit. These build the REAL shape: the
+  // status lives only in per-step `testStepFinished`, and `testCaseFinished`
+  // carries no status. Before the fix these scenarios all reported PASSED.
+  const realStream = (uri: string, scenarioLine: number, stepStatuses: string[]): string => {
+    const L: string[] = [];
+    L.push(env({ gherkinDocument: { uri, feature: { children: [{ scenario: { id: 'sc', location: { line: scenarioLine } } }] } } }));
+    L.push(env({ pickle: { id: 'pk', uri, name: 'X', tags: [], astNodeIds: ['sc'], steps: stepStatuses.map((_, i) => ({ id: `ps${i}`, text: `step ${i}` })) } }));
+    L.push(env({ testCase: { id: 'tc', pickleId: 'pk', testSteps: stepStatuses.map((_, i) => ({ id: `ts${i}`, pickleStepId: `ps${i}` })) } }));
+    L.push(env({ testCaseStarted: { id: 'tcs', testCaseId: 'tc', timestamp: { seconds: 1, nanos: 0 } } }));
+    for (let i = 0; i < stepStatuses.length; i++) {
+      L.push(env({ testStepFinished: { testCaseStartedId: 'tcs', testStepId: `ts${i}`, testStepResult: { status: stepStatuses[i] } } }));
+    }
+    L.push(env({ testCaseFinished: { testCaseStartedId: 'tcs', timestamp: { seconds: 2, nanos: 0 } } }));
+    return L.join('\n');
+  };
+
+  it('an UNDEFINED step makes the scenario UNDEFINED, not PASSED', () => {
+    const patch = parseNdjson(realStream('t.feature', 7, ['PASSED', 'UNDEFINED', 'SKIPPED']));
+    expect(patch.byLocation.get('t.feature:7')!.lastResult).toBe('UNDEFINED');
+  });
+  it('a PENDING step makes the scenario PENDING, not PASSED', () => {
+    const patch = parseNdjson(realStream('t.feature', 9, ['PASSED', 'PENDING', 'SKIPPED']));
+    expect(patch.byLocation.get('t.feature:9')!.lastResult).toBe('PENDING');
+  });
+  it('all-PASSED steps make the scenario PASSED', () => {
+    const patch = parseNdjson(realStream('t.feature', 11, ['PASSED', 'PASSED']));
+    expect(patch.byLocation.get('t.feature:11')!.lastResult).toBe('PASSED');
+  });
+  it('normalises Windows backslash uris to a POSIX location key', () => {
+    const patch = parseNdjson(realStream('.specs\\foo\\bar.feature', 3, ['UNDEFINED']));
+    expect(patch.byLocation.has('.specs/foo/bar.feature:3')).toBe(true);
+  });
+});
+
 describe('parseNdjson — result extraction from canonical envelopes', () => {
   it('returns PASSED with duration for a clean run', () => {
     const stream = buildNdjsonStream({
