@@ -8,12 +8,15 @@
 
 export type Decision = 'apply' | 'skip' | 'edit';
 
+/** Default per-file prompt timeout (FR-11 NFR-Usability-4 — 30 seconds). */
+export const DEFAULT_PROMPT_TIMEOUT_MS = 30_000;
+
 export interface PromptOptions {
   /** Source of user input — async iterator of lines. Tests inject a mock. */
   input: AsyncIterable<string>;
   /** Sink for the prompt text (defaults to process.stdout.write). */
   write?: (chunk: string) => void;
-  /** Timeout in ms; default 30_000 per FR-11 NFR-Usability-4. */
+  /** Timeout in ms; default {@link DEFAULT_PROMPT_TIMEOUT_MS} per FR-11 NFR-Usability-4. */
   timeoutMs?: number;
   /** Per-file context (filename, number of headings) for the prompt body. */
   context: {
@@ -43,7 +46,7 @@ function parseDecision(raw: string): Decision | null {
  */
 export async function promptApplyTimeout(opts: PromptOptions): Promise<PromptResult> {
   const write = opts.write ?? ((c) => process.stdout.write(c));
-  const timeoutMs = opts.timeoutMs ?? 30_000;
+  const timeoutMs = opts.timeoutMs ?? DEFAULT_PROMPT_TIMEOUT_MS;
 
   write(
     `\nFile: ${opts.context.file}\n` +

@@ -20,6 +20,10 @@ import {
 import { writeReport, emitYaml } from '../../.claude/skills/cross-spec-reconcile/scripts/yaml-writer.ts';
 import { writeSarif } from '../../.claude/skills/cross-spec-reconcile/scripts/sarif.ts';
 import { appendOverride, readOverrides } from '../../.claude/skills/cross-spec-reconcile/scripts/overrides-log.ts';
+import {
+  planResolution,
+  type ExplanationBlock,
+} from '../../.claude/skills/cross-spec-resolve/scripts/walker.ts';
 import type { V4World } from '../hooks/before-after.ts';
 
 interface CrossSpecWorld extends V4World {
@@ -30,6 +34,8 @@ interface CrossSpecWorld extends V4World {
   overrideReason?: string;
   resolveSlug?: string;
   resolveResult?: SpawnSyncReturns<string>;
+  resolveExplanation?: ExplanationBlock;
+  reportBytesBefore?: string;
 }
 
 const RESOLVE_CLI = path.join(
@@ -351,3 +357,64 @@ Then(/^the skill exits with non-zero status$/, function (this: CrossSpecWorld) {
 Then(/stdout includes literally.*«Run \/cross-spec-reconcile first»/, function (this: CrossSpecWorld) {
   assert.match(this.resolveResult?.stdout ?? '', /Run \/cross-spec-reconcile first/);
 });
+
+// ─── SPECGEN004_44 — resolve emits the 5-field explanation, read-only ───────
+// Wires the REAL planResolution/buildExplanation data layer — NO production
+// change. The AskUserQuestion «Apply» confirm is agent-flow; the testable
+// contract is (a) the 5-field block the skill feeds to the prompt and (b)
+// that producing it touches NO files. Anchored regex per the T-Cov.1 note
+// above — deliberately NOT a catch-all. (_45/_46/_48 stay W6 — they need
+// production additions: foreign-spec banner, path_alternatives option prose,
+// and re-check status labeling respectively.)
+
+Given(
+  /^`\.specs\/\{slug\}\/consistency-report\.yaml` contains an `impl-drift\/missing-file` finding$/,
+  function (this: CrossSpecWorld) {
+    this.resolveSlug = 'spec-current';
+    const dir = path.join(this.tempDir, '.specs', this.resolveSlug);
+    fs.mkdirSync(dir, { recursive: true });
+    const reportPath = path.join(dir, 'consistency-report.yaml');
+    fs.writeFileSync(
+      reportPath,
+      [
+        'findings:',
+        '  - code: impl-drift/missing-file',
+        '    class: impl-drift/missing-file',
+        '    severity: WARNING',
+        '    referenced_in: .specs/spec-current/DESIGN.md:42',
+        '    expected_path: src/missing.ts',
+        '    suggested_fix: create src/missing.ts or drop the stale reference',
+        '',
+      ].join('\n'),
+    );
+    this.reportBytesBefore = fs.readFileSync(reportPath, 'utf8');
+  },
+);
+
+Then(
+  /^the skill emits an explanation block containing code\+severity, files\+lines, plain-language change, WHY-from-finding rationale, and option list$/,
+  function (this: CrossSpecWorld) {
+    const plan = planResolution({ repoRoot: this.tempDir, slug: this.resolveSlug! }).plan;
+    assert.ok(plan && plan.length >= 1, 'planResolution must surface the finding');
+    const exp = plan[0].explanation;
+    assert.match(exp.header, /impl-drift\/missing-file/); // code
+    assert.match(exp.header, /WARNING/); // severity
+    assert.ok(exp.files.length >= 1, 'files+lines must be present');
+    assert.match(exp.files[0], /:\d+$/); // a line number
+    assert.ok(exp.plain.trim().length > 0, 'plain-language change');
+    assert.ok(exp.why.trim().length > 0, 'WHY-from-finding rationale');
+    assert.ok(exp.options.length >= 1, 'option list');
+    this.resolveExplanation = exp;
+  },
+);
+
+Then(
+  /^NO Edit or Write tool is invoked until the user confirms «Apply» via AskUserQuestion$/,
+  function (this: CrossSpecWorld) {
+    // planResolution + the resolve CLI are read-only — the report is byte-for-
+    // byte unchanged. The real Edit/Write happens only AFTER the agent-flow
+    // confirm, which is outside this in-process check.
+    const reportPath = path.join(this.tempDir, '.specs', this.resolveSlug!, 'consistency-report.yaml');
+    assert.equal(fs.readFileSync(reportPath, 'utf8'), this.reportBytesBefore);
+  },
+);

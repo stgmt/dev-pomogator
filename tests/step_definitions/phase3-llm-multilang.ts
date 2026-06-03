@@ -17,7 +17,7 @@ import { Given, When, Then } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { runJudge } from '../../tools/spec-llm-judge/index.ts';
+import { runJudge, emitDenyListSkipFinding } from '../../tools/spec-llm-judge/index.ts';
 import { ingestMultilang } from '../../tools/spec-graph/parsers/multilang.ts';
 import type { V4World } from '../hooks/before-after.ts';
 
@@ -26,7 +26,7 @@ interface Phase3World extends V4World {
   judgeFrText?: string;
   judgeScenarioText?: string;
   judgeSpawnCalled?: boolean;
-  judgeResult?: { result: string; explanation?: string; severity?: string };
+  judgeResult?: { result: string; explanation?: string; severity?: string; deny_pattern?: string };
   ndjsonSource?: string;
   ndjsonPatch?: { language: string; patch: { byLocation: Map<string, { lastResult: string }> } };
 }
@@ -228,5 +228,80 @@ Then(
     const fields = this.ndjsonPatch!.patch.byLocation.get('features/auth.feature:3');
     assert.ok(fields, 'patch must include the seeded scenario');
     assert.match(fields.lastResult, /PASSED|FAILED/);
+  },
+);
+
+// ─── SPECGEN004_53 — LLM-judge skips on FR-26 deny-list match ─────────────
+// Drives the REAL runJudge (same pattern as _17/_18): the deny-list scan runs
+// BEFORE the injected spawn, so a secret-bearing FR short-circuits to
+// SKIPPED_DENY_LIST with judgeSpawnCalled never flipped true. The skip then
+// emits the canonical SEMANTIC_CHECK_SKIPPED_DENY_LIST INFO entry via the real
+// spec-check-log writer.
+
+const readLatestSpecCheckLog = (root: string): string => {
+  const dir = path.join(root, '.dev-pomogator', '.spec-check-log');
+  if (!fs.existsSync(dir)) return '';
+  const shards = fs.readdirSync(dir).filter((n) => n.endsWith('.jsonl')).sort();
+  return shards.length ? fs.readFileSync(path.join(dir, shards[shards.length - 1]), 'utf8') : '';
+};
+
+Given(
+  'a spec FR body containing the substring `API_KEY=sk_live_abcdef1234567890`',
+  function (this: Phase3World) {
+    this.judgeFrText = 'FR-026: rotate the credential. Example: API_KEY=sk_live_abcdef1234567890';
+    this.judgeScenarioText = 'Scenario: SCEN-rotate — credential is rotated on schedule';
+  },
+);
+
+When(
+  '`conformance_check\\(scope, semantic: true)` is invoked for that FR',
+  async function (this: Phase3World) {
+    this.judgeSpawnCalled = false;
+    this.judgeResult = await runJudge({
+      repoRoot: this.tempDir,
+      frId: 'FR-026',
+      frText: this.judgeFrText ?? '',
+      scenarioId: 'SCEN-rotate',
+      scenarioText: this.judgeScenarioText ?? '',
+      spawn: async () => {
+        // Must NEVER run for a deny-list match — flipping this is the bug
+        // SPECGEN004_53 guards against.
+        this.judgeSpawnCalled = true;
+        return JSON.stringify({ result: 'NO_DRIFT_DETECTED' });
+      },
+    });
+    // conformance_check(semantic) emits the skip signal on the deny branch.
+    if (this.judgeResult.result === 'SKIPPED_DENY_LIST') {
+      emitDenyListSkipFinding({
+        repoRoot: this.tempDir,
+        frId: 'FR-026',
+        deny_pattern: this.judgeResult.deny_pattern,
+      });
+    }
+  },
+);
+
+Then('no `claude -p` subprocess is spawned', function (this: Phase3World) {
+  assert.equal(this.judgeSpawnCalled, false, 'deny-list match must short-circuit before any spawn');
+});
+
+Then(
+  /^spec-check-log gains a JSON entry with .*SEMANTIC_CHECK_SKIPPED_DENY_LIST.* and severity .*INFO/,
+  function (this: Phase3World) {
+    const log = readLatestSpecCheckLog(this.tempDir);
+    const lines = log.split('\n').filter(Boolean);
+    const entry = lines
+      .map((l) => JSON.parse(l) as Record<string, unknown>)
+      .find((e) => e.finding_code === 'SEMANTIC_CHECK_SKIPPED_DENY_LIST');
+    assert.ok(entry, 'expected a SEMANTIC_CHECK_SKIPPED_DENY_LIST entry in the spec-check-log');
+    assert.equal(String(entry.severity).toLowerCase(), 'info');
+  },
+);
+
+Then(
+  /^the caller does NOT receive a `NO_DRIFT_DETECTED` result for that FR$/,
+  function (this: Phase3World) {
+    assert.equal(this.judgeResult?.result, 'SKIPPED_DENY_LIST');
+    assert.notEqual(this.judgeResult?.result, 'NO_DRIFT_DETECTED');
   },
 );

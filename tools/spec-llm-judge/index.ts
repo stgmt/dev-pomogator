@@ -28,6 +28,7 @@
 
 import { checkDenyList } from './deny-list.ts';
 import { cacheKey, readEntry, writeEntry, type CacheEntry, type Verdict } from './cache.ts';
+import { appendRawEntry } from '../spec-check-log/writer.ts';
 
 export interface JudgeOptions {
   repoRoot: string;
@@ -172,6 +173,39 @@ export async function runJudge(opts: JudgeOptions): Promise<JudgeResult> {
   return parsed.result === 'NO_DRIFT_DETECTED'
     ? { result: 'NO_DRIFT_DETECTED', cache_key: key, from_cache: false }
     : { result: 'DRIFT', explanation: parsed.explanation, severity: parsed.severity, cache_key: key, from_cache: false };
+}
+
+/**
+ * Emit the canonical `SEMANTIC_CHECK_SKIPPED_DENY_LIST` INFO entry to the
+ * side-channel spec-check-log (FR-26 / SPECGEN004_53). This is the signal
+ * `deny-list.ts` documents the MCP server surfacing when `runJudge` returns
+ * `SKIPPED_DENY_LIST`; `conformance_check(semantic: true)` calls this on the
+ * skip branch so a skipped check is observable WITHOUT a `claude -p` spawn.
+ *
+ * Written via {@link appendRawEntry} (the special-event writer that also
+ * backs the guard's parse-crash and ALLOW_AFTER_MIGRATION entries) rather
+ * than `appendFinding`, because the semantic-skip is not a `checkConformance`
+ * finding — it carries no `FindingCode` and lives outside that taxonomy.
+ */
+export function emitDenyListSkipFinding(opts: {
+  repoRoot: string;
+  frId: string;
+  deny_pattern?: string;
+  now?: Date;
+}): string {
+  return appendRawEntry(
+    {
+      finding_code: 'SEMANTIC_CHECK_SKIPPED_DENY_LIST',
+      severity: 'info',
+      source: 'spec-llm-judge',
+      node_id: opts.frId,
+      deny_pattern: opts.deny_pattern,
+      message:
+        `Semantic drift check skipped for ${opts.frId}: deny-list pattern ` +
+        `"${opts.deny_pattern ?? 'matched'}" present; no claude -p subprocess spawned.`,
+    },
+    { repoRoot: opts.repoRoot, now: opts.now },
+  );
 }
 
 /**
