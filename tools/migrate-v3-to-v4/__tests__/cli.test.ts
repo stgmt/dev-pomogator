@@ -12,7 +12,24 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { randomUUID } from 'node:crypto';
-import { run, parseArgs } from '../cli.ts';
+import { run, parseArgs, dispatch, runInteractive, type InteractivePrompt } from '../cli.ts';
+import { promptApplyTimeout } from '../interactive.ts';
+
+/** An input source that never yields — only the prompt's timer can resolve. */
+const idleInput: AsyncIterable<string> = {
+  async *[Symbol.asyncIterator](): AsyncIterator<string> {
+    await new Promise(() => {});
+  },
+};
+
+/** A single-line input source (drives the real `promptApplyTimeout` parser). */
+function lineInput(line: string): AsyncIterable<string> {
+  return {
+    async *[Symbol.asyncIterator](): AsyncIterator<string> {
+      yield line;
+    },
+  };
+}
 
 function seedV3Repo(root: string): void {
   fs.mkdirSync(path.join(root, '.specs', 'auth'), { recursive: true });
@@ -115,6 +132,110 @@ describe('run — default mode (apply)', () => {
   });
 });
 
+// ─── dispatch routing (SPECGEN004_25 — no-flag → interactive) ───────────
+describe('dispatch — mode routing', () => {
+  let root: string;
+  beforeEach(() => {
+    root = path.join(os.tmpdir(), `migrate-dispatch-${randomUUID()}`);
+    fs.mkdirSync(root, { recursive: true });
+    seedV3Repo(root);
+  });
+  afterEach(() => fs.rmSync(root, { recursive: true, force: true }));
+
+  it('no-flag → interactive: the per-file prompt IS consulted (not auto-apply)', async () => {
+    const seen: string[] = [];
+    const prompt: InteractivePrompt = async (ctx) => {
+      seen.push(ctx.file);
+      return { decision: 'skip', timedOut: false };
+    };
+    const r = await dispatch({ repoRoot: root, suggestOnly: false }, { prompt });
+    // The prompt was asked about every changed file — interactive routing fired.
+    expect(seen.length).toBeGreaterThan(0);
+    // All skipped → nothing written, no version bump.
+    expect(r.files.some((f) => f.applied)).toBe(false);
+    expect(fs.readFileSync(path.join(root, '.specs/auth/FR.md'), 'utf8')).toContain(
+      'Requirement: FR-001',
+    );
+    expect(r.versionBumped).toBe(false);
+  });
+
+  it('--yes → non-interactive auto-apply: the prompt is NEVER consulted', async () => {
+    let called = false;
+    const prompt: InteractivePrompt = async (ctx) => {
+      called = true;
+      return { decision: 'skip', timedOut: false, rawInput: ctx.file };
+    };
+    const r = await dispatch({ repoRoot: root, suggestOnly: false, yes: true }, { prompt });
+    expect(called).toBe(false);
+    expect(r.versionBumped).toBe(true);
+    expect(fs.readFileSync(path.join(root, '.specs/auth/FR.md'), 'utf8')).toContain('### FR-001:');
+  });
+
+  it('--suggest-only → dry-run: prompt never consulted, files byte-stable', async () => {
+    let called = false;
+    const prompt: InteractivePrompt = async () => {
+      called = true;
+      return { decision: 'apply', timedOut: false };
+    };
+    const before = fs.readFileSync(path.join(root, '.specs/auth/FR.md'), 'utf8');
+    await dispatch({ repoRoot: root, suggestOnly: true }, { prompt });
+    expect(called).toBe(false);
+    expect(fs.readFileSync(path.join(root, '.specs/auth/FR.md'), 'utf8')).toBe(before);
+  });
+});
+
+// ─── runInteractive (SPECGEN004_25 — 30s default-skip timeout) ──────────
+describe('runInteractive — per-file decision (SPECGEN004_25)', () => {
+  let root: string;
+  beforeEach(() => {
+    root = path.join(os.tmpdir(), `migrate-interactive-${randomUUID()}`);
+    fs.mkdirSync(root, { recursive: true });
+    seedV3Repo(root);
+  });
+  afterEach(() => fs.rmSync(root, { recursive: true, force: true }));
+
+  it('timeout → skip leaves the file unchanged AND proceeds to the next file', async () => {
+    const authPath = path.join(root, '.specs/auth/FR.md');
+    const billingPath = path.join(root, '.specs/billing/FR.md');
+    const authBefore = fs.readFileSync(authPath, 'utf8');
+
+    // The ambiguous file (auth) times out via the REAL prompt timer; the next
+    // file (billing) is applied through the REAL parser on an "apply" line.
+    const prompt: InteractivePrompt = (ctx) =>
+      ctx.file.includes('auth')
+        ? promptApplyTimeout({ input: idleInput, write: () => {}, timeoutMs: 15, context: ctx })
+        : promptApplyTimeout({ input: lineInput('apply'), write: () => {}, timeoutMs: 5_000, context: ctx });
+
+    const r = await runInteractive({ repoRoot: root, suggestOnly: false }, prompt);
+
+    const auth = r.files.find((f) => f.file.includes('auth'));
+    const billing = r.files.find((f) => f.file.includes('billing'));
+
+    // Ambiguous file: timed-out → default skip → byte-stable on disk.
+    expect(auth?.decision).toBe('skip');
+    expect(auth?.timedOut).toBe(true);
+    expect(auth?.applied).toBe(false);
+    expect(fs.readFileSync(authPath, 'utf8')).toBe(authBefore);
+
+    // Loop proceeded to the next file (billing was visited + applied).
+    expect(billing).toBeDefined();
+    expect(billing?.applied).toBe(true);
+    expect(fs.readFileSync(billingPath, 'utf8')).toContain('### FR-010: Invoice');
+
+    // Version bumped because at least one file was actually applied.
+    expect(r.versionBumped).toBe(true);
+  });
+
+  it('skipping every file leaves the version unbumped', async () => {
+    const prompt: InteractivePrompt = (ctx) =>
+      promptApplyTimeout({ input: idleInput, write: () => {}, timeoutMs: 15, context: ctx });
+    const r = await runInteractive({ repoRoot: root, suggestOnly: false }, prompt);
+    expect(r.files.every((f) => !f.changed || f.timedOut === true)).toBe(true);
+    expect(r.files.some((f) => f.applied)).toBe(false);
+    expect(r.versionBumped).toBe(false);
+  });
+});
+
 describe('parseArgs', () => {
   it('default is apply mode against cwd', () => {
     const a = parseArgs([]);
@@ -123,6 +244,10 @@ describe('parseArgs', () => {
   });
   it('--suggest-only flips to dry-run', () => {
     expect(parseArgs(['--suggest-only']).suggestOnly).toBe(true);
+  });
+  it('--yes flips to non-interactive auto-apply', () => {
+    expect(parseArgs(['--yes']).yes).toBe(true);
+    expect(parseArgs(['-y']).yes).toBe(true);
   });
   it('--root overrides repoRoot', () => {
     expect(parseArgs(['--root', '/x/y']).repoRoot).toBe('/x/y');

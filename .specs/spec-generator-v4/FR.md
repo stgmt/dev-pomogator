@@ -124,9 +124,10 @@ Default Phase 2: DISABLED (in-memory only). Phase 4: opt-in via `.spec-config.js
 
 ## FR-11: Phase 5 — Migration helper v3→v4
 
-System SHALL provide CLI command `dev-pomogator migrate-v3-to-v4` with two modes:
+System SHALL provide CLI command `dev-pomogator migrate-v3-to-v4` with these modes:
 - `--suggest-only`: print per-file diffs (heading conversions, frontmatter additions, anchor changes) WITHOUT modifying files
 - Default (interactive): prompt approve/skip/edit per file; default `skip` if no input within 30s
+- `--yes`: non-interactive auto-apply (CI/unattended escape hatch) — applies every conversion WITHOUT prompting. This is the only non-dry-run path that writes without per-file confirmation; the no-flag default MUST remain interactive.
 
 Migration MUST:
 - Convert legacy `### Requirement: FR-N <title>` → `### FR-N: <title>` (preserving content body)

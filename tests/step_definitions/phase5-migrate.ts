@@ -10,11 +10,16 @@ import { Given, When, Then } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { run as runMigrate, type RunResult } from '../../tools/migrate-v3-to-v4/cli.ts';
+import {
+  run as runMigrate,
+  dispatch as dispatchMigrate,
+  type RunResult,
+  type FileResult,
+  type InteractivePrompt,
+} from '../../tools/migrate-v3-to-v4/cli.ts';
 import {
   promptApplyTimeout,
   DEFAULT_PROMPT_TIMEOUT_MS,
-  type PromptResult,
 } from '../../tools/migrate-v3-to-v4/interactive.ts';
 import type { V4World } from '../hooks/before-after.ts';
 
@@ -22,10 +27,27 @@ interface MigrateWorld extends V4World {
   migrateResult?: RunResult;
   preMigrateFileBytes?: string;
   preMigrateProgressVersion?: number | null;
-  promptResult?: PromptResult;
   promptTimeoutSeconds?: number;
-  promptFile?: string;
-  promptFileBytes?: string;
+  ambiguousFile?: string; // abs path of the file the prompt times out on
+  ambiguousBefore?: string; // its bytes before the (skipped) migration
+  ambiguousEntry?: FileResult; // its per-file result from the real loop
+  nextFile?: string; // abs path of the file the loop proceeds to
+}
+
+/** Input source that never yields — only the prompt's timer can resolve it. */
+const idleInput: AsyncIterable<string> = {
+  async *[Symbol.asyncIterator](): AsyncIterator<string> {
+    await new Promise(() => {});
+  },
+};
+
+/** Single-line input source — drives the real promptApplyTimeout parser. */
+function lineInput(line: string): AsyncIterable<string> {
+  return {
+    async *[Symbol.asyncIterator](): AsyncIterator<string> {
+      yield line;
+    },
+  };
 }
 
 // ─── SPECGEN004_24 — --suggest-only mode ────────────────────────────────
@@ -72,66 +94,77 @@ Then('`.progress.json::version` is NOT bumped', function (this: MigrateWorld) {
 });
 
 // ─── SPECGEN004_25 — interactive per-file prompt, 30s default-skip timeout ──
-// Wires the REAL promptApplyTimeout (the no-flag interactive path). Production
-// default is 30s (DEFAULT_PROMPT_TIMEOUT_MS); the test drives the identical
-// timeout→skip branch with a short timeout so the suite stays fast, and
-// asserts the production default ties to the scenario's "30 seconds".
+// Drives the REAL no-flag path end-to-end: dispatch() routes (suggestOnly:false,
+// no --yes) → runInteractive, which walks the changed files and consults the
+// prompt per file. The ambiguous file's prompt is fed a never-yielding input so
+// only the timer can resolve (→ skip); a short timeoutMs keeps the suite fast
+// while exercising the identical timeout→skip branch the 30s default uses. The
+// "file unchanged" + "proceeds to next" claims are asserted against the real
+// migration loop, not the prompt function in isolation.
 
 Given('the user runs `dev-pomogator migrate-v3-to-v4` \\(no flag)', function (this: MigrateWorld) {
-  // No flag = interactive mode (suggestOnly:false). The prompt is exercised
-  // per-file in the steps below.
+  // No flag = interactive mode (suggestOnly:false, yes:false → dispatch → runInteractive).
   fs.mkdirSync(path.join(this.tempDir, '.specs'), { recursive: true });
   fs.writeFileSync(path.join(this.tempDir, '.specs/.progress.json'), JSON.stringify({ version: 3 }));
+  // A second, unambiguous file so "proceeds to the next file" is observable.
+  const nextDir = path.join(this.tempDir, '.specs/znext');
+  fs.mkdirSync(nextDir, { recursive: true });
+  this.nextFile = path.join(nextDir, 'FR.md');
+  fs.writeFileSync(this.nextFile, '### Requirement: FR-050 Next file\n');
 });
 
 Given('the migration encounters a spec file with ambiguous structure', function (this: MigrateWorld) {
   const auth = path.join(this.tempDir, '.specs/auth');
   fs.mkdirSync(auth, { recursive: true });
-  this.promptFile = path.join(auth, 'FR.md');
-  fs.writeFileSync(this.promptFile, '# Requirements\n## FR1 ambiguous heading\n');
-  this.promptFileBytes = fs.readFileSync(this.promptFile, 'utf8');
+  this.ambiguousFile = path.join(auth, 'FR.md');
+  // A real legacy heading → convertSource flags it changed → the interactive
+  // loop prompts the user to decide on it (the "ambiguous" file).
+  fs.writeFileSync(this.ambiguousFile, '### Requirement: FR-001 Ambiguous login\n');
+  this.ambiguousBefore = fs.readFileSync(this.ambiguousFile, 'utf8');
 });
 
 When('the migration prompts approve\\/skip\\/edit', function (this: MigrateWorld) {
-  // The prompt is issued inside promptApplyTimeout in the next step; this
-  // marker documents the no-flag path reached the prompt.
-  assert.ok(this.promptFile, 'an ambiguous file must be staged before prompting');
+  // The prompt is issued inside runInteractive in the next step; this marker
+  // documents the no-flag path reached the per-file prompt.
+  assert.ok(this.ambiguousFile, 'an ambiguous file must be staged before prompting');
 });
 
 When(
   'the user provides no input for {int} seconds',
   async function (this: MigrateWorld, seconds: number) {
     this.promptTimeoutSeconds = seconds;
-    // Input that never yields and never ends → the timeout branch fires. A
-    // never-resolving next() leaves no pending timer/IO, so it does not keep
-    // the process alive after the step resolves.
-    const noInput: AsyncIterable<string> = {
-      [Symbol.asyncIterator]() {
-        return { next: () => new Promise<IteratorResult<string>>(() => {}) };
-      },
-    };
-    this.promptResult = await promptApplyTimeout({
-      input: noInput,
-      write: () => {},
-      timeoutMs: 25, // fast proxy for the real 30s — the timeout→skip logic is duration-agnostic
-      context: { file: this.promptFile!, headingCount: 1 },
-    });
+    // Per-file prompt: ambiguous file gets a never-yielding input so only the
+    // timer resolves (→ skip); the next file is applied so the loop's "proceed"
+    // is observable. Real promptApplyTimeout drives both decisions.
+    const prompt: InteractivePrompt = (ctx) =>
+      ctx.file.includes('auth')
+        ? promptApplyTimeout({ input: idleInput, write: () => {}, timeoutMs: 25, context: ctx })
+        : promptApplyTimeout({ input: lineInput('apply'), write: () => {}, timeoutMs: 5_000, context: ctx });
+    this.migrateResult = await dispatchMigrate(
+      { repoRoot: this.tempDir, suggestOnly: false },
+      { prompt },
+    );
+    this.ambiguousEntry = this.migrateResult.files.find((f) => f.file.includes('auth'));
   },
 );
 
 Then('the default action `skip` is applied', function (this: MigrateWorld) {
   // The production default IS the scenario's "30 seconds".
   assert.equal(DEFAULT_PROMPT_TIMEOUT_MS, (this.promptTimeoutSeconds ?? 30) * 1000);
-  assert.equal(this.promptResult?.decision, 'skip');
-  assert.equal(this.promptResult?.timedOut, true);
+  assert.equal(this.ambiguousEntry?.decision, 'skip');
+  assert.equal(this.ambiguousEntry?.timedOut, true);
 });
 
 Then('the file is left unchanged', function (this: MigrateWorld) {
-  assert.equal(fs.readFileSync(this.promptFile!, 'utf8'), this.promptFileBytes);
+  // The file went through the REAL interactive loop; skip must not have written.
+  assert.equal(this.ambiguousEntry?.applied, false);
+  assert.equal(fs.readFileSync(this.ambiguousFile!, 'utf8'), this.ambiguousBefore);
 });
 
 Then('the migration proceeds to the next file', function (this: MigrateWorld) {
-  // `skip` IS the proceed-to-next semantics: the file was not edited and the
-  // walk continues. The skip decision is the observable contract.
-  assert.equal(this.promptResult?.decision, 'skip');
+  // The loop continued past the skipped file and processed a later one.
+  const next = this.migrateResult?.files.find((f) => f.file.includes('znext'));
+  assert.ok(next, 'the loop must have visited the next file after the skip');
+  assert.equal(next.applied, true);
+  assert.equal(fs.readFileSync(this.nextFile!, 'utf8'), '### FR-050: Next file\n');
 });
