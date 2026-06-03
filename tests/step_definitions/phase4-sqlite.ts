@@ -12,9 +12,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {
   openDatabase,
-  integrityCheck,
-  quarantineCorrupt,
+  openDatabaseWithRecovery,
   type SqliteHandle,
+  type RecoveryResult,
 } from '../../tools/spec-mcp-server/sqlite/wrapper.ts';
 import { acquireLock, type LockHandle } from '../../tools/spec-mcp-server/lock-manager.ts';
 import type { V4World } from '../hooks/before-after.ts';
@@ -29,6 +29,7 @@ interface SqliteWorld extends V4World {
   postEditNodeCount?: number;
   corruptionDetected?: boolean;
   quarantineTarget?: string;
+  recovery?: RecoveryResult;
 }
 
 // After-hook closes any lingering DB handles so the tempDir cleanup in
@@ -188,53 +189,49 @@ Given(
 // both Gherkin scenarios can share the same When without ambiguity.
 
 Then('corruption is detected at startup', async function (this: SqliteWorld) {
-  // Open the DB now — phase2's "the MCP server starts" step is a no-op
-  // marker; the actual DB open happens here so the integrity check has
-  // something to inspect.
-  try {
-    this.sessionAHandle = await openDatabase({ repoRoot: this.tempDir });
-    if (!this.sessionAHandle.backend.available) return 'pending';
-    const result = integrityCheck(this.sessionAHandle);
-    this.corruptionDetected = result !== 'ok';
-  } catch {
-    this.corruptionDetected = true;
-  }
+  // phase2's "the MCP server starts" step is a no-op marker; the real startup
+  // recovery (detect → quarantine → log → reopen) runs here against the
+  // garbage file the Given wrote.
+  this.recovery = await openDatabaseWithRecovery({
+    repoRoot: this.tempDir,
+    now: new Date('2026-05-30T00:00:00Z'),
+  });
+  // When `better-sqlite3` isn't loadable the stub can't be corrupt — the
+  // scenario isn't applicable on that host, so surface PENDING not a false pass.
+  if (!this.recovery.handle.backend.available && !this.recovery.recovered) return 'pending';
+  this.sessionAHandle = this.recovery.handle; // let the After-hook close it
+  this.corruptionDetected = this.recovery.recovered;
   assert.equal(this.corruptionDetected, true);
 });
 
 Then(
   /^the corrupt file is moved to `\.dev-pomogator\/\.spec-index\.sqlite\.corrupt-\{timestamp\}`$/,
   function (this: SqliteWorld) {
-    if (!this.sessionAHandle?.backend.available) return 'pending';
-    if (this.sessionAHandle) this.sessionAHandle.backend.close();
-    const dbPath = path.join(this.tempDir, '.dev-pomogator', '.spec-index.sqlite');
-    const target = quarantineCorrupt(dbPath, new Date('2026-05-30T00:00:00Z'));
-    assert.match(target ?? '', /\.corrupt-/);
-    this.quarantineTarget = target ?? undefined;
-    assert.ok(fs.existsSync(target!));
+    if (!this.recovery?.recovered) return 'pending';
+    const target = this.recovery.quarantinedTo;
+    assert.match(target ?? '', /\.spec-index\.sqlite\.corrupt-/);
+    assert.ok(fs.existsSync(target!), `quarantined file should exist at ${target}`);
+    this.quarantineTarget = target;
   },
 );
 
-Then('MCP server falls back to in-memory rebuild', async function (this: SqliteWorld) {
-  // Reopen — should succeed with a fresh DB now that corrupt file is aside.
-  if (!this.sessionAHandle) return 'pending';
-  const fresh = await openDatabase({ repoRoot: this.tempDir });
-  assert.equal(fresh.backend.available, true);
-  const empty = fresh.backend.prepare('SELECT COUNT(*) AS n FROM nodes').get() as { n: number };
+Then('MCP server falls back to in-memory rebuild', function (this: SqliteWorld) {
+  // openDatabaseWithRecovery reopened a fresh DB once the corrupt one was moved
+  // aside — empty, ready for the lifecycle to rebuild the graph from source.
+  if (!this.recovery?.recovered) return 'pending';
+  const backend = this.recovery.handle.backend;
+  assert.equal(backend.available, true);
+  const empty = backend.prepare('SELECT COUNT(*) AS n FROM nodes').get() as { n: number };
   assert.equal(empty.n, 0);
-  fresh.backend.close();
-  // Windows holds SQLite file locks briefly after close — yield once so
-  // the After-hook tempDir cleanup doesn't race with the OS handle release.
-  await new Promise((r) => setTimeout(r, 50));
 });
 
 Then(
   /^a warning is logged to `\.dev-pomogator\/logs\/sqlite\.log`$/,
-  function () {
-    // The persistent corruption-warning log is a Phase-4 follow-up — the
-    // quarantine path + in-memory rebuild already cover the recovery
-    // contract; the log writer is a thin addition that lands later on
-    // this same branch.
-    return 'pending';
+  function (this: SqliteWorld) {
+    if (!this.recovery?.recovered) return 'pending';
+    const logFile = path.join(this.tempDir, '.dev-pomogator', 'logs', 'sqlite.log');
+    assert.ok(fs.existsSync(logFile), `expected sqlite.log at ${logFile}`);
+    const log = fs.readFileSync(logFile, 'utf8');
+    assert.match(log, /\[WARN\].*corrupt SQLite index/);
   },
 );

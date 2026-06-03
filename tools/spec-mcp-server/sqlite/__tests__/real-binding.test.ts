@@ -18,7 +18,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { randomUUID } from 'node:crypto';
-import { openDatabase, integrityCheck, quarantineCorrupt } from '../wrapper.ts';
+import {
+  openDatabase,
+  integrityCheck,
+  quarantineCorrupt,
+  openDatabaseWithRecovery,
+} from '../wrapper.ts';
 
 async function bindingAvailable(): Promise<boolean> {
   try {
@@ -103,5 +108,42 @@ describeOrSkip('SQLite wrapper — real better-sqlite3 binding', () => {
     const row = h2.backend.prepare('SELECT id FROM nodes WHERE id=?').get('FR-X');
     expect(row).toBeUndefined(); // fresh DB
     h2.backend.close();
+  });
+
+  it('openDatabaseWithRecovery: corrupt file → quarantine + sqlite.log + fresh DB (SPECGEN004_23)', async () => {
+    const dbDir = path.join(root, '.dev-pomogator');
+    fs.mkdirSync(dbDir, { recursive: true });
+    const dbPath = path.join(dbDir, '.spec-index.sqlite');
+    fs.writeFileSync(dbPath, Buffer.alloc(8192, 0xff)); // not-a-database garbage
+
+    const res = await openDatabaseWithRecovery({
+      repoRoot: root,
+      now: new Date('2026-05-30T00:00:00Z'),
+    });
+    try {
+      expect(res.recovered).toBe(true);
+      expect(res.quarantinedTo).toMatch(/\.spec-index\.sqlite\.corrupt-/);
+      expect(fs.existsSync(res.quarantinedTo!)).toBe(true);
+      // Reopened fresh + empty at the original path.
+      expect(res.handle.backend.available).toBe(true);
+      const n = res.handle.backend.prepare('SELECT COUNT(*) AS n FROM nodes').get() as { n: number };
+      expect(n.n).toBe(0);
+      // Warning logged.
+      const log = fs.readFileSync(path.join(dbDir, 'logs', 'sqlite.log'), 'utf8');
+      expect(log).toMatch(/\[WARN\].*corrupt SQLite index/);
+    } finally {
+      res.handle.backend.close();
+    }
+  });
+
+  it('openDatabaseWithRecovery: healthy DB → no recovery, no log', async () => {
+    const res = await openDatabaseWithRecovery({ repoRoot: root });
+    try {
+      expect(res.recovered).toBe(false);
+      expect(integrityCheck(res.handle)).toBe('ok');
+      expect(fs.existsSync(path.join(root, '.dev-pomogator', 'logs', 'sqlite.log'))).toBe(false);
+    } finally {
+      res.handle.backend.close();
+    }
   });
 });

@@ -134,12 +134,25 @@ export async function openDatabase(opts: OpenOptions): Promise<SqliteHandle> {
     pragma: (spec: string) => unknown;
     close: () => void;
   };
-  concrete.exec(SCHEMA_SQL);
-  // Stamp the schema version on first open.
-  const setMeta = (concrete.prepare(
-    'INSERT INTO meta(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',
-  ) as { run: (...args: unknown[]) => unknown });
-  setMeta.run('schema_version', String(SCHEMA_VERSION));
+  // A corrupt / not-a-database file passes the constructor (lazy open) but
+  // throws here on first access. Close the connection before propagating so
+  // the recovery path can rename the file aside (Windows holds a lock on an
+  // open handle).
+  try {
+    concrete.exec(SCHEMA_SQL);
+    // Stamp the schema version on first open.
+    const setMeta = (concrete.prepare(
+      'INSERT INTO meta(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',
+    ) as { run: (...args: unknown[]) => unknown });
+    setMeta.run('schema_version', String(SCHEMA_VERSION));
+  } catch (e) {
+    try {
+      concrete.close();
+    } catch {
+      /* ignore secondary close failure */
+    }
+    throw e;
+  }
   const backend: SqliteBackend = {
     available: true,
     exec: concrete.exec.bind(concrete),
@@ -182,6 +195,71 @@ export function quarantineCorrupt(dbPath: string, now: Date = new Date()): strin
   const target = `${dbPath}.corrupt-${suffix}`;
   fs.renameSync(dbPath, target);
   return target;
+}
+
+/** Append a WARN line to `.dev-pomogator/logs/sqlite.log` (best-effort). */
+function logSqliteWarning(repoRoot: string, message: string, now: Date): void {
+  try {
+    const logDir = path.join(repoRoot, '.dev-pomogator', 'logs');
+    fs.mkdirSync(logDir, { recursive: true });
+    fs.appendFileSync(path.join(logDir, 'sqlite.log'), `${now.toISOString()} [WARN] ${message}\n`);
+  } catch {
+    /* telemetry is best-effort — never block startup on a log write */
+  }
+}
+
+export interface RecoveryResult {
+  handle: SqliteHandle;
+  /** True when a corrupt DB was detected, quarantined, and reopened fresh. */
+  recovered: boolean;
+  /** Path the corrupt file was moved to, when `recovered`. */
+  quarantinedTo?: string;
+}
+
+/**
+ * Startup open with corruption recovery (SPECGEN004_23 / NFR-Reliability-5).
+ *
+ * Opens the on-disk index; if the open throws (not-a-database) OR
+ * `PRAGMA integrity_check` fails, the corrupt file is moved aside
+ * (`.corrupt-<ts>`), a warning is logged to `sqlite.log`, and a fresh DB is
+ * opened in its place so the lifecycle rebuilds the graph from source. When
+ * `better-sqlite3` is unavailable the stub backend is returned unchanged
+ * (nothing to corrupt).
+ */
+export async function openDatabaseWithRecovery(
+  opts: OpenOptions & { now?: Date },
+): Promise<RecoveryResult> {
+  const now = opts.now ?? new Date();
+  const dbPath = dbPathFor(opts.repoRoot);
+
+  let handle: SqliteHandle | null = null;
+  let corrupt = false;
+  try {
+    handle = await openDatabase(opts);
+    // Stub backend (no native binding) can't be corrupt — pass it through.
+    if (handle.backend.available && integrityCheck(handle) !== 'ok') corrupt = true;
+  } catch {
+    corrupt = true; // open/exec threw → not-a-database (openDatabase already closed it)
+  }
+
+  if (!corrupt) {
+    return { handle: handle as SqliteHandle, recovered: false };
+  }
+
+  try {
+    handle?.backend.close();
+  } catch {
+    /* may already be closed inside openDatabase's throw path */
+  }
+  const quarantinedTo = quarantineCorrupt(dbPath, now) ?? undefined;
+  logSqliteWarning(
+    opts.repoRoot,
+    `corrupt SQLite index detected at startup — quarantined to ${quarantinedTo ?? '(missing)'}; ` +
+      `falling back to in-memory rebuild from source`,
+    now,
+  );
+  const fresh = await openDatabase(opts); // corrupt file is aside → fresh empty DB
+  return { handle: fresh, recovered: true, quarantinedTo };
 }
 
 export { SCHEMA_VERSION };
