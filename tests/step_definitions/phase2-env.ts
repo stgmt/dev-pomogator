@@ -16,7 +16,7 @@
  * @see ../../tools/spec-graph/builder.ts (path relativisation)
  * @see ../../tools/spec-mcp-server/lock-manager.ts (acquireLock env gate)
  */
-import { Given, When, Then } from '@cucumber/cucumber';
+import { Given, When, Then, After } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -25,13 +25,51 @@ import { buildGraph } from '../../tools/spec-graph/builder.ts';
 import { buildToolRegistry } from '../../tools/spec-mcp-server/tools.ts';
 import { acquireLock, readLock, type LockHandle } from '../../tools/spec-mcp-server/lock-manager.ts';
 import { startLifecycle, type LifecycleHandle } from '../../tools/spec-mcp-server/lifecycle.ts';
+import {
+  ensureCodespacesPostStart,
+  postStartHasMcpAutostart,
+  codespacesAutostart,
+} from '../../tools/spec-mcp-server/codespaces-autostart.ts';
 
 interface EnvWorld extends V4World {
   traceResponse?: unknown;
   lockError?: Error & { code?: string; envMismatch?: boolean };
   sessionAHandle?: LockHandle;
   lifecycle?: LifecycleHandle;
+  resumeElapsedMs?: number;
+  savedCodespaces?: string | undefined;
+  savedCodespaceName?: string | undefined;
+  codespacesEnvMutated?: boolean;
 }
+
+const CODESPACE_MACHINE = 'fluffy-machine-42';
+
+/** Set Codespaces env vars for a scenario, remembering originals for cleanup. */
+function enterCodespacesEnv(w: EnvWorld): void {
+  w.savedCodespaces = process.env.CODESPACES;
+  w.savedCodespaceName = process.env.CODESPACE_NAME;
+  process.env.CODESPACES = 'true';
+  process.env.CODESPACE_NAME = CODESPACE_MACHINE;
+  w.codespacesEnvMutated = true;
+}
+
+// Restore env + tear down any lifecycle a scenario in THIS file started, so the
+// codespaces env vars never leak into a neighbouring scenario's detectEnvironment.
+After(async function (this: EnvWorld) {
+  if (this.lifecycle) {
+    try {
+      await this.lifecycle.shutdown();
+    } catch {
+      /* best-effort */
+    }
+  }
+  if (this.codespacesEnvMutated) {
+    if (this.savedCodespaces === undefined) delete process.env.CODESPACES;
+    else process.env.CODESPACES = this.savedCodespaces;
+    if (this.savedCodespaceName === undefined) delete process.env.CODESPACE_NAME;
+    else process.env.CODESPACE_NAME = this.savedCodespaceName;
+  }
+});
 
 /** Absolute path = Windows drive (`D:\` / `C:/`) or POSIX root (`/workspace`). */
 const ABS_PATH = /^(?:[A-Za-z]:[\\/]|\/)/;
@@ -184,4 +222,90 @@ Then(/subsequent file changes are detected via polling/, async function (this: E
   }
   assert.ok(this.lifecycle!.graph.nodes.has('FR-2'), 'polling watcher should surface FR2.md');
   await this.lifecycle!.shutdown();
+  this.lifecycle = undefined;
+});
+
+// ── SPECGEN004_36 — Codespaces autostart via postStartCommand ────────────────
+
+Given(/a Codespaces environment with dev-pomogator v4 installed/, function (this: EnvWorld) {
+  enterCodespacesEnv(this);
+  const specDir = path.join(this.tempDir, '.specs', 'auth');
+  fs.mkdirSync(specDir, { recursive: true });
+  fs.writeFileSync(path.join(specDir, 'FR.md'), '## FR-1: Login\n');
+  // "dev-pomogator install" injects the postStartCommand for real.
+  ensureCodespacesPostStart(this.tempDir);
+});
+
+Given(/.\.devcontainer\/devcontainer\.json. contains .postStartCommand. for MCP startup/, function (
+  this: EnvWorld,
+) {
+  const dc = JSON.parse(
+    fs.readFileSync(path.join(this.tempDir, '.devcontainer', 'devcontainer.json'), 'utf8'),
+  ) as { postStartCommand?: string };
+  assert.ok(
+    postStartHasMcpAutostart(dc.postStartCommand),
+    `postStartCommand should launch the MCP autostart, got: ${dc.postStartCommand}`,
+  );
+});
+
+When(/the codespace starts .cold or warm./, async function (this: EnvWorld) {
+  // Run the EXACT entry the injected postStartCommand invokes — a real codespace
+  // boot can't run on this host, so executing the postStartCommand's target with
+  // Codespaces env vars set is the faithful substitute (not a config-string check).
+  this.lifecycle = await codespacesAutostart({ repoRoot: this.tempDir, watchProbe: async () => true });
+});
+
+Then(/the MCP server is launched automatically/, function (this: EnvWorld) {
+  assert.ok(this.lifecycle, 'codespacesAutostart should return a live lifecycle handle');
+  assert.ok(this.lifecycle!.graph.nodes.has('FR-1'), 'the autostarted server should have built the graph');
+});
+
+Then(/.\.mcp-lock\.json. is written with .env: "codespaces:<machine-id>"./, function (this: EnvWorld) {
+  const lock = readLock(this.tempDir);
+  assert.equal(lock?.env, `codespaces:${CODESPACE_MACHINE}`);
+});
+
+// ── SPECGEN004_37 — Codespaces resume after hibernation within 2s ────────────
+
+Given(/a Codespaces environment is hibernated after 30 minutes of inactivity/, function (
+  this: EnvWorld,
+) {
+  enterCodespacesEnv(this);
+  const specDir = path.join(this.tempDir, '.specs', 'auth');
+  fs.mkdirSync(specDir, { recursive: true });
+  fs.writeFileSync(path.join(specDir, 'FR.md'), '## FR-1: Login\n');
+  // The pre-hibernation session's lock, left behind by a now-dead process.
+  fs.mkdirSync(path.join(this.tempDir, '.dev-pomogator'), { recursive: true });
+  fs.writeFileSync(
+    path.join(this.tempDir, '.dev-pomogator', '.mcp-lock.json'),
+    JSON.stringify({
+      pid: 2_147_483_646,
+      env: `codespaces:${CODESPACE_MACHINE}`,
+      started_at: new Date(0).toISOString(),
+      last_heartbeat: new Date(0).toISOString(),
+    }),
+  );
+});
+
+When(/the user resumes the codespace/, async function (this: EnvWorld) {
+  const t0 = Date.now();
+  this.lifecycle = await codespacesAutostart({ repoRoot: this.tempDir, watchProbe: async () => true });
+  this.resumeElapsedMs = Date.now() - t0;
+});
+
+Then(/the MCP server auto-restarts via postStartCommand/, function (this: EnvWorld) {
+  assert.ok(this.lifecycle, 'resume should boot a fresh lifecycle');
+  assert.ok(this.lifecycle!.graph.nodes.has('FR-1'), 'resumed server should rebuild the graph');
+});
+
+Then(/the SpecGraph is rebuilt from persistent .* in .2 seconds/, function (this: EnvWorld) {
+  assert.ok(
+    (this.resumeElapsedMs ?? Infinity) <= 2000,
+    `rebuild must be ≤2s, took ${this.resumeElapsedMs}ms`,
+  );
+});
+
+Then(/the lock file .env. tag remains .codespaces:<machine-id>./, function (this: EnvWorld) {
+  const lock = readLock(this.tempDir);
+  assert.equal(lock?.env, `codespaces:${CODESPACE_MACHINE}`);
 });
