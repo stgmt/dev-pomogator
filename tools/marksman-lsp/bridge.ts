@@ -38,11 +38,31 @@ export interface StartBridgeOptions {
   spawnFn?: SpawnLike;
 }
 
+export interface Position {
+  line: number;
+  character: number;
+}
+export interface Range {
+  start: Position;
+  end: Position;
+}
+/** An LSP `Location` — a file URI + a range within it. */
+export interface Location {
+  uri: string;
+  range: Range;
+}
+
 export interface BridgeHandle {
   /** The server's advertised capabilities (e.g. `referencesProvider`, `definitionProvider`). */
   capabilities: Record<string, unknown>;
   /** Optional `serverInfo` (name/version) when the server reports it. */
   serverInfo?: { name?: string; version?: string };
+  /** Tell the server a document is open (helps indexing). `languageId` defaults to `markdown`. */
+  didOpen(doc: { uri: string; text: string; languageId?: string }): void;
+  /** `textDocument/definition` — resolves a wiki-link / ref to its target. Array results collapse to the first. */
+  definition(at: { uri: string; position: Position }): Promise<Location | null>;
+  /** `textDocument/references` — all locations referencing the symbol at `position`. */
+  references(at: { uri: string; position: Position; includeDeclaration?: boolean }): Promise<Location[]>;
   /** Send `shutdown` + `exit` and terminate the child. Idempotent-safe. */
   stop(): Promise<void>;
 }
@@ -161,7 +181,13 @@ export async function startBridge(opts: StartBridgeOptions): Promise<BridgeHandl
       {
         processId: process.pid,
         rootUri: opts.rootUri ?? null,
-        capabilities: {},
+        // Declaring workspace.workspaceFolders is REQUIRED — without it Marksman
+        // rejects the folder («Workspace folder is bogus») and references/definition
+        // resolve to empty. Verified via capture on both Linux and Windows.
+        capabilities: {
+          workspace: { workspaceFolders: true, configuration: true },
+          textDocument: { definition: { linkSupport: false }, references: {} },
+        },
         ...(opts.rootUri ? { workspaceFolders: [{ uri: opts.rootUri, name: 'dev-pomogator' }] } : {}),
       },
       timeout,
@@ -175,6 +201,24 @@ export async function startBridge(opts: StartBridgeOptions): Promise<BridgeHandl
   return {
     capabilities: initResult.capabilities ?? {},
     serverInfo: initResult.serverInfo,
+    didOpen({ uri, text, languageId }): void {
+      conn.notify('textDocument/didOpen', {
+        textDocument: { uri, languageId: languageId ?? 'markdown', version: 1, text },
+      });
+    },
+    async definition({ uri, position }): Promise<Location | null> {
+      const res = await conn.request('textDocument/definition', { textDocument: { uri }, position }, timeout);
+      if (!res) return null;
+      return Array.isArray(res) ? ((res[0] as Location) ?? null) : (res as Location);
+    },
+    async references({ uri, position, includeDeclaration = true }): Promise<Location[]> {
+      const res = await conn.request(
+        'textDocument/references',
+        { textDocument: { uri }, position, context: { includeDeclaration } },
+        timeout,
+      );
+      return Array.isArray(res) ? (res as Location[]) : [];
+    },
     async stop(): Promise<void> {
       try {
         await conn.request('shutdown', null, 2000);

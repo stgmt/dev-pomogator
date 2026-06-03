@@ -18,6 +18,8 @@ const dir = path.dirname(fileURLToPath(import.meta.url));
 const realInitResult = JSON.parse(
   fs.readFileSync(path.join(dir, 'fixtures/initialize-result.json'), 'utf8'),
 ) as { capabilities: Record<string, unknown> };
+const realDefinition = JSON.parse(fs.readFileSync(path.join(dir, 'fixtures/definition-result.json'), 'utf8'));
+const realReferences = JSON.parse(fs.readFileSync(path.join(dir, 'fixtures/references-result.json'), 'utf8'));
 
 function frame(msg: unknown): Buffer {
   const json = Buffer.from(JSON.stringify(msg), 'utf8');
@@ -139,5 +141,42 @@ describe('startBridge — handshake', () => {
       startBridge({ binaryPath: '/fake/marksman', spawnFn: mock.spawnFn, initializeTimeoutMs: 60 }),
     ).rejects.toThrow(/initialize.*timed out/);
     expect(mock.killed()).toBe(true);
+  });
+});
+
+describe('startBridge — navigation (definition / references)', () => {
+  // The mock replays the REAL captured definition (single Location) + references
+  // (Location[]) shapes from a real Linux Marksman wiki-link round-trip.
+  function navMock() {
+    return makeMock((req, push) => {
+      if (req.method === 'initialize') push(frame({ jsonrpc: '2.0', id: req.id, result: realInitResult }));
+      else if (req.method === 'textDocument/definition') push(frame({ jsonrpc: '2.0', id: req.id, result: realDefinition }));
+      else if (req.method === 'textDocument/references') push(frame({ jsonrpc: '2.0', id: req.id, result: realReferences }));
+    });
+  }
+
+  it('definition() resolves a wiki-link to its target Location', async () => {
+    const h = await startBridge({ binaryPath: '/fake/marksman', spawnFn: navMock().spawnFn });
+    const loc = await h.definition({ uri: 'file:///ws/index.md', position: { line: 2, character: 7 } });
+    expect(loc).not.toBeNull();
+    expect(loc!.uri).toMatch(/note\.md$/);
+    expect(loc!.range.start).toEqual({ line: 0, character: 0 });
+  });
+
+  it('references() returns every referencing Location', async () => {
+    const h = await startBridge({ binaryPath: '/fake/marksman', spawnFn: navMock().spawnFn });
+    const refs = await h.references({ uri: 'file:///ws/index.md', position: { line: 2, character: 7 } });
+    expect(refs).toHaveLength(2);
+    expect(refs.map((r) => r.uri.replace(/.*\//, ''))).toEqual(['index.md', 'note.md']);
+    expect(refs.every((r) => r.range && typeof r.range.start.line === 'number')).toBe(true);
+  });
+
+  it('definition() returns null when the server has no target', async () => {
+    const mock = makeMock((req, push) => {
+      if (req.method === 'initialize') push(frame({ jsonrpc: '2.0', id: req.id, result: realInitResult }));
+      else if (req.method === 'textDocument/definition') push(frame({ jsonrpc: '2.0', id: req.id, result: null }));
+    });
+    const h = await startBridge({ binaryPath: '/fake/marksman', spawnFn: mock.spawnFn });
+    expect(await h.definition({ uri: 'file:///ws/x.md', position: { line: 0, character: 0 } })).toBeNull();
   });
 });
