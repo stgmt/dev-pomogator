@@ -429,6 +429,7 @@ Then(
 
 import { runInstall as runMarksmanInstall } from '../../tools/marksman-installer/postinstall.ts';
 import { readLog as readMarksmanLog } from '../../tools/marksman-installer/install-log.ts';
+import { resolveLspMode } from '../../tools/marksman-installer/lsp-mode.ts';
 import { createHash } from 'node:crypto';
 
 interface MarksmanWorld extends Phase2World {
@@ -524,15 +525,40 @@ Then(
   },
 );
 
-Then('MCP server initializes custom JS-based MD LSP fallback', function () {
-  // The JS-LSP subset ships in a tiny follow-up. The `available: false`
-  // log + reason is the supply-chain contract this PR enforces.
-  return 'pending';
+Then('MCP server initializes custom JS-based MD LSP fallback', function (this: MarksmanWorld) {
+  // The failed install left `marksman.available = false`; resolveLspMode reads
+  // that supply-chain record and selects the JS-based MD LSP fallback.
+  assert.equal(resolveLspMode(this.tempDir), 'js-fallback');
 });
 
-Then('wiki-link navigation still works through MCP `find_refs` tool', function () {
-  // find_refs is a Phase-2 follow-up tool — pending until that ships.
-  return 'pending';
+Then('wiki-link navigation still works through MCP `find_refs` tool', async function (
+  this: MarksmanWorld,
+) {
+  // Seed a real spec so find_refs has cross-links to resolve, then drive the
+  // actual MCP tool — the JS-LSP fallback's navigation surface (no Marksman).
+  const specDir = path.join(this.tempDir, '.specs', 'auth');
+  fs.mkdirSync(specDir, { recursive: true });
+  fs.writeFileSync(path.join(specDir, 'FR.md'), '## FR-1: Login\n');
+  fs.writeFileSync(
+    path.join(specDir, 'TASKS.md'),
+    '## Tasks\n\n- [ ] Build login — id: T-1 — Status: TODO\n  Implements FR-1 happy path.\n',
+  );
+  const featDir = path.join(this.tempDir, 'tests', 'features');
+  fs.mkdirSync(featDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(featDir, 'auth.feature'),
+    '@FR-1\nFeature: Auth\n  Scenario: login\n    Given a user\n',
+  );
+
+  const graph = buildGraph({ repoRoot: this.tempDir, skipNdjson: true });
+  const findRefs = buildToolRegistry(() => graph).find((t) => t.name === 'find_refs')!;
+  const res = await findRefs.handler({ node_id: 'FR-1' });
+  const body = JSON.parse(res.content[0].text) as {
+    references: Array<{ id: string; relation: string }>;
+  };
+  // The @FR-1 Scenario (tested-by) and the FR-1-referencing Task both surface.
+  assert.ok(body.references.some((r) => r.relation === 'tested-by'), 'find_refs should surface the testing Scenario');
+  assert.ok(body.references.some((r) => r.id === 'T-1'), 'find_refs should surface the referencing Task');
 });
 
 Then(

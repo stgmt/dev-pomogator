@@ -72,14 +72,15 @@ const tool = (name: string) => {
 };
 
 describe('tool registry — shape', () => {
-  it('registers exactly 12 tools with canonical names', () => {
-    expect(registry).toHaveLength(12);
+  it('registers exactly 13 tools with canonical names', () => {
+    expect(registry).toHaveLength(13);
     const names = registry.map((t) => t.name).sort();
     expect(names).toEqual(
       [
         'conformance_check',
         'find_by_tags',
         'find_orphans',
+        'find_refs', // FR-7 JS-LSP fallback navigation
         'get_coverage', // FR-32 honesty rollup
         'get_coverage_summary',
         'get_node',
@@ -227,6 +228,37 @@ describe('find_by_tags', () => {
   it('returns 0 when tag conjunction has no match', async () => {
     const r = await tool('find_by_tags').handler({ tags: ['FR-1', 'NEVER'] });
     expect((parseResult(r) as { count: number }).count).toBe(0);
+  });
+});
+
+describe('find_refs (FR-7 JS-LSP fallback navigation)', () => {
+  type Ref = { id: string; type: string; relation: string; direction: string };
+  const refsOf = async (id: string): Promise<Ref[]> =>
+    (parseResult(await tool('find_refs').handler({ node_id: id })) as { references: Ref[] }).references;
+
+  it('surfaces every cross-link to a node — covers/tested-by edges + task refs', async () => {
+    const refs = await refsOf('FR-1');
+    const byId = new Map(refs.map((r) => [r.id, r]));
+    // covers→AC-1 (outgoing), tested-by→SCEN-login-ok (outgoing), TASK refs (incoming)
+    expect(byId.get('AC-1')).toMatchObject({ relation: 'covers', direction: 'outgoing' });
+    expect(byId.get('SCEN-login-ok')).toMatchObject({ relation: 'tested-by', direction: 'outgoing' });
+    expect(byId.get('TASK-impl-login')).toMatchObject({ relation: 'refs', direction: 'incoming' });
+    expect(refs).toHaveLength(3);
+  });
+
+  it('never lists a (id, relation, direction) reference twice — output is deduped', async () => {
+    const refs = await refsOf('FR-1');
+    const keys = refs.map((r) => `${r.id}|${r.relation}|${r.direction}`);
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it('never returns the queried node itself as a reference', async () => {
+    const refs = await refsOf('FR-1');
+    expect(refs.some((r) => r.id === 'FR-1')).toBe(false);
+  });
+
+  it('returns an empty set for a node nothing points at', async () => {
+    expect(await refsOf('FR-2')).toEqual([]);
   });
 });
 

@@ -650,5 +650,53 @@ export function buildToolRegistry(getGraph: () => SpecGraph): ToolDefinition<z.Z
     },
   });
 
+  // ─── 12) find_refs — JS-LSP fallback wiki-link navigation (FR-7) ─────────
+  // The reference-finder that backs the custom JS-based MD LSP fallback when
+  // Marksman is unavailable (SPECGEN004_16). "Find all references" over the
+  // graph's real cross-links: incoming/outgoing edges (covers / tested-by /
+  // implements …) plus the task→FR refs that the edge set doesn't carry. This
+  // is the spec-domain equivalent of a Markdown wiki-link "find references",
+  // graph-backed so it works with or without the Marksman binary.
+  tools.push({
+    name: 'find_refs',
+    description:
+      'Find every reference to a node id across the graph (JS-LSP fallback for ' +
+      'wiki-link navigation per FR-7): incoming/outgoing edges plus task refs.',
+    inputShape: { node_id: z.string() } as const satisfies z.ZodRawShape,
+    handler: async ({ node_id }) => {
+      const graph = getGraph();
+      const id = node_id as string;
+      const seen = new Set<string>();
+      const references: Array<{
+        id: string;
+        type: string;
+        file: string;
+        line: number;
+        relation: string;
+        direction: 'incoming' | 'outgoing';
+      }> = [];
+      const add = (
+        n: { id: string; type: string; file: string; line: number } | undefined,
+        relation: string,
+        direction: 'incoming' | 'outgoing',
+      ): void => {
+        if (!n || n.id === id) return;
+        const key = `${n.id}|${relation}|${direction}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        references.push({ id: n.id, type: n.type, file: n.file, line: n.line, relation, direction });
+      };
+      for (const e of graph.edges) {
+        if (e.from === id) add(graph.nodes.get(e.to), e.type, 'outgoing');
+        if (e.to === id) add(graph.nodes.get(e.from), e.type, 'incoming');
+      }
+      // Task→FR refs are tracked on TaskNode.refs, not as graph edges.
+      for (const n of graph.nodes.values()) {
+        if (n.type === 'Task' && (n as TaskNode).refs.includes(id)) add(n, 'refs', 'incoming');
+      }
+      return asJsonResult({ ok: true, node_id: id, references, count: references.length });
+    },
+  });
+
   return tools;
 }
