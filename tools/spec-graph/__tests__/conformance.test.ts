@@ -50,6 +50,48 @@ function task(id: string, refs: string[], file = 'TASKS.md', line = 1): TaskNode
   return { id, type: 'Task', file, line, refs, status: 'TODO', title: id };
 }
 
+describe('checkConformance — TASK_STATUS_UNVERIFIED (FR-32 honesty gate)', () => {
+  const doneTask = (id: string, refs: string[]): TaskNode => ({
+    id, type: 'Task', file: 'TASKS.md', line: 1, refs, status: 'done', title: id, doneWhen: refs.join(' '),
+  });
+  const scenR = (id: string, tags: string[], result?: ScenarioNode['lastResult']): ScenarioNode => ({
+    id, type: 'Scenario', file: 't.feature', line: 1, tags, steps: [], lastResult: result,
+  });
+  const onlyGate = (g: SpecGraph) => checkConformance(g).filter((f) => f.code === 'TASK_STATUS_UNVERIFIED');
+
+  it('flags a DONE task whose mapped scenario is not green', () => {
+    const g = emptyGraph();
+    g.nodes.set('FR-1', fr('FR-1'));
+    g.nodes.set('t1', doneTask('t1', ['FR-1']));
+    g.nodes.set('s1', scenR('SCEN-specgen004-01-x', ['@feature1'], 'UNDEFINED'));
+    const findings = onlyGate(g);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({ code: 'TASK_STATUS_UNVERIFIED', severity: 'warning', nodeId: 't1' });
+  });
+
+  it('does NOT flag a DONE task whose mapped scenarios are all green', () => {
+    const g = emptyGraph();
+    g.nodes.set('FR-1', fr('FR-1'));
+    g.nodes.set('t1', doneTask('t1', ['FR-1']));
+    g.nodes.set('s1', scenR('SCEN-specgen004-01-x', ['@feature1'], 'PASSED'));
+    expect(onlyGate(g)).toHaveLength(0);
+  });
+
+  it('does NOT flag a TODO task — only DONE is gated', () => {
+    const g = emptyGraph();
+    g.nodes.set('FR-1', fr('FR-1'));
+    g.nodes.set('t1', task('t1', ['FR-1'])); // status TODO
+    g.nodes.set('s1', scenR('SCEN-specgen004-01-x', ['@feature1'], 'UNDEFINED'));
+    expect(onlyGate(g)).toHaveLength(0);
+  });
+
+  it('does NOT flag a DONE task with no mapped scenarios (unverified ≠ contradicted)', () => {
+    const g = emptyGraph();
+    g.nodes.set('t1', doneTask('t1', []));
+    expect(onlyGate(g)).toHaveLength(0);
+  });
+});
+
 describe('checkConformance — UNCOVERED_FR', () => {
   it('flags an FR with no AC and no tested-by edge', () => {
     const g = emptyGraph();

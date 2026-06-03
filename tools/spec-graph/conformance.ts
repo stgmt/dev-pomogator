@@ -23,13 +23,15 @@
  */
 
 import type { SpecGraph, Edge, ScenarioNode, TaskNode } from './types.ts';
+import { computeCoverage, type Bucket, type ScenarioLike, type TaskLike } from './coverage.ts';
 
 export type FindingCode =
   | 'UNCOVERED_FR'
   | 'ORPHAN_TASK'
   | 'SCENARIO_TAG_ORPHAN'
   | 'UNTAGGED_SCENARIO'
-  | 'DUPLICATE_DEFINITION';
+  | 'DUPLICATE_DEFINITION'
+  | 'TASK_STATUS_UNVERIFIED';
 
 export type Severity = 'error' | 'warning' | 'info';
 
@@ -105,6 +107,45 @@ export function checkConformance(graph: SpecGraph): Finding[] {
         suggestions: [
           { action: 'create_fr', reason: `Create ## ${ref} heading in a FR.md file, OR`, confidence: 'medium' },
           { action: 'remove_ref', reason: `remove the stale reference from the task.`, confidence: 'medium' },
+        ],
+      });
+    }
+  }
+
+  // 2b) TASK_STATUS_UNVERIFIED — hand-set DONE but a mapped scenario is not
+  // green (FR-32 honesty gate). Uses the single coverage.ts mapper so the
+  // verdict matches get_coverage exactly. `unverified` tasks (no mapped
+  // scenarios) are never flagged — there is no evidence to contradict.
+  const scenarioLikes: ScenarioLike[] = [];
+  const taskLikes: TaskLike[] = [];
+  for (const node of graph.nodes.values()) {
+    if (node.type === 'Scenario') {
+      const s = node as ScenarioNode;
+      scenarioLikes.push({ id: s.id, tags: s.tags, result: s.lastResult });
+    } else if (node.type === 'Task') {
+      const t = node as TaskNode;
+      taskLikes.push({ id: t.id, doneWhen: t.doneWhen ?? '', refs: t.refs });
+    }
+  }
+  if (taskLikes.length > 0) {
+    const cov = computeCoverage(taskLikes, scenarioLikes);
+    const bucketById = new Map<string, Bucket>();
+    for (const b of Object.keys(cov.buckets) as Bucket[]) for (const id of cov.buckets[b]) bucketById.set(id, b);
+    for (const node of graph.nodes.values()) {
+      if (node.type !== 'Task') continue;
+      const task = node as TaskNode;
+      if (task.status !== 'done') continue;
+      const entry = cov.tasks[task.id];
+      if (!entry || entry.verified_status !== 'IN_PROGRESS') continue;
+      const offenders = entry.scenarios.filter((id) => bucketById.get(id) !== 'passed');
+      findings.push({
+        code: 'TASK_STATUS_UNVERIFIED',
+        severity: 'warning',
+        location: { file: task.file, line: task.line },
+        message: `Task ${task.id} is marked DONE but ${offenders.length}/${entry.scenarios.length} mapped scenarios are not green (e.g. ${offenders.slice(0, 3).map((id) => `${id}=${bucketById.get(id)}`).join(', ')}).`,
+        nodeId: task.id,
+        suggestions: [
+          { action: 'make_green_or_downgrade', reason: 'Make the mapped scenarios pass, or set Status back to IN_PROGRESS — a DONE task must have every mapped scenario green.', confidence: 'high' },
         ],
       });
     }
