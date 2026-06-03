@@ -35,6 +35,7 @@
   },
   "scripts": {
     "lint": "eslint .claude tools",
+    "check:status-drift": "tsx scripts/check-status-drift.mts",
     "test": "bash scripts/docker-test.sh",
     "test:bdd": "node --import tsx node_modules/@cucumber/cucumber/bin/cucumber.js",
     "test:all": "bash scripts/docker-test.sh",

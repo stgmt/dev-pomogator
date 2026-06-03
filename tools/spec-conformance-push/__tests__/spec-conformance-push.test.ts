@@ -79,13 +79,27 @@ describe('runPush — stateful runner', () => {
     expect(out2).toContain('FR-1');
   });
 
-  it('per-spec opt-out (`_no_push_check: true`) suppresses push for that file', () => {
+  it('per-spec opt-out (`_no_push_check: true`) suppresses push but STILL logs (SPECGEN004_14)', () => {
     fs.writeFileSync(
       path.join(root, '.specs/x/FR.md'),
       '# _no_push_check: true\n## FR-1: Uncovered\n',
     );
-    const out = runPush(root, '.specs/x/FR.md', 1_700_000_000_000);
+    const out = runPush(root, '.specs/x/FR.md', 1_700_000_000_000, { sessionId: 'sess-optout' });
+    // Agent-facing emit is silenced …
     expect(out).toBe('');
+    // … but the durable audit journal still records every finding.
+    const dir = path.join(root, '.dev-pomogator', '.spec-check-log');
+    expect(fs.existsSync(dir)).toBe(true);
+    const shards = fs.readdirSync(dir).filter((n) => n.endsWith('.jsonl'));
+    expect(shards.length).toBeGreaterThanOrEqual(1);
+    const lines = fs
+      .readFileSync(path.join(dir, shards[0]), 'utf8')
+      .split('\n')
+      .filter(Boolean);
+    expect(lines.length).toBeGreaterThanOrEqual(1);
+    const obj = JSON.parse(lines[0]) as { finding_code: string; session_id?: string };
+    expect(obj.finding_code).toBe('UNCOVERED_FR');
+    expect(obj.session_id).toBe('sess-optout');
   });
 
   it('appends each finding into the spec-check-log JSONL (FR-15 wire-up)', () => {

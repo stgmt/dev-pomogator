@@ -117,6 +117,23 @@ function postEditContent(input: HookInput, repoRoot: string): string | null {
 }
 
 /**
+ * Detect malformed YAML frontmatter — currently the unclosed case: a block that
+ * opens with `---` on the first non-blank line but never closes with a `---`
+ * line. (Closed-but-invalid-YAML detection is a follow-up; the unclosed shape
+ * is what SPECGEN004_10 exercises and the most common authoring slip.)
+ */
+function malformedFrontmatter(content: string): string | null {
+  const lines = content.split(/\r?\n/);
+  let i = 0;
+  while (i < lines.length && lines[i].trim() === '') i++;
+  if (lines[i]?.trim() !== '---') return null; // no frontmatter block
+  for (let j = i + 1; j < lines.length; j++) {
+    if (lines[j].trim() === '---') return null; // properly closed
+  }
+  return `YAML frontmatter opened at line ${i + 1} but has no closing --- fence.`;
+}
+
+/**
  * Run the HARD-tier checks on `(kind, content)` and return aggregated deny
  * reasons. Empty array = allow. Returns `null` if parsing itself blew up
  * with a non-recoverable internal error (caller fails OPEN).
@@ -129,6 +146,8 @@ export function detectHardFindings(
   if (kind === null) return [];
   try {
     if (kind === 'md') {
+      const fmError = malformedFrontmatter(content);
+      if (fmError) return [`MALFORMED_FRONTMATTER at ${filePath} — ${fmError}`];
       const slice = parseMarkdown(content, filePath);
       const seen = new Map<string, number>();
       const denyReasons: string[] = [];

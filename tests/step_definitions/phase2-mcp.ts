@@ -219,29 +219,37 @@ Then('the Write does not occur', function () {
   // No side-effect to assert against in unit-level tests.
 });
 
-// ─── SPECGEN004_10 — MALFORMED_FRONTMATTER (pending: parser does not yet
-// surface frontmatter parse errors as HARD findings).
+// ─── SPECGEN004_10 — MALFORMED_FRONTMATTER (now a real HARD finding) ──────
 Given(
   'the agent attempts Write to `.specs\\/auth\\/FR.md` with frontmatter missing closing `---`',
-  function () {
-    return 'pending';
+  function (this: Phase2World) {
+    writeProgress(this.tempDir, 4);
+    (this as Phase2World & { malformedWrite?: { fp: string; content: string } }).malformedWrite = {
+      fp: path.join(this.tempDir, '.specs/auth/FR.md'),
+      content: '---\ntitle: Login\n## FR-901: Login\n', // opens `---`, never closes it
+    };
   },
 );
-When('the hook runs', function () {
-  return 'pending';
+When('the hook runs', function (this: Phase2World) {
+  const m = (this as Phase2World & { malformedWrite?: { fp: string; content: string } }).malformedWrite!;
+  this.hookOutput = runGuard(
+    { tool_name: 'Write', tool_input: { file_path: m.fp, content: m.content } },
+    this.tempDir,
+  );
 });
 Then('PreToolUse returns `permissionDecision: {string}`', function (
   this: Phase2World,
   decision: string,
 ) {
-  // Implemented for SPECGEN004_11 (MALFORMED_GHERKIN). SPECGEN004_10
-  // (MALFORMED_FRONTMATTER) marks its preceding Given as pending so this
-  // step is unreachable for that scenario until the frontmatter parser
-  // surfaces it as a HARD finding (deferred sub-PR).
+  // Shared between SPECGEN004_10 (MALFORMED_FRONTMATTER) and _11
+  // (MALFORMED_GHERKIN) — assert only the decision here. The
+  // `permissionDecisionReason contains code <CODE>` step does the per-scenario
+  // code check.
   assert.equal(this.hookOutput?.hookSpecificOutput?.permissionDecision, decision);
 });
-Then('the reason includes the offending line number', function () {
-  return 'pending';
+Then('the reason includes the offending line number', function (this: Phase2World) {
+  const reason = this.hookOutput?.hookSpecificOutput?.permissionDecisionReason ?? '';
+  assert.ok(/line \d+/.test(reason), `reason should reference the offending line: ${reason}`);
 });
 
 // ─── SPECGEN004_11 — MALFORMED_GHERKIN ───────────────────────────────────
@@ -401,11 +409,19 @@ Then('no `<system-reminder>` is pushed for that file', function (this: Phase2Wor
 
 Then(
   'the findings are still logged to `.dev-pomogator\\/.spec-check-log\\/`',
-  function () {
-    // The persistent log lands in Phase 4 (FR-15). Until then this step is
-    // pending — the throttle journal already holds the data the eventual
-    // log writer will consume.
-    return 'pending';
+  function (this: Phase2World) {
+    // FR-15 wire-up is live: opt-out silences the agent emit but the durable
+    // journal still records the findings the hook computed (SPECGEN004_14).
+    const dir = path.join(this.tempDir, '.dev-pomogator', '.spec-check-log');
+    assert.ok(fs.existsSync(dir), `expected spec-check-log dir at ${dir}`);
+    const shards = fs.readdirSync(dir).filter((n) => n.endsWith('.jsonl'));
+    assert.ok(shards.length >= 1, 'expected at least one .jsonl shard in the journal');
+    const lines = fs
+      .readFileSync(path.join(dir, shards[0]), 'utf8')
+      .split('\n')
+      .filter(Boolean);
+    assert.ok(lines.length >= 1, 'expected at least one logged finding');
+    assert.ok(/UNCOVERED_FR/.test(lines.join('\n')), 'expected the UNCOVERED_FR finding in the journal');
   },
 );
 
