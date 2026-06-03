@@ -419,12 +419,12 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And the agent's Write proceeds
 
   @feature25
-  Scenario: SPECGEN004_52 v4 install over v3 preserves all v3 hook entries
-    Given a project with dev-pomogator v3 installed (5 v3 form-guard hook entries in `plugin.json`)
-    When the user runs `claude plugin install dev-pomogator-v4`
-    Then the post-install `plugin.json` contains all 5 prior v3 entries unchanged
-    And at least 3 new v4 hook entries are appended (`spec-conformance-guard`, `spec-conformance-push`, `bash-post-test-ingest`)
-    And `length(hooks.claude.PreToolUse_post) ≥ length(hooks.claude.PreToolUse_prior) + 1`
+  Scenario: SPECGEN004_52 canonical plugin ships a complete static hooks.json (additive, nothing dropped)
+    Given dev-pomogator v4 is distributed as a canonical plugin that ships its own static `.claude-plugin/hooks.json`
+    When the plugin hook manifest is loaded
+    Then `.claude-plugin/hooks.json` declares the v4 spec hooks `spec-conformance-guard`, `spec-conformance-push` and `bash-post-test/ingest`
+    And it retains the pre-existing protective hook entries (the static manifest is the union, never a replacement)
+    And `length(hooks.PreToolUse) >= 1` and `length(hooks.PostToolUse) >= 1`
 
   @feature26
   Scenario: SPECGEN004_53 LLM-as-judge skips deny-list match with explicit finding

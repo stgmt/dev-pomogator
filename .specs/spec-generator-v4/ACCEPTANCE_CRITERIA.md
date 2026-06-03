@@ -303,12 +303,12 @@ WHEN any Write/Edit tool call targets `extension.json` OR `plugin.json` OR `.cla
 ## AC-25.1 (FR-25)
 **Требование:** [FR-25](FR.md#fr-25)
 
-WHEN `claude plugin install dev-pomogator-v4` is run in a project that already has dev-pomogator v3 installed AND the prior `plugin.json` contains the 5 v3 form-guard PreToolUse hook entries identified by their `name` field THEN the resulting post-install `plugin.json` SHALL contain ALL 5 prior v3 entries unchanged AND ≥3 additional new v4 hook entries (FR-5 `spec-conformance-guard`, FR-6 `spec-conformance-push`, `bash-post-test-ingest`).
+WHEN the canonical dev-pomogator v4 plugin's hook manifest `.claude-plugin/hooks.json` is loaded THEN it SHALL declare the v4 spec hooks (FR-5 `spec-conformance-guard`, FR-6 `spec-conformance-push`, `bash-post-test/ingest`) AND retain the pre-existing protective hook entries (the static manifest is the complete union, never a replacement).
 
 ## AC-25.2 (FR-25)
 **Требование:** [FR-25](FR.md#fr-25)
 
-WHEN the v4 install procedure detects existing v3 hook entries during merge THEN matching SHALL be performed by `name` field equality only — NOT by array index AND NOT by `command` substring match. The integration test `tests/e2e/v4-install-additive-merge.test.ts` SHALL verify `length(hooks.claude.PreToolUse_post) ≥ length(hooks.claude.PreToolUse_prior) + 1` AND zero pre-existing entries were removed.
+WHEN the shipped `.claude-plugin/hooks.json` is inspected THEN `length(hooks.PreToolUse) ≥ 1` AND `length(hooks.PostToolUse) ≥ 1`, AND the v4 spec hooks appear ALONGSIDE the protective hooks in their event arrays (additive — the spec hooks did not replace a pre-existing entry). Verified against the real manifest by SPECGEN004_52.
 
 ## AC-26.1 (FR-26)
 **Требование:** [FR-26](FR.md#fr-26)

@@ -322,15 +322,15 @@ Tampering attempts SHALL be logged to `.dev-pomogator/logs/meta-guard.log`. NFR-
 **Use Case:** [UC-9](USE_CASES.md#uc-9)
 **User Story:** US-5
 
-## FR-25: v3 hook entries SHALL survive v4 manifest install (additive merge, not replacement)
+## FR-25: canonical plugin SHALL ship a complete static hooks.json (additive union, nothing dropped)
 
-System SHALL perform `plugin.json` install-time edit as an **additive merge**, never as a replacement. Specifically:
+In the v2.0 canonical distribution dev-pomogator ships its own static `.claude-plugin/hooks.json` (aggregated hook declarations loaded by Claude Code directly) — there is NO install-time edit/merge of the user's `plugin.json` (that was the deprecated v1/npm model). The additive invariant therefore applies to the **shipped manifest**: it SHALL be the complete union of protective + v4 hooks, never a replacement that silently drops protection.
 
-- WHEN v4 install runs over an existing v3 install (target project has v3 hook entries in `plugin.json`/`extension.json`/`.claude/settings.local.json`) THEN the resulting manifest SHALL contain ALL prior v3 hook entries (5 form-guards + meta-guard + audit logger) PLUS the new v4 hook entries (FR-5 `spec-conformance-guard`, FR-6 `spec-conformance-push`, `bash-post-test-ingest`).
-- The install procedure SHALL detect existing v3 entries by `name` field match, NOT by array index, NOT by `command` substring match.
-- Integration test: `claude plugin install dev-pomogator-v4` over a v3 install MUST produce a manifest with `length(hooks.claude.PreToolUse) ≥ length(prior) + 1` AND zero v3-entry removals. Test name: `tests/e2e/v4-install-additive-merge.test.ts`.
+- The shipped `.claude-plugin/hooks.json` SHALL declare the protective hook entries (the plan-gate / phase-gate / build-guard / test-guard family) ALONGSIDE the v4 spec hooks (FR-5 `spec-conformance-guard`, FR-6 `spec-conformance-push`, `bash-post-test/ingest`).
+- A v4 hook added to the manifest SHALL NOT remove or overwrite a pre-existing protective hook entry in the same event array — additions are additive within each event.
+- `length(hooks.PreToolUse) ≥ 1` AND `length(hooks.PostToolUse) ≥ 1` — the spec hooks ship alongside the existing ones. Verified against the real `.claude-plugin/hooks.json` (SPECGEN004_52).
 
-Rationale: a naive «overwrite hooks array» install silently drops v3-era protection (form-guards) and creates a window of unprotected authoring until users notice. FR-25 makes the additive invariant explicit and enforceable.
+Rationale: a naive «overwrite hooks array» (or a manifest regenerated from scratch) silently drops protection and creates a window of unprotected authoring until users notice. FR-25 keeps the additive-union invariant explicit and enforceable on the static manifest the canonical plugin actually ships.
 
 **Связанные AC:** [AC-25.1](ACCEPTANCE_CRITERIA.md#ac-25-1), [AC-25.2](ACCEPTANCE_CRITERIA.md#ac-25-2)
 **Use Case:** [UC-4](USE_CASES.md#uc-4)
