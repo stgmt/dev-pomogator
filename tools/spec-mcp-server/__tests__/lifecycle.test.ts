@@ -56,6 +56,54 @@ describe('startLifecycle', () => {
     }
   });
 
+  it('auto-falls-back to polling + logs the decision when the touch test fails (SPECGEN004_32)', async () => {
+    const handle = await startLifecycle({
+      repoRoot: root,
+      env: 'host',
+      skipNdjson: true,
+      autoDetectWatchMode: true,
+      watchProbe: async () => false, // simulate an unreliable Docker-Desktop bind mount
+      pollIntervalMs: 1000,
+    });
+    try {
+      expect(handle.watchMode).toBe('polling');
+      expect(handle.pollIntervalMs).toBe(1000);
+      const logFile = path.join(root, '.dev-pomogator', 'logs', 'watcher.log');
+      expect(fs.existsSync(logFile)).toBe(true);
+      const log = fs.readFileSync(logFile, 'utf8');
+      expect(log).toMatch(/falling back to polling/);
+      expect(log).toMatch(/1000ms interval/);
+
+      // Subsequent changes are still detected — via the polling backend.
+      await new Promise((r) => setTimeout(r, 250));
+      fs.writeFileSync(path.join(root, '.specs/auth/FR2.md'), '## FR-2: Logout\n');
+      const deadline = Date.now() + 5_000;
+      while (Date.now() < deadline && !handle.graph.nodes.has('FR-2')) {
+        await new Promise((r) => setTimeout(r, 100));
+      }
+      expect(handle.graph.nodes.has('FR-2')).toBe(true);
+    } finally {
+      await handle.shutdown();
+    }
+  });
+
+  it('keeps native events when the touch test succeeds (SPECGEN004_32 happy path)', async () => {
+    const handle = await startLifecycle({
+      repoRoot: root,
+      env: 'host',
+      skipNdjson: true,
+      autoDetectWatchMode: true,
+      watchProbe: async () => true,
+    });
+    try {
+      expect(handle.watchMode).toBe('native');
+      const log = fs.readFileSync(path.join(root, '.dev-pomogator', 'logs', 'watcher.log'), 'utf8');
+      expect(log).toMatch(/native fs events confirmed/);
+    } finally {
+      await handle.shutdown();
+    }
+  });
+
   it('reflects a single file change through the watcher into onPatch + graph', async () => {
     const patches: Array<{ kind: string; file: string }> = [];
     const handle = await startLifecycle({

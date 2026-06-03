@@ -35,7 +35,9 @@ export async function boot(opts: BootOptions): Promise<{
   server: McpServer;
   lifecycle: LifecycleHandle;
 }> {
-  const lifecycle = await startLifecycle({ repoRoot: opts.repoRoot });
+  // Enable the touch-test watch-mode probe (SPECGEN004_32): on a Docker-Desktop
+  // bind mount where native fs events don't propagate, auto-fall-back to polling.
+  const lifecycle = await startLifecycle({ repoRoot: opts.repoRoot, autoDetectWatchMode: true });
   const server = new McpServer({ name: PRODUCT_NAME, version: PRODUCT_VERSION });
 
   for (const tool of buildToolRegistry(() => lifecycle.graph)) {

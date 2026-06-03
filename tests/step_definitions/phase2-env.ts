@@ -24,11 +24,13 @@ import { V4World } from '../hooks/before-after.ts';
 import { buildGraph } from '../../tools/spec-graph/builder.ts';
 import { buildToolRegistry } from '../../tools/spec-mcp-server/tools.ts';
 import { acquireLock, readLock, type LockHandle } from '../../tools/spec-mcp-server/lock-manager.ts';
+import { startLifecycle, type LifecycleHandle } from '../../tools/spec-mcp-server/lifecycle.ts';
 
 interface EnvWorld extends V4World {
   traceResponse?: unknown;
   lockError?: Error & { code?: string; envMismatch?: boolean };
   sessionAHandle?: LockHandle;
+  lifecycle?: LifecycleHandle;
 }
 
 /** Absolute path = Windows drive (`D:\` / `C:/`) or POSIX root (`/workspace`). */
@@ -133,4 +135,53 @@ Then(/no second MCP process is spawned/, function (this: EnvWorld) {
   assert.equal(held?.pid, process.pid, 'session A lock must be intact (no takeover)');
   assert.equal(held?.env, 'host', 'session A env tag must be unchanged');
   this.sessionAHandle?.release();
+});
+
+// ── SPECGEN004_32 — chokidar auto-polling fallback when events unreliable ────
+
+Given(/the workspace is bind-mounted from Docker Desktop on Windows/, function (this: EnvWorld) {
+  const specDir = path.join(this.tempDir, '.specs', 'auth');
+  fs.mkdirSync(specDir, { recursive: true });
+  fs.writeFileSync(path.join(specDir, 'FR.md'), '## FR-1: Login\n');
+});
+
+When(/the MCP server starts and runs touch test/, function () {
+  // The lifecycle start happens once the probe outcome is known — see the
+  // next step ("the touch event is not received within 500ms"), which injects
+  // the unreliable-bind-mount condition that a real Docker-Desktop host hits.
+});
+
+When(/the touch event is not received within 500ms/, async function (this: EnvWorld) {
+  this.lifecycle = await startLifecycle({
+    repoRoot: this.tempDir,
+    env: 'host',
+    skipNdjson: true,
+    autoDetectWatchMode: true,
+    watchProbe: async () => false, // touch event never arrives → unreliable
+    pollIntervalMs: 1000,
+  });
+});
+
+Then(/the chokidar watcher auto-falls-back to polling mode .1s interval./, function (this: EnvWorld) {
+  assert.equal(this.lifecycle?.watchMode, 'polling');
+  assert.equal(this.lifecycle?.pollIntervalMs, 1000);
+});
+
+Then(/the decision is logged to .*watcher\.log/, function (this: EnvWorld) {
+  const logFile = path.join(this.tempDir, '.dev-pomogator', 'logs', 'watcher.log');
+  assert.ok(fs.existsSync(logFile), `expected watcher.log at ${logFile}`);
+  const log = fs.readFileSync(logFile, 'utf8');
+  assert.match(log, /falling back to polling/);
+  assert.match(log, /1000ms interval/);
+});
+
+Then(/subsequent file changes are detected via polling/, async function (this: EnvWorld) {
+  await new Promise((r) => setTimeout(r, 250));
+  fs.writeFileSync(path.join(this.tempDir, '.specs', 'auth', 'FR2.md'), '## FR-2: Logout\n');
+  const deadline = Date.now() + 5_000;
+  while (Date.now() < deadline && !this.lifecycle!.graph.nodes.has('FR-2')) {
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  assert.ok(this.lifecycle!.graph.nodes.has('FR-2'), 'polling watcher should surface FR2.md');
+  await this.lifecycle!.shutdown();
 });

@@ -54,6 +54,12 @@ export interface WatchOptions {
    * Windows + WSL bind mounts; explicit `true` is for tests + Docker.
    */
   usePolling?: boolean;
+  /**
+   * Polling interval in ms when `usePolling` is active. Default 100. The
+   * lifecycle auto-fallback path raises this to 1000 (1s) per SPECGEN004_32
+   * so a Docker-Desktop bind mount isn't hammered every 100ms.
+   */
+  interval?: number;
   /** Called after every successful incremental patch. Optional. */
   onPatch?: (event: PatchEvent) => void;
   /** Called on any watcher-level error. Optional; default = swallow + log. */
@@ -239,7 +245,7 @@ export function startWatching(graph: SpecGraph, opts: WatchOptions): FSWatcher {
       !p.endsWith('.last-test-run.ndjson'),
     ignoreInitial: true,
     usePolling: opts.usePolling ?? false,
-    interval: 100,
+    interval: opts.interval ?? 100,
     binaryInterval: 300,
     awaitWriteFinish: { stabilityThreshold: 50, pollInterval: 25 },
     persistent: true,
