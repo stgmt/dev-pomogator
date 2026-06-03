@@ -8,7 +8,7 @@
         "tools/spec-mcp-server/server.ts"
       ],
       "env": {
-        "DEV_POMOGATOR_REPO_ROOT": "${workspaceFolder}"
+        "DEV_POMOGATOR_REPO_ROOT": "${CLAUDE_PROJECT_DIR}"
       }
     }
   }

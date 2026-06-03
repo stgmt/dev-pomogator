@@ -50,7 +50,9 @@ export async function boot(opts: BootOptions): Promise<{
 }
 
 async function main(): Promise<void> {
-  const repoRoot = process.env.DEV_POMOGATOR_REPO_ROOT ?? process.cwd();
+  // `||` (not `??`) so an empty-string env value — e.g. an unresolved
+  // `${CLAUDE_PROJECT_DIR}` in some launch contexts — still falls back to cwd.
+  const repoRoot = process.env.DEV_POMOGATOR_REPO_ROOT || process.cwd();
   const { server, lifecycle } = await boot({ repoRoot });
 
   const shutdownAndExit = async (code: number): Promise<void> => {
