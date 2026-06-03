@@ -37,6 +37,7 @@ import type {
 import { parseMarkdownFile } from './parsers/md.ts';
 import { parseGherkinFile } from './parsers/gherkin.ts';
 import { parseNdjsonFile, applyTestResults } from './parsers/ndjson.ts';
+import { parseTasksFile } from './parsers/tasks.ts';
 import { parseFileChangesFile, type FileChangeRow } from './parsers/file-changes.ts';
 import { parseDesignFile, type DesignFileRef } from './parsers/design.ts';
 
@@ -132,6 +133,20 @@ export function buildGraph(opts: BuildOptions): SpecGraph {
     for (const e of slice.edges) edges.push(e);
     for (const a of slice.anchors) {
       if (!definitions.has(a.alias)) definitions.set(a.alias, a.location);
+    }
+  }
+
+  // 1b) Task slices — parse every TASKS.md into Task nodes (id/status/refs/doneWhen).
+  for (const abs of mdFiles) {
+    if (path.basename(abs) !== 'TASKS.md') continue;
+    let taskSlice;
+    try {
+      taskSlice = parseTasksFile(abs, repoRoot);
+    } catch {
+      continue;
+    }
+    for (const node of taskSlice.nodes) {
+      if (!nodes.has(node.id)) nodes.set(node.id, node);
     }
   }
 

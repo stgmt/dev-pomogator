@@ -111,6 +111,12 @@ export interface TaskNode extends NodeBase {
   refs: string[];
   /** Optional human title. */
   title?: string;
+  /**
+   * Full text of the task block (header + Done-When), so consumers can map the
+   * task to scenarios via `SPECGEN004_NN` / `@featureN` mentions (FR-32). The
+   * single source of truth shared by get_coverage and spec-status.
+   */
+  doneWhen?: string;
 }
 
 export interface UseCaseNode extends NodeBase {

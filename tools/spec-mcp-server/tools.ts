@@ -616,9 +616,7 @@ export function buildToolRegistry(getGraph: () => SpecGraph): ToolDefinition<z.Z
           scenarios.push({ id: s.id, tags: s.tags, result: s.lastResult });
         } else if (node.type === 'Task') {
           const t = node as TaskNode;
-          // Graph TaskNode carries refs but not Done-When text; the explicit
-          // SPECGEN-id mapping happens in spec-status (which reads TASKS.md).
-          tasks.push({ id: t.id, doneWhen: '', refs: t.refs });
+          tasks.push({ id: t.id, doneWhen: t.doneWhen ?? '', refs: t.refs });
         }
       }
       return asJsonResult({ ok: true, ...computeCoverage(tasks, scenarios) });
