@@ -33,6 +33,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parseMarkdown } from '../spec-graph/parsers/md.ts';
 import { parseGherkin } from '../spec-graph/parsers/gherkin.ts';
+import { appendRawEntry } from '../spec-check-log/writer.ts';
 
 interface HookInput {
   tool_name?: string;
@@ -61,15 +62,39 @@ function shouldGuard(filePath: string): boolean {
   return classify(filePath) !== null;
 }
 
-function readProgressVersion(repoRoot: string): number | null {
-  const p = path.join(repoRoot, '.specs', '.progress.json');
-  if (!fs.existsSync(p)) return null;
-  try {
-    const obj = JSON.parse(fs.readFileSync(p, 'utf8')) as { version?: number };
-    return typeof obj.version === 'number' ? obj.version : null;
-  } catch {
-    return null;
+/** `<slug>` from a `.specs/<slug>/...` path, or null. */
+function specSlugOfPath(fp: string): string | null {
+  const m = fp.replace(/\\/g, '/').match(/(?:^|\/)\.specs\/([^/]+)\//);
+  return m ? m[1] : null;
+}
+
+/**
+ * Parse `version` from a `.progress.json`. A PRESENT-but-malformed file throws
+ * (FR-19 / SPECGEN004_49 hard-tier fail-CLOSED — a corrupt config is a startup
+ * integrity failure, not a silent allow). An ABSENT file is handled by the
+ * caller (returns null → no migration gate).
+ */
+function parseProgressVersion(p: string): number | null {
+  const obj = JSON.parse(fs.readFileSync(p, 'utf8')) as { version?: number };
+  return typeof obj.version === 'number' ? obj.version : null;
+}
+
+/**
+ * Resolve the spec version for `fp`: a per-spec `.specs/<slug>/.progress.json`
+ * wins over the global `.specs/.progress.json` (SPECGEN004_51). Returns null
+ * when no progress file exists (no migration gate). Throws on a malformed file.
+ */
+function readProgressVersion(repoRoot: string, fp?: string): number | null {
+  if (fp) {
+    const slug = specSlugOfPath(fp);
+    if (slug) {
+      const perSpec = path.join(repoRoot, '.specs', slug, '.progress.json');
+      if (fs.existsSync(perSpec)) return parseProgressVersion(perSpec);
+    }
   }
+  const global = path.join(repoRoot, '.specs', '.progress.json');
+  if (!fs.existsSync(global)) return null;
+  return parseProgressVersion(global);
 }
 
 function makeAllow(reason: string): HookOutput {
@@ -138,17 +163,28 @@ function malformedFrontmatter(content: string): string | null {
  * reasons. Empty array = allow. Returns `null` if parsing itself blew up
  * with a non-recoverable internal error (caller fails OPEN).
  */
+/** Test seam — inject throwing parsers / observe the fail-OPEN catch (FR-19). */
+export interface DetectOptions {
+  parseMarkdownFn?: typeof parseMarkdown;
+  parseGherkinFn?: typeof parseGherkin;
+  /** Called when a parser throws, before the per-file fail-OPEN (returns null). */
+  onParseError?: (err: unknown) => void;
+}
+
 export function detectHardFindings(
   kind: FileKind,
   filePath: string,
   content: string,
+  opts: DetectOptions = {},
 ): string[] | null {
   if (kind === null) return [];
+  const parseMarkdownFn = opts.parseMarkdownFn ?? parseMarkdown;
+  const parseGherkinFn = opts.parseGherkinFn ?? parseGherkin;
   try {
     if (kind === 'md') {
       const fmError = malformedFrontmatter(content);
       if (fmError) return [`MALFORMED_FRONTMATTER at ${filePath} — ${fmError}`];
-      const slice = parseMarkdown(content, filePath);
+      const slice = parseMarkdownFn(content, filePath);
       const seen = new Map<string, number>();
       const denyReasons: string[] = [];
       for (const anchor of slice.anchors) {
@@ -171,7 +207,7 @@ export function detectHardFindings(
       return denyReasons;
     }
     if (kind === 'feature') {
-      const slice = parseGherkin(content, filePath);
+      const slice = parseGherkinFn(content, filePath);
       // A successfully empty slice on a non-empty body is the parser's
       // "soft fail" signal — surface as MALFORMED_GHERKIN only when the
       // body has any non-whitespace content but no scenarios came back.
@@ -181,7 +217,9 @@ export function detectHardFindings(
       return [];
     }
   } catch (err) {
-    // Parser blew up — this is the per-file fail-OPEN branch per FR-19.
+    // Parser threw — per-file fail-OPEN branch per FR-19. Surface the error to
+    // the caller (the guard logs it to spec-check-log) before allowing.
+    opts.onParseError?.(err);
     return null;
   }
   return [];
@@ -191,13 +229,37 @@ export function detectHardFindings(
  * Pure runner — exported so tests can drive the hook without spawning a
  * subprocess. Reads `input`, returns a HookOutput object.
  */
-export function runGuard(input: HookInput, repoRoot: string): HookOutput {
+export interface RunGuardOptions extends DetectOptions {
+  /** Timestamp override for the spec-check-log entries (tests). */
+  now?: Date;
+}
+
+export function runGuard(input: HookInput, repoRoot: string, opts: RunGuardOptions = {}): HookOutput {
   const fp = input.tool_input?.file_path;
   if (!fp) return makeAllow('no file_path');
 
-  // FR-22: version gate. v3 (or absent) → ALLOW_AFTER_MIGRATION.
-  const version = readProgressVersion(repoRoot);
+  // FR-22 / SPECGEN004_51: per-spec version gate. v3 (or absent) →
+  // ALLOW_AFTER_MIGRATION. A PRESENT-but-malformed .progress.json throws here
+  // and the hook fails CLOSED (exit 1, SPECGEN004_49) in main().
+  const version = readProgressVersion(repoRoot, fp);
   if (version === null || version < 4) {
+    // SPECGEN004_51: record the migration bypass for guarded paths with an
+    // explicit legacy version, so the side-channel log has an audit trail.
+    if (shouldGuard(fp) && typeof version === 'number') {
+      try {
+        appendRawEntry(
+          {
+            kind: 'ALLOW_AFTER_MIGRATION',
+            reason: 'spec_version',
+            target: fp.replace(/\\/g, '/'),
+            observed_version: version,
+          },
+          { repoRoot, now: opts.now },
+        );
+      } catch {
+        /* best-effort audit — never block on a log write */
+      }
+    }
     return makeAllow('ALLOW_AFTER_MIGRATION');
   }
 
@@ -207,7 +269,27 @@ export function runGuard(input: HookInput, repoRoot: string): HookOutput {
   const content = postEditContent(input, repoRoot);
   if (content === null) return makeAllow('cannot derive post-edit content');
 
-  const denyReasons = detectHardFindings(kind, fp, content);
+  const denyReasons = detectHardFindings(kind, fp, content, {
+    parseMarkdownFn: opts.parseMarkdownFn,
+    parseGherkinFn: opts.parseGherkinFn,
+    // SPECGEN004_50: a parser crash fails OPEN, but the crash is logged to the
+    // spec-check-log JSONL so it isn't silently swallowed.
+    onParseError: (err) => {
+      try {
+        appendRawEntry(
+          {
+            hook_id: 'spec-conformance-guard',
+            file_path: fp.replace(/\\/g, '/'),
+            error_message: err instanceof Error ? err.message : String(err),
+            error_stack: err instanceof Error ? err.stack ?? '' : '',
+          },
+          { repoRoot, now: opts.now },
+        );
+      } catch {
+        /* best-effort */
+      }
+    },
+  });
   if (denyReasons === null) return makeAllow('parser fail-OPEN per FR-19');
   if (denyReasons.length === 0) return makeAllow('no hard findings');
   return makeDeny(denyReasons.join('\n'));

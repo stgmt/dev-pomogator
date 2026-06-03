@@ -142,3 +142,29 @@ export function appendFinding(finding: Finding, opts: AppendOptions): string {
 export function appendFindings(findings: Finding[], opts: AppendOptions): string[] {
   return findings.map((f) => appendFinding(f, opts));
 }
+
+/**
+ * Append an arbitrary JSON entry to the active shard — same path resolution +
+ * 10 MB rotation as findings. Used by the spec-conformance-guard for
+ * NON-finding events: per-file parse crashes (FR-19, SPECGEN004_50) and
+ * ALLOW_AFTER_MIGRATION decisions (FR-22, SPECGEN004_51). A `timestamp` is
+ * stamped automatically if the caller didn't supply one. Returns the shard path.
+ */
+export function appendRawEntry(
+  entry: Record<string, unknown>,
+  opts: Pick<AppendOptions, 'repoRoot' | 'now' | 'rotationBytes'>,
+): string {
+  const now = opts.now ?? new Date();
+  const dateStamp = utcDateStamp(now);
+  const rotationAt = opts.rotationBytes ?? ROTATION_BYTES;
+  const dir = path.join(opts.repoRoot, DIR_REL);
+  fs.mkdirSync(dir, { recursive: true });
+
+  let shard = activeShardPath(opts.repoRoot, dateStamp);
+  if (fs.existsSync(shard) && fs.statSync(shard).size >= rotationAt) {
+    shard = nextShard(shard, dateStamp);
+  }
+  const withTs = { timestamp: entry.timestamp ?? now.toISOString(), ...entry };
+  fs.appendFileSync(shard, `${JSON.stringify(withTs)}\n`);
+  return shard;
+}

@@ -19,6 +19,7 @@ import os from 'node:os';
 import { randomUUID } from 'node:crypto';
 import {
   appendFinding,
+  appendRawEntry,
   composeEntry,
   activeShardPath,
   ROTATION_BYTES,
@@ -147,5 +148,43 @@ describe('appendFinding — FR-15 rotation', () => {
 
   it('ROTATION_BYTES default is 10 MB per FR-15', () => {
     expect(ROTATION_BYTES).toBe(10 * 1024 * 1024);
+  });
+});
+
+describe('appendRawEntry — arbitrary non-finding entries (FR-19 / FR-22)', () => {
+  let root: string;
+  beforeEach(() => {
+    root = path.join(os.tmpdir(), `raw-${randomUUID()}`);
+    fs.mkdirSync(root, { recursive: true });
+  });
+  afterEach(() => fs.rmSync(root, { recursive: true, force: true }));
+
+  const lastEntry = (): Record<string, unknown> => {
+    const dir = path.join(root, '.dev-pomogator', '.spec-check-log');
+    const f = fs.readdirSync(dir).find((n) => n.endsWith('.jsonl'))!;
+    const lines = fs.readFileSync(path.join(dir, f), 'utf8').trim().split('\n');
+    return JSON.parse(lines[lines.length - 1]);
+  };
+
+  it('writes an arbitrary entry verbatim and auto-stamps a timestamp', () => {
+    appendRawEntry({ kind: 'ALLOW_AFTER_MIGRATION', reason: 'spec_version', observed_version: 2 }, {
+      repoRoot: root,
+      now: new Date('2026-06-03T00:00:00Z'),
+    });
+    const e = lastEntry();
+    expect(e.kind).toBe('ALLOW_AFTER_MIGRATION');
+    expect(e.observed_version).toBe(2);
+    expect(e.timestamp).toBe('2026-06-03T00:00:00.000Z');
+  });
+
+  it('shares rotation with findings (rolls over past the threshold)', () => {
+    const shard = appendRawEntry({ a: 1 }, { repoRoot: root, now: new Date('2026-06-03T00:00:00Z') });
+    fs.appendFileSync(shard, 'x'.repeat(64)); // push past a tiny threshold
+    const shard2 = appendRawEntry({ b: 2 }, {
+      repoRoot: root,
+      now: new Date('2026-06-03T00:00:00Z'),
+      rotationBytes: 32,
+    });
+    expect(path.basename(shard2)).toBe('2026-06-03-1.jsonl');
   });
 });

@@ -127,3 +127,76 @@ describe('detectHardFindings — pure unit', () => {
     expect(detectHardFindings(null, 'foo.ts', 'export const x = 1;')).toEqual([]);
   });
 });
+
+describe('runGuard — failure modes (FR-19 / FR-22, SPECGEN004_49..51)', () => {
+  let root: string;
+  beforeEach(() => {
+    root = path.join(os.tmpdir(), `guard-fail-${randomUUID()}`);
+    fs.mkdirSync(path.join(root, '.specs'), { recursive: true });
+  });
+  afterEach(() => fs.rmSync(root, { recursive: true, force: true }));
+
+  const readLog = (): string => {
+    const dir = path.join(root, '.dev-pomogator', '.spec-check-log');
+    if (!fs.existsSync(dir)) return '';
+    const f = fs.readdirSync(dir).find((n) => n.endsWith('.jsonl'));
+    return f ? fs.readFileSync(path.join(dir, f), 'utf8') : '';
+  };
+
+  it('SPECGEN004_49: a malformed .progress.json throws (fail-CLOSED → exit 1)', () => {
+    fs.writeFileSync(path.join(root, '.specs', '.progress.json'), '{ not valid json :: ');
+    expect(() =>
+      runGuard({ tool_name: 'Write', tool_input: { file_path: '.specs/auth/FR.md', content: '## FR-1\n' } }, root),
+    ).toThrow();
+  });
+
+  it('SPECGEN004_50: a parser exception fails OPEN and is logged to JSONL', () => {
+    writeProgress(root, 4);
+    const out = runGuard(
+      { tool_name: 'Write', tool_input: { file_path: '.specs/auth/x.feature', content: 'Feature: X\n  Scenario: Y\n' } },
+      root,
+      {
+        now: new Date('2026-06-03T00:00:00Z'),
+        parseGherkinFn: () => {
+          throw new Error('Gherkin parser exception: boom');
+        },
+      },
+    );
+    expect(out.hookSpecificOutput?.permissionDecision).toBe('allow');
+    const entry = JSON.parse(readLog().trim().split('\n').pop()!) as Record<string, unknown>;
+    expect(entry.hook_id).toBe('spec-conformance-guard');
+    for (const f of ['timestamp', 'file_path', 'error_message', 'error_stack']) expect(f in entry).toBe(true);
+  });
+
+  it('SPECGEN004_51: a per-spec legacy version wins over global + logs ALLOW_AFTER_MIGRATION', () => {
+    // Global is current (v4); the per-spec override is legacy (v2).
+    writeProgress(root, 4);
+    const specDir = path.join(root, '.specs', 'legacy-feature');
+    fs.mkdirSync(specDir, { recursive: true });
+    fs.writeFileSync(path.join(specDir, '.progress.json'), JSON.stringify({ version: 2 }));
+
+    const out = runGuard(
+      {
+        tool_name: 'Write',
+        tool_input: { file_path: '.specs/legacy-feature/FR.md', content: '## FR-1: A\n## FR-1: A dup\n' },
+      },
+      root,
+      { now: new Date('2026-06-03T00:00:00Z') },
+    );
+    // Would be DUPLICATE_DEFINITION under v4, but the per-spec v2 gate allows it.
+    expect(out.hookSpecificOutput?.permissionDecision).toBe('allow');
+    const entry = JSON.parse(readLog().trim().split('\n').pop()!) as Record<string, unknown>;
+    expect(entry.kind).toBe('ALLOW_AFTER_MIGRATION');
+    expect(entry.reason).toBe('spec_version');
+    expect(entry.observed_version).toBe(2);
+  });
+
+  it('per-spec gate does NOT fire for a current spec (global v4, no per-spec file)', () => {
+    writeProgress(root, 4);
+    const out = runGuard(
+      { tool_name: 'Write', tool_input: { file_path: '.specs/auth/FR.md', content: '## FR-1: A\n## FR-1: A dup\n' } },
+      root,
+    );
+    expect(out.hookSpecificOutput?.permissionDecision).toBe('deny'); // v4 → guard active
+  });
+});
