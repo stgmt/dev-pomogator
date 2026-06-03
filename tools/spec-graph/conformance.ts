@@ -54,6 +54,32 @@ export interface Finding {
 
 const SPEC_TAG_RE = /^@((?:FR|NFR|AC)[A-Za-z0-9._-]+)$/;
 
+/** Classic Levenshtein edit distance (iterative, O(m·n) time, O(n) space). */
+function levenshtein(a: string, b: string): number {
+  const m = a.length;
+  const n = b.length;
+  if (!m) return n;
+  if (!n) return m;
+  let prev = Array.from({ length: n + 1 }, (_, i) => i);
+  for (let i = 1; i <= m; i++) {
+    const cur = [i];
+    for (let j = 1; j <= n; j++) {
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+    prev = cur;
+  }
+  return prev[n];
+}
+
+/** Top-N existing ids closest to `target` by edit distance (ties broken by id). */
+function topSimilarIds(target: string, ids: string[], n: number): string[] {
+  return [...ids]
+    .map((id) => ({ id, d: levenshtein(target, id) }))
+    .sort((a, b) => a.d - b.d || a.id.localeCompare(b.id))
+    .slice(0, n)
+    .map((x) => x.id);
+}
+
 /**
  * Run all Phase-1 conformance rules on a built graph.
  *
@@ -61,8 +87,18 @@ const SPEC_TAG_RE = /^@((?:FR|NFR|AC)[A-Za-z0-9._-]+)$/;
  * issues, `info` for missing-coverage informational notes, `error` for
  * structural duplicates (which point at a build-time discard).
  */
-export function checkConformance(graph: SpecGraph): Finding[] {
+export function checkConformance(
+  graph: SpecGraph,
+  opts: { orphanPolicy?: { scenario_tag_orphan?: 'warn' | 'block' } } = {},
+): Finding[] {
   const findings: Finding[] = [];
+  // FR-13: orphan severity is config-driven — default `warn`, escalated to
+  // `error` when `.spec-config.json::orphan_policy.scenario_tag_orphan = "block"`.
+  const tagOrphanSeverity: Severity =
+    opts.orphanPolicy?.scenario_tag_orphan === 'block' ? 'error' : 'warning';
+  const specIds = [...graph.nodes.values()]
+    .filter((n) => n.type === 'FR' || n.type === 'NFR' || n.type === 'AC')
+    .map((n) => n.id);
 
   // Pre-compute edge indices for O(1) lookup of the «does FR-N have an AC
   // covering it / a scenario testing it» question.
@@ -163,15 +199,22 @@ export function checkConformance(graph: SpecGraph): Finding[] {
       hasSpecTag = true;
       const referenced = m[1];
       if (!graph.nodes.has(referenced)) {
+        const similar = topSimilarIds(referenced, specIds, 3);
         findings.push({
           code: 'SCENARIO_TAG_ORPHAN',
-          severity: 'warning',
+          severity: tagOrphanSeverity,
           location: { file: scen.file, line: scen.line },
           message: `Scenario ${scen.id} carries tag @${referenced} but no FR/NFR/AC with that id exists.`,
           nodeId: scen.id,
           relatedId: referenced,
           suggestions: [
-            { action: 'rename_tag', reason: `Did you mean a different spec id?`, confidence: 'medium' },
+            {
+              action: 'rename_tag',
+              reason: similar.length
+                ? `Did you mean ${similar.map((s) => `@${s}`).join(' / ')}? (top-3 closest existing ids)`
+                : `No similar spec id exists — verify the tag.`,
+              confidence: 'medium',
+            },
             { action: 'remove_tag', reason: `Strip the stale tag from the Scenario.`, confidence: 'medium' },
           ],
         });
