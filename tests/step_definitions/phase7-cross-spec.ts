@@ -12,6 +12,7 @@ import { Given, When, Then, After } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import { spawnSync, type SpawnSyncReturns } from 'node:child_process';
 import {
   reconcileLight,
   type ReconcileResult,
@@ -27,7 +28,14 @@ interface CrossSpecWorld extends V4World {
   sarifWritten?: string;
   dryRun?: boolean;
   overrideReason?: string;
+  resolveSlug?: string;
+  resolveResult?: SpawnSyncReturns<string>;
 }
+
+const RESOLVE_CLI = path.join(
+  process.cwd(),
+  '.claude/skills/cross-spec-resolve/scripts/resolve-cli.ts',
+);
 
 After(function (this: CrossSpecWorld) {
   this.reconcileReports = undefined;
@@ -312,17 +320,34 @@ Then(
   },
 );
 
-// ─── SPECGEN004_44..47 — cross-spec-resolve (interactive — deferred to W6) ───
+// ─── SPECGEN004_44..46 — cross-spec-resolve interactive loop (deferred to W6) ─
 // NOTE (T-Cov.1): the broad catch-all `Given(/^.*\bresolve.*$/)` was removed —
 // it matched ANY step containing "resolve" (incl. MD-parser _05/_06
-// "resolves to the heading"), producing 4 AMBIGUOUS scenarios. The deferred
-// _44..47 Given steps stay UNDEFINED (honest red) until W6 wires the resolve
-// loop — they must NOT be re-stubbed with a catch-all.
+// "resolves to the heading"), producing 4 AMBIGUOUS scenarios. _44..46 are the
+// AskUserQuestion-driven loop (agent-flow); their Given steps stay UNDEFINED
+// (honest red) until W6 — they must NOT be re-stubbed with a catch-all.
+//
+// SPECGEN004_47 is the ONE mechanical case (missing report → exit + hint): it
+// is wired to the REAL resolve CLI below (not a stub), backed by planResolution.
 
-When(/^the user runs `\/cross-spec-resolve`$/, function () {
-  return 'pending';
+Given(/consistency-report\.yaml. does not exist/, function (this: CrossSpecWorld) {
+  this.resolveSlug = 'auth';
+  // A spec dir with NO consistency-report.yaml.
+  fs.mkdirSync(path.join(this.tempDir, '.specs', this.resolveSlug), { recursive: true });
 });
 
-Then(/^stdout includes literally «Run \/cross-spec-reconcile first»$/, function () {
-  return 'pending';
+When(/^the user runs `\/cross-spec-resolve`$/, function (this: CrossSpecWorld) {
+  // Drive the REAL resolve CLI in a subprocess so the exit code is genuine.
+  this.resolveResult = spawnSync('node', ['--import', 'tsx', RESOLVE_CLI, this.resolveSlug ?? 'auth'], {
+    env: { ...process.env, DEV_POMOGATOR_REPO_ROOT: this.tempDir },
+    encoding: 'utf8',
+  });
+});
+
+Then(/^the skill exits with non-zero status$/, function (this: CrossSpecWorld) {
+  assert.notEqual(this.resolveResult?.status, 0, `expected non-zero exit; got ${this.resolveResult?.status}`);
+});
+
+Then(/stdout includes literally.*«Run \/cross-spec-reconcile first»/, function (this: CrossSpecWorld) {
+  assert.match(this.resolveResult?.stdout ?? '', /Run \/cross-spec-reconcile first/);
 });
