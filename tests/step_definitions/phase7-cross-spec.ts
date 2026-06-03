@@ -22,7 +22,9 @@ import { writeSarif } from '../../.claude/skills/cross-spec-reconcile/scripts/sa
 import { appendOverride, readOverrides } from '../../.claude/skills/cross-spec-reconcile/scripts/overrides-log.ts';
 import {
   planResolution,
+  buildExplanation,
   type ExplanationBlock,
+  type ReportFinding,
 } from '../../.claude/skills/cross-spec-resolve/scripts/walker.ts';
 import type { V4World } from '../hooks/before-after.ts';
 
@@ -36,6 +38,7 @@ interface CrossSpecWorld extends V4World {
   resolveResult?: SpawnSyncReturns<string>;
   resolveExplanation?: ExplanationBlock;
   reportBytesBefore?: string;
+  resolveFinding?: ReportFinding;
 }
 
 const RESOLVE_CLI = path.join(
@@ -416,5 +419,97 @@ Then(
     // confirm, which is outside this in-process check.
     const reportPath = path.join(this.tempDir, '.specs', this.resolveSlug!, 'consistency-report.yaml');
     assert.equal(fs.readFileSync(reportPath, 'utf8'), this.reportBytesBefore);
+  },
+);
+
+// ─── SPECGEN004_45 — foreign-spec edit fires the extra confirm + banner ─────
+// In-memory finding (readReport is a flat parser — untouched). buildExplanation
+// is the REAL data layer the live skill feeds to the prompt. Foreign path lives
+// in spec_a so the existing requiresForeignSpecConfirm rule is unchanged.
+
+Given(
+  /^a finding's target file path begins with `\.specs\/spec-other\/` while current resolve slug is `spec-current`$/,
+  function (this: CrossSpecWorld) {
+    this.resolveSlug = 'spec-current';
+    this.resolveFinding = {
+      code: 'impl-drift/missing-file',
+      class: 'impl-drift/missing-file',
+      severity: 'WARNING',
+      spec_a: '.specs/spec-other/README.md',
+      suggested_fix: 'create the referenced file or drop the reference',
+    };
+  },
+);
+
+When(/^the resolve skill reaches the per-finding handler$/, function (this: CrossSpecWorld) {
+  this.resolveExplanation = buildExplanation(this.resolveFinding!, this.resolveSlug!);
+});
+
+Then(
+  /^the explanation block includes a literal banner «⚠️ This edits foreign spec: \.specs\/spec-other\/README\.md»$/,
+  function (this: CrossSpecWorld) {
+    assert.equal(
+      this.resolveExplanation?.foreignSpecBanner,
+      '⚠️ This edits foreign spec: .specs/spec-other/README.md',
+    );
+  },
+);
+
+Then(
+  /^the skill requires a second AskUserQuestion confirm distinct from the per-finding confirm$/,
+  function (this: CrossSpecWorld) {
+    assert.equal(this.resolveExplanation?.requiresForeignSpecConfirm, true);
+  },
+);
+
+// ─── SPECGEN004_46 — Path options carry pros/cons/impacted_files prose ──────
+
+Given(
+  /^a finding with `code: "impl-drift\/architectural-decision-vs-reality"` and populated `path_alternatives\[\]`$/,
+  function (this: CrossSpecWorld) {
+    this.resolveSlug = 'auth';
+    this.resolveFinding = {
+      code: 'impl-drift/architectural-decision-vs-reality',
+      class: 'architectural-decision-vs-reality',
+      severity: 'CRITICAL',
+      suggested_fix: 'pick a resolution path',
+      path_alternatives: [
+        {
+          label: 'Path A: keep evaluator in agents/eval',
+          recommended: true,
+          pros: ['no new package boundary'],
+          cons: ['tighter coupling to the agent runtime'],
+          impacted_files: ['agents/eval/index.ts'],
+        },
+        {
+          label: 'Path B: extract a standalone eval service',
+          pros: ['clean module boundary'],
+          cons: ['more deployment surface to operate'],
+          impacted_files: ['services/eval/main.ts', 'infra/eval.tf'],
+        },
+      ],
+    };
+  },
+);
+
+When(/^resolve processes the finding$/, function (this: CrossSpecWorld) {
+  this.resolveExplanation = buildExplanation(this.resolveFinding!, this.resolveSlug!);
+});
+
+Then(/^AskUserQuestion is invoked with at least two Path options$/, function (this: CrossSpecWorld) {
+  const paths = (this.resolveExplanation?.options ?? []).filter((o) => /\bPath\b/.test(o.label));
+  assert.ok(paths.length >= 2, `expected ≥2 Path options, got ${paths.length}`);
+});
+
+Then(
+  /^each option's `description` field contains pros, cons, and impacted_files prose$/,
+  function (this: CrossSpecWorld) {
+    const paths = (this.resolveExplanation?.options ?? []).filter((o) => /\bPath\b/.test(o.label));
+    for (const o of paths) {
+      assert.ok(o.description, `Path option "${o.label}" must carry a description`);
+      assert.match(o.description!, /Pros:/);
+      assert.match(o.description!, /Cons:/);
+      assert.match(o.description!, /Impacted files:/);
+    }
   },
 );

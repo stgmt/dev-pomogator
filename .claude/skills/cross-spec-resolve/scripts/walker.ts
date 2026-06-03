@@ -15,6 +15,16 @@ export const SEVERITY_RANK: Record<Severity, number> = {
   INFO: 2,
 };
 
+/** Architectural fork alternative (SCHEMA `PathAlt`) for class
+ *  `architectural-decision-vs-reality` findings (SPECGEN004_46 / FR-18). */
+export interface PathAlt {
+  label: string;
+  recommended?: boolean;
+  pros?: string[];
+  cons?: string[];
+  impacted_files?: string[];
+}
+
 export interface ReportFinding {
   code: string;
   class: string;
@@ -24,6 +34,8 @@ export interface ReportFinding {
   spec_a?: string;
   spec_b?: string;
   suggested_fix?: string;
+  /** Path A/B/C alternatives — only on architectural-decision-vs-reality. */
+  path_alternatives?: PathAlt[];
 }
 
 export interface ExplanationBlock {
@@ -35,10 +47,14 @@ export interface ExplanationBlock {
   plain: string;
   /** WHY this matters if shipped. */
   why: string;
-  /** Options for the user (default-marked). */
-  options: Array<{ label: string; isDefault?: boolean }>;
+  /** Options for the user (default-marked). `description` carries the
+   *  pros/cons/impacted_files prose for architectural Path options. */
+  options: Array<{ label: string; isDefault?: boolean; description?: string }>;
   /** Whether this finding requires a foreign-spec confirm step. */
   requiresForeignSpecConfirm: boolean;
+  /** Literal banner shown when a target path edits a DIFFERENT spec
+   *  (SPECGEN004_45). Absent when no foreign-spec path is involved. */
+  foreignSpecBanner?: string;
 }
 
 /** Minimal YAML reader for the canonical consistency-report shape. */
@@ -120,6 +136,11 @@ export function buildExplanation(finding: ReportFinding, currentSlug: string): E
     finding.class === 'architectural-decision-vs-reality' ||
     !!(finding.spec_a && !finding.spec_a.includes(`.specs/${currentSlug}`)) ||
     !!(finding.spec_b && !finding.spec_b.includes(`.specs/${currentSlug}`));
+  // SPECGEN004_45: a target path under a DIFFERENT `.specs/<slug>/` gets a
+  // literal banner so the live skill can fire the extra foreign-spec confirm.
+  const foreignPath = [finding.referenced_in, finding.spec_a, finding.spec_b].find(
+    (p): p is string => !!p && p.startsWith('.specs/') && !p.startsWith(`.specs/${currentSlug}/`),
+  );
   return {
     header: `${finding.code} [${finding.severity} / ${finding.class}]`,
     files,
@@ -127,6 +148,7 @@ export function buildExplanation(finding: ReportFinding, currentSlug: string): E
     why,
     options,
     requiresForeignSpecConfirm,
+    ...(foreignPath ? { foreignSpecBanner: `⚠️ This edits foreign spec: ${foreignPath}` } : {}),
   };
 }
 
@@ -146,8 +168,25 @@ function whyText(severity: Severity, klass: string): string {
   return 'INFO finding — no action required, surfaced so you can decide to address it now.';
 }
 
+/** Pros/Cons/Impacted-files prose for a PathAlt option description (SPECGEN004_46). */
+function describeAlt(alt: PathAlt): string {
+  const join = (xs?: string[]): string => (xs && xs.length ? xs.join('; ') : '—');
+  return `Pros: ${join(alt.pros)}. Cons: ${join(alt.cons)}. Impacted files: ${join(alt.impacted_files)}.`;
+}
+
 function optionsFor(finding: ReportFinding): ExplanationBlock['options'] {
   if (finding.class === 'architectural-decision-vs-reality') {
+    // SPECGEN004_46: when the finding carries concrete path_alternatives,
+    // surface each as an option whose description holds pros/cons/impacted_files.
+    if (finding.path_alternatives && finding.path_alternatives.length > 0) {
+      const opts: ExplanationBlock['options'] = finding.path_alternatives.map((alt) => ({
+        label: alt.label,
+        isDefault: alt.recommended === true,
+        description: describeAlt(alt),
+      }));
+      opts.push({ label: 'Acknowledge & override (CRITICAL only)' });
+      return opts;
+    }
     return [
       { label: 'Path A — update spec (decision was wrong)', isDefault: true },
       { label: 'Path B — update code (reality was wrong)' },
