@@ -296,6 +296,11 @@
             "type": "command",
             "command": "node -e \"require(require('path').join(process.env.CLAUDE_PLUGIN_ROOT || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/bg-task-guard/mark-bg-task.ts\"",
             "timeout": 60
+          },
+          {
+            "type": "command",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PLUGIN_ROOT || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/bash-post-test/ingest.ts\"",
+            "timeout": 30
           }
         ]
       },
