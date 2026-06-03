@@ -222,6 +222,17 @@
 - Single combined skill (rejected) — same bloating concern; loss of modularity (research-workflow can be invoked standalone for simple lookups).
 - Manual pattern per major feature (status quo, rejected) — proven 30+ turn cost per feature, doesn't scale; the pattern IS the deliverable.
 
+### Decision: Marksman LSP bridge — hand-rolled JSON-RPC framing, handshake-first, captured-real
+
+**Rationale:** FR-7 declares Marksman the primary md-navigation surface but it was downloaded-and-never-run (`resolveLspMode` had zero runtime consumers). The bridge (`tools/marksman-lsp/bridge.ts`) spawns `marksman server` and speaks LSP over stdio. Framing is **hand-rolled** (`Content-Length: N\r\n\r\n<utf8-json>`, byte-level incremental reader) rather than pulling `vscode-jsonrpc`: keeps the repo's zero-runtime-dep posture (consistent with the in-memory-storage decision above), and the reader was **verified against the real Marksman 2026-02-08 binary** during a capture spike before any production code — its full `initialize` capabilities response is preserved as the test fixture `tools/marksman-lsp/__tests__/fixtures/initialize-result.json`. P1 ships the **handshake only** (`initialize`/`initialized`/`shutdown`/`exit` + capabilities); `definition`/`references` (FR-7b) are deferred to P2/P3 and will be built from a real **Linux** capture in Docker, because on Windows Marksman rejects the workspace folder (`<Folder> Workspace folder is bogus`, lowercase-drive canonicalization) so refs never resolve on host — the e2e target is Linux/Docker where they do.
+
+**Trade-off:** Hand-rolled framing must handle the messy cases the library would handle for free — split frames across `data` events, multiple frames per chunk, and UTF-8 byte-vs-char length. Covered by a unit mock that deliberately emits a split + concatenated + multibyte stream; cost is ~40 lines of reader + that test discipline. Re-capturing on a Marksman version bump is a manual step.
+
+**Alternatives considered:**
+- `vscode-jsonrpc` library (rejected for now) — correct framing for free, but adds a runtime dependency to a repo that deliberately ships none, and the messy-chunk cases are cheap to cover + already proven against the real binary. Reconsider if we grow beyond handshake+definition+references.
+- Spec-derived mock without real capture (rejected) — would encode assumptions about Marksman's wire behaviour and go green in P1 while the real binary surprises us in P3 (the `verify-against-real-artifact` failure class); capture-first eliminates it.
+- Full LSP client (hover/completion/diagnostics/documentSymbol) (rejected/out-of-scope) — only the methods actually surfaced via MCP (`initialize`+`definition`+`references`) are built; the rest is a separate task.
+
 ## BDD Test Infrastructure (ОБЯЗАТЕЛЬНО)
 
 **Classification:** TEST_DATA_ACTIVE

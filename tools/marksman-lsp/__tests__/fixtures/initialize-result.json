@@ -1,0 +1,76 @@
+{
+  "capabilities": {
+    "textDocumentSync": {
+      "openClose": true,
+      "change": 1
+    },
+    "hoverProvider": true,
+    "completionProvider": {
+      "triggerCharacters": [
+        "[",
+        "#",
+        "("
+      ]
+    },
+    "definitionProvider": true,
+    "referencesProvider": true,
+    "documentSymbolProvider": true,
+    "workspaceSymbolProvider": true,
+    "codeActionProvider": {
+      "resolveProvider": false
+    },
+    "codeLensProvider": {},
+    "renameProvider": true,
+    "executeCommandProvider": {
+      "commands": []
+    },
+    "semanticTokensProvider": {
+      "legend": {
+        "tokenTypes": [
+          "class",
+          "class",
+          "enumMember"
+        ],
+        "tokenModifiers": []
+      },
+      "range": true,
+      "full": {
+        "delta": false
+      }
+    },
+    "workspace": {
+      "workspaceFolders": {
+        "supported": true,
+        "changeNotifications": true
+      },
+      "fileOperations": {
+        "didCreate": {
+          "filters": [
+            {
+              "pattern": {
+                "glob": "**/*.{}",
+                "matches": "file",
+                "options": {
+                  "ignoreCase": true
+                }
+              }
+            }
+          ]
+        },
+        "didDelete": {
+          "filters": [
+            {
+              "pattern": {
+                "glob": "**/*.{}",
+                "matches": "file",
+                "options": {
+                  "ignoreCase": true
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}
