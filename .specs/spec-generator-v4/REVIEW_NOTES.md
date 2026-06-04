@@ -313,3 +313,24 @@ This round closed 10 silent gaps and risks discovered when honestly diffing v3 (
 - `validate-spec.ts -Path .specs/spec-generator-v4` → expected exit 0 (10 new FRs + 13 new AC + 6 new BDD scenarios all structurally valid).
 - `audit-spec.ts -Path .specs/spec-generator-v4` → expected 0 ERRORS / 0 OMISSIONS; new @feature19/@feature22/@feature25/@feature26/@feature27 tags each have paired FR + AC + Scenario.
 - `grep -l "specs-management.md" .claude/skills/` → expected empty (3 SKILL.md descriptions cleaned).
+
+---
+
+# Supplement review: FR-35 honesty-hardening + Phase 12 (2026 session)
+
+**Scope:** new content only — FR-35a/b/c, AC-35.1-5, NFR-Reliability-10, @feature35 (SPECGEN004_85-89), Phase 12 (WS-A..F), CHANGELOG v4.2.
+**Mechanical layer:** anchor-integrity **0 broken** · validate-spec **valid / 0 errors** · audit-spec advisory-only.
+
+**Verdict: READY** — P0=0, P1=0, P2=1.
+
+## P2 finding
+- **6-1 @featureN granularity** (TASKS Phase 12): `@feature35` tags 6 WS tasks but 5 BDD scenarios. The 5 scenarios cover WS-A's behavioral changes (FR-35a/b/c); WS-B..F are process/verification workstreams (no new behavior → no dedicated scenarios). Validator treats `@feature35` as COVERED (present in both files). Kept under one epic tag deliberately.
+
+## Verified-claim audit (no external-API claims; evidence is this-session tool runs)
+- "fake-positive GREEN → DONE" — `computeCoverage(done+PASSED)` → `DONE`.
+- "strong-tests/spec-status advisory, absent from feature-map + hooks" — grep `scripts/feature-map.ts` + `.claude-plugin/hooks.json` (0).
+- "checkConformance(done, zero scenario) → []" — direct run.
+- The SOLUTION (test-quality stage, `TASK_TEST_QUALITY`, enforcing hook) is phrased `SHALL` (Phase-12 TODO), not claimed existing.
+
+## Name-collision audit (clean)
+`TASK_TEST_QUALITY`, `[skip-test-quality:]` (fits escape family), `test-quality` stage (absent today = the gap) — collision-free.

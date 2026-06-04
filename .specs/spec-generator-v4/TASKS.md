@@ -981,6 +981,52 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] `spec-generator-v4.feature` @feature34 SPECGEN004_80..84 — 1:1 with AC-34.1..5 (detect same+cross / golden+single-source / reminder+escape / deterministic-idempotent / claude-fallback)
   - [x] `feature34_anchor_integrity.ts` binds to REAL tools (checkLinks/marksmanSlug/fixSpecDir/dispatchClaudeFallback/buildReminder/escapeReason; only spawn injected). Cucumber @feature34 5/5 GREEN, 35 steps; full suite 83 passed/1 pre-existing pending, 0 ambiguous
 
+## Phase 12 — Honesty hardening + v4 completion (FR-35 + 6 workstreams)
+
+> Derived from `audit-reports/v4-global-plan.md`. Every Done-When binds to a live
+> tool run (claim-evidence-gate discipline), not a checkbox. WS-A first — the v4
+> premise ("no fake DONE") is hollow until the test-quality hole is closed.
+
+- [ ] WS-A: test-quality gate — block DONE on weak / fake-positive -- @feature35 — id: ws-a-honesty-gate — Status: TODO | Est: 480m
+  _Requirements: [FR-35a](FR.md#fr-35), [FR-35b](FR.md#fr-35), [FR-35c](FR.md#fr-35)_
+  **Done When:**
+  - [ ] `coverage.ts` honesty derivation consumes a test-quality verdict: WEAK/FAKE-POSITIVE-RISK caps `verified_status` + emits `TASK_TEST_QUALITY` (SPECGEN004_85); STRONG stays DONE (SPECGEN004_86)
+  - [ ] `test-quality` stage added to `scripts/feature-map.ts` between coverage and honesty-gate (strong-tests + spec-status); `checkFeatureMapDrift` fails without it (SPECGEN004_87)
+  - [ ] pre-DONE Stop-gate enforces it; `[skip-test-quality: <reason>]` escape logged to `.claude/logs/` (SPECGEN004_88)
+  - [ ] `checkConformance` emits a finding for DONE-with-zero-scenario, no longer `[]` (SPECGEN004_89)
+  - [ ] ADVERSARIAL PROOF (live): a planted fake-positive GREEN test is REFUSED DONE
+
+- [ ] WS-B: status reconciliation — 63 TODO vs reality -- @feature35 — id: ws-b-status-reconcile — Status: TODO | Est: 240m
+  _Requirements: [FR-32](FR.md#fr-32)_
+  **Done When:**
+  - [ ] `spec-status` (independent sub-agent) + `npm run check:status-drift` run over all TODO tasks
+  - [ ] `(Green)` phase headers + checkboxes reconciled to reality; true done/todo count reported
+
+- [ ] WS-C: orchestrator pipeline e2e — agent really uses MCP + skills -- @feature35 — id: ws-c-orchestrator-e2e — Status: TODO | Est: 360m
+  _Requirements: [FR-33](FR.md#fr-33), [FR-32](FR.md#fr-32)_
+  **Done When:**
+  - [ ] real throwaway spec created via `create-spec`; orchestrator run end-to-end
+  - [ ] call-trace proves the agent INVOKES MCP tools + worker skills (not imitates)
+  - [ ] Phase 10 / Phase 11 TODO closed against the run
+
+- [ ] WS-D: observability consolidation + observability-review skill -- @feature35 — id: ws-d-observability — Status: TODO | Est: 300m
+  _Requirements: [FR-32](FR.md#fr-32)_
+  **Done When:**
+  - [ ] one "where did the agent stumble" view over `.claude/logs/*.jsonl` + `watcher.log` + `.last-test-run.ndjson` + conformance findings + SELF_IMPROVE
+  - [ ] new skill `.claude/skills/observability-review/SKILL.md` created + demo run
+
+- [ ] WS-E: clean-install e2e via verify-plugin-install -- @feature35 — id: ws-e-install-e2e — Status: TODO | Est: 180m
+  _Requirements: [FR-4](FR.md#fr-4)_
+  **Done When:**
+  - [ ] real `claude plugin install` in clean Docker; bundled MCP boots + answers `get_trace` for a user
+  - [ ] `tools/spec-mcp-server/__tests__/bundle.test.ts` green (bundle freshness guard)
+
+- [ ] WS-F: remaining feature work (Phase 7 cross-spec 24 TODO first) -- @feature35 — id: ws-f-remaining — Status: TODO | Est: 600m
+  _Requirements: [FR-33](FR.md#fr-33)_
+  **Done When:**
+  - [ ] WS-B triage applied FIRST (drift vs real); genuinely-pending Phase 7 tasks closed; drift tasks checked off
+  - [ ] no `(Green)` header left over a phase with real TODO
+
 ## Refactor & Polish (final)
 
 - [ ] Refactor + dedup across phases — id: final-refactor — Status: TODO | Est: 480m

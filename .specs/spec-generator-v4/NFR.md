@@ -136,6 +136,11 @@ PreToolUse hooks SHALL follow the two-tier failure policy defined in FR-19. SOFT
 **Anchor auto-fix is non-blocking, idempotent, and never guesses (FR-34c)**
 The auto-fix `claude -p`/background branch MUST NOT block the triggering Write/Edit — it is dispatched detached and reports asynchronously. The deterministic branch MUST be idempotent (`fix(fix(x))==fix(x)`) and MUST only rewrite an anchor when the target heading is unambiguously identified by id; ambiguous links are left flagged, never guess-rewritten (a wrong auto-rewrite is worse than a flagged broken link). The Stop-gate escape hatch `[skip-anchor-fix:]` MUST be append-logged to `.claude/logs/` for audit (mirrors the scope-gate escape-hatch discipline). PostToolUse anchor-check exceptions follow the SOFT-tier policy (log + exit 0 — never block the edit on a checker bug).
 
+### NFR-Reliability-10
+
+**Test-quality gate must not false-block a strong test (FR-35)**
+The test-quality gate MUST have zero false positives on a `STRONG` verdict — a wrongful block erodes trust and trains agents to game the `[skip-test-quality:]` escape (the same failure mode the gate exists to prevent). The test-body audit MUST run within the existing `get_coverage` latency budget (no separate >2s per-task stall); when the auditor is unavailable the gate MUST degrade to the current PASS/FAIL behaviour + a visible `TASK_TEST_QUALITY=unknown` note (fail-open, never silently pass a possibly-fake test as DONE).
+
 ## Usability
 
 ### NFR-Usability-1

@@ -664,3 +664,37 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When the headless fallback runs with the claude binary available
     Then it dispatches a background claude process for that link without blocking
     And with the claude binary unavailable the link stays flagged and is never rewritten
+
+  @feature35
+  Scenario: SPECGEN004_85 a fake-positive green test cannot mark a task DONE
+    Given a task whose linked scenario is GREEN but whose test body audits as FAKE-POSITIVE-RISK
+    When the honesty derivation runs with the test-quality verdict
+    Then verified_status is capped below DONE
+    And a TASK_TEST_QUALITY finding names the task and the fake-positive verdict
+
+  @feature35
+  Scenario: SPECGEN004_86 a genuinely strong green test is not false-blocked
+    Given a task whose linked scenario is GREEN and whose test body audits as STRONG
+    When the honesty derivation runs with the test-quality verdict
+    Then verified_status is DONE
+
+  @feature35
+  Scenario: SPECGEN004_87 the orchestrator feature-map carries an enforced test-quality stage
+    Given the orchestrator feature-map
+    When the drift guard evaluates it
+    Then a test-quality stage exists between coverage and honesty-gate routing to strong-tests and spec-status
+    And the drift guard fails when that stage is removed
+
+  @feature35
+  Scenario: SPECGEN004_88 the pre-DONE Stop-gate blocks a done claim on a weak test
+    Given a session-touched task whose test audits as WEAK
+    When the pre-DONE Stop-gate runs
+    Then it blocks the done claim
+    And it allows the claim only with an audited skip-test-quality escape logged to .claude/logs
+
+  @feature35
+  Scenario: SPECGEN004_89 a task marked DONE with zero linked scenarios is not silent
+    Given a task marked DONE with no linked scenario at all
+    When checkConformance runs
+    Then it emits a finding naming the task
+    And the returned finding set is not empty

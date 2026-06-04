@@ -585,6 +585,25 @@ System SHALL keep the Marksman-standard **descriptive** heading form (`## FR-N: 
 
 ---
 
+## FR-35
+
+**Honesty hardening — the gate must judge test QUALITY, not just PASS/FAIL**
+
+The FR-32 honesty gate derives `verified_status` from per-scenario PASS/FAIL only. VERIFIED this session (evidence: `computeCoverage`/`checkConformance` runs + grep of `.claude-plugin/hooks.json` and `scripts/feature-map.ts`): a fake-positive GREEN test (mocked / trivial-assert) marks a task `DONE`; the quality auditors `strong-tests`/`spec-status` are **advisory** — present in NEITHER the hooks registry NOR the orchestrator feature-map (WORKFLOW: scaffold→conformance→coverage→trace→reconcile→resolve→backlog→honesty-gate, no test-quality stage); and `checkConformance(done-task, zero linked scenario)` returns `[]` (silent). System SHALL close all three so a GREEN result can never silently mean "fake".
+
+**FR-35a (test-quality gate — block DONE on weak / fake-positive):** When a task's linked scenario is GREEN the honesty derivation (`tools/spec-graph/coverage.ts`) SHALL additionally require a **test-quality verdict** from the `strong-tests`/`spec-status` test-body audit; a verdict of `WEAK` or `FAKE-POSITIVE-RISK` SHALL cap `verified_status` below `DONE` (`IN_PROGRESS`) and emit a `TASK_TEST_QUALITY` finding naming the task + verdict, so a passing-but-worthless test cannot mark a task `DONE`. A `STRONG` verdict SHALL leave `DONE` intact (no false-block).
+
+**FR-35b (wire + enforce — not advisory):** A `test-quality` stage SHALL be added to the orchestrator feature-map (`scripts/feature-map.ts` `WORKFLOW`) **between `coverage` and `honesty-gate`**, routing to `strong-tests` + `spec-status`; AND a Stop / pre-DONE hook (modelled on `claim-evidence-gate`) SHALL **enforce** it — blocking a "done" claim when a session-touched task's test is `WEAK`/`FAKE-POSITIVE-RISK`/absent, with an audited escape hatch `[skip-test-quality: <reason>]` logged to `.claude/logs/`. The drift guard `checkFeatureMapDrift` (AC-33.5) SHALL FAIL when the stage is missing.
+
+**FR-35c (zero-linkage DONE is not silent):** `checkConformance` SHALL emit a finding when a task is marked `DONE` with **zero linked scenarios** (no test at all) — complementing the FR/@feature-level `NOT_COVERED` it already emits — so the "mark done, write no test" path is visible, not `[]`.
+
+**Зависит от:** FR-32 (honesty gate / `verified_status` derivation), FR-33 (orchestrator feature-map + `checkFeatureMapDrift`), FR-34b (Stop-gate idiom). Reuses `strong-tests`/`spec-status` (no new auditor) and the `claim-evidence-gate` hook pattern — no infra duplicated.
+**Связанные AC:** [AC-35.1](ACCEPTANCE_CRITERIA.md#ac-351), [AC-35.2](ACCEPTANCE_CRITERIA.md#ac-352), [AC-35.3](ACCEPTANCE_CRITERIA.md#ac-353), [AC-35.4](ACCEPTANCE_CRITERIA.md#ac-354), [AC-35.5](ACCEPTANCE_CRITERIA.md#ac-355)
+**Use Case:** [UC-2](USE_CASES.md#uc-2)
+**User Story:** US-22
+
+---
+
 ## Out of Scope
 
 ### FR-OUT-1: Real-time spec collaborative editing (CRDT/OT) — OUT OF SCOPE

@@ -4,6 +4,13 @@ All notable changes to this feature will be documented in this file.
 
 ## [Unreleased]
 
+### Planned (v4.2 — honesty hardening, FR-35 + Phase 12)
+
+Adversarial verification this session found the honesty gate judges only PASS/FAIL, never test quality: a fake-positive GREEN test marks a task DONE, and the quality auditors (`strong-tests`/`spec-status`) are advisory (absent from hooks AND the orchestrator feature-map). Evidence in `audit-reports/v4-global-plan.md`.
+
+- **FR-35** — honesty hardening in three layers: (a) a test-quality verdict caps `verified_status` below DONE on WEAK/FAKE-POSITIVE-RISK + `TASK_TEST_QUALITY` finding; (b) a `test-quality` stage wired into `scripts/feature-map.ts` between coverage and honesty-gate AND enforced by a pre-DONE Stop-gate (not advisory); (c) `checkConformance` no longer silent (`[]`) on a DONE task with zero linked scenarios.
+- **Phase 12** — 6 workstreams (WS-A honesty hardening … WS-F remaining Phase-7 work) planned in TASKS.md, each Done-When bound to a live tool run.
+
 ### Planned (v4.1 — gap-close)
 
 Three structural gaps surfaced by Round 3+ patch validation against the v4 corpus + MCP response shape. Each ships as one FR + one task; integration-tested per `.claude/rules/integration-tests-first.md`.

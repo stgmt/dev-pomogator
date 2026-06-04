@@ -469,3 +469,33 @@ IF a broken link's text contains the target heading id (e.g. text `FR-7` with a 
 **Требование:** [FR-34c](FR.md#fr-34)
 
 IF a broken link's text does NOT identify a heading id THEN the fixer SHALL dispatch `claude -p` (or background) with the broken link + candidate headings to choose the target; the dispatch SHALL run in the background and SHALL NOT block the triggering edit; AND when the headless path is unavailable the link SHALL remain flagged (the fixer SHALL NOT guess-rewrite).
+
+## AC-35.1
+
+**Требование:** [FR-35a](FR.md#fr-35)
+
+WHEN a task's linked scenario is GREEN AND its test-body audit returns `WEAK` or `FAKE-POSITIVE-RISK` THEN the honesty derivation SHALL cap `verified_status` below `DONE` (`IN_PROGRESS`) AND emit a `TASK_TEST_QUALITY` finding naming the task + the verdict.
+
+## AC-35.2
+
+**Требование:** [FR-35a](FR.md#fr-35)
+
+WHEN a task's linked scenario is GREEN AND its test-body audit returns `STRONG` THEN `verified_status` SHALL be `DONE` (the gate SHALL NOT false-block a genuinely strong test).
+
+## AC-35.3
+
+**Требование:** [FR-35b](FR.md#fr-35)
+
+WHEN the orchestrator feature-map is evaluated THEN it SHALL contain a `test-quality` stage between `coverage` and `honesty-gate` routing to `strong-tests` + `spec-status`, AND `checkFeatureMapDrift` SHALL FAIL when that stage is absent.
+
+## AC-35.4
+
+**Требование:** [FR-35b](FR.md#fr-35)
+
+WHEN a Stop / pre-DONE hook runs AND a session-touched task's test is `WEAK` / `FAKE-POSITIVE-RISK` / absent THEN it SHALL block the "done" claim UNLESS an audited `[skip-test-quality: <reason>]` escape (logged to `.claude/logs/`) is present.
+
+## AC-35.5
+
+**Требование:** [FR-35c](FR.md#fr-35)
+
+WHEN `checkConformance` runs on a task marked `DONE` with zero linked scenarios THEN it SHALL emit a finding (NOT return `[]`), so a no-test `DONE` is visible.
