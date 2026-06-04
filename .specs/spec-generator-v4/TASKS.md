@@ -918,6 +918,53 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - `tests/step_definitions/feature33_orchestrator.ts` binds SPECGEN004_75..79 to the real skill + ledger + guard (no mocks)
   - `npm run test:bdd` reports `@feature33` 5/5 PASSED
 
+## Phase 8: Anchor-Integrity Guard + Auto-Fix (FR-34)
+
+- [ ] Shared `marksmanSlug()` + golden fixture -- @feature34 — id: anchor-slug-shared — Status: TODO | Est: 120m
+  _depends: none_
+  _Requirements: [FR-34a](FR.md#fr-34)_
+  **Done When:**
+  - [ ] `tools/anchor-integrity/marksman-slug.ts` exports one `marksmanSlug(text)` (GLFM, dots dropped: `AC-1.1`→`ac-11`)
+  - [ ] `tests/fixtures/marksman/slug-rule.json` captured from the REAL binary; golden test asserts parity per id-shape
+  - [ ] `md.ts` (slugify/AC dot-drop) + `specs-generator-core.mjs` (`toAnchorSlug`) both import it — no second impl
+
+- [ ] Anchor-integrity check (same-file + cross-file) -- @feature34 — id: anchor-check — Status: TODO | Est: 120m
+  _depends: anchor-slug-shared_
+  _Requirements: [FR-34a](FR.md#fr-34)_
+  **Done When:**
+  - [ ] `tools/anchor-integrity/check.ts` returns `BrokenAnchor[]` {file,line,linkText,brokenAnchor,inferredId,currentSlug}
+  - [ ] Covers same-file `[t](#a)` (the class `CROSS_REF_LINKS` linkPattern misses) AND cross-file `[t](f.md#a)`
+  - [ ] Corpus test over all 48 specs → current baseline recorded
+
+- [ ] Deterministic fixer + idempotence -- @feature34 — id: anchor-fix-deterministic — Status: TODO | Est: 120m
+  _depends: anchor-check_
+  _Requirements: [FR-34c](FR.md#fr-34)_
+  **Done When:**
+  - [ ] `tools/anchor-integrity/fix.ts --apply` rewrites id-bearing broken links to the current `marksmanSlug` (no LLM)
+  - [ ] Round-trip test: rename a fixture heading → fix → links resolve; `fix(fix(x))==fix(x)`
+
+- [ ] PostToolUse hook + Stop-gate (escape hatch) -- @feature34 — id: anchor-guard-hooks — Status: TODO | Est: 150m
+  _depends: anchor-check_
+  _Requirements: [FR-34b](FR.md#fr-34)_
+  **Done When:**
+  - [ ] PostToolUse on Write/Edit `*.md` injects `<system-reminder>` with broken anchors (throttled, FR-6 idiom)
+  - [ ] `tools/anchor-integrity/anchor_gate_stop.ts` blocks "done" until resolved OR `[skip-anchor-fix: <reason>]` (logged)
+  - [ ] Both registered in `.claude-plugin/hooks.json`; SOFT-tier failure policy (log + exit 0) on checker exception
+
+- [ ] `claude -p`/`-bg` ambiguous-link fallback -- @feature34 — id: anchor-fix-claude — Status: TODO | Est: 240m
+  _depends: anchor-fix-deterministic_
+  _Requirements: [FR-34c](FR.md#fr-34)_
+  **Done When:**
+  - [ ] `fix.ts --claude` dispatches headless `claude -p` (background) for prose links; picks target heading; rewrites
+  - [ ] Non-blocking (detached); unavailable headless → link stays flagged (no guess-rewrite); mocked unit + 1 real bg smoke
+
+- [ ] Wire detector into validate-spec + markdown-lsp note -- @feature34 — id: anchor-wire — Status: TODO | Est: 60m
+  _depends: anchor-check_
+  _Requirements: [FR-34a](FR.md#fr-34)_
+  **Done When:**
+  - [ ] `CROSS_REF_LINKS` delegates to `check.ts` (same-file gap closed)
+  - [ ] `markdown-lsp` SKILL.md documents the rename→auto-fix workflow
+
 ## Refactor & Polish (final)
 
 - [ ] Refactor + dedup across phases — id: final-refactor — Status: TODO | Est: 480m

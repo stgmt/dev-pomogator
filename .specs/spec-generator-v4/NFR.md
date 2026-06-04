@@ -42,6 +42,11 @@ FR-20 threshold-only summary renderer SHALL complete in **≤50ms p95** between 
 **PostToolUse throttle is fixed-window (FR-28)**
 FR-6 PostToolUse 3-second throttle SHALL be implemented as a **fixed window** (not sliding, not debounce). First qualifying event at `t0` opens a window `[t0, t0 + throttle_ms]`; subsequent events within the window batch into it; at window close the aggregated findings push once and the throttle resets. New event at `t0 + throttle_ms + ε` opens a fresh window. Latency upper-bound for the author: `throttle_ms` from the first edit in a burst (default 3000ms). Sliding-window / debounce semantics are explicitly out of scope — they could indefinitely defer push during continuous edits.
 
+### NFR-Performance-8
+
+**Anchor-integrity check latency budget (FR-34)**
+The anchor-integrity check on a SINGLE touched spec (PostToolUse path) SHALL complete in **≤150ms p95** for specs up to ~40 headings (slug computation is pure-string; no LSP round-trip). A full-corpus check (CI / `--all`) SHALL be O(headings+links) and complete in **≤3s** for the 48-spec corpus (~1500 headings, ~4440 links). The deterministic fixer SHALL add no LSP/network call; the `claude -p` branch runs in the background and is NOT counted against the edit-path budget.
+
 ## Security
 
 ### NFR-Security-1
@@ -125,6 +130,11 @@ Reconcile YAML write SHALL be atomic (temp file `consistency-report.yaml.tmp` + 
 
 **Two-tier hook failure-mode invariants (FR-19)**
 PreToolUse hooks SHALL follow the two-tier failure policy defined in FR-19. SOFT tier (5 v3 form-guards + meta-guard): on ANY exception (parse, IO, runtime, timeout) MUST log to `~/.dev-pomogator/logs/form-guards.log` AND exit 0 (allow operation). HARD tier (`spec-conformance-guard`, FR-5): startup/config crash → exit 1 + stderr (hard fail surfaces broken install); per-file content-parse exception → log to spec-check-log JSONL + exit 0 (graceful per-file degradation). Rationale documented in DESIGN.md «Hook failure-mode tiers» paragraph. Single-tier «all fail-open» creates a known bypass vector (malicious .md crashes hard guard → unprotected Writes everywhere) and is explicitly rejected.
+
+### NFR-Reliability-9
+
+**Anchor auto-fix is non-blocking, idempotent, and never guesses (FR-34c)**
+The auto-fix `claude -p`/background branch MUST NOT block the triggering Write/Edit — it is dispatched detached and reports asynchronously. The deterministic branch MUST be idempotent (`fix(fix(x))==fix(x)`) and MUST only rewrite an anchor when the target heading is unambiguously identified by id; ambiguous links are left flagged, never guess-rewritten (a wrong auto-rewrite is worse than a flagged broken link). The Stop-gate escape hatch `[skip-anchor-fix:]` MUST be append-logged to `.claude/logs/` for audit (mirrors the scope-gate escape-hatch discipline). PostToolUse anchor-check exceptions follow the SOFT-tier policy (log + exit 0 — never block the edit on a checker bug).
 
 ## Usability
 

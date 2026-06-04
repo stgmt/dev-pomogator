@@ -439,3 +439,33 @@ WHEN the human marks a ledger entry `approved` THEN the orchestrator MAY auto-ap
 **Требование:** [FR-33](FR.md#fr-33)
 
 WHEN a new MCP tool, worker skill, or FR exists that the orchestrator feature-map does not reference THEN the drift guard SHALL fail with a message naming the unreferenced capability.
+
+## AC-34.1
+
+**Требование:** [FR-34a](FR.md#fr-34)
+
+WHEN a heading's text changes so its GLFM slug changes THEN the anchor-integrity check SHALL report every inbound link whose `#anchor` no longer matches any heading slug — for BOTH same-file `[t](#a)` and cross-file `[t](f.md#a)` links — naming the link file:line, its broken anchor, and the heading it most likely meant.
+
+## AC-34.2
+
+**Требование:** [FR-34a](FR.md#fr-34)
+
+WHEN `marksmanSlug(text)` is computed for any id-shape (`FR-7`, `## FR-7: Title`, `NFR-Performance-1`, `AC-1.1`, `AC-27.1`, `UC-3`) THEN it SHALL equal the slug the real Marksman binary produces (captured in a golden fixture); AND both `md.ts` and `specs-generator-core.mjs` SHALL import that single function (no second slug implementation); AND a divergence from the golden fixture SHALL fail the golden test.
+
+## AC-34.3
+
+**Требование:** [FR-34b](FR.md#fr-34)
+
+WHEN a Write/Edit to `.specs/**/*.md` orphans ≥1 inbound anchor THEN the PostToolUse hook SHALL inject a `<system-reminder>` within the throttle window naming the broken links; AND the Stop-gate SHALL block declaring the work "done" until the anchors resolve OR `[skip-anchor-fix: <reason ≥8 chars>]` is present (logged to `.claude/logs/`).
+
+## AC-34.4
+
+**Требование:** [FR-34c](FR.md#fr-34)
+
+IF a broken link's text contains the target heading id (e.g. `[FR-7](FR.md#fr-7-old)`) THEN the fixer SHALL rewrite the anchor to that heading's current `marksmanSlug` deterministically WITHOUT invoking an LLM, AND the operation SHALL be idempotent (`fix(fix(x)) == fix(x)`).
+
+## AC-34.5
+
+**Требование:** [FR-34c](FR.md#fr-34)
+
+IF a broken link's text does NOT identify a heading id THEN the fixer SHALL dispatch `claude -p` (or background) with the broken link + candidate headings to choose the target; the dispatch SHALL run in the background and SHALL NOT block the triggering edit; AND when the headless path is unavailable the link SHALL remain flagged (the fixer SHALL NOT guess-rewrite).
