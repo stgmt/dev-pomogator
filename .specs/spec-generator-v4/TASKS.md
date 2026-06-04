@@ -272,13 +272,17 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] Graceful fallback if download fails
   - [ ] @feature7 SPECGEN004_15, _16 pass
 
-- [ ] Marksman LSP bridge -- @feature7 — id: marksman-lsp-bridge — Status: TODO | Est: 240m
+- [x] Marksman as a NATIVE Claude Code LSP plugin -- @feature7 — id: marksman-native-lsp — Status: DONE | Est: 240m
   _depends: mcp-server-skeleton, marksman-installer_
-  _Requirements: [FR-7](FR.md#fr-7)_
+  _Requirements: [FR-7](FR.md#fr-7), [FR-7a](FR.md#fr-7), [FR-7b](FR.md#fr-7), [FR-7d](FR.md#fr-7)_
+  _Note: supersedes the old custom-bridge task. The bridge / md_references /
+  skip-policy / lsp-mode js-fallback were RETIRED — Claude Code's native `LSP`
+  tool serves Marksman markdown nav directly (proven end-to-end)._
   **Done When:**
-  - [ ] Spawns Marksman as subprocess
-  - [ ] Proxies LSP textDocument/references and textDocument/definition
-  - [ ] Falls back to custom JS MD LSP if absent
+  - [x] `.lsp.json` registers `marksman` (extensionToLanguage {".md":"markdown"}) via a node launcher shim — `claude plugin validate` passes, `claude plugin details` reports `LSP servers (1) marksman`
+  - [x] Binary AUTO-installed (ensure-marksman hook → managed `.dev-pomogator/bin/`) where the launcher reads it; NO js-fallback
+  - [x] Native `LSP` tool returns markdown documentSymbol + `[[wiki-link]]` references (real `claude -p` session, ground-truth match)
+  - [x] `markdown-lsp` skill shipped (FR-7d)
 
 - [ ] File watcher with polling fallback -- @feature14 — id: file-watcher-impl — Status: TODO | Est: 180m
   _depends: mcp-server-skeleton_
