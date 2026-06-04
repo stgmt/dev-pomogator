@@ -429,6 +429,8 @@ Then(
 
 import { runInstall as runMarksmanInstall } from '../../tools/marksman-installer/postinstall.ts';
 import { readLog as readMarksmanLog } from '../../tools/marksman-installer/install-log.ts';
+import { resolveMarksmanBinary } from '../../tools/marksman-installer/resolve-binary.ts';
+import { createMarksmanWorkspace, decideE2e, isInDocker, probeInitialize, removeMarksmanWorkspace } from '../../tools/marksman-installer/lsp-probe.ts';
 import { createHash } from 'node:crypto';
 
 interface MarksmanWorld extends Phase2World {
@@ -467,15 +469,28 @@ Then(
   },
 );
 
-Then('the binary responds to LSP `initialize` request', function () {
-  // This BDD suite runs on the host with a SYNTHETIC fake binary that can't run a
-  // real LSP — so this step stays pending HERE. The REAL «binary responds to
-  // initialize» proof (FR-7) is the native-LSP launcher shim
-  // `tools/marksman-installer/launch-marksman.cjs` execing `marksman server`
-  // against the live binary: verified end-to-end (a real `initialize` returned
-  // definition/references/rename/documentSymbol capabilities), and Claude Code's
-  // own `claude plugin details` reports «LSP servers (1) marksman».
-  return 'pending';
+Then('the binary responds to LSP `initialize` request', { timeout: 25000 }, async function () {
+  // Real-artifact hop-1: resolve the REAL Marksman binary (env override → PATH →
+  // managed), drive the native-LSP launcher shim `launch-marksman.cjs server`,
+  // and assert a real `initialize` returns nav capabilities. skip-policy
+  // semantic: absent inside Docker ⇒ hard FAIL; absent on a dev host ⇒ skip.
+  // (The synthetic fake binary from the install step is NOT used here — this
+  // tests the real binary the agent will actually navigate with.)
+  const resolved = resolveMarksmanBinary({ repoRoot: process.cwd() });
+  const decision = decideE2e({ binaryPath: resolved?.binaryPath ?? null, inDocker: isInDocker() });
+  if (decision === 'fail') {
+    throw new Error('inside Docker but no Marksman binary resolved — silent-skip = fake-green');
+  }
+  if (decision === 'skip') return 'skipped';
+  const ws = createMarksmanWorkspace();
+  try {
+    const { capabilities } = await probeInitialize({ binaryPath: resolved!.binaryPath, workspaceDir: ws });
+    assert.ok(capabilities.definitionProvider, 'expected definitionProvider');
+    assert.ok(capabilities.referencesProvider, 'expected referencesProvider');
+    assert.ok(capabilities.documentSymbolProvider, 'expected documentSymbolProvider');
+  } finally {
+    removeMarksmanWorkspace(ws);
+  }
 });
 
 Given(

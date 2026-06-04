@@ -20,10 +20,11 @@ RUN npm config set cache /tmp/.npm \
     && for i in 1 2 3; do npm install --ignore-scripts && break || echo "[retry] npm install attempt $i failed" && sleep 5; done \
     && (npm rebuild better-sqlite3 2>&1 | tail -5 || echo "[warn] better-sqlite3 rebuild failed — SQLite tests will stub")
 
-# Layer 1b: Real Marksman LSP server for the FR-7 e2e (_15/_16). Pinned + fetched
-# in the build layer (source-independent, cached) so the bridge e2e talks to a
-# REAL LSP, not a stub. A silent skip inside Docker is a hard FAIL — see
-# tools/marksman-lsp/skip-policy.ts (DEV_POMOGATOR_TEST_IN_DOCKER drives it).
+# Layer 1b: Real Marksman LSP server for the FR-7 hop-1 e2e (_15 + launch-marksman
+# e2e). Pinned + fetched in the build layer (source-independent, cached) so the
+# launcher → `marksman server` → initialize probe talks to a REAL LSP, not a stub.
+# A silent skip inside Docker is a hard FAIL — see decideE2e in
+# tools/marksman-installer/lsp-probe.ts (DEV_POMOGATOR_TEST_IN_DOCKER drives it).
 ARG MARKSMAN_VERSION=2026-02-08
 # Base image runs as `testuser`, so install into a testuser-owned path (not /usr/local/bin).
 RUN URL="https://github.com/artempyanykh/marksman/releases/download/${MARKSMAN_VERSION}/marksman-linux-x64" \

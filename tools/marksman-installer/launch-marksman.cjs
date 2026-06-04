@@ -64,6 +64,11 @@ function resolveMarksmanBinary(opts) {
   const env = opts.env || process.env;
   const whichFn = opts.whichFn || ((c) => whichOnPath(c, env, platform, existsFn));
 
+  // Explicit override (highest priority) — mirrors resolve-binary.ts. The Docker
+  // test image sets DEV_POMOGATOR_MARKSMAN_BIN to a path not on PATH.
+  const override = env.DEV_POMOGATOR_MARKSMAN_BIN;
+  if (override && existsFn(override)) return { source: 'env', binaryPath: override };
+
   const onPath = whichFn('marksman');
   if (onPath) return { source: 'path', binaryPath: onPath };
 
@@ -98,7 +103,22 @@ function main() {
 
   // Forward whatever args .lsp.json supplied (normally ["server"]) verbatim.
   const args = process.argv.slice(2);
-  const child = spawn(resolved.binaryPath, args, { stdio: 'inherit' });
+  // NOTE: do NOT use stdio:'inherit'. When this launcher is itself spawned with
+  // node-created pipes (the common case), those pipes are O_NONBLOCK; handing them
+  // raw to Marksman via 'inherit' makes its blocking reads fail — fatal on Linux
+  // (Windows pipe semantics differ, so it "worked" there). Instead let node own
+  // the pipes and forward bytes both ways — the standard transparent-proxy shape,
+  // negligible overhead for LSP traffic. stderr is inherited (Marksman logs pass
+  // straight to our stderr).
+  const child = spawn(resolved.binaryPath, args, { stdio: ['pipe', 'pipe', 'inherit'] });
+  const ignoreEpipe = (s) =>
+    s.on('error', (e) => {
+      if (e && e.code !== 'EPIPE') throw e; // EPIPE just means the other side closed first
+    });
+  ignoreEpipe(child.stdin);
+  ignoreEpipe(process.stdout);
+  process.stdin.pipe(child.stdin);
+  child.stdout.pipe(process.stdout);
   child.on('error', (err) => {
     process.stderr.write(`[marksman-lsp] failed to spawn ${resolved.binaryPath}: ${err.message}\n`);
     process.exit(1);

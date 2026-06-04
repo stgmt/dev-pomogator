@@ -16,7 +16,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-export type MarksmanSource = 'path' | 'managed';
+export type MarksmanSource = 'env' | 'path' | 'managed';
 
 export interface ResolvedMarksman {
   source: MarksmanSource;
@@ -30,6 +30,8 @@ export interface ResolveOptions {
   whichFn?: (cmd: string) => string | null;
   /** fs.existsSync, injectable for tests. */
   existsFn?: (p: string) => boolean;
+  /** Process env, injectable for tests. Honours `DEV_POMOGATOR_MARKSMAN_BIN`. */
+  env?: NodeJS.ProcessEnv;
 }
 
 /** Pure PATH scan — no shell-out. Honours PATHEXT-style extensions on Windows.
@@ -68,7 +70,15 @@ export function managedBinaryPath(repoRoot: string, platform: NodeJS.Platform = 
 export function resolveMarksmanBinary(opts: ResolveOptions): ResolvedMarksman | null {
   const platform = opts.platform ?? process.platform;
   const existsFn = opts.existsFn ?? fs.existsSync;
-  const whichFn = opts.whichFn ?? ((c: string) => whichOnPath(c, process.env, platform, existsFn));
+  const env = opts.env ?? process.env;
+  const whichFn = opts.whichFn ?? ((c: string) => whichOnPath(c, env, platform, existsFn));
+
+  // Explicit override (highest priority): the Docker test image installs the real
+  // binary to a testuser path and points `DEV_POMOGATOR_MARKSMAN_BIN` at it (the
+  // dir is not on PATH); honouring it is what lets the launcher + e2e find the
+  // binary in Docker — without it, "installed ≠ integrated".
+  const override = env.DEV_POMOGATOR_MARKSMAN_BIN;
+  if (override && existsFn(override)) return { source: 'env', binaryPath: override };
 
   const onPath = whichFn('marksman');
   if (onPath) return { source: 'path', binaryPath: onPath };

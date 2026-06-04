@@ -21,10 +21,22 @@ const shim = require('../launch-marksman.cjs') as {
 };
 
 describe('launch-marksman shim — resolution policy (mirrors resolve-binary.ts)', () => {
+  it('honours DEV_POMOGATOR_MARKSMAN_BIN override first (source=env)', () => {
+    const r = shim.resolveMarksmanBinary({
+      repoRoot: '/repo',
+      platform: 'linux',
+      env: { DEV_POMOGATOR_MARKSMAN_BIN: '/custom/marksman' },
+      whichFn: () => '/usr/bin/marksman',
+      existsFn: () => true,
+    });
+    expect(r).toEqual({ source: 'env', binaryPath: '/custom/marksman' });
+  });
+
   it('prefers a system-package marksman on PATH (source=path)', () => {
     const r = shim.resolveMarksmanBinary({
       repoRoot: '/repo',
       platform: 'linux',
+      env: {}, // isolate from Docker's DEV_POMOGATOR_MARKSMAN_BIN
       whichFn: () => '/usr/bin/marksman',
       existsFn: () => true, // managed would also "exist" — PATH must win
     });
@@ -36,6 +48,7 @@ describe('launch-marksman shim — resolution policy (mirrors resolve-binary.ts)
     const r = shim.resolveMarksmanBinary({
       repoRoot: '/repo',
       platform: 'linux',
+      env: {},
       whichFn: () => null,
       existsFn: (p) => p === managed,
     });
@@ -46,6 +59,7 @@ describe('launch-marksman shim — resolution policy (mirrors resolve-binary.ts)
     const r = shim.resolveMarksmanBinary({
       repoRoot: '/repo',
       platform: 'linux',
+      env: {},
       whichFn: () => null,
       existsFn: () => false,
     });
