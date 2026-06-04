@@ -106,6 +106,16 @@
         "hooks": [
           {
             "type": "command",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PLUGIN_ROOT || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/anchor-integrity/anchor_gate_stop.ts\"",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
             "command": "node -e \"require(require('path').join(process.env.CLAUDE_PLUGIN_ROOT || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/spec-backlog/auto-ingest-hook.ts\"",
             "timeout": 60
           }
@@ -305,6 +315,11 @@
           {
             "type": "command",
             "command": "node -e \"require(require('path').join(process.env.CLAUDE_PLUGIN_ROOT || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/spec-conformance-push/spec-conformance-push.ts\"",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PLUGIN_ROOT || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/anchor-integrity/anchor_check_post.ts\"",
             "timeout": 30
           }
         ]

@@ -944,13 +944,13 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] Round-trip + idempotence + ambiguous-skip + cross-file tests pass (Docker 35/37). Corpus dry-run: **1719/1744 deterministically fixable**, 25 ambiguous
   - [x] `anchor-fix` skill (`.claude/skills/anchor-fix/SKILL.md`) captures the workflow + measured slug rules; memory updated
 
-- [ ] PostToolUse hook + Stop-gate (escape hatch) -- @feature34 — id: anchor-guard-hooks — Status: TODO | Est: 150m
+- [x] PostToolUse hook + Stop-gate (escape hatch) -- @feature34 — id: anchor-guard-hooks — Status: DONE | Est: 150m
   _depends: anchor-check_
   _Requirements: [FR-34b](FR.md#fr-34)_
   **Done When:**
-  - [ ] PostToolUse on Write/Edit `*.md` injects `<system-reminder>` with broken anchors (throttled, FR-6 idiom)
-  - [ ] `tools/anchor-integrity/anchor_gate_stop.ts` blocks "done" until resolved OR `[skip-anchor-fix: <reason>]` (logged)
-  - [ ] Both registered in `.claude-plugin/hooks.json`; SOFT-tier failure policy (log + exit 0) on checker exception
+  - [x] `anchor_check_post.ts` (PostToolUse Write|Edit) injects `<system-reminder>` with broken anchors + fix (verified: 121 on pomogator-doctor, null on clean v4)
+  - [x] `anchor_gate_stop.ts` blocks "done" while git-MODIFIED specs have broken anchors; escape `[skip-anchor-fix: <reason ≥8>]` in commit msg OR `ANCHOR_GATE_SKIP=1` (logged); honours `stop_hook_active`; modes true/shadow/false
+  - [x] Both registered in `.claude-plugin/hooks.json` (valid); SOFT-tier (log + exit 0) on error. Docker 42/44 (2 corpus skipped)
 
 - [ ] `claude -p`/`-bg` ambiguous-link fallback -- @feature34 — id: anchor-fix-claude — Status: TODO | Est: 240m
   _depends: anchor-fix-deterministic_
