@@ -100,6 +100,11 @@ WHEN the e2e suite runs inside the Docker test image (the real pinned Marksman i
 
 IF a diff adds an installer / downloaded binary / external dependency WITHOUT a runtime consumer AND without an e2e against the real artifact THEN `dead-integration-guard` SHALL flag it — "installed ≠ integrated" (the exact gap FR-7 itself fell into).
 
+## AC-7.5 (FR-7c)
+**Требование:** [FR-7c](FR.md#fr-7)
+
+WHEN deciding the wiki-link form to adopt in specs THEN the system SHALL FIRST empirically confirm — against a REAL spec file with a REAL `## FR-1: Title` heading, via Marksman `completion` + `definition` at the LINK position — which `[[…]]` form Marksman actually resolves, AND the chosen form SHALL be the one Marksman resolves. Migrating specs to a non-resolving form is forbidden (repeats installed ≠ integrated). Navigation/edit primitives (definition/references/rename/completion) SHALL be served by Marksman; the graph SHALL retain only spec-domain traceability + the js-fallback resolver.
+
 ## AC-8.1 (FR-8)
 **Требование:** [FR-8](FR.md#fr-8)
 
