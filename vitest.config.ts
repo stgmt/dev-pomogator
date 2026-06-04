@@ -12,10 +12,6 @@ export default defineConfig({
     ],
     exclude: [
       'tests/fixtures/**',
-      // statusline-config management (resolveClaudeStatusLine / isManagedStatusLineCommand
-      // etc.) was an installer-era concern removed together with src/ in plugin v2.
-      // This file (26 references to the deleted utils) needs a focused rewrite; tracked.
-      'tests/e2e/tui-statusline.test.ts',
     ],
     setupFiles: ['tests/setup/ensure-docker.ts'],
     // Run test files sequentially to avoid race conditions

@@ -1,8 +1,8 @@
 ---
 name: pomogator-doctor
 description: |
-  Diagnostic tool для dev-pomogator plugin: проверяет 17 environment aspects (Node/Git/Bun/Python/MCP servers/hooks registry/env vars/Claude Code version match) и предлагает fix actions. Use при подозрениях на broken plugin install, missing dependencies, stale hooks, или когда команды plugin behave unexpectedly. Triggers (Russian): "проверь окружение", "доктор", "диагностика помогатора", "почему не работает плагин". Triggers (English): "check environment", "doctor", "plugin diagnostics", "verify install". Output: severity-coded report (🟢 self-sufficient, 🟡 needs env vars, 🔴 needs external deps) с actionable hints. Можно invoke через slash-command `/pomogator-doctor` (also distributed via plugin) или напрямую как skill.
-allowed-tools: Read, Bash, Glob, Grep
+  Diagnostic tool для dev-pomogator plugin: проверяет 18 environment aspects (Node/Git/Bun/Python/MCP servers/hooks registry/env vars/Claude Code version match/native statusLine) и предлагает fix actions (incl. установка нативного statusLine ccstatusline по подтверждению). Use при подозрениях на broken plugin install, missing dependencies, stale hooks, или когда команды plugin behave unexpectedly. Triggers (Russian): "проверь окружение", "доктор", "диагностика помогатора", "почему не работает плагин". Triggers (English): "check environment", "doctor", "plugin diagnostics", "verify install". Output: severity-coded report (🟢 self-sufficient, 🟡 needs env vars, 🔴 needs external deps) с actionable hints. Можно invoke через slash-command `/pomogator-doctor` (also distributed via plugin) или напрямую как skill.
+allowed-tools: Read, Bash, Glob, Grep, AskUserQuestion
 ---
 
 # pomogator-doctor — Environment diagnostic
@@ -30,6 +30,13 @@ Skill проверяет 17 environment aspects required для dev-pomogator pl
 3. Group by severity: 🟢 self-sufficient (Node/Git/install), 🟡 env vars needed, 🔴 external deps missing
 4. For each ⚠/✗ result: print message + hint в actionable format
 5. If `reinstallable: true` issues found → suggest `/plugin install dev-pomogator@stgmt --force` или migration script (`tools/migrate-v1-to-v2/migrate-v1-to-v2.ts --global` if v1 install detected)
+6. **Native statusLine fix-action (id `C-NSL`, FR-7):** если результат `Native statusLine (ccstatusline)` имеет severity `warning` → предложить через `AskUserQuestion` поставить строку сейчас («Поставить нативный statusLine (ccstatusline) сейчас?» / «Не надо»). При согласии — выполнить `details.fixScript` через bootstrap (резолвится из плагина у установленных юзеров):
+
+   ```bash
+   node -e "require(require('path').join(process.env.CLAUDE_PLUGIN_ROOT||'.','tools','_shared','bootstrap.cjs'))" -- "tools/native-statusline/apply-statusline.ts"
+   ```
+
+   Это пишет `statusLine.command = npx -y ccstatusline@latest` в `~/.claude/settings.json` немедленно (текущая сессия), идемпотентно, не перетирая чужую кастомную строку. Сама строка отрисуется со следующего старта сессии (settings читаются до хуков). Opt-out: `DEV_POMOGATOR_STATUSLINE=off`. Домен NATIVE statusLine ≠ прогресс тестов (compact_bar.py).
 
 ## Engine structure (scripts/engine/)
 
