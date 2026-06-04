@@ -23,5 +23,6 @@
   "skills": ["./.claude/skills"],
   "commands": ["./.claude/commands"],
   "hooks": ["./.claude-plugin/hooks.json"],
-  "mcpServers": ["./.mcp.json"]
+  "mcpServers": ["./.mcp.json"],
+  "lspServers": "./.lsp.json"
 }

@@ -20,5 +20,6 @@ allow:
 - stryker.config.mjs
 - .npmignore
 - .mcp.json
+- .lsp.json
 - stryker.config.mjs
 - cucumber.json

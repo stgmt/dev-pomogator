@@ -1,0 +1,10 @@
+{
+  "marksman": {
+    "command": "node",
+    "args": ["${CLAUDE_PLUGIN_ROOT}/tools/marksman-installer/launch-marksman.cjs", "server"],
+    "extensionToLanguage": {
+      ".md": "markdown"
+    },
+    "startupTimeout": 15000
+  }
+}
