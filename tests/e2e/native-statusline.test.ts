@@ -189,4 +189,21 @@ describe('NSL001: Native Statusline Auto-Install', () => {
     const f = Array.isArray(fixed) ? fixed[0] : fixed;
     expect(f?.severity).toBe('ok');
   });
+
+  // @feature3
+  it('NSL001_11: doctor check classifies ours/custom/corrupt correctly', async () => {
+    const sev = async () => {
+      const r = await statuslineCheck.run(makeCtx());
+      return (Array.isArray(r) ? r[0] : r)?.severity;
+    };
+    // ours (marker present) → ok
+    writeSettings({ statusLine: { type: 'command', command: 'npx -y ccstatusline@latest' } });
+    expect(await sev()).toBe('ok');
+    // custom foreign statusLine → ok (preserved, not our concern)
+    writeSettings({ statusLine: { type: 'command', command: 'my-custom-bar.sh' } });
+    expect(await sev()).toBe('ok');
+    // corrupt settings.json → warning (unreadable, not verified)
+    writeRawSettings('{ "statusLine": ');
+    expect(await sev()).toBe('warning');
+  });
 });

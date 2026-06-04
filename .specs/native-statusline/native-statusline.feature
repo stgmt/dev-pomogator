@@ -72,3 +72,11 @@ Feature: NSL001_Native_Statusline_Auto_Install
     When the statusline check executes
     Then the check is reported as needing a fix
     And applying the fix-action writes the ccstatusline command immediately
+
+  # @feature3
+  Scenario: NSL001_11 pomogator-doctor check is OK when a statusLine already exists
+    Given a HOME whose settings.json statusLine.command contains "ccstatusline"
+    When the statusline check executes
+    Then the check severity is "ok"
+    And a HOME with a custom non-ccstatusline statusLine also reports "ok" (preserved)
+    And a HOME with corrupt settings.json reports "warning" (unreadable, not verified)
