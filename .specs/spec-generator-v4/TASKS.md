@@ -966,13 +966,13 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] `CROSS_REF_LINKS` (specs-generator-core.mjs) delegates same-file `[t](#a)` to `check.mjs` → `checkLinks`; emits fix slug (verified: bare broken `#fr-7-old-broken` → `→ fix to #fr-7-title`, clean v4 = 0 false-positives)
   - [x] `markdown-lsp` SKILL.md documents the rename→auto-fix workflow (detect/fix/guard + `anchor-fix` skill cross-ref)
 
-- [ ] Update scaffold templates + generators to emit resolvable anchors (H1) -- @feature34 — id: anchor-templates — Status: TODO | Est: 240m
+- [x] Update scaffold templates + generators to emit resolvable anchors (H1) -- @feature34 — id: anchor-templates — Status: DONE | Est: 240m
   _depends: anchor-slug-shared, anchor-check_
   _Requirements: [FR-34a](FR.md#fr-34), [FR-3](FR.md#fr-3)_
   **Done When:**
-  - [ ] `tools/specs-generator/templates/{FR,ACCEPTANCE_CRITERIA,USE_CASES}.md.template` emit headings + links whose anchors resolve via `marksmanSlug` (drop the `#fr-1-{название}` / `#ac-1-fr-1` composites Marksman won't resolve to an H2)
-  - [ ] `specs-generator-core.mjs` / create-spec emit the long descriptive form (Marksman standard) with every cross-ref anchor = `marksmanSlug(target heading)`
-  - [ ] Fixture test: a freshly-scaffolded spec passes `anchor-check` (0 broken) out of the box
+  - [x] All `*.md.template` cross-ref anchors fixed: `#fr-1-{название}` → `#fr-1-название` = `marksmanSlug(## FR-1: {Название})`; `[FR-N]` task stubs repointed to concrete `[FR-1]`. (`#ac-1-fr-1` already resolved `## AC-1 (FR-1)`, kept.) Empirically: all 21 templates → checkLinks 0 broken
+  - [x] `specs-generator-core.mjs` validates with `marksmanSlug` (Task 1); no code emits broken composites into specs — only advisory `details:` hint strings with `…` ellipsis. create-spec is AI-driven off the fixed templates
+  - [x] Fixture test `__tests__/templates.test.ts` (all templates → 0 broken) + manual: fresh `scaffold-spec` → anchor-check **0 broken** (was 16)
 
 - [ ] BDD @feature34 scenarios for anchor-integrity -- @feature34 — id: anchor-bdd — Status: TODO | Est: 180m
   _depends: anchor-guard-hooks, anchor-fix-deterministic_

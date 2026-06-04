@@ -68,12 +68,12 @@
 > Each task below must pass `task-form-guard`: `**Done When:**` with ≥1 checkbox, `Status: TODO|IN_PROGRESS|DONE|BLOCKED`, `Est: <N>m`.
 
 - [ ] {Задача 1.1} -- @featureN — Status: TODO | Est: 30m
-  _Requirements: [FR-N](FR.md#fr-n-{название})_
+  _Requirements: [FR-1](FR.md#fr-1-название)_
   **Done When:**
   - [ ] {binary observable 1 — file exists / API returns X / log shows Y}
   - [ ] @featureN scenario переходит из Red в Green
 - [ ] {Задача 1.2} -- @featureN — Status: TODO | Est: 45m
-  _Requirements: [FR-N](FR.md#fr-n-{название})_
+  _Requirements: [FR-1](FR.md#fr-1-название)_
   **Done When:**
   - [ ] {binary observable}
   - [ ] @featureN scenario passes
@@ -82,12 +82,12 @@
 ## Phase 2: {Этап реализации 2} (Green)
 
 - [ ] {Задача 2.1} -- @featureN — Status: TODO | Est: 30m
-  _Requirements: [FR-N](FR.md#fr-n-{название})_
+  _Requirements: [FR-1](FR.md#fr-1-название)_
   **Done When:**
   - [ ] {binary observable}
   - [ ] @featureN scenario passes
 - [ ] {Задача 2.2} -- @featureN — Status: TODO | Est: 45m
-  _Requirements: [FR-N](FR.md#fr-n-{название})_
+  _Requirements: [FR-1](FR.md#fr-1-название)_
   **Done When:**
   - [ ] {binary observable}
   - [ ] @featureN scenario passes
