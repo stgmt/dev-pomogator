@@ -45,12 +45,22 @@ export function modifiedSpecSlugs(repoRoot: string): string[] {
   return [...slugs];
 }
 
+/** Extract a `[skip-anchor-fix: reason]` escape reason from any text, else null. */
+export function escapeReason(text: string): string | null {
+  const m = text.match(/\[skip-anchor-fix:\s*([^\]]+)\]/i);
+  return m ? m[1].trim() : null;
+}
+
+/** The escape reason is honoured only when it is substantive (≥8 chars). */
+export function escapeHonoured(reason: string | null): boolean {
+  return !!reason && reason.length >= 8;
+}
+
 /** Latest commit message carries `[skip-anchor-fix: reason]`? → the reason, else null. */
 function escapeFromCommit(repoRoot: string): string | null {
   const r = spawnSync('git', ['log', '-1', '--format=%B'], { cwd: repoRoot, encoding: 'utf8' });
   if (r.status !== 0 || !r.stdout) return null;
-  const m = r.stdout.match(/\[skip-anchor-fix:\s*([^\]]+)\]/i);
-  return m ? m[1].trim() : null;
+  return escapeReason(r.stdout);
 }
 
 function logEscape(repoRoot: string, reason: string, sessionId?: string): void {
@@ -105,7 +115,7 @@ async function main(): Promise<void> {
   // Escape hatch
   const envSkip = process.env.ANCHOR_GATE_SKIP === '1';
   const commitSkip = escapeFromCommit(repoRoot);
-  if (envSkip || (commitSkip && commitSkip.length >= 8)) {
+  if (envSkip || escapeHonoured(commitSkip)) {
     logEscape(repoRoot, commitSkip || 'ANCHOR_GATE_SKIP=1', input.session_id);
     return approve();
   }

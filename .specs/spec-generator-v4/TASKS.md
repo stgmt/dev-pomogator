@@ -974,12 +974,12 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] `specs-generator-core.mjs` validates with `marksmanSlug` (Task 1); no code emits broken composites into specs — only advisory `details:` hint strings with `…` ellipsis. create-spec is AI-driven off the fixed templates
   - [x] Fixture test `__tests__/templates.test.ts` (all templates → 0 broken) + manual: fresh `scaffold-spec` → anchor-check **0 broken** (was 16)
 
-- [ ] BDD @feature34 scenarios for anchor-integrity -- @feature34 — id: anchor-bdd — Status: TODO | Est: 180m
+- [x] BDD @feature34 scenarios for anchor-integrity -- @feature34 — id: anchor-bdd — Status: DONE | Est: 180m
   _depends: anchor-guard-hooks, anchor-fix-deterministic_
   _Requirements: [FR-34](FR.md#fr-34), [AC-34.1](ACCEPTANCE_CRITERIA.md#ac-341)_
   **Done When:**
-  - [ ] `spec-generator-v4.feature` @feature34 scenarios `SPECGEN004_NN` for detect / hook+gate / deterministic-fix / claude-fallback (1:1 with AC-34.x)
-  - [ ] `tests/step_definitions/` binds them to the REAL tools (no mocks); `npm run test:bdd` @feature34 GREEN
+  - [x] `spec-generator-v4.feature` @feature34 SPECGEN004_80..84 — 1:1 with AC-34.1..5 (detect same+cross / golden+single-source / reminder+escape / deterministic-idempotent / claude-fallback)
+  - [x] `feature34_anchor_integrity.ts` binds to REAL tools (checkLinks/marksmanSlug/fixSpecDir/dispatchClaudeFallback/buildReminder/escapeReason; only spawn injected). Cucumber @feature34 5/5 GREEN, 35 steps; full suite 83 passed/1 pre-existing pending, 0 ambiguous
 
 ## Refactor & Polish (final)
 

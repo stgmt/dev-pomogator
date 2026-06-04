@@ -629,3 +629,38 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When the drift guard runs
     Then it fails with a non-zero status
     And the message names the unreferenced capability
+
+  @feature34
+  Scenario: SPECGEN004_80 anchor-integrity reports same-file and cross-file broken anchors with the likely heading
+    Given a heading slug changed, orphaning one same-file and one cross-file inbound anchor
+    When the anchor-integrity check runs over the spec files
+    Then both broken links are reported with their file, line and unresolved anchor
+    And each one names the heading slug the link most likely meant
+
+  @feature34
+  Scenario: SPECGEN004_81 marksmanSlug matches the Marksman golden fixture and is the single shared source
+    Given the captured Marksman golden slug fixture
+    When marksmanSlug is computed for every id-shape in the fixture
+    Then each result equals the slug the real Marksman binary produced
+    And both the SpecGraph md parser and the specs-generator core import that one marksmanSlug function
+
+  @feature34
+  Scenario: SPECGEN004_82 a Write that orphans an anchor triggers a reminder and the Stop-gate escape is bounded
+    Given a spec file edited so an inbound anchor no longer resolves
+    When the PostToolUse anchor hook inspects the edited file
+    Then it returns a system-reminder naming the broken link and its fix
+    And the Stop-gate honours a skip-anchor-fix escape only when the reason is at least 8 characters
+
+  @feature34
+  Scenario: SPECGEN004_83 the deterministic fixer repairs an id-bearing link without an LLM and is idempotent
+    Given a broken link whose text carries the heading id
+    When the deterministic fixer runs over the spec
+    Then it rewrites the anchor to the heading's current marksmanSlug without invoking any model
+    And applying the fixer a second time changes nothing
+
+  @feature34
+  Scenario: SPECGEN004_84 an ambiguous link is dispatched to claude in the background, never guess-rewritten
+    Given a broken link whose text identifies no heading id
+    When the headless fallback runs with the claude binary available
+    Then it dispatches a background claude process for that link without blocking
+    And with the claude binary unavailable the link stays flagged and is never rewritten
