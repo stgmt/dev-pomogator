@@ -965,6 +965,21 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] `CROSS_REF_LINKS` delegates to `check.ts` (same-file gap closed)
   - [ ] `markdown-lsp` SKILL.md documents the rename→auto-fix workflow
 
+- [ ] Update scaffold templates + generators to emit resolvable anchors (H1) -- @feature34 — id: anchor-templates — Status: TODO | Est: 240m
+  _depends: anchor-slug-shared, anchor-check_
+  _Requirements: [FR-34a](FR.md#fr-34), [FR-3](FR.md#fr-3)_
+  **Done When:**
+  - [ ] `tools/specs-generator/templates/{FR,ACCEPTANCE_CRITERIA,USE_CASES}.md.template` emit headings + links whose anchors resolve via `marksmanSlug` (drop the `#fr-1-{название}` / `#ac-1-fr-1` composites Marksman won't resolve to an H2)
+  - [ ] `specs-generator-core.mjs` / create-spec emit the long descriptive form (Marksman standard) with every cross-ref anchor = `marksmanSlug(target heading)`
+  - [ ] Fixture test: a freshly-scaffolded spec passes `anchor-check` (0 broken) out of the box
+
+- [ ] BDD @feature34 scenarios for anchor-integrity -- @feature34 — id: anchor-bdd — Status: TODO | Est: 180m
+  _depends: anchor-guard-hooks, anchor-fix-deterministic_
+  _Requirements: [FR-34](FR.md#fr-34), [AC-34.1](ACCEPTANCE_CRITERIA.md#ac-341)_
+  **Done When:**
+  - [ ] `spec-generator-v4.feature` @feature34 scenarios `SPECGEN004_NN` for detect / hook+gate / deterministic-fix / claude-fallback (1:1 with AC-34.x)
+  - [ ] `tests/step_definitions/` binds them to the REAL tools (no mocks); `npm run test:bdd` @feature34 GREEN
+
 ## Refactor & Polish (final)
 
 - [ ] Refactor + dedup across phases — id: final-refactor — Status: TODO | Est: 480m
