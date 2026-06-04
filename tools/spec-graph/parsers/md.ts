@@ -33,6 +33,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { marksmanSlug } from '../../anchor-integrity/marksman-slug.mjs';
 import type {
   Node as SpecNode,
   ParserOutput,
@@ -70,14 +71,14 @@ const SHORT_AC_RE = /^AC-(\d+(?:\.\d+)?)$/;
 // All three resolve to the SAME canonical id (FR-001).
 const LEGACY_FR_HEADING_RE = /^Requirement:\s*FR-(\d+)\s+(.+)$/;
 
-/** Normalise a heading title into the slug component of the dual anchor. */
+/**
+ * Slug component of the dual anchor — delegates to the single `marksmanSlug`
+ * source of truth (FR-34a) so the graph's anchors match what Marksman actually
+ * resolves. (The old local impl dashed dots and stripped Cyrillic — both wrong
+ * vs the measured binary; this fixes that latent corpus bug.)
+ */
 function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .normalize('NFKD')
-    .replace(/[̀-ͯ]/g, '') // strip combining marks (accents)
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+  return marksmanSlug(text);
 }
 
 /**
@@ -323,10 +324,9 @@ export function parseMarkdown(mdSource: string, relativePath: string): ParserOut
     m = text.match(SHORT_AC_RE);
     if (m) {
       const acId = `AC-${m[1]}`;
-      // Marksman slug for `## AC-1.1` is `ac-11` — it REMOVES the dot (keeps the
-      // existing dash), unlike slugify() which dashes it. Match Marksman so the
-      // `[…](#ac-11)` links resolve and wikilinks.ts agrees.
-      const slug = acId.toLowerCase().replace(/\./g, '');
+      // Marksman slug for `## AC-1.1` is `ac-11` (dot dropped) — via the single
+      // marksmanSlug source of truth (FR-34a).
+      const slug = marksmanSlug(acId);
       const parentFr = parentFrAfter(lines, i);
       const node: AcNode = { id: acId, type: 'AC', parentFr, file: relativePath, line, ears: '' };
       nodes.push(node);

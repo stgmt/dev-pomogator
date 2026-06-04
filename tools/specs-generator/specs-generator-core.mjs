@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import { marksmanSlug } from '../anchor-integrity/marksman-slug.mjs';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -420,16 +421,13 @@ function replaceLiteralAll(content, searchValue, replacementValue) {
   return content.split(searchValue).join(String(replacementValue));
 }
 
+// Delegates to the single marksmanSlug source of truth (FR-34a) so the validator
+// checks links the way Marksman actually resolves them (the old local impl used
+// ASCII `\w`, silently stripping Cyrillic headings → wrong anchors). The leading
+// `@featureN` strip is kept defensively (markdown spec headings never carry it,
+// but feature-tag prose lines might be passed in).
 function toAnchorSlug(header) {
-  let slug = header.toLowerCase();
-  slug = slug.replace(/[\*_`\[\]\(\)]/g, '');
-  slug = slug.replace(/@feature\d+/g, '');
-  slug = slug.replace(/[^\w\s-]/g, '');
-  slug = slug.trim();
-  slug = slug.replace(/\s+/g, '-');
-  slug = slug.replace(/-+/g, '-');
-  slug = slug.replace(/-+$/g, '');
-  return slug;
+  return marksmanSlug(header.replace(/@feature\d+/g, ''));
 }
 
 function countMatches(text, pattern, flags = 'g') {

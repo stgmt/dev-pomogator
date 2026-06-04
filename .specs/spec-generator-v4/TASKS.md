@@ -920,13 +920,13 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
 
 ## Phase 8: Anchor-Integrity Guard + Auto-Fix (FR-34)
 
-- [ ] Shared `marksmanSlug()` + golden fixture -- @feature34 — id: anchor-slug-shared — Status: TODO | Est: 120m
+- [x] Shared `marksmanSlug()` + golden fixture -- @feature34 — id: anchor-slug-shared — Status: DONE | Est: 120m
   _depends: none_
   _Requirements: [FR-34a](FR.md#fr-34)_
   **Done When:**
-  - [ ] `tools/anchor-integrity/marksman-slug.ts` exports one `marksmanSlug(text)` (GLFM, dots dropped: `AC-1.1`→`ac-11`)
-  - [ ] `tests/fixtures/marksman/slug-rule.json` captured from the REAL binary; golden test asserts parity per id-shape
-  - [ ] `md.ts` (slugify/AC dot-drop) + `specs-generator-core.mjs` (`toAnchorSlug`) both import it — no second impl
+  - [x] `tools/anchor-integrity/marksman-slug.mjs` exports one `marksmanSlug(text)` (`.mjs` so both the `.mjs` validator and `.ts` parser import it; Unicode-aware — keeps Cyrillic; dots dropped: `AC-1.1`→`ac-11`)
+  - [x] `tests/fixtures/marksman/slug-rule.json` captured from the REAL binary (18 shapes incl. Cyrillic) via `capture-slug-fixture.cjs`; golden test asserts 18/18 parity + idempotence
+  - [x] `md.ts` (slugify/AC dot-drop) + `specs-generator-core.mjs` (`toAnchorSlug`) both delegate to it — no second impl. Verified: spec-graph 146/146 Docker, BDD 78 passed, validate-spec 0 errors/0 broken
 
 - [ ] Anchor-integrity check (same-file + cross-file) -- @feature34 — id: anchor-check — Status: TODO | Est: 120m
   _depends: anchor-slug-shared_

@@ -462,7 +462,7 @@ WHEN a Write/Edit to `.specs/**/*.md` orphans ≥1 inbound anchor THEN the PostT
 
 **Требование:** [FR-34c](FR.md#fr-34)
 
-IF a broken link's text contains the target heading id (e.g. `[FR-7](FR.md#fr-7-old)`) THEN the fixer SHALL rewrite the anchor to that heading's current `marksmanSlug` deterministically WITHOUT invoking an LLM, AND the operation SHALL be idempotent (`fix(fix(x)) == fix(x)`).
+IF a broken link's text contains the target heading id (e.g. text `FR-7` with a stale anchor `#fr-7-old`) THEN the fixer SHALL rewrite the anchor to that heading's current `marksmanSlug` deterministically WITHOUT invoking an LLM, AND the operation SHALL be idempotent (`fix(fix(x)) == fix(x)`).
 
 ## AC-34.5
 

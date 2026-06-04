@@ -1,0 +1,25 @@
+{
+  "_source": "captured from real Marksman binary via textDocument/completion (textEdit.newText)",
+  "_marksman_version": "2026-02-08",
+  "_regenerate": "node tools/anchor-integrity/capture-slug-fixture.cjs",
+  "slugs": {
+    "FR-7": "fr-7",
+    "FR-7: Phase 2 — Native LSP plugin (auto-installed, no fallback)": "fr-7-phase-2-native-lsp-plugin-auto-installed-no-fallback",
+    "FR-001: Login flow": "fr-001-login-flow",
+    "NFR-Performance-1": "nfr-performance-1",
+    "NFR-Performance-1: SpecGraph cold start": "nfr-performance-1-specgraph-cold-start",
+    "NFR-Reliability-9": "nfr-reliability-9",
+    "AC-1.1": "ac-11",
+    "AC-27.1": "ac-271",
+    "AC-3 (FR-1)": "ac-3-fr-1",
+    "AC-1.1 (FR-1)": "ac-11-fr-1",
+    "AC-29.1 (FR-29)": "ac-291-fr-29",
+    "UC-3": "uc-3",
+    "UC-3: Developer migrates from vitest pseudo-BDD": "uc-3-developer-migrates-from-vitest-pseudo-bdd",
+    "US-22": "us-22",
+    "Some Heading With Spaces!": "some-heading-with-spaces",
+    "Mixed: punctuation, commas & ampersands (parens) v2.0": "mixed-punctuation-commas-ampersands-parens-v20",
+    "Заголовок с пробелами и пунктуацией!": "заголовок-с-пробелами-и-пунктуацией",
+    "FR-7: Фаза 2 — нативный LSP плагин": "fr-7-фаза-2-нативный-lsp-плагин"
+  }
+}
