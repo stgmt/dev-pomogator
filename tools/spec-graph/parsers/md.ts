@@ -128,7 +128,12 @@ function parentFrAfter(lines: string[], i: number): string {
     const t = lines[j].trim();
     if (!t) continue;
     if (t.startsWith('#')) return '';
-    const m = t.match(/\bFR-(\d+[a-z]?)\b/);
+    // Prefer the canonical FR from the link HREF (`…#fr-7` → FR-7) so a sub-clause
+    // citation like `[FR-7a](FR.md#fr-7)` maps to the real FR-7 node, not a
+    // non-existent FR-7a. Fall back to the first FR-N token in the text.
+    const href = t.match(/#fr-(\d+)\b/i);
+    if (href) return `FR-${href[1]}`;
+    const m = t.match(/\bFR-(\d+)\b/);
     if (m) return `FR-${m[1]}`;
   }
   return '';
@@ -318,7 +323,10 @@ export function parseMarkdown(mdSource: string, relativePath: string): ParserOut
     m = text.match(SHORT_AC_RE);
     if (m) {
       const acId = `AC-${m[1]}`;
-      const slug = slugify(acId); // `ac-1-1` — matches `[…](#ac-1-1)` links
+      // Marksman slug for `## AC-1.1` is `ac-11` — it REMOVES the dot (keeps the
+      // existing dash), unlike slugify() which dashes it. Match Marksman so the
+      // `[…](#ac-11)` links resolve and wikilinks.ts agrees.
+      const slug = acId.toLowerCase().replace(/\./g, '');
       const parentFr = parentFrAfter(lines, i);
       const node: AcNode = { id: acId, type: 'AC', parentFr, file: relativePath, line, ears: '' };
       nodes.push(node);

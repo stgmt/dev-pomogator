@@ -178,8 +178,8 @@ describe('parseMarkdown — migrated short headings (FR-7c)', () => {
     expect(ac.id).toBe('AC-1.1');
     expect(ac.parentFr).toBe('FR-1');
     expect(out.edges).toEqual([{ from: 'FR-1', to: 'AC-1.1', type: 'covers' }]);
-    // adds the slug anchor `ac-1-1` so `[…](#ac-1-1)` resolves
-    expect(out.anchors.some((a) => a.alias === 'ac-1-1' && a.canonicalId === 'AC-1.1')).toBe(true);
+    // adds Marksman's dot-removed slug `ac-11` so `[…](#ac-11)` resolves
+    expect(out.anchors.some((a) => a.alias === 'ac-11' && a.canonicalId === 'AC-1.1')).toBe(true);
   });
 
   it('keeps the old `## FR-N: Title` / `## AC-N (FR-M)` forms working unchanged', () => {

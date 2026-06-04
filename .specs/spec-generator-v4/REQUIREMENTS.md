@@ -4,22 +4,22 @@
 
 | ID | Name | Linked AC | @featureN | Status |
 |----|------|-----------|-----------|--------|
-| [FR-1](FR.md#fr-1) | Phase 0 cucumber-js BDD migration | [AC-1.1](ACCEPTANCE_CRITERIA.md#ac-1-1), [AC-1.2](ACCEPTANCE_CRITERIA.md#ac-1-2), [AC-1.3](ACCEPTANCE_CRITERIA.md#ac-1-3) | @feature1 | Draft |
-| [FR-2](FR.md#fr-2) | In-memory SpecGraph builder | [AC-2.1](ACCEPTANCE_CRITERIA.md#ac-2-1), [AC-2.2](ACCEPTANCE_CRITERIA.md#ac-2-2) | @feature2 | Draft |
-| [FR-3](FR.md#fr-3) | Custom MD parser dual-anchor | [AC-3.1](ACCEPTANCE_CRITERIA.md#ac-3-1), [AC-3.2](ACCEPTANCE_CRITERIA.md#ac-3-2), [AC-3.3](ACCEPTANCE_CRITERIA.md#ac-3-3) | @feature3 | Draft |
-| [FR-4](FR.md#fr-4) | MCP server get_trace | [AC-4.1](ACCEPTANCE_CRITERIA.md#ac-4-1), [AC-4.2](ACCEPTANCE_CRITERIA.md#ac-4-2) | @feature4 | Draft |
-| [FR-5](FR.md#fr-5) | PreToolUse HARD hooks | [AC-5.1](ACCEPTANCE_CRITERIA.md#ac-5-1), [AC-5.2](ACCEPTANCE_CRITERIA.md#ac-5-2), [AC-5.3](ACCEPTANCE_CRITERIA.md#ac-5-3) | @feature5 | Draft |
-| [FR-6](FR.md#fr-6) | PostToolUse always-push 3s throttle | [AC-6.1](ACCEPTANCE_CRITERIA.md#ac-6-1), [AC-6.2](ACCEPTANCE_CRITERIA.md#ac-6-2), [AC-6.3](ACCEPTANCE_CRITERIA.md#ac-6-3) | @feature6 | Draft |
-| [FR-7](FR.md#fr-7) | Marksman bundle install | [AC-7.1](ACCEPTANCE_CRITERIA.md#ac-7-1), [AC-7.2](ACCEPTANCE_CRITERIA.md#ac-7-2) | @feature7 | Draft |
-| [FR-8](FR.md#fr-8) | LLM semantic drift check (opt-in) | [AC-8.1](ACCEPTANCE_CRITERIA.md#ac-8-1), [AC-8.2](ACCEPTANCE_CRITERIA.md#ac-8-2) | @feature8 | Draft |
-| [FR-9](FR.md#fr-9) | Multi-language BDD support | [AC-9.1](ACCEPTANCE_CRITERIA.md#ac-9-1), [AC-9.2](ACCEPTANCE_CRITERIA.md#ac-9-2) | @feature9 | Draft |
-| [FR-10](FR.md#fr-10) | SQLite FTS5 cross-session (Phase 4) | [AC-10.1](ACCEPTANCE_CRITERIA.md#ac-10-1), [AC-10.2](ACCEPTANCE_CRITERIA.md#ac-10-2), [AC-10.3](ACCEPTANCE_CRITERIA.md#ac-10-3) | @feature10 | Draft |
-| [FR-11](FR.md#fr-11) | Migration helper v3→v4 | [AC-11.1](ACCEPTANCE_CRITERIA.md#ac-11-1), [AC-11.2](ACCEPTANCE_CRITERIA.md#ac-11-2) | @feature11 | Draft |
-| [FR-12](FR.md#fr-12) | architecture-research-workflow skill | [AC-12.1](ACCEPTANCE_CRITERIA.md#ac-12-1), [AC-12.2](ACCEPTANCE_CRITERIA.md#ac-12-2), [AC-12.3](ACCEPTANCE_CRITERIA.md#ac-12-3) | @feature12 | Draft |
-| [FR-13](FR.md#fr-13) | Orphan resolution policy | [AC-13.1](ACCEPTANCE_CRITERIA.md#ac-13-1), [AC-13.2](ACCEPTANCE_CRITERIA.md#ac-13-2) | @feature13 | Draft |
-| [FR-14](FR.md#fr-14) | Devcontainer / multi-env support | [AC-14.1](ACCEPTANCE_CRITERIA.md#ac-14-1), [AC-14.2](ACCEPTANCE_CRITERIA.md#ac-14-2), [AC-14.3](ACCEPTANCE_CRITERIA.md#ac-14-3) | @feature14 | Draft |
-| [FR-15](FR.md#fr-15) | Side-channel conformance log | [AC-15.1](ACCEPTANCE_CRITERIA.md#ac-15-1), [AC-15.2](ACCEPTANCE_CRITERIA.md#ac-15-2) | @feature15 | Draft |
-| [FR-16](FR.md#fr-16) | GitHub Codespaces support | [AC-16.1](ACCEPTANCE_CRITERIA.md#ac-16-1), [AC-16.2](ACCEPTANCE_CRITERIA.md#ac-16-2) | @feature16 | Draft |
+| [FR-1](FR.md#fr-1) | Phase 0 cucumber-js BDD migration | [AC-1.1](ACCEPTANCE_CRITERIA.md#ac-11), [AC-1.2](ACCEPTANCE_CRITERIA.md#ac-12), [AC-1.3](ACCEPTANCE_CRITERIA.md#ac-13) | @feature1 | Draft |
+| [FR-2](FR.md#fr-2) | In-memory SpecGraph builder | [AC-2.1](ACCEPTANCE_CRITERIA.md#ac-21), [AC-2.2](ACCEPTANCE_CRITERIA.md#ac-22) | @feature2 | Draft |
+| [FR-3](FR.md#fr-3) | Custom MD parser dual-anchor | [AC-3.1](ACCEPTANCE_CRITERIA.md#ac-31), [AC-3.2](ACCEPTANCE_CRITERIA.md#ac-32), [AC-3.3](ACCEPTANCE_CRITERIA.md#ac-33) | @feature3 | Draft |
+| [FR-4](FR.md#fr-4) | MCP server get_trace | [AC-4.1](ACCEPTANCE_CRITERIA.md#ac-41), [AC-4.2](ACCEPTANCE_CRITERIA.md#ac-42) | @feature4 | Draft |
+| [FR-5](FR.md#fr-5) | PreToolUse HARD hooks | [AC-5.1](ACCEPTANCE_CRITERIA.md#ac-51), [AC-5.2](ACCEPTANCE_CRITERIA.md#ac-52), [AC-5.3](ACCEPTANCE_CRITERIA.md#ac-53) | @feature5 | Draft |
+| [FR-6](FR.md#fr-6) | PostToolUse always-push 3s throttle | [AC-6.1](ACCEPTANCE_CRITERIA.md#ac-61), [AC-6.2](ACCEPTANCE_CRITERIA.md#ac-62), [AC-6.3](ACCEPTANCE_CRITERIA.md#ac-63) | @feature6 | Draft |
+| [FR-7](FR.md#fr-7) | Marksman bundle install | [AC-7.1](ACCEPTANCE_CRITERIA.md#ac-71), [AC-7.2](ACCEPTANCE_CRITERIA.md#ac-72) | @feature7 | Draft |
+| [FR-8](FR.md#fr-8) | LLM semantic drift check (opt-in) | [AC-8.1](ACCEPTANCE_CRITERIA.md#ac-81), [AC-8.2](ACCEPTANCE_CRITERIA.md#ac-82) | @feature8 | Draft |
+| [FR-9](FR.md#fr-9) | Multi-language BDD support | [AC-9.1](ACCEPTANCE_CRITERIA.md#ac-91), [AC-9.2](ACCEPTANCE_CRITERIA.md#ac-92) | @feature9 | Draft |
+| [FR-10](FR.md#fr-10) | SQLite FTS5 cross-session (Phase 4) | [AC-10.1](ACCEPTANCE_CRITERIA.md#ac-101), [AC-10.2](ACCEPTANCE_CRITERIA.md#ac-102), [AC-10.3](ACCEPTANCE_CRITERIA.md#ac-103) | @feature10 | Draft |
+| [FR-11](FR.md#fr-11) | Migration helper v3→v4 | [AC-11.1](ACCEPTANCE_CRITERIA.md#ac-111), [AC-11.2](ACCEPTANCE_CRITERIA.md#ac-112) | @feature11 | Draft |
+| [FR-12](FR.md#fr-12) | architecture-research-workflow skill | [AC-12.1](ACCEPTANCE_CRITERIA.md#ac-121), [AC-12.2](ACCEPTANCE_CRITERIA.md#ac-122), [AC-12.3](ACCEPTANCE_CRITERIA.md#ac-123) | @feature12 | Draft |
+| [FR-13](FR.md#fr-13) | Orphan resolution policy | [AC-13.1](ACCEPTANCE_CRITERIA.md#ac-131), [AC-13.2](ACCEPTANCE_CRITERIA.md#ac-132) | @feature13 | Draft |
+| [FR-14](FR.md#fr-14) | Devcontainer / multi-env support | [AC-14.1](ACCEPTANCE_CRITERIA.md#ac-141), [AC-14.2](ACCEPTANCE_CRITERIA.md#ac-142), [AC-14.3](ACCEPTANCE_CRITERIA.md#ac-143) | @feature14 | Draft |
+| [FR-15](FR.md#fr-15) | Side-channel conformance log | [AC-15.1](ACCEPTANCE_CRITERIA.md#ac-151), [AC-15.2](ACCEPTANCE_CRITERIA.md#ac-152) | @feature15 | Draft |
+| [FR-16](FR.md#fr-16) | GitHub Codespaces support | [AC-16.1](ACCEPTANCE_CRITERIA.md#ac-161), [AC-16.2](ACCEPTANCE_CRITERIA.md#ac-162) | @feature16 | Draft |
 
 ## Functional Requirements
 

@@ -945,12 +945,15 @@ function commandValidateSpec(argv) {
 
     if (fileName === 'FR.md') {
       log('INFO', 'Checking FR_FORMAT rule...');
-      if (!/## FR-(\d+):/i.test(content)) {
+      // Accept BOTH the colon form (`## FR-N: Title`) and the migrated short form
+      // (`## FR-N`, title relocated to a body line per FR-7c). Line-anchored so a
+      // `### FR-001:` example in prose can't accidentally satisfy the check.
+      if (!/^#{2,6}\s+FR-\d+\b/im.test(content)) {
         errors.push({
           file: fileName,
           line: 0,
           rule: 'FR_FORMAT',
-          message: 'No FR-N headers found. Expected format: ## FR-N: {Название}',
+          message: 'No FR-N headers found. Expected format: ## FR-N (short) or ## FR-N: {Название}',
         });
         fileHasErrors = true;
         log('ERROR', `${fileName}: No FR-N headers found`);
@@ -959,12 +962,13 @@ function commandValidateSpec(argv) {
 
     if (fileName === 'USE_CASES.md') {
       log('INFO', 'Checking UC_FORMAT rule...');
-      if (!/## UC-(\d+):/i.test(content)) {
+      // Accept both `## UC-N: Title` and the migrated short form `## UC-N` (FR-7c).
+      if (!/^#{2,6}\s+UC-\d+\b/im.test(content)) {
         errors.push({
           file: fileName,
           line: 0,
           rule: 'UC_FORMAT',
-          message: 'No UC-N headers found. Expected format: ## UC-N: {Название}',
+          message: 'No UC-N headers found. Expected format: ## UC-N (short) or ## UC-N: {Название}',
         });
         fileHasErrors = true;
         log('ERROR', `${fileName}: No UC-N headers found`);
