@@ -1,11 +1,11 @@
 {
   "mcpServers": {
     "dev-pomogator-specs": {
+      "type": "stdio",
       "command": "node",
       "args": [
-        "--import",
-        "tsx",
-        "tools/spec-mcp-server/server.ts"
+        "-e",
+        "const p=require('node:path'),cp=require('node:child_process');const root=process.env.CLAUDE_PLUGIN_ROOT||process.cwd();const b=p.join(root,'tools','spec-mcp-server','server.bundle.mjs');const c=cp.spawn(process.execPath,[b],{stdio:'inherit'});c.on('exit',x=>process.exit(x??0));c.on('error',e=>{process.stderr.write('[dev-pomogator-specs] launch failed: '+e.message+'\\n');process.exit(1);});"
       ],
       "env": {
         "DEV_POMOGATOR_REPO_ROOT": "${CLAUDE_PROJECT_DIR}"
