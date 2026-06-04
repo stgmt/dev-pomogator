@@ -22,6 +22,7 @@ import { marksmanSlug } from './marksman-slug.mjs';
  * @property {number} line          1-indexed line of the link
  * @property {string} linkText      the `[text]` of the link
  * @property {string} targetFile    repo-relative target .md, or '' for same-file
+ * @property {string} targetRaw     the raw file part of the link as written ('' for same-file) — for exact rewrite
  * @property {string} brokenAnchor  the `#anchor` that did not resolve
  * @property {string} inferredId    id parsed from linkText (FR-7 / AC-1.1 / …), '' if none
  * @property {(string|null)} currentSlug  the slug of inferredId's heading in the target (the fix), or null
@@ -135,7 +136,7 @@ export function checkLinks(files) {
         const currentSlug = inferredId && targetIndex.idToSlug.has(inferredId)
           ? targetIndex.idToSlug.get(inferredId)
           : null;
-        broken.push({ file: f.file, line: i + 1, linkText, targetFile: filePart ? targetFile : '', brokenAnchor: anchor, inferredId, currentSlug });
+        broken.push({ file: f.file, line: i + 1, linkText, targetFile: filePart ? targetFile : '', targetRaw: filePart, brokenAnchor: anchor, inferredId, currentSlug });
       }
     }
   }

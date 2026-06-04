@@ -936,12 +936,13 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] Covers same-file `[t](#a)` (the class `CROSS_REF_LINKS` linkPattern misses) AND cross-file `[t](f.md#a)`
   - [x] Corpus baseline recorded: **1744 broken anchors across 39 specs** — VERIFIED against the real binary (links `#fr-3-devpomogator-…` vs real `fr-3-dev-pomogator-…`; the rollout report's "already resolvable" was WRONG). 30 synthetic unit tests pass in Docker; corpus tests skip there (`.specs` dockerignored), run via CLI on host. v4 = 0.
 
-- [ ] Deterministic fixer + idempotence -- @feature34 — id: anchor-fix-deterministic — Status: TODO | Est: 120m
+- [x] Deterministic fixer + idempotence -- @feature34 — id: anchor-fix-deterministic — Status: DONE | Est: 120m
   _depends: anchor-check_
   _Requirements: [FR-34c](FR.md#fr-34)_
   **Done When:**
-  - [ ] `tools/anchor-integrity/fix.ts --apply` rewrites id-bearing broken links to the current `marksmanSlug` (no LLM)
-  - [ ] Round-trip test: rename a fixture heading → fix → links resolve; `fix(fix(x))==fix(x)`
+  - [x] `tools/anchor-integrity/fix.mjs --apply` rewrites id-bearing broken links to the current `marksmanSlug` (no LLM); leaves ambiguous for claude -p; CLI `--spec`/`--all`
+  - [x] Round-trip + idempotence + ambiguous-skip + cross-file tests pass (Docker 35/37). Corpus dry-run: **1719/1744 deterministically fixable**, 25 ambiguous
+  - [x] `anchor-fix` skill (`.claude/skills/anchor-fix/SKILL.md`) captures the workflow + measured slug rules; memory updated
 
 - [ ] PostToolUse hook + Stop-gate (escape hatch) -- @feature34 — id: anchor-guard-hooks — Status: TODO | Est: 150m
   _depends: anchor-check_
