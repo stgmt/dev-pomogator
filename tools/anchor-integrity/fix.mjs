@@ -12,7 +12,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { checkSpecDir } from './check.mjs';
+import { checkSpecDir, headingList } from './check.mjs';
+import { resolveClaudeBin, dispatchClaudeFallback } from './claude-fallback.mjs';
 
 /**
  * Apply deterministic fixes to in-memory files.
@@ -50,8 +51,12 @@ export function applyFixes(files, broken) {
   return { changed, fixable, skipped };
 }
 
-/** Fix a spec dir on disk. @returns {{written:string[], fixable:number, skipped:number, remaining:number}} */
-export function fixSpecDir(dirAbs, repoRoot, { apply = false } = {}) {
+/**
+ * Fix a spec dir on disk. Deterministic rewrites always run; `claude` additionally
+ * dispatches the headless fallback (FR-34c) for the ambiguous remainder.
+ * @returns {{written:string[], fixable:number, skipped:number, remaining:number, claude?:ReturnType<typeof dispatchClaudeFallback>}}
+ */
+export function fixSpecDir(dirAbs, repoRoot, { apply = false, claude = false, claudeBin = undefined, spawnFn = undefined } = {}) {
   const files = [];
   for (const name of fs.readdirSync(dirAbs)) {
     if (!name.endsWith('.md')) continue;
@@ -68,7 +73,20 @@ export function fixSpecDir(dirAbs, repoRoot, { apply = false } = {}) {
       if (changed[f.file] !== undefined) { fs.writeFileSync(f.abs, changed[f.file]); written.push(f.file); }
     }
   }
-  return { written: apply ? written : Object.keys(changed), fixable, skipped, remaining: broken.length - fixable };
+  const result = { written: apply ? written : Object.keys(changed), fixable, skipped, remaining: broken.length - fixable };
+  if (claude && skipped > 0) {
+    // Build target-file → headings map for the prompt; re-check from the (possibly
+    // rewritten) on-disk state so determinstic fixes aren't re-dispatched.
+    const postBroken = apply ? checkSpecDir(dirAbs, repoRoot) : broken;
+    const candidatesByFile = new Map();
+    for (const f of files) {
+      const content = apply && changed[f.file] !== undefined ? changed[f.file] : f.content;
+      candidatesByFile.set(f.file, headingList(content));
+    }
+    const bin = claudeBin !== undefined ? claudeBin : resolveClaudeBin();
+    result.claude = dispatchClaudeFallback(postBroken, candidatesByFile, { repoRoot, claudeBin: bin, spawnFn });
+  }
+  return result;
 }
 
 // ── CLI ──────────────────────────────────────────────────────────────────
@@ -77,6 +95,7 @@ export function fixSpecDir(dirAbs, repoRoot, { apply = false } = {}) {
 function cliMain() {
   const args = process.argv.slice(2);
   const apply = args.includes('--apply');
+  const claude = args.includes('--claude');
   const repoRoot = process.env.DEV_POMOGATOR_REPO_ROOT || process.cwd();
   const dirs = [];
   if (args.includes('--all')) {
@@ -91,15 +110,26 @@ function cliMain() {
     if (!dir) { process.stderr.write('usage: fix.mjs --spec <dir> [--apply] | --all [--apply]\n'); process.exit(2); }
     dirs.push(path.resolve(repoRoot, dir));
   }
-  let totalFixable = 0, totalSkipped = 0, totalWritten = 0;
+  let totalFixable = 0, totalSkipped = 0, totalWritten = 0, totalDispatched = 0, totalFlagged = 0;
+  let claudeUnavailable = false;
   for (const dir of dirs) {
-    const r = fixSpecDir(dir, repoRoot, { apply });
+    const r = fixSpecDir(dir, repoRoot, { apply, claude });
     totalFixable += r.fixable; totalSkipped += r.skipped; totalWritten += r.written.length;
+    if (r.claude) {
+      totalDispatched += r.claude.dispatched; totalFlagged += r.claude.flagged;
+      if (!r.claude.available) claudeUnavailable = true;
+    }
     if (r.fixable || r.skipped) {
-      process.stdout.write(`${path.basename(dir).padEnd(36)} fixable=${r.fixable} ambiguous=${r.skipped}${apply ? ` written=${r.written.length}` : ''}\n`);
+      const cl = r.claude ? ` claude=${r.claude.available ? r.claude.dispatched + ' dispatched' : 'unavailable→flagged'}` : '';
+      process.stdout.write(`${path.basename(dir).padEnd(36)} fixable=${r.fixable} ambiguous=${r.skipped}${apply ? ` written=${r.written.length}` : ''}${cl}\n`);
     }
   }
-  process.stdout.write(`\n${apply ? 'APPLIED' : 'SUGGEST'}: ${totalFixable} deterministic fixes, ${totalSkipped} ambiguous (claude -p), ${apply ? totalWritten + ' files written' : 'dry run'}\n`);
+  const claudeNote = claude
+    ? (claudeUnavailable
+        ? `; claude UNAVAILABLE → ${totalFlagged} ambiguous left flagged (no guess)`
+        : `; ${totalDispatched} dispatched to claude -p (background)`)
+    : '';
+  process.stdout.write(`\n${apply ? 'APPLIED' : 'SUGGEST'}: ${totalFixable} deterministic fixes, ${totalSkipped} ambiguous${claude ? '' : ' (claude -p)'}${apply ? `, ${totalWritten} files written` : ', dry run'}${claudeNote}\n`);
   process.exit(0);
 }
 

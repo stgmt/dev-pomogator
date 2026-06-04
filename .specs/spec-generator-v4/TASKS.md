@@ -952,12 +952,12 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] `anchor_gate_stop.ts` blocks "done" while git-MODIFIED specs have broken anchors; escape `[skip-anchor-fix: <reason ≥8>]` in commit msg OR `ANCHOR_GATE_SKIP=1` (logged); honours `stop_hook_active`; modes true/shadow/false
   - [x] Both registered in `.claude-plugin/hooks.json` (valid); SOFT-tier (log + exit 0) on error. Docker 42/44 (2 corpus skipped)
 
-- [ ] `claude -p`/`-bg` ambiguous-link fallback -- @feature34 — id: anchor-fix-claude — Status: TODO | Est: 240m
+- [x] `claude -p`/`-bg` ambiguous-link fallback -- @feature34 — id: anchor-fix-claude — Status: DONE | Est: 240m
   _depends: anchor-fix-deterministic_
   _Requirements: [FR-34c](FR.md#fr-34)_
   **Done When:**
-  - [ ] `fix.ts --claude` dispatches headless `claude -p` (background) for prose links; picks target heading; rewrites
-  - [ ] Non-blocking (detached); unavailable headless → link stays flagged (no guess-rewrite); mocked unit + 1 real bg smoke
+  - [x] `fix.mjs --claude` (via `claude-fallback.mjs`) dispatches headless `claude -p` (detached, `--permission-mode acceptEdits`) for ambiguous prose links, prompt = broken link + target-file candidate headings (`headingList`)
+  - [x] Non-blocking (detached + `unref`); claude unavailable → link stays flagged, NEVER guess-rewritten. Mocked unit (3 invariants: non-blocking / no-guess / ambiguous-only) + real-bg smoke (ran green in Docker: dispatch returned <2s). Docker 52 passed / 2 skipped
 
 - [x] Wire detector into validate-spec + markdown-lsp note -- @feature34 — id: anchor-wire — Status: DONE | Est: 60m
   _depends: anchor-check_

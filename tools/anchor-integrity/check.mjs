@@ -76,6 +76,26 @@ export function indexHeadings(content) {
   return { slugs, idToSlug };
 }
 
+/**
+ * The headings of one file as `{text, slug}` pairs (fences skipped) — the candidate
+ * list handed to the `claude -p` fallback so it can pick the intended target.
+ * @param {string} content
+ * @returns {{text:string, slug:string}[]}
+ */
+export function headingList(content) {
+  const out = [];
+  let inFence = false;
+  for (const raw of content.split(/\r?\n/)) {
+    if (FENCE_RE.test(raw)) { inFence = !inFence; continue; }
+    if (inFence || raw.charCodeAt(0) !== 35) continue;
+    const hm = raw.match(HEADING_RE);
+    if (!hm) continue;
+    const text = headingText(hm[2]);
+    out.push({ text, slug: marksmanSlug(text) });
+  }
+  return out;
+}
+
 /** Byte offsets of inline-code (`backtick`) spans on a line, to skip links inside them. */
 function codeSpans(line) {
   const spans = [];
