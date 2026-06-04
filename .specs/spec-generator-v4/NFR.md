@@ -71,8 +71,8 @@ System SHALL auto-detect FS events reliability via touch test at startup (create
 ### NFR-Reliability-5: SQLite corruption recovery (Phase 4)
 System SHALL run `PRAGMA integrity_check` on SQLite at startup. If failure → auto-fallback to in-memory rebuild + corrupted file moved to `.dev-pomogator/.spec-index.sqlite.corrupt-{timestamp}` for postmortem + warning logged.
 
-### NFR-Reliability-6: Marksman crash isolation
-If bundled Marksman LSP subprocess crashes during runtime — MCP server detects via process exit code, logs warning, falls back to custom JS-based MD LSP. Auto-restart attempt every 30s; after 3 consecutive failures, disable Marksman for session.
+### NFR-Reliability-6: Marksman crash isolation (native LSP, no fake fallback)
+Marksman runs as a NATIVE Claude Code LSP plugin (`.lsp.json`), so Claude Code's LSP host owns the subprocess lifecycle — including restart (`maxRestarts` in `.lsp.json`). If Marksman is genuinely unavailable (crash, offline + unsupported platform), markdown navigation is simply absent with an actionable message — the system SHALL NOT fake a degraded JS MD-LSP (FR-7a). Spec-DOMAIN queries (`get_trace` / `get_coverage` / `find_refs`) are graph-backed and unaffected by Marksman's state.
 
 ### NFR-Reliability-7: Cross-spec reconcile graceful degradation (Phase 7)
 Reconcile YAML write SHALL be atomic (temp file `consistency-report.yaml.tmp` + rename, per `.claude/rules/atomic-config-save.md`). Agent subagent invocations SHALL have a 120-second per-pair timeout; on timeout fallback to mechanical-only mode + log warning. If subagent completes on some pairs but fails on others, YAML `partial: true` flag set + warning emitted; system does NOT fail-loud. If SpecGraph + MCP server (Phase 1) unavailable, reconcile operates in degraded mode reading `.specs/*/*.md` directly via `fs` + `remark` + `glob`. Existing `acknowledged_by` / `resolution_status` fields are preserved on merge writes (never overwritten by new run).

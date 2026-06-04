@@ -162,7 +162,7 @@ Then `.dev-pomogator/bin/marksman` binary is present and executable for the curr
 
 Given Marksman binary download fails during install (no network, offline)
 When the installer completes
-Then install does not fail; Marksman is marked as unavailable in `.dev-pomogator/install-log.json`; MCP server falls back to custom JS-based MD LSP for navigation
+Then install does not fail; Marksman is marked as unavailable in `.dev-pomogator/install-log.json`; there is NO fake JS MD-LSP — markdown navigation is simply absent with an actionable message, while spec-domain graph queries (`get_trace` / `find_refs`) still work
 
 Given a Developer opens `.specs/auth/FR.md` in VS Code with Marksman LSP plugin enabled
 When they Ctrl+Click on `[[FR-005]]` wiki-link in DESIGN.md
