@@ -11,6 +11,7 @@ import { Given, When, Then } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
 import { checkConformance, type Finding } from '../../tools/spec-graph/conformance.ts';
 import { computeCoverage, type CoverageReport, type ScenarioLike, type TaskLike, type TestQualityVerdict } from '../../tools/spec-graph/coverage.ts';
+import { WORKFLOW, REFERENCED_CAPABILITIES, checkFeatureMapDrift, type DriftResult } from '../../.claude/skills/spec-generator-orchestrator/scripts/feature-map.ts';
 import type { SpecGraph } from '../../tools/spec-graph/types.ts';
 
 interface ScenSpec { id: string; tags?: string[]; result?: string }
@@ -32,6 +33,8 @@ interface F35World {
   covScens?: ScenarioLike[];
   verdict?: Record<string, TestQualityVerdict>;
   taskId?: string;
+  driftWithStage?: DriftResult;
+  driftWithoutStage?: DriftResult;
 }
 
 // ── SPECGEN004_85/86 — FR-35a: a test-quality verdict caps / clears a GREEN task ──
@@ -68,6 +71,34 @@ Then('a TASK_TEST_QUALITY finding names the task and the fake-positive verdict',
 });
 Then('verified_status is DONE', function (this: F35World) {
   assert.equal(this.report!.tasks[this.taskId!].verified_status, 'DONE', 'a genuinely STRONG green test must NOT be false-blocked');
+});
+
+// ── SPECGEN004_87 — FR-35b: the feature-map carries an ENFORCED test-quality stage ──
+Given('the orchestrator feature-map', function (this: F35World) {
+  // WORKFLOW + REFERENCED_CAPABILITIES are module constants — nothing to set up.
+});
+When('the drift guard evaluates it', function (this: F35World) {
+  // The live capability set includes the test-quality workers (they are real skills).
+  const actual = [...REFERENCED_CAPABILITIES];
+  this.driftWithStage = checkFeatureMapDrift(actual, REFERENCED_CAPABILITIES);
+  // Simulate the stage being dropped from the map: referenced loses its workers.
+  const referencedWithout = REFERENCED_CAPABILITIES.filter((c) => c !== 'strong-tests' && c !== 'spec-status');
+  this.driftWithoutStage = checkFeatureMapDrift(actual, referencedWithout);
+});
+Then('a test-quality stage exists between coverage and honesty-gate routing to strong-tests and spec-status', function () {
+  const idx = (step: string) => WORKFLOW.findIndex((w) => w.step === step);
+  const tq = WORKFLOW.filter((w) => w.step === 'test-quality');
+  assert.equal(tq.length, 2, 'test-quality stage must route to two workers');
+  assert.deepEqual(tq.map((w) => w.worker).sort(), ['spec-status', 'strong-tests']);
+  const tqIdx = idx('test-quality');
+  assert.ok(tqIdx > idx('coverage'), 'test-quality must come after coverage');
+  assert.ok(tqIdx < idx('honesty-gate'), 'test-quality must come before honesty-gate');
+});
+Then('the drift guard fails when that stage is removed', function (this: F35World) {
+  assert.equal(this.driftWithStage!.ok, true, 'with the stage referenced there is no drift');
+  assert.equal(this.driftWithoutStage!.ok, false, 'dropping the stage must trip the drift guard');
+  assert.ok(this.driftWithoutStage!.unreferenced.includes('strong-tests'));
+  assert.ok(this.driftWithoutStage!.unreferenced.includes('spec-status'));
 });
 
 // ── SPECGEN004_89 — FR-35c: DONE with zero linked scenarios is not silent ────

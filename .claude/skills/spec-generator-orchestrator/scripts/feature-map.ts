@@ -12,7 +12,7 @@
 
 export interface WorkflowStep {
   /** End-to-end workflow stage. */
-  step: 'scaffold' | 'conformance' | 'coverage' | 'reconcile' | 'resolve' | 'honesty-gate' | 'trace' | 'backlog' | 'architecture';
+  step: 'scaffold' | 'conformance' | 'coverage' | 'test-quality' | 'reconcile' | 'resolve' | 'honesty-gate' | 'trace' | 'backlog' | 'architecture';
   /** The worker this stage delegates to (skill name or MCP tool name). */
   worker: string;
   /** Whether the worker is an MCP tool or a worker skill. */
@@ -32,6 +32,11 @@ export const WORKFLOW: WorkflowStep[] = [
   { step: 'reconcile', worker: 'cross-spec-reconcile', kind: 'skill' },
   { step: 'resolve', worker: 'cross-spec-resolve', kind: 'skill' },
   { step: 'backlog', worker: 'spec-backlog', kind: 'skill' },
+  // FR-35b: test-quality stage BETWEEN coverage and honesty-gate. strong-tests +
+  // spec-status audit the test BODY (STRONG/WEAK/FAKE-POSITIVE-RISK) so a fake-positive
+  // GREEN test cannot reach DONE; the worst verdict feeds get_coverage's honesty-gate.
+  { step: 'test-quality', worker: 'strong-tests', kind: 'skill' },
+  { step: 'test-quality', worker: 'spec-status', kind: 'skill' },
   { step: 'honesty-gate', worker: 'get_coverage', kind: 'mcp-tool' },
 ];
 
@@ -61,6 +66,10 @@ export const REFERENCED_CAPABILITIES: readonly string[] = [
   'cross-spec-reconcile',
   'cross-spec-resolve',
   'spec-backlog',
+  // FR-35b — test-quality stage workers (enforced: drift guard fails if a live
+  // strong-tests/spec-status capability is dropped from the map).
+  'strong-tests',
+  'spec-status',
 ];
 
 export interface DriftResult {
