@@ -1,32 +1,32 @@
 {
   "_doc": "Pinned sha256 of the Marksman LSP binaries we ship. Per FR-27, install aborts if the downloaded artefact's sha256 does not match the entry below for the current platform/arch. To refresh after a version bump: run `npx tsx tools/marksman-installer/cli-update-hashes.ts --version <X.Y.Z>` — that CLI downloads each tarball, computes sha256, writes this file. A maintainer reviews the diff and commits.",
-  "version": "2024.10.10",
+  "version": "2026-02-08",
   "release_url_template": "https://github.com/artempyanykh/marksman/releases/download/{version}/{asset}",
   "platforms": {
     "linux": {
       "x64": {
         "asset": "marksman-linux-x64",
-        "sha256": "PLACEHOLDER_LINUX_X64_SHA256"
+        "sha256": "be5098e8213219269c47fc0d916a66fa31ce0602ec967475c722260aabf26087"
       },
       "arm64": {
         "asset": "marksman-linux-arm64",
-        "sha256": "PLACEHOLDER_LINUX_ARM64_SHA256"
+        "sha256": "db8e124527f7f8048e3e6c91821b9c52ef173d92c01e47d221bf1337afd962fb"
       }
     },
     "darwin": {
       "x64": {
         "asset": "marksman-macos",
-        "sha256": "PLACEHOLDER_MACOS_X64_SHA256"
+        "sha256": "6a801c17b5ac0dba69787c5282b3b3bd416e66c96253fae098d311c6bbd1833b"
       },
       "arm64": {
         "asset": "marksman-macos",
-        "sha256": "PLACEHOLDER_MACOS_X64_SHA256"
+        "sha256": "6a801c17b5ac0dba69787c5282b3b3bd416e66c96253fae098d311c6bbd1833b"
       }
     },
     "win32": {
       "x64": {
         "asset": "marksman.exe",
-        "sha256": "PLACEHOLDER_WIN32_X64_SHA256"
+        "sha256": "a6d05beb08ebe41b0a9f09c98a438540421436fa5531424c22e0bb1d22529705"
       }
     }
   }

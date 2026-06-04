@@ -19,8 +19,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { pathToFileURL } from 'node:url';
 import { startLifecycle, type LifecycleHandle } from './lifecycle.ts';
 import { buildToolRegistry } from './tools.ts';
-import { resolveLspMode } from '../marksman-installer/lsp-mode.ts';
-import { readLog } from '../marksman-installer/install-log.ts';
+import { resolveMarksmanBinary } from '../marksman-installer/resolve-binary.ts';
 import { startBridge, type BridgeHandle } from '../marksman-lsp/bridge.ts';
 
 const PRODUCT_NAME = 'dev-pomogator-specs';
@@ -44,21 +43,20 @@ export async function boot(opts: BootOptions): Promise<{
   const lifecycle = await startLifecycle({ repoRoot: opts.repoRoot, autoDetectWatchMode: true });
   const server = new McpServer({ name: PRODUCT_NAME, version: PRODUCT_VERSION });
 
-  // FR-7b: the runtime CONSUMER of the installed Marksman. When the supply-chain
-  // record says the binary is available, spawn the LSP bridge so md_references is
-  // served by real Marksman; any failure degrades to the graph-backed fallback.
+  // FR-7b: the runtime CONSUMER of Marksman. Resolve the binary package-first
+  // (PATH → managed download → none, per resolve-binary.ts), then spawn the LSP
+  // bridge so md_references is served by real Marksman; any failure degrades to
+  // the graph-backed fallback (fail-open).
   let bridge: BridgeHandle | null = null;
-  if (resolveLspMode(opts.repoRoot) === 'marksman') {
-    const binaryPath = readLog(opts.repoRoot)?.marksman.binary_path;
-    if (binaryPath) {
-      try {
-        bridge = await startBridge({ binaryPath, rootUri: pathToFileURL(opts.repoRoot).href });
-      } catch (err) {
-        process.stderr.write(
-          `[${PRODUCT_NAME}] marksman bridge failed to start, using js-fallback: ${err instanceof Error ? err.message : String(err)}\n`,
-        );
-        bridge = null;
-      }
+  const resolved = resolveMarksmanBinary({ repoRoot: opts.repoRoot });
+  if (resolved) {
+    try {
+      bridge = await startBridge({ binaryPath: resolved.binaryPath, rootUri: pathToFileURL(opts.repoRoot).href });
+    } catch (err) {
+      process.stderr.write(
+        `[${PRODUCT_NAME}] marksman bridge failed to start (${resolved.source}: ${resolved.binaryPath}), using js-fallback: ${err instanceof Error ? err.message : String(err)}\n`,
+      );
+      bridge = null;
     }
   }
 
