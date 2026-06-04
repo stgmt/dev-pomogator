@@ -928,13 +928,13 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] `tests/fixtures/marksman/slug-rule.json` captured from the REAL binary (18 shapes incl. Cyrillic) via `capture-slug-fixture.cjs`; golden test asserts 18/18 parity + idempotence
   - [x] `md.ts` (slugify/AC dot-drop) + `specs-generator-core.mjs` (`toAnchorSlug`) both delegate to it — no second impl. Verified: spec-graph 146/146 Docker, BDD 78 passed, validate-spec 0 errors/0 broken
 
-- [ ] Anchor-integrity check (same-file + cross-file) -- @feature34 — id: anchor-check — Status: TODO | Est: 120m
+- [x] Anchor-integrity check (same-file + cross-file) -- @feature34 — id: anchor-check — Status: DONE | Est: 120m
   _depends: anchor-slug-shared_
   _Requirements: [FR-34a](FR.md#fr-34)_
   **Done When:**
-  - [ ] `tools/anchor-integrity/check.ts` returns `BrokenAnchor[]` {file,line,linkText,brokenAnchor,inferredId,currentSlug}
-  - [ ] Covers same-file `[t](#a)` (the class `CROSS_REF_LINKS` linkPattern misses) AND cross-file `[t](f.md#a)`
-  - [ ] Corpus test over all 48 specs → current baseline recorded
+  - [x] `tools/anchor-integrity/check.mjs` returns `BrokenAnchor[]` {file,line,linkText,targetFile,brokenAnchor,inferredId,currentSlug}; skips links in code spans/fences; + `--spec`/`--all` CLI
+  - [x] Covers same-file `[t](#a)` (the class `CROSS_REF_LINKS` linkPattern misses) AND cross-file `[t](f.md#a)`
+  - [x] Corpus baseline recorded: **1744 broken anchors across 39 specs** — VERIFIED against the real binary (links `#fr-3-devpomogator-…` vs real `fr-3-dev-pomogator-…`; the rollout report's "already resolvable" was WRONG). 30 synthetic unit tests pass in Docker; corpus tests skip there (`.specs` dockerignored), run via CLI on host. v4 = 0.
 
 - [ ] Deterministic fixer + idempotence -- @feature34 — id: anchor-fix-deterministic — Status: TODO | Est: 120m
   _depends: anchor-check_
