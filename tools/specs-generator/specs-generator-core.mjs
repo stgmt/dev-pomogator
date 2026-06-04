@@ -2,8 +2,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
-import { marksmanSlug } from '../anchor-integrity/marksman-slug.mjs';
-import { checkLinks } from '../anchor-integrity/check.mjs';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -427,7 +425,7 @@ function replaceLiteralAll(content, searchValue, replacementValue) {
 // ASCII `\w`, silently stripping Cyrillic headings → wrong anchors). The leading
 // `@featureN` strip is kept defensively (markdown spec headings never carry it,
 // but feature-tag prose lines might be passed in).
-function toAnchorSlug(header) {
+function toAnchorSlug(header, marksmanSlug) {
   return marksmanSlug(header.replace(/@feature\d+/g, ''));
 }
 
@@ -836,7 +834,13 @@ function commandFillTemplate(argv) {
   return 0;
 }
 
-function commandValidateSpec(argv) {
+async function commandValidateSpec(argv) {
+  // FR-34: the single marksmanSlug source + the anchor checker live in
+  // ../anchor-integrity. Load them LAZILY (only the validate path needs them) so
+  // core.mjs stays self-contained for scaffold/analyze/etc. — ARCH012 copies core.mjs
+  // alone into a tmp repo and a top-level import would crash with ERR_MODULE_NOT_FOUND.
+  const { marksmanSlug } = await import('../anchor-integrity/marksman-slug.mjs');
+  const { checkLinks } = await import('../anchor-integrity/check.mjs');
   const options = parseArgs(argv, [
     { flag: '-Path', key: 'inputPath', type: 'string', required: true },
     { flag: '-ErrorsOnly', key: 'errorsOnly', type: 'boolean', default: false },
@@ -1198,7 +1202,7 @@ function commandValidateSpec(argv) {
         continue;
       }
 
-      const anchor = toAnchorSlug(match[2]);
+      const anchor = toAnchorSlug(match[2], marksmanSlug);
       if (anchor) {
         anchorIndex[markdownFile].push(anchor);
       }
@@ -3538,15 +3542,19 @@ function main() {
   }
 }
 
-try {
-  const exitCode = main();
-  process.exit(exitCode);
-} catch (error) {
-  if (error instanceof CliError) {
-    process.stderr.write(`${error.message}\n`);
-    process.exit(error.exitCode);
-  }
+(async () => {
+  try {
+    // `main()` returns a number for sync commands, a Promise<number> for the async
+    // validate-spec path (which lazy-loads ../anchor-integrity) — await handles both.
+    const exitCode = await main();
+    process.exit(exitCode);
+  } catch (error) {
+    if (error instanceof CliError) {
+      process.stderr.write(`${error.message}\n`);
+      process.exit(error.exitCode);
+    }
 
-  process.stderr.write(`${error?.stack || error?.message || String(error)}\n`);
-  process.exit(1);
-}
+    process.stderr.write(`${error?.stack || error?.message || String(error)}\n`);
+    process.exit(1);
+  }
+})();
