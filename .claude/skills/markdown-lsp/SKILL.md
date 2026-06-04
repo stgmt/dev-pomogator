@@ -122,8 +122,33 @@ FR→AC→Scenario→Task chain is still complete.
   the system does not fake a degraded Markdown LSP. Use the spec-graph MCP for
   trace/coverage in the meantime.
 
+## Rename → auto-fix broken anchors (anchor-integrity, FR-34)
+
+`LSP rename` rewrites a heading AND its inbound links atomically — use it. But a
+heading title *edited as plain text* (not via `rename`) changes its slug and
+silently breaks every `[text](#old-slug)` link. The **anchor-integrity guard**
+(`tools/anchor-integrity/`) closes that gap, deterministically:
+
+- **Detect** — `node tools/anchor-integrity/check.mjs --spec .specs/<slug>` (or
+  `--all`) lists every link whose anchor no longer resolves under `marksmanSlug`,
+  with the correct slug. The same engine is wired into `validate-spec`
+  (`CROSS_REF_LINKS`, now covering same-file `[t](#a)` too) and into a
+  **PostToolUse** hook that injects a `<system-reminder>` right after you edit a
+  spec. A **Stop-gate** blocks "done" while a spec you edited still has broken
+  anchors (escape: `[skip-anchor-fix: <reason>]`).
+- **Fix** — `node tools/anchor-integrity/fix.mjs --spec .specs/<slug> --apply`
+  rewrites id-bearing links (`[FR-7](#…)`) to the heading's current slug; prose
+  links it can't disambiguate are left flagged for the `claude -p` fallback.
+- The slug rule is the **measured** table above — both tools import the single
+  `marksmanSlug()` source of truth, so detect/fix never disagree with the LSP.
+
+Prefer `LSP rename` when *changing* a heading; reach for anchor-integrity to
+*repair* drift the LSP didn't propagate (text-edited titles, bulk corpus fixes,
+generated specs). See the **`anchor-fix`** skill for the detect→fix→verify loop.
+
 ## See also
 
 - `.specs/spec-generator-v4/FR.md` FR-7 / FR-7a–d — the architecture this skill ships with.
+- `.specs/spec-generator-v4/FR.md` FR-34 + the **`anchor-fix`** skill — anchor-integrity detect/fix/guard.
 - `tools/marksman-installer/launch-marksman.cjs` — the launcher the `.lsp.json` `command` points at.
 - spec-graph MCP (`tools/spec-mcp-server/`) — `get_trace` / `get_coverage` for spec-domain traceability.

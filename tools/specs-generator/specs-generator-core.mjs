@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { marksmanSlug } from '../anchor-integrity/marksman-slug.mjs';
+import { checkLinks } from '../anchor-integrity/check.mjs';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -1237,6 +1238,30 @@ function commandValidateSpec(argv) {
         }
       }
     });
+  }
+
+  // Same-file anchors `[t](#a)` — the gap CROSS_REF_LINKS never covered. Delegate
+  // to the anchor-integrity engine (check.mjs), which skips code spans/fences and
+  // infers the fix slug. We emit only same-file findings (targetRaw === '') here;
+  // cross-file is already handled by the loop above. (FR-34c)
+  try {
+    const filesForCheck = markdownFiles.map((markdownFile) => ({
+      file: markdownFile,
+      content: safeReadLines(path.join(targetDir, markdownFile)).join('\n'),
+    }));
+    for (const b of checkLinks(filesForCheck)) {
+      if (b.targetRaw !== '') continue; // same-file only
+      const fix = b.currentSlug ? ` → fix to #${b.currentSlug}` : ' (ambiguous — see anchor-fix skill)';
+      warnings.push({
+        file: b.file,
+        line: b.line,
+        rule: 'CROSS_REF_LINKS',
+        message: `Broken same-file anchor: [${b.linkText}](#${b.brokenAnchor}) does not resolve in the Marksman LSP${fix}`,
+      });
+      log('WARN', `${b.file} line ${b.line}: same-file anchor '#${b.brokenAnchor}' unresolved${fix}`);
+    }
+  } catch (anchorErr) {
+    log('WARN', `same-file anchor check skipped: ${anchorErr instanceof Error ? anchorErr.message : String(anchorErr)}`);
   }
 
   log('INFO', 'CROSS_REF_LINKS check complete');

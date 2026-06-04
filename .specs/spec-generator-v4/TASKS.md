@@ -959,12 +959,12 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] `fix.ts --claude` dispatches headless `claude -p` (background) for prose links; picks target heading; rewrites
   - [ ] Non-blocking (detached); unavailable headless → link stays flagged (no guess-rewrite); mocked unit + 1 real bg smoke
 
-- [ ] Wire detector into validate-spec + markdown-lsp note -- @feature34 — id: anchor-wire — Status: TODO | Est: 60m
+- [x] Wire detector into validate-spec + markdown-lsp note -- @feature34 — id: anchor-wire — Status: DONE | Est: 60m
   _depends: anchor-check_
   _Requirements: [FR-34a](FR.md#fr-34)_
   **Done When:**
-  - [ ] `CROSS_REF_LINKS` delegates to `check.ts` (same-file gap closed)
-  - [ ] `markdown-lsp` SKILL.md documents the rename→auto-fix workflow
+  - [x] `CROSS_REF_LINKS` (specs-generator-core.mjs) delegates same-file `[t](#a)` to `check.mjs` → `checkLinks`; emits fix slug (verified: bare broken `#fr-7-old-broken` → `→ fix to #fr-7-title`, clean v4 = 0 false-positives)
+  - [x] `markdown-lsp` SKILL.md documents the rename→auto-fix workflow (detect/fix/guard + `anchor-fix` skill cross-ref)
 
 - [ ] Update scaffold templates + generators to emit resolvable anchors (H1) -- @feature34 — id: anchor-templates — Status: TODO | Est: 240m
   _depends: anchor-slug-shared, anchor-check_
