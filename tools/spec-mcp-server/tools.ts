@@ -50,9 +50,6 @@ import {
   type ScenarioLike,
   type TaskLike,
 } from '../spec-graph/coverage.ts';
-import path from 'node:path';
-import { pathToFileURL } from 'node:url';
-import type { BridgeHandle, Location } from '../marksman-lsp/bridge.ts';
 
 /** Build every Scenario as a ScenarioLike + an id→bucket index for FR-32 derivation. */
 function scenarioCoverageIndex(graph: SpecGraph): { scens: ScenarioLike[]; bucketById: Map<string, Bucket> } {
@@ -364,8 +361,10 @@ interface GraphRef {
 
 /**
  * "Find all references" over the graph's real cross-links: incoming/outgoing
- * edges plus the task→FR refs the edge set doesn't carry. The graph-backed
- * navigation that backs `find_refs` AND the `md_references` JS fallback.
+ * edges plus the task→FR refs the edge set doesn't carry. This is SPEC-DOMAIN
+ * reference-finding (semantic `covers` / `tested-by` / `implements` / `refs`
+ * edges) — distinct from Markdown wiki-link navigation, which Marksman's native
+ * LSP owns (FR-7b). Backs the `find_refs` tool.
  */
 function collectGraphRefs(graph: SpecGraph, id: string): GraphRef[] {
   const seen = new Set<string>();
@@ -393,8 +392,6 @@ function collectGraphRefs(graph: SpecGraph, id: string): GraphRef[] {
 
 export function buildToolRegistry(
   getGraph: () => SpecGraph,
-  getBridge: () => BridgeHandle | null = () => null,
-  repoRoot: string = process.cwd(),
 ): ToolDefinition<z.ZodRawShape>[] {
   const tools: ToolDefinition<z.ZodRawShape>[] = [];
 
@@ -712,75 +709,24 @@ export function buildToolRegistry(
     },
   });
 
-  // ─── 12) find_refs — JS-LSP fallback wiki-link navigation (FR-7) ─────────
-  // The reference-finder that backs the custom JS-based MD LSP fallback when
-  // Marksman is unavailable (SPECGEN004_16). "Find all references" over the
-  // graph's real cross-links: incoming/outgoing edges (covers / tested-by /
-  // implements …) plus the task→FR refs that the edge set doesn't carry. This
-  // is the spec-domain equivalent of a Markdown wiki-link "find references",
-  // graph-backed so it works with or without the Marksman binary.
+  // ─── 12) find_refs — spec-domain graph reference-finder (FR-7b) ──────────
+  // "Find all references" over the graph's SEMANTIC cross-links: incoming /
+  // outgoing edges (covers / tested-by / implements …) plus the task→FR refs the
+  // edge set doesn't carry. This is the spec-DOMAIN surface the Markdown LSP has
+  // no concept of (an LSP knows text wiki-links, not `tested-by` semantics).
+  // Markdown wiki-link navigation itself is owned by Marksman's native LSP
+  // (`.lsp.json`), exposed via Claude Code's `LSP` tool — NOT reimplemented here.
   tools.push({
     name: 'find_refs',
     description:
-      'Find every reference to a node id across the graph (JS-LSP fallback for ' +
-      'wiki-link navigation per FR-7): incoming/outgoing edges plus task refs.',
+      'Find every spec-domain reference to a node id across the graph: ' +
+      'incoming/outgoing semantic edges (covers/tested-by/implements) plus task ' +
+      'refs. (Markdown wiki-link nav is the native LSP tool’s job, not this.)',
     inputShape: { node_id: z.string() } as const satisfies z.ZodRawShape,
     handler: async ({ node_id }) => {
       const id = node_id as string;
       const references = collectGraphRefs(getGraph(), id);
       return asJsonResult({ ok: true, node_id: id, references, count: references.length });
-    },
-  });
-
-  // ─── 13) md_references — Marksman-backed navigation, find_refs fallback (FR-7b) ─
-  // The runtime CONSUMER of the bridge (resolveLspMode === 'marksman'). Maps a
-  // spec node to its on-disk heading position and asks the REAL Marksman for
-  // wiki-link references; when Marksman is unavailable (js-fallback mode, or the
-  // bridge errors), it serves the same query from the graph (AC-7.2). The
-  // `backend` field tells the agent which surface answered.
-  tools.push({
-    name: 'md_references',
-    description:
-      'Find references to a spec node via Marksman LSP when available (real ' +
-      'markdown wiki-link navigation), falling back to the graph (find_refs) ' +
-      'when Marksman is unavailable. Reports which backend answered.',
-    inputShape: { node_id: z.string() } as const satisfies z.ZodRawShape,
-    handler: async ({ node_id }) => {
-      const id = node_id as string;
-      const graph = getGraph();
-      const node = graph.nodes.get(id);
-      if (!node) return asJsonResult({ ok: false, error: `unknown node id: ${id}` });
-
-      const bridge = getBridge();
-      if (bridge) {
-        try {
-          const uri = pathToFileURL(path.resolve(repoRoot, node.file)).href;
-          const position = { line: Math.max(0, node.line - 1), character: 2 };
-          const locations: Location[] = await bridge.references({ uri, position });
-          return asJsonResult({
-            ok: true,
-            backend: 'marksman',
-            node_id: id,
-            references: locations,
-            count: locations.length,
-          });
-        } catch (err) {
-          // Bridge crashed mid-session → degrade to the graph rather than error.
-          const references = collectGraphRefs(graph, id);
-          return asJsonResult({
-            ok: true,
-            backend: 'js-fallback',
-            degraded_from: 'marksman',
-            reason: err instanceof Error ? err.message : String(err),
-            node_id: id,
-            references,
-            count: references.length,
-          });
-        }
-      }
-
-      const references = collectGraphRefs(graph, id);
-      return asJsonResult({ ok: true, backend: 'js-fallback', node_id: id, references, count: references.length });
     },
   });
 

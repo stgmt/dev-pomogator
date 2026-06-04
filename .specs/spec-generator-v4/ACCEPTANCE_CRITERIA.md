@@ -83,27 +83,27 @@ IF the spec frontmatter contains `_no_push_check: true` THEN PostToolUse push SH
 ## AC-7.1 (FR-7)
 **Требование:** [FR-7](FR.md#fr-7)
 
-WHEN `npx dev-pomogator install` completes successfully THEN the Marksman binary SHALL be present at `.dev-pomogator/bin/marksman` (per-platform executable) AND respond to LSP `initialize` request.
+WHEN `npx dev-pomogator install` completes (or the `ensure-marksman` SessionStart hook runs) THEN the Marksman binary SHALL be present at `.dev-pomogator/bin/marksman` (per-platform executable) AND respond to an LSP `initialize` request when launched via `tools/marksman-installer/launch-marksman.cjs server`.
 
-## AC-7.2 (FR-7)
+## AC-7.2 (FR-7a) — no fake fallback
+**Требование:** [FR-7a](FR.md#fr-7)
+
+IF the Marksman binary is unavailable for the current platform AND the network download fails THEN the install SHALL NOT fail; Marksman MUST be marked unavailable in `.dev-pomogator/install-log.json`; AND there SHALL be NO custom JS markdown-LSP fallback — markdown navigation is simply absent (the launcher exits non-zero with an actionable message). The MCP server SHALL expose ONLY spec-domain tools — `md_references` is retired and SHALL NOT appear in the tool registry — while spec-domain `find_refs` (semantic graph edges) stays available regardless of the binary.
+
+## AC-7.3 (FR-7) — native LSP registration verified
 **Требование:** [FR-7](FR.md#fr-7)
 
-IF Marksman bundled binary is unavailable for current platform AND network download fails THEN the install SHALL NOT fail; Marksman MUST be marked unavailable in `.dev-pomogator/install-log.json`; MCP server SHALL fall back to custom JS-based MD LSP for wiki-link navigation. Concretely: `md_references` SHALL answer with `backend: "js-fallback"` (graph-backed `find_refs`) when no bridge is available, and `backend: "marksman"` when the bridge is live.
+WHEN the plugin is installed THEN Claude Code SHALL register Marksman as an LSP server: `claude plugin validate` SHALL pass the `.lsp.json`/`plugin.json` manifest AND `claude plugin details` SHALL report `LSP servers (1) marksman`. The launcher → real `marksman server` SHALL answer `initialize` with definition/references/rename/documentSymbol capabilities, AND the agent-facing `LSP` tool SHALL return markdown `documentSymbol`/`references` for a `.md` file (proven end-to-end via a real `claude -p` session: headings + `[[wiki-link]]` reference locations matched ground-truth exactly).
 
-## AC-7.3 (FR-7)
+## AC-7.4 (FR-7) — installed ≠ integrated
 **Требование:** [FR-7](FR.md#fr-7)
 
-WHEN the e2e suite runs inside the Docker test image (the real pinned Marksman is present per `Dockerfile.test`) THEN the bridge e2e SHALL spawn the REAL binary and verify a real `initialize` + wiki-link `references`/`definition` round-trip through the production bridge. A silent skip inside Docker SHALL be a hard FAIL (`skip-policy.ts` — silent-skip would be fake-green).
+IF a diff adds an installer / downloaded binary / external dependency WITHOUT a runtime consumer AND without an e2e against the real artifact THEN `dead-integration-guard` SHALL flag it — "installed ≠ integrated" (the exact gap FR-7 itself fell into). The runtime consumer of the Marksman binary is the native LSP plugin registration (`.lsp.json` → launcher → `marksman server`), exercised by Claude Code's `LSP` tool.
 
-## AC-7.4 (FR-7)
-**Требование:** [FR-7](FR.md#fr-7)
-
-IF a diff adds an installer / downloaded binary / external dependency WITHOUT a runtime consumer AND without an e2e against the real artifact THEN `dead-integration-guard` SHALL flag it — "installed ≠ integrated" (the exact gap FR-7 itself fell into).
-
-## AC-7.5 (FR-7c)
+## AC-7.5 (FR-7c) — wiki-link form empirically confirmed
 **Требование:** [FR-7c](FR.md#fr-7)
 
-WHEN deciding the wiki-link form to adopt in specs THEN the system SHALL FIRST empirically confirm — against a REAL spec file with a REAL `## FR-1: Title` heading, via Marksman `completion` + `definition` at the LINK position — which `[[…]]` form Marksman actually resolves, AND the chosen form SHALL be the one Marksman resolves. Migrating specs to a non-resolving form is forbidden (repeats installed ≠ integrated). Navigation/edit primitives (definition/references/rename/completion) SHALL be served by Marksman; the graph SHALL retain only spec-domain traceability + the js-fallback resolver.
+WHEN deciding the wiki-link form to adopt in specs THEN the system SHALL FIRST empirically confirm — via Marksman `documentSymbol`/`references` at the LINK position — which `[[…]]` form Marksman resolves. CONFIRMED (2026-06-04): Marksman resolves by FULL heading-text slug — a short heading `## Note` (slug `note`) makes `[[Note]]` resolve to all its occurrences, whereas `## FR-1: Title` (slug `fr-1-title`) does NOT resolve `[[FR-1]]`. Specs SHALL adopt only the resolving form; migrating to a non-resolving form is forbidden (repeats installed ≠ integrated). Navigation/edit primitives (definition/references/rename/completion) SHALL be served by Marksman's native LSP; the graph SHALL retain ONLY spec-domain traceability + the `wikilinks.ts` broken-link conformance check (no js-fallback).
 
 ## AC-8.1 (FR-8)
 **Требование:** [FR-8](FR.md#fr-8)

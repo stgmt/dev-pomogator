@@ -429,7 +429,6 @@ Then(
 
 import { runInstall as runMarksmanInstall } from '../../tools/marksman-installer/postinstall.ts';
 import { readLog as readMarksmanLog } from '../../tools/marksman-installer/install-log.ts';
-import { resolveLspMode } from '../../tools/marksman-installer/lsp-mode.ts';
 import { createHash } from 'node:crypto';
 
 interface MarksmanWorld extends Phase2World {
@@ -469,11 +468,13 @@ Then(
 );
 
 Then('the binary responds to LSP `initialize` request', function () {
-  // This BDD suite runs on the host, where the synthetic fake binary can't run
-  // a real LSP — so this step stays pending HERE. The REAL «binary responds to
-  // initialize» proof is the automated bridge e2e against the live pinned
-  // Marksman in the Docker image: tools/marksman-lsp/__tests__/bridge-e2e.test.ts
-  // (FR-7a; silent-skip inside Docker is a hard FAIL — skip-policy.ts).
+  // This BDD suite runs on the host with a SYNTHETIC fake binary that can't run a
+  // real LSP — so this step stays pending HERE. The REAL «binary responds to
+  // initialize» proof (FR-7) is the native-LSP launcher shim
+  // `tools/marksman-installer/launch-marksman.cjs` execing `marksman server`
+  // against the live binary: verified end-to-end (a real `initialize` returned
+  // definition/references/rename/documentSymbol capabilities), and Claude Code's
+  // own `claude plugin details` reports «LSP servers (1) marksman».
   return 'pending';
 });
 
@@ -505,15 +506,6 @@ When('the MCP server starts', function (this: MarksmanWorld) {
   //   • SPECGEN004_23 → opens SQLite + integrity check
 });
 
-Then(
-  'the MCP server logs `marksman: unavailable, fallback to JS LSP`',
-  function (this: MarksmanWorld) {
-    const log = readMarksmanLog(this.tempDir);
-    assert.equal(log?.marksman.available, false);
-    assert.equal(log?.marksman.reason, 'offline');
-  },
-);
-
 Then('it detects missing Marksman binary', function (this: MarksmanWorld) {
   const log = readMarksmanLog(this.tempDir);
   assert.equal(log?.marksman.available, false);
@@ -527,17 +519,24 @@ Then(
   },
 );
 
-Then('MCP server initializes custom JS-based MD LSP fallback', function (this: MarksmanWorld) {
-  // The failed install left `marksman.available = false`; resolveLspMode reads
-  // that supply-chain record and selects the JS-based MD LSP fallback.
-  assert.equal(resolveLspMode(this.tempDir), 'js-fallback');
+Then('there is no custom JS markdown-LSP fallback in the MCP tool registry', function (
+  this: MarksmanWorld,
+) {
+  // FR-7a: NO fake MD-LSP. The retired `md_references` (bridge consumer + JS
+  // fallback) is gone — the MCP registry exposes ONLY spec-domain tools. Markdown
+  // navigation is owned by Marksman's NATIVE Claude Code LSP plugin (`.lsp.json`),
+  // surfaced via Claude Code's `LSP` tool, never reimplemented in-MCP.
+  const graph = buildGraph({ repoRoot: this.tempDir, skipNdjson: true });
+  const names = buildToolRegistry(() => graph).map((t) => t.name);
+  assert.ok(!names.includes('md_references'), 'md_references must be retired (no fake MD-LSP)');
 });
 
-Then('wiki-link navigation still works through MCP `find_refs` tool', async function (
+Then('spec-domain graph queries still work through the MCP `find_refs` tool', async function (
   this: MarksmanWorld,
 ) {
   // Seed a real spec so find_refs has cross-links to resolve, then drive the
-  // actual MCP tool — the JS-LSP fallback's navigation surface (no Marksman).
+  // actual MCP tool — the spec-DOMAIN reference surface (semantic edges), which
+  // is independent of Marksman: it stays available whether or not the binary is.
   const specDir = path.join(this.tempDir, '.specs', 'auth');
   fs.mkdirSync(specDir, { recursive: true });
   fs.writeFileSync(path.join(specDir, 'FR.md'), '## FR-1: Login\n');

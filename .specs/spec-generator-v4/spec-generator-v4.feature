@@ -129,13 +129,13 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And the binary responds to LSP `initialize` request
 
   @feature7
-  Scenario: SPECGEN004_16 MCP server falls back to JS LSP when Marksman unavailable
+  Scenario: SPECGEN004_16 No fake fallback when Marksman is unavailable
     Given the Marksman binary download fails during install (no network)
     When the MCP server starts
     Then it detects missing Marksman binary
     And `.dev-pomogator/install-log.json` is updated with marksman_available=false
-    And MCP server initializes custom JS-based MD LSP fallback
-    And wiki-link navigation still works through MCP `find_refs` tool
+    And there is no custom JS markdown-LSP fallback in the MCP tool registry
+    And spec-domain graph queries still work through the MCP `find_refs` tool
 
   @feature8
   Scenario: SPECGEN004_17 LLM semantic drift check detects FR↔Scenario mismatch (opt-in Phase 3)

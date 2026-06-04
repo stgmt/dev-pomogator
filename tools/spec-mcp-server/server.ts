@@ -19,8 +19,6 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { pathToFileURL } from 'node:url';
 import { startLifecycle, type LifecycleHandle } from './lifecycle.ts';
 import { buildToolRegistry } from './tools.ts';
-import { resolveMarksmanBinary } from '../marksman-installer/resolve-binary.ts';
-import { startBridge, type BridgeHandle } from '../marksman-lsp/bridge.ts';
 
 const PRODUCT_NAME = 'dev-pomogator-specs';
 const PRODUCT_VERSION = '0.1.0';
@@ -36,47 +34,33 @@ export interface BootOptions {
 export async function boot(opts: BootOptions): Promise<{
   server: McpServer;
   lifecycle: LifecycleHandle;
-  bridge: BridgeHandle | null;
 }> {
   // Enable the touch-test watch-mode probe (SPECGEN004_32): on a Docker-Desktop
   // bind mount where native fs events don't propagate, auto-fall-back to polling.
   const lifecycle = await startLifecycle({ repoRoot: opts.repoRoot, autoDetectWatchMode: true });
   const server = new McpServer({ name: PRODUCT_NAME, version: PRODUCT_VERSION });
 
-  // FR-7b: the runtime CONSUMER of Marksman. Resolve the binary package-first
-  // (PATH → managed download → none, per resolve-binary.ts), then spawn the LSP
-  // bridge so md_references is served by real Marksman; any failure degrades to
-  // the graph-backed fallback (fail-open).
-  let bridge: BridgeHandle | null = null;
-  const resolved = resolveMarksmanBinary({ repoRoot: opts.repoRoot });
-  if (resolved) {
-    try {
-      bridge = await startBridge({ binaryPath: resolved.binaryPath, rootUri: pathToFileURL(opts.repoRoot).href });
-    } catch (err) {
-      process.stderr.write(
-        `[${PRODUCT_NAME}] marksman bridge failed to start (${resolved.source}: ${resolved.binaryPath}), using js-fallback: ${err instanceof Error ? err.message : String(err)}\n`,
-      );
-      bridge = null;
-    }
-  }
-
-  for (const tool of buildToolRegistry(() => lifecycle.graph, () => bridge, opts.repoRoot)) {
+  // FR-7b: markdown navigation (definition/references/rename over wiki-links) is
+  // owned by Marksman as a NATIVE Claude Code LSP plugin (`.lsp.json`), exposed
+  // through Claude Code's built-in `LSP` tool — NOT a custom in-MCP bridge. This
+  // server keeps only the spec-DOMAIN graph tools (trace / coverage / honesty /
+  // conformance + the graph-edge `find_refs` the LSP has no concept of).
+  for (const tool of buildToolRegistry(() => lifecycle.graph)) {
     // SDK v1 `server.tool(name, schemaShape, handler)` — accepts raw zod
     // shape (i.e. `{key: z.string()}` not `z.object({key: ...})`).
     server.tool(tool.name, tool.description, tool.inputShape, tool.handler);
   }
 
-  return { server, lifecycle, bridge };
+  return { server, lifecycle };
 }
 
 async function main(): Promise<void> {
   // `||` (not `??`) so an empty-string env value — e.g. an unresolved
   // `${CLAUDE_PROJECT_DIR}` in some launch contexts — still falls back to cwd.
   const repoRoot = process.env.DEV_POMOGATOR_REPO_ROOT || process.cwd();
-  const { server, lifecycle, bridge } = await boot({ repoRoot });
+  const { server, lifecycle } = await boot({ repoRoot });
 
   const shutdownAndExit = async (code: number): Promise<void> => {
-    await bridge?.stop();
     await lifecycle.shutdown();
     try {
       await server.close();
