@@ -31,7 +31,9 @@ export type FindingCode =
   | 'SCENARIO_TAG_ORPHAN'
   | 'UNTAGGED_SCENARIO'
   | 'DUPLICATE_DEFINITION'
-  | 'TASK_STATUS_UNVERIFIED';
+  | 'TASK_STATUS_UNVERIFIED'
+  | 'TASK_UNTESTED'
+  | 'TASK_TEST_QUALITY';
 
 export type Severity = 'error' | 'warning' | 'info';
 
@@ -172,18 +174,35 @@ export function checkConformance(
       const task = node as TaskNode;
       if (task.status !== 'done') continue;
       const entry = cov.tasks[task.id];
-      if (!entry || entry.verified_status !== 'IN_PROGRESS') continue;
-      const offenders = entry.scenarios.filter((id) => bucketById.get(id) !== 'passed');
-      findings.push({
-        code: 'TASK_STATUS_UNVERIFIED',
-        severity: 'warning',
-        location: { file: task.file, line: task.line },
-        message: `Task ${task.id} is marked DONE but ${offenders.length}/${entry.scenarios.length} mapped scenarios are not green (e.g. ${offenders.slice(0, 3).map((id) => `${id}=${bucketById.get(id)}`).join(', ')}).`,
-        nodeId: task.id,
-        suggestions: [
-          { action: 'make_green_or_downgrade', reason: 'Make the mapped scenarios pass, or set Status back to IN_PROGRESS — a DONE task must have every mapped scenario green.', confidence: 'high' },
-        ],
-      });
+      if (!entry) continue;
+      if (entry.verified_status === 'IN_PROGRESS') {
+        const offenders = entry.scenarios.filter((id) => bucketById.get(id) !== 'passed');
+        findings.push({
+          code: 'TASK_STATUS_UNVERIFIED',
+          severity: 'warning',
+          location: { file: task.file, line: task.line },
+          message: `Task ${task.id} is marked DONE but ${offenders.length}/${entry.scenarios.length} mapped scenarios are not green (e.g. ${offenders.slice(0, 3).map((id) => `${id}=${bucketById.get(id)}`).join(', ')}).`,
+          nodeId: task.id,
+          suggestions: [
+            { action: 'make_green_or_downgrade', reason: 'Make the mapped scenarios pass, or set Status back to IN_PROGRESS — a DONE task must have every mapped scenario green.', confidence: 'high' },
+          ],
+        });
+      } else if (entry.verified_status === 'unverified') {
+        // FR-35c: a task marked DONE with ZERO linked scenarios must NOT be silent.
+        // "mark done, write no test" is the naeb the gate previously missed (it only
+        // fired on a linked-but-red scenario). Complements FR/@feature NOT_COVERED.
+        findings.push({
+          code: 'TASK_UNTESTED',
+          severity: 'warning',
+          location: { file: task.file, line: task.line },
+          message: `Task ${task.id} is marked DONE but has ZERO linked scenarios — no test backs the claim (Done-When references no SPECGEN id / @feature tag, and refs map to no scenario).`,
+          nodeId: task.id,
+          suggestions: [
+            { action: 'write_test', reason: 'Add a BDD scenario and reference its SPECGEN id (or @feature tag) in Done-When, so the DONE claim is backed by a real test.', confidence: 'high' },
+            { action: 'downgrade', reason: 'Or set Status back to IN_PROGRESS until a test exists — a DONE task with no test is unverifiable.', confidence: 'high' },
+          ],
+        });
+      }
     }
   }
 
