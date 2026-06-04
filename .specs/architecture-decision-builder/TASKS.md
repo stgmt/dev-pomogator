@@ -106,14 +106,14 @@
   - [ ] версия кешируется 24h в .architecture-cache.json
   - [ ] mock WebFetch в тесте
 - [ ] Реализовать `artefact-generator.ts` (Fisher-Yates seeded + word-budget) -- @feature2 — Status: TODO | Est: 45m
-  _Requirements: [FR-2](FR.md#fr-2-per-axis-artefact-markdown--self-contained-html), [FR-8](FR.md#fr-8-anti-bias-guardrails)_
+  _Requirements: [FR-2](FR.md#fr-2-per-axis-artefact-markdown-self-contained-html), [FR-8](FR.md#fr-8-anti-bias-guardrails)_
   _Config: см. SCHEMA VariantModel_
   **Done When:**
   - [ ] генерит md+html, recommendation pinned top
   - [ ] randomization seeded by axis.id, word-budget ±15%
   - [ ] @feature2 + @feature8 scenarios pass
 - [ ] Реализовать `html-renderer.ts` (self-contained, inline CSS, mermaid gated) -- @feature2 — Status: TODO | Est: 45m
-  _Requirements: [FR-2](FR.md#fr-2-per-axis-artefact-markdown--self-contained-html)_
+  _Requirements: [FR-2](FR.md#fr-2-per-axis-artefact-markdown-self-contained-html)_
   _Config: см. DESIGN.md Key Decision "Static self-contained HTML"_
   **Done When:**
   - [ ] HTML inline CSS, без внешних <link>
@@ -131,13 +131,13 @@
   - [ ] повторный compile не дублирует, user-контент сохранён
   - [ ] @feature5 scenario passes
 - [ ] Реализовать `audit.ts` (ARCHITECTURE_COVERAGE) -- @feature9 — Status: TODO | Est: 30m
-  _Requirements: [FR-9](FR.md#fr-9-audit-category-architecture_coverage)_
+  _Requirements: [FR-9](FR.md#fr-9-audit-category-architecturecoverage)_
   _Leverage: variant-matrix/audit.ts_
   **Done When:**
   - [ ] pending axis → WARNING finding
   - [ ] @feature9 scenario passes
 - [ ] Реализовать `architecture-decision-cli.ts` (5 команд dispatcher) -- @feature4 — Status: TODO | Est: 45m
-  _Requirements: [FR-4](FR.md#fr-4-итеративный-выбор-через-askuserquestion), [FR-6](FR.md#fr-6-cascading-implications-bmad-pattern)_
+  _Requirements: [FR-4](FR.md#fr-4-auto-apply-рекомендации-default-с-опциональным-override), [FR-6](FR.md#fr-6-cascading-implications-bmad-pattern)_
   _Config: см. DESIGN.md API раздел, exit codes 0/1/2/3/4_
   **Done When:**
   - [ ] detect-axes/generate-axis/compile-index/open-browser/audit роутятся
@@ -149,7 +149,7 @@
 ## Phase 2: Skill + rules + create-spec integration (Green)
 
 - [ ] Создать SKILL.md + 3 references (axis-catalog/variant-format-spec/html-style-guide) -- @feature7 — Status: TODO | Est: 45m
-  _Requirements: [FR-7](FR.md#fr-7-два-режима-запуска-standalone--create-spec-phase-175)_
+  _Requirements: [FR-7](FR.md#fr-7-два-режима-запуска-standalone-create-spec-phase-175)_
   _Leverage: .claude/skills/variant-matrix-build/SKILL.md_
   **Done When:**
   - [ ] frontmatter с allowed-tools покрывает все workflow tools
@@ -161,30 +161,30 @@
   - [ ] when-to-build: Apply WHEN + hard-OUT signals
   - [ ] escape-hatch-audit: JSONL format + red flags
 - [ ] Создать 2 templates (ARCHITECTURE_AXIS + ARCHITECTURE_INDEX) -- @feature2 — Status: TODO | Est: 20m
-  _Requirements: [FR-2](FR.md#fr-2-per-axis-artefact-markdown--self-contained-html), [FR-5](FR.md#fr-5-index-compile-idempotent-status-matrix)_
+  _Requirements: [FR-2](FR.md#fr-2-per-axis-artefact-markdown-self-contained-html), [FR-5](FR.md#fr-5-index-compile-idempotent-status-matrix)_
   **Done When:**
   - [ ] per-axis skeleton + INDEX skeleton созданы
 - [ ] Интеграция create-spec Phase 1.75 (phase1.75 ref + SKILL.md nav + phase1.5 edit) -- @feature7 — Status: TODO | Est: 45m
-  _Requirements: [FR-7](FR.md#fr-7-два-режима-запуска-standalone--create-spec-phase-175)_
+  _Requirements: [FR-7](FR.md#fr-7-два-режима-запуска-standalone-create-spec-phase-175)_
   _Note: Phase 1.75 — workflow step в create-spec SKILL.md (вызов после Context STOP, перед Requirements). НЕ трогать core.mjs PHASE_ORDER — auto-mode означает нет блокирующего ConfirmStop Architecture._
   **Done When:**
   - [ ] Phase 1.75 row в navigation table + phase1.75 reference создан
   - [ ] phase1.5 финальный абзац: greenfield → Phase 1.75 (workflow step, не state-machine gate)
   - [ ] @feature7 scenario passes
 - [ ] Добавить ARCHITECTURE_COVERAGE 9-ю audit категорию (overview edit + audit-architecture-coverage ref) -- @feature9 — Status: TODO | Est: 20m
-  _Requirements: [FR-9](FR.md#fr-9-audit-category-architecture_coverage)_
+  _Requirements: [FR-9](FR.md#fr-9-audit-category-architecturecoverage)_
   _Leverage: references/phase3plus_audit-variant-coverage.md_
   **Done When:**
   - [ ] overview содержит 9-ю категорию
   - [ ] @feature9 scenario passes
 - [ ] Обновить extension.json (skills/skillFiles/ruleFiles/toolFiles, bump 1.21.0) -- @feature7 — Status: TODO | Est: 30m
-  _Requirements: [FR-7](FR.md#fr-7-два-режима-запуска-standalone--create-spec-phase-175)_
+  _Requirements: [FR-7](FR.md#fr-7-два-режима-запуска-standalone-create-spec-phase-175)_
   _Config: см. FILE_CHANGES.md_
   **Done When:**
   - [ ] все новые файлы перечислены в манифесте
   - [ ] extension-layout-validate.ts exit 0
 - [ ] Реализовать cli-integration end-to-end + Phase 1.75 + audit (ARCH005) -- @feature4 — Status: TODO | Est: 45m
-  _Requirements: [FR-4](FR.md#fr-4-итеративный-выбор-через-askuserquestion), [FR-6](FR.md#fr-6-cascading-implications-bmad-pattern), [FR-7](FR.md#fr-7-два-режима-запуска-standalone--create-spec-phase-175), [FR-9](FR.md#fr-9-audit-category-architecture_coverage)_
+  _Requirements: [FR-4](FR.md#fr-4-auto-apply-рекомендации-default-с-опциональным-override), [FR-6](FR.md#fr-6-cascading-implications-bmad-pattern), [FR-7](FR.md#fr-7-два-режима-запуска-standalone-create-spec-phase-175), [FR-9](FR.md#fr-9-audit-category-architecturecoverage)_
   **Done When:**
   - [ ] spawnSync end-to-end на greenfield fixture
   - [ ] @feature4,6,7,9 scenarios pass
@@ -192,18 +192,18 @@
   **Done When:**
   - [ ] `/run-tests architecture` — ARCH005 green
 - [ ] Создать evals/evals.json (8 deterministic cases) + rubric.json (R1-R9) -- @feature11 — Status: TODO | Est: 30m
-  _Requirements: [FR-11](FR.md#fr-11-eval-suite--debug--benchmark-качества-2-слоя)_
+  _Requirements: [FR-11](FR.md#fr-11-eval-suite-debug-benchmark-качества-2-слоя)_
   _Leverage: .claude/skills/variant-matrix-build/evals/evals.json_
   **Done When:**
   - [ ] evals.json: greenfield/brownfield/pending/escape×2/idempotency/artefact-shape/ENOENT
   - [ ] rubric.json: R1-R9 с R3 anti-hallucination блокирующим
 - [ ] Создать golden bench scenario-bhph (copy ARCHITECTURE_PROPOSAL.md) + scenario-saas/cli-tool -- @feature11 — Status: TODO | Est: 20m
-  _Requirements: [FR-11](FR.md#fr-11-eval-suite--debug--benchmark-качества-2-слоя)_
+  _Requirements: [FR-11](FR.md#fr-11-eval-suite-debug-benchmark-качества-2-слоя)_
   _Leverage: D:\repos\bhph-early-warning\ARCHITECTURE_PROPOSAL.md (Variant F + context7 Evidence table)_
   **Done When:**
   - [ ] scenario-bhph golden artefact с Evidence table (R3/R7 эталон)
 - [ ] Реализовать eval-suite.test.ts (ARCH006) — deterministic runner + rubric grading -- @feature11 — Status: TODO | Est: 45m
-  _Requirements: [FR-11](FR.md#fr-11-eval-suite--debug--benchmark-качества-2-слоя)_
+  _Requirements: [FR-11](FR.md#fr-11-eval-suite-debug-benchmark-качества-2-слоя)_
   **Done When:**
   - [ ] deterministic eval → grading.json + aggregate.json
   - [ ] rubric R3 fail на тех-заявлении без [VERIFIED] marker (с указанием строки)
@@ -266,17 +266,17 @@
 > Фикс обратной связи: артефакт малоинформативен, две роли не разделены, источников мало, реал не подсвечен, время/обратимость не учтены. Verify: ARCH007_01-04 + ARCH008_01/02 зелёные в Docker; host-смоук 14/14 + 9/9.
 
 - [x] FR-17 две линзы + scorecard карта-сравнение + reality-check (R24, BLOCKING) -- @feature20 — Status: DONE | Est: 45m
-  _Requirements: [FR-17](FR.md#fr-17-две-линзы--scorecard--reality-check-r24-blocking)_
+  _Requirements: [FR-17](FR.md#fr-17-две-линзы-scorecard-reality-check-r24-blocking)_
   **Done When:**
   - [x] business_summary лента + scorecard матрица (критерии×варианты) + reality_check секция в html/md
   - [x] rubric R24 blocking; ARCH008_01 vitest
 - [x] FR-18 экономика: cost_at_scale + time_costs + exit_cost + door_type + sensitivity (R25, BLOCKING) -- @feature21 — Status: DONE | Est: 45m
-  _Requirements: [FR-18](FR.md#fr-18-экономика-решения--деньги-время-обратимость-r25-blocking)_
+  _Requirements: [FR-18](FR.md#fr-18-экономика-решения-деньги-время-обратимость-r25-blocking)_
   **Done When:**
   - [x] cost_at_scale ladder + time_costs (market/feature/test/support) + exit_cost + one-way/two-way banner + sensitivity + precedent.relevance
   - [x] rubric R25 blocking; ARCH008_02 vitest
 - [x] Completeness-сценарии coverage (другая сессия 84f3042e, FR-12) -- @feature12 @feature13 @feature18 @feature19 — Status: DONE | Est: 5m
-  _Requirements: [FR-12](FR.md#fr-12-audit-category-completeness_coverage--completeness-ledger)_
+  _Requirements: [FR-12](FR.md#fr-12-audit-category-completenesscoverage-completeness-ledger)_
   **Done When:**
   - [x] @feature12 ARCH005_05 (DIMENSION_PENDING) / @feature13 ARCH005_06 (COMPLETENESS_COMPLETE)
   - [x] @feature18 ARCH001_06 (stack_locked) / @feature19 ARCH005_07 (ADDRESSED_WITHOUT_POINTER) — vitest зелёные
@@ -293,7 +293,7 @@
 > Root-cause «presence ≠ truth»: verify-log + marker-guard + detect-precision + model-validation. Self-review loop (arch-review.ts) гоняет fix→verify автономно.
 
 - [x] FR-20 verify-log + audit-markers + detect confidence/domain-gate + validateAxisModel + cost-disclaimer -- @feature23 — Status: DONE | Est: 90m
-  _Requirements: [FR-20](FR.md#fr-20-anti-hallucination-integrity--verify-log--unbacked-marker-guard)_
+  _Requirements: [FR-20](FR.md#fr-20-anti-hallucination-integrity-verify-log-unbacked-marker-guard)_
   _Leverage: scope-gate escape-log pattern, audit.ts findings shape_
   **Done When:**
   - [x] verify-log.ts (recordVerification + checkVerifiedMarkers) + CLI record-verify/audit-markers; UNBACKED_VERIFIED_MARKER ловит фейки (поймал 8 на live-bhph)
@@ -301,7 +301,7 @@
   - [x] validateAxisModel fail-clear; cost «оценка · knowledge-cutoff»; word-budget surface
   - [x] ARCH001_07/ARCH002_07/ARCH010_01 vitest зелёные в Docker; arch-review.ts self-review driver + arch-review-loop skill
 - [x] FR-21 architecture-gate — гарантированный Phase 1.75 (PreToolUse hook) -- @feature24 — Status: DONE | Est: 45m
-  _Requirements: [FR-21](FR.md#fr-21-гарантированный-phase-175--architecture-gate-pretooluse-не-trust-based)_
+  _Requirements: [FR-21](FR.md#fr-21-гарантированный-phase-175-architecture-gate-pretooluse-не-trust-based)_
   _Leverage: phase-gate.ts hook contract, detect-axes greenfield-сигнал_
   **Done When:**
   - [x] architecture-gate.ts: greenfield + Requirements-file + нет ARCHITECTURE/нет skip → deny; brownfield/discovery/v<4 → allow; fail-open

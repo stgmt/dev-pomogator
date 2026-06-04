@@ -2,13 +2,13 @@
 
 ## AC-1 (FR-1)
 
-**Требование:** [FR-1](FR.md#fr-1-get-apiindex--fast-worktree-list-with-claude_max_mtime)
+**Требование:** [FR-1](FR.md#fr-1-get-apiindex-fast-worktree-list-with-claudemaxmtime)
 
 WHEN dashboard server is warm AND user requests `GET /api/index` THEN system SHALL respond with HTTP 200 + JSON array of worktree rows within 150ms.
 
 ## AC-2 (FR-2)
 
-**Требование:** [FR-2](FR.md#fr-2-get-apiclaudepath--jsonl-preview-with-last-message)
+**Требование:** [FR-2](FR.md#fr-2-get-apiclaudepath-jsonl-preview-with-last-message)
 
 WHEN user requests `GET /api/claude?path=/mnt/d/repos/foo` AND path has Claude history THEN system SHALL return top-5 JSONL session previews with `last_message`, `last_message_role`, `last_message_ts`, `msg_count`, and `claude_max_mtime` within 300ms cold.
 
@@ -20,7 +20,7 @@ WHEN client sends `GET /api/claude?path=X` with `If-None-Match: W/"<mtime>"` mat
 
 ## AC-4 (FR-4)
 
-**Требование:** [FR-4](FR.md#fr-4-post-apilaunch--cross-platform-native-terminal-spawn)
+**Требование:** [FR-4](FR.md#fr-4-post-apilaunch-cross-platform-native-terminal-spawn)
 
 WHEN user POSTs to `/api/launch` with `{worktree_path, mode: "resume", uuid}` THEN system SHALL spawn detached native terminal AND respond with `{ok: true, method: <label>, pid: int}` where `<label>` depends on platform:
 
@@ -35,31 +35,31 @@ WHEN user POSTs to `/api/launch` with `{worktree_path, mode: "resume", uuid}` TH
 
 ## AC-5 (FR-5)
 
-**Требование:** [FR-5](FR.md#fr-5-get-apimessage--single-message-by-index)
+**Требование:** [FR-5](FR.md#fr-5-get-apimessage-single-message-by-index)
 
 WHEN user requests `GET /api/message?path=X&session=UUID&index=42` AND JSONL file has ≥43 messages THEN system SHALL return message #42 with `{role, content, timestamp, neighbors: {prev: 41, next: 43}}`.
 
 ## AC-6 (FR-6)
 
-**Требование:** [FR-6](FR.md#fr-6-get-apigit-status--worktree-dirtyaheadbehind)
+**Требование:** [FR-6](FR.md#fr-6-get-apigit-status-worktree-dirtyaheadbehind)
 
 WHEN user requests `GET /api/git-status?path=X` THEN system SHALL return `{added: N, deleted: M, ahead: K, behind: L}` based on `git status --short` + `git rev-list --left-right HEAD...@{upstream}` parsed output.
 
 ## AC-7 (FR-7)
 
-**Требование:** [FR-7](FR.md#fr-7-get-apihealth--idempotent-autostart-probe)
+**Требование:** [FR-7](FR.md#fr-7-get-apihealth-idempotent-autostart-probe)
 
 WHEN start-server.ps1 (Windows) OR start-server.sh (Linux/macOS) launches AND user requests `GET /api/health` THEN system SHALL respond with HTTP 200 + `{"status": "ok", "version": "0.4.0", "uptime_sec": int, "platform": "win32"|"linux"|"darwin"}` within 5ms.
 
 ## AC-8 (FR-8)
 
-**Требование:** [FR-8](FR.md#fr-8-frontend-tabulator--multi-sort--virtual-scroll--filter)
+**Требование:** [FR-8](FR.md#fr-8-frontend-tabulator-multi-sort-virtual-scroll-filter)
 
 WHEN user clicks "Repo" column header THEN table SHALL sort alphabetically by Repo. WHEN user shift-clicks "Last Activity" header subsequently THEN table SHALL maintain primary sort by Repo AND apply secondary sort by Last Activity DESC within each Repo group (Tabulator native behavior).
 
 ## AC-9 (FR-9)
 
-**Требование:** [FR-9](FR.md#fr-9-pagination-strategy--top-20-priority--lazy-rest)
+**Требование:** [FR-9](FR.md#fr-9-pagination-strategy-top-20-priority-lazy-rest)
 
 WHEN dashboard cold-loads with 45 worktrees (9 with Claude history) THEN top-20 rows (sorted by `claude_max_mtime` DESC) SHALL be fully populated within 1 second AND remaining 25 rows SHALL show "scanning…" placeholder until background workers complete.
 
@@ -71,7 +71,7 @@ WHEN user clicks "Last message" cell в any row THEN `<dialog>` element SHALL op
 
 ## AC-11 (FR-11)
 
-**Требование:** [FR-11](FR.md#fr-11-4-button-action-column)
+**Требование:** [FR-11](FR.md#fr-11-3-button-action-column)
 
 WHEN user clicks [▶ Resume] button THEN system SHALL POST /api/launch with mode=resume → backend spawns Windows Terminal с `claude --resume <uuid>`. WHEN user clicks [✨ Fresh] THEN system SHALL POST with mode=fresh → spawns Windows Terminal с bare `claude`. WHEN user clicks [📂 VSCode] THEN system SHALL POST /api/open-vscode → `subprocess.Popen(['code.cmd', path])`.
 
@@ -113,7 +113,7 @@ WHEN installer re-run AND hook already registered AND `/api/health` returns 200 
 
 ## AC-16 (FR-16)
 
-**Требование:** [FR-16](FR.md#fr-16-skill-uses-mcp__claude-in-chrome__-for-browser)
+**Требование:** [FR-16](FR.md#fr-16-skill-uses-mcpclaude-in-chrome-for-browser)
 
 WHEN skill scenario verifies dashboard state THEN it SHALL use `mcp__claude-in-chrome__screenshot` to capture browser AND SHALL NOT use PowerShell `[System.Drawing.Bitmap]` desktop captures.
 
@@ -140,7 +140,7 @@ WHEN reviewer opens `.specs/session-pilot/COMPETITIVE_ANALYSIS.md` THEN file SHA
 
 ## AC-19 (FR-19)
 
-**Требование:** [FR-19](FR.md#fr-19-diagnostic-cli---diagnose-livecycle)
+**Требование:** [FR-19](FR.md#fr-19-diagnostic-cli-diagnose-livecycle)
 
 WHEN user runs `python server.py --diagnose-livecycle D:\repos\lm-saas` THEN output SHALL list all encoding variants AND all base dirs scanned (`%USERPROFILE%\.claude\projects`) AND per-JSONL match (path/mtime/age/size) AND verdict 🟢 LIVE / ⚪ idle / ❌ no match.
 
@@ -171,7 +171,7 @@ WHEN encoded dir contains 100 JSONLs (extreme case) THEN /api/index response SHA
 
 ## AC-25 (FR-25)
 
-**Требование:** [FR-25](FR.md#fr-25-process-based-open-window-indicator--separate-signal-from-jsonl-mtime-live)
+**Требование:** [FR-25](FR.md#fr-25-process-based-open-window-indicator-separate-signal-from-jsonl-mtime-live)
 
 WHEN server scans claude.exe processes AND finds ≥1 process with cwd matching row's `worktree_path` (via parent process tree CommandLine analysis on Windows / `/proc/<pid>/cwd` on Linux / `lsof` on macOS) THEN /api/index row SHALL include:
 - `claude_window_open: true`
@@ -191,7 +191,7 @@ WHEN claude.exe process detected but its cwd is `<install-dir>` (e.g. `C:\Progra
 
 ## AC-24 (FR-24)
 
-**Требование:** [FR-24](FR.md#fr-24-session-centric-rows--orphan-claude-sessions-resumable-independently-of-git-worktree)
+**Требование:** [FR-24](FR.md#fr-24-union-model-all-git-worktrees-and-all-claude-sessions-merged-deduplicated)
 
 WHEN dashboard server scans `~/.claude/projects/` AND finds encoded dir whose decoded cwd is NOT inside any git repo (e.g. `~/.claude/projects/C--Users-stigm-Desktop/`) THEN /api/index response SHALL include a row for that session with:
 - `is_orphan: true`
@@ -221,7 +221,7 @@ This preserves FR-1 worktree visibility — all configured worktrees remain in d
 
 ## AC-23 (FR-23)
 
-**Требование:** [FR-23](FR.md#fr-23-taskbar--dock-launcher-installer-create-launcher)
+**Требование:** [FR-23](FR.md#fr-23-taskbar-dock-launcher-installer-create-launcher)
 
 WHEN user runs platform-matching launcher installer:
 - **WHEN** `sys.platform == "win32"` AND user runs `pwsh -File create-launcher.ps1` **THEN** script SHALL create `%USERPROFILE%\Desktop\Session Pilot.lnk` with `TargetPath` set to a version-stable PowerShell exe AND `Arguments` running `-WindowStyle Hidden -File <launch.ps1>` (single-instance launcher, v0.5) AND `IconLocation` set to the generated `%LOCALAPPDATA%\session-pilot\session-pilot.ico` AND AppUserModelID `ClaudeCode.SessionPilot` stamped on the shortcut AND open Explorer with the icon highlighted for user pin step. (launch.ps1 itself opens `msedge.exe --app=http://127.0.0.1:<port>/ --user-data-dir=%LOCALAPPDATA%\session-pilot\browser-profile`, Chrome fallback.)
@@ -267,7 +267,7 @@ Cross-platform: skill workflow uses only `npm` / `node` / `git` commands which a
 
 ## AC-21 (FR-21)
 
-**Требование:** [FR-21](FR.md#fr-21-os-detection--platform-dispatched-module-architecture)
+**Требование:** [FR-21](FR.md#fr-21-os-detection-platform-dispatched-module-architecture)
 
 WHEN `terminal_launcher.launch(worktree_path, mode, uuid)` is called THEN function SHALL dispatch to handler based on `sys.platform`:
 

@@ -30,26 +30,26 @@
 
 | Path | Action | Reason |
 |------|--------|--------|
-| `tools/hyperv-test-runner/lib/common.ps1` | create | [FR-1](FR.md#fr-1-hyper-v-vm-lifecycle-scripts) — shared helpers (admin check, hyper-v assert, wait ready) |
-| `tools/hyperv-test-runner/01-create-vm.ps1` | create | [FR-1](FR.md#fr-1-hyper-v-vm-lifecycle-scripts) — New-VM Generation 2 + vTPM + ISO mount |
-| `tools/hyperv-test-runner/02-post-install.ps1` | create | [FR-4](FR.md#fr-4-native-rdp-access-via-mstsc) — RDP enable + winget Node/Git + npm Claude Code (внутри VM) |
-| `tools/hyperv-test-runner/03-checkpoint.ps1` | create | [FR-2](FR.md#fr-2-snapshot-versioning) — Checkpoint-VM с параметром -Snapshot |
-| `tools/hyperv-test-runner/04-revert-and-launch.ps1` | create | [FR-2](FR.md#fr-2-snapshot-versioning), [FR-3](FR.md#fr-3-gui-access-via-vmconnect-enhanced-session-mode) — Restore + Start + vmconnect |
-| `tools/hyperv-test-runner/05-cleanup.ps1` | create | [FR-12](FR.md#fr-12-vm-cleanup) — Stop-VM + snapshots remove + Remove-VM с -Confirm/-Force |
+| `tools/hyperv-test-runner/lib/common.ps1` | create | [FR-1](FR.md#fr-1-hyper-v-vm-lifecycle-scripts-feature1) — shared helpers (admin check, hyper-v assert, wait ready) |
+| `tools/hyperv-test-runner/01-create-vm.ps1` | create | [FR-1](FR.md#fr-1-hyper-v-vm-lifecycle-scripts-feature1) — New-VM Generation 2 + vTPM + ISO mount |
+| `tools/hyperv-test-runner/02-post-install.ps1` | create | [FR-4](FR.md#fr-4-native-rdp-access-via-mstsc-feature4) — RDP enable + winget Node/Git + npm Claude Code (внутри VM) |
+| `tools/hyperv-test-runner/03-checkpoint.ps1` | create | [FR-2](FR.md#fr-2-snapshot-versioning-feature2) — Checkpoint-VM с параметром -Snapshot |
+| `tools/hyperv-test-runner/04-revert-and-launch.ps1` | create | [FR-2](FR.md#fr-2-snapshot-versioning-feature2), [FR-3](FR.md#fr-3-gui-access-via-vmconnect-enhanced-session-mode-feature3) — Restore + Start + vmconnect |
+| `tools/hyperv-test-runner/05-cleanup.ps1` | create | [FR-12](FR.md#fr-12-vm-cleanup-feature12) — Stop-VM + snapshots remove + Remove-VM с -Confirm/-Force |
 
 ### Test catalog (@feature8)
 
 | Path | Action | Reason |
 |------|--------|--------|
-| `tests/hyperv-scenarios/schema.json` | create | [FR-8](FR.md#fr-8-test-scenario-catalog) — JSON Schema Draft-07 для validation |
-| `tests/hyperv-scenarios/HV001_install-clean.yaml` | create | [FR-8](FR.md#fr-8-test-scenario-catalog) — reference сценарий install dev-pomogator |
+| `tests/hyperv-scenarios/schema.json` | create | [FR-8](FR.md#fr-8-test-scenario-catalog-feature8) — JSON Schema Draft-07 для validation |
+| `tests/hyperv-scenarios/HV001_install-clean.yaml` | create | [FR-8](FR.md#fr-8-test-scenario-catalog-feature8) — reference сценарий install dev-pomogator |
 
 ### AI Agent Skill (@feature6, @feature7, @feature9, @feature10)
 
 | Path | Action | Reason |
 |------|--------|--------|
-| `.claude/skills/hyperv-test-runner/SKILL.md` | create | [FR-6](FR.md#fr-6-ai-agent-skill-hyperv-test-runner) — AI skill orchestration с triggers и алгоритмом |
-| `.claude/skills/hyperv-test-runner/scripts/run-scenario.ps1` | create | [FR-6](FR.md#fr-6-ai-agent-skill-hyperv-test-runner), [FR-9](FR.md#fr-9-run-artifacts-logging) — helper для skill, parse YAML + execute + log |
+| `.claude/skills/hyperv-test-runner/SKILL.md` | create | [FR-6](FR.md#fr-6-ai-agent-skill-hyperv-test-runner-feature6) — AI skill orchestration с triggers и алгоритмом |
+| `.claude/skills/hyperv-test-runner/scripts/run-scenario.ps1` | create | [FR-6](FR.md#fr-6-ai-agent-skill-hyperv-test-runner-feature6), [FR-9](FR.md#fr-9-run-artifacts-logging-feature9) — helper для skill, parse YAML + execute + log |
 
 ### BDD test runner (@feature1..@feature12 — meta tests)
 
@@ -61,15 +61,15 @@
 
 | Path | Action | Reason |
 |------|--------|--------|
-| `.gitignore` | edit | [FR-9](FR.md#fr-9-run-artifacts-logging), [NFR-Security](NFR.md#security) — добавить `.dev-pomogator/hyperv-runs/`, `*.iso`, `*.vhdx` |
+| `.gitignore` | edit | [FR-9](FR.md#fr-9-run-artifacts-logging-feature9), [NFR-Security](NFR.md#security) — добавить `.dev-pomogator/hyperv-runs/`, `*.iso`, `*.vhdx` |
 | `CLAUDE.md` | edit | Обновить Rules table если skill становится always-apply (опционально) |
-| `tests/fixtures/typical-claude-user/` | reuse (no change) | [FR-5](FR.md#fr-5-test-fixture-mounting-in-vm) — переиспользуется как target проект, не модифицируется |
+| `tests/fixtures/typical-claude-user/` | reuse (no change) | [FR-5](FR.md#fr-5-test-fixture-mounting-in-vm-feature5) — переиспользуется как target проект, не модифицируется |
 
 ### Reuse (no edits)
 
 | Path | Action | Reason |
 |------|--------|--------|
-| `extensions/debug-screenshot/skills/debug-screenshot/scripts/screenshot.ps1` | reuse | [FR-7](FR.md#fr-7-visual-verification-via-screenshots) — переиспользуется skill-ом для visual capture |
+| `extensions/debug-screenshot/skills/debug-screenshot/scripts/screenshot.ps1` | reuse | [FR-7](FR.md#fr-7-visual-verification-via-screenshots-feature7) — переиспользуется skill-ом для visual capture |
 | `.claude/skills/dev-pomogator-uninstall/SKILL.md` | reuse (pattern) | Эталон формата для нового SKILL.md (frontmatter + multi-step algorithm) |
 
 ## Out of scope (НЕ в этой спеке)

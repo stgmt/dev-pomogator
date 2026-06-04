@@ -76,7 +76,7 @@
 ## Phase 2: Wiring + Skill + Rules (Green)
 
 - [x] T05: Implement audit.ts + wire dispatch -- @feature5,6 — Status: TODO | Est: 45m
-  _Requirements: [FR-6](FR.md#fr-6-audit-category-variant_coverage-8-я-категория), [FR-7](FR.md#fr-7-escape-hatch-с-audit-log)_
+  _Requirements: [FR-6](FR.md#fr-6-audit-category-variantcoverage-8-я-категория), [FR-7](FR.md#fr-7-escape-hatch-с-audit-log)_
   _Variant: axis=audit-category, value=VARIANT_COVERAGE_
   **Done When:**
   - [ ] checkVariantCoverage(specPath) exported в audit.ts
@@ -99,7 +99,7 @@
   - [ ] escape-hatch-audit.md создан с JSONL format + Red flags + Anti-gaming + Log rotation
 
 - [x] T09: Doc updates Phase 2/3+ — Status: TODO | Est: 20m
-  _Requirements: [FR-6](FR.md#fr-6-audit-category-variant_coverage-8-я-категория), [FR-8](FR.md#fr-8-phase-2-sub-skill-variant-matrix-build)_
+  _Requirements: [FR-6](FR.md#fr-6-audit-category-variantcoverage-8-я-категория), [FR-8](FR.md#fr-8-phase-2-sub-skill-variant-matrix-build)_
   **Done When:**
   - [ ] phase2_requirements-and-design.md содержит Step 4c invocation
   - [ ] phase3plus_audit-overview.md categories 7→8 rows

@@ -37,7 +37,7 @@
 Реализовать verify.ts shell + 3 FC checks + 3 output formats + narrative path check.
 
 - [ ] Реализовать `verify.ts` shell: AuditFinding import, FILE_CHANGES parser с graceful fallback, CLI args -- @feature1 @feature2 @feature14 — Status: TODO | Est: 60m
-  _Requirements: [FR-1](FR.md#fr-1-skill-bundle-layout-feature1), [FR-2](FR.md#fr-2-file_changes-verification-checks-feature2), [FR-14](FR.md#fr-14-graceful-file_changes-parser-fallback-feature14)_
+  _Requirements: [FR-1](FR.md#fr-1-skill-bundle-layout-feature1), [FR-2](FR.md#fr-2-filechanges-verification-checks-feature2), [FR-14](FR.md#fr-14-graceful-filechanges-parser-fallback-feature14)_
   _Reuse: `extensions/specs-workflow/tools/specs-validator/audit-checks.ts:14` (AuditFinding interface), `src/utils/path-safety.ts` (resolveWithinProject)_
   **Done When:**
   - [ ] Файл `.claude/skills/spec-reality-check/scripts/verify.ts` существует
@@ -47,7 +47,7 @@
   - [ ] path-traversal guard через resolveWithinProject
 
 - [ ] Добавить 3 FC checks в verify.ts -- @feature2 — Status: TODO | Est: 45m
-  _Requirements: [FR-2](FR.md#fr-2-file_changes-verification-checks-feature2)_
+  _Requirements: [FR-2](FR.md#fr-2-filechanges-verification-checks-feature2)_
   **Done When:**
   - [ ] FC_CREATE_EXISTS emit-ит ERROR при existing file для action=create
   - [ ] FC_EDIT_MISSING emit-ит ERROR при missing file для action=edit
@@ -83,7 +83,7 @@
   - [ ] SRC001_05 scenario Green
 
 - [ ] Добавить TASKS↔FC consistency check -- @feature5 — Status: TODO | Est: 30m
-  _Requirements: [FR-5](FR.md#fr-5-tasksfile_changes-consistency-feature5)_
+  _Requirements: [FR-5](FR.md#fr-5-tasksfilechanges-consistency-feature5)_
   **Done When:**
   - [ ] Парс TASKS.md `**files:**` blocks
   - [ ] Symmetric diff vs FILE_CHANGES paths
@@ -175,7 +175,7 @@
 ## Phase 6: Plan-gate bug fix verification — ALREADY SHIPPED
 
 - [x] Bug fix в plan-gate.ts Phase 2.5 — string array → ValidationError objects -- @feature15 — Status: DONE | Est: 15m
-  _Requirements: [FR-15](FR.md#fr-15-bug-fix-plan-gate-phase-25--already-shipped-feature15)_
+  _Requirements: [FR-15](FR.md#fr-15-bug-fix-plan-gate-phase-25-already-shipped-feature15)_
   **Done When:**
   - [x] `extensions/plan-pomogator/tools/plan-pomogator/plan-gate.ts:308-311` исправлен
   - [x] Phase 2.5 deny errors теперь читаемые (не "line undefined: undefined")

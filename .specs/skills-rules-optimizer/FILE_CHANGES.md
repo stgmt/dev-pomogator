@@ -15,7 +15,7 @@
 | Path | Action | Reason |
 |------|--------|--------|
 | `.claude/skills/skills-rules-optimizer/SKILL.md` | edit | Updated mission + workflow audit→detect→merge→ratchet→apply; envelope handling steps |
-| `.claude/skills/skills-rules-optimizer/scripts/shared.ts` | edit | Add `Asset` interface, `SkillAuditEntry`, `OverlapPair`, `parseFrontmatterFlexible()`; [FR-8](FR.md#fr-8-unified-scoring-engine-для-rules--skills) |
+| `.claude/skills/skills-rules-optimizer/scripts/shared.ts` | edit | Add `Asset` interface, `SkillAuditEntry`, `OverlapPair`, `parseFrontmatterFlexible()`; [FR-8](FR.md#fr-8-unified-scoring-engine-для-rules-skills) |
 | `.claude/skills/skills-rules-optimizer/scripts/audit-rules.ts` | rename | Extracted from current audit.ts (verbatim logic); [FR-9](FR.md#fr-9-backward-compatibility-для-rules-side) |
 | `.claude/skills/skills-rules-optimizer/scripts/audit.ts` | edit | Convert to dispatcher (route by `--dir` to rules or skills pipeline); [FR-1](FR.md#fr-1-audit-skills-directory), [FR-9](FR.md#fr-9-backward-compatibility-для-rules-side) |
 | `.claude/skills/skills-rules-optimizer/scripts/audit-skills.ts` | create | NEW: SKILL.md scanning, frontmatter validation, tools coverage; [FR-1](FR.md#fr-1-audit-skills-directory), [FR-2](FR.md#fr-2-frontmatter-validation-per-anthropic-spec), [FR-3](FR.md#fr-3-allowed-tools-coverage-check) |

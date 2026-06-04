@@ -56,19 +56,19 @@ WHEN `.dev-pomogator/.classifier-cache.json` содержит valid entry для
 
 ## AC-10 (FR-4)
 
-**Требование:** [FR-4](FR.md#fr-4-shared-classifier-module--extended-yaml-config)
+**Требование:** [FR-4](FR.md#fr-4-shared-classifier-module-extended-yaml-config)
 
 WHEN maintainer запускает `grep -rn "TRASH_PATTERNS\|trash_patterns" extensions/forbid-root-artifacts/tools/forbid-root-artifacts/*.py`, THEN результат SHALL показать NO hardcoded TRASH_PATTERNS list в `*.py` (кроме `_FALLBACK_TRASH_PATTERNS` в check.py для graceful degradation) AND `_classifier.py` SHALL содержать функцию `load_classifier_config(repo_root, plugin_dir) → ClassifierConfig` которая читает obа yaml файла и merges layers.
 
 ## AC-11 (FR-4)
 
-**Требование:** [FR-4](FR.md#fr-4-shared-classifier-module--extended-yaml-config)
+**Требование:** [FR-4](FR.md#fr-4-shared-classifier-module-extended-yaml-config)
 
 WHEN maintainer добавляет новый pattern в `default-whitelist.yaml → trash_patterns_default: [...]` (плагин-side config), THEN последующий запуск check.py AND configure.py SHALL применять новый pattern без изменений в `*.py` files (yaml-driven, hot-reload at process start).
 
 ## AC-12 (FR-4)
 
-**Требование:** [FR-4](FR.md#fr-4-shared-classifier-module--extended-yaml-config)
+**Требование:** [FR-4](FR.md#fr-4-shared-classifier-module-extended-yaml-config)
 
 IF `_classifier.py` отсутствует (broken upgrade scenario, see UC-7), THEN `check.py` SHALL не crash AND SHALL использовать embedded `_FALLBACK_TRASH_PATTERNS` (минимум 6 universal patterns) AND SHALL напечатать в stderr «WARNING: classifier module missing — using fallback» AND SHALL продолжить работу как pre-commit hook (exit 0/1 normally).
 

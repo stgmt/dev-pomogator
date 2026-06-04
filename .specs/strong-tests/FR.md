@@ -5,7 +5,7 @@
 Skill SHALL produce strong tests for newly authored production code when invoked in Greenfield mode against a target file path. For every function with a structural invariant (roundtrip, idempotence, commutativity, associativity, identity), the skill SHALL emit at least one property-based test using the stack-appropriate framework (fast-check for TS, Hypothesis for Python). For every function without obvious structural invariants, the skill SHALL emit example-based tests covering at minimum: happy path, negative path, boundary conditions (min, max, empty, null/None, very-large, unicode where applicable). Every assertion SHALL include a descriptive failure message. The negative-to-positive scenario ratio SHALL be ≥1:2.
 
 **Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1)
-**Use Case:** [UC-1](USE_CASES.md#uc-1-greenfield-write-strong-tests-for-new-module)
+**Use Case:** [UC-1](USE_CASES.md#uc-1-greenfield-write-strong-tests-for-new-module-feature1)
 **User Story:** [Story 1](USER_STORIES.md#user-story-1-greenfield-strong-tests-for-new-code-priority-p1)
 
 ## FR-2: Audit existing tests against 8-anti-pattern catalogue
@@ -13,7 +13,7 @@ Skill SHALL produce strong tests for newly authored production code when invoked
 Skill SHALL provide an Audit mode that, given a path to an existing test file or directory, scans for the 8 anti-patterns documented in `references/anti-patterns.md`: (1) Permissive Matching (toBeDefined / NotNull only), (2) Assertion Roulette (multiple unlabelled asserts), (3) Magic Number Test, (4) Happy-Path-Only, (5) Tautological Assertion (recompute expected with same logic), (6) Trivial Input (e.g., `console.log("OK")`), (7) Silent Skip / catch-and-swallow, (8) Missing Await on async. For each finding skill SHALL emit a finding row with: file:line, anti-pattern code, BAD snippet, GOOD replacement, rationale, and a mapping to the 12-point self-eval item the finding violates. Skill SHALL compute a per-file strength score (0–100) based on weighted anti-pattern frequency.
 
 **Связанные AC:** [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2)
-**Use Case:** [UC-2](USE_CASES.md#uc-2-audit-review-existing-weak-test-suite)
+**Use Case:** [UC-2](USE_CASES.md#uc-2-audit-review-existing-weak-test-suite-feature2)
 **User Story:** [Story 2](USER_STORIES.md#user-story-2-audit-existing-tests-for-hidden-weakness-priority-p1)
 
 ## FR-3: Mutation-feedback loop until threshold
@@ -21,7 +21,7 @@ Skill SHALL provide an Audit mode that, given a path to an existing test file or
 Skill SHALL provide a Mutation-feedback mode that auto-detects the project's mutation tool from manifests (package.json for Stryker, pyproject.toml for mutmut, pom.xml for PIT, csproj for Stryker.NET, Cargo.toml for cargo-mutants, go.mod for go-mutesting). For TS+Python (primary stacks) the skill SHALL invoke the detected tool via `scripts/run-mutation.ts`. The skill SHALL parse survived mutants, propose a targeted test per survivor (with file:line of the mutation point), apply the proposed fix, and re-invoke the mutation tool. The loop SHALL terminate when: (a) kill rate ≥ user-specified threshold (default 70% per OutSight + Levnikolaevich consensus), OR (b) max-iter (default 5) reached. On max-iter exit skill SHALL emit a `[GAP]` report listing remaining survivors with rationale. If no mutation tool is detected, skill SHALL offer (a) install command, (b) AI-driven manual mutation fallback per the honnibal-style 8-category catalogue in `references/anti-patterns.md`.
 
 **Связанные AC:** [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3)
-**Use Case:** [UC-3](USE_CASES.md#uc-3-mutation-feedback-loop-strengthen-until-threshold), [UC-5](USE_CASES.md#uc-5-tool-missing-fallback-to-ai-driven-manual-mutation)
+**Use Case:** [UC-3](USE_CASES.md#uc-3-mutation-feedback-loop-strengthen-until-threshold-feature3), [UC-5](USE_CASES.md#uc-5-tool-missing-fallback-to-ai-driven-manual-mutation-feature3)
 **User Story:** [Story 3](USER_STORIES.md#user-story-3-mutation-feedback-loop-until-threshold-met-priority-p1)
 
 ## FR-4: Multi-stack auto-detection
@@ -29,7 +29,7 @@ Skill SHALL provide a Mutation-feedback mode that auto-detects the project's mut
 Skill SHALL auto-detect the project stack(s) when invoked without explicit target. Detection signals: `package.json` with a test framework devDep → TS (vitest / jest); `pyproject.toml` or `setup.py` with pytest → Python; `pom.xml` with `<artifactId>junit-jupiter` → Java; `*.csproj` with `xunit` → C#; `Cargo.toml` with `[dev-dependencies]` → Rust; `go.mod` with `*_test.go` → Go. For each detected stack the skill SHALL emit a matrix listing: stack name, test framework, mutation tool, PBT framework, threshold default. When ≥2 stacks are detected, the skill SHALL use `AskUserQuestion` to ask which stack(s) to target. When no recognized stack is detected, skill SHALL emit a clear message listing the 6 supported stacks with their detection signals.
 
 **Связанные AC:** [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4)
-**Use Case:** [UC-4](USE_CASES.md#uc-4-polyglot-project-auto-detect-both-stacks)
+**Use Case:** [UC-4](USE_CASES.md#uc-4-polyglot-project-auto-detect-both-stacks-feature4)
 **User Story:** [Story 4](USER_STORIES.md#user-story-4-multi-stack-auto-detection-priority-p2)
 
 ## FR-5: 12-point self-eval as final gate with PASS/FAIL report
@@ -63,7 +63,7 @@ Skill SHALL support a suppression mechanism per `scope-gate` escape-hatch patter
 Skill SHALL include §1.5 "Behavioural prior" в SKILL.md body that loads on **every** Skill activation (slash command, semantic match, JiT hook context insertion). Section content: reactive vs proactive workflow side-by-side, 3 anti-patterns A/B/C from session-pilot incident 2026-05-11 (cross-link: `dev-pomogator-session-pilot/.specs/session-pilot/POSTMORTEM-test-discipline.md`), 2 verbatim пинка таблицей, sample dialogue snippets cross-link to postmortem §9, главный системный вывод «знание правила ≠ применение правила». Section is **prior-activator**, not optional appendix.
 
 **Связанные AC:** [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7)
-**Use Case:** [UC-7](USE_CASES.md#uc-7-jit-auto-trigger-on-production-code-write)
+**Use Case:** [UC-7](USE_CASES.md#uc-7-jit-auto-trigger-on-production-code-write-feature7)
 **User Story:** [Story 6](USER_STORIES.md#user-story-6-jit-auto-trigger-via-posttooluse-hook-priority-p1)
 
 ## FR-11: Composition-chain detection (v0.5.0)

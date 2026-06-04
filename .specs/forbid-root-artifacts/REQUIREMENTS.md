@@ -7,7 +7,7 @@
 | [FR-1](FR.md#fr-1-auto-prune-stale-allow-entries-в-checkpy) | Auto-prune stale allow entries в check.py | [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1), [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-1), [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-1) | @feature1 | Draft |
 | [FR-2](FR.md#fr-2-user-configurable-trash-classification) | User-configurable trash classification | [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-2), [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-2), [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-2) | @feature2 | Draft |
 | [FR-3](FR.md#fr-3-llm-driven-classification-через-claude-code-cli-subscription) | LLM-driven classification (Claude CLI subscription) | [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-3), [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-3), [AC-9](ACCEPTANCE_CRITERIA.md#ac-9-fr-3) | @feature3 | Draft |
-| [FR-4](FR.md#fr-4-shared-classifier-module--extended-yaml-config) | Shared classifier module + extended yaml config | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-4), [AC-11](ACCEPTANCE_CRITERIA.md#ac-11-fr-4), [AC-12](ACCEPTANCE_CRITERIA.md#ac-12-fr-4) | @feature4 | Draft |
+| [FR-4](FR.md#fr-4-shared-classifier-module-extended-yaml-config) | Shared classifier module + extended yaml config | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-4), [AC-11](ACCEPTANCE_CRITERIA.md#ac-11-fr-4), [AC-12](ACCEPTANCE_CRITERIA.md#ac-12-fr-4) | @feature4 | Draft |
 | [FR-5](FR.md#fr-5-out-of-scope-migration-helper-для-существующих-stale-yaml-в-downstream-repos) | Migration helper | OUT OF SCOPE | — | OUT OF SCOPE |
 | [FR-6](FR.md#fr-6-out-of-scope-multi-llm-provider-support-openai-local-etc) | Multi-LLM provider support | OUT OF SCOPE | — | OUT OF SCOPE |
 
@@ -16,7 +16,7 @@
 - [FR-1: Auto-prune stale allow entries в check.py](FR.md#fr-1-auto-prune-stale-allow-entries-в-checkpy)
 - [FR-2: User-configurable trash classification](FR.md#fr-2-user-configurable-trash-classification)
 - [FR-3: LLM-driven classification через Claude Code CLI subscription](FR.md#fr-3-llm-driven-classification-через-claude-code-cli-subscription)
-- [FR-4: Shared classifier module + extended yaml config](FR.md#fr-4-shared-classifier-module--extended-yaml-config)
+- [FR-4: Shared classifier module + extended yaml config](FR.md#fr-4-shared-classifier-module-extended-yaml-config)
 - ~~FR-5~~ (OUT OF SCOPE)
 - ~~FR-6~~ (OUT OF SCOPE)
 

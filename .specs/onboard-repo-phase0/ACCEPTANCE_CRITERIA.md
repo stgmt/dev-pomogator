@@ -137,7 +137,7 @@
 
 ## AC-16 (FR-16): Manual refresh @feature4
 
-**Требование:** [FR-16](FR.md#fr-16-manual-refresh-через---refresh-onboarding-feature4)
+**Требование:** [FR-16](FR.md#fr-16-manual-refresh-через-refresh-onboarding-feature4)
 
 - **WHEN** developer запускает `/create-spec <slug> --refresh-onboarding` **THEN** Phase 0 SHALL force re-run независимо от cache state.
 - **WHEN** refresh начинается **THEN** pre-existing artifacts SHALL быть moved в `.specs/.onboarding-history/{ISO-timestamp}/` **BEFORE** новых writes.
@@ -145,7 +145,7 @@
 
 ## AC-17 (FR-17): Ignore files respect @feature2
 
-**Требование:** [FR-17](FR.md#fr-17-respect-cursorignore--aiderignore--gitignore-feature2)
+**Требование:** [FR-17](FR.md#fr-17-respect-cursorignore-aiderignore-gitignore-feature2)
 
 - **WHEN** Phase 0 subagents сканируют файлы **THEN** paths matching `.gitignore` patterns SHALL быть excluded.
 - **IF** `.cursorignore` существует **THEN** paths matching SHALL быть также excluded **AND** `onboarding.ignore.external_configs_found[]` SHALL включать `".cursorignore"`.

@@ -214,6 +214,14 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
     And every registered hook script under tools/ should be present in .claude-plugin/hooks.json
     And .claude-plugin/plugin.json, marketplace.json and hooks.json should be schema-valid per Anthropic spec
 
+  # @feature9 — hook child-script resolution for INSTALLED (non-dogfood) users
+  Scenario: CANON001_91 hook resolves plugin-relative child script via CLAUDE_PLUGIN_ROOT from a foreign CWD
+    Given a plugin tree at a CLAUDE_PLUGIN_ROOT separate from the session CWD
+    And the session CWD is an unrelated project with no plugin files
+    When a hook bootstraps tsx-runner and passes a plugin-relative child script "tools/<x>.ts"
+    Then tsx-runner should resolve the script against CLAUDE_PLUGIN_ROOT, not the CWD
+    And the script should execute (no ENOENT) for an external user
+
   # =========================================================================
   # @feature10 — Update path (FR-10)
   # =========================================================================

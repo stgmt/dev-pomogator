@@ -38,7 +38,7 @@ N/A — фича не требует новых сервисов / БД / env va
   - [ ] `@featureN` теги расставлены 1:1 с AC-{N}
 
 - [ ] T02: Создать step definitions (vitest describe/it stubs) — Status: TODO | Est: 20m
-  _Requirements: [FR-1](FR.md#fr-1-запись-skilllistingbudgetfraction-10-в-claudesettingsjson), [FR-2](FR.md#fr-2-идемпотентность-повторных-запусков), [FR-3](FR.md#fr-3-bump-существующего-значения--10), [FR-4](FR.md#fr-4-install-report-includes-change-line)_
+  _Requirements: [FR-1](FR.md#fr-1-запись-skilllistingbudgetfraction-10-в-claudesettingsjson), [FR-2](FR.md#fr-2-идемпотентность-повторных-запусков), [FR-3](FR.md#fr-3-bump-существующего-значения-10), [FR-4](FR.md#fr-4-install-report-includes-change-line)_
   _Source: DESIGN.md "Существующие hooks" — pattern из `tests/e2e/settings-protection.test.ts`_
   _Reuse: `tests/fixtures/pomogator-doctor/temp-home-builder.ts` для temp HOME isolation_
   **Done When:**
@@ -54,7 +54,7 @@ N/A — фича не требует новых сервисов / БД / env va
 > Реализовать код чтобы все 8 BDD сценариев перешли в Green.
 
 - [ ] T03: Implement `src/installer/skill-budget.ts` -- @feature1 @feature2 @feature3 — Status: TODO | Est: 45m
-  _Requirements: [FR-1](FR.md#fr-1-запись-skilllistingbudgetfraction-10-в-claudesettingsjson), [FR-2](FR.md#fr-2-идемпотентность-повторных-запусков), [FR-3](FR.md#fr-3-bump-существующего-значения--10)_
+  _Requirements: [FR-1](FR.md#fr-1-запись-skilllistingbudgetfraction-10-в-claudesettingsjson), [FR-2](FR.md#fr-2-идемпотентность-повторных-запусков), [FR-3](FR.md#fr-3-bump-существующего-значения-10)_
   **Done When:**
   - [ ] Экспортирована `ensureSkillListingBudget(homeDir?, report?): Promise<void>`
   - [ ] Использует `readJsonSafe` + `writeJsonAtomic` из `src/utils/atomic-json.ts`

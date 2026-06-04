@@ -2,18 +2,18 @@
 
 ## Реализуемые требования
 
-- [FR-1: Hyper-V VM Lifecycle Scripts](FR.md#fr-1-hyper-v-vm-lifecycle-scripts)
-- [FR-2: Snapshot Versioning](FR.md#fr-2-snapshot-versioning)
-- [FR-3: GUI Access via VMConnect Enhanced Session Mode](FR.md#fr-3-gui-access-via-vmconnect-enhanced-session-mode)
-- [FR-4: Native RDP Access via mstsc](FR.md#fr-4-native-rdp-access-via-mstsc)
-- [FR-5: Test Fixture Mounting in VM](FR.md#fr-5-test-fixture-mounting-in-vm)
-- [FR-6: AI Agent Skill `hyperv-test-runner`](FR.md#fr-6-ai-agent-skill-hyperv-test-runner)
-- [FR-7: Visual Verification via Screenshots](FR.md#fr-7-visual-verification-via-screenshots)
-- [FR-8: Test Scenario Catalog](FR.md#fr-8-test-scenario-catalog)
-- [FR-9: Run Artifacts Logging](FR.md#fr-9-run-artifacts-logging)
-- [FR-10: Catalog Extension Workflow](FR.md#fr-10-catalog-extension-workflow)
-- [FR-11: Documentation Includes Evolution Roadmap](FR.md#fr-11-documentation-includes-evolution-roadmap)
-- [FR-12: VM Cleanup](FR.md#fr-12-vm-cleanup)
+- [FR-1: Hyper-V VM Lifecycle Scripts](FR.md#fr-1-hyper-v-vm-lifecycle-scripts-feature1)
+- [FR-2: Snapshot Versioning](FR.md#fr-2-snapshot-versioning-feature2)
+- [FR-3: GUI Access via VMConnect Enhanced Session Mode](FR.md#fr-3-gui-access-via-vmconnect-enhanced-session-mode-feature3)
+- [FR-4: Native RDP Access via mstsc](FR.md#fr-4-native-rdp-access-via-mstsc-feature4)
+- [FR-5: Test Fixture Mounting in VM](FR.md#fr-5-test-fixture-mounting-in-vm-feature5)
+- [FR-6: AI Agent Skill `hyperv-test-runner`](FR.md#fr-6-ai-agent-skill-hyperv-test-runner-feature6)
+- [FR-7: Visual Verification via Screenshots](FR.md#fr-7-visual-verification-via-screenshots-feature7)
+- [FR-8: Test Scenario Catalog](FR.md#fr-8-test-scenario-catalog-feature8)
+- [FR-9: Run Artifacts Logging](FR.md#fr-9-run-artifacts-logging-feature9)
+- [FR-10: Catalog Extension Workflow](FR.md#fr-10-catalog-extension-workflow-feature10)
+- [FR-11: Documentation Includes Evolution Roadmap](FR.md#fr-11-documentation-includes-evolution-roadmap-feature11)
+- [FR-12: VM Cleanup](FR.md#fr-12-vm-cleanup-feature12)
 
 ## Архитектура (5 слоёв)
 

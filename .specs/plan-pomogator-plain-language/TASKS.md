@@ -30,7 +30,7 @@
 > Реализовать изменения в validate-plan.ts: новая запись в REQUIRED_SECTIONS + новая функция validateHumanSummarySection.
 
 - [x] Добавить в `extensions/plan-pomogator/tools/plan-pomogator/validate-plan.ts:20-29` массив `REQUIRED_SECTIONS` ПЕРВЫМ элементом запись `{ name: 'Простыми словами', regex: /^##\s+(?:💬\s+)?Простыми словами\s*$/ }` — @feature2
-  _Requirements: [FR-2](FR.md#fr-2-required_sections-массив-содержит-новую-запись-первой-feature2)_
+  _Requirements: [FR-2](FR.md#fr-2-requiredsections-массив-содержит-новую-запись-первой-feature2)_
 - [x] Добавить функцию `validateHumanSummarySection(lines, indices, errors)` в `validate-plan.ts` после `validateContextContent` (line ~414) по паттерну validateContextContent — @feature3
   _Requirements: [FR-3](FR.md#fr-3-validatehumansummarysection-функция-проверяет-non-empty-content-feature3)_
   _Pattern: `validate-plan.ts:372-413` (validateContextContent)_

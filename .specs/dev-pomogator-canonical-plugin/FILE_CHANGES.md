@@ -13,7 +13,7 @@
 | `commands/*.md` (mass) | create | [FR-1](FR.md#fr-1-canonical-plugin-layout) — canonical commands |
 | `.mcp.json` (repo root) | create | [FR-1](FR.md#fr-1-canonical-plugin-layout) — MCP servers config (если applicable) |
 | `tools/<tool>/...` (mass) | move | [FR-1](FR.md#fr-1-canonical-plugin-layout) — все tool/hook скрипты перенесены top-level в `tools/` (после удаления `src/` и `extensions/`) |
-| `tools/migrate-v1-to-v2/migrate-v1-to-v2.ts` | create | [FR-7](FR.md#fr-7-migration-v1-v2-documentation--optional-cleanup-script) — standalone cleanup script для users переходящих с v1 |
+| `tools/migrate-v1-to-v2/migrate-v1-to-v2.ts` | create | [FR-7](FR.md#fr-7-migration-v1-v2-documentation-optional-cleanup-script) — standalone cleanup script для users переходящих с v1 |
 | `package.json` | edit | [FR-3](FR.md#fr-3-distribution-через-plugin-marketplace-add), [FR-8](FR.md#fr-8-cursor-support-removal) — remove npm-based install path; remove "Cursor" из description+keywords |
 | `tests/e2e/canonical-plugin.test.ts` | create | Drift test для AC-1, FR-9: каждая hooks.json команда резолвится в on-disk скрипт под `tools/` (и vice-versa) + manifest schema validity |
 | `tests/e2e/marketplace-json.test.ts` | create | Integration tests для AC-2: marketplace.json schema validation per Anthropic spec |

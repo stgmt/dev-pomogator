@@ -8,7 +8,7 @@
 |------|--------|--------|
 | `extensions/skill-listing-budget/extension.json` | create | Manifest plugin-а: tool registration + SessionStart hook + postInstall hook |
 | `extensions/skill-listing-budget/README.md` | create | User-facing README для plugin folder (что делает, как откатить, гарантии) |
-| `extensions/skill-listing-budget/tools/skill-listing-budget/apply_skill_budget.ts` | create | Self-contained tool — [FR-1](FR.md#fr-1-запись-skilllistingbudgetfraction-10-в-claudesettingsjson)..[FR-3](FR.md#fr-3-bump-существующего-значения--10) логика, idempotent + atomic + fail-open |
+| `extensions/skill-listing-budget/tools/skill-listing-budget/apply_skill_budget.ts` | create | Self-contained tool — [FR-1](FR.md#fr-1-запись-skilllistingbudgetfraction-10-в-claudesettingsjson)..[FR-3](FR.md#fr-3-bump-существующего-значения-10) логика, idempotent + atomic + fail-open |
 | `extensions/skill-listing-budget/tools/skill-listing-budget/README.md` | create | Короткий pointer на родительский README |
 | `tests/e2e/skill-listing-budget.test.ts` | create | 10 integration тестов + 1 e2e через `runInstaller` |
 | `tests/features/core/CORE023_skill-listing-budget.feature` | create | BDD сценарии 1:1 mapping с тестами |

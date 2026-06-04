@@ -5,41 +5,41 @@
 | ID | Name | Linked AC | @featureN | Status |
 |----|------|-----------|-----------|--------|
 | [FR-1](FR.md#fr-1-axis-enumeration-из-prd) | Axis enumeration | [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1) | @feature1 | Done |
-| [FR-2](FR.md#fr-2-per-axis-artefact-markdown--self-contained-html) | Per-axis artefact (md+html) | [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2) | @feature2 | Done |
+| [FR-2](FR.md#fr-2-per-axis-artefact-markdown-self-contained-html) | Per-axis artefact (md+html) | [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2) | @feature2 | Done |
 | [FR-3](FR.md#fr-3-browser-auto-open-cross-platform-enoent-safe) | Browser auto-open | [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3) | @feature3 | Done |
-| [FR-4](FR.md#fr-4-итеративный-выбор-через-askuserquestion) | Iterative choice | [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4) | @feature4 | Done |
+| [FR-4](FR.md#fr-4-auto-apply-рекомендации-default-с-опциональным-override) | Iterative choice | [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4) | @feature4 | Done |
 | [FR-5](FR.md#fr-5-index-compile-idempotent-status-matrix) | INDEX compile | [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5) | @feature5 | Done |
 | [FR-6](FR.md#fr-6-cascading-implications-bmad-pattern) | Cascading implications | [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6) | @feature6 | Done |
-| [FR-7](FR.md#fr-7-два-режима-запуска-standalone--create-spec-phase-175) | Two run modes | [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7) | @feature7 | Done |
+| [FR-7](FR.md#fr-7-два-режима-запуска-standalone-create-spec-phase-175) | Two run modes | [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7) | @feature7 | Done |
 | [FR-8](FR.md#fr-8-anti-bias-guardrails) | Anti-bias guardrails | [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8) | @feature8 | Done |
-| [FR-9](FR.md#fr-9-audit-category-architecture_coverage) | ARCHITECTURE_COVERAGE audit | [AC-9](ACCEPTANCE_CRITERIA.md#ac-9-fr-9) | @feature9 | Done |
+| [FR-9](FR.md#fr-9-audit-category-architecturecoverage) | ARCHITECTURE_COVERAGE audit | [AC-9](ACCEPTANCE_CRITERIA.md#ac-9-fr-9) | @feature9 | Done |
 | [FR-10](FR.md#fr-10-escape-hatch-с-audit-trail) | Escape hatch + audit trail | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-10) | @feature10 | Done |
-| [FR-11](FR.md#fr-11-eval-suite--debug--benchmark-качества-2-слоя) | Eval suite (debug + benchmark) | [AC-11](ACCEPTANCE_CRITERIA.md#ac-11-fr-11) | @feature11 | Done |
-| [FR-12](FR.md#fr-12-audit-category-completeness_coverage--completeness-ledger) | COMPLETENESS_COVERAGE audit | [AC-12](ACCEPTANCE_CRITERIA.md#ac-12-fr-12) | @feature12 | Done |
+| [FR-11](FR.md#fr-11-eval-suite-debug-benchmark-качества-2-слоя) | Eval suite (debug + benchmark) | [AC-11](ACCEPTANCE_CRITERIA.md#ac-11-fr-11) | @feature11 | Done |
+| [FR-12](FR.md#fr-12-audit-category-completenesscoverage-completeness-ledger) | COMPLETENESS_COVERAGE audit | [AC-12](ACCEPTANCE_CRITERIA.md#ac-12-fr-12) | @feature12 | Done |
 | [FR-13](FR.md#fr-13-cross-axis-synthesis) | Cross-axis synthesis | [AC-13](ACCEPTANCE_CRITERIA.md#ac-13-fr-13) | @feature14 | Done |
 | [FR-14](FR.md#fr-14-correction-log-reasoning-journey) | Correction-log | [AC-14](ACCEPTANCE_CRITERIA.md#ac-14-fr-14) | @feature15 | Done |
 | [FR-15](FR.md#fr-15-live-context7-пруфы) | Live context7 пруфы | [AC-15](ACCEPTANCE_CRITERIA.md#ac-15-fr-15) | @feature16 | Done |
 | [FR-16](FR.md#fr-16-selection-policy-default-mvp-poc) | Selection policy (mvp-poc default) | [AC-16](ACCEPTANCE_CRITERIA.md#ac-16-fr-16) | @feature17 | Done |
-| [FR-17](FR.md#fr-17-две-линзы--scorecard--reality-check-r24-blocking) | Две линзы + scorecard + reality (R24) | [AC-17](ACCEPTANCE_CRITERIA.md#ac-17-fr-17) | @feature20 | Done |
-| [FR-18](FR.md#fr-18-экономика-решения--деньги-время-обратимость-r25-blocking) | Экономика: деньги/время/обратимость (R25) | [AC-18](ACCEPTANCE_CRITERIA.md#ac-18-fr-18) | @feature21 | Done |
+| [FR-17](FR.md#fr-17-две-линзы-scorecard-reality-check-r24-blocking) | Две линзы + scorecard + reality (R24) | [AC-17](ACCEPTANCE_CRITERIA.md#ac-17-fr-17) | @feature20 | Done |
+| [FR-18](FR.md#fr-18-экономика-решения-деньги-время-обратимость-r25-blocking) | Экономика: деньги/время/обратимость (R25) | [AC-18](ACCEPTANCE_CRITERIA.md#ac-18-fr-18) | @feature21 | Done |
 | [FR-19](FR.md#fr-19-единый-self-contained-architecturehtml-full-report) | Единый ARCHITECTURE.html (full-report) | [AC-19](ACCEPTANCE_CRITERIA.md#ac-19-fr-19) | @feature22 | Done |
-| [FR-20](FR.md#fr-20-anti-hallucination-integrity--verify-log--unbacked-marker-guard) | Anti-hallucination: verify-log + marker guard + detect-precision + model-validation | [AC-20](ACCEPTANCE_CRITERIA.md#ac-20-fr-20) | @feature23 | Done |
-| [FR-21](FR.md#fr-21-гарантированный-phase-175--architecture-gate-pretooluse-не-trust-based) | Guaranteed Phase 1.75 — architecture-gate PreToolUse hook | [AC-21](ACCEPTANCE_CRITERIA.md#ac-21-fr-21) | @feature24 | Done |
+| [FR-20](FR.md#fr-20-anti-hallucination-integrity-verify-log-unbacked-marker-guard) | Anti-hallucination: verify-log + marker guard + detect-precision + model-validation | [AC-20](ACCEPTANCE_CRITERIA.md#ac-20-fr-20) | @feature23 | Done |
+| [FR-21](FR.md#fr-21-гарантированный-phase-175-architecture-gate-pretooluse-не-trust-based) | Guaranteed Phase 1.75 — architecture-gate PreToolUse hook | [AC-21](ACCEPTANCE_CRITERIA.md#ac-21-fr-21) | @feature24 | Done |
 
 ## Functional Requirements
 
 - [FR-1: Axis enumeration из PRD](FR.md#fr-1-axis-enumeration-из-prd)
-- [FR-2: Per-axis artefact (md+html)](FR.md#fr-2-per-axis-artefact-markdown--self-contained-html)
+- [FR-2: Per-axis artefact (md+html)](FR.md#fr-2-per-axis-artefact-markdown-self-contained-html)
 - [FR-3: Browser auto-open](FR.md#fr-3-browser-auto-open-cross-platform-enoent-safe)
-- [FR-4: Iterative choice](FR.md#fr-4-итеративный-выбор-через-askuserquestion)
+- [FR-4: Iterative choice](FR.md#fr-4-auto-apply-рекомендации-default-с-опциональным-override)
 - [FR-5: INDEX compile](FR.md#fr-5-index-compile-idempotent-status-matrix)
 - [FR-6: Cascading implications](FR.md#fr-6-cascading-implications-bmad-pattern)
-- [FR-7: Two run modes](FR.md#fr-7-два-режима-запуска-standalone--create-spec-phase-175)
+- [FR-7: Two run modes](FR.md#fr-7-два-режима-запуска-standalone-create-spec-phase-175)
 - [FR-8: Anti-bias guardrails](FR.md#fr-8-anti-bias-guardrails)
-- [FR-9: ARCHITECTURE_COVERAGE audit](FR.md#fr-9-audit-category-architecture_coverage)
+- [FR-9: ARCHITECTURE_COVERAGE audit](FR.md#fr-9-audit-category-architecturecoverage)
 - [FR-10: Escape hatch + audit trail](FR.md#fr-10-escape-hatch-с-audit-trail)
-- [FR-11: Eval suite (debug + benchmark)](FR.md#fr-11-eval-suite--debug--benchmark-качества-2-слоя)
-- [FR-12: COMPLETENESS_COVERAGE audit](FR.md#fr-12-audit-category-completeness_coverage--completeness-ledger)
+- [FR-11: Eval suite (debug + benchmark)](FR.md#fr-11-eval-suite-debug-benchmark-качества-2-слоя)
+- [FR-12: COMPLETENESS_COVERAGE audit](FR.md#fr-12-audit-category-completenesscoverage-completeness-ledger)
 - [FR-13: Cross-axis synthesis](FR.md#fr-13-cross-axis-synthesis)
 - [FR-14: Correction-log](FR.md#fr-14-correction-log-reasoning-journey)
 - [FR-15: Live context7 пруфы](FR.md#fr-15-live-context7-пруфы)

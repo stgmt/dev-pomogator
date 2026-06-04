@@ -2,20 +2,20 @@
 
 ## Реализуемые требования
 
-- [FR-1: PreToolUse Hook Registration](FR.md#fr-1-pretooluse-hook-registration)
-- [FR-2: Stdin Parsing](FR.md#fr-2-stdin-parsing)
-- [FR-3: Spec Path Detection](FR.md#fr-3-spec-path-detection)
-- [FR-4: File-to-Phase Mapping](FR.md#fr-4-file-to-phase-mapping)
-- [FR-5: Phase Gate Decision](FR.md#fr-5-phase-gate-decision)
-- [FR-6: Deny Response Format](FR.md#fr-6-deny-response-format)
-- [FR-7: Fail-Open Error Handling](FR.md#fr-7-fail-open-error-handling)
-- [FR-8: Shared Phase Constants Module](FR.md#fr-8-shared-phase-constants-module)
-- [FR-9: Phase Status Injection](FR.md#fr-9-phase-status-injection)
-- [FR-10: Partial Implementation Detection](FR.md#fr-10-partial-implementation-detection)
-- [FR-11: Task Atomicity Check](FR.md#fr-11-task-atomicity-check)
-- [FR-12: FR Decomposition Rule](FR.md#fr-12-fr-decomposition-rule)
-- [FR-13: AC Scope Match Rule](FR.md#fr-13-ac-scope-match-rule)
-- [FR-14: Extension Manifest Update](FR.md#fr-14-extension-manifest-update)
+- [FR-1: PreToolUse Hook Registration](FR.md#fr-1-pretooluse-hook-блокирует-запись-в-файлы-будущих-фаз-feature1)
+- [FR-2: Stdin Parsing](FR.md#fr-2-hook-читает-состояние-из-progressjson-feature1)
+- [FR-3: Spec Path Detection](FR.md#fr-3-hook-возвращает-deny-с-exit-code-2-при-блокировке-feature1)
+- [FR-4: File-to-Phase Mapping](FR.md#fr-4-hook-работает-в-режиме-fail-open-feature1)
+- [FR-5: Phase Gate Decision](FR.md#fr-5-hook-пропускает-файлы-вне-specs-feature1)
+- [FR-6: Deny Response Format](FR.md#fr-6-feature-файл-привязан-к-фазе-requirements-feature1)
+- [FR-7: Fail-Open Error Handling](FR.md#fr-7-userpromptsubmit-hook-инжектирует-статус-фазы-feature2)
+- [FR-8: Shared Phase Constants Module](FR.md#fr-8-audit-обнаруживает-partial-implementation-feature3)
+- [FR-9: Phase Status Injection](FR.md#fr-9-audit-проверяет-task-fr-atomicity-feature3)
+- [FR-10: Partial Implementation Detection](FR.md#fr-10-audit-проверяет-fr-split-consistency-feature3)
+- [FR-11: Task Atomicity Check](FR.md#fr-11-audit-проверяет-bdd-scenario-scope-gap-feature3)
+- [FR-12: FR Decomposition Rule](FR.md#fr-12-правило-fr-variant-decomposition-feature4)
+- [FR-13: AC Scope Match Rule](FR.md#fr-13-правило-task-completion-integrity-feature4)
+- [FR-14: Extension Manifest Update](FR.md#fr-14-правило-ac-scope-match-feature4)
 
 ## 3-Layer Architecture
 

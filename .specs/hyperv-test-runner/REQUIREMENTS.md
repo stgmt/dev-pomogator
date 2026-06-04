@@ -4,33 +4,33 @@
 
 | ID | Name | Linked AC | @featureN | Status |
 |----|------|-----------|-----------|--------|
-| [FR-1](FR.md#fr-1-hyper-v-vm-lifecycle-scripts) | Hyper-V VM Lifecycle Scripts | [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1) | @feature1 | Draft |
-| [FR-2](FR.md#fr-2-snapshot-versioning) | Snapshot Versioning | [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2) | @feature2 | Draft |
-| [FR-3](FR.md#fr-3-gui-access-via-vmconnect-enhanced-session-mode) | GUI Access (VMConnect Enhanced Session) | [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3) | @feature3 | Draft |
-| [FR-4](FR.md#fr-4-native-rdp-access-via-mstsc) | Native RDP Access (mstsc) | [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4) | @feature4 | Draft |
-| [FR-5](FR.md#fr-5-test-fixture-mounting-in-vm) | Test Fixture Mounting | [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5) | @feature5 | Draft |
-| [FR-6](FR.md#fr-6-ai-agent-skill-hyperv-test-runner) | AI Agent Skill `hyperv-test-runner` | [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6) | @feature6 | Draft |
-| [FR-7](FR.md#fr-7-visual-verification-via-screenshots) | Visual Verification (Screenshots) | [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7) | @feature7 | Draft |
-| [FR-8](FR.md#fr-8-test-scenario-catalog) | Test Scenario Catalog | [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8) | @feature8 | Draft |
-| [FR-9](FR.md#fr-9-run-artifacts-logging) | Run Artifacts Logging | [AC-9](ACCEPTANCE_CRITERIA.md#ac-9-fr-9) | @feature9 | Draft |
-| [FR-10](FR.md#fr-10-catalog-extension-workflow) | Catalog Extension Workflow | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-10) | @feature10 | Draft |
-| [FR-11](FR.md#fr-11-documentation-includes-evolution-roadmap) | Evolution Roadmap Documentation | [AC-11](ACCEPTANCE_CRITERIA.md#ac-11-fr-11) | @feature11 | Draft |
-| [FR-12](FR.md#fr-12-vm-cleanup) | VM Cleanup | [AC-12](ACCEPTANCE_CRITERIA.md#ac-12-fr-12) | @feature12 | Draft |
+| [FR-1](FR.md#fr-1-hyper-v-vm-lifecycle-scripts-feature1) | Hyper-V VM Lifecycle Scripts | [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1-feature1) | @feature1 | Draft |
+| [FR-2](FR.md#fr-2-snapshot-versioning-feature2) | Snapshot Versioning | [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2-feature2) | @feature2 | Draft |
+| [FR-3](FR.md#fr-3-gui-access-via-vmconnect-enhanced-session-mode-feature3) | GUI Access (VMConnect Enhanced Session) | [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3-feature3) | @feature3 | Draft |
+| [FR-4](FR.md#fr-4-native-rdp-access-via-mstsc-feature4) | Native RDP Access (mstsc) | [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4-feature4) | @feature4 | Draft |
+| [FR-5](FR.md#fr-5-test-fixture-mounting-in-vm-feature5) | Test Fixture Mounting | [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5-feature5) | @feature5 | Draft |
+| [FR-6](FR.md#fr-6-ai-agent-skill-hyperv-test-runner-feature6) | AI Agent Skill `hyperv-test-runner` | [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6-feature6) | @feature6 | Draft |
+| [FR-7](FR.md#fr-7-visual-verification-via-screenshots-feature7) | Visual Verification (Screenshots) | [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7-feature7) | @feature7 | Draft |
+| [FR-8](FR.md#fr-8-test-scenario-catalog-feature8) | Test Scenario Catalog | [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8-feature8) | @feature8 | Draft |
+| [FR-9](FR.md#fr-9-run-artifacts-logging-feature9) | Run Artifacts Logging | [AC-9](ACCEPTANCE_CRITERIA.md#ac-9-fr-9-feature9) | @feature9 | Draft |
+| [FR-10](FR.md#fr-10-catalog-extension-workflow-feature10) | Catalog Extension Workflow | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-10-feature10) | @feature10 | Draft |
+| [FR-11](FR.md#fr-11-documentation-includes-evolution-roadmap-feature11) | Evolution Roadmap Documentation | [AC-11](ACCEPTANCE_CRITERIA.md#ac-11-fr-11-feature11) | @feature11 | Draft |
+| [FR-12](FR.md#fr-12-vm-cleanup-feature12) | VM Cleanup | [AC-12](ACCEPTANCE_CRITERIA.md#ac-12-fr-12-feature12) | @feature12 | Draft |
 
 ## Functional Requirements
 
-- [FR-1: Hyper-V VM Lifecycle Scripts](FR.md#fr-1-hyper-v-vm-lifecycle-scripts)
-- [FR-2: Snapshot Versioning](FR.md#fr-2-snapshot-versioning)
-- [FR-3: GUI Access via VMConnect Enhanced Session Mode](FR.md#fr-3-gui-access-via-vmconnect-enhanced-session-mode)
-- [FR-4: Native RDP Access via mstsc](FR.md#fr-4-native-rdp-access-via-mstsc)
-- [FR-5: Test Fixture Mounting in VM](FR.md#fr-5-test-fixture-mounting-in-vm)
-- [FR-6: AI Agent Skill `hyperv-test-runner`](FR.md#fr-6-ai-agent-skill-hyperv-test-runner)
-- [FR-7: Visual Verification via Screenshots](FR.md#fr-7-visual-verification-via-screenshots)
-- [FR-8: Test Scenario Catalog](FR.md#fr-8-test-scenario-catalog)
-- [FR-9: Run Artifacts Logging](FR.md#fr-9-run-artifacts-logging)
-- [FR-10: Catalog Extension Workflow](FR.md#fr-10-catalog-extension-workflow)
-- [FR-11: Documentation Includes Evolution Roadmap](FR.md#fr-11-documentation-includes-evolution-roadmap)
-- [FR-12: VM Cleanup](FR.md#fr-12-vm-cleanup)
+- [FR-1: Hyper-V VM Lifecycle Scripts](FR.md#fr-1-hyper-v-vm-lifecycle-scripts-feature1)
+- [FR-2: Snapshot Versioning](FR.md#fr-2-snapshot-versioning-feature2)
+- [FR-3: GUI Access via VMConnect Enhanced Session Mode](FR.md#fr-3-gui-access-via-vmconnect-enhanced-session-mode-feature3)
+- [FR-4: Native RDP Access via mstsc](FR.md#fr-4-native-rdp-access-via-mstsc-feature4)
+- [FR-5: Test Fixture Mounting in VM](FR.md#fr-5-test-fixture-mounting-in-vm-feature5)
+- [FR-6: AI Agent Skill `hyperv-test-runner`](FR.md#fr-6-ai-agent-skill-hyperv-test-runner-feature6)
+- [FR-7: Visual Verification via Screenshots](FR.md#fr-7-visual-verification-via-screenshots-feature7)
+- [FR-8: Test Scenario Catalog](FR.md#fr-8-test-scenario-catalog-feature8)
+- [FR-9: Run Artifacts Logging](FR.md#fr-9-run-artifacts-logging-feature9)
+- [FR-10: Catalog Extension Workflow](FR.md#fr-10-catalog-extension-workflow-feature10)
+- [FR-11: Documentation Includes Evolution Roadmap](FR.md#fr-11-documentation-includes-evolution-roadmap-feature11)
+- [FR-12: VM Cleanup](FR.md#fr-12-vm-cleanup-feature12)
 
 ## Non-Functional Requirements
 
@@ -41,18 +41,18 @@
 
 ## Acceptance Criteria
 
-- [AC-1 (FR-1): Hyper-V VM Lifecycle Scripts](ACCEPTANCE_CRITERIA.md#ac-1-fr-1)
-- [AC-2 (FR-2): Snapshot Versioning](ACCEPTANCE_CRITERIA.md#ac-2-fr-2)
-- [AC-3 (FR-3): GUI Access](ACCEPTANCE_CRITERIA.md#ac-3-fr-3)
-- [AC-4 (FR-4): Native RDP](ACCEPTANCE_CRITERIA.md#ac-4-fr-4)
-- [AC-5 (FR-5): Test Fixture Mounting](ACCEPTANCE_CRITERIA.md#ac-5-fr-5)
-- [AC-6 (FR-6): AI Agent Skill](ACCEPTANCE_CRITERIA.md#ac-6-fr-6)
-- [AC-7 (FR-7): Visual Verification](ACCEPTANCE_CRITERIA.md#ac-7-fr-7)
-- [AC-8 (FR-8): Test Scenario Catalog](ACCEPTANCE_CRITERIA.md#ac-8-fr-8)
-- [AC-9 (FR-9): Run Artifacts Logging](ACCEPTANCE_CRITERIA.md#ac-9-fr-9)
-- [AC-10 (FR-10): Catalog Extension Workflow](ACCEPTANCE_CRITERIA.md#ac-10-fr-10)
-- [AC-11 (FR-11): Roadmap Documentation](ACCEPTANCE_CRITERIA.md#ac-11-fr-11)
-- [AC-12 (FR-12): VM Cleanup](ACCEPTANCE_CRITERIA.md#ac-12-fr-12)
+- [AC-1 (FR-1): Hyper-V VM Lifecycle Scripts](ACCEPTANCE_CRITERIA.md#ac-1-fr-1-feature1)
+- [AC-2 (FR-2): Snapshot Versioning](ACCEPTANCE_CRITERIA.md#ac-2-fr-2-feature2)
+- [AC-3 (FR-3): GUI Access](ACCEPTANCE_CRITERIA.md#ac-3-fr-3-feature3)
+- [AC-4 (FR-4): Native RDP](ACCEPTANCE_CRITERIA.md#ac-4-fr-4-feature4)
+- [AC-5 (FR-5): Test Fixture Mounting](ACCEPTANCE_CRITERIA.md#ac-5-fr-5-feature5)
+- [AC-6 (FR-6): AI Agent Skill](ACCEPTANCE_CRITERIA.md#ac-6-fr-6-feature6)
+- [AC-7 (FR-7): Visual Verification](ACCEPTANCE_CRITERIA.md#ac-7-fr-7-feature7)
+- [AC-8 (FR-8): Test Scenario Catalog](ACCEPTANCE_CRITERIA.md#ac-8-fr-8-feature8)
+- [AC-9 (FR-9): Run Artifacts Logging](ACCEPTANCE_CRITERIA.md#ac-9-fr-9-feature9)
+- [AC-10 (FR-10): Catalog Extension Workflow](ACCEPTANCE_CRITERIA.md#ac-10-fr-10-feature10)
+- [AC-11 (FR-11): Roadmap Documentation](ACCEPTANCE_CRITERIA.md#ac-11-fr-11-feature11)
+- [AC-12 (FR-12): VM Cleanup](ACCEPTANCE_CRITERIA.md#ac-12-fr-12-feature12)
 
 ## Use Cases
 

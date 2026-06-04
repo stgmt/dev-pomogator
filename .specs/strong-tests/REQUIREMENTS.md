@@ -9,7 +9,7 @@
 | [FR-3](FR.md#fr-3-mutation-feedback-loop-until-threshold) | Mutation-feedback loop until threshold | [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3) | @feature3 | Draft |
 | [FR-4](FR.md#fr-4-multi-stack-auto-detection) | Multi-stack auto-detection | [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4) | @feature4 | Draft |
 | [FR-5](FR.md#fr-5-12-point-self-eval-as-final-gate-with-passfail-report) | 12-point self-eval as final gate | [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5) | @feature5 | Draft |
-| [FR-6](FR.md#fr-6-pit--strykernet--cargo-mutants--go-mutesting-deep-integration--out-of-scope) | PIT / Stryker.NET / cargo-mutants / go-mutesting deep integration (OUT OF SCOPE) | [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6) | — | OUT OF SCOPE |
+| [FR-6](FR.md#fr-6-pit-strykernet-cargo-mutants-go-mutesting-deep-integration-out-of-scope) | PIT / Stryker.NET / cargo-mutants / go-mutesting deep integration (OUT OF SCOPE) | [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6) | — | OUT OF SCOPE |
 | [FR-7](FR.md#fr-7-jit-just-in-time-auto-trigger-via-posttooluse-hook) | JiT auto-trigger via PostToolUse hook | [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7) | @feature7 | Draft |
 
 ## Functional Requirements

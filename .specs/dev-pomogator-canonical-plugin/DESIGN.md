@@ -8,7 +8,7 @@
 - [FR-4: Install через `/plugin install`](FR.md#fr-4-install-через-plugin-install-dev-pomogatorstgmt)
 - [FR-5: Scope-aware install](FR.md#fr-5-scope-aware-install-userprojectlocal)
 - [FR-6: Activation через `/reload-plugins`](FR.md#fr-6-activation-через-reload-plugins)
-- [FR-7: Migration v1 → v2](FR.md#fr-7-migration-v1-v2-documentation--optional-cleanup-script)
+- [FR-7: Migration v1 → v2](FR.md#fr-7-migration-v1-v2-documentation-optional-cleanup-script)
 - [FR-8: Cursor support removal](FR.md#fr-8-cursor-support-removal)
 - [FR-9: Single canonical plugin manifest](FR.md#fr-9-single-canonical-plugin-manifest)
 - [FR-10: Update path](FR.md#fr-10-update-path-через-plugin-marketplace-update)

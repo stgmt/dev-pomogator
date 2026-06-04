@@ -19,7 +19,7 @@
 Система ДОЛЖНА активировать валидацию ТОЛЬКО для директорий в .specs/
 которые содержат ВСЕ 12 обязательных MD файлов И хотя бы 1 .feature файл.
 
-→ [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3-полная-фича--13-файлов-feature3)
+→ [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3-полная-фича-13-файлов-feature3)
 
 ## FR-4: Пропуск неполных фич @feature4
 
@@ -33,7 +33,7 @@
 Система ДОЛЖНА обнаруживать теги @featureN в MD файлах (FR.md, AC.md, UC.md),
 которые НЕ имеют соответствующего # @featureN в .feature файле.
 
-→ [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5-not_covered-в-отчёте-feature5)
+→ [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5-notcovered-в-отчёте-feature5)
 
 ## FR-6: Детекция ORPHAN @feature6
 

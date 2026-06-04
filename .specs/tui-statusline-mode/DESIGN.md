@@ -2,12 +2,12 @@
 
 ## Реализуемые требования
 
-- [FR-1: CompactBar виджет](FR.md#fr-1-compactbar-виджет)
-- [FR-2: Toggle compact/full mode](FR.md#fr-2-toggle-compactfull-mode)
-- [FR-3: Stop tests](FR.md#fr-3-stop-tests)
-- [FR-4: Auto-compact](FR.md#fr-4-auto-compact-при-малом-terminal-height)
-- [FR-5: Выпилить statusline render](FR.md#fr-5-выпилить-statusline-render-из-test-statusline)
-- [FR-6: Idle indicator](FR.md#fr-6-idle-indicator-в-compact-mode)
+- [FR-1: CompactBar виджет](FR.md#fr-1-compactbar-виджет-feature1)
+- [FR-2: Toggle compact/full mode](FR.md#fr-2-toggle-compactfull-mode-feature2)
+- [FR-3: Stop tests](FR.md#fr-3-stop-tests-feature3)
+- [FR-4: Auto-compact](FR.md#fr-4-auto-compact-при-малом-terminal-height-feature4)
+- [FR-5: Выпилить statusline render](FR.md#fr-5-выпилить-statusline-render-из-test-statusline-feature5)
+- [FR-6: Idle indicator](FR.md#fr-6-idle-indicator-в-compact-mode-feature1)
 
 ## Компоненты
 

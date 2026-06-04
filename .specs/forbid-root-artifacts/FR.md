@@ -11,7 +11,7 @@ Auto-prune отключается через `auto_prune: { enabled: false }` в
 При работе только с basenames — entries содержащие `/`, `\`, `..`, `\0` пропускаются с WARN (NFR-Security path traversal protection).
 
 **Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1), [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-1), [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-1)
-**Use Case:** [UC-3](USE_CASES.md#uc-3-cleanup-stale-entries-после-удаления-файлов---prune), [UC-4](USE_CASES.md#uc-4-continuous-detection-через-checkpy-pre-commit), [UC-8](USE_CASES.md#uc-8-edge-stale-entries-удалены-интерактивно-при-confirmation-n)
+**Use Case:** [UC-3](USE_CASES.md#uc-3-auto-prune-stale-entries-при-pre-commit-после-удаления-файлов), [UC-4](USE_CASES.md#uc-4-auto-prune-disabled-opt-out-для-juzers-которые-не-хотят-modifying-hook), [UC-8](USE_CASES.md#uc-8-edge-atomic-rollback-через-git-revert)
 **User Story:** [US-2](USER_STORIES.md#user-story-2---prune-mode-для-cleanup-stale-entries-priority-p1), [US-3](USER_STORIES.md#user-story-3-warn-в-checkpy-о-stale-entries-priority-p1)
 
 ## FR-2: User-configurable trash classification
@@ -34,7 +34,7 @@ Override flag `--allow-trash` отключает trash filter полностью
 Хардкод TRASH_PATTERNS в Python запрещён — все patterns приходят из yaml.
 
 **Связанные AC:** [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-2), [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-2), [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-2)
-**Use Case:** [UC-1](USE_CASES.md#uc-1-первичная-установка-плагина-на-чистый-репозиторий-happy-path), [UC-2](USE_CASES.md#uc-2-установка-на-legacy-vs-репозиторий), [UC-6](USE_CASES.md#uc-6-edge-legitimate-whitelist-trash-файла---allow-trash-override)
+**Use Case:** [UC-1](USE_CASES.md#uc-1-первичная-установка-плагина-на-чистый-репозиторий-happy-path), [UC-2](USE_CASES.md#uc-2-установка-на-legacy-vs-репозиторий), [UC-6](USE_CASES.md#uc-6-edge-legitimate-whitelist-trash-файла-allow-trash-override)
 **User Story:** [US-1](USER_STORIES.md#user-story-1-trash-aware-configurepy-priority-p1)
 
 ## FR-3: LLM-driven classification через Claude Code CLI subscription
@@ -62,7 +62,7 @@ Reply with EXACTLY ONE word: trash | config | unknown.
 В `mode: hybrid` LLM вызывается ТОЛЬКО для truly unknown файлов (не matched ни trash_patterns ни config_patterns). В `mode: llm` LLM вызывается для всех unmatched файлов.
 
 **Связанные AC:** [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-3), [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-3), [AC-9](ACCEPTANCE_CRITERIA.md#ac-9-fr-3)
-**Use Case:** [UC-9](USE_CASES.md#uc-9-llm-classification-через-claude-cli-subscription), [UC-10](USE_CASES.md#uc-10-edge-llm-fallback-при-отсутствии-claude-cli)
+**Use Case:** [UC-9](USE_CASES.md#uc-9-llm-classification-через-claude-cli-subscription), [UC-10](USE_CASES.md#uc-10-edge-llm-fallback-при-отсутствии-claude-cli-ci-без-подписки)
 **User Story:** [US-1](USER_STORIES.md#user-story-1-trash-aware-configurepy-priority-p1) (extended)
 
 ## FR-4: Shared classifier module + extended yaml config

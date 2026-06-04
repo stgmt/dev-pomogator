@@ -82,7 +82,7 @@ WHEN два паттерна имеют одинаковый id THEN user patter
 
 ## AC-6 (FR-6): Auto-Run & Keybinding Launch @feature6
 
-**Требование:** [FR-6](FR.md#fr-6-auto-run--keybinding-launch-feature6)
+**Требование:** [FR-6](FR.md#fr-6-auto-run-keybinding-launch-feature6)
 
 WHEN пользователь нажимает зарегистрированную комбинацию клавиш THEN Claude Code SHALL запустить launcher.ts AND launcher SHALL spawn TUI detached.
 

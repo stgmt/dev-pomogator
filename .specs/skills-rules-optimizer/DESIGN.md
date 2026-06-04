@@ -9,7 +9,7 @@
 - [FR-5: LLM merge synthesis через sub-agent](FR.md#fr-5-llm-merge-synthesis-через-sub-agent)
 - [FR-6: Ratchet scorer](FR.md#fr-6-ratchet-scorer-regression-prevention)
 - [FR-7: Preserve originals](FR.md#fr-7-preserve-originals-no-auto-delete)
-- [FR-8: Unified scoring engine](FR.md#fr-8-unified-scoring-engine-для-rules--skills)
+- [FR-8: Unified scoring engine](FR.md#fr-8-unified-scoring-engine-для-rules-skills)
 - [FR-9: Backward compatibility](FR.md#fr-9-backward-compatibility-для-rules-side)
 
 ## Компоненты

@@ -4,35 +4,35 @@
 
 `prompt-capture.ts` ОБЯЗАН читать `input.session_id` (snake_case, как передаёт Claude Code в UserPromptSubmit hook input) и использовать его как primary key для имени файла кэша `~/.dev-pomogator/.plan-prompts-{session_id}.json`. Поле `conversation_id` НЕ ДОЛЖНО использоваться (legacy название из ошибочной реализации).
 
-**Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1)
-**Use Case:** [UC-1](USE_CASES.md#uc-1-happy-path--план-не-проходит-phase-2-deny-содержит-только-релевантные-промпты-feature1)
+**Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1-feature1)
+**Use Case:** [UC-1](USE_CASES.md#uc-1-happy-path-план-не-проходит-phase-2-deny-содержит-только-релевантные-промпты-feature1)
 
 ## FR-2: prompt-capture не пишет default.json при отсутствии session_id @feature2
 
 Если `input.session_id` отсутствует или пустая строка, `prompt-capture.ts` ОБЯЗАН выйти БЕЗ записи в файл (`return` без записи). Никакого fallback на `'default'` или другой синтетический ID. Это предотвращает возрождение проблемы общего файла, в который пишут все сессии.
 
-**Связанные AC:** [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2)
-**Use Case:** [UC-5](USE_CASES.md#uc-5-edge-case-отсутствие-session_id-feature2)
+**Связанные AC:** [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2-feature2)
+**Use Case:** [UC-5](USE_CASES.md#uc-5-edge-case-отсутствие-sessionid-feature2)
 
 ## FR-3: prompt-capture фильтрует task-notification псевдо-промпты @feature3
 
 `prompt-capture.ts` ОБЯЗАН пропускать (не сохранять в кэш) промпты, начинающиеся с `<task-notification` (case-insensitive, с возможным атрибутом или закрывающей `>`). Эти псевдо-промпты инжектятся Claude Code как user-message от завершившихся background-задач, но они НЕ являются реальным пользовательским вводом. Регекс проверки: `/^<task-notification\b/i`.
 
-**Связанные AC:** [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3)
-**Use Case:** [UC-2](USE_CASES.md#uc-2-background-задача-с-task-notification--фильтрация-системных-псевдо-промптов-feature3)
+**Связанные AC:** [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3-feature3)
+**Use Case:** [UC-2](USE_CASES.md#uc-2-background-задача-с-task-notification-фильтрация-системных-псевдо-промптов-feature3)
 
 ## FR-4: plan-gate loadUserPrompts не имеет most-recent fallback @feature4
 
 `plan-gate.ts` функция `loadUserPrompts(sessionId)` ОБЯЗАНА вернуть пустую строку при отсутствии `sessionId` или при отсутствии файла `.plan-prompts-{sessionId}.json` — БЕЗ fallback на most-recent файл из общей директории `~/.dev-pomogator/`. Удаляется блок `// Fallback: find most recent prompt file` (текущие строки 74-97). Это нарушает правило `hook-global-state-cwd-scoping.md` для глобальных директорий.
 
-**Связанные AC:** [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4)
-**Use Case:** [UC-3](USE_CASES.md#uc-3-параллельные-сессии--изоляция-кэшей-feature4), [UC-4](USE_CASES.md#uc-4-legacy-defaultjson--graceful-degradation-feature4)
+**Связанные AC:** [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4-feature4)
+**Use Case:** [UC-3](USE_CASES.md#uc-3-параллельные-сессии-изоляция-кэшей-feature4), [UC-4](USE_CASES.md#uc-4-legacy-defaultjson-graceful-degradation-feature4)
 
 ## FR-5: plan-gate formatPromptsFromFile фильтрует task-notification на чтении @feature5
 
 `plan-gate.ts` функция `formatPromptsFromFile` ОБЯЗАНА (defense-in-depth) фильтровать на чтении любые записи `.text` начинающиеся с `<task-notification` (тот же регекс что в FR-3) ПЕРЕД формированием формата вывода. Это защищает от: (а) legacy `default.json` файлов у пользователей которые получат update, (б) будущих багов в capture-коде, (в) ручного редактирования файлов кэша.
 
-**Связанные AC:** [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5)
+**Связанные AC:** [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5-feature5)
 **Use Case:** [UC-6](USE_CASES.md#uc-6-defense-in-depth-plan-gate-видит-legacy-mix-данные-feature5)
 
 ## FR-6: Спецификация .specs/plan-pomogator-prompt-isolation/ полна и валидна

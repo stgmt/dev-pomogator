@@ -2,7 +2,7 @@
 
 ## AC-1 (FR-1): Capture Hook Script @feature1
 
-**Требование:** [FR-1](FR.md#fr-1-capture-hook-script)
+**Требование:** [FR-1](FR.md#fr-1-capture-hook-script-feature1)
 
 WHEN UserPromptSubmit hook receives JSON input with `prompt` field containing a correction pattern THEN capture.ts SHALL parse the prompt, detect T1-T6 signals via regex, AND write matching entries to `.dev-pomogator/learnings-queue.json`.
 
@@ -12,7 +12,7 @@ IF no T1-T6 signals are detected in the input THEN capture.ts SHALL exit silentl
 
 ## AC-1a (FR-1a): Regex-based Detection @feature1a
 
-**Требование:** [FR-1a](FR.md#fr-1a-regex-based-detection)
+**Требование:** [FR-1a](FR.md#fr-1a-regex-based-detection-feature1a)
 
 WHEN prompt contains T2 correction pattern (e.g., "no, use bun") THEN capture SHALL create entry with trigger=T2 AND confidence >= 0.8.
 
@@ -32,7 +32,7 @@ IF prompt matches approval pattern AND no matching pending entry exists THEN cap
 
 ## AC-1b (FR-1b): AI-powered Semantic Detection @feature1b
 
-**Требование:** [FR-1b](FR.md#fr-1b-ai-powered-semantic-detection)
+**Требование:** [FR-1b](FR.md#fr-1b-ai-powered-semantic-detection-feature1b)
 
 WHEN Stop hook has `transcript_path` AND `LEARNINGS_SEMANTIC_ENABLED !== "false"` THEN capture SHALL invoke Haiku LLM with last 20 messages AND parse structured JSON output for T1-T6 signals.
 
@@ -46,7 +46,7 @@ WHEN Stop hook has transcript AND LLM returns no T1-T6 signals BUT self-evaluati
 
 ## AC-2 (FR-2): Queue Schema @feature2
 
-**Требование:** [FR-2](FR.md#fr-2-queue-schema)
+**Требование:** [FR-2](FR.md#fr-2-queue-schema-feature2)
 
 WHEN queue file is read by any consumer (/suggest-rules, /reflect) THEN it SHALL conform to version 1 schema with all required fields: id, timestamp, sessionId, trigger, signal, context, confidence, source, platform, status.
 
@@ -60,7 +60,7 @@ WHEN entry is written THEN it SHALL include `fingerprint` (SHA-256[:16] of norma
 
 ## AC-3 (FR-3): Atomic Queue Operations @feature3
 
-**Требование:** [FR-3](FR.md#fr-3-atomic-queue-operations)
+**Требование:** [FR-3](FR.md#fr-3-atomic-queue-operations-feature3)
 
 WHEN capture.ts writes to queue THEN it SHALL acquire file lock via `writeFile(lockFile, pid, { flag: 'wx' })` before reading/writing.
 
@@ -76,7 +76,7 @@ WHEN new entry fingerprint matches existing pending entry THEN appendEntries SHA
 
 ## AC-4 (FR-4): /suggest-rules Phase -1.5 Integration @feature4
 
-**Требование:** [FR-4](FR.md#fr-4-suggest-rules-phase--15-integration)
+**Требование:** [FR-4](FR.md#fr-4-suggest-rules-phase-15-integration-feature4)
 
 WHEN /suggest-rules runs AND `.dev-pomogator/learnings-queue.json` contains pending entries THEN Phase -1.5 SHALL display summary `📥 Queue: N pending entries` AND create pre-candidates with source `📥 queue`.
 
@@ -102,7 +102,7 @@ WHEN overlap is <30% THEN candidate SHALL be treated as NEW.
 
 ## AC-6 (FR-6): /reflect Command @feature2
 
-**Требование:** [FR-6](FR.md#fr-6-reflect-command)
+**Требование:** [FR-6](FR.md#fr-6-reflect-command-feature2)
 
 WHEN user runs /reflect THEN command SHALL display table of all entries sorted by timestamp (newest first) with columns: #, Trigger, Signal, Confidence, Age, Status.
 
@@ -126,7 +126,7 @@ IF no merge candidates found THEN Phase 6 summary SHALL include: "Дублика
 
 ## AC-8 (FR-8): Extension Manifest Update @feature4
 
-**Требование:** [FR-8](FR.md#fr-8-extension-manifest-update)
+**Требование:** [FR-8](FR.md#fr-8-extension-manifest-update-feature4)
 
 WHEN extension is installed via dev-pomogator installer THEN hooks SHALL be registered:
 - Claude: UserPromptSubmit + Stop events in `.claude/settings.json`
@@ -138,7 +138,7 @@ WHEN capture hook coexists with specs-validator on UserPromptSubmit THEN both ho
 
 ## AC-9 (FR-9): Installation Verification @feature4
 
-**Требование:** [FR-9](FR.md#fr-9-installation-verification)
+**Требование:** [FR-9](FR.md#fr-9-installation-verification-feature4)
 
 WHEN /verify-install runs THEN it SHALL check:
 1. `capture.ts` exists in `.dev-pomogator/tools/learnings-capture/`

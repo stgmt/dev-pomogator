@@ -119,7 +119,7 @@
 
 ## AC-12 (FR-12) @feature10
 
-**Требование:** [FR-12: Updater syncs `_shared/` utilities](FR.md#fr-12-updater-syncs-_shared_-utilities-feature10)
+**Требование:** [FR-12: Updater syncs `_shared/` utilities](FR.md#fr-12-updater-syncs-shared-utilities-feature10)
 
 - WHEN updater runs AND `extensions/_shared/hook-utils.ts` was modified upstream THEN target `.dev-pomogator/tools/_shared/hook-utils.ts` SHALL contain identical bytes after update completes.
 - WHEN a file was added to upstream `_shared/.manifest.json` THEN target SHALL contain the new file after next update.

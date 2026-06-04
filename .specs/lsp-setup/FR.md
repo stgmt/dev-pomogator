@@ -4,7 +4,7 @@
 
 Extension `lsp-setup` ДОЛЖЕН иметь `extension.json` со всеми компонентами: tools, ruleFiles, envRequirements, postInstall, postUpdate.
 
-**AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1-extension-manifest-valid-feature1), [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6-enable_lsp_tool-env-var-feature1), [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8-idempotent-installation-feature1), [AC-9](ACCEPTANCE_CRITERIA.md#ac-9-fr-9-update-adds-new-servers-feature1)
+**AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1-extension-manifest-valid-feature1), [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6-enablelsptool-env-var-feature1), [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8-idempotent-installation-feature1), [AC-9](ACCEPTANCE_CRITERIA.md#ac-9-fr-9-update-adds-new-servers-feature1)
 
 ## FR-2: LSP Server Installation @feature2 @feature3 @feature4
 
@@ -48,7 +48,7 @@ Extension ДОЛЖЕН устанавливать rule `.claude/rules/lsp-setup/
 
 Extension ДОЛЖЕН инжектировать `ENABLE_LSP_TOOL=1` [VERIFIED: official docs + Piebald-AI] через `envRequirements` с `default: "1"` — инсталлер автоматически пропишет в `.claude/settings.json` env.
 
-**AC:** [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6-enable_lsp_tool-env-var-feature1)
+**AC:** [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6-enablelsptool-env-var-feature1)
 
 ## FR-7: Verification Report @feature2 @feature3 @feature4
 

@@ -103,7 +103,7 @@
   - [ ] No two-step `git branch + git worktree add` pattern used
 
 - [ ] **T1-3: Invocation-from-sibling warn flow** -- @feature8 — Status: TODO | Est: 45m
-  _Requirements: [FR-8](FR.md#fr-8-invocation-from-sibling-worktree--warn--offer-continue), [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8)_
+  _Requirements: [FR-8](FR.md#fr-8-invocation-from-sibling-worktree-warn-offer-continue), [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8)_
   _depends: T1-2_
   **Done When:**
   - [ ] `orchestrate.ts` parses `git worktree list --porcelain` first entry as main; compares `process.cwd()`

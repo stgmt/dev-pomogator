@@ -2,15 +2,15 @@
 
 ## Реализуемые требования
 
-- [FR-1: Stop Hook — генерация подсказки](FR.md#fr-1-stop-hook--генерация-подсказки)
-- [FR-2: Submit Hook — инжекция через "+"](FR.md#fr-2-submit-hook--инжекция-подсказки-через-)
-- [FR-3: Auto-detect API](FR.md#fr-3-auto-detect-api)
-- [FR-4: TTL для state file](FR.md#fr-4-ttl-для-state-file)
-- [FR-5: Fail-open](FR.md#fr-5-fail-open)
-- [FR-6: Системный промпт v2](FR.md#fr-6-системный-промпт-v2)
-- [FR-7: Silence](FR.md#fr-7-silence--пустой-ответ-llm)
-- [FR-8: stop_hook_active guard](FR.md#fr-8-stop_hook_active-guard)
-- [FR-9: systemMessage 💡](FR.md#fr-9-systemmessage-с--emoji)
+- [FR-1: Stop Hook — генерация подсказки](FR.md#fr-1-stop-hook-генерация-подсказки-feature1)
+- [FR-2: Submit Hook — инжекция через "+"](FR.md#fr-2-submit-hook-инжекция-подсказки-через-feature2)
+- [FR-3: Auto-detect API](FR.md#fr-3-auto-detect-api-feature3)
+- [FR-4: TTL для state file](FR.md#fr-4-ttl-для-state-file-feature4)
+- [FR-5: Fail-open](FR.md#fr-5-fail-open-feature5)
+- [FR-6: Системный промпт v2](FR.md#fr-6-системный-промпт-v2-feature6)
+- [FR-7: Silence](FR.md#fr-7-silence-пустой-ответ-llm-feature7)
+- [FR-8: stop_hook_active guard](FR.md#fr-8-stophookactive-guard-feature8)
+- [FR-9: systemMessage 💡](FR.md#fr-9-systemmessage-с-emoji-feature9)
 
 ## Компоненты
 

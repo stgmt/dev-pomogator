@@ -4,7 +4,7 @@
 
 - [FR-1: Linux npx install regression coverage](FR.md#fr-1-linux-npx-install-regression-coverage-feature1)
 - [FR-2: Windows npx install regression coverage](FR.md#fr-2-windows-npx-install-regression-coverage-feature2)
-- [FR-3: runInstallerViaNpx helper API](FR.md#fr-3-runinstallerviapnpx-helper-api-feature3)
+- [FR-3: runInstallerViaNpx helper API](FR.md#fr-3-runinstallervianpx-helper-api-feature3)
 - [FR-4: install-diagnostics spec structure](FR.md#fr-4-install-diagnostics-spec-structure-feature4)
 - [FR-5: Cross-references via @featureN tags](FR.md#fr-5-cross-references-via-featuren-tags-feature5)
 

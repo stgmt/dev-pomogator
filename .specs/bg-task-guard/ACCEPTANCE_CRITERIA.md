@@ -44,7 +44,7 @@ IF session_id is absent from stdin THEN hooks SHALL fall back to legacy `.bg-tas
 
 ## AC-10 (FR-10) @feature7
 
-**Требование:** [FR-10](FR.md#fr-10-session_prefix_len-shared-через-sessionenv-feature7)
+**Требование:** [FR-10](FR.md#fr-10-sessionprefixlen-shared-через-sessionenv-feature7)
 
 WHEN SessionStart hook runs THEN it SHALL write `SESSION_PREFIX_LEN=8` to `session.env`.
 WHEN mark-bg-task.sh or stop-guard.sh run THEN they SHALL source `session.env` for SESSION_PREFIX_LEN with fallback `:-8`.
@@ -73,7 +73,7 @@ WHEN stop-guard reads `state: building` THEN it SHALL NOT trigger stuck detectio
 
 ## AC-14 (FR-14) @feature10
 
-**Требование:** [FR-14](FR.md#fr-14-centralized-marker-lifecycle-wrapper--orchestrator-feature10)
+**Требование:** [FR-14](FR.md#fr-14-centralized-marker-lifecycle-wrapper-orchestrator-feature10)
 
 WHEN wrapper starts THEN it SHALL create per-session marker `.bg-task-active.{session_prefix}`.
 WHEN wrapper exits (success, error, or signal) THEN it SHALL delete the marker file.

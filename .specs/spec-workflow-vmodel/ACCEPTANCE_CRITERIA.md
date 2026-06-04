@@ -8,7 +8,7 @@ Source: FR.md (`6` requirements detected).
 
 ## AC-1 (FR-1) — Качество требований по IEEE 29148 / INCOSE @feature1
 
-**Requirement:** [FR-1](FR.md#fr-1)
+**Requirement:** [FR-1](FR.md#fr-1-качество-требований-по-ieee-29148-incose-feature1)
 
 WHEN `<precondition or event>`
 THEN system SHALL `<expected observable behaviour>`
@@ -19,7 +19,7 @@ THEN system SHALL `<expected observable behaviour>`
 
 ## AC-2 (FR-2) — Детерминированная coverage validation @feature2
 
-**Requirement:** [FR-2](FR.md#fr-2)
+**Requirement:** [FR-2](FR.md#fr-2-детерминированная-coverage-validation-feature2)
 
 WHEN `<precondition or event>`
 THEN system SHALL `<expected observable behaviour>`
@@ -30,7 +30,7 @@ THEN system SHALL `<expected observable behaviour>`
 
 ## AC-3 (FR-3) — ID-based трассируемость @feature3
 
-**Requirement:** [FR-3](FR.md#fr-3)
+**Requirement:** [FR-3](FR.md#fr-3-id-based-трассируемость-feature3)
 
 WHEN `<precondition or event>`
 THEN system SHALL `<expected observable behaviour>`
@@ -41,7 +41,7 @@ THEN system SHALL `<expected observable behaviour>`
 
 ## AC-4 (FR-4) — Трёхуровневый design (IEEE 1016 + IEEE 42010 + DO-178C) @feature4
 
-**Requirement:** [FR-4](FR.md#fr-4)
+**Requirement:** [FR-4](FR.md#fr-4-трёхуровневый-design-ieee-1016-ieee-42010-do-178c-feature4)
 
 WHEN `<precondition or event>`
 THEN system SHALL `<expected observable behaviour>`
@@ -52,7 +52,7 @@ THEN system SHALL `<expected observable behaviour>`
 
 ## AC-5 (FR-5) — Paired generation + progressive traceability @feature5
 
-**Requirement:** [FR-5](FR.md#fr-5)
+**Requirement:** [FR-5](FR.md#fr-5-paired-generation-progressive-traceability-feature5)
 
 WHEN `<precondition or event>`
 THEN system SHALL `<expected observable behaviour>`
@@ -63,7 +63,7 @@ THEN system SHALL `<expected observable behaviour>`
 
 ## AC-6 (FR-6) — Cross-Platform Script Safety @feature6
 
-**Requirement:** [FR-6](FR.md#fr-6)
+**Requirement:** [FR-6](FR.md#fr-6-cross-platform-script-safety-feature6)
 
 WHEN `<precondition or event>`
 THEN system SHALL `<expected observable behaviour>`

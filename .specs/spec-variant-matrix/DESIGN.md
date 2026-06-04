@@ -7,7 +7,7 @@
 - [FR-3: AC Decision Table](FR.md#fr-3-ac-decision-table-обязательна-per-polymorphic-fr)
 - [FR-4: Gherkin Scenario Outline](FR.md#fr-4-gherkin-scenario-outline-в-feature-11-с-ac)
 - [FR-5: TASKS.md per-variant](FR.md#fr-5-tasksmd-per-variant)
-- [FR-6: Audit category VARIANT_COVERAGE](FR.md#fr-6-audit-category-variant_coverage-8-я-категория)
+- [FR-6: Audit category VARIANT_COVERAGE](FR.md#fr-6-audit-category-variantcoverage-8-я-категория)
 - [FR-7: Escape hatch с audit log](FR.md#fr-7-escape-hatch-с-audit-log)
 - [FR-8: Phase 2 sub-skill variant-matrix-build](FR.md#fr-8-phase-2-sub-skill-variant-matrix-build)
 

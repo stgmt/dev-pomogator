@@ -16,8 +16,8 @@ Skill `/verify-generic-scope-fix` SHALL выполнять следующий wo
 
 **Rationale:** H2 noticed-but-didn't-act — skill должен механически конвертировать diagnosis в action.
 
-**Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1)
-**Use Case:** [UC-1](USE_CASES.md#uc-1-happy-path)
+**Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1-feature1)
+**Use Case:** [UC-1](USE_CASES.md#uc-1-happy-path-agent-verifies-enum-expansion-commit-proceeds-feature1)
 
 ---
 
@@ -35,8 +35,8 @@ Hook `scope-gate-guard` (PreToolUse, matcher `"Bash"`) SHALL:
 8. Check `{cwd}/.claude/.scope-verified/` для fresh marker: `sha256(diff) === marker.diff_sha256` AND `session_id` match AND `age < 30min` → exit 0
 9. Otherwise: emit `permissionDecision: deny` + `process.exit(2)`
 
-**Связанные AC:** [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2)
-**Use Case:** [UC-3](USE_CASES.md#uc-3-missing-verification)
+**Связанные AC:** [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2-feature1)
+**Use Case:** [UC-3](USE_CASES.md#uc-3-missing-verification-stocktaking-like-incident-blocked-feature1)
 
 ---
 
@@ -56,8 +56,8 @@ On match:
 
 **Rationale:** H3 concerns-as-offload counter — escape hatch нужен, но audit trail делает accountability visible.
 
-**Связанные AC:** [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3)
-**Use Case:** [UC-5](USE_CASES.md#uc-5-escape-hatch)
+**Связанные AC:** [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3-feature3)
+**Use Case:** [UC-5](USE_CASES.md#uc-5-escape-hatch-legitimate-bypass-with-audit-trail-feature3)
 
 ---
 
@@ -71,8 +71,8 @@ Hook SHALL снижать score для benign diff patterns:
 
 **Rationale:** H1 over-application prevention. Без dampening gate становится "каждый commit блокирован", воспроизводит failure pattern.
 
-**Связанные AC:** [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4)
-**Use Case:** [UC-2](USE_CASES.md#uc-2-docs-only)
+**Связанные AC:** [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4-feature4)
+**Use Case:** [UC-2](USE_CASES.md#uc-2-docs-only-diff-zero-friction-feature4)
 
 ---
 
@@ -88,8 +88,8 @@ Invalid → treated as absent → re-verify required.
 
 Additionally: hook SHALL GC marker-файлов с age > 24h при каждом invocation.
 
-**Связанные AC:** [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5)
-**Use Case:** [UC-4](USE_CASES.md#uc-4-stale-marker)
+**Связанные AC:** [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5-feature2)
+**Use Case:** [UC-4](USE_CASES.md#uc-4-stale-marker-agent-changed-diff-after-verification-feature2)
 
 ---
 
@@ -112,7 +112,7 @@ Threshold: `score >= 2` → block (subject to FR-4 dampening).
 
 **Tuning:** threshold/weights tunable after 30+ real blocks via `.claude/logs/scope-gate-blocks.jsonl` analysis.
 
-**Связанные AC:** [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6)
+**Связанные AC:** [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6-feature1)
 
 ---
 
@@ -127,7 +127,7 @@ Skill SHALL:
 
 **Rationale:** H3 concerns-as-offload counter. "Noted concern и shipnуть" — structurally impossible.
 
-**Связанные AC:** [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7)
+**Связанные AC:** [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7-feature1)
 
 ---
 
@@ -146,7 +146,7 @@ disable-model-invocation: true
 
 **Rationale:** H2 counter — модель не может "решить пропустить" skill. Invocation только через user `/verify-generic-scope-fix` или referenced rule. Новый reusable pattern для dev-pomogator.
 
-**Связанные AC:** [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8)
+**Связанные AC:** [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8-feature5)
 
 ---
 
@@ -160,4 +160,4 @@ Extension `extensions/scope-gate/` SHALL содержать:
 
 Installer SHALL (via existing contract) copy artifacts в target project per `extension-manifest-integrity.md`.
 
-**Связанные AC:** [AC-9](ACCEPTANCE_CRITERIA.md#ac-9-fr-9)
+**Связанные AC:** [AC-9](ACCEPTANCE_CRITERIA.md#ac-9-fr-9-feature5)

@@ -2,8 +2,8 @@
 
 ## Реализуемые требования
 
-- [FR-1: prompt-capture использует session_id из hook input](FR.md#fr-1-prompt-capture-использует-session_id-из-hook-input-feature1)
-- [FR-2: prompt-capture не пишет default.json при отсутствии session_id](FR.md#fr-2-prompt-capture-не-пишет-defaultjson-при-отсутствии-session_id-feature2)
+- [FR-1: prompt-capture использует session_id из hook input](FR.md#fr-1-prompt-capture-использует-sessionid-из-hook-input-feature1)
+- [FR-2: prompt-capture не пишет default.json при отсутствии session_id](FR.md#fr-2-prompt-capture-не-пишет-defaultjson-при-отсутствии-sessionid-feature2)
 - [FR-3: prompt-capture фильтрует task-notification псевдо-промпты](FR.md#fr-3-prompt-capture-фильтрует-task-notification-псевдо-промпты-feature3)
 - [FR-4: plan-gate loadUserPrompts не имеет most-recent fallback](FR.md#fr-4-plan-gate-loaduserprompts-не-имеет-most-recent-fallback-feature4)
 - [FR-5: plan-gate formatPromptsFromFile фильтрует task-notification на чтении](FR.md#fr-5-plan-gate-formatpromptsfromfile-фильтрует-task-notification-на-чтении-feature5)

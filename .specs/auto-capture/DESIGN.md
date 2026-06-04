@@ -2,17 +2,17 @@
 
 ## Реализуемые требования
 
-- [FR-1: Capture Hook Script](FR.md#fr-1-capture-hook-script)
-- [FR-1a: Regex-based Detection](FR.md#fr-1a-regex-based-detection)
-- [FR-1b: AI-powered Semantic Detection](FR.md#fr-1b-ai-powered-semantic-detection)
-- [FR-2: Queue Schema](FR.md#fr-2-queue-schema)
-- [FR-3: Atomic Queue Operations](FR.md#fr-3-atomic-queue-operations)
-- [FR-4: Phase -1.5 Integration](FR.md#fr-4-suggest-rules-phase--15-integration)
+- [FR-1: Capture Hook Script](FR.md#fr-1-capture-hook-script-feature1)
+- [FR-1a: Regex-based Detection](FR.md#fr-1a-regex-based-detection-feature1a)
+- [FR-1b: AI-powered Semantic Detection](FR.md#fr-1b-ai-powered-semantic-detection-feature1b)
+- [FR-2: Queue Schema](FR.md#fr-2-queue-schema-feature2)
+- [FR-3: Atomic Queue Operations](FR.md#fr-3-atomic-queue-operations-feature3)
+- [FR-4: Phase -1.5 Integration](FR.md#fr-4-suggest-rules-phase-15-integration-feature4)
 - [FR-5: Auto-Dedupe](FR.md#fr-5-auto-dedupe-in-phase-25-feature3)
-- [FR-6: /reflect Command](FR.md#fr-6-reflect-command)
+- [FR-6: /reflect Command](FR.md#fr-6-reflect-command-feature2)
 - [FR-7: Auto-Dedupe Rules в Phase 6](FR.md#fr-7-auto-dedupe-rules-in-phase-6-feature3)
-- [FR-8: Extension Manifest](FR.md#fr-8-extension-manifest-update)
-- [FR-9: Installation Verification](FR.md#fr-9-installation-verification)
+- [FR-8: Extension Manifest](FR.md#fr-8-extension-manifest-update-feature4)
+- [FR-9: Installation Verification](FR.md#fr-9-installation-verification-feature4)
 - [FR-10: Auto-Suggest Threshold](FR.md#fr-10-auto-suggest-threshold-feature5)
 
 ## Компоненты

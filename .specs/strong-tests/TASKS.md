@@ -35,7 +35,7 @@
 
 Skipped — strong-tests skill не требует новых сервисов/БД/конфигов. vitest уже установлен в `package.json` devDependencies (verified evidence: `"vitest": "^3.2.4"`).
 
-> _Requirements: [FR-6](FR.md#fr-6-pit--strykernet--cargo-mutants--go-mutesting-deep-integration--out-of-scope) OUT OF SCOPE — Java/C#/Go/Rust mutation tooling deep integration tracked in references/tooling-setup.md only; no implementation tasks for FR-6 in this spec. Follow-up spec will cover deep integration when target stack is added to the codebase._
+> _Requirements: [FR-6](FR.md#fr-6-pit-strykernet-cargo-mutants-go-mutesting-deep-integration-out-of-scope) OUT OF SCOPE — Java/C#/Go/Rust mutation tooling deep integration tracked in references/tooling-setup.md only; no implementation tasks for FR-6 in this spec. Follow-up spec will cover deep integration when target stack is added to the codebase._
 
 ## Phase 0: BDD Foundation (Red)
 

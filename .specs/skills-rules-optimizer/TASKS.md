@@ -54,7 +54,7 @@
   - [ ] @feature8 scenario passes (rules-side audit byte-identical)
 
 - [x] T03: Extend shared.ts -- @feature1 — Status: TODO | Est: 30m
-  _Requirements: [FR-8](FR.md#fr-8-unified-scoring-engine-для-rules--skills)_
+  _Requirements: [FR-8](FR.md#fr-8-unified-scoring-engine-для-rules-skills)_
   **Done When:**
   - [ ] `Asset` interface exported (`type: "rule" | "skill"`, `path`, `frontmatter`, `body`, `tokens`)
   - [ ] `SkillAuditEntry`, `OverlapPair` interfaces added

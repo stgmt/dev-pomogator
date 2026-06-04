@@ -13,7 +13,7 @@ dev-pomogator installer и updater SHALL гарантировать что `~/.c
 - Все остальные ключи в `~/.claude/settings.json` SHALL сохраняться (preserve user config).
 
 **Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1)
-**Use Case:** [UC-1](USE_CASES.md#uc-1-fresh-install--no-key-in-settingsjson-linked-to-us-1), [UC-4](USE_CASES.md#uc-4-edge--invalid-existing-value-corrupted-wrong-type)
+**Use Case:** [UC-1](USE_CASES.md#uc-1-fresh-install-no-key-in-settingsjson-linked-to-us-1-feature1-feature4), [UC-4](USE_CASES.md#uc-4-edge-invalid-existing-value-corrupted-wrong-type-feature1-feature4)
 **User Story:** US-1
 
 ## FR-2: Идемпотентность повторных запусков
@@ -26,7 +26,7 @@ dev-pomogator installer и updater SHALL гарантировать что `~/.c
 - Логировать в install report: `skillListingBudgetFraction: 1.0 (unchanged)`.
 
 **Связанные AC:** [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2)
-**Use Case:** [UC-2](USE_CASES.md#uc-2-re-install--update--value-already-10-linked-to-us-2-idempotent)
+**Use Case:** [UC-2](USE_CASES.md#uc-2-re-install-update-value-already-10-linked-to-us-2-idempotent-feature2-feature4)
 **User Story:** US-2
 
 ## FR-3: Bump существующего значения < 1.0
@@ -39,7 +39,7 @@ dev-pomogator installer и updater SHALL гарантировать что `~/.c
 - Reasoning: primary goal — «никогда не truncate». User-explicit user-override < 1.0 трактуется как stale/forgotten — last write wins.
 
 **Связанные AC:** [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3)
-**Use Case:** [UC-3](USE_CASES.md#uc-3-user-downgraded-to-lower-value-linked-to-us-2-bump-path)
+**Use Case:** [UC-3](USE_CASES.md#uc-3-user-downgraded-to-lower-value-linked-to-us-2-bump-path-feature3-feature4)
 **User Story:** US-2
 
 ## FR-4: Install report includes change line

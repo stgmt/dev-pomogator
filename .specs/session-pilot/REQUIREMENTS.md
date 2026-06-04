@@ -4,60 +4,60 @@
 
 | ID | Name | Linked AC | @featureN | Status |
 |----|------|-----------|-----------|--------|
-| [FR-1](FR.md#fr-1-get-apiindex--fast-worktree-list-with-claude_max_mtime) | GET /api/index — fast worktree list | [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1) | @feature1 | Implemented |
-| [FR-2](FR.md#fr-2-get-apiclaudepath--jsonl-preview-with-last-message) | GET /api/claude — JSONL preview | [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2) | @feature2 | Implemented |
+| [FR-1](FR.md#fr-1-get-apiindex-fast-worktree-list-with-claudemaxmtime) | GET /api/index — fast worktree list | [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1) | @feature1 | Implemented |
+| [FR-2](FR.md#fr-2-get-apiclaudepath-jsonl-preview-with-last-message) | GET /api/claude — JSONL preview | [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2) | @feature2 | Implemented |
 | [FR-3](FR.md#fr-3-etag304-conditional-response-on-apiclaude) | ETag/304 conditional | [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3) | @feature3 | Implemented |
-| [FR-4](FR.md#fr-4-post-apilaunch--cross-platform-native-terminal-spawn) | POST /api/launch — cross-platform native terminal spawn | [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4) | @feature4 | Implemented (Windows); Draft (Linux/macOS) v0.4 |
-| [FR-5](FR.md#fr-5-get-apimessage--single-message-by-index) | GET /api/message | [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5) | @feature5 | Draft (Phase 5) |
-| [FR-6](FR.md#fr-6-get-apigit-status--worktree-dirtyaheadbehind) | GET /api/git-status | [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6) | @feature6 | Draft (v0.2) |
-| [FR-7](FR.md#fr-7-get-apihealth--idempotent-autostart-probe) | GET /api/health | [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7) | @feature7 | Implemented |
-| [FR-8](FR.md#fr-8-frontend-tabulator--multi-sort--virtual-scroll--filter) | Tabulator multi-sort | [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8) | @feature8 | Draft (Phase 5) |
-| [FR-9](FR.md#fr-9-pagination-strategy--top-20-priority--lazy-rest) | Pagination top-20 priority | [AC-9](ACCEPTANCE_CRITERIA.md#ac-9-fr-9) | @feature9 | Implemented (Alt A) |
+| [FR-4](FR.md#fr-4-post-apilaunch-cross-platform-native-terminal-spawn) | POST /api/launch — cross-platform native terminal spawn | [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4) | @feature4 | Implemented (Windows); Draft (Linux/macOS) v0.4 |
+| [FR-5](FR.md#fr-5-get-apimessage-single-message-by-index) | GET /api/message | [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5) | @feature5 | Draft (Phase 5) |
+| [FR-6](FR.md#fr-6-get-apigit-status-worktree-dirtyaheadbehind) | GET /api/git-status | [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6) | @feature6 | Draft (v0.2) |
+| [FR-7](FR.md#fr-7-get-apihealth-idempotent-autostart-probe) | GET /api/health | [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7) | @feature7 | Implemented |
+| [FR-8](FR.md#fr-8-frontend-tabulator-multi-sort-virtual-scroll-filter) | Tabulator multi-sort | [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8) | @feature8 | Draft (Phase 5) |
+| [FR-9](FR.md#fr-9-pagination-strategy-top-20-priority-lazy-rest) | Pagination top-20 priority | [AC-9](ACCEPTANCE_CRITERIA.md#ac-9-fr-9) | @feature9 | Implemented (Alt A) |
 | [FR-10](FR.md#fr-10-modal-viewer-for-last-message) | Modal viewer | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-10) | @feature10 | Draft (Phase 5) |
-| [FR-11](FR.md#fr-11-4-button-action-column) | 4-button action column | [AC-11](ACCEPTANCE_CRITERIA.md#ac-11-fr-11) | @feature11 | Implemented |
+| [FR-11](FR.md#fr-11-3-button-action-column) | 4-button action column | [AC-11](ACCEPTANCE_CRITERIA.md#ac-11-fr-11) | @feature11 | Implemented |
 | [FR-12](FR.md#fr-12-idle-time-human-readable-format) | Idle human-readable | [AC-12](ACCEPTANCE_CRITERIA.md#ac-12-fr-12) | @feature12 | Draft (Phase 5) |
 | [FR-13](FR.md#fr-13-sessionstart-hook-idempotent-autostart-cross-platform) | SessionStart hook autostart (cross-platform) | [AC-13](ACCEPTANCE_CRITERIA.md#ac-13-fr-13) | @feature13 | Draft (v0.4) |
 | [FR-14](FR.md#fr-14-swr-client-cache-via-localstorage) | SWR localStorage cache | [AC-14](ACCEPTANCE_CRITERIA.md#ac-14-fr-14) | @feature14 | Implemented |
 | [FR-15](FR.md#fr-15-cross-platform-installation-scripts) | Cross-platform installation scripts | [AC-15](ACCEPTANCE_CRITERIA.md#ac-15-fr-15) | @feature15 | Implemented (install.ps1); Draft (install.sh) v0.4 |
-| [FR-16](FR.md#fr-16-skill-uses-mcp__claude-in-chrome__-for-browser) | Skill uses MCP claude-in-chrome | [AC-16](ACCEPTANCE_CRITERIA.md#ac-16-fr-16) | @feature16 | Implemented |
+| [FR-16](FR.md#fr-16-skill-uses-mcpclaude-in-chrome-for-browser) | Skill uses MCP claude-in-chrome | [AC-16](ACCEPTANCE_CRITERIA.md#ac-16-fr-16) | @feature16 | Implemented |
 | [FR-17](FR.md#fr-17-cross-platform-claude-path-encoding) | Cross-platform Claude path encoding | [AC-17](ACCEPTANCE_CRITERIA.md#ac-17-fr-17) | @feature17 | Implemented (Windows + WSL); Draft (Linux/macOS canonical) v0.4 |
 | [FR-18](FR.md#fr-18-dedicated-competitor-analysis-artifact) | Competitor analysis artifact | [AC-18](ACCEPTANCE_CRITERIA.md#ac-18-fr-18) | @feature18 | Implemented |
-| [FR-19](FR.md#fr-19-diagnostic-cli---diagnose-livecycle) | --diagnose-livecycle CLI | [AC-19](ACCEPTANCE_CRITERIA.md#ac-19-fr-19) | @feature19 | Implemented |
+| [FR-19](FR.md#fr-19-diagnostic-cli-diagnose-livecycle) | --diagnose-livecycle CLI | [AC-19](ACCEPTANCE_CRITERIA.md#ac-19-fr-19) | @feature19 | Implemented |
 | [FR-20](FR.md#fr-20-configurable-live-threshold) | Configurable LIVE threshold | [AC-20](ACCEPTANCE_CRITERIA.md#ac-20-fr-20) | @feature20 | Implemented |
-| [FR-21](FR.md#fr-21-os-detection--platform-dispatched-module-architecture) | OS detection + platform-dispatched module architecture | [AC-21](ACCEPTANCE_CRITERIA.md#ac-21-fr-21) | @feature21 | Draft (v0.4) |
+| [FR-21](FR.md#fr-21-os-detection-platform-dispatched-module-architecture) | OS detection + platform-dispatched module architecture | [AC-21](ACCEPTANCE_CRITERIA.md#ac-21-fr-21) | @feature21 | Draft (v0.4) |
 | [FR-22](FR.md#fr-22-on-demand-worktree-bootstrap-skill-session-pilot-bootstrap) | On-demand worktree bootstrap skill (session-pilot-bootstrap) | [AC-22](ACCEPTANCE_CRITERIA.md#ac-22-fr-22) | @feature22 | Draft (v0.4) |
-| [FR-23](FR.md#fr-23-taskbar--dock-launcher-installer-create-launcher) | Taskbar / Dock launcher installer (cross-platform create-launcher.ps1 + create-launcher.sh) | [AC-23](ACCEPTANCE_CRITERIA.md#ac-23-fr-23) | @feature23 | Implemented (Windows .ps1 + POSIX .sh shipped in this PR); Draft (manual pin step automation) |
-| [FR-24](FR.md#fr-24-union-model--all-git-worktrees-and-all-claude-sessions-merged--deduplicated) | UNION model — all worktrees AND all sessions, merged + deduplicated | [AC-24](ACCEPTANCE_CRITERIA.md#ac-24-fr-24) | @feature24 | Draft (v0.4) — discovered via real-host diagnostic 2026-05-13 |
-| [FR-25](FR.md#fr-25-process-based-open-window-indicator--separate-signal-from-jsonl-mtime-live) | Process-based "open window" indicator (separate from JSONL mtime LIVE) | [AC-25](ACCEPTANCE_CRITERIA.md#ac-25-fr-25) | @feature25 | Draft (v0.4) — fixes idle-but-open-window UX gap |
+| [FR-23](FR.md#fr-23-taskbar-dock-launcher-installer-create-launcher) | Taskbar / Dock launcher installer (cross-platform create-launcher.ps1 + create-launcher.sh) | [AC-23](ACCEPTANCE_CRITERIA.md#ac-23-fr-23) | @feature23 | Implemented (Windows .ps1 + POSIX .sh shipped in this PR); Draft (manual pin step automation) |
+| [FR-24](FR.md#fr-24-union-model-all-git-worktrees-and-all-claude-sessions-merged-deduplicated) | UNION model — all worktrees AND all sessions, merged + deduplicated | [AC-24](ACCEPTANCE_CRITERIA.md#ac-24-fr-24) | @feature24 | Draft (v0.4) — discovered via real-host diagnostic 2026-05-13 |
+| [FR-25](FR.md#fr-25-process-based-open-window-indicator-separate-signal-from-jsonl-mtime-live) | Process-based "open window" indicator (separate from JSONL mtime LIVE) | [AC-25](ACCEPTANCE_CRITERIA.md#ac-25-fr-25) | @feature25 | Draft (v0.4) — fixes idle-but-open-window UX gap |
 | [FR-26](FR.md#fr-26-per-session-rows-expand-1-row-per-cwd-to-1-row-per-jsonl-uuid) | Per-session rows (expand 1-row-per-cwd to 1-row-per-JSONL-uuid) | [AC-26](ACCEPTANCE_CRITERIA.md#ac-26-fr-26) | @feature26 | Draft (v0.4) — fixes hidden-sessions-in-same-cwd UX gap (diagnostic 2026-05-13: 3 LIVE UUIDs collapsed to 1 row) |
 
 ## Functional Requirements
 
-- [FR-1: GET /api/index — fast worktree list](FR.md#fr-1-get-apiindex--fast-worktree-list-with-claude_max_mtime)
-- [FR-2: GET /api/claude — JSONL preview](FR.md#fr-2-get-apiclaudepath--jsonl-preview-with-last-message)
+- [FR-1: GET /api/index — fast worktree list](FR.md#fr-1-get-apiindex-fast-worktree-list-with-claudemaxmtime)
+- [FR-2: GET /api/claude — JSONL preview](FR.md#fr-2-get-apiclaudepath-jsonl-preview-with-last-message)
 - [FR-3: ETag/304 conditional response](FR.md#fr-3-etag304-conditional-response-on-apiclaude)
-- [FR-4: POST /api/launch — cross-platform native terminal spawn](FR.md#fr-4-post-apilaunch--cross-platform-native-terminal-spawn)
-- [FR-5: GET /api/message — single message by index](FR.md#fr-5-get-apimessage--single-message-by-index)
-- [FR-6: GET /api/git-status — worktree dirty/ahead/behind](FR.md#fr-6-get-apigit-status--worktree-dirtyaheadbehind)
-- [FR-7: GET /api/health — idempotent autostart probe](FR.md#fr-7-get-apihealth--idempotent-autostart-probe)
-- [FR-8: Frontend Tabulator — multi-sort + virtual scroll + filter](FR.md#fr-8-frontend-tabulator--multi-sort--virtual-scroll--filter)
-- [FR-9: Pagination strategy — top-20 priority + lazy rest](FR.md#fr-9-pagination-strategy--top-20-priority--lazy-rest)
+- [FR-4: POST /api/launch — cross-platform native terminal spawn](FR.md#fr-4-post-apilaunch-cross-platform-native-terminal-spawn)
+- [FR-5: GET /api/message — single message by index](FR.md#fr-5-get-apimessage-single-message-by-index)
+- [FR-6: GET /api/git-status — worktree dirty/ahead/behind](FR.md#fr-6-get-apigit-status-worktree-dirtyaheadbehind)
+- [FR-7: GET /api/health — idempotent autostart probe](FR.md#fr-7-get-apihealth-idempotent-autostart-probe)
+- [FR-8: Frontend Tabulator — multi-sort + virtual scroll + filter](FR.md#fr-8-frontend-tabulator-multi-sort-virtual-scroll-filter)
+- [FR-9: Pagination strategy — top-20 priority + lazy rest](FR.md#fr-9-pagination-strategy-top-20-priority-lazy-rest)
 - [FR-10: Modal viewer for last message](FR.md#fr-10-modal-viewer-for-last-message)
-- [FR-11: 4-button Action column](FR.md#fr-11-4-button-action-column)
+- [FR-11: 4-button Action column](FR.md#fr-11-3-button-action-column)
 - [FR-12: Idle time human-readable format](FR.md#fr-12-idle-time-human-readable-format)
 - [FR-13: SessionStart hook idempotent autostart (cross-platform)](FR.md#fr-13-sessionstart-hook-idempotent-autostart-cross-platform)
 - [FR-14: SWR client cache via localStorage](FR.md#fr-14-swr-client-cache-via-localstorage)
 - [FR-15: Cross-platform installation scripts](FR.md#fr-15-cross-platform-installation-scripts)
-- [FR-16: Skill uses mcp__claude-in-chrome__* for browser](FR.md#fr-16-skill-uses-mcp__claude-in-chrome__-for-browser)
+- [FR-16: Skill uses mcp__claude-in-chrome__* for browser](FR.md#fr-16-skill-uses-mcpclaude-in-chrome-for-browser)
 - [FR-17: Cross-platform Claude path encoding](FR.md#fr-17-cross-platform-claude-path-encoding)
 - [FR-18: Dedicated competitor analysis artifact](FR.md#fr-18-dedicated-competitor-analysis-artifact)
-- [FR-19: Diagnostic CLI --diagnose-livecycle](FR.md#fr-19-diagnostic-cli---diagnose-livecycle)
+- [FR-19: Diagnostic CLI --diagnose-livecycle](FR.md#fr-19-diagnostic-cli-diagnose-livecycle)
 - [FR-20: Configurable LIVE threshold](FR.md#fr-20-configurable-live-threshold)
-- [FR-21: OS detection + platform-dispatched module architecture](FR.md#fr-21-os-detection--platform-dispatched-module-architecture)
+- [FR-21: OS detection + platform-dispatched module architecture](FR.md#fr-21-os-detection-platform-dispatched-module-architecture)
 - [FR-22: On-demand worktree bootstrap skill](FR.md#fr-22-on-demand-worktree-bootstrap-skill-session-pilot-bootstrap)
-- [FR-23: Taskbar / Dock launcher installer](FR.md#fr-23-taskbar--dock-launcher-installer-create-launcher)
-- [FR-24: UNION model — all worktrees AND all sessions, merged + deduplicated](FR.md#fr-24-union-model--all-git-worktrees-and-all-claude-sessions-merged--deduplicated)
-- [FR-25: Process-based "open window" indicator](FR.md#fr-25-process-based-open-window-indicator--separate-signal-from-jsonl-mtime-live)
+- [FR-23: Taskbar / Dock launcher installer](FR.md#fr-23-taskbar-dock-launcher-installer-create-launcher)
+- [FR-24: UNION model — all worktrees AND all sessions, merged + deduplicated](FR.md#fr-24-union-model-all-git-worktrees-and-all-claude-sessions-merged-deduplicated)
+- [FR-25: Process-based "open window" indicator](FR.md#fr-25-process-based-open-window-indicator-separate-signal-from-jsonl-mtime-live)
 - [FR-26: Per-session rows (1 row per JSONL UUID, not per cwd)](FR.md#fr-26-per-session-rows-expand-1-row-per-cwd-to-1-row-per-jsonl-uuid)
 
 ## Non-Functional Requirements

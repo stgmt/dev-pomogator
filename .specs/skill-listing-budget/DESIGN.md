@@ -4,7 +4,7 @@
 
 - [FR-1: Запись `skillListingBudgetFraction: 1.0`](FR.md#fr-1-запись-skilllistingbudgetfraction-10-в-claudesettingsjson)
 - [FR-2: Идемпотентность](FR.md#fr-2-идемпотентность-повторных-запусков)
-- [FR-3: Bump существующего значения < 1.0](FR.md#fr-3-bump-существующего-значения--10)
+- [FR-3: Bump существующего значения < 1.0](FR.md#fr-3-bump-существующего-значения-10)
 - [FR-4: Install report line](FR.md#fr-4-install-report-includes-change-line)
 
 ## Компоненты

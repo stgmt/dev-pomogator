@@ -60,7 +60,7 @@ AND rule SHALL instruct to prefer LSP over grep for code symbols
 
 ## AC-6 (FR-6): ENABLE_LSP_TOOL Env Var @feature1
 
-**Требование:** [FR-6](FR.md#fr-6-enable_lsp_tool-environment-variable-feature1)
+**Требование:** [FR-6](FR.md#fr-6-enablelsptool-environment-variable-feature1)
 
 WHEN dev-pomogator installs lsp-setup extension
 THEN `.claude/settings.json` env section SHALL contain `"ENABLE_LSP_TOOL": "1"`

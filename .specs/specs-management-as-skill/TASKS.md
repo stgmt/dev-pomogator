@@ -105,7 +105,7 @@ N/A — рефактор не требует новых сервисов / БД 
   - Step 0 Jira → ссылка на `jira-mode.md` (не дублировать)
   - Step 3 (USER_STORIES) → reference на existing `discovery-forms` skill
   - TOC если файл >100 строк
-- **refs:** [FR-1](FR.md#fr-1-skill-structure-with-progressive-disclosure-feature1), [FR-2](FR.md#fr-2-reference-file-naming-convention-phasen-m_descriptive-feature2), [FR-5](FR.md#fr-5-research-workflow-extracted-as-standalone-skill-and-invoked-by-create-spec-feature5)
+- **refs:** [FR-1](FR.md#fr-1-skill-structure-with-progressive-disclosure-feature1), [FR-2](FR.md#fr-2-reference-file-naming-convention-phasenmdescriptive-feature2), [FR-5](FR.md#fr-5-research-workflow-extracted-as-standalone-skill-and-invoked-by-create-spec-feature5)
 - **deps:** `write-create-spec-skill-md`
 - **_features:_** @feature1, @feature2, @feature5
 

@@ -48,7 +48,7 @@ WHEN the skill completes the 12-point eval, THEN the final summary line SHALL be
 
 > OUT OF SCOPE — see FR-6
 
-**Требование:** [FR-6](FR.md#fr-6-pit--strykernet--cargo-mutants--go-mutesting-deep-integration--out-of-scope)
+**Требование:** [FR-6](FR.md#fr-6-pit-strykernet-cargo-mutants-go-mutesting-deep-integration-out-of-scope)
 
 N/A — FR-6 is documented as OUT OF SCOPE; no acceptance criteria defined. Java/C#/Go/Rust mutation tooling matrix lives in `references/tooling-setup.md` as documentation-only.
 

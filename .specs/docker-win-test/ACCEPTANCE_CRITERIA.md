@@ -2,13 +2,13 @@
 
 ## AC-1 (FR-1)
 
-**Требование:** [FR-1](FR.md#fr-1-{название})
+**Требование:** [FR-1](FR.md#fr-1-docker-based-win-test-vm-via-dockurwindows-feature1)
 
 WHEN {событие} THEN {система} SHALL {действие}.
 
 ## AC-2 (FR-2)
 
-**Требование:** [FR-2](FR.md#fr-2-{название})
+**Требование:** [FR-2](FR.md#fr-2-oem-post-install-automation-feature2)
 
 IF {условие} THEN {система} SHALL {действие}.
 

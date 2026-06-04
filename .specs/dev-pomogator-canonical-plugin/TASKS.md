@@ -38,7 +38,7 @@ The core migration was performed **by hand**: the three `.claude-plugin/*.json` 
 
 - [x] v1 install fixture -- @feature7 — Status: DONE | Est: 25m
   _Note: generated inline in CANON001_70 (tmp dir), not a committed `tests/fixtures/v1-install/` — same coverage, no dead fixture to maintain._
-  _Requirements: [FR-7](FR.md#fr-7-migration-v1-v2-documentation--optional-cleanup-script)_
+  _Requirements: [FR-7](FR.md#fr-7-migration-v1-v2-documentation-optional-cleanup-script)_
   **Done When:**
   - [x] `.dev-pomogator/.claude-plugin/plugin.json` (v1.5.0) present (in tmp fixture)
   - [x] `.claude/skills/sample-skill/SKILL.md` present (in tmp fixture)

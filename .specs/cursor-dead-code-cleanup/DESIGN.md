@@ -2,12 +2,12 @@
 
 ## Реализуемые требования
 
-- [FR-1: Remove Cursor-only functions](FR.md#fr-1-remove-cursor-only-functions-from-memoryts)
-- [FR-2: Remove dead helpers](FR.md#fr-2-remove-dead-helper-functions-from-memoryts)
-- [FR-3: Remove updater dead code](FR.md#fr-3-remove-dead-cursor-code-from-updaterindexts)
-- [FR-4: Simplify ternary](FR.md#fr-4-simplify-unreachable-ternary-branches)
-- [FR-5: Update comments](FR.md#fr-5-update-outdated-comments)
-- [FR-6: Preserve shared functions](FR.md#fr-6-preserve-shared-functions)
+- [FR-1: Remove Cursor-only functions](FR.md#fr-1-remove-cursor-only-functions-from-memoryts-feature1)
+- [FR-2: Remove dead helpers](FR.md#fr-2-remove-dead-helper-functions-from-memoryts-feature2)
+- [FR-3: Remove updater dead code](FR.md#fr-3-remove-dead-cursor-code-from-updaterindexts-feature3)
+- [FR-4: Simplify ternary](FR.md#fr-4-simplify-unreachable-ternary-branches-feature4)
+- [FR-5: Update comments](FR.md#fr-5-update-outdated-comments-feature5)
+- [FR-6: Preserve shared functions](FR.md#fr-6-preserve-shared-functions-feature5-feature6)
 
 ## Approach
 

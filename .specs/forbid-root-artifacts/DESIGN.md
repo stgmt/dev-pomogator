@@ -5,7 +5,7 @@
 - [FR-1: Auto-prune stale allow entries в check.py](FR.md#fr-1-auto-prune-stale-allow-entries-в-checkpy)
 - [FR-2: User-configurable trash classification](FR.md#fr-2-user-configurable-trash-classification)
 - [FR-3: LLM-driven classification через Claude Code CLI subscription](FR.md#fr-3-llm-driven-classification-через-claude-code-cli-subscription)
-- [FR-4: Shared classifier module + extended yaml config](FR.md#fr-4-shared-classifier-module--extended-yaml-config)
+- [FR-4: Shared classifier module + extended yaml config](FR.md#fr-4-shared-classifier-module-extended-yaml-config)
 
 ## Компоненты
 

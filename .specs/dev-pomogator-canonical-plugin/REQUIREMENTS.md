@@ -10,7 +10,7 @@
 | [FR-4](FR.md#fr-4-install-через-plugin-install-dev-pomogatorstgmt) | Install via /plugin install | [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-4-fr-5-fr-6) | @feature4 | Draft |
 | [FR-5](FR.md#fr-5-scope-aware-install-userprojectlocal) | Scope-aware install (user/project/local) | [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-4-fr-5-fr-6) | @feature5 | Draft |
 | [FR-6](FR.md#fr-6-activation-через-reload-plugins) | Activation via /reload-plugins | [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-4-fr-5-fr-6) | @feature6 | Draft |
-| [FR-7](FR.md#fr-7-migration-v1-v2-documentation--optional-cleanup-script) | Migration v1 → v2 cleanup | [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-7), [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-7) | @feature7 | Draft |
+| [FR-7](FR.md#fr-7-migration-v1-v2-documentation-optional-cleanup-script) | Migration v1 → v2 cleanup | [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-7), [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-7) | @feature7 | Draft |
 | [FR-8](FR.md#fr-8-cursor-support-removal) | Cursor support removal | [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8) | @feature8 | Draft |
 | [FR-9](FR.md#fr-9-single-canonical-plugin-manifest) | Single canonical plugin manifest | [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1-fr-9) | @feature9 | Draft |
 | [FR-10](FR.md#fr-10-update-path-через-plugin-marketplace-update) | Update path | [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1-fr-9) | @feature10 | Draft |
@@ -25,7 +25,7 @@
 - [FR-4: Install via /plugin install](FR.md#fr-4-install-через-plugin-install-dev-pomogatorstgmt)
 - [FR-5: Scope-aware install](FR.md#fr-5-scope-aware-install-userprojectlocal)
 - [FR-6: Activation via /reload-plugins](FR.md#fr-6-activation-через-reload-plugins)
-- [FR-7: Migration v1 → v2 cleanup](FR.md#fr-7-migration-v1-v2-documentation--optional-cleanup-script)
+- [FR-7: Migration v1 → v2 cleanup](FR.md#fr-7-migration-v1-v2-documentation-optional-cleanup-script)
 - [FR-8: Cursor support removal](FR.md#fr-8-cursor-support-removal)
 - [FR-9: Single canonical plugin manifest](FR.md#fr-9-single-canonical-plugin-manifest)
 - [FR-10: Update path](FR.md#fr-10-update-path-через-plugin-marketplace-update)

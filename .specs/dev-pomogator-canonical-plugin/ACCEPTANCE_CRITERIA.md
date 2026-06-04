@@ -40,7 +40,7 @@ AND `<cwd>/.claude/settings.json` SHALL остаться не модифицир
 
 ## AC-4 (FR-7)
 
-**Требование:** [FR-7](FR.md#fr-7-migration-v1-v2-documentation--optional-cleanup-script)
+**Требование:** [FR-7](FR.md#fr-7-migration-v1-v2-documentation-optional-cleanup-script)
 
 WHEN пользователь с v1 install в проекте запускает optional cleanup script `npx tsx <repo>/tools/migrate-v1-to-v2.ts`
 THEN script SHALL детектить v1 install через `<cwd>/.dev-pomogator/.claude-plugin/plugin.json` version<2.0.0
@@ -51,7 +51,7 @@ AND SHALL print next steps: «Run `/plugin marketplace add stgmt/dev-pomogator` 
 
 ## AC-5 (FR-7)
 
-**Требование:** [FR-7](FR.md#fr-7-migration-v1-v2-documentation--optional-cleanup-script)
+**Требование:** [FR-7](FR.md#fr-7-migration-v1-v2-documentation-optional-cleanup-script)
 
 WHEN cleanup script выполняется на проекте без v1 install (`<cwd>/.dev-pomogator/` отсутствует или version >= 2.0.0)
 THEN script SHALL exit с code 0

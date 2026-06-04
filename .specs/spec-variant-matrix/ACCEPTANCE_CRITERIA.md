@@ -14,13 +14,13 @@ WHEN FR содержит hard-OUT signal AND polymorphic-trigger AND текст�
 
 ## AC-3 (FR-3)
 
-**Требование:** [FR-3](FR.md#fr-3-ac-decision-table-обязательна-per-polymorphic-fr), [FR-6](FR.md#fr-6-audit-category-variant_coverage-8-я-категория)
+**Требование:** [FR-3](FR.md#fr-3-ac-decision-table-обязательна-per-polymorphic-fr), [FR-6](FR.md#fr-6-audit-category-variantcoverage-8-я-категория)
 
 WHEN polymorphic FR lacks AC Decision Table (no markdown table с required 6 columns) THEN audit category VARIANT_COVERAGE SHALL emit finding с severity WARNING и `code: 'AC_DECISION_TABLE_MISSING'`.
 
 ## AC-4 (FR-4)
 
-**Требование:** [FR-4](FR.md#fr-4-gherkin-scenario-outline-в-feature-11-с-ac), [FR-6](FR.md#fr-6-audit-category-variant_coverage-8-я-категория)
+**Требование:** [FR-4](FR.md#fr-4-gherkin-scenario-outline-в-feature-11-с-ac), [FR-6](FR.md#fr-6-audit-category-variantcoverage-8-я-категория)
 
 WHEN AC Decision Table covered-row count != Examples block row count для same FR (исключая OUT_OF_SCOPE rows) THEN audit SHALL emit finding `code: 'AC_EXAMPLES_ROW_MISMATCH'` с указанием expected/actual count.
 
@@ -32,7 +32,7 @@ IF escape-hatch syntax `[skip-variant-matrix: <reason>]` present AND reason leng
 
 ## AC-6 (FR-6)
 
-**Требование:** [FR-6](FR.md#fr-6-audit-category-variant_coverage-8-я-категория)
+**Требование:** [FR-6](FR.md#fr-6-audit-category-variantcoverage-8-я-категория)
 
 WHEN audit emits any VARIANT_COVERAGE finding с severity >= WARNING THEN spec-status.ts `-ConfirmStop Audit` SHALL refuse advancement до резолюции finding.
 
@@ -44,6 +44,6 @@ WHEN spec contains zero polymorphic FRs (все FRs либо single-variant ли
 
 ## Out of Scope: FR-9 deferred to v0.2.0
 
-**Требование:** [FR-9](FR.md#fr-9-pretooluse-form-guard-на-writeedit-frmd--out-of-scope)
+**Требование:** [FR-9](FR.md#fr-9-pretooluse-form-guard-на-writeedit-frmd-out-of-scope)
 
 > OUT OF SCOPE — см. FR-9. Form-guard variant-matrix-guard.ts откладывается до v0.2.0; в v0.1.0 audit-only catch достаточен.
