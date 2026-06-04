@@ -8,7 +8,8 @@
 //   2. managed   — a binary we fetched into `.dev-pomogator/bin/` as a fallback
 //                  when no system package is present (integrity-checked download,
 //                  separate module).
-//   3. null      — neither present → caller uses the graph-backed js-fallback.
+//   3. null      — neither present → the launcher exits with an actionable message
+//                  (FR-7a: there is NO js-fallback; navigation is simply absent).
 //
 // Pure + injectable (whichFn / existsFn) so the policy is unit-testable without
 // touching the real PATH or filesystem.

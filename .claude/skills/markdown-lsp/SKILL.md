@@ -57,13 +57,33 @@ Once the plugin is active, the `LSP` tool serves Marksman's primitives over any
 Diagnostics are ambient: after each `.md` edit the LSP reports broken links /
 duplicate headings automatically — read and fix them.
 
+## Measured slug rules (do NOT guess — verified against the real Marksman binary)
+
+These were measured with `textDocument/definition` at the link position; an earlier
+guess ("`[[FR-1]]` resolves `## FR-1`") was WRONG — bare `[[X]]` is a *document*
+reference. Trust this table, not intuition:
+
+- **Bare `[[X]]` targets a DOCUMENT**, not an H2 heading — it resolves to a note
+  whose H1 title (or filename) is `X`. `[[note]]→# Note` is document/H1 resolution.
+- **To reach an H2 heading**, the reference carries the slug: `[text](#slug)`
+  (markdown, same- or cross-file `[text](other.md#slug)`), `[[#Heading]]`, or
+  `[[doc#Heading]]`. All three resolve; bare `[[Heading-id]]` does not.
+- **Slug rule = GitHub-style with one trap: DOTS ARE REMOVED, dashes kept.**
+  `## FR-7` → `fr-7`; `## NFR-Performance-1` → `nfr-performance-1`;
+  `## AC-1.1` → `ac-11` (NOT `ac-1-1`); `## AC-27.1` → `ac-271`;
+  `## FR-7: Phase 2 — Title` → `fr-7-phase-2-title`.
+- **Custom anchors `{#id}` do NOT work** — Marksman parses `## H {#fr-7}` as a
+  "Tag" symbol, but `[…](#fr-7)` stays unresolved.
+- **Slugs match within OR across files** as long as the target file is in the
+  workspace (`.marksman.toml`/`.git` marker present).
+
 ## Why over grep (the failure grep can't avoid)
 
-- **Slug semantics.** Marksman matches a wiki-link by the target heading's **full
-  text slug**: `[[note]]` resolves `# Note` (slug `note`); `[[FR-1]]` resolves a
-  heading only if its slug is exactly `fr-1` (i.e. `## FR-1`), NOT `## FR-1: Phase
-  0 — …` (slug `fr-1-phase-0-…`). The LSP knows this; grep `FR-1` cannot
-  distinguish the heading, a link, and an unrelated mention.
+- **Slug semantics.** Marksman matches a markdown anchor / `[[#heading]]` link by the
+  target heading's slug (rules above). `[FR-7](FR.md#fr-7)` resolves only if the
+  heading's slug is exactly `fr-7` (i.e. `## FR-7`), NOT `## FR-7: Title`
+  (slug `fr-7-title`). The LSP knows this; grep `FR-7` cannot distinguish the
+  heading, a link, and an unrelated mention.
 - **Safe rename.** `rename` rewrites the heading AND every inbound link in one
   atomic edit. Grep-and-sed misses links whose slug differs from the visible
   text and silently desyncs the cross-references.

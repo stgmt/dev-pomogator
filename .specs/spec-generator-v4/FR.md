@@ -108,7 +108,7 @@ So the value is **editor-only** (human Ctrl-click in VS Code); the graph already
 
 **FR-7d (skill — how & why to use the markdown LSP):** dev-pomogator SHALL ship a skill (in the spec-generator plugin) teaching how and why to use the markdown LSP for spec navigation + refactor (Ctrl-click `[[…]]`, rename a requirement and propagate, jump to definition/references), installed to users as part of the plugin.
 
-**Связанные AC:** [AC-7.1](ACCEPTANCE_CRITERIA.md#ac-71), [AC-7.2](ACCEPTANCE_CRITERIA.md#ac-72), [AC-7.3](ACCEPTANCE_CRITERIA.md#ac-73), [AC-7.4](ACCEPTANCE_CRITERIA.md#ac-74)
+**Связанные AC:** [AC-7.1](ACCEPTANCE_CRITERIA.md#ac-71), [AC-7.2](ACCEPTANCE_CRITERIA.md#ac-72), [AC-7.3](ACCEPTANCE_CRITERIA.md#ac-73), [AC-7.4](ACCEPTANCE_CRITERIA.md#ac-74), [AC-7.5](ACCEPTANCE_CRITERIA.md#ac-75)
 **Use Case:** [UC-1](USE_CASES.md#uc-1)
 **User Story:** US-7
 
