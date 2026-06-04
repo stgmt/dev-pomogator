@@ -52,6 +52,15 @@ const FR_HEADING_RE = /^FR-(\d+):\s*(.+)$/;
 const NFR_HEADING_RE = /^NFR(?:-([A-Za-z][A-Za-z0-9]*))?-(\d+):\s*(.+)$/;
 const AC_HEADING_RE = /^AC-(\d+(?:\.\d+)?)\s*\(FR-(\d+)\)\s*:?\s*(.*)$/;
 
+// FR-7c short-heading forms — the migrated, Marksman-resolvable shape where the
+// heading slug equals the bare id (`## FR-7` → slug `fr-7`, so `[…](#fr-7)`
+// resolves). The title (FR/NFR) and the parent-FR (AC) move to the BODY, read by
+// the lookahead helpers below. These are tried AFTER the colon/paren forms above
+// so the 44 un-migrated specs keep parsing identically.
+const SHORT_FR_RE = /^FR-(\d+)$/;
+const SHORT_NFR_RE = /^NFR(?:-([A-Za-z][A-Za-z0-9]*))?-(\d+)$/;
+const SHORT_AC_RE = /^AC-(\d+(?:\.\d+)?)$/;
+
 // FR-3 legacy backward compat — v3 spec headings of the form
 // `Requirement: FR-001 Login flow` register a triple anchor so the same
 // node is reachable via three aliases:
@@ -89,6 +98,40 @@ function stripInlineMarkers(text: string): string {
   s = s.replace(/_([^_]+)_/g, '$1');
   s = s.replace(/`([^`]+)`/g, '$1');
   return s.trim();
+}
+
+/**
+ * For a migrated short heading (`## FR-7`), the title was relocated to a `**bold**`
+ * line directly below. Scan the next few non-empty lines: the FIRST non-empty line
+ * is the title iff it is wholly `**…**`; otherwise there is no relocated title
+ * (returns `''`). Stops at the next heading so we never borrow a sibling's title.
+ */
+function relocatedTitleAfter(lines: string[], i: number): string {
+  for (let j = i + 1; j < Math.min(lines.length, i + 6); j++) {
+    const t = lines[j].trim();
+    if (!t) continue;
+    if (t.startsWith('#')) return '';
+    const m = t.match(/^\*\*(.+?)\*\*$/);
+    return m ? stripInlineMarkers(m[1]).trim() : '';
+  }
+  return '';
+}
+
+/**
+ * For a migrated short AC heading (`## AC-1.1`), the parent FR moved to the
+ * `**Требование:** [FR-K](…)` line below (it was already present there in v4
+ * specs — the `(FR-K)` in the heading was redundant). Return `FR-K` from the
+ * first FR citation in the next few lines, or `''` if none.
+ */
+function parentFrAfter(lines: string[], i: number): string {
+  for (let j = i + 1; j < Math.min(lines.length, i + 6); j++) {
+    const t = lines[j].trim();
+    if (!t) continue;
+    if (t.startsWith('#')) return '';
+    const m = t.match(/\bFR-(\d+[a-z]?)\b/);
+    if (m) return `FR-${m[1]}`;
+  }
+  return '';
 }
 
 /**
@@ -231,6 +274,59 @@ export function parseMarkdown(mdSource: string, relativePath: string): ParserOut
       nodes.push(node);
       edges.push({ from: parentFr, to: acId, type: 'covers' });
       anchors.push({ alias: acId, canonicalId: acId, location });
+      continue;
+    }
+
+    // ── Migrated short forms (FR-7c) ──────────────────────────────────────
+    // Slug == bare id, so the existing `[…](#fr-7)` / `(#ac-1-1)` links resolve
+    // in Marksman. Title / parent-FR are read from the body.
+
+    // Short FR: `## FR-N` (title relocated to the `**bold**` line below).
+    m = text.match(SHORT_FR_RE);
+    if (m) {
+      const num = m[1];
+      const compact = `FR-${num}`;
+      const slug = `fr-${num}`; // matches Marksman's slug for `## FR-N`
+      const title = relocatedTitleAfter(lines, i);
+      const node: FrNode = { id: compact, type: 'FR', title, file: relativePath, line, anchors: [compact, slug], body: text };
+      nodes.push(node);
+      anchors.push(
+        { alias: compact, canonicalId: compact, location },
+        { alias: slug, canonicalId: compact, location },
+      );
+      continue;
+    }
+
+    // Short NFR: `## NFR-Category-N` / `## NFR-N` (title relocated below).
+    m = text.match(SHORT_NFR_RE);
+    if (m) {
+      const category = m[1];
+      const num = m[2];
+      const compact = category ? `NFR-${category}-${num}` : `NFR-${num}`;
+      const slug = `nfr-${category ? `${category.toLowerCase()}-` : ''}${num}`;
+      const title = relocatedTitleAfter(lines, i);
+      const node: NfrNode = { id: compact, type: 'NFR', title, category, file: relativePath, line, anchors: [compact, slug], body: text };
+      nodes.push(node);
+      anchors.push(
+        { alias: compact, canonicalId: compact, location },
+        { alias: slug, canonicalId: compact, location },
+      );
+      continue;
+    }
+
+    // Short AC: `## AC-N.M` (parent-FR read from the `**Требование:**` line).
+    m = text.match(SHORT_AC_RE);
+    if (m) {
+      const acId = `AC-${m[1]}`;
+      const slug = slugify(acId); // `ac-1-1` — matches `[…](#ac-1-1)` links
+      const parentFr = parentFrAfter(lines, i);
+      const node: AcNode = { id: acId, type: 'AC', parentFr, file: relativePath, line, ears: '' };
+      nodes.push(node);
+      if (parentFr) edges.push({ from: parentFr, to: acId, type: 'covers' });
+      anchors.push(
+        { alias: acId, canonicalId: acId, location },
+        { alias: slug, canonicalId: acId, location },
+      );
       continue;
     }
   }

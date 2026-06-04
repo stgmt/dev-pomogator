@@ -141,3 +141,52 @@ describe('parseMarkdown — FR / NFR / AC extraction', () => {
     expect(out.anchors).toEqual([]);
   });
 });
+
+describe('parseMarkdown — migrated short headings (FR-7c)', () => {
+  it('parses `## FR-7` with the title relocated to a **bold** line → slug `fr-7`', () => {
+    const md = '## FR-7\n\n**Phase 2 — Native LSP plugin**\n\n> body\n';
+    const out = parseMarkdown(md, '.specs/v4/FR.md');
+    expect(out.nodes).toHaveLength(1);
+    const fr = out.nodes[0] as FrNode;
+    expect(fr.id).toBe('FR-7');
+    expect(fr.title).toBe('Phase 2 — Native LSP plugin');
+    expect(fr.anchors).toEqual(['FR-7', 'fr-7']); // slug `fr-7` matches `[…](#fr-7)`
+  });
+
+  it('parses `## FR-7` with no relocated title (empty title, slug still `fr-7`)', () => {
+    const md = '## FR-7\n\n> just a blockquote, no bold title\n';
+    const out = parseMarkdown(md, '.specs/v4/FR.md');
+    const fr = out.nodes[0] as FrNode;
+    expect(fr.title).toBe('');
+    expect(fr.anchors).toEqual(['FR-7', 'fr-7']);
+  });
+
+  it('parses `### NFR-Reliability-6` short form with category + relocated title', () => {
+    const md = '### NFR-Reliability-6\n\n**Marksman crash isolation**\n';
+    const out = parseMarkdown(md, '.specs/v4/NFR.md');
+    const nfr = out.nodes[0] as NfrNode;
+    expect(nfr.id).toBe('NFR-Reliability-6');
+    expect(nfr.category).toBe('Reliability');
+    expect(nfr.title).toBe('Marksman crash isolation');
+    expect(nfr.anchors).toEqual(['NFR-Reliability-6', 'nfr-reliability-6']);
+  });
+
+  it('parses `## AC-1.1` short form, reading parent-FR from the Требование line + covers edge', () => {
+    const md = '## AC-1.1\n**Требование:** [FR-1](FR.md#fr-1)\n\nWHEN x THEN y SHALL z\n';
+    const out = parseMarkdown(md, '.specs/v4/ACCEPTANCE_CRITERIA.md');
+    const ac = out.nodes[0] as AcNode;
+    expect(ac.id).toBe('AC-1.1');
+    expect(ac.parentFr).toBe('FR-1');
+    expect(out.edges).toEqual([{ from: 'FR-1', to: 'AC-1.1', type: 'covers' }]);
+    // adds the slug anchor `ac-1-1` so `[…](#ac-1-1)` resolves
+    expect(out.anchors.some((a) => a.alias === 'ac-1-1' && a.canonicalId === 'AC-1.1')).toBe(true);
+  });
+
+  it('keeps the old `## FR-N: Title` / `## AC-N (FR-M)` forms working unchanged', () => {
+    const md = '## FR-1: Login flow\n\n## AC-3 (FR-1): submits\n';
+    const out = parseMarkdown(md, '.specs/auth/FR.md');
+    expect((out.nodes[0] as FrNode).title).toBe('Login flow');
+    expect((out.nodes[0] as FrNode).anchors).toEqual(['FR-1', 'fr-1-login-flow']);
+    expect((out.nodes[1] as AcNode).parentFr).toBe('FR-1');
+  });
+});
