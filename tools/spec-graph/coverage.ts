@@ -17,6 +17,8 @@
 
 export type Bucket = 'passed' | 'pending' | 'undefined' | 'ambiguous' | 'failed' | 'skipped';
 export type VerifiedStatus = 'DONE' | 'IN_PROGRESS' | 'unverified';
+/** Test-body quality verdict from the `strong-tests`/`spec-status` audit (FR-35a). */
+export type TestQualityVerdict = 'STRONG' | 'WEAK' | 'FAKE-POSITIVE-RISK';
 
 /** Map a Cucumber/SpecGraph result enum to a coverage bucket. */
 const RESULT_TO_BUCKET: Record<string, Bucket> = {
@@ -62,8 +64,8 @@ export function specOf(file: string): string | undefined {
 export interface CoverageReport {
   /** Every scenario id grouped into exactly one bucket (conservation invariant). */
   buckets: Record<Bucket, string[]>;
-  /** Per-task derived status + the scenarios it was derived from. */
-  tasks: Record<string, { verified_status: VerifiedStatus; scenarios: string[] }>;
+  /** Per-task derived status + the scenarios it was derived from + the test-quality verdict applied (FR-35a). */
+  tasks: Record<string, { verified_status: VerifiedStatus; scenarios: string[]; test_quality?: TestQualityVerdict }>;
   totals: { scenarios: number } & Record<Bucket, number>;
 }
 
@@ -158,13 +160,31 @@ export function mapTasksToScenarios(
  *   - EVERY mapped scenario `passed` → `DONE`
  *   - otherwise → `IN_PROGRESS` (never DONE while any scenario is non-green)
  */
-export function verifiedStatus(scenarioIds: string[], bucketById: Map<string, Bucket>): VerifiedStatus {
+export function verifiedStatus(
+  scenarioIds: string[],
+  bucketById: Map<string, Bucket>,
+  verdict?: TestQualityVerdict,
+): VerifiedStatus {
   if (scenarioIds.length === 0) return 'unverified';
-  return scenarioIds.every((id) => bucketById.get(id) === 'passed') ? 'DONE' : 'IN_PROGRESS';
+  if (!scenarioIds.every((id) => bucketById.get(id) === 'passed')) return 'IN_PROGRESS';
+  // FR-35a: GREEN is necessary but NOT sufficient — a WEAK / FAKE-POSITIVE-RISK test
+  // body cannot verify DONE. Fail-open on STRONG / unknown (NFR-Reliability-10: never
+  // false-block a genuinely strong test; an absent auditor degrades to PASS/FAIL).
+  if (verdict === 'WEAK' || verdict === 'FAKE-POSITIVE-RISK') return 'IN_PROGRESS';
+  return 'DONE';
 }
 
-/** Tie it together: buckets + per-task verified_status + totals. */
-export function computeCoverage(tasks: TaskLike[], scenarios: ScenarioLike[]): CoverageReport {
+/**
+ * Tie it together: buckets + per-task verified_status + totals.
+ * `testQualityByTask` (FR-35a) — optional per-task test-body verdict from the
+ * `strong-tests`/`spec-status` audit; a WEAK/FAKE-POSITIVE-RISK verdict caps an
+ * otherwise-green task below DONE. Absent → current PASS/FAIL behaviour (fail-open).
+ */
+export function computeCoverage(
+  tasks: TaskLike[],
+  scenarios: ScenarioLike[],
+  testQualityByTask: Record<string, TestQualityVerdict> = {},
+): CoverageReport {
   const buckets = bucketScenarios(scenarios);
   const bucketById = new Map<string, Bucket>();
   for (const b of Object.keys(buckets) as Bucket[]) for (const id of buckets[b]) bucketById.set(id, b);
@@ -172,9 +192,11 @@ export function computeCoverage(tasks: TaskLike[], scenarios: ScenarioLike[]): C
   const taskMap = mapTasksToScenarios(tasks, scenarios);
   const tasksOut: CoverageReport['tasks'] = {};
   for (const [taskId, scenarioIds] of taskMap) {
+    const verdict = testQualityByTask[taskId];
     tasksOut[taskId] = {
-      verified_status: verifiedStatus(scenarioIds, bucketById),
+      verified_status: verifiedStatus(scenarioIds, bucketById, verdict),
       scenarios: scenarioIds,
+      ...(verdict ? { test_quality: verdict } : {}),
     };
   }
 

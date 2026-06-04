@@ -23,7 +23,7 @@
  */
 
 import type { SpecGraph, Edge, ScenarioNode, TaskNode } from './types.ts';
-import { computeCoverage, specOf, type Bucket, type ScenarioLike, type TaskLike } from './coverage.ts';
+import { computeCoverage, specOf, type Bucket, type ScenarioLike, type TaskLike, type TestQualityVerdict } from './coverage.ts';
 
 export type FindingCode =
   | 'UNCOVERED_FR'
@@ -91,7 +91,11 @@ function topSimilarIds(target: string, ids: string[], n: number): string[] {
  */
 export function checkConformance(
   graph: SpecGraph,
-  opts: { orphanPolicy?: { scenario_tag_orphan?: 'warn' | 'block' } } = {},
+  opts: {
+    orphanPolicy?: { scenario_tag_orphan?: 'warn' | 'block' };
+    /** FR-35a — per-task test-body verdict; WEAK/FAKE-POSITIVE-RISK on a green task → TASK_TEST_QUALITY. */
+    testQualityByTask?: Record<string, TestQualityVerdict>;
+  } = {},
 ): Finding[] {
   const findings: Finding[] = [];
   // FR-13: orphan severity is config-driven — default `warn`, escalated to
@@ -166,7 +170,7 @@ export function checkConformance(
     }
   }
   if (taskLikes.length > 0) {
-    const cov = computeCoverage(taskLikes, scenarioLikes);
+    const cov = computeCoverage(taskLikes, scenarioLikes, opts.testQualityByTask);
     const bucketById = new Map<string, Bucket>();
     for (const b of Object.keys(cov.buckets) as Bucket[]) for (const id of cov.buckets[b]) bucketById.set(id, b);
     for (const node of graph.nodes.values()) {
@@ -176,17 +180,34 @@ export function checkConformance(
       const entry = cov.tasks[task.id];
       if (!entry) continue;
       if (entry.verified_status === 'IN_PROGRESS') {
-        const offenders = entry.scenarios.filter((id) => bucketById.get(id) !== 'passed');
-        findings.push({
-          code: 'TASK_STATUS_UNVERIFIED',
-          severity: 'warning',
-          location: { file: task.file, line: task.line },
-          message: `Task ${task.id} is marked DONE but ${offenders.length}/${entry.scenarios.length} mapped scenarios are not green (e.g. ${offenders.slice(0, 3).map((id) => `${id}=${bucketById.get(id)}`).join(', ')}).`,
-          nodeId: task.id,
-          suggestions: [
-            { action: 'make_green_or_downgrade', reason: 'Make the mapped scenarios pass, or set Status back to IN_PROGRESS — a DONE task must have every mapped scenario green.', confidence: 'high' },
-          ],
-        });
+        const allGreen = entry.scenarios.length > 0 && entry.scenarios.every((id) => bucketById.get(id) === 'passed');
+        if (allGreen && (entry.test_quality === 'WEAK' || entry.test_quality === 'FAKE-POSITIVE-RISK')) {
+          // FR-35a: every mapped scenario is green, but the test BODY audits as weak /
+          // fake-positive — a passing-but-worthless test cannot verify DONE.
+          findings.push({
+            code: 'TASK_TEST_QUALITY',
+            severity: 'warning',
+            location: { file: task.file, line: task.line },
+            message: `Task ${task.id} is marked DONE and its scenarios are green, but the test body audits as ${entry.test_quality} — a passing-but-${entry.test_quality} test cannot verify DONE.`,
+            nodeId: task.id,
+            relatedId: entry.test_quality,
+            suggestions: [
+              { action: 'strengthen_test', reason: 'Strengthen the test (real assertions, no over-mocking) until strong-tests reports STRONG, or set Status back to IN_PROGRESS.', confidence: 'high' },
+            ],
+          });
+        } else {
+          const offenders = entry.scenarios.filter((id) => bucketById.get(id) !== 'passed');
+          findings.push({
+            code: 'TASK_STATUS_UNVERIFIED',
+            severity: 'warning',
+            location: { file: task.file, line: task.line },
+            message: `Task ${task.id} is marked DONE but ${offenders.length}/${entry.scenarios.length} mapped scenarios are not green (e.g. ${offenders.slice(0, 3).map((id) => `${id}=${bucketById.get(id)}`).join(', ')}).`,
+            nodeId: task.id,
+            suggestions: [
+              { action: 'make_green_or_downgrade', reason: 'Make the mapped scenarios pass, or set Status back to IN_PROGRESS — a DONE task must have every mapped scenario green.', confidence: 'high' },
+            ],
+          });
+        }
       } else if (entry.verified_status === 'unverified') {
         // FR-35c: a task marked DONE with ZERO linked scenarios must NOT be silent.
         // "mark done, write no test" is the naeb the gate previously missed (it only

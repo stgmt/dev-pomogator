@@ -10,6 +10,7 @@
 import { Given, When, Then } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
 import { checkConformance, type Finding } from '../../tools/spec-graph/conformance.ts';
+import { computeCoverage, type CoverageReport, type ScenarioLike, type TaskLike, type TestQualityVerdict } from '../../tools/spec-graph/coverage.ts';
 import type { SpecGraph } from '../../tools/spec-graph/types.ts';
 
 interface ScenSpec { id: string; tags?: string[]; result?: string }
@@ -26,7 +27,48 @@ function makeGraph(scens: ScenSpec[], tasks: TaskSpec[]): SpecGraph {
 interface F35World {
   graph?: SpecGraph;
   findings?: Finding[];
+  report?: CoverageReport;
+  covTasks?: TaskLike[];
+  covScens?: ScenarioLike[];
+  verdict?: Record<string, TestQualityVerdict>;
+  taskId?: string;
 }
+
+// ── SPECGEN004_85/86 — FR-35a: a test-quality verdict caps / clears a GREEN task ──
+function setupGreenTaskWithVerdict(w: F35World, verdict: TestQualityVerdict): void {
+  const taskId = 't-quality';
+  w.taskId = taskId;
+  // a GREEN (PASSED) scenario linked to a DONE task — so only the verdict decides DONE.
+  w.covScens = [{ id: 'SCEN-specgen004-85x', tags: ['@feature85'], result: 'PASSED' }];
+  w.covTasks = [{ id: taskId, doneWhen: 'SPECGEN004_85 passes', refs: [] }];
+  w.verdict = { [taskId]: verdict };
+  w.graph = makeGraph(
+    [{ id: 'SCEN-specgen004-85x', tags: ['@feature85'], result: 'PASSED' }],
+    [{ id: taskId, status: 'done', refs: [], doneWhen: 'SPECGEN004_85 passes' }],
+  );
+}
+Given('a task whose linked scenario is GREEN but whose test body audits as FAKE-POSITIVE-RISK', function (this: F35World) {
+  setupGreenTaskWithVerdict(this, 'FAKE-POSITIVE-RISK');
+});
+Given('a task whose linked scenario is GREEN and whose test body audits as STRONG', function (this: F35World) {
+  setupGreenTaskWithVerdict(this, 'STRONG');
+});
+When('the honesty derivation runs with the test-quality verdict', function (this: F35World) {
+  this.report = computeCoverage(this.covTasks!, this.covScens!, this.verdict);
+  this.findings = checkConformance(this.graph!, { testQualityByTask: this.verdict });
+});
+Then('verified_status is capped below DONE', function (this: F35World) {
+  assert.equal(this.report!.tasks[this.taskId!].verified_status, 'IN_PROGRESS', 'a fake-positive green test must NOT be DONE');
+});
+Then('a TASK_TEST_QUALITY finding names the task and the fake-positive verdict', function (this: F35World) {
+  const f = this.findings!.find((x) => x.code === 'TASK_TEST_QUALITY');
+  assert.ok(f, `expected TASK_TEST_QUALITY, got ${JSON.stringify(this.findings!.map((x) => x.code))}`);
+  assert.match(f.message, new RegExp(this.taskId!));
+  assert.match(f.message, /FAKE-POSITIVE-RISK/);
+});
+Then('verified_status is DONE', function (this: F35World) {
+  assert.equal(this.report!.tasks[this.taskId!].verified_status, 'DONE', 'a genuinely STRONG green test must NOT be false-blocked');
+});
 
 // ── SPECGEN004_89 — FR-35c: DONE with zero linked scenarios is not silent ────
 Given('a task marked DONE with no linked scenario at all', function (this: F35World) {
