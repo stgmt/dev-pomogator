@@ -14,7 +14,8 @@ import os from 'os';
  * Spec: plan-pomogator v2.1.0 behaviour change.
  */
 
-const PLAN_GATE = path.resolve('extensions/plan-pomogator/tools/plan-pomogator/plan-gate.ts');
+// Canonical v2.0 layout — the `extensions/` middleware was removed (see CLAUDE.md).
+const PLAN_GATE = path.resolve('tools/plan-pomogator/plan-gate.ts');
 
 let tmpDir: string;
 
