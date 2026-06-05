@@ -9,7 +9,11 @@
  */
 import { Given, When, Then } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { checkConformance, type Finding } from '../../tools/spec-graph/conformance.ts';
+import { evaluateTestQualityGate, logEscape, type GateDecision } from '../../tools/spec-graph/test-quality-gate.ts';
 import { computeCoverage, type CoverageReport, type ScenarioLike, type TaskLike, type TestQualityVerdict } from '../../tools/spec-graph/coverage.ts';
 import { WORKFLOW, REFERENCED_CAPABILITIES, checkFeatureMapDrift, type DriftResult } from '../../.claude/skills/spec-generator-orchestrator/scripts/feature-map.ts';
 import type { SpecGraph } from '../../tools/spec-graph/types.ts';
@@ -35,6 +39,10 @@ interface F35World {
   taskId?: string;
   driftWithStage?: DriftResult;
   driftWithoutStage?: DriftResult;
+  blockDecision?: GateDecision;
+  approveDecision?: GateDecision;
+  shortEscapeDecision?: GateDecision;
+  escapeLog?: string;
 }
 
 // ── SPECGEN004_85/86 — FR-35a: a test-quality verdict caps / clears a GREEN task ──
@@ -99,6 +107,41 @@ Then('the drift guard fails when that stage is removed', function (this: F35Worl
   assert.equal(this.driftWithoutStage!.ok, false, 'dropping the stage must trip the drift guard');
   assert.ok(this.driftWithoutStage!.unreferenced.includes('strong-tests'));
   assert.ok(this.driftWithoutStage!.unreferenced.includes('spec-status'));
+});
+
+// ── SPECGEN004_88 — FR-35b: the pre-DONE Stop-gate blocks a weak test ────────
+Given('a session-touched task whose test audits as WEAK', function (this: F35World) {
+  const graph = makeGraph(
+    [{ id: 'SCEN-specgen004-88x', tags: ['@feature88'], result: 'PASSED' }],
+    [{ id: 't-weak', status: 'done', refs: [], doneWhen: 'SPECGEN004_88 passes' }],
+  );
+  // a real TASK_TEST_QUALITY finding (green scenario + WEAK verdict).
+  this.findings = checkConformance(graph, { testQualityByTask: { 't-weak': 'WEAK' } });
+});
+When('the pre-DONE Stop-gate runs', function (this: F35World) {
+  this.blockDecision = evaluateTestQualityGate(this.findings!, {});
+  const audited = 'deliberate placeholder weak test, tracked in JIRA-123';
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tqg-'));
+  this.escapeLog = logEscape(dir, audited);
+  this.approveDecision = evaluateTestQualityGate(this.findings!, { escape: audited });
+  this.shortEscapeDecision = evaluateTestQualityGate(this.findings!, { escape: 'no' });
+});
+Then('it blocks the done claim', function (this: F35World) {
+  assert.equal(this.blockDecision!.decision, 'block', 'a WEAK test must block the done claim');
+  assert.match(this.blockDecision!.reason!, /t-weak/);
+});
+// `\/` escapes the slash — in a Cucumber Expression a bare `/` is the alternative
+// operator, so `.claude/logs` would never match the literal feature text.
+Then('it allows the claim only with an audited skip-test-quality escape logged to .claude\\/logs', function (this: F35World) {
+  assert.equal(this.approveDecision!.decision, 'approve', 'an audited escape lets the claim through');
+  assert.ok(this.approveDecision!.escapeUsed, 'the escape reason is recorded on the decision');
+  // anti-gaming: a too-short escape (<8 chars) does NOT let it through.
+  assert.equal(this.shortEscapeDecision!.decision, 'block', 'a trivial escape must NOT bypass the gate');
+  // the escape was append-logged to .claude/logs/test-quality-escapes.jsonl.
+  assert.match(this.escapeLog!.replace(/\\/g, '/'), /\.claude\/logs\/test-quality-escapes\.jsonl/);
+  assert.ok(fs.existsSync(this.escapeLog!), 'escape log file written');
+  assert.match(fs.readFileSync(this.escapeLog!, 'utf8'), /JIRA-123/);
+  fs.rmSync(path.dirname(path.dirname(path.dirname(this.escapeLog!))), { recursive: true, force: true });
 });
 
 // ── SPECGEN004_89 — FR-35c: DONE with zero linked scenarios is not silent ────
