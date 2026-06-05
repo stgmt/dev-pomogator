@@ -108,17 +108,23 @@ describe('PLUGIN014: Test Quality', () => {
 
     // @feature3
     it('PLUGIN014_10: no duplicate getPythonRunner in test files', () => {
-      const testFiles = [
-        'tests/e2e/tui-statusline.test.ts',
-        'tests/e2e/tui-test-runner.test.ts',
-        'tests/e2e/tui-test-runner-v2.test.ts',
-      ];
-
+      // Scan ALL *.test.ts dynamically — a hardcoded list rots (it named a since-deleted
+      // tui-statusline.test.ts → ENOENT). The rule is universal: no test file may redefine
+      // getPythonRunner; it must import from helpers.ts (which is NOT a *.test.ts, so the
+      // legitimate definition there is excluded). See issue #45 Class B (hardcoded-list rot).
+      const walk = (dir: string): string[] =>
+        fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+          const full = path.join(dir, e.name);
+          if (e.isDirectory()) return e.name === 'node_modules' ? [] : walk(full);
+          return /\.test\.ts$/.test(e.name) ? [full] : [];
+        });
+      const testFiles = walk(appPath('tests'));
+      expect(testFiles.length).toBeGreaterThan(0);
       for (const file of testFiles) {
-        const content = fs.readFileSync(appPath(file), 'utf-8');
-        // Should NOT have local function definition (should import from helpers)
-        expect(content).not.toMatch(/^function getPythonRunner/m);
-        expect(content).not.toMatch(/^export function getPythonRunner/m);
+        const content = fs.readFileSync(file, 'utf-8');
+        // Should import from helpers, NOT define locally.
+        expect(content, `${file} redefines getPythonRunner — import it from helpers.ts`).not.toMatch(/^function getPythonRunner/m);
+        expect(content, `${file} redefines getPythonRunner — import it from helpers.ts`).not.toMatch(/^export function getPythonRunner/m);
       }
     });
   });
