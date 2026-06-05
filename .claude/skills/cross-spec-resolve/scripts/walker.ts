@@ -207,6 +207,21 @@ function optionsFor(finding: ReportFinding): ExplanationBlock['options'] {
   ];
 }
 
+/** Header label for the AskUserQuestion prompt (≤12 chars), by finding severity.
+ *  Shared by the live skill body (cross-spec-resolve SKILL.md step 4) and the
+ *  SPECGEN004_40 binding so both read ONE source — `⚠️ CRIT` is the header that marks
+ *  a hard-conflict STOP-blocker. */
+export function promptHeader(severity: Severity): string {
+  return severity === 'CRITICAL' ? '⚠️ CRIT' : severity === 'WARNING' ? 'WARN' : 'INFO';
+}
+
+/** Process exit code after the user's resolve choice. Any `Abort…` choice aborts the
+ *  STOP gate → the loop breaks and the skill exits NON-ZERO (the STOP stays blocked);
+ *  every other choice resolves/defers/acknowledges and exits 0. (SPECGEN004_40.) */
+export function exitCodeForChoice(choice: string): number {
+  return /^Abort/.test(choice) ? 2 : 0;
+}
+
 /** Top-level entrypoint for the live skill body. */
 export function planResolution(opts: { repoRoot: string; slug: string }): {
   missing?: true;

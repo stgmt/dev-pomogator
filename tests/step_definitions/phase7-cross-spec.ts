@@ -23,6 +23,8 @@ import { appendOverride, readOverrides } from '../../.claude/skills/cross-spec-r
 import {
   planResolution,
   buildExplanation,
+  promptHeader,
+  exitCodeForChoice,
   type ExplanationBlock,
   type ReportFinding,
 } from '../../.claude/skills/cross-spec-resolve/scripts/walker.ts';
@@ -169,32 +171,52 @@ Then(
   },
 );
 
-// ─── SPECGEN004_40 — CRITICAL blocks STOP (interactive — deferred) ──────
+// ─── SPECGEN004_40 — CRITICAL blocks STOP via the resolve prompt ─────────
 
 Given(
   /^a lightweight reconcile run produced one CRITICAL finding from the hard-conflict subset$/,
-  function () {
-    return 'pending';
+  function (this: CrossSpecWorld) {
+    // A CRITICAL hard-conflict finding (runtime-identifier-drift is in the subset —
+    // cross-spec-reconcile SKILL.md severity table). buildExplanation runs the REAL
+    // optionsFor builder the agent shows at step 4, so the prompt under test is the
+    // production one, not a reimplementation.
+    this.resolveFinding = {
+      code: 'cross-spec/runtime-identifier-drift',
+      class: 'runtime-identifier-drift',
+      severity: 'CRITICAL',
+      spec_a: 'spec-a',
+      spec_b: 'spec-b',
+    };
+    this.resolveExplanation = buildExplanation(this.resolveFinding, 'spec-a');
   },
 );
 
 When('the skill reaches step {int} of execution', function (this: CrossSpecWorld, step: number) {
-  // Recorder — the per-scenario Then steps act on the recorded step number.
-  // _40 never reaches here (its Given is a pending stub → scenario short-circuits),
-  // so this stays a no-op-ish recorder shared with _48 (step 7 = batch re-check).
+  // Records the step the per-scenario Then steps act on (shared with _48 step 7 = batch re-check).
   this.executionStep = step;
 });
 
-Then(/^AskUserQuestion is invoked with `header: "⚠️ CRIT"`$/, function () {
-  return 'pending';
+Then(/^AskUserQuestion is invoked with `header: "⚠️ CRIT"`$/, function (this: CrossSpecWorld) {
+  // The header the live skill body passes to AskUserQuestion comes from promptHeader —
+  // the SAME function the skill uses, so this asserts the real label, not a copy.
+  assert.equal(promptHeader(this.resolveFinding!.severity), '⚠️ CRIT');
+  assert.ok(this.resolveExplanation!.options.length > 0, 'the CRITICAL prompt must carry options');
 });
 
-Then(/^the options list includes literally «Abort STOP»$/, function () {
-  return 'pending';
+Then(/^the options list includes literally «Abort STOP»$/, function (this: CrossSpecWorld) {
+  const labels = this.resolveExplanation!.options.map((o) => o.label);
+  assert.ok(
+    labels.includes('Abort STOP'),
+    `CRITICAL options must include 'Abort STOP', got: ${labels.join(' | ')}`,
+  );
 });
 
-Then(/^selecting «Abort STOP» causes the skill to exit with non-zero status$/, function () {
-  return 'pending';
+Then(/^selecting «Abort STOP» causes the skill to exit with non-zero status$/, function (this: CrossSpecWorld) {
+  // Pull the literal label from the rendered options (not a magic string), then assert the
+  // production exit mapping yields non-zero — aborting keeps the STOP gate blocked.
+  const abort = this.resolveExplanation!.options.find((o) => o.label.startsWith('Abort'));
+  assert.ok(abort, 'an Abort option must be present in the CRITICAL prompt');
+  assert.notEqual(exitCodeForChoice(abort!.label), 0, 'Abort STOP must exit non-zero');
 });
 
 // ─── SPECGEN004_41 — Acknowledge & override writes JSONL ────────────────

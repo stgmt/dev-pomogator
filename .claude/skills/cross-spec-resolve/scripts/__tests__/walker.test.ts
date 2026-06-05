@@ -10,6 +10,8 @@ import {
   groupFindings,
   buildExplanation,
   planResolution,
+  promptHeader,
+  exitCodeForChoice,
   type ReportFinding,
 } from '../walker.ts';
 
@@ -171,5 +173,32 @@ describe('planResolution', () => {
     expect(r.plan).toHaveLength(2);
     expect(r.plan![0].finding.severity).toBe('CRITICAL');
     expect(r.plan![1].finding.severity).toBe('INFO');
+  });
+});
+
+// SPECGEN004_40 — the CRITICAL STOP-blocking prompt seam (header + abort exit).
+describe('promptHeader + exitCodeForChoice (SPECGEN004_40)', () => {
+  it('promptHeader maps each severity to its prompt label', () => {
+    expect(promptHeader('CRITICAL')).toBe('⚠️ CRIT');
+    expect(promptHeader('WARNING')).toBe('WARN');
+    expect(promptHeader('INFO')).toBe('INFO');
+  });
+
+  it('a CRITICAL hard-conflict finding surfaces an Abort STOP option', () => {
+    const finding: ReportFinding = {
+      code: 'cross-spec/runtime-identifier-drift',
+      class: 'runtime-identifier-drift',
+      severity: 'CRITICAL',
+      spec_a: 'spec-a',
+      spec_b: 'spec-b',
+    };
+    const labels = buildExplanation(finding, 'spec-a').options.map((o) => o.label);
+    expect(labels).toContain('Abort STOP');
+  });
+
+  it('Abort exits non-zero (STOP stays blocked); every other choice exits 0', () => {
+    expect(exitCodeForChoice('Abort STOP')).not.toBe(0);
+    expect(exitCodeForChoice('Apply suggested fix')).toBe(0);
+    expect(exitCodeForChoice('Acknowledge & override (log + skip)')).toBe(0);
   });
 });

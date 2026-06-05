@@ -108,9 +108,9 @@ if (plan.missing) { return "Run /cross-spec-reconcile first"; }
 const decisions = [];
 for (const { finding, explanation } of plan.plan!) {
   // Step 4: Confirm via AskUserQuestion.
-  const header =
-    finding.severity === 'CRITICAL' ? `⚠️ CRIT` :
-    finding.severity === 'WARNING'  ? `WARN`   : `INFO`;
+  // `promptHeader` (walker.ts) is the single source for the header label — the
+  // SPECGEN004_40 binding asserts the same function, so skill + test never diverge.
+  const header = promptHeader(finding.severity);   // '⚠️ CRIT' | 'WARN' | 'INFO'
 
   const answer = await AskUserQuestion({
     questions: [{
@@ -163,6 +163,9 @@ for (const { finding, explanation } of plan.plan!) {
     });
     status = 'acknowledged';
   } else if (chosen.startsWith('Abort')) {
+    // Abort STOP → exit the loop and surface a NON-ZERO status (exitCodeForChoice,
+    // walker.ts) so the STOP gate stays blocked. SPECGEN004_40 asserts this contract.
+    process.exitCode = exitCodeForChoice(chosen);   // non-zero
     break;
   }
 
