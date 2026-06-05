@@ -59,6 +59,21 @@ async function loadMcpConfig(configPath: string): Promise<any> {
 }
 
 describe('PLUGIN005: MCP Setup', () => {
+  // This suite mutates appPath('.mcp.json') — the repo's REAL committed manifest — as its
+  // installer fixture. Other tests (e.g. spec-mcp-server/bundle.test) read that same file and
+  // expect the shipped content. Capture the original once and restore it in afterAll so this
+  // suite leaves the tree as it found it (test files run sequentially: fileParallelism:false).
+  let originalProjectMcp: string | null = null;
+  let originalCursorMcp: string | null = null;
+  beforeAll(async () => {
+    originalProjectMcp = (await fs.pathExists(appPath('.mcp.json')))
+      ? await fs.readFile(appPath('.mcp.json'), 'utf-8')
+      : null;
+    originalCursorMcp = (await fs.pathExists(appPath('.cursor', 'mcp.json')))
+      ? await fs.readFile(appPath('.cursor', 'mcp.json'), 'utf-8')
+      : null;
+  });
+
   beforeEach(async () => {
     // Clean up MCP configs before each test
     await fs.remove(homePath('.cursor', 'mcp.json'));
@@ -72,15 +87,18 @@ describe('PLUGIN005: MCP Setup', () => {
   });
 
   afterAll(async () => {
-    // Clean up after all tests
+    // Clean up HOME artifacts (test-created, no original to preserve)
     await fs.remove(homePath('.cursor', 'mcp.json'));
     await fs.remove(homePath('.cursor', 'mcp.json.backup'));
     await fs.remove(homePath('.claude.json'));
     await fs.remove(homePath('.claude.json.backup'));
-    await fs.remove(appPath('.cursor', 'mcp.json'));
     await fs.remove(appPath('.cursor', 'mcp.json.backup'));
-    await fs.remove(appPath('.mcp.json'));
     await fs.remove(appPath('.mcp.json.backup'));
+    // RESTORE the repo's real manifests (don't leave them deleted — bundle.test reads them)
+    if (originalProjectMcp !== null) await fs.writeFile(appPath('.mcp.json'), originalProjectMcp);
+    else await fs.remove(appPath('.mcp.json'));
+    if (originalCursorMcp !== null) await fs.writeFile(appPath('.cursor', 'mcp.json'), originalCursorMcp);
+    else await fs.remove(appPath('.cursor', 'mcp.json'));
   });
 
   describe('Check mode', () => {
