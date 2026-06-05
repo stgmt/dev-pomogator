@@ -74,6 +74,29 @@ Official marketplace plugins set NONE of these (they auto-discover from conventi
   get rewritten to `C:/Program Files/Git/...`.
 - Do NOT pass `-e HOME=/home/tester` (gets mangled) — bake `ENV HOME=/home/tester` in the Dockerfile instead.
 
+## Deps-absent run check (the dead-integration-guard, here) — MANDATORY for hooks/MCP that import packages
+
+`install` copies the plugin into `cache/<marketplace>/<name>/<version>/` **WITHOUT `node_modules`**
+(gitignored; canonical install does not `npm install`). So any hook (`.claude-plugin/hooks.json`),
+MCP server (`.mcp.json`), or LSP launcher (`.lsp.json`) that imports a non-`node:` package
+(`@cucumber/gherkin`, `@modelcontextprotocol/sdk`, `zod`, `chokidar`, `fs-extra`, …) will crash
+`ERR_MODULE_NOT_FOUND` when it fires — installed ≠ runnable. The load check ("no MODULE_NOT_FOUND")
+only catches this if the hook happens to fire; **deliberately run each one**:
+
+1. Enumerate plugin-distributed entries: parse `hooks.json` commands + `.mcp.json` + `.lsp.json` →
+   the `tools/**` scripts they launch. For each, `grep` its import chain for non-`node:` non-relative
+   packages. No such import → node-builtins-only → skip (safe, like `anchor_gate_stop`).
+2. For each script that DOES import a package, RUN it from the install cache (no `node_modules`),
+   the way the harness does — hook via the `bootstrap.cjs` launcher with stdin; MCP via its `.mcp.json`
+   command piping an `initialize` JSON-RPC. PASS = it answers / approves / blocks; FAIL = `ERR_MODULE_NOT_FOUND`.
+3. Locally (no container) the same check is the dead-integration recipe: `mv node_modules/<@scope>` aside,
+   run the artifact via its real launcher, assert no crash, restore.
+
+A crash here means the fix is one of: **bundle** (esbuild, deps inlined — `server.bundle.mjs` pattern),
+**lazy-import + fail-open**, or **rewrite node-builtins-only**. See `.claude/rules/testing/dead-integration-guard.md`
+("Под-класс: plugin-distributed код"). dev-pomogator hits this twice (MCP → bundled; test-quality
+Stop-gate → lazy-import+fail-open) — treat every package-importing plugin artifact as guilty until run deps-absent.
+
 ## Regression guard (no Docker, no auth — runs in the normal suite)
 `tests/e2e/canonical-plugin.test.ts` asserts `plugin.json` declares `skills/commands/hooks/mcpServers`
 as arrays. That alone would have caught this bug in CI. The full Docker install run is the manual /

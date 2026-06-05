@@ -11,12 +11,35 @@
 
 dev-pomogator месяцами **скачивал** Marksman LSP, верифицировал sha256, клал на диск — и **ни разу не запускал**. `resolveLspMode` имел ноль вызовов вне теста; `binary_path` нигде не читался. «Интеграция с Marksman» была пустышкой: установщик есть, потребителя нет. Вскрылось только потому, что BDD-шаг `_15` «бинарь отвечает на LSP initialize» нечем было закрыть честно. Первый фикс был кастомным мостом в MCP — но и он оказался не тем слоем. **Финальный фикс (2026-06-04):** Marksman зарегистрирован как **нативный Claude Code LSP-плагин** (`.lsp.json` → лаунчер `tools/marksman-installer/launch-marksman.cjs` → `marksman server`), рантайм-потребитель = встроенный `LSP`-тул Claude Code; доказано end-to-end реальной `claude -p` сессией (documentSymbol + `[[wiki-link]]` references против ground-truth). Кастомный мост/`md_references`/`skip-policy`/js-fallback **ретайрнуты**. Урок тот же: скачан ≠ интегрирован — нужен реальный рантайм-потребитель + e2e против живого артефакта.
 
+## Под-класс: plugin-distributed код с `node_modules`-зависимостью (installed ≠ runnable)
+
+Тот же «installed ≠ integrated», но механизм другой и злее, потому что dogfood его НЕ ловит: код, который **распространяется внутри плагина** (hook из `.claude-plugin/hooks.json`, MCP-сервер из `.mcp.json`, launcher из `.lsp.json`, любой `tools/**/*.ts`, запускаемый хуком), **импортит non-builtin пакет** (`@cucumber/gherkin`, `@modelcontextprotocol/sdk`, `zod`, `chokidar`, `fs-extra`, …). Но `node_modules` **gitignored**, а canonical-plugin install (`/plugin marketplace add`) **НЕ запускает `npm install`** — он копирует файлы. Значит у юзера плагина этого пакета **нет на диске** → код падает `ERR_MODULE_NOT_FOUND` при запуске. В dogfood-репо `node_modules` есть → всё «работает» → проёб проходит на ревью.
+
+**Ключевая проверка (обязательна для plugin-distributed кода с импортом пакета):** спрячь `node_modules` (или только нужный `@scope`) и **реально запусти артефакт тем же способом, что harness** (hook через `bootstrap.cjs` лаунчер; MCP через его `.mcp.json` команду). Упало `ERR_MODULE_NOT_FOUND` → у юзеров оно **dead**. `grep` импортов недостаточно — **запусти deps-absent**.
+
+```bash
+# hook:  спрятать пакет → запустить через реальный лаунчер → ожидать НЕ-краш
+mv node_modules/@cucumber node_modules/@cucumber.bak
+echo '{}' | CLAUDE_PLUGIN_ROOT="$PWD" node -e "require(require('path').join(process.env.CLAUDE_PLUGIN_ROOT,'tools','_shared','bootstrap.cjs'))" -- "tools/<x>/<hook>.ts"
+# exit 1 + 'Cannot find package' = DEAD для юзеров.   mv ...bak обратно.
+```
+
+**Три легитимных фикса (выбрать осознанно):**
+1. **Bundle** (esbuild → self-contained `.mjs`/`.cjs`, зависимости inlined; запуск голым `node`, без tsx/node_modules) — как `tools/spec-mcp-server/server.bundle.mjs` (`npm run build:mcp`) + freshness-тест. Нужно когда фича ДОЛЖНА работать у юзера.
+2. **Lazy-import + fail-open** — `await import('./heavy.ts')` внутри функции в try/catch; нет deps → деградировать (approve/skip + note), не крашиться. Годится когда non-enforcement у bare-юзера приемлемо (см. NFR fail-open).
+3. **node-builtins-only** — переписать так, чтобы импортов из `node_modules` не было (как `anchor_gate_stop.ts` → только `check.mjs` на builtins).
+
+## Инцидент №2 (эта сессия, 2026): MCP + test-quality hook
+
+`spec-mcp-server` тянул `@modelcontextprotocol/sdk`+`zod`+`chokidar`; `.mcp.json` запускал `node --import tsx tools/.../server.ts` относительным путём. У юзера: нет tsx, нет sdk, неверный путь → MCP мёртв. Фикс — bundle (`server.bundle.mjs`) + dual-mode launcher через `${CLAUDE_PLUGIN_ROOT}`, доказано прогоном со спрятанным `node_modules`. Через пару коммитов **тот же проёб повторился**: новый Stop-hook `test_quality_gate_stop.ts` импортил `builder.ts` → `@cucumber/gherkin` на верхнем уровне → краш на КАЖДОМ Stop у юзеров. Поймано только когда юзер спросил «у других будет ставиться?». Фикс — lazy-import + fail-open. Урок: **каждый** plugin-distributed артефакт с импортом пакета гонять deps-absent ДО «готово», а не после вопроса юзера.
+
 ## Триггеры — когда проверять
 
 - Диф добавляет загрузку бинаря (`curl`/`wget`/`download(...)`/release URL) или установщик.
 - Диф добавляет рантайм-зависимость в `package.json` `dependencies` (не `devDependencies`).
 - Диф добавляет `*-installer*`, `postinstall`, `verifyHash`, `install-log` без потребителя.
 - Сборка скачивает что-то в Docker/CI слое, что код потом должен использовать.
+- **Новый/изменённый plugin-distributed entry** (`hooks.json` command, `.mcp.json`, `.lsp.json`, `tools/**` запускаемый хуком) **импортит non-`node:` non-relative пакет** → прогнать deps-absent.
 
 ## Что требовать
 
@@ -24,6 +47,7 @@ dev-pomogator месяцами **скачивал** Marksman LSP, верифиц
 - [ ] Есть e2e, который спавнит/вызывает РЕАЛЬНЫЙ артефакт (не стаб/мок) и проверяет реальный ответ?
 - [ ] e2e в Docker: отсутствие артефакта внутри Docker → тест **падает**, а не пропускается молча?
 - [ ] Если потребителя пока нет — задача помечена явно (`installed, consumer pending`), а фича НЕ названа готовой.
+- [ ] **(plugin-distributed код)** артефакт **запущен со спрятанным `node_modules`** (реальным лаунчером) и НЕ упал — либо bundled, либо lazy-import+fail-open, либо node-builtins-only. `grep` импортов ≠ доказательство.
 
 ## Hard-OUT (НЕ применять — иначе over-generalization, см. [[feedback_single-incident-rules-over-generalize]])
 
