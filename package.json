@@ -37,6 +37,8 @@
   "scripts": {
     "lint": "eslint .claude tools",
     "build:mcp": "esbuild tools/spec-mcp-server/server.ts --bundle --platform=node --format=esm --target=node20 --banner:js=\"import { createRequire as __cr } from 'module'; const require = __cr(import.meta.url);\" --outfile=tools/spec-mcp-server/server.bundle.mjs",
+    "build:gate": "esbuild tools/spec-graph/test_quality_gate_stop.ts --bundle --platform=node --format=esm --target=node20 --banner:js=\"import { createRequire as __cr } from 'module'; const require = __cr(import.meta.url);\" --outfile=tools/spec-graph/test_quality_gate_stop.bundle.mjs",
+    "build:bundles": "npm run build:mcp && npm run build:gate",
     "check:status-drift": "tsx scripts/check-status-drift.mts",
     "test": "bash scripts/docker-test.sh",
     "test:bdd": "node --import tsx node_modules/@cucumber/cucumber/bin/cucumber.js",

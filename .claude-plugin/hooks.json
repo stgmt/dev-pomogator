@@ -116,7 +116,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PLUGIN_ROOT || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/spec-graph/test_quality_gate_stop.ts\"",
+            "command": "node -e \"const cp=require('child_process'),p=require('path');const b=p.join(process.env.CLAUDE_PLUGIN_ROOT||process.cwd(),'tools','spec-graph','test_quality_gate_stop.bundle.mjs');const c=cp.spawn(process.execPath,[b],{stdio:'inherit'});c.on('exit',x=>process.exit(x??0));c.on('error',()=>process.exit(0));\"",
             "timeout": 30
           }
         ]

@@ -83,3 +83,29 @@ describe('test-quality Stop-gate (real hook process)', () => {
     expect(fs.readFileSync(log, 'utf8')).toMatch(/TEST_QUALITY_GATE_SKIP/);
   });
 });
+
+// The gate ships to plugin users as a self-contained esbuild bundle (the raw .ts crashes
+// on @cucumber/gherkin with no node_modules). These guard the shipped artifact.
+describe('test-quality gate distribution bundle', () => {
+  const bundle = path.join(here, '..', 'test_quality_gate_stop.bundle.mjs');
+  const hooksJson = path.join(repoRoot, '.claude-plugin', 'hooks.json');
+
+  it('committed bundle exists and is non-trivial (gherkin+builder inlined)', () => {
+    expect(fs.existsSync(bundle), 'run `npm run build:gate` and commit the bundle').toBe(true);
+    expect(fs.statSync(bundle).size).toBeGreaterThan(100_000);
+  });
+
+  it('bundle carries the gate logic (stale-bundle guard — re-run build:gate after edits)', () => {
+    const t = fs.readFileSync(bundle, 'utf8');
+    for (const marker of ['TASK_UNTESTED', 'TASK_TEST_QUALITY', 'skip-test-quality', 'test-quality-escapes']) {
+      expect(t, `bundle missing '${marker}' — run \`npm run build:gate\``).toContain(marker);
+    }
+  });
+
+  it('hooks.json launches the bundle, not the raw .ts (which needs gherkin/node_modules)', () => {
+    const h = fs.readFileSync(hooksJson, 'utf8');
+    expect(h).toContain('test_quality_gate_stop.bundle.mjs');
+    expect(h).not.toContain('test_quality_gate_stop.ts');
+    expect(h).toContain('CLAUDE_PLUGIN_ROOT');
+  });
+});
