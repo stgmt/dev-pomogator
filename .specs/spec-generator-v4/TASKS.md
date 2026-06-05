@@ -987,14 +987,14 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
 > tool run (claim-evidence-gate discipline), not a checkbox. WS-A first — the v4
 > premise ("no fake DONE") is hollow until the test-quality hole is closed.
 
-- [ ] WS-A: test-quality gate — block DONE on weak / fake-positive -- @feature35 — id: ws-a-honesty-gate — Status: TODO | Est: 480m
+- [x] WS-A: test-quality gate — block DONE on weak / fake-positive -- @feature35 — id: ws-a-honesty-gate — Status: DONE | Est: 480m
   _Requirements: [FR-35a](FR.md#fr-35), [FR-35b](FR.md#fr-35), [FR-35c](FR.md#fr-35)_
   **Done When:**
-  - [ ] `coverage.ts` honesty derivation consumes a test-quality verdict: WEAK/FAKE-POSITIVE-RISK caps `verified_status` + emits `TASK_TEST_QUALITY` (SPECGEN004_85); STRONG stays DONE (SPECGEN004_86)
-  - [ ] `test-quality` stage added to `scripts/feature-map.ts` between coverage and honesty-gate (strong-tests + spec-status); `checkFeatureMapDrift` fails without it (SPECGEN004_87)
-  - [ ] pre-DONE Stop-gate enforces it; `[skip-test-quality: <reason>]` escape logged to `.claude/logs/` (SPECGEN004_88)
-  - [ ] `checkConformance` emits a finding for DONE-with-zero-scenario, no longer `[]` (SPECGEN004_89)
-  - [ ] ADVERSARIAL PROOF (live): a planted fake-positive GREEN test is REFUSED DONE
+  - [x] `coverage.ts` honesty derivation consumes a test-quality verdict: WEAK/FAKE-POSITIVE-RISK caps `verified_status` + emits `TASK_TEST_QUALITY` (SPECGEN004_85); STRONG stays DONE (SPECGEN004_86) — commit, fail-open NFR-Reliability-10
+  - [x] `test-quality` stage added to `scripts/feature-map.ts` between coverage and honesty-gate (strong-tests + spec-status); `checkFeatureMapDrift` fails without it (SPECGEN004_87)
+  - [x] pre-DONE Stop-gate `test_quality_gate_stop.ts` enforces it; `[skip-test-quality: <reason ≥8>]` escape logged to `.claude/logs/`; registered in hooks.json (shadow default → flip `TEST_QUALITY_GATE_ENABLED=true` to enforce) (SPECGEN004_88)
+  - [x] `checkConformance` emits `TASK_UNTESTED` for DONE-with-zero-scenario, no longer `[]` (SPECGEN004_89)
+  - [x] ADVERSARIAL PROOF (live): planted task DONE + GREEN scenario + FAKE-POSITIVE-RISK verdict → verified_status IN_PROGRESS AND Stop-gate decision=block → DONE REFUSED. Cucumber @feature35 5/5; full BDD 88 passed; Docker spec-graph 17 files passed
 
 - [ ] WS-B: status reconciliation — 63 TODO vs reality -- @feature35 — id: ws-b-status-reconcile — Status: TODO | Est: 240m
   _Requirements: [FR-32](FR.md#fr-32)_
