@@ -45,12 +45,17 @@ When(/the plugin hook manifest is loaded/, function (this: HooksWorld) {
 Then(/.* declares the v4 spec hooks .*spec-conformance-guard.*spec-conformance-push.*bash-post-test/, function (
   this: HooksWorld,
 ) {
+  // Match each hook by its tool-directory name only — stable across BOTH the form changes:
+  // (a) extension: raw `.ts` (bootstrap launcher) vs bundled `.bundle.mjs` (WS-E deps-safe);
+  // (b) path syntax: slash path `tools/x/x.ts` vs join-array `'tools','x','x.bundle.mjs'`.
+  // The dir name appears verbatim in every form, so this proves the hook is declared without
+  // re-breaking each time the launcher is rewritten.
   for (const target of [
-    'spec-conformance-guard/spec-conformance-guard.ts',
-    'spec-conformance-push/spec-conformance-push.ts',
-    'bash-post-test/ingest.ts',
+    'spec-conformance-guard',
+    'spec-conformance-push',
+    'bash-post-test',
   ]) {
-    assert.ok(this.manifestJson!.includes(target), `hooks.json must declare ${target}`);
+    assert.ok(this.manifestJson!.includes(target), `hooks.json must declare the ${target} hook`);
   }
 });
 
