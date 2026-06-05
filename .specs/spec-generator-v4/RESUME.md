@@ -57,9 +57,23 @@ The spec now DESCRIBES the fix; the implementation is Phase 13 + Phase 14 in `TA
 - SPECGEN004_97 step defs (`tests/step_definitions/feature37_smart_verdict.ts`) — drive the REAL
   `runSpecVerdict()` on a temp fixture. Suite: 101 scenarios, 86 passed / 0 failed (undefined 12→11).
 
+### Done this leg #2 (P13-1, 2026-06-05 — code+local-verify; Docker pending)
+- Composite keys live: `qualifySlice()` in `builder.ts` + the SAME qualification in `incremental.ts`
+  (watcher patches can't re-insert bare ids). Edges / `Task.refs` / `AC.parentFr` qualified; anchors
+  BARE (FR-36b, Marksman untouched); outside-`.specs/` files keep bare ids.
+- `specOf()` → full dir path (`.specs/backlog/<name>/` were ONE cell → 60 residual collisions).
+- Numbers: **FR 47 → 574**; raw pre-map **0 collisions** (reproducible:
+  `node --import tsx tools/spec-graph/collision-probe.ts`, exit 0 ⇔ clean); build 277-305ms (≤2s
+  budget); cucumber **0 failed / 89 passed** (+3: _07 real linkage, _08, _62); vitest spec-graph +
+  spec-mcp-server **180/180**. Leak fixed: get_trace(v4:FR-36) больше не тянет pomogator-doctor AC-36.
+- **NOT closed:** full clean-HEAD Docker suite — этой машине docker недоступен; подтвердить на CI/другой
+  машине, потом закрыть P13-1 чекбокс.
+
 ### Next steps, in order
-1. **Phase 13** (FR-36) — composite key in `builder.ts` (de-collides ALL 47 specs at once) → edges +
-   `@featureN` tested-by → tools accept `slug:id` → update bare-id-pinning tests. Each phase suite-green.
+1. **Phase 13 остаток** — P13-2 (edges → composite на обоих концах В ПАРСЕРАХ + @featureN tested-by
+   слой + убрать tag-scan workaround из get_trace), P13-3 (tools принимают slug:id / {spec, node_id};
+   bare-id → candidate list; rebuild server.bundle.mjs), P13-4 (skills update + dogfood archive).
+   NB: builder-side edge qualification из P13-1 — временный мост; P13-2 переносит его в парсеры.
 2. **Phase 14 P14-2/3/4** — traceability-completeness check; make the smart verdict authoritative
    (compose conformance + get_coverage + FR-8 semantic onto `runSpecVerdict()`); skill guard
    (`spec-status`/dogfood/triage may not print "valid" off validate-spec) + a `.claude/rules/` guard.
