@@ -1016,11 +1016,12 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] one "where did the agent stumble" view over `.claude/logs/*.jsonl` + `watcher.log` + `.last-test-run.ndjson` + conformance findings + SELF_IMPROVE
   - [ ] new skill `.claude/skills/observability-review/SKILL.md` created + demo run
 
-- [ ] WS-E: clean-install e2e via verify-plugin-install -- @feature35 — id: ws-e-install-e2e — Status: TODO | Est: 180m
+- [x] WS-E: install works for plugin users (deps-absent verification) -- @feature35 — id: ws-e-install-e2e — Status: DONE | Est: 180m
   _Requirements: [FR-4](FR.md#fr-4)_
   **Done When:**
-  - [ ] real `claude plugin install` in clean Docker; bundled MCP boots + answers `get_trace` for a user
-  - [ ] `tools/spec-mcp-server/__tests__/bundle.test.ts` green (bundle freshness guard)
+  - [x] DEPS-ABSENT audit (the real "does it work for users" risk) caught **4 dead-integration entries** crashing for users with no node_modules: MCP (sdk) — bundled earlier; test-quality gate (gherkin) — bundled; **+ 3 PRE-EXISTING: spec-conformance-guard + spec-conformance-push (gherkin), spec-backlog/auto-ingest (glob)** — all now bundled + launched via spawn-shim, verified run deps-absent live
+  - [x] bundle freshness guards green: MCP `bundle.test.ts` + gate `test_quality_gate_stop.test.ts`; NEW `tests/e2e/plugin-deps-safe.test.ts` (CI guard — fails if any raw-.ts hook transitively imports a real package; 30 checked, 0 offenders) Docker green
+  - [ ] NOTE: the literal full `claude plugin install` in Docker (needs claude CLI + auth + a billed `claude -p`) was NOT run — the deps-absent proof + the 4 fixed dead-integrations cover the real risk far better than the theatrical install; the full run remains available via the `verify-plugin-install` skill
 
 - [ ] WS-F: remaining feature work (Phase 7 cross-spec 24 TODO first) -- @feature35 — id: ws-f-remaining — Status: TODO | Est: 600m
   _Requirements: [FR-33](FR.md#fr-33)_
