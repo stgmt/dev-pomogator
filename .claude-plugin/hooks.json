@@ -126,7 +126,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PLUGIN_ROOT || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/spec-backlog/auto-ingest-hook.ts\"",
+            "command": "node -e \"const cp=require('child_process'),p=require('path');const b=p.join(process.env.CLAUDE_PLUGIN_ROOT||process.cwd(),'tools','spec-backlog','auto-ingest-hook.bundle.mjs');const c=cp.spawn(process.execPath,[b],{stdio:'inherit'});c.on('exit',x=>process.exit(x??0));c.on('error',()=>process.exit(0));\"",
             "timeout": 60
           }
         ]
@@ -245,7 +245,7 @@
           },
           {
             "type": "command",
-            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PLUGIN_ROOT || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/spec-conformance-guard/spec-conformance-guard.ts\"",
+            "command": "node -e \"const cp=require('child_process'),p=require('path');const b=p.join(process.env.CLAUDE_PLUGIN_ROOT||process.cwd(),'tools','spec-conformance-guard','spec-conformance-guard.bundle.mjs');const c=cp.spawn(process.execPath,[b],{stdio:'inherit'});c.on('exit',x=>process.exit(x??0));c.on('error',()=>process.exit(0));\"",
             "timeout": 30
           }
         ]
@@ -324,7 +324,7 @@
           },
           {
             "type": "command",
-            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PLUGIN_ROOT || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/spec-conformance-push/spec-conformance-push.ts\"",
+            "command": "node -e \"const cp=require('child_process'),p=require('path');const b=p.join(process.env.CLAUDE_PLUGIN_ROOT||process.cwd(),'tools','spec-conformance-push','spec-conformance-push.bundle.mjs');const c=cp.spawn(process.execPath,[b],{stdio:'inherit'});c.on('exit',x=>process.exit(x??0));c.on('error',()=>process.exit(0));\"",
             "timeout": 30
           },
           {
