@@ -698,3 +698,45 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When checkConformance runs
     Then it emits a finding naming the task
     And the returned finding set is not empty
+
+  @feature36
+  Scenario: SPECGEN004_90 two specs defining the same bare id produce two distinct nodes
+    Given two specs that each define the bare id FR-2
+    When the builder assembles the graph with composite keys
+    Then the graph holds a node keyed slug-A:FR-2 and a node keyed slug-B:FR-2
+    And neither node is collision-dropped
+
+  @feature36
+  Scenario: SPECGEN004_91 an intra-file anchor stays bare and file-local
+    Given a markdown link FR.md#fr-2 inside one spec
+    When the anchor index resolves it
+    Then the anchor alias is the bare form fr-2 not the composite key
+    And Marksman and anchor-fix are unaffected
+
+  @feature36
+  Scenario: SPECGEN004_92 get_trace returns scenarios via real edges
+    Given a covers and tested-by edge built with composite keys on both ends
+    And a same-spec featureN to FR-N tested-by edge
+    When get_trace runs on an FR that has BDD scenarios
+    Then it returns those scenarios via real graph edges
+    And it no longer relies on the tag-scan workaround
+
+  @feature36
+  Scenario: SPECGEN004_93 a colliding bare id returns the candidate list
+    Given a bare id FR-2 that collides across specs
+    When a tool is called with that bare id
+    Then it returns the candidate list of slug:id entries
+    And it does not return one arbitrary node
+
+  @feature36
+  Scenario: SPECGEN004_94 a qualified id resolves the exact node
+    Given a graph keyed by composite ids
+    When a tool is called with slug:FR-2 or with spec and node_id
+    Then it resolves the exact node for that spec
+
+  @feature36
+  Scenario: SPECGEN004_95 the dogfood harness shows zero collisions after migration
+    Given the migration phase has completed
+    When the dogfood harness dumps the raw pre-map nodes
+    Then there are zero id collisions
+    And the FR-node count is about 470 not 47

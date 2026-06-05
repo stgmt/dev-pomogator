@@ -211,3 +211,13 @@ Every soft-tier hook SHALL be wrapped in `main().catch(() => exit(0))` so an int
 
 **Backward-compat for `.progress.json::version` reads**
 `readProgressState` SHALL continue to ignore unknown fields so that v4's `version: 4` bump does not break v3-era readers still loaded in target projects mid-migration.
+
+### NFR-Reliability-11
+
+**Spec-qualified-id migration is phased and never ships a red suite (FR-36)**
+The node-identity refactor (FR-36) SHALL be applied in phases that each leave the full clean-HEAD Docker suite green, verified clean-vs-clean per the `suite-failure-triage` discipline — the suite was previously "green" on a broken graph precisely because tests asserted bare ids that happened to resolve, so test churn (every bare-id assertion → qualified form) SHALL be updated in lockstep within the phase that changes the identity. Bare-id tool lookups SHALL degrade to a candidate list (soft back-compat), never a hard break, so agent callers that know only `FR-2` keep working. The `server.bundle.mjs` SHALL be rebuilt after any `tools.ts` change so plugin users get the fix.
+
+### NFR-Performance-9
+
+**De-collision SHALL NOT regress graph build time (FR-36)**
+After FR-36 the graph holds ≈470 FR nodes instead of 47 (collision-dropped); the full-corpus build (`buildGraphFromCwd` over all `.specs/`) SHALL stay within the existing MCP cold-start budget (NFR-Performance bounds) — the extra nodes are ones already parsed-then-dropped, so the work is bounded by parse cost already paid, not new I/O.

@@ -1034,6 +1034,44 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] no `(Green)` header left over a phase with real TODO — phases 2–6 relabelled `(In Progress — TODO remain)`, phase 7 `(TODO — not started)`; only Phase 1 keeps `(Green)` (genuinely all-DONE)
   - [ ] **OPEN — genuinely-pending feature build (NOT faked DONE):** ~43 real tasks across Phase 2 (10 MCP tools + marksman LSP + watcher + lock + extension.json), Phase 3 (claude-cli-bridge, multi-lang), Phase 4 (SQLite + spec-check-log + codespaces), Phase 5 (tag-predictor + interactive-prompt), Phase 6 (arch-research skill), **Phase 7 cross-spec (24 tasks)**. This is the multi-wave build (plan `~/.claude/plans/fizzy-percolating-turing.md` = Wave W1 "Finish Phase 2" is the entry point). Marking this `[x]` without doing the work would be the exact fake-DONE WS-A was built to block
 
+## Phase 13 — Unified spec-graph via spec-qualified node ids (FR-36)
+
+> Architectural root-cause fix surfaced by the dogfood dataset (`audit-reports/spec-mcp-dogfood-dataset.md`):
+> 46 specs define `FR-2` but only 47 FR nodes survive (collision-drop ≈90%). Design +
+> id-scheme deep-dive in `audit-reports/unified-spec-graph-design.md` (domain-prefix beats global N+1).
+> Phased — each task leaves the full clean-HEAD Docker suite GREEN (clean-vs-clean, `suite-failure-triage`),
+> and each Done-When binds to a live dogfood/suite run, not a checkbox. Scope: ALL 47 specs at once
+> (the collision is global; a half-migration is worse). Anchors stay BARE (FR-36b) — do NOT qualify them.
+
+- [ ] P13-1: composite node key in the builder only -- @feature36 — id: p13-composite-key — Status: TODO | Est: 240m
+  _Requirements: [FR-36a](FR.md#fr-36)_
+  **Done When:**
+  - [ ] `tools/spec-graph/builder.ts` keys every node by `<slug>:<localId>` (slug derived from the `.specs/<slug>/` path), node carries a `spec` field; parsers keep emitting bare `localId` (smallest de-collision diff) (SPECGEN004_90)
+  - [ ] dogfood (`node --import tsx tools/spec-mcp-server/dogfood-dataset.ts`) shows FR-node count ≈470 (was 47) and a raw pre-map node dump with 0 collisions (SPECGEN004_95)
+  - [ ] full-corpus `buildGraphFromCwd` build time stays within the MCP cold-start budget despite ≈470 nodes — measured before/after (NFR-Performance-9)
+  - [ ] full clean-HEAD Docker suite GREEN; any test pinning a bare node id updated to the qualified form in THIS task (NFR-Reliability-11)
+
+- [ ] P13-2: edges use composite keys + build the @featureN tested-by layer -- @feature36 — id: p13-edges-featureN — Status: TODO | Est: 240m
+  _Requirements: [FR-36c](FR.md#fr-36)_
+  **Done When:**
+  - [ ] `parsers/md.ts` (covers) + `parsers/gherkin.ts` (tested-by) reference composite keys on both ends; a same-spec `@featureN`↔`FR-N` tested-by edge is built (not only `@FR-N`) (SPECGEN004_92)
+  - [ ] `get_trace(FR)` returns scenarios via REAL edges for FRs that have BDD scenarios; the tag-scan workaround in `tools/spec-mcp-server/tools.ts` get_trace is removed (SPECGEN004_92)
+  - [ ] dogfood confirms get_trace non-empty via edges; full clean-HEAD Docker suite GREEN (NFR-Reliability-11)
+
+- [ ] P13-3: tools accept slug:id / {spec, node_id}; bare-id → candidate list -- @feature36 — id: p13-tool-api — Status: TODO | Est: 180m
+  _Requirements: [FR-36d](FR.md#fr-36)_
+  **Done When:**
+  - [ ] `tools/spec-mcp-server/tools.ts` resolves `slug:FR-2` / `{spec, node_id}` to the exact node (SPECGEN004_94); a colliding bare id returns the candidate list of `slug:id`, not an arbitrary node (SPECGEN004_93)
+  - [ ] `server.bundle.mjs` rebuilt (`npm run build:mcp`) so plugin users get the fix; bundle-freshness guard GREEN (NFR-Reliability-11)
+  - [ ] anchors verified still bare/file-local — Marksman + anchor-fix unaffected (SPECGEN004_91, FR-36b)
+
+- [ ] P13-4: update bare-id-pinning tests to the qualified form + verify -- @feature36 — id: p13-test-churn — Status: TODO | Est: 180m
+  _Requirements: [FR-36e](FR.md#fr-36)_
+  **Done When:**
+  - [ ] every test asserting a bare node id (`get_node("FR-2")`, hooks-stdin, spec-graph-query skill examples) updated to the qualified form / candidate-list expectation (AC-36.6)
+  - [ ] `spec-graph-query` skill + `spec-mcp-dogfood`/`runtime-dogfood` skills updated for the new node_id semantics; bare→candidates fallback documented
+  - [ ] FINAL: dogfood before/after diff archived in `audit-reports/`; full clean-HEAD Docker suite 0 failures; honesty-gate consistent
+
 ## Refactor & Polish (final)
 
 - [ ] Refactor + dedup across phases — id: final-refactor — Status: TODO | Est: 480m

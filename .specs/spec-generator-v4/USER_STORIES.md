@@ -520,3 +520,27 @@ Then MCP server auto-restarts via postStart hook + reuses in-memory rebuild from
 Given Codespaces persistent volume (`/workspaces/`) is used (not bind-mount)
 When chokidar runs touch test
 Then native FS events work (no polling fallback needed); test passes within 500ms
+
+---
+
+### User Story 21: Unified spec-graph via spec-qualified node ids (Priority: P1)
+
+As an AI agent (and the MCP tools it drives), I want all specs to form ONE graph where every node id is unique across specs, so that `get_trace`/`get_node`/coverage resolve the RIGHT node instead of a collision-dropped guess, and "specs as one graph" is true rather than a file-path workaround.
+
+**Why:** The graph keys nodes by the bare local id (`FR-2`), so across 47 specs they collide — the node Map keeps the last writer and silently drops ≈90% (46 specs define `FR-2`, only 47 FR nodes survive instead of ≈470). Every edge bug (`get_trace` empty for all 47 FRs, `covers` ×52 on one id) is a symptom. It only "works" because coverage scopes by file path, never trusting a bare id. This is the architectural root cause surfaced by the dogfood dataset; until fixed, cross-spec queries are impossible and the graph is silently lossy.
+
+**Independent Test:** Run the dogfood harness (`tools/spec-mcp-server/dogfood-dataset.ts`) before and after the migration → FR-node count jumps 47→≈470, a raw pre-map node dump shows 0 id collisions, and `get_trace` returns scenarios via real edges for every FR that has BDD scenarios. Resolve `slug:FR-2` → exact node; resolve bare `FR-2` → candidate list, not an arbitrary node.
+
+**Acceptance Scenarios:**
+
+Given two specs that each define `FR-2`
+When the builder assembles the graph with composite keys
+Then it holds two distinct nodes `slug-A:FR-2` and `slug-B:FR-2`, neither collision-dropped
+
+Given an intra-file markdown link `FR.md#fr-2`
+When the anchor index resolves it
+Then the anchor alias stays the bare file-local `fr-2` (Marksman/anchor-fix unaffected)
+
+Given a colliding bare id `FR-2`
+When a tool is called with it
+Then it returns the candidate list of `slug:id` entries rather than one arbitrary node

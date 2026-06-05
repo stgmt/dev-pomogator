@@ -499,3 +499,39 @@ WHEN a Stop / pre-DONE hook runs AND a session-touched task's test is `WEAK` / `
 **Требование:** [FR-35c](FR.md#fr-35)
 
 WHEN `checkConformance` runs on a task marked `DONE` with zero linked scenarios THEN it SHALL emit a finding (NOT return `[]`), so a no-test `DONE` is visible.
+
+## AC-36.1
+
+**Требование:** [FR-36a](FR.md#fr-36)
+
+WHEN the builder assembles the graph AND two specs each define the bare id `FR-2` THEN it SHALL produce two distinct nodes keyed `<slug-A>:FR-2` and `<slug-B>:FR-2` (each carrying its `spec` field), so no node is collision-dropped (FR-node count ≈470, not 47).
+
+## AC-36.2
+
+**Требование:** [FR-36b](FR.md#fr-36)
+
+WHEN an intra-file markdown link `[x](FR.md#fr-2)` is resolved THEN the anchor alias SHALL remain the bare file-local form `fr-2` (NOT the composite key), so Marksman, `anchor-fix`, and existing links remain unaffected.
+
+## AC-36.3
+
+**Требование:** [FR-36c](FR.md#fr-36)
+
+WHEN a `covers` or `tested-by` edge is constructed THEN both endpoints SHALL use composite keys, AND a same-spec `@featureN`↔`FR-N` `tested-by` edge SHALL be built; WHEN `get_trace(FR)` runs on an FR that has BDD scenarios THEN it SHALL return those scenarios via real graph edges (not the tag-scan workaround).
+
+## AC-36.4
+
+**Требование:** [FR-36d](FR.md#fr-36)
+
+WHEN a tool is called with a bare id that collides across specs THEN it SHALL return the candidate list (each `slug:id`) rather than one arbitrary node; WHEN called with `slug:id` or `{spec, node_id}` THEN it SHALL resolve the exact node.
+
+## AC-36.5
+
+**Требование:** [FR-36e](FR.md#fr-36)
+
+WHEN the dogfood harness runs after a migration phase THEN the raw pre-map node dump SHALL show 0 id collisions, the FR-node count SHALL be ≈470, AND `get_trace` SHALL be non-empty for every FR that has BDD scenarios.
+
+## AC-36.6
+
+**Требование:** [FR-36e](FR.md#fr-36)
+
+WHEN any migration phase completes THEN the full clean-HEAD Docker suite SHALL be green (clean-vs-clean), AND every test pinning a bare id (e.g. `get_node("FR-2")`) SHALL be updated to the qualified form in that same phase.

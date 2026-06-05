@@ -604,6 +604,29 @@ The FR-32 honesty gate derives `verified_status` from per-scenario PASS/FAIL onl
 
 ---
 
+## FR-36
+
+**Unified spec-graph via spec-qualified node ids — specs are ONE graph, not 47 colliding ones**
+
+The graph keys nodes by the BARE local id (`FR-2`, `AC-2.1`). MEASURED this session via the dogfood harness (`tools/spec-mcp-server/dogfood-dataset.ts`): **46 specs each define `FR-2`, yet the graph holds only 47 FR nodes from 6 spec dirs** (≈470 expected) — the node Map keeps the last writer and silently drops ≈90%; `FR-2` resolves to an arbitrary spec (`worktree-setup`). Every edge bug is a symptom: `covers` ×52 piled on one bare id, the FR/AC→Scenario `tested-by` layer orphaned (also because `SPEC_TAG_RE` only matches `@FR-N`, never the real `@featureN` tags), `get_trace` empty for ALL 47 FRs. It "works" today ONLY because `computeCoverage` + the patched `get_trace` scope by **file path**, never trusting a bare id — a workaround, not a fix. System SHALL make every node addressable without collision so specs form one coherent graph.
+
+**FR-36a (composite node key, auto-derived — no domain rules to design):** The graph builder (`tools/spec-graph/builder.ts`) SHALL key every node by the composite `<slug>:<localId>` (e.g. `spec-generator-v4:FR-2`), where `<slug>` is derived MECHANICALLY from the node's `.specs/<slug>/…` file path and `<localId>` stays the human form (`FR-2`, `AC-2.1`, the scenario id) — the author keeps writing `## FR-2` with LOCAL 1..N numbering and never types a prefix. The node SHALL carry an explicit `spec: '<slug>'` field. Two specs defining `FR-2` SHALL therefore produce two distinct nodes (≈470 FR nodes present, none collision-dropped). Separator SHALL be `:` (clean; `/` collides with path/anchor syntax). This finishes a pattern already in the repo — scenarios are ALREADY prefixed (`SPECGEN004_40`, `PLUGIN005_NN`, `CORE024_NN`); only FR/AC were bare and collided.
+
+**FR-36b (anchors stay bare + file-scoped — Marksman untouched):** Markdown anchor aliases SHALL remain the BARE file-local form (`#fr-2`), decoupled from the composite node key. Anchor resolution is WITHIN a file (`[x](FR.md#fr-2)`), there are zero cross-spec markdown links today, so the anchor index SHALL keep per-file bare aliases — Marksman, `anchor-fix`, and all existing intra-file links SHALL be unaffected. (This is the easy mistake to avoid: NODE key = composite, ANCHOR alias = bare.)
+
+**FR-36c (edges use composite keys + build the @featureN tested-by layer):** Edge construction (`parsers/md.ts` `covers`, `parsers/gherkin.ts` `tested-by`) SHALL reference composite keys on BOTH endpoints, AND SHALL build a `tested-by` edge for the same-spec `@featureN`↔`FR-N` convention (not only `@FR-N` tags). After this, `get_trace(FR)` SHALL return its scenarios via REAL graph edges, and the tag-scan workaround in `get_trace` SHALL be removed.
+
+**FR-36d (tool API: qualified internally, soft bare-id back-compat for agents):** The MCP tools (`tools/spec-mcp-server/tools.ts`) SHALL accept either `slug:id` or `{spec, node_id}` and resolve the exact node. When called with a BARE id that collides across specs, a tool SHALL return the CANDIDATE LIST (each `slug:id`) rather than one arbitrary node — soft back-compat, since agents often know only `FR-2`. Internally, edges SHALL always be qualified (hard). The `server.bundle.mjs` SHALL be rebuilt after the tools change.
+
+**FR-36e (phased migration, each phase suite-green, dogfood-verified):** The migration SHALL proceed in phases that each leave the full clean-HEAD Docker suite green (clean-vs-clean): (1) composite key in the builder only; (2) edge endpoints + `@featureN` tested-by edges; (3) tools accept `slug:id`/candidate fallback; (4) update tests pinning a bare id to the qualified form. The `runtime-dogfood`/`spec-mcp-dogfood` harness SHALL verify each phase: FR-node count jumps 47→≈470, `get_trace` non-empty via edges, and a raw pre-map node dump shows 0 id collisions.
+
+**Зависит от:** FR-4 (MCP server + 13 tools), FR-32 (honesty gate / `computeCoverage` — the file-scoped workaround this replaces). Reuses the existing parsers/builder/tool registry — no new infra; this is a refactor of node identity threaded through 21 TS files in `spec-graph` + `spec-mcp-server`. Evidence: `audit-reports/spec-mcp-dogfood-dataset.md` (runtime measurement) + `audit-reports/unified-spec-graph-design.md` (design + id-scheme deep-dive: domain-prefix beats global N+1 on both creation and work sides).
+**Связанные AC:** [AC-36.1](ACCEPTANCE_CRITERIA.md#ac-361), [AC-36.2](ACCEPTANCE_CRITERIA.md#ac-362), [AC-36.3](ACCEPTANCE_CRITERIA.md#ac-363), [AC-36.4](ACCEPTANCE_CRITERIA.md#ac-364), [AC-36.5](ACCEPTANCE_CRITERIA.md#ac-365), [AC-36.6](ACCEPTANCE_CRITERIA.md#ac-366)
+**Use Case:** [UC-2](USE_CASES.md#uc-2)
+**User Story:** US-21
+
+---
+
 ## Out of Scope
 
 ### FR-OUT-1: Real-time spec collaborative editing (CRDT/OT) — OUT OF SCOPE
