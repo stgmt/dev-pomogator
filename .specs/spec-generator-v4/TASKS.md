@@ -18,65 +18,65 @@
 | T1-11 | Incremental rebuild logic -- @feature2 | DONE | graph-builder-impl | Phase 1: Graph builder + parsers (Green) | 180m |
 | T1-12 | Conformance checker (all structural rules) -- @feature13 | DONE | graph-builder-impl | Phase 1: Graph builder + parsers (Green) | 300m |
 | T1-13 | Verify Phase 1 | DONE | conformance-checker | Phase 1: Graph builder + parsers (Green) | 60m |
-| T2-14 | MCP server skeleton -- @feature4 | IN_PROGRESS | conformance-checker | Phase 2: MCP server + hooks (Green) | 180m |
-| T2-15 | Implement get_trace tool (primary) -- @feature4 | DONE | mcp-server-skeleton | Phase 2: MCP server + hooks (Green) | 240m |
-| T2-16 | Implement 10 remaining MCP tools -- @feature4 | TODO | mcp-tool-get-trace | Phase 2: MCP server + hooks (Green) | 480m |
-| T2-17 | PreToolUse HARD hook -- @feature5 | IN_PROGRESS | conformance-checker | Phase 2: MCP server + hooks (Green) | 240m |
-| T2-18 | PostToolUse push hook -- @feature6 | IN_PROGRESS | mcp-server-skeleton | Phase 2: MCP server + hooks (Green) | 300m |
-| T2-19 | bash-post-test-ingest hook -- @feature1 | TODO | mcp-tools-rest | Phase 2: MCP server + hooks (Green) | 180m |
-| T2-20 | Marksman installer postInstall -- @feature7 | TODO | — | Phase 2: MCP server + hooks (Green) | 240m |
-| T2-21 | Marksman LSP bridge -- @feature7 | TODO | mcp-server-skeleton, marksman-installer | Phase 2: MCP server + hooks (Green) | 240m |
-| T2-22 | File watcher with polling fallback -- @feature14 | TODO | mcp-server-skeleton | Phase 2: MCP server + hooks (Green) | 180m |
-| T2-23 | Lock manager with env tracking -- @feature14 | TODO | mcp-server-skeleton | Phase 2: MCP server + hooks (Green) | 120m |
-| T2-24 | Update extension.json | TODO | pretooluse-hard-hook, posttooluse-push-hook, bash-post-test-hook | Phase 2: MCP server + hooks (Green) | 60m |
-| T2-25 | Verify Phase 2 | TODO | extension-json-update | Phase 2: MCP server + hooks (Green) | 120m |
-| T3-26 | Claude CLI bridge -- @feature8 | TODO | mcp-tools-rest | Phase 3: LLM layer + multi-language (Green) | 240m |
-| T3-27 | Semantic drift check -- @feature8 | DONE | claude-cli-bridge | Phase 3: LLM layer + multi-language (Green) | 300m |
-| T3-28 | Multi-language binding extractor -- @feature9 | IN_PROGRESS | ndjson-ingester-impl | Phase 3: LLM layer + multi-language (Green) | 360m |
-| T3-29 | Verify Phase 3 Red→Green -- @feature8 | TODO | semantic-drift-check, multi-lang-extractor | Phase 3: LLM layer + multi-language (Green) | 60m |
-| T4-30 | SQLite index opt-in -- @feature10 | IN_PROGRESS | graph-builder-impl | Phase 4: SQLite + side-channel log + Codespaces (Green) | 360m |
-| T4-31 | SQLite corruption recovery -- @feature10 | TODO | sqlite-index | Phase 4: SQLite + side-channel log + Codespaces (Green) | 180m |
-| T4-32 | Side-channel log JSONL -- @feature15 | DONE | conformance-checker | Phase 4: SQLite + side-channel log + Codespaces (Green) | 180m |
-| T4-33 | spec-check-log CLI -- @feature15 | TODO | spec-check-log | Phase 4: SQLite + side-channel log + Codespaces (Green) | 180m |
-| T4-34 | Codespaces env detector -- @feature16 | TODO | lock-manager-impl | Phase 4: SQLite + side-channel log + Codespaces (Green) | 120m |
-| T4-35 | Devcontainer postStartCommand -- @feature16 | TODO | mcp-server-skeleton | Phase 4: SQLite + side-channel log + Codespaces (Green) | 120m |
-| T4-36 | Verify Phase 4 Red→Green -- @feature10 | TODO | sqlite-index, spec-check-log, codespaces-detector, devcontainer-poststartcommand | Phase 4: SQLite + side-channel log + Codespaces (Green) | 120m |
-| T5-37 | Migration script main -- @feature11 | IN_PROGRESS | conformance-checker | Phase 5: Migration helper v3→v4 (Green) | 300m |
-| T5-38 | Heading converter -- @feature11 | IN_PROGRESS | migrate-script-main | Phase 5: Migration helper v3→v4 (Green) | 180m |
-| T5-39 | Tag predictor -- @feature11 | TODO | migrate-script-main | Phase 5: Migration helper v3→v4 (Green) | 240m |
-| T5-40 | Interactive prompt with 30s timeout -- @feature11 | TODO | migrate-script-main | Phase 5: Migration helper v3→v4 (Green) | 180m |
-| T5-41 | Verify Phase 5 Red→Green -- @feature11 | TODO | interactive-prompt | Phase 5: Migration helper v3→v4 (Green) | 60m |
-| T6-42 | Scaffold new skill -- @feature12 | TODO | — | Phase 6: architecture-research-workflow skill (Green) | 480m |
-| T6-43 | 7 stage templates -- @feature12 | TODO | arch-research-skill-scaffold | Phase 6: architecture-research-workflow skill (Green) | 480m |
-| T6-44 | Stage helper scripts -- @feature12 | TODO | arch-research-templates | Phase 6: architecture-research-workflow skill (Green) | 960m |
-| T6-45 | Shared research base -- @feature12 | TODO | — | Phase 6: architecture-research-workflow skill (Green) | 240m |
-| T6-46 | Enrich research-workflow -- @feature12 | TODO | shared-research-base | Phase 6: architecture-research-workflow skill (Green) | 240m |
-| T6-47 | Create-spec heuristic + recursion guard -- @feature12 | IN_PROGRESS | arch-research-scripts | Phase 6: architecture-research-workflow skill (Green) | 480m |
-| T6-48 | Verify Phase 6 Red→Green dogfood -- @feature12 | TODO | create-spec-heuristic, enrich-research-workflow | Phase 6: architecture-research-workflow skill (Green) | 480m |
-| T7-49 | Scaffold cross-spec-reconcile + cross-spec-resolve skills -- @feature17 @feature | TODO | — | Phase 7: Cross-spec reconciliation (Green) | 480m |
-| T7-50 | Implement mechanical reconcile checks -- @feature17 | TODO | install-cross-spec-skills | Phase 7: Cross-spec reconciliation (Green) | 720m |
-| T7-51 | Implement semantic subagent dispatcher -- @feature17 | TODO | impl-mechanical-checks | Phase 7: Cross-spec reconciliation (Green) | 480m |
-| T7-52 | Implement atomic YAML writer -- @feature17 | TODO | impl-semantic-subagent | Phase 7: Cross-spec reconciliation (Green) | 240m |
-| T7-53 | Implement CRITICAL blocking AskUserQuestion -- @feature17 | TODO | impl-yaml-writer | Phase 7: Cross-spec reconciliation (Green) | 240m |
-| T7-54 | Implement resolve loop end-to-end -- @feature18 | TODO | impl-critical-prompt | Phase 7: Cross-spec reconciliation (Green) | 720m |
-| T7-55 | Implement SARIF 2.1.0 secondary output -- @feature17 | TODO | impl-yaml-writer | Phase 7: Cross-spec reconciliation (Green) | 240m |
-| T7-56 | Implement --dry-run flag -- @feature17 | TODO | impl-sarif-output | Phase 7: Cross-spec reconciliation (Green) | 120m |
-| T7-57 | Implement Coverage Summary Table dashboard -- @feature17 | TODO | impl-yaml-writer | Phase 7: Cross-spec reconciliation (Green) | 120m |
-| T7-58 | Implement architectural decision detection -- @feature17 @feature18 | TODO | impl-semantic-subagent | Phase 7: Cross-spec reconciliation (Green) | 720m |
-| T7-59 | Wire reconcile invocations into create-spec workflow -- @feature17 | TODO | impl-critical-prompt | Phase 7: Cross-spec reconciliation (Green) | 240m |
-| T7-60 | Register skills in extension manifest -- @feature17 @feature18 | TODO | install-cross-spec-skills | Phase 7: Cross-spec reconciliation (Green) | 60m |
-| T7-61 | Create integration test fixture corpus -- @feature17 | TODO | register-skills-in-manifest | Phase 7: Cross-spec reconciliation (Green) | 240m |
-| T7-62 | E2E test reconcile roundtrip -- @feature17 @feature18 | TODO | integration-test-fixture, impl-resolve-loop | Phase 7: Cross-spec reconciliation (Green) | 480m |
-| T7-63 | T-Trans.1 verify FR-19 two-tier hook failure-mode | TODO | — | Phase 7: Cross-spec reconciliation (Green) | 90m |
-| T7-64 | T-Trans.2 verify FR-20 threshold-only summary + on-demand /spec-status | TODO | — | Phase 7: Cross-spec reconciliation (Green) | 60m |
-| T7-65 | T-Trans.3 verify FR-21 spec-status.ts task-table CLI contract | TODO | — | Phase 7: Cross-spec reconciliation (Green) | 60m |
-| T7-66 | T-Trans.4 verify FR-22 version gate for spec-conformance-guard | TODO | — | Phase 7: Cross-spec reconciliation (Green) | 60m |
-| T7-67 | T-Trans.5 verify FR-23 log-file inventory contract | TODO | — | Phase 7: Cross-spec reconciliation (Green) | 30m |
-| T7-68 | T-Trans.6 verify FR-24 meta-guard preservation + extension | TODO | — | Phase 7: Cross-spec reconciliation (Green) | 60m |
-| T7-69 | T-Trans.7 verify FR-25 v3 hooks survival on v4 install | TODO | — | Phase 7: Cross-spec reconciliation (Green) | 90m |
-| T7-70 | T-Trans.8 verify FR-26 LLM-as-judge content boundary | TODO | — | Phase 7: Cross-spec reconciliation (Green) | 60m |
-| T7-71 | T-Trans.9 verify FR-27 Marksman LSP supply-chain sha verification | TODO | — | Phase 7: Cross-spec reconciliation (Green) | 60m |
-| T7-72 | T-Trans.10 verify FR-28 PostToolUse fixed-window throttle | TODO | — | Phase 7: Cross-spec reconciliation (Green) | 45m |
+| T2-14 | MCP server skeleton -- @feature4 | IN_PROGRESS | conformance-checker | Phase 2: MCP server + hooks (In Progress — TODO remain) | 180m |
+| T2-15 | Implement get_trace tool (primary) -- @feature4 | DONE | mcp-server-skeleton | Phase 2: MCP server + hooks (In Progress — TODO remain) | 240m |
+| T2-16 | Implement 10 remaining MCP tools -- @feature4 | TODO | mcp-tool-get-trace | Phase 2: MCP server + hooks (In Progress — TODO remain) | 480m |
+| T2-17 | PreToolUse HARD hook -- @feature5 | IN_PROGRESS | conformance-checker | Phase 2: MCP server + hooks (In Progress — TODO remain) | 240m |
+| T2-18 | PostToolUse push hook -- @feature6 | IN_PROGRESS | mcp-server-skeleton | Phase 2: MCP server + hooks (In Progress — TODO remain) | 300m |
+| T2-19 | bash-post-test-ingest hook -- @feature1 | TODO | mcp-tools-rest | Phase 2: MCP server + hooks (In Progress — TODO remain) | 180m |
+| T2-20 | Marksman installer postInstall -- @feature7 | TODO | — | Phase 2: MCP server + hooks (In Progress — TODO remain) | 240m |
+| T2-21 | Marksman LSP bridge -- @feature7 | TODO | mcp-server-skeleton, marksman-installer | Phase 2: MCP server + hooks (In Progress — TODO remain) | 240m |
+| T2-22 | File watcher with polling fallback -- @feature14 | TODO | mcp-server-skeleton | Phase 2: MCP server + hooks (In Progress — TODO remain) | 180m |
+| T2-23 | Lock manager with env tracking -- @feature14 | TODO | mcp-server-skeleton | Phase 2: MCP server + hooks (In Progress — TODO remain) | 120m |
+| T2-24 | Update extension.json | TODO | pretooluse-hard-hook, posttooluse-push-hook, bash-post-test-hook | Phase 2: MCP server + hooks (In Progress — TODO remain) | 60m |
+| T2-25 | Verify Phase 2 | TODO | extension-json-update | Phase 2: MCP server + hooks (In Progress — TODO remain) | 120m |
+| T3-26 | Claude CLI bridge -- @feature8 | TODO | mcp-tools-rest | Phase 3: LLM layer + multi-language (In Progress — TODO remain) | 240m |
+| T3-27 | Semantic drift check -- @feature8 | DONE | claude-cli-bridge | Phase 3: LLM layer + multi-language (In Progress — TODO remain) | 300m |
+| T3-28 | Multi-language binding extractor -- @feature9 | IN_PROGRESS | ndjson-ingester-impl | Phase 3: LLM layer + multi-language (In Progress — TODO remain) | 360m |
+| T3-29 | Verify Phase 3 Red→Green -- @feature8 | TODO | semantic-drift-check, multi-lang-extractor | Phase 3: LLM layer + multi-language (In Progress — TODO remain) | 60m |
+| T4-30 | SQLite index opt-in -- @feature10 | IN_PROGRESS | graph-builder-impl | Phase 4: SQLite + side-channel log + Codespaces (In Progress — TODO remain) | 360m |
+| T4-31 | SQLite corruption recovery -- @feature10 | TODO | sqlite-index | Phase 4: SQLite + side-channel log + Codespaces (In Progress — TODO remain) | 180m |
+| T4-32 | Side-channel log JSONL -- @feature15 | DONE | conformance-checker | Phase 4: SQLite + side-channel log + Codespaces (In Progress — TODO remain) | 180m |
+| T4-33 | spec-check-log CLI -- @feature15 | TODO | spec-check-log | Phase 4: SQLite + side-channel log + Codespaces (In Progress — TODO remain) | 180m |
+| T4-34 | Codespaces env detector -- @feature16 | TODO | lock-manager-impl | Phase 4: SQLite + side-channel log + Codespaces (In Progress — TODO remain) | 120m |
+| T4-35 | Devcontainer postStartCommand -- @feature16 | TODO | mcp-server-skeleton | Phase 4: SQLite + side-channel log + Codespaces (In Progress — TODO remain) | 120m |
+| T4-36 | Verify Phase 4 Red→Green -- @feature10 | TODO | sqlite-index, spec-check-log, codespaces-detector, devcontainer-poststartcommand | Phase 4: SQLite + side-channel log + Codespaces (In Progress — TODO remain) | 120m |
+| T5-37 | Migration script main -- @feature11 | IN_PROGRESS | conformance-checker | Phase 5: Migration helper v3→v4 (In Progress — TODO remain) | 300m |
+| T5-38 | Heading converter -- @feature11 | IN_PROGRESS | migrate-script-main | Phase 5: Migration helper v3→v4 (In Progress — TODO remain) | 180m |
+| T5-39 | Tag predictor -- @feature11 | TODO | migrate-script-main | Phase 5: Migration helper v3→v4 (In Progress — TODO remain) | 240m |
+| T5-40 | Interactive prompt with 30s timeout -- @feature11 | TODO | migrate-script-main | Phase 5: Migration helper v3→v4 (In Progress — TODO remain) | 180m |
+| T5-41 | Verify Phase 5 Red→Green -- @feature11 | TODO | interactive-prompt | Phase 5: Migration helper v3→v4 (In Progress — TODO remain) | 60m |
+| T6-42 | Scaffold new skill -- @feature12 | TODO | — | Phase 6: architecture-research-workflow skill (In Progress — TODO remain) | 480m |
+| T6-43 | 7 stage templates -- @feature12 | TODO | arch-research-skill-scaffold | Phase 6: architecture-research-workflow skill (In Progress — TODO remain) | 480m |
+| T6-44 | Stage helper scripts -- @feature12 | TODO | arch-research-templates | Phase 6: architecture-research-workflow skill (In Progress — TODO remain) | 960m |
+| T6-45 | Shared research base -- @feature12 | TODO | — | Phase 6: architecture-research-workflow skill (In Progress — TODO remain) | 240m |
+| T6-46 | Enrich research-workflow -- @feature12 | TODO | shared-research-base | Phase 6: architecture-research-workflow skill (In Progress — TODO remain) | 240m |
+| T6-47 | Create-spec heuristic + recursion guard -- @feature12 | IN_PROGRESS | arch-research-scripts | Phase 6: architecture-research-workflow skill (In Progress — TODO remain) | 480m |
+| T6-48 | Verify Phase 6 Red→Green dogfood -- @feature12 | TODO | create-spec-heuristic, enrich-research-workflow | Phase 6: architecture-research-workflow skill (In Progress — TODO remain) | 480m |
+| T7-49 | Scaffold cross-spec-reconcile + cross-spec-resolve skills -- @feature17 @feature | TODO | — | Phase 7: Cross-spec reconciliation (TODO — not started) | 480m |
+| T7-50 | Implement mechanical reconcile checks -- @feature17 | TODO | install-cross-spec-skills | Phase 7: Cross-spec reconciliation (TODO — not started) | 720m |
+| T7-51 | Implement semantic subagent dispatcher -- @feature17 | TODO | impl-mechanical-checks | Phase 7: Cross-spec reconciliation (TODO — not started) | 480m |
+| T7-52 | Implement atomic YAML writer -- @feature17 | TODO | impl-semantic-subagent | Phase 7: Cross-spec reconciliation (TODO — not started) | 240m |
+| T7-53 | Implement CRITICAL blocking AskUserQuestion -- @feature17 | TODO | impl-yaml-writer | Phase 7: Cross-spec reconciliation (TODO — not started) | 240m |
+| T7-54 | Implement resolve loop end-to-end -- @feature18 | TODO | impl-critical-prompt | Phase 7: Cross-spec reconciliation (TODO — not started) | 720m |
+| T7-55 | Implement SARIF 2.1.0 secondary output -- @feature17 | TODO | impl-yaml-writer | Phase 7: Cross-spec reconciliation (TODO — not started) | 240m |
+| T7-56 | Implement --dry-run flag -- @feature17 | TODO | impl-sarif-output | Phase 7: Cross-spec reconciliation (TODO — not started) | 120m |
+| T7-57 | Implement Coverage Summary Table dashboard -- @feature17 | TODO | impl-yaml-writer | Phase 7: Cross-spec reconciliation (TODO — not started) | 120m |
+| T7-58 | Implement architectural decision detection -- @feature17 @feature18 | TODO | impl-semantic-subagent | Phase 7: Cross-spec reconciliation (TODO — not started) | 720m |
+| T7-59 | Wire reconcile invocations into create-spec workflow -- @feature17 | TODO | impl-critical-prompt | Phase 7: Cross-spec reconciliation (TODO — not started) | 240m |
+| T7-60 | Register skills in extension manifest -- @feature17 @feature18 | TODO | install-cross-spec-skills | Phase 7: Cross-spec reconciliation (TODO — not started) | 60m |
+| T7-61 | Create integration test fixture corpus -- @feature17 | TODO | register-skills-in-manifest | Phase 7: Cross-spec reconciliation (TODO — not started) | 240m |
+| T7-62 | E2E test reconcile roundtrip -- @feature17 @feature18 | TODO | integration-test-fixture, impl-resolve-loop | Phase 7: Cross-spec reconciliation (TODO — not started) | 480m |
+| T7-63 | T-Trans.1 verify FR-19 two-tier hook failure-mode | TODO | — | Phase 7: Cross-spec reconciliation (TODO — not started) | 90m |
+| T7-64 | T-Trans.2 verify FR-20 threshold-only summary + on-demand /spec-status | TODO | — | Phase 7: Cross-spec reconciliation (TODO — not started) | 60m |
+| T7-65 | T-Trans.3 verify FR-21 spec-status.ts task-table CLI contract | TODO | — | Phase 7: Cross-spec reconciliation (TODO — not started) | 60m |
+| T7-66 | T-Trans.4 verify FR-22 version gate for spec-conformance-guard | TODO | — | Phase 7: Cross-spec reconciliation (TODO — not started) | 60m |
+| T7-67 | T-Trans.5 verify FR-23 log-file inventory contract | TODO | — | Phase 7: Cross-spec reconciliation (TODO — not started) | 30m |
+| T7-68 | T-Trans.6 verify FR-24 meta-guard preservation + extension | TODO | — | Phase 7: Cross-spec reconciliation (TODO — not started) | 60m |
+| T7-69 | T-Trans.7 verify FR-25 v3 hooks survival on v4 install | TODO | — | Phase 7: Cross-spec reconciliation (TODO — not started) | 90m |
+| T7-70 | T-Trans.8 verify FR-26 LLM-as-judge content boundary | TODO | — | Phase 7: Cross-spec reconciliation (TODO — not started) | 60m |
+| T7-71 | T-Trans.9 verify FR-27 Marksman LSP supply-chain sha verification | TODO | — | Phase 7: Cross-spec reconciliation (TODO — not started) | 60m |
+| T7-72 | T-Trans.10 verify FR-28 PostToolUse fixed-window throttle | TODO | — | Phase 7: Cross-spec reconciliation (TODO — not started) | 45m |
 | T8-73 | T-Trans.11 Wire `implements` edges + `File` nodes in SpecGraph builder | DONE | — | Phase 8 — Gap-close (FR-29..FR-31) | 210m |
 | T8-74 | T-Trans.12 Surface `code_impl[]` array in MCP `get_trace` response | DONE | — | Phase 8 — Gap-close (FR-29..FR-31) | 90m |
 | T8-75 | T-Trans.13 Real multi-language e2e fixtures + integration test | DONE | — | Phase 8 — Gap-close (FR-29..FR-31) | 270m |
@@ -212,7 +212,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   **Done When:**
   - [ ] All Phase 1 scenarios pass (SPECGEN004_03, _04, _05, _06, _29)
 
-## Phase 2: MCP server + hooks (Green)
+## Phase 2: MCP server + hooks (In Progress — TODO remain)
 
 - [ ] MCP server skeleton -- @feature4 — id: mcp-server-skeleton — Status: IN_PROGRESS | Est: 180m
   _depends: conformance-checker_
@@ -316,7 +316,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   **Done When:**
   - [ ] All Phase 2 scenarios pass
 
-## Phase 3: LLM layer + multi-language (Green)
+## Phase 3: LLM layer + multi-language (In Progress — TODO remain)
 
 - [ ] Claude CLI bridge -- @feature8 — id: claude-cli-bridge — Status: TODO | Est: 240m
   _depends: mcp-tools-rest_
@@ -349,7 +349,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   **Done When:**
   - [ ] Phase 3 scenarios pass
 
-## Phase 4: SQLite + side-channel log + Codespaces (Green)
+## Phase 4: SQLite + side-channel log + Codespaces (In Progress — TODO remain)
 
 - [x] SQLite index opt-in -- @feature10 — id: sqlite-index — Status: DONE | Est: 360m
   _depends: graph-builder-impl_
@@ -405,7 +405,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   **Done When:**
   - [ ] Phase 4 scenarios pass
 
-## Phase 5: Migration helper v3→v4 (Green)
+## Phase 5: Migration helper v3→v4 (In Progress — TODO remain)
 
 - [ ] Migration script main -- @feature11 — id: migrate-script-main — Status: IN_PROGRESS | Est: 300m
   _depends: conformance-checker_
@@ -442,7 +442,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   **Done When:**
   - [ ] Phase 5 scenarios pass
 
-## Phase 6: architecture-research-workflow skill (Green)
+## Phase 6: architecture-research-workflow skill (In Progress — TODO remain)
 
 - [ ] Scaffold new skill -- @feature12 — id: arch-research-skill-scaffold — Status: TODO | Est: 480m
   _Requirements: [FR-12](FR.md#fr-12)_
@@ -496,7 +496,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] All 7 stages produce outputs
   - [ ] @feature12 scenarios all pass
 
-## Phase 7: Cross-spec reconciliation (Green)
+## Phase 7: Cross-spec reconciliation (TODO — not started)
 
 - [ ] Scaffold cross-spec-reconcile + cross-spec-resolve skills -- @feature17 @feature18 — id: install-cross-spec-skills — Status: TODO | Est: 480m
   _Requirements: [FR-17](FR.md#fr-17), [FR-18](FR.md#fr-18)_
@@ -1001,7 +1001,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   **Done When:**
   - [x] `check:status-drift` run (39 drift lines in OTHER specs, 0 in v4 by file-heuristic) + the STRONGER honesty-gate reconciliation: `computeCoverage` over the built v4 graph (110 tasks, 117 scenarios) derived each task's verified_status from REAL test results — dogfooding FR-32 instead of the spec-status sub-agent wrapper (same evidence)
   - [x] **CONSERVATIVE reconcile (explicit `SPECGEN004_NN`-in-doneWhen mapping ONLY):** flipped **24** drift tasks (TODO/in-progress but their explicitly-named scenarios GREEN) → DONE. Verified after: **NAEB 0**, WS-C..F correctly still TODO, anchor 0 broken, validate-spec valid. True status now **51 confirmed-DONE / ~50 TODO** of 110
-  - [ ] **DEFERRED — 56 tasks mapped ONLY via loose `@featureN`/FR-ref were NOT auto-flipped (over-map risk, see memory `project_fr32-gate-cross-spec-featureN-overmap`)** — a naive flip would have marked WS-C..F DONE falsely (caught + reverted). These 56 need a per-task `spec-status` sub-agent / manual pass (rolls into WS-F triage)
+  - [x] **DEFERRED-56 RESOLVED in WS-F triage (no hidden drift):** programmatic deliverable-existence pass over the remaining 46 TODO — **43 have NO deliverable on disk** (the file their Done-When names doesn't exist yet) → genuine pending feature work, NOT over-mapped drift. Only 3 had all-files-present (re-checked individually). Conclusion: WS-B's conservative flip already captured ALL real drift (24); the loose-`@featureN` remainder is real build work, correctly NOT flipped. The over-map trap was avoided precisely because we did NOT trust the tag mapping
 
 - [x] WS-C: orchestrator pipeline e2e — agent really uses MCP + skills -- @feature35 — id: ws-c-orchestrator-e2e — Status: DONE | Est: 360m
   _Requirements: [FR-33](FR.md#fr-33), [FR-32](FR.md#fr-32)_
@@ -1023,11 +1023,12 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] bundle freshness guards green: MCP `bundle.test.ts` + gate `test_quality_gate_stop.test.ts`; NEW `tests/e2e/plugin-deps-safe.test.ts` (CI guard — fails if any raw-.ts hook transitively imports a real package; 30 checked, 0 offenders) Docker green
   - [ ] NOTE: the literal full `claude plugin install` in Docker (needs claude CLI + auth + a billed `claude -p`) was NOT run — the deps-absent proof + the 4 fixed dead-integrations cover the real risk far better than the theatrical install; the full run remains available via the `verify-plugin-install` skill
 
-- [ ] WS-F: remaining feature work (Phase 7 cross-spec 24 TODO first) -- @feature35 — id: ws-f-remaining — Status: TODO | Est: 600m
+- [ ] WS-F: remaining feature work — TRIAGE done, BUILD is the open v4 backlog -- @feature35 — id: ws-f-remaining — Status: IN_PROGRESS (triage closed, build pending) | Est: 600m
   _Requirements: [FR-33](FR.md#fr-33)_
   **Done When:**
-  - [ ] WS-B triage applied FIRST (drift vs real); genuinely-pending Phase 7 tasks closed; drift tasks checked off
-  - [ ] no `(Green)` header left over a phase with real TODO
+  - [x] WS-B triage applied (drift vs real): the 46 remaining TODO triaged by deliverable-existence — **43 genuine pending build, 0 hidden drift** (WS-B already flipped all 24 real-drift). No tag-mapping trusted → over-map trap avoided
+  - [x] no `(Green)` header left over a phase with real TODO — phases 2–6 relabelled `(In Progress — TODO remain)`, phase 7 `(TODO — not started)`; only Phase 1 keeps `(Green)` (genuinely all-DONE)
+  - [ ] **OPEN — genuinely-pending feature build (NOT faked DONE):** ~43 real tasks across Phase 2 (10 MCP tools + marksman LSP + watcher + lock + extension.json), Phase 3 (claude-cli-bridge, multi-lang), Phase 4 (SQLite + spec-check-log + codespaces), Phase 5 (tag-predictor + interactive-prompt), Phase 6 (arch-research skill), **Phase 7 cross-spec (24 tasks)**. This is the multi-wave build (plan `~/.claude/plans/fizzy-percolating-turing.md` = Wave W1 "Finish Phase 2" is the entry point). Marking this `[x]` without doing the work would be the exact fake-DONE WS-A was built to block
 
 ## Refactor & Polish (final)
 
