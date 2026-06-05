@@ -76,6 +76,7 @@ function runCoreJson(command: string, specPath: string, opts: RunCoreOptions): a
       cwd: opts.cwd ?? process.cwd(),
       encoding: 'utf-8',
       maxBuffer: 64 * 1024 * 1024,
+      timeout: 120_000, // a hung core must not hang the verdict (skills import this in P14-4)
       stdio: ['ignore', 'pipe', 'pipe'],
       // Point the generator's repo root at the caller's corpus root, so the
       // verdict works on fixture dirs and foreign repos (FR-37/P14-5), not

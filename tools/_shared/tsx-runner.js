@@ -23,7 +23,7 @@
 
 'use strict';
 
-const { execSync, execFileSync } = require('child_process');
+const { execSync, execFileSync, spawnSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
@@ -494,21 +494,27 @@ function runNodeNativeTs() {
   // ERR_MODULE_NOT_FOUND, "bad option") are visible to isResolverError() and
   // trigger fall-through to the tsx loader family. With stdio:'inherit' the
   // error text never reaches err.stderr and fall-through silently never fires.
-  try {
-    execFileSync(process.execPath, [
-      ...nodeArgs,
-      scriptPath,
-      ...scriptArgs,
-    ], {
-      stdio: ['inherit', 'inherit', 'pipe'],
-      cwd: process.cwd(),
-      env: { ...getSafeEnv(), NODE_NO_WARNINGS: '1' },
-      timeout: 30000,
-    });
-  } catch (err) {
-    // Re-emit captured stderr so hook diagnostics are not swallowed,
-    // then rethrow for the strategy loop to classify.
-    if (err && err.stderr) process.stderr.write(String(err.stderr));
+  // spawnSync (not execFileSync) so stderr is ALSO re-emitted on exit 0 —
+  // fail-open hooks log errors to stderr and exit 0; those must stay visible.
+  // Trade-off: stderr is buffered until exit, not streamed live.
+  const res = spawnSync(process.execPath, [
+    ...nodeArgs,
+    scriptPath,
+    ...scriptArgs,
+  ], {
+    stdio: ['inherit', 'inherit', 'pipe'],
+    cwd: process.cwd(),
+    env: { ...getSafeEnv(), NODE_NO_WARNINGS: '1' },
+    timeout: TSX_EXEC_TIMEOUT, // same budget as the tsx strategies — a 30s hardcode killed >30s hooks (e.g. auto-commit LLM)
+  });
+  if (res.stderr && res.stderr.length) process.stderr.write(String(res.stderr));
+  if (res.error) throw res.error; // spawn/timeout-level failure (ETIMEDOUT, ENOENT)
+  if (res.status !== 0) {
+    // Mirror execFileSync's throw shape: the strategy loop classifies via
+    // err.stderr (resolver tokens) and err.status (exit-code propagation).
+    const err = new Error(`Command failed: ${process.execPath} (exit ${res.status})`);
+    err.status = res.status;
+    err.stderr = res.stderr;
     throw err;
   }
   return true;
