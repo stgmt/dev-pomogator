@@ -1010,11 +1010,11 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] No-imitation verified: orchestrator `SKILL.md` body has **0** re-implementation lines (no computeCoverage/checkConformance/bucketing) + 5 explicit "delegate, never re-implement" statements; `@feature33` BDD (delegation/drift/ledger) 5/5 GREEN
   - [x] Phase 10/11 reconciled in WS-B (conservative, explicit-id only); the loose-@featureN remainder is the deferred 56 (over-map risk). NOTE: a single continuous AI-agent orchestrator session wasn't theatrically run — the contract is proven at component level (tools answer real queries) + structurally (delegation, no-reimpl, drift guard)
 
-- [ ] WS-D: observability consolidation + observability-review skill -- @feature35 — id: ws-d-observability — Status: TODO | Est: 300m
+- [x] WS-D: observability consolidation + observability-review skill -- @feature35 — id: ws-d-observability — Status: DONE | Est: 300m
   _Requirements: [FR-32](FR.md#fr-32)_
   **Done When:**
-  - [ ] one "where did the agent stumble" view over `.claude/logs/*.jsonl` + `watcher.log` + `.last-test-run.ndjson` + conformance findings + SELF_IMPROVE
-  - [ ] new skill `.claude/skills/observability-review/SKILL.md` created + demo run
+  - [x] `tools/observability/observe.ts` — one "where did the agent stumble" view: escape-hatch logs (`.claude/logs/*-escapes.jsonl`) + last BDD run (`.last-test-run.ndjson`) + SELF_IMPROVE ledger + `.dev-pomogator/**/*.log` errors → 4 panes + 🟢/🟡 verdict. **builtins-only (node:fs/path) — dep-safe, won't crash for users** (deliberately NOT a graph build → no gherkin; deeper per-task verdict stays in the bundled `get_coverage` MCP)
+  - [x] skill `.claude/skills/observability-review/SKILL.md` created. Demo run on this repo surfaced a REAL signal: 5 `spec-variant-matrix` escapes with reason "ok" (short = gaming signal); last BDD run 1133 passed / 0 failed
 
 - [x] WS-E: install works for plugin users (deps-absent verification) -- @feature35 — id: ws-e-install-e2e — Status: DONE | Est: 180m
   _Requirements: [FR-4](FR.md#fr-4)_
