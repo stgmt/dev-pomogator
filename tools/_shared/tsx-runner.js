@@ -485,17 +485,32 @@ function runNodeNativeTs() {
   const [major, minor] = process.versions.node.split('.').map(Number);
   if (major < 22 || (major === 22 && minor < 6)) return false;
 
-  execFileSync(process.execPath, [
-    '--experimental-strip-types',
-    '--experimental-default-type=module',
-    scriptPath,
-    ...scriptArgs,
-  ], {
-    stdio: 'inherit',
-    cwd: process.cwd(),
-    env: { ...getSafeEnv(), NODE_NO_WARNINGS: '1' },
-    timeout: 30000,
-  });
+  // --experimental-default-type was removed in Node 23+ ("bad option", exit 9).
+  // On 23+ .ts files are ESM-detected natively; the flag is only needed on 22.x.
+  const nodeArgs = ['--experimental-strip-types'];
+  if (major === 22) nodeArgs.push('--experimental-default-type=module');
+
+  // stderr is piped (not inherited) so that resolver errors (SyntaxError,
+  // ERR_MODULE_NOT_FOUND, "bad option") are visible to isResolverError() and
+  // trigger fall-through to the tsx loader family. With stdio:'inherit' the
+  // error text never reaches err.stderr and fall-through silently never fires.
+  try {
+    execFileSync(process.execPath, [
+      ...nodeArgs,
+      scriptPath,
+      ...scriptArgs,
+    ], {
+      stdio: ['inherit', 'inherit', 'pipe'],
+      cwd: process.cwd(),
+      env: { ...getSafeEnv(), NODE_NO_WARNINGS: '1' },
+      timeout: 30000,
+    });
+  } catch (err) {
+    // Re-emit captured stderr so hook diagnostics are not swallowed,
+    // then rethrow for the strategy loop to classify.
+    if (err && err.stderr) process.stderr.write(String(err.stderr));
+    throw err;
+  }
   return true;
 }
 
@@ -510,6 +525,7 @@ const RESOLVER_ERROR_TOKENS = [
   'ERR_UNSUPPORTED_NODE_OPTION',
   'SyntaxError',
   'Cannot find module',
+  'bad option', // node rejects an unknown CLI flag (exit 9) — loader-level, retry with tsx
 ];
 function isResolverError(err) {
   if (!err) return false;
