@@ -285,8 +285,11 @@ describe('PLUGIN005: Specs Validator Hook', () => {
       expect(report).toContain('## NOT_COVERED');
       expect(report).toContain('NOT_COVERED');
       expect(report).toContain('@feature10');
+      // The hook console output is now an aggregated SUMMARY (counts, names only under
+      // SPECS_VALIDATOR_VERBOSE=1 / in the report) — assert the gap is surfaced + counted.
+      // The specific @feature10 tag stays verified via `report` above.
       expect(output).toContain('NOT_COVERED');
-      expect(output).toContain('@feature10');
+      expect(output).toMatch(/[1-9]\d* NOT_COVERED/);
     });
   });
 
@@ -311,8 +314,10 @@ describe('PLUGIN005: Specs Validator Hook', () => {
       expect(report).toContain('## ORPHAN');
       expect(report).toContain('ORPHAN');
       expect(report).toContain('@feature99');
+      // Aggregated SUMMARY output (see NOT_COVERED test) — assert the orphan gap is
+      // surfaced + counted; the specific @feature99 tag stays verified via `report`.
       expect(output).toContain('ORPHAN');
-      expect(output).toContain('@feature99');
+      expect(output).toMatch(/[1-9]\d* ORPHAN/);
     });
   });
 
