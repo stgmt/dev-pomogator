@@ -31,16 +31,21 @@ driven from, NOT grep guesses. Sampled inputs: `node_id=FR-2`, `tag=@plugin`,
    (`spec-graph-query` skill), not deleting them. The dataset confirms it empirically.
 2. **`find_refs` is the strongest case** — 86 semantic references on real data. Keep, and the
    earlier "redundant with Marksman" label is decisively wrong (Marksman has no such edges).
-3. **Two genuine runtime BUGS** (confirmed by probing the whole corpus, not one sample):
-   - **`get_trace` returns `scenarios=0` for ALL 47 FRs** (probed FR-1..FR-6 + the sample: every
-     one has AC + tasks but ZERO scenarios). The FR→Scenario trace edge is missing — the PRIMARY
-     traceability tool cannot answer "what tests this requirement". (`find_refs` finds 86 refs
-     for the same node because it traverses differently.) Real bug, high value — get_trace is the
-     headline tool used by skills.
-   - **`list_phase_tasks` → 0 because 0 of 110 Task nodes carry a `phase` field.** The TASKS
-     parser never populates `phase`, so the tool's only input matches nothing → non-functional
-     by construction. Fix = populate `phase` in the parser (assign each task its enclosing
-     `## Phase …` heading), or drop the tool.
+3. **Two genuine runtime BUGS — both FIXED (verified, suite green 199/199):**
+   - **`get_trace` returned `scenarios=0` for ALL 47 FRs.** Root cause: the graph builds **0 edges
+     into any Scenario node** — the FR/AC→Scenario `tested-by` edge layer is unbuilt; coverage
+     works only because `computeCoverage` maps via @featureN tags, not edges. **Fix:** `get_trace`
+     now collects an FR's scenarios via the FR-N↔@featureN convention, SAME-SPEC scoped (mirrors
+     computeCoverage; no cross-spec over-map). Result: **13/47 FRs now trace scenarios** (FR-18:5,
+     FR-19:2, …); the other 34 are FRs in specs with no BDD scenarios (legitimately empty). MCP
+     bundle rebuilt so users get the fix.
+   - **`list_phase_tasks` → 0** because `TaskNode` had no `phase` field AND the parser never
+     tracked the `## Phase …` heading. **Fix:** added `TaskNode.phase`; the tasks parser now
+     assigns each task its enclosing phase. Result: **110/110 tasks carry a phase**,
+     `list_phase_tasks("Phase 0 …")` → 5 tasks.
+   - Still OPEN (lower priority, noted): the duplicate `covers` edges (FR-2 had 52 covers all to
+     "AC-2") — an edge-builder dedup issue; the FR/AC→Scenario edge layer itself remains unbuilt
+     (get_trace now routes around it via tags).
 
 ## Reproduce
 ```

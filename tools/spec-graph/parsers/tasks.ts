@@ -39,6 +39,7 @@ export function parseTasks(content: string, file: string): TaskNode[] {
   const lines = content.split(/\r?\n/);
   const out: TaskNode[] = [];
   let cur: { node: TaskNode; body: string[] } | null = null;
+  let curPhase: string | undefined;
 
   const flush = (): void => {
     if (!cur) return;
@@ -49,6 +50,14 @@ export function parseTasks(content: string, file: string): TaskNode[] {
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
+    // Track the enclosing `## Phase …` heading so each task carries its phase
+    // (list_phase_tasks queries TaskNode.phase; without this it was always empty).
+    const ph = line.match(/^#{2,3}\s+(Phase\s.*?)\s*$/);
+    if (ph) {
+      curPhase = ph[1];
+      flush();
+      continue;
+    }
     const h = headerOf(line);
     if (h) {
       flush();
@@ -62,6 +71,7 @@ export function parseTasks(content: string, file: string): TaskNode[] {
           status: STATUS_MAP[h.status] ?? 'todo',
           refs: [],
           title: title ? title[1] : undefined,
+          phase: curPhase,
         },
         body: [line],
       };

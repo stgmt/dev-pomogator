@@ -46191,6 +46191,7 @@ function parseTasks(content, file2) {
   const lines = content.split(/\r?\n/);
   const out = [];
   let cur = null;
+  let curPhase;
   const flush = () => {
     if (!cur) return;
     cur.node.doneWhen = cur.body.join("\n").trim() || void 0;
@@ -46199,6 +46200,12 @@ function parseTasks(content, file2) {
   };
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
+    const ph = line.match(/^#{2,3}\s+(Phase\s.*?)\s*$/);
+    if (ph) {
+      curPhase = ph[1];
+      flush();
+      continue;
+    }
     const h = headerOf(line);
     if (h) {
       flush();
@@ -46211,7 +46218,8 @@ function parseTasks(content, file2) {
           line: i + 1,
           status: STATUS_MAP[h.status] ?? "todo",
           refs: [],
-          title: title ? title[1] : void 0
+          title: title ? title[1] : void 0,
+          phase: curPhase
         },
         body: [line]
       };
@@ -47095,20 +47103,24 @@ function mapTasksToScenarios(tasks, scenarios) {
   }
   return out;
 }
-function verifiedStatus(scenarioIds, bucketById) {
+function verifiedStatus(scenarioIds, bucketById, verdict) {
   if (scenarioIds.length === 0) return "unverified";
-  return scenarioIds.every((id) => bucketById.get(id) === "passed") ? "DONE" : "IN_PROGRESS";
+  if (!scenarioIds.every((id) => bucketById.get(id) === "passed")) return "IN_PROGRESS";
+  if (verdict === "WEAK" || verdict === "FAKE-POSITIVE-RISK") return "IN_PROGRESS";
+  return "DONE";
 }
-function computeCoverage(tasks, scenarios) {
+function computeCoverage(tasks, scenarios, testQualityByTask = {}) {
   const buckets = bucketScenarios(scenarios);
   const bucketById = /* @__PURE__ */ new Map();
   for (const b of Object.keys(buckets)) for (const id of buckets[b]) bucketById.set(id, b);
   const taskMap = mapTasksToScenarios(tasks, scenarios);
   const tasksOut = {};
   for (const [taskId, scenarioIds] of taskMap) {
+    const verdict = testQualityByTask[taskId];
     tasksOut[taskId] = {
-      verified_status: verifiedStatus(scenarioIds, bucketById),
-      scenarios: scenarioIds
+      verified_status: verifiedStatus(scenarioIds, bucketById, verdict),
+      scenarios: scenarioIds,
+      ...verdict ? { test_quality: verdict } : {}
     };
   }
   const totals = { scenarios: scenarios.length };
@@ -47193,7 +47205,7 @@ function checkConformance(graph, opts = {}) {
     }
   }
   if (taskLikes.length > 0) {
-    const cov = computeCoverage(taskLikes, scenarioLikes);
+    const cov = computeCoverage(taskLikes, scenarioLikes, opts.testQualityByTask);
     const bucketById = /* @__PURE__ */ new Map();
     for (const b of Object.keys(cov.buckets)) for (const id of cov.buckets[b]) bucketById.set(id, b);
     for (const node of graph.nodes.values()) {
@@ -47201,18 +47213,47 @@ function checkConformance(graph, opts = {}) {
       const task = node;
       if (task.status !== "done") continue;
       const entry = cov.tasks[task.id];
-      if (!entry || entry.verified_status !== "IN_PROGRESS") continue;
-      const offenders = entry.scenarios.filter((id) => bucketById.get(id) !== "passed");
-      findings.push({
-        code: "TASK_STATUS_UNVERIFIED",
-        severity: "warning",
-        location: { file: task.file, line: task.line },
-        message: `Task ${task.id} is marked DONE but ${offenders.length}/${entry.scenarios.length} mapped scenarios are not green (e.g. ${offenders.slice(0, 3).map((id) => `${id}=${bucketById.get(id)}`).join(", ")}).`,
-        nodeId: task.id,
-        suggestions: [
-          { action: "make_green_or_downgrade", reason: "Make the mapped scenarios pass, or set Status back to IN_PROGRESS \u2014 a DONE task must have every mapped scenario green.", confidence: "high" }
-        ]
-      });
+      if (!entry) continue;
+      if (entry.verified_status === "IN_PROGRESS") {
+        const allGreen = entry.scenarios.length > 0 && entry.scenarios.every((id) => bucketById.get(id) === "passed");
+        if (allGreen && (entry.test_quality === "WEAK" || entry.test_quality === "FAKE-POSITIVE-RISK")) {
+          findings.push({
+            code: "TASK_TEST_QUALITY",
+            severity: "warning",
+            location: { file: task.file, line: task.line },
+            message: `Task ${task.id} is marked DONE and its scenarios are green, but the test body audits as ${entry.test_quality} \u2014 a passing-but-${entry.test_quality} test cannot verify DONE.`,
+            nodeId: task.id,
+            relatedId: entry.test_quality,
+            suggestions: [
+              { action: "strengthen_test", reason: "Strengthen the test (real assertions, no over-mocking) until strong-tests reports STRONG, or set Status back to IN_PROGRESS.", confidence: "high" }
+            ]
+          });
+        } else {
+          const offenders = entry.scenarios.filter((id) => bucketById.get(id) !== "passed");
+          findings.push({
+            code: "TASK_STATUS_UNVERIFIED",
+            severity: "warning",
+            location: { file: task.file, line: task.line },
+            message: `Task ${task.id} is marked DONE but ${offenders.length}/${entry.scenarios.length} mapped scenarios are not green (e.g. ${offenders.slice(0, 3).map((id) => `${id}=${bucketById.get(id)}`).join(", ")}).`,
+            nodeId: task.id,
+            suggestions: [
+              { action: "make_green_or_downgrade", reason: "Make the mapped scenarios pass, or set Status back to IN_PROGRESS \u2014 a DONE task must have every mapped scenario green.", confidence: "high" }
+            ]
+          });
+        }
+      } else if (entry.verified_status === "unverified") {
+        findings.push({
+          code: "TASK_UNTESTED",
+          severity: "warning",
+          location: { file: task.file, line: task.line },
+          message: `Task ${task.id} is marked DONE but has ZERO linked scenarios \u2014 no test backs the claim (Done-When references no SPECGEN id / @feature tag, and refs map to no scenario).`,
+          nodeId: task.id,
+          suggestions: [
+            { action: "write_test", reason: "Add a BDD scenario and reference its SPECGEN id (or @feature tag) in Done-When, so the DONE claim is backed by a real test.", confidence: "high" },
+            { action: "downgrade", reason: "Or set Status back to IN_PROGRESS until a test exists \u2014 a DONE task with no test is unverifiable.", confidence: "high" }
+          ]
+        });
+      }
     }
   }
   for (const node of graph.nodes.values()) {
@@ -47491,6 +47532,21 @@ function buildToolRegistry(getGraph) {
         if (edge.to === node.id && edge.type === "covers") {
           const from = graph.nodes.get(edge.from);
           if (from?.type === "FR") related.push({ id: from.id, type: from.type, relation: "covered-by" });
+        }
+      }
+      if (node.type === "FR") {
+        const m = node.id.match(/^FR-(\d+)/);
+        const specOf2 = (f) => String(f).replace(/\\/g, "/").split(".specs/")[1]?.split("/")[0] ?? "";
+        const nodeSpec = specOf2(node.file);
+        if (m) {
+          const tag = `@feature${m[1]}`;
+          for (const n of graph.nodes.values()) {
+            if (n.type !== "Scenario") continue;
+            const s = n;
+            if (s.tags?.includes(tag) && specOf2(s.file) === nodeSpec && !scenarios.some((x) => x.id === s.id)) {
+              scenarios.push(s);
+            }
+          }
         }
       }
       for (const n of graph.nodes.values()) {

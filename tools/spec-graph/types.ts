@@ -111,6 +111,8 @@ export interface TaskNode extends NodeBase {
   refs: string[];
   /** Optional human title. */
   title?: string;
+  /** The `## Phase …` heading this task sits under in TASKS.md (for list_phase_tasks). */
+  phase?: string;
   /**
    * Full text of the task block (header + Done-When), so consumers can map the
    * task to scenarios via `SPECGEN004_NN` / `@featureN` mentions (FR-32). The
