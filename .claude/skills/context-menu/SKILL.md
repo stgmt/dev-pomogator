@@ -73,6 +73,26 @@ powershell.exe -NoProfile -Command "Start-Process cmd -ArgumentList '/c copy /Y 
 
 Write default config (see Default Configuration below) using the elevated write pattern (Step 4 of Workflow).
 
+### Step 5b: Copy launch script to the global path (REQUIRED)
+
+The "Claude Code (YOLO + TUI)" entry runs `powershell.exe -File "<home>\.dev-pomogator\scripts\launch-claude-tui.ps1"`. The NSS references that exact path, so the file **must exist there** — otherwise PowerShell opens, can't find `-File`, and the window closes instantly (the entry "does nothing"). Nothing else populates this path under the canonical v2 plugin, so copy it explicitly.
+
+The source lives inside the installed plugin tree, **not** the user's current project. `CLAUDE_PLUGIN_ROOT` is only injected for hook execution (NOT for skill-driven Bash), so resolve the source defensively — env var → version-aware plugin cache glob → repo dogfood fallback:
+
+```bash
+# Resolve the bundled launch script: plugin-root env → installed plugin cache → repo (dogfood)
+SRC="${CLAUDE_PLUGIN_ROOT:-}/scripts/launch-claude-tui.ps1"
+[ -f "$SRC" ] || SRC="$(ls -d "$HOME"/.claude/plugins/cache/*/dev-pomogator/*/scripts/launch-claude-tui.ps1 2>/dev/null | sort -V | tail -1)"
+[ -f "$SRC" ] || SRC="scripts/launch-claude-tui.ps1"
+if [ ! -f "$SRC" ]; then echo "ERROR: launch-claude-tui.ps1 not found in plugin tree"; exit 1; fi
+
+mkdir -p ~/.dev-pomogator/scripts
+cp "$SRC" ~/.dev-pomogator/scripts/launch-claude-tui.ps1
+echo "Installed launch script from: $SRC"
+```
+
+> `tools/context-menu/postinstall.ts` does the same via `copyLaunchScript()` (it resolves the source through `import.meta.url`, so it works regardless of `CLAUDE_PLUGIN_ROOT`). This manual step is for the skill-driven (v2) install where postinstall is not auto-invoked. Both write to the **same** target — `~/.dev-pomogator/scripts/launch-claude-tui.ps1` — which is exactly the path the generated NSS points at.
+
 ### Step 6: Icon
 
 Tell user:
@@ -245,10 +265,22 @@ Use the **Admin** entries whenever the upcoming Claude Code session will need to
 
 Standard entries are sufficient for normal coding, file editing in user space, and most non-system tasks.
 
+## Logs
+
+Every invocation of `launch-claude-tui.ps1` (the "YOLO + TUI" entry) is appended to:
+
+```
+~/.dev-pomogator/logs/context-menu-launch.log
+```
+
+Each entry records the timestamp, the args received, the resolved project dir, the detected Python, the launch command, and — on failure — the error message and stack trace. If a right-click launch misbehaves, read this file first. An **empty/absent** log after a click means the script itself never ran (the `.ps1` is missing at the global path — see Step 5b), not a launch error.
+
 ## Troubleshooting
 
 | Problem | Solution |
 |---------|----------|
+| First entry "Claude Code (YOLO + TUI)" does nothing | `launch-claude-tui.ps1` missing at `~/.dev-pomogator/scripts/` — run Step 5b. Confirm: `Test-Path "$HOME\.dev-pomogator\scripts\launch-claude-tui.ps1"` |
+| Launch fails but no log written | Script never ran → `.ps1` absent at global path (Step 5b). If log exists, read the ERROR line |
 | EPERM on write | Use elevated copy pattern (see File Permissions) |
 | Menu not updating | Ctrl+ПКМ desktop → Shell → Reload |
 | Icon not showing | Verify `claude-icon.ico` exists in imports dir |

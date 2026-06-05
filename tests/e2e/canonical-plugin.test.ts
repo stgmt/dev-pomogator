@@ -97,6 +97,37 @@ describe('CANON001: canonical plugin manifest integrity + migration', () => {
     expect(missing, `hooks.json references missing scripts:\n${missing.join('\n')}`).toEqual([]);
   });
 
+  // @feature9 — cross-user hook resolution. For an INSTALLED user, `claude` runs in THEIR
+  // project (CWD != plugin root). Hook commands pass the child script as a plugin-relative
+  // path ("tools/..."); if tsx-runner resolves it against CWD it ENOENTs and EVERY hook dies.
+  // It must resolve against CLAUDE_PLUGIN_ROOT. Exercises the REAL shipped bootstrap.cjs +
+  // tsx-runner.js from a foreign CWD. (verify-plugin-install surfaced this: all SessionStart
+  // hooks failed with `ENOENT lstat '<home>/tools'` on a clean canonical install.)
+  it('CANON001_91: hook resolves plugin-relative child script via CLAUDE_PLUGIN_ROOT from a foreign CWD', () => {
+    const pluginRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'canon-pluginroot-'));
+    const foreignCwd = fs.mkdtempSync(path.join(os.tmpdir(), 'canon-foreigncwd-'));
+    try {
+      // Real shipped loader + bootstrap, co-located exactly as in the plugin tree.
+      fs.copySync(appPath('tools', '_shared'), path.join(pluginRoot, 'tools', '_shared'));
+      // A plugin-relative child script the hook would target.
+      fs.writeFileSync(path.join(pluginRoot, 'tools', 'marker.ts'), 'console.log("RESOLVED_OK");\n');
+
+      const bootstrapRequire =
+        "require(require('path').join(process.env.CLAUDE_PLUGIN_ROOT,'tools','_shared','bootstrap.cjs'))";
+      const r = spawnSync('node', ['-e', bootstrapRequire, '--', 'tools/marker.ts'], {
+        cwd: foreignCwd, // simulate an external user's project — NOT the plugin root
+        encoding: 'utf-8',
+        env: { ...process.env, CLAUDE_PLUGIN_ROOT: pluginRoot },
+      });
+      const out = `${r.stdout || ''}${r.stderr || ''}`;
+      expect(out, `child script did not resolve via CLAUDE_PLUGIN_ROOT:\n${out}`).toContain('RESOLVED_OK');
+      expect(out, 'resolved against CWD instead of plugin root').not.toContain('ENOENT');
+    } finally {
+      fs.removeSync(pluginRoot);
+      fs.removeSync(foreignCwd);
+    }
+  });
+
   // @feature7 — migration dry-run
   it('CANON001_70: migrate-v1-to-v2 --dry-run detects a v1 install and modifies nothing', () => {
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'canon-v1-'));

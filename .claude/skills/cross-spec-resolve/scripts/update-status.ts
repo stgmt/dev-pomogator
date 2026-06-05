@@ -23,7 +23,11 @@ export type ResolutionStatus =
   | 'resolved'
   | 'acknowledged'
   | 'deferred'
-  | 'skipped';
+  | 'skipped'
+  // Step-7 batch re-check outcomes (SPECGEN004_48 / SCHEMA): set when a fresh
+  // reconcile re-run is diffed against the original findings.
+  | 'still_present'
+  | 'transformed';
 
 export interface ResolutionDecision {
   /** Stable key per the walker — `code|spec_a|spec_b|referenced_in`. */

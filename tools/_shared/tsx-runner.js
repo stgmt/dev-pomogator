@@ -86,6 +86,19 @@ function resolveScriptPath(rawPath) {
   // Absolute and exists — use as-is
   if (path.isAbsolute(rawPath) && fs.existsSync(rawPath)) return rawPath;
 
+  // Plugin-root relative (canonical install). Hook commands resolve bootstrap.cjs via
+  // CLAUDE_PLUGIN_ROOT but pass the CHILD script as a plugin-relative path ("tools/..."),
+  // so it must be resolved against the plugin root too — NOT the session CWD. For an
+  // external user `claude` runs in THEIR project, so CWD-relative resolution finds nothing
+  // and every hook dies with ENOENT. Tried BEFORE CWD so a user's same-named tools/<x>.ts
+  // can't shadow the plugin script. Env-gated: CLAUDE_PLUGIN_ROOT is unset in dogfood/v1,
+  // so those paths are unchanged (CWD-relative still wins there).
+  const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT;
+  if (pluginRoot) {
+    const prResolved = path.resolve(pluginRoot, rawPath);
+    if (fs.existsSync(prResolved)) return prResolved;
+  }
+
   // Relative from CWD
   const cwdResolved = path.resolve(process.cwd(), rawPath);
   if (fs.existsSync(cwdResolved)) return cwdResolved;

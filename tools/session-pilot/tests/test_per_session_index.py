@@ -55,6 +55,33 @@ def _make_jsonl(dir_path: Path, uuid: str, age_sec: float = 0, content: str = "m
     return fp
 
 
+def _make_jsonl_entrypoint(dir_path: Path, uuid: str, entrypoint: str, age_sec: float = 0) -> Path:
+    """Create a JSONL whose user line carries a real `entrypoint` field.
+
+    Mirrors the real Claude Code producer shape (entrypoint on message lines):
+    interactive CLI sessions write entrypoint='cli'; SDK/`claude -p` write
+    'sdk-ts'. Used to test the headless-session filter against real-shaped data.
+    """
+    dir_path.mkdir(parents=True, exist_ok=True)
+    fp = dir_path / f"{uuid}.jsonl"
+    line = {
+        "type": "user",
+        "message": {"role": "user", "content": "do work"},
+        "cwd": "/app",
+        "gitBranch": "HEAD",
+        "version": "2.1.0",
+        "entrypoint": entrypoint,
+        "sessionId": uuid,
+        "uuid": uuid,
+    }
+    # Compact JSON (no spaces) — mirrors the real Claude Code producer exactly,
+    # so the entrypoint marker is validated against real-shaped bytes.
+    fp.write_text(json.dumps(line, separators=(",", ":")) + "\n", encoding="utf-8")
+    now = time.time()
+    os.utime(fp, (now - age_sec, now - age_sec))
+    return fp
+
+
 def _reset_indexer_caches():
     """Clear in-process caches so tests don't see stale data from each other."""
     indexer._index_cache["data"] = None
@@ -63,6 +90,7 @@ def _reset_indexer_caches():
     indexer._session_index_cache["ts"] = 0.0
     indexer._mtime_cache.clear()
     indexer._claude_cache.clear()
+    indexer._headless_cache.clear()
     process_scanner._scan_cache["data"] = {}
     process_scanner._scan_cache["ts"] = 0.0
 
@@ -234,6 +262,146 @@ def test_fr24_meta_claude_dir_filtered_out(monkeypatch, tmp_path):
     idx = indexer.build_session_index()
     assert not any(r["session_uuid"] == "meta-uuid" for r in idx["rows"]), \
         "meta dirs C--Users-*--claude-* should be filtered out"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Headless filter — hide SDK / `claude -p` sessions (LangGraph fan-out flood)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_headless_sdk_session_excluded_from_index(monkeypatch, tmp_path):
+    """Source A: a session with entrypoint='sdk-ts' is hidden; 'cli' is shown.
+
+    Regression for the 338-row `/app` flood: a LangGraph pipeline spawns hundreds
+    of `claude -p` (Claude Agent SDK) sessions that drowned the dashboard. They
+    are real sessions but not human worktree work — filtered by entrypoint.
+    """
+    repo = tmp_path / "repo-headless"
+    _init_git_repo(repo)
+    encoded = str(repo).replace(":", "").replace("\\", "-").replace("/", "-")
+    proj_dir = tmp_path / "claude_projects" / encoded
+    _make_jsonl_entrypoint(proj_dir, "cli-session-real", entrypoint="cli", age_sec=10)
+    _make_jsonl_entrypoint(proj_dir, "sdk-session-noise", entrypoint="sdk-ts", age_sec=5)
+
+    monkeypatch.setenv("REPOS", str(repo))
+    monkeypatch.delenv("SP_SHOW_HEADLESS", raising=False)
+    monkeypatch.setattr(server, "CLAUDE_PROJECTS_DIRS", [tmp_path / "claude_projects"])
+    _reset_indexer_caches()
+
+    idx = indexer.build_session_index()
+    uuids = {r["session_uuid"] for r in idx["rows"] if r["repo"] == "repo-headless"}
+    assert "cli-session-real" in uuids, "interactive cli session must be shown"
+    assert "sdk-session-noise" not in uuids, "headless sdk-ts session must be hidden"
+
+
+def test_headless_missing_entrypoint_defaults_to_shown(monkeypatch, tmp_path):
+    """Safety invariant: a session we CANNOT prove is headless (no entrypoint
+    field) is SHOWN — never hide real/devcontainer work on a guess."""
+    repo = tmp_path / "repo-noentry"
+    _init_git_repo(repo)
+    encoded = str(repo).replace(":", "").replace("\\", "-").replace("/", "-")
+    proj_dir = tmp_path / "claude_projects" / encoded
+    _make_jsonl(proj_dir, "no-entrypoint-uuid", age_sec=10)  # legacy shape, no entrypoint
+
+    monkeypatch.setenv("REPOS", str(repo))
+    monkeypatch.delenv("SP_SHOW_HEADLESS", raising=False)
+    monkeypatch.setattr(server, "CLAUDE_PROJECTS_DIRS", [tmp_path / "claude_projects"])
+    _reset_indexer_caches()
+
+    idx = indexer.build_session_index()
+    uuids = {r["session_uuid"] for r in idx["rows"] if r["repo"] == "repo-noentry"}
+    assert "no-entrypoint-uuid" in uuids, "session without entrypoint must default to shown"
+
+
+def test_headless_orphan_sdk_session_excluded(monkeypatch, tmp_path):
+    """Source B: orphan dir full of sdk-ts sessions (the real `-app` case) emits
+    ZERO rows — this is the actual 338-row flood path."""
+    app_dir = tmp_path / "claude_projects" / "-app"
+    for i in range(5):
+        _make_jsonl_entrypoint(app_dir, f"sdk-orphan-{i}", entrypoint="sdk-ts", age_sec=i)
+
+    monkeypatch.setenv("REPOS", "")
+    monkeypatch.delenv("SP_SHOW_HEADLESS", raising=False)
+    monkeypatch.setattr(server, "CLAUDE_PROJECTS_DIRS", [tmp_path / "claude_projects"])
+    _reset_indexer_caches()
+
+    idx = indexer.build_session_index()
+    app_rows = [r for r in idx["rows"] if r["worktree_path"].endswith("/app")]
+    assert app_rows == [], f"all sdk-ts orphan sessions must be hidden, got {len(app_rows)} rows"
+
+
+def test_headless_deep_entrypoint_past_head_window_still_hidden(monkeypatch, tmp_path):
+    """Regression for real-data miss: SDK eval sessions embed a huge first message
+    (fact-checker prompt + source.json), pushing `entrypoint` up to ~1MB into the
+    line — past the cheap head window. The deep scan must still catch it.
+
+    Mirrors real `-app` shape: one user line where `entrypoint:"sdk-ts"` comes
+    AFTER a >64KB message.content. A naive 16-64KB head read missed 153/338 of
+    these on the live host.
+    """
+    app_dir = tmp_path / "claude_projects" / "-app"
+    app_dir.mkdir(parents=True, exist_ok=True)
+    huge = "x" * (200 * 1024)  # 200KB message body → entrypoint sits past 64KB head
+    line = {
+        "type": "user",
+        "message": {"role": "user", "content": huge},
+        "cwd": "/app",
+        "gitBranch": "HEAD",
+        "entrypoint": "sdk-ts",  # serialized AFTER the huge content
+        "sessionId": "deep-sdk",
+        "uuid": "deep-sdk",
+    }
+    fp = app_dir / "deep-sdk.jsonl"
+    fp.write_text(json.dumps(line, separators=(",", ":")) + "\n", encoding="utf-8")
+
+    monkeypatch.setenv("REPOS", "")
+    monkeypatch.delenv("SP_SHOW_HEADLESS", raising=False)
+    monkeypatch.setattr(server, "CLAUDE_PROJECTS_DIRS", [tmp_path / "claude_projects"])
+    _reset_indexer_caches()
+
+    idx = indexer.build_session_index()
+    assert not any(r["session_uuid"] == "deep-sdk" for r in idx["rows"]), \
+        "deep-entrypoint sdk session must still be hidden (deep scan past head window)"
+
+
+def test_interactive_with_huge_message_still_shown(monkeypatch, tmp_path):
+    """Safety: a real interactive session with a huge first paste is SHOWN — the
+    permission-mode UI line sits at the file top (before user input), so the head
+    window proves it interactive without reading the huge body."""
+    repo = tmp_path / "repo-bigpaste"
+    _init_git_repo(repo)
+    encoded = str(repo).replace(":", "").replace("\\", "-").replace("/", "-")
+    proj_dir = tmp_path / "claude_projects" / encoded
+    proj_dir.mkdir(parents=True, exist_ok=True)
+    huge = "y" * (200 * 1024)
+    perm_line = json.dumps({"type": "permission-mode", "mode": "default", "sessionId": "big"}, separators=(",", ":"))
+    user_line = json.dumps({"type": "user", "message": {"content": huge}, "sessionId": "big", "uuid": "big-int"}, separators=(",", ":"))
+    fp = proj_dir / "big-int.jsonl"
+    fp.write_text(perm_line + "\n" + user_line + "\n", encoding="utf-8")
+
+    monkeypatch.setenv("REPOS", str(repo))
+    monkeypatch.delenv("SP_SHOW_HEADLESS", raising=False)
+    monkeypatch.setattr(server, "CLAUDE_PROJECTS_DIRS", [tmp_path / "claude_projects"])
+    _reset_indexer_caches()
+
+    idx = indexer.build_session_index()
+    assert any(r["session_uuid"] == "big-int" for r in idx["rows"]), \
+        "interactive session (permission-mode line at top) must be shown despite huge paste"
+
+
+def test_headless_show_override_reincludes(monkeypatch, tmp_path):
+    """SP_SHOW_HEADLESS=1 re-includes SDK sessions (debugging escape hatch)."""
+    app_dir = tmp_path / "claude_projects" / "-app"
+    _make_jsonl_entrypoint(app_dir, "sdk-orphan-x", entrypoint="sdk-ts", age_sec=1)
+
+    monkeypatch.setenv("REPOS", "")
+    monkeypatch.setenv("SP_SHOW_HEADLESS", "1")
+    monkeypatch.setattr(server, "CLAUDE_PROJECTS_DIRS", [tmp_path / "claude_projects"])
+    _reset_indexer_caches()
+
+    idx = indexer.build_session_index()
+    assert any(r["session_uuid"] == "sdk-orphan-x" for r in idx["rows"]), \
+        "SP_SHOW_HEADLESS=1 must re-include headless sessions"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -412,10 +580,10 @@ def test_frontend_html_contains_per_session_lookup_logic():
     # Must use row.session_uuid for Resume button (not nested top.uuid)
     assert "const uuid = row.session_uuid" in HTML, \
         "frontend.py Resume button must use row.session_uuid, not nested sessions[0].uuid"
-    # Cache key bumped to v4 (v3 entries don't have session_uuid in id)
-    assert "wtdash_v4_" in HTML, "frontend.py cache key prefix must be v4 for FR-26 schema"
-    # One-shot v3 purge present
-    assert "purgeV3Cache" in HTML, "frontend.py must purge legacy wtdash_v3_ entries on load"
+    # Cache key prefix must be current (v5 — bumped past v4 for preview-cleanup)
+    assert "wtdash_v5_" in HTML, "frontend.py cache key prefix must be current (wtdash_v5_)"
+    # One-shot legacy purge present
+    assert "purgeLegacyCache" in HTML, "frontend.py must purge legacy wtdash cache entries on load"
 
 
 def test_status_column_uses_synthetic_sort_field():
@@ -487,6 +655,51 @@ def test_status_sort_key_python_replica():
     desc_labels = [r["label"] for r in rows_desc]
     assert desc_labels == list(reversed(asc_labels)), \
         f"DESC must reverse ASC exactly:\n  ASC : {asc_labels}\n  DESC: {desc_labels}"
+
+
+def test_live_uses_per_session_mtime_not_worktree_max():
+    """Regression (user-reported 2026-06-04: 4 windows open, ~10 rows green LIVE).
+
+    /api/index emits per-session claude_max_mtime + running_now (authoritative).
+    The frontend then merges /api/claude (per-WORKTREE aggregate) whose
+    claude_max_mtime is the MAX across the worktree. If that clobbers the per-row
+    value, the client LIVE-override `age < 300` fires for EVERY session in a
+    worktree that has one fresh session → false LIVE on old/closed sessions.
+
+    Replicates the formatter's LIVE decision in Python: with the per-session mtime
+    PRESERVED, an old session (running_now=false, old mtime) must read non-LIVE
+    even though a sibling session (and thus the worktree max) is fresh.
+    """
+    import time as _time
+    now = int(_time.time())
+    LIVE = 300
+
+    def is_live(row):  # mirrors frontend.py status formatter
+        age = (now - row["claude_max_mtime"]) if row.get("claude_max_mtime") else None
+        return bool(row.get("claude_running_now") or (age is not None and 0 <= age < LIVE))
+
+    worktree_max = now - 23  # one fresh sibling session just wrote
+    fresh = {"claude_running_now": True,  "claude_max_mtime": now - 23}
+    old   = {"claude_running_now": False, "claude_max_mtime": now - 29088}  # ~8h old
+
+    # CORRECT (per-session mtime preserved):
+    assert is_live(fresh) is True
+    assert is_live(old) is False, "old session must NOT be LIVE when its own mtime is old"
+
+    # BUG shape (per-session mtime clobbered by worktree max) — would be True:
+    old_clobbered = {"claude_running_now": False, "claude_max_mtime": worktree_max}
+    assert is_live(old_clobbered) is True, \
+        "demonstrates the bug: clobbering with worktree-max makes the old session false-LIVE"
+
+
+def test_frontend_preserves_per_session_mtime_after_merge():
+    """The /api/claude merge must restore per-session claude_max_mtime in BOTH the
+    cache-apply and fetch-enrich paths (else regression of the false-LIVE bug)."""
+    from frontend import HTML
+    assert "const mtimeBefore = row.claude_max_mtime" in HTML, \
+        "frontend must capture per-session mtime before the /api/claude Object.assign"
+    assert HTML.count("row.claude_max_mtime = mtimeBefore") >= 2, \
+        "per-session mtime must be restored in BOTH applyCachedClaude AND enrichClaude"
 
 
 def test_frontend_version_self_reload_present():

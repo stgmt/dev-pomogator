@@ -126,7 +126,7 @@ HTML = """<!doctype html>
 // browser is running stale JS (Edge --app keeps in-memory state across reloads
 // since Cache-Control: no-store only stops disk caching, not in-memory).
 // Force a full reload to pull fresh HTML/JS.
-const FRONTEND_VERSION = '0.5.0';
+const FRONTEND_VERSION = '0.6.1';
 
 let _rows = [];          // current row state
 let _wtById = {};        // id -> row reference
@@ -210,8 +210,12 @@ function applyCachedClaude(row) {
   // We keep claude_sessions / claude_last_modified for the message lookup,
   // but skip claude_running_now.
   const liveBefore = row.claude_running_now;
+  const mtimeBefore = row.claude_max_mtime;   // per-session mtime from /api/index
   Object.assign(row, c, {_claude_loaded: true, _from_cache: true, _cached_etag: cached.etag});
   row.claude_running_now = liveBefore;
+  // Restore per-session mtime clobbered by the per-worktree /api/claude aggregate
+  // (see enrichClaude) — else old sessions in an active worktree read as false LIVE.
+  row.claude_max_mtime = mtimeBefore;
   // FR-26: pick the session matching THIS row's session_uuid (not newest).
   // Fallback to first session if UUID not found (could happen if cache stale).
   const sessions = c.claude_sessions || [];
@@ -226,6 +230,7 @@ function applyCachedClaude(row) {
 }
 
 async function loadIndex() {
+  window._lastLoadTs = Date.now();
   setProgress(0, 'Loading worktree index…');
   try {
     const r = await fetch('/api/index', {cache: 'no-store'});
@@ -313,8 +318,14 @@ async function enrichClaude() {
         // Apply to every row sharing this cwd; lookup per-row session by uuid.
         rowsForPath.forEach(row => {
           const liveBefore = row.claude_running_now;
+          const mtimeBefore = row.claude_max_mtime;   // per-session mtime from /api/index
           Object.assign(row, c, {_claude_loaded: true, _from_cache: (r.status === 304)});
           row.claude_running_now = liveBefore;  // keep /api/index per-session value
+          // /api/claude.claude_max_mtime is the per-WORKTREE MAX — Object.assign just
+          // clobbered our per-session value with it. Restore the per-session mtime, or
+          // EVERY session in a worktree with one fresh session would read age<300s →
+          // false LIVE (user-reported: 4 windows open, ~10 rows green).
+          row.claude_max_mtime = mtimeBefore;
           const sessions = c.claude_sessions || [];
           const s = (row.session_uuid && sessions.find(x => x.uuid === row.session_uuid)) || sessions[0] || {};
           row._last_msg_text = s.last_message || s.first_message || '';
@@ -340,7 +351,11 @@ async function enrichClaude() {
       }
       done++;
       setProgress((done / total) * 100, `Fetching cwd (${done}/${total}) · ${rowsForPath.length} rows`);
-      if (done % 3 === 0 || done === total) render();
+      // Render ONCE at the end, not every 3rd fetch. Each render() is a full
+      // Tabulator replaceData (rebuilds all row DOM + fitColumns recalc) — calling
+      // it ~5×/loadIndex caused the visible "constant flicker" jank-burst. Tabulator
+      // keeps painting cached/partial data until the final render.
+      if (done === total) render();
     }
   });
   await Promise.all(workers);
@@ -352,19 +367,25 @@ async function enrichClaude() {
 }
 
 async function enrichGitStatus() {
-  const rows = [..._rows];
-  const queue = [...rows];
+  // Dedup by worktree_path — per-session rows share a cwd, so without this we
+  // spawned one `git status` subprocess PER ROW (e.g. 300+ identical calls for
+  // one cwd). Fetch once per unique path, then fan the result out to all rows.
+  const byPath = {};
+  _rows.forEach(r => { (byPath[r.worktree_path] = byPath[r.worktree_path] || []).push(r); });
+  const queue = Object.keys(byPath);
   const workers = Array(4).fill(0).map(async () => {
     while (queue.length) {
-      const row = queue.shift();
+      const path = queue.shift();
+      let status, dirty;
       try {
-        const r = await fetch('/api/git-status?path=' + encodeURIComponent(row.worktree_path), {cache: 'no-store'});
-        row._git_status = await r.json();
-        row._git_dirty_total = (row._git_status.added||0) + (row._git_status.modified||0) + (row._git_status.deleted||0) + (row._git_status.untracked||0);
+        const r = await fetch('/api/git-status?path=' + encodeURIComponent(path), {cache: 'no-store'});
+        status = await r.json();
+        dirty = (status.added||0) + (status.modified||0) + (status.deleted||0) + (status.untracked||0);
       } catch (e) {
-        row._git_status = {error: e.message};
-        row._git_dirty_total = 0;
+        status = {error: e.message};
+        dirty = 0;
       }
+      byPath[path].forEach(row => { row._git_status = status; row._git_dirty_total = dirty; });
     }
   });
   await Promise.all(workers);
@@ -484,12 +505,15 @@ function buildTabulator() {
           const pids = (row.claude_window_pids || []).join(',');
           return `<span class="status open" title="Window open · PIDs: ${pids}">💡 Open</span>`;
         }
-        if (row.claude_last_modified) {
-          const ageMin = Math.floor((Date.now()/1000 - new Date(row.claude_last_modified).getTime()/1000) / 60);
+        if (row.claude_max_mtime) {
+          // Per-session mtime (preserved through the /api/claude merge) — the
+          // authoritative idle age. claude_last_modified is per-WORKTREE, so it
+          // would mislabel an old session as "idle 0m" whenever a sibling is fresh.
+          const ageMin = Math.floor((Date.now()/1000 - row.claude_max_mtime) / 60);
           return `<span class="status idle">idle ${formatIdle(ageMin)}</span>`;
         }
-        if (row.claude_max_mtime) {
-          const ageMin = Math.floor((Date.now()/1000 - row.claude_max_mtime) / 60);
+        if (row.claude_last_modified) {
+          const ageMin = Math.floor((Date.now()/1000 - new Date(row.claude_last_modified).getTime()/1000) / 60);
           return `<span class="status idle">idle ${formatIdle(ageMin)}</span>`;
         }
         return '<span class="status none">—</span>';
@@ -732,9 +756,12 @@ document.addEventListener('keydown', (e) => {
 loadIndex();
 setInterval(loadIndex, 30000);
 
-// Refresh on tab focus (Chrome throttles setInterval on hidden tabs)
+// Refresh on tab focus (Chrome throttles setInterval on hidden tabs).
+// Debounced: a window that flips focus rapidly (Edge --app) would otherwise fire
+// loadIndex on every focus → a full re-render burst each time. Skip if we loaded
+// within the last 10s — the 30s interval covers steady-state refresh anyway.
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden) {
+  if (!document.hidden && (Date.now() - (window._lastLoadTs || 0)) > 10000) {
     setProgress(0, 'Tab focused — refreshing…');
     loadIndex();
   }

@@ -22,7 +22,7 @@
   Config + helpers come from sp-common.ps1. Port via $env:WT_DASHBOARD_PORT.
 #>
 [CmdletBinding()]
-param([switch]$Pin)
+param([switch]$Pin, [switch]$NoReveal)
 
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'sp-common.ps1')
@@ -35,12 +35,20 @@ if (-not (Find-SpBrowser)) {
   Write-Warning "Edge/Chrome not found — the launcher will fall back to the default browser (no standalone window)."
 }
 
-# Version-stable PowerShell exe for the shortcut target (survives pwsh updates)
+# PowerShell exe for the shortcut target. Prefer a REAL pwsh 7 install, else
+# Windows PowerShell 5.1 (always present at System32). DELIBERATELY avoid the
+# %LOCALAPPDATA%\Microsoft\WindowsApps\pwsh.exe Store alias: if pwsh 7 isn't
+# actually installed, *executing* that stub opens the Microsoft Store instead of
+# running the launcher — i.e. "the shortcut does nothing" for users without pwsh.
+# launch.ps1 is 5.1-compatible, so System32 powershell.exe is a safe universal fallback.
 $psExe = $null
-$stub = Join-Path $env:LOCALAPPDATA 'Microsoft\WindowsApps\pwsh.exe'        # Store alias — stable
-$sys  = Join-Path $env:WINDIR 'System32\WindowsPowerShell\v1.0\powershell.exe'  # always present
-if (Test-Path $stub) { $psExe = $stub } elseif (Test-Path $sys) { $psExe = $sys }
-else { Write-Error 'No stable PowerShell executable found.'; exit 1 }
+$psCandidates = @(
+  "$env:ProgramFiles\PowerShell\7\pwsh.exe",
+  "${env:ProgramFiles(x86)}\PowerShell\7\pwsh.exe",
+  (Join-Path $env:WINDIR 'System32\WindowsPowerShell\v1.0\powershell.exe')  # WinPS 5.1 — always present
+)
+foreach ($c in $psCandidates) { if ($c -and (Test-Path $c)) { $psExe = $c; break } }
+if (-not $psExe) { Write-Error 'No PowerShell executable found.'; exit 1 }
 
 $icon = Ensure-SpIcon
 $iconLocation = if ($icon) { $icon } else { "$psExe,0" }
@@ -80,6 +88,9 @@ if ($Pin) {
   } catch { Write-Host "⚠ Pin attempt failed: $_. Manual right-click → Pin to taskbar required." }
 }
 
-# Open Explorer with the icon highlighted so the user can immediately drag/pin
-Start-Process explorer.exe "/select,`"$lnkPath`""
+# Open Explorer with the icon highlighted so the user can immediately drag/pin.
+# Suppressed with -NoReveal (e.g. when install.ps1 calls this non-interactively).
+if (-not $NoReveal) {
+  Start-Process explorer.exe "/select,`"$lnkPath`""
+}
 exit 0
