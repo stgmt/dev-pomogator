@@ -1044,29 +1044,30 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
 > (the collision is global; a half-migration is worse). Anchors stay BARE (FR-36b) — do NOT qualify them.
 
 - [ ] P13-1: composite node key in the builder only -- @feature36 — id: p13-composite-key — Status: TODO | Est: 240m
-  _Requirements: [FR-36a](FR.md#fr-36)_
+  _Requirements: [FR-36](FR.md#fr-36), [FR-36a](FR.md#fr-36)_
   **Done When:**
   - [ ] `tools/spec-graph/builder.ts` keys every node by `<slug>:<localId>` (slug derived from the `.specs/<slug>/` path), node carries a `spec` field; parsers keep emitting bare `localId` (smallest de-collision diff) (SPECGEN004_90)
   - [ ] dogfood (`node --import tsx tools/spec-mcp-server/dogfood-dataset.ts`) shows FR-node count ≈470 (was 47) and a raw pre-map node dump with 0 collisions (SPECGEN004_95)
+  - [ ] **GLOBAL, not v4-only:** the composite key de-collides ALL 47 specs at once (corpus-wide), verified 0 id-collisions across the whole corpus — a half-migration is worse than none (FR-36e)
   - [ ] full-corpus `buildGraphFromCwd` build time stays within the MCP cold-start budget despite ≈470 nodes — measured before/after (NFR-Performance-9)
   - [ ] full clean-HEAD Docker suite GREEN; any test pinning a bare node id updated to the qualified form in THIS task (NFR-Reliability-11)
 
 - [ ] P13-2: edges use composite keys + build the @featureN tested-by layer -- @feature36 — id: p13-edges-featureN — Status: TODO | Est: 240m
-  _Requirements: [FR-36c](FR.md#fr-36)_
+  _Requirements: [FR-36](FR.md#fr-36), [FR-36c](FR.md#fr-36)_
   **Done When:**
   - [ ] `parsers/md.ts` (covers) + `parsers/gherkin.ts` (tested-by) reference composite keys on both ends; a same-spec `@featureN`↔`FR-N` tested-by edge is built (not only `@FR-N`) (SPECGEN004_92)
   - [ ] `get_trace(FR)` returns scenarios via REAL edges for FRs that have BDD scenarios; the tag-scan workaround in `tools/spec-mcp-server/tools.ts` get_trace is removed (SPECGEN004_92)
   - [ ] dogfood confirms get_trace non-empty via edges; full clean-HEAD Docker suite GREEN (NFR-Reliability-11)
 
 - [ ] P13-3: tools accept slug:id / {spec, node_id}; bare-id → candidate list -- @feature36 — id: p13-tool-api — Status: TODO | Est: 180m
-  _Requirements: [FR-36d](FR.md#fr-36)_
+  _Requirements: [FR-36](FR.md#fr-36), [FR-36d](FR.md#fr-36)_
   **Done When:**
   - [ ] `tools/spec-mcp-server/tools.ts` resolves `slug:FR-2` / `{spec, node_id}` to the exact node (SPECGEN004_94); a colliding bare id returns the candidate list of `slug:id`, not an arbitrary node (SPECGEN004_93)
   - [ ] `server.bundle.mjs` rebuilt (`npm run build:mcp`) so plugin users get the fix; bundle-freshness guard GREEN (NFR-Reliability-11)
   - [ ] anchors verified still bare/file-local — Marksman + anchor-fix unaffected (SPECGEN004_91, FR-36b)
 
 - [ ] P13-4: update bare-id-pinning tests to the qualified form + verify -- @feature36 — id: p13-test-churn — Status: TODO | Est: 180m
-  _Requirements: [FR-36e](FR.md#fr-36)_
+  _Requirements: [FR-36](FR.md#fr-36), [FR-36e](FR.md#fr-36)_
   **Done When:**
   - [ ] every test asserting a bare node id (`get_node("FR-2")`, hooks-stdin, spec-graph-query skill examples) updated to the qualified form / candidate-list expectation (AC-36.6)
   - [ ] `spec-graph-query` skill + `spec-mcp-dogfood`/`runtime-dogfood` skills updated for the new node_id semantics; bare→candidates fallback documented
@@ -1081,32 +1082,43 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
 > Each Done-When binds to a live verdict/dogfood run; depends on Phase 13 (FR-36 one graph).
 
 - [ ] P14-1: reconcile the 58 stale FILE_CHANGES paths + make stale-path a hard verdict ERROR -- @feature37 — id: p14-stale-filechanges — Status: TODO | Est: 240m
-  _Requirements: [FR-37e](FR.md#fr-37), [FR-37b](FR.md#fr-37)_
+  _Requirements: [FR-37](FR.md#fr-37), [FR-37e](FR.md#fr-37), [FR-37b](FR.md#fr-37)_
   **Done When:**
   - [ ] every `extensions/…`/`dist/installer/…` path in `.specs/spec-generator-v4/FILE_CHANGES.md` rewritten to its canonical post-v2 path OR removed with a reason (SPECGEN004_97)
   - [ ] `audit-spec` v4 stale-path P0s → 0 (was 9 of 10); `audit-spec` wired into the authoritative verdict so reading `validate-spec` alone cannot bypass it
   - [ ] live run: authoritative verdict FAILS before the fix (names the stale paths), PASSES that gate after — proven, not asserted
 
 - [ ] P14-2: traceability-completeness check (the cell→atom invariants) -- @feature37 — id: p14-traceability-check — Status: TODO | Est: 300m
-  _Requirements: [FR-37b](FR.md#fr-37)_
+  _Requirements: [FR-37](FR.md#fr-37), [FR-37b](FR.md#fr-37)_
   **Done When:**
   - [ ] new check emits a per-item gap list for {stale FILE_CHANGES path, UNCOVERED_FR, TASK_UNTESTED, UNTAGGED_SCENARIO} over the one graph (SPECGEN004_98)
   - [ ] within spec-generator-v4: UNCOVERED_FR→0, TASK_UNTESTED→0, every Scenario tagged→FR; corpus-wide counts measured + archived (baseline: 1243 UNTAGGED, 11 UNCOVERED_FR, 2 TASK_UNTESTED)
   - [ ] dogfood before/after shows the counts move to 0 within v4; suite green
 
 - [ ] P14-3: smart verdict authoritative; structural demoted to pre-filter -- @feature37 — id: p14-authoritative-verdict — Status: TODO | Est: 300m
-  _Requirements: [FR-37a](FR.md#fr-37), [FR-37c](FR.md#fr-37)_
+  _Requirements: [FR-37](FR.md#fr-37), [FR-37a](FR.md#fr-37), [FR-37c](FR.md#fr-37)_
   **Done When:**
   - [ ] the health entrypoint composes conformance + get_coverage + audit-spec + P14-2 over the one graph as THE verdict; `validate-spec` is a pre-filter whose pass is not emittable as "valid/clean/done" (SPECGEN004_96)
   - [ ] FR-8 semantic runs in the verdict path when a `claude` binary is present (SPECGEN004_99); absent → `SEMANTIC_SKIPPED` note, never a silent "no drift" (SPECGEN004_100)
   - [ ] live: on a 0-structural-error / open-smart-findings spec the verdict reads RED with a gap list; after reconciliation it reads GREEN
 
 - [ ] P14-4: skills/agents may not launder a structural pass -- @feature37 — id: p14-skill-guard — Status: TODO | Est: 180m
-  _Requirements: [FR-37d](FR.md#fr-37)_
+  _Requirements: [FR-37](FR.md#fr-37), [FR-37d](FR.md#fr-37)_
   **Done When:**
   - [ ] `spec-status` / `spec-mcp-dogfood` / `runtime-dogfood` / `suite-failure-triage` skills updated to surface the smart verdict + gap list, forbidden to print "valid/clean/done" off `validate-spec` alone (SPECGEN004_101)
   - [ ] a `.claude/rules/` guard encodes the exact failure (structural "valid" trusted as health) so future sessions can't repeat it
   - [ ] full clean-HEAD Docker suite green; honesty-gate consistent
+
+- [ ] P14-5: reusable corpus-health auditor skill — find collisions + broken edges + untraced atoms for ANY corpus, debugged to fire -- @feature37 — id: p14-corpus-health-skill — Status: TODO | Est: 360m
+  _Requirements: [FR-37](FR.md#fr-37), [FR-37b](FR.md#fr-37), [FR-36](FR.md#fr-36)_
+  > User ask (2026-06-05): make a GENERAL skill so this whole class (bare-id collisions, unresolved
+  > cross-spec edges, untraced atoms) is caught automatically in the future, not re-discovered by hand —
+  > and DEBUG it so it actually fires + helps, proven on a live run.
+  **Done When:**
+  - [ ] a GENERAL skill (corpus root as input, NOT hardcoded to spec-generator-v4) that builds the graph and reports: (1) bare-id collisions across specs (FR-36 class — raw pre-map node dump, same-bare-id-different-spec), (2) unresolved/orphan edges, (3) untraced atoms (UNCOVERED_FR / TASK_UNTESTED / UNTAGGED_SCENARIO / stale FILE_CHANGES path) — one report + a 🟢/🔴 verdict
+  - [ ] reuses the FR-37b traceability-completeness check (P14-2) + `buildGraphFromCwd`; works on other repos' `.specs/` corpora, not just this one
+  - [ ] **DEBUGGED to actually fire + help (not asserted):** a live run on THIS corpus pasted as evidence surfaces the known signals — ≈470-vs-47 collision, 58 stale FILE_CHANGES paths, 1243 UNTAGGED_SCENARIO, 11 UNCOVERED_FR; auto-invocable via trigger phrases AND manually; 0 overlap vs existing skills (skills-rules-optimizer check)
+  - [ ] dogfood before/after; full clean-HEAD Docker suite green
 
 ## Refactor & Polish (final)
 

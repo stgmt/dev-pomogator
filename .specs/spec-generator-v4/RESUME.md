@@ -1,0 +1,78 @@
+# RESUME — spec-generator-v4 (handoff, continue from here)
+
+**Updated:** 2026-06-05 · **Branch:** `feat/phase-2a-mcp-server-and-hooks` · **PR:** [#32](https://github.com/stgmt/dev-pomogator/pull/32)
+
+Pull this branch on any machine, read this file + the two audit-reports below, and continue. This is
+the single source of truth for "where we stopped and what to do next."
+
+## Where we are (this session's deliverables — SPEC-level, committed)
+
+Two new requirements were integrated INTO this spec (not as separate specs — the corpus is one organism):
+
+- **FR-36 — unified spec-graph via spec-qualified node ids.** Root cause (measured by dogfood): the
+  graph keys nodes by the BARE id, so 46 specs' `FR-2` collide → only 47 FR nodes survive (~470
+  expected). Fix = composite key `<slug>:<localId>` (anchors stay bare/file-local; Marksman untouched).
+  Design + id-scheme deep-dive: `audit-reports/unified-spec-graph-design.md`. Evidence:
+  `audit-reports/spec-mcp-dogfood-dataset.md`.
+- **FR-37 — smart verdict authoritative + cell→atom traceability gate.** A structural `validate-spec:
+  0 errors` was reported as "valid" while the smart layer showed real debt — false green. Fix = the
+  verdict is the SMART analysis (conformance + get_coverage + audit-spec + a traceability-completeness
+  check) over the one graph, default-ON; `validate-spec` demoted to a pre-filter; full traceability is
+  a hard gate. Report: `audit-reports/v4-smart-verdict-and-organism-traceability.md`.
+
+Both are FULLY TRACED (dogfood-verified, FR→AC→Scenario→Task→Design):
+- FR-36 → 7 AC, 6 scenarios (`@feature36` / SPECGEN004_90–95), 5 tasks (P13-1..4 + P14-5), DESIGN entry.
+- FR-37 → 6 AC, 6 scenarios (`@feature37` / SPECGEN004_96–101), 5 tasks (P14-1..4 + P14-5), DESIGN entry.
+- `validate-spec` 0 errors; BDD suite green (101 scenarios, 12 undefined @feature36+37, 0 failed —
+  cucumber is non-strict here, so undefined scenarios ahead of step-defs do NOT redden the suite).
+
+### Commits this session (newest last)
+- `b3c2c6e` feat(spec-v4): FR-36 unified spec-graph via spec-qualified node ids
+- `ed34ecc` feat(spec-v4): FR-37 smart verdict authoritative + cell→atom traceability gate
+- (this commit) traceability fixes: task→FR bare-ref links, DESIGN decisions, P14-5 corpus-health skill, RESUME.md
+
+## What is NOT done (the work — CODE — none of it is written yet)
+
+The spec now DESCRIBES the fix; the implementation is Phase 13 + Phase 14 in `TASKS.md`. Zero code shipped.
+
+### Measured debt (drive these to 0 — this is the gate)
+- **10 audit P0** = 1× FR-1 missing AC-link + **9× FILE_CHANGES paths at deleted `extensions/…`/`dist/installer/…`** (58 such stale paths total in `FILE_CHANGES.md`). NOT "FRs missing AC" (earlier mislabel, corrected).
+- **conformance_check: 1256** = 1243 `UNTAGGED_SCENARIO` + 11 `UNCOVERED_FR` + 2 `TASK_UNTESTED`.
+- **corpus specs-validator: 32 NOT_COVERED + 75 ORPHAN + 9 unconfirmed STOP.**
+- **collision: ~470 FR nodes expected, 47 present** (bare-id collision — FR-36 fixes this GLOBALLY across all 47 specs).
+
+### Next steps, in order
+1. **Phase 14 P14-1** — reconcile the 58 stale `extensions/`/`dist/installer` paths in `FILE_CHANGES.md`
+   (closes 9 of 10 P0) + wire `audit-spec` into the verdict; prove verdict RED→GREEN on a live run.
+2. **Phase 13** (FR-36) — composite key in `builder.ts` (de-collides ALL 47 specs at once) → edges +
+   `@featureN` tested-by → tools accept `slug:id` → update bare-id-pinning tests. Each phase suite-green.
+3. **Phase 14 P14-2/3/4** — traceability-completeness check; make the smart verdict authoritative;
+   skill guard (`spec-status`/dogfood/triage may not print "valid" off validate-spec) + a `.claude/rules/` guard.
+4. **Phase 14 P14-5** — the reusable GENERAL corpus-health skill (find collisions + broken edges +
+   untraced atoms for ANY corpus), DEBUGGED with a live run as evidence. (User ask 2026-06-05.)
+5. **Older verification debt** (pre-existing, see `final-verification` task): FR-20/21/24 tests, jscpd
+   dedup, `/simplify`, CHANGELOG. Plan entry point: `~/.claude/plans/fizzy-percolating-turing.md` (Wave W1).
+
+## Open decisions (RECORDED, not yet answered — per user "пока не отвечай")
+1. **Push cadence:** push each spec commit immediately vs batch. → resolved this turn: PUSH NOW.
+2. **PR #32 shape:** it is a 622-file monster ("20 batches, 9 workflows, 48 artifacts"). Merge as-is
+   vs split? Undecided — needs a call before any merge.
+
+## How to resume (commands)
+```bash
+git fetch && git switch feat/phase-2a-mcp-server-and-hooks && git pull
+# re-measure the debt (the smart verdict, the right way — handlers are async + MCP-enveloped):
+node --import tsx tools/spec-mcp-server/dogfood-dataset.ts > dataset.json   # 13 tools on the real graph
+npx tsx tools/specs-generator/audit-spec.ts -Path .specs/spec-generator-v4 # the 10 P0
+npx tsx tools/specs-generator/validate-spec.ts -Path .specs/spec-generator-v4 # structural pre-filter only
+node --import tsx node_modules/@cucumber/cucumber/bin/cucumber.js           # BDD (non-strict, exit 0)
+```
+**Gotchas when driving the MCP tools in a script:** the handlers are ASYNC and return the MCP envelope
+`{content:[{type:'text', text: JSON}]}` — `await` then `JSON.parse(r.content[0].text)`, or you read an
+unresolved Promise and see false zeros. `get_trace` links a Task to an FR only if the task's
+`_Requirements:` cites the BARE `[FR-N]` (sub-ids like `[FR-36a]` alone don't link).
+
+## Pointers
+- Spec: `.specs/spec-generator-v4/` (FR / ACCEPTANCE_CRITERIA / spec-generator-v4.feature / NFR / USER_STORIES / TASKS / DESIGN).
+- Reports: `audit-reports/{unified-spec-graph-design, spec-mcp-dogfood-dataset, v4-smart-verdict-and-organism-traceability}.md`.
+- Memory (user home, not in repo): `feedback_never-report-valid-off-structural-check`, `feedback_verify-regressions-on-clean-checkout`.
