@@ -21,7 +21,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
-import { buildGraphFromCwd } from './builder.ts';
+// NB: `builder.ts` is LAZY-imported inside main() — it pulls @cucumber/gherkin, a
+// node_modules runtime dep ABSENT for plugin users. A top-level import would crash the
+// hook on every Stop (dead integration). Loading it only when a modified spec actually
+// needs grading, and fail-opening when the deps are missing, keeps the hook safe to ship.
 import { checkConformance, type Finding } from './conformance.ts';
 import type { TestQualityVerdict } from './coverage.ts';
 import { evaluateTestQualityGate, escapeReason, escapeHonoured, logEscape } from './test-quality-gate.ts';
@@ -83,8 +86,18 @@ async function main(): Promise<void> {
   const slugs = new Set(modifiedSpecSlugs(repoRoot));
   if (slugs.size === 0) return approve();
 
-  const graph = buildGraphFromCwd(repoRoot);
-  const findings = checkConformance(graph, { testQualityByTask: readVerdicts(repoRoot) });
+  // Lazy-load the gherkin-backed builder ONLY now (a modified spec needs grading). If
+  // its node_modules deps (@cucumber/gherkin) are absent — a plugin user without
+  // node_modules — DEGRADE to fail-open (approve) instead of crashing on every Stop.
+  // Matches NFR-Reliability-10 (unavailable auditor → PASS/FAIL, never a hard wedge).
+  let findings: Finding[];
+  try {
+    const { buildGraphFromCwd } = await import('./builder.ts');
+    findings = checkConformance(buildGraphFromCwd(repoRoot), { testQualityByTask: readVerdicts(repoRoot) });
+  } catch (err) {
+    process.stderr.write(`[test-quality-gate] graph deps unavailable — degraded to PASS/FAIL (fail-open): ${err instanceof Error ? err.message : String(err)}\n`);
+    return approve();
+  }
   // Scope to tasks living in a git-modified spec (the session's own work).
   const scoped: Finding[] = findings.filter((f) => {
     const m = f.location.file.replace(/\\/g, '/').match(/\.specs\/([^/]+)\//);
