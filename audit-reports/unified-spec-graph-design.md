@@ -77,3 +77,43 @@ need a stable target — a single string key is simplest. `<slug>:<localId>` is 
 This is a real refactor (~21 files + test churn), but it's the correct foundation for "specs as
 one graph". Recommend turning this doc into a proper `.specs/unified-spec-graph/` via create-spec
 before coding, so each phase has FR/AC/BDD + the honesty gate.
+
+## 9. ID scheme deep-dive — domain-prefix vs global N+1 (pitfalls both sides)
+
+**Decisive existing fact:** the project ALREADY prefixes — scenarios are coded `SPECGEN004_40`,
+`PLUGIN005_NN`, `CORE024_NN` (globally unique). Only FR/AC are bare (`FR-2`) and collide. So the
+graph is INCONSISTENT, and "add a prefix to FR/AC" just finishes a pattern already in use — not a
+new invention. Also measured: there are **zero cross-spec markdown links** today (refs live
+per-spec) and anchors are file-local (`](FR.md#fr-2)`).
+
+### Option A — domain prefix (auto from folder: `spec-generator-v4:FR-2`)
+- **Creation side:** author writes `## FR-2`, numbering LOCAL 1..N (unchanged from today). The
+  prefix is the spec folder name, derived MECHANICALLY at build time — **the author never types
+  it, there are NO "domain prefix rules" to design**. No central allocator. Parallel branches
+  never collide (different specs → different prefixes; same spec → an ordinary merge conflict, as
+  now). Matches the SPECGEN/PLUGIN/CORE convention already in the repo.
+- **Work side:** anchors stay bare `#fr-2` (file-local) → Marksman / anchor-fix / existing links
+  unchanged. Within-spec refs unchanged. The ONLY additions: (a) a cross-spec ref convention
+  (`slug:FR-2`) — but cross-spec refs are rare + currently zero, so opt-in; (b) tool API takes
+  `{spec, node_id}` or `slug:id`, bare id → candidate list.
+- **Pitfall:** renaming a spec folder changes its node keys → cross-spec refs to it break (same as
+  renaming a Jira project). Rare; an anchor-fix-style rewrite covers it.
+
+### Option B — global N+1 (`FR-347`, one counter across all specs)
+- **Creation side (this is where it hurts):** needs a CENTRAL ALLOCATOR — a shared counter that
+  hands out the next number across all specs. → merge conflict on the counter every time ANY spec
+  adds an FR; two parallel branches both grab `FR-471` → collision on merge. Authoring loses
+  LOCALITY: the author of one spec sees `FR-347, FR-352, …` (non-contiguous, meaningless). Insert/
+  delete forces renumbering → brittle.
+- **Work side:** any ref is globally unique with no qualification (the one upside) — BUT `FR-347`
+  carries no spec context, anchors become `#fr-347` (and break on any renumber), navigation is
+  harder, and it diverges from the existing SPECGEN/PLUGIN/CORE style.
+
+### Verdict
+**Option A (domain prefix, auto from folder) wins on BOTH sides.** Your worry — "придётся
+разрабатывать доменные правила префиксы" — is unfounded: the prefix = the folder name, derived
+automatically; the author keeps writing `FR-2` and anchors keep being `#fr-2`. N+1's only merit
+(global uniqueness) is bought with a central allocator + merge conflicts + lost locality +
+brittle renumber — strictly worse on the creation side, and not better on the work side. Industry
+agrees (Jira `PROJ-123`, every requirements tool = prefix; RFC global-counter needs a central
+editor — which is exactly the allocator pain). **Recommend Option A; do NOT use N+1.**
