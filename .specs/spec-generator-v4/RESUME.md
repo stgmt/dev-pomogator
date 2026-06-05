@@ -38,8 +38,10 @@ The spec now DESCRIBES the fix; the implementation is Phase 13 + Phase 14 in `TA
 ### Measured debt (drive these to 0 — this is the gate)
 - **1 audit P0** (was 10): 1× FR-1 missing AC-link (scope: `final-verification`). ✅ P14-1 (2026-06-05)
   closed the 9 stale-path P0s: 58 stale `extensions/…`/`dist/installer/…` paths reconciled (57 rewritten
-  to canonical post-v2 paths, existence-verified; 1 removed with reason). Live proof: verdict BEFORE/AFTER
-  in `.dev-pomogator/spec-verdict-p14-1-{BEFORE,AFTER}.txt` — `FILE_CHANGES_VERIFY` 9→0.
+  to canonical post-v2 paths, existence-verified; 1 removed with reason). Live proof is reproducible:
+  `npx tsx tools/specs-generator/spec-verdict.ts -Path .specs/spec-generator-v4` — now RED with exactly
+  1× LINK_VALIDITY (`FILE_CHANGES_VERIFY` 9→0); on the pre-fix checkout (`7d1954c`) the same command
+  reads RED with 10 ERROR naming all 9 stale paths.
 - **conformance_check: 1256** = 1243 `UNTAGGED_SCENARIO` + 11 `UNCOVERED_FR` + 2 `TASK_UNTESTED`.
 - **corpus specs-validator: 32 NOT_COVERED + 75 ORPHAN + 9 unconfirmed STOP.**
 - **collision: ~470 FR nodes expected, 47 present** (bare-id collision — FR-36 fixes this GLOBALLY across all 47 specs).
