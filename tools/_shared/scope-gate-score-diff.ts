@@ -6,9 +6,11 @@
  * verified by /verify-generic-scope-fix before commit.
  *
  * Spec: .specs/verify-generic-scope-fix/FR.md#fr-6 + FR-4 dampening
- * Calibration: tests/fixtures/scope-gate/stocktaking-diff.patch → score 3 (+1 filename, +2 enum-item),
- *   well above the gate's SCORE_THRESHOLD (2, scope-gate-guard.ts). Was 5 before the #46 comma-churn
- *   fix (the previous-last array line gaining a trailing comma was wrongly counted as a new item).
+ * Calibration: tests/fixtures/scope-gate/stocktaking-diff.patch → score 4 (+1 filename, +3 guard
+ *   enum-item). A structural expansion in a guard file weighs +3 (vs +2 non-guard). Pre-#46 it
+ *   reached 4 via a comma-churn over-count (the previous-last array line gaining a trailing comma
+ *   was wrongly counted as a 2nd item → 5); that bug is fixed (isCommaChurn) and the +3 guard
+ *   weight now carries the regression pin instead.
  */
 
 export interface ScoreResult {
@@ -245,12 +247,19 @@ export function scoreDiff(unifiedDiff: string, opts: ScoreOptions = {}): ScoreRe
         const line = hunk.lines[i];
         if (line.kind !== 'add') continue;
 
+        // A structural expansion (enum/switch) inside a GUARD/policy file is the highest-signal
+        // event the gate exists for — the PRODUCTS-20218 incident was exactly an enum item added
+        // to a guard service. Weight it +3 (vs +2 in a non-guard file) so a real guard-file
+        // expansion clears the regression pin (>=4 with the +1 filename) WITHOUT relying on the
+        // old comma-churn over-count. Filename alone still scores +1 (< threshold), so this does
+        // NOT broaden the gate to flag non-structural guard-file edits.
+        const structuralPts = isGuardFile ? 3 : 2;
         if (isEnumLikeItem(line, hunk, i) && !isCommaChurn(line, hunk)) {
-          score += 2;
-          reasons.push(`+2 enum-item:${file.path}:${line.lineNumber}`);
+          score += structuralPts;
+          reasons.push(`+${structuralPts} enum-item:${file.path}:${line.lineNumber}`);
         } else if (isSwitchCase(line, hunk, i)) {
-          score += 2;
-          reasons.push(`+2 switch-case:${file.path}:${line.lineNumber}`);
+          score += structuralPts;
+          reasons.push(`+${structuralPts} switch-case:${file.path}:${line.lineNumber}`);
         }
       }
 
