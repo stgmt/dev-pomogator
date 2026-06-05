@@ -42,7 +42,10 @@ The spec now DESCRIBES the fix; the implementation is Phase 13 + Phase 14 in `TA
   `npx tsx tools/specs-generator/spec-verdict.ts -Path .specs/spec-generator-v4` — now RED with exactly
   1× LINK_VALIDITY (`FILE_CHANGES_VERIFY` 9→0); on the pre-fix checkout (`7d1954c`) the same command
   reads RED with 10 ERROR naming all 9 stale paths.
-- **conformance_check: 1256** = 1243 `UNTAGGED_SCENARIO` + 11 `UNCOVERED_FR` + 2 `TASK_UNTESTED`.
+- **conformance_check: 1557** (после P13-1; было 1256 на склеенном графе) = 1498 `UNTAGGED_SCENARIO` +
+  54 `UNCOVERED_FR` + 2 `TASK_UNTESTED` + 3 `TASK_STATUS_UNVERIFIED`. Рост 11→54 / 1243→1498 — ВЕРИФИЦИРОВАН
+  как newly-visible узлы после де-коллизии, НЕ повисшие рёбра: `grep -rnE "^\s*@(FR|AC|NFR)-" tests/features/`
+  пуст (cross-root tested-by рёбер в корпусе нет — все `@featureN` там комментарии).
 - **corpus specs-validator: 32 NOT_COVERED + 75 ORPHAN + 9 unconfirmed STOP.**
 - **collision: ~470 FR nodes expected, 47 present** (bare-id collision — FR-36 fixes this GLOBALLY across all 47 specs).
 
