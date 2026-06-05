@@ -1,0 +1,59 @@
+---
+name: spec-graph-query
+description: >
+  Cheatsheet for querying the spec-graph MCP (`dev-pomogator-specs`) instead of grepping
+  `.specs/` and guessing slug variants. Pick the right tool for: look up a node by id, find
+  what covers/tests/implements a node, list scenarios by @feature tag, list specs, list a
+  phase's tasks, per-spec FR/AC/Scenario counts, or check a single anchor. Triggers (EN):
+  "query the spec graph", "look up FR-7 / AC-7.1 / a scenario node", "what tests/covers FR-7",
+  "what depends on this requirement before I change it", "scenarios tagged @featureN", "what
+  specs exist", "tasks in Phase 2", "how many FR/AC/scenarios per spec", "does this anchor
+  resolve". Triggers (RU): "запросить граф спек", "найди узел FR-7 / AC-7.1 / сценарий", "что
+  тестит/покрывает FR-7", "что зависит от требования", "сценарии с тегом @featureN", "какие
+  спеки есть", "задачи фазы 2", "сколько FR/AC/сценариев в спеке", "резолвится ли якорь". Do
+  NOT use for: markdown link/anchor NAVIGATION or rename (markdown-lsp / Marksman), bulk
+  broken-anchor scan+fix (anchor-fix), the honest per-task DONE verdict (get_coverage /
+  spec-status), or cross-spec drift (cross-spec-reconcile).
+allowed-tools: mcp__dev-pomogator-specs__get_trace, mcp__dev-pomogator-specs__find_by_tags, mcp__dev-pomogator-specs__conformance_check, mcp__dev-pomogator-specs__search, mcp__dev-pomogator-specs__get_node, mcp__dev-pomogator-specs__list_phase_tasks, mcp__dev-pomogator-specs__get_test_result, mcp__dev-pomogator-specs__find_orphans, mcp__dev-pomogator-specs__get_coverage_summary, mcp__dev-pomogator-specs__get_coverage, mcp__dev-pomogator-specs__validate_anchor, mcp__dev-pomogator-specs__list_specs, mcp__dev-pomogator-specs__find_refs, Bash, Read
+---
+
+# spec-graph-query — one cheatsheet for the spec-graph MCP
+
+The `dev-pomogator-specs` MCP server exposes 13 query tools over the built spec graph. Querying
+the graph beats grepping `.specs/`: the graph resolved tag inheritance, dual-anchor slugs, and
+the FR↔AC↔scenario↔task edges that text search can't see. Pick by the question you're asking.
+
+## The under-used query tools (reach for these — they exist and work)
+
+| Need | Tool | Call |
+|------|------|------|
+| Look up ONE node by id (file+line+fields) | `get_node` | `{ node_id: "AC-7.1" }` |
+| What **covers / tests / implements** a node (semantic edges, before a rename) | `find_refs` | `{ node_id: "FR-7" }` |
+| Scenarios carrying ALL these @feature tags (AND, inheritance-aware) | `find_by_tags` | `{ tags: ["@feature5","@regression"] }` |
+| Which specs are loaded in the graph | `list_specs` | `{}` |
+| Tasks under a phase heading | `list_phase_tasks` | `{ phase: "Phase 2: MCP server + hooks" }` |
+| Per-spec FR/AC/Scenario/Task **counts** (structural census) | `get_coverage_summary` | `{}` |
+| Does ONE anchor (compact id or slug) resolve? | `validate_anchor` | `{ anchor: "ac-7-1" }` |
+
+All return `{ ok, ... }`; `ok:false` (or `registered:false`) when nothing matches.
+
+## The 6 you already use (here for completeness)
+`get_trace` (full traceability for a node), `conformance_check` (structural findings),
+`search` (free-text over the graph), `get_test_result` (a scenario's last run),
+`find_orphans` (nodes with no inbound coverage), `get_coverage` (the **honest** FR-32 per-task
+DONE verdict — distinct from `get_coverage_summary`, which is just counts).
+
+## Pick the RIGHT neighbour (so you don't reach here by mistake)
+- **Jump** from a `[text](#anchor)` link to its heading, or **rename** a heading + propagate
+  links → **markdown-lsp** skill (Marksman `definition`/`references`/`rename`). Marksman owns
+  PROSE links; `find_refs` owns the SEMANTIC edges Marksman can't see — complementary.
+- **Scan the whole corpus for broken anchors + auto-FIX** → **anchor-fix** skill (`check.mjs`).
+  `validate_anchor` is a single yes/no, not a bulk fixer.
+- **"Is this task really DONE, backed by a green test?"** → `get_coverage` / **spec-status**.
+  Counting (`get_coverage_summary`) ≠ verifying.
+- **Cross-spec contradictions / drift** → **cross-spec-reconcile**.
+
+## Why this is one skill, not seven
+A bench (`skills-rules-optimizer` overlap detector) flagged 7 per-tool micro-skills at Jaccard
+0.6–1.0 vs a 0.3 merge threshold — same domain vocabulary, near-duplicate shape. Consolidated
+here: every tool stays documented + discoverable under one rich trigger, zero overlap flags.
