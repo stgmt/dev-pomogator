@@ -6,7 +6,9 @@
  * verified by /verify-generic-scope-fix before commit.
  *
  * Spec: .specs/verify-generic-scope-fix/FR.md#fr-6 + FR-4 dampening
- * Calibration: tests/fixtures/scope-gate/stocktaking-diff.patch → score >= 4 (regression pin)
+ * Calibration: tests/fixtures/scope-gate/stocktaking-diff.patch → score 3 (+1 filename, +2 enum-item),
+ *   well above the gate's SCORE_THRESHOLD (2, scope-gate-guard.ts). Was 5 before the #46 comma-churn
+ *   fix (the previous-last array line gaining a trailing comma was wrongly counted as a new item).
  */
 
 export interface ScoreResult {

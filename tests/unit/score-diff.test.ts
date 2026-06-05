@@ -26,10 +26,15 @@ describe('SCOPEGATE001: scoreDiff pure heuristic', () => {
   });
 
   // @feature1
-  it('SCOPEGATE001_12: stocktaking fixture scores >= 4 (regression pin)', () => {
+  it('SCOPEGATE001_12: stocktaking fixture scores >= 3, well above the gate threshold (2)', () => {
     const diff = readFixture('stocktaking-diff.patch');
     const { score, reasons } = scoreDiff(diff);
-    expect(score).toBeGreaterThanOrEqual(4);
+    // Corrected from >=4 after the comma-churn fix (#46): the real incident adds ONE new enum
+    // member ('stocktaking') + touches a guard file → +1 filename + +2 enum-item = 3. The old
+    // >=4 was calibrated to the pre-fix over-count (the 'movetoanotherwarehouse,' churn line was
+    // wrongly counted as a 2nd item → 5). 3 >= SCORE_THRESHOLD (2, scope-gate-guard.ts) so the
+    // incident STILL denies — the gate's purpose is preserved; the functional threshold is untouched.
+    expect(score).toBeGreaterThanOrEqual(3);
     expect(reasons.join('\n')).toMatch(/filename:.*Service\.ts/);
     expect(reasons.join('\n')).toMatch(/enum-item/);
   });
