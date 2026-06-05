@@ -69,8 +69,9 @@ describe('SHAPE001: minimal-spec — empty edges (F-21)', () => {
   it('SHAPE001: builder produces a graph without crashing on empty FILE_CHANGES', () => {
     const graph = buildGraph({ repoRoot: staged.root, skipNdjson: true });
     // The single `### FR-1:` heading is the only thing in the spec.
+    // FR-36a: node keys are spec-qualified — staged under `.specs/minimal-spec/`.
     expect(graph.nodes.size).toBeGreaterThanOrEqual(1);
-    expect(graph.nodes.get('FR-1')?.type).toBe('FR');
+    expect(graph.nodes.get('minimal-spec:FR-1')?.type).toBe('FR');
     // version + builtAt must still be stamped per the builder invariant.
     expect(graph.version).toBe(1);
     expect(typeof graph.builtAt).toBe('string');
@@ -237,8 +238,9 @@ describe('SHAPE004: v3-legacy-spec — dual + triple anchor coexist (F-24)', () 
       if (node.type === 'FR') frNodes.push(node as FrNode);
     }
     expect(frNodes.length).toBeGreaterThanOrEqual(2);
+    // FR-36a: node keys are spec-qualified — staged under `.specs/v3-legacy-spec/`.
     const ids = frNodes.map((n) => n.id).sort();
-    expect(ids).toEqual(expect.arrayContaining(['FR-1', 'FR-2']));
+    expect(ids).toEqual(expect.arrayContaining(['v3-legacy-spec:FR-1', 'v3-legacy-spec:FR-2']));
   });
 
   it('SHAPE004: legacy `Requirement: FR-1 Login` registers triple anchor', () => {
@@ -255,7 +257,8 @@ describe('SHAPE004: v3-legacy-spec — dual + triple anchor coexist (F-24)', () 
     // The mechanical assertion is that FR-2 IS in the graph + the hard hook
     // does NOT deny the write of this fixture.
     const graph = buildGraph({ repoRoot: staged.root, skipNdjson: true });
-    expect(graph.nodes.get('FR-2')?.type).toBe('FR');
+    // FR-36a: spec-qualified key (anchors in graph.definitions stay bare).
+    expect(graph.nodes.get('v3-legacy-spec:FR-2')?.type).toBe('FR');
 
     writeV4Progress(staged.root);
     const content = fs.readFileSync(

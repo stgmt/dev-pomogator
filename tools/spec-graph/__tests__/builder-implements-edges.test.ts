@@ -95,17 +95,17 @@ describe('buildGraph — FR-29 implements edges + File nodes', () => {
       expect(['create', 'edit', 'delete']).toContain(edge.metadata?.action);
     }
 
-    // Specific FR→path mapping spot-checks.
+    // Specific FR→path mapping spot-checks (FR-36a: FR ends are spec-qualified).
     const fileIdByPath = new Map(fileNodes.map((n) => [n.path, n.id]));
     expect(
       impls.some(
-        (e) => e.from === 'FR-1' && e.to === fileIdByPath.get('src/a.ts') &&
+        (e) => e.from === 'alpha:FR-1' && e.to === fileIdByPath.get('src/a.ts') &&
                e.metadata?.action === 'create',
       ),
     ).toBe(true);
     expect(
       impls.some(
-        (e) => e.from === 'FR-2' && e.to === fileIdByPath.get('src/c.ts'),
+        (e) => e.from === 'alpha:FR-2' && e.to === fileIdByPath.get('src/c.ts'),
       ),
     ).toBe(true);
   });
@@ -132,7 +132,7 @@ describe('buildGraph — FR-29 implements edges + File nodes', () => {
 
     const impls = implementsEdges(graph.edges);
     const fooImpl = impls.find(
-      (e) => e.from === 'FR-3' && e.metadata?.file_path === 'src/foo.ts',
+      (e) => e.from === 'gamma:FR-3' && e.metadata?.file_path === 'src/foo.ts',
     );
     expect(fooImpl).toBeDefined();
     expect(fooImpl!.metadata?.source_section).toBe('DESIGN');
@@ -247,10 +247,11 @@ describe('buildGraph — FR-29 implements edges + File nodes', () => {
     expect(fileNodes).toHaveLength(1);
     expect(fileNodes[0].path).toBe('src/shared.ts');
 
-    // Two implements edges — one per FR — both pointing at the same File node.
+    // Two implements edges — one per (spec-qualified) FR — both pointing at
+    // the same shared File node (File ids are path-hashed, NOT spec-scoped).
     const impls = implementsEdges(graph.edges);
     expect(impls).toHaveLength(2);
-    expect(impls.map((e) => e.from).sort()).toEqual(['FR-10', 'FR-20']);
+    expect(impls.map((e) => e.from).sort()).toEqual(['spec1:FR-10', 'spec2:FR-20']);
     expect(new Set(impls.map((e) => e.to)).size).toBe(1);
   });
 });

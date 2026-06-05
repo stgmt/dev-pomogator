@@ -166,7 +166,8 @@ describe('spec-mcp-server initialize + tools/list + get_trace via real stdin', (
       jsonrpc: '2.0',
       id: 3,
       method: 'tools/call',
-      params: { name: 'get_trace', arguments: { node_id: 'FR-1' } },
+      // FR-36a: spec-qualified key — the fixture FR lives in `.specs/auth/`.
+      params: { name: 'get_trace', arguments: { node_id: 'auth:FR-1' } },
     });
     const result = spawnSync(
       process.execPath,
@@ -207,6 +208,6 @@ describe('spec-mcp-server initialize + tools/list + get_trace via real stdin', (
       node?: { id: string };
     };
     expect(payload.ok).toBe(true);
-    expect(payload.node?.id).toBe('FR-1');
+    expect(payload.node?.id).toBe('auth:FR-1');
   });
 });

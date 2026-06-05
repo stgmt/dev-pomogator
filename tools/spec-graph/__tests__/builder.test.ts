@@ -37,23 +37,27 @@ describe('buildGraph — cold-start integration', () => {
       path.join(root, '.specs/auth/ACCEPTANCE_CRITERIA.md'),
       '## AC-1 (FR-1)\n\nWHEN x THEN y SHALL z.\n',
     );
+    // Spec-owned feature file — the same-spec `@FR-N` convention qualifies
+    // the tested-by edge with the spec slug (FR-36a).
     fs.writeFileSync(
-      path.join(root, 'tests/features/auth.feature'),
+      path.join(root, '.specs/auth/auth.feature'),
       '@FR-1\nFeature: Auth\n  Scenario: Login OK\n    Given x\n    Then y\n',
     );
 
     const graph = buildGraph({ repoRoot: root, skipNdjson: true });
 
-    expect(graph.nodes.get('FR-1')?.type).toBe('FR');
-    expect(graph.nodes.get('FR-2')?.type).toBe('FR');
-    expect(graph.nodes.get('AC-1')?.type).toBe('AC');
-    expect(graph.nodes.get('SCEN-login-ok')?.type).toBe('Scenario');
+    // FR-36a: nodes inside `.specs/<slug>/` are keyed `<slug>:<localId>`.
+    expect(graph.nodes.get('auth:FR-1')?.type).toBe('FR');
+    expect(graph.nodes.get('auth:FR-2')?.type).toBe('FR');
+    expect(graph.nodes.get('auth:AC-1')?.type).toBe('AC');
+    expect(graph.nodes.get('auth:SCEN-login-ok')?.type).toBe('Scenario');
+    expect(graph.nodes.get('auth:FR-1')?.spec).toBe('auth');
 
-    // covers + tested-by edges
+    // covers + tested-by edges reference the composite keys on both ends.
     expect(graph.edges).toEqual(
       expect.arrayContaining([
-        { from: 'FR-1', to: 'AC-1', type: 'covers' },
-        { from: 'FR-1', to: 'SCEN-login-ok', type: 'tested-by' },
+        { from: 'auth:FR-1', to: 'auth:AC-1', type: 'covers' },
+        { from: 'auth:FR-1', to: 'auth:SCEN-login-ok', type: 'tested-by' },
       ]),
     );
   });
@@ -144,7 +148,8 @@ describe('buildGraph — cold-start integration', () => {
     );
 
     const graph = buildGraph({ repoRoot: root, skipNdjson: true });
-    expect(graph.nodes.get('FR-1')).toBeDefined();
+    expect(graph.nodes.get('auth:FR-1')).toBeDefined();
+    // Outside `.specs/` (tests/features) ids stay bare (FR-36a).
     expect(graph.nodes.get('SCEN-works')).toBeDefined();
     // The broken scenario produced no node — but the build did not crash.
     expect(graph.nodes.get('SCEN-broken')).toBeUndefined();
@@ -168,8 +173,10 @@ describe('buildGraph — cold-start integration', () => {
     );
 
     const graph = buildGraph({ repoRoot: root, skipNdjson: true });
-    const fr = graph.nodes.get('FR-7') as FrNode | undefined;
+    const fr = graph.nodes.get('auth:FR-7') as FrNode | undefined;
     expect(fr?.title).toBe('Edge case handling');
+    // FR-36b: anchors stay BARE + file-local even though the node key is
+    // composite — Marksman / markdown links must be unaffected.
     expect(fr?.anchors).toEqual(['FR-7', 'fr-7-edge-case-handling']);
   });
 });

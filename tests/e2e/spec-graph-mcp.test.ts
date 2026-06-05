@@ -55,10 +55,11 @@ describe('spec-graph MCP server — real JSON-RPC over stdio (T-Cov.3)', () => {
   });
 
   it('answers tools/call get_trace for a real node over the wire', async () => {
-    const res = await client.callTool({ name: 'get_trace', arguments: { node_id: 'FR-1' } });
+    // FR-36a: graph keys are spec-qualified — the fixture lives in `.specs/demo/`.
+    const res = await client.callTool({ name: 'get_trace', arguments: { node_id: 'demo:FR-1' } });
     const payload = JSON.parse((res.content as Array<{ text: string }>)[0].text);
     expect(payload.ok).toBe(true);
-    expect(payload.node.id).toBe('FR-1');
+    expect(payload.node.id).toBe('demo:FR-1');
     expect(payload.node).toHaveProperty('verified_status'); // FR-32 surface, over the transport
   });
 

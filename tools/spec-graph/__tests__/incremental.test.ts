@@ -42,7 +42,7 @@ describe('incremental — applyChange / applyUnlink / dropFileSlice', () => {
       '## FR-1: Old title\n',
     );
     const graph = buildGraph({ repoRoot: root, skipNdjson: true });
-    expect(graph.nodes.get('FR-1')?.type).toBe('FR');
+    expect(graph.nodes.get('auth:FR-1')?.type).toBe('FR');
     expect(graph.definitions.get('fr-1-old-title')).toBeDefined();
 
     // Rewrite the file with a new heading + new line for the same id.
@@ -52,7 +52,10 @@ describe('incremental — applyChange / applyUnlink / dropFileSlice', () => {
     );
     applyChange(graph, root, '.specs/auth/FR.md');
 
-    expect(graph.nodes.get('FR-1')?.type).toBe('FR');
+    // FR-36a: the watcher patch applies the SAME spec-qualification as the
+    // cold build — no bare-id duplicate may appear next to the composite key.
+    expect(graph.nodes.get('auth:FR-1')?.type).toBe('FR');
+    expect(graph.nodes.has('FR-1')).toBe(false);
     // The old slug alias must be gone, the new one present.
     expect(graph.definitions.get('fr-1-old-title')).toBeUndefined();
     expect(graph.definitions.get('fr-1-new-title')).toBeDefined();
@@ -61,13 +64,13 @@ describe('incremental — applyChange / applyUnlink / dropFileSlice', () => {
   it('add wires a brand-new spec file into the graph', () => {
     fs.writeFileSync(path.join(root, '.specs/auth/FR.md'), '## FR-1: A\n');
     const graph = buildGraph({ repoRoot: root, skipNdjson: true });
-    expect(graph.nodes.has('FR-2')).toBe(false);
+    expect(graph.nodes.has('logout:FR-2')).toBe(false);
 
     fs.mkdirSync(path.join(root, '.specs/logout'), { recursive: true });
     fs.writeFileSync(path.join(root, '.specs/logout/FR.md'), '## FR-2: B\n');
     applyChange(graph, root, '.specs/logout/FR.md');
 
-    expect(graph.nodes.get('FR-2')?.type).toBe('FR');
+    expect(graph.nodes.get('logout:FR-2')?.type).toBe('FR');
     expect(graph.definitions.get('FR-2')).toEqual({
       file: '.specs/logout/FR.md',
       line: 1,
@@ -82,16 +85,17 @@ describe('incremental — applyChange / applyUnlink / dropFileSlice', () => {
     );
     const graph = buildGraph({ repoRoot: root, skipNdjson: true });
 
-    expect(graph.nodes.has('FR-1')).toBe(true);
-    expect(graph.nodes.has('AC-1')).toBe(true);
-    expect(graph.edges).toContainEqual({ from: 'FR-1', to: 'AC-1', type: 'covers' });
+    expect(graph.nodes.has('auth:FR-1')).toBe(true);
+    expect(graph.nodes.has('auth:AC-1')).toBe(true);
+    expect(graph.edges).toContainEqual({ from: 'auth:FR-1', to: 'auth:AC-1', type: 'covers' });
 
     fs.rmSync(path.join(root, '.specs/auth/ACCEPTANCE_CRITERIA.md'));
     applyUnlink(graph, '.specs/auth/ACCEPTANCE_CRITERIA.md');
 
-    expect(graph.nodes.has('FR-1')).toBe(true); // FR.md untouched
-    expect(graph.nodes.has('AC-1')).toBe(false);
-    expect(graph.edges).not.toContainEqual({ from: 'FR-1', to: 'AC-1', type: 'covers' });
+    expect(graph.nodes.has('auth:FR-1')).toBe(true); // FR.md untouched
+    expect(graph.nodes.has('auth:AC-1')).toBe(false);
+    expect(graph.edges).not.toContainEqual({ from: 'auth:FR-1', to: 'auth:AC-1', type: 'covers' });
+    // FR-36b: anchor aliases stay bare — the definitions index uses them.
     expect(graph.definitions.has('AC-1')).toBe(false);
   });
 
@@ -103,9 +107,9 @@ describe('incremental — applyChange / applyUnlink / dropFileSlice', () => {
     const graph = buildGraph({ repoRoot: root, skipNdjson: true });
 
     const { removedNodeIds } = dropFileSlice(graph, '.specs/auth/FR.md');
-    expect(Array.from(removedNodeIds).sort()).toEqual(['FR-1', 'FR-2']);
-    expect(graph.nodes.has('FR-1')).toBe(false);
-    expect(graph.nodes.has('FR-2')).toBe(false);
+    expect(Array.from(removedNodeIds).sort()).toEqual(['auth:FR-1', 'auth:FR-2']);
+    expect(graph.nodes.has('auth:FR-1')).toBe(false);
+    expect(graph.nodes.has('auth:FR-2')).toBe(false);
   });
 
   it('idempotent on no-op change of an unrelated file', () => {

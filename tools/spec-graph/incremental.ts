@@ -37,7 +37,8 @@ import path from 'node:path';
 import { parseMarkdownFile } from './parsers/md.ts';
 import { parseGherkinFile } from './parsers/gherkin.ts';
 import { parseNdjsonFile, applyTestResults } from './parsers/ndjson.ts';
-import { rebuildBacklinks } from './builder.ts';
+import { rebuildBacklinks, qualifySlice } from './builder.ts';
+import { specOf } from './coverage.ts';
 import type { SpecGraph, ScenarioNode, ParserOutput } from './types.ts';
 
 export interface WatchOptions {
@@ -170,6 +171,9 @@ export function applyChange(
   if (kind === 'md') {
     if (!fs.existsSync(absPath)) return { nodesDelta: 0, edgesDelta: 0 };
     const slice = parseMarkdownFile(absPath, repoRoot);
+    // FR-36a: same qualification as the cold build — a live patch must not
+    // re-insert colliding bare ids next to composite-keyed nodes.
+    qualifySlice(slice, specOf(relativePath));
     const delta = applySlice(graph, slice);
     rebuildBacklinks(graph);
     return delta;
@@ -177,6 +181,7 @@ export function applyChange(
   if (kind === 'feature') {
     if (!fs.existsSync(absPath)) return { nodesDelta: 0, edgesDelta: 0 };
     const slice = parseGherkinFile(absPath, repoRoot);
+    qualifySlice(slice, specOf(relativePath));
     const delta = applySlice(graph, slice);
     rebuildBacklinks(graph);
     return delta;

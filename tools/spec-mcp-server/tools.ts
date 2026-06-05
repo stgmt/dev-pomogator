@@ -202,7 +202,11 @@ function computeCodeImpl(node: Node, graph: SpecGraph): CodeImplEntry[] {
     // Inherit code_impl from every FR/NFR tagged by the scenario.
     for (const tag of scen.tags) {
       const bare = tag.startsWith('@') ? tag.slice(1) : tag;
-      const tagged = graph.nodes.get(bare);
+      // FR-36a: tags stay bare in .feature files; nodes are spec-qualified.
+      // Same-spec lookup first, then bare (hand-built graphs) — mirrors
+      // collectImplementsWarnings.
+      const tagged =
+        (scen.spec ? graph.nodes.get(`${scen.spec}:${bare}`) : undefined) ?? graph.nodes.get(bare);
       if (!tagged) continue;
       if (tagged.type !== 'FR' && tagged.type !== 'NFR') continue;
       for (const entry of directImplements(tagged.id, graph)) {
@@ -325,7 +329,10 @@ function collectImplementsWarnings(node: Node, graph: SpecGraph): ImplementsWarn
   } else if (node.type === 'Scenario') {
     for (const tag of (node as ScenarioNode).tags) {
       const bare = tag.startsWith('@') ? tag.slice(1) : tag;
-      const tagged = graph.nodes.get(bare);
+      // FR-36a: tags stay bare in .feature files; nodes are spec-qualified.
+      // Resolve same-spec first, then the bare id (hand-built graphs).
+      const tagged =
+        (node.spec ? graph.nodes.get(`${node.spec}:${bare}`) : undefined) ?? graph.nodes.get(bare);
       if (tagged && (tagged.type === 'FR' || tagged.type === 'NFR')) sources.push(tagged.id);
     }
   }
@@ -439,7 +446,9 @@ export function buildToolRegistry(
       // spec's @feature2). Mirror computeCoverage's mapping so get_trace shows real coverage
       // instead of an empty `scenarios: []` for every FR.
       if (node.type === 'FR') {
-        const m = node.id.match(/^FR-(\d+)/);
+        // FR-36a: node ids are spec-qualified (`<slug>:FR-N`) — match the
+        // local FR number after the optional slug prefix.
+        const m = node.id.match(/(?:^|:)FR-(\d+)/);
         const specOf = (f: string): string =>
           String(f).replace(/\\/g, '/').split('.specs/')[1]?.split('/')[0] ?? '';
         const nodeSpec = specOf(node.file);

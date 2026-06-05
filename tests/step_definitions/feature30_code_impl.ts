@@ -49,6 +49,12 @@ interface GetTraceResponse {
 interface Feature30World extends V4World {
   graph?: SpecGraph;
   traceResponse?: GetTraceResponse;
+  /**
+   * FR-36a: graph keys are spec-qualified `<slug>:<localId>`. Each Given
+   * records the slug it staged under `tempDir/.specs/<slug>/` so the shared
+   * When steps can qualify the bare Gherkin node ids.
+   */
+  specSlug?: string;
 }
 
 /**
@@ -107,7 +113,8 @@ function writeSpec(
 Given(
   /^a spec where `FR-5` has 3 `implements` edges to files `src\/a\.ts`, `src\/b\.ts`, `src\/c\.ts`$/,
   function (this: Feature30World) {
-    writeSpec(this.tempDir, 'fr5-three-files', {
+    this.specSlug = 'fr5-three-files';
+    writeSpec(this.tempDir, this.specSlug, {
       frs: [{ id: 5, title: 'multi-impl' }],
       fileChanges: [
         { path: 'src/a.ts', frs: [5] },
@@ -122,7 +129,9 @@ Given(
 When(
   /^the MCP client invokes `get_trace\(\{node_id: "FR-5"\}\)`$/,
   async function (this: Feature30World) {
-    this.traceResponse = await invokeGetTrace(this.graph!, 'FR-5');
+    // Shared by _60 (fr5-three-files) and _64 (malformed-edge) — qualify
+    // with whatever slug the scenario's Given staged (FR-36a).
+    this.traceResponse = await invokeGetTrace(this.graph!, `${this.specSlug}:FR-5`);
   },
 );
 
@@ -152,7 +161,8 @@ Then(
 Given(
   /^a spec where `FR-5` has 2 `implements` edges to files `src\/a\.ts`, `src\/b\.ts`$/,
   function (this: Feature30World) {
-    const dir = writeSpec(this.tempDir, 'fr5-ac-inherit', {
+    this.specSlug = 'fr5-ac-inherit';
+    const dir = writeSpec(this.tempDir, this.specSlug, {
       frs: [{ id: 5, title: 'ac-inherit' }],
       fileChanges: [
         { path: 'src/a.ts', frs: [5] },
@@ -178,7 +188,9 @@ Given(
   /^`AC-5\.1` has no direct `implements` edges$/,
   function (this: Feature30World) {
     // Sanity check — no implements edges originate from AC-5.1 in our seeded graph.
-    const impls = this.graph!.edges.filter((e) => e.type === 'implements' && e.from === 'AC-5.1');
+    const impls = this.graph!.edges.filter(
+      (e) => e.type === 'implements' && e.from === `${this.specSlug}:AC-5.1`,
+    );
     assert.equal(impls.length, 0, `AC-5.1 must not own implements edges, got ${impls.length}`);
   },
 );
@@ -186,7 +198,7 @@ Given(
 When(
   /^the MCP client invokes `get_trace\(\{node_id: "AC-5\.1"\}\)`$/,
   async function (this: Feature30World) {
-    this.traceResponse = await invokeGetTrace(this.graph!, 'AC-5.1');
+    this.traceResponse = await invokeGetTrace(this.graph!, `${this.specSlug}:AC-5.1`);
   },
 );
 
@@ -203,7 +215,7 @@ Then(
   /^the entries equal parent `FR-5`'s `code_impl` entries identically by `file_path`$/,
   async function (this: Feature30World) {
     const acResp = this.traceResponse!;
-    const frResp = await invokeGetTrace(this.graph!, 'FR-5');
+    const frResp = await invokeGetTrace(this.graph!, `${this.specSlug}:FR-5`);
     const acPaths = acResp.code_impl!.map((e) => e.file_path).sort();
     const frPaths = frResp.code_impl!.map((e) => e.file_path).sort();
     assert.deepEqual(acPaths, frPaths, `AC paths ${JSON.stringify(acPaths)} != FR paths ${JSON.stringify(frPaths)}`);
@@ -215,7 +227,8 @@ Then(
 Given(
   /^a `\.feature` Scenario tagged with both `@FR-1` and `@FR-2`$/,
   function (this: Feature30World) {
-    const dir = writeSpec(this.tempDir, 'scenario-union', {
+    this.specSlug = 'scenario-union';
+    const dir = writeSpec(this.tempDir, this.specSlug, {
       frs: [
         { id: 1, title: 'first' },
         { id: 2, title: 'second' },
@@ -246,9 +259,12 @@ Given(
   /^`FR-1` has 1 `implements` edge to `src\/x\.ts`$/,
   function (this: Feature30World) {
     const fr1 = this.graph!.edges.filter(
-      (e) => e.type === 'implements' && e.from === 'FR-1' && e.metadata?.file_path === 'src/x.ts',
+      (e) =>
+        e.type === 'implements' &&
+        e.from === `${this.specSlug}:FR-1` &&
+        e.metadata?.file_path === 'src/x.ts',
     );
-    assert.equal(fr1.length, 1, `FR-1 -> src/x.ts must exist: got ${fr1.length}`);
+    assert.equal(fr1.length, 1, `${this.specSlug}:FR-1 -> src/x.ts must exist: got ${fr1.length}`);
   },
 );
 
@@ -256,9 +272,12 @@ Given(
   /^`FR-2` has 1 `implements` edge to `src\/y\.ts`$/,
   function (this: Feature30World) {
     const fr2 = this.graph!.edges.filter(
-      (e) => e.type === 'implements' && e.from === 'FR-2' && e.metadata?.file_path === 'src/y.ts',
+      (e) =>
+        e.type === 'implements' &&
+        e.from === `${this.specSlug}:FR-2` &&
+        e.metadata?.file_path === 'src/y.ts',
     );
-    assert.equal(fr2.length, 1, `FR-2 -> src/y.ts must exist: got ${fr2.length}`);
+    assert.equal(fr2.length, 1, `${this.specSlug}:FR-2 -> src/y.ts must exist: got ${fr2.length}`);
   },
 );
 
@@ -294,7 +313,8 @@ Then(
 Given(
   /^a spec where `FR-7` has zero `implements` edges$/,
   function (this: Feature30World) {
-    writeSpec(this.tempDir, 'fr7-empty', {
+    this.specSlug = 'fr7-empty';
+    writeSpec(this.tempDir, this.specSlug, {
       frs: [{ id: 7, title: 'no impls' }],
       fileChanges: [], // no FILE_CHANGES.md at all
     });
@@ -305,7 +325,7 @@ Given(
 When(
   /^the MCP client invokes `get_trace\(\{node_id: "FR-7"\}\)`$/,
   async function (this: Feature30World) {
-    this.traceResponse = await invokeGetTrace(this.graph!, 'FR-7');
+    this.traceResponse = await invokeGetTrace(this.graph!, `${this.specSlug}:FR-7`);
   },
 );
 
@@ -333,13 +353,16 @@ Given(
   function (this: Feature30World) {
     // Build a graph with one valid FR, then surgically inject a malformed
     // implements edge (no file_path, target id resolves to non-File node).
-    writeSpec(this.tempDir, 'malformed-edge', {
+    this.specSlug = 'malformed-edge';
+    writeSpec(this.tempDir, this.specSlug, {
       frs: [{ id: 5, title: 'malformed-edge-host' }],
       fileChanges: [],
     });
     this.graph = buildGraph({ repoRoot: this.tempDir, skipNdjson: true });
     const malformed: Edge = {
-      from: 'FR-5',
+      // FR-36a: the buildGraph node key is spec-qualified — the injected
+      // malformed edge must reference it or it would dangle off-graph.
+      from: `${this.specSlug}:FR-5`,
       to: 'NOT-A-FILE-NODE',
       type: 'implements',
       // intentionally NO metadata.file_path

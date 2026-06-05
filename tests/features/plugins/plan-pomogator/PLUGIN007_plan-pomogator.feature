@@ -15,7 +15,7 @@ Feature: PLUGIN007 Plan-pomogator Extension
     When dev-pomogator installs plan-pomogator for Claude
     Then plan-pomogator.md should exist in PROJECT/.claude/rules/
 
-  Scenario: Tools are installed
+  Scenario: plan-pomogator tools are installed
     When dev-pomogator installs plan-pomogator
     Then plan-pomogator folder should exist in PROJECT/.dev-pomogator/tools/
     And requirements.md should exist

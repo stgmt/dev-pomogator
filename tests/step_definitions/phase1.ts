@@ -23,6 +23,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { buildGraph } from '../../tools/spec-graph/builder.ts';
+import { specOf } from '../../tools/spec-graph/coverage.ts';
 import { parseMarkdown } from '../../tools/spec-graph/parsers/md.ts';
 import { applyChange } from '../../tools/spec-graph/incremental.ts';
 import type { SpecGraph } from '../../tools/spec-graph/types.ts';
@@ -121,7 +122,10 @@ Then('`get_trace\\({string})` returns non-empty result immediately after', funct
   id: string,
 ) {
   assert.ok(this.graph, 'graph was not built in prior step');
-  assert.ok(this.graph.nodes.has(id), `node ${id} not present in cold-built graph`);
+  // FR-36a: graph keys are spec-qualified `<slug>:<localId>`. The corpus
+  // seeded by seedSpecCorpus always places FR-001 in `.specs/slug-1/`.
+  const qualified = id.includes(':') ? id : `slug-1:${id}`;
+  assert.ok(this.graph.nodes.has(qualified), `node ${qualified} not present in cold-built graph`);
 });
 
 Given(
@@ -312,6 +316,10 @@ Then('no migration is required for legacy spec to function', function (this: Pha
   // The triple-anchor parser is transparent — the legacy heading reaches
   // a working FR node with all three aliases. No `.progress.json` bump,
   // no file rewrite. Surfacing the parser ran + node exists is enough.
+  // FR-36a: node keys are spec-qualified — derive the slug from the fixture
+  // path the Given step wrote (e.g. `.specs/legacy/FR.md` → `legacy`).
   assert.ok(this.graph, 'graph not built');
-  assert.ok(this.graph.nodes.has('FR-001'), 'FR-001 must exist after parse');
+  const slug = specOf(this.changedFile!.replace(/\\/g, '/'));
+  const qualified = slug ? `${slug}:FR-001` : 'FR-001';
+  assert.ok(this.graph.nodes.has(qualified), `${qualified} must exist after parse`);
 });

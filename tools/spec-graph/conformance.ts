@@ -56,6 +56,34 @@ export interface Finding {
 
 const SPEC_TAG_RE = /^@((?:FR|NFR|AC)[A-Za-z0-9._-]+)$/;
 
+/**
+ * FR-36a: the bare local id of a node (`spec-generator-v4:FR-2` → `FR-2`).
+ * Hand-built test graphs and files outside `.specs/` carry bare ids — for
+ * those the id IS the local id.
+ */
+function localIdOf(node: { id: string; spec?: string }): string {
+  return node.spec ? node.id.slice(node.spec.length + 1) : node.id;
+}
+
+/**
+ * FR-36a: resolve a BARE tag reference (`@FR-2`) against composite-keyed
+ * nodes. Tags stay bare in `.feature` files (same-spec convention):
+ *   1. scenario's own spec defines it → `<spec>:<ref>`;
+ *   2. bare node with that id exists (hand-built graphs, non-.specs files);
+ *   3. spec-less scenario (tests/features) → satisfied if ANY spec defines
+ *      the local id (cross-spec ambiguity tolerated at warning level).
+ */
+function tagResolves(
+  graph: SpecGraph,
+  scenSpec: string | undefined,
+  ref: string,
+  specLocalIds: ReadonlySet<string>,
+): boolean {
+  if (scenSpec && graph.nodes.has(`${scenSpec}:${ref}`)) return true;
+  if (graph.nodes.has(ref)) return true;
+  return !scenSpec && specLocalIds.has(ref);
+}
+
 /** Classic Levenshtein edit distance (iterative, O(m·n) time, O(n) space). */
 function levenshtein(a: string, b: string): number {
   const m = a.length;
@@ -102,9 +130,12 @@ export function checkConformance(
   // `error` when `.spec-config.json::orphan_policy.scenario_tag_orphan = "block"`.
   const tagOrphanSeverity: Severity =
     opts.orphanPolicy?.scenario_tag_orphan === 'block' ? 'error' : 'warning';
-  const specIds = [...graph.nodes.values()]
-    .filter((n) => n.type === 'FR' || n.type === 'NFR' || n.type === 'AC')
-    .map((n) => n.id);
+  const specNodes = [...graph.nodes.values()].filter(
+    (n) => n.type === 'FR' || n.type === 'NFR' || n.type === 'AC',
+  );
+  // FR-36a: bare local ids across all specs — tag resolution for spec-less
+  // scenarios + did-you-mean suggestions speak the author's (bare) language.
+  const specLocalIds = new Set(specNodes.map((n) => localIdOf(n)));
 
   // Pre-compute edge indices for O(1) lookup of the «does FR-N have an AC
   // covering it / a scenario testing it» question.
@@ -120,15 +151,18 @@ export function checkConformance(
     if (node.type !== 'FR') continue;
     if (acCovers.has(node.id)) continue;
     if (scenarioTests.has(node.id)) continue;
+    // Tag hints speak the author's bare-tag language (`@FR-2`), not the
+    // composite node key — tags stay bare in `.feature` files (FR-36b).
+    const bareTag = localIdOf(node);
     findings.push({
       code: 'UNCOVERED_FR',
       severity: 'warning',
       location: { file: node.file, line: node.line },
-      message: `FR ${node.id} has no Acceptance Criteria and no @${node.id}-tagged Scenario.`,
+      message: `FR ${node.id} has no Acceptance Criteria and no @${bareTag}-tagged Scenario.`,
       nodeId: node.id,
       suggestions: [
         { action: 'create_ac', reason: 'Add an AC heading `## AC-N (FR-N)` covering this FR.', confidence: 'high' },
-        { action: 'tag_scenario', reason: `Add @${node.id} to an existing Scenario in any \`.feature\` file.`, confidence: 'medium' },
+        { action: 'tag_scenario', reason: `Add @${bareTag} to an existing Scenario in any \`.feature\` file.`, confidence: 'medium' },
       ],
     });
   }
@@ -233,13 +267,14 @@ export function checkConformance(
     const scen = node as ScenarioNode;
 
     let hasSpecTag = false;
+    const scenSpec = scen.spec ?? specOf(scen.file);
     for (const tag of scen.tags) {
       const m = tag.match(SPEC_TAG_RE);
       if (!m) continue;
       hasSpecTag = true;
       const referenced = m[1];
-      if (!graph.nodes.has(referenced)) {
-        const similar = topSimilarIds(referenced, specIds, 3);
+      if (!tagResolves(graph, scenSpec, referenced, specLocalIds)) {
+        const similar = topSimilarIds(referenced, [...specLocalIds], 3);
         findings.push({
           code: 'SCENARIO_TAG_ORPHAN',
           severity: tagOrphanSeverity,

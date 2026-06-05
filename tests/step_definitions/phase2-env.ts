@@ -118,7 +118,8 @@ Given(/runs inside a VS Code devcontainer with bind-mounted workspace/, function
 When(/agent calls .get_trace\("FR-001"\). from inside the container/, async function (this: EnvWorld) {
   const graph = buildGraph({ repoRoot: this.tempDir, skipNdjson: true });
   const tool = buildToolRegistry(() => graph).find((t) => t.name === 'get_trace')!;
-  const res = await tool.handler({ node_id: 'FR-001' });
+  // FR-36a: the FR lives in `.specs/auth/` → spec-qualified key `auth:FR-001`.
+  const res = await tool.handler({ node_id: 'auth:FR-001' });
   this.traceResponse = JSON.parse(res.content[0].text);
 });
 
@@ -217,10 +218,11 @@ Then(/subsequent file changes are detected via polling/, async function (this: E
   await new Promise((r) => setTimeout(r, 250));
   fs.writeFileSync(path.join(this.tempDir, '.specs', 'auth', 'FR2.md'), '## FR-2: Logout\n');
   const deadline = Date.now() + 5_000;
-  while (Date.now() < deadline && !this.lifecycle!.graph.nodes.has('FR-2')) {
+  // FR-36a: FR2.md lives in `.specs/auth/` → spec-qualified key `auth:FR-2`.
+  while (Date.now() < deadline && !this.lifecycle!.graph.nodes.has('auth:FR-2')) {
     await new Promise((r) => setTimeout(r, 100));
   }
-  assert.ok(this.lifecycle!.graph.nodes.has('FR-2'), 'polling watcher should surface FR2.md');
+  assert.ok(this.lifecycle!.graph.nodes.has('auth:FR-2'), 'polling watcher should surface FR2.md');
   await this.lifecycle!.shutdown();
   this.lifecycle = undefined;
 });
@@ -257,7 +259,8 @@ When(/the codespace starts .cold or warm./, async function (this: EnvWorld) {
 
 Then(/the MCP server is launched automatically/, function (this: EnvWorld) {
   assert.ok(this.lifecycle, 'codespacesAutostart should return a live lifecycle handle');
-  assert.ok(this.lifecycle!.graph.nodes.has('FR-1'), 'the autostarted server should have built the graph');
+  // FR-36a: spec-qualified key — FR-1 is seeded in `.specs/auth/FR.md`.
+  assert.ok(this.lifecycle!.graph.nodes.has('auth:FR-1'), 'the autostarted server should have built the graph');
 });
 
 Then(/.\.mcp-lock\.json. is written with .env: "codespaces:<machine-id>"./, function (this: EnvWorld) {
@@ -295,7 +298,8 @@ When(/the user resumes the codespace/, async function (this: EnvWorld) {
 
 Then(/the MCP server auto-restarts via postStartCommand/, function (this: EnvWorld) {
   assert.ok(this.lifecycle, 'resume should boot a fresh lifecycle');
-  assert.ok(this.lifecycle!.graph.nodes.has('FR-1'), 'resumed server should rebuild the graph');
+  // FR-36a: spec-qualified key — FR-1 is seeded in `.specs/auth/FR.md`.
+  assert.ok(this.lifecycle!.graph.nodes.has('auth:FR-1'), 'resumed server should rebuild the graph');
 });
 
 Then(/the SpecGraph is rebuilt from persistent .* in .2 seconds/, function (this: EnvWorld) {

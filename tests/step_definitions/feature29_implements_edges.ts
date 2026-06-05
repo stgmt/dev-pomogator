@@ -106,9 +106,11 @@ Then(
     // ⇒ 2 + 1 + 2 + 2 + 2 = 9 pair edges
     const expected = 9;
     assert.equal(impls.length, expected, `expected ${expected} implements edges, got ${impls.length}`);
-    // Each edge from must be a FR-N id; each to must resolve to a File node.
+    // Each edge from must be a spec-qualified FR-N id (FR-36a: composite key
+    // `<slug>:FR-N`, slug = the staged fixture dir); each to must resolve to
+    // a File node.
     for (const edge of impls) {
-      assert.match(edge.from, /^FR-\d+$/, `edge.from must be FR-N, got ${edge.from}`);
+      assert.match(edge.from, /^deep-multi-fr-refs-spec:FR-\d+$/, `edge.from must be deep-multi-fr-refs-spec:FR-N, got ${edge.from}`);
       const target = this.graph!.nodes.get(edge.to);
       assert.equal(target?.type, 'File', `edge.to must resolve to File node (got ${target?.type})`);
     }
@@ -238,8 +240,9 @@ Then(
   /^the graph contains an `implements` edge from `FR-3` to `File\("src\/foo\.ts"\)`$/,
   function (this: Feature29World) {
     const impls = this.graph!.edges.filter((e) => e.type === 'implements');
-    const fromFr3 = impls.filter((e) => e.from === 'FR-3' && e.metadata?.file_path === 'src/foo.ts');
-    assert.equal(fromFr3.length, 1, `expected exactly one FR-3 -> src/foo.ts edge, got ${fromFr3.length}: ${JSON.stringify(impls)}`);
+    // FR-36a: edge.from is the spec-qualified FR key for the staged slug.
+    const fromFr3 = impls.filter((e) => e.from === 'design-only-spec:FR-3' && e.metadata?.file_path === 'src/foo.ts');
+    assert.equal(fromFr3.length, 1, `expected exactly one design-only-spec:FR-3 -> src/foo.ts edge, got ${fromFr3.length}: ${JSON.stringify(impls)}`);
     const target = this.graph!.nodes.get(fromFr3[0].to) as FileNode | undefined;
     assert.equal(target?.type, 'File');
     assert.equal(target?.path, 'src/foo.ts');
@@ -250,8 +253,8 @@ Then(
   /^the edge's `source_section` equals literally `'DESIGN'`$/,
   function (this: Feature29World) {
     const impls = this.graph!.edges.filter((e) => e.type === 'implements');
-    const target = impls.find((e) => e.from === 'FR-3' && e.metadata?.file_path === 'src/foo.ts');
-    assert.ok(target, 'FR-3 -> src/foo.ts edge must exist');
+    const target = impls.find((e) => e.from === 'design-only-spec:FR-3' && e.metadata?.file_path === 'src/foo.ts');
+    assert.ok(target, 'design-only-spec:FR-3 -> src/foo.ts edge must exist');
     assert.equal(target!.metadata?.source_section, 'DESIGN', `expected DESIGN, got ${target!.metadata?.source_section}`);
   },
 );
@@ -342,10 +345,11 @@ Then(
 Then(
   /^the graph contains exactly one `implements` edge from `FR-1` to `File\("src\/foo\.ts"\)`$/,
   function (this: Feature29World) {
+    // FR-36a: edge.from is spec-qualified with the staged `dedup-spec` slug.
     const impls = this.graph!.edges.filter(
-      (e) => e.type === 'implements' && e.from === 'FR-1' && e.metadata?.file_path === 'src/foo.ts',
+      (e) => e.type === 'implements' && e.from === 'dedup-spec:FR-1' && e.metadata?.file_path === 'src/foo.ts',
     );
-    assert.equal(impls.length, 1, `expected exactly one FR-1 -> src/foo.ts edge, got ${impls.length}`);
+    assert.equal(impls.length, 1, `expected exactly one dedup-spec:FR-1 -> src/foo.ts edge, got ${impls.length}`);
   },
 );
 
@@ -354,7 +358,7 @@ Then(
   function (this: Feature29World) {
     const edges = this.graph!.edges.filter(
       (e: Edge) =>
-        e.type === 'implements' && e.from === 'FR-1' && e.metadata?.file_path === 'src/foo.ts',
+        e.type === 'implements' && e.from === 'dedup-spec:FR-1' && e.metadata?.file_path === 'src/foo.ts',
     );
     assert.equal(edges.length, 1);
     assert.equal(

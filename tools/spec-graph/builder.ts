@@ -40,6 +40,52 @@ import { parseNdjsonFile, applyTestResults } from './parsers/ndjson.ts';
 import { parseTasksFile } from './parsers/tasks.ts';
 import { parseFileChangesFile, type FileChangeRow } from './parsers/file-changes.ts';
 import { parseDesignFile, type DesignFileRef } from './parsers/design.ts';
+import { specOf } from './coverage.ts';
+
+/**
+ * FR-36a: qualify one parser slice with its owning spec slug.
+ *
+ * The node KEY becomes `<slug>:<localId>` and the node records `spec` —
+ * bare ids collide across 47 specs (46 specs define `FR-2`; only 47 FR
+ * nodes survived of ~470). Reference fields are qualified too: edge
+ * endpoints (file-local by construction — `covers` joins FR↔AC of the
+ * same spec, `tested-by` follows the same-spec `@FR-N` convention),
+ * `TaskNode.refs`, and `AcNode.parentFr`.
+ *
+ * Anchors stay BARE + file-scoped (FR-36b) — markdown links resolve
+ * within a file; Marksman / anchor-fix must be unaffected. Do not touch
+ * `slice.anchors`.
+ *
+ * Files outside `.specs/<slug>/` (slug = undefined, e.g. tests/features)
+ * keep bare ids — scenario codes are globally unique by convention there.
+ *
+ * Exported for `incremental.ts`: the watcher patch path must apply the
+ * SAME qualification or live patches would re-insert colliding bare ids.
+ */
+export function qualifySlice(
+  slice: { nodes: Node[]; edges: Edge[] },
+  slug: string | undefined,
+): void {
+  if (!slug) return;
+  for (const node of slice.nodes) {
+    node.spec = slug;
+    node.id = `${slug}:${node.id}`;
+    if (node.type === 'Task') {
+      node.refs = node.refs.map((r) => `${slug}:${r}`);
+    } else if (node.type === 'AC' && node.parentFr) {
+      node.parentFr = `${slug}:${node.parentFr}`;
+    }
+  }
+  for (const e of slice.edges) {
+    e.from = `${slug}:${e.from}`;
+    e.to = `${slug}:${e.to}`;
+  }
+}
+
+/** Repo-relative POSIX path for an absolute file under repoRoot. */
+function relPosix(repoRoot: string, abs: string): string {
+  return path.relative(repoRoot, abs).split(path.sep).join('/');
+}
 
 export interface BuildOptions {
   /** Repository root (everything resolves relative to this). */
@@ -127,6 +173,7 @@ export function buildGraph(opts: BuildOptions): SpecGraph {
     } catch {
       continue;
     }
+    qualifySlice(slice, specOf(relPosix(repoRoot, abs)));
     for (const node of slice.nodes) {
       if (!nodes.has(node.id)) nodes.set(node.id, node);
     }
@@ -145,6 +192,7 @@ export function buildGraph(opts: BuildOptions): SpecGraph {
     } catch {
       continue;
     }
+    qualifySlice({ nodes: taskSlice.nodes, edges: [] }, specOf(relPosix(repoRoot, abs)));
     for (const node of taskSlice.nodes) {
       if (!nodes.has(node.id)) nodes.set(node.id, node);
     }
@@ -159,6 +207,7 @@ export function buildGraph(opts: BuildOptions): SpecGraph {
     } catch {
       continue;
     }
+    qualifySlice(slice, specOf(relPosix(repoRoot, abs)));
     for (const node of slice.nodes) {
       if (!nodes.has(node.id)) nodes.set(node.id, node);
     }
@@ -258,6 +307,10 @@ export function buildGraph(opts: BuildOptions): SpecGraph {
 
   for (const specDir of specDirs) {
     const relDir = path.relative(repoRoot, specDir).split(path.sep).join('/');
+    // FR-36a: implements edges must reference the qualified FR key, or they
+    // dangle once nodes are composite-keyed. Same-spec by construction.
+    const slug = specOf(`${relDir}/FILE_CHANGES.md`);
+    const qualifyFr = (fr: string): string => (slug ? `${slug}:${fr}` : fr);
 
     // FILE_CHANGES.md first (precedence per AC-29.3).
     const fcAbs = path.join(specDir, 'FILE_CHANGES.md');
@@ -272,7 +325,7 @@ export function buildGraph(opts: BuildOptions): SpecGraph {
       for (const row of rows) {
         if (row.frs.length === 0) continue;
         for (const fr of row.frs) {
-          emitImplements(fr, row.file_path, 'FILE_CHANGES', relFile, 1, row.action);
+          emitImplements(qualifyFr(fr), row.file_path, 'FILE_CHANGES', relFile, 1, row.action);
         }
       }
     }
@@ -291,7 +344,7 @@ export function buildGraph(opts: BuildOptions): SpecGraph {
       for (const ref of refs) {
         if (ref.frs.length === 0) continue;
         for (const fr of ref.frs) {
-          emitImplements(fr, ref.file_path, 'DESIGN', relFile, 1);
+          emitImplements(qualifyFr(fr), ref.file_path, 'DESIGN', relFile, 1);
         }
       }
     }

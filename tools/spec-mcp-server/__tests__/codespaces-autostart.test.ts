@@ -76,7 +76,7 @@ describe('codespaces-autostart', () => {
       const handle = await codespacesAutostart({ repoRoot: root, watchProbe: async () => true });
       try {
         expect(readLock(root)!.env).toBe('codespaces:fluffy-machine-42');
-        expect(handle.graph.nodes.has('FR-1')).toBe(true);
+        expect(handle.graph.nodes.has('auth:FR-1')).toBe(true);
       } finally {
         await handle.shutdown();
       }
@@ -102,7 +102,7 @@ describe('codespaces-autostart', () => {
       try {
         expect(elapsed).toBeLessThanOrEqual(2000);
         expect(readLock(root)!.env).toBe('codespaces:fluffy-machine-42');
-        expect(handle.graph.nodes.has('FR-1')).toBe(true);
+        expect(handle.graph.nodes.has('auth:FR-1')).toBe(true);
       } finally {
         await handle.shutdown();
       }

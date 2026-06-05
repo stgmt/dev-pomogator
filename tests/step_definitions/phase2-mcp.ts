@@ -42,7 +42,6 @@ function writeProgress(root: string, version: number): void {
 
 function seedFr001WithCoverage(root: string): void {
   fs.mkdirSync(path.join(root, '.specs/auth'), { recursive: true });
-  fs.mkdirSync(path.join(root, 'tests/features'), { recursive: true });
   fs.writeFileSync(
     path.join(root, '.specs/auth/FR.md'),
     '## FR-001: Login flow\n\n## FR-002: Logout\n',
@@ -51,8 +50,13 @@ function seedFr001WithCoverage(root: string): void {
     path.join(root, '.specs/auth/ACCEPTANCE_CRITERIA.md'),
     '## AC-1 (FR-001)\n\n## AC-2 (FR-001)\n',
   );
+  // FR-36a: `tested-by` follows the same-spec `@FR-N` convention — the
+  // .feature must live inside `.specs/auth/` so its scenarios + tag edges
+  // get spec-qualified (`auth:SCEN-…`, `auth:FR-001 → auth:SCEN-…`) and
+  // link to the qualified FR node. A bare-tagged feature under
+  // tests/features/ would dangle against composite keys.
   fs.writeFileSync(
-    path.join(root, 'tests/features/auth.feature'),
+    path.join(root, '.specs/auth/auth.feature'),
     [
       '@FR-001',
       'Feature: Auth',
@@ -83,9 +87,10 @@ Given(
   'SCEN-login-ok has lastResult PASSED, SCEN-login-locked has lastResult FAILED',
   function (this: Phase2World) {
     assert.ok(this.graph, 'graph must be built first');
-    const ok = this.graph.nodes.get('SCEN-login-ok') as ScenarioNode | undefined;
-    const locked = this.graph.nodes.get('SCEN-login-locked') as ScenarioNode | undefined;
-    assert.ok(ok && locked, 'expected scenarios SCEN-login-ok + SCEN-login-locked in graph');
+    // FR-36a: the fixture .feature lives in `.specs/auth/` → qualified keys.
+    const ok = this.graph.nodes.get('auth:SCEN-login-ok') as ScenarioNode | undefined;
+    const locked = this.graph.nodes.get('auth:SCEN-login-locked') as ScenarioNode | undefined;
+    assert.ok(ok && locked, 'expected scenarios auth:SCEN-login-ok + auth:SCEN-login-locked in graph');
     ok.lastResult = 'PASSED';
     locked.lastResult = 'FAILED';
     locked.failingStep = { step: 'Given user logs in', errorMessage: 'NullReferenceException at AuthService.cs:88' };
@@ -97,8 +102,8 @@ Given(
   function (this: Phase2World, line: number) {
     seedFr001WithCoverage(this.tempDir);
     this.graph = buildGraph({ repoRoot: this.tempDir, skipNdjson: true });
-    const locked = this.graph.nodes.get('SCEN-login-locked') as ScenarioNode | undefined;
-    assert.ok(locked, 'SCEN-login-locked must exist');
+    const locked = this.graph.nodes.get('auth:SCEN-login-locked') as ScenarioNode | undefined;
+    assert.ok(locked, 'auth:SCEN-login-locked must exist');
     locked.lastResult = 'FAILED';
     locked.failingStep = {
       step: 'Given user logs in',
@@ -107,18 +112,27 @@ Given(
   },
 );
 
+/**
+ * FR-36a: graph keys are spec-qualified `<slug>:<localId>`. Both _07 and _08
+ * seed their FR via `seedFr001WithCoverage` which writes `.specs/auth/` —
+ * qualify the bare Gherkin id with that fixture slug.
+ */
+function qualifyAuth(nodeId: string): string {
+  return nodeId.includes(':') ? nodeId : `auth:${nodeId}`;
+}
+
 When('agent calls MCP tool `get_trace\\({string})`', async function (this: Phase2World, nodeId: string) {
   const registry = buildToolRegistry(() => this.graph!);
   const t = registry.find((x) => x.name === 'get_trace');
   assert.ok(t, 'get_trace tool must be registered');
-  const r = await t.handler({ node_id: nodeId });
+  const r = await t.handler({ node_id: qualifyAuth(nodeId) });
   this.toolResponse = JSON.parse(r.content[0].text) as Phase2World['toolResponse'];
 });
 
 When('agent calls `get_trace\\({string})`', async function (this: Phase2World, nodeId: string) {
   const registry = buildToolRegistry(() => this.graph!);
   const t = registry.find((x) => x.name === 'get_trace');
-  const r = await t!.handler({ node_id: nodeId });
+  const r = await t!.handler({ node_id: qualifyAuth(nodeId) });
   this.toolResponse = JSON.parse(r.content[0].text) as Phase2World['toolResponse'];
 });
 
@@ -559,22 +573,24 @@ Then('spec-domain graph queries still work through the MCP `find_refs` tool', as
     path.join(specDir, 'TASKS.md'),
     '## Tasks\n\n- [ ] Build login — id: T-1 — Status: TODO\n  Implements FR-1 happy path.\n',
   );
-  const featDir = path.join(this.tempDir, 'tests', 'features');
-  fs.mkdirSync(featDir, { recursive: true });
+  // FR-36a: same-spec `tested-by` convention — the .feature lives inside
+  // `.specs/auth/` so its tag edge is qualified (`auth:FR-1 → auth:SCEN-…`)
+  // and resolves against the composite-keyed FR node.
   fs.writeFileSync(
-    path.join(featDir, 'auth.feature'),
+    path.join(specDir, 'auth.feature'),
     '@FR-1\nFeature: Auth\n  Scenario: login\n    Given a user\n',
   );
 
   const graph = buildGraph({ repoRoot: this.tempDir, skipNdjson: true });
   const findRefs = buildToolRegistry(() => graph).find((t) => t.name === 'find_refs')!;
-  const res = await findRefs.handler({ node_id: 'FR-1' });
+  // FR-36a: spec-qualified keys — FR-1 and T-1 both live in `.specs/auth/`.
+  const res = await findRefs.handler({ node_id: 'auth:FR-1' });
   const body = JSON.parse(res.content[0].text) as {
     references: Array<{ id: string; relation: string }>;
   };
   // The @FR-1 Scenario (tested-by) and the FR-1-referencing Task both surface.
   assert.ok(body.references.some((r) => r.relation === 'tested-by'), 'find_refs should surface the testing Scenario');
-  assert.ok(body.references.some((r) => r.id === 'T-1'), 'find_refs should surface the referencing Task');
+  assert.ok(body.references.some((r) => r.id === 'auth:T-1'), 'find_refs should surface the referencing Task');
 });
 
 Then(

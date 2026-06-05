@@ -1043,14 +1043,14 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
 > and each Done-When binds to a live dogfood/suite run, not a checkbox. Scope: ALL 47 specs at once
 > (the collision is global; a half-migration is worse). Anchors stay BARE (FR-36b) — do NOT qualify them.
 
-- [ ] P13-1: composite node key in the builder only -- @feature36 — id: p13-composite-key — Status: TODO | Est: 240m
+- [ ] P13-1: composite node key in the builder only -- @feature36 — id: p13-composite-key — Status: IN_PROGRESS (code+local-verify done 2026-06-05; blocked on Docker-suite confirmation — машина без docker) | Est: 240m
   _Requirements: [FR-36](FR.md#fr-36), [FR-36a](FR.md#fr-36)_
   **Done When:**
-  - [ ] `tools/spec-graph/builder.ts` keys every node by `<slug>:<localId>` (slug derived from the `.specs/<slug>/` path), node carries a `spec` field; parsers keep emitting bare `localId` (smallest de-collision diff) (SPECGEN004_90)
-  - [ ] dogfood (`node --import tsx tools/spec-mcp-server/dogfood-dataset.ts`) shows FR-node count ≈470 (was 47) and a raw pre-map node dump with 0 collisions (SPECGEN004_95)
-  - [ ] **GLOBAL, not v4-only:** the composite key de-collides ALL 47 specs at once (corpus-wide), verified 0 id-collisions across the whole corpus — a half-migration is worse than none (FR-36e)
-  - [ ] full-corpus `buildGraphFromCwd` build time stays within the MCP cold-start budget despite ≈470 nodes — measured before/after (NFR-Performance-9)
-  - [ ] full clean-HEAD Docker suite GREEN; any test pinning a bare node id updated to the qualified form in THIS task (NFR-Reliability-11)
+  - [x] `tools/spec-graph/builder.ts` keys every node by `<slug>:<localId>` (slug derived from the `.specs/<slug>/` path), node carries a `spec` field; parsers keep emitting bare `localId` (smallest de-collision diff) (SPECGEN004_90) — `qualifySlice()` exported, применяется и в `incremental.ts` (watcher-патч не вставляет bare-дубликаты); edges/Task.refs/AC.parentFr квалифицированы; anchors остались bare (FR-36b); `specOf()` теперь full-dir-path — вложенные `.specs/backlog/<name>/` были одной «клеткой» и давали 60 коллизий
+  - [x] dogfood shows FR-node count ≈470 (was 47) and a raw pre-map node dump with 0 collisions (SPECGEN004_95) — **FR nodes 47 → 574** (выше оценки ~470: nested backlog-спеки + research-доки добавили своих); raw pre-map: 2862 nodes / 2862 unique / **0 collisions** — воспроизводимо: `node --import tsx tools/spec-graph/collision-probe.ts` (exit 0 ⇔ 0 коллизий)
+  - [x] **GLOBAL, not v4-only:** corpus-wide 0 id-collisions (probe выше); попутно убран реальный leak — get_trace(spec-generator-v4:FR-36) было 7 AC (1 протёкший `AC-36` из pomogator-doctor), стало 6
+  - [x] full-corpus `buildGraphFromCwd` build time — **277-305ms** (3 прогона, 3369 nodes) vs ≤2s budget (NFR-Performance-1/9)
+  - [ ] full clean-HEAD Docker suite GREEN — **NOT VERIFIED: на этой машине нет docker**; локальные поверхности зелёные: cucumber 101 scenarios **0 failed** (89 passed, +3 vs до-P13-1 — _07 теперь проверяет реальную линковку, _08, _62), vitest spec-graph+spec-mcp-server **180/180**; все bare-id-пины обновлены на qualified в ЭТОМ таске (step defs phase1/phase2/feature29/30, lifecycle/codespaces tests, Docker-only e2e spec-graph-mcp/hooks-stdin/fixture-shapes — последние проверятся только в CI)
 
 - [ ] P13-2: edges use composite keys + build the @featureN tested-by layer -- @feature36 — id: p13-edges-featureN — Status: TODO | Est: 240m
   _Requirements: [FR-36](FR.md#fr-36), [FR-36c](FR.md#fr-36)_

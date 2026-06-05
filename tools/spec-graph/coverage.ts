@@ -52,12 +52,16 @@ export interface TaskLike {
 }
 
 /**
- * Derive the owning spec slug from a node's file path: `.specs/<slug>/...` →
- * `<slug>`. Returns `undefined` for files outside `.specs/` (e.g.
+ * Derive the owning spec slug from a node's file path: the FULL directory
+ * path between `.specs/` and the file name — `.specs/spec-generator-v4/FR.md`
+ * → `spec-generator-v4`, nested `.specs/backlog/honest-status-command/FR.md`
+ * → `backlog/honest-status-command` (FR-36a: first-segment-only slugs made
+ * all `.specs/backlog/<name>/` specs share one cell → 60 composite-key
+ * collisions). Returns `undefined` for files outside `.specs/` (e.g.
  * `tests/features/...`), so they never satisfy a spec-scoped tag match.
  */
 export function specOf(file: string): string | undefined {
-  const m = file.replace(/\\/g, '/').match(/(?:^|\/)\.specs\/([^/]+)\//);
+  const m = file.replace(/\\/g, '/').match(/(?:^|\/)\.specs\/(.+)\/[^/]+$/);
   return m ? m[1] : undefined;
 }
 

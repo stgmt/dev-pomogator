@@ -28,7 +28,7 @@ describe('startLifecycle', () => {
   it('acquires the lock and cold-builds a graph with the seeded FR', async () => {
     const handle = await startLifecycle({ repoRoot: root, env: 'host', skipNdjson: true });
     try {
-      expect(handle.graph.nodes.has('FR-1')).toBe(true);
+      expect(handle.graph.nodes.has('auth:FR-1')).toBe(true);
       const lock = readLock(root);
       expect(lock).not.toBeNull();
       expect(lock!.pid).toBe(process.pid);
@@ -78,10 +78,10 @@ describe('startLifecycle', () => {
       await new Promise((r) => setTimeout(r, 250));
       fs.writeFileSync(path.join(root, '.specs/auth/FR2.md'), '## FR-2: Logout\n');
       const deadline = Date.now() + 5_000;
-      while (Date.now() < deadline && !handle.graph.nodes.has('FR-2')) {
+      while (Date.now() < deadline && !handle.graph.nodes.has('auth:FR-2')) {
         await new Promise((r) => setTimeout(r, 100));
       }
-      expect(handle.graph.nodes.has('FR-2')).toBe(true);
+      expect(handle.graph.nodes.has('auth:FR-2')).toBe(true);
     } finally {
       await handle.shutdown();
     }

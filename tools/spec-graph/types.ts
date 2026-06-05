@@ -40,8 +40,19 @@ export type EdgeType =
 
 /** Shared shape every node carries. */
 interface NodeBase {
-  /** Canonical id, e.g. `FR-001` / `AC-3` / `SCEN-login-ok`. */
+  /**
+   * Canonical id. For nodes inside `.specs/<slug>/` this is the FR-36a
+   * spec-qualified composite key `<slug>:<localId>` (e.g.
+   * `spec-generator-v4:FR-2`) — bare local ids collide across 47 specs and
+   * silently drop ~90% of nodes. Files outside `.specs/` (e.g.
+   * `tests/features/`) keep the bare local id.
+   */
   id: string;
+  /**
+   * Owning spec slug derived from `.specs/<slug>/` (FR-36a). Absent for
+   * files outside `.specs/`. When present, `id === \`${spec}:${localId}\``.
+   */
+  spec?: string;
   /** Source file (repository-relative POSIX path). */
   file: string;
   /** 1-indexed heading line in the source file. */
