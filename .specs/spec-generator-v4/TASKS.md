@@ -1072,6 +1072,42 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] `spec-graph-query` skill + `spec-mcp-dogfood`/`runtime-dogfood` skills updated for the new node_id semantics; bare→candidates fallback documented
   - [ ] FINAL: dogfood before/after diff archived in `audit-reports/`; full clean-HEAD Docker suite 0 failures; honesty-gate consistent
 
+## Phase 14 — Smart verdict authoritative + cell→atom traceability gate (FR-37)
+
+> Triggered by a real false-green this session: structural `validate-spec: 0 errors` was reported as
+> "spec valid" while audit/conformance/coverage showed real debt. v4 already owns the smart machinery
+> (FR-8 semantic, conformance, coverage/honesty, audit) — this phase makes it AUTHORITATIVE and full
+> traceability a hard gate. Evidence: `audit-reports/v4-smart-verdict-and-organism-traceability.md`.
+> Each Done-When binds to a live verdict/dogfood run; depends on Phase 13 (FR-36 one graph).
+
+- [ ] P14-1: reconcile the 58 stale FILE_CHANGES paths + make stale-path a hard verdict ERROR -- @feature37 — id: p14-stale-filechanges — Status: TODO | Est: 240m
+  _Requirements: [FR-37e](FR.md#fr-37), [FR-37b](FR.md#fr-37)_
+  **Done When:**
+  - [ ] every `extensions/…`/`dist/installer/…` path in `.specs/spec-generator-v4/FILE_CHANGES.md` rewritten to its canonical post-v2 path OR removed with a reason (SPECGEN004_97)
+  - [ ] `audit-spec` v4 stale-path P0s → 0 (was 9 of 10); `audit-spec` wired into the authoritative verdict so reading `validate-spec` alone cannot bypass it
+  - [ ] live run: authoritative verdict FAILS before the fix (names the stale paths), PASSES that gate after — proven, not asserted
+
+- [ ] P14-2: traceability-completeness check (the cell→atom invariants) -- @feature37 — id: p14-traceability-check — Status: TODO | Est: 300m
+  _Requirements: [FR-37b](FR.md#fr-37)_
+  **Done When:**
+  - [ ] new check emits a per-item gap list for {stale FILE_CHANGES path, UNCOVERED_FR, TASK_UNTESTED, UNTAGGED_SCENARIO} over the one graph (SPECGEN004_98)
+  - [ ] within spec-generator-v4: UNCOVERED_FR→0, TASK_UNTESTED→0, every Scenario tagged→FR; corpus-wide counts measured + archived (baseline: 1243 UNTAGGED, 11 UNCOVERED_FR, 2 TASK_UNTESTED)
+  - [ ] dogfood before/after shows the counts move to 0 within v4; suite green
+
+- [ ] P14-3: smart verdict authoritative; structural demoted to pre-filter -- @feature37 — id: p14-authoritative-verdict — Status: TODO | Est: 300m
+  _Requirements: [FR-37a](FR.md#fr-37), [FR-37c](FR.md#fr-37)_
+  **Done When:**
+  - [ ] the health entrypoint composes conformance + get_coverage + audit-spec + P14-2 over the one graph as THE verdict; `validate-spec` is a pre-filter whose pass is not emittable as "valid/clean/done" (SPECGEN004_96)
+  - [ ] FR-8 semantic runs in the verdict path when a `claude` binary is present (SPECGEN004_99); absent → `SEMANTIC_SKIPPED` note, never a silent "no drift" (SPECGEN004_100)
+  - [ ] live: on a 0-structural-error / open-smart-findings spec the verdict reads RED with a gap list; after reconciliation it reads GREEN
+
+- [ ] P14-4: skills/agents may not launder a structural pass -- @feature37 — id: p14-skill-guard — Status: TODO | Est: 180m
+  _Requirements: [FR-37d](FR.md#fr-37)_
+  **Done When:**
+  - [ ] `spec-status` / `spec-mcp-dogfood` / `runtime-dogfood` / `suite-failure-triage` skills updated to surface the smart verdict + gap list, forbidden to print "valid/clean/done" off `validate-spec` alone (SPECGEN004_101)
+  - [ ] a `.claude/rules/` guard encodes the exact failure (structural "valid" trusted as health) so future sessions can't repeat it
+  - [ ] full clean-HEAD Docker suite green; honesty-gate consistent
+
 ## Refactor & Polish (final)
 
 - [ ] Refactor + dedup across phases — id: final-refactor — Status: TODO | Est: 480m
@@ -1086,7 +1122,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   > ⚠️ PARTIAL (honest, 2026-06-05): validate-spec + cucumber pass; audit-spec has **10 ERROR (P0)** findings (LOGIC_GAPS: FRs without matching AC) → the "0 P0" bar is NOT met. /simplify not run.
   **Done When:**
   - [x] `validate-spec.ts -Path .specs/spec-generator-v4` → 0 errors (valid: true; warnings/placeholders only)
-  - [ ] `audit-spec.ts -Path .specs/spec-generator-v4` → 0 P0 findings — **FAILS: 10 ERROR findings** (FRs missing matching AC)
+  - [ ] `audit-spec.ts -Path .specs/spec-generator-v4` → 0 P0 findings — **FAILS: 10 ERROR findings** (corrected 2026-06-05 from real audit output: 1× FR-1 has no clickable AC link + **9× FILE_CHANGES paths pointing at deleted `extensions/…`/`dist/installer/…`** — NOT "FRs missing AC". Closed by FR-37e / Phase 14 P14-1)
   - [x] cucumber scenarios GREEN — full vitest+BDD suite is 0-failure (1745 passed)
   - [ ] `/simplify` final review clean — not run
   - [ ] CHANGELOG entry written

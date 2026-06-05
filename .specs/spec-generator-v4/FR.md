@@ -627,6 +627,29 @@ The graph keys nodes by the BARE local id (`FR-2`, `AC-2.1`). MEASURED this sess
 
 ---
 
+## FR-37
+
+**Smart verdict is authoritative + the corpus traces as ONE organism (cell→atom) — structural-pass is never "clean"**
+
+MEASURED this session: the structural `validate-spec` returns `files_with_errors: 0` for spec-generator-v4 and that was reported as "spec valid" — a FALSE green, because `audit-spec` has 10 P0 (1 missing AC-link + **9 FILE_CHANGES entries pointing at deleted `extensions/…`/`dist/installer/…` paths**), `conformance_check` returns **1256 findings** (1243 `UNTAGGED_SCENARIO`, 11 `UNCOVERED_FR`, 2 `TASK_UNTESTED`), and the corpus `specs-validator` reports **32 NOT_COVERED + 75 ORPHAN + 9 unconfirmed STOP**. v4 ALREADY owns the smart machinery — FR-8 LLM-as-judge semantic drift, the `full` semantic skill mode, `conformance_check`, `get_coverage` (FR-32 honesty), `audit-spec` — but it is opt-in / not the boss, so a dumb structural pass masquerades as health. System SHALL make the smart graph analysis the canonical verdict and full cell→atom traceability a hard gate, so a GREEN verdict MEANS the organism traces from FR down to the atom (task / code / test line), across ALL specs — not "the formatting is fine."
+
+**FR-37a (smart verdict authoritative; structural is a pre-filter only):** The canonical spec-health verdict SHALL be the smart analysis over the ONE graph (FR-36): `conformance_check` + `get_coverage` (FR-32) + `audit-spec` + the FR-37b traceability-completeness check, default-ON. `validate-spec` (structure + links) SHALL be a pre-filter whose pass SHALL NOT be reportable, by any tool/skill/agent, as "valid / clean / done." A tool that reports health SHALL cite the smart verdict, never a bare `validate-spec: 0 errors`.
+
+**FR-37b (full cell→atom traceability is a hard gate):** The verdict SHALL FAIL while ANY of these hold, with an actionable per-item gap list: a FILE_CHANGES path that does not exist on disk (stale `extensions/…` etc.); an `UNCOVERED_FR` (FR with no AC, or no Scenario, or no Task); a `TASK_UNTESTED` (Task DONE with zero linked scenario); a Scenario not tagged up to a requirement (`UNTAGGED_SCENARIO`). Within spec-generator-v4 these SHALL be driven to 0; corpus-wide they SHALL be MEASURED and trend to 0 (the organism invariant: every atom reachable from the corpus via edges, no orphan).
+
+**FR-37c (semantic check ON in the verdict path, fail-loud not fail-silent):** When a `claude` binary is present the FR-8 semantic drift check SHALL run as part of the authoritative verdict (not opt-in). When the binary/headless path is unavailable the verdict SHALL carry an explicit `SEMANTIC_SKIPPED` note and SHALL NEVER report "no drift detected" for unchecked content (no false all-clear) — mirroring the FR-32/FR-35 honesty discipline.
+
+**FR-37d (skills/agents may not launder a structural pass):** The spec-facing skills (`spec-status`, `spec-mcp-dogfood`, `runtime-dogfood`, `suite-failure-triage`) and any agent reporting spec health SHALL be FORBIDDEN to state "valid / clean / done" off `validate-spec` alone; they SHALL surface the smart verdict (conformance/coverage/audit/traceability) and its gap list. This encodes the exact failure that triggered this FR (a structural "valid" trusted as health) as a guard, not a footnote.
+
+**FR-37e (close the measured in-scope debt):** The 58 stale `extensions/…`/`dist/installer/…` paths in spec-generator-v4 `FILE_CHANGES.md` SHALL be reconciled (rewritten to the canonical post-v2 path or removed with reason), closing the 9 stale-path P0s; and a stale FILE_CHANGES path SHALL be a hard ERROR in the authoritative verdict (already in `audit-spec` — wire `audit-spec` into the verdict so reading `validate-spec` alone cannot bypass it).
+
+**Зависит от:** FR-36 (ONE graph via composite ids — the precondition for corpus-wide traceability), FR-32 (`get_coverage` honesty gate), FR-8 (LLM-as-judge semantic drift), FR-35 (honesty-hardening idiom: GREEN never silently means fake). Reuses the existing smart tools — no new analyzer; this FR makes them AUTHORITATIVE + adds the traceability-completeness check. Evidence: `audit-reports/v4-smart-verdict-and-organism-traceability.md`.
+**Связанные AC:** [AC-37.1](ACCEPTANCE_CRITERIA.md#ac-371), [AC-37.2](ACCEPTANCE_CRITERIA.md#ac-372), [AC-37.3](ACCEPTANCE_CRITERIA.md#ac-373), [AC-37.4](ACCEPTANCE_CRITERIA.md#ac-374), [AC-37.5](ACCEPTANCE_CRITERIA.md#ac-375), [AC-37.6](ACCEPTANCE_CRITERIA.md#ac-376)
+**Use Case:** [UC-2](USE_CASES.md#uc-2)
+**User Story:** US-22
+
+---
+
 ## Out of Scope
 
 ### FR-OUT-1: Real-time spec collaborative editing (CRDT/OT) — OUT OF SCOPE

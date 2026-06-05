@@ -535,3 +535,39 @@ WHEN the dogfood harness runs after a migration phase THEN the raw pre-map node 
 **Требование:** [FR-36e](FR.md#fr-36)
 
 WHEN any migration phase completes THEN the full clean-HEAD Docker suite SHALL be green (clean-vs-clean), AND every test pinning a bare id (e.g. `get_node("FR-2")`) SHALL be updated to the qualified form in that same phase.
+
+## AC-37.1
+
+**Требование:** [FR-37a](FR.md#fr-37)
+
+WHEN spec health is reported THEN the verdict SHALL be the smart analysis (`conformance_check` + `get_coverage` + `audit-spec` + the traceability-completeness check) over the one graph; a bare `validate-spec: 0 errors` SHALL NOT be reportable as "valid / clean / done."
+
+## AC-37.2
+
+**Требование:** [FR-37b](FR.md#fr-37)
+
+WHEN any of {a stale FILE_CHANGES path, an `UNCOVERED_FR`, a `TASK_UNTESTED`, an `UNTAGGED_SCENARIO`} exists THEN the authoritative verdict SHALL be FAIL with a per-item gap list; within spec-generator-v4 these SHALL be 0 for a GREEN verdict.
+
+## AC-37.3
+
+**Требование:** [FR-37c](FR.md#fr-37)
+
+WHEN a `claude` binary is present THEN the FR-8 semantic drift check SHALL run inside the authoritative verdict (not opt-in); WHEN it is absent THEN the verdict SHALL carry a `SEMANTIC_SKIPPED` note and SHALL NEVER report "no drift detected" for unchecked content.
+
+## AC-37.4
+
+**Требование:** [FR-37d](FR.md#fr-37)
+
+WHEN a skill or agent reports spec health THEN it SHALL surface the smart verdict + gap list and SHALL NOT state "valid / clean / done" off `validate-spec` alone.
+
+## AC-37.5
+
+**Требование:** [FR-37e](FR.md#fr-37)
+
+WHEN the verdict runs AND `FILE_CHANGES.md` references a path that does not exist on disk THEN it SHALL emit a hard ERROR (via `audit-spec` wired into the verdict); the 58 stale `extensions/`/`dist/installer` paths in spec-generator-v4 SHALL be reconciled to 0.
+
+## AC-37.6
+
+**Требование:** [FR-37a](FR.md#fr-37)
+
+WHEN the authoritative verdict is GREEN THEN it SHALL mean the organism traces cell→atom (every Scenario tagged → FR, every FR has AC+Scenario+Task, every Task has a test, every FILE_CHANGES path exists) across the graph — NOT merely that one spec's formatting is well-formed.

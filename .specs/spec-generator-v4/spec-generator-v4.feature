@@ -740,3 +740,43 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When the dogfood harness dumps the raw pre-map nodes
     Then there are zero id collisions
     And the FR-node count is about 470 not 47
+
+  @feature37
+  Scenario: SPECGEN004_96 a bare structural pass is not reportable as clean
+    Given validate-spec returns zero structural errors but the smart analysis has open findings
+    When spec health is reported
+    Then the verdict is the smart analysis over the one graph
+    And a bare validate-spec zero-errors is not reportable as valid or clean or done
+
+  @feature37
+  Scenario: SPECGEN004_97 a stale FILE_CHANGES path fails the verdict
+    Given a FILE_CHANGES path that does not exist on disk
+    When the authoritative verdict runs
+    Then it fails with a hard error naming the stale path
+
+  @feature37
+  Scenario: SPECGEN004_98 an untraced atom fails the traceability gate
+    Given an UNCOVERED_FR or a TASK_UNTESTED or an UNTAGGED_SCENARIO exists
+    When the authoritative verdict runs
+    Then it fails with a per-item gap list
+    And within spec-generator-v4 these must be zero for a green verdict
+
+  @feature37
+  Scenario: SPECGEN004_99 the semantic check runs in the verdict path
+    Given a claude binary is present
+    When the authoritative verdict runs
+    Then the FR-8 semantic drift check runs as part of it
+
+  @feature37
+  Scenario: SPECGEN004_100 a missing semantic binary fails loud not silent
+    Given no claude binary is available
+    When the authoritative verdict runs
+    Then it carries a SEMANTIC_SKIPPED note
+    And it never reports no drift detected for unchecked content
+
+  @feature37
+  Scenario: SPECGEN004_101 a skill may not launder a structural pass
+    Given a skill or agent reports spec health
+    When it produces its verdict
+    Then it surfaces the smart verdict and gap list
+    And it does not state valid or clean or done off validate-spec alone

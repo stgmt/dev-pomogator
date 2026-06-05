@@ -544,3 +544,25 @@ Then the anchor alias stays the bare file-local `fr-2` (Marksman/anchor-fix unaf
 Given a colliding bare id `FR-2`
 When a tool is called with it
 Then it returns the candidate list of `slug:id` entries rather than one arbitrary node
+
+### User Story 22: Smart verdict is authoritative + the corpus traces cell→atom (Priority: P1)
+
+As a developer (and an AI agent reporting spec health), I want a GREEN spec verdict to MEAN the smart analysis passed and the corpus traces from FR down to the atom — not that one file's formatting is fine — so that I can trust "valid" instead of being handed a false green off a dumb structural check.
+
+**Why:** This session a structural `validate-spec: 0 errors` was reported as "spec valid" while `audit-spec` had 10 P0, `conformance_check` had 1256 findings, and the corpus had 32 NOT_COVERED + 75 ORPHAN + 9 unconfirmed STOP. v4 already owns the smart machinery (FR-8 semantic, conformance, coverage/honesty, audit) but it is opt-in / not authoritative, so a dumb pass masquerades as health. A verdict you can't trust is worse than none — it manufactures false confidence.
+
+**Independent Test:** On a spec with 0 structural errors but open smart findings, run the health entrypoint → the verdict is RED with a per-item gap list (stale FILE_CHANGES path, UNCOVERED_FR, TASK_UNTESTED, UNTAGGED_SCENARIO), and NO tool/skill prints "valid/clean/done". Reconcile the gaps → verdict turns GREEN, and GREEN now provably means cell→atom traceability.
+
+**Acceptance Scenarios:**
+
+Given validate-spec returns 0 structural errors but the smart analysis has open findings
+When spec health is reported
+Then the verdict is the smart analysis and a bare structural pass is not reportable as clean
+
+Given a stale FILE_CHANGES path, an UNCOVERED_FR, a TASK_UNTESTED, or an UNTAGGED_SCENARIO
+When the authoritative verdict runs
+Then it fails with a per-item gap list
+
+Given no claude binary is available
+When the authoritative verdict runs
+Then it carries a SEMANTIC_SKIPPED note and never reports no-drift for unchecked content
