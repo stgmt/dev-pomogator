@@ -43,9 +43,29 @@ driven from, NOT grep guesses. Sampled inputs: `node_id=FR-2`, `tag=@plugin`,
      tracked the `## Phase …` heading. **Fix:** added `TaskNode.phase`; the tasks parser now
      assigns each task its enclosing phase. Result: **110/110 tasks carry a phase**,
      `list_phase_tasks("Phase 0 …")` → 5 tasks.
-   - Still OPEN (lower priority, noted): the duplicate `covers` edges (FR-2 had 52 covers all to
-     "AC-2") — an edge-builder dedup issue; the FR/AC→Scenario edge layer itself remains unbuilt
-     (get_trace now routes around it via tags).
+   - Still OPEN — and it is ARCHITECTURAL, not a quick edge patch (root cause found):
+
+## Root cause of the edge bugs: node ids are NOT spec-qualified
+
+Probed: **46 specs each define `FR-2`, but the graph holds only 47 FR nodes from 6 spec dirs.**
+The graph keys nodes by the BARE id (`FR-2`, `AC-2.1`), so across 47 specs they **collide** — the
+map keeps the last writer and silently drops the rest (≈470 FRs expected, 47 present). `FR-2`
+resolves to a random spec (`worktree-setup`).
+
+Every edge bug is a symptom of this:
+- "FR-2 covers AC-2 ×52" = `covers` edges from 46 different specs' `FR-2`, all piled onto one
+  bare id.
+- The FR/AC→Scenario `tested-by` edges are orphaned both because of the collision AND because
+  `SPEC_TAG_RE` (`gherkin.ts`) only matches `@FR-N`/`@AC-N` tags while scenarios are tagged
+  `@featureN` — so no tested-by edge is ever built for a real scenario.
+
+**Patching the edges without fixing ids is pointless — they'd still collide.** The real fix is
+**spec-qualified node ids** (e.g. `worktree-setup/FR-2`) threaded through every parser, edge, and
+consumer + the MCP tools — a large architectural change. Until then, the working pattern is what
+`computeCoverage` (spec-scoped via file) and the patched `get_trace` (file-scoped @featureN) do:
+**scope by file path, never trust a bare id across specs.** This is the headline item for the
+v4 scope update — decide: commit to spec-qualified ids, or formally scope the graph to one spec
+at a time and document the collision.
 
 ## Reproduce
 ```
