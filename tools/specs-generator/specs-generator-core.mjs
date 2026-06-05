@@ -231,7 +231,13 @@ function createLogger({ logsDir, logFile, verboseOutput }) {
 }
 
 function createCommandContext(options) {
-  const repoRoot = findRepoRoot(SCRIPT_DIR);
+  // SPECS_GENERATOR_ROOT lets callers point the generator at a FOREIGN corpus
+  // root (fixture dirs in tests, other repos' .specs/ — FR-37/P14-5 verdict
+  // runs). Default behaviour (this repo's root from the script location) is
+  // unchanged when the env var is unset.
+  const repoRoot = process.env.SPECS_GENERATOR_ROOT
+    ? path.resolve(process.env.SPECS_GENERATOR_ROOT)
+    : findRepoRoot(SCRIPT_DIR);
   const logsDir = path.join(SCRIPT_DIR, 'logs');
   const logFile = options.logFile || path.join(logsDir, `specs-generator-${formatDateOnly()}.log`);
   const log = createLogger({

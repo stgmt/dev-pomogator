@@ -36,22 +36,35 @@ Both are FULLY TRACED (dogfood-verified, FR→AC→Scenario→Task→Design):
 The spec now DESCRIBES the fix; the implementation is Phase 13 + Phase 14 in `TASKS.md`. Zero code shipped.
 
 ### Measured debt (drive these to 0 — this is the gate)
-- **10 audit P0** = 1× FR-1 missing AC-link + **9× FILE_CHANGES paths at deleted `extensions/…`/`dist/installer/…`** (58 such stale paths total in `FILE_CHANGES.md`). NOT "FRs missing AC" (earlier mislabel, corrected).
+- **1 audit P0** (was 10): 1× FR-1 missing AC-link (scope: `final-verification`). ✅ P14-1 (2026-06-05)
+  closed the 9 stale-path P0s: 58 stale `extensions/…`/`dist/installer/…` paths reconciled (57 rewritten
+  to canonical post-v2 paths, existence-verified; 1 removed with reason). Live proof: verdict BEFORE/AFTER
+  in `.dev-pomogator/spec-verdict-p14-1-{BEFORE,AFTER}.txt` — `FILE_CHANGES_VERIFY` 9→0.
 - **conformance_check: 1256** = 1243 `UNTAGGED_SCENARIO` + 11 `UNCOVERED_FR` + 2 `TASK_UNTESTED`.
 - **corpus specs-validator: 32 NOT_COVERED + 75 ORPHAN + 9 unconfirmed STOP.**
 - **collision: ~470 FR nodes expected, 47 present** (bare-id collision — FR-36 fixes this GLOBALLY across all 47 specs).
 
+### Done this leg (P14-1, 2026-06-05)
+- `tools/specs-generator/spec-verdict.ts` — SEED of the authoritative verdict (FR-37a/e): exported
+  `runSpecVerdict()` (P14-3 composes onto it, P14-4 skills import it) + CLI. validate-spec = pre-filter
+  (pass NOT reportable as valid), ANY audit ERROR = hard gate with a per-class gap list; fail-loud on
+  core errors (a `{error:…}` reply can't read as GREEN); explicit `SEMANTIC_SKIPPED` /
+  `TRACEABILITY_PENDING` notes until P14-2/3 land.
+- `specs-generator-core.mjs`: `SPECS_GENERATOR_ROOT` env override — verdict runs on fixture dirs and
+  FOREIGN corpora (prereq for P14-5's general corpus-health skill).
+- SPECGEN004_97 step defs (`tests/step_definitions/feature37_smart_verdict.ts`) — drive the REAL
+  `runSpecVerdict()` on a temp fixture. Suite: 101 scenarios, 86 passed / 0 failed (undefined 12→11).
+
 ### Next steps, in order
-1. **Phase 14 P14-1** — reconcile the 58 stale `extensions/`/`dist/installer` paths in `FILE_CHANGES.md`
-   (closes 9 of 10 P0) + wire `audit-spec` into the verdict; prove verdict RED→GREEN on a live run.
-2. **Phase 13** (FR-36) — composite key in `builder.ts` (de-collides ALL 47 specs at once) → edges +
+1. **Phase 13** (FR-36) — composite key in `builder.ts` (de-collides ALL 47 specs at once) → edges +
    `@featureN` tested-by → tools accept `slug:id` → update bare-id-pinning tests. Each phase suite-green.
-3. **Phase 14 P14-2/3/4** — traceability-completeness check; make the smart verdict authoritative;
-   skill guard (`spec-status`/dogfood/triage may not print "valid" off validate-spec) + a `.claude/rules/` guard.
-4. **Phase 14 P14-5** — the reusable GENERAL corpus-health skill (find collisions + broken edges +
+2. **Phase 14 P14-2/3/4** — traceability-completeness check; make the smart verdict authoritative
+   (compose conformance + get_coverage + FR-8 semantic onto `runSpecVerdict()`); skill guard
+   (`spec-status`/dogfood/triage may not print "valid" off validate-spec) + a `.claude/rules/` guard.
+3. **Phase 14 P14-5** — the reusable GENERAL corpus-health skill (find collisions + broken edges +
    untraced atoms for ANY corpus), DEBUGGED with a live run as evidence. (User ask 2026-06-05.)
-5. **Older verification debt** (pre-existing, see `final-verification` task): FR-20/21/24 tests, jscpd
-   dedup, `/simplify`, CHANGELOG. Plan entry point: `~/.claude/plans/fizzy-percolating-turing.md` (Wave W1).
+4. **Older verification debt** (pre-existing, see `final-verification` task): FR-1 AC-link P0,
+   FR-20/21/24 tests, jscpd dedup, `/simplify`, CHANGELOG. Plan entry: `~/.claude/plans/fizzy-percolating-turing.md` (Wave W1).
 
 ## Open decisions (RECORDED, not yet answered — per user "пока не отвечай")
 1. **Push cadence:** push each spec commit immediately vs batch. → resolved this turn: PUSH NOW.

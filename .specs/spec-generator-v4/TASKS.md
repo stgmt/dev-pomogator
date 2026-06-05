@@ -1081,12 +1081,12 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
 > traceability a hard gate. Evidence: `audit-reports/v4-smart-verdict-and-organism-traceability.md`.
 > Each Done-When binds to a live verdict/dogfood run; depends on Phase 13 (FR-36 one graph).
 
-- [ ] P14-1: reconcile the 58 stale FILE_CHANGES paths + make stale-path a hard verdict ERROR -- @feature37 — id: p14-stale-filechanges — Status: TODO | Est: 240m
+- [x] P14-1: reconcile the 58 stale FILE_CHANGES paths + make stale-path a hard verdict ERROR -- @feature37 — id: p14-stale-filechanges — Status: DONE (2026-06-05) | Est: 240m
   _Requirements: [FR-37](FR.md#fr-37), [FR-37e](FR.md#fr-37), [FR-37b](FR.md#fr-37)_
   **Done When:**
-  - [ ] every `extensions/…`/`dist/installer/…` path in `.specs/spec-generator-v4/FILE_CHANGES.md` rewritten to its canonical post-v2 path OR removed with a reason (SPECGEN004_97)
-  - [ ] `audit-spec` v4 stale-path P0s → 0 (was 9 of 10); `audit-spec` wired into the authoritative verdict so reading `validate-spec` alone cannot bypass it
-  - [ ] live run: authoritative verdict FAILS before the fix (names the stale paths), PASSES that gate after — proven, not asserted
+  - [x] every `extensions/…`/`dist/installer/…` path in `.specs/spec-generator-v4/FILE_CHANGES.md` rewritten to its canonical post-v2 path OR removed with a reason (SPECGEN004_97) — 57 переписаны на существующие canonical-пути (existence verified на диске), 1 (`dist/installer/extensions.js`) удалён с reason; Total counts пересчитан (130→116 rows)
+  - [x] `audit-spec` v4 stale-path P0s → 0 (was 9 of 10); `audit-spec` wired into the authoritative verdict — `tools/specs-generator/spec-verdict.ts` (exported `runSpecVerdict()` + CLI): validate-spec = pre-filter (его pass не репортится как valid, FR-37a), любой audit ERROR = hard gate с per-class gap list; fail-loud на core-error (false-GREEN исключён); `SPECS_GENERATOR_ROOT` env в core для foreign-corpus прогонов (нужно P14-5)
+  - [x] live run: authoritative verdict FAILS before the fix (names the stale paths), PASSES that gate after — **proven**: BEFORE = RED, 10 ERROR / 2 класса, все 9 `FILE_CHANGES_VERIFY`-путей названы поимённо (`.dev-pomogator/spec-verdict-p14-1-BEFORE.txt`); AFTER = `FILE_CHANGES_VERIFY` 9→0, остался 1× `LINK_VALIDITY` (FR-1↔AC link — scope `final-verification`, не P14-1: "9 of 10") → verdict честно RED по этому классу (`.dev-pomogator/spec-verdict-p14-1-AFTER.txt`); SPECGEN004_97 step defs (`tests/step_definitions/feature37_smart_verdict.ts`) гоняют реальный `runSpecVerdict()` на temp-фикстуре — 1 passed
 
 - [ ] P14-2: traceability-completeness check (the cell→atom invariants) -- @feature37 — id: p14-traceability-check — Status: TODO | Est: 300m
   _Requirements: [FR-37](FR.md#fr-37), [FR-37b](FR.md#fr-37)_

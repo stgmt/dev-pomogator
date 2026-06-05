@@ -18,87 +18,72 @@
 | `tests/fixtures/ndjson/sample.ndjson` | create | Pre-recorded canonical NDJSON for ingester unit-tests ([FR-1](FR.md#fr-1)) |
 | `tests/fixtures/error-cases/` | create | Negative-case fixtures (corrupt-frontmatter, duplicate-fr, orphan-tagged) ([FR-5](FR.md#fr-5), [FR-13](FR.md#fr-13)) |
 | `.github/workflows/test.yml` | edit | Add `test:bdd` job alongside existing vitest job ([FR-1](FR.md#fr-1)) |
-| `extensions/onboard-repo/tools/onboard-repo/steps/detect-bdd.ts` | edit | Detect TS project + warn "v4 requires cucumber-js bootstrap" ([FR-1](FR.md#fr-1)) |
+| `tools/specs-generator/bdd-framework-detector.ts` | edit | Detect TS project + warn "v4 requires cucumber-js bootstrap" ([FR-1](FR.md#fr-1)) — canonical post-v2: BDD detection живёт в specs-generator, не в onboard-repo step |
 
 ## Phase 1 — Graph builder + parsers (in-memory)
 
 | Path | Action | Reason |
 |------|--------|--------|
-| `extensions/specs-workflow/tools/spec-graph/types.ts` | create | TypeScript types: Node, Edge, SpecGraph, NodeType, EdgeType ([FR-2](FR.md#fr-2), SCHEMA.md Entity 1) |
-| `extensions/specs-workflow/tools/spec-graph/md-parser.ts` | create | unified+remark+remark-frontmatter+remark-wiki-link MD parser with dual-anchor registration ([FR-3](FR.md#fr-3)) |
-| `extensions/specs-workflow/tools/spec-graph/anchor-patterns.ts` | create | Default regex patterns + config-driven override ([FR-3](FR.md#fr-3)) |
-| `extensions/specs-workflow/tools/spec-graph/gherkin-parser.ts` | create | @cucumber/gherkin + @cucumber/gherkin-utils wrapper, tag inheritance ([FR-2](FR.md#fr-2)) |
-| `extensions/specs-workflow/tools/spec-graph/ndjson-ingester.ts` | create | @cucumber/messages stream parser, JOIN keys → graph edges ([FR-2](FR.md#fr-2), [FR-9](FR.md#fr-9)) |
-| `extensions/specs-workflow/tools/spec-graph/graph-builder.ts` | create | Orchestrates parsers, merges trees → SpecGraph, in-memory store ([FR-2](FR.md#fr-2)) |
-| `extensions/specs-workflow/tools/spec-graph/incremental-rebuild.ts` | create | Hash-based change detection, only affected subgraph re-parse ([FR-2](FR.md#fr-2), NFR-Performance-2) |
-| `extensions/specs-workflow/tools/spec-graph/conformance-checker.ts` | create | All structural checks (UNCOVERED_FR/ORPHAN_TASK/BROKEN_REF/etc.) returning Finding[] ([FR-13](FR.md#fr-13), SCHEMA.md Entity 6) |
-| `extensions/specs-workflow/tools/spec-graph/__tests__/md-parser.test.ts` | create | vitest unit tests for parser regex + dual-anchor ([FR-3](FR.md#fr-3)) |
-| `extensions/specs-workflow/tools/spec-graph/__tests__/graph-builder.test.ts` | create | vitest unit tests using fixture from Phase 0 ([FR-2](FR.md#fr-2)) |
-| `extensions/specs-workflow/tools/spec-graph/__tests__/conformance.test.ts` | create | vitest unit tests for each finding code ([FR-13](FR.md#fr-13)) |
+| `tools/spec-graph/types.ts` | create | TypeScript types: Node, Edge, SpecGraph, NodeType, EdgeType ([FR-2](FR.md#fr-2), SCHEMA.md Entity 1) |
+| `tools/spec-graph/parsers/md.ts` | create | unified+remark+remark-frontmatter+remark-wiki-link MD parser with dual-anchor registration + default anchor regex patterns с config-driven override (поглотил planned `anchor-patterns.ts`) ([FR-3](FR.md#fr-3)) |
+| `tools/spec-graph/parsers/gherkin.ts` | create | @cucumber/gherkin + @cucumber/gherkin-utils wrapper, tag inheritance ([FR-2](FR.md#fr-2)) |
+| `tools/spec-graph/parsers/ndjson.ts` | create | @cucumber/messages stream parser, JOIN keys → graph edges ([FR-2](FR.md#fr-2), [FR-9](FR.md#fr-9)) |
+| `tools/spec-graph/builder.ts` | create | Orchestrates parsers, merges trees → SpecGraph, in-memory store ([FR-2](FR.md#fr-2)) |
+| `tools/spec-graph/incremental.ts` | create | Hash-based change detection, only affected subgraph re-parse ([FR-2](FR.md#fr-2), NFR-Performance-2) |
+| `tools/spec-graph/conformance.ts` | create | All structural checks (UNCOVERED_FR/ORPHAN_TASK/BROKEN_REF/etc.) returning Finding[] ([FR-13](FR.md#fr-13), SCHEMA.md Entity 6) |
+| `tools/spec-graph/__tests__/md-parser.test.ts` | create | vitest unit tests for parser regex + dual-anchor ([FR-3](FR.md#fr-3)) |
+| `tools/spec-graph/__tests__/builder.test.ts` | create | vitest unit tests using fixture from Phase 0 ([FR-2](FR.md#fr-2)) |
+| `tools/spec-graph/__tests__/conformance.test.ts` | create | vitest unit tests for each finding code ([FR-13](FR.md#fr-13)) |
 
 ## Phase 2 — MCP server + hooks + Marksman bundle
 
 | Path | Action | Reason |
 |------|--------|--------|
-| `extensions/specs-workflow/tools/spec-mcp-server/index.ts` | create | MCP server entry point, @modelcontextprotocol/sdk stdio ([FR-4](FR.md#fr-4)) |
-| `extensions/specs-workflow/tools/spec-mcp-server/tools/get-trace.ts` | create | Primary tool — structured tree + explanation_for_agent ([FR-4](FR.md#fr-4), AC-4.1) |
-| `extensions/specs-workflow/tools/spec-mcp-server/tools/get-node.ts` | create | Generic node lookup by id, type-aware payload ([FR-4](FR.md#fr-4)) |
-| `extensions/specs-workflow/tools/spec-mcp-server/tools/find-by-tags.ts` | create | Tag combinator (AND/OR) ([FR-4](FR.md#fr-4)) |
-| `extensions/specs-workflow/tools/spec-mcp-server/tools/find-by-type.ts` | create | Filter by node type ([FR-4](FR.md#fr-4)) |
-| `extensions/specs-workflow/tools/spec-mcp-server/tools/conformance-check.ts` | create | Run all enabled checks, return Finding[] with suggestions ([FR-4](FR.md#fr-4), [FR-13](FR.md#fr-13)) |
-| `extensions/specs-workflow/tools/spec-mcp-server/tools/blast-radius.ts` | create | Graph traversal for change impact ([FR-4](FR.md#fr-4), SCHEMA Entity 7) |
-| `extensions/specs-workflow/tools/spec-mcp-server/tools/list-orphans.ts` | create | Orphan node detection ([FR-13](FR.md#fr-13)) |
-| `extensions/specs-workflow/tools/spec-mcp-server/tools/broken-refs.ts` | create | Wiki-link / inline-link validator ([FR-4](FR.md#fr-4)) |
-| `extensions/specs-workflow/tools/spec-mcp-server/tools/git-diff-impact.ts` | create | Git plumbing + graph traversal ([FR-4](FR.md#fr-4)) |
-| `extensions/specs-workflow/tools/spec-mcp-server/tools/search.ts` | create | FTS5/BM25 + semantic embeddings (Phase 2: text only, Phase 4: + semantic) ([FR-4](FR.md#fr-4)) |
-| `extensions/specs-workflow/tools/spec-mcp-server/tools/overview.ts` | create | Per-spec or global summary ([FR-4](FR.md#fr-4)) |
-| `extensions/specs-workflow/tools/spec-mcp-server/lock-manager.ts` | create | .mcp-lock.json atomic create + pid+env check ([FR-14](FR.md#fr-14), NFR-Reliability-3) |
-| `extensions/specs-workflow/tools/spec-mcp-server/file-watcher.ts` | create | chokidar wrapper with polling auto-detect (touch test) ([FR-14](FR.md#fr-14), NFR-Reliability-4) |
-| `extensions/specs-workflow/tools/spec-mcp-server/lsp-bridge.ts` | create | Optional Marksman LSP subprocess proxy ([FR-7](FR.md#fr-7)) |
-| `extensions/specs-workflow/tools/spec-conformance-guard/spec-conformance-guard.ts` | create | PreToolUse HARD hook (DUPLICATE_DEFINITION etc.) ([FR-5](FR.md#fr-5)) |
-| `extensions/specs-workflow/tools/spec-conformance-push/spec-conformance-push.ts` | create | PostToolUse hook with 3s throttle + aggregation + push ([FR-6](FR.md#fr-6)) |
-| `extensions/specs-workflow/tools/bash-post-test-ingest/bash-post-test-ingest.ts` | create | PostToolUse on Bash — detect test run, invoke MCP ingest-ndjson ([FR-1](FR.md#fr-1)) |
-| `extensions/specs-workflow/tools/spec-mcp-server/meta-guard.ts` | create | Protects extension.json from tampering ([FR-5](FR.md#fr-5), NFR-Security-2) |
-| `extensions/specs-workflow/scripts/install-marksman.ts` | create | postInstall script: detect platform, download Marksman binary from GitHub releases, copy to `.dev-pomogator/bin/` ([FR-7](FR.md#fr-7)) |
-| `extensions/specs-workflow/extension.json` | edit | Register new MCP server + 3 hooks + meta-guard, bump version to 4.0.0 ([FR-4](FR.md#fr-4), [FR-5](FR.md#fr-5), [FR-6](FR.md#fr-6)) |
+| `tools/spec-mcp-server/server.ts` | create | MCP server entry point, @modelcontextprotocol/sdk stdio ([FR-4](FR.md#fr-4)) |
+| `tools/spec-mcp-server/tools.ts` | create | ВСЕ MCP tools в одном модуле: get_trace (primary, structured tree + explanation_for_agent, AC-4.1), get_node, find_by_tags (AND/OR), find_by_type, conformance_check (Finding[] + suggestions), blast_radius (SCHEMA Entity 7), list_orphans, broken_refs, git_diff_impact, search, overview — canonical post-v2 layout консолидировал 11 planned per-tool файлов в один ([FR-4](FR.md#fr-4), [FR-13](FR.md#fr-13)) |
+| `tools/spec-mcp-server/lock-manager.ts` | create | .mcp-lock.json atomic create + pid+env check ([FR-14](FR.md#fr-14), NFR-Reliability-3) |
+| `tools/spec-mcp-server/lifecycle.ts` | create | Lifecycle orchestrator: cold-start + chokidar watcher с polling auto-detect (поглотил planned `file-watcher.ts`) ([FR-14](FR.md#fr-14), NFR-Reliability-4) |
+| `tools/marksman-installer/lsp-probe.ts` | create | Marksman LSP probe; subprocess-proxy `lsp-bridge.ts` заменён нативной LSP-регистрацией plugin-а ([FR-7](FR.md#fr-7)) |
+| `tools/spec-conformance-guard/spec-conformance-guard.ts` | create | PreToolUse HARD hook (DUPLICATE_DEFINITION etc.) ([FR-5](FR.md#fr-5)) |
+| `tools/spec-conformance-push/spec-conformance-push.ts` | create | PostToolUse hook with 3s throttle + aggregation + push ([FR-6](FR.md#fr-6)) |
+| `tools/bash-post-test/ingest.ts` | create | PostToolUse on Bash — detect test run, invoke MCP ingest-ndjson ([FR-1](FR.md#fr-1)) |
+| `tools/specs-validator/extension-json-meta-guard.ts` | create | Protects plugin manifest from tampering ([FR-5](FR.md#fr-5), NFR-Security-2) |
+| `tools/marksman-installer/ensure-marksman.ts` | create | postInstall script: detect platform, download Marksman binary from GitHub releases, copy to `.dev-pomogator/bin/` ([FR-7](FR.md#fr-7)) |
+| `.claude-plugin/plugin.json` | edit | Register new MCP server + meta-guard, bump version to 4.0.0 — canonical v2 manifest (бывший `extensions/specs-workflow/extension.json`); hook declarations живут в `.claude-plugin/hooks.json` ([FR-4](FR.md#fr-4), [FR-5](FR.md#fr-5), [FR-6](FR.md#fr-6)) |
 | `package.json` | edit | Add `@modelcontextprotocol/sdk`, `unified`, `remark-parse`, `remark-frontmatter`, `remark-wiki-link`, `unist-util-visit`, `chokidar` deps + `postinstall` hook calling install-marksman ([FR-2](FR.md#fr-2), [FR-7](FR.md#fr-7)) |
-| `extensions/specs-workflow/tools/spec-mcp-server/__tests__/integration.test.ts` | create | End-to-end MCP server test using cucumber-js BDD ([FR-4](FR.md#fr-4)) |
+| `tools/spec-mcp-server/__tests__/tools.test.ts` | create | End-to-end MCP server test ([FR-4](FR.md#fr-4)) |
 
 ## Phase 3 — LLM layer + multi-language support
 
 | Path | Action | Reason |
 |------|--------|--------|
-| `extensions/specs-workflow/tools/claude-cli-bridge/claude-cli-bridge.ts` | create | Spawn `claude -p` subprocess, parse JSON output ([FR-8](FR.md#fr-8)) |
-| `extensions/specs-workflow/tools/claude-cli-bridge/semantic-drift-check.ts` | create | Compare FR text vs Scenario via Haiku subagent, cache by hash ([FR-8](FR.md#fr-8)) |
-| `extensions/specs-workflow/tools/claude-cli-bridge/cache.ts` | create | hash(fr_text + scenario_text) → cached Finding ([FR-8](FR.md#fr-8)) |
-| `extensions/specs-workflow/tools/spec-graph/multi-lang-binding-extractor.ts` | create | Per-language step binding extraction (C# Reqnroll, Python behave, Java cucumber-jvm) ([FR-9](FR.md#fr-9)) |
-| `extensions/specs-workflow/tools/spec-mcp-server/tools/conformance-check.ts` | edit | Add `semantic: true` flag handling + invoke claude-cli-bridge ([FR-8](FR.md#fr-8)) |
+| `tools/spec-llm-judge/index.ts` | create | LLM-as-judge orchestrator: spawn `claude -p` subprocess, parse JSON, semantic-drift compare FR text vs Scenario (поглотил planned `claude-cli-bridge.ts` + `semantic-drift-check.ts`) ([FR-8](FR.md#fr-8)) |
+| `tools/spec-llm-judge/cache.ts` | create | hash(fr_text + scenario_text) → cached Finding ([FR-8](FR.md#fr-8)) |
+| `tools/spec-graph/parsers/multilang.ts` | create | Per-language step binding extraction (C# Reqnroll, Python behave, Java cucumber-jvm) ([FR-9](FR.md#fr-9)) |
+| `tools/spec-mcp-server/tools.ts` | edit | Add `semantic: true` flag handling + invoke spec-llm-judge ([FR-8](FR.md#fr-8)) |
 | `tests/fixtures/multi-lang/` | create | Sample Reqnroll/behave/cucumber-jvm NDJSON outputs ([FR-9](FR.md#fr-9)) |
 
 ## Phase 4 — SQLite persistence + side-channel logs + Codespaces
 
 | Path | Action | Reason |
 |------|--------|--------|
-| `extensions/specs-workflow/tools/spec-mcp-server/sqlite-index.ts` | create | better-sqlite3 wrapper, WAL mode, FTS5 setup, schema migrations ([FR-10](FR.md#fr-10)) |
-| `extensions/specs-workflow/tools/spec-mcp-server/sqlite-schema.sql` | create | DDL for nodes/edges/definitions/backlinks tables + FTS5 virtual table ([FR-10](FR.md#fr-10)) |
-| `extensions/specs-workflow/tools/spec-mcp-server/sqlite-migrations/` | create | Versioned migration scripts ([FR-10](FR.md#fr-10)) |
-| `extensions/specs-workflow/tools/spec-mcp-server/sqlite-recovery.ts` | create | PRAGMA integrity_check + corruption fallback ([FR-10](FR.md#fr-10), NFR-Reliability-5) |
-| `extensions/specs-workflow/tools/spec-check-log/append-logger.ts` | create | Append-only JSONL logger with size-based rotation ([FR-15](FR.md#fr-15)) |
-| `extensions/specs-workflow/tools/spec-check-log/cli.ts` | create | `dev-pomogator spec-check-log --since --grep` CLI ([FR-15](FR.md#fr-15)) |
-| `extensions/specs-workflow/tools/spec-mcp-server/codespaces-detector.ts` | create | Detect Codespaces env (CODESPACES env var), tag lock file ([FR-16](FR.md#fr-16)) |
-| `extensions/devcontainer/templates/devcontainer.json` | edit | Add `postStartCommand` for MCP server auto-start ([FR-16](FR.md#fr-16)) |
+| `tools/spec-mcp-server/sqlite/wrapper.ts` | create | better-sqlite3 wrapper: WAL mode, FTS5, embedded DDL schema, PRAGMA integrity_check + corruption fallback, meta-table versioning — canonical post-v2 layout консолидировал planned `sqlite-index.ts` + `sqlite-schema.sql` + `sqlite-migrations/` + `sqlite-recovery.ts` ([FR-10](FR.md#fr-10), NFR-Reliability-5) |
+| `tools/spec-check-log/writer.ts` | create | Append-only JSONL logger with size-based rotation ([FR-15](FR.md#fr-15)) |
+| `tools/spec-check-log/cli.ts` | create | `dev-pomogator spec-check-log --since --grep` CLI ([FR-15](FR.md#fr-15)) |
+| `tools/spec-mcp-server/codespaces-autostart.ts` | create | Detect Codespaces env (CODESPACES env var), tag lock file ([FR-16](FR.md#fr-16)) |
+| `tools/devcontainer/templates/devcontainer.json` | edit | Add `postStartCommand` for MCP server auto-start ([FR-16](FR.md#fr-16)) |
 | `package.json` | edit | Add `better-sqlite3` to optionalDependencies ([FR-10](FR.md#fr-10)) |
 
 ## Phase 5 — Migration helper v3→v4
 
 | Path | Action | Reason |
 |------|--------|--------|
-| `extensions/specs-workflow/tools/migrate-v3-to-v4/migrate.ts` | create | Main migration script, scan + diff + interactive prompt ([FR-11](FR.md#fr-11)) |
-| `extensions/specs-workflow/tools/migrate-v3-to-v4/heading-converter.ts` | create | `### Requirement: FR-N <title>` → `### FR-N: <title>` ([FR-11](FR.md#fr-11)) |
-| `extensions/specs-workflow/tools/migrate-v3-to-v4/tag-predictor.ts` | create | Naming heuristic for untagged scenarios ([FR-11](FR.md#fr-11)) |
-| `extensions/specs-workflow/tools/migrate-v3-to-v4/config-generator.ts` | create | Create `.spec-config.json` with defaults if absent ([FR-11](FR.md#fr-11)) |
-| `extensions/specs-workflow/tools/migrate-v3-to-v4/interactive-prompt.ts` | create | Per-file approve/skip/edit with 30s timeout ([FR-11](FR.md#fr-11), AC-11.2) |
-| `extensions/specs-workflow/tools/migrate-v3-to-v4/__tests__/migration.test.ts` | create | BDD tests using v3 fixtures ([FR-11](FR.md#fr-11)) |
+| `tools/migrate-v3-to-v4/cli.ts` | create | Main migration script, scan + diff + interactive prompt ([FR-11](FR.md#fr-11)) |
+| `tools/migrate-v3-to-v4/converter.ts` | create | `### Requirement: FR-N <title>` → `### FR-N: <title>` ([FR-11](FR.md#fr-11)) |
+| `tools/migrate-v3-to-v4/tag-predictor.ts` | create | Naming heuristic for untagged scenarios — planned, ещё не реализован ([FR-11](FR.md#fr-11)) |
+| `tools/migrate-v3-to-v4/config-generator.ts` | create | Create `.spec-config.json` with defaults if absent — planned, ещё не реализован ([FR-11](FR.md#fr-11)) |
+| `tools/migrate-v3-to-v4/interactive.ts` | create | Per-file approve/skip/edit with 30s timeout ([FR-11](FR.md#fr-11), AC-11.2) |
+| `tools/migrate-v3-to-v4/__tests__/` | create | Tests: cli.test.ts + converter.test.ts + interactive.test.ts using v3 fixtures ([FR-11](FR.md#fr-11)) |
 
 ## Phase 6 — architecture-research-workflow skill + research-workflow enrichment + create-spec integration
 
@@ -119,7 +104,7 @@
 | `.claude/skills/research-workflow/SKILL.md` | edit | Enrich with external-pain + misconception-flush sections from shared base ([FR-12](FR.md#fr-12)) |
 | `.claude/skills/create-spec/SKILL.md` | edit | Add complexity heuristic + `--research-done` flag recursion guard ([FR-12](FR.md#fr-12)) |
 | `.claude/skills/create-spec/references/phase1_discovery.md` | edit | Update Step 5 to invoke `architecture-research-workflow` when heuristic triggers ([FR-12](FR.md#fr-12)) |
-| `extensions/specs-workflow/extension.json` | edit | Register new skill in `skills.{}` map ([FR-12](FR.md#fr-12)) |
+| `.claude-plugin/plugin.json` | edit | Skill distribution через canonical `"skills": ".claude/skills"` dir override — отдельная регистрация per-skill не нужна в v2 ([FR-12](FR.md#fr-12)) |
 | `CLAUDE.md` | edit | Update skill index table with `architecture-research-workflow` entry ([FR-12](FR.md#fr-12)) |
 
 ## Phase 7 — Cross-spec reconciliation
@@ -149,7 +134,7 @@
 | `.claude/skills/create-spec/references/phase3_finalization.md` | edit | Document new step 1c lightweight reconcile re-check before STOP #3 ([FR-17](FR.md#fr-17)) |
 | `.claude/skills/create-spec/references/phase3plus_audit-overview.md` | edit | Add 9th row CROSS_SPEC_CONSISTENCY to audit category table ([FR-17](FR.md#fr-17)) |
 | `.claude/skills/create-spec/references/phase3plus_audit-cross-spec.md` | create | 9th audit category reference with Checks / Remediation / Severity / Resolution codes sections ([FR-17](FR.md#fr-17)) |
-| `extensions/specs-workflow/extension.json` | edit | Register `skills.cross-spec-reconcile` + `skills.cross-spec-resolve` + skillFiles entries ([FR-17](FR.md#fr-17), [FR-18](FR.md#fr-18)) |
+| `.claude-plugin/plugin.json` | edit | `cross-spec-reconcile` + `cross-spec-resolve` distributed через canonical `"skills": ".claude/skills"` dir override ([FR-17](FR.md#fr-17), [FR-18](FR.md#fr-18)) |
 | `tests/fixtures/cross-spec-corpus/spec-a/FR.md` | create | Fixture spec A declaring session_token + src/auth/jwt.ts baseline ([FR-17](FR.md#fr-17)) |
 | `tests/fixtures/cross-spec-corpus/spec-a/DESIGN.md` | create | Fixture spec A declaring latency budget <100ms on /api/auth ([FR-17](FR.md#fr-17)) |
 | `tests/fixtures/cross-spec-corpus/spec-b/FR.md` | create | Fixture spec B declaring sessionToken + same path triggering runtime-identifier-drift + module-ownership-conflict ([FR-17](FR.md#fr-17)) |
@@ -165,9 +150,10 @@
 |------|--------|--------|
 | `.specs/spec-generator-v4/*.md` | edit | Already filled (Phase 1-2 of spec workflow) ([FR-1](FR.md#fr-1)..[FR-16](FR.md#fr-16)) |
 | `.specs/spec-generator-v4/.progress.json` | edit | Tracked by `spec-status.ts` automatically (DO NOT manually edit) ([FR-12](FR.md#fr-12)) |
-| `extensions/specs-workflow/CHANGELOG.md` | edit | v4.0.0 release notes ([FR-1](FR.md#fr-1)..[FR-16](FR.md#fr-16)) |
-| `extensions/specs-workflow/README.md` | edit | Update with v4 features ([FR-4](FR.md#fr-4)) |
-| `dist/installer/extensions.js` | edit | Recompiled after extension.json change (automated by `npm run build`) ([FR-7](FR.md#fr-7)) |
+| `CHANGELOG.md` | edit | v4.0.0 release notes — root-level в canonical v2 layout ([FR-1](FR.md#fr-1)..[FR-16](FR.md#fr-16)) |
+| `README.md` | edit | Update with v4 features — root-level в canonical v2 layout ([FR-4](FR.md#fr-4)) |
+
+> Removed (P14-1 reconcile, 2026-06-05): `dist/installer/extensions.js` — v2 canonical plugin не имеет installer-сборки (`npm install -g` flow deprecated); строка устарела вместе с v1 distribution. Остальные 57 stale `extensions/…`-путей выше переписаны на canonical post-v2 пути ([FR-37e](FR.md#fr-37)).
 
 ## Round 3 patch (v3→v4 transition — 10 closed gaps)
 
@@ -192,14 +178,14 @@ This block enumerates the spec-doc edits applied as part of the v3→v4 transiti
 
 | Phase | Files |
 |-------|-------|
-| Phase 0 | 11 (10 create + 1 edit) |
-| Phase 1 | 11 (all create) |
-| Phase 2 | 22 (20 create + 2 edit) |
-| Phase 3 | 6 (5 create + 1 edit) |
-| Phase 4 | 9 (8 create + 1 edit) |
+| Phase 0 | 11 (8 create + 3 edit) |
+| Phase 1 | 10 (all create; `anchor-patterns.ts` поглощён `parsers/md.ts`) |
+| Phase 2 | 13 (11 create + 2 edit; 11 per-tool файлов консолидированы в `tools.ts`) |
+| Phase 3 | 5 (4 create + 1 edit; bridge + drift-check консолидированы в `spec-llm-judge/index.ts`) |
+| Phase 4 | 6 (4 create + 2 edit; sqlite schema/migrations/recovery консолидированы в `sqlite/wrapper.ts`) |
 | Phase 5 | 6 (all create) |
-| Phase 6 | 17 (13 create + 4 edit) |
-| Phase 7 | 31 (26 create + 5 edit) |
-| Cross-phase docs | 5 (all edit) |
+| Phase 6 | 17 (12 create + 5 edit) |
+| Phase 7 | 32 (27 create + 5 edit) |
+| Cross-phase docs | 4 (all edit; `dist/installer/extensions.js` удалён — v2 без installer) |
 | Round 3 patch (v3→v4 transition) | 12 (all edit; 9 v4-spec files + 3 SKILL.md frontmatter) |
-| **Total** | **130 files (~101 create + 29 edit)** |
+| **Total** | **116 rows (~82 create + 34 edit; пересчитано при P14-1 reconcile 2026-06-05)** |
