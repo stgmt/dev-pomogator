@@ -189,7 +189,16 @@ describe('spec-mcp-server initialize + tools/list + get_trace via real stdin', (
     const listResp = JSON.parse(lines[1]) as { result?: { tools?: Array<{ name: string }> } };
     const names = (listResp.result?.tools ?? []).map((t) => t.name);
     expect(names).toContain('get_trace');
-    expect(names.length).toBe(11);
+    // Exact tool set — drift guard. A bare count rots silently when a tool is added (it did:
+    // was 11, server now registers 13). Assert the full set so a mismatch names the culprit.
+    // Keep in sync with tools.ts buildTools().
+    expect([...names].sort()).toEqual(
+      [
+        'conformance_check', 'find_by_tags', 'find_orphans', 'find_refs',
+        'get_coverage', 'get_coverage_summary', 'get_node', 'get_test_result',
+        'get_trace', 'list_phase_tasks', 'list_specs', 'search', 'validate_anchor',
+      ].sort(),
+    );
     const callResp = JSON.parse(lines[2]) as {
       result?: { content?: Array<{ text: string }> };
     };
