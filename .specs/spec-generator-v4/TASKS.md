@@ -537,14 +537,14 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] Top-level `summary` dashboard computed (by_severity, by_class, by_namespace, totals, top_3_recommendations)
   - [ ] `recommendations[]` section populated per priority+action+impact
 
-- [ ] Implement CRITICAL blocking AskUserQuestion -- @feature17 — id: impl-critical-prompt — Status: TODO | Est: 240m
+- [x] Implement CRITICAL blocking AskUserQuestion -- @feature17 — id: impl-critical-prompt — Status: DONE | Est: 240m
   _depends: impl-yaml-writer_
   _Requirements: [FR-17](FR.md#fr-17), [AC-17.2](ACCEPTANCE_CRITERIA.md#ac-172), [AC-17.3](ACCEPTANCE_CRITERIA.md#ac-173), [NFR-Usability-7](NFR.md#nfr-usability-7)_
-  **Done When:**
-  - [ ] When CRITICAL count > 0 (in light mode only for hard-conflict subset of 3 codes), skill emits AskUserQuestion `header: "⚠️ CRIT"` with three options (Fix now via /cross-spec-resolve / Acknowledge & override / Abort STOP)
-  - [ ] On Acknowledge — finding `acknowledged_by: user`, `override_reason: <text>`, `override_timestamp: <iso>` written to YAML
-  - [ ] JSONL entry `{ts, spec_slug, finding_codes[], override_reason, session_id, cwd}` appended atomically (O_APPEND) to `.claude/logs/cross-spec-overrides.jsonl`
-  - [ ] On Abort STOP — skill exits with non-zero status; create-spec gate honors block
+  **Done When:** _(flipped on explicit scenario evidence — SPECGEN004_40 + _41 both GREEN in the 89/89 run; NOT a loose @featureN flip)_
+  - [x] When CRITICAL count > 0 (hard-conflict subset), skill emits AskUserQuestion `header: "⚠️ CRIT"` with options incl. Abort STOP — **SPECGEN004_40** green via real `promptHeader` + `buildExplanation` (walker.ts), shared with the live skill body
+  - [x] On Acknowledge — finding `acknowledged_by: user`, `override_reason`, `override_timestamp` written to YAML — **SPECGEN004_41** green
+  - [x] JSONL entry appended atomically (O_APPEND) to `.claude/logs/cross-spec-overrides.jsonl` — **SPECGEN004_41** green (overrides-log.ts)
+  - [x] On Abort STOP — skill exits non-zero (`exitCodeForChoice`, shared with skill body) — **SPECGEN004_40** green
 
 - [ ] Implement resolve loop end-to-end -- @feature18 — id: impl-resolve-loop — Status: TODO | Est: 720m
   _depends: impl-critical-prompt_
@@ -1001,7 +1001,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   **Done When:**
   - [x] `check:status-drift` run (39 drift lines in OTHER specs, 0 in v4 by file-heuristic) + the STRONGER honesty-gate reconciliation: `computeCoverage` over the built v4 graph (110 tasks, 117 scenarios) derived each task's verified_status from REAL test results — dogfooding FR-32 instead of the spec-status sub-agent wrapper (same evidence)
   - [x] **CONSERVATIVE reconcile (explicit `SPECGEN004_NN`-in-doneWhen mapping ONLY):** flipped **24** drift tasks (TODO/in-progress but their explicitly-named scenarios GREEN) → DONE. Verified after: **NAEB 0**, WS-C..F correctly still TODO, anchor 0 broken, validate-spec valid. True status now **51 confirmed-DONE / ~50 TODO** of 110
-  - [x] **DEFERRED-56 RESOLVED in WS-F triage (no hidden drift):** programmatic deliverable-existence pass over the remaining 46 TODO — **43 have NO deliverable on disk** (the file their Done-When names doesn't exist yet) → genuine pending feature work, NOT over-mapped drift. Only 3 had all-files-present (re-checked individually). Conclusion: WS-B's conservative flip already captured ALL real drift (24); the loose-`@featureN` remainder is real build work, correctly NOT flipped. The over-map trap was avoided precisely because we did NOT trust the tag mapping
+  - [ ] **DEFERRED-56 — triage heuristic UNRELIABLE, status NOT re-derived (corrected):** the deliverable-existence pass (do the paths quoted in a Done-When exist on disk?) is too coarse and mislabels BOTH ways. Counterexample caught by advisor: `mcp-tools-rest` (T2-16, "10 remaining MCP tools") has NO file path in its Done-When → heuristic bucketed it "pending", yet `tools.ts` already ships **13** tools (built → it's DRIFT, not pending). So the earlier "0 hidden drift / 43 genuine pending" claim was **FALSE**. The ONLY reliable reconciler is the FR-32 honesty gate (explicit-`SPECGEN004_NN`-id mapping + real green scenarios) — WS-B already ran it (24 explicit-id flips). True status of the remainder needs a per-task `grep-deliverable + named-green-scenario` check (the v4 build backlog's job), NOT this heuristic. Flipping on file-existence would be the same false-confidence WS-A exists to block
 
 - [x] WS-C: orchestrator pipeline e2e — agent really uses MCP + skills -- @feature35 — id: ws-c-orchestrator-e2e — Status: DONE | Est: 360m
   _Requirements: [FR-33](FR.md#fr-33), [FR-32](FR.md#fr-32)_
@@ -1026,7 +1026,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
 - [ ] WS-F: remaining feature work — TRIAGE done, BUILD is the open v4 backlog -- @feature35 — id: ws-f-remaining — Status: IN_PROGRESS (triage closed, build pending) | Est: 600m
   _Requirements: [FR-33](FR.md#fr-33)_
   **Done When:**
-  - [x] WS-B triage applied (drift vs real): the 46 remaining TODO triaged by deliverable-existence — **43 genuine pending build, 0 hidden drift** (WS-B already flipped all 24 real-drift). No tag-mapping trusted → over-map trap avoided
+  - [~] WS-B triage applied (drift vs real): deliverable-existence heuristic proved UNRELIABLE (mislabels both ways — see corrected DEFERRED-56 note: T2-16 ships 13 tools but was bucketed "pending"). The reliable reconciler is the FR-32 gate (WS-B's 24 explicit-id flips stand); the remainder's true status needs a per-task grep+green-scenario check, deferred to the build backlog. NOT re-derived on file-existence
   - [x] no `(Green)` header left over a phase with real TODO — phases 2–6 relabelled `(In Progress — TODO remain)`, phase 7 `(TODO — not started)`; only Phase 1 keeps `(Green)` (genuinely all-DONE)
   - [ ] **OPEN — genuinely-pending feature build (NOT faked DONE):** ~43 real tasks across Phase 2 (10 MCP tools + marksman LSP + watcher + lock + extension.json), Phase 3 (claude-cli-bridge, multi-lang), Phase 4 (SQLite + spec-check-log + codespaces), Phase 5 (tag-predictor + interactive-prompt), Phase 6 (arch-research skill), **Phase 7 cross-spec (24 tasks)**. This is the multi-wave build (plan `~/.claude/plans/fizzy-percolating-turing.md` = Wave W1 "Finish Phase 2" is the entry point). Marking this `[x]` without doing the work would be the exact fake-DONE WS-A was built to block
 
