@@ -47,6 +47,9 @@ describe('SCOPEGATE001: scoreDiff pure heuristic', () => {
     const diff = readFixture('non-guard-enum-diff.patch');
     const { score } = scoreDiff(diff);
     // Two string items added in non-guard file → only +2 from enum rule, no filename bonus
+    // KNOWN-FAILURE (pre-existing on main): the fixture now has 3 items → scorer returns 6.
+    // Flagged for the scope-gate owner in #46 (fixture drift vs threshold vs scorer over-score);
+    // the threshold is NOT to be bumped to pass — that would defeat this FP guard.
     expect(score).toBeGreaterThanOrEqual(2);
     expect(score).toBeLessThanOrEqual(4);
   });
