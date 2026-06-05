@@ -152,6 +152,21 @@ function isEnumLikeItem(
   return enumContext;
 }
 
+/**
+ * True when an added line is merely an EXISTING item that gained a trailing comma
+ * (e.g. `-  'orange'` → `+  'orange',`) because new items were inserted after it.
+ * That is array-insertion churn, NOT a new enum member. Counting it inflated the score
+ * by +2 per insertion block — a false positive on non-guard files (SCOPEGATE001_20):
+ * adding N items scored (N+1)×2 instead of N×2. We exclude it by pairing the added line
+ * with a removed line of identical content modulo the trailing comma.
+ */
+function isCommaChurn(line: { content: string }, hunk: ParsedHunk): boolean {
+  const norm = (s: string): string => s.trim().replace(/,\s*$/, '');
+  const added = norm(line.content);
+  if (!added) return false;
+  return hunk.lines.some((l) => l.kind === 'del' && norm(l.content) === added);
+}
+
 /** Is the added line a `case X:` statement inside a switch block? */
 function isSwitchCase(
   line: { kind: string; content: string },
@@ -228,7 +243,7 @@ export function scoreDiff(unifiedDiff: string, opts: ScoreOptions = {}): ScoreRe
         const line = hunk.lines[i];
         if (line.kind !== 'add') continue;
 
-        if (isEnumLikeItem(line, hunk, i)) {
+        if (isEnumLikeItem(line, hunk, i) && !isCommaChurn(line, hunk)) {
           score += 2;
           reasons.push(`+2 enum-item:${file.path}:${line.lineNumber}`);
         } else if (isSwitchCase(line, hunk, i)) {

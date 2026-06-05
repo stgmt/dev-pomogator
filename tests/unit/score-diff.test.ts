@@ -46,10 +46,9 @@ describe('SCOPEGATE001: scoreDiff pure heuristic', () => {
   it('SCOPEGATE001_20: non-guard enum file scores 2 (borderline, acceptable FP)', () => {
     const diff = readFixture('non-guard-enum-diff.patch');
     const { score } = scoreDiff(diff);
-    // Two string items added in non-guard file → only +2 from enum rule, no filename bonus
-    // KNOWN-FAILURE (pre-existing on main): the fixture now has 3 items → scorer returns 6.
-    // Flagged for the scope-gate owner in #46 (fixture drift vs threshold vs scorer over-score);
-    // the threshold is NOT to be bumped to pass — that would defeat this FP guard.
+    // Two NEW string items (hotpink, teal) → +2 each = 4. The `'orange',` line is comma-churn
+    // (existing item that gained a trailing comma when items were inserted after it) — it is
+    // NOT a new enum member and must not score (#46 / isCommaChurn guard in score-diff).
     expect(score).toBeGreaterThanOrEqual(2);
     expect(score).toBeLessThanOrEqual(4);
   });
