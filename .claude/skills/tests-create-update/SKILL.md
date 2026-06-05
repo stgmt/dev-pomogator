@@ -113,6 +113,10 @@ Apply these rules when writing or editing test code:
 - NEVER compute expected value using same logic as production code — `expect(fn(x)).toBe(x * 0.2)` can never fail. Use hardcoded expected: `expect(fn(100)).toBe(20)`. _(Source: Mark Seemann, Randy Coulman)_
 - NEVER use `setTimeout`/`sleep`/`delay` to wait for async — flaky, slow. Use `expect.poll()`, `waitFor()`, `vi.useFakeTimers()`, or poll loop with condition. _(Source: Martin Fowler, Vitest docs)_
 
+**Isolation & drift rules (2 more — from the full-suite-triage incident, issue #45):**
+- NEVER mutate or delete a TRACKED repo file (a committed `.mcp.json`, a real config, a fixture under `appPath()`) inside a test without **capturing it in `beforeAll` and restoring in `afterAll`**. Test files share the filesystem and run sequentially (`fileParallelism:false`) — a test that `fs.remove(appPath('.mcp.json'))` makes a LATER test that reads that file fail deterministically by file-order. It passes in isolation, so it reads as a "flake." If you need a mutable config, use a `mkdtempSync` tmpdir, never the repo file. _(Real case: mcp-setup.test deleted the shipped `.mcp.json` → bundle.test red.)_
+- NEVER assert a bare `.length === N` count on a DYNAMIC registry (MCP tools, slash-commands, rules, plugin entries). The number rots the moment someone adds an item, and the failure (`expected 13 to be 11`) doesn't say WHICH. Assert the exact SET instead: `expect([...names].sort()).toEqual([...expected].sort())` — a drift then names the culprit. _(Real case: hooks-stdin pinned `toBe(11)`; the server grew to 13.)_
+
 ---
 
 ## Step 4: Compliance Report
