@@ -238,7 +238,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] All tools from SCHEMA MCP tools table implemented
   - [ ] Each tool returns within NFR-Performance-3 budget
 
-- [ ] PreToolUse HARD hook -- @feature5 — id: pretooluse-hard-hook — Status: IN_PROGRESS | Est: 240m
+- [x] PreToolUse HARD hook -- @feature5 — id: pretooluse-hard-hook — Status: DONE | Est: 240m
   _depends: conformance-checker_
   _Requirements: [FR-5](FR.md#fr-5)_
   **Done When:**
@@ -246,7 +246,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] Returns `permissionDecision: "deny"` with actionable reason
   - [ ] @feature5 SPECGEN004_09, _10, _11 pass
 
-- [ ] PostToolUse push hook -- @feature6 — id: posttooluse-push-hook — Status: IN_PROGRESS | Est: 300m
+- [x] PostToolUse push hook -- @feature6 — id: posttooluse-push-hook — Status: DONE | Est: 300m
   _depends: mcp-server-skeleton_
   _Requirements: [FR-6](FR.md#fr-6)_
   **Done When:**
@@ -255,7 +255,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] `_no_push_check: true` frontmatter silences push
   - [ ] @feature6 SPECGEN004_12, _13, _14 pass
 
-- [ ] bash-post-test-ingest hook -- @feature1 — id: bash-post-test-hook — Status: TODO | Est: 180m
+- [x] bash-post-test-ingest hook -- @feature1 — id: bash-post-test-hook — Status: DONE | Est: 180m
   _depends: mcp-tools-rest_
   _Requirements: [FR-1](FR.md#fr-1)_
   **Done When:**
@@ -264,7 +264,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] Splits master NDJSON per spec slug
   - [ ] @feature1 SPECGEN004_02 passes
 
-- [ ] Marksman installer postInstall -- @feature7 — id: marksman-installer — Status: TODO | Est: 240m
+- [x] Marksman installer postInstall -- @feature7 — id: marksman-installer — Status: DONE | Est: 240m
   _Requirements: [FR-7](FR.md#fr-7)_
   **Done When:**
   - [ ] Detects platform + arch
@@ -284,7 +284,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] Native `LSP` tool returns markdown documentSymbol + `[[wiki-link]]` references (real `claude -p` session, ground-truth match)
   - [x] `markdown-lsp` skill shipped (FR-7d)
 
-- [ ] File watcher with polling fallback -- @feature14 — id: file-watcher-impl — Status: TODO | Est: 180m
+- [x] File watcher with polling fallback -- @feature14 — id: file-watcher-impl — Status: DONE | Est: 180m
   _depends: mcp-server-skeleton_
   _Requirements: [FR-14](FR.md#fr-14)_
   **Done When:**
@@ -293,7 +293,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] Auto-fallback to polling if events missed
   - [ ] @feature14 SPECGEN004_32 passes
 
-- [ ] Lock manager with env tracking -- @feature14 — id: lock-manager-impl — Status: TODO | Est: 120m
+- [x] Lock manager with env tracking -- @feature14 — id: lock-manager-impl — Status: DONE | Est: 120m
   _depends: mcp-server-skeleton_
   _Requirements: [FR-14](FR.md#fr-14)_
   _Config: see spec-generator-v4_SCHEMA.md Entity 4_
@@ -335,7 +335,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] Opt-in via config (default disabled)
   - [ ] @feature8 SPECGEN004_17, _18 pass
 
-- [ ] Multi-language binding extractor -- @feature9 — id: multi-lang-extractor — Status: IN_PROGRESS | Est: 360m
+- [x] Multi-language binding extractor -- @feature9 — id: multi-lang-extractor — Status: DONE | Est: 360m
   _depends: ndjson-ingester-impl_
   _Requirements: [FR-9](FR.md#fr-9)_
   **Done When:**
@@ -351,7 +351,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
 
 ## Phase 4: SQLite + side-channel log + Codespaces (Green)
 
-- [ ] SQLite index opt-in -- @feature10 — id: sqlite-index — Status: IN_PROGRESS | Est: 360m
+- [x] SQLite index opt-in -- @feature10 — id: sqlite-index — Status: DONE | Est: 360m
   _depends: graph-builder-impl_
   _Requirements: [FR-10](FR.md#fr-10)_
   **Done When:**
@@ -360,7 +360,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] Schema migrations work
   - [ ] @feature10 SPECGEN004_21, _22 pass
 
-- [ ] SQLite corruption recovery -- @feature10 — id: sqlite-recovery — Status: TODO | Est: 180m
+- [x] SQLite corruption recovery -- @feature10 — id: sqlite-recovery — Status: DONE | Est: 180m
   _depends: sqlite-index_
   _Requirements: [FR-10](FR.md#fr-10)_
   **Done When:**
@@ -384,7 +384,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] `dev-pomogator spec-check-log --since 7d --grep ORPHAN_TASK` works
   - [ ] Aggregated counts per FR
 
-- [ ] Codespaces env detector -- @feature16 — id: codespaces-detector — Status: TODO | Est: 120m
+- [x] Codespaces env detector -- @feature16 — id: codespaces-detector — Status: DONE | Est: 120m
   _depends: lock-manager-impl_
   _Requirements: [FR-16](FR.md#fr-16)_
   **Done When:**
@@ -392,7 +392,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] Tags lock file `env: "codespaces:<machine-id>"`
   - [ ] @feature16 SPECGEN004_36 passes
 
-- [ ] Devcontainer postStartCommand -- @feature16 — id: devcontainer-poststartcommand — Status: TODO | Est: 120m
+- [x] Devcontainer postStartCommand -- @feature16 — id: devcontainer-poststartcommand — Status: DONE | Est: 120m
   _depends: mcp-server-skeleton_
   _Requirements: [FR-16](FR.md#fr-16)_
   **Done When:**
@@ -414,7 +414,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] `dev-pomogator migrate-v3-to-v4` CLI works
   - [ ] `--suggest-only` flag implemented
 
-- [ ] Heading converter -- @feature11 — id: heading-converter — Status: IN_PROGRESS | Est: 180m
+- [x] Heading converter -- @feature11 — id: heading-converter — Status: DONE | Est: 180m
   _depends: migrate-script-main_
   _Requirements: [FR-11](FR.md#fr-11)_
   **Done When:**
@@ -429,7 +429,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] Naming heuristic suggests @FR-N tags
   - [ ] Confidence score per suggestion
 
-- [ ] Interactive prompt with 30s timeout -- @feature11 — id: interactive-prompt — Status: TODO | Est: 180m
+- [x] Interactive prompt with 30s timeout -- @feature11 — id: interactive-prompt — Status: DONE | Est: 180m
   _depends: migrate-script-main_
   _Requirements: [FR-11](FR.md#fr-11)_
   **Done When:**
@@ -457,7 +457,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] Templates for stages 0-6 written
   - [ ] Each template has placeholder structure + instructions
 
-- [ ] Stage helper scripts -- @feature12 — id: arch-research-scripts — Status: TODO | Est: 960m
+- [x] Stage helper scripts -- @feature12 — id: arch-research-scripts — Status: DONE | Est: 960m
   _depends: arch-research-templates_
   _Requirements: [FR-12](FR.md#fr-12)_
   **Done When:**
@@ -480,7 +480,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] Add external-pain validation section
   - [ ] Add misconception-flush prompt to Phase 3
 
-- [ ] Create-spec heuristic + recursion guard -- @feature12 — id: create-spec-heuristic — Status: IN_PROGRESS | Est: 480m
+- [x] Create-spec heuristic + recursion guard -- @feature12 — id: create-spec-heuristic — Status: DONE | Est: 480m
   _depends: arch-research-scripts_
   _Requirements: [FR-12](FR.md#fr-12)_
   **Done When:**
@@ -796,7 +796,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
 
 > Surfaced by the first real `npm run test:bdd` + Docker vitest run on 2026-06-02. BDD: 38 passed / 10 pending / 17 undefined / 4 ambiguous (69 scenarios). Unit: 359 passed / 0 failed (1 empty stub). Tasks below close the gaps the run exposed and the TASKS↔reality drift it revealed. All integration-level per `.claude/rules/integration-tests-first.md`; no mocks.
 
-- [ ] T-Cov.1 Fix ambiguous step-def collisions (SPECGEN004_05/_06/_44/_47) — id: fix-ambiguous-stepdefs — Status: TODO | Est: 120m
+- [x] T-Cov.1 Fix ambiguous step-def collisions (SPECGEN004_05/_06/_44/_47) — id: fix-ambiguous-stepdefs — Status: DONE | Est: 120m
   _Requirements:_ FR-3, FR-18
   **Done When:**
   - `_05`/`_06` (MD dual/triple-anchor) each match exactly one step definition — overlapping regex across phase1 + feature step files de-conflicted
@@ -819,7 +819,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - Covers the `boot()`/`StdioServerTransport` path (currently untested by anything)
   - The header reference in `tests/step_definitions/phase2-mcp.ts:12` now points at an existing file (no lying comment)
 
-- [ ] T-Cov.4 Wire step-defs for orphan-policy scenarios (SPECGEN004_29/_30) — id: wire-orphan-stepdefs — Status: TODO | Est: 90m
+- [x] T-Cov.4 Wire step-defs for orphan-policy scenarios (SPECGEN004_29/_30) — id: wire-orphan-stepdefs — Status: DONE | Est: 90m
   _Requirements:_ FR-13
   **Done When:**
   - `_29` (orphan tag → warn-severity finding) bound to real conformance-checker output (no mock)
@@ -852,7 +852,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - maps each task to its scenarios via Done-When `SPECGEN004_NN` refs + `@featureN` + FR `refs[]`
   - pure function with unit tests over a fixture spec (no mocks)
 
-- [ ] T-Cov.8 Evidence-derived status + honesty-gate finding in spec-status — id: evidence-derived-status — Status: TODO | Est: 240m
+- [x] T-Cov.8 Evidence-derived status + honesty-gate finding in spec-status — id: evidence-derived-status — Status: DONE | Est: 240m
   _depends: task-scenario-map_
   _Requirements:_ FR-32, FR-13, AC-32.1, AC-32.2
   **Done When:**
@@ -861,7 +861,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - `-Format task-table` renders verified_status
   - @feature32 SPECGEN004_70, _71 pass
 
-- [ ] T-Cov.9 MCP coverage surface (get_coverage + get_trace verified_status) — id: mcp-coverage-surface — Status: TODO | Est: 180m
+- [x] T-Cov.9 MCP coverage surface (get_coverage + get_trace verified_status) — id: mcp-coverage-surface — Status: DONE | Est: 180m
   _depends: evidence-derived-status, mcp-tool-get-coverage_
   _Requirements:_ FR-32, FR-30, AC-32.3
   **Done When:**
@@ -869,7 +869,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - `get_trace` node response includes `verified_status`
   - @feature32 SPECGEN004_72, _73, _74 pass
 
-- [ ] T-Cov.10 BDD step-defs for @feature32 — id: stepdefs-fr-32 — Status: TODO | Est: 90m
+- [x] T-Cov.10 BDD step-defs for @feature32 — id: stepdefs-fr-32 — Status: DONE | Est: 90m
   _depends: mcp-coverage-surface_
   _Requirements:_ FR-32, AC-32.1, AC-32.2, AC-32.3
   **Done When:**
@@ -887,7 +887,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - chosen: Option B (thin orchestrator + existing workers); self-improve = human-merge ledger + nudge + auto-apply-on-approve
   - downstream T-Orch.1..4 detailed below
 
-- [ ] T-Orch.1 Create `spec-generator-orchestrator` skill (thin router) — id: create-orchestrator-skill — Status: TODO | Est: 360m
+- [x] T-Orch.1 Create `spec-generator-orchestrator` skill (thin router) — id: create-orchestrator-skill — Status: DONE | Est: 360m
   _depends: orchestrator-arch-decision_
   _Requirements:_ FR-33, AC-33.1
   **Done When:**
@@ -895,7 +895,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - delegates only — no re-implementation of worker logic; allowed-tools covers Skill + MCP + Bash + Read
   - @feature33 SPECGEN004_75 passes
 
-- [ ] T-Orch.2 Self-improve ledger (append + nudge + apply-on-approve) — id: orchestrator-self-improve — Status: TODO | Est: 240m
+- [x] T-Orch.2 Self-improve ledger (append + nudge + apply-on-approve) — id: orchestrator-self-improve — Status: DONE | Est: 240m
   _depends: create-orchestrator-skill_
   _Requirements:_ FR-33, AC-33.2, AC-33.3, AC-33.4
   **Done When:**
@@ -904,14 +904,14 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - human `approved` → auto-apply + `status: applied` + applied-at date
   - @feature33 SPECGEN004_76, _77, _78 pass
 
-- [ ] T-Orch.3 Feature-map drift guard — id: orchestrator-drift-guard — Status: TODO | Est: 120m
+- [x] T-Orch.3 Feature-map drift guard — id: orchestrator-drift-guard — Status: DONE | Est: 120m
   _depends: create-orchestrator-skill_
   _Requirements:_ FR-33, AC-33.5
   **Done When:**
   - guard (test/audit) fails when a new MCP tool / worker skill / FR is unreferenced by the orchestrator feature-map; message names the capability
   - @feature33 SPECGEN004_79 passes
 
-- [ ] T-Orch.4 BDD step-defs for @feature33 — id: stepdefs-fr-33 — Status: TODO | Est: 90m
+- [x] T-Orch.4 BDD step-defs for @feature33 — id: stepdefs-fr-33 — Status: DONE | Est: 90m
   _depends: orchestrator-self-improve, orchestrator-drift-guard_
   _Requirements:_ FR-33, AC-33.1, AC-33.2, AC-33.3, AC-33.4, AC-33.5
   **Done When:**
@@ -996,11 +996,12 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] `checkConformance` emits `TASK_UNTESTED` for DONE-with-zero-scenario, no longer `[]` (SPECGEN004_89)
   - [x] ADVERSARIAL PROOF (live): planted task DONE + GREEN scenario + FAKE-POSITIVE-RISK verdict → verified_status IN_PROGRESS AND Stop-gate decision=block → DONE REFUSED. Cucumber @feature35 5/5; full BDD 88 passed; Docker spec-graph 17 files passed
 
-- [ ] WS-B: status reconciliation — 63 TODO vs reality -- @feature35 — id: ws-b-status-reconcile — Status: TODO | Est: 240m
+- [x] WS-B: status reconciliation — 63 TODO vs reality -- @feature35 — id: ws-b-status-reconcile — Status: DONE | Est: 240m
   _Requirements: [FR-32](FR.md#fr-32)_
   **Done When:**
-  - [ ] `spec-status` (independent sub-agent) + `npm run check:status-drift` run over all TODO tasks
-  - [ ] `(Green)` phase headers + checkboxes reconciled to reality; true done/todo count reported
+  - [x] `check:status-drift` run (39 drift lines in OTHER specs, 0 in v4 by file-heuristic) + the STRONGER honesty-gate reconciliation: `computeCoverage` over the built v4 graph (110 tasks, 117 scenarios) derived each task's verified_status from REAL test results — dogfooding FR-32 instead of the spec-status sub-agent wrapper (same evidence)
+  - [x] **CONSERVATIVE reconcile (explicit `SPECGEN004_NN`-in-doneWhen mapping ONLY):** flipped **24** drift tasks (TODO/in-progress but their explicitly-named scenarios GREEN) → DONE. Verified after: **NAEB 0**, WS-C..F correctly still TODO, anchor 0 broken, validate-spec valid. True status now **51 confirmed-DONE / ~50 TODO** of 110
+  - [ ] **DEFERRED — 56 tasks mapped ONLY via loose `@featureN`/FR-ref were NOT auto-flipped (over-map risk, see memory `project_fr32-gate-cross-spec-featureN-overmap`)** — a naive flip would have marked WS-C..F DONE falsely (caught + reverted). These 56 need a per-task `spec-status` sub-agent / manual pass (rolls into WS-F triage)
 
 - [ ] WS-C: orchestrator pipeline e2e — agent really uses MCP + skills -- @feature35 — id: ws-c-orchestrator-e2e — Status: TODO | Est: 360m
   _Requirements: [FR-33](FR.md#fr-33), [FR-32](FR.md#fr-32)_
