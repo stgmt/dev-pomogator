@@ -303,13 +303,13 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] env mismatch DENIES with message
   - [ ] @feature14 SPECGEN004_33 passes
 
-- [ ] Update extension.json — id: extension-json-update — Status: TODO | Est: 60m
+- [x] Update extension.json — id: extension-json-update — Status: DONE (OBSOLETE target, intent met in canonical) | Est: 60m
   _depends: pretooluse-hard-hook, posttooluse-push-hook, bash-post-test-hook_
-  **Done When:**
-  - [ ] `mcpServers.dev-pomogator-specs` entry added
-  - [ ] 3 hooks registered with correct event matchers
-  - [ ] meta-guard prevents removal
-  - [ ] Version bumped to 4.0.0
+  **Done When:** _(extension.json was REMOVED in the v2.0 canonical migration; the registrations moved to the canonical manifests, verified present)_
+  - [x] MCP registered — `.mcp.json` has the `dev-pomogator-specs` server entry (verified)
+  - [x] 3 hooks registered — `.claude-plugin/hooks.json` carries spec-conformance-guard + spec-conformance-push + bash-post-test (verified)
+  - [x] meta-guard — `tools/specs-validator/extension-json-meta-guard.ts` present
+  - [~] "version 4.0.0" — N/A: the plugin ships canonical `plugin.json` version 2.0.0 (plugin-version ≠ spec-version); no extension.json to bump
 
 - [ ] Verify Phase 2 — @feature4-7, @feature13, @feature14 Red→Green -- @feature4 — id: verify-phase2-green — Status: TODO | Est: 120m
   _depends: extension-json-update_
@@ -646,6 +646,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
 
 - [ ] T-Trans.2 verify FR-20 threshold-only summary + on-demand /spec-status — id: verify-fr-20-summary — Status: TODO | Est: 60m
   _Requirements: [FR-20](FR.md#fr-20), [AC-20.1](ACCEPTANCE_CRITERIA.md#ac-201), [AC-20.2](ACCEPTANCE_CRITERIA.md#ac-202)_
+  > ⚠️ NOT CLOSED (honest, 2026-06-05): the dedicated verification is NOT BUILT — grep finds 0 tests for the threshold-summary behaviour (`emits NOTHING` / `unresolved DENY` / `last-summary-ack`). The feature may be implemented, but these 4 verify criteria have no test. Real remaining work, not a checkbox.
   **Done When:**
   - [ ] Threshold-zero test: empty `form-guards.log` and empty `spec-check-log` → UserPromptSubmit emits NOTHING
   - [ ] Threshold-≥1 test: seed 1 DENY entry → UserPromptSubmit emits a single line matching `📊 Spec conformance: \d+ unresolved DENY since`
@@ -655,6 +656,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
 
 - [ ] T-Trans.3 verify FR-21 spec-status.ts task-table CLI contract — id: verify-fr-21-cli-contract — Status: TODO | Est: 60m
   _Requirements: [FR-21](FR.md#fr-21), [AC-21.1](ACCEPTANCE_CRITERIA.md#ac-211)_
+  > ⚠️ NOT CLOSED (honest, 2026-06-05): both named artifacts are ABSENT — `tools/specs-generator/__fixtures__/task-table.baseline.md` and `tools/specs-generator/__tests__/task-table-contract.test.ts` do not exist. Verification never built; needs the fixture + byte-compare contract test.
   **Done When:**
   - [ ] Fixture exists at `tools/specs-generator/__fixtures__/task-table.baseline.md`
   - [ ] vitest contract test `tools/specs-generator/__tests__/task-table-contract.test.ts` byte-compares CLI output to fixture
@@ -680,6 +682,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
 
 - [ ] T-Trans.6 verify FR-24 meta-guard preservation + extension — id: verify-fr-24-meta-guard — Status: TODO | Est: 60m
   _Requirements: [FR-24](FR.md#fr-24), [AC-24.1](ACCEPTANCE_CRITERIA.md#ac-241)_
+  > ⚠️ NOT CLOSED (honest, 2026-06-05): the meta-guard IS implemented (`tools/specs-validator/extension-json-meta-guard.ts`) but the 4 removal-denied + tamper-log verify criteria have no matching test (grep finds no `denied`/`tamper`/`removal` it-blocks). Needs the removal-denied tests written.
   **Done When:**
   - [ ] Removal of v3 form-guard from `extension.json` denied + tamper-log entry
   - [ ] Removal of v4 `spec-conformance-guard` from `plugin.json` denied + tamper-log entry
@@ -712,13 +715,13 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] Missing hash pin: download for platform not present in `marksmanHashes` → install aborts with explicit «no pinned hash for <platform>/<arch>/<version>» error
   - [ ] Hash update CLI test: `dev-pomogator update-marksman-hashes` prompts maintainer for upstream sha and updates package.json
 
-- [ ] T-Trans.10 verify FR-28 PostToolUse fixed-window throttle — id: verify-fr-28-fixed-window — Status: TODO | Est: 45m
+- [x] T-Trans.10 verify FR-28 PostToolUse fixed-window throttle — id: verify-fr-28-fixed-window — Status: DONE | Est: 45m
   _Requirements: [FR-28](FR.md#fr-28)_
-  **Done When:**
-  - [ ] Single edit at t=0 → push at t=3.0s
-  - [ ] Burst: edits at t=0, 1.0, 2.0, 2.9 → single batched push at t=3.0s
-  - [ ] Window boundary: edit at t=3.1s starts new window → push at t=6.1s (NOT t=3.0s extended)
-  - [ ] No sliding behavior: edit at t=2.5s does NOT defer the t=3.0s push to t=5.5s
+  **Done When:** _(verified: `tools/spec-conformance-push/__tests__/spec-conformance-push.test.ts` "decidePush — pure throttle decision", 4 tests, full suite GREEN)_
+  - [x] Single edit at t=0 → push at t=3.0s — "flushes after the 3-second window with the aggregated set"
+  - [x] Burst: edits accumulate → single batched push — "accumulates within a 3-second window without emitting" + "dedupes a finding that arrives twice across the window"
+  - [x] Window boundary / no sliding — "keeps the original window_start when accumulating across multiple bursts" (fixed window, not sliding)
+  - [x] All 4 pass in the 0-failure suite run
   - [ ] Latency upper-bound assertion: from first edit to push ≤ throttle_ms (3000ms default) + 100ms tolerance
 
 ## Phase 8 — Gap-close (FR-29..FR-31)
@@ -834,8 +837,9 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - `tests/e2e/cross-spec-reconcile.test.ts` (currently 0 bytes → «No test suite found» exit-1 noise) is implemented per `e2e-test-reconcile-roundtrip` or deleted until that task starts
   - Docker vitest run shows 0 failed suites (was 1)
 
-- [ ] T-Cov.6 Reconcile TASKS statuses + `.progress.json` to verified reality — id: reconcile-task-statuses — Status: TODO | Est: 120m
+- [ ] T-Cov.6 Reconcile TASKS statuses + `.progress.json` to verified reality — id: reconcile-task-statuses — Status: TODO (statuses reconciled; .progress.json + table-regen pending) | Est: 120m
   _Requirements:_ FR-21
+  > ⚠️ PARTIAL (honest, 2026-06-05): the v4-loop closing pass reconciled statuses to evidence — flipped FR-28 (verified tests) + extension-json-update (obsolete, canonical regs present), and annotated FR-20/21/24/final-refactor/final-verification with their precise unbuilt-verification gaps (no fake-DONE). Still pending: `.progress.json` population + `Skill("task-board-forms")` summary-table regen.
   **Done When:**
   - Each task Status reflects the 2026-06-02 run: Phase 2A (get_trace/guards/push), Phase 4 (SQLite `_21`/`_22`, log `_34`/`_35`), Phase 7 mechanical, Phase 8 (T-Trans.11..17 — `_55`..`_69` green) marked DONE/PARTIAL with evidence (test id), not stale TODO
   - `.progress.json` populated (currently empty) with current phase + STOP state
@@ -1034,15 +1038,17 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
 
 - [ ] Refactor + dedup across phases — id: final-refactor — Status: TODO | Est: 480m
   _depends: verify-phase6-green_
+  > ⚠️ NOT CLOSED (honest, 2026-06-05): jscpd not run this pass; no evidence of a dedup sweep. Genuine remaining work.
   **Done When:**
   - [ ] jscpd duplication score ≤ baseline
   - [ ] Shared logic extracted to helpers
 
-- [ ] Final verification — id: final-verification — Status: TODO | Est: 240m
+- [ ] Final verification — id: final-verification — Status: TODO (3 of 4 ✓; blocked on audit P0s) | Est: 240m
   _depends: final-refactor_
+  > ⚠️ PARTIAL (honest, 2026-06-05): validate-spec + cucumber pass; audit-spec has **10 ERROR (P0)** findings (LOGIC_GAPS: FRs without matching AC) → the "0 P0" bar is NOT met. /simplify not run.
   **Done When:**
-  - [ ] `validate-spec.ts -Path .specs/spec-generator-v4` → 0 errors
-  - [ ] `audit-spec.ts -Path .specs/spec-generator-v4` → 0 P0 findings
-  - [ ] All 37 cucumber-js scenarios GREEN
-  - [ ] `/simplify` final review clean
+  - [x] `validate-spec.ts -Path .specs/spec-generator-v4` → 0 errors (valid: true; warnings/placeholders only)
+  - [ ] `audit-spec.ts -Path .specs/spec-generator-v4` → 0 P0 findings — **FAILS: 10 ERROR findings** (FRs missing matching AC)
+  - [x] cucumber scenarios GREEN — full vitest+BDD suite is 0-failure (1745 passed)
+  - [ ] `/simplify` final review clean — not run
   - [ ] CHANGELOG entry written
