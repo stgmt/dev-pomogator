@@ -59,7 +59,11 @@
 
 2. **Сгенерировать README.md** (Краткое описание + Ключевые идеи + Где лежит реализация + Где читать дальше).
 
-3. **Финальная валидация** через `validate-spec.ts -Path ".specs/{feature}"` — должно быть 0 errors.
+3. **Финальная валидация** — ДВА уровня (FR-37a/d, правило `no-structural-valid.md`):
+   - pre-filter: `validate-spec.ts -Path ".specs/{feature}"` — 0 errors (структура/ссылки);
+   - **вердикт**: `npx tsx tools/specs-generator/spec-verdict.ts -Path ".specs/{feature}" --no-semantic` —
+     GREEN (audit + traceability + conformance над одним графом). Голый «validate-spec: 0 errors»
+     НЕ репортится как «спека валидна» — это pre-filter, не здоровье.
 
 ## Правила TDD-порядка в TASKS.md
 

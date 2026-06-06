@@ -30,7 +30,7 @@ Both outputs pass form-guards `requirements-chk-guard` and `design-decision-guar
 
 - `FR.md` — enumerate every `## FR-N:` heading; extract the title + any `@featureN` tag on the heading line.
 - `ACCEPTANCE_CRITERIA.md` — enumerate `## AC-N (FR-N)` headings; pair with matching FR.
-- `{slug}.feature` — read `# @featureN` comments above scenarios; map scenario IDs.
+- `{slug}.feature` — read REAL Gherkin `@featureN` tag lines above scenarios (canonical since 2026-06-06; legacy `# @featureN` comments may still exist in old files — read both, but WRITE only real tags: comments are invisible to the spec-graph parser).
 - `USE_CASES.md` — extract `## UC-N:` for CHK traces that span user-journey level.
 - `DESIGN.md` — read existing components/algorithm sections to derive Key Decisions.
 - `JIRA_SOURCE.md` (if present) — verbatim Jira quotes must be preserved.

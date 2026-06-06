@@ -18,13 +18,22 @@
 
 {Описание требования}
 
+**Связанные AC:** [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3)
+**Use Case:** [UC-3](USE_CASES.md#uc-3-название)
+
 ## FR-4: {Название}
 
 {Описание требования}
 
+**Связанные AC:** [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4)
+**Use Case:** [UC-4](USE_CASES.md#uc-4-название)
+
 ## FR-5: {Название}
 
 {Описание требования}
+
+**Связанные AC:** [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5)
+**Use Case:** [UC-5](USE_CASES.md#uc-5-название)
 
 ## FR-N: {Название} — OUT OF SCOPE
 
