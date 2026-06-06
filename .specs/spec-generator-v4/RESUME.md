@@ -108,6 +108,20 @@ The spec now DESCRIBES the fix; the implementation is Phase 13 + Phase 14 in `TA
 - **Новый видимый корпус-долг для следующих заходов** (вне v4-scope, найден corpus-health):
   118 stale paths (worktree-setup, tui-test-runner-v2, …) + 10 dangling covers (fix-bg-output-loss).
 
+### Done this leg #6 (2026-06-06 — A-fixes ⇒ ПЕРВЫЙ GREEN-вердикт v4; FR-38 shipped; semantic full run)
+- **A**: оба LINK_VALIDITY были false-positives ЧЕКА (regex без ^-якоря матчил прозу-примеры) —
+  починены чек в core + tasks-парсер (бэктики = примеры, не refs). Вердикт v4 (--no-semantic):
+  **GREEN, exit 0** — впервые.
+- **FR-38** `cd39ab4`: MCP-тулза `get_spec_status` — lifecycle enum SPEC_ONLY/TESTS_NOT_RUN/RED/
+  PARTIAL/GREEN + слинкованный last_run summary (никогда не фабрикуется) + counts/gaps/hint;
+  полный цикл организма (FR/AC/5 BDD-сценариев SPECGEN004_102..106/Phase 15/DESIGN); live: v4 =
+  PARTIAL 99/1/1. Бандл пересобран (14 тулзов).
+- **Первый ПОЛНЫЙ semantic-прогон** (FR-8, 129 пар, кэш judge прогрет): **20 DRIFT / 0 сбоев** →
+  `audit-reports/fr8-semantic-drift-inventory.md`. Главный кластер: 11× мой же blanket-`@FR-19`
+  на legacy-v3 (P14-2) — judge поймал перетег; остальное — FR-тексты отстали от эволюции дизайна
+  (FR-6 opt-out, FR-7 native-LSP, FR-10/30/31/34). Резолюция 20 дрифтов = следующий spec-editing
+  заход.
+
 ### Next steps, in order
 2. **Phase 14 P14-2/3/4** — traceability-completeness check; make the smart verdict authoritative
    (compose conformance + get_coverage + FR-8 semantic onto `runSpecVerdict()`); skill guard
