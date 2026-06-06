@@ -41,11 +41,19 @@ tool returned real data on real input.
 ## Why this catches what the suite misses
 A green test suite can reach a tool's data by a SIDE-CHANNEL the tool itself doesn't use. Real
 case: `get_coverage` maps tasks→scenarios by **@featureN tags**, so the suite was green — yet
-`get_trace` returned `scenarios:[]` for ALL 47 FRs because it relied on **graph edges** that are
+`get_trace` returned `scenarios:[]` for ALL 47 FRs because it relied on **graph edges** that were
 never built (0 edges into any Scenario node). No test asserted `get_trace`'s output, so the bug
 was invisible. The dogfood ran the tool and saw the empty output immediately. Same run also
 caught `list_phase_tasks` (Task nodes had no `phase` field). See
 `audit-reports/spec-mcp-dogfood-dataset.md`.
+
+**Resolved by FR-36/Phase-13 (2026-06-06):** nodes are keyed `<slug>:<localId>` now (574 FR
+nodes vs the 47 that survived bare-id collisions), the `@featureN` convention builds REAL
+tested-by edges (164 into Scenario nodes), and `get_trace` answers via edges (tag-scan removed).
+Node-ref tools take `slug:FR-2` / `{spec, node_id}` / bare (unique → resolved; colliding →
+`AMBIGUOUS_BARE_ID` + candidates). A probe that pins a BARE id and gets candidates is
+exercising the ambiguity path, not a dead tool. Before/after numbers:
+`audit-reports/fr36-dogfood-before-after.md`.
 
 ## When to run
 - BEFORE a scope update or a "prune dead tools" decision (evidence, not grep).

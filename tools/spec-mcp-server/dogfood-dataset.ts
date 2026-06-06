@@ -17,15 +17,26 @@ let sampleTag = '@feature1';
 let samplePhase = '';
 let sampleScenarioId = '';
 let sampleAnchor = '';
+// FR-36c: prefer an FR that HAS a tested-by edge — the first-FR-alphabetically
+// may legitimately have zero tagged scenarios (e.g. `# @featureN` comments),
+// which reads as a dead get_trace when the tool is fine. The probe must
+// exercise the edge path it exists to watch.
+const testedByFrom = new Set<string>();
+for (const e of graph.edges) if (e.type === 'tested-by') testedByFrom.add(e.from);
+let frFallback = '';
 for (const node of graph.nodes.values()) {
   const n = node as any;
-  if (n.type === 'FR' && sampleNodeId === 'FR-1') sampleNodeId = n.id;
+  if (n.type === 'FR') {
+    if (!frFallback) frFallback = n.id;
+    if (sampleNodeId === 'FR-1' && testedByFrom.has(n.id)) sampleNodeId = n.id;
+  }
   if (n.type === 'Scenario') {
     if (!sampleScenarioId) sampleScenarioId = n.id;
     if (Array.isArray(n.tags) && n.tags.length) sampleTag = n.tags[0];
   }
   if (n.type === 'Task' && n.phase && !samplePhase) samplePhase = n.phase;
 }
+if (sampleNodeId === 'FR-1' && frFallback) sampleNodeId = frFallback;
 for (const a of graph.definitions?.keys?.() ?? []) { sampleAnchor = a; break; }
 
 const inputs: Record<string, any> = {

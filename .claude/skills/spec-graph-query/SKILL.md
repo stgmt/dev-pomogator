@@ -23,12 +23,28 @@ The `dev-pomogator-specs` MCP server exposes 13 query tools over the built spec 
 the graph beats grepping `.specs/`: the graph resolved tag inheritance, dual-anchor slugs, and
 the FR↔AC↔scenario↔task edges that text search can't see. Pick by the question you're asking.
 
+## Node ids are SPEC-QUALIFIED (FR-36): `<slug>:<localId>`
+
+Nodes inside `.specs/<slug>/` are keyed `spec-generator-v4:FR-2`, NOT bare `FR-2` — 46 specs
+define `FR-2`, so bare ids collide. Every node-ref tool (`get_trace` / `get_node` /
+`get_test_result` / `find_refs`) accepts three forms:
+
+| Form | Example | Resolution |
+|------|---------|------------|
+| Composite (preferred) | `{ node_id: "spec-generator-v4:FR-2" }` | exact |
+| Spec param | `{ node_id: "FR-2", spec: "spec-generator-v4" }` | exact |
+| Bare | `{ node_id: "FR-2" }` | unique across specs → resolved; defined by 2+ specs → `ok:false, error:"AMBIGUOUS_BARE_ID"` + the sorted `candidates: ["slug-a:FR-2", …]` list (never one arbitrary node) |
+
+On `AMBIGUOUS_BARE_ID`, pick the candidate for your spec and re-query. Anchors are the one
+layer that stays BARE (`validate_anchor` takes `ac-7-1`, not a composite) — markdown links are
+file-local by design (FR-36b).
+
 ## The under-used query tools (reach for these — they exist and work)
 
 | Need | Tool | Call |
 |------|------|------|
-| Look up ONE node by id (file+line+fields) | `get_node` | `{ node_id: "AC-7.1" }` |
-| What **covers / tests / implements** a node (semantic edges, before a rename) | `find_refs` | `{ node_id: "FR-7" }` |
+| Look up ONE node by id (file+line+fields) | `get_node` | `{ node_id: "<slug>:AC-7.1" }` (или bare + candidates) |
+| What **covers / tests / implements** a node (semantic edges, before a rename) | `find_refs` | `{ node_id: "<slug>:FR-7" }` |
 | Scenarios carrying ALL these @feature tags (AND, inheritance-aware) | `find_by_tags` | `{ tags: ["@feature5","@regression"] }` |
 | Which specs are loaded in the graph | `list_specs` | `{}` |
 | Tasks under a phase heading | `list_phase_tasks` | `{ phase: "Phase 2: MCP server + hooks" }` |

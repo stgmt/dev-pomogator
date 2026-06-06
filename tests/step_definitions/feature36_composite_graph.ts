@@ -16,8 +16,9 @@ import { Given, When, Then } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { V4World } from '../hooks/before-after.ts';
-import { buildGraph } from '../../tools/spec-graph/builder.ts';
+import { buildGraph, buildGraphFromCwd } from '../../tools/spec-graph/builder.ts';
 import { buildToolRegistry } from '../../tools/spec-mcp-server/tools.ts';
 import type { SpecGraph, ScenarioNode } from '../../tools/spec-graph/types.ts';
 
@@ -205,4 +206,49 @@ Then('it resolves the exact node for that spec', function (this: F36ResolveWorld
   assert.equal(this.toolResult!.node!.id, 'slug-a:FR-2');
   assert.ok(this.toolResultBySpecParam!.ok, '{spec, node_id} form must resolve');
   assert.equal(this.toolResultBySpecParam!.node!.id, 'slug-b:FR-2');
+});
+
+// ── SPECGEN004_95 — the dogfood harness: zero collisions on the REAL corpus ─
+
+interface F36ProbeWorld extends F36World {
+  probeStdout?: string;
+  probeStatus?: number | null;
+}
+
+const REPO_ROOT = path.resolve(import.meta.dirname ?? __dirname, '..', '..');
+
+Given('the migration phase has completed', function (this: F36ProbeWorld) {
+  // P13-1..3 shipped: builder/parsers emit composite keys. The mechanical
+  // marker is the probe script itself existing in the tree.
+  assert.ok(
+    fs.existsSync(path.join(REPO_ROOT, 'tools/spec-graph/collision-probe.ts')),
+    'collision-probe.ts must exist (P13-1 deliverable)',
+  );
+});
+
+When('the dogfood harness dumps the raw pre-map nodes', function (this: F36ProbeWorld) {
+  // Run the REAL probe on the REAL corpus — the same command a human runs.
+  const r = spawnSync(
+    process.execPath,
+    ['--import', 'tsx', 'tools/spec-graph/collision-probe.ts'],
+    { cwd: REPO_ROOT, encoding: 'utf-8', timeout: 120_000 },
+  );
+  this.probeStdout = `${r.stdout ?? ''}${r.stderr ?? ''}`;
+  this.probeStatus = r.status;
+});
+
+Then('there are zero id collisions', function (this: F36ProbeWorld) {
+  assert.equal(this.probeStatus, 0, `probe must exit 0 (⇔ 0 collisions); output: ${this.probeStdout?.slice(-300)}`);
+  assert.match(this.probeStdout!, /collisions: 0/, 'probe output must report exactly 0 collisions');
+});
+
+Then('the FR-node count is about 470 not 47', function (this: F36ProbeWorld) {
+  const g = buildGraphFromCwd(REPO_ROOT);
+  let frCount = 0;
+  for (const n of g.nodes.values()) if (n.type === 'FR') frCount++;
+  assert.ok(
+    frCount > 400,
+    `composite keys must surface the full FR population (~470+), got ${frCount}`,
+  );
+  assert.notEqual(frCount, 47, 'the collision-dropped count must be history');
 });

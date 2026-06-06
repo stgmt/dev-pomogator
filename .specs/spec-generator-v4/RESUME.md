@@ -81,11 +81,20 @@ The spec now DESCRIBES the fix; the implementation is Phase 13 + Phase 14 in `TA
 - **NOT closed:** full clean-HEAD Docker suite — этой машине docker недоступен; подтвердить на CI/другой
   машине, потом закрыть P13-1 чекбокс.
 
+### Done this leg #4 (2026-06-06 — PHASE 13 ЗАКРЫТА ЦЕЛИКОМ, P13-1..4)
+- **P13-2** `37cf617`: квалификация переехала В ПАРСЕРЫ (`coverage.ts::qualifySlice`); `@featureN`
+  стал РЕАЛЬНЫМИ tested-by рёбрами (+268; в Scenario-узлы 0→164); tag-scan костыль удалён из
+  get_trace с поведенческим доказательством (теги стёрты → сценарии всё равно приходят).
+  Docker clean-worktree: ровно те же 12 предсуществующих, ноль новых.
+- **P13-3** `19db813`: `resolveNodeRef()` — тулзы принимают `slug:FR-2` / `{spec, node_id}` / bare
+  (unique → soft-resolve; коллизия → `AMBIGUOUS_BARE_ID` + кандидаты, live: `FR-2` → 49);
+  `server.bundle.mjs` пересобран, freshness green.
+- **P13-4**: skills (`spec-graph-query` таблица трёх форм, `spec-mcp-dogfood` resolved-блок)
+  обновлены; dogfood-сэмплер предпочитает FR с tested-by ребром → **13/13 тулзов LIVE** (впервые);
+  архив `audit-reports/fr36-dogfood-before-after.md`; SPECGEN004_95 step defs гоняют реальный
+  collision-probe. BDD: 0 failed / 94 passed (undefined 12→6 за фазу).
+
 ### Next steps, in order
-1. **Phase 13 остаток** — P13-2 (edges → composite на обоих концах В ПАРСЕРАХ + @featureN tested-by
-   слой + убрать tag-scan workaround из get_trace), P13-3 (tools принимают slug:id / {spec, node_id};
-   bare-id → candidate list; rebuild server.bundle.mjs), P13-4 (skills update + dogfood archive).
-   NB: builder-side edge qualification из P13-1 — временный мост; P13-2 переносит его в парсеры.
 2. **Phase 14 P14-2/3/4** — traceability-completeness check; make the smart verdict authoritative
    (compose conformance + get_coverage + FR-8 semantic onto `runSpecVerdict()`); skill guard
    (`spec-status`/dogfood/triage may not print "valid" off validate-spec) + a `.claude/rules/` guard.
