@@ -144,3 +144,39 @@ describe('fr-author resolver', () => {
     expect(fr).toContain('DESIGN.md:4');
   });
 });
+
+describe('fr-author — producer-bug guards (2026-06-06 TBD-skeleton incident)', () => {
+  let root: string;
+  beforeEach(() => {
+    root = path.join(os.tmpdir(), `fr-guard-${randomUUID()}`);
+    fs.mkdirSync(path.join(root, '.specs/foo'), { recursive: true });
+  });
+  afterEach(() => fs.rmSync(root, { recursive: true, force: true }));
+
+  it('does NOT draft FRs from example ids in code spans, fences, zero-padded twins or out-of-range numbers', async () => {
+    fs.writeFileSync(
+      path.join(root, '.specs/foo/FR.md'),
+      ['# FR', '', '## FR-1: Login', 'Body.', '', '## FR-2: Logout', 'Body.', ''].join('\n'),
+    );
+    fs.writeFileSync(
+      path.join(root, '.specs/foo/REQUIREMENTS.md'),
+      [
+        '# Requirements',
+        '',
+        'WHEN a spec contains heading `### FR-001: Login` THEN the parser registers anchors.', // code span
+        'WHEN a Scenario is tagged @FR-999 AND FR-999 does not exist THEN warn.', // out-of-range noise
+        '```',
+        'FR-77 inside a fenced example block must be ignored too.',
+        '```',
+        'FR-3 is a REAL missing requirement cited in prose.', // the one legit candidate
+      ].join('\n'),
+    );
+    const result = await frAuthor.resolve({ repoRoot: root, entry: mkEntry('foo') });
+    const fr = fs.readFileSync(path.join(root, '.specs/foo/FR.md'), 'utf8');
+    expect(fr).toContain('## FR-3: [TBD title]'); // legit candidate drafted
+    expect(fr).not.toContain('FR-001:'); // zero-padded twin of FR-1 — skipped
+    expect(fr).not.toContain('## FR-999'); // beyond numbering range — skipped
+    expect(fr).not.toContain('## FR-77'); // fenced example — never harvested
+    expect(result.notes).toMatch(/implausible|Skipped/i);
+  });
+});

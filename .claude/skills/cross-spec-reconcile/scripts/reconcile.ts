@@ -392,6 +392,17 @@ function stripFencedBlocks(body: string): string {
   return body.replace(/```[\s\S]*?```/g, '');
 }
 
+/**
+ * Fenced blocks AND inline code spans are examples, not claims. The
+ * inline-span half closed 2026-06-06: `` `### FR-001: Login` `` quoted in AC
+ * text passed stripFencedBlocks, became a missing-fr-section finding, and
+ * fr-author drafted 9 [TBD] skeleton FRs from it (producer-bug incident —
+ * see .claude/skills/spec-generator-dev/SKILL.md registry).
+ */
+function stripCodeExamples(body: string): string {
+  return stripFencedBlocks(body).replace(/`[^`\n]*`/g, '');
+}
+
 /** Normalize key name: snake_case + camelCase + kebab → same key. */
 function normalizeIdentifierKey(key: string): string {
   return key.toLowerCase().replace(/[_-]/g, '');
@@ -1498,8 +1509,9 @@ function findMissingFrSections(
   const cited = new Set<string>();
   for (const f of files) {
     // Adversarial-review fix (HIGH FP): FR citations inside fenced ```
-    // blocks are example code — not real "this spec mentions FR-N" claims.
-    const body = stripFencedBlocks(f.body);
+    // blocks AND inline `code spans` are example code — not real
+    // "this spec mentions FR-N" claims (2026-06-06 [TBD]-skeleton incident).
+    const body = stripCodeExamples(f.body);
     let m: RegExpExecArray | null;
     FR_REF_RE.lastIndex = 0;
     while ((m = FR_REF_RE.exec(body)) !== null) cited.add(m[0]);

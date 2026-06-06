@@ -72,13 +72,27 @@ function frAuthorImpl(repoRoot: string, entry: BacklogEntry): ResolverResult {
   const citingBody = fs.readFileSync(citingPath, 'utf8');
   const citingLines = citingBody.split('\n');
 
-  // Collect all FR-N citations with their context (line numbers)
+  // Collect FR-N citations with their context (line numbers).
+  //
+  // PRODUCER-BUG GUARDS (2026-06-06 incident: 9 auto-[TBD] skeletons —
+  // FR-001/FR-999/FR-05… — were drafted from EXAMPLE strings inside AC text,
+  // e.g. «heading `### FR-001: Login`» or «AND FR-999 does not exist»):
+  //   1. code spans + fenced blocks are EXAMPLES, never citations — strip;
+  //   2. tracked per-candidate below: zero-padded variants whose canonical
+  //      twin exists, and ids far beyond the spec's numbering range, are
+  //      example-noise, not missing requirements.
   const citations: Array<{ num: string; line: number; context: string }> = [];
-  FR_CITATION_RE.lastIndex = 0;
+  let inFence = false;
   citingBody.split('\n').forEach((lineText, idx) => {
+    if (/^\s*```/.test(lineText)) {
+      inFence = !inFence;
+      return;
+    }
+    if (inFence) return;
+    const noCode = lineText.replace(/`[^`]*`/g, '');
     FR_CITATION_RE.lastIndex = 0;
     let lineMatch: RegExpExecArray | null;
-    while ((lineMatch = FR_CITATION_RE.exec(lineText)) !== null) {
+    while ((lineMatch = FR_CITATION_RE.exec(noCode)) !== null) {
       const num = lineMatch[1];
       citations.push({
         num,
@@ -101,8 +115,32 @@ function frAuthorImpl(repoRoot: string, entry: BacklogEntry): ResolverResult {
   const frBody = fs.readFileSync(frFile, 'utf8');
   const existingFRs = new Set(parseFrHeadings(frBody).map((h) => h.id));
 
-  // Filter to only FR-N that don't exist yet
-  const newFRs = citations.filter((c) => !existingFRs.has(`FR-${c.num}`));
+  // PRODUCER-BUG GUARDS, part 2 — plausibility of a "missing" candidate:
+  //   • a ZERO-PADDED id whose canonical twin exists (`FR-001` while `FR-1`
+  //     is defined) is a formatting variant in example text, not a gap;
+  //   • an id far beyond the spec's numbering range (`FR-999` when the max
+  //     real FR is 38) is example/negative-case noise, not a requirement.
+  const existingNums = parseFrHeadings(frBody)
+    .map((h) => parseInt(h.id.replace(/^FR-/, ''), 10))
+    .filter((n) => Number.isFinite(n));
+  const maxExisting = existingNums.length ? Math.max(...existingNums) : 0;
+  const RANGE_SLACK = 10;
+  const skippedImplausible: string[] = [];
+  const plausible = (c: { num: string }): boolean => {
+    const canonical = `FR-${parseInt(c.num, 10)}`;
+    if (/^0/.test(c.num) && existingFRs.has(canonical)) {
+      skippedImplausible.push(`FR-${c.num} (zero-padded twin of existing ${canonical})`);
+      return false;
+    }
+    if (maxExisting > 0 && parseInt(c.num, 10) > maxExisting + RANGE_SLACK) {
+      skippedImplausible.push(`FR-${c.num} (beyond numbering range, max real FR-${maxExisting})`);
+      return false;
+    }
+    return true;
+  };
+
+  // Filter to only FR-N that don't exist yet AND are plausible citations
+  const newFRs = citations.filter((c) => !existingFRs.has(`FR-${c.num}`) && plausible(c));
   if (newFRs.length === 0) {
     return {
       confidence: 1,
@@ -146,6 +184,9 @@ function frAuthorImpl(repoRoot: string, entry: BacklogEntry): ResolverResult {
       `Drafted ${uniqueNewFRs.length} new FR-N section(s) (FR-${uniqueNewFRs.map((f) => f.num).join(', FR-')}) ` +
       `in ${entry.slug}/FR.md with [TBD] placeholders. Each section includes citation context ` +
       `from ${citingFile}. Author MUST replace [TBD] placeholders with real requirement text ` +
-      `before the spec advances to the STOP gate.`,
+      `before the spec advances to the STOP gate.` +
+      (skippedImplausible.length
+        ? ` Skipped ${skippedImplausible.length} implausible candidate(s): ${skippedImplausible.join('; ')}.`
+        : ''),
   };
 }

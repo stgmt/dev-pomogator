@@ -30,6 +30,7 @@ export type FindingCode =
   | 'ORPHAN_TASK'
   | 'SCENARIO_TAG_ORPHAN'
   | 'UNTAGGED_SCENARIO'
+  | 'TAG_BULK_SUSPECT'
   | 'DUPLICATE_DEFINITION'
   | 'TASK_STATUS_UNVERIFIED'
   | 'TASK_UNTESTED'
@@ -314,6 +315,44 @@ export function checkConformance(
         nodeId: scen.id,
         suggestions: [
           { action: 'tag_scenario', reason: `Add the relevant @FR-N / @AC-N tag.`, confidence: 'high' },
+        ],
+      });
+    }
+  }
+
+  // 4b) TAG_BULK_SUSPECT — one requirement tag blanketing many scenarios.
+  //
+  // Producer-guard (2026-06-06 incident): a feature-level `@FR-19` was
+  // blanket-applied to 28 legacy scenarios to clear the UNTAGGED gate; the
+  // FR-8 judge then flagged 11 semantic drifts — the tag overreached. A
+  // single requirement tag claiming 10+ scenarios in one file is a smell:
+  // the gate invites tag-gaming, so the graph itself must raise the flag
+  // and point at the judge BEFORE the drift inventory does.
+  {
+    const BULK_THRESHOLD = 10;
+    const byFileTag = new Map<string, { count: number; file: string; line: number; tag: string }>();
+    for (const node of graph.nodes.values()) {
+      if (node.type !== 'Scenario') continue;
+      const scen = node as ScenarioNode;
+      for (const tag of scen.tags) {
+        if (!SPEC_TAG_RE.test(tag)) continue;
+        const key = `${scen.file}|${tag}`;
+        const cur = byFileTag.get(key);
+        if (cur) cur.count++;
+        else byFileTag.set(key, { count: 1, file: scen.file, line: scen.line, tag });
+      }
+    }
+    for (const { count, file, line, tag } of byFileTag.values()) {
+      if (count < BULK_THRESHOLD) continue;
+      findings.push({
+        code: 'TAG_BULK_SUSPECT',
+        severity: 'info',
+        location: { file, line },
+        message: `Tag ${tag} blankets ${count} scenarios in one file — verify the semantic fit per scenario (run the FR-8 judge); a blanket tag that clears UNTAGGED without testing the requirement is tag-gaming.`,
+        nodeId: tag,
+        suggestions: [
+          { action: 'run_semantic_judge', reason: `spec-verdict.ts with semantic ON will judge each ${tag}↔scenario pair.`, confidence: 'high' },
+          { action: 'retag_per_scenario', reason: 'Map each scenario to the requirement it actually tests.', confidence: 'medium' },
         ],
       });
     }
