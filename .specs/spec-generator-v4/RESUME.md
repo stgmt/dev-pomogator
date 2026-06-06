@@ -60,6 +60,15 @@ The spec now DESCRIBES the fix; the implementation is Phase 13 + Phase 14 in `TA
 - SPECGEN004_97 step defs (`tests/step_definitions/feature37_smart_verdict.ts`) — drive the REAL
   `runSpecVerdict()` on a temp fixture. Suite: 101 scenarios, 86 passed / 0 failed (undefined 12→11).
 
+### Done this leg #3 (2026-06-06 — WSL-обвязка + P13-1 закрыт Docker-прогоном)
+- **WSL-шим** в `scripts/docker-test.sh` (issue #49, commit `e2b5145`): машины без Docker Desktop
+  гоняют полный сьют через docker внутри WSL — авто-re-exec с `--cd <Windows-путь>` (Linux-форма
+  даёт ERROR_PATH_NOT_FOUND), WSLENV-проброс, guard от рекурсии; `.env.test` → `required:false`.
+- **P13-1 ЗАКРЫТ clean-vs-clean**: HEAD 1746/14 vs baseline `4bf8d5c` 1740/12 — 11 падений общие
+  (предсуществующие, вне graph), 3 multilang были моей регрессией (cross-root bare-ребро) → закрыты
+  builder-резолюцией ОДНОЗНАЧНЫХ bare-рёбер (двусмысленные честно висят). Ноль новых регрессий.
+- Issues: #49 (WSL-шим), #50 (хуки мертвы без Node — из carried-черновика).
+
 ### Done this leg #2 (P13-1, 2026-06-05 — code+local-verify; Docker pending)
 - Composite keys live: `qualifySlice()` in `builder.ts` + the SAME qualification in `incremental.ts`
   (watcher patches can't re-insert bare ids). Edges / `Task.refs` / `AC.parentFr` qualified; anchors

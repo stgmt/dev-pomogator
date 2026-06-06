@@ -63,9 +63,22 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 # Pre-flight: kill orphaned devpom-test containers from previous runs
-# (exec replaces bash → old trap is lost → containers linger)
+# (exec replaces bash → old trap is lost → containers linger).
+# ONLY genuine zombies (started >30 min ago — full suite takes ~10): a blanket
+# kill of every devpom-test-* murders a LIVE parallel session's run mid-flight
+# («Error waiting for container: Canceled», наблюдалось 2026-06-06 при двух
+# одновременных сессиях на одной машине).
+ORPHAN_AGE_SECS=1800
+NOW_EPOCH=$(date +%s)
 for cid in $(docker ps -q --filter "name=devpom-test-" 2>/dev/null); do
-  echo "[docker-test] Killing orphaned container: $(docker inspect --format '{{.Name}}' "$cid" 2>/dev/null)"
+  started=$(docker inspect --format '{{.State.StartedAt}}' "$cid" 2>/dev/null)
+  started_epoch=$(date -d "$started" +%s 2>/dev/null || echo "$NOW_EPOCH")
+  age=$((NOW_EPOCH - started_epoch))
+  if [ "$age" -lt "$ORPHAN_AGE_SECS" ]; then
+    echo "[docker-test] Skipping live container ($(docker inspect --format '{{.Name}}' "$cid" 2>/dev/null), age ${age}s < ${ORPHAN_AGE_SECS}s) — likely a parallel session's run"
+    continue
+  fi
+  echo "[docker-test] Killing orphaned container: $(docker inspect --format '{{.Name}}' "$cid" 2>/dev/null) (age ${age}s)"
   docker stop "$cid" 2>/dev/null || true
   docker rm "$cid" 2>/dev/null || true
 done
