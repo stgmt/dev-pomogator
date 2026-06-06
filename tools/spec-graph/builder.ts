@@ -350,6 +350,34 @@ export function buildGraph(opts: BuildOptions): SpecGraph {
     }
   }
 
+  // 2c) FR-36a: resolve dangling BARE edge endpoints, unambiguously.
+  //
+  // A `.feature` OUTSIDE `.specs/` (slug-less slice — e.g. a fixture
+  // materialised at an NDJSON URI, or tests/features/) may carry a bare
+  // `@FR-N` tag; its tested-by edge endpoint stays bare while spec nodes are
+  // composite-keyed — the edge dangles. When exactly ONE spec defines that
+  // localId, rewrite the endpoint to the composite key (soft bare-id
+  // resolution, same semantics P13-3 gives the MCP tools). Ambiguous bare
+  // refs (defined by 2+ specs) stay dangling — guessing would re-create the
+  // cross-spec leak FR-36 exists to kill.
+  {
+    const byLocalId = new Map<string, string | null>(); // localId → composite (null = ambiguous)
+    for (const n of nodes.values()) {
+      if (!n.spec) continue;
+      const localId = n.id.slice(n.spec.length + 1);
+      byLocalId.set(localId, byLocalId.has(localId) ? null : n.id);
+    }
+    const resolveBare = (id: string): string => {
+      if (nodes.has(id)) return id; // already resolves (bare node or composite)
+      const unique = byLocalId.get(id);
+      return unique ?? id;
+    };
+    for (const e of edges) {
+      e.from = resolveBare(e.from);
+      e.to = resolveBare(e.to);
+    }
+  }
+
   // 3) NDJSON patch onto the scenarios we just collected.
   if (!opts.skipNdjson) {
     const patch = parseNdjsonFile(ndjsonPath);

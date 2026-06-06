@@ -216,8 +216,13 @@ describe('multilang NDJSON ingest — full roundtrip from real-runner fixtures',
       it('AC-31.2: builder + MCP get_trace surface per-scenario lastResult', () => {
         const { graph } = buildGraphForFixture(spec);
 
-        const fr = graph.nodes.get(spec.frId);
-        expect(fr, `FR node ${spec.frId} missing from graph`).toBeDefined();
+        // FR-36a: the FR.md lives in `.specs/<slug>/` → composite node key.
+        // The feature file (materialised at the NDJSON URI, OUTSIDE .specs/)
+        // keeps a bare @FR-N tag — the builder's unambiguous bare-edge
+        // resolution links it to this composite FR.
+        const qualifiedFrId = `${spec.dirname.replace(/-sample$/, '')}:${spec.frId}`;
+        const fr = graph.nodes.get(qualifiedFrId);
+        expect(fr, `FR node ${qualifiedFrId} missing from graph`).toBeDefined();
         expect(fr!.type).toBe('FR');
 
         // Sanity: each expected Scenario node landed in the graph.
@@ -233,7 +238,7 @@ describe('multilang NDJSON ingest — full roundtrip from real-runner fixtures',
         const getTestResult = tools.find((t) => t.name === 'get_test_result')!;
 
         // get_trace(FR-N) → scenarios[] with matching lastResult per-scenario.
-        return getTrace.handler({ node_id: spec.frId }).then((traceResult) => {
+        return getTrace.handler({ node_id: qualifiedFrId }).then((traceResult) => {
           const payload = JSON.parse(traceResult.content[0].text) as {
             ok: boolean;
             scenarios: Array<{ id: string; lastResult: string }>;
