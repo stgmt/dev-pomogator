@@ -74,6 +74,9 @@ npm run build:mcp   # ОБЯЗАТЕЛЬНО при правке tools.ts/server
 | missing-fr из inline-примеров (upstream) | `cross-spec-reconcile/reconcile.ts` стрипал fence, но не inline-спаны | `stripCodeExamples()` (fence + inline) в citation-пути |
 | PARTIAL_IMPL false positive | core.mjs: неякорённый heading-трекер + маркеры в бэктиках (`PARTIAL` как enum-литерал) | ^-якорь + fence-skip + вырез код-спанов перед маркер-матчем |
 | Структурный pass = «valid» | привычка агента | правило `no-structural-valid.md` + FR-37d гарды в скиллах |
+| Свежий scaffold рождался RED (7 audit ERROR + 3 UNTAGGED из коробки) | `tools/specs-generator/templates/` — FR-3/4/5 без AC/UC-ссылок, edit-row на несуществующий путь, сценарии без тегов | FR/AC-шаблоны с полными перекрёстными ссылками, FILE_CHANGES placeholder → create + warning, feature.template с реальными @FR-N; live-proof: scaffold → verdict GREEN at birth |
+| Псевдо-тег `# @featureN` (комментарий — парсер не видит → UNTAGGED, рёбер нет) | ПРОМПТЫ-учителя: `extension-test-quality.md` (root), `feature-creation-rules.md`, `phase3plus_audit-logic-gaps.md`, `requirements-chk-matrix` | все 4 носителя переписаны на НАСТОЯЩИЙ Gherkin-тег (читать оба формата, ПИСАТЬ только реальный) |
+| «validate-spec: 0 errors» как финальная валидация в workflow | `phase3_finalization.md` шаг 3 | двухуровневая финализация: pre-filter + `spec-verdict --no-semantic` GREEN (FR-37a/d) |
 
 ## Связанные
 
