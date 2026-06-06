@@ -14,12 +14,12 @@ description: >
   NOT use for: markdown link/anchor NAVIGATION or rename (markdown-lsp / Marksman), bulk
   broken-anchor scan+fix (anchor-fix), the honest per-task DONE verdict (get_coverage /
   spec-status), or cross-spec drift (cross-spec-reconcile).
-allowed-tools: mcp__dev-pomogator-specs__get_trace, mcp__dev-pomogator-specs__find_by_tags, mcp__dev-pomogator-specs__conformance_check, mcp__dev-pomogator-specs__search, mcp__dev-pomogator-specs__get_node, mcp__dev-pomogator-specs__list_phase_tasks, mcp__dev-pomogator-specs__get_test_result, mcp__dev-pomogator-specs__find_orphans, mcp__dev-pomogator-specs__get_coverage_summary, mcp__dev-pomogator-specs__get_coverage, mcp__dev-pomogator-specs__validate_anchor, mcp__dev-pomogator-specs__list_specs, mcp__dev-pomogator-specs__find_refs, Bash, Read
+allowed-tools: mcp__dev-pomogator-specs__get_trace, mcp__dev-pomogator-specs__find_by_tags, mcp__dev-pomogator-specs__conformance_check, mcp__dev-pomogator-specs__search, mcp__dev-pomogator-specs__get_node, mcp__dev-pomogator-specs__get_spec_status, mcp__dev-pomogator-specs__list_phase_tasks, mcp__dev-pomogator-specs__get_test_result, mcp__dev-pomogator-specs__find_orphans, mcp__dev-pomogator-specs__get_coverage_summary, mcp__dev-pomogator-specs__get_coverage, mcp__dev-pomogator-specs__validate_anchor, mcp__dev-pomogator-specs__list_specs, mcp__dev-pomogator-specs__find_refs, Bash, Read
 ---
 
 # spec-graph-query — one cheatsheet for the spec-graph MCP
 
-The `dev-pomogator-specs` MCP server exposes 13 query tools over the built spec graph. Querying
+The `dev-pomogator-specs` MCP server exposes 14 query tools over the built spec graph. Querying
 the graph beats grepping `.specs/`: the graph resolved tag inheritance, dual-anchor slugs, and
 the FR↔AC↔scenario↔task edges that text search can't see. Pick by the question you're asking.
 
@@ -43,6 +43,7 @@ file-local by design (FR-36b).
 
 | Need | Tool | Call |
 |------|------|------|
+| **Full lifecycle of ONE spec** — SPEC_ONLY / TESTS_NOT_RUN / RED / PARTIAL / GREEN + linked last-run summary (passed/failed/undefined, run timestamp, NDJSON source) + counts + FR-37b gaps + agent hint (FR-38) | `get_spec_status` | `{ spec: "spec-generator-v4" }` |
 | Look up ONE node by id (file+line+fields) | `get_node` | `{ node_id: "<slug>:AC-7.1" }` (или bare + candidates) |
 | What **covers / tests / implements** a node (semantic edges, before a rename) | `find_refs` | `{ node_id: "<slug>:FR-7" }` |
 | Scenarios carrying ALL these @feature tags (AND, inheritance-aware) | `find_by_tags` | `{ tags: ["@feature5","@regression"] }` |

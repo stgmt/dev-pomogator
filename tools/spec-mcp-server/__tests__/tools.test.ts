@@ -72,8 +72,8 @@ const tool = (name: string) => {
 };
 
 describe('tool registry — shape', () => {
-  it('registers exactly 13 tools with canonical names', () => {
-    expect(registry).toHaveLength(13);
+  it('registers exactly 14 tools with canonical names', () => {
+    expect(registry).toHaveLength(14);
     const names = registry.map((t) => t.name).sort();
     expect(names).toEqual(
       [
@@ -84,6 +84,7 @@ describe('tool registry — shape', () => {
         'get_coverage', // FR-32 honesty rollup
         'get_coverage_summary',
         'get_node',
+        'get_spec_status', // FR-38 full lifecycle + linked last-run summary
         'get_test_result',
         'get_trace',
         'list_phase_tasks',

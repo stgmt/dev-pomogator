@@ -1138,3 +1138,15 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] cucumber scenarios GREEN — full vitest+BDD suite is 0-failure (1745 passed)
   - [ ] `/simplify` final review clean — not run
   - [ ] CHANGELOG entry written
+
+## Phase 15 — Full spec lifecycle status via MCP (FR-38)
+
+> User ask (2026-06-06): тест-ран линкуется с summary-данными, агент видит статус спеки целиком
+> (RED/GREEN/тесты не написаны/только доки) — через MCP, трассируемо, покрыто BDD.
+
+- [x] P15-1: get_spec_status MCP tool + lifecycle enum + linked run summary -- @feature38 — id: p15-spec-status-tool — Status: DONE (2026-06-06) | Est: 240m
+  _Requirements: [FR-38](FR.md#fr-38)_
+  **Done When:**
+  - [x] `tools/spec-mcp-server/tools.ts` exposes `get_spec_status({spec})`: исчерпывающий enum SPEC_ONLY / TESTS_NOT_RUN / RED / PARTIAL / GREEN (SPECGEN004_102..106), `last_run {at, source, summary}` ТОЛЬКО из инжестённого NDJSON (никогда не сфабрикован — null без рана), `counts` + FR-37b `gaps` + agent `hint`; SPEC_NOT_FOUND на неизвестный slug
+  - [x] BDD-покрытие всех пяти состояний реальным handler-ом и РЕАЛЬНЫМ NDJSON-контрактом (cucumber-messages envelopes; фикстуры в `tests/step_definitions/feature38_spec_status.ts`) — 5/5 passed
+  - [x] live на этом корпусе: v4 = PARTIAL (99 passed / 1 undefined / 1 skipped из 101 touched, с таймстампом рана) — честно отражает остаток; worktree-setup/fix-bg-output-loss = TESTS_NOT_RUN; `server.bundle.mjs` пересобран, freshness green

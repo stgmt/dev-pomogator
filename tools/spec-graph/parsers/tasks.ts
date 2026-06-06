@@ -85,7 +85,10 @@ export function parseTasks(content: string, file: string): TaskNode[] {
       continue;
     }
     cur.body.push(line);
-    for (const m of line.matchAll(/\b(?:FR|NFR)-\d+\b/g)) {
+    // Inline code spans are EXAMPLES (`FR-001`), not requirement refs —
+    // harvesting them produced ORPHAN_TASK noise off evidence prose (FR-36).
+    const noCode = line.replace(/`[^`]*`/g, '');
+    for (const m of noCode.matchAll(/\b(?:FR|NFR)-\d+\b/g)) {
       if (!cur.node.refs.includes(m[0])) cur.node.refs.push(m[0]);
     }
   }

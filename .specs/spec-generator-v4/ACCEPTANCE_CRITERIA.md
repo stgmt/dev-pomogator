@@ -571,3 +571,33 @@ WHEN the verdict runs AND `FILE_CHANGES.md` references a path that does not exis
 **Требование:** [FR-37a](FR.md#fr-37)
 
 WHEN the authoritative verdict is GREEN THEN it SHALL mean the organism traces cell→atom (every Scenario tagged → FR, every FR has AC+Scenario+Task, every Task has a test, every FILE_CHANGES path exists) across the graph — NOT merely that one spec's formatting is well-formed.
+
+## AC-38.1
+
+**Требование:** [FR-38a](FR.md#fr-38)
+
+WHEN `get_spec_status({spec})` is called for a spec with FR/AC docs but ZERO Scenario nodes THEN the response SHALL carry `lifecycle: "SPEC_ONLY"` AND `last_run: null`.
+
+## AC-38.2
+
+**Требование:** [FR-38a](FR.md#fr-38)
+
+WHEN the spec has Scenario nodes AND none of them carries a `lastResult` THEN the response SHALL carry `lifecycle: "TESTS_NOT_RUN"` AND `last_run: null` — the tool SHALL NOT fabricate a summary for a run that never happened.
+
+## AC-38.3
+
+**Требование:** [FR-38a](FR.md#fr-38), [FR-38b](FR.md#fr-38)
+
+WHEN the ingested NDJSON holds ≥1 FAILED scenario of the spec THEN `lifecycle: "RED"` AND `last_run.summary.failed` SHALL equal the failed count AND `last_run.at`/`last_run.source` SHALL identify the run.
+
+## AC-38.4
+
+**Требование:** [FR-38a](FR.md#fr-38), [FR-38b](FR.md#fr-38)
+
+WHEN every touched scenario of the spec is PASSED THEN `lifecycle: "GREEN"`; WHEN zero failed but ≥1 scenario is UNDEFINED/PENDING/SKIPPED THEN `lifecycle: "PARTIAL"` — written-but-unimplemented steps SHALL NOT read as GREEN (FR-35 honesty idiom).
+
+## AC-38.5
+
+**Требование:** [FR-38c](FR.md#fr-38), [FR-38d](FR.md#fr-38)
+
+WHEN any lifecycle state is returned THEN the response SHALL include `counts` (FR/AC/Scenario/Task), `gaps` (FR-37b per-class) and a human `hint`; AND each of the five states SHALL be covered by its own BDD scenario driving the real handler.

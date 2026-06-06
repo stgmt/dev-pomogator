@@ -496,3 +496,11 @@ The four design decisions below shipped in spec-generator-v3 (production via PR 
 **Trade-off:** the verdict is heavier (graph build + optional `claude -p` semantic) than a structural lint; mitigated by FR-36's bounded node count (NFR-Performance-9) and semantic being binary-present-gated with a fail-loud `SEMANTIC_SKIPPED` (never silent no-drift).
 
 **Alternatives rejected:** keep structural as the gate (the exact false-green that triggered this); make semantic opt-in (status quo — it never runs, so the dumb check wins); a brand-new analyzer (the smart tools exist — this FR makes them AUTHORITATIVE + adds the completeness check, no new engine). Evidence: `audit-reports/v4-smart-verdict-and-organism-traceability.md`.
+
+### Decision: get_spec_status — agent-facing READ of the same truth the verdict gates on (FR-38)
+
+**Rationale:** агенту нужен ОДИН вызов, чтобы понять состояние спеки целиком: написаны ли тесты, гонялись ли, чем кончился последний ран (summary), сколько дыр трассировки. До FR-38 эта картина собиралась из 3-4 вызовов (get_coverage_summary + find_by_tags + get_test_result по сценариям) и всё равно не отвечала «а ран вообще был?». Lifecycle выводится только из графа (FR-36) + инжестённого NDJSON (FR-1): SPEC_ONLY (нет сценариев) → TESTS_NOT_RUN (сценарии без lastResult) → RED (есть failed/ambiguous) → PARTIAL (0 failed, но есть undefined/pending/skipped — написано ≠ реализовано, FR-35 идиома) → GREEN (все тронутые passed).
+
+**Trade-off:** PARTIAL объединяет undefined/pending/skipped в одно «жёлтое» состояние — гранулярность отдана в `last_run.summary` (по-классово), сам enum остаётся пятизначным и читаемым агентом без таблицы.
+
+**Alternatives rejected:** расширять `list_specs` per-spec статусом (раздувает каждый ответ ради редкой нужды); отдельный side-файл статуса (нарушает «no side files» — правда живёт в графе+NDJSON); вычислять в скилле spec-status (скилл — оркестрация LLM, статус должен быть механическим и MCP-трассируемым).

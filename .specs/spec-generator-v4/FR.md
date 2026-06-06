@@ -650,6 +650,29 @@ MEASURED this session: the structural `validate-spec` returns `files_with_errors
 
 ---
 
+## FR-38
+
+**Полный lifecycle-статус спеки через MCP: тест-ран слинкован с summary, агент видит состояние целиком**
+
+User ask (2026-06-06): «кейс когда есть тест-ран и линкуется ещё и тест-ран с summary-данными, чтоб агент понимал статус полностью: спека может быть RED, GREEN, тесты не написаны, или просто спека есть и больше ничего — должно быть через MCP трассируемо и покрыто BDD-сценариями».
+
+System SHALL expose an MCP tool `get_spec_status({spec})` returning, for ONE spec (the cell), its full lifecycle state derived ONLY from the one graph (FR-36) + the ingested NDJSON test-run (FR-1) — no side files, no guesses.
+
+**FR-38a (lifecycle states — исчерпывающий enum):** The tool SHALL classify the spec into exactly one of: `SPEC_ONLY` — spec docs exist, zero Scenario nodes (тесты не написаны вовсе); `TESTS_NOT_RUN` — Scenario nodes exist, but no scenario of this spec carries a `lastResult` (ран не делался или NDJSON не инжестился); `RED` — the last run holds ≥1 `FAILED`/`AMBIGUOUS` scenario of this spec; `PARTIAL` — the last run touched this spec, zero failed, but ≥1 scenario is `UNDEFINED`/`PENDING`/`SKIPPED` (степы не дописаны / сценарии пропущены); `GREEN` — every touched scenario is `PASSED` and ≥1 was touched.
+
+**FR-38b (test-run summary linked):** When any run data exists the response SHALL embed `last_run`: `{at, source, summary: {passed, failed, pending, undefined, ambiguous, skipped, touched}}`, где `at` = max `lastRunAt` по сценариям спеки и `source` = путь инжестённого NDJSON. When no run data exists `last_run` SHALL be `null` — NEVER a fabricated summary (FR-35 honesty idiom).
+
+**FR-38c (полная картина для агента):** The response SHALL also carry `counts` (FR/AC/Scenario/Task клетки), `gaps` (FR-37b per-class counts для этой спеки) and a one-line `hint` telling the agent what the state MEANS and the next action.
+
+**FR-38d (BDD-покрытие состояний):** Every lifecycle state SHALL be covered by its own BDD scenario driving the REAL tool handler on a real fixture graph (NDJSON-контракт реальный, не hand-built инъекция результатов).
+
+**Зависит от:** FR-36 (composite ids — spec scoping), FR-1/FR-9 (NDJSON ingest + `lastResult`/`lastRunAt`), FR-32 (bucket-семантика через `coverage.ts`), FR-37 (вердикт — GATE; `get_spec_status` — agent-facing READ той же правды).
+**Связанные AC:** [AC-38.1](ACCEPTANCE_CRITERIA.md#ac-381), [AC-38.2](ACCEPTANCE_CRITERIA.md#ac-382), [AC-38.3](ACCEPTANCE_CRITERIA.md#ac-383), [AC-38.4](ACCEPTANCE_CRITERIA.md#ac-384), [AC-38.5](ACCEPTANCE_CRITERIA.md#ac-385)
+**Use Case:** [UC-2](USE_CASES.md#uc-2)
+**User Story:** US-23
+
+---
+
 ## Out of Scope
 
 ### FR-OUT-1: Real-time spec collaborative editing (CRDT/OT) — OUT OF SCOPE

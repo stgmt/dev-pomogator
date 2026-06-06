@@ -780,3 +780,36 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When it produces its verdict
     Then it surfaces the smart verdict and gap list
     And it does not state valid or clean or done off validate-spec alone
+
+  @feature38
+  Scenario: SPECGEN004_102 a docs-only spec reads SPEC_ONLY
+    Given a spec with FR and AC docs but zero scenarios
+    When get_spec_status runs for that spec
+    Then the lifecycle is SPEC_ONLY and last_run is null
+
+  @feature38
+  Scenario: SPECGEN004_103 written-but-never-run tests read TESTS_NOT_RUN
+    Given a spec whose scenarios carry no last result
+    When get_spec_status runs for that spec
+    Then the lifecycle is TESTS_NOT_RUN and last_run is null
+
+  @feature38
+  Scenario: SPECGEN004_104 a failing run reads RED with the linked summary
+    Given a spec whose last run holds a failed scenario
+    When get_spec_status runs for that spec
+    Then the lifecycle is RED
+    And the last_run summary counts the failure and identifies the run
+
+  @feature38
+  Scenario: SPECGEN004_105 an all-passed run reads GREEN with the linked summary
+    Given a spec whose last run passed every scenario
+    When get_spec_status runs for that spec
+    Then the lifecycle is GREEN
+    And the last_run summary counts the passes and identifies the run
+
+  @feature38
+  Scenario: SPECGEN004_106 undefined steps read PARTIAL never GREEN
+    Given a spec whose last run has undefined scenarios and zero failures
+    When get_spec_status runs for that spec
+    Then the lifecycle is PARTIAL
+    And the response carries counts gaps and an agent hint

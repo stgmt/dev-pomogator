@@ -29,6 +29,7 @@
 
 import { z } from 'zod';
 import { checkConformance, type Finding } from '../spec-graph/conformance.ts';
+import { gapsFromFindings, summariseGaps } from '../spec-graph/traceability.ts';
 import type {
   SpecGraph,
   Node,
@@ -804,6 +805,94 @@ export function buildToolRegistry(
       const id = node ? node.id : (node_id as string);
       const references = collectGraphRefs(graph, id);
       return asJsonResult({ ok: true, node_id: id, references, count: references.length });
+    },
+  });
+
+  // ─── 13) get_spec_status — full lifecycle of ONE spec + linked run (FR-38) ─
+  tools.push({
+    name: 'get_spec_status',
+    description:
+      'Full lifecycle status of ONE spec: SPEC_ONLY / TESTS_NOT_RUN / RED / ' +
+      'PARTIAL / GREEN + the linked last test-run summary (passed/failed/' +
+      'pending/undefined counts, run timestamp, NDJSON source), node counts, ' +
+      'FR-37b gap counts and an agent hint. The agent-facing READ of the same ' +
+      'truth the authoritative verdict gates on (FR-38).',
+    inputShape: { spec: z.string() } as const satisfies z.ZodRawShape,
+    handler: async ({ spec }) => {
+      const graph = getGraph();
+      const slug = String(spec).replace(/\\/g, '/').replace(/^\.?\/?\.specs\//, '').replace(/\/+$/, '');
+      const inSpec = (file: string): boolean =>
+        String(file).replace(/\\/g, '/').includes(`.specs/${slug}/`);
+
+      const counts = { fr: 0, ac: 0, scenarios: 0, tasks: 0 };
+      const scens: ScenarioNode[] = [];
+      for (const n of graph.nodes.values()) {
+        if (!inSpec(n.file)) continue;
+        if (n.type === 'FR') counts.fr++;
+        else if (n.type === 'AC') counts.ac++;
+        else if (n.type === 'Task') counts.tasks++;
+        else if (n.type === 'Scenario') {
+          counts.scenarios++;
+          scens.push(n as ScenarioNode);
+        }
+      }
+      if (counts.fr + counts.ac + counts.scenarios + counts.tasks === 0) {
+        return asJsonResult({
+          ok: false,
+          error: 'SPEC_NOT_FOUND',
+          spec: slug,
+          hint: `No nodes under .specs/${slug}/ — check list_specs for the loaded slugs.`,
+        });
+      }
+
+      // FR-38b: the linked last-run summary — ONLY from ingested NDJSON data
+      // (lastResult/lastRunAt stamped by the FR-1 pipeline). Never fabricated.
+      const summary = { passed: 0, failed: 0, pending: 0, undefined: 0, ambiguous: 0, skipped: 0, touched: 0 };
+      let lastAt: string | null = null;
+      for (const s of scens) {
+        if (!s.lastResult) continue;
+        summary.touched++;
+        const r = s.lastResult.toUpperCase();
+        if (r === 'PASSED') summary.passed++;
+        else if (r === 'FAILED') summary.failed++;
+        else if (r === 'PENDING') summary.pending++;
+        else if (r === 'UNDEFINED') summary.undefined++;
+        else if (r === 'AMBIGUOUS') summary.ambiguous++;
+        else if (r === 'SKIPPED') summary.skipped++;
+        if (s.lastRunAt && (!lastAt || s.lastRunAt > lastAt)) lastAt = s.lastRunAt;
+      }
+      const last_run =
+        summary.touched > 0
+          ? { at: lastAt, source: '.dev-pomogator/.last-test-run.ndjson', summary }
+          : null;
+
+      // FR-38a: the exhaustive lifecycle enum.
+      let lifecycle: 'SPEC_ONLY' | 'TESTS_NOT_RUN' | 'RED' | 'PARTIAL' | 'GREEN';
+      if (counts.scenarios === 0) lifecycle = 'SPEC_ONLY';
+      else if (!last_run) lifecycle = 'TESTS_NOT_RUN';
+      else if (summary.failed > 0 || summary.ambiguous > 0) lifecycle = 'RED';
+      else if (summary.pending + summary.undefined + summary.skipped > 0) lifecycle = 'PARTIAL';
+      else lifecycle = 'GREEN';
+
+      // FR-38c: the FR-37b gap counts for this cell + an agent hint.
+      const gaps = summariseGaps(gapsFromFindings(checkConformance(graph), { spec: slug }));
+      const hints: Record<typeof lifecycle, string> = {
+        SPEC_ONLY: 'Docs only — no scenarios written yet. Next: author the .feature (FR-38a).',
+        TESTS_NOT_RUN: `${counts.scenarios} scenario(s) written but never run/ingested. Next: run the suite so NDJSON lands.`,
+        RED: `${summary.failed + summary.ambiguous} failing of ${summary.touched} touched. Next: get_test_result per scenario.`,
+        PARTIAL: `${summary.pending + summary.undefined + summary.skipped} scenario(s) undefined/pending/skipped, 0 failed — written but not implemented; NOT green.`,
+        GREEN: `All ${summary.touched} touched scenario(s) passed at ${lastAt}.`,
+      };
+
+      return asJsonResult({
+        ok: true,
+        spec: slug,
+        lifecycle,
+        counts,
+        last_run,
+        gaps,
+        hint: hints[lifecycle],
+      });
     },
   });
 

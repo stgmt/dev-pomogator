@@ -2093,7 +2093,10 @@ function commandAuditSpec(argv) {
   }
 
   if (tasksContent && frContent) {
-    const frIds = [...frContent.matchAll(/## FR-(\d+):/g)].map((match) => match[1]);
+    // ^-anchored (m): an inline mention like «`### FR-001: Login` → anchors…»
+    // in FR.md prose is an EXAMPLE, not a requirement heading — unanchored
+    // matching produced false LINK_VALIDITY errors off example strings.
+    const frIds = [...frContent.matchAll(/^## FR-(\d+):/gm)].map((match) => match[1]);
     for (const frNum of frIds) {
       const frId = `FR-${frNum}`;
       const linkPattern = new RegExp(`\\[${escapeRegExp(frId)}[^\\]]*\\]\\([^)]+\\)`);
@@ -2112,9 +2115,13 @@ function commandAuditSpec(argv) {
   }
 
   if (frContent && acContent) {
-    const frNums = [...frContent.matchAll(/## FR-(\d+):/g)].map((match) => match[1]);
+    // ^-anchored for the same reason as the TASKS check above: a quoted
+    // `## FR-1: Title` inside a blockquote/example must not define a section.
+    const frNums = [...frContent.matchAll(/^## FR-(\d+):/gm)].map((match) => match[1]);
     for (const frNum of frNums) {
-      const sectionMatch = frContent.match(new RegExp(`## FR-${frNum}:.*?(?=## FR-\\d+:|$)`, 's'));
+      const sectionMatch = frContent.match(
+        new RegExp(`(?:^|\\n)## FR-${frNum}:.*?(?=\\n## FR-\\d+:|$)`, 's'),
+      );
       if (sectionMatch && !/\[AC-\d+[^\]]*\]\(ACCEPTANCE_CRITERIA\.md#[^)]+\)/.test(sectionMatch[0])) {
         findings.push({
           check: 'LINK_VALIDITY',

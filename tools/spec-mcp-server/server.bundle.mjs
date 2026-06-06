@@ -46358,7 +46358,8 @@ function parseTasks(content, file2) {
       continue;
     }
     cur.body.push(line);
-    for (const m of line.matchAll(/\b(?:FR|NFR)-\d+\b/g)) {
+    const noCode = line.replace(/`[^`]*`/g, "");
+    for (const m of noCode.matchAll(/\b(?:FR|NFR)-\d+\b/g)) {
       if (!cur.node.refs.includes(m[0])) cur.node.refs.push(m[0]);
     }
   }
@@ -47329,6 +47330,11 @@ function checkConformance(graph, opts = {}) {
     let hasSpecTag = false;
     const scenSpec = scen.spec ?? specOf(scen.file);
     for (const tag of scen.tags) {
+      const f = tag.match(/^@feature(\d+)$/i);
+      if (f && tagResolves(graph, scenSpec, `FR-${f[1]}`, specLocalIds)) {
+        hasSpecTag = true;
+        continue;
+      }
       const m = tag.match(SPEC_TAG_RE2);
       if (!m) continue;
       hasSpecTag = true;
@@ -47372,6 +47378,39 @@ function checkConformance(graph, opts = {}) {
   }
   void idCount;
   return findings;
+}
+
+// tools/spec-graph/traceability.ts
+var GAP_CLASSES = /* @__PURE__ */ new Set([
+  "UNCOVERED_FR",
+  "TASK_UNTESTED",
+  "UNTAGGED_SCENARIO"
+]);
+function gapsFromFindings(findings, opts = {}) {
+  const gaps = [];
+  for (const f of findings) {
+    if (!GAP_CLASSES.has(f.code)) continue;
+    if (opts.spec && !String(f.location.file).replace(/\\/g, "/").includes(`.specs/${opts.spec}/`)) {
+      continue;
+    }
+    gaps.push({
+      class: f.code,
+      nodeId: f.nodeId ?? "(unknown)",
+      file: f.location.file,
+      line: f.location.line,
+      message: f.message
+    });
+  }
+  return gaps;
+}
+function summariseGaps(gaps) {
+  const out = {
+    UNCOVERED_FR: 0,
+    TASK_UNTESTED: 0,
+    UNTAGGED_SCENARIO: 0
+  };
+  for (const g of gaps) out[g.class]++;
+  return out;
 }
 
 // tools/spec-mcp-server/tools.ts
@@ -47882,6 +47921,74 @@ function buildToolRegistry(getGraph) {
       const id = node ? node.id : node_id;
       const references = collectGraphRefs(graph, id);
       return asJsonResult({ ok: true, node_id: id, references, count: references.length });
+    }
+  });
+  tools.push({
+    name: "get_spec_status",
+    description: "Full lifecycle status of ONE spec: SPEC_ONLY / TESTS_NOT_RUN / RED / PARTIAL / GREEN + the linked last test-run summary (passed/failed/pending/undefined counts, run timestamp, NDJSON source), node counts, FR-37b gap counts and an agent hint. The agent-facing READ of the same truth the authoritative verdict gates on (FR-38).",
+    inputShape: { spec: external_exports.string() },
+    handler: async ({ spec }) => {
+      const graph = getGraph();
+      const slug = String(spec).replace(/\\/g, "/").replace(/^\.?\/?\.specs\//, "").replace(/\/+$/, "");
+      const inSpec = (file2) => String(file2).replace(/\\/g, "/").includes(`.specs/${slug}/`);
+      const counts = { fr: 0, ac: 0, scenarios: 0, tasks: 0 };
+      const scens = [];
+      for (const n of graph.nodes.values()) {
+        if (!inSpec(n.file)) continue;
+        if (n.type === "FR") counts.fr++;
+        else if (n.type === "AC") counts.ac++;
+        else if (n.type === "Task") counts.tasks++;
+        else if (n.type === "Scenario") {
+          counts.scenarios++;
+          scens.push(n);
+        }
+      }
+      if (counts.fr + counts.ac + counts.scenarios + counts.tasks === 0) {
+        return asJsonResult({
+          ok: false,
+          error: "SPEC_NOT_FOUND",
+          spec: slug,
+          hint: `No nodes under .specs/${slug}/ \u2014 check list_specs for the loaded slugs.`
+        });
+      }
+      const summary = { passed: 0, failed: 0, pending: 0, undefined: 0, ambiguous: 0, skipped: 0, touched: 0 };
+      let lastAt = null;
+      for (const s of scens) {
+        if (!s.lastResult) continue;
+        summary.touched++;
+        const r = s.lastResult.toUpperCase();
+        if (r === "PASSED") summary.passed++;
+        else if (r === "FAILED") summary.failed++;
+        else if (r === "PENDING") summary.pending++;
+        else if (r === "UNDEFINED") summary.undefined++;
+        else if (r === "AMBIGUOUS") summary.ambiguous++;
+        else if (r === "SKIPPED") summary.skipped++;
+        if (s.lastRunAt && (!lastAt || s.lastRunAt > lastAt)) lastAt = s.lastRunAt;
+      }
+      const last_run = summary.touched > 0 ? { at: lastAt, source: ".dev-pomogator/.last-test-run.ndjson", summary } : null;
+      let lifecycle;
+      if (counts.scenarios === 0) lifecycle = "SPEC_ONLY";
+      else if (!last_run) lifecycle = "TESTS_NOT_RUN";
+      else if (summary.failed > 0 || summary.ambiguous > 0) lifecycle = "RED";
+      else if (summary.pending + summary.undefined + summary.skipped > 0) lifecycle = "PARTIAL";
+      else lifecycle = "GREEN";
+      const gaps = summariseGaps(gapsFromFindings(checkConformance(graph), { spec: slug }));
+      const hints = {
+        SPEC_ONLY: "Docs only \u2014 no scenarios written yet. Next: author the .feature (FR-38a).",
+        TESTS_NOT_RUN: `${counts.scenarios} scenario(s) written but never run/ingested. Next: run the suite so NDJSON lands.`,
+        RED: `${summary.failed + summary.ambiguous} failing of ${summary.touched} touched. Next: get_test_result per scenario.`,
+        PARTIAL: `${summary.pending + summary.undefined + summary.skipped} scenario(s) undefined/pending/skipped, 0 failed \u2014 written but not implemented; NOT green.`,
+        GREEN: `All ${summary.touched} touched scenario(s) passed at ${lastAt}.`
+      };
+      return asJsonResult({
+        ok: true,
+        spec: slug,
+        lifecycle,
+        counts,
+        last_run,
+        gaps,
+        hint: hints[lifecycle]
+      });
     }
   });
   return tools;
