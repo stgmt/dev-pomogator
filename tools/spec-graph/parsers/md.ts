@@ -42,6 +42,7 @@ import type {
   AcNode,
   Edge,
 } from '../types.ts';
+import { specOf, qualifySlice } from '../coverage.ts';
 
 // Module-level pre-compiled regexes (hot path — recompilation per call would
 // allocate ~775×4 regex instances per cold-start). See
@@ -338,6 +339,11 @@ export function parseMarkdown(mdSource: string, relativePath: string): ParserOut
       continue;
     }
   }
+
+  // FR-36a (P13-2): the parser itself emits spec-qualified composite keys —
+  // node ids, covers-edge endpoints and parentFr. Anchors stay BARE (FR-36b),
+  // hence not passed into qualifySlice. Slug-less files keep bare ids.
+  qualifySlice({ nodes, edges }, specOf(relativePath));
 
   return { nodes, edges, anchors };
 }

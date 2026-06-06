@@ -17,6 +17,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { ParserOutput, TaskNode } from '../types.ts';
+import { specOf, qualifySlice } from '../coverage.ts';
 
 const STATUS_MAP: Record<string, TaskNode['status']> = {
   TODO: 'todo',
@@ -96,5 +97,8 @@ export function parseTasks(content: string, file: string): TaskNode[] {
 export function parseTasksFile(abs: string, repoRoot: string): ParserOutput {
   const content = fs.readFileSync(abs, 'utf8');
   const file = path.relative(repoRoot, abs).replace(/\\/g, '/');
-  return { nodes: parseTasks(content, file), edges: [], anchors: [] };
+  // FR-36a (P13-2): self-qualify — Task ids + refs become `<slug>:<localId>`.
+  const slice = { nodes: parseTasks(content, file), edges: [] as ParserOutput['edges'] };
+  qualifySlice(slice, specOf(file));
+  return { nodes: slice.nodes, edges: [], anchors: [] };
 }

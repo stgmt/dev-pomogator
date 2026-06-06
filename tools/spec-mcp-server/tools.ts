@@ -440,29 +440,12 @@ export function buildToolRegistry(
           if (from?.type === 'FR') related.push({ id: from.id, type: from.type, relation: 'covered-by' });
         }
       }
-      // The FR→Scenario `tested-by` edges are not built (the graph has 0 edges into any
-      // Scenario node — dogfood-dataset finding), so scenarios link to an FR only by the
-      // FR-N ↔ @featureN convention, SAME-SPEC scoped (a v4 FR-2 must not pull a sibling
-      // spec's @feature2). Mirror computeCoverage's mapping so get_trace shows real coverage
-      // instead of an empty `scenarios: []` for every FR.
-      if (node.type === 'FR') {
-        // FR-36a: node ids are spec-qualified (`<slug>:FR-N`) — match the
-        // local FR number after the optional slug prefix.
-        const m = node.id.match(/(?:^|:)FR-(\d+)/);
-        const specOf = (f: string): string =>
-          String(f).replace(/\\/g, '/').split('.specs/')[1]?.split('/')[0] ?? '';
-        const nodeSpec = specOf(node.file);
-        if (m) {
-          const tag = `@feature${m[1]}`;
-          for (const n of graph.nodes.values()) {
-            if (n.type !== 'Scenario') continue;
-            const s = n as ScenarioNode;
-            if (s.tags?.includes(tag) && specOf(s.file) === nodeSpec && !scenarios.some((x) => x.id === s.id)) {
-              scenarios.push(s);
-            }
-          }
-        }
-      }
+      // FR-36c (P13-2): the FR→Scenario `tested-by` edges ARE built now — the
+      // gherkin parser emits a real same-spec edge for both `@FR-N` and
+      // `@featureN` tags, so the edge loop above already collected the
+      // scenarios. The old tag-scan workaround (iterate every Scenario node,
+      // match `@feature${N}` + same-spec file prefix) is removed: get_trace
+      // answers via REAL edges (SPECGEN004_92).
       for (const n of graph.nodes.values()) {
         if (n.type !== 'Task') continue;
         const t = n as TaskNode;

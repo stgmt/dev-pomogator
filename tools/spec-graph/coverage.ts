@@ -65,6 +65,41 @@ export function specOf(file: string): string | undefined {
   return m ? m[1] : undefined;
 }
 
+/**
+ * FR-36a: qualify one parser slice with its owning spec slug — the node KEY
+ * becomes `<slug>:<localId>` and the node records `spec`; reference fields
+ * (edge endpoints, `TaskNode.refs`, `AcNode.parentFr`) are qualified too
+ * (file-local by construction). Anchors stay BARE + file-scoped (FR-36b) —
+ * callers never pass `slice.anchors` here. Slug-less slices (files outside
+ * `.specs/`) are returned untouched.
+ *
+ * Lives in coverage.ts next to `specOf` (no parser/builder imports → no
+ * cycles): the parsers self-qualify (P13-2), so the builder no longer
+ * rewrites slices.
+ */
+export function qualifySlice(
+  slice: {
+    nodes: Array<{ id: string; spec?: string; type: string } & Record<string, unknown>>;
+    edges: Array<{ from: string; to: string }>;
+  },
+  slug: string | undefined,
+): void {
+  if (!slug) return;
+  for (const node of slice.nodes) {
+    node.spec = slug;
+    node.id = `${slug}:${node.id}`;
+    if (node.type === 'Task' && Array.isArray(node.refs)) {
+      node.refs = (node.refs as string[]).map((r) => `${slug}:${r}`);
+    } else if (node.type === 'AC' && typeof node.parentFr === 'string' && node.parentFr) {
+      node.parentFr = `${slug}:${node.parentFr}`;
+    }
+  }
+  for (const e of slice.edges) {
+    e.from = `${slug}:${e.from}`;
+    e.to = `${slug}:${e.to}`;
+  }
+}
+
 export interface CoverageReport {
   /** Every scenario id grouped into exactly one bucket (conservation invariant). */
   buckets: Record<Bucket, string[]>;

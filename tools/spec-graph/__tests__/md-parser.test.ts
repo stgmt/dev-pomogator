@@ -22,7 +22,7 @@ describe('parseMarkdown — FR / NFR / AC extraction', () => {
     expect(out.nodes).toHaveLength(1);
     const fr = out.nodes[0] as FrNode;
     expect(fr.type).toBe('FR');
-    expect(fr.id).toBe('FR-1');
+    expect(fr.id).toBe('auth:FR-1');
     expect(fr.title).toBe('Login flow');
     expect(fr.line).toBe(3); // 1-indexed: line 1 is `# Functional Requirements`
     expect(fr.anchors).toEqual(['FR-1', 'fr-1-login-flow']);
@@ -40,7 +40,7 @@ describe('parseMarkdown — FR / NFR / AC extraction', () => {
     expect(out.nodes).toHaveLength(1);
     const nfr = out.nodes[0] as NfrNode;
     expect(nfr.type).toBe('NFR');
-    expect(nfr.id).toBe('NFR-Performance-1');
+    expect(nfr.id).toBe('v4:NFR-Performance-1');
     expect(nfr.category).toBe('Performance');
     expect(nfr.title).toBe('SpecGraph cold start');
     expect(nfr.anchors).toContain('NFR-Performance-1');
@@ -53,7 +53,7 @@ describe('parseMarkdown — FR / NFR / AC extraction', () => {
 
     expect(out.nodes).toHaveLength(1);
     const nfr = out.nodes[0] as NfrNode;
-    expect(nfr.id).toBe('NFR-7');
+    expect(nfr.id).toBe('v4:NFR-7');
     expect(nfr.category).toBeUndefined();
     expect(nfr.anchors).toContain('NFR-7');
   });
@@ -65,10 +65,10 @@ describe('parseMarkdown — FR / NFR / AC extraction', () => {
     expect(out.nodes).toHaveLength(1);
     const ac = out.nodes[0] as AcNode;
     expect(ac.type).toBe('AC');
-    expect(ac.id).toBe('AC-3');
-    expect(ac.parentFr).toBe('FR-1');
+    expect(ac.id).toBe('auth:AC-3');
+    expect(ac.parentFr).toBe('auth:FR-1');
 
-    expect(out.edges).toEqual([{ from: 'FR-1', to: 'AC-3', type: 'covers' }]);
+    expect(out.edges).toEqual([{ from: 'auth:FR-1', to: 'auth:AC-3', type: 'covers' }]);
   });
 
   it('handles dotted AC ids (`AC-N.M`) for sub-criteria', () => {
@@ -77,8 +77,8 @@ describe('parseMarkdown — FR / NFR / AC extraction', () => {
 
     expect(out.nodes).toHaveLength(1);
     const ac = out.nodes[0] as AcNode;
-    expect(ac.id).toBe('AC-2.1');
-    expect(ac.parentFr).toBe('FR-5');
+    expect(ac.id).toBe('v4:AC-2.1');
+    expect(ac.parentFr).toBe('v4:FR-5');
   });
 
   it('parses multiple headings in one file and preserves source order + lines', () => {
@@ -148,7 +148,7 @@ describe('parseMarkdown — migrated short headings (FR-7c)', () => {
     const out = parseMarkdown(md, '.specs/v4/FR.md');
     expect(out.nodes).toHaveLength(1);
     const fr = out.nodes[0] as FrNode;
-    expect(fr.id).toBe('FR-7');
+    expect(fr.id).toBe('v4:FR-7');
     expect(fr.title).toBe('Phase 2 — Native LSP plugin');
     expect(fr.anchors).toEqual(['FR-7', 'fr-7']); // slug `fr-7` matches `[…](#fr-7)`
   });
@@ -165,7 +165,7 @@ describe('parseMarkdown — migrated short headings (FR-7c)', () => {
     const md = '### NFR-Reliability-6\n\n**Marksman crash isolation**\n';
     const out = parseMarkdown(md, '.specs/v4/NFR.md');
     const nfr = out.nodes[0] as NfrNode;
-    expect(nfr.id).toBe('NFR-Reliability-6');
+    expect(nfr.id).toBe('v4:NFR-Reliability-6');
     expect(nfr.category).toBe('Reliability');
     expect(nfr.title).toBe('Marksman crash isolation');
     expect(nfr.anchors).toEqual(['NFR-Reliability-6', 'nfr-reliability-6']);
@@ -175,9 +175,9 @@ describe('parseMarkdown — migrated short headings (FR-7c)', () => {
     const md = '## AC-1.1\n**Требование:** [FR-1](FR.md#fr-1)\n\nWHEN x THEN y SHALL z\n';
     const out = parseMarkdown(md, '.specs/v4/ACCEPTANCE_CRITERIA.md');
     const ac = out.nodes[0] as AcNode;
-    expect(ac.id).toBe('AC-1.1');
-    expect(ac.parentFr).toBe('FR-1');
-    expect(out.edges).toEqual([{ from: 'FR-1', to: 'AC-1.1', type: 'covers' }]);
+    expect(ac.id).toBe('v4:AC-1.1');
+    expect(ac.parentFr).toBe('v4:FR-1');
+    expect(out.edges).toEqual([{ from: 'v4:FR-1', to: 'v4:AC-1.1', type: 'covers' }]);
     // adds Marksman's dot-removed slug `ac-11` so `[…](#ac-11)` resolves
     expect(out.anchors.some((a) => a.alias === 'ac-11' && a.canonicalId === 'AC-1.1')).toBe(true);
   });
@@ -187,6 +187,6 @@ describe('parseMarkdown — migrated short headings (FR-7c)', () => {
     const out = parseMarkdown(md, '.specs/auth/FR.md');
     expect((out.nodes[0] as FrNode).title).toBe('Login flow');
     expect((out.nodes[0] as FrNode).anchors).toEqual(['FR-1', 'fr-1-login-flow']);
-    expect((out.nodes[1] as AcNode).parentFr).toBe('FR-1');
+    expect((out.nodes[1] as AcNode).parentFr).toBe('auth:FR-1');
   });
 });

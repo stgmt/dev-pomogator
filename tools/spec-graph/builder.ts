@@ -42,50 +42,11 @@ import { parseFileChangesFile, type FileChangeRow } from './parsers/file-changes
 import { parseDesignFile, type DesignFileRef } from './parsers/design.ts';
 import { specOf } from './coverage.ts';
 
-/**
- * FR-36a: qualify one parser slice with its owning spec slug.
- *
- * The node KEY becomes `<slug>:<localId>` and the node records `spec` —
- * bare ids collide across 47 specs (46 specs define `FR-2`; only 47 FR
- * nodes survived of ~470). Reference fields are qualified too: edge
- * endpoints (file-local by construction — `covers` joins FR↔AC of the
- * same spec, `tested-by` follows the same-spec `@FR-N` convention),
- * `TaskNode.refs`, and `AcNode.parentFr`.
- *
- * Anchors stay BARE + file-scoped (FR-36b) — markdown links resolve
- * within a file; Marksman / anchor-fix must be unaffected. Do not touch
- * `slice.anchors`.
- *
- * Files outside `.specs/<slug>/` (slug = undefined, e.g. tests/features)
- * keep bare ids — scenario codes are globally unique by convention there.
- *
- * Exported for `incremental.ts`: the watcher patch path must apply the
- * SAME qualification or live patches would re-insert colliding bare ids.
- */
-export function qualifySlice(
-  slice: { nodes: Node[]; edges: Edge[] },
-  slug: string | undefined,
-): void {
-  if (!slug) return;
-  for (const node of slice.nodes) {
-    node.spec = slug;
-    node.id = `${slug}:${node.id}`;
-    if (node.type === 'Task') {
-      node.refs = node.refs.map((r) => `${slug}:${r}`);
-    } else if (node.type === 'AC' && node.parentFr) {
-      node.parentFr = `${slug}:${node.parentFr}`;
-    }
-  }
-  for (const e of slice.edges) {
-    e.from = `${slug}:${e.from}`;
-    e.to = `${slug}:${e.to}`;
-  }
-}
-
-/** Repo-relative POSIX path for an absolute file under repoRoot. */
-function relPosix(repoRoot: string, abs: string): string {
-  return path.relative(repoRoot, abs).split(path.sep).join('/');
-}
+// FR-36a (P13-2): node/edge qualification lives in the PARSERS now — each
+// slice arrives already composite-keyed (`coverage.ts::qualifySlice`). The
+// builder only qualifies what it derives itself (implements edges from
+// FILE_CHANGES/DESIGN rows) and resolves unambiguous bare edge endpoints
+// from slug-less feature files (step 2c below).
 
 export interface BuildOptions {
   /** Repository root (everything resolves relative to this). */
@@ -173,7 +134,6 @@ export function buildGraph(opts: BuildOptions): SpecGraph {
     } catch {
       continue;
     }
-    qualifySlice(slice, specOf(relPosix(repoRoot, abs)));
     for (const node of slice.nodes) {
       if (!nodes.has(node.id)) nodes.set(node.id, node);
     }
@@ -192,7 +152,6 @@ export function buildGraph(opts: BuildOptions): SpecGraph {
     } catch {
       continue;
     }
-    qualifySlice({ nodes: taskSlice.nodes, edges: [] }, specOf(relPosix(repoRoot, abs)));
     for (const node of taskSlice.nodes) {
       if (!nodes.has(node.id)) nodes.set(node.id, node);
     }
@@ -207,7 +166,6 @@ export function buildGraph(opts: BuildOptions): SpecGraph {
     } catch {
       continue;
     }
-    qualifySlice(slice, specOf(relPosix(repoRoot, abs)));
     for (const node of slice.nodes) {
       if (!nodes.has(node.id)) nodes.set(node.id, node);
     }

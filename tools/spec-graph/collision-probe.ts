@@ -1,18 +1,16 @@
 /**
- * FR-36 / SPECGEN004_95 — raw PRE-MAP node dump: parse every slice, qualify,
- * and count composite-id collisions BEFORE the builder's map dedup hides them.
+ * FR-36 / SPECGEN004_95 — raw PRE-MAP node dump: parse every slice and count
+ * composite-id collisions BEFORE the builder's map dedup hides them. The
+ * parsers self-qualify since P13-2 — no extra rewrite step here.
  * Run: node --import tsx tools/spec-graph/collision-probe.ts
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { qualifySlice } from './builder.ts';
 import { parseMarkdownFile } from './parsers/md.ts';
 import { parseGherkinFile } from './parsers/gherkin.ts';
 import { parseTasksFile } from './parsers/tasks.ts';
-import { specOf } from './coverage.ts';
 
 const root = process.cwd();
-const rel = (a: string): string => path.relative(root, a).split(path.sep).join('/');
 
 function walk(dir: string, sufs: string[]): string[] {
   if (!fs.existsSync(dir)) return [];
@@ -51,13 +49,9 @@ const collide = (slice: { nodes: Array<{ id: string; file: string }> }): void =>
 
 for (const a of walk(path.join(root, '.specs'), ['.md'])) {
   try {
-    const s = parseMarkdownFile(a, root);
-    qualifySlice(s, specOf(rel(a)));
-    collide(s);
+    collide(parseMarkdownFile(a, root));
     if (path.basename(a) === 'TASKS.md') {
-      const t = parseTasksFile(a, root);
-      qualifySlice({ nodes: t.nodes, edges: [] }, specOf(rel(a)));
-      collide(t);
+      collide(parseTasksFile(a, root));
     }
   } catch {
     /* per-file fail-soft, same as builder */
@@ -68,9 +62,7 @@ for (const a of [
   ...walk(path.join(root, 'tests/features'), ['.feature']),
 ]) {
   try {
-    const s = parseGherkinFile(a, root);
-    qualifySlice(s, specOf(rel(a)));
-    collide(s);
+    collide(parseGherkinFile(a, root));
   } catch {
     /* fail-soft */
   }
