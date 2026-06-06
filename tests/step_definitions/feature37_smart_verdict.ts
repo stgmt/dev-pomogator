@@ -15,6 +15,7 @@
  */
 import { Given, When, Then } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { V4World } from '../hooks/before-after.ts';
@@ -27,6 +28,10 @@ interface F37World extends V4World {
   verdictSpecPath?: string;
   verdictCwd?: string;
   verdictResult?: SpecVerdictResult;
+  /** FR-8 semantic controls for the shared When (SPECGEN004_99/_100). */
+  verdictSemantic?: boolean;
+  verdictJudgeSpawn?: (prompt: string) => Promise<string>;
+  savedClaudeBin?: string | undefined;
 }
 
 // ── SPECGEN004_97 — FR-37e: a stale FILE_CHANGES path fails the verdict ──
@@ -54,9 +59,24 @@ Given('a FILE_CHANGES path that does not exist on disk', function (this: F37Worl
   this.verdictCwd = this.tempDir;
 });
 
-When('the authoritative verdict runs', function (this: F37World) {
+When('the authoritative verdict runs', async function (this: F37World) {
   assert.ok(this.verdictSpecPath, 'no spec prepared for the verdict (Given step missing?)');
-  this.verdictResult = runSpecVerdict(this.verdictSpecPath, { cwd: this.verdictCwd });
+  try {
+    this.verdictResult = await runSpecVerdict(this.verdictSpecPath, {
+      cwd: this.verdictCwd,
+      // Hermetic default: scenarios that don't exercise FR-8 skip the judge
+      // explicitly (fail-loud SEMANTIC_SKIPPED) — _99/_100 override.
+      semantic: this.verdictSemantic ?? false,
+      judgeSpawn: this.verdictJudgeSpawn,
+    });
+  } finally {
+    if (this.savedClaudeBin !== undefined) {
+      process.env.CLAUDE_BIN = this.savedClaudeBin;
+      this.savedClaudeBin = undefined;
+    } else if (Object.prototype.hasOwnProperty.call(this, 'savedClaudeBin')) {
+      delete process.env.CLAUDE_BIN;
+    }
+  }
 });
 
 Then('it fails with a hard error naming the stale path', function (this: F37World) {
@@ -110,6 +130,114 @@ Then('it fails with a per-item gap list', function (this: F37World) {
     r.gapList.some((line) => line.includes('UNCOVERED_FR') && line.includes('FR.md')),
     'the per-item gap list must carry the class + location',
   );
+});
+
+// ── SPECGEN004_96 — FR-37a: a bare structural pass is not reportable as clean ──
+
+Given(
+  'validate-spec returns zero structural errors but the smart analysis has open findings',
+  function (this: F37World) {
+    // Real scaffold → structurally VALID (0 errors); then plant a smart-only
+    // finding: an FR with no AC and no scenario (UNCOVERED_FR).
+    const repoRoot = path.resolve(import.meta.dirname ?? __dirname, '..', '..');
+    execFileSync(
+      process.execPath,
+      [path.join(repoRoot, 'tools/specs-generator/specs-generator-core.mjs'), 'scaffold-spec', '-Name', 'health-demo'],
+      { env: { ...process.env, SPECS_GENERATOR_ROOT: this.tempDir }, stdio: 'ignore', timeout: 60_000 },
+    );
+    fs.appendFileSync(
+      path.join(this.tempDir, '.specs', 'health-demo', 'FR.md'),
+      '\n## FR-77: Smart-only finding bait\n\nNo AC, no scenario — invisible to the structural validator.\n',
+    );
+    this.verdictSpecPath = path.join('.specs', 'health-demo');
+    this.verdictCwd = this.tempDir;
+  },
+);
+
+When('spec health is reported', async function (this: F37World) {
+  this.verdictResult = await runSpecVerdict(this.verdictSpecPath!, {
+    cwd: this.verdictCwd,
+    semantic: false,
+  });
+});
+
+Then('the verdict is the smart analysis over the one graph', function (this: F37World) {
+  const r = this.verdictResult!;
+  assert.equal(r.prefilter.structuralErrors, 0, 'fixture must be structurally CLEAN');
+  assert.equal(r.verdict, 'RED', 'the SMART analysis must decide — open findings ⇒ RED despite 0 structural errors');
+  assert.ok(
+    r.traceabilityGate.gaps.some((g) => g.nodeId.includes('FR-77')),
+    'the smart gap (UNCOVERED_FR FR-77) must be what made it RED',
+  );
+});
+
+Then(
+  'a bare validate-spec zero-errors is not reportable as valid or clean or done',
+  function (this: F37World) {
+    const r = this.verdictResult!;
+    assert.match(
+      r.prefilter.note,
+      /NOT reportable as "valid\/clean\/done"/,
+      'the pre-filter must carry the FR-37a non-reportability note',
+    );
+    assert.equal(r.verdict, 'RED');
+  },
+);
+
+// ── SPECGEN004_99 / _100 — FR-37c: semantic ON when binary present, fail-loud otherwise ──
+
+Given('a claude binary is present', function (this: F37World) {
+  // Injected judge subprocess = "binary present" path, hermetic for CI.
+  const specDir = path.join(this.tempDir, '.specs', 'sem-demo');
+  fs.mkdirSync(specDir, { recursive: true });
+  fs.writeFileSync(path.join(specDir, 'FR.md'), '## FR-1: Semantic pair\n\nBody.\n');
+  fs.writeFileSync(
+    path.join(specDir, 'sem.feature'),
+    '@FR-1\nFeature: Sem\n  Scenario: pair one\n    Given x\n',
+  );
+  this.verdictSpecPath = path.join('.specs', 'sem-demo');
+  this.verdictCwd = this.tempDir;
+  this.verdictSemantic = true;
+  this.verdictJudgeSpawn = async () => JSON.stringify({ result: 'NO_DRIFT_DETECTED' });
+});
+
+Then('the FR-8 semantic drift check runs as part of it', function (this: F37World) {
+  const s = this.verdictResult!.semantic;
+  assert.equal(s.ran, true, 'semantic must RUN in the verdict path when the binary is present');
+  assert.ok(s.pairsChecked >= 1, `at least one FR↔Scenario pair must be judged, got ${s.pairsChecked}`);
+});
+
+Given('no claude binary is available', function (this: F37World) {
+  const specDir = path.join(this.tempDir, '.specs', 'nosem-demo');
+  fs.mkdirSync(specDir, { recursive: true });
+  fs.writeFileSync(path.join(specDir, 'FR.md'), '## FR-1: Unchecked pair\n\nBody.\n');
+  fs.writeFileSync(
+    path.join(specDir, 'nosem.feature'),
+    '@FR-1\nFeature: NoSem\n  Scenario: pair one\n    Given x\n',
+  );
+  this.verdictSpecPath = path.join('.specs', 'nosem-demo');
+  this.verdictCwd = this.tempDir;
+  this.verdictSemantic = true; // semantic WANTED — but the binary probe must fail:
+  this.savedClaudeBin = process.env.CLAUDE_BIN;
+  process.env.CLAUDE_BIN = 'claude-definitely-not-installed-xyz';
+});
+
+Then('it carries a SEMANTIC_SKIPPED note', function (this: F37World) {
+  const r = this.verdictResult!;
+  assert.equal(r.semantic.ran, false);
+  assert.ok(
+    r.notes.some((n) => n.includes('SEMANTIC_SKIPPED')),
+    `notes must carry SEMANTIC_SKIPPED, got: ${r.notes.join(' | ')}`,
+  );
+});
+
+Then('it never reports no drift detected for unchecked content', function (this: F37World) {
+  const s = this.verdictResult!.semantic;
+  // Nothing was checked ⇒ no per-pair claims may exist; the note says
+  // UNCHECKED, never "no drift".
+  assert.equal(s.pairsChecked, 0, 'unchecked content must report ZERO pairs checked');
+  assert.equal(s.drifts.length, 0);
+  assert.match(s.note ?? '', /NOT "no drift"/);
 });
 
 Then(

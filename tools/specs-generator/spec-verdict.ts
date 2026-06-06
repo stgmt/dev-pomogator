@@ -23,16 +23,20 @@
  * @see audit-reports/v4-smart-verdict-and-organism-traceability.md
  */
 
-import { execFileSync } from 'child_process';
+import { execFileSync, spawnSync } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { buildGraphFromCwd } from '../spec-graph/builder.ts';
+import { checkConformance } from '../spec-graph/conformance.ts';
+import { computeCoverage, specOf, type ScenarioLike, type TaskLike } from '../spec-graph/coverage.ts';
 import {
-  checkTraceabilityCompleteness,
+  gapsFromFindings,
   summariseGaps,
   type TraceabilityGap,
   type TraceabilityGapClass,
 } from '../spec-graph/traceability.ts';
+import { runJudge, type JudgeResult } from '../spec-llm-judge/index.ts';
+import type { FrNode, ScenarioNode, TaskNode } from '../spec-graph/types.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const corePath = path.join(__dirname, 'specs-generator-core.mjs');
@@ -71,14 +75,61 @@ export interface SpecVerdictResult {
     byClass: Record<TraceabilityGapClass, number>;
     gaps: TraceabilityGap[];
   };
+  /**
+   * P14-3: spec-scoped conformance summary over the one graph. Error-severity
+   * findings gate (RED); warnings are surfaced, not blocking (FR-37b
+   * enumerates the hard classes — they live in traceabilityGate).
+   */
+  conformance: {
+    errorCount: number;
+    warningCount: number;
+    byCode: Record<string, number>;
+  };
+  /**
+   * P14-3: FR-32 honesty rollup for this spec — scenario buckets + DONE tasks
+   * whose evidence does not verify them. Visible, not gate-blocking (the
+   * blocking subset is TASK_UNTESTED in the traceability gate).
+   */
+  coverage: {
+    buckets: Record<string, number>;
+    unverifiedDoneTasks: string[];
+  };
+  /**
+   * FR-37c (P14-3): FR-8 semantic drift in the verdict path. `ran` only when
+   * a claude binary is present; otherwise an explicit SEMANTIC_SKIPPED note —
+   * NEVER a silent "no drift" for unchecked content.
+   */
+  semantic: {
+    ran: boolean;
+    binaryPresent: boolean;
+    pairsChecked: number;
+    drifts: Array<{ frId: string; scenarioId: string; severity: string; explanation: string }>;
+    failures: number;
+    note?: string;
+  };
   /** Actionable per-item gap list (one line per blocking finding). */
   gapList: string[];
-  /** Explicit fail-loud notes for layers not yet composed (FR-37c). */
+  /** Explicit fail-loud notes (FR-37c discipline). */
   notes: string[];
 }
 
 interface RunCoreOptions {
   cwd?: string;
+  /**
+   * FR-8 semantic layer controls (P14-3). `judgeSpawn` injects the
+   * subprocess for tests; `semantic: false` forces an explicit skip;
+   * `maxPairs` bounds the first uncached run.
+   */
+  semantic?: boolean;
+  judgeSpawn?: (prompt: string) => Promise<string>;
+  maxPairs?: number;
+}
+
+/** Is a `claude` binary reachable (CLAUDE_BIN or PATH)? Probe, don't assume. */
+function claudeBinaryPresent(): boolean {
+  const bin = process.env.CLAUDE_BIN ?? 'claude';
+  const probe = spawnSync(bin, ['--version'], { stdio: 'ignore', timeout: 10_000, shell: process.platform === 'win32' });
+  return probe.status === 0;
 }
 
 /** Run a specs-generator-core.mjs command, tolerating non-zero exit (findings ≠ crash). */
@@ -127,7 +178,10 @@ function runCoreJson(command: string, specPath: string, opts: RunCoreOptions): a
  * @param specPath  e.g. ".specs/spec-generator-v4" (relative to opts.cwd)
  * @param opts.cwd  repo root the spec (and its FILE_CHANGES paths) resolve against
  */
-export function runSpecVerdict(specPath: string, opts: RunCoreOptions = {}): SpecVerdictResult {
+export async function runSpecVerdict(
+  specPath: string,
+  opts: RunCoreOptions = {},
+): Promise<SpecVerdictResult> {
   const validation = runCoreJson('validate-spec', specPath, opts);
   const audit = runCoreJson('audit-spec', specPath, opts);
 
@@ -140,15 +194,99 @@ export function runSpecVerdict(specPath: string, opts: RunCoreOptions = {}): Spe
   const byClass: Record<string, AuditFinding[]> = {};
   for (const f of errorFindings) (byClass[f.check] ??= []).push(f);
 
-  // FR-37b (P14-2): the cell→atom traceability gate over the ONE graph.
-  // Scope = this spec (the cell): slug is the dir path under `.specs/`.
+  // ── The ONE graph (FR-36) + ONE conformance pass — every smart layer below
+  // derives from these two (FR-37a composition, P14-3). ─────────────────────
   const cwd = opts.cwd ?? process.cwd();
   const slug = specPath
     .replace(/\\/g, '/')
     .replace(/^\.?\/?\.specs\//, '')
     .replace(/\/+$/, '');
   const graph = buildGraphFromCwd(cwd);
-  const gaps = checkTraceabilityCompleteness(graph, { spec: slug });
+  const allFindings = checkConformance(graph);
+  const inSpec = (file: string): boolean =>
+    String(file).replace(/\\/g, '/').includes(`.specs/${slug}/`);
+  const specFindings = allFindings.filter((f) => inSpec(f.location.file));
+
+  // FR-37b (P14-2): the cell→atom traceability HARD gate.
+  const gaps = gapsFromFindings(specFindings, {});
+
+  // P14-3: conformance summary — error-severity gates, warnings surface.
+  const confErrors = specFindings.filter((f) => f.severity === 'error');
+  const confByCode: Record<string, number> = {};
+  for (const f of specFindings) confByCode[f.code] = (confByCode[f.code] ?? 0) + 1;
+
+  // P14-3: FR-32 honesty rollup for this spec.
+  const taskLikes: TaskLike[] = [];
+  const scenLikes: ScenarioLike[] = [];
+  const doneTaskIds = new Set<string>();
+  for (const n of graph.nodes.values()) {
+    if (!inSpec(n.file)) continue;
+    if (n.type === 'Task') {
+      const t = n as TaskNode;
+      taskLikes.push({ id: t.id, doneWhen: t.doneWhen ?? '', refs: t.refs, spec: specOf(t.file) });
+      if (t.status === 'done') doneTaskIds.add(t.id);
+    } else if (n.type === 'Scenario') {
+      const s = n as ScenarioNode;
+      scenLikes.push({ id: s.id, tags: s.tags, result: s.lastResult, spec: specOf(s.file) });
+    }
+  }
+  const cov = computeCoverage(taskLikes, scenLikes);
+  const buckets: Record<string, number> = {};
+  for (const [b, ids] of Object.entries(cov.buckets)) buckets[b] = ids.length;
+  const unverifiedDoneTasks = [...doneTaskIds].filter(
+    (id) => cov.tasks[id]?.verified_status !== 'DONE',
+  );
+
+  // FR-37c (P14-3): FR-8 semantic drift IN the verdict path — ON when a
+  // claude binary is present; explicit skip otherwise. Fail-loud always.
+  const semanticWanted = opts.semantic !== false;
+  const binaryPresent = opts.judgeSpawn ? true : semanticWanted && claudeBinaryPresent();
+  const drifts: SpecVerdictResult['semantic']['drifts'] = [];
+  let pairsChecked = 0;
+  let judgeFailures = 0;
+  let semanticNote: string | undefined;
+  if (semanticWanted && binaryPresent) {
+    // Pairs = this spec's FR ↔ tested-by Scenario edges (the REAL edges, FR-36c).
+    const pairs: Array<{ fr: FrNode; scen: ScenarioNode }> = [];
+    for (const e of graph.edges) {
+      if (e.type !== 'tested-by') continue;
+      const fr = graph.nodes.get(e.from);
+      const scen = graph.nodes.get(e.to);
+      if (!fr || fr.type !== 'FR' || !scen || scen.type !== 'Scenario') continue;
+      if (!inSpec(fr.file)) continue;
+      pairs.push({ fr: fr as FrNode, scen: scen as ScenarioNode });
+    }
+    const limit = opts.maxPairs ?? Number.POSITIVE_INFINITY;
+    for (const { fr, scen } of pairs.slice(0, limit)) {
+      const res: JudgeResult = await runJudge({
+        repoRoot: cwd,
+        frId: fr.id,
+        frText: `${fr.title}\n${fr.body ?? ''}`,
+        scenarioId: scen.id,
+        scenarioText: scen.steps.map((s) => `${s.keyword} ${s.text}`).join('\n'),
+        spawn: opts.judgeSpawn,
+      });
+      pairsChecked++;
+      if (res.result === 'DRIFT') {
+        drifts.push({
+          frId: fr.id,
+          scenarioId: scen.id,
+          severity: res.severity ?? 'warning',
+          explanation: res.explanation ?? '',
+        });
+      } else if (res.result === 'SUBPROCESS_FAILED') {
+        judgeFailures++;
+      }
+    }
+    if (pairs.length > pairsChecked) {
+      semanticNote = `SEMANTIC_TRUNCATED — ${pairsChecked} of ${pairs.length} FR↔Scenario pairs checked (maxPairs); the rest are UNCHECKED, not "no drift" (FR-37c)`;
+    } else if (judgeFailures > 0) {
+      semanticNote = `SEMANTIC_DEGRADED — ${judgeFailures} judge subprocess failure(s); those pairs are UNCHECKED, not "no drift" (FR-37c)`;
+    }
+  } else {
+    semanticNote =
+      'SEMANTIC_SKIPPED — no claude binary available (or semantic disabled); unchecked content is NOT "no drift" (FR-37c)';
+  }
 
   const gapList: string[] = [
     ...(validation.errors ?? []).map(
@@ -156,10 +294,21 @@ export function runSpecVerdict(specPath: string, opts: RunCoreOptions = {}): Spe
     ),
     ...errorFindings.map((f) => `[${f.check}] ${f.message}`),
     ...gaps.map((g) => `[${g.class}] ${g.file}:${g.line} — ${g.message}`),
+    ...confErrors.map((f) => `[CONFORMANCE:${f.code}] ${f.location.file}:${f.location.line} — ${f.message}`),
+    ...drifts.map((d) => `[SEMANTIC_DRIFT:${d.severity}] ${d.frId} ↔ ${d.scenarioId} — ${d.explanation}`),
   ];
 
   const verdict: 'RED' | 'GREEN' =
-    structuralErrors > 0 || errorFindings.length > 0 || gaps.length > 0 ? 'RED' : 'GREEN';
+    structuralErrors > 0 ||
+    errorFindings.length > 0 ||
+    gaps.length > 0 ||
+    confErrors.length > 0 ||
+    drifts.length > 0
+      ? 'RED'
+      : 'GREEN';
+
+  const notes: string[] = [];
+  if (semanticNote) notes.push(semanticNote);
 
   return {
     specPath,
@@ -171,10 +320,22 @@ export function runSpecVerdict(specPath: string, opts: RunCoreOptions = {}): Spe
     },
     auditGate: { errorCount: errorFindings.length, byClass },
     traceabilityGate: { gapCount: gaps.length, byClass: summariseGaps(gaps), gaps },
+    conformance: {
+      errorCount: confErrors.length,
+      warningCount: specFindings.filter((f) => f.severity === 'warning').length,
+      byCode: confByCode,
+    },
+    coverage: { buckets, unverifiedDoneTasks },
+    semantic: {
+      ran: semanticWanted && binaryPresent,
+      binaryPresent,
+      pairsChecked,
+      drifts,
+      failures: judgeFailures,
+      note: semanticNote,
+    },
     gapList,
-    notes: [
-      'SEMANTIC_SKIPPED — FR-8 semantic drift check not yet composed into the verdict (P14-3); unchecked content is NOT "no drift" (FR-37c)',
-    ],
+    notes,
   };
 }
 
@@ -194,6 +355,26 @@ export function renderVerdict(r: SpecVerdictResult): string {
       lines.push(`  [${cls}] ×${findings.length}`);
       for (const f of findings) lines.push(`    - ${f.message}`);
     }
+  }
+  lines.push(
+    `conformance (one graph, spec-scoped): ${r.conformance.errorCount} error / ${r.conformance.warningCount} warning — ` +
+      Object.entries(r.conformance.byCode)
+        .map(([c, n]) => `${c}:${n}`)
+        .join(', '),
+  );
+  lines.push(
+    `coverage (FR-32 honesty): buckets ${JSON.stringify(r.coverage.buckets)}` +
+      (r.coverage.unverifiedDoneTasks.length
+        ? ` — DONE-but-unverified: ${r.coverage.unverifiedDoneTasks.join(', ')}`
+        : ''),
+  );
+  if (r.semantic.ran) {
+    lines.push(
+      `semantic (FR-8): ${r.semantic.pairsChecked} pair(s) checked — ${r.semantic.drifts.length} drift(s), ${r.semantic.failures} failure(s)` +
+        (r.semantic.note ? ` — ${r.semantic.note}` : ''),
+    );
+  } else {
+    lines.push(`semantic (FR-8): ${r.semantic.note}`);
   }
   if (r.traceabilityGate.gapCount === 0) {
     lines.push('traceability gate (FR-37b, cell→atom): 0 gaps — gate PASSES');
@@ -217,27 +398,36 @@ export function renderVerdict(r: SpecVerdictResult): string {
 }
 
 // ── CLI ────────────────────────────────────────────────────────────────────
-function parseArgs(argv: string[]): { specPath: string; json: boolean } {
+function parseArgs(argv: string[]): {
+  specPath: string;
+  json: boolean;
+  semantic: boolean;
+  maxPairs?: number;
+} {
   let specPath = '';
   let json = false;
+  let semantic = true;
+  let maxPairs: number | undefined;
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '-Path' || a === '--path') specPath = argv[++i] ?? '';
     else if (a === '--json') json = true;
+    else if (a === '--no-semantic') semantic = false;
+    else if (a === '--max-pairs') maxPairs = Number(argv[++i]);
     else if (!a.startsWith('-') && !specPath) specPath = a;
   }
   if (!specPath) {
-    console.error('Usage: spec-verdict.ts -Path .specs/<slug> [--json]');
+    console.error('Usage: spec-verdict.ts -Path .specs/<slug> [--json] [--no-semantic] [--max-pairs N]');
     process.exit(2);
   }
-  return { specPath, json };
+  return { specPath, json, semantic, maxPairs };
 }
 
 const isDirectRun =
   process.argv[1]?.endsWith('spec-verdict.ts') || process.argv[1]?.endsWith('spec-verdict.js');
 if (isDirectRun) {
-  const { specPath, json } = parseArgs(process.argv.slice(2));
-  const result = runSpecVerdict(specPath);
+  const { specPath, json, semantic, maxPairs } = parseArgs(process.argv.slice(2));
+  const result = await runSpecVerdict(specPath, { semantic, maxPairs });
   console.log(json ? JSON.stringify(result, null, 2) : renderVerdict(result));
   process.exit(result.verdict === 'RED' ? 1 : 0);
 }

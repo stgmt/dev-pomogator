@@ -20,7 +20,7 @@
  * @see tools/specs-generator/spec-verdict.ts (composition point)
  */
 
-import { checkConformance } from './conformance.ts';
+import { checkConformance, type Finding } from './conformance.ts';
 import type { SpecGraph } from './types.ts';
 
 export type TraceabilityGapClass = 'UNCOVERED_FR' | 'TASK_UNTESTED' | 'UNTAGGED_SCENARIO';
@@ -42,14 +42,14 @@ const GAP_CLASSES: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Per-item traceability gap list. `opts.spec` scopes to one spec slug (the
- * cell); absent → the whole corpus (the organism).
+ * Derive the gap list from an ALREADY-COMPUTED findings array — callers that
+ * also need the full conformance picture (the authoritative verdict, P14-3)
+ * run `checkConformance` once and reuse it for both views.
  */
-export function checkTraceabilityCompleteness(
-  graph: SpecGraph,
+export function gapsFromFindings(
+  findings: Finding[],
   opts: { spec?: string } = {},
 ): TraceabilityGap[] {
-  const findings = checkConformance(graph);
   const gaps: TraceabilityGap[] = [];
   for (const f of findings) {
     if (!GAP_CLASSES.has(f.code)) continue;
@@ -65,6 +65,17 @@ export function checkTraceabilityCompleteness(
     });
   }
   return gaps;
+}
+
+/**
+ * Per-item traceability gap list. `opts.spec` scopes to one spec slug (the
+ * cell); absent → the whole corpus (the organism).
+ */
+export function checkTraceabilityCompleteness(
+  graph: SpecGraph,
+  opts: { spec?: string } = {},
+): TraceabilityGap[] {
+  return gapsFromFindings(checkConformance(graph), opts);
 }
 
 /** Per-class counts — the measured-debt summary FR-37b asks to track. */
