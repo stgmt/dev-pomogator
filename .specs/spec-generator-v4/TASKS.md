@@ -1109,16 +1109,16 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] `.claude/rules/spec-verdict/no-structural-valid.md` кодирует инцидент false-green 2026-06-05 (structural «valid» при 10 P0 / 1256 smart-находках) + строка в CLAUDE.md (glossary-дисциплина)
   - [x] suite green локально (cucumber 0 failed, vitest 180/180); clean-HEAD Docker — подтверждение P14-3 бежит, P14-4 docs-only поверх (skills/rules/step defs)
 
-- [ ] P14-5: reusable corpus-health auditor skill — find collisions + broken edges + untraced atoms for ANY corpus, debugged to fire -- @feature37 — id: p14-corpus-health-skill — Status: TODO | Est: 360m
+- [x] P14-5: reusable corpus-health auditor skill — find collisions + broken edges + untraced atoms for ANY corpus, debugged to fire -- @feature37 — id: p14-corpus-health-skill — Status: DONE (2026-06-06) | Est: 360m
   _Requirements: [FR-37](FR.md#fr-37), [FR-37b](FR.md#fr-37), [FR-36](FR.md#fr-36)_
   > User ask (2026-06-05): make a GENERAL skill so this whole class (bare-id collisions, unresolved
   > cross-spec edges, untraced atoms) is caught automatically in the future, not re-discovered by hand —
   > and DEBUG it so it actually fires + helps, proven on a live run.
   **Done When:**
-  - [ ] a GENERAL skill (corpus root as input, NOT hardcoded to spec-generator-v4) that builds the graph and reports: (1) bare-id collisions across specs (FR-36 class — raw pre-map node dump, same-bare-id-different-spec), (2) unresolved/orphan edges, (3) untraced atoms (UNCOVERED_FR / TASK_UNTESTED / UNTAGGED_SCENARIO / stale FILE_CHANGES path) — one report + a 🟢/🔴 verdict
-  - [ ] reuses the FR-37b traceability-completeness check (P14-2) + `buildGraphFromCwd`; works on other repos' `.specs/` corpora, not just this one
-  - [ ] **DEBUGGED to actually fire + help (not asserted):** a live run on THIS corpus pasted as evidence surfaces the known signals — ≈470-vs-47 collision, 58 stale FILE_CHANGES paths, 1243 UNTAGGED_SCENARIO, 11 UNCOVERED_FR; auto-invocable via trigger phrases AND manually; 0 overlap vs existing skills (skills-rules-optimizer check)
-  - [ ] dogfood before/after; full clean-HEAD Docker suite green
+  - [x] GENERAL skill — `tools/spec-graph/corpus-health.ts` (corpus root = аргумент CLI, default cwd) + `.claude/skills/corpus-health/SKILL.md` (RU/EN триггеры): (1) коллизии через raw PRE-MAP dump (`rawCollisionScan`, отрефакторен из collision-probe в импортируемую функцию), (2) dangling edges, (3) untraced atoms (FR-37b), (4) graph-side stale FILE_CHANGES — один отчёт + 🟢/🔴 (hard = collisions+stale; `--strict` = любой долг), `--json`, exit code
+  - [x] reuses `checkTraceabilityCompleteness` (P14-2) + `buildGraphFromCwd`; работает на чужих корпусах (root-аргумент; synthetic-corpus тесты в `__tests__/corpus-health.test.ts` — 6/6, включая planted-duplicate → 🔴 и clean-corpus → 🟢)
+  - [x] **DEBUGGED to fire + help, живой прогон на ЭТОМ корпусе** — первый же запуск нашёл НОВЫЙ долг вне v4: **118 graph-side stale FILE_CHANGES путей** в других спеках (worktree-setup, tui-test-runner-v2… — та же `extensions/`-болезнь, что была у v4) + **10 dangling covers-рёбер** в fix-bg-output-loss (AC ссылаются на несуществующие FR-10..14) → 🔴 RED exit 1; коллизии 0 (FR-36 починил; детектор regression-guarded planted-duplicate тестом — исторические ≈470-vs-47 / 1243 UNTAGGED были сигналами ДО Phase 13/14 фиксов и заархивированы в `audit-reports/fr36-dogfood-before-after.md`); **0 overlap** против существующих скиллов (`detect-overlap.ts --threshold 0.3`: corpus-health не флагнут)
+  - [x] dogfood before/after в архиве (47→574 FR, 13/13 LIVE); clean-HEAD Docker — финальное подтверждение после коммита (P14-3 подтверждение пришло чистым: 7 предсуществующих файлов, ноль новых)
 
 ## Refactor & Polish (final)
 

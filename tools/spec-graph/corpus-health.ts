@@ -1,0 +1,167 @@
+/**
+ * corpus-health — the GENERAL spec-corpus auditor (FR-37b + FR-36, P14-5).
+ *
+ * One report + a 🟢/🔴 verdict over ANY `.specs/` corpus (corpus root as
+ * input — NOT hardcoded to this repo). Surfaces the whole disease class the
+ * FR-36 dogfood discovered by hand:
+ *   1. bare-id COLLISIONS across specs (raw PRE-MAP node dump — the builder's
+ *      map dedup silently drops last-writer losers; `rawCollisionScan`);
+ *   2. UNRESOLVED / dangling edges (an endpoint no node carries — a bare
+ *      cross-root tag, a typo'd @featureN, a deleted target);
+ *   3. UNTRACED ATOMS — the FR-37b invariants via the P14-2
+ *      traceability-completeness check (UNCOVERED_FR / TASK_UNTESTED /
+ *      UNTAGGED_SCENARIO);
+ *   4. graph-side STALE FILE_CHANGES paths (an `implements` edge with
+ *      action=edit whose File node points at a path missing on disk).
+ *
+ * Per-spec verdicts stay `spec-verdict.ts`'s job (audit + semantic layers);
+ * this is the ORGANISM view — cheap, graph-only, no subprocess spawns.
+ *
+ * Run:  node --import tsx tools/spec-graph/corpus-health.ts [corpusRoot] [--json]
+ * Exit: 0 ⇔ 🟢 (no collisions, no stale paths; untraced atoms + dangling
+ *       edges are REPORTED as debt but only gate when --strict).
+ *
+ * @see .specs/spec-generator-v4/TASKS.md P14-5
+ * @see .claude/skills/corpus-health/SKILL.md
+ */
+
+import fs from 'node:fs';
+import path from 'node:path';
+import { buildGraphFromCwd } from './builder.ts';
+import { rawCollisionScan, type CollisionScan } from './collision-probe.ts';
+import { checkTraceabilityCompleteness, summariseGaps } from './traceability.ts';
+import type { SpecGraph, FileNode } from './types.ts';
+
+export interface CorpusHealthReport {
+  corpusRoot: string;
+  nodes: number;
+  edges: number;
+  collisions: CollisionScan;
+  danglingEdges: {
+    count: number;
+    samples: Array<{ from: string; to: string; type: string; missing: 'from' | 'to' }>;
+  };
+  untracedAtoms: {
+    total: number;
+    byClass: Record<string, number>;
+    samples: Array<{ class: string; nodeId: string; file: string; line: number }>;
+  };
+  staleFileChanges: {
+    count: number;
+    samples: Array<{ fr: string; path: string }>;
+  };
+  /** 🟢 ⇔ no collisions AND no stale paths (hard); debt classes reported. */
+  verdict: 'GREEN' | 'RED';
+  strictVerdict: 'GREEN' | 'RED';
+}
+
+/** Pseudo-node id prefixes that are not graph nodes by design. */
+const SYNTHETIC_TARGET = /^RESULT-/;
+
+export function corpusHealth(corpusRoot: string): CorpusHealthReport {
+  const root = path.resolve(corpusRoot);
+  const graph: SpecGraph = buildGraphFromCwd(root);
+  const collisions = rawCollisionScan(root);
+
+  // 2) dangling edges — an endpoint that resolves to NO node.
+  const danglingSamples: CorpusHealthReport['danglingEdges']['samples'] = [];
+  let dangling = 0;
+  for (const e of graph.edges) {
+    const fromMissing = !graph.nodes.has(e.from);
+    const toMissing = !graph.nodes.has(e.to) && !SYNTHETIC_TARGET.test(e.to);
+    if (!fromMissing && !toMissing) continue;
+    dangling++;
+    if (danglingSamples.length < 15) {
+      danglingSamples.push({
+        from: e.from,
+        to: e.to,
+        type: e.type,
+        missing: fromMissing ? 'from' : 'to',
+      });
+    }
+  }
+
+  // 3) untraced atoms — the FR-37b invariants, corpus-wide (P14-2 check).
+  const gaps = checkTraceabilityCompleteness(graph);
+  const byClass = summariseGaps(gaps);
+
+  // 4) graph-side stale FILE_CHANGES paths: implements + action=edit + path
+  //    missing on disk. (Glob rows are skipped by the parser — per-spec audit
+  //    via spec-verdict catches those; this is the cheap organism-wide pass.)
+  const staleSamples: CorpusHealthReport['staleFileChanges']['samples'] = [];
+  let stale = 0;
+  for (const e of graph.edges) {
+    if (e.type !== 'implements' || e.metadata?.action !== 'edit') continue;
+    const file = graph.nodes.get(e.to) as FileNode | undefined;
+    if (!file || file.type !== 'File') continue;
+    if (fs.existsSync(path.join(root, file.path))) continue;
+    stale++;
+    if (staleSamples.length < 15) staleSamples.push({ fr: e.from, path: file.path });
+  }
+
+  const hardRed = collisions.collisions.length > 0 || stale > 0;
+  const anyDebt = hardRed || dangling > 0 || gaps.length > 0;
+
+  return {
+    corpusRoot: root,
+    nodes: graph.nodes.size,
+    edges: graph.edges.length,
+    collisions,
+    danglingEdges: { count: dangling, samples: danglingSamples },
+    untracedAtoms: {
+      total: gaps.length,
+      byClass,
+      samples: gaps.slice(0, 15).map((g) => ({ class: g.class, nodeId: g.nodeId, file: g.file, line: g.line })),
+    },
+    staleFileChanges: { count: stale, samples: staleSamples },
+    verdict: hardRed ? 'RED' : 'GREEN',
+    strictVerdict: anyDebt ? 'RED' : 'GREEN',
+  };
+}
+
+export function renderCorpusHealth(r: CorpusHealthReport): string {
+  const icon = (v: 'GREEN' | 'RED'): string => (v === 'GREEN' ? '🟢' : '🔴');
+  const lines: string[] = [];
+  lines.push(`═══ corpus-health — ${r.corpusRoot} ═══`);
+  lines.push(`graph: ${r.nodes} nodes / ${r.edges} edges`);
+  lines.push(
+    `1) collisions (raw pre-map): ${r.collisions.collisions.length} ` +
+      `(${r.collisions.totalRawNodes} raw / ${r.collisions.uniqueIds} unique)`,
+  );
+  for (const c of r.collisions.collisions.slice(0, 10)) {
+    lines.push(`   COLLISION ${c.id}: ${c.firstFile} <-> ${c.secondFile}`);
+  }
+  lines.push(`2) dangling edges: ${r.danglingEdges.count}`);
+  for (const d of r.danglingEdges.samples.slice(0, 5)) {
+    lines.push(`   [${d.type}] ${d.from} → ${d.to} (missing: ${d.missing})`);
+  }
+  lines.push(
+    `3) untraced atoms (FR-37b): ${r.untracedAtoms.total} — ` +
+      Object.entries(r.untracedAtoms.byClass)
+        .map(([k, v]) => `${k}:${v}`)
+        .join(', '),
+  );
+  lines.push(`4) stale FILE_CHANGES paths (graph-side): ${r.staleFileChanges.count}`);
+  for (const s of r.staleFileChanges.samples.slice(0, 5)) {
+    lines.push(`   ${s.fr} → ${s.path} (missing on disk)`);
+  }
+  lines.push(
+    `VERDICT: ${icon(r.verdict)} ${r.verdict} (hard: collisions+stale) | strict: ${icon(r.strictVerdict)} ${r.strictVerdict} (any debt)`,
+  );
+  lines.push('Per-spec deep verdict (audit + semantic): tools/specs-generator/spec-verdict.ts');
+  return lines.join('\n');
+}
+
+// ── CLI ────────────────────────────────────────────────────────────────────
+const isDirectRun =
+  process.argv[1]?.endsWith('corpus-health.ts') || process.argv[1]?.endsWith('corpus-health.js');
+if (isDirectRun) {
+  const args = process.argv.slice(2);
+  const json = args.includes('--json');
+  const strict = args.includes('--strict');
+  const rootArg = args.find((a) => !a.startsWith('-')) ?? process.cwd();
+  const report = corpusHealth(rootArg);
+  console.log(json ? JSON.stringify(report, null, 2) : renderCorpusHealth(report));
+  const gate = strict ? report.strictVerdict : report.verdict;
+  process.exit(gate === 'GREEN' ? 0 : 1);
+}

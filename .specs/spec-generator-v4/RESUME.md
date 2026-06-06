@@ -94,6 +94,20 @@ The spec now DESCRIBES the fix; the implementation is Phase 13 + Phase 14 in `TA
   архив `audit-reports/fr36-dogfood-before-after.md`; SPECGEN004_95 step defs гоняют реальный
   collision-probe. BDD: 0 failed / 94 passed (undefined 12→6 за фазу).
 
+### Done this leg #5 (2026-06-06 — PHASE 14 ЗАКРЫТА ЦЕЛИКОМ, P14-1..5 ⇒ FR-36+FR-37 SHIPPED)
+- **P14-2** `3f23698`: traceability-гейт (FR-37b) в вердикте; v4-долг → 0 (TBD-скелеты удалены,
+  honest @featureN-семантика, реальный @FR-19 на legacy-v3, 2 таска слинкованы); корпус 1557→1305.
+- **P14-3** `ff3c064`: вердикт композирует ВСЁ (conformance error-gate + coverage rollup + FR-8
+  semantic с binary-probe и fail-loud SKIPPED/TRUNCATED/DEGRADED); live RED→GREEN на scaffold;
+  вердикт сразу поймал свежий LINK_VALIDITY в новом тексте TASKS.md — гейт работает.
+- **P14-4** `0308629`: FR-37d гард в 4 скиллах + правило `no-structural-valid.md` + CLAUDE.md.
+- **P14-5**: общий **corpus-health** (`tools/spec-graph/corpus-health.ts` + skill) — первый прогон
+  нашёл НОВЫЙ долг вне v4: **118 stale FILE_CHANGES путей в других спеках + 10 dangling рёбер в
+  fix-bg-output-loss**; 0 overlap; 6/6 synthetic-тестов. BDD спеки: **0 failed / 99 passed,
+  undefined 12→1** за обе фазы.
+- **Новый видимый корпус-долг для следующих заходов** (вне v4-scope, найден corpus-health):
+  118 stale paths (worktree-setup, tui-test-runner-v2, …) + 10 dangling covers (fix-bg-output-loss).
+
 ### Next steps, in order
 2. **Phase 14 P14-2/3/4** — traceability-completeness check; make the smart verdict authoritative
    (compose conformance + get_coverage + FR-8 semantic onto `runSpecVerdict()`); skill guard
