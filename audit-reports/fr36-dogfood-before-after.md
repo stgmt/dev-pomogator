@@ -45,6 +45,16 @@ node --import tsx tools/spec-mcp-server/dogfood-dataset.ts     # 13 тулзов
 после. 11 общих падений + 1 order-зависимый — предсуществующий долг `final-verification`
 (вне graph-территории), задокументирован в TASKS.md.
 
+## P14-2 update (2026-06-06): traceability-гейт включён, v4-долг = 0
+
+`tools/spec-graph/traceability.ts` + FR-37b гейт в `spec-verdict.ts` (ANY gap → RED). Внутри v4
+все классы добиты до нуля: UNCOVERED_FR 9→0 (удалены авто-TBD скелеты — resolver читал ПРИМЕРЫ из
+текста AC как требования), TASK_UNTESTED 2→0 (линковка на SPECGEN004_52/_13), UNTAGGED 129→0
+(101 — честная семантика `@featureN`-с-резолвящимся-FR = тег до требования, это реальное ребро
+после P13-2; 28 legacy-v3 — реальный feature-level `@FR-19` по собственному header-у файла).
+Корпус: 1557 → **1305** (UNTAGGED 1498→1258, UNCOVERED_FR 49→40, TASK_UNTESTED 2→0 corpus-wide).
+Live verdict v4: `traceability gate: 0 gaps — PASSES`.
+
 ## Хвосты, переданные Phase 14
 
 - `UNTAGGED_SCENARIO` (1500) всё ещё не считает `@featureN` спековым тегом — теперь это реальное

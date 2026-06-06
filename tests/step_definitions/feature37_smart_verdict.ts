@@ -19,6 +19,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { V4World } from '../hooks/before-after.ts';
 import { runSpecVerdict, type SpecVerdictResult } from '../../tools/specs-generator/spec-verdict.ts';
+import { buildGraphFromCwd } from '../../tools/spec-graph/builder.ts';
+import { checkTraceabilityCompleteness } from '../../tools/spec-graph/traceability.ts';
 
 interface F37World extends V4World {
   stalePath?: string;
@@ -76,3 +78,55 @@ Then('it fails with a hard error naming the stale path', function (this: F37Worl
     `gap list does not name the stale path: ${r.gapList.join(' | ')}`,
   );
 });
+
+// ── SPECGEN004_98 — FR-37b: an untraced atom fails the traceability gate ──
+
+Given(
+  'an UNCOVERED_FR or a TASK_UNTESTED or an UNTAGGED_SCENARIO exists',
+  function (this: F37World) {
+    // Real fixture: a spec whose FR has NO AC and NO tested-by scenario —
+    // the UNCOVERED_FR class of untraced atom (FR-37b).
+    const specDir = path.join(this.tempDir, '.specs', 'untraced-demo');
+    fs.mkdirSync(specDir, { recursive: true });
+    fs.writeFileSync(path.join(specDir, 'FR.md'), '## FR-1: Orphan requirement\n\nNo AC, no scenario.\n');
+    fs.writeFileSync(
+      path.join(specDir, 'FILE_CHANGES.md'),
+      '# File Changes\n\n| Path | Action | Reason |\n|------|--------|--------|\n| `src/x.ts` | create | planned |\n',
+    );
+    this.verdictSpecPath = path.join('.specs', 'untraced-demo');
+    this.verdictCwd = this.tempDir;
+  },
+);
+
+Then('it fails with a per-item gap list', function (this: F37World) {
+  const r = this.verdictResult;
+  assert.ok(r, 'verdict did not run');
+  assert.equal(r.verdict, 'RED', 'an untraced atom must make the verdict RED (FR-37b hard gate)');
+  assert.ok(r.traceabilityGate.gapCount >= 1, 'traceability gate must report at least one gap');
+  const gap = r.traceabilityGate.gaps.find((g) => g.class === 'UNCOVERED_FR');
+  assert.ok(gap, `expected an UNCOVERED_FR gap, got: ${JSON.stringify(r.traceabilityGate.byClass)}`);
+  assert.ok(gap!.nodeId.includes('untraced-demo:FR-1'), `the gap must name the atom: ${gap!.nodeId}`);
+  assert.ok(
+    r.gapList.some((line) => line.includes('UNCOVERED_FR') && line.includes('FR.md')),
+    'the per-item gap list must carry the class + location',
+  );
+});
+
+Then(
+  'within spec-generator-v4 these must be zero for a green verdict',
+  function (this: F37World) {
+    // LIVE corpus assertion — the P14-2 Done-When itself: the real
+    // spec-generator-v4 cell carries ZERO untraced atoms.
+    const repoRoot = path.resolve(import.meta.dirname ?? __dirname, '..', '..');
+    const graph = buildGraphFromCwd(repoRoot);
+    const gaps = checkTraceabilityCompleteness(graph, { spec: 'spec-generator-v4' });
+    assert.equal(
+      gaps.length,
+      0,
+      `spec-generator-v4 must have 0 traceability gaps, got ${gaps.length}: ${gaps
+        .slice(0, 5)
+        .map((g) => `${g.class}:${g.nodeId}`)
+        .join(', ')}`,
+    );
+  },
+);

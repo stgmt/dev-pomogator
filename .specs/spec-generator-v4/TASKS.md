@@ -305,7 +305,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
 
 - [x] Update extension.json — id: extension-json-update — Status: DONE (OBSOLETE target, intent met in canonical) | Est: 60m
   _depends: pretooluse-hard-hook, posttooluse-push-hook, bash-post-test-hook_
-  **Done When:** _(extension.json was REMOVED in the v2.0 canonical migration; the registrations moved to the canonical manifests, verified present)_
+  **Done When:** _(extension.json was REMOVED in the v2.0 canonical migration; the registrations moved to the canonical manifests, verified present; BDD-контракт каноничных манифестов — SPECGEN004_52 «canonical plugin ships a complete static hooks.json»)_
   - [x] MCP registered — `.mcp.json` has the `dev-pomogator-specs` server entry (verified)
   - [x] 3 hooks registered — `.claude-plugin/hooks.json` carries spec-conformance-guard + spec-conformance-push + bash-post-test (verified)
   - [x] meta-guard — `tools/specs-validator/extension-json-meta-guard.ts` present
@@ -717,7 +717,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
 
 - [x] T-Trans.10 verify FR-28 PostToolUse fixed-window throttle — id: verify-fr-28-fixed-window — Status: DONE | Est: 45m
   _Requirements: [FR-28](FR.md#fr-28)_
-  **Done When:** _(verified: `tools/spec-conformance-push/__tests__/spec-conformance-push.test.ts` "decidePush — pure throttle decision", 4 tests, full suite GREEN)_
+  **Done When:** _(verified: `tools/spec-conformance-push/__tests__/spec-conformance-push.test.ts` "decidePush — pure throttle decision", 4 tests, full suite GREEN; BDD-контракт fixed-window агрегации — SPECGEN004_13)_
   - [x] Single edit at t=0 → push at t=3.0s — "flushes after the 3-second window with the aggregated set"
   - [x] Burst: edits accumulate → single batched push — "accumulates within a 3-second window without emitting" + "dedupes a finding that arrives twice across the window"
   - [x] Window boundary / no sliding — "keeps the original window_start when accumulating across multiple bursts" (fixed window, not sliding)
@@ -1088,12 +1088,12 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] `audit-spec` v4 stale-path P0s → 0 (was 9 of 10); `audit-spec` wired into the authoritative verdict — `tools/specs-generator/spec-verdict.ts` (exported `runSpecVerdict()` + CLI): validate-spec = pre-filter (его pass не репортится как valid, FR-37a), любой audit ERROR = hard gate с per-class gap list; fail-loud на core-error (false-GREEN исключён); `SPECS_GENERATOR_ROOT` env в core для foreign-corpus прогонов (нужно P14-5)
   - [x] live run: authoritative verdict FAILS before the fix (names the stale paths), PASSES that gate after — **proven**: BEFORE (commit `7d1954c`, до правки FILE_CHANGES.md) = RED, 10 ERROR / 2 класса, все 9 `FILE_CHANGES_VERIFY`-путей названы поимённо; AFTER (этот коммит) = `FILE_CHANGES_VERIFY` 9→0, остался 1× `LINK_VALIDITY` (FR-1↔AC link — scope `final-verification`, не P14-1: "9 of 10") → verdict честно RED по этому классу. Verdict детерминирован — воспроизводится: `npx tsx tools/specs-generator/spec-verdict.ts -Path .specs/spec-generator-v4` (сейчас: RED, ровно 1× LINK_VALIDITY; на `7d1954c` checkout: RED, 10 ERROR). SPECGEN004_97 step defs (`tests/step_definitions/feature37_smart_verdict.ts`) гоняют реальный `runSpecVerdict()` на temp-фикстуре — 1 passed
 
-- [ ] P14-2: traceability-completeness check (the cell→atom invariants) -- @feature37 — id: p14-traceability-check — Status: TODO | Est: 300m
+- [x] P14-2: traceability-completeness check (the cell→atom invariants) -- @feature37 — id: p14-traceability-check — Status: DONE (2026-06-06) | Est: 300m
   _Requirements: [FR-37](FR.md#fr-37), [FR-37b](FR.md#fr-37)_
   **Done When:**
-  - [ ] new check emits a per-item gap list for {stale FILE_CHANGES path, UNCOVERED_FR, TASK_UNTESTED, UNTAGGED_SCENARIO} over the one graph (SPECGEN004_98)
-  - [ ] within spec-generator-v4: UNCOVERED_FR→0, TASK_UNTESTED→0, every Scenario tagged→FR; corpus-wide counts measured + archived (baseline: 1243 UNTAGGED, 11 UNCOVERED_FR, 2 TASK_UNTESTED)
-  - [ ] dogfood before/after shows the counts move to 0 within v4; suite green
+  - [x] new check emits a per-item gap list (SPECGEN004_98) — `tools/spec-graph/traceability.ts` (`checkTraceabilityCompleteness` + `summariseGaps`, reuse checkConformance — не дублирует логику) над одним графом; stale FILE_CHANGES paths вливаются в тот же gap list из audit-гейта вердикта (P14-1); вшит в `spec-verdict.ts` как жёсткий FR-37b гейт (ANY gap → RED), spec-scoped по slug
+  - [x] within spec-generator-v4: **UNCOVERED_FR 9→0** (удалены 9 авто-TBD-скелетов из FR.md — мусор resolver-а, читавшего ПРИМЕРЫ из текста AC как требования: FR-001/FR-999/FR-05…), **TASK_UNTESTED 2→0** (extension-json-update → SPECGEN004_52, verify-fr-28-fixed-window → SPECGEN004_13 в Done-When), **UNTAGGED 129→0** (101 — честная семантика: `@featureN` С РЕЗОЛВЯЩИМСЯ FR-N = тег до требования, после P13-2 это реальное ребро; нерезолвящийся @featureN остаётся untagged; 28 legacy-v3 — реальный feature-level `@FR-19`, сам header файла называет FR-19 наследующим требованием; 0 tag-orphans). Corpus: 1557→**1305** (UNTAGGED 1498→1258, UNCOVERED_FR 49→40, TASK_UNTESTED 2→0) — заархивировано в `audit-reports/fr36-dogfood-before-after.md`
+  - [x] live verdict на v4: `traceability gate: 0 gaps — PASSES` (RED остаётся только по 1× LINK_VALIDITY — scope `final-verification`); SPECGEN004_97+98 step defs зелёные (фикстурный UNCOVERED_FR → RED с поимённым gap; live-ассерт «v4 = 0 gaps» прямо в сценарии)
 
 - [ ] P14-3: smart verdict authoritative; structural demoted to pre-filter -- @feature37 — id: p14-authoritative-verdict — Status: TODO | Est: 300m
   _Requirements: [FR-37](FR.md#fr-37), [FR-37a](FR.md#fr-37), [FR-37c](FR.md#fr-37)_

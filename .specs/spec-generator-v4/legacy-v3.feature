@@ -23,7 +23,15 @@
 # - Don't change @featureN tags — they wire into the legacy USER_STORIES
 #   structure that v3 form-guards still validate in production.
 # --------------------------------------------------------------------------
+# FR-36/FR-37b (2026-06-06): the feature-level @FR-19 tag below is REAL (not a
+# comment pseudo-tag) and inherits to all 28 scenarios — they are the canonical
+# test contract for the v3 form-guards v4 preserves as the SOFT TIER, i.e.
+# exactly what v4 FR-19 requires (see the header above). This builds the
+# same-spec tested-by edges so the scenarios trace up to a requirement.
+# The historical `# @featureN` comments are v3 numbering — left untouched.
+# --------------------------------------------------------------------------
 
+@FR-19
 Feature: SPECGEN003 Spec Generator v3 — form-guards, child skills, audit log
   As a dev-pomogator maintainer
   I want blocking PreToolUse hooks + private child skills + audit log

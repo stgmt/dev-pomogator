@@ -269,6 +269,15 @@ export function checkConformance(
     let hasSpecTag = false;
     const scenSpec = scen.spec ?? specOf(scen.file);
     for (const tag of scen.tags) {
+      // FR-36c/FR-37b (P14-2): `@featureN` builds a REAL same-spec tested-by
+      // edge since P13-2 — when its FR-N actually exists, the scenario IS
+      // tagged up to a requirement. A non-resolving @featureN (no FR-N in
+      // this spec) stays untagged — a dangling convention is not coverage.
+      const f = tag.match(/^@feature(\d+)$/i);
+      if (f && tagResolves(graph, scenSpec, `FR-${f[1]}`, specLocalIds)) {
+        hasSpecTag = true;
+        continue;
+      }
       const m = tag.match(SPEC_TAG_RE);
       if (!m) continue;
       hasSpecTag = true;

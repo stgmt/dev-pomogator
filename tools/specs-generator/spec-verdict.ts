@@ -26,6 +26,13 @@
 import { execFileSync } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { buildGraphFromCwd } from '../spec-graph/builder.ts';
+import {
+  checkTraceabilityCompleteness,
+  summariseGaps,
+  type TraceabilityGap,
+  type TraceabilityGapClass,
+} from '../spec-graph/traceability.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const corePath = path.join(__dirname, 'specs-generator-core.mjs');
@@ -52,6 +59,17 @@ export interface SpecVerdictResult {
   auditGate: {
     errorCount: number;
     byClass: Record<string, AuditFinding[]>;
+  };
+  /**
+   * FR-37b (P14-2): cell→atom traceability gate over the ONE graph — the
+   * spec-scoped per-item gap list (UNCOVERED_FR / TASK_UNTESTED /
+   * UNTAGGED_SCENARIO; stale FILE_CHANGES paths arrive via the audit gate
+   * above). ANY gap → RED.
+   */
+  traceabilityGate: {
+    gapCount: number;
+    byClass: Record<TraceabilityGapClass, number>;
+    gaps: TraceabilityGap[];
   };
   /** Actionable per-item gap list (one line per blocking finding). */
   gapList: string[];
@@ -122,14 +140,26 @@ export function runSpecVerdict(specPath: string, opts: RunCoreOptions = {}): Spe
   const byClass: Record<string, AuditFinding[]> = {};
   for (const f of errorFindings) (byClass[f.check] ??= []).push(f);
 
+  // FR-37b (P14-2): the cell→atom traceability gate over the ONE graph.
+  // Scope = this spec (the cell): slug is the dir path under `.specs/`.
+  const cwd = opts.cwd ?? process.cwd();
+  const slug = specPath
+    .replace(/\\/g, '/')
+    .replace(/^\.?\/?\.specs\//, '')
+    .replace(/\/+$/, '');
+  const graph = buildGraphFromCwd(cwd);
+  const gaps = checkTraceabilityCompleteness(graph, { spec: slug });
+
   const gapList: string[] = [
     ...(validation.errors ?? []).map(
       (e: any) => `[STRUCTURAL] ${e.file ?? ''}: ${e.message ?? JSON.stringify(e)}`,
     ),
     ...errorFindings.map((f) => `[${f.check}] ${f.message}`),
+    ...gaps.map((g) => `[${g.class}] ${g.file}:${g.line} — ${g.message}`),
   ];
 
-  const verdict: 'RED' | 'GREEN' = structuralErrors > 0 || errorFindings.length > 0 ? 'RED' : 'GREEN';
+  const verdict: 'RED' | 'GREEN' =
+    structuralErrors > 0 || errorFindings.length > 0 || gaps.length > 0 ? 'RED' : 'GREEN';
 
   return {
     specPath,
@@ -140,10 +170,10 @@ export function runSpecVerdict(specPath: string, opts: RunCoreOptions = {}): Spe
       note: 'pre-filter only — a structural pass is NOT reportable as "valid/clean/done" (FR-37a)',
     },
     auditGate: { errorCount: errorFindings.length, byClass },
+    traceabilityGate: { gapCount: gaps.length, byClass: summariseGaps(gaps), gaps },
     gapList,
     notes: [
       'SEMANTIC_SKIPPED — FR-8 semantic drift check not yet composed into the verdict (P14-3); unchecked content is NOT "no drift" (FR-37c)',
-      'TRACEABILITY_PENDING — cell→atom traceability-completeness gate (UNCOVERED_FR / TASK_UNTESTED / UNTAGGED_SCENARIO) arrives in P14-2; absence of those findings here is NOT an all-clear',
     ],
   };
 }
@@ -163,6 +193,21 @@ export function renderVerdict(r: SpecVerdictResult): string {
     for (const [cls, findings] of Object.entries(r.auditGate.byClass)) {
       lines.push(`  [${cls}] ×${findings.length}`);
       for (const f of findings) lines.push(`    - ${f.message}`);
+    }
+  }
+  if (r.traceabilityGate.gapCount === 0) {
+    lines.push('traceability gate (FR-37b, cell→atom): 0 gaps — gate PASSES');
+  } else {
+    const tb = r.traceabilityGate.byClass;
+    lines.push(
+      `traceability gate (FR-37b, cell→atom): ${r.traceabilityGate.gapCount} gap(s) — gate FAILS ` +
+        `(UNCOVERED_FR: ${tb.UNCOVERED_FR}, TASK_UNTESTED: ${tb.TASK_UNTESTED}, UNTAGGED_SCENARIO: ${tb.UNTAGGED_SCENARIO}):`,
+    );
+    for (const g of r.traceabilityGate.gaps.slice(0, 20)) {
+      lines.push(`  [${g.class}] ${g.nodeId} @ ${g.file}:${g.line}`);
+    }
+    if (r.traceabilityGate.gaps.length > 20) {
+      lines.push(`  … and ${r.traceabilityGate.gaps.length - 20} more (see --json for the full list)`);
     }
   }
   lines.push('notes (fail-loud, FR-37c):');
