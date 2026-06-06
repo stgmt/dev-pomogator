@@ -51,6 +51,47 @@ import {
   type TaskLike,
 } from '../spec-graph/coverage.ts';
 
+/**
+ * FR-36d (P13-3): resolve a tool-supplied node reference against the
+ * composite-keyed graph. Accepted forms:
+ *   - composite `slug:FR-2`              → exact lookup;
+ *   - `{spec: 'slug', node_id: 'FR-2'}`  → exact lookup of `slug:FR-2`;
+ *   - BARE `FR-2`, defined by ONE spec   → soft-resolved to that node;
+ *   - BARE `FR-2`, defined by 2+ specs   → the sorted candidate list of
+ *     `slug:id` keys — NEVER one arbitrary node (the bare-id collision used
+ *     to silently return the last-writer; that is the FR-36 root bug).
+ */
+function resolveNodeRef(
+  graph: SpecGraph,
+  nodeId: string,
+  spec?: string,
+): { node?: Node; candidates?: string[] } {
+  if (spec) {
+    const exact = graph.nodes.get(`${spec}:${nodeId}`);
+    return exact ? { node: exact } : {};
+  }
+  const direct = graph.nodes.get(nodeId); // composite form, or a genuine bare node
+  if (direct) return { node: direct };
+  const matches: Node[] = [];
+  for (const n of graph.nodes.values()) {
+    if (n.spec && n.id === `${n.spec}:${nodeId}`) matches.push(n);
+  }
+  if (matches.length === 1) return { node: matches[0] };
+  if (matches.length > 1) return { candidates: matches.map((n) => n.id).sort() };
+  return {};
+}
+
+/** Uniform AMBIGUOUS_BARE_ID envelope for every node-ref tool (FR-36d). */
+function ambiguousBareId(nodeId: string, candidates: string[]): ToolResult {
+  return asJsonResult({
+    ok: false,
+    error: 'AMBIGUOUS_BARE_ID',
+    node_id: nodeId,
+    candidates,
+    hint: `Bare id "${nodeId}" is defined by ${candidates.length} specs — qualify as <slug>:${nodeId} or pass {spec: "<slug>"}.`,
+  });
+}
+
 /** Build every Scenario as a ScenarioLike + an id→bucket index for FR-32 derivation. */
 function scenarioCoverageIndex(graph: SpecGraph): { scens: ScenarioLike[]; bucketById: Map<string, Bucket> } {
   const scens: ScenarioLike[] = [];
@@ -409,10 +450,15 @@ export function buildToolRegistry(
       'Get the full requirement trace for a node id: AC + Scenarios + Tasks + ' +
       'code_impl[] (implements edges per FR-30) + related nodes + a ≤500-char ' +
       'natural-language summary for the agent.',
-    inputShape: { node_id: z.string() } as const satisfies z.ZodRawShape,
-    handler: async ({ node_id }) => {
+    inputShape: {
+      node_id: z.string(),
+      spec: z.string().optional(),
+    } as const satisfies z.ZodRawShape,
+    handler: async ({ node_id, spec }) => {
       const graph = getGraph();
-      const node = graph.nodes.get(node_id as string);
+      // FR-36d: slug:id / {spec, node_id} / bare-unique resolve; bare-colliding → candidates.
+      const { node, candidates } = resolveNodeRef(graph, node_id as string, spec as string | undefined);
+      if (candidates) return ambiguousBareId(node_id as string, candidates);
       if (!node) {
         return asJsonResult({
           ok: false,
@@ -564,10 +610,16 @@ export function buildToolRegistry(
   // ─── 5) get_node ────────────────────────────────────────────────────────
   tools.push({
     name: 'get_node',
-    description: 'Raw node lookup by canonical id.',
-    inputShape: { node_id: z.string() } as const satisfies z.ZodRawShape,
-    handler: async ({ node_id }) => {
-      const node = getGraph().nodes.get(node_id as string);
+    description:
+      'Raw node lookup by canonical id — accepts `slug:FR-2`, `{spec, node_id}`, ' +
+      'or a bare id (unique → resolved; colliding → candidate list, FR-36d).',
+    inputShape: {
+      node_id: z.string(),
+      spec: z.string().optional(),
+    } as const satisfies z.ZodRawShape,
+    handler: async ({ node_id, spec }) => {
+      const { node, candidates } = resolveNodeRef(getGraph(), node_id as string, spec as string | undefined);
+      if (candidates) return ambiguousBareId(node_id as string, candidates);
       if (!node) return asJsonResult({ ok: false, error: 'NODE_NOT_FOUND', node_id });
       return asJsonResult({ ok: true, node });
     },
@@ -608,9 +660,13 @@ export function buildToolRegistry(
   tools.push({
     name: 'get_test_result',
     description: 'Return the last-result fields for a Scenario id.',
-    inputShape: { scenario_id: z.string() } as const satisfies z.ZodRawShape,
-    handler: async ({ scenario_id }) => {
-      const node = getGraph().nodes.get(scenario_id as string);
+    inputShape: {
+      scenario_id: z.string(),
+      spec: z.string().optional(),
+    } as const satisfies z.ZodRawShape,
+    handler: async ({ scenario_id, spec }) => {
+      const { node, candidates } = resolveNodeRef(getGraph(), scenario_id as string, spec as string | undefined);
+      if (candidates) return ambiguousBareId(scenario_id as string, candidates);
       if (!node || node.type !== 'Scenario') {
         return asJsonResult({ ok: false, error: 'SCENARIO_NOT_FOUND', scenario_id });
       }
@@ -735,10 +791,18 @@ export function buildToolRegistry(
       'Find every spec-domain reference to a node id across the graph: ' +
       'incoming/outgoing semantic edges (covers/tested-by/implements) plus task ' +
       'refs. (Markdown wiki-link nav is the native LSP tool’s job, not this.)',
-    inputShape: { node_id: z.string() } as const satisfies z.ZodRawShape,
-    handler: async ({ node_id }) => {
-      const id = node_id as string;
-      const references = collectGraphRefs(getGraph(), id);
+    inputShape: {
+      node_id: z.string(),
+      spec: z.string().optional(),
+    } as const satisfies z.ZodRawShape,
+    handler: async ({ node_id, spec }) => {
+      const graph = getGraph();
+      // FR-36d: refs are collected for the RESOLVED composite id — a bare id
+      // that collides must list candidates, not merge unrelated specs' refs.
+      const { node, candidates } = resolveNodeRef(graph, node_id as string, spec as string | undefined);
+      if (candidates) return ambiguousBareId(node_id as string, candidates);
+      const id = node ? node.id : (node_id as string);
+      const references = collectGraphRefs(graph, id);
       return asJsonResult({ ok: true, node_id: id, references, count: references.length });
     },
   });

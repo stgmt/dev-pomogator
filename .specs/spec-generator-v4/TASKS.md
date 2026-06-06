@@ -1059,12 +1059,12 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] `get_trace(FR)` returns scenarios via REAL edges; tag-scan workaround удалён из `tools.ts` (SPECGEN004_92) — step defs (`tests/step_definitions/feature36_composite_graph.ts`) доказывают ПОВЕДЕНЧЕСКИ: теги стираются из графа ПЕРЕД вызовом — сценарии всё равно приходят (tag-scan вернул бы пусто) — 1 passed
   - [x] dogfood confirms get_trace non-empty via edges — **164 tested-by ребра в Scenario-узлы (было 0** — исходный dogfood-finding); get_trace(v4:FR-36)=6/6/5, (v4:FR-37)=6/6/5, (v4:FR-32)=3/5/8 без tag-scan; локально cucumber 0 failed / 90 passed (undefined 11→10), vitest spec-graph+mcp 180/180 (md-parser пины → qualified); Docker clean-worktree прогон после коммита
 
-- [ ] P13-3: tools accept slug:id / {spec, node_id}; bare-id → candidate list -- @feature36 — id: p13-tool-api — Status: TODO | Est: 180m
+- [x] P13-3: tools accept slug:id / {spec, node_id}; bare-id → candidate list -- @feature36 — id: p13-tool-api — Status: DONE (2026-06-06) | Est: 180m
   _Requirements: [FR-36](FR.md#fr-36), [FR-36d](FR.md#fr-36)_
   **Done When:**
-  - [ ] `tools/spec-mcp-server/tools.ts` resolves `slug:FR-2` / `{spec, node_id}` to the exact node (SPECGEN004_94); a colliding bare id returns the candidate list of `slug:id`, not an arbitrary node (SPECGEN004_93)
-  - [ ] `server.bundle.mjs` rebuilt (`npm run build:mcp`) so plugin users get the fix; bundle-freshness guard GREEN (NFR-Reliability-11)
-  - [ ] anchors verified still bare/file-local — Marksman + anchor-fix unaffected (SPECGEN004_91, FR-36b)
+  - [x] `tools.ts` resolves `slug:FR-2` / `{spec, node_id}` to the exact node (SPECGEN004_94); a colliding bare id returns the candidate list, not an arbitrary node (SPECGEN004_93) — `resolveNodeRef()` + uniform `AMBIGUOUS_BARE_ID` envelope во всех 4 node-ref тулзах (get_trace / get_node / get_test_result / find_refs, + optional `spec` в inputShape); live probe: composite→exact, {spec,node_id}→exact, bare `FR-2`→**49 candidates**, bare-unique `FR-37`→soft-resolved, missing→NODE_NOT_FOUND; step defs _93/_94 — 2 passed
+  - [x] `server.bundle.mjs` rebuilt (`npm run build:mcp`, 1.6MB) — plugin-юзеры получают resolver; bundle-freshness guard GREEN (vitest 180/180 incl. bundle.test.ts)
+  - [x] anchors verified still bare/file-local (SPECGEN004_91, FR-36b) — step def строит спеку с markdown-ссылкой `FR.md#fr-2`: definitions содержит bare `FR-2`/`fr-2-…`, НИ ОДНОГО composite-алиаса; node при этом composite-keyed — 1 passed. Суммарно: cucumber 0 failed / 93 passed (undefined 10→7)
 
 - [ ] P13-4: update bare-id-pinning tests to the qualified form + verify -- @feature36 — id: p13-test-churn — Status: TODO | Est: 180m
   _Requirements: [FR-36](FR.md#fr-36), [FR-36e](FR.md#fr-36)_

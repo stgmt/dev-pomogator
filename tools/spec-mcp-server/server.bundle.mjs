@@ -44973,6 +44973,115 @@ function marksmanSlug(headingText) {
   return headingText.toLowerCase().replace(/[^\p{L}\p{N}\s-]+/gu, "").trim().replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-+|-+$/g, "");
 }
 
+// tools/spec-graph/coverage.ts
+var RESULT_TO_BUCKET = {
+  PASSED: "passed",
+  PENDING: "pending",
+  UNDEFINED: "undefined",
+  AMBIGUOUS: "ambiguous",
+  FAILED: "failed",
+  SKIPPED: "skipped"
+};
+function specOf(file2) {
+  const m = file2.replace(/\\/g, "/").match(/(?:^|\/)\.specs\/(.+)\/[^/]+$/);
+  return m ? m[1] : void 0;
+}
+function qualifySlice(slice, slug) {
+  if (!slug) return;
+  for (const node of slice.nodes) {
+    node.spec = slug;
+    node.id = `${slug}:${node.id}`;
+    if (node.type === "Task" && Array.isArray(node.refs)) {
+      node.refs = node.refs.map((r) => `${slug}:${r}`);
+    } else if (node.type === "AC" && typeof node.parentFr === "string" && node.parentFr) {
+      node.parentFr = `${slug}:${node.parentFr}`;
+    }
+  }
+  for (const e of slice.edges) {
+    e.from = `${slug}:${e.from}`;
+    e.to = `${slug}:${e.to}`;
+  }
+}
+function scenarioKey(s) {
+  const m = s.match(/s[pc]e[cn]gen004[_-](\d+)/i);
+  return m ? `specgen004_${m[1]}` : null;
+}
+function bucketScenarios(scenarios) {
+  const out = {
+    passed: [],
+    pending: [],
+    undefined: [],
+    ambiguous: [],
+    failed: [],
+    skipped: []
+  };
+  for (const s of scenarios) {
+    const bucket = s.result ? RESULT_TO_BUCKET[s.result.toUpperCase()] ?? "undefined" : "undefined";
+    out[bucket].push(s.id);
+  }
+  return out;
+}
+function mapTasksToScenarios(tasks, scenarios) {
+  const byTag = /* @__PURE__ */ new Map();
+  const byKey = /* @__PURE__ */ new Map();
+  const scenarioSpec = /* @__PURE__ */ new Map();
+  for (const s of scenarios) {
+    scenarioSpec.set(s.id, s.spec);
+    for (const tag of s.tags) {
+      const key = tag.toLowerCase();
+      if (!byTag.has(key)) byTag.set(key, /* @__PURE__ */ new Set());
+      byTag.get(key).add(s.id);
+    }
+    const k = scenarioKey(s.id);
+    if (k) byKey.set(k, s.id);
+  }
+  const out = /* @__PURE__ */ new Map();
+  for (const task of tasks) {
+    const ids = /* @__PURE__ */ new Set();
+    const sameSpec = (sid) => task.spec === void 0 || scenarioSpec.get(sid) === task.spec;
+    for (const m of task.doneWhen.matchAll(/s[pc]e[cn]gen004[_-]\d+/gi)) {
+      const k = scenarioKey(m[0]);
+      const sid = k && byKey.get(k);
+      if (sid) ids.add(sid);
+    }
+    for (const m of task.doneWhen.matchAll(/@feature\d+/gi)) {
+      for (const sid of byTag.get(m[0].toLowerCase()) ?? []) if (sameSpec(sid)) ids.add(sid);
+    }
+    for (const ref of task.refs) {
+      const n = ref.match(/FR-(\d+)/i);
+      if (n) {
+        for (const sid of byTag.get(`@feature${n[1]}`) ?? []) if (sameSpec(sid)) ids.add(sid);
+      }
+    }
+    out.set(task.id, [...ids]);
+  }
+  return out;
+}
+function verifiedStatus(scenarioIds, bucketById, verdict) {
+  if (scenarioIds.length === 0) return "unverified";
+  if (!scenarioIds.every((id) => bucketById.get(id) === "passed")) return "IN_PROGRESS";
+  if (verdict === "WEAK" || verdict === "FAKE-POSITIVE-RISK") return "IN_PROGRESS";
+  return "DONE";
+}
+function computeCoverage(tasks, scenarios, testQualityByTask = {}) {
+  const buckets = bucketScenarios(scenarios);
+  const bucketById = /* @__PURE__ */ new Map();
+  for (const b of Object.keys(buckets)) for (const id of buckets[b]) bucketById.set(id, b);
+  const taskMap = mapTasksToScenarios(tasks, scenarios);
+  const tasksOut = {};
+  for (const [taskId, scenarioIds] of taskMap) {
+    const verdict = testQualityByTask[taskId];
+    tasksOut[taskId] = {
+      verified_status: verifiedStatus(scenarioIds, bucketById, verdict),
+      scenarios: scenarioIds,
+      ...verdict ? { test_quality: verdict } : {}
+    };
+  }
+  const totals = { scenarios: scenarios.length };
+  for (const b of Object.keys(buckets)) totals[b] = buckets[b].length;
+  return { buckets, tasks: tasksOut, totals };
+}
+
 // tools/spec-graph/parsers/md.ts
 var HEADING_LINE_RE = /^(#{1,6})\s+(.+?)\s*$/;
 var FENCE_RE = /^(?:```|~~~)/;
@@ -45169,6 +45278,7 @@ function parseMarkdown(mdSource, relativePath) {
       continue;
     }
   }
+  qualifySlice({ nodes, edges }, specOf(relativePath));
   return { nodes, edges, anchors };
 }
 function parseMarkdownFile(absPath, repoRoot) {
@@ -45935,6 +46045,7 @@ var TestStepResultStatus;
 
 // tools/spec-graph/parsers/gherkin.ts
 var SPEC_TAG_RE = /^@((?:FR|NFR|AC)[A-Za-z0-9._-]+)$/;
+var FEATURE_TAG_RE = /^@feature(\d+)$/i;
 function slugifyName(name) {
   return name.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "unnamed";
 }
@@ -45953,8 +46064,17 @@ function parseGherkin(source, relativePath) {
     return { nodes: [], edges: [], anchors: [] };
   }
   const featureTags = (doc.feature.tags ?? []).map((t) => t.name);
+  const slug = specOf(relativePath);
+  const qualify = (id) => slug ? `${slug}:${id}` : id;
   const nodes = [];
   const edges = [];
+  const edgeSeen = /* @__PURE__ */ new Set();
+  const pushEdge = (e) => {
+    const key = `${e.from}|${e.to}|${e.type}`;
+    if (edgeSeen.has(key)) return;
+    edgeSeen.add(key);
+    edges.push(e);
+  };
   const anchors = [];
   const seenIds = /* @__PURE__ */ new Map();
   for (const child of doc.feature.children) {
@@ -45965,7 +46085,8 @@ function parseGherkin(source, relativePath) {
     let baseId = `SCEN-${slugifyName(scenario.name)}`;
     const seen = seenIds.get(baseId) ?? 0;
     seenIds.set(baseId, seen + 1);
-    const scenarioId = seen === 0 ? baseId : `${baseId}-${seen + 1}`;
+    const bareScenarioId = seen === 0 ? baseId : `${baseId}-${seen + 1}`;
+    const scenarioId = qualify(bareScenarioId);
     const line = scenario.location.line;
     const steps = (scenario.steps ?? []).map((s) => ({
       keyword: s.keyword.trim(),
@@ -45979,16 +46100,22 @@ function parseGherkin(source, relativePath) {
       tags,
       steps
     };
+    if (slug) node.spec = slug;
     nodes.push(node);
     anchors.push({
-      alias: scenarioId,
-      canonicalId: scenarioId,
+      alias: bareScenarioId,
+      canonicalId: bareScenarioId,
       location: { file: relativePath, line }
     });
     for (const tag of tags) {
       const m = tag.match(SPEC_TAG_RE);
       if (m) {
-        edges.push({ from: m[1], to: scenarioId, type: "tested-by" });
+        pushEdge({ from: qualify(m[1]), to: scenarioId, type: "tested-by" });
+        continue;
+      }
+      const f = tag.match(FEATURE_TAG_RE);
+      if (f && slug) {
+        pushEdge({ from: `${slug}:FR-${f[1]}`, to: scenarioId, type: "tested-by" });
       }
     }
   }
@@ -46241,7 +46368,9 @@ function parseTasks(content, file2) {
 function parseTasksFile(abs, repoRoot) {
   const content = fs4.readFileSync(abs, "utf8");
   const file2 = path3.relative(repoRoot, abs).replace(/\\/g, "/");
-  return { nodes: parseTasks(content, file2), edges: [], anchors: [] };
+  const slice = { nodes: parseTasks(content, file2), edges: [] };
+  qualifySlice(slice, specOf(file2));
+  return { nodes: slice.nodes, edges: [], anchors: [] };
 }
 
 // tools/spec-graph/parsers/file-changes.ts
@@ -46598,6 +46727,8 @@ function buildGraph(opts) {
   };
   for (const specDir of specDirs) {
     const relDir = path4.relative(repoRoot, specDir).split(path4.sep).join("/");
+    const slug = specOf(`${relDir}/FILE_CHANGES.md`);
+    const qualifyFr = (fr) => slug ? `${slug}:${fr}` : fr;
     const fcAbs = path4.join(specDir, "FILE_CHANGES.md");
     if (fs7.existsSync(fcAbs)) {
       let rows = [];
@@ -46610,7 +46741,7 @@ function buildGraph(opts) {
       for (const row of rows) {
         if (row.frs.length === 0) continue;
         for (const fr of row.frs) {
-          emitImplements(fr, row.file_path, "FILE_CHANGES", relFile, 1, row.action);
+          emitImplements(qualifyFr(fr), row.file_path, "FILE_CHANGES", relFile, 1, row.action);
         }
       }
     }
@@ -46626,9 +46757,26 @@ function buildGraph(opts) {
       for (const ref of refs) {
         if (ref.frs.length === 0) continue;
         for (const fr of ref.frs) {
-          emitImplements(fr, ref.file_path, "DESIGN", relFile, 1);
+          emitImplements(qualifyFr(fr), ref.file_path, "DESIGN", relFile, 1);
         }
       }
+    }
+  }
+  {
+    const byLocalId = /* @__PURE__ */ new Map();
+    for (const n of nodes.values()) {
+      if (!n.spec) continue;
+      const localId = n.id.slice(n.spec.length + 1);
+      byLocalId.set(localId, byLocalId.has(localId) ? null : n.id);
+    }
+    const resolveBare = (id) => {
+      if (nodes.has(id)) return id;
+      const unique = byLocalId.get(id);
+      return unique ?? id;
+    };
+    for (const e of edges) {
+      e.from = resolveBare(e.from);
+      e.to = resolveBare(e.to);
     }
   }
   if (!opts.skipNdjson) {
@@ -47035,101 +47183,16 @@ async function startLifecycle(opts) {
   return { graph, watcher, lock, watchMode, pollIntervalMs, shutdown };
 }
 
-// tools/spec-graph/coverage.ts
-var RESULT_TO_BUCKET = {
-  PASSED: "passed",
-  PENDING: "pending",
-  UNDEFINED: "undefined",
-  AMBIGUOUS: "ambiguous",
-  FAILED: "failed",
-  SKIPPED: "skipped"
-};
-function specOf(file2) {
-  const m = file2.replace(/\\/g, "/").match(/(?:^|\/)\.specs\/([^/]+)\//);
-  return m ? m[1] : void 0;
-}
-function scenarioKey(s) {
-  const m = s.match(/s[pc]e[cn]gen004[_-](\d+)/i);
-  return m ? `specgen004_${m[1]}` : null;
-}
-function bucketScenarios(scenarios) {
-  const out = {
-    passed: [],
-    pending: [],
-    undefined: [],
-    ambiguous: [],
-    failed: [],
-    skipped: []
-  };
-  for (const s of scenarios) {
-    const bucket = s.result ? RESULT_TO_BUCKET[s.result.toUpperCase()] ?? "undefined" : "undefined";
-    out[bucket].push(s.id);
-  }
-  return out;
-}
-function mapTasksToScenarios(tasks, scenarios) {
-  const byTag = /* @__PURE__ */ new Map();
-  const byKey = /* @__PURE__ */ new Map();
-  const scenarioSpec = /* @__PURE__ */ new Map();
-  for (const s of scenarios) {
-    scenarioSpec.set(s.id, s.spec);
-    for (const tag of s.tags) {
-      const key = tag.toLowerCase();
-      if (!byTag.has(key)) byTag.set(key, /* @__PURE__ */ new Set());
-      byTag.get(key).add(s.id);
-    }
-    const k = scenarioKey(s.id);
-    if (k) byKey.set(k, s.id);
-  }
-  const out = /* @__PURE__ */ new Map();
-  for (const task of tasks) {
-    const ids = /* @__PURE__ */ new Set();
-    const sameSpec = (sid) => task.spec === void 0 || scenarioSpec.get(sid) === task.spec;
-    for (const m of task.doneWhen.matchAll(/s[pc]e[cn]gen004[_-]\d+/gi)) {
-      const k = scenarioKey(m[0]);
-      const sid = k && byKey.get(k);
-      if (sid) ids.add(sid);
-    }
-    for (const m of task.doneWhen.matchAll(/@feature\d+/gi)) {
-      for (const sid of byTag.get(m[0].toLowerCase()) ?? []) if (sameSpec(sid)) ids.add(sid);
-    }
-    for (const ref of task.refs) {
-      const n = ref.match(/FR-(\d+)/i);
-      if (n) {
-        for (const sid of byTag.get(`@feature${n[1]}`) ?? []) if (sameSpec(sid)) ids.add(sid);
-      }
-    }
-    out.set(task.id, [...ids]);
-  }
-  return out;
-}
-function verifiedStatus(scenarioIds, bucketById, verdict) {
-  if (scenarioIds.length === 0) return "unverified";
-  if (!scenarioIds.every((id) => bucketById.get(id) === "passed")) return "IN_PROGRESS";
-  if (verdict === "WEAK" || verdict === "FAKE-POSITIVE-RISK") return "IN_PROGRESS";
-  return "DONE";
-}
-function computeCoverage(tasks, scenarios, testQualityByTask = {}) {
-  const buckets = bucketScenarios(scenarios);
-  const bucketById = /* @__PURE__ */ new Map();
-  for (const b of Object.keys(buckets)) for (const id of buckets[b]) bucketById.set(id, b);
-  const taskMap = mapTasksToScenarios(tasks, scenarios);
-  const tasksOut = {};
-  for (const [taskId, scenarioIds] of taskMap) {
-    const verdict = testQualityByTask[taskId];
-    tasksOut[taskId] = {
-      verified_status: verifiedStatus(scenarioIds, bucketById, verdict),
-      scenarios: scenarioIds,
-      ...verdict ? { test_quality: verdict } : {}
-    };
-  }
-  const totals = { scenarios: scenarios.length };
-  for (const b of Object.keys(buckets)) totals[b] = buckets[b].length;
-  return { buckets, tasks: tasksOut, totals };
-}
-
 // tools/spec-graph/conformance.ts
 var SPEC_TAG_RE2 = /^@((?:FR|NFR|AC)[A-Za-z0-9._-]+)$/;
+function localIdOf(node) {
+  return node.spec ? node.id.slice(node.spec.length + 1) : node.id;
+}
+function tagResolves(graph, scenSpec, ref, specLocalIds) {
+  if (scenSpec && graph.nodes.has(`${scenSpec}:${ref}`)) return true;
+  if (graph.nodes.has(ref)) return true;
+  return !scenSpec && specLocalIds.has(ref);
+}
 function levenshtein(a, b) {
   const m = a.length;
   const n = b.length;
@@ -47151,7 +47214,10 @@ function topSimilarIds(target, ids, n) {
 function checkConformance(graph, opts = {}) {
   const findings = [];
   const tagOrphanSeverity = opts.orphanPolicy?.scenario_tag_orphan === "block" ? "error" : "warning";
-  const specIds = [...graph.nodes.values()].filter((n) => n.type === "FR" || n.type === "NFR" || n.type === "AC").map((n) => n.id);
+  const specNodes = [...graph.nodes.values()].filter(
+    (n) => n.type === "FR" || n.type === "NFR" || n.type === "AC"
+  );
+  const specLocalIds = new Set(specNodes.map((n) => localIdOf(n)));
   const acCovers = /* @__PURE__ */ new Set();
   const scenarioTests = /* @__PURE__ */ new Set();
   for (const e of graph.edges) {
@@ -47162,15 +47228,16 @@ function checkConformance(graph, opts = {}) {
     if (node.type !== "FR") continue;
     if (acCovers.has(node.id)) continue;
     if (scenarioTests.has(node.id)) continue;
+    const bareTag = localIdOf(node);
     findings.push({
       code: "UNCOVERED_FR",
       severity: "warning",
       location: { file: node.file, line: node.line },
-      message: `FR ${node.id} has no Acceptance Criteria and no @${node.id}-tagged Scenario.`,
+      message: `FR ${node.id} has no Acceptance Criteria and no @${bareTag}-tagged Scenario.`,
       nodeId: node.id,
       suggestions: [
         { action: "create_ac", reason: "Add an AC heading `## AC-N (FR-N)` covering this FR.", confidence: "high" },
-        { action: "tag_scenario", reason: `Add @${node.id} to an existing Scenario in any \`.feature\` file.`, confidence: "medium" }
+        { action: "tag_scenario", reason: `Add @${bareTag} to an existing Scenario in any \`.feature\` file.`, confidence: "medium" }
       ]
     });
   }
@@ -47260,13 +47327,14 @@ function checkConformance(graph, opts = {}) {
     if (node.type !== "Scenario") continue;
     const scen = node;
     let hasSpecTag = false;
+    const scenSpec = scen.spec ?? specOf(scen.file);
     for (const tag of scen.tags) {
       const m = tag.match(SPEC_TAG_RE2);
       if (!m) continue;
       hasSpecTag = true;
       const referenced = m[1];
-      if (!graph.nodes.has(referenced)) {
-        const similar = topSimilarIds(referenced, specIds, 3);
+      if (!tagResolves(graph, scenSpec, referenced, specLocalIds)) {
+        const similar = topSimilarIds(referenced, [...specLocalIds], 3);
         findings.push({
           code: "SCENARIO_TAG_ORPHAN",
           severity: tagOrphanSeverity,
@@ -47307,6 +47375,30 @@ function checkConformance(graph, opts = {}) {
 }
 
 // tools/spec-mcp-server/tools.ts
+function resolveNodeRef(graph, nodeId, spec) {
+  if (spec) {
+    const exact = graph.nodes.get(`${spec}:${nodeId}`);
+    return exact ? { node: exact } : {};
+  }
+  const direct = graph.nodes.get(nodeId);
+  if (direct) return { node: direct };
+  const matches = [];
+  for (const n of graph.nodes.values()) {
+    if (n.spec && n.id === `${n.spec}:${nodeId}`) matches.push(n);
+  }
+  if (matches.length === 1) return { node: matches[0] };
+  if (matches.length > 1) return { candidates: matches.map((n) => n.id).sort() };
+  return {};
+}
+function ambiguousBareId(nodeId, candidates) {
+  return asJsonResult({
+    ok: false,
+    error: "AMBIGUOUS_BARE_ID",
+    node_id: nodeId,
+    candidates,
+    hint: `Bare id "${nodeId}" is defined by ${candidates.length} specs \u2014 qualify as <slug>:${nodeId} or pass {spec: "<slug>"}.`
+  });
+}
 function scenarioCoverageIndex(graph) {
   const scens = [];
   for (const n of graph.nodes.values()) {
@@ -47381,7 +47473,7 @@ function computeCodeImpl(node, graph) {
     }
     for (const tag of scen.tags) {
       const bare = tag.startsWith("@") ? tag.slice(1) : tag;
-      const tagged = graph.nodes.get(bare);
+      const tagged = (scen.spec ? graph.nodes.get(`${scen.spec}:${bare}`) : void 0) ?? graph.nodes.get(bare);
       if (!tagged) continue;
       if (tagged.type !== "FR" && tagged.type !== "NFR") continue;
       for (const entry of directImplements(tagged.id, graph)) {
@@ -47456,7 +47548,7 @@ function collectImplementsWarnings(node, graph) {
   } else if (node.type === "Scenario") {
     for (const tag of node.tags) {
       const bare = tag.startsWith("@") ? tag.slice(1) : tag;
-      const tagged = graph.nodes.get(bare);
+      const tagged = (node.spec ? graph.nodes.get(`${node.spec}:${bare}`) : void 0) ?? graph.nodes.get(bare);
       if (tagged && (tagged.type === "FR" || tagged.type === "NFR")) sources.push(tagged.id);
     }
   }
@@ -47504,10 +47596,14 @@ function buildToolRegistry(getGraph) {
   tools.push({
     name: "get_trace",
     description: "Get the full requirement trace for a node id: AC + Scenarios + Tasks + code_impl[] (implements edges per FR-30) + related nodes + a \u2264500-char natural-language summary for the agent.",
-    inputShape: { node_id: external_exports.string() },
-    handler: async ({ node_id }) => {
+    inputShape: {
+      node_id: external_exports.string(),
+      spec: external_exports.string().optional()
+    },
+    handler: async ({ node_id, spec }) => {
       const graph = getGraph();
-      const node = graph.nodes.get(node_id);
+      const { node, candidates } = resolveNodeRef(graph, node_id, spec);
+      if (candidates) return ambiguousBareId(node_id, candidates);
       if (!node) {
         return asJsonResult({
           ok: false,
@@ -47532,21 +47628,6 @@ function buildToolRegistry(getGraph) {
         if (edge.to === node.id && edge.type === "covers") {
           const from = graph.nodes.get(edge.from);
           if (from?.type === "FR") related.push({ id: from.id, type: from.type, relation: "covered-by" });
-        }
-      }
-      if (node.type === "FR") {
-        const m = node.id.match(/^FR-(\d+)/);
-        const specOf2 = (f) => String(f).replace(/\\/g, "/").split(".specs/")[1]?.split("/")[0] ?? "";
-        const nodeSpec = specOf2(node.file);
-        if (m) {
-          const tag = `@feature${m[1]}`;
-          for (const n of graph.nodes.values()) {
-            if (n.type !== "Scenario") continue;
-            const s = n;
-            if (s.tags?.includes(tag) && specOf2(s.file) === nodeSpec && !scenarios.some((x) => x.id === s.id)) {
-              scenarios.push(s);
-            }
-          }
         }
       }
       for (const n of graph.nodes.values()) {
@@ -47653,10 +47734,14 @@ function buildToolRegistry(getGraph) {
   });
   tools.push({
     name: "get_node",
-    description: "Raw node lookup by canonical id.",
-    inputShape: { node_id: external_exports.string() },
-    handler: async ({ node_id }) => {
-      const node = getGraph().nodes.get(node_id);
+    description: "Raw node lookup by canonical id \u2014 accepts `slug:FR-2`, `{spec, node_id}`, or a bare id (unique \u2192 resolved; colliding \u2192 candidate list, FR-36d).",
+    inputShape: {
+      node_id: external_exports.string(),
+      spec: external_exports.string().optional()
+    },
+    handler: async ({ node_id, spec }) => {
+      const { node, candidates } = resolveNodeRef(getGraph(), node_id, spec);
+      if (candidates) return ambiguousBareId(node_id, candidates);
       if (!node) return asJsonResult({ ok: false, error: "NODE_NOT_FOUND", node_id });
       return asJsonResult({ ok: true, node });
     }
@@ -47684,9 +47769,13 @@ function buildToolRegistry(getGraph) {
   tools.push({
     name: "get_test_result",
     description: "Return the last-result fields for a Scenario id.",
-    inputShape: { scenario_id: external_exports.string() },
-    handler: async ({ scenario_id }) => {
-      const node = getGraph().nodes.get(scenario_id);
+    inputShape: {
+      scenario_id: external_exports.string(),
+      spec: external_exports.string().optional()
+    },
+    handler: async ({ scenario_id, spec }) => {
+      const { node, candidates } = resolveNodeRef(getGraph(), scenario_id, spec);
+      if (candidates) return ambiguousBareId(scenario_id, candidates);
       if (!node || node.type !== "Scenario") {
         return asJsonResult({ ok: false, error: "SCENARIO_NOT_FOUND", scenario_id });
       }
@@ -47782,10 +47871,16 @@ function buildToolRegistry(getGraph) {
   tools.push({
     name: "find_refs",
     description: "Find every spec-domain reference to a node id across the graph: incoming/outgoing semantic edges (covers/tested-by/implements) plus task refs. (Markdown wiki-link nav is the native LSP tool\u2019s job, not this.)",
-    inputShape: { node_id: external_exports.string() },
-    handler: async ({ node_id }) => {
-      const id = node_id;
-      const references = collectGraphRefs(getGraph(), id);
+    inputShape: {
+      node_id: external_exports.string(),
+      spec: external_exports.string().optional()
+    },
+    handler: async ({ node_id, spec }) => {
+      const graph = getGraph();
+      const { node, candidates } = resolveNodeRef(graph, node_id, spec);
+      if (candidates) return ambiguousBareId(node_id, candidates);
+      const id = node ? node.id : node_id;
+      const references = collectGraphRefs(graph, id);
       return asJsonResult({ ok: true, node_id: id, references, count: references.length });
     }
   });
