@@ -240,6 +240,59 @@ Then('it never reports no drift detected for unchecked content', function (this:
   assert.match(s.note ?? '', /NOT "no drift"/);
 });
 
+// ── SPECGEN004_101 — FR-37d: a skill may not launder a structural pass ────
+
+interface F37GuardWorld extends F37World {
+  guardSkillTexts?: Map<string, string>;
+}
+
+const GUARDED_SKILLS = ['spec-status', 'spec-mcp-dogfood', 'runtime-dogfood', 'suite-failure-triage'];
+
+Given('a skill or agent reports spec health', function (this: F37GuardWorld) {
+  // The skills ARE prompts — their text is the behavioural contract an agent
+  // executes. Load the four health-reporting skills.
+  const repoRoot = path.resolve(import.meta.dirname ?? __dirname, '..', '..');
+  this.guardSkillTexts = new Map();
+  for (const name of GUARDED_SKILLS) {
+    const p = path.join(repoRoot, '.claude', 'skills', name, 'SKILL.md');
+    assert.ok(fs.existsSync(p), `guarded skill missing: ${name}`);
+    this.guardSkillTexts.set(name, fs.readFileSync(p, 'utf-8'));
+  }
+});
+
+When('it produces its verdict', function (this: F37GuardWorld) {
+  // No-op transition: the contract under test is the prompt text loaded above.
+  assert.ok(this.guardSkillTexts?.size === GUARDED_SKILLS.length);
+});
+
+Then('it surfaces the smart verdict and gap list', function (this: F37GuardWorld) {
+  for (const [name, text] of this.guardSkillTexts!) {
+    assert.ok(
+      text.includes('spec-verdict.ts') && /gap list/i.test(text),
+      `${name}/SKILL.md must direct the agent to the smart verdict (spec-verdict.ts) + gap list`,
+    );
+  }
+});
+
+Then(
+  'it does not state valid or clean or done off validate-spec alone',
+  function (this: F37GuardWorld) {
+    for (const [name, text] of this.guardSkillTexts!) {
+      assert.ok(
+        /ЗАПРЕЩЕНО.*valid \/ clean \/ done|forbidden.*valid\/clean\/done/is.test(text),
+        `${name}/SKILL.md must FORBID reporting valid/clean/done off validate-spec alone`,
+      );
+    }
+    // The .claude/rules/ guard encodes the incident for future sessions.
+    const repoRoot = path.resolve(import.meta.dirname ?? __dirname, '..', '..');
+    const rulePath = path.join(repoRoot, '.claude', 'rules', 'spec-verdict', 'no-structural-valid.md');
+    assert.ok(fs.existsSync(rulePath), 'the no-structural-valid rule must exist');
+    const rule = fs.readFileSync(rulePath, 'utf-8');
+    assert.ok(rule.includes('spec-verdict.ts') && rule.includes('false green'),
+      'the rule must point at the smart verdict and encode the false-green incident');
+  },
+);
+
 Then(
   'within spec-generator-v4 these must be zero for a green verdict',
   function (this: F37World) {

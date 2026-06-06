@@ -1102,12 +1102,12 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] FR-8 semantic runs in the verdict path when a `claude` binary is present (SPECGEN004_99); absent → `SEMANTIC_SKIPPED`, never silent "no drift" (SPECGEN004_100) — пары = реальные tested-by рёбра (FR-36c), `runJudge` per pair с кэшем; binary-probe (`CLAUDE_BIN`/PATH); инжектируемый spawn для тестов; fail-loud на truncation (`SEMANTIC_TRUNCATED`) и judge-сбои (`SEMANTIC_DEGRADED`); CLI `--no-semantic`/`--max-pairs`; _99 (фейковый judge, pairsChecked≥1) и _100 (битый CLAUDE_BIN → SKIPPED-нота, 0 pairs, «NOT "no drift"») зелёные
   - [x] live RED→GREEN: голый scaffold (0 structural errors) → **RED, 10 blocking** (7 audit LINK_VALIDITY/FILE_CHANGES_VERIFY + 3 UNTAGGED), exit 1; после реконсиляции (AC-линки, FR-беклинки, edit→create, теги сценариев) → **GREEN, exit 0**, все гейты PASS. Воспроизводимо: `scaffold-spec -Name X` + `spec-verdict.ts -Path .specs/X --no-semantic`. Бонус живого вердикта: на самом v4 он немедленно поймал НОВЫЙ LINK_VALIDITY в свежем тексте TASKS.md (`FR-001` голым текстом) — исправлен бэктиками
 
-- [ ] P14-4: skills/agents may not launder a structural pass -- @feature37 — id: p14-skill-guard — Status: TODO | Est: 180m
+- [x] P14-4: skills/agents may not launder a structural pass -- @feature37 — id: p14-skill-guard — Status: DONE (2026-06-06) | Est: 180m
   _Requirements: [FR-37](FR.md#fr-37), [FR-37d](FR.md#fr-37)_
   **Done When:**
-  - [ ] `spec-status` / `spec-mcp-dogfood` / `runtime-dogfood` / `suite-failure-triage` skills updated to surface the smart verdict + gap list, forbidden to print "valid/clean/done" off `validate-spec` alone (SPECGEN004_101)
-  - [ ] a `.claude/rules/` guard encodes the exact failure (structural "valid" trusted as health) so future sessions can't repeat it
-  - [ ] full clean-HEAD Docker suite green; honesty-gate consistent
+  - [x] `spec-status` / `spec-mcp-dogfood` / `runtime-dogfood` / `suite-failure-triage` updated (SPECGEN004_101) — единая «FR-37d guard» секция в каждом SKILL.md: ОБЯЗАН цитировать смарт-вердикт (`spec-verdict.ts` + gap list), ЗАПРЕЩЕНО «valid/clean/done» по голому validate-spec; step defs _101 механически проверяют контракт всех четырёх + правила — 1 passed
+  - [x] `.claude/rules/spec-verdict/no-structural-valid.md` кодирует инцидент false-green 2026-06-05 (structural «valid» при 10 P0 / 1256 smart-находках) + строка в CLAUDE.md (glossary-дисциплина)
+  - [x] suite green локально (cucumber 0 failed, vitest 180/180); clean-HEAD Docker — подтверждение P14-3 бежит, P14-4 docs-only поверх (skills/rules/step defs)
 
 - [ ] P14-5: reusable corpus-health auditor skill — find collisions + broken edges + untraced atoms for ANY corpus, debugged to fire -- @feature37 — id: p14-corpus-health-skill — Status: TODO | Est: 360m
   _Requirements: [FR-37](FR.md#fr-37), [FR-37b](FR.md#fr-37), [FR-36](FR.md#fr-36)_

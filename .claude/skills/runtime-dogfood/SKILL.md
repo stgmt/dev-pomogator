@@ -65,3 +65,14 @@ new surface.
 - `spec-mcp-dogfood` — the spec-graph-MCP-specific instance (ready to run).
 - `tests-create-update` — turn a dogfood finding into a regression test (coverage-blindness rule).
 - `suite-failure-triage` — the complement: when the suite is already RED, classify why.
+
+## FR-37d guard — никогда не отмывать структурный pass как здоровье
+
+Этот скилл (и любой агент, репортящий здоровье спеки) **ОБЯЗАН** цитировать
+СМАРТ-вердикт — `npx tsx tools/specs-generator/spec-verdict.ts -Path .specs/<slug>`
+(conformance + coverage + audit + traceability + semantic над одним графом) и его
+gap list. **ЗАПРЕЩЕНО** заявлять «valid / clean / done» на основании одного лишь
+`validate-spec: 0 errors` — структурный pass это pre-filter, не вердикт. Этот
+гард кодирует реальный инцидент 2026-06-05 (false green: structural «valid» при
+10 audit-P0 и 1256 smart-находках). Правило:
+`.claude/rules/spec-verdict/no-structural-valid.md` (FR-37d).

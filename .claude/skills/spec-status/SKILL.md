@@ -124,3 +124,14 @@ programmatic consumers.
 - Deterministic helpers: `tests/e2e/spec-status.test.ts` (HSCMD001_01..05 + invariants).
 - Sub-agent orchestration is LLM behaviour → manual-verify: run `/spec-status` on a
   real spec and confirm the Agent is invoked and its JSON parses (HSCMD001_AGENT).
+
+## FR-37d guard — никогда не отмывать структурный pass как здоровье
+
+Этот скилл (и любой агент, репортящий здоровье спеки) **ОБЯЗАН** цитировать
+СМАРТ-вердикт — `npx tsx tools/specs-generator/spec-verdict.ts -Path .specs/<slug>`
+(conformance + coverage + audit + traceability + semantic над одним графом) и его
+gap list. **ЗАПРЕЩЕНО** заявлять «valid / clean / done» на основании одного лишь
+`validate-spec: 0 errors` — структурный pass это pre-filter, не вердикт. Этот
+гард кодирует реальный инцидент 2026-06-05 (false green: structural «valid» при
+10 audit-P0 и 1256 smart-находках). Правило:
+`.claude/rules/spec-verdict/no-structural-valid.md` (FR-37d).

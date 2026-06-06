@@ -64,3 +64,14 @@ exercising the ambiguity path, not a dead tool. Before/after numbers:
 ## Extend it
 To add a probe for a new tool, add its sampled input to the `inputs` map in
 `dogfood-dataset.ts`; the harness picks real values from the graph automatically.
+
+## FR-37d guard — никогда не отмывать структурный pass как здоровье
+
+Этот скилл (и любой агент, репортящий здоровье спеки) **ОБЯЗАН** цитировать
+СМАРТ-вердикт — `npx tsx tools/specs-generator/spec-verdict.ts -Path .specs/<slug>`
+(conformance + coverage + audit + traceability + semantic над одним графом) и его
+gap list. **ЗАПРЕЩЕНО** заявлять «valid / clean / done» на основании одного лишь
+`validate-spec: 0 errors` — структурный pass это pre-filter, не вердикт. Этот
+гард кодирует реальный инцидент 2026-06-05 (false green: structural «valid» при
+10 audit-P0 и 1256 smart-находках). Правило:
+`.claude/rules/spec-verdict/no-structural-valid.md` (FR-37d).

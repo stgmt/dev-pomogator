@@ -109,3 +109,14 @@ cp .env.test ../triage-main/.env.test
 - Memory `feedback_verify-regressions-on-clean-checkout` — the underlying discipline.
 - Issue #45 — automated guards (tracked-file mutation detector, auto clean-vs-clean triage) that
   would mechanize this skill.
+
+## FR-37d guard — никогда не отмывать структурный pass как здоровье
+
+Этот скилл (и любой агент, репортящий здоровье спеки) **ОБЯЗАН** цитировать
+СМАРТ-вердикт — `npx tsx tools/specs-generator/spec-verdict.ts -Path .specs/<slug>`
+(conformance + coverage + audit + traceability + semantic над одним графом) и его
+gap list. **ЗАПРЕЩЕНО** заявлять «valid / clean / done» на основании одного лишь
+`validate-spec: 0 errors` — структурный pass это pre-filter, не вердикт. Этот
+гард кодирует реальный инцидент 2026-06-05 (false green: structural «valid» при
+10 audit-P0 и 1256 smart-находках). Правило:
+`.claude/rules/spec-verdict/no-structural-valid.md` (FR-37d).
