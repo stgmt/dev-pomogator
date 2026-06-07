@@ -449,3 +449,56 @@ export function extractWriteContent(
   if (idx === -1) return newStr; // can't apply diff cleanly — fail-safe to fragment
   return current.slice(0, idx) + newStr + current.slice(idx + oldStr.length);
 }
+
+// ── CLI: `--check <kind> <file>` — the dry-run surface the form skills document ──
+// (discovery-forms Step 5, requirements-chk-matrix Step 5, task-board-forms Step 6).
+// Was a PHANTOM until 2026-06-07: three skills instructed this invocation while no
+// CLI existed (creation-pipeline review finding). Exit 1 on any violation so the
+// skill can correct in place and re-emit BEFORE the form-guard hook denies a Write.
+
+export function runCheckCli(argv: string[]): { output: string; exitCode: number } {
+  const [flag, kind, file] = argv;
+  const usage = 'usage: spec-form-parsers.ts --check <user-stories|tasks|decisions|chk-rows> <file>';
+  if (flag !== '--check' || !kind || !file) return { output: usage, exitCode: 2 };
+  let content: string;
+  try {
+    content = fs.readFileSync(file, 'utf-8');
+  } catch (e) {
+    return { output: `cannot read ${file}: ${e instanceof Error ? e.message : e}`, exitCode: 2 };
+  }
+  const violations: string[] = [];
+  switch (kind) {
+    case 'user-stories':
+      for (const b of parseUserStoryBlocks(content)) {
+        if (b.missingFirst) violations.push(`${file}:${b.lineNumber} [${b.heading}] missing: ${b.missingFirst}`);
+      }
+      break;
+    case 'tasks':
+      for (const b of parseTaskBlocks(content)) {
+        if (!b.waived && b.missingFirst) violations.push(`${file}:${b.lineNumber} [${b.title}] missing: ${b.missingFirst}`);
+      }
+      break;
+    case 'decisions':
+      for (const b of parseDecisionBlocks(content)) {
+        if (b.missingFirst) violations.push(`${file}:${b.lineNumber} [${b.heading}] missing: ${b.missingFirst}`);
+      }
+      break;
+    case 'chk-rows':
+      for (const r of parseChkRows(content)) {
+        if (r.missingFirst) violations.push(`${file}:${r.lineNumber} [${r.id}] invalid: ${r.missingFirst}`);
+      }
+      break;
+    default:
+      return { output: usage, exitCode: 2 };
+  }
+  if (violations.length === 0) return { output: `OK — 0 violations (${kind})`, exitCode: 0 };
+  return { output: violations.join('\n') + `\n${violations.length} violation(s) (${kind})`, exitCode: 1 };
+}
+
+const isDirectRunFormParsers =
+  process.argv[1]?.endsWith('spec-form-parsers.ts') || process.argv[1]?.endsWith('spec-form-parsers.js');
+if (isDirectRunFormParsers) {
+  const { output, exitCode } = runCheckCli(process.argv.slice(2));
+  console.log(output);
+  process.exit(exitCode);
+}

@@ -32,6 +32,7 @@ const ACK_CLI = path.resolve(__dirname, '..', 'ack-summary.ts');
 let root: string;
 let ackFile: string;
 let repoRoot: string;
+let softLog: string;
 
 /** Seed N hard-tier deny findings (entries WITH a `code` field) into today's JSONL. */
 function seedHardDeny(n: number, ts = new Date()): void {
@@ -54,6 +55,10 @@ beforeEach(() => {
   ackFile = path.join(root, 'state', 'last-summary-ack.json');
   repoRoot = path.join(root, 'repo');
   fs.mkdirSync(repoRoot, { recursive: true });
+  // Isolated EMPTY soft-tier log: sibling guard suites write real DENYs into
+  // the machine-local form-guards.log concurrently — counts must not race.
+  softLog = path.join(root, 'soft.log');
+  fs.writeFileSync(softLog, '');
 });
 
 afterAll(() => {
@@ -65,14 +70,14 @@ describe('FR-20 threshold-only summary + ack (T-Trans.2)', () => {
     // Isolated repoRoot (no JSONL) + never-acked state + soft-tier filtered by
     // an ack stamped NOW so any real machine-local audit entries are excluded.
     writeAckAtomic({ ack_timestamp: new Date().toISOString(), ack_event_count: 0 }, ackFile);
-    const line = buildConformanceSummary({ ackFile, repoRoot });
+    const line = buildConformanceSummary({ ackFile, repoRoot, softLog });
     expect(line).toBeNull();
   });
 
   it('emits a single matching line when ≥1 unresolved DENY exists (threshold-≥1)', () => {
     writeAckAtomic({ ack_timestamp: new Date(Date.now() - 60_000).toISOString(), ack_event_count: 0 }, ackFile);
     seedHardDeny(3);
-    const line = buildConformanceSummary({ ackFile, repoRoot });
+    const line = buildConformanceSummary({ ackFile, repoRoot, softLog });
     expect(line).not.toBeNull();
     expect(line!).toMatch(/^📊 Spec conformance: \d+ unresolved DENY since /);
     expect(line!).toContain('3 unresolved DENY');
@@ -81,12 +86,12 @@ describe('FR-20 threshold-only summary + ack (T-Trans.2)', () => {
 
   it('goes silent after ack-summary.ts runs, and re-triggers on a NEWER deny (ack)', () => {
     seedHardDeny(2);
-    expect(buildConformanceSummary({ ackFile, repoRoot })).not.toBeNull();
+    expect(buildConformanceSummary({ ackFile, repoRoot, softLog })).not.toBeNull();
 
     // Real CLI subprocess — the same invocation the /spec-status skill makes.
     const r = spawnSync(
       process.execPath,
-      ['--import', 'tsx', ACK_CLI, '--ack-file', ackFile, '--repo-root', repoRoot],
+      ['--import', 'tsx', ACK_CLI, '--ack-file', ackFile, '--repo-root', repoRoot, '--soft-log', softLog],
       { encoding: 'utf-8', timeout: 60_000 },
     );
     expect(r.status, r.stderr).toBe(0);
@@ -96,13 +101,13 @@ describe('FR-20 threshold-only summary + ack (T-Trans.2)', () => {
     expect(state!.ack_event_count).toBeGreaterThanOrEqual(2);
 
     // Seeded entries are now acknowledged → silence.
-    expect(buildConformanceSummary({ ackFile, repoRoot })).toBeNull();
+    expect(buildConformanceSummary({ ackFile, repoRoot, softLog })).toBeNull();
 
     // A NEW deny after the ack re-triggers the line with count 1.
     seedHardDeny(1, new Date(Date.now() + 5))
     // ensure strictly-after the ack timestamp:
     ;
-    const after = buildConformanceSummary({ ackFile, repoRoot });
+    const after = buildConformanceSummary({ ackFile, repoRoot, softLog });
     expect(after).not.toBeNull();
     expect(after!).toContain('1 unresolved DENY');
   });
@@ -113,7 +118,7 @@ describe('FR-20 threshold-only summary + ack (T-Trans.2)', () => {
     const samples: number[] = [];
     for (let i = 0; i < 100; i++) {
       const t0 = performance.now();
-      const line = buildConformanceSummary({ ackFile, repoRoot });
+      const line = buildConformanceSummary({ ackFile, repoRoot, softLog });
       samples.push(performance.now() - t0);
       expect(line).toContain('1000 unresolved DENY');
     }
@@ -126,7 +131,7 @@ describe('FR-20 threshold-only summary + ack (T-Trans.2)', () => {
     const procs = Array.from({ length: 8 }, () =>
       spawnSync(
         process.execPath,
-        ['--import', 'tsx', ACK_CLI, '--ack-file', ackFile, '--repo-root', repoRoot],
+        ['--import', 'tsx', ACK_CLI, '--ack-file', ackFile, '--repo-root', repoRoot, '--soft-log', softLog],
         { encoding: 'utf-8', timeout: 60_000 },
       ),
     );

@@ -87,4 +87,9 @@ Skill("spec-reality-check")
 
 ## Verdict
 
-После Step 6 — спека готова. Если все findings закрыты или explicitly accepted в AUDIT_REPORT.md как false positives — verdict "Spec is ready for implementation".
+«Все findings закрыты в AUDIT_REPORT.md» — это НЕ вердикт (FR-37d, правило `no-structural-valid.md`). После Step 6 — ДВА условия одновременно:
+
+1. все findings закрыты или explicitly accepted в AUDIT_REPORT.md как false positives;
+2. **смарт-вердикт GREEN**: `npx tsx tools/specs-generator/spec-verdict.ts -Path .specs/{slug} --no-semantic` — audit + traceability (UNCOVERED_FR / TASK_UNTESTED / UNTAGGED_SCENARIO) + conformance над одним графом. RED ⇒ цитировать gap list и закрывать его, не «accepted».
+
+Только тогда verdict «Spec is ready for implementation». Для агентского потребления тот же статус доступен через MCP `get_spec_status({spec})` (lifecycle SPEC_ONLY / TESTS_NOT_RUN / RED / PARTIAL / GREEN + linked last_run).

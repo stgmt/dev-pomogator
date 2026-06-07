@@ -5,7 +5,7 @@ description: >
   the ## Task Summary Table header via spec-status.ts -Format task-table. Idempotent
   (replaces auto-generated block between markers). Called by create-spec Phase 3
   (Finalization) step 1b. Returns JSON summary of tasks enriched.
-allowed-tools: Read, Write, Edit, Bash
+allowed-tools: Read, Write, Edit, Bash, AskUserQuestion
 ---
 
 # Task Board Forms
@@ -82,16 +82,19 @@ Target heading shape (used in Jira-mode or when task-id matters):
 
 ```markdown
 ### 📋 `block-picking-over-limit`
-> {One-line description}
+> {One-line description} — Status: TODO | Est: 45m
 - **files:** `src/foo.ts` *(edit)*
-- **status:** TODO
-- **est:** 45m
 - **refs:** FR-1, AC-1
 - **deps:** *none*
-- **done when:**
+**Done When:**
   - [ ] {Binary observable 1}
   - [ ] @feature1 scenario passes
 ```
+
+> ⚠️ Маркеры РЕГИСТРО-ЗАВИСИМЫ под `task-form-guard` (spec-form-parsers.ts):
+> ровно `Status:` (TODO|IN_PROGRESS|DONE|BLOCKED), `Est: <N>m`, `**Done When:**`.
+> Lowercase `**status:**` / `**done when:**` guard НЕ распознаёт → DENY на Write
+> (поймано ревью 2026-06-07: скилл рекомендовал форму, которую его же guard режет).
 
 Use Edit (not Write) to preserve unrelated content (Phase descriptions, notes, Jira trace lines).
 

@@ -12,7 +12,7 @@ argument-hint: "<feature-slug>"
 
 ## Структура спецификации
 
-Каждая спека располагается в `.specs/{feature-slug}/` и содержит до 15 файлов: README, USER_STORIES, USE_CASES, RESEARCH, REQUIREMENTS, FR, NFR, ACCEPTANCE_CRITERIA, DESIGN, TASKS, FILE_CHANGES, CHANGELOG, FIXTURES, `*_SCHEMA.md`, `{slug}.feature`. Полный список см. `references/phase1_discovery.md`.
+Каждая спека располагается в `.specs/{feature-slug}/`. Scaffold создаёт 15 файлов: README, USER_STORIES, USE_CASES, RESEARCH, REQUIREMENTS, FR, NFR, ACCEPTANCE_CRITERIA, DESIGN, TASKS, FILE_CHANGES, CHANGELOG, `{slug}.feature` (эти **13 — обязательный минимум полноты**, его проверяет валидатор) + FIXTURES и `*_SCHEMA.md` (создаются scaffold-ом, но для статуса «ПОЛНАЯ» опциональны). Полный список см. `references/phase1_discovery.md`.
 
 ## Скрипты-инструменты
 

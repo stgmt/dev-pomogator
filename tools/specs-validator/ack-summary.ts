@@ -23,15 +23,17 @@ import {
 export function runAck(argv: string[] = process.argv.slice(2)): string {
   let ackFile = defaultAckFile();
   let repoRoot = process.cwd();
+  let softLog: string | undefined;
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--ack-file' && argv[i + 1]) ackFile = argv[++i];
     if (argv[i] === '--repo-root' && argv[i + 1]) repoRoot = argv[++i];
+    if (argv[i] === '--soft-log' && argv[i + 1]) softLog = argv[++i];
   }
-  const count = countSoftDenySince(null) + countHardDenySince(null, repoRoot);
+  const count = countSoftDenySince(null, softLog) + countHardDenySince(null, repoRoot);
   const state = { ack_timestamp: new Date().toISOString(), ack_event_count: count };
   writeAckAtomic(state, ackFile);
   // Show what was acknowledged (or confirm silence) for the skill transcript.
-  const line = buildConformanceSummary({ ackFile, repoRoot });
+  const line = buildConformanceSummary({ ackFile, repoRoot, softLog });
   return `acknowledged at ${state.ack_timestamp} (${count} event(s) in window); next-prompt summary: ${line ?? 'SILENT'}`;
 }
 

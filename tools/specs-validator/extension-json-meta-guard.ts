@@ -43,6 +43,9 @@ const PROTECTED_HOOKS = [
   'requirements-chk-guard.ts',
   'risk-assessment-guard.ts',
   'extension-json-meta-guard.ts',
+  // the live carrier of the five form-guards (2026-06-07 revival): removing
+  // the dispatcher registration kills them all at once — protect it too.
+  'form-guards-dispatch.ts',
 ];
 
 // v4 canonical-manifest registrations (FR-24 extension scope). Scanned as

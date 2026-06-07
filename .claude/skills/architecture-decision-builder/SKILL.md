@@ -10,7 +10,7 @@ description: >
   axis-enumeration plus once per axis. Do NOT use for brownfield refactors (existing build
   manifest), single-tech feature decisions, or post-implementation reviews.
 disable-model-invocation: false
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent, AskUserQuestion, WebFetch, WebSearch, mcp__context7__resolve-library-id, mcp__context7__query-docs
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent, AskUserQuestion, WebFetch, WebSearch, ToolSearch, mcp__context7__resolve-library-id, mcp__context7__query-docs, mcp__claude_ai_Context7__resolve-library-id, mcp__claude_ai_Context7__query-docs
 ---
 
 # architecture-decision-builder
@@ -28,7 +28,7 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent, AskUserQuestion, WebF
 3. **Failure-modes per вариант (R10).** Перечисли: crash mid-operation / duplicate side-effect / poison-infinite-retry / race. «Exactly-once delivery» ≠ idempotent side-effect.
 4. **External-integration timing (R12).** Для каждой внешней интеграции проверь: webhook timeout / required-response-time (respond-immediately если обработчик медленнее), sync-vs-async семантику, rate limits, per-resource queue limits.
 5. **Anti-hallucination (R3, BLOCKING).** Каждое тех-заявление помечай `[VERIFIED via <source>]` или `[UNVERIFIED]`. Cost — cited или `[UNVERIFIED — knowledge cutoff]`, не голые уверенные числа.
-6. **Live context7 пруфы (R15, FR-15).** Не переписывай факты из памяти/эталона second-hand — для каждого тех-заявления варианта зарезолви библиотеку через `mcp__context7__resolve-library-id` → `mcp__context7__query-docs` и пометь `[VERIFIED via context7:<lib> <ver>]`. Если context7 не нашёл библиотеку → `[UNVERIFIED — Context7 no match]`, НЕ выдумывай. context7 недоступен/rate-limit → fallback на тот же `[UNVERIFIED]` маркер (не blocking).
+6. **Live context7 пруфы (R15, FR-15).** Не переписывай факты из памяти/эталона second-hand — для каждого тех-заявления варианта зарезолви библиотеку через context7 MCP (`resolve-library-id` → `query-docs`; ВНИМАНИЕ: имя тулзы зависит от способа подключения сервера — `mcp__context7__*` для локальной регистрации, `mcp__claude_ai_Context7__*` для claude.ai-коннектора; если прямой вызов даёт unknown tool — найди актуальное имя через ToolSearch "context7") и пометь `[VERIFIED via context7:<lib> <ver>]`. Если context7 не нашёл библиотеку → `[UNVERIFIED — Context7 no match]`, НЕ выдумывай. context7 недоступен/rate-limit → fallback на тот же `[UNVERIFIED]` маркер (не blocking).
 7. **Correction-log (R14, FR-14, опционально).** Если по ходу ресёрча ты ИЗМЕНИЛ посылку (предполагал X → context7/challenge показал Y → исправил) — зафиксируй в `VariantModel.correction_log[]` строкой «предполагал X → обнаружил Y → исправил потому что Z». Рендерится секцией `## Corrections`. Не выдумывай фейковые корректировки если их не было — пустой log не рендерит секцию.
 8. **Две линзы + карта-сравнение + РЕАЛЬНОСТЬ (R24, BLOCKING — артефакт бесполезен без этого).** Каждый вариант ОБЯЗАН нести:
    - `business_summary` (**бизнес-линза**, plain language): `gets` (какую способность получает бизнес), `time_to_market` (срок до первого результата), `cost` (деньги: старт + при росте), `risk` (главный бизнес-риск). Без жаргона — это читает не инженер.

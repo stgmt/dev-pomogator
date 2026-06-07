@@ -36,6 +36,8 @@ export interface SummaryPaths {
   ackFile?: string;
   /** Repo root holding .dev-pomogator/.spec-check-log/. Default: cwd. */
   repoRoot?: string;
+  /** Soft-tier audit-log override (tests/isolation). Default: the real form-guards.log. */
+  softLog?: string;
 }
 
 const ENTRY_CAP = 1000; // FR-20: bound scan cost per file
@@ -65,8 +67,10 @@ export function writeAckAtomic(state: AckState, ackFile = defaultAckFile()): voi
 }
 
 /** Soft-tier unresolved DENY count: audit-log DENY events newer than the ack. */
-export function countSoftDenySince(sinceTs: Date | null): number {
-  const entries = readRecentEvents(24).slice(-ENTRY_CAP);
+export function countSoftDenySince(sinceTs: Date | null, softLog?: string): number {
+  const entries = (softLog === undefined ? readRecentEvents(24) : readRecentEvents(24, softLog)).slice(
+    -ENTRY_CAP,
+  );
   let n = 0;
   for (const e of entries) {
     if (e.event !== 'DENY') continue;
@@ -114,7 +118,8 @@ export function buildConformanceSummary(paths: SummaryPaths = {}): string | null
   const ack = readAck(paths.ackFile ?? defaultAckFile());
   const sinceTs = ack ? new Date(ack.ack_timestamp) : null;
   const unresolved =
-    countSoftDenySince(sinceTs) + countHardDenySince(sinceTs, paths.repoRoot ?? process.cwd());
+    countSoftDenySince(sinceTs, paths.softLog) +
+    countHardDenySince(sinceTs, paths.repoRoot ?? process.cwd());
   if (unresolved === 0) return null; // zero-noise default
   const sinceLabel = ack ? `since last ack ${ack.ack_timestamp}` : 'since the last 24h (never acked)';
   return `📊 Spec conformance: ${unresolved} unresolved DENY ${sinceLabel} — run /spec-status for the full aggregate, which also acknowledges them`;

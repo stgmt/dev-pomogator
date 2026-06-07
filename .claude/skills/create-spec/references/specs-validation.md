@@ -2,7 +2,7 @@
 
 ## Структура полной фичи
 
-Фича считается ПОЛНОЙ если содержит ВСЕ 13 файлов:
+Фича считается ПОЛНОЙ если содержит ВСЕ 13 обязательных файлов (FIXTURES.md и `*_SCHEMA.md` scaffold тоже создаёт, но для полноты они опциональны):
 - 12 MD файлов: ACCEPTANCE_CRITERIA, CHANGELOG, DESIGN, FILE_CHANGES, FR, NFR, README, REQUIREMENTS, RESEARCH, TASKS, USE_CASES, USER_STORIES
 - 1 .feature файл с BDD сценариями
 
@@ -18,7 +18,7 @@
 
 2. **В .feature файлах**:
    ```gherkin
-   # @feature1
+   @feature1
    Scenario: User can login with valid credentials
    ```
 
@@ -38,7 +38,7 @@
 1. Создай структуру через `scaffold-spec.ts`
 2. Заполни USER_STORIES.md → добавляй @featureN к каждой story
 3. Пиши FR.md → копируй @featureN из story
-4. Пиши .feature файл → добавляй # @featureN перед Scenario
+4. Пиши .feature файл → ставь НАСТОЯЩИЙ Gherkin-тег `@featureN` строкой над Scenario (НЕ комментарий `# @featureN` — парсер графа его не видит: сценарий UNTAGGED, рёбра tested-by не строятся)
 5. Пиши тесты → добавляй // @featureN перед describe/it
 
 ## Автоматическая валидация
@@ -56,7 +56,7 @@
 
 | Проблема | Описание | Действие |
 |----------|----------|----------|
-| NOT_COVERED | FR/AC/UC с @featureN но без сценария | Добавь # @featureN в .feature |
+| NOT_COVERED | FR/AC/UC с @featureN но без сценария | Добавь реальный тег `@featureN` строкой над Scenario в .feature |
 | ORPHAN | @featureN в .feature без FR/AC | Добавь @featureN в MD файл |
 | NO_TEST | @featureN без теста | Добавь // @featureN в тест |
 | INCOMPLETE | Фича не имеет всех 13 файлов | Дозаполни недостающие файлы |
