@@ -151,6 +151,36 @@ Then('Marksman and anchor-fix are unaffected', function (this: F36World) {
   assert.ok(!this.graph!.definitions.has('anchors-demo:FR-2'), 'definitions must NOT key by composite');
 });
 
+// ── SPECGEN004_90 — FR-36a: same bare id ⇒ two distinct composite nodes ───
+
+Given('two specs that each define the bare id FR-2', function (this: F36World) {
+  for (const slug of ['slug-a', 'slug-b']) {
+    const dir = path.join(this.tempDir, '.specs', slug);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'FR.md'), `## FR-2: ${slug} requirement\n\nBody.\n`);
+  }
+});
+
+When('the builder assembles the graph with composite keys', function (this: F36World) {
+  this.graph = buildGraph({ repoRoot: this.tempDir, skipNdjson: true });
+});
+
+Then('the graph holds a node keyed slug-A:FR-2 and a node keyed slug-B:FR-2', function (this: F36World) {
+  assert.ok(this.graph!.nodes.has('slug-a:FR-2'), 'slug-a:FR-2 node must exist');
+  assert.ok(this.graph!.nodes.has('slug-b:FR-2'), 'slug-b:FR-2 node must exist');
+});
+
+Then('neither node is collision-dropped', function (this: F36World) {
+  // Last-writer map dedup would have kept exactly ONE FR node — assert both
+  // survive AND each carries its own spec field (no shared object).
+  const a = this.graph!.nodes.get('slug-a:FR-2')!;
+  const b = this.graph!.nodes.get('slug-b:FR-2')!;
+  assert.equal(a.spec, 'slug-a');
+  assert.equal(b.spec, 'slug-b');
+  const frCount = [...this.graph!.nodes.values()].filter((n) => n.type === 'FR').length;
+  assert.equal(frCount, 2, `both FR-2 nodes must survive the build, got ${frCount}`);
+});
+
 // ── SPECGEN004_93 / _94 — FR-36d: bare→candidates, qualified→exact ────────
 
 interface F36ResolveWorld extends F36World {
