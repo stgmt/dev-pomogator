@@ -133,7 +133,7 @@
 | T16-127 | P16-7: `.progress.json` single-writer contract | TODO | — | Phase 16 — Creation-pipeline hardening (review 2026-06-07) | 60m |
 | T16-128 | P16-8: STOP-confirm discipline | TODO | — | Phase 16 — Creation-pipeline hardening (review 2026-06-07) | 180m |
 | T17-129 | P17-1: read-sufficiency | DONE | — | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 240m |
-| T17-130 | P17-2: mutation surface | TODO | p17-read-sufficiency | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 600m |
+| T17-130 | P17-2: mutation surface | DONE | p17-read-sufficiency | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 600m |
 | T17-131 | P17-3: spec-access-guard в SHADOW | TODO | p17-read-sufficiency | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 240m |
 | T17-132 | P17-4: carve-out лист движка в DESIGN | TODO | — | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 60m |
 | T17-133 | P17-5: миграция корзины 1 | TODO | p17-read-sufficiency, p17-mutation-surface | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 480m |
@@ -1252,14 +1252,14 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] SPECGEN004_113 GREEN (реальные handlers + реальный аудит-лог на изолированном корпусе); _111/_112 честно red до P17-3/6
   - [x] FR-33/42 drift-guard: 3 беспризорные capability пойманы guard-ом (incl. старый дрифт get_spec_status) → feature-map дополнен, guard чист
 
-- [ ] P17-2: mutation surface — живой генератор (propose/apply/create через MCP) — id: p17-mutation-surface — Status: TODO | Est: 600m
+- [x] P17-2: mutation surface — живой генератор (propose/apply/create через MCP) — id: p17-mutation-surface — Status: DONE (2026-06-07) | Est: 600m
   _depends: p17-read-sufficiency_
   _Requirements: [FR-40](FR.md#fr-40)_
   **Done When:**
-  - [ ] `propose_spec_change` (dry-run) + `apply_spec_change` + `create_spec` в tools.ts; ОБОРАЧИВАЮТ существующий движок (scaffold-spec, form-парсеры, anchor-checkLinks, conformance) — ноль дублированной валидации
-  - [ ] error-severity находка → отказ БЕЗ записи + findings list; исправленное изменение → атомарная запись + лог
-  - [ ] после записи граф обновлён (incremental FR-14 / полный fallback) — следующий read видит свежее
-  - [ ] SPECGEN004_114, _115, _116 GREEN
+  - [x] `propose_spec_change` (dry-run) + `apply_spec_change` + `create_spec` в tools.ts (16→19, пины обновлены); `mutations.ts` ОБОРАЧИВАЕТ движок: form-контракты = те же spec-form-parsers, якоря = anchor-integrity checkLinks (in-memory swap), conformance = checkConformance над TEMP-КЛОНОМ спеки с применённым изменением — реальное дерево не тронуто до прохода; ноль дублированной валидации; формат change = {content} | {old_string,new_string,replace_all?} (FR-40a)
+  - [x] error-severity → отказ БЕЗ записи + findings list (живая проба: битый якорь — propose denied, apply VALIDATION_FAILED, файла на диске нет; исправленное — атомарная запись temp+rename + audit-лог denied/denied/ok); create_spec: kebab-валидация, SPEC_EXISTS на дубль, SPECS_GENERATOR_ROOT в спавне (живая проба поймала: без него scaffold писал в РЕАЛЬНЫЙ репо — загрязнение удалено, фикс в спавне)
+  - [x] FR-40c: в сервере граф обновляет FR-14 watcher; watcher-less embedders передают refreshGraph (новый RegistryOptions) — _115 доказывает: после записи get_node видит свежий title
+  - [x] SPECGEN004_114, _115, _116 GREEN (реальные handlers; _116 гоняет РЕАЛЬНЫЙ runSpecVerdict на новорождённой — GREEN); feature-map +3, drift-guard чист; bundle rebuilt, vitest 52/52
 
 - [ ] P17-3: spec-access-guard в SHADOW — id: p17-shadow-guard — Status: TODO | Est: 240m
   _depends: p17-read-sufficiency_

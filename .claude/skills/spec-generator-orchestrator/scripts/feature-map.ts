@@ -65,6 +65,11 @@ export const REFERENCED_CAPABILITIES: readonly string[] = [
   // phase agents (FR-41) become the primary consumers when the wave lands.
   'list_spec_docs',
   'read_spec_doc',
+  // FR-40 (P17-2) mutation door — primary consumer: create-spec workflow (FR-42c)
+  // + the FR-41 phase agents when the wave lands.
+  'propose_spec_change',
+  'apply_spec_change',
+  'create_spec',
   // worker skills
   'create-spec',
   'architecture-research-workflow',

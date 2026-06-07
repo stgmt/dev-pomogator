@@ -68,3 +68,145 @@ Then('the read lands in the spec-access audit log', function (this: F39World) {
   assert.ok(read, 'the ok-read must be audited');
   assert.match(read.args_digest, /^[0-9a-f]{16}$/, 'args digest present');
 });
+
+// ── SPECGEN004_114/_115/_116 — FR-40: the mutation door (P17-2) ─────────────
+// Bound to the REAL handlers (propose/apply/create) over an isolated corpus;
+// _116 runs the REAL authoritative verdict (runSpecVerdict, cwd-aligned).
+
+import { runSpecVerdict } from '../../tools/specs-generator/spec-verdict.ts';
+
+interface F40World extends F39World {
+  applyDenied?: { ok: boolean; error?: string; findings?: Array<{ layer: string; message: string }> };
+  appliedOk?: { ok: boolean; bytes?: number };
+  freshBody?: string;
+  newbornVerdict?: { verdict: string; gapList: string[] };
+}
+
+function railsTools(world: F40World) {
+  return buildToolRegistry(() => buildGraph({ repoRoot: world.tempDir, skipNdjson: true }));
+}
+
+async function callTool(world: F40World, name: string, args: Record<string, unknown>): Promise<any> {
+  const t = railsTools(world).find((x) => x.name === name)!;
+  const r = (await t.handler(args as never)) as { content: Array<{ text: string }> };
+  return JSON.parse(r.content[0].text);
+}
+
+/** Run a handler with cwd switched to the isolated corpus (handlers resolve cwd). */
+async function inCorpus<T>(world: F40World, fn: () => Promise<T>): Promise<T> {
+  const prev = process.cwd();
+  process.chdir(world.tempDir);
+  try {
+    return await fn();
+  } finally {
+    process.chdir(prev);
+  }
+}
+
+// _114 — reject before disk, then the corrected change lands
+
+Given('a spec change that breaks an anchor or a form contract', function (this: F40World) {
+  const dir = path.join(this.tempDir, '.specs', 'mut-demo');
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'FR.md'), '## FR-1: Demo\n\nBody.\n');
+});
+
+When('the agent applies it through the MCP mutation tool', async function (this: F40World) {
+  this.applyDenied = await inCorpus(this, () =>
+    callTool(this, 'apply_spec_change', {
+      spec: 'mut-demo',
+      doc: 'DESIGN.md',
+      content: 'See [req](FR.md#fr-99-nope).\n', // broken anchor
+      reason: 'bdd probe',
+    }),
+  );
+});
+
+Then('the server refuses without writing and returns the findings list', function (this: F40World) {
+  assert.equal(this.applyDenied!.ok, false);
+  assert.equal(this.applyDenied!.error, 'VALIDATION_FAILED');
+  assert.ok(
+    this.applyDenied!.findings!.some((f) => f.layer === 'anchor'),
+    'the anchor finding must be named',
+  );
+  assert.ok(
+    !fs.existsSync(path.join(this.tempDir, '.specs', 'mut-demo', 'DESIGN.md')),
+    'a refused change must NOT touch the disk',
+  );
+});
+
+Then('the corrected change is written atomically and logged', async function (this: F40World) {
+  this.appliedOk = await inCorpus(this, () =>
+    callTool(this, 'apply_spec_change', {
+      spec: 'mut-demo',
+      doc: 'DESIGN.md',
+      content: 'See [req](FR.md#fr-1-demo).\n',
+      reason: 'bdd probe fixed',
+    }),
+  );
+  assert.equal(this.appliedOk!.ok, true);
+  assert.ok(fs.existsSync(path.join(this.tempDir, '.specs', 'mut-demo', 'DESIGN.md')));
+  const log = fs.readFileSync(path.join(this.tempDir, '.dev-pomogator', 'logs', 'spec-access.jsonl'), 'utf-8');
+  assert.ok(/apply_spec_change.*denied/.test(log), 'the refusal is audited');
+  assert.ok(/apply_spec_change.*"ok"/.test(log), 'the accepted write is audited');
+});
+
+// _115 — a successful write refreshes the graph for the next read
+
+Given('an accepted spec change written through MCP', async function (this: F40World) {
+  const dir = path.join(this.tempDir, '.specs', 'fresh-demo');
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'FR.md'), '## FR-1: Old title\n\nBody.\n');
+  // Watcher-less embedding: the registry gets an explicit refresh (FR-40c) —
+  // inside the real server the FR-14 watcher plays this role.
+  let graph = buildGraph({ repoRoot: this.tempDir, skipNdjson: true });
+  const tools = buildToolRegistry(() => graph, {
+    refreshGraph: () => {
+      graph = buildGraph({ repoRoot: this.tempDir, skipNdjson: true });
+    },
+  });
+  await inCorpus(this, async () => {
+    const r = (await tools.find((t) => t.name === 'apply_spec_change')!.handler({
+      spec: 'fresh-demo',
+      doc: 'FR.md',
+      content: '## FR-1: Fresh title\n\nBody.\n',
+      reason: 'freshness probe',
+    } as never)) as { content: Array<{ text: string }> };
+    assert.equal(JSON.parse(r.content[0].text).ok, true);
+    const node = (await tools.find((t) => t.name === 'get_node')!.handler({
+      node_id: 'fresh-demo:FR-1',
+    } as never)) as { content: Array<{ text: string }> };
+    this.freshBody = JSON.parse(node.content[0].text).node?.title;
+  });
+});
+
+When('the agent reads the affected node afterwards', function (this: F40World) {
+  // The read happened right after the write in the Given (single closure) —
+  // nothing else to do here; the assertion is in the Then.
+});
+
+Then('the response reflects the fresh state', function (this: F40World) {
+  assert.equal(this.freshBody, 'Fresh title', 'the post-write read must see the NEW content (FR-40c)');
+});
+
+// _116 — create_spec births a verdict-green spec through MCP
+
+Given('the create_spec mutation tool', function (this: F40World) {
+  fs.mkdirSync(path.join(this.tempDir, '.specs'), { recursive: true });
+});
+
+When('the agent creates a new spec through it', async function (this: F40World) {
+  const r = await inCorpus(this, () => callTool(this, 'create_spec', { slug: 'newborn-mcp' }));
+  assert.equal(r.ok, true, JSON.stringify(r).slice(0, 200));
+  this.newbornVerdict = (await inCorpus(this, () =>
+    runSpecVerdict('.specs/newborn-mcp', { semantic: false, cwd: this.tempDir } as never),
+  )) as { verdict: string; gapList: string[] };
+});
+
+Then('the authoritative verdict for the newborn spec is GREEN', function (this: F40World) {
+  assert.equal(
+    this.newbornVerdict!.verdict,
+    'GREEN',
+    `newborn must be GREEN, gaps: ${this.newbornVerdict!.gapList.slice(0, 3).join(' | ')}`,
+  );
+});

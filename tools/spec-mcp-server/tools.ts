@@ -39,6 +39,9 @@ import { gapsFromFindings, summariseGaps } from '../spec-graph/traceability.ts';
 import fs from 'node:fs';
 import path from 'node:path';
 import { logSpecAccess } from './spec-access-log.ts';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import { validateSpecChange, writeDocAtomic, type SpecChange } from './mutations.ts';
 import type {
   SpecGraph,
   Node,
@@ -448,8 +451,18 @@ function collectGraphRefs(graph: SpecGraph, id: string): GraphRef[] {
   return references;
 }
 
+export interface RegistryOptions {
+  /**
+   * FR-40c graph freshness after a mutation. Inside the running MCP server the
+   * FR-14 watcher patches the graph on the disk write — leave unset there.
+   * Watcher-less embedders (tests, one-shot scripts) pass an explicit rebuild.
+   */
+  refreshGraph?: () => void;
+}
+
 export function buildToolRegistry(
   getGraph: () => SpecGraph,
+  registryOpts: RegistryOptions = {},
 ): ToolDefinition<z.ZodRawShape>[] {
   const tools: ToolDefinition<z.ZodRawShape>[] = [];
 
@@ -959,6 +972,118 @@ export function buildToolRegistry(
       const content = fs.readFileSync(abs, 'utf-8');
       logSpecAccess('read_spec_doc', args, 'ok');
       return asJsonResult({ ok: true, spec: slug, doc: name, bytes: content.length, content });
+    },
+  });
+
+  // ─── 17) propose_spec_change — FR-40 dry-run (P17-2) ─────────────────────
+  const CHANGE_SHAPE = {
+    spec: z.string(),
+    doc: z.string(),
+    content: z.string().optional(),
+    old_string: z.string().optional(),
+    new_string: z.string().optional(),
+    replace_all: z.boolean().optional(),
+    reason: z.string(),
+  } as const satisfies z.ZodRawShape;
+  const toChange = (a: Record<string, unknown>): SpecChange | null => {
+    if (typeof a.content === 'string') return { content: a.content };
+    if (typeof a.old_string === 'string' && typeof a.new_string === 'string') {
+      return { old_string: a.old_string, new_string: a.new_string, replace_all: a.replace_all === true };
+    }
+    return null;
+  };
+  const slugOf = (spec: unknown): string =>
+    String(spec).replace(/\\/g, '/').replace(/^\.?\/?\.specs\//, '').replace(/\/+$/, '');
+  const docOf = (doc: unknown): string => path.basename(String(doc));
+
+  tools.push({
+    name: 'propose_spec_change',
+    description:
+      'FR-40 DRY-RUN of a spec mutation: applies the change IN MEMORY and runs the ' +
+      'full validation (form contracts + anchors + conformance of the affected spec) ' +
+      'WITHOUT writing. Same checks as apply_spec_change — propose first, fix the ' +
+      'findings, then apply. change = {content} (full replace) OR ' +
+      '{old_string, new_string, replace_all?} (Edit-tool semantics).',
+    inputShape: CHANGE_SHAPE,
+    handler: async (args) => {
+      const slug = slugOf(args.spec);
+      const doc = docOf(args.doc);
+      const change = toChange(args as Record<string, unknown>);
+      if (!change) {
+        logSpecAccess('propose_spec_change', args, 'error');
+        return asJsonResult({ ok: false, error: 'BAD_CHANGE', hint: 'Pass {content} or {old_string,new_string}.' });
+      }
+      const r = validateSpecChange(process.cwd(), slug, doc, change);
+      logSpecAccess('propose_spec_change', args, r.ok ? 'ok' : 'denied');
+      return asJsonResult({ ok: r.ok, spec: slug, doc, dry_run: true, findings: r.findings });
+    },
+  });
+
+  // ─── 18) apply_spec_change — FR-40 validated atomic write (P17-2) ────────
+  tools.push({
+    name: 'apply_spec_change',
+    description:
+      'FR-40 «живой генератор»: apply a spec mutation THROUGH the server. The change ' +
+      'is validated BEFORE touching disk (form contracts + anchors + conformance); any ' +
+      'error-severity finding → refusal with the findings list (fix and retry). A clean ' +
+      'change is written atomically and audited. Inside the MCP server the FR-14 watcher ' +
+      'refreshes the graph; the next read sees the fresh state.',
+    inputShape: CHANGE_SHAPE,
+    handler: async (args) => {
+      const slug = slugOf(args.spec);
+      const doc = docOf(args.doc);
+      const change = toChange(args as Record<string, unknown>);
+      if (!change) {
+        logSpecAccess('apply_spec_change', args, 'error');
+        return asJsonResult({ ok: false, error: 'BAD_CHANGE', hint: 'Pass {content} or {old_string,new_string}.' });
+      }
+      const r = validateSpecChange(process.cwd(), slug, doc, change);
+      if (!r.ok) {
+        logSpecAccess('apply_spec_change', args, 'denied');
+        return asJsonResult({ ok: false, error: 'VALIDATION_FAILED', spec: slug, doc, findings: r.findings, hint: 'Fix the findings and retry; propose_spec_change is the free dry-run.' });
+      }
+      const abs = writeDocAtomic(process.cwd(), slug, doc, r.next!);
+      registryOpts.refreshGraph?.();
+      logSpecAccess('apply_spec_change', args, 'ok');
+      return asJsonResult({ ok: true, spec: slug, doc, path: abs, bytes: r.next!.length, findings: [] });
+    },
+  });
+
+  // ─── 19) create_spec — FR-40a scaffold through MCP (P17-2) ───────────────
+  tools.push({
+    name: 'create_spec',
+    description:
+      'FR-40a: create a new spec THROUGH the server — wraps the engine scaffold ' +
+      '(templates are born verdict-GREEN). kebab-case slug; refuses an existing spec.',
+    inputShape: { slug: z.string() } as const satisfies z.ZodRawShape,
+    handler: async ({ slug }) => {
+      const name = String(slug);
+      if (!/^[a-z0-9][a-z0-9-]*$/.test(name)) {
+        logSpecAccess('create_spec', { slug: name }, 'error');
+        return asJsonResult({ ok: false, error: 'BAD_SLUG', hint: 'kebab-case: [a-z0-9-]' });
+      }
+      if (fs.existsSync(path.join(process.cwd(), '.specs', name))) {
+        logSpecAccess('create_spec', { slug: name }, 'denied');
+        return asJsonResult({ ok: false, error: 'SPEC_EXISTS', spec: name });
+      }
+      const core = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'specs-generator', 'specs-generator-core.mjs');
+      const r = spawnSync(process.execPath, [core, 'scaffold-spec', '-Name', name], {
+        cwd: process.cwd(),
+        encoding: 'utf-8',
+        timeout: 60_000,
+        // Without this the core resolves repoRoot from its SCRIPT location and
+        // scaffolds into the ENGINE repo, not the server's corpus (caught by
+        // the live probe: newborn-mcp landed in the real .specs/).
+        env: { ...process.env, SPECS_GENERATOR_ROOT: process.cwd() },
+      });
+      if (r.status !== 0) {
+        logSpecAccess('create_spec', { slug: name }, 'error');
+        return asJsonResult({ ok: false, error: 'SCAFFOLD_FAILED', stderr: (r.stderr ?? '').slice(0, 500) });
+      }
+      registryOpts.refreshGraph?.();
+      logSpecAccess('create_spec', { slug: name }, 'ok');
+      const docs = fs.readdirSync(path.join(process.cwd(), '.specs', name)).sort();
+      return asJsonResult({ ok: true, spec: name, docs, hint: 'Born verdict-GREEN; fill via apply_spec_change.' });
     },
   });
 

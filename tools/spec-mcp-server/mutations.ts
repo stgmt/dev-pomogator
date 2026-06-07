@@ -1,0 +1,187 @@
+/**
+ * FR-40 — the «живой генератор» mutation engine (P17-2).
+ *
+ * Spec writes go THROUGH the server: the change is applied IN MEMORY, the
+ * result is validated by the EXISTING engine (no second validator — the
+ * anti-pattern FR-40a forbids), and only a clean result touches the disk
+ * (atomic temp+rename). Any error-severity finding → refusal with the
+ * findings list; the agent fixes and retries.
+ *
+ * Validation layers (all reuse, none re-implemented):
+ *   1. form contracts   — spec-form-parsers by doc basename (the same parsers
+ *                         the live form-guards run);
+ *   2. anchors          — anchor-integrity `checkLinks` over the spec's md
+ *                         files with the changed doc swapped in-memory;
+ *   3. conformance      — `checkConformance` over a graph built from a TEMP
+ *                         CLONE of the spec dir with the change applied
+ *                         (error severity only; the real tree is untouched
+ *                         until validation passes).
+ *
+ * Graph freshness (FR-40c): inside the running MCP server the FR-14 watcher
+ * patches the graph on the write; callers without a watcher (tests, one-shot
+ * embedders) pass `refreshGraph` explicitly.
+ *
+ * @see .specs/spec-generator-v4/FR.md FR-40, NFR.md NFR-Reliability-11
+ */
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { checkLinks } from '../anchor-integrity/check.mjs';
+import { buildGraph } from '../spec-graph/builder.ts';
+import { checkConformance } from '../spec-graph/conformance.ts';
+import {
+  parseTaskBlocks,
+  parseUserStoryBlocks,
+  parseDecisionBlocks,
+  parseChkRows,
+} from '../specs-validator/spec-form-parsers.ts';
+
+export type SpecChange =
+  | { content: string }
+  | { old_string: string; new_string: string; replace_all?: boolean };
+
+export interface MutationFinding {
+  layer: 'form' | 'anchor' | 'conformance' | 'change';
+  message: string;
+  line?: number;
+}
+
+/** Apply the FR-40a change shape to current content (in memory, never disk). */
+export function applyChange(
+  current: string | null,
+  change: SpecChange,
+): { ok: true; next: string } | { ok: false; finding: MutationFinding } {
+  if ('content' in change) return { ok: true, next: change.content };
+  if (current === null) {
+    return {
+      ok: false,
+      finding: { layer: 'change', message: 'old_string change on a non-existent doc — use {content} to create it' },
+    };
+  }
+  const occurrences = current.split(change.old_string).length - 1;
+  if (occurrences === 0) {
+    return { ok: false, finding: { layer: 'change', message: 'old_string not found in the document' } };
+  }
+  if (occurrences > 1 && !change.replace_all) {
+    return {
+      ok: false,
+      finding: {
+        layer: 'change',
+        message: `old_string is not unique (${occurrences} occurrences) — pass replace_all or a longer anchor`,
+      },
+    };
+  }
+  const next = change.replace_all
+    ? current.split(change.old_string).join(change.new_string)
+    : current.replace(change.old_string, change.new_string);
+  return { ok: true, next };
+}
+
+/** Layer 1 — the SAME parsers the live form-guards run, by doc basename. */
+function formFindings(doc: string, content: string): MutationFinding[] {
+  const out: MutationFinding[] = [];
+  const push = (blocks: Array<{ missingFirst: string | null; lineNumber: number }>, label: string): void => {
+    for (const b of blocks) {
+      if (b.missingFirst) out.push({ layer: 'form', line: b.lineNumber, message: `${label}: missing ${b.missingFirst}` });
+    }
+  };
+  switch (path.basename(doc)) {
+    case 'TASKS.md':
+      push(parseTaskBlocks(content).filter((b) => !b.waived), 'task');
+      break;
+    case 'USER_STORIES.md':
+      push(parseUserStoryBlocks(content), 'user story');
+      break;
+    case 'DESIGN.md':
+      push(parseDecisionBlocks(content), 'decision');
+      break;
+    case 'REQUIREMENTS.md':
+      push(parseChkRows(content) as never, 'CHK row');
+      break;
+  }
+  return out;
+}
+
+/** Layer 2 — anchors over the spec's md files with the change swapped in. */
+function anchorFindings(repoRoot: string, slug: string, doc: string, next: string): MutationFinding[] {
+  const dir = path.join(repoRoot, '.specs', slug);
+  const files: Array<{ file: string; content: string }> = [];
+  for (const name of fs.readdirSync(dir)) {
+    if (!name.endsWith('.md')) continue;
+    const rel = `.specs/${slug}/${name}`;
+    files.push({
+      file: rel,
+      content: name === doc ? next : fs.readFileSync(path.join(dir, name), 'utf-8'),
+    });
+  }
+  if (doc.endsWith('.md') && !files.some((f) => f.file.endsWith(`/${doc}`))) {
+    files.push({ file: `.specs/${slug}/${doc}`, content: next }); // newly created doc
+  }
+  return (checkLinks(files) as Array<{ file: string; line: number; brokenAnchor: string; targetFile: string }>).map(
+    (b) => ({
+      layer: 'anchor' as const,
+      line: b.line,
+      message: `broken anchor #${b.brokenAnchor} → ${b.targetFile} (${b.file})`,
+    }),
+  );
+}
+
+/** Layer 3 — conformance over a TEMP CLONE with the change applied. */
+function conformanceFindings(repoRoot: string, slug: string, doc: string, next: string): MutationFinding[] {
+  const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'spec-mutate-'));
+  try {
+    const srcDir = path.join(repoRoot, '.specs', slug);
+    const dstDir = path.join(tmpRoot, '.specs', slug);
+    fs.cpSync(srcDir, dstDir, { recursive: true });
+    fs.writeFileSync(path.join(dstDir, doc), next);
+    const graph = buildGraph({ repoRoot: tmpRoot, skipNdjson: true });
+    return checkConformance(graph)
+      .filter((f) => f.severity === 'error')
+      .map((f) => ({
+        layer: 'conformance' as const,
+        line: f.location.line,
+        message: `${f.code}: ${f.message}`,
+      }));
+  } catch (e) {
+    return [{ layer: 'conformance', message: `conformance validation failed: ${e instanceof Error ? e.message : e}` }];
+  } finally {
+    fs.rmSync(tmpRoot, { recursive: true, force: true });
+  }
+}
+
+export interface ValidateResult {
+  ok: boolean;
+  next?: string;
+  findings: MutationFinding[];
+}
+
+/** The full FR-40b dry-run: apply in memory + all three validation layers. */
+export function validateSpecChange(
+  repoRoot: string,
+  slug: string,
+  doc: string,
+  change: SpecChange,
+): ValidateResult {
+  const abs = path.join(repoRoot, '.specs', slug, doc);
+  const current = fs.existsSync(abs) ? fs.readFileSync(abs, 'utf-8') : null;
+  const applied = applyChange(current, change);
+  if (!applied.ok) return { ok: false, findings: [applied.finding] };
+  const next = applied.next;
+  const findings = [
+    ...formFindings(doc, next),
+    ...(doc.endsWith('.md') ? anchorFindings(repoRoot, slug, doc, next) : []),
+    ...(doc.endsWith('.md') || doc.endsWith('.feature') ? conformanceFindings(repoRoot, slug, doc, next) : []),
+  ];
+  return { ok: findings.length === 0, next, findings };
+}
+
+/** Atomic write per atomic-config-save: unique temp + rename. */
+export function writeDocAtomic(repoRoot: string, slug: string, doc: string, content: string): string {
+  const dir = path.join(repoRoot, '.specs', slug);
+  fs.mkdirSync(dir, { recursive: true });
+  const abs = path.join(dir, doc);
+  const tmp = `${abs}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`;
+  fs.writeFileSync(tmp, content, 'utf-8');
+  fs.renameSync(tmp, abs);
+  return abs;
+}
