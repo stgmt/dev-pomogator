@@ -221,6 +221,19 @@ export interface SpecGraph {
   definitions: Map<string, NodeLocation>;
   /** Reverse index for fast «who links to me» queries. */
   backlinks: Map<string, BacklinkEntry[]>;
+  /**
+   * Raw PRE-MAP collision stats collected during the single build pass
+   * (FR-36): every duplicate-id merge attempt the first-writer-wins dedup
+   * would otherwise hide. Optional — set by `buildGraph`, absent on
+   * hand-constructed graphs. Consumed by corpus-health (saves a second full
+   * corpus parse); `collision-probe.ts` stays the INDEPENDENT cross-check
+   * (separate code path = real verification, SPECGEN004_95).
+   */
+  rawCollisions?: {
+    totalRawNodes: number;
+    uniqueIds: number;
+    collisions: Array<{ id: string; firstFile: string; secondFile: string }>;
+  };
 }
 
 /**

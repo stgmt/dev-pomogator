@@ -15,6 +15,7 @@
  * @see .specs/spec-generator-v4/FR.md FR-34b / AC-34.3
  */
 import fs from 'node:fs';
+import { readStdinJsonSafe } from '../_shared/stdin.ts';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
@@ -76,26 +77,10 @@ function logEscape(repoRoot: string, reason: string, sessionId?: string): void {
   }
 }
 
-async function readStdinJson(): Promise<StopInput> {
-  return new Promise((resolve) => {
-    const chunks: Buffer[] = [];
-    process.stdin.on('data', (c) => chunks.push(c as Buffer));
-    process.stdin.on('end', () => {
-      const t = Buffer.concat(chunks).toString('utf8').trim();
-      try {
-        resolve(t ? (JSON.parse(t) as StopInput) : {});
-      } catch {
-        resolve({});
-      }
-    });
-    process.stdin.on('error', () => resolve({}));
-  });
-}
-
 async function main(): Promise<void> {
   const mode = process.env.ANCHOR_GATE_ENABLED ?? 'true';
   if (mode === 'false') return approve();
-  const input = await readStdinJson();
+  const input = await readStdinJsonSafe<StopInput>();
   if (input.stop_hook_active === true) return approve(); // inside a continuation — don't re-block
   const repoRoot = process.env.CLAUDE_PROJECT_DIR || process.env.DEV_POMOGATOR_REPO_ROOT || process.cwd();
 

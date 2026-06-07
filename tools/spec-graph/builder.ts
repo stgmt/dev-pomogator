@@ -125,15 +125,30 @@ export function buildGraph(opts: BuildOptions): SpecGraph {
     list.push(entry);
   };
 
+  // Raw PRE-MAP collision stats (FR-36): every duplicate-id merge attempt is a
+  // collision the first-writer-wins dedup would otherwise hide. Collected here
+  // for free in the single pass — corpus-health consumes graph.rawCollisions
+  // instead of re-parsing the whole corpus a second time.
+  let totalRawNodes = 0;
+  const rawCollisionList: Array<{ id: string; firstFile: string; secondFile: string }> = [];
+
+  const mergeNode = (node: Node): void => {
+    totalRawNodes++;
+    const existing = nodes.get(node.id);
+    if (existing) {
+      rawCollisionList.push({ id: node.id, firstFile: existing.file, secondFile: node.file });
+    } else {
+      nodes.set(node.id, node);
+    }
+  };
+
   /** Merge one parsed slice into the accumulators (first-writer wins per id/alias). */
   const ingestSlice = (slice: {
     nodes: Node[];
     edges: Edge[];
     anchors: Array<{ alias: string; location: NodeLocation }>;
   }): void => {
-    for (const node of slice.nodes) {
-      if (!nodes.has(node.id)) nodes.set(node.id, node);
-    }
+    for (const node of slice.nodes) mergeNode(node);
     for (const e of slice.edges) edges.push(e);
     for (const a of slice.anchors) {
       if (!definitions.has(a.alias)) definitions.set(a.alias, a.location);
@@ -153,9 +168,9 @@ export function buildGraph(opts: BuildOptions): SpecGraph {
   }
 
   // 1b) Task slices — parse every TASKS.md into Task nodes (id/status/refs/doneWhen).
-  // NOTE: tasks emit NODES only by design (no edges/anchors) — hence the bare
-  // node-merge below instead of ingestSlice(); if the task parser ever emits
-  // edges, switch this branch to ingestSlice(taskSlice).
+  // NOTE: tasks emit NODES only by design (no edges/anchors) — hence mergeNode
+  // instead of ingestSlice(); if the task parser ever emits edges, switch this
+  // branch to ingestSlice(taskSlice).
   for (const abs of mdFiles) {
     if (path.basename(abs) !== 'TASKS.md') continue;
     let taskSlice;
@@ -164,9 +179,7 @@ export function buildGraph(opts: BuildOptions): SpecGraph {
     } catch {
       continue;
     }
-    for (const node of taskSlice.nodes) {
-      if (!nodes.has(node.id)) nodes.set(node.id, node);
-    }
+    for (const node of taskSlice.nodes) mergeNode(node);
   }
 
   // 2) Gherkin slices
@@ -374,6 +387,14 @@ export function buildGraph(opts: BuildOptions): SpecGraph {
     edges,
     definitions,
     backlinks,
+    // File nodes (2b) and ndjson patches are EXCLUDED by construction —
+    // mergeNode wraps only the parser-slice population, mirroring
+    // collision-probe's rawCollisionScan scope.
+    rawCollisions: {
+      totalRawNodes,
+      uniqueIds: totalRawNodes - rawCollisionList.length,
+      collisions: rawCollisionList,
+    },
   };
 }
 

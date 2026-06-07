@@ -46623,10 +46623,19 @@ function buildGraph(opts) {
     }
     list.push(entry);
   };
-  const ingestSlice = (slice) => {
-    for (const node of slice.nodes) {
-      if (!nodes.has(node.id)) nodes.set(node.id, node);
+  let totalRawNodes = 0;
+  const rawCollisionList = [];
+  const mergeNode = (node) => {
+    totalRawNodes++;
+    const existing = nodes.get(node.id);
+    if (existing) {
+      rawCollisionList.push({ id: node.id, firstFile: existing.file, secondFile: node.file });
+    } else {
+      nodes.set(node.id, node);
     }
+  };
+  const ingestSlice = (slice) => {
+    for (const node of slice.nodes) mergeNode(node);
     for (const e of slice.edges) edges.push(e);
     for (const a of slice.anchors) {
       if (!definitions.has(a.alias)) definitions.set(a.alias, a.location);
@@ -46650,9 +46659,7 @@ function buildGraph(opts) {
     } catch {
       continue;
     }
-    for (const node of taskSlice.nodes) {
-      if (!nodes.has(node.id)) nodes.set(node.id, node);
-    }
+    for (const node of taskSlice.nodes) mergeNode(node);
   }
   const featureFiles = featureRoots.flatMap((root) => walkDir(root, [".feature"]));
   for (const abs of featureFiles) {
@@ -46801,7 +46808,15 @@ function buildGraph(opts) {
     nodes,
     edges,
     definitions,
-    backlinks
+    backlinks,
+    // File nodes (2b) and ndjson patches are EXCLUDED by construction —
+    // mergeNode wraps only the parser-slice population, mirroring
+    // collision-probe's rawCollisionScan scope.
+    rawCollisions: {
+      totalRawNodes,
+      uniqueIds: totalRawNodes - rawCollisionList.length,
+      collisions: rawCollisionList
+    }
   };
 }
 function rebuildBacklinks(graph) {

@@ -12318,12 +12318,47 @@ var require_src2 = __commonJS({
 
 // tools/spec-conformance-guard/spec-conformance-guard.ts
 import fs2 from "node:fs";
+
+// tools/_shared/stdin.ts
+async function readStdin() {
+  let buf = "";
+  for await (const chunk of process.stdin) buf += chunk.toString();
+  return buf;
+}
+async function readStdinJson() {
+  const raw = await readStdin();
+  return raw.trim() ? JSON.parse(raw) : {};
+}
+
+// tools/spec-conformance-guard/spec-conformance-guard.ts
 import path2 from "node:path";
 import { pathToFileURL } from "node:url";
 
 // tools/anchor-integrity/marksman-slug.mjs
 function marksmanSlug(headingText) {
   return headingText.toLowerCase().replace(/[^\p{L}\p{N}\s-]+/gu, "").trim().replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-+|-+$/g, "");
+}
+
+// tools/spec-graph/coverage.ts
+function specOf(file) {
+  const m = file.replace(/\\/g, "/").match(/(?:^|\/)\.specs\/(.+)\/[^/]+$/);
+  return m ? m[1] : void 0;
+}
+function qualifySlice(slice, slug) {
+  if (!slug) return;
+  for (const node of slice.nodes) {
+    node.spec = slug;
+    node.id = `${slug}:${node.id}`;
+    if (node.type === "Task" && Array.isArray(node.refs)) {
+      node.refs = node.refs.map((r) => `${slug}:${r}`);
+    } else if (node.type === "AC" && typeof node.parentFr === "string" && node.parentFr) {
+      node.parentFr = `${slug}:${node.parentFr}`;
+    }
+  }
+  for (const e of slice.edges) {
+    e.from = `${slug}:${e.from}`;
+    e.to = `${slug}:${e.to}`;
+  }
 }
 
 // tools/spec-graph/parsers/md.ts
@@ -12522,6 +12557,7 @@ function parseMarkdown(mdSource, relativePath) {
       continue;
     }
   }
+  qualifySlice({ nodes, edges }, specOf(relativePath));
   return { nodes, edges, anchors };
 }
 
@@ -13281,6 +13317,7 @@ var TestStepResultStatus;
 
 // tools/spec-graph/parsers/gherkin.ts
 var SPEC_TAG_RE = /^@((?:FR|NFR|AC)[A-Za-z0-9._-]+)$/;
+var FEATURE_TAG_RE = /^@feature(\d+)$/i;
 function slugifyName(name) {
   return name.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "unnamed";
 }
@@ -13299,8 +13336,17 @@ function parseGherkin(source, relativePath) {
     return { nodes: [], edges: [], anchors: [] };
   }
   const featureTags = (doc.feature.tags ?? []).map((t) => t.name);
+  const slug = specOf(relativePath);
+  const qualify = (id) => slug ? `${slug}:${id}` : id;
   const nodes = [];
   const edges = [];
+  const edgeSeen = /* @__PURE__ */ new Set();
+  const pushEdge = (e) => {
+    const key = `${e.from}|${e.to}|${e.type}`;
+    if (edgeSeen.has(key)) return;
+    edgeSeen.add(key);
+    edges.push(e);
+  };
   const anchors = [];
   const seenIds = /* @__PURE__ */ new Map();
   for (const child of doc.feature.children) {
@@ -13311,7 +13357,8 @@ function parseGherkin(source, relativePath) {
     let baseId = `SCEN-${slugifyName(scenario.name)}`;
     const seen = seenIds.get(baseId) ?? 0;
     seenIds.set(baseId, seen + 1);
-    const scenarioId = seen === 0 ? baseId : `${baseId}-${seen + 1}`;
+    const bareScenarioId = seen === 0 ? baseId : `${baseId}-${seen + 1}`;
+    const scenarioId = qualify(bareScenarioId);
     const line = scenario.location.line;
     const steps = (scenario.steps ?? []).map((s) => ({
       keyword: s.keyword.trim(),
@@ -13325,16 +13372,22 @@ function parseGherkin(source, relativePath) {
       tags,
       steps
     };
+    if (slug) node.spec = slug;
     nodes.push(node);
     anchors.push({
-      alias: scenarioId,
-      canonicalId: scenarioId,
+      alias: bareScenarioId,
+      canonicalId: bareScenarioId,
       location: { file: relativePath, line }
     });
     for (const tag of tags) {
       const m = tag.match(SPEC_TAG_RE);
       if (m) {
-        edges.push({ from: m[1], to: scenarioId, type: "tested-by" });
+        pushEdge({ from: qualify(m[1]), to: scenarioId, type: "tested-by" });
+        continue;
+      }
+      const f = tag.match(FEATURE_TAG_RE);
+      if (f && slug) {
+        pushEdge({ from: `${slug}:FR-${f[1]}`, to: scenarioId, type: "tested-by" });
       }
     }
   }
@@ -13562,21 +13615,6 @@ function runGuard(input, repoRoot, opts = {}) {
   if (denyReasons === null) return makeAllow("parser fail-OPEN per FR-19");
   if (denyReasons.length === 0) return makeAllow("no hard findings");
   return makeDeny(denyReasons.join("\n"));
-}
-async function readStdinJson() {
-  return new Promise((resolve, reject) => {
-    const chunks = [];
-    process.stdin.on("data", (c) => chunks.push(c));
-    process.stdin.on("end", () => {
-      try {
-        const text = Buffer.concat(chunks).toString("utf8").trim();
-        resolve(text ? JSON.parse(text) : {});
-      } catch (e) {
-        reject(e);
-      }
-    });
-    process.stdin.on("error", reject);
-  });
 }
 async function main() {
   const repoRoot = process.env.CLAUDE_PLUGIN_ROOT ?? process.env.DEV_POMOGATOR_REPO_ROOT ?? process.cwd();

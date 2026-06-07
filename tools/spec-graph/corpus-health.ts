@@ -4,8 +4,8 @@
  * One report + a 🟢/🔴 verdict over ANY `.specs/` corpus (corpus root as
  * input — NOT hardcoded to this repo). Surfaces the whole disease class the
  * FR-36 dogfood discovered by hand:
- *   1. bare-id COLLISIONS across specs (raw PRE-MAP node dump — the builder's
- *      map dedup silently drops last-writer losers; `rawCollisionScan`);
+ *   1. bare-id COLLISIONS across specs (raw PRE-MAP stats from the builder's
+ *      single pass — `graph.rawCollisions`; the map dedup would hide them);
  *   2. UNRESOLVED / dangling edges (an endpoint no node carries — a bare
  *      cross-root tag, a typo'd @featureN, a deleted target);
  *   3. UNTRACED ATOMS — the FR-37b invariants via the P14-2
@@ -28,7 +28,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { buildGraphFromCwd } from './builder.ts';
-import { rawCollisionScan, type CollisionScan } from './collision-probe.ts';
+import type { CollisionScan } from './collision-probe.ts';
 import { checkTraceabilityCompleteness, summariseGaps } from './traceability.ts';
 import type { SpecGraph, FileNode } from './types.ts';
 
@@ -61,7 +61,14 @@ const SYNTHETIC_TARGET = /^RESULT-/;
 export function corpusHealth(corpusRoot: string): CorpusHealthReport {
   const root = path.resolve(corpusRoot);
   const graph: SpecGraph = buildGraphFromCwd(root);
-  const collisions = rawCollisionScan(root);
+  // Pre-map collision stats come from the builder's single pass (/simplify
+  // 2026-06-07 — was a second full corpus parse via rawCollisionScan; the
+  // standalone collision-probe CLI remains the independent cross-check).
+  const collisions: CollisionScan = graph.rawCollisions ?? {
+    totalRawNodes: graph.nodes.size,
+    uniqueIds: graph.nodes.size,
+    collisions: [],
+  };
 
   // 2) dangling edges — an endpoint that resolves to NO node.
   const danglingSamples: CorpusHealthReport['danglingEdges']['samples'] = [];

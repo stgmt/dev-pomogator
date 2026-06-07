@@ -10,6 +10,7 @@
  * @see .specs/spec-generator-v4/FR.md FR-34b / AC-34.3
  */
 import path from 'node:path';
+import { readStdinJsonSafe } from '../_shared/stdin.ts';
 import { pathToFileURL } from 'node:url';
 import { checkSpecDir } from './check.mjs';
 
@@ -55,24 +56,8 @@ export function buildReminder(absPath: string | null): string | null {
   return lines.join('\n') + '\n';
 }
 
-async function readStdinJson(): Promise<HookInput> {
-  return new Promise((resolve) => {
-    const chunks: Buffer[] = [];
-    process.stdin.on('data', (c) => chunks.push(c as Buffer));
-    process.stdin.on('end', () => {
-      const text = Buffer.concat(chunks).toString('utf8').trim();
-      try {
-        resolve(text ? (JSON.parse(text) as HookInput) : {});
-      } catch {
-        resolve({});
-      }
-    });
-    process.stdin.on('error', () => resolve({}));
-  });
-}
-
 async function main(): Promise<void> {
-  const input = await readStdinJson();
+  const input = await readStdinJsonSafe<HookInput>();
   const out = buildReminder(input.tool_input?.file_path ?? null);
   if (out) process.stdout.write(out);
 }

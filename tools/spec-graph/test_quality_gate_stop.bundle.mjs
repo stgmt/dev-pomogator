@@ -32,6 +32,121 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
+// tools/spec-graph/coverage.ts
+function specOf(file) {
+  const m = file.replace(/\\/g, "/").match(/(?:^|\/)\.specs\/(.+)\/[^/]+$/);
+  return m ? m[1] : void 0;
+}
+function qualifySlice(slice, slug) {
+  if (!slug) return;
+  for (const node of slice.nodes) {
+    node.spec = slug;
+    node.id = `${slug}:${node.id}`;
+    if (node.type === "Task" && Array.isArray(node.refs)) {
+      node.refs = node.refs.map((r) => `${slug}:${r}`);
+    } else if (node.type === "AC" && typeof node.parentFr === "string" && node.parentFr) {
+      node.parentFr = `${slug}:${node.parentFr}`;
+    }
+  }
+  for (const e of slice.edges) {
+    e.from = `${slug}:${e.from}`;
+    e.to = `${slug}:${e.to}`;
+  }
+}
+function scenarioKey(s) {
+  const m = s.match(/s[pc]e[cn]gen004[_-](\d+)/i);
+  return m ? `specgen004_${m[1]}` : null;
+}
+function bucketScenarios(scenarios) {
+  const out = {
+    passed: [],
+    pending: [],
+    undefined: [],
+    ambiguous: [],
+    failed: [],
+    skipped: []
+  };
+  for (const s of scenarios) {
+    const bucket = s.result ? RESULT_TO_BUCKET[s.result.toUpperCase()] ?? "undefined" : "undefined";
+    out[bucket].push(s.id);
+  }
+  return out;
+}
+function mapTasksToScenarios(tasks, scenarios) {
+  const byTag = /* @__PURE__ */ new Map();
+  const byKey = /* @__PURE__ */ new Map();
+  const scenarioSpec = /* @__PURE__ */ new Map();
+  for (const s of scenarios) {
+    scenarioSpec.set(s.id, s.spec);
+    for (const tag of s.tags) {
+      const key = tag.toLowerCase();
+      if (!byTag.has(key)) byTag.set(key, /* @__PURE__ */ new Set());
+      byTag.get(key).add(s.id);
+    }
+    const k = scenarioKey(s.id);
+    if (k) byKey.set(k, s.id);
+  }
+  const out = /* @__PURE__ */ new Map();
+  for (const task of tasks) {
+    const ids = /* @__PURE__ */ new Set();
+    const sameSpec = (sid) => task.spec === void 0 || scenarioSpec.get(sid) === task.spec;
+    for (const m of task.doneWhen.matchAll(/s[pc]e[cn]gen004[_-]\d+/gi)) {
+      const k = scenarioKey(m[0]);
+      const sid = k && byKey.get(k);
+      if (sid) ids.add(sid);
+    }
+    for (const m of task.doneWhen.matchAll(/@feature\d+/gi)) {
+      for (const sid of byTag.get(m[0].toLowerCase()) ?? []) if (sameSpec(sid)) ids.add(sid);
+    }
+    for (const ref of task.refs) {
+      const n = ref.match(/FR-(\d+)/i);
+      if (n) {
+        for (const sid of byTag.get(`@feature${n[1]}`) ?? []) if (sameSpec(sid)) ids.add(sid);
+      }
+    }
+    out.set(task.id, [...ids]);
+  }
+  return out;
+}
+function verifiedStatus(scenarioIds, bucketById, verdict) {
+  if (scenarioIds.length === 0) return "unverified";
+  if (!scenarioIds.every((id) => bucketById.get(id) === "passed")) return "IN_PROGRESS";
+  if (verdict === "WEAK" || verdict === "FAKE-POSITIVE-RISK") return "IN_PROGRESS";
+  return "DONE";
+}
+function computeCoverage(tasks, scenarios, testQualityByTask = {}) {
+  const buckets = bucketScenarios(scenarios);
+  const bucketById = /* @__PURE__ */ new Map();
+  for (const b of Object.keys(buckets)) for (const id of buckets[b]) bucketById.set(id, b);
+  const taskMap = mapTasksToScenarios(tasks, scenarios);
+  const tasksOut = {};
+  for (const [taskId, scenarioIds] of taskMap) {
+    const verdict = testQualityByTask[taskId];
+    tasksOut[taskId] = {
+      verified_status: verifiedStatus(scenarioIds, bucketById, verdict),
+      scenarios: scenarioIds,
+      ...verdict ? { test_quality: verdict } : {}
+    };
+  }
+  const totals = { scenarios: scenarios.length };
+  for (const b of Object.keys(buckets)) totals[b] = buckets[b].length;
+  return { buckets, tasks: tasksOut, totals };
+}
+var RESULT_TO_BUCKET;
+var init_coverage = __esm({
+  "tools/spec-graph/coverage.ts"() {
+    "use strict";
+    RESULT_TO_BUCKET = {
+      PASSED: "passed",
+      PENDING: "pending",
+      UNDEFINED: "undefined",
+      AMBIGUOUS: "ambiguous",
+      FAILED: "failed",
+      SKIPPED: "skipped"
+    };
+  }
+});
+
 // tools/anchor-integrity/marksman-slug.mjs
 function marksmanSlug(headingText) {
   return headingText.toLowerCase().replace(/[^\p{L}\p{N}\s-]+/gu, "").trim().replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-+|-+$/g, "");
@@ -231,6 +346,7 @@ function parseMarkdown(mdSource, relativePath) {
       continue;
     }
   }
+  qualifySlice({ nodes, edges }, specOf(relativePath));
   return { nodes, edges, anchors };
 }
 function parseMarkdownFile(absPath, repoRoot) {
@@ -243,6 +359,7 @@ var init_md = __esm({
   "tools/spec-graph/parsers/md.ts"() {
     "use strict";
     init_marksman_slug();
+    init_coverage();
     HEADING_LINE_RE = /^(#{1,6})\s+(.+?)\s*$/;
     FENCE_RE = /^(?:```|~~~)/;
     FR_HEADING_RE = /^FR-(\d+):\s*(.+)$/;
@@ -13355,8 +13472,17 @@ function parseGherkin(source, relativePath) {
     return { nodes: [], edges: [], anchors: [] };
   }
   const featureTags = (doc.feature.tags ?? []).map((t) => t.name);
+  const slug = specOf(relativePath);
+  const qualify = (id) => slug ? `${slug}:${id}` : id;
   const nodes = [];
   const edges = [];
+  const edgeSeen = /* @__PURE__ */ new Set();
+  const pushEdge = (e) => {
+    const key = `${e.from}|${e.to}|${e.type}`;
+    if (edgeSeen.has(key)) return;
+    edgeSeen.add(key);
+    edges.push(e);
+  };
   const anchors = [];
   const seenIds = /* @__PURE__ */ new Map();
   for (const child of doc.feature.children) {
@@ -13367,7 +13493,8 @@ function parseGherkin(source, relativePath) {
     let baseId = `SCEN-${slugifyName(scenario.name)}`;
     const seen = seenIds.get(baseId) ?? 0;
     seenIds.set(baseId, seen + 1);
-    const scenarioId = seen === 0 ? baseId : `${baseId}-${seen + 1}`;
+    const bareScenarioId = seen === 0 ? baseId : `${baseId}-${seen + 1}`;
+    const scenarioId = qualify(bareScenarioId);
     const line = scenario.location.line;
     const steps = (scenario.steps ?? []).map((s) => ({
       keyword: s.keyword.trim(),
@@ -13381,16 +13508,22 @@ function parseGherkin(source, relativePath) {
       tags,
       steps
     };
+    if (slug) node.spec = slug;
     nodes.push(node);
     anchors.push({
-      alias: scenarioId,
-      canonicalId: scenarioId,
+      alias: bareScenarioId,
+      canonicalId: bareScenarioId,
       location: { file: relativePath, line }
     });
     for (const tag of tags) {
       const m = tag.match(SPEC_TAG_RE2);
       if (m) {
-        edges.push({ from: m[1], to: scenarioId, type: "tested-by" });
+        pushEdge({ from: qualify(m[1]), to: scenarioId, type: "tested-by" });
+        continue;
+      }
+      const f = tag.match(FEATURE_TAG_RE);
+      if (f && slug) {
+        pushEdge({ from: `${slug}:FR-${f[1]}`, to: scenarioId, type: "tested-by" });
       }
     }
   }
@@ -13401,13 +13534,15 @@ function parseGherkinFile(absPath, repoRoot) {
   const relative = path3.relative(repoRoot, absPath).split(path3.sep).join("/");
   return parseGherkin(source, relative);
 }
-var import_gherkin, SPEC_TAG_RE2;
+var import_gherkin, SPEC_TAG_RE2, FEATURE_TAG_RE;
 var init_gherkin = __esm({
   "tools/spec-graph/parsers/gherkin.ts"() {
     "use strict";
     import_gherkin = __toESM(require_src2(), 1);
     init_src();
+    init_coverage();
     SPEC_TAG_RE2 = /^@((?:FR|NFR|AC)[A-Za-z0-9._-]+)$/;
+    FEATURE_TAG_RE = /^@feature(\d+)$/i;
   }
 });
 
@@ -13601,6 +13736,7 @@ function parseTasks(content, file) {
   const lines = content.split(/\r?\n/);
   const out = [];
   let cur = null;
+  let curPhase;
   const flush = () => {
     if (!cur) return;
     cur.node.doneWhen = cur.body.join("\n").trim() || void 0;
@@ -13609,6 +13745,12 @@ function parseTasks(content, file) {
   };
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
+    const ph = line.match(/^#{2,3}\s+(Phase\s.*?)\s*$/);
+    if (ph) {
+      curPhase = ph[1];
+      flush();
+      continue;
+    }
     const h = headerOf(line);
     if (h) {
       flush();
@@ -13621,7 +13763,8 @@ function parseTasks(content, file) {
           line: i + 1,
           status: STATUS_MAP[h.status] ?? "todo",
           refs: [],
-          title: title ? title[1] : void 0
+          title: title ? title[1] : void 0,
+          phase: curPhase
         },
         body: [line]
       };
@@ -13633,7 +13776,8 @@ function parseTasks(content, file) {
       continue;
     }
     cur.body.push(line);
-    for (const m of line.matchAll(/\b(?:FR|NFR)-\d+\b/g)) {
+    const noCode = line.replace(/`[^`]*`/g, "");
+    for (const m of noCode.matchAll(/\b(?:FR|NFR)-\d+\b/g)) {
       if (!cur.node.refs.includes(m[0])) cur.node.refs.push(m[0]);
     }
   }
@@ -13643,12 +13787,15 @@ function parseTasks(content, file) {
 function parseTasksFile(abs, repoRoot) {
   const content = fs5.readFileSync(abs, "utf8");
   const file = path4.relative(repoRoot, abs).replace(/\\/g, "/");
-  return { nodes: parseTasks(content, file), edges: [], anchors: [] };
+  const slice = { nodes: parseTasks(content, file), edges: [] };
+  qualifySlice(slice, specOf(file));
+  return { nodes: slice.nodes, edges: [], anchors: [] };
 }
 var STATUS_MAP;
 var init_tasks = __esm({
   "tools/spec-graph/parsers/tasks.ts"() {
     "use strict";
+    init_coverage();
     STATUS_MAP = {
       TODO: "todo",
       IN_PROGRESS: "in-progress",
@@ -13928,6 +14075,24 @@ function buildGraph(opts) {
     }
     list.push(entry);
   };
+  let totalRawNodes = 0;
+  const rawCollisionList = [];
+  const mergeNode = (node) => {
+    totalRawNodes++;
+    const existing = nodes.get(node.id);
+    if (existing) {
+      rawCollisionList.push({ id: node.id, firstFile: existing.file, secondFile: node.file });
+    } else {
+      nodes.set(node.id, node);
+    }
+  };
+  const ingestSlice = (slice) => {
+    for (const node of slice.nodes) mergeNode(node);
+    for (const e of slice.edges) edges.push(e);
+    for (const a of slice.anchors) {
+      if (!definitions.has(a.alias)) definitions.set(a.alias, a.location);
+    }
+  };
   const mdFiles = mdRoots.flatMap((root) => walkDir(root, [".md"]));
   for (const abs of mdFiles) {
     let slice;
@@ -13936,13 +14101,7 @@ function buildGraph(opts) {
     } catch {
       continue;
     }
-    for (const node of slice.nodes) {
-      if (!nodes.has(node.id)) nodes.set(node.id, node);
-    }
-    for (const e of slice.edges) edges.push(e);
-    for (const a of slice.anchors) {
-      if (!definitions.has(a.alias)) definitions.set(a.alias, a.location);
-    }
+    ingestSlice(slice);
   }
   for (const abs of mdFiles) {
     if (path5.basename(abs) !== "TASKS.md") continue;
@@ -13952,9 +14111,7 @@ function buildGraph(opts) {
     } catch {
       continue;
     }
-    for (const node of taskSlice.nodes) {
-      if (!nodes.has(node.id)) nodes.set(node.id, node);
-    }
+    for (const node of taskSlice.nodes) mergeNode(node);
   }
   const featureFiles = featureRoots.flatMap((root) => walkDir(root, [".feature"]));
   for (const abs of featureFiles) {
@@ -13964,13 +14121,7 @@ function buildGraph(opts) {
     } catch {
       continue;
     }
-    for (const node of slice.nodes) {
-      if (!nodes.has(node.id)) nodes.set(node.id, node);
-    }
-    for (const e of slice.edges) edges.push(e);
-    for (const a of slice.anchors) {
-      if (!definitions.has(a.alias)) definitions.set(a.alias, a.location);
-    }
+    ingestSlice(slice);
   }
   const specDirs = /* @__PURE__ */ new Set();
   for (const abs of mdFiles) {
@@ -14033,6 +14184,8 @@ function buildGraph(opts) {
   };
   for (const specDir of specDirs) {
     const relDir = path5.relative(repoRoot, specDir).split(path5.sep).join("/");
+    const slug = specOf(`${relDir}/FILE_CHANGES.md`);
+    const qualifyFr = (fr) => slug ? `${slug}:${fr}` : fr;
     const fcAbs = path5.join(specDir, "FILE_CHANGES.md");
     if (fs8.existsSync(fcAbs)) {
       let rows = [];
@@ -14045,7 +14198,7 @@ function buildGraph(opts) {
       for (const row of rows) {
         if (row.frs.length === 0) continue;
         for (const fr of row.frs) {
-          emitImplements(fr, row.file_path, "FILE_CHANGES", relFile, 1, row.action);
+          emitImplements(qualifyFr(fr), row.file_path, "FILE_CHANGES", relFile, 1, row.action);
         }
       }
     }
@@ -14061,9 +14214,26 @@ function buildGraph(opts) {
       for (const ref of refs) {
         if (ref.frs.length === 0) continue;
         for (const fr of ref.frs) {
-          emitImplements(fr, ref.file_path, "DESIGN", relFile, 1);
+          emitImplements(qualifyFr(fr), ref.file_path, "DESIGN", relFile, 1);
         }
       }
+    }
+  }
+  {
+    const byLocalId = /* @__PURE__ */ new Map();
+    for (const n of nodes.values()) {
+      if (!n.spec) continue;
+      const localId = n.id.slice(n.spec.length + 1);
+      byLocalId.set(localId, byLocalId.has(localId) ? null : n.id);
+    }
+    const resolveBare = (id) => {
+      if (nodes.has(id)) return id;
+      const unique = byLocalId.get(id);
+      return unique ?? id;
+    };
+    for (const e of edges) {
+      e.from = resolveBare(e.from);
+      e.to = resolveBare(e.to);
     }
   }
   if (!opts.skipNdjson) {
@@ -14090,7 +14260,15 @@ function buildGraph(opts) {
     nodes,
     edges,
     definitions,
-    backlinks
+    backlinks,
+    // File nodes (2b) and ndjson patches are EXCLUDED by construction —
+    // mergeNode wraps only the parser-slice population, mirroring
+    // collision-probe's rawCollisionScan scope.
+    rawCollisions: {
+      totalRawNodes,
+      uniqueIds: totalRawNodes - rawCollisionList.length,
+      collisions: rawCollisionList
+    }
   };
 }
 function rebuildBacklinks(graph) {
@@ -14116,110 +14294,47 @@ var init_builder = __esm({
     init_tasks();
     init_file_changes();
     init_design();
+    init_coverage();
   }
 });
 
 // tools/spec-graph/test_quality_gate_stop.ts
 import fs9 from "node:fs";
+
+// tools/_shared/stdin.ts
+async function readStdin() {
+  let buf = "";
+  for await (const chunk of process.stdin) buf += chunk.toString();
+  return buf;
+}
+async function readStdinJson() {
+  const raw = await readStdin();
+  return raw.trim() ? JSON.parse(raw) : {};
+}
+async function readStdinJsonSafe() {
+  try {
+    return await readStdinJson();
+  } catch {
+    return {};
+  }
+}
+
+// tools/spec-graph/test_quality_gate_stop.ts
 import path6 from "node:path";
 import { spawnSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 
-// tools/spec-graph/coverage.ts
-var RESULT_TO_BUCKET = {
-  PASSED: "passed",
-  PENDING: "pending",
-  UNDEFINED: "undefined",
-  AMBIGUOUS: "ambiguous",
-  FAILED: "failed",
-  SKIPPED: "skipped"
-};
-function specOf(file) {
-  const m = file.replace(/\\/g, "/").match(/(?:^|\/)\.specs\/([^/]+)\//);
-  return m ? m[1] : void 0;
-}
-function scenarioKey(s) {
-  const m = s.match(/s[pc]e[cn]gen004[_-](\d+)/i);
-  return m ? `specgen004_${m[1]}` : null;
-}
-function bucketScenarios(scenarios) {
-  const out = {
-    passed: [],
-    pending: [],
-    undefined: [],
-    ambiguous: [],
-    failed: [],
-    skipped: []
-  };
-  for (const s of scenarios) {
-    const bucket = s.result ? RESULT_TO_BUCKET[s.result.toUpperCase()] ?? "undefined" : "undefined";
-    out[bucket].push(s.id);
-  }
-  return out;
-}
-function mapTasksToScenarios(tasks, scenarios) {
-  const byTag = /* @__PURE__ */ new Map();
-  const byKey = /* @__PURE__ */ new Map();
-  const scenarioSpec = /* @__PURE__ */ new Map();
-  for (const s of scenarios) {
-    scenarioSpec.set(s.id, s.spec);
-    for (const tag of s.tags) {
-      const key = tag.toLowerCase();
-      if (!byTag.has(key)) byTag.set(key, /* @__PURE__ */ new Set());
-      byTag.get(key).add(s.id);
-    }
-    const k = scenarioKey(s.id);
-    if (k) byKey.set(k, s.id);
-  }
-  const out = /* @__PURE__ */ new Map();
-  for (const task of tasks) {
-    const ids = /* @__PURE__ */ new Set();
-    const sameSpec = (sid) => task.spec === void 0 || scenarioSpec.get(sid) === task.spec;
-    for (const m of task.doneWhen.matchAll(/s[pc]e[cn]gen004[_-]\d+/gi)) {
-      const k = scenarioKey(m[0]);
-      const sid = k && byKey.get(k);
-      if (sid) ids.add(sid);
-    }
-    for (const m of task.doneWhen.matchAll(/@feature\d+/gi)) {
-      for (const sid of byTag.get(m[0].toLowerCase()) ?? []) if (sameSpec(sid)) ids.add(sid);
-    }
-    for (const ref of task.refs) {
-      const n = ref.match(/FR-(\d+)/i);
-      if (n) {
-        for (const sid of byTag.get(`@feature${n[1]}`) ?? []) if (sameSpec(sid)) ids.add(sid);
-      }
-    }
-    out.set(task.id, [...ids]);
-  }
-  return out;
-}
-function verifiedStatus(scenarioIds, bucketById, verdict) {
-  if (scenarioIds.length === 0) return "unverified";
-  if (!scenarioIds.every((id) => bucketById.get(id) === "passed")) return "IN_PROGRESS";
-  if (verdict === "WEAK" || verdict === "FAKE-POSITIVE-RISK") return "IN_PROGRESS";
-  return "DONE";
-}
-function computeCoverage(tasks, scenarios, testQualityByTask = {}) {
-  const buckets = bucketScenarios(scenarios);
-  const bucketById = /* @__PURE__ */ new Map();
-  for (const b of Object.keys(buckets)) for (const id of buckets[b]) bucketById.set(id, b);
-  const taskMap = mapTasksToScenarios(tasks, scenarios);
-  const tasksOut = {};
-  for (const [taskId, scenarioIds] of taskMap) {
-    const verdict = testQualityByTask[taskId];
-    tasksOut[taskId] = {
-      verified_status: verifiedStatus(scenarioIds, bucketById, verdict),
-      scenarios: scenarioIds,
-      ...verdict ? { test_quality: verdict } : {}
-    };
-  }
-  const totals = { scenarios: scenarios.length };
-  for (const b of Object.keys(buckets)) totals[b] = buckets[b].length;
-  return { buckets, tasks: tasksOut, totals };
-}
-
 // tools/spec-graph/conformance.ts
+init_coverage();
 var SPEC_TAG_RE = /^@((?:FR|NFR|AC)[A-Za-z0-9._-]+)$/;
+function localIdOf(node) {
+  return node.spec ? node.id.slice(node.spec.length + 1) : node.id;
+}
+function tagResolves(graph, scenSpec, ref, specLocalIds) {
+  if (scenSpec && graph.nodes.has(`${scenSpec}:${ref}`)) return true;
+  if (graph.nodes.has(ref)) return true;
+  return !scenSpec && specLocalIds.has(ref);
+}
 function levenshtein(a, b) {
   const m = a.length;
   const n = b.length;
@@ -14241,7 +14356,10 @@ function topSimilarIds(target, ids, n) {
 function checkConformance(graph, opts = {}) {
   const findings = [];
   const tagOrphanSeverity = opts.orphanPolicy?.scenario_tag_orphan === "block" ? "error" : "warning";
-  const specIds = [...graph.nodes.values()].filter((n) => n.type === "FR" || n.type === "NFR" || n.type === "AC").map((n) => n.id);
+  const specNodes = [...graph.nodes.values()].filter(
+    (n) => n.type === "FR" || n.type === "NFR" || n.type === "AC"
+  );
+  const specLocalIds = new Set(specNodes.map((n) => localIdOf(n)));
   const acCovers = /* @__PURE__ */ new Set();
   const scenarioTests = /* @__PURE__ */ new Set();
   for (const e of graph.edges) {
@@ -14252,15 +14370,16 @@ function checkConformance(graph, opts = {}) {
     if (node.type !== "FR") continue;
     if (acCovers.has(node.id)) continue;
     if (scenarioTests.has(node.id)) continue;
+    const bareTag = localIdOf(node);
     findings.push({
       code: "UNCOVERED_FR",
       severity: "warning",
       location: { file: node.file, line: node.line },
-      message: `FR ${node.id} has no Acceptance Criteria and no @${node.id}-tagged Scenario.`,
+      message: `FR ${node.id} has no Acceptance Criteria and no @${bareTag}-tagged Scenario.`,
       nodeId: node.id,
       suggestions: [
         { action: "create_ac", reason: "Add an AC heading `## AC-N (FR-N)` covering this FR.", confidence: "high" },
-        { action: "tag_scenario", reason: `Add @${node.id} to an existing Scenario in any \`.feature\` file.`, confidence: "medium" }
+        { action: "tag_scenario", reason: `Add @${bareTag} to an existing Scenario in any \`.feature\` file.`, confidence: "medium" }
       ]
     });
   }
@@ -14350,13 +14469,19 @@ function checkConformance(graph, opts = {}) {
     if (node.type !== "Scenario") continue;
     const scen = node;
     let hasSpecTag = false;
+    const scenSpec = scen.spec ?? specOf(scen.file);
     for (const tag of scen.tags) {
+      const f = tag.match(/^@feature(\d+)$/i);
+      if (f && tagResolves(graph, scenSpec, `FR-${f[1]}`, specLocalIds)) {
+        hasSpecTag = true;
+        continue;
+      }
       const m = tag.match(SPEC_TAG_RE);
       if (!m) continue;
       hasSpecTag = true;
       const referenced = m[1];
-      if (!graph.nodes.has(referenced)) {
-        const similar = topSimilarIds(referenced, specIds, 3);
+      if (!tagResolves(graph, scenSpec, referenced, specLocalIds)) {
+        const similar = topSimilarIds(referenced, [...specLocalIds], 3);
         findings.push({
           code: "SCENARIO_TAG_ORPHAN",
           severity: tagOrphanSeverity,
@@ -14384,6 +14509,35 @@ function checkConformance(graph, opts = {}) {
         nodeId: scen.id,
         suggestions: [
           { action: "tag_scenario", reason: `Add the relevant @FR-N / @AC-N tag.`, confidence: "high" }
+        ]
+      });
+    }
+  }
+  {
+    const BULK_THRESHOLD = 10;
+    const byFileTag = /* @__PURE__ */ new Map();
+    for (const node of graph.nodes.values()) {
+      if (node.type !== "Scenario") continue;
+      const scen = node;
+      for (const tag of scen.tags) {
+        if (!SPEC_TAG_RE.test(tag)) continue;
+        const key = `${scen.file}|${tag}`;
+        const cur = byFileTag.get(key);
+        if (cur) cur.count++;
+        else byFileTag.set(key, { count: 1, file: scen.file, line: scen.line, tag });
+      }
+    }
+    for (const { count, file, line, tag } of byFileTag.values()) {
+      if (count < BULK_THRESHOLD) continue;
+      findings.push({
+        code: "TAG_BULK_SUSPECT",
+        severity: "info",
+        location: { file, line },
+        message: `Tag ${tag} blankets ${count} scenarios in one file \u2014 verify the semantic fit per scenario (run the FR-8 judge); a blanket tag that clears UNTAGGED without testing the requirement is tag-gaming.`,
+        nodeId: tag,
+        suggestions: [
+          { action: "run_semantic_judge", reason: `spec-verdict.ts with semantic ON will judge each ${tag}\u2194scenario pair.`, confidence: "high" },
+          { action: "retag_per_scenario", reason: "Map each scenario to the requirement it actually tests.", confidence: "medium" }
         ]
       });
     }
@@ -14459,25 +14613,10 @@ function escapeFromCommit(repoRoot) {
   const r = spawnSync("git", ["log", "-1", "--format=%B"], { cwd: repoRoot, encoding: "utf8" });
   return r.status === 0 && r.stdout ? escapeReason(r.stdout) : null;
 }
-async function readStdinJson() {
-  return new Promise((resolve) => {
-    const chunks = [];
-    process.stdin.on("data", (c) => chunks.push(c));
-    process.stdin.on("end", () => {
-      const t = Buffer.concat(chunks).toString("utf8").trim();
-      try {
-        resolve(t ? JSON.parse(t) : {});
-      } catch {
-        resolve({});
-      }
-    });
-    process.stdin.on("error", () => resolve({}));
-  });
-}
 async function main() {
   const mode = process.env.TEST_QUALITY_GATE_ENABLED ?? "shadow";
   if (mode === "false") return approve();
-  const input = await readStdinJson();
+  const input = await readStdinJsonSafe();
   if (input.stop_hook_active === true) return approve();
   const repoRoot = process.env.CLAUDE_PROJECT_DIR || process.env.DEV_POMOGATOR_REPO_ROOT || process.cwd();
   const slugs = new Set(modifiedSpecSlugs(repoRoot));

@@ -29,6 +29,7 @@
  */
 
 import fs from 'node:fs';
+import { readStdinJson } from '../_shared/stdin.ts';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parseMarkdown } from '../spec-graph/parsers/md.ts';
@@ -295,25 +296,9 @@ export function runGuard(input: HookInput, repoRoot: string, opts: RunGuardOptio
   return makeDeny(denyReasons.join('\n'));
 }
 
-async function readStdinJson(): Promise<HookInput> {
-  return new Promise<HookInput>((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    process.stdin.on('data', (c) => chunks.push(c));
-    process.stdin.on('end', () => {
-      try {
-        const text = Buffer.concat(chunks).toString('utf8').trim();
-        resolve(text ? (JSON.parse(text) as HookInput) : {});
-      } catch (e) {
-        reject(e);
-      }
-    });
-    process.stdin.on('error', reject);
-  });
-}
-
 async function main(): Promise<void> {
   const repoRoot = process.env.CLAUDE_PLUGIN_ROOT ?? process.env.DEV_POMOGATOR_REPO_ROOT ?? process.cwd();
-  const input = await readStdinJson();
+  const input = await readStdinJson<HookInput>();
   const out = runGuard(input, repoRoot);
   process.stdout.write(JSON.stringify(out));
 }

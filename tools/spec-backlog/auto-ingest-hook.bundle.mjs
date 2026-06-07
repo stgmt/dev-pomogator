@@ -2992,6 +2992,14 @@ var Ui = Object.assign(ts, { stream: Bt, iterate: Ut });
 var Ze = Object.assign(Je, { glob: Je, globSync: ts, sync: Ui, globStream: Qe, stream: Ii, globStreamSync: Bt, streamSync: ji, globIterate: es, iterate: Bi, globIterateSync: Ut, iterateSync: zi, Glob: I, hasMagic: le, escape: tt, unescape: W });
 Ze.glob = Ze;
 
+// tools/_shared/code-examples.ts
+function stripFencedBlocks(body) {
+  return body.replace(/```[\s\S]*?```/g, "");
+}
+function stripCodeExamples(body) {
+  return stripFencedBlocks(body).replace(/`[^`\n]*`/g, "");
+}
+
 // .claude/skills/cross-spec-reconcile/scripts/reconcile.ts
 var DEFAULT_OWNERSHIP_STOPLIST = [
   // Pre-batch-10 base — expanded to entire tests/e2e dir per readiness audit
@@ -3425,9 +3433,6 @@ function findMissingFileReferences(files, repoRoot, implRoots) {
     }
   }
   return out;
-}
-function stripFencedBlocks(body) {
-  return body.replace(/```[\s\S]*?```/g, "");
 }
 function normalizeIdentifierKey(key) {
   return key.toLowerCase().replace(/[_-]/g, "");
@@ -4247,7 +4252,7 @@ function findMissingFrSections(files, repoRoot) {
   const defs = collectFrDefinitions(files);
   const cited = /* @__PURE__ */ new Set();
   for (const f of files) {
-    const body = stripFencedBlocks(f.body);
+    const body = stripCodeExamples(f.body);
     let m;
     FR_REF_RE.lastIndex = 0;
     while ((m = FR_REF_RE.exec(body)) !== null) cited.add(m[0]);
