@@ -836,3 +836,10 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then the prompt-time summary is a single unresolved-DENY line
     When the spec-status ack stamps the state file
     Then the prompt-time summary is silent until a newer deny arrives
+
+  @feature36
+  Scenario: SPECGEN004_110 parser slices merge through one ingest path with first-writer-wins identity
+    Given two markdown files in one spec defining the same FR id
+    When the builder assembles the graph from both
+    Then exactly one node carries that composite id and it is the first parsed
+    And gherkin slices deduplicate through the same ingest semantics

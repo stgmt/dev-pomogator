@@ -1144,7 +1144,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   _depends: verify-phase6-green_
   **Done When:**
   - [x] jscpd duplication score ≤ baseline — baseline ESTABLISHED 2026-06-07 (none existed): **0.44%** (5 clones / 55 duplicated lines over 73 files, `--min-tokens 70`; report `.dev-pomogator/.bg-logs/jscpd/`). Was 0.55%/6 before this pass
-  - [x] Shared logic extracted to helpers — builder dual ingest loop → `ingestSlice()` (spec-graph 200/200 vitest green after; `server.bundle.mjs` rebuilt). Remaining 5 clones left DELIBERATELY: guard↔push `readStdinJson` (separately-bundled artifacts — sharing couples bundle builds for 23 vanilla lines), writer.ts/md.ts/arch-decision micro-clones 6-12L each (extraction overhead > value at 0.44% total)
+  - [x] Shared logic extracted to helpers — builder dual ingest loop → `ingestSlice()` (spec-graph 200/200 vitest green after; `server.bundle.mjs` rebuilt; refactor-guard scenario SPECGEN004_110 pins the single-path dedup semantics for md AND gherkin). Remaining 5 clones left DELIBERATELY: guard↔push `readStdinJson` (separately-bundled artifacts — sharing couples bundle builds for 23 vanilla lines), writer.ts/md.ts/arch-decision micro-clones 6-12L each (extraction overhead > value at 0.44% total)
 
 - [ ] Final verification — id: final-verification — Status: IN_PROGRESS (4 of 5 — only /simplify remains) | Est: 240m
   _depends: final-refactor_

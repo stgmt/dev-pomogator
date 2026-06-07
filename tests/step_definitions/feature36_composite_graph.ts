@@ -181,6 +181,53 @@ Then('neither node is collision-dropped', function (this: F36World) {
   assert.equal(frCount, 2, `both FR-2 nodes must survive the build, got ${frCount}`);
 });
 
+// ── SPECGEN004_110 — final-refactor guard: ONE ingest path, one dedup rule ──
+// builder.ts used to carry two copies of the slice-merge loop (md + gherkin);
+// the dedup semantics could silently drift apart. After the ingestSlice()
+// extraction there is one path — this scenario pins the shared semantics
+// (first-writer-wins per composite id) for BOTH parser families.
+
+Given('two markdown files in one spec defining the same FR id', function (this: F36World) {
+  const dir = path.join(this.tempDir, '.specs', 'dedup-demo');
+  fs.mkdirSync(dir, { recursive: true });
+  // FR.md parses before ZZ-extra.md (directory walk order) — first wins.
+  fs.writeFileSync(path.join(dir, 'FR.md'), '## FR-1: First definition\n\nBody.\n');
+  fs.writeFileSync(path.join(dir, 'ZZ-extra.md'), '## FR-1: Second definition\n\nBody.\n');
+});
+
+When('the builder assembles the graph from both', function (this: F36World) {
+  this.graph = buildGraph({ repoRoot: this.tempDir, skipNdjson: true });
+});
+
+Then('exactly one node carries that composite id and it is the first parsed', function (this: F36World) {
+  const node = this.graph!.nodes.get('dedup-demo:FR-1');
+  assert.ok(node, 'the composite id must resolve to a node');
+  const frCount = [...this.graph!.nodes.values()].filter(
+    (n) => n.type === 'FR' && n.spec === 'dedup-demo',
+  ).length;
+  assert.equal(frCount, 1, 'duplicate definitions must collapse to ONE node (first-writer-wins)');
+  assert.equal((node as { title?: string }).title, 'First definition', 'the FIRST parsed definition must win');
+});
+
+Then('gherkin slices deduplicate through the same ingest semantics', function (this: F36World) {
+  // Same scenario name in two .feature files of one spec → same composite
+  // Scenario id → the shared ingestSlice keeps the first, exactly like md.
+  const dir = path.join(this.tempDir, '.specs', 'dedup-demo');
+  fs.writeFileSync(
+    path.join(dir, 'a.feature'),
+    'Feature: A\n  Scenario: same name\n    Given x\n',
+  );
+  fs.writeFileSync(
+    path.join(dir, 'b.feature'),
+    'Feature: B\n  Scenario: same name\n    Given x\n',
+  );
+  const g = buildGraph({ repoRoot: this.tempDir, skipNdjson: true });
+  const scen = [...g.nodes.values()].filter(
+    (n) => n.type === 'Scenario' && n.spec === 'dedup-demo' && String(n.id).includes('same-name'),
+  );
+  assert.equal(scen.length, 1, `same scenario id from two files must dedup to one node, got ${scen.length}`);
+});
+
 // ── SPECGEN004_93 / _94 — FR-36d: bare→candidates, qualified→exact ────────
 
 interface F36ResolveWorld extends F36World {
