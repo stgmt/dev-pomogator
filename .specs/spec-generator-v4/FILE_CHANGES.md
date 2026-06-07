@@ -183,6 +183,15 @@ This block enumerates the spec-doc edits applied as part of the v3→v4 transiti
 | `tools/specs-validator/validate-specs.ts` | edit | renderFormGuardsSummary → FR-20 threshold semantics (v3 every-prompt 24h aggregate superseded) |
 | `tools/specs-validator/__tests__/conformance-summary.test.ts` | create | T-Trans.2: threshold-zero/≥1, ack via real CLI, ≤50ms p95 latency, concurrent-atomic, scan cap ([FR-20](FR.md#fr-20)) |
 | `.claude/skills/spec-status/SKILL.md` | edit | Step 6: run ack-summary.ts after rendering — viewing /spec-status acknowledges the backlog (FR-20 B4) |
+| `tools/specs-validator/form-guards-dispatch.ts` | create | LIVE carrier of the five v3 form-guards (found DEAD in the 2026-06-07 creation review): one PreToolUse hook routes spec-file Writes to the canonical guard ([FR-19](FR.md#fr-19), [FR-24](FR.md#fr-24)) |
+| `tools/specs-validator/__tests__/form-guards-dispatch.test.ts` | create | deny-propagation / allow / passthrough, real subprocess + stdin (P16-1) |
+| `tools/specs-validator/spec-form-parsers.ts` | edit | `runCheckCli` — the `--check` dry-run CLI three form skills documented but which never existed (P16-1) |
+| `tools/specs-validator/audit-logger.ts` | edit | `readRecentEvents` optional logFile param — soft-tier injectable for test isolation (FR-20 race fix) |
+| `.claude/skills/create-spec/references/specs-validation.md` | edit | pseudo-tags → real Gherkin tags (×3) + 13-required/2-optional file-count wording (P16-1) |
+| `.claude/skills/create-spec/references/jira-mode.md` | edit | example pseudo-tag → real tag (P16-1) |
+| `.claude/skills/create-spec/references/phase3plus_audit-overview.md` | edit | Verdict → two-condition: findings closed AND spec-verdict GREEN (FR-37d) + get_spec_status pointer (P16-1) |
+| `.claude/skills/create-spec/references/phase3plus_audit-variant-coverage.md` | edit | dead extensions/ path → canonical skill path (P16-1) |
+| `audit-reports/spec-creation-pipeline-review.md` | create | the full review: findings table, refuted scout claim, backlog → Phase 16 (P16-1) |
 | `.claude/settings.json` | edit | Register extension-json-meta-guard LIVE (PreToolUse Write|Edit) — was dead code, only in .bak (T-Trans.6 finding) |
 | `.claude-plugin/hooks.json` | edit | Same live registration for plugin users (bootstrap launcher; builtins-only imports — deps-safe) |
 

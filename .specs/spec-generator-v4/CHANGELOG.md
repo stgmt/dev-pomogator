@@ -4,6 +4,17 @@ All notable changes to this feature will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed (2026-06-07 — creation-pipeline review, Phase 16)
+
+The creation side had been neglected while tracing was polished. Review (3 parallel scouts +
+manual verification; 1 scout claim refuted by a live run) found the ENTIRE form-guard
+enforcement layer DEAD — five v3 guards registered in no live manifest. Revived via
+`form-guards-dispatch.ts` (one live hook, canonical guards untouched) + 10 confirmed defects
+fixed (CHK-NFR deadlock, Jira-shape case deadlock, phantom `--check` CLI built, pseudo-tags,
+pre-v4 audit Verdict, dead path, 13-vs-15 contradiction, allowed-tools, context7 namespaces,
+FR-20 test race). v4 TASKS.md made guard-clean (23→0). Backlog → Phase 16 (P16-2..8).
+Report: `audit-reports/spec-creation-pipeline-review.md`.
+
 ### Added (2026-06-06/07 — FR-36/37/38 + T-Trans closure, PR #32 final stretch)
 
 - **FR-36 — unified spec-graph via composite node ids** (`<slug>:<localId>`): 47→574 FR

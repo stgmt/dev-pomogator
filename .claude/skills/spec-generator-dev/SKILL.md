@@ -77,6 +77,8 @@ npm run build:mcp   # ОБЯЗАТЕЛЬНО при правке tools.ts/server
 | Свежий scaffold рождался RED (7 audit ERROR + 3 UNTAGGED из коробки) | `tools/specs-generator/templates/` — FR-3/4/5 без AC/UC-ссылок, edit-row на несуществующий путь, сценарии без тегов | FR/AC-шаблоны с полными перекрёстными ссылками, FILE_CHANGES placeholder → create + warning, feature.template с реальными @FR-N; live-proof: scaffold → verdict GREEN at birth |
 | Псевдо-тег `# @featureN` (комментарий — парсер не видит → UNTAGGED, рёбер нет) | ПРОМПТЫ-учителя: `extension-test-quality.md` (root), `feature-creation-rules.md`, `phase3plus_audit-logic-gaps.md`, `requirements-chk-matrix` | все 4 носителя переписаны на НАСТОЯЩИЙ Gherkin-тег (читать оба формата, ПИСАТЬ только реальный) |
 | «validate-spec: 0 errors» как финальная валидация в workflow | `phase3_finalization.md` шаг 3 | двухуровневая финализация: pre-filter + `spec-verdict --no-semantic` GREEN (FR-37a/d) |
+| Весь enforcement-слой создающей стороны мёртв (5 form-guards без единой живой регистрации; meta-guard охранял несуществующее; скиллы обещали «guard will deny») | регистрация терялась при v1→v2 миграции манифестов; ни один тест не проверял ЖИВОСТЬ регистрации (только прямой спавн) | `form-guards-dispatch.ts` live в обоих манифестах + самозащита в meta-guard + пин в SPECGEN004_52 + дисциплина: для каждого hook-артефакта проверять «registered in a LIVE manifest», не только «код+тест есть» |
+| Скилл инструктирует формат, который его же guard режет (CHK-NFR id; lowercase Jira-маркеры) | SKILL.md и guard-регекс эволюционировали независимо, evals нет | скиллы переписаны под guard-контракт + построен `--check` CLI (был фантомом в 3 скиллах) + P16-2: evals с negative-кейсами на оба класса |
 
 ## Связанные
 

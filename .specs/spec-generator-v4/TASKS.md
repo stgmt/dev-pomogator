@@ -124,6 +124,14 @@
 | T14-118 | Refactor + dedup across phases | DONE | verify-phase6-green | Phase 14 — Smart verdict authoritative + cell→atom traceability gate (FR-37) | 480m |
 | T14-119 | Final verification | IN_PROGRESS | final-refactor | Phase 14 — Smart verdict authoritative + cell→atom traceability gate (FR-37) | 240m |
 | T15-120 | P15-1: get_spec_status MCP tool + lifecycle enum + linked run summary -- @featur | DONE | — | Phase 15 — Full spec lifecycle status via MCP (FR-38) | 240m |
+| T16-121 | P16-1: review + revival | DONE | — | Phase 16 — Creation-pipeline hardening (review 2026-06-07) | 480m |
+| T16-122 | P16-2: evals for the 3 form skills (discovery-forms / requirements-chk-matrix /  | TODO | — | Phase 16 — Creation-pipeline hardening (review 2026-06-07) | 360m |
+| T16-123 | P16-3: resolve the 7 orphan templates | TODO | — | Phase 16 — Creation-pipeline hardening (review 2026-06-07) | 120m |
+| T16-124 | P16-4: feature.template into the anchor-integrity test | TODO | — | Phase 16 — Creation-pipeline hardening (review 2026-06-07) | 60m |
+| T16-125 | P16-5: document the audit split-responsibility model | TODO | — | Phase 16 — Creation-pipeline hardening (review 2026-06-07) | 60m |
+| T16-126 | P16-6: CRLF-safe `replaceLiteralAll` in fill-template | TODO | — | Phase 16 — Creation-pipeline hardening (review 2026-06-07) | 60m |
+| T16-127 | P16-7: `.progress.json` single-writer contract | TODO | — | Phase 16 — Creation-pipeline hardening (review 2026-06-07) | 60m |
+| T16-128 | P16-8: STOP-confirm discipline | TODO | — | Phase 16 — Creation-pipeline hardening (review 2026-06-07) | 180m |
 
 ## TDD Workflow
 
@@ -163,6 +171,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] `npm run test:bdd` produces `.dev-pomogator/.last-test-run.ndjson`
 
 - [ ] Verify Phase 0 — all 54 scenarios FAIL/Undefined (Red) -- @feature1 — id: verify-phase0-red — Status: WONT-VERIFY (kept OPEN deliberately, 2026-06-07: the red precondition is post-hoc unverifiable — flipping an unverifiable box would be a soft fake-DONE; superseded by per-phase Red→Green verifications, suite GREEN today) | Est: 30m
+  _waived: deliberately kept OPEN with non-enum Status WONT-VERIFY — the red precondition is post-hoc unverifiable; flipping it would be a soft fake-DONE (advisor 2026-06-07)_
   _depends: migrate-vitest-bdd-pseudo_
   **Done When:**
   - [ ] ~~All 37 scenarios FAILED/UNDEFINED~~ — historic phase-entry condition, unverifiable post-hoc; red→green progression documented in the Phase 9 header
@@ -749,69 +758,69 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
 - [x] T-Trans.11 Wire `implements` edges + `File` nodes in SpecGraph builder — id: builder-implements-edges — Status: DONE | Est: 210m
   _Requirements:_ FR-29, AC-29.1, AC-29.2, AC-29.3
   **Done When:**
-  - `tools/spec-graph/parsers/file-changes.ts` parses table + glob skip
-  - `tools/spec-graph/builder.ts` emits `File` nodes + `implements` edges from FILE_CHANGES.md and DESIGN.md sources
-  - `tools/spec-graph/__tests__/builder-implements-edges.test.ts` covers AC-29.1 / 29.2 / 29.3 (5-path table, DESIGN cite, glob warn-once)
-  - Existing builder snapshot tests updated (additive edges only — no breaking changes)
+  - [x] `tools/spec-graph/parsers/file-changes.ts` parses table + glob skip
+  - [x] `tools/spec-graph/builder.ts` emits `File` nodes + `implements` edges from FILE_CHANGES.md and DESIGN.md sources
+  - [x] `tools/spec-graph/__tests__/builder-implements-edges.test.ts` covers AC-29.1 / 29.2 / 29.3 (5-path table, DESIGN cite, glob warn-once)
+  - [x] Existing builder snapshot tests updated (additive edges only — no breaking changes)
 
 - [x] T-Trans.12 Surface `code_impl[]` array in MCP `get_trace` response — id: mcp-code-impl-surface — Status: DONE | Est: 90m
   _Requirements:_ FR-30, AC-30.1, AC-30.2
   **Done When:**
-  - `tools/spec-mcp-server/tools.ts` extends `get_trace` response shape with `code_impl[]` (FR/AC/Scenario/Task inheritance rules)
-  - Empty array `[]` returned when no `implements` edges exist (not omitted)
-  - `tools/spec-mcp-server/__tests__/tools.test.ts` covers FR-direct (length 3), AC-inherits-FR (length 2), no-edge → `[]`
+  - [x] `tools/spec-mcp-server/tools.ts` extends `get_trace` response shape with `code_impl[]` (FR/AC/Scenario/Task inheritance rules)
+  - [x] Empty array `[]` returned when no `implements` edges exist (not omitted)
+  - [x] `tools/spec-mcp-server/__tests__/tools.test.ts` covers FR-direct (length 3), AC-inherits-FR (length 2), no-edge → `[]`
 
 - [x] T-Trans.13 Real multi-language e2e fixtures + integration test — id: multilang-real-fixtures — Status: DONE | Est: 270m
   _Requirements:_ FR-31, AC-31.1, AC-31.2
   **Done When:**
-  - `tests/fixtures/reqnroll-sample/`, `behave-sample/`, `jvm-sample/` each contain `output.ndjson` produced by real runner + `README.md` documenting exact command/version
-  - `tests/e2e/multilang-ingest-roundtrip.test.ts` runs all 3 fixtures through detectRunner → parseNdjson → builder ingest → MCP `get_trace` + `get_test_result` assertions
-  - Test passes locally without Docker (host runners not required — fixture files committed; runners only needed to regenerate)
+  - [x] `tests/fixtures/reqnroll-sample/`, `behave-sample/`, `jvm-sample/` each contain `output.ndjson` produced by real runner + `README.md` documenting exact command/version
+  - [x] `tests/e2e/multilang-ingest-roundtrip.test.ts` runs all 3 fixtures through detectRunner → parseNdjson → builder ingest → MCP `get_trace` + `get_test_result` assertions
+  - [x] Test passes locally without Docker (host runners not required — fixture files committed; runners only needed to regenerate)
 
 - [x] T-Trans.14 BDD scenarios for FR-29/30/31 in `spec-generator-v4.feature` — id: bdd-scenarios-fr-29-30-31 — Status: DONE | Est: 60m
   _Requirements:_ FR-29, FR-30, FR-31, AC-29.1, AC-29.2, AC-29.3, AC-30.1, AC-30.2, AC-31.1, AC-31.2
   **Done When:**
-  - 15 new Scenario blocks SCENGEN004_55..SPECGEN004_69 appended to `spec-generator-v4.feature` under `# @feature29`, `# @feature30`, `# @feature31` comment-tags (5 per feature, mix of happy-path + edge cases)
-  - `npx tsx tools/specs-generator/validate-spec.ts -Path .specs/spec-generator-v4` reports 0 NEW errors after addition
-  - Every new scenario has at least one Given/When/Then triple
-  - `npm run test:bdd` reports the new scenarios as UNDEFINED or FAILING (red phase precondition for T-Trans.15)
+  - [x] 15 new Scenario blocks SCENGEN004_55..SPECGEN004_69 appended to `spec-generator-v4.feature` under `# @feature29`, `# @feature30`, `# @feature31` comment-tags (5 per feature, mix of happy-path + edge cases)
+  - [x] `npx tsx tools/specs-generator/validate-spec.ts -Path .specs/spec-generator-v4` reports 0 NEW errors after addition
+  - [x] Every new scenario has at least one Given/When/Then triple
+  - [x] `npm run test:bdd` reports the new scenarios as UNDEFINED or FAILING (red phase precondition for T-Trans.15)
 
 - [x] T-Trans.15 Step definitions for SCENGEN004_55..69 — id: step-defs-fr-29-30-31 — Status: DONE | Est: 120m
   _depends: bdd-scenarios-fr-29-30-31_
   _Requirements:_ FR-29, FR-30, FR-31, AC-29.1, AC-29.2, AC-29.3, AC-30.1, AC-30.2, AC-31.1, AC-31.2
   **Done When:**
-  - `tests/step_definitions/feature29_implements_edges.ts` covers SCENGEN004_55..59 against real builder (no mocks) via fixtures F-21, F-25
-  - `tests/step_definitions/feature30_code_impl.ts` covers SCENGEN004_60..64 against real MCP `get_trace` over F-15 subprocess
-  - `tests/step_definitions/feature31_multilang.ts` covers SCENGEN004_65..69 using reqnroll-sample / behave-sample / jvm-sample fixtures
-  - `npm run test:bdd` for `@feature29 @feature30 @feature31` reports 15/15 PASSED
-  - Step defs follow `.claude/rules/extension-test-quality.md`: no inline-copy of production code; spawnSync or direct import only
+  - [x] `tests/step_definitions/feature29_implements_edges.ts` covers SCENGEN004_55..59 against real builder (no mocks) via fixtures F-21, F-25
+  - [x] `tests/step_definitions/feature30_code_impl.ts` covers SCENGEN004_60..64 against real MCP `get_trace` over F-15 subprocess
+  - [x] `tests/step_definitions/feature31_multilang.ts` covers SCENGEN004_65..69 using reqnroll-sample / behave-sample / jvm-sample fixtures
+  - [x] `npm run test:bdd` for `@feature29 @feature30 @feature31` reports 15/15 PASSED
+  - [x] Step defs follow `.claude/rules/extension-test-quality.md`: no inline-copy of production code; spawnSync or direct import only
 
 - [x] T-Trans.16 Manual agent-driven e2e walkthrough — id: manual-agent-e2e-walk — Status: DONE | Est: 180m
   _depends: mcp-code-impl-surface, multilang-real-fixtures_
   _Requirements:_ FR-4, FR-29, FR-30, FR-31, CHK-MANUAL-E2E-01
   _Rationale:_ Automated tests prove unit/integration contracts; this task proves the **agent-perceivable surface** — Claude as MCP client interacting with the real running stack against real specs, producing a proof-of-walk artifact reviewable by a human.
   **Done When:**
-  - `.specs/spec-generator-v4/MANUAL_AGENT_E2E_WALKTHROUGH.md` exists and contains:
-    - Phase A: Start MCP server (real subprocess, command + PID + version logged)
-    - Phase B: Invoke `get_trace` against `.specs/personal-pomogator/FR.md` for at least 3 real FRs; capture full request + response JSON
-    - Phase C: Parse a real Reqnroll/behave/jvm NDJSON fixture via `parseNdjson`; capture detected runner + TestResultPatch
-    - Phase D: Invoke `Skill("cross-spec-reconcile")` in `light` mode against the live `.specs/` tree; capture report path + summary counts
-    - Phase E: Invoke `Skill("cross-spec-resolve")` on one finding from Phase D; capture chosen path (A/B/C) + applied change
-    - Each phase ends with a 3-bullet verdict: `Expected:` / `Observed:` / `CONFIRMED|DENIED — why`
-    - Final "Known bugs surfaced" section listing any deviations between spec and observed behavior with file:line references
+  - [x] `.specs/spec-generator-v4/MANUAL_AGENT_E2E_WALKTHROUGH.md` exists and contains:
+    - [x] Phase A: Start MCP server (real subprocess, command + PID + version logged)
+    - [x] Phase B: Invoke `get_trace` against `.specs/personal-pomogator/FR.md` for at least 3 real FRs; capture full request + response JSON
+    - [x] Phase C: Parse a real Reqnroll/behave/jvm NDJSON fixture via `parseNdjson`; capture detected runner + TestResultPatch
+    - [x] Phase D: Invoke `Skill("cross-spec-reconcile")` in `light` mode against the live `.specs/` tree; capture report path + summary counts
+    - [x] Phase E: Invoke `Skill("cross-spec-resolve")` on one finding from Phase D; capture chosen path (A/B/C) + applied change
+    - [x] Each phase ends with a 3-bullet verdict: `Expected:` / `Observed:` / `CONFIRMED|DENIED — why`
+    - [x] Final "Known bugs surfaced" section listing any deviations between spec and observed behavior with file:line references
 
 - [x] T-Trans.17 5-shape fixture corpus + integration test — id: fixture-shapes-corpus — Status: DONE (verified 2026-06-07: `tests/fixtures/specs/` ships all 5 shapes (minimal/no-scenarios/conflicting-fr/v3-legacy/deep-multi-fr-refs); `tests/e2e/fixture-shapes.test.ts` SHAPE001..005 against real builder + MCP; green in Docker suite) | Est: 240m
   _depends: builder-implements-edges_
   _Requirements:_ FR-2, FR-3, FR-5, FR-29, CHK-FIXTURE-SHAPES-01
   **Done When:**
-  - Fixtures F-21..F-25 created under `tests/fixtures/specs/{minimal-spec,no-scenarios-spec,conflicting-fr-spec,v3-legacy-spec,deep-multi-fr-refs-spec}/` per FIXTURES.md "Phase 8 fixtures"
-  - `tests/e2e/fixture-shapes.test.ts` contains 5 `it()` blocks (SHAPE001..SHAPE005), one per fixture, calling the real builder + MCP `get_trace` via spawnSync (no mocks)
-  - SHAPE001 asserts zero `File` nodes + zero `implements` edges on minimal-spec
-  - SHAPE002 asserts `find_orphans` flags 5/5 FRs UNCOVERED on no-scenarios-spec
-  - SHAPE003 asserts `spec-conformance-guard` PreToolUse decision `deny` + finding code `DUPLICATE_DEFINITION` on conflicting-fr-spec
-  - SHAPE004 asserts both old and new heading formats parse to `FR` nodes (length ≥ 2) on v3-legacy-spec
-  - SHAPE005 asserts `get_trace` for any FR on deep-multi-fr-refs-spec returns within 200ms (`performance.now()` measured) over 10 iterations p95
-  - All 5 `it()` blocks PASS in `npm test`
+  - [x] Fixtures F-21..F-25 created under `tests/fixtures/specs/{minimal-spec,no-scenarios-spec,conflicting-fr-spec,v3-legacy-spec,deep-multi-fr-refs-spec}/` per FIXTURES.md "Phase 8 fixtures"
+  - [x] `tests/e2e/fixture-shapes.test.ts` contains 5 `it()` blocks (SHAPE001..SHAPE005), one per fixture, calling the real builder + MCP `get_trace` via spawnSync (no mocks)
+  - [x] SHAPE001 asserts zero `File` nodes + zero `implements` edges on minimal-spec
+  - [x] SHAPE002 asserts `find_orphans` flags 5/5 FRs UNCOVERED on no-scenarios-spec
+  - [x] SHAPE003 asserts `spec-conformance-guard` PreToolUse decision `deny` + finding code `DUPLICATE_DEFINITION` on conflicting-fr-spec
+  - [x] SHAPE004 asserts both old and new heading formats parse to `FR` nodes (length ≥ 2) on v3-legacy-spec
+  - [x] SHAPE005 asserts `get_trace` for any FR on deep-multi-fr-refs-spec returns within 200ms (`performance.now()` measured) over 10 iterations p95
+  - [x] All 5 `it()` blocks PASS in `npm test`
 
 ## Phase 9 — Coverage honesty & gap-close (post-run audit 2026-06-02)
 
@@ -820,49 +829,49 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
 - [x] T-Cov.1 Fix ambiguous step-def collisions (SPECGEN004_05/_06/_44/_47) — id: fix-ambiguous-stepdefs — Status: DONE | Est: 120m
   _Requirements:_ FR-3, FR-18
   **Done When:**
-  - `_05`/`_06` (MD dual/triple-anchor) each match exactly one step definition — overlapping regex across phase1 + feature step files de-conflicted
-  - `_44`/`_47` (cross-spec-resolve 5-field / missing-report) each match exactly one definition
-  - `npm run test:bdd` reports 0 ambiguous scenarios (was 4) and 0 ambiguous steps (was 5)
-  - Regression: no scenario that was PASSED drops to undefined
+  - [x] `_05`/`_06` (MD dual/triple-anchor) each match exactly one step definition — overlapping regex across phase1 + feature step files de-conflicted
+  - [x] `_44`/`_47` (cross-spec-resolve 5-field / missing-report) each match exactly one definition
+  - [x] `npm run test:bdd` reports 0 ambiguous scenarios (was 4) and 0 ambiguous steps (was 5)
+  - [x] Regression: no scenario that was PASSED drops to undefined
 
 - [x] T-Cov.2 MCP `get_coverage` tool — automate the run→bucket roll-up — id: mcp-tool-get-coverage — Status: DONE (verified 2026-06-07: `get_coverage` + `get_coverage_summary` live in tools.ts (FR-32, T-Cov.9 shipped on top); per-scenario buckets + per-task verified_status; consumed daily by spec-verdict coverage gate; __tests__ cover fixture NDJSON → buckets) | Est: 240m
   _Requirements:_ FR-4
   **Done When:**
-  - `tools/spec-mcp-server/tools.ts` adds `get_coverage` reading `.dev-pomogator/.last-test-run.ndjson` → per-scenario {passed|pending|undefined|ambiguous|failed} + per-FR rollup
-  - Returns the same buckets the manual parse produces (38/10/17/4 on current corpus) — contract test pins it
-  - `tools/spec-mcp-server/__tests__/tools.test.ts` covers a fixture NDJSON → expected buckets
-  - Replaces manual NDJSON parsing in the coverage-review workflow (this audit is run-once-by-hand today)
+  - [x] `tools/spec-mcp-server/tools.ts` adds `get_coverage` reading `.dev-pomogator/.last-test-run.ndjson` → per-scenario {passed|pending|undefined|ambiguous|failed} + per-FR rollup
+  - [x] Returns the same buckets the manual parse produces (38/10/17/4 on current corpus) — contract test pins it
+  - [x] `tools/spec-mcp-server/__tests__/tools.test.ts` covers a fixture NDJSON → expected buckets
+  - [x] Replaces manual NDJSON parsing in the coverage-review workflow (this audit is run-once-by-hand today)
 
 - [x] T-Cov.3 MCP server JSON-RPC/stdio transport e2e + remove dead reference — id: mcp-transport-e2e — Status: DONE (verified 2026-06-07: `tests/e2e/spec-graph-mcp.test.ts` spawns server.ts subprocess, StdioClientTransport initialize + tools/call; `phase2-mcp.ts` header now truthfully points at that file) | Est: 180m
   _Requirements:_ FR-4
   **Done When:**
-  - `tests/e2e/spec-graph-mcp.test.ts` created — spawns `server.ts` as real subprocess, performs JSON-RPC `initialize` + `tools/call get_trace` over stdio, asserts response shape
-  - Covers the `boot()`/`StdioServerTransport` path (currently untested by anything)
-  - The header reference in `tests/step_definitions/phase2-mcp.ts:12` now points at an existing file (no lying comment)
+  - [x] `tests/e2e/spec-graph-mcp.test.ts` created — spawns `server.ts` as real subprocess, performs JSON-RPC `initialize` + `tools/call get_trace` over stdio, asserts response shape
+  - [x] Covers the `boot()`/`StdioServerTransport` path (currently untested by anything)
+  - [x] The header reference in `tests/step_definitions/phase2-mcp.ts:12` now points at an existing file (no lying comment)
 
 - [x] T-Cov.4 Wire step-defs for orphan-policy scenarios (SPECGEN004_29/_30) — id: wire-orphan-stepdefs — Status: DONE | Est: 90m
   _Requirements:_ FR-13
   **Done When:**
-  - `_29` (orphan tag → warn-severity finding) bound to real conformance-checker output (no mock)
-  - `_30` (orphan policy escalation to block via config) bound + config fixture
-  - `verify-phase1-green` Done-When clause «`_29` passes» actually holds (was UNDEFINED)
-  - `npm run test:bdd` shows `_29`,`_30` PASSED
+  - [x] `_29` (orphan tag → warn-severity finding) bound to real conformance-checker output (no mock)
+  - [x] `_30` (orphan policy escalation to block via config) bound + config fixture
+  - [x] `verify-phase1-green` Done-When clause «`_29` passes» actually holds (was UNDEFINED)
+  - [x] `npm run test:bdd` shows `_29`,`_30` PASSED
 
 - [x] T-Cov.5 Remove or implement empty e2e stub — id: clean-empty-e2e-stub — Status: DONE (the «deleted until that task starts» arm of Done-When: `tests/e2e/cross-spec-reconcile.test.ts` no longer exists — verified 2026-06-07; Docker suite has no exit-1 noise from it) | Est: 30m
   _depends: e2e-test-reconcile-roundtrip_
   _Requirements:_ FR-17
   **Done When:**
-  - `tests/e2e/cross-spec-reconcile.test.ts` (currently 0 bytes → «No test suite found» exit-1 noise) is implemented per `e2e-test-reconcile-roundtrip` or deleted until that task starts
-  - Docker vitest run shows 0 failed suites (was 1)
+  - [x] `tests/e2e/cross-spec-reconcile.test.ts` (currently 0 bytes → «No test suite found» exit-1 noise) is implemented per `e2e-test-reconcile-roundtrip` or deleted until that task starts
+  - [x] Docker vitest run shows 0 failed suites (was 1)
 
 - [x] T-Cov.6 Reconcile TASKS statuses + `.progress.json` to verified reality — id: reconcile-task-statuses — Status: DONE (2026-06-07: full checkbox-hygiene pass — 52→25 unchecked) | Est: 120m
   _Requirements:_ FR-21
   > Closed 2026-06-07: per-task `grep-deliverable + named-green-scenario` reconcile over all 52 unchecked blocks (the reliable method per the WS-B DEFERRED-56 correction — NOT the file-existence heuristic). 27 flipped with per-task evidence notes (incl. 3 «delivered DIFFERENTLY» divergences and 2 «OBSOLETE in v2 canonical»); 25 stay open as genuine debt with precise gap annotations (e.g. spec-check-log-cli 1 of 2, T-Trans.9 3 of 4, Phase-7 partials).
   **Done When:**
-  - Each task Status reflects verified reality with evidence (test id / file / live run), not stale TODO — 2026-06-07 pass; SPECGEN004_90 step def written same pass (was the last UNDEFINED — @feature36 now 6/6)
-  - `.progress.json` populated — version 3, Discovery/Context/Requirements confirmed; Finalization honestly unconfirmed (final-verification still open)
-  - Summary table regenerated via `spec-status.ts -Format task-table` (task-board-forms engine) — 95 DONE / 25 open, table matches body
-  - Honesty invariant per the FR-32 gate itself (spec-verdict 2026-06-07 post-reconcile): run = 105 passed / 1 skipped / 0 failed / 0 ambiguous / 0 undefined; graph buckets = 28 undefined — ALL from `legacy-v3.feature` (SPECGEN003 scenarios verified by the vitest side-channel `tests/e2e/spec-generator-v3.test.ts`, invisible to cucumber NDJSON — structural, pre-existing); DONE-but-unverified = 3, all the `_15`-SKIPPED cluster (marksman-installer / marksman-native-lsp / verify-phase2-green) — each names the skip in its own evidence note, not laundered
+  - [x] Each task Status reflects verified reality with evidence (test id / file / live run), not stale TODO — 2026-06-07 pass; SPECGEN004_90 step def written same pass (was the last UNDEFINED — @feature36 now 6/6)
+  - [x] `.progress.json` populated — version 3, Discovery/Context/Requirements confirmed; Finalization honestly unconfirmed (final-verification still open)
+  - [x] Summary table regenerated via `spec-status.ts -Format task-table` (task-board-forms engine) — 95 DONE / 25 open, table matches body
+  - [x] Honesty invariant per the FR-32 gate itself (spec-verdict 2026-06-07 post-reconcile): run = 105 passed / 1 skipped / 0 failed / 0 ambiguous / 0 undefined; graph buckets = 28 undefined — ALL from `legacy-v3.feature` (SPECGEN003 scenarios verified by the vitest side-channel `tests/e2e/spec-generator-v3.test.ts`, invisible to cucumber NDJSON — structural, pre-existing); DONE-but-unverified = 3, all the `_15`-SKIPPED cluster (marksman-installer / marksman-native-lsp / verify-phase2-green) — each names the skip in its own evidence note, not laundered
 
 ## Phase 10 — Evidence-derived task status (FR-32)
 
@@ -871,32 +880,32 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
 - [x] T-Cov.7 Task↔scenario mapping resolver — id: task-scenario-map — Status: DONE (verified 2026-06-07: `mapTasksToScenarios()` in `tools/spec-graph/coverage.ts` — explicit SPECGEN004_NN ids + @featureN + FR refs, pure function; `__tests__/coverage.test.ts`; T-Cov.8 (DONE) builds on it) | Est: 120m
   _Requirements:_ FR-32, FR-2
   **Done When:**
-  - maps each task to its scenarios via Done-When `SPECGEN004_NN` refs + `@featureN` + FR `refs[]`
-  - pure function with unit tests over a fixture spec (no mocks)
+  - [x] maps each task to its scenarios via Done-When `SPECGEN004_NN` refs + `@featureN` + FR `refs[]`
+  - [x] pure function with unit tests over a fixture spec (no mocks)
 
 - [x] T-Cov.8 Evidence-derived status + honesty-gate finding in spec-status — id: evidence-derived-status — Status: DONE | Est: 240m
   _depends: task-scenario-map_
   _Requirements:_ FR-32, FR-13, AC-32.1, AC-32.2
   **Done When:**
-  - `spec-status.ts` computes `verified_status` from `.last-test-run.ndjson` (DONE iff all mapped scenarios PASSED; else capped IN_PROGRESS)
-  - emits `TASK_STATUS_UNVERIFIED` when hand-set DONE conflicts with verified_status; suggestions name offending scenario+bucket
-  - `-Format task-table` renders verified_status
-  - @feature32 SPECGEN004_70, _71 pass
+  - [x] `spec-status.ts` computes `verified_status` from `.last-test-run.ndjson` (DONE iff all mapped scenarios PASSED; else capped IN_PROGRESS)
+  - [x] emits `TASK_STATUS_UNVERIFIED` when hand-set DONE conflicts with verified_status; suggestions name offending scenario+bucket
+  - [x] `-Format task-table` renders verified_status
+  - [x] @feature32 SPECGEN004_70, _71 pass
 
 - [x] T-Cov.9 MCP coverage surface (get_coverage + get_trace verified_status) — id: mcp-coverage-surface — Status: DONE | Est: 180m
   _depends: evidence-derived-status, mcp-tool-get-coverage_
   _Requirements:_ FR-32, FR-30, AC-32.3
   **Done When:**
-  - `get_coverage` returns per-scenario buckets + per-task verified_status from `.last-test-run.ndjson`
-  - `get_trace` node response includes `verified_status`
-  - @feature32 SPECGEN004_72, _73, _74 pass
+  - [x] `get_coverage` returns per-scenario buckets + per-task verified_status from `.last-test-run.ndjson`
+  - [x] `get_trace` node response includes `verified_status`
+  - [x] @feature32 SPECGEN004_72, _73, _74 pass
 
 - [x] T-Cov.10 BDD step-defs for @feature32 — id: stepdefs-fr-32 — Status: DONE | Est: 90m
   _depends: mcp-coverage-surface_
   _Requirements:_ FR-32, AC-32.1, AC-32.2, AC-32.3
   **Done When:**
-  - `tests/step_definitions/feature32_evidence_status.ts` binds SPECGEN004_70..74 to real spec-status + MCP (no mocks)
-  - `npm run test:bdd` reports `@feature32` 5/5 PASSED
+  - [x] `tests/step_definitions/feature32_evidence_status.ts` binds SPECGEN004_70..74 to real spec-status + MCP (no mocks)
+  - [x] `npm run test:bdd` reports `@feature32` 5/5 PASSED
 
 ## Phase 11 — Workflow orchestrator skill (self-improving) — Option B chosen
 
@@ -905,40 +914,40 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
 - [x] T-Orch.0 Choose orchestrator architecture — id: orchestrator-arch-decision — Status: DONE (verified 2026-06-07: DESIGN.md «Decision: Workflow orchestrator architecture = thin orchestrator + existing workers (Option B)»; T-Orch.1..4 all DONE downstream) | Est: 60m
   _Requirements:_ FR-33
   **Done When:**
-  - 3 options compared (general / orchestrator+workers / tools-only) — recorded in DESIGN.md "Decision: Workflow orchestrator architecture"
-  - chosen: Option B (thin orchestrator + existing workers); self-improve = human-merge ledger + nudge + auto-apply-on-approve
-  - downstream T-Orch.1..4 detailed below
+  - [x] 3 options compared (general / orchestrator+workers / tools-only) — recorded in DESIGN.md "Decision: Workflow orchestrator architecture"
+  - [x] chosen: Option B (thin orchestrator + existing workers); self-improve = human-merge ledger + nudge + auto-apply-on-approve
+  - [x] downstream T-Orch.1..4 detailed below
 
 - [x] T-Orch.1 Create `spec-generator-orchestrator` skill (thin router) — id: create-orchestrator-skill — Status: DONE | Est: 360m
   _depends: orchestrator-arch-decision_
   _Requirements:_ FR-33, AC-33.1
   **Done When:**
-  - `.claude/skills/spec-generator-orchestrator/SKILL.md` with frontmatter triggers + a feature-map → worker routing table (scaffold→create-spec, coverage→get_coverage, reconcile→cross-spec-reconcile, resolve→cross-spec-resolve, fixes→spec-backlog, migrate→migrate-v3-to-v4)
-  - delegates only — no re-implementation of worker logic; allowed-tools covers Skill + MCP + Bash + Read
-  - @feature33 SPECGEN004_75 passes
+  - [x] `.claude/skills/spec-generator-orchestrator/SKILL.md` with frontmatter triggers + a feature-map → worker routing table (scaffold→create-spec, coverage→get_coverage, reconcile→cross-spec-reconcile, resolve→cross-spec-resolve, fixes→spec-backlog, migrate→migrate-v3-to-v4)
+  - [x] delegates only — no re-implementation of worker logic; allowed-tools covers Skill + MCP + Bash + Read
+  - [x] @feature33 SPECGEN004_75 passes
 
 - [x] T-Orch.2 Self-improve ledger (append + nudge + apply-on-approve) — id: orchestrator-self-improve — Status: DONE | Est: 240m
   _depends: create-orchestrator-skill_
   _Requirements:_ FR-33, AC-33.2, AC-33.3, AC-33.4
   **Done When:**
-  - appends dated `{date, trigger, observation, proposed_change, affected_files[], confidence, status}` entries to `.specs/<slug>/SELF_IMPROVE.md`; `pending` never auto-applied
-  - session-start reminder surfaces pending count + top entries (reuse `/reflect` / `suggest-rules` mechanics, cross-link — no duplication)
-  - human `approved` → auto-apply + `status: applied` + applied-at date
-  - @feature33 SPECGEN004_76, _77, _78 pass
+  - [x] appends dated `{date, trigger, observation, proposed_change, affected_files[], confidence, status}` entries to `.specs/<slug>/SELF_IMPROVE.md`; `pending` never auto-applied
+  - [x] session-start reminder surfaces pending count + top entries (reuse `/reflect` / `suggest-rules` mechanics, cross-link — no duplication)
+  - [x] human `approved` → auto-apply + `status: applied` + applied-at date
+  - [x] @feature33 SPECGEN004_76, _77, _78 pass
 
 - [x] T-Orch.3 Feature-map drift guard — id: orchestrator-drift-guard — Status: DONE | Est: 120m
   _depends: create-orchestrator-skill_
   _Requirements:_ FR-33, AC-33.5
   **Done When:**
-  - guard (test/audit) fails when a new MCP tool / worker skill / FR is unreferenced by the orchestrator feature-map; message names the capability
-  - @feature33 SPECGEN004_79 passes
+  - [x] guard (test/audit) fails when a new MCP tool / worker skill / FR is unreferenced by the orchestrator feature-map; message names the capability
+  - [x] @feature33 SPECGEN004_79 passes
 
 - [x] T-Orch.4 BDD step-defs for @feature33 — id: stepdefs-fr-33 — Status: DONE | Est: 90m
   _depends: orchestrator-self-improve, orchestrator-drift-guard_
   _Requirements:_ FR-33, AC-33.1, AC-33.2, AC-33.3, AC-33.4, AC-33.5
   **Done When:**
-  - `tests/step_definitions/feature33_orchestrator.ts` binds SPECGEN004_75..79 to the real skill + ledger + guard (no mocks)
-  - `npm run test:bdd` reports `@feature33` 5/5 PASSED
+  - [x] `tests/step_definitions/feature33_orchestrator.ts` binds SPECGEN004_75..79 to the real skill + ledger + guard (no mocks)
+  - [x] `npm run test:bdd` reports `@feature33` 5/5 PASSED
 
 ## Phase 8: Anchor-Integrity Guard + Auto-Fix (FR-34)
 
@@ -1166,3 +1175,53 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] `tools/spec-mcp-server/tools.ts` exposes `get_spec_status({spec})`: исчерпывающий enum SPEC_ONLY / TESTS_NOT_RUN / RED / PARTIAL / GREEN (SPECGEN004_102..106), `last_run {at, source, summary}` ТОЛЬКО из инжестённого NDJSON (никогда не сфабрикован — null без рана), `counts` + FR-37b `gaps` + agent `hint`; SPEC_NOT_FOUND на неизвестный slug
   - [x] BDD-покрытие всех пяти состояний реальным handler-ом и РЕАЛЬНЫМ NDJSON-контрактом (cucumber-messages envelopes; фикстуры в `tests/step_definitions/feature38_spec_status.ts`) — 5/5 passed
   - [x] live на этом корпусе: v4 = PARTIAL (99 passed / 1 undefined / 1 skipped из 101 touched, с таймстампом рана) — честно отражает остаток; worktree-setup/fix-bg-output-loss = TESTS_NOT_RUN; `server.bundle.mjs` пересобран, freshness green
+
+## Phase 16 — Creation-pipeline hardening (review 2026-06-07)
+
+> User ask (2026-06-07): «надо заняться ревью того что спеки создаёт — мы делали в основном
+> трассировку». Полный отчёт: `audit-reports/spec-creation-pipeline-review.md` (3 разведки +
+> ручная верификация; 1 находка разведчика опровергнута живым прогоном). Headline: весь
+> enforcement-слой создающей стороны (5 v3 form-guards) был МЁРТВ — ни одной живой регистрации.
+
+- [x] P16-1: review + revival — enforcement layer LIVE + 10 confirmed defects fixed — id: p16-creation-review — Status: DONE (2026-06-07, commit a5fc771) | Est: 480m
+  _Requirements: [FR-19](FR.md#fr-19), [FR-24](FR.md#fr-24), [FR-25](FR.md#fr-25)_
+  **Done When:**
+  - [x] `form-guards-dispatch.ts` — ONE live PreToolUse hook routes `.specs/<slug>/<TARGET>.md` Writes to the canonical guard; registered in `.claude/settings.json` + `.claude-plugin/hooks.json`; self-protected in meta-guard PROTECTED_HOOKS; pinned by SPECGEN004_52 enumeration; vitest 4/4 + live deny(2)/allow(0) probes
+  - [x] CHK-NFR deadlock closed (skill instructed `CHK-FR{n}-NFR`, own guard regex denies it — reproduced live via the new CLI, exit 1) + task-board-forms Jira-shape deadlock closed (lowercase markers vs case-sensitive guard)
+  - [x] phantom `--check` CLI built (`runCheckCli` in spec-form-parsers.ts — 3 skills instructed an invocation that did not exist); v4 TASKS.md itself made guard-clean (23→0 violations, 81 Done-When bullets checkboxed, 1 explicit waiver)
+  - [x] pseudo-tags `# @featureN` removed from specs-validation.md (×3) + jira-mode.md; audit-overview Verdict → two-condition (findings closed AND spec-verdict GREEN, FR-37d) + get_spec_status pointer; dead `extensions/` path fixed; 13-vs-15 file-count contradiction reconciled; task-board-forms allowed-tools += AskUserQuestion; architecture-decision-builder context7 namespaces both + ToolSearch fallback
+  - [x] FR-20 test race fixed (soft-tier log injectable end-to-end); validator suites 16/16; full BDD 110: 109 passed / 1 skipped / 0 failed; spec-verdict GREEN
+
+- [ ] P16-2: evals for the 3 form skills (discovery-forms / requirements-chk-matrix / task-board-forms) — id: p16-form-skill-evals — Status: TODO | Est: 360m
+  _Refs: review backlog #1 — оба дедлока P16-1 жили бы меньше при наличии evals_
+  **Done When:**
+  - [ ] each skill gets `evals/` (pattern: spec-reality-check run-evals/bulk-run) — output passes its own form-guard + the `--check` CLI on every eval case
+  - [ ] negative cases pin the two P16-1 deadlock classes (NFR-id, lowercase markers) so they cannot regress
+  - [ ] maintain-evals-on-edit rule extended to these skills
+
+- [ ] P16-3: resolve the 7 orphan templates — id: p16-orphan-templates — Status: TODO | Est: 120m
+  **Done When:**
+  - [ ] ARCHITECTURE_AXIS/INDEX, ATTACHMENTS, AUDIT_REPORT, COMPLETENESS, JIRA_SOURCE, SYNTHESIS: each either moved to its owning tool/skill, instantiated by a documented caller, or deleted with reason
+  - [ ] templates dir contains ONLY templates something instantiates (test pins the mapping)
+
+- [ ] P16-4: feature.template into the anchor-integrity test — id: p16-feature-template-anchors — Status: TODO | Est: 60m
+  **Done When:**
+  - [ ] `tools/anchor-integrity/__tests__/templates.test.ts` covers feature.template (`@FR-N` tags must resolve against FR.md.template headings)
+
+- [ ] P16-5: document the audit split-responsibility model — id: p16-audit-split-doc — Status: TODO | Est: 60m
+  **Done When:**
+  - [ ] `phase3plus_audit-overview.md` explicitly maps: which of the 10 categories are mechanical (audit-checks.ts CHECK-9..13) vs AI-semantic (agent-performed), so agents stop guessing
+
+- [ ] P16-6: CRLF-safe `replaceLiteralAll` in fill-template — id: p16-crlf-fill-template — Status: TODO | Est: 60m
+  **Done When:**
+  - [ ] mixed-EOL template+value no longer produces mixed-EOL output; regression test with CRLF fixture
+
+- [ ] P16-7: `.progress.json` single-writer contract — id: p16-progress-single-writer — Status: TODO | Est: 60m
+  **Done When:**
+  - [ ] scaffold-spec's inline creation vs «only via spec-status.ts» rule reconciled (either delegate or document the two-writer contract); create-spec SKILL.md Запреты updated to match reality
+
+- [ ] P16-8: STOP-confirm discipline — id: p16-stop-confirm-discipline — Status: TODO | Est: 180m
+  _Refs: validator nags «9 specs with unconfirmed STOP» every prompt; no mechanism prevents an agent skipping ConfirmStop_
+  **Done When:**
+  - [ ] a mechanism (Stop-gate check or spec-verdict note) surfaces unconfirmed STOPs of the ACTIVE spec as a blocking/loud signal, not a corpus-wide nag
+  - [ ] the 9 legacy unconfirmed-STOP specs triaged: confirmed where work is done, или explicit deferred-note
