@@ -221,3 +221,15 @@ The node-identity refactor (FR-36) SHALL be applied in phases that each leave th
 
 **De-collision SHALL NOT regress graph build time (FR-36)**
 After FR-36 the graph holds ≈470 FR nodes instead of 47 (collision-dropped); the full-corpus build (`buildGraphFromCwd` over all `.specs/`) SHALL stay within the existing MCP cold-start budget (NFR-Performance bounds) — the extra nodes are ones already parsed-then-dropped, so the work is bounded by parse cost already paid, not new I/O.
+
+## NFR-Performance-10 (FR-39)
+
+`spec-access-guard` SHALL отвечать ALLOW на НЕ-матчащий вызов за ≤10ms собственной логики (path-фильтр до любого I/O; паттерн form-guards-dispatch); матчащий вызов (лог/deny) — ≤50ms. Лог `spec-access.jsonl` SHALL НЕ читаться в prompt-time пути FR-20 (отдельный файл, отдельный бюджет) — 50ms-бюджет AC-20.2 не затрагивается.
+
+## NFR-Reliability-11 (FR-39/FR-40)
+
+`spec-access.jsonl` — append-only O_APPEND, ротация 10MB/30 дней по образцу audit-logger; guard и mutation-тулзы SOFT-tier: внутренняя ошибка → fail-open (allow + лог), никогда не вешать сессию. Отказ mutation-валидации — это НЕ ошибка тулзы (нормальный findings-ответ).
+
+## NFR-Reliability-12 (FR-41)
+
+Фазовый headless-агент SHALL иметь таймаут (default 15 мин, конфигурируемо) и бюджет ретраев гейта (default 2); исчерпание → оркестратор останавливается с явным FAIL-отчётом фазы (никогда не вечное ожидание и не тихий пропуск фазы).

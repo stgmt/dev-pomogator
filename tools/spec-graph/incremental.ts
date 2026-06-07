@@ -31,6 +31,10 @@
  * @see .specs/spec-generator-v4/NFR.md NFR-Performance-2 (≤100ms p95)
  */
 
+// NOTE (review 2026-06-07): incremental patches do NOT update graph.rawCollisions —
+// the pre-map collision stats stay at their cold-build value. corpus-health and
+// collision-probe always cold-build, so this is safe today; a long-running MCP
+// server wanting fresh collision stats after watcher patches must rebuild.
 import chokidar, { type FSWatcher } from 'chokidar';
 import fs from 'node:fs';
 import path from 'node:path';

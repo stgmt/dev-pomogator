@@ -370,6 +370,21 @@ describe('find_orphans + get_test_result + get_coverage_summary + list_phase_tas
     expect(auth.task).toBe(2);
   });
 
+  it('get_coverage_summary keeps NESTED specs as distinct cells (coverage.ts::specOf, FR-36)', async () => {
+    // Pins the /simplify 2026-06-07 swap: the old local regex collapsed
+    // `.specs/backlog/<name>/…` to `backlog`; the imported specOf keeps the
+    // full dir path so nested backlog specs stay separate groups.
+    const g = makeGraph();
+    g.nodes.set('backlog/nested-x:FR-1', fr('backlog/nested-x:FR-1', 'Nested', '.specs/backlog/nested-x/FR.md'));
+    const tools2 = buildToolRegistry(() => g);
+    const r2 = await tools2.find((t) => t.name === 'get_coverage_summary')!.handler({});
+    const body2 = parseResult(r2 as never) as { specs: Array<{ spec: string; fr: number }> };
+    const nested = body2.specs.find((s) => s.spec === 'backlog/nested-x');
+    expect(nested, 'nested spec must group under its FULL dir path, not collapse to "backlog"').toBeDefined();
+    expect(nested!.fr).toBe(1);
+    expect(body2.specs.find((s) => s.spec === 'backlog')).toBeUndefined();
+  });
+
   it('list_phase_tasks returns empty + note (TaskNode has no phase yet)', async () => {
     const r = await tool('list_phase_tasks').handler({ phase: 'Phase 2' });
     const body = parseResult(r) as { tasks: unknown[]; count: number; note?: string };
