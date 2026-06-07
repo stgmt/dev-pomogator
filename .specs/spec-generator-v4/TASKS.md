@@ -68,10 +68,10 @@
 | T7-62 | E2E test reconcile roundtrip -- @feature17 @feature18 | TODO | integration-test-fixture, impl-resolve-loop | Phase 7: Cross-spec reconciliation (TODO — not started) | 480m |
 | T7-63 | T-Trans.1 verify FR-19 two-tier hook failure-mode | DONE | — | Phase 7: Cross-spec reconciliation (TODO — not started) | 90m |
 | T7-64 | T-Trans.2 verify FR-20 threshold-only summary + on-demand /spec-status | TODO | — | Phase 7: Cross-spec reconciliation (TODO — not started) | 60m |
-| T7-65 | T-Trans.3 verify FR-21 spec-status.ts task-table CLI contract | TODO | — | Phase 7: Cross-spec reconciliation (TODO — not started) | 60m |
+| T7-65 | T-Trans.3 verify FR-21 spec-status.ts task-table CLI contract | DONE | — | Phase 7: Cross-spec reconciliation (TODO — not started) | 60m |
 | T7-66 | T-Trans.4 verify FR-22 version gate for spec-conformance-guard | DONE | — | Phase 7: Cross-spec reconciliation (TODO — not started) | 60m |
 | T7-67 | T-Trans.5 verify FR-23 log-file inventory contract | DONE | — | Phase 7: Cross-spec reconciliation (TODO — not started) | 30m |
-| T7-68 | T-Trans.6 verify FR-24 meta-guard preservation + extension | TODO | — | Phase 7: Cross-spec reconciliation (TODO — not started) | 60m |
+| T7-68 | T-Trans.6 verify FR-24 meta-guard preservation + extension | DONE | — | Phase 7: Cross-spec reconciliation (TODO — not started) | 60m |
 | T7-69 | T-Trans.7 verify FR-25 v3 hooks survival on v4 install | TODO | — | Phase 7: Cross-spec reconciliation (TODO — not started) | 90m |
 | T7-70 | T-Trans.8 verify FR-26 LLM-as-judge content boundary | DONE | — | Phase 7: Cross-spec reconciliation (TODO — not started) | 60m |
 | T7-71 | T-Trans.9 verify FR-27 Marksman LSP supply-chain sha verification | IN_PROGRESS | — | Phase 7: Cross-spec reconciliation (TODO — not started) | 60m |
@@ -674,15 +674,14 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] Latency: render duration measured ≤50ms p95 across 100 trials with 1000-entry corpus
   - [ ] Atomic write of `last_summary_ack.json` verified via concurrent invocation test
 
-- [ ] T-Trans.3 verify FR-21 spec-status.ts task-table CLI contract — id: verify-fr-21-cli-contract — Status: TODO | Est: 60m
+- [x] T-Trans.3 verify FR-21 spec-status.ts task-table CLI contract — id: verify-fr-21-cli-contract — Status: DONE (2026-06-07: fixture + baseline + contract test 4/4 GREEN; BDD SPECGEN004_107 binds the same byte-contract via the real CLI) | Est: 60m
   _Requirements: [FR-21](FR.md#fr-21), [AC-21.1](ACCEPTANCE_CRITERIA.md#ac-211)_
-  > ⚠️ NOT CLOSED (honest, 2026-06-05): both named artifacts are ABSENT — `tools/specs-generator/__fixtures__/task-table.baseline.md` and `tools/specs-generator/__tests__/task-table-contract.test.ts` do not exist. Verification never built; needs the fixture + byte-compare contract test.
   **Done When:**
-  - [ ] Fixture exists at `tools/specs-generator/__fixtures__/task-table.baseline.md`
-  - [ ] vitest contract test `tools/specs-generator/__tests__/task-table-contract.test.ts` byte-compares CLI output to fixture
-  - [ ] Test passes for direct-MD-parse implementation
-  - [ ] Test passes for MCP-routed implementation (when MCP server running)
-  - [ ] Degraded-mode test: kill MCP server → CLI still produces fixture-shape output
+  - [x] Fixture exists at `tools/specs-generator/__fixtures__/task-table.baseline.md` (+ frozen input spec `__fixtures__/task-table-input/TASKS.md` exercising every parser branch)
+  - [x] vitest contract test `tools/specs-generator/__tests__/task-table-contract.test.ts` byte-compares CLI output to fixture (4/4 passed 2026-06-07); scenario SPECGEN004_107 GREEN
+  - [x] Test passes for direct-MD-parse implementation (the only implementation — FR-21 says MAY swap to MCP-routed; not built, contract test will keep guarding if it lands)
+  - [x] ~~MCP-routed implementation~~ — N/A today: no MCP routing exists in spec-status (FR-21 «MAY»); the contract test is source-agnostic and covers a future swap
+  - [x] Degraded-mode: no MCP server is started anywhere in the suite — CLI produces the contract shape standalone + idempotence asserted
 
 - [x] T-Trans.4 verify FR-22 version gate for spec-conformance-guard — id: verify-fr-22-version-gate — Status: DONE (verified 2026-06-07: guard tests «version gate (FR-22)» — ALLOW_AFTER_MIGRATION on absent .progress.json AND on version<4; v4-active DENY path covered in «HARD findings» describe; SPECGEN004_51 GREEN in full run) | Est: 60m
   _Requirements: [FR-22](FR.md#fr-22), [AC-22.1](ACCEPTANCE_CRITERIA.md#ac-221)_
@@ -700,14 +699,14 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] Hard-tier event writes only to JSONL (no form-guards.log line) — except fallback mode if Phase 2 chose Option 2 (FR-19 cross-phase note)
   - [ ] DESIGN.md «(m) Log file inventory» table reflects observed file paths/schemas/retention
 
-- [ ] T-Trans.6 verify FR-24 meta-guard preservation + extension — id: verify-fr-24-meta-guard — Status: TODO | Est: 60m
+- [x] T-Trans.6 verify FR-24 meta-guard preservation + extension — id: verify-fr-24-meta-guard — Status: DONE (2026-06-07, BDD SPECGEN004_108: the 2026-06-05 note UNDERSTATED the gap — the guard was not only untested, it was DEAD: registered only in `.claude/settings.json.bak`, never fired, and guarded only settings.json — none of the v4 canonical manifests. Fixed at the root: v4 scope + LIVE registration + 6/6 tests + live launcher deny proven) | Est: 60m
   _Requirements: [FR-24](FR.md#fr-24), [AC-24.1](ACCEPTANCE_CRITERIA.md#ac-241)_
-  > ⚠️ NOT CLOSED (honest, 2026-06-05): the meta-guard IS implemented (`tools/specs-validator/extension-json-meta-guard.ts`) but the 4 removal-denied + tamper-log verify criteria have no matching test (grep finds no `denied`/`tamper`/`removal` it-blocks). Needs the removal-denied tests written.
-  **Done When:**
-  - [ ] Removal of v3 form-guard from `extension.json` denied + tamper-log entry
-  - [ ] Removal of v4 `spec-conformance-guard` from `plugin.json` denied + tamper-log entry
-  - [ ] Removal of MCP-tool registration (`get_trace`) from `plugin.json` denied + tamper-log entry
-  - [ ] Meta-guard self-protection: removal of meta-guard's own registration denied
+  **Done When:** _(v1 `extension.json` no longer exists — targets translated to v2 canonical: settings.json (v3 semantics) + `.claude-plugin/hooks.json`/`plugin.json`/`.mcp.json` (FR-24 extension); tamper log = unified `~/.dev-pomogator/logs/form-guards.log` per FR-23 inventory, not a separate meta-guard.log)_
+  - [x] Removal of v3 form-guard from settings.json denied + tamper-log entry asserted (`__tests__/meta-guard.test.ts` 6/6 GREEN); scenario SPECGEN004_108 GREEN against the real hook
+  - [x] Removal of v4 `spec-conformance-guard` from `.claude-plugin/hooks.json` denied (+ `spec-conformance-push` token also protected)
+  - [x] Removal of the MCP registration (`dev-pomogator-specs` entry in `.mcp.json` — carries get_trace et al.) denied
+  - [x] Self-protection: removal of the meta-guard's own registration denied — proven BOTH in vitest AND via the real bootstrap launcher on the real hooks.json (deny exit 2, both tokens named)
+  - [x] Guard registered LIVE in `.claude/settings.json` (dogfood) + `.claude-plugin/hooks.json` (plugin users; builtins-only imports — deps-safe per dead-integration-guard)
 
 - [ ] T-Trans.7 verify FR-25 v3 hooks survival on v4 install — id: verify-fr-25-additive-merge — Status: TODO | Est: 90m
   _Requirements: [FR-25](FR.md#fr-25), [AC-25.1](ACCEPTANCE_CRITERIA.md#ac-251), [AC-25.2](ACCEPTANCE_CRITERIA.md#ac-252)_

@@ -813,3 +813,17 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When get_spec_status runs for that spec
     Then the lifecycle is PARTIAL
     And the response carries counts gaps and an agent hint
+
+  @feature21
+  Scenario: SPECGEN004_107 task-table CLI output byte-matches the frozen contract baseline
+    Given the frozen task-table input spec fixture
+    When spec-status runs with the task-table format on it
+    Then the output byte-matches the committed task-table baseline
+    And a second run produces identical bytes without any MCP server
+
+  @feature24
+  Scenario: SPECGEN004_108 meta-guard denies removing a protected registration from a v4 manifest
+    Given a canonical hooks manifest carrying the spec-conformance-guard registration
+    When an agent write removes that registration
+    Then the meta-guard denies the write naming spec-conformance-guard
+    And removing the meta-guard own registration is denied too

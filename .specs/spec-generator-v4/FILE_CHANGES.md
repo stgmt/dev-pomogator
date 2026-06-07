@@ -173,6 +173,13 @@ This block enumerates the spec-doc edits applied as part of the v3→v4 transiti
 | `.claude/skills/discovery-forms/SKILL.md` | edit | Replace stale «Called by `specs-management.md` Phase 1 (Discovery) step 3» → «Called by `create-spec` Phase 1 (Discovery) step 3» |
 | `.claude/skills/requirements-chk-matrix/SKILL.md` | edit | Replace stale «Called by `specs-management.md` Phase 2 (Requirements + Design) step 4b» → «Called by `create-spec` Phase 2 (Requirements + Design) step 4b» |
 | `.claude/skills/task-board-forms/SKILL.md` | edit | Replace stale «Called by `specs-management.md` Phase 3 (Finalization) step 1b» → «Called by `create-spec` Phase 3 (Finalization) step 1b» |
+| `tools/specs-generator/__fixtures__/task-table-input/TASKS.md` | create | Frozen input spec exercising every `parseTasksForTable` branch — FR-21 contract fixture (T-Trans.3) |
+| `tools/specs-generator/__fixtures__/task-table.baseline.md` | create | Committed byte-baseline of the task-table CLI output on the frozen input ([FR-21](FR.md#fr-21)) |
+| `tools/specs-generator/__tests__/task-table-contract.test.ts` | create | Byte-compare contract test + idempotence + degraded-mode (no MCP) + missing-TASKS error path ([FR-21](FR.md#fr-21), T-Trans.3) |
+| `tools/specs-validator/extension-json-meta-guard.ts` | edit | FR-24 extension: guard v4 canonical manifests (`.claude-plugin/hooks.json`/`plugin.json`/`.mcp.json`) — spec-conformance-guard/push, dev-pomogator-specs MCP entry, self-protection (T-Trans.6) |
+| `tools/specs-validator/__tests__/meta-guard.test.ts` | create | 4 removal-denied invariants + tamper-log + additive-allow, real subprocess + stdin ([FR-24](FR.md#fr-24), T-Trans.6) |
+| `.claude/settings.json` | edit | Register extension-json-meta-guard LIVE (PreToolUse Write|Edit) — was dead code, only in .bak (T-Trans.6 finding) |
+| `.claude-plugin/hooks.json` | edit | Same live registration for plugin users (bootstrap launcher; builtins-only imports — deps-safe) |
 
 ## Total counts
 
