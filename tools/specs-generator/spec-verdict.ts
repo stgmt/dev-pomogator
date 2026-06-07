@@ -288,6 +288,8 @@ export async function runSpecVerdict(
       'SEMANTIC_SKIPPED — no claude binary available (or semantic disabled); unchecked content is NOT "no drift" (FR-37c)';
   }
 
+  // THE definition of «what blocks» — the verdict derives from this list and
+  // nothing else (a future 6th gate is added HERE once, not in two places).
   const gapList: string[] = [
     ...(validation.errors ?? []).map(
       (e: any) => `[STRUCTURAL] ${e.file ?? ''}: ${e.message ?? JSON.stringify(e)}`,
@@ -298,14 +300,7 @@ export async function runSpecVerdict(
     ...drifts.map((d) => `[SEMANTIC_DRIFT:${d.severity}] ${d.frId} ↔ ${d.scenarioId} — ${d.explanation}`),
   ];
 
-  const verdict: 'RED' | 'GREEN' =
-    structuralErrors > 0 ||
-    errorFindings.length > 0 ||
-    gaps.length > 0 ||
-    confErrors.length > 0 ||
-    drifts.length > 0
-      ? 'RED'
-      : 'GREEN';
+  const verdict: 'RED' | 'GREEN' = gapList.length > 0 ? 'RED' : 'GREEN';
 
   const notes: string[] = [];
   if (semanticNote) notes.push(semanticNote);

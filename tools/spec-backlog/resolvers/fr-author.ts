@@ -8,6 +8,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { forEachProseLine } from '../../_shared/code-examples.ts';
 import type { Resolver, ResolverResult } from './types.ts';
 import type { BacklogEntry } from '../types.ts';
 import { parseFrHeadings } from '../../_shared/fr-parser.ts';
@@ -82,14 +83,7 @@ function frAuthorImpl(repoRoot: string, entry: BacklogEntry): ResolverResult {
   //      twin exists, and ids far beyond the spec's numbering range, are
   //      example-noise, not missing requirements.
   const citations: Array<{ num: string; line: number; context: string }> = [];
-  let inFence = false;
-  citingBody.split('\n').forEach((lineText, idx) => {
-    if (/^\s*```/.test(lineText)) {
-      inFence = !inFence;
-      return;
-    }
-    if (inFence) return;
-    const noCode = lineText.replace(/`[^`]*`/g, '');
+  forEachProseLine(citingBody, (noCode, lineText, idx) => {
     FR_CITATION_RE.lastIndex = 0;
     let lineMatch: RegExpExecArray | null;
     while ((lineMatch = FR_CITATION_RE.exec(noCode)) !== null) {

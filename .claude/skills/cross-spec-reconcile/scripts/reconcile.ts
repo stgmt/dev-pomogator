@@ -41,6 +41,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { globSync } from 'glob';
+import { stripCodeExamples, stripFencedBlocks } from '../../../../tools/_shared/code-examples.ts';
 
 export type Severity = 'CRITICAL' | 'WARNING' | 'INFO';
 export type FindingClass =
@@ -387,21 +388,9 @@ function findMissingFileReferences(
   return out;
 }
 
-/** Strip fenced code blocks (```...```) — they hold examples, not decisions. */
-function stripFencedBlocks(body: string): string {
-  return body.replace(/```[\s\S]*?```/g, '');
-}
-
-/**
- * Fenced blocks AND inline code spans are examples, not claims. The
- * inline-span half closed 2026-06-06: `` `### FR-001: Login` `` quoted in AC
- * text passed stripFencedBlocks, became a missing-fr-section finding, and
- * fr-author drafted 9 [TBD] skeleton FRs from it (producer-bug incident —
- * see .claude/skills/spec-generator-dev/SKILL.md registry).
- */
-function stripCodeExamples(body: string): string {
-  return stripFencedBlocks(body).replace(/`[^`\n]*`/g, '');
-}
+// stripFencedBlocks / stripCodeExamples — consolidated to
+// tools/_shared/code-examples.ts (one disease, several carriers — the
+// 2026-06-06 producer-bug incident; /simplify 2026-06-07 extraction).
 
 /** Normalize key name: snake_case + camelCase + kebab → same key. */
 function normalizeIdentifierKey(key: string): string {

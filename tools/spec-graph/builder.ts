@@ -153,6 +153,9 @@ export function buildGraph(opts: BuildOptions): SpecGraph {
   }
 
   // 1b) Task slices — parse every TASKS.md into Task nodes (id/status/refs/doneWhen).
+  // NOTE: tasks emit NODES only by design (no edges/anchors) — hence the bare
+  // node-merge below instead of ingestSlice(); if the task parser ever emits
+  // edges, switch this branch to ingestSlice(taskSlice).
   for (const abs of mdFiles) {
     if (path.basename(abs) !== 'TASKS.md') continue;
     let taskSlice;

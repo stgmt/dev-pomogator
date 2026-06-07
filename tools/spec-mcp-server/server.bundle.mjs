@@ -47871,12 +47871,8 @@ function buildToolRegistry(getGraph) {
     inputShape: {},
     handler: async () => {
       const bySpec = /* @__PURE__ */ new Map();
-      const specOf2 = (filePath) => {
-        const m = filePath.match(/^\.specs\/([^/]+)\//);
-        return m ? m[1] : "(other)";
-      };
       for (const node of getGraph().nodes.values()) {
-        const spec = specOf2(node.file);
+        const spec = specOf(node.file) ?? "(other)";
         const row = bySpec.get(spec) ?? { fr: 0, ac: 0, scenario: 0, task: 0 };
         if (node.type === "FR") row.fr++;
         else if (node.type === "AC") row.ac++;

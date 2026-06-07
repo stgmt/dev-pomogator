@@ -122,7 +122,7 @@
 | T14-116 | P14-4: skills/agents may not launder a structural pass -- @feature37 | DONE | — | Phase 14 — Smart verdict authoritative + cell→atom traceability gate (FR-37) | 180m |
 | T14-117 | P14-5: reusable corpus-health auditor skill | DONE | — | Phase 14 — Smart verdict authoritative + cell→atom traceability gate (FR-37) | 360m |
 | T14-118 | Refactor + dedup across phases | DONE | verify-phase6-green | Phase 14 — Smart verdict authoritative + cell→atom traceability gate (FR-37) | 480m |
-| T14-119 | Final verification | IN_PROGRESS | final-refactor | Phase 14 — Smart verdict authoritative + cell→atom traceability gate (FR-37) | 240m |
+| T14-119 | Final verification | DONE | final-refactor | Phase 14 — Smart verdict authoritative + cell→atom traceability gate (FR-37) | 240m |
 | T15-120 | P15-1: get_spec_status MCP tool + lifecycle enum + linked run summary -- @featur | DONE | — | Phase 15 — Full spec lifecycle status via MCP (FR-38) | 240m |
 | T16-121 | P16-1: review + revival | DONE | — | Phase 16 — Creation-pipeline hardening (review 2026-06-07) | 480m |
 | T16-122 | P16-2: evals for the 3 form skills (discovery-forms / requirements-chk-matrix /  | TODO | — | Phase 16 — Creation-pipeline hardening (review 2026-06-07) | 360m |
@@ -1155,13 +1155,13 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] jscpd duplication score ≤ baseline — baseline ESTABLISHED 2026-06-07 (none existed): **0.44%** (5 clones / 55 duplicated lines over 73 files, `--min-tokens 70`; report `.dev-pomogator/.bg-logs/jscpd/`). Was 0.55%/6 before this pass
   - [x] Shared logic extracted to helpers — builder dual ingest loop → `ingestSlice()` (spec-graph 200/200 vitest green after; `server.bundle.mjs` rebuilt; refactor-guard scenario SPECGEN004_110 pins the single-path dedup semantics for md AND gherkin). Remaining 5 clones left DELIBERATELY: guard↔push `readStdinJson` (separately-bundled artifacts — sharing couples bundle builds for 23 vanilla lines), writer.ts/md.ts/arch-decision micro-clones 6-12L each (extraction overhead > value at 0.44% total)
 
-- [ ] Final verification — id: final-verification — Status: IN_PROGRESS (4 of 5 — only /simplify remains) | Est: 240m
+- [x] Final verification — id: final-verification — Status: DONE (2026-06-07: /simplify executed — 4 parallel review agents + 6 fixes applied; all 5 criteria closed) | Est: 240m
   _depends: final-refactor_
   **Done When:**
   - [x] `validate-spec.ts -Path .specs/spec-generator-v4` → 0 errors (valid: true; warnings/placeholders only)
   - [x] `audit-spec.ts -Path .specs/spec-generator-v4` → 0 P0 findings — **PASSES since P14-1/P14-2** (re-verified 2026-06-07: `spec-verdict.ts --no-semantic` → audit gate 0 ERROR, traceability 0 gaps, **VERDICT: GREEN**)
   - [x] cucumber scenarios GREEN — full vitest+BDD suite is 0-failure (1745 passed)
-  - [ ] `/simplify` final review clean — not run
+  - [x] `/simplify` final review ran 2026-06-07: 4 angles (reuse/simplification/efficiency/altitude) → 6 fixes applied (tools.ts doc-drift 11→14 + specOf reuse; spec-verdict single RED source; shared `tools/_shared/code-examples.ts` consolidating the 2026-06-06 strip-disease carriers; shared `tools/_shared/stdin.ts` + 7 validator hooks migrated; FR-36c explicit disjunction; builder task-slice design note) + justified skips recorded in the commit (resolve-envelope variance, bundled-hook stdin copies, corpus-health double-parse perf, 3 task parsers with distinct contracts). After fixes: vitest 381/381 across 40 files, BDD 110 (109 passed / 1 skipped / 0 failed), verdict GREEN
   - [x] CHANGELOG entry written — Unreleased section: FR-36/37/38 + T-Trans closure + producer-fix rounds + jscpd baseline (2026-06-07)
 
 ## Phase 15 — Full spec lifecycle status via MCP (FR-38)

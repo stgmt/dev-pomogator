@@ -23,6 +23,7 @@
  *      actually has live registrations to protect)
  */
 import path from 'path';
+import { readStdin } from '../_shared/stdin.ts';
 import { spawnSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import { logEvent } from './audit-logger.ts';
@@ -39,12 +40,6 @@ const GUARD_BY_TARGET: Record<string, string> = {
   'REQUIREMENTS.md': 'requirements-chk-guard.ts',
   'RESEARCH.md': 'risk-assessment-guard.ts',
 };
-
-async function readStdin(): Promise<string> {
-  let buf = '';
-  for await (const chunk of process.stdin) buf += chunk.toString();
-  return buf;
-}
 
 async function main(): Promise<void> {
   if (process.stdin.isTTY) process.exit(0);

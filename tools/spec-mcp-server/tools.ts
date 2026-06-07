@@ -1,12 +1,13 @@
 /**
- * Phase 2 MCP tool registry — all 11 read-only graph-query tools.
+ * MCP tool registry — all 14 read-only graph-query tools.
  *
  * Each tool is a thin wrapper over the in-memory `SpecGraph` produced by the
  * Phase 1 builder. Wrappers do exactly two things: pluck the relevant subset
  * out of the graph + format an `explanation_for_agent` summary the agent can
  * paste back into its context.
  *
- * The 11 tools per [SCHEMA Entity 3](../../.specs/spec-generator-v4/spec-generator-v4_SCHEMA.md):
+ * The 14 tools (base set per [SCHEMA Entity 3](../../.specs/spec-generator-v4/spec-generator-v4_SCHEMA.md);
+ * + get_coverage FR-32, get_spec_status FR-38 — `buildToolRegistry` below is canonical):
  *
  *   get_trace               primary — structured tree + code_impl + explanation
  *   find_by_tags            scenarios filtered by `@FR/@NFR/@AC` tags
@@ -16,9 +17,12 @@
  *   list_phase_tasks        tasks filtered by phase string
  *   get_test_result         last-result for a scenario id
  *   find_orphans            ORPHAN_* / UNCOVERED_FR findings only
+ *   get_coverage            FR-32 — per-scenario buckets + per-task verified_status
  *   get_coverage_summary    per-spec FR/AC/Scenario counts
+ *   get_spec_status         FR-38 — lifecycle enum + linked last_run summary
  *   validate_anchor         is anchor alias registered?
  *   list_specs              top-level `.specs/<slug>/` directories
+ *   find_refs               incoming references for a node
  *
  * The handler signature is identical to the MCP SDK v1 `server.tool` callback
  * shape — receives the parsed input object, returns `{content: [{type, text}]}`.
@@ -704,12 +708,11 @@ export function buildToolRegistry(
     inputShape: {} as const satisfies z.ZodRawShape,
     handler: async () => {
       const bySpec = new Map<string, { fr: number; ac: number; scenario: number; task: number }>();
-      const specOf = (filePath: string): string => {
-        const m = filePath.match(/^\.specs\/([^/]+)\//);
-        return m ? m[1] : '(other)';
-      };
+      // One slug-derivation algorithm corpus-wide: coverage.ts::specOf (full
+      // dir path under .specs/ — nested `backlog/<name>` specs stay distinct
+      // cells per FR-36; the old local regex collapsed them to `backlog`).
       for (const node of getGraph().nodes.values()) {
-        const spec = specOf(node.file);
+        const spec = specOf(node.file) ?? '(other)';
         const row = bySpec.get(spec) ?? { fr: 0, ac: 0, scenario: 0, task: 0 };
         if (node.type === 'FR') row.fr++;
         else if (node.type === 'AC') row.ac++;

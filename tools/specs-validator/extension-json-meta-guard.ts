@@ -27,6 +27,7 @@
  */
 
 import fs from 'fs';
+import { readStdin } from '../_shared/stdin.ts';
 import path from 'path';
 import { logEvent } from './audit-logger.ts';
 import { readCurrentContent } from './spec-form-parsers.ts';
@@ -61,12 +62,6 @@ const PROTECTED_V4_TOKENS = [
 interface PreToolUseInput {
   tool_name?: string;
   tool_input?: { file_path?: string; content?: string; new_string?: string; old_string?: string };
-}
-
-async function readStdin(): Promise<string> {
-  let buf = '';
-  for await (const chunk of process.stdin) buf += chunk.toString();
-  return buf;
 }
 
 function deny(reason: string, filepath: string): never {
