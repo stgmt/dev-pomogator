@@ -4,6 +4,42 @@ All notable changes to this feature will be documented in this file.
 
 ## [Unreleased]
 
+### Added (2026-06-06/07 — FR-36/37/38 + T-Trans closure, PR #32 final stretch)
+
+- **FR-36 — unified spec-graph via composite node ids** (`<slug>:<localId>`): 47→574 FR
+  nodes survive the build (collision-drop dead), 0 id-collisions corpus-wide
+  (`collision-probe.ts` exit-0 pin), real `@featureN`→FR tested-by edges (0→164 into
+  Scenario nodes), tools resolve `slug:id` / `{spec, node_id}`, colliding bare id →
+  `AMBIGUOUS_BARE_ID` + candidate list. Anchors stay bare (Marksman/anchor-fix untouched).
+- **FR-37 — authoritative smart verdict** (`tools/specs-generator/spec-verdict.ts`):
+  composes audit + traceability (FR-37b cell→atom gate) + conformance + FR-32 coverage +
+  FR-8 semantic over ONE graph; `validate-spec` demoted to pre-filter («NOT reportable as
+  valid/clean/done», rule `no-structural-valid.md` + FR-37d skill guards). v4 reached its
+  first GREEN verdict; `corpus-health` skill generalises the auditor to ANY corpus.
+- **FR-38 — `get_spec_status` MCP tool** (14th): lifecycle enum SPEC_ONLY / TESTS_NOT_RUN /
+  RED / PARTIAL / GREEN + `last_run` summary strictly from ingested NDJSON (never fabricated).
+- **FR-20 BUILT** (T-Trans.2 uncovered a missing feature, not missing tests): threshold-only
+  conformance summary + `last-summary-ack.json` + `ack-summary.ts` CLI + /spec-status step 6;
+  live cycle proven (13 unresolved DENY → ack → SILENT).
+- **FR-24 meta-guard REVIVED** (T-Trans.6: was dead code — registered only in a `.bak`):
+  guards v4 canonical manifests (hooks.json / plugin.json / .mcp.json) incl. MCP entry +
+  self-protection; registered LIVE in both manifests; live launcher deny proven.
+- **FR-21 contract pinned** (T-Trans.3): frozen fixture + byte-baseline + 4/4 contract test.
+- **FR-25 hardened** (T-Trans.7, translated to v2): SPECGEN004_52 enumerates every
+  protective gate BY NAME; FR-27 supply chain re-confirmed live (computed sha256 of real
+  upstream assets byte-match the pins).
+- Producer-first fixes round 1+2: FR-harvest disease (4 carriers), templates now scaffold
+  verdict-GREEN specs, pseudo-tag `# @featureN` teachers rewritten (incl. the root
+  `extension-test-quality` rule), `TAG_BULK_SUSPECT` conformance guard, `spec-generator-dev`
+  skill (mission: fix producers, not symptoms).
+
+### Changed
+
+- TASKS.md reconciled to verified reality (T-Cov.6): 52→20 open tasks, 32 flips each with
+  per-task evidence (test id / file / live run); honesty invariant cited from the FR-32 gate
+  verbatim. jscpd baseline recorded: **0.44%** (5 clones / 55 lines; builder ingest loop
+  extracted to `ingestSlice`).
+
 ### Planned (v4.2 — honesty hardening, FR-35 + Phase 12)
 
 Adversarial verification this session found the honesty gate judges only PASS/FAIL, never test quality: a fake-positive GREEN test marks a task DONE, and the quality auditors (`strong-tests`/`spec-status`) are advisory (absent from hooks AND the orchestrator feature-map). Evidence in `audit-reports/v4-global-plan.md`.

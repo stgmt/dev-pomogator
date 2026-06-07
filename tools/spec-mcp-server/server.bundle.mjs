@@ -46623,6 +46623,15 @@ function buildGraph(opts) {
     }
     list.push(entry);
   };
+  const ingestSlice = (slice) => {
+    for (const node of slice.nodes) {
+      if (!nodes.has(node.id)) nodes.set(node.id, node);
+    }
+    for (const e of slice.edges) edges.push(e);
+    for (const a of slice.anchors) {
+      if (!definitions.has(a.alias)) definitions.set(a.alias, a.location);
+    }
+  };
   const mdFiles = mdRoots.flatMap((root) => walkDir(root, [".md"]));
   for (const abs of mdFiles) {
     let slice;
@@ -46631,13 +46640,7 @@ function buildGraph(opts) {
     } catch {
       continue;
     }
-    for (const node of slice.nodes) {
-      if (!nodes.has(node.id)) nodes.set(node.id, node);
-    }
-    for (const e of slice.edges) edges.push(e);
-    for (const a of slice.anchors) {
-      if (!definitions.has(a.alias)) definitions.set(a.alias, a.location);
-    }
+    ingestSlice(slice);
   }
   for (const abs of mdFiles) {
     if (path4.basename(abs) !== "TASKS.md") continue;
@@ -46659,13 +46662,7 @@ function buildGraph(opts) {
     } catch {
       continue;
     }
-    for (const node of slice.nodes) {
-      if (!nodes.has(node.id)) nodes.set(node.id, node);
-    }
-    for (const e of slice.edges) edges.push(e);
-    for (const a of slice.anchors) {
-      if (!definitions.has(a.alias)) definitions.set(a.alias, a.location);
-    }
+    ingestSlice(slice);
   }
   const specDirs = /* @__PURE__ */ new Set();
   for (const abs of mdFiles) {
@@ -47368,6 +47365,35 @@ function checkConformance(graph, opts = {}) {
         nodeId: scen.id,
         suggestions: [
           { action: "tag_scenario", reason: `Add the relevant @FR-N / @AC-N tag.`, confidence: "high" }
+        ]
+      });
+    }
+  }
+  {
+    const BULK_THRESHOLD = 10;
+    const byFileTag = /* @__PURE__ */ new Map();
+    for (const node of graph.nodes.values()) {
+      if (node.type !== "Scenario") continue;
+      const scen = node;
+      for (const tag of scen.tags) {
+        if (!SPEC_TAG_RE2.test(tag)) continue;
+        const key = `${scen.file}|${tag}`;
+        const cur = byFileTag.get(key);
+        if (cur) cur.count++;
+        else byFileTag.set(key, { count: 1, file: scen.file, line: scen.line, tag });
+      }
+    }
+    for (const { count, file: file2, line, tag } of byFileTag.values()) {
+      if (count < BULK_THRESHOLD) continue;
+      findings.push({
+        code: "TAG_BULK_SUSPECT",
+        severity: "info",
+        location: { file: file2, line },
+        message: `Tag ${tag} blankets ${count} scenarios in one file \u2014 verify the semantic fit per scenario (run the FR-8 judge); a blanket tag that clears UNTAGGED without testing the requirement is tag-gaming.`,
+        nodeId: tag,
+        suggestions: [
+          { action: "run_semantic_judge", reason: `spec-verdict.ts with semantic ON will judge each ${tag}\u2194scenario pair.`, confidence: "high" },
+          { action: "retag_per_scenario", reason: "Map each scenario to the requirement it actually tests.", confidence: "medium" }
         ]
       });
     }

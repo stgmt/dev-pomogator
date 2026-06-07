@@ -125,6 +125,21 @@ export function buildGraph(opts: BuildOptions): SpecGraph {
     list.push(entry);
   };
 
+  /** Merge one parsed slice into the accumulators (first-writer wins per id/alias). */
+  const ingestSlice = (slice: {
+    nodes: Node[];
+    edges: Edge[];
+    anchors: Array<{ alias: string; location: NodeLocation }>;
+  }): void => {
+    for (const node of slice.nodes) {
+      if (!nodes.has(node.id)) nodes.set(node.id, node);
+    }
+    for (const e of slice.edges) edges.push(e);
+    for (const a of slice.anchors) {
+      if (!definitions.has(a.alias)) definitions.set(a.alias, a.location);
+    }
+  };
+
   // 1) MD slices
   const mdFiles = mdRoots.flatMap((root) => walkDir(root, ['.md']));
   for (const abs of mdFiles) {
@@ -134,13 +149,7 @@ export function buildGraph(opts: BuildOptions): SpecGraph {
     } catch {
       continue;
     }
-    for (const node of slice.nodes) {
-      if (!nodes.has(node.id)) nodes.set(node.id, node);
-    }
-    for (const e of slice.edges) edges.push(e);
-    for (const a of slice.anchors) {
-      if (!definitions.has(a.alias)) definitions.set(a.alias, a.location);
-    }
+    ingestSlice(slice);
   }
 
   // 1b) Task slices — parse every TASKS.md into Task nodes (id/status/refs/doneWhen).
@@ -166,13 +175,7 @@ export function buildGraph(opts: BuildOptions): SpecGraph {
     } catch {
       continue;
     }
-    for (const node of slice.nodes) {
-      if (!nodes.has(node.id)) nodes.set(node.id, node);
-    }
-    for (const e of slice.edges) edges.push(e);
-    for (const a of slice.anchors) {
-      if (!definitions.has(a.alias)) definitions.set(a.alias, a.location);
-    }
+    ingestSlice(slice);
   }
 
   // 2b) FILE_CHANGES.md + DESIGN.md → File nodes + implements edges (FR-29).

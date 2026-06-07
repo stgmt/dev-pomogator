@@ -121,7 +121,7 @@
 | T14-115 | P14-3: smart verdict authoritative; structural demoted to pre-filter -- @feature | DONE | — | Phase 14 — Smart verdict authoritative + cell→atom traceability gate (FR-37) | 300m |
 | T14-116 | P14-4: skills/agents may not launder a structural pass -- @feature37 | DONE | — | Phase 14 — Smart verdict authoritative + cell→atom traceability gate (FR-37) | 180m |
 | T14-117 | P14-5: reusable corpus-health auditor skill | DONE | — | Phase 14 — Smart verdict authoritative + cell→atom traceability gate (FR-37) | 360m |
-| T14-118 | Refactor + dedup across phases | TODO | verify-phase6-green | Phase 14 — Smart verdict authoritative + cell→atom traceability gate (FR-37) | 480m |
+| T14-118 | Refactor + dedup across phases | DONE | verify-phase6-green | Phase 14 — Smart verdict authoritative + cell→atom traceability gate (FR-37) | 480m |
 | T14-119 | Final verification | IN_PROGRESS | final-refactor | Phase 14 — Smart verdict authoritative + cell→atom traceability gate (FR-37) | 240m |
 | T15-120 | P15-1: get_spec_status MCP tool + lifecycle enum + linked run summary -- @featur | DONE | — | Phase 15 — Full spec lifecycle status via MCP (FR-38) | 240m |
 
@@ -1140,22 +1140,20 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
 
 ## Refactor & Polish (final)
 
-- [ ] Refactor + dedup across phases — id: final-refactor — Status: TODO | Est: 480m
+- [x] Refactor + dedup across phases — id: final-refactor — Status: DONE (2026-06-07, scoped to the SHIPPED v4 delta — re-run when Phase-6/7 open builds land) | Est: 480m
   _depends: verify-phase6-green_
-  > ⚠️ NOT CLOSED (honest, 2026-06-05): jscpd not run this pass; no evidence of a dedup sweep. Genuine remaining work.
   **Done When:**
-  - [ ] jscpd duplication score ≤ baseline
-  - [ ] Shared logic extracted to helpers
+  - [x] jscpd duplication score ≤ baseline — baseline ESTABLISHED 2026-06-07 (none existed): **0.44%** (5 clones / 55 duplicated lines over 73 files, `--min-tokens 70`; report `.dev-pomogator/.bg-logs/jscpd/`). Was 0.55%/6 before this pass
+  - [x] Shared logic extracted to helpers — builder dual ingest loop → `ingestSlice()` (spec-graph 200/200 vitest green after; `server.bundle.mjs` rebuilt). Remaining 5 clones left DELIBERATELY: guard↔push `readStdinJson` (separately-bundled artifacts — sharing couples bundle builds for 23 vanilla lines), writer.ts/md.ts/arch-decision micro-clones 6-12L each (extraction overhead > value at 0.44% total)
 
-- [ ] Final verification — id: final-verification — Status: IN_PROGRESS (audit unblocked 2026-06-07 — verdict GREEN; remaining: /simplify + CHANGELOG) | Est: 240m
+- [ ] Final verification — id: final-verification — Status: IN_PROGRESS (4 of 5 — only /simplify remains) | Est: 240m
   _depends: final-refactor_
-  > ⚠️ PARTIAL (honest, 2026-06-05): validate-spec + cucumber pass; audit-spec has **10 ERROR (P0)** findings (LOGIC_GAPS: FRs without matching AC) → the "0 P0" bar is NOT met. /simplify not run.
   **Done When:**
   - [x] `validate-spec.ts -Path .specs/spec-generator-v4` → 0 errors (valid: true; warnings/placeholders only)
   - [x] `audit-spec.ts -Path .specs/spec-generator-v4` → 0 P0 findings — **PASSES since P14-1/P14-2** (re-verified 2026-06-07: `spec-verdict.ts --no-semantic` → audit gate 0 ERROR, traceability 0 gaps, **VERDICT: GREEN**)
   - [x] cucumber scenarios GREEN — full vitest+BDD suite is 0-failure (1745 passed)
   - [ ] `/simplify` final review clean — not run
-  - [ ] CHANGELOG entry written
+  - [x] CHANGELOG entry written — Unreleased section: FR-36/37/38 + T-Trans closure + producer-fix rounds + jscpd baseline (2026-06-07)
 
 ## Phase 15 — Full spec lifecycle status via MCP (FR-38)
 
