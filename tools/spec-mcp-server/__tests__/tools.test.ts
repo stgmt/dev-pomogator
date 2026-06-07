@@ -72,8 +72,8 @@ const tool = (name: string) => {
 };
 
 describe('tool registry — shape', () => {
-  it('registers exactly 14 tools with canonical names', () => {
-    expect(registry).toHaveLength(14);
+  it('registers exactly 16 tools with canonical names', () => {
+    expect(registry).toHaveLength(16);
     const names = registry.map((t) => t.name).sort();
     expect(names).toEqual(
       [
@@ -88,7 +88,9 @@ describe('tool registry — shape', () => {
         'get_test_result',
         'get_trace',
         'list_phase_tasks',
+        'list_spec_docs', // FR-39a read inventory (P17-1)
         'list_specs',
+        'read_spec_doc', // FR-39a whole-doc read + audit log (P17-1)
         'search',
         'validate_anchor',
       ].sort(),

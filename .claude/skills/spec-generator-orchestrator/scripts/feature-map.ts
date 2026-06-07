@@ -60,6 +60,11 @@ export const REFERENCED_CAPABILITIES: readonly string[] = [
   'list_specs',
   'search',
   'validate_anchor',
+  'get_spec_status', // FR-38 lifecycle — consumed by spec-status / spec-graph-query skills
+  // FR-39a (P17-1) read door — consumed by spec-graph-query today; the create-spec
+  // phase agents (FR-41) become the primary consumers when the wave lands.
+  'list_spec_docs',
+  'read_spec_doc',
   // worker skills
   'create-spec',
   'architecture-research-workflow',

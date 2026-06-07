@@ -1,5 +1,5 @@
 /**
- * MCP tool registry — all 14 read-only graph-query tools.
+ * MCP tool registry — all 16 read-only tools (graph queries + the FR-39a read door).
  *
  * Each tool is a thin wrapper over the in-memory `SpecGraph` produced by the
  * Phase 1 builder. Wrappers do exactly two things: pluck the relevant subset
@@ -23,6 +23,8 @@
  *   validate_anchor         is anchor alias registered?
  *   list_specs              top-level `.specs/<slug>/` directories
  *   find_refs               incoming references for a node
+ *   list_spec_docs          FR-39a — the read_spec_doc inventory of ONE spec
+ *   read_spec_doc           FR-39a — whole-document read + spec-access audit log
  *
  * The handler signature is identical to the MCP SDK v1 `server.tool` callback
  * shape — receives the parsed input object, returns `{content: [{type, text}]}`.
@@ -34,6 +36,9 @@
 import { z } from 'zod';
 import { checkConformance, type Finding } from '../spec-graph/conformance.ts';
 import { gapsFromFindings, summariseGaps } from '../spec-graph/traceability.ts';
+import fs from 'node:fs';
+import path from 'node:path';
+import { logSpecAccess } from './spec-access-log.ts';
 import type {
   SpecGraph,
   Node,
@@ -896,6 +901,64 @@ export function buildToolRegistry(
         gaps,
         hint: hints[lifecycle],
       });
+    },
+  });
+
+  // ─── 15) list_spec_docs — FR-39a read-sufficiency inventory (P17-1) ──────
+  tools.push({
+    name: 'list_spec_docs',
+    description:
+      'FR-39a: enumerate the readable documents of ONE spec (the read_spec_doc ' +
+      'inventory): *.md + *.feature + .progress.json (read-only) actually present ' +
+      'in .specs/<spec>/. The agent asks THIS first — read_spec_doc accepts only ' +
+      'names from this list. Every call is appended to the spec-access audit log.',
+    inputShape: { spec: z.string() } as const satisfies z.ZodRawShape,
+    handler: async ({ spec }) => {
+      const args = { spec };
+      const slug = String(spec).replace(/\\/g, '/').replace(/^\.?\/?\.specs\//, '').replace(/\/+$/, '');
+      const dir = path.join(process.cwd(), '.specs', slug);
+      if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) {
+        logSpecAccess('list_spec_docs', args, 'not_found');
+        return asJsonResult({ ok: false, error: 'SPEC_NOT_FOUND', spec: slug });
+      }
+      const docs = fs
+        .readdirSync(dir, { withFileTypes: true })
+        .filter((e) => e.isFile() && (/.(md|feature)$/.test(e.name) || e.name === '.progress.json'))
+        .map((e) => e.name)
+        .sort();
+      logSpecAccess('list_spec_docs', args, 'ok');
+      return asJsonResult({ ok: true, spec: slug, docs, count: docs.length });
+    },
+  });
+
+  // ─── 16) read_spec_doc — FR-39a whole-document read + audit trail (P17-1) ─
+  tools.push({
+    name: 'read_spec_doc',
+    description:
+      'FR-39a: read ONE whole spec document (prose outside graph nodes included) ' +
+      'by a name from list_spec_docs. Unknown name → explicit DOC_NOT_FOUND ' +
+      '(never an empty string). Every read lands in the spec-access audit log — ' +
+      'this is the MCP-only replacement for direct Read/Grep over .specs/.',
+    inputShape: { spec: z.string(), doc: z.string() } as const satisfies z.ZodRawShape,
+    handler: async ({ spec, doc }) => {
+      const args = { spec, doc };
+      const slug = String(spec).replace(/\\/g, '/').replace(/^\.?\/?\.specs\//, '').replace(/\/+$/, '');
+      const name = path.basename(String(doc)); // no traversal — inventory names only
+      const okName = /\.(md|feature)$/.test(name) || name === '.progress.json';
+      const abs = path.join(process.cwd(), '.specs', slug, name);
+      if (!okName || !fs.existsSync(abs) || !fs.statSync(abs).isFile()) {
+        logSpecAccess('read_spec_doc', args, 'not_found');
+        return asJsonResult({
+          ok: false,
+          error: 'DOC_NOT_FOUND',
+          spec: slug,
+          doc: name,
+          hint: 'Call list_spec_docs({spec}) for the valid inventory.',
+        });
+      }
+      const content = fs.readFileSync(abs, 'utf-8');
+      logSpecAccess('read_spec_doc', args, 'ok');
+      return asJsonResult({ ok: true, spec: slug, doc: name, bytes: content.length, content });
     },
   });
 

@@ -132,7 +132,7 @@
 | T16-126 | P16-6: CRLF-safe `replaceLiteralAll` in fill-template | TODO | — | Phase 16 — Creation-pipeline hardening (review 2026-06-07) | 60m |
 | T16-127 | P16-7: `.progress.json` single-writer contract | TODO | — | Phase 16 — Creation-pipeline hardening (review 2026-06-07) | 60m |
 | T16-128 | P16-8: STOP-confirm discipline | TODO | — | Phase 16 — Creation-pipeline hardening (review 2026-06-07) | 180m |
-| T17-129 | P17-1: read-sufficiency | TODO | — | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 240m |
+| T17-129 | P17-1: read-sufficiency | DONE | — | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 240m |
 | T17-130 | P17-2: mutation surface | TODO | p17-read-sufficiency | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 600m |
 | T17-131 | P17-3: spec-access-guard в SHADOW | TODO | p17-read-sufficiency | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 240m |
 | T17-132 | P17-4: carve-out лист движка в DESIGN | TODO | — | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 60m |
@@ -1243,13 +1243,14 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
 > ЖЁСТКАЯ цепочка: read-sufficiency → mutation → shadow → миграция → enforce (СТРОГО последним,
 > иначе окирпичиваем авторинг); агенты — параллельная дорожка после P17-1/2.
 
-- [ ] P17-1: read-sufficiency — `read_spec_doc` + аудит-лог чтений — id: p17-read-sufficiency — Status: TODO | Est: 240m
+- [x] P17-1: read-sufficiency — `read_spec_doc` + аудит-лог чтений — id: p17-read-sufficiency — Status: DONE (2026-06-07) | Est: 240m
   _Requirements: [FR-39](FR.md#fr-39)_
   **Done When:**
-  - [ ] `read_spec_doc({spec, doc})` + `list_spec_docs({spec})` в tools.ts; DOC_NOT_FOUND на отсутствующий; bundle rebuilt
-  - [ ] каждый read-вызов пишет `{ts, tool, args_digest}` в `.dev-pomogator/logs/spec-access.jsonl` (O_APPEND, ротация по образцу audit-logger)
-  - [ ] живая проба: авторинг-ревью одного документа пройден MCP-only (без единого Read по `.specs/`)
-  - [ ] SPECGEN004_113 GREEN
+  - [x] `read_spec_doc({spec, doc})` + `list_spec_docs({spec})` в tools.ts (тулзы 14→16, пины обновлены, header-док тоже); DOC_NOT_FOUND явный с hint на list_spec_docs; path-traversal закрыт (basename + inventory-вайтлист); bundle rebuilt + freshness green
+  - [x] каждый read-вызов пишет `{ts, tool, args_digest, decision}` в `.dev-pomogator/logs/spec-access.jsonl` (`spec-access-log.ts`: O_APPEND, ротация 10MB/30д, SOFT-tier per NFR-Reliability-11) — живой лог: ok/ok/not_found записи от проб
+  - [x] живая проба MCP-only: list_spec_docs(v4) → 26 доков; read_spec_doc(RESUME.md) → 5797 байт цельной прозы; NOPE.md → DOC_NOT_FOUND; ни одного Read по `.specs/`
+  - [x] SPECGEN004_113 GREEN (реальные handlers + реальный аудит-лог на изолированном корпусе); _111/_112 честно red до P17-3/6
+  - [x] FR-33/42 drift-guard: 3 беспризорные capability пойманы guard-ом (incl. старый дрифт get_spec_status) → feature-map дополнен, guard чист
 
 - [ ] P17-2: mutation surface — живой генератор (propose/apply/create через MCP) — id: p17-mutation-surface — Status: TODO | Est: 600m
   _depends: p17-read-sufficiency_
