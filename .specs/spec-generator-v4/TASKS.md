@@ -72,9 +72,9 @@
 | T7-66 | T-Trans.4 verify FR-22 version gate for spec-conformance-guard | DONE | — | Phase 7: Cross-spec reconciliation (TODO — not started) | 60m |
 | T7-67 | T-Trans.5 verify FR-23 log-file inventory contract | DONE | — | Phase 7: Cross-spec reconciliation (TODO — not started) | 30m |
 | T7-68 | T-Trans.6 verify FR-24 meta-guard preservation + extension | DONE | — | Phase 7: Cross-spec reconciliation (TODO — not started) | 60m |
-| T7-69 | T-Trans.7 verify FR-25 v3 hooks survival on v4 install | TODO | — | Phase 7: Cross-spec reconciliation (TODO — not started) | 90m |
+| T7-69 | T-Trans.7 verify FR-25 v3 hooks survival on v4 install | DONE | — | Phase 7: Cross-spec reconciliation (TODO — not started) | 90m |
 | T7-70 | T-Trans.8 verify FR-26 LLM-as-judge content boundary | DONE | — | Phase 7: Cross-spec reconciliation (TODO — not started) | 60m |
-| T7-71 | T-Trans.9 verify FR-27 Marksman LSP supply-chain sha verification | IN_PROGRESS | — | Phase 7: Cross-spec reconciliation (TODO — not started) | 60m |
+| T7-71 | T-Trans.9 verify FR-27 Marksman LSP supply-chain sha verification | DONE | — | Phase 7: Cross-spec reconciliation (TODO — not started) | 60m |
 | T7-72 | T-Trans.10 verify FR-28 PostToolUse fixed-window throttle | DONE | — | Phase 7: Cross-spec reconciliation (TODO — not started) | 45m |
 | T8-73 | T-Trans.11 Wire `implements` edges + `File` nodes in SpecGraph builder | DONE | — | Phase 8 — Gap-close (FR-29..FR-31) | 210m |
 | T8-74 | T-Trans.12 Surface `code_impl[]` array in MCP `get_trace` response | DONE | — | Phase 8 — Gap-close (FR-29..FR-31) | 90m |
@@ -707,14 +707,14 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] Self-protection: removal of the meta-guard's own registration denied — proven BOTH in vitest AND via the real bootstrap launcher on the real hooks.json (deny exit 2, both tokens named)
   - [x] Guard registered LIVE in `.claude/settings.json` (dogfood) + `.claude-plugin/hooks.json` (plugin users; builtins-only imports — deps-safe per dead-integration-guard)
 
-- [ ] T-Trans.7 verify FR-25 v3 hooks survival on v4 install — id: verify-fr-25-additive-merge — Status: TODO | Est: 90m
+- [x] T-Trans.7 verify FR-25 v3 hooks survival on v4 install — id: verify-fr-25-additive-merge — Status: DONE (2026-06-07, contract TRANSLATED to v2 per FR-25's own rewrite: «there is NO install-time edit/merge of the user's plugin.json» — canonical install copies the plugin's static hooks.json and never touches user settings, so the v1 merge-e2e below is structurally impossible AND unnecessary. The live invariant = the SHIPPED manifest is the complete union, verified by the hardened SPECGEN004_52) | Est: 90m
   _Requirements: [FR-25](FR.md#fr-25), [AC-25.1](ACCEPTANCE_CRITERIA.md#ac-251), [AC-25.2](ACCEPTANCE_CRITERIA.md#ac-252)_
-  **Done When:**
-  - [ ] `tests/e2e/v4-install-additive-merge.test.ts` exists and runs in CI
-  - [ ] Test seeds a v3-state project (`plugin.json` with 5 v3 form-guard entries) and invokes `claude plugin install dev-pomogator-v4`
-  - [ ] Post-install assertion: all 5 prior entries present unchanged AND ≥3 new entries added AND zero pre-existing entries removed
-  - [ ] Matching-by-name verified (NOT array index, NOT command substring)
-  - [ ] Uses spawnSync per integration-tests-first
+  **Done When:** _(v1 items translated; original text kept struck for audit)_
+  - [x] ~~`tests/e2e/v4-install-additive-merge.test.ts` seeds v3-state + `claude plugin install`~~ → obsolete: no install-time merge exists in v2 canonical (FR-25 text); install never edits user manifests — survival is by-construction
+  - [x] «Nothing dropped» enforced on the shipped manifest: SPECGEN004_52 hardened 2026-06-07 — EVERY protective gate enumerated BY NAME (plan-gate, phase-gate, build_guard, test_guard, extension-json-meta-guard) must coexist with the v4 spec hooks; the old `.some()` that tolerated a silently-vanished gate replaced
+  - [x] Matching-by-name verified (string name per gate, NOT array index) — the step def asserts each name individually
+  - [x] Defense-in-depth: edit-time removal of any of these registrations from hooks.json is now DENIED by the live meta-guard (T-Trans.6) — the two layers cover both «shipped wrong» and «degraded later»
+  - [x] @feature25 run GREEN (1 scenario / 8 steps, 2026-06-07)
 
 - [x] T-Trans.8 verify FR-26 LLM-as-judge content boundary — id: verify-fr-26-llm-deny-list — Status: DONE (verified 2026-06-07: `tools/spec-llm-judge/deny-list.ts` (file-name + body regex patterns) + `index.ts` SKIPPED_DENY_LIST/SKIPPED_OPT_OUT (`spec_llm_judge_deny: true`), skip observable WITHOUT `claude -p` spawn (injectable spawn = subprocess spy); `__tests__/llm-judge.test.ts`; SPECGEN004_53 GREEN in full run) | Est: 60m
   _Requirements: [FR-26](FR.md#fr-26), [AC-26.1](ACCEPTANCE_CRITERIA.md#ac-261), [AC-26.2](ACCEPTANCE_CRITERIA.md#ac-262)_
@@ -725,13 +725,13 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] False-positive guard: clean spec content does NOT trigger skip
   - [ ] Subprocess spy: verify zero `claude -p` invocations across all deny scenarios
 
-- [ ] T-Trans.9 verify FR-27 Marksman LSP supply-chain sha verification — id: verify-fr-27-marksman-sha — Status: IN_PROGRESS (3 of 4 verified 2026-06-07: `tools/marksman-installer/__tests__/postinstall.test.ts` covers happy-path sha match, sha mismatch with both hashes recorded, missing platform pin; the `update-marksman-hashes` maintainer CLI does NOT exist — grep 0 hits) | Est: 60m
+- [x] T-Trans.9 verify FR-27 Marksman LSP supply-chain sha verification — id: verify-fr-27-marksman-sha — Status: DONE (2026-06-07; correction: yesterday's «CLI not built — grep 0 hits» was a FALSE not-found — grep searched the planned name `update-marksman-hashes`, the shipped file is `cli-update-hashes.ts`. Live run confirmed the whole supply chain) | Est: 60m
   _Requirements: [FR-27](FR.md#fr-27), [AC-27.1](ACCEPTANCE_CRITERIA.md#ac-271)_
   **Done When:**
   - [x] Happy path: download with matching sha → install proceeds (postinstall.test.ts)
   - [x] Mismatch test: wrong sha → abort + both hash values recorded (postinstall.test.ts)
   - [x] Missing hash pin → explicit error (postinstall.test.ts)
-  - [ ] Hash update CLI test: `update-marksman-hashes` — CLI not built
+  - [x] Hash update CLI: `tools/marksman-installer/cli-update-hashes.ts` — DOWNLOADS the real release assets and COMPUTES sha256 (never hand-pasted; stronger than the planned «prompt maintainer for sha»); rewrites `marksman-hashes.json` in place. LIVE PROOF 2026-06-07: ran against real upstream (4 assets, 2026-02-08) — computed hashes byte-match the committed pins, `git diff` empty
 
 - [x] T-Trans.10 verify FR-28 PostToolUse fixed-window throttle — id: verify-fr-28-fixed-window — Status: DONE | Est: 45m
   _Requirements: [FR-28](FR.md#fr-28)_

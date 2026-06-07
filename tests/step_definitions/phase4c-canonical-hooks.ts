@@ -66,10 +66,16 @@ Then(/it retains the pre-existing protective hook entries .* never a replacement
   // proving the spec hook was added, not substituted for, the existing set.
   const pre = commandsOf(this.manifest!.hooks.PreToolUse);
   assert.ok(pre.some((c) => c.includes('spec-conformance-guard')), 'PreToolUse must include the v4 spec guard');
-  assert.ok(
-    pre.some((c) => /plan-gate|build_guard|test_guard|phase-gate/.test(c)),
-    'PreToolUse must still carry a pre-existing protective hook (additive union)',
-  );
+  // T-Trans.7 hardening: «nothing dropped» means EVERY member of the
+  // protective family, enumerated BY NAME (a `.some()` would stay green while
+  // a single gate silently vanished — the exact regression FR-25 forbids).
+  // Matching by name, never by array index (AC-25 matching-by-name clause).
+  for (const gate of ['plan-gate', 'phase-gate', 'build_guard', 'test_guard', 'extension-json-meta-guard']) {
+    assert.ok(
+      pre.some((c) => c.includes(gate)),
+      `PreToolUse must still carry the protective ${gate} hook (additive union, nothing dropped)`,
+    );
+  }
 });
 
 Then(/length\(hooks\.PreToolUse\) >= 1.*length\(hooks\.PostToolUse\) >= 1/, function (this: HooksWorld) {
