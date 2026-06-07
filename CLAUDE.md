@@ -75,6 +75,7 @@ dev-pomogator distributed как canonical Claude Code marketplace plugin (per A
 | one-feature-one-pr | 1 фича = 1 PR в идеале; не дробить связные слои («foundation / part 2 / benchmark») если кусок не имеет самостоятельной ценности; шаги плана — work breakdown, не PR boundaries; self-check перед `gh pr create`: ревьюер поймёт за один заход без предшествующих PR? | `.claude/rules/pomogator/one-feature-one-pr.md` |
 | skill-allowed-tools-audit | При создании/модификации skill — проверь что allowed-tools покрывает ВСЕ инструменты workflow | `.claude/rules/checklists/skill-allowed-tools-audit.md` |
 | docker-no-git-repo | Docker тесты без .git — git команды fail, использовать env override | `.claude/rules/gotchas/docker-no-git-repo.md` |
+| no-git-add-all-shared-tree | `git add -A` запрещён — параллельные сессии делят дерево; только явные пути (инцидент 12220e5) | `.claude/rules/gotchas/no-git-add-all-shared-tree.md` |
 | proactive-investigation | Не спрашивай разрешение исследовать — делай сам; каждое утверждение с evidence; [UNVERIFIED] для непроверяемого | `.claude/rules/plan-pomogator/proactive-investigation.md` |
 | cross-scope-coverage | При multi-scope фичах: coverage matrix scope×variant, gap report, [OUT_OF_SCOPE] для пропусков | `.claude/rules/plan-pomogator/cross-scope-coverage.md` |
 | spec-test-sync | При тестах в File Changes — спеки обязательны; при багфиксе — BDD .feature обязателен | `.claude/rules/plan-pomogator/spec-test-sync.md` |

@@ -101,6 +101,11 @@ export function countHardDenySince(sinceTs: Date | null, repoRoot = process.cwd(
         // NEVER counted (the live "13 unresolved" proof was all soft-tier).
         const findingCode = e.finding_code ?? e.code;
         if (typeof findingCode !== 'string') continue; // not a deny finding
+        // Second 2026-06-07 catch (the fix above instantly surfaced it live —
+        // the prompt line jumped to 1052): spec-conformance-push side-channels
+        // EVERY edit's findings (info severity, NOT denies) into the same
+        // shard. Unresolved-DENY counts only DENY producers — exclude push.
+        if (e.source === 'spec-conformance-push') continue;
         const ts = new Date(e.timestamp);
         if (isNaN(ts.getTime())) continue;
         if (sinceTs && ts <= sinceTs) continue;

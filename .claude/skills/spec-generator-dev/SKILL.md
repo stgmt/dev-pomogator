@@ -8,8 +8,8 @@ description: >
   extending the subsystem (new MCP tool, new check, new resolver), or reviewing a change that
   touches tools/spec-graph / tools/spec-mcp-server / tools/specs-generator / tools/spec-backlog /
   tools/spec-llm-judge. Triggers (RU): «поддержка спек-генератора», «разработка спек-плагина»,
-  «почини генератор спек», «producer-фикс», «кто породил этот дефект». Triggers (EN): "spec
-  generator dev", "maintain the spec plugin", "producer fix", "what produced this defect".
+  «почини генератор спек», «producer-фикс», «кто породил этот дефект», «ревью спек-генератора», «почини вердикт/счётчик/граф/хук спек», «оживи guard», «ложная находка», «шум в счётчике». Triggers (EN): "spec
+  generator dev", "maintain the spec plugin", "producer fix", "what produced this defect", "review the spec generator", "false finding", "noisy counter".
   Do NOT use for authoring a spec's CONTENT (create-spec), per-spec health (spec-status /
   spec-verdict), or corpus hygiene runs (corpus-health).
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent
@@ -79,6 +79,9 @@ npm run build:mcp   # ОБЯЗАТЕЛЬНО при правке tools.ts/server
 | «validate-spec: 0 errors» как финальная валидация в workflow | `phase3_finalization.md` шаг 3 | двухуровневая финализация: pre-filter + `spec-verdict --no-semantic` GREEN (FR-37a/d) |
 | Весь enforcement-слой создающей стороны мёртв (5 form-guards без единой живой регистрации; meta-guard охранял несуществующее; скиллы обещали «guard will deny») | регистрация терялась при v1→v2 миграции манифестов; ни один тест не проверял ЖИВОСТЬ регистрации (только прямой спавн) | `form-guards-dispatch.ts` live в обоих манифестах + самозащита в meta-guard + пин в SPECGEN004_52 + дисциплина: для каждого hook-артефакта проверять «registered in a LIVE manifest», не только «код+тест есть» |
 | Скилл инструктирует формат, который его же guard режет (CHK-NFR id; lowercase Jira-маркеры) | SKILL.md и guard-регекс эволюционировали независимо, evals нет | скиллы переписаны под guard-контракт + построен `--check` CLI (был фантомом в 3 скиллах) + P16-2: evals с negative-кейсами на оба класса |
+| Счётчик читает СВОЙ выдуманный envelope, а не producer-овский (FR-20 hard-tier искал `code`, реальный writer пишет `finding_code` — реальные находки не считались никогда; тесты сеяли рукодельный конверт) | новый потребитель лога написан без чтения composeEntry соседнего модуля | поле из producer-а (`finding_code ?? code`), тест-сидер через РЕАЛЬНЫЙ composeEntry; пойман SPECGEN004_122 на первом прогоне |
+| «Unresolved DENY» считал НЕ-denies (фикс выше открыл глаза счётчику → 1401 push-info-находка → 1052 в шапке) | общий JSONL-шард делят DENY-продюсер и side-channel push; счётчик не фильтровал source | фильтр `source !== 'spec-conformance-push'` + дисциплина: новый потребитель ОБЩЕГО лога перечисляет считаемые source-ы |
+| Класс NO-SCEN: FR реализован+vitest, но 0 BDD-сценариев → невидим tested-by слою (FR-23/28) | vitest-only верификация проходит все гейты задач | per-FR срез в spec-status (шаг 5b) детектит класс; закрытие = сценарий на РЕАЛЬНОМ коде |
 
 ## Связанные
 

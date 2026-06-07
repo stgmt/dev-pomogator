@@ -33,6 +33,17 @@ echo '{}' | CLAUDE_PLUGIN_ROOT="$PWD" node -e "require(require('path').join(proc
 
 `spec-mcp-server` тянул `@modelcontextprotocol/sdk`+`zod`+`chokidar`; `.mcp.json` запускал `node --import tsx tools/.../server.ts` относительным путём. У юзера: нет tsx, нет sdk, неверный путь → MCP мёртв. Фикс — bundle (`server.bundle.mjs`) + dual-mode launcher через `${CLAUDE_PLUGIN_ROOT}`, доказано прогоном со спрятанным `node_modules`. Через пару коммитов **тот же проёб повторился**: новый Stop-hook `test_quality_gate_stop.ts` импортил `builder.ts` → `@cucumber/gherkin` на верхнем уровне → краш на КАЖДОМ Stop у юзеров. Поймано только когда юзер спросил «у других будет ставиться?». Фикс — lazy-import + fail-open. Урок: **каждый** plugin-distributed артефакт с импортом пакета гонять deps-absent ДО «готово», а не после вопроса юзера.
 
+## Под-класс №2: hook/guard НЕ зарегистрирован живым (code+tests ≠ enforcement)
+
+Хук может иметь код И тесты (прямой спавн) — и НИКОГДА не срабатывать:
+регистрация отсутствует в живых манифестах. Инциденты 2026-06-07: meta-guard
+жил только в `.bak`; ВСЕ ПЯТЬ v3 form-guards не были зарегистрированы нигде
+(скиллы обещали «guard will deny» — ничего не fire-ило). **Для каждого
+hook-артефакта:** grep имени в `.claude/settings.json` И
+`.claude-plugin/hooks.json` (оба!), затем ЖИВОЙ прогон через реальный лаунчер
+(echo payload | bootstrap → ожидаемый deny/allow). Зелёные тесты при прямом
+спавне НЕ доказывают enforcement.
+
 ## Триггеры — когда проверять
 
 - Диф добавляет загрузку бинаря (`curl`/`wget`/`download(...)`/release URL) или установщик.
