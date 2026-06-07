@@ -178,6 +178,11 @@ This block enumerates the spec-doc edits applied as part of the v3→v4 transiti
 | `tools/specs-generator/__tests__/task-table-contract.test.ts` | create | Byte-compare contract test + idempotence + degraded-mode (no MCP) + missing-TASKS error path ([FR-21](FR.md#fr-21), T-Trans.3) |
 | `tools/specs-validator/extension-json-meta-guard.ts` | edit | FR-24 extension: guard v4 canonical manifests (`.claude-plugin/hooks.json`/`plugin.json`/`.mcp.json`) — spec-conformance-guard/push, dev-pomogator-specs MCP entry, self-protection (T-Trans.6) |
 | `tools/specs-validator/__tests__/meta-guard.test.ts` | create | 4 removal-denied invariants + tamper-log + additive-allow, real subprocess + stdin ([FR-24](FR.md#fr-24), T-Trans.6) |
+| `tools/specs-validator/conformance-summary.ts` | create | FR-20 threshold-only summary: ack state + soft/hard-tier unresolved-DENY counting, 1000-entry cap, path-injectable ([FR-20](FR.md#fr-20)) |
+| `tools/specs-validator/ack-summary.ts` | create | /spec-status step-6 CLI: atomic ack stamp (temp+rename) silencing the prompt-time line ([FR-20](FR.md#fr-20)) |
+| `tools/specs-validator/validate-specs.ts` | edit | renderFormGuardsSummary → FR-20 threshold semantics (v3 every-prompt 24h aggregate superseded) |
+| `tools/specs-validator/__tests__/conformance-summary.test.ts` | create | T-Trans.2: threshold-zero/≥1, ack via real CLI, ≤50ms p95 latency, concurrent-atomic, scan cap ([FR-20](FR.md#fr-20)) |
+| `.claude/skills/spec-status/SKILL.md` | edit | Step 6: run ack-summary.ts after rendering — viewing /spec-status acknowledges the backlog (FR-20 B4) |
 | `.claude/settings.json` | edit | Register extension-json-meta-guard LIVE (PreToolUse Write|Edit) — was dead code, only in .bak (T-Trans.6 finding) |
 | `.claude-plugin/hooks.json` | edit | Same live registration for plugin users (bootstrap launcher; builtins-only imports — deps-safe) |
 

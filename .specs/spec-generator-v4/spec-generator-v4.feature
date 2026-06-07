@@ -827,3 +827,12 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When an agent write removes that registration
     Then the meta-guard denies the write naming spec-conformance-guard
     And removing the meta-guard own registration is denied too
+
+  @feature20
+  Scenario: SPECGEN004_109 conformance summary is threshold-only and acknowledged via spec-status
+    Given an isolated conformance state with zero unresolved events
+    Then the prompt-time summary emits nothing
+    When two deny findings land in the hard-tier log
+    Then the prompt-time summary is a single unresolved-DENY line
+    When the spec-status ack stamps the state file
+    Then the prompt-time summary is silent until a newer deny arrives

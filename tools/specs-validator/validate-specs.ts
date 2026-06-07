@@ -21,7 +21,8 @@ import { parseFeatureFile } from './parsers/feature-parser.ts';
 import { matchTags, matchTestFeature } from './matcher.ts';
 import { flushWarnings, generateReport, printWarnings } from './reporter.ts';
 import { parseTestFile, findTestFile } from './parsers/test-parser.ts';
-import { summarizeRecent, rotateLog } from './audit-logger.ts';
+import { rotateLog } from './audit-logger.ts';
+import { buildConformanceSummary } from './conformance-summary.ts';
 import {
   PHASE_FILES,
   PHASE_ORDER,
@@ -315,28 +316,21 @@ function findAllSpecDirs(specsRoot: string): string[] {
  * Main entry point
  */
 /**
- * Print a one-line summary of form-guard events from the last 24 hours.
- * Source: ~/.dev-pomogator/logs/form-guards.log (written by all 6 form-guards).
- * Format: `📊 Form guards (24h): N DENY, M PARSER_CRASH ({hooks}), K ALLOW_AFTER_MIGRATION`.
- * Silent skip if log missing / empty / no events within window.
+ * FR-20 threshold-only conformance summary (B3): one line ONLY when
+ * unresolved DENY events exist since the author's last /spec-status ack —
+ * silent otherwise (zero-noise default; the v3 every-prompt 24h aggregate is
+ * superseded — its full view lives behind /spec-status, the B4 surface).
+ * Sources + ack-state logic live in ./conformance-summary.ts (path-injectable,
+ * contract-tested in __tests__/conformance-summary.test.ts).
  * Also calls rotateLog() once per session for retention cleanup.
  *
- * @see .specs/spec-generator-v4/FR.md FR-20 (threshold-only B3 + on-demand B4 supersede every-prompt v3 aggregate)
+ * @see .specs/spec-generator-v4/FR.md FR-20, NFR.md NFR-Performance-6
  */
 function renderFormGuardsSummary(): void {
   try {
     rotateLog();
-    const s = summarizeRecent(24);
-    if (s.total === 0) return;
-    const parts: string[] = [];
-    if (s.DENY > 0) parts.push(`${s.DENY} DENY`);
-    if (s.PARSER_CRASH > 0) {
-      const hooks = s.parserCrashHooks.length > 0 ? ` (${s.parserCrashHooks.join(', ')})` : '';
-      parts.push(`${s.PARSER_CRASH} PARSER_CRASH${hooks}`);
-    }
-    if (s.ALLOW_AFTER_MIGRATION > 0) parts.push(`${s.ALLOW_AFTER_MIGRATION} ALLOW_AFTER_MIGRATION`);
-    if (parts.length === 0) return; // only ALLOW_VALID events — not noteworthy
-    console.log(`📊 Form guards (24h): ${parts.join(', ')}`);
+    const line = buildConformanceSummary();
+    if (line) console.log(line);
   } catch {
     // fail-silent — audit log is non-critical
   }

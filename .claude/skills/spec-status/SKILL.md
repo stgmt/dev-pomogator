@@ -104,6 +104,20 @@ Merge sub-agent JSON + base progress + git + `deterministic.blockers` into markd
 End with the combined structured JSON (SCHEMA §3) in a trailing fenced block for
 programmatic consumers.
 
+### 6. Acknowledge the conformance summary (FR-20, B4)
+
+After rendering, run ONE Bash call:
+
+```bash
+npx tsx tools/specs-validator/ack-summary.ts
+```
+
+This stamps `~/.dev-pomogator/state/last-summary-ack.json` atomically — the
+threshold-only `📊 Spec conformance: N unresolved DENY …` line at prompt time
+goes silent until a NEW deny arrives. /spec-status IS the «show me everything»
+surface, so viewing it = acknowledging the backlog. Skipping this step leaves
+the prompt-time line repeating — that is the v3 noise FR-20 removes.
+
 ## Honesty rules (do not violate)
 
 - A passing/“done” claim requires an evidence path; absence of evidence → `claimed-only`.

@@ -67,7 +67,7 @@
 | T7-61 | Create integration test fixture corpus -- @feature17 | TODO | register-skills-in-manifest | Phase 7: Cross-spec reconciliation (TODO — not started) | 240m |
 | T7-62 | E2E test reconcile roundtrip -- @feature17 @feature18 | TODO | integration-test-fixture, impl-resolve-loop | Phase 7: Cross-spec reconciliation (TODO — not started) | 480m |
 | T7-63 | T-Trans.1 verify FR-19 two-tier hook failure-mode | DONE | — | Phase 7: Cross-spec reconciliation (TODO — not started) | 90m |
-| T7-64 | T-Trans.2 verify FR-20 threshold-only summary + on-demand /spec-status | TODO | — | Phase 7: Cross-spec reconciliation (TODO — not started) | 60m |
+| T7-64 | T-Trans.2 verify FR-20 threshold-only summary + on-demand /spec-status | DONE | — | Phase 7: Cross-spec reconciliation (TODO — not started) | 60m |
 | T7-65 | T-Trans.3 verify FR-21 spec-status.ts task-table CLI contract | DONE | — | Phase 7: Cross-spec reconciliation (TODO — not started) | 60m |
 | T7-66 | T-Trans.4 verify FR-22 version gate for spec-conformance-guard | DONE | — | Phase 7: Cross-spec reconciliation (TODO — not started) | 60m |
 | T7-67 | T-Trans.5 verify FR-23 log-file inventory contract | DONE | — | Phase 7: Cross-spec reconciliation (TODO — not started) | 30m |
@@ -664,15 +664,14 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] Soft tier exception test: force one v3 form-guard to throw → expect exit 0 + new line in `~/.dev-pomogator/logs/form-guards.log` matching `{ts} {hook_id} PARSER_CRASH …`
   - [ ] Uses spawnSync per `.claude/rules/integration-tests-first.md`
 
-- [ ] T-Trans.2 verify FR-20 threshold-only summary + on-demand /spec-status — id: verify-fr-20-summary — Status: TODO | Est: 60m
+- [x] T-Trans.2 verify FR-20 threshold-only summary + on-demand /spec-status — id: verify-fr-20-summary — Status: DONE (2026-06-07: the 06-05 note was OPTIMISTIC — not only were the tests missing, the FEATURE was: no ack mechanism existed, the hook emitted a v3-style 24h aggregate on every prompt after any DENY. Built for real: `conformance-summary.ts` (threshold + ack + hard-tier JSONL) + `ack-summary.ts` CLI + /spec-status skill step 6; 6/6 vitest + SPECGEN004_109 GREEN + live hook cycle proven: 13 unresolved → ack → SILENT) | Est: 60m
   _Requirements: [FR-20](FR.md#fr-20), [AC-20.1](ACCEPTANCE_CRITERIA.md#ac-201), [AC-20.2](ACCEPTANCE_CRITERIA.md#ac-202)_
-  > ⚠️ NOT CLOSED (honest, 2026-06-05): the dedicated verification is NOT BUILT — grep finds 0 tests for the threshold-summary behaviour (`emits NOTHING` / `unresolved DENY` / `last-summary-ack`). The feature may be implemented, but these 4 verify criteria have no test. Real remaining work, not a checkbox.
-  **Done When:**
-  - [ ] Threshold-zero test: empty `form-guards.log` and empty `spec-check-log` → UserPromptSubmit emits NOTHING
-  - [ ] Threshold-≥1 test: seed 1 DENY entry → UserPromptSubmit emits a single line matching `📊 Spec conformance: \d+ unresolved DENY since`
-  - [ ] Ack test: invoke `/spec-status` skill once → `~/.dev-pomogator/state/last-summary-ack.json` updated → next prompt emits NOTHING for the seeded entry
-  - [ ] Latency: render duration measured ≤50ms p95 across 100 trials with 1000-entry corpus
-  - [ ] Atomic write of `last_summary_ack.json` verified via concurrent invocation test
+  **Done When:** _(tests: `tools/specs-validator/__tests__/conformance-summary.test.ts` 6/6 + BDD SPECGEN004_109)_
+  - [x] Threshold-zero test: zero unresolved events → emits NOTHING (in-process + BDD)
+  - [x] Threshold-≥1 test: seeded DENY → single line matching `📊 Spec conformance: \d+ unresolved DENY since`
+  - [x] Ack test: real `ack-summary.ts` CLI run (the /spec-status step-6 invocation) → `last-summary-ack.json` updated → seeded entry silent; NEWER deny re-triggers. Live cycle through the real bootstrap launcher: 13 unresolved → ack → SILENT
+  - [x] Latency: ≤50ms p95 across 100 trials with a 1000-entry corpus (in-process measure of the real render); scan capped at last 1000 entries/file
+  - [x] Atomic write: 8 concurrent CLI writers → file always valid JSON, zero leftover temp files (unique-temp + rename per atomic-config-save)
 
 - [x] T-Trans.3 verify FR-21 spec-status.ts task-table CLI contract — id: verify-fr-21-cli-contract — Status: DONE (2026-06-07: fixture + baseline + contract test 4/4 GREEN; BDD SPECGEN004_107 binds the same byte-contract via the real CLI) | Est: 60m
   _Requirements: [FR-21](FR.md#fr-21), [AC-21.1](ACCEPTANCE_CRITERIA.md#ac-211)_
