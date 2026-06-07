@@ -11,7 +11,7 @@ All notable changes to this feature will be documented in this file.
 валидацией ДО записи), создание спек фазовыми headless-агентами (`claude -p`/-bg) под
 оркестратором-проверятором с verdict-гейтами между фазами. Жёсткая цепочка:
 read-sufficiency → mutation → shadow → миграция 31 скилла → ENFORCE строго последним.
-Анализ: `audit-reports/mcp-rails-wave-design.md`. Сценарии SPECGEN004_111..119 (red).
+Слойный контракт FR-42: юзер входит через СКИЛЛ (как сегодня), скилл знает MCP-параметры и оркестрирует, ВСЯ логика в MCP; таблица «тул → скилл-потребители» + расширенный drift-guard. Анализ: `audit-reports/mcp-rails-wave-design.md`. Сценарии SPECGEN004_111..121 (red).
 
 ### Fixed (2026-06-07 — creation-pipeline review, Phase 16)
 

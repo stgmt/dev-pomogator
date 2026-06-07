@@ -47,7 +47,7 @@ npx tsx tools/specs-validator/spec-form-parsers.ts --check tasks .specs/spec-gen
 Агент работает со спеками ТОЛЬКО через MCP (контроль + аудит-лог), живой генератор
 (валидация ДО записи), фазовые headless-агенты + оркестратор-проверятор. Цепочка:
 P17-1 read-sufficiency → P17-2 mutation → P17-3 shadow-хук → P17-5 миграция скиллов →
-P17-6 ENFORCE (строго последним!) ∥ P17-7/8 агенты+оркестратор. Анализ:
+P17-6 ENFORCE (строго последним!) ∥ P17-7/8 агенты+оркестратор ∥ P17-9 слойный контракт skill↔MCP (FR-42: юзер входит через скилл, логика в MCP). Анализ:
 `audit-reports/mcp-rails-wave-design.md`; сценарии SPECGEN004_111..119 (red).
 
 ### Phase 16 — creation-pipeline hardening (бэклог ревью, выбран вариант «всё в v4»)

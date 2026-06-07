@@ -903,3 +903,16 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given an orchestrated spec creation run
     When phases spawn retry and pass their gates
     Then every spawn retry and gate decision is logged with agent and phase identity
+
+  @FR-42
+  Scenario: SPECGEN004_120 every user-facing MCP tool has a skill consumer and the drift guard names strays
+    Given the MCP tool to skill consumer table in the design
+    When a new user-facing MCP tool ships without a skill consumer
+    Then the extended drift guard fails naming that tool
+
+  @FR-42
+  Scenario: SPECGEN004_121 the user still enters through a skill and the skill drives MCP
+    Given the create-spec skill as the user entry point
+    When the user asks to create a spec
+    Then the skill orchestrates the phases through MCP calls
+    And the skill body re-implements none of the server logic
