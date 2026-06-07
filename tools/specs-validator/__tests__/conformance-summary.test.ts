@@ -26,6 +26,7 @@ import {
   readAck,
   writeAckAtomic,
 } from '../conformance-summary.ts';
+import { composeEntry } from '../../spec-check-log/writer.ts';
 
 const ACK_CLI = path.resolve(__dirname, '..', 'ack-summary.ts');
 
@@ -34,18 +35,26 @@ let ackFile: string;
 let repoRoot: string;
 let softLog: string;
 
-/** Seed N hard-tier deny findings (entries WITH a `code` field) into today's JSONL. */
+/** Seed N hard-tier deny findings via the REAL writer envelope (composeEntry —
+ *  `finding_code` field). SPECGEN004_122 caught the old hand-rolled `code` seed
+ *  masking a prod field mismatch (verify-against-real-artifact discipline). */
 function seedHardDeny(n: number, ts = new Date()): void {
   const dir = path.join(repoRoot, '.dev-pomogator', '.spec-check-log');
   fs.mkdirSync(dir, { recursive: true });
   const file = path.join(dir, `${new Date().toISOString().slice(0, 10)}.jsonl`);
   const lines = Array.from({ length: n }, (_, i) =>
-    JSON.stringify({
-      timestamp: new Date(ts.getTime() + i).toISOString(),
-      code: 'DUPLICATE_DEFINITION',
-      severity: 'deny',
-      message: `seeded ${i}`,
-    }),
+    JSON.stringify(
+      composeEntry(
+        {
+          code: 'DUPLICATE_DEFINITION',
+          severity: 'error',
+          message: `seeded ${i}`,
+          location: { file: '.specs/probe/FR.md', line: i + 1 },
+        } as Parameters<typeof composeEntry>[0],
+        { repoRoot },
+        new Date(ts.getTime() + i),
+      ),
+    ),
   );
   fs.appendFileSync(file, lines.join('\n') + '\n');
 }

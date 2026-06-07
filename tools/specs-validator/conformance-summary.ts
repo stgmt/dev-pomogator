@@ -95,7 +95,12 @@ export function countHardDenySince(sinceTs: Date | null, repoRoot = process.cwd(
     for (const line of lines.slice(-ENTRY_CAP)) {
       try {
         const e = JSON.parse(line);
-        if (typeof e.code !== 'string') continue; // not a deny finding
+        // REAL envelope (spec-check-log composeEntry) carries `finding_code`;
+        // `code` kept for legacy seeds. Caught 2026-06-07 by SPECGEN004_122:
+        // the original check looked for `code` only — real guard findings were
+        // NEVER counted (the live "13 unresolved" proof was all soft-tier).
+        const findingCode = e.finding_code ?? e.code;
+        if (typeof findingCode !== 'string') continue; // not a deny finding
         const ts = new Date(e.timestamp);
         if (isNaN(ts.getTime())) continue;
         if (sinceTs && ts <= sinceTs) continue;

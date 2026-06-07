@@ -708,7 +708,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] Current version test: spec with `.progress.json::version: 4` containing DUPLICATE_DEFINITION → guard exit 1 + deny (gate bypassed)
   - [ ] Test covers all 4 hard invariants (DUPLICATE_DEFINITION, MALFORMED_FRONTMATTER, MALFORMED_GHERKIN, INVALID_ANCHOR_PATTERN)
 
-- [x] T-Trans.5 verify FR-23 log-file inventory contract — id: verify-fr-23-log-inventory — Status: DONE (verified 2026-06-07: both sinks creatable on first write — `writer.ts` mkdirSync recursive; soft-tier → form-guards.log asserted in spec-generator-v3 e2e, hard-tier → JSONL asserted in guard test _50; DESIGN.md «(m) Log file inventory (FR-23)» table present. NOTE: tier-exclusivity is asserted per-sink (each tier's test checks its own log), not as a cross-write negative) | Est: 30m
+- [x] T-Trans.5 verify FR-23 log-file inventory contract — id: verify-fr-23-log-inventory — Status: DONE (verified 2026-06-07; BDD SPECGEN004_122 added same day — closing the NO-SCEN class from the per-FR review; the scenario immediately caught a REAL prod bug: FR-20 hard-tier counter looked for `code` while the real envelope writes `finding_code` — real findings were never counted; fixed + test seeds now use the REAL composeEntry envelope: both sinks creatable on first write — `writer.ts` mkdirSync recursive; soft-tier → form-guards.log asserted in spec-generator-v3 e2e, hard-tier → JSONL asserted in guard test _50; DESIGN.md «(m) Log file inventory (FR-23)» table present. NOTE: tier-exclusivity is asserted per-sink (each tier's test checks its own log), not as a cross-write negative) | Est: 30m
   _Requirements: [FR-23](FR.md#fr-23)_
   **Done When:**
   - [ ] After fresh v4 install, both log paths exist (or are creatable on first write): `~/.dev-pomogator/logs/form-guards.log` AND `.dev-pomogator/.spec-check-log/<YYYY-MM-DD>.jsonl`
@@ -751,7 +751,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] Missing hash pin → explicit error (postinstall.test.ts)
   - [x] Hash update CLI: `tools/marksman-installer/cli-update-hashes.ts` — DOWNLOADS the real release assets and COMPUTES sha256 (never hand-pasted; stronger than the planned «prompt maintainer for sha»); rewrites `marksman-hashes.json` in place. LIVE PROOF 2026-06-07: ran against real upstream (4 assets, 2026-02-08) — computed hashes byte-match the committed pins, `git diff` empty
 
-- [x] T-Trans.10 verify FR-28 PostToolUse fixed-window throttle — id: verify-fr-28-fixed-window — Status: DONE | Est: 45m
+- [x] T-Trans.10 verify FR-28 PostToolUse fixed-window throttle — id: verify-fr-28-fixed-window — Status: DONE (BDD SPECGEN004_123 added 2026-06-07 — fixed-window + dedup-flush pinned through the real decidePush; closes the NO-SCEN class) | Est: 45m
   _Requirements: [FR-28](FR.md#fr-28)_
   **Done When:** _(verified: `tools/spec-conformance-push/__tests__/spec-conformance-push.test.ts` "decidePush — pure throttle decision", 4 tests, full suite GREEN; BDD-контракт fixed-window агрегации — SPECGEN004_13)_
   - [x] Single edit at t=0 → push at t=3.0s — "flushes after the 3-second window with the aggregated set"

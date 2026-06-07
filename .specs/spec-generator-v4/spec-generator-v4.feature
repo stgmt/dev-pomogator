@@ -916,3 +916,17 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When the user asks to create a spec
     Then the skill orchestrates the phases through MCP calls
     And the skill body re-implements none of the server logic
+
+  @FR-23
+  Scenario: SPECGEN004_122 the two-tier log inventory writes each tier to its own sink
+    Given a soft-tier event and a hard-tier finding
+    When each is logged through its canonical writer
+    Then the soft event lands in the global form-guards log
+    And the hard finding lands in the repo spec-check-log JSONL created on first write
+
+  @FR-28
+  Scenario: SPECGEN004_123 the push throttle window is fixed and never slides
+    Given findings accumulating in bursts within one throttle window
+    When more findings arrive before the window elapses
+    Then the window start stays the original one
+    And the flush after the window carries the aggregated deduplicated set
