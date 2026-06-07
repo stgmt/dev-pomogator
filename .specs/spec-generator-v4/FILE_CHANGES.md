@@ -192,6 +192,14 @@ This block enumerates the spec-doc edits applied as part of the v3→v4 transiti
 | `.claude/skills/create-spec/references/phase3plus_audit-overview.md` | edit | Verdict → two-condition: findings closed AND spec-verdict GREEN (FR-37d) + get_spec_status pointer (P16-1) |
 | `.claude/skills/create-spec/references/phase3plus_audit-variant-coverage.md` | edit | dead extensions/ path → canonical skill path (P16-1) |
 | `audit-reports/spec-creation-pipeline-review.md` | create | the full review: findings table, refuted scout claim, backlog → Phase 16 (P16-1) |
+| `audit-reports/mcp-rails-wave-design.md` | create | глубокий анализ волны MCP-rails: граница агент/движок, цепочка read→write→shadow→enforce, инвентарь трёх корзин ([FR-39](FR.md#fr-39)) |
+| `tools/spec-mcp-server/tools.ts` | edit | P17-1/2: read_spec_doc + list_spec_docs + propose/apply_spec_change + create_spec, аудит-лог spec-access.jsonl ([FR-39](FR.md#fr-39), [FR-40](FR.md#fr-40)) |
+| `tools/specs-validator/spec-access-guard.ts` | create | P17-3/6: shadow→enforce PreToolUse-хук на агентские файловые вызовы по `.specs/**` ([FR-39](FR.md#fr-39)) |
+| `.claude/agents/spec-phase-discovery.md` | create | P17-7: фазовый headless-агент Discovery, MCP-only allowed-tools ([FR-41](FR.md#fr-41)) |
+| `.claude/agents/spec-phase-requirements.md` | create | P17-7: фазовый агент Requirements+Design ([FR-41](FR.md#fr-41)) |
+| `.claude/agents/spec-phase-finalization.md` | create | P17-7: фазовый агент Finalization ([FR-41](FR.md#fr-41)) |
+| `.claude/agents/spec-phase-audit.md` | create | P17-7: фазовый агент Phase-3+ Audit ([FR-41](FR.md#fr-41)) |
+| `.claude/skills/spec-generator-orchestrator/SKILL.md` | edit | P17-8: оркестратор-проверятор — спавн фаз + verdict-гейты между ними ([FR-41](FR.md#fr-41)) |
 | `.claude/settings.json` | edit | Register extension-json-meta-guard LIVE (PreToolUse Write|Edit) — was dead code, only in .bak (T-Trans.6 finding) |
 | `.claude-plugin/hooks.json` | edit | Same live registration for plugin users (bootstrap launcher; builtins-only imports — deps-safe) |
 

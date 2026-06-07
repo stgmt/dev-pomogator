@@ -673,6 +673,52 @@ System SHALL expose an MCP tool `get_spec_status({spec})` returning, for ONE spe
 
 ---
 
+## FR-39
+
+**MCP-only доступ агента к спекам (централизация + аудит-лог) — granica агент vs движок**
+
+Запрет распространяется на TOOL-CALLS АГЕНТА и только на них: агентские Read / Grep / Glob / Edit / Write / Bash-чтения по `.specs/**` SHALL быть заменены MCP-вызовами; ДВИЖОК (builder, парсеры, CLI spec-verdict/corpus-health/spec-status/validate/audit, хуки, резолверы spec-backlog, сам MCP-сервер) SHALL продолжать читать/писать диск in-process — он и есть бэкенд этой двери. Противоречия с [FR-21](#fr-21) НЕТ: FR-21 — деградация ДВИЖКА без сервера, FR-39 — дисциплина АГЕНТА (verify-divergent-contracts соблюдено).
+
+- **FR-39a (read-sufficiency first):** MCP SHALL отдавать ВЕСЬ контент, нужный для авторинга/ревью: `get_node` уже несёт `body` (проверено живой пробой 2026-06-07); добавляется `read_spec_doc({spec, doc})` для цельных документов (проза вне узлов) + опционально `list_spec_docs`. Включение enforcement ДО доказанной read-sufficiency ЗАПРЕЩЕНО.
+- **FR-39b (аудит-лог):** каждый агентский spec-доступ через MCP (read и write) SHALL логироваться append-only (O_APPEND) в `.dev-pomogator/logs/spec-access.jsonl`: `{ts, tool, args_digest, decision}`; ротация по образцу audit-logger (10MB / 30 дней). Централизация ради контроля и лога — мотивация волны, запрет грепа — следствие.
+- **FR-39c (shadow → enforce, строго в этом порядке):** PreToolUse-хук `spec-access-guard` на Read|Grep|Glob|Edit|Write|Bash SHALL сначала работать в SHADOW-режиме (лог нарушений, без блока); флип в deny — через env `SPEC_ACCESS_ENFORCE=true`, ТОЛЬКО после (1) FR-39a доказан, (2) FR-40 mutation готова, (3) shadow-лог чист на живой работе. Escape hatch `[skip-spec-access: <reason ≥8>]` + JSONL-аудит по образцу scope-gate. Хук фильтрует по `.specs/` ДО любого I/O.
+- **FR-39d (хук живой, не мёртвый):** `spec-access-guard` SHALL быть зарегистрирован в ОБОИХ манифестах (`.claude/settings.json` + `.claude-plugin/hooks.json`), пройти deps-absent прогон, попасть в поимённый пин SPECGEN004_52 и в PROTECTED_HOOKS meta-guard-а — урок пяти мёртвых стражей (P16-1) кодируется требованием.
+- **FR-39e (миграция корзины 1):** инструкции скиллов, велящие агенту напрямую читать `.specs/` (31 файл-кандидат; точная разметка — задача), SHALL быть переписаны на MCP-вызовы; carve-out лист корзины 2 (39 engine-файлов) фиксируется в DESIGN.
+
+**Зависит от:** FR-4 (MCP server), FR-38 (get_spec_status), FR-21 (граница примирена). Evidence: `audit-reports/mcp-rails-wave-design.md`.
+**Связанные AC:** [AC-39.1](ACCEPTANCE_CRITERIA.md#ac-391), [AC-39.2](ACCEPTANCE_CRITERIA.md#ac-392), [AC-39.3](ACCEPTANCE_CRITERIA.md#ac-393)
+**User Story:** US-24
+
+## FR-40
+
+**Живой генератор: мутация спек через MCP с валидацией ДО записи**
+
+MCP-поверхность SHALL получить мутирующие тулзы — спека пишется через сервер, который прогоняет валидацию ДО касания диска; «писать вслепую и узнавать о мусоре на вердикте» прекращается.
+
+- **FR-40a (поверхность):** минимум `create_spec({slug})` (оборачивает scaffold — рождение verdict-GREEN), `apply_spec_change({spec, doc, patch|content, reason})` и `propose_spec_change(...)` (dry-run: те же проверки, без записи). Тулзы SHALL ОБОРАЧИВАТЬ существующий движок (scaffold-spec, резолверы spec-backlog, form-парсеры) — НЕ дублировать его логику (анти-паттерн «второй валидатор»).
+- **FR-40b (валидация на записи):** перед записью сервер SHALL прогнать in-process: form-контракты (spec-form-parsers), анкеры (anchor-integrity checkLinks), conformance затронутой спеки; ЛЮБОЙ error-severity результат → отказ с findings list (агент правит и повторяет). Запись SHALL быть атомарной (temp+rename) и логироваться в spec-access.jsonl (FR-39b).
+- **FR-40c (инкрементальный отклик):** после успешной записи сервер SHALL обновить граф (incremental rebuild FR-14 / полный ребилд как fallback), чтобы следующий read-вызов агента видел свежее состояние.
+
+**Зависит от:** FR-39a, FR-14 (watcher/incremental), FR-34 (anchors), FR-5 (conformance). Evidence: `audit-reports/mcp-rails-wave-design.md`.
+**Связанные AC:** [AC-40.1](ACCEPTANCE_CRITERIA.md#ac-401), [AC-40.2](ACCEPTANCE_CRITERIA.md#ac-402)
+**User Story:** US-24
+
+## FR-41
+
+**Создание спеки агентами по фазам + оркестратор-проверятор (headless claude -p/-bg)**
+
+Каждый этап create-spec SHALL исполняться выделенным headless-агентом, а переходы между этапами SHALL гейтиться проверятором.
+
+- **FR-41a (фазовые агенты):** определения в `.claude/agents/spec-phase-*.md` (discovery / requirements / finalization / audit). MCP-only SHALL принуждаться через allowed-tools агента (выданы MCP-тулзы, НЕ выданы Read/Grep/Edit по спекам) — второй слой enforcement, независимый от хука FR-39c. Спавн — `claude -p` (длинные фазы — detached `-bg` паттерн из `tools/anchor-integrity/claude-fallback.mjs`); переиспользовать инжектируемый spawn из `tools/spec-llm-judge` (тестируемость без реального бинаря).
+- **FR-41b (оркестратор-проверятор):** оркестратор SHALL спавнить фазу, ждать завершения, между фазами прогонять spec-verdict + get_spec_status; RED → вернуть фазу ТОМУ ЖЕ агенту с gap list (bounded retries), GREEN-гейт фазы → следующая. Расширяет skill `spec-generator-orchestrator` (FR-33, thin-router дисциплина сохраняется: проверятор КОМПОЗИРУЕТ существующие вердикты, не реализует свои).
+- **FR-41c (наблюдаемость):** каждый спавн/ретрай/гейт SHALL логироваться (spec-access.jsonl или сосед) — юзер видит, какой агент что сделал на каком этапе.
+
+**Зависит от:** FR-39a + FR-40 (агентам нужна полная MCP-дверь), FR-33 (оркестратор), FR-37 (вердикт), FR-8/судья (headless-инфра). Evidence: `audit-reports/mcp-rails-wave-design.md`.
+**Связанные AC:** [AC-41.1](ACCEPTANCE_CRITERIA.md#ac-411), [AC-41.2](ACCEPTANCE_CRITERIA.md#ac-412)
+**User Story:** US-24
+
+---
+
 ## Out of Scope
 
 ### FR-OUT-1: Real-time spec collaborative editing (CRDT/OT) — OUT OF SCOPE

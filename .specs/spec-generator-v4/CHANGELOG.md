@@ -4,6 +4,15 @@ All notable changes to this feature will be documented in this file.
 
 ## [Unreleased]
 
+### Planned (v4.3 — MCP-rails wave, FR-39/40/41 + Phase 17)
+
+Следующая большая волна (user ask 2026-06-07): агентский доступ к спекам ТОЛЬКО через MCP
+(централизация + аудит-лог `spec-access.jsonl`), живой генератор (мутация через сервер с
+валидацией ДО записи), создание спек фазовыми headless-агентами (`claude -p`/-bg) под
+оркестратором-проверятором с verdict-гейтами между фазами. Жёсткая цепочка:
+read-sufficiency → mutation → shadow → миграция 31 скилла → ENFORCE строго последним.
+Анализ: `audit-reports/mcp-rails-wave-design.md`. Сценарии SPECGEN004_111..119 (red).
+
 ### Fixed (2026-06-07 — creation-pipeline review, Phase 16)
 
 The creation side had been neglected while tracing was polished. Review (3 parallel scouts +

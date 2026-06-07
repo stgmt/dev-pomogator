@@ -601,3 +601,45 @@ WHEN every touched scenario of the spec is PASSED THEN `lifecycle: "GREEN"`; WHE
 **Требование:** [FR-38c](FR.md#fr-38), [FR-38d](FR.md#fr-38)
 
 WHEN any lifecycle state is returned THEN the response SHALL include `counts` (FR/AC/Scenario/Task), `gaps` (FR-37b per-class) and a human `hint`; AND each of the five states SHALL be covered by its own BDD scenario driving the real handler.
+
+## AC-39.1
+
+**Требование:** [FR-39](FR.md#fr-39)
+
+WHEN агент вызывает Read/Grep/Glob/Edit/Write по пути `.specs/**` при `SPEC_ACCESS_ENFORCE=true` THEN хук `spec-access-guard` SHALL отклонить вызов с указателем на MCP-тулзы И записать событие в `spec-access.jsonl`; в shadow-режиме тот же матч SHALL только логироваться. Движковые in-process чтения (builder/CLI/хуки) SHALL остаться незатронутыми.
+
+## AC-39.2
+
+**Требование:** [FR-39a](FR.md#fr-39)
+
+WHEN агенту нужен цельный документ спеки (проза вне узлов) THEN `read_spec_doc({spec, doc})` SHALL вернуть его содержимое И записать read-событие в аудит-лог; IF документа нет THEN SHALL вернуться явный DOC_NOT_FOUND (не пустая строка).
+
+## AC-39.3
+
+**Требование:** [FR-39d](FR.md#fr-39)
+
+WHEN `spec-access-guard` отгружается THEN он SHALL присутствовать в обоих живых манифестах, проходить deps-absent прогон, быть перечисленным в пине SPECGEN004_52 и в PROTECTED_HOOKS meta-guard-а (иначе отгрузка = повтор инцидента пяти мёртвых стражей).
+
+## AC-40.1
+
+**Требование:** [FR-40b](FR.md#fr-40)
+
+WHEN `apply_spec_change` получает изменение, дающее error-severity результат (битый анкер / нарушение form-контракта / conformance error) THEN сервер SHALL отказать БЕЗ записи на диск, вернув findings list; WHEN то же изменение исправлено THEN запись SHALL пройти атомарно и попасть в аудит-лог.
+
+## AC-40.2
+
+**Требование:** [FR-40c](FR.md#fr-40)
+
+WHEN запись через MCP успешна THEN следующий read-вызов агента SHALL видеть свежее состояние графа (инкрементальный ребилд или полный fallback); `create_spec` SHALL рождать спеку с verdict GREEN из коробки.
+
+## AC-41.1
+
+**Требование:** [FR-41b](FR.md#fr-41)
+
+WHEN оркестратор-проверятор запускает фазу THEN фаза SHALL исполняться выделенным headless-агентом, чьи allowed-tools НЕ содержат файловых тулзов по спекам; WHEN фаза завершена THEN переход дальше SHALL происходить только при GREEN-гейте (spec-verdict + get_spec_status), иначе фаза возвращается агенту с gap list (bounded retries).
+
+## AC-41.2
+
+**Требование:** [FR-41c](FR.md#fr-41)
+
+WHEN любой фазовый агент спавнится/ретраится/гейтится THEN событие SHALL попасть в лог наблюдаемости с идентификацией агента и фазы — юзер может восстановить, кто что делал.

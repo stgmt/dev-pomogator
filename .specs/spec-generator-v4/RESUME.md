@@ -43,6 +43,13 @@ npx tsx tools/specs-validator/spec-form-parsers.ts --check tasks .specs/spec-gen
    (clean-vs-clean против baseline; 12 предсуществующих падений — известны, см. P13-4).
 3. **Решение юзера по PR #32** — рекомендация: вливать целиком (вся Phase 13-16 работа).
 
+### Phase 17 — MCP-rails (СЛЕДУЮЩАЯ БОЛЬШАЯ ВОЛНА, user ask 2026-06-07)
+Агент работает со спеками ТОЛЬКО через MCP (контроль + аудит-лог), живой генератор
+(валидация ДО записи), фазовые headless-агенты + оркестратор-проверятор. Цепочка:
+P17-1 read-sufficiency → P17-2 mutation → P17-3 shadow-хук → P17-5 миграция скиллов →
+P17-6 ENFORCE (строго последним!) ∥ P17-7/8 агенты+оркестратор. Анализ:
+`audit-reports/mcp-rails-wave-design.md`; сценарии SPECGEN004_111..119 (red).
+
 ### Phase 16 — creation-pipeline hardening (бэклог ревью, выбран вариант «всё в v4»)
 - P16-2 evals для discovery-forms / requirements-chk-matrix / task-board-forms (360m) —
   самый ценный: оба guard-дедлока P16-1 жили бы меньше при наличии evals.

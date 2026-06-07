@@ -566,3 +566,27 @@ Then it fails with a per-item gap list
 Given no claude binary is available
 When the authoritative verdict runs
 Then it carries a SEMANTIC_SKIPPED note and never reports no-drift for unchecked content
+
+### User Story 24: MCP-only рельсы для агента (Priority: P1)
+
+Как владелец репозитория, я хочу чтобы агент читал и писал спеки ТОЛЬКО через
+централизованную MCP-дверь с аудит-логом и валидацией на записи, чтобы я
+контролировал и видел в логах всё, что агент делает со спеками, а генератор
+перестал писать вслепую.
+
+**Why:** Сегодня доступ врассыпную (Read/Grep/Edit по файлам), следа нет,
+ошибки авторинга всплывают только на финальном вердикте.
+
+**Independent Test:** В enforce-режиме агентский Grep по `.specs/` получает deny
+с указателем на MCP; запись с битым анкером отклонена сервером с findings list;
+каждый доступ виден в `spec-access.jsonl`.
+
+**Acceptance Scenarios:**
+
+Given enforce-режим включён после доказанной read/write-достаточности
+When агент вызывает Read или Grep по `.specs/**`
+Then вызов отклонён с указателем на MCP-тулзы и записью в аудит-лог
+
+Given фазовый headless-агент с allowed-tools без файловых тулзов по спекам
+When оркестратор-проверятор гоняет фазу
+Then переход к следующей фазе происходит только при GREEN-гейте вердикта

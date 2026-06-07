@@ -843,3 +843,63 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When the builder assembles the graph from both
     Then exactly one node carries that composite id and it is the first parsed
     And gherkin slices deduplicate through the same ingest semantics
+
+  @FR-39
+  Scenario: SPECGEN004_111 agent file access to specs is denied in enforce mode and logged
+    Given spec access enforcement is enabled after read and write sufficiency are proven
+    When the agent calls a file tool on a path under the specs tree
+    Then the call is denied with a pointer to the MCP tools
+    And the violation lands in the spec-access audit log
+
+  @FR-39
+  Scenario: SPECGEN004_112 shadow mode logs spec-access violations without blocking
+    Given the spec-access guard runs in shadow mode
+    When the agent reads a spec file directly
+    Then the access is logged as a violation
+    And the call is not blocked
+
+  @FR-39
+  Scenario: SPECGEN004_113 read_spec_doc serves whole documents with an audit trail
+    Given a spec document whose prose lives outside graph nodes
+    When the agent calls read_spec_doc for it
+    Then the full document content is returned
+    And the read lands in the spec-access audit log
+
+  @FR-40
+  Scenario: SPECGEN004_114 apply_spec_change rejects invalid writes before touching disk
+    Given a spec change that breaks an anchor or a form contract
+    When the agent applies it through the MCP mutation tool
+    Then the server refuses without writing and returns the findings list
+    And the corrected change is written atomically and logged
+
+  @FR-40
+  Scenario: SPECGEN004_115 a successful MCP write refreshes the graph for the next read
+    Given an accepted spec change written through MCP
+    When the agent reads the affected node afterwards
+    Then the response reflects the fresh state
+
+  @FR-40
+  Scenario: SPECGEN004_116 create_spec births a verdict-green spec through MCP
+    Given the create_spec mutation tool
+    When the agent creates a new spec through it
+    Then the authoritative verdict for the newborn spec is GREEN
+
+  @FR-41
+  Scenario: SPECGEN004_117 each creation phase runs in a dedicated headless agent
+    Given the phase agent definitions with MCP-only allowed-tools
+    When the orchestrator runs a creation phase
+    Then the phase executes in its dedicated headless agent
+    And the agent has no direct file tools over specs
+
+  @FR-41
+  Scenario: SPECGEN004_118 the orchestrator gates phase transitions on a green verdict
+    Given a completed creation phase with open verdict gaps
+    When the orchestrator checks the phase gate
+    Then the phase returns to its agent with the gap list
+    And the next phase starts only after the gate is GREEN
+
+  @FR-41
+  Scenario: SPECGEN004_119 agent spawns and gate decisions are observable in the log
+    Given an orchestrated spec creation run
+    When phases spawn retry and pass their gates
+    Then every spawn retry and gate decision is logged with agent and phase identity

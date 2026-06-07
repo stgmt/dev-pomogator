@@ -132,6 +132,14 @@
 | T16-126 | P16-6: CRLF-safe `replaceLiteralAll` in fill-template | TODO | — | Phase 16 — Creation-pipeline hardening (review 2026-06-07) | 60m |
 | T16-127 | P16-7: `.progress.json` single-writer contract | TODO | — | Phase 16 — Creation-pipeline hardening (review 2026-06-07) | 60m |
 | T16-128 | P16-8: STOP-confirm discipline | TODO | — | Phase 16 — Creation-pipeline hardening (review 2026-06-07) | 180m |
+| T17-129 | P17-1: read-sufficiency | TODO | — | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 240m |
+| T17-130 | P17-2: mutation surface | TODO | p17-read-sufficiency | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 600m |
+| T17-131 | P17-3: spec-access-guard в SHADOW | TODO | p17-read-sufficiency | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 240m |
+| T17-132 | P17-4: carve-out лист движка в DESIGN | TODO | — | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 60m |
+| T17-133 | P17-5: миграция корзины 1 | TODO | p17-read-sufficiency, p17-mutation-surface | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 480m |
+| T17-134 | P17-6: ENFORCE flip | TODO | p17-mutation-surface, p17-shadow-guard, p17-skill-migration | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 120m |
+| T17-135 | P17-7: фазовые headless-агенты | TODO | p17-read-sufficiency, p17-mutation-surface | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 480m |
+| T17-136 | P17-8: оркестратор-проверятор | TODO | p17-phase-agents | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 480m |
 
 ## TDD Workflow
 
@@ -1225,3 +1233,73 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   **Done When:**
   - [ ] a mechanism (Stop-gate check or spec-verdict note) surfaces unconfirmed STOPs of the ACTIVE spec as a blocking/loud signal, not a corpus-wide nag
   - [ ] the 9 legacy unconfirmed-STOP specs triaged: confirmed where work is done, или explicit deferred-note
+
+## Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41)
+
+> User ask (2026-06-07): «запретить grep по спекам — всё через MCP, централизованно, с логами;
+> создание спеки через claude -p/-bg агентов по фазам + оркестратор-проверятор; это следующая
+> большая волна рефактора легаси-подхода». Глубокий анализ: `audit-reports/mcp-rails-wave-design.md`.
+> ЖЁСТКАЯ цепочка: read-sufficiency → mutation → shadow → миграция → enforce (СТРОГО последним,
+> иначе окирпичиваем авторинг); агенты — параллельная дорожка после P17-1/2.
+
+- [ ] P17-1: read-sufficiency — `read_spec_doc` + аудит-лог чтений — id: p17-read-sufficiency — Status: TODO | Est: 240m
+  _Requirements: [FR-39](FR.md#fr-39)_
+  **Done When:**
+  - [ ] `read_spec_doc({spec, doc})` + `list_spec_docs({spec})` в tools.ts; DOC_NOT_FOUND на отсутствующий; bundle rebuilt
+  - [ ] каждый read-вызов пишет `{ts, tool, args_digest}` в `.dev-pomogator/logs/spec-access.jsonl` (O_APPEND, ротация по образцу audit-logger)
+  - [ ] живая проба: авторинг-ревью одного документа пройден MCP-only (без единого Read по `.specs/`)
+  - [ ] SPECGEN004_113 GREEN
+
+- [ ] P17-2: mutation surface — живой генератор (propose/apply/create через MCP) — id: p17-mutation-surface — Status: TODO | Est: 600m
+  _depends: p17-read-sufficiency_
+  _Requirements: [FR-40](FR.md#fr-40)_
+  **Done When:**
+  - [ ] `propose_spec_change` (dry-run) + `apply_spec_change` + `create_spec` в tools.ts; ОБОРАЧИВАЮТ существующий движок (scaffold-spec, form-парсеры, anchor-checkLinks, conformance) — ноль дублированной валидации
+  - [ ] error-severity находка → отказ БЕЗ записи + findings list; исправленное изменение → атомарная запись + лог
+  - [ ] после записи граф обновлён (incremental FR-14 / полный fallback) — следующий read видит свежее
+  - [ ] SPECGEN004_114, _115, _116 GREEN
+
+- [ ] P17-3: spec-access-guard в SHADOW — id: p17-shadow-guard — Status: TODO | Est: 240m
+  _depends: p17-read-sufficiency_
+  _Requirements: [FR-39](FR.md#fr-39)_
+  **Done When:**
+  - [ ] PreToolUse-хук на Read|Grep|Glob|Edit|Write|Bash: матч `.specs/**` ДО любого I/O → лог нарушения, БЕЗ блока; движковые carve-out пути не матчатся
+  - [ ] зарегистрирован ЖИВЫМ в обоих манифестах + deps-absent прогон + пин в SPECGEN004_52 + PROTECTED_HOOKS meta-guard (FR-39d — урок пяти мёртвых стражей)
+  - [ ] SPECGEN004_112 GREEN
+
+- [ ] P17-4: carve-out лист движка в DESIGN — id: p17-carveout-list — Status: TODO | Est: 60m
+  _Requirements: [FR-39](FR.md#fr-39)_
+  **Done When:**
+  - [ ] DESIGN.md фиксирует корзину 2 (39 engine-файлов по грепу 2026-06-07) как разрешённые in-process читатели; guard их не трогает
+
+- [ ] P17-5: миграция корзины 1 — скиллы на MCP-инструкции — id: p17-skill-migration — Status: TODO | Est: 480m
+  _depends: p17-read-sufficiency, p17-mutation-surface_
+  _Requirements: [FR-39](FR.md#fr-39)_
+  **Done When:**
+  - [ ] точная разметка 31 файла-кандидата: инструкция-vs-документация; список мигрируемых зафиксирован
+  - [ ] каждый мигрируемый SKILL.md велит MCP-тулзы вместо Read/Grep по `.specs/`
+  - [ ] shadow-лог violations/день → 0 на живой работе (метрика гейта P17-6)
+
+- [ ] P17-6: ENFORCE flip — id: p17-enforce — Status: TODO | Est: 120m
+  _depends: p17-mutation-surface, p17-shadow-guard, p17-skill-migration_
+  _Requirements: [FR-39](FR.md#fr-39)_
+  **Done When:**
+  - [ ] `SPEC_ACCESS_ENFORCE=true` → deny с указателем на MCP; escape `[skip-spec-access: <reason≥8>]` + JSONL-аудит по образцу scope-gate
+  - [ ] гейт флипа задокументирован и выполнен: shadow чист + P17-1/2 доказаны
+  - [ ] SPECGEN004_111 GREEN
+
+- [ ] P17-7: фазовые headless-агенты — id: p17-phase-agents — Status: TODO | Est: 480m
+  _depends: p17-read-sufficiency, p17-mutation-surface_
+  _Requirements: [FR-41](FR.md#fr-41)_
+  **Done When:**
+  - [ ] `.claude/agents/spec-phase-{discovery,requirements,finalization,audit}.md` с MCP-only allowed-tools (без файловых тулзов по спекам — второй слой enforcement)
+  - [ ] спавн через `claude -p` (длинные фазы — detached -bg паттерн claude-fallback); инжектируемый spawn из spec-llm-judge для тестов
+  - [ ] SPECGEN004_117 GREEN
+
+- [ ] P17-8: оркестратор-проверятор — id: p17-orchestrator-verifier — Status: TODO | Est: 480m
+  _depends: p17-phase-agents_
+  _Requirements: [FR-41](FR.md#fr-41)_
+  **Done When:**
+  - [ ] spec-generator-orchestrator расширен: спавн фазы → между фазами spec-verdict + get_spec_status → RED = вернуть фазу с gap list (bounded retries), GREEN → дальше; thin-router дисциплина FR-33 сохранена (композиция, не реализация)
+  - [ ] лог наблюдаемости: каждый спавн/ретрай/гейт с идентификацией агента и фазы
+  - [ ] dogfood: одна спека создана end-to-end оркестратором; SPECGEN004_118, _119 GREEN
