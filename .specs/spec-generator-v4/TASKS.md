@@ -1295,7 +1295,9 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   **Done When:**
   - [ ] `SPEC_ACCESS_ENFORCE=true` → deny с указателем на MCP; escape `[skip-spec-access: <reason≥8>]` + JSONL-аудит по образцу scope-gate
   - [x] read-путь enforce ДОКАЗАН вживую (2026-06-08 run4): `claude -p` ПОД `SPEC_ACCESS_ENFORCE=true` на спек-задаче → 0 записей в spec-access.jsonl (ни одного сырого Grep/Read), ответ корректный из MCP-двери. Потребовало 3 фикса-блокера: dead-bundle (be9a1cb), repo-root `${CLAUDE_PROJECT_DIR}` (3dcdb2c), MCP-грант через --allowedTools
-  - [ ] ОСТАТОК до постоянного флипа: (а) грант `mcp__dev-pomogator-specs__*` в `.claude/settings.json` permissions — ДЕЙСТВИЕ ЮЗЕРА (classifier блокирует self-modification прав агентом); (б) прогон ПОД enforce WRITE-пути (create-spec → apply_spec_change), не только read; (в) флип в settings
+  - [x] write-путь enforce ДОКАЗАН вживую (2026-06-08): `claude -p` ПОД enforce, задача «создай спеку» → сырой `Write .specs/…/README.md` → **denied** гардом → агент САМ ушёл в `create_spec` (ok) + `apply_spec_change` (ok, валидация form+anchors+conformance пустая, атомарно, зааудичено); спека создана через дверь, не сырым Write; throwaway убран, вердикт GREEN
+  - [x] грант `mcp__dev-pomogator-specs__*` в `.claude/settings.json` permissions — выполнено ЮЗЕРОМ (агент сам права не выдаёт; classifier-gated)
+  - [ ] ОСТАЁТСЯ только сам ФЛИП `SPEC_ACCESS_ENFORCE=true` в `.claude/settings.json` env — ОСОЗНАННОЕ ДЕЙСТВИЕ ЮЗЕРА: меняет поведение ГЛОБАЛЬНО (любая сессия, включая интерактивную человека, получит deny на сырой `.specs/` → через MCP или `SPEC_ACCESS_SKIP=1`). Жизнеспособность доказана (read+write live); остаётся решение когда включать
   - [ ] SPECGEN004_111 GREEN
 
 - [x] P17-7: фазовые headless-агенты — id: p17-phase-agents — Status: DONE (2026-06-07) | Est: 480m
