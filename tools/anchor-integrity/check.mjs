@@ -228,4 +228,9 @@ function cliMain() {
   process.exit(broken.length ? 1 : 0);
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) cliMain();
+// Basename guard, NOT `import.meta.url === pathToFileURL(argv[1])`: the latter is
+// bundle-UNSAFE — when this module is inlined into spec-mcp-server's esbuild bundle,
+// the bundle's single import.meta.url equals argv[1] (the bundle path), so cliMain()
+// fired and printed usage INSTEAD of starting the MCP server (dead-door, 2026-06-08).
+// A basename check only fires for the real standalone CLI invocation.
+if (process.argv[1] && /(^|[\\/])check\.mjs$/.test(process.argv[1])) cliMain();

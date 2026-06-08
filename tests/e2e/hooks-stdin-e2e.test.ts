@@ -169,9 +169,14 @@ describe('spec-mcp-server initialize + tools/list + get_trace via real stdin', (
       // FR-36a: spec-qualified key — the fixture FR lives in `.specs/auth/`.
       params: { name: 'get_trace', arguments: { node_id: 'auth:FR-1' } },
     });
+    // Spawn the BUNDLE (.mcp.json runs `node server.bundle.mjs`), not `tsx server.ts`:
+    // the bundle is what users + headless `claude -p` actually launch. Testing the
+    // source hid a dead-door regression where a bundled module's direct-run guard
+    // (anchor-integrity/check.mjs) fired in the bundle and printed usage INSTEAD of
+    // serving (2026-06-08). Test the REAL artifact.
     const result = spawnSync(
       process.execPath,
-      ['--import', 'tsx', path.join(REPO_ROOT, 'tools/spec-mcp-server/server.ts')],
+      [path.join(REPO_ROOT, 'tools/spec-mcp-server/server.bundle.mjs')],
       {
         input: `${init}\n${list}\n${call}\n`,
         encoding: 'utf8',
@@ -191,13 +196,15 @@ describe('spec-mcp-server initialize + tools/list + get_trace via real stdin', (
     const names = (listResp.result?.tools ?? []).map((t) => t.name);
     expect(names).toContain('get_trace');
     // Exact tool set — drift guard. A bare count rots silently when a tool is added (it did:
-    // was 11, server now registers 13). Assert the full set so a mismatch names the culprit.
-    // Keep in sync with tools.ts buildTools().
+    // was 11 → 13 → now 19 after P17 added the read door + mutation door). Assert the full
+    // set so a mismatch names the culprit. Keep in sync with tools.ts buildTools().
     expect([...names].sort()).toEqual(
       [
-        'conformance_check', 'find_by_tags', 'find_orphans', 'find_refs',
-        'get_coverage', 'get_coverage_summary', 'get_node', 'get_test_result',
-        'get_trace', 'list_phase_tasks', 'list_specs', 'search', 'validate_anchor',
+        'apply_spec_change', 'conformance_check', 'create_spec', 'find_by_tags',
+        'find_orphans', 'find_refs', 'get_coverage', 'get_coverage_summary',
+        'get_node', 'get_spec_status', 'get_test_result', 'get_trace',
+        'list_phase_tasks', 'list_spec_docs', 'list_specs', 'propose_spec_change',
+        'read_spec_doc', 'search', 'validate_anchor',
       ].sort(),
     );
     const callResp = JSON.parse(lines[2]) as {

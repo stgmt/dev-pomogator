@@ -44953,7 +44953,7 @@ var StdioServerTransport = class {
 };
 
 // tools/spec-mcp-server/server.ts
-import { pathToFileURL as pathToFileURL2 } from "node:url";
+import { pathToFileURL } from "node:url";
 
 // tools/spec-mcp-server/lifecycle.ts
 import fs10 from "node:fs";
@@ -47523,7 +47523,6 @@ import path10 from "node:path";
 // tools/anchor-integrity/check.mjs
 import fs12 from "node:fs";
 import path9 from "node:path";
-import { pathToFileURL } from "node:url";
 var HEADING_RE = /^(#{1,6})\s+(.+?)\s*$/;
 var FENCE_RE2 = /^(?:```|~~~)/;
 var ID_RE = /\b((?:FR|NFR|AC|UC|US)-[A-Za-z0-9.]+)\b/;
@@ -47669,7 +47668,7 @@ TOTAL ${total} broken anchors across ${corpus.size} specs
 `);
   process.exit(broken.length ? 1 : 0);
 }
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) cliMain();
+if (process.argv[1] && /(^|[\\/])check\.mjs$/.test(process.argv[1])) cliMain();
 
 // tools/specs-validator/spec-form-parsers.ts
 import fs13 from "fs";
@@ -48818,7 +48817,7 @@ async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
 }
-if (process.argv[1] && import.meta.url === pathToFileURL2(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().catch((err) => {
     process.stderr.write(`[${PRODUCT_NAME}] fatal: ${err instanceof Error ? err.stack ?? err.message : String(err)}
 `);
