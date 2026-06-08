@@ -129,6 +129,6 @@ argument-hint: "<scenario-name>"
 
 ## Не делает skill
 
-- Edit server.py — use Edit tool directly with knowledge from `.specs/session-pilot/DESIGN.md`
+- Edit server.py — use Edit tool directly with knowledge from `read_spec_doc({ spec: "session-pilot", doc: "DESIGN.md" })` (MCP-rails FR-39 — not a raw Read of `.specs/`)
 - Spec authoring — use `Skill("create-spec")` for that
 - Zellij configuration — that's separate domain
