@@ -197,7 +197,17 @@ async function main(): Promise<void> {
   if (!v) process.exit(0); // not a spec-access tool call — pre-I/O fast path
 
   const repoRoot = data.cwd || process.env.CLAUDE_PROJECT_DIR || process.env.DEV_POMOGATOR_REPO_ROOT || process.cwd();
-  const enforce = process.env.SPEC_ACCESS_ENFORCE === 'true';
+  // enforce is ON when set manually (SPEC_ACCESS_ENFORCE, dogfood/CI) OR via the
+  // plugin's `userConfig.spec_access_enforce` toggle, which Claude Code auto-exports
+  // to plugin subprocesses as `CLAUDE_PLUGIN_OPTION_<key>` (casing matched both ways).
+  // This gives INSTALLED users enforce from the enable-time prompt — no settings.json
+  // hand-editing (plugin userConfig, 2026-06-08). Env inherits through the
+  // bootstrap→tsx-runner→guard chain (more reliable than argv forwarding).
+  const onish = (v: string | undefined): boolean => v === 'true' || v === '1';
+  const enforce =
+    onish(process.env.SPEC_ACCESS_ENFORCE) ||
+    onish(process.env.CLAUDE_PLUGIN_OPTION_spec_access_enforce) ||
+    onish(process.env.CLAUDE_PLUGIN_OPTION_SPEC_ACCESS_ENFORCE);
 
   // Escape hatch (enforce only): env opt-out, logged for audit.
   if (enforce && process.env.SPEC_ACCESS_SKIP === '1') {
