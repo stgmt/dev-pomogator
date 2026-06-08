@@ -148,7 +148,7 @@
 | T19-142 | P19-3: get_coverage spec-scoping BDD + wiring | TODO | p17-read-sufficiency | Phase 19 — MCP-rails deep-audit gaps (2026-06-08) | 90m |
 | T19-143 | P19-4: полный генеративный e2e под enforce | TODO | p17-enforce, p19-phase-refactor | Phase 19 — MCP-rails deep-audit gaps (2026-06-08) | 240m |
 | T19-144 | P19-5: FR-35a test-quality honesty-гейт — consumer-сторона жива (get_coverage/spec-verdict читают side-channel); producer = остаток | IN_PROGRESS | p17-read-sufficiency | Phase 19 — MCP-rails deep-audit gaps (2026-06-08) | 240m |
-| T19-145 | P19-6: MCP-дверь к подкаталогам спеки (ARCHITECTURE/attachments) | TODO | p17-mutation-surface | Phase 19 — MCP-rails deep-audit gaps (2026-06-08) | 300m |
+| T19-145 | P19-6: MCP-дверь к подкаталогам спеки (read-side+read_attachment DONE; consumer-миграция остаток) | IN_PROGRESS | p17-mutation-surface | Phase 19 — MCP-rails deep-audit gaps (2026-06-08) | 300m |
 
 ## TDD Workflow
 
@@ -1389,13 +1389,14 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] **PRODUCER (РЕШЕНО юзером 2026-06-08):** скилл ТЕСТ-РАНА (`run-tests`) пишет `.dev-pomogator/.test-quality.json`; `strong-tests` грейдит покрытие/качество. Адаптировать: (1) strong-tests → канонический вердикт STRONG/WEAK/FAKE-POSITIVE-RISK (сейчас GOOD/FAIR/WEAK); (2) producer-хелпер `tools/spec-graph/test-quality-producer.ts` джойнит test→scenario→task по графу и пишет JSON keyed by taskId; (3) run-tests Step 5 (уже хинтит strong-tests) → реально вызвать grade + write. Детерминированный join+write, LLM только сам грейд. Анализ: audit-reports/mcp-rails-deep-audit-2026-06-08.md «FORK DECISIONS»
   - [ ] LOW: `DUPLICATE_DEFINITION` — либо производить находку, либо удалить мёртвый код + поправить тест-контракт (conformance.ts:361-376)
 
-- [ ] P19-6: MCP-дверь к ПОДКАТАЛОГАМ спеки (ARCHITECTURE/ attachments/ .architecture-research/) — id: p19-subdir-door — Status: TODO (РЕШЕНО: Option A — расширить дверь) | Est: 300m
+- [ ] P19-6: MCP-дверь к ПОДКАТАЛОГАМ спеки (ARCHITECTURE/ attachments/ .architecture-research/) — id: p19-subdir-door — Status: IN_PROGRESS (read-side DONE; consumer-миграция + write-resolution остаток) | Est: 300m
   _depends: p17-mutation-surface_
   _Requirements: [FR-39](FR.md#fr-39), [FR-40](FR.md#fr-40)_
-  **РЕШЕНИЕ юзера 2026-06-08: Option A — расширить дверь (НЕ carve-out).** Root cause: `docOf=path.basename` (tools.ts:1025) + inventory basename (982) срезают директорию → subdir структурно недостижим (детерминир. проверено). См. audit «FORK DECISIONS».
+  **РЕШЕНИЕ юзера 2026-06-08: Option A — расширить дверь.** Root cause: `docOf=path.basename` (tools.ts:1025) + inventory basename (982) срезали директорию → subdir структурно недостижим (детерминир. проверено). См. audit «FORK DECISIONS».
   **Done When:**
-  - [ ] read_spec_doc/apply_spec_change: `docOf` → принимать relative SUBPATH; заменить basename-strip на containment-check (resolve `path.join(specRoot,doc)` + assert внутри specRoot; reject `..` traversal). НЕ basename-strip
-  - [ ] list_spec_docs: рекурсия ≥1 уровня, возвращать relative subpaths (сохранить md/feature/.progress.json фильтр; отдельный инвентарь бинарей)
-  - [ ] новый `read_attachment({spec,path})`: base64 для бинарей (.png/.jpg/.pdf) — read_spec_doc text-only; для phase2 Step 5c Jira multimodal verify
-  - [ ] миграция consumers: arch-decision-builder (ARCHITECTURE/AXIS-*.md), phase2 (attachments/), arch-research-workflow (.architecture-research/<N>-stage.md write)
-  - [ ] BDD регресс: subdir-док читается через дверь; traversal `../../etc/passwd` отвергается (не basename-нейтрализуется молча); бинарь через read_attachment
+  - [x] read_spec_doc: принимает relative SUBPATH через общий `resolveSpecDoc` (containment-check вместо basename-strip; `..`/abs/drive → DOC_TRAVERSAL) — 11329b2, доказано live + BDD _138
+  - [x] list_spec_docs: рекурсия subdir-ов, возвращает relative subpaths + отдельный `attachments[]` инвентарь — 11329b2
+  - [x] новый `read_attachment({spec,path})`: base64+mime для бинарей (.png/.jpg/.pdf/.svg) — read_spec_doc text-only; для phase2 Step 5c Jira multimodal verify — 11329b2 (тул 19→20)
+  - [x] BDD регресс SPECGEN004_138: subdir-док читается; traversal `../../secret` отвергается (DOC_TRAVERSAL, не basename-нейтрализуется молча); бинарь через read_attachment base64. Полный сьют 138/137-passed GREEN
+  - [x] WRITE-resolution: arch subdir-артефакты (`.architecture-research/<N>-stage.md` freeform-проза, `QUEUE.json`/`COMPLETENESS.json` JSON) НЕ идут через apply_spec_change (валидирующая дверь — для graph-доков FR/AC/TASKS/feature, не для freeform/JSON). Их пишут СВОИ engine-CLI скиллов → покрыто engine-CLI carve-out (architecture-decision-cli.ts уже в REAL_ENGINE_INVOCATIONS allowed). apply_spec_change-дверь на запись subdir НЕ нужна текущим consumer'ам (агент не авторит graph-док в subdir)
+  - [ ] consumer-миграция SKILL.md (остаток, mechanical): arch-decision-builder читает ARCHITECTURE/AXIS-*.md → read_spec_doc subpath; phase2 Step 5c attachments → read_attachment; arch-research-workflow/arch-decision write → через свой engine-CLI (carve-out), задокументировать в их SKILL.md

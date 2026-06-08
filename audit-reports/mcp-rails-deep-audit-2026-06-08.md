@@ -118,6 +118,17 @@ hit again here when binding SPECGEN004_137 — repaired in the same pass.)
 ## FORK DECISIONS (user, 2026-06-08)
 
 ### P19-6 subdir door → **Option A: extend the door** (+ read_attachment for binaries)
+> **READ side IMPLEMENTED (11329b2):** shared `resolveSpecDoc` containment check (replaces
+> docOf basename-strip) → read_spec_doc accepts subpaths, list_spec_docs recurses + returns
+> `attachments[]`, new `read_attachment` (base64). Proven live + BDD _138 + full suite GREEN.
+> **WRITE resolution:** arch subdir artifacts (`.architecture-research/*.md` freeform prose,
+> `QUEUE.json`/`COMPLETENESS.json`) do NOT fit the validating door (form/anchor/conformance is
+> for graph docs FR/AC/TASKS/feature) — they are written by the skills' OWN engine CLIs, already
+> covered by the engine-CLI carve-out (architecture-decision-cli.ts is in the allowed pin). So
+> apply_spec_change is NOT extended to subdir writes (no consumer needs an agent-authored subdir
+> graph-doc). Remaining: mechanical consumer SKILL.md migration (arch-decision-builder read,
+> phase2 attachments, document arch CLIs' carve-out write path).
+
 The agent reaches spec SUBDIRECTORIES through the SAME door, not a carve-out:
 - `read_spec_doc` / `apply_spec_change`: accept a relative SUBPATH (`ARCHITECTURE/AXIS-1.md`)
   instead of `docOf = basename`. Validation: resolve `path.join(specRoot, doc)`, then assert
