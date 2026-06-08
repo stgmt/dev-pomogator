@@ -362,3 +362,45 @@ Then('every engine CLI is allowed and the generic reader stays a violation', fun
     'generic / inline / heredoc-to-tmp reads over .specs/ must stay violations — the carve-out is not a blanket pass',
   );
 });
+
+// ── SPECGEN004_135 — MCP server repo-root robust vs unresolved ${…} (P17-6) ────
+import { resolveRepoRoot } from '../../tools/spec-mcp-server/server.ts';
+
+interface RepoRootWorld extends F39World {
+  rrEnv?: string;
+  rrCwd?: string;
+  rrResult?: string;
+}
+Given('a repo-root env that is an unresolved placeholder and a cwd that contains a specs tree', function (this: RepoRootWorld) {
+  this.rrCwd = path.join(this.tempDir, 'cwd-with-specs');
+  fs.mkdirSync(path.join(this.rrCwd, '.specs'), { recursive: true });
+  this.rrEnv = '${CLAUDE_PROJECT_DIR}'; // headless launch did not substitute it
+});
+When('the server resolves its repo root', function (this: RepoRootWorld) {
+  this.rrResult = resolveRepoRoot(this.rrEnv, this.rrCwd!);
+});
+Then('it ignores the placeholder and uses the cwd', function (this: RepoRootWorld) {
+  assert.equal(this.rrResult, this.rrCwd);
+  // a real repo path (with .specs/) is honoured over cwd:
+  assert.equal(resolveRepoRoot(this.rrCwd!, this.tempDir), this.rrCwd);
+});
+
+// ── SPECGEN004_136 — enforce ON from plugin userConfig export, not only env ────
+import { enforceEnabled } from '../../tools/specs-validator/spec-access-guard.ts';
+
+interface EnfWorld extends F39World {
+  enfOn?: boolean;
+  enfOff?: boolean;
+}
+Given('the plugin userConfig enforce toggle exported to the guard environment', function (this: EnfWorld) {
+  // the value the When uses; Claude Code exports userConfig as CLAUDE_PLUGIN_OPTION_<key>
+  this.enfOn = undefined;
+});
+When('the guard computes whether enforce is on', function (this: EnfWorld) {
+  this.enfOn = enforceEnabled({ CLAUDE_PLUGIN_OPTION_spec_access_enforce: 'true' } as NodeJS.ProcessEnv);
+  this.enfOff = enforceEnabled({} as NodeJS.ProcessEnv);
+});
+Then('enforce is on, and it is off when no enforce signal is present', function (this: EnfWorld) {
+  assert.equal(this.enfOn, true);
+  assert.equal(this.enfOff, false);
+});

@@ -1001,3 +1001,15 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given a coverage run where one scenario passed, one is UNDEFINED, and one was not in the last NDJSON
     When coverage buckets are computed
     Then the absent scenario is not_run and the UNDEFINED one stays undefined
+
+  @FR-39
+  Scenario: SPECGEN004_135 the MCP server resolves a real repo root despite an unresolved placeholder env
+    Given a repo-root env that is an unresolved placeholder and a cwd that contains a specs tree
+    When the server resolves its repo root
+    Then it ignores the placeholder and uses the cwd
+
+  @FR-39
+  Scenario: SPECGEN004_136 enforce turns on from the plugin userConfig export, not only the manual env
+    Given the plugin userConfig enforce toggle exported to the guard environment
+    When the guard computes whether enforce is on
+    Then enforce is on, and it is off when no enforce signal is present
