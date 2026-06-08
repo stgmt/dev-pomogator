@@ -143,6 +143,10 @@
 | T17-137 | P17-9: слойный контракт skill↔MCP | DONE | p17-mutation-surface | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 240m |
 | T18-138 | P18-1: legacy-suspicion 4-state classifier | TODO | p17-enforce | Phase 18 — Legacy/drift spec triage (FR-43, после Phase 17) | 360m |
 | T18-139 | P18-2: HITL-маркер + триаж-отчёт + legacy-v3 резолюция | TODO | p18-legacy-classifier | Phase 18 — Legacy/drift spec triage (FR-43, после Phase 17) | 240m |
+| T19-140 | P19-1: рефакторинг ВСЕХ фаз + research на MCP-rails | TODO | p17-mutation-surface | Phase 19 — MCP-rails deep-audit gaps (2026-06-08) | 360m |
+| T19-141 | P19-2: MCP-тул гапы (get_trace acs / propose no-op / coverage_summary) | TODO | p17-read-sufficiency | Phase 19 — MCP-rails deep-audit gaps (2026-06-08) | 180m |
+| T19-142 | P19-3: get_coverage spec-scoping BDD + wiring | TODO | p17-read-sufficiency | Phase 19 — MCP-rails deep-audit gaps (2026-06-08) | 90m |
+| T19-143 | P19-4: полный генеративный e2e под enforce | TODO | p17-enforce, p19-phase-refactor | Phase 19 — MCP-rails deep-audit gaps (2026-06-08) | 240m |
 
 ## TDD Workflow
 
@@ -1339,3 +1343,34 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] триаж выдаёт кандидатов в отчёт; финал подтверждается человеком и пишется явным маркером (`.progress.json status: superseded|drifted|removed|absorbed` ИЛИ перенос в `.specs/archive/`); авто-ретайр/авто-удаление ЗАПРЕЩЕНЫ (AC-43.1)
   - [ ] `legacy-v3.feature` (28 сценариев SPECGEN003, инстанс SUPERSEDED) разрешён по решению юзера: архив + маркер supersedes ЛИБО добавление в cucumber paths — NOT_RUN-нота перестаёт гореть на нём
   - [ ] @feature43 сценарий на HITL-маркер (подсажена ложная авто-ретайр-попытка → guard/флоу её не допускает)
+
+- [ ] P19-1: рефакторинг ВСЕХ фаз + research-скиллов на MCP-rails (deep-audit 2026-06-08) — id: p19-phase-refactor — Status: TODO | Est: 360m
+  _depends: p17-mutation-surface_
+  _Requirements: [FR-39](FR.md#fr-39), [FR-42](FR.md#fr-42)_
+  **Done When:**
+  - [ ] G2: phase1/phase1.5/phase3/phase3plus читают `.specs/{slug}/JIRA_SOURCE.md` через `list_spec_docs`+`read_spec_doc`, не сырым Read/«если существует»
+  - [ ] G3: phase3plus создаёт `AUDIT_REPORT.md` через `apply_spec_change`/mutation-дверь, не сырым Write
+  - [ ] research-workflow + architecture-research-workflow: остаточный сырой `.specs/` доступ → MCP/CLI-carve-out; engine-CLI (scaffold/verdict/status/audit `-Path .specs/`) оставить (carve-out)
+  - [ ] финальный широкий скан: 0 агентского act-directing сырого `.specs/` доступа во ВСЕХ phase-доках + скиллах
+
+- [ ] P19-2: MCP-тул гапы из value-аудита (get_trace acs / propose no-op / coverage_summary) — id: p19-mcp-tool-gaps — Status: TODO | Est: 180m
+  _depends: p17-read-sufficiency_
+  _Requirements: [FR-30](FR.md#fr-30), [FR-40](FR.md#fr-40)_
+  **Done When:**
+  - [ ] G4: `get_trace FR-39` отдаёт `acs=0` хотя AC-39.1/2/3 есть — расследовать AC-covers-FR ребро в get_trace; фикс + регресс
+  - [ ] G5: `propose_spec_change` на identical (no-op) change → `ok=false findings=0` — определить/задокументировать поведение (явная NO_OP-находка ИЛИ ok=true); регресс
+  - [ ] G6: `get_coverage_summary` вернул specs=2 — подтвердить группировку (by source-dir) vs scoping-miss; задокументировать
+
+- [ ] P19-3: get_coverage spec-scoping — BDD + spec-graph-query wiring — id: p19-coverage-scope — Status: TODO | Est: 90m
+  _depends: p17-read-sufficiency_
+  _Requirements: [FR-32](FR.md#fr-32)_
+  **Done When:**
+  - [ ] BDD-сценарий: `get_coverage {spec}` scope=spec (≈164) ≠ `get_coverage {}` corpus (≈1535); биндинг на реальный buildToolRegistry
+  - [ ] spec-graph-query SKILL.md велит передавать `spec` в get_coverage (per-spec честность), не голый `{}`
+
+- [ ] P19-4: полный генеративный жизненный цикл e2e ПОД enforce (live) — id: p19-full-lifecycle-e2e — Status: TODO | Est: 240m
+  _depends: p17-enforce, p19-phase-refactor_
+  _Requirements: [FR-39](FR.md#fr-39), [FR-40](FR.md#fr-40), [FR-41](FR.md#fr-41)_
+  **Done When:**
+  - [ ] один живой `claude -p` под `SPEC_ACCESS_ENFORCE=true` гонит ВЕСЬ цикл: create_spec → заполнить фазы через apply_spec_change → CHK/decisions → задачи → /run-tests → spec-verdict GREEN — 0 residual в spec-access.jsonl, БЕЗ наёба (DONE только при passed-сценарии)
+  - [ ] throwaway убран; либо реальная маленькая фича доведена до GREEN через дверь
