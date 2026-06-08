@@ -144,7 +144,7 @@
 | T18-138 | P18-1: legacy-suspicion 4-state classifier | TODO | p17-enforce | Phase 18 — Legacy/drift spec triage (FR-43, после Phase 17) | 360m |
 | T18-139 | P18-2: HITL-маркер + триаж-отчёт + legacy-v3 резолюция | TODO | p18-legacy-classifier | Phase 18 — Legacy/drift spec triage (FR-43, после Phase 17) | 240m |
 | T19-140 | P19-1: рефакторинг ВСЕХ фаз + research на MCP-rails | TODO | p17-mutation-surface | Phase 19 — MCP-rails deep-audit gaps (2026-06-08) | 360m |
-| T19-141 | P19-2: MCP-тул гапы (get_trace acs / propose no-op / coverage_summary) | TODO | p17-read-sufficiency | Phase 19 — MCP-rails deep-audit gaps (2026-06-08) | 180m |
+| T19-141 | P19-2: MCP-тул гапы (get_trace acs / propose no-op / coverage_summary) — все 3 ложные находки аудита | DONE | p17-read-sufficiency | Phase 19 — MCP-rails deep-audit gaps (2026-06-08) | 180m |
 | T19-142 | P19-3: get_coverage spec-scoping BDD + wiring | TODO | p17-read-sufficiency | Phase 19 — MCP-rails deep-audit gaps (2026-06-08) | 90m |
 | T19-143 | P19-4: полный генеративный e2e под enforce | TODO | p17-enforce, p19-phase-refactor | Phase 19 — MCP-rails deep-audit gaps (2026-06-08) | 240m |
 | T19-144 | P19-5: оживить FR-35a test-quality honesty-гейт (мёртв e2e) | TODO | p17-read-sufficiency | Phase 19 — MCP-rails deep-audit gaps (2026-06-08) | 240m |
@@ -1355,13 +1355,14 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] research-workflow + architecture-research-workflow: остаточный сырой `.specs/` доступ → MCP/CLI-carve-out; engine-CLI (scaffold/verdict/status/audit `-Path .specs/`) оставить (carve-out)
   - [ ] финальный широкий скан: 0 агентского act-directing сырого `.specs/` доступа во ВСЕХ phase-доках + скиллах
 
-- [ ] P19-2: MCP-тул гапы из value-аудита (get_trace acs / propose no-op / coverage_summary) — id: p19-mcp-tool-gaps — Status: TODO | Est: 180m
+- [x] P19-2: MCP-тул гапы из value-аудита (get_trace acs / propose no-op / coverage_summary) — id: p19-mcp-tool-gaps — Status: DONE | Est: 180m
   _depends: p17-read-sufficiency_
   _Requirements: [FR-30](FR.md#fr-30), [FR-40](FR.md#fr-40)_
   **Done When:**
-  - [ ] G4: `get_trace FR-39` отдаёт `acs=0` хотя AC-39.1/2/3 есть — расследовать AC-covers-FR ребро в get_trace; фикс + регресс
-  - [ ] G5: `propose_spec_change` на identical (no-op) change → `ok=false findings=0` — определить/задокументировать поведение (явная NO_OP-находка ИЛИ ok=true); регресс
-  - [ ] G6: `get_coverage_summary` вернул specs=2 — подтвердить группировку (by source-dir) vs scoping-miss; задокументировать
+  - [x] G4: ЛОЖНАЯ НАХОДКА (2026-06-08) — `get_trace FR-39` корректно отдаёт `acceptance_criteria: 3` (AC-39.1/2/3); covers-рёбра FR-39→AC-39.x живые в графе. Аудит читал несуществующее поле `acs` (артефакт устаревшего bundle). Парсер-фикс не нужен
+  - [x] G5: ЛОЖНАЯ НАХОДКА — `propose_spec_change` требует `reason: z.string()` (CHANGE_SHAPE); смоук без `reason` → zod-reject envelope (без findings). С `reason` no-op даёт ЯСНУЮ находку «old_string is not unique». Refusal-путь корректен
+  - [x] G6: ЛОЖНАЯ НАХОДКА — `get_coverage_summary` отдаёт 54 спеки по slug (не 2); прежнее specs=2 — чтение устаревшего bundle
+  > Evidence: re-driven через source-handlers `buildToolRegistry(()=>buildGraphFromCwd())`. Реальные тул-баги (find_refs NODE_NOT_FOUND, list_specs nested) + G1 scoping — починены отдельно (dbc8241, 9658d06). Подробно: audit-reports/mcp-rails-deep-audit-2026-06-08.md
 
 - [ ] P19-3: get_coverage spec-scoping — BDD + spec-graph-query wiring — id: p19-coverage-scope — Status: TODO | Est: 90m
   _depends: p17-read-sufficiency_
