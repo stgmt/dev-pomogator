@@ -70,7 +70,7 @@ Then(/it retains the pre-existing protective hook entries .* never a replacement
   // protective family, enumerated BY NAME (a `.some()` would stay green while
   // a single gate silently vanished — the exact regression FR-25 forbids).
   // Matching by name, never by array index (AC-25 matching-by-name clause).
-  for (const gate of ['plan-gate', 'phase-gate', 'build_guard', 'test_guard', 'extension-json-meta-guard', 'form-guards-dispatch']) {
+  for (const gate of ['plan-gate', 'phase-gate', 'build_guard', 'test_guard', 'extension-json-meta-guard', 'form-guards-dispatch', 'spec-access-guard']) {
     assert.ok(
       pre.some((c) => c.includes(gate)),
       `PreToolUse must still carry the protective ${gate} hook (additive union, nothing dropped)`,

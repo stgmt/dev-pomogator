@@ -47,6 +47,7 @@ const PROTECTED_HOOKS = [
   // the live carrier of the five form-guards (2026-06-07 revival): removing
   // the dispatcher registration kills them all at once — protect it too.
   'form-guards-dispatch.ts',
+  'spec-access-guard.ts', // FR-39d (P17-3): the MCP-rails access guard
 ];
 
 // v4 canonical-manifest registrations (FR-24 extension scope). Scanned as

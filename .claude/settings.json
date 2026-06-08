@@ -202,6 +202,16 @@
             "timeout": 30
           }
         ]
+      },
+      {
+        "matcher": "Read|Grep|Glob|Edit|Write|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/specs-validator/spec-access-guard.ts\"",
+            "timeout": 30
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [

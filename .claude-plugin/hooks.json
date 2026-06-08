@@ -279,6 +279,16 @@
             "timeout": 30
           }
         ]
+      },
+      {
+        "matcher": "Read|Grep|Glob|Edit|Write|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PLUGIN_ROOT || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/specs-validator/spec-access-guard.ts\"",
+            "timeout": 30
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [

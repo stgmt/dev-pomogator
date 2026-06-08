@@ -134,7 +134,7 @@
 | T16-128 | P16-8: STOP-confirm discipline | TODO | — | Phase 16 — Creation-pipeline hardening (review 2026-06-07) | 180m |
 | T17-129 | P17-1: read-sufficiency | DONE | — | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 240m |
 | T17-130 | P17-2: mutation surface | DONE | p17-read-sufficiency | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 600m |
-| T17-131 | P17-3: spec-access-guard в SHADOW | TODO | p17-read-sufficiency | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 240m |
+| T17-131 | P17-3: spec-access-guard в SHADOW | DONE | p17-read-sufficiency | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 240m |
 | T17-132 | P17-4: carve-out лист движка в DESIGN | TODO | — | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 60m |
 | T17-133 | P17-5: миграция корзины 1 | TODO | p17-read-sufficiency, p17-mutation-surface | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 480m |
 | T17-134 | P17-6: ENFORCE flip | TODO | p17-mutation-surface, p17-shadow-guard, p17-skill-migration | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 120m |
@@ -1261,13 +1261,13 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] FR-40c: в сервере граф обновляет FR-14 watcher; watcher-less embedders передают refreshGraph (новый RegistryOptions) — _115 доказывает: после записи get_node видит свежий title
   - [x] SPECGEN004_114, _115, _116 GREEN (реальные handlers; _116 гоняет РЕАЛЬНЫЙ runSpecVerdict на новорождённой — GREEN); feature-map +3, drift-guard чист; bundle rebuilt, vitest 52/52
 
-- [ ] P17-3: spec-access-guard в SHADOW — id: p17-shadow-guard — Status: TODO | Est: 240m
+- [x] P17-3: spec-access-guard в SHADOW — id: p17-shadow-guard — Status: DONE (2026-06-07) | Est: 240m
   _depends: p17-read-sufficiency_
   _Requirements: [FR-39](FR.md#fr-39)_
   **Done When:**
-  - [ ] PreToolUse-хук на Read|Grep|Glob|Edit|Write|Bash: матч `.specs/**` ДО любого I/O → лог нарушения, БЕЗ блока; движковые carve-out пути не матчатся
-  - [ ] зарегистрирован ЖИВЫМ в обоих манифестах + deps-absent прогон + пин в SPECGEN004_52 + PROTECTED_HOOKS meta-guard (FR-39d — урок пяти мёртвых стражей)
-  - [ ] SPECGEN004_112 GREEN
+  - [x] `spec-access-guard.ts` на Read|Grep|Glob|Edit|Write|Bash: `violationOf` матчит `.specs/` ДО любого I/O (NFR-Performance-10); SHADOW по умолчанию (лог без блока), enforce за `SPEC_ACCESS_ENFORCE=true`; Bash-матчер = АЛГОРИТМ (FR-39f): engine-CLI вайтлист (spec-verdict/validate-spec/audit-spec/spec-status/corpus-health/collision-probe/spec-form-parsers/scaffold-spec/anchor-integrity) ALLOW даже с `.specs/`-аргументами, generic cat/sed/grep/node-e — violation
+  - [x] ЖИВАЯ регистрация в ОБОИХ манифестах (отдельная группа matcher Read|Grep|Glob|Edit|Write|Bash) + deps-absent прогон (builtins+_shared/stdin, exit 0 без node_modules) + пин в SPECGEN004_52 (поимённый gate-список) + PROTECTED_HOOKS meta-guard (FR-39d); escape `SPEC_ACCESS_SKIP=1` → лог в spec-access-escapes.jsonl
+  - [x] SPECGEN004_112 (shadow логирует без блока, exit 0) + SPECGEN004_111 (enforce deny exit 2 + аудит) GREEN — живые пробы всех тиров: shadow/engine-allow/violation/non-spec-fast/enforce-deny/escape
 
 - [ ] P17-4: carve-out лист движка в DESIGN — id: p17-carveout-list — Status: TODO | Est: 60m
   _Requirements: [FR-39](FR.md#fr-39)_

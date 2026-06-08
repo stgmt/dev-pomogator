@@ -210,3 +210,65 @@ Then('the authoritative verdict for the newborn spec is GREEN', function (this: 
     `newborn must be GREEN, gaps: ${this.newbornVerdict!.gapList.slice(0, 3).join(' | ')}`,
   );
 });
+
+// ── SPECGEN004_111 / _112 — FR-39c spec-access-guard (P17-3) ────────────────
+// Drives the REAL guard as a subprocess with PreToolUse stdin, both tiers.
+
+import { spawnSync } from 'node:child_process';
+import { pathToFileURL } from 'node:url';
+
+const GUARD = path.resolve(import.meta.dirname ?? __dirname, '..', '..', 'tools', 'specs-validator', 'spec-access-guard.ts');
+
+interface GuardWorld extends F39World {
+  guardRes?: { status: number | null; stdout: string };
+  guardCwd?: string;
+}
+
+function runGuard(world: GuardWorld, payload: object, enforce: boolean): { status: number | null; stdout: string } {
+  const r = spawnSync(process.execPath, ['--import', 'tsx', GUARD], {
+    encoding: 'utf-8',
+    input: JSON.stringify({ ...payload, cwd: world.tempDir }),
+    env: enforce ? { ...process.env, SPEC_ACCESS_ENFORCE: 'true' } : { ...process.env, SPEC_ACCESS_ENFORCE: '' },
+    timeout: 60_000,
+  });
+  return { status: r.status, stdout: r.stdout ?? '' };
+}
+
+Given('spec access enforcement is enabled after read and write sufficiency are proven', function (this: GuardWorld) {
+  fs.mkdirSync(path.join(this.tempDir, '.specs', 'guard-demo'), { recursive: true });
+});
+
+When('the agent calls a file tool on a path under the specs tree', function (this: GuardWorld) {
+  this.guardRes = runGuard(this, { tool_name: 'Read', tool_input: { file_path: '.specs/guard-demo/FR.md' } }, true);
+});
+
+Then('the call is denied with a pointer to the MCP tools', function (this: GuardWorld) {
+  assert.equal(this.guardRes!.status, 2, 'enforce mode must deny (exit 2)');
+  const out = JSON.parse(this.guardRes!.stdout);
+  assert.equal(out.hookSpecificOutput.permissionDecision, 'deny');
+  assert.match(out.hookSpecificOutput.permissionDecisionReason, /MCP|read_spec_doc/);
+});
+
+Then('the violation lands in the spec-access audit log', function (this: GuardWorld) {
+  const log = fs.readFileSync(path.join(this.tempDir, '.dev-pomogator', 'logs', 'spec-access.jsonl'), 'utf-8');
+  assert.ok(/spec-access-guard.*denied/.test(log), 'the deny must be audited');
+});
+
+Given('the spec-access guard runs in shadow mode', function (this: GuardWorld) {
+  fs.mkdirSync(path.join(this.tempDir, '.specs', 'guard-demo'), { recursive: true });
+});
+
+When('the agent reads a spec file directly', function (this: GuardWorld) {
+  this.guardRes = runGuard(this, { tool_name: 'Read', tool_input: { file_path: '.specs/guard-demo/FR.md' } }, false);
+});
+
+Then('the access is logged as a violation', function (this: GuardWorld) {
+  const log = fs.readFileSync(path.join(this.tempDir, '.dev-pomogator', 'logs', 'spec-access.jsonl'), 'utf-8');
+  assert.ok(/spec-access-guard.*shadow/.test(log), 'shadow mode must log the violation');
+});
+
+Then('the call is not blocked', function (this: GuardWorld) {
+  assert.equal(this.guardRes!.status, 0, 'shadow mode must NOT block (exit 0)');
+});
+
+void pathToFileURL;
