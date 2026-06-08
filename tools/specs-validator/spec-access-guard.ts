@@ -52,6 +52,7 @@ interface PreToolUseInput {
     file_path?: string;
     path?: string;
     pattern?: string;
+    glob?: string;
     command?: string;
   };
   cwd?: string;
@@ -61,6 +62,23 @@ interface PreToolUseInput {
 function touchesSpecs(s: string | undefined): boolean {
   if (!s) return false;
   return s.replace(/\\/g, '/').includes('.specs/');
+}
+
+/**
+ * Does the Bash command actually INVOKE an engine CLI (FR-39f)? A whole-command
+ * substring check was trivially bypassed — `cat .specs/x # spec-verdict`
+ * (comment bait) and `cat .specs/audit-spec-notes/FR.md` (path collision) both
+ * passed as "engine CLI" (2026-06-07 review, HIGH). Token-basename instead:
+ * strip shell comments, then ALLOW only if some whitespace/operator-delimited
+ * token's basename (minus .ts/.js/.mjs/.cjs) equals an ENGINE_CLI name.
+ */
+function invokesEngineCli(rawCmd: string): boolean {
+  const cmd = rawCmd.replace(/(^|\s)#.*$/gm, '$1'); // strip comments-to-EOL
+  const tokens = cmd.split(/[\s|;&()<>]+/).filter(Boolean);
+  return tokens.some((tok) => {
+    const base = tok.replace(/\\/g, '/').split('/').pop()!.replace(/\.(ts|js|mjs|cjs)$/i, '');
+    return ENGINE_CLI.includes(base);
+  });
 }
 
 /**
@@ -74,10 +92,19 @@ export function violationOf(data: PreToolUseInput): { tool: string; detail: stri
     if (touchesSpecs(inp.file_path)) return { tool: t, detail: inp.file_path! };
     return null;
   }
-  if (t === 'Grep' || t === 'Glob') {
-    // path argument OR a pattern that scopes into .specs/
+  if (t === 'Glob') {
+    // For Glob, `pattern` IS the path scope (e.g. ".specs/**/*.md").
     if (touchesSpecs(inp.path) || touchesSpecs(inp.pattern)) {
       return { tool: t, detail: inp.path ?? inp.pattern ?? '' };
+    }
+    return null;
+  }
+  if (t === 'Grep') {
+    // For Grep, `pattern` is SEARCH TEXT, not a path — gate on the path/glob
+    // SCOPE only (a search for the literal '.specs/' over src/ is not a
+    // spec-access violation; a Grep scoped by glob '.specs/**' IS).
+    if (touchesSpecs(inp.path) || touchesSpecs(inp.glob)) {
+      return { tool: t, detail: inp.path ?? inp.glob ?? '' };
     }
     return null;
   }
@@ -85,7 +112,7 @@ export function violationOf(data: PreToolUseInput): { tool: string; detail: stri
     const cmd = inp.command ?? '';
     if (!touchesSpecs(cmd)) return null;
     // FR-39f: an engine-CLI invocation is ALLOWED even with .specs/ args.
-    if (ENGINE_CLI.some((cli) => cmd.includes(cli))) return null;
+    if (invokesEngineCli(cmd)) return null;
     return { tool: 'Bash', detail: cmd.slice(0, 120) };
   }
   return null;

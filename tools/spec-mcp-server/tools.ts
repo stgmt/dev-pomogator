@@ -1023,6 +1023,7 @@ export function buildToolRegistry(
       const doc = docOf(args.doc);
       const change = toChange(args as Record<string, unknown>);
       if (change === 'ambiguous') {
+        logSpecAccess('propose_spec_change', args, 'error');
         return asJsonResult({ ok: false, error: 'AMBIGUOUS_CHANGE', hint: 'Pass EITHER {content} OR {old_string,new_string}, not both.' });
       }
       if (!change) {
@@ -1050,6 +1051,7 @@ export function buildToolRegistry(
       const doc = docOf(args.doc);
       const change = toChange(args as Record<string, unknown>);
       if (change === 'ambiguous') {
+        logSpecAccess('apply_spec_change', args, 'error');
         return asJsonResult({ ok: false, error: 'AMBIGUOUS_CHANGE', hint: 'Pass EITHER {content} OR {old_string,new_string}, not both.' });
       }
       if (!change) {

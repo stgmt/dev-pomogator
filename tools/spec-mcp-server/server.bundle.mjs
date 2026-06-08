@@ -47959,19 +47959,28 @@ function specMdFiles(repoRoot, slug, swapDoc, swapContent) {
   }
   return files;
 }
-var anchorKey = (b) => `${b.file}#${b.brokenAnchor}`;
+var anchorKey = (b) => `${b.file}#${b.targetFile}#${b.brokenAnchor}`;
 function anchorFindings(repoRoot, slug, doc, next) {
-  const baseline = new Set(
-    checkLinks(specMdFiles(repoRoot, slug)).map(anchorKey)
-  );
+  const remaining = /* @__PURE__ */ new Map();
+  for (const b of checkLinks(specMdFiles(repoRoot, slug))) {
+    remaining.set(anchorKey(b), (remaining.get(anchorKey(b)) ?? 0) + 1);
+  }
   const after = checkLinks(specMdFiles(repoRoot, slug, doc, next));
-  return after.filter((b) => !baseline.has(anchorKey(b))).map(
-    (b) => ({
+  const out = [];
+  for (const b of after) {
+    const k = anchorKey(b);
+    const left = remaining.get(k) ?? 0;
+    if (left > 0) {
+      remaining.set(k, left - 1);
+      continue;
+    }
+    out.push({
       layer: "anchor",
       line: b.line,
       message: `broken anchor #${b.brokenAnchor} \u2192 ${b.targetFile} (${b.file})`
-    })
-  );
+    });
+  }
+  return out;
 }
 function conformanceFindings(repoRoot, slug, doc, next) {
   const tmpRoot = fs14.mkdtempSync(path10.join(os.tmpdir(), "spec-mutate-"));
@@ -48696,6 +48705,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
       const doc = docOf(args.doc);
       const change = toChange(args);
       if (change === "ambiguous") {
+        logSpecAccess("propose_spec_change", args, "error");
         return asJsonResult({ ok: false, error: "AMBIGUOUS_CHANGE", hint: "Pass EITHER {content} OR {old_string,new_string}, not both." });
       }
       if (!change) {
@@ -48716,6 +48726,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
       const doc = docOf(args.doc);
       const change = toChange(args);
       if (change === "ambiguous") {
+        logSpecAccess("apply_spec_change", args, "error");
         return asJsonResult({ ok: false, error: "AMBIGUOUS_CHANGE", hint: "Pass EITHER {content} OR {old_string,new_string}, not both." });
       }
       if (!change) {

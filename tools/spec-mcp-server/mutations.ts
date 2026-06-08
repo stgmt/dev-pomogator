@@ -173,30 +173,41 @@ function specMdFiles(
   return files;
 }
 
-// Key WITHOUT line: a localized edit shifts line numbers, and a pre-existing
-// broken anchor that merely moved must NOT read as "introduced by this change".
-const anchorKey = (b: BrokenAnchor): string => `${b.file}#${b.brokenAnchor}`;
+// Key WITHOUT line (a localized edit shifts line numbers, so a pre-existing
+// break that merely moved must NOT read as new) but WITH targetFile: two links
+// sharing a fragment name yet pointing at DIFFERENT files are distinct breaks
+// and must not mask one another (2026-06-07 review, medium).
+const anchorKey = (b: BrokenAnchor): string => `${b.file}#${b.targetFile}#${b.brokenAnchor}`;
 
 /**
  * Layer 2 — anchors, DELTA-ONLY. A mutation is blamed only for broken anchors
  * it INTRODUCES, never for pre-existing breakage in sibling docs (a fresh
  * scaffold ships placeholder `#uc-N-…` cross-refs; whole-spec strictness would
- * block every unrelated edit — caught live 2026-06-07). Baseline = the spec as
- * it is on disk now; report only anchors present AFTER the change but not before.
+ * block every unrelated edit — caught live 2026-06-07). Counts by key, not a
+ * presence-Set, so ADDING a 2nd broken link with the same key as a pre-existing
+ * one is still reported (the after-count exceeds the baseline-count).
  */
 function anchorFindings(repoRoot: string, slug: string, doc: string, next: string): MutationFinding[] {
-  const baseline = new Set(
-    (checkLinks(specMdFiles(repoRoot, slug)) as BrokenAnchor[]).map(anchorKey),
-  );
+  const remaining = new Map<string, number>();
+  for (const b of checkLinks(specMdFiles(repoRoot, slug)) as BrokenAnchor[]) {
+    remaining.set(anchorKey(b), (remaining.get(anchorKey(b)) ?? 0) + 1);
+  }
   const after = checkLinks(specMdFiles(repoRoot, slug, doc, next)) as BrokenAnchor[];
-  return after
-    .filter((b) => !baseline.has(anchorKey(b)))
-    .map((b) => ({
-      layer: 'anchor' as const,
+  const out: MutationFinding[] = [];
+  for (const b of after) {
+    const k = anchorKey(b);
+    const left = remaining.get(k) ?? 0;
+    if (left > 0) {
+      remaining.set(k, left - 1); // covered by a pre-existing identical break
+      continue;
+    }
+    out.push({
+      layer: 'anchor',
       line: b.line,
       message: `broken anchor #${b.brokenAnchor} → ${b.targetFile} (${b.file})`,
-    }),
-  );
+    });
+  }
+  return out;
 }
 
 /** Layer 3 — conformance over a TEMP CLONE with the change applied. */

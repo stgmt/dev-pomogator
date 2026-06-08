@@ -39,6 +39,45 @@ export type SpawnPhase = (phase: Phase, slug: string, gapList: string[]) => Prom
 /** Run the authoritative verdict for the gate. Injectable (defaults to real). */
 export type RunGate = (slug: string) => Promise<GateResult>;
 
+/**
+ * PRODUCTION gate (FR-41b): the REAL authoritative verdict over the spec.
+ * Wired so runPhases is NOT dead-until-someone-injects (the dead-integration
+ * lesson). Lazy-imports spec-verdict so unit tests that inject their own gate
+ * never pay the cost. GREEN iff the verdict is GREEN; gapList = its gap list.
+ */
+export async function productionGate(slug: string): Promise<GateResult> {
+  const { runSpecVerdict } = await import('../../../../tools/specs-generator/spec-verdict.ts');
+  const r = await runSpecVerdict(`.specs/${slug}`, { semantic: false });
+  return { verdict: r.verdict, gapList: r.gapList };
+}
+
+/**
+ * PRODUCTION spawn (FR-41a): dispatch a headless phase agent via `claude -p`
+ * with the matching `.claude/agents/spec-phase-<phase>.md` definition. Lazy
+ * child_process import. The agent edits the spec ONLY through MCP (its
+ * allowed-tools); we trust the verdict gate over its self-report, so the
+ * stdout is returned but not parsed.
+ */
+export function productionSpawn(phase: Phase, slug: string, gapList: string[]): Promise<string> {
+  return new Promise((resolve, reject) => {
+    import('node:child_process').then(({ spawn }) => {
+      const bin = process.env.CLAUDE_BIN ?? 'claude';
+      const gaps = gapList.length ? `\nOpen verdict gaps to fix:\n- ${gapList.join('\n- ')}` : '';
+      const prompt =
+        `You are the spec-phase-${phase} agent. Work ONLY through the ` +
+        `dev-pomogator-specs MCP tools (no file tools over .specs/). ` +
+        `Author the ${phase} phase of spec "${slug}".${gaps}`;
+      const child = spawn(bin, ['-p', '--agent', `spec-phase-${phase}`, prompt], {
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+      const out: Buffer[] = [];
+      child.stdout.on('data', (c) => out.push(c));
+      child.on('error', reject);
+      child.on('exit', () => resolve(Buffer.concat(out).toString('utf8')));
+    });
+  });
+}
+
 export interface PhaseRunEvent {
   ts: string;
   phase: Phase;
@@ -49,8 +88,10 @@ export interface PhaseRunEvent {
 
 export interface PhaseRunOptions {
   slug: string;
-  spawn: SpawnPhase;
-  gate: RunGate;
+  /** Phase-agent dispatch. Default: productionSpawn (headless `claude -p`). */
+  spawn?: SpawnPhase;
+  /** Verdict gate. Default: productionGate (real runSpecVerdict). */
+  gate?: RunGate;
   /** Retry budget per phase (default 2 — NFR-Reliability-12). */
   maxRetries?: number;
   /** Observability sink; defaults to spec-access-style JSONL under repoRoot. */
@@ -85,6 +126,8 @@ function defaultLogger(repoRoot: string): (e: PhaseRunEvent) => void {
  */
 export async function runPhases(opts: PhaseRunOptions): Promise<PhaseRunResult> {
   const maxRetries = opts.maxRetries ?? 2;
+  const spawn = opts.spawn ?? productionSpawn; // real headless agent unless injected
+  const gate = opts.gate ?? productionGate; // real verdict unless injected
   const emit = opts.onEvent ?? defaultLogger(opts.repoRoot ?? process.cwd());
   const events: PhaseRunEvent[] = [];
   const record = (e: Omit<PhaseRunEvent, 'ts'>): void => {
@@ -98,8 +141,19 @@ export async function runPhases(opts: PhaseRunOptions): Promise<PhaseRunResult> 
     let passed = false;
     for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
       record({ phase, attempt, event: attempt === 1 ? 'spawn' : 'retry', detail: gapList.slice(0, 3).join(' | ') });
-      await opts.spawn(phase, opts.slug, gapList);
-      const g = await opts.gate(opts.slug);
+      // A spawn/gate throw (transient claude -p crash, verdict error) must end
+      // the run with a recorded 'fail' — never a silent abort with no event
+      // (2026-06-07 review). Treat the failing attempt as a RED that consumes
+      // the retry budget.
+      let g: GateResult;
+      try {
+        await spawn(phase, opts.slug, gapList);
+        g = await gate(opts.slug);
+      } catch (e) {
+        record({ phase, attempt, event: 'gate-red', detail: `threw: ${e instanceof Error ? e.message : String(e)}` });
+        gapList = [`phase ${phase} attempt ${attempt} threw: ${e instanceof Error ? e.message : String(e)}`];
+        continue;
+      }
       if (g.verdict === 'GREEN') {
         record({ phase, attempt, event: 'gate-green' });
         passed = true;

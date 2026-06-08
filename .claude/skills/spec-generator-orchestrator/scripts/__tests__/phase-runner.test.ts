@@ -3,7 +3,7 @@
  * injected spawn + gate — no real claude -p, no real verdict.
  */
 import { describe, it, expect } from 'vitest';
-import { runPhases, PHASES, type GateResult, type Phase } from '../phase-runner.ts';
+import { runPhases, PHASES, productionSpawn, productionGate, type GateResult, type Phase } from '../phase-runner.ts';
 
 const alwaysGreen = async (): Promise<GateResult> => ({ verdict: 'GREEN', gapList: [] });
 const noopSpawn = async (): Promise<string> => 'ok';
@@ -65,5 +65,27 @@ describe('runPhases — orchestrator-verifier (FR-41b)', () => {
     await runPhases({ slug: 'demo', spawn: noopSpawn, gate: alwaysGreen, onEvent: (e) => events.push(e.event) });
     expect(events.filter((e) => e === 'spawn')).toHaveLength(PHASES.length);
     expect(events.filter((e) => e === 'gate-green')).toHaveLength(PHASES.length);
+  });
+});
+
+describe('runPhases — exception safety (FR-41 review 2026-06-07)', () => {
+  it('a throwing gate consumes the retry budget and ends with a recorded fail (no silent abort)', async () => {
+    const r = await runPhases({
+      slug: 'demo',
+      spawn: async () => 'ok',
+      gate: async () => { throw new Error('verdict crashed'); },
+      maxRetries: 1,
+      onEvent: () => {},
+    });
+    expect(r.ok).toBe(false);
+    expect(r.failedPhase).toBe('discovery');
+    expect(r.events.some((e) => e.event === 'fail')).toBe(true);
+    expect(r.events.some((e) => e.event === 'gate-red' && /threw/.test(e.detail ?? ''))).toBe(true);
+  });
+
+  it('exposes productionSpawn + productionGate (wired, not dead-until-injected)', () => {
+    // imported below; presence = the runner has real defaults.
+    expect(typeof productionSpawn).toBe('function');
+    expect(typeof productionGate).toBe('function');
   });
 });
