@@ -121,13 +121,17 @@ hit again here when binding SPECGEN004_137 — repaired in the same pass.)
 > **READ side IMPLEMENTED (11329b2):** shared `resolveSpecDoc` containment check (replaces
 > docOf basename-strip) → read_spec_doc accepts subpaths, list_spec_docs recurses + returns
 > `attachments[]`, new `read_attachment` (base64). Proven live + BDD _138 + full suite GREEN.
-> **WRITE resolution:** arch subdir artifacts (`.architecture-research/*.md` freeform prose,
-> `QUEUE.json`/`COMPLETENESS.json`) do NOT fit the validating door (form/anchor/conformance is
-> for graph docs FR/AC/TASKS/feature) — they are written by the skills' OWN engine CLIs, already
-> covered by the engine-CLI carve-out (architecture-decision-cli.ts is in the allowed pin). So
-> apply_spec_change is NOT extended to subdir writes (no consumer needs an agent-authored subdir
-> graph-doc). Remaining: mechanical consumer SKILL.md migration (arch-decision-builder read,
-> phase2 attachments, document arch CLIs' carve-out write path).
+> **WRITE resolution (CORRECTED 2026-06-08 — my first claim was incomplete):** CLI-written
+> artifacts (init.ts scaffold of `.architecture-research/`, QUEUE.json/COMPLETENESS/AXIS via
+> architecture-decision-cli.ts) ARE covered by the engine-CLI carve-out. BUT arch-research-workflow
+> FILLS its 7 stage files `.architecture-research/<N>-stage.md` with the AGENT's Write TOOL
+> (freeform prose, not a CLI) — under enforce spec-access-guard blocks Write to `.specs/**`, and
+> the carve-out is for Bash engine-CLIs only, NOT the Write tool. So there IS a real agent-write
+> gap. Resolution (consistent with Option A): extend apply_spec_change/validateTarget/writeDocAtomic
+> to a containment-validated subpath (`resolveSpecDoc` + writeDocAtomic mkdir-parent) and SKIP the
+> graph gates (form/anchor/conformance — those are for top-level FR/AC/TASKS/feature) for non-graph
+> subdir docs like `.architecture-research/`; OR a `scripts/write-stage.ts` CLI (carve-out). NEXT.
+> Consumer READ migration DONE (41b1216): arch-decision-builder Step 3.5 + phase2 Step 5c.
 
 The agent reaches spec SUBDIRECTORIES through the SAME door, not a carve-out:
 - `read_spec_doc` / `apply_spec_change`: accept a relative SUBPATH (`ARCHITECTURE/AXIS-1.md`)
