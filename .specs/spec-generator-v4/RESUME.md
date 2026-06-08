@@ -53,16 +53,18 @@ P17-6 ENFORCE (строго последним!) ∥ P17-7/8 агенты+орк
 **Статус (2026-06-08):** P17-2/3/7/8/9 + read-tools — DONE. **P17-4 DONE** — DESIGN
 §"Engine carve-out": верифицирована полнота whitelist `ENGINE_CLI` тремя оракулами
 (direct-run enumeration / skill-grep / shadow-лог 0 ложных флагов) → deferred enforce-
-регрессии нет. **P17-5 IN_PROGRESS** — мигрирован первый связный срез (read-дверь +
-write через `apply_spec_change` + allowed-tools): `cross-spec-resolve` (read+write;
-`resolve-cli.ts` теперь эмитит план JSON в stdout, YAML читается in-process =
-carve-out), `requirements-chk-matrix`, `spec-review` SKILL §cat-14, `create-spec`
-phase2 CL-6/CL-7 (`spec-graph-query` был мигрирован ранее). **ОСТАТОК P17-5:**
-`spec-review/references/categories.md` — кукбук из ~8 act-directing грепов по `.specs/`
-(инструкции, НЕ иллюстрации — мигрировать); широкий флот (~27 скиллов) read+write
-путей; полная реструктуризация write-логики (Write/Edit→`apply_spec_change`) по флоту.
-**Оракул P17-5 = P17-6 go/no-go:** прогнать мигрированные скиллы вживую → 0 residual
-violations в `.dev-pomogator/logs/spec-access.jsonl`. P17-6 ENFORCE — строго после.
+регрессии нет. **P17-5 — статическая миграция ЗАВЕРШЕНА (IN_PROGRESS только по live-верификации).**
+Мигрированы агентские read+write пути на MCP-дверь: `cross-spec-resolve` (read+write;
+`resolve-cli.ts` эмитит план JSON, YAML in-process = carve-out), `requirements-chk-matrix`,
+`discovery-forms`, `task-board-forms` (form-filler тройка — записи через `apply_spec_change`),
+`spec-review` SKILL §cat-14 + весь кукбук (categories/antipattern/lessons-learned банеры),
+`create-spec` phase2 + frontmatter, `session-pilot` read-реф (`spec-graph-query` — ранее).
+**CLI/script-driven authoring-скиллы (carve-out, enforce-safe, миграция НЕ нужна):**
+`anchor-fix`, `cross-spec-reconcile`, `variant-matrix-build`, `architecture-decision-builder`
+— их `.specs/` I/O внутри engine-CLI. Финальный широкий скан агентского act-directing
+доступа — чисто (остаток — исторические сниппеты lessons-learned под баннером).
+**ОСТАЁТСЯ только live-verification = гейт P17-6:** прогнать мигрированные скиллы вживую
+→ 0 residual в `.dev-pomogator/logs/spec-access.jsonl`. P17-6 ENFORCE — строго после.
 
 ### Phase 16 — creation-pipeline hardening (бэклог ревью, выбран вариант «всё в v4»)
 - P16-2 evals для discovery-forms / requirements-chk-matrix / task-board-forms (360m) —

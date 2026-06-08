@@ -1281,8 +1281,11 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   **Done When:**
   - [x] точная разметка кандидатов: оракул = shadow-лог + proximity-grep; reference-доки spec-review размечены инструкция-vs-каталог (categories.md = кукбук из ~8 act-directing грепов, НЕ иллюстрации)
   - [x] первый связный срез мигрирован (read-дверь + write через apply_spec_change + allowed-tools): cross-spec-resolve (read+write, +resolve-cli эмитит план JSON), requirements-chk-matrix, spec-review SKILL §cat-14, create-spec phase2 CL-6/CL-7; spec-graph-query был мигрирован ранее
-  - [ ] ОСТАТОК: spec-review/references/categories.md кукбук (~8 грепов) + широкий флот (~27 скиллов) read+write путей; полная реструктуризация write-логики (Write/Edit→apply_spec_change) по флоту
-  - [ ] shadow-лог violations/день → 0 на живой работе (метрика гейта P17-6)
+  - [x] spec-review кукбук мигрирован: categories.md (банер + 7 рецептов на read_spec_doc), antipattern-triggers Step-2, lessons-learned банер (грепы там исторические — per advisor не переписываются); session-pilot read-реф
+  - [x] write-путь form-filler тройки на apply_spec_change: discovery-forms (USER_STORIES+RESEARCH), task-board-forms (TASKS.md; таблица через spec-status.ts = carve-out), requirements-chk-matrix
+  - [x] CLI/script-driven authoring-скиллы верифицированы как carve-out (enforce-safe, миграция НЕ нужна): anchor-fix (anchor-integrity --apply), cross-spec-reconcile (reconcile script пишет YAML in-process), variant-matrix-build, architecture-decision-builder (их `.specs/` I/O — внутри engine-CLI)
+  - [x] финальный широкий скан агентского act-directing `.specs/` доступа по всем SKILL.md+reference: чисто (остаток — только исторические сниппеты lessons-learned под баннером). Статическая миграция инструкций ЗАВЕРШЕНА
+  - [ ] shadow-лог violations/день → 0 на ЖИВОМ прогоне мигрированных скиллов (run-verification — это и есть гейт P17-6; статика done, live ещё не прогнан)
 
 - [ ] P17-6: ENFORCE flip — id: p17-enforce — Status: TODO | Est: 120m
   _depends: p17-mutation-surface, p17-shadow-guard, p17-skill-migration_
