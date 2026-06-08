@@ -87,15 +87,38 @@ function touchesSpecs(s: string | undefined): boolean {
  * `node -e "fs.readFileSync('.specs/…')"` and a `<<EOF`-to-`/tmp/x.mjs` heredoc
  * both fail (b) — `/tmp/x.mjs` is not under tools/ or .claude/skills/.
  */
+const ENGINE_RUNTIMES = new Set(['node', 'npx', 'tsx', 'bun', 'deno']);
+
+/** Is this token the engine — a canonical CLI basename or a project script path? */
+function isEngineToken(tok: string): boolean {
+  const norm = tok.replace(/\\/g, '/');
+  const base = norm.split('/').pop()!.replace(/\.(ts|js|mjs|cjs)$/i, '');
+  if (ENGINE_CLI.includes(base)) return true; // (a) canonical CLI
+  // (b) any project script (the engine's own code) — path-anchored, not basename.
+  return /\.(ts|js|mjs|cjs)$/i.test(norm) && /(^|\/)(tools|\.claude\/skills)\//.test(norm);
+}
+
 function invokesEngineCli(rawCmd: string): boolean {
   const cmd = rawCmd.replace(/(^|\s)#.*$/gm, '$1'); // strip comments-to-EOL
-  const tokens = cmd.split(/[\s|;&()<>]+/).filter(Boolean);
-  return tokens.some((tok) => {
-    const norm = tok.replace(/\\/g, '/');
-    const base = norm.split('/').pop()!.replace(/\.(ts|js|mjs|cjs)$/i, '');
-    if (ENGINE_CLI.includes(base)) return true; // (a) canonical CLI
-    // (b) any project script (the engine's own code) — path-anchored, not basename.
-    return /\.(ts|js|mjs|cjs)$/i.test(norm) && /(^|\/)(tools|\.claude\/skills)\//.test(norm);
+  // Per PIPELINE SEGMENT — the engine must be in COMMAND position, never a
+  // redirect target or a plain arg: `cat .specs/x > tools/y.ts` and
+  // `cp .specs/x tools/y.ts` are content-read bypasses if a `tools/*.ts` token
+  // anywhere counted (2026-06-08 review #3). Split on pipeline/sequence ops.
+  const segments = cmd.split(/&&|\|\||[|;&\n()]+/).map((s) => s.trim()).filter(Boolean);
+  return segments.some((seg) => {
+    // Drop redirect targets (everything from the first < or > onward is not argv).
+    const argv = seg.replace(/[<>].*$/, '').trim().split(/\s+/).filter(Boolean);
+    if (argv.length === 0) return false;
+    if (isEngineToken(argv[0])) return true; // engine is argv[0] (bare CLI or ./script)
+    // OR: a JS runtime + (flags / chained runtime) + the engine script as first real arg.
+    const exe = argv[0].replace(/\\/g, '/').split('/').pop()!;
+    if (!ENGINE_RUNTIMES.has(exe)) return false;
+    for (let i = 1; i < argv.length; i++) {
+      if (argv[i].startsWith('-')) continue; // flag, e.g. --import
+      if (ENGINE_RUNTIMES.has(argv[i])) continue; // npx tsx … (chained runtime)
+      return isEngineToken(argv[i]); // first real arg must BE the engine script
+    }
+    return false;
   });
 }
 

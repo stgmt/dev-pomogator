@@ -333,6 +333,8 @@ const MUST_DENY = [
   "node -e \"require('fs').readFileSync('.specs/demo/FR.md')\"",       // inline code, no script token
   'grep -rn X .specs/demo',                                            // generic search over .specs/
   'node /tmp/t.mjs .specs/demo',                                       // heredoc-to-/tmp escape hatch
+  'cat .specs/demo/FR.md > tools/leak.ts',                             // content-read via redirect TARGET in tools/
+  'cp .specs/demo/FR.md tools/leak.ts',                                // content-read via cp into a project dir
 ];
 interface CarveWorld extends F39World {
   carveAllowed?: string[];
