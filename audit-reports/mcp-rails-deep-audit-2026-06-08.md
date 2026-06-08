@@ -97,6 +97,12 @@ via `apply_spec_change`. Both reachable under enforce.
   of the phase docs full MCP-rails refactor (only phase2 fully migrated before this).
 - get_coverage spec-scoping: regression test + `spec-graph-query` skill wiring to
   pass `spec`.
+- **FR-35a PRODUCER (fork):** nothing writes `.dev-pomogator/.test-quality.json`. The
+  consumer chain is live (Stop-gate + get_coverage + spec-verdict all read it via the shared
+  `readVerdicts`), but the verdict file is never produced, so the gate only bites a planted
+  file. Options: (A) the `strong-tests` skill records its per-task verdict after grading
+  (LLM, non-deterministic), (B) a deterministic analyzer stage in the orchestrator, (C) both.
+  Needs a user decision — tracked as P19-5 producer residual.
 
 ## Deep gap-hunt (34-agent adversarial workflow, wf_03852f29) — 20 CONFIRMED
 
@@ -116,17 +122,25 @@ per-finding adversarial verify (default-refuted) found **27 candidates → 20 co
 - 🔴 `variant-matrix-build` mutates ACCEPTANCE_CRITERIA/{slug}.feature/TASKS via raw
   Write/Edit (SKILL.md) — NOT migrated to apply_spec_change (sibling chk-matrix is).
 - 🔴 `spec-review` Step 1 `ls -t .specs/*/.progress.json` (raw ls) → use list_spec_docs.
-- 🔴 `get_coverage` never passes `testQualityByTask` → can't cap DONE with weak/fake test.
+- 🔧 FIXED (2026-06-08) `get_coverage` never passed `testQualityByTask` → couldn't cap DONE
+  with a weak/fake test. Now reads the `.dev-pomogator/.test-quality.json` side-channel via
+  a SHARED `readVerdicts` (extracted to `test-quality-gate.ts`, one source of truth for the
+  Stop-hook + get_coverage + spec-verdict) and passes it to computeCoverage. Proven with a
+  planted WEAK verdict (install-bdd-framework → IN_PROGRESS, test_quality=WEAK). PRODUCER
+  (who WRITES the file) remains a fork — see "NOT yet covered".
 
 **MEDIUM:** create-spec SKILL:69 raw Read of .progress.json; arch-research-workflow
 writes stage files 1-7 raw to `.architecture-research/`; arch-decision writes
 COMPLETENESS.md/QUEUE.json raw; arch-review-loop edits .specs docs raw; spec-status
 Step 5b computes coverage + raw grep + sub-agent raw-read (3); spec-review Step 4
 Edit not apply_spec_change; `.architecture-research/` subdir has NO mutation-door path
-(MUTABLE_DOC_RE top-level only); **FR-35a test-quality gate INERT end-to-end** —
-`test_quality_gate_stop.ts` never writes `.test-quality.json` AND spec-verdict never
-reads testQualityByTask → the "weak test caps DONE/GREEN" honesty mechanism is dead
-(cluster with the get_coverage HIGH).
+(MUTABLE_DOC_RE top-level only); **FR-35a test-quality gate — CONSUMER side
+REVIVED (2026-06-08)** — spec-verdict now reads testQualityByTask and passes it to BOTH
+checkConformance and computeCoverage (was a 2-arg call) → a green-but-weak DONE task surfaces
+as TASK_TEST_QUALITY warning + DONE-but-unverified. get_coverage fixed in the same pass
+(HIGH above). The remaining INERT half is the PRODUCER: nothing WRITES `.test-quality.json`
+yet, so the gate only bites when the file is planted — that's a fork (strong-tests LLM stage
+vs deterministic analyzer), see "NOT yet covered".
 
 **LOW:** `DUPLICATE_DEFINITION` finding code declared but never produced
 (conformance.ts:361-376 dead `idCount`; test asserts a non-existent contract).

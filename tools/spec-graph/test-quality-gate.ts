@@ -15,6 +15,25 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Finding } from './conformance.ts';
+import type { TestQualityVerdict } from './coverage.ts';
+
+/**
+ * Read the optional per-task test-quality side-channel
+ * `.dev-pomogator/.test-quality.json` (`{ "<taskId>": "STRONG" | "WEAK" |
+ * "FAKE-POSITIVE-RISK" }`) that the strong-tests stage records. Absent/unparseable
+ * → `{}` (no verdict applied — the surface keeps its raw run-derived status).
+ * SHARED by the Stop-gate, the `get_coverage` MCP tool and `spec-verdict` so all
+ * three honesty surfaces apply the SAME quality cap (FR-35a) — single source of
+ * truth for the file path + parse, instead of three private copies.
+ */
+export function readVerdicts(repoRoot: string): Record<string, TestQualityVerdict> {
+  try {
+    const raw = fs.readFileSync(path.join(repoRoot, '.dev-pomogator', '.test-quality.json'), 'utf8');
+    return JSON.parse(raw) as Record<string, TestQualityVerdict>;
+  } catch {
+    return {};
+  }
+}
 
 export interface GateDecision {
   decision: 'block' | 'approve';

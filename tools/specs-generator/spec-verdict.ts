@@ -29,6 +29,7 @@ import { fileURLToPath } from 'url';
 import { buildGraphFromCwd } from '../spec-graph/builder.ts';
 import { checkConformance } from '../spec-graph/conformance.ts';
 import { computeCoverage, specOf, type ScenarioLike, type TaskLike } from '../spec-graph/coverage.ts';
+import { readVerdicts } from '../spec-graph/test-quality-gate.ts';
 import {
   gapsFromFindings,
   summariseGaps,
@@ -202,7 +203,11 @@ export async function runSpecVerdict(
     .replace(/^\.?\/?\.specs\//, '')
     .replace(/\/+$/, '');
   const graph = buildGraphFromCwd(cwd);
-  const allFindings = checkConformance(graph);
+  // FR-35a: the per-task test-quality side-channel caps a green-but-weak DONE task
+  // to IN_PROGRESS on this surface too (absent file → {} → no change). Same reader
+  // as the Stop-gate and get_coverage — one source of truth.
+  const testQualityByTask = readVerdicts(cwd);
+  const allFindings = checkConformance(graph, { testQualityByTask });
   const inSpec = (file: string): boolean =>
     String(file).replace(/\\/g, '/').includes(`.specs/${slug}/`);
   const specFindings = allFindings.filter((f) => inSpec(f.location.file));
@@ -239,7 +244,7 @@ export async function runSpecVerdict(
       }
     }
   }
-  const cov = computeCoverage(taskLikes, scenLikes);
+  const cov = computeCoverage(taskLikes, scenLikes, testQualityByTask);
   const buckets: Record<string, number> = {};
   for (const [b, ids] of Object.entries(cov.buckets)) buckets[b] = ids.length;
   const unverifiedDoneTasks = [...doneTaskIds].filter(

@@ -13,7 +13,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { checkConformance, type Finding } from '../../tools/spec-graph/conformance.ts';
-import { evaluateTestQualityGate, logEscape, type GateDecision } from '../../tools/spec-graph/test-quality-gate.ts';
+import { evaluateTestQualityGate, logEscape, readVerdicts, type GateDecision } from '../../tools/spec-graph/test-quality-gate.ts';
 import { computeCoverage, type CoverageReport, type ScenarioLike, type TaskLike, type TestQualityVerdict } from '../../tools/spec-graph/coverage.ts';
 import { WORKFLOW, REFERENCED_CAPABILITIES, checkFeatureMapDrift, type DriftResult } from '../../.claude/skills/spec-generator-orchestrator/scripts/feature-map.ts';
 import type { SpecGraph } from '../../tools/spec-graph/types.ts';
@@ -43,6 +43,8 @@ interface F35World {
   approveDecision?: GateDecision;
   shortEscapeDecision?: GateDecision;
   escapeLog?: string;
+  cappedReport?: CoverageReport;
+  doneReport?: CoverageReport;
 }
 
 // ── SPECGEN004_85/86 — FR-35a: a test-quality verdict caps / clears a GREEN task ──
@@ -142,6 +144,44 @@ Then('it allows the claim only with an audited skip-test-quality escape logged t
   assert.ok(fs.existsSync(this.escapeLog!), 'escape log file written');
   assert.match(fs.readFileSync(this.escapeLog!, 'utf8'), /JIRA-123/);
   fs.rmSync(path.dirname(path.dirname(path.dirname(this.escapeLog!))), { recursive: true, force: true });
+});
+
+// ── SPECGEN004_137 — FR-35a: the side-channel FILE is read by the consumer surfaces ──
+// _85/_86 feed the verdict in directly; this binds the actual gap P19-5 closed —
+// `.dev-pomogator/.test-quality.json` was never READ by get_coverage / spec-verdict.
+// Drives the REAL shared reader (readVerdicts) over a real tmp file, then the real
+// computeCoverage — proving the file path → cap chain end-to-end.
+Given('a side-channel test-quality file recording a WEAK verdict for a green DONE task', function (this: F35World) {
+  const taskId = 't-sidechannel';
+  this.taskId = taskId;
+  this.covScens = [{ id: 'SCEN-specgen004-137x', tags: ['@feature137'], result: 'PASSED' }];
+  this.covTasks = [{ id: taskId, doneWhen: 'SPECGEN004_137 passes', refs: [] }];
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'tq-sidechannel-'));
+  fs.mkdirSync(path.join(repoRoot, '.dev-pomogator'), { recursive: true });
+  fs.writeFileSync(
+    path.join(repoRoot, '.dev-pomogator', '.test-quality.json'),
+    JSON.stringify({ [taskId]: 'WEAK' }),
+  );
+  this.escapeLog = repoRoot; // reuse field to carry the tmp root for cleanup
+});
+When('the honesty read surfaces load the side-channel file', function (this: F35World) {
+  const repoRoot = this.escapeLog!;
+  // 1) WITH the file present — the real reader returns the WEAK verdict.
+  const verdict = readVerdicts(repoRoot);
+  this.cappedReport = computeCoverage(this.covTasks!, this.covScens!, verdict);
+  // 2) WITHOUT a file — an empty dir → readVerdicts returns {} → no cap.
+  const emptyRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'tq-nofile-'));
+  this.doneReport = computeCoverage(this.covTasks!, this.covScens!, readVerdicts(emptyRoot));
+  fs.rmSync(emptyRoot, { recursive: true, force: true });
+  fs.rmSync(repoRoot, { recursive: true, force: true });
+});
+Then('the verdict read from the file caps the task below DONE', function (this: F35World) {
+  const t = this.cappedReport!.tasks[this.taskId!];
+  assert.equal(t.verified_status, 'IN_PROGRESS', 'a WEAK verdict read from the side-channel file must cap a green DONE task');
+  assert.equal(t.test_quality, 'WEAK', 'the verdict from the file is surfaced on the task');
+});
+Then('with no side-channel file present the same green task reads DONE', function (this: F35World) {
+  assert.equal(this.doneReport!.tasks[this.taskId!].verified_status, 'DONE', 'absent file → {} → no cap → the green task stays DONE');
 });
 
 // ── SPECGEN004_89 — FR-35c: DONE with zero linked scenarios is not silent ────

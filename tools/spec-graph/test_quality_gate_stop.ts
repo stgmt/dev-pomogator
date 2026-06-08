@@ -17,9 +17,7 @@
  * @see ./test-quality-gate.ts (pure decision) · ./conformance.ts · ./builder.ts
  * @see .specs/spec-generator-v4/FR.md FR-35b / AC-35.4
  */
-import fs from 'node:fs';
 import { readStdinJsonSafe } from '../_shared/stdin.ts';
-import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 // NB: `builder.ts` is LAZY-imported inside main() — it pulls @cucumber/gherkin, a
@@ -27,8 +25,7 @@ import { pathToFileURL } from 'node:url';
 // hook on every Stop (dead integration). Loading it only when a modified spec actually
 // needs grading, and fail-opening when the deps are missing, keeps the hook safe to ship.
 import { checkConformance, type Finding } from './conformance.ts';
-import type { TestQualityVerdict } from './coverage.ts';
-import { evaluateTestQualityGate, escapeReason, escapeHonoured, logEscape } from './test-quality-gate.ts';
+import { evaluateTestQualityGate, escapeReason, logEscape, readVerdicts } from './test-quality-gate.ts';
 
 interface StopInput { stop_hook_active?: boolean; session_id?: string }
 
@@ -48,16 +45,6 @@ export function modifiedSpecSlugs(repoRoot: string): string[] {
     if (m) slugs.add(m[1]);
   }
   return [...slugs];
-}
-
-/** Optional per-task test-quality verdicts the orchestrator stage recorded. */
-function readVerdicts(repoRoot: string): Record<string, TestQualityVerdict> {
-  try {
-    const raw = fs.readFileSync(path.join(repoRoot, '.dev-pomogator', '.test-quality.json'), 'utf8');
-    return JSON.parse(raw) as Record<string, TestQualityVerdict>;
-  } catch {
-    return {};
-  }
 }
 
 function escapeFromCommit(repoRoot: string): string | null {

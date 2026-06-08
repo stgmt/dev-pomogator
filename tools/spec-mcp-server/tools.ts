@@ -63,6 +63,7 @@ import {
   type ScenarioLike,
   type TaskLike,
 } from '../spec-graph/coverage.ts';
+import { readVerdicts } from '../spec-graph/test-quality-gate.ts';
 
 /**
  * FR-36d (P13-3): resolve a tool-supplied node reference against the
@@ -773,7 +774,10 @@ export function buildToolRegistry(
           tasks.push({ id: t.id, doneWhen: t.doneWhen ?? '', refs: t.refs, spec: nodeSpec });
         }
       }
-      return asJsonResult({ ok: true, spec: spec ?? null, scope: spec ? 'spec' : 'corpus', ...computeCoverage(tasks, scenarios) });
+      // FR-35a: apply the per-task test-quality side-channel so a DONE task with a
+      // WEAK / FAKE-POSITIVE-RISK test reads IN_PROGRESS here too (absent file → {}).
+      const testQualityByTask = readVerdicts(process.cwd());
+      return asJsonResult({ ok: true, spec: spec ?? null, scope: spec ? 'spec' : 'corpus', ...computeCoverage(tasks, scenarios, testQualityByTask) });
     },
   });
 

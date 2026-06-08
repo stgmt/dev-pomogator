@@ -699,6 +699,13 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then it emits a finding naming the task
     And the returned finding set is not empty
 
+  @feature35
+  Scenario: SPECGEN004_137 the test-quality side-channel file caps a green DONE task on the read surfaces
+    Given a side-channel test-quality file recording a WEAK verdict for a green DONE task
+    When the honesty read surfaces load the side-channel file
+    Then the verdict read from the file caps the task below DONE
+    And with no side-channel file present the same green task reads DONE
+
   @feature36
   Scenario: SPECGEN004_90 two specs defining the same bare id produce two distinct nodes
     Given two specs that each define the bare id FR-2

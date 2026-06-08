@@ -61,13 +61,14 @@ function bucketScenarios(scenarios) {
   const out = {
     passed: [],
     pending: [],
+    not_run: [],
     undefined: [],
     ambiguous: [],
     failed: [],
     skipped: []
   };
   for (const s of scenarios) {
-    const bucket = s.result ? RESULT_TO_BUCKET[s.result.toUpperCase()] ?? "undefined" : "undefined";
+    const bucket = s.result ? RESULT_TO_BUCKET[s.result.toUpperCase()] ?? "undefined" : "not_run";
     out[bucket].push(s.id);
   }
   return out;
@@ -14298,9 +14299,6 @@ var init_builder = __esm({
   }
 });
 
-// tools/spec-graph/test_quality_gate_stop.ts
-import fs9 from "node:fs";
-
 // tools/_shared/stdin.ts
 async function readStdin() {
   let buf = "";
@@ -14320,7 +14318,6 @@ async function readStdinJsonSafe() {
 }
 
 // tools/spec-graph/test_quality_gate_stop.ts
-import path6 from "node:path";
 import { spawnSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 
@@ -14553,6 +14550,14 @@ function checkConformance(graph, opts = {}) {
 // tools/spec-graph/test-quality-gate.ts
 import fs from "node:fs";
 import path from "node:path";
+function readVerdicts(repoRoot) {
+  try {
+    const raw = fs.readFileSync(path.join(repoRoot, ".dev-pomogator", ".test-quality.json"), "utf8");
+    return JSON.parse(raw);
+  } catch {
+    return {};
+  }
+}
 var BLOCKING_CODES = /* @__PURE__ */ new Set(["TASK_TEST_QUALITY", "TASK_UNTESTED"]);
 function escapeReason(text) {
   const m = text.match(/\[skip-test-quality:\s*([^\]]+)\]/i);
@@ -14600,14 +14605,6 @@ function modifiedSpecSlugs(repoRoot) {
     if (m) slugs.add(m[1]);
   }
   return [...slugs];
-}
-function readVerdicts(repoRoot) {
-  try {
-    const raw = fs9.readFileSync(path6.join(repoRoot, ".dev-pomogator", ".test-quality.json"), "utf8");
-    return JSON.parse(raw);
-  } catch {
-    return {};
-  }
 }
 function escapeFromCommit(repoRoot) {
   const r = spawnSync("git", ["log", "-1", "--format=%B"], { cwd: repoRoot, encoding: "utf8" });

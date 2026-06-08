@@ -147,7 +147,7 @@
 | T19-141 | P19-2: MCP-тул гапы (get_trace acs / propose no-op / coverage_summary) — все 3 ложные находки аудита | DONE | p17-read-sufficiency | Phase 19 — MCP-rails deep-audit gaps (2026-06-08) | 180m |
 | T19-142 | P19-3: get_coverage spec-scoping BDD + wiring | TODO | p17-read-sufficiency | Phase 19 — MCP-rails deep-audit gaps (2026-06-08) | 90m |
 | T19-143 | P19-4: полный генеративный e2e под enforce | TODO | p17-enforce, p19-phase-refactor | Phase 19 — MCP-rails deep-audit gaps (2026-06-08) | 240m |
-| T19-144 | P19-5: оживить FR-35a test-quality honesty-гейт (мёртв e2e) | TODO | p17-read-sufficiency | Phase 19 — MCP-rails deep-audit gaps (2026-06-08) | 240m |
+| T19-144 | P19-5: FR-35a test-quality honesty-гейт — consumer-сторона жива (get_coverage/spec-verdict читают side-channel); producer = остаток | IN_PROGRESS | p17-read-sufficiency | Phase 19 — MCP-rails deep-audit gaps (2026-06-08) | 240m |
 | T19-145 | P19-6: MCP-дверь к подкаталогам спеки (ARCHITECTURE/attachments) | TODO | p17-mutation-surface | Phase 19 — MCP-rails deep-audit gaps (2026-06-08) | 300m |
 
 ## TDD Workflow
@@ -1378,14 +1378,15 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] один живой `claude -p` под `SPEC_ACCESS_ENFORCE=true` гонит ВЕСЬ цикл: create_spec → заполнить фазы через apply_spec_change → CHK/decisions → задачи → /run-tests → spec-verdict GREEN — 0 residual в spec-access.jsonl, БЕЗ наёба (DONE только при passed-сценарии)
   - [ ] throwaway убран; либо реальная маленькая фича доведена до GREEN через дверь
 
-- [ ] P19-5: оживить FR-35a test-quality honesty-гейт (мёртв end-to-end) — id: p19-test-quality-live — Status: TODO | Est: 240m
+- [ ] P19-5: оживить FR-35a test-quality honesty-гейт — CONSUMER-сторона DONE, producer = остаток-развилка — id: p19-test-quality-live — Status: IN_PROGRESS | Est: 240m
   _depends: p17-read-sufficiency_
   _Requirements: [FR-35](FR.md#fr-35), [FR-32](FR.md#fr-32)_
   **Done When:**
-  - [ ] producer: `test_quality_gate_stop.ts` РЕАЛЬНО пишет `.dev-pomogator/.test-quality.json` (сейчас не пишет → весь гейт inert)
-  - [ ] consumer get_coverage: передаёт `testQualityByTask` в computeCoverage (HIGH) → WEAK/FAKE-POSITIVE кап DONE→IN_PROGRESS
-  - [ ] consumer spec-verdict: читает testQualityByTask (сейчас 2-арг вызов) → не репортит GREEN при слабых тестах
-  - [ ] e2e регресс: WEAK-вердикт реально опускает задачу ниже DONE через MCP + verdict; planted-fake тест
+  - [x] consumer get_coverage: передаёт `testQualityByTask` в computeCoverage (HIGH) → WEAK/FAKE-POSITIVE кап DONE→IN_PROGRESS — proven planted-file (install-bdd-framework→IN_PROGRESS,test_quality=WEAK)
+  - [x] consumer spec-verdict: читает testQualityByTask + передаёт в checkConformance И computeCoverage → TASK_TEST_QUALITY warning + DONE-but-unverified (был 2-арг вызов)
+  - [x] shared reader: `readVerdicts` вынесен в `tools/spec-graph/test-quality-gate.ts` (один источник: Stop-hook + get_coverage + spec-verdict вместо 3 копий); bundles MCP+gate пересобраны; deps-absent gate-bundle exit 0
+  - [x] e2e регресс: SPECGEN004_137 — side-channel ФАЙЛ читается реальным readVerdicts → WEAK кап ниже DONE; нет файла → DONE (6/6 @feature35 green)
+  - [ ] **PRODUCER (остаток — РАЗВИЛКА):** никто пока НЕ пишет `.dev-pomogator/.test-quality.json`. Кто грейдит качество и пишет verdict: (A) strong-tests skill (LLM, недетерминирован) после прогона, (B) детерминированный анализатор-стадия в оркестраторе, (C) обе. Без producer гейт активен только когда файл подсажен вручную. Решение за юзером
   - [ ] LOW: `DUPLICATE_DEFINITION` — либо производить находку, либо удалить мёртвый код + поправить тест-контракт (conformance.ts:361-376)
 
 - [ ] P19-6: MCP-дверь к ПОДКАТАЛОГАМ спеки (ARCHITECTURE/ attachments/ .architecture-research/) — id: p19-subdir-door — Status: TODO | Est: 300m
