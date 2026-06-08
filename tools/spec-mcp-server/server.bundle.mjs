@@ -45010,13 +45010,14 @@ function bucketScenarios(scenarios) {
   const out = {
     passed: [],
     pending: [],
+    not_run: [],
     undefined: [],
     ambiguous: [],
     failed: [],
     skipped: []
   };
   for (const s of scenarios) {
-    const bucket = s.result ? RESULT_TO_BUCKET[s.result.toUpperCase()] ?? "undefined" : "undefined";
+    const bucket = s.result ? RESULT_TO_BUCKET[s.result.toUpperCase()] ?? "undefined" : "not_run";
     out[bucket].push(s.id);
   }
   return out;

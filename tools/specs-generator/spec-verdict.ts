@@ -219,6 +219,11 @@ export async function runSpecVerdict(
   const taskLikes: TaskLike[] = [];
   const scenLikes: ScenarioLike[] = [];
   const doneTaskIds = new Set<string>();
+  // not_run grouped by feature-file basename — distinguishes a genuinely
+  // filtered run of the MAIN feature (transient; re-run) from a feature file
+  // that is never in the test config (e.g. a legacy `*.feature` not in
+  // cucumber `paths` — a PERSISTENT gap a full run won't fix). 2026-06-08.
+  const notRunByFile = new Map<string, number>();
   for (const n of graph.nodes.values()) {
     if (!inSpec(n.file)) continue;
     if (n.type === 'Task') {
@@ -228,6 +233,10 @@ export async function runSpecVerdict(
     } else if (n.type === 'Scenario') {
       const s = n as ScenarioNode;
       scenLikes.push({ id: s.id, tags: s.tags, result: s.lastResult, spec: specOf(s.file) });
+      if (!s.lastResult) {
+        const base = String(s.file).replace(/\\/g, '/').split('/').pop() ?? String(s.file);
+        notRunByFile.set(base, (notRunByFile.get(base) ?? 0) + 1);
+      }
     }
   }
   const cov = computeCoverage(taskLikes, scenLikes);
@@ -304,6 +313,23 @@ export async function runSpecVerdict(
 
   const notes: string[] = [];
   if (semanticNote) notes.push(semanticNote);
+  // PARTIAL last run (FR-32 honesty): scenarios absent from the last NDJSON land
+  // in `not_run`, NOT `undefined`. A non-zero count means the last `cucumber` run
+  // was filtered (`--tags …`) or never ran some scenarios — the coverage picture
+  // is partial, NOT a spec defect. Loud note so a filtered debug run can't be
+  // misread as "the spec fell apart" (2026-06-08 incident).
+  const notRun = buckets.not_run ?? 0;
+  if (notRun > 0) {
+    const byFile = [...notRunByFile.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([f, n]) => `${f}:${n}`)
+      .join(', ');
+    notes.push(
+      `NOT_RUN — ${notRun} scenario(s) have no result in the last run (not_run, NOT "undefined"/unverified), by feature: ${byFile}. ` +
+        `A count on the MAIN feature ⇒ the last run was FILTERED (re-run the full suite). A feature absent from the test config ` +
+        `(e.g. a legacy *.feature not in cucumber \`paths\`) is a PERSISTENT gap a full run won't close — add it to paths or retire it.`,
+    );
+  }
 
   return {
     specPath,
@@ -357,8 +383,10 @@ export function renderVerdict(r: SpecVerdictResult): string {
         .map(([c, n]) => `${c}:${n}`)
         .join(', '),
   );
+  const notRunCount = (r.coverage.buckets as Record<string, number>).not_run ?? 0;
   lines.push(
     `coverage (FR-32 honesty): buckets ${JSON.stringify(r.coverage.buckets)}` +
+      (notRunCount > 0 ? ` — ⚠️ ${notRunCount} not_run (no last-run result; see NOT_RUN note for per-feature breakdown)` : '') +
       (r.coverage.unverifiedDoneTasks.length
         ? ` — DONE-but-unverified: ${r.coverage.unverifiedDoneTasks.join(', ')}`
         : ''),

@@ -15,7 +15,12 @@
  * @see ./parsers/ndjson.ts (produces ScenarioNode.lastResult via the builder)
  */
 
-export type Bucket = 'passed' | 'pending' | 'undefined' | 'ambiguous' | 'failed' | 'skipped';
+// `not_run` (scenario absent from the last NDJSON) is DISTINCT from `undefined`
+// (scenario ran but its steps are undefined/unimplemented). Conflating them made a
+// filtered `cucumber --tags X` run silently inflate `undefined` and read as "the
+// spec fell apart" (2026-06-08 incident). Separating them lets the verdict warn
+// "PARTIAL run — N scenarios not_run" instead of mislabelling them unverified.
+export type Bucket = 'passed' | 'pending' | 'undefined' | 'ambiguous' | 'failed' | 'skipped' | 'not_run';
 export type VerifiedStatus = 'DONE' | 'IN_PROGRESS' | 'unverified';
 /** Test-body quality verdict from the `strong-tests`/`spec-status` audit (FR-35a). */
 export type TestQualityVerdict = 'STRONG' | 'WEAK' | 'FAKE-POSITIVE-RISK';
@@ -35,7 +40,9 @@ export interface ScenarioLike {
   id: string;
   /** Gherkin tags, e.g. `@feature32`. */
   tags: string[];
-  /** Last run result; `undefined` → not run yet → counted as `undefined`. */
+  /** Last run result enum (PASSED/FAILED/UNDEFINED/…). ABSENT (`result == null`)
+   *  → the scenario was NOT in the last NDJSON → `not_run` bucket (NOT `undefined`,
+   *  which is reserved for a real UNDEFINED-steps result). */
   result?: string;
   /** Owning spec slug (from `.specs/<slug>/`). Enables same-spec tag scoping. */
   spec?: string;
@@ -119,18 +126,23 @@ export function scenarioKey(s: string): string | null {
   return m ? `specgen004_${m[1]}` : null;
 }
 
-/** Group scenarios by last result. Missing/unknown result → `undefined` bucket. */
+/** Group scenarios by last result. ABSENT result → `not_run` (not in the last
+ *  NDJSON); a present-but-unknown enum → `undefined`. */
 export function bucketScenarios(scenarios: ScenarioLike[]): Record<Bucket, string[]> {
   const out: Record<Bucket, string[]> = {
     passed: [],
     pending: [],
+    not_run: [],
     undefined: [],
     ambiguous: [],
     failed: [],
     skipped: [],
   };
   for (const s of scenarios) {
-    const bucket = s.result ? (RESULT_TO_BUCKET[s.result.toUpperCase()] ?? 'undefined') : 'undefined';
+    // ABSENT result → not_run (filtered/never-run); present enum → its bucket
+    // (an unknown present enum still falls to `undefined`, the genuine "ran but
+    // unresolved" bucket).
+    const bucket: Bucket = s.result ? (RESULT_TO_BUCKET[s.result.toUpperCase()] ?? 'undefined') : 'not_run';
     out[bucket].push(s.id);
   }
   return out;

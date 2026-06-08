@@ -51,8 +51,12 @@ describe('bucketScenarios — conservation invariant', () => {
     expect(buckets.failed).toEqual(['f']);
     expect(buckets.skipped).toEqual(['g']);
   });
-  it('treats missing AND unknown result as undefined', () => {
-    expect(buckets.undefined.sort()).toEqual(['d', 'h', 'i']);
+  it('separates not_run (ABSENT result) from undefined (UNDEFINED-steps or unknown present)', () => {
+    // 2026-06-08 fix: a scenario absent from the last NDJSON (`h`) is `not_run`,
+    // NOT `undefined`. `d` (real UNDEFINED result) + `i` (unknown present enum)
+    // stay `undefined` — so a filtered run inflates not_run, not undefined.
+    expect(buckets.not_run).toEqual(['h']);
+    expect(buckets.undefined.sort()).toEqual(['d', 'i']);
   });
 });
 

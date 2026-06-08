@@ -104,6 +104,17 @@ guard-фиксу P17-4 (их basename'ы НЕ в ENGINE_CLI → были бы DE
 - DONE-задача без мапящегося сценария = TASK_UNTESTED gap = RED вердикт (ловило дважды).
 - Тесты, спавнящие guard-ы, пишут DENY в реальный `~/.dev-pomogator/logs/form-guards.log`
   → точные счётчики изолировать через инжектируемые пути (softLog).
+- **Партиальный NDJSON ⇒ обманчивое покрытие (починено 2026-06-08)**: cucumber
+  (`cucumber.json` формат `message:.dev-pomogator/.last-test-run.ndjson`)
+  ПЕРЕЗАПИСЫВАЕТ общий NDJSON на каждом прогоне; `cucumber --tags X` пишет только
+  подмножество → coverage видел остальные как «undefined» (как будто спека
+  развалилась). Фикс: отдельный бакет `not_run` (нет результата) ≠ `undefined`
+  (undefined-шаги) + NOT_RUN-нота в `spec-verdict` с разбивкой по feature-файлу.
+  Разбивка различает: счётчик на ГЛАВНОМ feature ⇒ прогон был фильтрованный
+  (перепрогнать полный); feature вне `cucumber.json paths` (напр. `legacy-v3.feature`,
+  28 сценариев SPECGEN003) ⇒ ПЕРСИСТЕНТНАЯ дыра (полный прогон не закроет — это
+  открытый вопрос: добавить в paths или ретайрнуть). После `cucumber --tags`
+  всё равно прогоняй полный сьют перед чтением coverage.
 - **Docker EACCES на `.docker-status`**: если host-side запустить wrapper/`mkdir -p` под
   `daria` — каталог `.dev-pomogator/.docker-status` станет 755 owned host-UID, и контейнерный
   `testuser` (UID 1000) не сможет писать → wrapper падает `EACCES` на старте, ноль тестов,

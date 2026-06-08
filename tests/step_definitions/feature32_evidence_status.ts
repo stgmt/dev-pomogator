@@ -136,6 +136,32 @@ Then(/it never reports .DONE. while a linked scenario is pending, undefined or a
   assert.notEqual(this.traceNode!.verified_status, 'DONE');
 });
 
+// ── SPECGEN004_134 — not_run (absent) separated from undefined (FR-32 honesty) ─
+// Regression for the 2026-06-08 conflation: a scenario absent from the last
+// NDJSON (filtered `--tags` run) must bucket as not_run, NOT undefined — else a
+// debug run silently reads as "the spec fell apart".
+Given(
+  'a coverage run where one scenario passed, one is UNDEFINED, and one was not in the last NDJSON',
+  function (this: F32World) {
+    this.graph = makeGraph(
+      [
+        { id: 's-ran', tags: [], result: 'PASSED' },
+        { id: 's-undef', tags: [], result: 'UNDEFINED' }, // ran, steps undefined
+        { id: 's-absent', tags: [] }, // absent from NDJSON → not_run
+      ],
+      [],
+    );
+  },
+);
+When('coverage buckets are computed', function (this: F32World) {
+  this.report = computeCoverage([...graphTasks(this.graph!)], [...graphScens(this.graph!)]);
+});
+Then('the absent scenario is not_run and the UNDEFINED one stays undefined', function (this: F32World) {
+  assert.deepEqual(this.report!.buckets.not_run, ['s-absent']);
+  assert.deepEqual(this.report!.buckets.undefined, ['s-undef']);
+  assert.deepEqual(this.report!.buckets.passed, ['s-ran']);
+});
+
 // ── helpers: pull TaskLike / ScenarioLike out of the graph ──────────────────
 function* graphScens(g: SpecGraph) {
   for (const n of g.nodes.values()) if (n.type === 'Scenario') yield { id: n.id, tags: (n as any).tags, result: (n as any).lastResult };

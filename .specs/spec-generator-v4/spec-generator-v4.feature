@@ -995,3 +995,9 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given the spec-access-guard engine-CLI carve-out
     When each documented engine CLI and a generic reader run over the specs tree
     Then every engine CLI is allowed and the generic reader stays a violation
+
+  @FR-32
+  Scenario: SPECGEN004_134 not_run (absent from the last NDJSON) is separated from undefined
+    Given a coverage run where one scenario passed, one is UNDEFINED, and one was not in the last NDJSON
+    When coverage buckets are computed
+    Then the absent scenario is not_run and the UNDEFINED one stays undefined
