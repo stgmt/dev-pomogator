@@ -147,6 +147,8 @@
 | T19-141 | P19-2: MCP-тул гапы (get_trace acs / propose no-op / coverage_summary) | TODO | p17-read-sufficiency | Phase 19 — MCP-rails deep-audit gaps (2026-06-08) | 180m |
 | T19-142 | P19-3: get_coverage spec-scoping BDD + wiring | TODO | p17-read-sufficiency | Phase 19 — MCP-rails deep-audit gaps (2026-06-08) | 90m |
 | T19-143 | P19-4: полный генеративный e2e под enforce | TODO | p17-enforce, p19-phase-refactor | Phase 19 — MCP-rails deep-audit gaps (2026-06-08) | 240m |
+| T19-144 | P19-5: оживить FR-35a test-quality honesty-гейт (мёртв e2e) | TODO | p17-read-sufficiency | Phase 19 — MCP-rails deep-audit gaps (2026-06-08) | 240m |
+| T19-145 | P19-6: MCP-дверь к подкаталогам спеки (ARCHITECTURE/attachments) | TODO | p17-mutation-surface | Phase 19 — MCP-rails deep-audit gaps (2026-06-08) | 300m |
 
 ## TDD Workflow
 
@@ -1374,3 +1376,22 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   **Done When:**
   - [ ] один живой `claude -p` под `SPEC_ACCESS_ENFORCE=true` гонит ВЕСЬ цикл: create_spec → заполнить фазы через apply_spec_change → CHK/decisions → задачи → /run-tests → spec-verdict GREEN — 0 residual в spec-access.jsonl, БЕЗ наёба (DONE только при passed-сценарии)
   - [ ] throwaway убран; либо реальная маленькая фича доведена до GREEN через дверь
+
+- [ ] P19-5: оживить FR-35a test-quality honesty-гейт (мёртв end-to-end) — id: p19-test-quality-live — Status: TODO | Est: 240m
+  _depends: p17-read-sufficiency_
+  _Requirements: [FR-35](FR.md#fr-35), [FR-32](FR.md#fr-32)_
+  **Done When:**
+  - [ ] producer: `test_quality_gate_stop.ts` РЕАЛЬНО пишет `.dev-pomogator/.test-quality.json` (сейчас не пишет → весь гейт inert)
+  - [ ] consumer get_coverage: передаёт `testQualityByTask` в computeCoverage (HIGH) → WEAK/FAKE-POSITIVE кап DONE→IN_PROGRESS
+  - [ ] consumer spec-verdict: читает testQualityByTask (сейчас 2-арг вызов) → не репортит GREEN при слабых тестах
+  - [ ] e2e регресс: WEAK-вердикт реально опускает задачу ниже DONE через MCP + verdict; planted-fake тест
+  - [ ] LOW: `DUPLICATE_DEFINITION` — либо производить находку, либо удалить мёртвый код + поправить тест-контракт (conformance.ts:361-376)
+
+- [ ] P19-6: MCP-дверь к ПОДКАТАЛОГАМ спеки (ARCHITECTURE/ attachments/ .architecture-research/) — id: p19-subdir-door — Status: TODO | Est: 300m
+  _depends: p17-mutation-surface_
+  _Requirements: [FR-39](FR.md#fr-39), [FR-40](FR.md#fr-40)_
+  **Done When:**
+  - [ ] read-дверь достаёт subdir-доки (AXIS-*.md, COMPLETENESS.md) — read_spec_doc top-level-only сейчас → arch-decision-builder step 3.5 под enforce блок
+  - [ ] mutation-дверь пишет subdir (.architecture-research/<N>-stage.md, QUEUE.json, COMPLETENESS.md) ЛИБО эти CLI/in-process помечены carve-out (MUTABLE_DOC_RE top-level-only сейчас)
+  - [ ] attachments: `read_attachment` MCP-тул (multimodal/binary) ЛИБО carve-out для `.specs/<slug>/attachments/` — phase2 Step 5c Jira-verify под enforce блок
+  - [ ] решение задокументировано: новая дверь vs carve-out subdir-ов (граница агент-vs-движок)

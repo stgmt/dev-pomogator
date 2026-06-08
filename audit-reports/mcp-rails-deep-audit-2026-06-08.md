@@ -83,3 +83,43 @@ via `apply_spec_change`. Both reachable under enforce.
   of the phase docs full MCP-rails refactor (only phase2 fully migrated before this).
 - get_coverage spec-scoping: regression test + `spec-graph-query` skill wiring to
   pass `spec`.
+
+## Deep gap-hunt (34-agent adversarial workflow, wf_03852f29) — 20 CONFIRMED
+
+The manual pass found 6; the user said "мало найдено". A 7-area parallel finder +
+per-finding adversarial verify (default-refuted) found **27 candidates → 20 confirmed**.
+
+**HIGH:**
+- 🔧 FIXED (dbc8241) `find_refs` returned ok:true on a NON-EXISTENT id (fake-positive
+  "nothing references this") — now NODE_NOT_FOUND like siblings.
+- 🔧 FIXED (dbc8241) `list_specs` regex collapsed nested specs (`backlog/<name>`→`backlog`)
+  → 5+ nested specs invisible — now specOf full path + artifact-subdir filter.
+- 🔴 No MCP path for BINARY ATTACHMENTS (`phase2` Step 5c Jira multimodal verify reads
+  `.specs/<slug>/attachments/<file>` via raw Read; read_spec_doc filters to md/feature)
+  → needs a `read_attachment` MCP tool or an attachments carve-out.
+- 🔴 `architecture-decision-builder` reads `ARCHITECTURE/AXIS-*.md` raw (SKILL.md:86);
+  read_spec_doc can't reach spec SUBDIRECTORIES (top-level basename only) → enforce blocks.
+- 🔴 `variant-matrix-build` mutates ACCEPTANCE_CRITERIA/{slug}.feature/TASKS via raw
+  Write/Edit (SKILL.md) — NOT migrated to apply_spec_change (sibling chk-matrix is).
+- 🔴 `spec-review` Step 1 `ls -t .specs/*/.progress.json` (raw ls) → use list_spec_docs.
+- 🔴 `get_coverage` never passes `testQualityByTask` → can't cap DONE with weak/fake test.
+
+**MEDIUM:** create-spec SKILL:69 raw Read of .progress.json; arch-research-workflow
+writes stage files 1-7 raw to `.architecture-research/`; arch-decision writes
+COMPLETENESS.md/QUEUE.json raw; arch-review-loop edits .specs docs raw; spec-status
+Step 5b computes coverage + raw grep + sub-agent raw-read (3); spec-review Step 4
+Edit not apply_spec_change; `.architecture-research/` subdir has NO mutation-door path
+(MUTABLE_DOC_RE top-level only); **FR-35a test-quality gate INERT end-to-end** —
+`test_quality_gate_stop.ts` never writes `.test-quality.json` AND spec-verdict never
+reads testQualityByTask → the "weak test caps DONE/GREEN" honesty mechanism is dead
+(cluster with the get_coverage HIGH).
+
+**LOW:** `DUPLICATE_DEFINITION` finding code declared but never produced
+(conformance.ts:361-376 dead `idCount`; test asserts a non-existent contract).
+
+**Cross-cutting themes:** (1) the mutation/read door is TOP-LEVEL-DOC only — spec
+SUBDIRECTORIES (ARCHITECTURE/, attachments/, .architecture-research/) have no MCP path,
+so every skill using them breaks under enforce; (2) the test-QUALITY honesty layer is
+wired in code but dead end-to-end (no producer, no consumer); (3) several authoring
+skills (variant-matrix, spec-review, spec-status, arch-*) were never migrated off raw
+Read/Write/ls — only the 4-5 from the first slice were.
