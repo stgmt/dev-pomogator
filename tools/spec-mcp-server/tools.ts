@@ -752,24 +752,28 @@ export function buildToolRegistry(
     name: 'get_coverage',
     description:
       'FR-32 honesty rollup from the latest run: per-scenario buckets ' +
-      '(passed/pending/undefined/ambiguous/failed/skipped) + per-task ' +
+      '(passed/pending/undefined/ambiguous/failed/skipped/not_run) + per-task ' +
       'verified_status (DONE only when EVERY mapped scenario is green). ' +
-      'Tasks map to scenarios via their FR refs (FR-N ↔ @featureN).',
-    inputShape: {} as const satisfies z.ZodRawShape,
-    handler: async () => {
+      'Tasks map to scenarios via their FR refs (FR-N ↔ @featureN). Pass `spec` ' +
+      'to SCOPE the buckets to one spec (omit → whole-corpus rollup, where every ' +
+      'OTHER spec not in the last run shows as not_run — usually pass `spec`).',
+    inputShape: { spec: z.string().optional() } as const satisfies z.ZodRawShape,
+    handler: async ({ spec }) => {
       const graph = getGraph();
       const scenarios: ScenarioLike[] = [];
       const tasks: TaskLike[] = [];
       for (const node of graph.nodes.values()) {
+        const nodeSpec = specOf((node as { file: string }).file);
+        if (spec && nodeSpec !== spec) continue; // FR-32 scoping: per-spec when asked
         if (node.type === 'Scenario') {
           const s = node as ScenarioNode;
-          scenarios.push({ id: s.id, tags: s.tags, result: s.lastResult, spec: specOf(s.file) });
+          scenarios.push({ id: s.id, tags: s.tags, result: s.lastResult, spec: nodeSpec });
         } else if (node.type === 'Task') {
           const t = node as TaskNode;
-          tasks.push({ id: t.id, doneWhen: t.doneWhen ?? '', refs: t.refs, spec: specOf(t.file) });
+          tasks.push({ id: t.id, doneWhen: t.doneWhen ?? '', refs: t.refs, spec: nodeSpec });
         }
       }
-      return asJsonResult({ ok: true, ...computeCoverage(tasks, scenarios) });
+      return asJsonResult({ ok: true, spec: spec ?? null, scope: spec ? 'spec' : 'corpus', ...computeCoverage(tasks, scenarios) });
     },
   });
 

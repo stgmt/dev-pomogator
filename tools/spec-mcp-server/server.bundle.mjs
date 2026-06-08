@@ -48502,22 +48502,24 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
   });
   tools.push({
     name: "get_coverage",
-    description: "FR-32 honesty rollup from the latest run: per-scenario buckets (passed/pending/undefined/ambiguous/failed/skipped) + per-task verified_status (DONE only when EVERY mapped scenario is green). Tasks map to scenarios via their FR refs (FR-N \u2194 @featureN).",
-    inputShape: {},
-    handler: async () => {
+    description: "FR-32 honesty rollup from the latest run: per-scenario buckets (passed/pending/undefined/ambiguous/failed/skipped/not_run) + per-task verified_status (DONE only when EVERY mapped scenario is green). Tasks map to scenarios via their FR refs (FR-N \u2194 @featureN). Pass `spec` to SCOPE the buckets to one spec (omit \u2192 whole-corpus rollup, where every OTHER spec not in the last run shows as not_run \u2014 usually pass `spec`).",
+    inputShape: { spec: external_exports.string().optional() },
+    handler: async ({ spec }) => {
       const graph = getGraph();
       const scenarios = [];
       const tasks = [];
       for (const node of graph.nodes.values()) {
+        const nodeSpec = specOf(node.file);
+        if (spec && nodeSpec !== spec) continue;
         if (node.type === "Scenario") {
           const s = node;
-          scenarios.push({ id: s.id, tags: s.tags, result: s.lastResult, spec: specOf(s.file) });
+          scenarios.push({ id: s.id, tags: s.tags, result: s.lastResult, spec: nodeSpec });
         } else if (node.type === "Task") {
           const t = node;
-          tasks.push({ id: t.id, doneWhen: t.doneWhen ?? "", refs: t.refs, spec: specOf(t.file) });
+          tasks.push({ id: t.id, doneWhen: t.doneWhen ?? "", refs: t.refs, spec: nodeSpec });
         }
       }
-      return asJsonResult({ ok: true, ...computeCoverage(tasks, scenarios) });
+      return asJsonResult({ ok: true, spec: spec ?? null, scope: spec ? "spec" : "corpus", ...computeCoverage(tasks, scenarios) });
     }
   });
   tools.push({
