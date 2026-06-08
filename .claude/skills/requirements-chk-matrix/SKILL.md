@@ -79,7 +79,7 @@ For each FR-N, emit at least one CHK row. Format:
 
 If an FR has multiple ACs, emit `CHK-FR{n}-02`, `-03`, etc. If an FR relates to non-functional concerns (NFR), emit an additional row with the SAME numeric id scheme (`CHK-FR{n}-{next nn}`) — `Verification Method: Manual review` or `Integration test`, and mark the NFR linkage in `Notes` (e.g. `NFR-Performance-1`). **NEVER `CHK-FR{n}-NFR`** — the guard contract `CHK_ID_VALID = /^CHK-FR\d+-\d{2}$/` (spec-form-parsers.ts) rejects letter suffixes and `requirements-chk-guard` will DENY the Write (caught in the 2026-06-07 creation-pipeline review: the skill used to instruct the very format its own guard blocks).
 
-Write via Edit: anchor on existing `## Verification Matrix` if present, else append after `## Functional Requirements` section.
+Write via `apply_spec_change({ spec, doc: "REQUIREMENTS.md", old_string, new_string })` (MCP-rails — not a raw Edit): anchor `old_string` on the existing `## Verification Matrix` heading if present (place rows under it), else anchor on `## Functional Requirements` to append the section after it. The mutation door re-checks the CHK form (`CHK_ID_VALID`) before the disk write, so a bad row is refused, not silently landed.
 
 ### Step 3 — Append Verification Process and Summary Counts
 

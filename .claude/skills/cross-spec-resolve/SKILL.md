@@ -12,7 +12,7 @@ description: |
     C — defer with explicit OUT_OF_SCOPE marker
   Foreign-spec edits (modifying another slug's `.md`) fire an additional
   confirmation banner.
-allowed-tools: mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__apply_spec_change, mcp__dev-pomogator-specs__propose_spec_change, Bash, AskUserQuestion
+allowed-tools: mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__apply_spec_change, mcp__dev-pomogator-specs__propose_spec_change, Bash, Edit, AskUserQuestion
 ---
 
 # cross-spec-resolve
