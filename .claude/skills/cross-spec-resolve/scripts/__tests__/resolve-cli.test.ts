@@ -22,14 +22,18 @@ describe('resolveCli', () => {
     expect(r.stdout).toMatch(/Run \/cross-spec-reconcile first/);
   });
 
-  it('exits 0 and reports the plan size when a report exists', () => {
+  it('exits 0 and emits the structured plan as JSON when a report exists', () => {
     fs.writeFileSync(
       path.join(root, '.specs', 'auth', 'consistency-report.yaml'),
       'findings: []\n',
     );
     const r = resolveCli('auth', root);
     expect(r.exitCode).toBe(0);
-    expect(r.stdout).toMatch(/finding\(s\) to resolve/);
+    // MCP-rails: the agent consumes the plan from stdout, not a raw Read of the
+    // .specs/ YAML — so the CLI must emit machine-parseable structure.
+    const parsed = JSON.parse(r.stdout) as { count: number; plan: unknown[] };
+    expect(parsed.count).toBe(0);
+    expect(parsed.plan).toEqual([]);
   });
 
   it('exits 2 on a usage error (no slug)', () => {

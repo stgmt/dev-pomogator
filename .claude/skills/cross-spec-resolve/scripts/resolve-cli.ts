@@ -21,9 +21,13 @@ export function resolveCli(slug: string | undefined, repoRoot: string): ResolveC
     // SPECGEN004_47: no report → actionable hint + non-zero exit.
     return { stdout: `${result.hint ?? 'Run /cross-spec-reconcile first'}\n`, exitCode: 1 };
   }
-  // A report exists — the live skill takes over the interactive loop. The CLI
-  // confirms the plan size so callers see there is work to do.
-  return { stdout: `${result.plan?.length ?? 0} finding(s) to resolve\n`, exitCode: 0 };
+  // A report exists — emit the structured plan (the 5-field explanation blocks
+  // walker.ts already built) as JSON so the live skill drives the interactive
+  // loop from THIS stdout. MCP-rails (FR-39): the YAML is read in-process here
+  // (engine carve-out), the agent consumes the CLI's stdout — it never `Read`s
+  // the `.specs/` file directly. `count` stays for a human eyeballing the run.
+  const plan = result.plan ?? [];
+  return { stdout: JSON.stringify({ count: plan.length, plan }, null, 2) + '\n', exitCode: 0 };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

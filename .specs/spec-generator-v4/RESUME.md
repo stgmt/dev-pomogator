@@ -1,6 +1,6 @@
 # RESUME — spec-generator-v4 (handoff, continue from here)
 
-**Updated:** 2026-06-07 · **Branch:** `feat/phase-2a-mcp-server-and-hooks` · **PR:** [#32](https://github.com/stgmt/dev-pomogator/pull/32)
+**Updated:** 2026-06-08 · **Branch:** `feat/phase-2a-mcp-server-and-hooks` · **PR:** [#32](https://github.com/stgmt/dev-pomogator/pull/32)
 
 Pull this branch on any machine, read this file, and continue. Single source of truth for
 «где остановились и что дальше». Предыдущая версия этого файла (2026-06-05, «zero code
@@ -50,6 +50,20 @@ P17-1 read-sufficiency → P17-2 mutation → P17-3 shadow-хук → P17-5 ми
 P17-6 ENFORCE (строго последним!) ∥ P17-7/8 агенты+оркестратор ∥ P17-9 слойный контракт skill↔MCP (FR-42: юзер входит через скилл, логика в MCP). Анализ:
 `audit-reports/mcp-rails-wave-design.md`; сценарии SPECGEN004_111..119 (red).
 
+**Статус (2026-06-08):** P17-2/3/7/8/9 + read-tools — DONE. **P17-4 DONE** — DESIGN
+§"Engine carve-out": верифицирована полнота whitelist `ENGINE_CLI` тремя оракулами
+(direct-run enumeration / skill-grep / shadow-лог 0 ложных флагов) → deferred enforce-
+регрессии нет. **P17-5 IN_PROGRESS** — мигрирован первый связный срез (read-дверь +
+write через `apply_spec_change` + allowed-tools): `cross-spec-resolve` (read+write;
+`resolve-cli.ts` теперь эмитит план JSON в stdout, YAML читается in-process =
+carve-out), `requirements-chk-matrix`, `spec-review` SKILL §cat-14, `create-spec`
+phase2 CL-6/CL-7 (`spec-graph-query` был мигрирован ранее). **ОСТАТОК P17-5:**
+`spec-review/references/categories.md` — кукбук из ~8 act-directing грепов по `.specs/`
+(инструкции, НЕ иллюстрации — мигрировать); широкий флот (~27 скиллов) read+write
+путей; полная реструктуризация write-логики (Write/Edit→`apply_spec_change`) по флоту.
+**Оракул P17-5 = P17-6 go/no-go:** прогнать мигрированные скиллы вживую → 0 residual
+violations в `.dev-pomogator/logs/spec-access.jsonl`. P17-6 ENFORCE — строго после.
+
 ### Phase 16 — creation-pipeline hardening (бэклог ревью, выбран вариант «всё в v4»)
 - P16-2 evals для discovery-forms / requirements-chk-matrix / task-board-forms (360m) —
   самый ценный: оба guard-дедлока P16-1 жили бы меньше при наличии evals.
@@ -83,3 +97,9 @@ P17-6 ENFORCE (строго последним!) ∥ P17-7/8 агенты+орк
 - DONE-задача без мапящегося сценария = TASK_UNTESTED gap = RED вердикт (ловило дважды).
 - Тесты, спавнящие guard-ы, пишут DENY в реальный `~/.dev-pomogator/logs/form-guards.log`
   → точные счётчики изолировать через инжектируемые пути (softLog).
+- **Docker EACCES на `.docker-status`**: если host-side запустить wrapper/`mkdir -p` под
+  `daria` — каталог `.dev-pomogator/.docker-status` станет 755 owned host-UID, и контейнерный
+  `testuser` (UID 1000) не сможет писать → wrapper падает `EACCES` на старте, ноль тестов,
+  но `docker-test.sh` отдаёт exit 0 (обманчиво — ЧИТАЙ хвост). Фикс: `docker run --rm -v
+  "${PWD}\.dev-pomogator\.docker-status:/x" alpine chmod -R 777 /x` (host `chmod` — no-op на
+  NTFS). Не запускать host-side `test_runner_wrapper` в этом repo — только Docker.

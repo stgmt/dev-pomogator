@@ -135,8 +135,8 @@
 | T17-129 | P17-1: read-sufficiency | DONE | — | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 240m |
 | T17-130 | P17-2: mutation surface | DONE | p17-read-sufficiency | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 600m |
 | T17-131 | P17-3: spec-access-guard в SHADOW | DONE | p17-read-sufficiency | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 240m |
-| T17-132 | P17-4: carve-out лист движка в DESIGN | TODO | — | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 60m |
-| T17-133 | P17-5: миграция корзины 1 | TODO | p17-read-sufficiency, p17-mutation-surface | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 480m |
+| T17-132 | P17-4: carve-out лист движка в DESIGN | DONE | — | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 60m |
+| T17-133 | P17-5: миграция корзины 1 | IN_PROGRESS | p17-read-sufficiency, p17-mutation-surface | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 480m |
 | T17-134 | P17-6: ENFORCE flip | TODO | p17-mutation-surface, p17-shadow-guard, p17-skill-migration | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 120m |
 | T17-135 | P17-7: фазовые headless-агенты | DONE | p17-read-sufficiency, p17-mutation-surface | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 480m |
 | T17-136 | P17-8: оркестратор-проверятор | DONE | p17-phase-agents | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 480m |
@@ -1269,17 +1269,19 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] ЖИВАЯ регистрация в ОБОИХ манифестах (отдельная группа matcher Read|Grep|Glob|Edit|Write|Bash) + deps-absent прогон (builtins+_shared/stdin, exit 0 без node_modules) + пин в SPECGEN004_52 (поимённый gate-список) + PROTECTED_HOOKS meta-guard (FR-39d); escape `SPEC_ACCESS_SKIP=1` → лог в spec-access-escapes.jsonl
   - [x] SPECGEN004_112 (shadow логирует без блока, exit 0) + SPECGEN004_111 (enforce deny exit 2 + аудит) GREEN — живые пробы всех тиров: shadow/engine-allow/violation/non-spec-fast/enforce-deny/escape
 
-- [ ] P17-4: carve-out лист движка в DESIGN — id: p17-carveout-list — Status: TODO | Est: 60m
+- [x] P17-4: carve-out лист движка в DESIGN — id: p17-carveout-list — Status: DONE | Est: 60m
   _Requirements: [FR-39](FR.md#fr-39)_
   **Done When:**
-  - [ ] DESIGN.md фиксирует корзину 2 (39 engine-файлов по грепу 2026-06-07) как разрешённые in-process читатели; guard их не трогает
+  - [x] DESIGN.md фиксирует обе половины carve-out: корзину 2 (39 in-process читателей — guard их физически не трогает, информационно) И — главное — ВЕРИФИЦИРОВАННУЮ полноту whitelist `ENGINE_CLI` тремя оракулами (enumeration direct-run CLI / skill-instruction grep / shadow-лог: 0 ложных флагов), вывод: deferred enforce-регрессии нет (DESIGN §"Engine carve-out")
+  - [x] SPECGEN004_133 GREEN — регресс пинит полноту carve-out через реальную `violationOf`: каждый документированный engine-CLI над `.specs/` → allowed, generic reader (`cat`) → violation (ловит будущий дроп из ENGINE_CLI = enforce-регрессию)
 
-- [ ] P17-5: миграция корзины 1 — скиллы на MCP-инструкции — id: p17-skill-migration — Status: TODO | Est: 480m
+- [ ] P17-5: миграция корзины 1 — скиллы на MCP-инструкции — id: p17-skill-migration — Status: IN_PROGRESS | Est: 480m
   _depends: p17-read-sufficiency, p17-mutation-surface_
   _Requirements: [FR-39](FR.md#fr-39)_
   **Done When:**
-  - [ ] точная разметка 31 файла-кандидата: инструкция-vs-документация; список мигрируемых зафиксирован
-  - [ ] каждый мигрируемый SKILL.md велит MCP-тулзы вместо Read/Grep по `.specs/`
+  - [x] точная разметка кандидатов: оракул = shadow-лог + proximity-grep; reference-доки spec-review размечены инструкция-vs-каталог (categories.md = кукбук из ~8 act-directing грепов, НЕ иллюстрации)
+  - [x] первый связный срез мигрирован (read-дверь + write через apply_spec_change + allowed-tools): cross-spec-resolve (read+write, +resolve-cli эмитит план JSON), requirements-chk-matrix, spec-review SKILL §cat-14, create-spec phase2 CL-6/CL-7; spec-graph-query был мигрирован ранее
+  - [ ] ОСТАТОК: spec-review/references/categories.md кукбук (~8 грепов) + широкий флот (~27 скиллов) read+write путей; полная реструктуризация write-логики (Write/Edit→apply_spec_change) по флоту
   - [ ] shadow-лог violations/день → 0 на живой работе (метрика гейта P17-6)
 
 - [ ] P17-6: ENFORCE flip — id: p17-enforce — Status: TODO | Est: 120m

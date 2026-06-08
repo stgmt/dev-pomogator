@@ -84,12 +84,18 @@ ls ~/.claude/projects/${encoded}/memory/feedback_*.md 2>/dev/null
 
 Перед `spec-status -ConfirmStop Requirements`:
 
-```bash
-# Найти все absolute paths и file references в spec, verify existence
-grep -roE "(~|/|\.\.?\/|[A-Z]:[\\/])[a-zA-Z0-9._\\/-]+" .specs/{slug}/ | \
-  awk -F: '{print $3}' | sort -u | \
-  while read p; do [ -e "$(echo $p | sed "s|^~|$HOME|")" ] || echo "MISSING: $p"; done
+MCP-rails (FR-39 — no raw `grep` of `.specs/`): pull the spec text through the
+read door, extract path-like references, then verify each on disk:
+
 ```
+list_spec_docs({ spec: "{slug}" })           # md + feature + .progress.json
+# for each doc: read_spec_doc({ spec, doc }) → regex the returned content for
+#   (~|/|\.\.?/|[A-Z]:[\\/])[a-zA-Z0-9._\\/-]+   path-like tokens
+```
+
+For every extracted path `p`, the existence check is on the TARGET (code/config,
+outside `.specs/`), so it stays a plain shell test:
+`[ -e "$(echo $p | sed "s|^~|$HOME|")" ] || echo "MISSING: $p"`.
 
 Каждый `MISSING:` — либо truly missing (P0 — wrong claim) либо futur creation (OK если в FILE_CHANGES.md action=create). Если последнее — добавить в FILE_CHANGES.
 
@@ -99,16 +105,24 @@ grep -roE "(~|/|\.\.?\/|[A-Z]:[\\/])[a-zA-Z0-9._\\/-]+" .specs/{slug}/ | \
 
 Для каждой loaded в CL-1 memory:
 - Extract forbidden literals / required patterns (e.g., memory "no-hardcoded-stgmt" → forbidden `stgmt/`)
-- grep `.specs/{slug}/` на forbidden literals
+- Scan the spec for each forbidden literal **through the MCP read door** (MCP-rails
+  FR-39 — no raw `grep` of `.specs/`): `list_spec_docs` then `read_spec_doc` each
+  doc and substring-match the literal in the returned content
 - Если match — P0 finding, must fix
 
 ```bash
-# Пример для no-hardcoded-* memories
+# Extracting the literals from memory files is fine via grep — the memory dir
+# (~/.claude/projects/.../memory/) is NOT .specs/, so it is not gated:
 for memo in ~/.claude/projects/$(pwd | sed 's|[/:]|-|g')/memory/feedback_no-hardcoded-*.md; do
-  literal=$(grep -oE 'literal[s]? `[^`]+`' "$memo" | head -1 | sed 's/.*`\(.*\)`.*/\1/')
-  [ -n "$literal" ] && grep -rn "$literal" .specs/{slug}/ && echo "VIOLATION: $literal mentioned in $memo"
+  grep -oE 'literal[s]? `[^`]+`' "$memo" | head -1 | sed 's/.*`\(.*\)`.*/\1/'
 done
+# Then match each extracted literal against the spec docs via read_spec_doc
+# (above) — NOT `grep -rn "$literal" .specs/{slug}/`.
 ```
+
+> ⚠️ **Coverage note:** the read-door loop covers `*.md`/`*.feature`/`.progress.json`;
+> a literal hardcoded in a spec `.yaml`/`.json` artifact is out of this step's
+> reach (engine-side reconcile/audit owns that). Don't treat md/feature as total.
 
 ### CL-8: Cross-reference consistency
 

@@ -307,3 +307,39 @@ Then('the read is refused as an unsafe spec and nothing outside the tree is retu
   assert.equal(isSafeSlug('../secret'), false);
   assert.equal(isSafeSlug('backlog/nested'), true);
 });
+
+// ── SPECGEN004_133 — FR-39f engine-CLI carve-out is complete (P17-4) ───────────
+// Pins the verified ENGINE_CLI whitelist against the engine CLIs skills actually
+// invoke over .specs/ (DESIGN §"Engine carve-out"): each must be ALLOWED by the
+// real guard decision, while a generic reader over .specs/ stays a VIOLATION —
+// so enforce (P17-6) can't silently brick a legitimate authoring CLI.
+import { violationOf } from '../../tools/specs-validator/spec-access-guard.ts';
+
+const SKILL_ENGINE_CLIS = [
+  'spec-verdict', 'validate-spec', 'audit-spec', 'spec-status', 'corpus-health',
+  'collision-probe', 'spec-form-parsers', 'scaffold-spec', 'anchor-integrity', 'analyze-features',
+];
+interface CarveWorld extends F39World {
+  carveAllowed?: string[];
+  carveGenericViolation?: boolean;
+}
+Given('the spec-access-guard engine-CLI carve-out', function (this: CarveWorld) {
+  this.carveAllowed = [];
+});
+When('each documented engine CLI and a generic reader run over the specs tree', function (this: CarveWorld) {
+  const bash = (command: string): boolean =>
+    violationOf({ tool_name: 'Bash', tool_input: { command } }) === null;
+  for (const cli of SKILL_ENGINE_CLIS) {
+    if (bash(`npx tsx tools/x/${cli}.ts .specs/demo/FR.md`)) this.carveAllowed!.push(cli);
+  }
+  // generic reader over .specs/ must NOT be allowed (carve-out is not a blanket pass)
+  this.carveGenericViolation = !bash('cat .specs/demo/FR.md');
+});
+Then('every engine CLI is allowed and the generic reader stays a violation', function (this: CarveWorld) {
+  assert.deepEqual(
+    [...this.carveAllowed!].sort(),
+    [...SKILL_ENGINE_CLIS].sort(),
+    'every documented skill-invoked engine CLI must be allowed over .specs/ — a missing one is a deferred enforce regression',
+  );
+  assert.equal(this.carveGenericViolation, true, 'a generic reader over .specs/ stays a violation');
+});

@@ -4,6 +4,10 @@ description: |
   Семантическое pre-stop ревью спеки/кода через 15 категорий (10 spec-time + 3 post-implementation + 2 cross-cutting): external claims, antipatterns, assumption-vs-requirement, memory-constraint compliance, reality-drift и др. Используй ПЕРЕД каждым ConfirmStop в specs-management workflow И после каждой implementation phase. Триггеры — "сам ревью", "проверь спеку", "ревью перед стопом", "review phase N", "spec-review", "pre-stop check". Skip when — spec не существует, активной фазы нет в .progress.json, или пользователь явно отказался.
 license: Apache 2.0
 allowed-tools:
+  - "mcp__dev-pomogator-specs__read_spec_doc"
+  - "mcp__dev-pomogator-specs__list_spec_docs"
+  - "mcp__dev-pomogator-specs__get_node"
+  - "mcp__dev-pomogator-specs__search"
   - "Read"
   - "Grep"
   - "Glob"
@@ -67,7 +71,17 @@ Triggers when project memory dir `~/.claude/projects/{encoded-cwd}/memory/` cont
 2. **Required patterns** — phrases following "must use", "MUST", "обязан", "always", "from now on". Example: "env file MUST be created before asking" → required pattern (semantic, not always grep-able).
 3. **Severity** — P0 if memory uses "MUST" / "obязан" / "никогда не" / strong negatives; P1 otherwise.
 
-For each forbidden literal — grep recursively in `.specs/{slug}/`. Any match → finding with severity from above. Include link to source memory file in the finding's `Notes` column.
+For each forbidden literal — scan the spec through the MCP read door (MCP-rails
+FR-39 — never a raw `grep -r` of `.specs/`): `list_spec_docs({ spec: "{slug}" })`,
+then `read_spec_doc` each doc and substring-match the literal in the returned
+content. Any match → finding with severity from above; link the source memory
+file in the finding's `Notes` column.
+> ⚠️ **Coverage note (conscious narrowing):** `list_spec_docs` enumerates
+> `*.md` + `*.feature` + `.progress.json` only — the old recursive `grep` also
+> scanned `.yaml`/`.json` spec artifacts (e.g. `consistency-report.yaml`). A
+> forbidden literal hardcoded in such an artifact is no longer caught by this
+> step; that check belongs engine-side (the reconcile/audit CLIs), not in an
+> agent grep. Do not silently treat md/feature coverage as total.
 
 For required patterns — semantic check (read FR/DESIGN to see if pattern present). Harder to automate; emit as P2 "review hint" if uncertain.
 

@@ -989,3 +989,9 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given a secret file outside the specs tree and a read targeting it via a traversal slug
     When the agent calls the read tool
     Then the read is refused as an unsafe spec and nothing outside the tree is returned
+
+  @FR-39
+  Scenario: SPECGEN004_133 the engine-CLI carve-out allows every skill-invoked spec CLI over .specs/ but not generic readers
+    Given the spec-access-guard engine-CLI carve-out
+    When each documented engine CLI and a generic reader run over the specs tree
+    Then every engine CLI is allowed and the generic reader stays a violation

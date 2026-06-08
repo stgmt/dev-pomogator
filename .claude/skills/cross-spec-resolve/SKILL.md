@@ -12,7 +12,7 @@ description: |
     C — defer with explicit OUT_OF_SCOPE marker
   Foreign-spec edits (modifying another slug's `.md`) fire an additional
   confirmation banner.
-allowed-tools: Read, Write, Edit, AskUserQuestion
+allowed-tools: mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__apply_spec_change, mcp__dev-pomogator-specs__propose_spec_change, Bash, AskUserQuestion
 ---
 
 # cross-spec-resolve
@@ -32,8 +32,12 @@ agent to surface trade-offs the user might miss otherwise.
 
 ## The 7-step loop
 
-1. **Read** `.specs/<slug>/consistency-report.yaml`. If absent, hint +
-   exit.
+1. **Load the report via the CLI** (MCP-rails FR-39 — never a raw `Read` of
+   `.specs/`): run `npx tsx .claude/skills/cross-spec-resolve/scripts/resolve-cli.ts <slug>`.
+   It reads `consistency-report.yaml` IN-PROCESS (engine carve-out) and emits the
+   grouped plan (the 5-field explanation blocks) as JSON `{count, plan}` to
+   stdout — parse that. If the report is absent the CLI prints the hint + exits
+   non-zero.
 2. **Group** findings by severity → class → dedup by (code + spec_a +
    spec_b + location).
 3. **Explain** — emit a 5-field block per finding:
@@ -100,13 +104,16 @@ data + the audit-safe write helper, the skill provides the dialogue.
 When invoked, execute this sequence:
 
 ```ts
-// Step 1: Read.
-const plan = planResolution({ repoRoot: process.cwd(), slug: SLUG });
-if (plan.missing) { return "Run /cross-spec-reconcile first"; }
+// Step 1: load via the CLI (MCP-rails — the YAML is read IN-PROCESS by the CLI,
+// the agent parses its stdout JSON; never a raw `Read` of .specs/).
+//   Bash: npx tsx .claude/skills/cross-spec-resolve/scripts/resolve-cli.ts <slug>
+// Non-zero exit + "Run /cross-spec-reconcile first" → report it and stop.
+const { count, plan } = JSON.parse(cliStdout);   // { count, plan: [{finding, explanation}] }
+if (count === 0) { return "no findings to resolve"; }
 
 // Step 2 + 3: walker already deduped + ordered + built explanations.
 const decisions = [];
-for (const { finding, explanation } of plan.plan!) {
+for (const { finding, explanation } of plan) {
   // Step 4: Confirm via AskUserQuestion.
   // `promptHeader` (walker.ts) is the single source for the header label — the
   // SPECGEN004_40 binding asserts the same function, so skill + test never diverge.
@@ -131,18 +138,21 @@ for (const { finding, explanation } of plan.plan!) {
   let status: ResolutionStatus = 'skipped';
   let overrideReason: string | undefined;
 
-  // Step 5: Path A/B/C dispatch (mechanical fixes — apply via Edit/Write).
+  // Step 5: Path A/B/C dispatch. MCP-rails (FR-40): every write that lands in a
+  // `.specs/` doc goes through the mutation door `apply_spec_change({spec, doc,
+  // old_string, new_string})` — NEVER a raw Edit/Write of .specs/. Only Path B
+  // (implementation code, outside .specs/) uses a normal Edit.
   if (chosen.startsWith('Apply suggested fix')) {
-    // ... mechanical Edit / Write per the finding.suggested_fix hint
+    // spec target → apply_spec_change per finding.suggested_fix; code target → Edit
     status = 'resolved';
   } else if (chosen.startsWith('Path A')) {
-    // ... update spec body
+    // update spec body → apply_spec_change({ spec, doc, old_string, new_string })
     status = 'resolved';
   } else if (chosen.startsWith('Path B')) {
-    // ... update implementation code
+    // update implementation code (non-.specs/) → ordinary Edit
     status = 'resolved';
   } else if (chosen.startsWith('Path C')) {
-    // ... append [OUT_OF_SCOPE: <reason>] marker
+    // append [OUT_OF_SCOPE: <reason>] marker to the spec doc → apply_spec_change
     status = 'deferred';
   } else if (chosen.startsWith('Acknowledge')) {
     // Step 6: extra confirm for CRITICAL override.
@@ -170,7 +180,8 @@ for (const { finding, explanation } of plan.plan!) {
   }
 
   // Step 6 (foreign-spec banner): if the fix edits another slug's file,
-  // re-confirm with the banner before committing.
+  // re-confirm with the banner before committing. The foreign-spec write also
+  // goes through apply_spec_change({ spec: <foreign-slug>, ... }), not Edit.
   if (explanation.requiresForeignSpecConfirm && status === 'resolved') {
     const banner = await AskUserQuestion({
       questions: [{

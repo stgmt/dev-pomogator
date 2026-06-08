@@ -5,7 +5,7 @@ description: >
   in REQUIREMENTS.md and populates ## Key Decisions with Rationale + Trade-off + Alternatives
   blocks in DESIGN.md. Called by create-spec Phase 2 (Requirements + Design)
   step 4b. Preserves Jira trace lines byte-for-byte. Returns JSON summary of CHKs and decisions.
-allowed-tools: Read, Write, Edit, Bash, AskUserQuestion
+allowed-tools: mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__apply_spec_change, mcp__dev-pomogator-specs__propose_spec_change, Bash, AskUserQuestion
 ---
 
 # Requirements CHK Matrix
@@ -37,16 +37,26 @@ Both outputs pass form-guards `requirements-chk-guard` and `design-decision-guar
 
 ## Execution
 
+> **MCP-rails (FR-39/40):** every spec read goes through `read_spec_doc` /
+> `list_spec_docs` and every WRITE to REQUIREMENTS.md / DESIGN.md goes through
+> `apply_spec_change({ spec, doc, content | old_string/new_string })` — the
+> mutation door validates form contracts (the v3 CHK/Decision shapes) BEFORE the
+> disk write, so a malformed row is refused with findings instead of silently
+> landing. Never a raw `Read`/`Write`/`Edit`/`grep` of `.specs/`.
+
 ### Step 1 — Parse FR / AC / feature / UC
 
-Run reused FR-parsing logic:
+Read each doc through the MCP read door (MCP-rails FR-39 — never a raw
+`grep`/`Read` of `.specs/`), then extract the headers from the returned content:
 
-```bash
-grep -E "^## FR-[0-9]+" .specs/{slug}/FR.md
-grep -E "^## AC-[0-9]+ \\(FR-" .specs/{slug}/ACCEPTANCE_CRITERIA.md
-grep -E "^# @feature[0-9]+" .specs/{slug}/{slug}.feature
-grep -E "^## UC-[0-9]+" .specs/{slug}/USE_CASES.md
 ```
+read_spec_doc({ spec: "{slug}", doc: "FR.md" })                  → lines `^## FR-[0-9]+`
+read_spec_doc({ spec: "{slug}", doc: "ACCEPTANCE_CRITERIA.md" }) → lines `^## AC-[0-9]+ \(FR-`
+read_spec_doc({ spec: "{slug}", doc: "{slug}.feature" })         → lines `^# @feature[0-9]+`
+read_spec_doc({ spec: "{slug}", doc: "USE_CASES.md" })           → lines `^## UC-[0-9]+`
+```
+
+(`list_spec_docs({ spec })` first if you're unsure which of the four docs exist.)
 
 Build in-memory maps:
 - `FRs: { N → title }` from FR.md.

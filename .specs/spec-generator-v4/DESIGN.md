@@ -487,7 +487,9 @@ The four design decisions below shipped in spec-generator-v3 (production via PR 
 
 **Trade-off:** test churn — every test asserting a bare id must move to the qualified form in lockstep (this is why the suite was "green" on a broken graph: it asserted bare ids that happened to resolve). Mitigated by phasing (Phase 13, each phase suite-green) + soft bare→candidate-list fallback for agent callers.
 
-**Alternatives rejected:** global N+1 counter (`FR-347`) — needs a CENTRAL ALLOCATOR → merge conflict on the counter every time any spec adds an FR, lost locality, brittle renumber, and `FR-347` carries no spec context; the project ALREADY prefixes scenarios (`SPECGEN004_NN`/`PLUGIN005_NN`/`CORE024_NN`), so composite ids just finish a pattern in use. Separator `:` over `/` (collides with path/anchor syntax). Full deep-dive: `audit-reports/unified-spec-graph-design.md` §9.
+**Alternatives considered:**
+- global N+1 counter (`FR-347`) — needs a CENTRAL ALLOCATOR → merge conflict on the counter every time any spec adds an FR, lost locality, brittle renumber, and `FR-347` carries no spec context; the project ALREADY prefixes scenarios (`SPECGEN004_NN`/`PLUGIN005_NN`/`CORE024_NN`), so composite ids just finish a pattern in use.
+- separator `/` instead of `:` — collides with path/anchor syntax, so `:` chosen. Full deep-dive: `audit-reports/unified-spec-graph-design.md` §9.
 
 ### Decision: spec-health verdict = smart graph analysis, structural is a pre-filter only (FR-37)
 
@@ -495,7 +497,10 @@ The four design decisions below shipped in spec-generator-v3 (production via PR 
 
 **Trade-off:** the verdict is heavier (graph build + optional `claude -p` semantic) than a structural lint; mitigated by FR-36's bounded node count (NFR-Performance-9) and semantic being binary-present-gated with a fail-loud `SEMANTIC_SKIPPED` (never silent no-drift).
 
-**Alternatives rejected:** keep structural as the gate (the exact false-green that triggered this); make semantic opt-in (status quo — it never runs, so the dumb check wins); a brand-new analyzer (the smart tools exist — this FR makes them AUTHORITATIVE + adds the completeness check, no new engine). Evidence: `audit-reports/v4-smart-verdict-and-organism-traceability.md`.
+**Alternatives considered:**
+- keep structural as the gate — the exact false-green that triggered this.
+- make semantic opt-in — status quo, it never runs, so the dumb check wins.
+- a brand-new analyzer — the smart tools exist; this FR makes them AUTHORITATIVE + adds the completeness check, no new engine. Evidence: `audit-reports/v4-smart-verdict-and-organism-traceability.md`.
 
 ### Decision: get_spec_status — agent-facing READ of the same truth the verdict gates on (FR-38)
 
@@ -503,7 +508,10 @@ The four design decisions below shipped in spec-generator-v3 (production via PR 
 
 **Trade-off:** PARTIAL объединяет undefined/pending/skipped в одно «жёлтое» состояние — гранулярность отдана в `last_run.summary` (по-классово), сам enum остаётся пятизначным и читаемым агентом без таблицы.
 
-**Alternatives rejected:** расширять `list_specs` per-spec статусом (раздувает каждый ответ ради редкой нужды); отдельный side-файл статуса (нарушает «no side files» — правда живёт в графе+NDJSON); вычислять в скилле spec-status (скилл — оркестрация LLM, статус должен быть механическим и MCP-трассируемым).
+**Alternatives considered:**
+- расширять `list_specs` per-spec статусом — раздувает каждый ответ ради редкой нужды.
+- отдельный side-файл статуса — нарушает «no side files»; правда живёт в графе+NDJSON.
+- вычислять в скилле spec-status — скилл оркестрирует LLM, а статус должен быть механическим и MCP-трассируемым.
 
 ### Decision: MCP-rails — агентский доступ к спекам только через MCP (FR-39/40/41)
 
@@ -530,6 +538,21 @@ The four design decisions below shipped in spec-generator-v3 (production via PR 
 **Platform / worktree answers (refuted as defects, documented):** the server's repoRoot is `process.cwd()` and the FR-14 watcher + graph share it, so a worktree's own `.specs/` is read AND written consistently (no split-brain — `DEV_POMOGATOR_REPO_ROOT` defaults to cwd in the real launch). conformanceFindings clones only the one spec dir; cross-spec conformance codes are advisory there — the AUTHORITATIVE cross-spec verdict stays `spec-verdict.ts` over the full corpus, as designed.
 
 **Known residual (accepted, low):** `apply_spec_change` is last-writer-wins on concurrent edits of the same doc (TOCTOU validate→write window) — acceptable for a single-agent authoring loop; both writes are audited. The conformance clone layer is error-severity-only (rarely the rejecting gate; anchors + form contracts are the live gates) — matches the authoritative verdict's own conformance gating.
+
+### Engine carve-out — `ENGINE_CLI` whitelist verified complete (FR-39f, P17-4)
+
+The carve-out has two halves, with very different enforce-risk:
+
+1. **In-process engine readers (39 files: builder / form-parsers / resolvers / hooks / MCP server).** These read/write `.specs/` via `fs` IN-PROCESS — they never pass through PreToolUse, so the guard *cannot* block them. "Must not block" is trivially true; listing them is informational only. They are the door's backend (FR-39 rationale, DESIGN §"MCP-rails").
+
+2. **Bash-invoked engine CLIs (`invokesEngineCli` whitelist).** This is the FUNCTIONAL spine. The guard gates a Bash command iff it `touchesSpecs(cmd)`; an engine CLI is then allowed only if some token's basename ∈ `ENGINE_CLI`. A legitimate engine CLI **missing** from that 10-item array would be silently DENIED when enforce flips (P17-6) — a deferred regression. So P17-4's real deliverable is **verifying the whitelist is complete**, not writing a list.
+
+**Verification (2026-06-08), three oracles agreeing:**
+- *Enumeration* — direct-run CLIs (`isDirectRun`/`import.meta.url`) under `tools/specs-generator/` (10) + `tools/spec-graph/` (corpus-health, collision-probe). Of these, the ones a skill invokes carrying a `.specs/` path argument: `spec-verdict`, `spec-status`, `spec-form-parsers`, `collision-probe`, `corpus-health` — **all present** in `ENGINE_CLI`.
+- *Skill-instruction grep* — `ack-summary.ts` (spec-status §6) and `bdd-framework-detector.ts` (create-spec phase1.5) are invoked **without** a `.specs/` argument (`@see` comment only), so `touchesSpecs(cmd)` is false → the guard never fires on them → correctly absent from the whitelist.
+- *Shadow-log empirical* — all 31 Bash entries in `.dev-pomogator/logs/spec-access.jsonl` this wave are generic readers/writers (`cat`/`find`/`du`/`ls`/`grep`/`git add`/`node -e`/heredoc); **zero** are an engine-CLI invocation wrongly flagged (allowed CLIs are never logged), so every real `tsx tools/.../spec-verdict.ts .specs/…` run was correctly passed.
+
+**Conclusion:** `ENGINE_CLI` (spec-verdict, validate-spec, audit-spec, spec-status, corpus-health, collision-probe, spec-form-parsers, scaffold-spec, anchor-integrity, analyze-features) is complete for actual authoring usage — **no deferred enforce regression**. If a future skill instructs a new engine CLI to run over `.specs/`, it must be added here AND to `ENGINE_CLI`, else P17-6 enforce will block it.
 
 ### MCP tool → skill-consumer table (FR-42a, P17-9)
 
