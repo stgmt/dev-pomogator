@@ -47887,6 +47887,16 @@ var SAFE_SLUG_RE = /^[a-z0-9]([a-z0-9-]*(\/[a-z0-9][a-z0-9-]*)*)?$/;
 function isSafeSlug(slug) {
   return SAFE_SLUG_RE.test(slug) && !slug.includes("..");
 }
+function resolveSpecDoc(repoRoot, slug, doc) {
+  if (!isSafeSlug(slug)) return { ok: false, reason: "UNSAFE_SPEC" };
+  const relRaw = String(doc).replace(/\\/g, "/").replace(/^\/+/, "");
+  if (relRaw === "" || relRaw.includes("\0")) return { ok: false, reason: "BAD_DOC" };
+  const specRoot = path10.resolve(repoRoot, ".specs", slug);
+  const abs = path10.resolve(specRoot, relRaw);
+  const rootWithSep = specRoot.endsWith(path10.sep) ? specRoot : specRoot + path10.sep;
+  if (!abs.startsWith(rootWithSep)) return { ok: false, reason: "TRAVERSAL" };
+  return { ok: true, abs, rel: path10.relative(specRoot, abs).replace(/\\/g, "/") };
+}
 function validateTarget(slug, doc) {
   if (!isSafeSlug(slug)) {
     return { layer: "target", message: `unsafe spec slug "${slug}" \u2014 kebab-case, nested ok, no traversal/abs path` };
@@ -48658,9 +48668,25 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
         logSpecAccess("list_spec_docs", args, "not_found");
         return asJsonResult({ ok: false, error: "SPEC_NOT_FOUND", spec: slug });
       }
-      const docs = fs16.readdirSync(dir, { withFileTypes: true }).filter((e) => e.isFile() && (/.(md|feature)$/.test(e.name) || e.name === ".progress.json")).map((e) => e.name).sort();
+      const docs = [];
+      const attachments = [];
+      const ATTACH_RE = /\.(png|jpe?g|gif|webp|bmp|pdf|svg)$/i;
+      const walk = (abs, rel) => {
+        for (const e of fs16.readdirSync(abs, { withFileTypes: true })) {
+          const childRel = rel ? `${rel}/${e.name}` : e.name;
+          if (e.isDirectory()) {
+            walk(path12.join(abs, e.name), childRel);
+          } else if (e.isFile()) {
+            if (/\.(md|feature)$/.test(e.name) || e.name === ".progress.json") docs.push(childRel);
+            else if (ATTACH_RE.test(e.name)) attachments.push(childRel);
+          }
+        }
+      };
+      walk(dir, "");
+      docs.sort();
+      attachments.sort();
       logSpecAccess("list_spec_docs", args, "ok");
-      return asJsonResult({ ok: true, spec: slug, docs, count: docs.length });
+      return asJsonResult({ ok: true, spec: slug, docs, count: docs.length, attachments });
     }
   });
   tools.push({
@@ -48674,22 +48700,61 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
         logSpecAccess("read_spec_doc", args, "denied");
         return asJsonResult({ ok: false, error: "UNSAFE_SPEC", spec: slug, hint: "slug must stay within .specs/ (no traversal)" });
       }
-      const name = path12.basename(String(doc));
-      const okName = /\.(md|feature)$/.test(name) || name === ".progress.json";
-      const abs = path12.join(process.cwd(), ".specs", slug, name);
-      if (!okName || !fs16.existsSync(abs) || !fs16.statSync(abs).isFile()) {
+      const resolved = resolveSpecDoc(process.cwd(), slug, String(doc));
+      if (!resolved.ok) {
+        logSpecAccess("read_spec_doc", args, "denied");
+        return asJsonResult({ ok: false, error: resolved.reason === "TRAVERSAL" ? "DOC_TRAVERSAL" : "UNSAFE_SPEC", spec: slug, doc: String(doc), hint: "doc must stay within .specs/<spec>/ (no traversal/abs path)" });
+      }
+      const rel = resolved.rel;
+      const base = path12.basename(rel);
+      const okName = /\.(md|feature)$/.test(base) || base === ".progress.json";
+      if (!okName || !fs16.existsSync(resolved.abs) || !fs16.statSync(resolved.abs).isFile()) {
         logSpecAccess("read_spec_doc", args, "not_found");
         return asJsonResult({
           ok: false,
           error: "DOC_NOT_FOUND",
           spec: slug,
-          doc: name,
-          hint: "Call list_spec_docs({spec}) for the valid inventory."
+          doc: rel,
+          hint: "Call list_spec_docs({spec}) for the valid inventory. Binary attachments \u2192 read_attachment."
         });
       }
-      const content = fs16.readFileSync(abs, "utf-8");
+      const content = fs16.readFileSync(resolved.abs, "utf-8");
       logSpecAccess("read_spec_doc", args, "ok");
-      return asJsonResult({ ok: true, spec: slug, doc: name, bytes: content.length, content });
+      return asJsonResult({ ok: true, spec: slug, doc: rel, bytes: content.length, content });
+    }
+  });
+  tools.push({
+    name: "read_attachment",
+    description: "P19-6: read ONE BINARY attachment of a spec (e.g. attachments/diagram.png) by a subpath from list_spec_docs.attachments[]. Returns base64 + mime so a multimodal verify (Jira screenshots, phase2 Step 5c) works under enforce without a raw Read. Text docs \u2192 read_spec_doc. Every read is audit-logged.",
+    inputShape: { spec: external_exports.string(), path: external_exports.string() },
+    handler: async ({ spec, path: docPath }) => {
+      const args = { spec, path: docPath };
+      const slug = String(spec).replace(/\\/g, "/").replace(/^\.?\/?\.specs\//, "").replace(/\/+$/, "");
+      const resolved = resolveSpecDoc(process.cwd(), slug, String(docPath));
+      if (!resolved.ok) {
+        logSpecAccess("read_attachment", args, "denied");
+        return asJsonResult({ ok: false, error: resolved.reason === "TRAVERSAL" ? "DOC_TRAVERSAL" : "UNSAFE_SPEC", spec: slug, path: String(docPath), hint: "path must stay within .specs/<spec>/ (no traversal/abs path)" });
+      }
+      const rel = resolved.rel;
+      const ext = path12.extname(rel).toLowerCase();
+      const MIME = {
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".gif": "image/gif",
+        ".webp": "image/webp",
+        ".bmp": "image/bmp",
+        ".pdf": "application/pdf",
+        ".svg": "image/svg+xml"
+      };
+      const mime = MIME[ext];
+      if (!mime || !fs16.existsSync(resolved.abs) || !fs16.statSync(resolved.abs).isFile()) {
+        logSpecAccess("read_attachment", args, "not_found");
+        return asJsonResult({ ok: false, error: "ATTACHMENT_NOT_FOUND", spec: slug, path: rel, hint: "Call list_spec_docs({spec}).attachments for the valid inventory." });
+      }
+      const buf = fs16.readFileSync(resolved.abs);
+      logSpecAccess("read_attachment", args, "ok");
+      return asJsonResult({ ok: true, spec: slug, path: rel, mime, bytes: buf.length, base64: buf.toString("base64") });
     }
   });
   const CHANGE_SHAPE = {

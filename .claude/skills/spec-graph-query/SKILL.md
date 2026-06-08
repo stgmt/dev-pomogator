@@ -14,12 +14,12 @@ description: >
   NOT use for: markdown link/anchor NAVIGATION or rename (markdown-lsp / Marksman), bulk
   broken-anchor scan+fix (anchor-fix), the honest per-task DONE verdict (get_coverage /
   spec-status), or cross-spec drift (cross-spec-reconcile).
-allowed-tools: mcp__dev-pomogator-specs__get_trace, mcp__dev-pomogator-specs__find_by_tags, mcp__dev-pomogator-specs__conformance_check, mcp__dev-pomogator-specs__search, mcp__dev-pomogator-specs__get_node, mcp__dev-pomogator-specs__get_spec_status, mcp__dev-pomogator-specs__list_phase_tasks, mcp__dev-pomogator-specs__get_test_result, mcp__dev-pomogator-specs__find_orphans, mcp__dev-pomogator-specs__get_coverage_summary, mcp__dev-pomogator-specs__get_coverage, mcp__dev-pomogator-specs__validate_anchor, mcp__dev-pomogator-specs__list_specs, mcp__dev-pomogator-specs__find_refs, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__read_spec_doc, Bash, Read
+allowed-tools: mcp__dev-pomogator-specs__get_trace, mcp__dev-pomogator-specs__find_by_tags, mcp__dev-pomogator-specs__conformance_check, mcp__dev-pomogator-specs__search, mcp__dev-pomogator-specs__get_node, mcp__dev-pomogator-specs__get_spec_status, mcp__dev-pomogator-specs__list_phase_tasks, mcp__dev-pomogator-specs__get_test_result, mcp__dev-pomogator-specs__find_orphans, mcp__dev-pomogator-specs__get_coverage_summary, mcp__dev-pomogator-specs__get_coverage, mcp__dev-pomogator-specs__validate_anchor, mcp__dev-pomogator-specs__list_specs, mcp__dev-pomogator-specs__find_refs, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__read_attachment, Bash, Read
 ---
 
 # spec-graph-query — one cheatsheet for the spec-graph MCP
 
-The `dev-pomogator-specs` MCP server exposes 14 query tools over the built spec graph. Querying
+The `dev-pomogator-specs` MCP server exposes 15 query tools over the built spec graph. Querying
 the graph beats grepping `.specs/`: the graph resolved tag inheritance, dual-anchor slugs, and
 the FR↔AC↔scenario↔task edges that text search can't see. Pick by the question you're asking.
 
@@ -51,8 +51,9 @@ file-local by design (FR-36b).
 | Tasks under a phase heading | `list_phase_tasks` | `{ phase: "Phase 2: MCP server + hooks" }` |
 | Per-spec FR/AC/Scenario/Task **counts** (structural census) | `get_coverage_summary` | `{}` |
 | Does ONE anchor (compact id or slug) resolve? | `validate_anchor` | `{ anchor: "ac-7-1" }` |
-| List ONE spec's readable docs (the `read_spec_doc` inventory: *.md + *.feature) (FR-39a) | `list_spec_docs` | `{ spec: "spec-generator-v4" }` |
-| Read a WHOLE spec document — prose outside graph nodes (README/DESIGN/RESUME); audited (FR-39a/b) | `read_spec_doc` | `{ spec: "...", doc: "RESUME.md" }` |
+| List ONE spec's readable docs + binary attachments (recurses subdirs: ARCHITECTURE/, attachments/) (FR-39a/P19-6) | `list_spec_docs` | `{ spec: "spec-generator-v4" }` → `{ docs[], attachments[] }` |
+| Read a WHOLE spec document — prose outside graph nodes (README/DESIGN/RESUME or a SUBPATH `ARCHITECTURE/AXIS-1.md`); audited (FR-39a/b) | `read_spec_doc` | `{ spec: "...", doc: "RESUME.md" }` |
+| Read a BINARY attachment (Jira screenshot/diagram) as base64+mime — text docs use read_spec_doc (P19-6) | `read_attachment` | `{ spec: "...", path: "attachments/diagram.png" }` |
 
 All return `{ ok, ... }`; `ok:false` (or `registered:false`) when nothing matches.
 

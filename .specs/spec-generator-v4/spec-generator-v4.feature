@@ -1020,3 +1020,9 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given the plugin userConfig enforce toggle exported to the guard environment
     When the guard computes whether enforce is on
     Then enforce is on, and it is off when no enforce signal is present
+
+  @FR-39
+  Scenario: SPECGEN004_138 the read door reaches a subdirectory doc but refuses traversal
+    Given a spec whose docs live in a subdirectory and a secret file outside the spec root
+    When the door resolves an in-tree subpath and a traversal subpath
+    Then the in-tree subpath resolves inside the spec root and the traversal subpath is refused

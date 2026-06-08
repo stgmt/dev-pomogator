@@ -404,3 +404,54 @@ Then('enforce is on, and it is off when no enforce signal is present', function 
   assert.equal(this.enfOn, true);
   assert.equal(this.enfOff, false);
 });
+
+// ── SPECGEN004_138 — P19-6 read door reaches subdirs, still refuses traversal ──
+// Binds the REAL handlers over a tempDir corpus: a subdir doc + a binary
+// attachment are reachable through the door (read_spec_doc / read_attachment),
+// while a `..` subpath is refused — the containment check replaces the old
+// basename-strip WITHOUT reopening the traversal hole.
+interface SubdirWorld extends F39World {
+  subdirRead?: { ok: boolean; content?: string; doc?: string };
+  attachRead?: { ok: boolean; mime?: string; base64?: string; bytes?: number };
+  subTraversal?: { ok: boolean; error?: string };
+}
+Given('a spec whose docs live in a subdirectory and a secret file outside the spec root', function (this: SubdirWorld) {
+  const root = path.join(this.tempDir, '.specs', 'subdir-demo');
+  fs.mkdirSync(path.join(root, 'ARCHITECTURE'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'attachments'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'FR.md'), '## FR-1: X\n');
+  fs.writeFileSync(path.join(root, 'ARCHITECTURE', 'AXIS-1.md'), '# AXIS-1\n\naxis body marker-138\n');
+  // a tiny PNG (header + bytes) — read_attachment must base64 it
+  fs.writeFileSync(path.join(root, 'attachments', 'diag.png'), Buffer.from('89504e470d0a1a0a0102030405', 'hex'));
+  fs.mkdirSync(path.join(this.tempDir, 'secret'), { recursive: true });
+  fs.writeFileSync(path.join(this.tempDir, 'secret', 'leak.md'), 'TOP SECRET 138');
+});
+When('the door resolves an in-tree subpath and a traversal subpath', async function (this: SubdirWorld) {
+  const prev = process.cwd();
+  process.chdir(this.tempDir);
+  try {
+    const t = buildToolRegistry(() => buildGraph({ repoRoot: this.tempDir, skipNdjson: true }));
+    const read = (n: string, a: object) =>
+      t.find((x) => x.name === n)!.handler(a as never) as Promise<{ content: Array<{ text: string }> }>;
+    this.subdirRead = JSON.parse((await read('read_spec_doc', { spec: 'subdir-demo', doc: 'ARCHITECTURE/AXIS-1.md' })).content[0].text);
+    this.attachRead = JSON.parse((await read('read_attachment', { spec: 'subdir-demo', path: 'attachments/diag.png' })).content[0].text);
+    // a traversal subpath that would escape the spec root into the sibling secret/
+    this.subTraversal = JSON.parse((await read('read_spec_doc', { spec: 'subdir-demo', doc: '../../secret/leak.md' })).content[0].text);
+  } finally {
+    process.chdir(prev);
+  }
+});
+Then('the in-tree subpath resolves inside the spec root and the traversal subpath is refused', function (this: SubdirWorld) {
+  // subdir text doc served through the door
+  assert.equal(this.subdirRead!.ok, true, 'a subdir doc must be reachable via read_spec_doc');
+  assert.equal(this.subdirRead!.doc, 'ARCHITECTURE/AXIS-1.md');
+  assert.match(this.subdirRead!.content!, /marker-138/);
+  // binary attachment served as base64
+  assert.equal(this.attachRead!.ok, true, 'a binary attachment must be reachable via read_attachment');
+  assert.equal(this.attachRead!.mime, 'image/png');
+  assert.ok((this.attachRead!.base64?.length ?? 0) > 0, 'attachment base64 is non-empty');
+  // traversal refused, nothing outside the spec root leaks
+  assert.equal(this.subTraversal!.ok, false, 'a .. subpath must be refused');
+  assert.equal(this.subTraversal!.error, 'DOC_TRAVERSAL');
+  assert.ok(!JSON.stringify(this.subTraversal).includes('TOP SECRET'), 'no out-of-tree content may leak');
+});

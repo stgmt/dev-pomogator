@@ -67,6 +67,34 @@ export function isSafeSlug(slug: string): boolean {
 }
 
 /**
+ * Resolve a (slug, doc) reference — where `doc` MAY be a SUBPATH
+ * (`ARCHITECTURE/AXIS-1.md`, `attachments/diagram.png`) — to an absolute path
+ * GUARANTEED to stay inside `.specs/<slug>/` (P19-6). This REPLACES the old
+ * `path.basename(doc)` strip used by the read/write tools: basename silently
+ * FLATTENED subpaths (so subdir docs were unreachable) while neutralizing
+ * traversal as a side effect. Here we keep subpaths reachable AND keep the
+ * traversal door shut with a real containment check — `path.resolve` collapses
+ * `..`, then the resolved path must still be a descendant of the spec root, so
+ * `../../etc/passwd`, an absolute `/etc/passwd`, or a Windows drive path all land
+ * OUTSIDE and are rejected (mirrors the 2026-06-07 leak that motivated isSafeSlug).
+ */
+export function resolveSpecDoc(
+  repoRoot: string,
+  slug: string,
+  doc: string,
+): { ok: true; abs: string; rel: string } | { ok: false; reason: 'UNSAFE_SPEC' | 'BAD_DOC' | 'TRAVERSAL' } {
+  if (!isSafeSlug(slug)) return { ok: false, reason: 'UNSAFE_SPEC' };
+  const relRaw = String(doc).replace(/\\/g, '/').replace(/^\/+/, '');
+  if (relRaw === '' || relRaw.includes('\0')) return { ok: false, reason: 'BAD_DOC' };
+  const specRoot = path.resolve(repoRoot, '.specs', slug);
+  const abs = path.resolve(specRoot, relRaw);
+  const rootWithSep = specRoot.endsWith(path.sep) ? specRoot : specRoot + path.sep;
+  // abs must be a STRICT descendant of specRoot (not the dir itself, not outside).
+  if (!abs.startsWith(rootWithSep)) return { ok: false, reason: 'TRAVERSAL' };
+  return { ok: true, abs, rel: path.relative(specRoot, abs).replace(/\\/g, '/') };
+}
+
+/**
  * Reject an unsafe (slug, doc) target BEFORE any fs touch. Closes the edge
  * cases the 2026-06-07 mutation-tools review confirmed:
  *   - slug traversal (`../escape`) → arbitrary write outside .specs/ (HIGH);
