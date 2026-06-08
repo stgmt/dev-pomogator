@@ -5,7 +5,7 @@ description: >
   the ## Task Summary Table header via spec-status.ts -Format task-table. Idempotent
   (replaces auto-generated block between markers). Called by create-spec Phase 3
   (Finalization) step 1b. Returns JSON summary of tasks enriched.
-allowed-tools: Read, Write, Edit, Bash, AskUserQuestion
+allowed-tools: mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__apply_spec_change, mcp__dev-pomogator-specs__propose_spec_change, Bash, AskUserQuestion
 ---
 
 # Task Board Forms
@@ -34,6 +34,15 @@ Tasks in Phase -1 (Infrastructure) are exempt from Done When by form-guard desig
 - `FR.md` — for task `_Requirements:_` back-references.
 
 ## Execution
+
+> **MCP-rails (FR-39/40):** parsing TASKS.md via `spec-form-parsers.ts` and
+> regenerating the table via `spec-status.ts -Format task-table` are engine-CLI
+> calls (carve-out — allowed over `.specs/`). Any doc the agent reads itself
+> (ACCEPTANCE_CRITERIA / {slug}.feature / FR for Done-When refs) goes through
+> `read_spec_doc`, and the WRITE to TASKS.md goes through `apply_spec_change`
+> ({ old_string, new_string }) — the mutation door re-checks the task form
+> (Status/Est/Done When) before the disk write. Never a raw `Edit`/`Write`/`grep`
+> of `.specs/`.
 
 ### Step 1 — Parse existing task blocks
 
@@ -96,7 +105,7 @@ Target heading shape (used in Jira-mode or when task-id matters):
 > Lowercase `**status:**` / `**done when:**` guard НЕ распознаёт → DENY на Write
 > (поймано ревью 2026-06-07: скилл рекомендовал форму, которую его же guard режет).
 
-Use Edit (not Write) to preserve unrelated content (Phase descriptions, notes, Jira trace lines).
+Use `apply_spec_change({ spec, doc: "TASKS.md", old_string, new_string })` (MCP-rails — not a raw Edit) to preserve unrelated content (Phase descriptions, notes, Jira trace lines): anchor `old_string` on the specific task block / table marker you're changing.
 
 ### Step 5 — Regenerate Task Summary Table
 
