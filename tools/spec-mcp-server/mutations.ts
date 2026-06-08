@@ -107,13 +107,31 @@ export function validateTarget(slug: string, doc: string): MutationFinding | nul
   if (!isSafeSlug(slug)) {
     return { layer: 'target', message: `unsafe spec slug "${slug}" — kebab-case, nested ok, no traversal/abs path` };
   }
-  if (!MUTABLE_DOC_RE.test(doc)) {
+  // P19-6: doc MAY be a SUBPATH (.architecture-research/1-stage.md). Containment is
+  // a pure relative check (no segment may be '', '.', '..'; no drive/abs) — keeps
+  // the traversal door shut that the old MUTABLE_DOC_RE (no-slash) closed implicitly.
+  const rel = normalizeContainedDoc(doc);
+  if (rel === null) {
+    return { layer: 'target', message: `doc "${doc}" escapes the spec root — no traversal/abs/drive path` };
+  }
+  // The EXTENSION gate is on the basename (so a subdir AXIS-1.md passes; FR.MD / .progress.json do not).
+  if (!MUTABLE_DOC_RE.test(path.basename(rel))) {
     return {
       layer: 'target',
       message: `doc "${doc}" is not a mutable spec document — only *.md / *.feature (NOT .progress.json: single-writer via spec-status)`,
     };
   }
   return null;
+}
+
+/** Pure relative containment: returns the '/'-normalized rel path, or null if it
+ *  escapes (absolute, drive, or any `.`/`..`/empty segment). Shared by the write
+ *  gate; the read tools use `resolveSpecDoc` (absolute, repoRoot-anchored). */
+export function normalizeContainedDoc(doc: string): string | null {
+  const rel = String(doc).replace(/\\/g, '/').replace(/^\/+/, '');
+  if (!rel || rel.includes('\0') || /^[A-Za-z]:/.test(rel)) return null;
+  if (rel.split('/').some((s) => s === '' || s === '.' || s === '..')) return null;
+  return rel;
 }
 
 /** Apply the FR-40a change shape to current content (in memory, never disk). */
@@ -279,6 +297,8 @@ export function validateSpecChange(
   // target guard FIRST — before any fs touch (traversal / casing / doc-type).
   const targetBad = validateTarget(slug, doc);
   if (targetBad) return { ok: false, findings: [targetBad] };
+  const rel = normalizeContainedDoc(doc)!; // non-null: validateTarget passed
+  doc = rel; // downstream form/anchor/conformance + the write use the normalized rel
 
   const specDir = path.join(repoRoot, '.specs', slug);
   const abs = path.join(specDir, doc);
@@ -306,6 +326,13 @@ export function validateSpecChange(
       findings: [{ layer: 'change', message: 'refusing to replace a non-empty document with empty content' }],
     };
   }
+  // P19-6: a SUBDIR doc (.architecture-research/<N>-stage.md) is a non-graph WORKING
+  // document — the form/anchor/conformance gates exist for the TOP-LEVEL graph docs
+  // (FR/AC/TASKS/feature) and would mis-fire on freeform research prose. Contained +
+  // ext-checked + audited is the contract for these; skip the graph gates.
+  if (rel.includes('/')) {
+    return { ok: true, next, findings: [] };
+  }
   const findings = [
     ...formFindings(doc, next),
     ...(isMd ? anchorFindings(repoRoot, slug, doc, next) : []),
@@ -319,8 +346,10 @@ export function validateSpecChange(
  *  the temp file is unlinked so it never litters .specs/ (review #6). */
 export function writeDocAtomic(repoRoot: string, slug: string, doc: string, content: string): string {
   const dir = path.join(repoRoot, '.specs', slug);
-  fs.mkdirSync(dir, { recursive: true });
   const abs = path.join(dir, doc);
+  // P19-6: doc may be a SUBPATH — create the immediate parent (e.g.
+  // .specs/<slug>/.architecture-research/) so the subdir write doesn't ENOENT.
+  fs.mkdirSync(path.dirname(abs), { recursive: true });
   const tmp = `${abs}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`;
   fs.writeFileSync(tmp, content, 'utf-8');
   try {

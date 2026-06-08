@@ -891,6 +891,12 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When the agent creates a new spec through it
     Then the authoritative verdict for the newborn spec is GREEN
 
+  @FR-40
+  Scenario: SPECGEN004_139 the mutation door writes a subdir working doc but refuses a traversal write
+    Given a spec that needs a research stage file written into a subdirectory
+    When the agent applies a subdir write and a traversal write through the mutation tool
+    Then the subdir doc is written without the graph gates and the traversal write is refused with nothing escaping the spec root
+
   @FR-41
   Scenario: SPECGEN004_117 each creation phase runs in a dedicated headless agent
     Given the phase agent definitions with MCP-only allowed-tools

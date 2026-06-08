@@ -1079,7 +1079,9 @@ export function buildToolRegistry(
   };
   const slugOf = (spec: unknown): string =>
     String(spec).replace(/\\/g, '/').replace(/^\.?\/?\.specs\//, '').replace(/\/+$/, '');
-  const docOf = (doc: unknown): string => path.basename(String(doc));
+  // P19-6: keep the SUBPATH (ARCHITECTURE/AXIS-1.md) — validateTarget does the
+  // containment check; basename-flattening would lose the subdir target.
+  const docOf = (doc: unknown): string => String(doc).replace(/\\/g, '/').replace(/^\/+/, '');
 
   tools.push({
     name: 'propose_spec_change',

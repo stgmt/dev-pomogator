@@ -455,3 +455,49 @@ Then('the in-tree subpath resolves inside the spec root and the traversal subpat
   assert.equal(this.subTraversal!.error, 'DOC_TRAVERSAL');
   assert.ok(!JSON.stringify(this.subTraversal).includes('TOP SECRET'), 'no out-of-tree content may leak');
 });
+
+// ── SPECGEN004_139 — P19-6 mutation door reaches subdirs, refuses traversal ───
+// The write twin of _138: apply_spec_change writes a non-graph WORKING doc into a
+// subdirectory (.architecture-research/) WITHOUT the form/anchor/conformance gates
+// (those are for top-level graph docs), while a `..` write is refused and nothing
+// lands outside the spec root. Binds the REAL mutation handler over a tempDir corpus.
+interface SubWriteWorld extends F40World {
+  subWrite?: { ok: boolean; path?: string; findings?: unknown[] };
+  travWrite?: { ok: boolean; error?: string };
+}
+Given('a spec that needs a research stage file written into a subdirectory', function (this: SubWriteWorld) {
+  const dir = path.join(this.tempDir, '.specs', 'sub-write-demo');
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'FR.md'), '## FR-1: Demo\n\nBody.\n');
+});
+When('the agent applies a subdir write and a traversal write through the mutation tool', async function (this: SubWriteWorld) {
+  this.subWrite = await inCorpus(this, () =>
+    callTool(this, 'apply_spec_change', {
+      spec: 'sub-write-demo',
+      doc: '.architecture-research/1-problem-framing.md',
+      content: '# Stage 1\n\nFreeform research prose with a [link](http://example.com).\n',
+      reason: 'P19-6 subdir research stage write',
+    }),
+  );
+  this.travWrite = await inCorpus(this, () =>
+    callTool(this, 'apply_spec_change', {
+      spec: 'sub-write-demo',
+      doc: '../../escape-139.md',
+      content: 'should never land',
+      reason: 'P19-6 traversal write probe',
+    }),
+  );
+});
+Then('the subdir doc is written without the graph gates and the traversal write is refused with nothing escaping the spec root', function (this: SubWriteWorld) {
+  // subdir working doc written, graph gates skipped (freeform prose → no findings)
+  assert.equal(this.subWrite!.ok, true, 'a contained subdir write must succeed');
+  assert.deepEqual(this.subWrite!.findings, [], 'a non-graph subdir doc skips the form/anchor/conformance gates');
+  assert.ok(
+    fs.existsSync(path.join(this.tempDir, '.specs', 'sub-write-demo', '.architecture-research', '1-problem-framing.md')),
+    'the subdir file must be on disk',
+  );
+  // traversal refused, nothing escapes the spec root
+  assert.equal(this.travWrite!.ok, false, 'a .. write must be refused');
+  assert.ok(!fs.existsSync(path.join(this.tempDir, 'escape-139.md')), 'no file may escape to the corpus root');
+  assert.ok(!fs.existsSync(path.join(this.tempDir, '.specs', 'escape-139.md')), 'no file may escape to .specs/');
+});

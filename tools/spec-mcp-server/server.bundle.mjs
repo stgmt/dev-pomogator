@@ -47901,13 +47901,23 @@ function validateTarget(slug, doc) {
   if (!isSafeSlug(slug)) {
     return { layer: "target", message: `unsafe spec slug "${slug}" \u2014 kebab-case, nested ok, no traversal/abs path` };
   }
-  if (!MUTABLE_DOC_RE.test(doc)) {
+  const rel = normalizeContainedDoc(doc);
+  if (rel === null) {
+    return { layer: "target", message: `doc "${doc}" escapes the spec root \u2014 no traversal/abs/drive path` };
+  }
+  if (!MUTABLE_DOC_RE.test(path10.basename(rel))) {
     return {
       layer: "target",
       message: `doc "${doc}" is not a mutable spec document \u2014 only *.md / *.feature (NOT .progress.json: single-writer via spec-status)`
     };
   }
   return null;
+}
+function normalizeContainedDoc(doc) {
+  const rel = String(doc).replace(/\\/g, "/").replace(/^\/+/, "");
+  if (!rel || rel.includes("\0") || /^[A-Za-z]:/.test(rel)) return null;
+  if (rel.split("/").some((s) => s === "" || s === "." || s === "..")) return null;
+  return rel;
 }
 function applyChange2(current, change) {
   if ("content" in change) return { ok: true, next: change.content };
@@ -48016,6 +48026,8 @@ function conformanceFindings(repoRoot, slug, doc, next) {
 function validateSpecChange(repoRoot, slug, doc, change) {
   const targetBad = validateTarget(slug, doc);
   if (targetBad) return { ok: false, findings: [targetBad] };
+  const rel = normalizeContainedDoc(doc);
+  doc = rel;
   const specDir = path10.join(repoRoot, ".specs", slug);
   const abs = path10.join(specDir, doc);
   const current = fs14.existsSync(abs) ? fs14.readFileSync(abs, "utf-8") : null;
@@ -48038,6 +48050,9 @@ function validateSpecChange(repoRoot, slug, doc, change) {
       findings: [{ layer: "change", message: "refusing to replace a non-empty document with empty content" }]
     };
   }
+  if (rel.includes("/")) {
+    return { ok: true, next, findings: [] };
+  }
   const findings = [
     ...formFindings(doc, next),
     ...isMd ? anchorFindings(repoRoot, slug, doc, next) : [],
@@ -48047,8 +48062,8 @@ function validateSpecChange(repoRoot, slug, doc, change) {
 }
 function writeDocAtomic(repoRoot, slug, doc, content) {
   const dir = path10.join(repoRoot, ".specs", slug);
-  fs14.mkdirSync(dir, { recursive: true });
   const abs = path10.join(dir, doc);
+  fs14.mkdirSync(path10.dirname(abs), { recursive: true });
   const tmp = `${abs}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`;
   fs14.writeFileSync(tmp, content, "utf-8");
   try {
@@ -48777,7 +48792,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
     return null;
   };
   const slugOf = (spec) => String(spec).replace(/\\/g, "/").replace(/^\.?\/?\.specs\//, "").replace(/\/+$/, "");
-  const docOf = (doc) => path12.basename(String(doc));
+  const docOf = (doc) => String(doc).replace(/\\/g, "/").replace(/^\/+/, "");
   tools.push({
     name: "propose_spec_change",
     description: "FR-40 DRY-RUN of a spec mutation: applies the change IN MEMORY and runs the full validation (form contracts + anchors + conformance of the affected spec) WITHOUT writing. Same checks as apply_spec_change \u2014 propose first, fix the findings, then apply. change = {content} (full replace) OR {old_string, new_string, replace_all?} (Edit-tool semantics).",
