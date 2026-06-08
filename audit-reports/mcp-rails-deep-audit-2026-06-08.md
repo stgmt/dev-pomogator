@@ -127,11 +127,13 @@ hit again here when binding SPECGEN004_137 — repaired in the same pass.)
 > FILLS its 7 stage files `.architecture-research/<N>-stage.md` with the AGENT's Write TOOL
 > (freeform prose, not a CLI) — under enforce spec-access-guard blocks Write to `.specs/**`, and
 > the carve-out is for Bash engine-CLIs only, NOT the Write tool. So there IS a real agent-write
-> gap. Resolution (consistent with Option A): extend apply_spec_change/validateTarget/writeDocAtomic
-> to a containment-validated subpath (`resolveSpecDoc` + writeDocAtomic mkdir-parent) and SKIP the
-> graph gates (form/anchor/conformance — those are for top-level FR/AC/TASKS/feature) for non-graph
-> subdir docs like `.architecture-research/`; OR a `scripts/write-stage.ts` CLI (carve-out). NEXT.
-> Consumer READ migration DONE (41b1216): arch-decision-builder Step 3.5 + phase2 Step 5c.
+> gap. **WRITE side IMPLEMENTED (dbb7ae6):** `normalizeContainedDoc` containment in validateTarget
+> (ext gate on basename), validateSpecChange skips form/anchor/conformance for a `rel.includes('/')`
+> subdir doc (top-level keeps full gates), writeDocAtomic mkdir-parent, docOf pass-through. Proven
+> live (subdir write ok+on-disk+0 findings; `../..` → VALIDATION_FAILED, no escape) + BDD _139; full
+> BDD 139/138-passed GREEN. Consumer migration DONE: READ (41b1216, arch-decision-builder Step 3.5 +
+> phase2 Step 5c), WRITE (253ed04, arch-research-workflow stage writes via apply_spec_change).
+> **P19-6 COMPLETE** (read + write + read_attachment + consumer migration, all verified).
 
 The agent reaches spec SUBDIRECTORIES through the SAME door, not a carve-out:
 - `read_spec_doc` / `apply_spec_change`: accept a relative SUBPATH (`ARCHITECTURE/AXIS-1.md`)
