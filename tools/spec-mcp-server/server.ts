@@ -17,6 +17,8 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { pathToFileURL } from 'node:url';
+import fs from 'node:fs';
+import path from 'node:path';
 import { startLifecycle, type LifecycleHandle } from './lifecycle.ts';
 import { buildToolRegistry } from './tools.ts';
 
@@ -54,10 +56,28 @@ export async function boot(opts: BootOptions): Promise<{
   return { server, lifecycle };
 }
 
+/**
+ * Resolve the repo root robustly. `DEV_POMOGATOR_REPO_ROOT` is preferred, but
+ * ONLY when it's a real directory that actually contains `.specs/`. Headless
+ * launch contexts (`claude -p`) were observed to pass the UNRESOLVED
+ * `${CLAUDE_PROJECT_DIR}` LITERAL (a non-empty string, so the old `|| cwd`
+ * never caught it) — the server then built its graph from a nonexistent path, so
+ * EVERY `get_node`/`get_trace` returned NODE_NOT_FOUND and the live agent fell
+ * back to a raw `Read` of `.specs/` (2026-06-08 P17-6 live diagnosis). Reject an
+ * `${…}` placeholder or a `.specs`-less path, then fall back to cwd.
+ */
+export function resolveRepoRoot(env: string | undefined, cwd: string): string {
+  if (env && !env.includes('${') && fs.existsSync(path.join(env, '.specs'))) return env;
+  if (env && (env.includes('${') || !fs.existsSync(path.join(env, '.specs')))) {
+    process.stderr.write(
+      `[${PRODUCT_NAME}] DEV_POMOGATOR_REPO_ROOT="${env}" is not a repo with .specs/ — using cwd ${cwd}\n`,
+    );
+  }
+  return cwd;
+}
+
 async function main(): Promise<void> {
-  // `||` (not `??`) so an empty-string env value — e.g. an unresolved
-  // `${CLAUDE_PROJECT_DIR}` in some launch contexts — still falls back to cwd.
-  const repoRoot = process.env.DEV_POMOGATOR_REPO_ROOT || process.cwd();
+  const repoRoot = resolveRepoRoot(process.env.DEV_POMOGATOR_REPO_ROOT, process.cwd());
   const { server, lifecycle } = await boot({ repoRoot });
 
   const shutdownAndExit = async (code: number): Promise<void> => {
