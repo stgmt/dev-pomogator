@@ -195,7 +195,7 @@ Format Jira trace в FR/AC/BDD/Tasks — см. [`jira-mode.md`](jira-mode.md).
    - Пометить непроверенные: `[UNVERIFIED]`
 
 10. **Step 5c: Multimodal re-verification (ОБЯЗАТЕЛЬНО в Jira-mode):** Для каждого AC, содержащего ссылку `Screenshot: {filename}` или `Video: {filename}:{timestamp}`:
-   - Прочитать attachment из `.specs/{slug}/attachments/{filename}` (если присутствует локально) через Read tool (multimodal)
+   - Прочитать attachment через MCP-дверь (FR-39/P19-6 — НЕ raw Read; под enforce raw `.specs/**` блокируется): `read_attachment({ spec: "{slug}", path: "attachments/{filename}" })` → вернёт `{ base64, mime }` для multimodal-анализа. (`list_spec_docs({spec}).attachments[]` — инвентарь доступных вложений.)
    - Применить правило `.claude/rules/pomogator/screenshot-driven-verification.md`: описать что ВИДНО, сравнить с ОЖИДАНИЕМ AC, вывести `CONFIRMED` / `DENIED` с обоснованием
    - Если file отсутствует локально → пометить AC `[EVIDENCE_MISSING: run /jira-intake-resync]` и не утверждать детали UI от головы.
 
