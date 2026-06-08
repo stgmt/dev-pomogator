@@ -115,6 +115,52 @@ buckets back to 136/28/skip1, GREEN). RULE OF THUMB: after any filtered cucumber
 the full suite before trusting any coverage surface. (Same incident the user flagged earlier;
 hit again here when binding SPECGEN004_137 — repaired in the same pass.)
 
+## FORK DECISIONS (user, 2026-06-08)
+
+### P19-6 subdir door → **Option A: extend the door** (+ read_attachment for binaries)
+The agent reaches spec SUBDIRECTORIES through the SAME door, not a carve-out:
+- `read_spec_doc` / `apply_spec_change`: accept a relative SUBPATH (`ARCHITECTURE/AXIS-1.md`)
+  instead of `docOf = basename`. Validation: resolve `path.join(specRoot, doc)`, then assert
+  the resolved real path is STILL inside `specRoot` (reject `..` traversal — the basename
+  neutralization that exists today must be replaced by a containment check, not a strip).
+- `list_spec_docs`: recurse one+ levels and return relative subpaths (keep the md/feature/
+  .progress.json filter; add a separate inventory of binary attachments).
+- New `read_attachment({ spec, path })`: returns base64 for binaries (`.png/.jpg/.pdf`) —
+  `read_spec_doc` is text-only. Used by phase2 Step 5c Jira multimodal verify.
+- spec-access-guard: nothing to relax (the door widens; raw `.specs/**` stays denied).
+
+### P19-5 producer → **the pomogator TEST-RUN skill writes the verdict; strong-tests grades**
+User direction: "наш скил тест-рана пишет вердикт … стронг тест оценивает покрытие и
+качество … мб обновить что-то надо адаптировать". Grounded wiring analysis:
+
+**What exists today**
+- `run-tests` skill / `test_runner_wrapper.cjs` — runs the suite, writes YAML status + (for
+  cucumber) the NDJSON. Step 5 ALREADY detects changed test files and HINTS strong-tests —
+  but only prints a hint, writes no verdict.
+- `strong-tests` skill (audit / mutate modes) — grades a TEST FILE: 12-point self-eval,
+  mutation kill rate, `enriched-report.json`, a strength rating **GOOD/FAIR/WEAK** (SKILL:499).
+- Consumer chain (now live): `.dev-pomogator/.test-quality.json` `{ "<taskId>": "STRONG|WEAK|
+  FAKE-POSITIVE-RISK" }` → readVerdicts → computeCoverage caps DONE.
+
+**The two real gaps to close**
+1. **Vocabulary mismatch:** strong-tests rates GOOD/FAIR/WEAK; the verdict file/`TestQualityVerdict`
+   is STRONG/WEAK/FAKE-POSITIVE-RISK. Adapt strong-tests to emit the canonical 3-value verdict
+   (map GOOD→STRONG, WEAK→WEAK, and a fake-positive finding → FAKE-POSITIVE-RISK), machine-readable.
+2. **TEST→TASK mapping:** the verdict file is keyed by TASK id; strong-tests grades a test FILE /
+   scenario. Bridge via the graph: a test file binds step-defs → scenarios; a task → DoneWhen
+   (SPECGEN id) → scenario (tested-by). So scenario-verdict → every task whose DoneWhen maps to
+   that scenario. A small deterministic producer step does this join and writes the JSON.
+
+**Proposed flow (adapt, don't rebuild)**
+`run-tests` (Step 5, after a run with changed test files) → invoke `strong-tests` audit on the
+changed tests → strong-tests emits a per-test canonical verdict → a producer helper
+(`tools/spec-graph/test-quality-producer.ts`) joins test→scenario→task over the built graph and
+writes `.dev-pomogator/.test-quality.json` keyed by taskId → the live consumers (Stop-gate /
+get_coverage / spec-verdict) then bite for real, no hand-planted file. Open sub-question for
+implementation: strong-tests is LLM (non-deterministic) — keep its verdict as the quality signal
+but make the run-tests producer step deterministic (the join + write), so the FILE is reproducible
+even if the grade itself is a judgement. (Recorded as P19-5 producer task; not yet implemented.)
+
 ## Deep gap-hunt (34-agent adversarial workflow, wf_03852f29) — 20 CONFIRMED
 
 The manual pass found 6; the user said "мало найдено". A 7-area parallel finder +

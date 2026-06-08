@@ -1386,14 +1386,16 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] consumer spec-verdict: читает testQualityByTask + передаёт в checkConformance И computeCoverage → TASK_TEST_QUALITY warning + DONE-but-unverified (был 2-арг вызов)
   - [x] shared reader: `readVerdicts` вынесен в `tools/spec-graph/test-quality-gate.ts` (один источник: Stop-hook + get_coverage + spec-verdict вместо 3 копий); bundles MCP+gate пересобраны; deps-absent gate-bundle exit 0
   - [x] e2e регресс: SPECGEN004_137 — side-channel ФАЙЛ читается реальным readVerdicts → WEAK кап ниже DONE; нет файла → DONE (6/6 @feature35 green)
-  - [ ] **PRODUCER (остаток — РАЗВИЛКА):** никто пока НЕ пишет `.dev-pomogator/.test-quality.json`. Кто грейдит качество и пишет verdict: (A) strong-tests skill (LLM, недетерминирован) после прогона, (B) детерминированный анализатор-стадия в оркестраторе, (C) обе. Без producer гейт активен только когда файл подсажен вручную. Решение за юзером
+  - [ ] **PRODUCER (РЕШЕНО юзером 2026-06-08):** скилл ТЕСТ-РАНА (`run-tests`) пишет `.dev-pomogator/.test-quality.json`; `strong-tests` грейдит покрытие/качество. Адаптировать: (1) strong-tests → канонический вердикт STRONG/WEAK/FAKE-POSITIVE-RISK (сейчас GOOD/FAIR/WEAK); (2) producer-хелпер `tools/spec-graph/test-quality-producer.ts` джойнит test→scenario→task по графу и пишет JSON keyed by taskId; (3) run-tests Step 5 (уже хинтит strong-tests) → реально вызвать grade + write. Детерминированный join+write, LLM только сам грейд. Анализ: audit-reports/mcp-rails-deep-audit-2026-06-08.md «FORK DECISIONS»
   - [ ] LOW: `DUPLICATE_DEFINITION` — либо производить находку, либо удалить мёртвый код + поправить тест-контракт (conformance.ts:361-376)
 
-- [ ] P19-6: MCP-дверь к ПОДКАТАЛОГАМ спеки (ARCHITECTURE/ attachments/ .architecture-research/) — id: p19-subdir-door — Status: TODO | Est: 300m
+- [ ] P19-6: MCP-дверь к ПОДКАТАЛОГАМ спеки (ARCHITECTURE/ attachments/ .architecture-research/) — id: p19-subdir-door — Status: TODO (РЕШЕНО: Option A — расширить дверь) | Est: 300m
   _depends: p17-mutation-surface_
   _Requirements: [FR-39](FR.md#fr-39), [FR-40](FR.md#fr-40)_
+  **РЕШЕНИЕ юзера 2026-06-08: Option A — расширить дверь (НЕ carve-out).** Root cause: `docOf=path.basename` (tools.ts:1025) + inventory basename (982) срезают директорию → subdir структурно недостижим (детерминир. проверено). См. audit «FORK DECISIONS».
   **Done When:**
-  - [ ] read-дверь достаёт subdir-доки (AXIS-*.md, COMPLETENESS.md) — read_spec_doc top-level-only сейчас → arch-decision-builder step 3.5 под enforce блок
-  - [ ] mutation-дверь пишет subdir (.architecture-research/<N>-stage.md, QUEUE.json, COMPLETENESS.md) ЛИБО эти CLI/in-process помечены carve-out (MUTABLE_DOC_RE top-level-only сейчас)
-  - [ ] attachments: `read_attachment` MCP-тул (multimodal/binary) ЛИБО carve-out для `.specs/<slug>/attachments/` — phase2 Step 5c Jira-verify под enforce блок
-  - [ ] решение задокументировано: новая дверь vs carve-out subdir-ов (граница агент-vs-движок)
+  - [ ] read_spec_doc/apply_spec_change: `docOf` → принимать relative SUBPATH; заменить basename-strip на containment-check (resolve `path.join(specRoot,doc)` + assert внутри specRoot; reject `..` traversal). НЕ basename-strip
+  - [ ] list_spec_docs: рекурсия ≥1 уровня, возвращать relative subpaths (сохранить md/feature/.progress.json фильтр; отдельный инвентарь бинарей)
+  - [ ] новый `read_attachment({spec,path})`: base64 для бинарей (.png/.jpg/.pdf) — read_spec_doc text-only; для phase2 Step 5c Jira multimodal verify
+  - [ ] миграция consumers: arch-decision-builder (ARCHITECTURE/AXIS-*.md), phase2 (attachments/), arch-research-workflow (.architecture-research/<N>-stage.md write)
+  - [ ] BDD регресс: subdir-док читается через дверь; traversal `../../etc/passwd` отвергается (не basename-нейтрализуется молча); бинарь через read_attachment
