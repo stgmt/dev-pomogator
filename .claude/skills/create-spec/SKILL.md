@@ -27,6 +27,20 @@ argument-hint: "<feature-slug>"
 
 `.progress.json` создаётся ТОЛЬКО через `spec-status.ts`. ЗАПРЕЩЕНО создавать его через Write tool, вручную или напрямую. Аргумент `-Path` ОБЯЗАН указывать на `.specs/<feature>/`.
 
+## MCP-rails: писать спеки через сервер, не Write/Edit напрямую (FR-40/FR-42)
+
+create-spec — это ДВЕРЬ (юзер входит сюда как сейчас), но запись документов идёт через MCP-мутации `dev-pomogator-specs`, не через сырой Write/Edit по `.specs/` (слойный контракт FR-42c: тонкий скилл оркестрирует, толстый сервер валидирует ДО записи):
+
+| Нужно | MCP-тул | Параметры |
+|-------|---------|-----------|
+| Новая спека (scaffold, рождается verdict-GREEN) | `create_spec` | `{ slug }` |
+| Создать/переписать любой `*.md`/`*.feature` | `apply_spec_change` | `{ spec, doc, content, reason }` |
+| Точечная правка | `apply_spec_change` | `{ spec, doc, old_string, new_string, reason }` |
+| Проверить без записи (dry-run, те же гейты) | `propose_spec_change` | `{ spec, doc, content\|old/new, reason }` |
+| Прочитать цельный документ / перечень | `read_spec_doc` / `list_spec_docs` | `{ spec[, doc] }` |
+
+Сервер валидирует form-контракты + якоря (delta-only) + conformance ДО касания диска и отказывает с findings list — НЕ переписывай эту логику в скилле. `.progress.json` НЕ мутабелен через MCP (single-writer — `spec-status.ts`).
+
 ## Phase navigation
 
 | Phase | Reference | Что делает |

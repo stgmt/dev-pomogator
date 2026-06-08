@@ -82,6 +82,65 @@ export const REFERENCED_CAPABILITIES: readonly string[] = [
   'spec-status',
 ];
 
+/**
+ * FR-42a/b — the «MCP tool → skill consumer(s)» table (thin skill, thick
+ * server). Every USER-FACING MCP tool must have a skill that knows how to
+ * drive it; a live tool absent from this table is a layering violation (a
+ * "naked MCP tool" with no skill wrapper). The drift guard enforces it.
+ * Mirror of the orchestrator feature-map discipline, one level down.
+ */
+export const TOOL_CONSUMERS: Readonly<Record<string, readonly string[]>> = {
+  get_trace: ['spec-graph-query'],
+  find_by_tags: ['spec-graph-query'],
+  conformance_check: ['spec-graph-query', 'cross-spec-reconcile'],
+  search: ['spec-graph-query'],
+  get_node: ['spec-graph-query'],
+  list_phase_tasks: ['spec-graph-query'],
+  get_test_result: ['spec-graph-query'],
+  find_orphans: ['spec-graph-query'],
+  get_coverage: ['spec-graph-query', 'spec-status'],
+  get_coverage_summary: ['spec-graph-query'],
+  get_spec_status: ['spec-graph-query', 'spec-status'],
+  validate_anchor: ['spec-graph-query'],
+  list_specs: ['spec-graph-query'],
+  find_refs: ['spec-graph-query'],
+  // FR-39a read door
+  list_spec_docs: ['spec-graph-query'],
+  read_spec_doc: ['spec-graph-query'],
+  // FR-40 mutation door — create-spec is the user entry (FR-42c)
+  propose_spec_change: ['create-spec'],
+  apply_spec_change: ['create-spec'],
+  create_spec: ['create-spec'],
+};
+
+export interface ConsumerDriftResult {
+  ok: boolean;
+  /** Live tools with no declared skill consumer (FR-42a violations). */
+  unconsumed: string[];
+  message: string;
+}
+
+/**
+ * FR-42a: every live MCP tool must appear in TOOL_CONSUMERS with ≥1 consumer.
+ * `actualTools` = the live registry tool names.
+ */
+export function checkToolConsumers(
+  actualTools: readonly string[],
+  consumers: Readonly<Record<string, readonly string[]>> = TOOL_CONSUMERS,
+): ConsumerDriftResult {
+  const unconsumed = [...new Set(actualTools)].filter(
+    (t) => !consumers[t] || consumers[t].length === 0,
+  );
+  return {
+    ok: unconsumed.length === 0,
+    unconsumed,
+    message:
+      unconsumed.length === 0
+        ? 'every live MCP tool has a skill consumer (FR-42a)'
+        : `FR-42a violation — ${unconsumed.length} MCP tool(s) with no skill consumer: ${unconsumed.join(', ')}`,
+  };
+}
+
 export interface DriftResult {
   ok: boolean;
   /** Capabilities present at runtime that the feature map does not reference. */

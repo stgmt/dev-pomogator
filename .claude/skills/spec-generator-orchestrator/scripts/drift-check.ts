@@ -9,7 +9,7 @@
 import { pathToFileURL } from 'node:url';
 import { buildToolRegistry } from '../../../../tools/spec-mcp-server/tools.ts';
 import type { SpecGraph } from '../../../../tools/spec-graph/types.ts';
-import { checkFeatureMapDrift } from './feature-map.ts';
+import { checkFeatureMapDrift, checkToolConsumers } from './feature-map.ts';
 
 /** Worker skills the orchestrator delegates to (no registry — declared here). */
 export const WORKER_SKILLS: readonly string[] = [
@@ -20,22 +20,31 @@ export const WORKER_SKILLS: readonly string[] = [
   'spec-backlog',
 ];
 
+const EMPTY_GRAPH: SpecGraph = {
+  version: 1,
+  builtAt: '',
+  nodes: new Map(),
+  edges: [],
+  definitions: new Map(),
+  backlinks: new Map(),
+};
+
+/** Live MCP tool names from the real registry. */
+export function liveTools(): string[] {
+  return buildToolRegistry(() => EMPTY_GRAPH).map((t) => t.name);
+}
+
 /** The live capability surface: real MCP tool names + worker skills. */
 export function liveCapabilities(): string[] {
-  const emptyGraph: SpecGraph = {
-    version: 1,
-    builtAt: '',
-    nodes: new Map(),
-    edges: [],
-    definitions: new Map(),
-    backlinks: new Map(),
-  };
-  const toolNames = buildToolRegistry(() => emptyGraph).map((t) => t.name);
-  return [...toolNames, ...WORKER_SKILLS];
+  return [...liveTools(), ...WORKER_SKILLS];
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const res = checkFeatureMapDrift(liveCapabilities());
-  process.stdout.write(`${res.message}\n`);
-  if (!res.ok) process.exit(1);
+  // FR-33: feature-map references every capability.
+  const fmap = checkFeatureMapDrift(liveCapabilities());
+  process.stdout.write(`${fmap.message}\n`);
+  // FR-42a: every live MCP tool has a skill consumer (thin skill, thick server).
+  const cons = checkToolConsumers(liveTools());
+  process.stdout.write(`${cons.message}\n`);
+  if (!fmap.ok || !cons.ok) process.exit(1);
 }

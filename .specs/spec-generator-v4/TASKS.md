@@ -140,7 +140,7 @@
 | T17-134 | P17-6: ENFORCE flip | TODO | p17-mutation-surface, p17-shadow-guard, p17-skill-migration | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 120m |
 | T17-135 | P17-7: фазовые headless-агенты | TODO | p17-read-sufficiency, p17-mutation-surface | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 480m |
 | T17-136 | P17-8: оркестратор-проверятор | TODO | p17-phase-agents | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 480m |
-| T17-137 | P17-9: слойный контракт skill↔MCP | TODO | p17-mutation-surface | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 240m |
+| T17-137 | P17-9: слойный контракт skill↔MCP | DONE | p17-mutation-surface | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 240m |
 
 ## TDD Workflow
 
@@ -1306,10 +1306,10 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] лог наблюдаемости: каждый спавн/ретрай/гейт с идентификацией агента и фазы
   - [ ] dogfood: одна спека создана end-to-end оркестратором; SPECGEN004_118, _119 GREEN
 
-- [ ] P17-9: слойный контракт skill↔MCP — таблица потребителей + расширенный drift-guard — id: p17-skill-mcp-contract — Status: TODO | Est: 240m
+- [x] P17-9: слойный контракт skill↔MCP — таблица потребителей + расширенный drift-guard — id: p17-skill-mcp-contract — Status: DONE (2026-06-07) | Est: 240m
   _depends: p17-mutation-surface_
   _Requirements: [FR-42](FR.md#fr-42)_
   **Done When:**
-  - [ ] DESIGN несёт таблицу «MCP-тул → скилл(ы)-потребители» для всех user-facing тулзов (вкл. новые FR-39a/40a); юзер-сценарий без обёртки = violation
-  - [ ] drift-guard FR-33 расширен: новый user-facing тул без skill-потребителя → fail с именем тулзы (SPECGEN004_120)
-  - [ ] create-spec UX сохранён: юзер входит через скилл, шаги фаз = MCP-вызовы; тела spec-скиллов не пере-реализуют серверную логику (SPECGEN004_121)
+  - [x] DESIGN несёт таблицу «MCP-тул → скилл-потребители» (19 тулзов); канон = `feature-map.ts::TOOL_CONSUMERS`; реальные потребители дописаны в скиллы: read-door (list_spec_docs/read_spec_doc) → spec-graph-query (allowed-tools + таблица), mutation-door (propose/apply/create_spec) → create-spec (новая секция «MCP-rails»)
+  - [x] drift-guard расширен `checkToolConsumers`: live-тул без потребителя → fail с именем (FR-42b); до фикса показал ровно 5 беспризорных новых тулзов, после дописывания потребителей — «every live MCP tool has a skill consumer»; SPECGEN004_120 гоняет это на синтетическом stray-туле
+  - [x] create-spec UX сохранён (дверь, STOP-точки), запись = MCP-мутации не Write/Edit; SPECGEN004_121 проверяет: тело ссылается на mutation-тулзы И не несёт server-логики (checkConformance/parseTaskBlocks/checkLinks/buildGraph)

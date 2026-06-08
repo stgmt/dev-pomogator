@@ -14,7 +14,7 @@ description: >
   NOT use for: markdown link/anchor NAVIGATION or rename (markdown-lsp / Marksman), bulk
   broken-anchor scan+fix (anchor-fix), the honest per-task DONE verdict (get_coverage /
   spec-status), or cross-spec drift (cross-spec-reconcile).
-allowed-tools: mcp__dev-pomogator-specs__get_trace, mcp__dev-pomogator-specs__find_by_tags, mcp__dev-pomogator-specs__conformance_check, mcp__dev-pomogator-specs__search, mcp__dev-pomogator-specs__get_node, mcp__dev-pomogator-specs__get_spec_status, mcp__dev-pomogator-specs__list_phase_tasks, mcp__dev-pomogator-specs__get_test_result, mcp__dev-pomogator-specs__find_orphans, mcp__dev-pomogator-specs__get_coverage_summary, mcp__dev-pomogator-specs__get_coverage, mcp__dev-pomogator-specs__validate_anchor, mcp__dev-pomogator-specs__list_specs, mcp__dev-pomogator-specs__find_refs, Bash, Read
+allowed-tools: mcp__dev-pomogator-specs__get_trace, mcp__dev-pomogator-specs__find_by_tags, mcp__dev-pomogator-specs__conformance_check, mcp__dev-pomogator-specs__search, mcp__dev-pomogator-specs__get_node, mcp__dev-pomogator-specs__get_spec_status, mcp__dev-pomogator-specs__list_phase_tasks, mcp__dev-pomogator-specs__get_test_result, mcp__dev-pomogator-specs__find_orphans, mcp__dev-pomogator-specs__get_coverage_summary, mcp__dev-pomogator-specs__get_coverage, mcp__dev-pomogator-specs__validate_anchor, mcp__dev-pomogator-specs__list_specs, mcp__dev-pomogator-specs__find_refs, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__read_spec_doc, Bash, Read
 ---
 
 # spec-graph-query — one cheatsheet for the spec-graph MCP
@@ -51,8 +51,16 @@ file-local by design (FR-36b).
 | Tasks under a phase heading | `list_phase_tasks` | `{ phase: "Phase 2: MCP server + hooks" }` |
 | Per-spec FR/AC/Scenario/Task **counts** (structural census) | `get_coverage_summary` | `{}` |
 | Does ONE anchor (compact id or slug) resolve? | `validate_anchor` | `{ anchor: "ac-7-1" }` |
+| List ONE spec's readable docs (the `read_spec_doc` inventory: *.md + *.feature) (FR-39a) | `list_spec_docs` | `{ spec: "spec-generator-v4" }` |
+| Read a WHOLE spec document — prose outside graph nodes (README/DESIGN/RESUME); audited (FR-39a/b) | `read_spec_doc` | `{ spec: "...", doc: "RESUME.md" }` |
 
 All return `{ ok, ... }`; `ok:false` (or `registered:false`) when nothing matches.
+
+> **MCP-rails (FR-39):** these read tools are the door — prefer them over a raw
+> `Read`/`Grep` of `.specs/`. The whole-document read is `read_spec_doc`; for a
+> single node's body use `get_node`. WRITING a spec is a sibling door —
+> `create-spec` drives `propose_spec_change` / `apply_spec_change` / `create_spec`
+> (FR-40/FR-42); never hand-Edit a `.specs/` file.
 
 ## The 6 you already use (here for completeness)
 `get_trace` (full traceability for a node), `conformance_check` (structural findings),

@@ -530,3 +530,18 @@ The four design decisions below shipped in spec-generator-v3 (production via PR 
 **Platform / worktree answers (refuted as defects, documented):** the server's repoRoot is `process.cwd()` and the FR-14 watcher + graph share it, so a worktree's own `.specs/` is read AND written consistently (no split-brain — `DEV_POMOGATOR_REPO_ROOT` defaults to cwd in the real launch). conformanceFindings clones only the one spec dir; cross-spec conformance codes are advisory there — the AUTHORITATIVE cross-spec verdict stays `spec-verdict.ts` over the full corpus, as designed.
 
 **Known residual (accepted, low):** `apply_spec_change` is last-writer-wins on concurrent edits of the same doc (TOCTOU validate→write window) — acceptable for a single-agent authoring loop; both writes are audited. The conformance clone layer is error-severity-only (rarely the rejecting gate; anchors + form contracts are the live gates) — matches the authoritative verdict's own conformance gating.
+
+### MCP tool → skill-consumer table (FR-42a, P17-9)
+
+Thin skill, thick server: every USER-FACING MCP tool has a skill that knows how to drive it (the user enters through the SKILL, never naked MCP). The table is the canonical declaration in `.claude/skills/spec-generator-orchestrator/scripts/feature-map.ts::TOOL_CONSUMERS`; the drift guard (`drift-check.ts`) fails if a live registry tool is absent or has zero consumers (`checkToolConsumers`, FR-42b). SPECGEN004_120 enforces it; SPECGEN004_121 pins create-spec as the entry that drives the mutation tools without re-implementing server logic.
+
+| MCP tool | Skill consumer(s) | Door |
+|---|---|---|
+| get_trace / get_node / find_refs / find_by_tags / search | spec-graph-query | read (query) |
+| conformance_check | spec-graph-query, cross-spec-reconcile | read |
+| get_coverage / get_coverage_summary / get_spec_status | spec-graph-query, spec-status | read (honesty) |
+| list_phase_tasks / list_specs / find_orphans / validate_anchor | spec-graph-query | read |
+| **list_spec_docs / read_spec_doc** | spec-graph-query | **FR-39a read door** |
+| **propose_spec_change / apply_spec_change / create_spec** | create-spec | **FR-40 mutation door** |
+
+A new user-facing tool MUST be added to TOOL_CONSUMERS with a real consumer skill (and that skill must actually document/use it) or the drift guard blocks — this is the FR-42 «no naked MCP tool» invariant.
