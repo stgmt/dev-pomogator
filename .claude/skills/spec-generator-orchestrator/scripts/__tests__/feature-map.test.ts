@@ -6,8 +6,11 @@ import {
   WORKFLOW,
   REFERENCED_CAPABILITIES,
   checkFeatureMapDrift,
+  checkToolConsumers,
+  verifyConsumerTruthfulness,
+  TOOL_CONSUMERS,
 } from '../feature-map.ts';
-import { liveCapabilities } from '../drift-check.ts';
+import { liveCapabilities, liveTools } from '../drift-check.ts';
 
 describe('feature map routing (AC-33.1 — delegate, never re-implement)', () => {
   it('routes the coverage + honesty-gate steps to the get_coverage MCP tool', () => {
@@ -46,3 +49,34 @@ describe('checkFeatureMapDrift (AC-33.5)', () => {
     expect(res.ok).toBe(true);
   });
 });
+
+describe('FR-42 layering contract (thin skill, thick server)', () => {
+  it('FR-42a: flags a live MCP tool with no skill consumer, naming it', () => {
+    const res = checkToolConsumers([...Object.keys(TOOL_CONSUMERS), 'naked_new_tool']);
+    expect(res.ok).toBe(false);
+    expect(res.unconsumed).toContain('naked_new_tool');
+  });
+
+  it('FR-42a: every LIVE registry tool has a declared consumer', () => {
+    expect(checkToolConsumers(liveTools()).ok).toBe(true);
+  });
+
+  it('FR-42b: flags a LYING declaration — consumer skill that never references the tool', () => {
+    // injected reader: the skill exists but does NOT mention the tool.
+    const res = verifyConsumerTruthfulness(() => 'a skill body with no tool name', { some_tool: ['some-skill'] });
+    expect(res.ok).toBe(false);
+    expect(res.message).toMatch(/some-skill.*some_tool/);
+  });
+
+  it('FR-42b: the REAL TOOL_CONSUMERS table is truthful (every consumer skill uses its tool)', () => {
+    // caught 2026-06-07: spec-status was credited for get_coverage/get_spec_status it never named.
+    const fs2 = require('node:fs'); const path2 = require('node:path');
+    const dir = path2.resolve(__dirname, '..', '..', '..');
+    const res = verifyConsumerTruthfulness((skill) => {
+      const f = path2.join(dir, skill, 'SKILL.md');
+      return fs2.existsSync(f) ? fs2.readFileSync(f, 'utf-8') : null;
+    });
+    expect(res.ok, res.message).toBe(true);
+  });
+});
+

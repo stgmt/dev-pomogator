@@ -9,7 +9,10 @@
 import { pathToFileURL } from 'node:url';
 import { buildToolRegistry } from '../../../../tools/spec-mcp-server/tools.ts';
 import type { SpecGraph } from '../../../../tools/spec-graph/types.ts';
-import { checkFeatureMapDrift, checkToolConsumers } from './feature-map.ts';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { checkFeatureMapDrift, checkToolConsumers, verifyConsumerTruthfulness } from './feature-map.ts';
 
 /** Worker skills the orchestrator delegates to (no registry — declared here). */
 export const WORKER_SKILLS: readonly string[] = [
@@ -46,5 +49,13 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   // FR-42a: every live MCP tool has a skill consumer (thin skill, thick server).
   const cons = checkToolConsumers(liveTools());
   process.stdout.write(`${cons.message}\n`);
-  if (!fmap.ok || !cons.ok) process.exit(1);
+  // FR-42b: and each declared consumer is TRUTHFUL — the skill really uses the
+  // tool (a non-empty table that lies is the 2026-06-07 «сам проверил?» bug).
+  const skillsDir = path.resolve(fileURLToPath(import.meta.url), '..', '..', '..');
+  const truth = verifyConsumerTruthfulness((skill) => {
+    const p = path.join(skillsDir, skill, 'SKILL.md');
+    return fs.existsSync(p) ? fs.readFileSync(p, 'utf-8') : null;
+  });
+  process.stdout.write(`${truth.message}\n`);
+  if (!fmap.ok || !cons.ok || !truth.ok) process.exit(1);
 }

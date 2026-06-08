@@ -98,9 +98,9 @@ export const TOOL_CONSUMERS: Readonly<Record<string, readonly string[]>> = {
   list_phase_tasks: ['spec-graph-query'],
   get_test_result: ['spec-graph-query'],
   find_orphans: ['spec-graph-query'],
-  get_coverage: ['spec-graph-query', 'spec-status'],
+  get_coverage: ['spec-graph-query'],
   get_coverage_summary: ['spec-graph-query'],
-  get_spec_status: ['spec-graph-query', 'spec-status'],
+  get_spec_status: ['spec-graph-query'],
   validate_anchor: ['spec-graph-query'],
   list_specs: ['spec-graph-query'],
   find_refs: ['spec-graph-query'],
@@ -138,6 +138,45 @@ export function checkToolConsumers(
       unconsumed.length === 0
         ? 'every live MCP tool has a skill consumer (FR-42a)'
         : `FR-42a violation — ${unconsumed.length} MCP tool(s) with no skill consumer: ${unconsumed.join(', ')}`,
+  };
+}
+
+export interface TruthResult {
+  ok: boolean;
+  /** "skill credited for tool X but its SKILL.md never mentions X". */
+  lies: string[];
+  message: string;
+}
+
+/**
+ * FR-42b hardening (caught 2026-06-07 by «сам проверил?»): a non-empty
+ * TOOL_CONSUMERS entry is NOT enough — the declared consumer skill must
+ * REALLY reference the tool, else the table lies and the guard rubber-stamps
+ * it. `readSkill(name)` returns the skill's SKILL.md body (or null if absent);
+ * injectable so the check is pure + unit-testable.
+ */
+export function verifyConsumerTruthfulness(
+  readSkill: (skill: string) => string | null,
+  consumers: Readonly<Record<string, readonly string[]>> = TOOL_CONSUMERS,
+): TruthResult {
+  const lies: string[] = [];
+  for (const [tool, skills] of Object.entries(consumers)) {
+    for (const skill of skills) {
+      const body = readSkill(skill);
+      if (body === null) {
+        lies.push(`${skill} (missing SKILL.md) credited for ${tool}`);
+      } else if (!body.includes(tool)) {
+        lies.push(`${skill} credited for ${tool} but its SKILL.md never mentions it`);
+      }
+    }
+  }
+  return {
+    ok: lies.length === 0,
+    lies,
+    message:
+      lies.length === 0
+        ? 'every declared tool→skill consumer is truthful (FR-42b)'
+        : `FR-42b: ${lies.length} false consumer declaration(s): ${lies.join('; ')}`,
   };
 }
 
