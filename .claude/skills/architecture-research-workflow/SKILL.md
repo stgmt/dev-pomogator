@@ -8,7 +8,7 @@ description: |
   with one Appendix per stage. Auto-invoked by `create-spec` when the
   complexity heuristic matches (RU/EN keywords: "архитектур*", "v\d+",
   "rebuild", "перепроектировать", OR ≥3 components in the prompt).
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion, WebSearch, WebFetch
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion, WebSearch, WebFetch, mcp__dev-pomogator-specs__apply_spec_change, mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__list_spec_docs
 ---
 
 # architecture-research-workflow
@@ -60,6 +60,25 @@ mandatory; hard limit 3 rewinds prevents infinite loops).
 `.specs/<slug>/.architecture-research/` is NOT in `.gitignore`. Stages
 read like a postmortem — future readers (including future-you) can
 audit why a specific variant was chosen and what was rejected.
+
+## Writing stage files (MCP-rails, FR-39/P19-6)
+
+Each stage doc lives in the spec SUBDIRECTORY `.architecture-research/`, so under
+enforce a raw `Write` to `.specs/**` is blocked. Persist every stage through the
+mutation door instead:
+
+```
+apply_spec_change({ spec: "{slug}", doc: ".architecture-research/1-problem-framing.md",
+                    content: "<stage prose>", reason: "arch-research stage 1" })
+```
+
+The door accepts the subpath (containment-checked) and — because a research stage is
+a NON-graph working doc — SKIPS the form/anchor/conformance gates that apply to the
+top-level FR/AC/TASKS/feature docs. The final `RESEARCH.md` (top-level) IS a graph doc:
+write it through the same `apply_spec_change({ doc: "RESEARCH.md", ... })` and it WILL be
+gate-validated. Read prior stages back with `read_spec_doc({ doc: ".architecture-research/N-...md" })`
+(`list_spec_docs({spec}).docs` shows the subdir inventory). The `scripts/init.ts` scaffold
+runs as an engine CLI (carve-out) — it may create the directory + skeletons directly.
 
 ## How `create-spec` integrates
 
