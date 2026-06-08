@@ -48534,13 +48534,13 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
   });
   tools.push({
     name: "list_specs",
-    description: "Enumerate top-level `.specs/<slug>/` directories present in the current graph.",
+    description: "Enumerate `.specs/<slug>/` specs present in the current graph (slug = FULL nested dir path, e.g. `backlog/honest-status-command`).",
     inputShape: {},
     handler: async () => {
       const specs = /* @__PURE__ */ new Set();
       for (const node of getGraph().nodes.values()) {
-        const m = node.file.match(/^\.specs\/([^/]+)\//);
-        if (m) specs.add(m[1]);
+        const s = specOf(node.file);
+        if (s && !/(^|\/)(_artifact|_fixtures|attachments|\.architecture-research)(\/|$)/.test(s)) specs.add(s);
       }
       return asJsonResult({ ok: true, specs: Array.from(specs).sort() });
     }
@@ -48556,9 +48556,9 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
       const graph = getGraph();
       const { node, candidates } = resolveNodeRef(graph, node_id, spec);
       if (candidates) return ambiguousBareId(node_id, candidates);
-      const id = node ? node.id : node_id;
-      const references = collectGraphRefs(graph, id);
-      return asJsonResult({ ok: true, node_id: id, references, count: references.length });
+      if (!node) return asJsonResult({ ok: false, error: "NODE_NOT_FOUND", node_id });
+      const references = collectGraphRefs(graph, node.id);
+      return asJsonResult({ ok: true, node_id: node.id, references, count: references.length });
     }
   });
   tools.push({

@@ -792,13 +792,17 @@ export function buildToolRegistry(
   // ─── 11) list_specs ─────────────────────────────────────────────────────
   tools.push({
     name: 'list_specs',
-    description: 'Enumerate top-level `.specs/<slug>/` directories present in the current graph.',
+    description: 'Enumerate `.specs/<slug>/` specs present in the current graph (slug = FULL nested dir path, e.g. `backlog/honest-status-command`).',
     inputShape: {} as const satisfies z.ZodRawShape,
     handler: async () => {
       const specs = new Set<string>();
       for (const node of getGraph().nodes.values()) {
-        const m = node.file.match(/^\.specs\/([^/]+)\//);
-        if (m) specs.add(m[1]);
+        // FR-36 slug = full dir path under .specs/ (specOf), NOT the first segment —
+        // the old `/^\.specs\/([^/]+)\//` collapsed `backlog/<name>` → `backlog`, so
+        // every nested backlog spec was invisible to the inventory (2026-06-08 audit).
+        // Exclude artifact/fixture subdirs (a .feature under _artifact/ is NOT a spec).
+        const s = specOf(node.file);
+        if (s && !/(^|\/)(_artifact|_fixtures|attachments|\.architecture-research)(\/|$)/.test(s)) specs.add(s);
       }
       return asJsonResult({ ok: true, specs: Array.from(specs).sort() });
     },
@@ -827,9 +831,12 @@ export function buildToolRegistry(
       // that collides must list candidates, not merge unrelated specs' refs.
       const { node, candidates } = resolveNodeRef(graph, node_id as string, spec as string | undefined);
       if (candidates) return ambiguousBareId(node_id as string, candidates);
-      const id = node ? node.id : (node_id as string);
-      const references = collectGraphRefs(graph, id);
-      return asJsonResult({ ok: true, node_id: id, references, count: references.length });
+      // A non-existent id must be NODE_NOT_FOUND (like get_trace/get_node/get_test_result),
+      // NOT ok:true with empty refs — that fake-positive reads as "nothing references this"
+      // when the truth is "this id does not exist" (2026-06-08 audit).
+      if (!node) return asJsonResult({ ok: false, error: 'NODE_NOT_FOUND', node_id: node_id as string });
+      const references = collectGraphRefs(graph, node.id);
+      return asJsonResult({ ok: true, node_id: node.id, references, count: references.length });
     },
   });
 
