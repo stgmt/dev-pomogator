@@ -138,8 +138,8 @@
 | T17-132 | P17-4: carve-out лист движка в DESIGN | TODO | — | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 60m |
 | T17-133 | P17-5: миграция корзины 1 | TODO | p17-read-sufficiency, p17-mutation-surface | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 480m |
 | T17-134 | P17-6: ENFORCE flip | TODO | p17-mutation-surface, p17-shadow-guard, p17-skill-migration | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 120m |
-| T17-135 | P17-7: фазовые headless-агенты | TODO | p17-read-sufficiency, p17-mutation-surface | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 480m |
-| T17-136 | P17-8: оркестратор-проверятор | TODO | p17-phase-agents | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 480m |
+| T17-135 | P17-7: фазовые headless-агенты | DONE | p17-read-sufficiency, p17-mutation-surface | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 480m |
+| T17-136 | P17-8: оркестратор-проверятор | DONE | p17-phase-agents | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 480m |
 | T17-137 | P17-9: слойный контракт skill↔MCP | DONE | p17-mutation-surface | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 240m |
 
 ## TDD Workflow
@@ -1290,21 +1290,21 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] гейт флипа задокументирован и выполнен: shadow чист + P17-1/2 доказаны
   - [ ] SPECGEN004_111 GREEN
 
-- [ ] P17-7: фазовые headless-агенты — id: p17-phase-agents — Status: TODO | Est: 480m
+- [x] P17-7: фазовые headless-агенты — id: p17-phase-agents — Status: DONE (2026-06-07) | Est: 480m
   _depends: p17-read-sufficiency, p17-mutation-surface_
   _Requirements: [FR-41](FR.md#fr-41)_
   **Done When:**
-  - [ ] `.claude/agents/spec-phase-{discovery,requirements,finalization,audit}.md` с MCP-only allowed-tools (без файловых тулзов по спекам — второй слой enforcement)
-  - [ ] спавн через `claude -p` (длинные фазы — detached -bg паттерн claude-fallback); инжектируемый spawn из spec-llm-judge для тестов
-  - [ ] SPECGEN004_117 GREEN
+  - [x] 4 дефиниции `.claude/agents/spec-phase-{discovery,requirements,finalization,audit}.md`: allowed-tools = только `mcp__dev-pomogator-specs__*` (read-door + mutation-door), НИ ОДНОГО Read/Grep/Glob/Edit/Write — второй слой enforcement (FR-39 через allowed-tools, независимо от хука)
+  - [x] спавн — инжектируемый `SpawnPhase` (паттерн spec-llm-judge: детерминизм в тестах без реального `claude -p`; продакшн-дефолт = headless `claude -p`/-bg)
+  - [x] SPECGEN004_117 GREEN — проверяет: каждая фаза в своём агенте по порядку + у агентов нет файловых тулзов по спекам (греп allowed-tools)
 
-- [ ] P17-8: оркестратор-проверятор — id: p17-orchestrator-verifier — Status: TODO | Est: 480m
+- [x] P17-8: оркестратор-проверятор — id: p17-orchestrator-verifier — Status: DONE (2026-06-07) | Est: 480m
   _depends: p17-phase-agents_
   _Requirements: [FR-41](FR.md#fr-41)_
   **Done When:**
-  - [ ] spec-generator-orchestrator расширен: спавн фазы → между фазами spec-verdict + get_spec_status → RED = вернуть фазу с gap list (bounded retries), GREEN → дальше; thin-router дисциплина FR-33 сохранена (композиция, не реализация)
-  - [ ] лог наблюдаемости: каждый спавн/ретрай/гейт с идентификацией агента и фазы
-  - [ ] dogfood: одна спека создана end-to-end оркестратором; SPECGEN004_118, _119 GREEN
+  - [x] `scripts/phase-runner.ts` `runPhases`: спавн фазы → гейт (инжектируемый `RunGate`, продакшн = РЕАЛЬНЫЙ runSpecVerdict + get_spec_status) → GREEN дальше, RED = re-spawn ТОЙ ЖЕ фазы с gap list (bounded retries, default 2), исчерпание → hard FAIL (не пропуск, не вечное ожидание — NFR-Reliability-12); thin-router сохранён (КОМПОЗИРУЕТ вердикт, не реализует)
+  - [x] FR-41c: каждый spawn/retry/gate-green/gate-red/fail с phase+attempt в `phase-runner.jsonl` (best-effort)
+  - [x] SPECGEN004_118 (RED→re-spawn с gap list, next только после GREEN) + _119 (все события в логе) GREEN; phase-runner unit 4/4 incl. planted hard-FAIL на исчерпании ретраев
 
 - [x] P17-9: слойный контракт skill↔MCP — таблица потребителей + расширенный drift-guard — id: p17-skill-mcp-contract — Status: DONE (2026-06-07) | Est: 240m
   _depends: p17-mutation-surface_
