@@ -50,19 +50,24 @@ P17-1 read-sufficiency → P17-2 mutation → P17-3 shadow-хук → P17-5 ми
 P17-6 ENFORCE (строго последним!) ∥ P17-7/8 агенты+оркестратор ∥ P17-9 слойный контракт skill↔MCP (FR-42: юзер входит через скилл, логика в MCP). Анализ:
 `audit-reports/mcp-rails-wave-design.md`; сценарии SPECGEN004_111..119 (red).
 
-**Статус (2026-06-08):** P17-2/3/7/8/9 + read-tools — DONE. **P17-4 DONE** — DESIGN
-§"Engine carve-out": верифицирована полнота whitelist `ENGINE_CLI` тремя оракулами
-(direct-run enumeration / skill-grep / shadow-лог 0 ложных флагов) → deferred enforce-
-регрессии нет. **P17-5 — статическая миграция ЗАВЕРШЕНА (IN_PROGRESS только по live-верификации).**
+**Статус (2026-06-08):** P17-2/3/7/8/9 + read-tools — DONE. **P17-4 DONE (с исправлением
+review #2)** — DESIGN §"Engine carve-out". Первый вывод «whitelist ENGINE_CLI полон тремя
+оракулами» оказался НЕВЕРЕН: basename-only матчинг пропускал directory-named/generic-basename
+CLI (anchor-integrity/fix.mjs → basename `fix` ∉ списка → anchor-fix `--apply` был бы DENIED
+под enforce). ФИКС в guard: `invokesEngineCli` распознаёт движок по сути — basename ∈ ENGINE_CLI
+ИЛИ ЛЮБОЙ проектный скрипт (.ts/.js/.mjs/.cjs под tools/ или .claude/skills/); inline node-e /
+heredoc-to-/tmp остаются violation. Пинит SPECGEN004_133 на РЕАЛЬНЫХ producer-инвокациях.
+**P17-5 — статическая миграция ЗАВЕРШЕНА (IN_PROGRESS только по live-верификации).**
 Мигрированы агентские read+write пути на MCP-дверь: `cross-spec-resolve` (read+write;
 `resolve-cli.ts` эмитит план JSON, YAML in-process = carve-out), `requirements-chk-matrix`,
 `discovery-forms`, `task-board-forms` (form-filler тройка — записи через `apply_spec_change`),
 `spec-review` SKILL §cat-14 + весь кукбук (categories/antipattern/lessons-learned банеры),
 `create-spec` phase2 + frontmatter, `session-pilot` read-реф (`spec-graph-query` — ранее).
-**CLI/script-driven authoring-скиллы (carve-out, enforce-safe, миграция НЕ нужна):**
-`anchor-fix`, `cross-spec-reconcile`, `variant-matrix-build`, `architecture-decision-builder`
-— их `.specs/` I/O внутри engine-CLI. Финальный широкий скан агентского act-directing
-доступа — чисто (остаток — исторические сниппеты lessons-learned под баннером).
+**CLI/script-driven authoring-скиллы** (`anchor-fix`, `cross-spec-reconcile`,
+`variant-matrix-build`, `architecture-decision-builder`) — enforce-safe ТЕПЕРЬ благодаря
+guard-фиксу P17-4 (их basename'ы НЕ в ENGINE_CLI → были бы DENY), per-skill миграция НЕ нужна.
+Финальный широкий скан агентского act-directing доступа — чисто (остаток — исторические
+сниппеты lessons-learned под баннером).
 **ОСТАЁТСЯ только live-verification = гейт P17-6:** прогнать мигрированные скиллы вживую
 → 0 residual в `.dev-pomogator/logs/spec-access.jsonl`. P17-6 ENFORCE — строго после.
 

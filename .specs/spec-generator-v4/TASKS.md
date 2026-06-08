@@ -1272,8 +1272,8 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
 - [x] P17-4: carve-out лист движка в DESIGN — id: p17-carveout-list — Status: DONE | Est: 60m
   _Requirements: [FR-39](FR.md#fr-39)_
   **Done When:**
-  - [x] DESIGN.md фиксирует обе половины carve-out: корзину 2 (39 in-process читателей — guard их физически не трогает, информационно) И — главное — ВЕРИФИЦИРОВАННУЮ полноту whitelist `ENGINE_CLI` тремя оракулами (enumeration direct-run CLI / skill-instruction grep / shadow-лог: 0 ложных флагов), вывод: deferred enforce-регрессии нет (DESIGN §"Engine carve-out")
-  - [x] SPECGEN004_133 GREEN — регресс пинит полноту carve-out через реальную `violationOf`: каждый документированный engine-CLI над `.specs/` → allowed, generic reader (`cat`) → violation (ловит будущий дроп из ENGINE_CLI = enforce-регрессию)
+  - [x] DESIGN.md фиксирует обе половины carve-out (39 in-process читателей + Bash-invoked движок). Review #2 (2026-06-08) ВСКРЫЛ: basename-only whitelist был НЕполон — anchor-integrity/fix.mjs (basename `fix`) и др. directory-named/generic-basename CLI были бы DENIED под enforce (моя «3 оракула complete» — неверный вывод, verify-against-real-artifact анти-паттерн). ФИКС: `invokesEngineCli` теперь распознаёт движок по сути — (a) basename ∈ ENGINE_CLI ИЛИ (b) ЛЮБОЙ проектный скрипт (.ts/.js/.mjs/.cjs под tools/ или .claude/skills/); inline `node -e`/heredoc-to-/tmp остаются violation
+  - [x] SPECGEN004_133 GREEN — переписан на РЕАЛЬНЫЕ producer-инвокации (anchor-integrity check/fix --apply, full-mode.ts, architecture-decision-cli.ts, variant-matrix-cli.ts, spec-verdict.ts → ALLOW; cat/grep/node-e/node-/tmp → DENY), а не синтетический `tools/x/<cli>.ts` (тот давал фейк-green)
 
 - [ ] P17-5: миграция корзины 1 — скиллы на MCP-инструкции — id: p17-skill-migration — Status: IN_PROGRESS | Est: 480m
   _depends: p17-read-sufficiency, p17-mutation-surface_
@@ -1283,7 +1283,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] первый связный срез мигрирован (read-дверь + write через apply_spec_change + allowed-tools): cross-spec-resolve (read+write, +resolve-cli эмитит план JSON), requirements-chk-matrix, spec-review SKILL §cat-14, create-spec phase2 CL-6/CL-7; spec-graph-query был мигрирован ранее
   - [x] spec-review кукбук мигрирован: categories.md (банер + 7 рецептов на read_spec_doc), antipattern-triggers Step-2, lessons-learned банер (грепы там исторические — per advisor не переписываются); session-pilot read-реф
   - [x] write-путь form-filler тройки на apply_spec_change: discovery-forms (USER_STORIES+RESEARCH), task-board-forms (TASKS.md; таблица через spec-status.ts = carve-out), requirements-chk-matrix
-  - [x] CLI/script-driven authoring-скиллы верифицированы как carve-out (enforce-safe, миграция НЕ нужна): anchor-fix (anchor-integrity --apply), cross-spec-reconcile (reconcile script пишет YAML in-process), variant-matrix-build, architecture-decision-builder (их `.specs/` I/O — внутри engine-CLI)
+  - [x] CLI/script-driven authoring-скиллы (anchor-fix, cross-spec-reconcile, variant-matrix-build, architecture-decision-builder) теперь enforce-safe — НЕ потому что были безопасны (их basename'ы НЕ в ENGINE_CLI → DENY до фикса), а потому что guard-фикс P17-4 распознаёт проектные скрипты как движок. Per-skill миграция им НЕ нужна (фикс на уровне guard, проверено реальными `violationOf` пробами)
   - [x] финальный широкий скан агентского act-directing `.specs/` доступа по всем SKILL.md+reference: чисто (остаток — только исторические сниппеты lessons-learned под баннером). Статическая миграция инструкций ЗАВЕРШЕНА
   - [ ] shadow-лог violations/день → 0 на ЖИВОМ прогоне мигрированных скиллов (run-verification — это и есть гейт P17-6; статика done, live ещё не прогнан)
 

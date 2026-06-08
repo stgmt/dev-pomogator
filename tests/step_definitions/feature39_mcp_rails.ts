@@ -308,38 +308,55 @@ Then('the read is refused as an unsafe spec and nothing outside the tree is retu
   assert.equal(isSafeSlug('backlog/nested'), true);
 });
 
-// ── SPECGEN004_133 — FR-39f engine-CLI carve-out is complete (P17-4) ───────────
-// Pins the verified ENGINE_CLI whitelist against the engine CLIs skills actually
-// invoke over .specs/ (DESIGN §"Engine carve-out"): each must be ALLOWED by the
-// real guard decision, while a generic reader over .specs/ stays a VIOLATION —
-// so enforce (P17-6) can't silently brick a legitimate authoring CLI.
+// ── SPECGEN004_133 — FR-39f engine carve-out, REAL producer invocations (P17-4) ─
+// Pins the guard against the ACTUAL commands skills run over .specs/ (verify-
+// against-real-artifact: the first cut tested synthetic `tools/x/<cli>.ts` and
+// gave false-green while `tools/anchor-integrity/fix.mjs` was really DENIED —
+// 2026-06-08 review). Every real engine producer must be ALLOWED; generic /
+// inline / heredoc-to-tmp reads must stay a VIOLATION, so enforce (P17-6) can't
+// silently brick authoring yet can't be bypassed by ad-hoc code either.
 import { violationOf } from '../../tools/specs-validator/spec-access-guard.ts';
 
-const SKILL_ENGINE_CLIS = [
-  'spec-verdict', 'validate-spec', 'audit-spec', 'spec-status', 'corpus-health',
-  'collision-probe', 'spec-form-parsers', 'scaffold-spec', 'anchor-integrity', 'analyze-features',
+// The commands authoring skills ACTUALLY invoke (basenames check/fix/full-mode/
+// variant-matrix-cli are too generic to whitelist — recognized as project scripts).
+const REAL_ENGINE_INVOCATIONS = [
+  'npx tsx tools/specs-generator/spec-verdict.ts .specs/demo',          // canonical CLI by name
+  'npx tsx tools/spec-graph/collision-probe.ts .specs/demo',
+  'node tools/anchor-integrity/check.mjs --spec .specs/demo',          // directory-named tool
+  'node tools/anchor-integrity/fix.mjs --spec .specs/demo --apply',    // the anchor-fix write path
+  'npx tsx .claude/skills/cross-spec-reconcile/scripts/full-mode.ts .specs/demo',
+  'npx tsx tools/specs-generator/architecture-decision/architecture-decision-cli.ts .specs/demo',
+  'npx tsx tools/specs-generator/variant-matrix/variant-matrix-cli.ts .specs/demo',
+];
+const MUST_DENY = [
+  'cat .specs/demo/FR.md',                                              // generic reader
+  "node -e \"require('fs').readFileSync('.specs/demo/FR.md')\"",       // inline code, no script token
+  'grep -rn X .specs/demo',                                            // generic search over .specs/
+  'node /tmp/t.mjs .specs/demo',                                       // heredoc-to-/tmp escape hatch
 ];
 interface CarveWorld extends F39World {
   carveAllowed?: string[];
-  carveGenericViolation?: boolean;
+  carveDenied?: string[];
 }
 Given('the spec-access-guard engine-CLI carve-out', function (this: CarveWorld) {
   this.carveAllowed = [];
+  this.carveDenied = [];
 });
 When('each documented engine CLI and a generic reader run over the specs tree', function (this: CarveWorld) {
-  const bash = (command: string): boolean =>
+  const allowed = (command: string): boolean =>
     violationOf({ tool_name: 'Bash', tool_input: { command } }) === null;
-  for (const cli of SKILL_ENGINE_CLIS) {
-    if (bash(`npx tsx tools/x/${cli}.ts .specs/demo/FR.md`)) this.carveAllowed!.push(cli);
-  }
-  // generic reader over .specs/ must NOT be allowed (carve-out is not a blanket pass)
-  this.carveGenericViolation = !bash('cat .specs/demo/FR.md');
+  for (const cmd of REAL_ENGINE_INVOCATIONS) if (allowed(cmd)) this.carveAllowed!.push(cmd);
+  for (const cmd of MUST_DENY) if (!allowed(cmd)) this.carveDenied!.push(cmd);
 });
 Then('every engine CLI is allowed and the generic reader stays a violation', function (this: CarveWorld) {
   assert.deepEqual(
-    [...this.carveAllowed!].sort(),
-    [...SKILL_ENGINE_CLIS].sort(),
-    'every documented skill-invoked engine CLI must be allowed over .specs/ — a missing one is a deferred enforce regression',
+    this.carveAllowed!,
+    REAL_ENGINE_INVOCATIONS,
+    'every REAL engine producer invocation over .specs/ must be allowed — a denied one is a deferred enforce regression',
   );
-  assert.equal(this.carveGenericViolation, true, 'a generic reader over .specs/ stays a violation');
+  assert.deepEqual(
+    this.carveDenied!,
+    MUST_DENY,
+    'generic / inline / heredoc-to-tmp reads over .specs/ must stay violations — the carve-out is not a blanket pass',
+  );
 });

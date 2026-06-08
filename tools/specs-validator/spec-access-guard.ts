@@ -65,19 +65,37 @@ function touchesSpecs(s: string | undefined): boolean {
 }
 
 /**
- * Does the Bash command actually INVOKE an engine CLI (FR-39f)? A whole-command
- * substring check was trivially bypassed — `cat .specs/x # spec-verdict`
- * (comment bait) and `cat .specs/audit-spec-notes/FR.md` (path collision) both
- * passed as "engine CLI" (2026-06-07 review, HIGH). Token-basename instead:
- * strip shell comments, then ALLOW only if some whitespace/operator-delimited
- * token's basename (minus .ts/.js/.mjs/.cjs) equals an ENGINE_CLI name.
+ * Does the Bash command actually INVOKE the engine (FR-39f)? Two recognizers,
+ * both token-based (a whole-command substring check was bypassed by comment bait
+ * `cat .specs/x # spec-verdict` and path collision `cat .specs/audit-spec-notes/`
+ * — 2026-06-07 review, HIGH):
+ *
+ *   (a) a canonical engine CLI by bare name / path — some token's basename (minus
+ *       .ts/.js/.mjs/.cjs) ∈ ENGINE_CLI (covers PATH-installed `spec-verdict` and
+ *       `tsx tools/.../spec-verdict.ts`); AND
+ *   (b) ANY PROJECT SCRIPT — a `.ts/.js/.mjs/.cjs` token whose path is under
+ *       `tools/` or `.claude/skills/`. The DESIGN rationale is "the engine reads
+ *       /writes .specs/ as before — it IS the door's backend", and the engine is
+ *       not just the 10 named CLIs: `node tools/anchor-integrity/fix.mjs --apply`,
+ *       `tsx .../scripts/full-mode.ts`, `variant-matrix-cli.ts <spec-path>` etc.
+ *       have basenames (`fix`/`full-mode`/`check`) too generic to whitelist, yet
+ *       are legitimate engine invocations. A hand-maintained basename list drifts
+ *       (it missed every directory-named tool — 2026-06-08 review, the second
+ *       drift); recognizing the project-script PATH fixes the class.
+ *
+ * Inline code carries NO such script-path token, so it stays a violation:
+ * `node -e "fs.readFileSync('.specs/…')"` and a `<<EOF`-to-`/tmp/x.mjs` heredoc
+ * both fail (b) — `/tmp/x.mjs` is not under tools/ or .claude/skills/.
  */
 function invokesEngineCli(rawCmd: string): boolean {
   const cmd = rawCmd.replace(/(^|\s)#.*$/gm, '$1'); // strip comments-to-EOL
   const tokens = cmd.split(/[\s|;&()<>]+/).filter(Boolean);
   return tokens.some((tok) => {
-    const base = tok.replace(/\\/g, '/').split('/').pop()!.replace(/\.(ts|js|mjs|cjs)$/i, '');
-    return ENGINE_CLI.includes(base);
+    const norm = tok.replace(/\\/g, '/');
+    const base = norm.split('/').pop()!.replace(/\.(ts|js|mjs|cjs)$/i, '');
+    if (ENGINE_CLI.includes(base)) return true; // (a) canonical CLI
+    // (b) any project script (the engine's own code) — path-anchored, not basename.
+    return /\.(ts|js|mjs|cjs)$/i.test(norm) && /(^|\/)(tools|\.claude\/skills)\//.test(norm);
   });
 }
 
