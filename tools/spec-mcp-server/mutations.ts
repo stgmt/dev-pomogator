@@ -136,23 +136,54 @@ function formFindings(doc: string, content: string): MutationFinding[] {
   return out;
 }
 
-/** Layer 2 — anchors over the spec's md files with the change swapped in. */
-function anchorFindings(repoRoot: string, slug: string, doc: string, next: string): MutationFinding[] {
+interface BrokenAnchor {
+  file: string;
+  line: number;
+  brokenAnchor: string;
+  targetFile: string;
+}
+
+/** Build the spec's md file list, optionally swapping ONE doc's content. */
+function specMdFiles(
+  repoRoot: string,
+  slug: string,
+  swapDoc?: string,
+  swapContent?: string,
+): Array<{ file: string; content: string }> {
   const dir = path.join(repoRoot, '.specs', slug);
   const files: Array<{ file: string; content: string }> = [];
   for (const name of fs.readdirSync(dir)) {
     if (!name.endsWith('.md')) continue;
-    const rel = `.specs/${slug}/${name}`;
     files.push({
-      file: rel,
-      content: name === doc ? next : fs.readFileSync(path.join(dir, name), 'utf-8'),
+      file: `.specs/${slug}/${name}`,
+      content: name === swapDoc ? swapContent! : fs.readFileSync(path.join(dir, name), 'utf-8'),
     });
   }
-  if (doc.endsWith('.md') && !files.some((f) => f.file.endsWith(`/${doc}`))) {
-    files.push({ file: `.specs/${slug}/${doc}`, content: next }); // newly created doc
+  if (swapDoc && swapDoc.endsWith('.md') && !files.some((f) => f.file.endsWith(`/${swapDoc}`))) {
+    files.push({ file: `.specs/${slug}/${swapDoc}`, content: swapContent! }); // newly created doc
   }
-  return (checkLinks(files) as Array<{ file: string; line: number; brokenAnchor: string; targetFile: string }>).map(
-    (b) => ({
+  return files;
+}
+
+// Key WITHOUT line: a localized edit shifts line numbers, and a pre-existing
+// broken anchor that merely moved must NOT read as "introduced by this change".
+const anchorKey = (b: BrokenAnchor): string => `${b.file}#${b.brokenAnchor}`;
+
+/**
+ * Layer 2 — anchors, DELTA-ONLY. A mutation is blamed only for broken anchors
+ * it INTRODUCES, never for pre-existing breakage in sibling docs (a fresh
+ * scaffold ships placeholder `#uc-N-…` cross-refs; whole-spec strictness would
+ * block every unrelated edit — caught live 2026-06-07). Baseline = the spec as
+ * it is on disk now; report only anchors present AFTER the change but not before.
+ */
+function anchorFindings(repoRoot: string, slug: string, doc: string, next: string): MutationFinding[] {
+  const baseline = new Set(
+    (checkLinks(specMdFiles(repoRoot, slug)) as BrokenAnchor[]).map(anchorKey),
+  );
+  const after = checkLinks(specMdFiles(repoRoot, slug, doc, next)) as BrokenAnchor[];
+  return after
+    .filter((b) => !baseline.has(anchorKey(b)))
+    .map((b) => ({
       layer: 'anchor' as const,
       line: b.line,
       message: `broken anchor #${b.brokenAnchor} → ${b.targetFile} (${b.file})`,

@@ -976,3 +976,10 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given a create_spec call with a reserved device-name slug
     When the agent runs it
     Then the server refuses the reserved slug
+
+  @FR-40
+  Scenario: SPECGEN004_131 an edit is not blocked by pre-existing broken anchors in sibling docs
+    Given a scaffolded spec with placeholder anchors in a sibling document
+    When the agent applies a clean change to another document
+    Then the change is accepted despite the sibling's pre-existing broken anchors
+    But a broken anchor introduced by the change itself is still refused

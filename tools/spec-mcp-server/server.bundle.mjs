@@ -47944,21 +47944,28 @@ function formFindings(doc, content) {
   }
   return out;
 }
-function anchorFindings(repoRoot, slug, doc, next) {
+function specMdFiles(repoRoot, slug, swapDoc, swapContent) {
   const dir = path10.join(repoRoot, ".specs", slug);
   const files = [];
   for (const name of fs14.readdirSync(dir)) {
     if (!name.endsWith(".md")) continue;
-    const rel = `.specs/${slug}/${name}`;
     files.push({
-      file: rel,
-      content: name === doc ? next : fs14.readFileSync(path10.join(dir, name), "utf-8")
+      file: `.specs/${slug}/${name}`,
+      content: name === swapDoc ? swapContent : fs14.readFileSync(path10.join(dir, name), "utf-8")
     });
   }
-  if (doc.endsWith(".md") && !files.some((f) => f.file.endsWith(`/${doc}`))) {
-    files.push({ file: `.specs/${slug}/${doc}`, content: next });
+  if (swapDoc && swapDoc.endsWith(".md") && !files.some((f) => f.file.endsWith(`/${swapDoc}`))) {
+    files.push({ file: `.specs/${slug}/${swapDoc}`, content: swapContent });
   }
-  return checkLinks(files).map(
+  return files;
+}
+var anchorKey = (b) => `${b.file}#${b.brokenAnchor}`;
+function anchorFindings(repoRoot, slug, doc, next) {
+  const baseline = new Set(
+    checkLinks(specMdFiles(repoRoot, slug)).map(anchorKey)
+  );
+  const after = checkLinks(specMdFiles(repoRoot, slug, doc, next));
+  return after.filter((b) => !baseline.has(anchorKey(b))).map(
     (b) => ({
       layer: "anchor",
       line: b.line,

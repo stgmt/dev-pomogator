@@ -140,3 +140,31 @@ Then('the server refuses on the target guard', function (this: EdgeWorld) {
     `expected a target-guard refusal, got ${JSON.stringify(this.result)}`,
   );
 });
+
+// ── SPECGEN004_131 — FR-40 anchor layer is DELTA-ONLY ───────────────────────
+interface DeltaWorld extends EdgeWorld {
+  cleanOk?: boolean;
+  newBrokenOk?: boolean;
+}
+Given('a scaffolded spec with placeholder anchors in a sibling document', function (this: DeltaWorld) {
+  const dir = path.join(this.tempDir, '.specs', 'delta-demo');
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'FR.md'), '## FR-1: Demo\n\nBody.\n');
+  // sibling carries a PRE-EXISTING broken anchor (scaffold placeholder shape)
+  fs.writeFileSync(path.join(dir, 'USE_CASES.md'), '## UC-1: X\n\nSee [u](USE_CASES.md#uc-9-placeholder).\n');
+});
+When('the agent applies a clean change to another document', async function (this: DeltaWorld) {
+  this.tool = 'apply_spec_change';
+  this.args = { spec: 'delta-demo', doc: 'RESEARCH.md', content: '# Research\n\nNo links here.\n', reason: 'edge' };
+  await run(this);
+  this.cleanOk = this.result!.ok;
+});
+Then('the change is accepted despite the sibling\'s pre-existing broken anchors', function (this: DeltaWorld) {
+  assert.equal(this.cleanOk, true, `clean edit must pass; got ${JSON.stringify(this.result)}`);
+});
+Then('a broken anchor introduced by the change itself is still refused', async function (this: DeltaWorld) {
+  this.args = { spec: 'delta-demo', doc: 'RESEARCH.md', content: '# Research\n\nSee [x](FR.md#totally-made-up).\n', reason: 'edge' };
+  await run(this);
+  assert.equal(this.result!.ok, false);
+  assert.ok(this.result!.findings?.some((f) => f.layer === 'anchor'), 'a NEW broken anchor must still be caught');
+});
