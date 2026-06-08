@@ -52,8 +52,19 @@ export interface MutationFinding {
  *  (review #1, HIGH). .progress.json is DELIBERATELY excluded — "only via
  *  spec-status.ts" (single-writer rule), never an agent write. */
 const MUTABLE_DOC_RE = /^[A-Za-z0-9_][A-Za-z0-9_.-]*\.(md|feature)$/;
-/** Slug: nested dirs allowed (backlog/foo); NO traversal, drive, or abs path. */
-const SAFE_SLUG_RE = /^[a-z0-9][a-z0-9/-]*$/;
+/** Slug: nested dirs allowed (backlog/foo); NO traversal, drive, or abs path,
+ *  no empty path segment (`a//b`), no trailing slash. */
+const SAFE_SLUG_RE = /^[a-z0-9]([a-z0-9-]*(\/[a-z0-9][a-z0-9-]*)*)?$/;
+
+/**
+ * Is a spec slug safe to resolve under `.specs/`? The ONE slug gate — shared by
+ * the mutation tools (validateTarget) AND the read tools (read_spec_doc /
+ * list_spec_docs), so a read can't escape `.specs/` either (a `spec:'../secret'`
+ * read leaked an out-of-tree file before this was shared — 2026-06-07 review).
+ */
+export function isSafeSlug(slug: string): boolean {
+  return SAFE_SLUG_RE.test(slug) && !slug.includes('..');
+}
 
 /**
  * Reject an unsafe (slug, doc) target BEFORE any fs touch. Closes the edge
@@ -65,11 +76,8 @@ const SAFE_SLUG_RE = /^[a-z0-9][a-z0-9/-]*$/;
  *     garbage through every gate.
  */
 export function validateTarget(slug: string, doc: string): MutationFinding | null {
-  if (!SAFE_SLUG_RE.test(slug)) {
+  if (!isSafeSlug(slug)) {
     return { layer: 'target', message: `unsafe spec slug "${slug}" — kebab-case, nested ok, no traversal/abs path` };
-  }
-  if (slug.includes('..')) {
-    return { layer: 'target', message: `spec slug must not contain ".." ("${slug}")` };
   }
   if (!MUTABLE_DOC_RE.test(doc)) {
     return {

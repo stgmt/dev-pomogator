@@ -983,3 +983,9 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When the agent applies a clean change to another document
     Then the change is accepted despite the sibling's pre-existing broken anchors
     But a broken anchor introduced by the change itself is still refused
+
+  @FR-39
+  Scenario: SPECGEN004_132 read tools refuse a traversal slug (no out-of-tree leak)
+    Given a secret file outside the specs tree and a read targeting it via a traversal slug
+    When the agent calls the read tool
+    Then the read is refused as an unsafe spec and nothing outside the tree is returned

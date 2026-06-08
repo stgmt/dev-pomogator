@@ -272,3 +272,38 @@ Then('the call is not blocked', function (this: GuardWorld) {
 });
 
 void pathToFileURL;
+
+// ── SPECGEN004_132 — FR-39 read tools share the slug guard (no traversal leak) ─
+import { isSafeSlug } from '../../tools/spec-mcp-server/mutations.ts';
+
+interface LeakWorld extends F39World {
+  leakRes?: { ok: boolean; error?: string };
+}
+Given('a secret file outside the specs tree and a read targeting it via a traversal slug', function (this: LeakWorld) {
+  fs.mkdirSync(path.join(this.tempDir, '.specs', 'safe'), { recursive: true });
+  fs.writeFileSync(path.join(this.tempDir, '.specs', 'safe', 'FR.md'), '## FR-1: X\n');
+  fs.mkdirSync(path.join(this.tempDir, 'secret'), { recursive: true });
+  fs.writeFileSync(path.join(this.tempDir, 'secret', 'leak.md'), 'TOP SECRET');
+});
+When('the agent calls the read tool', async function (this: LeakWorld) {
+  const prev = process.cwd();
+  process.chdir(this.tempDir);
+  try {
+    const t = buildToolRegistry(() => buildGraph({ repoRoot: this.tempDir, skipNdjson: true }));
+    const r = (await t.find((x) => x.name === 'read_spec_doc')!.handler({
+      spec: '../secret',
+      doc: 'leak.md',
+    } as never)) as { content: Array<{ text: string }> };
+    this.leakRes = JSON.parse(r.content[0].text);
+  } finally {
+    process.chdir(prev);
+  }
+});
+Then('the read is refused as an unsafe spec and nothing outside the tree is returned', function (this: LeakWorld) {
+  assert.equal(this.leakRes!.ok, false);
+  assert.equal(this.leakRes!.error, 'UNSAFE_SPEC');
+  assert.ok(!JSON.stringify(this.leakRes).includes('TOP SECRET'), 'no out-of-tree content may leak');
+  // the shared guard is the single chokepoint:
+  assert.equal(isSafeSlug('../secret'), false);
+  assert.equal(isSafeSlug('backlog/nested'), true);
+});

@@ -47881,13 +47881,13 @@ if (isDirectRunFormParsers) {
 
 // tools/spec-mcp-server/mutations.ts
 var MUTABLE_DOC_RE = /^[A-Za-z0-9_][A-Za-z0-9_.-]*\.(md|feature)$/;
-var SAFE_SLUG_RE = /^[a-z0-9][a-z0-9/-]*$/;
+var SAFE_SLUG_RE = /^[a-z0-9]([a-z0-9-]*(\/[a-z0-9][a-z0-9-]*)*)?$/;
+function isSafeSlug(slug) {
+  return SAFE_SLUG_RE.test(slug) && !slug.includes("..");
+}
 function validateTarget(slug, doc) {
-  if (!SAFE_SLUG_RE.test(slug)) {
+  if (!isSafeSlug(slug)) {
     return { layer: "target", message: `unsafe spec slug "${slug}" \u2014 kebab-case, nested ok, no traversal/abs path` };
-  }
-  if (slug.includes("..")) {
-    return { layer: "target", message: `spec slug must not contain ".." ("${slug}")` };
   }
   if (!MUTABLE_DOC_RE.test(doc)) {
     return {
@@ -48623,6 +48623,10 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
     handler: async ({ spec }) => {
       const args = { spec };
       const slug = String(spec).replace(/\\/g, "/").replace(/^\.?\/?\.specs\//, "").replace(/\/+$/, "");
+      if (!isSafeSlug(slug)) {
+        logSpecAccess("list_spec_docs", args, "denied");
+        return asJsonResult({ ok: false, error: "UNSAFE_SPEC", spec: slug, hint: "slug must stay within .specs/ (no traversal)" });
+      }
       const dir = path11.join(process.cwd(), ".specs", slug);
       if (!fs15.existsSync(dir) || !fs15.statSync(dir).isDirectory()) {
         logSpecAccess("list_spec_docs", args, "not_found");
@@ -48640,6 +48644,10 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
     handler: async ({ spec, doc }) => {
       const args = { spec, doc };
       const slug = String(spec).replace(/\\/g, "/").replace(/^\.?\/?\.specs\//, "").replace(/\/+$/, "");
+      if (!isSafeSlug(slug)) {
+        logSpecAccess("read_spec_doc", args, "denied");
+        return asJsonResult({ ok: false, error: "UNSAFE_SPEC", spec: slug, hint: "slug must stay within .specs/ (no traversal)" });
+      }
       const name = path11.basename(String(doc));
       const okName = /\.(md|feature)$/.test(name) || name === ".progress.json";
       const abs = path11.join(process.cwd(), ".specs", slug, name);

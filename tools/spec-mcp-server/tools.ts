@@ -41,7 +41,7 @@ import path from 'node:path';
 import { logSpecAccess } from './spec-access-log.ts';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { validateSpecChange, writeDocAtomic, type SpecChange } from './mutations.ts';
+import { validateSpecChange, writeDocAtomic, isSafeSlug, type SpecChange } from './mutations.ts';
 import type {
   SpecGraph,
   Node,
@@ -929,6 +929,10 @@ export function buildToolRegistry(
     handler: async ({ spec }) => {
       const args = { spec };
       const slug = String(spec).replace(/\\/g, '/').replace(/^\.?\/?\.specs\//, '').replace(/\/+$/, '');
+      if (!isSafeSlug(slug)) {
+        logSpecAccess('list_spec_docs', args, 'denied');
+        return asJsonResult({ ok: false, error: 'UNSAFE_SPEC', spec: slug, hint: 'slug must stay within .specs/ (no traversal)' });
+      }
       const dir = path.join(process.cwd(), '.specs', slug);
       if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) {
         logSpecAccess('list_spec_docs', args, 'not_found');
@@ -956,6 +960,10 @@ export function buildToolRegistry(
     handler: async ({ spec, doc }) => {
       const args = { spec, doc };
       const slug = String(spec).replace(/\\/g, '/').replace(/^\.?\/?\.specs\//, '').replace(/\/+$/, '');
+      if (!isSafeSlug(slug)) {
+        logSpecAccess('read_spec_doc', args, 'denied');
+        return asJsonResult({ ok: false, error: 'UNSAFE_SPEC', spec: slug, hint: 'slug must stay within .specs/ (no traversal)' });
+      }
       const name = path.basename(String(doc)); // no traversal — inventory names only
       const okName = /\.(md|feature)$/.test(name) || name === '.progress.json';
       const abs = path.join(process.cwd(), '.specs', slug, name);
