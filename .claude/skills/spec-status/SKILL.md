@@ -15,7 +15,7 @@ description: >
   «per-FR implementation review», «which FRs are done».
   Do NOT use for: writing/scaffolding a spec (use create-spec), running tests
   (use /run-tests), or general progress questions answerable from .progress.json alone.
-allowed-tools: Bash, Read, Glob, Grep, Agent
+allowed-tools: Bash, Read, Glob, Grep, Agent, mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__get_coverage
 ---
 
 # spec-status — honest, sub-agent-verified spec status
@@ -122,8 +122,10 @@ programmatic consumers.
 - **SPEC-ONLY** — красная волна (задумано).
 
 Механика: buildGraphFromCwd → FR-узлы спеки → рёбра tested-by + Task.refs.
-Сверь полноту: grep -c "^## FR-" FR.md == числу строк среза. Отчёт обязан
-идти классами с причинами, не «всё ок».
+Сверь полноту через MCP-дверь (MCP-rails FR-39 — НЕ raw `grep`/`Read` по `.specs/`;
+под enforce блок): `read_spec_doc({ spec, doc: "FR.md" })` → посчитай строки
+`^## FR-` в `content` == числу строк среза. Отчёт обязан идти классами с
+причинами, не «всё ок».
 
 ### 6. Acknowledge the conformance summary (FR-20, B4)
 

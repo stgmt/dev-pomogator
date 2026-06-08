@@ -48669,7 +48669,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
   });
   tools.push({
     name: "list_spec_docs",
-    description: "FR-39a: enumerate the readable documents of ONE spec (the read_spec_doc inventory): *.md + *.feature + .progress.json (read-only) actually present in .specs/<spec>/. The agent asks THIS first \u2014 read_spec_doc accepts only names from this list. Every call is appended to the spec-access audit log.",
+    description: "FR-39a: enumerate the readable documents of ONE spec (the read_spec_doc inventory): *.md + *.feature + .progress.json + .jira-cache.json (read-only) present in .specs/<spec>/. The agent asks THIS first \u2014 read_spec_doc accepts only names from this list. Every call is appended to the spec-access audit log.",
     inputShape: { spec: external_exports.string() },
     handler: async ({ spec }) => {
       const args = { spec };
@@ -48692,7 +48692,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
           if (e.isDirectory()) {
             walk(path12.join(abs, e.name), childRel);
           } else if (e.isFile()) {
-            if (/\.(md|feature)$/.test(e.name) || e.name === ".progress.json") docs.push(childRel);
+            if (/\.(md|feature)$/.test(e.name) || e.name === ".progress.json" || e.name === ".jira-cache.json") docs.push(childRel);
             else if (ATTACH_RE.test(e.name)) attachments.push(childRel);
           }
         }
@@ -48722,7 +48722,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
       }
       const rel = resolved.rel;
       const base = path12.basename(rel);
-      const okName = /\.(md|feature)$/.test(base) || base === ".progress.json";
+      const okName = /\.(md|feature)$/.test(base) || base === ".progress.json" || base === ".jira-cache.json";
       if (!okName || !fs16.existsSync(resolved.abs) || !fs16.statSync(resolved.abs).isFile()) {
         logSpecAccess("read_spec_doc", args, "not_found");
         return asJsonResult({
