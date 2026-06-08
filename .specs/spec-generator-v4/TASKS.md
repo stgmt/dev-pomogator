@@ -141,6 +141,8 @@
 | T17-135 | P17-7: фазовые headless-агенты | DONE | p17-read-sufficiency, p17-mutation-surface | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 480m |
 | T17-136 | P17-8: оркестратор-проверятор | DONE | p17-phase-agents | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 480m |
 | T17-137 | P17-9: слойный контракт skill↔MCP | DONE | p17-mutation-surface | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 240m |
+| T18-138 | P18-1: legacy-suspicion 4-state classifier | TODO | p17-enforce | Phase 18 — Legacy/drift spec triage (FR-43, после Phase 17) | 360m |
+| T18-139 | P18-2: HITL-маркер + триаж-отчёт + legacy-v3 резолюция | TODO | p18-legacy-classifier | Phase 18 — Legacy/drift spec triage (FR-43, после Phase 17) | 240m |
 
 ## TDD Workflow
 
@@ -1318,3 +1320,19 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] DESIGN несёт таблицу «MCP-тул → скилл-потребители» (19 тулзов); канон = `feature-map.ts::TOOL_CONSUMERS`; реальные потребители дописаны в скиллы: read-door (list_spec_docs/read_spec_doc) → spec-graph-query (allowed-tools + таблица), mutation-door (propose/apply/create_spec) → create-spec (новая секция «MCP-rails»)
   - [x] drift-guard расширен ДВУМЯ гейтами: `checkToolConsumers` (live-тул без потребителя → fail с именем) + `verifyConsumerTruthfulness` (заявленный потребитель реально юзает тул — поймал 2 ложные записи spec-status, юзер «сам проверил?»); до фикса показал ровно 5 беспризорных новых тулзов, после дописывания потребителей — «every live MCP tool has a skill consumer»; SPECGEN004_120 гоняет это на синтетическом stray-туле
   - [x] create-spec UX сохранён (дверь, STOP-точки), запись = MCP-мутации не Write/Edit; SPECGEN004_121 проверяет: тело ссылается на mutation-тулзы И не несёт server-логики (checkConformance/parseTaskBlocks/checkLinks/buildGraph)
+
+- [ ] P18-1: legacy-suspicion 4-state classifier (расширение spec-reality-check) — id: p18-legacy-classifier — Status: TODO | Est: 360m
+  _depends: p17-enforce_
+  _Requirements: [FR-43](FR.md#fr-43)_
+  **Done When:**
+  - [ ] `spec-reality-check` получает третий выход «legacy-suspicion»: классифицирует спеку в SUPERSEDED/REMOVED/DRIFTED/ABSORBED по reality-drift (категория-15, существование FILE_CHANGES-путей/символов) + version-lineage (slug vN) + not_run-by-feature (FR-32); git-staleness near-zero вес (AC-43.1)
+  - [ ] «код есть, описание разошлось» → DRIFTED (re-sync), НЕ retire — pinned тестом на drifted-фикстуре; НОВЫЙ движок не вводится (переиспользование spec-reality-check)
+  - [ ] @feature43 BDD-сценарий + step def на реальном classifier (1:1, не inline-копия)
+
+- [ ] P18-2: HITL-маркер + триаж-отчёт + резолюция legacy-v3.feature — id: p18-legacy-marker — Status: TODO | Est: 240m
+  _depends: p18-legacy-classifier_
+  _Requirements: [FR-43](FR.md#fr-43)_
+  **Done When:**
+  - [ ] триаж выдаёт кандидатов в отчёт; финал подтверждается человеком и пишется явным маркером (`.progress.json status: superseded|drifted|removed|absorbed` ИЛИ перенос в `.specs/archive/`); авто-ретайр/авто-удаление ЗАПРЕЩЕНЫ (AC-43.1)
+  - [ ] `legacy-v3.feature` (28 сценариев SPECGEN003, инстанс SUPERSEDED) разрешён по решению юзера: архив + маркер supersedes ЛИБО добавление в cucumber paths — NOT_RUN-нота перестаёт гореть на нём
+  - [ ] @feature43 сценарий на HITL-маркер (подсажена ложная авто-ретайр-попытка → guard/флоу её не допускает)
