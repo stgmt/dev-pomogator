@@ -516,3 +516,17 @@ The four design decisions below shipped in spec-generator-v3 (production via PR 
 - Полный запрет включая движок (всё через сервер) — отклонено: ломает FR-21 деградацию, превращает каждый CLI в клиента сервера, самоблокирующаяся архитектура.
 - Один монолитный агент создания вместо фазовых — отклонено: нет промежуточных гейтов проверятора, ошибки фаз копятся до финала (текущая болезнь и есть).
 
+
+### Mutation tools — edge-case hardening (review 2026-06-07, dynamic workflow wf_859eee1f-282)
+
+5-angle adversarial review (platforms / worktrees / concurrency / inputs / clone) + per-finding refutation. 13 confirmed, 5 refuted. Fixes in `tools/spec-mcp-server/mutations.ts` (`validateTarget`) + handlers; regressions = SPECGEN004_124..130.
+
+**Closed (HIGH first):**
+- **Slug traversal** (`../escape`) → arbitrary write outside `.specs/`: `SAFE_SLUG_RE` + explicit `..` reject, BEFORE any fs touch.
+- **Mixed-case extension** (`FR.MD`) skipped every case-sensitive gate then overwrote the real `FR.md` on a case-insensitive FS: extension must be canonical lowercase `.md`/`.feature`.
+- **`.progress.json` / non-md-feature docs** wrote unvalidated through all gates: `MUTABLE_DOC_RE` whitelist; `.progress.json` deliberately excluded (single-writer via spec-status).
+- **Empty full-replace** silently destroyed a doc → refused. **Both `content` + edit-pair** ambiguous → `AMBIGUOUS_CHANGE`. **Missing-spec `.md`** threw uncaught ENOENT in the clone → now clean `VALIDATION_FAILED`/SPEC_NOT_FOUND. **Reserved Windows slug** (`con`/`nul`/…) → `RESERVED_SLUG`. **Orphan `.tmp`** on rename failure → unlinked.
+
+**Platform / worktree answers (refuted as defects, documented):** the server's repoRoot is `process.cwd()` and the FR-14 watcher + graph share it, so a worktree's own `.specs/` is read AND written consistently (no split-brain — `DEV_POMOGATOR_REPO_ROOT` defaults to cwd in the real launch). conformanceFindings clones only the one spec dir; cross-spec conformance codes are advisory there — the AUTHORITATIVE cross-spec verdict stays `spec-verdict.ts` over the full corpus, as designed.
+
+**Known residual (accepted, low):** `apply_spec_change` is last-writer-wins on concurrent edits of the same doc (TOCTOU validate→write window) — acceptable for a single-agent authoring loop; both writes are audited. The conformance clone layer is error-severity-only (rarely the rejecting gate; anchors + form contracts are the live gates) — matches the authoritative verdict's own conformance gating.

@@ -41,9 +41,43 @@ export type SpecChange =
   | { old_string: string; new_string: string; replace_all?: boolean };
 
 export interface MutationFinding {
-  layer: 'form' | 'anchor' | 'conformance' | 'change';
+  layer: 'form' | 'anchor' | 'conformance' | 'change' | 'target';
   message: string;
   line?: number;
+}
+
+/** Docs the agent may mutate: markdown + gherkin only. The extension MUST be
+ *  canonical lowercase `.md`/`.feature` — a mixed-case `FR.MD` would skip the
+ *  case-sensitive gates AND overwrite the real `FR.md` on a case-insensitive FS
+ *  (review #1, HIGH). .progress.json is DELIBERATELY excluded — "only via
+ *  spec-status.ts" (single-writer rule), never an agent write. */
+const MUTABLE_DOC_RE = /^[A-Za-z0-9_][A-Za-z0-9_.-]*\.(md|feature)$/;
+/** Slug: nested dirs allowed (backlog/foo); NO traversal, drive, or abs path. */
+const SAFE_SLUG_RE = /^[a-z0-9][a-z0-9/-]*$/;
+
+/**
+ * Reject an unsafe (slug, doc) target BEFORE any fs touch. Closes the edge
+ * cases the 2026-06-07 mutation-tools review confirmed:
+ *   - slug traversal (`../escape`) → arbitrary write outside .specs/ (HIGH);
+ *   - mixed-case extension (`FR.MD`) → skipped all validation gates, then
+ *     overwrote the real FR.md on a case-insensitive FS (HIGH);
+ *   - non-md/feature docs (`.progress.json`, `*.jsonl`) → wrote unvalidated
+ *     garbage through every gate.
+ */
+export function validateTarget(slug: string, doc: string): MutationFinding | null {
+  if (!SAFE_SLUG_RE.test(slug)) {
+    return { layer: 'target', message: `unsafe spec slug "${slug}" — kebab-case, nested ok, no traversal/abs path` };
+  }
+  if (slug.includes('..')) {
+    return { layer: 'target', message: `spec slug must not contain ".." ("${slug}")` };
+  }
+  if (!MUTABLE_DOC_RE.test(doc)) {
+    return {
+      layer: 'target',
+      message: `doc "${doc}" is not a mutable spec document — only *.md / *.feature (NOT .progress.json: single-writer via spec-status)`,
+    };
+  }
+  return null;
 }
 
 /** Apply the FR-40a change shape to current content (in memory, never disk). */
@@ -153,6 +187,8 @@ export interface ValidateResult {
   ok: boolean;
   next?: string;
   findings: MutationFinding[];
+  /** Set when the spec dir is absent — handlers map this to SPEC_NOT_FOUND. */
+  specMissing?: boolean;
 }
 
 /** The full FR-40b dry-run: apply in memory + all three validation layers. */
@@ -162,26 +198,62 @@ export function validateSpecChange(
   doc: string,
   change: SpecChange,
 ): ValidateResult {
-  const abs = path.join(repoRoot, '.specs', slug, doc);
+  // target guard FIRST — before any fs touch (traversal / casing / doc-type).
+  const targetBad = validateTarget(slug, doc);
+  if (targetBad) return { ok: false, findings: [targetBad] };
+
+  const specDir = path.join(repoRoot, '.specs', slug);
+  const abs = path.join(specDir, doc);
   const current = fs.existsSync(abs) ? fs.readFileSync(abs, 'utf-8') : null;
+  // Spec dir absent → clean SPEC_NOT_FOUND, NOT an uncaught ENOENT later in
+  // the conformance clone (the .md path threw before this check was added).
+  if (current === null && !fs.existsSync(specDir)) {
+    return {
+      ok: false,
+      specMissing: true,
+      findings: [{ layer: 'target', message: `spec "${slug}" does not exist — create_spec first` }],
+    };
+  }
+  const ext = doc.toLowerCase();
+  const isMd = ext.endsWith('.md');
+  const isFeature = ext.endsWith('.feature');
+
   const applied = applyChange(current, change);
   if (!applied.ok) return { ok: false, findings: [applied.finding] };
   const next = applied.next;
+  // Empty full-replace silently destroys a doc — refuse (the review's #9).
+  if (next.trim() === '' && current !== null && current.trim() !== '') {
+    return {
+      ok: false,
+      findings: [{ layer: 'change', message: 'refusing to replace a non-empty document with empty content' }],
+    };
+  }
   const findings = [
     ...formFindings(doc, next),
-    ...(doc.endsWith('.md') ? anchorFindings(repoRoot, slug, doc, next) : []),
-    ...(doc.endsWith('.md') || doc.endsWith('.feature') ? conformanceFindings(repoRoot, slug, doc, next) : []),
+    ...(isMd ? anchorFindings(repoRoot, slug, doc, next) : []),
+    ...(isMd || isFeature ? conformanceFindings(repoRoot, slug, doc, next) : []),
   ];
   return { ok: findings.length === 0, next, findings };
 }
 
-/** Atomic write per atomic-config-save: unique temp + rename. */
+/** Atomic write per atomic-config-save: unique temp + rename. On a rename
+ *  failure (Windows EPERM/EBUSY when the target is locked by an editor/watcher)
+ *  the temp file is unlinked so it never litters .specs/ (review #6). */
 export function writeDocAtomic(repoRoot: string, slug: string, doc: string, content: string): string {
   const dir = path.join(repoRoot, '.specs', slug);
   fs.mkdirSync(dir, { recursive: true });
   const abs = path.join(dir, doc);
   const tmp = `${abs}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`;
   fs.writeFileSync(tmp, content, 'utf-8');
-  fs.renameSync(tmp, abs);
+  try {
+    fs.renameSync(tmp, abs);
+  } catch (e) {
+    try {
+      fs.unlinkSync(tmp);
+    } catch {
+      /* best-effort */
+    }
+    throw e;
+  }
   return abs;
 }

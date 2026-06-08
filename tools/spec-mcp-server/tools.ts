@@ -985,10 +985,15 @@ export function buildToolRegistry(
     replace_all: z.boolean().optional(),
     reason: z.string(),
   } as const satisfies z.ZodRawShape;
-  const toChange = (a: Record<string, unknown>): SpecChange | null => {
-    if (typeof a.content === 'string') return { content: a.content };
-    if (typeof a.old_string === 'string' && typeof a.new_string === 'string') {
-      return { old_string: a.old_string, new_string: a.new_string, replace_all: a.replace_all === true };
+  const toChange = (a: Record<string, unknown>): SpecChange | null | 'ambiguous' => {
+    const hasContent = typeof a.content === 'string';
+    const hasEdit = typeof a.old_string === 'string' && typeof a.new_string === 'string';
+    // Both forms supplied → ambiguous; {content} used to silently win and the
+    // Edit intent was dropped (review #11). Refuse instead.
+    if (hasContent && hasEdit) return 'ambiguous';
+    if (hasContent) return { content: a.content as string };
+    if (hasEdit) {
+      return { old_string: a.old_string as string, new_string: a.new_string as string, replace_all: a.replace_all === true };
     }
     return null;
   };
@@ -1009,6 +1014,9 @@ export function buildToolRegistry(
       const slug = slugOf(args.spec);
       const doc = docOf(args.doc);
       const change = toChange(args as Record<string, unknown>);
+      if (change === 'ambiguous') {
+        return asJsonResult({ ok: false, error: 'AMBIGUOUS_CHANGE', hint: 'Pass EITHER {content} OR {old_string,new_string}, not both.' });
+      }
       if (!change) {
         logSpecAccess('propose_spec_change', args, 'error');
         return asJsonResult({ ok: false, error: 'BAD_CHANGE', hint: 'Pass {content} or {old_string,new_string}.' });
@@ -1033,6 +1041,9 @@ export function buildToolRegistry(
       const slug = slugOf(args.spec);
       const doc = docOf(args.doc);
       const change = toChange(args as Record<string, unknown>);
+      if (change === 'ambiguous') {
+        return asJsonResult({ ok: false, error: 'AMBIGUOUS_CHANGE', hint: 'Pass EITHER {content} OR {old_string,new_string}, not both.' });
+      }
       if (!change) {
         logSpecAccess('apply_spec_change', args, 'error');
         return asJsonResult({ ok: false, error: 'BAD_CHANGE', hint: 'Pass {content} or {old_string,new_string}.' });
@@ -1061,6 +1072,12 @@ export function buildToolRegistry(
       if (!/^[a-z0-9][a-z0-9-]*$/.test(name)) {
         logSpecAccess('create_spec', { slug: name }, 'error');
         return asJsonResult({ ok: false, error: 'BAD_SLUG', hint: 'kebab-case: [a-z0-9-]' });
+      }
+      // Windows reserved device names collide with real files even with an
+      // extension — refuse as a spec slug (review #10).
+      if (/^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(name)) {
+        logSpecAccess('create_spec', { slug: name }, 'error');
+        return asJsonResult({ ok: false, error: 'RESERVED_SLUG', hint: 'slug collides with a Windows reserved device name' });
       }
       if (fs.existsSync(path.join(process.cwd(), '.specs', name))) {
         logSpecAccess('create_spec', { slug: name }, 'denied');

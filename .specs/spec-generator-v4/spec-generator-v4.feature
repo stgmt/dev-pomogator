@@ -930,3 +930,49 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When more findings arrive before the window elapses
     Then the window start stays the original one
     And the flush after the window carries the aggregated deduplicated set
+
+  @FR-40
+  Scenario: SPECGEN004_124 apply_spec_change refuses a traversal slug (no write outside .specs)
+    Given a mutation targeting a spec slug that escapes the specs tree
+    When the agent applies it
+    Then the server refuses on the target guard
+    And no file is written outside the specs tree
+
+  @FR-40
+  Scenario: SPECGEN004_125 a mixed-case doc extension is refused (no case-insensitive overwrite)
+    Given an existing validated FR.md and a change targeting FR.MD
+    When the agent applies it
+    Then the server refuses on the target guard
+    And the original FR.md content is intact
+
+  @FR-40
+  Scenario: SPECGEN004_126 .progress.json is not an agent-mutable document
+    Given a change targeting .progress.json
+    When the agent applies it
+    Then the server refuses on the target guard
+    And no progress file is written
+
+  @FR-40
+  Scenario: SPECGEN004_127 an empty full-replace of a non-empty doc is refused
+    Given an existing non-empty document and an empty-content change
+    When the agent applies it
+    Then the server refuses on the change guard
+    And the document keeps its content
+
+  @FR-40
+  Scenario: SPECGEN004_128 supplying both content and an edit pair is ambiguous and refused
+    Given a change carrying both content and an old_string/new_string pair
+    When the agent applies it
+    Then the server refuses as ambiguous
+
+  @FR-40
+  Scenario: SPECGEN004_129 a change to a non-existent spec returns a clean not-found, not a crash
+    Given a markdown change targeting a spec slug that does not exist
+    When the agent applies it
+    Then the server returns a clean validation failure without throwing
+
+  @FR-40
+  Scenario: SPECGEN004_130 create_spec refuses a Windows reserved device-name slug
+    Given a create_spec call with a reserved device-name slug
+    When the agent runs it
+    Then the server refuses the reserved slug

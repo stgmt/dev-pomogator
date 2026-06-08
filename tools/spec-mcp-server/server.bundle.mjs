@@ -47880,6 +47880,23 @@ if (isDirectRunFormParsers) {
 }
 
 // tools/spec-mcp-server/mutations.ts
+var MUTABLE_DOC_RE = /^[A-Za-z0-9_][A-Za-z0-9_.-]*\.(md|feature)$/;
+var SAFE_SLUG_RE = /^[a-z0-9][a-z0-9/-]*$/;
+function validateTarget(slug, doc) {
+  if (!SAFE_SLUG_RE.test(slug)) {
+    return { layer: "target", message: `unsafe spec slug "${slug}" \u2014 kebab-case, nested ok, no traversal/abs path` };
+  }
+  if (slug.includes("..")) {
+    return { layer: "target", message: `spec slug must not contain ".." ("${slug}")` };
+  }
+  if (!MUTABLE_DOC_RE.test(doc)) {
+    return {
+      layer: "target",
+      message: `doc "${doc}" is not a mutable spec document \u2014 only *.md / *.feature (NOT .progress.json: single-writer via spec-status)`
+    };
+  }
+  return null;
+}
 function applyChange2(current, change) {
   if ("content" in change) return { ok: true, next: change.content };
   if (current === null) {
@@ -47969,15 +47986,34 @@ function conformanceFindings(repoRoot, slug, doc, next) {
   }
 }
 function validateSpecChange(repoRoot, slug, doc, change) {
-  const abs = path10.join(repoRoot, ".specs", slug, doc);
+  const targetBad = validateTarget(slug, doc);
+  if (targetBad) return { ok: false, findings: [targetBad] };
+  const specDir = path10.join(repoRoot, ".specs", slug);
+  const abs = path10.join(specDir, doc);
   const current = fs14.existsSync(abs) ? fs14.readFileSync(abs, "utf-8") : null;
+  if (current === null && !fs14.existsSync(specDir)) {
+    return {
+      ok: false,
+      specMissing: true,
+      findings: [{ layer: "target", message: `spec "${slug}" does not exist \u2014 create_spec first` }]
+    };
+  }
+  const ext = doc.toLowerCase();
+  const isMd = ext.endsWith(".md");
+  const isFeature = ext.endsWith(".feature");
   const applied = applyChange2(current, change);
   if (!applied.ok) return { ok: false, findings: [applied.finding] };
   const next = applied.next;
+  if (next.trim() === "" && current !== null && current.trim() !== "") {
+    return {
+      ok: false,
+      findings: [{ layer: "change", message: "refusing to replace a non-empty document with empty content" }]
+    };
+  }
   const findings = [
     ...formFindings(doc, next),
-    ...doc.endsWith(".md") ? anchorFindings(repoRoot, slug, doc, next) : [],
-    ...doc.endsWith(".md") || doc.endsWith(".feature") ? conformanceFindings(repoRoot, slug, doc, next) : []
+    ...isMd ? anchorFindings(repoRoot, slug, doc, next) : [],
+    ...isMd || isFeature ? conformanceFindings(repoRoot, slug, doc, next) : []
   ];
   return { ok: findings.length === 0, next, findings };
 }
@@ -47987,7 +48023,15 @@ function writeDocAtomic(repoRoot, slug, doc, content) {
   const abs = path10.join(dir, doc);
   const tmp = `${abs}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`;
   fs14.writeFileSync(tmp, content, "utf-8");
-  fs14.renameSync(tmp, abs);
+  try {
+    fs14.renameSync(tmp, abs);
+  } catch (e) {
+    try {
+      fs14.unlinkSync(tmp);
+    } catch {
+    }
+    throw e;
+  }
   return abs;
 }
 
@@ -48617,8 +48661,11 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
     reason: external_exports.string()
   };
   const toChange = (a) => {
-    if (typeof a.content === "string") return { content: a.content };
-    if (typeof a.old_string === "string" && typeof a.new_string === "string") {
+    const hasContent = typeof a.content === "string";
+    const hasEdit = typeof a.old_string === "string" && typeof a.new_string === "string";
+    if (hasContent && hasEdit) return "ambiguous";
+    if (hasContent) return { content: a.content };
+    if (hasEdit) {
       return { old_string: a.old_string, new_string: a.new_string, replace_all: a.replace_all === true };
     }
     return null;
@@ -48633,6 +48680,9 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
       const slug = slugOf(args.spec);
       const doc = docOf(args.doc);
       const change = toChange(args);
+      if (change === "ambiguous") {
+        return asJsonResult({ ok: false, error: "AMBIGUOUS_CHANGE", hint: "Pass EITHER {content} OR {old_string,new_string}, not both." });
+      }
       if (!change) {
         logSpecAccess("propose_spec_change", args, "error");
         return asJsonResult({ ok: false, error: "BAD_CHANGE", hint: "Pass {content} or {old_string,new_string}." });
@@ -48650,6 +48700,9 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
       const slug = slugOf(args.spec);
       const doc = docOf(args.doc);
       const change = toChange(args);
+      if (change === "ambiguous") {
+        return asJsonResult({ ok: false, error: "AMBIGUOUS_CHANGE", hint: "Pass EITHER {content} OR {old_string,new_string}, not both." });
+      }
       if (!change) {
         logSpecAccess("apply_spec_change", args, "error");
         return asJsonResult({ ok: false, error: "BAD_CHANGE", hint: "Pass {content} or {old_string,new_string}." });
@@ -48674,6 +48727,10 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
       if (!/^[a-z0-9][a-z0-9-]*$/.test(name)) {
         logSpecAccess("create_spec", { slug: name }, "error");
         return asJsonResult({ ok: false, error: "BAD_SLUG", hint: "kebab-case: [a-z0-9-]" });
+      }
+      if (/^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(name)) {
+        logSpecAccess("create_spec", { slug: name }, "error");
+        return asJsonResult({ ok: false, error: "RESERVED_SLUG", hint: "slug collides with a Windows reserved device name" });
       }
       if (fs15.existsSync(path11.join(process.cwd(), ".specs", name))) {
         logSpecAccess("create_spec", { slug: name }, "denied");
