@@ -65,6 +65,7 @@ export const REFERENCED_CAPABILITIES: readonly string[] = [
   // phase agents (FR-41) become the primary consumers when the wave lands.
   'list_spec_docs',
   'read_spec_doc',
+  'read_attachment', // FR-39a/P19-6 binary attachment read door — consumed by spec-graph-query
   // FR-40 (P17-2) mutation door — primary consumer: create-spec workflow (FR-42c)
   // + the FR-41 phase agents when the wave lands.
   'propose_spec_change',
@@ -107,6 +108,7 @@ export const TOOL_CONSUMERS: Readonly<Record<string, readonly string[]>> = {
   // FR-39a read door
   list_spec_docs: ['spec-graph-query'],
   read_spec_doc: ['spec-graph-query'],
+  read_attachment: ['spec-graph-query'], // FR-39a/P19-6 binary attachment read door
   // FR-40 mutation door — create-spec is the user entry (FR-42c)
   propose_spec_change: ['create-spec'],
   apply_spec_change: ['create-spec'],
