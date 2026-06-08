@@ -5,7 +5,7 @@
 
 ## Step 0 (Jira-mode)
 
-Если `.specs/{slug}/JIRA_SOURCE.md` существует — выполнить Step 0 из [`jira-mode.md`](jira-mode.md) для Phase 3: reproduction steps → mapping к implementation tasks (порядок tasks отражает порядок видео); error evidence → каждый task содержит `_Jira: <file>:<line>_`; directives enumeration → каждый scope-member-FR имеет green-task с `_Jira:_` reference.
+Если `JIRA_SOURCE.md` присутствует (проверка через `list_spec_docs({spec})`; MCP-rails, не raw `ls`) — выполнить Step 0 из [`jira-mode.md`](jira-mode.md) для Phase 3: reproduction steps → mapping к implementation tasks (порядок tasks отражает порядок видео); error evidence → каждый task содержит `_Jira: <file>:<line>_`; directives enumeration → каждый scope-member-FR имеет green-task с `_Jira:_` reference.
 
 **Каждая task в TASKS.md ОБЯЗАНА содержать `_Jira:_` строку** в теле блока (в пределах 20 строк после `### 📋 \`task-id\``). Format — см. [`jira-mode.md`](jira-mode.md).
 

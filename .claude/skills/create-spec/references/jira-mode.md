@@ -37,6 +37,15 @@
 - `/jira-intake {KEY}` skill (в cleverence-pomogator) после фетча Jira issue записывает все 3 артефакта и передаёт управление create-spec.
 - Для existing spec без Jira — retroactive intake **out of scope**. Либо ждать следующей Jira-задачи, либо вручную создать `JIRA_SOURCE.md` + `.jira-cache.json` + `ATTACHMENTS.md` по шаблонам.
 
+## MCP-rails: как читать Jira-артефакты (FR-39/P19-6)
+
+Под enforce сырой `Read`/`ls` по `.specs/**` блокируется — все Jira-артефакты читай через дверь:
+
+- **Существование** (вместо «если `JIRA_SOURCE.md` существует»): `list_spec_docs({ spec })` → проверь `'JIRA_SOURCE.md'` в `docs[]`. Файла нет → весь Jira-mode no-op.
+- **JIRA_SOURCE.md / ATTACHMENTS.md** (оба `.md`): `read_spec_doc({ spec, doc: "JIRA_SOURCE.md" })`, `read_spec_doc({ spec, doc: "ATTACHMENTS.md" })`. Везде ниже «Re-read JIRA_SOURCE.md» = этот вызов.
+- **Бинарные вложения** (`attachments/<file>` для multimodal): `read_attachment({ spec, path: "attachments/<file>" })` (см. phase2 Step 5c).
+- **`.jira-cache.json`**: ⚠️ известный под-гап — read-дверь сейчас отдаёт только `*.md`/`*.feature`/`.progress.json` (фильтр в `read_spec_doc`/`list_spec_docs`). Чтобы читать `.jira-cache.json` под enforce, нужно расширить okName-фильтр двери на этот named-артефакт (по образцу `.progress.json`) — TODO P19-1. До расширения — `.jira-cache.json` читается только движком (validator/audit CLI, carve-out), не агентом под enforce; агент опирается на `JIRA_SOURCE.md` (verbatim) как основной источник.
+
 ## Step 0 в каждой phase
 
 ### Phase 1 Step 0 (Discovery)

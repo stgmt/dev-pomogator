@@ -138,7 +138,7 @@ done
 
 ## Step 0 (Jira-mode)
 
-Если `.specs/{slug}/JIRA_SOURCE.md` существует — выполнить Step 0 из [`jira-mode.md`](jira-mode.md) для Phase 2: extract CRITICAL imperatives → FR; scope enumeration → каждый member получает FR или `[WAIVED]`; exclusions → `## Out of Scope`; errors → reference `{file}:{line}`; UI observations → точные тексты в AC; config values → NFR boundaries.
+Если `JIRA_SOURCE.md` присутствует (проверка через `list_spec_docs({spec})`; MCP-rails, не raw `ls`) — выполнить Step 0 из [`jira-mode.md`](jira-mode.md) для Phase 2: extract CRITICAL imperatives → FR; scope enumeration → каждый member получает FR или `[WAIVED]`; exclusions → `## Out of Scope`; errors → reference `{file}:{line}`; UI observations → точные тексты в AC; config values → NFR boundaries.
 
 Format Jira trace в FR/AC/BDD/Tasks — см. [`jira-mode.md`](jira-mode.md).
 

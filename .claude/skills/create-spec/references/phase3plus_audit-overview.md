@@ -77,8 +77,8 @@ Skill("spec-reality-check")
 
 ## Step 5: Генерация AUDIT_REPORT.md
 
-1. Создать `.specs/{feature}/AUDIT_REPORT.md` по шаблону `tools/specs-generator/templates/AUDIT_REPORT.md.template`
-2. Записать ВСЕ найденные и исправленные проблемы (что было → что исправлено)
+1. Создать `.specs/{feature}/AUDIT_REPORT.md` через mutation-дверь (MCP-rails, FR-40 — НЕ raw `Write`; под enforce raw запись в `.specs/**` блокируется): `apply_spec_change({ spec: "{feature}", doc: "AUDIT_REPORT.md", content: "<по шаблону tools/specs-generator/templates/AUDIT_REPORT.md.template>", reason: "phase3+ audit report" })`. Дверь валидирует форму перед записью + пишет в аудит-лог.
+2. Записать ВСЕ найденные и исправленные проблемы (что было → что исправлено) — в том же `content`
 3. Показать summary таблицу пользователю
 
 ## Step 6: Финальный /simplify review

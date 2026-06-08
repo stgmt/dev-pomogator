@@ -5,7 +5,7 @@
 
 ## Step 0 (только в Jira-mode)
 
-Если `.specs/{slug}/JIRA_SOURCE.md` существует — выполнить Step 0 из [`jira-mode.md`](jira-mode.md) для Phase 1 (extract roles, user goals, reproduction flow). Если файла нет — пропустить.
+Если `JIRA_SOURCE.md` присутствует (проверка через `list_spec_docs({spec})` → есть ли `JIRA_SOURCE.md` в `docs[]`; MCP-rails, не raw `ls`) — выполнить Step 0 из [`jira-mode.md`](jira-mode.md) для Phase 1 (extract roles, user goals, reproduction flow). Если файла нет — пропустить.
 
 ## Pre-Write Verification Checklist (ОБЯЗАТЕЛЬНО)
 
