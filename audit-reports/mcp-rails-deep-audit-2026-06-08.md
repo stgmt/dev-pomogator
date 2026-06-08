@@ -104,6 +104,17 @@ via `apply_spec_change`. Both reachable under enforce.
   (LLM, non-deterministic), (B) a deterministic analyzer stage in the orchestrator, (C) both.
   Needs a user decision — tracked as P19-5 producer residual.
 
+## OPERATIONAL HAZARD (re-hit 2026-06-08): partial cucumber poisons the shared NDJSON
+
+`cucumber.json` writes a SINGLE `message:.dev-pomogator/.last-test-run.ndjson` formatter
+that OVERWRITES on every run. Running a FILTERED suite (`--name X` / `--tags @featureN`) to
+spot-check one scenario clobbers the canonical run-state with a partial result → `get_coverage`
+/ `spec-verdict` then read e.g. passed:6/not_run:159 instead of 136/28. RECOVERY: re-run the
+FULL suite (no filter) — it regenerates the complete NDJSON (verified: 137 testCaseFinished,
+buckets back to 136/28/skip1, GREEN). RULE OF THUMB: after any filtered cucumber run, re-run
+the full suite before trusting any coverage surface. (Same incident the user flagged earlier;
+hit again here when binding SPECGEN004_137 — repaired in the same pass.)
+
 ## Deep gap-hunt (34-agent adversarial workflow, wf_03852f29) — 20 CONFIRMED
 
 The manual pass found 6; the user said "мало найдено". A 7-area parallel finder +
