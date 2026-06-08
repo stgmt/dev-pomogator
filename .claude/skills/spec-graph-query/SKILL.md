@@ -66,7 +66,10 @@ All return `{ ok, ... }`; `ok:false` (or `registered:false`) when nothing matche
 `get_trace` (full traceability for a node), `conformance_check` (structural findings),
 `search` (free-text over the graph), `get_test_result` (a scenario's last run),
 `find_orphans` (nodes with no inbound coverage), `get_coverage` (the **honest** FR-32 per-task
-DONE verdict — distinct from `get_coverage_summary`, which is just counts).
+DONE verdict — distinct from `get_coverage_summary`, which is just counts). **Always pass
+`get_coverage({ spec: "<slug>" })`** for a per-spec rollup — a bare `get_coverage({})` returns
+the WHOLE-CORPUS buckets (every other spec shows as `not_run`), which reads as "this spec is
+mostly unrun". Scope it.
 
 ## Pick the RIGHT neighbour (so you don't reach here by mistake)
 - **Jump** from a `[text](#anchor)` link to its heading, or **rename** a heading + propagate

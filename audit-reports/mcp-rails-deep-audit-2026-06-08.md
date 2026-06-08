@@ -66,8 +66,14 @@ via `apply_spec_change`. Both reachable under enforce.
   Migrate → `list_spec_docs` (existence) + `read_spec_doc` (read).
 - 🔴 **G3:** phase3plus_audit-overview CREATES `.specs/{feature}/AUDIT_REPORT.md` via
   raw Write — under enforce: denied. Migrate → `apply_spec_change` ({content}).
-- 🟡 **G4:** `get_trace FR-39` returns `acs=0` though AC-39.1/2/3 exist — AC-covers-FR
-  edge may not be surfaced by get_trace. INVESTIGATE.
+- 🟡 **G4:** `get_trace FR-39` returns `acs=0` though AC-39.1/2/3 exist. ROOT (2026-06-08):
+  AC-39.1 references the CLEAN `[FR-39](#fr-39)` (not a sub-id), yet `acs=0` — so it's
+  NOT only a sub-id (FR-39a) issue. `conformance.ts` adds `e.from` of a `covers` edge to
+  `acCovers` (= FR ids), and `get_trace:502` collects ACs where `edge.from===FR && to.type==='AC'`
+  — both expect `covers` as **FR→AC**. acs=0 ⇒ no `covers` edge has `from === "spec-generator-v4:FR-39"`.
+  NEXT: read the AC parser (`parsers/md.ts`) covers-edge building + dump edges touching AC-39.1
+  — the edge is either built with `from=AC` (opposite direction, which would also mis-feed
+  acCovers) or keyed bare (not composite) so it never matches the FR-39 node id.
 - 🟡 **G5:** `propose_spec_change` on an identical (no-op) change → `ok=false findings=0`
   — refusal path on a no-op/identical replace unclear. INVESTIGATE.
 - 🟡 **G6:** `get_coverage_summary` returned specs=2 (likely by source-dir, not 47
