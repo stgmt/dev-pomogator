@@ -125,14 +125,29 @@ per-finding adversarial verify (default-refuted) found **27 candidates → 20 co
   "nothing references this") — now NODE_NOT_FOUND like siblings.
 - 🔧 FIXED (dbc8241) `list_specs` regex collapsed nested specs (`backlog/<name>`→`backlog`)
   → 5+ nested specs invisible — now specOf full path + artifact-subdir filter.
-- 🔴 No MCP path for BINARY ATTACHMENTS (`phase2` Step 5c Jira multimodal verify reads
-  `.specs/<slug>/attachments/<file>` via raw Read; read_spec_doc filters to md/feature)
-  → needs a `read_attachment` MCP tool or an attachments carve-out.
-- 🔴 `architecture-decision-builder` reads `ARCHITECTURE/AXIS-*.md` raw (SKILL.md:86);
-  read_spec_doc can't reach spec SUBDIRECTORIES (top-level basename only) → enforce blocks.
-- 🔴 `variant-matrix-build` mutates ACCEPTANCE_CRITERIA/{slug}.feature/TASKS via raw
-  Write/Edit (SKILL.md) — NOT migrated to apply_spec_change (sibling chk-matrix is).
-- 🔴 `spec-review` Step 1 `ls -t .specs/*/.progress.json` (raw ls) → use list_spec_docs.
+- 🔴 **P19-6 FORK (root cause confirmed deterministically 2026-06-08):** spec
+  SUBDIRECTORIES are structurally unreachable through the door. `docOf =
+  path.basename(String(doc))` (tools.ts:1025) and the list inventory `path.basename`
+  (tools.ts:982) STRIP the directory — so `read_spec_doc({doc:"ARCHITECTURE/AXIS-1.md"})`
+  → basename `AXIS-1.md` → DOC_NOT_FOUND; `attachments/diagram.png` → `diagram.png` →
+  DOC_NOT_FOUND; `../../etc/passwd` → `passwd` (traversal neutralized — good, but also no
+  subdir). `apply_spec_change` shares `docOf` → can't WRITE subdirs either. Consumers that
+  break under enforce: `architecture-decision-builder` (reads `ARCHITECTURE/AXIS-*.md`),
+  `phase2` Step 5c (reads `attachments/<file>` — BINARY, read_spec_doc returns text only),
+  `architecture-research-workflow` (writes `.architecture-research/<N>-stage.md`). FORK
+  options: (A) extend read_spec_doc/apply_spec_change to accept a traversal-validated
+  relative SUBPATH within `.specs/{slug}/` (one door; binary still needs base64) +
+  `read_attachment` for binaries; (B) dedicated `read_attachment` (base64) + subdir-md in
+  read_spec_doc; (C) a subdir carve-out (raw Read of `.specs/{slug}/{ARCHITECTURE,
+  attachments,.architecture-research}/**` allowed under enforce, door stays top-level).
+  Needs a user decision.
+- 🔧 FIXED (b13b416) `variant-matrix-build` mutated ACCEPTANCE_CRITERIA/{slug}.feature/TASKS
+  via raw Write/Edit — now apply_spec_change + MCP read door (mirrors sibling chk-matrix).
+- 🟡 `spec-review` Step 1 `ls -t .specs/*/.progress.json` (raw ls) — UNBLOCKED, no fork:
+  read_spec_doc DOES serve `.progress.json` (verified live: ok:true, 765 bytes — the audit's
+  earlier "md/feature only" was WRONG) and list_spec_docs enumerates it. Migration = list_specs
+  + read_spec_doc each `.progress.json` to pick the active spec (loses raw mtime-ordering; pass
+  the slug from the caller when known). Mechanical, top-level only.
 - 🔧 FIXED (2026-06-08) `get_coverage` never passed `testQualityByTask` → couldn't cap DONE
   with a weak/fake test. Now reads the `.dev-pomogator/.test-quality.json` side-channel via
   a SHARED `readVerdicts` (extracted to `test-quality-gate.ts`, one source of truth for the
@@ -140,7 +155,8 @@ per-finding adversarial verify (default-refuted) found **27 candidates → 20 co
   planted WEAK verdict (install-bdd-framework → IN_PROGRESS, test_quality=WEAK). PRODUCER
   (who WRITES the file) remains a fork — see "NOT yet covered".
 
-**MEDIUM:** create-spec SKILL:69 raw Read of .progress.json; arch-research-workflow
+**MEDIUM:** create-spec SKILL:69 raw Read of .progress.json (UNBLOCKED — read_spec_doc serves
+it, mechanical migration); arch-research-workflow
 writes stage files 1-7 raw to `.architecture-research/`; arch-decision writes
 COMPLETENESS.md/QUEUE.json raw; arch-review-loop edits .specs docs raw; spec-status
 Step 5b computes coverage + raw grep + sub-agent raw-read (3); spec-review Step 4
