@@ -32,6 +32,7 @@ import type { CollisionScan } from './collision-probe.ts';
 import { checkTraceabilityCompleteness, summariseGaps } from './traceability.ts';
 import { findOrphanProjectTests } from './project-test-trace.ts';
 import { findFrsWithoutResearch } from './research-trace.ts';
+import { findUnlinkedUpstream } from './upstream-trace.ts';
 import type { SpecGraph, FileNode } from './types.ts';
 
 export interface CorpusHealthReport {
@@ -61,6 +62,12 @@ export interface CorpusHealthReport {
   frsWithoutResearch: {
     count: number;
     samples: Array<{ nodeId: string; file: string; line: number }>;
+  };
+  /** FR-44/GT-4 reverse gap: stories / use-cases / decisions wired to no requirement. */
+  unlinkedUpstream: {
+    count: number;
+    byKind: Record<string, number>;
+    samples: Array<{ kind: string; nodeId: string; file: string; line: number }>;
   };
   /** 🟢 ⇔ no collisions AND no stale paths (hard); debt classes reported. */
   verdict: 'GREEN' | 'RED';
@@ -127,8 +134,14 @@ export function corpusHealth(corpusRoot: string): CorpusHealthReport {
   //    over FR.md sections in specs that HAVE a RESEARCH.md; INFO-class debt.
   const frsNoResearch = findFrsWithoutResearch(root);
 
+  // 7) upstream artifacts wired to no requirement (FR-44/GT-4) — stories /
+  //    use-cases / decisions; file pass; INFO-class debt.
+  const upstream = findUnlinkedUpstream(root);
+  const upstreamByKind: Record<string, number> = {};
+  for (const u of upstream) upstreamByKind[u.kind] = (upstreamByKind[u.kind] ?? 0) + 1;
+
   const hardRed = collisions.collisions.length > 0 || stale > 0;
-  const anyDebt = hardRed || dangling > 0 || gaps.length > 0 || orphanTests.length > 0 || frsNoResearch.length > 0;
+  const anyDebt = hardRed || dangling > 0 || gaps.length > 0 || orphanTests.length > 0 || frsNoResearch.length > 0 || upstream.length > 0;
 
   return {
     corpusRoot: root,
@@ -149,6 +162,11 @@ export function corpusHealth(corpusRoot: string): CorpusHealthReport {
     frsWithoutResearch: {
       count: frsNoResearch.length,
       samples: frsNoResearch.slice(0, 15).map((f) => ({ nodeId: f.nodeId, file: f.file, line: f.line })),
+    },
+    unlinkedUpstream: {
+      count: upstream.length,
+      byKind: upstreamByKind,
+      samples: upstream.slice(0, 15).map((u) => ({ kind: u.kind, nodeId: u.nodeId, file: u.file, line: u.line })),
     },
     verdict: hardRed ? 'RED' : 'GREEN',
     strictVerdict: anyDebt ? 'RED' : 'GREEN',
@@ -188,6 +206,14 @@ export function renderCorpusHealth(r: CorpusHealthReport): string {
   lines.push(`6) FRs citing no RESEARCH.md (FR-44/GT-2, reverse): ${r.frsWithoutResearch.count} — requirement traces to no research finding`);
   for (const f of r.frsWithoutResearch.samples.slice(0, 5)) {
     lines.push(`   ${f.nodeId} @ ${f.file}:${f.line} (no RESEARCH.md citation in the FR section)`);
+  }
+  lines.push(
+    `7) upstream unlinked (FR-44/GT-4, reverse): ${r.unlinkedUpstream.count} — ` +
+      Object.entries(r.unlinkedUpstream.byKind).map(([k, v]) => `${k}:${v}`).join(', ') +
+      ' wired to no requirement',
+  );
+  for (const u of r.unlinkedUpstream.samples.slice(0, 5)) {
+    lines.push(`   [${u.kind}] ${u.nodeId} @ ${u.file}:${u.line}`);
   }
   lines.push(
     `VERDICT: ${icon(r.verdict)} ${r.verdict} (hard: collisions+stale) | strict: ${icon(r.strictVerdict)} ${r.strictVerdict} (any debt)`,

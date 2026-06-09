@@ -730,6 +730,12 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When the FR-to-research reverse trace runs
     Then only the uncited FR of the spec with the research file is flagged and a citing FR is not
 
+  @FR-44
+  Scenario: SPECGEN004_145 upstream stories use-cases and decisions wired to no requirement are flagged
+    Given a spec whose story and use-case and decision variously cite or omit a requirement
+    When the upstream reverse trace runs
+    Then only the unlinked story use-case and research-less decision are flagged with their kinds
+
   @feature36
   Scenario: SPECGEN004_90 two specs defining the same bare id produce two distinct nodes
     Given two specs that each define the bare id FR-2

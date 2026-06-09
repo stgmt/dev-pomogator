@@ -1433,12 +1433,13 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] таск (любой статус) с пустыми refs И без FR/SPECGEN/@feature в Done-When → TASK_NO_REQUIREMENT (conformance.ts) — 7 INFO находок на реальном корпусе, корректно отфильтровал 17 из 24 (линкуются через doneWhen)
   - [x] BDD-регресс SPECGEN004_140 (@FR-44, привязан к реальному checkConformance) + решение зубов: INFO (не гейтит) чтобы не флудить RED на legacy-долге; promote-to-gate после чистки = P20-5
 
-- [ ] P20-4: GT-4 back-ref USER_STORIES/USE_CASES/DESIGN → требования — id: p20-upstream-backref — Status: TODO | Est: 180m
+- [x] P20-4: GT-4 back-ref USER_STORIES/USE_CASES/DESIGN → требования — id: p20-upstream-backref — Status: DONE | Est: 180m
   _depends: p17-mutation-surface_
   _Requirements: [FR-44](FR.md#fr-44)_
+  > Option A (как P20-1/P20-2): standalone `tools/spec-graph/upstream-trace.ts` — ни stories, ни UC, ни decisions не graph-ingested; файловый проход. Один код UPSTREAM_UNLINKED с kind story/use-case/decision.
   **Done When:**
-  - [ ] story→FR / UC→FR / decision→(FR|research) обратная полнота проверяется
-  - [ ] BDD-регресс
+  - [x] story→FR / UC→FR / decision→(FR|RESEARCH.md) обратная полнота проверяется: блок без цитаты → UPSTREAM_UNLINKED INFO (P20-5 keep-advisory: эмпирика 459 legacy — story:152 [конвенции 0/78… реально 0% цитируют], use-case:265 из 307, decision:42 из 70); CLI + corpus-health секция 7; модуль сверен с независимым замером (use-case/decision — точное совпадение)
+  - [x] BDD SPECGEN004_145 (герметично: linked story/UC/decision чисты, unlinked флагаются с kind; decision на RESEARCH.md без FR = linked). 145/144-passed GREEN
 
 - [x] P20-5: решение promote-vs-advisory для беззубых обратных проверок — id: p20-toothless-decision — Status: DONE | Est: 90m
   _depends: p17-mutation-surface_

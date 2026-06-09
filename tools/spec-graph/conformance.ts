@@ -42,7 +42,8 @@ export type FindingCode =
   | 'TASK_TEST_QUALITY'
   | 'TASK_NO_REQUIREMENT'
   | 'ORPHAN_PROJECT_TEST'
-  | 'FR_NO_RESEARCH';
+  | 'FR_NO_RESEARCH'
+  | 'UPSTREAM_UNLINKED';
 
 export type Severity = 'error' | 'warning' | 'info';
 

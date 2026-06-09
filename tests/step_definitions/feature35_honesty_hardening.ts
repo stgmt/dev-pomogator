@@ -300,3 +300,34 @@ Then('only the uncited FR of the spec with the research file is flagged and a ci
   const ids = this.frGaps!.map((g) => g.nodeId);
   assert.deepEqual(ids, ['with-research:FR-2'], `expected only with-research:FR-2, got ${JSON.stringify(ids)}`);
 });
+
+// ── SPECGEN004_145 — FR-44/GT-4: upstream artifacts wired to no requirement ──
+// Binds the REAL findUnlinkedUpstream over a tmp corpus. Per kind: a linked and
+// an unlinked sibling — only the unlinked ones flag; a decision grounded in
+// RESEARCH.md (no FR) counts as linked.
+interface UpstreamWorld extends F35World { upRepo?: string; upGaps?: Array<{ kind: string; nodeId: string }>; }
+Given('a spec whose story and use-case and decision variously cite or omit a requirement', function (this: UpstreamWorld) {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'upstream-'));
+  const dir = path.join(repo, '.specs', 'demo');
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'USER_STORIES.md'),
+    '## User Story 1: linked\n\nrealized by FR-1.\n\n## User Story 2: unlinked\n\nno requirement cited.\n');
+  fs.writeFileSync(path.join(dir, 'USE_CASES.md'),
+    '## UC-1 linked\n\ncovers FR-2.\n\n## UC-2 unlinked\n\nnothing here.\n');
+  fs.writeFileSync(path.join(dir, 'DESIGN.md'),
+    '### Decision: research-grounded\n\nrests on RESEARCH.md#finding.\n\n### Decision: groundless\n\nneither requirement nor research.\n');
+  this.upRepo = repo;
+});
+When('the upstream reverse trace runs', async function (this: UpstreamWorld) {
+  const { findUnlinkedUpstream } = await import('../../tools/spec-graph/upstream-trace.ts');
+  this.upGaps = findUnlinkedUpstream(this.upRepo!);
+  fs.rmSync(this.upRepo!, { recursive: true, force: true });
+});
+Then('only the unlinked story use-case and research-less decision are flagged with their kinds', function (this: UpstreamWorld) {
+  const got = this.upGaps!.map((g) => `${g.kind}|${g.nodeId}`).sort();
+  assert.deepEqual(got, [
+    'decision|demo:Decision: groundless',
+    'story|demo:User Story 2: unlinked',
+    'use-case|demo:UC-2 unlinked',
+  ], `unexpected gap set: ${JSON.stringify(got)}`);
+});
