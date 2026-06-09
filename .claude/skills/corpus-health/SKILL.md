@@ -49,6 +49,7 @@ any debt incl. untraced atoms and dangling edges).
 | 2) dangling edges | edge endpoint with no node | an AC covering a deleted FR, a typo'd `@featureN`, a cross-root bare tag — connective tissue pointing at nothing |
 | 3) untraced atoms (FR-37b) | UNCOVERED_FR / TASK_UNTESTED / UNTAGGED_SCENARIO | the cell→atom invariants from the P14-2 traceability check, corpus-wide |
 | 4) stale FILE_CHANGES (graph-side) | `implements` edge with action=edit, path missing on disk | the «58 stale `extensions/` paths» class that hid 9 P0s in v4 — checked across EVERY spec |
+| 5) orphan project tests (FR-44/GT-1) | vitest `it()` id with no spec scenario | the «test from nowhere» reverse hole — a project test described in no `.feature` (graph is built FROM `.feature`, blind to project-side tests). INFO-class: gates `--strict`, not the hard verdict |
 
 ## Division of labour
 - **corpus-health** = the WHOLE-corpus cheap pass (this skill).
