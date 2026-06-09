@@ -169,3 +169,37 @@ function* graphScens(g: SpecGraph) {
 function* graphTasks(g: SpecGraph) {
   for (const n of g.nodes.values()) if (n.type === 'Task') yield { id: n.id, doneWhen: (n as any).doneWhen ?? '', refs: (n as any).refs };
 }
+
+// ── SPECGEN004_143 — FR-32 (P19-3): get_coverage {spec} scoping vs bare corpus ──
+// Binds the REAL registry handler: the spec param filters by specOf(node.file),
+// so the two specs' scenarios live in distinct .specs/<slug>/ files here.
+interface ScopeWorld extends F32World {
+  scoped?: { ok: boolean; scope: string; buckets: Record<string, string[]> };
+  bare?: { ok: boolean; scope: string; buckets: Record<string, string[]> };
+}
+function twoSpecGraph(): SpecGraph {
+  const nodes = new Map<string, any>();
+  const scen = (id: string, slug: string, result?: string) =>
+    nodes.set(id, { id, type: 'Scenario', file: `.specs/${slug}/${slug}.feature`, line: 1, tags: ['@FR-1'], steps: [], lastResult: result });
+  scen('spec-a:SCEN-aaa001-01-one', 'spec-a', 'PASSED');
+  scen('spec-a:SCEN-aaa001-02-two', 'spec-a', 'FAILED');
+  scen('spec-b:SCEN-bbb001-01-other', 'spec-b', 'PASSED');
+  return { version: 1, builtAt: '', nodes, edges: [], definitions: new Map(), backlinks: new Map() };
+}
+Given('a graph holding scenarios from two different specs', function (this: ScopeWorld) {
+  this.graph = twoSpecGraph();
+});
+When('get_coverage is called scoped to one spec and then bare', async function (this: ScopeWorld) {
+  const tool = getTool(this.graph!, 'get_coverage');
+  const call = async (args: object) => JSON.parse(((await tool.handler(args as never)) as { content: Array<{ text: string }> }).content[0].text);
+  this.scoped = await call({ spec: 'spec-a' });
+  this.bare = await call({});
+});
+Then("the scoped buckets hold only that spec's scenarios and the bare buckets hold the whole corpus", function (this: ScopeWorld) {
+  const ids = (r: { buckets: Record<string, string[]> }) => Object.values(r.buckets).flat();
+  assert.equal(this.scoped!.scope, 'spec');
+  assert.deepEqual(ids(this.scoped!).sort(), ['spec-a:SCEN-aaa001-01-one', 'spec-a:SCEN-aaa001-02-two'], 'scoped call must see ONLY spec-a scenarios');
+  assert.equal(this.bare!.scope, 'corpus');
+  assert.equal(ids(this.bare!).length, 3, 'bare call must see the whole corpus (both specs)');
+  assert.ok(ids(this.bare!).includes('spec-b:SCEN-bbb001-01-other'), 'corpus view includes the other spec');
+});

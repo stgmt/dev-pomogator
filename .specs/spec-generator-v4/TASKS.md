@@ -145,7 +145,7 @@
 | T18-139 | P18-2: HITL-маркер + триаж-отчёт + legacy-v3 резолюция | TODO | p18-legacy-classifier | Phase 18 — Legacy/drift spec triage (FR-43, после Phase 17) | 240m |
 | T19-140 | P19-1: рефакторинг фаз+research на MCP-rails (все под-пункты done; зонтик IN_PROGRESS — нет выделенного сценария, TASK_UNTESTED-честность) | IN_PROGRESS | p17-mutation-surface | Phase 19 — MCP-rails deep-audit gaps (2026-06-08) | 360m |
 | T19-141 | P19-2: MCP-тул гапы (get_trace acs / propose no-op / coverage_summary) — все 3 ложные находки аудита | DONE | p17-read-sufficiency | Phase 19 — MCP-rails deep-audit gaps (2026-06-08) | 180m |
-| T19-142 | P19-3: get_coverage spec-scoping BDD + wiring | TODO | p17-read-sufficiency | Phase 19 — MCP-rails deep-audit gaps (2026-06-08) | 90m |
+| T19-142 | P19-3: get_coverage spec-scoping BDD (SPECGEN004_143) + spec-graph-query wiring | DONE | p17-read-sufficiency | Phase 19 — MCP-rails deep-audit gaps (2026-06-08) | 90m |
 | T19-143 | P19-4: полный генеративный e2e под enforce | TODO | p17-enforce, p19-phase-refactor | Phase 19 — MCP-rails deep-audit gaps (2026-06-08) | 240m |
 | T19-144 | P19-5: FR-35a test-quality honesty-гейт жив e2e — consumer + producer (test-quality-producer.ts) + skill-проводка (run-tests Step 5b / strong-tests canonical) | DONE | p17-read-sufficiency | Phase 19 — MCP-rails deep-audit gaps (2026-06-08) | 240m |
 | T19-145 | P19-6: MCP-дверь к подкаталогам спеки (read+write+read_attachment+consumer-миграция) | DONE | p17-mutation-surface | Phase 19 — MCP-rails deep-audit gaps (2026-06-08) | 300m |
@@ -1368,12 +1368,12 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] G6: ЛОЖНАЯ НАХОДКА — `get_coverage_summary` отдаёт 54 спеки по slug (не 2); прежнее specs=2 — чтение устаревшего bundle
   > Evidence: re-driven через source-handlers `buildToolRegistry(()=>buildGraphFromCwd())`. Реальные тул-баги (find_refs NODE_NOT_FOUND, list_specs nested) + G1 scoping — починены отдельно (dbc8241, 9658d06). Подробно: audit-reports/mcp-rails-deep-audit-2026-06-08.md
 
-- [ ] P19-3: get_coverage spec-scoping — BDD + spec-graph-query wiring — id: p19-coverage-scope — Status: TODO | Est: 90m
+- [x] P19-3: get_coverage spec-scoping — BDD + spec-graph-query wiring — id: p19-coverage-scope — Status: DONE | Est: 90m
   _depends: p17-read-sufficiency_
   _Requirements: [FR-32](FR.md#fr-32)_
   **Done When:**
-  - [ ] BDD-сценарий: `get_coverage {spec}` scope=spec (≈164) ≠ `get_coverage {}` corpus (≈1535); биндинг на реальный buildToolRegistry
-  - [ ] spec-graph-query SKILL.md велит передавать `spec` в get_coverage (per-spec честность), не голый `{}`
+  - [x] BDD SPECGEN004_143: двух-спековый граф → `get_coverage {spec:'spec-a'}` scope=spec видит ТОЛЬКО spec-a сценарии; голый `{}` scope=corpus видит весь корпус; биндинг на реальный buildToolRegistry handler (143/142-passed GREEN)
+  - [x] spec-graph-query SKILL.md велит всегда передавать `spec` в get_coverage (e475547)
 
 - [ ] P19-4: полный генеративный жизненный цикл e2e ПОД enforce (live) — id: p19-full-lifecycle-e2e — Status: TODO | Est: 240m
   _depends: p17-enforce, p19-phase-refactor_

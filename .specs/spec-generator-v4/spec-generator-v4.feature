@@ -1028,6 +1028,12 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then every engine CLI is allowed and the generic reader stays a violation
 
   @FR-32
+  Scenario: SPECGEN004_143 get_coverage scopes to one spec while a bare call stays corpus-wide
+    Given a graph holding scenarios from two different specs
+    When get_coverage is called scoped to one spec and then bare
+    Then the scoped buckets hold only that spec's scenarios and the bare buckets hold the whole corpus
+
+  @FR-32
   Scenario: SPECGEN004_134 not_run (absent from the last NDJSON) is separated from undefined
     Given a coverage run where one scenario passed, one is UNDEFINED, and one was not in the last NDJSON
     When coverage buckets are computed
