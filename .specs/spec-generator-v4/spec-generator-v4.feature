@@ -700,6 +700,12 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And the returned finding set is not empty
 
   @feature35
+  Scenario: SPECGEN004_142 the test-quality producer joins per-test verdicts to the backing task worst-wins
+    Given a task backed by a scenario with two graded tests one WEAK one FAKE-POSITIVE-RISK
+    When the test-quality producer joins the per-test verdicts
+    Then the task verdict is the worst of the two and a task with no graded test is absent
+
+  @feature35
   Scenario: SPECGEN004_137 the test-quality side-channel file caps a green DONE task on the read surfaces
     Given a side-channel test-quality file recording a WEAK verdict for a green DONE task
     When the honesty read surfaces load the side-channel file

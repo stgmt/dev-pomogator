@@ -14,6 +14,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { checkConformance, type Finding } from '../../tools/spec-graph/conformance.ts';
 import { findOrphanProjectTests, type OrphanProjectTest } from '../../tools/spec-graph/project-test-trace.ts';
+import { mapTestVerdictsToTasks } from '../../tools/spec-graph/test-quality-producer.ts';
 import { evaluateTestQualityGate, logEscape, readVerdicts, type GateDecision } from '../../tools/spec-graph/test-quality-gate.ts';
 import { computeCoverage, type CoverageReport, type ScenarioLike, type TaskLike, type TestQualityVerdict } from '../../tools/spec-graph/coverage.ts';
 import { WORKFLOW, REFERENCED_CAPABILITIES, checkFeatureMapDrift, type DriftResult } from '../../.claude/skills/spec-generator-orchestrator/scripts/feature-map.ts';
@@ -245,4 +246,30 @@ Then('only the test id with no scenario is reported as an orphan project test', 
   assert.deepEqual(ids, ['BAR002_03'], `expected only BAR002_03 orphan, got ${JSON.stringify(ids)}`);
   assert.equal(this.orphans![0].file, 'tests/e2e/demo.test.ts');
   assert.ok(this.orphans![0].line >= 1, 'orphan carries a 1-based line');
+});
+
+// ── SPECGEN004_142 — FR-35a producer: per-test verdicts → per-task (worst-wins) ──
+interface ProducerWorld extends F35World { taskVerdicts?: Record<string, TestQualityVerdict>; }
+Given('a task backed by a scenario with two graded tests one WEAK one FAKE-POSITIVE-RISK', function (this: ProducerWorld) {
+  // task t-graded refs FR-1 → @feature1 scenario foo001-01; tests FOO001_01 + FOO001_02 grade it.
+  // t-ungraded refs FR-9 → @feature9 scenario bar009-01 with NO graded test → must be absent.
+  // prefix convention: ONE scenario `foo001` backed by sub-tests FOO001_01/_02 →
+  // worst-wins applies across both sub-tests of the same scenario.
+  this.graph = makeGraph(
+    [
+      { id: 'demo:SCEN-foo001-covered', tags: ['@feature1'], result: 'PASSED' },
+      { id: 'demo:SCEN-bar009-untested', tags: ['@feature9'], result: 'PASSED' },
+    ],
+    [
+      { id: 't-graded', status: 'done', refs: ['FR-1'], doneWhen: '' },
+      { id: 't-ungraded', status: 'done', refs: ['FR-9'], doneWhen: '' },
+    ],
+  );
+});
+When('the test-quality producer joins the per-test verdicts', function (this: ProducerWorld) {
+  this.taskVerdicts = mapTestVerdictsToTasks(this.graph!, { FOO001_01: 'WEAK', FOO001_02: 'FAKE-POSITIVE-RISK' });
+});
+Then('the task verdict is the worst of the two and a task with no graded test is absent', function (this: ProducerWorld) {
+  assert.equal(this.taskVerdicts!['t-graded'], 'FAKE-POSITIVE-RISK', 'worst-wins: one fake-positive test drags the task down');
+  assert.ok(!('t-ungraded' in this.taskVerdicts!), 'a task with no graded backing test gets no verdict (absent)');
 });
