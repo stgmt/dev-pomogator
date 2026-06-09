@@ -236,3 +236,16 @@ git diff --name-only HEAD~1 HEAD -- '*.test.*' '*_test.*' '*Tests.cs' '*Steps.cs
 **Если test files НЕ changed (только production code edited)** — skip hint (не спамить user).
 
 Cross-link: `.claude/skills/strong-tests/SKILL.md` для skill workflow + thresholds (default 70% kill rate для critical paths).
+
+### Step 5b: Записать test-quality side-channel (FR-35a producer, P19-5)
+
+Если `strong-tests` отгрейдил тесты (Step 5) — ПЕРСИСТИТЬ его канонические вердикты в honesty side-channel, чтобы гейт `get_coverage`/`spec-verdict`/Stop-gate реально кусал (без этого producer-шага гейт мёртв — кусает только рукодельный файл, инцидент 2026-06-08).
+
+1. Собрать из вывода `strong-tests` мапу `{ "<testId>": "STRONG"|"WEAK"|"FAKE-POSITIVE-RISK" }` (канонический словарь — см. strong-tests SKILL.md «Canonical verdict»; GOOD→STRONG, FAIR/WEAK→WEAK, fake-positive→FAKE-POSITIVE-RISK). Записать во временный grades-файл, напр. `.dev-pomogator/.test-grades.json`.
+2. Запустить детерминированный producer (engine CLI — carve-out, не raw write):
+   ```bash
+   npx tsx tools/spec-graph/test-quality-producer.ts .dev-pomogator/.test-grades.json
+   ```
+   Он джойнит `testId → scenario → task` по графу (worst-wins) и атомарно пишет `.dev-pomogator/.test-quality.json` (keyed by taskId). Дальше `get_coverage`/`spec-verdict` сами опускают слабо-протестированный DONE до IN_PROGRESS.
+
+Skip, если `strong-tests` не запускался (Step 5 hint не сработал) — producer без грейдов бессмыслен.

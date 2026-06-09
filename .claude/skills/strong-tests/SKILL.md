@@ -498,6 +498,23 @@ Eight smells caught by Audit mode. Full BAD/GOOD + grep regexes in [`references/
 
 Severity score = 100 − Σ(severity_weight × count_i). Strength rating: ≥85 GOOD, 60-84 FAIR, <60 WEAK.
 
+### Canonical verdict (FR-35a producer handoff, P19-5)
+
+The honesty side-channel (`.dev-pomogator/.test-quality.json`) speaks a 3-value vocabulary —
+`STRONG | WEAK | FAKE-POSITIVE-RISK`. When this audit feeds the producer (run-tests Step 5b →
+`tools/spec-graph/test-quality-producer.ts`), map the internal rating to it **per test-id**:
+
+| Internal signal | Canonical verdict |
+|---|---|
+| Strength rating GOOD (≥85), no fake-positive smell | `STRONG` |
+| FAIR / WEAK (<85) | `WEAK` |
+| any fake-positive smell fired (#11 Trivial Input, #12 Self-Challenge, ALWAYS_TRUE, mock-only assert) | `FAKE-POSITIVE-RISK` |
+
+Emit a grades map `{ "<testId e.g. SPECGEN004_140>": "<canonical>" }` keyed by the test's
+DOMAIN_CODE_NN id (the same id the `.feature` scenario carries) so the producer can join
+test → scenario → task. A passing-but-fake test MUST read FAKE-POSITIVE-RISK, never STRONG —
+that is the whole point of the gate.
+
 ---
 
 ## 5. The 12-Point Self-Eval Checklist
