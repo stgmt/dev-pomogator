@@ -567,3 +567,14 @@ Thin skill, thick server: every USER-FACING MCP tool has a skill that knows how 
 | **propose_spec_change / apply_spec_change / create_spec** | create-spec | **FR-40 mutation door** |
 
 A new user-facing tool MUST be added to TOOL_CONSUMERS with a real consumer skill (and that skill must actually document/use it) or the drift guard blocks — this is the FR-42 «no naked MCP tool» invariant.
+
+### Decision: Toothless reverse-trace checks stay ADVISORY until the debt is cleaned (P20-5, FR-44)
+
+**Rationale:** The live corpus data decides this, not taste. Promoting the warning-class reverse checks (ORPHAN_TASK, SCENARIO_TAG_ORPHAN, TASK_STATUS_UNVERIFIED) or the new INFO trio (TASK_NO_REQUIREMENT: 7, ORPHAN_PROJECT_TEST: 72, FR_NO_RESEARCH: 538) into the FR-37b GAP_CLASSES hard gate TODAY would flip spec-generator-v4 itself RED on the spot (3 live TASK_STATUS_UNVERIFIED) and flood the corpus with hundreds of legacy findings. A gate that is born red on day one teaches escape-hatch gaming instead of hygiene (the H1 / scope-gate anti-gaming lesson) — surfacing first, gating after cleanup, preserves the gate's authority.
+
+**Trade-off:** Advisory findings can be ignored, so new debt of these classes can still accumulate until promotion — the cost of not flooding RED now. Mitigated by visibility: all six classes appear in the spec-verdict conformance summary and corpus-health sections 3/5/6 on every run, so the debt is measured, not hidden.
+
+**Alternatives considered:**
+- Promote everything to GAP_CLASSES now (rejected) — instant corpus-wide RED (538+72+7 findings), drowns the three real residuals, incentivises gaming the escape hatches.
+- Per-spec opt-in gating (e.g. only specs created after FR-44 landed) (deferred) — viable second step after cleanup; adds config surface now without removing the legacy-debt problem.
+- Keep-advisory with explicit promotion criteria (CHOSEN) — a class is promoted to GAP_CLASSES (+ BDD regression per the SPECGEN004_98 lesson) only once its corpus count is driven to ~0 and stays there for a full hygiene cycle; until then the counts in corpus-health are the burn-down metric.

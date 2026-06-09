@@ -1440,9 +1440,9 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] story→FR / UC→FR / decision→(FR|research) обратная полнота проверяется
   - [ ] BDD-регресс
 
-- [ ] P20-5: решение promote-vs-advisory для беззубых обратных проверок — id: p20-toothless-decision — Status: TODO | Est: 90m
+- [x] P20-5: решение promote-vs-advisory для беззубых обратных проверок — id: p20-toothless-decision — Status: DONE | Est: 90m
   _depends: p17-mutation-surface_
   _Requirements: [FR-44](FR.md#fr-44)_
   **Done When:**
-  - [ ] для ORPHAN_TASK / SCENARIO_TAG_ORPHAN / TASK_STATUS_UNVERIFIED осознанно решено promote-to-gap-class или keep-advisory (с обоснованием в DESIGN)
-  - [ ] если promote — добавлены в GAP_CLASSES + BDD; если advisory — задокументировано почему
+  - [x] решено KEEP-ADVISORY (для ORPHAN_TASK / SCENARIO_TAG_ORPHAN / TASK_STATUS_UNVERIFIED + INFO-трио TASK_NO_REQUIREMENT/ORPHAN_PROJECT_TEST/FR_NO_RESEARCH) — Decision-блок в DESIGN.md «Toothless reverse-trace checks stay ADVISORY until the debt is cleaned»; данные решили: promote сегодня = мгновенный RED v4 (3 живых TASK_STATUS_UNVERIFIED) + 538/72/7 legacy-флуд → гейминг escape-hatch (H1-урок)
+  - [x] advisory задокументировано ПОЧЕМУ + критерий промоушена: класс уходит в GAP_CLASSES (+BDD по уроку SPECGEN004_98) когда его corpus-счётчик доведён до ~0 и держится полный hygiene-цикл; счётчики corpus-health (секции 3/5/6) = burn-down метрика
