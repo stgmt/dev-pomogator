@@ -71,3 +71,50 @@ Then('the skill body re-implements none of the server logic', function (this: F4
     assert.ok(!body.includes(banned), `create-spec must NOT re-implement server logic (found ${banned})`);
   }
 });
+
+// ── SPECGEN004_146 — P19-1 umbrella contract: migrated skills declare the door ──
+// Binds the REAL SKILL.md files of every skill the P19-1 refactor migrated to
+// MCP-rails: each must declare mcp__dev-pomogator-specs__* tools in allowed-tools.
+// A migration that drops the declaration would silently fall back to raw access
+// under enforce — this pins the contract per skill, by name.
+const MIGRATED_SKILLS = [
+  'create-spec',
+  'requirements-chk-matrix',
+  'variant-matrix-build',
+  'spec-review',
+  'spec-status',
+  'spec-graph-query',
+  'architecture-decision-builder',
+  'architecture-research-workflow',
+];
+
+interface MigWorld extends F42World {
+  skillTools?: Map<string, string>;
+}
+
+Given('the list of authoring skills migrated to MCP-rails', function (this: MigWorld) {
+  for (const name of MIGRATED_SKILLS) {
+    assert.ok(
+      fs.existsSync(path.join(REPO, '.claude', 'skills', name, 'SKILL.md')),
+      `migrated skill ${name} must exist`,
+    );
+  }
+});
+
+When("each migrated skill's frontmatter is inspected", function (this: MigWorld) {
+  this.skillTools = new Map();
+  for (const name of MIGRATED_SKILLS) {
+    const text = fs.readFileSync(path.join(REPO, '.claude', 'skills', name, 'SKILL.md'), 'utf-8');
+    // frontmatter = up to the SECOND '---' line; allowed-tools may be inline or a YAML list.
+    const fmEnd = text.indexOf('---', 3);
+    this.skillTools.set(name, text.slice(0, fmEnd === -1 ? 2000 : fmEnd));
+  }
+});
+
+Then('every one of them declares dev-pomogator-specs door tools in allowed-tools', function (this: MigWorld) {
+  const missing: string[] = [];
+  for (const [name, fm] of this.skillTools!) {
+    if (!/mcp__dev-pomogator-specs__/.test(fm)) missing.push(name);
+  }
+  assert.deepEqual(missing, [], `skills missing the MCP door in allowed-tools: ${missing.join(', ')}`);
+});

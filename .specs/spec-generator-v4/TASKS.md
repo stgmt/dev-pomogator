@@ -143,7 +143,7 @@
 | T17-137 | P17-9: слойный контракт skill↔MCP | DONE | p17-mutation-surface | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 240m |
 | T18-138 | P18-1: legacy-suspicion 4-state classifier | TODO | p17-enforce | Phase 18 — Legacy/drift spec triage (FR-43, после Phase 17) | 360m |
 | T18-139 | P18-2: HITL-маркер + триаж-отчёт + legacy-v3 резолюция | TODO | p18-legacy-classifier | Phase 18 — Legacy/drift spec triage (FR-43, после Phase 17) | 240m |
-| T19-140 | P19-1: рефакторинг фаз+research на MCP-rails (все под-пункты done; зонтик IN_PROGRESS — нет выделенного сценария, TASK_UNTESTED-честность) | IN_PROGRESS | p17-mutation-surface | Phase 19 — MCP-rails deep-audit gaps (2026-06-08) | 360m |
+| T19-140 | P19-1: рефакторинг фаз+research на MCP-rails — закрыт контракт-сценарием SPECGEN004_146 (8 мигрированных скиллов декларируют дверь) | DONE | p17-mutation-surface | Phase 19 — MCP-rails deep-audit gaps (2026-06-08) | 360m |
 | T19-141 | P19-2: MCP-тул гапы (get_trace acs / propose no-op / coverage_summary) — все 3 ложные находки аудита | DONE | p17-read-sufficiency | Phase 19 — MCP-rails deep-audit gaps (2026-06-08) | 180m |
 | T19-142 | P19-3: get_coverage spec-scoping BDD (SPECGEN004_143) + spec-graph-query wiring | DONE | p17-read-sufficiency | Phase 19 — MCP-rails deep-audit gaps (2026-06-08) | 90m |
 | T19-143 | P19-4: полный генеративный e2e под enforce | TODO | p17-enforce, p19-phase-refactor | Phase 19 — MCP-rails deep-audit gaps (2026-06-08) | 240m |
@@ -1346,10 +1346,10 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] `legacy-v3.feature` (28 сценариев SPECGEN003, инстанс SUPERSEDED) разрешён по решению юзера: архив + маркер supersedes ЛИБО добавление в cucumber paths — NOT_RUN-нота перестаёт гореть на нём
   - [ ] @feature43 сценарий на HITL-маркер (подсажена ложная авто-ретайр-попытка → guard/флоу её не допускает)
 
-- [ ] P19-1: рефакторинг ВСЕХ фаз + research-скиллов на MCP-rails (deep-audit 2026-06-08) — id: p19-phase-refactor — Status: IN_PROGRESS | Est: 360m
+- [x] P19-1: рефакторинг ВСЕХ фаз + research-скиллов на MCP-rails (deep-audit 2026-06-08) — id: p19-phase-refactor — Status: DONE | Est: 360m
   _depends: p17-mutation-surface_
   _Requirements: [FR-39](FR.md#fr-39), [FR-42](FR.md#fr-42)_
-  > Все под-пункты выполнены (`[x]` ниже). Статус НЕ DONE сознательно: это рефакторинг-зонтик из доковых правок SKILL.md/phase-доков — у него НЕТ выделенного BDD-сценария, а пометка DONE без linked-сценария = TASK_UNTESTED (честный гейт FR-37b, поймано SPECGEN004_98). Верификация миграций: door-сценарии SPECGEN004_138 (read subpath) / _139 (write subdir) / _133 (carve-out) + broad-scan «0 raw .specs». Закрыть DONE можно только добавив скилл-MCP-контракт-сценарий (assert: мигрированный SKILL.md ссылается на дверь) — отдельная задача.
+  > ЗАКРЫТ по условию из собственной ноты: добавлен скилл-MCP-контракт-сценарий SPECGEN004_146 (@FR-42) — биндит РЕАЛЬНЫЕ SKILL.md всех 8 мигрированных скиллов (create-spec, requirements-chk-matrix, variant-matrix-build, spec-review, spec-status, spec-graph-query, architecture-decision-builder, architecture-research-workflow): каждый ОБЯЗАН декларировать mcp__dev-pomogator-specs__* в allowed-tools, пропавшая декларация = красный тест с именем скилла. Дополнительно: door-сценарии SPECGEN004_138/_139/_133 + broad-scan «0 raw .specs». Гейт честности теперь принимает DONE — SPECGEN004_146 passes.
   **Done When:**
   - [x] variant-matrix-build: raw Write/Edit → apply_spec_change + read door (b13b416)
   - [x] arch-decision-builder Step 3.5 (read ARCHITECTURE/AXIS via door), arch-research-workflow (stage writes via apply_spec_change), phase2 Step 5c attachments (read_attachment) — P19-6 consumer migration (41b1216 / 253ed04)

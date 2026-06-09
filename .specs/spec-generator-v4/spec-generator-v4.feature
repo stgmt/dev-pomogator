@@ -960,6 +960,12 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then the skill orchestrates the phases through MCP calls
     And the skill body re-implements none of the server logic
 
+  @FR-42
+  Scenario: SPECGEN004_146 every migrated authoring skill declares the MCP door in its allowed-tools
+    Given the list of authoring skills migrated to MCP-rails
+    When each migrated skill's frontmatter is inspected
+    Then every one of them declares dev-pomogator-specs door tools in allowed-tools
+
   @FR-23
   Scenario: SPECGEN004_122 the two-tier log inventory writes each tier to its own sink
     Given a soft-tier event and a hard-tier finding
