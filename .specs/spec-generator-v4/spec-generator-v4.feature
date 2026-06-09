@@ -724,6 +724,12 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When the project-test reverse trace runs
     Then only the test id with no scenario is reported as an orphan project test
 
+  @FR-44
+  Scenario: SPECGEN004_144 an FR citing no research finding is flagged only when the spec has a research file
+    Given two specs where only one has a research file and each has an FR without a research citation
+    When the FR-to-research reverse trace runs
+    Then only the uncited FR of the spec with the research file is flagged and a citing FR is not
+
   @feature36
   Scenario: SPECGEN004_90 two specs defining the same bare id produce two distinct nodes
     Given two specs that each define the bare id FR-2

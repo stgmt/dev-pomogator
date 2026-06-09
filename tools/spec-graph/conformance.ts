@@ -41,7 +41,8 @@ export type FindingCode =
   | 'TASK_UNTESTED'
   | 'TASK_TEST_QUALITY'
   | 'TASK_NO_REQUIREMENT'
-  | 'ORPHAN_PROJECT_TEST';
+  | 'ORPHAN_PROJECT_TEST'
+  | 'FR_NO_RESEARCH';
 
 export type Severity = 'error' | 'warning' | 'info';
 

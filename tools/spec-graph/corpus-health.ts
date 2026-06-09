@@ -31,6 +31,7 @@ import { buildGraphFromCwd } from './builder.ts';
 import type { CollisionScan } from './collision-probe.ts';
 import { checkTraceabilityCompleteness, summariseGaps } from './traceability.ts';
 import { findOrphanProjectTests } from './project-test-trace.ts';
+import { findFrsWithoutResearch } from './research-trace.ts';
 import type { SpecGraph, FileNode } from './types.ts';
 
 export interface CorpusHealthReport {
@@ -55,6 +56,11 @@ export interface CorpusHealthReport {
   orphanProjectTests: {
     count: number;
     samples: Array<{ testId: string; file: string; line: number }>;
+  };
+  /** FR-44/GT-2 reverse gap: FR sections citing no RESEARCH.md (in specs that have one). */
+  frsWithoutResearch: {
+    count: number;
+    samples: Array<{ nodeId: string; file: string; line: number }>;
   };
   /** 🟢 ⇔ no collisions AND no stale paths (hard); debt classes reported. */
   verdict: 'GREEN' | 'RED';
@@ -117,8 +123,12 @@ export function corpusHealth(corpusRoot: string): CorpusHealthReport {
   //    (contributes to strict, not hard — like untraced atoms).
   const orphanTests = findOrphanProjectTests(graph, root);
 
+  // 6) FRs citing no RESEARCH.md (FR-44/GT-2, reverse traceability) — file pass
+  //    over FR.md sections in specs that HAVE a RESEARCH.md; INFO-class debt.
+  const frsNoResearch = findFrsWithoutResearch(root);
+
   const hardRed = collisions.collisions.length > 0 || stale > 0;
-  const anyDebt = hardRed || dangling > 0 || gaps.length > 0 || orphanTests.length > 0;
+  const anyDebt = hardRed || dangling > 0 || gaps.length > 0 || orphanTests.length > 0 || frsNoResearch.length > 0;
 
   return {
     corpusRoot: root,
@@ -135,6 +145,10 @@ export function corpusHealth(corpusRoot: string): CorpusHealthReport {
     orphanProjectTests: {
       count: orphanTests.length,
       samples: orphanTests.slice(0, 15).map((o) => ({ testId: o.testId, file: o.file, line: o.line })),
+    },
+    frsWithoutResearch: {
+      count: frsNoResearch.length,
+      samples: frsNoResearch.slice(0, 15).map((f) => ({ nodeId: f.nodeId, file: f.file, line: f.line })),
     },
     verdict: hardRed ? 'RED' : 'GREEN',
     strictVerdict: anyDebt ? 'RED' : 'GREEN',
@@ -170,6 +184,10 @@ export function renderCorpusHealth(r: CorpusHealthReport): string {
   lines.push(`5) orphan project tests (FR-44/GT-1, reverse): ${r.orphanProjectTests.count} — vitest it() with no spec scenario`);
   for (const o of r.orphanProjectTests.samples.slice(0, 5)) {
     lines.push(`   ${o.testId} @ ${o.file}:${o.line} (no .feature scenario)`);
+  }
+  lines.push(`6) FRs citing no RESEARCH.md (FR-44/GT-2, reverse): ${r.frsWithoutResearch.count} — requirement traces to no research finding`);
+  for (const f of r.frsWithoutResearch.samples.slice(0, 5)) {
+    lines.push(`   ${f.nodeId} @ ${f.file}:${f.line} (no RESEARCH.md citation in the FR section)`);
   }
   lines.push(
     `VERDICT: ${icon(r.verdict)} ${r.verdict} (hard: collisions+stale) | strict: ${icon(r.strictVerdict)} ${r.strictVerdict} (any debt)`,

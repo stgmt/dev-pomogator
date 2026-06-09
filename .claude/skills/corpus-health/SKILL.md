@@ -6,7 +6,8 @@ description: >
   dump (the graph's map dedup silently drops last-writer losers), (2) unresolved/dangling edges,
   (3) untraced atoms (UNCOVERED_FR / TASK_UNTESTED / UNTAGGED_SCENARIO, FR-37b), (4) graph-side
   stale FILE_CHANGES paths, (5) orphan project tests (FR-44/GT-1 reverse traceability — vitest
-  it() ids with no spec scenario, the "test from nowhere" hole). The ORGANISM view — catches the disease class FR-36 was (47 of ~470
+  it() ids with no spec scenario, the "test from nowhere" hole), (6) FRs citing no RESEARCH.md
+  finding (FR-44/GT-2 — "a requirement nobody researched"). The ORGANISM view — catches the disease class FR-36 was (47 of ~470
   FR nodes surviving collisions) BEFORE it is rediscovered by hand. INVOKE after touching the
   graph builder/parsers, before trusting corpus-wide counts, when onboarding a foreign spec
   corpus, or on a regular hygiene pass. Triggers (RU): "здоровье корпуса", "проверь корпус спек",
@@ -50,6 +51,7 @@ any debt incl. untraced atoms and dangling edges).
 | 3) untraced atoms (FR-37b) | UNCOVERED_FR / TASK_UNTESTED / UNTAGGED_SCENARIO | the cell→atom invariants from the P14-2 traceability check, corpus-wide |
 | 4) stale FILE_CHANGES (graph-side) | `implements` edge with action=edit, path missing on disk | the «58 stale `extensions/` paths» class that hid 9 P0s in v4 — checked across EVERY spec |
 | 5) orphan project tests (FR-44/GT-1) | vitest `it()` id with no spec scenario | the «test from nowhere» reverse hole — a project test described in no `.feature` (graph is built FROM `.feature`, blind to project-side tests). INFO-class: gates `--strict`, not the hard verdict |
+| 6) FRs citing no RESEARCH.md (FR-44/GT-2) | FR section with no `RESEARCH.md` reference, in a spec that HAS one | «a requirement nobody researched» — RESEARCH.md is not graph-ingested, so only this file pass sees it. Real corpus: 538 of 562 FR sections (~3% cite). INFO-class: gates `--strict` only |
 
 ## Division of labour
 - **corpus-health** = the WHOLE-corpus cheap pass (this skill).

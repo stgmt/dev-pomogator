@@ -1418,12 +1418,13 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] reverse: project-тест без сценария → ORPHAN_PROJECT_TEST (72 на реальном корпусе, CLI + orphanProjectTestFindings); forward (сценарий без backing-теста) уже частично ловится NDJSON undefined-bucket
   - [x] зубы: INFO (не гейтит) — 72 legacy не флудят RED; promote-to-gate после чистки = P20-5. BDD SPECGEN004_141 (герметичный tmp-fixture, привязан к реальной findOrphanProjectTests). corpus-health surfacing (organism-вид). Полный сьют 141/140-passed GREEN
 
-- [ ] P20-2: GT-2 ingest RESEARCH.md + FR→research чек (FR_NO_RESEARCH) — id: p20-research-trace — Status: TODO | Est: 240m
+- [x] P20-2: GT-2 FR→research чек (FR_NO_RESEARCH) — id: p20-research-trace — Status: DONE | Est: 240m
   _depends: p17-mutation-surface_
   _Requirements: [FR-44](FR.md#fr-44)_
+  > Реализовано через **Option A** (как P20-1): standalone `tools/spec-graph/research-trace.ts` — файловый проход по FR.md-секциям, БЕЗ ингеста Research-узлов в граф (граф не держит прозу FR-секций; ingest не нужен для чека). Предикат прост и задокументирован: упоминание `RESEARCH.md` внутри FR-секции (реальная форма цитат корпуса).
   **Done When:**
-  - [ ] RESEARCH.md ингестится (Research/Finding узлы); FR без цитаты находки → FR_NO_RESEARCH
-  - [ ] severity + gating решены; BDD-регресс на спеке с/без research-цитаты
+  - [x] FR-секция без RESEARCH.md-цитаты в спеке, ИМЕЮЩЕЙ RESEARCH.md → FR_NO_RESEARCH (спека без research-файла скипается — нечего цитировать); CLI + corpus-health секция 6
+  - [x] severity + gating решены ЭМПИРИКОЙ: 562 FR-секции, цитируют лишь 17 (~3%) → 538 legacy → INFO (не гейтит hard; гейтит --strict), promote после чистки = P20-5 паттерн. BDD SPECGEN004_144 (спека С research: uncited FR флагается, citing — нет; спека БЕЗ research — скип). 144/143-passed GREEN
 
 - [x] P20-3: GT-3 таск без требования детектится (TASK_NO_REQUIREMENT) — id: p20-task-empty-refs — Status: DONE | Est: 120m
   _depends: p17-mutation-surface_

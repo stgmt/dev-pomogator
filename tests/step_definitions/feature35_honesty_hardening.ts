@@ -273,3 +273,30 @@ Then('the task verdict is the worst of the two and a task with no graded test is
   assert.equal(this.taskVerdicts!['t-graded'], 'FAKE-POSITIVE-RISK', 'worst-wins: one fake-positive test drags the task down');
   assert.ok(!('t-ungraded' in this.taskVerdicts!), 'a task with no graded backing test gets no verdict (absent)');
 });
+
+// ── SPECGEN004_144 — FR-44/GT-2: FR citing no RESEARCH.md finding (reverse gap) ──
+// Binds the REAL findFrsWithoutResearch over a tmp corpus: spec-with-research
+// contributes its uncited FR (the citing one is clean); spec-without-research is
+// skipped entirely (you cannot cite what does not exist).
+interface ResearchWorld extends F35World { researchRepo?: string; frGaps?: Array<{ nodeId: string }>; }
+Given('two specs where only one has a research file and each has an FR without a research citation', function (this: ResearchWorld) {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'fr-research-'));
+  const mk = (slug: string, fr: string, withResearch: boolean): void => {
+    const dir = path.join(repo, '.specs', slug);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'FR.md'), fr);
+    if (withResearch) fs.writeFileSync(path.join(dir, 'RESEARCH.md'), '# Research\n\n## Findings\n\n- finding one\n');
+  };
+  mk('with-research', '## FR-1\n\ngrounded — see [research](RESEARCH.md#findings).\n\n## FR-2\n\nno citation here.\n', true);
+  mk('no-research', '## FR-1\n\nno citation and no research file either.\n', false);
+  this.researchRepo = repo;
+});
+When('the FR-to-research reverse trace runs', async function (this: ResearchWorld) {
+  const { findFrsWithoutResearch } = await import('../../tools/spec-graph/research-trace.ts');
+  this.frGaps = findFrsWithoutResearch(this.researchRepo!);
+  fs.rmSync(this.researchRepo!, { recursive: true, force: true });
+});
+Then('only the uncited FR of the spec with the research file is flagged and a citing FR is not', function (this: ResearchWorld) {
+  const ids = this.frGaps!.map((g) => g.nodeId);
+  assert.deepEqual(ids, ['with-research:FR-2'], `expected only with-research:FR-2, got ${JSON.stringify(ids)}`);
+});
