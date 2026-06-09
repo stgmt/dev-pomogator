@@ -14399,6 +14399,22 @@ function checkConformance(graph, opts = {}) {
       });
     }
   }
+  for (const node of graph.nodes.values()) {
+    if (node.type !== "Task") continue;
+    const task = node;
+    if (task.refs.length > 0) continue;
+    if (/\bFR-\d+|SPECGEN\d+_\d+|@feature\d+/i.test(task.doneWhen ?? "")) continue;
+    findings.push({
+      code: "TASK_NO_REQUIREMENT",
+      severity: "info",
+      location: { file: task.file, line: task.line },
+      message: `Task ${task.id} references NO requirement \u2014 empty refs and its Done-When names no FR-N / SPECGEN id / @feature tag. A task with no upstream requirement cannot be traced (reverse-traceability gap, FR-44/GT-3).`,
+      nodeId: task.id,
+      suggestions: [
+        { action: "add_requirement_ref", reason: "Add a _Requirements: [FR-N](FR.md#fr-n)_ line, or reference a SPECGEN id / @feature tag in Done-When.", confidence: "high" }
+      ]
+    });
+  }
   const scenarioLikes = [];
   const taskLikes = [];
   for (const node of graph.nodes.values()) {

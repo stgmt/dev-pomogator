@@ -706,6 +706,12 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then the verdict read from the file caps the task below DONE
     And with no side-channel file present the same green task reads DONE
 
+  @FR-44
+  Scenario: SPECGEN004_140 a task that references no requirement is flagged (reverse traceability)
+    Given a task with empty refs whose Done-When names no requirement
+    When checkConformance runs for reverse traceability
+    Then a TASK_NO_REQUIREMENT info finding names the task
+
   @feature36
   Scenario: SPECGEN004_90 two specs defining the same bare id produce two distinct nodes
     Given two specs that each define the bare id FR-2

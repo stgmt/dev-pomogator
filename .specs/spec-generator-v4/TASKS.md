@@ -1424,12 +1424,12 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] RESEARCH.md ингестится (Research/Finding узлы); FR без цитаты находки → FR_NO_RESEARCH
   - [ ] severity + gating решены; BDD-регресс на спеке с/без research-цитаты
 
-- [ ] P20-3: GT-3 IN_PROGRESS таск с пустыми refs детектится — id: p20-task-empty-refs — Status: TODO | Est: 120m
+- [x] P20-3: GT-3 таск без требования детектится (TASK_NO_REQUIREMENT) — id: p20-task-empty-refs — Status: DONE | Est: 120m
   _depends: p17-mutation-surface_
   _Requirements: [FR-44](FR.md#fr-44)_
   **Done When:**
-  - [ ] таск (любой статус) без refs ни на одно требование → находка (сейчас только DONE через TASK_UNTESTED)
-  - [ ] BDD-регресс + решение зубов
+  - [x] таск (любой статус) с пустыми refs И без FR/SPECGEN/@feature в Done-When → TASK_NO_REQUIREMENT (conformance.ts) — 7 INFO находок на реальном корпусе, корректно отфильтровал 17 из 24 (линкуются через doneWhen)
+  - [x] BDD-регресс SPECGEN004_140 (@FR-44, привязан к реальному checkConformance) + решение зубов: INFO (не гейтит) чтобы не флудить RED на legacy-долге; promote-to-gate после чистки = P20-5
 
 - [ ] P20-4: GT-4 back-ref USER_STORIES/USE_CASES/DESIGN → требования — id: p20-upstream-backref — Status: TODO | Est: 180m
   _depends: p17-mutation-surface_

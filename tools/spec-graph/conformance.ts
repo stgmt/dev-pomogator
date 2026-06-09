@@ -9,6 +9,9 @@
  *   SCENARIO_TAG_ORPHAN Scenario carries an `@FR-N` / `@AC-N` tag for a node
  *                       that doesn't exist
  *   UNTAGGED_SCENARIO   Scenario carries NO `@FR` / `@NFR` / `@AC` tag
+ *   TASK_NO_REQUIREMENT Task references no requirement at all (empty refs +
+ *                       no FR/SPECGEN/@feature in Done-When) — reverse gap,
+ *                       INFO (FR-44/GT-3; non-gating to avoid legacy-debt flood)
  *   DUPLICATE_DEFINITION Two headings produced the same canonical id
  *                       (the second was discarded by the builder; this
  *                       finding surfaces the discard for the author)
@@ -34,7 +37,8 @@ export type FindingCode =
   | 'DUPLICATE_DEFINITION'
   | 'TASK_STATUS_UNVERIFIED'
   | 'TASK_UNTESTED'
-  | 'TASK_TEST_QUALITY';
+  | 'TASK_TEST_QUALITY'
+  | 'TASK_NO_REQUIREMENT';
 
 export type Severity = 'error' | 'warning' | 'info';
 
@@ -187,6 +191,29 @@ export function checkConformance(
         ],
       });
     }
+  }
+
+  // 2a) TASK_NO_REQUIREMENT (FR-44 GT-3, reverse traceability) — a Task that
+  // references NO requirement at all: empty `refs` AND its Done-When names no
+  // FR-N / SPECGEN id / @feature tag, so nothing ties it to a spec atom. INFO
+  // (not gating): the real corpus carries pre-existing untraced tasks (24 on
+  // spec-generator-v4), so promoting this to the hard gate would flood RED on
+  // legacy debt — surface it, decide promote-vs-keep-advisory after cleanup (P20-5).
+  for (const node of graph.nodes.values()) {
+    if (node.type !== 'Task') continue;
+    const task = node as TaskNode;
+    if (task.refs.length > 0) continue;
+    if (/\bFR-\d+|SPECGEN\d+_\d+|@feature\d+/i.test(task.doneWhen ?? '')) continue;
+    findings.push({
+      code: 'TASK_NO_REQUIREMENT',
+      severity: 'info',
+      location: { file: task.file, line: task.line },
+      message: `Task ${task.id} references NO requirement — empty refs and its Done-When names no FR-N / SPECGEN id / @feature tag. A task with no upstream requirement cannot be traced (reverse-traceability gap, FR-44/GT-3).`,
+      nodeId: task.id,
+      suggestions: [
+        { action: 'add_requirement_ref', reason: 'Add a _Requirements: [FR-N](FR.md#fr-n)_ line, or reference a SPECGEN id / @feature tag in Done-When.', confidence: 'high' },
+      ],
+    });
   }
 
   // 2b) TASK_STATUS_UNVERIFIED — hand-set DONE but a mapped scenario is not

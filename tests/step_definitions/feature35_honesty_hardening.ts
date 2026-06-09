@@ -201,3 +201,23 @@ Then('it emits a finding naming the task', function (this: F35World) {
 Then('the returned finding set is not empty', function (this: F35World) {
   assert.ok(this.findings!.length > 0, 'a DONE task with no test must not yield an empty finding set');
 });
+
+// ── SPECGEN004_140 — FR-44/GT-3: a task referencing NO requirement (reverse gap) ──
+interface NoReqWorld extends F35World { noReqFindings?: Finding[]; }
+Given('a task with empty refs whose Done-When names no requirement', function (this: NoReqWorld) {
+  // empty refs AND a Done-When with no FR-N / SPECGEN id / @feature tag → true orphan
+  this.graph = makeGraph([], [{ id: 't-noreq', status: 'todo', refs: [], doneWhen: 'implement the thing, no requirement cited' }]);
+});
+When('checkConformance runs for reverse traceability', function (this: NoReqWorld) {
+  this.noReqFindings = checkConformance(this.graph!);
+});
+Then('a TASK_NO_REQUIREMENT info finding names the task', function (this: NoReqWorld) {
+  const f = this.noReqFindings!.find((x) => x.code === 'TASK_NO_REQUIREMENT');
+  assert.ok(f, `expected TASK_NO_REQUIREMENT, got: ${JSON.stringify(this.noReqFindings!.map((x) => x.code))}`);
+  assert.equal(f.severity, 'info', 'reverse-trace gap is INFO (non-gating) to avoid legacy-debt flood');
+  assert.match(f.message, /t-noreq/);
+  assert.equal(f.nodeId, 't-noreq');
+  // a task that DOES cite a requirement in Done-When is NOT flagged
+  const okGraph = makeGraph([], [{ id: 't-ok', status: 'todo', refs: [], doneWhen: 'closes SPECGEN004_140' }]);
+  assert.ok(!checkConformance(okGraph).some((x) => x.code === 'TASK_NO_REQUIREMENT' && x.nodeId === 't-ok'), 'a Done-When citing a SPECGEN id must NOT be flagged');
+});
