@@ -30,6 +30,7 @@ import path from 'node:path';
 import { buildGraphFromCwd } from './builder.ts';
 import type { CollisionScan } from './collision-probe.ts';
 import { checkTraceabilityCompleteness, summariseGaps } from './traceability.ts';
+import { findOrphanProjectTests } from './project-test-trace.ts';
 import type { SpecGraph, FileNode } from './types.ts';
 
 export interface CorpusHealthReport {
@@ -49,6 +50,11 @@ export interface CorpusHealthReport {
   staleFileChanges: {
     count: number;
     samples: Array<{ fr: string; path: string }>;
+  };
+  /** FR-44/GT-1 reverse gap: project vitest tests with no spec scenario. */
+  orphanProjectTests: {
+    count: number;
+    samples: Array<{ testId: string; file: string; line: number }>;
   };
   /** 🟢 ⇔ no collisions AND no stale paths (hard); debt classes reported. */
   verdict: 'GREEN' | 'RED';
@@ -106,8 +112,13 @@ export function corpusHealth(corpusRoot: string): CorpusHealthReport {
     if (staleSamples.length < 15) staleSamples.push({ fr: e.from, path: file.path });
   }
 
+  // 5) orphan project tests — vitest it() with no spec scenario (FR-44/GT-1,
+  //    reverse traceability). Reads the project test tree; INFO-class debt
+  //    (contributes to strict, not hard — like untraced atoms).
+  const orphanTests = findOrphanProjectTests(graph, root);
+
   const hardRed = collisions.collisions.length > 0 || stale > 0;
-  const anyDebt = hardRed || dangling > 0 || gaps.length > 0;
+  const anyDebt = hardRed || dangling > 0 || gaps.length > 0 || orphanTests.length > 0;
 
   return {
     corpusRoot: root,
@@ -121,6 +132,10 @@ export function corpusHealth(corpusRoot: string): CorpusHealthReport {
       samples: gaps.slice(0, 15).map((g) => ({ class: g.class, nodeId: g.nodeId, file: g.file, line: g.line })),
     },
     staleFileChanges: { count: stale, samples: staleSamples },
+    orphanProjectTests: {
+      count: orphanTests.length,
+      samples: orphanTests.slice(0, 15).map((o) => ({ testId: o.testId, file: o.file, line: o.line })),
+    },
     verdict: hardRed ? 'RED' : 'GREEN',
     strictVerdict: anyDebt ? 'RED' : 'GREEN',
   };
@@ -151,6 +166,10 @@ export function renderCorpusHealth(r: CorpusHealthReport): string {
   lines.push(`4) stale FILE_CHANGES paths (graph-side): ${r.staleFileChanges.count}`);
   for (const s of r.staleFileChanges.samples.slice(0, 5)) {
     lines.push(`   ${s.fr} → ${s.path} (missing on disk)`);
+  }
+  lines.push(`5) orphan project tests (FR-44/GT-1, reverse): ${r.orphanProjectTests.count} — vitest it() with no spec scenario`);
+  for (const o of r.orphanProjectTests.samples.slice(0, 5)) {
+    lines.push(`   ${o.testId} @ ${o.file}:${o.line} (no .feature scenario)`);
   }
   lines.push(
     `VERDICT: ${icon(r.verdict)} ${r.verdict} (hard: collisions+stale) | strict: ${icon(r.strictVerdict)} ${r.strictVerdict} (any debt)`,

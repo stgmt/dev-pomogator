@@ -13,6 +13,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { checkConformance, type Finding } from '../../tools/spec-graph/conformance.ts';
+import { findOrphanProjectTests, type OrphanProjectTest } from '../../tools/spec-graph/project-test-trace.ts';
 import { evaluateTestQualityGate, logEscape, readVerdicts, type GateDecision } from '../../tools/spec-graph/test-quality-gate.ts';
 import { computeCoverage, type CoverageReport, type ScenarioLike, type TaskLike, type TestQualityVerdict } from '../../tools/spec-graph/coverage.ts';
 import { WORKFLOW, REFERENCED_CAPABILITIES, checkFeatureMapDrift, type DriftResult } from '../../.claude/skills/spec-generator-orchestrator/scripts/feature-map.ts';
@@ -220,4 +221,28 @@ Then('a TASK_NO_REQUIREMENT info finding names the task', function (this: NoReqW
   // a task that DOES cite a requirement in Done-When is NOT flagged
   const okGraph = makeGraph([], [{ id: 't-ok', status: 'todo', refs: [], doneWhen: 'closes SPECGEN004_140' }]);
   assert.ok(!checkConformance(okGraph).some((x) => x.code === 'TASK_NO_REQUIREMENT' && x.nodeId === 't-ok'), 'a Done-When citing a SPECGEN id must NOT be flagged');
+});
+
+// ── SPECGEN004_141 — FR-44/GT-1: a project test with no spec scenario (headline reverse gap) ──
+interface OrphanProjWorld extends F35World { orphanRepo?: string; orphans?: OrphanProjectTest[]; }
+Given('a project test file with one id that has a spec scenario and one that does not', function (this: OrphanProjWorld) {
+  // graph knows scenario FOO001_01 (node id SCEN-foo001-01-...); BAR002_03 has none.
+  this.graph = makeGraph([{ id: 'demo:SCEN-foo001-01-covered', tags: ['@FR-1'], result: 'PASSED' }], []);
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'orphan-proj-'));
+  fs.mkdirSync(path.join(repo, 'tests', 'e2e'), { recursive: true });
+  fs.writeFileSync(
+    path.join(repo, 'tests', 'e2e', 'demo.test.ts'),
+    `it('FOO001_01: covered by a scenario', () => {});\nit('BAR002_03: described in no spec', () => {});\n`,
+  );
+  this.orphanRepo = repo;
+});
+When('the project-test reverse trace runs', function (this: OrphanProjWorld) {
+  this.orphans = findOrphanProjectTests(this.graph!, this.orphanRepo!);
+  fs.rmSync(this.orphanRepo!, { recursive: true, force: true });
+});
+Then('only the test id with no scenario is reported as an orphan project test', function (this: OrphanProjWorld) {
+  const ids = this.orphans!.map((o) => o.testId);
+  assert.deepEqual(ids, ['BAR002_03'], `expected only BAR002_03 orphan, got ${JSON.stringify(ids)}`);
+  assert.equal(this.orphans![0].file, 'tests/e2e/demo.test.ts');
+  assert.ok(this.orphans![0].line >= 1, 'orphan carries a 1-based line');
 });

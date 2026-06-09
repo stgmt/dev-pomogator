@@ -38,7 +38,8 @@ export type FindingCode =
   | 'TASK_STATUS_UNVERIFIED'
   | 'TASK_UNTESTED'
   | 'TASK_TEST_QUALITY'
-  | 'TASK_NO_REQUIREMENT';
+  | 'TASK_NO_REQUIREMENT'
+  | 'ORPHAN_PROJECT_TEST';
 
 export type Severity = 'error' | 'warning' | 'info';
 

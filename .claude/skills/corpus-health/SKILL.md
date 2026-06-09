@@ -5,7 +5,8 @@ description: >
   other — corpus root is an input): (1) bare-id collisions across specs via a raw PRE-MAP node
   dump (the graph's map dedup silently drops last-writer losers), (2) unresolved/dangling edges,
   (3) untraced atoms (UNCOVERED_FR / TASK_UNTESTED / UNTAGGED_SCENARIO, FR-37b), (4) graph-side
-  stale FILE_CHANGES paths. The ORGANISM view — catches the disease class FR-36 was (47 of ~470
+  stale FILE_CHANGES paths, (5) orphan project tests (FR-44/GT-1 reverse traceability — vitest
+  it() ids with no spec scenario, the "test from nowhere" hole). The ORGANISM view — catches the disease class FR-36 was (47 of ~470
   FR nodes surviving collisions) BEFORE it is rediscovered by hand. INVOKE after touching the
   graph builder/parsers, before trusting corpus-wide counts, when onboarding a foreign spec
   corpus, or on a regular hygiene pass. Triggers (RU): "здоровье корпуса", "проверь корпус спек",

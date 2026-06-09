@@ -712,6 +712,12 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When checkConformance runs for reverse traceability
     Then a TASK_NO_REQUIREMENT info finding names the task
 
+  @FR-44
+  Scenario: SPECGEN004_141 a project test with no spec scenario is flagged as an orphan project test
+    Given a project test file with one id that has a spec scenario and one that does not
+    When the project-test reverse trace runs
+    Then only the test id with no scenario is reported as an orphan project test
+
   @feature36
   Scenario: SPECGEN004_90 two specs defining the same bare id produce two distinct nodes
     Given two specs that each define the bare id FR-2

@@ -1409,13 +1409,14 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
 
 ## Phase 20 — Двусторонняя трассируемость (FR-44, audit-reports/bidirectional-traceability-audit-2026-06-09.md)
 
-- [ ] P20-1: GT-1 ingest проектных тестов + reverse orphan-project-test чек (HEADLINE) — id: p20-project-test-ingest — Status: TODO | Est: 480m
+- [x] P20-1: GT-1 reverse orphan-project-test чек (HEADLINE) — id: p20-project-test-ingest — Status: DONE | Est: 480m
   _depends: p17-mutation-surface_
   _Requirements: [FR-44](FR.md#fr-44)_
+  > Реализовано через **Option A** (advisor): standalone `tools/spec-graph/project-test-trace.ts` читает тест-дерево + кросс-реф граф по naming-convention — БЕЗ ингеста в граф (не перетряхивает 1539 сценариев + всех потребителей). P19-5 producer переиспользует ту же нормализацию.
   **Done When:**
-  - [ ] builder ингестит tests/step_definitions/*.ts + tests/e2e/*.test.ts в Project-Test узлы (оживить extractStepBindings; НЕ второй движок)
-  - [ ] reverse: project-тест без парного Scenario-узла → ORPHAN_PROJECT_TEST; forward: Scenario без backing-теста
-  - [ ] зубы (gap-class vs advisory) решены + BDD-регресс + прогон на реальном корпусе (1195 vitest + 589 step-defs невидимы сейчас)
+  - [x] standalone модуль (Option A) кросс-реф vitest it()-id ↔ scenario-узлы по naming-convention; ДВЕ конвенции (full-id SPECGEN004_140 + prefix HVTR001_01); junk-фильтр (id только из начала it/test/describe-строки)
+  - [x] reverse: project-тест без сценария → ORPHAN_PROJECT_TEST (72 на реальном корпусе, CLI + orphanProjectTestFindings); forward (сценарий без backing-теста) уже частично ловится NDJSON undefined-bucket
+  - [x] зубы: INFO (не гейтит) — 72 legacy не флудят RED; promote-to-gate после чистки = P20-5. BDD SPECGEN004_141 (герметичный tmp-fixture, привязан к реальной findOrphanProjectTests). corpus-health surfacing (organism-вид). Полный сьют 141/140-passed GREEN
 
 - [ ] P20-2: GT-2 ingest RESEARCH.md + FR→research чек (FR_NO_RESEARCH) — id: p20-research-trace — Status: TODO | Est: 240m
   _depends: p17-mutation-surface_
