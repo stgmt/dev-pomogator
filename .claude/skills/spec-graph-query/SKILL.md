@@ -60,8 +60,9 @@ All return `{ ok, ... }`; `ok:false` (or `registered:false`) when nothing matche
 > **MCP-rails (FR-39):** these read tools are the door — prefer them over a raw
 > `Read`/`Grep` of `.specs/`. The whole-document read is `read_spec_doc`; for a
 > single node's body use `get_node`. WRITING a spec is a sibling door —
-> `create-spec` drives `propose_spec_change` / `apply_spec_change` / `create_spec`
-> (FR-40/FR-42); never hand-Edit a `.specs/` file.
+> `create-spec` drives `propose_spec_change` / `apply_spec_change` / `create_spec` /
+> `delete_spec_doc` (FR-40/FR-42; the D is doc-level only — whole-spec retirement is
+> FR-43 human-confirmed); never hand-Edit or hand-delete a `.specs/` file.
 
 ## The 6 you already use (here for completeness)
 `get_trace` (full traceability for a node), `conformance_check` (structural findings),

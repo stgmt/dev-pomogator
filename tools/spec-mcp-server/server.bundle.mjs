@@ -48853,6 +48853,73 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
     }
   });
   tools.push({
+    name: "delete_spec_doc",
+    description: "P19-4 (FR-40/FR-43): DELETE one spec document/attachment through the door \u2014 the D of the CRUD lifecycle. Containment-checked subpath, mandatory reason, audited. REFUSES: a doc whose graph nodes are referenced by edges from other files (would strand dangling refs), .progress.json/.jira-cache.json (single-writer artifacts), and anything outside .specs/<spec>/. Whole-spec retirement is NOT this tool \u2014 FR-43 human-confirmed archive only.",
+    inputShape: {
+      spec: external_exports.string(),
+      doc: external_exports.string(),
+      reason: external_exports.string()
+    },
+    handler: async ({ spec, doc, reason }) => {
+      const args = { spec, doc, reason };
+      const slug = slugOf(spec);
+      if (!isSafeSlug(slug)) {
+        logSpecAccess("delete_spec_doc", args, "denied");
+        return asJsonResult({ ok: false, error: "UNSAFE_SPEC", spec: slug });
+      }
+      const resolved = resolveSpecDoc(process.cwd(), slug, String(doc));
+      if (!resolved.ok) {
+        logSpecAccess("delete_spec_doc", args, "denied");
+        return asJsonResult({ ok: false, error: resolved.reason === "TRAVERSAL" ? "DOC_TRAVERSAL" : "UNSAFE_SPEC", spec: slug, doc: String(doc) });
+      }
+      const rel = resolved.rel;
+      const base = path12.basename(rel);
+      const deletable = /\.(md|feature|png|jpe?g|gif|webp|bmp|pdf|svg)$/i.test(base);
+      if (!deletable) {
+        logSpecAccess("delete_spec_doc", args, "denied");
+        return asJsonResult({ ok: false, error: "NOT_DELETABLE", spec: slug, doc: rel, hint: "Only *.md/*.feature and binary attachments are agent-deletable; .progress.json/.jira-cache.json are single-writer artifacts." });
+      }
+      if (!fs16.existsSync(resolved.abs) || !fs16.statSync(resolved.abs).isFile()) {
+        logSpecAccess("delete_spec_doc", args, "not_found");
+        return asJsonResult({ ok: false, error: "DOC_NOT_FOUND", spec: slug, doc: rel });
+      }
+      const graph = getGraph();
+      const relFile = `.specs/${slug}/${rel}`;
+      const docNodeIds = /* @__PURE__ */ new Set();
+      for (const n of graph.nodes.values()) {
+        if (String(n.file).replace(/\\/g, "/") === relFile) docNodeIds.add(n.id);
+      }
+      const blockers = [];
+      for (const e of graph.edges) {
+        const fromIn = docNodeIds.has(e.from);
+        const toIn = docNodeIds.has(e.to);
+        if (fromIn === toIn) continue;
+        const outsideId = fromIn ? e.to : e.from;
+        const outside = graph.nodes.get(outsideId);
+        if (!outside) continue;
+        if (String(outside.file).replace(/\\/g, "/") === relFile) continue;
+        if (blockers.length < 10) blockers.push({ edge: e.type, from: e.from, to: e.to });
+        else break;
+      }
+      if (blockers.length > 0) {
+        logSpecAccess("delete_spec_doc", args, "denied");
+        return asJsonResult({
+          ok: false,
+          error: "LIVE_INBOUND_EDGES",
+          spec: slug,
+          doc: rel,
+          blockers,
+          hint: "Nodes in this doc are referenced from other files \u2014 retarget/remove those references first (find_refs shows them), or this deletion strands dangling edges."
+        });
+      }
+      const bytes = fs16.statSync(resolved.abs).size;
+      fs16.unlinkSync(resolved.abs);
+      registryOpts.refreshGraph?.();
+      logSpecAccess("delete_spec_doc", args, "ok");
+      return asJsonResult({ ok: true, spec: slug, doc: rel, deleted: true, bytes });
+    }
+  });
+  tools.push({
     name: "create_spec",
     description: "FR-40a: create a new spec THROUGH the server \u2014 wraps the engine scaffold (templates are born verdict-GREEN). kebab-case slug; refuses an existing spec.",
     inputShape: { slug: external_exports.string() },

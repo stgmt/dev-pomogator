@@ -501,3 +501,39 @@ Then('the subdir doc is written without the graph gates and the traversal write 
   assert.ok(!fs.existsSync(path.join(this.tempDir, 'escape-139.md')), 'no file may escape to the corpus root');
   assert.ok(!fs.existsSync(path.join(this.tempDir, '.specs', 'escape-139.md')), 'no file may escape to .specs/');
 });
+
+// ── SPECGEN004_147 — P19-4 D-door: delete through the door, refuse strands ───
+// Binds the REAL delete_spec_doc handler over a tempDir corpus: a free prose doc
+// deletes cleanly; a doc whose nodes carry cross-file inbound edges is refused
+// with named blockers (no dangling refs); .progress.json is single-writer (refused).
+interface DDoorWorld extends F40World {
+  delFree?: { ok: boolean; deleted?: boolean };
+  delRef?: { ok: boolean; error?: string; blockers?: Array<{ edge: string }> };
+  delProgress?: { ok: boolean; error?: string };
+}
+Given('a spec with a free prose doc and a doc whose nodes are referenced from another file', function (this: DDoorWorld) {
+  const dir = path.join(this.tempDir, '.specs', 'd-demo');
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'FR.md'), '## FR-1: Thing\n\nBody.\n');
+  // AC in ANOTHER file covers FR-1 → cross-file inbound edge onto FR.md's node.
+  fs.writeFileSync(path.join(dir, 'ACCEPTANCE_CRITERIA.md'), '## AC-1.1\n\n**Требование:** [FR-1](FR.md#fr-1)\n\nWHEN x THEN y SHALL z.\n');
+  fs.writeFileSync(path.join(dir, 'RESUME.md'), '# Handoff\n\nfree prose, no nodes.\n');
+  fs.writeFileSync(path.join(dir, '.progress.json'), '{}');
+});
+When('the agent deletes each target through the delete door', async function (this: DDoorWorld) {
+  this.delFree = await inCorpus(this, () => callTool(this, 'delete_spec_doc', { spec: 'd-demo', doc: 'RESUME.md', reason: 'throwaway prose cleanup' }));
+  this.delRef = await inCorpus(this, () => callTool(this, 'delete_spec_doc', { spec: 'd-demo', doc: 'FR.md', reason: 'attempt referenced doc' }));
+  this.delProgress = await inCorpus(this, () => callTool(this, 'delete_spec_doc', { spec: 'd-demo', doc: '.progress.json', reason: 'single-writer probe' }));
+});
+Then('the free doc is deleted and the referenced doc and the progress artifact are refused with named blockers', function (this: DDoorWorld) {
+  const dir = path.join(this.tempDir, '.specs', 'd-demo');
+  assert.equal(this.delFree!.ok, true, 'a free prose doc must delete through the door');
+  assert.ok(!fs.existsSync(path.join(dir, 'RESUME.md')), 'the free doc must be gone from disk');
+  assert.equal(this.delRef!.ok, false, 'a referenced doc must be refused');
+  assert.equal(this.delRef!.error, 'LIVE_INBOUND_EDGES');
+  assert.ok((this.delRef!.blockers?.length ?? 0) > 0, 'the refusal must NAME the blocking edges');
+  assert.ok(fs.existsSync(path.join(dir, 'FR.md')), 'the referenced doc must remain on disk');
+  assert.equal(this.delProgress!.ok, false, 'the single-writer artifact must be refused');
+  assert.equal(this.delProgress!.error, 'NOT_DELETABLE');
+  assert.ok(fs.existsSync(path.join(dir, '.progress.json')), '.progress.json must remain on disk');
+});

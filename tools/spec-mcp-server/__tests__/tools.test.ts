@@ -72,14 +72,15 @@ const tool = (name: string) => {
 };
 
 describe('tool registry — shape', () => {
-  it('registers exactly 20 tools with canonical names', () => {
-    expect(registry).toHaveLength(20);
+  it('registers exactly 21 tools with canonical names', () => {
+    expect(registry).toHaveLength(21);
     const names = registry.map((t) => t.name).sort();
     expect(names).toEqual(
       [
         'apply_spec_change', // FR-40 validated atomic write (P17-2)
         'conformance_check',
         'create_spec', // FR-40a scaffold through MCP (P17-2)
+        'delete_spec_doc', // P19-4 the D of the CRUD door (doc-level; FR-43 guards whole-spec)
         'find_by_tags',
         'find_orphans',
         'find_refs', // FR-7b spec-domain graph reference-finder (NOT markdown nav)

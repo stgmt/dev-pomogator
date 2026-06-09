@@ -1144,6 +1144,89 @@ export function buildToolRegistry(
     },
   });
 
+  // ─── 18b) delete_spec_doc — the D of the CRUD door (P19-4, FR-40/FR-43) ──
+  // Doc-level ONLY: retiring a WHOLE spec stays FR-43 (human-confirmed archive,
+  // auto-retire forbidden). Refuses when the doc's graph nodes have LIVE edges
+  // from OTHER files — deleting it would strand dangling references.
+  tools.push({
+    name: 'delete_spec_doc',
+    description:
+      'P19-4 (FR-40/FR-43): DELETE one spec document/attachment through the door — the D ' +
+      'of the CRUD lifecycle. Containment-checked subpath, mandatory reason, audited. ' +
+      'REFUSES: a doc whose graph nodes are referenced by edges from other files ' +
+      '(would strand dangling refs), .progress.json/.jira-cache.json (single-writer ' +
+      'artifacts), and anything outside .specs/<spec>/. Whole-spec retirement is NOT ' +
+      'this tool — FR-43 human-confirmed archive only.',
+    inputShape: {
+      spec: z.string(),
+      doc: z.string(),
+      reason: z.string(),
+    } as const satisfies z.ZodRawShape,
+    handler: async ({ spec, doc, reason }) => {
+      const args = { spec, doc, reason };
+      const slug = slugOf(spec);
+      if (!isSafeSlug(slug)) {
+        logSpecAccess('delete_spec_doc', args, 'denied');
+        return asJsonResult({ ok: false, error: 'UNSAFE_SPEC', spec: slug });
+      }
+      const resolved = resolveSpecDoc(process.cwd(), slug, String(doc));
+      if (!resolved.ok) {
+        logSpecAccess('delete_spec_doc', args, 'denied');
+        return asJsonResult({ ok: false, error: resolved.reason === 'TRAVERSAL' ? 'DOC_TRAVERSAL' : 'UNSAFE_SPEC', spec: slug, doc: String(doc) });
+      }
+      const rel = resolved.rel;
+      const base = path.basename(rel);
+      // Deletable: *.md / *.feature + binary attachments. NOT the single-writer
+      // artifacts (.progress.json — spec-status owns it; .jira-cache.json — jira-intake).
+      const deletable = /\.(md|feature|png|jpe?g|gif|webp|bmp|pdf|svg)$/i.test(base);
+      if (!deletable) {
+        logSpecAccess('delete_spec_doc', args, 'denied');
+        return asJsonResult({ ok: false, error: 'NOT_DELETABLE', spec: slug, doc: rel, hint: 'Only *.md/*.feature and binary attachments are agent-deletable; .progress.json/.jira-cache.json are single-writer artifacts.' });
+      }
+      if (!fs.existsSync(resolved.abs) || !fs.statSync(resolved.abs).isFile()) {
+        logSpecAccess('delete_spec_doc', args, 'not_found');
+        return asJsonResult({ ok: false, error: 'DOC_NOT_FOUND', spec: slug, doc: rel });
+      }
+      // Inbound-edge gate: nodes defined in THIS doc referenced by a REAL node
+      // living in ANOTHER file → deletion would strand the reference. Synthetic
+      // edge targets (RESULT-*) never resolve to nodes, so runs don't block.
+      const graph = getGraph();
+      const relFile = `.specs/${slug}/${rel}`;
+      const docNodeIds = new Set<string>();
+      for (const n of graph.nodes.values()) {
+        if (String(n.file).replace(/\\/g, '/') === relFile) docNodeIds.add(n.id);
+      }
+      const blockers: Array<{ edge: string; from: string; to: string }> = [];
+      for (const e of graph.edges) {
+        const fromIn = docNodeIds.has(e.from);
+        const toIn = docNodeIds.has(e.to);
+        if (fromIn === toIn) continue; // internal edge or unrelated
+        const outsideId = fromIn ? e.to : e.from;
+        const outside = graph.nodes.get(outsideId);
+        if (!outside) continue; // synthetic target (RESULT-*) — not a real node
+        if (String(outside.file).replace(/\\/g, '/') === relFile) continue;
+        if (blockers.length < 10) blockers.push({ edge: e.type, from: e.from, to: e.to });
+        else break;
+      }
+      if (blockers.length > 0) {
+        logSpecAccess('delete_spec_doc', args, 'denied');
+        return asJsonResult({
+          ok: false,
+          error: 'LIVE_INBOUND_EDGES',
+          spec: slug,
+          doc: rel,
+          blockers,
+          hint: 'Nodes in this doc are referenced from other files — retarget/remove those references first (find_refs shows them), or this deletion strands dangling edges.',
+        });
+      }
+      const bytes = fs.statSync(resolved.abs).size;
+      fs.unlinkSync(resolved.abs);
+      registryOpts.refreshGraph?.();
+      logSpecAccess('delete_spec_doc', args, 'ok');
+      return asJsonResult({ ok: true, spec: slug, doc: rel, deleted: true, bytes });
+    },
+  });
+
   // ─── 19) create_spec — FR-40a scaffold through MCP (P17-2) ───────────────
   tools.push({
     name: 'create_spec',

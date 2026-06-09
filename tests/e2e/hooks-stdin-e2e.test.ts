@@ -196,16 +196,18 @@ describe('spec-mcp-server initialize + tools/list + get_trace via real stdin', (
     const names = (listResp.result?.tools ?? []).map((t) => t.name);
     expect(names).toContain('get_trace');
     // Exact tool set — drift guard. A bare count rots silently when a tool is added (it did:
-    // was 11 → 13 → 19 after P17 added the read door + mutation door → now 20 after P19-6
-    // added read_attachment for binary subdir attachments). Assert the full set so a mismatch
-    // names the culprit. Keep in sync with tools.ts buildToolRegistry().
+    // was 11 → 13 → 19 after P17 added the read door + mutation door → 20 after P19-6
+    // added read_attachment → now 21 after P19-4 added delete_spec_doc, the D of the CRUD
+    // door. Assert the full set so a mismatch names the culprit. Keep in sync with
+    // tools.ts buildToolRegistry().
     expect([...names].sort()).toEqual(
       [
-        'apply_spec_change', 'conformance_check', 'create_spec', 'find_by_tags',
-        'find_orphans', 'find_refs', 'get_coverage', 'get_coverage_summary',
-        'get_node', 'get_spec_status', 'get_test_result', 'get_trace',
-        'list_phase_tasks', 'list_spec_docs', 'list_specs', 'propose_spec_change',
-        'read_attachment', 'read_spec_doc', 'search', 'validate_anchor',
+        'apply_spec_change', 'conformance_check', 'create_spec', 'delete_spec_doc',
+        'find_by_tags', 'find_orphans', 'find_refs', 'get_coverage',
+        'get_coverage_summary', 'get_node', 'get_spec_status', 'get_test_result',
+        'get_trace', 'list_phase_tasks', 'list_spec_docs', 'list_specs',
+        'propose_spec_change', 'read_attachment', 'read_spec_doc', 'search',
+        'validate_anchor',
       ].sort(),
     );
     const callResp = JSON.parse(lines[2]) as {

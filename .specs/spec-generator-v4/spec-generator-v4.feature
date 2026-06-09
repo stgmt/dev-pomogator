@@ -927,6 +927,12 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When the agent applies a subdir write and a traversal write through the mutation tool
     Then the subdir doc is written without the graph gates and the traversal write is refused with nothing escaping the spec root
 
+  @FR-40
+  Scenario: SPECGEN004_147 the delete door removes a free doc but refuses a referenced doc and single-writer artifacts
+    Given a spec with a free prose doc and a doc whose nodes are referenced from another file
+    When the agent deletes each target through the delete door
+    Then the free doc is deleted and the referenced doc and the progress artifact are refused with named blockers
+
   @FR-41
   Scenario: SPECGEN004_117 each creation phase runs in a dedicated headless agent
     Given the phase agent definitions with MCP-only allowed-tools

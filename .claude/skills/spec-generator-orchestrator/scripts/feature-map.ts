@@ -71,6 +71,7 @@ export const REFERENCED_CAPABILITIES: readonly string[] = [
   'propose_spec_change',
   'apply_spec_change',
   'create_spec',
+  'delete_spec_doc', // P19-4 the D of the CRUD door — doc-level, FR-43 guards whole-spec retirement
   // worker skills
   'create-spec',
   'architecture-research-workflow',
@@ -113,6 +114,7 @@ export const TOOL_CONSUMERS: Readonly<Record<string, readonly string[]>> = {
   propose_spec_change: ['create-spec'],
   apply_spec_change: ['create-spec'],
   create_spec: ['create-spec'],
+  delete_spec_doc: ['create-spec'], // P19-4 D-door — same mutation-door owner
 };
 
 export interface ConsumerDriftResult {
