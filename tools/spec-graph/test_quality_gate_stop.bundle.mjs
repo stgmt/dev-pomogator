@@ -14555,11 +14555,6 @@ function checkConformance(graph, opts = {}) {
       });
     }
   }
-  const idCount = /* @__PURE__ */ new Map();
-  for (const alias of graph.definitions.keys()) {
-    idCount.set(alias, (idCount.get(alias) ?? 0) + 1);
-  }
-  void idCount;
   return findings;
 }
 

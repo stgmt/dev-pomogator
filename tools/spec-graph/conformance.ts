@@ -12,9 +12,11 @@
  *   TASK_NO_REQUIREMENT Task references no requirement at all (empty refs +
  *                       no FR/SPECGEN/@feature in Done-When) — reverse gap,
  *                       INFO (FR-44/GT-3; non-gating to avoid legacy-debt flood)
- *   DUPLICATE_DEFINITION Two headings produced the same canonical id
- *                       (the second was discarded by the builder; this
- *                       finding surfaces the discard for the author)
+ *   DUPLICATE_DEFINITION Two headings produced the same canonical id — code is
+ *                       declared HERE (shared vocabulary) but NOT emitted by this
+ *                       walk: the builder's dedup hides the duplicate before we run.
+ *                       Owners: spec-conformance-guard (write-time deny) +
+ *                       corpus-health raw pre-map collision scan (see check 5 note)
  *
  * The checker is purely read-only over a SpecGraph — Phase 2's MCP
  * `conformance_check` tool wraps this same function with severity / scope
@@ -386,20 +388,17 @@ export function checkConformance(
     }
   }
 
-  // 5) DUPLICATE_DEFINITION — anchors registered more than once for the same id.
-  // The builder's «if (!nodes.has(id)) ...» discard is intentional but should
-  // surface to the author so they don't think both definitions are live.
-  const idCount = new Map<string, number>();
-  for (const alias of graph.definitions.keys()) {
-    idCount.set(alias, (idCount.get(alias) ?? 0) + 1);
-  }
-  // The duplicate is invisible here because the builder takes only the first.
-  // The robust signal lives in the anchor stream itself — emit findings only
-  // when the parser slices themselves disagree on the canonical location.
-  // (Concrete enforcement lands once the builder retains a discard log.)
-  // This stays as a structural-but-unused branch for now to make the rule's
-  // existence explicit for the Phase-2 conformance_check API surface.
-  void idCount;
+  // 5) DUPLICATE_DEFINITION — NOT emitted here, by design (P19-5 LOW resolution,
+  // 2026-06-10). A duplicate is invisible to a graph walk: the builder's
+  // «if (!nodes.has(id))» dedup keeps the FIRST definition, so by the time this
+  // checker runs the second one no longer exists. The code stays in FindingCode —
+  // it is the shared vocabulary of the surfaces that DO own the contract:
+  //   - write-time: spec-conformance-guard.ts denies the Write/Edit that would
+  //     create the duplicate (the real enforcement; SHAPE003 / SPECGEN004_09 bind it);
+  //   - corpus-wide: corpus-health's RAW pre-map collision scan sees what the
+  //     map dedup hides (the FR-36 «47-of-470» disease class).
+  // (The previous dead `idCount` over graph.definitions.keys() counted Map keys —
+  // unique by definition, every count was 1 — and was removed as unreachable.)
 
   return findings;
 }

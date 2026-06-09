@@ -147,7 +147,7 @@
 | T19-141 | P19-2: MCP-тул гапы (get_trace acs / propose no-op / coverage_summary) — все 3 ложные находки аудита | DONE | p17-read-sufficiency | Phase 19 — MCP-rails deep-audit gaps (2026-06-08) | 180m |
 | T19-142 | P19-3: get_coverage spec-scoping BDD + wiring | TODO | p17-read-sufficiency | Phase 19 — MCP-rails deep-audit gaps (2026-06-08) | 90m |
 | T19-143 | P19-4: полный генеративный e2e под enforce | TODO | p17-enforce, p19-phase-refactor | Phase 19 — MCP-rails deep-audit gaps (2026-06-08) | 240m |
-| T19-144 | P19-5: FR-35a test-quality honesty-гейт — consumer-сторона жива (get_coverage/spec-verdict читают side-channel); producer = остаток | IN_PROGRESS | p17-read-sufficiency | Phase 19 — MCP-rails deep-audit gaps (2026-06-08) | 240m |
+| T19-144 | P19-5: FR-35a test-quality honesty-гейт жив e2e — consumer + producer (test-quality-producer.ts) + skill-проводка (run-tests Step 5b / strong-tests canonical) | DONE | p17-read-sufficiency | Phase 19 — MCP-rails deep-audit gaps (2026-06-08) | 240m |
 | T19-145 | P19-6: MCP-дверь к подкаталогам спеки (read+write+read_attachment+consumer-миграция) | DONE | p17-mutation-surface | Phase 19 — MCP-rails deep-audit gaps (2026-06-08) | 300m |
 
 ## TDD Workflow
@@ -1382,7 +1382,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] один живой `claude -p` под `SPEC_ACCESS_ENFORCE=true` гонит ВЕСЬ цикл: create_spec → заполнить фазы через apply_spec_change → CHK/decisions → задачи → /run-tests → spec-verdict GREEN — 0 residual в spec-access.jsonl, БЕЗ наёба (DONE только при passed-сценарии)
   - [ ] throwaway убран; либо реальная маленькая фича доведена до GREEN через дверь
 
-- [ ] P19-5: оживить FR-35a test-quality honesty-гейт — CONSUMER-сторона DONE, producer = остаток-развилка — id: p19-test-quality-live — Status: IN_PROGRESS | Est: 240m
+- [x] P19-5: оживить FR-35a test-quality honesty-гейт — consumer + producer + skill-проводка — id: p19-test-quality-live — Status: DONE | Est: 240m
   _depends: p17-read-sufficiency_
   _Requirements: [FR-35](FR.md#fr-35), [FR-32](FR.md#fr-32)_
   **Done When:**
@@ -1390,8 +1390,8 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] consumer spec-verdict: читает testQualityByTask + передаёт в checkConformance И computeCoverage → TASK_TEST_QUALITY warning + DONE-but-unverified (был 2-арг вызов)
   - [x] shared reader: `readVerdicts` вынесен в `tools/spec-graph/test-quality-gate.ts` (один источник: Stop-hook + get_coverage + spec-verdict вместо 3 копий); bundles MCP+gate пересобраны; deps-absent gate-bundle exit 0
   - [x] e2e регресс: SPECGEN004_137 — side-channel ФАЙЛ читается реальным readVerdicts → WEAK кап ниже DONE; нет файла → DONE (6/6 @feature35 green)
-  - [ ] **PRODUCER (РЕШЕНО юзером 2026-06-08):** скилл ТЕСТ-РАНА (`run-tests`) пишет `.dev-pomogator/.test-quality.json`; `strong-tests` грейдит покрытие/качество. Адаптировать: (1) strong-tests → канонический вердикт STRONG/WEAK/FAKE-POSITIVE-RISK (сейчас GOOD/FAIR/WEAK); (2) producer-хелпер `tools/spec-graph/test-quality-producer.ts` джойнит test→scenario→task по графу и пишет JSON keyed by taskId; (3) run-tests Step 5 (уже хинтит strong-tests) → реально вызвать grade + write. Детерминированный join+write, LLM только сам грейд. Анализ: audit-reports/mcp-rails-deep-audit-2026-06-08.md «FORK DECISIONS»
-  - [ ] LOW: `DUPLICATE_DEFINITION` — либо производить находку, либо удалить мёртвый код + поправить тест-контракт (conformance.ts:361-376)
+  - [x] **PRODUCER (DONE f2a43c6 + bf97b7f):** `tools/spec-graph/test-quality-producer.ts` — детерминированный join testId→scenario (нормализация P20-1, обе конвенции)→task (mapTasksToScenarios), worst-wins, атомарная запись `.test-quality.json` keyed by taskId + CLI. Доказано e2e: planted SPECGEN004_01=WEAK → install-bdd-framework=IN_PROGRESS/WEAK через get_coverage. BDD SPECGEN004_142 (worst-wins; задача без грейженного теста — отсутствует). Skill-проводка: run-tests Step 5b (grades-файл → producer CLI, carve-out) + strong-tests «Canonical verdict» (GOOD→STRONG, FAIR/WEAK→WEAK, fake-positive smell→FAKE-POSITIVE-RISK, keyed by DOMAIN_CODE_NN)
+  - [x] LOW: `DUPLICATE_DEFINITION` — РЕЗОЛЮЦИЯ 2026-06-10: мёртвый `idCount`-блок удалён из conformance.ts (считал ключи Map — уникальны по определению, недостижимая ветка); код ОСТАЁТСЯ в FindingCode (общий словарь). Контракт РЕАЛЬНО живёт в spec-conformance-guard (write-time deny, :202) + corpus-health raw pre-map collision scan — ВСЕ ассертящие тесты (SHAPE003, SPECGEN004_09, hooks-stdin) биндят guard, «test asserts non-existent contract» из аудита было неточностью. Бандлы пересобраны, sanity чист
 
 - [x] P19-6: MCP-дверь к ПОДКАТАЛОГАМ спеки (ARCHITECTURE/ attachments/ .architecture-research/) — id: p19-subdir-door — Status: DONE | Est: 300m
   _depends: p17-mutation-surface_
