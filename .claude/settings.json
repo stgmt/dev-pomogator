@@ -2,6 +2,7 @@
   "env": {
     "AUTO_COMMIT_LLM_URL": "https://aipomogator.ru/go/v1",
     "AUTO_COMMIT_LLM_MODEL": "openrouter/deepseek/deepseek-v3.2",
+    "SPEC_ACCESS_ENFORCE": "true",
     "PROMPT_SUGGEST_ENABLED": "true",
     "PROMPT_SUGGEST_TTL": "600000",
     "TEST_STATUSLINE_ENABLED": "true",
@@ -291,5 +292,10 @@
   },
   "enabledPlugins": {
     "skill-creator@claude-plugins-official": true
+  },
+  "permissions": {
+    "allow": [
+      "mcp__dev-pomogator-specs__*"
+    ]
   }
 }
