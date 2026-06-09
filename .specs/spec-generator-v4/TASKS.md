@@ -1406,3 +1406,41 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] WRITE-resolution ЧАСТИЧНО: CLI-записанные артефакты (init.ts scaffold `.architecture-research/`, QUEUE.json/COMPLETENESS/AXIS via architecture-decision-cli.ts) покрыты engine-CLI carve-out (architecture-decision-cli.ts в REAL_ENGINE_INVOCATIONS allowed)
   - [x] WRITE-side АГЕНТ (DONE dbb7ae6): apply_spec_change/validateTarget/writeDocAtomic расширены на containment-subpath (`normalizeContainedDoc`; writeDocAtomic mkdir parent; docOf pass-through) + для non-graph subdir-доков ПРОПУСК graph-гейтов form/anchor/conformance (для top-level FR/AC/TASKS/feature остаются). Доказано live (subdir write ok+на диске+0 findings; `../..` → VALIDATION_FAILED, escape-файл не создан) + BDD SPECGEN004_139; полный сьют 139/138-passed GREEN
   - [x] consumer-миграция WRITE (DONE): arch-research-workflow заполняет 7 stage-файлов через `apply_spec_change({doc:".architecture-research/N-...md"})` (door пропускает гейты для subdir-прозы); финальный RESEARCH.md (top-level) — через ту же дверь С валидацией; allowed-tools обновлены. Docker-зелёные мои 3 фикса подтверждены (16→13 падений, 13 — предсуществующие, не импортят мои модули)
+
+## Phase 20 — Двусторонняя трассируемость (FR-44, audit-reports/bidirectional-traceability-audit-2026-06-09.md)
+
+- [ ] P20-1: GT-1 ingest проектных тестов + reverse orphan-project-test чек (HEADLINE) — id: p20-project-test-ingest — Status: TODO | Est: 480m
+  _depends: p17-mutation-surface_
+  _Requirements: [FR-44](FR.md#fr-44)_
+  **Done When:**
+  - [ ] builder ингестит tests/step_definitions/*.ts + tests/e2e/*.test.ts в Project-Test узлы (оживить extractStepBindings; НЕ второй движок)
+  - [ ] reverse: project-тест без парного Scenario-узла → ORPHAN_PROJECT_TEST; forward: Scenario без backing-теста
+  - [ ] зубы (gap-class vs advisory) решены + BDD-регресс + прогон на реальном корпусе (1195 vitest + 589 step-defs невидимы сейчас)
+
+- [ ] P20-2: GT-2 ingest RESEARCH.md + FR→research чек (FR_NO_RESEARCH) — id: p20-research-trace — Status: TODO | Est: 240m
+  _depends: p17-mutation-surface_
+  _Requirements: [FR-44](FR.md#fr-44)_
+  **Done When:**
+  - [ ] RESEARCH.md ингестится (Research/Finding узлы); FR без цитаты находки → FR_NO_RESEARCH
+  - [ ] severity + gating решены; BDD-регресс на спеке с/без research-цитаты
+
+- [ ] P20-3: GT-3 IN_PROGRESS таск с пустыми refs детектится — id: p20-task-empty-refs — Status: TODO | Est: 120m
+  _depends: p17-mutation-surface_
+  _Requirements: [FR-44](FR.md#fr-44)_
+  **Done When:**
+  - [ ] таск (любой статус) без refs ни на одно требование → находка (сейчас только DONE через TASK_UNTESTED)
+  - [ ] BDD-регресс + решение зубов
+
+- [ ] P20-4: GT-4 back-ref USER_STORIES/USE_CASES/DESIGN → требования — id: p20-upstream-backref — Status: TODO | Est: 180m
+  _depends: p17-mutation-surface_
+  _Requirements: [FR-44](FR.md#fr-44)_
+  **Done When:**
+  - [ ] story→FR / UC→FR / decision→(FR|research) обратная полнота проверяется
+  - [ ] BDD-регресс
+
+- [ ] P20-5: решение promote-vs-advisory для беззубых обратных проверок — id: p20-toothless-decision — Status: TODO | Est: 90m
+  _depends: p17-mutation-surface_
+  _Requirements: [FR-44](FR.md#fr-44)_
+  **Done When:**
+  - [ ] для ORPHAN_TASK / SCENARIO_TAG_ORPHAN / TASK_STATUS_UNVERIFIED осознанно решено promote-to-gap-class или keep-advisory (с обоснованием в DESIGN)
+  - [ ] если promote — добавлены в GAP_CLASSES + BDD; если advisory — задокументировано почему
