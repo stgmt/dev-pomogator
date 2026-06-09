@@ -1375,12 +1375,14 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] BDD SPECGEN004_143: двух-спековый граф → `get_coverage {spec:'spec-a'}` scope=spec видит ТОЛЬКО spec-a сценарии; голый `{}` scope=corpus видит весь корпус; биндинг на реальный buildToolRegistry handler (143/142-passed GREEN)
   - [x] spec-graph-query SKILL.md велит всегда передавать `spec` в get_coverage (e475547)
 
-- [ ] P19-4: полный генеративный жизненный цикл e2e ПОД enforce (live) — id: p19-full-lifecycle-e2e — Status: TODO | Est: 240m
+- [ ] P19-4: полный жизненный цикл спеки e2e ПОД enforce (live) — FULL CRUD, не только создание — id: p19-full-lifecycle-e2e — Status: TODO | Est: 300m
   _depends: p17-enforce, p19-phase-refactor_
-  _Requirements: [FR-39](FR.md#fr-39), [FR-40](FR.md#fr-40), [FR-41](FR.md#fr-41)_
+  _Requirements: [FR-39](FR.md#fr-39), [FR-40](FR.md#fr-40), [FR-41](FR.md#fr-41), [FR-43](FR.md#fr-43)_
+  > Директива юзера 2026-06-10: «в полном цикле спеки должно быть не только создание но и фул круд операции». Маппинг CRUD→дверь: **C** create_spec · **R** list_specs/list_spec_docs/read_spec_doc/read_attachment/get_* · **U** propose/apply_spec_change (top-level с гейтами + subdir working-доки) · **D** — ГАП: в реестре НЕТ delete/archive-тула (grep delete|remove|archive по tools.ts → 0), под enforce агент не может удалить/архивировать док вообще. Закрыть ДО live-прогона.
   **Done When:**
-  - [ ] один живой `claude -p` под `SPEC_ACCESS_ENFORCE=true` гонит ВЕСЬ цикл: create_spec → заполнить фазы через apply_spec_change → CHK/decisions → задачи → /run-tests → spec-verdict GREEN — 0 residual в spec-access.jsonl, БЕЗ наёба (DONE только при passed-сценарии)
-  - [ ] throwaway убран; либо реальная маленькая фича доведена до GREEN через дверь
+  - [ ] **D-дверь:** validated delete/archive операция через mutation-слой (отдельный тул `delete_spec_doc` ЛИБО `apply_spec_change` delete-форма): containment-чек, обязательный `reason`, аудит-лог, отказ на graph-доки с живыми inbound-рёбрами (битые ссылки не оставлять); ретайр ЦЕЛОЙ спеки — НЕ авто (FR-43: human-confirmed архив с маркером), дверь даёт только doc-level D + BDD-регресс
+  - [ ] один живой `claude -p` под `SPEC_ACCESS_ENFORCE=true` гонит ВЕСЬ CRUD-цикл: **C** create_spec → **U** заполнить фазы через apply_spec_change (CHK/decisions/задачи, включая subdir-док) → **R** read_spec_doc/get_coverage/get_spec_status по ходу → **D** удалить throwaway-док через D-дверь → /run-tests → spec-verdict GREEN — 0 residual в spec-access.jsonl, БЕЗ наёба (DONE только при passed-сценарии)
+  - [ ] throwaway убран ЧЕРЕЗ D-дверь (не raw rm); либо реальная маленькая фича доведена до GREEN через дверь
 
 - [x] P19-5: оживить FR-35a test-quality honesty-гейт — consumer + producer + skill-проводка — id: p19-test-quality-live — Status: DONE | Est: 240m
   _depends: p17-read-sufficiency_
