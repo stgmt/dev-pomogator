@@ -24,6 +24,7 @@ import path from 'node:path';
 import type { FSWatcher } from 'chokidar';
 import { buildGraph } from '../spec-graph/builder.ts';
 import { startWatching, type PatchEvent } from '../spec-graph/incremental.ts';
+import { computeTaskCensus, writeTaskCensusCache } from '../spec-graph/task-census.ts';
 import {
   acquireLock,
   acquireLockOrReadOnly,
@@ -200,6 +201,21 @@ export async function startLifecycle(opts: LifecycleOptions): Promise<LifecycleH
     skipNdjson: opts.skipNdjson,
   });
 
+  // P21-6: refresh the honest task-census cache from the LIVE graph. The
+  // PostToolUse spec-conformance-push producer only fires on raw Write|Edit —
+  // but under enforce the agent edits specs through the MCP door, which never
+  // triggers it. The server's watcher DOES see every on-disk spec change (door
+  // writes included), so refreshing here (boot + each patch) keeps the banner's
+  // census fresh in the mode that matters. Best-effort: never crash the server.
+  const refreshCensus = (): void => {
+    try {
+      writeTaskCensusCache(opts.repoRoot, computeTaskCensus(graph), new Date().toISOString());
+    } catch {
+      // census cache is advisory — a write failure must never break the door
+    }
+  };
+  refreshCensus();
+
   // 3) Heartbeat — refresh `last_heartbeat` every N ms so a sibling can
   //    detect a stalled owner. Unref so it doesn't keep the event loop alive
   //    past a deliberate shutdown. A read-only door owns no lock, so it skips
@@ -242,7 +258,12 @@ export async function startLifecycle(opts: LifecycleOptions): Promise<LifecycleH
     ndjsonPath: opts.ndjsonPath,
     usePolling,
     interval: usePolling ? pollIntervalMs : undefined,
-    onPatch: opts.onPatch,
+    // P21-6: every on-disk spec change (door writes included) refreshes the
+    // census cache, then the caller's own onPatch runs.
+    onPatch: (e) => {
+      refreshCensus();
+      opts.onPatch?.(e);
+    },
     onError:
       opts.onError ??
       ((err: Error) => process.stderr.write(`[spec-mcp-server][watcher] ${err.message}\n`)),

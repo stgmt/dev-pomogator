@@ -37,6 +37,26 @@ describe('startLifecycle', () => {
     }
   });
 
+  it('writes the task-census cache on boot — the enforce-mode producer (P21-6)', async () => {
+    // A todo task so the census is non-trivial; the door-write path under enforce
+    // never triggers the Write|Edit push hook, so the server must produce it.
+    fs.writeFileSync(
+      path.join(root, '.specs/auth/TASKS.md'),
+      '# Tasks\n\n- [ ] Open one — id: o1 — Status: TODO | Est: 5m\n  **Done When:**\n  - [ ] x\n',
+    );
+    const handle = await startLifecycle({ repoRoot: root, env: 'host', skipNdjson: true });
+    try {
+      const cachePath = path.join(root, '.dev-pomogator', '.task-census.json');
+      expect(fs.existsSync(cachePath)).toBe(true);
+      const c = JSON.parse(fs.readFileSync(cachePath, 'utf-8'));
+      expect(c.open).toBeGreaterThanOrEqual(1);
+      expect(c.doneButRed).toBe(0); // not_run-excluded → safe even on a skipNdjson build
+      expect(typeof c.ts).toBe('string');
+    } finally {
+      await handle.shutdown();
+    }
+  });
+
   it('shutdown() releases the lock and closes the watcher', async () => {
     const handle = await startLifecycle({ repoRoot: root, env: 'host', skipNdjson: true });
     await handle.shutdown();
