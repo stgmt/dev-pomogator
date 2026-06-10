@@ -491,6 +491,26 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
       expect(content).toContain('автоматизировать работу');
       expect(content).toContain('экономия времени');
     });
+
+    // @feature15
+    it('PLUGIN006_FT_CRLF: P16-6 keeps CRLF endings when inserting a multi-line value', async () => {
+      // A CRLF template + a multi-line LF value (JSON -Values) must NOT yield a
+      // file with mixed EOLs — replaceLiteralAll matches the value's endings to
+      // the document's. Regression for the split/join-into-CRLF-doc gap.
+      const crlf = appPath('tests', 'fixtures', 'specs-generator', 'temp-crlf-template.md');
+      await fs.writeFile(crlf, '# Doc\r\nBefore {BODY} after\r\n', 'utf-8'); // CRLF doc
+      try {
+        const values = JSON.stringify({ BODY: 'line1\nline2\nline3' }); // multi-line LF value
+        runShellScript(getSpecsGeneratorPath('fill-template.ts'), ['-File', crlf, '-Values', values]);
+        const out = await fs.readFile(crlf, 'utf-8');
+        expect(out.match(/[^\r]\n/g)).toBeNull(); // no lone LF — every line ends CRLF
+        expect((out.match(/\r\n/g) || []).length).toBeGreaterThanOrEqual(4);
+        expect(out).toContain('line1');
+        expect(out).toContain('line3');
+      } finally {
+        await fs.remove(crlf);
+      }
+    });
   });
 
   // ============================================================================

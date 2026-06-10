@@ -112,4 +112,5 @@ printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocol
   `spec-mcp-dogfood` (рантайм-перепись тулзов), `spec-status` (per-spec вердикт)
 - Спека: `.specs/spec-generator-v4/` (FR-36/37/38 — identity, вердикт, lifecycle)
 - Реворк loose→strict TASKS.md (чтобы спека трекалась census/tested-by): `references/rework-loose-tasks-to-strict.md` + `scripts/add-task-ids.ts`
+- Аудит — кто что проверяет (validate-spec/audit-spec/conformance/coverage/semantic/corpus-health, композиция в spec-verdict): `references/audit-split-responsibility.md` (P16-5)
 - Архивы: `audit-reports/fr36-dogfood-before-after.md`, `audit-reports/fr8-semantic-drift-inventory.md`

@@ -40,18 +40,23 @@ Skill("spec-reality-check")
 
 Агент ОБЯЗАН выполнить проверки по 10 категориям, читая файлы спеки И реальный код проекта. Каждая категория — отдельный reference-файл с описанием checks и remediation:
 
-| Category | Reference | Severity scope |
-|----------|-----------|----------------|
-| ОШИБКИ (Errors) | [`phase3plus_audit-errors.md`](phase3plus_audit-errors.md) | Расхождения с реальным кодом |
-| ЛОГИЧЕСКИЕ ПРОБЕЛЫ (Logic Gaps) | [`phase3plus_audit-logic-gaps.md`](phase3plus_audit-logic-gaps.md) | Непокрытые требования / разорванные цепочки |
-| НЕКОНСИСТЕНТНОСТЬ (Inconsistency) | [`phase3plus_audit-inconsistency.md`](phase3plus_audit-inconsistency.md) | Терминологические расхождения |
-| РУДИМЕНТЫ (Rudiments) | [`phase3plus_audit-rudiments.md`](phase3plus_audit-rudiments.md) | Устаревшая информация |
-| ФАНТАЗИИ (Fantasies) | [`phase3plus_audit-fantasies.md`](phase3plus_audit-fantasies.md) | Непроверенные допущения |
-| UNDEFINED_BEHAVIOR | [`phase3plus_audit-undefined-behavior.md`](phase3plus_audit-undefined-behavior.md) | Непокрытые edge cases (taxonomy с 9 категориями + BVA + 12 combined failures inlined) |
-| JIRA_DRIFT (только Jira-mode) | [`phase3plus_audit-jira-drift.md`](phase3plus_audit-jira-drift.md) | Drift между spec и Jira source |
-| VARIANT_COVERAGE | [`phase3plus_audit-variant-coverage.md`](phase3plus_audit-variant-coverage.md) | Polymorphic FRs без enumerated variant matrix (AC Decision Table + Examples + per-variant tasks) |
-| ARCHITECTURE_COVERAGE | [`phase3plus_audit-architecture-coverage.md`](phase3plus_audit-architecture-coverage.md) | Greenfield architecture axes (Phase 1.75) в статусе pending — blocks STOP #3 |
-| COMPLETENESS_COVERAGE | [`phase3plus_audit-completeness-coverage.md`](phase3plus_audit-completeness-coverage.md) | Greenfield: 8 system-completeness измерений (COMPLETENESS.md ledger) в статусе pending — blocks STOP #3 |
+| Category | Backing — mechanical vs AI-semantic (P16-5) | Reference | Severity scope |
+|----------|----------------------------------------------|-----------|----------------|
+| ОШИБКИ (Errors) | AI-semantic **+ mechanical pre-check** CHECK-9 `PARTIAL_IMPL_DETECTION` | [`phase3plus_audit-errors.md`](phase3plus_audit-errors.md) | Расхождения с реальным кодом |
+| ЛОГИЧЕСКИЕ ПРОБЕЛЫ (Logic Gaps) | AI-semantic **+ mechanical** CHECK-10 `TASK_FR_ATOMICITY` + CHECK-12 `BDD_SCENARIO_SCOPE` | [`phase3plus_audit-logic-gaps.md`](phase3plus_audit-logic-gaps.md) | Непокрытые требования / разорванные цепочки |
+| НЕКОНСИСТЕНТНОСТЬ (Inconsistency) | AI-semantic **+ mechanical** CHECK-11 `FR_SPLIT_CONSISTENCY` | [`phase3plus_audit-inconsistency.md`](phase3plus_audit-inconsistency.md) | Терминологические расхождения |
+| РУДИМЕНТЫ (Rudiments) | **AI-semantic only** (agent reads spec+code) | [`phase3plus_audit-rudiments.md`](phase3plus_audit-rudiments.md) | Устаревшая информация |
+| ФАНТАЗИИ (Fantasies) | **AI-semantic only** (agent reads spec+code) | [`phase3plus_audit-fantasies.md`](phase3plus_audit-fantasies.md) | Непроверенные допущения |
+| UNDEFINED_BEHAVIOR | **AI-semantic only** (agent reads spec+code) | [`phase3plus_audit-undefined-behavior.md`](phase3plus_audit-undefined-behavior.md) | Непокрытые edge cases (taxonomy с 9 категориями + BVA + 12 combined failures inlined) |
+| JIRA_DRIFT (только Jira-mode) | **MECHANICAL** — CHECK-13 `audit-checks.ts checkJiraDrift` | [`phase3plus_audit-jira-drift.md`](phase3plus_audit-jira-drift.md) | Drift между spec и Jira source |
+| VARIANT_COVERAGE | **MECHANICAL** — audit-spec category (emits `AC_DECISION_TABLE_MISSING`) | [`phase3plus_audit-variant-coverage.md`](phase3plus_audit-variant-coverage.md) | Polymorphic FRs без enumerated variant matrix (AC Decision Table + Examples + per-variant tasks) |
+| ARCHITECTURE_COVERAGE | **MECHANICAL** — `architecture-decision-cli.ts audit` (9th category, FR-9) | [`phase3plus_audit-architecture-coverage.md`](phase3plus_audit-architecture-coverage.md) | Greenfield architecture axes (Phase 1.75) в статусе pending — blocks STOP #3 |
+| COMPLETENESS_COVERAGE | **MECHANICAL** — `architecture-decision-cli.ts audit-completeness` (10th category) | [`phase3plus_audit-completeness-coverage.md`](phase3plus_audit-completeness-coverage.md) | Greenfield: 8 system-completeness измерений (COMPLETENESS.md ledger) в статусе pending — blocks STOP #3 |
+
+**Mechanical vs AI-semantic (P16-5 — чтобы агент не гадал):**
+- **MECHANICAL** категории (JIRA_DRIFT / VARIANT_COVERAGE / ARCHITECTURE_COVERAGE / COMPLETENESS_COVERAGE) — findings ВЫЧИСЛЯЮТСЯ скриптом: они уже в выводе Step 1 (`audit-spec.ts` гоняет `audit-checks.ts` CHECK-9..13) или архитектурного CLI. Агент **читает** эти находки, НЕ передоказывает их семантически.
+- **AI-semantic only** (Rudiments / Fantasies / Undefined-behavior) — нет механического чека; агент обязан прочитать spec + реальный код и вынести суждение.
+- **Hybrid** (Errors / Logic Gaps / Inconsistency) — есть механический pre-check (CHECK-9..12), который ловит очевидные случаи; агент всё равно делает более широкий семантический проход поверх.
 
 Загружай только relevant category файлы — не все 10 одновременно.
 

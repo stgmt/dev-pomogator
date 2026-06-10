@@ -423,7 +423,14 @@ function listPlaceholders(content, lines) {
 }
 
 function replaceLiteralAll(content, searchValue, replacementValue) {
-  return content.split(searchValue).join(String(replacementValue));
+  // P16-6 CRLF-safe: match the inserted value's line endings to the document's,
+  // so a CRLF template + a multi-line LF value (from JSON -Values) — or the
+  // reverse — never produces a file with mixed EOLs. Single-line values are a
+  // no-op. EOL detected from the document (CRLF if it contains any \r\n).
+  let value = String(replacementValue);
+  if (content.includes('\r\n')) value = value.replace(/\r?\n/g, '\r\n');
+  else if (content.includes('\n')) value = value.replace(/\r\n/g, '\n');
+  return content.split(searchValue).join(value);
 }
 
 // Delegates to the single marksmanSlug source of truth (FR-34a) so the validator
