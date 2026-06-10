@@ -1058,6 +1058,18 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then writes refuse with the holder named while reads and dry-runs stay live and the file is untouched
 
   @FR-39
+  Scenario: SPECGEN004_150 read_spec_doc paginates a big doc by section, by line window, and whole
+    Given a spec doc with several headings and many lines
+    When the agent reads it by section, by line window, and whole
+    Then each paging mode returns the right slice with total_lines metadata
+
+  @FR-39
+  Scenario: SPECGEN004_151 the inline skip-spec-access marker lets one Bash spec read through under enforce
+    Given the spec-access-guard inline escape under enforce
+    When a Bash spec read runs with a valid marker, no marker, and a too-short marker
+    Then only the valid marker is honoured and the escape is audit-logged
+
+  @FR-39
   Scenario: SPECGEN004_133 the engine-CLI carve-out allows every skill-invoked spec CLI over .specs/ but not generic readers
     Given the spec-access-guard engine-CLI carve-out
     When each documented engine CLI and a generic reader run over the specs tree

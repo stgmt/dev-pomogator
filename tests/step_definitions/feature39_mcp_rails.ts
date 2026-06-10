@@ -315,7 +315,7 @@ Then('the read is refused as an unsafe spec and nothing outside the tree is retu
 // 2026-06-08 review). Every real engine producer must be ALLOWED; generic /
 // inline / heredoc-to-tmp reads must stay a VIOLATION, so enforce (P17-6) can't
 // silently brick authoring yet can't be bypassed by ad-hoc code either.
-import { violationOf } from '../../tools/specs-validator/spec-access-guard.ts';
+import { violationOf, extractSkipMarker } from '../../tools/specs-validator/spec-access-guard.ts';
 
 // The commands authoring skills ACTUALLY invoke (basenames check/fix/full-mode/
 // variant-matrix-cli are too generic to whitelist — recognized as project scripts).
@@ -625,4 +625,95 @@ Then('writes refuse with the holder named while reads and dry-runs stay live and
   assert.ok(this.roRead!.content!.includes('Original body'), 'the read must return the real, unchanged doc');
   assert.notEqual(this.roPropose!.error, 'WRITE_LOCK_HELD', 'the propose dry-run must NOT be lock-gated');
   assert.equal(this.roBodyAfter, this.roBodyBefore, 'a refused write must not touch disk');
+});
+
+// ── SPECGEN004_150 — P21-2 read_spec_doc pagination over a big doc ───────────
+// Binds the REAL read_spec_doc handler: a {section} read returns one heading
+// block (down to the next same/higher heading, deeper headings stay in); an
+// {offset,limit} read returns a line window with truncated+next_offset; the
+// whole-doc read stays back-compat and every reply carries total_lines.
+interface PageWorld extends F40World {
+  pgSection?: { ok: boolean; content?: string; section?: string; lines?: number; total_lines?: number };
+  pgWindow?: { ok: boolean; content?: string; lines?: number; truncated?: boolean; next_offset?: number | null; total_lines?: number };
+  pgWhole?: { ok: boolean; content?: string; total_lines?: number };
+  pgMiss?: { ok: boolean; error?: string };
+}
+Given('a spec doc with several headings and many lines', function (this: PageWorld) {
+  const dir = path.join(this.tempDir, '.specs', 'page-demo');
+  fs.mkdirSync(dir, { recursive: true });
+  const body = [
+    '# Doc', 'intro line',
+    '## FR-1', 'fr1 a', 'fr1 b',
+    '## FR-2', 'fr2 marker UNIQUE-FR2', '### AC-2.1', 'deeper stays in FR-2',
+    '## FR-3', 'fr3 tail',
+  ].join('\n') + '\n';
+  fs.writeFileSync(path.join(dir, 'FR.md'), body);
+});
+When('the agent reads it by section, by line window, and whole', async function (this: PageWorld) {
+  this.pgSection = await inCorpus(this, () => callTool(this, 'read_spec_doc', { spec: 'page-demo', doc: 'FR.md', section: 'FR-2' }));
+  this.pgWindow = await inCorpus(this, () => callTool(this, 'read_spec_doc', { spec: 'page-demo', doc: 'FR.md', offset: 1, limit: 3 }));
+  this.pgWhole = await inCorpus(this, () => callTool(this, 'read_spec_doc', { spec: 'page-demo', doc: 'FR.md' }));
+  this.pgMiss = await inCorpus(this, () => callTool(this, 'read_spec_doc', { spec: 'page-demo', doc: 'FR.md', section: 'FR-9999' }));
+});
+// ── SPECGEN004_151 — P21-2 inline escape marker over .specs under enforce ────
+// Spawns the REAL guard (full main(): violationOf + enforceEnabled +
+// extractSkipMarker + decision). Under enforce a Bash `.specs/` read is DENY;
+// appending `[skip-spec-access: <reason ≥8>]` to the command ALLOWS it (logged);
+// a too-short reason is NOT honoured (stays DENY). Also pins the pure parser.
+import { spawnSync as _spawnSync151 } from 'node:child_process';
+interface EscapeWorld extends F39World {
+  escWith?: number;
+  escWithout?: number;
+  escShort?: number;
+  escLogged?: boolean;
+}
+Given('the spec-access-guard inline escape under enforce', function (this: EscapeWorld) {
+  fs.mkdirSync(path.join(this.tempDir, '.specs', 'esc-demo'), { recursive: true });
+  fs.writeFileSync(path.join(this.tempDir, '.specs', 'esc-demo', 'FR.md'), '## FR-1\n\nbody\n');
+});
+When('a Bash spec read runs with a valid marker, no marker, and a too-short marker', function (this: EscapeWorld) {
+  const guardPath = path.resolve(process.cwd(), 'tools', 'specs-validator', 'spec-access-guard.ts');
+  const S = '.' + 'specs';
+  const run = (command: string): number => {
+    const r = _spawnSync151('node', ['--import', 'tsx', guardPath], {
+      input: JSON.stringify({ tool_name: 'Bash', tool_input: { command }, cwd: this.tempDir }),
+      encoding: 'utf-8',
+      env: { ...process.env, SPEC_ACCESS_ENFORCE: 'true', SPEC_ACCESS_SKIP: '' },
+    });
+    return r.status ?? -1;
+  };
+  this.escWith = run(`cat ${S}/esc-demo/FR.md # [skip-spec-access: cleanup stray scaffold artifact]`);
+  this.escWithout = run(`cat ${S}/esc-demo/FR.md`);
+  this.escShort = run(`cat ${S}/esc-demo/FR.md # [skip-spec-access: x]`);
+  const log = path.join(this.tempDir, '.claude', 'logs', 'spec-access-escapes.jsonl');
+  this.escLogged = fs.existsSync(log) && fs.readFileSync(log, 'utf-8').includes('cleanup stray scaffold artifact');
+});
+Then('only the valid marker is honoured and the escape is audit-logged', function (this: EscapeWorld) {
+  assert.equal(this.escWith, 0, 'a valid [skip-spec-access: …] marker must ALLOW the Bash spec read (exit 0)');
+  assert.equal(this.escWithout, 2, 'no marker → DENY (exit 2)');
+  assert.equal(this.escShort, 2, 'a <8-char reason must NOT be honoured → DENY (exit 2)');
+  assert.ok(this.escLogged, 'the honoured escape must land in spec-access-escapes.jsonl with its reason');
+  // Pin the pure parser the decision relies on.
+  assert.equal(extractSkipMarker('x # [skip-spec-access: deliberate cleanup]'), 'deliberate cleanup');
+  assert.equal(extractSkipMarker('cat .specs/x'), null);
+  assert.equal(extractSkipMarker('[skip-spec-access: ]'), '');
+});
+
+Then('each paging mode returns the right slice with total_lines metadata', function (this: PageWorld) {
+  // section: just the FR-2 block, deeper AC-2.1 included, FR-3 excluded.
+  assert.ok(this.pgSection!.ok, 'section read must succeed');
+  assert.ok(this.pgSection!.content!.includes('UNIQUE-FR2'), 'section must contain its own body');
+  assert.ok(this.pgSection!.content!.includes('### AC-2.1'), 'a deeper heading stays inside the section');
+  assert.ok(!this.pgSection!.content!.includes('## FR-3'), 'the next same-level heading ends the section');
+  // window: 3 lines, truncated, next_offset past them.
+  assert.equal(this.pgWindow!.lines, 3, 'line window must honour limit');
+  assert.equal(this.pgWindow!.truncated, true, 'a partial window must report truncated');
+  assert.equal(this.pgWindow!.next_offset, 4, 'next_offset must point past the window');
+  // whole: back-compat + size metadata present in every mode.
+  assert.ok(this.pgWhole!.ok && this.pgWhole!.content!.includes('# Doc'), 'whole-doc read stays back-compat');
+  assert.ok((this.pgWhole!.total_lines ?? 0) >= 11, 'total_lines metadata accompanies the read');
+  assert.equal(this.pgSection!.total_lines, this.pgWhole!.total_lines, 'total_lines is the doc total, not the slice');
+  // missing section is explicit, never an empty string.
+  assert.equal(this.pgMiss!.ok, false);
+  assert.equal(this.pgMiss!.error, 'SECTION_NOT_FOUND');
 });

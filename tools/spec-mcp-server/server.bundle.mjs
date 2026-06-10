@@ -48206,6 +48206,40 @@ function clamp(s, max) {
   if (s.length <= max) return s;
   return s.slice(0, max - 1) + "\u2026";
 }
+function slugifyHeading(s) {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+function sliceSection(lines, query) {
+  const q = query.replace(/^#+/, "").trim();
+  const qSlug = slugifyHeading(q);
+  let startIdx = -1;
+  let level = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(/^(#{1,6})\s+(.*\S)\s*$/);
+    if (!m) continue;
+    const text = m[2].trim();
+    if (text === q || slugifyHeading(text) === qSlug) {
+      startIdx = i;
+      level = m[1].length;
+      break;
+    }
+  }
+  if (startIdx === -1) return null;
+  let endIdx = lines.length;
+  for (let i = startIdx + 1; i < lines.length; i++) {
+    const m = lines[i].match(/^(#{1,6})\s+/);
+    if (m && m[1].length <= level) {
+      endIdx = i;
+      break;
+    }
+  }
+  return {
+    heading: lines[startIdx].replace(/^#+\s+/, "").trim(),
+    startLine: startIdx + 1,
+    endLine: endIdx,
+    lines: lines.slice(startIdx, endIdx)
+  };
+}
 function summariseFrTrace(fr, acs, scenarios, tasks) {
   const acCount = acs.length;
   const scenCount = scenarios.length;
@@ -48772,10 +48806,16 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
   });
   tools.push({
     name: "read_spec_doc",
-    description: "FR-39a: read ONE whole spec document (prose outside graph nodes included) by a name from list_spec_docs. Unknown name \u2192 explicit DOC_NOT_FOUND (never an empty string). Every read lands in the spec-access audit log \u2014 this is the MCP-only replacement for direct Read/Grep over .specs/.",
-    inputShape: { spec: external_exports.string(), doc: external_exports.string() },
-    handler: async ({ spec, doc }) => {
-      const args = { spec, doc };
+    description: 'FR-39a: read ONE spec document (prose outside graph nodes included) by a name from list_spec_docs. Unknown name \u2192 explicit DOC_NOT_FOUND (never an empty string). Every read lands in the spec-access audit log \u2014 the MCP-only replacement for direct Read/Grep over .specs/. P21-2 pagination for big docs (FR.md \u224877KB): pass {section:"FR-14"} for one heading block (down to the next same/higher heading), OR {offset,limit} for a 1-based line window. No paging arg \u2192 whole doc. Every reply carries total_lines/total_bytes so you can decide to page; a windowed reply carries truncated + next_offset.',
+    inputShape: {
+      spec: external_exports.string(),
+      doc: external_exports.string(),
+      offset: external_exports.number().int().min(1).optional(),
+      limit: external_exports.number().int().min(1).optional(),
+      section: external_exports.string().optional()
+    },
+    handler: async ({ spec, doc, offset, limit, section }) => {
+      const args = { spec, doc, offset, limit, section };
       const slug = String(spec).replace(/\\/g, "/").replace(/^\.?\/?\.specs\//, "").replace(/\/+$/, "");
       if (!isSafeSlug(slug)) {
         logSpecAccess("read_spec_doc", args, "denied");
@@ -48799,9 +48839,82 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
           hint: "Call list_spec_docs({spec}) for the valid inventory. Binary attachments \u2192 read_attachment."
         });
       }
-      const content = fs16.readFileSync(resolved.abs, "utf-8");
+      const full = fs16.readFileSync(resolved.abs, "utf-8");
+      const lines = full.split(/\r?\n/);
+      const totalLines = lines.length;
+      const totalBytes = full.length;
+      if (section !== void 0) {
+        const sel = sliceSection(lines, String(section));
+        if (!sel) {
+          logSpecAccess("read_spec_doc", args, "not_found");
+          return asJsonResult({
+            ok: false,
+            error: "SECTION_NOT_FOUND",
+            spec: slug,
+            doc: rel,
+            section,
+            total_lines: totalLines,
+            total_bytes: totalBytes,
+            hint: 'Pass a heading text ("FR-14") or its #anchor ("fr-14"); omit section to read the whole doc or use {offset,limit}.'
+          });
+        }
+        const content = sel.lines.join("\n");
+        logSpecAccess("read_spec_doc", args, "ok");
+        return asJsonResult({
+          ok: true,
+          spec: slug,
+          doc: rel,
+          section: sel.heading,
+          start_line: sel.startLine,
+          end_line: sel.endLine,
+          lines: sel.lines.length,
+          total_lines: totalLines,
+          total_bytes: totalBytes,
+          bytes: content.length,
+          content
+        });
+      }
+      if (offset !== void 0 || limit !== void 0) {
+        const startIdx = (offset ?? 1) - 1;
+        if (startIdx >= totalLines) {
+          logSpecAccess("read_spec_doc", args, "ok");
+          return asJsonResult({
+            ok: true,
+            spec: slug,
+            doc: rel,
+            start_line: startIdx + 1,
+            end_line: startIdx + 1,
+            lines: 0,
+            total_lines: totalLines,
+            total_bytes: totalBytes,
+            truncated: false,
+            next_offset: null,
+            content: "",
+            note: "offset is past end of file"
+          });
+        }
+        const endIdx = limit !== void 0 ? Math.min(startIdx + limit, totalLines) : totalLines;
+        const slice = lines.slice(startIdx, endIdx);
+        const truncated = endIdx < totalLines;
+        const content = slice.join("\n");
+        logSpecAccess("read_spec_doc", args, "ok");
+        return asJsonResult({
+          ok: true,
+          spec: slug,
+          doc: rel,
+          start_line: startIdx + 1,
+          end_line: endIdx,
+          lines: slice.length,
+          total_lines: totalLines,
+          total_bytes: totalBytes,
+          truncated,
+          next_offset: truncated ? endIdx + 1 : null,
+          bytes: content.length,
+          content
+        });
+      }
       logSpecAccess("read_spec_doc", args, "ok");
-      return asJsonResult({ ok: true, spec: slug, doc: rel, bytes: content.length, content });
+      return asJsonResult({ ok: true, spec: slug, doc: rel, bytes: totalBytes, total_lines: totalLines, total_bytes: totalBytes, content: full });
     }
   });
   tools.push({

@@ -171,6 +171,55 @@ function clamp(s: string, max: number): string {
   return s.slice(0, max - 1) + '…';
 }
 
+/** Slugify a markdown heading the way the anchor resolver does (lowercase,
+ *  non-alnum → `-`, trimmed). Lets `section` match either the heading TEXT
+ *  ("## FR-14") or its anchor ("fr-14"). */
+function slugifyHeading(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
+/**
+ * P21-2: extract ONE markdown section — from the matched heading down to (but
+ * not including) the next heading of the SAME-or-higher level — so the agent can
+ * pull just `## FR-14` out of a 77KB FR.md instead of the whole doc. `query`
+ * matches the heading text or its `#anchor` (leading `#` is tolerated). Returns
+ * null when no heading matches.
+ */
+export function sliceSection(
+  lines: readonly string[],
+  query: string,
+): { heading: string; startLine: number; endLine: number; lines: string[] } | null {
+  const q = query.replace(/^#+/, '').trim();
+  const qSlug = slugifyHeading(q);
+  let startIdx = -1;
+  let level = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(/^(#{1,6})\s+(.*\S)\s*$/);
+    if (!m) continue;
+    const text = m[2].trim();
+    if (text === q || slugifyHeading(text) === qSlug) {
+      startIdx = i;
+      level = m[1].length;
+      break;
+    }
+  }
+  if (startIdx === -1) return null;
+  let endIdx = lines.length;
+  for (let i = startIdx + 1; i < lines.length; i++) {
+    const m = lines[i].match(/^(#{1,6})\s+/);
+    if (m && m[1].length <= level) {
+      endIdx = i;
+      break;
+    }
+  }
+  return {
+    heading: lines[startIdx].replace(/^#+\s+/, '').trim(),
+    startLine: startIdx + 1,
+    endLine: endIdx,
+    lines: lines.slice(startIdx, endIdx),
+  };
+}
+
 /** Build the «one-paragraph context for the agent» summary for a single FR. */
 function summariseFrTrace(
   fr: FrNode,
@@ -1010,13 +1059,23 @@ export function buildToolRegistry(
   tools.push({
     name: 'read_spec_doc',
     description:
-      'FR-39a: read ONE whole spec document (prose outside graph nodes included) ' +
-      'by a name from list_spec_docs. Unknown name → explicit DOC_NOT_FOUND ' +
-      '(never an empty string). Every read lands in the spec-access audit log — ' +
-      'this is the MCP-only replacement for direct Read/Grep over .specs/.',
-    inputShape: { spec: z.string(), doc: z.string() } as const satisfies z.ZodRawShape,
-    handler: async ({ spec, doc }) => {
-      const args = { spec, doc };
+      'FR-39a: read ONE spec document (prose outside graph nodes included) by a name ' +
+      'from list_spec_docs. Unknown name → explicit DOC_NOT_FOUND (never an empty ' +
+      'string). Every read lands in the spec-access audit log — the MCP-only ' +
+      'replacement for direct Read/Grep over .specs/. P21-2 pagination for big docs ' +
+      '(FR.md ≈77KB): pass {section:"FR-14"} for one heading block (down to the next ' +
+      'same/higher heading), OR {offset,limit} for a 1-based line window. No paging ' +
+      'arg → whole doc. Every reply carries total_lines/total_bytes so you can decide ' +
+      'to page; a windowed reply carries truncated + next_offset.',
+    inputShape: {
+      spec: z.string(),
+      doc: z.string(),
+      offset: z.number().int().min(1).optional(),
+      limit: z.number().int().min(1).optional(),
+      section: z.string().optional(),
+    } as const satisfies z.ZodRawShape,
+    handler: async ({ spec, doc, offset, limit, section }) => {
+      const args = { spec, doc, offset, limit, section };
       const slug = String(spec).replace(/\\/g, '/').replace(/^\.?\/?\.specs\//, '').replace(/\/+$/, '');
       if (!isSafeSlug(slug)) {
         logSpecAccess('read_spec_doc', args, 'denied');
@@ -1042,9 +1101,57 @@ export function buildToolRegistry(
           hint: 'Call list_spec_docs({spec}) for the valid inventory. Binary attachments → read_attachment.',
         });
       }
-      const content = fs.readFileSync(resolved.abs, 'utf-8');
+      const full = fs.readFileSync(resolved.abs, 'utf-8');
+      const lines = full.split(/\r?\n/);
+      const totalLines = lines.length;
+      const totalBytes = full.length;
+
+      // P21-2 (a): section mode — one heading block out of a big doc.
+      if (section !== undefined) {
+        const sel = sliceSection(lines, String(section));
+        if (!sel) {
+          logSpecAccess('read_spec_doc', args, 'not_found');
+          return asJsonResult({
+            ok: false, error: 'SECTION_NOT_FOUND', spec: slug, doc: rel, section,
+            total_lines: totalLines, total_bytes: totalBytes,
+            hint: 'Pass a heading text ("FR-14") or its #anchor ("fr-14"); omit section to read the whole doc or use {offset,limit}.',
+          });
+        }
+        const content = sel.lines.join('\n');
+        logSpecAccess('read_spec_doc', args, 'ok');
+        return asJsonResult({
+          ok: true, spec: slug, doc: rel, section: sel.heading,
+          start_line: sel.startLine, end_line: sel.endLine, lines: sel.lines.length,
+          total_lines: totalLines, total_bytes: totalBytes, bytes: content.length, content,
+        });
+      }
+
+      // P21-2 (b): line-window mode — {offset,limit} (1-based, like the Read tool).
+      if (offset !== undefined || limit !== undefined) {
+        const startIdx = (offset ?? 1) - 1;
+        if (startIdx >= totalLines) {
+          logSpecAccess('read_spec_doc', args, 'ok');
+          return asJsonResult({
+            ok: true, spec: slug, doc: rel, start_line: startIdx + 1, end_line: startIdx + 1,
+            lines: 0, total_lines: totalLines, total_bytes: totalBytes, truncated: false,
+            next_offset: null, content: '', note: 'offset is past end of file',
+          });
+        }
+        const endIdx = limit !== undefined ? Math.min(startIdx + limit, totalLines) : totalLines;
+        const slice = lines.slice(startIdx, endIdx);
+        const truncated = endIdx < totalLines;
+        const content = slice.join('\n');
+        logSpecAccess('read_spec_doc', args, 'ok');
+        return asJsonResult({
+          ok: true, spec: slug, doc: rel, start_line: startIdx + 1, end_line: endIdx,
+          lines: slice.length, total_lines: totalLines, total_bytes: totalBytes,
+          truncated, next_offset: truncated ? endIdx + 1 : null, bytes: content.length, content,
+        });
+      }
+
+      // Default: whole doc (back-compat) + size metadata so the agent can decide to page.
       logSpecAccess('read_spec_doc', args, 'ok');
-      return asJsonResult({ ok: true, spec: slug, doc: rel, bytes: content.length, content });
+      return asJsonResult({ ok: true, spec: slug, doc: rel, bytes: totalBytes, total_lines: totalLines, total_bytes: totalBytes, content: full });
     },
   });
 

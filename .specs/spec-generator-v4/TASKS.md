@@ -1461,13 +1461,13 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] headless: дверь в `claude -p` требует `--mcp-config .mcp.json` (живой пин из crud-e2e); singleton-kill держателя больше НЕ нужен — вторая сессия получает READ-ONLY дверь автоматически
   - [x] BDD-регресс лок-семантики: SPECGEN004_149 (@feature14) биндит реальную цепочку acquireLock→acquireLockOrReadOnly→registry refusal; unit lock-manager (writer/reader/stale/envMismatch) + tools.test (3 write-тула рефьюзят, propose не гейтится) green; FR-14 обновлён (DENY whole-server → read-only fallback)
 
-- [ ] P21-2: enforce-эргономика — git-carve-out + пагинация read_spec_doc + рабочий inline-escape — id: p21-enforce-ergonomics — Status: TODO | Est: 240m
+- [x] P21-2: enforce-эргономика — git-carve-out + пагинация read_spec_doc + рабочий inline-escape — id: p21-enforce-ergonomics — Status: DONE | Est: 240m
   _depends: p17-enforce_
   _Requirements: [FR-39](FR.md#fr-39)_
   **Done When:**
   - [x] guard: carve-out для VCS-plumbing git над спеками (add/commit/status/stash + unstage-only restore --staged / rm --cached / reset) — content-leak (show/diff/log/grep/blame/cat-file) и worktree-rewrite (checkout/switch/plain-restore/reset --hard) остаются DENY. isSpecVcsPlumbingOnly per-segment, флаги из всего argv. BDD SPECGEN004_148 (биндит реальный violationOf, 7 allow / 7 deny). 148/147-passed GREEN. Живой укус который это породил: под enforce `git add .specs` денался → не мог закоммитить door-написанное
-  - [ ] read_spec_doc: `offset/limit` ИЛИ `section` — 77KB FR.md / 295KB RESEARCH.md не токен-бомбят + регресс
-  - [ ] escape доступен из агентского Bash: inline `SPEC_ACCESS_SKIP=1` распознаётся в ТЕКСТЕ команды ЛИБО `[skip-spec-access: reason ≥8]` маркер (сейчас hook видит только settings-env — живой укус 2026-06-10) + аудит
+  - [x] read_spec_doc: `offset/limit` (1-based line window) ИЛИ `section` (один heading-блок до следующего same/higher heading; deeper headings внутри); whole-doc остаётся back-compat; КАЖДЫЙ ответ несёт total_lines/total_bytes (windowed — ещё truncated/next_offset). Помощник sliceSection (anchor- или text-match). BDD SPECGEN004_150 (section/offset-limit/whole/missing) + unit sliceSection. Живой smoke на реальном FR.md (78KB): section FR-14 → 14 строк со line 211, window 1..5 truncated+next_offset=6, whole=780 строк
+  - [x] escape доступен из агентского Bash: `[skip-spec-access: reason ≥8]` маркер в ТЕКСТЕ Bash-команды распознаётся guard-ом (extractSkipMarker + main-решение), reason ≥8 → ALLOW+аудит в spec-access-escapes.jsonl, <8 → НЕ honoured (anti-gaming, остаётся DENY); env SPEC_ACCESS_SKIP=1 остаётся session-уровневым. Маркер Bash-only (единственный per-call текстовый канал агента; env-префикс до hook не доходит — живой укус 2026-06-10). BDD SPECGEN004_151 спавнит РЕАЛЬНЫЙ guard (valid→exit0, none→exit2, short→exit2 + лог) + пин extractSkipMarker
 
 - [ ] P21-3: сценарная гниль — FR-19 blanket-ре-тег + FR-7 пересъёмка под нативный LSP — id: p21-scenario-rot — Status: TODO | Est: 240m
   _depends: p17-enforce_

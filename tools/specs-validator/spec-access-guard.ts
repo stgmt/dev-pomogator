@@ -10,8 +10,9 @@
  * Two tiers (FR-39c — SHADOW first, enforce LAST):
  *   - SHADOW (default): a match is LOGGED to spec-access.jsonl, NOT blocked.
  *   - ENFORCE (`SPEC_ACCESS_ENFORCE=true`): a match is DENIED with a pointer
- *     to the MCP tools. Escape: `[skip-spec-access: <reason ≥8>]` in the commit
- *     message is N/A here (no commit); use env `SPEC_ACCESS_SKIP=1` — logged.
+ *     to the MCP tools. Escape (both logged to spec-access-escapes.jsonl):
+ *     `[skip-spec-access: <reason ≥8>]` in the Bash command TEXT (the per-call
+ *     channel the agent controls — P21-2), OR session env `SPEC_ACCESS_SKIP=1`.
  *
  * The Bash matcher is an ALGORITHM, not a substring (FR-39f): a command whose
  * executable is an ENGINE CLI (spec-verdict / validate-spec / audit-spec /
@@ -221,6 +222,22 @@ function logAccess(repoRoot: string, event: Record<string, unknown>): void {
   }
 }
 
+/**
+ * P21-2 inline escape: `[skip-spec-access: <reason>]` in a Bash command's TEXT —
+ * the per-call channel the agent actually controls (an env PREFIX like
+ * `SPEC_ACCESS_SKIP=1 cmd` never reaches the hook: the hook reads its OWN process
+ * env = the session env, not the spawned command's). Mirrors the sibling
+ * commit-marker gates (`[skip-scope-verify: …]`). Returns the trimmed reason when
+ * the marker is present (`''` if present-but-empty), or null when absent. The
+ * caller honours it only when `reason.length >= 8` (substantive rationale), else
+ * WARNs and still denies — same anti-gaming bar as the sibling gates.
+ */
+export function extractSkipMarker(cmd: string | undefined): string | null {
+  if (!cmd) return null;
+  const m = cmd.match(/\[skip-spec-access:\s*([^\]]*)\]/i);
+  return m ? m[1].trim() : null;
+}
+
 function logEscape(repoRoot: string, reason: string): void {
   try {
     const dir = path.join(repoRoot, '.claude', 'logs');
@@ -263,11 +280,26 @@ async function main(): Promise<void> {
   const repoRoot = data.cwd || process.env.CLAUDE_PROJECT_DIR || process.env.DEV_POMOGATOR_REPO_ROOT || process.cwd();
   const enforce = enforceEnabled(process.env);
 
-  // Escape hatch (enforce only): env opt-out, logged for audit.
+  // Escape hatch (enforce only), both logged for audit:
+  //  (1) env SPEC_ACCESS_SKIP=1 — session-level deliberate opt-out (all tools).
+  //  (2) P21-2: `[skip-spec-access: <reason ≥8>]` in a Bash command's TEXT — the
+  //      per-call channel the agent controls (the env prefix never reached here).
   if (enforce && process.env.SPEC_ACCESS_SKIP === '1') {
     logEscape(repoRoot, 'SPEC_ACCESS_SKIP=1');
     logAccess(repoRoot, { hook: HOOK_NAME, tool: v.tool, decision: 'escaped', detail: v.detail });
     process.exit(0);
+  }
+  if (enforce && v.tool === 'Bash') {
+    const marker = extractSkipMarker(data.tool_input?.command);
+    if (marker !== null && marker.length >= 8) {
+      logEscape(repoRoot, `[skip-spec-access] ${marker}`);
+      logAccess(repoRoot, { hook: HOOK_NAME, tool: v.tool, decision: 'escaped', detail: v.detail });
+      process.exit(0);
+    }
+    if (marker !== null) {
+      // Present but too short — NOT honoured (anti-gaming); fall through to DENY.
+      process.stderr.write(`[${HOOK_NAME}] [skip-spec-access] reason too short (<8 chars) — not honoured\n`);
+    }
   }
 
   logAccess(repoRoot, {
@@ -282,12 +314,16 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
+  const escapeLine =
+    v.tool === 'Bash'
+      ? `  escape (deliberate): append \`# [skip-spec-access: <reason ≥8 chars>]\` to the command, or set SPEC_ACCESS_SKIP=1 (both logged).`
+      : `  escape (deliberate): set SPEC_ACCESS_SKIP=1 (logged); the inline marker is Bash-only — read/write THIS through the door.`;
   const reason =
     `[${HOOK_NAME}] ${v.tool} on .specs/ is not allowed — read/write specs through the MCP door:\n` +
     `  read:  list_spec_docs / read_spec_doc / get_trace / get_node / search\n` +
     `  write: propose_spec_change / apply_spec_change / create_spec\n` +
     `  detail: ${v.detail}\n` +
-    `  escape (deliberate): set SPEC_ACCESS_SKIP=1 (logged).`;
+    escapeLine;
   process.stdout.write(
     JSON.stringify({
       hookSpecificOutput: {

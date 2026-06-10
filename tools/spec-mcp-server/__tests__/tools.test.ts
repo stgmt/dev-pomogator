@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { buildToolRegistry } from '../tools.ts';
+import { buildToolRegistry, sliceSection } from '../tools.ts';
 import type {
   SpecGraph,
   FrNode,
@@ -100,6 +100,49 @@ describe('tool registry — shape', () => {
         'validate_anchor',
       ].sort(),
     );
+  });
+});
+
+describe('P21-2 read_spec_doc pagination — sliceSection (pure)', () => {
+  const doc = [
+    '# Title',                // 1
+    'intro',                  // 2
+    '## FR-13',               // 3
+    'fr13 body',              // 4
+    '## FR-14',               // 5  ← target
+    'fr14 line a',            // 6
+    '### AC-14.1',            // 7  (deeper → stays inside FR-14)
+    'ac detail',              // 8
+    '## FR-15',               // 9  (same level → ends FR-14)
+    'fr15 body',              // 10
+  ];
+
+  it('extracts a heading block down to the next same-or-higher heading', () => {
+    const sel = sliceSection(doc, 'FR-14')!;
+    expect(sel).not.toBeNull();
+    expect(sel.heading).toBe('FR-14');
+    expect(sel.startLine).toBe(5);
+    expect(sel.endLine).toBe(8); // last INCLUDED line ('ac detail'); ## FR-15 (line 9) excluded
+    // The deeper ### AC-14.1 stays INSIDE the FR-14 block.
+    expect(sel.lines).toContain('### AC-14.1');
+    expect(sel.lines).not.toContain('## FR-15');
+  });
+
+  it('matches by #anchor as well as by heading text', () => {
+    const byText = sliceSection(doc, 'FR-14');
+    const byAnchor = sliceSection(doc, '#fr-14');
+    expect(byAnchor).toEqual(byText);
+  });
+
+  it('returns null when no heading matches', () => {
+    expect(sliceSection(doc, 'FR-9999')).toBeNull();
+  });
+
+  it('a top-level # section runs to the next # / same-level heading', () => {
+    const sel = sliceSection(['# A', 'a body', '## sub', 'x', '# B', 'b'], 'A')!;
+    expect(sel.startLine).toBe(1);
+    expect(sel.endLine).toBe(4); // last INCLUDED line ('x'); '# B' (line 5) ends the section
+    expect(sel.lines).toContain('## sub');
   });
 });
 
