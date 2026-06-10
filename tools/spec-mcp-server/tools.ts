@@ -459,6 +459,14 @@ export interface RegistryOptions {
    * Watcher-less embedders (tests, one-shot scripts) pass an explicit rebuild.
    */
   refreshGraph?: () => void;
+  /**
+   * P21-1 multi-session door: when this returns a holder record the server
+   * booted READ-ONLY (another live session owns the write-lock). The three
+   * write tools (apply_spec_change / delete_spec_doc / create_spec) then refuse
+   * with `WRITE_LOCK_HELD`; reads + the `propose_spec_change` dry-run stay live.
+   * Unset (or returning null) = this session owns the lock → writes proceed.
+   */
+  writeLockHeldBy?: () => { pid: number; env: string; started_at: string } | null;
 }
 
 export function buildToolRegistry(
@@ -466,6 +474,25 @@ export function buildToolRegistry(
   registryOpts: RegistryOptions = {},
 ): ToolDefinition<z.ZodRawShape>[] {
   const tools: ToolDefinition<z.ZodRawShape>[] = [];
+
+  // P21-1: when the door is read-only (a sibling session owns the write-lock),
+  // every write tool short-circuits here with the holder named. Returns null
+  // when writable, so a write handler does `const ro = readOnlyRefusal(...); if
+  // (ro) return ro;` as its first line.
+  const readOnlyRefusal = (tool: string, args: unknown): ToolResult | null => {
+    const holder = registryOpts.writeLockHeldBy?.();
+    if (!holder) return null;
+    logSpecAccess(tool, args, 'denied');
+    return asJsonResult({
+      ok: false,
+      error: 'WRITE_LOCK_HELD',
+      held_by: holder,
+      hint:
+        `Another Claude Code session (pid ${holder.pid}, env ${holder.env}) holds the spec ` +
+        `write-lock, so THIS session's door is read-only. Reads + propose_spec_change (dry-run) ` +
+        `work here — make the edit in that session, or close it and retry.`,
+    });
+  };
 
   // ─── 1) get_trace ───────────────────────────────────────────────────────
   tools.push({
@@ -1121,6 +1148,8 @@ export function buildToolRegistry(
       'refreshes the graph; the next read sees the fresh state.',
     inputShape: CHANGE_SHAPE,
     handler: async (args) => {
+      const ro = readOnlyRefusal('apply_spec_change', args);
+      if (ro) return ro;
       const slug = slugOf(args.spec);
       const doc = docOf(args.doc);
       const change = toChange(args as Record<string, unknown>);
@@ -1164,6 +1193,8 @@ export function buildToolRegistry(
     } as const satisfies z.ZodRawShape,
     handler: async ({ spec, doc, reason }) => {
       const args = { spec, doc, reason };
+      const ro = readOnlyRefusal('delete_spec_doc', args);
+      if (ro) return ro;
       const slug = slugOf(spec);
       if (!isSafeSlug(slug)) {
         logSpecAccess('delete_spec_doc', args, 'denied');
@@ -1235,6 +1266,8 @@ export function buildToolRegistry(
       '(templates are born verdict-GREEN). kebab-case slug; refuses an existing spec.',
     inputShape: { slug: z.string() } as const satisfies z.ZodRawShape,
     handler: async ({ slug }) => {
+      const ro = readOnlyRefusal('create_spec', { slug });
+      if (ro) return ro;
       const name = String(slug);
       if (!/^[a-z0-9][a-z0-9-]*$/.test(name)) {
         logSpecAccess('create_spec', { slug: name }, 'error');

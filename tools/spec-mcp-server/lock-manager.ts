@@ -197,3 +197,65 @@ export function acquireLock(opts: AcquireOptions): LockHandle {
     },
   };
 }
+
+/**
+ * Result of {@link acquireLockOrReadOnly}: either we own the singleton write
+ * lock (`writer`), or an alive sibling holds it (`reader`) and we boot a
+ * read-only door. A `LockHandle` is ALWAYS returned so callers stay uniform —
+ * the reader's handle is a no-op (it owns nothing, so `heartbeat`/`release`
+ * must never touch the owner's file).
+ */
+export interface LockAcquisition {
+  mode: 'writer' | 'reader';
+  /** Real handle for `writer`; no-op stand-in for `reader`. */
+  lock: LockHandle;
+  /** The current owner's record — present only when `mode === 'reader'`. */
+  holder?: LockRecord;
+  /** FR-14 cross-env collision flag — present only when `mode === 'reader'`. */
+  envMismatch?: boolean;
+}
+
+/**
+ * A read-only stand-in handle. Owns NO lock: `heartbeat`/`release` are no-ops so
+ * a reader session never overwrites or unlinks the writer's `.mcp-lock.json`.
+ */
+function noopLock(repoRoot: string): LockHandle {
+  const now = new Date().toISOString();
+  return {
+    path: lockPath(repoRoot),
+    record: { pid: process.pid, env: detectEnvironment(), started_at: now, last_heartbeat: now },
+    heartbeat(): void {
+      /* reader owns nothing */
+    },
+    release(): void {
+      /* reader owns nothing */
+    },
+  };
+}
+
+/**
+ * Non-fatal lock acquisition for the multi-session door (P21-1 / FR-14).
+ *
+ * Wraps {@link acquireLock}: on an alive-owner collision (`ELOCK_HELD`) it does
+ * NOT throw — it returns a `reader` acquisition carrying the owner's record, so
+ * the caller can boot a READ-ONLY door (queries + dry-runs stay live; mutations
+ * refuse with the holder named). Stale (dead-pid) locks are still reclaimed by
+ * the underlying {@link acquireLock} and yield a `writer`. Any non-`ELOCK_HELD`
+ * error (e.g. EACCES) still propagates — that's a genuine fault, not contention.
+ */
+export function acquireLockOrReadOnly(opts: AcquireOptions): LockAcquisition {
+  try {
+    return { mode: 'writer', lock: acquireLock(opts) };
+  } catch (err) {
+    const e = err as Error & { code?: string; existing?: LockRecord; envMismatch?: boolean };
+    if (e.code === 'ELOCK_HELD' && e.existing) {
+      return {
+        mode: 'reader',
+        lock: noopLock(opts.repoRoot),
+        holder: e.existing,
+        envMismatch: !!e.envMismatch,
+      };
+    }
+    throw err;
+  }
+}

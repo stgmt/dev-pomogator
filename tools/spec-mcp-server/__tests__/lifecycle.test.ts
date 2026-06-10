@@ -56,6 +56,38 @@ describe('startLifecycle', () => {
     }
   });
 
+  it('boots a READ-ONLY door (no throw) when a sibling holds the lock under onLockContention=readonly (P21-1)', async () => {
+    const first = await startLifecycle({ repoRoot: root, env: 'host', skipNdjson: true });
+    try {
+      // The second session does NOT crash — it boots read-only.
+      const second = await startLifecycle({
+        repoRoot: root,
+        env: 'host',
+        skipNdjson: true,
+        onLockContention: 'readonly',
+      });
+      try {
+        expect(second.readOnly).toBe(true);
+        expect(second.lockHolder?.pid).toBe(first.lock.record.pid);
+        // Reads stay live: the read-only door still cold-built its own graph.
+        expect(second.graph.nodes.has('auth:FR-1')).toBe(true);
+        // It owns NOTHING — the on-disk lock is still the FIRST session's record.
+        expect(readLock(root)!.pid).toBe(first.lock.record.pid);
+        const log = fs.readFileSync(path.join(root, '.dev-pomogator', 'logs', 'watcher.log'), 'utf8');
+        expect(log).toMatch(/READ-ONLY door/);
+      } finally {
+        await second.shutdown();
+      }
+      // The reader's shutdown must NOT have released the writer's lock.
+      expect(readLock(root)).not.toBeNull();
+      expect(readLock(root)!.pid).toBe(first.lock.record.pid);
+    } finally {
+      await first.shutdown();
+    }
+    // Once the writer shuts down, the lock is gone.
+    expect(readLock(root)).toBeNull();
+  });
+
   it('auto-falls-back to polling + logs the decision when the touch test fails (SPECGEN004_32)', async () => {
     const handle = await startLifecycle({
       repoRoot: root,

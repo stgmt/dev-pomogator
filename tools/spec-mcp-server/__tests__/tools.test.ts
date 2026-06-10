@@ -103,6 +103,57 @@ describe('tool registry — shape', () => {
   });
 });
 
+describe('P21-1 read-only door — write tools refuse, reads + dry-run stay live', () => {
+  // Simulate a sibling session owning the write-lock: writeLockHeldBy returns a
+  // holder, so the three write tools must short-circuit with WRITE_LOCK_HELD
+  // BEFORE touching disk; propose_spec_change (dry-run) must NOT be gated.
+  const holder = { pid: 4242, env: 'host', started_at: '2026-06-10T00:00:00.000Z' };
+  const roRegistry = buildToolRegistry(() => makeGraph(), { writeLockHeldBy: () => holder });
+  const roTool = (name: string) => {
+    const t = roRegistry.find((x) => x.name === name);
+    if (!t) throw new Error(`tool ${name} not registered`);
+    return t;
+  };
+
+  for (const name of ['apply_spec_change', 'delete_spec_doc', 'create_spec']) {
+    it(`${name} refuses with WRITE_LOCK_HELD naming the holder`, async () => {
+      const args =
+        name === 'create_spec'
+          ? { slug: 'whatever-new-spec' }
+          : name === 'delete_spec_doc'
+            ? { spec: 'demo', doc: 'FR.md', reason: 'x' }
+            : { spec: 'demo', doc: 'FR.md', content: 'x' };
+      const body = parseResult(await roTool(name).handler(args as never)) as {
+        ok: boolean;
+        error: string;
+        held_by: { pid: number; env: string };
+      };
+      expect(body.ok).toBe(false);
+      expect(body.error).toBe('WRITE_LOCK_HELD');
+      expect(body.held_by.pid).toBe(4242);
+      expect(body.held_by.env).toBe('host');
+    });
+  }
+
+  it('propose_spec_change (dry-run) is NOT gated by the read-only door', async () => {
+    const body = parseResult(
+      await roTool('propose_spec_change').handler({ spec: 'demo', doc: 'FR.md', content: 'x' } as never),
+    ) as { error?: string };
+    // It may fail validation against the real fs, but it must NEVER be the
+    // write-lock refusal — dry-runs stay available in a read-only door.
+    expect(body.error).not.toBe('WRITE_LOCK_HELD');
+  });
+
+  it('a writable door (no holder) does NOT short-circuit the write tools', async () => {
+    // create_spec with a bad slug → BAD_SLUG, proving the read-only gate is OFF
+    // (it reached the slug validation rather than refusing as WRITE_LOCK_HELD).
+    const body = parseResult(await tool('create_spec').handler({ slug: 'Bad Slug!' } as never)) as {
+      error: string;
+    };
+    expect(body.error).toBe('BAD_SLUG');
+  });
+});
+
 describe('find_refs — spec-domain graph reference-finder (FR-7b)', () => {
   // After the bridge retirement (Marksman is a native LSP plugin, not an in-MCP
   // bridge), find_refs serves SEMANTIC graph references only — markdown wiki-link

@@ -47087,6 +47087,33 @@ function acquireLock(opts) {
     }
   };
 }
+function noopLock(repoRoot) {
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  return {
+    path: lockPath(repoRoot),
+    record: { pid: process.pid, env: detectEnvironment(), started_at: now, last_heartbeat: now },
+    heartbeat() {
+    },
+    release() {
+    }
+  };
+}
+function acquireLockOrReadOnly(opts) {
+  try {
+    return { mode: "writer", lock: acquireLock(opts) };
+  } catch (err) {
+    const e = err;
+    if (e.code === "ELOCK_HELD" && e.existing) {
+      return {
+        mode: "reader",
+        lock: noopLock(opts.repoRoot),
+        holder: e.existing,
+        envMismatch: !!e.envMismatch
+      };
+    }
+    throw err;
+  }
+}
 
 // tools/spec-mcp-server/lifecycle.ts
 async function probeNativeEvents(repoRoot, timeoutMs) {
@@ -47143,7 +47170,24 @@ function logWatcherDecision(repoRoot, message) {
   }
 }
 async function startLifecycle(opts) {
-  const lock = acquireLock({ repoRoot: opts.repoRoot, env: opts.env ?? detectEnvironment() });
+  const env = opts.env ?? detectEnvironment();
+  let lock;
+  let readOnly = false;
+  let lockHolder;
+  if ((opts.onLockContention ?? "throw") === "readonly") {
+    const acq = acquireLockOrReadOnly({ repoRoot: opts.repoRoot, env });
+    lock = acq.lock;
+    if (acq.mode === "reader") {
+      readOnly = true;
+      lockHolder = acq.holder;
+      logWatcherDecision(
+        opts.repoRoot,
+        `write-lock held by pid ${acq.holder?.pid} (env ${acq.holder?.env}) \u2014 booting READ-ONLY door (P21-1); reads + dry-runs live, mutations refuse`
+      );
+    }
+  } else {
+    lock = acquireLock({ repoRoot: opts.repoRoot, env });
+  }
   const graph = buildGraph({
     repoRoot: opts.repoRoot,
     mdRoots: opts.mdRoots,
@@ -47152,8 +47196,8 @@ async function startLifecycle(opts) {
     skipNdjson: opts.skipNdjson
   });
   const intervalMs = opts.heartbeatMs ?? 15e3;
-  const heartbeatTimer = setInterval(() => lock.heartbeat(), intervalMs);
-  heartbeatTimer.unref?.();
+  const heartbeatTimer = readOnly ? void 0 : setInterval(() => lock.heartbeat(), intervalMs);
+  heartbeatTimer?.unref?.();
   const pollIntervalMs = opts.pollIntervalMs ?? 1e3;
   let usePolling;
   let watchMode;
@@ -47189,14 +47233,14 @@ async function startLifecycle(opts) {
   const shutdown = async () => {
     if (shuttingDown) return;
     shuttingDown = true;
-    clearInterval(heartbeatTimer);
+    if (heartbeatTimer) clearInterval(heartbeatTimer);
     try {
       await watcher.close();
     } catch {
     }
     lock.release();
   };
-  return { graph, watcher, lock, watchMode, pollIntervalMs, shutdown };
+  return { graph, watcher, lock, watchMode, pollIntervalMs, readOnly, lockHolder, shutdown };
 }
 
 // tools/spec-graph/conformance.ts
@@ -48320,6 +48364,17 @@ function collectGraphRefs(graph, id) {
 }
 function buildToolRegistry(getGraph, registryOpts = {}) {
   const tools = [];
+  const readOnlyRefusal = (tool, args) => {
+    const holder = registryOpts.writeLockHeldBy?.();
+    if (!holder) return null;
+    logSpecAccess(tool, args, "denied");
+    return asJsonResult({
+      ok: false,
+      error: "WRITE_LOCK_HELD",
+      held_by: holder,
+      hint: `Another Claude Code session (pid ${holder.pid}, env ${holder.env}) holds the spec write-lock, so THIS session's door is read-only. Reads + propose_spec_change (dry-run) work here \u2014 make the edit in that session, or close it and retry.`
+    });
+  };
   tools.push({
     name: "get_trace",
     description: "Get the full requirement trace for a node id: AC + Scenarios + Tasks + code_impl[] (implements edges per FR-30) + related nodes + a \u2264500-char natural-language summary for the agent.",
@@ -48830,6 +48885,8 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
     description: "FR-40 \xAB\u0436\u0438\u0432\u043E\u0439 \u0433\u0435\u043D\u0435\u0440\u0430\u0442\u043E\u0440\xBB: apply a spec mutation THROUGH the server. The change is validated BEFORE touching disk (form contracts + anchors + conformance); any error-severity finding \u2192 refusal with the findings list (fix and retry). A clean change is written atomically and audited. Inside the MCP server the FR-14 watcher refreshes the graph; the next read sees the fresh state.",
     inputShape: CHANGE_SHAPE,
     handler: async (args) => {
+      const ro = readOnlyRefusal("apply_spec_change", args);
+      if (ro) return ro;
       const slug = slugOf(args.spec);
       const doc = docOf(args.doc);
       const change = toChange(args);
@@ -48862,6 +48919,8 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
     },
     handler: async ({ spec, doc, reason }) => {
       const args = { spec, doc, reason };
+      const ro = readOnlyRefusal("delete_spec_doc", args);
+      if (ro) return ro;
       const slug = slugOf(spec);
       if (!isSafeSlug(slug)) {
         logSpecAccess("delete_spec_doc", args, "denied");
@@ -48924,6 +48983,8 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
     description: "FR-40a: create a new spec THROUGH the server \u2014 wraps the engine scaffold (templates are born verdict-GREEN). kebab-case slug; refuses an existing spec.",
     inputShape: { slug: external_exports.string() },
     handler: async ({ slug }) => {
+      const ro = readOnlyRefusal("create_spec", { slug });
+      if (ro) return ro;
       const name = String(slug);
       if (!/^[a-z0-9][a-z0-9-]*$/.test(name)) {
         logSpecAccess("create_spec", { slug: name }, "error");
@@ -48964,9 +49025,26 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
 var PRODUCT_NAME = "dev-pomogator-specs";
 var PRODUCT_VERSION = "0.1.0";
 async function boot(opts) {
-  const lifecycle = await startLifecycle({ repoRoot: opts.repoRoot, autoDetectWatchMode: true });
+  const lifecycle = await startLifecycle({
+    repoRoot: opts.repoRoot,
+    autoDetectWatchMode: true,
+    onLockContention: "readonly"
+  });
+  if (lifecycle.readOnly && lifecycle.lockHolder) {
+    process.stderr.write(
+      `[${PRODUCT_NAME}] read-only door: write-lock held by pid ${lifecycle.lockHolder.pid} (env ${lifecycle.lockHolder.env}); reads + dry-runs live, mutations refuse
+`
+    );
+  }
   const server = new McpServer({ name: PRODUCT_NAME, version: PRODUCT_VERSION });
-  for (const tool of buildToolRegistry(() => lifecycle.graph)) {
+  for (const tool of buildToolRegistry(() => lifecycle.graph, {
+    // P21-1: in a read-only door the write tools refuse with the holder named.
+    writeLockHeldBy: () => lifecycle.readOnly && lifecycle.lockHolder ? {
+      pid: lifecycle.lockHolder.pid,
+      env: lifecycle.lockHolder.env,
+      started_at: lifecycle.lockHolder.started_at
+    } : null
+  })) {
     server.tool(tool.name, tool.description, tool.inputShape, tool.handler);
   }
   return { server, lifecycle };

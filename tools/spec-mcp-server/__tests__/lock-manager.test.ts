@@ -17,7 +17,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { randomUUID } from 'node:crypto';
-import { acquireLock, readLock, detectEnvironment } from '../lock-manager.ts';
+import { acquireLock, acquireLockOrReadOnly, readLock, detectEnvironment } from '../lock-manager.ts';
 
 describe('lock-manager', () => {
   let root: string;
@@ -125,6 +125,73 @@ describe('lock-manager', () => {
     expect(fs.existsSync(handle.path)).toBe(true);
     // Cleanup so afterEach succeeds.
     fs.unlinkSync(handle.path);
+  });
+
+  // ── P21-1: non-fatal acquisition for the multi-session read-only door ──
+  it('acquireLockOrReadOnly returns mode=writer + a real lock when the path is free', () => {
+    const acq = acquireLockOrReadOnly({ repoRoot: root, env: 'host' });
+    try {
+      expect(acq.mode).toBe('writer');
+      expect(acq.holder).toBeUndefined();
+      // It actually wrote OUR record to disk (a real owning lock).
+      expect(readLock(root)!.pid).toBe(process.pid);
+    } finally {
+      acq.lock.release();
+    }
+  });
+
+  it('acquireLockOrReadOnly returns mode=reader + holder (no throw) when a live owner holds it', () => {
+    const owner = acquireLock({ repoRoot: root, env: 'host' });
+    try {
+      const acq = acquireLockOrReadOnly({ repoRoot: root, env: 'host' });
+      expect(acq.mode).toBe('reader');
+      expect(acq.holder!.pid).toBe(process.pid);
+      // The reader handle owns NOTHING: heartbeat + release must not touch the
+      // owner's lock file (no overwrite, no unlink).
+      const before = readLock(root)!;
+      acq.lock.heartbeat();
+      acq.lock.release();
+      const after = readLock(root)!;
+      expect(after.pid).toBe(before.pid);
+      expect(after.started_at).toBe(before.started_at);
+      expect(after.last_heartbeat).toBe(before.last_heartbeat);
+      expect(fs.existsSync(owner.path)).toBe(true);
+    } finally {
+      owner.release();
+    }
+  });
+
+  it('acquireLockOrReadOnly reclaims a stale (dead-pid) lock as mode=writer', () => {
+    const lockFile = path.join(root, '.dev-pomogator', '.mcp-lock.json');
+    fs.mkdirSync(path.dirname(lockFile), { recursive: true });
+    fs.writeFileSync(
+      lockFile,
+      JSON.stringify({
+        pid: 2_147_483_646,
+        env: 'host',
+        started_at: new Date(0).toISOString(),
+        last_heartbeat: new Date(0).toISOString(),
+      }),
+    );
+    const acq = acquireLockOrReadOnly({ repoRoot: root, env: 'host' });
+    try {
+      expect(acq.mode).toBe('writer');
+      expect(readLock(root)!.pid).toBe(process.pid);
+    } finally {
+      acq.lock.release();
+    }
+  });
+
+  it('acquireLockOrReadOnly surfaces envMismatch on a cross-env collision (FR-14)', () => {
+    const owner = acquireLock({ repoRoot: root, env: 'host' });
+    try {
+      const acq = acquireLockOrReadOnly({ repoRoot: root, env: 'container:cafe' });
+      expect(acq.mode).toBe('reader');
+      expect(acq.envMismatch).toBe(true);
+      expect(acq.holder!.env).toBe('host');
+    } finally {
+      owner.release();
+    }
   });
 
   it('heartbeat() updates last_heartbeat in place', async () => {

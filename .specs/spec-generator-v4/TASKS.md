@@ -1453,13 +1453,13 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
 
 ## Phase 21 — Эксплуатация enforce + door-полнота (deep-gap-analysis 2026-06-10)
 
-- [ ] P21-1: multi-session дверь — singleton-лок блокирует все сессии кроме первой (P0) — id: p21-multisession-door — Status: TODO | Est: 360m
+- [x] P21-1: multi-session дверь — singleton-лок: вторая сессия больше НЕ падает, дверь boots READ-ONLY (P0 закрыт) — id: p21-multisession-door — Status: DONE | Est: 360m
   _depends: p17-enforce_
   _Requirements: [FR-14](FR.md#fr-14), [FR-39](FR.md#fr-39)_
   **Done When:**
-  - [ ] вторая сессия получает РАБОЧУЮ дверь при живом первом сервере: read-тулы без лока ИЛИ lock per WRITE ИЛИ брокер (выбор в DESIGN Decision-блоком); живой пин «MCP lock already held» при двух сессиях не воспроизводится
-  - [ ] headless: дверь в `claude -p` требует `--mcp-config .mcp.json` — задокументировано
-  - [ ] BDD-регресс лок-семантики
+  - [x] **РЕШЕНИЕ — read-only fallback (не брокер):** `acquireLockOrReadOnly` (lock-manager) при живом владельце возвращает reader+holder вместо throw; `startLifecycle({onLockContention:readonly})` поднимает дверь READ-ONLY (граф+watcher живут, heartbeat пропущен — reader ничего не владеет); три write-тула (apply/delete/create) рефьюзят `WRITE_LOCK_HELD` с именем держателя (pid+env), read-тулы и `propose_spec_change` dry-run остаются живыми; writes сериализуются на единственного владельца лока
+  - [x] headless: дверь в `claude -p` требует `--mcp-config .mcp.json` (живой пин из crud-e2e); singleton-kill держателя больше НЕ нужен — вторая сессия получает READ-ONLY дверь автоматически
+  - [x] BDD-регресс лок-семантики: SPECGEN004_149 (@feature14) биндит реальную цепочку acquireLock→acquireLockOrReadOnly→registry refusal; unit lock-manager (writer/reader/stale/envMismatch) + tools.test (3 write-тула рефьюзят, propose не гейтится) green; FR-14 обновлён (DENY whole-server → read-only fallback)
 
 - [ ] P21-2: enforce-эргономика — git-carve-out + пагинация read_spec_doc + рабочий inline-escape — id: p21-enforce-ergonomics — Status: TODO | Est: 240m
   _depends: p17-enforce_

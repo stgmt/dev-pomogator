@@ -215,7 +215,7 @@ Default severity for both: `warning` (NOT `error`, NOT block). Configurable per-
 System SHALL function correctly across environments: host (Win/Mac/Linux), VS Code devcontainer, WSL2, Hyper-V VM. Specifically:
 - All file paths in MCP API responses ARE relative to `git rev-parse --show-toplevel` (never absolute, never container-internal-only)
 - `chokidar` watcher auto-detects slow FS via touch test at startup (create temp file, await event ≤500ms); if event missed → enable polling mode (1s interval) + log decision
-- `.mcp-lock.json` tags `env` field (e.g., `host`, `container:devcontainer-abc123`, `wsl:ubuntu`); second MCP server start on same worktree with different `env` → DENY with clear message
+- `.mcp-lock.json` tags `env` field (e.g., `host`, `container:devcontainer-abc123`, `wsl:ubuntu`) — ONE write-owner per worktree. A second concurrent session does NOT crash (P21-1): its door boots READ-ONLY — reads + the `propose_spec_change` dry-run stay live, while `apply_spec_change`/`delete_spec_doc`/`create_spec` refuse with `WRITE_LOCK_HELD` naming the holder pid+env — so every session keeps a usable door while writes serialise to the single lock owner. A different-`env` collision additionally surfaces the env-mismatch hint.
 - `claude` CLI must be installed in each env where Claude Code runs (documented in onboard-repo flow)
 
 **Связанные AC:** [AC-14.1](ACCEPTANCE_CRITERIA.md#ac-141), [AC-14.2](ACCEPTANCE_CRITERIA.md#ac-142), [AC-14.3](ACCEPTANCE_CRITERIA.md#ac-143)

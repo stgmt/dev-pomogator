@@ -39,7 +39,20 @@ export async function boot(opts: BootOptions): Promise<{
 }> {
   // Enable the touch-test watch-mode probe (SPECGEN004_32): on a Docker-Desktop
   // bind mount where native fs events don't propagate, auto-fall-back to polling.
-  const lifecycle = await startLifecycle({ repoRoot: opts.repoRoot, autoDetectWatchMode: true });
+  // P21-1: `onLockContention: 'readonly'` — when a sibling session owns the
+  // write-lock, boot a READ-ONLY door instead of crashing, so every session
+  // keeps a live door for reads while writes serialise to the lock owner.
+  const lifecycle = await startLifecycle({
+    repoRoot: opts.repoRoot,
+    autoDetectWatchMode: true,
+    onLockContention: 'readonly',
+  });
+  if (lifecycle.readOnly && lifecycle.lockHolder) {
+    process.stderr.write(
+      `[${PRODUCT_NAME}] read-only door: write-lock held by pid ${lifecycle.lockHolder.pid} ` +
+        `(env ${lifecycle.lockHolder.env}); reads + dry-runs live, mutations refuse\n`,
+    );
+  }
   const server = new McpServer({ name: PRODUCT_NAME, version: PRODUCT_VERSION });
 
   // FR-7b: markdown navigation (definition/references/rename over wiki-links) is
@@ -47,7 +60,17 @@ export async function boot(opts: BootOptions): Promise<{
   // through Claude Code's built-in `LSP` tool — NOT a custom in-MCP bridge. This
   // server keeps only the spec-DOMAIN graph tools (trace / coverage / honesty /
   // conformance + the graph-edge `find_refs` the LSP has no concept of).
-  for (const tool of buildToolRegistry(() => lifecycle.graph)) {
+  for (const tool of buildToolRegistry(() => lifecycle.graph, {
+    // P21-1: in a read-only door the write tools refuse with the holder named.
+    writeLockHeldBy: () =>
+      lifecycle.readOnly && lifecycle.lockHolder
+        ? {
+            pid: lifecycle.lockHolder.pid,
+            env: lifecycle.lockHolder.env,
+            started_at: lifecycle.lockHolder.started_at,
+          }
+        : null,
+  })) {
     // SDK v1 `server.tool(name, schemaShape, handler)` — accepts raw zod
     // shape (i.e. `{key: z.string()}` not `z.object({key: ...})`).
     server.tool(tool.name, tool.description, tool.inputShape, tool.handler);
