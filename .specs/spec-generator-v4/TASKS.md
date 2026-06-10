@@ -1484,12 +1484,12 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] владелец+каденция для 7 TASK_NO_REQUIREMENT / 72 ORPHAN_PROJECT_TEST / 538 FR_NO_RESEARCH / 459 UPSTREAM_UNLINKED / 1251 UNTAGGED — иначе promote-критерий P20-5 недостижим
   - [ ] первый измеримый burn-down срез (счётчики corpus-health до/после)
 
-- [ ] P21-5: door-полнота — rename/move (anchors-aware) + CAS + детерминированная FR-перекличка — id: p21-door-completeness — Status: TODO | Est: 300m
+- [ ] P21-5: door-полнота — rename/move (anchors-aware) + CAS + детерминированная FR-перекличка — id: p21-door-completeness — Status: IN_PROGRESS | Est: 300m
   _depends: p21-multisession-door_
   _Requirements: [FR-40](FR.md#fr-40)_
   **Done When:**
   - [ ] rename/move дока через дверь с учётом inbound markdown-якорей чужих спек ЛИБО осознанный отказ Decision-блоком
-  - [ ] optimistic-CAS (`expected_sha`) на apply_spec_change против last-write-wins
+  - [x] optimistic-CAS (`expected_sha`) на apply_spec_change против last-write-wins — read_spec_doc отдаёт `sha`; apply с `expected_sha` рефьюзит CAS_MISMATCH (+actual_sha) если дока изменилась чужой сессией (хазард P21-1), при свежем sha пишет и возвращает новый sha для цепочки правок; opt-out без поля. docSha+casCheck (mutations.ts). BDD SPECGEN004_153 (@FR-40, реальный read→stale→CAS_MISMATCH→rebase→ok) + unit mutations-cas; live-доказано (дверь вернула sha)
   - [ ] `fr-census` мини-CLI поверх графа (meta-урок: LLM-перекличка дала false-green по FR-43)
 
 - [x] P21-6: хук-перепись незавершённых задач (честный, не по галочкам) — id: p21-task-census-hook — Status: DONE | Est: 120m

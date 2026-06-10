@@ -1069,6 +1069,12 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When the agent reads it by section, by line window, and whole
     Then each paging mode returns the right slice with total_lines metadata
 
+  @FR-40
+  Scenario: SPECGEN004_153 optimistic CAS refuses a stale write and the rebased write lands
+    Given a spec doc read with its content sha
+    When the agent applies with the fresh sha, then the stale sha, then the rebased sha
+    Then only the up-to-date write lands and the stale one is refused CAS_MISMATCH
+
   @FR-39
   Scenario: SPECGEN004_151 the inline skip-spec-access marker lets one Bash spec read through under enforce
     Given the spec-access-guard inline escape under enforce

@@ -47676,6 +47676,7 @@ import { fileURLToPath } from "node:url";
 import fs15 from "node:fs";
 import os from "node:os";
 import path11 from "node:path";
+import crypto2 from "node:crypto";
 
 // tools/anchor-integrity/check.mjs
 import fs13 from "node:fs";
@@ -48073,6 +48074,16 @@ function normalizeContainedDoc(doc) {
   if (!rel || rel.includes("\0") || /^[A-Za-z]:/.test(rel)) return null;
   if (rel.split("/").some((s) => s === "" || s === "." || s === "..")) return null;
   return rel;
+}
+function docSha(content) {
+  return crypto2.createHash("sha256").update(content, "utf8").digest("hex");
+}
+function casCheck(repoRoot, slug, doc, expectedSha) {
+  const rel = normalizeContainedDoc(doc);
+  const abs = rel === null ? null : path11.join(repoRoot, ".specs", slug, rel);
+  const current = abs && fs15.existsSync(abs) ? fs15.readFileSync(abs, "utf-8") : null;
+  const actualSha = current === null ? null : docSha(current);
+  return actualSha === expectedSha ? { ok: true } : { ok: false, actualSha };
 }
 function applyChange2(current, change) {
   if ("content" in change) return { ok: true, next: change.content };
@@ -48943,6 +48954,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
       const lines = full.split(/\r?\n/);
       const totalLines = lines.length;
       const totalBytes = full.length;
+      const sha = docSha(full);
       if (section !== void 0) {
         const sel = sliceSection(lines, String(section));
         if (!sel) {
@@ -48971,6 +48983,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
           total_lines: totalLines,
           total_bytes: totalBytes,
           bytes: content.length,
+          sha,
           content
         });
       }
@@ -48989,6 +49002,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
             total_bytes: totalBytes,
             truncated: false,
             next_offset: null,
+            sha,
             content: "",
             note: "offset is past end of file"
           });
@@ -49010,11 +49024,12 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
           truncated,
           next_offset: truncated ? endIdx + 1 : null,
           bytes: content.length,
+          sha,
           content
         });
       }
       logSpecAccess("read_spec_doc", args, "ok");
-      return asJsonResult({ ok: true, spec: slug, doc: rel, bytes: totalBytes, total_lines: totalLines, total_bytes: totalBytes, content: full });
+      return asJsonResult({ ok: true, spec: slug, doc: rel, bytes: totalBytes, total_lines: totalLines, total_bytes: totalBytes, sha, content: full });
     }
   });
   tools.push({
@@ -49058,6 +49073,9 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
     old_string: external_exports.string().optional(),
     new_string: external_exports.string().optional(),
     replace_all: external_exports.boolean().optional(),
+    /** P21-5 optimistic CAS: the `sha` from your read_spec_doc. apply refuses
+     *  with CAS_MISMATCH if the doc changed since (another session). Omit to opt out. */
+    expected_sha: external_exports.string().optional(),
     reason: external_exports.string()
   };
   const toChange = (a) => {
@@ -49095,7 +49113,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
   });
   tools.push({
     name: "apply_spec_change",
-    description: "FR-40 \xAB\u0436\u0438\u0432\u043E\u0439 \u0433\u0435\u043D\u0435\u0440\u0430\u0442\u043E\u0440\xBB: apply a spec mutation THROUGH the server. The change is validated BEFORE touching disk (form contracts + anchors + conformance); any error-severity finding \u2192 refusal with the findings list (fix and retry). A clean change is written atomically and audited. Inside the MCP server the FR-14 watcher refreshes the graph; the next read sees the fresh state.",
+    description: "FR-40 \xAB\u0436\u0438\u0432\u043E\u0439 \u0433\u0435\u043D\u0435\u0440\u0430\u0442\u043E\u0440\xBB: apply a spec mutation THROUGH the server. The change is validated BEFORE touching disk (form contracts + anchors + conformance); any error-severity finding \u2192 refusal with the findings list (fix and retry). A clean change is written atomically and audited. Inside the MCP server the FR-14 watcher refreshes the graph; the next read sees the fresh state. P21-5 optimistic CAS: pass expected_sha (the sha from read_spec_doc) to make the write conditional \u2014 CAS_MISMATCH if another session changed the doc; the reply returns the new sha for chaining edits.",
     inputShape: CHANGE_SHAPE,
     handler: async (args) => {
       const ro = readOnlyRefusal("apply_spec_change", args);
@@ -49111,6 +49129,22 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
         logSpecAccess("apply_spec_change", args, "error");
         return asJsonResult({ ok: false, error: "BAD_CHANGE", hint: "Pass {content} or {old_string,new_string}." });
       }
+      const expectedSha = typeof args.expected_sha === "string" ? args.expected_sha : null;
+      if (expectedSha !== null) {
+        const cas = casCheck(process.cwd(), slug, doc, expectedSha);
+        if (!cas.ok) {
+          logSpecAccess("apply_spec_change", args, "denied");
+          return asJsonResult({
+            ok: false,
+            error: "CAS_MISMATCH",
+            spec: slug,
+            doc,
+            expected_sha: expectedSha,
+            actual_sha: cas.actualSha,
+            hint: "The doc changed since you read it (another session?). Re-read with read_spec_doc for the fresh sha, rebase your change, and retry."
+          });
+        }
+      }
       const r = validateSpecChange(process.cwd(), slug, doc, change);
       if (!r.ok) {
         logSpecAccess("apply_spec_change", args, "denied");
@@ -49119,7 +49153,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
       const abs = writeDocAtomic(process.cwd(), slug, doc, r.next);
       registryOpts.refreshGraph?.();
       logSpecAccess("apply_spec_change", args, "ok");
-      return asJsonResult({ ok: true, spec: slug, doc, path: abs, bytes: r.next.length, findings: [] });
+      return asJsonResult({ ok: true, spec: slug, doc, path: abs, bytes: r.next.length, sha: docSha(r.next), findings: [] });
     }
   });
   tools.push({

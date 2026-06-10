@@ -26,6 +26,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { checkLinks } from '../anchor-integrity/check.mjs';
 import { buildGraph } from '../spec-graph/builder.ts';
 import { checkConformance } from '../spec-graph/conformance.ts';
@@ -132,6 +133,33 @@ export function normalizeContainedDoc(doc: string): string | null {
   if (!rel || rel.includes('\0') || /^[A-Za-z]:/.test(rel)) return null;
   if (rel.split('/').some((s) => s === '' || s === '.' || s === '..')) return null;
   return rel;
+}
+
+/** P21-5 CAS: sha256 of a doc's content — the optimistic-concurrency token. The
+ *  agent gets it from read_spec_doc and passes it back as `expected_sha`. */
+export function docSha(content: string): string {
+  return crypto.createHash('sha256').update(content, 'utf8').digest('hex');
+}
+
+/**
+ * P21-5 optimistic CAS: refuse a write whose `expectedSha` no longer matches the
+ * doc on disk — i.e. another session changed it since the caller read it (the
+ * last-write-wins hazard the multi-session door, P21-1, surfaced). Returns ok
+ * when the doc is byte-identical to what the caller saw; otherwise the actual
+ * sha (null = doc absent) so the caller re-reads and retries. A missing
+ * `expectedSha` opts OUT (back-compat — unconditional write).
+ */
+export function casCheck(
+  repoRoot: string,
+  slug: string,
+  doc: string,
+  expectedSha: string,
+): { ok: true } | { ok: false; actualSha: string | null } {
+  const rel = normalizeContainedDoc(doc);
+  const abs = rel === null ? null : path.join(repoRoot, '.specs', slug, rel);
+  const current = abs && fs.existsSync(abs) ? fs.readFileSync(abs, 'utf-8') : null;
+  const actualSha = current === null ? null : docSha(current);
+  return actualSha === expectedSha ? { ok: true } : { ok: false, actualSha };
 }
 
 /** Apply the FR-40a change shape to current content (in memory, never disk). */

@@ -717,3 +717,36 @@ Then('each paging mode returns the right slice with total_lines metadata', funct
   assert.equal(this.pgMiss!.ok, false);
   assert.equal(this.pgMiss!.error, 'SECTION_NOT_FOUND');
 });
+
+// ── SPECGEN004_153 — P21-5 optimistic CAS on apply_spec_change ───────────────
+// Binds the REAL door: read_spec_doc returns a content sha; apply with the fresh
+// sha lands (and returns the NEW sha); apply with the now-stale sha is refused
+// CAS_MISMATCH (reporting the actual sha); re-reading + retrying lands. A subdir
+// doc isolates CAS from the form/anchor/conformance gates.
+interface CasWorld extends F40World {
+  casSha?: string;
+  casFresh?: { ok: boolean; sha?: string };
+  casStale?: { ok: boolean; error?: string; actual_sha?: string };
+  casRebased?: { ok: boolean };
+}
+Given('a spec doc read with its content sha', async function (this: CasWorld) {
+  const dir = path.join(this.tempDir, '.specs', 'cas-demo', 'notes');
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'x.md'), 'hello\n');
+  const read = await inCorpus(this, () => callTool(this, 'read_spec_doc', { spec: 'cas-demo', doc: 'notes/x.md' }));
+  this.casSha = read.sha;
+});
+When('the agent applies with the fresh sha, then the stale sha, then the rebased sha', async function (this: CasWorld) {
+  this.casFresh = await inCorpus(this, () => callTool(this, 'apply_spec_change', { spec: 'cas-demo', doc: 'notes/x.md', content: 'hello2\n', expected_sha: this.casSha, reason: 'cas fresh' }));
+  this.casStale = await inCorpus(this, () => callTool(this, 'apply_spec_change', { spec: 'cas-demo', doc: 'notes/x.md', content: 'hello3\n', expected_sha: this.casSha, reason: 'cas stale' }));
+  this.casRebased = await inCorpus(this, () => callTool(this, 'apply_spec_change', { spec: 'cas-demo', doc: 'notes/x.md', content: 'hello3\n', expected_sha: this.casFresh!.sha, reason: 'cas rebased' }));
+});
+Then('only the up-to-date write lands and the stale one is refused CAS_MISMATCH', function (this: CasWorld) {
+  assert.match(this.casSha ?? '', /^[0-9a-f]{64}$/, 'read_spec_doc must return a content sha');
+  assert.equal(this.casFresh!.ok, true, 'a fresh-sha write must land');
+  assert.ok(this.casFresh!.sha && this.casFresh!.sha !== this.casSha, 'apply returns the NEW sha for chaining edits');
+  assert.equal(this.casStale!.ok, false, 'a stale-sha write must be refused');
+  assert.equal(this.casStale!.error, 'CAS_MISMATCH');
+  assert.equal(this.casStale!.actual_sha, this.casFresh!.sha, 'the refusal reports the actual current sha');
+  assert.equal(this.casRebased!.ok, true, 're-reading the fresh sha and retrying must succeed');
+});

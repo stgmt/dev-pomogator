@@ -41,7 +41,7 @@ import path from 'node:path';
 import { logSpecAccess } from './spec-access-log.ts';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { validateSpecChange, writeDocAtomic, isSafeSlug, resolveSpecDoc, type SpecChange } from './mutations.ts';
+import { validateSpecChange, writeDocAtomic, isSafeSlug, resolveSpecDoc, docSha, casCheck, type SpecChange } from './mutations.ts';
 import type {
   SpecGraph,
   Node,
@@ -1105,6 +1105,9 @@ export function buildToolRegistry(
       const lines = full.split(/\r?\n/);
       const totalLines = lines.length;
       const totalBytes = full.length;
+      // P21-5: whole-doc CAS token — pass it back as apply_spec_change({expected_sha})
+      // to make the write conditional (refuses if another session changed the doc).
+      const sha = docSha(full);
 
       // P21-2 (a): section mode — one heading block out of a big doc.
       if (section !== undefined) {
@@ -1122,7 +1125,7 @@ export function buildToolRegistry(
         return asJsonResult({
           ok: true, spec: slug, doc: rel, section: sel.heading,
           start_line: sel.startLine, end_line: sel.endLine, lines: sel.lines.length,
-          total_lines: totalLines, total_bytes: totalBytes, bytes: content.length, content,
+          total_lines: totalLines, total_bytes: totalBytes, bytes: content.length, sha, content,
         });
       }
 
@@ -1134,7 +1137,7 @@ export function buildToolRegistry(
           return asJsonResult({
             ok: true, spec: slug, doc: rel, start_line: startIdx + 1, end_line: startIdx + 1,
             lines: 0, total_lines: totalLines, total_bytes: totalBytes, truncated: false,
-            next_offset: null, content: '', note: 'offset is past end of file',
+            next_offset: null, sha, content: '', note: 'offset is past end of file',
           });
         }
         const endIdx = limit !== undefined ? Math.min(startIdx + limit, totalLines) : totalLines;
@@ -1145,13 +1148,13 @@ export function buildToolRegistry(
         return asJsonResult({
           ok: true, spec: slug, doc: rel, start_line: startIdx + 1, end_line: endIdx,
           lines: slice.length, total_lines: totalLines, total_bytes: totalBytes,
-          truncated, next_offset: truncated ? endIdx + 1 : null, bytes: content.length, content,
+          truncated, next_offset: truncated ? endIdx + 1 : null, bytes: content.length, sha, content,
         });
       }
 
       // Default: whole doc (back-compat) + size metadata so the agent can decide to page.
       logSpecAccess('read_spec_doc', args, 'ok');
-      return asJsonResult({ ok: true, spec: slug, doc: rel, bytes: totalBytes, total_lines: totalLines, total_bytes: totalBytes, content: full });
+      return asJsonResult({ ok: true, spec: slug, doc: rel, bytes: totalBytes, total_lines: totalLines, total_bytes: totalBytes, sha, content: full });
     },
   });
 
@@ -1197,6 +1200,9 @@ export function buildToolRegistry(
     old_string: z.string().optional(),
     new_string: z.string().optional(),
     replace_all: z.boolean().optional(),
+    /** P21-5 optimistic CAS: the `sha` from your read_spec_doc. apply refuses
+     *  with CAS_MISMATCH if the doc changed since (another session). Omit to opt out. */
+    expected_sha: z.string().optional(),
     reason: z.string(),
   } as const satisfies z.ZodRawShape;
   const toChange = (a: Record<string, unknown>): SpecChange | null | 'ambiguous' => {
@@ -1252,7 +1258,9 @@ export function buildToolRegistry(
       'is validated BEFORE touching disk (form contracts + anchors + conformance); any ' +
       'error-severity finding → refusal with the findings list (fix and retry). A clean ' +
       'change is written atomically and audited. Inside the MCP server the FR-14 watcher ' +
-      'refreshes the graph; the next read sees the fresh state.',
+      'refreshes the graph; the next read sees the fresh state. P21-5 optimistic CAS: pass ' +
+      'expected_sha (the sha from read_spec_doc) to make the write conditional — CAS_MISMATCH ' +
+      'if another session changed the doc; the reply returns the new sha for chaining edits.',
     inputShape: CHANGE_SHAPE,
     handler: async (args) => {
       const ro = readOnlyRefusal('apply_spec_change', args);
@@ -1268,6 +1276,19 @@ export function buildToolRegistry(
         logSpecAccess('apply_spec_change', args, 'error');
         return asJsonResult({ ok: false, error: 'BAD_CHANGE', hint: 'Pass {content} or {old_string,new_string}.' });
       }
+      // P21-5 optimistic CAS — refuse a write against a stale read (another session
+      // changed the doc since `expected_sha` was taken). Opt-in: omitted → unconditional.
+      const expectedSha = typeof args.expected_sha === 'string' ? args.expected_sha : null;
+      if (expectedSha !== null) {
+        const cas = casCheck(process.cwd(), slug, doc, expectedSha);
+        if (!cas.ok) {
+          logSpecAccess('apply_spec_change', args, 'denied');
+          return asJsonResult({
+            ok: false, error: 'CAS_MISMATCH', spec: slug, doc, expected_sha: expectedSha, actual_sha: cas.actualSha,
+            hint: 'The doc changed since you read it (another session?). Re-read with read_spec_doc for the fresh sha, rebase your change, and retry.',
+          });
+        }
+      }
       const r = validateSpecChange(process.cwd(), slug, doc, change);
       if (!r.ok) {
         logSpecAccess('apply_spec_change', args, 'denied');
@@ -1276,7 +1297,7 @@ export function buildToolRegistry(
       const abs = writeDocAtomic(process.cwd(), slug, doc, r.next!);
       registryOpts.refreshGraph?.();
       logSpecAccess('apply_spec_change', args, 'ok');
-      return asJsonResult({ ok: true, spec: slug, doc, path: abs, bytes: r.next!.length, findings: [] });
+      return asJsonResult({ ok: true, spec: slug, doc, path: abs, bytes: r.next!.length, sha: docSha(r.next!), findings: [] });
     },
   });
 
