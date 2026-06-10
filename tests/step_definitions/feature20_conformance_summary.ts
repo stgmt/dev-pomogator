@@ -12,7 +12,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { V4World } from '../hooks/before-after.ts';
-import { buildConformanceSummary } from '../../tools/specs-validator/conformance-summary.ts';
+import { buildConformanceSummary, buildTaskCensusLine } from '../../tools/specs-validator/conformance-summary.ts';
+import { runPush } from '../../tools/spec-conformance-push/spec-conformance-push.ts';
 
 const REPO_ROOT = path.resolve(import.meta.dirname ?? __dirname, '..', '..');
 const ACK_CLI = path.join(REPO_ROOT, 'tools', 'specs-validator', 'ack-summary.ts');
@@ -85,4 +86,45 @@ Then('the prompt-time summary is silent until a newer deny arrives', function (t
   const line = summary(this);
   assert.ok(line, 'a NEW deny after the ack must re-trigger');
   assert.match(line!, /1 unresolved DENY/);
+});
+
+// ── SPECGEN004_152 — P21-4 task census: producer → cache → banner end-to-end ──
+// Binds the REAL chain: runPush (the spec-conformance-push producer) builds the
+// graph + writes .task-census.json; buildTaskCensusLine (the per-prompt banner)
+// reads ONLY that cache and surfaces the open-task count. Proves the wiring the
+// user asked for ("a hook that shows which tasks aren't finished").
+interface CensusWorld extends V4World {
+  censusLine?: string | null;
+  censusCacheExists?: boolean;
+}
+Given('a spec corpus with one open task and one done task', function (this: CensusWorld) {
+  const dir = path.join(this.tempDir, '.specs', 'census-demo');
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(
+    path.join(dir, 'TASKS.md'),
+    [
+      '# Tasks',
+      '',
+      '- [ ] Open demo task — id: census-open — Status: TODO | Est: 30m',
+      '  **Done When:**',
+      '  - [ ] do the thing',
+      '',
+      '- [x] Done demo task — id: census-done — Status: DONE | Est: 30m',
+      '  **Done When:**',
+      '  - [x] did the thing',
+      '',
+    ].join('\n'),
+  );
+});
+When('the conformance-push producer runs over it', function (this: CensusWorld) {
+  // The REAL producer: builds the graph (with ndjson) and writes the cache.
+  runPush(this.tempDir, path.join(this.tempDir, '.specs', 'census-demo', 'TASKS.md'), Date.now());
+  this.censusCacheExists = fs.existsSync(path.join(this.tempDir, '.dev-pomogator', '.task-census.json'));
+  this.censusLine = buildTaskCensusLine(this.tempDir);
+});
+Then('the banner surfaces the open task count from the cached census', function (this: CensusWorld) {
+  assert.ok(this.censusCacheExists, 'producer must write .task-census.json');
+  assert.ok(this.censusLine, 'banner must emit a census line when a task is open');
+  assert.match(this.censusLine!, /^📋 Spec tasks: \d+ task\(s\) open \(of \d+; census /);
+  assert.match(this.censusLine!, /run \/spec-status/);
 });

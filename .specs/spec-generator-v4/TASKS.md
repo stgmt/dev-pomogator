@@ -1491,3 +1491,11 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] rename/move дока через дверь с учётом inbound markdown-якорей чужих спек ЛИБО осознанный отказ Decision-блоком
   - [ ] optimistic-CAS (`expected_sha`) на apply_spec_change против last-write-wins
   - [ ] `fr-census` мини-CLI поверх графа (meta-урок: LLM-перекличка дала false-green по FR-43)
+
+- [x] P21-6: хук-перепись незавершённых задач (честный, не по галочкам) — id: p21-task-census-hook — Status: DONE | Est: 120m
+  _depends: p17-enforce_
+  _Requirements: [FR-20](FR.md#fr-20)_
+  **Done When:**
+  - [x] `tools/spec-graph/task-census.ts`: computeTaskCensus(graph) → {open, doneButRed} — open = todo/in-progress/blocked (admitted not-done), doneButRed = DONE-задача с ≥1 hard-negative сценарием (failed/undefined/ambiguous; **not_run исключён** → переживает filtered-cucumber poison). Переиспользует mapTasksToScenarios+bucketScenarios (не расходится с get_coverage)
+  - [x] продьюсер spec-conformance-push пишет `.dev-pomogator/.task-census.json` (build С ndjson — doneButRed нужны результаты; conformance-build остаётся skipNdjson); консюмер conformance-summary.buildTaskCensusLine читает ТОЛЬКО кэш (граф на UserPromptSubmit НЕ строится — NFR-Performance-6); validate-specs печатает строку
+  - [x] BDD SPECGEN004_152 (@feature20, реальный runPush→cache→banner) + unit task-census.test (failed flagged / not_run excluded / passed+no-scen not flagged / cache round-trip) + banner-контракт buildTaskCensusLine; advisor-reconcile: not_run-исключение вместо verified_status (иначе filtered run false-flag-ит все DONE). ЖИВОЙ: строка `📋 Spec tasks: 29 task(s) open` уже висит в баннере

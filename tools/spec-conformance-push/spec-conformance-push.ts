@@ -32,6 +32,7 @@ import { pathToFileURL } from 'node:url';
 import { buildGraph } from '../spec-graph/builder.ts';
 import { checkConformance, type Finding } from '../spec-graph/conformance.ts';
 import { appendFindings } from '../spec-check-log/writer.ts';
+import { computeTaskCensus, writeTaskCensusCache } from '../spec-graph/task-census.ts';
 
 interface HookInput {
   tool_name?: string;
@@ -181,6 +182,18 @@ export function runPush(
   const optedOut = !!(changedFile && isOptedOut(changedFile, repoRoot));
   const graph = buildGraph({ repoRoot, skipNdjson: true });
   const newFindings = checkConformance(graph);
+
+  // P21-4: snapshot the honest task census. doneButRed needs scenario RESULTS,
+  // so this build includes ndjson (the conformance build above stays skipNdjson —
+  // its findings are result-free by design). Edit-triggered + 3s-throttled, so a
+  // second ~50-150ms build is fine; the per-prompt banner reads ONLY the tiny
+  // cache, never the graph (NFR-Performance-6). Best-effort: soft tier.
+  try {
+    const censusGraph = buildGraph({ repoRoot });
+    writeTaskCensusCache(repoRoot, computeTaskCensus(censusGraph), new Date(now).toISOString());
+  } catch {
+    // Cache write unavailable → banner just stays silent; never block the hook.
+  }
 
   // FR-15 wire-up: every finding the hook sees gets persisted to the
   // side-channel JSONL log, even if the throttle window decides to stay

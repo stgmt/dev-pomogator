@@ -874,6 +874,12 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When the spec-status ack stamps the state file
     Then the prompt-time summary is silent until a newer deny arrives
 
+  @feature20
+  Scenario: SPECGEN004_152 the task census surfaces unfinished tasks in the prompt banner
+    Given a spec corpus with one open task and one done task
+    When the conformance-push producer runs over it
+    Then the banner surfaces the open task count from the cached census
+
   @feature36
   Scenario: SPECGEN004_110 parser slices merge through one ingest path with first-writer-wins identity
     Given two markdown files in one spec defining the same FR id

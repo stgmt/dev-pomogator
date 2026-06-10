@@ -22,11 +22,13 @@ import os from 'node:os';
 import path from 'node:path';
 import {
   buildConformanceSummary,
+  buildTaskCensusLine,
   countHardDenySince,
   readAck,
   writeAckAtomic,
 } from '../conformance-summary.ts';
 import { composeEntry } from '../../spec-check-log/writer.ts';
+import { writeTaskCensusCache } from '../../spec-graph/task-census.ts';
 
 const ACK_CLI = path.resolve(__dirname, '..', 'ack-summary.ts');
 
@@ -72,6 +74,26 @@ beforeEach(() => {
 
 afterAll(() => {
   // best-effort: leaf temp dirs die with the OS tmp cleaner anyway
+});
+
+describe('P21-4 task-census banner line (buildTaskCensusLine)', () => {
+  it('emits a line when the cached census has open tasks', () => {
+    writeTaskCensusCache(repoRoot, { total: 154, open: 29, doneButRed: 0, openIds: [], doneButRedIds: [] }, '2026-06-10T00:00:00Z');
+    const line = buildTaskCensusLine(repoRoot)!;
+    expect(line).toMatch(/^📋 Spec tasks: 29 task\(s\) open \(of 154; census 2026-06-10/);
+    expect(line).not.toMatch(/marked-DONE-but-RED/); // doneButRed=0 → omitted
+  });
+
+  it('calls out marked-DONE-but-RED when present', () => {
+    writeTaskCensusCache(repoRoot, { total: 154, open: 5, doneButRed: 2, openIds: [], doneButRedIds: [] }, '2026-06-10T00:00:00Z');
+    expect(buildTaskCensusLine(repoRoot)!).toMatch(/5 task\(s\) open, 2 marked-DONE-but-RED/);
+  });
+
+  it('is silent when nothing is unfinished (open=0, doneButRed=0) or cache absent', () => {
+    expect(buildTaskCensusLine(repoRoot)).toBeNull(); // no cache
+    writeTaskCensusCache(repoRoot, { total: 100, open: 0, doneButRed: 0, openIds: [], doneButRedIds: [] }, '2026-06-10T00:00:00Z');
+    expect(buildTaskCensusLine(repoRoot)).toBeNull(); // all finished → zero-noise
+  });
 });
 
 describe('FR-20 threshold-only summary + ack (T-Trans.2)', () => {

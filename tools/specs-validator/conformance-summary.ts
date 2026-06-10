@@ -25,6 +25,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { readRecentEvents } from './audit-logger.ts';
+import { readTaskCensusCache } from '../spec-graph/task-census.ts';
 
 export interface AckState {
   ack_timestamp: string;
@@ -133,4 +134,22 @@ export function buildConformanceSummary(paths: SummaryPaths = {}): string | null
   if (unresolved === 0) return null; // zero-noise default
   const sinceLabel = ack ? `since last ack ${ack.ack_timestamp}` : 'since the last 24h (never acked)';
   return `📊 Spec conformance: ${unresolved} unresolved DENY ${sinceLabel} — run /spec-status for the full aggregate, which also acknowledges them`;
+}
+
+/**
+ * P21-4 task-census line: surfaces UNFINISHED work from the cached census
+ * (written by spec-conformance-push while the graph was hot — this reads ONLY
+ * the tiny JSON, never builds the graph, per NFR-Performance-6). Honest by
+ * construction: `open` = author-admitted not-done, `done-without-tests` = the
+ * honesty-gate's "claimed done, zero scenarios" — NOT a self-reported checkbox
+ * count. Returns null (silent) when the cache is absent or shows zero open and
+ * zero done-without-tests.
+ */
+export function buildTaskCensusLine(repoRoot = process.cwd()): string | null {
+  const c = readTaskCensusCache(repoRoot);
+  if (!c) return null;
+  if (c.open === 0 && c.doneButRed === 0) return null; // nothing unfinished → silent
+  const parts = [`${c.open} task(s) open`];
+  if (c.doneButRed > 0) parts.push(`${c.doneButRed} marked-DONE-but-RED`);
+  return `📋 Spec tasks: ${parts.join(', ')} (of ${c.total}; census ${c.ts}) — run /spec-status for the per-task breakdown`;
 }

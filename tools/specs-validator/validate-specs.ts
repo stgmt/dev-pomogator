@@ -22,7 +22,7 @@ import { matchTags, matchTestFeature } from './matcher.ts';
 import { flushWarnings, generateReport, printWarnings } from './reporter.ts';
 import { parseTestFile, findTestFile } from './parsers/test-parser.ts';
 import { rotateLog } from './audit-logger.ts';
-import { buildConformanceSummary } from './conformance-summary.ts';
+import { buildConformanceSummary, buildTaskCensusLine } from './conformance-summary.ts';
 import {
   PHASE_FILES,
   PHASE_ORDER,
@@ -331,6 +331,10 @@ function renderFormGuardsSummary(): void {
     rotateLog();
     const line = buildConformanceSummary();
     if (line) console.log(line);
+    // P21-4: surface unfinished tasks from the cached census (graph-only, written
+    // by spec-conformance-push). Reads a tiny JSON — never builds the graph here.
+    const census = buildTaskCensusLine();
+    if (census) console.log(census);
   } catch {
     // fail-silent — audit log is non-critical
   }

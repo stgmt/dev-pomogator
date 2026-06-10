@@ -12317,7 +12317,7 @@ var require_src2 = __commonJS({
 });
 
 // tools/spec-conformance-push/spec-conformance-push.ts
-import fs9 from "node:fs";
+import fs10 from "node:fs";
 
 // tools/_shared/stdin.ts
 async function readStdin() {
@@ -12331,7 +12331,7 @@ async function readStdinJson() {
 }
 
 // tools/spec-conformance-push/spec-conformance-push.ts
-import path6 from "node:path";
+import path7 from "node:path";
 import { pathToFileURL } from "node:url";
 
 // tools/spec-graph/builder.ts
@@ -14508,40 +14508,97 @@ function appendFindings(findings, opts) {
   return findings.map((f) => appendFinding(f, opts));
 }
 
+// tools/spec-graph/task-census.ts
+import fs9 from "node:fs";
+import path6 from "node:path";
+var CAP = 25;
+function computeTaskCensus(graph, spec) {
+  const scenarios = [];
+  const tasks = [];
+  const taskNodes = [];
+  for (const node of graph.nodes.values()) {
+    const nodeSpec = specOf(node.file);
+    if (spec && nodeSpec !== spec) continue;
+    if (node.type === "Scenario") {
+      const s = node;
+      scenarios.push({ id: s.id, tags: s.tags, result: s.lastResult, spec: nodeSpec });
+    } else if (node.type === "Task") {
+      const t = node;
+      tasks.push({ id: t.id, doneWhen: t.doneWhen ?? "", refs: t.refs, spec: nodeSpec });
+      taskNodes.push(t);
+    }
+  }
+  const map = mapTasksToScenarios(tasks, scenarios);
+  const buckets = bucketScenarios(scenarios);
+  const bucketById = /* @__PURE__ */ new Map();
+  for (const b of Object.keys(buckets)) for (const id of buckets[b]) bucketById.set(id, b);
+  const HARD_NEGATIVE = /* @__PURE__ */ new Set(["failed", "undefined", "ambiguous"]);
+  const openIds = [];
+  const doneButRedIds = [];
+  for (const t of taskNodes) {
+    if (t.status === "todo" || t.status === "in-progress" || t.status === "blocked") {
+      openIds.push(t.id);
+    } else if (t.status === "done") {
+      const sids = map.get(t.id) ?? [];
+      if (sids.some((id) => HARD_NEGATIVE.has(bucketById.get(id) ?? "not_run"))) {
+        doneButRedIds.push(t.id);
+      }
+    }
+  }
+  return {
+    total: taskNodes.length,
+    open: openIds.length,
+    doneButRed: doneButRedIds.length,
+    openIds: openIds.slice(0, CAP),
+    doneButRedIds: doneButRedIds.slice(0, CAP)
+  };
+}
+var CACHE_REL = path6.join(".dev-pomogator", ".task-census.json");
+function taskCensusCachePath(repoRoot) {
+  return path6.join(repoRoot, CACHE_REL);
+}
+function writeTaskCensusCache(repoRoot, census, ts) {
+  const file = taskCensusCachePath(repoRoot);
+  fs9.mkdirSync(path6.dirname(file), { recursive: true });
+  const tmp = `${file}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`;
+  fs9.writeFileSync(tmp, JSON.stringify({ ...census, ts }, null, 2) + "\n", "utf-8");
+  fs9.renameSync(tmp, file);
+}
+
 // tools/spec-conformance-push/spec-conformance-push.ts
 var WINDOW_MS = 3e3;
 var STATE_PATH_REL = ".dev-pomogator/.push-throttle-state.json";
 function statePath(repoRoot) {
-  return path6.join(repoRoot, STATE_PATH_REL);
+  return path7.join(repoRoot, STATE_PATH_REL);
 }
 function readState(repoRoot) {
   const p = statePath(repoRoot);
-  if (!fs9.existsSync(p)) return null;
+  if (!fs10.existsSync(p)) return null;
   try {
-    return JSON.parse(fs9.readFileSync(p, "utf8"));
+    return JSON.parse(fs10.readFileSync(p, "utf8"));
   } catch {
     return null;
   }
 }
 function writeState(repoRoot, state) {
   const p = statePath(repoRoot);
-  fs9.mkdirSync(path6.dirname(p), { recursive: true });
+  fs10.mkdirSync(path7.dirname(p), { recursive: true });
   const tmp = `${p}.tmp.${process.pid}`;
-  fs9.writeFileSync(tmp, JSON.stringify(state, null, 2));
-  fs9.renameSync(tmp, p);
+  fs10.writeFileSync(tmp, JSON.stringify(state, null, 2));
+  fs10.renameSync(tmp, p);
 }
 function clearState(repoRoot) {
   const p = statePath(repoRoot);
   try {
-    fs9.unlinkSync(p);
+    fs10.unlinkSync(p);
   } catch {
   }
 }
 function isOptedOut(filePath, repoRoot) {
-  const abs = path6.isAbsolute(filePath) ? filePath : path6.join(repoRoot, filePath);
-  if (!fs9.existsSync(abs)) return false;
+  const abs = path7.isAbsolute(filePath) ? filePath : path7.join(repoRoot, filePath);
+  if (!fs10.existsSync(abs)) return false;
   try {
-    const head = fs9.readFileSync(abs, "utf8").slice(0, 512);
+    const head = fs10.readFileSync(abs, "utf8").slice(0, 512);
     if (/^_no_push_check:\s*true/m.test(head)) return true;
     if (/^#\s*_no_push_check:\s*true/m.test(head)) return true;
   } catch {
@@ -14604,6 +14661,11 @@ function runPush(repoRoot, changedFile, now, options = {}) {
   const optedOut = !!(changedFile && isOptedOut(changedFile, repoRoot));
   const graph = buildGraph({ repoRoot, skipNdjson: true });
   const newFindings = checkConformance(graph);
+  try {
+    const censusGraph = buildGraph({ repoRoot });
+    writeTaskCensusCache(repoRoot, computeTaskCensus(censusGraph), new Date(now).toISOString());
+  } catch {
+  }
   if (newFindings.length > 0) {
     try {
       appendFindings(newFindings, {
