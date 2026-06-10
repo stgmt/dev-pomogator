@@ -1,13 +1,13 @@
 ---
 name: pomogator-doctor
 description: |
-  Diagnostic tool для dev-pomogator plugin: проверяет 18 environment aspects (Node/Git/Bun/Python/MCP servers/hooks registry/env vars/Claude Code version match/native statusLine) и предлагает fix actions (incl. установка нативного statusLine ccstatusline по подтверждению). Use при подозрениях на broken plugin install, missing dependencies, stale hooks, или когда команды plugin behave unexpectedly. Triggers (Russian): "проверь окружение", "доктор", "диагностика помогатора", "почему не работает плагин". Triggers (English): "check environment", "doctor", "plugin diagnostics", "verify install". Output: severity-coded report (🟢 self-sufficient, 🟡 needs env vars, 🔴 needs external deps) с actionable hints. Можно invoke через slash-command `/pomogator-doctor` (also distributed via plugin) или напрямую как skill.
+  Diagnostic tool для dev-pomogator plugin: проверяет 17 environment aspects (Node/Git/Bun/Python/MCP servers/hooks registry/env vars/Claude Code version match/native statusLine/statusline widgets repo+cwd) и предлагает fix actions (incl. установка нативного statusLine ccstatusline и добавление repo/cwd виджетов по подтверждению). Use при подозрениях на broken plugin install, missing dependencies, stale hooks, или когда команды plugin behave unexpectedly. Triggers (Russian): "проверь окружение", "доктор", "диагностика помогатора", "почему не работает плагин". Triggers (English): "check environment", "doctor", "plugin diagnostics", "verify install". Output: severity-coded report (🟢 self-sufficient, 🟡 needs env vars, 🔴 needs external deps) с actionable hints. Можно invoke через slash-command `/pomogator-doctor` (also distributed via plugin) или напрямую как skill.
 allowed-tools: Read, Bash, Glob, Grep, AskUserQuestion
 ---
 
 # pomogator-doctor — Environment diagnostic
 
-Skill проверяет 17 environment aspects required для dev-pomogator plugin функционирования. Использует self-contained TypeScript engine в `scripts/engine/` для checks; hook вариант в `scripts/doctor-hook.ts` runs at SessionStart events.
+Skill проверяет 17 environment aspects (17 CheckDefinitions в `checks/index.ts`) required для dev-pomogator plugin функционирования. Использует self-contained TypeScript engine в `scripts/engine/` для checks; hook вариант в `scripts/doctor-hook.ts` runs at SessionStart events.
 
 ## Когда invoke
 
@@ -37,6 +37,8 @@ Skill проверяет 17 environment aspects required для dev-pomogator pl
    ```
 
    Это пишет `statusLine.command = npx -y ccstatusline@latest` в `~/.claude/settings.json` немедленно (текущая сессия), идемпотентно, не перетирая чужую кастомную строку. Сама строка отрисуется со следующего старта сессии (settings читаются до хуков). Opt-out: `DEV_POMOGATOR_STATUSLINE=off`. Домен NATIVE statusLine ≠ прогресс тестов (compact_bar.py).
+
+7. **Statusline widgets fix-action (id `C-NSW`, FR-11):** если результат `Statusline widgets (repo + cwd)` имеет severity `warning` (конфиг ccstatusline отсутствует или стоковый — на баре нет имени репо и cwd) → предложить через `AskUserQuestion` («Добавить repo + cwd на statusline сейчас?» / «Не надо»). При согласии — выполнить тот же `apply-statusline.ts` (см. выше): он дополнительно сидит/обогащает `~/.config/ccstatusline/settings.json` виджетами `git-root-dir` + `current-working-dir`. Кастомные layouts никогда не трогаются (check репортит для них `ok`).
 
 ## Engine structure (scripts/engine/)
 

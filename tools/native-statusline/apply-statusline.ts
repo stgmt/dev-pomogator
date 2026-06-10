@@ -11,12 +11,16 @@
  * Prints the WriteResult as JSON. Exit 0 always (fail-open).
  */
 
+import { writeCcstatuslineWidgets } from './ccstatusline-widgets.ts';
 import { writeNativeStatusLine } from './reconcile-statusline.ts';
 
 function main(): void {
   try {
     const result = writeNativeStatusLine();
-    process.stdout.write(`${JSON.stringify(result)}\n`);
+    // Repair path (FR-11): explicit user action — also enrich a stock-shaped
+    // ccstatusline widget config that lacks repo/cwd. Custom layouts untouched.
+    const widgets = writeCcstatuslineWidgets({ enrichExisting: true });
+    process.stdout.write(`${JSON.stringify({ ...result, widgets })}\n`);
   } catch (err) {
     process.stderr.write(`[native-statusline] apply error: ${err}\n`);
     process.stdout.write(`${JSON.stringify({ changed: false, action: 'keep-user' })}\n`);

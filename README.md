@@ -38,13 +38,44 @@ Canonical Claude Code marketplace plugin — командные стандарт
 
 После canonical install Claude Code copies plugin к `~/.claude/plugins/cache/stgmt/dev-pomogator/<version>/`:
 
-- **Skills** (19): `/dev-pomogator:create-spec`, `/dev-pomogator:run-tests`, `/dev-pomogator:plan-pomogator`, `/dev-pomogator:pomogator-doctor`, `/dev-pomogator:research-workflow` и др. — invokable через `Skill` tool или slash command
+- **Skills** (47): `/dev-pomogator:create-spec`, `/dev-pomogator:run-tests`, `/dev-pomogator:plan-pomogator`, `/dev-pomogator:pomogator-doctor`, `/dev-pomogator:research-workflow` и др. — invokable через `Skill` tool или slash command
 - **Commands**: `/reflect`, `/simplify`, `/pomogator-doctor` — slash commands из plugin
-- **Hooks** (25): SessionStart, Stop, PreToolUse, PostToolUse, UserPromptSubmit — declared в `.claude-plugin/hooks.json` plugin manifest
+- **Hooks** (37 записей): SessionStart, Stop, PreToolUse, PostToolUse, UserPromptSubmit — declared в `.claude-plugin/hooks.json` plugin manifest
 - **MCP servers**: настраиваются плагином через `.mcp.json`
 - **Rules**: `.claude/rules/` content для context loading
+- **Native statusline**: см. секцию ниже — подключается автоматически SessionStart-хуком
 
 `enabledPlugins` declaration автоматически добавляется в `~/.claude/settings.json` соответствующего scope.
+
+> 📍 **Карта всех встроенных инструментов и связей между ними**: [docs/COMPONENTS.md](docs/COMPONENTS.md) —
+> dev-pomogator это одна система (один плагин), внутри которой инструменты связаны контурами:
+> спеки → валидация → согласованность, тесты → мониторинг → качество, statusline ↔ doctor и т.д.
+
+## Native statusline (repo + cwd + ветка)
+
+Часть плагина (не отдельный plugin): SessionStart-хук `tools/native-statusline/` при первом
+запуске сессии подключает [ccstatusline](https://github.com/sirmalloc/ccstatusline) как
+основной statusline Claude Code и, если конфига виджетов ещё нет, создаёт
+`~/.config/ccstatusline/settings.json` с 3-строчным столбиком (одна строка обрезается по
+ширине терминала и съедает хвост):
+
+```
+Model: Opus 4.8 | Ctx: 232.0k
+dev-pomogator | cwd: ~\dev-pomogator
+⎇ feat/my-branch | (+555,-59)
+```
+
+Правила безопасности:
+
+- Кастомный `statusLine.command` пользователя **никогда не перезаписывается** (keep-user).
+- Существующий конфиг виджетов хук **не мутирует** — починка «слетевшего» конфига только
+  через `/pomogator-doctor` (check `C-NSW`) с явным подтверждением; кастомные раскладки
+  виджетов доктор тоже не трогает.
+- Opt-out целиком: `DEV_POMOGATOR_STATUSLINE=off`.
+- Бар отрисовывается со следующей сессии (settings читаются до хуков); немедленно — через
+  fix-action доктора.
+
+Спека: `.specs/native-statusline/` (FR-1…FR-11).
 
 ## Skills overview
 
@@ -206,7 +237,7 @@ Flags:
 
 `/pomogator-doctor` slash command или skill invocation проверяет 17 environment aspects:
 
-- 🟢 **Self-sufficient**: Node, Git, plugin cache structure, hooks registry, version match
+- 🟢 **Self-sufficient**: Node, Git, plugin cache structure, hooks registry, version match, native statusline (`C-NSL` команда + `C-NSW` виджеты repo/cwd)
 - 🟡 **Needs env vars**: `AUTO_COMMIT_API_KEY` и др. (ищет в `.env` + `.claude/settings.local.json → env`)
 - 🔴 **Needs external deps**: Bun, Python + packages, Docker, MCP servers
 

@@ -14,6 +14,7 @@ import { pluginLoaderCheck } from './plugin-loader.js';
 import { pomogatorHomeCheck } from './pomogator-home.js';
 import { pythonCheck } from './python.js';
 import { statuslineCheck } from './statusline.js';
+import { statuslineWidgetsCheck } from './statusline-widgets.js';
 import { versionMatchCheck } from './version-match.js';
 
 export const phase2Checks: CheckDefinition[] = [
@@ -27,6 +28,7 @@ export const phase2Checks: CheckDefinition[] = [
   gitignoreBlockCheck,
   claudeBinPriorityCheck,
   statuslineCheck,
+  statuslineWidgetsCheck,
 ];
 
 export const phase3Checks: CheckDefinition[] = [bunCheck, pythonCheck, dockerCheck];
@@ -55,5 +57,6 @@ export {
   pomogatorHomeCheck,
   pythonCheck,
   statuslineCheck,
+  statuslineWidgetsCheck,
   versionMatchCheck,
 };

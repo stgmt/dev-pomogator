@@ -80,3 +80,56 @@ Feature: NSL001_Native_Statusline_Auto_Install
     Then the check severity is "ok"
     And a HOME with a custom non-ccstatusline statusLine also reports "ok" (preserved)
     And a HOME with corrupt settings.json reports "warning" (unreadable, not verified)
+
+  # @feature6
+  Scenario: NSL001_12 hook seeds a missing ccstatusline widget config with repo and cwd
+    Given ~/.config/ccstatusline/settings.json does not exist
+    When the native-statusline hook runs
+    Then a widget config is created as a 3-line column whose line 1 contains "git-root-dir" and "current-working-dir"
+
+  # @feature6
+  Scenario: NSL001_13 hook never mutates an existing widget config (install-only)
+    Given a stock-default ccstatusline widget config without repo and cwd widgets
+    When the native-statusline hook runs
+    Then the widget config file is byte-for-byte unchanged
+
+  # @feature7
+  Scenario: NSL001_14 doctor fix-action enriches a stock-default widget config
+    Given a stock-default ccstatusline widget config mirroring the real producer output
+    When the apply-statusline fix-action runs
+    Then the layout is normalized to a 3-line column with "git-root-dir" and "current-working-dir" on their own line (a single line truncates at terminal width)
+    And the original stock widgets and all other config fields are preserved
+
+  # @feature7
+  Scenario: NSL001_15 a customized widget layout is never enriched
+    Given a ccstatusline widget config containing a non-stock widget type
+    When the apply-statusline fix-action runs
+    Then the widget config file is byte-for-byte unchanged
+
+  # @feature7
+  Scenario: NSL001_16 widget enrichment is idempotent
+    Given a widget config already containing repo and cwd widgets
+    When the apply-statusline fix-action runs again
+    Then no write occurs and the action is "noop"
+
+  # @feature8
+  Scenario: NSL001_17 doctor detects a stock widget config missing repo and cwd
+    Given ccstatusline is the configured statusLine
+    And the widget config is stock-default without repo and cwd widgets
+    When the statusline-widgets check executes
+    Then the check severity is "warning" naming the missing widget types
+    And after the apply-statusline fix-action the check reports "ok"
+
+  # @feature8
+  Scenario: NSL001_18 widgets check defers to the statusline check and respects custom layouts
+    Given a HOME without any statusLine configured
+    When the statusline-widgets check executes
+    Then the check severity is "ok" (not applicable — C-NSL's domain)
+    And a HOME with a customized widget layout missing repo/cwd also reports "ok" (left untouched)
+  # @feature7
+  Scenario: NSL001_19 a previous dev-pomogator single-line layout migrates to the column
+    Given a widget config in the previous dev-pomogator revision (our widgets tail-appended to the stock single line)
+    When the apply-statusline fix-action runs
+    Then the layout is normalized to the canonical 3-line column with repo and cwd on their own line
+    And all other config fields are preserved
+

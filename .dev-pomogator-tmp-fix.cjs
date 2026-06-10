@@ -1,0 +1,14 @@
+const fs=require('fs');
+const p='tools/spec-mcp-server/tools.ts';
+let raw=fs.readFileSync(p,'utf8');const crlf=raw.includes('\r\n');
+let s=crlf?raw.replace(/\r\n/g,'\n'):raw;
+const BAD="const slug = String(spec).replace(/\/g, '/').replace(/^.?/?.specs//, '').replace(//+$/, '');";
+const GOOD="const slug = String(spec).replace(/\\/g, '/').replace(/^\.?\/?\.specs\//, '').replace(/\/+$/, '');";
+if(s.split(BAD).length!==3)throw new Error('expected exactly 2 occurrences, got '+(s.split(BAD).length-1));
+s=s.split(BAD).join(GOOD);
+const BADOK="const okName = /.(md|feature)$/.test(name) || name === '.progress.json';";
+const GOODOK="const okName = /\.(md|feature)$/.test(name) || name === '.progress.json';";
+if(!s.includes(BADOK))throw new Error('okName NF');
+s=s.replace(BADOK,GOODOK);
+fs.writeFileSync(p,crlf?s.replace(/\n/g,'\r\n'):s);
+console.log('regex fixed');

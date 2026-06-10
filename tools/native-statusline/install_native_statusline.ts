@@ -22,6 +22,7 @@
  */
 
 import { log as _logShared } from '../_shared/hook-utils.ts';
+import { writeCcstatuslineWidgets } from './ccstatusline-widgets.ts';
 import { writeNativeStatusLine } from './reconcile-statusline.ts';
 
 const LOG_PREFIX = 'NATIVE-STATUSLINE';
@@ -54,11 +55,27 @@ async function main(): Promise<void> {
     const result = writeNativeStatusLine();
     log('INFO', `reconcile action=${result.action} changed=${result.changed}`);
 
-    if (result.changed) {
+    // Install path (FR-11): seed the ccstatusline WIDGET config (repo + cwd
+    // widgets) ONLY when the file is missing — existing configs are never
+    // mutated by the hook (repair of a degraded config = doctor fix-action).
+    const widgets = writeCcstatuslineWidgets({ enrichExisting: false });
+    log('INFO', `widgets action=${widgets.action} changed=${widgets.changed}`);
+
+    if (result.changed || widgets.changed) {
+      const parts: string[] = [];
+      if (result.changed) {
+        parts.push(
+          'native statusline (ccstatusline) подключён в ~/.claude/settings.json — строка появится со следующей сессии',
+        );
+      }
+      if (widgets.changed) {
+        parts.push(
+          'виджеты statusline (repo + cwd) настроены в ~/.config/ccstatusline/settings.json',
+        );
+      }
       process.stdout.write(
         JSON.stringify({
-          systemMessage:
-            'dev-pomogator: native statusline (ccstatusline) подключён в ~/.claude/settings.json — строка появится со следующей сессии. Отключить: DEV_POMOGATOR_STATUSLINE=off.',
+          systemMessage: `dev-pomogator: ${parts.join('; ')}. Отключить: DEV_POMOGATOR_STATUSLINE=off.`,
         }),
       );
       return;

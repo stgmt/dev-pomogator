@@ -34,7 +34,19 @@
       "Read(//c/Users/stigm/.local/share/claude/versions/**)",
       "Read(//c/Users/stigm/AppData/Local/claude/**)",
       "Bash(ls:*)",
-      "Bash(where claude:*)"
+      "Bash(where claude:*)",
+      "Bash(git fetch *)",
+      "Bash(git switch *)",
+      "Bash(git pull *)",
+      "PowerShell(Get-ChildItem *)",
+      "Bash(wsl.exe -e docker info)",
+      "Bash(echo \"docker info exit: $?\")",
+      "Bash(wsl.exe -e docker ps)",
+      "Bash(node tools/test-statusline/test_runner_wrapper.cjs --framework generic -- node --import tsx node_modules/@cucumber/cucumber/bin/cucumber.js)",
+      "Bash(tee .dev-pomogator/.bg-logs/full-bdd-p195d.log)"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "dev-pomogator-specs"
+  ]
 }
