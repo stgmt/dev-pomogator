@@ -49,8 +49,8 @@ describe('startLifecycle', () => {
       const cachePath = path.join(root, '.dev-pomogator', '.task-census.json');
       expect(fs.existsSync(cachePath)).toBe(true);
       const c = JSON.parse(fs.readFileSync(cachePath, 'utf-8'));
-      expect(c.open).toBeGreaterThanOrEqual(1);
-      expect(c.doneButRed).toBe(0); // not_run-excluded → safe even on a skipNdjson build
+      expect(c.total.open).toBeGreaterThanOrEqual(1);
+      expect(c.total.doneRed).toBe(0); // not_run-excluded → safe even on a skipNdjson build
       expect(typeof c.ts).toBe('string');
     } finally {
       await handle.shutdown();

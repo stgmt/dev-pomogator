@@ -125,6 +125,8 @@ When('the conformance-push producer runs over it', function (this: CensusWorld) 
 Then('the banner surfaces the open task count from the cached census', function (this: CensusWorld) {
   assert.ok(this.censusCacheExists, 'producer must write .task-census.json');
   assert.ok(this.censusLine, 'banner must emit a census line when a task is open');
-  assert.match(this.censusLine!, /^📋 Spec tasks: \d+ task\(s\) open \(of \d+; census /);
+  // P21-6 per-spec format: header with totals + a per-spec line for census-demo.
+  assert.match(this.censusLine!, /^📋 Spec tasks \(census .+\): \d+ open/);
   assert.match(this.censusLine!, /run \/spec-status/);
+  assert.match(this.censusLine!, /\n {3}census-demo: \d+ open/);
 });

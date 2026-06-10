@@ -46990,58 +46990,89 @@ function startWatching(graph, opts) {
 // tools/spec-graph/task-census.ts
 import fs9 from "node:fs";
 import path6 from "node:path";
-var CAP = 25;
-function computeTaskCensus(graph, spec) {
+var HARD_NEGATIVE = /* @__PURE__ */ new Set(["failed", "undefined", "ambiguous"]);
+function computeTaskCensus(graph) {
   const scenarios = [];
   const tasks = [];
-  const taskNodes = [];
+  const taskEntries = [];
   for (const node of graph.nodes.values()) {
     const nodeSpec = specOf(node.file);
-    if (spec && nodeSpec !== spec) continue;
     if (node.type === "Scenario") {
       const s = node;
       scenarios.push({ id: s.id, tags: s.tags, result: s.lastResult, spec: nodeSpec });
     } else if (node.type === "Task") {
       const t = node;
       tasks.push({ id: t.id, doneWhen: t.doneWhen ?? "", refs: t.refs, spec: nodeSpec });
-      taskNodes.push(t);
+      taskEntries.push({ node: t, slug: nodeSpec ?? "(no-spec)" });
     }
   }
   const map2 = mapTasksToScenarios(tasks, scenarios);
   const buckets = bucketScenarios(scenarios);
   const bucketById = /* @__PURE__ */ new Map();
   for (const b of Object.keys(buckets)) for (const id of buckets[b]) bucketById.set(id, b);
-  const HARD_NEGATIVE = /* @__PURE__ */ new Set(["failed", "undefined", "ambiguous"]);
-  const openIds = [];
-  const doneButRedIds = [];
-  for (const t of taskNodes) {
+  const per = /* @__PURE__ */ new Map();
+  const row = (slug) => {
+    let r = per.get(slug);
+    if (!r) {
+      r = { slug, open: 0, doneRed: 0, doneUnrun: 0 };
+      per.set(slug, r);
+    }
+    return r;
+  };
+  for (const { node: t, slug } of taskEntries) {
     if (t.status === "todo" || t.status === "in-progress" || t.status === "blocked") {
-      openIds.push(t.id);
+      row(slug).open++;
     } else if (t.status === "done") {
       const sids = map2.get(t.id) ?? [];
-      if (sids.some((id) => HARD_NEGATIVE.has(bucketById.get(id) ?? "not_run"))) {
-        doneButRedIds.push(t.id);
-      }
+      const hasRed = sids.some((id) => HARD_NEGATIVE.has(bucketById.get(id) ?? "not_run"));
+      const allPassed = sids.length > 0 && sids.every((id) => bucketById.get(id) === "passed");
+      if (hasRed) row(slug).doneRed++;
+      else if (!allPassed) row(slug).doneUnrun++;
     }
   }
-  return {
-    total: taskNodes.length,
-    open: openIds.length,
-    doneButRed: doneButRedIds.length,
-    openIds: openIds.slice(0, CAP),
-    doneButRedIds: doneButRedIds.slice(0, CAP)
-  };
+  const specs = [...per.values()].filter((s) => s.open + s.doneRed + s.doneUnrun > 0).sort((a, b) => b.open + b.doneRed + b.doneUnrun - (a.open + a.doneRed + a.doneUnrun));
+  const total = specs.reduce(
+    (acc, s) => ({ open: acc.open + s.open, doneRed: acc.doneRed + s.doneRed, doneUnrun: acc.doneUnrun + s.doneUnrun }),
+    { open: 0, doneRed: 0, doneUnrun: 0 }
+  );
+  return { total, specs };
 }
 var CACHE_REL = path6.join(".dev-pomogator", ".task-census.json");
+var PREV_REL = path6.join(".dev-pomogator", ".task-census.prev.json");
 function taskCensusCachePath(repoRoot) {
   return path6.join(repoRoot, CACHE_REL);
+}
+function taskCensusPrevPath(repoRoot) {
+  return path6.join(repoRoot, PREV_REL);
 }
 function writeTaskCensusCache(repoRoot, census, ts) {
   const file2 = taskCensusCachePath(repoRoot);
   fs9.mkdirSync(path6.dirname(file2), { recursive: true });
+  try {
+    const cur = readTaskCensusCache(repoRoot);
+    if (cur && sumTotal(cur) !== sumTotal(census)) {
+      fs9.copyFileSync(file2, taskCensusPrevPath(repoRoot));
+    }
+  } catch {
+  }
   const tmp = `${file2}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`;
   fs9.writeFileSync(tmp, JSON.stringify({ ...census, ts }, null, 2) + "\n", "utf-8");
   fs9.renameSync(tmp, file2);
+}
+function sumTotal(c) {
+  return c.total.open + c.total.doneRed + c.total.doneUnrun;
+}
+function readCacheFile(p) {
+  try {
+    const parsed = JSON.parse(fs9.readFileSync(p, "utf-8"));
+    if (!parsed?.total || typeof parsed.total.open !== "number") return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+function readTaskCensusCache(repoRoot) {
+  return readCacheFile(taskCensusCachePath(repoRoot));
 }
 
 // tools/spec-mcp-server/lock-manager.ts

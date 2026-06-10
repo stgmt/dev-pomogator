@@ -1,39 +1,39 @@
 /**
- * P21-4 honest task census — the "what is NOT finished" signal, graph-only.
+ * P21-6 honest task census — PER-SPEC "what is NOT finished", graph-only.
  *
  * Motivated by a real challenge (2026-06-10): "I don't believe all tasks are
- * done, and there's no hook that surfaces the unfinished ones." A naive counter
- * that greps `Status: TODO` / `- [ ]` would just reprint the SELF-REPORTED state
- * the user distrusts — and trust every `- [x]` blindly. This module instead
- * derives TWO signals that don't rely on the checkbox being honest:
+ * done, there's no hook for the unfinished ones, and it must cover ALL specs."
+ * A checkbox counter would just reprint the self-reported state. This derives
+ * three signals that don't trust the `- [x]`, PER SPEC:
  *
- *   - open       — tasks whose status is todo/in-progress/blocked. The author
- *                  ADMITS these aren't done; surfacing them is honest reporting.
- *   - doneButRed — tasks marked DONE that have ≥1 mapped scenario in a HARD-
- *                  NEGATIVE bucket (failed/undefined/ambiguous). This answers the
- *                  part the user led with — "я не верю что все ВЫПОЛНЕНЫ" — the
- *                  lie a bare checkbox count hides. It DELIBERATELY excludes
- *                  `not_run`: a filtered/stale cucumber run turns a scenario into
- *                  `not_run`, NEVER `failed` (the "partial cucumber poisons
- *                  NDJSON" hazard), so doneButRed survives a stale run instead of
- *                  false-flagging every done task. 0 today = a working smoke
- *                  detector, not a dead signal. The `not_run` "can't-verify" set
- *                  (marksman / legacy-v3) is real but ndjson-sensitive and stays
- *                  in /spec-status — out of the per-prompt banner.
+ *   - open       — status todo/in-progress/blocked (author-admitted not-done).
+ *   - doneRed    — status DONE but ≥1 mapped scenario in a HARD-NEGATIVE bucket
+ *                  (failed/undefined/ambiguous). `not_run` is EXCLUDED so a
+ *                  filtered/stale cucumber run can't false-flag (the "partial
+ *                  cucumber poisons NDJSON" hazard) — a stale run turns a
+ *                  scenario into not_run, never failed.
+ *   - doneUnrun  — status DONE but NOT all scenarios passed and NOT red, i.e.
+ *                  ≥1 not_run OR no scenario at all → "claimed done, can't
+ *                  confirm". This is the "не запускался — тоже писать" signal:
+ *                  surfaced, not hidden.
  *
- * It reuses {@link mapTasksToScenarios} + {@link bucketScenarios} + {@link specOf}
- * — the SAME mapping/bucketing get_coverage uses — so the census never diverges
- * from the authoritative verdict.
+ * Only the STRICT task format (parsed into Task nodes by the graph) is tracked;
+ * loose-checkbox specs contribute nothing (a deliberate scope decision — they
+ * get reworked to the strict format, not silently half-counted).
  *
- * Produced on each spec edit by tools/spec-conformance-push (which already
- * cold-builds the graph for conformance; the census build adds ndjson so
- * scenario results are populated — `doneButRed` needs them), cached to
- * `.dev-pomogator/.task-census.json`, and read by the per-prompt banner
- * (tools/specs-validator/conformance-summary) — so the SpecGraph is NEVER built
- * on the hot UserPromptSubmit path (NFR-Performance-6).
+ * GRAPH-ONLY (no NDJSON dependency for correctness): doneRed needs results but
+ * excludes not_run, so it is right even on a skipNdjson build (→ 0). Reuses
+ * mapTasksToScenarios + bucketScenarios + specOf — the SAME machinery
+ * get_coverage uses — so the census never diverges from the verdict.
  *
- * @see ./coverage.ts (mapTasksToScenarios / specOf — single source of truth)
- * @see tools/spec-conformance-push/spec-conformance-push.ts (producer)
+ * Produced on every on-disk spec change by the MCP server's watcher (lifecycle,
+ * the enforce-mode path) AND by spec-conformance-push (raw Write|Edit), cached
+ * to `.dev-pomogator/.task-census.json` (+ `.prev` rotation for the history
+ * line); read by the per-prompt banner — the graph is NEVER built on the hot
+ * UserPromptSubmit path (NFR-Performance-6).
+ *
+ * @see ./coverage.ts (mapTasksToScenarios / bucketScenarios / specOf)
+ * @see tools/spec-mcp-server/lifecycle.ts + tools/spec-conformance-push (producers)
  * @see tools/specs-validator/conformance-summary.ts (consumer — the banner)
  */
 import fs from 'node:fs';
@@ -48,70 +48,74 @@ import {
   type TaskLike,
 } from './coverage.ts';
 
-export interface TaskCensus {
-  /** Total Task nodes considered. */
-  total: number;
-  /** Count of tasks with status todo/in-progress/blocked (admitted not-done). */
+/** Per-spec unfinished-work counts. */
+export interface SpecCensus {
+  slug: string;
   open: number;
-  /** Count of DONE tasks with ≥1 hard-negative scenario (failed/undefined/ambiguous; not_run excluded). */
-  doneButRed: number;
-  /** First {@link CAP} open task ids — enough to act, bounded for the cache. */
-  openIds: string[];
-  /** First {@link CAP} done-but-red task ids. */
-  doneButRedIds: string[];
+  doneRed: number;
+  doneUnrun: number;
 }
 
-/** Cap id arrays so the cached JSON stays small even on a huge corpus. */
-const CAP = 25;
+export interface TaskCensus {
+  /** Corpus totals across every tracked spec. */
+  total: { open: number; doneRed: number; doneUnrun: number };
+  /** Specs WITH unfinished work, sorted by (open+doneRed+doneUnrun) desc. */
+  specs: SpecCensus[];
+}
+
+const HARD_NEGATIVE = new Set<Bucket>(['failed', 'undefined', 'ambiguous']);
 
 /**
- * Compute the honest census over a built graph. `spec` (optional) scopes to one
- * spec slug; omitted → whole corpus (every `.specs/<slug>/`). Pure — the caller
- * stamps a timestamp and writes the cache.
+ * Compute the per-spec honest census over a built graph. Pure — the caller
+ * stamps the timestamp and writes the cache.
  */
-export function computeTaskCensus(graph: SpecGraph, spec?: string): TaskCensus {
+export function computeTaskCensus(graph: SpecGraph): TaskCensus {
   const scenarios: ScenarioLike[] = [];
   const tasks: TaskLike[] = [];
-  const taskNodes: TaskNode[] = [];
+  const taskEntries: Array<{ node: TaskNode; slug: string }> = [];
   for (const node of graph.nodes.values()) {
     const nodeSpec = specOf((node as { file: string }).file);
-    if (spec && nodeSpec !== spec) continue;
     if (node.type === 'Scenario') {
       const s = node as ScenarioNode;
       scenarios.push({ id: s.id, tags: s.tags, result: s.lastResult, spec: nodeSpec });
     } else if (node.type === 'Task') {
       const t = node as TaskNode;
       tasks.push({ id: t.id, doneWhen: t.doneWhen ?? '', refs: t.refs, spec: nodeSpec });
-      taskNodes.push(t);
+      taskEntries.push({ node: t, slug: nodeSpec ?? '(no-spec)' });
     }
   }
   const map = mapTasksToScenarios(tasks, scenarios);
   const buckets = bucketScenarios(scenarios);
   const bucketById = new Map<string, Bucket>();
   for (const b of Object.keys(buckets) as Bucket[]) for (const id of buckets[b]) bucketById.set(id, b);
-  // Hard-negative = a REAL bad result; `not_run` (absent from the last run) is
-  // EXCLUDED so a filtered/stale cucumber run can't false-flag a done task.
-  const HARD_NEGATIVE = new Set<Bucket>(['failed', 'undefined', 'ambiguous']);
 
-  const openIds: string[] = [];
-  const doneButRedIds: string[] = [];
-  for (const t of taskNodes) {
+  const per = new Map<string, SpecCensus>();
+  const row = (slug: string): SpecCensus => {
+    let r = per.get(slug);
+    if (!r) { r = { slug, open: 0, doneRed: 0, doneUnrun: 0 }; per.set(slug, r); }
+    return r;
+  };
+  for (const { node: t, slug } of taskEntries) {
     if (t.status === 'todo' || t.status === 'in-progress' || t.status === 'blocked') {
-      openIds.push(t.id);
+      row(slug).open++;
     } else if (t.status === 'done') {
       const sids = map.get(t.id) ?? [];
-      if (sids.some((id) => HARD_NEGATIVE.has(bucketById.get(id) ?? 'not_run'))) {
-        doneButRedIds.push(t.id);
-      }
+      const hasRed = sids.some((id) => HARD_NEGATIVE.has(bucketById.get(id) ?? 'not_run'));
+      const allPassed = sids.length > 0 && sids.every((id) => bucketById.get(id) === 'passed');
+      if (hasRed) row(slug).doneRed++;
+      else if (!allPassed) row(slug).doneUnrun++; // ≥1 not_run OR no scenario → can't confirm
+      // allPassed → genuinely confirmed → not surfaced
     }
   }
-  return {
-    total: taskNodes.length,
-    open: openIds.length,
-    doneButRed: doneButRedIds.length,
-    openIds: openIds.slice(0, CAP),
-    doneButRedIds: doneButRedIds.slice(0, CAP),
-  };
+
+  const specs = [...per.values()]
+    .filter((s) => s.open + s.doneRed + s.doneUnrun > 0)
+    .sort((a, b) => (b.open + b.doneRed + b.doneUnrun) - (a.open + a.doneRed + a.doneUnrun));
+  const total = specs.reduce(
+    (acc, s) => ({ open: acc.open + s.open, doneRed: acc.doneRed + s.doneRed, doneUnrun: acc.doneUnrun + s.doneUnrun }),
+    { open: 0, doneRed: 0, doneUnrun: 0 },
+  );
+  return { total, specs };
 }
 
 /** On-disk cache the producer writes and the per-prompt banner reads. */
@@ -121,31 +125,58 @@ export interface TaskCensusCache extends TaskCensus {
 }
 
 const CACHE_REL = path.join('.dev-pomogator', '.task-census.json');
+const PREV_REL = path.join('.dev-pomogator', '.task-census.prev.json');
 
 export function taskCensusCachePath(repoRoot: string): string {
   return path.join(repoRoot, CACHE_REL);
 }
+export function taskCensusPrevPath(repoRoot: string): string {
+  return path.join(repoRoot, PREV_REL);
+}
 
 /**
- * Atomically persist the census (temp + rename, per atomic-config-save). Called
- * by the producer that already built the graph. Best-effort — a soft-tier hook
- * must never crash on a cache write.
+ * Atomically persist the census (temp + rename, per atomic-config-save), AND
+ * rotate the current cache into `.prev` first so the banner can show a
+ * было→стало history line. Best-effort — never crash a soft-tier hook.
  */
 export function writeTaskCensusCache(repoRoot: string, census: TaskCensus, ts: string): void {
   const file = taskCensusCachePath(repoRoot);
   fs.mkdirSync(path.dirname(file), { recursive: true });
+  // Rotate current → prev (only when the totals actually changed, so a no-op
+  // rebuild doesn't erase a meaningful previous snapshot).
+  try {
+    const cur = readTaskCensusCache(repoRoot);
+    if (cur && sumTotal(cur) !== sumTotal(census)) {
+      fs.copyFileSync(file, taskCensusPrevPath(repoRoot));
+    }
+  } catch {
+    /* no prior cache / unreadable — first write, no prev */
+  }
   const tmp = `${file}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`;
   fs.writeFileSync(tmp, JSON.stringify({ ...census, ts } satisfies TaskCensusCache, null, 2) + '\n', 'utf-8');
   fs.renameSync(tmp, file);
 }
 
-/** Read the cached census. Returns null on missing / torn / malformed (banner stays silent). */
-export function readTaskCensusCache(repoRoot: string): TaskCensusCache | null {
+/** Sum of all unfinished counts — the single number the history line compares. */
+export function sumTotal(c: TaskCensus): number {
+  return c.total.open + c.total.doneRed + c.total.doneUnrun;
+}
+
+function readCacheFile(p: string): TaskCensusCache | null {
   try {
-    const parsed = JSON.parse(fs.readFileSync(taskCensusCachePath(repoRoot), 'utf-8'));
-    if (typeof parsed?.open !== 'number' || typeof parsed?.doneButRed !== 'number') return null;
+    const parsed = JSON.parse(fs.readFileSync(p, 'utf-8'));
+    if (!parsed?.total || typeof parsed.total.open !== 'number') return null;
     return parsed as TaskCensusCache;
   } catch {
     return null;
   }
+}
+
+/** Read the current cached census. Null on missing / torn / malformed. */
+export function readTaskCensusCache(repoRoot: string): TaskCensusCache | null {
+  return readCacheFile(taskCensusCachePath(repoRoot));
+}
+/** Read the previous snapshot (for the было→стало line). Null if none. */
+export function readTaskCensusPrev(repoRoot: string): TaskCensusCache | null {
+  return readCacheFile(taskCensusPrevPath(repoRoot));
 }

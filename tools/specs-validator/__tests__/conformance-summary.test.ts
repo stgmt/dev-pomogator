@@ -76,23 +76,46 @@ afterAll(() => {
   // best-effort: leaf temp dirs die with the OS tmp cleaner anyway
 });
 
-describe('P21-4 task-census banner line (buildTaskCensusLine)', () => {
-  it('emits a line when the cached census has open tasks', () => {
-    writeTaskCensusCache(repoRoot, { total: 154, open: 29, doneButRed: 0, openIds: [], doneButRedIds: [] }, '2026-06-10T00:00:00Z');
+describe('P21-6 per-spec task-census banner (buildTaskCensusLine)', () => {
+  it('emits header + per-spec lines, surfacing open / 🔴 / ⏸', () => {
+    writeTaskCensusCache(
+      repoRoot,
+      {
+        total: { open: 29, doneRed: 1, doneUnrun: 3 },
+        specs: [
+          { slug: 'spec-generator-v4', open: 29, doneRed: 1, doneUnrun: 3 },
+          { slug: 'session-pilot', open: 4, doneRed: 0, doneUnrun: 0 },
+        ],
+      },
+      '2026-06-10T00:00:00Z',
+    );
     const line = buildTaskCensusLine(repoRoot)!;
-    expect(line).toMatch(/^📋 Spec tasks: 29 task\(s\) open \(of 154; census 2026-06-10/);
-    expect(line).not.toMatch(/marked-DONE-but-RED/); // doneButRed=0 → omitted
+    expect(line).toMatch(/^📋 Spec tasks \(census 2026-06-10.*\): 29 open, 1 🔴 done-but-red, 3 ⏸ done-but-not-run/);
+    expect(line).toMatch(/\n {3}spec-generator-v4: 29 open, 1🔴, 3⏸/);
+    expect(line).toMatch(/\n {3}session-pilot: 4 open/);
   });
 
-  it('calls out marked-DONE-but-RED when present', () => {
-    writeTaskCensusCache(repoRoot, { total: 154, open: 5, doneButRed: 2, openIds: [], doneButRedIds: [] }, '2026-06-10T00:00:00Z');
-    expect(buildTaskCensusLine(repoRoot)!).toMatch(/5 task\(s\) open, 2 marked-DONE-but-RED/);
+  it('shows было→стало when the total changed since the prev snapshot', () => {
+    // first write (no prev) — silent on history
+    writeTaskCensusCache(repoRoot, { total: { open: 29, doneRed: 0, doneUnrun: 0 }, specs: [{ slug: 'x', open: 29, doneRed: 0, doneUnrun: 0 }] }, 't1');
+    expect(buildTaskCensusLine(repoRoot)).not.toMatch(/было/);
+    // changed total → rotation + история line
+    writeTaskCensusCache(repoRoot, { total: { open: 31, doneRed: 0, doneUnrun: 0 }, specs: [{ slug: 'x', open: 31, doneRed: 0, doneUnrun: 0 }] }, 't2');
+    expect(buildTaskCensusLine(repoRoot)!).toMatch(/\[было 29 → стало 31, не подтверждено\]/);
   });
 
-  it('is silent when nothing is unfinished (open=0, doneButRed=0) or cache absent', () => {
+  it('caps to top-5 specs with «ещё N»', () => {
+    const specs = Array.from({ length: 8 }, (_, i) => ({ slug: `s${i}`, open: 8 - i, doneRed: 0, doneUnrun: 0 }));
+    writeTaskCensusCache(repoRoot, { total: { open: 36, doneRed: 0, doneUnrun: 0 }, specs }, 't');
+    const line = buildTaskCensusLine(repoRoot)!;
+    expect((line.match(/\n {3}s\d:/g) || []).length).toBe(5);
+    expect(line).toMatch(/…ещё 3 спек/);
+  });
+
+  it('is silent when nothing is unfinished or the cache is absent', () => {
     expect(buildTaskCensusLine(repoRoot)).toBeNull(); // no cache
-    writeTaskCensusCache(repoRoot, { total: 100, open: 0, doneButRed: 0, openIds: [], doneButRedIds: [] }, '2026-06-10T00:00:00Z');
-    expect(buildTaskCensusLine(repoRoot)).toBeNull(); // all finished → zero-noise
+    writeTaskCensusCache(repoRoot, { total: { open: 0, doneRed: 0, doneUnrun: 0 }, specs: [] }, 't');
+    expect(buildTaskCensusLine(repoRoot)).toBeNull(); // all clean → zero-noise
   });
 });
 

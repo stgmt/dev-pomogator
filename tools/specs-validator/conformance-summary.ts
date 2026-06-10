@@ -25,7 +25,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { readRecentEvents } from './audit-logger.ts';
-import { readTaskCensusCache } from '../spec-graph/task-census.ts';
+import { readTaskCensusCache, readTaskCensusPrev, sumTotal } from '../spec-graph/task-census.ts';
 
 export interface AckState {
   ack_timestamp: string;
@@ -137,19 +137,40 @@ export function buildConformanceSummary(paths: SummaryPaths = {}): string | null
 }
 
 /**
- * P21-4 task-census line: surfaces UNFINISHED work from the cached census
- * (written by spec-conformance-push while the graph was hot — this reads ONLY
- * the tiny JSON, never builds the graph, per NFR-Performance-6). Honest by
- * construction: `open` = author-admitted not-done, `done-without-tests` = the
- * honesty-gate's "claimed done, zero scenarios" — NOT a self-reported checkbox
- * count. Returns null (silent) when the cache is absent or shows zero open and
- * zero done-without-tests.
+ * P21-6 task-census banner: a PER-SPEC, multi-line view of UNFINISHED work from
+ * the cached census (written by the MCP-server watcher + spec-conformance-push
+ * while the graph was hot — this reads ONLY the tiny JSON, never builds the
+ * graph, per NFR-Performance-6). Honest by construction: `open` = author-admitted
+ * not-done, `🔴` = DONE-but-a-test-fails, `⏸` = DONE-but-can't-confirm (not_run /
+ * no scenario) — surfaced, not hidden. A было→стало history line fires when the
+ * total changed since the prev snapshot. Header + top-5 specs + «ещё N»; silent
+ * when nothing is unfinished or the cache is absent.
  */
 export function buildTaskCensusLine(repoRoot = process.cwd()): string | null {
   const c = readTaskCensusCache(repoRoot);
   if (!c) return null;
-  if (c.open === 0 && c.doneButRed === 0) return null; // nothing unfinished → silent
-  const parts = [`${c.open} task(s) open`];
-  if (c.doneButRed > 0) parts.push(`${c.doneButRed} marked-DONE-but-RED`);
-  return `📋 Spec tasks: ${parts.join(', ')} (of ${c.total}; census ${c.ts}) — run /spec-status for the per-task breakdown`;
+  if (c.total.open === 0 && c.total.doneRed === 0 && c.total.doneUnrun === 0) return null; // all clean → silent
+
+  const parts = [`${c.total.open} open`];
+  if (c.total.doneRed > 0) parts.push(`${c.total.doneRed} 🔴 done-but-red`);
+  if (c.total.doneUnrun > 0) parts.push(`${c.total.doneUnrun} ⏸ done-but-not-run`);
+  let header = `📋 Spec tasks (census ${c.ts}): ${parts.join(', ')} — run /spec-status for the per-task breakdown`;
+
+  // History: было→стало when the total moved since the previous snapshot.
+  const prev = readTaskCensusPrev(repoRoot);
+  if (prev && sumTotal(prev) !== sumTotal(c)) {
+    header += `  [было ${sumTotal(prev)} → стало ${sumTotal(c)}, не подтверждено]`;
+  }
+
+  const lines = [header];
+  const TOP = 5;
+  for (const s of c.specs.slice(0, TOP)) {
+    const p: string[] = [];
+    if (s.open) p.push(`${s.open} open`);
+    if (s.doneRed) p.push(`${s.doneRed}🔴`);
+    if (s.doneUnrun) p.push(`${s.doneUnrun}⏸`);
+    lines.push(`   ${s.slug}: ${p.join(', ')}`);
+  }
+  if (c.specs.length > TOP) lines.push(`   …ещё ${c.specs.length - TOP} спек`);
+  return lines.join('\n');
 }
