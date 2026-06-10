@@ -537,3 +537,40 @@ Then('the free doc is deleted and the referenced doc and the progress artifact a
   assert.equal(this.delProgress!.error, 'NOT_DELETABLE');
   assert.ok(fs.existsSync(path.join(dir, '.progress.json')), '.progress.json must remain on disk');
 });
+
+// ── SPECGEN004_148 — P21-2 git VCS-plumbing carve-out over .specs under enforce ──
+// Binds the REAL violationOf: committing door-written specs (add/commit/status/
+// unstage) is allowed; content-leak/worktree-rewrite git (show/diff/checkout/
+// reset --hard) and generic readers stay violations.
+interface GitCarveWorld extends F39World { blockedAllow?: string[]; leakedDeny?: string[]; }
+Given('the spec-access-guard git carve-out under enforce', function (this: GitCarveWorld) {
+  this.blockedAllow = undefined;
+});
+When('git plumbing and git content commands run over the specs tree', function (this: GitCarveWorld) {
+  const S = '.' + 'specs';
+  const denied = (command: string): boolean => violationOf({ tool_name: 'Bash', tool_input: { command } } as never) !== null;
+  const mustAllow = [
+    `git add ${S}/auth/FR.md`,
+    `git add ${S}/auth/FR.md && git commit -m "x"`,
+    `git commit -m "x"`,
+    `git status -s ${S}/auth/`,
+    `git stash push ${S}/auth/`,
+    `git restore --staged ${S}/auth/FR.md`,
+    `git rm --cached ${S}/auth/old.md`,
+  ];
+  const mustDeny = [
+    `git show HEAD:${S}/auth/FR.md`,
+    `git diff ${S}/auth/FR.md`,
+    `git checkout ${S}/auth/FR.md`,
+    `git restore ${S}/auth/FR.md`,
+    `git reset --hard ${S}/auth/`,
+    `cat ${S}/auth/FR.md`,
+    `git add ${S}/auth/FR.md && cat ${S}/auth/FR.md`,
+  ];
+  this.blockedAllow = mustAllow.filter((c) => denied(c)); // should be []
+  this.leakedDeny = mustDeny.filter((c) => !denied(c)); // should be []
+});
+Then('VCS plumbing commands are allowed and content-reading git commands stay violations', function (this: GitCarveWorld) {
+  assert.deepEqual(this.blockedAllow, [], `VCS-plumbing wrongly blocked: ${JSON.stringify(this.blockedAllow)}`);
+  assert.deepEqual(this.leakedDeny, [], `content-leak/worktree-write/reader wrongly allowed: ${JSON.stringify(this.leakedDeny)}`);
+});

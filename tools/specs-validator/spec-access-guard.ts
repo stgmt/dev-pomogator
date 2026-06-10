@@ -98,6 +98,52 @@ function isEngineToken(tok: string): boolean {
   return /\.(ts|js|mjs|cjs)$/i.test(norm) && /(^|\/)(tools|\.claude\/skills)\//.test(norm);
 }
 
+/**
+ * P21-2 git carve-out: VCS PLUMBING over `.specs/` is allowed under enforce —
+ * committing door-written spec changes is version control, NOT a spec read/write
+ * bypass. Allowed git subcommands move specs through the index/history WITHOUT
+ * revealing or rewriting content (add/commit/status/stash + unstage-only forms).
+ * DENIED: content-leak (show/diff/log/grep/blame) and worktree-rewriting forms
+ * (checkout/switch, plain restore, plain rm, reset --hard) — those ARE raw
+ * read/write of spec content and must go through the MCP door.
+ *
+ * Every pipeline segment that touches `.specs/` must itself be safe git plumbing;
+ * a single non-plumbing spec-touching segment fails the whole command.
+ */
+const GIT_PLUMBING_SAFE = new Set(['add', 'commit', 'status', 'stash']);
+const GIT_CONTENT_LEAK = new Set(['show', 'diff', 'log', 'grep', 'blame', 'cat-file', 'checkout', 'switch']);
+function isSpecVcsPlumbingOnly(rawCmd: string): boolean {
+  // Strip comments AND quoted strings FIRST — a commit message is DATA, not a
+  // command: `git commit -m "…(.specs/x)…"` must not be shredded by the segment
+  // splitter (the message's parens/slashes/`.specs/` are not shell structure).
+  const cmd = rawCmd
+    .replace(/(^|\s)#.*$/gm, '$1')
+    .replace(/"[^"]*"/g, '""')
+    .replace(/'[^']*'/g, "''");
+  const segments = cmd.split(/&&|\|\||[|;&\n()]+/).map((s) => s.trim()).filter(Boolean);
+  if (segments.length === 0) return false;
+  // EVERY pipeline segment must be safe git plumbing (we're here only because the
+  // raw command mentions `.specs/`; a single non-plumbing segment fails it).
+  for (const seg of segments) {
+    const argv = seg.replace(/[<>].*$/, '').trim().split(/\s+/).filter(Boolean);
+    let k = 0;
+    while (k < argv.length && /^[A-Za-z_]\w*=/.test(argv[k])) k++; // skip env prefixes
+    if (argv[k] !== 'git') return false; // a non-git command segment → not plumbing
+    const rest = argv.slice(k + 1);
+    const sub = rest.find((a) => !a.startsWith('-')) ?? ''; // first non-flag = subcommand
+    const flags = rest.filter((a) => a.startsWith('-')); // ALL flags, any position
+    if (GIT_CONTENT_LEAK.has(sub) || !GIT_PLUMBING_SAFE.has(sub)) {
+      // restore/rm/reset are safe ONLY in their unstage-only (no-worktree-write) forms.
+      const unstageOnly =
+        (sub === 'restore' && flags.includes('--staged')) ||
+        (sub === 'rm' && flags.includes('--cached')) ||
+        (sub === 'reset' && !flags.includes('--hard'));
+      if (!unstageOnly) return false;
+    }
+  }
+  return true;
+}
+
 function invokesEngineCli(rawCmd: string): boolean {
   const cmd = rawCmd.replace(/(^|\s)#.*$/gm, '$1'); // strip comments-to-EOL
   // Per PIPELINE SEGMENT — the engine must be in COMMAND position, never a
@@ -154,6 +200,8 @@ export function violationOf(data: PreToolUseInput): { tool: string; detail: stri
     if (!touchesSpecs(cmd)) return null;
     // FR-39f: an engine-CLI invocation is ALLOWED even with .specs/ args.
     if (invokesEngineCli(cmd)) return null;
+    // P21-2: git VCS plumbing over specs (commit door-written changes) is ALLOWED.
+    if (isSpecVcsPlumbingOnly(cmd)) return null;
     return { tool: 'Bash', detail: cmd.slice(0, 120) };
   }
   return null;

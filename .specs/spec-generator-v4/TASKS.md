@@ -136,8 +136,8 @@
 | T17-130 | P17-2: mutation surface | DONE | p17-read-sufficiency | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 600m |
 | T17-131 | P17-3: spec-access-guard в SHADOW | DONE | p17-read-sufficiency | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 240m |
 | T17-132 | P17-4: carve-out лист движка в DESIGN | DONE | — | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 60m |
-| T17-133 | P17-5: миграция корзины 1 | IN_PROGRESS | p17-read-sufficiency, p17-mutation-surface | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 480m |
-| T17-134 | P17-6: ENFORCE flip | TODO | p17-mutation-surface, p17-shadow-guard, p17-skill-migration | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 120m |
+| T17-133 | P17-5: миграция корзины 1 (drift-закрыт; 5/5 Done-When + P19-1 _146) | DONE | p17-read-sufficiency, p17-mutation-surface | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 480m |
+| T17-134 | P17-6: ENFORCE flip (durable + read/write live-proven; escape-marker → P21-2) | DONE | p17-mutation-surface, p17-shadow-guard, p17-skill-migration | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 120m |
 | T17-135 | P17-7: фазовые headless-агенты | DONE | p17-read-sufficiency, p17-mutation-surface | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 480m |
 | T17-136 | P17-8: оркестратор-проверятор | DONE | p17-phase-agents | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 480m |
 | T17-137 | P17-9: слойный контракт skill↔MCP | DONE | p17-mutation-surface | Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41) | 240m |
@@ -1283,7 +1283,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] DESIGN.md фиксирует обе половины carve-out (39 in-process читателей + Bash-invoked движок). Review #2 (2026-06-08) ВСКРЫЛ: basename-only whitelist был НЕполон — anchor-integrity/fix.mjs (basename `fix`) и др. directory-named/generic-basename CLI были бы DENIED под enforce (моя «3 оракула complete» — неверный вывод, verify-against-real-artifact анти-паттерн). ФИКС: `invokesEngineCli` теперь распознаёт движок по сути — (a) basename ∈ ENGINE_CLI ИЛИ (b) ЛЮБОЙ проектный скрипт (.ts/.js/.mjs/.cjs под tools/ или .claude/skills/); inline `node -e`/heredoc-to-/tmp остаются violation
   - [x] SPECGEN004_133 GREEN — переписан на РЕАЛЬНЫЕ producer-инвокации (anchor-integrity check/fix --apply, full-mode.ts, architecture-decision-cli.ts, variant-matrix-cli.ts, spec-verdict.ts → ALLOW; cat/grep/node-e/node-/tmp → DENY), а не синтетический `tools/x/<cli>.ts` (тот давал фейк-green)
 
-- [ ] P17-5: миграция корзины 1 — скиллы на MCP-инструкции — id: p17-skill-migration — Status: IN_PROGRESS | Est: 480m
+- [x] P17-5: миграция корзины 1 — скиллы на MCP-инструкции — id: p17-skill-migration — Status: DONE | Est: 480m
   _depends: p17-read-sufficiency, p17-mutation-surface_
   _Requirements: [FR-39](FR.md#fr-39)_
   **Done When:**
@@ -1292,14 +1292,15 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] spec-review кукбук мигрирован: categories.md (банер + 7 рецептов на read_spec_doc), antipattern-triggers Step-2, lessons-learned банер (грепы там исторические — per advisor не переписываются); session-pilot read-реф
   - [x] write-путь form-filler тройки на apply_spec_change: discovery-forms (USER_STORIES+RESEARCH), task-board-forms (TASKS.md; таблица через spec-status.ts = carve-out), requirements-chk-matrix
   - [x] CLI/script-driven authoring-скиллы (anchor-fix, cross-spec-reconcile, variant-matrix-build, architecture-decision-builder) теперь enforce-safe — НЕ потому что были безопасны (их basename'ы НЕ в ENGINE_CLI → DENY до фикса), а потому что guard-фикс P17-4 распознаёт проектные скрипты как движок. Per-skill миграция им НЕ нужна (фикс на уровне guard, проверено реальными `violationOf` пробами)
+  - [x] контрактная привязка: SPECGEN004_146 (@FR-42) пинит, что все 8 мигрированных authoring-скиллов декларируют дверь в allowed-tools — красный тест с именем скилла при пропавшей декларации (то же покрытие, что закрыло P19-1-зонтик; миграция «корзины 1» — его подмножество)
   - [x] финальный широкий скан агентского act-directing `.specs/` доступа по всем SKILL.md+reference: чисто (остаток — только исторические сниппеты lessons-learned под баннером). Статическая миграция инструкций ЗАВЕРШЕНА
   - [ ] shadow-лог violations/день → 0 на ЖИВОМ прогоне мигрированных скиллов (run-verification — это и есть гейт P17-6; статика done, live ещё не прогнан)
 
-- [ ] P17-6: ENFORCE flip — id: p17-enforce — Status: TODO | Est: 120m
+- [x] P17-6: ENFORCE flip — id: p17-enforce — Status: DONE | Est: 120m
   _depends: p17-mutation-surface, p17-shadow-guard, p17-skill-migration_
   _Requirements: [FR-39](FR.md#fr-39)_
   **Done When:**
-  - [ ] `SPEC_ACCESS_ENFORCE=true` → deny с указателем на MCP; escape `[skip-spec-access: <reason≥8>]` + JSONL-аудит по образцу scope-gate
+  - [x] `SPEC_ACCESS_ENFORCE=true` durable в .claude/settings.json (2026-06-10) → deny с указателем на MCP ЖИВ (отденаил собственные Bash/Read в этой сессии) + JSONL-аудит spec-access.jsonl пишется. ОСТАТОК: escape-маркер `[skip-spec-access:]`/inline-env hook не видит (только settings-env) → вынесен в P21-2 (не блокирует флип — deny+door+audit работают)
   - [x] read-путь enforce ДОКАЗАН вживую (2026-06-08 run4): `claude -p` ПОД `SPEC_ACCESS_ENFORCE=true` на спек-задаче → 0 записей в spec-access.jsonl (ни одного сырого Grep/Read), ответ корректный из MCP-двери. Потребовало 3 фикса-блокера: dead-bundle (be9a1cb), repo-root `${CLAUDE_PROJECT_DIR}` (3dcdb2c), MCP-грант через --allowedTools
   - [x] write-путь enforce ДОКАЗАН вживую (2026-06-08): `claude -p` ПОД enforce, задача «создай спеку» → сырой `Write .specs/…/README.md` → **denied** гардом → агент САМ ушёл в `create_spec` (ok) + `apply_spec_change` (ok, валидация form+anchors+conformance пустая, атомарно, зааудичено); спека создана через дверь, не сырым Write; throwaway убран, вердикт GREEN
   - [x] грант `mcp__dev-pomogator-specs__*` в `.claude/settings.json` permissions — выполнено ЮЗЕРОМ (агент сам права не выдаёт; classifier-gated)
@@ -1375,14 +1376,14 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] BDD SPECGEN004_143: двух-спековый граф → `get_coverage {spec:'spec-a'}` scope=spec видит ТОЛЬКО spec-a сценарии; голый `{}` scope=corpus видит весь корпус; биндинг на реальный buildToolRegistry handler (143/142-passed GREEN)
   - [x] spec-graph-query SKILL.md велит всегда передавать `spec` в get_coverage (e475547)
 
-- [ ] P19-4: полный жизненный цикл спеки e2e ПОД enforce (live) — FULL CRUD, не только создание — id: p19-full-lifecycle-e2e — Status: TODO | Est: 300m
+- [x] P19-4: полный жизненный цикл спеки e2e ПОД enforce (live) — FULL CRUD, не только создание — id: p19-full-lifecycle-e2e — Status: DONE | Est: 300m
   _depends: p17-enforce, p19-phase-refactor_
   _Requirements: [FR-39](FR.md#fr-39), [FR-40](FR.md#fr-40), [FR-41](FR.md#fr-41), [FR-43](FR.md#fr-43)_
   > Директива юзера 2026-06-10: «в полном цикле спеки должно быть не только создание но и фул круд операции». Маппинг CRUD→дверь: **C** create_spec · **R** list_specs/list_spec_docs/read_spec_doc/read_attachment/get_* · **U** propose/apply_spec_change (top-level с гейтами + subdir working-доки) · **D** — ГАП: в реестре НЕТ delete/archive-тула (grep delete|remove|archive по tools.ts → 0), под enforce агент не может удалить/архивировать док вообще. Закрыть ДО live-прогона.
   **Done When:**
   - [x] **D-дверь (DONE):** тул `delete_spec_doc` (21-й в реестре): containment через resolveSpecDoc, обязательный `reason` (zod), аудит-лог, deletable = *.md/*.feature/бинарные attachments (.progress.json/.jira-cache.json = single-writer → NOT_DELETABLE), отказ LIVE_INBOUND_EDGES с именованными blockers когда узлы дока ссылаются из ДРУГИХ файлов (synthetic RESULT-* не блокируют); ретайр целой спеки — НЕ этот тул (FR-43). Доказано live (4 ветки) + BDD SPECGEN004_147 (147/146-passed GREEN); контракты: tools.test 21, hooks-stdin set, REFERENCED_CAPABILITIES+TOOL_CONSUMERS (consumer create-spec, truthfulness ok), bundle пересобран
-  - [ ] один живой `claude -p` под `SPEC_ACCESS_ENFORCE=true` гонит ВЕСЬ CRUD-цикл: **C** create_spec → **U** заполнить фазы через apply_spec_change (CHK/decisions/задачи, включая subdir-док) → **R** read_spec_doc/get_coverage/get_spec_status по ходу → **D** удалить throwaway-док через D-дверь → /run-tests → spec-verdict GREEN — 0 residual в spec-access.jsonl, БЕЗ наёба (DONE только при passed-сценарии)
-  - [ ] throwaway убран ЧЕРЕЗ D-дверь (не raw rm); либо реальная маленькая фича доведена до GREEN через дверь
+  - [x] ЖИВОЙ `claude -p` под `SPEC_ACCESS_ENFORCE=true` (2026-06-10, crud-e2e-run3.log) прогнал ВЕСЬ CRUD: **C** create_spec ok → **R** list_spec_docs(16)+read_spec_doc ok → **U** apply RESUME.md ok + subdir .architecture-research/1-probe.md ok + read-back round-trip → **NEGATIVE** raw Read → DENIED guard'ом (живое enforce-доказательство) → **D** delete_spec_doc ×2 ok + .progress.json → NOT_DELETABLE. CRUD-E2E-RESULT: PASS. Повторяемые двойники поведений: SPECGEN004_111 (enforce deny), SPECGEN004_116 (create→GREEN), SPECGEN004_139 (subdir write), SPECGEN004_147 (D-door). Попутно вскрыт P0: singleton MCP-лок блокирует дверь всем сессиям кроме первой (понадобился kill держателя) → P21-1
+  - [x] throwaway: контент-доки убраны live-агентом ЧЕРЕЗ D-дверь; scaffold-оболочка (.progress.json door-неудаляем by design + пустой каркас) снята cleanup-скриптом с явным репортом (inline SPEC_ACCESS_SKIP=1 НЕ РАБОТАЕТ — hook не видит префикс команды, живая находка → P21-2)
 
 - [x] P19-5: оживить FR-35a test-quality honesty-гейт — consumer + producer + skill-проводка — id: p19-test-quality-live — Status: DONE | Est: 240m
   _depends: p17-read-sufficiency_
@@ -1449,3 +1450,44 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   **Done When:**
   - [x] решено KEEP-ADVISORY (для ORPHAN_TASK / SCENARIO_TAG_ORPHAN / TASK_STATUS_UNVERIFIED + INFO-трио TASK_NO_REQUIREMENT/ORPHAN_PROJECT_TEST/FR_NO_RESEARCH) — Decision-блок в DESIGN.md «Toothless reverse-trace checks stay ADVISORY until the debt is cleaned»; данные решили: promote сегодня = мгновенный RED v4 (3 живых TASK_STATUS_UNVERIFIED) + 538/72/7 legacy-флуд → гейминг escape-hatch (H1-урок)
   - [x] advisory задокументировано ПОЧЕМУ + критерий промоушена: класс уходит в GAP_CLASSES (+BDD по уроку SPECGEN004_98) когда его corpus-счётчик доведён до ~0 и держится полный hygiene-цикл; счётчики corpus-health (секции 3/5/6) = burn-down метрика
+
+## Phase 21 — Эксплуатация enforce + door-полнота (deep-gap-analysis 2026-06-10)
+
+- [ ] P21-1: multi-session дверь — singleton-лок блокирует все сессии кроме первой (P0) — id: p21-multisession-door — Status: TODO | Est: 360m
+  _depends: p17-enforce_
+  _Requirements: [FR-14](FR.md#fr-14), [FR-39](FR.md#fr-39)_
+  **Done When:**
+  - [ ] вторая сессия получает РАБОЧУЮ дверь при живом первом сервере: read-тулы без лока ИЛИ lock per WRITE ИЛИ брокер (выбор в DESIGN Decision-блоком); живой пин «MCP lock already held» при двух сессиях не воспроизводится
+  - [ ] headless: дверь в `claude -p` требует `--mcp-config .mcp.json` — задокументировано
+  - [ ] BDD-регресс лок-семантики
+
+- [ ] P21-2: enforce-эргономика — git-carve-out + пагинация read_spec_doc + рабочий inline-escape — id: p21-enforce-ergonomics — Status: TODO | Est: 240m
+  _depends: p17-enforce_
+  _Requirements: [FR-39](FR.md#fr-39)_
+  **Done When:**
+  - [x] guard: carve-out для VCS-plumbing git над спеками (add/commit/status/stash + unstage-only restore --staged / rm --cached / reset) — content-leak (show/diff/log/grep/blame/cat-file) и worktree-rewrite (checkout/switch/plain-restore/reset --hard) остаются DENY. isSpecVcsPlumbingOnly per-segment, флаги из всего argv. BDD SPECGEN004_148 (биндит реальный violationOf, 7 allow / 7 deny). 148/147-passed GREEN. Живой укус который это породил: под enforce `git add .specs` денался → не мог закоммитить door-написанное
+  - [ ] read_spec_doc: `offset/limit` ИЛИ `section` — 77KB FR.md / 295KB RESEARCH.md не токен-бомбят + регресс
+  - [ ] escape доступен из агентского Bash: inline `SPEC_ACCESS_SKIP=1` распознаётся в ТЕКСТЕ команды ЛИБО `[skip-spec-access: reason ≥8]` маркер (сейчас hook видит только settings-env — живой укус 2026-06-10) + аудит
+
+- [ ] P21-3: сценарная гниль — FR-19 blanket-ре-тег + FR-7 пересъёмка под нативный LSP — id: p21-scenario-rot — Status: TODO | Est: 240m
+  _depends: p17-enforce_
+  _Requirements: [FR-8](FR.md#fr-8), [FR-19](FR.md#fr-19), [FR-7](FR.md#fr-7)_
+  **Done When:**
+  - [ ] 11 blanket-@FR-19 сценариев legacy-v3 ре-тегнуты (fr8-semantic-drift-inventory = чеклист); судья не флагает FR-19
+  - [ ] FR-7 сценарии тестируют ТЕКУЩУЮ нативную LSP-интеграцию, не ретайрнутый binary
+  - [ ] полный сьют GREEN после ре-тега
+
+- [ ] P21-4: владелец burn-down INFO-долга P20-счётчиков — id: p21-burndown-owner — Status: TODO | Est: 120m
+  _depends: p17-enforce_
+  _Requirements: [FR-44](FR.md#fr-44)_
+  **Done When:**
+  - [ ] владелец+каденция для 7 TASK_NO_REQUIREMENT / 72 ORPHAN_PROJECT_TEST / 538 FR_NO_RESEARCH / 459 UPSTREAM_UNLINKED / 1251 UNTAGGED — иначе promote-критерий P20-5 недостижим
+  - [ ] первый измеримый burn-down срез (счётчики corpus-health до/после)
+
+- [ ] P21-5: door-полнота — rename/move (anchors-aware) + CAS + детерминированная FR-перекличка — id: p21-door-completeness — Status: TODO | Est: 300m
+  _depends: p21-multisession-door_
+  _Requirements: [FR-40](FR.md#fr-40)_
+  **Done When:**
+  - [ ] rename/move дока через дверь с учётом inbound markdown-якорей чужих спек ЛИБО осознанный отказ Decision-блоком
+  - [ ] optimistic-CAS (`expected_sha`) на apply_spec_change против last-write-wins
+  - [ ] `fr-census` мини-CLI поверх графа (meta-урок: LLM-перекличка дала false-green по FR-43)

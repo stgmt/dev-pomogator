@@ -1046,6 +1046,12 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then the read is refused as an unsafe spec and nothing outside the tree is returned
 
   @FR-39
+  Scenario: SPECGEN004_148 the git VCS-plumbing carve-out lets door-written specs be committed but not content-leaked
+    Given the spec-access-guard git carve-out under enforce
+    When git plumbing and git content commands run over the specs tree
+    Then VCS plumbing commands are allowed and content-reading git commands stay violations
+
+  @FR-39
   Scenario: SPECGEN004_133 the engine-CLI carve-out allows every skill-invoked spec CLI over .specs/ but not generic readers
     Given the spec-access-guard engine-CLI carve-out
     When each documented engine CLI and a generic reader run over the specs tree
