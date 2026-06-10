@@ -103,6 +103,7 @@ printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocol
 | ENGINE_CLI вайтлист пропускал directory-named тулзы (`anchor-integrity/fix.mjs`→basename `fix` ∉ списка → под enforce anchor-fix DENY); SPECGEN004_133 first cut тестил синтетический `tools/x/anchor-integrity.ts` = fake-green | hand-maintained basename-список дрейфует; тест зеркалил выдуманный путь, не реальный producer | guard распознаёт движок по СУТИ (basename ∈ ENGINE_CLI ИЛИ project-script под tools/.claude — command-position, не redirect-target); _133 переписан на РЕАЛЬНЫЕ инвокации; verify-against-real-artifact |
 | Живой агент под enforce падал в Read: MCP-сервер вернул `NODE_NOT_FOUND` на реальный FR (P17-6) | headless `claude -p` не подставлял `${CLAUDE_PROJECT_DIR}` → `DEV_POMOGATOR_REPO_ROOT`=literal (непустой, `\|\| cwd` не словил) → граф из несуществующего пути | `resolveRepoRoot(env,cwd)`: доверять env ТОЛЬКО если это реальный dir с `.specs/`, иначе cwd (отвергает `${…}`-плейсхолдер + `.specs`-less путь); unit `server-repo-root.test.ts` |
 | Юзеры плагина не получали enforce/MCP-конфиг без ручной правки settings.json | в манифесте плагина НЕТ поля `permissions` (грант не шипится); enforce был только per-session env | enforce шипится через `userConfig.spec_access_enforce` (default true; авто-экспорт `CLAUDE_PLUGIN_OPTION_*` → guard читает обе casing); MCP-сервер авто-регистрируется из plugin.json `mcpServers` + per-server approval (не правка settings); подтверждено `claude plugin validate --strict` |
+| Спека невидима census-у/tested-by (0 Task-нод) — `parsers/tasks.ts` `headerOf` требует `— id:` И `Status:`, а старые спеки (session-pilot) пишут `Tnn:`-префикс БЕЗ `— id:` → headerOf=null → задачи пропущены молча (census трекал 1 спеку из 50) | дрейф формата TASKS.md: строгий v4 (`— id: — Status:`) vs `Tnn:`-таблица task-board-forms | `scripts/add-task-ids.ts` (CRLF-safe, status-preserving, child-safe, idempotent) реворкает `Tnn:`→`— id: tNN`; писать ЧЕРЕЗ дверь; session-pilot 0→58 task-нод, census 1→2 спеки (24 open+34 ⏸ — честно: трекнут, НЕ переверифицирован); reference `references/rework-loose-tasks-to-strict.md` |
 
 ## Связанные
 
@@ -110,4 +111,5 @@ printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocol
 - Скиллы-соседи: `corpus-health` (организм), `spec-graph-query` (читать граф),
   `spec-mcp-dogfood` (рантайм-перепись тулзов), `spec-status` (per-spec вердикт)
 - Спека: `.specs/spec-generator-v4/` (FR-36/37/38 — identity, вердикт, lifecycle)
+- Реворк loose→strict TASKS.md (чтобы спека трекалась census/tested-by): `references/rework-loose-tasks-to-strict.md` + `scripts/add-task-ids.ts`
 - Архивы: `audit-reports/fr36-dogfood-before-after.md`, `audit-reports/fr8-semantic-drift-inventory.md`

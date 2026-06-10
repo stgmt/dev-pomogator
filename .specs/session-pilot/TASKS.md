@@ -48,13 +48,13 @@
 
 ## Phase 1: MOVE prototype (Green)
 
-- [x] T01: MOVE files to extensions/session-pilot/ -- @feature1 — Status: DONE | Est: 60m
+- [x] T01: MOVE files to extensions/session-pilot/ -- @feature1 — id: t01 — Status: DONE | Est: 60m
   _Requirements: [FR-1](FR.md#fr-1-get-apiindex-fast-worktree-list-with-claudemaxmtime), [FR-2](FR.md#fr-2-get-apiclaudepath-jsonl-preview-with-last-message)_
   **Done When:**
   - [x] 9 files copied (cp -p) preserving mtime
   - [x] extension-layout-validate.ts exit 0
   - [x] curl localhost:8083/api/index returns 200 from new path
-- [x] T02: Create extension.json + README + CHANGELOG -- @feature1 — Status: DONE | Est: 30m
+- [x] T02: Create extension.json + README + CHANGELOG -- @feature1 — id: t02 — Status: DONE | Est: 30m
   _Requirements: extension-manifest-integrity rule_
   **Done When:**
   - [x] extension.json with toolFiles array (9 entries)
@@ -63,7 +63,7 @@
 
 ## Phase 2: Competitor analysis (Green)
 
-- [x] T03: COMPETITIVE_ANALYSIS.md -- @feature18 — Status: DONE | Est: 90m
+- [x] T03: COMPETITIVE_ANALYSIS.md -- @feature18 — id: t03 — Status: DONE | Est: 90m
   _Requirements: [FR-18](FR.md#fr-18-dedicated-competitor-analysis-artifact)_
   **Done When:**
   - [x] ≥1500 words (actual: 3518)
@@ -73,12 +73,12 @@
 
 ## Phase 3: Action button + MCP (Green)
 
-- [x] T04: KDL layout templates -- @feature4 — Status: DONE | Est: 15m
+- [x] T04: KDL layout templates -- @feature4 — id: t04 — Status: DONE | Est: 15m
   _Requirements: [FR-4](FR.md#fr-4-post-apilaunch-cross-platform-native-terminal-spawn)_
   **Done When:**
   - [x] claude-resume.kdl.tmpl with __CWD__/__UUID__/__NAME__ placeholders
   - [x] claude-fresh.kdl.tmpl
-- [x] T05: POST /api/launch decision tree -- @feature4 @feature15 — Status: DONE | Est: 90m
+- [x] T05: POST /api/launch decision tree -- @feature4 @feature15 — id: t05 — Status: DONE | Est: 90m
   _Requirements: [FR-4](FR.md#fr-4-post-apilaunch-cross-platform-native-terminal-spawn), [FR-15](FR.md#fr-15-cross-platform-installation-scripts)_
   **Done When:**
   - [x] Existing session → focus-pane-id + write-chars
@@ -86,17 +86,17 @@
   - [x] 5s idempotency lock
   - [x] Path whitelist + UUID regex
   - [x] E2E confirmed: sp-final-test session created
-- [x] T06: POST /api/open-vscode -- @feature11 — Status: DONE | Est: 15m
+- [x] T06: POST /api/open-vscode -- @feature11 — id: t06 — Status: DONE | Est: 15m
   _Requirements: [FR-11](FR.md#fr-11-3-button-action-column)_
   **Done When:**
   - [x] subprocess.Popen(['code', path]) with whitelist
   - [x] Returns 200/500 properly
-- [x] T07: GET /api/health -- @feature7 @feature3 — Status: DONE | Est: 15m
+- [x] T07: GET /api/health -- @feature7 @feature3 — id: t07 — Status: DONE | Est: 15m
   _Requirements: [FR-7](FR.md#fr-7-get-apihealth-idempotent-autostart-probe), [FR-3](FR.md#fr-3-etag304-conditional-response-on-apiclaude)_
   **Done When:**
   - [x] Returns 200 + {status, version, uptime_sec}
   - [x] Latency <5ms
-- [x] T08: 4-button Action column frontend -- @feature11 — Status: DONE | Est: 45m
+- [x] T08: 4-button Action column frontend -- @feature11 — id: t08 — Status: DONE | Est: 45m
   _Requirements: [FR-11](FR.md#fr-11-3-button-action-column)_
   **Done When:**
   - [x] [▶][✨][📂][🪟] buttons with tooltips
@@ -105,20 +105,20 @@
 
 ## Phase 3b: lm-saas LIVE bug fix (Green)
 
-- [x] T09: --diagnose-livecycle CLI -- @feature19 — Status: DONE | Est: 30m
+- [x] T09: --diagnose-livecycle CLI -- @feature19 — id: t09 — Status: DONE | Est: 30m
   _Requirements: [FR-19](FR.md#fr-19-diagnostic-cli-diagnose-livecycle)_
   **Done When:**
   - [x] Dumps all encoding variants
   - [x] Lists all base dirs scanned
   - [x] Per-JSONL match: path/mtime/age/size
   - [x] Verdict 🟢 LIVE / ⚪ idle / ❌ no match
-- [x] T10: Bump LIVE_THRESHOLD_SEC 90→300 -- @feature20 — Status: DONE | Est: 5m
+- [x] T10: Bump LIVE_THRESHOLD_SEC 90→300 -- @feature20 — id: t10 — Status: DONE | Est: 5m
   _Requirements: [FR-20](FR.md#fr-20-configurable-live-threshold)_
   **Done When:**
   - [x] Default 300s
   - [x] env LIVE_THRESHOLD_SEC override
   - [x] lm-saas detected as LIVE after fix
-- [x] T11: visibilitychange + cache shortcut -- @feature14 — Status: DONE | Est: 15m
+- [x] T11: visibilitychange + cache shortcut -- @feature14 — id: t11 — Status: DONE | Est: 15m
   _Requirements: [FR-14](FR.md#fr-14-swr-client-cache-via-localstorage)_
   **Done When:**
   - [x] visibilitychange listener refreshes on tab focus
@@ -126,7 +126,7 @@
 
 ## Phase 4: Pagination decision (Refactor)
 
-- [x] T12: Pagination strategy in DESIGN.md -- @feature9 — Status: DONE | Est: 60m
+- [x] T12: Pagination strategy in DESIGN.md -- @feature9 — id: t12 — Status: DONE | Est: 60m
   _Requirements: [FR-9](FR.md#fr-9-pagination-strategy-top-20-priority-lazy-rest)_
   **Done When:**
   - [x] 3 alternatives documented (priority queue / LIVE-only+IO / SQLite)
@@ -135,11 +135,11 @@
 
 ## Phase 6a: Spec content (Refactor)
 
-- [x] T13: Spec scaffold -- @feature1..@feature20 — Status: DONE | Est: 5m
+- [x] T13: Spec scaffold -- @feature1..@feature20 — id: t13 — Status: DONE | Est: 5m
   _Requirements: ALL FRs need a home_
   **Done When:**
   - [x] scaffold-spec.ts -Name session-pilot creates 15 files
-- [x] T14: Fill core spec files -- @feature1 — Status: DONE | Est: 120m
+- [x] T14: Fill core spec files -- @feature1 — id: t14 — Status: DONE | Est: 120m
   _Requirements: ALL FRs need spec content_
   **Done When:**
   - [x] USER_STORIES.md (8 stories)
@@ -148,30 +148,30 @@
   - [x] NFR.md (Perf/Sec/Rel/Use/Compat + Anti-халява)
   - [x] ACCEPTANCE_CRITERIA.md (20 EARS ACs)
   - [x] session-pilot.feature (17 BDD scenarios)
-- [x] T15: Fill RESEARCH + DESIGN -- @feature1 — Status: DONE | Est: 60m
+- [x] T15: Fill RESEARCH + DESIGN -- @feature1 — id: t15 — Status: DONE | Est: 60m
   _Requirements: cross-cut design rationale_
   **Done When:**
   - [x] RESEARCH.md with [VERIFIED] markers + 6 risks
   - [x] DESIGN.md with 9 KDs + pagination matrix
-- [x] T16: Fill REQUIREMENTS CHK matrix -- @feature1 — Status: DONE | Est: 30m
+- [x] T16: Fill REQUIREMENTS CHK matrix -- @feature1 — id: t16 — Status: DONE | Est: 30m
   _Requirements: ALL FRs traceability_
   **Done When:**
   - [x] 40 CHK entries with FR + AC | @featureN | UC traces
   - [x] 28 Verified, 12 Draft (deferred features)
-- [x] T17: Fill FILE_CHANGES.md -- @feature1 — Status: DONE | Est: 15m
+- [x] T17: Fill FILE_CHANGES.md -- @feature1 — id: t17 — Status: DONE | Est: 15m
   _Requirements: file inventory_
   **Done When:**
   - [x] 30 files mapped to FR refs with Phase tracking
 
 ## Phase 6b: Skill + Rules (Refactor)
 
-- [x] T18: SKILL.md -- @feature16 — Status: DONE | Est: 30m
+- [x] T18: SKILL.md -- @feature16 — id: t18 — Status: DONE | Est: 30m
   _Requirements: [FR-16](FR.md#fr-16-skill-uses-mcpclaude-in-chrome-for-browser)_
   **Done When:**
   - [x] Frontmatter with RU+EN triggers + mcp__claude-in-chrome__* allowed
   - [x] 4 scenarios (Health, Resume, Worktree create, Diagnose)
   - [x] Anti-халява verification step in each scenario
-- [x] T19: 4 rules under .claude/rules/session-pilot/ -- @feature16 — Status: DONE | Est: 60m
+- [x] T19: 4 rules under .claude/rules/session-pilot/ -- @feature16 — id: t19 — Status: DONE | Est: 60m
   _Requirements: project conventions_
   **Done When:**
   - [x] action-button-injection.md
@@ -181,32 +181,32 @@
 
 ## Phase 6c: Tests + CLAUDE.md (Refactor)
 
-- [x] T20: tests/test_encode_path.py -- @feature17 — Status: DONE | Est: 20m
+- [x] T20: tests/test_encode_path.py -- @feature17 — id: t20 — Status: DONE | Est: 20m
   _Requirements: [FR-17](FR.md#fr-17-cross-platform-claude-path-encoding)_
   **Done When:**
   - [x] 6 tests covering WSL/Win + lm-saas regression + Cursor pattern
   - [x] All 6 PASS
-- [x] T21: tests/test_launch_idempotent.py -- @feature4 — Status: DONE | Est: 30m
+- [x] T21: tests/test_launch_idempotent.py -- @feature4 — id: t21 — Status: DONE | Est: 30m
   _Requirements: [FR-4](FR.md#fr-4-post-apilaunch-cross-platform-native-terminal-spawn)_
   **Done When:**
   - [x] 5 integration tests against running server
   - [x] All 5 PASS
-- [x] T22: Update CLAUDE.md glossary -- @feature16 — Status: DONE | Est: 10m
+- [x] T22: Update CLAUDE.md glossary -- @feature16 — id: t22 — Status: DONE | Est: 10m
   _Requirements: claude-md-glossary rule_
   **Done When:**
   - [x] 4 new rule entries (action-button, encoding, perf, mcp-chrome)
 
 ## Phase 7: Verification
 
-- [x] T23: audit-spec.ts -- @feature1 — Status: DONE | Est: 5m
+- [x] T23: audit-spec.ts -- @feature1 — id: t23 — Status: DONE | Est: 5m
   _Requirements: spec quality gate_
   **Done When:**
   - [x] audit-spec.ts -Path .specs/session-pilot returns 0 ERROR-severity findings
-- [x] T24: extension-layout-validate.ts -- @feature1 — Status: DONE | Est: 5m
+- [x] T24: extension-layout-validate.ts -- @feature1 — id: t24 — Status: DONE | Est: 5m
   _Requirements: extension-layout rule_
   **Done When:**
   - [x] exit 0
-- [x] T39: v0.3 implementation — Windows PowerShell native (drop Zellij) -- @feature4 @feature11 @feature13 @feature15 @feature17 — Status: DONE | Est: 180m
+- [x] T39: v0.3 implementation — Windows PowerShell native (drop Zellij) -- @feature4 @feature11 @feature13 @feature15 @feature17 — id: t39 — Status: DONE | Est: 180m
   _Requirements: FR-4, FR-11, FR-13, FR-15, FR-17 (v0.3 pivot)_
   **Done When:**
   - [x] `terminal_launcher.py` (177 LOC) replaces `zellij_util.py`: spawn chain wt.exe → cmd.exe → SP_TERMINAL_CMD override
@@ -221,7 +221,7 @@
   - [x] CI workflow updated; new `test_terminal_launcher.py` (7 cases) added
   - [x] All 69 Python tests pass
 
-- [x] T37: Strong tests — mutation kill rate 81% → 97.8% -- @feature17 — Status: DONE | Est: 120m
+- [x] T37: Strong tests — mutation kill rate 81% → 97.8% -- @feature17 — id: t37 — Status: DONE | Est: 120m
   _Requirements: NFR-Anti-1, NFR-Anti-3, strong-tests skill 12-point self-eval_
   **Done When:**
   - [x] CI mutmut dump enhanced to print surviving mutant signatures + mutated source
@@ -229,7 +229,7 @@
   - [x] M54/M55 documented as [EQUIVALENT_SUSPECT] (rstrip eliminates len-3 boundary case)
   - [x] Final rate 97.8% (Total=92, Killed=90, Survived=2 equivalent)
 
-- [x] T38: Refactor server.py — full module split (Phase 5 complete) -- @feature1 — Status: DONE | Est: 180m
+- [x] T38: Refactor server.py — full module split (Phase 5 complete) -- @feature1 — id: t38 — Status: DONE | Est: 180m
   _Requirements: server.py single-file size cap (KD-1)_
   **Done When:**
   - [x] frontend.py (593 LOC) — HTML/CSS/JS dashboard SPA
@@ -241,7 +241,7 @@
   - [x] All 62 Python tests green throughout (test_encode_path/encode_path_module/diagnose_cli/jsonl_indexer/new_endpoints/zellij_spawn_isolation)
   - [x] Re-export pattern: extracted modules read `import server` at call time (late binding), so test monkey-patches via `server.CLAUDE_PROJECTS_DIRS = ...` continue to work without re-architecture
 
-- [x] T36: Race fix — Playwright spawn isolation -- @feature4 — Status: DONE | Est: 60m
+- [x] T36: Race fix — Playwright spawn isolation -- @feature4 — id: t36 — Status: DONE | Est: 60m
   _Requirements: NFR-Compat-6, RESEARCH.md spawn-race Risk row_
   **Done When:**
   - [x] Research-workflow run 2026-05-11 refined diagnosis (fd inheritance + libfuse #27 race, not SIGPIPE)
@@ -251,7 +251,7 @@
   - [x] test_zellij_spawn_isolation.py: 4 cases (pgid isolation, master parked, stdio is TTY, child survives master close); Linux-only, skip on Windows
   - [x] RESEARCH.md Risk row + NFR-Compat-6 updated to "FIXED v0.2" with mechanism explained + sources cited
 
-- [ ] T25: git push + open PR -- @feature1 — Status: TODO | Est: 10m
+- [ ] T25: git push + open PR -- @feature1 — id: t25 — Status: TODO | Est: 10m
   _Requirements: PR delivery_
   **Done When:**
   - [ ] git push -u origin feat/session-pilot
@@ -260,33 +260,33 @@
 
 ## v0.2 backlog
 
-- [ ] T26: Strengthen tests per strong-tests skill -- @feature17 — Status: TODO | Est: 120m
+- [ ] T26: Strengthen tests per strong-tests skill -- @feature17 — id: t26 — Status: TODO | Est: 120m
   _Requirements: NFR-Anti-1, strong-tests recommendations_
   **Done When:**
   - [ ] Mutation kill rate ≥70% on encode_path tests
   - [ ] Cleanup added to launch tests
   - [ ] Permissive matchers replaced with exact equality
-- [ ] T27: Add mutmut mutation testing -- @feature17 — Status: TODO | Est: 60m
+- [ ] T27: Add mutmut mutation testing -- @feature17 — id: t27 — Status: TODO | Est: 60m
   _Requirements: NFR-Anti-3_
   **Done When:**
   - [ ] mutmut installed in tests/
   - [ ] mutation score baseline recorded
   - [ ] CI integration documented
-- [x] T28: /api/message + modal frontend -- @feature5 @feature10 — Status: DONE | Est: 120m
+- [x] T28: /api/message + modal frontend -- @feature5 @feature10 — id: t28 — Status: DONE | Est: 120m
   _Requirements: [FR-5](FR.md#fr-5-get-apimessage-single-message-by-index), [FR-10](FR.md#fr-10-modal-viewer-for-last-message)_
   **Done When:**
   - [x] /api/message endpoint returns msg + neighbors (messages_for_session with whitelist + variant encoding match)
   - [x] `<dialog>` modal triggered on last_message click (cursor + hover styling, opens with showModal())
   - [x] prev/next nav functional (button click + ArrowLeft/ArrowRight keys)
   - [x] Target message highlighted in modal (`.msg-block.target` style)
-- [x] T29: /api/git-status endpoint -- @feature6 — Status: DONE | Est: 60m
+- [x] T29: /api/git-status endpoint -- @feature6 — id: t29 — Status: DONE | Est: 60m
   _Requirements: [FR-6](FR.md#fr-6-get-apigit-status-worktree-dirtyaheadbehind)_
   **Done When:**
   - [x] Returns {added, modified, deleted, untracked, ahead, behind}
   - [x] Frontend column displays +A ~M -D ?U / ↑K ↓L (formatGitStatus helper)
   - [x] Whitelist-gated (uses _whitelisted_paths())
   - [x] Parallel enrichGitStatus() with 4-worker queue, fire-and-forget after Claude enrich
-- [x] T30: Tabulator vendored + multi-key sort -- @feature8 — Status: DONE | Est: 180m
+- [x] T30: Tabulator vendored + multi-key sort -- @feature8 — id: t30 — Status: DONE | Est: 180m
   _Requirements: [FR-8](FR.md#fr-8-frontend-tabulator-multi-sort-virtual-scroll-filter)_
   **Done When:**
   - [x] Tabulator 6.3.1 MIT vendored under `ui/vendor/{tabulator.min.js,tabulator_midnight.min.css}`
@@ -295,28 +295,28 @@
   - [x] Built-in Shift+click multi-column sort (Tabulator native)
   - [x] setFilter wired to vi-style `/` input (multiple OR fields: repo/branch/head/path/last-msg/session)
   - [x] Dead pure-JS sort/filter helpers removed (sortHdr/setSort/applySort/applyFilter) — replaced by Tabulator's API
-- [ ] T31: Idle Intl.RelativeTimeFormat -- @feature12 — Status: TODO | Est: 30m
+- [ ] T31: Idle Intl.RelativeTimeFormat -- @feature12 — id: t31 — Status: TODO | Est: 30m
   _Requirements: [FR-12](FR.md#fr-12-idle-time-human-readable-format)_
   **Done When:**
   - [ ] <24h shows "3 hours ago"
   - [ ] >24h shows "1d 5h 37m"
-- [ ] T32: SessionStart hook -- @feature13 — Status: TODO | Est: 15m
+- [ ] T32: SessionStart hook -- @feature13 — id: t32 — Status: TODO | Est: 15m
   _Requirements: [FR-13](FR.md#fr-13-sessionstart-hook-idempotent-autostart-cross-platform)_
   **Done When:**
   - [ ] extension.json hooks.claude.SessionStart points to start-server.sh
   - [ ] Idempotent on re-trigger
-- [x] T33: Vi-style `/` filter -- @feature8 — Status: DONE | Est: 20m
+- [x] T33: Vi-style `/` filter -- @feature8 — id: t33 — Status: DONE | Est: 20m
   _Requirements: [FR-8](FR.md#fr-8-frontend-tabulator-multi-sort-virtual-scroll-filter)_
   **Done When:**
   - [x] keyboard `/` focuses search input (document.addEventListener keydown, ignores when typing in input/textarea)
   - [x] applyFilter() substring-matches across repo/branch/head/worktree_path/last_message/session_name
   - [x] Esc clears filter + blurs input
-- [x] T34: tests/test_jsonl_indexer.py -- @feature2 — Status: DONE | Est: 60m
+- [x] T34: tests/test_jsonl_indexer.py -- @feature2 — id: t34 — Status: DONE | Est: 60m
   _Requirements: [FR-2](FR.md#fr-2-get-apiclaudepath-jsonl-preview-with-last-message)_
   **Done When:**
   - [x] Synthetic JSONL fixtures created (10 test cases T34_01..T34_10)
   - [x] Parallel correctness tests pass (head/tail parse, msg_count, LIVE/idle, empty, malformed, list-of-blocks, multi-session, no-match, variant encoding match)
-- [ ] T35: README install for fresh machine -- @feature1 — Status: TODO | Est: 30m
+- [ ] T35: README install for fresh machine -- @feature1 — id: t35 — Status: TODO | Est: 30m
   _Requirements: distribution_
   **Done When:**
   - [ ] Step-by-step from clean WSL Ubuntu install
@@ -324,34 +324,34 @@
 
 ## v0.4 backlog: cross-platform restoration
 
-- [ ] T36: Implement `_launch_linux_gui` handler in terminal_launcher.py -- @feature4 @feature21 — Status: TODO | Est: 90m
+- [ ] T36: Implement `_launch_linux_gui` handler in terminal_launcher.py -- @feature4 @feature21 — id: t36-1 — Status: TODO | Est: 90m
   _Requirements: [FR-4](FR.md#fr-4-post-apilaunch-cross-platform-native-terminal-spawn), [FR-21](FR.md#fr-21-os-detection-platform-dispatched-module-architecture)_
   **Done When:**
   - [ ] Probe chain: `$TERMINAL` → gnome-terminal → konsole → alacritty → kitty → wezterm → xfce4-terminal → tilix → terminator → xterm
   - [ ] Per-terminal argv build verified for each of 9 terminals
   - [ ] Unit tests parametrized over `shutil.which` mock for each terminal
   - [ ] Integration test on Ubuntu 22.04 host with at least gnome-terminal installed
-- [ ] T37: Implement `_launch_linux_headless` handler -- @feature4 @feature21 — Status: TODO | Est: 30m
+- [ ] T37: Implement `_launch_linux_headless` handler -- @feature4 @feature21 — id: t37-1 — Status: TODO | Est: 30m
   _Requirements: [FR-4](FR.md#fr-4-post-apilaunch-cross-platform-native-terminal-spawn), [FR-21](FR.md#fr-21-os-detection-platform-dispatched-module-architecture)_
   **Done When:**
   - [ ] `subprocess.Popen(["setsid","nohup","bash","-c","cd <cwd> && claude ..."], start_new_session=True, stdin/stdout/stderr=DEVNULL)`
   - [ ] PID captured and survives server restart (verified via `kill -0` после server stop)
   - [ ] Detection: $DISPLAY AND $WAYLAND_DISPLAY both empty OR all GUI terminals missing
-- [ ] T38: Implement `_launch_darwin` handler -- @feature4 @feature21 — Status: TODO | Est: 45m
+- [ ] T38: Implement `_launch_darwin` handler -- @feature4 @feature21 — id: t38-1 — Status: TODO | Est: 45m
   _Requirements: [FR-4](FR.md#fr-4-post-apilaunch-cross-platform-native-terminal-spawn), [FR-21](FR.md#fr-21-os-detection-platform-dispatched-module-architecture)_
   **Done When:**
   - [ ] iTerm2 detection via `osascript -e 'tell app "System Events" to (name of processes) contains "iTerm2"'`
   - [ ] Terminal.app via `osascript -e 'tell app "Terminal" to do script ...'`
   - [ ] iTerm2 via `osascript -e 'tell app "iTerm2" to create window ...'`
   - [ ] Tested on macOS 12+ host or mocked osascript in CI
-- [ ] T39: Implement `_launch_env_override` handler -- @feature4 @feature21 — Status: TODO | Est: 30m
+- [ ] T39: Implement `_launch_env_override` handler -- @feature4 @feature21 — id: t39-1 — Status: TODO | Est: 30m
   _Requirements: [FR-4](FR.md#fr-4-post-apilaunch-cross-platform-native-terminal-spawn), [FR-21](FR.md#fr-21-os-detection-platform-dispatched-module-architecture)_
   **Done When:**
   - [ ] Template substitution `{cwd}` and `{cmd}` placeholders
   - [ ] `shlex.split` on POSIX / list-form on Windows
   - [ ] NEVER `shell=True`
   - [ ] Tests on all 3 OS with sample templates (alacritty / wt.exe / Terminal-via-osascript)
-- [ ] T40: Extend `claude_paths.encode_path_for_claude` to return list[str] with per-OS canonical + cross-platform fallbacks -- @feature17 — Status: TODO | Est: 60m
+- [ ] T40: Extend `claude_paths.encode_path_for_claude` to return list[str] with per-OS canonical + cross-platform fallbacks -- @feature17 — id: t40 — Status: TODO | Est: 60m
   _Requirements: [FR-17](FR.md#fr-17-cross-platform-claude-path-encoding)_
   **Done When:**
   - [ ] Windows: `D:\repos\foo` → `["D--repos-foo"]`
@@ -361,7 +361,7 @@
   - [ ] UNC: `\\wsl.localhost\Ubuntu\home\user\foo` → `["--wsl.localhost-Ubuntu-home-user-foo", "-home-user-foo"]`
   - [ ] Cursor IDE: `C:\Users\stigm\.cursor\worktrees\bar` → `["C--Users-stigm--cursor-worktrees-bar"]`
   - [ ] Unit tests for each row in AC-17 examples table
-- [ ] T41: Create `install.sh` sibling installer -- @feature15 — Status: TODO | Est: 45m
+- [ ] T41: Create `install.sh` sibling installer -- @feature15 — id: t41 — Status: TODO | Est: 45m
   _Requirements: [FR-15](FR.md#fr-15-cross-platform-installation-scripts)_
   **Done When:**
   - [ ] `bash extensions/session-pilot/install.sh` runs on Ubuntu 22.04+ and macOS 12+
@@ -369,27 +369,27 @@
   - [ ] Register SessionStart hook (`bash start-server.sh`) в `~/.claude/settings.json`
   - [ ] Idempotent: re-run detects existing install + alive server → exit 0
   - [ ] `set -euo pipefail`; bash ≥4.x
-- [ ] T42: Create `start-server.sh` POSIX autostart -- @feature13 — Status: TODO | Est: 30m
+- [ ] T42: Create `start-server.sh` POSIX autostart -- @feature13 — id: t42 — Status: TODO | Est: 30m
   _Requirements: [FR-13](FR.md#fr-13-sessionstart-hook-idempotent-autostart-cross-platform)_
   **Done When:**
   - [ ] PID lock в `${XDG_STATE_HOME:-$HOME/.local/state}/session-pilot/server.pid`
   - [ ] `kill -0 $pid 2>/dev/null` liveness check
   - [ ] `setsid nohup python3 server.py >/dev/null 2>&1 &` for spawn
   - [ ] Poll `/api/health` until 200 (timeout 2s)
-- [ ] T43: Update `extension.json` для platform-conditional hook registration -- @feature13 — Status: TODO | Est: 15m
+- [ ] T43: Update `extension.json` для platform-conditional hook registration -- @feature13 — id: t43 — Status: TODO | Est: 15m
   _Requirements: [FR-13](FR.md#fr-13-sessionstart-hook-idempotent-autostart-cross-platform)_
   **Done When:**
   - [ ] Installer chooses ps1 vs sh based on host OS detection
   - [ ] Manifest enumerates BOTH scripts via `toolFiles`
-- [ ] T44: Add `platform` field to `/api/health` response -- @feature7 — Status: TODO | Est: 5m
+- [ ] T44: Add `platform` field to `/api/health` response -- @feature7 — id: t44 — Status: TODO | Est: 5m
   _Requirements: [FR-7](FR.md#fr-7-get-apihealth-idempotent-autostart-probe)_
   **Done When:**
   - [ ] `{"status":"ok","version":"0.4.0","uptime_sec":int,"platform":"win32"|"linux"|"darwin"}`
-- [ ] T45: Rename env var `WT_DASHBOARD_BIND` → `SP_DASHBOARD_BIND` -- @feature15 — Status: TODO | Est: 10m
+- [ ] T45: Rename env var `WT_DASHBOARD_BIND` → `SP_DASHBOARD_BIND` -- @feature15 — id: t45 — Status: TODO | Est: 10m
   _Requirements: NFR-Sec-3_
   **Done When:**
   - [ ] All references updated; deprecation alias `WT_DASHBOARD_BIND` warns + reads value for backward-compat (one release cycle)
-- [ ] T46: Implement skill `session-pilot-bootstrap` (on-demand orphan worktree bootstrap) -- @feature22 — Status: TODO | Est: 60m
+- [ ] T46: Implement skill `session-pilot-bootstrap` (on-demand orphan worktree bootstrap) -- @feature22 — id: t46 — Status: TODO | Est: 60m
   _Requirements: [FR-22](FR.md#fr-22-on-demand-worktree-bootstrap-skill-session-pilot-bootstrap)_
   **Done When:**
   - [ ] `.claude/skills/session-pilot-bootstrap/SKILL.md` created с frontmatter (name, description с RU+EN triggers, allowed-tools: Bash + AskUserQuestion + Read)
@@ -401,13 +401,13 @@
   - [ ] Integration test reproduces orphan worktree scenario: `git worktree add /tmp/test-wt main && cd /tmp/test-wt && rm -rf .dev-pomogator/tools && invoke skill && assert sentinel exists`
   - [ ] Cross-platform smoke: workflow uses only npm/node/git — no OS branches
   - [ ] extension.json лист skillFiles для session-pilot-bootstrap
-- [ ] T47: Add session-pilot-bootstrap skill to extension manifest -- @feature22 — Status: TODO | Est: 10m
+- [ ] T47: Add session-pilot-bootstrap skill to extension manifest -- @feature22 — id: t47 — Status: TODO | Est: 10m
   _Requirements: [FR-22](FR.md#fr-22-on-demand-worktree-bootstrap-skill-session-pilot-bootstrap)_
   **Done When:**
   - [ ] `extensions/session-pilot/extension.json` → `skills.session-pilot-bootstrap` source path entry
   - [ ] `skillFiles.session-pilot-bootstrap` enumerates SKILL.md path
   - [ ] Installer test verifies skill is installed на target after `node bin/cli.js install .`
-- [ ] T49: Implement session-centric indexer (FR-24) — rows from ~/.claude/projects/* with git enrichment -- @feature24 — Status: TODO | Est: 90m
+- [ ] T49: Implement session-centric indexer (FR-24) — rows from ~/.claude/projects/* with git enrichment -- @feature24 — id: t49 — Status: TODO | Est: 90m
   _Requirements: [FR-24](FR.md#fr-24-union-model-all-git-worktrees-and-all-claude-sessions-merged-deduplicated)_
   **Done When:**
   - [ ] `indexer.py` scans `~/.claude/projects/*` first (Phase 1)
@@ -419,7 +419,7 @@
   - [ ] Stale path detection: `if not Path(cwd).exists() → is_stale: true`
   - [ ] Filter out `~/.claude/projects/C--Users-*--claude-*` meta dirs
   - [ ] Configurable max-age via `SP_MAX_AGE_DAYS` env (default 7) — filter very-old idle sessions
-- [ ] T50: Update frontend (app.js / index.html) to render orphan rows -- @feature24 — Status: TODO | Est: 30m
+- [ ] T50: Update frontend (app.js / index.html) to render orphan rows -- @feature24 — id: t50 — Status: TODO | Est: 30m
   _Requirements: [FR-24](FR.md#fr-24-union-model-all-git-worktrees-and-all-claude-sessions-merged-deduplicated)_
   **Done When:**
   - [ ] Tabulator column formatters render `—` placeholder for empty repo_name/branch/head_sha when is_orphan=true
@@ -427,7 +427,7 @@
   - [ ] Action buttons enabled for orphan rows (Resume/Fresh/VSCode)
   - [ ] If is_stale=true: action buttons disabled with title attr="Path no longer exists"
   - [ ] CSS subtle visual differentiation (grey-out repo/branch cells for orphan rows)
-- [ ] T52: Implement process-based "open window" detection (FR-25) -- @feature25 — Status: TODO | Est: 90m
+- [ ] T52: Implement process-based "open window" detection (FR-25) -- @feature25 — id: t52 — Status: TODO | Est: 90m
   _Requirements: [FR-25](FR.md#fr-25-process-based-open-window-indicator-separate-signal-from-jsonl-mtime-live)_
   **Done When:**
   - [ ] New module `extensions/session-pilot/tools/session-pilot/process_scanner.py` with `scan_claude_processes() -> dict[cwd_path, list[pid]]`
@@ -438,7 +438,7 @@
   - [ ] Cache result for 5s (TTL); fail-open if scan > 100ms
   - [ ] indexer.py integrates: per row, set `claude_window_open: bool` + `claude_window_pids: list[int]` from scan result
   - [ ] Test fixture: simulate Win32_Process output + parent chain; assert correct cwd extraction
-- [ ] T54: Implement per-session rows (FR-26) -- @feature26 — Status: TODO | Est: 60m
+- [ ] T54: Implement per-session rows (FR-26) -- @feature26 — id: t54 — Status: TODO | Est: 60m
   _Requirements: [FR-26](FR.md#fr-26-per-session-rows-expand-1-row-per-cwd-to-1-row-per-jsonl-uuid)_
   **Done When:**
   - [ ] `indexer.py` changed: emit 1 row per JSONL file (not per encoded dir)
@@ -448,14 +448,14 @@
   - [ ] Git-only worktree (Source C) → emit 1 row with session_uuid=null
   - [ ] Frontend POST /api/launch on Resume uses row.session_uuid
   - [ ] Stress test: 100 JSONLs in single dir → 100 rows rendered via Tabulator virtual scroll
-- [ ] T53: Frontend 3-state Status column rendering (FR-25) -- @feature25 — Status: TODO | Est: 20m
+- [ ] T53: Frontend 3-state Status column rendering (FR-25) -- @feature25 — id: t53 — Status: TODO | Est: 20m
   _Requirements: [FR-25](FR.md#fr-25-process-based-open-window-indicator-separate-signal-from-jsonl-mtime-live)_
   **Done When:**
   - [ ] Status column formatter checks `claude_running_now > claude_window_open > else` priority
   - [ ] Renders `🟢 LIVE` / `💡 Open` / `idle Xs ago` accordingly
   - [ ] CSS class per state for color differentiation
   - [ ] Tooltip on `💡 Open` shows "Claude Code window open, idle" + PID list
-- [ ] T51: Add tests for session-centric indexer + orphan handling -- @feature24 — Status: TODO | Est: 45m
+- [ ] T51: Add tests for session-centric indexer + orphan handling -- @feature24 — id: t51 — Status: TODO | Est: 45m
   _Requirements: [FR-24](FR.md#fr-24-union-model-all-git-worktrees-and-all-claude-sessions-merged-deduplicated)_
   **Done When:**
   - [ ] Test fixture: `tmpdir/projects/D--repos-foo/<uuid>.jsonl` + matching real git worktree → row has full git fields, is_orphan=false
@@ -464,7 +464,7 @@
   - [ ] Test fixture: meta dir `C--Users-x--claude-projects/<uuid>.jsonl` → excluded from /api/index
   - [ ] Test fixture: Phase 3 git worktree without Claude history → claude_max_mtime=null row emitted
   - [ ] Dedup test: same cwd in both Phase 1 + Phase 3 → only Phase 1 row in response
-- [x] T48: Create launcher installer scripts (create-launcher.ps1 + create-launcher.sh) -- @feature23 — Status: DONE | Est: 60m
+- [x] T48: Create launcher installer scripts (create-launcher.ps1 + create-launcher.sh) -- @feature23 — id: t48 — Status: DONE | Est: 60m
   _Requirements: [FR-23](FR.md#fr-23-taskbar-dock-launcher-installer-create-launcher)_
   **Done When:**
   - [x] `extensions/session-pilot/tools/session-pilot/create-launcher.ps1` — Windows Desktop .lnk creator (Edge/Chrome detection, msedge.exe `--app=URL` mode, opens Explorer at icon, optional `-Pin` flag for legacy COM verb)
