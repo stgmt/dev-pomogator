@@ -15,13 +15,48 @@ function log(level: 'INFO' | 'ERROR' | 'WARN', message: string): void {
   _logShared(level, LOG_PREFIX, message);
 }
 
-/** Check if Python 3.9+ is available */
+/**
+ * Windows-only: does `bin` resolve ONLY to the Microsoft Store execution-alias
+ * stub (`…\WindowsApps\python.exe`)? EXECUTING that stub is what pops the Store —
+ * so we must detect it WITHOUT running it. `where` only reads PATH (no execution),
+ * so it never triggers the Store. If every resolved path is under WindowsApps,
+ * the only "python" is the stub → treat as absent and NEVER probe `--version`.
+ */
+/** Pure: are ALL resolved paths the Microsoft Store execution-alias stub? (the
+ *  bug-prevention core — `≥1` real interpreter path means it's safe to execute).
+ *  Empty = nothing resolved (not the alias case). Exported for cross-platform test. */
+export function everyPathIsStoreAlias(paths: readonly string[]): boolean {
+  const real = paths.map((s) => s.trim()).filter(Boolean);
+  return real.length > 0 && real.every((p) => /[\\/]WindowsApps[\\/]/i.test(p));
+}
+
+export function resolvesToStoreAliasOnly(bin: string): boolean {
+  if (process.platform !== 'win32') return false;
+  try {
+    const out = execSync(`where ${bin}`, { encoding: 'utf-8', timeout: 5000 }).trim();
+    return everyPathIsStoreAlias(out.split(/\r?\n/));
+  } catch {
+    return false; // `where` failed = not on PATH; the normal probe will ENOENT, no Store
+  }
+}
+
+/** Check if Python 3.9+ is available — WITHOUT ever executing the Store stub. */
 export function detectPython(): string | null {
+  // Windows: `py -3` (the real Python Launcher py.exe — never the Store alias)
+  // FIRST, so we prefer a genuine interpreter and only fall back to bare
+  // `python`/`python3` after filtering out the WindowsApps execution-alias stub.
   const candidates = process.platform === 'win32'
-    ? ['python', 'python3', 'py -3']
+    ? ['py -3', 'python', 'python3']
     : ['python3', 'python'];
 
   for (const cmd of candidates) {
+    const bin = cmd.split(' ')[0];
+    // NEVER execute a bin that resolves only to the Microsoft Store alias —
+    // running it opens the Store (the bug behind "что за питон-менеджер открылся").
+    if (resolvesToStoreAliasOnly(bin)) {
+      log('WARN', `Skipping '${bin}' — resolves only to the Microsoft Store alias (not a real interpreter); not executed`);
+      continue;
+    }
     try {
       const output = execSync(`${cmd} --version`, { encoding: 'utf-8', timeout: 5000 }).trim();
       const match = output.match(/Python\s+(\d+)\.(\d+)/);
@@ -30,7 +65,7 @@ export function detectPython(): string | null {
         const minor = parseInt(match[2], 10);
         if (major >= 3 && minor >= 9) {
           log('INFO', `Found ${output} via '${cmd}'`);
-          return cmd.split(' ')[0]; // return just the binary name
+          return cmd; // keep the full invocation ('py -3' OR 'python') so callers run the SAME interpreter
         }
       }
     } catch { /* not found, try next */ }
@@ -112,7 +147,10 @@ export function launchTui(
     return;
   }
 
-  const child = spawn(pythonCmd, buildTuiLaunchArgs(statusFile, logFile, framework), {
+  // pythonCmd may be a multi-token invocation ('py -3'); spawn needs exe + args
+  // split (spawn treats the whole string as one executable name otherwise).
+  const [exe, ...preArgs] = pythonCmd.split(' ');
+  const child = spawn(exe, [...preArgs, ...buildTuiLaunchArgs(statusFile, logFile, framework)], {
     cwd: path.dirname(tuiPackagePath),
     detached: true,
     stdio: 'ignore',
