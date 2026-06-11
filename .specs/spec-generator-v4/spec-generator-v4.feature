@@ -1116,3 +1116,12 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given a spec whose docs live in a subdirectory and a secret file outside the spec root
     When the door resolves an in-tree subpath and a traversal subpath
     Then the in-tree subpath resolves inside the spec root and the traversal subpath is refused
+
+  @feature37
+  Scenario: SPECGEN004_154 the deterministic FR census never false-greens an FR with open tasks
+    Given a fixture corpus where one FR has a done task and an open task and another FR is marked done with no passing scenario
+    When the deterministic fr-census runs over the built graph
+    Then the FR with an open task reads IN_PROGRESS not IMPLEMENTED
+    And the FR marked done with no test reads DONE_UNTESTED in the false-green list
+    And every FR appears exactly once and the per-verdict counts conserve
+    And the census classifies every FR of the live spec-generator-v4 corpus by graph evidence
