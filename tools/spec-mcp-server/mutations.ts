@@ -68,6 +68,18 @@ export function isSafeSlug(slug: string): boolean {
 }
 
 /**
+ * Is a slug under `.specs/archive/`? Archived specs are RETIRED (FR-43c / the
+ * archival lifecycle): the builder skips `archive/` (out of the live graph), so
+ * they must be SEALED against the mutation door — no apply_spec_change /
+ * delete_spec_doc / rename_spec_doc may touch them. The sanctioned way INTO the
+ * archive is `archive_spec` (a whole-dir move), not a per-doc write; the way OUT
+ * is a deliberate human `git` op. Reaching content stays read-only via git history.
+ */
+export function isArchivedSlug(slug: string): boolean {
+  return slug === 'archive' || slug.startsWith('archive/');
+}
+
+/**
  * Resolve a (slug, doc) reference — where `doc` MAY be a SUBPATH
  * (`ARCHITECTURE/AXIS-1.md`, `attachments/diagram.png`) — to an absolute path
  * GUARANTEED to stay inside `.specs/<slug>/` (P19-6). This REPLACES the old
@@ -107,6 +119,12 @@ export function resolveSpecDoc(
 export function validateTarget(slug: string, doc: string): MutationFinding | null {
   if (!isSafeSlug(slug)) {
     return { layer: 'target', message: `unsafe spec slug "${slug}" — kebab-case, nested ok, no traversal/abs path` };
+  }
+  // Seal the archive: retired specs under .specs/archive/ are read-only through
+  // the mutation door (FR-43c / archival lifecycle). The message is prefixed
+  // ARCHIVE_SEALED so the door + tests recognise this specific denial.
+  if (isArchivedSlug(slug)) {
+    return { layer: 'target', message: `ARCHIVE_SEALED: "${slug}" is under .specs/archive/ — archived specs are read-only via the mutation door; un-archive with a deliberate git move` };
   }
   // P19-6: doc MAY be a SUBPATH (.architecture-research/1-stage.md). Containment is
   // a pure relative check (no segment may be '', '.', '..'; no drive/abs) — keeps

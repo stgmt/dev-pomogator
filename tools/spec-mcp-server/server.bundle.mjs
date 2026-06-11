@@ -46581,7 +46581,9 @@ function walkDir(absDir, suffixes) {
     "dist",
     ".dev-pomogator-tmp",
     ".stryker-tmp",
-    "__pycache__"
+    "__pycache__",
+    "archive"
+    // FR-43c: `.specs/archive/` holds human-confirmed retired specs — out of the live graph
   ]);
   const stack = [absDir];
   while (stack.length) {
@@ -48043,6 +48045,9 @@ var SAFE_SLUG_RE = /^[a-z0-9]([a-z0-9-]*(\/[a-z0-9][a-z0-9-]*)*)?$/;
 function isSafeSlug(slug) {
   return SAFE_SLUG_RE.test(slug) && !slug.includes("..");
 }
+function isArchivedSlug(slug) {
+  return slug === "archive" || slug.startsWith("archive/");
+}
 function resolveSpecDoc(repoRoot, slug, doc) {
   if (!isSafeSlug(slug)) return { ok: false, reason: "UNSAFE_SPEC" };
   const relRaw = String(doc).replace(/\\/g, "/").replace(/^\/+/, "");
@@ -48056,6 +48061,9 @@ function resolveSpecDoc(repoRoot, slug, doc) {
 function validateTarget(slug, doc) {
   if (!isSafeSlug(slug)) {
     return { layer: "target", message: `unsafe spec slug "${slug}" \u2014 kebab-case, nested ok, no traversal/abs path` };
+  }
+  if (isArchivedSlug(slug)) {
+    return { layer: "target", message: `ARCHIVE_SEALED: "${slug}" is under .specs/archive/ \u2014 archived specs are read-only via the mutation door; un-archive with a deliberate git move` };
   }
   const rel = normalizeContainedDoc(doc);
   if (rel === null) {
