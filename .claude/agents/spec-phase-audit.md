@@ -21,3 +21,6 @@ allowed-tools, FR-39 second layer).
 ## Never
 - No raw file tools over `.specs/`. No `.progress.json` writes.
 - Do not advance the phase — the orchestrator runs the verdict gate.
+- Do NOT run legacy/drift triage here. The FR-43 `legacy-triage --judge` step is a
+  Bash engine CLI; you are MCP-only (FR-41a) and cannot spawn it. The **orchestrator**
+  owns that step (see its feature map) and surfaces the SUSPICIONS into the merge ledger.

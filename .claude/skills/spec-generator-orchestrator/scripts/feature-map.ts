@@ -12,11 +12,11 @@
 
 export interface WorkflowStep {
   /** End-to-end workflow stage. */
-  step: 'scaffold' | 'conformance' | 'coverage' | 'test-quality' | 'reconcile' | 'resolve' | 'honesty-gate' | 'trace' | 'backlog' | 'architecture';
-  /** The worker this stage delegates to (skill name or MCP tool name). */
+  step: 'scaffold' | 'conformance' | 'coverage' | 'test-quality' | 'reconcile' | 'resolve' | 'honesty-gate' | 'trace' | 'backlog' | 'architecture' | 'legacy-triage';
+  /** The worker this stage delegates to (skill name, MCP tool name, or engine CLI). */
   worker: string;
-  /** Whether the worker is an MCP tool or a worker skill. */
-  kind: 'mcp-tool' | 'skill';
+  /** Whether the worker is an MCP tool, a worker skill, or an engine CLI. */
+  kind: 'mcp-tool' | 'skill' | 'engine-cli';
 }
 
 /**
@@ -37,6 +37,11 @@ export const WORKFLOW: WorkflowStep[] = [
   // GREEN test cannot reach DONE; the worst verdict feeds get_coverage's honesty-gate.
   { step: 'test-quality', worker: 'strong-tests', kind: 'skill' },
   { step: 'test-quality', worker: 'spec-status', kind: 'skill' },
+  // FR-43: legacy/drift triage. The ORCHESTRATOR runs it (it has Bash; the phase
+  // agents are MCP-only and cannot spawn a CLI). `legacy-triage --judge` flags
+  // abandoned specs (SUPERSEDED/REMOVED/DRIFTED/ABSORBED) via the LLM judge —
+  // SUSPICION only, a human confirms (FR-43c), never auto-retire.
+  { step: 'legacy-triage', worker: 'legacy-triage', kind: 'engine-cli' },
   { step: 'honesty-gate', worker: 'get_coverage', kind: 'mcp-tool' },
 ];
 
@@ -83,6 +88,12 @@ export const REFERENCED_CAPABILITIES: readonly string[] = [
   // strong-tests/spec-status capability is dropped from the map).
   'strong-tests',
   'spec-status',
+  // FR-43 — legacy/drift triage. An engine CLI (`tools/specs-generator/legacy-triage.ts
+  // --judge`), not an MCP tool nor a worker skill, so it is NOT in the live
+  // capability surface (liveCapabilities = MCP registry + WORKER_SKILLS); listing
+  // it here keeps the WORKFLOW worker referenced. The orchestrator runs it because
+  // it has Bash; the phase agents are MCP-only (FR-41a) and cannot spawn a CLI.
+  'legacy-triage',
 ];
 
 /**

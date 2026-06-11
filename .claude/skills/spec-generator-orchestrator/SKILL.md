@@ -31,6 +31,7 @@ delegates to a worker — a `Skill(...)` or an MCP tool — never inline logic:
 | reconcile | `Skill("cross-spec-reconcile")` | skill |
 | resolve | `Skill("cross-spec-resolve")` | skill |
 | backlog | `Skill("spec-backlog")` | skill |
+| legacy-triage | **`legacy-triage --judge` engine CLI** | engine-cli |
 | honesty-gate | **`get_coverage` MCP tool** | mcp-tool |
 
 ### Coverage + honesty step (delegation, not re-implementation)
@@ -40,6 +41,26 @@ When the workflow reaches the coverage / honesty-gate step, **call the
 `verified_status`. Do NOT compute buckets here — the bucketing + FR-32 honesty
 derivation is owned by `tools/spec-graph/coverage.ts` and surfaced by
 `get_coverage`. This skill body intentionally contains no bucketing code.
+
+### Legacy/drift triage step (FR-43 — SUSPICION only, the orchestrator runs it)
+
+After the backlog step and before the honesty-gate, run the legacy/drift triage —
+**only the orchestrator can**, because it has `Bash`; the phase agents are MCP-only
+(FR-41a) and cannot spawn a CLI. Call the engine directly:
+
+```bash
+# Flags abandoned specs; --judge escalates the reality-drift kinds via the LLM judge.
+npx tsx tools/specs-generator/legacy-triage.ts --judge
+```
+
+It emits SUSPICIONS, never verdicts: each candidate is `SUPERSEDED` (deterministic —
+version-lineage + not_run + lineage header) or, for the reality-drift kinds, the
+`claude -p` judge separates `MOVED→DRIFTED` (re-sync paths, don't retire) /
+`REMOVED` / `ABSORBED`, grep-grounded and degrade-honest (no binary → stays
+`DRIFTED`). The engine **never auto-retires** (AC-43.3 / FR-43c) — a missing path is
+DRIFTED by default, and a human confirms before anything is archived to `.specs/archive/`.
+Surface the breakdown + evidence into the merge ledger as a `pending` entry; do not
+mutate any spec from this step.
 
 ## Self-improve merge ledger (human gate)
 
