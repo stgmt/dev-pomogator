@@ -31,6 +31,9 @@ import path from 'node:path';
 import { buildGraphFromCwd } from '../spec-graph/builder.ts';
 import { specOf } from '../spec-graph/coverage.ts';
 import type { SpecGraph, ScenarioNode } from '../spec-graph/types.ts';
+// FR-43b: the "is the implementation still on disk?" signal is REUSED from
+// spec-reality-check (its FILE_CHANGES reality checks), not re-built here.
+import { parseFileChangesTable, checkFcRows } from '../../.claude/skills/spec-reality-check/scripts/verify.ts';
 
 export type LegacyState = 'SUPERSEDED' | 'REMOVED' | 'DRIFTED' | 'ABSORBED' | 'NEEDS_HUMAN';
 
@@ -90,6 +93,31 @@ function headerHint(repoRoot: string, relFile: string): string | null {
   }
 }
 
+/**
+ * REMOVED / DRIFTED signal (FR-43a) — REUSE spec-reality-check's FILE_CHANGES
+ * reality check (FR-43b): how much of a spec's CLAIMED implementation still
+ * exists on disk. Whole impl gone → REMOVED; partly gone → DRIFTED (re-sync, the
+ * FR-43a default — NOT a retirement); mostly present → healthy (no candidate).
+ */
+function specImplReality(
+  corpusRoot: string,
+  slug: string,
+): { editDelete: number; missing: number; existRatio: number } | null {
+  const fc = path.join(corpusRoot, '.specs', slug, 'FILE_CHANGES.md');
+  if (!fs.existsSync(fc)) return null;
+  let rows;
+  try {
+    rows = parseFileChangesTable(fs.readFileSync(fc, 'utf-8')).rows;
+  } catch {
+    return null;
+  }
+  const editDelete = rows.filter((r) => r.action === 'edit' || r.action === 'delete').length;
+  if (editDelete < 4) return null; // too few claimed-existing paths to judge abandonment
+  const findings = checkFcRows(rows, corpusRoot);
+  const missing = findings.filter((f) => f.check === 'FC_EDIT_MISSING' || f.check === 'FC_DELETE_MISSING').length;
+  return { editDelete, missing, existRatio: (editDelete - missing) / editDelete };
+}
+
 export function computeLegacyTriage(graph: SpecGraph, corpusRoot: string): TriageReport {
   // Group scenarios by their feature file.
   const byFile = new Map<string, ScenarioNode[]>();
@@ -139,6 +167,37 @@ export function computeLegacyTriage(graph: SpecGraph, corpusRoot: string): Triag
       allNotRun,
       suspected,
       signals,
+      recommendedAction: ACTION[suspected],
+    });
+  }
+
+  // Spec-level reality drift (REMOVED / DRIFTED) — a SECOND dimension beyond the
+  // orphaned-feature scan above: a spec whose claimed implementation is gone/stale.
+  const flaggedFiles = new Set(candidates.map((c) => c.file));
+  const specs = new Set<string>();
+  for (const n of graph.nodes.values()) if (n.spec) specs.add(n.spec);
+  for (const slug of specs) {
+    const r = specImplReality(corpusRoot, slug);
+    if (!r) continue;
+    if (r.existRatio >= 0.8) continue; // ≥80% of the claimed implementation exists → healthy
+    // FR-43a DEFAULT = DRIFTED, never auto-REMOVED. A MISSING FILE_CHANGES path proves
+    // the spec is STALE about its implementation, but CANNOT tell "deleted" from "moved"
+    // (e.g. the v2 migration relocated extensions/* → .claude/*, tools/* — proven on
+    // worktree-setup/pomogator-doctor: live features, stale paths). REMOVED needs a
+    // git-delete signal (deferred); from path-existence alone we only assert DRIFTED.
+    const suspected: LegacyState = 'DRIFTED';
+    const file = `.specs/${slug}/FILE_CHANGES.md`;
+    if (flaggedFiles.has(file)) continue;
+    candidates.push({
+      file,
+      spec: slug,
+      scenarioCount: 0,
+      allNotRun: false,
+      suspected,
+      signals: [
+        `${r.missing}/${r.editDelete} claimed edit/delete implementation paths are MISSING on disk (${Math.round(r.existRatio * 100)}% still exist) — spec-reality-check FILE_CHANGES drift`,
+        'the spec is STALE about WHERE its code lives (often a refactor/migration the spec never tracked) — UPDATE the FILE_CHANGES paths (re-sync), do NOT retire (FR-43a default); REMOVED would need git-delete proof, not a missing path',
+      ],
       recommendedAction: ACTION[suspected],
     });
   }

@@ -1,60 +1,48 @@
 /**
  * Unit: P18-1 legacy/drift SUSPICION classifier (tools/specs-generator/legacy-triage.ts).
  *
- * Real tmpdir corpus (no mocks). Pins the FR-43 contract:
- *   - SUPERSEDED suspicion from old-version ids inside a newer spec + lineage header,
- *   - not_run ALONE is NOT abandonment (the 107-file-flood guard),
- *   - the classifier only REPORTS (no auto-retire — FR-43c HITL).
+ * Fixtures are CAPTURED FROM THE REAL CORPUS (real-fixtures discipline), not
+ * hand-fabricated — see __fixtures__/legacy-triage/PROVENANCE.md:
+ *   - superseded-v4/legacy.feature = the real legacy-v3.feature (28 SPECGEN003
+ *     scenarios, v3→v4 lineage header) → ground truth SUPERSEDED.
+ *   - drifted-real/FILE_CHANGES.md = the real worktree-setup FILE_CHANGES (a LIVE
+ *     skill whose paths went stale at the v2 migration) → ground truth DRIFTED.
+ * (Anti-flood + no-REMOVED + tool↔disk reconcile on the LIVE corpus are covered
+ * by the dogfood, evals/legacy-triage-dogfood.ts — those need the real corpus.)
  */
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
-import { randomUUID } from 'node:crypto';
 import { buildGraphFromCwd } from '../../spec-graph/builder.ts';
 import { computeLegacyTriage } from '../legacy-triage.ts';
 
-let root: string;
-const specDir = () => path.join(root, '.specs', 'demo-v4');
-beforeEach(() => {
-  root = path.join(os.tmpdir(), `lt-${randomUUID()}`);
-  fs.mkdirSync(specDir(), { recursive: true });
-  fs.writeFileSync(path.join(specDir(), 'FR.md'), '## FR-1: Demo\n\nBody.\n');
-});
-afterEach(() => fs.rmSync(root, { recursive: true, force: true }));
+const FIXTURES = path.resolve(import.meta.dirname ?? __dirname, '..', '__fixtures__', 'legacy-triage');
 
-function feature(name: string, body: string) {
-  fs.writeFileSync(path.join(specDir(), name), body);
-}
+describe('computeLegacyTriage — on REAL captured fixtures', () => {
+  const report = computeLegacyTriage(buildGraphFromCwd(FIXTURES), FIXTURES);
+  const find = (suffix: string) => report.candidates.find((c) => c.file.endsWith(suffix));
 
-describe('computeLegacyTriage — FR-43 suspicion', () => {
-  it('suspects SUPERSEDED from old-version ids + lineage header inside a newer spec', () => {
-    feature('legacy.feature', '# preserved as part of the v3 → v4 consolidation\n@FR-1\nFeature: L\n  Scenario: SPECGEN003_01 old\n    Given x\n');
-    const r = computeLegacyTriage(buildGraphFromCwd(root), root);
-    const c = r.candidates.find((x) => x.file.endsWith('legacy.feature'))!;
-    expect(c.suspected).toBe('SUPERSEDED');
-    expect(c.signals.some((s) => /SPECGEN003/.test(s))).toBe(true);
-    expect(c.signals.some((s) => /lineage|consolidat/i.test(s))).toBe(true);
-    expect(c.recommendedAction).toMatch(/archive/);
+  it('the REAL legacy-v3 feature classifies SUPERSEDED with its lineage evidence', () => {
+    const c = find('superseded-v4/legacy.feature');
+    expect(c, `candidates: ${report.candidates.map((x) => x.file).join(', ')}`).toBeDefined();
+    expect(c!.suspected).toBe('SUPERSEDED');
+    expect(c!.scenarioCount).toBe(28); // the real scenario count, captured
+    expect(c!.signals.some((s) => /SPECGEN003/.test(s))).toBe(true);
+    expect(c!.signals.some((s) => /lineage|consolidat/i.test(s))).toBe(true);
+    expect(c!.recommendedAction).toMatch(/archive/);
   });
 
-  it('does NOT flag a plain not_run feature with no abandonment signal (anti-flood gate)', () => {
-    // SPECGEN999 is NEWER than v4 → no version-older signal; no lineage header.
-    feature('normal.feature', '@FR-1\nFeature: N\n  Scenario: SPECGEN999_01 current\n    Given x\n');
-    const r = computeLegacyTriage(buildGraphFromCwd(root), root);
-    expect(r.candidates.some((x) => x.file.endsWith('normal.feature'))).toBe(false);
+  it('a REAL spec with stale FILE_CHANGES paths classifies DRIFTED (re-sync), never REMOVED', () => {
+    const c = find('drifted-real/FILE_CHANGES.md');
+    expect(c).toBeDefined();
+    expect(c!.suspected).toBe('DRIFTED');
+    expect(c!.recommendedAction).toMatch(/UPDATE the spec/i);
+    // A missing FILE_CHANGES path is staleness — NEVER auto-claimed as REMOVED.
+    expect(report.candidates.every((x) => x.suspected !== 'REMOVED')).toBe(true);
   });
 
-  it('only the old-version feature is a candidate when both coexist', () => {
-    feature('legacy.feature', '# v3 → v4 consolidation, preserved\n@FR-1\nFeature: L\n  Scenario: SPECGEN003_01 old\n    Given x\n');
-    feature('normal.feature', '@FR-1\nFeature: N\n  Scenario: SPECGEN999_01 current\n    Given x\n');
-    const r = computeLegacyTriage(buildGraphFromCwd(root), root);
-    expect(r.candidates.map((x) => path.basename(x.file)).sort()).toEqual(['legacy.feature']);
-  });
-
-  it('reports only — the suspected file is never auto-moved or deleted (FR-43c)', () => {
-    feature('legacy.feature', '# v3 → v4 consolidation\n@FR-1\nFeature: L\n  Scenario: SPECGEN003_01 old\n    Given x\n');
-    computeLegacyTriage(buildGraphFromCwd(root), root);
-    expect(fs.existsSync(path.join(specDir(), 'legacy.feature'))).toBe(true);
+  it('reports only — the fixtures are never moved or deleted (FR-43c)', () => {
+    expect(fs.existsSync(path.join(FIXTURES, '.specs', 'superseded-v4', 'legacy.feature'))).toBe(true);
+    expect(fs.existsSync(path.join(FIXTURES, '.specs', 'drifted-real', 'FILE_CHANGES.md'))).toBe(true);
   });
 });
