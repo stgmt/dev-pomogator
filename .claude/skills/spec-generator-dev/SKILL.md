@@ -42,7 +42,7 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent
 | Чекеры | `conformance.ts`, `traceability.ts`, `corpus-health.ts` | findings/gaps | неякорённые regex (false positives), несвязанная с рёбрами семантика тегов |
 | Audit | `tools/specs-generator/specs-generator-core.mjs` | P0/warnings | `## FR-N:` без `^…m` ловит примеры в прозе |
 | Вердикт | `tools/specs-generator/spec-verdict.ts` | RED/GREEN + gap list | пропущенный слой = тихое false-green (всегда fail-loud ноты) |
-| MCP | `tools/spec-mcp-server/{tools,server}.ts` + `server.bundle.mjs` | 19 тулзов (read+mutation door) | забытый rebuild бандла = юзеры без фикса; bare-id двусмысленность; **direct-run guard любого ИНЛАЙНЕННОГО в бандл модуля (`import.meta.url===argv[1]`) срабатывает В БАНДЛЕ и убивает сервер (dead-door) — basename-guard** |
+| MCP | `tools/spec-mcp-server/{tools,server}.ts` + `server.bundle.mjs` | read + full CRUD+rename mutation door (`create_spec`/`read_spec_doc`/`apply_spec_change`(+CAS `expected_sha`)/`delete_spec_doc`/**`rename_spec_doc`** anchors-aware: refuse-Decision на inbound markdown-якоря чужих доков ИЛИ `rewrite_inbound` авто-ретаргет; findInboundLinks/rewriteInboundLinks в `mutations.ts`) | забытый rebuild бандла = юзеры без фикса; bare-id двусмысленность; **direct-run guard любого ИНЛАЙНЕННОГО в бандл модуля (`import.meta.url===argv[1]`) срабатывает В БАНДЛЕ и убивает сервер (dead-door) — basename-guard** |
 | Judge | `tools/spec-llm-judge/` | DRIFT-вердикты | трактовать SUBPROCESS_FAILED как «no drift» |
 | Резолверы | `tools/spec-backlog/resolvers/*.ts` | ПИШУТ В СПЕКИ | главный риск мусора: создают артефакты из ошибочно-понятых цитат |
 

@@ -1125,3 +1125,11 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And the FR marked done with no test reads DONE_UNTESTED in the false-green list
     And every FR appears exactly once and the per-verdict counts conserve
     And the census classifies every FR of the live spec-generator-v4 corpus by graph evidence
+
+  @FR-40
+  Scenario: SPECGEN004_155 rename_spec_doc refuses to strand inbound links, then retargets them on opt-in
+    Given a spec doc with inbound markdown links from another doc
+    When the agent renames it through the door without rewrite_inbound
+    Then the door refuses with a Decision block naming the inbound links and nothing is moved
+    When the agent renames it again with rewrite_inbound
+    Then the doc is moved, the old name is gone, and the inbound links are retargeted to the new name

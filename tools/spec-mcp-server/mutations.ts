@@ -369,6 +369,112 @@ export function validateSpecChange(
   return { ok: findings.length === 0, next, findings };
 }
 
+/**
+ * P21-5 rename/move — find inbound MARKDOWN links across the WHOLE corpus that
+ * point AT `targetRelFile` (a repo-relative `.specs/<slug>/<doc>` path). A link
+ * `[text](dest#frag)` references the target when `dest`, resolved relative to
+ * the REFERENCING file's directory, lands on the target file. This is the
+ * MARKDOWN-anchor layer the Done-When names — distinct from delete_spec_doc's
+ * graph-EDGE gate (parsed refs/covers/tested-by): a rename that doesn't retarget
+ * these literal links silently breaks every inbound `[text](…/FR.md#fr-7)`.
+ *
+ * Self-links (a link inside the target doc itself) are EXCLUDED — they travel
+ * with the moved content; only links FROM OTHER files strand on a rename.
+ */
+export interface InboundLink {
+  /** Repo-relative POSIX path of the file that holds the link. */
+  file: string;
+  line: number;
+  /** The raw path written in the markdown link (sans #fragment). */
+  linkPath: string;
+  /** The `#anchor` fragment, if any. */
+  fragment: string | null;
+}
+
+const MD_LINK_RE = /\[[^\]]*\]\(([^)\s]+?)(#[^)\s]*)?\)/g;
+
+export function findInboundLinks(repoRoot: string, targetRelFile: string): InboundLink[] {
+  const specsRoot = path.resolve(repoRoot, '.specs');
+  const targetAbs = path.resolve(repoRoot, targetRelFile);
+  const out: InboundLink[] = [];
+  const walk = (dir: string): void => {
+    let entries: fs.Dirent[];
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const e of entries) {
+      const abs = path.join(dir, e.name);
+      if (e.isDirectory()) {
+        if (e.name === 'node_modules' || e.name === '.git') continue;
+        walk(abs);
+      } else if (e.isFile() && e.name.endsWith('.md')) {
+        if (path.resolve(abs) === targetAbs) continue; // skip the target doc's own (self) links
+        let content: string;
+        try {
+          content = fs.readFileSync(abs, 'utf-8');
+        } catch {
+          continue;
+        }
+        const lines = content.split(/\r?\n/);
+        for (let i = 0; i < lines.length; i++) {
+          for (const m of lines[i].matchAll(MD_LINK_RE)) {
+            const rawPath = m[1];
+            // Ignore non-file links (http(s), mailto, pure #anchor, [[wiki]]).
+            if (/^[a-z][a-z0-9+.-]*:/i.test(rawPath) || rawPath.startsWith('#')) continue;
+            const resolved = path.resolve(path.dirname(abs), rawPath);
+            if (resolved !== targetAbs) continue;
+            out.push({
+              file: path.relative(repoRoot, abs).replace(/\\/g, '/'),
+              line: i + 1,
+              linkPath: rawPath,
+              fragment: m[2] ?? null,
+            });
+          }
+        }
+      }
+    }
+  };
+  walk(specsRoot);
+  return out;
+}
+
+/**
+ * Plan the link-path rewrites for a rename/move: for each inbound link, compute
+ * the NEW relative path from the referencing file to `newTargetRel`, preserving
+ * the `#fragment`. Returns the per-file edited content (caller writes atomically),
+ * grouped so one file with N inbound links is rewritten once.
+ */
+export function rewriteInboundLinks(
+  repoRoot: string,
+  inbound: InboundLink[],
+  newTargetRel: string,
+): Array<{ file: string; content: string }> {
+  const newTargetAbs = path.resolve(repoRoot, newTargetRel);
+  const byFile = new Map<string, InboundLink[]>();
+  for (const l of inbound) {
+    const list = byFile.get(l.file);
+    if (list) list.push(l);
+    else byFile.set(l.file, [l]);
+  }
+  const edits: Array<{ file: string; content: string }> = [];
+  for (const [file, links] of byFile) {
+    const abs = path.resolve(repoRoot, file);
+    let content = fs.readFileSync(abs, 'utf-8');
+    // New relative path FROM this referencing file's dir TO the moved target.
+    let rel = path.relative(path.dirname(abs), newTargetAbs).replace(/\\/g, '/');
+    if (!rel.startsWith('.')) rel = `./${rel}`;
+    for (const l of links) {
+      const oldRef = `](${l.linkPath}${l.fragment ?? ''})`;
+      const newRef = `](${rel}${l.fragment ?? ''})`;
+      content = content.split(oldRef).join(newRef);
+    }
+    edits.push({ file, content });
+  }
+  return edits;
+}
+
 /** Atomic write per atomic-config-save: unique temp + rename. On a rename
  *  failure (Windows EPERM/EBUSY when the target is locked by an editor/watcher)
  *  the temp file is unlinked so it never litters .specs/ (review #6). */

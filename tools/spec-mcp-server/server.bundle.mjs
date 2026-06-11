@@ -48226,6 +48226,75 @@ function validateSpecChange(repoRoot, slug, doc, change) {
   ];
   return { ok: findings.length === 0, next, findings };
 }
+var MD_LINK_RE = /\[[^\]]*\]\(([^)\s]+?)(#[^)\s]*)?\)/g;
+function findInboundLinks(repoRoot, targetRelFile) {
+  const specsRoot = path11.resolve(repoRoot, ".specs");
+  const targetAbs = path11.resolve(repoRoot, targetRelFile);
+  const out = [];
+  const walk = (dir) => {
+    let entries;
+    try {
+      entries = fs15.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const e of entries) {
+      const abs = path11.join(dir, e.name);
+      if (e.isDirectory()) {
+        if (e.name === "node_modules" || e.name === ".git") continue;
+        walk(abs);
+      } else if (e.isFile() && e.name.endsWith(".md")) {
+        if (path11.resolve(abs) === targetAbs) continue;
+        let content;
+        try {
+          content = fs15.readFileSync(abs, "utf-8");
+        } catch {
+          continue;
+        }
+        const lines = content.split(/\r?\n/);
+        for (let i = 0; i < lines.length; i++) {
+          for (const m of lines[i].matchAll(MD_LINK_RE)) {
+            const rawPath = m[1];
+            if (/^[a-z][a-z0-9+.-]*:/i.test(rawPath) || rawPath.startsWith("#")) continue;
+            const resolved = path11.resolve(path11.dirname(abs), rawPath);
+            if (resolved !== targetAbs) continue;
+            out.push({
+              file: path11.relative(repoRoot, abs).replace(/\\/g, "/"),
+              line: i + 1,
+              linkPath: rawPath,
+              fragment: m[2] ?? null
+            });
+          }
+        }
+      }
+    }
+  };
+  walk(specsRoot);
+  return out;
+}
+function rewriteInboundLinks(repoRoot, inbound, newTargetRel) {
+  const newTargetAbs = path11.resolve(repoRoot, newTargetRel);
+  const byFile = /* @__PURE__ */ new Map();
+  for (const l of inbound) {
+    const list = byFile.get(l.file);
+    if (list) list.push(l);
+    else byFile.set(l.file, [l]);
+  }
+  const edits = [];
+  for (const [file2, links] of byFile) {
+    const abs = path11.resolve(repoRoot, file2);
+    let content = fs15.readFileSync(abs, "utf-8");
+    let rel = path11.relative(path11.dirname(abs), newTargetAbs).replace(/\\/g, "/");
+    if (!rel.startsWith(".")) rel = `./${rel}`;
+    for (const l of links) {
+      const oldRef = `](${l.linkPath}${l.fragment ?? ""})`;
+      const newRef = `](${rel}${l.fragment ?? ""})`;
+      content = content.split(oldRef).join(newRef);
+    }
+    edits.push({ file: file2, content });
+  }
+  return edits;
+}
 function writeDocAtomic(repoRoot, slug, doc, content) {
   const dir = path11.join(repoRoot, ".specs", slug);
   const abs = path11.join(dir, doc);
@@ -49223,6 +49292,103 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
       registryOpts.refreshGraph?.();
       logSpecAccess("delete_spec_doc", args, "ok");
       return asJsonResult({ ok: true, spec: slug, doc: rel, deleted: true, bytes });
+    }
+  });
+  tools.push({
+    name: "rename_spec_doc",
+    description: "P21-5: rename or MOVE a spec document (*.md/*.feature) \u2014 within a spec or to another spec (to_spec). Anchors-aware: by DEFAULT refuses with a Decision block listing inbound markdown links (`[text](\u2026/FR.md#\u2026)`) from OTHER docs that the rename would strand; pass rewrite_inbound:true to retarget them atomically. Refuses a destination that already exists (no clobber). Validates the moved doc at its new name (a filename carries parser semantics \u2014 FR.md\u2192TASKS.md would mis-parse). Optimistic CAS via expected_sha on the source; atomic write+unlink; audited.",
+    inputShape: {
+      spec: external_exports.string(),
+      doc: external_exports.string(),
+      to_doc: external_exports.string(),
+      to_spec: external_exports.string().optional(),
+      reason: external_exports.string(),
+      expected_sha: external_exports.string().optional(),
+      rewrite_inbound: external_exports.boolean().optional()
+    },
+    handler: async (args) => {
+      const ro = readOnlyRefusal("rename_spec_doc", args);
+      if (ro) return ro;
+      const cwd = process.cwd();
+      const slug = slugOf(args.spec);
+      const toSlug = args.to_spec != null ? slugOf(args.to_spec) : slug;
+      const doc = docOf(args.doc);
+      const toDoc = docOf(args.to_doc);
+      const rewriteInbound = args.rewrite_inbound === true;
+      const srcBad = validateTarget(slug, doc);
+      if (srcBad) {
+        logSpecAccess("rename_spec_doc", args, "denied");
+        return asJsonResult({ ok: false, error: "INVALID_SOURCE", spec: slug, doc, finding: srcBad });
+      }
+      const dstBad = validateTarget(toSlug, toDoc);
+      if (dstBad) {
+        logSpecAccess("rename_spec_doc", args, "denied");
+        return asJsonResult({ ok: false, error: "INVALID_DEST", spec: toSlug, doc: toDoc, finding: dstBad });
+      }
+      const src = resolveSpecDoc(cwd, slug, doc);
+      const dst = resolveSpecDoc(cwd, toSlug, toDoc);
+      if (!src.ok || !dst.ok) {
+        logSpecAccess("rename_spec_doc", args, "denied");
+        return asJsonResult({ ok: false, error: "DOC_TRAVERSAL", spec: slug, doc });
+      }
+      if (src.abs === dst.abs) {
+        logSpecAccess("rename_spec_doc", args, "error");
+        return asJsonResult({ ok: false, error: "NOOP_RENAME", hint: "source and destination resolve to the same path" });
+      }
+      if (!fs17.existsSync(src.abs) || !fs17.statSync(src.abs).isFile()) {
+        logSpecAccess("rename_spec_doc", args, "not_found");
+        return asJsonResult({ ok: false, error: "DOC_NOT_FOUND", spec: slug, doc: src.rel });
+      }
+      if (fs17.existsSync(dst.abs)) {
+        logSpecAccess("rename_spec_doc", args, "denied");
+        return asJsonResult({ ok: false, error: "DEST_EXISTS", spec: toSlug, doc: dst.rel, hint: "destination already exists \u2014 pick a free name or delete it first (no silent clobber)" });
+      }
+      const expectedSha = typeof args.expected_sha === "string" ? args.expected_sha : null;
+      if (expectedSha !== null) {
+        const cas = casCheck(cwd, slug, src.rel, expectedSha);
+        if (!cas.ok) {
+          logSpecAccess("rename_spec_doc", args, "denied");
+          return asJsonResult({ ok: false, error: "CAS_MISMATCH", spec: slug, doc: src.rel, expected_sha: expectedSha, actual_sha: cas.actualSha, hint: "source changed since you read it (another session?) \u2014 re-read for the fresh sha and retry" });
+        }
+      }
+      const content = fs17.readFileSync(src.abs, "utf-8");
+      const srcRelFile = `.specs/${slug}/${src.rel}`;
+      const dstRelFile = `.specs/${toSlug}/${dst.rel}`;
+      const inbound = findInboundLinks(cwd, srcRelFile);
+      if (inbound.length > 0 && !rewriteInbound) {
+        logSpecAccess("rename_spec_doc", args, "denied");
+        return asJsonResult({
+          ok: false,
+          error: "INBOUND_LINKS_PRESENT",
+          spec: slug,
+          doc: src.rel,
+          inbound_count: inbound.length,
+          inbound: inbound.slice(0, 20),
+          decision: `Renaming ${srcRelFile} \u2192 ${dstRelFile} would strand ${inbound.length} inbound markdown link(s) in other docs. Decide: (a) rewrite_inbound:true to retarget them atomically, (b) fix those links first, or (c) keep the name.`,
+          hint: "Nothing was changed. Pass rewrite_inbound:true to auto-retarget, or update the listed links first."
+        });
+      }
+      const v = validateSpecChange(cwd, toSlug, dst.rel, { content });
+      if (v.specMissing) {
+        logSpecAccess("rename_spec_doc", args, "denied");
+        return asJsonResult({ ok: false, error: "DEST_SPEC_MISSING", spec: toSlug, hint: "destination spec does not exist \u2014 create_spec first" });
+      }
+      if (!v.ok) {
+        logSpecAccess("rename_spec_doc", args, "denied");
+        return asJsonResult({ ok: false, error: "VALIDATION_FAILED", spec: toSlug, doc: dst.rel, findings: v.findings, hint: "the doc does not validate at its new name/location \u2014 fix or pick another target" });
+      }
+      writeDocAtomic(cwd, toSlug, dst.rel, content);
+      let rewroteFiles = 0;
+      if (rewriteInbound && inbound.length > 0) {
+        for (const edit of rewriteInboundLinks(cwd, inbound, dstRelFile)) {
+          fs17.writeFileSync(path13.join(cwd, edit.file), edit.content, "utf-8");
+          rewroteFiles++;
+        }
+      }
+      fs17.unlinkSync(src.abs);
+      registryOpts.refreshGraph?.();
+      logSpecAccess("rename_spec_doc", args, "ok");
+      return asJsonResult({ ok: true, spec: slug, from: src.rel, to_spec: toSlug, to: dst.rel, sha: docSha(content), inbound_count: inbound.length, rewrote_inbound_files: rewroteFiles, findings: [] });
     }
   });
   tools.push({
