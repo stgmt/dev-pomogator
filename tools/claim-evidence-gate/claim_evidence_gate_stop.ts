@@ -12,6 +12,12 @@
  * run the real check first. This catches the failure that motivated the gate: presenting a
  * fact-check verdict table without ever running fact-check.
  *
+ * It ALSO kicks «доделывай»: the `deferred-work` class fires when the final message
+ * self-reports a remaining-work list OR defers the next step back to the user
+ * ("осталось: …", "беру дальше пункт N", "скажешь — сделаю") and then ENDS the turn.
+ * No tool excuses it — stopping with a declared remainder is the failure; the agent must
+ * finish in-turn (cooldown + maxRetries release a genuinely-blocked step).
+ *
  * Modes (CLAIM_GATE_ENABLED): "true" (enforce, default) | "shadow" (log only, never block)
  * | "false" (off). Every detection is appended to .dev-pomogator/.claim-evidence-gate-fires.jsonl.
  *
@@ -142,11 +148,19 @@ async function main(): Promise<void> {
   writeMarkerAtomic(mp, { hash: currentHash, timestamp: new Date().toISOString(), count: newCount });
 
   log('INFO', `blocking ${unsupported.cls} (attempt ${newCount})`);
-  block(
-    `⚠️ ${SELF_MARKER}: ты заявил результат (${unsupported.cls}), но в этом ходе нет улики, которая его породила.\n` +
-      `Нужно: ${unsupported.need}.\n` +
-      `Сначала реально прогони проверку, потом заявляй — либо явно пометь [UNVERIFIED] если проверить нельзя.`,
-  );
+  if (unsupported.cls === 'deferred-work') {
+    block(
+      `⚠️ ${SELF_MARKER}: ты сам обозначил остаток работы / отложил следующий шаг и сдаёшь ход.\n` +
+        `ДОДЕЛЫВАЙ в этом же ходе — ${unsupported.need}.\n` +
+        `Не перекладывай следующий шаг на пользователя «скажешь — сделаю». Если реально заблокирован — задай ОДИН конкретный вопрос; иначе продолжай работу.`,
+    );
+  } else {
+    block(
+      `⚠️ ${SELF_MARKER}: ты заявил результат (${unsupported.cls}), но в этом ходе нет улики, которая его породила.\n` +
+        `Нужно: ${unsupported.need}.\n` +
+        `Сначала реально прогони проверку, потом заявляй — либо явно пометь [UNVERIFIED] если проверить нельзя.`,
+    );
+  }
 }
 
 main()

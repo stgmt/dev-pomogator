@@ -12,7 +12,12 @@
 
 import type { ToolUse } from './turn_window.ts';
 
-export type ClaimClass = 'analysis-verdict' | 'works-done' | 'not-found-impossible' | 'verified-marker';
+export type ClaimClass =
+  | 'analysis-verdict'
+  | 'works-done'
+  | 'not-found-impossible'
+  | 'verified-marker'
+  | 'deferred-work';
 
 export interface ClaimHit {
   cls: ClaimClass;
@@ -111,6 +116,52 @@ function isNotFound(text: string): boolean {
 
 const VERIFIED_MARKER = /\[VERIFIED\s+via\s+([^\]]{1,80})\]/i;
 
+// ── deferred-work detector ───────────────────────────────────────────────────
+// The "stopped mid-task" pattern: the final message SELF-REPORTS remaining work
+// or DEFERS the next step (often handing the go-ahead back to the user) instead
+// of just doing it — and the turn ends. The gate must kick «доделывай», not
+// approve. Unlike the evidence classes, NO tool excuses this — stopping with a
+// declared remainder is the failure itself. Anti-loop (cooldown + maxRetries in
+// the Stop hook) guarantees it can't trap forever: a genuinely-blocked next step
+// approves after the retry budget.
+//
+// Structural-pattern bias (same as the rest of the classifier): a single stray
+// "дальше" never fires — only an explicit remaining-work phrase or a
+// defer-to-user-permission phrase. Examples it MUST catch (real, this session):
+//   "Что в волне 1 ещё осталось: 1. … 2. … 3. …"
+//   "Беру дальше пункт 1"
+//   "Скажешь «волна 1» — начну"
+//   "дальше — свожу статусы"
+const DEFERRED_WORK = new RegExp(
+  [
+    'что\\s+(?:ещё|еще)?\\s*осталось',
+    '(?:ещё|еще)\\s+осталось',
+    'осталось\\s*(?::|—|–|-|\\d|доделать|закрыть|сделать|починить|реализовать)',
+    'остато?к\\s+(?:работы|волны|задач)',
+    'дальше\\s*(?:—|–|-|:|беру|возьму|ид[уё]|пойду|продолж|сдела|свожу|свед)',
+    'дал(?:ее|ьше)\\s+(?:беру|—|:)',
+    'следующ(?:ий|им|ие)\\s+(?:шаг|пункт|задач)',
+    'беру\\s+(?:дальше\\s+)?(?:пункт|волну|следующ|остаток)',
+    '(?:^|[\\s.,;])продолж(?:у|аю|им)(?:[\\s.,!]|$)',
+    'доделаю',
+    'не\\s+доделал',
+    'оста(?:вш|ло)\\S*\\s+(?:пункт|задач|шаг|доделать)',
+    'remaining\\b',
+    'next\\s+steps?\\b',
+    '(?:^|[\\s(])to-?do\\b',
+    // deferring the next ACTION to the user's go-ahead instead of doing it:
+    'скажешь\\s+\\S.*?(?:начну|сделаю|возьму|пойду|покажу|продолж)',
+    'если\\s+(?:хочешь|нужно|скажешь|надо)(?:[\\s,.;—–-]|$)',
+    '(?:скажи|напиши)\\b[^.\\n]{0,40}(?:и\\s+я|покаж|сделаю|начну|возьму|пойду|продолж)',
+  ].join('|'),
+  'i',
+);
+
+/** True when the message announces remaining work / a deferred next step + ends the turn. */
+export function isDeferredWork(text: string): boolean {
+  return DEFERRED_WORK.test(text);
+}
+
 // ── public API ──────────────────────────────────────────────────────────────
 
 /** rawText = the raw assistant message (for the [VERIFIED] marker which lives in prose). */
@@ -130,6 +181,12 @@ export function classify(rawText: string): ClaimHit[] {
   if (isNotFound(text)) {
     hits.push({ cls: 'not-found-impossible', need: '≥2 поисковых вызова (Grep/Glob/WebSearch/octocode) в этом ходе' });
   }
+  if (isDeferredWork(text)) {
+    hits.push({
+      cls: 'deferred-work',
+      need: 'доделать начатое В ЭТОМ ХОДЕ — не сдавать ход с незакрытым остатком и не перекладывать следующий шаг на пользователя',
+    });
+  }
   return hits;
 }
 
@@ -147,6 +204,12 @@ export function evidenceSatisfied(hit: ClaimHit, tools: ToolUse[], minSearch = M
       if (tokens.length === 0) return true; // nothing to match → don't block
       return tools.some((t) => tokens.some((tok) => t.name.includes(tok) || t.input.includes(tok)));
     }
+    case 'deferred-work':
+      // No tool excuses stopping with a declared remainder — the stop itself is
+      // the failure. Always a block candidate; the Stop hook's cooldown +
+      // maxRetries is the only release valve (genuinely-blocked step approves
+      // after the retry budget).
+      return false;
   }
 }
 

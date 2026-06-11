@@ -104,6 +104,34 @@ describe('CEGATE001: claim-evidence gate — verified-marker class', () => {
   });
 });
 
+describe('CEGATE001: claim-evidence gate — deferred-work class (kick «доделывай»)', () => {
+  // @feature6
+  it('CEGATE001_17: blocks a self-reported remaining-work list that ends the turn', () => {
+    const { blocked } = runHook([U('делай дальше'), A([txt('Что осталось:\n1. свести статусы\n2. e2e тест\n3. врезать в create-spec')])]);
+    expect(blocked).toBe(true);
+  });
+
+  // @feature6
+  it('CEGATE001_18: blocks "беру дальше пункт N" EVEN when a Bash ran this turn (the stop is the failure)', () => {
+    const { blocked } = runHook([U('делай'), A([tool('Bash', { command: 'npx tsx x.ts' })]), A([txt('Беру дальше пункт 1 — свожу статусы.')])]);
+    expect(blocked).toBe(true);
+  });
+
+  // @feature6
+  it('CEGATE001_19: blocks deferring the next action to the user ("скажешь — начну")', () => {
+    const { blocked } = runHook([U('план'), A([txt('Скажешь «волна 1» — начну, вытяну открытые задачи и пойду делать.')])]);
+    expect(blocked).toBe(true);
+  });
+
+  // @feature6
+  it('CEGATE001_20: does NOT fire on a clean completion or an explanatory "дальше"', () => {
+    expect(classify('Закоммичено 7c3c723. Вердикт зелёный, 156 сценариев.').some((h) => h.cls === 'deferred-work')).toBe(false);
+    expect(classify('По коду гейт фаерит только при заявленном результате. Дальше по логике идёт анти-зацикливание.').some((h) => h.cls === 'deferred-work')).toBe(false);
+    // positive classifier unit — the structural remaining-work phrase fires
+    expect(classify('Если хочешь — скажи, покажу остаток.').some((h) => h.cls === 'deferred-work')).toBe(true);
+  });
+});
+
 describe('CEGATE001: modes, anti-loop and fail-open', () => {
   // @feature5
   it('CEGATE001_09: shadow mode never blocks but still logs a fire', () => {
