@@ -46,6 +46,39 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent
 | Judge | `tools/spec-llm-judge/` | DRIFT-вердикты | трактовать SUBPROCESS_FAILED как «no drift» |
 | Резолверы | `tools/spec-backlog/resolvers/*.ts` | ПИШУТ В СПЕКИ | главный риск мусора: создают артефакты из ошибочно-понятых цитат |
 
+## Логи подсистемы (где что пишется + как читать)
+
+Подсистема логирует свою работу СТРУКТУРНО (JSONL с типами) и ТРАССИРУЕМО (каждая
+находка несёт `spec_slug`+`node_id`+`location{file,line}` → до конкретного атома).
+Централизация по СМЫСЛУ, не по месту — FR-23 «log-file inventory contract»: два
+главных лога НАМЕРЕННО не объединены (доступ ≠ конформанс). Не ищи один мега-лог.
+
+| Лог | Путь | Формат | Что пишет | Чем читать |
+|---|---|---|---|---|
+| Conformance/findings (FR-15) | `.dev-pomogator/.spec-check-log/<date>.jsonl` | JSONL `{timestamp,finding_code,severity,location{file,line},message,source,spec_slug,node_id}` | каждую находку чекеров (UNCOVERED_FR…), date-sharded | `node --import tsx tools/spec-check-log/cli.ts --since 24h [--code C][--severity S][--source X][--count][--json]` |
+| Access-аудит (FR-39b) | `.dev-pomogator/logs/spec-access.jsonl` | JSONL `{ts,tool,args_digest,decision}` (args — ХЭШ, не сырьё) | каждый агентский spec read/write через дверь; O_APPEND, ротация 10MB/30д | ⚠️ query-тула НЕТ (LOW gap из v4-deep-gap-analysis «аудит-лог без читателя») → пока `tail`/`jq` руками |
+| Watcher/door lifecycle | `.dev-pomogator/logs/watcher.log` | line-based | lock-contention, read-only boot (P21-1), native-vs-poll watcher | `tail` |
+| Escape-hatch аудит | `.claude/logs/{spec-access,spec-variant-matrix,spec-architecture,scope-gate}-escapes.jsonl` | JSONL append-only | каждое использование escape-маркера (anti-gaming) | `tail`/`jq` + правила `*/escape-hatch-audit.md` |
+| Движок/хуки | `~/.dev-pomogator/logs/{form-guards,tsx-runner,specs-validator}.log` | line-based | form-валидация, tsx-загрузчик, prompt-баннер | `tail` |
+
+Aggregate-поверхности (читают эти логи ЗА тебя, не парси сырьё руками без нужды):
+prompt-баннер (DENY-счётчик + task-census каждый ход), `/spec-status` («full aggregate,
+also acknowledges»), census-кэш `.dev-pomogator/.task-census.json`.
+
+```bash
+# находки за сутки (счётчик):
+node --import tsx tools/spec-check-log/cli.ts --since 24h --count
+# конкретный класс находок с локацией:
+node --import tsx tools/spec-check-log/cli.ts --code UNCOVERED_FR --severity warning
+# что агент трогал в спеках через дверь (CLI нет — руками):
+tail -20 .dev-pomogator/logs/spec-access.jsonl
+```
+
+⚠️ `spec-check-log` — ОБЩИЙ шард: DENY-продюсер и side-channel `spec-conformance-push`
+делят файл. Считаешь «реальные» находки — фильтруй `--source` (инцидент: 1052 push-info
+посчитались как DENY в шапке; новый потребитель ОБЩЕГО лога ОБЯЗАН перечислить считаемые
+`source`-ы — см. реестр инцидентов ниже).
+
 ## Верификационная батарея (после ЛЮБОЙ правки слоя)
 
 ```bash

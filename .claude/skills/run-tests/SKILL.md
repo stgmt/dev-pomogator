@@ -205,6 +205,17 @@ command: "bash tools/tui-test-runner/test-monitor.sh .dev-pomogator/.docker-stat
 
 **Гарантии test-guard hook:** прямой `npx vitest` блокируется (centralized-test-runner rule). Через wrapper — разрешено, потому что wrapper и есть централизованный entry point.
 
+**Ещё быстрее для PURE-функции — standalone node-check, МИНУЯ vitest целиком:** когда правишь
+чистую функцию (parser / aggregator / verdict / любой `compute*` без I/O в HOME) и хочешь
+проверить ЛОГИКУ за <1s, не поднимая vitest-харнесс и не дожидаясь Docker — напиши throwaway
+`.dev-pomogator/.tmp/check.mjs` (через **Write-тул**, не heredoc), импортирующий функцию, и
+прогони `node --import tsx .dev-pomogator/.tmp/check.mjs`. Это НЕ замена коммит-гейту (vitest
+в Docker + BDD остаются обязательными перед «готово») — это dev-loop для fast feedback. Инцидент
+2026-06-11: `computeFrCensus` проверен так за 1 проход (5 вердиктов + инварианты), пока полный
+Docker-сьют был настоящим гейтом. `ensure-docker` не триггерится (это не vitest-setup), test-guard
+не ловит (это не test-команда). Ограничение: только pure-логика — функция, трогающая `~/.claude`/
+`appPath()`, всё равно идёт в Docker.
+
 ### Step 4: Report results
 
 After execution completes (or when Monitor emits DONE), report:
