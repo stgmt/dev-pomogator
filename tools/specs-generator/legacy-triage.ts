@@ -28,9 +28,11 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { buildGraphFromCwd } from '../spec-graph/builder.ts';
 import { specOf } from '../spec-graph/coverage.ts';
 import type { SpecGraph, ScenarioNode } from '../spec-graph/types.ts';
+import { judgeLegacyState, type JudgedState } from './legacy-judge.ts';
 // FR-43b: the "is the implementation still on disk?" signal is REUSED from
 // spec-reality-check (its FILE_CHANGES reality checks), not re-built here.
 import { parseFileChangesTable, checkFcRows } from '../../.claude/skills/spec-reality-check/scripts/verify.ts';
@@ -48,6 +50,8 @@ export interface LegacyCandidate {
   suspected: LegacyState;
   /** The signals that produced the suspicion, for the human to weigh. */
   signals: string[];
+  /** Claimed-but-missing FILE_CHANGES paths (DRIFTED candidates) — the LLM-judge input. */
+  missingPaths?: string[];
   /** The action FR-43a prescribes for the suspected state. */
   recommendedAction: string;
 }
@@ -102,7 +106,7 @@ function headerHint(repoRoot: string, relFile: string): string | null {
 function specImplReality(
   corpusRoot: string,
   slug: string,
-): { editDelete: number; missing: number; existRatio: number } | null {
+): { editDelete: number; missing: number; existRatio: number; missingPaths: string[] } | null {
   const fc = path.join(corpusRoot, '.specs', slug, 'FILE_CHANGES.md');
   if (!fs.existsSync(fc)) return null;
   let rows;
@@ -114,8 +118,11 @@ function specImplReality(
   const editDelete = rows.filter((r) => r.action === 'edit' || r.action === 'delete').length;
   if (editDelete < 4) return null; // too few claimed-existing paths to judge abandonment
   const findings = checkFcRows(rows, corpusRoot);
-  const missing = findings.filter((f) => f.check === 'FC_EDIT_MISSING' || f.check === 'FC_DELETE_MISSING').length;
-  return { editDelete, missing, existRatio: (editDelete - missing) / editDelete };
+  const missingFindings = findings.filter((f) => f.check === 'FC_EDIT_MISSING' || f.check === 'FC_DELETE_MISSING');
+  const missingPaths = missingFindings
+    .map((f) => (f as { file?: string }).file)
+    .filter((p): p is string => Boolean(p));
+  return { editDelete, missing: missingFindings.length, existRatio: (editDelete - missingFindings.length) / editDelete, missingPaths };
 }
 
 export function computeLegacyTriage(graph: SpecGraph, corpusRoot: string): TriageReport {
@@ -198,6 +205,7 @@ export function computeLegacyTriage(graph: SpecGraph, corpusRoot: string): Triag
         `${r.missing}/${r.editDelete} claimed edit/delete implementation paths are MISSING on disk (${Math.round(r.existRatio * 100)}% still exist) — spec-reality-check FILE_CHANGES drift`,
         'the spec is STALE about WHERE its code lives (often a refactor/migration the spec never tracked) — UPDATE the FILE_CHANGES paths (re-sync), do NOT retire (FR-43a default); REMOVED would need git-delete proof, not a missing path',
       ],
+      missingPaths: r.missingPaths,
       recommendedAction: ACTION[suspected],
     });
   }
@@ -209,6 +217,63 @@ export function computeLegacyTriage(graph: SpecGraph, corpusRoot: string): Triag
 const ICON: Record<LegacyState, string> = {
   SUPERSEDED: '♻️', REMOVED: '🗑️', DRIFTED: '✏️', ABSORBED: '🔀', NEEDS_HUMAN: '❓',
 };
+
+// ── LLM-judge escalation (FR-8 idiom) — opt-in, cached, degrades when no binary ──
+const JUDGE_CACHE = path.join('.dev-pomogator', '.legacy-judge-cache.json');
+type JudgeCache = Record<string, { state: JudgedState; why: string }>;
+function loadJudgeCache(root: string): JudgeCache {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(root, JUDGE_CACHE), 'utf-8')) as JudgeCache;
+  } catch {
+    return {};
+  }
+}
+function saveJudgeCache(root: string, c: JudgeCache): void {
+  try {
+    fs.mkdirSync(path.dirname(path.join(root, JUDGE_CACHE)), { recursive: true });
+    fs.writeFileSync(path.join(root, JUDGE_CACHE), JSON.stringify(c, null, 2));
+  } catch {
+    /* best-effort cache */
+  }
+}
+
+/**
+ * Escalate each DRIFTED candidate (missing FILE_CHANGES paths — ambiguous between
+ * moved/removed/absorbed) to the LLM judge, refining the state with EVIDENCE. The
+ * judge maps MOVED→DRIFTED (re-sync the paths, NOT retire), REMOVED→REMOVED,
+ * ABSORBED→ABSORBED. Cached by (spec, missing-paths-hash) — the spawn is ~14s/call.
+ * Degrades honestly: no `claude` binary / unparseable → the candidate KEEPS its
+ * deterministic DRIFTED (FR-37c — never fabricate a verdict).
+ */
+export async function refineWithJudge(
+  report: TriageReport,
+  repoRoot: string,
+  opts: { spawn?: (prompt: string) => Promise<string>; noCache?: boolean } = {},
+): Promise<TriageReport> {
+  const cache = opts.noCache ? {} : loadJudgeCache(repoRoot);
+  let spawned = 0;
+  for (const c of report.candidates) {
+    if (c.suspected !== 'DRIFTED' || !c.missingPaths?.length || !c.spec) continue;
+    const key = `${c.spec}:${crypto.createHash('sha256').update(c.missingPaths.join('|')).digest('hex').slice(0, 16)}`;
+    let v = cache[key];
+    if (!v) {
+      const res = await judgeLegacyState({ repoRoot, slug: c.spec, missingPaths: c.missingPaths, spawn: opts.spawn });
+      if (!res.ran) {
+        c.signals.push(`LLM judge: ${res.why} — kept DRIFTED (deterministic default, FR-37c)`);
+        continue;
+      }
+      v = { state: res.state, why: res.why };
+      cache[key] = v;
+      spawned++;
+    }
+    const mapped: LegacyState = v.state === 'REMOVED' ? 'REMOVED' : v.state === 'ABSORBED' ? 'ABSORBED' : 'DRIFTED';
+    c.suspected = mapped;
+    c.recommendedAction = ACTION[mapped];
+    c.signals.push(`LLM judge (FR-8, claude -p): ${v.state} — ${v.why}`);
+  }
+  if (spawned && !opts.noCache) saveJudgeCache(repoRoot, cache);
+  return report;
+}
 
 export function renderTriage(r: TriageReport): string {
   const lines: string[] = [];
@@ -232,8 +297,10 @@ const isDirectRun =
 if (isDirectRun) {
   const argv = process.argv.slice(2);
   const json = argv.includes('--json');
+  const judge = argv.includes('--judge'); // opt-in LLM escalation (claude -p, ~14s/spec, cached)
   const root = path.resolve(argv.find((a) => !a.startsWith('-')) ?? process.cwd());
-  const report = computeLegacyTriage(buildGraphFromCwd(root), root);
+  let report = computeLegacyTriage(buildGraphFromCwd(root), root);
+  if (judge) report = await refineWithJudge(report, root);
   console.log(json ? JSON.stringify(report, null, 2) : renderTriage(report));
   process.exit(0);
 }

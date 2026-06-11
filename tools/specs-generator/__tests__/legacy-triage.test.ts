@@ -14,7 +14,7 @@ import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { buildGraphFromCwd } from '../../spec-graph/builder.ts';
-import { computeLegacyTriage } from '../legacy-triage.ts';
+import { computeLegacyTriage, refineWithJudge } from '../legacy-triage.ts';
 
 const FIXTURES = path.resolve(import.meta.dirname ?? __dirname, '..', '__fixtures__', 'legacy-triage');
 
@@ -44,5 +44,38 @@ describe('computeLegacyTriage — on REAL captured fixtures', () => {
   it('reports only — the fixtures are never moved or deleted (FR-43c)', () => {
     expect(fs.existsSync(path.join(FIXTURES, '.specs', 'superseded-v4', 'legacy.feature'))).toBe(true);
     expect(fs.existsSync(path.join(FIXTURES, '.specs', 'drifted-real', 'FILE_CHANGES.md'))).toBe(true);
+  });
+});
+
+describe('refineWithJudge — LLM escalation maps the verdict (mock spawn, no binary)', () => {
+  const drifted = () => computeLegacyTriage(buildGraphFromCwd(FIXTURES), FIXTURES);
+  const dr = (r: ReturnType<typeof drifted>) => r.candidates.find((x) => x.file.endsWith('drifted-real/FILE_CHANGES.md'))!;
+
+  it('REMOVED verdict → candidate becomes REMOVED with the judge evidence kept', async () => {
+    const r = drifted();
+    await refineWithJudge(r, FIXTURES, { noCache: true, spawn: async () => '{"state":"REMOVED","why":"no replacement anywhere"}' });
+    const c = dr(r);
+    expect(c.suspected).toBe('REMOVED');
+    expect(c.signals.some((s) => /LLM judge.*REMOVED/.test(s))).toBe(true);
+  });
+
+  it('MOVED verdict keeps the candidate DRIFTED (re-sync paths, NOT a retirement)', async () => {
+    const r = drifted();
+    await refineWithJudge(r, FIXTURES, { noCache: true, spawn: async () => '{"state":"MOVED","why":"same-named at a new path"}' });
+    expect(dr(r).suspected).toBe('DRIFTED');
+  });
+
+  it('ABSORBED verdict → ABSORBED', async () => {
+    const r = drifted();
+    await refineWithJudge(r, FIXTURES, { noCache: true, spawn: async () => '{"state":"ABSORBED","why":"merged into another subsystem"}' });
+    expect(dr(r).suspected).toBe('ABSORBED');
+  });
+
+  it('no binary (spawn throws) → candidate keeps deterministic DRIFTED (FR-37c, no fabrication)', async () => {
+    const r = drifted();
+    await refineWithJudge(r, FIXTURES, { noCache: true, spawn: async () => { throw new Error('no claude'); } });
+    const c = dr(r);
+    expect(c.suspected).toBe('DRIFTED');
+    expect(c.signals.some((s) => /kept DRIFTED/.test(s))).toBe(true);
   });
 });
