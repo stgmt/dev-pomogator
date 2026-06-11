@@ -76,6 +76,7 @@ function walkDir(absDir: string, suffixes: string[]): string[] {
     '.dev-pomogator-tmp',
     '.stryker-tmp',
     '__pycache__',
+    'archive', // FR-43c: `.specs/archive/` holds human-confirmed retired specs — out of the live graph
   ]);
   const stack: string[] = [absDir];
   while (stack.length) {

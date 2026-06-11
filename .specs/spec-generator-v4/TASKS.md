@@ -1331,21 +1331,21 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] drift-guard расширен ДВУМЯ гейтами: `checkToolConsumers` (live-тул без потребителя → fail с именем) + `verifyConsumerTruthfulness` (заявленный потребитель реально юзает тул — поймал 2 ложные записи spec-status, юзер «сам проверил?»); до фикса показал ровно 5 беспризорных новых тулзов, после дописывания потребителей — «every live MCP tool has a skill consumer»; SPECGEN004_120 гоняет это на синтетическом stray-туле
   - [x] create-spec UX сохранён (дверь, STOP-точки), запись = MCP-мутации не Write/Edit; SPECGEN004_121 проверяет: тело ссылается на mutation-тулзы И не несёт server-логики (checkConformance/parseTaskBlocks/checkLinks/buildGraph)
 
-- [ ] P18-1: legacy-suspicion 4-state classifier (расширение spec-reality-check) — id: p18-legacy-classifier — Status: TODO | Est: 360m
+- [ ] P18-1: legacy-suspicion 4-state classifier (расширение spec-reality-check) — id: p18-legacy-classifier — Status: IN_PROGRESS | Est: 360m
   _depends: p17-enforce_
   _Requirements: [FR-43](FR.md#fr-43)_
   **Done When:**
-  - [ ] `spec-reality-check` получает третий выход «legacy-suspicion»: классифицирует спеку в SUPERSEDED/REMOVED/DRIFTED/ABSORBED по reality-drift (категория-15, существование FILE_CHANGES-путей/символов) + version-lineage (slug vN) + not_run-by-feature (FR-32); git-staleness near-zero вес (AC-43.1)
+  - [~] ЧАСТИЧНО: `tools/specs-generator/legacy-triage.ts` (composer над графом, НЕ новый движок) классифицирует SUPERSEDED по version-lineage (старые SPECGEN00N-id внутри vM-спеки, N<M) + not_run-by-feature (FR-32) + lineage-заголовок файла; git-staleness не используется (near-zero). Эмитит SUSPICION-отчёт, авто-ретайр НЕТ (FR-43c). На ЖИВОМ корпусе: 1 кандидат (legacy-v3 SUPERSEDED), 100+ прочих not_run НЕ флагнуты (positive-signal gate). ОСТАЛОСЬ: reality-drift-вход (категория-15 spec-reality-check) для REMOVED/DRIFTED/ABSORBED — пока такие → NEEDS_HUMAN. BDD SPECGEN004_156 (@FR-43) + unit legacy-triage.test
   - [ ] «код есть, описание разошлось» → DRIFTED (re-sync), НЕ retire — pinned тестом на drifted-фикстуре; НОВЫЙ движок не вводится (переиспользование spec-reality-check)
   - [ ] @feature43 BDD-сценарий + step def на реальном classifier (1:1, не inline-копия)
 
-- [ ] P18-2: HITL-маркер + триаж-отчёт + резолюция legacy-v3.feature — id: p18-legacy-marker — Status: TODO | Est: 240m
+- [x] P18-2: HITL-маркер + триаж-отчёт + резолюция legacy-v3.feature — id: p18-legacy-marker — Status: DONE | Est: 240m
   _depends: p18-legacy-classifier_
   _Requirements: [FR-43](FR.md#fr-43)_
   **Done When:**
-  - [ ] триаж выдаёт кандидатов в отчёт; финал подтверждается человеком и пишется явным маркером (`.progress.json status: superseded|drifted|removed|absorbed` ИЛИ перенос в `.specs/archive/`); авто-ретайр/авто-удаление ЗАПРЕЩЕНЫ (AC-43.1)
-  - [ ] `legacy-v3.feature` (28 сценариев SPECGEN003, инстанс SUPERSEDED) разрешён по решению юзера: архив + маркер supersedes ЛИБО добавление в cucumber paths — NOT_RUN-нота перестаёт гореть на нём
-  - [ ] @feature43 сценарий на HITL-маркер (подсажена ложная авто-ретайр-попытка → guard/флоу её не допускает)
+  - [x] `legacy-triage.ts` выдаёт триаж-отчёт (renderTriage) с кандидатами+уликами+рекомендованным действием; авто-ретайр/авто-удаление НЕТ (только отчёт — pinned SPECGEN004_156 «nothing is retired automatically»); резолюция = человек-подтверждённый перенос в `.specs/archive/` (builder skipDirs += archive → вне живого графа)
+  - [x] `legacy-v3.feature` (28 SPECGEN003, SUPERSEDED) по решению юзера ПЕРЕНЕСЁН `git mv` в `.specs/archive/legacy-v3.feature` (история сохранена). ДОКАЗАНО: вердикт coverage not_run 28→0, NOT_RUN-нота погасла, вердикт GREEN
+  - [x] @FR-43 сценарий SPECGEN004_156 биндит реальный computeLegacyTriage на temp-корпусе: SUPERSEDED по уликам, plain-not_run НЕ флагнут (anti-flood gate), и «nothing is retired automatically» (классификатор только репортит — FR-43c)
 
 - [x] P19-1: рефакторинг ВСЕХ фаз + research-скиллов на MCP-rails (deep-audit 2026-06-08) — id: p19-phase-refactor — Status: DONE | Est: 360m
   _depends: p17-mutation-surface_

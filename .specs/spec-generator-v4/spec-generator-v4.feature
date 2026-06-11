@@ -1133,3 +1133,11 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then the door refuses with a Decision block naming the inbound links and nothing is moved
     When the agent renames it again with rewrite_inbound
     Then the doc is moved, the old name is gone, and the inbound links are retargeted to the new name
+
+  @FR-43
+  Scenario: SPECGEN004_156 legacy-triage suspects a superseded feature without auto-retiring it
+    Given a v4 spec holding an old-version feature file and a plain not-run feature
+    When the legacy-triage classifier runs over the graph
+    Then the old-version feature is suspected SUPERSEDED with its lineage evidence
+    And the plain not-run feature is not flagged (not_run alone is not abandonment)
+    And nothing is retired automatically
