@@ -94,10 +94,23 @@ who overrode what and why.
 
 ## Flags
 
+Driven by the CLI entry `scripts/reconcile-cli.ts` (mirrors the sibling
+`cross-spec-resolve/scripts/resolve-cli.ts`): a pure `parseReconcileArgs` +
+`reconcileCli` over the engine (`reconcileLight` / `runFullMode`) + writers.
+
+```bash
+node --import tsx .claude/skills/cross-spec-reconcile/scripts/reconcile-cli.ts \
+  --mode light --slug <name> --sarif        # writes consistency-report.yaml (+ .sarif)
+```
+
 - `--mode light|full` — default `light`
-- `--dry-run` — compute findings, print summary, do NOT write the YAML/SARIF
+- `--dry-run` — compute findings, print the summary table, do NOT write the YAML/SARIF
 - `--sarif` — also write `.specs/<slug>/consistency-report.sarif` (SARIF 2.1.0)
-- `--slug <name>` — limit to one spec (default: every `.specs/<slug>/`)
+- `--slug <name>` — limit to one spec, repeatable (default: every `.specs/<slug>/`)
+
+The CLI prints a per-spec **Coverage Summary Table** (CRIT/WARN/INFO/total) and
+exits 0; the CRITICAL blocking `AskUserQuestion` stays in the skill body (above),
+not the CLI — the CLI only reports the CRITICAL count so the skill knows to prompt.
 
 ## Resolution Patterns
 
@@ -129,7 +142,8 @@ to the detection-side exclusion list.
 
 ## See also
 
-- `scripts/reconcile.ts` — light-mode entry (mechanical checks)
+- `scripts/reconcile-cli.ts` — **the runnable CLI driver** (flags → engine → YAML/SARIF + summary table)
+- `scripts/reconcile.ts` — light-mode engine (mechanical checks)
 - `scripts/full-mode.ts` — full-mode semantic pass (Phase-3 LLM judge wrapper)
 - `scripts/sarif.ts` — SARIF 2.1.0 emitter
 - `references/reference_resolution-patterns.md` — full pattern catalog with before/after diffs
