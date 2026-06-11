@@ -125,41 +125,50 @@ const VERIFIED_MARKER = /\[VERIFIED\s+via\s+([^\]]{1,80})\]/i;
 // the Stop hook) guarantees it can't trap forever: a genuinely-blocked next step
 // approves after the retry budget.
 //
-// Structural-pattern bias (same as the rest of the classifier): a single stray
-// "дальше" never fires — only an explicit remaining-work phrase or a
-// defer-to-user-permission phrase. Examples it MUST catch (real, this session):
-//   "Что в волне 1 ещё осталось: 1. … 2. … 3. …"
-//   "Беру дальше пункт 1"
-//   "Скажешь «волна 1» — начну"
-//   "дальше — свожу статусы"
+// PRECISION over recall (dogfood 2026-06-11 on the real session: the broad
+// remaining-work patterns — bare "осталось", "продолжаю", "TODO", numbered
+// lists, "следующий шаг" — fired on 36% of real stop-points, ~90% of them
+// FALSE: completion reports ("Готово, закоммичено", "Pre-flight закрыт DONE")
+// and plain plan-answers ("33 готовы, 11 в работе"). A gate that cries wolf on
+// every report gets disabled. So the detector targets ONLY the high-precision
+// signal the user actually hates: HANDING THE NEXT STEP / A DECISION BACK to the
+// user instead of doing it. "Осталось 1,2,3" in a report is NOT a defer; "скажешь
+// — сделаю" / "решать тебе" / "жду твоего слова" IS.
+//   Catches:  "Скажешь «волна 1» — начну"   "если хочешь — покажу"
+//             "это решать тебе"             "беру дальше пункт 1" (then stop)
+//   Ignores:  "Готово, закоммичено"  "33 готовы, 11 в работе"  "продолжаю проверку"
 const DEFERRED_WORK = new RegExp(
   [
-    'что\\s+(?:ещё|еще)?\\s*осталось',
-    '(?:ещё|еще)\\s+осталось',
-    'осталось\\s*(?::|—|–|-|\\d|доделать|закрыть|сделать|починить|реализовать)',
-    'остато?к\\s+(?:работы|волны|задач)',
-    'дальше\\s*(?:—|–|-|:|беру|возьму|ид[уё]|пойду|продолж|сдела|свожу|свед)',
-    'дал(?:ее|ьше)\\s+(?:беру|—|:)',
-    'следующ(?:ий|им|ие)\\s+(?:шаг|пункт|задач)',
-    'беру\\s+(?:дальше\\s+)?(?:пункт|волну|следующ|остаток)',
-    '(?:^|[\\s.,;])продолж(?:у|аю|им)(?:[\\s.,!]|$)',
-    'доделаю',
-    'не\\s+доделал',
-    'оста(?:вш|ло)\\S*\\s+(?:пункт|задач|шаг|доделать)',
-    'remaining\\b',
-    'next\\s+steps?\\b',
-    '(?:^|[\\s(])to-?do\\b',
-    // deferring the next ACTION to the user's go-ahead instead of doing it:
+    // hand the next ACTION back, pending the user's go-ahead
     'скажешь\\s+\\S.*?(?:начну|сделаю|возьму|пойду|покажу|продолж)',
-    'если\\s+(?:хочешь|нужно|скажешь|надо)(?:[\\s,.;—–-]|$)',
-    '(?:скажи|напиши)\\b[^.\\n]{0,40}(?:и\\s+я|покаж|сделаю|начну|возьму|пойду|продолж)',
+    'если\\s+(?:хочешь|нужно|надо)[^.\\n]{0,50}(?:сделаю|возьму|начну|покажу|продолж|могу|скажи)',
+    '(?:скажи|напиши)[ ,—–-]+[^.\\n]{0,40}(?:и\\s+я|покаж|сделаю|начну|возьму|пойду|продолж)',
+    'жди\\s+команды',
+    // hand a DECISION back to the user
+    'реш(?:ать|аешь|и)\\s+(?:тебе|ты|тобой|сам)',
+    'тебе\\s+решать',
+    'на\\s+тво[её]\\s+усмотрение',
+    '(?:разрул|выбер|реши|подтверд)\\S*\\s+(?:тобой|ты|тебе|сам)',
+    'жду\\s+(?:твоего|твой|твоё|твоей)\\s+(?:слова|ответа|решения|сигнала|команды|добра)',
+    'жду,?\\s+что\\s+(?:ты\\s+)?скажешь',
+    'дай\\s+знать',
+    // a SPECIFIC announce-next-and-stop (numbered next step), not bare "дальше"
+    'беру\\s+(?:дальше\\s+)?(?:пункт|волну)\\s*\\d',
   ].join('|'),
   'i',
 );
 
-/** True when the message announces remaining work / a deferred next step + ends the turn. */
+/** True when the message hands the next step / a decision back to the user. */
 export function isDeferredWork(text: string): boolean {
   return DEFERRED_WORK.test(text);
+}
+
+/** Diagnostic: the matched defer phrase + a little context (for dogfood/logging), or null. */
+export function deferredMatch(text: string): string | null {
+  const m = DEFERRED_WORK.exec(stripCode(text));
+  if (!m) return null;
+  const i = m.index;
+  return stripCode(text).slice(Math.max(0, i - 15), i + m[0].length + 25).replace(/\s+/g, ' ').trim();
 }
 
 // ── public API ──────────────────────────────────────────────────────────────

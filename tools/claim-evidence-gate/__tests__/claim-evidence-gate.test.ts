@@ -106,9 +106,12 @@ describe('CEGATE001: claim-evidence gate — verified-marker class', () => {
 
 describe('CEGATE001: claim-evidence gate — deferred-work class (kick «доделывай»)', () => {
   // @feature6
-  it('CEGATE001_17: blocks a self-reported remaining-work list that ends the turn', () => {
-    const { blocked } = runHook([U('делай дальше'), A([txt('Что осталось:\n1. свести статусы\n2. e2e тест\n3. врезать в create-spec')])]);
-    expect(blocked).toBe(true);
+  // Precision (dogfood 2026-06-11 on the real session): a PURE remaining-work list
+  // with no offload is NOT a defer — it false-fired on 36% of real stop-points
+  // (completion reports / plan-answers). The gate must NOT block it.
+  it('CEGATE001_17: does NOT block a pure remaining-work list with no offload to the user', () => {
+    const { blocked } = runHook([U('какой план'), A([txt('Что осталось:\n1. свести статусы\n2. e2e тест\n3. врезать в create-spec')])]);
+    expect(blocked).toBe(false);
   });
 
   // @feature6
@@ -118,9 +121,9 @@ describe('CEGATE001: claim-evidence gate — deferred-work class (kick «дод�
   });
 
   // @feature6
-  it('CEGATE001_19: blocks deferring the next action to the user ("скажешь — начну")', () => {
-    const { blocked } = runHook([U('план'), A([txt('Скажешь «волна 1» — начну, вытяну открытые задачи и пойду делать.')])]);
-    expect(blocked).toBe(true);
+  it('CEGATE001_19: blocks handing the next step OR a decision back to the user', () => {
+    expect(runHook([U('план'), A([txt('Скажешь «волна 1» — начну, вытяну открытые задачи и пойду делать.')])]).blocked).toBe(true);
+    expect(runHook([U('делай'), A([txt('Список собран, что из него удалять — решаешь ты.')])]).blocked).toBe(true);
   });
 
   // @feature6
