@@ -202,6 +202,13 @@ This block enumerates the spec-doc edits applied as part of the v3→v4 transiti
 | `.claude/skills/spec-generator-orchestrator/SKILL.md` | edit | P17-8: оркестратор-проверятор — спавн фаз + verdict-гейты между ними ([FR-41](FR.md#fr-41)) |
 | `.claude/settings.json` | edit | Register extension-json-meta-guard LIVE (PreToolUse Write|Edit) — was dead code, only in .bak (T-Trans.6 finding) |
 | `.claude-plugin/hooks.json` | edit | Same live registration for plugin users (bootstrap launcher; builtins-only imports — deps-safe) |
+| `tools/specs-generator/legacy-triage.ts` | create | P18-1 legacy/drift SUSPICION classifier — composer over not_run-by-feature + version-lineage + FILE_CHANGES reality; 4 states; never auto-retires ([FR-43](FR.md#fr-43)) |
+| `tools/specs-generator/legacy-judge.ts` | create | P18-1 LLM-judge escalation (claude -p) resolving moved/removed/absorbed, grep-grounded, degrade-honest (FR-8 idiom) ([FR-43](FR.md#fr-43)) |
+| `tools/specs-generator/evals/legacy-triage-dogfood.ts` | create | Dogfood: drives the classifier on the live corpus, reconciles output vs disk ([FR-43](FR.md#fr-43)) |
+| `tools/specs-generator/__tests__/legacy-triage.test.ts` | create | Unit on REAL captured fixtures + judge mapping ([FR-43](FR.md#fr-43)) |
+| `tools/specs-generator/__tests__/legacy-judge.test.ts` | create | Unit on the LLM judge — injected spawn, every branch + honest degrade ([FR-43](FR.md#fr-43)) |
+| `tests/step_definitions/feature43_legacy_triage.ts` | create | SPECGEN004_156 binds the real computeLegacyTriage ([FR-43](FR.md#fr-43)) |
+| `tools/spec-graph/builder.ts` | edit | P18-2: skipDirs += `archive` so `.specs/archive/` retired specs leave the live graph ([FR-43](FR.md#fr-43)) |
 
 ## Total counts
 
@@ -217,4 +224,5 @@ This block enumerates the spec-doc edits applied as part of the v3→v4 transiti
 | Phase 7 | 32 (27 create + 5 edit) |
 | Cross-phase docs | 4 (all edit; `dist/installer/extensions.js` удалён — v2 без installer) |
 | Round 3 patch (v3→v4 transition) | 12 (all edit; 9 v4-spec files + 3 SKILL.md frontmatter) |
-| **Total** | **116 rows (~82 create + 34 edit; пересчитано при P14-1 reconcile 2026-06-05)** |
+| Phase 18 (FR-43 legacy-triage) | 7 (6 create + 1 edit; classifier + LLM judge + dogfood + 2 unit + BDD step; legacy-v3 archived) |
+| **Total** | **123 rows (~89 create + 34 edit; +7 Phase-18 FR-43 traced 2026-06-11)** |
