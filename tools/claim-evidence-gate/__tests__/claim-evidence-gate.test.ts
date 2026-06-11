@@ -124,6 +124,12 @@ describe('CEGATE001: claim-evidence gate — deferred-work class (kick «дод�
   });
 
   // @feature6
+  it('CEGATE001_21: a report ABOUT the gate (пинатор / ДОДЕЛЫВАЙ) does not trigger itself, even quoting a trigger phrase', () => {
+    const { blocked } = runHook([U('расскажи'), A([txt('Пинатор теперь ловит «беру дальше пункт 1». Кикает ДОДЕЛЫВАЙ.')])]);
+    expect(blocked).toBe(false);
+  });
+
+  // @feature6
   it('CEGATE001_20: does NOT fire on a clean completion or an explanatory "дальше"', () => {
     expect(classify('Закоммичено 7c3c723. Вердикт зелёный, 156 сценариев.').some((h) => h.cls === 'deferred-work')).toBe(false);
     expect(classify('По коду гейт фаерит только при заявленном результате. Дальше по логике идёт анти-зацикливание.').some((h) => h.cls === 'deferred-work')).toBe(false);

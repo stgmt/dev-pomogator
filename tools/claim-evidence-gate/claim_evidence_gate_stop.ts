@@ -45,6 +45,13 @@ const MARKER_DIR = '.dev-pomogator';
 const MARKER_FILENAME = '.claim-evidence-gate-marker.json';
 const FIRES_FILENAME = '.claim-evidence-gate-fires.jsonl';
 const SELF_MARKER = 'claim-evidence-gate';
+// Self-reference skip: when a message is ABOUT this gate (reporting on it,
+// quoting its trigger phrases as examples) it must not trigger the gate. The
+// original single English marker missed Russian meta-discussion ("пинатор",
+// "ДОДЕЛЫВАЙ", "deferred-work") — which false-fired the deferred-work class on
+// a completion report. Low gaming-risk: these are the gate's OWN vocabulary, not
+// words a genuine deferral ("беру дальше пункт 1") would contain.
+const SELF_MARKERS = ['claim-evidence-gate', 'deferred-work', 'пинатор', 'ДОДЕЛЫВАЙ'];
 const LOG_PREFIX = 'CLAIM-EVIDENCE-GATE';
 
 function log(level: 'INFO' | 'DEBUG' | 'ERROR', message: string): void {
@@ -111,7 +118,7 @@ async function main(): Promise<void> {
   }
 
   const { claimText, toolUses } = extractTurnWindow(rawTranscript);
-  if (!claimText.trim() || claimText.includes(SELF_MARKER)) return approve();
+  if (!claimText.trim() || SELF_MARKERS.some((m) => claimText.includes(m))) return approve();
 
   const unsupported = firstUnsupported(claimText, toolUses, config.minSearch);
   if (!unsupported) return approve();
