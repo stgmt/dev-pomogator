@@ -667,3 +667,9 @@ WHEN триаж легаси-подозрения прогоняется по с
 **Требование:** [FR-44](FR.md#fr-44)
 
 WHEN проектный cucumber step-def или vitest `it()` не имеет парного сценария-узла ни в одной `.feature` THEN движок трассируемости SHALL пометить его как orphan-project-test (обратная дыра), А НЕ молчать; WHEN FR не цитирует ни одной находки RESEARCH.md THEN SHALL эмитить FR_NO_RESEARCH; обе находки SHALL иметь зубы (gap-class ИЛИ осознанно advisory).
+
+## AC-45.1
+
+**Требование:** [FR-45a](FR.md#fr-45), [FR-45b](FR.md#fr-45), [FR-45c](FR.md#fr-45)
+
+WHEN спека-кандидат проверяется на архивацию THEN система SHALL вызвать `get_archival_proof(slug)` и SHALL получить ARCHIVE только при НУЛЕ живых входящих ссылок (граф-рёбра + prose) и KEEP_FALSE_POSITIVE при наличии хотя бы одной; IF живые ссылки есть THEN `archive_spec` SHALL вернуть ARCHIVE_BLOCKED и НЕ двигать спеку; WHEN нет живых ссылок И сигнал FR-43 принадлежит {SUPERSEDED, REMOVED, ABSORBED} THEN `archive_spec` SHALL перенести спеку в `.specs/archive/<slug>/` и SHALL записать аудит-строку в `.dev-pomogator/logs/spec-archive.jsonl`; WHEN агент пытается писать через дверь под `.specs/archive/**` THEN дверь SHALL отвергнуть запись (ARCHIVE_SEALED); WHEN супрессия неоднозначна THEN система SHALL эскалировать NEEDS_HUMAN без авто-удаления.
