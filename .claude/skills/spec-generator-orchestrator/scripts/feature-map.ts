@@ -12,7 +12,7 @@
 
 export interface WorkflowStep {
   /** End-to-end workflow stage. */
-  step: 'scaffold' | 'conformance' | 'coverage' | 'test-quality' | 'reconcile' | 'resolve' | 'honesty-gate' | 'trace' | 'backlog' | 'architecture' | 'legacy-triage';
+  step: 'scaffold' | 'conformance' | 'coverage' | 'test-quality' | 'reconcile' | 'resolve' | 'honesty-gate' | 'trace' | 'backlog' | 'architecture' | 'legacy-triage' | 'archive';
   /** The worker this stage delegates to (skill name, MCP tool name, or engine CLI). */
   worker: string;
   /** Whether the worker is an MCP tool, a worker skill, or an engine CLI. */
@@ -42,6 +42,11 @@ export const WORKFLOW: WorkflowStep[] = [
   // abandoned specs (SUPERSEDED/REMOVED/DRIFTED/ABSORBED) via the LLM judge —
   // SUSPICION only, a human confirms (FR-43c), never auto-retire.
   { step: 'legacy-triage', worker: 'legacy-triage', kind: 'engine-cli' },
+  // FR-45: after legacy-triage SUSPECTS, the spec-archive skill PROVES (door
+  // get_archival_proof: no live inbound refs) and, on hard proof, archives via
+  // archive_spec + prunes orphaned tests + reports. Autonomous on hard proof;
+  // ambiguous escalates to a human; everything git-revertable.
+  { step: 'archive', worker: 'spec-archive', kind: 'skill' },
   { step: 'honesty-gate', worker: 'get_coverage', kind: 'mcp-tool' },
 ];
 
@@ -90,6 +95,8 @@ export const REFERENCED_CAPABILITIES: readonly string[] = [
   // strong-tests/spec-status capability is dropped from the map).
   'strong-tests',
   'spec-status',
+  // FR-45 — the proof-gated archival worker skill (runs after legacy-triage).
+  'spec-archive',
   // FR-43 — legacy/drift triage. An engine CLI (`tools/specs-generator/legacy-triage.ts
   // --judge`), not an MCP tool nor a worker skill, so it is NOT in the live
   // capability surface (liveCapabilities = MCP registry + WORKER_SKILLS); listing

@@ -32,6 +32,7 @@ delegates to a worker — a `Skill(...)` or an MCP tool — never inline logic:
 | resolve | `Skill("cross-spec-resolve")` | skill |
 | backlog | `Skill("spec-backlog")` | skill |
 | legacy-triage | **`legacy-triage --judge` engine CLI** | engine-cli |
+| archive | **`Skill("spec-archive")`** | skill |
 | honesty-gate | **`get_coverage` MCP tool** | mcp-tool |
 
 ### Coverage + honesty step (delegation, not re-implementation)
@@ -61,6 +62,22 @@ version-lineage + not_run + lineage header) or, for the reality-drift kinds, the
 DRIFTED by default, and a human confirms before anything is archived to `.specs/archive/`.
 Surface the breakdown + evidence into the merge ledger as a `pending` entry; do not
 mutate any spec from this step.
+
+### Archive step (FR-45 — proof-gated, runs after legacy-triage)
+
+After legacy-triage SUSPECTS abandoned specs, `Skill("spec-archive")` PROVES each
+against the repo and acts only on hard proof. It calls the door's
+`get_archival_proof` (no LIVE inbound reference — graph edges + prose links — to
+the spec) and combines it with the supersession signal:
+
+- **ARCHIVE** (no live refs + SUPERSEDED/REMOVED/ABSORBED) → autonomously
+  `archive_spec` (gated move) + prune orphaned tests + write the proof report.
+- **KEEP_FALSE_POSITIVE** (live refs) → it is still in use; leave it (the
+  "наоборот ошибка" — a false legacy suspicion the proof catches).
+- **NEEDS_HUMAN** (graph-clear but ambiguous supersession) → escalate, untouched.
+
+Everything is git-revertable; the dogfood proved **0 false archival** on the live
+corpus (19 of 24 suspected specs were saved as still-referenced).
 
 ## Self-improve merge ledger (human gate)
 

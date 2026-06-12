@@ -21,6 +21,7 @@ export const WORKER_SKILLS: readonly string[] = [
   'cross-spec-reconcile',
   'cross-spec-resolve',
   'spec-backlog',
+  'spec-archive', // FR-45 — proof-gated archival worker skill
 ];
 
 const EMPTY_GRAPH: SpecGraph = {
