@@ -628,7 +628,21 @@ export function buildToolRegistry(
           // (and FR aggregation for _60-_64) is unchanged.
           code_impl: computeCodeImpl(s, graph),
         })),
-        tasks: tasks.map((t) => ({ id: t.id, status: t.status, file: t.file, line: t.line })),
+        // FR-46d: surface the task's OWN scenario (the specgen004_NN it cites in Done-When)
+        // + its last result, so task↔own-scenario traceability is visible, not just task→FR.
+        tasks: tasks.map((t) => {
+          const m = (t.doneWhen ?? '').match(/s[pc]e[cn]gen004[_-](\d+)/i);
+          let own_scenario: { id: string; lastResult: string } | null = null;
+          if (m) {
+            const sc = [...graph.nodes.values()].find(
+              (n) => n.type === 'Scenario' && new RegExp(`specgen004[_-]${m[1]}(?:\\D|$)`, 'i').test(n.id),
+            ) as ScenarioNode | undefined;
+            own_scenario = sc
+              ? { id: sc.id, lastResult: sc.lastResult ?? 'UNKNOWN' }
+              : { id: `SPECGEN004_${m[1]}`, lastResult: 'NOT_FOUND' };
+          }
+          return { id: t.id, status: t.status, file: t.file, line: t.line, own_scenario };
+        }),
         code_impl: computeCodeImpl(node, graph),
         warnings,
         related_nodes: related,
