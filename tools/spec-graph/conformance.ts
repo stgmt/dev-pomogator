@@ -39,6 +39,7 @@ export type FindingCode =
   | 'DUPLICATE_DEFINITION'
   | 'TASK_STATUS_UNVERIFIED'
   | 'TASK_UNTESTED'
+  | 'TASK_NO_OWN_SCENARIO'
   | 'TASK_TEST_QUALITY'
   | 'TASK_NO_REQUIREMENT'
   | 'ORPHAN_PROJECT_TEST'
@@ -292,6 +293,30 @@ export function checkConformance(
         });
       }
     }
+  }
+
+  // 2c) TASK_NO_OWN_SCENARIO (FR-46a/b) — a DONE task whose Done-When cites NO explicit
+  // SPECGEN id of ITS OWN. Mapping via refs→FR-wide @featureN is NOT enough: the task
+  // rides on the requirement's other scenarios and passes as verified without a test for
+  // ITSELF (proven: 0/26 v4 tasks cite their own id). WARNING for now — staged
+  // detect→retrofit→gate (FR-46c); promote to ERROR only after the corpus is retrofitted,
+  // else the door wedges on pre-existing violators.
+  for (const node of graph.nodes.values()) {
+    if (node.type !== 'Task') continue;
+    const task = node as TaskNode;
+    if (task.status !== 'done') continue;
+    if (/s[pc]e[cn]gen004[_-]\d+/i.test(task.doneWhen ?? '')) continue; // cites its own scenario id
+    findings.push({
+      code: 'TASK_NO_OWN_SCENARIO',
+      severity: 'warning',
+      location: { file: task.file, line: task.line },
+      message: `Task ${task.id} is marked DONE but its Done-When cites no SPECGEN id of its OWN — it only maps to its requirement's scenarios at large, so no test verifies THIS task specifically (FR-46a).`,
+      nodeId: task.id,
+      suggestions: [
+        { action: 'cite_own_scenario', reason: "Reference this task's own SPECGEN004_NN scenario in Done-When (the one that verifies exactly this task), not just the FR.", confidence: 'high' },
+        { action: 'downgrade', reason: 'Or set Status back to IN_PROGRESS until the task has its own passing scenario.', confidence: 'high' },
+      ],
+    });
   }
 
   // 3) SCENARIO_TAG_ORPHAN + 4) UNTAGGED_SCENARIO

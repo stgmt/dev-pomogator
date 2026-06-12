@@ -92,6 +92,34 @@ describe('checkConformance — TASK_STATUS_UNVERIFIED (FR-32 honesty gate)', () 
   });
 });
 
+describe('checkConformance — TASK_NO_OWN_SCENARIO (FR-46a/b: DONE needs its OWN scenario id)', () => {
+  const onlyRule = (g: SpecGraph) => checkConformance(g).filter((f) => f.code === 'TASK_NO_OWN_SCENARIO');
+  const doneTask = (id: string, doneWhen: string, refs: string[] = ['FR-1']): TaskNode => ({
+    id, type: 'Task', file: 'TASKS.md', line: 1, refs, status: 'done', title: id, doneWhen,
+  });
+
+  it('flags a DONE task whose Done-When cites no SPECGEN id of its own (rides on FR-wide refs)', () => {
+    const g = emptyGraph();
+    g.nodes.set('FR-1', fr('FR-1'));
+    g.nodes.set('t1', doneTask('t1', 'verified by FR-1', ['FR-1']));
+    const f = onlyRule(g);
+    expect(f).toHaveLength(1);
+    expect(f[0]).toMatchObject({ code: 'TASK_NO_OWN_SCENARIO', severity: 'warning', nodeId: 't1' });
+  });
+
+  it('does NOT flag a DONE task that cites its own SPECGEN004_NN in Done-When', () => {
+    const g = emptyGraph();
+    g.nodes.set('t1', doneTask('t1', 'done when SPECGEN004_42 passes'));
+    expect(onlyRule(g)).toHaveLength(0);
+  });
+
+  it('does NOT flag a TODO task without an own scenario (link required at DONE, not creation)', () => {
+    const g = emptyGraph();
+    g.nodes.set('t1', task('t1', ['FR-1'])); // status TODO
+    expect(onlyRule(g)).toHaveLength(0);
+  });
+});
+
 describe('checkConformance — UNCOVERED_FR', () => {
   it('flags an FR with no AC and no tested-by edge', () => {
     const g = emptyGraph();

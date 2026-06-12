@@ -13954,7 +13954,9 @@ function walkDir(absDir, suffixes) {
     "dist",
     ".dev-pomogator-tmp",
     ".stryker-tmp",
-    "__pycache__"
+    "__pycache__",
+    "archive"
+    // FR-43c: `.specs/archive/` holds human-confirmed retired specs — out of the live graph
   ]);
   const stack = [absDir];
   while (stack.length) {
@@ -14351,6 +14353,23 @@ function checkConformance(graph, opts = {}) {
         });
       }
     }
+  }
+  for (const node of graph.nodes.values()) {
+    if (node.type !== "Task") continue;
+    const task = node;
+    if (task.status !== "done") continue;
+    if (/s[pc]e[cn]gen004[_-]\d+/i.test(task.doneWhen ?? "")) continue;
+    findings.push({
+      code: "TASK_NO_OWN_SCENARIO",
+      severity: "warning",
+      location: { file: task.file, line: task.line },
+      message: `Task ${task.id} is marked DONE but its Done-When cites no SPECGEN id of its OWN \u2014 it only maps to its requirement's scenarios at large, so no test verifies THIS task specifically (FR-46a).`,
+      nodeId: task.id,
+      suggestions: [
+        { action: "cite_own_scenario", reason: "Reference this task's own SPECGEN004_NN scenario in Done-When (the one that verifies exactly this task), not just the FR.", confidence: "high" },
+        { action: "downgrade", reason: "Or set Status back to IN_PROGRESS until the task has its own passing scenario.", confidence: "high" }
+      ]
+    });
   }
   for (const node of graph.nodes.values()) {
     if (node.type !== "Scenario") continue;
