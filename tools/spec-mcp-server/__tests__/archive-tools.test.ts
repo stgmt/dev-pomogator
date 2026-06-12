@@ -39,14 +39,28 @@ describe('ARCHSEAL: archive is read-only through the mutation door (FR-3)', () =
   });
 });
 
-describe('ARCHTOOL: get_archival_proof + archive_spec on the real graph (FR-45)', () => {
-  it('ARCHTOOL_01: get_archival_proof gives a verdict; live-referenced spec is KEEP_FALSE_POSITIVE', async () => {
-    const r = await callTool('get_archival_proof', { slug: 'spec-generator-v4' });
+describe('ARCHTOOL: get_archival_proof + archive_spec (FR-45)', () => {
+  // Corpus-INDEPENDENT fixture: a synthetic graph where live-y references
+  // retired-x via a cross-spec EDGE. Asserting on the real corpus is fragile —
+  // the Docker test harness resets `.specs/`, so live prose-refs vanish there.
+  // The live behaviour (graph + prose refs) is covered by the host dogfood.
+  const synthGraph = {
+    version: 1, builtAt: '', definitions: new Map(), backlinks: new Map(),
+    nodes: new Map<string, unknown>([
+      ['retired-x:FR-1', { id: 'retired-x:FR-1', type: 'FR', file: '.specs/retired-x/FR.md' }],
+      ['live-y:FR-2', { id: 'live-y:FR-2', type: 'FR', file: '.specs/live-y/FR.md' }],
+    ]),
+    edges: [{ from: 'live-y:FR-2', to: 'retired-x:FR-1', type: 'covers' }],
+  } as never;
+  const synthReg = buildToolRegistry(() => synthGraph, {});
+  const synthCall = async (name: string, args: Record<string, unknown>) =>
+    JSON.parse((await synthReg.find((x) => x.name === name)!.handler(args as never) as { content: Array<{ text: string }> }).content[0].text);
+
+  it('ARCHTOOL_01: a spec referenced by a live spec is KEEP_FALSE_POSITIVE', async () => {
+    const r = await synthCall('get_archival_proof', { slug: 'retired-x' });
     expect(r.ok).toBe(true);
-    expect(['ARCHIVE', 'KEEP_FALSE_POSITIVE']).toContain(r.verdict);
-    // v4 is referenced by other specs in prose → must be flagged NOT abandoned.
     expect(r.verdict).toBe('KEEP_FALSE_POSITIVE');
-    expect(r.live_inbound_count).toBeGreaterThan(0);
+    expect(r.live_inbound_count).toBeGreaterThanOrEqual(1);
   });
 
   it('ARCHTOOL_02: unknown slug → SPEC_NOT_FOUND; archived slug → ALREADY_ARCHIVED', async () => {
@@ -55,10 +69,10 @@ describe('ARCHTOOL: get_archival_proof + archive_spec on the real graph (FR-45)'
   });
 
   it('ARCHTOOL_03: archive_spec refuses a live-referenced spec (ARCHIVE_BLOCKED) — no move', async () => {
-    const r = await callTool('archive_spec', { slug: 'spec-generator-v4', reason: 'test' });
+    const r = await synthCall('archive_spec', { slug: 'retired-x', reason: 'test' });
     expect(r.ok).toBe(false);
     expect(r.error).toBe('ARCHIVE_BLOCKED');
-    expect(r.live_inbound_count).toBeGreaterThan(0);
+    expect(r.live_inbound_count).toBeGreaterThanOrEqual(1);
   });
 
   it('ARCHTOOL_04: archive_spec refuses an archived/unknown slug before touching disk', async () => {
