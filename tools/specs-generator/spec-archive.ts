@@ -19,12 +19,24 @@
 //
 // @see .specs/spec-generator-v4/FR.md FR-45
 
+import fs from 'node:fs';
+import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { buildGraphFromCwd } from '../spec-graph/builder.ts';
 import { computeLegacyTriage } from './legacy-triage.ts';
 import { buildToolRegistry } from '../spec-mcp-server/tools.ts';
 
 export type ArchiveDecision = 'ARCHIVE' | 'KEEP_FALSE_POSITIVE' | 'NEEDS_HUMAN';
+
+/** What a human learns by actually opening a drifted spec: what it is, whether its
+ *  claimed implementation still exists on disk (even after the v1→v2 move), and a call. */
+export interface DriftInvestigation {
+  summary: string;
+  shipped: boolean;
+  codePresent: boolean;
+  evidence: string;
+  recommendation: 'KEEP_DRIFTED' | 'RETIRE_CANDIDATE';
+}
 
 export interface ArchivePlan {
   spec: string;
@@ -33,9 +45,62 @@ export interface ArchivePlan {
   decision: ArchiveDecision;
   liveInbound: number;
   why: string;
+  investigation?: DriftInvestigation;
 }
 
 const RETIRE_STATES = new Set(['SUPERSEDED', 'REMOVED', 'ABSORBED']);
+
+// Code-path tokens the way specs write them (incl. the legacy `extensions/<plugin>/` prefix).
+const CODE_PATH_RE = /(?:tools|extensions|src|\.claude|tests|scripts)\/[\w./-]+\.(?:ts|tsx|py|mjs|cjs|js|cs|go|rs)/g;
+
+const _basenameIndex = new Map<string, Set<string>>();
+/** Every code-file basename under the live source roots — basename match catches files
+ *  the v2 refactor MOVED (`extensions/X/foo.ts` → `tools/X/foo.ts`) without a path equality. */
+function repoBasenames(cwd: string): Set<string> {
+  const cached = _basenameIndex.get(cwd);
+  if (cached) return cached;
+  const idx = new Set<string>();
+  for (const root of ['tools', '.claude', 'tests', 'scripts', 'src']) {
+    const abs = path.join(cwd, root);
+    if (!fs.existsSync(abs)) continue;
+    try {
+      for (const e of fs.readdirSync(abs, { recursive: true, withFileTypes: true }) as fs.Dirent[]) {
+        if (e.isFile()) idx.add(e.name);
+      }
+    } catch { /* unreadable root — skip */ }
+  }
+  _basenameIndex.set(cwd, idx);
+  return idx;
+}
+
+/**
+ * Investigate a NEEDS_HUMAN (drifted) spec the way a human would: read its README +
+ * FILE_CHANGES, decide whether the feature is shipped / its impl still lives on disk
+ * (even at a moved path), and recommend KEEP_DRIFTED (alive, spec text stale) vs
+ * RETIRE_CANDIDATE (no impl found — confirm). Replaces blind "needs human" with evidence.
+ */
+export function investigateDrifted(cwd: string, slug: string): DriftInvestigation {
+  const read = (doc: string): string => {
+    try { return fs.readFileSync(path.join(cwd, '.specs', slug, doc), 'utf8'); } catch { return ''; }
+  };
+  const readme = read('README.md');
+  const blob = readme + '\n' + read('FILE_CHANGES.md');
+  const summary = (readme.split('\n').find((l) => l.trim() && !l.startsWith('#') && !l.startsWith('>')) ?? '').trim().slice(0, 200);
+  const shipped = /status:\s*shipped|\bshipped\s+\d/i.test(readme);
+  const claimed = [...new Set(blob.match(CODE_PATH_RE) ?? [])];
+  const names = repoBasenames(cwd);
+  const found = claimed.filter((p) => fs.existsSync(path.join(cwd, p)) || names.has(path.basename(p))).map((p) => path.basename(p));
+  const codePresent = found.length > 0;
+  const recommendation = shipped || codePresent ? 'KEEP_DRIFTED' : 'RETIRE_CANDIDATE';
+  const evidence = shipped
+    ? `README marks shipped${codePresent ? `; impl present (${found.slice(0, 3).join(', ')})` : ''}`
+    : codePresent
+      ? `impl files still on disk (${found.slice(0, 3).join(', ')}${found.length > 3 ? `, +${found.length - 3}` : ''}) — spec path drifted, feature lives`
+      : claimed.length
+        ? `none of ${claimed.length} claimed impl file(s) found on disk — possibly retired, confirm`
+        : `no impl paths in README/FILE_CHANGES — cannot tell from disk, confirm`;
+  return { summary, shipped, codePresent, evidence, recommendation };
+}
 
 /** Build the prove-then-decide plan over the live corpus. No disk mutation. */
 export async function planArchival(cwd: string): Promise<ArchivePlan[]> {
@@ -69,7 +134,8 @@ export async function planArchival(cwd: string): Promise<ArchivePlan[]> {
       decision = 'NEEDS_HUMAN';
       why = `graph-clear but supersession=${c.suspected} (ambiguous)`;
     }
-    out.push({ spec: c.spec, legacyState: c.suspected, proofVerdict: verdict, decision, liveInbound, why });
+    const investigation = decision === 'NEEDS_HUMAN' ? investigateDrifted(cwd, c.spec) : undefined;
+    out.push({ spec: c.spec, legacyState: c.suspected, proofVerdict: verdict, decision, liveInbound, why, investigation });
   }
   return out;
 }
@@ -93,6 +159,11 @@ function render(plans: ArchivePlan[]): string {
   const lines = [`spec-archive — ${plans.length} candidate(s): ARCHIVE=${by('ARCHIVE')} KEEP_FALSE_POSITIVE=${by('KEEP_FALSE_POSITIVE')} NEEDS_HUMAN=${by('NEEDS_HUMAN')}`];
   for (const p of plans.sort((a, b) => a.decision.localeCompare(b.decision))) {
     lines.push(`  [${p.decision}] ${p.spec} — ${p.why} (legacy=${p.legacyState}, proof=${p.proofVerdict})`);
+    if (p.investigation) {
+      const inv = p.investigation;
+      lines.push(`      → ${inv.recommendation}: ${inv.evidence}`);
+      if (inv.summary) lines.push(`        what: ${inv.summary}`);
+    }
   }
   return lines.join('\n');
 }
