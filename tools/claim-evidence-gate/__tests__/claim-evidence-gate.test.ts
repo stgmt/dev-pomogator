@@ -139,6 +139,15 @@ describe('CEGATE001: claim-evidence gate — deferred-work class (kick «дод�
     // positive classifier unit — the structural remaining-work phrase fires
     expect(classify('Если хочешь — скажи, покажу остаток.').some((h) => h.cls === 'deferred-work')).toBe(true);
   });
+
+  // @feature6
+  it('CEGATE001_22: blocks self-deferring the declared next step to a FUTURE pass ("следующим заходом")', () => {
+    // the exact phrasing that slipped the gate (2026-06-12): step known, no blocker, still stopped
+    expect(runHook([U('делай по очереди'), A([txt('Дверь живая. Беру это следующим заходом.')])]).blocked).toBe(true);
+    expect(classify('Добью отдельным заходом — там по шагам.').some((h) => h.cls === 'deferred-work')).toBe(true);
+    // precision: "за один заход" = a completion ("did it in one pass"), NOT a defer
+    expect(classify('Свёл всё за один заход, закоммичено.').some((h) => h.cls === 'deferred-work')).toBe(false);
+  });
 });
 
 describe('CEGATE001: modes, anti-loop and fail-open', () => {

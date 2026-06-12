@@ -136,6 +136,7 @@ const VERIFIED_MARKER = /\[VERIFIED\s+via\s+([^\]]{1,80})\]/i;
 // — сделаю" / "решать тебе" / "жду твоего слова" IS.
 //   Catches:  "Скажешь «волна 1» — начну"   "если хочешь — покажу"
 //             "это решать тебе"             "беру дальше пункт 1" (then stop)
+//             "беру это следующим заходом"  "добью отдельным заходом" (self-defer)
 //   Ignores:  "Готово, закоммичено"  "33 готовы, 11 в работе"  "продолжаю проверку"
 const DEFERRED_WORK = new RegExp(
   [
@@ -154,6 +155,10 @@ const DEFERRED_WORK = new RegExp(
     'дай\\s+знать',
     // a SPECIFIC announce-next-and-stop (numbered next step), not bare "дальше"
     'беру\\s+(?:дальше\\s+)?(?:пункт|волну)\\s*\\d',
+    // self-DEFER the declared next step to a FUTURE pass/turn (knows the step, no
+    // blocker, still stops): "беру это следующим заходом", "добью отдельным заходом",
+    // "вернусь следующим заходом". High-precision — "заход" in this sense = "later".
+    '(?:беру|возьм\\S+|сделаю|добью|допишу|дорабо\\S+|займусь|продолж\\S+|вернусь|перенесу|оставлю)[^.\\n]{0,40}(?:следующ\\S+|отдельн\\S+|нов\\S+|другим|следом)\\s+заход',
   ].join('|'),
   'i',
 );
