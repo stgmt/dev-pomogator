@@ -11,8 +11,9 @@
  * side-channel `.dev-pomogator/.test-quality.json` (`{ "<taskId>": "WEAK" | ... }`)
  * that the orchestrator's test-quality stage writes after running strong-tests.
  *
- * Modes via `TEST_QUALITY_GATE_ENABLED`: "shadow" (DEFAULT — log only, safe rollout)
- * | "true" (enforce) | "false" (off). SOFT tier: any error → approve.
+ * Modes via `TEST_QUALITY_GATE_ENABLED`: "true" (enforce, DEFAULT) | "shadow" (log only)
+ * | "false" (off). SOFT tier: any error → approve. Scope: only TRACKED git-modified specs
+ * (untracked parallel-session specs excluded — see parseModifiedSpecSlugs).
  *
  * @see ./test-quality-gate.ts (pure decision) · ./conformance.ts · ./builder.ts
  * @see .specs/spec-generator-v4/FR.md FR-35b / AC-35.4
@@ -35,16 +36,28 @@ function block(reason: string): void {
   process.exit(0);
 }
 
-/** Modified `.specs/<slug>` → distinct slugs, via `git status --porcelain`. */
-export function modifiedSpecSlugs(repoRoot: string): string[] {
-  const r = spawnSync('git', ['status', '--porcelain', '--', '.specs'], { cwd: repoRoot, encoding: 'utf8' });
-  if (r.status !== 0 || !r.stdout) return [];
+/**
+ * Parse `git status --porcelain -- .specs` stdout → distinct tracked-modified slugs.
+ * Untracked (`??`) entries are EXCLUDED: in a shared working tree they are a parallel
+ * session's spec or a generated artifact, NOT this session's own work — judging them
+ * would wedge THIS Stop on someone else's spec. Only tracked edits (staged/unstaged,
+ * incl. `git add`-ed new specs) count as the session declaring that work.
+ */
+export function parseModifiedSpecSlugs(porcelain: string): string[] {
   const slugs = new Set<string>();
-  for (const line of r.stdout.split('\n')) {
+  for (const line of porcelain.split('\n')) {
+    if (line.startsWith('??')) continue;
     const m = line.match(/\.specs\/([^/]+)\//);
     if (m) slugs.add(m[1]);
   }
   return [...slugs];
+}
+
+/** Modified `.specs/<slug>` → distinct slugs, via `git status --porcelain`. */
+export function modifiedSpecSlugs(repoRoot: string): string[] {
+  const r = spawnSync('git', ['status', '--porcelain', '--', '.specs'], { cwd: repoRoot, encoding: 'utf8' });
+  if (r.status !== 0 || !r.stdout) return [];
+  return parseModifiedSpecSlugs(r.stdout);
 }
 
 function escapeFromCommit(repoRoot: string): string | null {
@@ -53,7 +66,7 @@ function escapeFromCommit(repoRoot: string): string | null {
 }
 
 async function main(): Promise<void> {
-  const mode = process.env.TEST_QUALITY_GATE_ENABLED ?? 'shadow';
+  const mode = process.env.TEST_QUALITY_GATE_ENABLED ?? 'true';
   if (mode === 'false') return approve();
   const input = await readStdinJsonSafe<StopInput>();
   if (input.stop_hook_active === true) return approve();

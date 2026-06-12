@@ -11,6 +11,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import { parseModifiedSpecSlugs } from '../test_quality_gate_stop.ts';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const HOOK = path.join(here, '..', 'test_quality_gate_stop.ts');
@@ -61,8 +62,16 @@ describe('test-quality Stop-gate (real hook process)', () => {
     expect(out.reason).toMatch(/TASK_UNTESTED/);
   });
 
-  it.skipIf(!hasGit)('SHADOW (default): approves but logs "would block" to stderr', () => {
-    const r = runHook(tmp, '{}', {});
+  it.skipIf(!hasGit)('ENFORCE is the DEFAULT (FR-7): no env → still blocks the DONE-untested task', () => {
+    const r = runHook(tmp, '{}', {}); // no TEST_QUALITY_GATE_ENABLED → default 'true'
+    expect(r.status).toBe(0);
+    const out = JSON.parse(r.stdout.trim());
+    expect(out.decision).toBe('block');
+    expect(out.reason).toMatch(/TASK_UNTESTED/);
+  });
+
+  it.skipIf(!hasGit)('SHADOW (explicit opt-in): approves but logs "would block" to stderr', () => {
+    const r = runHook(tmp, '{}', { TEST_QUALITY_GATE_ENABLED: 'shadow' });
     expect(r.status).toBe(0);
     expect(r.stdout.trim()).toBe(''); // no block JSON
     expect(r.stderr).toMatch(/shadow: would block/);
@@ -81,6 +90,26 @@ describe('test-quality Stop-gate (real hook process)', () => {
     const log = path.join(tmp, '.claude', 'logs', 'test-quality-escapes.jsonl');
     expect(fs.existsSync(log)).toBe(true);
     expect(fs.readFileSync(log, 'utf8')).toMatch(/TEST_QUALITY_GATE_SKIP/);
+  });
+});
+
+// Root scope-fix (shared working tree): the gate must judge only the SESSION'S OWN
+// tracked work, never an untracked parallel-session spec — else arming enforce wedges
+// THIS Stop on someone else's spec. Pure-function test → deterministic, no git needed.
+describe('parseModifiedSpecSlugs — scope excludes untracked parallel-session specs', () => {
+  it('SCOPE_01: untracked (??) specs are NOT counted; tracked edits + staged new specs are', () => {
+    const porcelain = [
+      '?? .specs/skill-security-scan/',          // parallel session — untracked dir
+      '?? .specs/spec-generator-v4/report.yaml', // generated artifact — untracked file
+      ' M .specs/mine/FR.md',                     // my tracked edit
+      'A  .specs/mine-new/TASKS.md',              // my staged new spec
+    ].join('\n');
+    expect(parseModifiedSpecSlugs(porcelain).sort()).toEqual(['mine', 'mine-new']);
+  });
+
+  it('SCOPE_02: empty / non-spec porcelain → []', () => {
+    expect(parseModifiedSpecSlugs('')).toEqual([]);
+    expect(parseModifiedSpecSlugs(' M tools/foo.ts\n?? bar.txt')).toEqual([]);
   });
 });
 

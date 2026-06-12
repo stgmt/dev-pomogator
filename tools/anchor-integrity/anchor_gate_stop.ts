@@ -34,16 +34,26 @@ function block(reason: string): void {
   process.exit(0);
 }
 
-/** Modified `.specs/<slug>/…md` → distinct slugs, via `git status --porcelain`. */
-export function modifiedSpecSlugs(repoRoot: string): string[] {
-  const r = spawnSync('git', ['status', '--porcelain', '--', '.specs'], { cwd: repoRoot, encoding: 'utf8' });
-  if (r.status !== 0 || !r.stdout) return [];
+/**
+ * Parse `git status --porcelain -- .specs` → distinct slugs with an edited `.md` file.
+ * Untracked (`??`) entries are EXCLUDED — a parallel session's spec or a generated file
+ * is not this session's work and must not wedge its Stop (shared working tree).
+ */
+export function parseModifiedSpecSlugs(porcelain: string): string[] {
   const slugs = new Set<string>();
-  for (const line of r.stdout.split('\n')) {
+  for (const line of porcelain.split('\n')) {
+    if (line.startsWith('??')) continue;
     const m = line.match(/\.specs\/([^/]+)\/[^\s]*\.md$/);
     if (m) slugs.add(m[1]);
   }
   return [...slugs];
+}
+
+/** Modified `.specs/<slug>/…md` → distinct slugs, via `git status --porcelain`. */
+export function modifiedSpecSlugs(repoRoot: string): string[] {
+  const r = spawnSync('git', ['status', '--porcelain', '--', '.specs'], { cwd: repoRoot, encoding: 'utf8' });
+  if (r.status !== 0 || !r.stdout) return [];
+  return parseModifiedSpecSlugs(r.stdout);
 }
 
 /** Extract a `[skip-anchor-fix: reason]` escape reason from any text, else null. */

@@ -14031,7 +14031,9 @@ function walkDir(absDir, suffixes) {
     "dist",
     ".dev-pomogator-tmp",
     ".stryker-tmp",
-    "__pycache__"
+    "__pycache__",
+    "archive"
+    // FR-43c: `.specs/archive/` holds human-confirmed retired specs — out of the live graph
   ]);
   const stack = [absDir];
   while (stack.length) {
@@ -14607,22 +14609,26 @@ function block(reason) {
   process.stdout.write(JSON.stringify({ decision: "block", reason }));
   process.exit(0);
 }
-function modifiedSpecSlugs(repoRoot) {
-  const r = spawnSync("git", ["status", "--porcelain", "--", ".specs"], { cwd: repoRoot, encoding: "utf8" });
-  if (r.status !== 0 || !r.stdout) return [];
+function parseModifiedSpecSlugs(porcelain) {
   const slugs = /* @__PURE__ */ new Set();
-  for (const line of r.stdout.split("\n")) {
+  for (const line of porcelain.split("\n")) {
+    if (line.startsWith("??")) continue;
     const m = line.match(/\.specs\/([^/]+)\//);
     if (m) slugs.add(m[1]);
   }
   return [...slugs];
+}
+function modifiedSpecSlugs(repoRoot) {
+  const r = spawnSync("git", ["status", "--porcelain", "--", ".specs"], { cwd: repoRoot, encoding: "utf8" });
+  if (r.status !== 0 || !r.stdout) return [];
+  return parseModifiedSpecSlugs(r.stdout);
 }
 function escapeFromCommit(repoRoot) {
   const r = spawnSync("git", ["log", "-1", "--format=%B"], { cwd: repoRoot, encoding: "utf8" });
   return r.status === 0 && r.stdout ? escapeReason(r.stdout) : null;
 }
 async function main() {
-  const mode = process.env.TEST_QUALITY_GATE_ENABLED ?? "shadow";
+  const mode = process.env.TEST_QUALITY_GATE_ENABLED ?? "true";
   if (mode === "false") return approve();
   const input = await readStdinJsonSafe();
   if (input.stop_hook_active === true) return approve();
@@ -14663,7 +14669,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   });
 }
 export {
-  modifiedSpecSlugs
+  modifiedSpecSlugs,
+  parseModifiedSpecSlugs
 };
 /*! Bundled license information:
 
