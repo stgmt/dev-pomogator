@@ -1141,3 +1141,21 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then the old-version feature is suspected SUPERSEDED with its lineage evidence
     And the plain not-run feature is not flagged (not_run alone is not abandonment)
     And nothing is retired automatically
+
+  @FR-45
+  Scenario: SPECGEN004_157 get_archival_proof keeps a spec still referenced by a live spec
+    Given a graph where one spec is referenced by an edge from a live spec
+    When get_archival_proof runs for the referenced spec
+    Then the verdict is KEEP_FALSE_POSITIVE with a live inbound count of at least one
+
+  @FR-45
+  Scenario: SPECGEN004_158 archive_spec refuses to move a spec a live spec still references
+    Given a graph where one spec is referenced by an edge from a live spec
+    When archive_spec is asked to archive the referenced spec
+    Then it refuses with ARCHIVE_BLOCKED and nothing is moved
+
+  @FR-45
+  Scenario: SPECGEN004_159 the mutation door seals the archive tree against writes
+    Given the archive tree holds a spec
+    When the door validates a write targeting that archived spec
+    Then the write is refused as ARCHIVE_SEALED
