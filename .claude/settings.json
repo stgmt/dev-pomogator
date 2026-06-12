@@ -109,6 +109,36 @@
             "timeout": 60
           }
         ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/anchor-integrity/anchor_gate_stop.ts\"",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"const cp=require('child_process'),p=require('path');const b=p.join(process.env.CLAUDE_PLUGIN_ROOT||process.cwd(),'tools','spec-graph','test_quality_gate_stop.bundle.mjs');const c=cp.spawn(process.execPath,[b],{stdio:'inherit'});c.on('exit',x=>process.exit(x??0));c.on('error',()=>process.exit(0));\"",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"const cp=require('child_process'),p=require('path');const b=p.join(process.env.CLAUDE_PLUGIN_ROOT||process.cwd(),'tools','spec-backlog','auto-ingest-hook.bundle.mjs');const c=cp.spawn(process.execPath,[b],{stdio:'inherit'});c.on('exit',x=>process.exit(x??0));c.on('error',()=>process.exit(0));\"",
+            "timeout": 60
+          }
+        ]
       }
     ],
     "SessionStart": [
@@ -161,6 +191,46 @@
             "timeout": 120
           }
         ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/marksman-installer/ensure-marksman.ts\"",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \".claude/skills/pomogator-doctor/scripts/doctor-hook.ts\"",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/skill-listing-budget/apply_skill_budget.ts\"",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/spec-backlog/session-summary-hook.ts\"",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "PreToolUse": [
@@ -191,6 +261,11 @@
             "type": "command",
             "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/specs-validator/form-guards-dispatch.ts\"",
             "timeout": 60
+          },
+          {
+            "type": "command",
+            "command": "node -e \"const cp=require('child_process'),p=require('path');const b=p.join(process.env.CLAUDE_PLUGIN_ROOT||process.cwd(),'tools','spec-conformance-guard','spec-conformance-guard.bundle.mjs');const c=cp.spawn(process.execPath,[b],{stdio:'inherit'});c.on('exit',x=>process.exit(x??0));c.on('error',()=>process.exit(0));\"",
+            "timeout": 30
           }
         ]
       },
@@ -275,6 +350,16 @@
             "type": "command",
             "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/test-quality/compliance_check.ts\"",
             "timeout": 60
+          },
+          {
+            "type": "command",
+            "command": "node -e \"const cp=require('child_process'),p=require('path');const b=p.join(process.env.CLAUDE_PLUGIN_ROOT||process.cwd(),'tools','spec-conformance-push','spec-conformance-push.bundle.mjs');const c=cp.spawn(process.execPath,[b],{stdio:'inherit'});c.on('exit',x=>process.exit(x??0));c.on('error',()=>process.exit(0));\"",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/anchor-integrity/anchor_check_post.ts\"",
+            "timeout": 30
           }
         ]
       },
@@ -285,6 +370,11 @@
             "type": "command",
             "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/bg-task-guard/mark-bg-task.ts\"",
             "timeout": 60
+          },
+          {
+            "type": "command",
+            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/bash-post-test/ingest.ts\"",
+            "timeout": 30
           }
         ]
       },
