@@ -159,6 +159,10 @@ const DEFERRED_WORK = new RegExp(
     // blocker, still stops): "беру это следующим заходом", "добью отдельным заходом",
     // "вернусь следующим заходом". High-precision — "заход" in this sense = "later".
     '(?:беру|возьм\\S+|сделаю|добью|допишу|дорабо\\S+|займусь|продолж\\S+|вернусь|перенесу|оставлю)[^.\\n]{0,40}(?:следующ\\S+|отдельн\\S+|нов\\S+|другим|следом)\\s+заход',
+    // hand a FACTUAL confirm/correct back to the user instead of investigating it yourself
+    // ("подтверди, что X, или поправь") — tempered to EXCLUDE intent-confirmation
+    // ("...что я правильно понял задачу...") which plan-pomogator sanctions.
+    'подтверд\\S+,?\\s+что\\s+(?:(?!понял|понима|правильно|задач).)*?или\\s+поправь',
   ].join('|'),
   'i',
 );

@@ -11,8 +11,9 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { classify, firstUnsupported, stripCode } from '../claim_classifier.ts';
+import { classify, firstUnsupported, stripCode, isDeferredWork } from '../claim_classifier.ts';
 import { extractTurnWindow } from '../turn_window.ts';
+import { SHOULD_FIRE, SHOULD_NOT_FIRE } from '../bench/deferred-bench.ts';
 
 const HOOK = path.resolve(__dirname, '..', 'claim_evidence_gate_stop.ts');
 
@@ -147,6 +148,23 @@ describe('CEGATE001: claim-evidence gate — deferred-work class (kick «дод�
     expect(classify('Добью отдельным заходом — там по шагам.').some((h) => h.cls === 'deferred-work')).toBe(true);
     // precision: "за один заход" = a completion ("did it in one pass"), NOT a defer
     expect(classify('Свёл всё за один заход, закоммичено.').some((h) => h.cls === 'deferred-work')).toBe(false);
+  });
+
+  // @feature6
+  it('CEGATE001_23: blocks handing a FACTUAL confirm/correct back to the user, NOT the sanctioned intent-confirmation', () => {
+    // the case that slipped (2026-06-12): asking the user to verify a CODE fact I should investigate
+    expect(classify('tui-test-runner-v2 — реально заброшен или ещё в работе? подтверди, что живые, или поправь').some((h) => h.cls === 'deferred-work')).toBe(true);
+    // PRECISION GUARD: plan-pomogator's sanctioned "Правильно понял?" (about INTENT) must NEVER fire
+    expect(classify('Правильно понял? Спиннер только во время запроса?').some((h) => h.cls === 'deferred-work')).toBe(false);
+    expect(classify('Подтверди, что я правильно понял задачу, или поправь.').some((h) => h.cls === 'deferred-work')).toBe(false);
+  });
+
+  // @feature6 — the deferred-bench corpus is a CI regression contract (both directions).
+  it('CEGATE001_24: deferred-bench corpus — every SHOULD_FIRE fires, every SHOULD_NOT_FIRE stays silent', () => {
+    const misses = SHOULD_FIRE.filter((c) => !isDeferredWork(c.text)).map((c) => c.id);
+    const falseFires = SHOULD_NOT_FIRE.filter((c) => isDeferredWork(c.text)).map((c) => c.id);
+    expect(misses, `should-fire missed: ${misses.join(', ')}`).toEqual([]);
+    expect(falseFires, `should-not-fire false-fired: ${falseFires.join(', ')}`).toEqual([]);
   });
 });
 
