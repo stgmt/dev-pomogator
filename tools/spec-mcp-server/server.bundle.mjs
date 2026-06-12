@@ -49439,6 +49439,115 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
       return asJsonResult({ ok: true, spec: name, docs, hint: "Born verdict-GREEN; fill via apply_spec_change." });
     }
   });
+  const normalizeSlug = (s) => String(s).replace(/\\/g, "/").replace(/^\.?\/?\.specs\//, "").replace(/\/+$/, "");
+  const liveInboundRefs = (graph, slug) => {
+    const out = [];
+    const seen = /* @__PURE__ */ new Set();
+    const add = (from, to, type) => {
+      const k = `${from}|${to}|${type}`;
+      if (seen.has(k)) return;
+      seen.add(k);
+      out.push({ from, to, type });
+    };
+    for (const e of graph.edges) {
+      if (String(e.to).split(":")[0] !== slug) continue;
+      const fromSpec = String(e.from).split(":")[0];
+      if (fromSpec === slug || isArchivedSlug(fromSpec)) continue;
+      add(e.from, e.to, String(e.type));
+    }
+    const specsDir = path13.join(process.cwd(), ".specs");
+    if (fs17.existsSync(specsDir)) {
+      const linkRe = new RegExp(`(?:\\.specs/|\\.\\./|/|\\]\\()${slug.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&")}/`);
+      const walk = (dir, otherSlug) => {
+        for (const ent of fs17.readdirSync(dir, { withFileTypes: true })) {
+          const abs = path13.join(dir, ent.name);
+          if (ent.isDirectory()) {
+            walk(abs, otherSlug);
+            continue;
+          }
+          if (!/\.(md|feature)$/.test(ent.name)) continue;
+          let body = "";
+          try {
+            body = fs17.readFileSync(abs, "utf-8");
+          } catch {
+            continue;
+          }
+          if (linkRe.test(body)) {
+            add(`.specs/${otherSlug}/${path13.relative(path13.join(specsDir, otherSlug), abs).replace(/\\/g, "/")}`, `.specs/${slug}/`, "md-link");
+          }
+        }
+      };
+      for (const ent of fs17.readdirSync(specsDir, { withFileTypes: true })) {
+        if (!ent.isDirectory() || ent.name.startsWith(".")) continue;
+        if (ent.name === slug || isArchivedSlug(ent.name)) continue;
+        walk(path13.join(specsDir, ent.name), ent.name);
+      }
+    }
+    return out;
+  };
+  tools.push({
+    name: "get_archival_proof",
+    description: "FR-45a: graph-derived safety proof for archiving ONE spec \u2014 every LIVE inbound reference from OTHER specs to its nodes. Verdict: KEEP_FALSE_POSITIVE (live refs \u2192 NOT abandoned), ARCHIVE (no live refs \u2192 graph-clear), SPEC_NOT_FOUND / ALREADY_ARCHIVED. Supersession is the agent\u2019s legacy-triage signal, layered on this.",
+    inputShape: { slug: external_exports.string() },
+    handler: async ({ slug }) => {
+      const graph = getGraph();
+      const s = normalizeSlug(String(slug));
+      if (isArchivedSlug(s)) return asJsonResult({ ok: false, error: "ALREADY_ARCHIVED", slug: s });
+      const hasNodes = [...graph.nodes.values()].some((n) => String(n.file).replace(/\\/g, "/").includes(`.specs/${s}/`));
+      if (!hasNodes) return asJsonResult({ ok: false, error: "SPEC_NOT_FOUND", slug: s, hint: "check list_specs for loaded slugs" });
+      const refs = liveInboundRefs(graph, s);
+      const verdict = refs.length > 0 ? "KEEP_FALSE_POSITIVE" : "ARCHIVE";
+      return asJsonResult({
+        ok: true,
+        slug: s,
+        verdict,
+        live_inbound_count: refs.length,
+        live_inbound_refs: refs.slice(0, 50),
+        note: verdict === "KEEP_FALSE_POSITIVE" ? `${refs.length} live spec ref(s) \u2192 ${s} is NOT abandoned; archiving would strand them.` : `No live spec references ${s} \u2014 graph-clear to archive (combine with the agent's supersession signal).`
+      });
+    }
+  });
+  tools.push({
+    name: "archive_spec",
+    description: "FR-45b: the sanctioned, gated whole-spec move `.specs/<slug>/` \u2192 `.specs/archive/<slug>/`. Re-checks live inbound refs \u2192 ARCHIVE_BLOCKED if any; refuses a clobber (DEST_EXISTS); appends an audit line. The builder drops archive/ from the live graph; the move is read back via git history (the archive is then SEALED against the mutation door).",
+    inputShape: { slug: external_exports.string(), reason: external_exports.string() },
+    handler: async ({ slug, reason }) => {
+      const ro = readOnlyRefusal("archive_spec", { slug, reason });
+      if (ro) return ro;
+      const cwd = process.cwd();
+      const s = normalizeSlug(String(slug));
+      if (!isSafeSlug(s) || isArchivedSlug(s)) {
+        logSpecAccess("archive_spec", { slug: s }, "denied");
+        return asJsonResult({ ok: false, error: "INVALID_SLUG", slug: s, hint: "a safe, non-archived slug" });
+      }
+      const refs = liveInboundRefs(getGraph(), s);
+      if (refs.length > 0) {
+        logSpecAccess("archive_spec", { slug: s }, "denied");
+        return asJsonResult({ ok: false, error: "ARCHIVE_BLOCKED", slug: s, live_inbound_count: refs.length, live_inbound_refs: refs.slice(0, 50), hint: "live specs still reference this \u2014 redirect those refs first, or it is a KEEP false positive" });
+      }
+      const srcAbs = path13.join(cwd, ".specs", s);
+      const dstAbs = path13.join(cwd, ".specs", "archive", s);
+      if (!fs17.existsSync(srcAbs) || !fs17.statSync(srcAbs).isDirectory()) {
+        logSpecAccess("archive_spec", { slug: s }, "not_found");
+        return asJsonResult({ ok: false, error: "SPEC_NOT_FOUND", slug: s });
+      }
+      if (fs17.existsSync(dstAbs)) {
+        logSpecAccess("archive_spec", { slug: s }, "denied");
+        return asJsonResult({ ok: false, error: "DEST_EXISTS", slug: s, hint: "already archived (no clobber)" });
+      }
+      fs17.mkdirSync(path13.dirname(dstAbs), { recursive: true });
+      fs17.renameSync(srcAbs, dstAbs);
+      try {
+        const ledger = path13.join(cwd, ".dev-pomogator", "logs", "spec-archive.jsonl");
+        fs17.mkdirSync(path13.dirname(ledger), { recursive: true });
+        fs17.appendFileSync(ledger, JSON.stringify({ ts: (/* @__PURE__ */ new Date()).toISOString(), slug: s, reason: String(reason ?? ""), from: `.specs/${s}/`, to: `.specs/archive/${s}/` }) + "\n");
+      } catch {
+      }
+      registryOpts.refreshGraph?.();
+      logSpecAccess("archive_spec", { slug: s }, "ok");
+      return asJsonResult({ ok: true, slug: s, from: `.specs/${s}/`, to: `.specs/archive/${s}/`, hint: "moved out of the live graph; commit the move with git" });
+    }
+  });
   return tools;
 }
 

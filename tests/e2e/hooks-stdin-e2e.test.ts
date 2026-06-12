@@ -202,8 +202,8 @@ describe('spec-mcp-server initialize + tools/list + get_trace via real stdin', (
     // tools.ts buildToolRegistry().
     expect([...names].sort()).toEqual(
       [
-        'apply_spec_change', 'conformance_check', 'create_spec', 'delete_spec_doc',
-        'find_by_tags', 'find_orphans', 'find_refs', 'get_coverage',
+        'apply_spec_change', 'archive_spec', 'conformance_check', 'create_spec', 'delete_spec_doc',
+        'find_by_tags', 'find_orphans', 'find_refs', 'get_archival_proof', 'get_coverage',
         'get_coverage_summary', 'get_node', 'get_spec_status', 'get_test_result',
         'get_trace', 'list_phase_tasks', 'list_spec_docs', 'list_specs',
         'propose_spec_change', 'read_attachment', 'read_spec_doc', 'rename_spec_doc',
