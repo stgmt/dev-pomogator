@@ -679,3 +679,9 @@ WHEN спека-кандидат проверяется на архивацию 
 **Требование:** [FR-46a](FR.md#fr-46), [FR-46b](FR.md#fr-46), [FR-46c](FR.md#fr-46), [FR-46d](FR.md#fr-46)
 
 WHEN задача `Status: DONE` записывается без явного `specgen004_NN` в Done-When THEN conformance SHALL дать находку `TASK_NO_OWN_SCENARIO`; IF задача todo/in-progress без своего сценария THEN находки SHALL НЕ быть (связь нужна к DONE, не к созданию — тесты пишутся после задачи); WHEN задача DONE цитирует свой сценарий, но он не PASSED THEN conformance SHALL дать `TASK_STATUS_UNVERIFIED`; WHEN правило промоутнуто до ERROR THEN дверь `apply_spec_change` SHALL отказать запись с этой находкой, А предсуществующие нарушители SHALL НЕ блокировать несвязанную запись (поэтапный порядок детект→ретрофит→гейт ИЛИ delta-скоуп old→new); WHEN агент зовёт `get_trace` по задаче THEN ответ SHALL включать её свой `specgen004_NN` и его результат.
+
+## AC-47.1
+
+**Требование:** [FR-47a](FR.md#fr-47), [FR-47b](FR.md#fr-47), [FR-47c](FR.md#fr-47), [FR-47d](FR.md#fr-47)
+
+WHEN билдер парсит DESIGN.md THEN блок `### Decision:` с явной строкой `**Требование:** [FR-N]` SHALL дать узел `Decision` + ребро `covers` FR→Decision; IF строки `**Требование:**` нет (FR упомянут лишь в прозе Rationale) THEN ребро SHALL НЕ строиться (не костыль); WHEN conformance прогоняется THEN FR без покрывающего `Decision` SHALL давать `FR_NO_DESIGN` (зеркально `FR_NO_RESEARCH`), severity поэтапно WARNING→ERROR (delta-скоуп, не клинить дверь); WHEN агент зовёт `get_trace` по требованию THEN ответ SHALL включать его `decisions[]` (id + parentFr); WHEN записывается блок `### Decision:` без строки `**Требование:**` THEN `design-decision-guard` SHALL это пометить.

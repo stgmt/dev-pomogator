@@ -44,6 +44,7 @@ export type FindingCode =
   | 'TASK_NO_REQUIREMENT'
   | 'ORPHAN_PROJECT_TEST'
   | 'FR_NO_RESEARCH'
+  | 'FR_NO_DESIGN'
   | 'UPSTREAM_UNLINKED';
 
 export type Severity = 'error' | 'warning' | 'info';
@@ -151,9 +152,16 @@ export function checkConformance(
   // Pre-compute edge indices for O(1) lookup of the «does FR-N have an AC
   // covering it / a scenario testing it» question.
   const acCovers = new Set<string>(); // FR ids with at least one `covers` AC edge
+  const decisionCovers = new Set<string>(); // FR ids with a `covers` edge to a Decision node (FR-47b)
   const scenarioTests = new Set<string>(); // FR / AC / NFR ids referenced by a `tested-by` edge
   for (const e of graph.edges) {
-    if (e.type === 'covers') acCovers.add(e.from);
+    if (e.type === 'covers') {
+      // `covers` now carries FR→AC AND FR→Decision — split by target type so a Decision
+      // edge is NOT mistaken for AC coverage (UNCOVERED_FR must still fire on an FR that
+      // has a Decision but no AC/scenario).
+      if (graph.nodes.get(e.to)?.type === 'Decision') decisionCovers.add(e.from);
+      else acCovers.add(e.from);
+    }
     if (e.type === 'tested-by') scenarioTests.add(e.from);
   }
 
@@ -174,6 +182,27 @@ export function checkConformance(
       suggestions: [
         { action: 'create_ac', reason: 'Add an AC heading `## AC-N (FR-N)` covering this FR.', confidence: 'high' },
         { action: 'tag_scenario', reason: `Add @${bareTag} to an existing Scenario in any \`.feature\` file.`, confidence: 'medium' },
+      ],
+    });
+  }
+
+  // 1b) FR_NO_DESIGN (FR-47b) — FR with no covering design Decision (no `covers` edge to
+  // a Decision node). GRAPH-NATIVE mirror of FR_NO_RESEARCH: the edge is built ONLY from
+  // an explicit `**Требование:**` line in a `### Decision:` block (md parser), so this is
+  // a DECLARED gap, not a body text-scan. WARNING (detect-first, FR-47b staged) — promote
+  // to ERROR only after the design legs are retrofitted, else it floods on the legacy FRs.
+  for (const node of graph.nodes.values()) {
+    if (node.type !== 'FR') continue;
+    if (decisionCovers.has(node.id)) continue;
+    findings.push({
+      code: 'FR_NO_DESIGN',
+      severity: 'warning',
+      location: { file: node.file, line: node.line },
+      message: `FR ${node.id} has no design Decision covering it — no \`### Decision:\` block declares \`**Требование:** [${localIdOf(node)}]\` (FR-47: the design leg of the trace web).`,
+      nodeId: node.id,
+      suggestions: [
+        { action: 'add_decision', reason: 'Add a `### Decision:` block in DESIGN.md with a `**Требование:** [FR-N]` line, OR', confidence: 'medium' },
+        { action: 'link_existing_decision', reason: 'add the `**Требование:**` line to the existing decision that motivated this FR.', confidence: 'medium' },
       ],
     });
   }

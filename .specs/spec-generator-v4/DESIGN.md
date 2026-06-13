@@ -190,6 +190,8 @@
 
 ### Decision: cucumber-js as Phase 0 canonical BDD runner
 
+**Требование:** [FR-1](FR.md#fr-1)
+
 **Rationale:** Only TypeScript-compatible BDD runner emitting canonical Cucumber Messages NDJSON (the same schema Reqnroll v3+ produces for .NET). Single schema across languages = simplified NDJSON ingester in Phase 1, no per-runner adapters in Phase 3. Mature ecosystem (`@cucumber/cucumber`, `@cucumber/messages`, `@cucumber/gherkin-utils` все official, MIT, stable).
 
 **Trade-off:** Migration burden for dev-pomogator: existing vitest pseudo-BDD (`.feature` as docs only, tests in vitest) must convert to real cucumber-js. Estimated 1-2 days of work for ~30 scenarios. Vitest unit tests stay untouched (additive setup), but CI now runs two test suites.

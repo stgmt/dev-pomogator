@@ -1515,3 +1515,19 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] правило `TASK_NO_OWN_SCENARIO` в `conformance.ts`: DONE-задача без явного specgen004_NN в Done-When → WARNING (детект-первый; ERROR — после ретрофита, FR-46c). Живёт в одном месте — гоняют дверь apply_spec_change + push + verdict + census. Проверено: 45 v4-задач засветились, вердикт остался GREEN. Verified by SPECGEN004_160 (DONE без своего id → флаг)
   - [x] `get_trace` отдаёт `tasks[].own_scenario` (резолвит specgen004_NN из Done-When в узел сценария + lastResult; null если не цитирует), server bundle пересобран. Verified by SPECGEN004_162 (own_scenario surfaced с PASSED)
   - [x] эта задача — ПЕРВАЯ по правилу FR-46: ссылается и на требование (FR-46), и на свой сценарий (SPECGEN004_160), сценарий зелёный → НЕ ловится TASK_NO_OWN_SCENARIO. Verified by SPECGEN004_161 (DONE со своим id → не флаг). Step-defs tests/step_definitions/feature46_task_traceability.ts на реальные checkConformance + get_trace
+
+- [x] P22-2: дизайн как первоклассный узел графа — Decision-узлы + FR_NO_DESIGN + get_trace design_decisions (FR-47, срез 1/3) — id: p22-design-trace-nodes — Status: DONE | Est: 360m
+  _depends: p22-task-traceability_
+  _Requirements: [FR-47](FR.md#fr-47)_
+  **Done When:**
+  - [x] узел `Decision` в модель графа (types.ts) + парсер `### Decision:` (parsers/md.ts) строит ребро covers FR→Decision ТОЛЬКО из явной строки `**Требование:**` (decisionRequirementAfter), не из прозы. Verified by SPECGEN004_163. Доказано на реальных данных: ретрофит решения cucumber-js → ребро FR-1→Decision построено
+  - [x] `FR_NO_DESIGN` в conformance.ts (FR без покрывающего Decision, граф-нативно, зеркало FR_NO_RESEARCH; WARNING детект-первый, FR-47b). На живом корпусе 580 FR без дизайн-ноги подсвечены, FR-1 снят. Verified by SPECGEN004_164
+  - [x] `get_trace` отдаёт `design_decisions[]` требования (FR-47c), server bundle пересобран. Verified by SPECGEN004_165. Step-defs tests/step_definitions/feature47_design_trace.ts на реальные parseMarkdown + checkConformance + get_trace
+
+- [ ] P22-3: FR-47 остаток — design-decision-guard + ретрофит дизайн-ног + срезы Story/Research — id: p22-design-trace-rest — Status: TODO | Est: 600m
+  _depends: p22-design-trace-nodes_
+  _Requirements: [FR-47](FR.md#fr-47)_
+  **Done When:**
+  - [ ] `design-decision-guard` (FR-47d) денаит блок `### Decision:` без строки `**Требование:** [FR-N]` + unit/BDD
+  - [ ] ретрофит дизайн-ног корпуса (FR_NO_DESIGN на v4 → 0 или принятый долг помечен); промоут FR_NO_DESIGN до ERROR дельта-скоупом
+  - [ ] срез 2 (Story-узлы) + срез 3 (Research-узлы) аналогично Decision: узел+парсер+ребро+проверка+get_trace+BDD+самотрассировка

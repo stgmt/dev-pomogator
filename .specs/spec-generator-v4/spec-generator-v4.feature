@@ -1177,3 +1177,22 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given a graph with a DONE task whose Done-When cites its own SPECGEN scenario id which passed
     When get_trace runs for that task's requirement
     Then the task's own_scenario is surfaced with its passing result
+
+  @feature47
+  Scenario: SPECGEN004_163 a design Decision links to its FR only via an explicit requirement line
+    Given a DESIGN doc with one Decision citing its requirement on a Требование line and one citing a requirement only in prose
+    When the design markdown is parsed
+    Then a Decision node and an FR-to-Decision covers edge exist for the explicit one
+    And the prose-only Decision is a node with no edge
+
+  @feature47
+  Scenario: SPECGEN004_164 conformance flags an FR with no covering design Decision
+    Given a graph with an FR that no Decision covers
+    When conformance checks the design leg of the graph
+    Then an FR_NO_DESIGN warning is raised for that FR
+
+  @feature47
+  Scenario: SPECGEN004_165 get_trace surfaces an FR's design decisions
+    Given a graph where a Decision covers an FR via an explicit requirement line
+    When get_trace runs for that FR
+    Then the FR's design_decisions include that Decision

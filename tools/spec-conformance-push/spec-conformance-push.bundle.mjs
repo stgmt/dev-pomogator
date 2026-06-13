@@ -14264,9 +14264,13 @@ function checkConformance(graph, opts = {}) {
   );
   const specLocalIds = new Set(specNodes.map((n) => localIdOf(n)));
   const acCovers = /* @__PURE__ */ new Set();
+  const decisionCovers = /* @__PURE__ */ new Set();
   const scenarioTests = /* @__PURE__ */ new Set();
   for (const e of graph.edges) {
-    if (e.type === "covers") acCovers.add(e.from);
+    if (e.type === "covers") {
+      if (graph.nodes.get(e.to)?.type === "Decision") decisionCovers.add(e.from);
+      else acCovers.add(e.from);
+    }
     if (e.type === "tested-by") scenarioTests.add(e.from);
   }
   for (const node of graph.nodes.values()) {
@@ -14283,6 +14287,21 @@ function checkConformance(graph, opts = {}) {
       suggestions: [
         { action: "create_ac", reason: "Add an AC heading `## AC-N (FR-N)` covering this FR.", confidence: "high" },
         { action: "tag_scenario", reason: `Add @${bareTag} to an existing Scenario in any \`.feature\` file.`, confidence: "medium" }
+      ]
+    });
+  }
+  for (const node of graph.nodes.values()) {
+    if (node.type !== "FR") continue;
+    if (decisionCovers.has(node.id)) continue;
+    findings.push({
+      code: "FR_NO_DESIGN",
+      severity: "warning",
+      location: { file: node.file, line: node.line },
+      message: `FR ${node.id} has no design Decision covering it \u2014 no \`### Decision:\` block declares \`**\u0422\u0440\u0435\u0431\u043E\u0432\u0430\u043D\u0438\u0435:** [${localIdOf(node)}]\` (FR-47: the design leg of the trace web).`,
+      nodeId: node.id,
+      suggestions: [
+        { action: "add_decision", reason: "Add a `### Decision:` block in DESIGN.md with a `**\u0422\u0440\u0435\u0431\u043E\u0432\u0430\u043D\u0438\u0435:** [FR-N]` line, OR", confidence: "medium" },
+        { action: "link_existing_decision", reason: "add the `**\u0422\u0440\u0435\u0431\u043E\u0432\u0430\u043D\u0438\u0435:**` line to the existing decision that motivated this FR.", confidence: "medium" }
       ]
     });
   }
