@@ -147,3 +147,41 @@ describe('computeFrCensus — output invariants + gate', () => {
     expect(r.scope).toBe('other-spec');
   });
 });
+
+describe('computeFrCensus — FR-47b trace-web completeness (webComplete)', () => {
+  it('none of the legacy-shaped FRs are web-complete; the verdict counts 0/N', () => {
+    // makeGraph FRs have AC/scenario/task at most — none has design/story/research,
+    // so the 6-leg AND yields 0 web-complete. The honest "tasks done ≠ 100%" signal.
+    const r = computeFrCensus(makeGraph());
+    expect(r.webCompleteCount).toBe(0);
+    expect(r.rows.every((row) => !row.webComplete)).toBe(true);
+  });
+
+  it('acCovers split bugfix: a covers edge to a Decision/Story is NOT counted as AC', () => {
+    // Regression: before the split, ANY covers edge set hasAc → an FR with only a
+    // design Decision read AC:✓. The edge target type must decide the leg.
+    const nodes = new Map<string, unknown>([
+      [`${SLUG}:FR-9`, fr(9)],
+      [`${SLUG}:Decision-x`, { id: `${SLUG}:Decision-x`, type: 'Decision', file: `.specs/${SLUG}/DESIGN.md`, line: 1, title: 'x', parentFr: `${SLUG}:FR-9`, body: '' }],
+      [`${SLUG}:Story-x`, { id: `${SLUG}:Story-x`, type: 'Story', file: `.specs/${SLUG}/USER_STORIES.md`, line: 1, title: 'x', parentFr: `${SLUG}:FR-9`, body: '' }],
+    ]);
+    const edges: Edge[] = [
+      { from: `${SLUG}:FR-9`, to: `${SLUG}:Decision-x`, type: 'covers' },
+      { from: `${SLUG}:FR-9`, to: `${SLUG}:Story-x`, type: 'covers' },
+    ];
+    const r = computeFrCensus({ nodes, edges } as unknown as SpecGraph);
+    const row = r.rows.find((x) => x.frId === `${SLUG}:FR-9`)!;
+    expect(row.hasAc).toBe(false); // the Decision/Story edges must NOT forge AC coverage
+    expect(row.hasDesign).toBe(true);
+    expect(row.hasStory).toBe(true);
+    expect(row.missingLegs).toContain('AC');
+  });
+
+  it('research leg is N/A→present unless the FR is in the frsWithoutResearch set', () => {
+    const r = computeFrCensus(makeGraph(), { frsWithoutResearch: new Set([`${SLUG}:FR-1`]) });
+    const fr1 = r.rows.find((x) => x.frId === `${SLUG}:FR-1`)!;
+    const fr2 = r.rows.find((x) => x.frId === `${SLUG}:FR-2`)!;
+    expect(fr1.hasResearch).toBe(false); // explicitly flagged as lacking research
+    expect(fr2.hasResearch).toBe(true); // not flagged → research leg N/A → present
+  });
+});

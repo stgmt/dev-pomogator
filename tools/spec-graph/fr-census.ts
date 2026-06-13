@@ -40,6 +40,7 @@
 import path from 'node:path';
 import { buildGraphFromCwd } from './builder.ts';
 import { computeCoverage, specOf, type ScenarioLike, type TaskLike } from './coverage.ts';
+import { findFrsWithoutResearch } from './research-trace.ts';
 import type { SpecGraph, FrNode, ScenarioNode, TaskNode } from './types.ts';
 
 export type FrCensusVerdict =
@@ -68,6 +69,21 @@ export interface FrCensusRow {
   /** ≥1 implementing Task verifies (verified_status DONE — its scenarios passed). */
   tested: boolean;
   verdict: FrCensusVerdict;
+  /** ≥1 `covers` edge to a Decision node (FR-47 design leg). */
+  hasDesign: boolean;
+  /** ≥1 `covers` edge to a Story node (FR-47 story leg). */
+  hasStory: boolean;
+  /** FR cites a RESEARCH.md finding (FR-47 research leg). N/A → true for a spec with no RESEARCH.md. */
+  hasResearch: boolean;
+  /**
+   * ALL six trace-web legs attached: AC + scenario + task + design + story +
+   * research (FR-47b). AND-aggregation, not OR — one missing leg ⇒ not 100%
+   * (rollup-completeness-all-not-any). This is the literal "доводят до 100%?"
+   * answer: a feature is web-complete only when every leg is wired.
+   */
+  webComplete: boolean;
+  /** Which of the six legs are absent — empty ⇔ webComplete. */
+  missingLegs: string[];
 }
 
 export interface FrCensusReport {
@@ -77,6 +93,8 @@ export interface FrCensusReport {
   rows: FrCensusRow[];
   /** Count per verdict (conservation: Σ === rows.length). */
   byVerdict: Record<FrCensusVerdict, number>;
+  /** FRs with ALL six trace-web legs attached (FR-47b webComplete count). */
+  webCompleteCount: number;
   /** FRs claimed DONE with no passing scenario — the false-green class. */
   falseGreen: string[];
   /** 🟢 ⇔ no DONE_UNTESTED (no unproven DONE). */
@@ -99,15 +117,25 @@ const ALL_VERDICTS: readonly FrCensusVerdict[] = [
  * task→scenario join (`mapTasksToScenarios`, same-spec scoped internally) stays
  * correct regardless of the report scope.
  */
-export function computeFrCensus(graph: SpecGraph, opts: { spec?: string } = {}): FrCensusReport {
-  // Edge indices — same semantics as conformance.ts::UNCOVERED_FR (covers.from
-  // = FR with an AC; tested-by.from = FR/AC tested by a Scenario). Reused, not
-  // re-derived, so a census row never disagrees with the traceability gate.
+export function computeFrCensus(
+  graph: SpecGraph,
+  opts: { spec?: string; frsWithoutResearch?: Set<string> } = {},
+): FrCensusReport {
+  // Edge indices — same semantics as conformance.ts::UNCOVERED_FR. `covers`
+  // carries FR→AC AND FR→Decision AND FR→Story since FR-47, so SPLIT by target
+  // type: a design/story edge must NOT count as AC coverage (else an FR with a
+  // Decision but no AC would read AC:✓). Mirrors conformance.ts edge pre-compute.
   const acCovers = new Set<string>();
+  const designCovers = new Set<string>(); // FR→Decision (FR-47 design leg)
+  const storyCovers = new Set<string>(); // FR→Story (FR-47 story leg)
   const directlyTested = new Set<string>();
   for (const e of graph.edges) {
-    if (e.type === 'covers') acCovers.add(e.from);
-    else if (e.type === 'tested-by') directlyTested.add(e.from);
+    if (e.type === 'covers') {
+      const toType = graph.nodes.get(e.to)?.type;
+      if (toType === 'Decision') designCovers.add(e.from);
+      else if (toType === 'Story') storyCovers.add(e.from);
+      else acCovers.add(e.from);
+    } else if (e.type === 'tested-by') directlyTested.add(e.from);
   }
 
   // FR-32 coverage over the WHOLE corpus — the single source of verified_status
@@ -164,18 +192,41 @@ export function computeFrCensus(graph: SpecGraph, opts: { spec?: string } = {}):
     else if (noneStarted) verdict = 'PLANNED';
     else verdict = 'IN_PROGRESS'; // a mix of done/in-progress and open tasks
 
+    // FR-47b trace-web legs. Research is N/A (→ true) for a spec with no
+    // RESEARCH.md: research-trace skips those entirely, so we must not flag
+    // their FRs as research-incomplete here either.
+    const hasAc = acCovers.has(fr.id);
+    const hasScenario = directlyTested.has(fr.id);
+    const hasDesign = designCovers.has(fr.id);
+    const hasStory = storyCovers.has(fr.id);
+    const hasResearch = !(opts.frsWithoutResearch?.has(fr.id) ?? false);
+    const hasTask = tasks.length > 0;
+    // AND-aggregation (rollup-completeness-all-not-any): one missing leg ⇒ not 100%.
+    const missingLegs: string[] = [];
+    if (!hasAc) missingLegs.push('AC');
+    if (!hasScenario) missingLegs.push('scenario');
+    if (!hasTask) missingLegs.push('task');
+    if (!hasDesign) missingLegs.push('design');
+    if (!hasStory) missingLegs.push('story');
+    if (!hasResearch) missingLegs.push('research');
+
     rows.push({
       frId: fr.id,
       spec: fr.spec,
       title: fr.title,
       file: fr.file,
       line: fr.line,
-      hasAc: acCovers.has(fr.id),
-      hasScenario: directlyTested.has(fr.id),
+      hasAc,
+      hasScenario,
       taskIds: tasks.map((t) => t.id),
       taskStatuses,
       tested: allVerified,
       verdict,
+      hasDesign,
+      hasStory,
+      hasResearch,
+      webComplete: missingLegs.length === 0,
+      missingLegs,
     });
   }
 
@@ -198,6 +249,7 @@ export function computeFrCensus(graph: SpecGraph, opts: { spec?: string } = {}):
     scope: opts.spec ?? 'ALL',
     rows,
     byVerdict,
+    webCompleteCount: rows.filter((r) => r.webComplete).length,
     falseGreen,
     verdict: byVerdict.DONE_UNTESTED > 0 ? 'RED' : 'GREEN',
     strictVerdict: byVerdict.DONE_UNTESTED > 0 || byVerdict.UNIMPLEMENTED > 0 ? 'RED' : 'GREEN',
@@ -216,9 +268,15 @@ export function renderFrCensus(r: FrCensusReport): string {
   const lines: string[] = [];
   lines.push(`═══ fr-census (deterministic per-FR roll-call, FR-37) — ${r.corpusRoot} [scope: ${r.scope}] ═══`);
   lines.push(`${r.rows.length} FR(s): ` + ALL_VERDICTS.map((v) => `${VERDICT_ICON[v]} ${v}:${r.byVerdict[v]}`).join('  '));
+  lines.push(
+    `🕸️  web-complete (ALL 6 legs AC+Scen+Task+Design+Story+Research): ${r.webCompleteCount}/${r.rows.length} — FR-47b "доводят до 100%?" verdict (AND, not OR)`,
+  );
   for (const row of r.rows) {
-    const ev = `AC:${row.hasAc ? '✓' : '✗'} Scen:${row.hasScenario ? '✓' : '✗'} tasks:[${row.taskStatuses.join(',') || '—'}]`;
-    lines.push(`  ${VERDICT_ICON[row.verdict]} ${row.frId}  ${row.verdict.padEnd(13)} ${ev}  ${row.title}`);
+    const tick = (b: boolean): string => (b ? '✓' : '✗');
+    const ev =
+      `AC:${tick(row.hasAc)} Scen:${tick(row.hasScenario)} D:${tick(row.hasDesign)} St:${tick(row.hasStory)} R:${tick(row.hasResearch)} tasks:[${row.taskStatuses.join(',') || '—'}]`;
+    const web = row.webComplete ? '🕸️100%' : `⚠️missing[${row.missingLegs.join(',')}]`;
+    lines.push(`  ${VERDICT_ICON[row.verdict]} ${row.frId}  ${row.verdict.padEnd(13)} ${ev} ${web}  ${row.title}`);
   }
   if (r.falseGreen.length) {
     lines.push(`⚠️ FALSE-GREEN — ${r.falseGreen.length} FR(s) marked DONE with no passing scenario (claim no test backs):`);
@@ -244,7 +302,11 @@ if (isDirectRun) {
   if (specIdx !== -1) spec = argv[specIdx + 1];
   const rootArg = argv.find((a, i) => !a.startsWith('-') && argv[i - 1] !== '--spec') ?? process.cwd();
   const corpusRoot = path.resolve(rootArg);
-  const report = computeFrCensus(buildGraphFromCwd(corpusRoot), { spec });
+  // Research leg (FR-47b): the existing text detector (research stays a detector,
+  // not a graph node — prose has no clean per-finding unit). Composite FR ids
+  // lacking a RESEARCH.md citation, only for specs that HAVE a RESEARCH.md.
+  const frsWithoutResearch = new Set(findFrsWithoutResearch(corpusRoot).map((f) => f.nodeId));
+  const report = computeFrCensus(buildGraphFromCwd(corpusRoot), { spec, frsWithoutResearch });
   report.corpusRoot = corpusRoot;
   console.log(json ? JSON.stringify(report, null, 2) : renderFrCensus(report));
   const gate = strict ? report.strictVerdict : report.verdict;

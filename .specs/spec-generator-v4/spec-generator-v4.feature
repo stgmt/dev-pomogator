@@ -1215,3 +1215,9 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given a graph where a Story covers an FR via an explicit requirement line
     When get_trace runs for that requirement
     Then the FR's user_stories include that Story
+
+  @feature47
+  Scenario: SPECGEN004_169 fr-census is web-complete only with ALL six legs (AND, not OR)
+    Given a graph with a fully-legged FR and a sibling FR missing only its research leg
+    When fr-census computes the completeness verdict
+    Then the fully-legged FR is web-complete and the other FR misses only research
