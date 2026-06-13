@@ -1,6 +1,6 @@
 ---
 name: task-status
-description: Use when you change a spec task's status — ESPECIALLY before starting work (moving a task to `ready`/`in-progress`). It is the centralized, validated path: read the requirement's trace chain, confirm it is assembled, then set the status through the door's `set_entity_status` tool. Explains why a start is refused (which legs are missing) and the two ways to unblock. Trigger phrases: "взять задачу в работу", "поставить задачу in-progress / ready / done", "пометить задачу готовой", "start working on task", "set task status".
+description: Use when you change ANY spec entity's status through the centralized door — ESPECIALLY before starting work (moving a task to `ready`/`in-progress`) or confirming a spec PHASE STOP. It is the validated path: read the requirement's trace chain, confirm it is assembled, then set the status through the door's `set_entity_status` tool. Covers tasks (5-status machine), spec phases (confirm STOP, gated on prior STOPs), and derived entities (FR/story/decision — refused, their status is computed). Explains why a start is refused (which legs are missing) and how to unblock. Trigger phrases: "взять задачу в работу", "поставить задачу in-progress / ready / done", "пометить задачу готовой", "подтвердить STOP фазы", "start working on task", "set task status", "confirm phase stop".
 allowed-tools: mcp__dev-pomogator-specs__get_trace, mcp__dev-pomogator-specs__get_node, mcp__dev-pomogator-specs__get_spec_status, mcp__dev-pomogator-specs__set_entity_status, mcp__dev-pomogator-specs__read_spec_doc
 ---
 
@@ -56,8 +56,26 @@ conformance check raises `TASK_STARTED_WITHOUT_CHAIN` (detect-first WARNING toda
 promoted to a hard refusal after the corpus is retrofitted). The command is the
 ergonomic path; the conformance gate is the floor. Use the command.
 
+## Beyond tasks — the one door handles every entity (FR-48e)
+
+`set_entity_status` accepts ANY spec entity id and answers by type, so nothing
+bypasses the door:
+
+- **Spec PHASE** (`<slug>:phase:Discovery|Context|Requirements|Finalization`) — confirm
+  its STOP with `to: "done"` (the ONLY legal phase move; a task status like `in-progress`
+  on a phase is `ILLEGAL_TRANSITION`-for-type — a phase is binary). The gate refuses until
+  every PRIOR phase's STOP is confirmed, the phase's input files exist, and (Requirements)
+  `DESIGN.md` carries its `## BDD Test Infrastructure` Classification. The write is delegated
+  to the canonical `.progress.json` writer — there is no second writer. **Discover the phase
+  ids in `get_spec_status`** — its `phases[]` lists each `id` + `stop_confirmed`.
+- **Derived entity** (FR / user story / design Decision / AC / scenario / whole spec) — its
+  status is COMPUTED, never hand-set. `set_entity_status` refuses with `STATUS_DERIVED` and
+  RETURNS the live verdict (`fr-census` for an FR, `get_spec_status` for a spec). Change it by
+  assembling legs / passing the scenario, not by setting a status.
+
 ## See also
 
-- `.specs/spec-generator-v4/FR.md` FR-48 (FR-48a machine / FR-48b gate / FR-48d command)
-- `tools/spec-graph/task-lifecycle.ts` — the transition table + chain-assembled check
+- `.specs/spec-generator-v4/FR.md` FR-48 (FR-48a machine / FR-48b gate / FR-48d command / FR-48e all-entity dispatch)
+- `tools/spec-graph/task-lifecycle.ts` — the task transition table + chain-assembled check
+- `tools/spec-graph/phase-lifecycle.ts` — the phase STOP gate (ordering + inputs + precondition)
 - FR-46 (the back bracket): a task cannot be `done` without its own green scenario.
