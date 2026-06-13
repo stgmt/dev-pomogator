@@ -40,6 +40,7 @@ import type {
   FrNode,
   NfrNode,
   AcNode,
+  DecisionNode,
   Edge,
 } from '../types.ts';
 import { specOf, qualifySlice } from '../coverage.ts';
@@ -53,6 +54,11 @@ const FENCE_RE = /^(?:```|~~~)/;
 const FR_HEADING_RE = /^FR-(\d+):\s*(.+)$/;
 const NFR_HEADING_RE = /^NFR(?:-([A-Za-z][A-Za-z0-9]*))?-(\d+):\s*(.+)$/;
 const AC_HEADING_RE = /^AC-(\d+(?:\.\d+)?)\s*\(FR-(\d+)\)\s*:?\s*(.*)$/;
+// Decision (DESIGN.md «Key Decisions»): `### Decision: <title>`. The parent FR is
+// read from an EXPLICIT `**Требование:** [FR-N]` / `**Requirement:** [FR-N]` line in
+// the block (decisionRequirementAfter) — NOT any FR mention in the prose, so the
+// FR↔Decision edge is a real declared link, not a body text-scan (FR-46 «no crutch»).
+const DECISION_HEADING_RE = /^Decision:\s*(.+)$/;
 
 // FR-7c short-heading forms — the migrated, Marksman-resolvable shape where the
 // heading slug equals the bare id (`## FR-7` → slug `fr-7`, so `[…](#fr-7)`
@@ -137,6 +143,28 @@ function parentFrAfter(lines: string[], i: number): string {
     if (href) return `FR-${href[1]}`;
     const m = t.match(/\bFR-(\d+)\b/);
     if (m) return `FR-${m[1]}`;
+  }
+  return '';
+}
+
+/**
+ * For a Decision block, read the parent FR ONLY from an explicit
+ * `**Требование:** [FR-N]` / `**Requirement:** [FR-N]` label line — NOT from any FR
+ * mention in the Rationale/Alternatives prose. Keeps FR↔Decision a DECLARED link
+ * (FR-46 «no crutch»): a coincidental `FR-1` in prose must not forge the edge.
+ * Returns `FR-N`, or `''` if the block declares no requirement.
+ */
+function decisionRequirementAfter(lines: string[], i: number): string {
+  for (let j = i + 1; j < Math.min(lines.length, i + 14); j++) {
+    const t = lines[j].trim();
+    if (t.startsWith('#')) return ''; // next heading — block ended
+    const label = t.match(/^\*\*\s*(?:Требовани[ея]|Requirements?)\s*:?\s*\*\*\s*:?\s*(.*)$/i);
+    if (!label) continue;
+    const rest = label[1];
+    const href = rest.match(/#fr-(\d+)\b/i);
+    if (href) return `FR-${href[1]}`;
+    const m = rest.match(/\bFR-(\d+)\b/);
+    return m ? `FR-${m[1]}` : ''; // labeled line is the single source — no fallback scan
   }
   return '';
 }
@@ -335,6 +363,25 @@ export function parseMarkdown(mdSource: string, relativePath: string): ParserOut
       anchors.push(
         { alias: acId, canonicalId: acId, location },
         { alias: slug, canonicalId: acId, location },
+      );
+      continue;
+    }
+
+    // Decision: `### Decision: <title>` (DESIGN.md design decisions). Parent FR from
+    // the explicit `**Требование:**` line → real FR→Decision `covers` edge (the design
+    // leg of the trace web). No requirement line → node with empty parentFr, no edge.
+    m = text.match(DECISION_HEADING_RE);
+    if (m) {
+      const title = m[1].trim();
+      const decId = `Decision-${slugify(title)}`;
+      const slug = slugify(text); // Marksman slug of the full `Decision: <title>` heading
+      const parentFr = decisionRequirementAfter(lines, i);
+      const node: DecisionNode = { id: decId, type: 'Decision', title, parentFr, file: relativePath, line, body: text };
+      nodes.push(node);
+      if (parentFr) edges.push({ from: parentFr, to: decId, type: 'covers' });
+      anchors.push(
+        { alias: decId, canonicalId: decId, location },
+        { alias: slug, canonicalId: decId, location },
       );
       continue;
     }

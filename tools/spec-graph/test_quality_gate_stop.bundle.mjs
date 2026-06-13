@@ -196,6 +196,20 @@ function parentFrAfter(lines, i) {
   }
   return "";
 }
+function decisionRequirementAfter(lines, i) {
+  for (let j = i + 1; j < Math.min(lines.length, i + 14); j++) {
+    const t = lines[j].trim();
+    if (t.startsWith("#")) return "";
+    const label = t.match(/^\*\*\s*(?:Требовани[ея]|Requirements?)\s*:?\s*\*\*\s*:?\s*(.*)$/i);
+    if (!label) continue;
+    const rest = label[1];
+    const href = rest.match(/#fr-(\d+)\b/i);
+    if (href) return `FR-${href[1]}`;
+    const m = rest.match(/\bFR-(\d+)\b/);
+    return m ? `FR-${m[1]}` : "";
+  }
+  return "";
+}
 function parseMarkdown(mdSource, relativePath) {
   const nodes = [];
   const edges = [];
@@ -346,6 +360,21 @@ function parseMarkdown(mdSource, relativePath) {
       );
       continue;
     }
+    m = text.match(DECISION_HEADING_RE);
+    if (m) {
+      const title = m[1].trim();
+      const decId = `Decision-${slugify(title)}`;
+      const slug = slugify(text);
+      const parentFr = decisionRequirementAfter(lines, i);
+      const node = { id: decId, type: "Decision", title, parentFr, file: relativePath, line, body: text };
+      nodes.push(node);
+      if (parentFr) edges.push({ from: parentFr, to: decId, type: "covers" });
+      anchors.push(
+        { alias: decId, canonicalId: decId, location },
+        { alias: slug, canonicalId: decId, location }
+      );
+      continue;
+    }
   }
   qualifySlice({ nodes, edges }, specOf(relativePath));
   return { nodes, edges, anchors };
@@ -355,7 +384,7 @@ function parseMarkdownFile(absPath, repoRoot) {
   const relative = path2.relative(repoRoot, absPath).split(path2.sep).join("/");
   return parseMarkdown(source, relative);
 }
-var HEADING_LINE_RE, FENCE_RE, FR_HEADING_RE, NFR_HEADING_RE, AC_HEADING_RE, SHORT_FR_RE, SHORT_NFR_RE, SHORT_AC_RE, LEGACY_FR_HEADING_RE;
+var HEADING_LINE_RE, FENCE_RE, FR_HEADING_RE, NFR_HEADING_RE, AC_HEADING_RE, DECISION_HEADING_RE, SHORT_FR_RE, SHORT_NFR_RE, SHORT_AC_RE, LEGACY_FR_HEADING_RE;
 var init_md = __esm({
   "tools/spec-graph/parsers/md.ts"() {
     "use strict";
@@ -366,6 +395,7 @@ var init_md = __esm({
     FR_HEADING_RE = /^FR-(\d+):\s*(.+)$/;
     NFR_HEADING_RE = /^NFR(?:-([A-Za-z][A-Za-z0-9]*))?-(\d+):\s*(.+)$/;
     AC_HEADING_RE = /^AC-(\d+(?:\.\d+)?)\s*\(FR-(\d+)\)\s*:?\s*(.*)$/;
+    DECISION_HEADING_RE = /^Decision:\s*(.+)$/;
     SHORT_FR_RE = /^FR-(\d+)$/;
     SHORT_NFR_RE = /^NFR(?:-([A-Za-z][A-Za-z0-9]*))?-(\d+)$/;
     SHORT_AC_RE = /^AC-(\d+(?:\.\d+)?)$/;

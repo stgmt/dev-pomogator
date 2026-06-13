@@ -45091,6 +45091,7 @@ var FENCE_RE = /^(?:```|~~~)/;
 var FR_HEADING_RE = /^FR-(\d+):\s*(.+)$/;
 var NFR_HEADING_RE = /^NFR(?:-([A-Za-z][A-Za-z0-9]*))?-(\d+):\s*(.+)$/;
 var AC_HEADING_RE = /^AC-(\d+(?:\.\d+)?)\s*\(FR-(\d+)\)\s*:?\s*(.*)$/;
+var DECISION_HEADING_RE = /^Decision:\s*(.+)$/;
 var SHORT_FR_RE = /^FR-(\d+)$/;
 var SHORT_NFR_RE = /^NFR(?:-([A-Za-z][A-Za-z0-9]*))?-(\d+)$/;
 var SHORT_AC_RE = /^AC-(\d+(?:\.\d+)?)$/;
@@ -45127,6 +45128,20 @@ function parentFrAfter(lines, i) {
     if (href) return `FR-${href[1]}`;
     const m = t.match(/\bFR-(\d+)\b/);
     if (m) return `FR-${m[1]}`;
+  }
+  return "";
+}
+function decisionRequirementAfter(lines, i) {
+  for (let j = i + 1; j < Math.min(lines.length, i + 14); j++) {
+    const t = lines[j].trim();
+    if (t.startsWith("#")) return "";
+    const label = t.match(/^\*\*\s*(?:Требовани[ея]|Requirements?)\s*:?\s*\*\*\s*:?\s*(.*)$/i);
+    if (!label) continue;
+    const rest = label[1];
+    const href = rest.match(/#fr-(\d+)\b/i);
+    if (href) return `FR-${href[1]}`;
+    const m = rest.match(/\bFR-(\d+)\b/);
+    return m ? `FR-${m[1]}` : "";
   }
   return "";
 }
@@ -45277,6 +45292,21 @@ function parseMarkdown(mdSource, relativePath) {
       anchors.push(
         { alias: acId, canonicalId: acId, location },
         { alias: slug, canonicalId: acId, location }
+      );
+      continue;
+    }
+    m = text.match(DECISION_HEADING_RE);
+    if (m) {
+      const title = m[1].trim();
+      const decId = `Decision-${slugify2(title)}`;
+      const slug = slugify2(text);
+      const parentFr = decisionRequirementAfter(lines, i);
+      const node = { id: decId, type: "Decision", title, parentFr, file: relativePath, line, body: text };
+      nodes.push(node);
+      if (parentFr) edges.push({ from: parentFr, to: decId, type: "covers" });
+      anchors.push(
+        { alias: decId, canonicalId: decId, location },
+        { alias: slug, canonicalId: decId, location }
       );
       continue;
     }
