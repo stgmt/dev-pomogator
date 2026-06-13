@@ -1159,3 +1159,21 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given the archive tree holds a spec
     When the door validates a write targeting that archived spec
     Then the write is refused as ARCHIVE_SEALED
+
+  @feature46
+  Scenario: SPECGEN004_160 conformance flags a DONE task that cites no scenario of its own
+    Given a graph with a DONE task whose Done-When cites only its requirement, not its own scenario
+    When conformance runs over the graph
+    Then a TASK_NO_OWN_SCENARIO warning is raised for that task
+
+  @feature46
+  Scenario: SPECGEN004_161 conformance does not flag a DONE task that cites its own scenario id
+    Given a graph with a DONE task whose Done-When cites its own SPECGEN scenario id which passed
+    When conformance runs over the graph
+    Then no TASK_NO_OWN_SCENARIO finding is raised for that task
+
+  @feature46
+  Scenario: SPECGEN004_162 get_trace surfaces a task's own scenario and its passing result
+    Given a graph with a DONE task whose Done-When cites its own SPECGEN scenario id which passed
+    When get_trace runs for that task's requirement
+    Then the task's own_scenario is surfaced with its passing result

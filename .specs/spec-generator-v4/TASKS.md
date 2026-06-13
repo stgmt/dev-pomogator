@@ -1507,3 +1507,11 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] дверные тулы `get_archival_proof(slug)` (живые входящие ссылки = граф-рёбра не-архивных спек + prose-ссылки в .specs/* вне самой спеки) и `archive_spec(slug, reason)` (перенос в .specs/archive/ ТОЛЬКО при нуле ссылок И FR-43 принадлежит {SUPERSEDED,REMOVED,ABSORBED}, иначе ARCHIVE_BLOCKED; TOCTOU re-check; аудит в spec-archive.jsonl) в tools/spec-mcp-server/tools.ts; ARCHIVE_SEALED в mutations.ts (validateTarget денаит запись под archive/)
   - [x] агент-консьюмер `tools/specs-generator/spec-archive.ts` (planArchival/applyArchival) + skill spec-archive + врезка archive-стадии в spec-generator-orchestrator WORKFLOW; dogfood 24 кандидата дали 0 ложных архиваций (19 KEEP_FALSE_POSITIVE, 5 NEEDS_HUMAN)
   - [x] BDD SPECGEN004_157..159 (@FR-45) биндят реальные тулы через registry на синтетическом графе (KEEP_FALSE_POSITIVE / ARCHIVE_BLOCKED / ARCHIVE_SEALED), step-defs tests/step_definitions/feature45_spec_archive.ts; vitest archive-tools.test.ts (ARCHSEAL_01-03 + ARCHTOOL_01-04)
+
+- [x] P22-1: двусторонняя трассируемость задачи — TASK_NO_OWN_SCENARIO + get_trace own_scenario (FR-46) — id: p22-task-traceability — Status: DONE | Est: 240m
+  _depends: p17-enforce_
+  _Requirements: [FR-46](FR.md#fr-46)_
+  **Done When:**
+  - [x] правило `TASK_NO_OWN_SCENARIO` в `conformance.ts`: DONE-задача без явного specgen004_NN в Done-When → WARNING (детект-первый; ERROR — после ретрофита, FR-46c). Живёт в одном месте — гоняют дверь apply_spec_change + push + verdict + census. Проверено: 45 v4-задач засветились, вердикт остался GREEN. Verified by SPECGEN004_160 (DONE без своего id → флаг)
+  - [x] `get_trace` отдаёт `tasks[].own_scenario` (резолвит specgen004_NN из Done-When в узел сценария + lastResult; null если не цитирует), server bundle пересобран. Verified by SPECGEN004_162 (own_scenario surfaced с PASSED)
+  - [x] эта задача — ПЕРВАЯ по правилу FR-46: ссылается и на требование (FR-46), и на свой сценарий (SPECGEN004_160), сценарий зелёный → НЕ ловится TASK_NO_OWN_SCENARIO. Verified by SPECGEN004_161 (DONE со своим id → не флаг). Step-defs tests/step_definitions/feature46_task_traceability.ts на реальные checkConformance + get_trace
