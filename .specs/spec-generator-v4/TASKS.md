@@ -612,14 +612,14 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] Written to `.specs/{slug}/consistency-report.sarif` atomically when `--sarif` flag passed or `.spec-config.json` `output_formats` includes `"sarif"`
   - [ ] GitHub Code Scanning ingestion smoke test passes (upload SARIF, see results annotated)
 
-- [ ] Implement --dry-run flag -- @feature17 — id: impl-dry-run-mode — Status: TODO | Est: 120m
+- [x] Implement --dry-run flag -- @feature17 — id: impl-dry-run-mode — Status: DONE (verified 2026-06-13: `reconcile-cli.ts` parses `--dry-run`, prints summary table + first-10 findings via `renderFirstFindings`, skips both writers; verified on the real corpus 1391 findings + reconcile-cli.test; commit 42d2d7d) | Est: 120m
   _depends: impl-sarif-output_
   _Requirements: [FR-17](FR.md#fr-17), [AC-17.8](ACCEPTANCE_CRITERIA.md#ac-178)_
   **Done When:**
-  - [ ] Skill entry script accepts `--dry-run` boolean flag (default false)
-  - [ ] When true: prints `summary` block + first 10 findings to stdout in Coverage Summary Table format
-  - [ ] When true: skips both write-yaml-report and write-sarif-report invocations
-  - [ ] Original spec/code state on disk unchanged
+  - [x] Skill entry script accepts `--dry-run` boolean flag (default false)
+  - [x] When true: prints `summary` block + first 10 findings to stdout in Coverage Summary Table format
+  - [x] When true: skips both write-yaml-report and write-sarif-report invocations
+  - [x] Original spec/code state on disk unchanged
 
 - [ ] Implement Coverage Summary Table dashboard -- @feature17 — id: impl-coverage-summary — Status: TODO | Est: 120m
   _depends: impl-yaml-writer_
