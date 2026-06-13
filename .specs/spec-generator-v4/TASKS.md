@@ -1560,32 +1560,32 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   **Done When:**
   - [x] FR-48 (a/b/c/d) + AC-48.1 + @feature48 SPECGEN004_171-174 + Decision и User Story 25 (обе с явной `**Требование:** [FR-48]`) записаны через дверь; spec-verdict GREEN. Spec-authoring фаза: ноги создаёт сама, своего код-сценария нет — будущий гейт FR-48 такие задачи не гейтит (анти-deadlock)
 
-- [ ] P23-2: словарь статусов + машина переходов — id: p23-status-vocab — Status: TODO | Est: 120m
+- [x] P23-2: словарь статусов + машина переходов — id: p23-status-vocab — Status: DONE | Est: 120m
   _depends: p23-spec-fr48_
   _Requirements: [FR-48](FR.md#fr-48)_
   **Done When:**
-  - [ ] `ready` в `TaskNode['status']` (types.ts) + `STATUS_MAP`/regex (parsers/tasks.ts); `task-lifecycle.ts` с `LEGAL_TRANSITIONS` + `isLegalTransition` (вкл. обратные done→in-progress, blocked↔*). Verified by SPECGEN004_171
+  - [x] `ready` в `TaskNode['status']` (types.ts) + `STATUS_MAP`/regex (parsers/tasks.ts); `task-lifecycle.ts` с `LEGAL_TRANSITIONS` + `isLegalTransition` (вкл. обратные done→in-progress, blocked↔*). Verified by SPECGEN004_171 (зелёный в полном прогоне 174/174)
 
-- [ ] P23-3: проверка собранности цепочки per-FR, фаза-aware (анти-deadlock) — id: p23-chain-check — Status: TODO | Est: 120m
+- [x] P23-3: проверка собранности цепочки per-FR, фаза-aware (анти-deadlock) — id: p23-chain-check — Status: DONE | Est: 120m
   _depends: p23-status-vocab_
   _Requirements: [FR-48](FR.md#fr-48)_
   **Done When:**
-  - [ ] `chainAssembledFor` (переиспользует `missingLegs`) + `isSpecAuthoringPhase` (явный маркер фазы); impl строго, spec мягко. Verified by SPECGEN004_172
+  - [x] `chainAssembledFor` (переиспользует `missingLegs` через общий `legs.ts`) + `isSpecAuthoringPhase` (явный маркер фазы); impl строго, spec мягко. Verified by SPECGEN004_172
 
-- [ ] P23-4: гейт-находка в conformance (started-without-chain, WARNING детект-первый) — id: p23-conformance-gate — Status: TODO | Est: 90m
+- [x] P23-4: гейт-находка в conformance (started-without-chain, WARNING детект-первый) — id: p23-conformance-gate — Status: DONE | Est: 90m
   _depends: p23-chain-check_
   _Requirements: [FR-48](FR.md#fr-48)_
   **Done When:**
-  - [ ] `TASK_STARTED_WITHOUT_CHAIN` в conformance.ts (фаза-aware, WARNING), дверь видит автоматически + перечень недостающих ног в сообщении. Verified by SPECGEN004_173
+  - [x] `TASK_STARTED_WITHOUT_CHAIN` в conformance.ts (фаза-aware, WARNING), дверь видит автоматически + перечень недостающих ног. На живом корпусе фаерит на 6 задачах. Verified by SPECGEN004_173
 
-- [ ] P23-5: команда set_entity_status + навык task-status — id: p23-set-status-command — Status: TODO | Est: 150m
+- [x] P23-5: команда set_entity_status + навык task-status — id: p23-set-status-command — Status: DONE | Est: 150m
   _depends: p23-conformance-gate_
   _Requirements: [FR-48](FR.md#fr-48)_
   **Done When:**
-  - [ ] тул `set_entity_status` (читает get_trace → проверяет легальность+собранность → пишет через mutation-путь с `expected_sha` CAS) + `.claude/skills/task-status/SKILL.md`. Verified by SPECGEN004_174
+  - [x] тул `set_entity_status` (читает граф → проверяет легальность+собранность → пишет через mutation-путь с `expected_sha` CAS) + `.claude/skills/task-status/SKILL.md` + FR-42 регистрация (feature-map/TOOL_CONSUMERS, truthfulness-проверена). Verified by SPECGEN004_174
 
-- [ ] P23-6: пересборка бандлов + полная проверка — id: p23-rebuild-verify — Status: TODO | Est: 60m
+- [x] P23-6: пересборка бандлов + полная проверка — id: p23-rebuild-verify — Status: DONE | Est: 60m
   _depends: p23-set-status-command_
   _Requirements: [FR-48](FR.md#fr-48)_
   **Done When:**
-  - [ ] `npm run build:bundles`; живой прогон двери (impl без цепочки → отказ, spec-задача → пропуск); fr-census/spec-verdict GREEN; Docker green
+  - [x] `npm run build:bundles` (дверь/push/gate); полный cucumber 174/174; collision-probe 0; spec-verdict GREEN; Docker — мои тесты зелёные, остаток = известный флак-набор (analyze-features/SPECGEN003/registry-parity/doctor-core)
