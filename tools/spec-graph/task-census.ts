@@ -128,6 +128,57 @@ export function computeTaskCensus(graph: SpecGraph): TaskCensus {
   return { total, specs };
 }
 
+/** FR-49d: an in-progress task whose evidence says it is likely already DONE. */
+export interface StaleMarker {
+  id: string;
+  title: string;
+  spec: string;
+  /** The mapped scenario ids that all PASSED — the evidence the work is done. */
+  scenarios: string[];
+}
+
+/**
+ * FR-49d stale-marker reconciler: tasks the author left `in-progress` whose mapped
+ * scenarios ALL PASSED — evidence that the work is done but the marker drifted (the
+ * exact class this session hit: FR-17's cluster). FLAG-ONLY by contract — never
+ * auto-close (false-green guard); the human/agent confirms + closes via
+ * set_entity_status. A task with NO mapped scenario is NOT flagged (no positive
+ * evidence of doneness — could be genuinely partial, like the FR-15 CLI was).
+ * Reuses the SAME mapTasksToScenarios + bucketScenarios as the census, so a flag
+ * and the census never disagree.
+ */
+export function findStaleInProgress(graph: SpecGraph): StaleMarker[] {
+  const scenarios: ScenarioLike[] = [];
+  const tasks: TaskLike[] = [];
+  const taskEntries: Array<{ node: TaskNode; slug: string }> = [];
+  for (const node of graph.nodes.values()) {
+    const nodeSpec = specOf((node as { file: string }).file);
+    if (node.type === 'Scenario') {
+      const s = node as ScenarioNode;
+      scenarios.push({ id: s.id, tags: s.tags, result: s.lastResult, spec: nodeSpec });
+    } else if (node.type === 'Task') {
+      const t = node as TaskNode;
+      tasks.push({ id: t.id, doneWhen: t.doneWhen ?? '', refs: t.refs, spec: nodeSpec });
+      taskEntries.push({ node: t, slug: nodeSpec ?? '(no-spec)' });
+    }
+  }
+  const map = mapTasksToScenarios(tasks, scenarios);
+  const buckets = bucketScenarios(scenarios);
+  const bucketById = new Map<string, Bucket>();
+  for (const b of Object.keys(buckets) as Bucket[]) for (const id of buckets[b]) bucketById.set(id, b);
+
+  const out: StaleMarker[] = [];
+  for (const { node: t, slug } of taskEntries) {
+    if (t.status !== 'in-progress') continue;
+    const sids = map.get(t.id) ?? [];
+    if (sids.length === 0) continue; // no scenario → no positive doneness evidence → don't flag
+    if (sids.every((id) => bucketById.get(id) === 'passed')) {
+      out.push({ id: t.id, title: t.title ?? t.id, spec: slug, scenarios: sids });
+    }
+  }
+  return out;
+}
+
 /** On-disk cache the producer writes and the per-prompt banner reads. */
 export interface TaskCensusCache extends TaskCensus {
   /** ISO timestamp of the producing build — shown so a stale census is visible. */

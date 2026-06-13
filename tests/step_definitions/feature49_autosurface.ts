@@ -17,12 +17,17 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { V4World } from '../hooks/before-after.ts';
-import { writeTaskCensusCache } from '../../tools/spec-graph/task-census.ts';
+import type { SpecGraph } from '../../tools/spec-graph/types.ts';
+import { writeTaskCensusCache, findStaleInProgress, type StaleMarker } from '../../tools/spec-graph/task-census.ts';
+import { renderStaleReport } from '../../tools/spec-graph/stale-marker-scan.ts';
 import { buildTaskCensusLine } from '../../tools/specs-validator/conformance-summary.ts';
 
 interface AutoSurfaceWorld extends V4World {
   asRoot?: string;
   asBanner?: string | null;
+  staleGraph?: SpecGraph;
+  staleResult?: StaleMarker[];
+  staleReport?: string;
 }
 
 Given('a cached task census whose busiest spec has an open task with a title', function (this: AutoSurfaceWorld) {
@@ -50,3 +55,36 @@ Then('the banner names that task title as the next step', function (this: AutoSu
   assert.match(this.asBanner!, /следующее:/, 'banner carries a next-step line');
   assert.match(this.asBanner!, /Wire the gate/, 'banner names the concrete next open task title');
 });
+
+// SPECGEN004_179 (FR-49d): the stale-marker reconciler flags an all-green in-progress
+// task but never auto-closes — it points at set_entity_status. Drives the REAL
+// findStaleInProgress + renderStaleReport.
+Given(
+  'an in-progress task whose mapped scenarios all passed plus a sibling in-progress task still red',
+  function (this: AutoSurfaceWorld) {
+    const scen = (id: string, result: string) => ({ id, type: 'Scenario', tags: [], lastResult: result, file: '.specs/demo/x.feature' });
+    const task = (id: string, doneWhen: string, title: string) =>
+      ({ id, type: 'Task', status: 'in-progress', refs: [], doneWhen, title, file: '.specs/demo/TASKS.md' });
+    const nodes = new Map<string, unknown>([
+      ['SCEN-specgen004-01-pass', scen('SCEN-specgen004-01-pass', 'PASSED')],
+      ['SCEN-specgen004-02-fail', scen('SCEN-specgen004-02-fail', 'FAILED')],
+      ['demo:T-stale', task('demo:T-stale', 'closed by SPECGEN004_01', 'Stale one')], // all green → flag
+      ['demo:T-real', task('demo:T-real', 'closed by SPECGEN004_02', 'Real WIP')], // a red → not stale
+    ]);
+    this.staleGraph = { nodes } as unknown as SpecGraph;
+  },
+);
+
+When('the stale-marker reconciler scans the graph', function (this: AutoSurfaceWorld) {
+  this.staleResult = findStaleInProgress(this.staleGraph!);
+  this.staleReport = renderStaleReport(this.staleResult);
+});
+
+Then(
+  'only the all-green in-progress task is flagged and the report points at set_entity_status to close it',
+  function (this: AutoSurfaceWorld) {
+    assert.deepEqual(this.staleResult!.map((s) => s.id), ['demo:T-stale'], 'only the all-green in-progress task flagged');
+    assert.match(this.staleReport!, /set_entity_status/, 'report points at the close command');
+    assert.match(this.staleReport!, /NOT auto-closed/i, 'flag-only — never auto-closes');
+  },
+);

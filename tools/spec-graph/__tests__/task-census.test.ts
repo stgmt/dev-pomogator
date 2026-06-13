@@ -19,12 +19,14 @@ import { randomUUID } from 'node:crypto';
 import type { SpecGraph } from '../types.ts';
 import {
   computeTaskCensus,
+  findStaleInProgress,
   writeTaskCensusCache,
   readTaskCensusCache,
   readTaskCensusPrev,
   taskCensusCachePath,
   sumTotal,
 } from '../task-census.ts';
+import { renderStaleReport } from '../stale-marker-scan.ts';
 
 function makeGraph(): SpecGraph {
   const scen = (id: string, slug: string, result?: string) => ({ id, type: 'Scenario', tags: [], lastResult: result, file: `.specs/${slug}/x.feature` });
@@ -107,6 +109,37 @@ describe('FR-49a — nextOpen (the «next step» the banner names)', () => {
     const c = computeTaskCensus({ nodes } as unknown as SpecGraph);
     expect(c.specs[0].doneUnrun).toBe(1);
     expect(c.specs[0].nextOpen).toBeUndefined();
+  });
+});
+
+describe('FR-49d — findStaleInProgress (stale in-progress markers)', () => {
+  function staleGraph(): SpecGraph {
+    const scen = (id: string, result?: string) => ({ id, type: 'Scenario', tags: [], lastResult: result, file: '.specs/demo/x.feature' });
+    const task = (id: string, status: string, doneWhen: string, title: string) =>
+      ({ id, type: 'Task', status, refs: [], doneWhen, title, file: '.specs/demo/TASKS.md' });
+    const nodes = new Map<string, unknown>([
+      ['SCEN-specgen004-01-pass', scen('SCEN-specgen004-01-pass', 'PASSED')],
+      ['SCEN-specgen004-02-fail', scen('SCEN-specgen004-02-fail', 'FAILED')],
+      ['demo:T-stale', task('demo:T-stale', 'in-progress', 'closed by SPECGEN004_01', 'Stale one')], // all green → flag
+      ['demo:T-real', task('demo:T-real', 'in-progress', 'closed by SPECGEN004_02', 'Real WIP')], // a red → not stale
+      ['demo:T-noscen', task('demo:T-noscen', 'in-progress', 'pure docs, no scenario', 'No evidence')], // no scenario → not flagged
+      ['demo:T-todo', task('demo:T-todo', 'todo', 'closed by SPECGEN004_01', 'Not started')], // not in-progress → never
+    ]);
+    return { nodes } as unknown as SpecGraph;
+  }
+
+  it('flags ONLY an in-progress task whose mapped scenarios all PASS', () => {
+    const stale = findStaleInProgress(staleGraph());
+    expect(stale.map((s) => s.id)).toEqual(['demo:T-stale']); // not T-real (red), T-noscen (no evidence), T-todo (not in-progress)
+    expect(stale[0]).toMatchObject({ title: 'Stale one', spec: 'demo' });
+    expect(stale[0].scenarios.length).toBeGreaterThan(0);
+  });
+
+  it('renderStaleReport is FLAG-ONLY — points at set_entity_status, never auto-closes', () => {
+    expect(renderStaleReport([])).toMatch(/No stale/);
+    const r = renderStaleReport([{ id: 'demo:T1', title: 'X', spec: 'demo', scenarios: ['s1'] }]);
+    expect(r).toMatch(/set_entity_status/);
+    expect(r).toMatch(/NOT auto-closed/i);
   });
 });
 

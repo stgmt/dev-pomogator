@@ -1275,3 +1275,9 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given a cached task census whose busiest spec has an open task with a title
     When the per-prompt task-census banner renders
     Then the banner names that task title as the next step
+
+  @feature49
+  Scenario: SPECGEN004_179 the reconciler flags a stale in-progress marker but never auto-closes it
+    Given an in-progress task whose mapped scenarios all passed plus a sibling in-progress task still red
+    When the stale-marker reconciler scans the graph
+    Then only the all-green in-progress task is flagged and the report points at set_entity_status to close it
