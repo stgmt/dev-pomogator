@@ -11,8 +11,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { randomUUID } from 'node:crypto';
-import { run, parseDuration } from '../cli.ts';
+import { run, parseDuration, frKeyOf } from '../cli.ts';
 import { appendFinding } from '../writer.ts';
+import type { LogEntry } from '../writer.ts';
 import type { Finding } from '../../spec-graph/conformance.ts';
 
 function fr(file: string, line: number, code = 'UNCOVERED_FR'): Finding {
@@ -120,5 +121,60 @@ describe('cli.run — filters', () => {
 
   it('rejects an unknown flag with a clear error', () => {
     expect(() => run(['--root', root, '--wat'])).toThrow(/unknown flag/);
+  });
+});
+
+describe('per-FR aggregation (FR-15 "aggregated counts per FR")', () => {
+  const base: LogEntry = {
+    timestamp: '2026-05-29T00:00:00Z',
+    finding_code: 'UNCOVERED_FR',
+    severity: 'info',
+    location: { file: '.specs/x/FR.md', line: 1 },
+    message: 'm',
+    source: 'push',
+  };
+
+  it('frKeyOf reads the FR from node_id, then related_id, then message, else (no FR)', () => {
+    expect(frKeyOf({ ...base, node_id: 'spec:FR-7' })).toBe('FR-7');
+    expect(frKeyOf({ ...base, node_id: 'spec:T7-1', related_id: 'spec:FR-9' })).toBe('FR-9');
+    expect(frKeyOf({ ...base, message: 'task touches FR-3 somewhere' })).toBe('FR-3');
+    expect(frKeyOf({ ...base, message: 'no requirement token here' })).toBe('(no FR)');
+  });
+
+  it('--by-fr rolls up matched findings per requirement, busiest first, total conserved', () => {
+    const root = path.join(os.tmpdir(), `cli-byfr-${randomUUID()}`);
+    fs.mkdirSync(root, { recursive: true });
+    try {
+      const t0 = new Date('2026-05-29T00:00:00Z');
+      const seedOne = (nodeId: string, n: number) => {
+        const f: Finding = {
+          code: 'UNCOVERED_FR',
+          severity: 'warning',
+          location: { file: '.specs/x/FR.md', line: n },
+          message: 'UNCOVERED_FR',
+          nodeId,
+        };
+        appendFinding(f, { repoRoot: root, source: 'push', now: new Date(t0.getTime() + n * 1000) });
+      };
+      seedOne('x:FR-1', 1);
+      seedOne('x:FR-1', 2); // FR-1 ×2
+      seedOne('x:FR-2', 3); // FR-2 ×1
+      // a finding with no FR token anywhere → buckets under (no FR)
+      appendFinding(
+        { code: 'ORPHAN_PROJECT_TEST', severity: 'info', location: { file: 'tests/x.test.ts', line: 9 }, message: 'orphan test' },
+        { repoRoot: root, source: 'push', now: new Date(t0.getTime() + 4000) },
+      );
+
+      const { matched, text } = run(['--root', root, '--by-fr']);
+      const lines = text.trim().split('\n');
+      // busiest first: FR-1 (2) leads
+      expect(lines[0]).toMatch(/2\s+FR-1/);
+      // total conserved: Σ buckets === matched count
+      const total = lines.reduce((s, l) => s + parseInt(l.trim(), 10), 0);
+      expect(total).toBe(matched.length);
+      expect(text).toMatch(/\(no FR\)/);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
   });
 });

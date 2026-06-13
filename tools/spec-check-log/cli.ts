@@ -10,6 +10,7 @@
 //   --source SOURCE    exact match vs source
 //   --json             re-emit matched entries as JSONL (for piping)
 //   --count            print just the count of matched entries
+//   --by-fr            aggregate matched entries by requirement (FR-N), count desc
 //   --root PATH        override repoRoot (default cwd or env)
 //
 // repoRoot defaults to process.cwd() or DEV_POMOGATOR_REPO_ROOT env var.
@@ -32,6 +33,25 @@ interface CliArgs {
   source?: string;
   emitJson: boolean;
   countOnly: boolean;
+  byFr: boolean;
+}
+
+const FR_RE = /\bFR-\d+\b/;
+
+/**
+ * The requirement a log entry rolls up under (FR-15 «aggregated counts per FR»).
+ * The CLI is graph-free, so the FR is read from the entry's own fields in
+ * priority order — node_id (an FR finding keys here), then related_id (a
+ * task/scenario finding back-references its FR), then the message prose as a
+ * last resort. Entries with no FR token bucket under `(no FR)` so the total is
+ * conserved (Σ buckets === matched).
+ */
+export function frKeyOf(entry: LogEntry): string {
+  for (const field of [entry.node_id, entry.related_id, entry.message]) {
+    const m = field ? FR_RE.exec(field) : null;
+    if (m) return m[0];
+  }
+  return '(no FR)';
 }
 
 const DURATION_RE = /^(\d+)([smhdw])$/;
@@ -55,6 +75,7 @@ function parseArgs(argv: string[]): CliArgs {
     repoRoot: process.env.DEV_POMOGATOR_REPO_ROOT ?? process.cwd(),
     emitJson: false,
     countOnly: false,
+    byFr: false,
   };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
@@ -91,6 +112,9 @@ function parseArgs(argv: string[]): CliArgs {
         break;
       case '--count':
         args.countOnly = true;
+        break;
+      case '--by-fr':
+        args.byFr = true;
         break;
       case '--root':
         args.repoRoot = next;
@@ -163,7 +187,16 @@ export function run(argv: string[], now: number = Date.now()): RunResult {
     });
   }
   let text: string;
-  if (args.countOnly) {
+  if (args.byFr) {
+    // FR-15 per-FR roll-up: count matched findings per requirement, busiest first.
+    const counts = new Map<string, number>();
+    for (const e of matched) {
+      const k = frKeyOf(e);
+      counts.set(k, (counts.get(k) ?? 0) + 1);
+    }
+    const rows = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+    text = rows.map(([fr, n]) => `${String(n).padStart(5)}  ${fr}`).join('\n') + (rows.length ? '\n' : '');
+  } else if (args.countOnly) {
     text = `${matched.length}\n`;
   } else if (args.emitJson) {
     text = matched.map((e) => JSON.stringify(e)).join('\n') + (matched.length ? '\n' : '');

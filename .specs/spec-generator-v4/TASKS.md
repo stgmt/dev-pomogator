@@ -423,12 +423,12 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] Size-based rotation at 10MB
   - [ ] @feature15 SPECGEN004_34, _35 pass
 
-- [ ] spec-check-log CLI -- @feature15 — id: spec-check-log-cli — Status: IN_PROGRESS (1 of 2 verified 2026-06-07: `tools/spec-check-log/cli.ts` ships --since/--grep/--count; per-FR aggregation NOT implemented — no FR roll-up in cli.ts) | Est: 180m
+- [x] spec-check-log CLI -- @feature15 — id: spec-check-log-cli — Status: DONE (2 of 2 verified 2026-06-13: `tools/spec-check-log/cli.ts` ships --since/--grep/--count + `--by-fr` per-FR roll-up; `frKeyOf` reads node_id→related_id→message, verified on the real corpus log + cli.test.ts) | Est: 180m
   _depends: spec-check-log_
   _Requirements: [FR-15](FR.md#fr-15)_
   **Done When:**
   - [x] `spec-check-log --since 7d --grep ORPHAN_TASK` works (via `npx tsx tools/spec-check-log/cli.ts` / `bin.cjs` — no global `dev-pomogator` bin in v2 canonical)
-  - [ ] Aggregated counts per FR
+  - [x] Aggregated counts per FR (`--by-fr`)
 
 - [x] Codespaces env detector -- @feature16 — id: codespaces-detector — Status: DONE | Est: 120m
   _depends: lock-manager-impl_
