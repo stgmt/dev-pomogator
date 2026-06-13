@@ -41,6 +41,7 @@ import path from 'node:path';
 import { buildGraphFromCwd } from './builder.ts';
 import { computeCoverage, specOf, type ScenarioLike, type TaskLike } from './coverage.ts';
 import { findFrsWithoutResearch } from './research-trace.ts';
+import { buildLegIndices } from './legs.ts';
 import type { SpecGraph, FrNode, ScenarioNode, TaskNode } from './types.ts';
 
 export type FrCensusVerdict =
@@ -121,22 +122,9 @@ export function computeFrCensus(
   graph: SpecGraph,
   opts: { spec?: string; frsWithoutResearch?: Set<string> } = {},
 ): FrCensusReport {
-  // Edge indices — same semantics as conformance.ts::UNCOVERED_FR. `covers`
-  // carries FR→AC AND FR→Decision AND FR→Story since FR-47, so SPLIT by target
-  // type: a design/story edge must NOT count as AC coverage (else an FR with a
-  // Decision but no AC would read AC:✓). Mirrors conformance.ts edge pre-compute.
-  const acCovers = new Set<string>();
-  const designCovers = new Set<string>(); // FR→Decision (FR-47 design leg)
-  const storyCovers = new Set<string>(); // FR→Story (FR-47 story leg)
-  const directlyTested = new Set<string>();
-  for (const e of graph.edges) {
-    if (e.type === 'covers') {
-      const toType = graph.nodes.get(e.to)?.type;
-      if (toType === 'Decision') designCovers.add(e.from);
-      else if (toType === 'Story') storyCovers.add(e.from);
-      else acCovers.add(e.from);
-    } else if (e.type === 'tested-by') directlyTested.add(e.from);
-  }
+  // Edge indices — the single leg-truth (buildLegIndices), shared with the FR-48
+  // start gate (task-lifecycle) so a census row and a gate decision never disagree.
+  const { acCovers, designCovers, storyCovers, directlyTested } = buildLegIndices(graph);
 
   // FR-32 coverage over the WHOLE corpus — the single source of verified_status
   // (a task is verified iff every mapped scenario PASSED). Filtering FRs by

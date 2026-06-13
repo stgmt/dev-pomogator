@@ -12,7 +12,8 @@
  * @see .specs/spec-generator-v4/FR.md FR-48 (FR-48a vocabulary + transitions)
  * @see .specs/spec-generator-v4/spec-generator-v4.feature SPECGEN004_171
  */
-import type { TaskNode } from './types.ts';
+import type { SpecGraph, TaskNode } from './types.ts';
+import { frLegsOf } from './legs.ts';
 
 export type TaskStatus = TaskNode['status'];
 
@@ -47,3 +48,62 @@ export function isLegalTransition(from: TaskStatus, to: TaskStatus): boolean {
  * assembled (impl-phase) or it is a spec-authoring task (anti-deadlock).
  */
 export const WORKING_STATUSES: readonly TaskStatus[] = ['ready', 'in-progress'];
+
+/**
+ * Is the requirement's chain ASSEMBLED enough to START work on it (FR-48b)?
+ * «Assembled» = the upstream legs are wired — AC + scenario + design + story. NOT
+ * «work done», NOT spec-verdict GREEN. Research is a grounding leg that is NOT
+ * required to start (it may land with the work). A failing scenario counts as
+ * present (TDD-first): this gate guarantees the chain is WIRED, the FR-46 done gate
+ * guarantees it is GREEN — two deliberately different brackets. Returns the missing
+ * legs so the deny message can name them (FR-48c).
+ */
+export function chainAssembledFor(
+  graph: SpecGraph,
+  frId: string,
+  frsWithoutResearch?: Set<string>,
+): { assembled: boolean; missing: string[] } {
+  const legs = frLegsOf(graph, frId, frsWithoutResearch);
+  const missing: string[] = [];
+  if (!legs.hasAc) missing.push('AC');
+  if (!legs.hasScenario) missing.push('scenario');
+  if (!legs.hasDesign) missing.push('design');
+  if (!legs.hasStory) missing.push('story');
+  return { assembled: missing.length === 0, missing };
+}
+
+const SPEC_PHASE_MARKER = /\[spec-phase\]/i;
+
+/**
+ * Is this a spec-authoring task (FR-48b anti-deadlock)? Such tasks CREATE the legs,
+ * so they must NOT be gated on the legs existing — else the task that authors FR-X's
+ * design leg could never start (FR-X has no design leg yet — that is its deliverable).
+ * Detection is an EXPLICIT `[spec-phase]` marker in the task block, NOT a fragile text
+ * heuristic; the default is impl (GATED), so a forgotten marker fails safe (gated, not
+ * silently exempt).
+ */
+export function isSpecAuthoringPhase(task: Pick<TaskNode, 'doneWhen' | 'phase'>): boolean {
+  return SPEC_PHASE_MARKER.test(task.doneWhen ?? '') || SPEC_PHASE_MARKER.test(task.phase ?? '');
+}
+
+/**
+ * The FR-48b START decision: may this task ENTER a working status (ready / in-progress)?
+ * Spec-authoring tasks are always allowed — they CREATE the legs (anti-deadlock). An impl
+ * task is allowed only when EVERY requirement it `refs` has its chain assembled. When
+ * blocked, `missing` carries `<frId>:<leg>` entries so the gate/command can name exactly
+ * what to author (FR-48c). The single decision reused by the conformance gate (FR-48b) and
+ * the `set_entity_status` command (FR-48d).
+ */
+export function canEnterWorkingStatus(
+  graph: SpecGraph,
+  task: Pick<TaskNode, 'doneWhen' | 'phase' | 'refs'>,
+  frsWithoutResearch?: Set<string>,
+): { allowed: boolean; missing: string[]; specPhase: boolean } {
+  if (isSpecAuthoringPhase(task)) return { allowed: true, missing: [], specPhase: true };
+  const missing: string[] = [];
+  for (const fr of task.refs ?? []) {
+    const r = chainAssembledFor(graph, fr, frsWithoutResearch);
+    if (!r.assembled) missing.push(...r.missing.map((m) => `${fr}:${m}`));
+  }
+  return { allowed: missing.length === 0, missing, specPhase: false };
+}

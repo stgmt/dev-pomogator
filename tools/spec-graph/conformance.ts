@@ -29,6 +29,7 @@
 
 import type { SpecGraph, Edge, ScenarioNode, TaskNode } from './types.ts';
 import { computeCoverage, specOf, type Bucket, type ScenarioLike, type TaskLike, type TestQualityVerdict } from './coverage.ts';
+import { WORKING_STATUSES, canEnterWorkingStatus } from './task-lifecycle.ts';
 
 export type FindingCode =
   | 'UNCOVERED_FR'
@@ -48,6 +49,7 @@ export type FindingCode =
   | 'FR_NO_STORY'
   | 'TOOTHLESS_DECISION'
   | 'TOOTHLESS_STORY'
+  | 'TASK_STARTED_WITHOUT_CHAIN'
   | 'UPSTREAM_UNLINKED';
 
 export type Severity = 'error' | 'warning' | 'info';
@@ -253,6 +255,33 @@ export function checkConformance(
           reason: 'Add a `**Требование:** [FR-N]` line inside the block, pointing at the requirement it serves.',
           confidence: 'high',
         },
+      ],
+    });
+  }
+
+  // 1e) TASK_STARTED_WITHOUT_CHAIN (FR-48b) — a task already in a working status
+  // (ready / in-progress) whose requirement chain is NOT assembled. Phase-aware:
+  // spec-authoring tasks (the `[spec-phase]` marker) are exempt — they CREATE the legs
+  // (anti-deadlock). WARNING (detect-first, staged → ERROR once the corpus is
+  // retrofitted; a hard gate now would wedge the door on the 0/47-complete FRs). The
+  // single gate-truth is canEnterWorkingStatus (also used by the set_entity_status
+  // command), so the door state-invariant and the command never disagree. Message
+  // names the missing legs (FR-48c).
+  for (const node of graph.nodes.values()) {
+    if (node.type !== 'Task') continue;
+    const task = node as TaskNode;
+    if (!WORKING_STATUSES.includes(task.status)) continue;
+    const gate = canEnterWorkingStatus(graph, task);
+    if (gate.allowed) continue;
+    findings.push({
+      code: 'TASK_STARTED_WITHOUT_CHAIN',
+      severity: 'warning',
+      location: { file: task.file, line: task.line },
+      message: `Task ${task.id} is ${task.status} but its requirement chain is not assembled — missing ${gate.missing.join(', ')}. Assemble the legs (or mark the task \`[spec-phase]\` if it authors them) before starting — run /task-status (FR-48b).`,
+      nodeId: task.id,
+      suggestions: [
+        { action: 'assemble_chain', reason: `Author the missing legs (${gate.missing.join(', ')}) for the requirement, OR`, confidence: 'high' },
+        { action: 'mark_spec_phase', reason: 'add a `[spec-phase]` marker if this task itself authors those legs (anti-deadlock exemption).', confidence: 'medium' },
       ],
     });
   }

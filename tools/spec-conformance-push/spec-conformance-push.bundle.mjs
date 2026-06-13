@@ -13725,6 +13725,7 @@ import fs4 from "node:fs";
 import path3 from "node:path";
 var STATUS_MAP = {
   TODO: "todo",
+  READY: "ready",
   IN_PROGRESS: "in-progress",
   DONE: "done",
   BLOCKED: "blocked"
@@ -13732,7 +13733,7 @@ var STATUS_MAP = {
 function headerOf(line) {
   if (!/^\s*-\s*\[[ xX~]\]/.test(line)) return null;
   const id = line.match(/\bid:\s*([\w.\-]+)/);
-  const status = line.match(/\bStatus:\s*(TODO|IN_PROGRESS|DONE|BLOCKED)\b/);
+  const status = line.match(/\bStatus:\s*(TODO|READY|IN_PROGRESS|DONE|BLOCKED)\b/);
   if (!id || !status) return null;
   return { id: id[1], status: status[1] };
 }
@@ -14244,6 +14245,58 @@ function buildGraph(opts) {
   };
 }
 
+// tools/spec-graph/legs.ts
+function buildLegIndices(graph) {
+  const acCovers = /* @__PURE__ */ new Set();
+  const designCovers = /* @__PURE__ */ new Set();
+  const storyCovers = /* @__PURE__ */ new Set();
+  const directlyTested = /* @__PURE__ */ new Set();
+  for (const e of graph.edges) {
+    if (e.type === "covers") {
+      const toType = graph.nodes.get(e.to)?.type;
+      if (toType === "Decision") designCovers.add(e.from);
+      else if (toType === "Story") storyCovers.add(e.from);
+      else acCovers.add(e.from);
+    } else if (e.type === "tested-by") directlyTested.add(e.from);
+  }
+  return { acCovers, designCovers, storyCovers, directlyTested };
+}
+function frLegsOf(graph, frId, frsWithoutResearch) {
+  const idx = buildLegIndices(graph);
+  return {
+    hasAc: idx.acCovers.has(frId),
+    hasScenario: idx.directlyTested.has(frId),
+    hasDesign: idx.designCovers.has(frId),
+    hasStory: idx.storyCovers.has(frId),
+    hasResearch: !(frsWithoutResearch?.has(frId) ?? false)
+  };
+}
+
+// tools/spec-graph/task-lifecycle.ts
+var WORKING_STATUSES = ["ready", "in-progress"];
+function chainAssembledFor(graph, frId, frsWithoutResearch) {
+  const legs = frLegsOf(graph, frId, frsWithoutResearch);
+  const missing = [];
+  if (!legs.hasAc) missing.push("AC");
+  if (!legs.hasScenario) missing.push("scenario");
+  if (!legs.hasDesign) missing.push("design");
+  if (!legs.hasStory) missing.push("story");
+  return { assembled: missing.length === 0, missing };
+}
+var SPEC_PHASE_MARKER = /\[spec-phase\]/i;
+function isSpecAuthoringPhase(task) {
+  return SPEC_PHASE_MARKER.test(task.doneWhen ?? "") || SPEC_PHASE_MARKER.test(task.phase ?? "");
+}
+function canEnterWorkingStatus(graph, task, frsWithoutResearch) {
+  if (isSpecAuthoringPhase(task)) return { allowed: true, missing: [], specPhase: true };
+  const missing = [];
+  for (const fr of task.refs ?? []) {
+    const r = chainAssembledFor(graph, fr, frsWithoutResearch);
+    if (!r.assembled) missing.push(...r.missing.map((m) => `${fr}:${m}`));
+  }
+  return { allowed: missing.length === 0, missing, specPhase: false };
+}
+
 // tools/spec-graph/conformance.ts
 var SPEC_TAG_RE2 = /^@((?:FR|NFR|AC)[A-Za-z0-9._-]+)$/;
 function localIdOf(node) {
@@ -14354,6 +14407,24 @@ function checkConformance(graph, opts = {}) {
           reason: "Add a `**\u0422\u0440\u0435\u0431\u043E\u0432\u0430\u043D\u0438\u0435:** [FR-N]` line inside the block, pointing at the requirement it serves.",
           confidence: "high"
         }
+      ]
+    });
+  }
+  for (const node of graph.nodes.values()) {
+    if (node.type !== "Task") continue;
+    const task = node;
+    if (!WORKING_STATUSES.includes(task.status)) continue;
+    const gate = canEnterWorkingStatus(graph, task);
+    if (gate.allowed) continue;
+    findings.push({
+      code: "TASK_STARTED_WITHOUT_CHAIN",
+      severity: "warning",
+      location: { file: task.file, line: task.line },
+      message: `Task ${task.id} is ${task.status} but its requirement chain is not assembled \u2014 missing ${gate.missing.join(", ")}. Assemble the legs (or mark the task \`[spec-phase]\` if it authors them) before starting \u2014 run /task-status (FR-48b).`,
+      nodeId: task.id,
+      suggestions: [
+        { action: "assemble_chain", reason: `Author the missing legs (${gate.missing.join(", ")}) for the requirement, OR`, confidence: "high" },
+        { action: "mark_spec_phase", reason: "add a `[spec-phase]` marker if this task itself authors those legs (anti-deadlock exemption).", confidence: "medium" }
       ]
     });
   }
