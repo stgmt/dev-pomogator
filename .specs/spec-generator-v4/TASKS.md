@@ -1603,3 +1603,29 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   _Requirements: [FR-48](FR.md#fr-48)_
   **Done When:**
   - [x] `phase-lifecycle.ts` (parsePhaseId / canConfirmPhaseStop = порядок STOP + входы + предусловие Requirements / `done`-only переход); `set_entity_status` перехватывает id фазы ДО графа → гейт → спавн `node specs-generator-core.mjs spec-status -ConfirmStop` (паттерн create_spec, plain-ESM, без tsx/второго писателя); task-словарь на фазе = ILLEGAL-for-type; `get_spec_status` публикует `phases[]` (discoverability FR-48c). Verified by SPECGEN004_176/177 (реальный спавн + реальный обработчик); @feature48 7/7; @feature38 5/5; deps-absent доказан статически; бандл пересобран. Коммит 3d9ee23
+
+## Phase 25 — FR-49: авто-сёрфинг честного статуса + анти-false-close (гибрид)
+
+- [x] P25-1: баннер несёт следующий шаг (FR-49a) — id: p25-banner-next — Status: DONE | Est: 60m
+  _depends: p24-phase-path_
+  _Requirements: [FR-49](FR.md#fr-49)_
+  **Done When:**
+  - [x] `computeTaskCensus` несёт `nextOpen` (первая открытая задача, title→id fallback); `buildTaskCensusLine` рендерит «👉 следующее». Unit + SPECGEN004_178. Коммит f703b5b
+
+- [x] P25-2: census-aware стоп-гейт (FR-49b) — id: p25-census-gate — Status: DONE | Est: 150m
+  _depends: p25-banner-next_
+  _Requirements: [FR-49](FR.md#fr-49)_
+  **Done When:**
+  - [x] `isSpecCompletionClaim` (whole-spec, анти-H1) + класс `spec-false-close` в claim_evidence_gate_stop.ts (читает кэш переписи → впечатывает реальные числа + следующий шаг; fail-open; импорт builtins-only/dep-safe). Live-fire 5/5 против реального стоп-хука; CEGATE001_17/18/19. Коммит bd6e662
+
+- [x] P25-3: смена статуса освежает кэш (FR-49c) — id: p25-cache-refresh — Status: DONE | Est: 30m
+  _depends: p25-census-gate_
+  _Requirements: [FR-49](FR.md#fr-49)_
+  **Done When:**
+  - [x] Verified (нового кода не нужно): `lifecycle.ts` `refreshCensus()` на boot + каждом watcher `onPatch` (door-записи включены) уже держит кэш свежим при door-смене статуса. Подтверждено чтением кода + boot-тест lifecycle.test
+
+- [x] P25-4: сверщик устаревших маркеров (FR-49d) — id: p25-reconciler — Status: DONE | Est: 90m
+  _depends: p25-cache-refresh_
+  _Requirements: [FR-49](FR.md#fr-49)_
+  **Done When:**
+  - [x] `findStaleInProgress` + CLI `stale-marker-scan.ts` флажит in-progress с all-green сценариями; FLAG-ONLY (указывает на set_entity_status, не авто-закрывает); no-scenario → не флажит. Unit + SPECGEN004_179; реальный прогон на корпусе чист (консервативно). Коммит 8db0f63
