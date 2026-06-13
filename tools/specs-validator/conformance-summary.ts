@@ -163,6 +163,12 @@ export function buildTaskCensusLine(repoRoot = process.cwd()): string | null {
   }
 
   const lines = [header];
+  // FR-49a: name ONE concrete next open task (busiest unfinished spec with an
+  // open task) so «what's next» rides the standing signal, not just counts.
+  const nextSpec = c.specs.find((s) => s.nextOpen);
+  if (nextSpec?.nextOpen) {
+    lines.push(`   👉 следующее: ${nextSpec.nextOpen.title} [${nextSpec.nextOpen.id}]`);
+  }
   const TOP = 5;
   for (const s of c.specs.slice(0, TOP)) {
     const p: string[] = [];

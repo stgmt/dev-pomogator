@@ -1269,3 +1269,9 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given a temp spec with a known phase STOP state
     When get_spec_status reports the phase list for that spec
     Then its phases list carries the slug-qualified phase id and the stop-confirmed flag matching the progress file
+
+  @feature49
+  Scenario: SPECGEN004_178 the task-census banner names one concrete next open task
+    Given a cached task census whose busiest spec has an open task with a title
+    When the per-prompt task-census banner renders
+    Then the banner names that task title as the next step

@@ -54,6 +54,13 @@ export interface SpecCensus {
   open: number;
   doneRed: number;
   doneUnrun: number;
+  /**
+   * FR-49a: the first OPEN task (todo/in-progress/blocked) in this spec — the
+   * concrete «next step» the per-prompt banner names so «what's next» rides the
+   * standing signal, not just counts. Undefined when the spec has no open task
+   * (only doneRed/doneUnrun unfinished).
+   */
+  nextOpen?: { id: string; title: string };
 }
 
 export interface TaskCensus {
@@ -97,7 +104,10 @@ export function computeTaskCensus(graph: SpecGraph): TaskCensus {
   };
   for (const { node: t, slug } of taskEntries) {
     if (t.status === 'todo' || t.status === 'in-progress' || t.status === 'blocked') {
-      row(slug).open++;
+      const r = row(slug);
+      r.open++;
+      // FR-49a: capture the FIRST open task (document order) as the spec's «next step».
+      if (!r.nextOpen) r.nextOpen = { id: t.id, title: t.title ?? t.id };
     } else if (t.status === 'done') {
       const sids = map.get(t.id) ?? [];
       const hasRed = sids.some((id) => HARD_NEGATIVE.has(bucketById.get(id) ?? 'not_run'));

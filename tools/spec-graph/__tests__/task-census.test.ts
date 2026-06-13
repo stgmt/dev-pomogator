@@ -79,6 +79,37 @@ describe('computeTaskCensus — per-spec signals', () => {
   });
 });
 
+describe('FR-49a — nextOpen (the «next step» the banner names)', () => {
+  it('captures the FIRST open task per spec, preferring its title', () => {
+    const nodes = new Map<string, unknown>([
+      ['s:T1', { id: 's:T1', type: 'Task', status: 'done', refs: [], doneWhen: '', file: '.specs/s/TASKS.md' }],
+      ['s:T2', { id: 's:T2', type: 'Task', status: 'in-progress', refs: [], doneWhen: '', title: 'Wire the gate', file: '.specs/s/TASKS.md' }],
+      ['s:T3', { id: 's:T3', type: 'Task', status: 'todo', refs: [], doneWhen: '', title: 'Second open', file: '.specs/s/TASKS.md' }],
+    ]);
+    const c = computeTaskCensus({ nodes } as unknown as SpecGraph);
+    const s = c.specs.find((x) => x.slug === 's')!;
+    expect(s.open).toBe(2);
+    expect(s.nextOpen).toEqual({ id: 's:T2', title: 'Wire the gate' }); // first open in doc order, title used
+  });
+
+  it('falls back to the id when the open task has no title', () => {
+    const nodes = new Map<string, unknown>([
+      ['s:T1', { id: 's:T1', type: 'Task', status: 'todo', refs: [], doneWhen: '', file: '.specs/s/TASKS.md' }],
+    ]);
+    const c = computeTaskCensus({ nodes } as unknown as SpecGraph);
+    expect(c.specs[0].nextOpen).toEqual({ id: 's:T1', title: 's:T1' });
+  });
+
+  it('a spec with only done-but-unconfirmed work has no nextOpen', () => {
+    const nodes = new Map<string, unknown>([
+      ['s:T1', { id: 's:T1', type: 'Task', status: 'done', refs: [], doneWhen: 'no scenario', file: '.specs/s/TASKS.md' }],
+    ]);
+    const c = computeTaskCensus({ nodes } as unknown as SpecGraph);
+    expect(c.specs[0].doneUnrun).toBe(1);
+    expect(c.specs[0].nextOpen).toBeUndefined();
+  });
+});
+
 describe('task-census cache + история rotation', () => {
   let root: string;
   beforeEach(() => {
