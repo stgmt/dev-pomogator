@@ -24,6 +24,7 @@ interface SetWorld extends V4World {
   ssIllegal?: SetStatusResult;
   ssUnassembled?: SetStatusResult;
   ssValid?: SetStatusResult;
+  ssDerived?: SetStatusResult;
 }
 
 Given('a graph and the set_entity_status tool', function (this: SetWorld) {
@@ -71,5 +72,36 @@ Then(
     const tasks = fs.readFileSync(path.join(this.ssRoot!, '.specs', 'demo', 'TASKS.md'), 'utf-8');
     assert.match(tasks, /id: t1 — Status: READY/, 'the door write flipped t1 to READY on disk');
     assert.match(tasks, /id: t2 — Status: TODO/, 't2 untouched');
+  },
+);
+
+// SPECGEN004_175 (FR-48e): a derived entity (an FR) carries a COMPUTED status —
+// set_entity_status refuses the hand-set and returns the live fr-census verdict.
+Given('a graph with an FR and the set_entity_status tool', function (this: SetWorld) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fr48-derived-'));
+  const spec = path.join(root, '.specs', 'demo');
+  fs.mkdirSync(spec, { recursive: true });
+  fs.writeFileSync(path.join(spec, 'FR.md'), '## FR-1: Some requirement\n');
+  this.ssRoot = root;
+});
+
+When('a status change is requested for that FR', function (this: SetWorld) {
+  const graph = buildGraph({ repoRoot: this.ssRoot!, skipNdjson: true });
+  // `to` is irrelevant — a derived entity is refused before any transition check.
+  this.ssDerived = setEntityStatus(graph, this.ssRoot!, { id: 'demo:FR-1', to: 'in-progress' });
+});
+
+Then(
+  'the change is refused as STATUS_DERIVED and the reply carries the FR census verdict',
+  function (this: SetWorld) {
+    const r = this.ssDerived!;
+    assert.equal(r.ok, false, 'a derived entity is not hand-set');
+    assert.equal(r.error, 'STATUS_DERIVED');
+    assert.equal(r.entityType, 'FR');
+    const VERDICTS = ['IMPLEMENTED', 'DONE_UNTESTED', 'IN_PROGRESS', 'PLANNED', 'UNIMPLEMENTED'];
+    assert.ok(
+      r.verdict !== undefined && VERDICTS.includes(r.verdict),
+      `reply carries a live fr-census verdict, got ${r.verdict}`,
+    );
   },
 );

@@ -1251,3 +1251,9 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given a graph and the set_entity_status tool
     When a status change is requested for a task
     Then an illegal transition or an unassembled chain is refused with the reason and a valid transition writes through the door
+
+  @feature48
+  Scenario: SPECGEN004_175 set_entity_status refuses a derived entity and returns its computed verdict
+    Given a graph with an FR and the set_entity_status tool
+    When a status change is requested for that FR
+    Then the change is refused as STATUS_DERIVED and the reply carries the FR census verdict

@@ -19,13 +19,14 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import type { SpecGraph, TaskNode } from '../spec-graph/types.ts';
+import type { SpecGraph, TaskNode, Node } from '../spec-graph/types.ts';
 import {
   isLegalTransition,
   canEnterWorkingStatus,
   WORKING_STATUSES,
   type TaskStatus,
 } from '../spec-graph/task-lifecycle.ts';
+import { computeFrCensus } from '../spec-graph/fr-census.ts';
 import { validateSpecChange, writeDocAtomic, casCheck } from './mutations.ts';
 
 /** TASKS.md `Status:` token per stored status (the parser maps these back). */
@@ -45,10 +46,46 @@ export interface SetStatusResult {
   to?: TaskStatus;
   /** Why the transition was refused (illegal move / chain not assembled / not found / CAS / door). */
   reason?: string;
-  /** `<frId>:<leg>` entries when refused for an unassembled chain (FR-48c — name what to author). */
+  /** `<frId>:<leg>` entries when refused for an unassembled chain (FR-48c — name what to author). Also an FR's missing legs on a STATUS_DERIVED refusal. */
   missing?: string[];
+  /** FR-48e: on STATUS_DERIVED, the entity's graph type (FR / Story / Decision / AC / Scenario). */
+  entityType?: string;
+  /** FR-48e: on STATUS_DERIVED for an FR, the live `fr-census` verdict — the computed status the caller tried to hand-set. */
+  verdict?: string;
   /** Machine-readable refusal class for the tool wrapper. */
-  error?: 'NOT_FOUND' | 'ILLEGAL_TRANSITION' | 'CHAIN_NOT_ASSEMBLED' | 'CAS_MISMATCH' | 'DOOR_REFUSED';
+  error?: 'NOT_FOUND' | 'ILLEGAL_TRANSITION' | 'CHAIN_NOT_ASSEMBLED' | 'CAS_MISMATCH' | 'DOOR_REFUSED' | 'STATUS_DERIVED';
+}
+
+/**
+ * FR-48e: refuse to hand-set a DERIVED entity's status and return the live
+ * COMPUTED verdict instead. An FR carries its `fr-census` verdict + missing
+ * legs (its real per-FR status); any other derived node gets the typed refusal
+ * + the pointer to where its status IS computed. So every entity routes through
+ * the one door, and content never carries a fake stored status (FR-48a
+ * single-source — «вердикт не хранится, выводится»).
+ */
+function refuseDerived(graph: SpecGraph, node: Node, frsWithoutResearch?: Set<string>): SetStatusResult {
+  if (node.type === 'FR') {
+    const report = computeFrCensus(graph, { spec: node.spec, frsWithoutResearch });
+    const row = report.rows.find((r) => r.frId === node.id);
+    if (row) {
+      const legs = row.missingLegs.length ? `, не хватает ног: ${row.missingLegs.join(', ')}` : '';
+      return {
+        ok: false,
+        error: 'STATUS_DERIVED',
+        entityType: 'FR',
+        verdict: row.verdict,
+        missing: row.missingLegs,
+        reason: `${node.id}: статус ВЫВОДИТСЯ (вердикт ${row.verdict}${legs}) — не ставится руками. Изменить: собери недостающие ноги и прогони сценарий; см. fr-census (per-FR) / get_spec_status (per-spec).`,
+      };
+    }
+  }
+  return {
+    ok: false,
+    error: 'STATUS_DERIVED',
+    entityType: node.type,
+    reason: `${node.id} (${node.type}): статус ВЫВОДИТСЯ из покрытия и прогона тестов, не ставится руками; см. fr-census (per-FR) / get_spec_status (per-spec). Руками через дверь ставятся только задачи и фазы.`,
+  };
 }
 
 /**
@@ -63,8 +100,16 @@ export function setEntityStatus(
   frsWithoutResearch?: Set<string>,
 ): SetStatusResult {
   const node = graph.nodes.get(args.id);
-  if (!node || node.type !== 'Task') {
-    return { ok: false, error: 'NOT_FOUND', reason: `no task "${args.id}" in the graph` };
+  if (!node) {
+    // NOTE (FR-48e slice B): phase ids (`<slug>:phase:<Phase>`) are NOT graph
+    // nodes — they must be intercepted BEFORE this lookup when the phase
+    // authored-path lands. Today a phase id falls through to NOT_FOUND.
+    return { ok: false, error: 'NOT_FOUND', reason: `no entity "${args.id}" in the graph` };
+  }
+  // FR-48e: a derived entity (FR / Story / Decision / AC / Scenario / …) carries a
+  // COMPUTED status — refuse the hand-set and return the live verdict instead.
+  if (node.type !== 'Task') {
+    return refuseDerived(graph, node, frsWithoutResearch);
   }
   const task = node as TaskNode;
   const from = task.status;

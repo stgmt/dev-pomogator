@@ -593,3 +593,20 @@ A new user-facing tool MUST be added to TOOL_CONSUMERS with a real consumer skil
 - Gate on `webComplete` everywhere (rejected) — instant deadlock on the retrofit (0/47), nothing can start.
 - Gate on spec-verdict GREEN (rejected) — couples one task's start to the whole spec; one red scenario anywhere blocks unrelated starts; heavy (audit+traceability+semantic per transition).
 - Phase-aware «legs present per-FR» (CHOSEN) — breaks the cycle, cheap (reuses `missingLegs`), staged WARNING→ERROR so it does not flip the corpus red on day one (the FR-44 advisory lesson above).
+
+### Decision: One door, entity-type dispatch — authored (Task+Phase) vs derived (refuse with verdict) (FR-48e)
+
+**Требование:** [FR-48e](FR.md#fr-48)
+
+**Rationale:** Owner: «сразу все сущности». But «all entities» splits cleanly along authored-vs-derived, NOT one uniform status. (1) AUTHORED = a human/agent declares the state: TASK (5-vocab in `TASKS.md`) + PHASE (the STOP-confirm in `.progress.json`). These route the WRITE through `set_entity_status` and are gated. (2) DERIVED = the state is COMPUTED, never hand-set: FR / story / decision / AC / scenario / whole-spec — their truth is `fr-census` (per-FR) / `get_spec_status` (per-spec). Storing a hand-set status on them duplicates truth — the exact thing FR-48a forbids («вердикт не хранится, выводится»). So `set_entity_status` accepts EVERY entity but answers by type: authored → typed transition; derived → refuse `STATUS_DERIVED` CARRYING the live computed verdict + how to change it. «All entities route through one door» holds without a fake stored status.
+
+**Phase is NOT a 5-vocab entity.** Its single authored field is `stopConfirmed`; `completedAt`/`currentPhase` are recomputed from file existence (`-ConfirmStop`, `specs-generator-core.mjs:1480-1542`). So a phase's authored transition is BINARY — `done` = confirm STOP, reopen = clear — and `ready`/`in-progress`/`blocked` are illegal-for-type. `done` ⇒ `stopConfirmed=true` (NOT `completedAt`, which stays derived). The write MUST reuse the EXACT `-ConfirmStop` transform (the FULL recompute, not a half that sets only `stopConfirmed` and leaves `currentPhase`/`completedAt` stale — that half-write IS the dual-truth bug). `.progress.json` is JSON, not a markdown doc: it does NOT pass the door's mutation-path (validateSpecChange/conformance) nor sha-CAS — it uses the `.progress.json` atomic writer with the same last-writer-wins story as `-ConfirmStop` today. FR-48d's CAS claim is task-only.
+
+**Phase-id discoverability.** Phases are not graph nodes, so `get_node`/`get_trace` cannot surface `<slug>:phase:Requirements`. The id is published by `get_spec_status` — without it the command is unusable for phases, violating FR-48c (the agent learns the handle at the point of use).
+
+**Trade-off:** `set_entity_status` gains an entity-type dispatch + a real wire to `fr-census`/`get_spec_status` for the derived verdict (not a throwaway branch). The phase write reuses the `.mjs` `-ConfirmStop` transform (extract-or-delegate; a partial extraction is rejected as dual-truth). Skill stays named `task-status` (rename touches 4 registration points + the FR-42b grep) with a one-line «broader than tasks» note.
+
+**Alternatives considered:**
+- Uniform 5-vocab on every entity (rejected) — meaningless for a phase (a `ready` phase?) and forces a stored status onto derived content, duplicating the census/verdict truth FR-48a forbids.
+- Refuse content silently / NOT_FOUND (rejected) — the agent can't tell «no such entity» from «status is derived»; the typed `STATUS_DERIVED` + live verdict is the discoverable answer.
+- A second `.progress.json` writer inside `set_entity_status` (rejected) — diverges from `-ConfirmStop` (dual truth); reuse the one transform.
