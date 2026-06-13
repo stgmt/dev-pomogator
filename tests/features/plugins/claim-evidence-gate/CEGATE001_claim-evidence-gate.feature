@@ -161,19 +161,19 @@ Feature: CEGATE001 Claim-Evidence Gate
     Then every should-fire fires and every should-not-fire stays silent
 
   # @feature49
-  Scenario: CEGATE001_17 Blocks a whole-spec done claim when the task-census shows unfinished work
+  Scenario: CEGATE001_25 Blocks a whole-spec done claim when the task-census shows unfinished work
     Given the final message claims the whole spec is done and an executor ran, with the census showing unfinished work
     When the gate evaluates the turn
     Then it blocks the stop with the real counts and the next step
 
   # @feature49
-  Scenario: CEGATE001_18 Does not fire on a non-spec works-done claim even with unfinished census
+  Scenario: CEGATE001_26 Does not fire on a non-spec works-done claim even with unfinished census
     Given the final message claims a non-spec fix works and an executor ran, with the census showing unfinished work
     When the gate evaluates the turn
     Then it approves the stop
 
   # @feature49
-  Scenario: CEGATE001_19 Does not fire on a whole-spec claim when the census is clean or absent
+  Scenario: CEGATE001_27 Does not fire on a whole-spec claim when the census is clean or absent
     Given the final message claims the whole spec is done but the census is clean or absent
     When the gate evaluates the turn
     Then it approves the stop

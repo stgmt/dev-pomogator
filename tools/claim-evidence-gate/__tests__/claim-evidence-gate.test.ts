@@ -256,7 +256,7 @@ describe('CEGATE001: claim-evidence gate — spec-false-close class (FR-49b)', (
   }
 
   // @feature49 — the escaped false-close: executor ran + no defer phrasing, but the spec is unfinished.
-  it('CEGATE001_17: blocks a whole-spec "done" claim when the census shows unfinished work', () => {
+  it('CEGATE001_25: blocks a whole-spec "done" claim when the census shows unfinished work', () => {
     writeCensus(dir, { open: 11, doneRed: 0, doneUnrun: 0 }, { id: 'demo:t1', title: 'Wire the gate' });
     const { blocked, raw } = runHook([
       U('закрой спеку'),
@@ -269,7 +269,7 @@ describe('CEGATE001: claim-evidence gate — spec-false-close class (FR-49b)', (
   });
 
   // @feature49 — anti-H1: a NON-spec completion claim must NOT trip the census branch.
-  it('CEGATE001_18: does NOT fire on a non-spec works-done claim even with unfinished census', () => {
+  it('CEGATE001_26: does NOT fire on a non-spec works-done claim even with unfinished census', () => {
     writeCensus(dir, { open: 11, doneRed: 0, doneUnrun: 0 });
     const { blocked } = runHook([
       U('почини импорт'),
@@ -280,7 +280,7 @@ describe('CEGATE001: claim-evidence gate — spec-false-close class (FR-49b)', (
   });
 
   // @feature49 — a whole-spec claim is fine when the census is clean (no unfinished work).
-  it('CEGATE001_19: does NOT fire on a whole-spec claim when the census is clean/absent', () => {
+  it('CEGATE001_27: does NOT fire on a whole-spec claim when the census is clean/absent', () => {
     const { blocked } = runHook([
       U('закрой спеку'),
       A([tool('Bash', { command: 'git commit -m done' })]),
