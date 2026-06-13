@@ -59,6 +59,9 @@ describe('reconcileCli — drives the real engine + writes artifacts', () => {
     expect(res.totalFindings).toBeGreaterThanOrEqual(1);
     expect(res.bySeverity.WARNING).toBeGreaterThanOrEqual(1);
     expect(res.stdout).toContain('| spec | CRIT | WARN | INFO | total |');
+    // T7-56: dry-run lists the actual findings (severity + code + location), not just counts.
+    expect(res.stdout).toMatch(/first \d+ of \d+ finding\(s\):/);
+    expect(res.stdout).toMatch(/\[WARNING\] impl-drift\/missing-file/);
     expect(res.stdout).toContain('--dry-run');
     expect(res.reportPaths).toEqual([]);
     expect(fs.existsSync(path.join(repoRoot, '.specs', 'demo-spec', 'consistency-report.yaml'))).toBe(false);

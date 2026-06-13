@@ -18,7 +18,7 @@
 // @see .claude/skills/cross-spec-reconcile/SKILL.md (## Flags)
 
 import { pathToFileURL } from 'node:url';
-import { reconcileLight, type ReconcileResult, type Severity } from './reconcile.ts';
+import { reconcileLight, type ReconcileResult, type Severity, type Finding } from './reconcile.ts';
 import { runFullMode } from './full-mode.ts';
 import { writeReport } from './yaml-writer.ts';
 import { writeSarif } from './sarif.ts';
@@ -98,6 +98,29 @@ function renderSummaryTable(results: readonly ReconcileResult[]): string {
   return rows.length ? `${head}\n${body}\n${totalRow}\n` : `(no findings across ${results.length} specs)\n`;
 }
 
+/** A finding's most specific location for the dry-run listing. */
+function findingLocation(slug: string, f: Finding): string {
+  if (f.referenced_in) return f.referenced_in;
+  if (f.expected_path) return f.expected_path;
+  if (f.spec_a && f.spec_b) return `${f.spec_a} ↔ ${f.spec_b}`;
+  return slug;
+}
+
+/**
+ * T7-56: under --dry-run, list the first `limit` findings (severity + code +
+ * location) after the summary table, so the author sees the actual drift, not
+ * just counts, without any file being written. Empty string when there are none.
+ */
+function renderFirstFindings(results: readonly ReconcileResult[], limit = 10): string {
+  const flat: Array<{ slug: string; f: Finding }> = [];
+  for (const r of results) for (const f of r.findings) flat.push({ slug: r.specSlug, f });
+  if (flat.length === 0) return '';
+  const shown = flat.slice(0, limit);
+  const lines = [`first ${shown.length} of ${flat.length} finding(s):`];
+  for (const { slug, f } of shown) lines.push(`  [${f.severity}] ${f.code} — ${findingLocation(slug, f)}`);
+  return lines.join('\n') + '\n';
+}
+
 /** Drive the engine, optionally write artifacts, return summary stdout. */
 export async function reconcileCli(
   args: ReconcileCliArgs,
@@ -139,6 +162,11 @@ export async function reconcileCli(
   lines.push(renderSummaryTable(results).trimEnd());
   lines.push('');
   if (args.dryRun) {
+    const firstFindings = renderFirstFindings(results).trimEnd();
+    if (firstFindings) {
+      lines.push(firstFindings);
+      lines.push('');
+    }
     lines.push('(--dry-run: no consistency-report.yaml written)');
   } else {
     lines.push(`wrote ${reportPaths.length} consistency-report.yaml${args.sarif ? ` + ${sarifPaths.length} .sarif` : ''}`);
