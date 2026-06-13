@@ -1257,3 +1257,15 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given a graph with an FR and the set_entity_status tool
     When a status change is requested for that FR
     Then the change is refused as STATUS_DERIVED and the reply carries the FR census verdict
+
+  @feature48
+  Scenario: SPECGEN004_176 a phase STOP is confirmed through the door only past the ordering gate
+    Given a temp spec whose Discovery STOP is not yet confirmed
+    When phase status changes are requested through set_entity_status
+    Then confirming the Requirements STOP first is refused for the unconfirmed prior STOP, a task-vocab status on a phase is illegal-for-type, and confirming the Discovery STOP writes stopConfirmed through the canonical writer
+
+  @feature48
+  Scenario: SPECGEN004_177 get_spec_status publishes the settable phase ids
+    Given a temp spec with a known phase STOP state
+    When get_spec_status reports the phase list for that spec
+    Then its phases list carries the slug-qualified phase id and the stop-confirmed flag matching the progress file

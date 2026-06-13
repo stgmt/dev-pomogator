@@ -19,6 +19,8 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
 import type { SpecGraph, TaskNode, Node } from '../spec-graph/types.ts';
 import {
   isLegalTransition,
@@ -27,6 +29,7 @@ import {
   type TaskStatus,
 } from '../spec-graph/task-lifecycle.ts';
 import { computeFrCensus } from '../spec-graph/fr-census.ts';
+import { parsePhaseId, canConfirmPhaseStop, isLegalPhaseTransition } from '../spec-graph/phase-lifecycle.ts';
 import { validateSpecChange, writeDocAtomic, casCheck } from './mutations.ts';
 
 /** TASKS.md `Status:` token per stored status (the parser maps these back). */
@@ -89,6 +92,55 @@ function refuseDerived(graph: SpecGraph, node: Node, frsWithoutResearch?: Set<st
 }
 
 /**
+ * FR-48e: confirm a PHASE's STOP through the door. A phase is authored (not derived)
+ * but is NOT a 5-vocab task — the only legal move is `done` (= confirm STOP). The
+ * GATE (prior-STOP ordering + inputs + Requirements precondition) runs HERE, in the
+ * typed layer (the owner's prohibition the CLI does not enforce); the WRITE is then
+ * delegated to the canonical single writer by spawning `node specs-generator-core.mjs
+ * spec-status -ConfirmStop` — the SAME plain-ESM engine create_spec already spawns
+ * (tools.ts), so there is no second `.progress.json` writer (FR-48a single-source) and
+ * no tsx dependency for users. SPECS_GENERATOR_ROOT pins the corpus root so a non-cwd
+ * repo (the @feature48 temp repo) resolves correctly.
+ */
+function setPhaseStatus(repoRoot: string, ph: { slug: string; phase: string }, to: TaskStatus): SetStatusResult {
+  if (!isLegalPhaseTransition(to)) {
+    return {
+      ok: false,
+      error: 'ILLEGAL_TRANSITION',
+      to,
+      entityType: 'Phase',
+      reason: `phase status is binary — only "done" (confirm STOP) is settable; "${to}" is illegal-for-type (a phase has no todo/ready/in-progress/blocked).`,
+    };
+  }
+  const specAbsDir = path.join(repoRoot, '.specs', ph.slug);
+  if (!fs.existsSync(specAbsDir)) {
+    return { ok: false, error: 'NOT_FOUND', to, entityType: 'Phase', reason: `no spec "${ph.slug}" at .specs/${ph.slug}` };
+  }
+  const gate = canConfirmPhaseStop(specAbsDir, ph.phase);
+  if (!gate.allowed) {
+    return {
+      ok: false,
+      error: 'CHAIN_NOT_ASSEMBLED',
+      to,
+      entityType: 'Phase',
+      missing: gate.missing,
+      reason: `cannot confirm ${ph.phase} STOP — ${gate.missing.join('; ')}. Confirm the prior STOP / author the inputs, then retry.`,
+    };
+  }
+  const core = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'specs-generator', 'specs-generator-core.mjs');
+  const r = spawnSync(
+    process.execPath,
+    [core, 'spec-status', '-Path', `.specs/${ph.slug}`, '-ConfirmStop', ph.phase, '-Format', 'json'],
+    { cwd: repoRoot, env: { ...process.env, SPECS_GENERATOR_ROOT: repoRoot }, encoding: 'utf-8' },
+  );
+  if (r.status !== 0) {
+    const why = (r.stderr || r.stdout || '').toString().trim();
+    return { ok: false, error: 'DOOR_REFUSED', to, entityType: 'Phase', reason: `the spec-status writer refused: ${why || `exit ${r.status}`}` };
+  }
+  return { ok: true, to, entityType: 'Phase' };
+}
+
+/**
  * Transition a task entity to `to`, writing through the door. `frsWithoutResearch`
  * is unused by the start gate (research is not required to START) but threaded for a
  * uniform signature. `expectedSha` (optional) makes the write CAS-conditional.
@@ -99,11 +151,13 @@ export function setEntityStatus(
   args: { id: string; to: TaskStatus; expectedSha?: string },
   frsWithoutResearch?: Set<string>,
 ): SetStatusResult {
+  // FR-48e: a PHASE is not a graph node — intercept its id first (a node lookup
+  // would 404 it) and route to the phase authored-path (gate → canonical write).
+  const ph = parsePhaseId(args.id);
+  if (ph) return setPhaseStatus(repoRoot, ph, args.to);
+
   const node = graph.nodes.get(args.id);
   if (!node) {
-    // NOTE (FR-48e slice B): phase ids (`<slug>:phase:<Phase>`) are NOT graph
-    // nodes — they must be intercepted BEFORE this lookup when the phase
-    // authored-path lands. Today a phase id falls through to NOT_FOUND.
     return { ok: false, error: 'NOT_FOUND', reason: `no entity "${args.id}" in the graph` };
   }
   // FR-48e: a derived entity (FR / Story / Decision / AC / Scenario / …) carries a

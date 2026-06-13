@@ -43,6 +43,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { validateSpecChange, writeDocAtomic, isSafeSlug, resolveSpecDoc, docSha, casCheck, validateTarget, findInboundLinks, rewriteInboundLinks, isArchivedSlug, type SpecChange } from './mutations.ts';
 import { setEntityStatus } from './set-status.ts';
+import { readProgressState, PHASE_ORDER, STOP_LABELS } from '../specs-validator/phase-constants.ts';
 import type {
   SpecGraph,
   Node,
@@ -1022,6 +1023,19 @@ export function buildToolRegistry(
         GREEN: `All ${summary.touched} touched scenario(s) passed at ${lastAt}.`,
       };
 
+      // FR-48e discoverability: a phase is not a graph node, so publish its
+      // settable handle (`<slug>:phase:<Phase>`) + authored state HERE — the only
+      // place the agent learns the id to pass to set_entity_status (else the phase
+      // authored-path is unusable, violating FR-48c).
+      const progress = readProgressState(path.join(process.cwd(), '.specs', slug));
+      const phases = PHASE_ORDER.map((name) => ({
+        id: `${slug}:phase:${name}`,
+        name,
+        stop_label: STOP_LABELS[name] ?? null,
+        stop_confirmed: progress?.phases?.[name]?.stopConfirmed ?? false,
+        completed_at: progress?.phases?.[name]?.completedAt ?? null,
+      }));
+
       return asJsonResult({
         ok: true,
         spec: slug,
@@ -1029,6 +1043,7 @@ export function buildToolRegistry(
         counts,
         last_run,
         gaps,
+        phases,
         hint: hints[lifecycle],
       });
     },
