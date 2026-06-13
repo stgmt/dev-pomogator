@@ -1227,3 +1227,27 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given a graph with a Decision and a Story that declare no requirement line, plus one labelled Decision
     When conformance checks the toothless-block guard
     Then TOOTHLESS_DECISION and TOOTHLESS_STORY fire for the unlabelled blocks but not the labelled one
+
+  @feature48
+  Scenario: SPECGEN004_171 the lifecycle machine accepts legal transitions and rejects illegal ones
+    Given the task-lifecycle transition table
+    When a status transition is checked
+    Then todo to ready to in-progress to done and the done to in-progress reopen are legal but todo straight to done is rejected
+
+  @feature48
+  Scenario: SPECGEN004_172 starting an impl task needs the assembled chain but a spec-authoring task does not
+    Given an FR whose chain is missing its design and story legs
+    When the start gate evaluates an impl task and a spec-authoring task for that FR
+    Then the impl task is blocked with the missing legs listed and the spec-authoring task is allowed
+
+  @feature48
+  Scenario: SPECGEN004_173 conformance flags an impl task in-progress whose requirement chain is not assembled
+    Given a graph with an impl task in-progress whose FR lacks design and story
+    When conformance checks the start gate
+    Then a TASK_STARTED_WITHOUT_CHAIN warning is raised naming the missing legs
+
+  @feature48
+  Scenario: SPECGEN004_174 set_entity_status refuses an unbacked or illegal transition and writes a valid one
+    Given a graph and the set_entity_status tool
+    When a status change is requested for a task
+    Then an illegal transition or an unassembled chain is refused with the reason and a valid transition writes through the door

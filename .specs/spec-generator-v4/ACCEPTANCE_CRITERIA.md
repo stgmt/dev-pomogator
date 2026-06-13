@@ -685,3 +685,9 @@ WHEN задача `Status: DONE` записывается без явного `s
 **Требование:** [FR-47a](FR.md#fr-47), [FR-47b](FR.md#fr-47), [FR-47c](FR.md#fr-47), [FR-47d](FR.md#fr-47)
 
 WHEN билдер парсит DESIGN.md THEN блок `### Decision:` с явной строкой `**Требование:** [FR-N]` SHALL дать узел `Decision` + ребро `covers` FR→Decision; IF строки `**Требование:**` нет (FR упомянут лишь в прозе Rationale) THEN ребро SHALL НЕ строиться (не костыль); WHEN conformance прогоняется THEN FR без покрывающего `Decision` SHALL давать `FR_NO_DESIGN` (зеркально `FR_NO_RESEARCH`), severity поэтапно WARNING→ERROR (delta-скоуп, не клинить дверь); WHEN агент зовёт `get_trace` по требованию THEN ответ SHALL включать его `decisions[]` (id + parentFr); WHEN записывается блок `### Decision:` без строки `**Требование:**` THEN `design-decision-guard` SHALL это пометить.
+
+## AC-48.1
+
+**Требование:** [FR-48a](FR.md#fr-48), [FR-48b](FR.md#fr-48), [FR-48c](FR.md#fr-48), [FR-48d](FR.md#fr-48)
+
+WHEN команда/дверь переводит impl-задачу в `in-progress`, а цепочка её требования не собрана (нет хоть одной из ног: AC / дизайн / история / ресерч / сценарий) THEN система SHALL дать находку `TASK_STARTED_WITHOUT_CHAIN` с перечнем недостающих ног; IF задача фазы-спеки (создаёт ноги) И её требование существует THEN перевод SHALL быть разрешён даже без ног (анти-deadlock); WHEN запрошен нелегальный переход (напр. `todo → done` минуя `in-progress`) THEN система SHALL отказать; WHEN правило промоутнуто до ERROR THEN дверь `apply_spec_change` SHALL отказать запись с находкой, А предсуществующие нарушители SHALL НЕ блокировать несвязанную запись (detect→retrofit→gate, delta-скоуп); WHEN команда `set_entity_status` ставит статус THEN запись SHALL идти через mutation-путь (`expected_sha` CAS) И conformance-гейт SHALL оставаться полом (сырая правка markdown не обходит); WHEN дверь отказывает THEN текст SHALL называть недостающие ноги и навык `/task-status`.

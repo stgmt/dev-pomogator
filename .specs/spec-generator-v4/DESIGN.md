@@ -580,3 +580,16 @@ A new user-facing tool MUST be added to TOOL_CONSUMERS with a real consumer skil
 - Promote everything to GAP_CLASSES now (rejected) — instant corpus-wide RED (538+72+7 findings), drowns the three real residuals, incentivises gaming the escape hatches.
 - Per-spec opt-in gating (e.g. only specs created after FR-44 landed) (deferred) — viable second step after cleanup; adds config surface now without removing the legacy-debt problem.
 - Keep-advisory with explicit promotion criteria (CHOSEN) — a class is promoted to GAP_CLASSES (+ BDD regression per the SPECGEN004_98 lesson) only once its corpus count is driven to ~0 and stays there for a full hygiene cycle; until then the counts in corpus-health are the burn-down metric.
+
+### Decision: Gate task START on the chain phase-aware, NOT on whole-spec health (FR-48)
+
+**Требование:** [FR-48](FR.md#fr-48)
+
+**Rationale:** The gate must block starting an impl task whose requirement lacks its chain — but a flat «chain complete» gate deadlocks the remedy: with 0/47 FRs web-complete, the very task that authors FR-X's design leg cannot go in-progress (FR-X has no design leg — that is what the task produces). Keying the gate off task PHASE breaks the cycle: impl-phase tasks gate on the upstream chain existing; spec-authoring/retrofit tasks gate only on «the FR heading exists». This is the repo's «spec fully, then code» order made enforceable, not an exemption hack. «Validated» = legs present + internally consistent per-FR (cheap, reuses `missingLegs`), NOT spec-verdict GREEN (which would couple one task's start to the entire spec's health — one red scenario anywhere blocks an unrelated start).
+
+**Trade-off:** Phase classification needs an explicit signal (a task marker), not a fragile text heuristic — small authoring cost per task. And per-FR «legs present» is weaker than «legs green»: a failing scenario counts as present (TDD-first), so the gate guarantees the chain is ASSEMBLED, not that work is done (that stays the FR-46 done gate). Accepted: the two brackets are deliberately different checks.
+
+**Alternatives considered:**
+- Gate on `webComplete` everywhere (rejected) — instant deadlock on the retrofit (0/47), nothing can start.
+- Gate on spec-verdict GREEN (rejected) — couples one task's start to the whole spec; one red scenario anywhere blocks unrelated starts; heavy (audit+traceability+semantic per transition).
+- Phase-aware «legs present per-FR» (CHOSEN) — breaks the cycle, cheap (reuses `missingLegs`), staged WARNING→ERROR so it does not flip the corpus red on day one (the FR-44 advisory lesson above).
