@@ -45092,6 +45092,7 @@ var FR_HEADING_RE = /^FR-(\d+):\s*(.+)$/;
 var NFR_HEADING_RE = /^NFR(?:-([A-Za-z][A-Za-z0-9]*))?-(\d+):\s*(.+)$/;
 var AC_HEADING_RE = /^AC-(\d+(?:\.\d+)?)\s*\(FR-(\d+)\)\s*:?\s*(.*)$/;
 var DECISION_HEADING_RE = /^Decision:\s*(.+)$/;
+var STORY_HEADING_RE = /^User Story \d+:\s*(.+)$/;
 var SHORT_FR_RE = /^FR-(\d+)$/;
 var SHORT_NFR_RE = /^NFR(?:-([A-Za-z][A-Za-z0-9]*))?-(\d+)$/;
 var SHORT_AC_RE = /^AC-(\d+(?:\.\d+)?)$/;
@@ -45307,6 +45308,21 @@ function parseMarkdown(mdSource, relativePath) {
       anchors.push(
         { alias: decId, canonicalId: decId, location },
         { alias: slug, canonicalId: decId, location }
+      );
+      continue;
+    }
+    m = text.match(STORY_HEADING_RE);
+    if (m) {
+      const title = m[1].trim();
+      const storyId = `Story-${slugify2(title)}`;
+      const slug = slugify2(text);
+      const parentFr = decisionRequirementAfter(lines, i);
+      const node = { id: storyId, type: "Story", title, parentFr, file: relativePath, line, body: text };
+      nodes.push(node);
+      if (parentFr) edges.push({ from: parentFr, to: storyId, type: "covers" });
+      anchors.push(
+        { alias: storyId, canonicalId: storyId, location },
+        { alias: slug, canonicalId: storyId, location }
       );
       continue;
     }
@@ -47412,10 +47428,13 @@ function checkConformance(graph, opts = {}) {
   const specLocalIds = new Set(specNodes.map((n) => localIdOf(n)));
   const acCovers = /* @__PURE__ */ new Set();
   const decisionCovers = /* @__PURE__ */ new Set();
+  const storyCovers = /* @__PURE__ */ new Set();
   const scenarioTests = /* @__PURE__ */ new Set();
   for (const e of graph.edges) {
     if (e.type === "covers") {
-      if (graph.nodes.get(e.to)?.type === "Decision") decisionCovers.add(e.from);
+      const toType = graph.nodes.get(e.to)?.type;
+      if (toType === "Decision") decisionCovers.add(e.from);
+      else if (toType === "Story") storyCovers.add(e.from);
       else acCovers.add(e.from);
     }
     if (e.type === "tested-by") scenarioTests.add(e.from);
@@ -47449,6 +47468,20 @@ function checkConformance(graph, opts = {}) {
       suggestions: [
         { action: "add_decision", reason: "Add a `### Decision:` block in DESIGN.md with a `**\u0422\u0440\u0435\u0431\u043E\u0432\u0430\u043D\u0438\u0435:** [FR-N]` line, OR", confidence: "medium" },
         { action: "link_existing_decision", reason: "add the `**\u0422\u0440\u0435\u0431\u043E\u0432\u0430\u043D\u0438\u0435:**` line to the existing decision that motivated this FR.", confidence: "medium" }
+      ]
+    });
+  }
+  for (const node of graph.nodes.values()) {
+    if (node.type !== "FR") continue;
+    if (storyCovers.has(node.id)) continue;
+    findings.push({
+      code: "FR_NO_STORY",
+      severity: "warning",
+      location: { file: node.file, line: node.line },
+      message: `FR ${node.id} has no user Story covering it \u2014 no \`### User Story\` block declares \`**\u0422\u0440\u0435\u0431\u043E\u0432\u0430\u043D\u0438\u0435:** [${localIdOf(node)}]\` (FR-47: the story leg of the trace web).`,
+      nodeId: node.id,
+      suggestions: [
+        { action: "link_story", reason: "Add a `**\u0422\u0440\u0435\u0431\u043E\u0432\u0430\u043D\u0438\u0435:** [FR-N]` line to the User Story that motivates this FR.", confidence: "medium" }
       ]
     });
   }
@@ -48684,6 +48717,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
       }
       const acs = [];
       const decisions = [];
+      const stories = [];
       const scenarios = [];
       const tasks = [];
       const related = [];
@@ -48693,6 +48727,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
           if (!to) continue;
           if (edge.type === "covers" && to.type === "AC") acs.push(to);
           else if (edge.type === "covers" && to.type === "Decision") decisions.push(to);
+          else if (edge.type === "covers" && to.type === "Story") stories.push(to);
           else if (edge.type === "tested-by" && to.type === "Scenario") {
             scenarios.push(to);
           } else related.push({ id: to.id, type: to.type, relation: edge.type });
@@ -48721,6 +48756,8 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
         // FR-47c: the design leg — Decisions covering this FR (real `covers` edges built
         // from explicit `**Требование:**` lines), so the trace web is navigable FR→design.
         design_decisions: decisions.map((d) => ({ id: d.id, file: d.file, line: d.line, parentFr: d.parentFr })),
+        // FR-47: the story leg — user Stories motivating this FR (real `covers` edges).
+        user_stories: stories.map((s) => ({ id: s.id, file: s.file, line: s.line, parentFr: s.parentFr })),
         scenarios: scenarios.map((s) => ({
           id: s.id,
           file: s.file,

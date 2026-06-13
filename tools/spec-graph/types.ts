@@ -2,8 +2,8 @@
  * SpecGraph in-memory model — TypeScript types per Entity 1 of v4 SCHEMA.md.
  *
  * The graph is a typed in-memory representation of a spec corpus: nodes of
- * 10 discriminated kinds (FR / NFR / AC / Decision / Scenario / Task / UseCase /
- * Risk / File / StepBinding) connected by 8 edge kinds (refs / covers / tested-by /
+ * 11 discriminated kinds (FR / NFR / AC / Decision / Story / Scenario / Task /
+ * UseCase / Risk / File / StepBinding) connected by 8 edge kinds (refs / covers / tested-by /
  * tagged-by / implements / last-result / step-binding / code-impl). The MCP
  * server (Phase 2) serves slices of this graph; the builder (this Phase) is
  * the single producer.
@@ -22,6 +22,7 @@ export type NodeType =
   | 'NFR'
   | 'AC'
   | 'Decision'
+  | 'Story'
   | 'Scenario'
   | 'Task'
   | 'UseCase'
@@ -109,6 +110,20 @@ export interface DecisionNode extends NodeBase {
   body: string;
 }
 
+export interface StoryNode extends NodeBase {
+  type: 'Story';
+  /** Heading title after `### User Story N:`. */
+  title: string;
+  /**
+   * Requirement id this story motivates — read from the block's
+   * `**Требование:** [FR-N]` / `**Requirement:** [FR-N]` line (mirrors DecisionNode).
+   * Makes FR↔Story a REAL graph edge, not a text-scan. Empty when undeclared.
+   */
+  parentFr: string;
+  /** Raw block body (Why / Independent Test / Acceptance Scenarios). */
+  body: string;
+}
+
 export interface ScenarioStep {
   keyword: 'Given' | 'When' | 'Then' | 'And' | 'But';
   text: string;
@@ -180,6 +195,7 @@ export type Node =
   | NfrNode
   | AcNode
   | DecisionNode
+  | StoryNode
   | ScenarioNode
   | TaskNode
   | UseCaseNode

@@ -375,6 +375,21 @@ function parseMarkdown(mdSource, relativePath) {
       );
       continue;
     }
+    m = text.match(STORY_HEADING_RE);
+    if (m) {
+      const title = m[1].trim();
+      const storyId = `Story-${slugify(title)}`;
+      const slug = slugify(text);
+      const parentFr = decisionRequirementAfter(lines, i);
+      const node = { id: storyId, type: "Story", title, parentFr, file: relativePath, line, body: text };
+      nodes.push(node);
+      if (parentFr) edges.push({ from: parentFr, to: storyId, type: "covers" });
+      anchors.push(
+        { alias: storyId, canonicalId: storyId, location },
+        { alias: slug, canonicalId: storyId, location }
+      );
+      continue;
+    }
   }
   qualifySlice({ nodes, edges }, specOf(relativePath));
   return { nodes, edges, anchors };
@@ -384,7 +399,7 @@ function parseMarkdownFile(absPath, repoRoot) {
   const relative = path2.relative(repoRoot, absPath).split(path2.sep).join("/");
   return parseMarkdown(source, relative);
 }
-var HEADING_LINE_RE, FENCE_RE, FR_HEADING_RE, NFR_HEADING_RE, AC_HEADING_RE, DECISION_HEADING_RE, SHORT_FR_RE, SHORT_NFR_RE, SHORT_AC_RE, LEGACY_FR_HEADING_RE;
+var HEADING_LINE_RE, FENCE_RE, FR_HEADING_RE, NFR_HEADING_RE, AC_HEADING_RE, DECISION_HEADING_RE, STORY_HEADING_RE, SHORT_FR_RE, SHORT_NFR_RE, SHORT_AC_RE, LEGACY_FR_HEADING_RE;
 var init_md = __esm({
   "tools/spec-graph/parsers/md.ts"() {
     "use strict";
@@ -396,6 +411,7 @@ var init_md = __esm({
     NFR_HEADING_RE = /^NFR(?:-([A-Za-z][A-Za-z0-9]*))?-(\d+):\s*(.+)$/;
     AC_HEADING_RE = /^AC-(\d+(?:\.\d+)?)\s*\(FR-(\d+)\)\s*:?\s*(.*)$/;
     DECISION_HEADING_RE = /^Decision:\s*(.+)$/;
+    STORY_HEADING_RE = /^User Story \d+:\s*(.+)$/;
     SHORT_FR_RE = /^FR-(\d+)$/;
     SHORT_NFR_RE = /^NFR(?:-([A-Za-z][A-Za-z0-9]*))?-(\d+)$/;
     SHORT_AC_RE = /^AC-(\d+(?:\.\d+)?)$/;
@@ -14391,10 +14407,13 @@ function checkConformance(graph, opts = {}) {
   const specLocalIds = new Set(specNodes.map((n) => localIdOf(n)));
   const acCovers = /* @__PURE__ */ new Set();
   const decisionCovers = /* @__PURE__ */ new Set();
+  const storyCovers = /* @__PURE__ */ new Set();
   const scenarioTests = /* @__PURE__ */ new Set();
   for (const e of graph.edges) {
     if (e.type === "covers") {
-      if (graph.nodes.get(e.to)?.type === "Decision") decisionCovers.add(e.from);
+      const toType = graph.nodes.get(e.to)?.type;
+      if (toType === "Decision") decisionCovers.add(e.from);
+      else if (toType === "Story") storyCovers.add(e.from);
       else acCovers.add(e.from);
     }
     if (e.type === "tested-by") scenarioTests.add(e.from);
@@ -14428,6 +14447,20 @@ function checkConformance(graph, opts = {}) {
       suggestions: [
         { action: "add_decision", reason: "Add a `### Decision:` block in DESIGN.md with a `**\u0422\u0440\u0435\u0431\u043E\u0432\u0430\u043D\u0438\u0435:** [FR-N]` line, OR", confidence: "medium" },
         { action: "link_existing_decision", reason: "add the `**\u0422\u0440\u0435\u0431\u043E\u0432\u0430\u043D\u0438\u0435:**` line to the existing decision that motivated this FR.", confidence: "medium" }
+      ]
+    });
+  }
+  for (const node of graph.nodes.values()) {
+    if (node.type !== "FR") continue;
+    if (storyCovers.has(node.id)) continue;
+    findings.push({
+      code: "FR_NO_STORY",
+      severity: "warning",
+      location: { file: node.file, line: node.line },
+      message: `FR ${node.id} has no user Story covering it \u2014 no \`### User Story\` block declares \`**\u0422\u0440\u0435\u0431\u043E\u0432\u0430\u043D\u0438\u0435:** [${localIdOf(node)}]\` (FR-47: the story leg of the trace web).`,
+      nodeId: node.id,
+      suggestions: [
+        { action: "link_story", reason: "Add a `**\u0422\u0440\u0435\u0431\u043E\u0432\u0430\u043D\u0438\u0435:** [FR-N]` line to the User Story that motivates this FR.", confidence: "medium" }
       ]
     });
   }

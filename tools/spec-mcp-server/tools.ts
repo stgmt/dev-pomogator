@@ -48,6 +48,7 @@ import type {
   FrNode,
   AcNode,
   DecisionNode,
+  StoryNode,
   ScenarioNode,
   TaskNode,
   StepBindingNode,
@@ -570,6 +571,7 @@ export function buildToolRegistry(
       }
       const acs: AcNode[] = [];
       const decisions: DecisionNode[] = [];
+      const stories: StoryNode[] = [];
       const scenarios: ScenarioNode[] = [];
       const tasks: TaskNode[] = [];
       const related: Array<{ id: string; type: string; relation: string }> = [];
@@ -580,6 +582,7 @@ export function buildToolRegistry(
           if (!to) continue;
           if (edge.type === 'covers' && to.type === 'AC') acs.push(to as AcNode);
           else if (edge.type === 'covers' && to.type === 'Decision') decisions.push(to as DecisionNode);
+          else if (edge.type === 'covers' && to.type === 'Story') stories.push(to as StoryNode);
           else if (edge.type === 'tested-by' && to.type === 'Scenario') {
             scenarios.push(to as ScenarioNode);
           } else related.push({ id: to.id, type: to.type, relation: edge.type });
@@ -621,6 +624,8 @@ export function buildToolRegistry(
         // FR-47c: the design leg — Decisions covering this FR (real `covers` edges built
         // from explicit `**Требование:**` lines), so the trace web is navigable FR→design.
         design_decisions: decisions.map((d) => ({ id: d.id, file: d.file, line: d.line, parentFr: d.parentFr })),
+        // FR-47: the story leg — user Stories motivating this FR (real `covers` edges).
+        user_stories: stories.map((s) => ({ id: s.id, file: s.file, line: s.line, parentFr: s.parentFr })),
         scenarios: scenarios.map((s) => ({
           id: s.id,
           file: s.file,

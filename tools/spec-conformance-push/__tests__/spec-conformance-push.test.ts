@@ -125,7 +125,11 @@ describe('runPush — stateful runner', () => {
   });
 
   it('does NOT append anything when there are zero findings', () => {
-    // Replace the uncovered FR with a covered one (FR-1 with AC).
+    // Replace the uncovered FR with a FULLY covered one. Under FR-47 the
+    // trace web has four legs — AC/scenario (UNCOVERED_FR), design Decision
+    // (FR_NO_DESIGN) and user Story (FR_NO_STORY) — so a truly silent FR
+    // needs all of them. The Decision/Story legs are real `covers` edges
+    // built ONLY from the explicit `**Требование:** [FR-1]` line.
     fs.writeFileSync(
       path.join(root, '.specs/x/FR.md'),
       '## FR-1: Covered\n',
@@ -133,6 +137,14 @@ describe('runPush — stateful runner', () => {
     fs.writeFileSync(
       path.join(root, '.specs/x/ACCEPTANCE_CRITERIA.md'),
       '## AC-1 (FR-1)\n',
+    );
+    fs.writeFileSync(
+      path.join(root, '.specs/x/DESIGN.md'),
+      '## Decision: Pick X\n\n**Требование:** [FR-1](FR.md#fr-1)\n\nRationale.\n',
+    );
+    fs.writeFileSync(
+      path.join(root, '.specs/x/USER_STORIES.md'),
+      '## User Story 1: As a user\n\n**Требование:** [FR-1](FR.md#fr-1)\n\nWhy.\n',
     );
     fs.mkdirSync(path.join(root, 'tests', 'features'), { recursive: true });
     fs.writeFileSync(

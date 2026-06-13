@@ -1524,10 +1524,19 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] `FR_NO_DESIGN` в conformance.ts (FR без покрывающего Decision, граф-нативно, зеркало FR_NO_RESEARCH; WARNING детект-первый, FR-47b). На живом корпусе 580 FR без дизайн-ноги подсвечены, FR-1 снят. Verified by SPECGEN004_164
   - [x] `get_trace` отдаёт `design_decisions[]` требования (FR-47c), server bundle пересобран. Verified by SPECGEN004_165. Step-defs tests/step_definitions/feature47_design_trace.ts на реальные parseMarkdown + checkConformance + get_trace
 
-- [ ] P22-3: FR-47 остаток — design-decision-guard + ретрофит дизайн-ног + срезы Story/Research — id: p22-design-trace-rest — Status: TODO | Est: 600m
+- [x] P22-4: story как первоклассный узел графа — Story-узлы + FR_NO_STORY + get_trace user_stories (FR-47, срез 2/3) — id: p22-story-trace-nodes — Status: DONE | Est: 240m
   _depends: p22-design-trace-nodes_
   _Requirements: [FR-47](FR.md#fr-47)_
   **Done When:**
-  - [ ] `design-decision-guard` (FR-47d) денаит блок `### Decision:` без строки `**Требование:** [FR-N]` + unit/BDD
-  - [ ] ретрофит дизайн-ног корпуса (FR_NO_DESIGN на v4 → 0 или принятый долг помечен); промоут FR_NO_DESIGN до ERROR дельта-скоупом
-  - [ ] срез 2 (Story-узлы) + срез 3 (Research-узлы) аналогично Decision: узел+парсер+ребро+проверка+get_trace+BDD+самотрассировка
+  - [x] узел `Story` (types.ts) + парсер `### User Story N:` (parsers/md.ts) → ребро covers FR→Story ТОЛЬКО из явной строки `**Требование:**` (тот же decisionRequirementAfter). Verified by SPECGEN004_166. На живом корпусе 97 Story-узлов построено
+  - [x] `FR_NO_STORY` в conformance.ts (FR без покрывающей Story, граф-нативно; WARNING детект-первый). На живом корпусе 581 FR без story-ноги подсвечены. Verified by SPECGEN004_167
+  - [x] `get_trace` отдаёт `user_stories[]` (FR-47c). Verified by SPECGEN004_168. Step-defs tests/step_definitions/feature48_story_trace.ts на реальные parseMarkdown + checkConformance + get_trace
+
+- [ ] P22-3: FR-47 остаток — guards + ретрофит ног + единый вердикт полноты + research-нога — id: p22-design-trace-rest — Status: TODO | Est: 480m
+  _depends: p22-story-trace-nodes_
+  _Requirements: [FR-47](FR.md#fr-47)_
+  **Done When:**
+  - [ ] `design-decision-guard` + `user-story-form-guard` (FR-47d) денаят блок без строки `**Требование:** [FR-N]` + unit/BDD
+  - [ ] ретрофит design+story-ног корпуса (FR_NO_DESIGN/FR_NO_STORY на v4 → 0 или принятый долг помечен); промоут до ERROR дельта-скоупом
+  - [ ] research-нога ОСТАЁТСЯ существующим детектором `FR_NO_RESEARCH` (research-trace.ts) — RESEARCH.md это проза без чётких per-finding заголовков, моделировать узлом = фаззи-онтология (осознанно НЕ делаем); все 3 ноги ПРОВЕРЯЮТСЯ: design/story как узлы, research как детектор
+  - [ ] единый вердикт «полнота требования»: FR без хоть одной ноги (AC / сценарий / задача / design / story / research) — один сводный сигнал

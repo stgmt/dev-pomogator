@@ -125,7 +125,10 @@ describe('checkConformance — UNCOVERED_FR', () => {
     const g = emptyGraph();
     g.nodes.set('FR-1', fr('FR-1'));
 
-    const findings = checkConformance(g);
+    // Filter to the code under test: a bare FR now also raises FR_NO_DESIGN +
+    // FR_NO_STORY (FR-47 trace-web legs), so the unfiltered array is no longer
+    // length-1. Sibling tests (below) already filter; match them.
+    const findings = checkConformance(g).filter((f) => f.code === 'UNCOVERED_FR');
     expect(findings).toHaveLength(1);
     expect(findings[0]).toMatchObject({
       code: 'UNCOVERED_FR',

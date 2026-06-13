@@ -12368,6 +12368,7 @@ var FR_HEADING_RE = /^FR-(\d+):\s*(.+)$/;
 var NFR_HEADING_RE = /^NFR(?:-([A-Za-z][A-Za-z0-9]*))?-(\d+):\s*(.+)$/;
 var AC_HEADING_RE = /^AC-(\d+(?:\.\d+)?)\s*\(FR-(\d+)\)\s*:?\s*(.*)$/;
 var DECISION_HEADING_RE = /^Decision:\s*(.+)$/;
+var STORY_HEADING_RE = /^User Story \d+:\s*(.+)$/;
 var SHORT_FR_RE = /^FR-(\d+)$/;
 var SHORT_NFR_RE = /^NFR(?:-([A-Za-z][A-Za-z0-9]*))?-(\d+)$/;
 var SHORT_AC_RE = /^AC-(\d+(?:\.\d+)?)$/;
@@ -12583,6 +12584,21 @@ function parseMarkdown(mdSource, relativePath) {
       anchors.push(
         { alias: decId, canonicalId: decId, location },
         { alias: slug, canonicalId: decId, location }
+      );
+      continue;
+    }
+    m = text.match(STORY_HEADING_RE);
+    if (m) {
+      const title = m[1].trim();
+      const storyId = `Story-${slugify(title)}`;
+      const slug = slugify(text);
+      const parentFr = decisionRequirementAfter(lines, i);
+      const node = { id: storyId, type: "Story", title, parentFr, file: relativePath, line, body: text };
+      nodes.push(node);
+      if (parentFr) edges.push({ from: parentFr, to: storyId, type: "covers" });
+      anchors.push(
+        { alias: storyId, canonicalId: storyId, location },
+        { alias: slug, canonicalId: storyId, location }
       );
       continue;
     }

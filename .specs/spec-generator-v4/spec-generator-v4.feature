@@ -1196,3 +1196,22 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given a graph where a Decision covers an FR via an explicit requirement line
     When get_trace runs for that FR
     Then the FR's design_decisions include that Decision
+
+  @feature47
+  Scenario: SPECGEN004_166 a user Story links to its FR only via an explicit requirement line
+    Given a USER_STORIES doc with one Story citing its requirement on a Требование line and one citing a requirement only in prose
+    When the user-stories markdown is parsed
+    Then a Story node and an FR-to-Story covers edge exist for the explicit one
+    And the prose-only Story is a node with no edge
+
+  @feature47
+  Scenario: SPECGEN004_167 conformance flags an FR with no covering user Story
+    Given a graph with an FR that no Story covers
+    When conformance checks the story leg of the graph
+    Then an FR_NO_STORY warning is raised for that FR
+
+  @feature47
+  Scenario: SPECGEN004_168 get_trace surfaces an FR's user stories
+    Given a graph where a Story covers an FR via an explicit requirement line
+    When get_trace runs for that requirement
+    Then the FR's user_stories include that Story

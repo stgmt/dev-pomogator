@@ -41,6 +41,7 @@ import type {
   NfrNode,
   AcNode,
   DecisionNode,
+  StoryNode,
   Edge,
 } from '../types.ts';
 import { specOf, qualifySlice } from '../coverage.ts';
@@ -59,6 +60,9 @@ const AC_HEADING_RE = /^AC-(\d+(?:\.\d+)?)\s*\(FR-(\d+)\)\s*:?\s*(.*)$/;
 // the block (decisionRequirementAfter) — NOT any FR mention in the prose, so the
 // FR↔Decision edge is a real declared link, not a body text-scan (FR-46 «no crutch»).
 const DECISION_HEADING_RE = /^Decision:\s*(.+)$/;
+// Story (USER_STORIES.md): `### User Story N: <title> (Priority: …)`. Same explicit-link
+// rule as Decision — FR from the `**Требование:**` line (decisionRequirementAfter), not prose.
+const STORY_HEADING_RE = /^User Story \d+:\s*(.+)$/;
 
 // FR-7c short-heading forms — the migrated, Marksman-resolvable shape where the
 // heading slug equals the bare id (`## FR-7` → slug `fr-7`, so `[…](#fr-7)`
@@ -382,6 +386,24 @@ export function parseMarkdown(mdSource: string, relativePath: string): ParserOut
       anchors.push(
         { alias: decId, canonicalId: decId, location },
         { alias: slug, canonicalId: decId, location },
+      );
+      continue;
+    }
+
+    // Story: `### User Story N: <title>` (USER_STORIES.md). Parent FR from the explicit
+    // `**Требование:**` line → real FR→Story `covers` edge (the story leg of the web).
+    m = text.match(STORY_HEADING_RE);
+    if (m) {
+      const title = m[1].trim();
+      const storyId = `Story-${slugify(title)}`;
+      const slug = slugify(text); // Marksman slug of the full `User Story N: <title>` heading
+      const parentFr = decisionRequirementAfter(lines, i);
+      const node: StoryNode = { id: storyId, type: 'Story', title, parentFr, file: relativePath, line, body: text };
+      nodes.push(node);
+      if (parentFr) edges.push({ from: parentFr, to: storyId, type: 'covers' });
+      anchors.push(
+        { alias: storyId, canonicalId: storyId, location },
+        { alias: slug, canonicalId: storyId, location },
       );
       continue;
     }
