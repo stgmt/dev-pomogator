@@ -62,7 +62,7 @@ const AC_HEADING_RE = /^AC-(\d+(?:\.\d+)?)\s*\(FR-(\d+)\)\s*:?\s*(.*)$/;
 const DECISION_HEADING_RE = /^Decision:\s*(.+)$/;
 // Story (USER_STORIES.md): `### User Story N: <title> (Priority: …)`. Same explicit-link
 // rule as Decision — FR from the `**Требование:**` line (decisionRequirementAfter), not prose.
-const STORY_HEADING_RE = /^User Story \d+:\s*(.+)$/;
+const STORY_HEADING_RE = /^User Story (\d+):\s*(.+)$/;
 
 // FR-7c short-heading forms — the migrated, Marksman-resolvable shape where the
 // heading slug equals the bare id (`## FR-7` → slug `fr-7`, so `[…](#fr-7)`
@@ -394,8 +394,11 @@ export function parseMarkdown(mdSource: string, relativePath: string): ParserOut
     // `**Требование:**` line → real FR→Story `covers` edge (the story leg of the web).
     m = text.match(STORY_HEADING_RE);
     if (m) {
-      const title = m[1].trim();
-      const storyId = `Story-${slugify(title)}`;
+      const num = m[1];
+      const title = m[2].trim();
+      // Id keyed by the story NUMBER (its identity), not the title alone — two stories
+      // with the same title but different N must NOT collapse to one node (FR-36 collision).
+      const storyId = `Story-${num}-${slugify(title)}`;
       const slug = slugify(text); // Marksman slug of the full `User Story N: <title>` heading
       const parentFr = decisionRequirementAfter(lines, i);
       const node: StoryNode = { id: storyId, type: 'Story', title, parentFr, file: relativePath, line, body: text };

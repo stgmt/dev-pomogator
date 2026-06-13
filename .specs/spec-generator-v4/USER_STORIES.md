@@ -307,54 +307,6 @@ Then result includes finding code `UNTAGGED_SCENARIO` with severity `warning`
 
 ---
 
-### User Story 15: Phase 4 — Side-channel conformance log (Priority: P3)
-
-As a Developer / team lead, I want all conformance findings to be appended to a persistent log `.dev-pomogator/.spec-check-log/<timestamp>.jsonl`, so that I can grep history, run analytics (e.g., "which FRs failed conformance most often"), and audit spec drift over time without flooding agent context.
-
-**Why:** PostToolUse push gives real-time feedback but disappears. Persistent log enables retrospective analysis + team audit + ML training data for future LLM-based checks (Phase 3+).
-
-**Independent Test:** Trigger 5 distinct conformance failures over time → check `.dev-pomogator/.spec-check-log/` contains 5 JSONL entries with timestamps, finding codes, locations, severity; `grep ORPHAN_TASK .dev-pomogator/.spec-check-log/*.jsonl` returns relevant entries chronologically.
-
-**Acceptance Scenarios:**
-
-Given conformance_check produces a finding `SCENARIO_TAG_ORPHAN` for SCEN-x
-When PostToolUse hook completes
-Then a JSONL line is appended to `.dev-pomogator/.spec-check-log/<YYYY-MM-DD>.jsonl` containing { timestamp, finding_code, severity, location, message }
-
-Given the log file exceeds 10MB
-When the next append happens
-Then the file is rotated to `.spec-check-log/<YYYY-MM-DD>-<N>.jsonl` and a new file starts (size-based rotation, не дата)
-
-Given the user runs `dev-pomogator spec-check-log --since 7d --grep ORPHAN_TASK`
-When the CLI processes the request
-Then it returns aggregated counts per FR + per file with last occurrence timestamp
-
----
-
-### User Story 16: Phase 4 — GitHub Codespaces support (Priority: P3)
-
-As a Developer using GitHub Codespaces (cloud devcontainer with persistent volume), I want dev-pomogator v4 MCP server to start automatically in Codespaces lifecycle, handle persistent volume FS semantics correctly, and survive container hibernation/restart, so that Codespaces user gets same workflow as local devcontainer.
-
-**Why:** Codespaces has unique constraints: ephemeral CPU (hibernation), persistent `/workspaces/` volume (not bind-mount), built-in port forwarding, postCreate/postStart lifecycle hooks. Generic devcontainer support (US-14) covers most but Codespaces specifics need explicit verification.
-
-**Independent Test:** Spin up GitHub Codespaces from a repo with dev-pomogator v4 installed → verify MCP server auto-starts via `postStartCommand` in `.devcontainer/devcontainer.json` → run `get_trace("FR-001")` → hibernate codespace → resume → verify MCP server resumes with intact spec graph (rebuild ≤2s).
-
-**Acceptance Scenarios:**
-
-Given a Codespaces environment with dev-pomogator v4 in `.devcontainer/devcontainer.json`
-When the codespace starts (cold or warm)
-Then `postStartCommand` launches MCP server and writes lock file `.dev-pomogator/.mcp-lock.json` with `env: "codespaces:<machine-id>"`
-
-Given Codespace hibernates after 30 minutes of inactivity
-When user resumes the codespace
-Then MCP server auto-restarts via postStart hook + reuses in-memory rebuild from persistent `/workspaces/` files within 2s
-
-Given Codespaces persistent volume (`/workspaces/`) is used (not bind-mount)
-When chokidar runs touch test
-Then native FS events work (no polling fallback needed); test passes within 500ms
-
----
-
 ### User Story 17: Phase 7 — Cross-spec conflict detection during spec authoring (Priority: P1)
 
 As a spec author drafting a new `.specs/{slug}/`, I want create-spec workflow to automatically detect conflicts between my draft and existing specs in `.specs/*/` — runtime identifier drift (e.g. my spec writes `sessionToken` while another spec uses `session_token` for the same concept), module ownership conflicts (two specs claim `src/auth/jwt.ts`), contradictory FRs, NFR budget mismatches — so that I learn about cross-spec collisions during Phase 2/3 STOP gates rather than discovering them weeks later during implementation merge.
