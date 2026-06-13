@@ -1589,3 +1589,17 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   _Requirements: [FR-48](FR.md#fr-48)_
   **Done When:**
   - [x] `npm run build:bundles` (дверь/push/gate); полный cucumber 174/174; collision-probe 0; spec-verdict GREEN; Docker — мои тесты зелёные, остаток = известный флак-набор (analyze-features/SPECGEN003/registry-parity/doctor-core)
+
+## Phase 24 — FR-48e: жизненный цикл статусов на ВСЕ сущности (диспетчер по типу)
+
+- [x] P24-1: отказ контенту с вычисленным вердиктом (диспетчер: derived → STATUS_DERIVED) — id: p24-derived-refusal — Status: DONE | Est: 90m
+  _depends: p23-rebuild-verify_
+  _Requirements: [FR-48](FR.md#fr-48)_
+  **Done When:**
+  - [x] `set_entity_status` принимает ЛЮБУЮ сущность; не-Task узел → `refuseDerived` (FR → живой `computeFrCensus` вердикт + missingLegs; прочее → `STATUS_DERIVED` + указатель на fr-census/get_spec_status). FR-48e + AC-48.2 + DESIGN-решение записаны через дверь; FR-48d CAS сужен до задач; серверный бандл пересобран. Verified by SPECGEN004_175 (реальный temp-repo). spec-verdict GREEN. Коммит 3fa4db8
+
+- [x] P24-2: авторский путь ФАЗЫ через дверь (гейт + делегирование канонического писателя) — id: p24-phase-path — Status: DONE | Est: 150m
+  _depends: p24-derived-refusal_
+  _Requirements: [FR-48](FR.md#fr-48)_
+  **Done When:**
+  - [x] `phase-lifecycle.ts` (parsePhaseId / canConfirmPhaseStop = порядок STOP + входы + предусловие Requirements / `done`-only переход); `set_entity_status` перехватывает id фазы ДО графа → гейт → спавн `node specs-generator-core.mjs spec-status -ConfirmStop` (паттерн create_spec, plain-ESM, без tsx/второго писателя); task-словарь на фазе = ILLEGAL-for-type; `get_spec_status` публикует `phases[]` (discoverability FR-48c). Verified by SPECGEN004_176/177 (реальный спавн + реальный обработчик); @feature48 7/7; @feature38 5/5; deps-absent доказан статически; бандл пересобран. Коммит 3d9ee23
