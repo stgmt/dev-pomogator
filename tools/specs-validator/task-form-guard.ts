@@ -77,7 +77,7 @@ async function main(): Promise<void> {
   const msg =
     `${violations.length} task(s) failed v3 form validation in ${specInfo.filename}:\n` +
     lines.join('\n') +
-    `\n\nRequired per task: **Done When:** block with ≥1 \`- [ ]\` checkbox, \`Status: TODO|IN_PROGRESS|DONE|BLOCKED\`, \`Est: <N>m\`.\n` +
+    `\n\nRequired per task: **Done When:** block with ≥1 \`- [ ]\` checkbox, \`Status: TODO|READY|IN_PROGRESS|DONE|BLOCKED\`, \`Est: <N>m\`.\n` +
     `Tasks in Phase -1 (Infrastructure) are exempt; mark explicit waivers with \`_waived: {reason}_\`.\n` +
     `Fix: call Skill("task-board-forms") to enrich tasks with Done When/Status/Est.`;
   deny(msg, filePath);

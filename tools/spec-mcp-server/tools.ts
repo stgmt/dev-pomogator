@@ -42,6 +42,7 @@ import { logSpecAccess } from './spec-access-log.ts';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { validateSpecChange, writeDocAtomic, isSafeSlug, resolveSpecDoc, docSha, casCheck, validateTarget, findInboundLinks, rewriteInboundLinks, isArchivedSlug, type SpecChange } from './mutations.ts';
+import { setEntityStatus } from './set-status.ts';
 import type {
   SpecGraph,
   Node,
@@ -1323,6 +1324,48 @@ export function buildToolRegistry(
       registryOpts.refreshGraph?.();
       logSpecAccess('apply_spec_change', args, 'ok');
       return asJsonResult({ ok: true, spec: slug, doc, path: abs, bytes: r.next!.length, sha: docSha(r.next!), findings: [] });
+    },
+  });
+
+  // ─── 18a) set_entity_status — FR-48d centralized validated status transition ──
+  tools.push({
+    name: 'set_entity_status',
+    description:
+      'FR-48 «жизненный цикл»: transition a task to a new status THROUGH the door. Validates ' +
+      'the lifecycle move (todo→ready→in-progress→done + reverse; no skip-to-finish) and, for a ' +
+      'WORKING status (ready/in-progress), REFUSES unless the requirement chain is assembled — ' +
+      'AC + scenario + design + story (impl tasks); a [spec-phase] task is exempt (anti-deadlock, ' +
+      'it authors the legs). On refusal the reply names the missing legs. A valid move flips the ' +
+      'Status: marker via the same validated atomic write as apply_spec_change (CAS via expected_sha).',
+    inputShape: {
+      id: z.string(),
+      to: z.enum(['todo', 'ready', 'in-progress', 'done', 'blocked']),
+      expected_sha: z.string().optional(),
+    } as const satisfies z.ZodRawShape,
+    handler: async (args) => {
+      const ro = readOnlyRefusal('set_entity_status', args);
+      if (ro) return ro;
+      const res = setEntityStatus(getGraph(), process.cwd(), {
+        id: args.id as string,
+        to: args.to as 'todo' | 'ready' | 'in-progress' | 'done' | 'blocked',
+        expectedSha: typeof args.expected_sha === 'string' ? args.expected_sha : undefined,
+      });
+      if (!res.ok) {
+        logSpecAccess('set_entity_status', args, 'denied');
+        return asJsonResult({
+          ok: false,
+          error: res.error,
+          id: args.id,
+          from: res.from,
+          to: res.to,
+          reason: res.reason,
+          missing: res.missing,
+          hint: 'Run /task-status: read the trace, assemble the missing legs, then retry — or mark the task [spec-phase] if it authors them.',
+        });
+      }
+      registryOpts.refreshGraph?.();
+      logSpecAccess('set_entity_status', args, 'ok');
+      return asJsonResult({ ok: true, id: args.id, from: res.from, to: res.to });
     },
   });
 

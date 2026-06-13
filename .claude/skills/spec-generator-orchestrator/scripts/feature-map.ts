@@ -83,6 +83,7 @@ export const REFERENCED_CAPABILITIES: readonly string[] = [
   'create_spec',
   'delete_spec_doc', // P19-4 the D of the CRUD door — doc-level, FR-43 guards whole-spec retirement
   'rename_spec_doc', // P21-5 rename/move door — anchors-aware, same create-spec owner
+  'set_entity_status', // FR-48d centralized validated status transition — consumed by task-status
   'get_archival_proof', // FR-45a archival safety proof (graph + prose inbound refs)
   'archive_spec', // FR-45b gated whole-spec move into archive/ — consumed by spec-archive
   // worker skills
@@ -137,6 +138,7 @@ export const TOOL_CONSUMERS: Readonly<Record<string, readonly string[]>> = {
   create_spec: ['create-spec'],
   delete_spec_doc: ['create-spec'], // P19-4 D-door — same mutation-door owner
   rename_spec_doc: ['create-spec'], // P21-5 rename/move door — same mutation-door owner (FR-42c)
+  set_entity_status: ['task-status'], // FR-48d — the status-lifecycle command, driven by the task-status skill
   get_archival_proof: ['spec-archive'], // FR-45a — the archival agent drives the proof
   archive_spec: ['spec-archive'], // FR-45b — the archival agent drives the gated move
 };

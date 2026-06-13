@@ -96,7 +96,7 @@ export interface TaskBlock {
 const PHASE_HEADING = /^(?:##|###)\s+(Phase\s+[-\d]+\S*.*?)$/i;
 const TASK_BULLET = /^-\s+\[[ x]\]\s+(.+)$/;
 const TASK_HEADING = /^###\s+📋\s+`([^`]+)`/;
-const STATUS_TAG = /Status:\s*(TODO|IN_PROGRESS|DONE|BLOCKED)/;
+const STATUS_TAG = /Status:\s*(TODO|READY|IN_PROGRESS|DONE|BLOCKED)/;
 const EST_TAG = /Est:\s*\d+\s*m/i;
 
 export function parseTaskBlocks(content: string): TaskBlock[] {
