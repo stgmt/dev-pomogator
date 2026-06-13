@@ -240,3 +240,52 @@ describe('CEGATE001: pure classifier units', () => {
     expect(out.replace(/\s+/g, ' ').trim()).toBe('текст и конец');
   });
 });
+
+describe('CEGATE001: claim-evidence gate — spec-false-close class (FR-49b)', () => {
+  function writeCensus(
+    d: string,
+    total: { open: number; doneRed: number; doneUnrun: number },
+    nextOpen?: { id: string; title: string },
+  ): void {
+    const cacheDir = path.join(d, '.dev-pomogator');
+    fs.mkdirSync(cacheDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(cacheDir, '.task-census.json'),
+      JSON.stringify({ total, specs: [{ slug: 'demo', ...total, nextOpen }], ts: '2026-06-13T00:00:00Z' }),
+    );
+  }
+
+  // @feature49 — the escaped false-close: executor ran + no defer phrasing, but the spec is unfinished.
+  it('CEGATE001_17: blocks a whole-spec "done" claim when the census shows unfinished work', () => {
+    writeCensus(dir, { open: 11, doneRed: 0, doneUnrun: 0 }, { id: 'demo:t1', title: 'Wire the gate' });
+    const { blocked, raw } = runHook([
+      U('закрой спеку'),
+      A([tool('Bash', { command: 'git commit -m done' })]), // executor ran → works-done satisfied; no defer phrasing
+      A([txt('Спека готова, всё закрыто. 37 из 48.')]),
+    ]);
+    expect(blocked).toBe(true);
+    expect(raw).toMatch(/в работе|незакрыто/); // real numbers injected
+    expect(raw).toMatch(/Wire the gate/); // names the next step
+  });
+
+  // @feature49 — anti-H1: a NON-spec completion claim must NOT trip the census branch.
+  it('CEGATE001_18: does NOT fire on a non-spec works-done claim even with unfinished census', () => {
+    writeCensus(dir, { open: 11, doneRed: 0, doneUnrun: 0 });
+    const { blocked } = runHook([
+      U('почини импорт'),
+      A([tool('Bash', { command: 'npx tsx build.ts' })]), // executor → works-done satisfied
+      A([txt('Поправил импорт, всё работает.')]), // task-level, not whole-spec
+    ]);
+    expect(blocked).toBe(false);
+  });
+
+  // @feature49 — a whole-spec claim is fine when the census is clean (no unfinished work).
+  it('CEGATE001_19: does NOT fire on a whole-spec claim when the census is clean/absent', () => {
+    const { blocked } = runHook([
+      U('закрой спеку'),
+      A([tool('Bash', { command: 'git commit -m done' })]),
+      A([txt('Спека полностью готова.')]), // no census cache in dir → censusReminder null
+    ]);
+    expect(blocked).toBe(false);
+  });
+});

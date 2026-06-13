@@ -31,7 +31,8 @@ import path from 'node:path';
 import { log as _logShared, normalizePath } from '../_shared/hook-utils.ts';
 import { markerPath, readMarker, writeMarkerAtomic, isWithinCooldown, hashFileList } from '../_shared/marker-utils.ts';
 import { extractTurnWindow } from './turn_window.ts';
-import { firstUnsupported } from './claim_classifier.ts';
+import { firstUnsupported, isSpecCompletionClaim } from './claim_classifier.ts';
+import { readTaskCensusCache } from '../spec-graph/task-census.ts';
 
 interface StopHookInput {
   cwd?: string;
@@ -91,6 +92,28 @@ function logFire(repoRoot: string, entry: Record<string, unknown>): void {
   }
 }
 
+/**
+ * FR-49b: the real unfinished-work tally from the task-census cache (the same cache
+ * the per-prompt banner reads — cheap JSON, never builds the graph). Null when the
+ * cache is absent or everything is finished. Fail-open on any error.
+ */
+function censusReminder(repoRoot: string): string | null {
+  try {
+    const c = readTaskCensusCache(repoRoot);
+    if (!c) return null;
+    const t = c.total;
+    if (t.open + t.doneRed + t.doneUnrun === 0) return null;
+    const parts = [`${t.open} в работе`];
+    if (t.doneRed) parts.push(`${t.doneRed} 🔴 done-but-red`);
+    if (t.doneUnrun) parts.push(`${t.doneUnrun} ⏸ done-but-not-run`);
+    const top = c.specs[0];
+    const next = top?.nextOpen ? ` Следующее: ${top.nextOpen.title} [${top.nextOpen.id}].` : '';
+    return `перепись (${c.ts}): ${parts.join(', ')} незакрыто${top ? `, самая нагруженная — ${top.slug}` : ''}.${next}`;
+  } catch {
+    return null;
+  }
+}
+
 async function main(): Promise<void> {
   const config = getConfig();
   if (config.mode === 'false') return approve();
@@ -120,10 +143,19 @@ async function main(): Promise<void> {
   const { claimText, toolUses } = extractTurnWindow(rawTranscript);
   if (!claimText.trim() || SELF_MARKERS.some((m) => claimText.includes(m))) return approve();
 
-  const unsupported = firstUnsupported(claimText, toolUses, config.minSearch);
+  const repoRoot = normalizePath(input.cwd || input.workspace_roots?.[0] || process.cwd());
+
+  let unsupported = firstUnsupported(claimText, toolUses, config.minSearch);
+  // FR-49b: a WHOLE-SPEC "done" claim while the task-census shows unfinished work is a
+  // false-close — block even when tools ran and there is no defer phrasing (the gap the
+  // text classes miss). Tightly spec-scoped: isSpecCompletionClaim is whole-spec (not
+  // per-task) AND requires a REAL unfinished census, so a non-spec "fixed it" never trips it.
+  const censusMsg = isSpecCompletionClaim(claimText) ? censusReminder(repoRoot) : null;
+  if (!unsupported && censusMsg) {
+    unsupported = { cls: 'spec-false-close', need: censusMsg };
+  }
   if (!unsupported) return approve();
 
-  const repoRoot = normalizePath(input.cwd || input.workspace_roots?.[0] || process.cwd());
   logFire(repoRoot, {
     ts: new Date().toISOString(),
     class: unsupported.cls,
@@ -155,17 +187,24 @@ async function main(): Promise<void> {
   writeMarkerAtomic(mp, { hash: currentHash, timestamp: new Date().toISOString(), count: newCount });
 
   log('INFO', `blocking ${unsupported.cls} (attempt ${newCount})`);
-  if (unsupported.cls === 'deferred-work') {
+  const censusTail = censusMsg && unsupported.cls !== 'spec-false-close' ? `\n📋 ${censusMsg}` : '';
+  if (unsupported.cls === 'spec-false-close') {
+    block(
+      `⚠️ ${SELF_MARKER}: ты заявил завершение СПЕКИ/фичи, но ${unsupported.need}\n` +
+        `Не закрывай как «готово» — доделай открытое или назови ОДИН конкретный следующий шаг. ` +
+        `GREEN-вердикт = «нет вранья про готовность», НЕ «спека закончена».`,
+    );
+  } else if (unsupported.cls === 'deferred-work') {
     block(
       `⚠️ ${SELF_MARKER}: ты сам обозначил остаток работы / отложил следующий шаг и сдаёшь ход.\n` +
         `ДОДЕЛЫВАЙ в этом же ходе — ${unsupported.need}.\n` +
-        `Не перекладывай следующий шаг на пользователя «скажешь — сделаю». Если реально заблокирован — задай ОДИН конкретный вопрос; иначе продолжай работу.`,
+        `Не перекладывай следующий шаг на пользователя «скажешь — сделаю». Если реально заблокирован — задай ОДИН конкретный вопрос; иначе продолжай работу.${censusTail}`,
     );
   } else {
     block(
       `⚠️ ${SELF_MARKER}: ты заявил результат (${unsupported.cls}), но в этом ходе нет улики, которая его породила.\n` +
         `Нужно: ${unsupported.need}.\n` +
-        `Сначала реально прогони проверку, потом заявляй — либо явно пометь [UNVERIFIED] если проверить нельзя.`,
+        `Сначала реально прогони проверку, потом заявляй — либо явно пометь [UNVERIFIED] если проверить нельзя.${censusTail}`,
     );
   }
 }

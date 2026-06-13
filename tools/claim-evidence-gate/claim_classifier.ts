@@ -17,7 +17,11 @@ export type ClaimClass =
   | 'works-done'
   | 'not-found-impossible'
   | 'verified-marker'
-  | 'deferred-work';
+  | 'deferred-work'
+  // FR-49b: synthesized by the Stop hook (NOT classify()) — a whole-spec completion
+  // claim while the task-census shows unfinished work. Needs repoRoot (cache read),
+  // so it lives in the hook, not the pure text classifier.
+  | 'spec-false-close';
 
 export interface ClaimHit {
   cls: ClaimClass;
@@ -170,6 +174,34 @@ const DEFERRED_WORK = new RegExp(
 /** True when the message hands the next step / a decision back to the user. */
 export function isDeferredWork(text: string): boolean {
   return DEFERRED_WORK.test(text);
+}
+
+// ── spec-completion detector (FR-49b) ────────────────────────────────────────
+// A WHOLE-SPEC / feature completion assertion — NOT a per-task / per-FR claim and
+// NOT a progress report. Tightly scoped (anti-H1, the advisor's main concern): the
+// Stop hook pairs a TRUE here with the task-census cache — a "the spec/feature is
+// done" claim WHILE the census shows unfinished work is the false-close to block
+// with real numbers. Must NOT match: "задача готова", "FR-49a готов", "fixed the
+// typo", "37 из 48 готовы" (a progress report), "спека готова к ревью" (ready-for-X,
+// not done). Requires a whole-scope noun (спека/фича/all requirements) bound to a
+// done-word, OR an explicit "вся работа/all done" — never a bare "готово".
+const SPEC_COMPLETION = new RegExp(
+  [
+    '(?:спек[ауи]|фич[ауи]|фича)\\s+(?:полностью\\s+|целиком\\s+)?(?:готов[ао]?|заверш[ёе]н\\S*|закончен\\S*|сделан\\S*|done|complete|finished)(?!\\s+к\\s)',
+    '(?:вся|все)\\s+(?:спека|фича|требовани\\S+|работа)\\s+(?:готов\\S*|реализован\\S*|сделан\\S*|закрыт\\S*|заверш\\S*)',
+    'все\\s+требовани\\S+\\s+(?:готов\\S*|реализован\\S*|сделан\\S*|закрыт\\S*|выполнен\\S*)',
+    '(?:the\\s+)?(?:spec|feature|all\\s+requirements)\\s+(?:is\\s+|are\\s+)?(?:fully\\s+)?(?:done|complete|finished|shipped)\\b',
+  ].join('|'),
+  'i',
+);
+
+/**
+ * True when the message asserts a WHOLE-SPEC/feature is complete (not a single
+ * task/FR, not a progress report). The Stop hook gates this against the live
+ * task-census: whole-spec "done" + unfinished census = false-close (FR-49b).
+ */
+export function isSpecCompletionClaim(text: string): boolean {
+  return SPEC_COMPLETION.test(stripCode(text));
 }
 
 /** Diagnostic: the matched defer phrase + a little context (for dogfood/logging), or null. */
