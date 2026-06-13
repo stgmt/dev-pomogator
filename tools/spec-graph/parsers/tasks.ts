@@ -21,6 +21,7 @@ import { specOf, qualifySlice } from '../coverage.ts';
 
 const STATUS_MAP: Record<string, TaskNode['status']> = {
   TODO: 'todo',
+  READY: 'ready',
   IN_PROGRESS: 'in-progress',
   DONE: 'done',
   BLOCKED: 'blocked',
@@ -30,7 +31,7 @@ const STATUS_MAP: Record<string, TaskNode['status']> = {
 function headerOf(line: string): { id: string; status: string } | null {
   if (!/^\s*-\s*\[[ xX~]\]/.test(line)) return null;
   const id = line.match(/\bid:\s*([\w.\-]+)/);
-  const status = line.match(/\bStatus:\s*(TODO|IN_PROGRESS|DONE|BLOCKED)\b/);
+  const status = line.match(/\bStatus:\s*(TODO|READY|IN_PROGRESS|DONE|BLOCKED)\b/);
   if (!id || !status) return null;
   return { id: id[1], status: status[1] };
 }

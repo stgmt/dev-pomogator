@@ -148,7 +148,14 @@ export interface ScenarioNode extends NodeBase {
 
 export interface TaskNode extends NodeBase {
   type: 'Task';
-  status: 'todo' | 'in-progress' | 'done' | 'blocked';
+  /**
+   * Hand-set lifecycle status (TASKS.md `Status:`). `ready` (FR-48a) is the new
+   * node between `todo` and `in-progress`: «the requirement chain is assembled +
+   * validated, the task is eligible to start». Quality verdicts
+   * (done-unverified / IMPLEMENTED / PLANNED) are NOT stored here — fr-census
+   * derives them from status + scenario result (one source of truth).
+   */
+  status: 'todo' | 'ready' | 'in-progress' | 'done' | 'blocked';
   /** FR/NFR ids the task implements. */
   refs: string[];
   /** Optional human title. */
