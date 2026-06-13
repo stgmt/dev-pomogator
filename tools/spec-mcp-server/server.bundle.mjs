@@ -49923,6 +49923,10 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
           to: res.to,
           reason: res.reason,
           missing: res.missing,
+          // FR-48e: surface the structured refusal — entity_type + the live computed
+          // verdict on a STATUS_DERIVED (derived entities are not hand-set).
+          entity_type: res.entityType,
+          verdict: res.verdict,
           hint: "Run /task-status: read the trace, assemble the missing legs, then retry \u2014 or mark the task [spec-phase] if it authors them."
         });
       }

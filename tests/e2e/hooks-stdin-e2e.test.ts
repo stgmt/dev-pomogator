@@ -220,4 +220,70 @@ describe('spec-mcp-server initialize + tools/list + get_trace via real stdin', (
     expect(payload.ok).toBe(true);
     expect(payload.node?.id).toBe('auth:FR-1');
   });
+
+  it('set_entity_status (FR-48e): derived FR refused with verdict + a phase STOP confirmed through the bundle', () => {
+    // .progress.json (v4) makes the phase authored-path live; USER_STORIES = a Discovery input.
+    fs.writeFileSync(path.join(tmp, '.specs/auth/USER_STORIES.md'), '## User Story 1: As a user\n');
+    const mk = () => ({ completedAt: null, stopConfirmed: false, stopConfirmedAt: null });
+    fs.writeFileSync(
+      path.join(tmp, '.specs/auth/.progress.json'),
+      JSON.stringify({
+        version: 4, featureSlug: 'auth', createdAt: '2026-01-01T00:00:00.000Z', currentPhase: 'Discovery',
+        phases: { Discovery: mk(), Context: mk(), Requirements: mk(), Finalization: mk() },
+      }),
+    );
+    const init = JSON.stringify({
+      jsonrpc: '2.0', id: 1, method: 'initialize',
+      params: { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'e2e', version: '0' } },
+    });
+    const call = (id: number, name: string, args: Record<string, unknown>) =>
+      JSON.stringify({ jsonrpc: '2.0', id, method: 'tools/call', params: { name, arguments: args } });
+    // Spawn the BUNDLE (what users launch). The phase confirm spawns the canonical
+    // `node specs-generator-core.mjs spec-status -ConfirmStop` writer from inside it.
+    const result = spawnSync(
+      process.execPath,
+      [path.join(REPO_ROOT, 'tools/spec-mcp-server/server.bundle.mjs')],
+      {
+        input:
+          [
+            init,
+            call(2, 'set_entity_status', { id: 'auth:FR-1', to: 'in-progress' }),
+            call(3, 'set_entity_status', { id: 'auth:phase:Discovery', to: 'done' }),
+            call(4, 'get_spec_status', { spec: 'auth' }),
+          ].join('\n') + '\n',
+        encoding: 'utf8',
+        cwd: tmp,
+        env: { ...process.env, DEV_POMOGATOR_REPO_ROOT: tmp },
+        timeout: 20_000,
+      },
+    );
+    const byId: Record<number, { result?: { content?: Array<{ text: string }> } }> = {};
+    for (const l of result.stdout.split('\n')) {
+      const t = l.trim();
+      if (!t.startsWith('{')) continue;
+      try {
+        const o = JSON.parse(t) as { id?: number; result?: { content?: Array<{ text: string }> } };
+        if (o.id != null) byId[o.id] = o;
+      } catch {
+        /* non-JSON noise */
+      }
+    }
+    const body = (id: number) => JSON.parse(byId[id]?.result?.content?.[0]?.text ?? '{}') as Record<string, unknown>;
+
+    // (2) derived FR → refused with the COMPUTED verdict (not hand-set).
+    const d2 = body(2);
+    expect(d2.error).toBe('STATUS_DERIVED');
+    expect(d2.entity_type).toBe('FR');
+    expect(typeof d2.verdict).toBe('string');
+    // (3) Discovery phase STOP (first phase, input present) → confirmed via the canonical writer.
+    expect(body(3).ok).toBe(true);
+    const prog = JSON.parse(fs.readFileSync(path.join(tmp, '.specs/auth/.progress.json'), 'utf8')) as {
+      phases: { Discovery: { stopConfirmed: boolean } };
+    };
+    expect(prog.phases.Discovery.stopConfirmed).toBe(true);
+    // (4) get_spec_status publishes the settable phase ids + live state (FR-48c discoverability).
+    const d4 = body(4) as { phases?: Array<{ id: string; stop_confirmed: boolean }> };
+    const disc = (d4.phases ?? []).find((p) => p.id === 'auth:phase:Discovery');
+    expect(disc?.stop_confirmed).toBe(true);
+  });
 });
