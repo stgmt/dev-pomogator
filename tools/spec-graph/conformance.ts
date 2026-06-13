@@ -46,6 +46,8 @@ export type FindingCode =
   | 'FR_NO_RESEARCH'
   | 'FR_NO_DESIGN'
   | 'FR_NO_STORY'
+  | 'TOOTHLESS_DECISION'
+  | 'TOOTHLESS_STORY'
   | 'UPSTREAM_UNLINKED';
 
 export type Severity = 'error' | 'warning' | 'info';
@@ -225,6 +227,32 @@ export function checkConformance(
       nodeId: node.id,
       suggestions: [
         { action: 'link_story', reason: 'Add a `**Требование:** [FR-N]` line to the User Story that motivates this FR.', confidence: 'medium' },
+      ],
+    });
+  }
+
+  // 1d) TOOTHLESS_DECISION / TOOTHLESS_STORY (FR-47d) — a `### Decision:` / `### User
+  // Story:` block that declares NO `**Требование:** [FR-N]` line: its parentFr is empty,
+  // so the FR→Decision/Story `covers` edge can't be built and the design/story leg dangles.
+  // Decision/Story-CENTRIC mirror of the FR-centric FR_NO_DESIGN/FR_NO_STORY — the two ends
+  // of the same edge. WARNING (detect-first, staged → ERROR after the corpus is retrofitted;
+  // a hard gate now would wedge the door on the pre-existing unlabelled blocks).
+  for (const node of graph.nodes.values()) {
+    if (node.type !== 'Decision' && node.type !== 'Story') continue;
+    if ((node as { parentFr?: string }).parentFr) continue; // has a **Требование:** line → edge built
+    const isDecision = node.type === 'Decision';
+    findings.push({
+      code: isDecision ? 'TOOTHLESS_DECISION' : 'TOOTHLESS_STORY',
+      severity: 'warning',
+      location: { file: node.file, line: node.line },
+      message: `${isDecision ? 'Decision' : 'User Story'} ${node.id} declares no \`**Требование:** [FR-N]\` line — it covers no requirement, so the ${isDecision ? 'design' : 'story'} leg dangles (FR-47d). The covers edge is built ONLY from that line.`,
+      nodeId: node.id,
+      suggestions: [
+        {
+          action: isDecision ? 'link_decision_requirement' : 'link_story_requirement',
+          reason: 'Add a `**Требование:** [FR-N]` line inside the block, pointing at the requirement it serves.',
+          confidence: 'high',
+        },
       ],
     });
   }

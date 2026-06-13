@@ -1540,9 +1540,14 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] research-нога = существующий детектор `findFrsWithoutResearch` (research-trace.ts), переданный в computeFrCensus set'ом — research остаётся ДЕТЕКТОРОМ (проза, нет чёткого per-finding узла), не моделируется узлом
   - [x] попутный фикс латентного бага: fr-census `acCovers` строился из ВСЕХ covers-рёбер → FR с Decision/Story-ребром ложно читался `AC:✓`; сплит по типу цели (зеркало conformance). Step-defs tests/step_definitions/feature47b_completeness_trace.ts на реальный computeFrCensus
 
-- [ ] P22-3: FR-47 остаток — формат-стражи (FR-47d) + ретрофит ног корпуса + промоут до ERROR — id: p22-design-trace-rest — Status: TODO | Est: 360m
+- [x] P22-6: формат-страж FR-47d — TOOTHLESS_DECISION/STORY в conformance (дверь-путь) — id: p22-toothless-guard — Status: DONE | Est: 150m
   _depends: p22-completeness-verdict_
   _Requirements: [FR-47](FR.md#fr-47)_
   **Done When:**
-  - [ ] `design-decision-guard` + `user-story-form-guard` (FR-47d) денаят блок `### Decision:` / `### User Story:` без строки `**Требование:** [FR-N]` + unit/BDD
-  - [ ] ретрофит design+story-ног корпуса (FR_NO_DESIGN/FR_NO_STORY на v4 → 0 или принятый долг помечен); промоут до ERROR дельта-скоупом
+  - [x] `checkConformance` даёт TOOTHLESS_DECISION/TOOTHLESS_STORY для блока `### Decision:`/`### User Story:` с пустым parentFr (нет строки `**Требование:**`) — WARNING детект-первый. Decision/Story-центричное зеркало FR_NO_DESIGN/FR_NO_STORY (два конца ребра). Verified by SPECGEN004_170. NB: существующие Write-стражи (design-decision-guard.ts, v3-only) под enforce НЕ срабатывают (дверь обходит Write) → enforcement в conformance, урок FR-46. Бандлы пересобраны. Step-defs tests/step_definitions/feature47d_toothless_guard.ts на реальный checkConformance
+
+- [ ] P22-3: FR-47 остаток — ретрофит design/story-ног корпуса + промоут стражей WARNING→ERROR — id: p22-design-trace-rest — Status: TODO | Est: 300m
+  _depends: p22-toothless-guard_
+  _Requirements: [FR-47](FR.md#fr-47)_
+  **Done When:**
+  - [ ] ретрофит design+story-ног корпуса (FR_NO_DESIGN / FR_NO_STORY / TOOTHLESS_* на v4 → 0 или принятый долг помечен); промоут детект-правил WARNING→ERROR дельта-скоупом. NB: ретрофит ~580 FR — инкрементальный (по спеке при касании), не разовый прогон

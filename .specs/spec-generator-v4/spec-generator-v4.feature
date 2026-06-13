@@ -1221,3 +1221,9 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given a graph with a fully-legged FR and a sibling FR missing only its research leg
     When fr-census computes the completeness verdict
     Then the fully-legged FR is web-complete and the other FR misses only research
+
+  @feature47
+  Scenario: SPECGEN004_170 conformance flags a Decision or Story that declares no requirement line
+    Given a graph with a Decision and a Story that declare no requirement line, plus one labelled Decision
+    When conformance checks the toothless-block guard
+    Then TOOTHLESS_DECISION and TOOTHLESS_STORY fire for the unlabelled blocks but not the labelled one

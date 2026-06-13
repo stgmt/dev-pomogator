@@ -14339,6 +14339,25 @@ function checkConformance(graph, opts = {}) {
     });
   }
   for (const node of graph.nodes.values()) {
+    if (node.type !== "Decision" && node.type !== "Story") continue;
+    if (node.parentFr) continue;
+    const isDecision = node.type === "Decision";
+    findings.push({
+      code: isDecision ? "TOOTHLESS_DECISION" : "TOOTHLESS_STORY",
+      severity: "warning",
+      location: { file: node.file, line: node.line },
+      message: `${isDecision ? "Decision" : "User Story"} ${node.id} declares no \`**\u0422\u0440\u0435\u0431\u043E\u0432\u0430\u043D\u0438\u0435:** [FR-N]\` line \u2014 it covers no requirement, so the ${isDecision ? "design" : "story"} leg dangles (FR-47d). The covers edge is built ONLY from that line.`,
+      nodeId: node.id,
+      suggestions: [
+        {
+          action: isDecision ? "link_decision_requirement" : "link_story_requirement",
+          reason: "Add a `**\u0422\u0440\u0435\u0431\u043E\u0432\u0430\u043D\u0438\u0435:** [FR-N]` line inside the block, pointing at the requirement it serves.",
+          confidence: "high"
+        }
+      ]
+    });
+  }
+  for (const node of graph.nodes.values()) {
     if (node.type !== "Task") continue;
     const task = node;
     for (const ref of task.refs) {
