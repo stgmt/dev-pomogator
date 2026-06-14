@@ -484,10 +484,10 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] Default `skip` after 30s no input
   - [ ] @feature11 SPECGEN004_25 passes
 
-- [ ] Verify Phase 5 Red→Green -- @feature11 — id: verify-phase5-green — Status: TODO | Est: 60m
+- [x] Verify Phase 5 Red→Green -- @feature11 — id: verify-phase5-green — Status: DONE (2026-06-14) | Est: 60m
   _depends: interactive-prompt_
   **Done When:**
-  - [ ] Phase 5 scenarios pass
+  - [x] Phase 5 scenarios pass (full cucumber run 2026-06-14: 180 scenarios / 1283 steps all passed, incl. @feature11 SPECGEN004_24/_25/_176)
 
 ## Phase 6: architecture-research-workflow skill (In Progress — TODO remain)
 
