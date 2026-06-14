@@ -20,14 +20,28 @@ describe('POMOGATORDOCTOR001 — Meridian proxy health (FR-49)', () => {
     await killAllChildren();
   });
 
-  it('POMOGATORDOCTOR001_40: gated out when Meridian is not opted in', async () => {
-    delete process.env.CLAIM_GATE_JUDGE;
+  it('POMOGATORDOCTOR001_40: gated out only when judge explicitly disabled + proxy not wired', async () => {
+    process.env.CLAIM_GATE_JUDGE = 'false'; // judge off AND temp projectDir has no proxy infra + no .env
     delete process.env.MERIDIAN_URL;
-    const home = buildTempHome(); // temp projectDir has no proxy infra + no .env
+    const home = buildTempHome();
     try {
       const report = await runDoctor({ homeDir: home.homeDir, projectRoot: home.projectDir });
       expect(report.gatedOut.some((g) => g.id === 'C17')).toBe(true);
       expect(report.results.some((r) => r.id === 'C17')).toBe(false);
+    } finally {
+      home.cleanup();
+    }
+  });
+
+  it('POMOGATORDOCTOR001_43: relevant by default (judge on, parity) — proxy down → warning', async () => {
+    delete process.env.CLAIM_GATE_JUDGE; // unset → judge ON by default → Meridian expected → check relevant
+    process.env.MERIDIAN_URL = 'http://127.0.0.1:59599'; // nothing listening
+    const home = buildTempHome();
+    try {
+      const report = await runDoctor({ homeDir: home.homeDir, projectRoot: home.projectDir });
+      expect(report.gatedOut.some((g) => g.id === 'C17')).toBe(false);
+      const c17 = findC17(report.results);
+      expect(c17?.severity).toBe('warning');
     } finally {
       home.cleanup();
     }

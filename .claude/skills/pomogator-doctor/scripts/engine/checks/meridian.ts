@@ -15,13 +15,13 @@ const PROBE_TIMEOUT_MS = 500; // SessionStart budget: a down proxy is instant EC
 const proxyUrl = () => process.env.MERIDIAN_URL || 'http://127.0.0.1:3456';
 
 /**
- * Relevant only when the user has OPTED INTO the subscription proxy / FR-49e judge —
- * health-check, not evangelism. Three opt-in signals: the judge flag, a project .env wired
- * to the proxy, or the proxy infra vendored in this project tree (dogfood). Otherwise gated
- * out so a user who never heard of Meridian is never nagged about it.
+ * Mirrors the hook: the FR-49e judge is ON by default (CLAIM_GATE_JUDGE !== 'false'), so
+ * Meridian is an EXPECTED component for every user — surface its health to everyone, not just
+ * explicit opt-ins (parity: "включено как везде"). Only gate out when the judge is explicitly
+ * disabled AND the proxy is not wired some other way (.env → :3456 / vendored infra).
  */
 function optedIn(ctx: CheckContext): { in: boolean; reason?: string } {
-  if ((process.env.CLAIM_GATE_JUDGE ?? '').toLowerCase() === 'true') return { in: true };
+  if ((process.env.CLAIM_GATE_JUDGE ?? 'true').toLowerCase() !== 'false') return { in: true };
   const base = readDotenvFile(path.join(ctx.projectRoot, '.env')).ANTHROPIC_BASE_URL ?? '';
   if (/:3456|meridian|claude-subscription/i.test(base)) return { in: true };
   if (fileExists(path.join(ctx.projectRoot, 'tools', 'claude-subscription-proxy', 'docker-compose.yml'))) {
@@ -29,8 +29,7 @@ function optedIn(ctx: CheckContext): { in: boolean; reason?: string } {
   }
   return {
     in: false,
-    reason:
-      'Meridian not opted in (CLAIM_GATE_JUDGE!=true, no .env ANTHROPIC_BASE_URL→:3456, no vendored proxy infra)',
+    reason: 'judge explicitly disabled (CLAIM_GATE_JUDGE=false) and proxy not wired (.env / infra)',
   };
 }
 

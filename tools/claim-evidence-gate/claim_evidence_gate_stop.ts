@@ -163,9 +163,11 @@ async function main(): Promise<void> {
   // FR-49e: gray-zone judge. The fast layer (regex + census fact) did not block, but the
   // turn ended on a progress/completion/continuation claim while the census shows unfinished
   // work. Escalate to the Meridian Haiku judge — it catches premature-stop phrasings the regex
-  // can't match. Opt-in (CLAIM_GATE_JUDGE=true) for staged rollout; fail-open if Meridian is
-  // down (judgeStop → null → keep the fast-layer approve). Fires RARELY (gray signal + unfinished).
-  if (!unsupported && (process.env.CLAIM_GATE_JUDGE ?? 'false').toLowerCase() === 'true') {
+  // can't match. ON by default (parity: enabled for every user like the rest of the gate); set
+  // CLAIM_GATE_JUDGE=false to disable. FAIL-OPEN if Meridian is down — judgeStop returns null
+  // (fetch ECONNREFUSED is instant, no hang), so a user without the proxy keeps the fast-layer
+  // approve at zero cost. Fires RARELY (gray signal + unfinished census).
+  if (!unsupported && (process.env.CLAIM_GATE_JUDGE ?? 'true').toLowerCase() === 'true') {
     const census = readTaskCensusCache(repoRoot);
     const unfinished = census ? census.total.open + census.total.doneRed + census.total.doneUnrun : 0;
     if (unfinished > 0 && GRAY_SIGNAL.test(claimText)) {

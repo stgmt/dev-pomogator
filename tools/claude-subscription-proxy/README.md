@@ -20,14 +20,21 @@ Built on [Meridian](https://github.com/rynfar/meridian) (official
 - `scripts/{start,stop,health}.{sh,ps1}` — cross-platform lifecycle
 - `scripts/install-autostart.ps1` — Windows Docker Desktop autostart
 
-## Quick start (after extension install)
+## Autostart (default — nothing to do)
+
+With dev-pomogator installed, a SessionStart hook (`ensure-up.cjs`) brings the proxy up
+automatically: it health-probes `:3456`, and if down **and Docker is available**, starts
+it in the background (fail-open, non-blocking — a missing Docker just logs a one-line hint
+and the FR-49e judge fails open). Opt out with `MERIDIAN_AUTOSTART=false`.
+
+**Login is reused from the host — no separate `claude login` for the proxy.** The container
+mounts your existing `~/.claude` (the credentials Claude Code already saved when you logged
+in to use it at all) and refreshes tokens automatically. The only hard prerequisite is
+**Docker** (Desktop on Windows/macOS, engine on Linux).
+
+## Manual start (if you opted out, or to build the image up front)
 
 ```bash
-# Pre-requisites (one-time)
-npm install -g @anthropic-ai/claude-code   # if not installed
-claude login                                # browser OAuth, saves ~/.claude/.credentials.json
-
-# Bring up the proxy
 bash tools/claude-subscription-proxy/scripts/start.sh
 # Windows: powershell -ExecutionPolicy Bypass -File tools\claude-subscription-proxy\scripts\start.ps1
 ```

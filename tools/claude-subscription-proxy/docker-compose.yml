@@ -22,15 +22,15 @@ services:
     ports:
       - "127.0.0.1:${PROXY_PORT:-3456}:3456"
 
-    # Mount Claude Code OAuth credentials (read-write — meridian refreshes
-    # tokens automatically). On Windows Docker Desktop you may need to enable
-    # file sharing for C:\Users\<you> in Docker Desktop → Settings → Resources.
-    #
-    # The refresh-token write-back means containers survive credential expiry
-    # without manual `claude login` (until refresh token itself expires
-    # after weeks of inactivity).
+    # Reuse the HOST's existing Claude Code OAuth login — NO separate `claude login`
+    # needed in the container. The Windows/host `~/.claude` (where Claude Code already
+    # stored credentials when the user logged in to use Claude Code at all) is mounted
+    # read-write so meridian refreshes tokens automatically. start.ps1/start.sh export
+    # CLAUDE_CREDS_DIR to the host-native path (Docker Desktop resolves `C:\Users\..`
+    # reliably, where a Git-Bash `/c/Users/..` HOME may not). On Windows Docker Desktop,
+    # enable file sharing for C:\Users\<you> (Settings → Resources → File sharing).
     volumes:
-      - ${HOME:-${USERPROFILE}}/.claude:/home/claude/.claude
+      - ${CLAUDE_CREDS_DIR:-${HOME:-${USERPROFILE}}/.claude}:/home/claude/.claude
 
     environment:
       # Passthrough: meridian returns tool_use blocks to client instead of

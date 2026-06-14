@@ -68,7 +68,7 @@ interface JudgeOpts {
  */
 export async function judgeStop(input: JudgeInput, opts: JudgeOpts = {}): Promise<JudgeVerdict | null> {
   const base = (opts.url ?? DEFAULT_URL).replace(/\/+$/, '');
-  const timeoutMs = opts.timeoutMs ?? 9000;
+  const timeoutMs = opts.timeoutMs ?? 5000; // real thinking-off call ~3s; caps a black-holed port (down proxy fails instant)
   const doFetch = opts.fetchImpl ?? (typeof fetch === 'function' ? fetch : undefined);
   if (!doFetch) return null; // no fetch (old node) → fail-open
   const ctrl = new AbortController();
