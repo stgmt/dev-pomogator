@@ -21,7 +21,10 @@ export type ClaimClass =
   // FR-49b: synthesized by the Stop hook (NOT classify()) — a whole-spec completion
   // claim while the task-census shows unfinished work. Needs repoRoot (cache read),
   // so it lives in the hook, not the pure text classifier.
-  | 'spec-false-close';
+  | 'spec-false-close'
+  // FR-49e: synthesized by the Stop hook — the gray-zone Meridian judge ruled the stop
+  // premature (the case the regex classes don't phrase-match). Hook-only (async model call).
+  | 'judge-block';
 
 export interface ClaimHit {
   cls: ClaimClass;

@@ -33,6 +33,7 @@ import { markerPath, readMarker, writeMarkerAtomic, isWithinCooldown, hashFileLi
 import { extractTurnWindow } from './turn_window.ts';
 import { firstUnsupported, isSpecCompletionClaim } from './claim_classifier.ts';
 import { readTaskCensusCache } from '../spec-graph/task-census.ts';
+import { judgeStop } from './meridian-judge.ts';
 
 interface StopHookInput {
   cwd?: string;
@@ -54,6 +55,10 @@ const SELF_MARKER = 'claim-evidence-gate';
 // words a genuine deferral ("беру дальше пункт 1") would contain.
 const SELF_MARKERS = ['claim-evidence-gate', 'deferred-work', 'пинатор', 'ДОДЕЛЫВАЙ'];
 const LOG_PREFIX = 'CLAIM-EVIDENCE-GATE';
+// FR-49e: loose lexical net for "the turn ended on a progress/completion/continuation
+// claim" — the cheap gate for escalating to the Meridian judge (also requires the census
+// to show unfinished work, so the judge fires RARELY, never on a clean done or a question).
+const GRAY_SIGNAL = /(готов|сделал|закоммич|закрыл|реализова|продолж|дальше|двину|перехож|беру|next\b|done\b|commit|fixed|finish|ship|complete|wrap)/i;
 
 function log(level: 'INFO' | 'DEBUG' | 'ERROR', message: string): void {
   _logShared(level, LOG_PREFIX, message);
@@ -154,6 +159,22 @@ async function main(): Promise<void> {
   if (!unsupported && censusMsg) {
     unsupported = { cls: 'spec-false-close', need: censusMsg };
   }
+
+  // FR-49e: gray-zone judge. The fast layer (regex + census fact) did not block, but the
+  // turn ended on a progress/completion/continuation claim while the census shows unfinished
+  // work. Escalate to the Meridian Haiku judge — it catches premature-stop phrasings the regex
+  // can't match. Opt-in (CLAIM_GATE_JUDGE=true) for staged rollout; fail-open if Meridian is
+  // down (judgeStop → null → keep the fast-layer approve). Fires RARELY (gray signal + unfinished).
+  if (!unsupported && (process.env.CLAIM_GATE_JUDGE ?? 'false').toLowerCase() === 'true') {
+    const census = readTaskCensusCache(repoRoot);
+    const unfinished = census ? census.total.open + census.total.doneRed + census.total.doneUnrun : 0;
+    if (unfinished > 0 && GRAY_SIGNAL.test(claimText)) {
+      const verdict = await judgeStop({ finalMessage: claimText, tools: toolUses.map((t) => t.name), openTasks: census!.total.open });
+      if (verdict?.block) unsupported = { cls: 'judge-block', need: verdict.reason };
+      // verdict null (fail-open / proxy down) or block:false → fall through to approve
+    }
+  }
+
   if (!unsupported) return approve();
 
   logFire(repoRoot, {
@@ -187,8 +208,13 @@ async function main(): Promise<void> {
   writeMarkerAtomic(mp, { hash: currentHash, timestamp: new Date().toISOString(), count: newCount });
 
   log('INFO', `blocking ${unsupported.cls} (attempt ${newCount})`);
-  const censusTail = censusMsg && unsupported.cls !== 'spec-false-close' ? `\n📋 ${censusMsg}` : '';
-  if (unsupported.cls === 'spec-false-close') {
+  const censusTail = censusMsg && unsupported.cls !== 'spec-false-close' && unsupported.cls !== 'judge-block' ? `\n📋 ${censusMsg}` : '';
+  if (unsupported.cls === 'judge-block') {
+    block(
+      `⚠️ ${SELF_MARKER}: судья (Meridian) счёл это преждевременным стопом — ${unsupported.need}\n` +
+        `Доделай начатое В ЭТОМ ХОДЕ или назови ОДИН конкретный следующий шаг. Не перекладывай на пользователя.`,
+    );
+  } else if (unsupported.cls === 'spec-false-close') {
     block(
       `⚠️ ${SELF_MARKER}: ты заявил завершение СПЕКИ/фичи, но ${unsupported.need}\n` +
         `Не закрывай как «готово» — доделай открытое или назови ОДИН конкретный следующий шаг. ` +
