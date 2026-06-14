@@ -20,6 +20,14 @@ export const SHOULD_FIRE: Array<{ id: string; text: string }> = [
   { id: 'hand-decision-back', text: 'Список собран, что из него удалять — решаешь ты.' },
   { id: 'wait-for-go-ahead', text: 'Жду твоего слова, чтобы продолжить.' },
   { id: 'conditional-offload', text: 'Если хочешь — скажи, покажу остаток.' },
+  // The 2026-06-14 SLIP: announcing the NEXT unit of work and stopping. «Продолжаю»
+  // was ignored to protect «продолжаю проверку» (in-flight), but «продолжаю ПО
+  // СЛЕДУЮЩЕМУ куску» at STOP is an empty promise — the agent announced the next
+  // unit and ended the turn instead of doing it. Distinct from continuing the
+  // CURRENT action (SHOULD_NOT_FIRE continuing-now) by the "по/к следующему" shift.
+  { id: 'announce-next-unit-and-stop', text: 'Продолжаю по следующему реальному куску — тем же циклом: сверить код, закрыть пункт, тест.' },
+  { id: 'shift-to-next-and-stop', text: 'Перехожу к следующему куску бэклога.' },
+  { id: 'take-next-unit', text: 'Беру следующий реальный кусок и довожу.' },
 ];
 
 export const SHOULD_NOT_FIRE: Array<{ id: string; text: string }> = [

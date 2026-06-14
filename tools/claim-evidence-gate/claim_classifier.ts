@@ -159,6 +159,13 @@ const DEFERRED_WORK = new RegExp(
     'дай\\s+знать',
     // a SPECIFIC announce-next-and-stop (numbered next step), not bare "дальше"
     'беру\\s+(?:дальше\\s+)?(?:пункт|волну)\\s*\\d',
+    // announce a SHIFT to the NEXT unit of work and STOP (2026-06-14 slip). «продолжаю»
+    // was ignored to protect «продолжаю проверку» (continuing the CURRENT action), but
+    // «продолжаю / перехожу ПО/К/НА/ЗА следующему [куску]» at stop is the empty-promise
+    // defer — the agent named the next unit and ended the turn instead of doing it. The
+    // «по/к/на/за следующ» shift is what distinguishes it from the in-flight continuation.
+    '(?:продолж\\S+|перехожу|перехож\\S+|приступаю|берусь|возьмусь)\\s+(?:по|к|на|за)\\s+следующ\\S+',
+    'беру\\s+следующ\\S+',
     // self-DEFER the declared next step to a FUTURE pass/turn (knows the step, no
     // blocker, still stops): "беру это следующим заходом", "добью отдельным заходом",
     // "вернусь следующим заходом". High-precision — "заход" in this sense = "later".
