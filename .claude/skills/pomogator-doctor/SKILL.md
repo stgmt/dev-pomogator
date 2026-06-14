@@ -7,7 +7,7 @@ allowed-tools: Read, Bash, Glob, Grep, AskUserQuestion
 
 # pomogator-doctor — Environment diagnostic
 
-Skill проверяет 17 environment aspects (17 CheckDefinitions в `checks/index.ts`) required для dev-pomogator plugin функционирования. Использует self-contained TypeScript engine в `scripts/engine/` для checks; hook вариант в `scripts/doctor-hook.ts` runs at SessionStart events.
+Skill проверяет 18 environment aspects (18 CheckDefinitions в `checks/index.ts`) required для dev-pomogator plugin функционирования. Использует self-contained TypeScript engine в `scripts/engine/` для checks; hook вариант в `scripts/doctor-hook.ts` runs at SessionStart events.
 
 ## Когда invoke
 
