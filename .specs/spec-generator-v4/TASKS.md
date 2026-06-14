@@ -468,12 +468,13 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] Preserves body content
   - [ ] @feature11 SPECGEN004_24 passes
 
-- [ ] Tag predictor -- @feature11 — id: tag-predictor — Status: TODO | Est: 240m
+- [x] Tag predictor -- @feature11 — id: tag-predictor — Status: DONE (2026-06-14, commits 0138c16+fb8589d: `tools/migrate-v3-to-v4/tag-predictor.ts` predictTags + score, wired into cli.ts predictFeatureTags as advisory --suggest-only output; tag-predictor.test.ts 8 + cli.test.ts integration; live "User logs in"→@FR-001) | Est: 240m
   _depends: migrate-script-main_
   _Requirements: [FR-11](FR.md#fr-11)_
   **Done When:**
-  - [ ] Naming heuristic suggests @FR-N tags
-  - [ ] Confidence score per suggestion
+  - [x] Naming heuristic suggests @FR-N tags (predictTags — stopword-filtered keyword overlap with >=3-char-prefix stem)
+  - [x] Confidence score per suggestion (TagSuggestion.score 0..1, 0.34 threshold)
+  - [x] @feature11 SPECGEN004_176 passes (cucumber 3/3)
 
 - [x] Interactive prompt with 30s timeout -- @feature11 — id: interactive-prompt — Status: DONE | Est: 180m
   _depends: migrate-script-main_
@@ -513,18 +514,18 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] restart-from-stage.ts handles rewind + 3-rewind hard limit
   - [ ] @feature12 SPECGEN004_27 passes
 
-- [ ] Shared research base -- @feature12 — id: shared-research-base — Status: TODO | Est: 240m
+- [x] Shared research base -- @feature12 — id: shared-research-base — Status: DONE (2026-06-14) | Est: 240m
   _Requirements: [FR-12](FR.md#fr-12)_
   **Done When:**
-  - [ ] `.claude/skills/_shared/research-base.md` contains common patterns
-  - [ ] Both skills reference it
+  - [x] `.claude/skills/_shared/research-base.md` contains common patterns (hypothesis-first, source taxonomy, ≥3-independent triangulation, verification markers, schema-exhaustiveness, recency, anti-patterns AP-1..8, external-pain §8, misconception-flush §9)
+  - [x] Both skills reference it (research-workflow SKILL.md + architecture-research-workflow SKILL.md Stage-3 note both link `../_shared/research-base.md` — grep-verified)
 
-- [ ] Enrich research-workflow -- @feature12 — id: enrich-research-workflow — Status: TODO | Est: 240m
+- [x] Enrich research-workflow -- @feature12 — id: enrich-research-workflow — Status: DONE (2026-06-14) | Est: 240m
   _depends: shared-research-base_
   _Requirements: [FR-12](FR.md#fr-12)_
   **Done When:**
-  - [ ] Add external-pain validation section
-  - [ ] Add misconception-flush prompt to Phase 3
+  - [x] Add external-pain validation section (Phase 1 «External-pain validation» — H-pain hypothesis, `[ASSUMED]` без внешнего сигнала боли; references base §8)
+  - [x] Add misconception-flush prompt to Phase 3 (Phase 3 «Misconception flush» before final verdicts — surface + disprove assumptions; references base §9)
 
 - [x] Create-spec heuristic + recursion guard -- @feature12 — id: create-spec-heuristic — Status: DONE | Est: 480m
   _depends: arch-research-scripts_
