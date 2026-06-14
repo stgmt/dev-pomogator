@@ -255,7 +255,7 @@ Codespaces persistent `/workspaces/` volume MUST work without polling fallback (
 System SHALL provide skill `cross-spec-reconcile` that scans ALL specs in `.specs/*/` plus actual implementation tree (`src/`, `extensions/`, `package.json`, `extensions/*/extension.json`) and emits structured findings to `.specs/{current_slug}/consistency-report.yaml`. Skill SHALL support two modes:
 
 - `light` — mechanical-only checks (file existence, regex terminology drift, RUNTIME_IDENTIFIER_DRIFT via grep), budget ≤5s for 30-spec corpus.
-- `full` — light + LLM-semantic pairwise FR/AC compare via Agent tool subagent (prompt template from skill `references/semantic-judge-prompt.md`). No time budget; caches per-pair sha256 content hash to avoid re-evaluation.
+- `full` — light + LLM-semantic pairwise FR/AC compare via `spec-llm-judge` through the local **Meridian** subscription proxy (`/v1/messages`, thinking OFF, ~3s/pair Haiku — measured 3841ms; NOT `claude -p` ~13s, see skill `meridian-model-call`). Fail-open: Meridian down → spawn throws → `SUBPROCESS_FAILED` → pair skipped (no slow-path fallback). Caches per-pair sha256 content hash to avoid re-evaluation.
 
 Skill SHALL be invoked from `create-spec` at three points: Phase 2 step 4e (mode=light), Phase 3 step 1d (mode=light), Phase 3+ Audit category CROSS_SPEC_CONSISTENCY (mode=full). (Step labels 4e/1d reflect the actual create-spec phase numbering — 4d=SCHEMA.md, 1c=strong-tests were already taken.)
 
