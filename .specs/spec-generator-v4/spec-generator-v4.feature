@@ -214,6 +214,15 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And the file is left unchanged
     And the migration proceeds to the next file
 
+  @feature11
+  Scenario: SPECGEN004_176 Migration helper — predict @FR-N tags for untagged scenarios
+    Given a v3 spec whose FR.md defines FR-001 "User login and authentication"
+    And a `.feature` with an untagged scenario "User logs in" and an already-tagged scenario
+    When the user runs `dev-pomogator migrate-v3-to-v4 --suggest-only`
+    Then a tag suggestion `@FR-001` is printed for the untagged "User logs in" scenario
+    And the already-tagged scenario gets no suggestion
+    And no tag is written into the `.feature` (advisory only)
+
   @feature12
   Scenario: SPECGEN004_26 architecture-research-workflow skill produces 7 stage outputs (Phase 6)
     Given the maintainer invokes `Skill("architecture-research-workflow")` with a feature description
