@@ -9,6 +9,8 @@ allowed-tools: Read, Glob, Grep, Bash, WebFetch, WebSearch
 
 4-фазный workflow с **hypothesis-FIRST** подходом и обязательной triangulation через ≥3 INDEPENDENT источника.
 
+> **Shared base:** общая research-дисциплина (таксономия источников, маркеры верификации, триангуляция, anti-patterns AP-1..8, external-pain, misconception-flush) живёт в [`.claude/skills/_shared/research-base.md`](../_shared/research-base.md) — один источник правды, общий с `architecture-research-workflow` (его Stage 3 «broad research» зовёт этот навык примитивом). Этот SKILL — конкретный 4-фазный процесс поверх той базы.
+
 ## Anti-patterns from past failures
 
 Перед началом — изучи известные failure modes (избегай повторения):
@@ -68,6 +70,14 @@ H2: **Flag surface** — ВСЕ flags с types/defaults/examples
 H3: **Config files** — где читаются (precedence), schema каждого
 H4: **Env vars** — какие читаются, какой type/format
 H5: **Output formats** — exit codes, stdout/stderr conventions, machine-readable formats
+
+### External-pain validation (проблема существует вне нашей головы?)
+
+ДО исследования решений — найти улику, что ПРОБЛЕМА реальна для кого-то ещё: issue, тред,
+пост «почему X больно», существование конкурирующего инструмента. Это формулируется как
+гипотеза (H-pain: «проблема X испытывается другими»), проверяется как любая другая (§8 базы).
+Нет внешнего сигнала боли → помечай проблему `[ASSUMED]` и трактуй всю задачу как ставку, а не
+подтверждённую потребность. (Общее правило — `_shared/research-base.md` §8.)
 
 ### Output of Phase 1
 
@@ -154,6 +164,13 @@ H5: **Output formats** — exit codes, stdout/stderr conventions, machine-readab
 ---
 
 ## ФАЗА 3: ВЕРИФИКАЦИЯ (triangulation, fail-loud)
+
+### Misconception flush (перед финальными вердиктами)
+
+Прежде чем закрывать гипотезы — выписать ЯВНО свои оставшиеся допущения о теме и активно искать
+им disproof: устаревшая ментальная модель, конвенция принятая за универсальную, «и так понятно».
+Что пережило попытку опровержения — переходит из `[ASSUMED]` в проверяемую гипотезу и идёт в
+триангуляцию ниже; что не пережило — выкинуть до отчёта. (Общее правило — `_shared/research-base.md` §9.)
 
 ### Triangulation requirement (не «3 источника», а 3 INDEPENDENT)
 

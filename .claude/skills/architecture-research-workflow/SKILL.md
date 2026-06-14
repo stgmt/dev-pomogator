@@ -20,6 +20,12 @@ small features (single-file changes, no architecture decisions) the
 standard [`research-workflow`](../research-workflow/SKILL.md) is the
 right tool — this skill is heavier and ships when stakes are higher.
 
+> **Shared base:** the verification discipline both skills obey (source taxonomy,
+> verification markers, ≥3-independent triangulation, anti-patterns AP-1..8, external-pain,
+> misconception-flush) lives in [`.claude/skills/_shared/research-base.md`](../_shared/research-base.md).
+> Stage 3 ("broad research") calls `research-workflow` as a primitive, which enforces that base —
+> so this skill inherits the same rigor rather than re-stating it.
+
 ## When to invoke
 
 **Auto-trigger** (from `create-spec` Phase 1.5 complexity heuristic):
