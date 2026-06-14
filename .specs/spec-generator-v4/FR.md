@@ -257,7 +257,7 @@ System SHALL provide skill `cross-spec-reconcile` that scans ALL specs in `.spec
 - `light` — mechanical-only checks (file existence, regex terminology drift, RUNTIME_IDENTIFIER_DRIFT via grep), budget ≤5s for 30-spec corpus.
 - `full` — light + LLM-semantic pairwise FR/AC compare via Agent tool subagent (prompt template from skill `references/semantic-judge-prompt.md`). No time budget; caches per-pair sha256 content hash to avoid re-evaluation.
 
-Skill SHALL be invoked from `create-spec` at three points: Phase 2 step 4d (mode=light), Phase 3 step 1c (mode=light), Phase 3+ Audit category CROSS_SPEC_CONSISTENCY (mode=full).
+Skill SHALL be invoked from `create-spec` at three points: Phase 2 step 4e (mode=light), Phase 3 step 1d (mode=light), Phase 3+ Audit category CROSS_SPEC_CONSISTENCY (mode=full). (Step labels 4e/1d reflect the actual create-spec phase numbering — 4d=SCHEMA.md, 1c=strong-tests were already taken.)
 
 When CRITICAL findings exist — in `light` mode only for hard-conflict subset (`cross-spec/runtime-identifier-drift`, `cross-spec/module-ownership-conflict`, `cross-spec/contradictory-fr`), in `full` mode for all 28 finding codes that map to severity CRITICAL — skill SHALL emit a blocking AskUserQuestion with `header: "⚠️ CRIT"` (≤12 chars per AskUserQuestion schema) AND options listing each CRITICAL finding's spec_a/spec_b + message + suggested_fix. User MUST explicitly choose: «Fix now via /cross-spec-resolve» / «Acknowledge & override (logged)» / «Abort STOP». Override choice writes `acknowledged_by: user`, `override_reason: <text>`, `override_timestamp: <iso>` to YAML AND appends entry to `.claude/logs/cross-spec-overrides.jsonl` (mirror of existing `scope-gate/escape-hatch-audit.md` pattern).
 
