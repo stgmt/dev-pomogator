@@ -69,7 +69,7 @@ The caller MUST degrade, never block on the proxy:
 | Make a model call from OUR hook/judge/engine | **this** (the recipe above) |
 | Proxy down / 503 / start-restart-reauth Meridian | `proxy-up` |
 | Wire an EXTERNAL project's `.env` to the subscription | `use-claude-subscription` |
-| Install/autostart Meridian for plugin users | the plugin install provisions it (see `tools/claude-subscription-proxy/scripts/install-autostart.ps1`) |
+| Install/autostart Meridian for plugin users | infra ships in the plugin at `<plugin-root>/tools/claude-subscription-proxy/`; `proxy-up` resolves & starts it (defensive path chain), autostart via that dir's `scripts/install-autostart.ps1` |
 
 ## Anti-patterns
 

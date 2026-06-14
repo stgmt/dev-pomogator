@@ -9,6 +9,7 @@ import { gitignoreBlockCheck } from './gitignore-block.js';
 import { hooksRegistryCheck } from './hooks-registry.js';
 import { mcpParseCheck } from './mcp-parse.js';
 import { mcpProbeCheck } from './mcp-probe.js';
+import { meridianCheck } from './meridian.js';
 import { nodeVersionCheck } from './node-version.js';
 import { pluginLoaderCheck } from './plugin-loader.js';
 import { pomogatorHomeCheck } from './pomogator-home.js';
@@ -31,7 +32,7 @@ export const phase2Checks: CheckDefinition[] = [
   statuslineWidgetsCheck,
 ];
 
-export const phase3Checks: CheckDefinition[] = [bunCheck, pythonCheck, dockerCheck];
+export const phase3Checks: CheckDefinition[] = [bunCheck, pythonCheck, dockerCheck, meridianCheck];
 
 export const phase4Checks: CheckDefinition[] = [mcpParseCheck, mcpProbeCheck, pluginLoaderCheck];
 
@@ -52,6 +53,7 @@ export {
   hooksRegistryCheck,
   mcpParseCheck,
   mcpProbeCheck,
+  meridianCheck,
   nodeVersionCheck,
   pluginLoaderCheck,
   pomogatorHomeCheck,

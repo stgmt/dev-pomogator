@@ -29,7 +29,7 @@ claude login                                # browser OAuth, saves ~/.claude/.cr
 
 # Bring up the proxy
 bash tools/claude-subscription-proxy/scripts/start.sh
-# Windows: powershell .\.dev-pomogator\tools\claude-subscription-proxy\scripts\start.ps1
+# Windows: powershell -ExecutionPolicy Bypass -File tools\claude-subscription-proxy\scripts\start.ps1
 ```
 
 First start builds the Docker image (~3 min, cached after). Then:
@@ -58,7 +58,7 @@ needed.
 ## Always-on (Windows)
 
 ```powershell
-.\.dev-pomogator\tools\claude-subscription-proxy\scripts\install-autostart.ps1
+powershell -ExecutionPolicy Bypass -File tools\claude-subscription-proxy\scripts\install-autostart.ps1
 ```
 
 Enables Docker Desktop autostart on Windows login. Combined with
