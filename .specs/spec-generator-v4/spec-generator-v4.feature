@@ -1279,6 +1279,12 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When get_spec_status reports the phase list for that spec
     Then its phases list carries the slug-qualified phase id and the stop-confirmed flag matching the progress file
 
+  @feature48
+  Scenario: SPECGEN004_180 set_entity_status resolves a bare local task id (+ optional spec), not only the composite slug:id
+    Given a graph and the set_entity_status tool
+    When a status change is requested by bare local task id
+    Then the bare id resolves to the composite task node and is not 404ed
+
   @feature49
   Scenario: SPECGEN004_178 the task-census banner names one concrete next open task
     Given a cached task census whose busiest spec has an open task with a title
