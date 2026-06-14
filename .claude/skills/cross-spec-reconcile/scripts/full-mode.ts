@@ -18,15 +18,54 @@
 //   3. Cache hit returns the cached verdict — no spawn.
 //   4. Subprocess runs, parses JSON, returns DRIFT or NO_DRIFT.
 //
-// `runFullMode` is pure orchestration — the actual `claude -p` spawn is
-// injected so unit tests cover every branch without invoking a real
-// subprocess. Production wiring resolves the binary via `CLAUDE_BIN`
-// env var or PATH lookup (`runJudge` default behaviour).
+// `runFullMode` is pure orchestration — the LLM spawn is injected so unit tests
+// cover every branch without a real call. PRODUCTION default = `meridianSpawn`
+// (the local Meridian subscription proxy, ~3s thinking-off) — NOT `claude -p`
+// (~13s cold-start; see skill `meridian-model-call`). Fail-open: if Meridian is
+// down, the spawn throws → `runJudge` returns SUBPROCESS_FAILED → the pair is
+// skipped (no semantic finding), never falling back to the slow path.
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { runJudge, type JudgeResult } from '../../../../tools/spec-llm-judge/index.ts';
 import { type Finding, type ReconcileResult, reconcileLight } from './reconcile.ts';
+
+const MERIDIAN_MODEL = 'claude-haiku-4-5-20251001';
+const MERIDIAN_TIMEOUT_MS = 20_000;
+const meridianUrl = () => (process.env.MERIDIAN_URL || 'http://127.0.0.1:3456').replace(/\/+$/, '');
+
+/**
+ * Fast LLM transport for the semantic-drift judge via the local Meridian proxy
+ * (`/v1/messages`, thinking OFF). Returns the model's text (the JSON verdict
+ * `buildPrompt` asks for; markdown fences stripped). THROWS on any failure so the
+ * caller fails open to SUBPROCESS_FAILED — we never reinvent the slow `claude -p` path.
+ */
+async function meridianSpawn(prompt: string): Promise<string> {
+  if (typeof fetch !== 'function') throw new Error('no global fetch (node <18)');
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), MERIDIAN_TIMEOUT_MS);
+  try {
+    const r = await fetch(`${meridianUrl()}/v1/messages`, {
+      method: 'POST',
+      signal: ctrl.signal,
+      headers: { 'content-type': 'application/json', 'anthropic-version': '2023-06-01', 'x-api-key': 'sk-dummy' },
+      body: JSON.stringify({
+        model: MERIDIAN_MODEL,
+        max_tokens: 256,
+        thinking: { type: 'disabled' },
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+    if (!r.ok) throw new Error(`meridian /v1/messages ${r.status}`);
+    const j = (await r.json()) as { content?: Array<{ type: string; text?: string }> };
+    const text = (j.content ?? []).filter((b) => b.type === 'text').map((b) => b.text ?? '').join('').trim();
+    if (!text) throw new Error('empty meridian response');
+    // Strip a ```json fence if Haiku wrapped the JSON; parseSubprocessOutput needs bare JSON.
+    return text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 export interface FullModeOptions {
   repoRoot: string;
@@ -157,7 +196,7 @@ export async function runFullMode(opts: FullModeOptions): Promise<FullModeResult
       scenarioId: `${b.slug}/${b.frId}`,
       scenarioText: b.body,
       spec_llm_judge_deny: denyA || denyB,
-      spawn: opts.spawn,
+      spawn: opts.spawn ?? meridianSpawn, // production default = Meridian (not claude -p)
     });
     if (!judgeRes.from_cache) calls++;
     if (judgeRes.result === 'SKIPPED_DENY_LIST') {
