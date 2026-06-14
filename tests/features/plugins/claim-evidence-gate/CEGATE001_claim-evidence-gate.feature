@@ -80,10 +80,12 @@ Feature: CEGATE001 Claim-Evidence Gate
     Then it approves the stop
 
   # @feature5
-  Scenario: CEGATE001_12 Honors stop_hook_active
+  Scenario: CEGATE001_12 stop_hook_active does not exempt a premature continuation stop
     Given stop_hook_active is true
+    And the turn ends on an unsupported works-done claim with no evidence
     When the gate evaluates the turn
-    Then it approves the stop
+    Then it blocks the stop
+    And an identical re-stop is then released by the anti-loop
 
   # @feature1
   Scenario: CEGATE001_13 Verdict tokens inside a fenced code block do not fire

@@ -134,7 +134,14 @@ async function main(): Promise<void> {
     return approve();
   }
 
-  if (input.stop_hook_active === true) return approve(); // inside a continuation → don't re-block
+  // NOTE: we do NOT blanket-approve when stop_hook_active===true. That short-circuit
+  // (the usual infinite-loop guard) let a SECOND premature stop sail through after the
+  // gate fired once — the agent got blocked, did a little work, then announced-and-stopped
+  // again and the judge never ran (incident 2026-06-14: «беру его… перейду к FR-18» passed).
+  // Instead we KEEP judging every continuation stop and bound the loop with the marker
+  // anti-loop below (same-hash → approve; per-cooldown cap → approve), so a fresh premature
+  // re-stop is still caught while a genuine repeat / runaway still terminates.
+  const inContinuation = input.stop_hook_active === true;
   const tx = input.transcript_path;
   if (!tx || !fs.existsSync(tx)) return approve();
 
@@ -203,8 +210,12 @@ async function main(): Promise<void> {
   if (marker && marker.hash === currentHash) return approve(); // same message re-submitted
   const within = marker ? isWithinCooldown(marker.timestamp, config.cooldownMinutes) : false;
   const newCount = within ? (marker?.count ?? 0) + 1 : 1;
-  if (within && newCount > config.maxRetries) {
-    log('INFO', `max retries (${config.maxRetries}) in cooldown → approve`);
+  // Kick HARDER during a continuation chain (the agent is mid-turn re-stopping — that is
+  // exactly when it tries to slip a premature stop past us), but still guarantee the loop
+  // terminates. Fresh turns keep the gentle maxRetries (default 2).
+  const cap = inContinuation ? Math.max(config.maxRetries, 6) : config.maxRetries;
+  if (within && newCount > cap) {
+    log('INFO', `retry cap (${cap}${inContinuation ? ', continuation' : ''}) in cooldown → approve`);
     return approve();
   }
   writeMarkerAtomic(mp, { hash: currentHash, timestamp: new Date().toISOString(), count: newCount });

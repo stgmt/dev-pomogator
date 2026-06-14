@@ -194,15 +194,26 @@ describe('CEGATE001: modes, anti-loop and fail-open', () => {
   });
 
   // @feature5
-  it('CEGATE001_12: honors stop_hook_active (no re-block in a continuation)', () => {
+  it('CEGATE001_12: stop_hook_active does NOT exempt a premature continuation stop (re-blocks, then terminates)', () => {
+    // Incident 2026-06-14: a blanket `stop_hook_active → approve` let a SECOND premature stop
+    // sail through after the gate fired once (the agent announced-and-stopped again mid-turn).
+    // The continuation stop must now be JUDGED (block), and the marker anti-loop must still
+    // terminate the loop. CLAIM_GATE_JUDGE=false → deterministic fast-layer (no Meridian).
     const fp = path.join(dir, 't.jsonl');
-    fs.writeFileSync(fp, JSON.stringify(A([txt('всё работает')])));
-    const res = spawnSync('npx', ['tsx', HOOK], {
-      input: JSON.stringify({ transcript_path: fp, cwd: dir, stop_hook_active: true }),
-      encoding: 'utf-8',
-      env: { ...process.env, CLAIM_GATE_ENABLED: 'true' },
-    });
-    expect((res.stdout || '').trim()).toBe('{}');
+    fs.writeFileSync(
+      fp,
+      [U('почини'), A([txt('всё работает, фикс задеплоен')])].map((r) => JSON.stringify(r)).join('\n'),
+    );
+    const fire = () =>
+      spawnSync('npx', ['tsx', HOOK], {
+        input: JSON.stringify({ transcript_path: fp, cwd: dir, stop_hook_active: true }),
+        encoding: 'utf-8',
+        env: { ...process.env, CLAIM_GATE_ENABLED: 'true', CLAIM_GATE_JUDGE: 'false' },
+      });
+    // 1st continuation stop with an unsupported works-done claim → BLOCKS (the fix).
+    expect(fire().stdout || '').toContain('"decision":"block"');
+    // 2nd identical re-stop → same-hash anti-loop releases → terminates (no infinite loop).
+    expect((fire().stdout || '').trim()).toBe('{}');
   });
 });
 
