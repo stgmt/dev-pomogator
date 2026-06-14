@@ -12,7 +12,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { randomUUID } from 'node:crypto';
-import { run, parseArgs, dispatch, runInteractive, type InteractivePrompt } from '../cli.ts';
+import { run, parseArgs, dispatch, runInteractive, predictFeatureTags, type InteractivePrompt } from '../cli.ts';
 import { promptApplyTimeout } from '../interactive.ts';
 
 /** An input source that never yields — only the prompt's timer can resolve. */
@@ -257,5 +257,40 @@ describe('parseArgs', () => {
   });
   it('rejects unknown flags', () => {
     expect(() => parseArgs(['--wat'])).toThrow(/unknown flag/);
+  });
+});
+
+// ─── FR-11 tag prediction wired through the CLI (integration) ────────────
+describe('predictFeatureTags — CLI tag prediction (FR-11)', () => {
+  let root: string;
+  beforeEach(() => {
+    root = path.join(os.tmpdir(), `migrate-tags-${randomUUID()}`);
+    fs.mkdirSync(path.join(root, '.specs', 'auth'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, '.specs/auth/FR.md'),
+      '## FR-001: User login and authentication\nThe system SHALL allow a user to login with email and password.\n## FR-002: Export report to PDF\nGenerate a PDF export of the dashboard.\n',
+    );
+    fs.writeFileSync(
+      path.join(root, '.specs/auth/auth.feature'),
+      'Feature: auth\n\n  Scenario: User logs in\n    Given the login page\n\n  @FR-002\n  Scenario: Export the report\n    Given a dashboard\n',
+    );
+  });
+  afterEach(() => fs.rmSync(root, { recursive: true, force: true }));
+
+  it('suggests @FR-001 for the untagged scenario and skips the tagged one', () => {
+    const { text, suggested } = predictFeatureTags(root);
+    expect(suggested).toBe(1);
+    expect(text).toContain('User logs in');
+    expect(text).toContain('@FR-001');
+    expect(text).not.toContain('Export the report'); // already @FR-002 → omitted
+  });
+
+  it('surfaces tag suggestions in a --suggest-only run without writing tags', () => {
+    const before = fs.readFileSync(path.join(root, '.specs/auth/auth.feature'), 'utf8');
+    const r = run({ repoRoot: root, suggestOnly: true });
+    expect(r.text).toContain('"User logs in" → @FR-001');
+    expect(r.text).toContain('#   tag suggestions:        1');
+    // advisory only — the .feature is byte-stable (no tag auto-written).
+    expect(fs.readFileSync(path.join(root, '.specs/auth/auth.feature'), 'utf8')).toBe(before);
   });
 });

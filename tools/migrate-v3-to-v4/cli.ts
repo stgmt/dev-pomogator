@@ -22,6 +22,7 @@ import { pathToFileURL } from 'node:url';
 import { createInterface } from 'node:readline';
 import { convertSource, renderDiff, type ConversionResult } from './converter.ts';
 import { promptApplyTimeout, type PromptResult, type Decision } from './interactive.ts';
+import { predictTags, extractFrs, renderTagSuggestions, type FrEntry, type TagSuggestion } from './tag-predictor.ts';
 
 export interface RunArgs {
   repoRoot: string;
@@ -66,6 +67,48 @@ function listSpecMdFiles(repoRoot: string, slugs?: string[]): string[] {
     }
   }
   return out;
+}
+
+/**
+ * FR-11 tag prediction: for every `.feature` in each spec dir, suggest `@FR-N` tags for
+ * untagged scenarios using the spec's own FR.md as the catalog. ADVISORY ONLY — the text is
+ * printed (suggest-only + interactive both surface it); tags are never auto-written. Returns
+ * the rendered blocks + the count of confident suggestions.
+ */
+export function predictFeatureTags(repoRoot: string, slugs?: string[]): { text: string; suggested: number } {
+  const specsDir = path.join(repoRoot, '.specs');
+  if (!fs.existsSync(specsDir)) return { text: '', suggested: 0 };
+  const blocks: string[] = [];
+  let suggested = 0;
+  for (const slug of fs.readdirSync(specsDir, { withFileTypes: true })) {
+    if (!slug.isDirectory()) continue;
+    if (slugs && slugs.length > 0 && !slugs.includes(slug.name)) continue;
+    const dir = path.join(specsDir, slug.name);
+    let frs: FrEntry[] = [];
+    try {
+      frs = extractFrs(fs.readFileSync(path.join(dir, 'FR.md'), 'utf8'));
+    } catch {
+      continue; // no FR.md → nothing to predict against
+    }
+    if (frs.length === 0) continue;
+    for (const name of fs.readdirSync(dir)) {
+      if (!name.endsWith('.feature')) continue;
+      const abs = path.join(dir, name);
+      const rel = path.relative(repoRoot, abs).split(path.sep).join('/');
+      let suggestions: TagSuggestion[];
+      try {
+        suggestions = predictTags(fs.readFileSync(abs, 'utf8'), frs);
+      } catch {
+        continue;
+      }
+      const rendered = renderTagSuggestions(rel, suggestions);
+      if (rendered) {
+        blocks.push(rendered);
+        suggested += suggestions.filter((s) => !s.alreadyTagged && s.suggestedTag).length;
+      }
+    }
+  }
+  return { text: blocks.join('\n'), suggested };
 }
 
 function atomicWrite(filePath: string, content: string): void {
@@ -134,12 +177,16 @@ export function run(args: RunArgs): RunResult {
     versionBumped = bumpProgressVersion(args.repoRoot);
   }
 
+  const tags = predictFeatureTags(args.repoRoot, args.slugs);
+  if (tags.text) lines.push(tags.text);
+
   lines.push(
     ...summaryLines(
       results,
       totalConverted,
       args.suggestOnly ? '--suggest-only (no writes)' : 'apply',
       versionBumped,
+      tags.suggested,
     ),
   );
   return {
@@ -156,6 +203,7 @@ function summaryLines(
   totalConverted: number,
   modeLabel: string,
   versionBumped: boolean,
+  tagSuggested = 0,
 ): string[] {
   const out: string[] = [
     '',
@@ -163,6 +211,7 @@ function summaryLines(
     `#   files scanned:          ${results.length}`,
     `#   files with conversions: ${results.filter((r) => r.changed).length}`,
     `#   headings converted:     ${totalConverted}`,
+    `#   tag suggestions:        ${tagSuggested}`,
     `#   mode:                   ${modeLabel}`,
   ];
   if (versionBumped) out.push(`#   .specs/.progress.json:  version → 4`);
@@ -224,7 +273,10 @@ export async function runInteractive(args: RunArgs, prompt: InteractivePrompt): 
   let versionBumped = false;
   if (appliedCount > 0) versionBumped = bumpProgressVersion(args.repoRoot);
 
-  lines.push(...summaryLines(results, totalConverted, 'interactive', versionBumped));
+  const tags = predictFeatureTags(args.repoRoot, args.slugs);
+  if (tags.text) lines.push(tags.text);
+
+  lines.push(...summaryLines(results, totalConverted, 'interactive', versionBumped, tags.suggested));
   return {
     files: results,
     totalHeadingsConverted: totalConverted,

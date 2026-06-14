@@ -32,6 +32,7 @@ interface MigrateWorld extends V4World {
   ambiguousBefore?: string; // its bytes before the (skipped) migration
   ambiguousEntry?: FileResult; // its per-file result from the real loop
   nextFile?: string; // abs path of the file the loop proceeds to
+  featureBefore?: string; // .feature bytes before the (advisory) tag-prediction run
 }
 
 /** Input source that never yields — only the prompt's timer can resolve it. */
@@ -167,4 +168,58 @@ Then('the migration proceeds to the next file', function (this: MigrateWorld) {
   assert.ok(next, 'the loop must have visited the next file after the skip');
   assert.equal(next.applied, true);
   assert.equal(fs.readFileSync(this.nextFile!, 'utf8'), '### FR-050: Next file\n');
+});
+
+// ─── SPECGEN004_176 — tag prediction (FR-11) ────────────────────────────
+// Reuses the SPECGEN004_24 When ("--suggest-only"); the Given seeds an FR catalog
+// + a .feature with one untagged + one already-tagged scenario, and the Then asserts
+// the predicted @FR-N appears in stdout while the .feature stays byte-stable (advisory).
+
+Given(
+  /^a v3 spec whose FR\.md defines FR-001 "([^"]+)"$/,
+  function (this: MigrateWorld, title: string) {
+    const auth = path.join(this.tempDir, '.specs/auth');
+    fs.mkdirSync(auth, { recursive: true });
+    fs.writeFileSync(
+      path.join(auth, 'FR.md'),
+      `## FR-001: ${title}\nThe system SHALL allow a user to login with email and password.\n## FR-002: Export report to PDF\nGenerate a PDF export of the dashboard.\n`,
+    );
+    fs.mkdirSync(path.join(this.tempDir, '.specs'), { recursive: true });
+    fs.writeFileSync(path.join(this.tempDir, '.specs/.progress.json'), JSON.stringify({ version: 3 }));
+  },
+);
+
+Given(
+  /^a `\.feature` with an untagged scenario "([^"]+)" and an already-tagged scenario$/,
+  function (this: MigrateWorld, scenarioName: string) {
+    const fp = path.join(this.tempDir, '.specs/auth/auth.feature');
+    fs.writeFileSync(
+      fp,
+      `Feature: auth\n\n  Scenario: ${scenarioName}\n    Given the login page\n\n  @FR-002\n  Scenario: Export the report\n    Given a dashboard\n`,
+    );
+    this.featureBefore = fs.readFileSync(fp, 'utf8');
+  },
+);
+
+Then(
+  /^a tag suggestion `(@FR-\d+)` is printed for the untagged "([^"]+)" scenario$/,
+  function (this: MigrateWorld, tag: string, scenarioName: string) {
+    assert.ok(this.migrateResult, 'migrate must have run');
+    assert.ok(
+      this.migrateResult.text.includes(scenarioName) && this.migrateResult.text.includes(tag),
+      this.migrateResult.text,
+    );
+  },
+);
+
+Then('the already-tagged scenario gets no suggestion', function (this: MigrateWorld) {
+  assert.ok(
+    !this.migrateResult!.text.includes('Export the report'),
+    'an already-tagged scenario must not appear in the tag suggestions',
+  );
+});
+
+Then(/^no tag is written into the `\.feature` \(advisory only\)$/, function (this: MigrateWorld) {
+  const fp = path.join(this.tempDir, '.specs/auth/auth.feature');
+  assert.equal(fs.readFileSync(fp, 'utf8'), this.featureBefore);
 });
