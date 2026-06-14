@@ -36,9 +36,9 @@ Skill("spec-reality-check")
 
 После cleanup — повторить Step 1 (`audit-spec.ts`) и продолжить к Step 2.
 
-## Step 2: AI семантический анализ (10 категорий)
+## Step 2: AI семантический анализ (11 категорий)
 
-Агент ОБЯЗАН выполнить проверки по 10 категориям, читая файлы спеки И реальный код проекта. Каждая категория — отдельный reference-файл с описанием checks и remediation:
+Агент ОБЯЗАН выполнить проверки по 11 категориям, читая файлы спеки И реальный код проекта. Каждая категория — отдельный reference-файл с описанием checks и remediation:
 
 | Category | Backing — mechanical vs AI-semantic (P16-5) | Reference | Severity scope |
 |----------|----------------------------------------------|-----------|----------------|
@@ -52,13 +52,15 @@ Skill("spec-reality-check")
 | VARIANT_COVERAGE | **MECHANICAL** — audit-spec category (emits `AC_DECISION_TABLE_MISSING`) | [`phase3plus_audit-variant-coverage.md`](phase3plus_audit-variant-coverage.md) | Polymorphic FRs без enumerated variant matrix (AC Decision Table + Examples + per-variant tasks) |
 | ARCHITECTURE_COVERAGE | **MECHANICAL** — `architecture-decision-cli.ts audit` (9th category, FR-9) | [`phase3plus_audit-architecture-coverage.md`](phase3plus_audit-architecture-coverage.md) | Greenfield architecture axes (Phase 1.75) в статусе pending — blocks STOP #3 |
 | COMPLETENESS_COVERAGE | **MECHANICAL** — `architecture-decision-cli.ts audit-completeness` (10th category) | [`phase3plus_audit-completeness-coverage.md`](phase3plus_audit-completeness-coverage.md) | Greenfield: 8 system-completeness измерений (COMPLETENESS.md ledger) в статусе pending — blocks STOP #3 |
+| CROSS_SPEC_CONSISTENCY | **SKILL** — invoke `Skill("cross-spec-reconcile")` mode=full (FR-17; пишет `consistency-report.yaml`) | [`phase3plus_audit-cross-spec-consistency.md`](phase3plus_audit-cross-spec-consistency.md) | Конфликты МЕЖДУ спеками + дрейф spec↔impl (28 finding codes); CRITICAL (contradictory-fr / module-ownership-conflict / runtime-identifier-drift) блокирует STOP #3 через AskUserQuestion |
 
 **Mechanical vs AI-semantic (P16-5 — чтобы агент не гадал):**
 - **MECHANICAL** категории (JIRA_DRIFT / VARIANT_COVERAGE / ARCHITECTURE_COVERAGE / COMPLETENESS_COVERAGE) — findings ВЫЧИСЛЯЮТСЯ скриптом: они уже в выводе Step 1 (`audit-spec.ts` гоняет `audit-checks.ts` CHECK-9..13) или архитектурного CLI. Агент **читает** эти находки, НЕ передоказывает их семантически.
 - **AI-semantic only** (Rudiments / Fantasies / Undefined-behavior) — нет механического чека; агент обязан прочитать spec + реальный код и вынести суждение.
 - **Hybrid** (Errors / Logic Gaps / Inconsistency) — есть механический pre-check (CHECK-9..12), который ловит очевидные случаи; агент всё равно делает более широкий семантический проход поверх.
+- **SKILL** (CROSS_SPEC_CONSISTENCY) — findings вычисляет отдельный навык `cross-spec-reconcile` (mode=full), НЕ `audit-spec.ts`: агент вызывает `Skill("cross-spec-reconcile")`, читает `consistency-report.yaml`, и резолвит CRITICAL до STOP (паттерн как у `spec-reality-check` на Step 1.5).
 
-Загружай только relevant category файлы — не все 10 одновременно.
+Загружай только relevant category файлы — не все 11 одновременно.
 
 ## Step 3: Исправление найденных проблем
 
@@ -73,6 +75,7 @@ Skill("spec-reality-check")
 7. **VARIANT_COVERAGE** — для каждого polymorphic FR без complete matrix: emit AC Decision Table (через Skill `variant-matrix-build`), Gherkin Scenario Outline + Examples в .feature, per-variant tasks в TASKS.md. Если matrix не applicable — добавить escape hatch `[skip-variant-matrix: <reason ≥8 chars>]` в FR body. См. `phase3plus_audit-variant-coverage.md` для resolution guide.
 8. **ARCHITECTURE_COVERAGE** (greenfield only) — для каждой оси в статусе `pending`: выбрать вариант (auto-mode рекомендация или override) ИЛИ добавить `[skip-architecture-axis: <reason ≥12 chars>]`. Применимо только если `.specs/{slug}/ARCHITECTURE/` существует (Phase 1.75 ran). См. `phase3plus_audit-architecture-coverage.md`.
 9. **COMPLETENESS_COVERAGE** (greenfield only) — для каждого из 8 измерений в `ARCHITECTURE/COMPLETENESS.md` ledger в статусе `pending`: пометить `addressed` (+ pointer) / `out-of-scope` (+ reason ≥12) ИЛИ `[skip-completeness-dimension: <reason ≥12>]`. Прогон `architecture-decision-cli.ts audit-completeness <spec-dir>`. См. `phase3plus_audit-completeness-coverage.md`.
+10. **CROSS_SPEC_CONSISTENCY** — вызвать `Skill("cross-spec-reconcile")` mode=full, прочитать `consistency-report.yaml`. Для каждого CRITICAL (contradictory-fr / module-ownership-conflict / runtime-identifier-drift): резолвить через `/cross-spec-resolve` ЛИБО acknowledge с `override_reason` (пишется в YAML + `.claude/logs/cross-spec-overrides.jsonl`). WARNING/INFO — в контекст как `<system-reminder>`, не блокируют. См. `phase3plus_audit-cross-spec-consistency.md`.
 
 ## Step 4: Повторный аудит
 

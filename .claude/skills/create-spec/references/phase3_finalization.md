@@ -33,6 +33,8 @@
 
    **Why not enforced:** test extension может не быть установлен в target repo (per `.dev-pomogator/installed-extensions.json` selection). Recommendation soft-fails, не блокирует workflow.
 
+   **Step 1d: Вызвать `Skill("cross-spec-reconcile")` (mode=light)** (FR-17) — повторный дешёвый mechanical проход на финализации (спека уже наполнена): file existence, terminology drift, RUNTIME_IDENTIFIER_DRIFT. Ловит расхождения с другими спеками + дрейф spec↔impl до STOP. CRITICAL hard-conflict subset → блокирующий AskUserQuestion; WARNING/INFO → `<system-reminder>`. Полный full-mode (LLM-semantic) — в Phase 3+ Audit (категория `CROSS_SPEC_CONSISTENCY`, см. `phase3plus_audit-cross-spec-consistency.md`).
+
    Структура TASKS.md:
 
    - **Phase -1 (Infrastructure):** Если DESIGN.md упоминает БД, docker, .env, secrets — добавить Phase -1: Infrastructure Prerequisites. Env vars пометить `[VERIFIED: source]`.
