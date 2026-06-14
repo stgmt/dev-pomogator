@@ -2271,7 +2271,11 @@ function commandAuditSpec(argv) {
 
       const noCode = line.replace(/`[^`]*`/g, '');
       for (const marker of partialMarkers) {
-        if (new RegExp(escapeRegExp(marker), 'i').test(noCode)) {
+        // Word-boundary match (Unicode-aware — markers include Cyrillic like «НЕ РЕАЛИЗОВАНО»),
+        // NOT a raw substring: a substring match false-fired on 'deferred' inside 'deferred-work'
+        // (FR-49 incident 2026-06-14) and would also catch 'PARTIAL' inside 'PARTIALLY' etc.
+        // Reject when the marker is glued to a letter/digit/underscore/hyphen on either side.
+        if (new RegExp(`(?<![\\p{L}\\p{N}_-])${escapeRegExp(marker)}(?![\\p{L}\\p{N}_-])`, 'iu').test(noCode)) {
           frWithMarkers[currentFr] = marker;
           break;
         }
