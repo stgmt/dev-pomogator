@@ -639,15 +639,15 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] Subagent returns `{verdict, path_alternatives[]: {label, pros, cons, impacted_files}}` for contradictions
   - [ ] Resolve skill consumes `path_alternatives` and presents via AskUserQuestion with ≥2 Path options (Recommended / Current-spec / optionally Custom)
 
-- [ ] Wire reconcile invocations into create-spec workflow -- @feature17 — id: wire-create-spec-skill — Status: TODO | Est: 240m
+- [x] Wire reconcile invocations into create-spec workflow -- @feature17 — id: wire-create-spec-skill — Status: DONE (2026-06-14, commit b912755) | Est: 240m
   _depends: impl-critical-prompt_
   _Requirements: [FR-17](FR.md#fr-17)_
   **Done When:**
-  - [ ] `.claude/skills/create-spec/SKILL.md` updated with Phase 2 step 4d invoking `Skill("cross-spec-reconcile", mode: "light")` after requirements-chk-matrix (4b) + variant-matrix-build (4c)
-  - [ ] `.claude/skills/create-spec/SKILL.md` Phase 3 step 1c invoking the same after task-board-forms (1b)
-  - [ ] `.claude/skills/create-spec/references/phase2_requirements-and-design.md` and `phase3_finalization.md` document the new steps + blocking semantics
-  - [ ] `.claude/skills/create-spec/references/phase3plus_audit-overview.md` gains a 9th row CROSS_SPEC_CONSISTENCY pointing to new `phase3plus_audit-cross-spec.md`
-  - [ ] `.claude/skills/create-spec/references/phase3plus_audit-cross-spec.md` created with 4 sections (Checks, Remediation, Severity, Resolution codes) mirroring `phase3plus_audit-variant-coverage.md` structure
+  - [x] create-spec SKILL.md + phase2 ref: Phase 2 **step 4e** invokes `Skill("cross-spec-reconcile")` mode=light after requirements-chk-matrix (4b) + variant-matrix-build (4c). (Label 4e not 4d: 4d=SCHEMA.md was already taken; FR-17 text reconciled.)
+  - [x] phase3 finalization ref: **step 1d** invokes the same mode=light after task-board-forms (1b). (Label 1d not 1c: 1c=strong-tests was taken.)
+  - [x] `phase2_requirements-and-design.md` + `phase3_finalization.md` document the new light steps + blocking semantics
+  - [x] `phase3plus_audit-overview.md` gained the **11th** category row CROSS_SPEC_CONSISTENCY (mode=full) pointing to the new reference (count 10→11, Step-3 resolution item added)
+  - [x] `.claude/skills/create-spec/references/phase3plus_audit-cross-spec-consistency.md` created (Checks/Remediation/Severity/Resolution mirroring phase3plus_audit-variant-coverage.md)
 
 - [x] Register skills in extension manifest -- @feature17 @feature18 — id: register-skills-in-manifest — Status: DONE (OBSOLETE target, intent met in canonical — same precedent as extension-json-update: `extensions/` tree removed in v2.0; both skills ship via `.claude-plugin/plugin.json` `"skills": ["./.claude/skills"]`, dirs verified present 2026-06-07) | Est: 60m
   _depends: install-cross-spec-skills_
