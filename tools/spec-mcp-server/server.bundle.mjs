@@ -47074,7 +47074,9 @@ function computeTaskCensus(graph) {
   };
   for (const { node: t, slug } of taskEntries) {
     if (t.status === "todo" || t.status === "in-progress" || t.status === "blocked") {
-      row(slug).open++;
+      const r = row(slug);
+      r.open++;
+      if (!r.nextOpen) r.nextOpen = { id: t.id, title: t.title ?? t.id };
     } else if (t.status === "done") {
       const sids = map2.get(t.id) ?? [];
       const hasRed = sids.some((id) => HARD_NEGATIVE.has(bucketById.get(id) ?? "not_run"));
@@ -48886,9 +48888,23 @@ function setPhaseStatus(repoRoot, ph, to) {
 function setEntityStatus(graph, repoRoot, args, frsWithoutResearch) {
   const ph = parsePhaseId(args.id);
   if (ph) return setPhaseStatus(repoRoot, ph, args.to);
-  const node = graph.nodes.get(args.id);
+  let node = graph.nodes.get(args.id);
+  if (!node && !args.id.includes(":")) {
+    if (args.spec) node = graph.nodes.get(`${args.spec}:${args.id}`);
+    if (!node) {
+      const matches = [...graph.nodes.values()].filter((n) => n.id.endsWith(`:${args.id}`));
+      if (matches.length === 1) node = matches[0];
+      else if (matches.length > 1) {
+        return {
+          ok: false,
+          error: "NOT_FOUND",
+          reason: `ambiguous bare id "${args.id}" across ${matches.length} specs (${matches.map((m) => m.spec).join(", ")}) \u2014 pass spec, or use slug:id`
+        };
+      }
+    }
+  }
   if (!node) {
-    return { ok: false, error: "NOT_FOUND", reason: `no entity "${args.id}" in the graph` };
+    return { ok: false, error: "NOT_FOUND", reason: `no entity "${args.id}" in the graph${args.spec ? ` (spec "${args.spec}")` : ""}` };
   }
   if (node.type !== "Task") {
     return refuseDerived(graph, node, frsWithoutResearch);
@@ -49902,6 +49918,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
     description: "FR-48 \xAB\u0436\u0438\u0437\u043D\u0435\u043D\u043D\u044B\u0439 \u0446\u0438\u043A\u043B\xBB: transition a task to a new status THROUGH the door. Validates the lifecycle move (todo\u2192ready\u2192in-progress\u2192done + reverse; no skip-to-finish) and, for a WORKING status (ready/in-progress), REFUSES unless the requirement chain is assembled \u2014 AC + scenario + design + story (impl tasks); a [spec-phase] task is exempt (anti-deadlock, it authors the legs). On refusal the reply names the missing legs. A valid move flips the Status: marker via the same validated atomic write as apply_spec_change (CAS via expected_sha).",
     inputShape: {
       id: external_exports.string(),
+      spec: external_exports.string().optional(),
       to: external_exports.enum(["todo", "ready", "in-progress", "done", "blocked"]),
       expected_sha: external_exports.string().optional()
     },
@@ -49910,6 +49927,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
       if (ro) return ro;
       const res = setEntityStatus(getGraph(), process.cwd(), {
         id: args.id,
+        spec: typeof args.spec === "string" ? args.spec : void 0,
         to: args.to,
         expectedSha: typeof args.expected_sha === "string" ? args.expected_sha : void 0
       });

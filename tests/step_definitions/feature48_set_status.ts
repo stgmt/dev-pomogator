@@ -25,6 +25,9 @@ interface SetWorld extends V4World {
   ssUnassembled?: SetStatusResult;
   ssValid?: SetStatusResult;
   ssDerived?: SetStatusResult;
+  ssBareSpec?: SetStatusResult;
+  ssBareUnique?: SetStatusResult;
+  ssBareBogus?: SetStatusResult;
 }
 
 Given('a graph and the set_entity_status tool', function (this: SetWorld) {
@@ -105,3 +108,27 @@ Then(
     );
   },
 );
+
+// SPECGEN004_180 (FR-48): set_entity_status resolves a BARE local task id (+ optional spec),
+// not only the composite slug:id. Task nodes are composite-keyed (<spec>:<localId>), so a raw
+// bare graph.nodes.get used to 404 every natural `id:` from TASKS.md (incident 2026-06-14);
+// now it mirrors the sibling node-ref tools (resolveNodeRef: composite / spec+bare / unique-bare).
+When('a status change is requested by bare local task id', function (this: SetWorld) {
+  // bare local id + spec → resolves to demo:t1 (FR-1 legged) → ready writes through the door
+  this.ssBareSpec = setEntityStatus(buildGraph({ repoRoot: this.ssRoot!, skipNdjson: true }), this.ssRoot!, { id: 't1', spec: 'demo', to: 'ready' });
+  // bare-unique id, NO spec → resolves to demo:t2 (FR-2 bare) → refused CHAIN_NOT_ASSEMBLED (resolved, not 404)
+  this.ssBareUnique = setEntityStatus(buildGraph({ repoRoot: this.ssRoot!, skipNdjson: true }), this.ssRoot!, { id: 't2', to: 'ready' });
+  // bare id that matches no task → NOT_FOUND
+  this.ssBareBogus = setEntityStatus(buildGraph({ repoRoot: this.ssRoot!, skipNdjson: true }), this.ssRoot!, { id: 'no-such-task', spec: 'demo', to: 'done' });
+});
+
+Then('the bare id resolves to the composite task node and is not 404ed', function (this: SetWorld) {
+  // bare + spec resolved AND wrote through the door
+  assert.equal(this.ssBareSpec!.ok, true, `bare local id + spec resolves + writes (reason: ${this.ssBareSpec!.reason})`);
+  const tasks = fs.readFileSync(path.join(this.ssRoot!, '.specs', 'demo', 'TASKS.md'), 'utf-8');
+  assert.match(tasks, /id: t1 — Status: READY/, 'bare-id write flipped t1 to READY on disk');
+  // bare-unique (no spec) resolved — refused for the chain, NOT a NOT_FOUND
+  assert.equal(this.ssBareUnique!.error, 'CHAIN_NOT_ASSEMBLED', 'bare-unique id resolved (refused on chain, not 404)');
+  // truly-missing bare id → NOT_FOUND
+  assert.equal(this.ssBareBogus!.error, 'NOT_FOUND', 'an unknown bare id is 404ed');
+});

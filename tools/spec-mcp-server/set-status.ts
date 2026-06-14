@@ -148,7 +148,7 @@ function setPhaseStatus(repoRoot: string, ph: { slug: string; phase: string }, t
 export function setEntityStatus(
   graph: SpecGraph,
   repoRoot: string,
-  args: { id: string; to: TaskStatus; expectedSha?: string },
+  args: { id: string; to: TaskStatus; expectedSha?: string; spec?: string },
   frsWithoutResearch?: Set<string>,
 ): SetStatusResult {
   // FR-48e: a PHASE is not a graph node — intercept its id first (a node lookup
@@ -156,9 +156,27 @@ export function setEntityStatus(
   const ph = parsePhaseId(args.id);
   if (ph) return setPhaseStatus(repoRoot, ph, args.to);
 
-  const node = graph.nodes.get(args.id);
+  // Resolve the node like the sibling node-ref tools (resolveNodeRef): accept a composite
+  // `slug:localId`, OR a bare local id + the optional `spec`, OR a bare id that is unique
+  // across the corpus. Task nodes are keyed composite (`<spec>:<localId>`), so a raw
+  // graph.nodes.get(bareId) used to 404 every natural `id:` from TASKS.md (incident 2026-06-14).
+  let node = graph.nodes.get(args.id);
+  if (!node && !args.id.includes(':')) {
+    if (args.spec) node = graph.nodes.get(`${args.spec}:${args.id}`);
+    if (!node) {
+      const matches = [...graph.nodes.values()].filter((n) => n.id.endsWith(`:${args.id}`));
+      if (matches.length === 1) node = matches[0];
+      else if (matches.length > 1) {
+        return {
+          ok: false,
+          error: 'NOT_FOUND',
+          reason: `ambiguous bare id "${args.id}" across ${matches.length} specs (${matches.map((m) => m.spec).join(', ')}) — pass spec, or use slug:id`,
+        };
+      }
+    }
+  }
   if (!node) {
-    return { ok: false, error: 'NOT_FOUND', reason: `no entity "${args.id}" in the graph` };
+    return { ok: false, error: 'NOT_FOUND', reason: `no entity "${args.id}" in the graph${args.spec ? ` (spec "${args.spec}")` : ''}` };
   }
   // FR-48e: a derived entity (FR / Story / Decision / AC / Scenario / …) carries a
   // COMPUTED status — refuse the hand-set and return the live verdict instead.

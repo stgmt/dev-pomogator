@@ -1354,6 +1354,7 @@ export function buildToolRegistry(
       'Status: marker via the same validated atomic write as apply_spec_change (CAS via expected_sha).',
     inputShape: {
       id: z.string(),
+      spec: z.string().optional(),
       to: z.enum(['todo', 'ready', 'in-progress', 'done', 'blocked']),
       expected_sha: z.string().optional(),
     } as const satisfies z.ZodRawShape,
@@ -1362,6 +1363,7 @@ export function buildToolRegistry(
       if (ro) return ro;
       const res = setEntityStatus(getGraph(), process.cwd(), {
         id: args.id as string,
+        spec: typeof args.spec === 'string' ? args.spec : undefined,
         to: args.to as 'todo' | 'ready' | 'in-progress' | 'done' | 'blocked',
         expectedSha: typeof args.expected_sha === 'string' ? args.expected_sha : undefined,
       });
