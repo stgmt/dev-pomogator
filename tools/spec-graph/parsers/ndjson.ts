@@ -343,9 +343,25 @@ export function applyTestResults(
   patch: TestResultPatch,
 ): number {
   let applied = 0;
+  // Suffix fallback for cucumber invocations that emit ABSOLUTE file:// uris
+  // (`file:///D:/repo/.specs/x.feature`) while the graph keys scenarios by a
+  // repo-RELATIVE path (`.specs/x.feature`). Exact lookup misses → every result
+  // is dropped → all scenarios read not_run → tasks falsely DONE_UNTESTED (the
+  // windows-path incident class). The `/`-anchored suffix keeps it from matching
+  // `…notspecs/x.feature`. Built lazily, only when an exact lookup misses.
+  let keys: string[] | null = null;
   for (const s of scenarios) {
-    const key = `${s.file}:${s.line}`;
-    const fields = patch.byLocation.get(key);
+    const exactKey = `${s.file}:${s.line}`;
+    let fields = patch.byLocation.get(exactKey);
+    if (!fields) {
+      if (keys === null) keys = [...patch.byLocation.keys()];
+      // The graph's relative path has no leading `./` (path.relative never adds one),
+      // so a raw `/<relpath>:line` suffix matches the tail of an absolute uri key
+      // (`…/<repo>/.specs/x.feature:5`) without mangling the leading dot of `.specs`.
+      const suffix = `/${s.file}:${s.line}`;
+      const hit = keys.find((k) => k.endsWith(suffix));
+      if (hit) fields = patch.byLocation.get(hit);
+    }
     if (!fields) continue;
     s.lastResult = fields.lastResult;
     s.lastRunAt = fields.lastRunAt;

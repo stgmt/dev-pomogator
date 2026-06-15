@@ -264,4 +264,41 @@ describe('applyTestResults — mutates only matching scenarios', () => {
     const applied = applyTestResults([scen('SCEN-a', 'a.feature', 3)], patch);
     expect(applied).toBe(0);
   });
+
+  it('matches a relative-keyed scenario against an ABSOLUTE file:// uri (suffix fallback)', () => {
+    // Some cucumber invocations emit absolute uris; the graph keys scenarios relative.
+    // Without the suffix fallback the exact lookup misses → every result is dropped →
+    // scenarios falsely read not_run (the windows-path incident class).
+    const s = scen('SCEN-a', 'dir/a.feature', 3);
+    const stream = buildNdjsonStream({
+      uri: 'file:///D:/repo/dir/a.feature',
+      scenarioId: 'sc-1',
+      scenarioLine: 3,
+      pickleId: 'pk-1',
+      pickleName: 'A',
+      testCaseId: 'tc-1',
+      testCaseStartedId: 'tcs-1',
+      status: 'PASSED',
+    });
+    const applied = applyTestResults([s], parseNdjson(stream));
+    expect(applied).toBe(1);
+    expect(s.lastResult).toBe('PASSED');
+  });
+
+  it('does NOT suffix-match a different file with a colliding tail', () => {
+    // `/notdir/a.feature` must not satisfy a scenario keyed `dir/a.feature` (the
+    // `/`-anchored suffix prevents `…notdir/a.feature` false matches).
+    const s = scen('SCEN-a', 'dir/a.feature', 3);
+    const stream = buildNdjsonStream({
+      uri: 'file:///D:/repo/xdir/a.feature',
+      scenarioId: 'sc-1',
+      scenarioLine: 3,
+      pickleId: 'pk-1',
+      pickleName: 'A',
+      testCaseId: 'tc-1',
+      testCaseStartedId: 'tcs-1',
+      status: 'PASSED',
+    });
+    expect(applyTestResults([s], parseNdjson(stream))).toBe(0);
+  });
 });
