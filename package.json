@@ -48,8 +48,8 @@
     "test:all": "bash scripts/docker-test.sh",
     "test:e2e:docker": "vitest run --reporter=verbose",
     "test:tui": "python3 -m pytest tests/tui/ -v",
-    "mutation": "bash scripts/docker-mutation.sh",
-    "mutation:real": "bash scripts/docker-mutation.sh stryker.real.config.mjs"
+    "mutation": "bash scripts/docker-mutation.sh stryker.real.config.mjs",
+    "mutation:skill": "bash scripts/docker-mutation.sh stryker.config.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",

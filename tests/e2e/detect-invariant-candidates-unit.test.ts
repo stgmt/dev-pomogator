@@ -406,5 +406,66 @@ function normal(): number[] {
       expect(r.candidates[0].function).toBe('normal');
       expect(r.suppressed[0].function).toMatch(/^leaf:/);
     });
+
+    // ── composition-chain kind — was ENTIRELY uncovered (no fixture triggered chains>=1),
+    //    so CHAIN_TS/CHAIN_CS, chainCount, and the `else if (chains>=1)` branch all survived. ──
+    it('flags a TS .map().filter() chain as composition-chain (FAILS if CHAIN_TS / chainCount / else-if branch broken)', () => {
+      // CHAIN_TS uses `[^)]*` between calls, so the chained callbacks must be paren-free
+      // arrows (`x => …`, not `(x) => …`) — the detector's documented heuristic limit.
+      const src = `export function pipe(xs: number[]): Array<number> {
+  return xs.map(x => x + 1).filter(x => x > 0);
+}`;
+      const r = scan(src, 'ts');
+      expect(r.candidates.length).toBe(1);
+      expect(r.candidates[0].kind, 'two chained array ops ⇒ composition-chain').toBe('composition-chain');
+      expect(r.candidates[0].rationale).toContain('composition chain');
+      expect(r.candidates[0].suggestedInvariants).toContain('monotonicity');
+    });
+
+    it('flags a C# LINQ Select().Where() chain as composition-chain (FAILS if CHAIN_CS broken)', () => {
+      const src = `public List<int> Pipe(List<int> xs)
+{
+    return xs.Select(x => x + 1).Where(x => x > 0).ToList();
+}`;
+      const r = scan(src, 'csharp');
+      expect(r.candidates.length).toBe(1);
+      expect(r.candidates[0].kind).toBe('composition-chain');
+    });
+
+    it('nxm-overlap wins over a chain when both are present (FAILS if the if/else-if order is flipped)', () => {
+      // nested loops AND a chain in the same body → nxm-overlap, because `nestedFor>=2`
+      // is tested BEFORE `chains>=1`. A flipped order would misclassify as composition-chain.
+      const src = `function both(): number[] {
+  const out: number[] = [];
+  for (let i=0;i<n;i++) { for (let j=0;j<m;j++) { out.push(i); } }
+  return out.map((x) => x).filter((x) => x > 0);
+}`;
+      const r = scan(src, 'ts');
+      expect(r.candidates[0].kind, 'nested loops dominate the chain').toBe('nxm-overlap');
+    });
+
+    // ── return-type alternations — each unexercised branch of COLLECTION_TS survived mutation. ──
+    it('detects a TS Set<T> return (FAILS if the Set alternation is dropped from COLLECTION_TS)', () => {
+      const r = scan(`function uniq(): Set<string> {\n  return new Set();\n}`, 'ts');
+      expect(r.candidates[0]?.returnType).toBe('Set<string>');
+    });
+
+    it('detects a TS Map<K,V> return → coverage+no-leak (FAILS if Map alternation or dict suggestInvariants branch removed)', () => {
+      const r = scan(`function idx(): Map<string, number> {\n  return new Map();\n}`, 'ts');
+      expect(r.candidates[0]?.returnType).toContain('Map<string');
+      expect(r.candidates[0]?.suggestedInvariants).toContain('coverage');
+      expect(r.candidates[0]?.suggestedInvariants).toContain('no-leak');
+    });
+
+    it('detects a TS Iterator<T> return → idempotence+monotonicity (FAILS if Iterator alternation or iter branch removed)', () => {
+      const r = scan(`function gen(): Iterator<number> {\n  return [][Symbol.iterator]();\n}`, 'ts');
+      expect(r.candidates[0]?.returnType).toBe('Iterator<number>');
+      expect(r.candidates[0]?.suggestedInvariants).toContain('idempotence');
+    });
+
+    it('detects a TS ReadonlyArray<T> return (FAILS if the ReadonlyArray alternation is dropped)', () => {
+      const r = scan(`function frozen(): ReadonlyArray<string> {\n  return [];\n}`, 'ts');
+      expect(r.candidates[0]?.returnType).toBe('ReadonlyArray<string>');
+    });
   });
 });

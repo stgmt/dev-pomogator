@@ -14,7 +14,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import type { SpecGraph, Edge } from '../types.ts';
-import { computeFrCensus } from '../fr-census.ts';
+import { computeFrCensus, renderFrCensus } from '../fr-census.ts';
 
 const SLUG = 'demo';
 
@@ -197,5 +197,77 @@ describe('computeFrCensus — FR-47b trace-web completeness (webComplete)', () =
     const fr2 = r.rows.find((x) => x.frId === `${SLUG}:FR-2`)!;
     expect(fr1.hasResearch).toBe(false); // explicitly flagged as lacking research
     expect(fr2.hasResearch).toBe(true); // not flagged → research leg N/A → present
+  });
+});
+
+describe('renderFrCensus — the human report surfaces the verdict (text rendering)', () => {
+  const report = computeFrCensus(makeGraph());
+  report.corpusRoot = '/corpus';
+  const out = renderFrCensus(report);
+
+  it('the header names the tool and the report scope', () => {
+    expect(out, 'header must name the tool').toContain('fr-census');
+    expect(out, 'header must show the scope').toContain('[scope: ALL]');
+    expect(out, 'header must echo corpusRoot').toContain('/corpus');
+  });
+
+  it('the count line shows every verdict with its own icon and count (one each in makeGraph)', () => {
+    // makeGraph yields exactly one FR per verdict — pins the VERDICT_ICON map AND the counts.
+    expect(out).toContain('🟢 IMPLEMENTED:1');
+    expect(out).toContain('🔴 DONE_UNTESTED:1');
+    expect(out).toContain('🟡 IN_PROGRESS:1');
+    expect(out).toContain('⚪ PLANNED:1');
+    expect(out).toContain('⚫ UNIMPLEMENTED:1');
+  });
+
+  it('the web-complete line reports the 6-leg AND count (0/5 for legacy-shaped FRs)', () => {
+    expect(out).toContain('web-complete');
+    expect(out, 'no makeGraph FR has all 6 legs').toContain('0/5');
+  });
+
+  it('each FR row carries its icon, id, verdict word, evidence ticks and title', () => {
+    // FR-1 IMPLEMENTED has AC + scenario (✓✓); FR-2 PLANNED has neither (✗✗).
+    expect(out, 'FR-1 row').toMatch(/🟢 demo:FR-1\s+IMPLEMENTED.*AC:✓ Scen:✓.*Requirement 1/);
+    expect(out, 'FR-2 row').toMatch(/⚪ demo:FR-2\s+PLANNED.*AC:✗ Scen:✗.*Requirement 2/);
+  });
+
+  it('renders the FALSE-GREEN block listing each unproven-DONE FR', () => {
+    expect(out).toContain('FALSE-GREEN');
+    expect(out).toContain('1 FR(s) marked DONE');
+    expect(out, 'FR-4 is the false-green one').toContain('demo:FR-4');
+  });
+
+  it('the final VERDICT line shows RED (hard + strict) when a DONE_UNTESTED exists', () => {
+    // makeGraph has FR-4 DONE_UNTESTED ⇒ both hard and strict verdicts are RED.
+    expect(out).toContain('VERDICT: 🔴 RED (hard: no DONE_UNTESTED)');
+    expect(out).toContain('strict: 🔴 RED');
+    expect(out, 'a RED report must NOT print a green verdict icon').not.toContain('VERDICT: 🟢');
+  });
+
+  it('a GREEN report omits the FALSE-GREEN block and shows the green verdict', () => {
+    const g = makeGraph();
+    g.nodes.delete(`${SLUG}:FR-4`);
+    g.nodes.delete(`${SLUG}:T4`);
+    const green = renderFrCensus(computeFrCensus(g));
+    expect(green, 'no false-green ⇒ no FALSE-GREEN block').not.toContain('FALSE-GREEN');
+    expect(green).toContain('VERDICT: 🟢 GREEN');
+  });
+});
+
+describe('computeFrCensus — stable cross-spec ordering', () => {
+  it('rows sort by spec then by NUMERIC FR id (FR-2 before FR-10, not lexical)', () => {
+    const mk = (spec: string, n: number): [string, unknown] => [
+      `${spec}:FR-${n}`,
+      { id: `${spec}:FR-${n}`, type: 'FR', spec, file: `.specs/${spec}/FR.md`, line: n, title: `R${n}`, anchors: [], body: '' },
+    ];
+    // Insertion order is deliberately scrambled (b before a; 10 before 2) so a
+    // no-op / lexical sort mutant produces a different order than asserted.
+    const nodes = new Map<string, unknown>([mk('b-spec', 2), mk('a-spec', 10), mk('a-spec', 2)]);
+    const r = computeFrCensus({ nodes, edges: [] } as unknown as SpecGraph);
+    expect(r.rows.map((x) => x.frId), 'spec asc, then FR id numeric asc').toEqual([
+      'a-spec:FR-2',
+      'a-spec:FR-10',
+      'b-spec:FR-2',
+    ]);
   });
 });
