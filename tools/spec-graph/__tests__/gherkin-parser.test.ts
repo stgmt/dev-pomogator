@@ -120,4 +120,27 @@ describe('parseGherkin — Scenario / tag / edge extraction', () => {
       { from: 'FR-9', to: 'SCEN-no-tags-here', type: 'tested-by' },
     ]);
   });
+
+  it('emits nodes for scenarios nested under a Rule (inheriting feature + rule tags)', () => {
+    // Rule-wrapped scenarios were silently dropped (no node → no coverage). Each must
+    // produce a ScenarioNode and inherit feature + rule + scenario tags.
+    const source = [
+      'Feature: F',
+      '',
+      '  @ruletag',
+      '  Rule: a rule',
+      '',
+      '    @feature1',
+      '    Scenario: inside the rule',
+      '      Given a',
+      '',
+      '    @feature2',
+      '    Scenario: also inside',
+      '      Given b',
+    ].join('\n');
+    const out = parseGherkin(source, 't.feature');
+    expect(out.nodes).toHaveLength(2);
+    expect((out.nodes[0] as ScenarioNode).tags).toEqual(['@ruletag', '@feature1']);
+    expect((out.nodes[1] as ScenarioNode).tags).toEqual(['@ruletag', '@feature2']);
+  });
 });

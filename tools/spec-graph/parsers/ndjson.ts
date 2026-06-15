@@ -148,14 +148,19 @@ export function parseNdjson(source: string): TestResultPatch {
     }
 
     // gherkinDocument — index ast node ids to their line numbers
+    type GherkinScenario = { id?: string; location?: { line?: number } };
     const doc = env.gherkinDocument as
-      | { feature?: { children?: Array<{ scenario?: { id?: string; location?: { line?: number } } }> } }
+      | { feature?: { children?: Array<{ scenario?: GherkinScenario; rule?: { children?: Array<{ scenario?: GherkinScenario }> } }> } }
       | undefined;
     if (doc?.feature?.children) {
+      const indexScenario = (sc?: GherkinScenario): void => {
+        if (sc?.id && typeof sc.location?.line === 'number') astLineByNodeId.set(sc.id, sc.location.line);
+      };
+      // Index top-level scenarios AND scenarios nested under a `Rule:` — else a
+      // Rule-wrapped scenario's result never maps (its astLine is unknown).
       for (const ch of doc.feature.children) {
-        if (ch.scenario?.id && typeof ch.scenario.location?.line === 'number') {
-          astLineByNodeId.set(ch.scenario.id, ch.scenario.location.line);
-        }
+        indexScenario(ch.scenario);
+        if (ch.rule?.children) for (const rc of ch.rule.children) indexScenario(rc.scenario);
       }
       continue;
     }

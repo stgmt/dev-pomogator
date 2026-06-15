@@ -55,6 +55,12 @@ interface GherkinFeatureChild {
     steps?: Array<{ keyword: string; text: string }>;
     examples?: unknown[];
   };
+  // A `Rule:` groups its own scenarios under `rule.children` — they must be
+  // flattened or Rule-wrapped scenarios are silently dropped (no node → no coverage).
+  rule?: {
+    tags?: Array<{ name: string }>;
+    children: GherkinFeatureChild[];
+  };
 }
 
 interface GherkinFeature {
@@ -108,12 +114,23 @@ export function parseGherkin(source: string, relativePath: string): ParserOutput
   const anchors: ParserOutput['anchors'] = [];
   const seenIds = new Map<string, number>();
 
+  // Flatten top-level scenarios AND scenarios nested under a `Rule:`. A Rule-wrapped
+  // scenario inherits feature + rule + scenario tags. Without this the whole Rule block
+  // is invisible to the graph (no node) and to coverage (no result) — a silent honesty hole.
+  const entries: Array<{ scenario: NonNullable<GherkinFeatureChild['scenario']>; ruleTags: string[] }> = [];
   for (const child of doc.feature.children) {
-    const scenario = child.scenario;
-    if (!scenario) continue;
-
+    if (child.scenario) {
+      entries.push({ scenario: child.scenario, ruleTags: [] });
+    } else if (child.rule?.children) {
+      const ruleTags = (child.rule.tags ?? []).map((t) => t.name);
+      for (const rc of child.rule.children) {
+        if (rc.scenario) entries.push({ scenario: rc.scenario, ruleTags });
+      }
+    }
+  }
+  for (const { scenario, ruleTags } of entries) {
     const scenarioTags: string[] = (scenario.tags ?? []).map((t) => t.name);
-    const tags = [...featureTags, ...scenarioTags];
+    const tags = [...featureTags, ...ruleTags, ...scenarioTags];
 
     let baseId = `SCEN-${slugifyName(scenario.name)}`;
     const seen = seenIds.get(baseId) ?? 0;
