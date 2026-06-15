@@ -178,9 +178,17 @@ async function main(): Promise<void> {
     const census = readTaskCensusCache(repoRoot);
     const unfinished = census ? census.total.open + census.total.doneRed + census.total.doneUnrun : 0;
     if (unfinished > 0 && GRAY_SIGNAL.test(claimText)) {
-      const verdict = await judgeStop({ finalMessage: claimText, tools: toolUses.map((t) => t.name), openTasks: census!.total.open });
+      // A TRANSIENT judge failure (timeout / network blip → null) must NOT be a free
+      // pass — that fail-open was the actual escape route. Evidence (3× probe 2026-06-15):
+      // the judge BLOCKS the announce-and-stop phrasings when it RUNS, but intermittently
+      // null-failed → approve, so a premature stop slipped and the USER had to pin. Retry
+      // ONCE before honouring the fail-open. Users without Meridian still fail-open fast:
+      // ECONNREFUSED is instant, so a second instant miss costs ~nothing and still approves.
+      const jInput = { finalMessage: claimText, tools: toolUses.map((t) => t.name), openTasks: census!.total.open };
+      let verdict = await judgeStop(jInput);
+      if (verdict === null) verdict = await judgeStop(jInput);
       if (verdict?.block) unsupported = { cls: 'judge-block', need: verdict.reason };
-      // verdict null (fail-open / proxy down) or block:false → fall through to approve
+      // verdict null twice (proxy down / persistent fail) or block:false → fall through to approve
     }
   }
 
