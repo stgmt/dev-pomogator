@@ -75,7 +75,7 @@ AI НЕ выдумывает требования. Только формализ
 
 **Когда применять:** EARS формулировки типа `WHEN (X OR Y) AND NOT Z THEN system SHALL ...`
 
-**Пруф:** адаптировано из MC/DC coverage criterion (DO-178C, ISO 29119-4) — universal technique, применимо к любым complex boolean AC, независимо от домена. Источник: [§22 RESEARCH.md](RESEARCH.md#22-white-box-unit-test-techniques-из-unit-testmd).
+**Пруф:** адаптировано из MC/DC coverage criterion (DO-178C, ISO 29119-4) — universal technique, применимо к любым complex boolean AC, независимо от домена. Источник: [§20 RESEARCH.md](RESEARCH.md#20-white-box-unit-test-techniques-из-unit-testmd).
 
 **Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1-качество-требований-по-ieee-29148-incose-feature1)
 

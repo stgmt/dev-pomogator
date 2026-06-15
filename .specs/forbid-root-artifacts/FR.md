@@ -12,7 +12,7 @@ Auto-prune отключается через `auto_prune: { enabled: false }` в
 
 **Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1), [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-1), [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-1)
 **Use Case:** [UC-3](USE_CASES.md#uc-3-auto-prune-stale-entries-при-pre-commit-после-удаления-файлов), [UC-4](USE_CASES.md#uc-4-auto-prune-disabled-opt-out-для-juzers-которые-не-хотят-modifying-hook), [UC-8](USE_CASES.md#uc-8-edge-atomic-rollback-через-git-revert)
-**User Story:** [US-2](USER_STORIES.md#user-story-2---prune-mode-для-cleanup-stale-entries-priority-p1), [US-3](USER_STORIES.md#user-story-3-warn-в-checkpy-о-stale-entries-priority-p1)
+**User Story:** [US-2](USER_STORIES.md#user-story-2-auto-prune-stale-allow-entries-в-pre-commit-priority-p1), [US-3](USER_STORIES.md#user-story-3-llm-driven-classification-через-claude-code-subscription-priority-p1)
 
 ## FR-2: User-configurable trash classification
 
@@ -86,7 +86,7 @@ Reply with EXACTLY ONE word: trash | config | unknown.
 
 **Связанные AC:** [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-4), [AC-11](ACCEPTANCE_CRITERIA.md#ac-11-fr-4), [AC-12](ACCEPTANCE_CRITERIA.md#ac-12-fr-4)
 **Use Case:** [UC-7](USE_CASES.md#uc-7-edge-graceful-fallback-при-отсутствии-classifier-module)
-**User Story:** [US-4](USER_STORIES.md#user-story-4-shared-classifier-module-priority-p1)
+**User Story:** [US-4](USER_STORIES.md#user-story-4-shared-classifier-module-yaml-driven-configuration-priority-p1)
 
 ## FR-5 (out of scope): Migration helper для существующих stale YAML в downstream repos
 

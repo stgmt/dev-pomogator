@@ -6,7 +6,7 @@ Skill SHALL produce strong tests for newly authored production code when invoked
 
 **Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1)
 **Use Case:** [UC-1](USE_CASES.md#uc-1-greenfield-write-strong-tests-for-new-module-feature1)
-**User Story:** [Story 1](USER_STORIES.md#user-story-1-greenfield-strong-tests-for-new-code-priority-p1)
+**User Story:** [Story 1](USER_STORIES.md#user-story-1-greenfield-strong-tests-for-new-code-priority-p1-feature1)
 
 ## FR-2: Audit existing tests against 8-anti-pattern catalogue
 
@@ -14,7 +14,7 @@ Skill SHALL provide an Audit mode that, given a path to an existing test file or
 
 **Связанные AC:** [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2)
 **Use Case:** [UC-2](USE_CASES.md#uc-2-audit-review-existing-weak-test-suite-feature2)
-**User Story:** [Story 2](USER_STORIES.md#user-story-2-audit-existing-tests-for-hidden-weakness-priority-p1)
+**User Story:** [Story 2](USER_STORIES.md#user-story-2-audit-existing-tests-for-hidden-weakness-priority-p1-feature2)
 
 ## FR-3: Mutation-feedback loop until threshold
 
@@ -22,7 +22,7 @@ Skill SHALL provide a Mutation-feedback mode that auto-detects the project's mut
 
 **Связанные AC:** [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3)
 **Use Case:** [UC-3](USE_CASES.md#uc-3-mutation-feedback-loop-strengthen-until-threshold-feature3), [UC-5](USE_CASES.md#uc-5-tool-missing-fallback-to-ai-driven-manual-mutation-feature3)
-**User Story:** [Story 3](USER_STORIES.md#user-story-3-mutation-feedback-loop-until-threshold-met-priority-p1)
+**User Story:** [Story 3](USER_STORIES.md#user-story-3-mutation-feedback-loop-until-threshold-met-priority-p1-feature3)
 
 ## FR-4: Multi-stack auto-detection
 
@@ -30,7 +30,7 @@ Skill SHALL auto-detect the project stack(s) when invoked without explicit targe
 
 **Связанные AC:** [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4)
 **Use Case:** [UC-4](USE_CASES.md#uc-4-polyglot-project-auto-detect-both-stacks-feature4)
-**User Story:** [Story 4](USER_STORIES.md#user-story-4-multi-stack-auto-detection-priority-p2)
+**User Story:** [Story 4](USER_STORIES.md#user-story-4-multi-stack-auto-detection-priority-p2-feature4)
 
 ## FR-5: 12-point self-eval as final gate with PASS/FAIL report
 
@@ -38,7 +38,7 @@ Skill SHALL run the 12-point self-eval checklist as the final step in every mode
 
 **Связанные AC:** [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5)
 **Use Case:** All UCs (UC-1..UC-5) — final step
-**User Story:** [Story 5](USER_STORIES.md#user-story-5-enforce-12-point-self-eval-as-final-gate-priority-p2)
+**User Story:** [Story 5](USER_STORIES.md#user-story-5-enforce-12-point-self-eval-as-final-gate-priority-p2-feature5)
 
 ## FR-6: PIT / Stryker.NET / cargo-mutants / go-mutesting deep integration — OUT OF SCOPE
 
@@ -64,7 +64,7 @@ Skill SHALL include §1.5 "Behavioural prior" в SKILL.md body that loads on **e
 
 **Связанные AC:** [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7)
 **Use Case:** [UC-7](USE_CASES.md#uc-7-jit-auto-trigger-on-production-code-write-feature7)
-**User Story:** [Story 6](USER_STORIES.md#user-story-6-jit-auto-trigger-via-posttooluse-hook-priority-p1)
+**User Story:** [Story 6](USER_STORIES.md#user-story-6-jit-auto-trigger-via-posttooluse-hook-priority-p1-feature7)
 
 ## FR-11: Composition-chain detection (v0.5.0)
 

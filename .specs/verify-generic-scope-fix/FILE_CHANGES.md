@@ -27,7 +27,7 @@
 | `tests/e2e/scope-gate.test.ts` | create | 1:1 mapping to VSGF001_10..VSGF001_60 scenarios via `@feature1..@feature5` tags per `extension-test-quality.md` |
 | `tests/e2e/scope-gate-helpers.ts` | create | `createTmpRepoWithDiff()`, `writeMarkerFile()`, `spawnHook()` per DESIGN.md BDD Test Infrastructure |
 | `tests/regressions/stocktaking-incident.test.ts` | create | Regression pin — asserts `scoreDiff(F-1)` >= 4 forever. Defends against accidental weight changes losing the incident |
-| `tests/fixtures/scope-gate/stocktaking-diff.patch` | create | F-1 fixture per [FIXTURES.md](FIXTURES.md#f-1-stocktaking-diffpatch) |
+| `tests/fixtures/scope-gate/stocktaking-diff.patch` | create | F-1 fixture per [FIXTURES.md](FIXTURES.md#f-1-stocktaking-diffpatch-scoring-regression-pin) |
 | `tests/fixtures/scope-gate/docs-only-diff.patch` | create | F-2 fixture |
 | `tests/fixtures/scope-gate/fresh-marker.json.tpl` | create | F-3 fixture template |
 | `tests/fixtures/scope-gate/stale-marker.json.tpl` | create | F-4 fixture template |

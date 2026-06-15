@@ -18,4 +18,4 @@
 | `.claude/skills/strong-tests/scripts/detect-invariant-candidates.ts` | create | [FR-7](FR.md#fr-7-jit-just-in-time-auto-trigger-via-posttooluse-hook) — ast-grep based detector for Collection-returning / N×M / composition candidates; produces JSON per SCHEMA |
 | `extensions/test-quality/tools/test-quality/posttool-jit.ts` | create | [FR-7](FR.md#fr-7-jit-just-in-time-auto-trigger-via-posttooluse-hook) — PostToolUse hook handler; reads stdin tool_input, filters production paths, spawns detector, emits additionalContext, appends audit log |
 | `extensions/test-quality/extension.json` | edit | [FR-7](FR.md#fr-7-jit-just-in-time-auto-trigger-via-posttooluse-hook) — add PostToolUse hook entry array-format per `gotchas/installer-hook-formats.md`; add posttool-jit.ts + detect-invariant-candidates.ts to toolFiles/skillFiles |
-| `.gitignore` | edit | [NFR-S4](NFR.md#security-cont--jit) — add `.claude/logs/strong-tests-skips.jsonl` to gitignore (runtime audit log, not committed) |
+| `.gitignore` | edit | [NFR-S4](NFR.md#security-jit) — add `.claude/logs/strong-tests-skips.jsonl` to gitignore (runtime audit log, not committed) |
