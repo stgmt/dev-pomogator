@@ -31,7 +31,7 @@
 
 > BDD foundation already in place, verified в DESIGN.md Evidence: tests/e2e/specs-generator-*.test.ts существуют через vitest.
 
-- [x] T01: Создать 5 fixture директорий + test scaffold -- @feature2,3,4,5,6,7 — Status: TODO | Est: 30m
+- [x] T01: Создать 5 fixture директорий + test scaffold -- @feature2,3,4,5,6,7 — id: t01 — Status: TODO | Est: 30m
   _Requirements: [FR-1](FR.md#fr-1-polymorphic-trigger-detection-через-mechanical-regex), [FR-2](FR.md#fr-2-hard-out-signals-anti-over-application), [FR-3](FR.md#fr-3-ac-decision-table-обязательна-per-polymorphic-fr), [FR-7](FR.md#fr-7-escape-hatch-с-audit-log)_
   **Done When:**
   - [ ] tests/fixtures/specs-generator/variant-matrix/polymorphic-fr-complete/ создан с 5 .md + 1 .feature
@@ -43,7 +43,7 @@
 
 ## Phase 1: Pure modules (Green)
 
-- [x] T02: Implement trigger-phrases.ts -- @feature2,3,4 — Status: TODO | Est: 30m
+- [x] T02: Implement trigger-phrases.ts -- @feature2,3,4 — id: t02 — Status: TODO | Est: 30m
   _Requirements: [FR-1](FR.md#fr-1-polymorphic-trigger-detection-через-mechanical-regex), [FR-2](FR.md#fr-2-hard-out-signals-anti-over-application)_
   _Variant: axis=detection-language, value=EN+RU+mixed_
   **Done When:**
@@ -52,20 +52,20 @@
   - [ ] @feature3 (RU trigger) переходит из Red в Green
   - [ ] @feature4 (hard-OUT) переходит из Red в Green
 
-- [x] T03: Implement parsers.ts -- @feature5 — Status: TODO | Est: 30m
+- [x] T03: Implement parsers.ts -- @feature5 — id: t03 — Status: TODO | Est: 30m
   _Requirements: [FR-3](FR.md#fr-3-ac-decision-table-обязательна-per-polymorphic-fr), [FR-4](FR.md#fr-4-gherkin-scenario-outline-в-feature-11-с-ac), [FR-5](FR.md#fr-5-tasksmd-per-variant)_
   **Done When:**
   - [ ] Module exports parseDecisionTable, parseExamplesTable, parseVariantTasks
   - [ ] Parser unit-тесты переходят в Green (6 cases)
 
-- [x] T04: Fill unit tests trigger+parsers -- @feature2,3,4,5 — Status: TODO | Est: 30m
+- [x] T04: Fill unit tests trigger+parsers -- @feature2,3,4,5 — id: t04 — Status: TODO | Est: 30m
   _Requirements: [FR-1](FR.md#fr-1-polymorphic-trigger-detection-через-mechanical-regex)_
   **Done When:**
   - [ ] 4 detection cases real (EN/RU/hard-OUT/escape-hatch detected)
   - [ ] 6 parser cases real (parseDecisionTable good/missing-cols/missing-rows × 3)
   - [ ] vitest run shows 10 green tests
 
-- [x] T06: Implement escape-log.ts -- @feature7 — Status: TODO | Est: 20m
+- [x] T06: Implement escape-log.ts -- @feature7 — id: t06 — Status: TODO | Est: 20m
   _Requirements: [FR-7](FR.md#fr-7-escape-hatch-с-audit-log)_
   _Variant: axis=concurrency, value=O_APPEND_
   **Done When:**
@@ -75,7 +75,7 @@
 
 ## Phase 2: Wiring + Skill + Rules (Green)
 
-- [x] T05: Implement audit.ts + wire dispatch -- @feature5,6 — Status: TODO | Est: 45m
+- [x] T05: Implement audit.ts + wire dispatch -- @feature5,6 — id: t05 — Status: TODO | Est: 45m
   _Requirements: [FR-6](FR.md#fr-6-audit-category-variantcoverage-8-я-категория), [FR-7](FR.md#fr-7-escape-hatch-с-audit-log)_
   _Variant: axis=audit-category, value=VARIANT_COVERAGE_
   **Done When:**
@@ -85,33 +85,33 @@
   - [ ] @feature5 (audit emit finding) переходит в Green
   - [ ] @feature6 (short escape WARNING) переходит в Green
 
-- [x] T07: Create variant-matrix-build SKILL.md -- @feature2 — Status: TODO | Est: 30m
+- [x] T07: Create variant-matrix-build SKILL.md -- @feature2 — id: t07 — Status: TODO | Est: 30m
   _Requirements: [FR-8](FR.md#fr-8-phase-2-sub-skill-variant-matrix-build)_
   **Done When:**
   - [ ] Frontmatter валиден (name/description/disable-model-invocation/allowed-tools)
   - [ ] Body sections present: Mission/Preconditions/Inputs/Execution/Contract/Fallback
   - [ ] Reference Incident block ≤6 lines (cite Лилия 2026-04-27)
 
-- [x] T08: Create rules when-to-build + escape-audit -- @feature4,7 — Status: TODO | Est: 30m
+- [x] T08: Create rules when-to-build + escape-audit -- @feature4,7 — id: t08 — Status: TODO | Est: 30m
   _Requirements: [FR-2](FR.md#fr-2-hard-out-signals-anti-over-application), [FR-7](FR.md#fr-7-escape-hatch-с-audit-log)_
   **Done When:**
   - [ ] when-to-build-matrix.md создан с Apply WHEN + Hard-OUT + Why-list-exists + Related sections
   - [ ] escape-hatch-audit.md создан с JSONL format + Red flags + Anti-gaming + Log rotation
 
-- [x] T09: Doc updates Phase 2/3+ — Status: TODO | Est: 20m
+- [x] T09: Doc updates Phase 2/3+ — id: t09 — Status: TODO | Est: 20m
   _Requirements: [FR-6](FR.md#fr-6-audit-category-variantcoverage-8-я-категория), [FR-8](FR.md#fr-8-phase-2-sub-skill-variant-matrix-build)_
   **Done When:**
   - [ ] phase2_requirements-and-design.md содержит Step 4c invocation
   - [ ] phase3plus_audit-overview.md categories 7→8 rows
   - [ ] phase3plus_audit-variant-coverage.md создан (resolution guide)
 
-- [x] T10: Update cross-scope-coverage.md — Status: TODO | Est: 15m
+- [x] T10: Update cross-scope-coverage.md — id: t10 — Status: TODO | Est: 15m
   _Requirements: [FR-3](FR.md#fr-3-ac-decision-table-обязательна-per-polymorphic-fr)_
   **Done When:**
   - [ ] Step 0 section вставлена перед "## Правило"
   - [ ] See also содержит cross-link на when-to-build-matrix.md
 
-- [x] T11: Bump manifest specs-workflow extension.json -- @feature2,5 — Status: TODO | Est: 15m
+- [x] T11: Bump manifest specs-workflow extension.json -- @feature2,5 — id: t11 — Status: TODO | Est: 15m
   _Requirements: extension-manifest-integrity rule_
   **Done When:**
   - [ ] version 1.18.0 → 1.19.0
@@ -121,7 +121,7 @@
   - [ ] extension-layout-validate.ts exit 0
   - [ ] extension-json-meta-guard.ts exit 0
 
-- [x] T12: Update CLAUDE.md — Status: TODO | Est: 10m
+- [x] T12: Update CLAUDE.md — id: t12 — Status: TODO | Est: 10m
   _Requirements: claude-md-glossary rule_
   **Done When:**
   - [ ] 2 rows added для variant-matrix/when-to-build + variant-matrix/escape-hatch-audit
@@ -129,7 +129,7 @@
 
 ## Phase 3: E2E Integration Tests + Refactor & Polish
 
-- [x] T13: E2E integration tests -- @feature2,3,4,5,6,7 — Status: TODO | Est: 45m
+- [x] T13: E2E integration tests -- @feature2,3,4,5,6,7 — id: t13 — Status: TODO | Est: 45m
   _Requirements: ALL FRs except OUT_OF_SCOPE_
   _Variant: axis=test-coverage, value=positive+negative+regression+RU+escape_
   **Done When:**
@@ -141,7 +141,7 @@
   - [ ] T27 short escape WARNING_REASON_TOO_SHORT green
   - [ ] Все 6 e2e tests pass via /run-tests
 
-- [x] T14: Final verification — Status: TODO | Est: 15m
+- [x] T14: Final verification — id: t14 — Status: TODO | Est: 15m
   **Done When:**
   - [ ] Все BDD сценарии GREEN
   - [ ] validate-spec.ts -Path .specs/spec-variant-matrix → 0 errors

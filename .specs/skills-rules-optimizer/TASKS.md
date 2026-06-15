@@ -34,7 +34,7 @@
 
 > BDD foundation уже существует (vitest + .feature pattern из spec-variant-matrix). Bootstrap block не требуется. Все implementation tasks могут зависеть напрямую от T01.
 
-- [x] T01: Test fixtures + scaffold -- @feature1,2,3,4,5,6,7,8 — Status: TODO | Est: 30m
+- [x] T01: Test fixtures + scaffold -- @feature1,2,3,4,5,6,7,8 — id: t01 — Status: TODO | Est: 30m
   _Requirements: [FR-1](FR.md#fr-1-audit-skills-directory), [FR-2](FR.md#fr-2-frontmatter-validation-per-anthropic-spec), [FR-3](FR.md#fr-3-allowed-tools-coverage-check), [FR-4](FR.md#fr-4-triple-axis-overlap-detection)_
   **Done When:**
   - [ ] 6 fixture директорий созданы под `tests/fixtures/skills-rules-optimizer/` (valid-skill, claude-in-name, missing-allowed-tools, oversize-skill, transitive-references/{SKILL.md,A.md,B.md}, overlap-pair/{a,b})
@@ -44,7 +44,7 @@
 
 ## Phase 1: Rename + Foundation (Green)
 
-- [x] T02: Atomic git mv + manifest sync -- @feature8 — Status: TODO | Est: 25m
+- [x] T02: Atomic git mv + manifest sync -- @feature8 — id: t02 — Status: TODO | Est: 25m
   _Requirements: [FR-9](FR.md#fr-9-backward-compatibility-для-rules-side)_
   **Done When:**
   - [ ] `git mv .claude/skills/rules-optimizer .claude/skills/skills-rules-optimizer` (preserves history)
@@ -53,7 +53,7 @@
   - [ ] `extension-layout-validate.ts` exit 0 для skills-rules-optimizer entry
   - [ ] @feature8 scenario passes (rules-side audit byte-identical)
 
-- [x] T03: Extend shared.ts -- @feature1 — Status: TODO | Est: 30m
+- [x] T03: Extend shared.ts -- @feature1 — id: t03 — Status: TODO | Est: 30m
   _Requirements: [FR-8](FR.md#fr-8-unified-scoring-engine-для-rules-skills)_
   **Done When:**
   - [ ] `Asset` interface exported (`type: "rule" | "skill"`, `path`, `frontmatter`, `body`, `tokens`)
@@ -64,7 +64,7 @@
 
 ## Phase 2: Skill Implementation (Green)
 
-- [x] T04: Implement audit-skills.ts -- @feature1,2,3 — Status: TODO | Est: 45m
+- [x] T04: Implement audit-skills.ts -- @feature1,2,3 — id: t04 — Status: TODO | Est: 45m
   _Requirements: [FR-1](FR.md#fr-1-audit-skills-directory), [FR-2](FR.md#fr-2-frontmatter-validation-per-anthropic-spec), [FR-3](FR.md#fr-3-allowed-tools-coverage-check)_
   _Variant: axis=detection-coverage, value=frontmatter+tools+oversize_
   **Done When:**
@@ -75,7 +75,7 @@
   - [ ] Output JSON shape: `{ totalSkills, withErrors[], withWarnings[], details[] }`
   - [ ] @feature1, @feature2, @feature3 scenarios переходят из Red в Green
 
-- [x] T05: Implement detect-overlap.ts -- @feature4 — Status: TODO | Est: 30m
+- [x] T05: Implement detect-overlap.ts -- @feature4 — id: t05 — Status: TODO | Est: 30m
   _Requirements: [FR-4](FR.md#fr-4-triple-axis-overlap-detection)_
   _Variant: axis=overlap-axis, value=trigger+sections+functional_
   **Done When:**
@@ -84,7 +84,7 @@
   - [ ] Output JSON: `{ overlaps: [{a, b, axis, similarity, recommendation}] }`
   - [ ] @feature4 scenario passes (F-6 fixture detects ≥0.3 trigger Jaccard)
 
-- [x] T06: Convert audit.ts to dispatcher + extract audit-rules.ts -- @feature8 — Status: TODO | Est: 25m
+- [x] T06: Convert audit.ts to dispatcher + extract audit-rules.ts -- @feature8 — id: t06 — Status: TODO | Est: 25m
   _Requirements: [FR-9](FR.md#fr-9-backward-compatibility-для-rules-side)_
   **Done When:**
   - [ ] Current audit.ts logic extracted verbatim в `audit-rules.ts` (no logic change)
@@ -92,14 +92,14 @@
   - [ ] Backward compat baseline test: existing `audit.ts --dir .claude/rules --save x.json` outputs byte-identical к pre-rename baseline (snapshot test)
   - [ ] @feature8 scenario passes
 
-- [x] T07: Extend check-antipatterns.ts -- @feature1 — Status: TODO | Est: 25m
+- [x] T07: Extend check-antipatterns.ts -- @feature1 — id: t07 — Status: TODO | Est: 25m
   _Requirements: [FR-1](FR.md#fr-1-audit-skills-directory)_
   **Done When:**
   - [ ] Skill antipatterns added: transitive references (depth >1), oversize SKILL.md (>500 lines), missing TOC for >100 lines
   - [ ] Existing rule antipatterns preserved unchanged (regex regression test)
   - [ ] CLI accepts `--asset-type rule|skill|both` (default both)
 
-- [x] T08: Implement merge-skills.ts (envelope) -- @feature5 — Status: TODO | Est: 30m
+- [x] T08: Implement merge-skills.ts (envelope) -- @feature5 — id: t08 — Status: TODO | Est: 30m
   _Requirements: [FR-5](FR.md#fr-5-llm-merge-synthesis-через-sub-agent)_
   _Variant: axis=invocation-pattern, value=envelope_
   **Done When:**
@@ -109,7 +109,7 @@
   - [ ] Path validation per `no-unvalidated-manifest-paths` rule (reject `..` traversal)
   - [ ] @feature5 scenario passes
 
-- [x] T09: Implement verify-merge.ts (ratchet envelope) -- @feature6 — Status: TODO | Est: 30m
+- [x] T09: Implement verify-merge.ts (ratchet envelope) -- @feature6 — id: t09 — Status: TODO | Est: 30m
   _Requirements: [FR-6](FR.md#fr-6-ratchet-scorer-regression-prevention)_
   _Variant: axis=ratchet-decision, value=regression-detect+revert_
   **Done When:**
@@ -119,7 +119,7 @@
   - [ ] Output handler interprets scorer response: regression → revert path output; pass → cleanup suggestions
   - [ ] @feature6 scenario passes
 
-- [x] T10: References (3 new docs) -- @feature4,5,6 — Status: TODO | Est: 30m
+- [x] T10: References (3 new docs) -- @feature4,5,6 — id: t10 — Status: TODO | Est: 30m
   _Requirements: [FR-4](FR.md#fr-4-triple-axis-overlap-detection), [FR-5](FR.md#fr-5-llm-merge-synthesis-через-sub-agent), [FR-6](FR.md#fr-6-ratchet-scorer-regression-prevention)_
   **Done When:**
   - [ ] `merge-prompt-template.md` — MERGE_PROMPT verbatim из jkitchin/skillz + license attribution
@@ -127,7 +127,7 @@
   - [ ] `skill-overlap-detection.md` — triple-axis algo, Jaccard thresholds (0.3 default), calibration notes
   - [ ] Updated `known-antipatterns.md` с skill section (transitive refs, oversize, no TOC)
 
-- [x] T11: Update SKILL.md workflow -- @feature5,6,7 — Status: TODO | Est: 25m
+- [x] T11: Update SKILL.md workflow -- @feature5,6,7 — id: t11 — Status: TODO | Est: 25m
   _Requirements: [FR-5](FR.md#fr-5-llm-merge-synthesis-через-sub-agent), [FR-6](FR.md#fr-6-ratchet-scorer-regression-prevention), [FR-7](FR.md#fr-7-preserve-originals-no-auto-delete)_
   **Done When:**
   - [ ] SKILL.md mission updated: "Optimize rules + skills" (не только rules)
@@ -136,21 +136,21 @@
   - [ ] Cleanup suggestion section (FR-7 preserve originals)
   - [ ] allowed-tools updated: Read, Write, Edit, Bash, Agent (для invocation), Glob (existing)
 
-- [x] T12: Extend report.ts (skill findings) -- @feature1 — Status: TODO | Est: 20m
+- [x] T12: Extend report.ts (skill findings) -- @feature1 — id: t12 — Status: TODO | Est: 20m
   _Requirements: [FR-1](FR.md#fr-1-audit-skills-directory), [FR-9](FR.md#fr-9-backward-compatibility-для-rules-side)_
   **Done When:**
   - [ ] report.ts accepts skills audit JSON в дополнение к rules
   - [ ] Output Markdown содержит обе секции "Rules findings" + "Skills findings"
   - [ ] Existing rules-only invocation backward compat (FR-9)
 
-- [x] T13: Update /suggest-rules Phase 6 -- @feature8 — Status: TODO | Est: 20m
+- [x] T13: Update /suggest-rules Phase 6 -- @feature8 — id: t13 — Status: TODO | Est: 20m
   _Requirements: [FR-9](FR.md#fr-9-backward-compatibility-для-rules-side)_
   **Done When:**
   - [ ] `.claude/commands/suggest-rules.md` Phase 6.2: paths updated (rules-optimizer → skills-rules-optimizer)
   - [ ] Phase 6 pipeline: audit rules + audit skills + aggregate report
   - [ ] No regression в existing rule audit step (existing test passes)
 
-- [x] T14: Update CLAUDE.md -- @feature8 — Status: TODO | Est: 10m
+- [x] T14: Update CLAUDE.md -- @feature8 — id: t14 — Status: TODO | Est: 10m
   _Requirements: [`claude-md-glossary` rule]_
   **Done When:**
   - [ ] CLAUDE.md mentions `rules-optimizer` replaced с `skills-rules-optimizer` (если есть references)
@@ -158,7 +158,7 @@
 
 ## Phase 3: Verification
 
-- [x] T15: E2E integration tests -- @feature1,2,3,4,5,6,7,8 — Status: TODO | Est: 45m
+- [x] T15: E2E integration tests -- @feature1,2,3,4,5,6,7,8 — id: t15 — Status: TODO | Est: 45m
   _Requirements: ALL FRs except OUT_OF_SCOPE_
   **Done When:**
   - [ ] All 8 .feature scenarios переходят из Red в Green (vitest tests passing)
@@ -166,7 +166,7 @@
   - [ ] Mock Agent response в merge test (тест не требует real Agent invocation)
   - [ ] Tests run via host-bypass (`run-tests/SKILL.md` Step 3.6) — fast feedback (<5s)
 
-- [x] T16: Final verification — Status: TODO | Est: 15m
+- [x] T16: Final verification — id: t16 — Status: TODO | Est: 15m
   **Done When:**
   - [ ] `npx tsx .dev-pomogator/tools/specs-generator/validate-spec.ts -Path .specs/skills-rules-optimizer` → 0 errors
   - [ ] `npx tsx .dev-pomogator/tools/specs-generator/audit-spec.ts -Path .specs/skills-rules-optimizer` → 0 findings (self-host: skill applies к собственной spec)

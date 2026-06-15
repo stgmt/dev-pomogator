@@ -45,19 +45,19 @@ Skipped — strong-tests skill не требует новых сервисов/�
 > `(BDD foundation already in place, verified in DESIGN.md Evidence: "vitest": "^3.2.4")`.
 > DESIGN.md содержит `TEST_DATA_NONE` — дополнительные hook/fixture задачи не нужны.
 
-- [ ] T01: Create `.claude/skills/strong-tests/` directory + initial SKILL.md frontmatter (name, description, allowed-tools, argument-hint) -- @feature1 — Status: TODO | Est: 20m
+- [ ] T01: Create `.claude/skills/strong-tests/` directory + initial SKILL.md frontmatter (name, description, allowed-tools, argument-hint) -- @feature1 — id: t01 — Status: TODO | Est: 20m
   _Requirements: [FR-1](FR.md#fr-1-greenfield-strong-test-generation-with-pbt), [FR-5](FR.md#fr-5-12-point-self-eval-as-final-gate-with-passfail-report)_
   **Done When:**
   - [ ] Directory exists at `.claude/skills/strong-tests/`
   - [ ] `SKILL.md` exists with valid YAML frontmatter (name=strong-tests, allowed-tools includes Read/Write/Edit/Grep/Glob/Bash/AskUserQuestion/Skill)
   - [ ] Frontmatter validates via `npx tsx extensions/_shared/extension-layout-validate.ts` (no layout violations)
-- [ ] T02: Write `.specs/strong-tests/strong-tests.feature` with TESTQUAL001_01..05 scenarios for @feature1..@feature5 -- @feature1..@feature5 — Status: TODO | Est: 30m
+- [ ] T02: Write `.specs/strong-tests/strong-tests.feature` with TESTQUAL001_01..05 scenarios for @feature1..@feature5 -- @feature1..@feature5 — id: t02 — Status: TODO | Est: 30m
   _Requirements: All FRs_
   **Done When:**
   - [ ] 5 scenarios written (one per FR) with Given/When/Then triplets
   - [ ] Naming follows DOMAIN_CODE_NN per `extension-test-quality` rule (TESTQUAL001_01..05)
   - [ ] `# @feature1`..`@feature5` tags above each Scenario
-- [ ] T03: Write `tests/e2e/strong-tests.test.ts` stub blocks matching @feature1..@feature5 (1:1 mapping; PendingException-style empty body) — Status: TODO | Est: 30m
+- [ ] T03: Write `tests/e2e/strong-tests.test.ts` stub blocks matching @feature1..@feature5 (1:1 mapping; PendingException-style empty body) — id: t03 — Status: TODO | Est: 30m
   _Requirements: All FRs_
   **Done When:**
   - [ ] vitest `describe("TESTQUAL001: strong-tests skill")` block exists
@@ -74,38 +74,38 @@ Skipped — strong-tests skill не требует новых сервисов/�
 > Реализовать SKILL.md sections + references + run-mutation.ts чтобы Red тесты начали проходить.
 > Each task below must pass `task-form-guard`.
 
-- [ ] T04: Fill SKILL.md sections 1-3 (Why this exists / Pre-write checklist / Multi-framework tooling matrix) -- @feature1 — Status: TODO | Est: 45m
+- [ ] T04: Fill SKILL.md sections 1-3 (Why this exists / Pre-write checklist / Multi-framework tooling matrix) -- @feature1 — id: t04 — Status: TODO | Est: 45m
   _Requirements: [FR-1](FR.md#fr-1-greenfield-strong-test-generation-with-pbt), [FR-4](FR.md#fr-4-multi-stack-auto-detection)_
   **Done When:**
   - [ ] Section 1 has at least 3 empirical citations with URLs + concrete numbers from RESEARCH.md
   - [ ] Section 2 has invariants 5 minimum, input categories 3 minimum, mutation-equivalent code, framework choice subsections
   - [ ] Section 3 has TS + Python detail; Java/C#/Go/Rust abbreviated with reference link
-- [ ] T05: Fill SKILL.md sections 4-5 (Anti-pattern detection table 8 smells / 12-point self-eval verbatim) -- @feature2,@feature5 — Status: TODO | Est: 45m
+- [ ] T05: Fill SKILL.md sections 4-5 (Anti-pattern detection table 8 smells / 12-point self-eval verbatim) -- @feature2,@feature5 — id: t05 — Status: TODO | Est: 45m
   _Requirements: [FR-2](FR.md#fr-2-audit-existing-tests-against-8-anti-pattern-catalogue), [FR-5](FR.md#fr-5-12-point-self-eval-as-final-gate-with-passfail-report)_
   **Done When:**
   - [ ] Section 4 table has 8 rows (smell / grep pattern / frequency / fix)
   - [ ] Section 5 has all 12 items verbatim with rationale
   - [ ] @feature2 + @feature5 vitest tests pass
-- [ ] T06: Fill SKILL.md sections 6-8 (3 execution modes / 4 verbatim prompt templates A-D / Anti-халява invariants 4 hard-NOs) -- @feature1,@feature3 — Status: TODO | Est: 45m
+- [ ] T06: Fill SKILL.md sections 6-8 (3 execution modes / 4 verbatim prompt templates A-D / Anti-халява invariants 4 hard-NOs) -- @feature1,@feature3 — id: t06 — Status: TODO | Est: 45m
   _Requirements: [FR-1](FR.md#fr-1-greenfield-strong-test-generation-with-pbt), [FR-3](FR.md#fr-3-mutation-feedback-loop-until-threshold)_
   **Done When:**
   - [ ] Section 6 has Greenfield / Audit / Mutation-feedback algorithm steps each
   - [ ] Section 7 has 4 prompt templates A/B/C/D copy-paste ready
   - [ ] Section 8 has 4 hard-NO invariants
   - [ ] @feature1 + @feature3 vitest tests pass
-- [ ] T07: Write `.claude/skills/strong-tests/references/anti-patterns.md` (8 patterns full detail + grep recipes + honnibal 8-category mutation catalogue) -- @feature2 — Status: TODO | Est: 45m
+- [ ] T07: Write `.claude/skills/strong-tests/references/anti-patterns.md` (8 patterns full detail + grep recipes + honnibal 8-category mutation catalogue) -- @feature2 — id: t07 — Status: TODO | Est: 45m
   _Requirements: [FR-2](FR.md#fr-2-audit-existing-tests-against-8-anti-pattern-catalogue)_
   **Done When:**
   - [ ] All 8 anti-patterns have BAD snippet, GOOD replacement, grep regex
   - [ ] honnibal 8-category mutation catalogue cited with credit
   - [ ] Cross-link to tests-create-update SKILL.md rule 10 added
-- [ ] T08: Write `.claude/skills/strong-tests/references/tooling-setup.md` (6 stacks full matrix: install + run + threshold per stack) -- @feature4 — Status: TODO | Est: 45m
+- [ ] T08: Write `.claude/skills/strong-tests/references/tooling-setup.md` (6 stacks full matrix: install + run + threshold per stack) -- @feature4 — id: t08 — Status: TODO | Est: 45m
   _Requirements: [FR-4](FR.md#fr-4-multi-stack-auto-detection)_
   **Done When:**
   - [ ] 6 sections (TS / Python / Java / C# / Go / Rust)
   - [ ] Each section has install command, run command, threshold recommendation
   - [ ] Detection signal documented per stack
-- [ ] T09: Write `.claude/skills/strong-tests/scripts/run-mutation.ts` (auto-detect stack + dispatch Stryker/mutmut subprocess + standardized JSON output) -- @feature3,@feature4 — Status: TODO | Est: 60m
+- [ ] T09: Write `.claude/skills/strong-tests/scripts/run-mutation.ts` (auto-detect stack + dispatch Stryker/mutmut subprocess + standardized JSON output) -- @feature3,@feature4 — id: t09 — Status: TODO | Est: 60m
   _Requirements: [FR-3](FR.md#fr-3-mutation-feedback-loop-until-threshold), [FR-4](FR.md#fr-4-multi-stack-auto-detection)_
   **Done When:**
   - [ ] Script runs via `npx tsx run-mutation.ts [target] [--threshold=N] [--max-iter=M] [--dry-run]`
@@ -116,28 +116,28 @@ Skipped — strong-tests skill не требует новых сервисов/�
 
 ## Phase 2: Wiring + Verification (Green)
 
-- [ ] T10: Update `extensions/test-quality/extension.json` to add skills.strong-tests + skillFiles.strong-tests (all 4 files) — Status: TODO | Est: 15m
+- [ ] T10: Update `extensions/test-quality/extension.json` to add skills.strong-tests + skillFiles.strong-tests (all 4 files) — id: t10 — Status: TODO | Est: 15m
   _Requirements: [FR-Integration]_
   **Done When:**
   - [ ] `skills.strong-tests` key set to `.claude/skills/strong-tests`
   - [ ] `skillFiles.strong-tests` array contains SKILL.md + 2 reference files + 1 script
   - [ ] `extension-manifest-integrity` rule satisfied
-- [ ] T11: Run `npx tsx extensions/_shared/extension-layout-validate.ts` + fix any strong-tests violations — Status: TODO | Est: 15m
+- [ ] T11: Run `npx tsx extensions/_shared/extension-layout-validate.ts` + fix any strong-tests violations — id: t11 — Status: TODO | Est: 15m
   _Requirements: [FR-Layout]_
   **Done When:**
   - [ ] Validator exits 0 for strong-tests paths
   - [ ] Pre-existing edge-debug-port violation noted but ignored (flagged in report)
-- [ ] T12: Implement vitest tests: replace stubs with real assertions, run npm test -- --run strong-tests until Green — Status: TODO | Est: 60m
+- [ ] T12: Implement vitest tests: replace stubs with real assertions, run npm test -- --run strong-tests until Green — id: t12 — Status: TODO | Est: 60m
   _Requirements: All FRs_
   **Done When:**
   - [ ] All 5 vitest scenarios Green
   - [ ] Tests follow `integration-tests-first` rule (no unit-only)
-- [ ] T13: Run `Skill("skills-rules-optimizer")` audit on strong-tests + fix any P0/P1 findings (oversize/merge/frontmatter) — Status: TODO | Est: 30m
+- [ ] T13: Run `Skill("skills-rules-optimizer")` audit on strong-tests + fix any P0/P1 findings (oversize/merge/frontmatter) — id: t13 — Status: TODO | Est: 30m
   _Requirements: NFR-Reliability_
   **Done When:**
   - [ ] Optimizer reports 0 P0 findings for strong-tests
   - [ ] SKILL.md token count under 8K soft cap
-- [ ] T14: Cross-link bidirectionally — edit `.claude/skills/tests-create-update/SKILL.md` add note pointing at strong-tests, AND edit strong-tests SKILL.md reverse — Status: TODO | Est: 15m
+- [ ] T14: Cross-link bidirectionally — edit `.claude/skills/tests-create-update/SKILL.md` add note pointing at strong-tests, AND edit strong-tests SKILL.md reverse — id: t14 — Status: TODO | Est: 15m
   _Requirements: NFR-U4_
   **Done When:**
   - [ ] tests-create-update/SKILL.md contains `## Related Skills` with reference to strong-tests
@@ -149,16 +149,16 @@ Skipped — strong-tests skill не требует новых сервисов/�
 
 ## Phase 3: Refactor & Polish
 
-- [ ] T15: Run `Skill("spec-review")` final pass post-implementation — categories 11 (spec drift) + 12 (collisions) + 13 (config consistency) — Status: TODO | Est: 20m
+- [ ] T15: Run `Skill("spec-review")` final pass post-implementation — categories 11 (spec drift) + 12 (collisions) + 13 (config consistency) — id: t15 — Status: TODO | Est: 20m
   **Done When:**
   - [ ] REVIEW_NOTES.md updated with post-impl section
   - [ ] 0 P0 findings; 0 P1 unless explicit override
-- [ ] T16: Generate `.specs/strong-tests/report.html` (8 sections, semantic HTML5, light/dark CSS, no JS, no emojis) — Status: TODO | Est: 45m
+- [ ] T16: Generate `.specs/strong-tests/report.html` (8 sections, semantic HTML5, light/dark CSS, no JS, no emojis) — id: t16 — Status: TODO | Est: 45m
   **Done When:**
   - [ ] File exists with all 8 sections (executive summary / empirical foundation / existing-skills audit / incident analysis / spec summary / architecture / verification / limitations)
   - [ ] Validates as HTML5 (headings hierarchy correct)
   - [ ] Renders OK in both light and dark mode
-- [ ] T17: Final verification — Status: TODO | Est: 20m
+- [ ] T17: Final verification — id: t17 — Status: TODO | Est: 20m
   **Done When:**
   - [ ] `validate-spec.ts -Path .specs/strong-tests` returns 0 errors
   - [ ] `audit-spec.ts -Path .specs/strong-tests` returns 0 findings
@@ -168,20 +168,20 @@ Skipped — strong-tests skill не требует новых сервисов/�
 
 > v3 expansion — JiT auto-trigger через PostToolUse hook + ast-grep detector + suppression audit log + §1.5 behavioural prior. Mirrors Phase 0-2 TDD discipline для new functionality. Все tasks below must pass `task-form-guard`.
 
-- [x] T18: Add TESTQUAL001_06..08 scenarios to `.specs/strong-tests/strong-tests.feature` @feature7 — Status: DONE | Est: 25m _(Verified: 2026-05-12)_
+- [x] T18: Add TESTQUAL001_06..08 scenarios to `.specs/strong-tests/strong-tests.feature` @feature7 — id: t18 — Status: DONE | Est: 25m _(Verified: 2026-05-12)_
   _Requirements: [FR-7](FR.md#fr-7-jit-just-in-time-auto-trigger-via-posttooluse-hook)_
   **Done When:**
   - [x] 3 scenarios written: TESTQUAL001_06 (detection emit), TESTQUAL001_07 (suppression + audit log), TESTQUAL001_08 (§1.5 ordering)
   - [x] All tagged `# @feature7` above Scenario keyword per `extension-test-quality` rule
   - [x] Given/When/Then triplets use `or` instead of pipe `|` to avoid markdown table parser conflicts
-- [x] T19: Add `tests/e2e/strong-tests-jit.test.ts` Red stubs (1:1 mapping to TESTQUAL001_06..08) -- @feature7 — Status: DONE | Est: 30m _(Verified: 2026-05-12)_
+- [x] T19: Add `tests/e2e/strong-tests-jit.test.ts` Red stubs (1:1 mapping to TESTQUAL001_06..08) -- @feature7 — id: t19 — Status: DONE | Est: 30m _(Verified: 2026-05-12)_
   _Requirements: [FR-7](FR.md#fr-7-jit-just-in-time-auto-trigger-via-posttooluse-hook)_
   **Done When:**
   - [x] vitest `describe("TESTQUAL001_JiT: PostToolUse auto-trigger")` block exists
   - [x] 3 `it()` blocks named TESTQUAL001_06..08 with `// @feature7` comment above each
   - [x] Tests are integration-first (spawnSync the detector + simulated PostToolUse hook flow) per `integration-tests-first` rule
   - [x] `npm test -- --run strong-tests-jit` shows Green (Red→Green transitioned in Chunk 2)
-- [x] T20: Implement `.claude/skills/strong-tests/scripts/detect-invariant-candidates.ts` -- @feature7 — Status: DONE | Est: 90m _(Verified: 2026-05-12; note — regex-based v0.1.0, ast-grep migration v0.4.0 roadmap)_
+- [x] T20: Implement `.claude/skills/strong-tests/scripts/detect-invariant-candidates.ts` -- @feature7 — id: t20 — Status: DONE | Est: 90m _(Verified: 2026-05-12; note — regex-based v0.1.0, ast-grep migration v0.4.0 roadmap)_
   _Requirements: [FR-7](FR.md#fr-7-jit-just-in-time-auto-trigger-via-posttooluse-hook), [NFR-P4](NFR.md#performance-jit), [NFR-R5](NFR.md#reliability-jit)_
   **Done When:**
   - [x] Script runs via `npx tsx detect-invariant-candidates.ts <file>` returning JSON per [SCHEMA.md detect-invariant-candidates.ts stdout JSON](strong-tests_SCHEMA.md)
@@ -192,7 +192,7 @@ Skipped — strong-tests skill не требует новых сервисов/�
   - [x] Graceful degradation: if ast-grep binary missing, exits 0 with `candidates: []` + `astGrepVersion: null` per NFR-R5
   - [x] Performance: p95 ≤500ms on files ≤2000 LOC (measured via `scanDurationMs` in output) per NFR-P4
   - [x] Imports use `.ts` extensions per `ts-import-extensions` rule
-- [x] T21: Implement `extensions/test-quality/tools/test-quality/posttool-jit.ts` PostToolUse hook handler -- @feature7 — Status: DONE | Est: 60m _(Verified: 2026-05-12)_
+- [x] T21: Implement `extensions/test-quality/tools/test-quality/posttool-jit.ts` PostToolUse hook handler -- @feature7 — id: t21 — Status: DONE | Est: 60m _(Verified: 2026-05-12)_
   _Requirements: [FR-7](FR.md#fr-7-jit-just-in-time-auto-trigger-via-posttooluse-hook), [NFR-S4](NFR.md#security-jit), [NFR-S5](NFR.md#security-jit), [NFR-R6](NFR.md#reliability-jit)_
   **Done When:**
   - [x] Hook reads stdin JSON `{tool_name, tool_input: {file_path, ...}, session_id, cwd}` per Claude Code PostToolUse hook protocol
@@ -204,14 +204,14 @@ Skipped — strong-tests skill не требует новых сервисов/�
   - [x] Emits stdout JSON `{hookSpecificOutput: {hookEventName: "PostToolUse", additionalContext}}` per Claude Code hook protocol
   - [x] Exits 0 unconditionally per NFR-R5 graceful degradation
   - [x] Imports use `.ts` extensions per `ts-import-extensions` rule
-- [x] T22: Wire JiT artifacts in `extensions/test-quality/extension.json` -- @feature7 — Status: DONE | Est: 20m _(Verified: 2026-05-12)_
+- [x] T22: Wire JiT artifacts in `extensions/test-quality/extension.json` -- @feature7 — id: t22 — Status: DONE | Est: 20m _(Verified: 2026-05-12)_
   _Requirements: `extension-manifest-integrity` rule, `installer-hook-formats` rule_
   **Done When:**
   - [x] `hooks.claude.PostToolUse[]` array contains new entry with `matcher: "Write|Edit"` and `hooks[].command: "npx tsx .dev-pomogator/tools/test-quality/posttool-jit.ts"` per array-with-nested-hooks format per `gotchas/installer-hook-formats.md`
   - [x] `skillFiles.strong-tests` includes `.claude/skills/strong-tests/scripts/detect-invariant-candidates.ts`
   - [x] `toolFiles.test-quality` includes `.dev-pomogator/tools/test-quality/posttool-jit.ts`
   - [x] Bump version in extension.json (e.g., 1.2.0 → 1.3.0) per semver convention for added feature
-- [x] T23: Implement Green — replace JiT test stubs with real assertions, run until PASS — Status: DONE | Est: 60m _(Verified: 2026-05-12; vitest 4/4 PASS)_
+- [x] T23: Implement Green — replace JiT test stubs with real assertions, run until PASS — id: t23 — Status: DONE | Est: 60m _(Verified: 2026-05-12; vitest 4/4 PASS)_
   _Requirements: All FR-7 + linked NFRs_
   **Done When:**
   - [x] TESTQUAL001_06 PASS: integration test asserts detector identifies collection-returning function on fixture file
@@ -222,7 +222,7 @@ Skipped — strong-tests skill не требует новых сервисов/�
 
 > v0.3.0 extends JiT auto-trigger detector to third language stack: C# / .NET. Same regex-based approach as TS+Python — single-line method signature detection with collection-return-type checking, suppression comment recognition, nested for/foreach loop counting, test file exclusion via Steps.cs / Tests.cs / Test.cs / _test.cs / capital Tests folder patterns. All tasks below must pass `task-form-guard`.
 
-- [x] T25: Add C# regex branch to detect-invariant-candidates.ts (COLLECTION_CS + FUNCTION_CS + SUPPRESS_CS constants + detectStack csharp branch + scan csharp dispatch) -- @feature7 — Status: DONE | Est: 60m _(Verified: 2026-05-12)_
+- [x] T25: Add C# regex branch to detect-invariant-candidates.ts (COLLECTION_CS + FUNCTION_CS + SUPPRESS_CS constants + detectStack csharp branch + scan csharp dispatch) -- @feature7 — id: t25 — Status: DONE | Est: 60m _(Verified: 2026-05-12)_
   _Requirements: [FR-7](FR.md#fr-7-jit-just-in-time-auto-trigger-via-posttooluse-hook)_
   **Done When:**
   - [x] COLLECTION_CS regex matches List<T>, IList<T>, IEnumerable<T>, IReadOnlyList<T>, IReadOnlyCollection<T>, IReadOnlyDictionary<K,V>, ICollection<T>, Dictionary<K,V>, IDictionary<K,V>, HashSet<T>, ISet<T>, Queue<T>, Stack<T>, T[] with optional Task<...> ValueTask<...> wrapper
@@ -232,7 +232,7 @@ Skipped — strong-tests skill не требует новых сервисов/�
   - [x] nestedLoopCount counts both `for (...)` and `foreach (...)` for csharp stack
   - [x] Manual smoke test verifies stack csharp + BuildIndex nxm-overlap + Tally collection-returning + CountItems suppressed
 
-- [x] T26: Update posttool-jit.ts PRODUCTION_INCLUDE and TEST_EXCLUDE patterns for C# files -- @feature7 — Status: DONE | Est: 20m _(Verified: 2026-05-12)_
+- [x] T26: Update posttool-jit.ts PRODUCTION_INCLUDE and TEST_EXCLUDE patterns for C# files -- @feature7 — id: t26 — Status: DONE | Est: 20m _(Verified: 2026-05-12)_
   _Requirements: [FR-7](FR.md#fr-7-jit-just-in-time-auto-trigger-via-posttooluse-hook), [NFR-S5](NFR.md#security-jit)_
   **Done When:**
   - [x] PRODUCTION_INCLUDE regex updated from `/\.(ts|tsx|py)$/i` to `/\.(ts|tsx|py|cs)$/i` for C# inclusion
@@ -241,7 +241,7 @@ Skipped — strong-tests skill не требует новых сервисов/�
   - [x] Installed copy synced from extensions/test-quality/tools/test-quality/posttool-jit.ts to .dev-pomogator/tools/test-quality/posttool-jit.ts per post-edit-verification rule
   - [x] End-to-end smoke test verifies production .cs emits additionalContext while .cs in Tests/ folder and Steps.cs are excluded with empty stdout
 
-- [x] T27: Add TESTQUAL001_09 vitest it() block in tests/e2e/strong-tests-jit.test.ts -- @feature7 — Status: DONE | Est: 30m _(Verified: 2026-05-12; vitest 6/6 PASS including TESTQUAL001_09 + 09b)_
+- [x] T27: Add TESTQUAL001_09 vitest it() block in tests/e2e/strong-tests-jit.test.ts -- @feature7 — id: t27 — Status: DONE | Est: 30m _(Verified: 2026-05-12; vitest 6/6 PASS including TESTQUAL001_09 + 09b)_
   _Requirements: [FR-7](FR.md#fr-7-jit-just-in-time-auto-trigger-via-posttooluse-hook), [NFR-P4](NFR.md#performance-jit)_
   **Done When:**
   - [x] New `it('TESTQUAL001_09: detector identifies Collection-returning C# method with nested for+foreach loops', ...)` block exists with `// @feature7` comment
@@ -251,7 +251,7 @@ Skipped — strong-tests skill не требует новых сервисов/�
   - [x] Additional TESTQUAL001_09b verifies hook exclusion patterns (Steps.cs, Tests.cs, capital Tests/ folder) — production .cs emits additionalContext, test files emit empty stdout
   - [x] vitest run shows 6/6 PASS (TESTQUAL001_06 + 07 + 08 + 09 + 09b + 06b)
 
-- [x] T28: Document known limitations as out-of-scope (multi-line C# signatures + expression-bodied properties) -- @feature7 — Status: DONE | Est: 10m _(Verified: 2026-05-12; documented in FR.md Assumptions + Out of Scope)_
+- [x] T28: Document known limitations as out-of-scope (multi-line C# signatures + expression-bodied properties) -- @feature7 — id: t28 — Status: DONE | Est: 10m _(Verified: 2026-05-12; documented in FR.md Assumptions + Out of Scope)_
   _Requirements: documentation_
   **Done When:**
   - [x] Multi-line C# method signatures (e.g., `public async Task<List<T>>\n  GetAsync(...)`) noted as known limitation in v0.3.0 — regex single-line only
@@ -269,7 +269,7 @@ Skipped — strong-tests skill не требует новых сервисов/�
 
 > v0.4.0 ships Go detector (4th stack) + cross-skill composition wires + lm-saas field verification + INVARIANTS.md catalogue. Commit `6836052`.
 
-- [x] T29: Add Go stack detection to detect-invariant-candidates.ts (COLLECTION_GO + FUNCTION_GO + SUPPRESS_GO regex constants) -- @feature7 — Status: DONE | Est: 60m _(Verified: 2026-05-13)_
+- [x] T29: Add Go stack detection to detect-invariant-candidates.ts (COLLECTION_GO + FUNCTION_GO + SUPPRESS_GO regex constants) -- @feature7 — id: t29 — Status: DONE | Est: 60m _(Verified: 2026-05-13)_
   _Requirements: FR-7 v0.4.0_
   **Done When:**
   - [x] Go function signatures with pointer receiver detected: `func (s *Service) Method() []T`
@@ -303,7 +303,7 @@ Skipped — strong-tests skill не требует новых сервисов/�
 
 > v0.5.0 closes 8 declared-but-not-working features. Commit `6836052`.
 
-- [x] T33: Composition-chain detection — declared since v0.1.0 in types + SKILL.md but 0 lines implementation -- @feature7 — Status: DONE | Est: 90m _(Verified: 2026-05-13)_
+- [x] T33: Composition-chain detection — declared since v0.1.0 in types + SKILL.md but 0 lines implementation -- @feature7 — id: t33 — Status: DONE | Est: 90m _(Verified: 2026-05-13)_
   _Requirements: FR-11_
   **Done When:**
   - [x] CHAIN_TS / CHAIN_CS / CHAIN_PY / CHAIN_GO regex constants added
