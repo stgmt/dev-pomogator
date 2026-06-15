@@ -12,11 +12,13 @@
  * run the real check first. This catches the failure that motivated the gate: presenting a
  * fact-check verdict table without ever running fact-check.
  *
- * It ALSO kicks «доделывай»: the `deferred-work` class fires when the final message
- * self-reports a remaining-work list OR defers the next step back to the user
- * ("осталось: …", "беру дальше пункт N", "скажешь — сделаю") and then ENDS the turn.
- * No tool excuses it — stopping with a declared remainder is the failure; the agent must
- * finish in-turn (cooldown + maxRetries release a genuinely-blocked step).
+ * It ALSO kicks «доделывай» — but that is now the Meridian Haiku JUDGE's job (FR-49e), not a
+ * regex. When the turn ends on a progress/completion claim while the census shows unfinished
+ * work, the judge decides block-vs-approve by UNDERSTANDING ("беру дальше пункт N", "скажешь —
+ * сделаю", "это несколько заходов" → BLOCK). No tool excuses it — stopping with a declared
+ * remainder is the failure; the agent must finish in-turn (cooldown + maxRetries release a
+ * genuinely-blocked step). The brittle deferred-work regex was removed (it missed real stalls
+ * AND false-fired on honest reports); judge-bench.ts pins the judge's behaviour instead.
  *
  * Modes (CLAIM_GATE_ENABLED): "true" (enforce, default) | "shadow" (log only, never block)
  * | "false" (off). Every detection is appended to .dev-pomogator/.claim-evidence-gate-fires.jsonl.
@@ -48,11 +50,11 @@ const MARKER_FILENAME = '.claim-evidence-gate-marker.json';
 const FIRES_FILENAME = '.claim-evidence-gate-fires.jsonl';
 const SELF_MARKER = 'claim-evidence-gate';
 // Self-reference skip: when a message is ABOUT this gate (reporting on it,
-// quoting its trigger phrases as examples) it must not trigger the gate. The
-// original single English marker missed Russian meta-discussion ("пинатор",
-// "ДОДЕЛЫВАЙ", "deferred-work") — which false-fired the deferred-work class on
-// a completion report. Low gaming-risk: these are the gate's OWN vocabulary, not
-// words a genuine deferral ("беру дальше пункт 1") would contain.
+// quoting its trigger phrases as examples) it must not trigger the gate — including
+// being escalated to the judge. The original single English marker missed Russian
+// meta-discussion ("пинатор", "ДОДЕЛЫВАЙ", "deferred-work"), which false-fired on a
+// completion report that merely DESCRIBED the gate. Low gaming-risk: these are the
+// gate's OWN vocabulary, not words a genuine deferral ("беру дальше пункт 1") contains.
 const SELF_MARKERS = ['claim-evidence-gate', 'deferred-work', 'пинатор', 'ДОДЕЛЫВАЙ'];
 const LOG_PREFIX = 'CLAIM-EVIDENCE-GATE';
 // FR-49e: loose lexical net for "the turn ended on a progress/completion/continuation
@@ -240,12 +242,6 @@ async function main(): Promise<void> {
       `⚠️ ${SELF_MARKER}: ты заявил завершение СПЕКИ/фичи, но ${unsupported.need}\n` +
         `Не закрывай как «готово» — доделай открытое или назови ОДИН конкретный следующий шаг. ` +
         `GREEN-вердикт = «нет вранья про готовность», НЕ «спека закончена».`,
-    );
-  } else if (unsupported.cls === 'deferred-work') {
-    block(
-      `⚠️ ${SELF_MARKER}: ты сам обозначил остаток работы / отложил следующий шаг и сдаёшь ход.\n` +
-        `ДОДЕЛЫВАЙ в этом же ходе — ${unsupported.need}.\n` +
-        `Не перекладывай следующий шаг на пользователя «скажешь — сделаю». Если реально заблокирован — задай ОДИН конкретный вопрос; иначе продолжай работу.${censusTail}`,
     );
   } else {
     block(

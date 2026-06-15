@@ -1,7 +1,7 @@
 /**
  * FR-49e — the gray-zone LLM judge for the claim-evidence-gate Stop hook.
  *
- * The fast layer (regex deferred-work/works-done + the FR-49b census fact) handles the
+ * The fast layer (regex works-done/not-found/verified + the FR-49b census fact) handles the
  * obvious cases instantly. The GRAY zone — a progress/completion claim that ended the turn,
  * which the regex did NOT match, while the census shows unfinished work — escalates HERE: a
  * one-shot Haiku call through the local Meridian subscription proxy decides block vs approve

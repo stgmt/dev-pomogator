@@ -5,6 +5,11 @@
  * that intrinsically require a tool to back them. firstUnsupported() pairs each hit with
  * the turn's tool_uses and returns the first claim that lacks its required evidence.
  *
+ * Deferred-work (lazy-stop / hand-to-user) detection is NOT here anymore: the brittle regex
+ * was removed (it both missed real stalls and false-fired on honest progress reports). That
+ * job belongs ENTIRELY to the Meridian Haiku judge (meridian-judge.ts), which decides by
+ * understanding, not phrase-matching — see the judge-bench for its contract.
+ *
  * Design bias: default to APPROVE. A hit requires a STRUCTURAL pattern (a verdict grid, a
  * standalone completion assertion, a negative-existence claim, an explicit [VERIFIED]
  * marker) — never a single stray word — and a block requires zero matching evidence.
@@ -17,13 +22,12 @@ export type ClaimClass =
   | 'works-done'
   | 'not-found-impossible'
   | 'verified-marker'
-  | 'deferred-work'
   // FR-49b: synthesized by the Stop hook (NOT classify()) — a whole-spec completion
   // claim while the task-census shows unfinished work. Needs repoRoot (cache read),
   // so it lives in the hook, not the pure text classifier.
   | 'spec-false-close'
-  // FR-49e: synthesized by the Stop hook — the gray-zone Meridian judge ruled the stop
-  // premature (the case the regex classes don't phrase-match). Hook-only (async model call).
+  // FR-49e: synthesized by the Stop hook — the Meridian judge ruled the stop premature
+  // (lazy-stop / announce-next / hand-to-user). Hook-only (async model call).
   | 'judge-block';
 
 export interface ClaimHit {
@@ -123,82 +127,6 @@ function isNotFound(text: string): boolean {
 
 const VERIFIED_MARKER = /\[VERIFIED\s+via\s+([^\]]{1,80})\]/i;
 
-// ── deferred-work detector ───────────────────────────────────────────────────
-// The "stopped mid-task" pattern: the final message SELF-REPORTS remaining work
-// or DEFERS the next step (often handing the go-ahead back to the user) instead
-// of just doing it — and the turn ends. The gate must kick «доделывай», not
-// approve. Unlike the evidence classes, NO tool excuses this — stopping with a
-// declared remainder is the failure itself. Anti-loop (cooldown + maxRetries in
-// the Stop hook) guarantees it can't trap forever: a genuinely-blocked next step
-// approves after the retry budget.
-//
-// PRECISION over recall (dogfood 2026-06-11 on the real session: the broad
-// remaining-work patterns — bare "осталось", "продолжаю", "TODO", numbered
-// lists, "следующий шаг" — fired on 36% of real stop-points, ~90% of them
-// FALSE: completion reports ("Готово, закоммичено", "Pre-flight закрыт DONE")
-// and plain plan-answers ("33 готовы, 11 в работе"). A gate that cries wolf on
-// every report gets disabled. So the detector targets ONLY the high-precision
-// signal the user actually hates: HANDING THE NEXT STEP / A DECISION BACK to the
-// user instead of doing it. "Осталось 1,2,3" in a report is NOT a defer; "скажешь
-// — сделаю" / "решать тебе" / "жду твоего слова" IS.
-//   Catches:  "Скажешь «волна 1» — начну"   "если хочешь — покажу"
-//             "это решать тебе"             "беру дальше пункт 1" (then stop)
-//             "беру это следующим заходом"  "добью отдельным заходом" (self-defer)
-//   Ignores:  "Готово, закоммичено"  "33 готовы, 11 в работе"  "продолжаю проверку"
-const DEFERRED_WORK = new RegExp(
-  [
-    // hand the next ACTION back, pending the user's go-ahead
-    'скажешь\\s+\\S.*?(?:начну|сделаю|возьму|пойду|покажу|продолж)',
-    'если\\s+(?:хочешь|нужно|надо)[^.\\n]{0,50}(?:сделаю|возьму|начну|покажу|продолж|могу|скажи)',
-    '(?:скажи|напиши)[ ,—–-]+[^.\\n]{0,40}(?:и\\s+я|покаж|сделаю|начну|возьму|пойду|продолж)',
-    'жди\\s+команды',
-    // hand a DECISION back to the user
-    'реш(?:ать|аешь|и)\\s+(?:тебе|ты|тобой|сам)',
-    'тебе\\s+решать',
-    'на\\s+тво[её]\\s+усмотрение',
-    '(?:разрул|выбер|реши|подтверд)\\S*\\s+(?:тобой|ты|тебе|сам)',
-    'жду\\s+(?:твоего|твой|твоё|твоей)\\s+(?:слова|ответа|решения|сигнала|команды|добра)',
-    'жду,?\\s+что\\s+(?:ты\\s+)?скажешь',
-    'дай\\s+знать',
-    // a SPECIFIC announce-next-and-stop (numbered next step), not bare "дальше"
-    'беру\\s+(?:дальше\\s+)?(?:пункт|волну)\\s*\\d',
-    // announce a SHIFT to the NEXT unit of work and STOP (2026-06-14 slip). «продолжаю»
-    // was ignored to protect «продолжаю проверку» (continuing the CURRENT action), but
-    // «продолжаю / перехожу ПО/К/НА/ЗА следующему [куску]» at stop is the empty-promise
-    // defer — the agent named the next unit and ended the turn instead of doing it. The
-    // «по/к/на/за следующ» shift is what distinguishes it from the in-flight continuation.
-    '(?:продолж\\S+|перехожу|перехож\\S+|приступаю|берусь|возьмусь)\\s+(?:по|к|на|за)\\s+следующ\\S+',
-    'беру\\s+следующ\\S+',
-    // self-DEFER to the NEXT TURN explicitly — "делаю это сейчас, в следующем ходе",
-    // "следующим ходом", EN "next turn". Saying you will do it next turn IS the defer:
-    // the step is known, no blocker, yet the turn ends. (\\S* not \\w*: JS \\w is
-    // ASCII-only and would stop at the first Cyrillic letter.) 2026-06-15 slip.
-    'в\\s+следующ\\S*\\s+ход\\S*',
-    'следующим\\s+ход\\S*',
-    'next\\s+turn',
-    // announce the next action as the CLOSING line and STOP — "запускаю сейчас.",
-    // "Делаю сейчас." The announce verb must be CLAUSE-INITIAL (after . ! ? — : or the
-    // message start) and «сейчас» must end the message. The clause-initial guard keeps
-    // «продолжаю … сейчас» (continuing the CURRENT action, not a new unit) and any
-    // mid-sentence mention from firing. «продолж*» is deliberately NOT an announce verb.
-    '(?:^|[.!?\\n—:])\\s*(?:запускаю|делаю|беру|читаю|начинаю|прогоняю|собираю|пишу|стартую|гоню)(?:[^.\\n]*?\\s)?сейчас\\s*[.!)）]*\\s*$',
-    // self-DEFER the declared next step to a FUTURE pass/turn (knows the step, no
-    // blocker, still stops): "беру это следующим заходом", "добью отдельным заходом",
-    // "вернусь следующим заходом". High-precision — "заход" in this sense = "later".
-    '(?:беру|возьм\\S+|сделаю|добью|допишу|дорабо\\S+|займусь|продолж\\S+|вернусь|перенесу|оставлю)[^.\\n]{0,40}(?:следующ\\S+|отдельн\\S+|нов\\S+|другим|следом)\\s+заход',
-    // hand a FACTUAL confirm/correct back to the user instead of investigating it yourself
-    // ("подтверди, что X, или поправь") — tempered to EXCLUDE intent-confirmation
-    // ("...что я правильно понял задачу...") which plan-pomogator sanctions.
-    'подтверд\\S+,?\\s+что\\s+(?:(?!понял|понима|правильно|задач).)*?или\\s+поправь',
-  ].join('|'),
-  'i',
-);
-
-/** True when the message hands the next step / a decision back to the user. */
-export function isDeferredWork(text: string): boolean {
-  return DEFERRED_WORK.test(text);
-}
-
 // ── spec-completion detector (FR-49b) ────────────────────────────────────────
 // A WHOLE-SPEC / feature completion assertion — NOT a per-task / per-FR claim and
 // NOT a progress report. Tightly scoped (anti-H1, the advisor's main concern): the
@@ -227,14 +155,6 @@ export function isSpecCompletionClaim(text: string): boolean {
   return SPEC_COMPLETION.test(stripCode(text));
 }
 
-/** Diagnostic: the matched defer phrase + a little context (for dogfood/logging), or null. */
-export function deferredMatch(text: string): string | null {
-  const m = DEFERRED_WORK.exec(stripCode(text));
-  if (!m) return null;
-  const i = m.index;
-  return stripCode(text).slice(Math.max(0, i - 15), i + m[0].length + 25).replace(/\s+/g, ' ').trim();
-}
-
 // ── public API ──────────────────────────────────────────────────────────────
 
 /** rawText = the raw assistant message (for the [VERIFIED] marker which lives in prose). */
@@ -254,12 +174,6 @@ export function classify(rawText: string): ClaimHit[] {
   if (isNotFound(text)) {
     hits.push({ cls: 'not-found-impossible', need: '≥2 поисковых вызова (Grep/Glob/WebSearch/octocode) в этом ходе' });
   }
-  if (isDeferredWork(text)) {
-    hits.push({
-      cls: 'deferred-work',
-      need: 'доделать начатое В ЭТОМ ХОДЕ — не сдавать ход с незакрытым остатком и не перекладывать следующий шаг на пользователя',
-    });
-  }
   return hits;
 }
 
@@ -277,12 +191,9 @@ export function evidenceSatisfied(hit: ClaimHit, tools: ToolUse[], minSearch = M
       if (tokens.length === 0) return true; // nothing to match → don't block
       return tools.some((t) => tokens.some((tok) => t.name.includes(tok) || t.input.includes(tok)));
     }
-    case 'deferred-work':
-      // No tool excuses stopping with a declared remainder — the stop itself is
-      // the failure. Always a block candidate; the Stop hook's cooldown +
-      // maxRetries is the only release valve (genuinely-blocked step approves
-      // after the retry budget).
-      return false;
+    default:
+      // spec-false-close / judge-block are synthesized + handled by the Stop hook, not here.
+      return true;
   }
 }
 

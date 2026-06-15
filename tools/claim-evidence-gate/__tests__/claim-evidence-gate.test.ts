@@ -11,9 +11,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { classify, firstUnsupported, stripCode, isDeferredWork } from '../claim_classifier.ts';
+import { classify, firstUnsupported, stripCode } from '../claim_classifier.ts';
 import { extractTurnWindow } from '../turn_window.ts';
-import { SHOULD_FIRE, SHOULD_NOT_FIRE } from '../bench/deferred-bench.ts';
 
 const HOOK = path.resolve(__dirname, '..', 'claim_evidence_gate_stop.ts');
 
@@ -105,68 +104,10 @@ describe('CEGATE001: claim-evidence gate — verified-marker class', () => {
   });
 });
 
-describe('CEGATE001: claim-evidence gate — deferred-work class (kick «доделывай»)', () => {
-  // @feature6
-  // Precision (dogfood 2026-06-11 on the real session): a PURE remaining-work list
-  // with no offload is NOT a defer — it false-fired on 36% of real stop-points
-  // (completion reports / plan-answers). The gate must NOT block it.
-  it('CEGATE001_17: does NOT block a pure remaining-work list with no offload to the user', () => {
-    const { blocked } = runHook([U('какой план'), A([txt('Что осталось:\n1. свести статусы\n2. e2e тест\n3. врезать в create-spec')])]);
-    expect(blocked).toBe(false);
-  });
-
-  // @feature6
-  it('CEGATE001_18: blocks "беру дальше пункт N" EVEN when a Bash ran this turn (the stop is the failure)', () => {
-    const { blocked } = runHook([U('делай'), A([tool('Bash', { command: 'npx tsx x.ts' })]), A([txt('Беру дальше пункт 1 — свожу статусы.')])]);
-    expect(blocked).toBe(true);
-  });
-
-  // @feature6
-  it('CEGATE001_19: blocks handing the next step OR a decision back to the user', () => {
-    expect(runHook([U('план'), A([txt('Скажешь «волна 1» — начну, вытяну открытые задачи и пойду делать.')])]).blocked).toBe(true);
-    expect(runHook([U('делай'), A([txt('Список собран, что из него удалять — решаешь ты.')])]).blocked).toBe(true);
-  });
-
-  // @feature6
-  it('CEGATE001_21: a report ABOUT the gate (пинатор / ДОДЕЛЫВАЙ) does not trigger itself, even quoting a trigger phrase', () => {
-    const { blocked } = runHook([U('расскажи'), A([txt('Пинатор теперь ловит «беру дальше пункт 1». Кикает ДОДЕЛЫВАЙ.')])]);
-    expect(blocked).toBe(false);
-  });
-
-  // @feature6
-  it('CEGATE001_20: does NOT fire on a clean completion or an explanatory "дальше"', () => {
-    expect(classify('Закоммичено 7c3c723. Вердикт зелёный, 156 сценариев.').some((h) => h.cls === 'deferred-work')).toBe(false);
-    expect(classify('По коду гейт фаерит только при заявленном результате. Дальше по логике идёт анти-зацикливание.').some((h) => h.cls === 'deferred-work')).toBe(false);
-    // positive classifier unit — the structural remaining-work phrase fires
-    expect(classify('Если хочешь — скажи, покажу остаток.').some((h) => h.cls === 'deferred-work')).toBe(true);
-  });
-
-  // @feature6
-  it('CEGATE001_22: blocks self-deferring the declared next step to a FUTURE pass ("следующим заходом")', () => {
-    // the exact phrasing that slipped the gate (2026-06-12): step known, no blocker, still stopped
-    expect(runHook([U('делай по очереди'), A([txt('Дверь живая. Беру это следующим заходом.')])]).blocked).toBe(true);
-    expect(classify('Добью отдельным заходом — там по шагам.').some((h) => h.cls === 'deferred-work')).toBe(true);
-    // precision: "за один заход" = a completion ("did it in one pass"), NOT a defer
-    expect(classify('Свёл всё за один заход, закоммичено.').some((h) => h.cls === 'deferred-work')).toBe(false);
-  });
-
-  // @feature6
-  it('CEGATE001_23: blocks handing a FACTUAL confirm/correct back to the user, NOT the sanctioned intent-confirmation', () => {
-    // the case that slipped (2026-06-12): asking the user to verify a CODE fact I should investigate
-    expect(classify('tui-test-runner-v2 — реально заброшен или ещё в работе? подтверди, что живые, или поправь').some((h) => h.cls === 'deferred-work')).toBe(true);
-    // PRECISION GUARD: plan-pomogator's sanctioned "Правильно понял?" (about INTENT) must NEVER fire
-    expect(classify('Правильно понял? Спиннер только во время запроса?').some((h) => h.cls === 'deferred-work')).toBe(false);
-    expect(classify('Подтверди, что я правильно понял задачу, или поправь.').some((h) => h.cls === 'deferred-work')).toBe(false);
-  });
-
-  // @feature6 — the deferred-bench corpus is a CI regression contract (both directions).
-  it('CEGATE001_24: deferred-bench corpus — every SHOULD_FIRE fires, every SHOULD_NOT_FIRE stays silent', () => {
-    const misses = SHOULD_FIRE.filter((c) => !isDeferredWork(c.text)).map((c) => c.id);
-    const falseFires = SHOULD_NOT_FIRE.filter((c) => isDeferredWork(c.text)).map((c) => c.id);
-    expect(misses, `should-fire missed: ${misses.join(', ')}`).toEqual([]);
-    expect(falseFires, `should-not-fire false-fired: ${falseFires.join(', ')}`).toEqual([]);
-  });
-});
+// NOTE: the deferred-work / lazy-stop tests (formerly CEGATE001_17–24) were removed
+// with the regex detector — that job moved ENTIRELY to the Meridian Haiku judge. Its
+// behaviour is pinned LIVE in tools/claim-evidence-gate/bench/judge-bench.ts (announce-
+// next / hand-to-user / did-work-then-defer → BLOCK; per-task / status / in-flight → APPROVE).
 
 describe('CEGATE001: modes, anti-loop and fail-open', () => {
   // @feature5

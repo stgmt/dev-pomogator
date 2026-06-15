@@ -112,55 +112,9 @@ Feature: CEGATE001 Claim-Evidence Gate
     When stripCode runs
     Then those spans are removed before classification
 
-  # @feature6
-  Scenario: CEGATE001_17 Does not block a pure remaining-work list with no offload
-    Given the final message lists remaining work but hands nothing back to the user
-    When the gate evaluates the turn
-    Then it approves the stop
-
-  # @feature6
-  Scenario: CEGATE001_18 Blocks announce-next-and-stop even when a Bash ran this turn
-    Given the final message says "беру дальше пункт N" and then stops
-    And a Bash tool ran this turn
-    When the gate evaluates the turn
-    Then it blocks the stop because stopping with a declared remainder is the failure
-
-  # @feature6
-  Scenario: CEGATE001_19 Blocks handing the next step or a decision back to the user
-    Given the final message hands the next action or a decision to the user
-    When the gate evaluates the turn
-    Then it blocks the stop
-
-  # @feature6
-  Scenario: CEGATE001_20 Does not fire on a clean completion or an explanatory "дальше"
-    Given the final message is a committed-completion or an explanatory sentence
-    When the classifier runs
-    Then no deferred-work finding is produced
-
-  # @feature6
-  Scenario: CEGATE001_21 A report about the gate does not trigger itself
-    Given the final message quotes a trigger phrase while describing the gate
-    When the gate evaluates the turn
-    Then it approves the stop
-
-  # @feature6
-  Scenario: CEGATE001_22 Blocks self-deferring the declared next step to a future pass
-    Given the final message says it will take the known next step "следующим заходом" and stops
-    When the gate evaluates the turn
-    Then it blocks the stop
-
-  # @feature6
-  Scenario: CEGATE001_23 Blocks a factual confirm-or-correct, not the sanctioned intent-confirmation
-    Given the final message asks the user to confirm-or-correct a CODE fact it should investigate
-    When the classifier runs
-    Then a deferred-work finding is produced
-    But the sanctioned plan confirmation "Правильно понял?" produces no finding
-
-  # @feature6
-  Scenario: CEGATE001_24 The deferred-bench corpus holds in both directions
-    Given the labelled deferred-bench corpus of should-fire and should-not-fire messages
-    When the classifier runs over every case
-    Then every should-fire fires and every should-not-fire stays silent
+  # NOTE: the deferred-work / lazy-stop scenarios (formerly CEGATE001_17–24) were retired
+  # with the regex detector. That job moved ENTIRELY to the Meridian Haiku judge (FR-49e),
+  # whose behaviour is pinned LIVE in tools/claim-evidence-gate/bench/judge-bench.ts.
 
   # @feature49
   Scenario: CEGATE001_25 Blocks a whole-spec done claim when the task-census shows unfinished work
