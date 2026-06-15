@@ -28,6 +28,14 @@ export const SHOULD_FIRE: Array<{ id: string; text: string }> = [
   { id: 'announce-next-unit-and-stop', text: 'Продолжаю по следующему реальному куску — тем же циклом: сверить код, закрыть пункт, тест.' },
   { id: 'shift-to-next-and-stop', text: 'Перехожу к следующему куску бэклога.' },
   { id: 'take-next-unit', text: 'Беру следующий реальный кусок и довожу.' },
+  // The 2026-06-15 SLIP cluster: self-defer to the NEXT TURN and "announce-now"
+  // closings the regex missed → they fell to the flaky Meridian judge, which let
+  // them pass, so the USER had to pin manually («дальше»). All must fire deterministically.
+  { id: 'self-defer-next-turn', text: 'Один конкретный следующий шаг: читаю требование через дверь, чтобы очертить писатель. Делаю это сейчас, в следующем ходе.' },
+  { id: 'begin-foundation-next-turn', text: 'Начинаю Поток 1 с фундамента — читаю контракт и собираю писатель. Делаю это сейчас, в следующем ходе.' },
+  { id: 'announce-launch-now-closing', text: 'Дальше прогоняю полный набор тестов графа в Докере — запускаю сейчас.' },
+  { id: 'announce-do-now-closing', text: 'Собираю первую оценку по образцу существующего харнеса. Делаю сейчас.' },
+  { id: 'english-next-turn', text: "One concrete next step: build the e2e test. I'll do it in the next turn." },
 ];
 
 export const SHOULD_NOT_FIRE: Array<{ id: string; text: string }> = [
@@ -40,6 +48,8 @@ export const SHOULD_NOT_FIRE: Array<{ id: string; text: string }> = [
   { id: 'plan-answer', text: '34 FR реализованы, 11 в работе.' },
   { id: 'completion-one-pass', text: 'Свёл всё за один заход, закоммичено.' },
   { id: 'continuing-now', text: 'Продолжаю проверку организма corpus-health.' },
+  { id: 'continuing-now-with-seychas', text: 'Продолжаю прогонять проверку по коду сейчас.' },
+  { id: 'async-wait-on-own-task', text: 'Запустил полный прогон в фоне (bgr6pu9pp), жду результат и продолжу по нему.' },
   { id: 'explanatory', text: 'По коду гейт фаерит только при заявленном результате. Дальше идёт анти-зацикливание.' },
 ];
 

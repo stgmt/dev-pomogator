@@ -169,6 +169,19 @@ const DEFERRED_WORK = new RegExp(
     // «по/к/на/за следующ» shift is what distinguishes it from the in-flight continuation.
     '(?:продолж\\S+|перехожу|перехож\\S+|приступаю|берусь|возьмусь)\\s+(?:по|к|на|за)\\s+следующ\\S+',
     'беру\\s+следующ\\S+',
+    // self-DEFER to the NEXT TURN explicitly — "делаю это сейчас, в следующем ходе",
+    // "следующим ходом", EN "next turn". Saying you will do it next turn IS the defer:
+    // the step is known, no blocker, yet the turn ends. (\\S* not \\w*: JS \\w is
+    // ASCII-only and would stop at the first Cyrillic letter.) 2026-06-15 slip.
+    'в\\s+следующ\\S*\\s+ход\\S*',
+    'следующим\\s+ход\\S*',
+    'next\\s+turn',
+    // announce the next action as the CLOSING line and STOP — "запускаю сейчас.",
+    // "Делаю сейчас." The announce verb must be CLAUSE-INITIAL (after . ! ? — : or the
+    // message start) and «сейчас» must end the message. The clause-initial guard keeps
+    // «продолжаю … сейчас» (continuing the CURRENT action, not a new unit) and any
+    // mid-sentence mention from firing. «продолж*» is deliberately NOT an announce verb.
+    '(?:^|[.!?\\n—:])\\s*(?:запускаю|делаю|беру|читаю|начинаю|прогоняю|собираю|пишу|стартую|гоню)(?:[^.\\n]*?\\s)?сейчас\\s*[.!)）]*\\s*$',
     // self-DEFER the declared next step to a FUTURE pass/turn (knows the step, no
     // blocker, still stops): "беру это следующим заходом", "добью отдельным заходом",
     // "вернусь следующим заходом". High-precision — "заход" in this sense = "later".
