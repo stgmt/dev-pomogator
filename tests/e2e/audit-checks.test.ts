@@ -82,6 +82,20 @@ describe('checkPartialImpl', () => {
     expect(findings).toHaveLength(1);
     expect(findings[0].check).toBe('PARTIAL_IMPL_DETECTION');
   });
+
+  it('does NOT fire on a marker that appears only inside a fenced code block', () => {
+    // A marker inside an EXAMPLE is not a live partial-impl claim. core.mjs strips
+    // code before matching; this detector must too (the two must share one contract).
+    writeSpecFile('FR.md', '## FR-10: Thing\n\nFully done. Example:\n```\nconst MODE = PARTIAL;\n```\n');
+    writeSpecFile('TASKS.md', '- [x] do FR-10\n');
+    expect(checkPartialImpl(tmpDir)).toHaveLength(0);
+  });
+
+  it('does NOT fire on a marker inside an inline code span', () => {
+    writeSpecFile('FR.md', '## FR-11: Thing\n\nReturns the `NOT IMPLEMENTED` sentinel string. Done.\n');
+    writeSpecFile('TASKS.md', '- [x] do FR-11\n');
+    expect(checkPartialImpl(tmpDir)).toHaveLength(0);
+  });
 });
 
 describe('checkTaskAtomicity', () => {

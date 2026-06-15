@@ -76,8 +76,13 @@ export function checkPartialImpl(specPath: string): AuditFinding[] {
     if (!idMatch) continue;
     const frId = idMatch[1];
 
+    // Strip fenced code blocks + inline code spans so a marker that appears only
+    // inside an EXAMPLE is not treated as a live partial-impl claim. Mirrors
+    // specs-generator-core.mjs (which strips code before this check) so both
+    // PARTIAL_IMPL detectors share the FULL contract — word-bounded AND code-stripped.
+    const body = section.replace(/```[\s\S]*?```/g, ' ').replace(/`[^`]+`/g, ' ');
     for (const marker of PARTIAL_MARKERS) {
-      if (markerPresent(section, marker)) {
+      if (markerPresent(body, marker)) {
         // Check if task referencing this FR is [x]
         const tasksLines = tasksContent.split('\n');
         for (const line of tasksLines) {
