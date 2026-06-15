@@ -92,6 +92,20 @@ describe('computeFrCensus — deterministic per-FR verdict', () => {
     expect(byId[`${SLUG}:FR-2`].verdict).toBe('PLANNED');
   });
 
+  it('an FR whose only task is READY (eligible, not yet started) is PLANNED, not IN_PROGRESS', () => {
+    // FR-48a `ready` = chain assembled, eligible to start, NO work begun → pre-work.
+    // Before the fix `noneStarted` omitted `ready`, so it read IN_PROGRESS (started).
+    const g = {
+      nodes: new Map<string, unknown>([
+        [`${SLUG}:FR-9`, fr(9)],
+        [`${SLUG}:T9`, task('T9', 9, 'ready', '')],
+      ]),
+      edges: [],
+    } as unknown as SpecGraph;
+    const row = computeFrCensus(g).rows.find((x) => x.frId === `${SLUG}:FR-9`);
+    expect(row?.verdict).toBe('PLANNED');
+  });
+
   it('META-#0: a single done task among open tasks is IN_PROGRESS, NEVER IMPLEMENTED', () => {
     // FR-43 in the real corpus: tasks [todo,todo,done,in-progress] — the LLM
     // census called it IMPLEMENTED. The deterministic census must not.

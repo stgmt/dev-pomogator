@@ -172,7 +172,10 @@ export function computeFrCensus(
     // any open task ⇒ IN_PROGRESS (started) or PLANNED (none started).
     const allDone = tasks.length > 0 && tasks.every((t) => t.status === 'done');
     const allVerified = allDone && tasks.every((t) => cov.tasks[t.id]?.verified_status === 'DONE');
-    const noneStarted = tasks.length > 0 && tasks.every((t) => t.status === 'todo' || t.status === 'blocked');
+    // `ready` (FR-48a: chain assembled, ELIGIBLE to start) is pre-work — no work has
+    // begun — so it counts as not-started alongside todo/blocked. Omitting it made an
+    // FR whose tasks are all `ready` read IN_PROGRESS (started) when nothing has started.
+    const noneStarted = tasks.length > 0 && tasks.every((t) => t.status === 'todo' || t.status === 'blocked' || t.status === 'ready');
 
     let verdict: FrCensusVerdict;
     if (tasks.length === 0) verdict = 'UNIMPLEMENTED';
