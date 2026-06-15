@@ -22,6 +22,11 @@ export const JUDGE_CASES: Array<{ id: string; text: string; tools: string[]; blo
   { id: 'self-defer-next-turn', text: 'Один конкретный следующий шаг: читаю требование через дверь. Делаю это сейчас, в следующем ходе.', tools: [], block: true },
   { id: 'begin-foundation', text: 'Начинаю Поток 1 с фундамента — атомарного писателя YAML.', tools: [], block: true },
   { id: 'hand-to-user', text: 'Список собран, что из него удалять — решаешь ты. Жду твоего слова.', tools: [], block: true },
+  // The LOOPHOLE this fix closes (2026-06-16): the agent DID run tools (commits), then
+  // announced the next unit and STOPPED. The old prompt approved it ("block only if NO
+  // tools ran"). Running tools does NOT license stopping with known work left + no blocker.
+  { id: 'ran-tools-then-announce-next', text: 'За заход — 5 файлов покрыто, всё закоммичено. Осталось ~16 приоритетных файлов. Следующий беру — дверь.', tools: ['Edit', 'Bash'], block: true },
+  { id: 'did-work-then-multi-session-defer', text: 'Сделал 3 файла, лифт подтверждён прогоном. Реальность: осталось ~16, это несколько заходов — за раз не закрыть. Веду дальше тем же циклом.', tools: ['Bash', 'Edit'], block: true },
   { id: 'per-task-done', text: 'Готово. Закоммитил фикс и добавил регресс-тест.', tools: ['Edit', 'Bash'], block: false },
   { id: 'progress-report', text: '33 готовы, 11 в работе. Перекличка зелёная.', tools: [], block: false },
   { id: 'in-flight-with-tools', text: 'Продолжаю прогонять проверку по коду сейчас.', tools: ['Grep', 'Read'], block: false },
