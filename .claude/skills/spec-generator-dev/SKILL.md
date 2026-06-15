@@ -90,7 +90,7 @@ node --import tsx node_modules/@cucumber/cucumber/bin/cucumber.js          # BDD
 # vitest по слою (через wrapper): tools/spec-graph/__tests__ + tools/spec-mcp-server/__tests__
 npm run build:mcp   # ОБЯЗАТЕЛЬНО при правке tools.ts/server.ts/импорт-графа сервера — иначе юзеры плагина без фикса
 # bundle-serve смоук (РЕАЛЬНЫЙ артефакт юзеров, не source) — обязателен после build:mcp:
-printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"smoke","version":"0"}}}' '{"jsonrpc":"2.0","method":"notifications/initialized"}' '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}' | DEV_POMOGATOR_REPO_ROOT="$PWD" node tools/spec-mcp-server/server.bundle.mjs   # ждём serverInfo + 19 тулзов, НЕ "usage: …"
+printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"smoke","version":"0"}}}' '{"jsonrpc":"2.0","method":"notifications/initialized"}' '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}' | DEV_POMOGATOR_REPO_ROOT="$PWD" node tools/spec-mcp-server/server.bundle.mjs   # ждём serverInfo + 25 тулзов, НЕ "usage: …"
 ```
 
 Вердиктные прогоны Docker-сьюта — только из ЧИСТОГО worktree (`git worktree add ../confirm <sha>`),
