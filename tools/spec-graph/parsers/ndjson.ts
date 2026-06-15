@@ -278,17 +278,26 @@ export function parseNdjson(source: string): TestResultPatch {
         const acc = testCaseResult.get(tcId) ?? { lastResult: 'UNKNOWN' as TestStatus };
         // The full pass/fail of a testCase is the worst-of testStepFinished —
         // but cucumber-js v12 also re-emits status in this envelope when present.
-        const explicit = (env.testCaseFinished as { testStepResult?: { status?: string } }).testStepResult?.status;
-        if (explicit) acc.lastResult = normalizeStatus(explicit);
-        else if (acc.lastResult === 'UNKNOWN') acc.lastResult = 'PASSED'; // no steps observed
-        // (worst-of-steps status already accumulated in testStepFinished)
+        const explicit = normalizeStatus((env.testCaseFinished as { testStepResult?: { status?: string } }).testStepResult?.status);
+        // The explicit testCase-level status may only RAISE severity — never LOWER it.
+        // A blind `acc.lastResult = explicit` let an explicit PASSED hide a FAILED step
+        // (the false-green class). Worst-of-steps stays authoritative; explicit only
+        // promotes (e.g. a testCase FAILED with no per-step FAILED captured), and is the
+        // sole signal when no steps were observed at all.
+        if (explicit !== 'UNKNOWN' && statusSeverity(explicit) > statusSeverity(acc.lastResult)) {
+          acc.lastResult = explicit;
+        } else if (acc.lastResult === 'UNKNOWN') {
+          acc.lastResult = 'PASSED'; // no steps observed and no explicit status
+        }
 
         if (tcFinished.timestamp && acc.startTs) {
           const endMs =
             (tcFinished.timestamp.seconds ?? 0) * 1000 +
             Math.round((tcFinished.timestamp.nanos ?? 0) / 1_000_000);
           const startMs = new Date(acc.startTs).getTime();
-          if (Number.isFinite(startMs)) acc.durationMs = endMs - startMs;
+          // Clamp to ≥0: a clock skew (finish timestamp < start) must not store a
+          // negative duration.
+          if (Number.isFinite(startMs)) acc.durationMs = Math.max(0, endMs - startMs);
         }
         testCaseResult.set(tcId, acc);
       }

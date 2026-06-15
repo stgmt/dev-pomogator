@@ -221,6 +221,32 @@ describe('parseNdjson — result extraction from canonical envelopes', () => {
     expect(fields?.lastResult).toBe('FAILED');
     expect(fields?.failingStep?.errorMessage).toBe('boom');
   });
+
+  it('a testCaseFinished explicit status may RAISE but must not HIDE a FAILED step', () => {
+    // An explicit PASSED on testCaseFinished must not overwrite the worst-of-steps
+    // FAILED (false-green). Explicit can only promote severity, never lower it.
+    const stream = [
+      { gherkinDocument: { uri: 'f.feature', feature: { children: [{ scenario: { id: 's1', location: { line: 7 } } }] } } },
+      { pickle: { id: 'pk1', uri: 'f.feature', astNodeIds: ['s1'], steps: [{ id: 'ps1', text: 'a' }] } },
+      { testCase: { id: 'tc1', pickleId: 'pk1', testSteps: [{ id: 'ts1', pickleStepId: 'ps1' }] } },
+      { testCaseStarted: { id: 'tcs1', testCaseId: 'tc1' } },
+      { testStepFinished: { testCaseStartedId: 'tcs1', testStepId: 'ts1', testStepResult: { status: 'FAILED', message: 'x' } } },
+      { testCaseFinished: { testCaseStartedId: 'tcs1', testStepResult: { status: 'PASSED' } } },
+    ].map((o) => JSON.stringify(o)).join('\n');
+    expect(parseNdjson(stream).byLocation.get('f.feature:7')?.lastResult).toBe('FAILED');
+  });
+
+  it('clamps a negative duration (clock skew: finish timestamp before start) to 0', () => {
+    const stream = [
+      { gherkinDocument: { uri: 'f.feature', feature: { children: [{ scenario: { id: 's1', location: { line: 9 } } }] } } },
+      { pickle: { id: 'pk1', uri: 'f.feature', astNodeIds: ['s1'], steps: [{ id: 'ps1', text: 'a' }] } },
+      { testCase: { id: 'tc1', pickleId: 'pk1', testSteps: [{ id: 'ts1', pickleStepId: 'ps1' }] } },
+      { testCaseStarted: { id: 'tcs1', testCaseId: 'tc1', timestamp: { seconds: 10, nanos: 0 } } },
+      { testStepFinished: { testCaseStartedId: 'tcs1', testStepId: 'ts1', testStepResult: { status: 'PASSED' } } },
+      { testCaseFinished: { testCaseStartedId: 'tcs1', timestamp: { seconds: 9, nanos: 0 } } },
+    ].map((o) => JSON.stringify(o)).join('\n');
+    expect(parseNdjson(stream).byLocation.get('f.feature:9')?.durationMs).toBe(0);
+  });
 });
 
 describe('applyTestResults — mutates only matching scenarios', () => {
