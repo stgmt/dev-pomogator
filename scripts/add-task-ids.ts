@@ -46,6 +46,35 @@ export function addTaskIds(content: string): AddIdResult {
   return { content: next, added, skipped };
 }
 
+// General header form: any `- [..] … — Status:` task header (NOT only `Tnn:`). Used by
+// specs whose loose tasks are title-only (`- [ ] Создать X -- @feature1 — Status: TODO`)
+// or use a phase-dashed prefix (`T4-33`) the `Tnn:` regex misses. `[^\r\n]*?` keeps it
+// single-line + CRLF-safe; the `(?!.*\bid:)` look-ahead on the head is enforced in code.
+const ANY_HEADER = /^([ \t]*-\s*\[[ xX~]\]\s+[^\r\n]*?)(\s+—\s*Status:\s*(?:TODO|IN_PROGRESS|DONE|BLOCKED)\b)/gm;
+
+/**
+ * Add `— id: <slug>` to EVERY task header (with `— Status:`) missing an id — not just
+ * `Tnn:`-prefixed ones. The id is derived from a leading `T<n>` / `T<n>-<n>` prefix when
+ * present (semantic, deduped), else a sequential `t<NN>` by position. Status-preserving,
+ * child-safe (only `— Status:` lines), idempotent (a header with `id:` is left as-is).
+ */
+export function addTaskIdsAnyHeader(content: string): AddIdResult {
+  const used = new Set<string>();
+  let added = 0;
+  let skipped = 0;
+  let seq = 0;
+  const next = content.replace(ANY_HEADER, (m, head: string, statusPart: string) => {
+    if (/\bid:\s*\S/.test(head)) { skipped++; return m; }
+    const pref = head.match(/\bT(\d+(?:-\d+)?)\b/);
+    let id = pref ? `t${pref[1].replace('-', '')}` : `t${String(++seq).padStart(2, '0')}`;
+    if (used.has(id)) { let n = 1; while (used.has(`${id}-${n}`)) n++; id = `${id}-${n}`; }
+    used.add(id);
+    added++;
+    return `${head} — id: ${id}${statusPart}`;
+  });
+  return { content: next, added, skipped };
+}
+
 // CLI: read {content} JSON envelope (spec-door read output) → write transformed text.
 const isCli = process.argv[1]?.endsWith('add-task-ids.ts');
 if (isCli) {

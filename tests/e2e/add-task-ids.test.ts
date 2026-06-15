@@ -5,7 +5,7 @@
  * headers that lack it — CRLF-safe, status-preserving, child-safe, idempotent.
  */
 import { describe, it, expect } from 'vitest';
-import { addTaskIds } from '../../scripts/add-task-ids.ts';
+import { addTaskIds, addTaskIdsAnyHeader } from '../../scripts/add-task-ids.ts';
 
 describe('addTaskIds (rework loose TASKS.md → strict, parser-trackable)', () => {
   it('inserts — id: t<nn> before — Status: on Tnn headers, derived from the prefix', () => {
@@ -43,5 +43,28 @@ describe('addTaskIds (rework loose TASKS.md → strict, parser-trackable)', () =
     expect(r.added).toBe(2);
     expect(r.content).toMatch(/A — id: t01 —/);
     expect(r.content).toMatch(/B — id: t01-1 —/);
+  });
+});
+
+describe('addTaskIdsAnyHeader (general: title-only + phase-dashed loose headers)', () => {
+  it('inserts a sequential id on a title-only header (no Tnn prefix)', () => {
+    const r = addTaskIdsAnyHeader('- [ ] Создать fixture X -- @feature1 — Status: TODO | Est: 15m');
+    expect(r.added).toBe(1);
+    expect(r.content).toMatch(/X -- @feature1 — id: t01 — Status: TODO/);
+  });
+
+  it('derives the id from a leading T<n>-<n> phase-dashed prefix when present', () => {
+    const r = addTaskIdsAnyHeader('- [ ] **T4-33: do thing** — Status: DONE | Est: 30m');
+    expect(r.added).toBe(1);
+    expect(r.content).toMatch(/— id: t433 — Status: DONE/);
+  });
+
+  it('is child-safe (Done-When checkboxes have no Status:) and idempotent', () => {
+    const src = '- [ ] Title -- @feature1 — Status: TODO\n  - [ ] a child observable (no status)\n';
+    const r1 = addTaskIdsAnyHeader(src);
+    expect(r1.added).toBe(1);
+    expect(r1.content).toContain('a child observable (no status)');
+    expect(r1.content).not.toMatch(/child observable.*id:/);
+    expect(addTaskIdsAnyHeader(r1.content).added).toBe(0); // idempotent
   });
 });
