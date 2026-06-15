@@ -41,6 +41,7 @@ import path from 'node:path';
 import { parseMarkdownFile } from './parsers/md.ts';
 import { parseGherkinFile } from './parsers/gherkin.ts';
 import { parseNdjsonFile, applyTestResults } from './parsers/ndjson.ts';
+import { parseTasksFile } from './parsers/tasks.ts';
 import { rebuildBacklinks } from './builder.ts';
 import type { SpecGraph, ScenarioNode, ParserOutput } from './types.ts';
 
@@ -177,6 +178,20 @@ export function applyChange(
     // same composite keys as the cold build by construction.
     const slice = parseMarkdownFile(absPath, repoRoot);
     const delta = applySlice(graph, slice);
+    // The cold build (builder.ts step 1b) parses TASKS.md with BOTH
+    // parseMarkdownFile AND parseTasksFile. The incremental path must mirror
+    // that — otherwise dropFileSlice() removes every Task node for the file and
+    // parseMarkdownFile (which emits no Task nodes) never re-adds them, so the
+    // live graph loses ALL tasks for a spec after ANY TASKS.md edit (e.g. a
+    // set_entity_status write) until a full restart. Bug found 2026-06-15:
+    // back-to-back set_entity_status → second call NOT_FOUND on a node a cold
+    // rebuild still has.
+    if (path.basename(absPath) === 'TASKS.md') {
+      const taskSlice = parseTasksFile(absPath, repoRoot);
+      const taskDelta = applySlice(graph, taskSlice);
+      delta.nodesDelta += taskDelta.nodesDelta;
+      delta.edgesDelta += taskDelta.edgesDelta;
+    }
     rebuildBacklinks(graph);
     return delta;
   }

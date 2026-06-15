@@ -22,6 +22,7 @@ import os from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { buildGraph } from '../builder.ts';
 import { applyChange, applyUnlink, dropFileSlice } from '../incremental.ts';
+import type { TaskNode } from '../types.ts';
 
 function percentile(sortedMs: number[], p: number): number {
   if (sortedMs.length === 0) return 0;
@@ -59,6 +60,35 @@ describe('incremental — applyChange / applyUnlink / dropFileSlice', () => {
     // The old slug alias must be gone, the new one present.
     expect(graph.definitions.get('fr-1-old-title')).toBeUndefined();
     expect(graph.definitions.get('fr-1-new-title')).toBeDefined();
+  });
+
+  it('change of TASKS.md preserves Task nodes with updated status (regression)', () => {
+    // Bug 2026-06-15: classify() routed TASKS.md to the 'md' branch, which
+    // dropFileSlice()'d every Task node then re-parsed with parseMarkdownFile
+    // (emits NO Task nodes) — so any TASKS.md edit (e.g. a set_entity_status
+    // write) wiped all tasks for the spec from the live graph until restart.
+    // The cold build parses TASKS.md with BOTH md + tasks parsers; the
+    // incremental path must mirror that.
+    fs.writeFileSync(
+      path.join(root, '.specs/auth/TASKS.md'),
+      '## Phase 1\n\n- [ ] Build the thing — id: build-thing — Status: TODO\n  _Requirements:_ FR-1\n  **Done When:**\n  - [ ] it works\n',
+    );
+    const graph = buildGraph({ repoRoot: root, skipNdjson: true });
+    expect(graph.nodes.get('auth:build-thing')?.type).toBe('Task');
+    expect((graph.nodes.get('auth:build-thing') as TaskNode).status).toBe('todo');
+
+    // Flip the status on disk (exactly what set_entity_status does) and patch.
+    fs.writeFileSync(
+      path.join(root, '.specs/auth/TASKS.md'),
+      '## Phase 1\n\n- [ ] Build the thing — id: build-thing — Status: IN_PROGRESS\n  _Requirements:_ FR-1\n  **Done When:**\n  - [ ] it works\n',
+    );
+    applyChange(graph, root, '.specs/auth/TASKS.md');
+
+    // The node MUST survive the patch (it was dropped before the fix) and carry
+    // the new status — back-to-back set_entity_status calls depend on this.
+    const node = graph.nodes.get('auth:build-thing');
+    expect(node?.type).toBe('Task');
+    expect((node as TaskNode).status).toBe('in-progress');
   });
 
   it('add wires a brand-new spec file into the graph', () => {
