@@ -140,6 +140,66 @@ targets, by how much a weak test lets real breakage slip through:
 Plus the **61 files with zero unit-test coverage** (Part 1) — the larger gap. Strongest
 tests: `registry.ts` (100%), `task-census.ts` (82.9%), `wikilinks.ts` (80%).
 
+## Remediation plan — by risk, not by count
+
+Principle: harden where a weak/absent test = most risk (the modules ALL spec work flows
+through), not "cover all 61" (months). ~20-25 files are genuinely priority; CLI/eval
+scripts are optional. Per file: run `npm run mutation:specgen` scoped to it → the SURVIVOR
+list is the exact gap → write integration-first tests aimed at each survivor (kill it, not
+chase a %) → re-run to confirm the lift.
+
+### Phase 1 — critical core (highest risk; do first)
+| Target | now | goal | why |
+|---|---|---|---|
+| `spec-graph/conformance.ts` | 35% | 70% | the correctness checker every gate uses; 268 survivors = precise to-do list |
+| `spec-mcp-server/tools.ts` | 20% | 60% | the MCP door's tool registry; weakest file in v4 |
+| `spec-verdict.ts` | none | add | the canonical health verdict — zero unit tests today |
+| `audit-spec.ts` | none | add | the audit engine — zero unit tests |
+| `validate-spec.ts` | none | add | the structural validator — zero unit tests |
+| `spec-mcp-server/mutations.ts` | 40% | 65% | every spec edit flows through its form/anchor validation |
+
+### Phase 2 — important graph logic + validator guards
+- spec-graph: `incremental.ts` (37%), `tasks.ts` (42%), `fr-census.ts` in-function (39%).
+- validator enforcement guards with NO test: `task-form-guard`, `user-story-form-guard`,
+  `requirements-chk-guard`, `risk-assessment-guard`, `spec-access-guard`, `phase-gate`,
+  `completeness` — they *deny* bad edits yet are themselves unverified.
+
+### Phase 3 — remainder (by residual budget)
+- `legacy-triage.ts` (32%), `spec-archive.ts` (25%), backlog `owner-picker.ts` (39%) / `classifier.ts` (37%).
+- spec-graph trace modules with no unit test (`traceability`, `legs`, `research-trace`,
+  `upstream-trace`) — FIRST verify whether an e2e already covers them before writing units.
+- CLI / eval / benchmark scripts — lowest priority (thin glue; e2e/spawn-tested).
+
+### Separate fix — unblock server.ts
+`spec-mcp-server/server.ts` is un-mutatable (vite import-scanner trips on its instrumented
+generics). Either pre-bundle it for the Stryker run (esbuild → JSX-free output) or bump
+Stryker/vite; then it joins the Phase-1 set.
+
+**Sequencing note:** Phase 1's three zero-coverage CLIs (`spec-verdict`/`audit-spec`/
+`validate-spec`) need an Import-Guard refactor first (export the logic, guard `main()`) so a
+unit test can import them — same pattern already applied to `detect-invariant-candidates.ts`
+and `fr-census.ts`.
+
+## Remediation progress (executing — 2026-06-15)
+
+Cadence per file: read source+test+survivors → write survivor-targeted tests →
+host-validate → commit → Docker mutation-verify the lift. Confirmed lifts:
+
+| File | before | after | Δ | commit |
+|---|---|---|---|---|
+| `spec-graph/conformance.ts` | 34.9% | **50.3%** | +15 | 5269bf2 |
+| `spec-graph/parsers/tasks.ts` | 41.9% | **64.2%** | +22 | 245614c |
+| `spec-graph/incremental.ts` | 36.5% | **43.5%** | +7 | eb8e59c |
+| `spec-graph/stale-marker-scan.ts` | 44.4% | host-validated, verify pending | — | bb8bd17 chain |
+| `spec-graph/corpus-health.ts` | 45.1% | host-validated, verify pending | — | bb8bd17 |
+
+`incremental.ts` residual (43.5%) is the chokidar event-handlers (`handleChange`/
+`handleUnlink`) + the ndjson `applyChange` branch — they fire only on real async watcher
+events, which the suite avoids by design (flaky); an honest ceiling for a watcher file.
+Remaining priority targets (Phase 1 door + zero-coverage authoring): `spec-mcp-server/
+tools.ts` (20%), `mutations.ts` (40%), then `spec-verdict`/`audit-spec`/`validate-spec`
+(need the Import-Guard refactor). Multi-session by nature — ~16 priority files remain.
+
 ## Already mutation-tested green (prior runs, 2026-06-15)
 
 - `tools/spec-graph/parsers/ndjson.ts` — 61.2%
