@@ -376,7 +376,16 @@ export function validateSpecChange(
   // document — the form/anchor/conformance gates exist for the TOP-LEVEL graph docs
   // (FR/AC/TASKS/feature) and would mis-fire on freeform research prose. Contained +
   // ext-checked + audited is the contract for these; skip the graph gates.
-  if (rel.includes('/')) {
+  // BUT only for genuine NON-graph basenames: the builder walks `.specs/` RECURSIVELY
+  // and ingests by BASENAME, so a subdir doc named like a graph doc (sub/TASKS.md,
+  // sub/FR.md, sub/x.feature) DOES enter the graph — exempting it let a malformed
+  // graph doc bypass the conformance floor through the door (confirmed 2026-06-15).
+  // Such a subdir graph-doc must still pass the gates.
+  const base = path.basename(rel).toLowerCase();
+  const isGraphDocName =
+    /^(fr|nfr|acceptance_criteria|user_stories|use_cases|design|requirements|tasks|file_changes|research)\.md$/.test(base) ||
+    base.endsWith('.feature');
+  if (rel.includes('/') && !isGraphDocName) {
     return { ok: true, next, findings: [] };
   }
   const findings = [
