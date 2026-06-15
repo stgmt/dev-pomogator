@@ -10,7 +10,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { corpusHealth, renderCorpusHealth } from '../corpus-health.ts';
+import { corpusHealth, renderCorpusHealth, type CorpusHealthReport } from '../corpus-health.ts';
 
 describe('corpus-health — the organism view over ANY corpus root', () => {
   let root: string;
@@ -100,5 +100,52 @@ describe('corpus-health — the organism view over ANY corpus root', () => {
     for (const marker of ['collisions (raw pre-map)', 'dangling edges', 'untraced atoms', 'stale FILE_CHANGES', 'VERDICT: 🟢 GREEN']) {
       expect(text).toContain(marker);
     }
+  });
+});
+
+describe('renderCorpusHealth — full RED report with every section populated (pure)', () => {
+  // A synthetic report exercises the branches the integration corpora never hit:
+  // the RED verdict icon, sections 5-7 (orphan tests / no-research / upstream), and
+  // every per-class / per-sample line.
+  const report = {
+    corpusRoot: '/corpus',
+    nodes: 9,
+    edges: 7,
+    collisions: { totalRawNodes: 9, uniqueIds: 8, collisions: [{ id: 'demo:FR-1', firstFile: 'a/FR.md', secondFile: 'b/FR.md' }] },
+    danglingEdges: { count: 1, samples: [{ from: 'demo:FR-1', to: 'ghost:X', type: 'covers', missing: 'to' as const }] },
+    untracedAtoms: { total: 2, byClass: { UNCOVERED_FR: 1, TASK_UNTESTED: 1 }, samples: [{ class: 'UNCOVERED_FR', nodeId: 'demo:FR-9', file: 'FR.md', line: 9 }] },
+    staleFileChanges: { count: 1, samples: [{ fr: 'demo:FR-1', path: 'gone/x.ts' }] },
+    orphanProjectTests: { count: 1, samples: [{ testId: 'IT_07', file: 'x.test.ts', line: 12 }] },
+    frsWithoutResearch: { count: 1, samples: [{ nodeId: 'demo:FR-2', file: 'FR.md', line: 2 }] },
+    unlinkedUpstream: { count: 1, byKind: { story: 1 }, samples: [{ kind: 'story', nodeId: 'demo:US-1', file: 'USER_STORIES.md', line: 3 }] },
+    verdict: 'RED' as const,
+    strictVerdict: 'RED' as const,
+  } satisfies CorpusHealthReport;
+
+  const out = renderCorpusHealth(report);
+
+  it('shows the RED verdict icon + dual verdict line', () => {
+    expect(out).toContain('VERDICT: 🔴 RED (hard: collisions+stale)');
+    expect(out).toContain('strict: 🔴 RED');
+  });
+
+  it('renders the collision + dangling + stale sample lines', () => {
+    expect(out).toContain('COLLISION demo:FR-1: a/FR.md <-> b/FR.md');
+    expect(out).toContain('demo:FR-1 → ghost:X (missing: to)');
+    expect(out).toContain('demo:FR-1 → gone/x.ts (missing on disk)');
+  });
+
+  it('renders the untraced-atom class breakdown', () => {
+    expect(out).toMatch(/untraced atoms.*UNCOVERED_FR:1.*TASK_UNTESTED:1/);
+  });
+
+  it('renders the three reverse-traceability sections (orphan tests / no-research / upstream)', () => {
+    expect(out).toContain('orphan project tests');
+    expect(out).toContain('IT_07 @ x.test.ts:12');
+    expect(out).toContain('FRs citing no RESEARCH.md');
+    expect(out).toContain('demo:FR-2 @ FR.md:2');
+    expect(out).toContain('upstream unlinked');
+    expect(out).toContain('story:1');
+    expect(out).toContain('[story] demo:US-1 @ USER_STORIES.md:3');
   });
 });
