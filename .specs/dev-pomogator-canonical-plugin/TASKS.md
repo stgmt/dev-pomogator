@@ -26,7 +26,7 @@ The core migration was performed **by hand**: the three `.claude-plugin/*.json` 
 
 ## Phase 1: Manifest drift test + fixtures — DONE
 
-- [x] `tests/e2e/canonical-plugin.test.ts` — manifest drift test -- @feature1 @feature9 — Status: DONE | Est: 60m
+- [x] `tests/e2e/canonical-plugin.test.ts` — manifest drift test -- @feature1 @feature9 — id: t01 — Status: DONE | Est: 60m
   _Note: 4 CANON001_* scenarios incl. CANON001_11 component-fields-are-arrays guard._
   _Requirements: [FR-1](FR.md#fr-1-canonical-plugin-layout), [FR-9](FR.md#fr-9-single-canonical-plugin-manifest)_
   _Leverage: `.claude-plugin/hooks.json`, `tools/migrate-v1-to-v2/migrate-v1-to-v2.ts`_
@@ -36,7 +36,7 @@ The core migration was performed **by hand**: the three `.claude-plugin/*.json` 
   - [x] Every hook script on disk is referenced in `hooks.json` (two-way drift)
   - [x] `migrate-v1-to-v2 --dry-run` on fixture detects v1 without modifying
 
-- [x] v1 install fixture -- @feature7 — Status: DONE | Est: 25m
+- [x] v1 install fixture -- @feature7 — id: t02 — Status: DONE | Est: 25m
   _Note: generated inline in CANON001_70 (tmp dir), not a committed `tests/fixtures/v1-install/` — same coverage, no dead fixture to maintain._
   _Requirements: [FR-7](FR.md#fr-7-migration-v1-v2-documentation-optional-cleanup-script)_
   **Done When:**
@@ -46,7 +46,7 @@ The core migration was performed **by hand**: the three `.claude-plugin/*.json` 
 
 ## Phase 2: Sync with main + conflict resolution — DONE
 
-- [x] `git merge origin/main`, resolve delete/modify conflicts — Status: DONE | Est: 120m
+- [x] `git merge origin/main`, resolve delete/modify conflicts — id: t03 — Status: DONE | Est: 120m
   _Note: branch is now 0 commits behind origin/main (verified)._
   _Requirements: [FR-1](FR.md#fr-1-canonical-plugin-layout)_
   **Done When:**
@@ -56,7 +56,7 @@ The core migration was performed **by hand**: the three `.claude-plugin/*.json` 
 
 ## Phase 3: E2E smoke (mandatory before merge) — DONE
 
-- [x] E2E install verified — **automated, non-interactive** in a clean Docker container via the real `claude plugin` CLI (2.1.152) — Status: DONE | Est: 30m
+- [x] E2E install verified — **automated, non-interactive** in a clean Docker container via the real `claude plugin` CLI (2.1.152) — id: t04 — Status: DONE | Est: 30m
   _Note: stronger than the manual fresh-session procedure — Claude Code 2.1.x ships `claude plugin marketplace add / install / list`, so it ran headless. Method captured in skill `verify-plugin-install`. Caught + fixed a real install-blocking bug (`plugin.json` string→array fields, commit 8bb67b5). Desktop visibility (Step 5) remains optional/manual._
   _Requirements: [FR-3](FR.md#fr-3-distribution-через-plugin-marketplace-add), [FR-4](FR.md#fr-4-install-через-plugin-install-dev-pomogatorstgmt), [FR-6](FR.md#fr-6-activation-через-reload-plugins)_
   **Done When:**
@@ -67,51 +67,51 @@ The core migration was performed **by hand**: the three `.claude-plugin/*.json` 
 
 ## Phase 4: Test rewrite (un-mask the no-op) — MOSTLY DONE (1 tidiness item left)
 
-- [ ] Remove `runInstaller()` no-op shim; per ex-installer test decide rewrite-or-delete — Status: IN_PROGRESS | Est: 90m
+- [ ] Remove `runInstaller()` no-op shim; per ex-installer test decide rewrite-or-delete — id: t05 — Status: IN_PROGRESS | Est: 90m
   _Note: `runInstaller()` in `helpers.ts` is a documented no-op v2 bridge (`return {exitCode:0}`); 11 test files still call it in `beforeAll` after the real `setupCleanState('claude')`. It does NOT mask — those tests assert real behaviour by invoking `tools/<name>/…` directly (the genuine installer/updater tests were already deleted). Remaining: strip the vestigial call + import from the 11 files (mechanical, then re-run). Not blocking correctness, only tidiness._
   _Requirements: [FR-1](FR.md#fr-1-canonical-plugin-layout)_
   **Done When:**
   - [ ] No test calls the no-op `runInstaller()` (11 vestigial `beforeAll` calls to strip)
   - [x] Genuinely obsolete installer/updater tests deleted; kept tests exercise real code via direct tool invocation
 
-- [x] Triage failing tests (stale `extensions/`/`src/` paths) — Status: DONE | Est: 60m
+- [x] Triage failing tests (stale `extensions/`/`src/` paths) — id: t06 — Status: DONE | Est: 60m
   _Note: full Docker suite verified green 2026-05-27 — 951 passed, 0 failed, 61 skipped (59 files passed, 3 skipped), incl. new CANON001_11._
   **Done When:**
   - [x] Each failing test classified: fix-path, rewrite, or delete
   - [x] `npm run test:e2e:docker` green (or documented skips)
 
-- [x] Bind CANON001_* scenarios to the drift test from Phase 1 — Status: DONE | Est: 30m
+- [x] Bind CANON001_* scenarios to the drift test from Phase 1 — id: t07 — Status: DONE | Est: 30m
   **Done When:**
   - [x] Each non-@manual CANON001_NN scenario has a paired assertion in `canonical-plugin.test.ts`
 
 ## Phase 5: Tails — obsolete rules + dead references — MOSTLY DONE
 
-- [x] Delete/rewrite obsolete rules + fix CLAUDE.md rule table — Status: DONE | Est: 60m
+- [x] Delete/rewrite obsolete rules + fix CLAUDE.md rule table — id: t08 — Status: DONE | Est: 60m
   _Note (verified): the 4 obsolete rule files are deleted; `ts-import-extensions.md` and `extension-test-quality.md` now have 0 `extensions/` mentions; CLAUDE.md no longer lists the deleted rules._
   **Done When:**
   - [x] Delete `updater-managed-cleanup.md`, `updater-sync-tools-hooks.md`, `gotchas/installer-hook-formats.md`, `checklists/manifest-test-coverage.md`
   - [x] Rewrite `extension-test-quality.md` + `ts-import-extensions.md` examples for `tools/`
   - [x] Remove deleted-rule rows from CLAUDE.md table + fix cross-links
 
-- [x] Fix dead `extensions/`→`tools/` references — Status: DONE | Est: 60m
+- [x] Fix dead `extensions/`→`tools/` references — id: t09 — Status: DONE | Est: 60m
   _Note: 0 `extensions/<x>/` refs remain in rules/skills; onboard-repo rules repointed to `tools/onboard-repo/`; `.dev-pomogator/tools/*`→`tools/*` in plan-pomogator/spec-reality-check/post-edit/hook rules; dead `npm run build`+copy steps removed. Remaining: `.claude/settings.local.json` has 3 stale Bash allow-patterns (`ls extensions/*/skills/`, `grep extensions/*/extension.json`) — harmless unused allowances, optional to prune._
   **Done When:**
   - [x] Skills/rules repointed to `tools/` (0 dead `extensions/` refs)
   - [x] `.dev-pomogator/tools` refs triaged (real paths fixed; v1-fallback in uninstall labelled)
 
-- [x] Account for 5 unmigrated tools — Status: DONE | Est: 45m
+- [x] Account for 5 unmigrated tools — id: t10 — Status: DONE | Est: 45m
   _Note (verified): `tools/answer-simple` ✓, `tools/skill-listing-budget` ✓ present; `specs-workflow` split into `tools/specs-generator` + `tools/specs-validator` + `tools/steps-validator`; `suggest-rules` survives as rule (`self-improving.md`) + commands (`reflect.md`, `suggest-rules.md`) with tool scripts migrated in Phase 2a (7c74537). None lost._
   **Done When:**
   - [x] `answer-simple`, `skill-listing-budget`, `specs-workflow`, `suggest-rules` either moved to `tools/` or accounted for
   - [x] (`pomogator-doctor` already → skill, no action)
 
-- [x] Fix spec residue flagged during spec-to-truth — Status: DONE | Est: 20m
+- [x] Fix spec residue flagged during spec-to-truth — id: t11 — Status: DONE | Est: 20m
   _Note (verified 2026-05-27): spec SOURCE is reality-accurate — every `extensions/`/`extension.json`/`src/` mention in FR.md/DESIGN.md/FILE_CHANGES.md is historical ("удалены в v2"), and RESEARCH.md is excluded as historical research. `CANON001_81` already greps "cursor" with a Given that states extensions/ are deleted; `FIXTURES.md` already notes `src/` was removed. Remaining reality-check findings are completion-state (FC_CREATE_EXISTS / CODE_DRIFT_FR_ALREADY_DONE on files/FRs we built), not content defects; the committed REALITY_CHECK_REPORT.md is a pre-fix snapshot._
   **Done When:**
   - [x] Scenario `CANON001_81` reflects reality (greps "cursor"; Given states extensions/ deleted)
   - [x] FR/DESIGN/FIXTURES `extensions/`/`src/` mentions are historical-accurate, not live refs
 
-- [x] Remove empty `extensions/` directory tree from git — Status: DONE | Est: 5m
+- [x] Remove empty `extensions/` directory tree from git — id: t12 — Status: DONE | Est: 5m
   _Note: the `extensions/` tree held 0 files (only empty dirs, never tracked by git); removed from the worktree. Nothing to commit._
   **Done When:**
   - [x] No empty `extensions/*` dirs remain tracked/visible
@@ -120,7 +120,7 @@ The core migration was performed **by hand**: the three `.claude-plugin/*.json` 
 
 > Executed AFTER #24 merges. Order by adaptation size (smallest first). Each PR gets its own implementation plan; this is the roadmap + shared template.
 
-- [ ] Adapt remaining 6 PRs onto the canonical `tools/` layout — Status: TODO | Est: 480m
+- [ ] Adapt remaining 6 PRs onto the canonical `tools/` layout — id: t13 — Status: TODO | Est: 480m
   **Done When:**
   - [ ] Order followed: #21 (2 files) → #23 (4 files, or absorbed into #24) → #16 (7 in extensions/) → #22 (5) → #17 (57) → #20 (224, touches deleted `src/`+`dist/` — own sub-plan)
   - [ ] Per PR: rebase on merged #24 → move `extensions/<x>/tools/`→`tools/` → drop installer/`extension.json` deps → repoint hooks to `.claude-plugin/hooks.json` → drift test green

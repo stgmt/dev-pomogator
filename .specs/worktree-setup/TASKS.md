@@ -50,35 +50,35 @@
 
 ## Phase 0: BDD Foundation (Red)
 
-- [ ] **T0-1: Write integration test cases for worktree-setup.feature** -- @feature1–@feature8 — Status: TODO | Est: 60m
+- [ ] **T0-1: Write integration test cases for worktree-setup.feature** -- @feature1–@feature8 — id: t01 — Status: TODO | Est: 60m
   _Requirements: [FR-1..FR-8](FR.md), `.specs/worktree-setup/worktree-setup.feature`_
   **Done When:**
   - [ ] `tests/e2e/worktree-setup.test.ts` has `describe`/`it` CORE024_NN cases that spawn the real scripts (`spawnSync npx tsx orchestrate.ts`, `node worktree-doctor.cjs`) or import pure functions — no Cucumber step-defs, no `runInstaller`
   - [ ] Before production code exists, the behavior cases fail (Red); structural cases (manifest/skill present) may already pass
   - [ ] No production code touched in this task
 
-- [ ] **T0-2: Create integration harness `tests/e2e/worktree-helpers.ts`** -- @feature1–@feature11 — Status: TODO | Est: 30m
+- [ ] **T0-2: Create integration harness `tests/e2e/worktree-helpers.ts`** -- @feature1–@feature11 — id: t02 — Status: TODO | Est: 30m
   _Source: DESIGN.md "BDD Test Infrastructure" > "Новые helpers"_
   **Done When:**
   - [ ] Exports `makeTempGitRepo(files, gitignore)` (real `git init` temp repo), `makeTempDir(prefix)`, `isolateHome()` (sets HOME+USERPROFILE, returns `restore()`), `cleanupTempPaths()` (afterEach), `gitAvailable()` (guard)
   - [ ] No `setupTempProject`/`runInstaller` reuse (installer-based); env-isolation via temp HOME
   - [ ] Usable across CORE024_* scenarios
 
-- [ ] **T0-3: (no static fixtures) build test data on the fly** -- @feature1–@feature11 — Status: TODO | Est: 15m
+- [ ] **T0-3: (no static fixtures) build test data on the fly** -- @feature1–@feature11 — id: t03 — Status: TODO | Est: 15m
   _Source: DESIGN.md "BDD Test Infrastructure" > "Test Data & Fixtures"_
   **Done When:**
   - [ ] Tests construct main repos per-case via `makeTempGitRepo({...}, gitignore)` (no `tests/fixtures/worktree-setup/` directory)
   - [ ] External commands mocked via PATH-shim temp `bin/` (echo-recording `npm`; no-op `git`/`gh`/`docker`/`python3`) — no `gh-mock` JSON files, no tsx-runner snapshot
   - [ ] Self-heal regression covered by direct tsx-runner invocation (CORE024_06/07/08), not a fixture snapshot
 
-- [ ] **T0-4: Integration cases + on-the-fly test data for @feature9 (env-sync)** -- @feature9 — Status: TODO | Est: 30m
+- [ ] **T0-4: Integration cases + on-the-fly test data for @feature9 (env-sync)** -- @feature9 — id: t04 — Status: TODO | Est: 30m
   _Requirements: [FR-10](FR.md#fr-10-local-envconfig-file-synchronization-into-fresh-worktree), [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-10), `.specs/worktree-setup/worktree-setup.feature` scenarios CORE024_19..23_
   **Done When:**
   - [ ] Step-def stubs for CORE024_19..23 added to `tests/e2e/worktree-setup.test.ts` as vitest integration cases (Red before impl)
   - [ ] `tests/fixtures/worktree-setup/env-sync/` contains: main with gitignored `.env.test`, main with custom-named `.env.local`, main with secret-bearing env, main with `.devcontainer/.env`
   - [ ] All 5 @feature9 scenarios FAIL initially (Red)
 
-- [ ] **T0-5: Integration cases + on-the-fly test data for @feature10 (build-sync) + @feature11 (devcontainer) + dir-collision + ancestor** -- @feature10 + @feature11 + @feature1 + @feature2 — Status: TODO | Est: 40m
+- [ ] **T0-5: Integration cases + on-the-fly test data for @feature10 (build-sync) + @feature11 (devcontainer) + dir-collision + ancestor** -- @feature10 + @feature11 + @feature1 + @feature2 — id: t05 — Status: TODO | Est: 40m
   _Requirements: [FR-11](FR.md#fr-11-build-and-dependency-synchronization), [FR-12](FR.md#fr-12-devcontainer-integration), [FR-1](FR.md#fr-1-atomic-worktreebranch-creation-from-main), [FR-2](FR.md#fr-2-full-installer-bootstrap-with-global-config-registration), scenarios CORE024_24..33_
   **Done When:**
   - [ ] Step-def stubs for CORE024_24..33 added to `tests/e2e/worktree-setup.test.ts` as vitest integration cases (Red before impl)
@@ -87,14 +87,14 @@
 
 ## Phase 1: Worktree creation core (Green @feature1 + @feature8)
 
-- [ ] **T1-1: Slug validator + branch pre-flight** -- @feature1 — Status: TODO | Est: 45m
+- [ ] **T1-1: Slug validator + branch pre-flight** -- @feature1 — id: t11 — Status: TODO | Est: 45m
   _Requirements: [FR-1](FR.md#fr-1-atomic-worktreebranch-creation-from-main), [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1)_
   **Done When:**
   - [ ] Regex `^[a-z][a-z0-9-]*[a-z0-9]$` validation in `.claude/skills/worktree-setup/scripts/orchestrate.ts`
   - [ ] `git show-ref --verify --quiet refs/heads/feat/<slug>` pre-flight runs before `git worktree add`
   - [ ] CORE024_02, CORE024_03 scenarios pass Red→Green
 
-- [ ] **T1-2: git worktree add -b orchestration** -- @feature1 — Status: TODO | Est: 45m
+- [ ] **T1-2: git worktree add -b orchestration** -- @feature1 — id: t12 — Status: TODO | Est: 45m
   _Requirements: [FR-1](FR.md#fr-1-atomic-worktreebranch-creation-from-main)_
   _depends: T1-1_
   **Done When:**
@@ -102,7 +102,7 @@
   - [ ] CORE024_01 scenario passes Red→Green
   - [ ] No two-step `git branch + git worktree add` pattern used
 
-- [ ] **T1-3: Invocation-from-sibling warn flow** -- @feature8 — Status: TODO | Est: 45m
+- [ ] **T1-3: Invocation-from-sibling warn flow** -- @feature8 — id: t13 — Status: TODO | Est: 45m
   _Requirements: [FR-8](FR.md#fr-8-invocation-from-sibling-worktree-warn-offer-continue), [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8)_
   _depends: T1-2_
   **Done When:**
@@ -110,7 +110,7 @@
   - [ ] AskUserQuestion fires with options "Continue from main" / "Abort"
   - [ ] CORE024_17, CORE024_18 scenarios pass
 
-- [ ] **T1-4: Directory-collision pre-flight (FR-1)** -- @feature1 — Status: TODO | Est: 30m
+- [ ] **T1-4: Directory-collision pre-flight (FR-1)** -- @feature1 — id: t14 — Status: TODO | Est: 30m
   _Requirements: [FR-1](FR.md#fr-1-atomic-worktreebranch-creation-from-main), [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1)_
   _depends: T1-1_
   **Done When:**
@@ -118,7 +118,7 @@
   - [ ] Existing registered worktree path routes to UC-4 reuse (not refusal)
   - [ ] CORE024_28 scenario passes Red→Green
 
-- [ ] **T1-V: Verify Phase 1 scenarios Red→Green** -- @feature1 + @feature8 — Status: TODO | Est: 15m
+- [ ] **T1-V: Verify Phase 1 scenarios Red→Green** -- @feature1 + @feature8 — id: t1 — Status: TODO | Est: 15m
   _depends: T1-1, T1-2, T1-3, T1-4_
   **Done When:**
   - [ ] CORE024_01, _02, _03, _17, _18, _28 all PASS via `npx vitest run`
@@ -126,7 +126,7 @@
 
 ## Phase 2: Bootstrap + doctor (Green @feature2 + @feature6)
 
-- [ ] **T2-1: Bootstrap step (installer invocation)** -- @feature2 — Status: TODO | Est: 30m
+- [ ] **T2-1: Bootstrap step (installer invocation)** -- @feature2 — id: t21 — Status: TODO | Est: 30m
   _Requirements: [FR-2](FR.md#fr-2-full-installer-bootstrap-with-global-config-registration)_
   _depends: T1-2_
   **Done When:**
@@ -134,7 +134,7 @@
   - [ ] Post-install: skill reads `~/.dev-pomogator/config.json`, verifies new path in `projectPaths[]`
   - [ ] CORE024_04 passes; CORE024_05 (failure path) shows retry hint
 
-- [ ] **T2-2: worktree-doctor.cjs (full + --quick modes)** -- @feature6 — Status: TODO | Est: 90m
+- [ ] **T2-2: worktree-doctor.cjs (full + --quick modes)** -- @feature6 — id: t22 — Status: TODO | Est: 90m
   _Requirements: [FR-6](FR.md#fr-6-worktree-doctorcjs-standalone-diagnostic), [NFR-P2](NFR.md#performance)_
   _depends: T0-3_
   _Config: см. SCHEMA.md "worktree-doctor.cjs stdout format"_
@@ -144,7 +144,7 @@
   - [ ] `--quick` mode completes <50ms (measured via integration test)
   - [ ] CORE024_14, _15, _16 scenarios pass
 
-- [ ] **T2-3: Installer wires worktree-doctor.cjs as managed file** -- @feature6 — Status: TODO | Est: 30m
+- [ ] **T2-3: Installer wires worktree-doctor.cjs as managed file** -- @feature6 — id: t23 — Status: TODO | Est: 30m
   _Requirements: [FR-6](FR.md), `extension-manifest-integrity` rule_
   _depends: T2-2_
   **Done When:**
@@ -152,7 +152,7 @@
   - [ ] Installer copies to `~/.dev-pomogator/scripts/worktree-doctor.cjs` on install
   - [ ] Updater regenerates on version bump (preserves user mods via existing backup pattern)
 
-- [ ] **T2-4: env-sync.ts (copy root env, regenerate devcontainer .env, secret-warn, idempotent skip)** -- @feature9 — Status: TODO | Est: 75m
+- [ ] **T2-4: env-sync.ts (copy root env, regenerate devcontainer .env, secret-warn, idempotent skip)** -- @feature9 — id: t24 — Status: TODO | Est: 75m
   _Requirements: [FR-10](FR.md#fr-10-local-envconfig-file-synchronization-into-fresh-worktree), [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-10), [NFR-S6](NFR.md#security), [NFR-R6](NFR.md#reliability)_
   _depends: T2-1, T0-4_
   _Config: см. SCHEMA.md "env-sync candidate selection" + "env-sync audit JSONL entry"_
@@ -162,7 +162,7 @@
   - [ ] Writes env-sync audit JSONL; called from `orchestrate.ts` after the bootstrap step and before doctor verification
   - [ ] CORE024_19, _20, _21, _22, _23 pass Red→Green
 
-- [ ] **T2-5: build/deps-sync (npm install + npm run build, --skip-build, best-effort)** -- @feature10 — Status: TODO | Est: 60m
+- [ ] **T2-5: build/deps-sync (npm install + npm run build, --skip-build, best-effort)** -- @feature10 — id: t25 — Status: TODO | Est: 60m
   _Requirements: [FR-11](FR.md#fr-11-build-and-dependency-synchronization), [AC-11](ACCEPTANCE_CRITERIA.md#ac-11-fr-11), [NFR-P5](NFR.md#performance), [NFR-R3](NFR.md#reliability)_
   _depends: T2-1, T0-5_
   **Done When:**
@@ -170,14 +170,14 @@
   - [ ] `--skip-build` skips both and prints manual commands; non-zero exit prints retry hint and continues without rollback
   - [ ] CORE024_24, _25, _26, _27 pass Red→Green
 
-- [ ] **T2-6: Installer ancestor-guard (FR-2 worktree-not-ancestor)** -- @feature2 — Status: TODO | Est: 30m
+- [ ] **T2-6: Installer ancestor-guard (FR-2 worktree-not-ancestor)** -- @feature2 — id: t26 — Status: TODO | Est: 30m
   _Requirements: [FR-2](FR.md#fr-2-full-installer-bootstrap-with-global-config-registration), [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2)_
   _depends: T2-1, T0-5_
   **Done When:**
   - [ ] After bootstrap, `orchestrate.ts` verifies registered projectPath equals the worktree (not an ancestor resolved by `findRepoRoot()`); mismatch → refuse with hint
   - [ ] CORE024_29 scenario passes Red→Green
 
-- [ ] **T2-7: devcontainer.ts --devcontainer build/up (FR-12a)** -- @feature11 — Status: TODO | Est: 60m
+- [ ] **T2-7: devcontainer.ts --devcontainer build/up (FR-12a)** -- @feature11 — id: t27 — Status: TODO | Est: 60m
   _Requirements: [FR-12](FR.md#fr-12-devcontainer-integration), [AC-12](ACCEPTANCE_CRITERIA.md#ac-12-fr-12), [NFR-R3](NFR.md#reliability)_
   _depends: T2-5, T0-5_
   **Done When:**
@@ -185,7 +185,7 @@
   - [ ] Docker failure → manual-command hint + continue; no `--devcontainer` → zero docker calls
   - [ ] CORE024_30, _31, _32 pass Red→Green
 
-- [ ] **T2-8: post-create.sh npm install + build (FR-12b)** -- @feature11 — Status: TODO | Est: 30m
+- [ ] **T2-8: post-create.sh npm install + build (FR-12b)** -- @feature11 — id: t28 — Status: TODO | Est: 30m
   _Requirements: [FR-12](FR.md#fr-12-devcontainer-integration), [AC-12](ACCEPTANCE_CRITERIA.md#ac-12-fr-12)_
   _depends: T0-5_
   **Done When:**
@@ -193,7 +193,7 @@
   - [ ] Idempotent: skip install when node_modules present + lockfile unchanged, skip build when dist fresh
   - [ ] CORE024_33 passes Red→Green
 
-- [ ] **T2-V: Verify Phase 2 scenarios Red→Green** -- @feature2 + @feature6 + @feature9 + @feature10 + @feature11 — Status: TODO | Est: 15m
+- [ ] **T2-V: Verify Phase 2 scenarios Red→Green** -- @feature2 + @feature6 + @feature9 + @feature10 + @feature11 — id: t2 — Status: TODO | Est: 15m
   _depends: T2-1, T2-2, T2-3, T2-4, T2-5, T2-6, T2-7, T2-8_
   **Done When:**
   - [ ] CORE024_04, _05, _14, _15, _16, _19, _20, _21, _22, _23, _24, _25, _26, _27, _29, _30, _31, _32, _33 all PASS
@@ -201,7 +201,7 @@
 
 ## Phase 3: Self-heal in tsx-runner.js (Green @feature3)
 
-- [ ] **T3-1: Patch tsx-runner.js with self-heal block** -- @feature3 — Status: TODO | Est: 60m
+- [ ] **T3-1: Patch tsx-runner.js with self-heal block** -- @feature3 — id: t31 — Status: TODO | Est: 60m
   _Requirements: [FR-3](FR.md#fr-3-self-heal-hint-for-orphan-worktrees-via-tsx-runnerjs), [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3)_
   _depends: T0-3_
   _Source: src/scripts/tsx-runner.js, insert after `resolveScriptPath()` line 107 (Read-verified)_
@@ -210,7 +210,7 @@
   - [ ] Check `args[0].startsWith('.dev-pomogator/') && !fs.existsSync(scriptPath)` → call `selfHealOrphanWorktree()` → `process.exit(0)`
   - [ ] CORE024_06 (JSONL append), CORE024_08 (no hardcoded npx URL) scenarios pass
 
-- [ ] **T3-2: JSONL append + dedup + stderr hint** -- @feature3 — Status: TODO | Est: 45m
+- [ ] **T3-2: JSONL append + dedup + stderr hint** -- @feature3 — id: t32 — Status: TODO | Est: 45m
   _Requirements: [FR-3](FR.md), [NFR-R5](NFR.md#reliability)_
   _depends: T3-1_
   **Done When:**
@@ -219,7 +219,7 @@
   - [ ] CORE024_07 passes
   - [ ] NFR-P3 (≤5ms overhead in happy path) verified by integration test
 
-- [ ] **T3-V: Verify Phase 3 scenarios Red→Green** -- @feature3 — Status: TODO | Est: 15m
+- [ ] **T3-V: Verify Phase 3 scenarios Red→Green** -- @feature3 — id: t3 — Status: TODO | Est: 15m
   _depends: T3-1, T3-2_
   **Done When:**
   - [ ] CORE024_06, _07, _08 all PASS
@@ -227,7 +227,7 @@
 
 ## Phase 4: PR flow with three-layer resolution (Green @feature4 + @feature5)
 
-- [ ] **T4-1: env-resolver.ts three-layer resolution** -- @feature4 — Status: TODO | Est: 90m
+- [ ] **T4-1: env-resolver.ts three-layer resolution** -- @feature4 — id: t41 — Status: TODO | Est: 90m
   _Requirements: [FR-4](FR.md#fr-4-pr-creation-via-three-layer-config-resolution), [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4)_
   _depends: T0-3_
   _Config: см. SCHEMA.md "Env file" + USE_CASES.md UC-5 Layer 0/1/2/3_
@@ -237,14 +237,14 @@
   - [ ] Atomic env-file write per NFR-R1
   - [ ] CORE024_09, _10, _11, _12 pass
 
-- [ ] **T4-2: pr-creator.ts push + gh pr create** -- @feature4 — Status: TODO | Est: 45m
+- [ ] **T4-2: pr-creator.ts push + gh pr create** -- @feature4 — id: t42 — Status: TODO | Est: 45m
   _Requirements: [FR-4](FR.md)_
   _depends: T4-1, T1-2_
   **Done When:**
   - [ ] `.claude/skills/worktree-setup/scripts/pr-creator.ts` invokes `git push -u origin feat/<slug>` then `gh pr create --draft --repo ${WT_GH_OWNER}/${WT_GH_REPO}`
   - [ ] PR URL printed in final summary
 
-- [ ] **T4-3: gh auth pre-flight** -- @feature5 — Status: TODO | Est: 20m
+- [ ] **T4-3: gh auth pre-flight** -- @feature5 — id: t43 — Status: TODO | Est: 20m
   _Requirements: [FR-5](FR.md#fr-5-gh-authentication-pre-flight-check), [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5)_
   _depends: T1-2_
   **Done When:**
@@ -252,7 +252,7 @@
   - [ ] Non-zero exit refuses cleanly with hint, no side effects
   - [ ] CORE024_13 passes
 
-- [ ] **T4-V: Verify Phase 4 scenarios Red→Green** -- @feature4 + @feature5 — Status: TODO | Est: 15m
+- [ ] **T4-V: Verify Phase 4 scenarios Red→Green** -- @feature4 + @feature5 — id: t4 — Status: TODO | Est: 15m
   _depends: T4-1, T4-2, T4-3_
   **Done When:**
   - [ ] CORE024_09, _10, _11, _12, _13 all PASS
@@ -260,7 +260,7 @@
 
 ## Phase 5: session-pilot integration contract (no impl in this branch)
 
-- [ ] **T5-1: Document session-pilot integration cross-ref** -- @feature7 — Status: TODO | Est: 30m
+- [ ] **T5-1: Document session-pilot integration cross-ref** -- @feature7 — id: t51 — Status: TODO | Est: 30m
   _Requirements: [FR-7](FR.md#fr-7-session-pilot-integration-contract), [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7)_
   _depends: T2-2_
   **Done When:**
@@ -272,14 +272,14 @@
 
 ## Phase 6: Refactor & Polish
 
-- [ ] **T6-1: Refactor + jscpd ≤ baseline** — Status: TODO | Est: 45m
+- [ ] **T6-1: Refactor + jscpd ≤ baseline** — id: t61 — Status: TODO | Est: 45m
   _depends: T1–T5 all complete_
   **Done When:**
   - [ ] All CORE024_01–_18 GREEN
   - [ ] `jscpd .claude/skills/worktree-setup/` duplication score ≤ project baseline
   - [ ] `/simplify` final review clean (no systemic findings)
 
-- [ ] **T6-2: Final validate-spec + audit-spec + simplify** — Status: TODO | Est: 20m
+- [ ] **T6-2: Final validate-spec + audit-spec + simplify** — id: t62 — Status: TODO | Est: 20m
   _depends: T6-1_
   **Done When:**
   - [ ] `npx tsx .dev-pomogator/tools/specs-generator/validate-spec.ts -Path .specs/worktree-setup` → 0 errors

@@ -34,7 +34,7 @@
 
 ## Phase -1: Infrastructure Prerequisites
 
-- [ ] Документировать env-выключатель `DEV_POMOGATOR_STATUSLINE=off` в `.env.example` — Status: TODO | Est: 10m
+- [ ] Документировать env-выключатель `DEV_POMOGATOR_STATUSLINE=off` в `.env.example` — id: t01 — Status: TODO | Est: 10m
   _Requirements: [FR-5](FR.md#fr-5-opt-out-switch)_
   **Done When:**
   - [ ] `.env.example` содержит закомментированную строку `DEV_POMOGATOR_STATUSLINE` с описанием [VERIFIED: prefix DEV_POMOGATOR_* уже используется в tools/]
@@ -44,31 +44,31 @@
 > Framework vitest already installed (verified DESIGN.md Evidence: package.json `vitest ^4.1.0`). Bootstrap block не нужен.
 > TEST_DATA_ACTIVE → нужны per-scenario hook (temp HOME) + fixtures (settings.json варианты).
 
-- [ ] `.feature` файл `tests/features/native-statusline.feature` — NSL001 сценарии (УЖЕ создан в Phase 2) — Status: TODO | Est: 10m
+- [ ] `.feature` файл `tests/features/native-statusline.feature` — NSL001 сценарии (УЖЕ создан в Phase 2) — id: t02 — Status: TODO | Est: 10m
   _Requirements: все FR_
   **Done When:**
   - [ ] Файл существует и содержит 10 сценариев NSL001_01..10
-- [ ] Создать test-скелет `tests/e2e/native-statusline.test.ts` с `it()` 1:1 по NSL001 (заглушки → FAIL) -- @feature1 @feature2 @feature3 @feature4 @feature5 — Status: TODO | Est: 30m
+- [ ] Создать test-скелет `tests/e2e/native-statusline.test.ts` с `it()` 1:1 по NSL001 (заглушки → FAIL) -- @feature1 @feature2 @feature3 @feature4 @feature5 — id: t03 — Status: TODO | Est: 30m
   _Requirements: все FR_
   **Done When:**
   - [ ] describe `NSL001` + 10 `it()` с кодами NSL001_01..10
   - [ ] Все it() FAIL (Red) до реализации
-- [ ] Создать hook: `tests/e2e/native-statusline.test.ts` beforeEach/afterEach (per-scenario, temp HOME) — cleanup для изолированного settings.json — Status: TODO | Est: 20m
+- [ ] Создать hook: `tests/e2e/native-statusline.test.ts` beforeEach/afterEach (per-scenario, temp HOME) — cleanup для изолированного settings.json — id: t04 — Status: TODO | Est: 20m
   _Source: DESIGN.md "BDD Test Infrastructure" > "Новые hooks"_
   _Reuse: spawn helper из `tests/e2e/helpers.ts` (no-test-helper-duplication)_
   **Done When:**
   - [ ] beforeEach делает `mkdtempSync` → temp HOME; afterEach `rmSync(recursive)`
-- [ ] Создать fixtures (in-test генерация): empty / foreign-statusLine / corrupt-JSON settings.json — per-scenario — Status: TODO | Est: 15m
+- [ ] Создать fixtures (in-test генерация): empty / foreign-statusLine / corrupt-JSON settings.json — per-scenario — id: t05 — Status: TODO | Est: 15m
   _Source: DESIGN.md "BDD Test Infrastructure" > "Test Data & Fixtures"_
   **Done When:**
   - [ ] Хелперы пишут 3 варианта settings.json в temp HOME для US1/US2/US5
-- [ ] Verify: все сценарии NSL001 FAIL (Red) -- @feature1 — Status: TODO | Est: 10m
+- [ ] Verify: все сценарии NSL001 FAIL (Red) -- @feature1 — id: t06 — Status: TODO | Est: 10m
   **Done When:**
   - [ ] `/run-tests native-statusline` показывает все NSL001 как failing
 
 ## Phase 1: Reconciler (Green)
 
-- [ ] Реализовать `reconcileStatusLine(existing)` в `tools/native-statusline/reconcile-statusline.ts` -- @feature1 @feature2 — Status: TODO | Est: 30m
+- [ ] Реализовать `reconcileStatusLine(existing)` в `tools/native-statusline/reconcile-statusline.ts` -- @feature1 @feature2 — id: t07 — Status: TODO | Est: 30m
   _Requirements: [FR-1](FR.md#fr-1-reconciler-slot-classification), [FR-4](FR.md#fr-4-ownership-marker)_
   _Config: см. DESIGN.md секция "API" + SCHEMA.md "ReconcileResult"_
   **Done When:**
@@ -76,65 +76,65 @@
   - [ ] command с `ccstatusline` → `noop` (NSL001_05)
   - [ ] чужой command → `keep-user`
   - [ ] NSL001_01 и NSL001_05 переходят из Red в Green
-- [ ] Verify: @feature1/@feature2 reconciler-сценарии Green — Status: TODO | Est: 5m
+- [ ] Verify: @feature1/@feature2 reconciler-сценарии Green — id: t08 — Status: TODO | Est: 5m
   **Done When:**
   - [ ] NSL001_01, NSL001_05 PASS
 
 ## Phase 2: Writer + SessionStart hook (Green)
 
-- [ ] Реализовать `writeNativeStatusLine` (atomic, conditional) в `tools/native-statusline/reconcile-statusline.ts` -- @feature1 @feature5 — Status: TODO | Est: 40m
+- [ ] Реализовать `writeNativeStatusLine` (atomic, conditional) в `tools/native-statusline/reconcile-statusline.ts` -- @feature1 @feature5 — id: t09 — Status: TODO | Est: 40m
   _Requirements: [FR-2](FR.md#fr-2-atomic-conditional-writer), [FR-8](FR.md#fr-8-idempotent-and-fail-open)_
   _Config: см. DESIGN.md "API" + atomic-config-save rule (temp+rename)_
   **Done When:**
   - [ ] install → atomic write, прочие поля settings.json целы (NSL001_02/03)
   - [ ] noop/keep-user → нет записи (NSL001_04, NSL001_07 идемпотентность)
-- [ ] Реализовать SessionStart-хук `tools/native-statusline/install_native_statusline.ts` (stdin → env gate → writer → systemMessage → exit 0) + `tools/native-statusline/package.json` -- @feature1 @feature4 @feature5 — Status: TODO | Est: 35m
+- [ ] Реализовать SessionStart-хук `tools/native-statusline/install_native_statusline.ts` (stdin → env gate → writer → systemMessage → exit 0) + `tools/native-statusline/package.json` -- @feature1 @feature4 @feature5 — id: t10 — Status: TODO | Est: 35m
   _Requirements: [FR-3](FR.md#fr-3-native-statusline-sessionstart-hook), [FR-5](FR.md#fr-5-opt-out-switch), [FR-8](FR.md#fr-8-idempotent-and-fail-open)_
   **Done When:**
   - [ ] changed=true → hook JSON с systemMessage (NSL001_02)
   - [ ] `DEV_POMOGATOR_STATUSLINE=off` → нет записи (NSL001_06)
   - [ ] битый JSON → exit 0, без мутации (NSL001_08); отсутствующий файл → создаётся (NSL001_09)
-- [ ] Verify: @feature1/@feature4/@feature5 writer+hook сценарии Green — Status: TODO | Est: 5m
+- [ ] Verify: @feature1/@feature4/@feature5 writer+hook сценарии Green — id: t11 — Status: TODO | Est: 5m
   **Done When:**
   - [ ] NSL001_02/03/04/06/07/08/09 PASS
 
 ## Phase 3: Hook registration (Green)
 
-- [ ] Зарегистрировать SessionStart-хук в `.claude-plugin/hooks.json` + `.claude/settings.json` -- @feature1 — Status: TODO | Est: 20m
+- [ ] Зарегистрировать SessionStart-хук в `.claude-plugin/hooks.json` + `.claude/settings.json` -- @feature1 — id: t12 — Status: TODO | Est: 20m
   _Requirements: [FR-6](FR.md#fr-6-hook-registration)_
   _Config: bootstrap-паттерн `process.env.CLAUDE_PLUGIN_ROOT` (см. существующие entries в hooks.json)_
   **Done When:**
   - [ ] hooks.json содержит SessionStart entry на install_native_statusline.ts
   - [ ] .claude/settings.json содержит тот же entry (dogfood)
-- [ ] Verify: manifest-тест на регистрацию хука Green — Status: TODO | Est: 10m
+- [ ] Verify: manifest-тест на регистрацию хука Green — id: t13 — Status: TODO | Est: 10m
   **Done When:**
   - [ ] integration-тест читает hooks.json и находит entry
 
 ## Phase 4: Doctor check + fix-action (Green)
 
-- [ ] Создать doctor check `.claude/skills/pomogator-doctor/scripts/engine/checks/statusline.ts` + регистрация в `checks/index.ts` -- @feature3 — Status: TODO | Est: 35m
+- [ ] Создать doctor check `.claude/skills/pomogator-doctor/scripts/engine/checks/statusline.ts` + регистрация в `checks/index.ts` -- @feature3 — id: t14 — Status: TODO | Est: 35m
   _Requirements: [FR-7](FR.md#fr-7-doctor-check-and-fix-action)_
   _Reuse: `writeNativeStatusLine` из reconcile-statusline.ts_
   **Done When:**
   - [ ] нет statusLine → check needs-fix; fix применяет writer немедленно (NSL001_10)
   - [ ] statusLine есть → check OK без fix
-- [ ] Verify: @feature3 doctor-сценарий Green — Status: TODO | Est: 5m
+- [ ] Verify: @feature3 doctor-сценарий Green — id: t15 — Status: TODO | Est: 5m
   **Done When:**
   - [ ] NSL001_10 PASS
 
 ## Phase 5: Refactor & Polish
 
-- [ ] Удалить мёртвый `tests/e2e/tui-statusline.test.ts` + снять exclude в `vitest.config.ts` — Status: TODO | Est: 15m
+- [ ] Удалить мёртвый `tests/e2e/tui-statusline.test.ts` + снять exclude в `vitest.config.ts` — id: t16 — Status: TODO | Est: 15m
   _Requirements: [FR-9](FR.md#fr-9-domain-separation-guard)_
   **Done When:**
   - [ ] tui-statusline.test.ts (тест на удалённую src/utils/statusline.ts) удалён
   - [ ] vitest.config.ts больше не исключает statusline-тесты; новый тест в наборе
-- [ ] Обновить `CLAUDE.md` индекс (строка про native-statusline) — Status: TODO | Est: 10m
+- [ ] Обновить `CLAUDE.md` индекс (строка про native-statusline) — id: t17 — Status: TODO | Est: 10m
   _Requirements: [FR-6](FR.md#fr-6-hook-registration)_
   _Config: claude-md-glossary rule_
   **Done When:**
   - [ ] CLAUDE.md содержит упоминание домена native-statusline
-- [ ] Final verification — Status: TODO | Est: 25m
+- [ ] Final verification — id: t18 — Status: TODO | Est: 25m
   **Done When:**
   - [ ] Все NSL001 сценарии GREEN через `/run-tests native-statusline`
   - [ ] `validate-spec.ts -Path .specs/native-statusline` → 0 errors
