@@ -70,6 +70,7 @@ nul
 
 # Temp / runtime artifacts (mutation sandbox, scratch, embedded worktrees, runtime locks)
 .stryker-tmp/
+reports/
 .dev-pomogator-tmp/
 .claude/worktrees/
 .claude/scheduled_tasks.lock

@@ -11,3 +11,5 @@ coverage
 run-tests-workspace
 .dev-pomogator/.test-status
 .dev-pomogator/.bg-task-active*
+.stryker-tmp
+reports

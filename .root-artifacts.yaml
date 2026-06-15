@@ -17,7 +17,9 @@ allow:
 - uninstall.ps1
 - vitest.config.ts
 - vitest.unit.config.ts
+- vitest.mutation.config.ts
 - stryker.config.mjs
+- stryker.real.config.mjs
 - .npmignore
 - .mcp.json
 - .lsp.json
