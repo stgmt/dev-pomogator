@@ -60,6 +60,28 @@ describe('checkPartialImpl', () => {
     writeSpecFile('TASKS.md', '- [x] do FR-3\n');
     expect(checkPartialImpl(tmpDir)).toHaveLength(0);
   });
+
+  it('does NOT match a marker as a substring of a larger word (PARTIAL ⊄ PARTIALLY)', () => {
+    // 'PARTIAL' must be word-bounded — 'PARTIALLY implemented' is a completion claim,
+    // not a partial-impl marker. Raw .includes() would fabricate an ERROR here.
+    writeSpecFile('FR.md', '## FR-7: Thing\n\nThis is PARTIALLY implemented and done.\n');
+    writeSpecFile('TASKS.md', '- [x] do FR-7\n');
+    expect(checkPartialImpl(tmpDir)).toHaveLength(0);
+  });
+
+  it('does NOT match "deferred" inside a hyphenated word (deferred-work)', () => {
+    writeSpecFile('FR.md', '## FR-8: Thing\n\nUses the deferred-work classifier path.\n');
+    writeSpecFile('TASKS.md', '- [x] do FR-8\n');
+    expect(checkPartialImpl(tmpDir)).toHaveLength(0);
+  });
+
+  it('still matches a standalone marker after the word-boundary fix', () => {
+    writeSpecFile('FR.md', '## FR-9: Thing\n\nThis is deferred for now.\n');
+    writeSpecFile('TASKS.md', '- [x] do FR-9\n');
+    const findings = checkPartialImpl(tmpDir);
+    expect(findings).toHaveLength(1);
+    expect(findings[0].check).toBe('PARTIAL_IMPL_DETECTION');
+  });
 });
 
 describe('checkTaskAtomicity', () => {

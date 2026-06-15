@@ -28,6 +28,24 @@ const PARTIAL_MARKERS = [
   'будущее улучшение',
 ];
 
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Unicode word-bounded marker presence — mirrors specs-generator-core.mjs so the
+ * two PARTIAL_IMPL detectors share ONE contract. A raw substring match flags
+ * 'PARTIAL' inside 'PARTIALLY' and 'deferred' inside 'deferred-work' — false
+ * positives that fabricate ERROR findings. Boundaries (incl. '-') prevent that
+ * while still matching Cyrillic markers ('НЕ РЕАЛИЗОВАНО') and multi-word phrases.
+ */
+function markerPresent(haystack: string, marker: string): boolean {
+  return new RegExp(
+    `(?<![\\p{L}\\p{N}_-])${escapeRegExp(marker)}(?![\\p{L}\\p{N}_-])`,
+    'iu',
+  ).test(haystack);
+}
+
 const DOMAIN_TERMS = [
   'batch', 'serial', 'IN', 'OUT', 'inbound', 'outbound',
   'create', 'update', 'delete', 'rollback', 'cancel', 'approve', 'reject',
@@ -59,7 +77,7 @@ export function checkPartialImpl(specPath: string): AuditFinding[] {
     const frId = idMatch[1];
 
     for (const marker of PARTIAL_MARKERS) {
-      if (section.toLowerCase().includes(marker.toLowerCase())) {
+      if (markerPresent(section, marker)) {
         // Check if task referencing this FR is [x]
         const tasksLines = tasksContent.split('\n');
         for (const line of tasksLines) {
