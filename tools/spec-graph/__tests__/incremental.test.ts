@@ -21,7 +21,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { buildGraph } from '../builder.ts';
-import { applyChange, applyUnlink, dropFileSlice } from '../incremental.ts';
+import { applyChange, applyUnlink, dropFileSlice, startWatching } from '../incremental.ts';
 import type { TaskNode } from '../types.ts';
 
 function percentile(sortedMs: number[], p: number): number {
@@ -192,5 +192,47 @@ describe('incremental — applyChange / applyUnlink / dropFileSlice', () => {
       `[incremental] p50=${percentile(samples, 50).toFixed(2)}ms p95=${p95.toFixed(2)}ms n=20`,
     );
     expect(p95).toBeLessThanOrEqual(100);
+  });
+
+  it('applyChange on a .feature file splices new Scenario nodes (classify=feature branch)', () => {
+    fs.mkdirSync(path.join(root, 'tests/features'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'tests/features/x.feature'), '@FR-1\nFeature: X\n  Scenario: one\n    Given y\n');
+    const graph = buildGraph({ repoRoot: root, skipNdjson: true });
+    const before = [...graph.nodes.values()].filter((n) => n.type === 'Scenario').length;
+    fs.writeFileSync(path.join(root, 'tests/features/x.feature'), '@FR-1\nFeature: X\n  Scenario: one\n    Given y\n  Scenario: two\n    Given z\n');
+    const delta = applyChange(graph, root, 'tests/features/x.feature');
+    const after = [...graph.nodes.values()].filter((n) => n.type === 'Scenario').length;
+    expect(after, 'a second Scenario must be spliced in').toBeGreaterThan(before);
+    expect(delta.nodesDelta).toBeGreaterThan(0);
+  });
+
+  it('applyChange on a non-spec extension is a no-op (classify=unknown branch)', () => {
+    fs.writeFileSync(path.join(root, '.specs/auth/FR.md'), '## FR-1: A\n');
+    fs.writeFileSync(path.join(root, '.specs/auth/notes.txt'), 'hello');
+    const graph = buildGraph({ repoRoot: root, skipNdjson: true });
+    const before = { n: graph.nodes.size, e: graph.edges.length };
+    const delta = applyChange(graph, root, '.specs/auth/notes.txt');
+    expect(delta).toEqual({ nodesDelta: 0, edgesDelta: 0 });
+    expect(graph.nodes.size).toBe(before.n);
+    expect(graph.edges.length).toBe(before.e);
+  });
+
+  it('dropFileSlice removes an edge whose FROM endpoint is dropped (mirror of the unlink to-side test)', () => {
+    fs.writeFileSync(path.join(root, '.specs/auth/FR.md'), '## FR-1: A\n');
+    fs.writeFileSync(path.join(root, '.specs/auth/ACCEPTANCE_CRITERIA.md'), '## AC-1 (FR-1)\n');
+    const graph = buildGraph({ repoRoot: root, skipNdjson: true });
+    expect(graph.edges).toContainEqual({ from: 'auth:FR-1', to: 'auth:AC-1', type: 'covers' });
+    dropFileSlice(graph, '.specs/auth/FR.md'); // FR-1 is the FROM of the covers edge
+    expect(graph.edges, 'edge dropped when its from-node is removed').not.toContainEqual({ from: 'auth:FR-1', to: 'auth:AC-1', type: 'covers' });
+  });
+
+  it('startWatching builds a live watcher over the default roots and closes cleanly', async () => {
+    fs.writeFileSync(path.join(root, '.specs/auth/FR.md'), '## FR-1: A\n');
+    const graph = buildGraph({ repoRoot: root, skipNdjson: true });
+    const errors: Error[] = [];
+    const watcher = startWatching(graph, { repoRoot: root, usePolling: true, interval: 40, onError: (e) => errors.push(e) });
+    expect(typeof watcher.close).toBe('function');
+    await watcher.close();
+    expect(errors, 'no watcher-level error on setup/teardown').toEqual([]);
   });
 });
