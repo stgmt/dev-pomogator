@@ -315,6 +315,12 @@ function scan(content: string, stack: Stack): { candidates: Candidate[]; suppres
 export { detectStack, scan, suggestInvariants, nestedLoopCount };
 export type { Stack, Candidate, Suppressed, DetectorOutput };
 
+// Stryker disable all : the CLI entry below is run as a SUBPROCESS (spawned, never
+// imported), so Stryker cannot activate a mutant inside it — every mutant here is
+// "no coverage" by construction, a tool limitation, NOT a test gap. The real logic
+// (scan / detectStack / suggestInvariants / nestedLoopCount) is mutation-tested
+// in-process above; main() is thin arg-read → scan → JSON-write glue. This excludes
+// ONLY the un-killable CLI — the detection regexes' survivors remain counted.
 function main(): void {
   const t0 = Date.now();
   const filePath = process.argv[2];

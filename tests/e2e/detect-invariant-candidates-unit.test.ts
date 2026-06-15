@@ -444,6 +444,27 @@ function normal(): number[] {
       expect(r.candidates[0].kind, 'nested loops dominate the chain').toBe('nxm-overlap');
     });
 
+    it('flags a Python stacked-comprehension as composition-chain (FAILS if CHAIN_PY broken)', () => {
+      const src = `def pipe(items: list[int]) -> list[int]:
+    a = [x for x in items]
+    b = [y for y in a]
+    return b`;
+      const r = scan(src, 'python');
+      expect(r.candidates.length).toBe(1);
+      expect(r.candidates[0].kind, 'two stacked comprehensions ⇒ composition-chain').toBe('composition-chain');
+    });
+
+    it('flags Go sequential collection calls as composition-chain (FAILS if CHAIN_GO broken)', () => {
+      const src = `func Pipe(items []int) []int {
+\ta := transform(items)
+\tb := flatten(a)
+\treturn b
+}`;
+      const r = scan(src, 'go');
+      expect(r.candidates.length).toBe(1);
+      expect(r.candidates[0].kind, 'result piped through a second call ⇒ composition-chain').toBe('composition-chain');
+    });
+
     // ── return-type alternations — each unexercised branch of COLLECTION_TS survived mutation. ──
     it('detects a TS Set<T> return (FAILS if the Set alternation is dropped from COLLECTION_TS)', () => {
       const r = scan(`function uniq(): Set<string> {\n  return new Set();\n}`, 'ts');

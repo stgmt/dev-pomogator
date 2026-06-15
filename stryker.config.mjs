@@ -3,24 +3,17 @@
  * Target: .claude/skills/strong-tests/scripts/detect-invariant-candidates.ts
  * Test runner: vitest (already in devDeps).
  *
- * Run via: npm run mutation:skill   (the PRIMARY `npm run mutation` targets the
- * repo's real product code — see stryker.real.config.mjs).
- * Reports: reports/mutation/mutation.html + mutation.json
+ * Run via: npm run mutation:skill. The PRIMARY mutation gate is the repo's real
+ * product code — `npm run mutation` -> stryker.real.config.mjs (57% green, no
+ * mutator exclusions). This file is intentionally NOT the headline gate.
  *
- * Why excludedMutations:['Regex'] here (and NOT in stryker.real.config.mjs):
- * this file is a ~12-regex HEURISTIC candidate-detector. Stryker's Regex mutator
- * dominates with equivalent char-class shuffles — verified on the 2026-06-15 run:
- * survivors are `^\s*`→`\s*` (anchor drop), `\s+`→`\s`, `\s*`→`\S*`, optional-group
- * removal — none of which change detection on valid source. The DETECTION BEHAVIOR
- * (does scan() classify a function as collection-returning / nxm-overlap /
- * composition-chain, per stack) is pinned by 30+ behavioural tests in
- * tests/e2e/detect-invariant-candidates-unit.test.ts. We therefore gate on the
- * LOGIC mutants (conditionals/blocks/strings), not regex char-shuffle noise. This
- * is the strong-tests skill's own documented procedure (references/
- * stryker.config.template.mjs §"Regex-equivalent survivors"). The CLI main() is
- * additionally un-killable here — Stryker cannot trace mutations across the
- * subprocess boundary (see the test file header). This is NOT a threshold drop;
- * thresholds are unchanged.
+ * This target is a ~12-regex heuristic candidate-detector, so its mutation ceiling
+ * is inherently capped: (1) the CLI main() is un-killable — Stryker cannot trace
+ * mutations across the subprocess boundary (see the test file header); (2) a
+ * regex-heuristic produces many char-class-shuffle mutants. Detection BEHAVIOUR is
+ * pinned by 30+ scan() tests in tests/e2e/detect-invariant-candidates-unit.test.ts
+ * (composition-chain across TS/C#/Python/Go + every return-type alternation). The
+ * score here is an informational self-test signal, not a pass/fail gate.
  */
 export default {
   packageManager: 'npm',
@@ -37,10 +30,6 @@ export default {
     '.claude/skills/strong-tests/scripts/detect-invariant-candidates.ts',
   ],
   testRunnerNodeArgs: [],
-  // Gate on logic mutants, not equivalent regex char-shuffles (see header rationale).
-  mutator: {
-    excludedMutations: ['Regex'],
-  },
   env: {
     SKIP_BUILD_CHECK: '1',
   },
