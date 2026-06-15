@@ -67,4 +67,48 @@ describe('addTaskIdsAnyHeader (general: title-only + phase-dashed loose headers)
     expect(r1.content).not.toMatch(/child observable.*id:/);
     expect(addTaskIdsAnyHeader(r1.content).added).toBe(0); // idempotent
   });
+
+  // Property-style (manual generator, no fast-check dep): invariants over many shapes.
+  const STATUSES = ['TODO', 'IN_PROGRESS', 'DONE', 'BLOCKED'];
+  function genDoc(seed: number): string {
+    const n = (seed % 5) + 1;
+    const lines: string[] = [`## Phase ${seed % 3}`];
+    for (let i = 0; i < n; i++) {
+      const st = STATUSES[(seed + i) % STATUSES.length];
+      const prefix = (seed + i) % 2 === 0 ? `T${seed % 4}-${i}: ` : '';
+      lines.push(`- [${st === 'DONE' ? 'x' : ' '}] ${prefix}task ${i} -- @feature${i} — Status: ${st} | Est: ${i + 1}0m`);
+      lines.push(`  - [ ] child observable ${i} (no status)`); // must never get an id
+    }
+    return lines.join('\r\n') + '\r\n'; // CRLF on purpose
+  }
+
+  it('INVARIANT idempotence: applying twice equals applying once, over many doc shapes', () => {
+    for (let seed = 0; seed < 40; seed++) {
+      const doc = genDoc(seed);
+      const once = addTaskIdsAnyHeader(doc).content;
+      const twice = addTaskIdsAnyHeader(once);
+      expect(twice.added, `seed=${seed}: 2nd pass must add 0 (idempotent), doc=${JSON.stringify(doc)}`).toBe(0);
+      expect(twice.content, `seed=${seed}: 2nd pass must be byte-identical to 1st`).toBe(once);
+    }
+  });
+
+  it('INVARIANT id-uniqueness + child-safety: every header gets exactly one unique id; no child does', () => {
+    for (let seed = 0; seed < 40; seed++) {
+      const r = addTaskIdsAnyHeader(genDoc(seed));
+      const ids = [...r.content.matchAll(/—\s*id:\s*(\S+)\s*—\s*Status:/g)].map((m) => m[1]);
+      const headers = (r.content.match(/^[ \t]*-\s*\[[ xX~]\][^\r\n]*?—\s*Status:/gm) || []).length;
+      expect(ids.length, `seed=${seed}: one id per header (${headers} headers)`).toBe(headers);
+      expect(new Set(ids).size, `seed=${seed}: ids must be unique — got ${ids.join(',')}`).toBe(ids.length);
+      expect(/child observable \d+ \(no status\)[^\n]*id:/.test(r.content), `seed=${seed}: a child line must never receive an id`).toBe(false);
+    }
+  });
+
+  it('INVARIANT status-preservation: the Status token of every header is byte-unchanged', () => {
+    for (let seed = 0; seed < 40; seed++) {
+      const doc = genDoc(seed);
+      const before = (doc.match(/—\s*Status:\s*\w+/g) || []).sort();
+      const after = (addTaskIdsAnyHeader(doc).content.match(/—\s*Status:\s*\w+/g) || []).sort();
+      expect(after, `seed=${seed}: id-insertion must not alter any Status token`).toEqual(before);
+    }
+  });
 });

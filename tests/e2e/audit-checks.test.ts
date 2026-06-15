@@ -96,6 +96,28 @@ describe('checkPartialImpl', () => {
     writeSpecFile('TASKS.md', '- [x] do FR-11\n');
     expect(checkPartialImpl(tmpDir)).toHaveLength(0);
   });
+
+  // Property-style (manual generator, no fast-check dep): the contract must hold for
+  // EVERY partial marker — word-bounded prose fires, a larger-word substring or a
+  // code-fenced occurrence does not. This pins the two divergence bugs (word-boundary
+  // + code-strip) across the whole marker list, not just a couple of examples.
+  const MARKERS = ['НЕ РЕАЛИЗОВАНО', 'NOT IMPLEMENTED', 'PARTIAL', 'TODO: implement', 'deferred', 'будущее улучшение'];
+  it('INVARIANT marker contract: word-bounded fires; substring-of-larger-word + code-fenced do NOT — for every marker', () => {
+    writeSpecFile('TASKS.md', '- [x] do FR-5 stuff\n');
+    for (const m of MARKERS) {
+      // (a) standalone, word-bounded, prose → must fire
+      writeSpecFile('FR.md', `## FR-5: T\n\nStatus: ${m} right now.\n`);
+      expect(checkPartialImpl(tmpDir).length, `marker "${m}" word-bounded must fire`).toBe(1);
+
+      // (b) appended to a larger word (no boundary) → must NOT fire
+      writeSpecFile('FR.md', `## FR-5: T\n\nThis is ${m}LY done and complete.\n`);
+      expect(checkPartialImpl(tmpDir).length, `marker "${m}" as a substring of a larger word must NOT fire`).toBe(0);
+
+      // (c) only inside a fenced code block → must NOT fire
+      writeSpecFile('FR.md', `## FR-5: T\n\nFully done. Example:\n\`\`\`\nconst X = "${m}";\n\`\`\`\n`);
+      expect(checkPartialImpl(tmpDir).length, `marker "${m}" inside a code fence must NOT fire`).toBe(0);
+    }
+  });
 });
 
 describe('checkTaskAtomicity', () => {

@@ -236,6 +236,33 @@ describe('parseNdjson — result extraction from canonical envelopes', () => {
     expect(parseNdjson(stream).byLocation.get('f.feature:7')?.lastResult).toBe('FAILED');
   });
 
+  // Property-style (manual generator, no fast-check dep): a scenario's result is the
+  // WORST-severity step status — never a lower one (the false-green class). Severity:
+  // FAILED>AMBIGUOUS>UNDEFINED>PENDING>SKIPPED>PASSED.
+  const SEV = ['PASSED', 'SKIPPED', 'PENDING', 'UNDEFINED', 'AMBIGUOUS', 'FAILED'];
+  function streamForSteps(statuses: string[]): string {
+    return [
+      { gherkinDocument: { uri: 'f.feature', feature: { children: [{ scenario: { id: 's1', location: { line: 3 } } }] } } },
+      { pickle: { id: 'pk1', uri: 'f.feature', astNodeIds: ['s1'], steps: statuses.map((_, i) => ({ id: 'ps' + i, text: 's' + i })) } },
+      { testCase: { id: 'tc1', pickleId: 'pk1', testSteps: statuses.map((_, i) => ({ id: 'ts' + i, pickleStepId: 'ps' + i })) } },
+      { testCaseStarted: { id: 'tcs1', testCaseId: 'tc1' } },
+      ...statuses.map((s, i) => ({ testStepFinished: { testCaseStartedId: 'tcs1', testStepId: 'ts' + i, testStepResult: { status: s } } })),
+      { testCaseFinished: { testCaseStartedId: 'tcs1' } },
+    ].map((o) => JSON.stringify(o)).join('\n');
+  }
+
+  it('INVARIANT worst-of-steps: scenario result = max-severity step, over many step combos + orders', () => {
+    // Cover every ordered pair + a few triples; the order must NOT matter.
+    const combos: string[][] = [];
+    for (const a of SEV) for (const b of SEV) combos.push([a, b]);
+    combos.push(['PASSED', 'FAILED', 'PASSED'], ['SKIPPED', 'PASSED', 'PENDING'], ['PASSED', 'UNDEFINED', 'PASSED', 'PASSED']);
+    for (const steps of combos) {
+      const want = steps.reduce((w, s) => (SEV.indexOf(s) > SEV.indexOf(w) ? s : w), 'PASSED');
+      const got = parseNdjson(streamForSteps(steps)).byLocation.get('f.feature:3')?.lastResult;
+      expect(got, `steps=[${steps.join(',')}] → worst should be ${want}, got ${got}`).toBe(want);
+    }
+  });
+
   it('clamps a negative duration (clock skew: finish timestamp before start) to 0', () => {
     const stream = [
       { gherkinDocument: { uri: 'f.feature', feature: { children: [{ scenario: { id: 's1', location: { line: 9 } } }] } } },
