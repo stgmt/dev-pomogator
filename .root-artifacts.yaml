@@ -18,8 +18,10 @@ allow:
 - vitest.config.ts
 - vitest.unit.config.ts
 - vitest.mutation.config.ts
+- vitest.specgen.config.ts
 - stryker.config.mjs
 - stryker.real.config.mjs
+- stryker.specgen.config.mjs
 - .npmignore
 - .mcp.json
 - .lsp.json
