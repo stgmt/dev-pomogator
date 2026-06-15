@@ -310,7 +310,15 @@ export function parseNdjson(source: string): TestResultPatch {
       durationMs: acc.durationMs,
       failingStep: acc.failingStep ?? null,
     };
-    byLocation.set(key, fields);
+    // Worst-of-merge on key collision. A Scenario Outline's example rows can resolve
+    // to the SAME `${uri}:astLine` (they share the Outline's scenario line); a plain
+    // last-writer `set` would let a later PASSED example HIDE an earlier FAILED one —
+    // the exact false-green this ingester must never emit. Keep the worst-severity
+    // result (and its failingStep) so a FAILED row always wins.
+    const prev = byLocation.get(key);
+    if (!prev || statusSeverity(fields.lastResult) > statusSeverity(prev.lastResult)) {
+      byLocation.set(key, fields);
+    }
   }
 
   return { byLocation };

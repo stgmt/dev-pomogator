@@ -198,6 +198,29 @@ describe('parseNdjson — result extraction from canonical envelopes', () => {
     const patch = parseNdjson('');
     expect(patch.byLocation.size).toBe(0);
   });
+
+  it('worst-of-merge on key collision: a later PASSED must NOT hide an earlier FAILED', () => {
+    // Two Scenario-Outline example rows resolve to the SAME scenario line (s1→5).
+    // pk1 FAILED, pk2 PASSED, pk2 finishes LAST. A plain last-writer set would let the
+    // PASSED overwrite the FAILED (false-green); worst-of-merge keeps FAILED.
+    const stream = [
+      { gherkinDocument: { uri: 'f.feature', feature: { children: [{ scenario: { id: 's1', location: { line: 5 } } }] } } },
+      { pickle: { id: 'pk1', uri: 'f.feature', astNodeIds: ['s1'], steps: [{ id: 'ps1', text: 'a step' }] } },
+      { pickle: { id: 'pk2', uri: 'f.feature', astNodeIds: ['s1'], steps: [{ id: 'ps2', text: 'a step' }] } },
+      { testCase: { id: 'tc1', pickleId: 'pk1', testSteps: [{ id: 'ts1', pickleStepId: 'ps1' }] } },
+      { testCase: { id: 'tc2', pickleId: 'pk2', testSteps: [{ id: 'ts2', pickleStepId: 'ps2' }] } },
+      { testCaseStarted: { id: 'tcs1', testCaseId: 'tc1' } },
+      { testStepFinished: { testCaseStartedId: 'tcs1', testStepId: 'ts1', testStepResult: { status: 'FAILED', message: 'boom' } } },
+      { testCaseFinished: { testCaseStartedId: 'tcs1' } },
+      { testCaseStarted: { id: 'tcs2', testCaseId: 'tc2' } },
+      { testStepFinished: { testCaseStartedId: 'tcs2', testStepId: 'ts2', testStepResult: { status: 'PASSED' } } },
+      { testCaseFinished: { testCaseStartedId: 'tcs2' } },
+    ].map((o) => JSON.stringify(o)).join('\n');
+    const patch = parseNdjson(stream);
+    const fields = patch.byLocation.get('f.feature:5');
+    expect(fields?.lastResult).toBe('FAILED');
+    expect(fields?.failingStep?.errorMessage).toBe('boom');
+  });
 });
 
 describe('applyTestResults — mutates only matching scenarios', () => {
