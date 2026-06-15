@@ -45,4 +45,53 @@ describe('parseTasks', () => {
     expect(final.doneWhen).toContain('all green');
     expect(final.refs).toEqual([]);
   });
+
+  it('tags each task with its enclosing ## Phase heading (TaskNode.phase)', () => {
+    const m = tasks.find((t) => t.id === 'task-scenario-map')!;
+    expect(m.phase, 'task under "## Phase X" carries that phase').toBe('Phase X');
+  });
+
+  it('extracts the task title between the checkbox and the — id: marker', () => {
+    expect(tasks.find((t) => t.id === 'task-scenario-map')!.title).toBe('T-Cov.7 Task↔scenario map');
+    expect(tasks.find((t) => t.id === 'graph-types')!.title).toBe('Define types -- @feature2');
+  });
+});
+
+describe('parseTasks — block boundaries + edge cases (formerly uncovered)', () => {
+  it('ends a task block at a horizontal rule (---) — body does not bleed into it', () => {
+    const src = '- [ ] A — id: a — Status: TODO\n  **Done When:** alpha\n---\n- [ ] B — id: b — Status: TODO\n  **Done When:** beta\n';
+    const t = parseTasks(src, 'T.md');
+    expect(t.map((x) => x.id)).toEqual(['a', 'b']);
+    expect(t.find((x) => x.id === 'a')!.doneWhen).toContain('alpha');
+    expect(t.find((x) => x.id === 'a')!.doneWhen, 'beta must not bleed past the ---').not.toContain('beta');
+  });
+
+  it('ends a task block at an HTML comment (<!--)', () => {
+    const src = '- [ ] A — id: a — Status: TODO\n  alpha line\n<!-- a note -->\n  beta line\n';
+    const a = parseTasks(src, 'T.md').find((x) => x.id === 'a')!;
+    expect(a.doneWhen).toContain('alpha line');
+    expect(a.doneWhen, 'comment ends the block; beta is outside').not.toContain('beta line');
+  });
+
+  it('a task before any ## Phase heading has no phase', () => {
+    const src = '- [ ] Pre — id: pre — Status: TODO\n## Phase 2: Build\n- [ ] In — id: inph — Status: TODO\n';
+    const t = parseTasks(src, 'T.md');
+    expect(t.find((x) => x.id === 'pre')!.phase).toBeUndefined();
+    expect(t.find((x) => x.id === 'inph')!.phase).toBe('Phase 2: Build');
+  });
+
+  it('maps READY status to the ready enum', () => {
+    expect(parseTasks('- [ ] X — id: x — Status: READY\n', 'T.md')[0].status).toBe('ready');
+  });
+
+  it('does NOT harvest an FR ref inside a `code span` — it is an example, not a requirement (FR-36)', () => {
+    const src = '- [ ] A — id: a — Status: TODO\n  see `FR-001` for the old shape, but the real ref is FR-2\n';
+    const a = parseTasks(src, 'T.md')[0];
+    expect(a.refs, 'code-span FR-001 is an example; only FR-2 is harvested').toEqual(['FR-2']);
+  });
+
+  it('a `- [ ]` line missing id: or Status: is NOT a task header', () => {
+    expect(parseTasks('- [ ] just a checklist item with no id or status\n', 'T.md')).toEqual([]);
+    expect(parseTasks('- [ ] has id only — id: x\n', 'T.md'), 'id without Status is not a header').toEqual([]);
+  });
 });
