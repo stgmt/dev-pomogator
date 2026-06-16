@@ -536,7 +536,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] `--research-done` flag prevents recursion
   - [ ] @feature12 SPECGEN004_26, _28 pass
 
-- [ ] Verify Phase 6 Red→Green dogfood -- @feature12 — id: verify-phase6-green — Status: TODO | Est: 480m
+- [x] Verify Phase 6 Red→Green dogfood -- @feature12 — id: verify-phase6-green — Status: DONE | Est: 480m
   _depends: create-spec-heuristic, enrich-research-workflow_
   **Done When:**
   - [ ] Dogfood: invoke arch-research on synthetic "v5 cache layer" feature
@@ -1210,7 +1210,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] pseudo-tags `# @featureN` removed from specs-validation.md (×3) + jira-mode.md; audit-overview Verdict → two-condition (findings closed AND spec-verdict GREEN, FR-37d) + get_spec_status pointer; dead `extensions/` path fixed; 13-vs-15 file-count contradiction reconciled; task-board-forms allowed-tools += AskUserQuestion; architecture-decision-builder context7 namespaces both + ToolSearch fallback
   - [x] FR-20 test race fixed (soft-tier log injectable end-to-end); validator suites 16/16; full BDD 110: 109 passed / 1 skipped / 0 failed; spec-verdict GREEN
 
-- [ ] P16-2: evals for the 3 form skills (discovery-forms / requirements-chk-matrix / task-board-forms) — id: p16-form-skill-evals — Status: TODO | Est: 360m
+- [ ] P16-2: evals for the 3 form skills (discovery-forms / requirements-chk-matrix / task-board-forms) — id: p16-form-skill-evals — Status: IN_PROGRESS | Est: 360m
   _Refs: review backlog #1 — оба дедлока P16-1 жили бы меньше при наличии evals_
   **Done When:**
   - [ ] each skill gets `evals/` (pattern: spec-reality-check run-evals/bulk-run) — output passes its own form-guard + the `--check` CLI on every eval case
