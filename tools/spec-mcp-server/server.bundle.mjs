@@ -48070,12 +48070,16 @@ if (process.argv[1] && /(^|[\\/])check\.mjs$/.test(process.argv[1])) cliMain();
 // tools/spec-graph/feature-strength.ts
 var TBD_RE = /\[TBD\]/gi;
 var PROSE_PLACEHOLDER_STEP = /^`?<[^>]*\s[^>]*>`?$/;
+var CURLY_PLACEHOLDER_STEP = /^`?\{[^}]+\}`?$/;
 function placeholderScenarios(featureText) {
   const out = [];
   const { nodes } = parseGherkin(featureText, "strength-probe.feature");
   for (const n of nodes) {
     if (n.type !== "Scenario") continue;
-    const stub = (n.steps ?? []).some((s) => PROSE_PLACEHOLDER_STEP.test(s.text.trim()));
+    const stub = (n.steps ?? []).some((s) => {
+      const t = s.text.trim();
+      return PROSE_PLACEHOLDER_STEP.test(t) || CURLY_PLACEHOLDER_STEP.test(t);
+    });
     if (stub) out.push({ id: n.id, line: n.line });
   }
   return out;

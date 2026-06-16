@@ -22,7 +22,16 @@
  *        like `<precondition or initial state>`). Whitespace inside `<>` is impossible
  *        for a Gherkin Scenario-Outline parameter (params are single identifiers), so
  *        Outlines (`<amount>`) are NEVER flagged.
+ *      - a step whose ENTIRE text is a `{…}` token (the `create_spec` `feature.template`
+ *        stub style: `Given {контекст}`). Gherkin has no `{…}` construct in a .feature
+ *        BODY (Cucumber Expression `{int}` lives in step DEFINITIONS), so a whole-step
+ *        `{…}` is unambiguously a fill-in-the-blank — no whitespace guard needed.
  *      - the literal `[TBD]` marker the `scenario-writer` resolver stamps.
+ *
+ * NB the two skeleton PRODUCERS (`create_spec` scaffold, `scenario-writer` resolver) both
+ * write RAW (not through the door), so they are not themselves gated — they lay down the
+ * initial skeleton. The gate bites where it matters: an agent AUTHORING/editing `.feature`
+ * content through `apply_spec_change` must not leave (or add) a stub scenario.
  *
  * @see .claude/skills/create-spec/references/feature-creation-rules.md §6
  * @see tools/spec-backlog/resolvers/scenario-writer.ts (the skeleton producer this gates)
@@ -41,6 +50,14 @@ const TBD_RE = /\[TBD\]/gi;
  */
 const PROSE_PLACEHOLDER_STEP = /^`?<[^>]*\s[^>]*>`?$/;
 
+/**
+ * A step whose ENTIRE text is a `{…}` token — the `create_spec` `feature.template` stub
+ * style (`Given {контекст}`, `Then {ожидаемый результат}`). No whitespace guard: a .feature
+ * body has no legitimate whole-step `{…}` (Cucumber Expressions live in step defs), so a
+ * mid-text brace (`Given a config {"k":"v"}`) is safe — only a stub IS the whole step.
+ */
+const CURLY_PLACEHOLDER_STEP = /^`?\{[^}]+\}`?$/;
+
 export interface PlaceholderScenario {
   /** the scenario node id (SCEN-<slug>) — readable enough for the deny message */
   id: string;
@@ -57,7 +74,10 @@ export function placeholderScenarios(featureText: string): PlaceholderScenario[]
   const { nodes } = parseGherkin(featureText, 'strength-probe.feature');
   for (const n of nodes) {
     if (n.type !== 'Scenario') continue;
-    const stub = (n.steps ?? []).some((s) => PROSE_PLACEHOLDER_STEP.test(s.text.trim()));
+    const stub = (n.steps ?? []).some((s) => {
+      const t = s.text.trim();
+      return PROSE_PLACEHOLDER_STEP.test(t) || CURLY_PLACEHOLDER_STEP.test(t);
+    });
     if (stub) out.push({ id: n.id, line: n.line });
   }
   return out;

@@ -72,6 +72,17 @@ describe('feature-strength: placeholder detection (precise — never a fuzzy sig
     expect(placeholderScenarios(f)).toEqual([]);
   });
 
+  it('flags a create_spec template-style scaffold (whole-step {curly} placeholders)', () => {
+    // mirrors tools/specs-generator/templates/feature.template
+    const f = `Feature: x\n\n  @FR-1\n  Scenario: scaffolded\n    Given {контекст}\n    When {действие}\n    Then {ожидаемый результат}\n`;
+    expect(placeholderScenarios(f).length).toBe(1);
+  });
+
+  it('precision guard: a mid-text brace step (Given a config {"k":"v"}) is NOT flagged', () => {
+    const f = `Feature: x\n\n  @FR-1\n  Scenario: real\n    Given a config {"k":"v"}\n    When applied\n    Then it loads\n`;
+    expect(placeholderScenarios(f)).toEqual([]);
+  });
+
   it('returns [] for an empty / scenario-less / unparseable feature', () => {
     expect(placeholderScenarios('')).toEqual([]);
     expect(placeholderScenarios('Feature: empty\n')).toEqual([]);
