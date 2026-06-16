@@ -46127,11 +46127,20 @@ function parseGherkin(source, relativePath) {
   };
   const anchors = [];
   const seenIds = /* @__PURE__ */ new Map();
+  const entries = [];
   for (const child of doc.feature.children) {
-    const scenario = child.scenario;
-    if (!scenario) continue;
+    if (child.scenario) {
+      entries.push({ scenario: child.scenario, ruleTags: [] });
+    } else if (child.rule?.children) {
+      const ruleTags = (child.rule.tags ?? []).map((t) => t.name);
+      for (const rc of child.rule.children) {
+        if (rc.scenario) entries.push({ scenario: rc.scenario, ruleTags });
+      }
+    }
+  }
+  for (const { scenario, ruleTags } of entries) {
     const scenarioTags = (scenario.tags ?? []).map((t) => t.name);
-    const tags = [...featureTags, ...scenarioTags];
+    const tags = [...featureTags, ...ruleTags, ...scenarioTags];
     let baseId = `SCEN-${slugifyName(scenario.name)}`;
     const seen = seenIds.get(baseId) ?? 0;
     seenIds.set(baseId, seen + 1);
@@ -46225,10 +46234,12 @@ function parseNdjson(source) {
     }
     const doc = env.gherkinDocument;
     if (doc?.feature?.children) {
+      const indexScenario = (sc) => {
+        if (sc?.id && typeof sc.location?.line === "number") astLineByNodeId.set(sc.id, sc.location.line);
+      };
       for (const ch of doc.feature.children) {
-        if (ch.scenario?.id && typeof ch.scenario.location?.line === "number") {
-          astLineByNodeId.set(ch.scenario.id, ch.scenario.location.line);
-        }
+        indexScenario(ch.scenario);
+        if (ch.rule?.children) for (const rc of ch.rule.children) indexScenario(rc.scenario);
       }
       continue;
     }
@@ -46300,13 +46311,16 @@ function parseNdjson(source) {
       const tcId = startedToTestCase.get(tcFinished.testCaseStartedId);
       if (tcId) {
         const acc = testCaseResult.get(tcId) ?? { lastResult: "UNKNOWN" };
-        const explicit = env.testCaseFinished.testStepResult?.status;
-        if (explicit) acc.lastResult = normalizeStatus(explicit);
-        else if (acc.lastResult === "UNKNOWN") acc.lastResult = "PASSED";
+        const explicit = normalizeStatus(env.testCaseFinished.testStepResult?.status);
+        if (explicit !== "UNKNOWN" && statusSeverity(explicit) > statusSeverity(acc.lastResult)) {
+          acc.lastResult = explicit;
+        } else if (acc.lastResult === "UNKNOWN") {
+          acc.lastResult = "PASSED";
+        }
         if (tcFinished.timestamp && acc.startTs) {
           const endMs = (tcFinished.timestamp.seconds ?? 0) * 1e3 + Math.round((tcFinished.timestamp.nanos ?? 0) / 1e6);
           const startMs = new Date(acc.startTs).getTime();
-          if (Number.isFinite(startMs)) acc.durationMs = endMs - startMs;
+          if (Number.isFinite(startMs)) acc.durationMs = Math.max(0, endMs - startMs);
         }
         testCaseResult.set(tcId, acc);
       }
@@ -46325,7 +46339,10 @@ function parseNdjson(source) {
       durationMs: acc.durationMs,
       failingStep: acc.failingStep ?? null
     };
-    byLocation.set(key, fields);
+    const prev = byLocation.get(key);
+    if (!prev || statusSeverity(fields.lastResult) > statusSeverity(prev.lastResult)) {
+      byLocation.set(key, fields);
+    }
   }
   return { byLocation };
 }
@@ -46335,9 +46352,16 @@ function parseNdjsonFile(absPath) {
 }
 function applyTestResults(scenarios, patch) {
   let applied = 0;
+  let keys = null;
   for (const s of scenarios) {
-    const key = `${s.file}:${s.line}`;
-    const fields = patch.byLocation.get(key);
+    const exactKey = `${s.file}:${s.line}`;
+    let fields = patch.byLocation.get(exactKey);
+    if (!fields) {
+      if (keys === null) keys = [...patch.byLocation.keys()];
+      const suffix = `/${s.file}:${s.line}`;
+      const hit = keys.find((k) => k.endsWith(suffix));
+      if (hit) fields = patch.byLocation.get(hit);
+    }
     if (!fields) continue;
     s.lastResult = fields.lastResult;
     s.lastRunAt = fields.lastRunAt;
@@ -46947,6 +46971,12 @@ function applyChange(graph, repoRoot, relativePath) {
     if (!fs8.existsSync(absPath)) return { nodesDelta: 0, edgesDelta: 0 };
     const slice = parseMarkdownFile(absPath, repoRoot);
     const delta = applySlice(graph, slice);
+    if (path5.basename(absPath) === "TASKS.md") {
+      const taskSlice = parseTasksFile(absPath, repoRoot);
+      const taskDelta = applySlice(graph, taskSlice);
+      delta.nodesDelta += taskDelta.nodesDelta;
+      delta.edgesDelta += taskDelta.edgesDelta;
+    }
     rebuildBacklinks(graph);
     return delta;
   }
@@ -48037,6 +48067,48 @@ TOTAL ${total} broken anchors across ${corpus.size} specs
 }
 if (process.argv[1] && /(^|[\\/])check\.mjs$/.test(process.argv[1])) cliMain();
 
+// tools/spec-graph/feature-strength.ts
+var TBD_RE = /\[TBD\]/gi;
+var PROSE_PLACEHOLDER_STEP = /^`?<[^>]*\s[^>]*>`?$/;
+function placeholderScenarios(featureText) {
+  const out = [];
+  const { nodes } = parseGherkin(featureText, "strength-probe.feature");
+  for (const n of nodes) {
+    if (n.type !== "Scenario") continue;
+    const stub = (n.steps ?? []).some((s) => PROSE_PLACEHOLDER_STEP.test(s.text.trim()));
+    if (stub) out.push({ id: n.id, line: n.line });
+  }
+  return out;
+}
+function firstTbdLine(text) {
+  const lines = text.split(/\r?\n/);
+  for (let i = 0; i < lines.length; i++) if (/\[TBD\]/i.test(lines[i])) return i + 1;
+  return 1;
+}
+function featureStrengthFindings(current, next) {
+  const cur = current ?? "";
+  const curPh = placeholderScenarios(cur);
+  const nextPh = placeholderScenarios(next);
+  const findings = [];
+  if (nextPh.length > curPh.length) {
+    for (const p of nextPh) {
+      findings.push({
+        line: p.line,
+        message: `STRONG_TEST_PLACEHOLDER: \u0441\u0446\u0435\u043D\u0430\u0440\u0438\u0439 ${p.id} (\u0441\u0442\u0440\u043E\u043A\u0430 ${p.line}) \u0441\u043E\u0434\u0435\u0440\u0436\u0438\u0442 \u043D\u0435\u0437\u0430\u043F\u043E\u043B\u043D\u0435\u043D\u043D\u044B\u0435 \u0448\u0430\u0433\u0438-\u0437\u0430\u0433\u043E\u0442\u043E\u0432\u043A\u0438 (\`<...>\`) \u2014 \u0432\u043F\u0438\u0448\u0438 \u0440\u0435\u0430\u043B\u044C\u043D\u044B\u0435 Given/When/Then \u043F\u0435\u0440\u0435\u0434 \u0437\u0430\u043F\u0438\u0441\u044C\u044E. \u0414\u0432\u0435\u0440\u044C \u043D\u0435 \u043F\u0440\u0438\u043D\u0438\u043C\u0430\u0435\u0442 \u0441\u0446\u0435\u043D\u0430\u0440\u0438\u0438-\u043F\u0443\u0441\u0442\u044B\u0448\u043A\u0438 (\u0441\u043C. feature-creation-rules.md \xA76).`
+      });
+    }
+  }
+  const curTbd = (cur.match(TBD_RE) ?? []).length;
+  const nextTbd = (next.match(TBD_RE) ?? []).length;
+  if (nextTbd > curTbd) {
+    findings.push({
+      line: firstTbdLine(next),
+      message: `STRONG_TEST_TBD: \u0434\u043E\u0431\u0430\u0432\u043B\u0435\u043D \`[TBD]\`-\u043C\u0430\u0440\u043A\u0435\u0440 \u043D\u0435\u0437\u0430\u0432\u0435\u0440\u0448\u0451\u043D\u043D\u043E\u0433\u043E \u0441\u0446\u0435\u043D\u0430\u0440\u0438\u044F (\u0441\u0442\u0440\u043E\u043A\u0430 ${firstTbdLine(next)}) \u2014 \u0437\u0430\u043F\u043E\u043B\u043D\u0438 \u0441\u0446\u0435\u043D\u0430\u0440\u0438\u0439 \u0440\u0435\u0430\u043B\u044C\u043D\u044B\u043C\u0438 \u0448\u0430\u0433\u0430\u043C\u0438 \u0434\u043E \u0437\u0430\u043F\u0438\u0441\u0438 (\u0434\u0432\u0435\u0440\u044C, hard-gate; feature-creation-rules.md \xA76).`
+    });
+  }
+  return findings;
+}
+
 // tools/specs-validator/spec-form-parsers.ts
 import fs14 from "fs";
 var US_HEADING = /^###\s+User Story\s+\d+\b/;
@@ -48431,13 +48503,18 @@ function validateSpecChange(repoRoot, slug, doc, change) {
       findings: [{ layer: "change", message: "refusing to replace a non-empty document with empty content" }]
     };
   }
-  if (rel.includes("/")) {
+  const base = path11.basename(rel).toLowerCase();
+  const isGraphDocName = /^(fr|nfr|acceptance_criteria|user_stories|use_cases|design|requirements|tasks|file_changes|research)\.md$/.test(base) || base.endsWith(".feature");
+  if (rel.includes("/") && !isGraphDocName) {
     return { ok: true, next, findings: [] };
   }
   const findings = [
     ...formFindings(doc, next),
     ...isMd ? anchorFindings(repoRoot, slug, doc, next) : [],
-    ...isMd || isFeature ? conformanceFindings(repoRoot, slug, doc, next) : []
+    ...isMd || isFeature ? conformanceFindings(repoRoot, slug, doc, next) : [],
+    // V2 hard-gate: refuse a .feature write that ADDS a placeholder/[TBD] skeleton
+    // scenario (net-new, doc-scoped — legacy skeletons don't block unrelated edits).
+    ...isFeature ? featureStrengthFindings(current, next).map((f) => ({ layer: "strength", line: f.line, message: f.message })) : []
   ];
   return { ok: findings.length === 0, next, findings };
 }
@@ -48628,7 +48705,7 @@ function computeFrCensus(graph, opts = {}) {
     const taskStatuses = tasks.map((t) => t.status);
     const allDone = tasks.length > 0 && tasks.every((t) => t.status === "done");
     const allVerified = allDone && tasks.every((t) => cov.tasks[t.id]?.verified_status === "DONE");
-    const noneStarted = tasks.length > 0 && tasks.every((t) => t.status === "todo" || t.status === "blocked");
+    const noneStarted = tasks.length > 0 && tasks.every((t) => t.status === "todo" || t.status === "blocked" || t.status === "ready");
     let verdict;
     if (tasks.length === 0) verdict = "UNIMPLEMENTED";
     else if (allDone) verdict = allVerified ? "IMPLEMENTED" : "DONE_UNTESTED";

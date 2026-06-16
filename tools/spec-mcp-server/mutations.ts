@@ -30,6 +30,7 @@ import crypto from 'node:crypto';
 import { checkLinks } from '../anchor-integrity/check.mjs';
 import { buildGraph } from '../spec-graph/builder.ts';
 import { checkConformance } from '../spec-graph/conformance.ts';
+import { featureStrengthFindings } from '../spec-graph/feature-strength.ts';
 import {
   parseTaskBlocks,
   parseUserStoryBlocks,
@@ -42,7 +43,7 @@ export type SpecChange =
   | { old_string: string; new_string: string; replace_all?: boolean };
 
 export interface MutationFinding {
-  layer: 'form' | 'anchor' | 'conformance' | 'change' | 'target';
+  layer: 'form' | 'anchor' | 'conformance' | 'change' | 'target' | 'strength';
   message: string;
   line?: number;
 }
@@ -392,6 +393,11 @@ export function validateSpecChange(
     ...formFindings(doc, next),
     ...(isMd ? anchorFindings(repoRoot, slug, doc, next) : []),
     ...(isMd || isFeature ? conformanceFindings(repoRoot, slug, doc, next) : []),
+    // V2 hard-gate: refuse a .feature write that ADDS a placeholder/[TBD] skeleton
+    // scenario (net-new, doc-scoped — legacy skeletons don't block unrelated edits).
+    ...(isFeature
+      ? featureStrengthFindings(current, next).map((f) => ({ layer: 'strength' as const, line: f.line, message: f.message }))
+      : []),
   ];
   return { ok: findings.length === 0, next, findings };
 }
