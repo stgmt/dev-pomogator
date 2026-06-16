@@ -21,6 +21,7 @@ import type { SpecGraph } from '../../tools/spec-graph/types.ts';
 import { writeTaskCensusCache, findStaleInProgress, type StaleMarker } from '../../tools/spec-graph/task-census.ts';
 import { renderStaleReport } from '../../tools/spec-graph/stale-marker-scan.ts';
 import { buildTaskCensusLine } from '../../tools/specs-validator/conformance-summary.ts';
+import { validateSpecChange, type ValidateResult } from '../../tools/spec-mcp-server/mutations.ts';
 
 interface AutoSurfaceWorld extends V4World {
   asRoot?: string;
@@ -28,7 +29,36 @@ interface AutoSurfaceWorld extends V4World {
   staleGraph?: SpecGraph;
   staleResult?: StaleMarker[];
   staleReport?: string;
+  doorRoot?: string;
+  doorStub?: ValidateResult;
+  doorReal?: ValidateResult;
 }
+
+// FR-49f (SPECGEN004_181): the door strength-gate refuses a .feature write that ADDS a
+// stub scenario, accepts a fully-written one. Drives the REAL validateSpecChange (the door)
+// on a temp spec — the curly {…} stub mirrors the create_spec feature.template style.
+const DOOR_STUB = `Feature: door-fixture
+
+  @FR-1
+  Scenario: FR-1 stub
+    Given {контекст}
+    When {действие}
+    Then {ожидаемый результат}
+`;
+const DOOR_REAL = `Feature: door-fixture
+
+  @FR-1
+  Scenario: FR-1 happy path
+    Given a configured widget
+    When the user saves
+    Then the record persists
+
+  @FR-1
+  Scenario: FR-1 rejects empty input
+    Given an empty form
+    When the user saves
+    Then an error is shown
+`;
 
 Given('a cached task census whose busiest spec has an open task with a title', function (this: AutoSurfaceWorld) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fr49a-'));
@@ -88,3 +118,31 @@ Then(
     assert.match(this.staleReport!, /NOT auto-closed/i, 'flag-only — never auto-closes');
   },
 );
+
+Given('a spec and the spec-mutation door', function (this: AutoSurfaceWorld) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fr49f-'));
+  const dir = path.join(root, '.specs', 'door-fixture');
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'FR.md'), '# FR\n\n## FR-1 Widget saves\n\nThe widget SHALL persist on save.\n');
+  this.doorRoot = root;
+});
+
+When(
+  'a write adds a scenario whose steps are still unfilled placeholders and then a fully-written scenario',
+  function (this: AutoSurfaceWorld) {
+    this.doorStub = validateSpecChange(this.doorRoot!, 'door-fixture', 'door-fixture.feature', { content: DOOR_STUB });
+    this.doorReal = validateSpecChange(this.doorRoot!, 'door-fixture', 'door-fixture.feature', { content: DOOR_REAL });
+  },
+);
+
+Then('the door refuses the stub write with a strength-layer finding and accepts the real one', function (this: AutoSurfaceWorld) {
+  fs.rmSync(this.doorRoot!, { recursive: true, force: true });
+  const stubStrength = this.doorStub!.findings.filter((f) => f.layer === 'strength');
+  assert.ok(stubStrength.length >= 1, 'stub write refused with a strength-layer finding');
+  assert.equal(this.doorStub!.ok, false, 'stub write verdict ok=false');
+  assert.deepEqual(
+    this.doorReal!.findings.filter((f) => f.layer === 'strength'),
+    [],
+    'a fully-written .feature gets no strength finding',
+  );
+});

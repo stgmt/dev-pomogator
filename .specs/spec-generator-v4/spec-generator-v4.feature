@@ -1296,3 +1296,9 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given an in-progress task whose mapped scenarios all passed plus a sibling in-progress task still red
     When the stale-marker reconciler scans the graph
     Then only the all-green in-progress task is flagged and the report points at set_entity_status to close it
+
+  @feature49
+  Scenario: SPECGEN004_181 the door refuses a .feature write that adds a stub scenario but accepts a real one
+    Given a spec and the spec-mutation door
+    When a write adds a scenario whose steps are still unfilled placeholders and then a fully-written scenario
+    Then the door refuses the stub write with a strength-layer finding and accepts the real one
