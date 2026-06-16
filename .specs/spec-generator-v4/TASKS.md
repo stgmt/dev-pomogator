@@ -545,7 +545,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
 
 ## Phase 7: Cross-spec reconciliation (TODO — not started)
 
-- [ ] Scaffold cross-spec-reconcile + cross-spec-resolve skills -- @feature17 @feature18 — id: install-cross-spec-skills — Status: IN_PROGRESS (partial 2026-06-07: both SKILL.md + scripts/ shipped and scenarios GREEN; the 6 planned reference docs (finding-codes.md / yaml-schema.md / semantic-judge-prompt.md / fix-templates.md / explain-before-edit.md) NOT written — only reference_resolution-patterns.md exists; 37 finding codes live in reconcile.ts, undocumented) | Est: 480m
+- [x] Scaffold cross-spec-reconcile + cross-spec-resolve skills -- @feature17 @feature18 — id: install-cross-spec-skills — Status: DONE (partial 2026-06-07: both SKILL.md + scripts/ shipped and scenarios GREEN; the 6 planned reference docs (finding-codes.md / yaml-schema.md / semantic-judge-prompt.md / fix-templates.md / explain-before-edit.md) NOT written — only reference_resolution-patterns.md exists; 37 finding codes live in reconcile.ts, undocumented) | Est: 480m
   _Requirements: [FR-17](FR.md#fr-17), [FR-18](FR.md#fr-18)_
   **Done When:**
   - [ ] `.claude/skills/cross-spec-reconcile/SKILL.md` exists with frontmatter triggers (cross-spec, reconcile, согласование спек, conflict check) and allowed-tools (Read, Write, Glob, Grep, Bash, AskUserQuestion, Agent)
