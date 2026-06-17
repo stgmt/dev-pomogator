@@ -50,6 +50,8 @@ interface AutoSurfaceWorld extends V4World {
   nfApproveTwo?: boolean;
   vgBlock?: boolean;
   vgApprove?: boolean;
+  vmBlock?: boolean;
+  vmApprove?: boolean;
 }
 
 // FR-49f (SPECGEN004_181): the door strength-gate refuses a .feature write that ADDS a
@@ -367,4 +369,27 @@ Then('the hook blocks the unbacked grid and approves the one backed by a tool ru
   fs.rmSync(this.wdRoot!, { recursive: true, force: true });
   assert.equal(this.vgBlock, true, 'a verdict grid with no tool run this turn → block');
   assert.equal(this.vgApprove, false, 'the same grid after a tool ran → approve');
+});
+
+// SPECGEN004_194 (claim-evidence-gate verified-marker class): a "[VERIFIED via X]" marker is
+// unsupported unless a tool whose input matches X actually ran. Reuses the 191 fresh-repo Given;
+// migrated from CEGATE001_07/08.
+When('the hook judges a verified-via-command claim first with no matching tool and then after that command ran', function (this: AutoSurfaceWorld) {
+  const claim = '[VERIFIED via npm test] всё проверено.';
+  this.vmBlock = runStopHook(this.wdRoot!, claim, []).blocked; // no tool → unverified marker
+  this.vmApprove = runStopHook(this.wdRoot!, claim, [{ name: 'Bash', input: { command: 'npm test' } }]).blocked;
+});
+
+Then('the hook blocks the unmatched marker and approves the one whose command actually ran', function (this: AutoSurfaceWorld) {
+  fs.rmSync(this.wdRoot!, { recursive: true, force: true });
+  assert.equal(this.vmBlock, true, 'a [VERIFIED via X] marker with no matching tool → block');
+  assert.equal(this.vmApprove, false, 'the same marker after X actually ran → approve');
+});
+
+// SPECGEN004_195 (FR-49b anti-false-positive): a whole-spec done claim with a CLEAN (zero-open)
+// census must NOT be blocked. New Given (clean census); reuses the 189 When + 190 Then. From CEGATE001_27.
+Given('a clean zero-open task census and the real claim-evidence-gate stop hook', function (this: AutoSurfaceWorld) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fr49b-clean-'));
+  writeTaskCensusCache(root, { total: { open: 0, doneRed: 0, doneUnrun: 0 }, specs: [] }, '2026-06-17T00:00:00Z');
+  this.csRoot = root;
 });

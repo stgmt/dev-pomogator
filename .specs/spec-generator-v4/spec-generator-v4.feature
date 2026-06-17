@@ -1374,3 +1374,15 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given a fresh repo with no census and the real claim-evidence-gate stop hook
     When the hook judges a verdict grid first with no tool and then after a tool ran
     Then the hook blocks the unbacked grid and approves the one backed by a tool run
+
+  @feature49
+  Scenario: SPECGEN004_194 the gate blocks a verified-via marker with no matching tool and approves it once that command ran
+    Given a fresh repo with no census and the real claim-evidence-gate stop hook
+    When the hook judges a verified-via-command claim first with no matching tool and then after that command ran
+    Then the hook blocks the unmatched marker and approves the one whose command actually ran
+
+  @feature49
+  Scenario: SPECGEN004_195 the census-false-close gate does not fire on a whole-spec done claim when the census is clean
+    Given a clean zero-open task census and the real claim-evidence-gate stop hook
+    When the hook judges a whole-spec done claim made after a tool ran
+    Then the hook does not block it
