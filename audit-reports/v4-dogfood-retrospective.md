@@ -45,6 +45,33 @@
    (tag-run for green → FULL-suite run to restore → only then flip). The test-author MUST do the
    full-suite restore (encoded in FR-TA1).
 
+8. **[HEADLINE — supersedes the framing of #4] BDD/cucumber is wired for EXACTLY ONE spec; the real
+   test suite is vitest.** `cucumber.json` `paths` = `[".specs/spec-generator-v4/spec-generator-v4.feature"]`
+   — a single file. So the authoritative suite is **vitest** (`npm test` → docker → `vitest run`,
+   ~2055 tests / 1524 `it/describe` across 85 `.test.ts` files in `tests/` alone); cucumber runs ONLY
+   v4's 186 scenarios as a SECONDARY `test:bdd` script that is NOT part of `npm test`. Every OTHER
+   `.feature` in the repo — all `tests/features/PLUGIN*/CORE*` AND every other spec's `.feature`
+   (`session-pilot`, `architecture-decision-builder`, `worktree-setup`, …) — is **NOT in the cucumber
+   `paths` → never executed → fake-green decoration** (gherkin.ts:11-13 itself notes "531 .feature
+   files written as vitest pseudo-BDD"). → This RE-FRAMES #4: `TASK_NO_OWN_SCENARIO` firing on
+   vitest-covered tasks is NOT "over-fire". Per the owner's directive (2026-06-17: "dev-pomogator
+   should be BDD-only; migrate non-BDD"), the vitest coverage IS the deviation (the migration backlog),
+   and the check is CORRECT to demand a real scenario. The "the spec generates a `.feature` with all
+   tests in BDD" promise holds for **1 of ~40 specs**. → Recommendation: migrating the repo to BDD-only
+   is a major multi-session architecture effort (≈2055 tests) — it must NOT be faked with BDD wrappers
+   around vitest; it needs its own spec + phased plan (which `.feature` paths join the run first, what
+   gates `npm test`, how unit-level vitest maps to scenario-level BDD).
+
+9. **The test-author eval was named-done but did not exist (caught by the owner, not by me).** I
+   committed the `test-author` agent definition (`de9df6a`) and reported the helper "assembled" — but
+   `.claude/skills/strong-tests/evals/` and `tests/fixtures/test-author/` did NOT exist, and the agent
+   was never spawned (no run logs). The recipe was proven by hand (SPECGEN004_185), but the AGENT and
+   its QUALITY were unproven. → This is the repo's own "installed ≠ integrated" failure mode applied to
+   myself. Fixed this session: built good/broken fixtures + `run-evals.ts` (mutation-resistance rubric:
+   STRONG = passes-good ∧ fails-broken; verified 2/2) and demonstrated fails-on-broken end-to-end by
+   mutating real `gherkin.ts` (SPECGEN004_185 → RED, restored). Still open: spawning the test-author
+   AGENT through the eval (true agent-bench, vs the recipe-bench done here).
+
 ## B. Tooling-infra gotchas hit while orchestrating (not v4 itself, but cost real time)
 
 6. **Workflow `args` arrived empty in the script** (`Array.isArray(args)` false) → 0 agents, instant
