@@ -59,6 +59,12 @@ interface AutoSurfaceWorld extends V4World {
   puTurnTools?: number;
   puTurnCls?: string;
   puStrip?: string;
+  shadowBlocked?: boolean;
+  shadowFires?: string;
+  disabledBlocked?: boolean;
+  missingRaw?: string;
+  loopFirstBlocked?: boolean;
+  loopSecondRaw?: string;
 }
 
 // FR-49f (SPECGEN004_181): the door strength-gate refuses a .feature write that ADDS a
@@ -184,6 +190,7 @@ function runStopHook(
   root: string,
   claimText: string,
   tools: Array<{ name: string; input: unknown }> = [{ name: 'Edit', input: {} }],
+  extra: { env?: Record<string, string>; stopHookActive?: boolean } = {},
 ): { blocked: boolean; raw: string } {
   const rows = [
     { type: 'user', message: { role: 'user', content: [{ type: 'text', text: 'почини' }] } },
@@ -192,10 +199,12 @@ function runStopHook(
   ];
   const fp = path.join(root, 'transcript.jsonl');
   fs.writeFileSync(fp, rows.map((r) => JSON.stringify(r)).join('\n'));
+  const input: Record<string, unknown> = { transcript_path: fp, cwd: root };
+  if (extra.stopHookActive) input.stop_hook_active = true;
   const res = spawnSync(process.execPath, ['--import', 'tsx', NS_HOOK], {
-    input: JSON.stringify({ transcript_path: fp, cwd: root }),
+    input: JSON.stringify(input),
     encoding: 'utf-8',
-    env: { ...process.env, CLAIM_GATE_ENABLED: 'true', CLAIM_GATE_JUDGE: 'false' },
+    env: { ...process.env, CLAIM_GATE_ENABLED: 'true', CLAIM_GATE_JUDGE: 'false', ...extra.env },
   });
   const raw = res.stdout || '';
   return { blocked: raw.includes('"decision":"block"'), raw };
@@ -431,4 +440,57 @@ Then('fenced verdicts do not fire negation is not a works-claim evidence is scop
   assert.equal(this.puTurnCls, 'works-done', 'the current-turn unbacked works-claim is flagged');
   assert.ok(!this.puStrip!.includes('работает') && !this.puStrip!.includes('существует'), 'stripCode removes inline-code + quoted spans');
   assert.equal(this.puStrip!.replace(/\s+/g, ' ').trim(), 'текст и конец');
+});
+
+// SPECGEN004_197 (modes + fail-open): shadow never blocks but still logs the would-be fire; disabled
+// approves outright; a missing transcript fails open. Drives the REAL hook. From CEGATE001_09/10/11.
+Given('the claim-evidence-gate stop hook under varying modes', function () {
+  // each sub-case uses its own tmpdir, created in the When
+});
+
+When('it runs in shadow mode in disabled mode and against a missing transcript', function (this: AutoSurfaceWorld) {
+  const rShadow = fs.mkdtempSync(path.join(os.tmpdir(), 'cg-shadow-'));
+  this.shadowBlocked = runStopHook(rShadow, 'Итог:\n| q1 | FAIL |\n| q2 | FAIL |', [], { env: { CLAIM_GATE_ENABLED: 'shadow' } }).blocked;
+  const firesPath = path.join(rShadow, '.dev-pomogator', '.claim-evidence-gate-fires.jsonl');
+  this.shadowFires = fs.existsSync(firesPath) ? fs.readFileSync(firesPath, 'utf-8') : '';
+  fs.rmSync(rShadow, { recursive: true, force: true });
+
+  const rOff = fs.mkdtempSync(path.join(os.tmpdir(), 'cg-off-'));
+  this.disabledBlocked = runStopHook(rOff, 'всё работает', [], { env: { CLAIM_GATE_ENABLED: 'false' } }).blocked;
+  fs.rmSync(rOff, { recursive: true, force: true });
+
+  const rMiss = fs.mkdtempSync(path.join(os.tmpdir(), 'cg-miss-'));
+  const res = spawnSync(process.execPath, ['--import', 'tsx', NS_HOOK], {
+    input: JSON.stringify({ transcript_path: path.join(rMiss, 'nope.jsonl'), cwd: rMiss }),
+    encoding: 'utf-8',
+    env: { ...process.env, CLAIM_GATE_ENABLED: 'true' },
+  });
+  this.missingRaw = (res.stdout || '').trim();
+  fs.rmSync(rMiss, { recursive: true, force: true });
+});
+
+Then('shadow approves but still logs a fire disabled approves outright and a missing transcript approves', function (this: AutoSurfaceWorld) {
+  assert.equal(this.shadowBlocked, false, 'shadow mode never blocks');
+  assert.match(this.shadowFires!, /analysis-verdict/, 'shadow still logs the would-be fire');
+  assert.equal(this.disabledBlocked, false, 'disabled mode approves');
+  assert.equal(this.missingRaw, '{}', 'a missing transcript fails open (approve)');
+});
+
+// SPECGEN004_198 (anti-loop): a continuation stop (stop_hook_active) with an unsupported works-claim
+// is JUDGED (block), not blanket-exempted; the identical re-stop is released by the same-hash
+// anti-loop so the loop terminates. Judge OFF → deterministic. From CEGATE001_12.
+Given('the claim-evidence-gate stop hook and an unsupported works-done continuation stop', function (this: AutoSurfaceWorld) {
+  this.csRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'cg-loop-'));
+});
+
+When('the same continuation stop fires twice with stop_hook_active set', function (this: AutoSurfaceWorld) {
+  const claim = 'всё работает, фикс задеплоен';
+  this.loopFirstBlocked = runStopHook(this.csRoot!, claim, [{ name: 'Edit', input: {} }], { stopHookActive: true }).blocked;
+  this.loopSecondRaw = runStopHook(this.csRoot!, claim, [{ name: 'Edit', input: {} }], { stopHookActive: true }).raw.trim();
+});
+
+Then('the first fire blocks and the identical re-fire is released by the anti-loop', function (this: AutoSurfaceWorld) {
+  fs.rmSync(this.csRoot!, { recursive: true, force: true });
+  assert.equal(this.loopFirstBlocked, true, 'a continuation stop with an unsupported works-claim is judged, not exempted → block');
+  assert.equal(this.loopSecondRaw, '{}', 'the identical re-stop is released by the same-hash anti-loop → terminates');
 });

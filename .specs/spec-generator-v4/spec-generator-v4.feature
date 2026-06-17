@@ -1392,3 +1392,15 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given the claim-evidence-gate pure classifier functions
     When fenced-code verdicts a negated claim a prior-turn tool and an inline-code-plus-quote string are classified
     Then fenced verdicts do not fire negation is not a works-claim evidence is scoped to the current turn and stripCode removes code and quotes
+
+  @feature49
+  Scenario: SPECGEN004_197 the gate shadow and disabled modes and fail-open hold
+    Given the claim-evidence-gate stop hook under varying modes
+    When it runs in shadow mode in disabled mode and against a missing transcript
+    Then shadow approves but still logs a fire disabled approves outright and a missing transcript approves
+
+  @feature49
+  Scenario: SPECGEN004_198 a continuation stop is judged not exempted and the anti-loop still terminates
+    Given the claim-evidence-gate stop hook and an unsupported works-done continuation stop
+    When the same continuation stop fires twice with stop_hook_active set
+    Then the first fire blocks and the identical re-fire is released by the anti-loop
