@@ -12,7 +12,7 @@ verify-phase6-green, install-cross-spec-skills (6 ref docs written), impl-semant
 | Task | Title | Status | Category | Assessment |
 |---|---|---|---|---|
 | T12-108 `ws-f-remaining` | WS-F: remaining feature work | IN_PROGRESS | **umbrella** | DO NOT CLOSE — its mapped scenarios pass but it tracks the open backlog; closing = false-green. |
-| T0-05 | Verify Phase 0 (BDD migration) | TODO | **likely drift** | Phase 0 migration shipped (cucumber-js live, 182 scenarios run). Verify-task stale like verify-phase6-green was → verify + close (W1). |
+| T0-05 `verify-phase0-red` | Verify Phase 0 — all scenarios RED at entry | WONT-VERIFY | **deliberately open (waived)** | CORRECTED (verified the block): NOT drift. The RED-at-entry precondition is post-hoc unverifiable; flipping it = soft fake-DONE (advisor-waived 2026-06-07, `_waived:` note in TASKS.md). DO NOT CLOSE — same as the umbrella. |
 | T7-57 `impl-coverage-summary` | Coverage Summary Table | TODO | **divergence** | Spec wants a `summary` block in the YAML report; code put it only in the stdout `renderSummaryTable` (minimal emitter by-design). Implement YAML summary OR ratify stdout + update Done-When (W3). |
 | T7-61 `integration-test-fixture` | cross-spec fixture corpus | TODO | **divergence/partial** | Built simpler than the 3-spec plan (real 2-spec corpus under `corpus/`, captured against the real engine); plan's codes (`nfr-conflict`/`mcp-tool-drift`) don't exist in the engine. Extend to e2e needs OR ratify (W3/W4). |
 | T7-62 `e2e-test-reconcile-roundtrip` | E2E reconcile roundtrip | TODO | **unbuilt (low-pri)** | Genuinely absent (`tests/e2e/cross-spec-reconcile.test.ts`). Build against the REAL engine codes, not mocks (W4). |
@@ -27,8 +27,8 @@ verify-phase6-green, install-cross-spec-skills (6 ref docs written), impl-semant
 | T21-163 | P22-3 FR-47 remainder | TODO | **likely genuine** | Explicit remainder of FR-47 retrofit; real work (W2+). |
 
 ## Category roll-up (the real shape of "14 open")
-- **Umbrella (leave open):** 1 — T12-108.
-- **Drift (verify + close, cheap):** ~1 confirmed (T0-05) + up to ~5 of the P16 cluster pending verify (W1).
+- **Deliberately-open (leave, NOT drift):** 2 — T12-108 (umbrella) + T0-05 (`verify-phase0-red`, WONT-VERIFY waived). Closing either = fake-DONE.
+- **Drift (verify + close, cheap):** up to ~5 of the P16 cluster pending per-task verify (W1) — none confirmed drift yet; T0-05 was wrongly assumed drift and corrected.
 - **Divergence (scope-call):** 2 — T7-57, T7-61 (W3).
 - **Unbuilt low-priority:** 1 — T7-62 (W4).
 - **Genuine remaining work:** ~3 — T21-153/154/163 (+ any P16 that verify shows unbuilt) (W2/W5).
