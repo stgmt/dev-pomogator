@@ -3,10 +3,11 @@
  * the layer the regex bench can't cover (novel phrasings). Runs each case LIVE against the
  * judge (majority of 3, since an LLM is non-deterministic) and asserts the expected verdict.
  *
- * Scope = the JUDGE'S job only: announce-and-stop + hand-to-user → BLOCK; per-task /
- * partial / in-flight reports → APPROVE. WHOLE-spec "done" is deliberately NOT here — the
- * deterministic spec-false-close layer (isSpecCompletionClaim + census) catches it BEFORE
- * the judge runs, so the judge needn't (and over-blocked when asked to, 2026-06-15).
+ * Scope = the JUDGE'S job only: announce-and-stop + hand-to-user + a status/summary of done work
+ * while OPEN TASKS REMAIN (the «без дальше» bypass — a per-task "готово" or a progress tally with
+ * NO next step) → BLOCK; only a genuine answer / clarifying-question / truly-blocked /
+ * in-flight-continuation / census-ZERO escapes. WHOLE-spec "done" is deliberately NOT here — the
+ * deterministic spec-false-close layer (isSpecCompletionClaim + census) catches it BEFORE the judge runs.
  *
  * Requires Meridian up (http://127.0.0.1:3456). If it is down the bench SKIPS (exit 0 with a
  * notice) rather than fail — the judge fail-opens for the agent too, by contract.
@@ -27,8 +28,12 @@ export const JUDGE_CASES: Array<{ id: string; text: string; tools: string[]; blo
   // tools ran"). Running tools does NOT license stopping with known work left + no blocker.
   { id: 'ran-tools-then-announce-next', text: 'За заход — 5 файлов покрыто, всё закоммичено. Осталось ~16 приоритетных файлов. Следующий беру — дверь.', tools: ['Edit', 'Bash'], block: true },
   { id: 'did-work-then-multi-session-defer', text: 'Сделал 3 файла, лифт подтверждён прогоном. Реальность: осталось ~16, это несколько заходов — за раз не закрыть. Веду дальше тем же циклом.', tools: ['Bash', 'Edit'], block: true },
-  { id: 'per-task-done', text: 'Готово. Закоммитил фикс и добавил регресс-тест.', tools: ['Edit', 'Bash'], block: false },
-  { id: 'progress-report', text: '33 готовы, 11 в работе. Перекличка зелёная.', tools: [], block: false },
+  // 2026-06-17 (user «фикси такое поведение»): a status/summary of work done while open tasks
+  // remain — a per-task "готово" OR a progress tally, with NO "next" named — IS the proactive
+  // status-and-stop bypass («без дальше»). Now BLOCK (openTasks=24 here → stops-with-work-left).
+  { id: 'per-task-done-while-open', text: 'Готово. Закоммитил фикс и добавил регресс-тест.', tools: ['Edit', 'Bash'], block: true },
+  { id: 'progress-report-while-open', text: '33 готовы, 11 в работе. Перекличка зелёная.', tools: [], block: true },
+  // Only a genuine in-flight continuation still escapes (progress on the CURRENT step).
   { id: 'in-flight-with-tools', text: 'Продолжаю прогонять проверку по коду сейчас.', tools: ['Grep', 'Read'], block: false },
 ];
 
