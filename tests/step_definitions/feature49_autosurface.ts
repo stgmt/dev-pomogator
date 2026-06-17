@@ -46,6 +46,8 @@ interface AutoSurfaceWorld extends V4World {
   wdRoot?: string;
   wdBlockEdit?: boolean;
   wdApproveRun?: boolean;
+  nfBlockOne?: boolean;
+  nfApproveTwo?: boolean;
 }
 
 // FR-49f (SPECGEN004_181): the door strength-gate refuses a .feature write that ADDS a
@@ -170,11 +172,11 @@ const NS_HOOK = path.resolve('tools', 'claim-evidence-gate', 'claim_evidence_gat
 function runStopHook(
   root: string,
   claimText: string,
-  tool: { name: string; input: unknown } = { name: 'Edit', input: {} },
+  tools: Array<{ name: string; input: unknown }> = [{ name: 'Edit', input: {} }],
 ): { blocked: boolean; raw: string } {
   const rows = [
     { type: 'user', message: { role: 'user', content: [{ type: 'text', text: 'почини' }] } },
-    { type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', name: tool.name, input: tool.input }] } },
+    { type: 'assistant', message: { role: 'assistant', content: tools.map((t) => ({ type: 'tool_use', name: t.name, input: t.input })) } },
     { type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: claimText }] } },
   ];
   const fp = path.join(root, 'transcript.jsonl');
@@ -306,7 +308,7 @@ Then('the hook blocks it and the block names the unfinished count and the next t
 When('the hook judges a task-level fixed-it claim made after a tool ran', function (this: AutoSurfaceWorld) {
   // works-done needs a real executor (Bash/run), not Edit — so the «всё работает» claim is
   // satisfied and the test isolates the census branch (which must NOT fire on a non-spec claim).
-  this.csBlocked = runStopHook(this.csRoot!, 'Поправил импорт, всё работает.', { name: 'Bash', input: { command: 'npx tsx build.ts' } }).blocked;
+  this.csBlocked = runStopHook(this.csRoot!, 'Поправил импорт, всё работает.', [{ name: 'Bash', input: { command: 'npx tsx build.ts' } }]).blocked;
 });
 
 Then('the hook does not block it', function (this: AutoSurfaceWorld) {
@@ -324,11 +326,28 @@ Given('a fresh repo with no census and the real claim-evidence-gate stop hook', 
 When('the hook judges a works-done claim first with only an edit and then after a real run', function (this: AutoSurfaceWorld) {
   const claim = 'Поправил импорт, теперь всё работает.';
   this.wdBlockEdit = runStopHook(this.wdRoot!, claim).blocked; // default Edit → no real executor
-  this.wdApproveRun = runStopHook(this.wdRoot!, claim, { name: 'Bash', input: { command: 'npx tsx build.ts' } }).blocked;
+  this.wdApproveRun = runStopHook(this.wdRoot!, claim, [{ name: 'Bash', input: { command: 'npx tsx build.ts' } }]).blocked;
 });
 
 Then('the hook blocks the edit-only claim and approves the one backed by a real run', function (this: AutoSurfaceWorld) {
   fs.rmSync(this.wdRoot!, { recursive: true, force: true });
   assert.equal(this.wdBlockEdit, true, 'a works-done claim with only an edit (no executor) → block');
   assert.equal(this.wdApproveRun, false, 'the same claim after a real run → approve');
+});
+
+// SPECGEN004_192 (claim-evidence-gate not-found class): a "не существует / impossible" claim needs
+// 2+ real searches to be supported. Reuses the 191 fresh-repo Given; migrated from CEGATE001_05/06.
+When('the hook judges a not-found claim first after one search and then after two searches', function (this: AutoSurfaceWorld) {
+  const claim = 'Публичного решения не существует.';
+  this.nfBlockOne = runStopHook(this.wdRoot!, claim, [{ name: 'Grep', input: { pattern: 'x' } }]).blocked;
+  this.nfApproveTwo = runStopHook(this.wdRoot!, claim, [
+    { name: 'Grep', input: { pattern: 'x' } },
+    { name: 'WebSearch', input: { query: 'y' } },
+  ]).blocked;
+});
+
+Then('the hook blocks the under-searched claim and approves the one backed by enough searches', function (this: AutoSurfaceWorld) {
+  fs.rmSync(this.wdRoot!, { recursive: true, force: true });
+  assert.equal(this.nfBlockOne, true, 'a not-found claim with fewer than 2 searches → block');
+  assert.equal(this.nfApproveTwo, false, 'the same claim after 2+ searches → approve');
 });

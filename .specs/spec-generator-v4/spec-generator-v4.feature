@@ -1362,3 +1362,9 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given a fresh repo with no census and the real claim-evidence-gate stop hook
     When the hook judges a works-done claim first with only an edit and then after a real run
     Then the hook blocks the edit-only claim and approves the one backed by a real run
+
+  @feature49
+  Scenario: SPECGEN004_192 the gate blocks a not-found claim with too few searches and approves it after enough
+    Given a fresh repo with no census and the real claim-evidence-gate stop hook
+    When the hook judges a not-found claim first after one search and then after two searches
+    Then the hook blocks the under-searched claim and approves the one backed by enough searches
