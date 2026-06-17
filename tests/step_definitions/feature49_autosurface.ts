@@ -24,6 +24,8 @@ import { renderStaleReport } from '../../tools/spec-graph/stale-marker-scan.ts';
 import { buildTaskCensusLine } from '../../tools/specs-validator/conformance-summary.ts';
 import { validateSpecChange, type ValidateResult } from '../../tools/spec-mcp-server/mutations.ts';
 import { buildJudgePrompt, resolveEndpoint } from '../../tools/claim-evidence-gate/meridian-judge.ts';
+import { classify, firstUnsupported, stripCode } from '../../tools/claim-evidence-gate/claim_classifier.ts';
+import { extractTurnWindow } from '../../tools/claim-evidence-gate/turn_window.ts';
 
 interface AutoSurfaceWorld extends V4World {
   asRoot?: string;
@@ -52,6 +54,11 @@ interface AutoSurfaceWorld extends V4World {
   vgApprove?: boolean;
   vmBlock?: boolean;
   vmApprove?: boolean;
+  puFenced?: boolean;
+  puNegated?: boolean;
+  puTurnTools?: number;
+  puTurnCls?: string;
+  puStrip?: string;
 }
 
 // FR-49f (SPECGEN004_181): the door strength-gate refuses a .feature write that ADDS a
@@ -392,4 +399,36 @@ Given('a clean zero-open task census and the real claim-evidence-gate stop hook'
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fr49b-clean-'));
   writeTaskCensusCache(root, { total: { open: 0, doneRed: 0, doneUnrun: 0 }, specs: [] }, '2026-06-17T00:00:00Z');
   this.csRoot = root;
+});
+
+// SPECGEN004_196 (claim-evidence-gate pure classifier units): drives the REAL classify /
+// firstUnsupported / stripCode / extractTurnWindow in-process (no hook spawn). Migrated from the
+// vitest CEGATE001_13/14/15/16 — one scenario bundles the four pure-unit asserts.
+Given('the claim-evidence-gate pure classifier functions', function () {
+  // pure functions — computed in the When
+});
+
+When('fenced-code verdicts a negated claim a prior-turn tool and an inline-code-plus-quote string are classified', function (this: AutoSurfaceWorld) {
+  this.puFenced = classify('Пример плохого вывода:\n```\nq1 FAIL\nq2 FAIL\n```\nэто иллюстрация').some((h) => h.cls === 'analysis-verdict');
+  this.puNegated = classify('пока не работает, чиню').some((h) => h.cls === 'works-done');
+  const raw = [
+    { type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', name: 'Bash', input: { command: 'old' } }] } },
+    { type: 'user', message: { role: 'user', content: [{ type: 'text', text: 'новый запрос' }] } },
+    { type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: 'всё работает' }] } },
+  ]
+    .map((r) => JSON.stringify(r))
+    .join('\n');
+  const w = extractTurnWindow(raw);
+  this.puTurnTools = w.toolUses.length;
+  this.puTurnCls = firstUnsupported(w.claimText, w.toolUses)?.cls;
+  this.puStrip = stripCode('текст `работает` и «не существует» конец');
+});
+
+Then('fenced verdicts do not fire negation is not a works-claim evidence is scoped to the current turn and stripCode removes code and quotes', function (this: AutoSurfaceWorld) {
+  assert.equal(this.puFenced, false, 'verdict tokens inside a fenced code block do not fire');
+  assert.equal(this.puNegated, false, 'negated "не работает" is not a works-done claim');
+  assert.equal(this.puTurnTools, 0, 'a prior-turn tool is not counted in the current window');
+  assert.equal(this.puTurnCls, 'works-done', 'the current-turn unbacked works-claim is flagged');
+  assert.ok(!this.puStrip!.includes('работает') && !this.puStrip!.includes('существует'), 'stripCode removes inline-code + quoted spans');
+  assert.equal(this.puStrip!.replace(/\s+/g, ' ').trim(), 'текст и конец');
 });
