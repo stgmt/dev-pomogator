@@ -1350,3 +1350,9 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given a census with unfinished work naming a next open task and the real claim-evidence-gate stop hook
     When the hook judges a whole-spec done claim made after a tool ran
     Then the hook blocks it and the block names the unfinished count and the next task
+
+  @feature49
+  Scenario: SPECGEN004_190 the census-false-close gate does not fire on a non-spec works-done claim
+    Given a census with unfinished work naming a next open task and the real claim-evidence-gate stop hook
+    When the hook judges a task-level fixed-it claim made after a tool ran
+    Then the hook does not block it

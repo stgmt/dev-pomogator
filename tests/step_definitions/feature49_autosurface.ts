@@ -164,10 +164,14 @@ Then('the door refuses the stub write with a strength-layer finding and accepts 
 // must block; the same claim WITH one must approve. Pins the Cyrillic-\b regex fix (commit 2fe24e0)
 // against silent re-breakage — `дальше\b` never matched «Дальше:» so the whole layer was dead.
 const NS_HOOK = path.resolve('tools', 'claim-evidence-gate', 'claim_evidence_gate_stop.ts');
-function runStopHook(root: string, claimText: string): { blocked: boolean; raw: string } {
+function runStopHook(
+  root: string,
+  claimText: string,
+  tool: { name: string; input: unknown } = { name: 'Edit', input: {} },
+): { blocked: boolean; raw: string } {
   const rows = [
     { type: 'user', message: { role: 'user', content: [{ type: 'text', text: 'почини' }] } },
-    { type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', name: 'Edit', input: {} }] } },
+    { type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', name: tool.name, input: tool.input }] } },
     { type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: claimText }] } },
   ];
   const fp = path.join(root, 'transcript.jsonl');
@@ -291,4 +295,18 @@ Then('the hook blocks it and the block names the unfinished count and the next t
   assert.equal(this.csBlocked, true, 'whole-spec done claim + unfinished census → block');
   assert.match(this.csRaw!, /в работе|незакрыто/, 'the block injects the real unfinished count');
   assert.match(this.csRaw!, /Wire the gate/, 'the block names the concrete next open task');
+});
+
+// SPECGEN004_190 (FR-49b anti-H1): the census branch is tightly spec-scoped — a task-level "fixed
+// it" claim (not a whole-spec done) must NOT trip it even with an unfinished census. Reuses the
+// 189 Given (census with unfinished work); migrated from the vitest CEGATE001_26.
+When('the hook judges a task-level fixed-it claim made after a tool ran', function (this: AutoSurfaceWorld) {
+  // works-done needs a real executor (Bash/run), not Edit — so the «всё работает» claim is
+  // satisfied and the test isolates the census branch (which must NOT fire on a non-spec claim).
+  this.csBlocked = runStopHook(this.csRoot!, 'Поправил импорт, всё работает.', { name: 'Bash', input: { command: 'npx tsx build.ts' } }).blocked;
+});
+
+Then('the hook does not block it', function (this: AutoSurfaceWorld) {
+  fs.rmSync(this.csRoot!, { recursive: true, force: true });
+  assert.equal(this.csBlocked, false, 'a non-spec works-done claim must NOT trip the census branch (anti-H1)');
 });
