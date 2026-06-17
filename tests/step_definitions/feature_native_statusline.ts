@@ -20,6 +20,7 @@ import {
 } from '../../tools/native-statusline/reconcile-statusline.ts';
 import { statuslineCheck } from '../../.claude/skills/pomogator-doctor/scripts/engine/checks/statusline.ts';
 import type { CheckContext } from '../../.claude/skills/pomogator-doctor/scripts/engine/types.ts';
+import { ccstatuslineConfigPath, writeCcstatuslineWidgets, REQUIRED_WIDGET_TYPES } from '../../tools/native-statusline/ccstatusline-widgets.ts';
 
 const NSL_HOOK = path.resolve(process.cwd(), 'tools/native-statusline/install_native_statusline.ts');
 const NSL_APPLY = path.resolve(process.cwd(), 'tools/native-statusline/apply-statusline.ts');
@@ -38,6 +39,45 @@ function nslCtx(home: string): CheckContext {
 async function nslCheckRun(home: string): Promise<{ severity?: string; hint?: string }> {
   const r = await statuslineCheck.run(nslCtx(home));
   return (Array.isArray(r) ? r[0] : r) ?? {};
+}
+function nslWidgetsPath(home: string): string {
+  return ccstatuslineConfigPath(home);
+}
+function nslWriteWidgets(home: string, obj: unknown): void {
+  fs.mkdirSync(path.dirname(nslWidgetsPath(home)), { recursive: true });
+  fs.writeFileSync(nslWidgetsPath(home), JSON.stringify(obj, null, 2), 'utf-8');
+}
+function nslReadWidgets(home: string): { lines: Array<Array<{ type: string }>> } & Record<string, unknown> {
+  return JSON.parse(fs.readFileSync(nslWidgetsPath(home), 'utf-8')) as { lines: Array<Array<{ type: string }>> } & Record<string, unknown>;
+}
+function nslWidgetTypes(lines: Array<Array<{ type: string }>>): string[] {
+  return lines.flat().map((w) => w.type);
+}
+// Mirrors the REAL ccstatusline stock-default config (verify-against-real-artifact).
+function nslStockWidgets(): Record<string, unknown> {
+  return {
+    version: 3,
+    lines: [
+      [
+        { id: '1', type: 'model', color: 'cyan' },
+        { id: '2', type: 'separator' },
+        { id: '3', type: 'context-length', color: 'brightBlack' },
+        { id: '4', type: 'separator' },
+        { id: '5', type: 'git-branch', color: 'magenta' },
+        { id: '6', type: 'separator' },
+        { id: '7', type: 'git-changes', color: 'yellow' },
+      ],
+      [],
+      [],
+    ],
+    flexMode: 'full-minus-40',
+    compactThreshold: 60,
+    colorLevel: 2,
+    inheritSeparatorColors: false,
+    globalBold: false,
+    gitCacheTtlSeconds: 5,
+    minimalistMode: false,
+  };
 }
 function nslSettingsPath(home: string): string {
   return path.join(home, '.claude', 'settings.json');
@@ -67,6 +107,8 @@ interface NSLWorld extends V4World {
   nslBefore?: string;
   nslEnv?: Record<string, string>;
   nslCheck?: { severity?: string; hint?: string };
+  nslWidgetRes?: { changed: boolean; action: string };
+  nslWidgetBefore?: string;
 }
 
 After(function (this: NSLWorld) {
@@ -246,4 +288,51 @@ Then(/^a HOME with a custom non-ccstatusline statusLine also reports "ok" \(pres
 Then(/^a HOME with corrupt settings\.json reports "warning" \(unreadable, not verified\)$/, async function (this: NSLWorld) {
   fs.writeFileSync(nslSettingsPath(this.nslHome!), '{ "statusLine": ', 'utf-8');
   assert.equal((await nslCheckRun(this.nslHome!)).severity, 'warning');
+});
+
+// --- NSL001_12 (hook seeds a missing widget config with repo + cwd) ---
+Given(/^~\/\.config\/ccstatusline\/settings\.json does not exist$/, function (this: NSLWorld) {
+  nslWriteSettings(this.nslHome!, {}); // clean statusLine settings; widget config still absent
+  assert.equal(fs.existsSync(nslWidgetsPath(this.nslHome!)), false);
+});
+Then(/^a widget config is created as a 3-line column whose line 1 contains "git-root-dir" and "current-working-dir"$/, function (this: NSLWorld) {
+  const cfg = nslReadWidgets(this.nslHome!);
+  assert.equal(cfg.lines.length, 3);
+  const types = nslWidgetTypes(cfg.lines);
+  for (const req of REQUIRED_WIDGET_TYPES) assert.ok(types.includes(req), `required widget ${req}`);
+  assert.deepEqual(cfg.lines[1].map((w) => w.type), ['git-root-dir', 'separator', 'current-working-dir']);
+});
+
+// --- NSL001_13 (hook never mutates an existing widget config — install-only) ---
+Given(/^a stock-default ccstatusline widget config without repo and cwd widgets$/, function (this: NSLWorld) {
+  nslWriteSettings(this.nslHome!, { statusLine: { type: 'command', command: DEFAULT_STATUSLINE_COMMAND } });
+  nslWriteWidgets(this.nslHome!, nslStockWidgets());
+  this.nslWidgetBefore = fs.readFileSync(nslWidgetsPath(this.nslHome!), 'utf-8');
+});
+Then(/^the widget config file is byte-for-byte unchanged$/, function (this: NSLWorld) {
+  assert.equal(fs.readFileSync(nslWidgetsPath(this.nslHome!), 'utf-8'), this.nslWidgetBefore);
+});
+
+// --- NSL001_14 (doctor fix-action enriches a stock-default widget config) ---
+Given(/^a stock-default ccstatusline widget config mirroring the real producer output$/, function (this: NSLWorld) {
+  nslWriteSettings(this.nslHome!, { statusLine: { type: 'command', command: DEFAULT_STATUSLINE_COMMAND } });
+  nslWriteWidgets(this.nslHome!, nslStockWidgets());
+});
+When(/^the apply-statusline fix-action runs$/, function (this: NSLWorld) {
+  this.nslWidgetRes = writeCcstatuslineWidgets({ home: this.nslHome!, enrichExisting: true });
+});
+Then(/^the layout is normalized to a 3-line column with "git-root-dir" and "current-working-dir" on their own line \(a single line truncates at terminal width\)$/, function (this: NSLWorld) {
+  assert.equal(this.nslWidgetRes!.changed, true);
+  assert.equal(this.nslWidgetRes!.action, 'enrich');
+  const cfg = nslReadWidgets(this.nslHome!);
+  assert.equal(cfg.lines.length, 3);
+  assert.deepEqual(cfg.lines[1].map((w) => w.type), ['git-root-dir', 'separator', 'current-working-dir']);
+  for (const req of REQUIRED_WIDGET_TYPES) assert.ok(nslWidgetTypes(cfg.lines).includes(req));
+});
+Then(/^the original stock widgets and all other config fields are preserved$/, function (this: NSLWorld) {
+  const cfg = nslReadWidgets(this.nslHome!);
+  assert.equal(cfg.flexMode, 'full-minus-40');
+  assert.equal(cfg.gitCacheTtlSeconds, 5);
+  const types = nslWidgetTypes(cfg.lines);
+  assert.ok(types.includes('model') && types.includes('git-branch'));
 });

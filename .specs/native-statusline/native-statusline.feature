@@ -93,21 +93,21 @@ Feature: NSL001_Native_Statusline_Auto_Install
     And a HOME with corrupt settings.json reports "warning" (unreadable, not verified)
 
   # @feature6
-  @wip
+  @feature6
   Scenario: NSL001_12 hook seeds a missing ccstatusline widget config with repo and cwd
     Given ~/.config/ccstatusline/settings.json does not exist
     When the native-statusline hook runs
     Then a widget config is created as a 3-line column whose line 1 contains "git-root-dir" and "current-working-dir"
 
   # @feature6
-  @wip
+  @feature6
   Scenario: NSL001_13 hook never mutates an existing widget config (install-only)
     Given a stock-default ccstatusline widget config without repo and cwd widgets
     When the native-statusline hook runs
     Then the widget config file is byte-for-byte unchanged
 
   # @feature7
-  @wip
+  @feature7
   Scenario: NSL001_14 doctor fix-action enriches a stock-default widget config
     Given a stock-default ccstatusline widget config mirroring the real producer output
     When the apply-statusline fix-action runs
