@@ -222,6 +222,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] @cucumber/gherkin + @cucumber/gherkin-utils integrated
   - [ ] Tag inheritance Feature→Scenario→Pickle preserved
   - [ ] Unit test passes on fixture .feature files
+  - [x] @feature2 SPECGEN004_185 passes — tag inheritance Feature→Scenario verified through the real parseGherkin
 
 - [x] Implement NDJSON ingester -- @feature2 — id: ndjson-ingester-impl — Status: DONE | Est: 180m
   _depends: graph-types_

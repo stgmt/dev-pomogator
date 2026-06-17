@@ -1320,3 +1320,9 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given a graph with a waived DONE task a waived open task and a plain DONE task
     When conformance checks the waived-close floor
     Then only the waived and DONE task raises TASK_WAIVED_CLOSED and the other two do not
+
+  @feature2
+  Scenario: SPECGEN004_185 the gherkin parser inherits a feature-level tag onto its scenario node
+    Given a .feature source whose Feature carries a tag and whose scenario has none of its own
+    When the gherkin parser parses that source
+    Then the produced scenario node carries the inherited feature-level tag
