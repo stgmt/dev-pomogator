@@ -33,5 +33,15 @@ verify-phase6-green, install-cross-spec-skills (6 ref docs written), impl-semant
 - **Unbuilt low-priority:** 1 — T7-62 (W4).
 - **Genuine remaining work:** ~3 — T21-153/154/163 (+ any P16 that verify shows unbuilt) (W2/W5).
 
+## W1 CONCLUSION (verified 2026-06-17) — drift is EXHAUSTED
+
+Per-task verification (get_trace + code reads) overturns the "mostly drift" premise for the REMAINDER:
+- **Drift = only the FR-17 cluster** (7 tasks, already closed this session). No more drift remains.
+- **T0-05** = deliberately-open WONT-VERIFY waiver (NOT drift) — leave.
+- **P16 cluster verified GENUINE, not drift:** `p16-feature-template-anchors` confirmed undone (nothing in `tools/anchor-integrity` references feature.template); `p16-form-skill-evals`/`p16-orphan-templates`/`p16-progress-single-writer`/`p16-stop-confirm-discipline` are real undone work; `p16-audit-split-doc` is done-but-gated (needs an own cucumber scenario for the FR-46 DONE-gate).
+- **P21 cluster** (scenario-rot / INFO-debt burndown / FR-47 remainder) = genuine ongoing work.
+
+**Honest net:** of 15 open — 2 leave-open-by-design (umbrella + T0-05 waiver), ~13 are GENUINE remaining work (2 divergences, 1 unbuilt e2e, ~6 P16, ~3 P21). There is NO cheap drift left to close. The remaining work is real build/author/resolve, NOT status-flipping.
+
 ## Next (per the plan `v4-backlog-closeout.md`)
-W1 = verify+close the drift (T0-05 + P16 cluster). W2 = back-fill legs where the chain-gate blocks closes. W3 = decide the 2 divergences. W4 = build the e2e (low-pri). W5 = corpus hygiene (2 DENY, coverage gaps, STOPs).
+W1 (close-drift) DONE — drift exhausted. The remainder skips to W2 (back-fill legs where chain-gate blocks), W3 (decide the 2 divergences), W4 (build the low-pri e2e), W5 (corpus hygiene: 2 DENY, coverage gaps, STOPs). Each is genuine work, not a quick close.
