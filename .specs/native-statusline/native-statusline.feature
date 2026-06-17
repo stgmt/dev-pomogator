@@ -115,14 +115,14 @@ Feature: NSL001_Native_Statusline_Auto_Install
     And the original stock widgets and all other config fields are preserved
 
   # @feature7
-  @wip
+  @feature7
   Scenario: NSL001_15 a customized widget layout is never enriched
     Given a ccstatusline widget config containing a non-stock widget type
     When the apply-statusline fix-action runs
     Then the widget config file is byte-for-byte unchanged
 
   # @feature7
-  @wip
+  @feature7
   Scenario: NSL001_16 widget enrichment is idempotent
     Given a widget config already containing repo and cwd widgets
     When the apply-statusline fix-action runs again
@@ -145,7 +145,7 @@ Feature: NSL001_Native_Statusline_Auto_Install
     Then the check severity is "ok" (not applicable — C-NSL's domain)
     And a HOME with a customized widget layout missing repo/cwd also reports "ok" (left untouched)
   # @feature7
-  @wip
+  @feature7
   Scenario: NSL001_19 a previous dev-pomogator single-line layout migrates to the column
     Given a widget config in the previous dev-pomogator revision (our widgets tail-appended to the stock single line)
     When the apply-statusline fix-action runs

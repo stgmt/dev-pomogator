@@ -336,3 +336,47 @@ Then(/^the original stock widgets and all other config fields are preserved$/, f
   const types = nslWidgetTypes(cfg.lines);
   assert.ok(types.includes('model') && types.includes('git-branch'));
 });
+
+// --- NSL001_15 (a customized widget layout is never enriched) ---
+Given(/^a ccstatusline widget config containing a non-stock widget type$/, function (this: NSLWorld) {
+  const custom = nslStockWidgets();
+  (custom.lines as Array<Array<Record<string, string>>>)[0].push({ id: '8', type: 'custom-text' });
+  nslWriteWidgets(this.nslHome!, custom);
+  this.nslWidgetBefore = fs.readFileSync(nslWidgetsPath(this.nslHome!), 'utf-8');
+});
+
+// --- NSL001_16 (widget enrichment is idempotent) ---
+Given(/^a widget config already containing repo and cwd widgets$/, function (this: NSLWorld) {
+  nslWriteWidgets(this.nslHome!, nslStockWidgets());
+  writeCcstatuslineWidgets({ home: this.nslHome!, enrichExisting: true }); // first enrich adds repo+cwd
+  this.nslWidgetBefore = fs.readFileSync(nslWidgetsPath(this.nslHome!), 'utf-8');
+});
+When(/^the apply-statusline fix-action runs again$/, function (this: NSLWorld) {
+  this.nslWidgetRes = writeCcstatuslineWidgets({ home: this.nslHome!, enrichExisting: true });
+});
+Then(/^no write occurs and the action is "noop"$/, function (this: NSLWorld) {
+  assert.equal(this.nslWidgetRes!.changed, false);
+  assert.equal(this.nslWidgetRes!.action, 'noop');
+  assert.equal(fs.readFileSync(nslWidgetsPath(this.nslHome!), 'utf-8'), this.nslWidgetBefore);
+});
+
+// --- NSL001_19 (previous single-line layout migrates to the column) ---
+Given(/^a widget config in the previous dev-pomogator revision \(our widgets tail-appended to the stock single line\)$/, function (this: NSLWorld) {
+  const old = nslStockWidgets();
+  (old.lines as Array<Array<Record<string, unknown>>>)[0].push(
+    { id: '8', type: 'separator' },
+    { id: '9', type: 'git-root-dir', color: 'cyan' },
+    { id: '10', type: 'separator' },
+    { id: '11', type: 'current-working-dir', color: 'blue', metadata: { abbreviateHome: 'true' } },
+  );
+  nslWriteWidgets(this.nslHome!, old);
+});
+Then(/^the layout is normalized to the canonical 3-line column with repo and cwd on their own line$/, function (this: NSLWorld) {
+  assert.equal(this.nslWidgetRes!.changed, true);
+  assert.equal(this.nslWidgetRes!.action, 'enrich');
+  const cfg = nslReadWidgets(this.nslHome!);
+  assert.deepEqual(cfg.lines[1].map((w) => w.type), ['git-root-dir', 'separator', 'current-working-dir']);
+});
+Then(/^all other config fields are preserved$/, function (this: NSLWorld) {
+  assert.equal(nslReadWidgets(this.nslHome!).flexMode, 'full-minus-40');
+});
