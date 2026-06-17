@@ -80,17 +80,36 @@ export function parseScenarios(feature: string): ScenarioInfo[] {
   return out;
 }
 
-/** Classify a single it()/test() body into one of the three migration classes. */
-export function classifyTestBody(body: string): TestClass {
+/** Symbols imported from a `tools/` module — invoking one in a test = a real engine call. */
+export function toolImportSymbols(src: string): string[] {
+  const syms: string[] = [];
+  const re = /import\s*(?:type\s*)?\{([^}]+)\}\s*from\s*['"][^'"]*tools\/[^'"]+['"]/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(src))) {
+    for (const s of m[1].split(',')) {
+      const name = s.trim().split(/\s+as\s+/)[0].trim();
+      if (name && /^[A-Za-z_$]\w*$/.test(name)) syms.push(name);
+    }
+  }
+  return syms;
+}
+
+/**
+ * Classify a single it()/test() body. `toolSymbols` are names imported from tools/ — a body that
+ * CALLS one is runtime even if it also reads files (the classifier's blind spot found on
+ * skill-listing-budget: ensureSkillListingBudget(...) + fs.readJson was mis-labelled artifact).
+ */
+export function classifyTestBody(body: string, toolSymbols: string[] = []): TestClass {
   if (/\bspawnSync\b|\bexecSync\b|\bspawn\b/.test(body)) return 'runtime';
-  // calls an imported engine: a bare identifier call that is not fs/assert/expect/path
-  if (/\b(detect|run|build|parse|compute|validate|audit|generate|resolve)[A-Z]\w*\s*\(/.test(body)) return 'runtime';
+  if (toolSymbols.some((s) => new RegExp(`\\b${s}\\s*\\(`).test(body))) return 'runtime';
+  if (/\b(detect|run|build|parse|compute|validate|audit|generate|resolve|ensure|apply)[A-Z]\w*\s*\(/.test(body)) return 'runtime';
   if (/\bfs\.|readFileSync|pathExists|readJson|existsSync/.test(body)) return 'artifact';
   return 'unknown';
 }
 
 /** Split a vitest file into it()/test() blocks (incl. it.skip) and classify each. */
 export function classifyVitestFile(src: string): VitestInfo[] {
+  const toolSymbols = toolImportSymbols(src);
   const out: VitestInfo[] = [];
   const re = /\b(it|test)(\.skip|\.only)?\s*\(\s*(['"`])([\s\S]*?)\3/g;
   let m: RegExpExecArray | null;
@@ -103,7 +122,7 @@ export function classifyVitestFile(src: string): VitestInfo[] {
     const nextMatch = /\b(it|test)(\.skip|\.only)?\s*\(/.exec(src.slice(re.lastIndex));
     const end = nextMatch ? re.lastIndex + nextMatch.index : src.length;
     const body = src.slice(start, end);
-    out.push({ name, cls: skipped ? 'manual' : classifyTestBody(body) });
+    out.push({ name, cls: skipped ? 'manual' : classifyTestBody(body, toolSymbols) });
   }
   return out;
 }
