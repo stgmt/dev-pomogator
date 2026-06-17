@@ -46,6 +46,7 @@ interface NSLWorld extends V4World {
   nslHookOut?: { stdout: string; status: number | null };
   nslWriteResult?: { changed: boolean; action: string };
   nslBefore?: string;
+  nslEnv?: Record<string, string>;
 }
 
 After(function (this: NSLWorld) {
@@ -70,7 +71,8 @@ Given(/^a temporary HOME with an isolated ~\/\.claude\/settings\.json$/, functio
 
 // --- NSL001_01 (reconciler installs into an empty slot — pure function) -------
 Given(/^settings\.json has no statusLine field$/, function (this: NSLWorld) {
-  this.nslExisting = undefined;
+  this.nslExisting = undefined; // for _01's reconcile call
+  nslWriteSettings(this.nslHome!, {}); // and a real empty file for the hook scenarios (_06) reusing this step
 });
 When(/^reconcileStatusLine is called with an undefined existing command$/, function (this: NSLWorld) {
   this.nslResult = reconcileStatusLine(undefined);
@@ -147,4 +149,44 @@ When(/^the native-statusline hook runs with default-on behavior$/, function (thi
 });
 Then(/^a valid settings\.json is created containing only the statusLine field$/, function (this: NSLWorld) {
   assert.deepEqual(Object.keys(nslReadSettings(this.nslHome!)), ['statusLine']);
+});
+
+// --- shared When for the hook scenarios NSL001_04/_06/_08 (captures before-bytes + env) ---
+When(/^the native-statusline hook runs$/, function (this: NSLWorld) {
+  const p = nslSettingsPath(this.nslHome!);
+  this.nslBefore = fs.existsSync(p) ? fs.readFileSync(p, 'utf-8') : '';
+  this.nslHookOut = nslRunHook(this.nslHome!, this.nslEnv ?? {});
+});
+
+// --- NSL001_04 (a user's custom statusLine is never overwritten) ---
+Given(/^settings\.json has a custom statusLine\.command without the ccstatusline marker$/, function (this: NSLWorld) {
+  nslWriteSettings(this.nslHome!, { statusLine: { type: 'command', command: 'my-custom-bar.sh' } });
+});
+Then(/^the existing statusLine\.command is left unchanged$/, function (this: NSLWorld) {
+  const sl = nslReadSettings(this.nslHome!).statusLine as { command?: string };
+  assert.equal(sl.command, 'my-custom-bar.sh');
+});
+Then(/^no write to settings\.json occurs$/, function (this: NSLWorld) {
+  assert.equal(fs.readFileSync(nslSettingsPath(this.nslHome!), 'utf-8'), this.nslBefore);
+});
+
+// --- NSL001_06 (opt-out switch disables all writes) ---
+Given(/^the env var DEV_POMOGATOR_STATUSLINE is set to "off"$/, function (this: NSLWorld) {
+  this.nslEnv = { DEV_POMOGATOR_STATUSLINE: 'off' };
+});
+Then(/^settings\.json is left unchanged and no statusLine is added$/, function (this: NSLWorld) {
+  assert.equal(nslReadSettings(this.nslHome!).statusLine, undefined);
+  assert.equal(fs.readFileSync(nslSettingsPath(this.nslHome!), 'utf-8'), this.nslBefore);
+});
+
+// --- NSL001_08 (corrupt settings.json handled fail-open) ---
+Given(/^settings\.json contains invalid JSON$/, function (this: NSLWorld) {
+  fs.mkdirSync(path.dirname(nslSettingsPath(this.nslHome!)), { recursive: true });
+  fs.writeFileSync(nslSettingsPath(this.nslHome!), '{ "statusLine": ', 'utf-8');
+});
+Then(/^the hook exits with code 0 without throwing$/, function (this: NSLWorld) {
+  assert.equal(this.nslHookOut!.status, 0);
+});
+Then(/^settings\.json is not mutated$/, function (this: NSLWorld) {
+  assert.equal(fs.readFileSync(nslSettingsPath(this.nslHome!), 'utf-8'), '{ "statusLine": ');
 });

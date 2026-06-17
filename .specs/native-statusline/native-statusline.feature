@@ -31,7 +31,7 @@ Feature: NSL001_Native_Statusline_Auto_Install
     And only the statusLine field was added
 
   # @feature2
-  @wip
+  @feature2
   Scenario: NSL001_04 a user's custom statusLine is never overwritten
     Given settings.json has a custom statusLine.command without the ccstatusline marker
     When the native-statusline hook runs
@@ -46,7 +46,7 @@ Feature: NSL001_Native_Statusline_Auto_Install
     Then it returns action "noop"
 
   # @feature4
-  @wip
+  @feature4
   Scenario: NSL001_06 opt-out switch disables all writes
     Given the env var DEV_POMOGATOR_STATUSLINE is set to "off"
     And settings.json has no statusLine field
@@ -61,7 +61,7 @@ Feature: NSL001_Native_Statusline_Auto_Install
     Then no write to settings.json occurs and the file mtime is unchanged
 
   # @feature5
-  @wip
+  @feature5
   Scenario: NSL001_08 corrupt settings.json is handled fail-open
     Given settings.json contains invalid JSON
     When the native-statusline hook runs
