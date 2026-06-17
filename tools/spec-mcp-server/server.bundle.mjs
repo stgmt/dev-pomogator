@@ -46414,7 +46414,7 @@ var TASK_BULLET = /^-\s+\[[ x]\]\s+(.+)$/;
 var TASK_HEADING = /^###\s+📋\s+`([^`]+)`/;
 var STATUS_TAG = /Status:\s*(TODO|READY|IN_PROGRESS|DONE|BLOCKED)/;
 var EST_TAG = /Est:\s*\d+\s*m/i;
-var WAIVED_RE = /_waived:\s*([^_]+)_/;
+var WAIVED_RE = /^[ \t]*_waived:[ \t]*([^_\n]+)_[ \t]*$/m;
 function parseTaskBlocks(content) {
   const lines = content.replace(/\r\n/g, "\n").split("\n");
   const blocks = [];

@@ -100,13 +100,21 @@ const STATUS_TAG = /Status:\s*(TODO|READY|IN_PROGRESS|DONE|BLOCKED)/;
 const EST_TAG = /Est:\s*\d+\s*m/i;
 
 /**
- * FR-50: the deliberate-waiver marker — an italic `_waived: <reason>_` line in a task
- * block. Capture group 1 = the reason. SHARED single source: the spec-graph task parser
+ * FR-50: the deliberate-waiver marker — an italic `_waived: <reason>_` marker that is its
+ * OWN body line in a task block (a sibling of the `_depends:` / `_Requirements:` lines).
+ * Capture group 1 = the reason. SHARED single source: the spec-graph task parser
  * (tools/spec-graph/parsers/tasks.ts) imports this to set `TaskNode.waived`, so the
  * form-gate's "skip waived" check below and the graph's waived-close floor (FR-50c)
- * never drift apart. Non-global: safe with both `.test()` (here) and `.match()` (graph parser).
+ * never drift apart.
+ *
+ * FULL-LINE anchored (`^…$`, `m` flag): the marker counts only when it is a STANDALONE
+ * line — never a code-span mention (`` `_waived:` ``) or prose that merely DESCRIBES the
+ * marker. The earlier unanchored `[^_]+` matched the FR-50 task's OWN description of the
+ * marker and spanned newlines into the header, false-firing TASK_WAIVED_CLOSED on
+ * `p26-waived-close-gate` (the task that built this very feature). `[^_\n]` keeps the
+ * reason on one line. Non-global: safe with both `.test()` (here) and `.match()` (graph parser).
  */
-export const WAIVED_RE = /_waived:\s*([^_]+)_/;
+export const WAIVED_RE = /^[ \t]*_waived:[ \t]*([^_\n]+)_[ \t]*$/m;
 
 export function parseTaskBlocks(content: string): TaskBlock[] {
   const lines = content.replace(/\r\n/g, '\n').split('\n');
