@@ -168,6 +168,14 @@ export interface TaskNode extends NodeBase {
    * single source of truth shared by get_coverage and spec-status.
    */
   doneWhen?: string;
+  /**
+   * FR-50: the deliberate-waiver reason, lifted from a `_waived: <reason>_` marker in the
+   * task block (the same marker the form-gate skips, shared `WAIVED_RE`). Presence means
+   * the task is DELIBERATELY kept open — a post-hoc-unverifiable precondition, an advisor
+   * waiver, … — and MUST NOT be closed: the conformance floor errors on `waived && done`
+   * (TASK_WAIVED_CLOSED) and set_entity_status refuses the close. Undefined for normal tasks.
+   */
+  waived?: string;
 }
 
 export interface UseCaseNode extends NodeBase {

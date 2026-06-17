@@ -50,6 +50,7 @@ export type FindingCode =
   | 'TOOTHLESS_DECISION'
   | 'TOOTHLESS_STORY'
   | 'TASK_STARTED_WITHOUT_CHAIN'
+  | 'TASK_WAIVED_CLOSED'
   | 'UPSTREAM_UNLINKED';
 
 export type Severity = 'error' | 'warning' | 'info';
@@ -282,6 +283,31 @@ export function checkConformance(
       suggestions: [
         { action: 'assemble_chain', reason: `Author the missing legs (${gate.missing.join(', ')}) for the requirement, OR`, confidence: 'high' },
         { action: 'mark_spec_phase', reason: 'add a `[spec-phase]` marker if this task itself authors those legs (anti-deadlock exemption).', confidence: 'medium' },
+      ],
+    });
+  }
+
+  // 1f) TASK_WAIVED_CLOSED (FR-50c) — a DELIBERATELY-WAIVED task (carries a `_waived:`
+  // marker) that is marked DONE. A waiver means "kept open on purpose" (a post-hoc-
+  // unverifiable precondition, an advisor waiver); closing it is a soft fake-DONE. ERROR
+  // — NOT staged-WARNING like the FR-46/47/48 gates: "waived + done" is a logical
+  // contradiction with no legitimate use and (verified) zero legacy violators, so the
+  // door REFUSES the close outright. To close legitimately, remove the `_waived:` marker
+  // first (a deliberate un-waive). The single signal is TaskNode.waived (parser-lifted
+  // from the same WAIVED_RE the form-gate uses), so floor + command never disagree.
+  for (const node of graph.nodes.values()) {
+    if (node.type !== 'Task') continue;
+    const task = node as TaskNode;
+    if (!task.waived || task.status !== 'done') continue;
+    findings.push({
+      code: 'TASK_WAIVED_CLOSED',
+      severity: 'error',
+      location: { file: task.file, line: task.line },
+      message: `Task ${task.id} is marked DONE but carries a _waived:_ marker ("${task.waived}") — a deliberately-waived task must not be closed (soft fake-DONE, FR-50c). Remove the _waived: marker in a deliberate edit to un-waive before closing.`,
+      nodeId: task.id,
+      suggestions: [
+        { action: 'keep_waived_open', reason: 'A waived task is kept open on purpose — restore its prior Status and leave the _waived: marker in place.', confidence: 'high' },
+        { action: 'unwaive_then_close', reason: 'If the waiver no longer applies, remove the _waived: marker line first, THEN close — closing must be a deliberate un-waive.', confidence: 'medium' },
       ],
     });
   }

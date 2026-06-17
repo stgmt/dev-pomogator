@@ -18,6 +18,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { ParserOutput, TaskNode } from '../types.ts';
 import { specOf, qualifySlice } from '../coverage.ts';
+import { WAIVED_RE } from '../../specs-validator/spec-form-parsers.ts';
 
 const STATUS_MAP: Record<string, TaskNode['status']> = {
   TODO: 'todo',
@@ -45,7 +46,13 @@ export function parseTasks(content: string, file: string): TaskNode[] {
 
   const flush = (): void => {
     if (!cur) return;
-    cur.node.doneWhen = cur.body.join('\n').trim() || undefined;
+    const body = cur.body.join('\n').trim();
+    cur.node.doneWhen = body || undefined;
+    // FR-50: lift the `_waived: <reason>_` marker into the node so the GRAPH sees the
+    // waiver (the form-gate already honours the same marker via the shared WAIVED_RE). A
+    // waived task that is (or becomes) DONE is caught by the TASK_WAIVED_CLOSED floor.
+    const wm = body.match(WAIVED_RE);
+    if (wm) cur.node.waived = wm[1].trim();
     out.push(cur.node);
     cur = null;
   };
@@ -77,6 +84,17 @@ export function parseTasks(content: string, file: string): TaskNode[] {
         },
         body: [line],
       };
+      continue;
+    }
+    // A column-0 `- [..]` bullet carrying `id:` is a task BOUNDARY even when its Status is
+    // non-enum (e.g. a WONT-VERIFY waiver): end the current block here. Without this the
+    // orphan's lines — including its `_waived:` marker — bleed into the PREVIOUS task's
+    // body and mis-attribute the waiver to it (FR-50: a false TASK_WAIVED_CLOSED on the
+    // prior DONE task). headerOf already returned null (non-enum status), so the orphan is
+    // NOT added as a node — it stays invisible (deliberate: no headerOf relaxation), just
+    // non-bleeding. Column-0 only, so an indented Done-When sub-checkbox never trips it.
+    if (/^-\s*\[[ xX~]\]/.test(line) && /\bid:\s*[\w.\-]+/.test(line)) {
+      flush();
       continue;
     }
     if (!cur) continue;

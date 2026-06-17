@@ -1630,3 +1630,14 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   _Requirements: [FR-49](FR.md#fr-49)_
   **Done When:**
   - [x] `findStaleInProgress` + CLI `stale-marker-scan.ts` флажит in-progress с all-green сценариями; FLAG-ONLY (указывает на set_entity_status, не авто-закрывает); no-scenario → не флажит. Unit + SPECGEN004_179; реальный прогон на корпусе чист (консервативно). Коммит 8db0f63
+
+## Phase 26 — FR-50: жёсткий отказ закрывать намеренно-отложенную (waived) задачу
+
+- [x] P26-1: waived-close gate — парсер поднимает `_waived:`, conformance-пол + команда отказывают закрытие -- @feature50 — id: p26-waived-close-gate — Status: DONE | Est: 240m
+  _depends: p25-reconciler_
+  _Requirements: [FR-50](FR.md#fr-50)_
+  **Done When:**
+  - [ ] `TaskNode.waived` поднят из `_waived:` общим `WAIVED_RE` (tasks.ts + spec-form-parsers.ts); колоночный буллет с неэнумным статусом = граница парса (анти-bleed)
+  - [ ] `TASK_WAIVED_CLOSED` ERROR-пол в conformance.ts; дверь отклоняет waived→DONE правку
+  - [ ] `set_entity_status` отказывает закрытие с `error: WAIVED` (видимая задача + fallback-скан невидимой)
+  - [ ] SPECGEN004_182, SPECGEN004_183, SPECGEN004_184 @feature50 зелёные; бандлы (server/push/gate) пересобраны

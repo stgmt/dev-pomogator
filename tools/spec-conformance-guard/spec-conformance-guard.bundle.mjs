@@ -12368,7 +12368,7 @@ var FR_HEADING_RE = /^FR-(\d+):\s*(.+)$/;
 var NFR_HEADING_RE = /^NFR(?:-([A-Za-z][A-Za-z0-9]*))?-(\d+):\s*(.+)$/;
 var AC_HEADING_RE = /^AC-(\d+(?:\.\d+)?)\s*\(FR-(\d+)\)\s*:?\s*(.*)$/;
 var DECISION_HEADING_RE = /^Decision:\s*(.+)$/;
-var STORY_HEADING_RE = /^User Story \d+:\s*(.+)$/;
+var STORY_HEADING_RE = /^User Story (\d+):\s*(.+)$/;
 var SHORT_FR_RE = /^FR-(\d+)$/;
 var SHORT_NFR_RE = /^NFR(?:-([A-Za-z][A-Za-z0-9]*))?-(\d+)$/;
 var SHORT_AC_RE = /^AC-(\d+(?:\.\d+)?)$/;
@@ -12589,8 +12589,9 @@ function parseMarkdown(mdSource, relativePath) {
     }
     m = text.match(STORY_HEADING_RE);
     if (m) {
-      const title = m[1].trim();
-      const storyId = `Story-${slugify(title)}`;
+      const num = m[1];
+      const title = m[2].trim();
+      const storyId = `Story-${num}-${slugify(title)}`;
       const slug = slugify(text);
       const parentFr = decisionRequirementAfter(lines, i);
       const node = { id: storyId, type: "Story", title, parentFr, file: relativePath, line, body: text };
@@ -13395,11 +13396,20 @@ function parseGherkin(source, relativePath) {
   };
   const anchors = [];
   const seenIds = /* @__PURE__ */ new Map();
+  const entries = [];
   for (const child of doc.feature.children) {
-    const scenario = child.scenario;
-    if (!scenario) continue;
+    if (child.scenario) {
+      entries.push({ scenario: child.scenario, ruleTags: [] });
+    } else if (child.rule?.children) {
+      const ruleTags = (child.rule.tags ?? []).map((t) => t.name);
+      for (const rc of child.rule.children) {
+        if (rc.scenario) entries.push({ scenario: rc.scenario, ruleTags });
+      }
+    }
+  }
+  for (const { scenario, ruleTags } of entries) {
     const scenarioTags = (scenario.tags ?? []).map((t) => t.name);
-    const tags = [...featureTags, ...scenarioTags];
+    const tags = [...featureTags, ...ruleTags, ...scenarioTags];
     let baseId = `SCEN-${slugifyName(scenario.name)}`;
     const seen = seenIds.get(baseId) ?? 0;
     seenIds.set(baseId, seen + 1);

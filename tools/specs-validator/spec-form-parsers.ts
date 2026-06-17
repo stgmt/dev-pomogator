@@ -99,6 +99,15 @@ const TASK_HEADING = /^###\s+📋\s+`([^`]+)`/;
 const STATUS_TAG = /Status:\s*(TODO|READY|IN_PROGRESS|DONE|BLOCKED)/;
 const EST_TAG = /Est:\s*\d+\s*m/i;
 
+/**
+ * FR-50: the deliberate-waiver marker — an italic `_waived: <reason>_` line in a task
+ * block. Capture group 1 = the reason. SHARED single source: the spec-graph task parser
+ * (tools/spec-graph/parsers/tasks.ts) imports this to set `TaskNode.waived`, so the
+ * form-gate's "skip waived" check below and the graph's waived-close floor (FR-50c)
+ * never drift apart. Non-global: safe with both `.test()` (here) and `.match()` (graph parser).
+ */
+export const WAIVED_RE = /_waived:\s*([^_]+)_/;
+
 export function parseTaskBlocks(content: string): TaskBlock[] {
   const lines = content.replace(/\r\n/g, '\n').split('\n');
   const blocks: TaskBlock[] = [];
@@ -129,7 +138,7 @@ export function parseTaskBlocks(content: string): TaskBlock[] {
     const hasStatus = STATUS_TAG.test(body);
     const hasEst = EST_TAG.test(body);
     const hasDoneWhen = /\*\*Done When:\*\*/.test(body);
-    const waived = /_waived:\s*[^_]+_/.test(body);
+    const waived = WAIVED_RE.test(body);
     // Count `- [ ]` or `- [x]` lines that appear AFTER `**Done When:**` marker
     let doneWhenCheckboxes = 0;
     if (hasDoneWhen) {

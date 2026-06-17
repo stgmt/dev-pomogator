@@ -1302,3 +1302,21 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given a spec and the spec-mutation door
     When a write adds a scenario whose steps are still unfilled placeholders and then a fully-written scenario
     Then the door refuses the stub write with a strength-layer finding and accepts the real one
+
+  @feature50
+  Scenario: SPECGEN004_182 the mutation door refuses flipping a waived task to DONE
+    Given a spec whose TASKS.md carries a task with a _waived: marker
+    When a spec-change flips that waived task to DONE through the mutation door
+    Then the door refuses the write with a TASK_WAIVED_CLOSED error finding
+
+  @feature50
+  Scenario: SPECGEN004_183 set_entity_status refuses closing a waived task with the waiver reason
+    Given the set_entity_status tool and a waived task that is invisible to the graph by a non-enum status
+    When a close to done is requested for that task
+    Then the change is refused as WAIVED carrying the waiver reason rather than a NOT_FOUND
+
+  @feature50
+  Scenario: SPECGEN004_184 the parser lifts the waiver and the close-floor stays precise
+    Given a graph with a waived DONE task a waived open task and a plain DONE task
+    When conformance checks the waived-close floor
+    Then only the waived and DONE task raises TASK_WAIVED_CLOSED and the other two do not

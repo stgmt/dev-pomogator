@@ -653,3 +653,16 @@ A new user-facing tool MUST be added to TOOL_CONSUMERS with a real consumer skil
 - 4 net-new hooks (rejected) — 3 of the 4 concerns already had live machinery; net-new would duplicate + drift.
 - A research-N/A escape to lift web-complete (rejected mid-session as invented scope — research citation is ~3% by design, INFO-only, not a target).
 - Auto-closing reconciler (rejected) — false-green risk; flag-only, the human/agent closes via `set_entity_status`.
+
+### Decision: Waived tasks are hard-gated against closing — ERROR floor, no headerOf relaxation (FR-50)
+
+**Требование:** [FR-50](FR.md#fr-50)
+
+**Rationale:** The near-fake-close of `verify-phase0-red` was caught by a human RE-READING the block, not by the door — so the discipline must move INTO the door. The single signal is the EXISTING `_waived:` marker the form-gate already honours; FR-50 just makes the spec-GRAPH see it too via ONE shared `WAIVED_RE` (no second concept to drift). The shape is the FR-46/48 pattern: a state-invariant in `checkConformance` + a `set_entity_status` refusal sharing ONE truth (`TaskNode.waived`), so floor and command never disagree. ERROR (not the staged-WARNING the FR-44/47/48 gates use) is justified because a corpus scan proved ZERO `waived && done` violators — a born-green gate doesn't teach escape-hatch gaming (the H1 lesson), unlike a gate that flips the corpus red on day one.
+
+**Trade-off:** Lifting `_waived:` into the graph forced a parser boundary fix — a column-0 `- [..]` bullet with `id:` must END the prior block even when its `Status:` is non-enum; without it the orphan's `_waived:` line bleeds into the PREVIOUS DONE task and false-fires the floor (caught empirically pre-commit, on `migrate-vitest-bdd-pseudo`). Accepted: the boundary fix is strictly more correct (a DONE task's Done-When no longer absorbs the next orphan). A waived task with a non-enum status stays INVISIBLE to the graph by design (no `headerOf` relaxation) — protected at the close attempt (the command's TASKS.md fallback scan + the floor once it becomes DONE), NOT surfaced as an open `todo`.
+
+**Alternatives considered:**
+- Relax `headerOf` to surface WONT-VERIFY as `todo` (rejected) — highest blast radius (every malformed-status task across 47 specs surfaces at once) AND mislabels a deliberate PERMANENT waiver as an open todo that fr-census would nag about forever.
+- Staged WARNING→ERROR like the FR-46/47/48 gates (rejected) — zero legacy `waived && done` violators, so staging only opens a soft window for the exact contradiction with no upside; ERROR from day one is safe and immediate.
+- Command-only refusal without the conformance floor (rejected) — a raw `apply_spec_change` flipping the status bypasses the command; the floor is the un-bypassable guarantee, the command is the clean early UX (CHOSEN: both, sharing one `TaskNode.waived` truth).

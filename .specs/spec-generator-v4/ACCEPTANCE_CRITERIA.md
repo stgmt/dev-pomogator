@@ -715,3 +715,15 @@ WHEN финальное сообщение хода — claim прогресса
 **Требование:** [FR-49f](FR.md#fr-49)
 
 WHEN запись `.feature` через дверь (`apply_spec_change`) ДОБАВЛЯЕТ сценарий-заготовку — шаг, целиком состоящий из плейсхолдера (`<...>` с пробелом ИЛИ `{...}`) либо несущий НОВЫЙ маркер `[TBD]` — THEN дверь SHALL ОТКЛОНИТЬ запись finding'ом слоя `strength` с перечнем пустых сценариев; WHEN запись добавляет полностью написанный сценарий THEN strength-finding SHALL НЕ появляться; WHEN шаг — параметр Scenario Outline (`<amount>`, один токен без пробела) ИЛИ скобка внутри текста (`{"k":"v"}`) THEN он SHALL НЕ считаться заготовкой (точный сигнал, анти-H1); WHEN прежняя заготовка лишь СОХРАНЯЕТСЯ без добавления новой THEN запись SHALL НЕ отклоняться (net-new, doc-scoped — легаси не клинит несвязанные правки); WHEN спеку создают через `create_spec` THEN стартовый каркас из шаблона SHALL писаться мимо двери by design (гейт кусает на авторинге/правке через `apply_spec_change`, не на скаффолде).
+
+## AC-50.1
+
+**Требование:** [FR-50](FR.md#fr-50)
+
+WHEN задача несёт маркер `_waived: <причина>_` И помечена `done` THEN `checkConformance` SHALL эмитить `TASK_WAIVED_CLOSED` severity ERROR; WHEN такая waived+done правка идёт через дверь (`apply_spec_change` / `set_entity_status`) THEN дверь SHALL ОТКЛОНИТЬ запись (error-severity floor); WHEN waived-задача НЕ `done` (открыта) THEN находка SHALL НЕ появляться; WHEN `done`-задача БЕЗ маркера `_waived:` THEN находка SHALL НЕ появляться (точный сигнал — только `waived && done`, проверено сканом корпуса = 0 легаси-нарушителей).
+
+## AC-50.2
+
+**Требование:** [FR-50](FR.md#fr-50)
+
+WHEN `set_entity_status` переводит waived-задачу в `done` THEN команда SHALL отказать с `error: WAIVED` и причиной вейвера; WHEN закрываемая waived-задача НЕВИДИМА графу (неэнумный статус `WONT-VERIFY`) THEN команда SHALL просканировать `TASKS.md`, вернуть причину вейвера и `error: WAIVED`, а НЕ `NOT_FOUND`; WHEN парсер графа встречает колоночный `- [..]`-буллет с `id:` и неэнумным статусом THEN он SHALL завершить предыдущий блок (граница), чтобы `_waived:` сироты не втекал в соседнюю DONE-задачу; WHEN задача несёт `_waived:` THEN парсер SHALL поднять причину в `TaskNode.waived`.

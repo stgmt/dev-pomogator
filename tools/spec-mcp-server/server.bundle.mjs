@@ -44958,11 +44958,11 @@ import fs22 from "node:fs";
 import path19 from "node:path";
 
 // tools/spec-mcp-server/lifecycle.ts
-import fs11 from "node:fs";
+import fs12 from "node:fs";
 import path8 from "node:path";
 
 // tools/spec-graph/builder.ts
-import fs7 from "node:fs";
+import fs8 from "node:fs";
 import path4 from "node:path";
 import { createHash } from "node:crypto";
 
@@ -46373,8 +46373,220 @@ function applyTestResults(scenarios, patch) {
 }
 
 // tools/spec-graph/parsers/tasks.ts
-import fs4 from "node:fs";
+import fs5 from "node:fs";
 import path3 from "node:path";
+
+// tools/specs-validator/spec-form-parsers.ts
+import fs4 from "fs";
+var US_HEADING = /^###\s+User Story\s+\d+\b/;
+var US_PRIORITY = /\(Priority:\s*P[123]\)/;
+function parseUserStoryBlocks(content) {
+  const lines = content.replace(/\r\n/g, "\n").split("\n");
+  const blocks = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (!US_HEADING.test(line)) continue;
+    let j = i + 1;
+    for (; j < lines.length; j++) {
+      if (US_HEADING.test(lines[j])) break;
+      if (/^##\s/.test(lines[j])) break;
+    }
+    const body = lines.slice(i, j).join("\n");
+    const hasPriority = US_PRIORITY.test(line);
+    const hasWhy = /\*\*Why:\*\*/.test(body);
+    const hasIndependentTest = /\*\*Independent Test:\*\*/.test(body);
+    const hasAcceptanceScenarios = /\*\*Acceptance Scenarios:\*\*/.test(body);
+    const missingFirst = !hasPriority && "Priority" || !hasWhy && "Why" || !hasIndependentTest && "Independent Test" || !hasAcceptanceScenarios && "Acceptance Scenarios" || null;
+    blocks.push({
+      lineNumber: i + 1,
+      heading: line.replace(/^###\s+/, ""),
+      hasPriority,
+      hasWhy,
+      hasIndependentTest,
+      hasAcceptanceScenarios,
+      missingFirst
+    });
+  }
+  return blocks;
+}
+var PHASE_HEADING = /^(?:##|###)\s+(Phase\s+[-\d]+\S*.*?)$/i;
+var TASK_BULLET = /^-\s+\[[ x]\]\s+(.+)$/;
+var TASK_HEADING = /^###\s+📋\s+`([^`]+)`/;
+var STATUS_TAG = /Status:\s*(TODO|READY|IN_PROGRESS|DONE|BLOCKED)/;
+var EST_TAG = /Est:\s*\d+\s*m/i;
+var WAIVED_RE = /_waived:\s*([^_]+)_/;
+function parseTaskBlocks(content) {
+  const lines = content.replace(/\r\n/g, "\n").split("\n");
+  const blocks = [];
+  let currentPhase = "";
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const phaseMatch = line.match(PHASE_HEADING);
+    if (phaseMatch) {
+      currentPhase = phaseMatch[1].trim();
+      continue;
+    }
+    const bulletMatch = line.match(TASK_BULLET);
+    const headingMatch = line.match(TASK_HEADING);
+    if (!bulletMatch && !headingMatch) continue;
+    const title = bulletMatch ? bulletMatch[1] : headingMatch[1];
+    let j = i + 1;
+    for (; j < lines.length; j++) {
+      const nextLine = lines[j];
+      if (PHASE_HEADING.test(nextLine)) break;
+      if (bulletMatch && TASK_BULLET.test(nextLine) && !/^\s/.test(nextLine)) break;
+      if (headingMatch && TASK_HEADING.test(nextLine)) break;
+      if (bulletMatch && /^\s*$/.test(nextLine) && j + 1 < lines.length && TASK_BULLET.test(lines[j + 1])) break;
+    }
+    const body = lines.slice(i, j).join("\n");
+    const hasStatus = STATUS_TAG.test(body);
+    const hasEst = EST_TAG.test(body);
+    const hasDoneWhen = /\*\*Done When:\*\*/.test(body);
+    const waived = WAIVED_RE.test(body);
+    let doneWhenCheckboxes = 0;
+    if (hasDoneWhen) {
+      const [, afterDoneWhen = ""] = body.split(/\*\*Done When:\*\*/);
+      doneWhenCheckboxes = (afterDoneWhen.match(/^\s*-\s+\[[ x]\]/gm) || []).length;
+    }
+    const isPhaseMinusOne = /Phase\s+-1/i.test(currentPhase);
+    const missingFirst = waived ? null : isPhaseMinusOne ? null : !hasDoneWhen && "Done When block" || hasDoneWhen && doneWhenCheckboxes === 0 && "Done When checkbox (at least one - [ ])" || !hasStatus && "Status tag" || !hasEst && "Est tag" || null;
+    blocks.push({
+      lineNumber: i + 1,
+      title: title.slice(0, 160),
+      phase: currentPhase,
+      hasStatus,
+      hasEst,
+      hasDoneWhen,
+      doneWhenCheckboxes,
+      waived,
+      missingFirst
+    });
+  }
+  return blocks;
+}
+var DECISION_HEADING = /^###\s+Decision:/;
+function parseDecisionBlocks(content) {
+  const lines = content.replace(/\r\n/g, "\n").split("\n");
+  const blocks = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (!DECISION_HEADING.test(line)) continue;
+    let j = i + 1;
+    for (; j < lines.length; j++) {
+      if (/^###?\s/.test(lines[j])) break;
+    }
+    const body = lines.slice(i, j).join("\n");
+    const hasRationale = /\*\*Rationale:\*\*/.test(body);
+    const hasTradeoff = /\*\*Trade-?off:\*\*/.test(body);
+    const hasAlternatives = /\*\*Alternatives considered:\*\*/.test(body);
+    let alternativesCount = 0;
+    if (hasAlternatives) {
+      const [, after = ""] = body.split(/\*\*Alternatives considered:\*\*/);
+      alternativesCount = (after.match(/^\s*-\s+/gm) || []).length;
+    }
+    const missingFirst = !hasRationale && "Rationale" || !hasTradeoff && "Trade-off" || !hasAlternatives && "Alternatives considered" || hasAlternatives && alternativesCount < 2 && "Alternatives bullets (\u22652 required)" || null;
+    blocks.push({
+      lineNumber: i + 1,
+      heading: line.replace(/^###\s+/, ""),
+      hasRationale,
+      hasTradeoff,
+      hasAlternatives,
+      alternativesCount,
+      missingFirst
+    });
+  }
+  return blocks;
+}
+var CHK_ID_VALID = /^CHK-FR\d+-\d{2}$/;
+var ALLOWED_METHODS = /* @__PURE__ */ new Set([
+  "BDD scenario",
+  "Unit test",
+  "Manual review",
+  "Integration test",
+  "N/A"
+]);
+var ALLOWED_STATUSES = /* @__PURE__ */ new Set(["Draft", "In Progress", "Verified", "Blocked"]);
+function parseChkRows(content) {
+  const lines = content.replace(/\r\n/g, "\n").split("\n");
+  const rows = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line.startsWith("|")) continue;
+    if (/^\|[\s-:|]+\|$/.test(line)) continue;
+    const cells = line.split("|").slice(1, -1).map((c) => c.trim());
+    if (cells.length < 5) continue;
+    const [id, requirement, tracesTo, verificationMethod, status, notes = ""] = cells;
+    if (!/^CHK-/.test(id)) continue;
+    if (id === "CHK-ID") continue;
+    const idValid = CHK_ID_VALID.test(id);
+    const tracesValid = /\bFR-\d+/.test(tracesTo) && /(AC-\d+|@feature\d+|UC-\d+)/.test(tracesTo);
+    const methodValid = ALLOWED_METHODS.has(verificationMethod);
+    const statusValid = ALLOWED_STATUSES.has(status);
+    const missingFirst = !idValid && `CHK-ID format must match CHK-FR{n}-{nn} (got "${id}")` || !tracesValid && "Traces To must include FR-N + (AC-N | @featureN | UC-N)" || !verificationMethod && "Verification Method (empty)" || !methodValid && `Verification Method must be one of: ${[...ALLOWED_METHODS].join(", ")} (got "${verificationMethod}")` || !statusValid && `Status must be one of: ${[...ALLOWED_STATUSES].join(", ")} (got "${status}")` || null;
+    rows.push({
+      lineNumber: i + 1,
+      id,
+      requirement,
+      tracesTo,
+      verificationMethod,
+      status,
+      notes,
+      idValid,
+      tracesValid,
+      methodValid,
+      statusValid,
+      missingFirst
+    });
+  }
+  return rows;
+}
+function runCheckCli(argv) {
+  const [flag, kind, file2] = argv;
+  const usage = "usage: spec-form-parsers.ts --check <user-stories|tasks|decisions|chk-rows> <file>";
+  if (flag !== "--check" || !kind || !file2) return { output: usage, exitCode: 2 };
+  let content;
+  try {
+    content = fs4.readFileSync(file2, "utf-8");
+  } catch (e) {
+    return { output: `cannot read ${file2}: ${e instanceof Error ? e.message : e}`, exitCode: 2 };
+  }
+  const violations = [];
+  switch (kind) {
+    case "user-stories":
+      for (const b of parseUserStoryBlocks(content)) {
+        if (b.missingFirst) violations.push(`${file2}:${b.lineNumber} [${b.heading}] missing: ${b.missingFirst}`);
+      }
+      break;
+    case "tasks":
+      for (const b of parseTaskBlocks(content)) {
+        if (!b.waived && b.missingFirst) violations.push(`${file2}:${b.lineNumber} [${b.title}] missing: ${b.missingFirst}`);
+      }
+      break;
+    case "decisions":
+      for (const b of parseDecisionBlocks(content)) {
+        if (b.missingFirst) violations.push(`${file2}:${b.lineNumber} [${b.heading}] missing: ${b.missingFirst}`);
+      }
+      break;
+    case "chk-rows":
+      for (const r of parseChkRows(content)) {
+        if (r.missingFirst) violations.push(`${file2}:${r.lineNumber} [${r.id}] invalid: ${r.missingFirst}`);
+      }
+      break;
+    default:
+      return { output: usage, exitCode: 2 };
+  }
+  if (violations.length === 0) return { output: `OK \u2014 0 violations (${kind})`, exitCode: 0 };
+  return { output: violations.join("\n") + `
+${violations.length} violation(s) (${kind})`, exitCode: 1 };
+}
+var isDirectRunFormParsers = process.argv[1]?.endsWith("spec-form-parsers.ts") || process.argv[1]?.endsWith("spec-form-parsers.js");
+if (isDirectRunFormParsers) {
+  const { output, exitCode } = runCheckCli(process.argv.slice(2));
+  console.log(output);
+  process.exit(exitCode);
+}
+
+// tools/spec-graph/parsers/tasks.ts
 var STATUS_MAP = {
   TODO: "todo",
   READY: "ready",
@@ -46396,7 +46608,10 @@ function parseTasks(content, file2) {
   let curPhase;
   const flush = () => {
     if (!cur) return;
-    cur.node.doneWhen = cur.body.join("\n").trim() || void 0;
+    const body = cur.body.join("\n").trim();
+    cur.node.doneWhen = body || void 0;
+    const wm = body.match(WAIVED_RE);
+    if (wm) cur.node.waived = wm[1].trim();
     out.push(cur.node);
     cur = null;
   };
@@ -46427,6 +46642,10 @@ function parseTasks(content, file2) {
       };
       continue;
     }
+    if (/^-\s*\[[ xX~]\]/.test(line) && /\bid:\s*[\w.\-]+/.test(line)) {
+      flush();
+      continue;
+    }
     if (!cur) continue;
     if (/^#{1,6}\s/.test(line) || /^---\s*$/.test(line) || /^\s*<!--/.test(line)) {
       flush();
@@ -46442,7 +46661,7 @@ function parseTasks(content, file2) {
   return out;
 }
 function parseTasksFile(abs, repoRoot) {
-  const content = fs4.readFileSync(abs, "utf8");
+  const content = fs5.readFileSync(abs, "utf8");
   const file2 = path3.relative(repoRoot, abs).replace(/\\/g, "/");
   const slice = { nodes: parseTasks(content, file2), edges: [] };
   qualifySlice(slice, specOf(file2));
@@ -46450,7 +46669,7 @@ function parseTasksFile(abs, repoRoot) {
 }
 
 // tools/spec-graph/parsers/file-changes.ts
-import fs5 from "node:fs";
+import fs6 from "node:fs";
 var ALLOWED_ACTIONS = /* @__PURE__ */ new Set([
   "create",
   "edit",
@@ -46544,7 +46763,7 @@ function parseFileChanges(mdSource, opts = {}) {
 function parseFileChangesFile(absPath, opts = {}) {
   let source;
   try {
-    source = fs5.readFileSync(absPath, "utf-8");
+    source = fs6.readFileSync(absPath, "utf-8");
   } catch {
     return [];
   }
@@ -46552,7 +46771,7 @@ function parseFileChangesFile(absPath, opts = {}) {
 }
 
 // tools/spec-graph/parsers/design.ts
-import fs6 from "node:fs";
+import fs7 from "node:fs";
 var SECTION_HEADING_RE = /^(?:где\s+лежит\s+реализаци[яи]|где\s+код|app[-\s]?код)\s*:?\s*$/i;
 var BULLET_LABEL_RE = /^[-*+]\s+(?:\*\*)?([^:*]+?)(?:\*\*)?:\s*(.*)$/;
 var BACKTICK_PATH_RE = /`([^`\n]+)`/g;
@@ -46636,7 +46855,7 @@ function parseDesign(mdSource, _relativePath) {
 function parseDesignFile(absPath, repoRoot) {
   let source;
   try {
-    source = fs6.readFileSync(absPath, "utf-8");
+    source = fs7.readFileSync(absPath, "utf-8");
   } catch {
     return [];
   }
@@ -46645,7 +46864,7 @@ function parseDesignFile(absPath, repoRoot) {
 
 // tools/spec-graph/builder.ts
 function walkDir(absDir, suffixes) {
-  if (!fs7.existsSync(absDir)) return [];
+  if (!fs8.existsSync(absDir)) return [];
   const out = [];
   const skipDirs = /* @__PURE__ */ new Set([
     "node_modules",
@@ -46662,7 +46881,7 @@ function walkDir(absDir, suffixes) {
     const current = stack.pop();
     let entries;
     try {
-      entries = fs7.readdirSync(current, { withFileTypes: true });
+      entries = fs8.readdirSync(current, { withFileTypes: true });
     } catch {
       continue;
     }
@@ -46812,7 +47031,7 @@ function buildGraph(opts) {
     const slug = specOf(`${relDir}/FILE_CHANGES.md`);
     const qualifyFr = (fr) => slug ? `${slug}:${fr}` : fr;
     const fcAbs = path4.join(specDir, "FILE_CHANGES.md");
-    if (fs7.existsSync(fcAbs)) {
+    if (fs8.existsSync(fcAbs)) {
       let rows = [];
       try {
         rows = parseFileChangesFile(fcAbs, { warnOnceState });
@@ -46828,7 +47047,7 @@ function buildGraph(opts) {
       }
     }
     const dAbs = path4.join(specDir, "DESIGN.md");
-    if (fs7.existsSync(dAbs)) {
+    if (fs8.existsSync(dAbs)) {
       let refs = [];
       try {
         refs = parseDesignFile(dAbs);
@@ -46913,7 +47132,7 @@ function buildGraphFromCwd(cwd = process.cwd()) {
 
 // tools/spec-graph/incremental.ts
 init_esm2();
-import fs8 from "node:fs";
+import fs9 from "node:fs";
 import path5 from "node:path";
 function dropFileSlice(graph, relativePath) {
   const removedNodeIds = /* @__PURE__ */ new Set();
@@ -46968,7 +47187,7 @@ function applyChange(graph, repoRoot, relativePath) {
   const kind = classify(relativePath);
   dropFileSlice(graph, relativePath);
   if (kind === "md") {
-    if (!fs8.existsSync(absPath)) return { nodesDelta: 0, edgesDelta: 0 };
+    if (!fs9.existsSync(absPath)) return { nodesDelta: 0, edgesDelta: 0 };
     const slice = parseMarkdownFile(absPath, repoRoot);
     const delta = applySlice(graph, slice);
     if (path5.basename(absPath) === "TASKS.md") {
@@ -46981,14 +47200,14 @@ function applyChange(graph, repoRoot, relativePath) {
     return delta;
   }
   if (kind === "feature") {
-    if (!fs8.existsSync(absPath)) return { nodesDelta: 0, edgesDelta: 0 };
+    if (!fs9.existsSync(absPath)) return { nodesDelta: 0, edgesDelta: 0 };
     const slice = parseGherkinFile(absPath, repoRoot);
     const delta = applySlice(graph, slice);
     rebuildBacklinks(graph);
     return delta;
   }
   if (kind === "ndjson") {
-    if (!fs8.existsSync(absPath)) return { nodesDelta: 0, edgesDelta: 0 };
+    if (!fs9.existsSync(absPath)) return { nodesDelta: 0, edgesDelta: 0 };
     const patch = parseNdjsonFile(absPath);
     const scenarios = [];
     for (const node of graph.nodes.values()) {
@@ -47017,11 +47236,11 @@ function startWatching(graph, opts) {
   const watched = [];
   for (const r of mdRoots) {
     const abs = path5.resolve(repoRoot, r);
-    if (fs8.existsSync(abs)) watched.push(abs);
+    if (fs9.existsSync(abs)) watched.push(abs);
   }
   for (const r of featureRoots) {
     const abs = path5.resolve(repoRoot, r);
-    if (fs8.existsSync(abs)) watched.push(abs);
+    if (fs9.existsSync(abs)) watched.push(abs);
   }
   watched.push(path5.resolve(repoRoot, ndjsonPath));
   const watcher = esm_default.watch(watched, {
@@ -47071,7 +47290,7 @@ function startWatching(graph, opts) {
 }
 
 // tools/spec-graph/task-census.ts
-import fs9 from "node:fs";
+import fs10 from "node:fs";
 import path6 from "node:path";
 var HARD_NEGATIVE = /* @__PURE__ */ new Set(["failed", "undefined", "ambiguous"]);
 function computeTaskCensus(graph) {
@@ -47132,24 +47351,24 @@ function taskCensusPrevPath(repoRoot) {
 }
 function writeTaskCensusCache(repoRoot, census, ts) {
   const file2 = taskCensusCachePath(repoRoot);
-  fs9.mkdirSync(path6.dirname(file2), { recursive: true });
+  fs10.mkdirSync(path6.dirname(file2), { recursive: true });
   try {
     const cur = readTaskCensusCache(repoRoot);
     if (cur && sumTotal(cur) !== sumTotal(census)) {
-      fs9.copyFileSync(file2, taskCensusPrevPath(repoRoot));
+      fs10.copyFileSync(file2, taskCensusPrevPath(repoRoot));
     }
   } catch {
   }
   const tmp = `${file2}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`;
-  fs9.writeFileSync(tmp, JSON.stringify({ ...census, ts }, null, 2) + "\n", "utf-8");
-  fs9.renameSync(tmp, file2);
+  fs10.writeFileSync(tmp, JSON.stringify({ ...census, ts }, null, 2) + "\n", "utf-8");
+  fs10.renameSync(tmp, file2);
 }
 function sumTotal(c) {
   return c.total.open + c.total.doneRed + c.total.doneUnrun;
 }
 function readCacheFile(p) {
   try {
-    const parsed = JSON.parse(fs9.readFileSync(p, "utf-8"));
+    const parsed = JSON.parse(fs10.readFileSync(p, "utf-8"));
     if (!parsed?.total || typeof parsed.total.open !== "number") return null;
     return parsed;
   } catch {
@@ -47161,7 +47380,7 @@ function readTaskCensusCache(repoRoot) {
 }
 
 // tools/spec-mcp-server/lock-manager.ts
-import fs10 from "node:fs";
+import fs11 from "node:fs";
 import path7 from "node:path";
 function detectEnvironment(envVars = process.env) {
   if (envVars.CODESPACES === "true" && envVars.CODESPACE_NAME) {
@@ -47192,9 +47411,9 @@ function lockPath(repoRoot) {
 }
 function readLock(repoRoot) {
   const p = lockPath(repoRoot);
-  if (!fs10.existsSync(p)) return null;
+  if (!fs11.existsSync(p)) return null;
   try {
-    const raw = fs10.readFileSync(p, "utf8");
+    const raw = fs11.readFileSync(p, "utf8");
     const parsed = JSON.parse(raw);
     if (typeof parsed.pid !== "number") return null;
     return parsed;
@@ -47204,7 +47423,7 @@ function readLock(repoRoot) {
 }
 function acquireLock(opts) {
   const lockFile = lockPath(opts.repoRoot);
-  fs10.mkdirSync(path7.dirname(lockFile), { recursive: true });
+  fs11.mkdirSync(path7.dirname(lockFile), { recursive: true });
   const record2 = {
     pid: process.pid,
     env: opts.env ?? detectEnvironment(),
@@ -47213,7 +47432,7 @@ function acquireLock(opts) {
     argv: process.argv.slice(2)
   };
   const write = () => {
-    fs10.writeFileSync(lockFile, JSON.stringify(record2, null, 2), { flag: "wx" });
+    fs11.writeFileSync(lockFile, JSON.stringify(record2, null, 2), { flag: "wx" });
   };
   try {
     write();
@@ -47230,7 +47449,7 @@ function acquireLock(opts) {
       throw e;
     }
     try {
-      fs10.unlinkSync(lockFile);
+      fs11.unlinkSync(lockFile);
     } catch {
     }
     write();
@@ -47243,7 +47462,7 @@ function acquireLock(opts) {
       if (released) return;
       record2.last_heartbeat = (/* @__PURE__ */ new Date()).toISOString();
       try {
-        fs10.writeFileSync(lockFile, JSON.stringify(record2, null, 2));
+        fs11.writeFileSync(lockFile, JSON.stringify(record2, null, 2));
       } catch {
       }
     },
@@ -47253,7 +47472,7 @@ function acquireLock(opts) {
       try {
         const current = readLock(opts.repoRoot);
         if (current?.pid === record2.pid) {
-          fs10.unlinkSync(lockFile);
+          fs11.unlinkSync(lockFile);
         }
       } catch {
       }
@@ -47292,7 +47511,7 @@ function acquireLockOrReadOnly(opts) {
 async function probeNativeEvents(repoRoot, timeoutMs) {
   const dir = path8.join(repoRoot, ".dev-pomogator");
   try {
-    fs11.mkdirSync(dir, { recursive: true });
+    fs12.mkdirSync(dir, { recursive: true });
   } catch {
     return false;
   }
@@ -47305,7 +47524,7 @@ async function probeNativeEvents(repoRoot, timeoutMs) {
       probe.close().catch(() => {
       });
       try {
-        fs11.unlinkSync(sentinel);
+        fs12.unlinkSync(sentinel);
       } catch {
       }
     };
@@ -47323,7 +47542,7 @@ async function probeNativeEvents(repoRoot, timeoutMs) {
     probe.on("error", () => settle(false));
     probe.on("ready", () => {
       try {
-        fs11.writeFileSync(sentinel, String(Date.now()));
+        fs12.writeFileSync(sentinel, String(Date.now()));
       } catch {
         settle(false);
       }
@@ -47333,8 +47552,8 @@ async function probeNativeEvents(repoRoot, timeoutMs) {
 function logWatcherDecision(repoRoot, message) {
   try {
     const logDir = path8.join(repoRoot, ".dev-pomogator", "logs");
-    fs11.mkdirSync(logDir, { recursive: true });
-    fs11.appendFileSync(
+    fs12.mkdirSync(logDir, { recursive: true });
+    fs12.appendFileSync(
       path8.join(logDir, "watcher.log"),
       `${(/* @__PURE__ */ new Date()).toISOString()} [watch-mode] ${message}
 `
@@ -47626,6 +47845,22 @@ function checkConformance(graph, opts = {}) {
   for (const node of graph.nodes.values()) {
     if (node.type !== "Task") continue;
     const task = node;
+    if (!task.waived || task.status !== "done") continue;
+    findings.push({
+      code: "TASK_WAIVED_CLOSED",
+      severity: "error",
+      location: { file: task.file, line: task.line },
+      message: `Task ${task.id} is marked DONE but carries a _waived:_ marker ("${task.waived}") \u2014 a deliberately-waived task must not be closed (soft fake-DONE, FR-50c). Remove the _waived: marker in a deliberate edit to un-waive before closing.`,
+      nodeId: task.id,
+      suggestions: [
+        { action: "keep_waived_open", reason: "A waived task is kept open on purpose \u2014 restore its prior Status and leave the _waived: marker in place.", confidence: "high" },
+        { action: "unwaive_then_close", reason: "If the waiver no longer applies, remove the _waived: marker line first, THEN close \u2014 closing must be a deliberate un-waive.", confidence: "medium" }
+      ]
+    });
+  }
+  for (const node of graph.nodes.values()) {
+    if (node.type !== "Task") continue;
+    const task = node;
     for (const ref of task.refs) {
       if (graph.nodes.has(ref)) continue;
       findings.push({
@@ -47856,7 +48091,7 @@ import fs21 from "node:fs";
 import path18 from "node:path";
 
 // tools/spec-mcp-server/spec-access-log.ts
-import fs12 from "node:fs";
+import fs13 from "node:fs";
 import path9 from "node:path";
 import { createHash as createHash2 } from "node:crypto";
 var MAX_SIZE_BYTES = 10 * 1024 * 1024;
@@ -47874,7 +48109,7 @@ function digestArgs(args) {
 function logSpecAccess(tool, args, decision, repoRoot = process.cwd()) {
   try {
     const file2 = specAccessLogPath(repoRoot);
-    fs12.mkdirSync(path9.dirname(file2), { recursive: true });
+    fs13.mkdirSync(path9.dirname(file2), { recursive: true });
     rotateIfNeeded(file2);
     const event = {
       ts: (/* @__PURE__ */ new Date()).toISOString(),
@@ -47882,17 +48117,17 @@ function logSpecAccess(tool, args, decision, repoRoot = process.cwd()) {
       args_digest: digestArgs(args),
       decision
     };
-    fs12.appendFileSync(file2, JSON.stringify(event) + "\n", "utf-8");
+    fs13.appendFileSync(file2, JSON.stringify(event) + "\n", "utf-8");
   } catch {
   }
 }
 function rotateIfNeeded(file2) {
   try {
-    if (!fs12.existsSync(file2)) return;
-    const stat4 = fs12.statSync(file2);
+    if (!fs13.existsSync(file2)) return;
+    const stat4 = fs13.statSync(file2);
     if (stat4.size <= MAX_SIZE_BYTES) return;
     const cutoff = Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1e3;
-    const fresh = fs12.readFileSync(file2, "utf-8").split("\n").filter((l) => {
+    const fresh = fs13.readFileSync(file2, "utf-8").split("\n").filter((l) => {
       if (!l.trim()) return false;
       try {
         return new Date(JSON.parse(l).ts).getTime() >= cutoff;
@@ -47901,8 +48136,8 @@ function rotateIfNeeded(file2) {
       }
     });
     const tmp = `${file2}.${process.pid}.tmp`;
-    fs12.writeFileSync(tmp, fresh.join("\n") + "\n", "utf-8");
-    fs12.renameSync(tmp, file2);
+    fs13.writeFileSync(tmp, fresh.join("\n") + "\n", "utf-8");
+    fs13.renameSync(tmp, file2);
   } catch {
   }
 }
@@ -47918,7 +48153,7 @@ import path11 from "node:path";
 import crypto2 from "node:crypto";
 
 // tools/anchor-integrity/check.mjs
-import fs13 from "node:fs";
+import fs14 from "node:fs";
 import path10 from "node:path";
 var HEADING_RE = /^(#{1,6})\s+(.+?)\s*$/;
 var FENCE_RE2 = /^(?:```|~~~)/;
@@ -48011,23 +48246,23 @@ function checkLinks(files) {
 }
 function checkSpecDir(dirAbs, repoRoot) {
   const files = [];
-  for (const name of fs13.readdirSync(dirAbs)) {
+  for (const name of fs14.readdirSync(dirAbs)) {
     if (!name.endsWith(".md")) continue;
     const abs = path10.join(dirAbs, name);
-    if (!fs13.statSync(abs).isFile()) continue;
+    if (!fs14.statSync(abs).isFile()) continue;
     const rel = path10.relative(repoRoot, abs).split(path10.sep).join("/");
-    files.push({ file: rel, content: fs13.readFileSync(abs, "utf-8") });
+    files.push({ file: rel, content: fs14.readFileSync(abs, "utf-8") });
   }
   return checkLinks(files);
 }
 function checkCorpus(repoRoot) {
   const specsRoot = path10.join(repoRoot, ".specs");
   const out = /* @__PURE__ */ new Map();
-  if (!fs13.existsSync(specsRoot)) return out;
-  for (const d of fs13.readdirSync(specsRoot)) {
+  if (!fs14.existsSync(specsRoot)) return out;
+  for (const d of fs14.readdirSync(specsRoot)) {
     const dir = path10.join(specsRoot, d);
     try {
-      if (!fs13.statSync(dir).isDirectory() || !fs13.existsSync(path10.join(dir, "FR.md"))) continue;
+      if (!fs14.statSync(dir).isDirectory() || !fs14.existsSync(path10.join(dir, "FR.md"))) continue;
       const b = checkSpecDir(dir, repoRoot);
       if (b.length) out.set(d, b);
     } catch {
@@ -48111,215 +48346,6 @@ function featureStrengthFindings(current, next) {
     });
   }
   return findings;
-}
-
-// tools/specs-validator/spec-form-parsers.ts
-import fs14 from "fs";
-var US_HEADING = /^###\s+User Story\s+\d+\b/;
-var US_PRIORITY = /\(Priority:\s*P[123]\)/;
-function parseUserStoryBlocks(content) {
-  const lines = content.replace(/\r\n/g, "\n").split("\n");
-  const blocks = [];
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (!US_HEADING.test(line)) continue;
-    let j = i + 1;
-    for (; j < lines.length; j++) {
-      if (US_HEADING.test(lines[j])) break;
-      if (/^##\s/.test(lines[j])) break;
-    }
-    const body = lines.slice(i, j).join("\n");
-    const hasPriority = US_PRIORITY.test(line);
-    const hasWhy = /\*\*Why:\*\*/.test(body);
-    const hasIndependentTest = /\*\*Independent Test:\*\*/.test(body);
-    const hasAcceptanceScenarios = /\*\*Acceptance Scenarios:\*\*/.test(body);
-    const missingFirst = !hasPriority && "Priority" || !hasWhy && "Why" || !hasIndependentTest && "Independent Test" || !hasAcceptanceScenarios && "Acceptance Scenarios" || null;
-    blocks.push({
-      lineNumber: i + 1,
-      heading: line.replace(/^###\s+/, ""),
-      hasPriority,
-      hasWhy,
-      hasIndependentTest,
-      hasAcceptanceScenarios,
-      missingFirst
-    });
-  }
-  return blocks;
-}
-var PHASE_HEADING = /^(?:##|###)\s+(Phase\s+[-\d]+\S*.*?)$/i;
-var TASK_BULLET = /^-\s+\[[ x]\]\s+(.+)$/;
-var TASK_HEADING = /^###\s+📋\s+`([^`]+)`/;
-var STATUS_TAG = /Status:\s*(TODO|READY|IN_PROGRESS|DONE|BLOCKED)/;
-var EST_TAG = /Est:\s*\d+\s*m/i;
-function parseTaskBlocks(content) {
-  const lines = content.replace(/\r\n/g, "\n").split("\n");
-  const blocks = [];
-  let currentPhase = "";
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const phaseMatch = line.match(PHASE_HEADING);
-    if (phaseMatch) {
-      currentPhase = phaseMatch[1].trim();
-      continue;
-    }
-    const bulletMatch = line.match(TASK_BULLET);
-    const headingMatch = line.match(TASK_HEADING);
-    if (!bulletMatch && !headingMatch) continue;
-    const title = bulletMatch ? bulletMatch[1] : headingMatch[1];
-    let j = i + 1;
-    for (; j < lines.length; j++) {
-      const nextLine = lines[j];
-      if (PHASE_HEADING.test(nextLine)) break;
-      if (bulletMatch && TASK_BULLET.test(nextLine) && !/^\s/.test(nextLine)) break;
-      if (headingMatch && TASK_HEADING.test(nextLine)) break;
-      if (bulletMatch && /^\s*$/.test(nextLine) && j + 1 < lines.length && TASK_BULLET.test(lines[j + 1])) break;
-    }
-    const body = lines.slice(i, j).join("\n");
-    const hasStatus = STATUS_TAG.test(body);
-    const hasEst = EST_TAG.test(body);
-    const hasDoneWhen = /\*\*Done When:\*\*/.test(body);
-    const waived = /_waived:\s*[^_]+_/.test(body);
-    let doneWhenCheckboxes = 0;
-    if (hasDoneWhen) {
-      const [, afterDoneWhen = ""] = body.split(/\*\*Done When:\*\*/);
-      doneWhenCheckboxes = (afterDoneWhen.match(/^\s*-\s+\[[ x]\]/gm) || []).length;
-    }
-    const isPhaseMinusOne = /Phase\s+-1/i.test(currentPhase);
-    const missingFirst = waived ? null : isPhaseMinusOne ? null : !hasDoneWhen && "Done When block" || hasDoneWhen && doneWhenCheckboxes === 0 && "Done When checkbox (at least one - [ ])" || !hasStatus && "Status tag" || !hasEst && "Est tag" || null;
-    blocks.push({
-      lineNumber: i + 1,
-      title: title.slice(0, 160),
-      phase: currentPhase,
-      hasStatus,
-      hasEst,
-      hasDoneWhen,
-      doneWhenCheckboxes,
-      waived,
-      missingFirst
-    });
-  }
-  return blocks;
-}
-var DECISION_HEADING = /^###\s+Decision:/;
-function parseDecisionBlocks(content) {
-  const lines = content.replace(/\r\n/g, "\n").split("\n");
-  const blocks = [];
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (!DECISION_HEADING.test(line)) continue;
-    let j = i + 1;
-    for (; j < lines.length; j++) {
-      if (/^###?\s/.test(lines[j])) break;
-    }
-    const body = lines.slice(i, j).join("\n");
-    const hasRationale = /\*\*Rationale:\*\*/.test(body);
-    const hasTradeoff = /\*\*Trade-?off:\*\*/.test(body);
-    const hasAlternatives = /\*\*Alternatives considered:\*\*/.test(body);
-    let alternativesCount = 0;
-    if (hasAlternatives) {
-      const [, after = ""] = body.split(/\*\*Alternatives considered:\*\*/);
-      alternativesCount = (after.match(/^\s*-\s+/gm) || []).length;
-    }
-    const missingFirst = !hasRationale && "Rationale" || !hasTradeoff && "Trade-off" || !hasAlternatives && "Alternatives considered" || hasAlternatives && alternativesCount < 2 && "Alternatives bullets (\u22652 required)" || null;
-    blocks.push({
-      lineNumber: i + 1,
-      heading: line.replace(/^###\s+/, ""),
-      hasRationale,
-      hasTradeoff,
-      hasAlternatives,
-      alternativesCount,
-      missingFirst
-    });
-  }
-  return blocks;
-}
-var CHK_ID_VALID = /^CHK-FR\d+-\d{2}$/;
-var ALLOWED_METHODS = /* @__PURE__ */ new Set([
-  "BDD scenario",
-  "Unit test",
-  "Manual review",
-  "Integration test",
-  "N/A"
-]);
-var ALLOWED_STATUSES = /* @__PURE__ */ new Set(["Draft", "In Progress", "Verified", "Blocked"]);
-function parseChkRows(content) {
-  const lines = content.replace(/\r\n/g, "\n").split("\n");
-  const rows = [];
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line.startsWith("|")) continue;
-    if (/^\|[\s-:|]+\|$/.test(line)) continue;
-    const cells = line.split("|").slice(1, -1).map((c) => c.trim());
-    if (cells.length < 5) continue;
-    const [id, requirement, tracesTo, verificationMethod, status, notes = ""] = cells;
-    if (!/^CHK-/.test(id)) continue;
-    if (id === "CHK-ID") continue;
-    const idValid = CHK_ID_VALID.test(id);
-    const tracesValid = /\bFR-\d+/.test(tracesTo) && /(AC-\d+|@feature\d+|UC-\d+)/.test(tracesTo);
-    const methodValid = ALLOWED_METHODS.has(verificationMethod);
-    const statusValid = ALLOWED_STATUSES.has(status);
-    const missingFirst = !idValid && `CHK-ID format must match CHK-FR{n}-{nn} (got "${id}")` || !tracesValid && "Traces To must include FR-N + (AC-N | @featureN | UC-N)" || !verificationMethod && "Verification Method (empty)" || !methodValid && `Verification Method must be one of: ${[...ALLOWED_METHODS].join(", ")} (got "${verificationMethod}")` || !statusValid && `Status must be one of: ${[...ALLOWED_STATUSES].join(", ")} (got "${status}")` || null;
-    rows.push({
-      lineNumber: i + 1,
-      id,
-      requirement,
-      tracesTo,
-      verificationMethod,
-      status,
-      notes,
-      idValid,
-      tracesValid,
-      methodValid,
-      statusValid,
-      missingFirst
-    });
-  }
-  return rows;
-}
-function runCheckCli(argv) {
-  const [flag, kind, file2] = argv;
-  const usage = "usage: spec-form-parsers.ts --check <user-stories|tasks|decisions|chk-rows> <file>";
-  if (flag !== "--check" || !kind || !file2) return { output: usage, exitCode: 2 };
-  let content;
-  try {
-    content = fs14.readFileSync(file2, "utf-8");
-  } catch (e) {
-    return { output: `cannot read ${file2}: ${e instanceof Error ? e.message : e}`, exitCode: 2 };
-  }
-  const violations = [];
-  switch (kind) {
-    case "user-stories":
-      for (const b of parseUserStoryBlocks(content)) {
-        if (b.missingFirst) violations.push(`${file2}:${b.lineNumber} [${b.heading}] missing: ${b.missingFirst}`);
-      }
-      break;
-    case "tasks":
-      for (const b of parseTaskBlocks(content)) {
-        if (!b.waived && b.missingFirst) violations.push(`${file2}:${b.lineNumber} [${b.title}] missing: ${b.missingFirst}`);
-      }
-      break;
-    case "decisions":
-      for (const b of parseDecisionBlocks(content)) {
-        if (b.missingFirst) violations.push(`${file2}:${b.lineNumber} [${b.heading}] missing: ${b.missingFirst}`);
-      }
-      break;
-    case "chk-rows":
-      for (const r of parseChkRows(content)) {
-        if (r.missingFirst) violations.push(`${file2}:${r.lineNumber} [${r.id}] invalid: ${r.missingFirst}`);
-      }
-      break;
-    default:
-      return { output: usage, exitCode: 2 };
-  }
-  if (violations.length === 0) return { output: `OK \u2014 0 violations (${kind})`, exitCode: 0 };
-  return { output: violations.join("\n") + `
-${violations.length} violation(s) (${kind})`, exitCode: 1 };
-}
-var isDirectRunFormParsers = process.argv[1]?.endsWith("spec-form-parsers.ts") || process.argv[1]?.endsWith("spec-form-parsers.js");
-if (isDirectRunFormParsers) {
-  const { output, exitCode } = runCheckCli(process.argv.slice(2));
-  console.log(output);
-  process.exit(exitCode);
 }
 
 // tools/spec-mcp-server/mutations.ts
@@ -48906,6 +48932,40 @@ var STATUS_TOKEN = {
   blocked: "BLOCKED"
 };
 var STATUS_TOKEN_RE = /\bStatus:\s*(?:TODO|READY|IN_PROGRESS|DONE|BLOCKED)\b/;
+function findWaivedBlock(repoRoot, id, spec) {
+  const localId = id.includes(":") ? id.slice(id.indexOf(":") + 1) : id;
+  const idRe = new RegExp(`\\bid:\\s*${localId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`);
+  const specsRoot = path16.join(repoRoot, ".specs");
+  let slugs;
+  if (spec) slugs = [spec];
+  else {
+    try {
+      slugs = fs19.readdirSync(specsRoot, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name);
+    } catch {
+      return null;
+    }
+  }
+  for (const slug of slugs) {
+    let content;
+    try {
+      content = fs19.readFileSync(path16.join(specsRoot, slug, "TASKS.md"), "utf-8");
+    } catch {
+      continue;
+    }
+    const lines = content.split(/\r?\n/);
+    for (let i = 0; i < lines.length; i++) {
+      if (!/^\s*-\s*\[[ xX~]\]/.test(lines[i]) || !idRe.test(lines[i])) continue;
+      const body = [lines[i]];
+      for (let j = i + 1; j < lines.length; j++) {
+        if (/^\s*-\s*\[[ xX~]\]/.test(lines[j]) || /^#{1,6}\s/.test(lines[j]) || /^---\s*$/.test(lines[j])) break;
+        body.push(lines[j]);
+      }
+      const wm = body.join("\n").match(WAIVED_RE);
+      if (wm) return wm[1].trim();
+    }
+  }
+  return null;
+}
 function refuseDerived(graph, node, frsWithoutResearch) {
   if (node.type === "FR") {
     const report = computeFrCensus(graph, { spec: node.spec, frsWithoutResearch });
@@ -48985,6 +49045,17 @@ function setEntityStatus(graph, repoRoot, args, frsWithoutResearch) {
     }
   }
   if (!node) {
+    if (args.to === "done") {
+      const waivedReason = findWaivedBlock(repoRoot, args.id, args.spec);
+      if (waivedReason) {
+        return {
+          ok: false,
+          error: "WAIVED",
+          to: args.to,
+          reason: `task ${args.id} is deliberately waived (${waivedReason}) \u2014 it is kept open on purpose and must not be closed. Remove the _waived: marker to un-waive before closing.`
+        };
+      }
+    }
     return { ok: false, error: "NOT_FOUND", reason: `no entity "${args.id}" in the graph${args.spec ? ` (spec "${args.spec}")` : ""}` };
   }
   if (node.type !== "Task") {
@@ -48992,6 +49063,15 @@ function setEntityStatus(graph, repoRoot, args, frsWithoutResearch) {
   }
   const task = node;
   const from = task.status;
+  if (task.waived && args.to === "done") {
+    return {
+      ok: false,
+      error: "WAIVED",
+      from,
+      to: args.to,
+      reason: `task ${args.id} is deliberately waived (${task.waived}) \u2014 it is kept open on purpose and must not be closed. Remove the _waived: marker in a deliberate edit to un-waive before closing.`
+    };
+  }
   if (!isLegalTransition(from, args.to)) {
     return {
       ok: false,

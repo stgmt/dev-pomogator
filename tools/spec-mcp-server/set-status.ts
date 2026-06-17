@@ -31,6 +31,7 @@ import {
 import { computeFrCensus } from '../spec-graph/fr-census.ts';
 import { parsePhaseId, canConfirmPhaseStop, isLegalPhaseTransition } from '../spec-graph/phase-lifecycle.ts';
 import { validateSpecChange, writeDocAtomic, casCheck } from './mutations.ts';
+import { WAIVED_RE } from '../specs-validator/spec-form-parsers.ts';
 
 /** TASKS.md `Status:` token per stored status (the parser maps these back). */
 const STATUS_TOKEN: Record<TaskStatus, string> = {
@@ -56,7 +57,52 @@ export interface SetStatusResult {
   /** FR-48e: on STATUS_DERIVED for an FR, the live `fr-census` verdict — the computed status the caller tried to hand-set. */
   verdict?: string;
   /** Machine-readable refusal class for the tool wrapper. */
-  error?: 'NOT_FOUND' | 'ILLEGAL_TRANSITION' | 'CHAIN_NOT_ASSEMBLED' | 'CAS_MISMATCH' | 'DOOR_REFUSED' | 'STATUS_DERIVED';
+  error?: 'NOT_FOUND' | 'ILLEGAL_TRANSITION' | 'CHAIN_NOT_ASSEMBLED' | 'CAS_MISMATCH' | 'DOOR_REFUSED' | 'STATUS_DERIVED' | 'WAIVED';
+}
+
+/**
+ * FR-50b: scan TASKS.md for a task block with `id: <localId>` carrying a `_waived:`
+ * marker, returning the waiver reason (or null). Used ONLY on the close/NOT_FOUND path —
+ * a waived task with a non-enum status (WONT-VERIFY) is INVISIBLE to the graph (the
+ * parser drops a non-enum header), so the node lookup misses it; this surfaces the
+ * waiver reason for a clean WAIVED refusal instead of a confusing 404 (the motivating
+ * verify-phase0-red case). Scans the given spec's TASKS.md when `spec` is known, else
+ * every spec's TASKS.md (error path — cost acceptable). Mirrors the parser's block
+ * recognition (a `- [..]` header carrying `id:`) then matches the shared WAIVED_RE.
+ */
+function findWaivedBlock(repoRoot: string, id: string, spec?: string): string | null {
+  const localId = id.includes(':') ? id.slice(id.indexOf(':') + 1) : id;
+  const idRe = new RegExp(`\\bid:\\s*${localId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`);
+  const specsRoot = path.join(repoRoot, '.specs');
+  let slugs: string[];
+  if (spec) slugs = [spec];
+  else {
+    try {
+      slugs = fs.readdirSync(specsRoot, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name);
+    } catch {
+      return null;
+    }
+  }
+  for (const slug of slugs) {
+    let content: string;
+    try {
+      content = fs.readFileSync(path.join(specsRoot, slug, 'TASKS.md'), 'utf-8');
+    } catch {
+      continue;
+    }
+    const lines = content.split(/\r?\n/);
+    for (let i = 0; i < lines.length; i++) {
+      if (!/^\s*-\s*\[[ xX~]\]/.test(lines[i]) || !idRe.test(lines[i])) continue;
+      const body: string[] = [lines[i]];
+      for (let j = i + 1; j < lines.length; j++) {
+        if (/^\s*-\s*\[[ xX~]\]/.test(lines[j]) || /^#{1,6}\s/.test(lines[j]) || /^---\s*$/.test(lines[j])) break;
+        body.push(lines[j]);
+      }
+      const wm = body.join('\n').match(WAIVED_RE);
+      if (wm) return wm[1].trim();
+    }
+  }
+  return null;
 }
 
 /**
@@ -176,6 +222,20 @@ export function setEntityStatus(
     }
   }
   if (!node) {
+    // FR-50b: a waived task may be INVISIBLE (a non-enum waiver status like WONT-VERIFY
+    // makes the parser drop the block). On a CLOSE attempt, scan TASKS.md for a `_waived:`
+    // block with this id so the agent gets the WAIVED reason, not a confusing NOT_FOUND.
+    if (args.to === 'done') {
+      const waivedReason = findWaivedBlock(repoRoot, args.id, args.spec);
+      if (waivedReason) {
+        return {
+          ok: false,
+          error: 'WAIVED',
+          to: args.to,
+          reason: `task ${args.id} is deliberately waived (${waivedReason}) — it is kept open on purpose and must not be closed. Remove the _waived: marker to un-waive before closing.`,
+        };
+      }
+    }
     return { ok: false, error: 'NOT_FOUND', reason: `no entity "${args.id}" in the graph${args.spec ? ` (spec "${args.spec}")` : ''}` };
   }
   // FR-48e: a derived entity (FR / Story / Decision / AC / Scenario / …) carries a
@@ -185,6 +245,20 @@ export function setEntityStatus(
   }
   const task = node as TaskNode;
   const from = task.status;
+
+  // FR-50b: a deliberately-waived task (carries a `_waived:` marker) must not be CLOSED
+  // via the command. The conformance floor (TASK_WAIVED_CLOSED) is the un-bypassable
+  // guarantee; this is the clean early message naming the waiver reason. Un-waiving is a
+  // deliberate edit removing the _waived: marker, never a status flip.
+  if (task.waived && args.to === 'done') {
+    return {
+      ok: false,
+      error: 'WAIVED',
+      from,
+      to: args.to,
+      reason: `task ${args.id} is deliberately waived (${task.waived}) — it is kept open on purpose and must not be closed. Remove the _waived: marker in a deliberate edit to un-waive before closing.`,
+    };
+  }
 
   if (!isLegalTransition(from, args.to)) {
     return {
