@@ -40,6 +40,9 @@ interface AutoSurfaceWorld extends V4World {
   judgeInput?: { finalMessage: string; tools: string[]; openTasks: number };
   judgePrompt?: string;
   judgeResolutions?: Record<string, { url: string; key: string; model: string } | null>;
+  csRoot?: string;
+  csBlocked?: boolean;
+  csRaw?: string;
 }
 
 // FR-49f (SPECGEN004_181): the door strength-gate refuses a .feature write that ADDS a
@@ -161,7 +164,7 @@ Then('the door refuses the stub write with a strength-layer finding and accepts 
 // must block; the same claim WITH one must approve. Pins the Cyrillic-\b regex fix (commit 2fe24e0)
 // against silent re-breakage — `дальше\b` never matched «Дальше:» so the whole layer was dead.
 const NS_HOOK = path.resolve('tools', 'claim-evidence-gate', 'claim_evidence_gate_stop.ts');
-function driveStopHook(root: string, claimText: string): boolean {
+function runStopHook(root: string, claimText: string): { blocked: boolean; raw: string } {
   const rows = [
     { type: 'user', message: { role: 'user', content: [{ type: 'text', text: 'почини' }] } },
     { type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', name: 'Edit', input: {} }] } },
@@ -174,7 +177,11 @@ function driveStopHook(root: string, claimText: string): boolean {
     encoding: 'utf-8',
     env: { ...process.env, CLAIM_GATE_ENABLED: 'true', CLAIM_GATE_JUDGE: 'false' },
   });
-  return (res.stdout || '').includes('"decision":"block"');
+  const raw = res.stdout || '';
+  return { blocked: raw.includes('"decision":"block"'), raw };
+}
+function driveStopHook(root: string, claimText: string): boolean {
+  return runStopHook(root, claimText).blocked;
 }
 
 Given('a task census with open work and the real claim-evidence-gate stop hook', function (this: AutoSurfaceWorld) {
@@ -255,3 +262,33 @@ Then(
     assert.equal(r.none, null, 'no token at all → null (judge skipped, caller fail-closes)');
   },
 );
+
+// SPECGEN004_189 (FR-49b): the census-aware false-close block — a WHOLE-spec "done" claim while the
+// task census still shows unfinished work is blocked, with the real numbers + next task injected.
+// Migrated from the vitest CEGATE001_25 to a BDD scenario driving the REAL hook (judge OFF; the
+// census-false-close is deterministic and fires before the judge).
+Given('a census with unfinished work naming a next open task and the real claim-evidence-gate stop hook', function (this: AutoSurfaceWorld) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fr49b-'));
+  writeTaskCensusCache(
+    root,
+    {
+      total: { open: 11, doneRed: 0, doneUnrun: 0 },
+      specs: [{ slug: 'demo', open: 11, doneRed: 0, doneUnrun: 0, nextOpen: { id: 'demo:wire-gate', title: 'Wire the gate' } }],
+    },
+    '2026-06-17T00:00:00Z',
+  );
+  this.csRoot = root;
+});
+
+When('the hook judges a whole-spec done claim made after a tool ran', function (this: AutoSurfaceWorld) {
+  const out = runStopHook(this.csRoot!, 'Спека готова, всё закрыто. 37 из 48.');
+  this.csBlocked = out.blocked;
+  this.csRaw = out.raw;
+});
+
+Then('the hook blocks it and the block names the unfinished count and the next task', function (this: AutoSurfaceWorld) {
+  fs.rmSync(this.csRoot!, { recursive: true, force: true });
+  assert.equal(this.csBlocked, true, 'whole-spec done claim + unfinished census → block');
+  assert.match(this.csRaw!, /в работе|незакрыто/, 'the block injects the real unfinished count');
+  assert.match(this.csRaw!, /Wire the gate/, 'the block names the concrete next open task');
+});

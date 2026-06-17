@@ -1344,3 +1344,9 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given the помогатор judge endpoint resolver
     When it resolves an OpenRouter key a claude-mem key an auto-commit key an explicit override and no token at all
     Then OpenRouter-family keys pick openrouter.ai the auto-commit key picks aipomogator the explicit override wins and no token resolves to null
+
+  @feature49
+  Scenario: SPECGEN004_189 the stop-gate blocks a whole-spec done claim while the census shows unfinished work
+    Given a census with unfinished work naming a next open task and the real claim-evidence-gate stop hook
+    When the hook judges a whole-spec done claim made after a tool ran
+    Then the hook blocks it and the block names the unfinished count and the next task
