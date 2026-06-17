@@ -48,6 +48,8 @@ interface AutoSurfaceWorld extends V4World {
   wdApproveRun?: boolean;
   nfBlockOne?: boolean;
   nfApproveTwo?: boolean;
+  vgBlock?: boolean;
+  vgApprove?: boolean;
 }
 
 // FR-49f (SPECGEN004_181): the door strength-gate refuses a .feature write that ADDS a
@@ -350,4 +352,19 @@ Then('the hook blocks the under-searched claim and approves the one backed by en
   fs.rmSync(this.wdRoot!, { recursive: true, force: true });
   assert.equal(this.nfBlockOne, true, 'a not-found claim with fewer than 2 searches → block');
   assert.equal(this.nfApproveTwo, false, 'the same claim after 2+ searches → approve');
+});
+
+// SPECGEN004_193 (claim-evidence-gate verdict-grid class): a verdict table (an analysis result) is
+// unsupported unless a tool ran this turn. Reuses the 191 fresh-repo Given; migrated from
+// CEGATE001_01/02.
+When('the hook judges a verdict grid first with no tool and then after a tool ran', function (this: AutoSurfaceWorld) {
+  const grid = 'Итог:\n| q1 | FAIL |\n| q2 | FAIL |\n| q3 | PASS |';
+  this.vgBlock = runStopHook(this.wdRoot!, grid, []).blocked; // no tool → unbacked verdict
+  this.vgApprove = runStopHook(this.wdRoot!, grid, [{ name: 'Bash', input: { command: 'npx tsx fact-check.ts' } }]).blocked;
+});
+
+Then('the hook blocks the unbacked grid and approves the one backed by a tool run', function (this: AutoSurfaceWorld) {
+  fs.rmSync(this.wdRoot!, { recursive: true, force: true });
+  assert.equal(this.vgBlock, true, 'a verdict grid with no tool run this turn → block');
+  assert.equal(this.vgApprove, false, 'the same grid after a tool ran → approve');
 });

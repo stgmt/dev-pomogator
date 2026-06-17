@@ -1368,3 +1368,9 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given a fresh repo with no census and the real claim-evidence-gate stop hook
     When the hook judges a not-found claim first after one search and then after two searches
     Then the hook blocks the under-searched claim and approves the one backed by enough searches
+
+  @feature49
+  Scenario: SPECGEN004_193 the gate blocks a verdict grid with no tool run and approves it once one runs
+    Given a fresh repo with no census and the real claim-evidence-gate stop hook
+    When the hook judges a verdict grid first with no tool and then after a tool ran
+    Then the hook blocks the unbacked grid and approves the one backed by a tool run
