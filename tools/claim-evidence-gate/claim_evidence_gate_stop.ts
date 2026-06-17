@@ -233,15 +233,23 @@ async function main(): Promise<void> {
   log('INFO', `blocking ${unsupported.cls} (attempt ${newCount})`);
   const censusTail = censusMsg && unsupported.cls !== 'spec-false-close' && unsupported.cls !== 'judge-block' ? `\n📋 ${censusMsg}` : '';
   if (unsupported.cls === 'judge-block') {
+    // The feedback MUST match the judge's APPROVE criteria (meridian-judge.ts), NOT contradict
+    // them. The old text offered «назови ОДИН следующий шаг» as an exit — but the judge BLOCKS
+    // exactly «named-a-next-step-and-stopped» (its #1 rule). Following the feedback therefore
+    // guaranteed a re-block → unwinnable loop (57-fire log, 2026-06-17). So: do the step NOW,
+    // and stop ONLY on a path the judge actually approves.
     block(
       `⚠️ ${SELF_MARKER}: судья (Meridian) счёл это преждевременным стопом — ${unsupported.need}\n` +
-        `Доделай начатое В ЭТОМ ХОДЕ или назови ОДИН конкретный следующий шаг. Не перекладывай на пользователя.`,
+        `НЕ анонсируй следующий шаг как обещание и не останавливайся на нём — СДЕЛАЙ его прямо сейчас, в этом ходе. ` +
+        `«Назвал шаг и встал» этот гейт считает стоп-сигналом, а НЕ выходом. Останавливаться можно ТОЛЬКО когда: ` +
+        `(1) текущая единица реально завершена и в сообщении НЕТ «дальше X»; (2) это чистый статус/перекличка без отложенного остатка; ` +
+        `(3) нужен ввод, который можешь дать только ты (доступ/решение без дефолта) — тогда задай ровно его.`,
     );
   } else if (unsupported.cls === 'spec-false-close') {
     block(
       `⚠️ ${SELF_MARKER}: ты заявил завершение СПЕКИ/фичи, но ${unsupported.need}\n` +
-        `Не закрывай как «готово» — доделай открытое или назови ОДИН конкретный следующий шаг. ` +
-        `GREEN-вердикт = «нет вранья про готовность», НЕ «спека закончена».`,
+        `Не закрывай как «готово»: доделай открытое СЕЙЧАС, в этом ходе, либо дай честный статус без слова «готово» и без «дальше X». ` +
+        `GREEN-вердикт = «нет вранья про готовность», НЕ «спека закончена». «Назвать остаток и встать» — это стоп-сигнал, не выход.`,
     );
   } else {
     block(
