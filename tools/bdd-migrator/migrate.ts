@@ -43,6 +43,7 @@ export interface MigrationPlan {
   scenarios: ScenarioInfo[];
   vitestFiles: string[];
   vitestTests: VitestInfo[];
+  localRunRisk: boolean;
   actions: string[];
 }
 
@@ -154,7 +155,18 @@ export function buildPlan(slug: string): MigrationPlan {
   const hasFeature = fs.existsSync(featureAbs);
   const scenarios = hasFeature ? parseScenarios(fs.readFileSync(featureAbs, 'utf-8')) : [];
   const vitestFiles = findVitestFiles(slug);
-  const vitestTests = vitestFiles.flatMap((f) => classifyVitestFile(fs.readFileSync(path.join(REPO, f), 'utf-8')));
+  const vitestSrcs = vitestFiles.map((f) => fs.readFileSync(path.join(REPO, f), 'utf-8'));
+  const vitestTests = vitestSrcs.flatMap((s) => classifyVitestFile(s));
+  // Run-safety: a test that writes into the REAL repo (.specs/.claude via APP_DIR/appPath) must
+  // run in Docker, not the local cucumber dev-loop (shared tree, parallel sessions). tmp-isolated
+  // tests (mkdtemp/tmpdir) are local-safe. This is orthogonal to test CLASS — found on
+  // create-specs-bdd-enforcement (class-clean but mutates real .specs/).
+  const localRunRisk = vitestSrcs.some(
+    (s) =>
+      /(APP_DIR|appPath\()/.test(s) &&
+      /(mkdirSync|writeFileSync|rmSync|ensureDirSync|writeJsonSync|fs\.remove)\b/.test(s) &&
+      /\.specs|\.claude/.test(s),
+  );
   const wired = hasFeature && isWired(featureRel);
 
   const actions: string[] = [];
@@ -172,7 +184,7 @@ export function buildPlan(slug: string): MigrationPlan {
     actions.push(`no slug-named vitest file — already migrated or cross-cutting (check project-test-trace.ts for orphans)`);
   }
 
-  return { spec: slug, featurePath: hasFeature ? featureRel : null, wiredInCucumber: wired, scenarios, vitestFiles, vitestTests, actions };
+  return { spec: slug, featurePath: hasFeature ? featureRel : null, wiredInCucumber: wired, scenarios, vitestFiles, vitestTests, localRunRisk, actions };
 }
 
 function render(plan: MigrationPlan): string {
@@ -205,8 +217,9 @@ export function migratability(plan: MigrationPlan): { score: number; label: stri
   const c = { runtime: 0, artifact: 0, manual: 0, unknown: 0 };
   for (const t of plan.vitestTests) c[t.cls]++;
   const total = plan.vitestTests.length || 1;
-  const score = (c.manual + c.unknown) * 100 + total;
-  const label = c.manual + c.unknown === 0 ? 'clean' : c.unknown ? 'needs-triage' : 'has-manual';
+  // run-risky specs sort LAST (must run in Docker, not the local dev-loop) regardless of class.
+  const score = (c.manual + c.unknown) * 100 + total + (plan.localRunRisk ? 200 : 0);
+  const label = plan.localRunRisk ? 'docker-only' : c.manual + c.unknown === 0 ? 'clean' : c.unknown ? 'needs-triage' : 'has-manual';
   return { score, label };
 }
 
