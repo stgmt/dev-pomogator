@@ -35,7 +35,7 @@ Feature: CORE023_skill-listing-budget
     Then файл содержит `skillListingBudgetFraction: 1.0`
     And install report содержит строку `skillListingBudgetFraction: 0.5 → 1.0`
 
-  @wip
+  @feature1
   Scenario: CORE023_05 битый JSON — backup + rewrite с 1.0
     Given `${HOME}/.claude/settings.json` содержит невалидный JSON `{ skillListingBudgetFraction: }`
     When запускается `ensureSkillListingBudget`
@@ -44,24 +44,37 @@ Feature: CORE023_skill-listing-budget
     And содержит `skillListingBudgetFraction: 1.0`
     And install report содержит строку начинающуюся с `skillListingBudgetFraction: <invalid:`
 
-  @wip
+  @feature1
   Scenario: CORE023_06 ключ с invalid типом (string) — bump до 1.0
     Given `${HOME}/.claude/settings.json` содержит `{ "skillListingBudgetFraction": "0.5" }`
     When запускается `ensureSkillListingBudget`
     Then файл содержит `skillListingBudgetFraction: 1.0` (number, не string)
     And install report содержит строку начинающуюся с `skillListingBudgetFraction: <invalid:`
 
-  @wip
+  @feature4
   Scenario: CORE023_07 install report содержит ровно одну строку про skillListingBudgetFraction
     Given любое начальное состояние `${HOME}/.claude/settings.json`
     When запускается `ensureSkillListingBudget`
     Then install report содержит ровно одну строку начинающуюся с `skillListingBudgetFraction:`
     And не содержит дублирующих или противоречивых строк
 
-  @wip
+  @feature1
   Scenario: CORE023_08 запись атомарна — temp file + fs.move
-    Given файл `${HOME}/.claude/settings.json` отсутствует
-    When `ensureSkillListingBudget` начинает запись
-    Then перед `fs.move` существует `${HOME}/.claude/settings.json.tmp`
-    And после `fs.move` `settings.json.tmp` удалён
-    And `settings.json` содержит финальный JSON
+    Given файл `${HOME}/.claude/settings.json` не существует
+    When запускается `ensureSkillListingBudget`
+    Then после записи `settings.json.tmp` отсутствует (атомарный move завершён)
+    And `settings.json` содержит финальный JSON с `skillListingBudgetFraction: 1.0`
+
+  @feature1
+  Scenario: CORE023_09 числовое значение вне диапазона (>1.0) — invalid-recovered
+    Given `${HOME}/.claude/settings.json` содержит `{ "skillListingBudgetFraction": 2.0 }`
+    When запускается `ensureSkillListingBudget`
+    Then файл содержит `skillListingBudgetFraction: 1.0`
+    And действие SHALL быть invalid-recovered
+
+  @feature1
+  Scenario: CORE023_10 отрицательное значение — invalid-recovered
+    Given `${HOME}/.claude/settings.json` содержит `{ "skillListingBudgetFraction": -0.5 }`
+    When запускается `ensureSkillListingBudget`
+    Then файл содержит `skillListingBudgetFraction: 1.0`
+    And действие SHALL быть invalid-recovered

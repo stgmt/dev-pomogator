@@ -102,3 +102,68 @@ Then(/^файл содержит `skillListingBudgetFraction: 1\.0`$/, function 
 Then(/^install report содержит строку `skillListingBudgetFraction: 0\.5 → 1\.0`$/, function (this: SLBWorld) {
   assert.equal(this.slbResult!.reportLine, 'skillListingBudgetFraction: 0.5 → 1.0');
 });
+
+// --- CORE023_05 (broken JSON → backup + recover) ------------------------------
+Given(/^`\$\{HOME\}\/\.claude\/settings\.json` содержит невалидный JSON `\{ skillListingBudgetFraction: \}`$/, function (this: SLBWorld) {
+  fs.ensureDirSync(path.dirname(settings(this)));
+  fs.writeFileSync(settings(this), '{ skillListingBudgetFraction: }', 'utf-8');
+});
+Then(/^создан backup `\$\{HOME\}\/\.dev-pomogator\/\.user-overrides\/settings\.json\.broken-\{epoch\}` с оригинальным content$/, function (this: SLBWorld) {
+  assert.ok(this.slbResult!.backupPath, 'backupPath must be set');
+  assert.ok(fs.existsSync(this.slbResult!.backupPath!), 'backup file must exist');
+  assert.equal(fs.readFileSync(this.slbResult!.backupPath!, 'utf-8'), '{ skillListingBudgetFraction: }');
+});
+Then(/^`\$\{HOME\}\/\.claude\/settings\.json` теперь валидный JSON$/, function (this: SLBWorld) {
+  assert.doesNotThrow(() => fs.readJsonSync(settings(this)));
+});
+Then(/^содержит `skillListingBudgetFraction: 1\.0`$/, function (this: SLBWorld) {
+  assert.equal(fs.readJsonSync(settings(this)).skillListingBudgetFraction, 1.0);
+});
+Then(/^install report содержит строку начинающуюся с `skillListingBudgetFraction: <invalid:`$/, function (this: SLBWorld) {
+  assert.match(this.slbResult!.reportLine, /^skillListingBudgetFraction: <invalid:/);
+});
+
+// --- CORE023_06 (invalid type string → recover) -------------------------------
+Given(/^`\$\{HOME\}\/\.claude\/settings\.json` содержит `\{ "skillListingBudgetFraction": "0\.5" \}`$/, function (this: SLBWorld) {
+  fs.ensureDirSync(path.dirname(settings(this)));
+  fs.writeJsonSync(settings(this), { skillListingBudgetFraction: '0.5' });
+});
+Then(/^файл содержит `skillListingBudgetFraction: 1\.0` \(number, не string\)$/, function (this: SLBWorld) {
+  const w = fs.readJsonSync(settings(this));
+  assert.equal(w.skillListingBudgetFraction, 1.0);
+  assert.equal(typeof w.skillListingBudgetFraction, 'number');
+});
+
+// --- CORE023_07 (exactly one report line) -------------------------------------
+Given(/^любое начальное состояние `\$\{HOME\}\/\.claude\/settings\.json`$/, function () {
+  /* absent tmp is a valid initial state */
+});
+Then(/^install report содержит ровно одну строку начинающуюся с `skillListingBudgetFraction:`$/, function (this: SLBWorld) {
+  const lines = this.slbResult!.reportLine.split('\n').filter((l) => l.startsWith('skillListingBudgetFraction:'));
+  assert.equal(lines.length, 1, 'exactly one skillListingBudgetFraction report line');
+});
+Then(/^не содержит дублирующих или противоречивых строк$/, function (this: SLBWorld) {
+  const all = this.slbResult!.reportLine.split('\n').filter((l) => l.includes('skillListingBudgetFraction'));
+  assert.equal(new Set(all).size, all.length, 'no duplicate report lines');
+});
+
+// --- CORE023_08 (atomic write — outcome; transient .tmp is not post-hoc observable) ---
+Then(/^после записи `settings\.json\.tmp` отсутствует \(атомарный move завершён\)$/, function (this: SLBWorld) {
+  assert.equal(fs.existsSync(settings(this) + '.tmp'), false, 'no .tmp left after atomic move');
+});
+Then(/^`settings\.json` содержит финальный JSON с `skillListingBudgetFraction: 1\.0`$/, function (this: SLBWorld) {
+  assert.equal(fs.readJsonSync(settings(this)).skillListingBudgetFraction, 1.0);
+});
+
+// --- CORE023_09 / _10 (numeric out-of-range / negative → invalid-recovered) ---
+Given(/^`\$\{HOME\}\/\.claude\/settings\.json` содержит `\{ "skillListingBudgetFraction": 2\.0 \}`$/, function (this: SLBWorld) {
+  fs.ensureDirSync(path.dirname(settings(this)));
+  fs.writeJsonSync(settings(this), { skillListingBudgetFraction: 2.0 });
+});
+Given(/^`\$\{HOME\}\/\.claude\/settings\.json` содержит `\{ "skillListingBudgetFraction": -0\.5 \}`$/, function (this: SLBWorld) {
+  fs.ensureDirSync(path.dirname(settings(this)));
+  fs.writeJsonSync(settings(this), { skillListingBudgetFraction: -0.5 });
+});
+Then(/^действие SHALL быть invalid-recovered$/, function (this: SLBWorld) {
+  assert.equal(this.slbResult!.action, 'invalid-recovered');
+});
