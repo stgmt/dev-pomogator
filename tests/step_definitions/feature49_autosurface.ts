@@ -23,6 +23,7 @@ import { writeTaskCensusCache, findStaleInProgress, type StaleMarker } from '../
 import { renderStaleReport } from '../../tools/spec-graph/stale-marker-scan.ts';
 import { buildTaskCensusLine } from '../../tools/specs-validator/conformance-summary.ts';
 import { validateSpecChange, type ValidateResult } from '../../tools/spec-mcp-server/mutations.ts';
+import { buildJudgePrompt } from '../../tools/claim-evidence-gate/meridian-judge.ts';
 
 interface AutoSurfaceWorld extends V4World {
   asRoot?: string;
@@ -36,6 +37,8 @@ interface AutoSurfaceWorld extends V4World {
   nsRoot?: string;
   nsBlocked?: boolean;
   nsAllowed?: boolean;
+  judgeInput?: { finalMessage: string; tools: string[]; openTasks: number };
+  judgePrompt?: string;
 }
 
 // FR-49f (SPECGEN004_181): the door strength-gate refuses a .feature write that ADDS a
@@ -193,3 +196,25 @@ Then('the hook blocks the one lacking the section and approves the one carrying 
   assert.equal(this.nsBlocked, true, 'a gray claim with open census and NO «Дальше» → block');
   assert.equal(this.nsAllowed, false, 'the same claim WITH a «Дальше:» section → approve');
 });
+
+// SPECGEN004_187 (FR-49e): the judge prompt the помогатор Haiku receives. Drives the REAL pure
+// buildJudgePrompt (no token, no network — deterministic, runs in CI). Re-covers the assertions
+// lost when the fetch-mock unit test was deleted: the census fact reaches the judge, it is told to
+// answer with ONE JSON line, and the APPROVE-side clarifying-question carve-out is preserved.
+Given('a judge input reporting twenty open tasks', function (this: AutoSurfaceWorld) {
+  this.judgeInput = { finalMessage: 'Готово, дальше посмотрю.', tools: ['Bash'], openTasks: 20 };
+});
+
+When('the помогатор judge prompt is built', function (this: AutoSurfaceWorld) {
+  this.judgePrompt = buildJudgePrompt(this.judgeInput!);
+});
+
+Then(
+  'the prompt states the open-task count and instructs a single JSON verdict line and keeps the clarifying-question carve-out',
+  function (this: AutoSurfaceWorld) {
+    const p = this.judgePrompt!;
+    assert.match(p, /20 open/, 'the census fact (20 open) reaches the judge');
+    assert.match(p, /ONLY one JSON line/, 'the judge is told to answer with exactly one JSON line');
+    assert.match(p, /genuine clarifying question/i, 'the APPROVE-side clarifying-question carve-out is present');
+  },
+);

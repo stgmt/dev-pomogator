@@ -1332,3 +1332,9 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given a task census with open work and the real claim-evidence-gate stop hook
     When the hook judges a progress claim without a «Дальше» section and then one with it
     Then the hook blocks the one lacking the section and approves the one carrying it
+
+  @feature49
+  Scenario: SPECGEN004_187 the judge prompt carries the open-task count and demands one JSON verdict line
+    Given a judge input reporting twenty open tasks
+    When the помогатор judge prompt is built
+    Then the prompt states the open-task count and instructs a single JSON verdict line and keeps the clarifying-question carve-out
