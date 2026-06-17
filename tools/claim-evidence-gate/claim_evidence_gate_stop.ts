@@ -65,6 +65,11 @@ const LOG_PREFIX = 'CLAIM-EVIDENCE-GATE';
 // claim" — the cheap gate for escalating to the Meridian judge (also requires the census
 // to show unfinished work, so the judge fires RARELY, never on a clean done or a question).
 const GRAY_SIGNAL = /(готов|сделал|закоммич|закрыл|реализова|продолж|дальше|двину|перехож|беру|next\b|done\b|commit|fixed|finish|ship|complete|wrap)/i;
+// Require-next-section (user 2026-06-17): a stop while work remains MUST carry a concrete
+// «Дальше / what's next» section. Recognised as a heading / bold / line lead-in — deterministic,
+// so the «без дальше» omission bypass can't slip (no LLM, no fail-open).
+const NEXT_SECTION_RE =
+  /(?:^|\n)\s{0,4}(?:#{1,6}\s*)?(?:\*\*\s*)?(?:что[\s-]+)?дальше\b|следующ(?:ий|ие)\s+шаг|(?:^|\n)\s{0,4}(?:#{1,6}\s*|\*\*\s*)?next steps?\b|(?:^|\n)\s{0,4}#{1,6}\s*next\b/i;
 
 function log(level: 'INFO' | 'DEBUG' | 'ERROR', message: string): void {
   _logShared(level, LOG_PREFIX, message);
@@ -173,38 +178,50 @@ async function main(): Promise<void> {
     unsupported = { cls: 'spec-false-close', need: censusMsg };
   }
 
-  // FR-49e: gray-zone judge. The fast layer (regex + census fact) did not block, but the
-  // turn ended on a progress/completion/continuation claim while the census shows unfinished
-  // work. Escalate to the Meridian Haiku judge — it catches premature-stop phrasings the regex
-  // can't match. ON by default (parity: enabled for every user like the rest of the gate); set
-  // CLAIM_GATE_JUDGE=false to disable. FAIL-OPEN if Meridian is down — judgeStop returns null
-  // (fetch ECONNREFUSED is instant, no hang), so a user without the proxy keeps the fast-layer
-  // approve at zero cost. Fires RARELY (gray signal + unfinished census).
+  // Require-next-section (user 2026-06-17): DETERMINISTIC — no LLM, no fail-open. On a stop while
+  // the census shows open work, a progress/completion claim MUST carry a concrete «Дальше:» section.
+  // Absent it → block, regardless of judge availability. This is the unbypassable core that closes
+  // the «без дальше» omission bypass; a message WITH the section then still goes to the judge below,
+  // which checks the next step is genuine (not пиздёж).
+  if (!unsupported) {
+    const c = readTaskCensusCache(repoRoot);
+    const open = c ? c.total.open + c.total.doneRed + c.total.doneUnrun : 0;
+    if (open > 0 && GRAY_SIGNAL.test(claimText) && !NEXT_SECTION_RE.test(claimText)) {
+      unsupported = { cls: 'no-next-section', need: 'в ответе при незакрытой работе нет секции «Дальше:» с конкретным следующим шагом' };
+    }
+  }
+
+  // FR-49e: gray-zone judge. The fast layer (regex + census fact + require-next-section) did not
+  // block, but the turn ended on a progress/completion/continuation claim while the census shows
+  // unfinished work. Escalate to the ПОМОГАТОР Haiku judge (the project's existing OpenAI-compatible
+  // LLM integration — OPENROUTER_API_KEY/AUTO_COMMIT_API_KEY) — it catches premature-stop phrasings
+  // the regex can't match. ON by default; set CLAIM_GATE_JUDGE=false to disable. SINGLE real path —
+  // no mock, no secondary fallback endpoint (user 2026-06-17 «никаких моков и фолбеков»). judgeStop
+  // logs WHY to stderr and returns null when помогатор is unreachable. Fires RARELY.
   if (!unsupported && (process.env.CLAIM_GATE_JUDGE ?? 'true').toLowerCase() === 'true') {
     const census = readTaskCensusCache(repoRoot);
     const unfinished = census ? census.total.open + census.total.doneRed + census.total.doneUnrun : 0;
     if (unfinished > 0 && GRAY_SIGNAL.test(claimText)) {
-      // A TRANSIENT judge failure (timeout / network blip → null) must NOT be a free
-      // pass — that fail-open was the actual escape route. Evidence (3× probe 2026-06-15):
-      // the judge BLOCKS the announce-and-stop phrasings when it RUNS, but intermittently
-      // null-failed → approve, so a premature stop slipped and the USER had to pin. Retry
-      // ONCE before honouring the fail-open. Users without Meridian still fail-open fast:
-      // ECONNREFUSED is instant, so a second instant miss costs ~nothing and still approves.
+      // A TRANSIENT judge failure (timeout / network blip → null) must NOT be a free pass —
+      // that fail-open was the actual escape route. The judge BLOCKS the announce-and-stop
+      // phrasings when it RUNS, but an intermittent null → approve let a premature stop slip and
+      // the USER had to pin. Retry ONCE before honouring the fail-closed below. A user with no
+      // помогатор token fails fast (no-token is instant), so a second miss costs ~nothing.
       const jInput = { finalMessage: claimText, tools: toolUses.map((t) => t.name), openTasks: census!.total.open };
       let verdict = await judgeStop(jInput);
       if (verdict === null) verdict = await judgeStop(jInput);
       if (verdict?.block) {
         unsupported = { cls: 'judge-block', need: verdict.reason };
       } else if (verdict === null) {
-        // NO free stop when the judge is unreachable. Both endpoints down (local Meridian AND the
-        // hosted aipomogator.ru fallback) used to fall through to approve — the last bypass. User
-        // decision 2026-06-17 («нельзя обойти»): a gray progress/completion claim while the census
-        // shows open work, with NO judge to clear it, is treated as an unconfirmed stop → BLOCK
+        // NO free stop when помогатор is unreachable. A null verdict (no token / endpoint down /
+        // unparseable — judgeStop logs WHY to stderr) used to fall through to approve — the last
+        // bypass. User decision 2026-06-17 («нельзя обойти»): a gray progress/completion claim while
+        // the census shows open work, with NO judge to clear it, is an unconfirmed stop → BLOCK
         // deterministically. The anti-loop cap below bounds it, so a genuinely-offline user is
         // released after a few kicks rather than hung (and CLAIM_GATE_JUDGE=false disables it).
         unsupported = {
           cls: 'judge-unavailable',
-          need: `судья недоступен (ни Meridian, ни aipomogator.ru), а перепись показывает ${census!.total.open} открытых задач — стоп не подтверждён`,
+          need: `помогатор-судья недоступен (см. stderr — почему), а перепись показывает ${census!.total.open} открытых задач — стоп не подтверждён`,
         };
       }
       // verdict.block === false (a reachable judge CLEARED the stop) → fall through to approve
@@ -259,6 +276,12 @@ async function main(): Promise<void> {
       `⚠️ ${SELF_MARKER}: ${unsupported.need}.\n` +
         `Не останавливайся на статусе — сделай следующий шаг СЕЙЧАС, в этом ходе. ` +
         `Стоп только если работа реально закончена ИЛИ нужен ввод, который можешь дать только ты.`,
+    );
+  } else if (unsupported.cls === 'no-next-section') {
+    block(
+      `⚠️ ${SELF_MARKER}: ${unsupported.need}.\n` +
+        `Каждый ответ при незакрытой работе ОБЯЗАН содержать секцию «Дальше:» с КОНКРЕТНЫМ следующим шагом (без воды). ` +
+        `Допиши её — и сделай этот шаг сейчас, не просто назови.`,
     );
   } else if (unsupported.cls === 'spec-false-close') {
     block(

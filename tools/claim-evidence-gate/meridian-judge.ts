@@ -1,31 +1,36 @@
 /**
  * FR-49e — the gray-zone LLM judge for the claim-evidence-gate Stop hook.
  *
- * The fast layer (regex works-done/not-found/verified + the FR-49b census fact) handles the
- * obvious cases instantly. The GRAY zone — a progress/completion claim that ended the turn,
- * which the regex did NOT match, while the census shows unfinished work — escalates HERE: a
- * one-shot Haiku call through the local Meridian subscription proxy decides block vs approve
- * by UNDERSTANDING (not phrase-matching), so the gate stops playing whack-a-mole with wording.
+ * The fast layer (regex works-done/not-found/verified + the FR-49b census fact + the deterministic
+ * require-next-section check) handles the obvious cases instantly. The GRAY zone — a progress/
+ * completion claim that ended the turn WITH a «Дальше:» section but which the regex did NOT
+ * resolve, while the census shows unfinished work — escalates HERE: a one-shot Haiku call decides
+ * block vs approve by UNDERSTANDING (not phrase-matching), so the gate stops playing whack-a-mole.
  *
- * Transport = Meridian `/v1/messages`, thinking OFF (see skill `meridian-model-call`):
- * measured ~3s vs `claude -p` ~13s, 6/6 accuracy, thinking adds nothing. NEVER `claude -p`.
+ * Transport = ПОМОГАТОР, the project's own existing LLM integration (OpenAI-compatible
+ * `/chat/completions`), reused verbatim from tools/prompt-suggest & tools/auto-commit:
+ *   OPENROUTER_API_KEY → https://openrouter.ai/api/v1   (priority)
+ *   else AUTO_COMMIT_API_KEY → https://aipomogator.ru/go/v1   (AUTO_COMMIT_LLM_URL override)
+ * SINGLE real path — NO mock transport, NO secondary fallback endpoint (user 2026-06-17:
+ * «никаких моков и фолбеков»). The token is read from process.env, and — «токен есть» — also
+ * loaded from a .env / .env.local / .env.test file in cwd when it is not already exported.
  *
- * FAIL-OPEN by contract: proxy down / non-200 / timeout / unparseable → return null, and the
- * caller keeps the fast-layer verdict. A plugin-distributed Stop hook must never hang or crash
- * because a user has no Meridian. Dep-safe: node builtins (`fetch`) only.
+ * DIAGNOSABLE: on ANY failure (no token / non-200 / timeout / unparseable) it logs WHY to stderr
+ * («помогатор недоступен — <reason>») and returns null; the caller then applies its deterministic
+ * fail-closed. A plugin Stop hook must never hang or crash. Dep-safe: node builtins (`fetch`/`fs`) only.
  *
- * @see .specs/spec-generator-v4/FR.md FR-49 (FR-49e) · AC-49.2 · .claude/skills/meridian-model-call
+ * (Filename is legacy — the transport is помогатор now, not the Meridian proxy; kept to avoid
+ * churning the two importers. The exported API — judgeStop/buildJudgePrompt — is unchanged.)
+ *
+ * @see .specs/spec-generator-v4/FR.md FR-49 (FR-49e) · AC-49.2
+ * @see tools/prompt-suggest/prompt_suggest_core.ts (loadConfig + callSuggestionLLM — the canonical caller)
  */
 
-const DEFAULT_URL = process.env.MERIDIAN_URL ?? 'http://127.0.0.1:3456';
-// When local Meridian times out (6s) or errors, FALL BACK to the hosted aipomogator.ru Haiku so a
-// down/absent local proxy is no longer a free stop (the hole the gate let through — user decision
-// 2026-06-17). Hosted = near-always reachable, so the judge actually runs. Override/disable via env;
-// optional key for the hosted endpoint. Both-down still fail-opens so an offline user never hangs.
-const FALLBACK_URL = process.env.CLAIM_GATE_JUDGE_FALLBACK_URL ?? 'https://aipomogator.ru';
-const FALLBACK_KEY = process.env.CLAIM_GATE_JUDGE_FALLBACK_KEY ?? '';
-const MODEL = 'claude-haiku-4-5-20251001';
-const TIMEOUT_MS = 6000; // user-set: 6s per endpoint, then fall back / fail-open
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+
+const MODEL_OVERRIDE = process.env.CLAIM_GATE_JUDGE_MODEL;
+const TIMEOUT_MS = 6000; // user-set: 6s, then log + fail-open(null) → caller fail-closes
 
 export interface JudgeInput {
   /** The agent's final assistant message this turn. */
@@ -39,6 +44,84 @@ export interface JudgeInput {
 export interface JudgeVerdict {
   block: boolean;
   reason: string;
+}
+
+function logUnavailable(reason: string): void {
+  // The literal user ask («логи есть почему недоступен помогатор?»): say WHY on stderr, once,
+  // on failure only. Distinguishes "no token" (config) from "endpoint refused/HTTP" (actionable).
+  try {
+    process.stderr.write(`[claim-evidence-gate] judge: помогатор недоступен — ${reason}\n`);
+  } catch {
+    /* never let logging throw */
+  }
+}
+
+// --- token loading: fill ABSENT keys from dotenv files in cwd (builtins-only parser, run once) ---
+let dotenvLoaded = false;
+function ensureDotenvLoaded(): void {
+  if (dotenvLoaded) return;
+  dotenvLoaded = true;
+  for (const name of ['.env', '.env.local', '.env.test']) {
+    try {
+      const p = path.join(process.cwd(), name);
+      if (!fs.existsSync(p)) continue;
+      for (const raw of fs.readFileSync(p, 'utf-8').split('\n')) {
+        const line = raw.trim();
+        if (!line || line.startsWith('#')) continue;
+        const m = line.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/);
+        if (!m) continue;
+        const k = m[1];
+        let v = m[2].trim();
+        if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) v = v.slice(1, -1);
+        if (!process.env[k]) process.env[k] = v; // never overwrite an already-exported value
+      }
+    } catch {
+      /* unreadable .env → ignore, fall through to "no token" */
+    }
+  }
+}
+
+interface Endpoint {
+  url: string;
+  key: string;
+  model: string;
+}
+
+/**
+ * Resolve the помогатор endpoint+key+model. Mirrors prompt_suggest_core.loadConfig and ALSO accepts
+ * the OpenRouter key this project actually carries under CLAUDE_MEM_OPENROUTER_API_KEY («токен есть»),
+ * plus a dedicated CLAIM_GATE_JUDGE_KEY override for users. NULL = no token anywhere → judge skips.
+ * Priority: explicit judge key → OPENROUTER_API_KEY → CLAUDE_MEM_OPENROUTER_API_KEY → AUTO_COMMIT_API_KEY.
+ */
+export function resolveEndpoint(): Endpoint | null {
+  ensureDotenvLoaded();
+  const judgeKey = process.env.CLAIM_GATE_JUDGE_KEY;
+  if (judgeKey) {
+    return {
+      url: process.env.CLAIM_GATE_JUDGE_URL ?? 'https://openrouter.ai/api/v1',
+      key: judgeKey,
+      model: MODEL_OVERRIDE ?? 'anthropic/claude-haiku-4.5',
+    };
+  }
+  // OpenRouter key under any known name (the project's real one is CLAUDE_MEM_OPENROUTER_API_KEY).
+  const orKey = process.env.OPENROUTER_API_KEY || process.env.CLAUDE_MEM_OPENROUTER_API_KEY;
+  if (orKey) {
+    return { url: 'https://openrouter.ai/api/v1', key: orKey, model: MODEL_OVERRIDE ?? 'anthropic/claude-haiku-4.5' };
+  }
+  const acKey = process.env.AUTO_COMMIT_API_KEY;
+  if (acKey) {
+    return {
+      url: process.env.AUTO_COMMIT_LLM_URL ?? 'https://aipomogator.ru/go/v1',
+      key: acKey,
+      model: MODEL_OVERRIDE ?? 'openrouter/anthropic/claude-haiku-4.5',
+    };
+  }
+  return null;
+}
+
+/** True when a token resolves — used by the live bench to skip cleanly when no помогатор token is configured. */
+export function judgeAvailable(): boolean {
+  return resolveEndpoint() !== null;
 }
 
 export function buildJudgePrompt(i: JudgeInput): string {
@@ -71,69 +154,65 @@ export function buildJudgePrompt(i: JudgeInput): string {
 }
 
 interface JudgeOpts {
+  /** Override the resolved endpoint base URL (tests / config). */
   url?: string;
-  /** Fallback endpoint used when the primary times out / fails (default aipomogator.ru). */
-  fallbackUrl?: string;
   timeoutMs?: number;
-  /** Injectable fetch for tests (defaults to global fetch). */
-  fetchImpl?: typeof fetch;
-}
-
-/** Call ONE judge endpoint. Returns the verdict, or NULL (non-200 / timeout / unparseable). Never throws. */
-async function callJudgeOnce(
-  base: string,
-  input: JudgeInput,
-  doFetch: typeof fetch,
-  timeoutMs: number,
-  apiKey: string,
-): Promise<JudgeVerdict | null> {
-  const url = base.replace(/\/+$/, '');
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
-  try {
-    const r = await doFetch(`${url}/v1/messages`, {
-      method: 'POST',
-      signal: ctrl.signal,
-      headers: { 'content-type': 'application/json', 'anthropic-version': '2023-06-01', 'x-api-key': apiKey || 'sk-dummy' },
-      body: JSON.stringify({
-        model: MODEL,
-        max_tokens: 120,
-        thinking: { type: 'disabled' }, // the speed knob: ~3s vs ~7s, same verdict
-        messages: [{ role: 'user', content: buildJudgePrompt(input) }],
-      }),
-    });
-    if (!r.ok) return null;
-    const j = (await r.json()) as { content?: Array<{ type: string; text?: string }> };
-    const text = (j.content ?? []).filter((b) => b.type === 'text').map((b) => b.text ?? '').join('');
-    const m = text.match(/\{[^{}]*"block"[^{}]*\}/);
-    if (!m) return null;
-    const v = JSON.parse(m[0]) as { block?: unknown; reason?: unknown };
-    if (typeof v.block !== 'boolean') return null;
-    return { block: v.block, reason: typeof v.reason === 'string' ? v.reason : 'judge verdict' };
-  } catch {
-    return null; // abort / network / parse → caller falls back, then fail-opens
-  } finally {
-    clearTimeout(timer);
-  }
 }
 
 /**
- * Ask the Haiku judge: local Meridian first (~3s), and on timeout/failure FALL BACK to the hosted
- * aipomogator.ru Haiku — so a down/absent local proxy no longer grants a free stop. Returns the
- * verdict, or NULL to FAIL-OPEN only when BOTH endpoints fail (an offline user never hangs). Never throws.
+ * Ask the помогатор Haiku judge over the project's existing OpenAI-compatible integration. ONE real
+ * call — no mock transport, no secondary endpoint. Returns the {block,reason} verdict, or NULL to
+ * FAIL-OPEN (and logs WHY) when there is no token / the endpoint fails / the reply is unparseable.
+ * Never throws — a plugin Stop hook must not crash because помогатор is unreachable.
  */
 export async function judgeStop(input: JudgeInput, opts: JudgeOpts = {}): Promise<JudgeVerdict | null> {
-  const doFetch = opts.fetchImpl ?? (typeof fetch === 'function' ? fetch : undefined);
-  if (!doFetch) return null; // no fetch (old node) → fail-open
-  const timeoutMs = opts.timeoutMs ?? TIMEOUT_MS;
-  const primary = (opts.url ?? DEFAULT_URL).replace(/\/+$/, '');
-  const primaryVerdict = await callJudgeOnce(primary, input, doFetch, timeoutMs, '');
-  if (primaryVerdict) return primaryVerdict;
-  // Primary timed out / failed → hosted fallback (key optional). Skip when it is the same URL.
-  const fallback = (opts.fallbackUrl ?? FALLBACK_URL).replace(/\/+$/, '');
-  if (fallback && fallback !== primary) {
-    const fbVerdict = await callJudgeOnce(fallback, input, doFetch, timeoutMs, FALLBACK_KEY);
-    if (fbVerdict) return fbVerdict;
+  if (typeof fetch !== 'function') {
+    logUnavailable('в этом рантайме нет global fetch (старый Node)');
+    return null;
   }
-  return null; // both down → fail-open (the only remaining free stop, and only when truly offline)
+  const ep = resolveEndpoint();
+  if (!ep) {
+    logUnavailable('нет токена — задай OPENROUTER_API_KEY или AUTO_COMMIT_API_KEY (env или .env/.env.test)');
+    return null;
+  }
+  const base = (opts.url ?? ep.url).replace(/\/+$/, '');
+  const url = `${base}/chat/completions`;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), opts.timeoutMs ?? TIMEOUT_MS);
+  try {
+    const r = await fetch(url, {
+      method: 'POST',
+      signal: ctrl.signal,
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${ep.key}` },
+      body: JSON.stringify({
+        model: ep.model,
+        max_tokens: 120,
+        temperature: 0,
+        messages: [{ role: 'user', content: buildJudgePrompt(input) }],
+      }),
+    });
+    if (!r.ok) {
+      logUnavailable(`HTTP ${r.status} ${r.statusText} от ${base} (модель ${ep.model})`);
+      return null;
+    }
+    const j = (await r.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    const text = j?.choices?.[0]?.message?.content ?? '';
+    const m = text.match(/\{[^{}]*"block"[^{}]*\}/);
+    if (!m) {
+      logUnavailable(`ответ без JSON-вердикта от ${base}`);
+      return null;
+    }
+    const v = JSON.parse(m[0]) as { block?: unknown; reason?: unknown };
+    if (typeof v.block !== 'boolean') {
+      logUnavailable(`в вердикте поле block не boolean (${base})`);
+      return null;
+    }
+    return { block: v.block, reason: typeof v.reason === 'string' ? v.reason : 'judge verdict' };
+  } catch (e) {
+    const msg = e instanceof Error ? (e.name === 'AbortError' ? `таймаут ${opts.timeoutMs ?? TIMEOUT_MS}ms` : e.message) : String(e);
+    logUnavailable(`${msg} (${base})`);
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
 }
