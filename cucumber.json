@@ -1,6 +1,6 @@
 {
   "default": {
-    "paths": [".specs/spec-generator-v4/spec-generator-v4.feature", ".specs/answer-simple/answer-simple.feature", ".specs/skill-listing-budget/skill-listing-budget.feature"],
+    "paths": [".specs/spec-generator-v4/spec-generator-v4.feature", ".specs/answer-simple/answer-simple.feature", ".specs/skill-listing-budget/skill-listing-budget.feature", ".specs/native-statusline/native-statusline.feature"],
     "import": ["tests/step_definitions/**/*.ts", "tests/hooks/**/*.ts"],
     "tags": "not @wip and not @manual",
     "format": [
