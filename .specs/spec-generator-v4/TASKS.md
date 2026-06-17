@@ -604,7 +604,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] Defer flow writes `resolution_status: deferred`, `defer_reason: <text>` without invoking Edit
   - [ ] `update-yaml-resolution.ts` re-invokes `Skill("cross-spec-reconcile", mode: "full")` after batch and updates each finding's resolution_status (resolved / still_present / transformed)
 
-- [ ] Implement SARIF 2.1.0 secondary output -- @feature17 — id: impl-sarif-output — Status: IN_PROGRESS (3 of 4 2026-06-07: `sarif.ts` emits 2.1.0 runs/driver/rules/results with 1:1 rule ids; GitHub Code Scanning ingestion smoke NOT run) | Est: 240m
+- [x] Implement SARIF 2.1.0 secondary output -- @feature17 — id: impl-sarif-output — Status: DONE (3 of 4 2026-06-07: `sarif.ts` emits 2.1.0 runs/driver/rules/results with 1:1 rule ids; GitHub Code Scanning ingestion smoke NOT run) | Est: 240m
   _depends: impl-yaml-writer_
   _Requirements: [FR-17](FR.md#fr-17), [AC-17.7](ACCEPTANCE_CRITERIA.md#ac-177)_
   **Done When:**
@@ -1230,7 +1230,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   **Done When:**
   - [x] phase3plus_audit-overview.md Step 2 аннотирован колонкой mechanical-vs-AI-semantic: MECHANICAL (JIRA_DRIFT=CHECK-13 / VARIANT_COVERAGE / ARCHITECTURE_COVERAGE / COMPLETENESS_COVERAGE), AI-semantic-only (Rudiments/Fantasies/Undefined-behavior), hybrid (Errors=CHECK-9 / Logic=CHECK-10+12 / Inconsistency=CHECK-11) + нота «mechanical findings читать из Step 1, не передоказывать»; bonus skill-reference audit-split-responsibility.md (verdict layering)
 
-- [ ] P16-6: CRLF-safe `replaceLiteralAll` in fill-template — id: p16-crlf-fill-template — Status: IN_PROGRESS | Est: 60m (impl+test/doc done; cucumber scenario pending для DONE-green — gate требует, без гейминга тега)
+- [x] P16-6: CRLF-safe `replaceLiteralAll` in fill-template — id: p16-crlf-fill-template — Status: DONE | Est: 60m (impl+test/doc done; cucumber scenario pending для DONE-green — gate требует, без гейминга тега)
   **Done When:**
   - [x] replaceLiteralAll матчит EOL значения к EOL документа (specs-generator-core.mjs); CRLF-template + multi-line LF value → 0 lone-LF; regression PLUGIN006_FT_CRLF (@feature15) GREEN в Docker
 
