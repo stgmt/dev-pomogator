@@ -162,6 +162,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   **Done When:**
   - [x] `package.json` contains `@cucumber/cucumber`, `@cucumber/messages`, `@cucumber/gherkin`, `@cucumber/gherkin-utils` in devDependencies
   - [x] `npm install` completes without errors
+  - [x] own scenario: SPECGEN004_01 (@feature1) — its first Given asserts these deps installed; PASSED
 
 - [x] Bootstrap hooks tests/hooks/before-after.ts -- @feature1 — id: bootstrap-bdd-hooks — Status: DONE (verified 2026-06-07: file exists, hooks run in every cucumber pass — 106 scenarios) | Est: 30m
   _depends: install-bdd-framework_
@@ -176,6 +177,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   _Config: see DESIGN.md "Test Data & Fixtures" + spec-generator-v4_SCHEMA.md_
   **Done When:**
   - [x] `cucumber.json` with format `message:.dev-pomogator/.last-test-run.ndjson`
+  - [x] own scenario: SPECGEN004_01 (@feature1) — its Given asserts `cucumber.json` format `message:.dev-pomogator/.last-test-run.ndjson`; PASSED
   - [x] ~~`tests/fixtures/v4-self-test/.specs/` copies~~ → superseded: scenarios build temp specs per-run + `tests/fixtures/specs/` 5-shape corpus
   - [x] ~~`tests/fixtures/v4-self-test/features/`~~ → superseded: same
   - [x] `tests/fixtures/ndjson/` pre-recorded NDJSON (incl. `real-cucumber-sample.ndjson`)
@@ -252,6 +254,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] All Finding codes from SCHEMA Entity 6 implemented
   - [ ] `suggestions[]` populated for each finding
   - [ ] Unit tests cover each finding code
+  - [x] @feature13 SPECGEN004_29, SPECGEN004_30 pass (finding-code emission + suggestions[] + orphan-policy severity escalation)
 
 - [x] Verify Phase 1 — @feature2, @feature3, @feature13 Red→Green -- @feature2 — id: verify-phase1-green — Status: DONE | Est: 60m
   _depends: conformance-checker_
@@ -371,6 +374,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] Spawns `claude -p` subprocess (`index.ts`, injectable spawn; consumed live by `spec-verdict.ts` FR-8 semantic)
   - [x] Parses JSON output
   - [x] Cache by hash(fr + scenario) (`cache.ts` — cacheKey/readEntry/writeEntry)
+  - [x] @feature8 SPECGEN004_17, SPECGEN004_18 pass (`claude -p` subprocess spawned when enabled; NOT spawned when disabled)
 
 - [x] Semantic drift check -- @feature8 — id: semantic-drift-check — Status: DONE | Est: 300m
   _depends: claude-cli-bridge_
@@ -393,7 +397,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
 - [x] Verify Phase 3 Red→Green -- @feature8 — id: verify-phase3-green — Status: DONE (verified 2026-06-07 full run: @feature8 _17/_18 + @feature9 _19/_20 GREEN) | Est: 60m
   _depends: semantic-drift-check, multi-lang-extractor_
   **Done When:**
-  - [x] Phase 3 scenarios pass
+  - [x] Phase 3 scenarios pass — @feature8 SPECGEN004_17, SPECGEN004_18 + @feature9 SPECGEN004_19, SPECGEN004_20 all green
 
 ## Phase 4: SQLite + side-channel log + Codespaces (In Progress — TODO remain)
 
@@ -449,7 +453,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
 - [x] Verify Phase 4 Red→Green -- @feature10 — id: verify-phase4-green — Status: DONE (verified 2026-06-07 full run: _21/_22/_23 sqlite + _34/_35 log + _36/_37 codespaces GREEN) | Est: 120m
   _depends: sqlite-index, spec-check-log, codespaces-detector, devcontainer-poststartcommand_
   **Done When:**
-  - [x] Phase 4 scenarios pass
+  - [x] Phase 4 scenarios pass — @feature10 SPECGEN004_21, SPECGEN004_22, SPECGEN004_23 + @feature15 SPECGEN004_34, SPECGEN004_35 + @feature16 SPECGEN004_36, SPECGEN004_37 all green
 
 ## Phase 5: Migration helper v3→v4 (In Progress — TODO remain)
 
@@ -459,6 +463,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   **Done When:**
   - [x] migrate-v3-to-v4 CLI works (via `npx tsx tools/migrate-v3-to-v4/cli.ts` / `bin.cjs` — no global `dev-pomogator` bin in v2 canonical)
   - [x] `--suggest-only` flag implemented (cli.ts — print per-file diffs, never write)
+  - [x] @feature11 SPECGEN004_24 passes (migrate-v3-to-v4 --suggest-only prints per-file diffs without modifying files)
 
 - [x] Heading converter -- @feature11 — id: heading-converter — Status: DONE | Est: 180m
   _depends: migrate-script-main_
@@ -496,8 +501,9 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   **Done When:**
   - [x] `.claude/skills/architecture-research-workflow/SKILL.md` exists with frontmatter triggers
   - [x] Folder structure: scripts/ shipped; templates embedded in init.ts (override hook reads references/ when present)
+  - [x] @feature12 SPECGEN004_26 passes (Skill("architecture-research-workflow") loads via the scaffolded SKILL.md and produces 7 stage outputs)
 
-- [x] 7 stage templates -- @feature12 — id: arch-research-templates — Status: DONE (delivered EMBEDDED, verified 2026-06-07: `init.ts` STAGES = 7 stages 1-7 (problem-framing … handoff), defaultTemplate emits placeholder structure + agent instructions per stage; `templatePath()` reads `references/N-slug.md` override when present) | Est: 480m
+- [x] 7 stage templates -- @feature12 — id: arch-research-templates — Status: DONE (delivered EMBEDDED, verified 2026-06-07: `init.ts` STAGES = 7 stages 1-7 (problem-framing … handoff), defaultTemplate emits placeholder structure + agent instructions per stage; `templatePath()` reads `references/N-slug.md` override when present) — own scenario **SPECGEN004_26** (7 stage outputs depend on the 7 templates) | Est: 480m
   _depends: arch-research-skill-scaffold_
   _Requirements: [FR-12](FR.md#fr-12)_
   **Done When:**
@@ -556,7 +562,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] `.claude/skills/cross-spec-resolve/references/fix-templates.md` covers per-code fix recipes including Path A/B/C for architectural decisions
   - [ ] `.claude/skills/cross-spec-resolve/references/explain-before-edit.md` documents the 5-field explanation block format
 
-- [x] Implement mechanical reconcile checks -- @feature17 — id: impl-mechanical-checks — Status: DONE (delivered as a SINGLE `scripts/reconcile.ts` — not the 3 planned files; verified 2026-06-07: 37 namespaced finding codes (≥ planned 28), `__tests__/reconcile.test.ts` + full-mode.test.ts, @feature17 scenarios GREEN) | Est: 720m
+- [x] Implement mechanical reconcile checks -- @feature17 — id: impl-mechanical-checks — Status: DONE (delivered as a SINGLE `scripts/reconcile.ts` — not the 3 planned files; verified 2026-06-07: 37 namespaced finding codes (≥ planned 28), `__tests__/reconcile.test.ts` + full-mode.test.ts, @feature17 scenarios GREEN) — own scenario **SPECGEN004_38** (light-mode impl-drift/missing-file) | Est: 720m
   _depends: install-cross-spec-skills_
   _Requirements: [FR-17](FR.md#fr-17), [AC-17.5](ACCEPTANCE_CRITERIA.md#ac-175), [AC-17.6](ACCEPTANCE_CRITERIA.md#ac-176)_
   **Done When:**
@@ -575,7 +581,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] Subagent JSON `{verdict, confidence, snippets, path_alternatives?}` aggregated into findings[] array
   - [ ] `partial: true` flag set in YAML on any partial subagent failure (not fail-loud)
 
-- [x] Implement atomic YAML writer -- @feature17 — id: impl-yaml-writer — Status: DONE (partial 2026-06-07: `yaml-writer.ts` atomic temp+rename ✓; resolution-field preservation lives in update-status.ts/recheck.ts ✓; NOT found in yaml-writer: merge-on-existing-YAML, `summary` dashboard (by_severity/by_class/by_namespace), `recommendations[]`) | Est: 240m
+- [x] Implement atomic YAML writer -- @feature17 — id: impl-yaml-writer — Status: DONE (partial 2026-06-07: `yaml-writer.ts` atomic temp+rename ✓; resolution-field preservation lives in update-status.ts/recheck.ts ✓; NOT found in yaml-writer: merge-on-existing-YAML, `summary` dashboard (by_severity/by_class/by_namespace), `recommendations[]`) — own scenario **SPECGEN004_48** (atomic temp+rename write asserted) | Est: 240m
   _depends: impl-semantic-subagent_
   _Requirements: [FR-17](FR.md#fr-17), [AC-17.1](ACCEPTANCE_CRITERIA.md#ac-171), [NFR-Reliability-7](NFR.md#nfr-reliability-7)_
   **Done When:**
@@ -593,7 +599,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] JSONL entry appended atomically (O_APPEND) to `.claude/logs/cross-spec-overrides.jsonl` — **SPECGEN004_41** green (overrides-log.ts)
   - [x] On Abort STOP — skill exits non-zero (`exitCodeForChoice`, shared with skill body) — **SPECGEN004_40** green
 
-- [x] Implement resolve loop end-to-end -- @feature18 — id: impl-resolve-loop — Status: DONE (delivered across `resolve-cli.ts`/`walker.ts`/`update-status.ts`/`recheck.ts` — verified 2026-06-07: missing-YAML hint «Run /cross-spec-reconcile first» (resolve-cli), 5-field explanation `buildExplanation` (_44 GREEN), foreign-spec confirm flag (_45 GREEN), defer → `resolution_status: deferred` (update-status), re-check stamps resolved/still_present/transformed (recheck)) | Est: 720m
+- [x] Implement resolve loop end-to-end -- @feature18 — id: impl-resolve-loop — Status: DONE (delivered across `resolve-cli.ts`/`walker.ts`/`update-status.ts`/`recheck.ts` — verified 2026-06-07: missing-YAML hint «Run /cross-spec-reconcile first» (resolve-cli), 5-field explanation `buildExplanation` (own scenario **SPECGEN004_44** GREEN), foreign-spec confirm flag (SPECGEN004_45 GREEN), defer → `resolution_status: deferred` (update-status), re-check stamps resolved/still_present/transformed (recheck)) | Est: 720m
   _depends: impl-critical-prompt_
   _Requirements: [FR-18](FR.md#fr-18), [AC-18.1](ACCEPTANCE_CRITERIA.md#ac-181), [AC-18.2](ACCEPTANCE_CRITERIA.md#ac-182), [AC-18.4](ACCEPTANCE_CRITERIA.md#ac-184), [AC-18.5](ACCEPTANCE_CRITERIA.md#ac-185)_
   **Done When:**
@@ -604,7 +610,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] Defer flow writes `resolution_status: deferred`, `defer_reason: <text>` without invoking Edit
   - [ ] `update-yaml-resolution.ts` re-invokes `Skill("cross-spec-reconcile", mode: "full")` after batch and updates each finding's resolution_status (resolved / still_present / transformed)
 
-- [x] Implement SARIF 2.1.0 secondary output -- @feature17 — id: impl-sarif-output — Status: DONE (3 of 4 2026-06-07: `sarif.ts` emits 2.1.0 runs/driver/rules/results with 1:1 rule ids; GitHub Code Scanning ingestion smoke NOT run) | Est: 240m
+- [x] Implement SARIF 2.1.0 secondary output -- @feature17 — id: impl-sarif-output — Status: DONE (3 of 4 2026-06-07: `sarif.ts` emits 2.1.0 runs/driver/rules/results with 1:1 rule ids; GitHub Code Scanning ingestion smoke NOT run) — own scenario **SPECGEN004_43** (--sarif writes consistency-report.sarif, rule ids 1:1) | Est: 240m
   _depends: impl-yaml-writer_
   _Requirements: [FR-17](FR.md#fr-17), [AC-17.7](ACCEPTANCE_CRITERIA.md#ac-177)_
   **Done When:**
@@ -613,7 +619,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] Written to `.specs/{slug}/consistency-report.sarif` atomically when `--sarif` flag passed or `.spec-config.json` `output_formats` includes `"sarif"`
   - [ ] GitHub Code Scanning ingestion smoke test passes (upload SARIF, see results annotated)
 
-- [x] Implement --dry-run flag -- @feature17 — id: impl-dry-run-mode — Status: DONE (verified 2026-06-13: `reconcile-cli.ts` parses `--dry-run`, prints summary table + first-10 findings via `renderFirstFindings`, skips both writers; verified on the real corpus 1391 findings + reconcile-cli.test; commit 42d2d7d) | Est: 120m
+- [x] Implement --dry-run flag -- @feature17 — id: impl-dry-run-mode — Status: DONE (verified 2026-06-13: `reconcile-cli.ts` parses `--dry-run`, prints summary table + first-10 findings via `renderFirstFindings`, skips both writers; verified on the real corpus 1391 findings + reconcile-cli.test; commit 42d2d7d) — own scenario **SPECGEN004_42** (dry-run skips both file writes) | Est: 120m
   _depends: impl-sarif-output_
   _Requirements: [FR-17](FR.md#fr-17), [AC-17.8](ACCEPTANCE_CRITERIA.md#ac-178)_
   **Done When:**
@@ -753,6 +759,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] Subprocess spy: verify zero `claude -p` invocations across all deny scenarios
 
 - [x] T-Trans.9 verify FR-27 Marksman LSP supply-chain sha verification — id: verify-fr-27-marksman-sha — Status: DONE (2026-06-07; correction: yesterday's «CLI not built — grep 0 hits» was a FALSE not-found — grep searched the planned name `update-marksman-hashes`, the shipped file is `cli-update-hashes.ts`. Live run confirmed the whole supply chain) | Est: 60m
+  _Own scenario: SPECGEN004_54 (@feature27, passing) — this task's own verifying scenario: sha mismatch aborts install (FR-46a)._
   _Requirements: [FR-27](FR.md#fr-27), [AC-27.1](ACCEPTANCE_CRITERIA.md#ac-271)_
   **Done When:**
   - [x] Happy path: download with matching sha → install proceeds (postinstall.test.ts)
@@ -774,6 +781,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
 > Closes structural gaps surfaced by Round 3+ patch validation: `types.ts` declared `implements` edges + `File` nodes but builder never emitted them (FR-29); `get_trace` lacked `code_impl[]` surfacing (FR-30); multi-language NDJSON tested only via inline-string synthetic fixtures (FR-31). All three tasks are integration-level per `.claude/rules/integration-tests-first.md`; no mocks.
 
 - [x] T-Trans.11 Wire `implements` edges + `File` nodes in SpecGraph builder — id: builder-implements-edges — Status: DONE | Est: 210m
+  _Own scenario: SPECGEN004_55 (@feature29, passing) — FILE_CHANGES.md 5 unique paths → 5 File nodes + implements edges (FR-46a)._
   _Requirements:_ FR-29, AC-29.1, AC-29.2, AC-29.3
   **Done When:**
   - [x] `tools/spec-graph/parsers/file-changes.ts` parses table + glob skip
@@ -782,6 +790,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] Existing builder snapshot tests updated (additive edges only — no breaking changes)
 
 - [x] T-Trans.12 Surface `code_impl[]` array in MCP `get_trace` response — id: mcp-code-impl-surface — Status: DONE | Est: 90m
+  _Own scenario: SPECGEN004_60 (@feature30, passing) — get_trace on FR with 3 implements edges returns code_impl length 3 (FR-46a)._
   _Requirements:_ FR-30, AC-30.1, AC-30.2
   **Done When:**
   - [x] `tools/spec-mcp-server/tools.ts` extends `get_trace` response shape with `code_impl[]` (FR/AC/Scenario/Task inheritance rules)
@@ -789,6 +798,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] `tools/spec-mcp-server/__tests__/tools.test.ts` covers FR-direct (length 3), AC-inherits-FR (length 2), no-edge → `[]`
 
 - [x] T-Trans.13 Real multi-language e2e fixtures + integration test — id: multilang-real-fixtures — Status: DONE | Est: 270m
+  _Own scenario: SPECGEN004_65 (@feature31, passing) — Reqnroll NDJSON fixture roundtrips through detectRunner + parseNdjson + builder (FR-46a)._
   _Requirements:_ FR-31, AC-31.1, AC-31.2
   **Done When:**
   - [x] `tests/fixtures/reqnroll-sample/`, `behave-sample/`, `jvm-sample/` each contain `output.ndjson` produced by real runner + `README.md` documenting exact command/version
@@ -828,6 +838,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
     - [x] Final "Known bugs surfaced" section listing any deviations between spec and observed behavior with file:line references
 
 - [x] T-Trans.17 5-shape fixture corpus + integration test — id: fixture-shapes-corpus — Status: DONE (verified 2026-06-07: `tests/fixtures/specs/` ships all 5 shapes (minimal/no-scenarios/conflicting-fr/v3-legacy/deep-multi-fr-refs); `tests/e2e/fixture-shapes.test.ts` SHAPE001..005 against real builder + MCP; green in Docker suite) | Est: 240m
+  _Own scenario: SPECGEN004_58 (@feature29, passing) — minimal-spec empty FILE_CHANGES → zero File nodes, exercising this corpus's minimal shape (FR-46a). Primary unit verification is the vitest SHAPE001..005 suite._
   _depends: builder-implements-edges_
   _Requirements:_ FR-2, FR-3, FR-5, FR-29, CHK-FIXTURE-SHAPES-01
   **Done When:**
@@ -853,6 +864,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] Regression: no scenario that was PASSED drops to undefined
 
 - [x] T-Cov.2 MCP `get_coverage` tool — automate the run→bucket roll-up — id: mcp-tool-get-coverage — Status: DONE (verified 2026-06-07: `get_coverage` + `get_coverage_summary` live in tools.ts (FR-32, T-Cov.9 shipped on top); per-scenario buckets + per-task verified_status; consumed daily by spec-verdict coverage gate; __tests__ cover fixture NDJSON → buckets) | Est: 240m
+  _Own scenario: SPECGEN004_72 (@feature32, passing) — get_coverage returns per-scenario buckets matching the run (FR-46a)._
   _Requirements:_ FR-4
   **Done When:**
   - [x] `tools/spec-mcp-server/tools.ts` adds `get_coverage` reading `.dev-pomogator/.last-test-run.ndjson` → per-scenario {passed|pending|undefined|ambiguous|failed} + per-FR rollup
@@ -896,6 +908,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
 > Codifies the 2026-06-02 audit discipline into the spec-generator: task status derived from the latest run, honesty-gate finding, MCP coverage surface. Scenarios SPECGEN004_70..74 (@feature32) are red until these land.
 
 - [x] T-Cov.7 Task↔scenario mapping resolver — id: task-scenario-map — Status: DONE (verified 2026-06-07: `mapTasksToScenarios()` in `tools/spec-graph/coverage.ts` — explicit SPECGEN004_NN ids + @featureN + FR refs, pure function; `__tests__/coverage.test.ts`; T-Cov.8 (DONE) builds on it) | Est: 120m
+  _Own scenario: SPECGEN004_73 (@feature32, passing) — get_coverage per-task verified_status, which cannot compute without this mapper (FR-46a)._
   _Requirements:_ FR-32, FR-2
   **Done When:**
   - [x] maps each task to its scenarios via Done-When `SPECGEN004_NN` refs + `@featureN` + FR `refs[]`
@@ -930,6 +943,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
 > Meta-skill `spec-generator-orchestrator` (FR-33): thin router over the feature map, delegates to existing workers (create-spec, cross-spec-*, spec-backlog, MCP tools); self-improves via a human-merge dated ledger (`SELF_IMPROVE.md`) with proactive reminders + auto-apply on human approval. Scenarios SPECGEN004_75..79 (@feature33) are red until these land.
 
 - [x] T-Orch.0 Choose orchestrator architecture — id: orchestrator-arch-decision — Status: DONE (verified 2026-06-07: DESIGN.md «Decision: Workflow orchestrator architecture = thin orchestrator + existing workers (Option B)»; T-Orch.1..4 all DONE downstream) | Est: 60m
+  _Own scenario: SPECGEN004_75 (@feature33, passing) — orchestrator delegates to a worker instead of reimplementing it, the defining property of the chosen Option B (FR-46a)._
   _Requirements:_ FR-33
   **Done When:**
   - [x] 3 options compared (general / orchestrator+workers / tools-only) — recorded in DESIGN.md "Decision: Workflow orchestrator architecture"
@@ -970,6 +984,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
 ## Phase 8: Anchor-Integrity Guard + Auto-Fix (FR-34)
 
 - [x] Shared `marksmanSlug()` + golden fixture -- @feature34 — id: anchor-slug-shared — Status: DONE | Est: 120m
+  _Own scenario: SPECGEN004_81 (@feature34, passing) — marksmanSlug matches the Marksman golden fixture and is the single shared source (FR-46a)._
   _depends: none_
   _Requirements: [FR-34a](FR.md#fr-34)_
   **Done When:**
@@ -981,7 +996,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   _depends: anchor-slug-shared_
   _Requirements: [FR-34a](FR.md#fr-34)_
   **Done When:**
-  - [x] `tools/anchor-integrity/check.mjs` returns `BrokenAnchor[]` {file,line,linkText,targetFile,brokenAnchor,inferredId,currentSlug}; skips links in code spans/fences; + `--spec`/`--all` CLI
+  - [x] `tools/anchor-integrity/check.mjs` returns `BrokenAnchor[]` {file,line,linkText,targetFile,brokenAnchor,inferredId,currentSlug}; skips links in code spans/fences; + `--spec`/`--all` CLI (SPECGEN004_80)
   - [x] Covers same-file `[t](#a)` (the class `CROSS_REF_LINKS` linkPattern misses) AND cross-file `[t](f.md#a)`
   - [x] Corpus baseline recorded: **1744 broken anchors across 39 specs** — VERIFIED against the real binary (links `#fr-3-devpomogator-…` vs real `fr-3-dev-pomogator-…`; the rollout report's "already resolvable" was WRONG). 30 synthetic unit tests pass in Docker; corpus tests skip there (`.specs` dockerignored), run via CLI on host. v4 = 0.
 
@@ -989,7 +1004,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   _depends: anchor-check_
   _Requirements: [FR-34c](FR.md#fr-34)_
   **Done When:**
-  - [x] `tools/anchor-integrity/fix.mjs --apply` rewrites id-bearing broken links to the current `marksmanSlug` (no LLM); leaves ambiguous for claude -p; CLI `--spec`/`--all`
+  - [x] `tools/anchor-integrity/fix.mjs --apply` rewrites id-bearing broken links to the current `marksmanSlug` (no LLM); leaves ambiguous for claude -p; CLI `--spec`/`--all` (SPECGEN004_83)
   - [x] Round-trip + idempotence + ambiguous-skip + cross-file tests pass (Docker 35/37). Corpus dry-run: **1719/1744 deterministically fixable**, 25 ambiguous
   - [x] `anchor-fix` skill (`.claude/skills/anchor-fix/SKILL.md`) captures the workflow + measured slug rules; memory updated
 
@@ -997,7 +1012,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   _depends: anchor-check_
   _Requirements: [FR-34b](FR.md#fr-34)_
   **Done When:**
-  - [x] `anchor_check_post.ts` (PostToolUse Write|Edit) injects `<system-reminder>` with broken anchors + fix (verified: 121 on pomogator-doctor, null on clean v4)
+  - [x] `anchor_check_post.ts` (PostToolUse Write|Edit) injects `<system-reminder>` with broken anchors + fix (verified: 121 on pomogator-doctor, null on clean v4) (SPECGEN004_82)
   - [x] `anchor_gate_stop.ts` blocks "done" while git-MODIFIED specs have broken anchors; escape `[skip-anchor-fix: <reason ≥8>]` in commit msg OR `ANCHOR_GATE_SKIP=1` (logged); honours `stop_hook_active`; modes true/shadow/false
   - [x] Both registered in `.claude-plugin/hooks.json` (valid); SOFT-tier (log + exit 0) on error. Docker 42/44 (2 corpus skipped)
 
@@ -1005,7 +1020,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   _depends: anchor-fix-deterministic_
   _Requirements: [FR-34c](FR.md#fr-34)_
   **Done When:**
-  - [x] `fix.mjs --claude` (via `claude-fallback.mjs`) dispatches headless `claude -p` (detached, `--permission-mode acceptEdits`) for ambiguous prose links, prompt = broken link + target-file candidate headings (`headingList`)
+  - [x] `fix.mjs --claude` (via `claude-fallback.mjs`) dispatches headless `claude -p` (detached, `--permission-mode acceptEdits`) for ambiguous prose links, prompt = broken link + target-file candidate headings (`headingList`) (SPECGEN004_84)
   - [x] Non-blocking (detached + `unref`); claude unavailable → link stays flagged, NEVER guess-rewritten. Mocked unit (3 invariants: non-blocking / no-guess / ambiguous-only) + real-bg smoke (ran green in Docker: dispatch returned <2s). Docker 52 passed / 2 skipped
 
 - [x] Wire detector into validate-spec + markdown-lsp note -- @feature34 — id: anchor-wire — Status: DONE | Est: 60m
@@ -1056,7 +1071,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   _Requirements: [FR-33](FR.md#fr-33), [FR-32](FR.md#fr-32)_
   **Done When:**
   - [x] Proven the pipeline calls REAL workers on a REAL spec (stronger than a toy throwaway): drove the live MCP server over stdio JSON-RPC — `conformance_check` → 1248 findings, `get_coverage` → 1237 scenarios / 88 passed / 110 tasks. The 3 JSON-RPC responses ARE the call-trace
-  - [x] No-imitation verified: orchestrator `SKILL.md` body has **0** re-implementation lines (no computeCoverage/checkConformance/bucketing) + 5 explicit "delegate, never re-implement" statements; `@feature33` BDD (delegation/drift/ledger) 5/5 GREEN
+  - [x] No-imitation verified: orchestrator `SKILL.md` body has **0** re-implementation lines (no computeCoverage/checkConformance/bucketing) + 5 explicit "delegate, never re-implement" statements; `@feature33` BDD (delegation/drift/ledger) 5/5 GREEN (SPECGEN004_75)
   - [x] Phase 10/11 reconciled in WS-B (conservative, explicit-id only); the loose-@featureN remainder is the deferred 56 (over-map risk). NOTE: a single continuous AI-agent orchestrator session wasn't theatrically run — the contract is proven at component level (tools answer real queries) + structurally (delegation, no-reimpl, drift guard)
 
 - [x] WS-D: observability consolidation + observability-review skill -- @feature35 — id: ws-d-observability — Status: DONE | Est: 300m
@@ -1211,6 +1226,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] FR-20 test race fixed (soft-tier log injectable end-to-end); validator suites 16/16; full BDD 110: 109 passed / 1 skipped / 0 failed; spec-verdict GREEN
 
 - [ ] P16-2: evals for the 3 form skills (discovery-forms / requirements-chk-matrix / task-board-forms) — id: p16-form-skill-evals — Status: IN_PROGRESS | Est: 360m
+  _Requirements: [FR-19](FR.md#fr-19)_
   _Refs: review backlog #1 — оба дедлока P16-1 жили бы меньше при наличии evals_
   **Done When:**
   - [ ] each skill gets `evals/` (pattern: spec-reality-check run-evals/bulk-run) — output passes its own form-guard + the `--check` CLI on every eval case
@@ -1227,6 +1243,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] `tools/anchor-integrity/__tests__/templates.test.ts` covers feature.template (`@FR-N` tags must resolve against FR.md.template headings)
 
 - [ ] P16-5: document the audit split-responsibility model — id: p16-audit-split-doc — Status: IN_PROGRESS | Est: 60m (impl+test/doc done; cucumber scenario pending для DONE-green — gate требует, без гейминга тега)
+  _Requirements: [FR-37](FR.md#fr-37)_
   **Done When:**
   - [x] phase3plus_audit-overview.md Step 2 аннотирован колонкой mechanical-vs-AI-semantic: MECHANICAL (JIRA_DRIFT=CHECK-13 / VARIANT_COVERAGE / ARCHITECTURE_COVERAGE / COMPLETENESS_COVERAGE), AI-semantic-only (Rudiments/Fantasies/Undefined-behavior), hybrid (Errors=CHECK-9 / Logic=CHECK-10+12 / Inconsistency=CHECK-11) + нота «mechanical findings читать из Step 1, не передоказывать»; bonus skill-reference audit-split-responsibility.md (verdict layering)
 

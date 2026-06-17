@@ -8,6 +8,8 @@
 
 ### User Story 1: Phase 0 — Real BDD with NDJSON output (Priority: P1)
 
+**Требование:** [FR-1](FR.md#fr-1)
+
 As a Developer working in dev-pomogator (TypeScript), I want real cucumber-js BDD with NDJSON output, so that v4 graph builder has machine-readable test trace data instead of vitest pseudo-BDD (.feature as documentation only).
 
 **Why:** Without canonical Cucumber Messages NDJSON, v4 cannot trace FR → Scenario → TestCase → PASS/FAIL automatically; agent has to grep stdout, error-prone and slow.
@@ -31,6 +33,8 @@ Then cucumber-js BDD is mandatory additive (not replace) — both test suites ru
 ---
 
 ### User Story 2: Phase 1 — Full SpecGraph in one call (Priority: P1)
+
+**Требование:** [FR-2](FR.md#fr-2)
 
 As an AI agent (Claude Code) working on a feature spec, I want to get the full SpecGraph slice (FR ↔ AC ↔ Scenario ↔ TestResult ↔ code refs) via a single MCP call, so that I don't waste context on N sequential Read operations and don't hallucinate connections.
 
@@ -56,6 +60,8 @@ Then `related_nodes` includes FR-005 with `reason` field explaining the link typ
 
 ### User Story 3: Phase 1 — Dual-anchor custom MD parser with backward compat (Priority: P1)
 
+**Требование:** [FR-3](FR.md#fr-3)
+
 As a Developer migrating from v3 specs, I want both `[[fr-001-login]]` (Marksman-native) and `[[FR-001]]` (compact alias) wiki-links to resolve to the same heading, so that I can use whichever form is appropriate for context and existing v3 `### Requirement: FR-N` headings keep working.
 
 **Why:** Pure Marksman generates long slugs like `requirement-fr-001-login`; agents prefer short `[[FR-001]]`; humans sometimes want descriptive long form. Dual-anchor satisfies both without breaking v3 backward compat.
@@ -80,6 +86,8 @@ Then it correctly navigates to `### FR-001: Login` heading in `FR.md`
 
 ### User Story 4: Phase 2 — MCP server `get_trace` with natural-language explanation (Priority: P1)
 
+**Требование:** [FR-4](FR.md#fr-4)
+
 As an AI agent, I want MCP `get_trace(node_id)` to return both structured data AND a natural-language `explanation_for_agent` field, so that I can immediately understand context without reasoning over raw JSON.
 
 **Why:** Structured data alone forces agent to interpret — that's where hallucinations creep in. Pre-written explanation grounds the agent in fact.
@@ -99,6 +107,8 @@ Then `explanation_for_agent` summary opens with concrete counts (e.g., "2 AC, 3 
 ---
 
 ### User Story 5: Phase 2 — PreToolUse HARD hooks for syntax invariants (Priority: P1)
+
+**Требование:** [FR-5](FR.md#fr-5)
 
 As a Developer, I want PreToolUse hooks to BLOCK Write/Edit on spec files when the change introduces syntax errors, duplicate FR-N IDs, or malformed YAML frontmatter, so that I never commit broken graph integrity.
 
@@ -124,6 +134,8 @@ Then hook decision depends on configured policy (default: soft warn, not block)
 
 ### User Story 6: Phase 2 — PostToolUse always-push conformance feedback (Priority: P1)
 
+**Требование:** [FR-6](FR.md#fr-6)
+
 As a Developer, I want PostToolUse hook to automatically inject conformance check findings into agent context after each Edit on `.specs/**/*.md` or `**/*.feature`, throttled to max 1 push per 3 seconds with aggregation, so that the agent sees drift immediately without forgetting to call `conformance_check` manually.
 
 **Why:** Pull-only (agent must call MCP) means agent forgets. Push with 3s throttle balances real-time feedback against bulk-edit spam.
@@ -147,6 +159,8 @@ Then the push is silenced for that file (escape hatch for red phase / bulk migra
 ---
 
 ### User Story 7: Phase 2 — Marksman bundle install for IDE-rich features (Priority: P2)
+
+**Требование:** [FR-7](FR.md#fr-7)
 
 As a Developer using VS Code / Neovim / Obsidian / any LSP-compatible editor, I want Marksman LSP installed silently by default as part of dev-pomogator install, so that I get hover, goto-definition, find-references, and broken-link diagnostics for `[[FR-001]]`-style wiki-links out of the box.
 
@@ -172,6 +186,8 @@ Then VS Code navigates to `### FR-005: ...` heading
 
 ### User Story 8: Phase 3 — LLM-as-judge semantic drift check (opt-in) (Priority: P3)
 
+**Требование:** [FR-8](FR.md#fr-8)
+
 As a Developer who wants stronger spec-test alignment, I want an opt-in semantic drift check via Haiku subagent that verifies whether Scenario Given/When/Then text semantically matches the FR description, so that I catch cases where tests technically pass but don't actually validate the requirement.
 
 **Why:** Structural checks miss semantic gaps (test calls auth API but FR says "redirect to login page" — both pass syntactic check, semantically misaligned). Opt-in because subagent calls cost tokens.
@@ -193,6 +209,8 @@ Then only structural checks run; no subagent invocation; no LLM token spend
 
 ### User Story 9: Phase 3 — Multi-language BDD support (C#/Python/Java) (Priority: P3)
 
+**Требование:** [FR-9](FR.md#fr-9)
+
 As a Developer working in a non-TypeScript project (C#, Python, or Java), I want the same v4 graph + MCP + conformance flow to work with Reqnroll (C#), behave (Python), or Cucumber-JVM (Java), so that v4 isn't locked to TS only.
 
 **Why:** Cucumber Messages NDJSON is a language-agnostic standard; all major BDD runners emit it. v4 should leverage that, not duplicate logic per language.
@@ -212,6 +230,8 @@ Then v4 NDJSON ingester parses the file successfully and populates SpecGraph
 ---
 
 ### User Story 10: Phase 4 — SQLite cross-session shared spec graph (Priority: P3)
+
+**Требование:** [FR-10](FR.md#fr-10)
 
 As a Developer running multiple Claude Code sessions on the same project (e.g., one for feature work, one for debugging), I want a persistent SQLite spec index shared across sessions, so that I don't pay 1-2s rebuild cost per session start and findings are consistent.
 
@@ -237,6 +257,8 @@ Then automatic fallback to in-memory rebuild + warning logged
 
 ### User Story 11: Phase 5 — Migration helper v3→v4 (Priority: P2)
 
+**Требование:** [FR-11](FR.md#fr-11)
+
 As an existing dev-pomogator v3 user with 20+ feature specs, I want a `dev-pomogator migrate-v3-to-v4` command with interactive diff approval and "suggestion mode" (preview without applying), so that I can upgrade without manually editing every spec.
 
 **Why:** Forcing manual migration across 20+ specs is a non-starter. Auto-migration with consent is acceptable; silent auto-rewrite is risky.
@@ -260,6 +282,8 @@ Then it predicts FR tags via naming heuristic (e.g., `Scenario: User logs in` �
 ---
 
 ### User Story 12: Phase 6 — `architecture-research-workflow` skill (Priority: P2)
+
+**Требование:** [FR-12](FR.md#fr-12)
 
 As a Maintainer of dev-pomogator, I want a 7-stage `architecture-research-workflow` skill that encapsulates pain validation → broad research → focused pushback → variant generation → decision locking → phased rollout → hand-off to create-spec, so that future major features take 5-8 turns instead of 30+.
 
@@ -285,6 +309,8 @@ Then it invokes regular `research-workflow` (not `architecture-research-workflow
 
 ### User Story 13: Orphan resolution policy (warn-default, not block) (Priority: P2)
 
+**Требование:** [FR-13](FR.md#fr-13)
+
 As a Developer in red-phase TDD, I want orphan scenarios (Scenario with `@FR-N` tag where FR-N doesn't exist) and untagged scenarios to surface as warnings (default), not blocking errors, so that I can write failing tests first without the tooling getting in my way.
 
 **Why:** Forcing every test to have a matching FR upfront breaks the TDD red-green-refactor cycle. Default-warn allows red phase; teams can escalate to block via config.
@@ -308,6 +334,8 @@ Then result includes finding code `UNTAGGED_SCENARIO` with severity `warning`
 ---
 
 ### User Story 17: Phase 7 — Cross-spec conflict detection during spec authoring (Priority: P1)
+
+**Требование:** [FR-17](FR.md#fr-17)
 
 As a spec author drafting a new `.specs/{slug}/`, I want create-spec workflow to automatically detect conflicts between my draft and existing specs in `.specs/*/` — runtime identifier drift (e.g. my spec writes `sessionToken` while another spec uses `session_token` for the same concept), module ownership conflicts (two specs claim `src/auth/jwt.ts`), contradictory FRs, NFR budget mismatches — so that I learn about cross-spec collisions during Phase 2/3 STOP gates rather than discovering them weeks later during implementation merge.
 
@@ -333,6 +361,8 @@ Then `findings[0].acknowledged_by` is `user`, `override_reason` is the supplied 
 
 ### User Story 18: Phase 7 — Spec-vs-implementation drift surfaces before implementation starts (Priority: P1)
 
+**Требование:** [FR-17](FR.md#fr-17)
+
 As a spec author finalizing `.specs/{slug}/DESIGN.md`, I want the reconcile skill to verify that claims in my DESIGN.md (file paths, exported symbols, MCP tool names, hook registrations declared in extension.json) actually exist in the codebase, so that I do not specify implementation against ghost code (file renamed, symbol removed, hook not registered).
 
 **Why:** Spec drift compounds — DESIGN.md ages 6 months while code refactor renames files; specs reference functions that no longer export. Implementor follows spec, hits ERR_MODULE_NOT_FOUND, has to re-trace which spec is wrong. Cost is multiplied across N implementations referencing the stale claim.
@@ -356,6 +386,8 @@ Then YAML report includes `partial: true` flag and uses fs+remark+glob to parse 
 ---
 
 ### User Story 19: Phase 7 — Resolver explains and confirms each fix before applying (Priority: P1)
+
+**Требование:** [FR-18](FR.md#fr-18)
 
 As a spec author with `.specs/{slug}/consistency-report.yaml` produced by reconcile, I want `/cross-spec-resolve` skill to walk me through each finding — explain the finding code, target files with line ranges, what will change in plain language, WHY this fix follows from the finding, and offer Apply/Skip/Defer options — so that I never silently apply a fix I do not understand, especially when the fix touches another team's spec or the implementation code.
 
@@ -381,6 +413,8 @@ Then YAML is updated with `findings[i].resolution_status: deferred`, `defer_reas
 
 ### User Story 20: Phase 7 — Architect resolves Path A/B/C forks for architectural conflicts (Priority: P2)
 
+**Требование:** [FR-18](FR.md#fr-18)
+
 As an architect reviewing a reconcile report that contains an `impl-drift/architectural-decision-vs-reality` finding (e.g., spec says «separate agent on port 8005», code says «inline TS service in pipeline/agent.ts»), I want the resolve skill to present 2-3 Path alternatives with trade-offs (pros, cons, impacted files) and let me explicitly choose the direction, so that architectural divergences are routed through human judgment rather than auto-fixed or dumped as a passive finding.
 
 **Why:** Per arXiv 2602.07609 + prior art survey (spec-kit, mex, OpenFastTrace, Spectral), the largest gap is that existing tools either dump findings and walk away or apply one auto-fix path. Architectural decisions inherently require human routing — LLMs perform well on code-inferable decisions but poorly on implicit/deployment decisions. Path A/B/C surfacing of the choice IS the novel UX contribution.
@@ -404,6 +438,8 @@ Then `Skill("cross-spec-reconcile", mode: "full")` is invoked once and each orig
 ---
 
 ### User Story 14: Devcontainer / multi-env support (Priority: P2)
+
+**Требование:** [FR-14](FR.md#fr-14)
 
 As a Developer working in a VS Code devcontainer (or WSL, Codespaces, Hyper-V VM), I want dev-pomogator v4 MCP server to work out of the box with correct path handling and file watching, so that I don't have to manually configure paths or worry about bind-mount FS events.
 
@@ -429,6 +465,8 @@ Then it detects existing lock file with different `env` tag and DENIES with clea
 
 ### User Story 15: Phase 4 — Side-channel conformance log (Priority: P3)
 
+**Требование:** [FR-15](FR.md#fr-15)
+
 As a Developer / team lead, I want all conformance findings to be appended to a persistent log `.dev-pomogator/.spec-check-log/<timestamp>.jsonl`, so that I can grep history, run analytics (e.g., "which FRs failed conformance most often"), and audit spec drift over time without flooding agent context.
 
 **Why:** PostToolUse push gives real-time feedback but disappears. Persistent log enables retrospective analysis + team audit + ML training data для future LLM-based checks (Phase 3+).
@@ -452,6 +490,8 @@ Then it returns aggregated counts per FR + per file with last occurrence timesta
 ---
 
 ### User Story 16: Phase 4 — GitHub Codespaces support (Priority: P3)
+
+**Требование:** [FR-16](FR.md#fr-16)
 
 As a Developer using GitHub Codespaces (cloud devcontainer with persistent volume), I want dev-pomogator v4 MCP server to start automatically in Codespaces lifecycle, handle persistent volume FS semantics correctly, and survive container hibernation/restart, so that Codespaces user gets same workflow as local devcontainer.
 
@@ -477,6 +517,8 @@ Then native FS events work (no polling fallback needed); test passes within 500m
 
 ### User Story 21: Unified spec-graph via spec-qualified node ids (Priority: P1)
 
+**Требование:** [FR-36](FR.md#fr-36)
+
 As an AI agent (and the MCP tools it drives), I want all specs to form ONE graph where every node id is unique across specs, so that `get_trace`/`get_node`/coverage resolve the RIGHT node instead of a collision-dropped guess, and "specs as one graph" is true rather than a file-path workaround.
 
 **Why:** The graph keys nodes by the bare local id (`FR-2`), so across 47 specs they collide — the node Map keeps the last writer and silently drops ≈90% (46 specs define `FR-2`, only 47 FR nodes survive instead of ≈470). Every edge bug (`get_trace` empty for all 47 FRs, `covers` ×52 on one id) is a symptom. It only "works" because coverage scopes by file path, never trusting a bare id. This is the architectural root cause surfaced by the dogfood dataset; until fixed, cross-spec queries are impossible and the graph is silently lossy.
@@ -499,6 +541,8 @@ Then it returns the candidate list of `slug:id` entries rather than one arbitrar
 
 ### User Story 22: Smart verdict is authoritative + the corpus traces cell→atom (Priority: P1)
 
+**Требование:** [FR-37](FR.md#fr-37)
+
 As a developer (and an AI agent reporting spec health), I want a GREEN spec verdict to MEAN the smart analysis passed and the corpus traces from FR down to the atom — not that one file's formatting is fine — so that I can trust "valid" instead of being handed a false green off a dumb structural check.
 
 **Why:** This session a structural `validate-spec: 0 errors` was reported as "spec valid" while `audit-spec` had 10 P0, `conformance_check` had 1256 findings, and the corpus had 32 NOT_COVERED + 75 ORPHAN + 9 unconfirmed STOP. v4 already owns the smart machinery (FR-8 semantic, conformance, coverage/honesty, audit) but it is opt-in / not authoritative, so a dumb pass masquerades as health. A verdict you can't trust is worse than none — it manufactures false confidence.
@@ -520,6 +564,8 @@ When the authoritative verdict runs
 Then it carries a SEMANTIC_SKIPPED note and never reports no-drift for unchecked content
 
 ### User Story 24: MCP-only рельсы для агента (Priority: P1)
+
+**Требование:** [FR-39](FR.md#fr-39)
 
 Как владелец репозитория, я хочу чтобы агент читал и писал спеки ТОЛЬКО через
 централизованную MCP-дверь с аудит-логом и валидацией на записи, чтобы я

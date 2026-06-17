@@ -134,6 +134,8 @@
 
 ### Decision: In-memory storage only for Phase 2
 
+**Требование:** [FR-2](FR.md#fr-2)
+
 **Rationale:** Simplicity wins for the 30-spec scale typical of v4 first deployment. Pure JS implementation has zero native dependencies (`better-sqlite3` requires platform-specific compile), making install trivial on devcontainer / Codespaces / WSL where bind-mount FS lock semantics are unreliable. Cold-start rebuild at 1-2s is acceptable for single Claude Code session lifecycle. Source-of-truth always lives in `.specs/**/*.md` (git-committed) — in-memory index is purely derived, loss = 1-2s rebuild not data loss.
 
 **Trade-off:** No cross-session sharing — each Claude Code session pays the 1-2s rebuild cost. Multi-session scenarios (developer running two terminals on same project) cannot share SpecGraph state without going through filesystem.
@@ -144,6 +146,8 @@
 - Persistent JSON file (rejected) — atomic write/lock semantics same problem as SQLite, no query performance benefit over in-memory, only marginal cold-start savings.
 
 ### Decision: Dual-anchor heading convention (FR-001 + fr-001-login)
+
+**Требование:** [FR-3](FR.md#fr-3)
 
 **Rationale:** Marksman LSP generates wiki-link slugs from heading text natively (`### FR-001: Login` → `fr-001-login`), enabling IDE Ctrl+Click navigation without custom plugins. Compact `[[FR-001]]` form preferred by agents for dense cross-refs. Registering BOTH anchors satisfies both human readers (descriptive `[[fr-001-login]]`) and agent context efficiency (`[[FR-001]]`). Legacy v3 `### Requirement: FR-001 Login` continues to work via triple-anchor registration in our custom parser — no breaking change.
 
@@ -156,6 +160,8 @@
 
 ### Decision: Workflow orchestrator architecture = thin orchestrator + existing workers (Option B)
 
+**Требование:** [FR-33](FR.md#fr-33)
+
 **Rationale:** v4 already ships the workers (create-spec phases, cross-spec-reconcile/resolve, spec-backlog resolvers, MCP `get_trace`/`get_coverage`/`get_test_result`, conformance hooks). A thin orchestrator that owns only the feature-map + routing reuses all of them (per repo reuse rules), stays token-cheap, scales (workers run as isolated sub-agents, parallelizable), and matches the repo's proven dispatch pattern (spec-backlog specialist resolvers, cross-spec semantic subagent). Self-improvement is a human-merge dated ledger (`SELF_IMPROVE.md`): the orchestrator accumulates `pending` improvement notes, proactively reminds the human, and only auto-applies after the human marks an entry `approved` — keeping the human as the validation gate (consistent with FR-32 honesty discipline) while removing them as the memory of what's left to do.
 
 **Trade-off:** More moving parts than a single monolithic skill; sub-agent worker dispatch costs extra latency/tokens; the routing feature-map must be kept current as capabilities grow (mitigated by the FR-33 drift guard, task T-Orch.3).
@@ -167,6 +173,8 @@
 
 ### Decision: MCP and LSP as separate layers, not nested
 
+**Требование:** [FR-4](FR.md#fr-4)
+
 **Rationale:** LSP is reactive (responds to file events / Read tool enrichment), MCP is pull-based (agent explicitly calls tools). Different ментальные модели и activation patterns. Forcing MCP-wraps-LSP would lose MCP's autonomous initiation capability (e.g., `conformance_check` doesn't map to any standard LSP request). Keeping them parallel: agent uses LSP-backed tools (`FindReferences`) for known symbol queries, MCP for domain queries (`get_trace`).
 
 **Trade-off:** Some capability duplication — `FindReferences` (LSP) and `backlinks` (MCP) overlap. Cost: two implementations to maintain. Benefit: each layer optimized for its access pattern.
@@ -177,6 +185,8 @@
 - LSP only, no MCP (rejected) — no way to expose domain-specific queries (`get_trace`, `blast_radius`); LSP standard not extensible enough.
 
 ### Decision: PostToolUse always-push with 3s throttle
+
+**Требование:** [FR-6](FR.md#fr-6)
 
 **Rationale:** Pull-only conformance check requires agent to remember to call `conformance_check` after every spec edit. Empirical observation (session 2026-05-17): agents forget. Push-based with throttling guarantees conformance feedback reaches agent context within bounded time, eliminating silent drift between spec edit and detection. 3-second throttle balances real-time feedback against bulk-edit spam.
 
@@ -204,6 +214,8 @@
 
 ### Decision: Marksman bundle install (always silent default)
 
+**Требование:** [FR-7](FR.md#fr-7)
+
 **Rationale:** IDE wiki-link navigation (Ctrl+Click on `[[FR-001]]` in VS Code) is critical for human-readable spec workflow. Opt-in postInstall introduces friction — users skip and lose IDE features without realizing. Silent bundle = "just works" out of the box. Binary size +15MB is acceptable trade-off for adoption.
 
 **Trade-off:** +15MB to dev-pomogator install footprint per platform. Slightly slower `npm install` (single binary download). Network dependency at install time (mitigated: fallback to custom JS MD LSP if download fails).
@@ -215,6 +227,8 @@
 
 ### Decision: Phase 6 added — architecture-research-workflow skill (meta-deliverable)
 
+**Требование:** [FR-12](FR.md#fr-12)
+
 **Rationale:** This v4 spec itself took 30+ turns of manual user pushback to reach quality (session 2026-05-17). The pattern (pain validation → research → variants → decision Q&A → phases) is reusable for future major features (v5, v6). Encoding it as a skill means future arch features take 5-8 turns instead of 30+. The skill calls existing `research-workflow` as a primitive for individual research bursts, adding meta-stages (variants, decisions, phases) on top.
 
 **Trade-off:** Skill creep risk — 7 stages may be overkill for medium features. Mitigated via complexity heuristic in `create-spec` (auto-invoke only on "архитектур"/"v\d+"/"rebuild" keywords or ≥3 components detected).
@@ -225,6 +239,8 @@
 - Manual pattern per major feature (status quo, rejected) — proven 30+ turn cost per feature, doesn't scale; the pattern IS the deliverable.
 
 ### Decision: Marksman LSP bridge — hand-rolled JSON-RPC framing, handshake-first, captured-real
+
+**Требование:** [FR-7](FR.md#fr-7)
 
 > **SUPERSEDED (2026-06-04) by FR-7 «native Claude Code LSP plugin».** The custom bridge (`marksman-lsp/bridge.ts`), `md_references` MCP tool, `skip-policy`, managed-hashes and the js-fallback are RETIRED: Claude Code has native LSP support, so Marksman is registered via the plugin's `.lsp.json`/`marketplace.json` `lspServers` (auto-installed binary, no fallback), and the graph keeps only spec-domain traceability. The framing/capture work below is kept for historical context only.
 
@@ -511,6 +527,8 @@ The four design decisions below shipped in spec-generator-v3 (production via PR 
 
 ### Decision: node identity = composite `<slug>:<localId>`, anchors stay bare (FR-36)
 
+**Требование:** [FR-36](FR.md#fr-36)
+
 **Rationale:** the graph keyed nodes by the bare local id (`FR-2`), so across 47 specs the ids collide and the node Map keeps only the last writer — 46 specs define `FR-2` yet only 47 FR nodes survive (≈470 expected). Measured by the dogfood harness; every edge bug (`get_trace` empty, `covers` ×52, `AC-36` from `pomogator-doctor` leaking into v4's FR-36 trace) is a symptom. The fix keys every node by `<slug>:<localId>` where `<slug>` is derived MECHANICALLY from the `.specs/<slug>/` path (the author keeps writing `## FR-2`, no prefix to type), and **decouples the anchor alias** — anchors stay bare `#fr-2` (file-local) so Marksman / anchor-fix / existing links are untouched.
 
 **Trade-off:** test churn — every test asserting a bare id must move to the qualified form in lockstep (this is why the suite was "green" on a broken graph: it asserted bare ids that happened to resolve). Mitigated by phasing (Phase 13, each phase suite-green) + soft bare→candidate-list fallback for agent callers.
@@ -520,6 +538,8 @@ The four design decisions below shipped in spec-generator-v3 (production via PR 
 - separator `/` instead of `:` — collides with path/anchor syntax, so `:` chosen. Full deep-dive: `audit-reports/unified-spec-graph-design.md` §9.
 
 ### Decision: spec-health verdict = smart graph analysis, structural is a pre-filter only (FR-37)
+
+**Требование:** [FR-37](FR.md#fr-37)
 
 **Rationale:** a structural `validate-spec: 0 errors` was reported as "spec valid" while `audit-spec` had 10 P0, `conformance_check` 1256 findings, and the corpus 32 NOT_COVERED + 75 ORPHAN + 9 unconfirmed STOP — a false green. v4 already owns the smart machinery (FR-8 semantic, `conformance_check`, `get_coverage` honesty, `audit-spec`) but it was opt-in / not authoritative. The verdict is therefore composed from the smart tools over the ONE graph (FR-36) + a traceability-completeness check (the cell→atom invariants), default-ON; `validate-spec` is demoted to a pre-filter whose pass is NOT emittable as "valid/clean/done".
 
@@ -532,6 +552,8 @@ The four design decisions below shipped in spec-generator-v3 (production via PR 
 
 ### Decision: get_spec_status — agent-facing READ of the same truth the verdict gates on (FR-38)
 
+**Требование:** [FR-38](FR.md#fr-38)
+
 **Rationale:** агенту нужен ОДИН вызов, чтобы понять состояние спеки целиком: написаны ли тесты, гонялись ли, чем кончился последний ран (summary), сколько дыр трассировки. До FR-38 эта картина собиралась из 3-4 вызовов (get_coverage_summary + find_by_tags + get_test_result по сценариям) и всё равно не отвечала «а ран вообще был?». Lifecycle выводится только из графа (FR-36) + инжестённого NDJSON (FR-1): SPEC_ONLY (нет сценариев) → TESTS_NOT_RUN (сценарии без lastResult) → RED (есть failed/ambiguous) → PARTIAL (0 failed, но есть undefined/pending/skipped — написано ≠ реализовано, FR-35 идиома) → GREEN (все тронутые passed).
 
 **Trade-off:** PARTIAL объединяет undefined/pending/skipped в одно «жёлтое» состояние — гранулярность отдана в `last_run.summary` (по-классово), сам enum остаётся пятизначным и читаемым агентом без таблицы.
@@ -542,6 +564,8 @@ The four design decisions below shipped in spec-generator-v3 (production via PR 
 - вычислять в скилле spec-status — скилл оркестрирует LLM, а статус должен быть механическим и MCP-трассируемым.
 
 ### Decision: MCP-rails — агентский доступ к спекам только через MCP (FR-39/40/41)
+
+**Требование:** [FR-39](FR.md#fr-39), [FR-40](FR.md#fr-40), [FR-41](FR.md#fr-41)
 
 **Rationale:** Централизация через одну дверь даёт контроль + аудит-лог агентских действий и живую валидацию на записи (генератор перестаёт писать вслепую); запрет прямого grep — следствие, не цель. Граница: запрет касается TOOL-CALLS АГЕНТА; движок (39 in-process файлов: builder/парсеры/CLI/хуки/резолверы) читает и пишет диск как раньше — он бэкенд двери. FR-21 (CLI без сервера) не нарушен: FR-21 — деградация движка, FR-39 — дисциплина агента.
 
@@ -583,6 +607,8 @@ The carve-out has two halves, with very different enforce-risk:
 
 ### MCP tool → skill-consumer table (FR-42a, P17-9)
 
+**Требование:** [FR-42](FR.md#fr-42)
+
 Thin skill, thick server: every USER-FACING MCP tool has a skill that knows how to drive it (the user enters through the SKILL, never naked MCP). The table is the canonical declaration in `.claude/skills/spec-generator-orchestrator/scripts/feature-map.ts::TOOL_CONSUMERS`; the drift guard (`drift-check.ts`) fails if a live registry tool is absent or has zero consumers (`checkToolConsumers`, FR-42b). SPECGEN004_120 enforces it; SPECGEN004_121 pins create-spec as the entry that drives the mutation tools without re-implementing server logic.
 
 | MCP tool | Skill consumer(s) | Door |
@@ -597,6 +623,8 @@ Thin skill, thick server: every USER-FACING MCP tool has a skill that knows how 
 A new user-facing tool MUST be added to TOOL_CONSUMERS with a real consumer skill (and that skill must actually document/use it) or the drift guard blocks — this is the FR-42 «no naked MCP tool» invariant.
 
 ### Decision: Toothless reverse-trace checks stay ADVISORY until the debt is cleaned (P20-5, FR-44)
+
+**Требование:** [FR-44](FR.md#fr-44)
 
 **Rationale:** The live corpus data decides this, not taste. Promoting the warning-class reverse checks (ORPHAN_TASK, SCENARIO_TAG_ORPHAN, TASK_STATUS_UNVERIFIED) or the new INFO trio (TASK_NO_REQUIREMENT: 7, ORPHAN_PROJECT_TEST: 72, FR_NO_RESEARCH: 538) into the FR-37b GAP_CLASSES hard gate TODAY would flip spec-generator-v4 itself RED on the spot (3 live TASK_STATUS_UNVERIFIED) and flood the corpus with hundreds of legacy findings. A gate that is born red on day one teaches escape-hatch gaming instead of hygiene (the H1 / scope-gate anti-gaming lesson) — surfacing first, gating after cleanup, preserves the gate's authority.
 
