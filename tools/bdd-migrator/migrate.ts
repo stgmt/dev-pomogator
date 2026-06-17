@@ -187,8 +187,58 @@ function render(plan: MigrationPlan): string {
   return L.join('\n');
 }
 
+/** Specs that own a tests/e2e/<slug>.test.ts AND a matching .feature — migration candidates. */
+function discoverMigratableSpecs(): string[] {
+  const e2e = path.join(REPO, 'tests', 'e2e');
+  if (!fs.existsSync(e2e)) return [];
+  const slugs: string[] = [];
+  for (const f of fs.readdirSync(e2e)) {
+    const m = f.match(/^(.+)\.test\.ts$/);
+    if (!m) continue;
+    if (fs.existsSync(path.join(REPO, '.specs', m[1], `${m[1]}.feature`))) slugs.push(m[1]);
+  }
+  return slugs;
+}
+
+/** Lower score = easier/safer to migrate first (all-clean + few tests). */
+export function migratability(plan: MigrationPlan): { score: number; label: string } {
+  const c = { runtime: 0, artifact: 0, manual: 0, unknown: 0 };
+  for (const t of plan.vitestTests) c[t.cls]++;
+  const total = plan.vitestTests.length || 1;
+  const score = (c.manual + c.unknown) * 100 + total;
+  const label = c.manual + c.unknown === 0 ? 'clean' : c.unknown ? 'needs-triage' : 'has-manual';
+  return { score, label };
+}
+
+/** Emit a prioritised batch plan over all candidate specs that still own a vitest file. */
+function runBatch(): void {
+  const rows = discoverMigratableSpecs()
+    .map((slug) => {
+      const plan = buildPlan(slug);
+      return { slug, plan, m: migratability(plan) };
+    })
+    .filter((r) => r.plan.vitestFiles.length > 0)
+    .sort((a, b) => a.m.score - b.m.score);
+  console.log(`bdd-migrator BATCH plan — ${rows.length} spec(s) with a vitest file + matching .feature, easiest first:\n`);
+  for (const r of rows) {
+    const c = { runtime: 0, artifact: 0, manual: 0, unknown: 0 };
+    for (const t of r.plan.vitestTests) c[t.cls]++;
+    console.log(
+      `  [${r.m.label.padEnd(12)}] ${r.slug.padEnd(30)} tests:${String(r.plan.vitestTests.length).padStart(3)}` +
+        `  R:${c.runtime} A:${c.artifact} M:${c.manual} U:${c.unknown}  wired:${r.plan.wiredInCucumber ? 'y' : 'n'}`,
+    );
+  }
+  console.log(`\nBatch model: author step-defs for a batch of specs (parallelisable via test-author subagents,`);
+  console.log(`throttle ~3/wave per the swarm rate-limit finding), then ONE full cucumber run validates all —`);
+  console.log(`the run is the serial bottleneck (last-write-wins ndjson), so amortise it across the batch.`);
+}
+
 function main(): void {
   const args = process.argv.slice(2);
+  if (args.includes('--batch')) {
+    runBatch();
+    process.exit(0);
+  }
   const specIdx = args.indexOf('--spec');
   const slug = specIdx >= 0 ? args[specIdx + 1] : undefined;
   const asJson = args.includes('--json');
