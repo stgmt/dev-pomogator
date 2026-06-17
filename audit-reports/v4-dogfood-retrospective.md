@@ -88,6 +88,34 @@
     recommended. Sources: cucumber.io/blog/bdd/where_should_you_use_bdd, automationpanda BDD-101,
     browserstack/accelq 2026 cucumber guides.
 
+11. **[BDD-migration pilot — answer-simple, the spec for the P2 universal migrator] What the
+    pilot taught (commits 17a3031 / 8dc9e10 / ff6d734).** Migrating answer-simple's 9 scenarios →
+    cucumber surfaced the real shape of the work; the migrator MUST encode these:
+    - **Scenarios usually already exist** — they were dead decoration: tags were `# comments`
+      (graph-invisible), no step-defs, the `.feature` not in cucumber `paths`. Migration =
+      "fix comment-tags → real tags + write step-defs + wire", NOT "author from scratch".
+    - **Three honest classes per scenario, not one.** (a) runtime-engine (detectJargon, Stop-hook
+      spawn) → real-engine step-def (strong, mutation-proven); (b) artifact-structure (rule/skill
+      file shape) → file-inspection step-def (the proxy vitest already used — same strength, now
+      traceable); (c) genuine agent/skill runtime with NO automation hook (_04 slash-output) →
+      `@manual`, never faked. The migrator must classify each vitest test into a/b/c.
+    - **Stale prose must be rewritten to current truth first** — _05 referenced v1 `npx install`
+      + a removed `extensions/_shared` validator; rewritten to the verifiable v2 repo-migration
+      state before step-defs.
+    - **Tag→FR impedance.** gherkin.ts maps `@featureN → FR-N` strictly, but this repo's loose
+      convention is "@featureN = a GROUP that may test FR-M" (answer-simple's @feature4 group
+      tests FR-8 → the edge lands on FR-4, wrong). Migrator must tag with the REAL FR (or `@FR-N`),
+      not the group number — else traceability points at the wrong requirement.
+    - **Cross-spec tag collision.** `--tags @feature4` also ran v4's @feature4 scenarios (6, not
+      4). Per-spec tag runs need spec-scoping; the migrator's verify step must filter by path/spec.
+    - **`@wip` / `@manual` + `tags: "not @manual"` in cucumber.json** = the clean staging lever:
+      keeps un-migrated/manual scenarios out of the green gate with zero UNDEFINED, v4 untouched.
+    - **Migrate-then-delete reduces orphans for real** — deleting the superseded vitest file
+      retired 9 graph-invisible orphan tests; the behaviour now lives as traceable scenarios.
+    - **Open caveat:** the vitest deletion was verified by BDD-parity + "nothing imports it", not
+      yet by a Docker full-suite run (the authoritative `npm test`). A Docker run is the
+      belt-and-suspenders confirmation before the rollout scales.
+
 ## B. Tooling-infra gotchas hit while orchestrating (not v4 itself, but cost real time)
 
 6. **Workflow `args` arrived empty in the script** (`Array.isArray(args)` false) → 0 agents, instant
