@@ -55,7 +55,11 @@ const SELF_MARKER = 'claim-evidence-gate';
 // meta-discussion ("пинатор", "ДОДЕЛЫВАЙ", "deferred-work"), which false-fired on a
 // completion report that merely DESCRIBED the gate. Low gaming-risk: these are the
 // gate's OWN vocabulary, not words a genuine deferral ("беру дальше пункт 1") contains.
-const SELF_MARKERS = ['claim-evidence-gate', 'deferred-work', 'пинатор', 'ДОДЕЛЫВАЙ'];
+// NOTE (2026-06-17, user decision): the casual «пинатор»/«ДОДЕЛЫВАЙ» were REMOVED — they granted a
+// FREE STOP to ANY message merely mentioning the kicker, which is how recent premature stops
+// slipped. Scoped now to the gate's PRECISE internals only; genuine meta-reports that don't quote
+// them are still covered by the judge's own answer/clarifying carve-out.
+const SELF_MARKERS = ['claim-evidence-gate', 'deferred-work'];
 const LOG_PREFIX = 'CLAIM-EVIDENCE-GATE';
 // FR-49e: loose lexical net for "the turn ended on a progress/completion/continuation
 // claim" — the cheap gate for escalating to the Meridian judge (also requires the census
