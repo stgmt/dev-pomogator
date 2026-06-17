@@ -129,7 +129,7 @@ Feature: NSL001_Native_Statusline_Auto_Install
     Then no write occurs and the action is "noop"
 
   # @feature8
-  @wip
+  @feature8
   Scenario: NSL001_17 doctor detects a stock widget config missing repo and cwd
     Given ccstatusline is the configured statusLine
     And the widget config is stock-default without repo and cwd widgets
@@ -138,7 +138,7 @@ Feature: NSL001_Native_Statusline_Auto_Install
     And after the apply-statusline fix-action the check reports "ok"
 
   # @feature8
-  @wip
+  @feature8
   Scenario: NSL001_18 widgets check defers to the statusline check and respects custom layouts
     Given a HOME without any statusLine configured
     When the statusline-widgets check executes

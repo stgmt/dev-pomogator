@@ -21,6 +21,7 @@ import {
 import { statuslineCheck } from '../../.claude/skills/pomogator-doctor/scripts/engine/checks/statusline.ts';
 import type { CheckContext } from '../../.claude/skills/pomogator-doctor/scripts/engine/types.ts';
 import { ccstatuslineConfigPath, writeCcstatuslineWidgets, REQUIRED_WIDGET_TYPES } from '../../tools/native-statusline/ccstatusline-widgets.ts';
+import { statuslineWidgetsCheck } from '../../.claude/skills/pomogator-doctor/scripts/engine/checks/statusline-widgets.ts';
 
 const NSL_HOOK = path.resolve(process.cwd(), 'tools/native-statusline/install_native_statusline.ts');
 const NSL_APPLY = path.resolve(process.cwd(), 'tools/native-statusline/apply-statusline.ts');
@@ -79,6 +80,10 @@ function nslStockWidgets(): Record<string, unknown> {
     minimalistMode: false,
   };
 }
+async function nslWidgetsCheckRun(home: string): Promise<{ severity?: string; message?: string; hint?: string }> {
+  const r = await statuslineWidgetsCheck.run(nslCtx(home));
+  return (Array.isArray(r) ? r[0] : r) ?? {};
+}
 function nslSettingsPath(home: string): string {
   return path.join(home, '.claude', 'settings.json');
 }
@@ -109,6 +114,7 @@ interface NSLWorld extends V4World {
   nslCheck?: { severity?: string; hint?: string };
   nslWidgetRes?: { changed: boolean; action: string };
   nslWidgetBefore?: string;
+  nslWidgetCheck?: { severity?: string; message?: string; hint?: string };
 }
 
 After(function (this: NSLWorld) {
@@ -379,4 +385,47 @@ Then(/^the layout is normalized to the canonical 3-line column with repo and cwd
 });
 Then(/^all other config fields are preserved$/, function (this: NSLWorld) {
   assert.equal(nslReadWidgets(this.nslHome!).flexMode, 'full-minus-40');
+});
+
+// --- NSL001_17 / _18 (pomogator-doctor statusline-widgets check) ---
+Given(/^ccstatusline is the configured statusLine$/, function (this: NSLWorld) {
+  nslWriteSettings(this.nslHome!, { statusLine: { type: 'command', command: DEFAULT_STATUSLINE_COMMAND } });
+});
+Given(/^the widget config is stock-default without repo and cwd widgets$/, function (this: NSLWorld) {
+  nslWriteWidgets(this.nslHome!, nslStockWidgets());
+});
+When(/^the statusline-widgets check executes$/, async function (this: NSLWorld) {
+  this.nslWidgetCheck = await nslWidgetsCheckRun(this.nslHome!);
+});
+Then(/^the check severity is "warning" naming the missing widget types$/, function (this: NSLWorld) {
+  assert.equal(this.nslWidgetCheck!.severity, 'warning');
+  assert.match(String(this.nslWidgetCheck!.message), /git-root-dir/);
+  assert.match(String(this.nslWidgetCheck!.message), /current-working-dir/);
+});
+Then(/^after the apply-statusline fix-action the check reports "ok"$/, async function (this: NSLWorld) {
+  const apply = spawnSync(process.execPath, ['--import', 'tsx', NSL_APPLY], {
+    input: '',
+    encoding: 'utf8',
+    env: { ...process.env, HOME: this.nslHome!, USERPROFILE: this.nslHome! },
+  });
+  assert.equal(apply.status, 0);
+  const ar = JSON.parse((apply.stdout ?? '').trim()) as { widgets?: { changed?: boolean; action?: string } };
+  assert.equal(ar.widgets?.changed, true);
+  assert.equal(ar.widgets?.action, 'enrich');
+  assert.equal((await nslWidgetsCheckRun(this.nslHome!)).severity, 'ok');
+});
+
+// --- NSL001_18 (widgets check defers to C-NSL + respects custom layouts) ---
+Given(/^a HOME without any statusLine configured$/, function (this: NSLWorld) {
+  nslWriteSettings(this.nslHome!, {});
+});
+Then(/^the check severity is "ok" \(not applicable — C-NSL's domain\)$/, function (this: NSLWorld) {
+  assert.equal(this.nslWidgetCheck!.severity, 'ok');
+});
+Then(/^a HOME with a customized widget layout missing repo\/cwd also reports "ok" \(left untouched\)$/, async function (this: NSLWorld) {
+  nslWriteSettings(this.nslHome!, { statusLine: { type: 'command', command: DEFAULT_STATUSLINE_COMMAND } });
+  const custom = nslStockWidgets();
+  (custom.lines as Array<Array<Record<string, string>>>)[0].push({ id: '8', type: 'session-clock' });
+  nslWriteWidgets(this.nslHome!, custom);
+  assert.equal((await nslWidgetsCheckRun(this.nslHome!)).severity, 'ok');
 });
