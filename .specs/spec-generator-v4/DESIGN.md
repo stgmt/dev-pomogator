@@ -237,6 +237,32 @@
 - Spec-derived mock without real capture (rejected) — would encode assumptions about Marksman's wire behaviour and go green in P1 while the real binary surprises us in P3 (the `verify-against-real-artifact` failure class); capture-first eliminates it.
 - Full LSP client (hover/completion/diagnostics/documentSymbol) (rejected/out-of-scope) — only the methods actually surfaced via MCP (`initialize`+`definition`+`references`) are built; the rest is a separate task.
 
+### Decision: Two-tier cross-spec reconcile — mechanical light mode + opt-in LLM full mode
+
+**Требование:** [FR-17](FR.md#fr-17)
+
+**Rationale:** Cross-spec drift splits into two detectable layers. Most classes (missing files/symbols, duplicate FR ids, enum/schema/URL/flag divergence, orphans) are purely MECHANICAL — exact/structural comparison over a per-spec index, fast (<5s), no model call, CI-safe. But two same-id FRs can share 60% of their tokens and still describe genuinely different behaviour — only an LLM can judge that. So the engine ships LIGHT mode (mechanical only, the default, `reconcile.ts`) and `full-mode.ts` adds an OPT-IN semantic pass that escalates ONLY the gray same-id pairs to the judge. Light is always-on + cheap; full is paid only when asked, and reuses the FR-8 judge transport (Meridian, fail-open) rather than a second judge.
+
+**Trade-off:** Two code paths to keep aligned (mechanical + semantic findings merged into one report) and full mode's semantic accuracy depends on Meridian being up — mitigated by fail-open (proxy down → semantic pass skipped, mechanical findings still ship).
+
+**Alternatives considered:**
+- LLM-for-everything (rejected) — slow, costly, non-deterministic for classes a regex nails exactly (missing file, duplicate id); wastes tokens on the ~90% mechanical cases.
+- Mechanical-only, no semantic layer (rejected) — misses the highest-value class (two same-id FRs that look similar but contradict), which is the whole reason the FR-8 judge exists.
+- A separate semantic-only tool (rejected) — duplicates the per-spec index build + the report writer; one engine with a light/full toggle reuses both.
+
+### Decision: Resolve findings via an interactive explain-before-edit loop, never auto-fix
+
+**Требование:** [FR-18](FR.md#fr-18)
+
+**Rationale:** A finding's fix usually carries a real trade-off (update the spec vs the code vs defer; edit a foreign spec or not). Auto-applying a "suggested fix" would silently pick a side and risk cross-spec contamination. So `cross-spec-resolve` is an INTERACTIVE 7-step loop: per finding it emits a 5-field explanation (code/severity/class, files+lines, plain-language, WHY-if-shipped, options) and asks via AskUserQuestion BEFORE any edit. CRITICAL findings block (header ⚠️ CRIT) with an audited override path; foreign-spec edits get a second confirm; after the batch it re-runs reconcile to stamp the real outcome (resolved/still_present/transformed). Spec writes go through the mutation door; only implementation code (outside `.specs/`) uses an ordinary Edit.
+
+**Trade-off:** Interactive = not headless/batchable — a human must walk each finding. Slower than auto-fix, but the cost of a wrong silent fix (especially a cross-spec one) is higher than the walk-through time.
+
+**Alternatives considered:**
+- Auto-apply `suggested_fix` for all findings (rejected) — silently picks a side on genuine trade-offs (decision-vs-reality, foreign-spec edits) and risks contaminating another spec; the explain-before-edit block exists precisely to surface that trade-off.
+- Print findings only, no resolve loop (rejected) — leaves the user to fix by hand with no guided options or audit trail; the resolve half of the feature would be missing.
+- Block-only on CRITICAL, auto-fix the rest (rejected) — WARNING/INFO findings still have trade-offs (which doc to edit); a uniform explain-before-edit is simpler and safer than a severity-split fix policy.
+
 ## BDD Test Infrastructure (ОБЯЗАТЕЛЬНО)
 
 **Classification:** TEST_DATA_ACTIVE

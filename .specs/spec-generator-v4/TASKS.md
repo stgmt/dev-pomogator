@@ -630,7 +630,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] `top_3_recommendations[]` selected by priority + impact (case-study format)
   - [ ] yaml-schema.md reference doc updated with full example output
 
-- [ ] Implement architectural decision detection -- @feature17 @feature18 — id: impl-architectural-detection — Status: TODO | Est: 720m
+- [x] Implement architectural decision detection -- @feature17 @feature18 — id: impl-architectural-detection — Status: DONE | Est: 720m
   _depends: impl-semantic-subagent_
   _Requirements: [FR-17](FR.md#fr-17), [FR-18](FR.md#fr-18), [AC-18.3](ACCEPTANCE_CRITERIA.md#ac-183)_
   **Done When:**
