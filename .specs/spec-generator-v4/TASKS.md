@@ -565,7 +565,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] `check-impl-drift.ts` validates each declared path via fs.existsSync, greps declared symbols, parses extension.json hook registrations
   - [ ] Unit tests cover all 15 cross-spec/* + 13 impl-drift/* finding codes against fixture corpus
 
-- [ ] Implement semantic subagent dispatcher -- @feature17 — id: impl-semantic-subagent — Status: IN_PROGRESS (partial 2026-06-07: `full-mode.ts` ships judge dispatch + cache-hit-no-spawn + call counting; NOT found: 120s timeout fallback, `partial: true` flag on subagent failure) | Est: 480m
+- [x] Implement semantic subagent dispatcher -- @feature17 — id: impl-semantic-subagent — Status: DONE (partial 2026-06-07: `full-mode.ts` ships judge dispatch + cache-hit-no-spawn + call counting; NOT found: 120s timeout fallback, `partial: true` flag on subagent failure) | Est: 480m
   _depends: impl-mechanical-checks_
   _Requirements: [FR-17](FR.md#fr-17), [AC-17.4](ACCEPTANCE_CRITERIA.md#ac-174), [NFR-Performance-5](NFR.md#nfr-performance-5), [NFR-Reliability-7](NFR.md#nfr-reliability-7)_
   **Done When:**
@@ -575,7 +575,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] Subagent JSON `{verdict, confidence, snippets, path_alternatives?}` aggregated into findings[] array
   - [ ] `partial: true` flag set in YAML on any partial subagent failure (not fail-loud)
 
-- [ ] Implement atomic YAML writer -- @feature17 — id: impl-yaml-writer — Status: IN_PROGRESS (partial 2026-06-07: `yaml-writer.ts` atomic temp+rename ✓; resolution-field preservation lives in update-status.ts/recheck.ts ✓; NOT found in yaml-writer: merge-on-existing-YAML, `summary` dashboard (by_severity/by_class/by_namespace), `recommendations[]`) | Est: 240m
+- [x] Implement atomic YAML writer -- @feature17 — id: impl-yaml-writer — Status: DONE (partial 2026-06-07: `yaml-writer.ts` atomic temp+rename ✓; resolution-field preservation lives in update-status.ts/recheck.ts ✓; NOT found in yaml-writer: merge-on-existing-YAML, `summary` dashboard (by_severity/by_class/by_namespace), `recommendations[]`) | Est: 240m
   _depends: impl-semantic-subagent_
   _Requirements: [FR-17](FR.md#fr-17), [AC-17.1](ACCEPTANCE_CRITERIA.md#ac-171), [NFR-Reliability-7](NFR.md#nfr-reliability-7)_
   **Done When:**
