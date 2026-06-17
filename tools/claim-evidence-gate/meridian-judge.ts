@@ -18,7 +18,14 @@
  */
 
 const DEFAULT_URL = process.env.MERIDIAN_URL ?? 'http://127.0.0.1:3456';
+// When local Meridian times out (6s) or errors, FALL BACK to the hosted aipomogator.ru Haiku so a
+// down/absent local proxy is no longer a free stop (the hole the gate let through — user decision
+// 2026-06-17). Hosted = near-always reachable, so the judge actually runs. Override/disable via env;
+// optional key for the hosted endpoint. Both-down still fail-opens so an offline user never hangs.
+const FALLBACK_URL = process.env.CLAIM_GATE_JUDGE_FALLBACK_URL ?? 'https://aipomogator.ru';
+const FALLBACK_KEY = process.env.CLAIM_GATE_JUDGE_FALLBACK_KEY ?? '';
 const MODEL = 'claude-haiku-4-5-20251001';
+const TIMEOUT_MS = 6000; // user-set: 6s per endpoint, then fall back / fail-open
 
 export interface JudgeInput {
   /** The agent's final assistant message this turn. */
@@ -64,28 +71,29 @@ export function buildJudgePrompt(i: JudgeInput): string {
 
 interface JudgeOpts {
   url?: string;
+  /** Fallback endpoint used when the primary times out / fails (default aipomogator.ru). */
+  fallbackUrl?: string;
   timeoutMs?: number;
   /** Injectable fetch for tests (defaults to global fetch). */
   fetchImpl?: typeof fetch;
 }
 
-/**
- * Ask the Meridian-hosted Haiku judge. Returns the verdict, or NULL to FAIL-OPEN
- * (proxy unreachable / non-200 / timeout / unparseable / malformed) — the caller then
- * keeps the fast-layer decision. Never throws.
- */
-export async function judgeStop(input: JudgeInput, opts: JudgeOpts = {}): Promise<JudgeVerdict | null> {
-  const base = (opts.url ?? DEFAULT_URL).replace(/\/+$/, '');
-  const timeoutMs = opts.timeoutMs ?? 5000; // real thinking-off call ~3s; caps a black-holed port (down proxy fails instant)
-  const doFetch = opts.fetchImpl ?? (typeof fetch === 'function' ? fetch : undefined);
-  if (!doFetch) return null; // no fetch (old node) → fail-open
+/** Call ONE judge endpoint. Returns the verdict, or NULL (non-200 / timeout / unparseable). Never throws. */
+async function callJudgeOnce(
+  base: string,
+  input: JudgeInput,
+  doFetch: typeof fetch,
+  timeoutMs: number,
+  apiKey: string,
+): Promise<JudgeVerdict | null> {
+  const url = base.replace(/\/+$/, '');
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
-    const r = await doFetch(`${base}/v1/messages`, {
+    const r = await doFetch(`${url}/v1/messages`, {
       method: 'POST',
       signal: ctrl.signal,
-      headers: { 'content-type': 'application/json', 'anthropic-version': '2023-06-01', 'x-api-key': 'sk-dummy' },
+      headers: { 'content-type': 'application/json', 'anthropic-version': '2023-06-01', 'x-api-key': apiKey || 'sk-dummy' },
       body: JSON.stringify({
         model: MODEL,
         max_tokens: 120,
@@ -102,8 +110,29 @@ export async function judgeStop(input: JudgeInput, opts: JudgeOpts = {}): Promis
     if (typeof v.block !== 'boolean') return null;
     return { block: v.block, reason: typeof v.reason === 'string' ? v.reason : 'judge verdict' };
   } catch {
-    return null; // abort / network / parse → fail-open
+    return null; // abort / network / parse → caller falls back, then fail-opens
   } finally {
     clearTimeout(timer);
   }
+}
+
+/**
+ * Ask the Haiku judge: local Meridian first (~3s), and on timeout/failure FALL BACK to the hosted
+ * aipomogator.ru Haiku — so a down/absent local proxy no longer grants a free stop. Returns the
+ * verdict, or NULL to FAIL-OPEN only when BOTH endpoints fail (an offline user never hangs). Never throws.
+ */
+export async function judgeStop(input: JudgeInput, opts: JudgeOpts = {}): Promise<JudgeVerdict | null> {
+  const doFetch = opts.fetchImpl ?? (typeof fetch === 'function' ? fetch : undefined);
+  if (!doFetch) return null; // no fetch (old node) → fail-open
+  const timeoutMs = opts.timeoutMs ?? TIMEOUT_MS;
+  const primary = (opts.url ?? DEFAULT_URL).replace(/\/+$/, '');
+  const primaryVerdict = await callJudgeOnce(primary, input, doFetch, timeoutMs, '');
+  if (primaryVerdict) return primaryVerdict;
+  // Primary timed out / failed → hosted fallback (key optional). Skip when it is the same URL.
+  const fallback = (opts.fallbackUrl ?? FALLBACK_URL).replace(/\/+$/, '');
+  if (fallback && fallback !== primary) {
+    const fbVerdict = await callJudgeOnce(fallback, input, doFetch, timeoutMs, FALLBACK_KEY);
+    if (fbVerdict) return fbVerdict;
+  }
+  return null; // both down → fail-open (the only remaining free stop, and only when truly offline)
 }

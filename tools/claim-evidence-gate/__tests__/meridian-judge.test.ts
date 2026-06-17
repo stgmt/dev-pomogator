@@ -38,6 +38,30 @@ describe('judgeStop (FR-49e) — Meridian gray-zone judge', () => {
     expect(await judgeStop(input, { fetchImpl: async () => textResp('{"block":"yes"}') })).toBeNull();
   });
 
+  it('FALLBACK: local Meridian down → uses the hosted aipomogator.ru verdict (no free stop)', async () => {
+    const seen: string[] = [];
+    const fetchImpl = (async (url: unknown) => {
+      seen.push(String(url));
+      if (String(url).includes('127.0.0.1')) throw new Error('ECONNREFUSED'); // Meridian down
+      return textResp('{"block": true, "reason": "fallback caught lazy stop"}'); // aipomogator.ru
+    }) as unknown as typeof fetch;
+    const v = await judgeStop(input, { fetchImpl });
+    expect(v).toEqual({ block: true, reason: 'fallback caught lazy stop' });
+    expect(seen.some((u) => u.includes('aipomogator.ru'))).toBe(true);
+  });
+
+  it('FALLBACK: primary answers → the fallback endpoint is NOT called', async () => {
+    const seen: string[] = [];
+    const fetchImpl = (async (url: unknown) => {
+      seen.push(String(url));
+      if (String(url).includes('127.0.0.1')) return textResp('{"block": false, "reason": "primary"}');
+      return textResp('{"block": true, "reason": "should-not-be-used"}');
+    }) as unknown as typeof fetch;
+    const v = await judgeStop(input, { fetchImpl });
+    expect(v).toEqual({ block: false, reason: 'primary' });
+    expect(seen.some((u) => u.includes('aipomogator.ru'))).toBe(false);
+  });
+
   it('buildJudgePrompt feeds the census fact + asks for one JSON line', () => {
     const p = buildJudgePrompt(input);
     expect(p).toMatch(/20 open/); // the spec-generator census fact reaches the judge
