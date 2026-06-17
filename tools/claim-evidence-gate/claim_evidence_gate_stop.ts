@@ -193,8 +193,21 @@ async function main(): Promise<void> {
       const jInput = { finalMessage: claimText, tools: toolUses.map((t) => t.name), openTasks: census!.total.open };
       let verdict = await judgeStop(jInput);
       if (verdict === null) verdict = await judgeStop(jInput);
-      if (verdict?.block) unsupported = { cls: 'judge-block', need: verdict.reason };
-      // verdict null twice (proxy down / persistent fail) or block:false → fall through to approve
+      if (verdict?.block) {
+        unsupported = { cls: 'judge-block', need: verdict.reason };
+      } else if (verdict === null) {
+        // NO free stop when the judge is unreachable. Both endpoints down (local Meridian AND the
+        // hosted aipomogator.ru fallback) used to fall through to approve — the last bypass. User
+        // decision 2026-06-17 («нельзя обойти»): a gray progress/completion claim while the census
+        // shows open work, with NO judge to clear it, is treated as an unconfirmed stop → BLOCK
+        // deterministically. The anti-loop cap below bounds it, so a genuinely-offline user is
+        // released after a few kicks rather than hung (and CLAIM_GATE_JUDGE=false disables it).
+        unsupported = {
+          cls: 'judge-unavailable',
+          need: `судья недоступен (ни Meridian, ни aipomogator.ru), а перепись показывает ${census!.total.open} открытых задач — стоп не подтверждён`,
+        };
+      }
+      // verdict.block === false (a reachable judge CLEARED the stop) → fall through to approve
     }
   }
 
@@ -240,6 +253,12 @@ async function main(): Promise<void> {
     block(
       `⚠️ ${SELF_MARKER}: судья (Meridian) счёл это преждевременным стопом — ${unsupported.need}\n` +
         `Доделай начатое В ЭТОМ ХОДЕ или назови ОДИН конкретный следующий шаг. Не перекладывай на пользователя.`,
+    );
+  } else if (unsupported.cls === 'judge-unavailable') {
+    block(
+      `⚠️ ${SELF_MARKER}: ${unsupported.need}.\n` +
+        `Не останавливайся на статусе — сделай следующий шаг СЕЙЧАС, в этом ходе. ` +
+        `Стоп только если работа реально закончена ИЛИ нужен ввод, который можешь дать только ты.`,
     );
   } else if (unsupported.cls === 'spec-false-close') {
     block(
