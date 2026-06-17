@@ -72,6 +72,22 @@
    mutating real `gherkin.ts` (SPECGEN004_185 → RED, restored). Still open: spawning the test-author
    AGENT through the eval (true agent-bench, vs the recipe-bench done here).
 
+10. **[research — owner asked "how is it done right in 2026"] Converting ALL tests to BDD/cucumber
+    is a recognised anti-pattern; the correct shape is the test pyramid.** Unanimous across
+    authoritative 2025-2026 sources incl. Cucumber's OWN blog: Gherkin for unit-level tests is
+    "overkill" — use vitest/JUnit/pytest for low-level, reserve Cucumber for behaviour/acceptance
+    where a non-developer reads the scenario and the business has opinions. Decision rule
+    (cucumber.io "Where should you use BDD?"): business cares about the behaviour → Cucumber;
+    indifferent → unit framework. → Implication for dev-pomogator: the ~2055 vitest tests are the
+    CORRECT pyramid base, NOT a deviation to migrate away. The real defect (finding #8) is that the
+    BDD layer is dead decoration (1 of ~40 `.feature` files wired). Recommended direction instead of
+    a mass rewrite: (a) make the generated `.feature` files REAL acceptance tests (wire them into the
+    cucumber `paths` + gate `npm test` on them); (b) teach `TASK_NO_OWN_SCENARIO` to accept a CITED
+    real vitest test id (retro #4 option b) — so a task is "covered" by either a real acceptance
+    scenario OR a real unit test, never faked. Mass unit→Gherkin rewrite is explicitly NOT
+    recommended. Sources: cucumber.io/blog/bdd/where_should_you_use_bdd, automationpanda BDD-101,
+    browserstack/accelq 2026 cucumber guides.
+
 ## B. Tooling-infra gotchas hit while orchestrating (not v4 itself, but cost real time)
 
 6. **Workflow `args` arrived empty in the script** (`Array.isArray(args)` false) → 0 agents, instant
