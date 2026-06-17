@@ -68,8 +68,11 @@ const GRAY_SIGNAL = /(готов|сделал|закоммич|закрыл|ре
 // Require-next-section (user 2026-06-17): a stop while work remains MUST carry a concrete
 // «Дальше / what's next» section. Recognised as a heading / bold / line lead-in — deterministic,
 // so the «без дальше» omission bypass can't slip (no LLM, no fail-open).
+// NOTE: no `\b` after a Cyrillic word — in JS (no `u` flag) Cyrillic isn't `\w`, so `дальше\b`
+// never matches "Дальше:". Each alternative is anchored to a LINE lead-in (after ≤4 spaces and an
+// optional heading/bold/bullet marker) so a casual mid-sentence "дальше" does NOT count as a section.
 const NEXT_SECTION_RE =
-  /(?:^|\n)\s{0,4}(?:#{1,6}\s*)?(?:\*\*\s*)?(?:что[\s-]+)?дальше\b|следующ(?:ий|ие)\s+шаг|(?:^|\n)\s{0,4}(?:#{1,6}\s*|\*\*\s*)?next steps?\b|(?:^|\n)\s{0,4}#{1,6}\s*next\b/i;
+  /(?:^|\n)[ \t]{0,4}(?:#{1,6}[ \t]*|\*\*[ \t]*|[-*][ \t]+)?(?:(?:что[ \t-]+)?дальше|следующ(?:ий|ие)[ \t]+шаг|next[ \t]+steps?\b|next[ \t]*:)/i;
 
 function log(level: 'INFO' | 'DEBUG' | 'ERROR', message: string): void {
   _logShared(level, LOG_PREFIX, message);
