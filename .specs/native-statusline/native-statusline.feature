@@ -15,7 +15,7 @@ Feature: NSL001_Native_Statusline_Auto_Install
     Then it returns action "install" with command "npx -y ccstatusline@latest"
 
   # @feature1
-  @wip
+  @feature1
   Scenario: NSL001_02 SessionStart hook writes statusLine into a clean settings.json
     Given a settings.json with no statusLine field
     When the native-statusline SessionStart hook runs with a session-start stdin JSON
@@ -23,7 +23,7 @@ Feature: NSL001_Native_Statusline_Auto_Install
     And the hook exits with code 0
 
   # @feature1
-  @wip
+  @feature1
   Scenario: NSL001_03 writer preserves all other settings.json fields
     Given a settings.json with env and permissions fields and no statusLine
     When the writer installs the native statusLine
@@ -54,7 +54,7 @@ Feature: NSL001_Native_Statusline_Auto_Install
     Then settings.json is left unchanged and no statusLine is added
 
   # @feature5
-  @wip
+  @feature5
   Scenario: NSL001_07 second run is idempotent (no disk churn)
     Given the hook already installed the native statusLine in a previous run
     When the hook runs again with no other changes
@@ -69,7 +69,7 @@ Feature: NSL001_Native_Statusline_Auto_Install
     And settings.json is not mutated
 
   # @feature1
-  @wip
+  @feature1
   Scenario: NSL001_09 missing settings.json is created with only our statusLine
     Given ~/.claude/settings.json does not exist
     When the native-statusline hook runs with default-on behavior
