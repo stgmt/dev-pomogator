@@ -1326,3 +1326,9 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given a .feature source whose Feature carries a tag and whose scenario has none of its own
     When the gherkin parser parses that source
     Then the produced scenario node carries the inherited feature-level tag
+
+  @feature49
+  Scenario: SPECGEN004_186 the stop-gate requires a «Дальше» next-step section while work remains
+    Given a task census with open work and the real claim-evidence-gate stop hook
+    When the hook judges a progress claim without a «Дальше» section and then one with it
+    Then the hook blocks the one lacking the section and approves the one carrying it

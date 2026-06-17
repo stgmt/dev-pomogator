@@ -16,6 +16,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import { spawnSync } from 'node:child_process';
 import { V4World } from '../hooks/before-after.ts';
 import type { SpecGraph } from '../../tools/spec-graph/types.ts';
 import { writeTaskCensusCache, findStaleInProgress, type StaleMarker } from '../../tools/spec-graph/task-census.ts';
@@ -32,6 +33,9 @@ interface AutoSurfaceWorld extends V4World {
   doorRoot?: string;
   doorStub?: ValidateResult;
   doorReal?: ValidateResult;
+  nsRoot?: string;
+  nsBlocked?: boolean;
+  nsAllowed?: boolean;
 }
 
 // FR-49f (SPECGEN004_181): the door strength-gate refuses a .feature write that ADDS a
@@ -145,4 +149,47 @@ Then('the door refuses the stub write with a strength-layer finding and accepts 
     [],
     'a fully-written .feature gets no strength finding',
   );
+});
+
+// SPECGEN004_186 (FR-49g): the deterministic require-next-section layer. Drives the REAL Stop
+// hook (spawn via node --import tsx; judge OFF to isolate the deterministic layer — Docker carries
+// no помогатор token) on a census-open tmpdir: a gray progress claim WITHOUT a «Дальше» section
+// must block; the same claim WITH one must approve. Pins the Cyrillic-\b regex fix (commit 2fe24e0)
+// against silent re-breakage — `дальше\b` never matched «Дальше:» so the whole layer was dead.
+const NS_HOOK = path.resolve('tools', 'claim-evidence-gate', 'claim_evidence_gate_stop.ts');
+function driveStopHook(root: string, claimText: string): boolean {
+  const rows = [
+    { type: 'user', message: { role: 'user', content: [{ type: 'text', text: 'почини' }] } },
+    { type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', name: 'Edit', input: {} }] } },
+    { type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: claimText }] } },
+  ];
+  const fp = path.join(root, 'transcript.jsonl');
+  fs.writeFileSync(fp, rows.map((r) => JSON.stringify(r)).join('\n'));
+  const res = spawnSync(process.execPath, ['--import', 'tsx', NS_HOOK], {
+    input: JSON.stringify({ transcript_path: fp, cwd: root }),
+    encoding: 'utf-8',
+    env: { ...process.env, CLAIM_GATE_ENABLED: 'true', CLAIM_GATE_JUDGE: 'false' },
+  });
+  return (res.stdout || '').includes('"decision":"block"');
+}
+
+Given('a task census with open work and the real claim-evidence-gate stop hook', function (this: AutoSurfaceWorld) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fr49g-'));
+  writeTaskCensusCache(
+    root,
+    { total: { open: 11, doneRed: 0, doneUnrun: 0 }, specs: [{ slug: 'demo', open: 11, doneRed: 0, doneUnrun: 0 }] },
+    '2026-06-17T00:00:00Z',
+  );
+  this.nsRoot = root;
+});
+
+When('the hook judges a progress claim without a «Дальше» section and then one with it', function (this: AutoSurfaceWorld) {
+  this.nsBlocked = driveStopHook(this.nsRoot!, 'Готово. Закоммитил фикс.');
+  this.nsAllowed = driveStopHook(this.nsRoot!, 'Готово. Закоммитил фикс.\n\nДальше: гоняю прогон, потом коммичу.');
+});
+
+Then('the hook blocks the one lacking the section and approves the one carrying it', function (this: AutoSurfaceWorld) {
+  fs.rmSync(this.nsRoot!, { recursive: true, force: true });
+  assert.equal(this.nsBlocked, true, 'a gray claim with open census and NO «Дальше» → block');
+  assert.equal(this.nsAllowed, false, 'the same claim WITH a «Дальше:» section → approve');
 });
