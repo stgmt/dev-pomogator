@@ -43,6 +43,9 @@ interface AutoSurfaceWorld extends V4World {
   csRoot?: string;
   csBlocked?: boolean;
   csRaw?: string;
+  wdRoot?: string;
+  wdBlockEdit?: boolean;
+  wdApproveRun?: boolean;
 }
 
 // FR-49f (SPECGEN004_181): the door strength-gate refuses a .feature write that ADDS a
@@ -309,4 +312,23 @@ When('the hook judges a task-level fixed-it claim made after a tool ran', functi
 Then('the hook does not block it', function (this: AutoSurfaceWorld) {
   fs.rmSync(this.csRoot!, { recursive: true, force: true });
   assert.equal(this.csBlocked, false, 'a non-spec works-done claim must NOT trip the census branch (anti-H1)');
+});
+
+// SPECGEN004_191 (claim-evidence-gate works-done class): a "works" claim is supported only by a
+// REAL executor (Bash/run), not an edit. No census here, so this isolates the works-done classifier.
+// Migrated from the vitest CEGATE001_03/04.
+Given('a fresh repo with no census and the real claim-evidence-gate stop hook', function (this: AutoSurfaceWorld) {
+  this.wdRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'wd-'));
+});
+
+When('the hook judges a works-done claim first with only an edit and then after a real run', function (this: AutoSurfaceWorld) {
+  const claim = 'Поправил импорт, теперь всё работает.';
+  this.wdBlockEdit = runStopHook(this.wdRoot!, claim).blocked; // default Edit → no real executor
+  this.wdApproveRun = runStopHook(this.wdRoot!, claim, { name: 'Bash', input: { command: 'npx tsx build.ts' } }).blocked;
+});
+
+Then('the hook blocks the edit-only claim and approves the one backed by a real run', function (this: AutoSurfaceWorld) {
+  fs.rmSync(this.wdRoot!, { recursive: true, force: true });
+  assert.equal(this.wdBlockEdit, true, 'a works-done claim with only an edit (no executor) → block');
+  assert.equal(this.wdApproveRun, false, 'the same claim after a real run → approve');
 });
