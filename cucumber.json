@@ -1,8 +1,8 @@
 {
   "default": {
-    "paths": [".specs/spec-generator-v4/spec-generator-v4.feature", ".specs/answer-simple/answer-simple.feature"],
+    "paths": [".specs/spec-generator-v4/spec-generator-v4.feature", ".specs/answer-simple/answer-simple.feature", ".specs/skill-listing-budget/skill-listing-budget.feature"],
     "import": ["tests/step_definitions/**/*.ts", "tests/hooks/**/*.ts"],
-    "tags": "not @manual",
+    "tags": "not @wip and not @manual",
     "format": [
       "message:.dev-pomogator/.last-test-run.ndjson",
       "progress-bar"
