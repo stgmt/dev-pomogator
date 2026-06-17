@@ -18,8 +18,27 @@ import {
   writeNativeStatusLine,
   OWNERSHIP_MARKER,
 } from '../../tools/native-statusline/reconcile-statusline.ts';
+import { statuslineCheck } from '../../.claude/skills/pomogator-doctor/scripts/engine/checks/statusline.ts';
+import type { CheckContext } from '../../.claude/skills/pomogator-doctor/scripts/engine/types.ts';
 
 const NSL_HOOK = path.resolve(process.cwd(), 'tools/native-statusline/install_native_statusline.ts');
+const NSL_APPLY = path.resolve(process.cwd(), 'tools/native-statusline/apply-statusline.ts');
+function nslCtx(home: string): CheckContext {
+  return {
+    config: null,
+    configError: null,
+    referencedMcpServers: new Set<string>(),
+    installedExtensions: [],
+    projectRoot: home,
+    homeDir: home,
+    signal: new AbortController().signal,
+    packageVersion: null,
+  } as unknown as CheckContext;
+}
+async function nslCheckRun(home: string): Promise<{ severity?: string; hint?: string }> {
+  const r = await statuslineCheck.run(nslCtx(home));
+  return (Array.isArray(r) ? r[0] : r) ?? {};
+}
 function nslSettingsPath(home: string): string {
   return path.join(home, '.claude', 'settings.json');
 }
@@ -47,6 +66,7 @@ interface NSLWorld extends V4World {
   nslWriteResult?: { changed: boolean; action: string };
   nslBefore?: string;
   nslEnv?: Record<string, string>;
+  nslCheck?: { severity?: string; hint?: string };
 }
 
 After(function (this: NSLWorld) {
@@ -189,4 +209,41 @@ Then(/^the hook exits with code 0 without throwing$/, function (this: NSLWorld) 
 });
 Then(/^settings\.json is not mutated$/, function (this: NSLWorld) {
   assert.equal(fs.readFileSync(nslSettingsPath(this.nslHome!), 'utf-8'), '{ "statusLine": ');
+});
+
+// --- NSL001_10 / _11 (pomogator-doctor statusline check + real apply fix-action) ---
+Given(/^pomogator-doctor runs against a HOME whose settings\.json has no statusLine$/, function (this: NSLWorld) {
+  nslWriteSettings(this.nslHome!, {});
+});
+When(/^the statusline check executes$/, async function (this: NSLWorld) {
+  this.nslCheck = await nslCheckRun(this.nslHome!);
+});
+Then(/^the check is reported as needing a fix$/, function (this: NSLWorld) {
+  assert.equal(this.nslCheck!.severity, 'warning');
+  assert.ok(this.nslCheck!.hint, 'a fix hint must be present');
+});
+Then(/^applying the fix-action writes the ccstatusline command immediately$/, async function (this: NSLWorld) {
+  const apply = spawnSync(process.execPath, ['--import', 'tsx', NSL_APPLY], {
+    input: '',
+    encoding: 'utf8',
+    env: { ...process.env, HOME: this.nslHome!, USERPROFILE: this.nslHome! },
+  });
+  assert.equal(apply.status, 0);
+  const ar = JSON.parse((apply.stdout ?? '').trim()) as { changed?: boolean };
+  assert.equal(ar.changed, true);
+  assert.equal((await nslCheckRun(this.nslHome!)).severity, 'ok');
+});
+Given(/^a HOME whose settings\.json statusLine\.command contains "ccstatusline"$/, function (this: NSLWorld) {
+  nslWriteSettings(this.nslHome!, { statusLine: { type: 'command', command: 'npx -y ccstatusline@latest' } });
+});
+Then(/^the check severity is "ok"$/, function (this: NSLWorld) {
+  assert.equal(this.nslCheck!.severity, 'ok');
+});
+Then(/^a HOME with a custom non-ccstatusline statusLine also reports "ok" \(preserved\)$/, async function (this: NSLWorld) {
+  nslWriteSettings(this.nslHome!, { statusLine: { type: 'command', command: 'my-custom-bar.sh' } });
+  assert.equal((await nslCheckRun(this.nslHome!)).severity, 'ok');
+});
+Then(/^a HOME with corrupt settings\.json reports "warning" \(unreadable, not verified\)$/, async function (this: NSLWorld) {
+  fs.writeFileSync(nslSettingsPath(this.nslHome!), '{ "statusLine": ', 'utf-8');
+  assert.equal((await nslCheckRun(this.nslHome!)).severity, 'warning');
 });

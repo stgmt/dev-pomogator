@@ -76,7 +76,7 @@ Feature: NSL001_Native_Statusline_Auto_Install
     Then a valid settings.json is created containing only the statusLine field
 
   # @feature3
-  @wip
+  @feature3
   Scenario: NSL001_10 pomogator-doctor offers a fix when statusLine is missing
     Given pomogator-doctor runs against a HOME whose settings.json has no statusLine
     When the statusline check executes
@@ -84,7 +84,7 @@ Feature: NSL001_Native_Statusline_Auto_Install
     And applying the fix-action writes the ccstatusline command immediately
 
   # @feature3
-  @wip
+  @feature3
   Scenario: NSL001_11 pomogator-doctor check is OK when a statusLine already exists
     Given a HOME whose settings.json statusLine.command contains "ccstatusline"
     When the statusline check executes
