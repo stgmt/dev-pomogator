@@ -694,3 +694,536 @@ A new user-facing tool MUST be added to TOOL_CONSUMERS with a real consumer skil
 - Relax `headerOf` to surface WONT-VERIFY as `todo` (rejected) — highest blast radius (every malformed-status task across 47 specs surfaces at once) AND mislabels a deliberate PERMANENT waiver as an open todo that fr-census would nag about forever.
 - Staged WARNING→ERROR like the FR-46/47/48 gates (rejected) — zero legacy `waived && done` violators, so staging only opens a soft window for the exact contradiction with no upside; ERROR from day one is safe and immediate.
 - Command-only refusal without the conformance floor (rejected) — a raw `apply_spec_change` flipping the status bypasses the command; the floor is the un-bypassable guarantee, the command is the clean early UX (CHOSEN: both, sharing one `TaskNode.waived` truth).
+
+### Decision: get_trace returns BOTH a structured tree AND a pre-written explanation_for_agent
+
+**Требование:** [FR-4](FR.md#fr-4)
+
+**Rationale:** The primary MCP tool `get_trace(node_id)` must let the agent act on one queried node without any follow-up file Read. Returning structured JSON alone (acceptance_criteria[]/scenarios[]/tasks[]/code_impl[]/related_nodes[]) forces the agent to re-interpret raw data — exactly where hallucinated cross-refs creep in. So the server ALSO composes a ≤500-char natural-language `explanation_for_agent` (FR title, AC/scenario/task counts, latest test status, failing step + error location when present), grounding the agent in fact. Implemented in `tools/spec-mcp-server/tools.ts` (`explanation_for_agent: explanation`, ~line 662) over the graph slice assembled by `tools/spec-graph` — no extra round-trip, the summary is built from the same in-memory nodes already gathered for the structured payload.
+
+**Trade-off:** The server owns a hand-written summariser that must stay in sync with the structured fields (a new edge type means updating both the tree and the prose), and the ≤500-char budget means the explanation is lossy for very large traces — it cites counts + the single most relevant failing step, not every node.
+
+**Alternatives considered:**
+- Structured JSON only, no prose (rejected) — pushes interpretation onto the agent, the documented hallucination source FR-4 exists to remove.
+- Prose only, no structured tree (rejected) — agent cannot programmatically walk AC->Scenario->Task edges; loses machine-actionable traceability.
+- Let the agent run a second summarising LLM call over the JSON (rejected) — extra latency/token cost per query and non-deterministic; a server-composed deterministic summary is cheaper and stable.
+
+### Decision: Syntax invariants are HARD PreToolUse DENY, not soft warnings
+
+**Требование:** [FR-5](FR.md#fr-5)
+
+**Rationale:** A class of spec defects breaks graph integrity outright — two `### FR-N:` headings with the same id (DUPLICATE_DEFINITION), YAML frontmatter that won't parse (MALFORMED_FRONTMATTER), a `.feature` that fails gherkin parse (MALFORMED_GHERKIN), a heading that matches `anchor_patterns` but yields an empty anchor (INVALID_ANCHOR_PATTERN). Soft warnings on these get ignored by both agent and human (the proven v3 form-guard track record), so they must be enforced SYNCHRONOUSLY at Write/Edit time: the PreToolUse hook `spec-conformance-guard` DENIES the tool call with a `permissionDecisionReason` carrying location + an actionable hint. Implemented in `tools/spec-conformance-guard/spec-conformance-guard.ts` (matches `.specs/**/*.md` + `**/*.feature`), mirroring the v3 form-guard hard-deny pattern.
+
+**Trade-off:** A hard deny can block a legitimate in-progress edit (e.g. mid-refactor a heading is briefly duplicated); the cost is the developer must resolve the invariant before the write lands. Limited deliberately to true syntax/integrity invariants — soft drift (UNCOVERED_FR, semantic mismatch) is left to the PostToolUse push (FR-6), not this hard gate.
+
+**Alternatives considered:**
+- Soft WARNING only (rejected) — 1.5-year evidence that agents and humans ignore warnings; broken graph integrity ships.
+- PostToolUse async check (rejected for this class) — fires after the broken content is already on disk; a duplicate id has already corrupted the graph by then. Async push is correct for soft drift, not for hard invariants.
+- Validate only at commit time / CI (rejected) — too late in the loop, the agent has already built on the broken state for many turns.
+
+### Decision: Marksman is registered as a native Claude Code LSP plugin (supersedes the custom bridge + js-fallback)
+
+**Требование:** [FR-7](FR.md#fr-7)
+
+**Rationale:** Markdown navigation/edit over wiki-links (definition / references / rename / hover / documentSymbol) is a solved LSP problem, and Claude Code now has NATIVE LSP support. So dev-pomogator registers Marksman via the plugin's `.lsp.json` (`plugin.json` `lspServers`): one server `marksman`, `command` = a `node` launcher shim `tools/marksman-installer/launch-marksman.cjs` that execs the resolved binary `marksman server` over inherited stdio (cross-platform, no PATH mutation, mirrors `.mcp.json`'s node pattern), `args=["server"]`, `extensionToLanguage={".md":"markdown"}`. A SessionStart hook auto-installs the binary (PATH first, else managed download to `.dev-pomogator/bin/` with sha256 computed by `cli-update-hashes.ts`) — the user is never asked to install it. The custom graph keeps ONLY spec-domain concerns an LSP has no concept of: traceability (get_trace/get_coverage), the honesty gate, conformance, and broken-link detection (`wikilinks.ts` stays a CONFORMANCE check, not a navigation fallback).
+
+**Trade-off:** When Marksman is genuinely unavailable (offline + unsupported platform) navigation features are simply ABSENT with an actionable message — the system does NOT fake a degraded MD-LSP (dead-integration-guard). Versus the old bridge, dev-pomogator gives up wire-level control of the JSON-RPC framing (now Claude Code's native LSP host owns it), and a Marksman version bump means re-resolving/re-hashing the binary.
+
+**Alternatives considered:**
+- Custom hand-rolled JSON-RPC bridge (`marksman-lsp/bridge.ts` + `md_references` MCP tool) (rejected/RETIRED 2026-06-04) — wrong layer once native LSP exists; reimplements what the LSP host already does; was downloaded-and-never-run.
+- A JS MD-LSP fallback when Marksman is missing (rejected) — fakes a degraded navigation surface that lies about resolution (dead-integration-guard); FR-7 mandates honest absence instead.
+- Heading migration to short slugs so bare `[[FR-1]]` resolves to `## FR-1` (rejected here, scoped out) — lossy (drops the title + AC<->FR linkage from headings) and the agent already resolves `[[FR-1]]`/`AC-N` via the graph's own dual-anchor definitions; any migration is a separate forked task.
+
+### Decision: Semantic drift is an opt-in LLM judge, default OFF, result-cached by content hash
+
+**Требование:** [FR-8](FR.md#fr-8)
+
+**Rationale:** Structural checks miss the case where a test technically passes but does not validate the requirement (FR says 'redirect to /login', the scenario asserts an API 401 — both pass syntactic checks, semantically misaligned). Only an LLM can judge that. So `conformance_check(scope, semantic: true)` spawns a `claude -p` subprocess (Haiku) with the FR text + the scenario Given/When/Then text and parses the JSON verdict into a `SEMANTIC_DRIFT` finding (severity + explanation). It is DISABLED by default (per-call `semantic: true` or `.spec-config.json::conformance_checks.semantic_drift.enabled`) because the call costs tokens and is non-deterministic. Results are cached by `hash(fr_text + scenario_text)` so a repeat call returns the cached verdict without re-spawning. Implemented in `tools/spec-graph/conformance.ts` + `tools/spec-llm-judge/` (`index.ts`, `cache.ts`, `deny-list.ts`).
+
+**Trade-off:** When enabled it adds latency + token spend per scope and the verdict can vary run-to-run; mitigated by default-OFF + the content-hash cache. The judge transport must fail-open (judge unavailable -> drift pass skipped, structural findings still ship) so a missing `claude` binary never blocks conformance.
+
+**Alternatives considered:**
+- Always-on semantic check (rejected) — token cost + non-determinism on every spec edit; the documented forgetfulness-vs-noise balance breaks.
+- Pure structural conformance, no semantic layer (rejected) — misses the highest-value class (test passes but doesn't validate the FR), the whole reason the judge exists.
+- A second bespoke judge stack (rejected) — reuse the existing judge transport + deny-list rather than maintaining a parallel one.
+
+### Decision: Multi-language BDD via the canonical Cucumber Messages schema, not per-runner adapters
+
+**Требование:** [FR-9](FR.md#fr-9)
+
+**Rationale:** Cucumber Messages NDJSON is a language-agnostic standard that every major BDD runner emits (Reqnroll v3+ for .NET, behave with the message formatter for Python, Cucumber-JVM with `--plugin message:` for Java) — the same schema cucumber-js produces for TypeScript. So the NDJSON ingester relies on the `@cucumber/messages` canonical parser and stays runner-agnostic: one ingester populates the SpecGraph regardless of source language, and `get_trace` works identically across stacks. Only code-reference extraction (`step_bindings`) is runner-specific (Reqnroll/cucumber-js carry `stepDefinition` envelopes in NDJSON; behave needs a small bridge reading its bindings). Implemented in `tools/spec-graph/parsers/multilang.ts` + `parsers/ndjson.ts`, exercised by `tests/e2e/multilang-ingest-roundtrip.test.ts`.
+
+**Trade-off:** v4 is tied to runners that emit canonical Cucumber Messages — a runner with a non-standard output format needs a producing-side conversion (or a bridge) before ingestion; behave specifically needs the extra binding-extraction bridge. Re-verifying against each real runner's actual NDJSON is a maintenance cost (verify-against-real-artifact).
+
+**Alternatives considered:**
+- Per-language bespoke parsers (rejected) — duplicates ingest logic N times, drifts per runner, defeats the point of a shared schema.
+- TypeScript/cucumber-js only (rejected) — locks v4 to one ecosystem; the whole FR is to support C#/Python/Java projects.
+- Parse each runner's human stdout (rejected) — brittle, format-unstable; canonical NDJSON is the machine-readable contract that exists precisely to avoid stdout scraping.
+
+### Decision: SQLite cross-session index is opt-in (config-gated), WAL + single-writer, with corruption auto-fallback
+
+**Требование:** [FR-10](FR.md#fr-10)
+
+**Rationale:** The Phase-2 default is in-memory only (see 'In-memory storage only for Phase 2', owned by FR-2), but multi-session users (two Claude Code terminals on one project) pay the rebuild cost per session and can see inconsistent state. So Phase 4 ADDS an OPT-IN persistent index at `.dev-pomogator/.spec-index.sqlite` (SQLite WAL mode), gated by `.spec-config.json::storage.sqlite_enabled=true`: sessions share one MCP server (per `.mcp-lock.json`), cold start reads the pre-built index instead of rebuilding, writes are single-writer-enforced by wrapping in a `BEGIN IMMEDIATE` transaction, schema migrations run off a `meta.schema_version` table, and on corruption the server auto-falls-back to an in-memory rebuild + logs a warning (the index is purely derived — `.specs/**/*.md` stays source of truth, so loss = rebuild not data loss). Implemented in `tools/spec-mcp-server/sqlite/wrapper.ts`.
+
+**Trade-off:** SQLite is opt-in precisely because its native binding complicates the install matrix (devcontainer/Codespaces/WSL bind-mount lock semantics) and adds schema-migration maintenance — so it is OFF by default and only paid by users who explicitly want cross-session sharing. WAL single-writer serialises writers; concurrent sessions read freely but writes go through the lock owner.
+
+**Alternatives considered:**
+- Make SQLite the default (rejected) — native-compile + bind-mount lock-corruption risk on the common devcontainer/Codespaces/WSL targets; in-memory is the safe default, SQLite the opt-in.
+- Persistent JSON file instead of SQLite (rejected) — same atomic-write/lock problem with no query-performance benefit and only marginal cold-start savings.
+- No fallback on corruption (rejected) — a corrupt index would hard-fail the server; auto-rebuild from the git-committed MDs is free and keeps the door alive.
+
+### Decision: v3->v4 migration is consent-first — dry-run default-safe, interactive with skip-default, explicit --yes for CI
+
+**Требование:** [FR-11](FR.md#fr-11)
+
+**Rationale:** Forcing manual edits across 20+ existing v3 specs is a non-starter, but silently auto-rewriting them is risky. So `dev-pomogator migrate-v3-to-v4` is consent-first with three modes: `--suggest-only` prints per-file diffs (heading conversions, frontmatter additions, anchor changes) WITHOUT touching files; the no-flag default is interactive (approve/skip/edit per file, defaulting to `skip` on 30s of no input); `--yes` is the only non-dry-run path that writes without per-file confirmation, reserved for CI/unattended. Migration converts legacy `### Requirement: FR-N <title>` -> `### FR-N: <title>` (body preserved), creates `.spec-config.json` if absent, predicts `@FR-N` tags for untagged scenarios by naming heuristic, and bumps `.progress.json::version` 3->4 ONLY when the spec migration is confirmed. Backward compat is preserved via triple-anchor registration so legacy headings keep working. Implemented in `tools/migrate-v3-to-v4/` (`cli.ts`, `converter.ts`, `interactive.ts`, `tag-predictor.ts`).
+
+**Trade-off:** The interactive 30s-skip default means a fully unattended run does nothing unless `--yes` is passed (deliberate — safe default over convenience); and the tag-prediction heuristic can mis-suggest a tag, which is why suggestions are shown for approval rather than auto-applied.
+
+**Alternatives considered:**
+- Silent auto-rewrite of all specs (rejected) — risk of corrupting completed specs with no consent; the whole FR is consent-first.
+- Default to apply (no dry-run) (rejected) — a wrong conversion lands before the user sees it; dry-run / interactive-skip keeps the no-flag path non-destructive.
+- Pure manual migration, no tool (status quo, rejected) — days of hand-editing across 20+ specs, the exact non-starter that motivates the helper.
+
+### Decision: Orphan scenarios are WARNING by default (TDD red-phase safe), escalation is per-class config
+
+**Требование:** [FR-13](FR.md#fr-13)
+
+**Rationale:** Red-phase TDD writes failing scenarios before the FR/AC exists, so forcing every scenario to have a matching node upfront would break the red-green-refactor cycle. conformance_check detects two orphan classes — `SCENARIO_TAG_ORPHAN` (scenario tags `@FR-N`/`@NFR-N`/`@AC-N` but the node doesn't exist) and `UNTAGGED_SCENARIO` (no FR/NFR/AC tag at all) — and emits both at severity `warning` (NOT error, NOT block) by default, listing existing similar ids to help. Teams that want stricter enforcement raise it per class via `.spec-config.json::orphan_policy.{class}` = `warn|block|exempt`, with `exempt_scenarios` (e.g. `@no-fr-required`) and `exempt_paths` (e.g. `tests/infrastructure/**`) escape lists. Implemented in `tools/spec-graph/conformance.ts`.
+
+**Trade-off:** A default-warn means a genuinely orphaned scenario can ship un-blocked until someone reads the warning — the cost of not breaking red-phase. Teams that prefer hard enforcement opt into `block` per class; the policy is per-orphan-class rather than global so untagged vs dangling-tag can be tuned independently.
+
+**Alternatives considered:**
+- Hard-block all orphans by default (rejected) — breaks red-phase TDD, the explicit motivation; agents/humans can't write a failing test first.
+- Global single severity for both classes (rejected) — UNTAGGED_SCENARIO (infrastructure tests legitimately untagged) and SCENARIO_TAG_ORPHAN (a typo'd/renamed FR id) deserve different policies; per-class config is needed.
+- No exemption lists (rejected) — infrastructure/`@no-fr-required` scenarios would forever warn; explicit exempt lists silence the known-OK cases without disabling the check.
+
+### Decision: Multi-env correctness — repo-relative paths, watcher touch-test fallback, one write-owner with read-only co-sessions
+
+**Требование:** [FR-14](FR.md#fr-14)
+
+**Rationale:** dev-pomogator must work across host (Win/Mac/Linux), VS Code devcontainer, WSL2, Hyper-V VM and Codespaces, where absolute/container-internal paths and unreliable bind-mount FS events silently break things. So: (1) every path in MCP API responses is relative to `git rev-parse --show-toplevel` (never absolute, never container-only); (2) the chokidar watcher runs a startup touch test (create temp file, await event <=500ms) and, if the event is missed, enables polling mode (1s) + logs the decision — auto-adapting to slow bind-mount FS; (3) `.mcp-lock.json` tags an `env` field (`host`/`container:...`/`wsl:...`) with ONE write-owner per worktree — a second concurrent session does NOT crash, it boots READ-ONLY (reads + `propose_spec_change` dry-run stay live, while `apply_spec_change`/`delete_spec_doc`/`create_spec` refuse with `WRITE_LOCK_HELD` naming the holder pid+env), so writes serialise to the single owner and a different-env collision additionally surfaces an env-mismatch hint. Implemented in `tools/spec-mcp-server/lock-manager.ts` + `lifecycle.ts` + `codespaces-autostart.ts`.
+
+**Trade-off:** Polling fallback (1s interval) is slower than native FS events — accepted as the price of correctness on bind-mounts where native events are unreliable. The single-write-owner model means a second session can't write concurrently (by design — it stays usable for reads), trading write-concurrency for a serialised, conflict-free lock.
+
+**Alternatives considered:**
+- Absolute paths in responses (rejected) — break the moment the repo is opened from a different mount (`/workspace/...` vs `D:\...`); repo-relative is portable across host/container/WSL.
+- Always-poll the watcher (rejected) — wastes CPU on fast host FS where native events work; the touch test picks the right mode per environment.
+- Crash/deny the second session outright (rejected) — a co-session would lose its whole door; read-only boot keeps it usable while still serialising writes to one owner (P21-1).
+
+### Decision: Side-channel conformance log is persistent append-only JSONL, separate from the agent push
+
+**Требование:** [FR-15](FR.md#fr-15)
+
+**Rationale:** The PostToolUse push (FR-6) gives real-time feedback but is ephemeral — it vanishes from agent context. Team leads and retrospective analytics («which FRs fail conformance most often») need durable history without flooding agent context. A persistent per-day JSONL at `.dev-pomogator/.spec-check-log/<YYYY-MM-DD>.jsonl` (one line `{timestamp, finding_code, severity, location, message, spec_slug}`) is append-only so it doubles as an audit trail, daily-named so `--since` windows are cheap, and rotated at 10MB (`-<N>.jsonl` suffix) so a hot spec cannot grow one file unbounded. It is consumed by `dev-pomogator spec-check-log [--since][--grep]` and by external `jq`/`grep`/ML tooling (the prior-art append-only-JSONL pattern reused from `scope-gate/escape-hatch-audit.md`, DESIGN.md section (k)).
+
+**Trade-off:** Two log files now coexist (this JSONL + v3 `form-guards.log`, see FR-23) with no unification tooling — different taxonomies and consumers. Append-only means no in-place dedup; size is bounded only by rotation, not de-duplication.
+
+**Alternatives considered:**
+- Push-only / no persistent log (rejected) — agent sees findings once then forgets; no retrospective audit, no ML training data for Phase 3+.
+- Single unified log merging form-guard decisions + conformance findings (rejected) — incompatible event taxonomies break v3 `renderFormGuardsSummary()` consumers; see FR-23.
+- In-place mutable store / SQLite (rejected for this artifact) — loses the grep/jq/external-tooling compatibility that is the whole point; rotation is simpler than a schema.
+
+### Decision: Codespaces lifecycle = postStartCommand autostart + machine-tagged lock + in-memory resume
+
+**Требование:** [FR-16](FR.md#fr-16)
+
+**Rationale:** GitHub Codespaces differs from a local devcontainer in ways generic US-14 support does not cover: ephemeral CPU (hibernation), a persistent `/workspaces/` volume (not a bind-mount), and postCreate/postStart lifecycle hooks. dev-pomogator therefore adds a `postStartCommand` to `.devcontainer/devcontainer.json` that launches the MCP server on every cold or warm start, and tags the lock file's `env` field `codespaces:<machine-id>` so a second environment opening the same worktree is detected and refused. Because the persistent `/workspaces/` volume delivers native FS events, no polling fallback is needed; after hibernation/resume the server rebuilds its in-memory graph from the git-committed `.specs/**` files within 2s (loss = a 2s rebuild, not data loss — consistent with the in-memory-only storage decision).
+
+**Trade-off:** Couples dev-pomogator install to editing the user's `.devcontainer/devcontainer.json` (postStartCommand). The 2s resume budget assumes the spec corpus stays at the 30-spec scale; a much larger corpus would exceed it. Machine-id tagging is best-effort — a Codespace machine-id change between hibernations would look like a new environment.
+
+**Alternatives considered:**
+- Rely on generic devcontainer support (US-14) only (rejected) — Codespaces hibernation/postStart specifics are unverified by US-14; silent breakage with no obvious cause.
+- postCreateCommand instead of postStartCommand (rejected) — postCreate runs once at creation, not on warm resume; the server would not restart after hibernation.
+- Persist the graph to disk to skip the resume rebuild (rejected) — the in-memory-only decision already accepts the 2s rebuild; persistence reintroduces the bind-mount/volume lock-semantics risk that decision avoids.
+
+### Decision: Two-tier PreToolUse hook failure policy (soft fail-open preserved, hard tier fail-closed on startup)
+
+**Требование:** [FR-19](FR.md#fr-19)
+
+(Promotes the existing prose at DESIGN.md section «(l) Hook failure-mode tiers (FR-19)», DESIGN.md:456, into a graph-recognized `### Decision:` block — content lifted, not invented.)
+
+**Rationale:** A single «all hooks fail-open» policy creates a bypass vector: an attacker crafts a `.md` whose content reliably crashes the hard guard's parser and thereafter Writes are unprotected on every file. Two tiers close that hole while preserving v3 robustness. The **soft tier** (the 5 v3 form-guards + the meta-guard) keeps v3 FR-10's behaviour verbatim — on ANY exception it logs `{ts,hook_id,file_path,error_message,error_stack}` to `~/.dev-pomogator/logs/form-guards.log` and exits 0. The **hard tier** (`spec-conformance-guard`, FR-5) splits by failure site: a STARTUP/config-load crash exits 1 + actionable stderr (broken install must surface; the user's Write is blocked until repair), whereas a per-file CONTENT parse exception appends to the spec-check-log JSONL (FR-15) and exits 0 — one confused file must not DoS authoring.
+
+**Trade-off:** A broken hard-guard install now blocks the user's Write tool entirely until repaired (intentional — surfaces the breakage) rather than silently degrading. Adds a cross-phase dependency on the FR-15 JSONL writer; if FR-15 ships later, the writer is lifted to Phase 2 OR the hard tier falls back to `form-guards.log` with a `hard_tier_file_parse` discriminator until then.
+
+**Alternatives considered:**
+- Single-tier all-fail-open (rejected) — the parser-crash bypass above; an unprotected Write path on every file after one crafted crash.
+- Single-tier all-fail-closed (rejected) — one confused/in-progress file DoSes authoring; regression vs v3's tolerant form-guards.
+- Fail-closed on per-file parse errors too (rejected) — same DoS-on-authoring problem; the startup-vs-per-file split is the precise boundary.
+
+### Decision: Author-facing conformance summary is threshold-only at prompt time plus on-demand /spec-status (B3+B4)
+
+**Требование:** [FR-20](FR.md#fr-20)
+
+(Promotes the existing prose at DESIGN.md section «(n) Conformance summary surfacing options (FR-20)», DESIGN.md:483, into a graph-recognized `### Decision:` block — content lifted, not invented.)
+
+**Rationale:** v3 rendered the 24h aggregate at every UserPromptSubmit, costing file-scan latency on every prompt and emitting noise even when nothing changed. The chosen combo replaces it with two complementary surfaces: **B3 threshold-only** renders a one-line summary at UserPromptSubmit ONLY when `unresolved_deny_events ≥ 1` since the author's last acknowledgment (state in `~/.dev-pomogator/state/last-summary-ack.json` = `{ack_timestamp, ack_event_count, ack_session_id}`), so the default is zero-noise and alerts only on real signal; **B4 on-demand** lets the author always pull the full 24h aggregate via `/spec-status`. Reads are capped at the last 1000 entries per log file to keep the prompt-time render ≤50ms p95 (NFR-Performance-6).
+
+**Trade-off:** B3 requires a per-machine ack state file and an explicit ack semantics (ack on `/spec-status` invocation or on clicking the rendered line — never implicit). B4 alone would never alert a user who never asks; B3 alone misses the «show me everything» need — hence both.
+
+**Alternatives considered:**
+- B1 — render 24h aggregate at every prompt, v3 verbatim (rejected) — per-prompt latency + noise when nothing changed; regression for latency-conscious users.
+- B2 — deprecate the summary entirely, CLI-only (rejected) — silent UX regression; users miss alerts v3 surfaced inline.
+
+### Decision: `spec-status.ts -Format task-table` output is a frozen public contract, source-swappable underneath
+
+**Требование:** [FR-21](FR.md#fr-21)
+
+**Rationale:** The `task-board-forms` skill, v3 spec-workflow tooling, and third-party consumers depend on the exact markdown table bounded by the `<!-- auto-generated by spec-status.ts -Format task-table; do not edit manually -->` / `<!-- end auto-generated -->` markers. We therefore treat that shape as a STABLE PUBLIC CONTRACT: the implementation MAY swap the underlying source (direct `remark` MD parse vs MCP-routed `get_trace` from SpecGraph) at any minor version, but the rendered shape may not change. The contract is pinned by a fixture-diff test (`tools/specs-generator/__tests__/task-table-contract.test.ts` against `__fixtures__/task-table-input/TASKS.md`). The CLI also runs in degraded mode (direct MD parse fallback) when the MCP server is down, mirroring NFR-Reliability-7's `cross-spec-reconcile` pattern.
+
+**Trade-off:** Freezing the shape constrains future formatting changes — any improvement to the table must be additive or gated behind a new `-Format`. Maintaining a baseline fixture adds a test artifact that must be regenerated deliberately when the contract intentionally evolves.
+
+**Alternatives considered:**
+- Re-derive the table fresh from the graph each version without a frozen contract (rejected) — silently breaks `task-board-forms` and third-party parsers when the shape drifts.
+- Require the MCP server for the CLI (rejected) — breaks standalone/degraded use; FR-21 explicitly mandates a direct-MD-parse fallback (see DESIGN.md:552 «ломает FR-21 деградацию»).
+
+### Decision: Version gate for spec-conformance-guard — gate on .progress.json::version >= 4 (mirror of v3 FR-9)
+
+**Требование:** [FR-22](FR.md#fr-22)
+
+(Promotes the inherited inline decision at DESIGN.md section (o), DESIGN.md:506 «migration guard via .progress.json::version >= 3 (extended by v4 FR-22 …)», into a graph-recognized `### Decision:` block — content lifted, not invented.)
+
+**Rationale:** dev-pomogator users hold 30+ legacy specs at versions 1/2/3. v4's new hard invariants (DUPLICATE_DEFINITION, MALFORMED_FRONTMATTER, MALFORMED_GHERKIN, INVALID_ANCHOR_PATTERN) were not enforced when those specs were authored. Without a gate the FR-5 hard guard would false-positive on every legacy spec and DoS authoring until each is migrated. So `spec-conformance-guard` fires only when the target spec's `.progress.json::version >= 4`; for `version < 4` / null / absent it exits 0 and logs `{kind:"ALLOW_AFTER_MIGRATION", reason:"spec_version", target:<path>}` to the spec-check-log JSONL. This is the same compatibility pattern v3 FR-9 used for the v2→v3 transition (`.progress.version` is the natural version marker; hooks check it right after the matcher filter).
+
+**Trade-off:** Legacy specs stay un-enforced until manually migrated — enforcement cannot be applied retroactively. The gate keys on a single field, so a mis-stamped `.progress.json` silently disables the guard for that spec.
+
+**Alternatives considered:**
+- WARNING-only period then ERROR-switch (rejected) — agents ignore warnings (1.5-year track record per `validate-specs.ts`).
+- Bulk-migrate all existing specs (rejected) — days of manual work + risk of breaking completed specs.
+- Opt-in via explicit env var (rejected) — `.progress.version` is the natural marker; no new config file needed.
+
+### Decision: Two distinct log files (v3 form-guards.log + v4 spec-check-log JSONL), intentionally not unified
+
+**Требование:** [FR-23](FR.md#fr-23)
+
+(Promotes the existing prose at DESIGN.md section «(m) Log file inventory (FR-23)», DESIGN.md:472, into a graph-recognized `### Decision:` block — content lifted, not invented.)
+
+**Rationale:** v4 keeps v3's `~/.dev-pomogator/logs/form-guards.log` (text line `{ts} {hook_id} {decision} {target} {message}`; 30d/10MB cap; rotated by `validate-specs.ts`; consumed by `renderFormGuardsSummary()` for FR-20 + `/spec-status`) AND adds `.dev-pomogator/.spec-check-log/<YYYY-MM-DD>.jsonl` (FR-15; JSON-per-line `{timestamp, finding_code, severity, location, message, spec_slug}`; rotate at 10MB; consumed by the `dev-pomogator spec-check-log` CLI + analytics). They are deliberately NOT unified because they carry different event taxonomies (form-validation decisions vs invariant findings), have different consumers (legacy v3 summary vs new CLI analytics), and different lifetimes. Schema-migration/unification tooling is out of scope for v4.
+
+**Trade-off:** Two files and two schemas to reason about; FR-20's summary reader must scan both. No cross-file de-duplication or unified query without external tooling.
+
+**Alternatives considered:**
+- Unify into one log (rejected) — incompatible taxonomies break v3 `renderFormGuardsSummary()` consumers for no clear gain; v5+ may consolidate.
+- Drop the v3 form-guards.log and route everything to JSONL (rejected) — regression for v3 summary consumers that depend on the text-line schema + 30-day retention.
+
+### Decision: Meta-guard preserved from v3 and extended to protect v4 plugin.json MCP-tool registrations
+
+**Требование:** [FR-24](FR.md#fr-24)
+
+(Promotes the inherited inline decision at DESIGN.md section (o), DESIGN.md:504 «meta-guard protects extension.json … extended by v4 FR-24 to cover plugin.json MCP-tool registrations», into a graph-recognized `### Decision:` block — content lifted, not invented.)
+
+**Rationale:** Agents kept finding the env-var bypass (`SPEC_FORM_GUARDS_DISABLE`) and forgetting to remove it, so v3 deleted the bypass and made `extension-json-meta-guard.ts` DENY removal of any form-guard registration from the manifest. v4 extends that exact protection scope to `plugin.json`: the meta-guard denies any Write/Edit on `extension.json` OR `plugin.json` that removes (a) any of the 5 v3 form-guard hook entries, (b) the new `spec-conformance-guard` (FR-5) registration, (c) the new MCP server `dev-pomogator-specs` tool registrations (FR-4: get_trace, find_by_tags, conformance_check, …), or (d) the meta-guard's own registration (self-protection). Tampering attempts log to `.dev-pomogator/logs/meta-guard.log`. NFR-Security-2 is the concrete instantiation.
+
+**Trade-off:** Legitimate manifest changes (renaming/consolidating extensions, removing a deprecated tool) now require human editing outside Claude Code. Self-protection means the guard cannot be removed by the agent even when removal is intended.
+
+**Alternatives considered:**
+- Keep the env-var bypass (rejected) — trivially circumvented; the exact failure that motivated deleting it.
+- Read-only filesystem flag on the manifest (rejected) — blocks install-time updates.
+- Cryptographic signature on the manifest (rejected) — over-engineering; no key-management infra.
+
+### Decision: Canonical plugin ships a complete static hooks.json — additive union, never a replacement
+
+**Требование:** [FR-25](FR.md#fr-25)
+
+(Lifts the cross-reference at DESIGN.md section (o), DESIGN.md:500 «FR-25 (additive merge preserves v3 hook registrations)», into a standalone graph-recognized `### Decision:` block.)
+
+**Rationale:** In the v2.0 canonical distribution there is no install-time edit/merge of the user's `plugin.json` (that was the deprecated v1/npm model); dev-pomogator ships its own static `.claude-plugin/hooks.json` loaded by Claude Code directly. The additive invariant therefore applies to the shipped manifest: it MUST be the complete union of the protective hooks (plan-gate / phase-gate / build-guard / test-guard family) AND the v4 spec hooks (FR-5 `spec-conformance-guard`, FR-6 `spec-conformance-push`, `bash-post-test/ingest`), with `length(PreToolUse) ≥ 1` AND `length(PostToolUse) ≥ 1`. A v4 hook added to an event array must not remove or overwrite a pre-existing protective entry in the same array. Enforced/verified against the real `.claude-plugin/hooks.json` (SPECGEN004_52).
+
+**Trade-off:** The shipped manifest must be hand-maintained as a union; a regenerate-from-scratch step would silently drop protection and open a window of unprotected authoring until users notice. The invariant is a static-shape check, not a runtime merge.
+
+**Alternatives considered:**
+- Naive «overwrite the hooks array» / regenerate manifest from scratch (rejected) — silently drops protective hooks.
+- Install-time merge into the user's plugin.json (rejected) — the deprecated v1/npm model; canonical plugins load a static shipped manifest.
+
+### Decision: LLM-as-judge content boundary — deny-list scrub before claude -p, with paranoid per-spec opt-out
+
+**Требование:** [FR-26](FR.md#fr-26)
+
+**Rationale:** FR-8's semantic-drift check spawns a `claude -p` subprocess with FR + scenario text; sending secrets to an external model is a leak vector. So the subprocess prompt is scrubbed against a deny-list: file-names (`.env`, `.env.*`, `*.pem`, `*.key`, `*credentials*`, `*secret*`) and body regexes (`\bAPI[_-]?KEY\b`, `\bBEARER\s+…`, `\bSECRET[_-]?KEY\b`, `\b(PRIVATE|RSA)\s+KEY\b`, `\bPASSWORD\s*[:=]`, `\bTOKEN\s*[:=]\s*[A-Za-z0-9._-]{16,}`). On a match the invocation is SKIPPED and a `SEMANTIC_CHECK_SKIPPED_DENY_LIST` warning is logged to the spec-check-log JSONL — crucially the result is NEVER reported as «no drift detected» (no false-clean when content was withheld). A spec may set frontmatter `spec_llm_judge_deny: true` to force-skip regardless of content (paranoid mode); there is deliberately no allow-list override — opt-in past a deny match is impossible. NFR-Security-7 captures the security NFR; this decision captures the behavioural contract.
+
+**Trade-off:** Specs containing deny-matching text get no semantic check at all (skipped, not partially redacted) — a coverage gap traded for a hard no-leak guarantee. The regex deny-list can false-positive on benign text (e.g. a doc literally discussing `PASSWORD:`), silently skipping the check for that input.
+
+**Alternatives considered:**
+- Redact-and-send (mask the secret, send the rest) (rejected) — partial redaction is error-prone; a missed pattern still leaks; skip-on-match is the safe default.
+- Allow-list override for known-safe specs (rejected) — any override reintroduces the leak path; deny-list is one-way by design.
+- Report «no drift» when skipped (rejected) — manufactures a false-clean signal; the SKIPPED finding must be explicit.
+
+### Decision: Marksman binary is sha256-verified against a pinned hash, install aborts on mismatch
+
+**Требование:** [FR-27](FR.md#fr-27)
+
+**Rationale:** `npm install` running an arbitrary binary fetched from a third-party GitHub release is a known supply-chain hole; the bundle-install decision (DESIGN.md:205) downloads Marksman but does not by itself prove the bytes. So `package.json` ships a `marksmanHashes` object mapping `{platform, arch, version} → sha256` (verbose sibling `marksman-hashes.json` allowed); after download, `postInstall` computes the file's sha256 and compares to the pinned hash for the current platform/arch/version. On mismatch the install ABORTS with `Marksman binary sha256 mismatch — expected <pinned>, got <actual>. Refusing to install untrusted binary.` and the downloaded file is deleted. The hash list is updatable ONLY via an explicit `dev-pomogator update-marksman-hashes` CLI that requires the maintainer to supply the new release version + upstream sha256. NFR-Security-8 references this.
+
+**Trade-off:** Every new Marksman release requires a maintainer to run the update-hashes CLI before users can install it — a deliberate human gate that adds release friction. A platform/arch/version with no pinned hash cannot be installed until added.
+
+**Alternatives considered:**
+- Trust the download as-is (rejected) — the supply-chain hole FR-27 exists to close; a compromised release would execute unverified.
+- Auto-fetch the hash from the same GitHub release at install time (rejected) — if the release is compromised the hash is too; the pin must be maintainer-reviewed and committed.
+- GPG-signature verification instead of sha256 (rejected) — Marksman releases are not signed; a pinned sha256 is the available integrity primitive.
+
+### Decision: Builder wires `implements` edges + `File` nodes from FILE_CHANGES.md and DESIGN.md
+
+**Требование:** [FR-29](FR.md#fr-29)
+
+**Rationale:** The trace web needs the FR→code leg, not just FR→AC/Scenario/Task. The builder parses each spec's `FILE_CHANGES.md` table (`Path | Action | Reason`) and DESIGN.md «Где код»/«App-код» sections, emitting one `File` node per unique referenced path (deduplicated across both sources and across all specs) and one `implements` edge from an FR to that File node. The FR↔file linkage is established by: a `Reason` column citing `FR-N` (`\bFR-\d+\b`), OR a Task whose `refs[]` contains FR-N and whose `files[]` includes that path, OR a DESIGN.md section citing FR-N adjacent to a path. Edge metadata = `{file_path, source_section: 'FILE_CHANGES'|'DESIGN', action?}`. The `types.ts` `EdgeType='implements'` / `NodeType='File'` declarations stay authoritative — this only wires `builder.ts` to emit them.
+
+**Trade-off:** Glob patterns in `Path` (e.g. `tools/spec-graph/*.ts`) cannot be resolved to a concrete File node, so they are skipped with a single warn-once log per build (no implements edge) — a known coverage gap for glob-only rows. FILE_CHANGES.md wins on `action` metadata when a path appears in both sources, so a DESIGN-only action is shadowed.
+
+**Alternatives considered:**
+- Require explicit `// [impl->FR-N]` code annotations (OpenFastTrace style) (rejected) — pollutes source; we parse the spec's prose claims directly.
+- Body text-scan any FR mention near a path to forge the edge (rejected) — coincidental FR mentions forge false edges; the linkage rules above are declared, not scanned (FR-46 «no crutch»).
+- Resolve globs by filesystem expansion at build time (rejected) — non-deterministic across machines/checkouts; warn-once skip is predictable.
+
+=== DESIGN.md (append a new `### Decision:` under the get_trace/MCP-surface decisions) ===
+
+### Decision: get_trace surfaces code_impl[] per node, transitively derived (FR-30)
+
+**Требование:** [FR-30](FR.md#fr-30)
+
+**Rationale:** Once FR-29 builds `implements` edges (FR node → File node) the agent still needs the code per node WITHOUT a second hop. So `get_trace` (tools/spec-graph/coverage.ts → the trace assembler in tools/spec-mcp-server/tools.ts) attaches `code_impl[]` to every returned node: an FR node carries its direct `implements` File nodes; an AC node inherits its parent FR's entries transitively; a Scenario node unions its StepBinding file paths with the parent FR's `code_impl`; a Task node unions its `files[]` with the parent FR's. A node with no `implements` edge carries `code_impl: []` (present, never omitted) so the response shape stays stable for clients.
+
+**Trade-off:** the transitive inheritance (AC→FR, Scenario→FR∪bindings, Task→FR∪files) duplicates entries across nodes in one response; dedup is by `file_path`. Accepted — the agent gets a complete per-node code map in one call instead of re-walking edges.
+
+**Alternatives considered:**
+- return only the FR's direct `implements` and make the agent re-traverse for AC/Scenario/Task — defeats the one-call goal (US-2 pain).
+- omit `code_impl` when empty — breaks stable client shape; an explicit `[]` is the FR-30 contract.
+
+=== USER_STORIES.md (append a new story; FR.md `**User Story:** US-18` citation is stale — US-18 is a cross-spec story) ===
+
+### User Story 30: Per-node code map in one trace call (Priority: P2)
+
+**Требование:** [FR-30](FR.md#fr-30)
+
+As an AI agent inspecting a requirement, I want each node `get_trace` returns to carry the code files that implement it (`code_impl[]`), so that I see FR/AC/Scenario/Task → code in a single call without walking `implements` edges myself.
+
+**Why:** FR-29 builds the FR→File `implements` edges, but without surfacing them per node the agent must make a second pass to find the code behind an AC/Scenario/Task — the exact N-call waste FR-2 set out to remove.
+
+**Independent Test:** Call `get_trace` on an FR with 3 `implements` edges → response node carries `code_impl` of length 3; an AC under it inherits the same 3; a node with no `implements` edge carries `code_impl: []` (present, not omitted).
+
+**Acceptance Scenarios:**
+
+Given an FR with 3 implements edges
+When get_trace returns the FR node
+Then code_impl has length 3
+
+Given an AC whose parent FR has implements edges
+When get_trace returns the AC node
+Then code_impl inherits the parent FR entries
+
+Given a node with no implements edges
+When get_trace returns it
+Then code_impl is an empty array, not omitted
+
+=== DESIGN.md (append under 'Test Data & Fixtures' or as a `### Decision:`) ===
+
+### Decision: Real multi-language NDJSON fixtures + a cross-language roundtrip test (FR-31)
+
+**Требование:** [FR-31](FR.md#fr-31)
+
+**Rationale:** The NDJSON ingester (detectRunner / parseNdjson) must work against the REAL output of each runner, not a synthetic inline string that fakes the producer's envelope (the verify-against-real-artifact discipline). So the corpus ships three fixture dirs captured from actual runners — tests/fixtures/reqnroll-sample/ (.NET/Reqnroll), tests/fixtures/behave-sample/ (Python/behave), tests/fixtures/jvm-sample/ (Java/Cucumber-JVM) — each output.ndjson holding ≥1 PASSED + ≥1 FAILED, each with a README.md pinning the exact runner command+version for regeneration. tests/e2e/multilang-ingest-roundtrip.test.ts drives each: detectRunner → expected runner string; parseNdjson → ≥2 scenarios with a PASS and a FAIL; ingest into a synthetic fixture spec and assert get_trace scenarios[].lastResult + get_test_result agree per language.
+
+**Trade-off:** real fixtures must be regenerated when a runner's Messages output changes (hence the README provenance) — heavier than hand-written NDJSON, but the only way to prove the ingester against the producer's true shape. Ships independently of FR-29/FR-30 (pure test infrastructure).
+
+**Alternatives considered:**
+- synthetic inline NDJSON strings — fast but fakes the producer; masked the worst-of-steps / Windows-path bugs the FR-32 corpus audit found.
+- one TS-only fixture — leaves the multi-language claim (US-9) unproven; the runners differ in how they emit testStepResult.
+
+=== USER_STORIES.md (append; FR.md `**User Story:** US-19` is stale — US-19 is cross-spec-resolve) ===
+
+### User Story 31: The ingester is proven on real non-TS runner output (Priority: P2)
+
+**Требование:** [FR-31](FR.md#fr-31)
+
+As a maintainer of the NDJSON ingester, I want a committed fixture corpus of REAL Reqnroll/behave/Cucumber-JVM output plus a roundtrip test, so that detectRunner+parseNdjson are proven against each producer's true shape, not synthetic strings that fake it.
+
+**Why:** Synthetic NDJSON fakes the envelope and hides cross-language bugs (worst-of-steps status collapse, path separators). Real captured fixtures + a roundtrip make the multi-language claim demonstrable.
+
+**Independent Test:** For each of reqnroll-sample / behave-sample / jvm-sample: detectRunner returns the expected runner string; parseNdjson yields ≥2 scenarios with ≥1 PASSED and ≥1 FAILED; after ingest, get_trace scenarios[].lastResult and get_test_result agree.
+
+**Acceptance Scenarios:**
+
+Given the reqnroll-sample fixture
+When detectRunner+parseNdjson run on it
+Then the runner is 'reqnroll' and ≥2 scenarios with one PASSED and one FAILED are parsed
+
+Given the behave-sample fixture ingested into a fixture spec
+When get_trace and get_test_result are queried
+Then the per-language statuses match
+
+Given a fixture dir missing its README.md
+When the corpus is validated
+Then it errors loudly with an actionable hint
+
+=== DESIGN.md (append a `### Decision:`) ===
+
+### Decision: Task status is evidence-derived from the latest run, with a honesty gate (FR-32)
+
+**Требование:** [FR-32](FR.md#fr-32)
+
+**Rationale:** A hand-authored `Status: DONE` lies when the backing scenario is pending/undefined. So tools/spec-graph/coverage.ts derives each task's `verified_status` from the latest ingested run (.dev-pomogator/.last-test-run.ndjson): map the task to its scenarios via @featureN / SPECGEN004_NN refs and the FR refs[]; `DONE` only when EVERY mapped scenario is PASSED; any pending/undefined/ambiguous/failed caps it at IN_PROGRESS; no mapped scenario → fall back to the hand-set status flagged `unverified`. checkConformance emits TASK_STATUS_UNVERIFIED (WARNING) when a hand-set `Status: DONE` conflicts with `verified_status < DONE`, naming the offending scenario+bucket; spec-status.ts -Format task-table renders `verified_status`, so the summary cannot claim DONE without green scenarios. This codifies the 2026-06-02 coverage-audit discipline into the engine, removing the human as the enforcement point.
+
+**Trade-off:** the derived status is only as good as scenario↔task mapping; an unmapped task stays `unverified` rather than blocking — visible, not enforced (TDD-first).
+
+**Alternatives considered:**
+- trust the hand-set Status: field — the false-green this FR exists to kill.
+- block (ERROR) on any unverified task — would flip the corpus red on day one and teach escape-hatch gaming (the FR-44 advisory lesson); WARNING + render the derived status is the chosen surfacing.
+
+=== USER_STORIES.md (append; FR.md `**User Story:** US-20` is stale — US-20 is the architect Path A/B/C story) ===
+
+### User Story 32: A task can't claim DONE without green scenarios (Priority: P1)
+
+**Требование:** [FR-32](FR.md#fr-32)
+
+As a maintainer, I want each task's effective status derived from the latest test run instead of a hand-typed field, so that a task cannot read DONE while its BDD scenario is pending/undefined and I don't have to police it by hand.
+
+**Why:** Status is set by free-text edit; 'done' can sit on a task whose scenario never passed. Deriving from the run + a honesty finding catches this mechanically.
+
+**Independent Test:** A task whose mapped scenario is UNDEFINED reads verified_status IN_PROGRESS (never DONE), and a hand-set Status: DONE on it emits TASK_STATUS_UNVERIFIED naming the scenario; a task with all scenarios PASSED reads DONE.
+
+**Acceptance Scenarios:**
+
+Given a task mapped to scenarios that are all PASSED in the latest run
+When verified_status is derived
+Then it is DONE
+
+Given a task hand-set Status: DONE whose mapped scenario is UNDEFINED
+When conformance runs
+Then it emits TASK_STATUS_UNVERIFIED naming the scenario and bucket
+
+Given a task with no mapped scenarios
+When verified_status is derived
+Then it falls back to the hand-set status flagged unverified
+
+=== DESIGN.md (append a `### Decision:`) ===
+
+### Decision: Three-layer anchor-integrity guard keeps descriptive headings rename-safe (FR-34)
+
+**Требование:** [FR-34](FR.md#fr-34)
+
+**Rationale:** Marksman-standard descriptive headings (`## FR-N: Title`) derive their GLFM slug from the heading TEXT, so a rename silently orphans inbound `#anchor` links — the ONLY failure mode of the readable form. Three layers automate it (code: tools/anchor-integrity/): (34a detect) ONE shared marksmanSlug(text) in marksman-slug.mjs — measured against the real Marksman binary (lowercase, strip punctuation INCLUDING dots so AC-1.1→ac-11), consumed by both the graph parser and the validator and pinned by a golden fixture; check.mjs verifies EVERY same-file `[t](#a)` and cross-file `[t](f.md#a)` anchor, skipping links in fenced/inline code. (34b catch) anchor_check_post.ts (PostToolUse on *.md) injects a throttled system-reminder; anchor_gate_stop.ts (Stop-gate) blocks 'done' on a session-touched spec with broken anchors, escape `[skip-anchor-fix: <reason>]` logged to .claude/logs/. (34c fix) fix.mjs repairs id-bearing links deterministically (id → current heading → marksmanSlug → rewrite, idempotent); ambiguous prose links dispatch to claude-fallback.mjs in the background, never guess-rewritten when the headless path is unavailable.
+
+**Trade-off:** the deterministic fixer only handles id-bearing links; ambiguous ones need a (background) LLM hop and stay flagged when claude is absent — correct over a wrong guess.
+
+**Alternatives considered:**
+- drop descriptive headings for bare `## FR-N` — kills IDE Ctrl+Click navigation (the value of the Marksman-standard form).
+- a single deterministic fixer for all links — can't disambiguate prose links without an LLM; guessing would rewrite to the wrong heading.
+
+=== USER_STORIES.md (append; FR.md `**User Story:** US-22` is stale — US-22 belongs to FR-37) ===
+
+### User Story 34: Renaming a heading never silently breaks my spec links (Priority: P2)
+
+**Требование:** [FR-34](FR.md#fr-34)
+
+As a spec author who renames descriptive headings, I want broken inbound anchors detected at edit time and id-bearing links auto-fixed, so that I keep readable `## FR-N: Title` headings without links rotting after a rename.
+
+**Why:** Descriptive headings derive their slug from the text, so a rename orphans every `#anchor` link to it; without a guard the rot is invisible until someone clicks a dead link.
+
+**Independent Test:** anchor-integrity reports both same-file and cross-file broken anchors with the likely heading; marksmanSlug matches the Marksman golden fixture; a write that orphans an anchor fires a reminder + the Stop-gate (bounded escape); the deterministic fixer repairs an id-bearing link without an LLM and is idempotent; an ambiguous link is dispatched to claude in the background, never guess-rewritten.
+
+**Acceptance Scenarios:**
+
+Given a same-file and a cross-file broken anchor
+When anchor-integrity runs
+Then both are reported with the likely target heading
+
+Given an id-bearing link with a stale anchor
+When the deterministic fixer runs
+Then it rewrites to the current slug and fix(fix(x))==fix(x)
+
+Given an ambiguous prose link and no headless claude available
+When the fixer runs
+Then the link stays flagged and is never guess-rewritten
+
+=== DESIGN.md (append a `### Decision:`) ===
+
+### Decision: The honesty gate judges test QUALITY, not just PASS/FAIL (FR-35)
+
+**Требование:** [FR-35](FR.md#fr-35)
+
+**Rationale:** FR-32 derives verified_status from PASS/FAIL only, so a fake-positive GREEN test (mocked / trivial-assert) still marks a task DONE. FR-35 closes three holes: (35a) when a task's scenario is GREEN, the honesty derivation in tools/spec-graph/coverage.ts additionally requires a test-quality verdict from the strong-tests/spec-status test-body audit — WEAK or FAKE-POSITIVE-RISK caps verified_status at IN_PROGRESS and emits TASK_TEST_QUALITY naming task+verdict; STRONG leaves DONE intact (no false-block). (35b) a `test-quality` stage is added to the orchestrator feature-map (scripts/feature-map.ts WORKFLOW) between coverage and honesty-gate, routing to strong-tests+spec-status, AND a Stop/pre-DONE hook (claim-evidence-gate idiom) enforces it (escape `[skip-test-quality: <reason>]` logged); checkFeatureMapDrift FAILs if the stage is missing. (35c) checkConformance emits a finding when a task is DONE with ZERO linked scenarios, so 'mark done, write no test' is visible, not []. The producer joins per-test verdicts to the backing task worst-wins.
+
+**Trade-off:** the quality verdict comes from an advisory auditor (strong-tests/spec-status) surfaced via a side-channel file the coverage reader consumes — keeps coverage.ts builtins-only (dep-safe for plugin users) at the cost of an extra producer step.
+
+**Alternatives considered:**
+- keep the gate PASS/FAIL-only — the fake-positive-marks-DONE hole this FR exists to close.
+- leave strong-tests/spec-status advisory (not in hooks/feature-map) — measured this session: they then never run, so a worthless GREEN test wins.
+
+=== USER_STORIES.md (append; FR.md `**User Story:** US-22` is stale — US-22 belongs to FR-37) ===
+
+### User Story 35: A passing-but-worthless test can't mark a task DONE (Priority: P1)
+
+**Требование:** [FR-35](FR.md#fr-35)
+
+As a maintainer, I want the honesty gate to require a test-QUALITY verdict on top of GREEN, so that a mocked or trivial-assert test that passes cannot silently mark a task DONE and a task DONE with no test at all is surfaced.
+
+**Why:** PASS/FAIL alone is gameable — a fake-positive GREEN reads DONE. A WEAK/FAKE-POSITIVE-RISK verdict must cap the status, the quality stage must be enforced (not advisory), and zero-linkage DONE must not be silent.
+
+**Independent Test:** A task whose GREEN test is WEAK/FAKE-POSITIVE-RISK caps at IN_PROGRESS with TASK_TEST_QUALITY; a STRONG GREEN test stays DONE; the orchestrator feature-map carries an enforced test-quality stage (drift guard fails if missing); a DONE task with zero linked scenarios emits a finding.
+
+**Acceptance Scenarios:**
+
+Given a task whose linked scenario is GREEN but the test-body verdict is FAKE-POSITIVE-RISK
+When verified_status is derived
+Then it is capped below DONE and TASK_TEST_QUALITY is emitted
+
+Given a task whose GREEN test verdict is STRONG
+When verified_status is derived
+Then DONE is left intact
+
+Given a task marked DONE with zero linked scenarios
+When conformance runs
+Then a finding is emitted (not silent)
+
+### Decision: 4-state legacy/drift triage, never auto-retire — reuse spec-reality-check, default DRIFTED (FR-43)
+
+**Требование:** [FR-43](FR.md#fr-43)
+
+**Rationale:** «Реализовано, но уже не актуально» — это не одно состояние, а ЧЕТЫРЕ с разными действиями (SUPERSEDED→archive+`supersedes`, REMOVED→archive/delete, DRIFTED→re-sync спеки, ABSORBED→redirect FR). Конфляция этих случаев и есть причина «непонятно как определять». Решающий сигнал — СУЩЕСТВОВАНИЕ реализации (переиспользуем skill `spec-reality-check` категория-15 reality-drift: FILE_CHANGES-пути + символы против диска), скрещённое с version-lineage по slug (FR-36) и not_run-by-feature (FR-32); git-staleness даём near-zero вес — стабильная законченная спека неотличима по давности от заброшенной. Дефолт «всё зарефакторено» = DRIFTED (re-sync), НЕ retire — иначе теряются ещё-в-силе требования. Реализовано в tools/specs-generator/legacy-triage.ts (классификатор) + legacy-judge.ts.
+
+**Trade-off:** Триаж выдаёт лишь ПОДОЗРЕНИЕ + кандидатов; финальное состояние подтверждает человек явным маркером (`.progress.json status` или перенос в `.specs/archive/`). Авто-ретайр/авто-удаление запрещены — стоимость ложного ретайра (потеря живого требования) выше стоимости ручного подтверждения.
+
+**Alternatives considered:**
+- Новый отдельный движок staleness-детекции (rejected) — анти-паттерн «второй валидатор»; spec-reality-check уже считает reality-drift, дублировать незачем.
+- git-staleness как главный сигнал (rejected) — давность коммита не отличает «заброшено» от «законченно и стабильно»; даёт ложные ретайры.
+- Авто-ретайр на подозрении без HITL (rejected) — необратимо теряет ещё-в-силе FR при ложной тревоге; «решено один раз — guard не переспрашивает» сохраняет контроль у человека.
+
+### Decision: Archive only on hard repo-proof — recount inside the door (TOCTOU), seal the archive (FR-45)
+
+**Требование:** [FR-45](FR.md#fr-45)
+
+**Rationale:** FR-43 даёт лишь подозрение; исполнение (перенос в `.specs/archive/`) должно действовать ТОЛЬКО на твёрдом пруфе, иначе ловим «наоборот ошибку» (архивируем ещё-живую спеку). Дверной тул `get_archival_proof(slug)` считает ЖИВЫЕ входящие ссылки — граф-рёбра из НЕ-архивных спек ПЛЮС prose/markdown-ссылки в `.specs/*` вне самой спеки — и даёт вердикт ARCHIVE / KEEP_FALSE_POSITIVE / SPEC_NOT_FOUND / ALREADY_ARCHIVED. `archive_spec` переносит ТОЛЬКО при отсутствии живых ссылок И сигнале FR-43 ∈ {SUPERSEDED,REMOVED,ABSORBED}. Реализовано: tools/spec-mcp-server/mutations.ts + tools.ts (door), tools/specs-generator/spec-archive.ts (agent-консьюмер: prune осиротевших тестов + отчёт-пруф). Доступ к спекам только через дверь (FR-39/40); git-операции напрямую, всё revert-able.
+
+**Trade-off:** Ссылки пересчитываются ВНУТРИ `archive_spec` (защита TOCTOU) — двойной счёт (пруф + повторный счёт на записи), стоимость в обмен на отсутствие гонки между пруфом и действием. Архив запечатан (ARCHIVE_SEALED — запись под `.specs/archive/**` через дверь отвергается), поэтому правка архивной спеки требует ручного восстановления из git.
+
+**Alternatives considered:**
+- Авто-архив по сигналу FR-43 без пруфа ссылок (rejected) — dogfood 24 кандидата дал бы ложные архивации; 19 спасены именно тем, что ещё-ссылаемы.
+- Пруф без пересчёта в момент записи (rejected) — TOCTOU-окно: ссылка появляется между get_archival_proof и archive_spec, архивируем живую спеку.
+- Удалять осиротевшие тесты автоматически без эскалации неоднозначных (rejected) — общий тест (покрывает не только архивируемую спеку) удалять нельзя; spec-archive эскалирует NEEDS_HUMAN.
+
+### Decision: Task↔own-scenario is a DECLARED link enforced in conformance, DONE-only, staged detect→gate (FR-46)
+
+**Требование:** [FR-46](FR.md#fr-46)
+
+**Rationale:** Сейчас задача связывается со сценарием лишь через `refs: FR-N` → ко ВСЕМ `@featureN` (`mapTasksToScenarios`), свой конкретный сценарий не требуется — «готово» можно поставить, ридуя на тесты всего требования, и дрейф «готово-vs-не-построено» неотличим (read-only проба: 0/26 v4-задач цитируют свой `specgen004_NN`). Правило живёт в ОДНОМ месте — `conformance.ts` (его прогоняют дверь apply_spec_change, spec-conformance-guard, conformance_check, verdict, census): новое `TASK_NO_OWN_SCENARIO` + существующее `TASK_STATUS_UNVERIFIED` гейтят DONE на «цитирует свой `specgen004_NN` И он PASSED». Связь нужна к DONE, не к созданию (TDD: тест пишется ПОСЛЕ задачи). get_trace отдаёт task→own_scenario + результат. Реализовано в tools/spec-graph/conformance.ts + fr-census.ts.
+
+**Trade-off:** Правило вводится ПОЭТАПНО (WARNING → ретрофит → ERROR), иначе ERROR заклинит дверь на предсуществующих нарушителях (вердикт: 129 warning). Допустимая альтернатива — дверь error-ит только на нарушении, ВВЕДЁННОМ этой записью (delta old→new), не на предсуществующих. Стоимость: окно, в котором новый долг этого класса ещё может копиться до промоута.
+
+**Alternatives considered:**
+- Оставить связь только через `refs: FR-N` ко всем @featureN (rejected) — ровно текущая дыра: «готово» ставится на тестах всего требования, свой сценарий не доказан.
+- Сразу ERROR без стадии WARNING (rejected) — заклинит дверь на 0/26 предсуществующих, учит геймить escape-hatch (урок H1/scope-gate).
+- Требовать связь к СОЗДАНИЮ задачи (rejected) — ломает TDD red-first: сценарий пишется после задачи; связь нужна к DONE.
+
+### Decision: Design/story/research are graph nodes with declared edges, not a body text-scan — completeness via webComplete AND (FR-47)
+
+**Требование:** [FR-47](FR.md#fr-47)
+
+**Rationale:** FR-44 ловит обратные дыры эвристикой по тексту тела; owner: «текст-скан = костыль, чинить перестройкой графа». FR-47 делает паутину НАСТОЯЩЕЙ: Decision/Story/Research моделируются узлами с реальным ребром `covers` FR→узел, построенным ТОЛЬКО из явной строки `**Требование:** [FR-N]` в блоке `### Decision:`/`### User Story:` (НЕ из упоминания FR в Rationale/прозе) — иначе случайный `FR-1` в тексте подделал бы ребро. conformance даёт `FR_NO_DESIGN` (зеркально `FR_NO_RESEARCH`); fr-census даёт единый вердикт «полнота требования» через `webComplete` AND-агрегацию (ВСЕ ноги: AC+сценарий+задача+ресерч+дизайн+история — не ЛЮБАЯ, per rollup-completeness-all-not-any). get_trace surface-ит все ноги в обе стороны. Страж `design-decision-guard` требует строку `**Требование:**`, иначе ребро не построить. Реализовано: tools/spec-graph/parsers/md.ts (parser+builder), conformance.ts, fr-census.ts, upstream-trace.ts/research-trace.ts.
+
+**Trade-off:** Узлы вместо текст-скана требуют формат-стража и `**Требование:**`-строки в КАЖДОМ блоке (авторская стоимость; ровно те 13 unit'ов, что этот аудит чинит). Поэтапно detect→retrofit→gate (как FR-46c), дельта-скоуп — не клинить дверь на предсуществующих незаполненных ногах.
+
+**Alternatives considered:**
+- Оставить текст-скан FR-44 (rejected) — owner назвал костылём; случайное упоминание FR в прозе подделывает связь, нет настоящего ребра для прыжка в обе стороны.
+- Строить ребро из ЛЮБОГО упоминания FR в блоке (rejected) — `FR-1` в Alternatives выковал бы ложный covers; только явная `**Требование:**`-строка = декларированная связь.
+- webComplete как ЛЮБАЯ нога (OR) (rejected) — false-green: одна нога зеленит требование; нужна AND по всем ногам (rollup-completeness-all-not-any).
