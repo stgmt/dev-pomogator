@@ -864,15 +864,21 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
   // ============================================================================
 
   describe('analyze-features.ts', () => {
+    // Deterministic committed corpus (PLUGIN001_corpus-a, PLUGIN002_corpus-b,
+    // specs-generator-slug). Running with cwd = this dir makes analyze-features scan a
+    // KNOWN 3-feature set instead of the live repo root — which raced with parallel tests
+    // mid-walk (→ exit 1 under the Docker suite) and isn't reproducible (.specs/ is
+    // dockerignored, .stryker-tmp duplicated every feature 8×).
+    const CORPUS_DIR = appPath('tools', 'specs-generator', '__fixtures__', 'analyze-features-corpus');
+
     // @feature31
     it('should return JSON with totalFeatures > 0', () => {
       const result = runShellScript(
-        getSpecsGeneratorPath('analyze-features.ts'),
-        []
+        getSpecsGeneratorPath('analyze-features.ts'), [], CORPUS_DIR,
       );
 
       expect(result.exitCode).toBe(0);
-      expect(result.json.totalFeatures).toBeGreaterThan(0);
+      expect(result.json.totalFeatures).toBe(3); // the 3 corpus features, deterministic
       expect(result.json).toHaveProperty('distribution');
       expect(Array.isArray(result.json.searchPaths)).toBe(true);
     });
@@ -880,36 +886,45 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     // @feature32
     it('should contain step dictionary with given/when/then', () => {
       const result = runShellScript(
-        getSpecsGeneratorPath('analyze-features.ts'),
-        []
+        getSpecsGeneratorPath('analyze-features.ts'), [], CORPUS_DIR,
       );
 
       expect(result.exitCode).toBe(0);
       expect(Array.isArray(result.json.stepDictionary.given)).toBe(true);
       expect(Array.isArray(result.json.stepDictionary.when)).toBe(true);
       expect(Array.isArray(result.json.stepDictionary.then)).toBe(true);
+      // the corpus carries Given/When/Then steps → the dictionary is populated
+      expect(result.json.stepDictionary.given.length).toBeGreaterThan(0);
+      expect(result.json.stepDictionary.when.length).toBeGreaterThan(0);
+      expect(result.json.stepDictionary.then.length).toBeGreaterThan(0);
     });
 
     // @feature33
     it('should detect naming patterns with domain codes', () => {
       const result = runShellScript(
-        getSpecsGeneratorPath('analyze-features.ts'),
-        []
+        getSpecsGeneratorPath('analyze-features.ts'), [], CORPUS_DIR,
       );
 
       expect(result.exitCode).toBe(0);
       expect(result.json.namingPatterns).toHaveProperty('domains');
+      // PLUGIN001 + PLUGIN002 → the PLUGIN domain is detected with a count of 2
+      const plugin = result.json.namingPatterns.domains.find(
+        (d: { prefix: string }) => d.prefix === 'PLUGIN',
+      );
+      expect(plugin).toBeDefined();
+      expect(plugin.count).toBe(2);
     });
 
     // @feature34
     it('should filter candidates by -DomainCode', () => {
       const result = runShellScript(
-        getSpecsGeneratorPath('analyze-features.ts'),
-        ['-DomainCode', 'PLUGIN']
+        getSpecsGeneratorPath('analyze-features.ts'), ['-DomainCode', 'PLUGIN'], CORPUS_DIR,
       );
 
       expect(result.exitCode).toBe(0);
       expect(Array.isArray(result.json.candidates)).toBe(true);
+      // exactly the two PLUGIN-domain corpus features (the non-domain slug feature scores 0)
+      expect(result.json.candidates.length).toBe(2);
 
       // All candidates should match PLUGIN domain
       for (const candidate of result.json.candidates) {
@@ -922,13 +937,13 @@ describe('PLUGIN006: Specs Generator Scripts', () => {
     // @feature35
     it('should filter candidates by -FeatureSlug', () => {
       const result = runShellScript(
-        getSpecsGeneratorPath('analyze-features.ts'),
-        ['-FeatureSlug', 'specs-generator']
+        getSpecsGeneratorPath('analyze-features.ts'), ['-FeatureSlug', 'specs-generator'], CORPUS_DIR,
       );
 
       expect(result.exitCode).toBe(0);
       expect(Array.isArray(result.json.candidates)).toBe(true);
-      expect(result.json.candidates.length).toBeGreaterThan(0);
+      // exactly the specs-generator-slug.feature (its slug contains "specs-generator")
+      expect(result.json.candidates.length).toBe(1);
     });
   });
 

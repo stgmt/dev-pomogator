@@ -1,0 +1,53 @@
+{
+  "Stop": [
+    "anchor_gate_stop",
+    "answer_simple_stop",
+    "auto-ingest-hook",
+    "auto_commit_stop",
+    "capture --event Stop",
+    "claim_evidence_gate_stop",
+    "dedup_stop",
+    "prompt_suggest_stop",
+    "simplify_stop",
+    "stop-guard",
+    "test-spec-gate",
+    "test_quality_gate_stop",
+    "tui_stop"
+  ],
+  "SessionStart": [
+    "apply_skill_budget",
+    "doctor-hook",
+    "ensure-marksman",
+    "ensure-up",
+    "health-check",
+    "install_native_statusline",
+    "patch_bun_runner",
+    "session-summary-hook",
+    "statusline_session_start",
+    "tui_session_start"
+  ],
+  "PreToolUse": [
+    "build_guard",
+    "extension-json-meta-guard",
+    "form-guards-dispatch",
+    "phase-gate",
+    "plan-gate",
+    "spec-access-guard",
+    "spec-conformance-guard",
+    "test_guard"
+  ],
+  "PostToolUse": [
+    "anchor_check_post",
+    "compliance_check",
+    "ingest",
+    "mark-bg-task",
+    "research-workflow-marker-guard",
+    "spec-conformance-push"
+  ],
+  "UserPromptSubmit": [
+    "capture --event UserPromptSubmit",
+    "prompt-capture",
+    "prompt_suggest_submit",
+    "validate-specs"
+  ]
+}

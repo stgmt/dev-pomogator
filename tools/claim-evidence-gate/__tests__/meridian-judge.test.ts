@@ -42,6 +42,6 @@ describe('judgeStop (FR-49e) — Meridian gray-zone judge', () => {
     const p = buildJudgePrompt(input);
     expect(p).toMatch(/20 open/); // the spec-generator census fact reaches the judge
     expect(p).toMatch(/ONLY one JSON line/);
-    expect(p).toMatch(/genuine block, NOT a defer/i); // the blocking-question carve-out
+    expect(p).toMatch(/genuine clarifying question/i); // the answering/clarifying carve-out (APPROVE side)
   });
 });

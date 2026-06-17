@@ -1,7 +1,8 @@
 /**
  * Integration tests for spec-generator-v3 feature (SPECGEN003).
  *
- * Covers 28 scenarios from .specs/spec-generator-v4/legacy-v3.feature (v3-era contract preserved by v4):
+ * Covers the v3-era SPECGEN003 contract (archived at .specs/archive/legacy-v3.feature). Most
+ * scenarios are preserved verbatim; SPECGEN003_28 has EVOLVED past the frozen archive — see its note:
  * - SPECGEN003_01..04: user-story-form-guard (deny + allow + migration + fail-open)
  * - SPECGEN003_05..07: task-form-guard
  * - SPECGEN003_08..09: design-decision-guard
@@ -16,7 +17,9 @@
  * - SPECGEN003_24: child skills do NOT auto-trigger
  * - SPECGEN003_25, 26: meta-guard (deny remove form-guard, allow add unrelated)
  * - SPECGEN003_27: audit-logger append-only with ISO timestamp
- * - SPECGEN003_28: UserPromptSubmit summary over 24h
+ * - SPECGEN003_28: UserPromptSubmit conformance summary — now asserts the FR-20 threshold-only
+ *   "N unresolved DENY" banner. The archived v3 "Form guards (24h)" aggregate was deliberately
+ *   superseded (FR-20, conformance-summary.ts); the archive .feature stays frozen as the v3 record.
  *
  * Red baseline: all assertions should FAIL until implementation phases land.
  * @see integration-tests-first.md
@@ -585,8 +588,12 @@ describe('SPECGEN003: spec-generator-v3 form-guards + skills + audit log', () =>
   });
 
   // @feature8
-  it('SPECGEN003_28: UserPromptSubmit summary shows counts for 24h window (integration)', () => {
-    // Seed log with synthetic events
+  it('SPECGEN003_28: UserPromptSubmit emits the FR-20 unresolved-DENY conformance summary (integration)', () => {
+    // FR-20 (conformance-summary.ts) SUPERSEDED the v3 every-prompt "Form guards (24h)"
+    // aggregate with a threshold-only one-liner: emitted ONLY when unresolved DENY events
+    // exist since the author's last /spec-status ack (the full aggregate moved behind
+    // /spec-status). Seed a CLEAN soft-log with 3 DENY and clear the ack so those 3 count
+    // as unresolved; preserve+restore both real files (parallel sessions share them).
     const nowIso = new Date().toISOString();
     const synthetic = [
       `${nowIso} DENY user-story-form-guard /tmp/a USER_STORIES missing Priority`,
@@ -597,14 +604,12 @@ describe('SPECGEN003: spec-generator-v3 form-guards + skills + audit log', () =>
       `${nowIso} ALLOW_AFTER_MIGRATION task-form-guard /tmp/f v2 pass-through`,
     ].join('\n') + '\n';
     mkdirSync(path.dirname(AUDIT_LOG), { recursive: true });
-    // Seed a CLEAN log with ONLY the synthetic events so the exact-count assertions
-    // below are deterministic. The earlier form-guard tests in this suite append real
-    // DENY/PARSER_CRASH events to the same global log (~/.dev-pomogator/logs/form-guards.log);
-    // appending here would let those pollute the 24h counts (e.g. "13 DENY" vs the
-    // expected 3). Preserve + restore the original so we don't clobber unrelated state.
-    const original = existsSync(AUDIT_LOG) ? readFileSync(AUDIT_LOG, 'utf-8') : null;
+    const ACK_FILE = path.join(homedir(), '.dev-pomogator', 'state', 'last-summary-ack.json');
+    const originalLog = existsSync(AUDIT_LOG) ? readFileSync(AUDIT_LOG, 'utf-8') : null;
+    const originalAck = existsSync(ACK_FILE) ? readFileSync(ACK_FILE, 'utf-8') : null;
     try {
       writeFileSync(AUDIT_LOG, synthetic, 'utf-8');
+      if (originalAck !== null) rmSync(ACK_FILE); // never-acked → the 24h DENY are all unresolved
 
       const payload = { hook_event_name: 'UserPromptSubmit', prompt: 'hello', cwd: APP_DIR };
       const result = spawnSync('npx', ['tsx', VALIDATE_SPECS], {
@@ -613,12 +618,14 @@ describe('SPECGEN003: spec-generator-v3 form-guards + skills + audit log', () =>
       });
       expect(result.status).toBe(0);
       const combined = (result.stdout || '') + (result.stderr || '');
-      expect(combined).toMatch(/Form guards \(24h\)/);
-      expect(combined).toMatch(/3 DENY|DENY:\s*3/);
-      expect(combined).toMatch(/1 PARSER_CRASH|PARSER_CRASH:\s*1/);
-      expect(combined).toMatch(/2 ALLOW_AFTER_MIGRATION|ALLOW_AFTER_MIGRATION:\s*2/);
+      // FR-20 banner: "📊 Spec conformance: N unresolved DENY since ... — run /spec-status ..."
+      const m = combined.match(/Spec conformance:\s*(\d+)\s*unresolved DENY/);
+      expect(m, `expected the FR-20 conformance summary, got:\n${combined}`).not.toBeNull();
+      // the 3 seeded soft-tier DENYs are surfaced (the hard tier may add more from the live shard)
+      expect(Number(m![1])).toBeGreaterThanOrEqual(3);
     } finally {
-      if (original !== null) writeFileSync(AUDIT_LOG, original, 'utf-8');
+      if (originalLog !== null) writeFileSync(AUDIT_LOG, originalLog, 'utf-8');
+      if (originalAck !== null) writeFileSync(ACK_FILE, originalAck, 'utf-8');
     }
   });
 });

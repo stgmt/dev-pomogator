@@ -17,8 +17,14 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, '..', '..', '..');
-const settings = JSON.parse(fs.readFileSync(path.join(repoRoot, '.claude', 'settings.json'), 'utf8'));
+// .claude-plugin/hooks.json is never touched by the suite — safe to read at load.
 const hooksJson = JSON.parse(fs.readFileSync(path.join(repoRoot, '.claude-plugin', 'hooks.json'), 'utf8'));
+// .claude/settings.json IS wiped mid-suite by a destructive sibling test
+// (tests/e2e/helpers.ts setupCleanState → fs.remove(appPath('.claude','settings.json'))),
+// so it is read LAZILY at test-run time (not at module load) with a committed-snapshot
+// fallback — see dogfoodIdentitiesForEvent below.
+const SETTINGS = path.join(repoRoot, '.claude', 'settings.json');
+const SNAPSHOT = path.join(here, '__fixtures__', 'registry-parity', 'settings-hooks.snapshot.json');
 
 const EVENTS = ['Stop', 'SessionStart', 'PreToolUse', 'PostToolUse', 'UserPromptSubmit'] as const;
 const STRIP = /\.(?:bundle\.mjs|ts|cjs|mjs|sh)$/;
@@ -49,6 +55,21 @@ function identitiesForEvent(registry: { hooks?: Record<string, unknown> }, event
   return out;
 }
 
+/**
+ * Dogfood hook identities for one event. Reads the LIVE .claude/settings.json when it
+ * survives the suite; falls back to the committed snapshot when a destructive sibling test
+ * (setupCleanState → fs.remove(appPath('.claude','settings.json'))) wiped it. The snapshot
+ * is kept honest by PARITY_SNAPSHOT_FRESH below. Read happens at test-RUN time, not at
+ * module load, so load-order vs the wipe can't ENOENT-crash the file.
+ */
+function dogfoodIdentitiesForEvent(event: string): Set<string> {
+  if (fs.existsSync(SETTINGS)) {
+    return identitiesForEvent(JSON.parse(fs.readFileSync(SETTINGS, 'utf8')), event);
+  }
+  const snap = JSON.parse(fs.readFileSync(SNAPSHOT, 'utf8')) as Record<string, string[]>;
+  return new Set(snap[event] ?? []);
+}
+
 describe('hookIdentity — stable across .ts vs .bundle.mjs and loader noise', () => {
   it('PARITY_ID_01: bootstrap-launched .ts → basename; bundle spawn → same basename', () => {
     expect(hookIdentity('node -e "require(...bootstrap.cjs...)" -- "tools/anchor-integrity/anchor_gate_stop.ts"')).toBe('anchor_gate_stop');
@@ -61,7 +82,7 @@ describe('hookIdentity — stable across .ts vs .bundle.mjs and loader noise', (
 describe('registry parity — settings.json (dogfood) vs hooks.json (distribution)', () => {
   for (const event of EVENTS) {
     it(`PARITY_${event}: both registries declare the same hooks`, () => {
-      const dogfood = identitiesForEvent(settings, event);
+      const dogfood = dogfoodIdentitiesForEvent(event);
       const shipped = identitiesForEvent(hooksJson, event);
       const missingInDogfood = [...shipped].filter((id) => !dogfood.has(id)).sort();
       const missingInShipped = [...dogfood].filter((id) => !shipped.has(id)).sort();
@@ -69,4 +90,18 @@ describe('registry parity — settings.json (dogfood) vs hooks.json (distributio
       expect(missingInShipped, `${event}: in dogfood settings.json but NOT shipped to users`).toEqual([]);
     });
   }
+
+  // Drift guard: when the live .claude/settings.json IS present (host / before a sibling
+  // wipe), the committed snapshot MUST still match it — otherwise the Docker-suite fallback
+  // silently validates against a stale set. Regenerate the snapshot when this fails.
+  it('PARITY_SNAPSHOT_FRESH: committed snapshot matches the live settings.json (when present)', () => {
+    if (!fs.existsSync(SETTINGS)) return; // wiped by a sibling test → snapshot is the only source; nothing to compare
+    const liveJson = JSON.parse(fs.readFileSync(SETTINGS, 'utf8'));
+    const snap = JSON.parse(fs.readFileSync(SNAPSHOT, 'utf8')) as Record<string, string[]>;
+    for (const event of EVENTS) {
+      const live = [...identitiesForEvent(liveJson, event)].sort();
+      const snapped = (snap[event] ?? []).slice().sort();
+      expect(live, `${event}: snapshot drifted from live settings.json — regenerate settings-hooks.snapshot.json`).toEqual(snapped);
+    }
+  });
 });

@@ -119,15 +119,29 @@ function collectFilesRecursive(dirPath, matcher, skipDir) {
   }
 
   const walk = (currentDir) => {
-    for (const entry of fs.readdirSync(currentDir, { withFileTypes: true })) {
+    // A recursive walk of a live tree races with concurrent mutation (tests/users
+    // creating+deleting files mid-scan) and can hit unreadable entries — readdir then
+    // throws ENOENT/EACCES. Skip the offending dir/entry instead of aborting the whole
+    // scan (this is what crashed analyze-features → exit 1 under the parallel Docker suite).
+    let entries;
+    try {
+      entries = fs.readdirSync(currentDir, { withFileTypes: true });
+    } catch {
+      return; // dir vanished mid-walk or unreadable — skip it, don't crash the scan
+    }
+    for (const entry of entries) {
       const fullPath = path.join(currentDir, entry.name);
-      if (entry.isDirectory()) {
-        if (typeof skipDir === 'function' && skipDir(entry.name, fullPath)) {
-          continue;
+      try {
+        if (entry.isDirectory()) {
+          if (typeof skipDir === 'function' && skipDir(entry.name, fullPath)) {
+            continue;
+          }
+          walk(fullPath);
+        } else if (!matcher || matcher(fullPath, entry)) {
+          results.push(fullPath);
         }
-        walk(fullPath);
-      } else if (!matcher || matcher(fullPath, entry)) {
-        results.push(fullPath);
+      } catch {
+        continue; // a single entry raced away / unreadable — skip, keep scanning
       }
     }
   };
@@ -3002,6 +3016,10 @@ function commandAnalyzeFeatures(argv) {
   const EXCLUDED_DIRS = new Set([
     'node_modules', 'bin', 'obj', '.git', 'dist', 'build', 'out',
     '.dev-pomogator', '.vs', '.idea', 'packages', 'TestResults',
+    // Mutation-testing scratch + tool output: .stryker-tmp holds full repo COPIES
+    // (sandbox-*/) that otherwise duplicate every .feature (392 vs ~46 real); reports/
+    // coverage carry no source features. The real .specs/ stays included (type:'spec').
+    '.stryker-tmp', 'reports', 'coverage',
   ]);
   const skipDir = (name) => EXCLUDED_DIRS.has(name);
 

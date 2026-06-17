@@ -223,33 +223,36 @@ Feature: PLUGIN006 Specs Generator Scripts
     When I run validate-spec.ts on that spec
     Then warnings should contain rule "CONTEXT_SECTION"
 
-  # analyze-features.ts scenarios
+  # analyze-features.ts scenarios — run against the committed fixture corpus
+  # (tools/specs-generator/__fixtures__/analyze-features-corpus: two PLUGIN-domain
+  # features + one specs-generator-slug feature) so the counts are deterministic and
+  # the scan never walks the live, mutating repo tree.
 
   @feature31
-  Scenario: Analyze features returns JSON report with discovered files
-    When I run analyze-features.ts with -Format json
-    Then the result should have totalFeatures greater than 0
+  Scenario: Analyze features returns a JSON report over the fixture corpus
+    When I run analyze-features.ts over the analyze-features fixture corpus
+    Then the result should report totalFeatures equal to the corpus size
     And distribution should contain production and fixture counts
 
   @feature32
-  Scenario: Analyze features extracts step dictionary
-    When I run analyze-features.ts with -Format json
-    Then stepDictionary should contain given, when, and then arrays
+  Scenario: Analyze features extracts a populated step dictionary
+    When I run analyze-features.ts over the analyze-features fixture corpus
+    Then stepDictionary should contain non-empty given, when, and then arrays
 
   @feature33
   Scenario: Analyze features detects naming patterns
-    When I run analyze-features.ts with -Format json
-    Then namingPatterns should contain domain codes
+    When I run analyze-features.ts over the analyze-features fixture corpus
+    Then namingPatterns should contain the PLUGIN domain with a count of two
 
   @feature34
   Scenario: Analyze features filters candidates by domain code
-    When I run analyze-features.ts with -DomainCode "PLUGIN"
-    Then all candidates should match PLUGIN domain
+    When I run analyze-features.ts over the corpus with -DomainCode "PLUGIN"
+    Then every returned candidate should match the PLUGIN domain
 
   @feature35
   Scenario: Analyze features filters candidates by feature slug
-    When I run analyze-features.ts with -FeatureSlug "specs-generator"
-    Then candidates should contain at least one match
+    When I run analyze-features.ts over the corpus with -FeatureSlug "specs-generator"
+    Then candidates should contain exactly the matching feature
 
   # .progress.json state machine scenarios
 
