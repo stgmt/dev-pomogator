@@ -135,3 +135,32 @@ Then(/^хук SHALL вернуть `\{\}` \(не блокировать снов
     fs.removeSync(this.asHookRoot!);
   }
 });
+
+// --- PLUGIN017_05 (v2 wiring + atomic migration — real repo-state artifact checks) ---
+Given(/^репозиторий dev-pomogator после атомарной миграции rule \(v2 canonical\)$/, function () {
+  assert.ok(fs.existsSync(appPath('.claude-plugin/hooks.json')), 'hooks.json must exist');
+});
+Then(/^Stop-хук answer-simple SHALL быть подключён в `\.claude-plugin\/hooks\.json`$/, function () {
+  const hooks = JSON.parse(fs.readFileSync(appPath('.claude-plugin/hooks.json'), 'utf-8')).hooks;
+  const stopCmds = (hooks.Stop || []).flatMap((g: { hooks?: { command?: string }[] }) =>
+    (g.hooks || []).map((h) => h.command || ''),
+  );
+  assert.ok(
+    stopCmds.some((c: string) => /tools\/answer-simple\/answer_simple_stop\.ts/.test(c)),
+    'answer-simple Stop hook must be wired in hooks.json',
+  );
+});
+Then(/^файл `tools\/answer-simple\/answer_simple_stop\.ts` SHALL присутствовать$/, function () {
+  assert.ok(fs.existsSync(appPath('tools/answer-simple/answer_simple_stop.ts')));
+});
+Then(/^старый путь правила `\.claude\/rules\/clear-questions-to-user\.md` SHALL отсутствовать$/, function () {
+  assert.equal(fs.existsSync(appPath('.claude/rules/clear-questions-to-user.md')), false, 'old rule path must be gone');
+});
+Then(/^новый путь правила `\.claude\/rules\/answer-simple\/clear-questions-to-user\.md` SHALL присутствовать$/, function () {
+  assert.ok(fs.existsSync(appPath(RULE_PATH)));
+});
+Then(/^`CLAUDE\.md` SHALL ссылаться на новый путь и не содержать старый путь в backticks$/, function () {
+  const claudeMd = fs.readFileSync(appPath('CLAUDE.md'), 'utf-8');
+  assert.match(claudeMd, /\.claude\/rules\/answer-simple\/clear-questions-to-user\.md/, 'CLAUDE.md must point to new path');
+  assert.ok(!/`\.claude\/rules\/clear-questions-to-user\.md`/.test(claudeMd), 'CLAUDE.md must not list old path in backticks');
+});

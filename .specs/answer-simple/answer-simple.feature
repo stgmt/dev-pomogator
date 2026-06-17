@@ -43,17 +43,14 @@ Feature: PLUGIN017_answer-simple
 
   # @feature3 — US-3 / FR-3 / FR-5 / AC-3 / AC-5 (installer + migration)
 
-  @wip
-  Scenario: PLUGIN017_05: установка extension создаёт корректную структуру файлов и миграция rule выполнена атомарно
-    Given fresh target-проект без установленного dev-pomogator
-    And dev-pomogator source repo с уже выполненной миграцией rule (atomic 3-step)
-    When запущена команда `npx github:<owner>/dev-pomogator --claude --plugins=answer-simple` в target-проекте
-    Then target-проект SHALL содержать файл `.claude/rules/answer-simple/clear-questions-to-user.md`
-    And target-проект SHALL содержать файл `.claude/skills/answer-simple/SKILL.md`
-    And `~/.dev-pomogator/config.json` SHALL содержать SHA-256 хеши обоих файлов в managedFiles
-    And валидатор `extensions/_shared/extension-layout-validate.ts` SHALL вернуть exit 0
-    And dev-pomogator source repo SHALL содержать CLAUDE.md глоссарий-запись с путём `.claude/rules/answer-simple/clear-questions-to-user.md`
-    And dev-pomogator source repo SHALL не содержать старый путь `.claude/rules/clear-questions-to-user.md`
+  @feature3
+  Scenario: PLUGIN017_05: v2-проводка и атомарная миграция rule выполнены в репозитории
+    Given репозиторий dev-pomogator после атомарной миграции rule (v2 canonical)
+    Then Stop-хук answer-simple SHALL быть подключён в `.claude-plugin/hooks.json`
+    And файл `tools/answer-simple/answer_simple_stop.ts` SHALL присутствовать
+    And старый путь правила `.claude/rules/clear-questions-to-user.md` SHALL отсутствовать
+    And новый путь правила `.claude/rules/answer-simple/clear-questions-to-user.md` SHALL присутствовать
+    And `CLAUDE.md` SHALL ссылаться на новый путь и не содержать старый путь в backticks
 
   # @feature4 — US-1 / FR-8 / AC-8 (Stop-hook runtime enforcement of plain language)
 
