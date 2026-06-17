@@ -2,7 +2,7 @@
   "default": {
     "paths": [".specs/spec-generator-v4/spec-generator-v4.feature", ".specs/answer-simple/answer-simple.feature"],
     "import": ["tests/step_definitions/**/*.ts", "tests/hooks/**/*.ts"],
-    "tags": "not @wip",
+    "tags": "not @manual",
     "format": [
       "message:.dev-pomogator/.last-test-run.ndjson",
       "progress-bar"

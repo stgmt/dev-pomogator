@@ -7,34 +7,27 @@ Feature: PLUGIN017_answer-simple
 
   # @feature1 — US-1 / FR-1 / FR-4 / AC-1 / AC-4 (always-apply self-check + incident trigger)
 
-  @wip
-  Scenario: PLUGIN017_01: агент молча применяет шаблон самопроверки перед содержательным ответом
-    Given пользователь задал агенту нетривиальный вопрос требующий ответа
-    And в reasoning context агента подгружено правило clear-questions-to-user
-    When агент готовит черновик ответа содержащий внутренние коды "Wave 14" и "FR-12" без расшифровки
-    Then перед отправкой агент SHALL прогнать 5-шаговый шаблон самопроверки
-    And финальный ответ SHALL не содержать необъяснённых внутренних кодов формата "Wave N" или "FR-N"
-    And финальный ответ SHALL иметь структуру микроистории с минимум 3 из 5 опорных точек
+  @feature1
+  Scenario: PLUGIN017_01: правило answer-simple несёт 5-шаговый шаблон самопроверки и микроисторию
+    Given содержимое правила clear-questions-to-user прочитано
+    Then правило SHALL содержать все 5 шагов шаблона самопроверки
+    And правило SHALL перечислять 5 опорных точек микроистории
 
-  @wip
-  Scenario: PLUGIN017_02: триггер инцидента — агент не задаёт новый вопрос при сигнале "не понял"
-    Given в прошлом turn агент задал жаргонный multi-select вопрос пользователю
-    When пользователь в текущем turn ответил "ниче не понял слишком сложно"
-    Then агент SHALL не задавать новый уточняющий вопрос в текущем turn
-    And агент SHALL перечитать копипаст пользователя за последние 2-3 turn
-    And агент SHALL действовать из контекста или задать одну свободную фразу без multi-select опций
+  @feature1
+  Scenario: PLUGIN017_02: правило несёт секцию триггера инцидента с мандатом не задавать новый вопрос
+    Given содержимое правила clear-questions-to-user прочитано
+    Then правило SHALL содержать секцию Триггер инцидента с ключевыми словами не понял и сложно
+    And правило SHALL содержать мандат СТОП не задавать новый вопрос
 
   # @feature2 — US-2 / FR-2 / AC-2 (slash-команда explicit invocation)
 
-  @wip
-  Scenario: PLUGIN017_03: slash-команда /answer-simple возвращает структурированный output на жаргонном черновике
-    Given пользователь набирает в чате команду `/answer-simple "Wave 14 (gates+OpenRouter) ПЕРЕД Wave 11 — Keep / Swap / Parallel?"`
-    When Claude Code находит skill `.claude/skills/answer-simple/SKILL.md` и активирует его
-    Then skill SHALL вернуть output содержащий заголовок "Переформулировано:"
-    And output SHALL содержать заголовок "Найдено проблем:"
-    And блок "Найдено проблем:" SHALL включать упоминания "Wave 14" "Wave 11" "gates" "OpenRouter" как жаргон и multi-select с 3 опциями как превышение порога 2
+  @feature2
+  Scenario: PLUGIN017_03: skill answer-simple несёт корректный frontmatter и критерии workflow
+    Given содержимое skill answer-simple прочитано
+    Then skill SHALL содержать frontmatter с name answer-simple и allowed-tools и упоминание slash-команды
+    And skill SHALL перечислять фиксированные заголовки output Переформулировано Найдено-проблем и Проблем-не-найдено
 
-  @wip
+  @manual
   Scenario: PLUGIN017_04: slash-команда /answer-simple на чистом черновике возвращает "Проблем не найдено"
     Given черновик соответствует шаблону микроистории и не содержит внутренних кодов
     When пользователь вызывает `/answer-simple <чистый-черновик>`

@@ -42,6 +42,8 @@ interface ASWorld extends V4World {
   asHook?: string;
   asHookRoot?: string;
   asBlocked?: { status: number; stdout: string };
+  asRuleContent?: string;
+  asSkillContent?: string;
 }
 
 function setupHookTmp(): { hook: string; root: string } {
@@ -163,4 +165,51 @@ Then(/^`CLAUDE\.md` SHALL ссылаться на новый путь и не с
   const claudeMd = fs.readFileSync(appPath('CLAUDE.md'), 'utf-8');
   assert.match(claudeMd, /\.claude\/rules\/answer-simple\/clear-questions-to-user\.md/, 'CLAUDE.md must point to new path');
   assert.ok(!/`\.claude\/rules\/clear-questions-to-user\.md`/.test(claudeMd), 'CLAUDE.md must not list old path in backticks');
+});
+
+// --- PLUGIN017_01 / _02 (rule artifact structure) + _03 (skill artifact structure) ---
+Given(/^содержимое правила clear-questions-to-user прочитано$/, function (this: ASWorld) {
+  this.asRuleContent = fs.readFileSync(appPath(RULE_PATH), 'utf-8');
+});
+Then(/^правило SHALL содержать все 5 шагов шаблона самопроверки$/, function (this: ASWorld) {
+  const c = this.asRuleContent!;
+  for (const re of [
+    /### 1\. Что я понял/,
+    /### 2\. Что я собираюсь ответить/,
+    /### 3\. Самооценка/,
+    /### 4\. Шаблон ответа = микроистория/,
+    /### 5\. Если шаблон не прошёл/,
+  ]) {
+    assert.match(c, re, `rule must contain template step ${re}`);
+  }
+});
+Then(/^правило SHALL перечислять 5 опорных точек микроистории$/, function (this: ASWorld) {
+  const c = this.asRuleContent!;
+  for (const re of [/Откуда пришли/, /Что юзер сказал/, /Что сделал и почему/, /Где сейчас/, /Что дальше/]) {
+    assert.match(c, re, `rule must enumerate micro-story point ${re}`);
+  }
+});
+Then(/^правило SHALL содержать секцию Триггер инцидента с ключевыми словами не понял и сложно$/, function (this: ASWorld) {
+  const c = this.asRuleContent!;
+  assert.match(c, /## Триггер инцидента/);
+  assert.match(c, /не понял/);
+  assert.match(c, /сложно/);
+});
+Then(/^правило SHALL содержать мандат СТОП не задавать новый вопрос$/, function (this: ASWorld) {
+  assert.match(this.asRuleContent!, /СТОП.{0,40}не задавать новый вопрос/);
+});
+Given(/^содержимое skill answer-simple прочитано$/, function (this: ASWorld) {
+  this.asSkillContent = fs.readFileSync(appPath(SKILL_PATH), 'utf-8');
+});
+Then(/^skill SHALL содержать frontmatter с name answer-simple и allowed-tools и упоминание slash-команды$/, function (this: ASWorld) {
+  const c = this.asSkillContent!;
+  assert.match(c, /name: answer-simple/);
+  assert.match(c, /allowed-tools: Read/);
+  assert.match(c, /\/answer-simple/);
+});
+Then(/^skill SHALL перечислять фиксированные заголовки output Переформулировано Найдено-проблем и Проблем-не-найдено$/, function (this: ASWorld) {
+  const c = this.asSkillContent!;
+  assert.match(c, /Переформулировано:/);
+  assert.match(c, /Найдено проблем:/);
+  assert.match(c, /Проблем не найдено/);
 });
