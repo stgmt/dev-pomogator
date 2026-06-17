@@ -543,7 +543,7 @@ Run as the final step in every mode. Emit Markdown table with PASS/FAIL/N_A + Ev
 
 ---
 
-## 6. Four execution modes
+## 6. Five execution modes
 
 ### 6.1 Greenfield mode (new code → strong tests)
 
@@ -860,6 +860,45 @@ Legitimate use cases:
 - Explicit deferred (`covered in follow-up spec spec-XXX`)
 
 **Detection scope** (v0.1.0): TypeScript + Python через ast-grep catalog. C# / Go / Rust — roadmap.
+
+---
+
+### 6.5 BDD scenario authoring mode (test-author — FR-TA1)
+
+Author a REAL `@featureN` cucumber scenario + step-def for a spec task that lacks its own
+(the `TASK_NO_OWN_SCENARIO` gap). The output MUST be a STRONG test — one that FAILS if the task's
+code is broken — never a fake-green scenario that always passes. Proven end-to-end in the W0
+skeleton (`SPECGEN004_185` / `gherkin-parser-impl`, tag-inheritance via the real `parseGherkin`).
+
+**Recipe — author → run → green → flip (never flip first):**
+
+1. **Identify**: the task's FR (→ the `@featureN` tag), the behaviour its Done-When describes, and
+   the implementing module (`get_trace` + grep the real code).
+2. **Drift-check FIRST**: is that behaviour already covered by an existing scenario that just isn't
+   cited? If yes → cite it in the task's Done-When (reconcile); do NOT author a duplicate. (Most v4
+   "missing scenario" tasks are already vitest-covered — see `audit-reports/v4-dogfood-retrospective.md`.)
+3. **Author the scenario** in `.specs/<slug>/<slug>.feature` — the ONLY file cucumber runs. NEVER
+   `tests/features/*.feature` (never executed → fake-green). Real `@featureN` tag (a tag LINE, not a
+   `#` comment), `Scenario: SPECGEN004_NN <behaviour>`, real Given/When/Then. Via the MCP door
+   (`apply_spec_change`) under enforce; the door's strength layer refuses stub/placeholder steps.
+4. **Author the step-def** in `tests/step_definitions/featureN_<desc>.ts`: import + call the REAL
+   engine module (NO mock, NO inline copy of production logic), assert on its real output. 1:1 with
+   the scenario. Apply §2 pre-write + §5 12-point self-eval (esp. #2 specificity, #9 no
+   parallel-impl, #12 self-challenge "this assertion fails if prod did X").
+5. **Run the FULL cucumber suite** (not `--tags`): one full run verifies the new scenario AND keeps
+   `.last-test-run.ndjson` complete. A tag-only run overwrites the ndjson and collapses coverage
+   (observed 185→3). Cucumber runs SERIALIZE — author one, full-run, flip; not a parallel batch.
+6. **Only after green**: flip the task's Done-When via the door to cite the green `SPECGEN004_NN`
+   (the door refuses a pre-green flip — `TASK_NO_OWN_SCENARIO` / honesty gate).
+7. **Mutation gutcheck (the quality bar)**: break the task's impl → confirm the scenario goes RED →
+   restore. A scenario that stays green on broken code is FAKE-POSITIVE-RISK, not STRONG, and must
+   be strengthened. The eval harness (FR-TA3) automates exactly this fails-on-broken check.
+
+**Never**: fabricate a scenario for a genuinely-unbuilt task (flag it `_waived:` / honest status);
+author in `tests/features/`; flip before green; copy production logic into the step-def.
+
+The `test-author` subagent (`.claude/agents/test-author.md`, FR-TA2) runs this recipe in a task's
+scope; spec-generator-v4 auto-invokes it on a `TASK_NO_OWN_SCENARIO` finding (FR-TA4).
 
 ---
 
