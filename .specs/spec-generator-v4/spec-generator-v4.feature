@@ -1338,3 +1338,9 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given a judge input reporting twenty open tasks
     When the помогатор judge prompt is built
     Then the prompt states the open-task count and instructs a single JSON verdict line and keeps the clarifying-question carve-out
+
+  @feature49
+  Scenario: SPECGEN004_188 the judge resolves its endpoint and key by priority and returns null with no token
+    Given the помогатор judge endpoint resolver
+    When it resolves an OpenRouter key a claude-mem key an auto-commit key an explicit override and no token at all
+    Then OpenRouter-family keys pick openrouter.ai the auto-commit key picks aipomogator the explicit override wins and no token resolves to null

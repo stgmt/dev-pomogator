@@ -93,25 +93,33 @@ interface Endpoint {
  * plus a dedicated CLAIM_GATE_JUDGE_KEY override for users. NULL = no token anywhere → judge skips.
  * Priority: explicit judge key → OPENROUTER_API_KEY → CLAUDE_MEM_OPENROUTER_API_KEY → AUTO_COMMIT_API_KEY.
  */
-export function resolveEndpoint(): Endpoint | null {
-  ensureDotenvLoaded();
-  const judgeKey = process.env.CLAIM_GATE_JUDGE_KEY;
+export function resolveEndpoint(injectedEnv?: Record<string, string | undefined>): Endpoint | null {
+  // Default: real process.env after loading .env/.env.test. Tests pass a controlled env to assert
+  // the priority deterministically — without a live token and without the real cwd's .env polluting.
+  let env: Record<string, string | undefined>;
+  if (injectedEnv) {
+    env = injectedEnv;
+  } else {
+    ensureDotenvLoaded();
+    env = process.env;
+  }
+  const judgeKey = env.CLAIM_GATE_JUDGE_KEY;
   if (judgeKey) {
     return {
-      url: process.env.CLAIM_GATE_JUDGE_URL ?? 'https://openrouter.ai/api/v1',
+      url: env.CLAIM_GATE_JUDGE_URL ?? 'https://openrouter.ai/api/v1',
       key: judgeKey,
       model: MODEL_OVERRIDE ?? 'anthropic/claude-haiku-4.5',
     };
   }
   // OpenRouter key under any known name (the project's real one is CLAUDE_MEM_OPENROUTER_API_KEY).
-  const orKey = process.env.OPENROUTER_API_KEY || process.env.CLAUDE_MEM_OPENROUTER_API_KEY;
+  const orKey = env.OPENROUTER_API_KEY || env.CLAUDE_MEM_OPENROUTER_API_KEY;
   if (orKey) {
     return { url: 'https://openrouter.ai/api/v1', key: orKey, model: MODEL_OVERRIDE ?? 'anthropic/claude-haiku-4.5' };
   }
-  const acKey = process.env.AUTO_COMMIT_API_KEY;
+  const acKey = env.AUTO_COMMIT_API_KEY;
   if (acKey) {
     return {
-      url: process.env.AUTO_COMMIT_LLM_URL ?? 'https://aipomogator.ru/go/v1',
+      url: env.AUTO_COMMIT_LLM_URL ?? 'https://aipomogator.ru/go/v1',
       key: acKey,
       model: MODEL_OVERRIDE ?? 'openrouter/anthropic/claude-haiku-4.5',
     };

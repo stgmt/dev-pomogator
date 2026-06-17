@@ -23,7 +23,7 @@ import { writeTaskCensusCache, findStaleInProgress, type StaleMarker } from '../
 import { renderStaleReport } from '../../tools/spec-graph/stale-marker-scan.ts';
 import { buildTaskCensusLine } from '../../tools/specs-validator/conformance-summary.ts';
 import { validateSpecChange, type ValidateResult } from '../../tools/spec-mcp-server/mutations.ts';
-import { buildJudgePrompt } from '../../tools/claim-evidence-gate/meridian-judge.ts';
+import { buildJudgePrompt, resolveEndpoint } from '../../tools/claim-evidence-gate/meridian-judge.ts';
 
 interface AutoSurfaceWorld extends V4World {
   asRoot?: string;
@@ -39,6 +39,7 @@ interface AutoSurfaceWorld extends V4World {
   nsAllowed?: boolean;
   judgeInput?: { finalMessage: string; tools: string[]; openTasks: number };
   judgePrompt?: string;
+  judgeResolutions?: Record<string, { url: string; key: string; model: string } | null>;
 }
 
 // FR-49f (SPECGEN004_181): the door strength-gate refuses a .feature write that ADDS a
@@ -216,5 +217,41 @@ Then(
     assert.match(p, /20 open/, 'the census fact (20 open) reaches the judge');
     assert.match(p, /ONLY one JSON line/, 'the judge is told to answer with exactly one JSON line');
     assert.match(p, /genuine clarifying question/i, 'the APPROVE-side clarifying-question carve-out is present');
+  },
+);
+
+// SPECGEN004_188 (FR-49e): the endpoint/key resolver — the exact logic whose blind spot caused the
+// «судья недоступен» bug (it didn't recognise CLAUDE_MEM_OPENROUTER_API_KEY). The live bench skips
+// without a token, so this is its ONLY CI coverage. Drives the REAL resolveEndpoint with injected
+// envs (deterministic — no token, no network, no real-.env pollution).
+Given('the помогатор judge endpoint resolver', function (this: AutoSurfaceWorld) {
+  // pure resolver — resolutions are computed in the When with controlled envs
+});
+
+When(
+  'it resolves an OpenRouter key a claude-mem key an auto-commit key an explicit override and no token at all',
+  function (this: AutoSurfaceWorld) {
+    this.judgeResolutions = {
+      openrouter: resolveEndpoint({ OPENROUTER_API_KEY: 'sk-or-test' }),
+      claudeMem: resolveEndpoint({ CLAUDE_MEM_OPENROUTER_API_KEY: 'sk-or-mem' }),
+      autoCommit: resolveEndpoint({ AUTO_COMMIT_API_KEY: 'sk-ac' }),
+      override: resolveEndpoint({ CLAIM_GATE_JUDGE_KEY: 'sk-judge', OPENROUTER_API_KEY: 'sk-or-test' }),
+      none: resolveEndpoint({}),
+    };
+  },
+);
+
+Then(
+  'OpenRouter-family keys pick openrouter.ai the auto-commit key picks aipomogator the explicit override wins and no token resolves to null',
+  function (this: AutoSurfaceWorld) {
+    const r = this.judgeResolutions!;
+    assert.equal(r.openrouter?.url, 'https://openrouter.ai/api/v1', 'OPENROUTER_API_KEY → openrouter.ai');
+    assert.equal(r.openrouter?.key, 'sk-or-test');
+    assert.equal(r.claudeMem?.url, 'https://openrouter.ai/api/v1', 'CLAUDE_MEM_OPENROUTER_API_KEY → openrouter.ai (the key the bug missed)');
+    assert.equal(r.claudeMem?.key, 'sk-or-mem');
+    assert.equal(r.autoCommit?.url, 'https://aipomogator.ru/go/v1', 'AUTO_COMMIT_API_KEY → aipomogator.ru/go/v1');
+    assert.equal(r.autoCommit?.key, 'sk-ac');
+    assert.equal(r.override?.key, 'sk-judge', 'CLAIM_GATE_JUDGE_KEY wins over OPENROUTER_API_KEY');
+    assert.equal(r.none, null, 'no token at all → null (judge skipped, caller fail-closes)');
   },
 );
