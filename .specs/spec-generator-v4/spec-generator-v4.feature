@@ -1428,3 +1428,9 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given a set of scenarios with mixed results including an absent and an unknown one
     When bucketScenarios partitions them
     Then every scenario lands in exactly one bucket the results route to the right buckets and an absent result is not_run while UNDEFINED-or-unknown stays undefined
+
+  @feature32
+  Scenario: SPECGEN004_203 mapTasksToScenarios links a task to its scenarios by id tag and FR-ref and de-dupes
+    Given a coverage scenario set tagged with SPECGEN ids @featureN tags and FR refs
+    When tasks are mapped by explicit id by tag by FR-ref and by multiple overlapping sources
+    Then each task resolves to the right scenarios and a scenario reached by overlapping sources appears once

@@ -10,7 +10,14 @@
  */
 import { Given, When, Then } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
-import { scenarioKey, bucketScenarios, type Bucket, type ScenarioLike } from '../../tools/spec-graph/coverage.ts';
+import {
+  scenarioKey,
+  bucketScenarios,
+  mapTasksToScenarios,
+  type Bucket,
+  type ScenarioLike,
+  type TaskLike,
+} from '../../tools/spec-graph/coverage.ts';
 import { V4World } from '../hooks/before-after.ts';
 import '../hooks/before-after.ts';
 
@@ -18,6 +25,7 @@ interface CovWorld extends V4World {
   covKeys?: Record<string, string | null>;
   covScenarios?: ScenarioLike[];
   covBuckets?: ReturnType<typeof bucketScenarios>;
+  covMaps?: Record<string, string[] | undefined>;
 }
 
 Given('the coverage scenarioKey normaliser', function () {
@@ -75,3 +83,34 @@ Then(
     assert.deepEqual([...b.undefined].sort(), ['d', 'i'], 'a real UNDEFINED result + an unknown enum stay undefined');
   },
 );
+
+// SPECGEN004_203 — mapTasksToScenarios core mapping (migrated from coverage.test.ts).
+const MAP_SCENARIOS: ScenarioLike[] = [
+  { id: 'SCEN-specgen004-70-x', tags: ['@feature32'], result: 'PASSED' },
+  { id: 'SCEN-specgen004-71-y', tags: ['@feature32'], result: 'UNDEFINED' },
+  { id: 'SCEN-specgen004-03-z', tags: ['@feature2'], result: 'PASSED' },
+];
+
+Given('a coverage scenario set tagged with SPECGEN ids @featureN tags and FR refs', function (this: CovWorld) {
+  this.covScenarios = MAP_SCENARIOS;
+});
+
+When('tasks are mapped by explicit id by tag by FR-ref and by multiple overlapping sources', function (this: CovWorld) {
+  const sc = this.covScenarios!;
+  const map = (task: TaskLike) => mapTasksToScenarios([task], sc).get(task.id);
+  this.covMaps = {
+    byId: map({ id: 't1', doneWhen: 'SPECGEN004_70 passes', refs: [] }),
+    byTag: map({ id: 't2', doneWhen: 'all @feature32 green', refs: [] }),
+    byFr: map({ id: 't3', doneWhen: 'no explicit ids', refs: ['FR-2'] }),
+    overlap: map({ id: 't4', doneWhen: '@feature32 SPECGEN004_70', refs: ['FR-32'] }),
+  };
+});
+
+Then('each task resolves to the right scenarios and a scenario reached by overlapping sources appears once', function (this: CovWorld) {
+  const m = this.covMaps!;
+  assert.deepEqual(m.byId, ['SCEN-specgen004-70-x'], 'explicit SPECGEN id in Done-When');
+  assert.deepEqual([...m.byTag!].sort(), ['SCEN-specgen004-70-x', 'SCEN-specgen004-71-y'], '@featureN tag in Done-When');
+  assert.deepEqual(m.byFr, ['SCEN-specgen004-03-z'], 'FR ref → @feature<N>');
+  assert.equal(new Set(m.overlap).size, m.overlap!.length, 'overlapping sources de-dupe');
+  assert.ok(m.overlap!.includes('SCEN-specgen004-70-x'), 'the overlapping scenario is present (once)');
+});
