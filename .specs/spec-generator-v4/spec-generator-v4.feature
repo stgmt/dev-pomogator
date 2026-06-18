@@ -1464,3 +1464,9 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given a graph where one task cites its own SPECGEN scenario in Done-When and another does not
     When get_trace is asked for the shared FR
     Then the citing task own_scenario resolves to that scenario with its last result and the other task own_scenario is null
+
+  @feature3
+  Scenario: SPECGEN004_209 parseMarkdown registers triple anchors for a legacy Requirement heading and the v4 pair without regression
+    Given the markdown parser with legacy v3 and modern v4 spec headings
+    When it parses a legacy Requirement heading a modern v4 heading a mixed file and a legacy title
+    Then a legacy heading registers three aliases at one location the v4 heading keeps the two-anchor pair a mixed file registers each heading's own anchors and the legacy title slugifies into the legacy alias
