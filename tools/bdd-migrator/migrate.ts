@@ -23,6 +23,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { skippedDescribeSpans } from './inventory.ts';
 
 const REPO = process.cwd();
 
@@ -111,14 +112,15 @@ export function classifyTestBody(body: string, toolSymbols: string[] = []): Test
 /** Split a vitest file into it()/test() blocks (incl. it.skip) and classify each. */
 export function classifyVitestFile(src: string): VitestInfo[] {
   const toolSymbols = toolImportSymbols(src);
+  const skippedSpans = skippedDescribeSpans(src); // a describe.skip/.todo suite is skipped → manual, like it.skip
   const out: VitestInfo[] = [];
   const re = /\b(it|test)(\.skip|\.only)?\s*\(\s*(['"`])([\s\S]*?)\3/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(src))) {
-    const skipped = m[2] === '.skip';
+    const start = m.index;
+    const skipped = m[2] === '.skip' || skippedSpans.some((s) => start >= s.start && start < s.end);
     const name = m[4];
     // Body = from this match to the next it/test (rough block boundary).
-    const start = m.index;
     re.lastIndex = m.index + m[0].length;
     const nextMatch = /\b(it|test)(\.skip|\.only)?\s*\(/.exec(src.slice(re.lastIndex));
     const end = nextMatch ? re.lastIndex + nextMatch.index : src.length;

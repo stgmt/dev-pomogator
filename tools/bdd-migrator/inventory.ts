@@ -14,7 +14,9 @@
  *                step asserts the real artifact's structure.
  *   - pure     : imports a production function and calls it directly → BDD step drives that function
  *                in-process (deterministic, CI-safe — no token/spawn).
- *   - manual   : it.skip / it.todo → carry over as @wip until a human authors it.
+ *   - manual   : it.skip / it.todo, OR any it() inside a describe.skip/.todo (whole suite skipped —
+ *                often obsolete/env-gated, e.g. a suite inspecting a deleted src/ tree) → carry over
+ *                as @wip until a human authors it; NOT auto-migratable.
  *
  * Pure regex/string parsing — node builtins only (dep-safe; the migrator may ship in the plugin).
  * Not a full TS AST: case "body" is approximated as the slice up to the next it()/describe(), which
@@ -108,6 +110,29 @@ function findFsSetupVars(source: string): string[] {
   return [...vars];
 }
 
+/**
+ * Char spans of describe.skip(...) / describe.todo(...) bodies. Every it() whose position falls inside
+ * such a span is skipped at the SUITE level (the per-it modifier is absent, so classifyBody can't see
+ * it) — these are not auto-migratable: the suite is usually obsolete or env-gated. Brace-matched so a
+ * nested describe.skip catches only its own its, not the rest of the file.
+ */
+export function skippedDescribeSpans(source: string): Array<{ start: number; end: number }> {
+  const spans: Array<{ start: number; end: number }> = [];
+  for (const m of source.matchAll(/\bdescribe\.(?:skip|todo)\b\s*\(/g)) {
+    const open = source.indexOf('{', m.index ?? 0);
+    if (open < 0) continue;
+    let depth = 0;
+    for (let i = open; i < source.length; i++) {
+      if (source[i] === '{') depth++;
+      else if (source[i] === '}' && --depth === 0) {
+        spans.push({ start: open, end: i + 1 });
+        break;
+      }
+    }
+  }
+  return spans;
+}
+
 function classifyBody(
   body: string,
   modifier: string,
@@ -159,11 +184,15 @@ export function inventoryVitestSource(source: string, file = '<source>'): Vitest
 
   const runtimeHelpers = findRuntimeHelpers(source);
   const fsSetupVars = findFsSetupVars(source);
+  const skippedSpans = skippedDescribeSpans(source);
 
   const cases: VitestCase[] = hits.map((h, i) => {
     const end = i + 1 < hits.length ? hits[i + 1].pos : source.length;
     const body = source.slice(h.pos, end);
-    const { kind, signals } = classifyBody(body, h.modifier, runtimeHelpers, fsSetupVars);
+    const inSkippedSuite = skippedSpans.some((s) => h.pos >= s.start && h.pos < s.end);
+    const { kind, signals } = inSkippedSuite
+      ? { kind: 'manual' as const, signals: ['describe.skip/.todo — whole suite skipped, not auto-migratable'] }
+      : classifyBody(body, h.modifier, runtimeHelpers, fsSetupVars);
     const idMatch = h.title.match(ID_RE);
     return {
       id: idMatch ? idMatch[1] : null,
