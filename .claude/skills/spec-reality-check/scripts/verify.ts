@@ -209,6 +209,24 @@ export function parseFileChangesTable(content: string): { rows: FcRow[]; finding
   return { rows, findings };
 }
 
+// FR-52a / P28 (dogfood F5): path prefixes removed in dev-pomogator's own v2.0 canonical-plugin
+// migration. This is repo-SPECIFIC knowledge, NOT universal — `src/` is a normal source dir in
+// most projects this shared checker runs against. So the v1-drift finding is GUARDED below: it
+// fires ONLY when the repo is itself a canonical plugin (`.claude-plugin/plugin.json` present) AND
+// the prefix dir is gone entirely — otherwise a missing `src/…` edit path is a plain FC_EDIT_MISSING.
+const V1_REMOVED_PREFIXES = ['src/', 'extensions/'];
+
+/** True only for a canonical-plugin repo that has actually shed a removed-v1 layout dir.
+ *  Keeps the v1-drift finding from misfiring on any normal project that legitimately has `src/`. */
+function isRemovedV1LayoutPath(p: string, repoRoot: string): string | null {
+  const prefix = V1_REMOVED_PREFIXES.find((pre) => p.startsWith(pre));
+  if (!prefix) return null;
+  const repoIsCanonicalPlugin = fs.existsSync(path.join(repoRoot, '.claude-plugin', 'plugin.json'));
+  if (!repoIsCanonicalPlugin) return null;
+  const prefixDirGone = !fs.existsSync(path.join(repoRoot, prefix.replace(/\/+$/, '')));
+  return prefixDirGone ? prefix : null;
+}
+
 // strong-tests:skip invariants covered by evals iteration-2 (isolated fixtures + forbidden_codes enforce exact-count + no-leak invariants per check)
 export function checkFcRows(rows: FcRow[], repoRoot: string): AuditFinding[] {
   const findings: AuditFinding[] = [];
@@ -251,15 +269,28 @@ export function checkFcRows(rows: FcRow[], repoRoot: string): AuditFinding[] {
         line: row.rowNumber,
       });
     } else if (a === 'edit' && !exists) {
-      findings.push({
-        check: 'FC_EDIT_MISSING',
-        category: 'FILE_CHANGES_VERIFY',
-        severity: 'ERROR',
-        message: `FILE_CHANGES action=edit on missing path: ${row.path}`,
-        details: 'Path does not exist. Was the file renamed or removed? Update FILE_CHANGES row.',
-        file: row.path,
-        line: row.rowNumber,
-      });
+      const v1Prefix = isRemovedV1LayoutPath(row.path, repoRoot);
+      if (v1Prefix) {
+        findings.push({
+          check: 'FC_V1_LAYOUT_DRIFT',
+          category: 'FILE_CHANGES_VERIFY',
+          severity: 'ERROR',
+          message: `FILE_CHANGES action=edit on removed v1 layout path: ${row.path}`,
+          details: `\`${v1Prefix}\` was removed in this plugin's v2.0 canonical migration — the file moved under \`.claude/skills/<x>/\` (or the manifest is now \`.claude-plugin/plugin.json\`). Remap this row to the real v2 path, or drop it if the work is honestly @wip / not a v2 file edit.`,
+          file: row.path,
+          line: row.rowNumber,
+        });
+      } else {
+        findings.push({
+          check: 'FC_EDIT_MISSING',
+          category: 'FILE_CHANGES_VERIFY',
+          severity: 'ERROR',
+          message: `FILE_CHANGES action=edit on missing path: ${row.path}`,
+          details: 'Path does not exist. Was the file renamed or removed? Update FILE_CHANGES row.',
+          file: row.path,
+          line: row.rowNumber,
+        });
+      }
     } else if (a === 'delete' && !exists) {
       findings.push({
         check: 'FC_DELETE_MISSING',

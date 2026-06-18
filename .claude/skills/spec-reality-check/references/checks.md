@@ -20,6 +20,14 @@ Each finding emits `AuditFinding` shape: `{check, category, severity, message, d
 - **Root cause:** Path renamed/deleted in code, not updated in FC.md; or typo
 - **Fix:** `git log --diff-filter=D -- <path>` to confirm deletion; update or remove row
 
+### FC_V1_LAYOUT_DRIFT
+
+- **Severity:** ERROR
+- **Category:** FILE_CHANGES_VERIFY
+- **Trigger:** `action=edit` on a missing path under a removed-v1 prefix (`src/`, `extensions/`) — GUARDED: only when the repo is itself a canonical plugin (`.claude-plugin/plugin.json` present) AND the prefix dir is gone entirely. A normal project with a real `src/` dir (or no plugin marker) keeps generic FC_EDIT_MISSING instead — no misfire.
+- **Root cause:** Spec inherited a v1-layout path; the file moved to `.claude/skills/<x>/` (or the manifest became `.claude-plugin/plugin.json`) in this plugin's v2.0 canonical migration
+- **Fix:** Remap the row to the real v2 path, or drop it if the work is honestly @wip / not a v2 file edit (the dev-pomogator dogfood incident: pomogator-doctor carried 14 dead `src/`+`extensions/` edit rows)
+
 ### FC_DELETE_MISSING
 
 - **Severity:** ERROR
