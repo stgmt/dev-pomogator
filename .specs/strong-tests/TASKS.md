@@ -304,7 +304,7 @@ Skipped — strong-tests skill не требует новых сервисов/�
 > v0.5.0 closes 8 declared-but-not-working features. Commit `6836052`.
 
 - [x] T33: Composition-chain detection — declared since v0.1.0 in types + SKILL.md but 0 lines implementation -- @feature7 — id: t33 — Status: DONE | Est: 90m _(Verified: 2026-05-13)_
-  _Requirements: FR-11_
+  _Requirements: [FR-11](FR.md#fr-11-composition-chain-detection-v050)_
   **Done When:**
   - [x] CHAIN_TS / CHAIN_CS / CHAIN_PY / CHAIN_GO regex constants added
   - [x] chainRegexFor() + chainCount() helpers
@@ -312,7 +312,7 @@ Skipped — strong-tests skill не требует новых сервисов/�
   - [x] Smoke: TS `.filter().map().reduce()` → composition-chain; C# LINQ `.Where().Select().OrderBy().ToList()` → composition-chain
 
 - [x] T34: Stryker.NET dispatch in run-mutation.ts -- Status: DONE | Est: 120m _(Verified: 2026-05-13)_
-  _Requirements: FR-12_
+  _Requirements: [FR-12](FR.md#fr-12-strykernet-dispatch-для-c-stack-v050)_
   **Done When:**
   - [x] runStrykerNet() function parallel to runStryker/runMutmut
   - [x] dotnet-stryker --help pre-flight check + stryker-config.json existence guard
@@ -321,14 +321,14 @@ Skipped — strong-tests skill не требует новых сервисов/�
   - [x] Smoke on fixture: 80.49% kill rate, 41 mutants, HTML+JSON reports generated in 15.4s
 
 - [x] T35: Test classification policy — default Category=Unit filter -- Status: DONE | Est: 30m _(Verified: 2026-05-13)_
-  _Requirements: FR-13_
+  _Requirements: [FR-13](FR.md#fr-13-test-classification-policy-v050)_
   **Done When:**
   - [x] runStrykerNet args include --test-case-filter "Category=Unit" by default
   - [x] --include-integration / --include-e2e CLI flags override (union filter)
   - [x] Documented в SKILL.md §3 Test classification policy section
 
 - [x] T36: ast-grep migration TS branch via @ast-grep/napi NAPI -- Status: DONE | Est: 90m _(Verified: 2026-05-13)_
-  _Requirements: FR-14_
+  _Requirements: [FR-14](FR.md#fr-14-ast-grep-migration-для-typescript-detector-v050)_
   **Done When:**
   - [x] @ast-grep/napi installed as devDep
   - [x] getTsFunctionsViaAstGrep() cached function with content hash invalidation
@@ -336,7 +336,7 @@ Skipped — strong-tests skill не требует новых сервисов/�
   - [x] 47 unit tests pass with NAPI loaded; Python/Go/C# remain regex (v0.5.1+ roadmap)
 
 - [x] T37: LLM survivor analysis stub — annotateSurvivorsForLlmReview() -- Status: DONE | Est: 60m _(Verified: 2026-05-13)_
-  _Requirements: FR-15 v0.5.0 stub_
+  _Requirements: [FR-15](FR.md#fr-15-llm-driven-survivor-analysis-stub-v050) v0.5.0 stub_
   **Done When:**
   - [x] --analyze-survivors CLI flag added to parseArgs
   - [x] Each survivor annotated с equivalentSuspect: NEEDS_HUMAN_REVIEW + reconstructedContext (±3 lines)
@@ -344,21 +344,21 @@ Skipped — strong-tests skill не требует новых сервисов/�
   - [x] AI orchestrator pattern documented в SKILL.md
 
 - [x] T38: Hypothesis Ghostwriter integration -- Status: DONE | Est: 45m _(Verified: 2026-05-13)_
-  _Requirements: FR-16_
+  _Requirements: [FR-16](FR.md#fr-16-hypothesis-ghostwriter-integration-для-python-greenfield-v050)_
   **Done When:**
   - [x] runGhostwriter(cwd, functionRef) function spawns `hypothesis write <module.function>`
   - [x] Pre-flight `hypothesis --version` check + install hint if missing
   - [x] STDOUT parse looks for `from hypothesis` import line as scaffold start
 
 - [x] T39: Framework selection UX through AskUserQuestion -- Status: DONE | Est: 30m _(Verified: 2026-05-13)_
-  _Requirements: FR-17_
+  _Requirements: [FR-17](FR.md#fr-17-framework-selection-ux-через-askuserquestion-v050)_
   **Done When:**
   - [x] SKILL.md §3 documents enumerated 6-framework list pattern
   - [x] Cross-link to 9 established skills using AskUserQuestion enumerated selections
   - [x] No heavy auto-detection — calling side picks
 
 - [x] T40: .NET fixture project at tests/fixtures/dotnet-stryker-target/ -- Status: DONE | Est: 60m _(Verified: 2026-05-13)_
-  _Requirements: FR-12 self-test infrastructure_
+  _Requirements: [FR-12](FR.md#fr-12-strykernet-dispatch-для-c-stack-v050) self-test infrastructure_
   **Done When:**
   - [x] Library.Shared.csproj + UnitTests.csproj created
   - [x] PricingCalculator + CollectionPipeline + CartesianProduct demonstrating composition-chain + nxm-overlap kinds
@@ -372,14 +372,14 @@ Skipped — strong-tests skill не требует новых сервисов/�
 > v0.5.1 closes FR-15 stub with complete 4-step orchestration. Commit `72b6684`.
 
 - [x] T41: survivors-batch-prompt.ts helper script -- Status: DONE | Est: 60m _(Verified: 2026-05-13)_
-  _Requirements: FR-15 v0.5.1 batching_
+  _Requirements: [FR-15](FR.md#fr-15-llm-driven-survivor-analysis-stub-v050) v0.5.1 batching_
   **Done When:**
   - [x] Reads MutationReport JSON, batches survivors into chunks of 50 (configurable)
   - [x] Emits one JSON line per batch с Meta ACH-style prompt + cost estimate
   - [x] Cost guard: aborts emit if cumulative > --budget-usd default $2
 
 - [x] T42: merge-survivor-verdicts.ts helper script -- Status: DONE | Est: 60m _(Verified: 2026-05-13)_
-  _Requirements: FR-15 v0.5.1 merge_
+  _Requirements: [FR-15](FR.md#fr-15-llm-driven-survivor-analysis-stub-v050) v0.5.1 merge_
   **Done When:**
   - [x] Takes original report + N verdict JSON files, merges into enriched report
   - [x] Each verdict merged into MutationReport.gaps[] with equivalentSuspect + confidence + rationale
@@ -387,7 +387,7 @@ Skipped — strong-tests skill не требует новых сервисов/�
   - [x] Unmatched verdict warning emit to stderr
 
 - [x] T43: SKILL.md §6.3 LLM survivor analysis workflow doc -- Status: DONE | Est: 45m _(Verified: 2026-05-13)_
-  _Requirements: FR-15 v0.5.1 workflow documentation_
+  _Requirements: [FR-15](FR.md#fr-15-llm-driven-survivor-analysis-stub-v050) v0.5.1 workflow documentation_
   **Done When:**
   - [x] 4-step workflow: run-mutation.ts --analyze-survivors → batch-prompt → Agent() per batch → merge-verdicts
   - [x] Agent() prompt template + Meta ACH pattern explanation
@@ -396,7 +396,7 @@ Skipped — strong-tests skill не требует новых сервисов/�
   - [x] §8 hard-NO #6 preserved — verdicts are suggestions not assertions
 
 - [x] T44: vitest TESTQUAL001_12..16 integration tests -- Status: DONE | Est: 60m _(Verified: 2026-05-13)_
-  _Requirements: FR-15 verification_
+  _Requirements: [FR-15](FR.md#fr-15-llm-driven-survivor-analysis-stub-v050) verification_
   **Done When:**
   - [x] TESTQUAL001_12 batching into chunks of 50 with cost estimate
   - [x] TESTQUAL001_13 budget guard aborts when cumulative exceeds budget

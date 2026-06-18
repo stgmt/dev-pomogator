@@ -113,6 +113,39 @@ async function main(): Promise<void> {
     }
   }
 
+  // Cucumber clobber guard (FR-52a / P28-1): a FILTERED cucumber run (--name) against the
+  // DEFAULT config overwrites the canonical .dev-pomogator/.last-test-run.ndjson with a partial
+  // result → every spec not in the filter then reads not_run (poisons the honesty gate/census).
+  // Deny ONLY a bare --name run; allow the run-bdd wrapper, an explicit -c temp config, or an
+  // explicit --format message: redirect (precise — avoids over-blocking legit isolated runs, H1).
+  const isCucumber = /cucumber(?:\.js)?\b/.test(command) || /@cucumber\/cucumber/.test(command);
+  const isNameFiltered = /(?:^|\s)(?:--name|-n)(?:\s|=)/.test(command);
+  const isRedirected =
+    /(?:^|\s)(?:-c|--config)(?:\s|=)/.test(command) || /--format\s+message:/.test(command);
+  if (isCucumber && isNameFiltered && !isRedirected) {
+    const filterArgs = command.replace(/^[\s\S]*?cucumber\.js\s*/, '').trim() || '--name "<id>"';
+    const msg = [
+      '🚫 Filtered cucumber run against the default config would CLOBBER the canonical',
+      '   .dev-pomogator/.last-test-run.ndjson with a partial result (every other spec → not_run).',
+      '',
+      '✅ Use the clobber-safe runner (routes a filtered run to a throwaway + archives the run to',
+      '   .dev-pomogator/.test-history/ with timings):',
+      '',
+      `  node scripts/run-bdd.mjs ${filterArgs}`,
+      '',
+      '   (or pass an explicit -c <temp-config> / --format message:<throwaway> for an isolated run).',
+    ].join('\n');
+    const output = {
+      hookSpecificOutput: {
+        hookEventName: 'PreToolUse',
+        permissionDecision: 'deny',
+        permissionDecisionReason: `[test-guard:cucumber-clobber] ${msg}`,
+      },
+    };
+    process.stdout.write(JSON.stringify(output));
+    process.exit(2);
+  }
+
   // Check if direct test command (block + smart converter)
   for (const entry of BLOCKED_PATTERNS) {
     if (entry.pattern.test(command)) {

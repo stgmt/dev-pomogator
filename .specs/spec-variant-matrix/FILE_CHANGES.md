@@ -10,7 +10,7 @@
 | `tools/specs-generator/variant-matrix/parsers.ts` | create | [FR-3](FR.md#fr-3-ac-decision-table-обязательна-per-polymorphic-fr), [FR-4](FR.md#fr-4-gherkin-scenario-outline-в-feature-11-с-ac), [FR-5](FR.md#fr-5-tasksmd-per-variant) |
 | `tools/specs-generator/variant-matrix/audit.ts` | create | [FR-6](FR.md#fr-6-audit-category-variantcoverage-8-я-категория) |
 | `tools/specs-generator/variant-matrix/escape-log.ts` | create | [FR-7](FR.md#fr-7-escape-hatch-с-audit-log) |
-| `extensions/specs-workflow/tools/specs-generator/specs-generator-core.mjs` | edit | [FR-6](FR.md#fr-6-audit-category-variantcoverage-8-я-категория) — wire VARIANT_COVERAGE category в commandAuditSpec ~line 1611 + categoryCount ~line 2676 |
+| `tools/specs-generator/specs-generator-core.mjs` | edit | [FR-6](FR.md#fr-6-audit-category-variantcoverage-8-я-категория) — wire VARIANT_COVERAGE category в commandAuditSpec ~line 1611 + categoryCount ~line 2676 |
 | `extensions/specs-workflow/.claude/skills/variant-matrix-build/SKILL.md` | create | [FR-8](FR.md#fr-8-phase-2-sub-skill-variant-matrix-build) |
 | `.claude/rules/specs-workflow/variant-matrix/when-to-build-matrix.md` | create | [FR-2](FR.md#fr-2-hard-out-signals-anti-over-application) — trigger map с hard-OUT signals |
 | `.claude/rules/specs-workflow/variant-matrix/escape-hatch-audit.md` | create | [FR-7](FR.md#fr-7-escape-hatch-с-audit-log) — JSONL audit format |
@@ -18,7 +18,7 @@
 | `.claude/skills/create-spec/references/phase3plus_audit-overview.md` | edit | [FR-6](FR.md#fr-6-audit-category-variantcoverage-8-я-категория) — categories table 7→8 |
 | `.claude/skills/create-spec/references/phase3plus_audit-variant-coverage.md` | create | [FR-6](FR.md#fr-6-audit-category-variantcoverage-8-я-категория) — resolution guide |
 | `.claude/rules/plan-pomogator/cross-scope-coverage.md` | edit | [FR-3](FR.md#fr-3-ac-decision-table-обязательна-per-polymorphic-fr) — add Step 0 spec-time application |
-| `extensions/specs-workflow/extension.json` | edit | Manifest bump 1.18.0 → 1.19.0; register new toolFiles + skillFiles + ruleFiles + skill |
+| `.claude-plugin/plugin.json` | edit | Manifest version bump + register new tool/skill/rule files (canonical v2 manifest; replaced `extensions/specs-workflow/extension.json`, removed after v2.0) |
 | `CLAUDE.md` | edit | Add 2 rows to Always-apply rules table per claude-md-glossary rule |
 | `tests/fixtures/specs-generator/variant-matrix/polymorphic-fr-complete/FR.md` | create | Test fixture — happy path positive |
 | `tests/fixtures/specs-generator/variant-matrix/polymorphic-fr-complete/ACCEPTANCE_CRITERIA.md` | create | Test fixture — complete AC Decision Table |

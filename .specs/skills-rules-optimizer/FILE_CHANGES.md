@@ -39,7 +39,7 @@
 
 | Path | Action | Reason |
 |------|--------|--------|
-| `extensions/suggest-rules/extension.json` | edit | `skills.rules-optimizer` → `skills.skills-rules-optimizer` (path + name); `skillFiles.skills-rules-optimizer` (расширенный файл-список); bump version 1.9.0 → 1.10.0; [FR-9](FR.md#fr-9-backward-compatibility-для-rules-side) |
+| `.claude-plugin/plugin.json` | edit | Skill auto-registered via the `./.claude/skills` glob after the rules-optimizer → skills-rules-optimizer rename; manifest version bump (canonical v2 manifest; replaced `extensions/suggest-rules/extension.json`, removed after v2.0); [FR-9](FR.md#fr-9-backward-compatibility-для-rules-side) |
 | `.claude/commands/suggest-rules.md` | edit | Phase 6.2: `audit.ts --dir .claude/rules` (existing) + `audit.ts --dir .claude/skills` (NEW); aggregate report includes skill findings; [FR-9](FR.md#fr-9-backward-compatibility-для-rules-side) |
 | `CLAUDE.md` | edit | Replace `rules-optimizer` mentions с `skills-rules-optimizer` (если есть); per `claude-md-glossary` rule |
 

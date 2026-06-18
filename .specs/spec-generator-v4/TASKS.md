@@ -1648,6 +1648,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   _Requirements: [FR-49](FR.md#fr-49)_
   **Done When:**
   - [x] `findStaleInProgress` + CLI `stale-marker-scan.ts` флажит in-progress с all-green сценариями; FLAG-ONLY (указывает на set_entity_status, не авто-закрывает); no-scenario → не флажит. Unit + SPECGEN004_179; реальный прогон на корпусе чист (консервативно). Коммит 8db0f63
+  - [x] precision-fix (2026-06-18): own-scenario guard — флажит ТОЛЬКО задачу, чьё Done-When цитирует СВОЙ scenario-id (тот же сигнал FR-46a own-scenario), не FR-ref over-map. Без него сверщик сам выдавал 3 false-green: ws-f-remaining (backlog-umbrella), p16-form-skill-evals, p16-audit-split-doc — все мапят на @featureN своего FR через siblings, а собственный deliverable не готов. Реальный корпус 3→0 flags; unit-pin T-overmap (мапит на зелёный сценарий лишь через FR-ref → НЕ флажится). Закрывает класс «спека зелёная, задача открыта» = FR-32 over-map иллюзия, а не дрейф
 
 ## Phase 26 — FR-50: жёсткий отказ закрывать намеренно-отложенную (waived) задачу
 
@@ -1659,3 +1660,96 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] `TASK_WAIVED_CLOSED` ERROR-пол в conformance.ts; дверь отклоняет waived→DONE правку
   - [ ] `set_entity_status` отказывает закрытие с `error: WAIVED` (видимая задача + fallback-скан невидимой)
   - [ ] SPECGEN004_182, SPECGEN004_183, SPECGEN004_184 @feature50 зелёные; бандлы (server/push/gate) пересобраны
+
+## Phase 27 — BDD migration rollout (FR-51 мигратор → централизация всех тестов на трассируемых @featureN BDD)
+
+План-источник: `~/.claude/plans/mighty-purring-meteor.md` (P2–P6). Цель: каждый тест = `@featureN`-сценарий, привязанный к требованию и реально гоняемый (граф видит только `@featureN`-теги); не-BDD (vitest) тесты переносятся и выпиливаются ПО МЕРЕ переноса; репо зелёное на каждом шаге. Конкретная разбивка backlog-задачи `ws-f-remaining`. Мигратор (FR-51) собран, пилот доказан — дальше раскатка спека-за-спекой (многозаходная, P3-P6 плана).
+
+- [x] P27-1: универсальный BDD-мигратор собран + пилот доказан + дорожная карта честна -- @feature51 — id: p27-migrator-and-pilot — Status: DONE | Est: 1200m
+  _depends: p26-waived-close-gate_
+  _Requirements: [FR-51](FR.md#fr-51)_
+  **Done When:**
+  - [x] `tools/bdd-migrator/` собран: `inventory.ts` классифицирует кейсы (runtime/artifact/pure/manual) + детект runtime-хелпера + span-детект `describe.skip`; `corpus.ts` ранжирует easy-first + twin-детект (`twinHint`/`twinnedVia`); `migrate.ts buildPlan(slug)` план per-спека. Verified by SPECGEN004_199. Commits 42cb366 / 4cc9e5e / cf1be57
+  - [x] пилот доказан end-to-end: claim-evidence-gate перенесён на БДД (SPECGEN004_186..198) + ~13 v4-domain тест-файлов свёрнуты в `@featureN`-сценарии SPECGEN004_186..220 с real-engine step-defs; рецепт §6.5 доказан на живом
+  - [x] честная карта: 174 gross → **119 NET** без существующего BDD-двойника + 55 twin-candidates; fixtures/.specs/obsolete исключены; live: `node --import tsx tools/bdd-migrator/corpus.ts .`
+
+- [ ] P27-2: раскатка спека-за-спекой — локально-запускаемые первыми (FR-M5) — id: p27-rollout-local — Status: TODO | Est: 2400m
+  _depends: p27-migrator-and-pilot_
+  _Requirements: [FR-51](FR.md#fr-51)_
+  **Done When:**
+  - [ ] дискриминатор FR-M5: `.feature` спеки попадает в `cucumber.json` paths ТОЛЬКО когда у ВСЕХ её сценариев есть step-defs (иначе mass-UNDEFINED); немигрированная спека остаётся на vitest, репо зелёное
+  - [ ] `spec-reality-check` (17 кейсов, локально-запускаем, tmpdir-изолирован): прозаичные `.feature`-сценарии → исполняемый Gherkin + step-defs (runChecks in-process + `verify.ts` spawn + `verify-hook.ts` — 3 поверхности), временный cucumber-конфиг зелёный, vitest выпилен ПОСЛЕ зелёного эквивалента, ORPHAN=0/NOT_COVERED=0
+  - [ ] `tui-test-runner` / `tui-test-runner-v2` (≈20 каждый) + остальные локально-запускаемые целевые спеки (порядок easy-first по `corpus.ts` roadmap)
+
+- [ ] P27-3: Docker-cucumber validation path (разблокирует 3 docker-only спеки) (FR-M3) — id: p27-docker-cucumber — Status: TODO | Est: 480m
+  _depends: p27-rollout-local_
+  _Requirements: [FR-51](FR.md#fr-51)_
+  **Done When:**
+  - [ ] `scripts/docker-test.sh` гоняет cucumber как гейт для мигрированных спек (сейчас Docker CMD = vitest; cucumber-гейт в Docker отсутствует)
+  - [ ] 3 docker-only спеки (create-specs-bdd-enforcement, auto-capture, worktree-setup) мигрируются — их тесты пишут общий `.specs/`/HOME (не tmpdir-изолируемы), поэтому ждут Docker-путь
+
+- [ ] P27-4: born-BDD — test-author в create-spec Phase 3 / phase-runner (FR-M6) — id: p27-born-bdd — Status: TODO | Est: 480m
+  _depends: p27-migrator-and-pilot_
+  _Requirements: [FR-51](FR.md#fr-51)_
+  **Done When:**
+  - [ ] на находку TASK_NO_OWN_SCENARIO create-spec/phase-runner вызывает агента `test-author` → новые спеки рождаются трассируемыми (новые сироты не появляются по построению)
+
+- [ ] P27-5: финальный переключатель — npm test/docker гейтит BDD + выпил vitest-двойников (FR-M3/P5, ПОСЛЕДНИМ) — id: p27-gate-switch — Status: TODO | Est: 240m
+  _depends: p27-rollout-local, p27-docker-cucumber, p27-born-bdd_
+  _Requirements: [FR-51](FR.md#fr-51)_
+  **Done When:**
+  - [ ] после миграции ВСЕХ целевых спек: `npm test`/`docker-test.sh` гейтит cucumber; остаточный vitest-двойник выпилен/помечен non-traceable scratch; делается ПОСЛЕ раскатки, не раньше (нет mass-UNDEFINED)
+
+## Phase 28 — Session dogfood hardening (FR-52: door/MCP/BDD-workflow frictions, 2026-06-18)
+
+Источник: `audit-reports/session-dogfood-findings-2026-06-18.md` (находки F1–F10). Каждая задача — детерминированный фикс с тестом, раскрывает FR-52a..f. F1 — work-item автору незакоммиченной E-A-переделки двери (код двери не трогаем — чужая работа).
+
+- [ ] P28-1: канонический ndjson клоббер-безопасен — фильтрованный прогон → throwaway, не `.last-test-run.ndjson` (F2/FR-52a) — id: p28-ndjson-clobber-safe — Status: TODO | Est: 120m
+  _depends: p27-migrator-and-pilot_
+  _Requirements: [FR-52](FR.md#fr-52)_
+  **Done When:**
+  - [x] обёртка `scripts/run-bdd.mjs` собрана: фильтрованный (`--name`/`--tags`) → throwaway ndjson, полный → канонический; verified — фильтрованный прогон оставляет канонический нетронутым (mtime unchanged)
+  - [x] умная история кусочками с таймингами (идея owner'а): каждый прогон → `.dev-pomogator/.test-history/run-<epoch>-<kind>.ndjson` + строка индекса (ts/kind/scenarios/durationMs/exit), ротация последних 30; verified на probe-прогоне
+  - [ ] ОСТАЛОСЬ: вписать `run-bdd.mjs` санкционированным путём (bdd-migrator SKILL + run-tests) — иначе raw `cucumber.js --name` всё ещё затирает (dead-integration); enforcement-гард (PreToolUse деном raw фильтрованного cucumber, пишущего канонический); BDD-сценарий @feature52
+
+- [ ] P28-2: anchor-fix через дверь под enforce + enforce-aware hint гейта (F3/F10/FR-52b) — id: p28-anchor-fix-door — Status: TODO | Est: 180m
+  _depends: p27-migrator-and-pilot_
+  _Requirements: [FR-52](FR.md#fr-52)_
+  **Done When:**
+  - [ ] door-тул чинит якорь (canonical slug через `marksman-slug.mjs`, запись валидированной дверью) ЛИБО `anchor_gate_stop` под enforce советует door-путь (не блокируемый `fix.mjs`); тест: под `SPEC_ACCESS_ENFORCE` битый якорь чинится без обхода гарда/двери
+
+- [ ] P28-3: validate_anchor — описание различает 2 смысла «якоря» + heading-slug резолв (F4/FR-52c) — id: p28-validate-anchor-clarity — Status: TODO | Est: 90m
+  _depends: p27-migrator-and-pilot_
+  _Requirements: [FR-52](FR.md#fr-52)_
+  **Done When:**
+  - [ ] описание `validate_anchor` явно: spec-graph compact-id/alias-реестр ≠ Marksman heading-слаг; добавлена проверка резолва `DOC.md#heading-slug` (reuse `marksman-slug.mjs`); тест: heading-slug линк валидируется, compact-id по-прежнему работает
+
+- [ ] P28-4: audit ловит v1→v2 дрейф путей FILE_CHANGES (F5/FR-52d) — id: p28-v1v2-filechanges-drift — Status: TODO | Est: 120m
+  _depends: p27-migrator-and-pilot_
+  _Requirements: [FR-52](FR.md#fr-52)_
+  **Done When:**
+  - [ ] `edit`-путь под удалённым v1-префиксом (`src/`,`extensions/`) + файла нет → находка «v1-layout, ремапь в `.claude/...` или удали» (не только generic FILE_CHANGES_VERIFY); тест: фикстура с мёртвым `src/`-edit даёт v1-drift находку, живой v2-путь — нет
+
+- [ ] P28-5: FR-32 join — задача verified своим сценарием, не worst-of-feature (F8/FR-52e) — id: p28-fr32-own-scenario-join — Status: TODO | Est: 120m
+  _depends: p27-migrator-and-pilot_
+  _Requirements: [FR-52](FR.md#fr-52)_
+  **Done When:**
+  - [ ] задача с PASSED собственным покрывающим сценарием читается verified (не DONE-but-unverified из-за @manual/not-run сиблингов того же @featureN); тест-пин: strong-tests:t29 (покрыт TESTQUAL001_10 passed) → verified
+
+- [ ] P28-6: стейл-сценарий vs E-A переделка двери — обновить SPECGEN004_149 + FR под short-write-lock семантику (F1/FR-52f) — id: p28-readonly-door-bdd-vs-ea — Status: TODO | Est: 60m
+  _depends: p27-migrator-and-pilot_
+  _Requirements: [FR-52](FR.md#fr-52)_
+  **Done When:**
+  - [ ] (work-item автору E-A, НЕ мне — чужая незакоммиченная переделка двери) при коммите E-A: SPECGEN004_149 + read-only-door FR переписаны под short-write-lock+CAS (writes succeed cross-session; transient WRITE_LOCK_BUSY only in-flight; same-doc → CAS_MISMATCH); до тех пор канонический сьют несёт 1 известно-красный стейл-сценарий
+
+- [ ] P28-7: атомарный промоут тегов комментарий→реальный при wire (F6) — id: p28-tag-promote-at-wire — Status: TODO | Est: 90m
+  _depends: p27-migrator-and-pilot_
+  _Requirements: [FR-51](FR.md#fr-51)_
+  **Done When:**
+  - [ ] door-хелпер/wire-шаг промоутит `# @featureN`→`@featureN` с SRO009-проверкой (номер тега = FR, который сценарий реально тестит); тест: промоут строит tested-by рёбра, неверный номер отвергается
+
+- [ ] P28-8: политика кардинальности задача↔сценарий для консолидированных миграций (F7) — id: p28-task-scenario-cardinality — Status: TODO | Est: 60m
+  _depends: p27-migrator-and-pilot_
+  _Requirements: [FR-52](FR.md#fr-52)_
+  **Done When:**
+  - [ ] решено + закодировано: many→few (задача «протестирована» если ≥1 покрывающий сценарий passed → ослабить `TASK_NO_OWN_SCENARIO` при наличии tested-by ребра) ЛИБО мигратор обязан сплитить; тест фиксирует выбранную политику

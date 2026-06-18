@@ -6,7 +6,7 @@
 
 | Path | Action | Reason |
 |------|--------|--------|
-| `extensions/specs-workflow/extension.json` | edit | [FR-9](FR.md#fr-9-extension-manifest-wiring-feature9) — Register skill + bump version (continues across iterations) |
+| `.claude-plugin/plugin.json` | edit | [FR-9](FR.md#fr-9-extension-manifest-wiring-feature9) — Register skill (canonical `./.claude/skills` glob) + bump version; v2.0 canonical manifest (replaced `extensions/specs-workflow/extension.json`, removed after v2.0) |
 | `.claude/skills/spec-review/SKILL.md` | edit | [FR-12](FR.md#fr-12-spec-review-category-15-integration-feature12) — Category 15 "Reality Drift" |
 | `.claude/skills/create-spec/references/phase3plus_audit-overview.md` | edit | [FR-13](FR.md#fr-13-create-spec-phase-3-integration-feature13) — Phase 3 reality-check step |
 | `.specs/dev-pomogator-canonical-plugin/FILE_CHANGES.md` | edit | [FR-11](FR.md#fr-11-applied-on-canonical-plugin-spec-feature11) — Cleanup stale paths after skill applied |

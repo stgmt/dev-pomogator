@@ -727,3 +727,9 @@ WHEN задача несёт маркер `_waived: <причина>_` И пом
 **Требование:** [FR-50](FR.md#fr-50)
 
 WHEN `set_entity_status` переводит waived-задачу в `done` THEN команда SHALL отказать с `error: WAIVED` и причиной вейвера; WHEN закрываемая waived-задача НЕВИДИМА графу (неэнумный статус `WONT-VERIFY`) THEN команда SHALL просканировать `TASKS.md`, вернуть причину вейвера и `error: WAIVED`, а НЕ `NOT_FOUND`; WHEN парсер графа встречает колоночный `- [..]`-буллет с `id:` и неэнумным статусом THEN он SHALL завершить предыдущий блок (граница), чтобы `_waived:` сироты не втекал в соседнюю DONE-задачу; WHEN задача несёт `_waived:` THEN парсер SHALL поднять причину в `TaskNode.waived`.
+
+## AC-52.1
+
+**Требование:** [FR-52](FR.md#fr-52)
+
+WHEN cucumber-прогон отфильтрован (`--name` или частичный `paths`) THEN он SHALL НЕ перезаписывать канонический `.dev-pomogator/.last-test-run.ndjson` (фильтрованные пишут throwaway, канонический — только полный прогон); WHEN anchor-integrity гейт флажит битый якорь под `SPEC_ACCESS_ENFORCE` THEN remediation SHALL быть door-совместимой (не enforce-блокируемый `fix.mjs`); WHEN описывается `validate_anchor` THEN оно SHALL явно различать spec-graph compact-id-реестр от Marksman heading-слагов И уметь проверить резолв `DOC.md#heading-slug`; WHEN `edit`-путь в FILE_CHANGES совпал с удалённым v1-префиксом (`src/`, `extensions/`) И файла нет THEN audit SHALL эмитить v1-layout-drift находку с указанием ремапа, а не только generic FILE_CHANGES_VERIFY; WHEN FR-32 сворачивает покрытие задачи, чей СОБСТВЕННЫЙ покрывающий сценарий PASSED THEN задача SHALL читаться verified (не worst-of по @manual/not-run сиблингам); WHEN изменение кода двери/локов меняет наблюдаемое поведение THEN его BDD-сценарий + FR SHALL обновляться в ТОМ ЖЕ изменении (иначе стейл-сценарий валит канонический сьют).

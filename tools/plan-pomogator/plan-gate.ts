@@ -253,8 +253,30 @@ export function scorePromptRelevance(planContent: string, promptTexts: string[])
 /**
  * Deny ExitPlanMode with formatted error message and exit.
  */
+/**
+ * FR-15: render a ValidationError[] readably (`line N: message` + hint), NOT the pre-fix
+ * "line undefined: undefined" that a bare string[] produced. Exported so a BDD scenario can
+ * bind to the ACTUAL deny formatting (the shipped fix), not just the Phase 2.5 trigger.
+ */
+export function formatDenyErrors(errors: ValidationError[]): string {
+  return errors.map((e) => `  line ${e.line}: ${e.message}\n    💡 ${e.hint}`).join('\n');
+}
+
+/**
+ * FR-15: the Phase 2.5 relevance-deny payload as a STRUCTURED ValidationError. The shipped bug
+ * fix (b8a2bca) was passing this object instead of a bare string — a string rendered as
+ * "line undefined: undefined" through formatDenyErrors. Exported for the @feature15 scenario.
+ */
+export function phase25RelevanceDenyError(): ValidationError {
+  return {
+    line: 0,
+    message: 'План слабо заземлён в текущем запросе: его Extracted Requirements почти не пересекаются с тем, что ты просил в этой сессии. Похоже на план, скопированный из другой задачи.',
+    hint: 'Перепиши ### Extracted Requirements так, чтобы они прямо отражали ТЕКУЩИЙ запрос (ключевые слова из твоих сообщений этой сессии), а не другую задачу.',
+  };
+}
+
 function denyAndExit(planName: string, phaseLabel: string, errors: ValidationError[], extra: string = ''): never {
-  const errorList = errors.map((e) => `  line ${e.line}: ${e.message}\n    💡 ${e.hint}`).join('\n');
+  const errorList = formatDenyErrors(errors);
   const output = {
     hookSpecificOutput: {
       hookEventName: 'PreToolUse',
@@ -368,11 +390,7 @@ async function main(): Promise<void> {
       const relevanceScore = scorePromptRelevance(planContent, promptTexts);
       if (relevanceScore <= -20) {
         denyAndExit(planName, 'Phase 2.5 — релевантность',
-          [{
-            line: 0,
-            message: 'План слабо заземлён в текущем запросе: его Extracted Requirements почти не пересекаются с тем, что ты просил в этой сессии. Похоже на план, скопированный из другой задачи.',
-            hint: 'Перепиши ### Extracted Requirements так, чтобы они прямо отражали ТЕКУЩИЙ запрос (ключевые слова из твоих сообщений этой сессии), а не другую задачу.',
-          }],
+          [phase25RelevanceDenyError()],
           '\nНЕ копируй содержимое из других планов. Создай план С НУЛЯ по шаблону.\n' + loadUserPrompts(data.session_id));
       }
     }

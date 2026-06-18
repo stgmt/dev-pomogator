@@ -752,3 +752,23 @@ Then the state is PARTIAL and last_run carries the per-class summary
 Given a spec with no ingested run data
 When get_spec_status runs
 Then last_run is null and no summary is fabricated
+
+### User Story 31: Workflow frictions I hit in use get fixed, not re-hit (Priority: P2)
+
+**Требование:** [FR-52](FR.md#fr-52)
+
+As a maintainer dogfooding the spec-graph / MCP-door / BDD workflow, I want the frictions surfaced during live use — a filtered cucumber run silently clobbering the canonical coverage ndjson, the anchor-fixer being unusable under enforce, v1→v2 FILE_CHANGES path drift on migrated specs, validate_anchor answering about the wrong kind of anchor, coverage marking a task unverified though its own scenario passed, and a door behaviour change leaving its BDD scenario stale — captured as concrete hardening requirements with tests, so that the next session does not re-hit the same papercuts and the door/workflow gets steadily more honest.
+
+**Why:** These were not theoretical — each cost real time this session (hand-reconciling 14 dead FILE_CHANGES rows, re-running a 2.5-minute canonical suite to undo an ndjson clobber, hand-computing a Cyrillic GLFM slug because fix.mjs is enforce-blocked). Left uncaptured, the same frictions re-cost the next operator. The analysis lives in `audit-reports/session-dogfood-findings-2026-06-18.md`.
+
+**Independent Test:** Each FR-52 sub-requirement (a..f) has a deterministic check: a filtered run leaves the canonical ndjson untouched; the anchor gate offers a door-routed remediation under enforce; the audit names a v1-layout FILE_CHANGES path; validate_anchor's description distinguishes the two anchor kinds; a task with a passing own-scenario reads verified; a door-behaviour change is gated until its BDD scenario matches.
+
+**Acceptance Scenarios:**
+
+Given a cucumber run filtered with --name
+When it executes through the default config
+Then the canonical .last-test-run.ndjson is not overwritten with the partial result
+
+Given a migrated spec whose FILE_CHANGES has an edit row under a removed v1 prefix
+When the audit runs
+Then it emits a specific v1-layout-drift finding with remap guidance, not only a generic missing-file error

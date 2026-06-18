@@ -75,8 +75,10 @@ export function parseScenarios(feature: string): ScenarioInfo[] {
       }
       break;
     }
-    // Prefer a short id token (CODE_NN) from the scenario title when present.
-    const idTok = m[1].match(/^([A-Za-z]+\d+_\d+|[A-Za-z]+\d+)/);
+    // Prefer a short id token (CODE_NN) from the scenario title when present. The trailing `[a-z]?`
+    // keeps a letter SUFFIX (SRC001_05b) distinct from its base (SRC001_05) — without it both parse
+    // to "SRC001_05" and collide (the planner listed SRC001_05 twice for spec-reality-check).
+    const idTok = m[1].match(/^([A-Za-z]+\d+_\d+[a-z]?|[A-Za-z]+\d+)/);
     out.push({ id: idTok ? idTok[1] : m[1].slice(0, 40), tagState, tags });
   }
   return out;

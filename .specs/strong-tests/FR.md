@@ -70,29 +70,43 @@ Skill SHALL include §1.5 "Behavioural prior" в SKILL.md body that loads on **e
 
 Detector `detect-invariant-candidates.ts` `scan()` function SHALL assign `kind: 'composition-chain'` для functions whose body содержит ≥2 chained method calls на collection types ИЛИ ≥2 sequential collection-typed assignments. Per-stack regex constants: `CHAIN_TS` (`.map().filter().reduce()` patterns), `CHAIN_CS` (LINQ `.Select().Where().GroupBy()`), `CHAIN_PY` (list comprehension stacking), `CHAIN_GO` (sequential `result := fn(); result2 := fn2(result)` flow). Existing taxonomy mapping в `suggestInvariants()` already returns `[cardinality, uniqueness, conservation, monotonicity]` для composition-chain kind. Detection priority: `nxm-overlap` (≥2 nested loops) takes precedence; composition-chain assigned ONLY when nestedFor < 2 AND chainCount ≥ 1.
 
+**Связанные AC:** [AC-11](ACCEPTANCE_CRITERIA.md#ac-11-fr-11-composition-chain-detection-v050)
+
 ## FR-12: Stryker.NET dispatch для C# stack (v0.5.0)
 
 `run-mutation.ts` SHALL добавить `runStrykerNet()` function как parallel implementation `runStryker()` (TS) и `runMutmut()` (Python). Detection: existing `detectStack()` C# branch уже identifies `*.csproj` + xUnit/NUnit; expanded для recognize Stryker.NET availability via either (a) `<PackageReference Include="Stryker.NET"` в csproj, ИЛИ (b) presence of `stryker-config.json` в repo root. Dispatch: spawn `dotnet-stryker --config-file stryker-config.json` через `spawnSync`, parse `StrykerOutput/<latest-timestamp>/reports/mutation-report.json`. Pre-flight checks: `dotnet-stryker --help` для tool availability + `stryker-config.json` exists для repo setup. Install hint emit if missing: `dotnet tool install -g dotnet-stryker` + copy template из `references/stryker-net.config.template.json`. Parallel JSON template at `references/stryker-net.config.template.json` с `{{TODO}}` placeholders для production / test-projects / test-case-filter / additional-timeout / thresholds.
+
+**Связанные AC:** [AC-12](ACCEPTANCE_CRITERIA.md#ac-12-fr-12-strykernet-dispatch-v050)
 
 ## FR-13: Test classification policy (v0.5.0)
 
 Stryker dispatch (TS + Python + C#) SHALL по умолчанию apply test-case filter `Category=Unit` (или equivalent stack-specific pattern: pytest `-m unit`, xUnit `[Trait("Category","Unit")]`, vitest `describe.skipIf` on integration env var). Integration и E2E tests skipped unless caller passes explicit override flag `--include-integration` ИЛИ `--include-e2e` к `run-mutation.ts`. Rationale: real-world experience (lm-saas/AiPomogator field verification documented в FIELD_VERIFICATION.md) — integration tests с live infrastructure (DB / auth / HTTP) block Stryker initial test run, preventing mutation phase from starting. Solution architectural: classify tests via Trait/marker, default scope = unit only. AI agent SHALL offer test classification suggestion sub-mode (см. SKILL.md §framework-selection-ux) когда target repo не имеет existing categorization.
 
+**Связанные AC:** [AC-13](ACCEPTANCE_CRITERIA.md#ac-13-fr-13-test-classification-policy-v050)
+
 ## FR-14: ast-grep migration для TypeScript detector (v0.5.0)
 
 `detect-invariant-candidates.ts` SHALL прefer ast-grep AST-based detection через `@ast-grep/napi` library (npm dependency) для TypeScript stack. Implementation: cached `getTsFunctionsViaAstGrep(content)` returns `Map<line, name>` для ALL function-like nodes (function_declaration + arrow function const assignments). Cache invalidation на content hash. Function detection precedence: ast-grep parse result → fallback к regex `FUNCTION_TS` ONLY if NAPI load fails OR ast-grep returns empty results. Other stacks (Python / C# / Go) remain regex-based для v0.5.0 — full ast-grep migration roadmap v0.5.1+. Required: try/catch NAPI module load на startup (graceful degradation если binary compat fails на target host).
+
+**Связанные AC:** [AC-14](ACCEPTANCE_CRITERIA.md#ac-14-fr-14-ast-grep-migration-ts-branch-v050)
 
 ## FR-15: LLM-driven survivor analysis stub (v0.5.0)
 
 `run-mutation.ts` SHALL provide `--analyze-survivors` CLI flag which enriches `MutationReport.gaps[]` с annotated survivors containing: original `Survivor` fields + `equivalentSuspect: 'NEEDS_HUMAN_REVIEW'` initial marker + `reconstructedContext` (±3 lines around mutation point read from disk). Function `annotateSurvivorsForLlmReview()` pure 1-to-1 mapping (cardinality preserved). Production invocation pattern documented в SKILL.md: AI orchestrator reads `gaps[]` output, spawns `Agent(subagent_type="general-purpose")` per batch of 50 survivors, asks LLM to flag equivalent vs real (per Meta ACH 0.95 precision Equivalence Detector pattern, engineering.fb.com 2025), merges verdicts back into `gaps[].equivalentSuspect: boolean`. Standalone Node script cannot directly invoke `Agent()` tool (skill-level only) — annotation provides structured context для AI orchestration.
 
+**Связанные AC:** [AC-15](ACCEPTANCE_CRITERIA.md#ac-15-fr-15-llm-survivor-analysis-full-workflow-v051)
+
 ## FR-16: Hypothesis Ghostwriter integration для Python Greenfield (v0.5.0)
 
 `run-mutation.ts` SHALL provide `runGhostwriter(cwd, functionRef)` function for invoking `hypothesis write <module.function>` subprocess in Python Greenfield mode (§6.1). Returns `GhostwriterResult{success, scaffold?, error?, functionRef}`. Pre-flight check `hypothesis --version` для tool availability; if missing emit install hint `pip install hypothesis`. STDOUT parse: locate `from hypothesis import` line as scaffold start, slice до конца output. Integration point: AI orchestrator может invoke runGhostwriter per detected production function в Greenfield mode для emit PBT skeleton как `[GHOSTWRITER_SCAFFOLD]` block. Reduces blank-page paralysis per SKILL.md §6.4 line 390 reference.
 
+**Связанные AC:** [AC-16](ACCEPTANCE_CRITERIA.md#ac-16-fr-16-hypothesis-ghostwriter-integration-v050)
+
 ## FR-17: Framework selection UX через AskUserQuestion (v0.5.0)
 
 Skill SHALL NOT perform heavy auto-detection для polyglot repositories (multiple stacks detected). Вместо этого calling-side (AI agent ИЛИ user) SHALL invoke `AskUserQuestion` с enumerated framework list (6 options: vitest+Stryker / jest+Stryker / pytest+mutmut / xUnit+Stryker.NET / NUnit+Stryker.NET / go test+go-mutesting / cargo test+cargo-mutants). Pattern established в 9 другие dev-pomogator skills (discovery-forms, hyperv-test-runner, docker-optimize, install-diagnostics, run-tests, fewer-permission-prompts, dev-pomogator-uninstall, simplify, dedup-tests). `run-mutation.ts detectStack()` heuristic remains as fallback для unambiguous single-stack repos. Documentation в SKILL.md §3 "Framework selection UX" sub-section.
+
+**Связанные AC:** [AC-17](ACCEPTANCE_CRITERIA.md#ac-17-fr-17-framework-selection-ux-v050)
 
 ## Out of Scope для v0.5.0
 

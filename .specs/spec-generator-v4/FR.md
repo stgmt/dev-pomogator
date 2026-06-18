@@ -900,3 +900,22 @@ FR-46 закрыл заднюю скобку («нельзя ЗАКОНЧИТЬ 
 
 ---
 
+## FR-52
+
+**Session dogfood hardening — door/MCP/BDD-workflow frictions surfaced in use (2026-06-18)**
+
+Аудит сессии раскатки BDD-миграции (`audit-reports/session-dogfood-findings-2026-06-18.md`) вскрыл ряд frictions/багов воркфлоу — пойманных при РЕАЛЬНОМ использовании двери и BDD-конвейера, не теоретически. FR-52 кодифицирует их как требования к харднингу; каждое — отдельный детерминированный фикс с тестом. Owner: «много догфуда багов спекгенератора мсп тулов и воркфлоу... план работ по фиксу, фиксим через добавление в спеки, анализ и отчет» (2026-06-18).
+
+- **FR-52a (канонический ndjson клоббер-безопасен):** отфильтрованный/scoped cucumber-прогон (`--name`, частичный `paths`) SHALL НЕ перезаписывать канонический `.dev-pomogator/.last-test-run.ndjson` — иначе `spec-verdict`/перепись/стоп-гейт читают частичный прогон как полный и врут `not_run`. Только ПОЛНЫЙ прогон пишет канонический артефакт; фильтрованные → throwaway ndjson (обёртка/гейт формата). Инцидент F2: диагностический `--name`-прогон затёр покрытие всех спек, пришлось перепрогонять полный сьют. **Умная история прогонов (идея owner'а 2026-06-18): затирание → фича.** КАЖДЫЙ прогон SHALL архивироваться кусочком `.dev-pomogator/.test-history/run-<epoch>-<kind>.ndjson` + компактной строкой индекса (`ts`, `kind` full/filtered, `scenarios`, `durationMs`, `exit`); полные payload-куски ротируются (последние N=30), индекс-строки долгоживущие — ни один прогон не потерян + видны тренды по времени; полный кусок хранит per-step тайминги и точный pass/fail (через канонический парсер). Реализация: `scripts/run-bdd.mjs` (фильтрованный → throwaway + архив; полный → канонический + архив; verified: фильтрованный прогон оставляет канонический нетронутым).
+- **FR-52b (anchor-fix через дверь под enforce):** чинилка якорей (FR-34) SHALL иметь door-совместимый путь под `SPEC_ACCESS_ENFORCE` — сейчас `fix.mjs --apply` И блокируется Bash-гардом (`.specs/` в команде, не whitelisted), И пишет `.specs/` напрямую мимо двери. Нужен door-тул (считает canonical slug через `marksman-slug.mjs`, пишет валидированной дверью) ЛИБО enforce-aware remediation в `anchor_gate_stop` (перестать советовать запрещённый под enforce `fix.mjs`). Инцидент F3/F10: 3 якоря чинились вручную (hand-computed GLFM slug + door).
+- **FR-52c (validate_anchor: ясность + heading-slug):** `validate_anchor` SHALL в описании явно различать spec-graph compact-id/alias-реестр (что он проверяет) от Marksman heading-слагов (FR-34, что он НЕ проверяет), и SHALL получить проверку резолва `DOC.md#heading-slug` (reuse `marksman-slug.mjs` + заголовки дока). Инцидент F4: тул молча ответил `registered:false` про другой смысл «якоря».
+- **FR-52d (audit ловит v1→v2 дрейф путей FILE_CHANGES):** когда `edit`-путь в FILE_CHANGES совпадает с удалённым v1-префиксом (`src/`, `extensions/`) И файла нет — audit SHALL эмитить конкретную находку «v1-layout путь — ремапь в v2 `.claude/...` или удали», а не только generic FILE_CHANGES_VERIFY. Инцидент F5: 14 мёртвых v1-строк у pomogator-doctor классифицировались вручную.
+- **FR-52e (FR-32 join: задача verified своим сценарием, не worst-of-feature):** rollup покрытия FR-32 SHALL скоупить «verified» к РЕЗУЛЬТАТУ собственного покрывающего сценария задачи, не worst-of по всем сценариям её @featureN (включая not-run `@manual`) — иначе задача с зелёным покрывающим сценарием ложно остаётся DONE-but-unverified. Инцидент F8: strong-tests:t29 (покрыт passed-сценарием TESTQUAL001_10) висит unverified.
+- **FR-52f (изменение поведения двери обязано обновить свой BDD в том же изменении):** WHEN изменение кода двери/локов меняет наблюдаемое поведение (как незакоммиченная переделка «E-A»: убран lifetime read-only-замок, `readOnlyRefusal` → no-op) THEN оно SHALL обновить свой BDD-сценарий + FR в ТОМ ЖЕ изменении — иначе стейл-сценарий валит канонический сьют (класс verify-divergent-contracts). Инцидент F1: SPECGEN004_149 тестирует УБРАННУЮ read-only-семантику → красный; обновление — за автором E-A (чужая незакоммиченная работа, код двери не трогаю).
+
+**Зависит от:** FR-32 (перепись/coverage), FR-34 (Marksman anchor-integrity), FR-37 (smart-verdict/audit), FR-39 (MCP-дверь/enforce), FR-51 (мигратор). Триггер: owner «много догфуда багов... фиксим через добавление в спеки, анализ и отчет» (2026-06-18); полный анализ — `audit-reports/session-dogfood-findings-2026-06-18.md`.
+**Связанные AC:** [AC-52.1](ACCEPTANCE_CRITERIA.md#ac-521)
+**User Story:** US-31
+
+---
+

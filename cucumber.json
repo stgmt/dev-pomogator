@@ -1,6 +1,6 @@
 {
   "default": {
-    "paths": [".specs/spec-generator-v4/spec-generator-v4.feature", ".specs/answer-simple/answer-simple.feature", ".specs/skill-listing-budget/skill-listing-budget.feature", ".specs/native-statusline/native-statusline.feature"],
+    "paths": [".specs/spec-generator-v4/spec-generator-v4.feature", ".specs/answer-simple/answer-simple.feature", ".specs/skill-listing-budget/skill-listing-budget.feature", ".specs/native-statusline/native-statusline.feature", ".specs/tests-create-update/tests-create-update.feature", ".specs/spec-reality-check/spec-reality-check.feature", ".specs/spec-variant-matrix/spec-variant-matrix.feature", ".specs/skills-rules-optimizer/skills-rules-optimizer.feature", ".specs/tui-test-runner/tui-test-runner.feature", ".specs/pomogator-doctor/pomogator-doctor.feature", ".specs/strong-tests/strong-tests.feature"],
     "import": ["tests/step_definitions/**/*.ts", "tests/hooks/**/*.ts"],
     "tags": "not @wip and not @manual",
     "format": [

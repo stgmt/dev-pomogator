@@ -109,3 +109,21 @@ WHEN AI-агент пытается выполнить `npm test` через Bas
 IF команда содержит `test_runner_wrapper` THEN hook SHALL пропустить (уже wrapped).
 
 WHEN hook блокирует команду THEN сообщение SHALL содержать: usage /run-tests, список фреймворков.
+
+## AC-13 (FR-13): Rule centralized-test-runner @feature13
+
+**Требование:** [FR-13](FR.md#fr-13-rule-centralized-test-runner-feature13)
+
+WHEN разработчик читает правило centralized-test-runner THEN оно SHALL указывать, что тесты запускаются только через `/run-tests`, и SHALL объяснять причину (wrapper пишет YAML status для statusline и TUI).
+
+WHEN dispatch строит тест-команду THEN он SHALL собрать каноническую обёртку test_runner_wrapper с явным `--framework` аргументом и инвокацией нужного раннера.
+
+## AC-14 (FR-14): Dispatch Table @feature14
+
+**Требование:** [FR-14](FR.md#fr-14-dispatch-table-feature14)
+
+WHEN `/run-tests` резолвит фреймворк THEN dispatch table SHALL отдать каноническую команду для каждого из 6 поддерживаемых (vitest, jest, pytest, dotnet, cargo, go).
+
+WHEN wrapper или passthrough запускает дочернюю npx-команду THEN он SHALL сделать это кроссплатформенно, вернуть exit 0 и напечатать semver-версию.
+
+WHEN добавляется новый фреймворк THEN он SHALL требовать ровно одну новую строку в dispatch table.

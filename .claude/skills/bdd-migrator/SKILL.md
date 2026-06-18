@@ -42,14 +42,46 @@ answer-simple pilot proved (retrospective finding #11) — follow it, don't rein
 4. **Author the step-def** under `tests/step_definitions/feature_<slug>.ts`, 1:1 with the
    scenarios. Use REGEX step patterns (not Cucumber Expressions) so literal `/`, backticks and `{}`
    match verbatim. Honour strong-tests §2 + §5 (specificity, no parallel-impl, self-challenge).
-5. **Wire + run.** Add the `.feature` to `cucumber.json` `paths`; keep `"tags": "not @manual"` (and
-   `not @wip` while staging) so un-migrated scenarios never become UNDEFINED and v4 is untouched.
-   Run the FULL suite (`node --import tsx node_modules/@cucumber/cucumber/bin/cucumber.js`) — one
-   full run keeps `.last-test-run.ndjson` complete (a `--tags` run collapses coverage). Confirm green.
-6. **Mutation gutcheck (runtime class).** Break the engine under test, re-run, confirm the scenario
+5. **Validate via a TEMP config FIRST — never the canonical run, never the shared `cucumber.json`.**
+   Before touching anything shared, prove the step-defs green in isolation. Write a throwaway config
+   (Write tool, NOT heredoc — under enforce a heredoc with `.specs/` is denied) e.g.
+   `.dev-pomogator/.tmp/cuke-<slug>.json` with `paths:[the .feature]`, `import` = the SAME globs as
+   `cucumber.json` (`tests/step_definitions/**/*.ts` + `tests/hooks/**/*.ts`), and
+   `format:["message:.dev-pomogator/.tmp/<slug>.ndjson"]` — a TEMP ndjson, **NEVER**
+   `message:.dev-pomogator/.last-test-run.ndjson` (a filtered/partial run into the canonical file
+   poisons every other session's honesty gate). Run:
+   `node --import tsx node_modules/@cucumber/cucumber/bin/cucumber.js -c .dev-pomogator/.tmp/cuke-<slug>.json --name "<id-regex>"`
+   (the `.specs/` path lives in the config FILE, so it never hits the command line → the spec-access
+   guard stays quiet). Iterate to all-green.
+   > **Quick filtered diagnostic against the DEFAULT config** (re-running one scenario from the full
+   > suite, NOT this isolated temp-config validation) — use `node scripts/run-bdd.mjs --name "<id>"`,
+   > **never** raw `node … cucumber.js --name` against `cucumber.json`. The wrapper routes a filtered run
+   > to a throwaway ndjson (canonical `.last-test-run.ndjson` left intact) and archives every run to
+   > `.dev-pomogator/.test-history/` with timings (FR-52a). A bare `--name` against the default config
+   > overwrites the canonical with a partial result → every other spec then reads `not_run`.
+6. **Collision dry-run — your step-def file is loaded by the WHOLE suite.** `tests/step_definitions/**`
+   is one global namespace; a too-broad regex hijacks another feature's step (ambiguous → main suite
+   breaks). Scope every regex to THIS spec's vocabulary, then prove it: `--dry-run` a temp config over
+   the existing `cucumber.json` `paths` and confirm **0 ambiguous / 0 undefined** (all "skipped" = all
+   matched). Fix any collision by narrowing the regex (a negative lookahead disambiguates in-process
+   vs spawn vs repeat Whens — see gotchas).
+7. **Wire — only when ALL scenarios are green AND `cucumber.json` is shared-tree-safe.** Add the
+   `.feature` to `cucumber.json` `paths` (keep `"tags": "not @manual"` + `not @wip` while staging) ONLY
+   after every scenario has a step-def (else mass-UNDEFINED) **and** `git status --short cucumber.json`
+   is clean — if a PARALLEL session has it `M` (e.g. mid-migrating another spec), DO NOT edit it
+   (you'd entangle their uncommitted work); wait for it to settle, that is a legitimate block, say so.
+   Real-tag + wire TOGETHER: a real-tagged-but-unwired COVERAGE tag (`@featureN`) shows `not_run` and
+   bumps the spec's `doneUnrun`, so defer it. BUT real-tag the CONTROL tags (`@manual` / `@wip`) AT
+   WIRING regardless — `cucumber.json` gates on `"tags": "not @manual and not @wip"`, and a
+   comment-`# @manual` is invisible to that filter, so a live-TUI/manual scenario would RUN as
+   UNDEFINED → RED in the gated suite. (Dogfood: the tui-test-runner agent left 6 live-Textual
+   scenarios as `# @manual` comments — correct intent, but they must become real `@manual` at wiring
+   or they redden the gate.) Then run the FULL suite once (no `--tags` override) so the
+   `"not @manual"` filter applies and `.last-test-run.ndjson` is complete.
+8. **Mutation gutcheck (runtime class).** Break the engine under test, re-run, confirm the scenario
    goes RED, restore. A scenario that survives a real mutation is FAKE-POSITIVE-RISK, not a deliverable.
    (`.claude/skills/strong-tests/evals/run-evals.ts` is the reusable rubric.)
-7. **Verify traceability + retire vitest.** `npx tsx tools/bdd-migrator/migrate.ts --spec <slug>`
+9. **Verify traceability + retire vitest.** `npx tsx tools/bdd-migrator/migrate.ts --spec <slug>`
    should now show wired + all real tags. `project-test-trace.ts` should show no orphans for the
    spec. Only THEN delete the superseded `tests/e2e/<slug>.test.ts` (BDD parity reached), and
    confirm the full Docker suite (`npm test`) still passes before the rollout scales.
@@ -60,6 +92,104 @@ answer-simple pilot proved (retrospective finding #11) — follow it, don't rein
 - Flip/delete vitest before the BDD equivalent is green in a FULL run.
 - Tag with a group number when the scenario tests a different FR (breaks traceability).
 - Touch `.specs/` with raw file tools — feature/TASKS edits go THROUGH the door (`apply_spec_change`).
+
+## Dogfood-hardened gotchas (spec-reality-check, 2026-06-18 — 20/20 green)
+
+Migrating spec-reality-check end-to-end surfaced these; they recur — apply them up front.
+
+- **Spawn the real CLI with `node --import tsx`, NOT `npx`.** A step-def that spawns the tool as a
+  CLI must use `spawnSync(process.execPath, ['--import','tsx', SCRIPT_ABS, ...args], {cwd: REPO_ROOT})`.
+  `npx tsx` does NOT resolve in a Windows host spawn (empty stdout → silent failure), and `--import
+  tsx` needs `node_modules`, so cwd MUST be the repo root, not the per-scenario tmpdir. Capture
+  `res.stdout`/`res.status`; assert on those.
+- **chalk strips ANSI when stdout is not a TTY.** A `--format human` spawn emits NO escape codes —
+  assert on the textual marker the tool prints (e.g. a header line / the finding's check name), never
+  on raw ANSI. (Migrate to what the tool REALLY emits — confirm by running the binary once by hand.)
+- **The `.feature` prose is often decorative / inconsistent — reconcile against REAL code, then FIX
+  the `.feature` via the door.** Real cases hit: a fixture named bare (`` `missing-edit/` ``) in one
+  scenario and by full path (`` `tests/fixtures/.../stale-create/` ``) in another → the fixture-copy
+  Given must capture the BASENAME from either (`` /`[^`]*?([\w-]+)\/`/ ``); the same `--format json`
+  wording used by an in-process scenario AND a spawn scenario → disambiguate with a negative lookahead
+  (`/^запущен (?!.*--format).*verify\.ts/` for the in-process When); an assertion claiming behaviour
+  that does not happen (the hook "writes a stderr warning" — it actually fails open SILENTLY: verified
+  exit 0 + 0-byte stdout AND stderr). When the prose lies, run the real artifact, then correct the
+  scenario via `apply_spec_change` so it asserts reality (and note why in the reason).
+- **Reconcile `.feature` ↔ the vitest twin BOTH ways before declaring parity.** Scenarios live in one
+  but not the other (spec-reality-check: SRC002 invariants were in the vitest but NOT the `.feature`;
+  SRCHOOK was in the `.feature`; a second vitest file `*-hook.test.ts` held more). Enumerate every
+  `it()` across ALL the spec's vitest files; ADD the missing scenarios via the door; only "all tests
+  have a BDD twin" is parity.
+- **Drive the REAL exported function in-process where you can** (deterministic, fast, no spawn): import
+  `runChecks` / the parse helpers and call them; reserve spawn for scenarios that genuinely assert CLI
+  behaviour (output formats, the hook). Per-scenario isolation comes free from the `V4World` Before
+  hook's fresh `tempDir`.
+
+## Field-validated additions (GitHub research + this session's dogfood, 2026-06-18)
+
+Cross-checked against external BDD-for-AI practice; folded the genuinely-transferable parts only.
+
+- **Spawn a FRESH agent PER SPEC — context decay is real.** ATDD-for-Claude-Code
+  (swingerman/disciplined-agentic-engineering) uses "a fresh-per-phase agent team" precisely to stop
+  one agent accumulating context decay across a long job. This session's dogfood confirmed it: a
+  single agent hand-migrating a whole spec over a very long turn degraded. So the rollout spawns ONE
+  dedicated `bdd-migrator` agent PER SPEC (`subagent_type: bdd-migrator`, see `.claude/agents/bdd-migrator.md`),
+  not one marathon agent — each starts clean with just its `slug`.
+- **Run the rollout SEQUENTIALLY (one spec at a time), not many agents at once.** All step-def files
+  share the `tests/step_definitions/**` import glob, so the collision `--dry-run` loads EVERY agent's
+  file — including another concurrent agent's HALF-WRITTEN file → spurious parse/ambiguous failures
+  that aren't yours. Finish + review one spec before launching the next. (Dogfood: running
+  tui-test-runner + spec-variant-matrix concurrently put two in-flight files in the shared glob at
+  once — exactly this hazard.) If you MUST parallelize, scope each agent's collision-check temp config
+  `import` to the STABLE step-defs + its own new file, never the whole glob.
+- **Keep the gates DETERMINISTIC, not prompt-only.** Same source enforces exit criteria via scripts,
+  not trust. Our gates already are real runs, not prose: `migrate.ts --spec` (work-list), the temp-config
+  cucumber run (green), the `--dry-run` (0 ambiguous), the mutation gutcheck (RED-on-break). Never
+  downgrade a gate to "I checked it" — run it.
+- **Scenario writing (gherkin-guidelines-for-ai, AutomationPanda): one behaviour per scenario,
+  CONCRETE values (no placeholders — mirrors FR-49f), declarative/domain language ("what", not "how").**
+  CAVEAT for migration: a scenario migrated from a UNIT-invariant test (e.g. `parseFileChangesTable`
+  cardinality) is inherently technical — keep those minimal+technical; reserve declarative domain
+  language for behavioural scenarios. Don't force business prose onto a parser-invariant test.
+- **The duplicate-step pitfall is industry-known.** "AI rephrases/recreates steps → step-defs become
+  misaligned or near-duplicate → inconsistency." Our defence is exactly right: REUSE an existing
+  step-def when the text matches, SCOPE every regex to the spec, and prove it with the collision
+  `--dry-run`. Prefer reusing a shared step over authoring a near-twin.
+- **Anti-fake-green = two streams + mutation.** Same source: acceptance (WHAT) + unit (HOW) + mutation
+  (REAL?) "make the model think more deeply." We already keep the vitest twin live until BDD parity is
+  proven AND mutation-gutcheck the runtime class — keep both; retire the vitest only after.
+- **NOT adopted (deliberate):** `@amiceli/vitest-cucumber` / `jest-cucumber` / `quickpickle` run
+  Gherkin INSIDE vitest. That's the mainstream alt — but it does NOT feed the spec-graph (which reads
+  cucumber-js NDJSON + `@featureN` tags for traceability). We stay on cucumber-js on purpose. (Their
+  `--feature → --spec` skeleton generator is a nice-to-have idea for `migrate.ts`, not a dependency.)
+
+Sources: github.com/swingerman/disciplined-agentic-engineering · github.com/AutomationPanda/gherkin-guidelines-for-ai · github.com/amiceli/vitest-cucumber · github.com/bencompton/jest-cucumber
+
+## Wiring procedure (main-loop, after an agent reports — dogfood-hardened 2026-06-18)
+
+The dedicated agent leaves tags comment-style (`# @featureN`) and does NOT touch `cucumber.json`. The
+MAIN LOOP wires, in this exact order — validated activating FOUR specs in one turn (spec-reality-check /
+spec-variant-matrix / skills-rules-optimizer / tui-test-runner; canonical 350/350 green):
+
+1. **Promote tags via the door** — rewrite the `.feature` through `apply_spec_change`, converting every
+   `# @featureN` → real `@featureN` AND every `# @manual` → real `@manual` (same line as the feature tag,
+   e.g. `@feature6 @manual`). A comment `# @manual` is INVISIBLE to the gate's `not @manual` filter — leave
+   it a comment and that scenario RUNS as undefined and reddens the gate. Door `findings: []` = every tag
+   resolves to an FR.
+2. **Verify each tag NUMBER against the FR it actually tests — do NOT trust the file's group convention.**
+   Dogfood (skills-rules-optimizer SRO009): a scenario carried `# @feature8` by the file's grouping habit
+   but tested the rules-backward-compat requirement (FR-9); a blind promote would build the `tested-by`
+   edge on the WRONG requirement. Read the scenario's intent; tag the real FR.
+3. **Wire** — add the `.feature` to `cucumber.json` `paths` (freely editable; there is NO parallel-session
+   blocker — see rule `no-unverified-blocker`). Keep `"tags": "not @wip and not @manual"`.
+4. **One full canonical run** (no `--tags`) so `.last-test-run.ndjson` is complete, then **`get_coverage`**
+   to confirm the flip (passed scenarios + tasks → DONE).
+5. **Honest IN_PROGRESS is correct, not a failure.** A task whose mapped set includes a `@manual` (not-run)
+   scenario stays IN_PROGRESS (FR-32 worst-of) — the truth (the manual behaviour isn't auto-verified), NOT
+   something to force-green. (Dogfood: skills-rules-optimizer t09–t11.)
+6. **Bind the test to the FIX, not the trigger — run the revert-check.** Dogfood (this turn, advisor catch):
+   a t20/FR-15 scenario drove the Phase-2.5 *trigger* (`scorePromptRelevance`) and SURVIVED reverting the
+   actual fix → fake-green in the graph. Fix: extract the fixed unit as an export, assert its post-fix shape,
+   and PROVE the bind by reverting the fix and watching the scenario go RED before declaring the task DONE.
 
 ## Relationship to strong-tests / test-author
 This skill is the per-spec, batch-oriented application of strong-tests §6.5 (BDD authoring) and

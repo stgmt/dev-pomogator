@@ -11,6 +11,13 @@
 | [FR-5](FR.md#fr-5-12-point-self-eval-as-final-gate-with-passfail-report) | 12-point self-eval as final gate | [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5) | @feature5 | Draft |
 | [FR-6](FR.md#fr-6-pit-strykernet-cargo-mutants-go-mutesting-deep-integration-out-of-scope) | PIT / Stryker.NET / cargo-mutants / go-mutesting deep integration (OUT OF SCOPE) | [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6) | — | OUT OF SCOPE |
 | [FR-7](FR.md#fr-7-jit-just-in-time-auto-trigger-via-posttooluse-hook) | JiT auto-trigger via PostToolUse hook | [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7) | @feature7 | Draft |
+| [FR-11](FR.md#fr-11-composition-chain-detection-v050) | Composition-chain detection (v0.5.0) | [AC-11](ACCEPTANCE_CRITERIA.md#ac-11-fr-11-composition-chain-detection-v050) | @feature7 | Draft |
+| [FR-12](FR.md#fr-12-strykernet-dispatch-для-c-stack-v050) | Stryker.NET dispatch для C# stack (v0.5.0) | [AC-12](ACCEPTANCE_CRITERIA.md#ac-12-fr-12-strykernet-dispatch-v050) | @feature3 | Draft |
+| [FR-13](FR.md#fr-13-test-classification-policy-v050) | Test classification policy (v0.5.0) | [AC-13](ACCEPTANCE_CRITERIA.md#ac-13-fr-13-test-classification-policy-v050) | @feature4 | Draft |
+| [FR-14](FR.md#fr-14-ast-grep-migration-для-typescript-detector-v050) | ast-grep migration для TypeScript detector (v0.5.0) | [AC-14](ACCEPTANCE_CRITERIA.md#ac-14-fr-14-ast-grep-migration-ts-branch-v050) | @feature1 | Draft |
+| [FR-15](FR.md#fr-15-llm-driven-survivor-analysis-stub-v050) | LLM-driven survivor analysis stub (v0.5.0) | [AC-15](ACCEPTANCE_CRITERIA.md#ac-15-fr-15-llm-survivor-analysis-full-workflow-v051) | @feature3 | Draft |
+| [FR-16](FR.md#fr-16-hypothesis-ghostwriter-integration-для-python-greenfield-v050) | Hypothesis Ghostwriter integration для Python Greenfield (v0.5.0) | [AC-16](ACCEPTANCE_CRITERIA.md#ac-16-fr-16-hypothesis-ghostwriter-integration-v050) | @feature1 | Draft |
+| [FR-17](FR.md#fr-17-framework-selection-ux-через-askuserquestion-v050) | Framework selection UX через AskUserQuestion (v0.5.0) | [AC-17](ACCEPTANCE_CRITERIA.md#ac-17-fr-17-framework-selection-ux-v050) | @feature4 | Draft |
 
 ## Functional Requirements
 
@@ -20,6 +27,13 @@
 - [FR-4: Multi-stack auto-detection](FR.md#fr-4-multi-stack-auto-detection)
 - [FR-5: 12-point self-eval as final gate with PASS/FAIL report](FR.md#fr-5-12-point-self-eval-as-final-gate-with-passfail-report)
 - [FR-7: JiT (Just-in-Time) auto-trigger via PostToolUse hook](FR.md#fr-7-jit-just-in-time-auto-trigger-via-posttooluse-hook)
+- [FR-11: Composition-chain detection (v0.5.0)](FR.md#fr-11-composition-chain-detection-v050)
+- [FR-12: Stryker.NET dispatch для C# stack (v0.5.0)](FR.md#fr-12-strykernet-dispatch-для-c-stack-v050)
+- [FR-13: Test classification policy (v0.5.0)](FR.md#fr-13-test-classification-policy-v050)
+- [FR-14: ast-grep migration для TypeScript detector (v0.5.0)](FR.md#fr-14-ast-grep-migration-для-typescript-detector-v050)
+- [FR-15: LLM-driven survivor analysis stub (v0.5.0)](FR.md#fr-15-llm-driven-survivor-analysis-stub-v050)
+- [FR-16: Hypothesis Ghostwriter integration для Python Greenfield (v0.5.0)](FR.md#fr-16-hypothesis-ghostwriter-integration-для-python-greenfield-v050)
+- [FR-17: Framework selection UX через AskUserQuestion (v0.5.0)](FR.md#fr-17-framework-selection-ux-через-askuserquestion-v050)
 
 ## Non-Functional Requirements
 
@@ -36,6 +50,13 @@
 - [AC-4 (FR-4): Auto-detect stacks](ACCEPTANCE_CRITERIA.md#ac-4-fr-4)
 - [AC-5 (FR-5): 12-point eval report](ACCEPTANCE_CRITERIA.md#ac-5-fr-5)
 - [AC-7 (FR-7): JiT auto-trigger via PostToolUse hook](ACCEPTANCE_CRITERIA.md#ac-7-fr-7)
+- [AC-11 (FR-11): Composition-chain detection v0.5.0](ACCEPTANCE_CRITERIA.md#ac-11-fr-11-composition-chain-detection-v050)
+- [AC-12 (FR-12): Stryker.NET dispatch v0.5.0](ACCEPTANCE_CRITERIA.md#ac-12-fr-12-strykernet-dispatch-v050)
+- [AC-13 (FR-13): Test classification policy v0.5.0](ACCEPTANCE_CRITERIA.md#ac-13-fr-13-test-classification-policy-v050)
+- [AC-14 (FR-14): ast-grep migration TS branch v0.5.0](ACCEPTANCE_CRITERIA.md#ac-14-fr-14-ast-grep-migration-ts-branch-v050)
+- [AC-15 (FR-15): LLM survivor analysis full workflow v0.5.1](ACCEPTANCE_CRITERIA.md#ac-15-fr-15-llm-survivor-analysis-full-workflow-v051)
+- [AC-16 (FR-16): Hypothesis Ghostwriter integration v0.5.0](ACCEPTANCE_CRITERIA.md#ac-16-fr-16-hypothesis-ghostwriter-integration-v050)
+- [AC-17 (FR-17): Framework selection UX v0.5.0](ACCEPTANCE_CRITERIA.md#ac-17-fr-17-framework-selection-ux-v050)
 
 ## Verification Matrix (CHK)
 
@@ -63,22 +84,22 @@
 | CHK-FR7-05 | FR-7 NFR: detector p95 latency under 500ms on files up to 2000 LOC | FR-7, AC-7, @feature7 | Integration test | Verified | NFR-P4 perf |
 | CHK-FR7-06 | FR-7 NFR: detector errors do not fail Write or Edit (exit 0 unconditional) | FR-7, AC-7, @feature7 | Integration test | Verified | NFR-R5 graceful degradation |
 | CHK-FR7-07 | FR-7 covered v0.3.0: C# detection path identifies collection-returning function with nested for/foreach loops; Tests/ folder + Steps.cs/Tests.cs excluded; suppression comment skips with audit log | FR-7, AC-7, @feature7, UC-1 | BDD scenario | Draft | C# detection path v0.3.0 |
-| CHK-FR11-01 | FR-11 composition-chain detection в scan() assigns kind correctly when ≥2 chained method calls detected | FR-11, AC-7, @feature7 | Unit test | Verified | TS .filter().map().reduce() and C# LINQ smoke confirmed |
-| CHK-FR11-02 | FR-11 detection priority correct nxm-overlap takes precedence over composition-chain when nestedFor ≥2 | FR-11, AC-7, @feature7 | Unit test | Verified | TESTQUAL001_11b ProcessItems composition-chain CartesianProduct nxm-overlap |
-| CHK-FR12-01 | FR-12 Stryker.NET dispatch runStrykerNet function exists in run-mutation.ts | FR-12, AC-3, @feature3 | Integration test | Verified | TESTQUAL001_11 dry-run returns stack csharp tool stryker-net |
-| CHK-FR12-02 | FR-12 Stryker.NET template references/stryker-net.config.template.json with TODO placeholders | FR-12, AC-3, @feature3 | Manual review | Verified | Template created with full schema documentation |
-| CHK-FR12-03 | FR-12 detection augmented Stryker.NET tool detected via PackageReference OR stryker-config.json | FR-12, AC-3, @feature3 | Integration test | Verified | detectStack expanded with existsSync check |
-| CHK-FR13-01 | FR-13 default skip Integration E2E runStrykerNet applies Category Unit filter by default | FR-13, AC-3, @feature3 | Integration test | Verified | Filter args explicit plus log line emit when override |
-| CHK-FR13-02 | FR-13 v0.5.2 classify-tests.ts scanner heuristics for C# Python TS Go test files | FR-13, AC-13, @feature4 | Integration test | Verified | TESTQUAL001_17-23 verify pure Unit Moq Integration WebApplicationFactory E2E Trait detection markdown JSON empty |
-| CHK-FR13-03 | FR-13 v0.5.2 real-world validation lm-saas AiPomogator 79 test files classified 52 Unit 8 Integration 19 E2E | FR-13, AC-13, @feature4 | Manual review | Verified | Smoke test on actual untagged Reqnroll BDD steps confirms actionable output |
-| CHK-FR13-04 | FR-13 v0.5.3 --apply flag auto-injects Trait markers with safety defaults confidence=high skip existing dry-run | FR-13, AC-13, @feature4 | Integration test | Verified | TESTQUAL001_24-28 verify dry-run apply C# Trait Python pytestmark existing marker skip confidence threshold safety |
-| CHK-FR14-01 | FR-14 ast-grep TS branch getTsFunctionsViaAstGrep integrated with regex fallback | FR-14, AC-1, @feature1 | Integration test | Verified | 47 unit tests pass with NAPI loaded regex fallback if NAPI fails |
-| CHK-FR14-02 | FR-14 NAPI module load try catch on require ast-grep napi graceful degradation | FR-14, AC-1, @feature1 | Integration test | Verified | astGrepModule null fallback path |
-| CHK-FR15-01 | FR-15 LLM survivor stub annotateSurvivorsForLlmReview preserves cardinality 1-to-1 | FR-15, AC-3, @feature3 | Integration test | Verified | TESTQUAL001_12-16 verify batching cost guard merge unmatched preference |
-| CHK-FR15-02 | FR-15 reconstructedContext 3 lines around mutation point read from disk | FR-15, AC-3, @feature3 | Integration test | Verified | annotateSurvivorsForLlmReview reads file emits null if not readable |
-| CHK-FR15-03 | FR-15 v0.5.1 full workflow batch-prompt cost guard plus merge-verdicts Meta ACH pattern | FR-15, AC-3, @feature3 | Integration test | Verified | TESTQUAL001_LLM_SURVIVOR 5 tests green budget abort warning unmatched |
-| CHK-FR16-01 | FR-16 Ghostwriter integration runGhostwriter function spawns hypothesis write subprocess | FR-16, AC-1, @feature1 | Integration test | Draft | Pre-flight hypothesis version check plus STDOUT parse |
-| CHK-FR17-01 | FR-17 framework selection documented in SKILL.md section 3 with AskUserQuestion pattern plus 6 frameworks enumerated | FR-17, AC-4, @feature4 | Manual review | Verified | Cross-link to 9 established skills |
+| CHK-FR11-01 | FR-11 composition-chain detection в scan() assigns kind correctly when ≥2 chained method calls detected | [FR-11](FR.md#fr-11-composition-chain-detection-v050), [AC-11](ACCEPTANCE_CRITERIA.md#ac-11-fr-11-composition-chain-detection-v050), @feature7 | Unit test | Verified | TS .filter().map().reduce() and C# LINQ smoke confirmed |
+| CHK-FR11-02 | FR-11 detection priority correct nxm-overlap takes precedence over composition-chain when nestedFor ≥2 | [FR-11](FR.md#fr-11-composition-chain-detection-v050), [AC-11](ACCEPTANCE_CRITERIA.md#ac-11-fr-11-composition-chain-detection-v050), @feature7 | Unit test | Verified | TESTQUAL001_11b ProcessItems composition-chain CartesianProduct nxm-overlap |
+| CHK-FR12-01 | FR-12 Stryker.NET dispatch runStrykerNet function exists in run-mutation.ts | [FR-12](FR.md#fr-12-strykernet-dispatch-для-c-stack-v050), [AC-12](ACCEPTANCE_CRITERIA.md#ac-12-fr-12-strykernet-dispatch-v050), @feature3 | Integration test | Verified | TESTQUAL001_11 dry-run returns stack csharp tool stryker-net |
+| CHK-FR12-02 | FR-12 Stryker.NET template references/stryker-net.config.template.json with TODO placeholders | [FR-12](FR.md#fr-12-strykernet-dispatch-для-c-stack-v050), [AC-12](ACCEPTANCE_CRITERIA.md#ac-12-fr-12-strykernet-dispatch-v050), @feature3 | Manual review | Verified | Template created with full schema documentation |
+| CHK-FR12-03 | FR-12 detection augmented Stryker.NET tool detected via PackageReference OR stryker-config.json | [FR-12](FR.md#fr-12-strykernet-dispatch-для-c-stack-v050), [AC-12](ACCEPTANCE_CRITERIA.md#ac-12-fr-12-strykernet-dispatch-v050), @feature3 | Integration test | Verified | detectStack expanded with existsSync check |
+| CHK-FR13-01 | FR-13 default skip Integration E2E runStrykerNet applies Category Unit filter by default | [FR-13](FR.md#fr-13-test-classification-policy-v050), [AC-13](ACCEPTANCE_CRITERIA.md#ac-13-fr-13-test-classification-policy-v050), @feature3 | Integration test | Verified | Filter args explicit plus log line emit when override |
+| CHK-FR13-02 | FR-13 v0.5.2 classify-tests.ts scanner heuristics for C# Python TS Go test files | [FR-13](FR.md#fr-13-test-classification-policy-v050), [AC-13](ACCEPTANCE_CRITERIA.md#ac-13-fr-13-test-classification-policy-v050), @feature4 | Integration test | Verified | TESTQUAL001_17-23 verify pure Unit Moq Integration WebApplicationFactory E2E Trait detection markdown JSON empty |
+| CHK-FR13-03 | FR-13 v0.5.2 real-world validation lm-saas AiPomogator 79 test files classified 52 Unit 8 Integration 19 E2E | [FR-13](FR.md#fr-13-test-classification-policy-v050), [AC-13](ACCEPTANCE_CRITERIA.md#ac-13-fr-13-test-classification-policy-v050), @feature4 | Manual review | Verified | Smoke test on actual untagged Reqnroll BDD steps confirms actionable output |
+| CHK-FR13-04 | FR-13 v0.5.3 --apply flag auto-injects Trait markers with safety defaults confidence=high skip existing dry-run | [FR-13](FR.md#fr-13-test-classification-policy-v050), [AC-13](ACCEPTANCE_CRITERIA.md#ac-13-fr-13-test-classification-policy-v050), @feature4 | Integration test | Verified | TESTQUAL001_24-28 verify dry-run apply C# Trait Python pytestmark existing marker skip confidence threshold safety |
+| CHK-FR14-01 | FR-14 ast-grep TS branch getTsFunctionsViaAstGrep integrated with regex fallback | [FR-14](FR.md#fr-14-ast-grep-migration-для-typescript-detector-v050), [AC-14](ACCEPTANCE_CRITERIA.md#ac-14-fr-14-ast-grep-migration-ts-branch-v050), @feature1 | Integration test | Verified | 47 unit tests pass with NAPI loaded regex fallback if NAPI fails |
+| CHK-FR14-02 | FR-14 NAPI module load try catch on require ast-grep napi graceful degradation | [FR-14](FR.md#fr-14-ast-grep-migration-для-typescript-detector-v050), [AC-14](ACCEPTANCE_CRITERIA.md#ac-14-fr-14-ast-grep-migration-ts-branch-v050), @feature1 | Integration test | Verified | astGrepModule null fallback path |
+| CHK-FR15-01 | FR-15 LLM survivor stub annotateSurvivorsForLlmReview preserves cardinality 1-to-1 | [FR-15](FR.md#fr-15-llm-driven-survivor-analysis-stub-v050), [AC-15](ACCEPTANCE_CRITERIA.md#ac-15-fr-15-llm-survivor-analysis-full-workflow-v051), @feature3 | Integration test | Verified | TESTQUAL001_12-16 verify batching cost guard merge unmatched preference |
+| CHK-FR15-02 | FR-15 reconstructedContext 3 lines around mutation point read from disk | [FR-15](FR.md#fr-15-llm-driven-survivor-analysis-stub-v050), [AC-15](ACCEPTANCE_CRITERIA.md#ac-15-fr-15-llm-survivor-analysis-full-workflow-v051), @feature3 | Integration test | Verified | annotateSurvivorsForLlmReview reads file emits null if not readable |
+| CHK-FR15-03 | FR-15 v0.5.1 full workflow batch-prompt cost guard plus merge-verdicts Meta ACH pattern | [FR-15](FR.md#fr-15-llm-driven-survivor-analysis-stub-v050), [AC-15](ACCEPTANCE_CRITERIA.md#ac-15-fr-15-llm-survivor-analysis-full-workflow-v051), @feature3 | Integration test | Verified | TESTQUAL001_LLM_SURVIVOR 5 tests green budget abort warning unmatched |
+| CHK-FR16-01 | FR-16 Ghostwriter integration runGhostwriter function spawns hypothesis write subprocess | [FR-16](FR.md#fr-16-hypothesis-ghostwriter-integration-для-python-greenfield-v050), [AC-16](ACCEPTANCE_CRITERIA.md#ac-16-fr-16-hypothesis-ghostwriter-integration-v050), @feature1 | Integration test | Draft | Pre-flight hypothesis version check plus STDOUT parse |
+| CHK-FR17-01 | FR-17 framework selection documented in SKILL.md section 3 with AskUserQuestion pattern plus 6 frameworks enumerated | [FR-17](FR.md#fr-17-framework-selection-ux-через-askuserquestion-v050), [AC-17](ACCEPTANCE_CRITERIA.md#ac-17-fr-17-framework-selection-ux-v050), @feature4 | Manual review | Verified | Cross-link to 9 established skills |
 
 ## Verification Process
 

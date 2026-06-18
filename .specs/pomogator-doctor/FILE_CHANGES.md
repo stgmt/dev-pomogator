@@ -34,12 +34,6 @@
 | `.claude/skills/pomogator-doctor/scripts/engine/checks/plugin-loader.ts` | create | [FR-13](FR.md#fr-13-commandsskills-plugin-loader-check-feature10): 4-state detection |
 | `.claude/skills/pomogator-doctor/scripts/engine/checks/docker.ts` | create | [FR-14](FR.md#fr-14-docker-devcontainer-cli-check-extension-gated-feature11): extension-gated |
 
-## Core CLI wiring — EDIT existing
-
-| Path | Action | Reason |
-|------|--------|--------|
-| `src/index.ts` | edit | [FR-16](FR.md#fr-16-cli-flag-dev-pomogator-doctor-feature8): parse --doctor/--json/--quiet/--extension flags, call runDoctor |
-
 ## Extension pomogator-doctor — NEW
 
 | Path | Action | Reason |
@@ -47,16 +41,6 @@
 | `extensions/pomogator-doctor/extension.json` | create | Manifest: SessionStart hook registration + category metadata. Включает новое `dependencies` поле (empty — self-sufficient) per [FR-22](FR.md#fr-22-extensionjson-dependencies-schema-feature11) |
 | `extensions/pomogator-doctor/tools/pomogator-doctor/doctor-hook.ts` | create | [FR-17](FR.md#fr-17-sessionstart-hook-feature4): thin wrapper вызывающий runDoctor({quiet:true}) |
 | `extensions/pomogator-doctor/claude/commands/pomogator-doctor.md` | create | [FR-15](FR.md#fr-15-slash-command-pomogator-doctor-feature1): slash-command markdown с allowed-tools |
-
-## Extension.json schema propagation — EDIT existing extensions (FR-22)
-
-| Path | Action | Reason |
-|------|--------|--------|
-| `extensions/claude-mem-health/extension.json` | edit | Add `dependencies: {binaries: ['chroma','python3'], pythonPackages: ['chromadb']}` |
-| `extensions/bun-oom-guard/extension.json` | edit | Add `dependencies: {binaries: ['bun']}` |
-| `extensions/devcontainer/extension.json` | edit | Add `dependencies: {docker: true}` |
-| `extensions/forbid-root-artifacts/extension.json` | edit | Add `dependencies: {binaries: ['python3'], pythonPackages: ['pyyaml','simple-term-menu']}` |
-| `extensions/tui-test-runner/extension.json` | edit | Add `dependencies: {binaries: ['python3'], pythonPackages: ['textual']}` |
 
 > Note: `mcp-setup` не является extension в текущем коде — это standalone setup script. Doctor FR-9/FR-10 проверяют MCP серверы через `.mcp.json` / `~/.claude/mcp.json` parsing, не через extension manifest.
 
@@ -130,17 +114,9 @@
 | `.claude/skills/pomogator-doctor/scripts/engine/checks/plugin-loader.ts` | edit | [FR-28](FR.md#fr-28-plugin-manifest-presence-for-installed-projects-feature10): missing plugin.json для installed project → critical (было silent ok) |
 | `.claude/skills/pomogator-doctor/scripts/engine/checks/version-match.ts` | edit | [FR-32](FR.md#fr-32-configjson-top-level-version-field-feature2): updated hint when top-level version field missing |
 | `.claude/skills/pomogator-doctor/scripts/engine/checks/mcp-probe.ts` | edit | [FR-33](FR.md#fr-33-mcp-probe-timeout-error-categorization-feature4): 10s timeout, warning vs critical categorization, ENOENT/EACCES/exit-code hints |
-| `src/doctor/checks/index.ts` | edit | Append C20 (hook-command-integrity), C21 (managed-files-integrity), C22 (stale-managed) to phase2Checks array |
 | `.claude/skills/pomogator-doctor/scripts/engine/runner.ts` | edit | [FR-30](FR.md#fr-30-all-projects-flag-feature8): export `executeChecksAllProjects` с `p-limit(4)` |
 | `.claude/skills/pomogator-doctor/scripts/engine/reporter.ts` | edit | [FR-30](FR.md#fr-30-all-projects-flag-feature8): new mode "all-projects" + JSON nested projects object |
 | `.claude/skills/pomogator-doctor/scripts/engine/constants.ts` | edit | [FR-33](FR.md#fr-33-mcp-probe-timeout-error-categorization-feature4): PROBE_MS = 10_000 (was 3_000) |
-| `src/doctor/index.ts` | edit | [FR-30](FR.md#fr-30-all-projects-flag-feature8): `runDoctor({allProjects:true, ...})` overload |
-| `src/index.ts` | edit | [FR-30](FR.md#fr-30-all-projects-flag-feature8): CLI parse `--all-projects` flag |
-| `src/config/index.ts` | edit | [FR-32](FR.md#fr-32-configjson-top-level-version-field-feature2): writer injects top-level `version: pkg.version` on save + backfill |
-| `src/installer/index.ts` | edit | [FR-32](FR.md#fr-32-configjson-top-level-version-field-feature2): pass version to config writer; [FR-29](FR.md#fr-29-pomogator-doctor-self-install-in-all-projectpaths-feature12): ensure pomogator-doctor installed by default |
-| `src/installer/extensions.ts` | edit | [FR-29](FR.md#fr-29-pomogator-doctor-self-install-in-all-projectpaths-feature12): add `pomogator-doctor` to default-install list with `alwaysInstall: true` semantic |
-| `extensions/pomogator-doctor/extension.json` | edit | [FR-29](FR.md#fr-29-pomogator-doctor-self-install-in-all-projectpaths-feature12): add `category: "infrastructure"` + `alwaysInstall: true` field |
-| `extensions/pomogator-doctor/tools/pomogator-doctor/doctor-hook.ts` | edit | Enhanced banner — если ≥3 C20/C21 critical, message специфичен к "hook/tool files missing" |
 | `tests/fixtures/pomogator-doctor/temp-home-builder.ts` | edit | Add preset `"webapp-like"` (F-14) + options `missingPluginManifest`, `configWithoutVersion`, `staleManagedEntries`, `hashMismatch`, `fileOver1MB` |
 | `tests/fixtures/pomogator-doctor/fake-mcp-server.ts` | edit | Add preset `"nonexistent-command"` to test spawn ENOENT path |
 | `tests/features/plugins/pomogator-doctor/doctor-integrity.test.ts` | create | New test file for scenarios 16..21, 30, 31 (C20/C21/C22 integrity checks) |
