@@ -1416,3 +1416,9 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given the graph wiki-link resolver and a registry of node locations
     When it resolves a compact id a slug alias an unknown target an alias-plus-fragment a same-file fragment and multiple links on one line
     Then ids and slug aliases resolve identically unknown targets are broken the alias and fragment are stripped a same-file fragment is empty-but-not-broken and line numbers are recorded
+
+  @feature32
+  Scenario: SPECGEN004_201 the coverage scenarioKey normaliser canonicalises ids and ignores prose
+    Given the coverage scenarioKey normaliser
+    When it normalises a slug node id a raw Done-When mention a legacy-typo id and plain prose
+    Then it yields the canonical specgen004 id tolerates the legacy SCENGEN typo and returns null for prose
