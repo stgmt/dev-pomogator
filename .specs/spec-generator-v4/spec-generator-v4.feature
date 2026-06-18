@@ -1512,3 +1512,9 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given the mutation door CAS primitives and a spec doc on disk
     When docSha hashes content and casCheck compares an expected sha to the current doc
     Then docSha is a deterministic sha256 sensitive to content casCheck is ok on a match returns the actual sha on a mismatch and yields a null sha for a missing doc
+
+  @feature39
+  Scenario: SPECGEN004_217 the MCP server resolves its repo root from the env only when it is a real specs dir else falls back to cwd
+    Given a real repo dir and a cwd both holding a specs tree
+    When resolveRepoRoot is given a valid env path the unresolved project-dir literal a no-specs path and an empty env
+    Then it trusts a valid env path and falls back to cwd for the literal a no-specs path and an empty or missing env
