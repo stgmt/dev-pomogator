@@ -1729,6 +1729,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   _Requirements: [FR-52](FR.md#fr-52)_
   **Done When:**
   - [ ] `edit`-путь под удалённым v1-префиксом (`src/`,`extensions/`) + файла нет → находка «v1-layout, ремапь в `.claude/...` или удали» (не только generic FILE_CHANGES_VERIFY); тест: фикстура с мёртвым `src/`-edit даёт v1-drift находку, живой v2-путь — нет
+  - [ ] **Уточнение дизайна (2026-06-19, начатая попытка откатана):** наивный префикс-чек в ОБЩЕМ скиле `verify.ts`/`checkFcRows` НЕ годится — `src/` легитимен у большинства юзеров, мисфайрит на «ещё не созданный `src/`-файл» и ломает eval `v2-code-drift-no-git` (фикстура `src/feature_v2.ts`). v1→v2 знание dev-pomogator-специфично → детектор обязан быть guarded: срабатывать ТОЛЬКО когда репо — canonical v2-плагин (`.claude-plugin/plugin.json` присутствует) И сам префикс-каталог (`src/`/`extensions/`) отсутствует целиком; иначе обычный FC_EDIT_MISSING. Требует полного цикла maintain-evals-on-edit: positive-фикстура с plugin-маркером + dir-gone, negative-eval «`src/`-каталог есть → FC_EDIT_MISSING», bulk-run reclassification на 45 реальных спеках (clean-count не должен упасть). verify.ts откатан в pristine — мисфайр в общий скил не шипнут.
 
 - [ ] P28-5: FR-32 join — задача verified своим сценарием, не worst-of-feature (F8/FR-52e) — id: p28-fr32-own-scenario-join — Status: TODO | Est: 120m
   _depends: p27-migrator-and-pilot_
