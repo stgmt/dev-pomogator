@@ -1440,3 +1440,21 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given the coverage specOf path helper
     When it reads a POSIX spec path a Windows spec path and a path outside the specs tree
     Then it derives the slug for both separators and returns undefined outside the specs tree
+
+  @feature32
+  Scenario: SPECGEN004_205 task-to-scenario mapping scopes to the task's own spec to survive a cross-spec featureN collision
+    Given two specs sharing a featureN tag where only the first spec's scenario ran
+    When a task in the first spec is mapped by FR-ref by tag by explicit id and as a legacy unscoped task
+    Then FR-ref and tag matches scope to the first spec its task is DONE an explicit id is never scoped and a legacy unscoped task stays IN_PROGRESS
+
+  @feature32
+  Scenario: SPECGEN004_206 verifiedStatus is DONE only when every mapped scenario passed
+    Given a bucket-by-id map with two passed scenarios and one undefined
+    When verifiedStatus is asked for no scenarios for the two passed and for a passed-plus-undefined mix
+    Then it is unverified with none DONE with all passed and IN_PROGRESS as soon as one is non-green
+
+  @feature32
+  Scenario: SPECGEN004_207 computeCoverage reconciles totals and never marks a task with an unrun scenario DONE
+    Given a coverage run over one passed and one undefined scenario with a done a mixed and an orphan task
+    When computeCoverage scores them end to end
+    Then the bucket totals reconcile with the scenario count and the done task is DONE the mixed task IN_PROGRESS and the orphan task unverified
