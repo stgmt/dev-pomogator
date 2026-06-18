@@ -1422,3 +1422,9 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given the coverage scenarioKey normaliser
     When it normalises a slug node id a raw Done-When mention a legacy-typo id and plain prose
     Then it yields the canonical specgen004 id tolerates the legacy SCENGEN typo and returns null for prose
+
+  @feature32
+  Scenario: SPECGEN004_202 bucketScenarios conserves every scenario and routes each result to one bucket
+    Given a set of scenarios with mixed results including an absent and an unknown one
+    When bucketScenarios partitions them
+    Then every scenario lands in exactly one bucket the results route to the right buckets and an absent result is not_run while UNDEFINED-or-unknown stays undefined

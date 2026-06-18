@@ -10,12 +10,14 @@
  */
 import { Given, When, Then } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
-import { scenarioKey } from '../../tools/spec-graph/coverage.ts';
+import { scenarioKey, bucketScenarios, type Bucket, type ScenarioLike } from '../../tools/spec-graph/coverage.ts';
 import { V4World } from '../hooks/before-after.ts';
 import '../hooks/before-after.ts';
 
 interface CovWorld extends V4World {
   covKeys?: Record<string, string | null>;
+  covScenarios?: ScenarioLike[];
+  covBuckets?: ReturnType<typeof bucketScenarios>;
 }
 
 Given('the coverage scenarioKey normaliser', function () {
@@ -38,3 +40,38 @@ Then('it yields the canonical specgen004 id tolerates the legacy SCENGEN typo an
   assert.equal(k.typo, 'specgen004_55', 'the legacy SCENGEN004 typo is tolerated');
   assert.equal(k.prose, null, 'plain prose with no id yields null');
 });
+
+// SPECGEN004_202 — bucketScenarios conservation + routing (migrated from coverage.test.ts).
+Given('a set of scenarios with mixed results including an absent and an unknown one', function (this: CovWorld) {
+  this.covScenarios = [
+    { id: 'a', tags: [], result: 'PASSED' },
+    { id: 'b', tags: [], result: 'passed' },
+    { id: 'c', tags: [], result: 'PENDING' },
+    { id: 'd', tags: [], result: 'UNDEFINED' },
+    { id: 'e', tags: [], result: 'AMBIGUOUS' },
+    { id: 'f', tags: [], result: 'FAILED' },
+    { id: 'g', tags: [], result: 'SKIPPED' },
+    { id: 'h', tags: [] },
+    { id: 'i', tags: [], result: 'WEIRD' },
+  ];
+});
+
+When('bucketScenarios partitions them', function (this: CovWorld) {
+  this.covBuckets = bucketScenarios(this.covScenarios!);
+});
+
+Then(
+  'every scenario lands in exactly one bucket the results route to the right buckets and an absent result is not_run while UNDEFINED-or-unknown stays undefined',
+  function (this: CovWorld) {
+    const b = this.covBuckets!;
+    const total = (Object.keys(b) as Bucket[]).reduce((n, k) => n + b[k].length, 0);
+    assert.equal(total, this.covScenarios!.length, 'sum of buckets === total (conservation invariant)');
+    assert.deepEqual([...b.passed].sort(), ['a', 'b']);
+    assert.deepEqual(b.pending, ['c']);
+    assert.deepEqual(b.ambiguous, ['e']);
+    assert.deepEqual(b.failed, ['f']);
+    assert.deepEqual(b.skipped, ['g']);
+    assert.deepEqual(b.not_run, ['h'], 'an absent result is not_run');
+    assert.deepEqual([...b.undefined].sort(), ['d', 'i'], 'a real UNDEFINED result + an unknown enum stay undefined');
+  },
+);
