@@ -139,3 +139,9 @@ Feature: CEGATE001 Claim-Evidence Gate
     Given the gate has blocked consecutive stops in which the agent ran no tools (no work-delta)
     When the no-progress streak reaches the cap
     Then it releases the stop, but a later kick that runs a tool resets the streak and the gate blocks again
+
+  # @feature11
+  Scenario: CEGATE001_29 Blocks an unproven blocker claim but approves a substantiated or real-async one
+    Given the final message rests the stop on a blocker claim while work remains
+    When the turn ran no tool and launched no background task
+    Then it blocks the stop demanding proof, yet approves when the agent ran a tool or launched a background task

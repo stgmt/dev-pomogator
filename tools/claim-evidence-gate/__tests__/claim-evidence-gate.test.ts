@@ -266,4 +266,25 @@ describe('CEGATE001: claim-evidence gate — spec-false-close class (FR-49b)', (
     expect(kick(39)).toBe(false); // streak 3 ≥ cap (default 3) → FR-11 release
     expect(kick(40, [tool('Read', { file_path: 'x.ts' })])).toBe(true); // ran a tool → streak reset → block
   });
+
+  // @feature11 — FR-11 blocker-proof: a stop resting on a BLOCKER claim is honoured ONLY with
+  // observable evidence (a tool run this turn / a bg task launched). A bare narrative blocker with
+  // zero tools and no bg, while work remains, is the fabricated blocker → block "prove it or work".
+  it('CEGATE001_29: blocks an unproven blocker; approves when substantiated or awaiting real async', () => {
+    writeCensus(dir, { open: 11, doneRed: 0, doneUnrun: 0 }, { id: 'demo:t1', title: 'Wire the gate' });
+    const blocker = (turnTools: Block[] = []): boolean =>
+      runHook(
+        [
+          U('старт'),
+          A([tool('Edit', { file_path: '.specs/demo/FR.md' })]), // FR-9: spec in scope (earlier turn)
+          U('идём'),
+          ...turnTools.map((t) => A([t])),
+          A([txt('Жду — cucumber.json держит параллельная сессия, трогать нельзя.')]),
+        ],
+        { CLAIM_GATE_JUDGE: 'false' },
+      ).blocked;
+    expect(blocker()).toBe(true); // bare blocker, 0 tools, no bg → block
+    expect(blocker([tool('Bash', { command: 'git diff -- cucumber.json' })])).toBe(false); // substantiated → approve
+    expect(blocker([tool('Bash', { command: 'npm test', run_in_background: true })])).toBe(false); // real async → approve
+  });
 });

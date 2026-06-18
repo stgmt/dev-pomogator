@@ -65,6 +65,13 @@ const LOG_PREFIX = 'CLAIM-EVIDENCE-GATE';
 // claim" — the cheap gate for escalating to the Meridian judge (also requires the census
 // to show unfinished work, so the judge fires RARELY, never on a clean done or a question).
 const GRAY_SIGNAL = /(готов|сделал|закоммич|закрыл|реализова|продолж|дальше|двину|перехож|беру|next\b|done\b|commit|fixed|finish|ship|complete|wrap)/i;
+// FR-11 (blocker-proof): the agent rests its stop on a BLOCKER claim. The gate's GRAY_SIGNAL does not
+// include these words, so a bare "я жду параллельную сессию / это заблокировано" used to be a clean
+// stop — exactly the fabricated-blocker that ran 34 turns (audit addendum). A blocker is honoured ONLY
+// if the hook can SEE it (a background task launched this turn / a real check run); a pure-narrative
+// blocker with zero observable evidence is unproven → block "prove it or work" (rule no-unverified-blocker).
+const BLOCKER_SIGNAL =
+  /(жду\b|ожида\w*|заблокирован\w*|заблокировал\w*|держит\s+(?:друг|параллел|чуж)|параллельн\w*\s+сесси\w*|нельзя\s+(?:тронуть|трогать|править)|blocked\b|waiting\s+on\b|held\s+by\b|can'?t\s+touch)/i;
 // Require-next-section (user 2026-06-17): a stop while work remains MUST carry a concrete
 // «Дальше / what's next» section. Recognised as a heading / bold / line lead-in — deterministic,
 // so the «без дальше» omission bypass can't slip (no LLM, no fail-open).
@@ -214,6 +221,23 @@ async function main(): Promise<void> {
     }
   }
 
+  // FR-11 (blocker-proof): a stop that rests on a BLOCKER claim ("жду / заблокировано / держит
+  // параллельная сессия / нельзя трогать") must be backed by something the hook can OBSERVE — a
+  // background task launched this turn (real async wait) OR a tool run this turn (e.g. the agent's own
+  // `git diff/log` substantiating it). A pure-narrative blocker (zero tools, no bg task) while work
+  // remains is the fabricated blocker the audit addendum caught (34 turns, never one `git diff`). The
+  // agent's prior word is NOT evidence — block "prove it or work" (operationalizes no-unverified-blocker).
+  // No fuzzy file-extraction / no git-in-hook: it leans only on harness-recorded, agent-independent facts.
+  if (!unsupported) {
+    const open = scoped ? scoped.total.open + scoped.total.doneRed + scoped.total.doneUnrun : 0;
+    if (open > 0 && BLOCKER_SIGNAL.test(claimText) && !bgTaskLaunchedThisTurn && toolUses.length === 0) {
+      unsupported = {
+        cls: 'unproven-blocker',
+        need: 'заявлен блокер (жду/заблокировано/держит), но в этом ходе нет улики — ни запущенной фоновой задачи, ни прогона проверки (git diff/log)',
+      };
+    }
+  }
+
   // FR-49e: gray-zone judge. The fast layer (regex + census fact + require-next-section) did not
   // block, but the turn ended on a progress/completion/continuation claim while the census shows
   // unfinished work. Escalate to the ПОМОГАТОР Haiku judge (the project's existing OpenAI-compatible
@@ -337,6 +361,13 @@ async function main(): Promise<void> {
       `⚠️ ${SELF_MARKER}: ${unsupported.need}.\n` +
         `Каждый ответ при незакрытой работе ОБЯЗАН содержать секцию «Дальше:» с КОНКРЕТНЫМ следующим шагом (без воды). ` +
         `Допиши её — и сделай этот шаг сейчас, не просто назови.`,
+    );
+  } else if (unsupported.cls === 'unproven-blocker') {
+    block(
+      `⚠️ ${SELF_MARKER}: ${unsupported.need}.\n` +
+        `Непроверенный блокер — это НЕ блокер. Предъяви улику В ЭТОМ ЖЕ ответе: \`git diff/log\` названного файла, ` +
+        `или запусти проверку. Нет улики → не заблокирован → работай (или возьми безопасную не-перекрывающую работу). ` +
+        `«Жду фоновую задачу» — только если ты её РЕАЛЬНО запустил в этом ходе.`,
     );
   } else if (unsupported.cls === 'spec-false-close') {
     block(
