@@ -1404,3 +1404,9 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given the claim-evidence-gate stop hook and an unsupported works-done continuation stop
     When the same continuation stop fires twice with stop_hook_active set
     Then the first fire blocks and the identical re-fire is released by the anti-loop
+
+  @feature51
+  Scenario: SPECGEN004_199 the migrator inventory classifies cases by how they exercise code
+    Given a non-BDD test source with a spawning helper a pure call an fs read and a skipped case
+    When the migrator inventories that source
+    Then the helper-calling case is runtime the direct call is pure the fs case is artifact and the skipped case is manual
