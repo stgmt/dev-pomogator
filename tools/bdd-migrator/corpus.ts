@@ -20,7 +20,11 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { inventoryVitestSource, type CaseKind } from './inventory.ts';
 
-const SKIP_DIRS = new Set(['node_modules', '.git', '.stryker-tmp', 'dist', '.dev-pomogator', 'coverage']);
+// Skip build/vendor dirs AND non-suite trees: `fixtures` holds sample/fixture *.test.ts that are
+// test DATA (e.g. a deliberate fake-positive.test.ts), and `.specs` holds backlog `_artifact/tests`
+// — neither is the repo's real suite, so neither is a migration target. Roadmapping them overcounts
+// and would tempt the rollout to "migrate" a fixture (actively wrong).
+const SKIP_DIRS = new Set(['node_modules', '.git', '.stryker-tmp', 'dist', '.dev-pomogator', 'coverage', 'fixtures', '.specs']);
 const TEST_RE = /\.test\.ts$/;
 
 export interface FileReport {
