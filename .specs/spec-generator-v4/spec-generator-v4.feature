@@ -1518,3 +1518,15 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given a real repo dir and a cwd both holding a specs tree
     When resolveRepoRoot is given a valid env path the unresolved project-dir literal a no-specs path and an empty env
     Then it trusts a valid env path and falls back to cwd for the literal a no-specs path and an empty or missing env
+
+  @feature9
+  Scenario: SPECGEN004_218 detectRunner picks the runner from the meta envelope normalises SpecFlow and stays resilient
+    Given NDJSON meta envelopes naming various runners plus an absent-meta and a malformed-leading-line input
+    When detectRunner reads each
+    Then it names cucumber-js reqnroll cucumber-jvm and behave normalises SpecFlow to reqnroll returns unknown for an unknown name or absent meta and recovers past a malformed leading line
+
+  @feature9
+  Scenario: SPECGEN004_219 ingestMultilang produces the canonical PASSED patch for each runner equivalent to parseNdjson
+    Given multi-language NDJSON streams from Reqnroll behave and cucumber-jvm
+    When ingestMultilang ingests each
+    Then it reports the detected language and a patch keyed by the scenario location with PASSED matching parseNdjson directly
