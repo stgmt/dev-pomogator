@@ -212,6 +212,8 @@ describe('CEGATE001: claim-evidence gate — spec-false-close class (FR-49b)', (
     writeCensus(dir, { open: 11, doneRed: 0, doneUnrun: 0 }, { id: 'demo:t1', title: 'Wire the gate' });
     const { blocked, raw } = runHook([
       U('закрой спеку'),
+      // FR-9: the census is SESSION-scoped — the spec must be one THIS session edited to be in scope.
+      A([tool('Edit', { file_path: '.specs/demo/FR.md' })]), // session wrote demo → 'demo' enters scope
       A([tool('Bash', { command: 'git commit -m done' })]), // executor ran → works-done satisfied; no defer phrasing
       A([txt('Спека готова, всё закрыто. 37 из 48.')]),
     ]);

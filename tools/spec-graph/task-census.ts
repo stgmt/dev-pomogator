@@ -170,6 +170,15 @@ export function findStaleInProgress(graph: SpecGraph): StaleMarker[] {
   const out: StaleMarker[] = [];
   for (const { node: t, slug } of taskEntries) {
     if (t.status !== 'in-progress') continue;
+    // FR-46/49d precision guard: flag ONLY a task that cites its OWN scenario (a SPECGEN id in
+    // Done-When — the same signal conformance TASK_NO_OWN_SCENARIO uses). A task that maps to
+    // scenarios SOLELY via its FR-ref rides the requirement's OTHER scenarios at large (the FR-32
+    // over-map): those passing is NOT evidence THIS task is done. Without this guard the reconciler
+    // itself emits false-green — it flagged 3 v4 umbrella/in-flight tasks (ws-f-remaining,
+    // p16-form-skill-evals, p16-audit-split-doc) as "all scenarios pass → close" though their own
+    // deliverables were unfinished. Scanning the whole Done-When (which includes the header line's
+    // @featureN title tag) is why we key on the explicit SPECGEN id, not @featureN.
+    if (!/s[pc]e[cn]gen004[_-]\d+/i.test(t.doneWhen ?? '')) continue;
     const sids = map.get(t.id) ?? [];
     if (sids.length === 0) continue; // no scenario → no positive doneness evidence → don't flag
     if (sids.every((id) => bucketById.get(id) === 'passed')) {
@@ -221,6 +230,72 @@ export function writeTaskCensusCache(repoRoot: string, census: TaskCensus, ts: s
 /** Sum of all unfinished counts — the single number the history line compares. */
 export function sumTotal(c: TaskCensus): number {
   return c.total.open + c.total.doneRed + c.total.doneUnrun;
+}
+
+// ── FR-9 (pinator decision 2a+C1, 2026-06-18): SESSION-scoped census ──────────────
+// The claim-evidence gate's "unfinished work remains" precondition (and the per-prompt
+// banner) used the GLOBAL corpus total — so in any non-empty repo it was permanently
+// true and the gate could never go quiet. FR-9 scopes it to the specs THIS session
+// actually WROTE to, derived from the transcript (agent-independent: the harness records
+// every tool_use). ONE source, used by BOTH the gate and the banner.
+
+/** Filter a census to only the given spec slugs, recomputing the total. */
+export function scopeCensusToSlugs<T extends TaskCensus>(census: T, slugs: Set<string>): TaskCensus {
+  const specs = census.specs.filter((s) => slugs.has(s.slug));
+  const total = specs.reduce(
+    (acc, s) => ({ open: acc.open + s.open, doneRed: acc.doneRed + s.doneRed, doneUnrun: acc.doneUnrun + s.doneUnrun }),
+    { open: 0, doneRed: 0, doneUnrun: 0 },
+  );
+  return { total, specs };
+}
+
+const SPEC_PATH_RE = /\.specs[/\\]([a-z0-9][a-z0-9._-]*)[/\\]/i;
+const RAW_WRITE_TOOL_RE = /^(edit|write|multiedit|notebookedit)$/i;
+const DOOR_WRITE_TOOL_RE =
+  /(?:^|__)(apply_spec_change|create_spec|delete_spec_doc|rename_spec_doc|set_entity_status|archive_spec)$/i;
+
+/**
+ * FR-9: the set of spec slugs THIS session MUTATED, parsed from its transcript.
+ * Only WRITES scope a session — raw Edit/Write/MultiEdit whose `file_path` is under
+ * `.specs/<slug>/`, and door mutations (apply_spec_change / create_spec / … — NOT the
+ * read-only `propose_spec_change` dry-run / read_spec_doc) whose `spec`/`slug` arg names it.
+ * Agent-independent (the harness writes tool_use records). Fail-open → empty set
+ * (→ a pure-analysis session scopes to ZERO specs → the gate does not arm).
+ */
+export function sessionEditedSpecSlugs(transcriptPath: string): Set<string> {
+  const slugs = new Set<string>();
+  let raw: string;
+  try {
+    raw = fs.readFileSync(transcriptPath, 'utf-8');
+  } catch {
+    return slugs;
+  }
+  for (const line of raw.split(/\r?\n/)) {
+    if (!line.includes('"tool_use"') || line.length > 2_000_000) continue;
+    let entry: { message?: { content?: unknown } };
+    try {
+      entry = JSON.parse(line);
+    } catch {
+      continue;
+    }
+    const content = entry?.message?.content;
+    if (!Array.isArray(content)) continue;
+    for (const b of content as Array<Record<string, unknown>>) {
+      if (b?.type !== 'tool_use') continue;
+      const name = String(b.name ?? '');
+      const input = (b.input ?? {}) as Record<string, unknown>;
+      if (DOOR_WRITE_TOOL_RE.test(name)) {
+        if (typeof input.spec === 'string') slugs.add(input.spec);
+        else if (typeof input.slug === 'string') slugs.add(input.slug);
+        continue;
+      }
+      if (RAW_WRITE_TOOL_RE.test(name) && typeof input.file_path === 'string') {
+        const m = input.file_path.match(SPEC_PATH_RE);
+        if (m) slugs.add(m[1]);
+      }
+    }
+  }
+  return slugs;
 }
 
 function readCacheFile(p: string): TaskCensusCache | null {

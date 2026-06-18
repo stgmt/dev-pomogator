@@ -34,7 +34,7 @@ import { log as _logShared, normalizePath } from '../_shared/hook-utils.ts';
 import { markerPath, readMarker, writeMarkerAtomic, isWithinCooldown, hashFileList } from '../_shared/marker-utils.ts';
 import { extractTurnWindow } from './turn_window.ts';
 import { firstUnsupported, isSpecCompletionClaim } from './claim_classifier.ts';
-import { readTaskCensusCache } from '../spec-graph/task-census.ts';
+import { readTaskCensusCache, scopeCensusToSlugs, sessionEditedSpecSlugs, type TaskCensusCache } from '../spec-graph/task-census.ts';
 import { judgeStop } from './meridian-judge.ts';
 
 interface StopHookInput {
@@ -116,9 +116,8 @@ function logFire(repoRoot: string, entry: Record<string, unknown>): void {
  * the per-prompt banner reads — cheap JSON, never builds the graph). Null when the
  * cache is absent or everything is finished. Fail-open on any error.
  */
-function censusReminder(repoRoot: string): string | null {
+function censusReminder(c: TaskCensusCache | null): string | null {
   try {
-    const c = readTaskCensusCache(repoRoot);
     if (!c) return null;
     const t = c.total;
     if (t.open + t.doneRed + t.doneUnrun === 0) return null;
@@ -171,12 +170,22 @@ async function main(): Promise<void> {
 
   const repoRoot = normalizePath(input.cwd || input.workspace_roots?.[0] || process.cwd());
 
+  // FR-9 (2026-06-18): scope the unfinished-work census to specs THIS session actually WROTE
+  // (transcript-derived), NOT the global corpus backlog — otherwise the gate stays permanently
+  // armed by other specs' open tasks in any non-empty repo. A pure-analysis session that edited
+  // no spec scopes to ZERO → the census/judge precondition is false → the gate does not fire.
+  const editedSlugs = sessionEditedSpecSlugs(tx);
+  const globalCensus = readTaskCensusCache(repoRoot);
+  const scoped: TaskCensusCache | null = globalCensus
+    ? { ...scopeCensusToSlugs(globalCensus, editedSlugs), ts: globalCensus.ts }
+    : null;
+
   let unsupported = firstUnsupported(claimText, toolUses, config.minSearch);
   // FR-49b: a WHOLE-SPEC "done" claim while the task-census shows unfinished work is a
   // false-close — block even when tools ran and there is no defer phrasing (the gap the
   // text classes miss). Tightly spec-scoped: isSpecCompletionClaim is whole-spec (not
   // per-task) AND requires a REAL unfinished census, so a non-spec "fixed it" never trips it.
-  const censusMsg = isSpecCompletionClaim(claimText) ? censusReminder(repoRoot) : null;
+  const censusMsg = isSpecCompletionClaim(claimText) ? censusReminder(scoped) : null;
   if (!unsupported && censusMsg) {
     unsupported = { cls: 'spec-false-close', need: censusMsg };
   }
@@ -187,8 +196,7 @@ async function main(): Promise<void> {
   // the «без дальше» omission bypass; a message WITH the section then still goes to the judge below,
   // which checks the next step is genuine (not пиздёж).
   if (!unsupported) {
-    const c = readTaskCensusCache(repoRoot);
-    const open = c ? c.total.open + c.total.doneRed + c.total.doneUnrun : 0;
+    const open = scoped ? scoped.total.open + scoped.total.doneRed + scoped.total.doneUnrun : 0;
     if (open > 0 && GRAY_SIGNAL.test(claimText) && !NEXT_SECTION_RE.test(claimText)) {
       unsupported = { cls: 'no-next-section', need: 'в ответе при незакрытой работе нет секции «Дальше:» с конкретным следующим шагом' };
     }
@@ -202,15 +210,26 @@ async function main(): Promise<void> {
   // no mock, no secondary fallback endpoint (user 2026-06-17 «никаких моков и фолбеков»). judgeStop
   // logs WHY to stderr and returns null when помогатор is unreachable. Fires RARELY.
   if (!unsupported && (process.env.CLAIM_GATE_JUDGE ?? 'true').toLowerCase() === 'true') {
-    const census = readTaskCensusCache(repoRoot);
-    const unfinished = census ? census.total.open + census.total.doneRed + census.total.doneUnrun : 0;
+    const unfinished = scoped ? scoped.total.open + scoped.total.doneRed + scoped.total.doneUnrun : 0;
     if (unfinished > 0 && GRAY_SIGNAL.test(claimText)) {
       // A TRANSIENT judge failure (timeout / network blip → null) must NOT be a free pass —
       // that fail-open was the actual escape route. The judge BLOCKS the announce-and-stop
       // phrasings when it RUNS, but an intermittent null → approve let a premature stop slip and
       // the USER had to pin. Retry ONCE before honouring the fail-closed below. A user with no
       // помогатор token fails fast (no-token is instant), so a second miss costs ~nothing.
-      const jInput = { finalMessage: claimText, tools: toolUses.map((t) => t.name), openTasks: census!.total.open };
+      // FR-10: observable, agent-independent facts gathered from the turn window → judge weighs them first.
+      const MUTATING_TOOL = /^(edit|write|multiedit|notebookedit|bash|powershell)$/;
+      const mutatingToolsThisTurn = toolUses.filter(
+        (t) => MUTATING_TOOL.test(t.name) || /^mcp__.*__(apply_spec_change|create_spec|delete_spec_doc|rename_spec_doc|set_entity_status|archive_spec)$/.test(t.name),
+      ).length;
+      const bgTaskLaunchedThisTurn = toolUses.some((t) => t.input.includes('"run_in_background":true'));
+      const jInput = {
+        finalMessage: claimText,
+        tools: toolUses.map((t) => t.name),
+        openTasks: scoped!.total.open,
+        mutatingToolsThisTurn,
+        bgTaskLaunchedThisTurn,
+      };
       let verdict = await judgeStop(jInput);
       if (verdict === null) verdict = await judgeStop(jInput);
       if (verdict?.block) {
@@ -224,7 +243,7 @@ async function main(): Promise<void> {
         // released after a few kicks rather than hung (and CLAIM_GATE_JUDGE=false disables it).
         unsupported = {
           cls: 'judge-unavailable',
-          need: `помогатор-судья недоступен (см. stderr — почему), а перепись показывает ${census!.total.open} открытых задач — стоп не подтверждён`,
+          need: `помогатор-судья недоступен (см. stderr — почему), а перепись показывает ${scoped!.total.open} открытых задач (scope сессии) — стоп не подтверждён`,
         };
       }
       // verdict.block === false (a reachable judge CLEARED the stop) → fall through to approve

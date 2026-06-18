@@ -17,7 +17,7 @@
 import { judgeStop, judgeAvailable } from '../meridian-judge.ts';
 
 // [id, message, tools, expectBlock]
-export const JUDGE_CASES: Array<{ id: string; text: string; tools: string[]; block: boolean }> = [
+export const JUDGE_CASES: Array<{ id: string; text: string; tools: string[]; block: boolean; mutating?: number; bg?: boolean }> = [
   { id: 'announce-launch-now', text: 'Дальше прогоняю полный набор тестов графа в Докере — запускаю сейчас.', tools: [], block: true },
   { id: 'self-defer-next-turn', text: 'Один конкретный следующий шаг: читаю требование через дверь. Делаю это сейчас, в следующем ходе.', tools: [], block: true },
   { id: 'begin-foundation', text: 'Начинаю Поток 1 с фундамента — атомарного писателя YAML.', tools: [], block: true },
@@ -34,12 +34,22 @@ export const JUDGE_CASES: Array<{ id: string; text: string; tools: string[]; blo
   { id: 'progress-report-while-open', text: '33 готовы, 11 в работе. Перекличка зелёная.', tools: [], block: true },
   // Only a genuine in-flight continuation still escapes (progress on the CURRENT step).
   { id: 'in-flight-with-tools', text: 'Продолжаю прогонять проверку по коду сейчас.', tools: ['Grep', 'Read'], block: false },
+  // FR-8/FR-10 (2026-06-18): the missing APPROVE case — the agent launched a background task THIS
+  // turn and is legitimately waiting for its async result; it physically cannot proceed. The
+  // observable `bg` fact (hook-gathered) → approve, even though open tasks remain.
+  { id: 'awaiting-async-approve', text: 'Запустил фонового агента на миграцию спеки — жду его результата, сам пока ничего сделать не могу.', tools: ['Agent'], bg: true, block: false },
 ];
 
-async function majorityBlock(text: string, tools: string[]): Promise<boolean> {
+async function majorityBlock(c: { text: string; tools: string[]; mutating?: number; bg?: boolean }): Promise<boolean> {
   let blocks = 0;
   for (let i = 0; i < 3; i++) {
-    const v = await judgeStop({ finalMessage: text, tools, openTasks: 24 });
+    const v = await judgeStop({
+      finalMessage: c.text,
+      tools: c.tools,
+      openTasks: 24,
+      mutatingToolsThisTurn: c.mutating,
+      bgTaskLaunchedThisTurn: c.bg,
+    });
     if (v?.block) blocks++; // NULL (fail-open) counts as approve
   }
   return blocks >= 2;
@@ -52,7 +62,7 @@ async function run(): Promise<number> {
   }
   let fail = 0;
   for (const c of JUDGE_CASES) {
-    const got = await majorityBlock(c.text, c.tools);
+    const got = await majorityBlock(c);
     const ok = got === c.block;
     if (!ok) fail++;
     console.log(`${ok ? 'PASS' : 'FAIL'}  [${c.block ? 'BLOCK' : 'allow'}] ${c.id}${ok ? '' : `  (got ${got ? 'BLOCK' : 'allow'})`}`);

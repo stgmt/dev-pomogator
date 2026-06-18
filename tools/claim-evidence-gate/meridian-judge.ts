@@ -37,8 +37,16 @@ export interface JudgeInput {
   finalMessage: string;
   /** Tool names the agent ran this turn (for "did it actually do work?"). */
   tools: string[];
-  /** Open/unfinished task count from the census cache (the objective fact). */
+  /** Open/unfinished task count — SESSION-scoped (FR-9), the objective fact. */
   openTasks: number;
+  /**
+   * FR-10: observable, agent-INDEPENDENT facts the hook gathers — the judge weighs
+   * these FIRST (the message text is secondary, the agent can polish it). Optional so
+   * existing callers / the live bench keep working (default → "unknown"/false).
+   */
+  mutatingToolsThisTurn?: number;
+  /** FR-10: the agent launched a background task this turn → may be legitimately awaiting async. */
+  bgTaskLaunchedThisTurn?: boolean;
 }
 
 export interface JudgeVerdict {
@@ -133,29 +141,34 @@ export function judgeAvailable(): boolean {
 }
 
 export function buildJudgePrompt(i: JudgeInput): string {
+  const mut = i.mutatingToolsThisTurn ?? null;
   return [
     'You are a STOP-GATE judge for an AI coding agent that just ENDED its turn.',
-    'Decide ONE thing: did it STOP while it still had a concrete next step it could do RIGHT NOW with no blocker? If yes → BLOCK (kick it to keep going). Doing SOME work this turn does NOT earn the right to stop with known work left — that is the lazy stop you exist to catch.',
+    'Decide ONE thing: did it STOP while it still had a concrete next step it could do RIGHT NOW with no blocker? If yes → BLOCK (kick it). If it is genuinely done / answering the user / truly blocked / legitimately awaiting an async result → APPROVE.',
     '',
-    `FINAL MESSAGE:\n${i.finalMessage}`,
+    'OBSERVABLE FACTS — the hook gathered these from the transcript + repo; the agent did NOT author them. WEIGH THESE FIRST; the message text below is secondary narrative the agent CAN polish to pass you:',
+    `- mutating tool calls THIS turn (Edit/Write/Bash/door-writes): ${mut === null ? 'unknown' : mut}`,
+    `- background task launched THIS turn (agent may be awaiting an async callback): ${i.bgTaskLaunchedThisTurn ? 'YES' : 'no'}`,
+    `- open/unfinished tasks in THIS SESSION's scope: ${i.openTasks}`,
+    `- tool names this turn: ${i.tools.length ? i.tools.join(', ') : 'none'}`,
     '',
-    `TOOLS THE AGENT RAN THIS TURN: ${i.tools.length ? i.tools.join(', ') : 'none'}`,
-    `OBJECTIVE STATE (spec census): ${i.openTasks} open/unfinished task(s).`,
+    `AGENT'S FINAL MESSAGE (secondary — may be written to look done):\n${i.finalMessage}`,
     '',
-    'BLOCK if the message does ANY of these — running tools this turn is IRRELEVANT, it still must not stop:',
-    '- NAMES the next unit/file/step it will do and the turn ENDS without doing it ("следующий беру X", "дальше X", "осталось N, беру …", "начинаю с …", "запускаю X" then stops).',
-    '- DEFERS the remaining work to later passes/turns ("это несколько заходов", "за раз не закрыть", "следующим заходом", "в следующем ходе", "веду дальше" as a sign-off). Naming a remainder and signing off IS the stall.',
-    '- Hands the next ACTION or a DECISION to the user ("скажешь — сделаю", "решать тебе", "жду твоего слова").',
-    '- Claims the WHOLE spec/feature is done/shipped while open tasks remain.',
-    '- ENDS on a STATUS / SUMMARY of work just done while OPEN TASKS REMAIN — EVEN WITH NO next step named. Omitting "дальше"/"next" does NOT make it a clean stop: a proactive status-and-stop while work is left is THE bypass you must catch ("38 готовы, всё durable, коммиты на ветке" while 199 open → BLOCK). Reporting progress is not finishing.',
+    'BLOCK if the message does ANY of these. Mutating tools this turn do NOT license stopping with known work left — doing some work then announcing-and-stopping is exactly the lazy stop you catch:',
+    '- NAMES a NEW/next unit/file/step and the turn ENDS without doing it — even phrased present-tense ("следующий беру X", "дальше X", "начинаю с…", "запускаю X сейчас" then stops). Announcing a NEW unit is named-next even if it says "сейчас"; only continuing the SAME step already underway is in-flight (see APPROVE).',
+    '- DEFERS remaining work to later passes/turns ("несколько заходов", "за раз не закрыть", "в следующем ходе", "веду дальше" as a sign-off).',
+    '- Hands the next ACTION or a DECISION to the user ("скажешь — сделаю", "решать тебе", "жду твоего слова") — UNLESS it is ONE genuine clarifying question only the user can answer.',
+    '- Claims the WHOLE spec/feature is done/shipped while scope-open tasks remain.',
+    '- ENDS on a PAST-tense STATUS / SUMMARY of work just DONE ("сделал X", "готово N из M", "закоммитил", "перекличка зелёная") while OPEN TASKS REMAIN, even with NO next step named. A proactive status-and-stop while work is left is THE bypass; reporting finished progress is not finishing. (NOT the same as a present-tense continuation of the current step — see in-flight in APPROVE.)',
     '',
-    `APPROVE only if ONE clearly holds (objective state: ${i.openTasks} open task(s) — weigh it hard):`,
-    '- It is ANSWERING the user or asking ONE genuine clarifying question the user alone must decide (a real back-and-forth, not a self-initiated sign-off).',
+    `APPROVE only if ONE clearly holds (scope-open tasks: ${i.openTasks} — weigh it hard):`,
+    '- ANSWERING the user, or asking ONE genuine clarifying question the user alone must decide (a real back-and-forth, not a self-initiated sign-off).',
     '- TRULY blocked: needs an external input ONLY the user can give (credentials, access, a no-safe-default decision) and asks for exactly that.',
-    '- Continuing the SAME in-flight action it is mid-way through ("продолжаю прогон сейчас") — progress on the CURRENT step, not a new unit announced-and-deferred.',
-    '- Genuinely NOTHING is left: the census shows ZERO open tasks AND the message is a clean done. With open tasks, a "clean done / status / count" is NOT an approve — it falls under BLOCK above.',
+    '- LEGITIMATELY AWAITING ASYNC: the "background task launched THIS turn" fact is YES and the message is waiting for that result — the agent CANNOT proceed until the callback fires. This is a CORRECT stop, not lazy.',
+    '- IN-FLIGHT CONTINUATION of the CURRENT step right now: present-tense "doing it this moment" on an action already underway ("продолжаю прогон сейчас", "дочитываю", "гоняю проверку сейчас") that names NO new deferred unit and is NOT a past-tense done-report → APPROVE. Being mid-action is correct, not lazy — even with open tasks.',
+    '- Genuinely NOTHING left: scope shows ZERO open tasks AND the message is a clean done.',
     '',
-    'Tie-breaker: named-next-step, deferred-to-later, handed-to-user, OR a status/summary of done work while open tasks remain (WITH OR WITHOUT a "next") → BLOCK, no matter how many tools ran. APPROVE only: answering-the-user / one genuine clarifying question / truly-blocked / in-flight-continuation / census-is-ZERO-and-done.',
+    'Tie-breaker: named-next (even "X сейчас") / deferred-to-later / handed-to-user / PAST-tense status-while-open → BLOCK, no matter how many tools ran. APPROVE only: answering-the-user / one genuine clarifying question / truly-blocked / awaiting-async (bg launched THIS turn) / PRESENT-tense in-flight continuation of the SAME current step / scope-is-ZERO-and-done. Decider when ambiguous: is a CURRENT action explicitly in progress right now (continuation), or is this a finished report / a NEW unit named? in-progress → APPROVE; finished-or-new → BLOCK.',
     '',
     'Respond with ONLY one JSON line: {"block": true|false, "reason": "<=12 words"}',
   ].join('\n');
