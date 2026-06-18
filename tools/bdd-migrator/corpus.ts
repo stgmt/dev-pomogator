@@ -28,11 +28,20 @@ export interface FileReport {
   total: number;
   kinds: Record<CaseKind, number>;
   ease: 'easy' | 'medium' | 'hard';
+  /** A production module this file imports is ALSO imported by an existing step-def → already BDD-twinned. */
+  twinHint: boolean;
+  /** The shared prod module(s) that triggered twinHint (repo-relative, ext-stripped) — evidence, not a guess. */
+  twinnedVia: string[];
 }
 
 export interface CorpusReport {
   root: string;
+  /** Gross: every vitest file found. */
   fileCount: number;
+  /** Net: files NOT already BDD-twinned — the real remaining rollout. */
+  netCount: number;
+  /** Files whose prod module an existing step-def already drives (likely migrated). */
+  twinnedCount: number;
   caseCount: number;
   kindTotals: Record<CaseKind, number>;
   files: FileReport[];
@@ -55,6 +64,53 @@ function walk(dir: string, out: string[]): void {
   }
 }
 
+/** A resolved module under tools/ or src/ is production code (not a test helper / node builtin). */
+const PROD_RE = /^(tools|src)\//;
+
+/** Like walk(), but collects ALL *.ts files — step-defs are not *.test.ts. */
+function walkTs(dir: string, out: string[]): void {
+  let entries: fs.Dirent[];
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const e of entries) {
+    if (e.isDirectory()) {
+      if (!SKIP_DIRS.has(e.name)) walkTs(path.join(dir, e.name), out);
+    } else if (e.name.endsWith('.ts')) {
+      out.push(path.join(dir, e.name));
+    }
+  }
+}
+
+/** Resolve a relative import specifier to a repo-relative, ext-stripped POSIX path; null if it is a bare package import. */
+function resolveSpec(fromFile: string, spec: string, root: string): string | null {
+  if (!spec.startsWith('.')) return null;
+  const abs = path.resolve(path.dirname(fromFile), spec);
+  return path.relative(root, abs).replace(/\\/g, '/').replace(/\.(tsx?|mjs|cjs|js)$/, '');
+}
+
+/** Every prod module (under tools/ or src/) already imported by a tests/step_definitions/*.ts file. */
+function collectTwinnedTargets(root: string): Set<string> {
+  const files: string[] = [];
+  walkTs(path.join(root, 'tests', 'step_definitions'), files);
+  const targets = new Set<string>();
+  for (const f of files) {
+    let src = '';
+    try {
+      src = fs.readFileSync(f, 'utf-8');
+    } catch {
+      continue;
+    }
+    for (const m of src.matchAll(/from\s+(['"])(\.[^'"]+)\1/g)) {
+      const resolved = resolveSpec(f, m[2], root);
+      if (resolved && PROD_RE.test(resolved)) targets.add(resolved);
+    }
+  }
+  return targets;
+}
+
 function rankEase(kinds: Record<CaseKind, number>, total: number): 'easy' | 'medium' | 'hard' {
   if (kinds.manual > 0 || total > 25) return 'hard';
   const heavy = (k: CaseKind) => kinds[k] >= total / 2;
@@ -65,6 +121,7 @@ function rankEase(kinds: Record<CaseKind, number>, total: number): 'easy' | 'med
 export function buildCorpusReport(root: string): CorpusReport {
   const files: string[] = [];
   walk(root, files);
+  const twinned = collectTwinnedTargets(root);
 
   const kindTotals: Record<CaseKind, number> = { runtime: 0, artifact: 0, pure: 0, manual: 0 };
   const reports: FileReport[] = [];
@@ -82,28 +139,32 @@ export function buildCorpusReport(root: string): CorpusReport {
     for (const c of inv.cases) kinds[c.kind]++;
     for (const k of Object.keys(kinds) as CaseKind[]) kindTotals[k] += kinds[k];
     caseCount += inv.total;
-    reports.push({ file: path.relative(root, file).replace(/\\/g, '/'), total: inv.total, kinds, ease: rankEase(kinds, inv.total) });
+    // twinHint: a prod module this file imports is ALSO driven by an existing step-def → likely already migrated.
+    const twinnedVia = [...new Set(inv.prodImports.map((s) => resolveSpec(file, s, root)).filter((p): p is string => !!p && PROD_RE.test(p) && twinned.has(p)))];
+    reports.push({ file: path.relative(root, file).replace(/\\/g, '/'), total: inv.total, kinds, ease: rankEase(kinds, inv.total), twinHint: twinnedVia.length > 0, twinnedVia });
   }
 
-  // easy first (start the rollout where it is cheapest), then by case count ascending.
+  // Net-remaining first (un-twinned, easy-first, fewest cases); already-twinned files sink to the bottom.
   const order = { easy: 0, medium: 1, hard: 2 };
-  reports.sort((a, b) => order[a.ease] - order[b.ease] || a.total - b.total);
+  reports.sort((a, b) => Number(a.twinHint) - Number(b.twinHint) || order[a.ease] - order[b.ease] || a.total - b.total);
 
-  return { root, fileCount: reports.length, caseCount, kindTotals, files: reports };
+  const twinnedCount = reports.filter((f) => f.twinHint).length;
+  return { root, fileCount: reports.length, netCount: reports.length - twinnedCount, twinnedCount, caseCount, kindTotals, files: reports };
 }
 
 export function renderRoadmap(r: CorpusReport): string {
   const lines = [
     `# BDD migration roadmap`,
     ``,
-    `${r.fileCount} non-BDD test files, ${r.caseCount} cases — ${r.kindTotals.pure} pure / ${r.kindTotals.runtime} runtime / ${r.kindTotals.artifact} artifact / ${r.kindTotals.manual} manual.`,
-    `Migrate easy-first (mostly-pure files: deterministic in-process step-defs, no spawn).`,
+    `${r.netCount} files have NO existing BDD twin (definitely need migration). ${r.twinnedCount} of ${r.fileCount} are twin-CANDIDATES — a prod module they test is already driven by an existing step-def, so they MAY be done; verify per file (a shared module ≠ every behaviour migrated).`,
+    `${r.caseCount} cases — ${r.kindTotals.pure} pure / ${r.kindTotals.runtime} runtime / ${r.kindTotals.artifact} artifact / ${r.kindTotals.manual} manual.`,
+    `Migrate easy-first (mostly-pure files: deterministic in-process step-defs, no spawn). ✓twin rows are likely done — verify before re-migrating.`,
     ``,
-    `| ease | cases | file | pure/runtime/artifact/manual |`,
-    `|------|-------|------|------------------------------|`,
+    `| twin | ease | cases | file | pure/runtime/artifact/manual |`,
+    `|------|------|-------|------|------------------------------|`,
   ];
   for (const f of r.files) {
-    lines.push(`| ${f.ease} | ${f.total} | ${f.file} | ${f.kinds.pure}/${f.kinds.runtime}/${f.kinds.artifact}/${f.kinds.manual} |`);
+    lines.push(`| ${f.twinHint ? '✓' : ''} | ${f.ease} | ${f.total} | ${f.file} | ${f.kinds.pure}/${f.kinds.runtime}/${f.kinds.artifact}/${f.kinds.manual} |`);
   }
   return lines.join('\n') + '\n';
 }
