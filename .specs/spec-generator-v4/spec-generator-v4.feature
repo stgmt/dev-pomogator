@@ -1530,3 +1530,9 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given multi-language NDJSON streams from Reqnroll behave and cucumber-jvm
     When ingestMultilang ingests each
     Then it reports the detected language and a patch keyed by the scenario location with PASSED matching parseNdjson directly
+
+  @feature32
+  Scenario: SPECGEN004_220 parseNdjson on a real captured cucumber run keys by POSIX path and never collapses non-passed scenarios
+    Given the real captured cucumber NDJSON fixture
+    When parseNdjsonFile parses it
+    Then it yields exactly three scenarios keyed by POSIX paths with the passing one PASSED and the pending and undefined ones not collapsed to PASSED
