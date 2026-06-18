@@ -25,11 +25,14 @@ interface MigratorWorld extends V4World {
 const FIXTURE = [
   "import { foo } from '../foo.ts';",
   'function runHook(rows) { const res = spawnSync("node", ["x"]); return res.status; }',
+  'let corpus;',
+  "beforeEach(() => { corpus = '/tmp/x'; fs.writeFileSync(corpus + '/a', 'data'); });",
   "describe('DEMO: migrator fixture', () => {",
   "  it('DEMO_01: runtime via a spawning helper', () => { const s = runHook([1]); expect(s).toBe(0); });",
   "  it('DEMO_02: pure direct call', () => { expect(foo(1)).toBe(2); });",
   "  it('DEMO_03: artifact fs read', () => { const c = fs.readFileSync('/x', 'utf-8'); expect(c).toContain('y'); });",
   "  it.skip('DEMO_04: manual skipped', () => { expect(true).toBe(true); });",
+  "  it('DEMO_05: artifact via a beforeEach fs-setup var', () => { expect(corpus).toBeTruthy(); });",
   '});',
 ].join('\n');
 
@@ -45,11 +48,12 @@ Then(
   'the helper-calling case is runtime the direct call is pure the fs case is artifact and the skipped case is manual',
   function (this: MigratorWorld) {
     const byId = (id: string) => this.migInv!.cases.find((c) => c.id === id);
-    assert.equal(this.migInv!.total, 4, 'all four cases inventoried');
+    assert.equal(this.migInv!.total, 5, 'all five cases inventoried');
     assert.equal(byId('DEMO_01')?.kind, 'runtime', 'a case calling a spawning helper is runtime (helper-detection)');
     assert.equal(byId('DEMO_02')?.kind, 'pure', 'a direct in-process call is pure');
-    assert.equal(byId('DEMO_03')?.kind, 'artifact', 'an fs read is artifact');
+    assert.equal(byId('DEMO_03')?.kind, 'artifact', 'an fs read in the body is artifact');
     assert.equal(byId('DEMO_04')?.kind, 'manual', 'an it.skip case is manual');
+    assert.equal(byId('DEMO_05')?.kind, 'artifact', 'a case using a beforeEach fs-setup var is artifact (not falsely pure)');
     assert.ok(this.migInv!.prodImports.includes('../foo.ts'), 'the production import is captured for step-def reuse');
   },
 );

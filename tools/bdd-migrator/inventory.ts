@@ -79,7 +79,41 @@ function findRuntimeHelpers(source: string): string[] {
   return [...names];
 }
 
-function classifyBody(body: string, modifier: string, runtimeHelpers: string[]): { kind: CaseKind; signals: string[] } {
+/**
+ * Variables assigned inside an fs-WRITING setup hook (beforeEach/beforeAll that writes a real
+ * corpus). A case body that references such a var depends on the real filesystem → it is `artifact`
+ * even though its own body has no `fs.read` (the read is via a helper like findInboundLinks(root,…)).
+ * Without this, a test whose fixture is built in beforeEach looks falsely `pure`.
+ */
+/** The `{…}` block body starting at/after `from`, brace-matched (so it does not bleed into the
+ * next function). Naive (ignores braces in strings) — fine for short setup hooks. */
+function braceBody(source: string, from: number): string {
+  const open = source.indexOf('{', from);
+  if (open < 0) return '';
+  let depth = 0;
+  for (let i = open; i < source.length; i++) {
+    if (source[i] === '{') depth++;
+    else if (source[i] === '}' && --depth === 0) return source.slice(open, i + 1);
+  }
+  return source.slice(open);
+}
+
+function findFsSetupVars(source: string): string[] {
+  const vars = new Set<string>();
+  for (const m of source.matchAll(/\b(?:beforeEach|beforeAll)\s*\(/g)) {
+    const body = braceBody(source, m.index ?? 0); // precise hook body — not a fixed window
+    if (!/\bfs\.(?:writeFileSync|mkdirSync|mkdtempSync|cpSync|writeFile)\b/.test(body)) continue;
+    for (const a of body.matchAll(/(?:\bconst\s+|\blet\s+|\bvar\s+|[;{]\s*)([a-zA-Z_]\w*)\s*=/g)) vars.add(a[1]);
+  }
+  return [...vars];
+}
+
+function classifyBody(
+  body: string,
+  modifier: string,
+  runtimeHelpers: string[],
+  fsSetupVars: string[],
+): { kind: CaseKind; signals: string[] } {
   if (modifier === '.skip' || modifier === '.todo') return { kind: 'manual', signals: [`it${modifier}`] };
   const signals: string[] = [];
   if (/\b(?:spawnSync|execSync|runInstaller|spawn\s*\(|child_process)/.test(body)) {
@@ -93,6 +127,11 @@ function classifyBody(body: string, modifier: string, runtimeHelpers: string[]):
   }
   if (/\bfs\.(?:existsSync|readFileSync|readdirSync|statSync)\b/.test(body)) {
     signals.push('fs read — checks a real artifact');
+    return { kind: 'artifact', signals };
+  }
+  const usedSetupVar = fsSetupVars.find((v) => new RegExp(`\\b${v}\\b`).test(body));
+  if (usedSetupVar) {
+    signals.push(`uses fs-setup var ${usedSetupVar} — depends on a real corpus (artifact)`);
     return { kind: 'artifact', signals };
   }
   signals.push('direct in-process call — pure');
@@ -119,11 +158,12 @@ export function inventoryVitestSource(source: string, file = '<source>'): Vitest
   }
 
   const runtimeHelpers = findRuntimeHelpers(source);
+  const fsSetupVars = findFsSetupVars(source);
 
   const cases: VitestCase[] = hits.map((h, i) => {
     const end = i + 1 < hits.length ? hits[i + 1].pos : source.length;
     const body = source.slice(h.pos, end);
-    const { kind, signals } = classifyBody(body, h.modifier, runtimeHelpers);
+    const { kind, signals } = classifyBody(body, h.modifier, runtimeHelpers, fsSetupVars);
     const idMatch = h.title.match(ID_RE);
     return {
       id: idMatch ? idMatch[1] : null,
