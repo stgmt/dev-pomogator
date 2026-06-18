@@ -10,6 +10,14 @@ export interface MarkerData {
   hash: string;
   timestamp: string;
   count: number;
+  /**
+   * Optional — used by the claim-evidence-gate (FR-11) to count CONSECUTIVE kicks in which the
+   * agent ran ZERO tools (no observable work-delta — the audit's loop signature). Other hooks omit
+   * it. Survives the JSON round-trip in readMarker (extra fields are preserved), so the streak
+   * accumulates across kicks even though the cooldown timestamp resets — bounding the loop by
+   * work-delta, not time (the time-based cap cannot, audit root-cause #1).
+   */
+  noProgressStreak?: number;
 }
 
 export function markerPath(repoRoot: string, markerDir: string, markerFilename: string): string {

@@ -85,6 +85,9 @@ function getConfig() {
     cooldownMinutes: parseInt(process.env.CLAIM_GATE_COOLDOWN_MINUTES || '2', 10) || 2,
     maxRetries: parseInt(process.env.CLAIM_GATE_MAX_RETRIES || '2', 10) || 2,
     minSearch: parseInt(process.env.CLAIM_GATE_MIN_SEARCH || '2', 10) || 2,
+    // FR-11: release after this many CONSECUTIVE zero-tool kicks (the agent is spinning on narrative,
+    // doing no observable work). Bounds the loop by work-delta, not the time-delta cooldown cap.
+    noProgressCap: parseInt(process.env.CLAIM_GATE_NO_PROGRESS_CAP || '3', 10) || 3,
   };
 }
 
@@ -180,6 +183,15 @@ async function main(): Promise<void> {
     ? { ...scopeCensusToSlugs(globalCensus, editedSlugs), ts: globalCensus.ts }
     : null;
 
+  // FR-10/FR-11: observable, agent-INDEPENDENT facts about THIS turn (the harness writes the tool_use
+  // records; the agent cannot fabricate them). mutating = real changes attempted this turn (judge
+  // input, FR-10); bg = a background task launched (the agent may legitimately be awaiting its async
+  // result). Deliberately NOT a git-tree hash: the shared worktree always looks "changed" (audit §5).
+  const MUTATING_TOOL = /^(edit|write|multiedit|notebookedit|bash|powershell)$/i;
+  const isDoorWrite = /^mcp__.*__(apply_spec_change|create_spec|delete_spec_doc|rename_spec_doc|set_entity_status|archive_spec)$/;
+  const mutatingToolsThisTurn = toolUses.filter((t) => MUTATING_TOOL.test(t.name) || isDoorWrite.test(t.name)).length;
+  const bgTaskLaunchedThisTurn = toolUses.some((t) => t.input.includes('"run_in_background":true'));
+
   let unsupported = firstUnsupported(claimText, toolUses, config.minSearch);
   // FR-49b: a WHOLE-SPEC "done" claim while the task-census shows unfinished work is a
   // false-close — block even when tools ran and there is no defer phrasing (the gap the
@@ -217,12 +229,8 @@ async function main(): Promise<void> {
       // phrasings when it RUNS, but an intermittent null → approve let a premature stop slip and
       // the USER had to pin. Retry ONCE before honouring the fail-closed below. A user with no
       // помогатор token fails fast (no-token is instant), so a second miss costs ~nothing.
-      // FR-10: observable, agent-independent facts gathered from the turn window → judge weighs them first.
-      const MUTATING_TOOL = /^(edit|write|multiedit|notebookedit|bash|powershell)$/;
-      const mutatingToolsThisTurn = toolUses.filter(
-        (t) => MUTATING_TOOL.test(t.name) || /^mcp__.*__(apply_spec_change|create_spec|delete_spec_doc|rename_spec_doc|set_entity_status|archive_spec)$/.test(t.name),
-      ).length;
-      const bgTaskLaunchedThisTurn = toolUses.some((t) => t.input.includes('"run_in_background":true'));
+      // FR-10: feed the observable, agent-independent turn facts (computed above) to the judge so it
+      // weighs them FIRST — the message text is secondary narrative the agent can polish.
       const jInput = {
         finalMessage: claimText,
         tools: toolUses.map((t) => t.name),
@@ -274,6 +282,31 @@ async function main(): Promise<void> {
   const marker = readMarker(mp);
   const currentHash = hashFileList([claimText]);
   if (marker && marker.hash === currentHash) return approve(); // same message re-submitted
+
+  // FR-11 (no-progress release, decision 3 — closes audit root-cause #1). The time-based cap below
+  // does NOT terminate the loop when kicks are >cooldown apart: 86% of real kicks reset `count` to 1,
+  // so `newCount > cap` never fires. Bound the loop by WORK-DELTA instead of time-delta: count
+  // CONSECUTIVE kicks in which the agent ran ZERO tools (the audit's loop signature — `tools=[-]`,
+  // pure narrative re-spin), and once it has clearly stopped moving, RELEASE — kicking a stuck agent
+  // only burns tokens. The streak lives in the marker and resets ONLY when the agent runs a tool
+  // (observable work), never on a time pause — so >cooldown gaps can no longer un-bound it. Also
+  // release when the agent launched a background task this turn: it is legitimately awaiting an async
+  // result and physically cannot proceed (the false-positive that bit the session). Both signals are
+  // harness-recorded, not agent narrative — they cannot be gamed by polishing the stop message.
+  const ranNoTools = toolUses.length === 0;
+  const noProgressStreak = ranNoTools ? (marker?.noProgressStreak ?? 0) + 1 : 0;
+  // FR-13 precedence seam: when a long-running tool is active AND its on-disk output is frozen, this
+  // is where it must escalate to a human (block → AskUserQuestion) INSTEAD of silently releasing.
+  // Added in FR-13; until then a stalled wait simply releases.
+  if (bgTaskLaunchedThisTurn || noProgressStreak >= config.noProgressCap) {
+    const why = bgTaskLaunchedThisTurn
+      ? 'awaiting async (bg task launched this turn)'
+      : `no work-delta across ${noProgressStreak} consecutive zero-tool kicks`;
+    log('INFO', `FR-11 release: ${why}`);
+    writeMarkerAtomic(mp, { hash: currentHash, timestamp: new Date().toISOString(), count: marker?.count ?? 1, noProgressStreak });
+    return approve();
+  }
+
   const within = marker ? isWithinCooldown(marker.timestamp, config.cooldownMinutes) : false;
   const newCount = within ? (marker?.count ?? 0) + 1 : 1;
   // Kick HARDER during a continuation chain (the agent is mid-turn re-stopping — that is
@@ -284,7 +317,7 @@ async function main(): Promise<void> {
     log('INFO', `retry cap (${cap}${inContinuation ? ', continuation' : ''}) in cooldown → approve`);
     return approve();
   }
-  writeMarkerAtomic(mp, { hash: currentHash, timestamp: new Date().toISOString(), count: newCount });
+  writeMarkerAtomic(mp, { hash: currentHash, timestamp: new Date().toISOString(), count: newCount, noProgressStreak });
 
   log('INFO', `blocking ${unsupported.cls} (attempt ${newCount})`);
   const censusTail = censusMsg && unsupported.cls !== 'spec-false-close' && unsupported.cls !== 'judge-block' ? `\n📋 ${censusMsg}` : '';

@@ -133,3 +133,9 @@ Feature: CEGATE001 Claim-Evidence Gate
     Given the final message claims the whole spec is done but the census is clean or absent
     When the gate evaluates the turn
     Then it approves the stop
+
+  # @feature11
+  Scenario: CEGATE001_28 Releases after consecutive zero-tool kicks and a tool-run resets the streak
+    Given the gate has blocked consecutive stops in which the agent ran no tools (no work-delta)
+    When the no-progress streak reaches the cap
+    Then it releases the stop, but a later kick that runs a tool resets the streak and the gate blocks again

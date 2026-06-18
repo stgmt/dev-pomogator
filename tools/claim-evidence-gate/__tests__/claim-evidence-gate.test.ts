@@ -242,4 +242,28 @@ describe('CEGATE001: claim-evidence gate — spec-false-close class (FR-49b)', (
     ]);
     expect(blocked).toBe(false);
   });
+
+  // @feature11 — FR-11 no-progress release: consecutive ZERO-tool kicks bound the loop by WORK-delta
+  // (the cooldown-reset time-cap cannot, audit root-cause #1). MAX_RETRIES=99 takes the time-cap out,
+  // isolating FR-11 as the sole release path; the spec is session-scoped in (FR-9, edit in an earlier
+  // turn) so the gate arms. A tool-running kick resets the streak — the gate keeps engaging.
+  it('CEGATE001_28: releases after N consecutive zero-tool kicks; a tool-run resets the streak', () => {
+    writeCensus(dir, { open: 11, doneRed: 0, doneUnrun: 0 }, { id: 'demo:t1', title: 'Wire the gate' });
+    const env = { CLAIM_GATE_MAX_RETRIES: '99', CLAIM_GATE_JUDGE: 'false' };
+    const kick = (n: number, turnTools: Block[] = []): boolean =>
+      runHook(
+        [
+          U('старт'),
+          A([tool('Edit', { file_path: '.specs/demo/FR.md' })]), // FR-9: spec in scope (earlier turn)
+          U('идём'),
+          ...turnTools.map((t) => A([t])), // current-turn tool(s), each its own assistant message
+          A([txt(`Готово, всё закрыто. ${n} из 48.`)]), // no «Дальше:» section → no-next-section block
+        ],
+        env,
+      ).blocked;
+    expect(kick(37)).toBe(true); // streak 1
+    expect(kick(38)).toBe(true); // streak 2
+    expect(kick(39)).toBe(false); // streak 3 ≥ cap (default 3) → FR-11 release
+    expect(kick(40, [tool('Read', { file_path: 'x.ts' })])).toBe(true); // ran a tool → streak reset → block
+  });
 });
