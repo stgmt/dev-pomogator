@@ -1506,3 +1506,9 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given short-form FR NFR and AC headings with titles relocated to bold lines and the old long forms
     When parseMarkdown reads them
     Then a short FR or NFR takes its bold title with a short slug a short AC reads its parent FR from the requirement line plus a dot-removed slug and the old long forms still work unchanged
+
+  @feature40
+  Scenario: SPECGEN004_216 the optimistic-CAS primitives hash content deterministically and gate a write against a stale read
+    Given the mutation door CAS primitives and a spec doc on disk
+    When docSha hashes content and casCheck compares an expected sha to the current doc
+    Then docSha is a deterministic sha256 sensitive to content casCheck is ok on a match returns the actual sha on a mismatch and yields a null sha for a missing doc
