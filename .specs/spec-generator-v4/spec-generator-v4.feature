@@ -1476,3 +1476,15 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given a spec corpus with same-spec cross-spec self and external links to a target doc
     When the rename helpers find the inbound links and rewrite them to a new doc name
     Then self-links and external URLs are excluded fragments are preserved and each referencing file is retargeted once to the new name
+
+  @feature2
+  Scenario: SPECGEN004_211 buildGraph cold-start merges MD and Gherkin into one graph with composite keys edges and dual anchors
+    Given a synthetic spec corpus with FR and AC docs and a spec-owned feature
+    When buildGraph runs cold-start over it
+    Then MD nodes and the scenario share composite spec-keyed ids covers and tested-by edges link them dual anchors register in definitions and the FR body and bare anchors are preserved
+
+  @feature2
+  Scenario: SPECGEN004_212 buildGraph ingests an NDJSON run survives a malformed feature and stamps version and timestamp
+    Given a corpus with a feature plus an NDJSON test-run and separately a corpus with a malformed feature
+    When buildGraph runs with NDJSON ingest and again over the malformed corpus
+    Then the matching scenario gets its lastResult duration and last-result edge the malformed feature does not abort the build and every graph carries version 1 and a builtAt timestamp
