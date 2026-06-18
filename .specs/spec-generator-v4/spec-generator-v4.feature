@@ -1410,3 +1410,9 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given a non-BDD test source with a spawning helper a pure call an fs read and a skipped case
     When the migrator inventories that source
     Then the helper-calling case is runtime the direct call is pure the fs case is artifact and the skipped case is manual
+
+  @feature3
+  Scenario: SPECGEN004_200 the wiki-link resolver resolves ids and slug aliases strips fragments and flags broken targets
+    Given the graph wiki-link resolver and a registry of node locations
+    When it resolves a compact id a slug alias an unknown target an alias-plus-fragment a same-file fragment and multiple links on one line
+    Then ids and slug aliases resolve identically unknown targets are broken the alias and fragment are stripped a same-file fragment is empty-but-not-broken and line numbers are recorded
