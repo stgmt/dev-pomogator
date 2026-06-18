@@ -1470,3 +1470,9 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given the markdown parser with legacy v3 and modern v4 spec headings
     When it parses a legacy Requirement heading a modern v4 heading a mixed file and a legacy title
     Then a legacy heading registers three aliases at one location the v4 heading keeps the two-anchor pair a mixed file registers each heading's own anchors and the legacy title slugifies into the legacy alias
+
+  @feature40
+  Scenario: SPECGEN004_210 the rename helpers find inbound links across the corpus and retarget them preserving fragments
+    Given a spec corpus with same-spec cross-spec self and external links to a target doc
+    When the rename helpers find the inbound links and rewrite them to a new doc name
+    Then self-links and external URLs are excluded fragments are preserved and each referencing file is retargeted once to the new name
