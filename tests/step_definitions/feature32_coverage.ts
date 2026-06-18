@@ -12,6 +12,7 @@ import { Given, When, Then } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
 import {
   scenarioKey,
+  specOf,
   bucketScenarios,
   mapTasksToScenarios,
   type Bucket,
@@ -26,6 +27,7 @@ interface CovWorld extends V4World {
   covScenarios?: ScenarioLike[];
   covBuckets?: ReturnType<typeof bucketScenarios>;
   covMaps?: Record<string, string[] | undefined>;
+  covSpecOf?: Record<string, string | undefined>;
 }
 
 Given('the coverage scenarioKey normaliser', function () {
@@ -113,4 +115,24 @@ Then('each task resolves to the right scenarios and a scenario reached by overla
   assert.deepEqual(m.byFr, ['SCEN-specgen004-03-z'], 'FR ref → @feature<N>');
   assert.equal(new Set(m.overlap).size, m.overlap!.length, 'overlapping sources de-dupe');
   assert.ok(m.overlap!.includes('SCEN-specgen004-70-x'), 'the overlapping scenario is present (once)');
+});
+
+// SPECGEN004_204 — specOf slug-from-path (migrated from coverage.test.ts).
+Given('the coverage specOf path helper', function () {
+  // pure function — applied in the When
+});
+
+When('it reads a POSIX spec path a Windows spec path and a path outside the specs tree', function (this: CovWorld) {
+  this.covSpecOf = {
+    posix: specOf('.specs/spec-generator-v4/TASKS.md'),
+    win: specOf('.specs\\auth\\auth.feature'),
+    outside: specOf('tests/features/plugins/x.feature'),
+  };
+});
+
+Then('it derives the slug for both separators and returns undefined outside the specs tree', function (this: CovWorld) {
+  const s = this.covSpecOf!;
+  assert.equal(s.posix, 'spec-generator-v4', 'POSIX .specs/<slug>/ path');
+  assert.equal(s.win, 'auth', 'Windows .specs\\<slug>\\ path');
+  assert.equal(s.outside, undefined, 'a path outside the specs tree is undefined');
 });

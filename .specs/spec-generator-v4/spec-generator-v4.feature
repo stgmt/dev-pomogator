@@ -1434,3 +1434,9 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given a coverage scenario set tagged with SPECGEN ids @featureN tags and FR refs
     When tasks are mapped by explicit id by tag by FR-ref and by multiple overlapping sources
     Then each task resolves to the right scenarios and a scenario reached by overlapping sources appears once
+
+  @feature32
+  Scenario: SPECGEN004_204 specOf derives the spec slug from a spec path on both separators and is undefined elsewhere
+    Given the coverage specOf path helper
+    When it reads a POSIX spec path a Windows spec path and a path outside the specs tree
+    Then it derives the slug for both separators and returns undefined outside the specs tree
