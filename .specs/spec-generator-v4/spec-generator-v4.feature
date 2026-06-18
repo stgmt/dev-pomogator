@@ -1488,3 +1488,21 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given a corpus with a feature plus an NDJSON test-run and separately a corpus with a malformed feature
     When buildGraph runs with NDJSON ingest and again over the malformed corpus
     Then the matching scenario gets its lastResult duration and last-result edge the malformed feature does not abort the build and every graph carries version 1 and a builtAt timestamp
+
+  @feature2
+  Scenario: SPECGEN004_213 parseMarkdown extracts FR NFR and AC nodes with anchors and emits covers edges
+    Given FR NFR and AC headings including a categorised NFR a plain NFR and a dotted AC
+    When parseMarkdown extracts them
+    Then each FR and NFR node carries compact and slug anchors the NFR category is read where present and each AC emits a covers edge to its parent FR
+
+  @feature2
+  Scenario: SPECGEN004_214 parseMarkdown preserves order and lines ignores non-spec headings slugifies predictably and emits nothing for a plain file
+    Given a multi-heading spec a file with non-spec headings a cyrillic-titled FR and a plain readme
+    When parseMarkdown processes each
+    Then nodes keep source order with 1-indexed lines non-spec headings are ignored a cyrillic title slugifies to an ascii slug and a plain file yields no nodes edges or anchors
+
+  @feature2
+  Scenario: SPECGEN004_215 parseMarkdown handles migrated short headings with relocated bold titles and a dot-removed AC slug
+    Given short-form FR NFR and AC headings with titles relocated to bold lines and the old long forms
+    When parseMarkdown reads them
+    Then a short FR or NFR takes its bold title with a short slug a short AC reads its parent FR from the requirement line plus a dot-removed slug and the old long forms still work unchanged
