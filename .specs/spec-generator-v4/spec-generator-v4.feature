@@ -1458,3 +1458,9 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given a coverage run over one passed and one undefined scenario with a done a mixed and an orphan task
     When computeCoverage scores them end to end
     Then the bucket totals reconcile with the scenario count and the done task is DONE the mixed task IN_PROGRESS and the orphan task unverified
+
+  @feature46
+  Scenario: SPECGEN004_208 get_trace surfaces each task's own cited scenario and its last result
+    Given a graph where one task cites its own SPECGEN scenario in Done-When and another does not
+    When get_trace is asked for the shared FR
+    Then the citing task own_scenario resolves to that scenario with its last result and the other task own_scenario is null
