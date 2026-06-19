@@ -45,9 +45,10 @@
     "check:status-drift": "tsx scripts/check-status-drift.mts",
     "test": "bash scripts/docker-test.sh",
     "test:bdd": "node --import tsx node_modules/@cucumber/cucumber/bin/cucumber.js",
+    "test:bdd:docker": "bash scripts/docker-bdd.sh",
     "test:all": "bash scripts/docker-test.sh",
     "test:e2e:docker": "vitest run --reporter=verbose",
-    "test:tui": "python3 -m pytest tests/tui/ -v",
+    "test:tui": "bash scripts/docker-test.sh --tui",
     "mutation": "bash scripts/docker-mutation.sh stryker.real.config.mjs",
     "mutation:skill": "bash scripts/docker-mutation.sh stryker.config.mjs",
     "mutation:specgen": "bash scripts/docker-mutation.sh stryker.specgen.config.mjs"

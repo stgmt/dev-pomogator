@@ -27,3 +27,4 @@ allow:
 - .lsp.json
 - stryker.config.mjs
 - cucumber.json
+- cucumber.docker.json
