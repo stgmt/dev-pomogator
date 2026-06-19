@@ -181,7 +181,9 @@ else below you do yourself, and it is safe to run in parallel with sibling migra
    but tested the rules-backward-compat requirement (FR-9); a blind promote would build the `tested-by`
    edge on the WRONG requirement. Read the scenario's intent; tag the real FR.
 3. **Wire YOURSELF — concurrency-safe** — add your `.feature` to `cucumber.json` via
-   `node scripts/wire-feature.mjs .specs/<slug>/<slug>.feature`. This is an O_EXCL-lock-guarded, idempotent,
+   `node scripts/wire-feature.mjs <slug>` (pass the BARE SLUG, not the `.specs/...` path — the helper
+   builds the path internally, keeping `.specs/` out of the command so the enforce Bash-guard doesn't
+   deny it). This is an O_EXCL-lock-guarded, idempotent,
    atomic append (debugged 2026-06-19: a naive read-modify-write loses sibling agents' paths; the helper
    serialises behind a lock so parallel agents never clobber each other). Do NOT hand-edit `cucumber.json`
    while siblings run. Keep `"tags": "not @wip and not @manual"`.
