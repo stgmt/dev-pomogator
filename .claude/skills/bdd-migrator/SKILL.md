@@ -164,32 +164,43 @@ Cross-checked against external BDD-for-AI practice; folded the genuinely-transfe
 
 Sources: github.com/swingerman/disciplined-agentic-engineering · github.com/AutomationPanda/gherkin-guidelines-for-ai · github.com/amiceli/vitest-cucumber · github.com/bencompton/jest-cucumber
 
-## Wiring procedure (main-loop, after an agent reports — dogfood-hardened 2026-06-18)
+## Self-wiring procedure — THE AGENT DOES THIS END-TO-END (autonomous, parallel-safe; 2026-06-19)
 
-The dedicated agent leaves tags comment-style (`# @featureN`) and does NOT touch `cucumber.json`. The
-MAIN LOOP wires, in this exact order — validated activating FOUR specs in one turn (spec-reality-check /
-spec-variant-matrix / skills-rules-optimizer / tui-test-runner; canonical 350/350 green):
+You (the migrator agent) own the WHOLE migration for your spec — classify → step-defs → tags → wire →
+self-verify. The ONLY step left to the coordinator is the single shared canonical run (see bottom), because
+all specs write ONE shared `.last-test-run.ndjson` and N concurrent full runs would clobber it. Everything
+else below you do yourself, and it is safe to run in parallel with sibling migrator agents.
 
-1. **Promote tags via the door** — rewrite the `.feature` through `apply_spec_change`, converting every
+1. **Promote YOUR tags via the door** — rewrite your `.feature` through `apply_spec_change`, converting every
    `# @featureN` → real `@featureN` AND every `# @manual` → real `@manual` (same line as the feature tag,
    e.g. `@feature6 @manual`). A comment `# @manual` is INVISIBLE to the gate's `not @manual` filter — leave
    it a comment and that scenario RUNS as undefined and reddens the gate. Door `findings: []` = every tag
-   resolves to an FR.
+   resolves to an FR. (Per-spec `.feature` edit through the door is CAS-safe — no cross-agent race.)
 2. **Verify each tag NUMBER against the FR it actually tests — do NOT trust the file's group convention.**
    Dogfood (skills-rules-optimizer SRO009): a scenario carried `# @feature8` by the file's grouping habit
    but tested the rules-backward-compat requirement (FR-9); a blind promote would build the `tested-by`
    edge on the WRONG requirement. Read the scenario's intent; tag the real FR.
-3. **Wire** — add the `.feature` to `cucumber.json` `paths` (freely editable; there is NO parallel-session
-   blocker — see rule `no-unverified-blocker`). Keep `"tags": "not @wip and not @manual"`.
-4. **One full canonical run** (no `--tags`) so `.last-test-run.ndjson` is complete, then **`get_coverage`**
-   to confirm the flip (passed scenarios + tasks → DONE).
-5. **Honest IN_PROGRESS is correct, not a failure.** A task whose mapped set includes a `@manual` (not-run)
-   scenario stays IN_PROGRESS (FR-32 worst-of) — the truth (the manual behaviour isn't auto-verified), NOT
-   something to force-green. (Dogfood: skills-rules-optimizer t09–t11.)
-6. **Bind the test to the FIX, not the trigger — run the revert-check.** Dogfood (this turn, advisor catch):
-   a t20/FR-15 scenario drove the Phase-2.5 *trigger* (`scorePromptRelevance`) and SURVIVED reverting the
-   actual fix → fake-green in the graph. Fix: extract the fixed unit as an export, assert its post-fix shape,
-   and PROVE the bind by reverting the fix and watching the scenario go RED before declaring the task DONE.
+3. **Wire YOURSELF — concurrency-safe** — add your `.feature` to `cucumber.json` via
+   `node scripts/wire-feature.mjs .specs/<slug>/<slug>.feature`. This is an O_EXCL-lock-guarded, idempotent,
+   atomic append (debugged 2026-06-19: a naive read-modify-write loses sibling agents' paths; the helper
+   serialises behind a lock so parallel agents never clobber each other). Do NOT hand-edit `cucumber.json`
+   while siblings run. Keep `"tags": "not @wip and not @manual"`.
+4. **Self-verify with a SCOPED run (NOT the full glob, NOT the canonical ndjson).** Validate via a temp
+   config importing ONLY your own step-def + `tests/hooks/**`, format → a temp ndjson (e.g.
+   `.dev-pomogator/.tmp/cuke-<slug>.ndjson`). This proves your spec green with REAL tags without loading
+   siblings' in-progress step-defs or touching the shared `.last-test-run.ndjson`. Do NOT use
+   `scripts/run-bdd.mjs` (its throwaway ndjson is shared → races).
+5. **Bind the test to the FIX, not the trigger — run the revert-check.** Dogfood (advisor catch): a
+   t20/FR-15 scenario drove the Phase-2.5 *trigger* and SURVIVED reverting the actual fix → fake-green.
+   Extract the fixed unit, assert its post-fix shape, and PROVE the bind by reverting → scenario RED → restore.
+6. **Report honestly** — scenarios + FR map, scoped-run pass/fail, `@manual` ones, and which vitest doubles
+   are safe to delete. **Honest IN_PROGRESS is correct, not a failure**: a task whose mapped set includes a
+   `@manual` (not-run) scenario stays IN_PROGRESS (FR-32 worst-of) — the truth, NOT something to force-green.
+
+### Coordinator residual (NOT the agent — one step per wave)
+After all wave agents report wired+scoped-green: run **one** full canonical run (no `--tags`) so the shared
+`.last-test-run.ndjson` is complete → `get_coverage` to confirm each flip → delete the reported vitest
+doubles. This single shared run is the only irreducibly-serial step.
 
 ## Relationship to strong-tests / test-author
 This skill is the per-spec, batch-oriented application of strong-tests §6.5 (BDD authoring) and
