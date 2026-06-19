@@ -61,10 +61,18 @@ answer-simple pilot proved (retrospective finding #11) — follow it, don't rein
    > overwrites the canonical with a partial result → every other spec then reads `not_run`.
 6. **Collision dry-run — your step-def file is loaded by the WHOLE suite.** `tests/step_definitions/**`
    is one global namespace; a too-broad regex hijacks another feature's step (ambiguous → main suite
-   breaks). Scope every regex to THIS spec's vocabulary, then prove it: `--dry-run` a temp config over
-   the existing `cucumber.json` `paths` and confirm **0 ambiguous / 0 undefined** (all "skipped" = all
-   matched). Fix any collision by narrowing the regex (a negative lookahead disambiguates in-process
-   vs spawn vs repeat Whens — see gotchas).
+   breaks). Scope every regex to THIS spec's vocabulary, then prove it: `--dry-run` over a **TEMP
+   config** that mirrors the existing `cucumber.json` `paths`, and confirm **0 ambiguous / 0 undefined**
+   (all "skipped" = all matched). Fix any collision by narrowing the regex (a negative lookahead
+   disambiguates in-process vs spawn vs repeat Whens — see gotchas).
+   > 🚫 **CLOBBER TRAP (observed live 2026-06-19):** the dry-run config MUST set
+   > `format:["message:.dev-pomogator/.tmp/<slug>-collision.ndjson"]` (a throwaway) — do **NOT** run the
+   > default `cucumber.json` directly (`node … cucumber.js` with no `-c`, or `-c cucumber.json`). The
+   > default config's format writes the canonical `.dev-pomogator/.last-test-run.ndjson`, and a
+   > `--dry-run` produces an **all-skipped** ndjson → it overwrites the real run, so the spec-graph
+   > census reads every scenario as `not_run` (poisons the honesty gate for ALL specs). A dry-run looks
+   > harmless because nothing executes — but it still WRITES the result file. Copy the paths into your
+   > temp config (Write tool); never point cucumber at `cucumber.json` for a partial/dry run.
 7. **Wire — only when ALL scenarios are green AND `cucumber.json` is shared-tree-safe.** Add the
    `.feature` to `cucumber.json` `paths` (keep `"tags": "not @manual"` + `not @wip` while staging) ONLY
    after every scenario has a step-def (else mass-UNDEFINED) **and** `git status --short cucumber.json`
