@@ -8,6 +8,23 @@
 
 ---
 
+## ✅ Исправлено прямо в этой сессии (durable, закоммичено)
+
+- **H1 закрыт полностью (3 слоя защиты от клоббера):** `docker-bdd.sh` argc-гард (a5f6e59);
+  bdd-migrator SKILL — collision-dry-run обязан throwaway-конфиг (0fa9018); test-guard расширен
+  на `--dry-run`/`--tags` + `-c cucumber.json` больше не «safe» + заякорен на реальный вызов
+  (перестал душить коммиты) — 8/8 verifier + BDD SPECGEN004_221 (7da544d). Живой клоббер канона
+  пойман и восстановлен.
+- **H2 ядро закрыто:** `corpus.ts` сверяется с `cucumber.json` — вшитые спеки больше не false-NET
+  (netCount 97→90, wiredCount 6); добавлен инвариант-тест, которого у инструмента не было —
+  `corpus.test.ts` (8b6095f).
+- **tests-create-update** — реальная недоделка (6 @wip + source-grep) перенесена + старый дубль
+  удалён (f0de5fd).
+
+Остаётся: H2-доп (spawn-twin-детект — необязателен, cucumber.json сильнее), M1–M3, L1–L4.
+
+---
+
 ## 🔴 HIGH — подтверждённые ЖИВЫЕ баги
 
 ### H1. Канонический ndjson клоббернут collision-dry-run'ом агента (FR-52a / P28-1 НЕ закрыт)
