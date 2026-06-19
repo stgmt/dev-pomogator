@@ -1673,20 +1673,21 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] пилот доказан end-to-end: claim-evidence-gate перенесён на БДД (SPECGEN004_186..198) + ~13 v4-domain тест-файлов свёрнуты в `@featureN`-сценарии SPECGEN004_186..220 с real-engine step-defs; рецепт §6.5 доказан на живом
   - [x] честная карта: 174 gross → **119 NET** без существующего BDD-двойника + 55 twin-candidates; fixtures/.specs/obsolete исключены; live: `node --import tsx tools/bdd-migrator/corpus.ts .`
 
-- [ ] P27-2: раскатка спека-за-спекой — локально-запускаемые первыми (FR-M5) — id: p27-rollout-local — Status: TODO | Est: 2400m
+- [ ] P27-2: раскатка спека-за-спекой — локально-запускаемые первыми (FR-M5) — id: p27-rollout-local — Status: IN_PROGRESS | Est: 2400m
   _depends: p27-migrator-and-pilot_
   _Requirements: [FR-51](FR.md#fr-51)_
+  _Прогресс (2026-06-19): волна закрыта — 11 спек мигрированы + закоммичены + граф-флипнуты (pomogator-doctor, tui-test-runner-v2, auto-capture, verify-generic-scope-fix, create-specs-bdd-enforcement, onboard-repo-phase0, dev-pomogator-canonical-plugin, forbid-root-artifacts, worktree-setup, architecture-decision-builder, spec-workflow-feature-steps-validation) через параллельных bdd-migrator-агентов с само-вшиванием `scripts/wire-feature.mjs <slug>`. Live corpus: **97 NET** без BDD-двойника (было 119 в снапшоте P27-1) + 69 twin-candidates; 36 easy / 45 medium / 16 hard. Следующий заход — locally-runnable easy-first по `corpus.ts` roadmap._
   **Done When:**
   - [ ] дискриминатор FR-M5: `.feature` спеки попадает в `cucumber.json` paths ТОЛЬКО когда у ВСЕХ её сценариев есть step-defs (иначе mass-UNDEFINED); немигрированная спека остаётся на vitest, репо зелёное
   - [ ] `spec-reality-check` (17 кейсов, локально-запускаем, tmpdir-изолирован): прозаичные `.feature`-сценарии → исполняемый Gherkin + step-defs (runChecks in-process + `verify.ts` spawn + `verify-hook.ts` — 3 поверхности), временный cucumber-конфиг зелёный, vitest выпилен ПОСЛЕ зелёного эквивалента, ORPHAN=0/NOT_COVERED=0
   - [ ] `tui-test-runner` / `tui-test-runner-v2` (≈20 каждый) + остальные локально-запускаемые целевые спеки (порядок easy-first по `corpus.ts` roadmap)
 
-- [ ] P27-3: Docker-cucumber validation path (разблокирует 3 docker-only спеки) (FR-M3) — id: p27-docker-cucumber — Status: TODO | Est: 480m
-  _depends: p27-rollout-local_
+- [x] P27-3: Docker-cucumber validation path (разблокирует 3 docker-only спеки) (FR-M3) — id: p27-docker-cucumber — Status: DONE | Est: 480m
+  _depends: p27-migrator-and-pilot_
   _Requirements: [FR-51](FR.md#fr-51)_
   **Done When:**
-  - [ ] `scripts/docker-test.sh` гоняет cucumber как гейт для мигрированных спек (сейчас Docker CMD = vitest; cucumber-гейт в Docker отсутствует)
-  - [ ] 3 docker-only спеки (create-specs-bdd-enforcement, auto-capture, worktree-setup) мигрируются — их тесты пишут общий `.specs/`/HOME (не tmpdir-изолируемы), поэтому ждут Docker-путь
+  - [x] Docker-cucumber **прогонщик** доставлен как `scripts/docker-bdd.sh` + `npm run test:bdd:docker` (commit 60d2280): гоняет канонический cucumber-сьют ВНУТРИ Docker/Linux (реальная среда — где env-зависимые сценарии реально работают, напр. worktree gh/docker shell-mock), пишет результат в host-канонический `.dev-pomogator/.last-test-run.ndjson` через смонтированную `.docker-status`, монтирует writable-копию `.specs/` (dockerignored). Зависимость переписана `p27-rollout-local`→`p27-migrator-and-pilot`: прогонщик — инфраструктура поверх мигратора, не требует завершения локальной раскатки. Сделать его ДЕФОЛТНЫМ enforcing-гейтом в `docker-test.sh` (npm test ещё маршрутит на vitest) — это P27-5 gate-switch, НЕ здесь
+  - [x] 3 docker-only спеки (create-specs-bdd-enforcement, auto-capture, worktree-setup) мигрированы и зелены в Docker — прямой разбор ndjson docker-bdd-прогона (591 сценариев / 589 passed); ни одна из трёх не красная. 2 красных = чужой незакоммиченный door SPECGEN004_149 + env-flaky POMOGATORDOCTOR001_06 (773ms vs ожидаемые 2800ms тайминг), оба вне этой задачи
 
 - [ ] P27-4: born-BDD — test-author в create-spec Phase 3 / phase-runner (FR-M6) — id: p27-born-bdd — Status: TODO | Est: 480m
   _depends: p27-migrator-and-pilot_
