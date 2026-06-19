@@ -19,7 +19,8 @@
       ".specs/dev-pomogator-canonical-plugin/dev-pomogator-canonical-plugin.feature",
       ".specs/onboard-repo-phase0/onboard-repo-phase0.feature",
       ".specs/forbid-root-artifacts/forbid-root-artifacts.feature",
-      ".specs/worktree-setup/worktree-setup.feature"
+      ".specs/worktree-setup/worktree-setup.feature",
+      ".specs/architecture-decision-builder/architecture-decision-builder.feature"
     ],
     "import": [
       "tests/step_definitions/**/*.ts",
