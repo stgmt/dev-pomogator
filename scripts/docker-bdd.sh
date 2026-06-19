@@ -74,7 +74,14 @@ rm -rf "$SPECS_RW" 2>/dev/null || true
 STATUS=${PIPESTATUS[0]}
 
 # Persist the Docker result to the host canonical path the spec-graph reads.
-if [ -s "$OUT_REL" ]; then
+# CLOBBER-SAFE (H1 / FR-52a): only a FULL run (no extra cucumber args) may write the
+# canonical. A filtered/partial run ("$@" non-empty, e.g. --name/--tags/<path>) leaves
+# the canonical untouched — its partial/skipped ndjson must NOT poison the spec-graph
+# census. Its result still lands in $OUT_REL for inspection. No `shift` runs above, so
+# "$#" here is the original argc.
+if [ "$#" -gt 0 ]; then
+  echo "[docker-bdd] filtered run ($*) — result in $OUT_REL ONLY; canonical NOT updated (clobber-safe)"
+elif [ -s "$OUT_REL" ]; then
   cp "$OUT_REL" "$CANONICAL"
   echo "[docker-bdd] Canonical ndjson updated from the Docker/Linux run -> $CANONICAL"
 else
