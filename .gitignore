@@ -42,9 +42,6 @@ __pycache__/
 # (e.g. tui-test-runner user-patterns override) — otherwise fresh clones/CI fail those tests
 !tests/fixtures/**/.dev-pomogator/
 !tests/fixtures/**/.dev-pomogator/**
-# hyperv-test-runner artifacts: .dev-pomogator/hyperv-runs/ (per-run logs + screenshots)
-# RDP file (contains VM IP, user-specific)
-claude-test.rdp
 
 # OEM offline installers (if cached locally)
 oem/*.msi

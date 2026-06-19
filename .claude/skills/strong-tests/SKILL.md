@@ -208,7 +208,7 @@ Primary (TS + Python — covered in detail below). Other stacks (Java / C# / Go 
 
 **Skill does NOT do heavy auto-detection.** For polyglot repositories (e.g., C# + Go like lm-saas), auto-detection picks one stack based on first match — обычно not what caller wants. Instead skill exposes **enumerated framework list** через `AskUserQuestion` pattern, calling-side (AI agent или user) picks.
 
-Established pattern in 9 dev-pomogator skills using `AskUserQuestion` для enumerated selection: `discovery-forms`, `hyperv-test-runner`, `docker-optimize`, `install-diagnostics`, `run-tests`, `fewer-permission-prompts`, `dev-pomogator-uninstall`, `simplify`, `dedup-tests`.
+Established pattern in 8 dev-pomogator skills using `AskUserQuestion` для enumerated selection: `discovery-forms`, `docker-optimize`, `install-diagnostics`, `run-tests`, `fewer-permission-prompts`, `dev-pomogator-uninstall`, `simplify`, `dedup-tests`.
 
 **Caller-side invocation pattern:**
 

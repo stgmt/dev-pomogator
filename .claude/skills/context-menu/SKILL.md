@@ -261,7 +261,6 @@ Use the **Admin** entries whenever the upcoming Claude Code session will need to
 - Install/modify software via `winget` system-wide
 - Edit files under `C:\Program Files\`, `C:\Windows\`, registry HKLM
 - Run `Enable-WindowsOptionalFeature`, `Stop-Service`, `Set-ItemProperty HKLM:\...`
-- Use `tools/hyperv-test-runner/` lifecycle scripts (vTPM, Secure Boot, snapshot ops)
 
 Standard entries are sufficient for normal coding, file editing in user space, and most non-system tasks.
 
