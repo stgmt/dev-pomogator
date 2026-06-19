@@ -13786,6 +13786,7 @@ var PHASE_HEADING = /^(?:##|###)\s+(Phase\s+[-\d]+\S*.*?)$/i;
 var TASK_BULLET = /^-\s+\[[ x]\]\s+(.+)$/;
 var TASK_HEADING = /^###\s+📋\s+`([^`]+)`/;
 var STATUS_TAG = /Status:\s*(TODO|READY|IN_PROGRESS|DONE|BLOCKED)/;
+var STATUS_PRESENT = /Status:\s*([^\s|]+)/;
 var EST_TAG = /Est:\s*\d+\s*m/i;
 var WAIVED_RE = /^[ \t]*_waived:[ \t]*([^_\n]+)_[ \t]*$/m;
 function parseTaskBlocks(content) {
@@ -13813,6 +13814,7 @@ function parseTaskBlocks(content) {
     }
     const body = lines.slice(i, j).join("\n");
     const hasStatus = STATUS_TAG.test(body);
+    const badStatusValue = hasStatus ? null : body.match(STATUS_PRESENT)?.[1] ?? null;
     const hasEst = EST_TAG.test(body);
     const hasDoneWhen = /\*\*Done When:\*\*/.test(body);
     const waived = WAIVED_RE.test(body);
@@ -13822,7 +13824,7 @@ function parseTaskBlocks(content) {
       doneWhenCheckboxes = (afterDoneWhen.match(/^\s*-\s+\[[ x]\]/gm) || []).length;
     }
     const isPhaseMinusOne = /Phase\s+-1/i.test(currentPhase);
-    const missingFirst = waived ? null : isPhaseMinusOne ? null : !hasDoneWhen && "Done When block" || hasDoneWhen && doneWhenCheckboxes === 0 && "Done When checkbox (at least one - [ ])" || !hasStatus && "Status tag" || !hasEst && "Est tag" || null;
+    const missingFirst = waived ? null : isPhaseMinusOne ? null : !hasDoneWhen && "Done When block" || hasDoneWhen && doneWhenCheckboxes === 0 && "Done When checkbox (at least one - [ ])" || !hasStatus && (badStatusValue ? `valid Status value (got "${badStatusValue}", expected TODO|READY|IN_PROGRESS|DONE|BLOCKED)` : "Status tag") || !hasEst && "Est tag" || null;
     blocks.push({
       lineNumber: i + 1,
       title: title.slice(0, 160),

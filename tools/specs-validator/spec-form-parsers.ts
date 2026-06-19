@@ -97,6 +97,10 @@ const PHASE_HEADING = /^(?:##|###)\s+(Phase\s+[-\d]+\S*.*?)$/i;
 const TASK_BULLET = /^-\s+\[[ x]\]\s+(.+)$/;
 const TASK_HEADING = /^###\s+📋\s+`([^`]+)`/;
 const STATUS_TAG = /Status:\s*(TODO|READY|IN_PROGRESS|DONE|BLOCKED)/;
+// Any `Status:` token with a value — used to tell "no Status tag" from "Status tag present but
+// the VALUE is invalid" (M3: `Status: IN-PROGRESS` reported as "missing Status tag" was confusing;
+// the value is wrong, not missing — the parser wants the underscore form IN_PROGRESS).
+const STATUS_PRESENT = /Status:\s*([^\s|]+)/;
 const EST_TAG = /Est:\s*\d+\s*m/i;
 
 /**
@@ -144,6 +148,7 @@ export function parseTaskBlocks(content: string): TaskBlock[] {
     }
     const body = lines.slice(i, j).join('\n');
     const hasStatus = STATUS_TAG.test(body);
+    const badStatusValue = hasStatus ? null : body.match(STATUS_PRESENT)?.[1] ?? null;
     const hasEst = EST_TAG.test(body);
     const hasDoneWhen = /\*\*Done When:\*\*/.test(body);
     const waived = WAIVED_RE.test(body);
@@ -160,7 +165,10 @@ export function parseTaskBlocks(content: string): TaskBlock[] {
       ? null // Phase -1 relaxed (WARN, not DENY — enforced by hook, not parser)
       : (!hasDoneWhen && 'Done When block') ||
         (hasDoneWhen && doneWhenCheckboxes === 0 && 'Done When checkbox (at least one - [ ])') ||
-        (!hasStatus && 'Status tag') ||
+        (!hasStatus &&
+          (badStatusValue
+            ? `valid Status value (got "${badStatusValue}", expected TODO|READY|IN_PROGRESS|DONE|BLOCKED)`
+            : 'Status tag')) ||
         (!hasEst && 'Est tag') ||
         null;
     blocks.push({

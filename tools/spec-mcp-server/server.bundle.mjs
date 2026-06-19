@@ -46413,6 +46413,7 @@ var PHASE_HEADING = /^(?:##|###)\s+(Phase\s+[-\d]+\S*.*?)$/i;
 var TASK_BULLET = /^-\s+\[[ x]\]\s+(.+)$/;
 var TASK_HEADING = /^###\s+📋\s+`([^`]+)`/;
 var STATUS_TAG = /Status:\s*(TODO|READY|IN_PROGRESS|DONE|BLOCKED)/;
+var STATUS_PRESENT = /Status:\s*([^\s|]+)/;
 var EST_TAG = /Est:\s*\d+\s*m/i;
 var WAIVED_RE = /^[ \t]*_waived:[ \t]*([^_\n]+)_[ \t]*$/m;
 function parseTaskBlocks(content) {
@@ -46440,6 +46441,7 @@ function parseTaskBlocks(content) {
     }
     const body = lines.slice(i, j).join("\n");
     const hasStatus = STATUS_TAG.test(body);
+    const badStatusValue = hasStatus ? null : body.match(STATUS_PRESENT)?.[1] ?? null;
     const hasEst = EST_TAG.test(body);
     const hasDoneWhen = /\*\*Done When:\*\*/.test(body);
     const waived = WAIVED_RE.test(body);
@@ -46449,7 +46451,7 @@ function parseTaskBlocks(content) {
       doneWhenCheckboxes = (afterDoneWhen.match(/^\s*-\s+\[[ x]\]/gm) || []).length;
     }
     const isPhaseMinusOne = /Phase\s+-1/i.test(currentPhase);
-    const missingFirst = waived ? null : isPhaseMinusOne ? null : !hasDoneWhen && "Done When block" || hasDoneWhen && doneWhenCheckboxes === 0 && "Done When checkbox (at least one - [ ])" || !hasStatus && "Status tag" || !hasEst && "Est tag" || null;
+    const missingFirst = waived ? null : isPhaseMinusOne ? null : !hasDoneWhen && "Done When block" || hasDoneWhen && doneWhenCheckboxes === 0 && "Done When checkbox (at least one - [ ])" || !hasStatus && (badStatusValue ? `valid Status value (got "${badStatusValue}", expected TODO|READY|IN_PROGRESS|DONE|BLOCKED)` : "Status tag") || !hasEst && "Est tag" || null;
     blocks.push({
       lineNumber: i + 1,
       title: title.slice(0, 160),
@@ -47506,6 +47508,69 @@ function acquireLockOrReadOnly(opts) {
     throw err;
   }
 }
+var WRITE_LOCK_FILE = ".mcp-write.lock";
+var writeLockDepth = 0;
+function writeLockPath(repoRoot) {
+  return path7.join(repoRoot, ".dev-pomogator", WRITE_LOCK_FILE);
+}
+function sleepSync(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, Math.max(1, ms));
+}
+function withWriteLock(repoRoot, fn, opts = {}) {
+  if (writeLockDepth > 0) {
+    writeLockDepth++;
+    try {
+      return fn();
+    } finally {
+      writeLockDepth--;
+    }
+  }
+  const lockFile = writeLockPath(repoRoot);
+  fs11.mkdirSync(path7.dirname(lockFile), { recursive: true });
+  const retries = opts.retries ?? 100;
+  const intervalMs = opts.intervalMs ?? 50;
+  const payload = JSON.stringify({ pid: process.pid, started_at: (/* @__PURE__ */ new Date()).toISOString() });
+  let acquired = false;
+  for (let i = 0; i <= retries && !acquired; i++) {
+    try {
+      fs11.writeFileSync(lockFile, payload, { flag: "wx" });
+      acquired = true;
+    } catch (err) {
+      if (err.code !== "EEXIST") throw err;
+      try {
+        const cur = JSON.parse(fs11.readFileSync(lockFile, "utf8"));
+        if (typeof cur.pid === "number" && !isPidAlive(cur.pid)) {
+          fs11.unlinkSync(lockFile);
+          continue;
+        }
+      } catch {
+      }
+      if (i < retries) sleepSync(intervalMs);
+    }
+  }
+  if (!acquired) {
+    let holder;
+    try {
+      holder = JSON.parse(fs11.readFileSync(lockFile, "utf8"));
+    } catch {
+    }
+    const e = new Error(`spec write-lock busy after ${retries} retries`);
+    e.code = "WRITE_LOCK_BUSY";
+    e.holder = holder;
+    throw e;
+  }
+  writeLockDepth = 1;
+  try {
+    return fn();
+  } finally {
+    writeLockDepth = 0;
+    try {
+      const cur = JSON.parse(fs11.readFileSync(lockFile, "utf8"));
+      if (cur.pid === process.pid) fs11.unlinkSync(lockFile);
+    } catch {
+    }
+  }
+}
 
 // tools/spec-mcp-server/lifecycle.ts
 async function probeNativeEvents(repoRoot, timeoutMs) {
@@ -47574,7 +47639,7 @@ async function startLifecycle(opts) {
       lockHolder = acq.holder;
       logWatcherDecision(
         opts.repoRoot,
-        `write-lock held by pid ${acq.holder?.pid} (env ${acq.holder?.env}) \u2014 booting READ-ONLY door (P21-1); reads + dry-runs live, mutations refuse`
+        `presence lock owned by pid ${acq.holder?.pid} (env ${acq.holder?.env}) \u2014 booting PRESENCE-READER door (E-A); reads + dry-runs live, writes still proceed serialized by the short write-lock + CAS`
       );
     }
   } else {
@@ -48618,21 +48683,23 @@ function rewriteInboundLinks(repoRoot, inbound, newTargetRel) {
   return edits;
 }
 function writeDocAtomic(repoRoot, slug, doc, content) {
-  const dir = path11.join(repoRoot, ".specs", slug);
-  const abs = path11.join(dir, doc);
-  fs15.mkdirSync(path11.dirname(abs), { recursive: true });
-  const tmp = `${abs}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`;
-  fs15.writeFileSync(tmp, content, "utf-8");
-  try {
-    fs15.renameSync(tmp, abs);
-  } catch (e) {
+  return withWriteLock(repoRoot, () => {
+    const dir = path11.join(repoRoot, ".specs", slug);
+    const abs = path11.join(dir, doc);
+    fs15.mkdirSync(path11.dirname(abs), { recursive: true });
+    const tmp = `${abs}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`;
+    fs15.writeFileSync(tmp, content, "utf-8");
     try {
-      fs15.unlinkSync(tmp);
-    } catch {
+      fs15.renameSync(tmp, abs);
+    } catch (e) {
+      try {
+        fs15.unlinkSync(tmp);
+      } catch {
+      }
+      throw e;
     }
-    throw e;
-  }
-  return abs;
+    return abs;
+  });
 }
 
 // tools/spec-mcp-server/set-status.ts
@@ -49397,17 +49464,7 @@ function collectGraphRefs(graph, id) {
 }
 function buildToolRegistry(getGraph, registryOpts = {}) {
   const tools = [];
-  const readOnlyRefusal = (tool, args) => {
-    const holder = registryOpts.writeLockHeldBy?.();
-    if (!holder) return null;
-    logSpecAccess(tool, args, "denied");
-    return asJsonResult({
-      ok: false,
-      error: "WRITE_LOCK_HELD",
-      held_by: holder,
-      hint: `Another Claude Code session (pid ${holder.pid}, env ${holder.env}) holds the spec write-lock, so THIS session's door is read-only. Reads + propose_spec_change (dry-run) work here \u2014 make the edit in that session, or close it and retry.`
-    });
-  };
+  const readOnlyRefusal = (_tool, _args) => null;
   tools.push({
     name: "get_trace",
     description: "Get the full requirement trace for a node id: AC + Scenarios + Tasks + code_impl[] (implements edges per FR-30) + related nodes + a \u2264500-char natural-language summary for the agent.",
@@ -50034,8 +50091,6 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
     description: "FR-40 \xAB\u0436\u0438\u0432\u043E\u0439 \u0433\u0435\u043D\u0435\u0440\u0430\u0442\u043E\u0440\xBB: apply a spec mutation THROUGH the server. The change is validated BEFORE touching disk (form contracts + anchors + conformance); any error-severity finding \u2192 refusal with the findings list (fix and retry). A clean change is written atomically and audited. Inside the MCP server the FR-14 watcher refreshes the graph; the next read sees the fresh state. P21-5 optimistic CAS: pass expected_sha (the sha from read_spec_doc) to make the write conditional \u2014 CAS_MISMATCH if another session changed the doc; the reply returns the new sha for chaining edits.",
     inputShape: CHANGE_SHAPE,
     handler: async (args) => {
-      const ro = readOnlyRefusal("apply_spec_change", args);
-      if (ro) return ro;
       const slug = slugOf(args.spec);
       const doc = docOf(args.doc);
       const change = toChange(args);
@@ -50048,30 +50103,48 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
         return asJsonResult({ ok: false, error: "BAD_CHANGE", hint: "Pass {content} or {old_string,new_string}." });
       }
       const expectedSha = typeof args.expected_sha === "string" ? args.expected_sha : null;
-      if (expectedSha !== null) {
-        const cas = casCheck(process.cwd(), slug, doc, expectedSha);
-        if (!cas.ok) {
+      try {
+        return withWriteLock(process.cwd(), () => {
+          if (expectedSha !== null) {
+            const cas = casCheck(process.cwd(), slug, doc, expectedSha);
+            if (!cas.ok) {
+              logSpecAccess("apply_spec_change", args, "denied");
+              return asJsonResult({
+                ok: false,
+                error: "CAS_MISMATCH",
+                spec: slug,
+                doc,
+                expected_sha: expectedSha,
+                actual_sha: cas.actualSha,
+                hint: "The doc changed since you read it (another session?). Re-read with read_spec_doc for the fresh sha, rebase your change, and retry."
+              });
+            }
+          }
+          const r = validateSpecChange(process.cwd(), slug, doc, change);
+          if (!r.ok) {
+            logSpecAccess("apply_spec_change", args, "denied");
+            return asJsonResult({ ok: false, error: "VALIDATION_FAILED", spec: slug, doc, findings: r.findings, hint: "Fix the findings and retry; propose_spec_change is the free dry-run." });
+          }
+          const abs = writeDocAtomic(process.cwd(), slug, doc, r.next);
+          registryOpts.refreshGraph?.();
+          logSpecAccess("apply_spec_change", args, "ok");
+          return asJsonResult({ ok: true, spec: slug, doc, path: abs, bytes: r.next.length, sha: docSha(r.next), findings: [] });
+        });
+      } catch (e) {
+        if (e.code === "WRITE_LOCK_BUSY") {
           logSpecAccess("apply_spec_change", args, "denied");
+          const h = e.holder;
           return asJsonResult({
             ok: false,
-            error: "CAS_MISMATCH",
+            error: "WRITE_LOCK_BUSY",
             spec: slug,
             doc,
-            expected_sha: expectedSha,
-            actual_sha: cas.actualSha,
-            hint: "The doc changed since you read it (another session?). Re-read with read_spec_doc for the fresh sha, rebase your change, and retry."
+            held_by: h ?? null,
+            hint: "Another session is writing a spec RIGHT NOW; this is a brief transient lock \u2014 retry in a moment."
           });
         }
+        throw e;
       }
-      const r = validateSpecChange(process.cwd(), slug, doc, change);
-      if (!r.ok) {
-        logSpecAccess("apply_spec_change", args, "denied");
-        return asJsonResult({ ok: false, error: "VALIDATION_FAILED", spec: slug, doc, findings: r.findings, hint: "Fix the findings and retry; propose_spec_change is the free dry-run." });
-      }
-      const abs = writeDocAtomic(process.cwd(), slug, doc, r.next);
-      registryOpts.refreshGraph?.();
-      logSpecAccess("apply_spec_change", args, "ok");
-      return asJsonResult({ ok: true, spec: slug, doc, path: abs, bytes: r.next.length, sha: docSha(r.next), findings: [] });
     }
   });
   tools.push({
@@ -50443,7 +50516,7 @@ async function boot(opts) {
   });
   if (lifecycle.readOnly && lifecycle.lockHolder) {
     process.stderr.write(
-      `[${PRODUCT_NAME}] read-only door: write-lock held by pid ${lifecycle.lockHolder.pid} (env ${lifecycle.lockHolder.env}); reads + dry-runs live, mutations refuse
+      `[${PRODUCT_NAME}] presence-reader door: presence lock owned by pid ${lifecycle.lockHolder.pid} (env ${lifecycle.lockHolder.env}); E-A \u2014 writes still proceed, serialized per-mutation by the short write-lock + CAS
 `
     );
   }

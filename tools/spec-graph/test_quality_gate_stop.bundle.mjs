@@ -13850,6 +13850,7 @@ function parseTaskBlocks(content) {
     }
     const body = lines.slice(i, j).join("\n");
     const hasStatus = STATUS_TAG.test(body);
+    const badStatusValue = hasStatus ? null : body.match(STATUS_PRESENT)?.[1] ?? null;
     const hasEst = EST_TAG.test(body);
     const hasDoneWhen = /\*\*Done When:\*\*/.test(body);
     const waived = WAIVED_RE.test(body);
@@ -13859,7 +13860,7 @@ function parseTaskBlocks(content) {
       doneWhenCheckboxes = (afterDoneWhen.match(/^\s*-\s+\[[ x]\]/gm) || []).length;
     }
     const isPhaseMinusOne = /Phase\s+-1/i.test(currentPhase);
-    const missingFirst = waived ? null : isPhaseMinusOne ? null : !hasDoneWhen && "Done When block" || hasDoneWhen && doneWhenCheckboxes === 0 && "Done When checkbox (at least one - [ ])" || !hasStatus && "Status tag" || !hasEst && "Est tag" || null;
+    const missingFirst = waived ? null : isPhaseMinusOne ? null : !hasDoneWhen && "Done When block" || hasDoneWhen && doneWhenCheckboxes === 0 && "Done When checkbox (at least one - [ ])" || !hasStatus && (badStatusValue ? `valid Status value (got "${badStatusValue}", expected TODO|READY|IN_PROGRESS|DONE|BLOCKED)` : "Status tag") || !hasEst && "Est tag" || null;
     blocks.push({
       lineNumber: i + 1,
       title: title.slice(0, 160),
@@ -13979,7 +13980,7 @@ function runCheckCli(argv) {
   return { output: violations.join("\n") + `
 ${violations.length} violation(s) (${kind})`, exitCode: 1 };
 }
-var US_HEADING, US_PRIORITY, PHASE_HEADING, TASK_BULLET, TASK_HEADING, STATUS_TAG, EST_TAG, WAIVED_RE, DECISION_HEADING, CHK_ID_VALID, ALLOWED_METHODS, ALLOWED_STATUSES, isDirectRunFormParsers;
+var US_HEADING, US_PRIORITY, PHASE_HEADING, TASK_BULLET, TASK_HEADING, STATUS_TAG, STATUS_PRESENT, EST_TAG, WAIVED_RE, DECISION_HEADING, CHK_ID_VALID, ALLOWED_METHODS, ALLOWED_STATUSES, isDirectRunFormParsers;
 var init_spec_form_parsers = __esm({
   "tools/specs-validator/spec-form-parsers.ts"() {
     "use strict";
@@ -13989,6 +13990,7 @@ var init_spec_form_parsers = __esm({
     TASK_BULLET = /^-\s+\[[ x]\]\s+(.+)$/;
     TASK_HEADING = /^###\s+📋\s+`([^`]+)`/;
     STATUS_TAG = /Status:\s*(TODO|READY|IN_PROGRESS|DONE|BLOCKED)/;
+    STATUS_PRESENT = /Status:\s*([^\s|]+)/;
     EST_TAG = /Est:\s*\d+\s*m/i;
     WAIVED_RE = /^[ \t]*_waived:[ \t]*([^_\n]+)_[ \t]*$/m;
     DECISION_HEADING = /^###\s+Decision:/;
