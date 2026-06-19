@@ -119,3 +119,72 @@ Feature: VSGF001 Verify Generic Scope Fix gate
     Then the suspicion score is at least 4
     And the score reasons include a filename hit on "StockValidationService.ts"
     And the score reasons include an enum-item hit on "StockValidationService.ts"
+
+  @feature6
+  Scenario: VSGF001_62 An empty diff scores zero
+    Given a raw scope-gate diff ""
+    When the scope-gate heuristic scores the diff
+    Then the suspicion score is exactly 0
+
+  @feature6
+  Scenario: VSGF001_63 A malformed diff scores zero
+    Given a raw scope-gate diff "this is not a diff"
+    When the scope-gate heuristic scores the diff
+    Then the suspicion score is exactly 0
+
+  @feature6
+  Scenario: VSGF001_64 A switch-case addition scores at least three
+    Given a scope-gate diff fixture "switch-case-diff.patch"
+    When the scope-gate heuristic scores the diff
+    Then the suspicion score is at least 3
+    And a score reason matches /switch-case|case/
+
+  @feature6
+  Scenario: VSGF001_65 A non-guard enum addition scores in the borderline band
+    Given a scope-gate diff fixture "non-guard-enum-diff.patch"
+    When the scope-gate heuristic scores the diff
+    Then the suspicion score is between 2 and 4
+
+  @feature6
+  Scenario: VSGF001_66 A dampened markdown file subtracts two from the score
+    Given a scope-gate diff fixture "stocktaking-diff.patch"
+    When the diff is scored plain and again dampening files "README.md"
+    Then the dampened score is the plain score minus 2
+
+  @feature6
+  Scenario: VSGF001_67 A dampened tests file subtracts one from the score
+    Given a scope-gate diff fixture "stocktaking-diff.patch"
+    When the diff is scored plain and again dampening files "tests/foo.test.ts"
+    Then the dampened score is the plain score minus 1
+
+  @feature6
+  Scenario: VSGF001_68 parseFilesFromDiff lists every file path in order
+    Then parseFilesFromDiff of fixture "docs-only-diff.patch" yields paths "README.md|docs/CHANGES.md"
+
+  @feature6
+  Scenario: VSGF001_69 Every score reason carries a signed weight
+    Given a scope-gate diff fixture "stocktaking-diff.patch"
+    When the scope-gate heuristic scores the diff
+    Then every score reason starts with a signed weight
+
+  @feature4
+  Scenario: VSGF001_70 isDocsOrTestsOnly is true for a docs-or-tests-only file list
+    Then isDocsOrTestsOnly of "README.md|docs/CHANGES.md" is true
+    And isDocsOrTestsOnly of "tests/foo.test.ts|tests/bar.test.ts" is true
+    And isDocsOrTestsOnly of "docs/a.rst" is true
+
+  @feature4
+  Scenario: VSGF001_71 isDocsOrTestsOnly is false when any code file is present
+    Then isDocsOrTestsOnly of "README.md|src/index.ts" is false
+    And isDocsOrTestsOnly of "src/a.ts" is false
+
+  @feature4
+  Scenario: VSGF001_72 isDocsOrTestsOnly is false for empty input
+    Then isDocsOrTestsOnly of "" is false
+    And isDocsOrTestsOnly of "   " is false
+
+  @feature4
+  Scenario: VSGF001_73 A docs-only diff scores zero
+    Given a scope-gate diff fixture "docs-only-diff.patch"
+    When the scope-gate heuristic scores the diff
+    Then the suspicion score is exactly 0

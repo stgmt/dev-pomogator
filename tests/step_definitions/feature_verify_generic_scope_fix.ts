@@ -34,7 +34,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { createHash } from 'node:crypto';
 import { V4World } from '../hooks/before-after.ts';
-import { scoreDiff } from '../../tools/_shared/scope-gate-score-diff.ts';
+import { scoreDiff, isDocsOrTestsOnly, parseFilesFromDiff } from '../../tools/_shared/scope-gate-score-diff.ts';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -55,9 +55,11 @@ interface VsgfWorld extends V4World {
   vsgfStagedDiff?: string;
   /** Session id used in the current scenario */
   vsgfSessionId?: string;
-  /** FR-6 weighted-heuristic result (regression pin VSGF001_61) */
+  /** FR-6 weighted-heuristic result (regression pin VSGF001_61 + score-diff fold) */
   vsgfScore?: number;
   vsgfReasons?: string[];
+  vsgfBaselineScore?: number;
+  vsgfDampenedScore?: number;
 }
 
 interface HookResult {
@@ -582,4 +584,53 @@ Then(/^the score reasons include an? (filename|enum-item) hit on "([^"]+)"$/, fu
   const text = (this.vsgfReasons ?? []).join('\n');
   const re = new RegExp(`${kind}:.*${file.replace(/\./g, '\\.')}`);
   assert.ok(re.test(text), `expected a ${kind} reason hit on ${file}; reasons:\n${text}`);
+});
+
+// ---------------------------------------------------------------------------
+// FR-6/FR-4 scoreDiff + isDocsOrTestsOnly + parseFilesFromDiff unit coverage
+// (VSGF001_62..73), folded from tests/unit/score-diff.test.ts. All drive the REAL
+// PURE functions in-process — no mock, no spawn. ("|" is the list separator in
+// step args since Gherkin can't carry a newline.)
+// ---------------------------------------------------------------------------
+Given(/^a scope-gate diff fixture "([^"]+)"$/, function (this: VsgfWorld, name: string) {
+  this.vsgfStagedDiff = fs.readFileSync(path.join(FIXTURES_DIR, name), 'utf-8');
+});
+Given(/^a raw scope-gate diff "([^"]*)"$/, function (this: VsgfWorld, text: string) {
+  this.vsgfStagedDiff = text;
+});
+When(/^the scope-gate heuristic scores the diff$/, function (this: VsgfWorld) {
+  const r = scoreDiff(this.vsgfStagedDiff ?? '');
+  this.vsgfScore = r.score;
+  this.vsgfReasons = r.reasons;
+});
+When(/^the diff is scored plain and again dampening files "([^"]+)"$/, function (this: VsgfWorld, files: string) {
+  this.vsgfBaselineScore = scoreDiff(this.vsgfStagedDiff ?? '').score;
+  this.vsgfDampenedScore = scoreDiff(this.vsgfStagedDiff ?? '', { dampenFiles: files.split('|') }).score;
+});
+Then(/^the suspicion score is exactly (\d+)$/, function (this: VsgfWorld, n: string) {
+  assert.equal(this.vsgfScore, Number(n), `expected score ${n}, got ${this.vsgfScore}`);
+});
+Then(/^the suspicion score is between (\d+) and (\d+)$/, function (this: VsgfWorld, lo: string, hi: string) {
+  const s = this.vsgfScore ?? -1;
+  assert.ok(s >= Number(lo) && s <= Number(hi), `score ${s} not in [${lo},${hi}]`);
+});
+Then(/^the dampened score is the plain score minus (\d+)$/, function (this: VsgfWorld, n: string) {
+  assert.equal(this.vsgfDampenedScore, (this.vsgfBaselineScore ?? 0) - Number(n),
+    `dampened ${this.vsgfDampenedScore} != baseline ${this.vsgfBaselineScore} - ${n}`);
+});
+Then(/^a score reason matches \/([^/]+)\/$/, function (this: VsgfWorld, pat: string) {
+  assert.match((this.vsgfReasons ?? []).join('\n'), new RegExp(pat));
+});
+Then(/^every score reason starts with a signed weight$/, function (this: VsgfWorld) {
+  const rs = this.vsgfReasons ?? [];
+  assert.ok(rs.length > 0 && rs.every((r) => /^[+-]\d+ /.test(r)), `reasons not all signed: ${rs.join(' | ')}`);
+});
+Then(/^isDocsOrTestsOnly of "([^"]*)" is (true|false)$/, function (this: VsgfWorld, input: string, expected: string) {
+  const v = isDocsOrTestsOnly(input.split('|').join('\n'));
+  assert.equal(v, expected === 'true', `isDocsOrTestsOnly("${input}") = ${v}, expected ${expected}`);
+});
+Then(/^parseFilesFromDiff of fixture "([^"]+)" yields paths "([^"]+)"$/, function (this: VsgfWorld, name: string, paths: string) {
+  const diff = fs.readFileSync(path.join(FIXTURES_DIR, name), 'utf-8');
+  const got = parseFilesFromDiff(diff).map((f: { path: string }) => f.path);
+  assert.deepEqual(got, paths.split('|'));
 });
