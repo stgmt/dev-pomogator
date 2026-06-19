@@ -113,20 +113,31 @@ async function main(): Promise<void> {
     }
   }
 
-  // Cucumber clobber guard (FR-52a / P28-1): a FILTERED cucumber run (--name) against the
-  // DEFAULT config overwrites the canonical .dev-pomogator/.last-test-run.ndjson with a partial
-  // result → every spec not in the filter then reads not_run (poisons the honesty gate/census).
-  // Deny ONLY a bare --name run; allow the run-bdd wrapper, an explicit -c temp config, or an
-  // explicit --format message: redirect (precise — avoids over-blocking legit isolated runs, H1).
-  const isCucumber = /cucumber(?:\.js)?\b/.test(command) || /@cucumber\/cucumber/.test(command);
-  const isNameFiltered = /(?:^|\s)(?:--name|-n)(?:\s|=)/.test(command);
-  const isRedirected =
-    /(?:^|\s)(?:-c|--config)(?:\s|=)/.test(command) || /--format\s+message:/.test(command);
-  if (isCucumber && isNameFiltered && !isRedirected) {
-    const filterArgs = command.replace(/^[\s\S]*?cucumber\.js\s*/, '').trim() || '--name "<id>"';
+  // Cucumber clobber guard (FR-52a / P28-1): a PARTIAL / non-authoritative cucumber run against the
+  // DEFAULT config overwrites the canonical .dev-pomogator/.last-test-run.ndjson → every spec not in
+  // the result then reads not_run (poisons the honesty gate/census). PARTIAL = a filter
+  // (--name/-n/--tags/-t) OR a --dry-run (executes nothing, writes an ALL-skipped ndjson — the exact
+  // vector that clobbered the canonical live on 2026-06-19; the old guard only caught --name). A FULL
+  // real run is fine (it is the intended way to refresh the canonical).
+  //   Allow ONLY when isolated to a throwaway: a temp config (-c/--config NOT cucumber.json — `-c
+  //   cucumber.json` still writes the canonical, so it is NOT safe), or an explicit --format message:
+  //   to a non-canonical target.
+  //   A prose command (git/echo/cat/…) may MENTION cucumber + a flag in its text (e.g. a commit
+  //   message describing THIS guard) but never RUNS it — anchor to a real invocation so we don't deny
+  //   a commit/echo/doc (false-positive that blocked a commit 2026-06-19).
+  const isProse = /^\s*(?:git|echo|printf|cat|sed|awk|grep|rg)\b/.test(command.trimStart());
+  const isCucumber =
+    !isProse && (/cucumber(?:\.js|-js)\b/.test(command) || /@cucumber\/cucumber/.test(command));
+  const isPartial = /(?:^|\s)(?:--name|-n|--tags|-t|--dry-run)(?:\s|=|$)/.test(command);
+  const usesTempConfig = /(?:^|\s)(?:-c|--config)(?:\s|=)\s*(?!cucumber\.json\b)\S/.test(command);
+  const usesThrowawayFormat = /--format\s+message:(?!\S*last-test-run)/.test(command);
+  const isSafeIsolated = usesTempConfig || usesThrowawayFormat;
+  if (isCucumber && isPartial && !isSafeIsolated) {
+    const filterArgs =
+      command.replace(/^[\s\S]*?cucumber(?:\.js|-js)?\s*/, '').trim() || '--tags "@featureN"';
     const msg = [
-      '🚫 Filtered cucumber run against the default config would CLOBBER the canonical',
-      '   .dev-pomogator/.last-test-run.ndjson with a partial result (every other spec → not_run).',
+      '🚫 Partial/dry-run cucumber run against the default config would CLOBBER the canonical',
+      '   .dev-pomogator/.last-test-run.ndjson with a partial/all-skipped result (other specs → not_run).',
       '',
       '✅ Use the clobber-safe runner (routes a filtered run to a throwaway + archives the run to',
       '   .dev-pomogator/.test-history/ with timings):',

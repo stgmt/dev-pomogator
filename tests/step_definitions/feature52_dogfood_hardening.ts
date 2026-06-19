@@ -36,6 +36,9 @@ interface GuardWorld {
   wrapperStatus?: number | null;
   fullRunStatus?: number | null;
   isolatedStatus?: number | null;
+  dryRunStatus?: number | null;
+  cDefaultDryRunStatus?: number | null;
+  proseStatus?: number | null;
 }
 
 Given(/^the test-guard PreToolUse hook is the canonical Bash guard$/, function () {
@@ -84,4 +87,35 @@ Then(/^the guard allows the isolated run with exit 0$/, function (this: GuardWor
     0,
     `explicit -c isolated run must be allowed (exit 0); got ${this.isolatedStatus}`,
   );
+});
+
+// FR-52a gap closed 2026-06-19: a --dry-run executes nothing but STILL writes the canonical
+// ndjson (all-skipped), so it poisons the census exactly like a filtered run. The old guard
+// only keyed on --name and let this through (the live clobber this session).
+When(/^a dry-run cucumber pass hits the default config$/, function (this: GuardWorld) {
+  this.dryRunStatus = runGuard(`${CUKE} --dry-run`).status;
+});
+Then(/^the clobber guard denies the dry-run with exit 2$/, function (this: GuardWorld) {
+  assert.equal(this.dryRunStatus, 2, `--dry-run on default config must be denied (exit 2); got ${this.dryRunStatus}`);
+});
+
+// -c cucumber.json is NOT a safe redirect — the default config's format writes the canonical.
+When(/^a dry-run names the default cucumber\.json config explicitly$/, function (this: GuardWorld) {
+  this.cDefaultDryRunStatus = runGuard(`${CUKE} -c cucumber.json --dry-run`).status;
+});
+Then(/^the clobber guard still denies it with exit 2$/, function (this: GuardWorld) {
+  assert.equal(
+    this.cDefaultDryRunStatus,
+    2,
+    `-c cucumber.json (the default, writes canonical) must be denied (exit 2); got ${this.cDefaultDryRunStatus}`,
+  );
+});
+
+// False-positive fixed: a prose command (git commit) may MENTION cucumber + a flag in its
+// message but never RUNS cucumber — the guard must not deny it.
+When(/^a git commit message merely mentions a filtered cucumber run$/, function (this: GuardWorld) {
+  this.proseStatus = runGuard('git commit -m "fix: cucumber --name X clobbers .last-test-run.ndjson"').status;
+});
+Then(/^the guard allows the commit with exit 0$/, function (this: GuardWorld) {
+  assert.equal(this.proseStatus, 0, `a commit message mentioning cucumber must be allowed (exit 0); got ${this.proseStatus}`);
 });

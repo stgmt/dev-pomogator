@@ -1548,6 +1548,12 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then the guard allows the full run with exit 0
     When a filtered cucumber run names an explicit temp config
     Then the guard allows the isolated run with exit 0
+    When a dry-run cucumber pass hits the default config
+    Then the clobber guard denies the dry-run with exit 2
+    When a dry-run names the default cucumber.json config explicitly
+    Then the clobber guard still denies it with exit 2
+    When a git commit message merely mentions a filtered cucumber run
+    Then the guard allows the commit with exit 0
 
   @feature49
   Scenario: SPECGEN004_222 the gate releases after consecutive zero-tool kicks and a tool-run resets the no-progress streak
