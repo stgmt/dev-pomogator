@@ -189,7 +189,11 @@ const NS_HOOK = path.resolve('tools', 'claim-evidence-gate', 'claim_evidence_gat
 function runStopHook(
   root: string,
   claimText: string,
-  tools: Array<{ name: string; input: unknown }> = [{ name: 'Edit', input: {} }],
+  // FR-9 (session-scoped census): the default simulated turn EDITS the `demo` spec — the same slug the
+  // census fixtures carry — so the census is in this session's scope and the census-dependent layers
+  // (spec-false-close / no-next-section) arm. An empty Edit (no file_path) scopes to ZERO specs (FR-9's
+  // own contract) → those layers correctly stay quiet, which is why the old default broke 186/189.
+  tools: Array<{ name: string; input: unknown }> = [{ name: 'Edit', input: { file_path: '.specs/demo/FR.md' } }],
   extra: { env?: Record<string, string>; stopHookActive?: boolean } = {},
 ): { blocked: boolean; raw: string } {
   const rows = [
@@ -250,7 +254,9 @@ Then(
   'the prompt states the open-task count and instructs a single JSON verdict line and keeps the clarifying-question carve-out',
   function (this: AutoSurfaceWorld) {
     const p = this.judgePrompt!;
-    assert.match(p, /20 open/, 'the census fact (20 open) reaches the judge');
+    // FR-8 (facts-first rewrite): the open-task count now reaches the judge as a SESSION-scoped fact
+    // («open/unfinished tasks in THIS SESSION's scope: 20» + «scope-open tasks: 20»), not the old «20 open».
+    assert.match(p, /(?:tasks|scope)[^\n]{0,40}20/i, 'the census fact (20 open) reaches the judge');
     assert.match(p, /ONLY one JSON line/, 'the judge is told to answer with exactly one JSON line');
     assert.match(p, /genuine clarifying question/i, 'the APPROVE-side clarifying-question carve-out is present');
   },
