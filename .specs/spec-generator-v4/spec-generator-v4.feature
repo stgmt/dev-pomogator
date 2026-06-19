@@ -1626,3 +1626,99 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given the canonical hooks.json and the dogfood settings.json are both present
     When the registry parity check runs for the UserPromptSubmit event
     Then both registries declare identical hook identities for that event
+
+  @feature12
+  Scenario: SPECGEN004_234 detectComplexity routes to architecture-research-workflow on Russian "архитектура" keyword
+    Given the create-spec complexity heuristic is available
+    When detectComplexity is called with a prompt containing the Russian "архитектура" keyword
+    Then the verdict is "use-architecture-research-workflow" and at least one keyword hit is recorded
+
+  @feature12
+  Scenario: SPECGEN004_235 detectComplexity routes to architecture-research-workflow on English "rebuild" keyword
+    Given the create-spec complexity heuristic is available
+    When detectComplexity is called with an English "rebuild" keyword
+    Then the verdict is "use-architecture-research-workflow"
+
+  @feature12
+  Scenario: SPECGEN004_236 detectComplexity routes to architecture-research-workflow on version-bump keyword like "v4"
+    Given the create-spec complexity heuristic is available
+    When detectComplexity is called with a version-bump keyword like "v4"
+    Then the verdict is "use-architecture-research-workflow" for version prompts
+
+  @feature12
+  Scenario: SPECGEN004_237 detectComplexity routes to architecture-research-workflow when ≥3 PascalCase component nouns are present
+    Given the create-spec complexity heuristic is available
+    When detectComplexity is called with a prompt that lists ≥3 PascalCase component nouns
+    Then the verdict is "use-architecture-research-workflow" and at least 3 components are detected
+
+  @feature12
+  Scenario: SPECGEN004_238 detectComplexity routes to regular research-workflow when no keyword and fewer than 3 component nouns
+    Given the create-spec complexity heuristic is available
+    When detectComplexity is called with a plain prompt with no keyword and fewer than 3 component nouns
+    Then the verdict is "use-research-workflow"
+
+  @feature12
+  Scenario: SPECGEN004_239 detectComplexity keyword wins over component count (early exit)
+    Given the create-spec complexity heuristic is available
+    When detectComplexity is called with a prompt containing both a keyword and ≥3 component nouns
+    Then the verdict is "use-architecture-research-workflow" with the reason citing keywords not components
+
+  @feature12
+  Scenario: SPECGEN004_240 detectComplexity explains the verdict in plain language
+    Given the create-spec complexity heuristic is available
+    When detectComplexity is called with a simple refactor prompt
+    Then the verdict is "use-research-workflow" and the reason mentions no architecture keyword and the threshold
+
+  @feature33
+  Scenario: SPECGEN004_241 orchestrator WORKFLOW routes coverage and honesty-gate steps to get_coverage MCP tool
+    Given the orchestrator feature-map routing table is loaded
+    When the coverage and honesty-gate workflow steps are inspected
+    Then every coverage and honesty-gate step delegates to the get_coverage MCP tool and never re-implements it
+
+  @feature33
+  Scenario: SPECGEN004_242 every WORKFLOW worker appears in the REFERENCED_CAPABILITIES set
+    Given the orchestrator feature-map routing table is loaded
+    When each WORKFLOW step's worker is cross-checked against REFERENCED_CAPABILITIES
+    Then every WORKFLOW worker appears in the referenced-capability set
+
+  @feature33
+  Scenario: SPECGEN004_243 checkFeatureMapDrift is clean when actual capabilities are a subset of referenced
+    Given the orchestrator feature-map routing table is loaded
+    When checkFeatureMapDrift is called with the REFERENCED_CAPABILITIES set as the actual surface
+    Then the drift check reports ok with no unreferenced capabilities
+
+  @feature33
+  Scenario: SPECGEN004_244 checkFeatureMapDrift fails and names an unknown capability
+    Given the orchestrator feature-map routing table is loaded
+    When checkFeatureMapDrift is called with a surface that includes an unknown capability "brand_new_tool"
+    Then the drift check reports not-ok and names "brand_new_tool" as unreferenced
+
+  @feature33
+  Scenario: SPECGEN004_245 the live MCP registry and worker skills have no drift against the orchestrator feature-map
+    Given the orchestrator feature-map routing table is loaded
+    When checkFeatureMapDrift is called against the live MCP registry and worker skills
+    Then the live capability surface has no drift against the orchestrator feature-map
+
+  @feature42
+  Scenario: SPECGEN004_246 checkToolConsumers flags a live MCP tool with no declared skill consumer
+    Given the orchestrator feature-map routing table is loaded
+    When checkToolConsumers is called with a surface that includes "naked_new_tool" with no declared consumer
+    Then the consumer check reports not-ok and names "naked_new_tool" as unconsumed
+
+  @feature42
+  Scenario: SPECGEN004_247 every live MCP registry tool has a declared skill consumer
+    Given the orchestrator feature-map routing table is loaded
+    When checkToolConsumers is called against the live MCP tool registry
+    Then every live MCP tool has at least one declared skill consumer
+
+  @feature42
+  Scenario: SPECGEN004_248 verifyConsumerTruthfulness flags a consumer skill that never references its declared tool
+    Given the orchestrator feature-map routing table is loaded
+    When verifyConsumerTruthfulness is called with an injected reader where "some-skill" never mentions "some_tool"
+    Then the truth check reports not-ok and the message names "some-skill" and "some_tool"
+
+  @feature42
+  Scenario: SPECGEN004_249 the real TOOL_CONSUMERS table is truthful every consumer skill genuinely references its tool
+    Given the orchestrator feature-map routing table is loaded
+    When verifyConsumerTruthfulness is called against the real TOOL_CONSUMERS table and real SKILL.md files
+    Then every consumer skill in TOOL_CONSUMERS genuinely references its declared tool in its SKILL.md
