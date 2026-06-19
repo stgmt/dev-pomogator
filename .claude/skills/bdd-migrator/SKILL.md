@@ -131,6 +131,13 @@ Migrating spec-reality-check end-to-end surfaced these; they recur — apply the
   `runChecks` / the parse helpers and call them; reserve spawn for scenarios that genuinely assert CLI
   behaviour (output formats, the hook). Per-scenario isolation comes free from the `V4World` Before
   hook's fresh `tempDir`.
+- **Step-def signature: `function (this: World, a, b)` — `this:` is a TYPE ANNOTATION; cucumber BINDS the
+  World, it does NOT pass it as an argument.** The capture groups ALONE are the params. NEVER write the
+  World as a real first param (`function (world, a, b)` / `function (_w, a, b)`) — that shifts every
+  capture by one AND makes cucumber treat the trailing param as a `done` callback that is never called →
+  the step TIMES OUT at 30s or reads the wrong capture. (Dogfood 2026-06-20: a fold step
+  `function (_this, name, paths)` read `paths` as the fixture name → ENOENT; an `isDocsOrTestsOnly` step
+  → 30s timeout. The capturing groups are the only arguments.)
 
 ## Field-validated additions (GitHub research + this session's dogfood, 2026-06-18)
 

@@ -74,6 +74,12 @@ ambiguous) → mutation gutcheck (RED-on-break).
   RUN the real artifact, then FIX the `.feature` via `apply_spec_change` so it asserts reality (note why).
 - **Drive the REAL exported function in-process where you can** (deterministic, fast); reserve spawn
   for scenarios that genuinely assert CLI/hook behaviour.
+- **Step-def signature: `function (this: World, a, b)` — `this:` is a TYPE ANNOTATION; cucumber BINDS
+  the World, it does NOT pass it as an argument.** The capture groups ALONE are the params. NEVER write
+  the World as a real first param (`function (world, a, b)` / `function (_w, a, b)`) — that shifts every
+  capture by one AND makes cucumber treat the trailing param as a `done` callback that is never called →
+  the step TIMES OUT at 30s or reads the wrong capture. (Dogfood 2026-06-20: `function (_this, name, paths)`
+  read `paths` as the fixture name → ENOENT; an `isDocsOrTestsOnly` step → 30s timeout.)
 
 ## Never
 - Fake a manual/agent-behaviour scenario green with a check that doesn't test the claim.
