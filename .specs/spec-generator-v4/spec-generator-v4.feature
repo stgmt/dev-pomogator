@@ -1566,3 +1566,63 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given a census with unfinished work and the real claim-evidence-gate stop hook
     When the stop rests on a blocker claim with no tool then with a tool run then with a background task launched
     Then the bare blocker is blocked for lacking evidence while the tool-backed and background-task ones are approved
+
+  @feature45
+  Scenario: SPECGEN004_224 investigateDrifted recommends KEEP_DRIFTED when README marks shipped and impl exists on disk
+    Given a drifted spec whose README marks it as shipped and whose claimed impl exists on disk
+    When investigateDrifted runs on that spec
+    Then the investigation recommends KEEP_DRIFTED with shipped=true and codePresent=true
+
+  @feature45
+  Scenario: SPECGEN004_225 investigateDrifted recommends KEEP_DRIFTED when impl moved to tools/ keeping its basename
+    Given a drifted spec whose FILE_CHANGES points to an old v1 path but the file moved to tools/ keeping its basename
+    When investigateDrifted runs on that spec
+    Then the investigation recommends KEEP_DRIFTED with shipped=false and codePresent=true because the basename was found at the moved path
+
+  @feature45
+  Scenario: SPECGEN004_226 investigateDrifted recommends RETIRE_CANDIDATE when no shipped marker and impl absent
+    Given a drifted spec with no shipped marker and its claimed impl absent from disk
+    When investigateDrifted runs on that spec
+    Then the investigation recommends RETIRE_CANDIDATE with codePresent=false
+
+  @feature45
+  Scenario: SPECGEN004_227 investigateDrifted recommends RETIRE_CANDIDATE without throwing when spec docs are missing
+    Given a spec directory that exists but contains no README or FILE_CHANGES
+    When investigateDrifted runs on that spec
+    Then the investigation recommends RETIRE_CANDIDATE without throwing
+
+  @feature25
+  Scenario: SPECGEN004_228 hookIdentity strips bootstrap launcher noise and extension chains returning stable basename
+    Given the hook identity utility is available
+    When hookIdentity is called on a bootstrap-launched .ts command, a bundle spawn, a sh script, and a capture with --event
+    Then it returns the script basename without extension chain and appends --event when present
+
+  @feature25
+  Scenario: SPECGEN004_229 settings.json and hooks.json declare the same Stop hooks
+    Given the canonical hooks.json and the dogfood settings.json are both present
+    When the registry parity check runs for the Stop event
+    Then both registries declare identical hook identities for that event
+
+  @feature25
+  Scenario: SPECGEN004_230 settings.json and hooks.json declare the same SessionStart hooks
+    Given the canonical hooks.json and the dogfood settings.json are both present
+    When the registry parity check runs for the SessionStart event
+    Then both registries declare identical hook identities for that event
+
+  @feature25
+  Scenario: SPECGEN004_231 settings.json and hooks.json declare the same PreToolUse hooks
+    Given the canonical hooks.json and the dogfood settings.json are both present
+    When the registry parity check runs for the PreToolUse event
+    Then both registries declare identical hook identities for that event
+
+  @feature25
+  Scenario: SPECGEN004_232 settings.json and hooks.json declare the same PostToolUse hooks
+    Given the canonical hooks.json and the dogfood settings.json are both present
+    When the registry parity check runs for the PostToolUse event
+    Then both registries declare identical hook identities for that event
+
+  @feature25
+  Scenario: SPECGEN004_233 settings.json and hooks.json declare the same UserPromptSubmit hooks
+    Given the canonical hooks.json and the dogfood settings.json are both present
+    When the registry parity check runs for the UserPromptSubmit event
+    Then both registries declare identical hook identities for that event
