@@ -90,3 +90,9 @@ test_runner_wrapper.ts SHALL создавать `.bg-task-active.{session_prefix
 stop-guard.sh SHALL пропускать YAML status данные если file mtime > 30 секунд назад (stale от предыдущего run, не текущего).
 
 **Связанные AC:** [AC-15](ACCEPTANCE_CRITERIA.md#ac-15-fr-15-feature10)
+
+## FR-16: Stuck-task escalation к человеку @feature5
+
+stop-guard.sh SHALL при состоянии `running` с 0% прогресса (passed=0 И failed=0) и возрастом маркера в окне [STUCK_TTL=3мин, ESCALATE_TTL=6мин) возвращать `decision: block` с инструкцией агенту вызвать AskUserQuestion (ждать / убить через TaskStop / продолжить) — эскалация зависшей долгой задачи к ЧЕЛОВЕКУ вместо немедленного allow-stop. При возрасте ≥ ESCALATE_TTL (человек не ответил — headless/cron-прогон без человека) hook SHALL откатываться на оригинальный allow-stop recovery, чтобы прогон без человека НЕ повисал (HARD_TTL=15мин — внешний предохранитель). Building-state и running-with-progress пути НЕ затрагиваются.
+
+Реализует кейс монитор-зависшего-тула → вопрос-человеку в правильном доме (bg-task-guard уже владеет мониторингом фоновых задач — не дублировать в claim-evidence-gate). Кросс-реф: claim-evidence-gate FR-13.

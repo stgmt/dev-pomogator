@@ -438,6 +438,27 @@ describe('GUARD002: Background Task Guard', () => {
       expect(result.stdout).toContain('block');
       expect(result.stdout).not.toContain('100/200');
     });
+
+    // @feature5 — FR-16 escalation: a hung task (0% progress past STUCK_TTL) WITHIN the escalation
+    // window asks the human via the agent (block → AskUserQuestion) instead of silently allowing the stop.
+    it('GUARD002_36: stuck within the escalation window blocks and tells the agent to ask the human', () => {
+      createMarker(4, 'stuck-task'); // 4 min: STUCK_TTL(3) <= age < ESCALATE_TTL(6)
+      createYamlStatus({ state: 'running', passed: 0, failed: 0, skipped: 0, total: 100, percent: 0 });
+      const result = runHook(STOP_HOOK);
+      const output = JSON.parse(result.stdout.trim());
+      expect(output.decision).toBe('block');
+      expect(output.reason).toContain('AskUserQuestion');
+    });
+
+    // @feature5 — FR-16 headless-safe recover: past the escalation window with no human answer, a hung
+    // task falls back to allow-stop so a human-less (headless/cron) run never hangs.
+    it('GUARD002_37: stuck past the escalation window allows the stop (headless-safe recover)', () => {
+      createMarker(7, 'stuck-task'); // 7 min: age >= ESCALATE_TTL(6), still < HARD_TTL(15)
+      createYamlStatus({ state: 'running', passed: 0, failed: 0, skipped: 0, total: 100, percent: 0 });
+      const result = runHook(STOP_HOOK);
+      expect(result.status).toBe(0); // allow = exit 0
+      expect(result.stdout).not.toContain('"decision":"block"');
+    });
   });
 
   describe('Per-Session Marker Isolation', () => {
