@@ -17,7 +17,9 @@
       ".specs/verify-generic-scope-fix/verify-generic-scope-fix.feature",
       ".specs/create-specs-bdd-enforcement/create-specs-bdd-enforcement.feature",
       ".specs/dev-pomogator-canonical-plugin/dev-pomogator-canonical-plugin.feature",
-      ".specs/onboard-repo-phase0/onboard-repo-phase0.feature"
+      ".specs/onboard-repo-phase0/onboard-repo-phase0.feature",
+      ".specs/forbid-root-artifacts/forbid-root-artifacts.feature",
+      ".specs/worktree-setup/worktree-setup.feature"
     ],
     "import": [
       "tests/step_definitions/**/*.ts",
