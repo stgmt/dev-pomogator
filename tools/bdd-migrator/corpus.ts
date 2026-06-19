@@ -36,16 +36,25 @@ export interface FileReport {
   twinHint: boolean;
   /** The shared prod module(s) that triggered twinHint (repo-relative, ext-stripped) — evidence, not a guess. */
   twinnedVia: string[];
+  /**
+   * This file's spec slug has a `.feature` ALREADY wired in cucumber.json → the spec is MIGRATED, so
+   * this vitest is a kept twin, NOT remaining work. DEFINITIVE (the ground truth), unlike twinHint
+   * which is import-overlap-only and misses spawn/dynamic-import-driven migrations (the false-NET that
+   * sent migrators at already-done specs, dogfood 2026-06-19). null = no spec slug maps to this file.
+   */
+  wired: boolean;
 }
 
 export interface CorpusReport {
   root: string;
   /** Gross: every vitest file found. */
   fileCount: number;
-  /** Net: files NOT already BDD-twinned — the real remaining rollout. */
+  /** Net: files NOT wired AND NOT twinned — the real remaining rollout. */
   netCount: number;
   /** Files whose prod module an existing step-def already drives (likely migrated). */
   twinnedCount: number;
+  /** Files whose spec is already wired in cucumber.json (migrated — kept twins, not work). */
+  wiredCount: number;
   caseCount: number;
   kindTotals: Record<CaseKind, number>;
   files: FileReport[];
@@ -115,6 +124,49 @@ function collectTwinnedTargets(root: string): Set<string> {
   return targets;
 }
 
+/**
+ * Spec slugs whose `.feature` is already wired into cucumber.json `paths` — the DEFINITIVE
+ * "this spec is migrated" signal. Reads cucumber.json with builtins only; empty set if absent.
+ */
+export function collectWiredSlugs(root: string): Set<string> {
+  const slugs = new Set<string>();
+  try {
+    const cfg = JSON.parse(fs.readFileSync(path.join(root, 'cucumber.json'), 'utf-8'));
+    const paths: string[] = cfg?.default?.paths ?? [];
+    for (const p of paths) {
+      // `.specs/<slug>/<file>.feature` — slug may be nested (e.g. backlog/honest-status-command).
+      const m = p.replace(/\\/g, '/').match(/specs\/(.+)\/[^/]+\.feature$/);
+      if (m) slugs.add(m[1]);
+    }
+  } catch {
+    /* no cucumber.json (or malformed) → no wired specs known */
+  }
+  return slugs;
+}
+
+/**
+ * Does this test file belong to a spec whose `.feature` is wired? Maps `tests/e2e/<slug>.test.ts`
+ * (and a hyphen-prefix of it, e.g. `spec-reality-check-hook` → `spec-reality-check`) to a wired
+ * slug, plus the trailing segment of a nested slug. A tool test (no 1:1 spec) maps to nothing →
+ * stays correctly net-remaining.
+ */
+export function isWired(file: string, wiredSlugs: Set<string>): boolean {
+  if (wiredSlugs.size === 0) return false;
+  const base = path.basename(file).replace(/\.test\.ts$/, '');
+  if (wiredSlugs.has(base)) return true;
+  // a wired slug may be a hyphen-prefix of the test basename (hook/variant test files)
+  const parts = base.split('-');
+  for (let i = parts.length - 1; i > 0; i--) {
+    if (wiredSlugs.has(parts.slice(0, i).join('-'))) return true;
+  }
+  // a nested wired slug (a/b) matches when the test basename equals its last segment
+  for (const s of wiredSlugs) {
+    const last = s.split('/').pop();
+    if (last && (last === base || base.startsWith(last + '-'))) return true;
+  }
+  return false;
+}
+
 function rankEase(kinds: Record<CaseKind, number>, total: number): 'easy' | 'medium' | 'hard' {
   if (kinds.manual > 0 || total > 25) return 'hard';
   const heavy = (k: CaseKind) => kinds[k] >= total / 2;
@@ -126,6 +178,7 @@ export function buildCorpusReport(root: string): CorpusReport {
   const files: string[] = [];
   walk(root, files);
   const twinned = collectTwinnedTargets(root);
+  const wiredSlugs = collectWiredSlugs(root);
 
   const kindTotals: Record<CaseKind, number> = { runtime: 0, artifact: 0, pure: 0, manual: 0 };
   const reports: FileReport[] = [];
@@ -145,30 +198,37 @@ export function buildCorpusReport(root: string): CorpusReport {
     caseCount += inv.total;
     // twinHint: a prod module this file imports is ALSO driven by an existing step-def → likely already migrated.
     const twinnedVia = [...new Set(inv.prodImports.map((s) => resolveSpec(file, s, root)).filter((p): p is string => !!p && PROD_RE.test(p) && twinned.has(p)))];
-    reports.push({ file: path.relative(root, file).replace(/\\/g, '/'), total: inv.total, kinds, ease: rankEase(kinds, inv.total), twinHint: twinnedVia.length > 0, twinnedVia });
+    const rel = path.relative(root, file).replace(/\\/g, '/');
+    reports.push({ file: rel, total: inv.total, kinds, ease: rankEase(kinds, inv.total), twinHint: twinnedVia.length > 0, twinnedVia, wired: isWired(rel, wiredSlugs) });
   }
 
-  // Net-remaining first (un-twinned, easy-first, fewest cases); already-twinned files sink to the bottom.
+  // Real remaining (NOT wired, NOT twinned) first, easy-first, fewest cases. Wired files (spec
+  // already migrated) sink to the very bottom, then twin-candidates — neither is rollout work.
   const order = { easy: 0, medium: 1, hard: 2 };
-  reports.sort((a, b) => Number(a.twinHint) - Number(b.twinHint) || order[a.ease] - order[b.ease] || a.total - b.total);
+  const doneRank = (f: FileReport) => (f.wired ? 2 : f.twinHint ? 1 : 0);
+  reports.sort((a, b) => doneRank(a) - doneRank(b) || order[a.ease] - order[b.ease] || a.total - b.total);
 
-  const twinnedCount = reports.filter((f) => f.twinHint).length;
-  return { root, fileCount: reports.length, netCount: reports.length - twinnedCount, twinnedCount, caseCount, kindTotals, files: reports };
+  const wiredCount = reports.filter((f) => f.wired).length;
+  // twin-candidates that are NOT already wired (wired supersedes twinHint as the stronger signal).
+  const twinnedCount = reports.filter((f) => f.twinHint && !f.wired).length;
+  const netCount = reports.filter((f) => !f.wired && !f.twinHint).length;
+  return { root, fileCount: reports.length, netCount, twinnedCount, wiredCount, caseCount, kindTotals, files: reports };
 }
 
 export function renderRoadmap(r: CorpusReport): string {
   const lines = [
     `# BDD migration roadmap`,
     ``,
-    `${r.netCount} files have NO existing BDD twin (definitely need migration). ${r.twinnedCount} of ${r.fileCount} are twin-CANDIDATES — a prod module they test is already driven by an existing step-def, so they MAY be done; verify per file (a shared module ≠ every behaviour migrated).`,
+    `${r.netCount} files are REAL remaining work (not wired, not twinned). ${r.wiredCount} of ${r.fileCount} are 🔒WIRED — their spec's .feature is already in cucumber.json, so the spec is MIGRATED and the vitest is a kept twin (retire-after-verify, NOT rollout work — do not re-migrate). ${r.twinnedCount} more are twin-CANDIDATES (a prod module they test is already driven by a step-def; MAY be done — verify, a shared module ≠ every behaviour migrated).`,
     `${r.caseCount} cases — ${r.kindTotals.pure} pure / ${r.kindTotals.runtime} runtime / ${r.kindTotals.artifact} artifact / ${r.kindTotals.manual} manual.`,
-    `Migrate easy-first (mostly-pure files: deterministic in-process step-defs, no spawn). ✓twin rows are likely done — verify before re-migrating.`,
+    `Migrate easy-first (mostly-pure files: deterministic in-process step-defs, no spawn). 🔒wired rows are DONE (verify-then-retire only); ✓twin rows are likely done — verify before re-migrating.`,
     ``,
-    `| twin | ease | cases | file | pure/runtime/artifact/manual |`,
+    `| done | ease | cases | file | pure/runtime/artifact/manual |`,
     `|------|------|-------|------|------------------------------|`,
   ];
   for (const f of r.files) {
-    lines.push(`| ${f.twinHint ? '✓' : ''} | ${f.ease} | ${f.total} | ${f.file} | ${f.kinds.pure}/${f.kinds.runtime}/${f.kinds.artifact}/${f.kinds.manual} |`);
+    const done = f.wired ? '🔒wired' : f.twinHint ? '✓twin' : '';
+    lines.push(`| ${done} | ${f.ease} | ${f.total} | ${f.file} | ${f.kinds.pure}/${f.kinds.runtime}/${f.kinds.artifact}/${f.kinds.manual} |`);
   }
   return lines.join('\n') + '\n';
 }
