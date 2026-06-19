@@ -285,11 +285,17 @@ export function sessionEditedSpecSlugs(transcriptPath: string): Set<string> {
       const name = String(b.name ?? '');
       const input = (b.input ?? {}) as Record<string, unknown>;
       if (DOOR_WRITE_TOOL_RE.test(name)) {
+        // FR-9 refinement (dogfood 2026-06-19): a TEST-AUTHORING edit (a `.feature` doc) does NOT take
+        // ownership of the spec's open IMPLEMENTATION backlog — only FR/TASKS/impl-doc edits scope a spec.
+        // Else adding ONE scenario to a 25-task spec armed its whole backlog and the gate over-fired on a
+        // DONE session (the over-firing token-burn this gate exists to prevent, turned on its own author).
+        if (typeof input.doc === 'string' && input.doc.endsWith('.feature')) continue;
         if (typeof input.spec === 'string') slugs.add(input.spec);
         else if (typeof input.slug === 'string') slugs.add(input.slug);
         continue;
       }
       if (RAW_WRITE_TOOL_RE.test(name) && typeof input.file_path === 'string') {
+        if (input.file_path.endsWith('.feature')) continue; // test authoring, not impl-task ownership
         const m = input.file_path.match(SPEC_PATH_RE);
         if (m) slugs.add(m[1]);
       }

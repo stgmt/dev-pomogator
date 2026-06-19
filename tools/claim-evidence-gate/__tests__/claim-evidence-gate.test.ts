@@ -287,4 +287,25 @@ describe('CEGATE001: claim-evidence gate — spec-false-close class (FR-49b)', (
     expect(blocker([tool('Bash', { command: 'git diff -- cucumber.json' })])).toBe(false); // substantiated → approve
     expect(blocker([tool('Bash', { command: 'npm test', run_in_background: true })])).toBe(false); // real async → approve
   });
+
+  // @feature9 — FR-9 refinement (dogfood 2026-06-19): a TEST-AUTHORING edit (a `.feature` doc) must NOT
+  // scope the spec's open IMPLEMENTATION backlog — only FR/TASKS/impl-doc edits do. Else adding one
+  // scenario to a big spec arms its whole backlog and the gate over-fires on a done session.
+  it('CEGATE001_30: a .feature-only edit does not scope the spec (no over-fire); an FR.md edit still does', () => {
+    writeCensus(dir, { open: 11, doneRed: 0, doneUnrun: 0 }, { id: 'demo:t1', title: 'Wire the gate' });
+    // editing ONLY the spec's .feature (authoring a test) → demo NOT scoped → open=0 → gate quiet
+    const featureEdit = runHook([
+      U('добавь сценарий'),
+      A([tool('Edit', { file_path: '.specs/demo/demo.feature' })]),
+      A([txt('Готово, всё закрыто. 37 из 48.')]),
+    ]).blocked;
+    // contrast: editing FR.md DOES scope demo → open>0 + gray claim + no «Дальше» → block (unchanged)
+    const frEdit = runHook([
+      U('правлю требование'),
+      A([tool('Edit', { file_path: '.specs/demo/FR.md' })]),
+      A([txt('Готово, тут всё закрыто. 37 из 48.')]),
+    ]).blocked;
+    expect(featureEdit).toBe(false); // .feature edit → not scoped → no over-fire
+    expect(frEdit).toBe(true); // FR.md edit → scoped → still fires (real impl work)
+  });
 });

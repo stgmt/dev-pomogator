@@ -145,3 +145,9 @@ Feature: CEGATE001 Claim-Evidence Gate
     Given the final message rests the stop on a blocker claim while work remains
     When the turn ran no tool and launched no background task
     Then it blocks the stop demanding proof, yet approves when the agent ran a tool or launched a background task
+
+  # @feature9
+  Scenario: CEGATE001_30 A test-authoring .feature edit does not scope the spec while an FR.md edit does
+    Given the session edits only a spec's .feature in one turn and only its FR.md in another, with an open census
+    When the gate evaluates each turn
+    Then the .feature-only turn stays quiet (the spec is not scoped) while the FR.md turn blocks as before
