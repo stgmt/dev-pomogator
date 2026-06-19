@@ -29,26 +29,26 @@ Feature: PLUGIN016 Tests Create Update Skill
   Scenario: PLUGIN016_05 the skill is installed in the repo tree
     Then the file .claude/skills/tests-create-update/SKILL.md exists
 
-  @wip
+  @feature8
   Scenario: PLUGIN016_06 the plugin registry wires compliance_check as PostToolUse(Write|Edit)
     Then the plugin hooks register compliance_check on PostToolUse with matcher "Write|Edit"
 
-  @wip
+  @feature8
   Scenario: PLUGIN016_07 compliance_check.ts exists and exports the scanner
     Then tools/test-quality/compliance_check.ts is non-trivial and contains scanAntiPatterns and isTestFile
 
-  @wip
+  @feature1
   Scenario: PLUGIN016_08 the scanner detects the existence-only pattern
-    Then compliance_check.ts contains "existence-only" and "pathExists"
+    Then the compliance scanner flags a pathExists-only call as an "existence-only" violation
 
-  @wip
+  @feature1
   Scenario: PLUGIN016_09 the scanner detects the weak-assertion pattern
-    Then compliance_check.ts contains "weak-assertion" and "toBeDefined"
+    Then the compliance scanner flags a lone toBeDefined as a "weak-assertion" violation
 
-  @wip
+  @feature8
   Scenario: PLUGIN016_10 isTestFile recognises the test-file patterns
-    Then compliance_check.ts recognises test.ts, test.cs and Steps.cs
+    Then the compliance hook classifies test.ts, test.cs and Steps.cs as test files
 
-  @wip
+  @feature8
   Scenario: PLUGIN016_11 the hook has a per-session cooldown
-    Then compliance_check.ts uses COOLDOWN_MINUTES, markerPath and isWithinCooldown
+    Then the compliance hook's cooldown logic returns true for a recent timestamp
