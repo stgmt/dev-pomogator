@@ -111,3 +111,11 @@ Feature: VSGF001 Verify Generic Scope Fix gate
     And hook stdout is empty
     And no marker file is created
     And no escape log entry is appended
+
+  @feature6
+  Scenario: VSGF001_61 The stocktaking incident fixture scores >= 4 via the weighted heuristic (regression pin)
+    Given the stocktaking incident diff fixture from PRODUCTS-20218
+    When the scope-gate weighted heuristic scores the stocktaking diff
+    Then the suspicion score is at least 4
+    And the score reasons include a filename hit on "StockValidationService.ts"
+    And the score reasons include an enum-item hit on "StockValidationService.ts"

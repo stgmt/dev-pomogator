@@ -34,6 +34,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { createHash } from 'node:crypto';
 import { V4World } from '../hooks/before-after.ts';
+import { scoreDiff } from '../../tools/_shared/scope-gate-score-diff.ts';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -54,6 +55,9 @@ interface VsgfWorld extends V4World {
   vsgfStagedDiff?: string;
   /** Session id used in the current scenario */
   vsgfSessionId?: string;
+  /** FR-6 weighted-heuristic result (regression pin VSGF001_61) */
+  vsgfScore?: number;
+  vsgfReasons?: string[];
 }
 
 interface HookResult {
@@ -549,4 +553,33 @@ Then(/^"\.claude\/rules\/scope-gate\/when-to-verify\.md" exists$/, function () {
 Then(/^"\.claude\/rules\/scope-gate\/escape-hatch-audit\.md" exists$/, function () {
   assert.ok(fs.existsSync(path.resolve(REPO_ROOT, '.claude', 'rules', 'scope-gate', 'escape-hatch-audit.md')),
     '.claude/rules/scope-gate/escape-hatch-audit.md must exist');
+});
+
+// ---------------------------------------------------------------------------
+// FR-6 — weighted suspicionScore heuristic (VSGF001_61). Regression pin folded
+// from tests/regressions/stocktaking-incident.test.ts: the real scoreDiff() over
+// the PRODUCTS-20218 fixture must keep scoring >= 4 so incident detection cannot
+// be silently tuned away. Drives the REAL scoreDiff in-process — no mock.
+// ---------------------------------------------------------------------------
+Given(/^the stocktaking incident diff fixture from PRODUCTS-20218$/, function (this: VsgfWorld) {
+  this.vsgfStagedDiff = fs.readFileSync(path.join(FIXTURES_DIR, 'stocktaking-diff.patch'), 'utf-8');
+});
+
+When(/^the scope-gate weighted heuristic scores the stocktaking diff$/, function (this: VsgfWorld) {
+  const r = scoreDiff(this.vsgfStagedDiff ?? '');
+  this.vsgfScore = r.score;
+  this.vsgfReasons = r.reasons;
+});
+
+Then(/^the suspicion score is at least (\d+)$/, function (this: VsgfWorld, min: string) {
+  assert.ok(
+    (this.vsgfScore ?? -1) >= Number(min),
+    `stocktaking fixture must score >= ${min} (filename+enum+predicate), got ${this.vsgfScore}. Reasons: ${(this.vsgfReasons ?? []).join(', ')}`,
+  );
+});
+
+Then(/^the score reasons include an? (filename|enum-item) hit on "([^"]+)"$/, function (this: VsgfWorld, kind: string, file: string) {
+  const text = (this.vsgfReasons ?? []).join('\n');
+  const re = new RegExp(`${kind}:.*${file.replace(/\./g, '\\.')}`);
+  assert.ok(re.test(text), `expected a ${kind} reason hit on ${file}; reasons:\n${text}`);
 });
