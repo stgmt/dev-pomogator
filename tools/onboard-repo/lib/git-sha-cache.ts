@@ -10,7 +10,7 @@
 
 import * as path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import * as fsExtra from 'fs-extra';
+import fsExtra from 'fs-extra';
 import type { CacheStatus, OnboardingJson } from './types.ts';
 
 

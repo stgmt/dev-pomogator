@@ -1,12 +1,19 @@
 import * as path from 'node:path';
 import * as os from 'node:os';
+import * as fs from 'node:fs';
 import * as crypto from 'node:crypto';
+import { fileURLToPath } from 'node:url';
 import { spawnSync, type SpawnSyncReturns } from 'node:child_process';
-import * as fsExtra from 'fs-extra';
+import fsExtra from 'fs-extra';
 import type { OnboardingJson, Archetype } from '../../../tools/onboard-repo/lib/types.ts';
 
 
-const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
+// __dirname is not available in ESM (cucumber-js + tsx); use import.meta.url with a CJS fallback.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const _dirname = typeof (globalThis as any).__dirname !== 'undefined'
+  ? (globalThis as any).__dirname as string
+  : path.dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = path.resolve(_dirname, '..', '..', '..');
 const FIXTURES_DIR = path.join(REPO_ROOT, 'tests', 'fixtures', 'onboard-repo-fake-repos');
 
 
@@ -20,7 +27,7 @@ export async function setupFakeRepo(fixtureName: string, options: SetupOptions =
   const { initGit = true, commitInitial = true } = options;
 
   const src = path.join(FIXTURES_DIR, fixtureName);
-  if (!fsExtra.existsSync(src)) {
+  if (!fs.existsSync(src)) {
     throw new Error(`Fixture '${fixtureName}' not found at ${src}`);
   }
 

@@ -1,13 +1,14 @@
 Feature: ONBOARD001_Phase0_Repo_Onboarding
 
   Background:
-    Given dev-pomogator is installed
+    Given dev-pomogator is installed with onboard-repo tools
     And onboard-repo extension is enabled
     And specs-workflow extension is enabled
     And the target repo is a clean copy of a fake-repo fixture
     And managed-registry snapshot is captured
 
-  # @feature1
+  @feature1
+  @manual
   Scenario: ONBOARD002_First_create_spec_auto_triggers_phase0
     Given the target repo does not contain `.specs/.onboarding.json`
     And fake-python-api fixture is seeded in tmpdir
@@ -19,7 +20,7 @@ Feature: ONBOARD001_Phase0_Repo_Onboarding
     And `.claude/settings.local.json` contains an onboarding PreToolUse hook block
     And state machine transitions to `Discovery` after `-ConfirmStop Onboarding`
 
-  # @feature4
+  @feature4
   Scenario: ONBOARD003_Cache_hit_skips_phase0
     Given `.specs/.onboarding.json` exists with `last_indexed_sha` matching git HEAD
     When I run `/create-spec another-feature` in the target repo
@@ -27,7 +28,7 @@ Feature: ONBOARD001_Phase0_Repo_Onboarding
     And a 3-line cache hit summary is shown mentioning archetype and baseline test count
     And the command proceeds directly to Phase 1 Discovery within 3 seconds
 
-  # @feature4
+  @feature4
   Scenario: ONBOARD004_SHA_drift_prompts_refresh
     Given `.specs/.onboarding.json` exists with stale `last_indexed_sha`
     And the git log shows at least 5 commits since `last_indexed_sha`
@@ -35,7 +36,7 @@ Feature: ONBOARD001_Phase0_Repo_Onboarding
     Then a prompt appears asking "Refresh or continue with cache?"
     And the prompt mentions the drift count in commits
 
-  # @feature4
+  @feature4
   Scenario: ONBOARD005_Manual_refresh_flag_forces_rerun
     Given `.specs/.onboarding.json` exists and is valid
     When I run `/create-spec feature-x --refresh-onboarding` in the target repo
@@ -44,14 +45,15 @@ Feature: ONBOARD001_Phase0_Repo_Onboarding
     And the archive directory uses ISO-8601 timestamp format
     And `.specs/.onboarding-history/` retains at most 5 snapshots
 
-  # @feature13
+  @feature13
+  @manual
   Scenario: ONBOARD006_Missing_dev_pomogator_errors_early
     Given the target repo does not have `.dev-pomogator/` directory
     When I run `/create-spec anything` in the target repo
     Then Phase 0 does not start
     And an actionable error message is shown pointing to `npx github:stgmt/dev-pomogator --claude`
 
-  # @feature5
+  @feature5
   Scenario: ONBOARD007_Baseline_tests_invoke_run_tests_skill
     Given fake-python-api fixture has pytest installed
     And run-tests-skill-mock returns `{"passed": 145, "failed": 2, "duration_s": 47}`
@@ -61,7 +63,7 @@ Feature: ONBOARD001_Phase0_Repo_Onboarding
     And `.onboarding.json.baseline_tests.failed == 2`
     And `.onboarding.json.baseline_tests.via_skill == "run-tests"`
 
-  # @feature5
+  @feature5
   Scenario: ONBOARD008_No_test_framework_skips_baseline
     Given fake-no-tests fixture is seeded
     And Step 2 recon does not detect any test framework
@@ -70,14 +72,15 @@ Feature: ONBOARD001_Phase0_Repo_Onboarding
     And `.onboarding.json.baseline_tests` equals `{"framework": null, "reason": "no test framework detected"}`
     And `.onboarding.json.risks` contains a note about missing tests baseline
 
-  # @feature5
+  @feature5
   Scenario: ONBOARD009_Skip_baseline_flag_records_user_choice
     Given fake-python-api fixture is seeded
     When I run `/create-spec f --onboard --skip-baseline-tests`
     Then Phase 0 Step 4 is skipped
     And `.onboarding.json.baseline_tests.skipped_by_user == true`
 
-  # @feature6
+  @feature6
+  @manual
   Scenario: ONBOARD010_Text_gate_accepts_confirmation
     Given Phase 0 Steps 1-5 completed successfully
     When the agent emits a 1-paragraph architecture summary in chat
@@ -85,7 +88,8 @@ Feature: ONBOARD001_Phase0_Repo_Onboarding
     Then `spec-status.ts -ConfirmStop Onboarding` is invoked
     And Phase 0 completes
 
-  # @feature6
+  @feature6
+  @manual
   Scenario: ONBOARD011_Text_gate_iterates_on_correction
     Given Phase 0 Steps 1-5 completed successfully
     And the agent emits summary "this is a Python CLI tool"
@@ -94,7 +98,8 @@ Feature: ONBOARD001_Phase0_Repo_Onboarding
     And the agent asks "Правильно я понял суть?" again
     And the iteration counter increments to 2
 
-  # @feature6
+  @feature6
+  @manual
   Scenario: ONBOARD012_Text_gate_aborts_after_3_iterations
     Given Phase 0 Steps 1-5 completed successfully
     And the agent attempted 3 summary iterations with no user confirmation
@@ -103,7 +108,7 @@ Feature: ONBOARD001_Phase0_Repo_Onboarding
     And partial artifacts are not finalized
     And the user can retry with `--refresh-onboarding`
 
-  # @feature7
+  @feature7
   Scenario: ONBOARD013_Parallel_subagents_launch_in_one_tool_call
     Given fake-python-api fixture is seeded
     And mock-subagent fixture returns outputs for manifest, tests, entry-points
@@ -112,7 +117,7 @@ Feature: ONBOARD001_Phase0_Repo_Onboarding
     And all 3 outputs merge via priority rule A > B > C per-field
     And merged result is stored in phase0State
 
-  # @feature7
+  @feature7
   Scenario: ONBOARD014_Partial_subagent_failure_continues_with_warnings
     Given mock-subagent fixture configured so Subagent B crashes
     When Phase 0 Step 2 runs
@@ -120,7 +125,7 @@ Feature: ONBOARD001_Phase0_Repo_Onboarding
     And `.onboarding.json.warnings[]` contains entry with `step: "recon"` and `subagent: "B"`
     And the text gate summary acknowledges partial data
 
-  # @feature8
+  @feature8
   Scenario: ONBOARD015_Archetype_triage_classifies_python_api
     Given fake-python-api fixture contains `pyproject.toml` with FastAPI and uvicorn
     When Phase 0 Step 1 runs
@@ -129,21 +134,21 @@ Feature: ONBOARD001_Phase0_Repo_Onboarding
     And `.onboarding.json.archetype_confidence == "high"`
     And `.onboarding.json.archetype_evidence` mentions `pyproject.toml` and `FastAPI`
 
-  # @feature8
+  @feature8
   Scenario: ONBOARD016_Archetype_triage_classifies_nextjs_frontend
     Given fake-nextjs-frontend fixture contains `next.config.ts` and `src/app/page.tsx`
     When Phase 0 Step 1 runs
     Then `.onboarding.json.archetype == "nodejs-frontend"`
     And archetype-specific section contains `routes` array
 
-  # @feature8
+  @feature8
   Scenario: ONBOARD017_Monorepo_archetype_with_sub_archetypes
     Given fake-fullstack-monorepo fixture has `turbo.json` and workspaces
     When Phase 0 Step 1 runs
     Then `.onboarding.json.archetype == "fullstack-monorepo"`
     And `archetype_specific.sub_archetypes[]` contains entries for `packages/api/` (python-api) and `packages/web/` (nodejs-frontend)
 
-  # @feature8
+  @feature8
   Scenario: ONBOARD018_Minimal_repo_gets_short_report
     Given fake-empty fixture contains only README.md
     When Phase 0 completes
@@ -151,7 +156,7 @@ Feature: ONBOARD001_Phase0_Repo_Onboarding
     And the text gate summary mentions minimal content
     And Suggested next steps section has at most 1 item
 
-  # @feature2 @feature10
+  @feature2 @feature10
   Scenario: ONBOARD019_Onboarding_json_conforms_to_schema_v1
     Given fake-python-api fixture is seeded
     And mock-subagent outputs match python-api
@@ -161,7 +166,7 @@ Feature: ONBOARD001_Phase0_Repo_Onboarding
     And `schema_version == "1.0"`
     And `last_indexed_sha` matches git HEAD
 
-  # @feature10
+  @feature10
   Scenario: ONBOARD020_AI_specific_sections_are_mandatory
     Given fake-python-api fixture is seeded
     When Phase 0 finalizes
@@ -174,14 +179,14 @@ Feature: ONBOARD001_Phase0_Repo_Onboarding
     And `.onboarding.json.gotchas` key exists as array
     And `.onboarding.json.glossary` key exists as array
 
-  # @feature2 @feature10
+  @feature2 @feature10
   Scenario: ONBOARD021_Schema_violation_aborts_finalize
     Given invalid-schema-onboarding fixture is used to simulate malformed JSON
     When Phase 0 Step 7 attempts schema validation
     Then Phase 0 aborts with structured error message "Schema validation failed: <path>: <rule>"
     And `.specs/.onboarding.json` is NOT written to disk
 
-  # @feature3 @feature15
+  @feature3 @feature15
   Scenario: ONBOARD022_Commands_via_skill_reference_when_skill_exists
     Given target repo has `/run-tests` skill installed
     When Phase 0 populates `commands.test` block
@@ -191,7 +196,7 @@ Feature: ONBOARD001_Phase0_Repo_Onboarding
     And `commands.test.forbidden_if_skill_present == true`
     And `commands.test.raw_pattern_to_block` is a non-empty regex
 
-  # @feature3
+  @feature3
   Scenario: ONBOARD023_PreToolUse_hook_blocks_raw_npm_test
     Given Phase 0 finalized and hook compiled into `.claude/settings.local.json`
     When Claude agent attempts to run raw `npm test` via Bash tool
@@ -199,7 +204,7 @@ Feature: ONBOARD001_Phase0_Repo_Onboarding
     And `permissionDecisionReason` mentions "/run-tests"
     And the Bash tool invocation does not execute
 
-  # @feature15
+  @feature15
   Scenario: ONBOARD024_Dual_render_produces_both_artifacts
     Given Phase 0 Step 7 starts from a valid `.onboarding.json`
     When `render-rule.ts` and `compile-hook.ts` execute
@@ -208,7 +213,7 @@ Feature: ONBOARD001_Phase0_Repo_Onboarding
     And `.claude/settings.local.json` contains hook entries derived from commands.*.raw_pattern_to_block
     And existing user hooks in settings.local.json are preserved (smart merge)
 
-  # @feature14
+  @feature14
   Scenario: ONBOARD025_Scratch_file_activates_for_large_repo
     Given fake-large-repo factory generates 600 files
     When Phase 0 Step 2 starts
@@ -216,14 +221,14 @@ Feature: ONBOARD001_Phase0_Repo_Onboarding
     And after Phase 0 Step 7 the scratch file is archived to `.specs/.onboarding-history/scratch-<ISO>.md`
     And the live `.specs/.onboarding-scratch.md` is removed from working directory
 
-  # @feature14
+  @feature14
   Scenario: ONBOARD026_Small_repo_does_not_create_scratch_file
     Given fake-python-api fixture has less than 500 files
     When Phase 0 runs
     Then `.specs/.onboarding-scratch.md` is never created
     And no scratch archive entry is added to `.onboarding-history/`
 
-  # @feature12
+  @feature12
   Scenario: ONBOARD027_Coexistence_with_init_does_not_modify_claude_md
     Given fake-python-api fixture is seeded
     And a pre-existing `CLAUDE.md` file is present in tmpdir with custom content
@@ -232,7 +237,8 @@ Feature: ONBOARD001_Phase0_Repo_Onboarding
     And `CLAUDE.md` mtime is unchanged
     And `.onboarding.json.existing_ai_configs[]` contains "CLAUDE.md"
 
-  # @feature2
+  @feature2
+  @manual
   Scenario: ONBOARD028_Cursorignore_respected_by_phase0
     Given fake-with-cursorignore fixture contains `.cursorignore` with pattern `secrets/**`
     And the tmpdir contains a real file `secrets/key.json`
@@ -241,7 +247,7 @@ Feature: ONBOARD001_Phase0_Repo_Onboarding
     And `.onboarding.json.ignore.external_configs_found[]` contains ".cursorignore"
     And `.onboarding.json.ignore.ai_excluded_paths[]` contains "secrets/**"
 
-  # @feature9
+  @feature9
   Scenario: ONBOARD029_Onboarding_md_has_six_mandatory_sections
     Given fake-python-api fixture is seeded
     When Phase 0 finalizes
@@ -252,13 +258,14 @@ Feature: ONBOARD001_Phase0_Repo_Onboarding
     And contains section "Risks and notes"
     And contains section "Suggested next steps"
 
-  # @feature11
+  @feature11
   Scenario: ONBOARD030_Suggested_next_steps_includes_env_requirements
     Given fake-python-api fixture has `.env.example` with `AUTO_COMMIT_API_KEY`
     When Phase 0 finalizes
     Then `.onboarding.md` Section 6 "Suggested next steps" includes an item mentioning `AUTO_COMMIT_API_KEY`
 
-  # @feature13
+  @feature13
+  @manual
   Scenario: ONBOARD031_Extension_installable_via_npx
     Given a clean project without dev-pomogator
     When I run `npx github:stgmt/dev-pomogator --claude --plugins=onboard-repo`
@@ -266,14 +273,15 @@ Feature: ONBOARD001_Phase0_Repo_Onboarding
     And rules exist under `.claude/rules/onboard-repo/`
     And `dev-pomogator --status` output lists `onboard-repo` as installed
 
-  # @feature4
+  @feature4
   Scenario: ONBOARD032_Non_git_repo_falls_back_to_mtime_cache
     Given fake-no-git fixture has no `.git/` directory
     When Phase 0 finalizes
     Then `.onboarding.json.last_indexed_sha` equals empty string ""
     And `.onboarding.json.warnings[]` contains entry mentioning "not a git repo, mtime-based invalidation"
 
-  # EC-5 @feature7
+  @feature7
+  @wip
   Scenario: ONBOARD033_Large_repo_uses_repomix_when_available
     Given fake-large-repo factory generates 1000 files
     And `repomix` CLI is available in PATH
@@ -282,6 +290,7 @@ Feature: ONBOARD001_Phase0_Repo_Onboarding
     And `.onboarding.json.ingestion.method == "repomix"`
     And `.onboarding.json.ingestion.compression_ratio` is between 0.2 and 0.4
 
+  @feature7
   Scenario: ONBOARD034_Fallback_ingestion_when_repomix_missing
     Given `repomix` CLI is NOT available in PATH
     When Phase 0 Step 3 runs

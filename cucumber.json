@@ -1,7 +1,28 @@
 {
   "default": {
-    "paths": [".specs/spec-generator-v4/spec-generator-v4.feature", ".specs/answer-simple/answer-simple.feature", ".specs/skill-listing-budget/skill-listing-budget.feature", ".specs/native-statusline/native-statusline.feature", ".specs/tests-create-update/tests-create-update.feature", ".specs/spec-reality-check/spec-reality-check.feature", ".specs/spec-variant-matrix/spec-variant-matrix.feature", ".specs/skills-rules-optimizer/skills-rules-optimizer.feature", ".specs/tui-test-runner/tui-test-runner.feature", ".specs/pomogator-doctor/pomogator-doctor.feature", ".specs/strong-tests/strong-tests.feature"],
-    "import": ["tests/step_definitions/**/*.ts", "tests/hooks/**/*.ts"],
+    "paths": [
+      ".specs/spec-generator-v4/spec-generator-v4.feature",
+      ".specs/answer-simple/answer-simple.feature",
+      ".specs/skill-listing-budget/skill-listing-budget.feature",
+      ".specs/native-statusline/native-statusline.feature",
+      ".specs/tests-create-update/tests-create-update.feature",
+      ".specs/spec-reality-check/spec-reality-check.feature",
+      ".specs/spec-variant-matrix/spec-variant-matrix.feature",
+      ".specs/skills-rules-optimizer/skills-rules-optimizer.feature",
+      ".specs/tui-test-runner/tui-test-runner.feature",
+      ".specs/pomogator-doctor/pomogator-doctor.feature",
+      ".specs/strong-tests/strong-tests.feature",
+      ".specs/tui-test-runner-v2/tui-test-runner-v2.feature",
+      ".specs/auto-capture/auto-capture.feature",
+      ".specs/verify-generic-scope-fix/verify-generic-scope-fix.feature",
+      ".specs/create-specs-bdd-enforcement/create-specs-bdd-enforcement.feature",
+      ".specs/dev-pomogator-canonical-plugin/dev-pomogator-canonical-plugin.feature",
+      ".specs/onboard-repo-phase0/onboard-repo-phase0.feature"
+    ],
+    "import": [
+      "tests/step_definitions/**/*.ts",
+      "tests/hooks/**/*.ts"
+    ],
     "tags": "not @wip and not @manual",
     "format": [
       "message:.dev-pomogator/.last-test-run.ndjson",

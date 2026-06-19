@@ -10,7 +10,7 @@
  */
 
 import * as path from 'node:path';
-import * as fsExtra from 'fs-extra';
+import fsExtra from 'fs-extra';
 import { glob } from 'glob';
 
 

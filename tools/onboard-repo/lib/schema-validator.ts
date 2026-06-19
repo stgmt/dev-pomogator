@@ -17,7 +17,7 @@ import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Ajv2020, type AnySchemaObject, type ErrorObject } from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
-import * as fsExtra from 'fs-extra';
+import fsExtra from 'fs-extra';
 import type { OnboardingJson, CommandBlock } from './types.ts';
 
 

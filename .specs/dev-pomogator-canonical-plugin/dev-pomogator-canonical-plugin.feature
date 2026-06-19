@@ -15,7 +15,7 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
   # @feature1 — Canonical plugin layout (FR-1)
   # =========================================================================
 
-  # @feature1
+  @feature1
   Scenario: CANON001_10 plugin.json contains canonical required fields
     Given dev-pomogator repo with hand-maintained .claude-plugin/ manifests
     When I read .claude-plugin/plugin.json
@@ -24,7 +24,7 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
     And field "description"
     And field "author" with object structure
 
-  # @feature1
+  @feature1
   Scenario: CANON001_11 Canonical sub-directories and hooks config exist
     Given dev-pomogator repo with hand-maintained .claude-plugin/ manifests
     Then skills/ directory should exist with at least one <name>/SKILL.md file
@@ -33,7 +33,7 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
     And .mcp.json should exist
     And agents/ may or may not exist (optional)
 
-  # @feature1
+  @feature1
   Scenario: CANON001_12 .claude-plugin contains only plugin.json, marketplace.json and hooks.json
     Given dev-pomogator repo with hand-maintained .claude-plugin/ manifests
     When I list .claude-plugin/ directory contents
@@ -44,7 +44,7 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
   # @feature2 — Marketplace catalog (FR-2)
   # =========================================================================
 
-  # @feature2
+  @feature2
   Scenario: CANON001_20 marketplace.json valid per Anthropic schema
     Given dev-pomogator repo with hand-maintained .claude-plugin/ manifests
     When I read .claude-plugin/marketplace.json
@@ -52,7 +52,7 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
     And field "owner" with required "name" sub-field
     And field "plugins" array with at least 1 entry
 
-  # @feature2
+  @feature2
   Scenario: CANON001_21 Plugin entry contains required name and source fields
     Given marketplace.json valid
     When I parse plugins[0]
@@ -64,7 +64,7 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
   # @feature3 — Distribution via /plugin marketplace add (FR-3)
   # =========================================================================
 
-  # @feature3 @manual
+  @feature3 @manual
   Scenario: CANON001_30 /plugin marketplace add registers marketplace
     Given fresh Claude Code session без существующих marketplaces
     When user runs "/plugin marketplace add stgmt/dev-pomogator"
@@ -77,7 +77,7 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
   # @feature4 — Install via /plugin install (FR-4)
   # =========================================================================
 
-  # @feature4 @manual
+  @feature4 @manual
   Scenario: CANON001_40 /plugin install copies plugin to cache
     Given marketplace "stgmt" added в Claude Code session
     When user runs "/plugin install dev-pomogator@stgmt"
@@ -89,7 +89,7 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
   # @feature5 — Scope-aware install (FR-5)
   # =========================================================================
 
-  # @feature5 @manual
+  @feature5 @manual
   Scenario: CANON001_50 Default scope is user
     Given marketplace added
     When user runs "/plugin install dev-pomogator@stgmt" без --scope flag
@@ -97,7 +97,7 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
     And <cwd>/.claude/settings.json should NOT contain entry
     And <cwd>/.claude/settings.local.json should NOT contain entry
 
-  # @feature5 @manual
+  @feature5 @manual
   Scenario: CANON001_51 --scope project writes to committed settings.json
     Given marketplace added
     When user runs "/plugin install dev-pomogator@stgmt --scope project"
@@ -105,7 +105,7 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
     And ~/.claude/settings.json should NOT receive new entry from this install
     And <cwd>/.claude/settings.local.json should NOT receive entry
 
-  # @feature5 @manual
+  @feature5 @manual
   Scenario: CANON001_52 --scope local writes to gitignored settings.local.json
     Given marketplace added
     When user runs "/plugin install dev-pomogator@stgmt --scope local"
@@ -117,7 +117,7 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
   # @feature6 — Activation via /reload-plugins (FR-6)
   # =========================================================================
 
-  # @feature6 @manual
+  @feature6 @manual
   Scenario: CANON001_60 /reload-plugins activates plugin in current CLI session
     Given plugin installed via "/plugin install dev-pomogator@stgmt"
     And current CLI session does NOT yet see plugin skills
@@ -129,7 +129,7 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
   # @feature7 — Migration v1 → v2 cleanup script (FR-7)
   # =========================================================================
 
-  # @feature7
+  @feature7
   Scenario: CANON001_70 Cleanup script detects v1 install
     Given test fixture project с .dev-pomogator/.claude-plugin/plugin.json version "1.5.0"
     And no .dev-pomogator/.migrated-to-v2 marker
@@ -137,7 +137,7 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
     Then script should print "Detected v1 install, version 1.5.0"
     And script should proceed to cleanup steps
 
-  # @feature7
+  @feature7
   Scenario: CANON001_71 Cleanup removes managed project files
     Given test fixture project с v1 install
     When migration script runs
@@ -145,22 +145,28 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
     And .claude/rules/<dev-pomogator-managed>/ should be removed
     And .dev-pomogator/ directory should be removed (kept .user-overrides/ если backups created)
 
-  # @feature7
+  @feature7
   Scenario: CANON001_72 Cleanup removes .gitignore managed block
     Given test fixture project с marker block в .gitignore
     When migration script runs
     Then .gitignore should NOT contain "# >>> dev-pomogator managed >>>" marker
     And .gitignore should preserve user-authored entries (e.g., "node_modules/")
 
-  # @feature7
+  @feature7
   Scenario: CANON001_73 Cleanup backups user-modified files
+    # Reconciliation: the script backs up .claude/skills/ + .claude/rules/ to
+    # .dev-pomogator/.user-overrides/, then safeRemove('.dev-pomogator/') destroys the backup.
+    # Only .dev-pomogator/.migrated-to-v2 survives. Backup is therefore transient (a design
+    # quirk: .user-overrides/ is inside .dev-pomogator/ which is the first removal target).
+    # Step-def uses --dry-run pre-flight in the Given step to verify backup would include
+    # custom-skill (count >= 2), then confirms real run reports same count in stdout.
     Given test fixture project с v1 install
     And .claude/skills/custom-skill/SKILL.md has content hash mismatch from upstream
     When migration script runs
     Then file should be copied to .dev-pomogator/.user-overrides/.claude/skills/custom-skill/SKILL.md
     And original file should still be removed from .claude/skills/
 
-  # @feature7
+  @feature7
   Scenario: CANON001_74 Cleanup script idempotent
     Given test fixture project where migration already ran (.migrated-to-v2 marker exists)
     When migration script runs снова
@@ -168,7 +174,7 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
     And stdout should contain informational message "No v1 install detected" or "Already migrated"
     And no project files should be modified
 
-  # @feature7
+  @feature7
   Scenario: CANON001_75 Cleanup prints canonical install instructions
     Given test fixture project с v1 install
     When migration script completes successfully
@@ -180,7 +186,7 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
   # @feature8 — Cursor support removal (FR-8)
   # =========================================================================
 
-  # @feature8
+  @feature8 @wip
   Scenario: CANON001_80 Legacy CLI --cursor exits with v2 message
     Given dev-pomogator legacy CLI binary still exists for migration utility
     When user runs "dev-pomogator --cursor"
@@ -188,14 +194,14 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
     And stderr should contain "Cursor support was removed in v2.0"
     And stderr should suggest "Use canonical install: /plugin marketplace add stgmt/dev-pomogator"
 
-  # @feature8
+  @feature8
   Scenario: CANON001_81 No cursor references remain in the repo
     Given dev-pomogator v2 source repository (no extensions/ or extension.json — deleted)
     When I grep the whole repo (tools/, .claude/, package.json, .claude-plugin/) for "cursor"
     Then no functional cursor reference should remain
     And any match should be only a historical note ("removed in v2")
 
-  # @feature8
+  @feature8
   Scenario: CANON001_82 package.json description and keywords have no Cursor
     Given dev-pomogator v2 source repository
     When I read package.json
@@ -206,15 +212,19 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
   # @feature9 — Manifest integrity / drift test (FR-9)
   # =========================================================================
 
-  # @feature9
+  @feature9
   Scenario: CANON001_90 drift test asserts hooks.json commands resolve to on-disk tools
     Given dev-pomogator repo with hand-maintained .claude-plugin/ manifests
     When I run the drift test "tests/e2e/canonical-plugin.test.ts"
     Then every hook command in .claude-plugin/hooks.json should resolve to an existing script under tools/
     And every registered hook script under tools/ should be present in .claude-plugin/hooks.json
     And .claude-plugin/plugin.json, marketplace.json and hooks.json should be schema-valid per Anthropic spec
+  # Reconciliation: "When I run the drift test 'tests/e2e/canonical-plugin.test.ts'" would be
+  # self-referential (launching the vitest twin from inside cucumber). Step-def performs the
+  # identical in-process checks: reads hooks.json, validates each command resolves to an on-disk
+  # tools/ file, checks bootstrap.cjs exists, validates plugin.json + marketplace.json fields.
 
-  # @feature9 — hook child-script resolution for INSTALLED (non-dogfood) users
+  @feature9
   Scenario: CANON001_91 hook resolves plugin-relative child script via CLAUDE_PLUGIN_ROOT from a foreign CWD
     Given a plugin tree at a CLAUDE_PLUGIN_ROOT separate from the session CWD
     And the session CWD is an unrelated project with no plugin files
@@ -226,7 +236,7 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
   # @feature10 — Update path (FR-10)
   # =========================================================================
 
-  # @feature10
+  @feature10
   Scenario: CANON001_100 marketplace.json and plugin.json versions synchronized
     Given dev-pomogator repo with hand-maintained .claude-plugin/ manifests
     When I read .claude-plugin/marketplace.json plugin entry version
@@ -237,7 +247,7 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
   # @feature11 — Desktop compatibility (FR-11)
   # =========================================================================
 
-  # @feature11 @manual
+  @feature11 @manual
   Scenario: CANON001_110 Skills visible in Claude Desktop after install
     Given dev-pomogator installed via canonical "/plugin install dev-pomogator@stgmt"
     And Claude Desktop application restarted (если был open)
@@ -249,7 +259,7 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
   # @feature12 — Uninstall canonical (FR-12)
   # =========================================================================
 
-  # @feature12 @manual
+  @feature12 @manual
   Scenario: CANON001_120 /plugin uninstall removes cache and enabledPlugins entry
     Given dev-pomogator installed at user scope
     When user runs "/plugin uninstall dev-pomogator@stgmt"

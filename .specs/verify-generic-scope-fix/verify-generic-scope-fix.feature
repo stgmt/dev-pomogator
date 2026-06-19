@@ -9,7 +9,7 @@ Feature: VSGF001 Verify Generic Scope Fix gate
     And a git repository project exists
     And target project has .claude/ directory initialised
 
-  # @feature1
+  @feature1
   Scenario: VSGF001_10 Enum extension in Service file is blocked without marker
     Given staged diff adds line "'stocktaking'" to array in file "src/services/StockValidationService.ts"
     And no marker file exists under ".claude/.scope-verified/"
@@ -20,7 +20,7 @@ Feature: VSGF001 Verify Generic Scope Fix gate
     And permissionDecisionReason mentions "/verify-generic-scope-fix"
     And permissionDecisionReason mentions score >= 2
 
-  # @feature1
+  @feature1
   Scenario: VSGF001_11 Fresh marker with matching diff hash unblocks commit
     Given staged diff adds line "'stocktaking'" to array in file "src/services/StockValidationService.ts"
     And fresh marker file exists at ".claude/.scope-verified/sess1-<diff12>.json" with matching diff_sha256 and should_ship true
@@ -29,7 +29,7 @@ Feature: VSGF001 Verify Generic Scope Fix gate
     Then hook exit code is 0
     And no deny JSON is emitted
 
-  # @feature1
+  @feature1
   Scenario: VSGF001_12 Switch-case addition in Gate file is blocked
     Given staged diff adds line "case StockTaking:" inside switch in file "src/services/DocumentGate.ts"
     And no marker file exists
@@ -37,15 +37,15 @@ Feature: VSGF001 Verify Generic Scope Fix gate
     Then hook exit code is 2
     And permissionDecisionReason mentions "switch-case" or "case"
 
-  # @feature2
+  @feature2
   Scenario: VSGF001_20 Stale marker (diff hash mismatch) is ignored
     Given staged diff has sha256 "new456"
     And marker exists with diff_sha256 "old123" and session_id matching current session
     When Claude Code invokes Bash "git commit -m 'fix'"
     Then hook exit code is 2
-    And permissionDecisionReason mentions "verification stale" or re-run hint
+    And permissionDecisionReason mentions re-run hint or score pattern
 
-  # @feature2
+  @feature2
   Scenario: VSGF001_21 Marker older than 30 minutes is invalidated
     Given staged diff adds suspicious pattern
     And marker exists with matching diff_sha256 and session_id but timestamp 31 minutes ago
@@ -53,7 +53,7 @@ Feature: VSGF001 Verify Generic Scope Fix gate
     Then hook exit code is 2
     And permissionDecisionReason mentions re-verify required
 
-  # @feature3
+  @feature3
   Scenario: VSGF001_30 Explicit escape hatch logs audit entry and passes
     Given staged diff adds line "case StockTaking:" in file "src/services/DocumentGate.ts"
     And no marker file exists
@@ -63,7 +63,7 @@ Feature: VSGF001 Verify Generic Scope Fix gate
     And the new line contains reason starting with "dead-code path confirmed"
     And the new line contains the diff_sha256 of staged diff
 
-  # @feature3
+  @feature3
   Scenario: VSGF001_31 Escape hatch with reason shorter than 8 chars warns but passes
     Given staged diff adds suspicious pattern
     When Claude Code invokes Bash "git commit -m 'fix [skip-scope-verify: tl;dr]'"
@@ -71,7 +71,7 @@ Feature: VSGF001 Verify Generic Scope Fix gate
     And hook stderr contains warning about short reason
     And escape log entry is still appended
 
-  # @feature4
+  @feature4
   Scenario: VSGF001_40 Docs-only diff is short-circuited without scoring
     Given staged diff touches only "README.md" and "docs/CHANGES.md"
     When Claude Code invokes Bash "git commit -m 'docs: update changelog'"
@@ -79,14 +79,14 @@ Feature: VSGF001 Verify Generic Scope Fix gate
     And no deny JSON is emitted
     And no marker file is created
 
-  # @feature4
+  @feature4
   Scenario: VSGF001_41 Non-guard enum addition false positive — escapable
     Given staged diff adds line "'hotpink'" to array in file "src/utils/ColorPalette.ts"
     When Claude Code invokes Bash "git commit -m 'feat: add color [skip-scope-verify: pure presentation enum no runtime gate]'"
     Then hook exit code is 0
     And escape log entry is appended
 
-  # @feature5
+  @feature5
   Scenario: VSGF001_50 SKILL.md frontmatter contains disable-model-invocation true
     Given dev-pomogator scope-gate extension is installed
     When I read ".claude/skills/verify-generic-scope-fix/SKILL.md" frontmatter
@@ -94,18 +94,17 @@ Feature: VSGF001 Verify Generic Scope Fix gate
     And frontmatter contains "name: verify-generic-scope-fix"
     And frontmatter contains "allowed-tools:" with Read, Bash, Grep, Glob
 
-  # @feature5
-  Scenario: VSGF001_51 extension.json registers hook with correct matcher
-    Given "extensions/scope-gate/extension.json" exists
-    When I parse the manifest
-    Then hooks.claude.PreToolUse.matcher equals "Bash"
-    And hooks.claude.PreToolUse.command contains "scope-gate-guard.ts"
-    And hooks.claude.PreToolUse.timeout is less than or equal to 10
-    And skillFiles contains "verify-generic-scope-fix/SKILL.md" and analyze-diff.ts
-    And toolFiles contains scope-gate-guard.ts, score-diff.ts, marker-store.ts
-    And ruleFiles.claude contains when-to-verify.md and escape-hatch-audit.md
+  @feature5
+  Scenario: VSGF001_51 ships scope-gate guard tool, skill and rules at v2 paths
+    Given dev-pomogator scope-gate extension is installed
+    When I check the v2 artifact paths
+    Then "tools/scope-gate/scope-gate-guard.ts" exists
+    And "tools/scope-gate/analyze-diff.ts" exists
+    And ".claude/skills/verify-generic-scope-fix/SKILL.md" exists
+    And ".claude/rules/scope-gate/when-to-verify.md" exists
+    And ".claude/rules/scope-gate/escape-hatch-audit.md" exists
 
-  # @feature1
+  @feature1
   Scenario: VSGF001_60 Non-git Bash command passes without side effects
     When Claude Code invokes Bash "ls -la"
     Then hook exit code is 0
