@@ -21,7 +21,8 @@
       ".specs/forbid-root-artifacts/forbid-root-artifacts.feature",
       ".specs/worktree-setup/worktree-setup.feature",
       ".specs/architecture-decision-builder/architecture-decision-builder.feature",
-      ".specs/spec-workflow-feature-steps-validation/spec-workflow-feature-steps-validation.feature"
+      ".specs/spec-workflow-feature-steps-validation/spec-workflow-feature-steps-validation.feature",
+      ".specs/bg-task-guard/bg-task-guard.feature"
     ],
     "import": [
       "tests/step_definitions/**/*.ts",
