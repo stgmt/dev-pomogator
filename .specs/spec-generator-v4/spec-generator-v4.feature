@@ -1548,3 +1548,15 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then the guard allows the full run with exit 0
     When a filtered cucumber run names an explicit temp config
     Then the guard allows the isolated run with exit 0
+
+  @feature49
+  Scenario: SPECGEN004_222 the gate releases after consecutive zero-tool kicks and a tool-run resets the no-progress streak
+    Given a census with unfinished work and the real claim-evidence-gate stop hook with the time-cap raised
+    When the agent stops with a gray claim and no tool across consecutive kicks then runs a tool
+    Then the first kicks block the streak cap releases the stop and a tool-running kick resets the streak so the gate blocks again
+
+  @feature49
+  Scenario: SPECGEN004_223 the gate blocks an unproven blocker claim but approves a substantiated or real-async one
+    Given a census with unfinished work and the real claim-evidence-gate stop hook
+    When the stop rests on a blocker claim with no tool then with a tool run then with a background task launched
+    Then the bare blocker is blocked for lacking evidence while the tool-backed and background-task ones are approved

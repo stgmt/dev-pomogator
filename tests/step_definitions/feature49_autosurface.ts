@@ -65,6 +65,11 @@ interface AutoSurfaceWorld extends V4World {
   missingRaw?: string;
   loopFirstBlocked?: boolean;
   loopSecondRaw?: string;
+  npRoot?: string;
+  npKicks?: boolean[];
+  bpBare?: boolean;
+  bpTool?: boolean;
+  bpBg?: boolean;
 }
 
 // FR-49f (SPECGEN004_181): the door strength-gate refuses a .feature write that ADDS a
@@ -499,4 +504,89 @@ Then('the first fire blocks and the identical re-fire is released by the anti-lo
   fs.rmSync(this.csRoot!, { recursive: true, force: true });
   assert.equal(this.loopFirstBlocked, true, 'a continuation stop with an unsupported works-claim is judged, not exempted → block');
   assert.equal(this.loopSecondRaw, '{}', 'the identical re-stop is released by the same-hash anti-loop → terminates');
+});
+
+// FR-11 (no-progress release + blocker-proof, SPECGEN004_222/223): both need a SESSION that edited the
+// spec in an EARLIER turn (→ in FR-9 scope) while the CURRENT turn carries a controlled tool set (incl.
+// zero). runStopHook is single-turn (its tools land in the current window), so this drives a two-turn
+// transcript directly. Judge OFF — the no-progress + blocker-proof layers are deterministic.
+function runStopHookScoped(
+  root: string,
+  claimText: string,
+  currentTurnTools: Array<{ name: string; input: unknown }> = [],
+  extraEnv: Record<string, string> = {},
+): boolean {
+  const rows = [
+    { type: 'user', message: { role: 'user', content: [{ type: 'text', text: 'старт' }] } },
+    { type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', name: 'Edit', input: { file_path: '.specs/demo/FR.md' } }] } },
+    { type: 'user', message: { role: 'user', content: [{ type: 'text', text: 'идём' }] } },
+    ...currentTurnTools.map((t) => ({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', name: t.name, input: t.input }] } })),
+    { type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: claimText }] } },
+  ];
+  const fp = path.join(root, 'transcript.jsonl');
+  fs.writeFileSync(fp, rows.map((r) => JSON.stringify(r)).join('\n'));
+  const res = spawnSync(process.execPath, ['--import', 'tsx', NS_HOOK], {
+    input: JSON.stringify({ transcript_path: fp, cwd: root }),
+    encoding: 'utf-8',
+    env: { ...process.env, CLAIM_GATE_ENABLED: 'true', CLAIM_GATE_JUDGE: 'false', ...extraEnv },
+  });
+  return (res.stdout || '').trim().includes('"decision":"block"');
+}
+
+function censusRoot(prefix: string): string {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
+  writeTaskCensusCache(
+    root,
+    { total: { open: 11, doneRed: 0, doneUnrun: 0 }, specs: [{ slug: 'demo', open: 11, doneRed: 0, doneUnrun: 0, nextOpen: { id: 'demo:t1', title: 'Wire the gate' } }] },
+    '2026-06-17T00:00:00Z',
+  );
+  return root;
+}
+
+// SPECGEN004_222 (FR-11 no-progress release): consecutive ZERO-tool kicks bound the loop by work-delta
+// (the time-cap, raised here via MAX_RETRIES=99, is out of the picture); a tool-running kick resets the
+// streak. Migrated from the vitest CEGATE001_28; drives the REAL hook across sequential kicks.
+Given('a census with unfinished work and the real claim-evidence-gate stop hook with the time-cap raised', function (this: AutoSurfaceWorld) {
+  this.npRoot = censusRoot('fr11-np-');
+});
+
+When('the agent stops with a gray claim and no tool across consecutive kicks then runs a tool', function (this: AutoSurfaceWorld) {
+  const env = { CLAIM_GATE_MAX_RETRIES: '99' }; // isolate FR-11 from the time-based cap
+  this.npKicks = [
+    runStopHookScoped(this.npRoot!, 'Готово, всё закрыто. 37 из 48.', [], env), // streak 1
+    runStopHookScoped(this.npRoot!, 'Готово, всё закрыто. 38 из 48.', [], env), // streak 2
+    runStopHookScoped(this.npRoot!, 'Готово, всё закрыто. 39 из 48.', [], env), // streak 3 → release
+    runStopHookScoped(this.npRoot!, 'Готово, всё закрыто. 40 из 48.', [{ name: 'Read', input: { file_path: 'x.ts' } }], env), // tool → reset
+  ];
+});
+
+Then('the first kicks block the streak cap releases the stop and a tool-running kick resets the streak so the gate blocks again', function (this: AutoSurfaceWorld) {
+  fs.rmSync(this.npRoot!, { recursive: true, force: true });
+  assert.deepEqual(this.npKicks, [true, true, false, true], 'block, block, FR-11 release at the cap, then a tool-run resets the streak → block');
+});
+
+// SPECGEN004_223 (FR-11 blocker-proof): a stop resting on a blocker claim is honoured ONLY with
+// observable evidence — bare (0 tools, no bg) → block; a tool run / a launched bg task → approve.
+// Migrated from the vitest CEGATE001_29; each case uses its own fresh census root.
+Given('a census with unfinished work and the real claim-evidence-gate stop hook', function () {
+  // each blocker case below uses its own fresh census root (created in the When)
+});
+
+When('the stop rests on a blocker claim with no tool then with a tool run then with a background task launched', function (this: AutoSurfaceWorld) {
+  const blocker = 'Жду — cucumber.json держит параллельная сессия, трогать нельзя.';
+  const a = censusRoot('fr11-bp-a-');
+  this.bpBare = runStopHookScoped(a, blocker, []);
+  fs.rmSync(a, { recursive: true, force: true });
+  const b = censusRoot('fr11-bp-b-');
+  this.bpTool = runStopHookScoped(b, blocker, [{ name: 'Bash', input: { command: 'git diff -- cucumber.json' } }]);
+  fs.rmSync(b, { recursive: true, force: true });
+  const c = censusRoot('fr11-bp-c-');
+  this.bpBg = runStopHookScoped(c, blocker, [{ name: 'Bash', input: { command: 'npm test', run_in_background: true } }]);
+  fs.rmSync(c, { recursive: true, force: true });
+});
+
+Then('the bare blocker is blocked for lacking evidence while the tool-backed and background-task ones are approved', function (this: AutoSurfaceWorld) {
+  assert.equal(this.bpBare, true, 'a bare blocker claim with no tool and no bg → block (prove it or work)');
+  assert.equal(this.bpTool, false, 'the same blocker after a real tool run → approve (substantiated)');
+  assert.equal(this.bpBg, false, 'the same blocker after launching a bg task → approve (real async wait)');
 });
