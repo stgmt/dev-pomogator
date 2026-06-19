@@ -20,7 +20,8 @@
       ".specs/onboard-repo-phase0/onboard-repo-phase0.feature",
       ".specs/forbid-root-artifacts/forbid-root-artifacts.feature",
       ".specs/worktree-setup/worktree-setup.feature",
-      ".specs/architecture-decision-builder/architecture-decision-builder.feature"
+      ".specs/architecture-decision-builder/architecture-decision-builder.feature",
+      ".specs/spec-workflow-feature-steps-validation/spec-workflow-feature-steps-validation.feature"
     ],
     "import": [
       "tests/step_definitions/**/*.ts",
