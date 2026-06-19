@@ -1722,3 +1722,80 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given the orchestrator feature-map routing table is loaded
     When verifyConsumerTruthfulness is called against the real TOOL_CONSUMERS table and real SKILL.md files
     Then every consumer skill in TOOL_CONSUMERS genuinely references its declared tool in its SKILL.md
+
+  # ── FR-41 phase-runner unit behaviours (folded from phase-runner.test.ts) ──
+
+  @feature41
+  Scenario: SPECGEN004_250 phase runner hard-fails when discovery retry budget exhausted
+    Given a phase runner configured with maxRetries 2 for all phases
+    When the discovery phase gate returns RED on every attempt
+    Then runPhases returns ok=false with failedPhase "discovery"
+    And discovery was spawned exactly 3 times before hard-failing
+
+  @feature41
+  Scenario: SPECGEN004_251 phase runner exception safety throwing gate consumes retry budget and ends with hard fail
+    Given a phase runner where the discovery gate throws on every call
+    When the orchestrator runs phases with budget 2
+    Then runPhases returns ok=false and the events include a gate-red entry matching /threw/
+
+  @feature41
+  Scenario: SPECGEN004_252 productionSpawn and productionGate are exported callable functions
+    Given the phase-runner module is imported
+    Then productionSpawn is exported and is a function
+    And productionGate is exported and is a function
+
+  # ── FR-11 tag-predictor pure-function unit tests (folded from tag-predictor.test.ts) ──
+
+  @feature11
+  Scenario: SPECGEN004_253 predictTags suggests FR-001 for an untagged User logs in scenario (FR-11 worked example)
+    Given a feature file with an untagged scenario "User logs in"
+    When predictTags is called with the standard FR catalog
+    Then the suggestion for "User logs in" is "@FR-001" with a positive score
+
+  @feature11
+  Scenario: SPECGEN004_254 predictTags skips an already-tagged scenario with alreadyTagged true and no suggestion
+    Given a feature file with an already-tagged scenario "@FR-002" "Export the monthly report"
+    When predictTags is called with the standard FR catalog
+    Then the suggestion has alreadyTagged=true and suggestedTag=null
+
+  @feature11
+  Scenario: SPECGEN004_255 predictTags does not force a tag when no FR is relevant
+    Given a feature file with an untagged scenario about an unrelated topic
+    When predictTags is called with the standard FR catalog
+    Then the suggestion has suggestedTag=null and frId=null
+
+  @feature11
+  Scenario: SPECGEN004_256 predictTags handles Scenario Outline and returns one suggestion per scenario
+    Given a feature file with a regular Scenario and a Scenario Outline
+    When predictTags is called with the standard FR catalog
+    Then predictTags returns two suggestions
+    And the first suggestion is "@FR-001" and the second is "@FR-002"
+
+  @feature11
+  Scenario: SPECGEN004_257 predictTags respects a high threshold suppressing weak matches
+    Given a feature file with a weakly-matching untagged scenario "User logs in somewhere else entirely today"
+    When predictTags is called with threshold 0.9
+    Then the suggestion has suggestedTag=null because the score is below the threshold
+
+  @feature11
+  Scenario: SPECGEN004_258 tokenize lowercases splits on non-word and drops stopwords and short tokens
+    When tokenize is called with "The User logs IN to a System"
+    Then the result is ["logs"]
+
+  @feature11
+  Scenario: SPECGEN004_259 extractFrs handles both v3 and v4 FR heading formats
+    Given an FR.md string with v3 heading "### Requirement: FR-7 Marksman LSP" and v4 heading "## FR-8: Semantic judge"
+    When extractFrs is called on that markdown
+    Then the result has frIds ["FR-7", "FR-8"] and the first title is "Marksman LSP"
+
+  @feature11
+  Scenario: SPECGEN004_260 renderTagSuggestions lists only untagged scenarios with their suggestion
+    Given a feature file with one already-tagged and one untagged scenario
+    When renderTagSuggestions is called with predictions from that feature file
+    Then the rendered output contains "User logs in" and "@FR-001" but NOT "Export report"
+
+  @feature11
+  Scenario: SPECGEN004_261 renderTagSuggestions returns empty string when every scenario is already tagged
+    Given a feature file where every scenario is already tagged
+    When renderTagSuggestions is called on that file
+    Then the rendered output is an empty string
