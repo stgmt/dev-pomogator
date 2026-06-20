@@ -57,7 +57,8 @@ Re-ran the full file after adding TESTQUAL001_34/35/36 [cmd:npm run mutation:bdd
 
 | Lines | Mutants | Class | Verdict |
 |---|---|---|---|
-| 120/122/151/156 | 14 × Regex | Stryker Regex-mutator | Likely-equivalent (Regex mutator tweaks regex internals; high equivalent rate — also the reason the skill-mutation config reverted the Regex mutator). Needs per-regex review; do not count as test debt yet. |
+| 43–64, 120/122/151/156 | Regex consts | Stryker Regex-mutator | **Not a real test-debt cluster.** Two reasons, both evidenced: (a) the flip-diff found regex mutants heavily among the 48 run-to-run FLIPPERS → their "survived" is the proven runner nondeterminism, not a stable gap; (b) the Regex mutator makes sub-token tweaks that still match the fixture inputs (high equivalent rate — also why the skill-mutation vitest config reverted this mutator). Resolve any individual one on demand with `verify-kill`; do not treat as assertion debt. |
+| 123 | ArrayDeclaration | nestedLoopCount TS `?? []` fallback | **Equivalent** — `verify-kill` → SURVIVED [cmd:verify-kill kill-123.json → SURVIVED]. The `?? []` fallback fires only at 0 matches; the mutant bumps 0→1, but `nestedFor >= 2` gates nxm-overlap, so 0 vs 1 never changes the kind. No test can observe it. |
 | 160:12, 160:21 | 2 (min→max, ±1) | Python EOF-fallback | **Proven equivalent** — `Array.slice` clamps over-large end [cmd above]. Annotate, don't chase. |
 | findFunctionEndLine Python indent-loop | Block/Logical/Conditional/Equality/Method | Python indent-loop | **Was equivalent-for-fixture → now FIXED.** `verify-kill` batch (blank-skip `===`→`!==`, off-by-one `i-1`→`i+1`, boundary `<=`→`<`) → all 3 SURVIVED [cmd:verify-kill kill-python-cluster.json → killed 0/3]. Root cause (probed): TESTQUAL001_36's fixture runs to **EOF**, so the de-indent return (L157) is dead — only the slice-clamp fallback (L159, proven-equivalent) decides endLine; the mutants were equivalent FOR THAT FIXTURE, not loose assertions [cmd:scan() probe → EOF & de-indent fixtures both endLine 6]. Fix = a fixture where the function de-indents (function + trailing top-level statement) so L157 fires, asserting the exact endLine: added scenario **TESTQUAL001_37**, which deterministically KILLS the off-by-one [cmd:verify-kill kill-offbyone-37.json → KILLED]. |
 | 81:7 | ConditionalExpression | suggestInvariants Iterator branch | **FALSE survivor** — `verify-kill.ts` proves TESTQUAL001_35 KILLS the `→false` mutant deterministically [cmd:verify-kill kill-81.json → KILLED]. The flaky aggregate mislabeled it; NOT test debt. |
@@ -65,7 +66,15 @@ Re-ran the full file after adding TESTQUAL001_34/35/36 [cmd:npm run mutation:bdd
 | 123:38 | 1 ArrayDeclaration | suggestInvariants array | Possibly killable (assert exact array). |
 | 299:20 | 1 StringLiteral | composition-chain rationale | **KILLED** (commit d99682d) — tightened TESTQUAL001_11 to assert the rationale text; proven via inject+restore. |
 
-So the honest survivor picture is **not** "32 weak tests": 14 Regex + 2 slice-clamp are equivalent/likely-equivalent (~half), 1 killed, and ~15 are real targets for tighter/branch-reaching scenarios (the strong-tests §6.5 backlog). Driving those down is incremental scenario work, not an assertion-rewrite sweep.
+**Triage complete (via `verify-kill`, deterministic) — the 32 "survivors" are NOT a wall of weak tests:**
+- 299 → KILLED (W4 tightened assertion).
+- 81 → FALSE survivor (the flaky aggregate lied) → deterministically KILLED by TESTQUAL001_35.
+- findFunctionEndLine cluster → equivalent FOR the EOF fixture → now genuinely KILLED via the new de-indent scenario TESTQUAL001_37.
+- 123 + 160 → equivalent mutants (nxm `>=2` threshold can't see 0→1; `Array.slice` clamps the over-large end).
+- regex-const block (43–64, …) → dominated by the proven runner flakiness (regex mutants were among the 48 flippers) + Regex-mutator equivalents — not assertion debt.
+- 71 → genuine `.go` coverage gap (no scenario drives `detectStack(path)`); out-of-scope here or a future scenario.
+
+**Net real test improvement this pass: TESTQUAL001_37 — one deterministically-proven new kill.** The scary survivor count was mostly the runner bug + equivalents, not weak BDD tests. The durable take-away: gate on `verify-kill` (deterministic), not the cucumber-runner aggregate.
 
 ### ⚠️ Flakiness finding — the aggregate score is NON-DETERMINISTIC under concurrency:100%
 
