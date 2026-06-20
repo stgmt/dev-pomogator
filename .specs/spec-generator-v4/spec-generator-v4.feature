@@ -1087,10 +1087,10 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then VCS plumbing commands are allowed and content-reading git commands stay violations
 
   @feature14
-  Scenario: SPECGEN004_149 the read-only door keeps every session live for reads while writes serialise to the lock owner
-    Given a spec corpus whose write-lock is already held by another session
+  Scenario: SPECGEN004_149 every session's door stays writable — a second session's write serialises in (no lifetime read-only)
+    Given a spec corpus whose presence-lock is already held by another session
     When a second session boots its door and exercises read + write tools
-    Then writes refuse with the holder named while reads and dry-runs stay live and the file is untouched
+    Then every session can write — the second session's write serialises in, reads stay live, and no lifetime lock refuses it
 
   @FR-39
   Scenario: SPECGEN004_150 read_spec_doc paginates a big doc by section, by line window, and whole
