@@ -921,3 +921,35 @@ Then(
     assert.ok(c.suggestedInvariants.includes('conservation'), `missing 'conservation' in ${JSON.stringify(c.suggestedInvariants)}`);
   },
 );
+
+// TESTQUAL001_37 — runtime: a Python function that DE-INDENTS (a top-level statement follows it) so
+// findFunctionEndLine's de-indent return (`return i - 1`) actually fires — unlike the EOF fixture
+// where only the slice-clamp fallback decides. Asserting the exact endLine here KILLS the off-by-one
+// mutant (`return i - 1` → `return i + 1`), which is equivalent for the EOF fixture. Drives scan() in-process.
+Given(
+  /^a Python file with a nested-loop function followed by a top-level statement$/,
+  function () {
+    const content = [
+      'def pair(items: list[str]) -> list[str]:',
+      '    out = []',
+      '    for a in items:',
+      '        for b in items:',
+      '            out.append(a + b)',
+      '    return out',
+      'x = 1',
+    ].join('\n');
+    world.tempFile = path.join(world.tempDir!, 'src', 'pair_then_stmt.py');
+    fs.mkdirSync(path.dirname(world.tempFile), { recursive: true });
+    fs.writeFileSync(world.tempFile, content, 'utf-8');
+  },
+);
+
+Then(
+  /^the candidate kind SHALL be nxm-overlap and endLine SHALL be exactly (\d+)$/,
+  function (expected: string) {
+    const c = world.scanResult!.candidates[0];
+    assert.ok(c, `expected a candidate; got ${JSON.stringify(world.scanResult)}`);
+    assert.equal(c.kind, 'nxm-overlap', `kind must be nxm-overlap, got ${c.kind}`);
+    assert.equal(c.endLine, Number(expected), `endLine must be exactly ${expected}, got ${c.endLine}`);
+  },
+);
