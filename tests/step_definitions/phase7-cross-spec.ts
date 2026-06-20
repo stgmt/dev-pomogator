@@ -28,7 +28,8 @@ import {
   type ExplanationBlock,
   type ReportFinding,
 } from '../../.claude/skills/cross-spec-resolve/scripts/walker.ts';
-import { applyRecheck, type ApplyRecheckResult } from '../../.claude/skills/cross-spec-resolve/scripts/recheck.ts';
+import { applyRecheck, recheckStatuses, type ApplyRecheckResult } from '../../.claude/skills/cross-spec-resolve/scripts/recheck.ts';
+import { resolveCli, type ResolveCliResult } from '../../.claude/skills/cross-spec-resolve/scripts/resolve-cli.ts';
 import type { V4World } from '../hooks/before-after.ts';
 
 interface CrossSpecWorld extends V4World {
@@ -45,6 +46,9 @@ interface CrossSpecWorld extends V4World {
   executionStep?: number;
   recheckOriginal?: ReportFinding[];
   recheckResult?: ApplyRecheckResult;
+  recheckStatuses?: Map<string, import('../../.claude/skills/cross-spec-resolve/scripts/recheck.ts').RecheckStatus>;
+  recheckOriginalEmpty?: ReportFinding[];
+  resolveCliResult?: ResolveCliResult;
 }
 
 const RESOLVE_CLI = path.join(
@@ -625,5 +629,110 @@ Then(
     const dir = path.join(this.tempDir, '.specs', this.resolveSlug!);
     const leftovers = fs.readdirSync(dir).filter((n) => n.includes('.tmp'));
     assert.deepEqual(leftovers, [], 'no temp file should remain after the atomic rename');
+  },
+);
+
+// ─── SPECGEN004_284 — recheckStatuses empty-fresh → all resolved ─────────────
+
+Given(
+  /^the resolve skill has original findings and the fresh reconcile run returns no findings$/,
+  function (this: CrossSpecWorld) {
+    this.recheckOriginalEmpty = [
+      { code: 'cross-spec/a', class: 'uncovered', severity: 'WARNING', referenced_in: '.specs/demo/FR.md:1' },
+      { code: 'cross-spec/b', class: 'uncovered', severity: 'WARNING', referenced_in: '.specs/demo/FR.md:2' },
+    ];
+  },
+);
+
+When(
+  /^recheckStatuses is called with the original findings and an empty fresh list$/,
+  function (this: CrossSpecWorld) {
+    this.recheckStatuses = recheckStatuses(this.recheckOriginalEmpty!, []);
+  },
+);
+
+Then(
+  /^every original finding is classified as `resolved`$/,
+  function (this: CrossSpecWorld) {
+    for (const [, status] of this.recheckStatuses!) {
+      assert.equal(status, 'resolved');
+    }
+  },
+);
+
+Then(
+  /^the result map size equals the original finding count$/,
+  function (this: CrossSpecWorld) {
+    assert.equal(this.recheckStatuses!.size, this.recheckOriginalEmpty!.length);
+  },
+);
+
+// ─── SPECGEN004_285 — resolveCli exits 0 + JSON plan when report exists ──────
+
+Given(
+  /^a consistency-report\.yaml exists for slug `demo` with one finding$/,
+  function (this: CrossSpecWorld) {
+    this.resolveSlug = 'demo';
+    const dir = path.join(this.tempDir, '.specs', this.resolveSlug);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(
+      path.join(dir, 'consistency-report.yaml'),
+      [
+        'findings:',
+        '  - code: cross-spec/missing-cross-ref',
+        '    class: missing-cross-ref',
+        '    severity: WARNING',
+        '    spec_a: .specs/demo',
+        '    spec_b: .specs/other',
+        '    referenced_in: .specs/demo/FR.md:5',
+        '',
+      ].join('\n'),
+    );
+  },
+);
+
+When(
+  /^resolveCli is called with slug `demo` and the temp repo root$/,
+  function (this: CrossSpecWorld) {
+    this.resolveCliResult = resolveCli(this.resolveSlug!, this.tempDir);
+  },
+);
+
+Then(
+  /^the exit code is 0$/,
+  function (this: CrossSpecWorld) {
+    assert.equal(this.resolveCliResult!.exitCode, 0);
+  },
+);
+
+Then(
+  /^stdout parses as JSON with a `count` field and a `plan` array$/,
+  function (this: CrossSpecWorld) {
+    const parsed = JSON.parse(this.resolveCliResult!.stdout) as { count: number; plan: unknown[] };
+    assert.ok(typeof parsed.count === 'number', 'count must be a number');
+    assert.ok(Array.isArray(parsed.plan), 'plan must be an array');
+  },
+);
+
+// ─── SPECGEN004_286 — resolveCli exits 2 when no slug ────────────────────────
+
+Given(
+  /^the resolve CLI is invoked$/,
+  function (this: CrossSpecWorld) {
+    // no-op — context set in the When step
+  },
+);
+
+When(
+  /^resolveCli is called with an undefined slug$/,
+  function (this: CrossSpecWorld) {
+    this.resolveCliResult = resolveCli(undefined, this.tempDir);
+  },
+);
+
+Then(
+  /^the exit code is 2$/,
+  function (this: CrossSpecWorld) {
+    assert.equal(this.resolveCliResult!.exitCode, 2);
   },
 );

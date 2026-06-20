@@ -403,6 +403,26 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And each original finding's `resolution_status` is updated to `resolved`, `still_present`, or `transformed`
     And the YAML is written atomically via temp file + rename
 
+  @feature18
+  Scenario: SPECGEN004_284 recheckStatuses with empty fresh run marks all original findings resolved
+    Given the resolve skill has original findings and the fresh reconcile run returns no findings
+    When recheckStatuses is called with the original findings and an empty fresh list
+    Then every original finding is classified as `resolved`
+    And the result map size equals the original finding count
+
+  @feature18
+  Scenario: SPECGEN004_285 resolveCli exits 0 and emits a JSON plan when the consistency report exists
+    Given a consistency-report.yaml exists for slug `demo` with one finding
+    When resolveCli is called with slug `demo` and the temp repo root
+    Then the exit code is 0
+    And stdout parses as JSON with a `count` field and a `plan` array
+
+  @feature18
+  Scenario: SPECGEN004_286 resolveCli exits 2 when no slug is supplied
+    Given the resolve CLI is invoked
+    When resolveCli is called with an undefined slug
+    Then the exit code is 2
+
   @feature19
   Scenario: SPECGEN004_49 Hard tier startup crash exits 1 and blocks Write
     Given `spec-conformance-guard` config file is malformed YAML
