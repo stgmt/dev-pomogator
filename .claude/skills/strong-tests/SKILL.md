@@ -890,9 +890,19 @@ skeleton (`SPECGEN004_185` / `gherkin-parser-impl`, tag-inheritance via the real
    (observed 185→3). Cucumber runs SERIALIZE — author one, full-run, flip; not a parallel batch.
 6. **Only after green**: flip the task's Done-When via the door to cite the green `SPECGEN004_NN`
    (the door refuses a pre-green flip — `TASK_NO_OWN_SCENARIO` / honesty gate).
-7. **Mutation gutcheck (the quality bar)**: break the task's impl → confirm the scenario goes RED →
-   restore. A scenario that stays green on broken code is FAKE-POSITIVE-RISK, not STRONG, and must
-   be strengthened. The eval harness (FR-TA3) automates exactly this fails-on-broken check.
+7. **Mutation gutcheck (depth — not fake-green)**: break the task's impl → confirm the scenario goes
+   RED → restore. A scenario that stays green on broken code is FAKE-POSITIVE-RISK, not STRONG. The
+   eval harness (FR-TA3) automates this fails-on-broken check.
+8. **Mutation COVERAGE (breadth — the dogfood lesson)**: a gutcheck proves ONE scenario isn't
+   fake-green, but a set of TIGHT scenarios can still leave whole branches **NoCoverage** — unkillable
+   by ANY scenario because none reaches them. Run `npm run mutation:bdd` (skill `stryker-mutation`) and
+   read the NoCoverage list; author a scenario **per uncovered branch** (return-type taxonomy, language
+   variants, suppression, chains). Dogfood 2026-06-20: the `detect-invariant` `@feature7` set killed
+   ~98% of COVERED mutants yet had 139 NoCoverage (Map/Iterable return-types, Python `for-in`) — the
+   fix was ADD a scenario per branch, NOT tighten `.includes`→`.toEqual` (assertions were already
+   tight). **Strong BDD = tight assertions (depth) AND a scenario per branch (breadth).** Probe with a
+   quick in-process `scan()`-style call to see which branch a fixture reaches before authoring (see
+   `audit-reports/stryker-bdd-mutation-finding.md`).
 
 **Never**: fabricate a scenario for a genuinely-unbuilt task (flag it `_waived:` / honest status);
 author in `tests/features/`; flip before green; copy production logic into the step-def.
