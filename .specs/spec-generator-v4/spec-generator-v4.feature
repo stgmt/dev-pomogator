@@ -1092,6 +1092,18 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When a second session boots its door and exercises read + write tools
     Then every session can write — the second session's write serialises in, reads stay live, and no lifetime lock refuses it
 
+  @feature49
+  Scenario: SPECGEN004_160 a backlog-marked spec is excluded from the task-census the Stop-gate reads
+    Given a spec corpus with two specs each carrying one open task
+    When I mark spec demo-b backlog through the set_spec_status door tool
+    Then the door reports backlog and the task-census drops demo-b while demo-a stays
+
+  @feature49
+  Scenario: SPECGEN004_161 marking a spec active again restores it to the task-census
+    Given a spec corpus with two specs each carrying one open task
+    When I mark spec demo-b backlog then back to active through the door
+    Then the marker is removed and the task-census counts demo-b again
+
   @FR-39
   Scenario: SPECGEN004_150 read_spec_doc paginates a big doc by section, by line window, and whole
     Given a spec doc with several headings and many lines
