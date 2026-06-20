@@ -85,7 +85,22 @@ ambiguous) → mutation gutcheck (RED-on-break).
 - Fake a manual/agent-behaviour scenario green with a check that doesn't test the claim.
 - Author in `tests/features/` (never executed → fake-green) — scenarios live in `.specs/<slug>/<slug>.feature`.
 - Flip/delete vitest before the BDD equivalent is green in a real run; clobber the canonical ndjson;
-  edit a parallel-session's `cucumber.json`; touch `.specs/` with raw file tools (door only); commit/push.
+  edit a parallel-session's `cucumber.json`; touch `.specs/` with raw file tools (door only); push.
+
+## Commit discipline (path-limited — YOURS only, never the index)
+Parallel agents share the tree, so a bare `git commit` (no paths) commits the WHOLE index — incl. a
+sibling agent's already-staged files (incident 8ab1d22: a personal-pomogator commit swallowed 3 of
+the cross-spec-reconcile agent's staged files). Commit EXACTLY your files, never the index:
+1. **Clean the repo root first** — a stray root artifact (scratch `.ndjson`, a throwaway config) makes
+   the `forbid-root-artifacts` pre-commit hook BLOCK *any* commit. Delete trash; move/whitelist real ones.
+2. **`git add <your explicit paths>`** — new (untracked) files MUST be added (path-limited commit does
+   NOT stage untracked). NEVER `git add -A` / `git add .`.
+3. **`git diff --cached --name-only`** — eyeball: staged == ONLY your files. If a foreign file is staged,
+   `git restore --staged <foreign>`.
+4. **`git commit -m "msg" -- <your explicit paths>`** — the `-m` comes BEFORE `--`; everything after `--`
+   is a pathspec. Path-limited commit snapshots ONLY those paths, immune to whatever else sits in the index.
+   (For a multi-line message: `git commit -F - -- <paths> <<'EOF' … EOF`.)
+5. NEVER bare `git commit` (commits the whole index → captures foreign staged work).
 
 ## Report back
 Scenarios migrated + validated green (X of Y), classes used (in-process vs spawn), any `.feature`

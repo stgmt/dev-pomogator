@@ -93,6 +93,13 @@ answer-simple pilot proved (retrospective finding #11) — follow it, don't rein
    should now show wired + all real tags. `project-test-trace.ts` should show no orphans for the
    spec. Only THEN delete the superseded `tests/e2e/<slug>.test.ts` (BDD parity reached), and
    confirm the full Docker suite (`npm test`) still passes before the rollout scales.
+10. **Commit YOURS only — path-limited.** A bare `git commit` commits the WHOLE index incl. a parallel
+    agent's staged files (incident 8ab1d22). So: clean the repo root of stray artifacts first (the
+    `forbid-root-artifacts` pre-commit hook blocks ANY commit otherwise) → `git add <your explicit
+    paths>` (untracked files MUST be added; never `git add -A`) → `git diff --cached --name-only` to
+    confirm staged == only yours → `git commit -m "msg" -- <your explicit paths>` (`-m` BEFORE `--`;
+    everything after `--` is a pathspec, so the commit is immune to foreign staged work). NEVER bare
+    `git commit`. Full discipline in the agent definition `.claude/agents/bdd-migrator.md`.
 
 ## Never
 - Fake a manual/agent-behaviour scenario green with a file-check that doesn't test the claim.
