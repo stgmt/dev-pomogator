@@ -1235,3 +1235,167 @@ Then(
     );
   },
 );
+
+// ============================================================================
+// @feature12 — FR-12 Test Guard Hook (GUARD001_01–12)
+//
+// Drives the REAL `tools/tui-test-runner/test_guard.ts` PreToolUse hook via
+// `spawnSync(process.execPath, ['--import', 'tsx', ABS_SCRIPT], ...)` per the
+// BDD-migrator dogfood: NOT `npx` (which doesn't resolve in a host spawn).
+// CWD = REPO_ROOT so the hook's node_modules resolution works.
+//
+// Every deny scenario asserts BOTH status===2 AND parsed permissionDecision===
+// 'deny' — two independent signals; a mutation that breaks either goes RED.
+// ============================================================================
+
+const GUARD_SCRIPT_ABS = path.join(REPO_ROOT, 'tools', 'tui-test-runner', 'test_guard.ts');
+const PLUGIN_HOOKS_PATH = path.join(REPO_ROOT, '.claude-plugin', 'hooks.json');
+
+interface GuardResult {
+  status: number | null;
+  stdout: string;
+  stderr: string;
+}
+
+function runTestGuardBDD(command: string, env: Record<string, string> = {}): GuardResult {
+  const input = JSON.stringify({
+    session_id: 'bdd-guard-test',
+    cwd: REPO_ROOT,
+    tool_name: 'Bash',
+    tool_input: { command },
+  });
+  const result = spawnSync(
+    process.execPath,
+    ['--import', 'tsx', GUARD_SCRIPT_ABS],
+    {
+      input,
+      encoding: 'utf-8',
+      cwd: REPO_ROOT,
+      env: { ...process.env, FORCE_COLOR: '0', ...env },
+      timeout: 15000,
+    },
+  );
+  return { status: result.status, stdout: (result.stdout || '').trim(), stderr: (result.stderr || '') };
+}
+
+// World extension for GUARD001
+interface TuiWorldWithGuard extends TuiWorld {
+  guardResult?: GuardResult;
+}
+
+// --- Given steps: set up the guard command via World state ------------------
+
+Given(/^the test guard hook receives a direct pytest command$/, function (this: TuiWorldWithGuard) {
+  this.guardResult = runTestGuardBDD('python -m pytest tests/');
+});
+
+Given(/^the test guard hook receives a direct vitest command$/, function (this: TuiWorldWithGuard) {
+  this.guardResult = runTestGuardBDD('npx vitest run');
+});
+
+Given(/^the test guard hook receives a direct jest command$/, function (this: TuiWorldWithGuard) {
+  this.guardResult = runTestGuardBDD('npx jest');
+});
+
+Given(/^the test guard hook receives a direct dotnet test command$/, function (this: TuiWorldWithGuard) {
+  this.guardResult = runTestGuardBDD('dotnet test');
+});
+
+Given(/^the test guard hook receives a direct cargo test command$/, function (this: TuiWorldWithGuard) {
+  this.guardResult = runTestGuardBDD('cargo test');
+});
+
+Given(/^the test guard hook receives a direct go test command$/, function (this: TuiWorldWithGuard) {
+  this.guardResult = runTestGuardBDD('go test ./...');
+});
+
+Given(/^the test guard hook receives a direct npm test command$/, function (this: TuiWorldWithGuard) {
+  this.guardResult = runTestGuardBDD('npm test');
+});
+
+Given(/^the test guard hook receives a wrapper command$/, function (this: TuiWorldWithGuard) {
+  this.guardResult = runTestGuardBDD('node test_runner_wrapper.cjs python -m pytest');
+});
+
+Given(/^the test guard hook receives a wrapper command with framework flag$/, function (this: TuiWorldWithGuard) {
+  this.guardResult = runTestGuardBDD('node test_runner_wrapper.cjs --framework dotnet -- dotnet test');
+});
+
+Given(/^the test guard hook receives a non-test command$/, function (this: TuiWorldWithGuard) {
+  this.guardResult = runTestGuardBDD('ls -la');
+});
+
+Given(/^the plugin hooks registry is read$/, function (this: TuiWorldWithGuard) {
+  // Registry is read in the Then step; nothing to run here.
+});
+
+// --- When step: for GUARD001_11 "inspect reason" (re-uses Given state) -----
+
+When(/^the deny reason is inspected for framework list$/, function (this: TuiWorldWithGuard) {
+  // guardResult already set by the preceding Given; no additional action needed.
+});
+
+// --- Then steps: assertions shared across GUARD001 scenarios ----------------
+
+Then(/^the test guard should deny with exit code 2$/, function (this: TuiWorldWithGuard) {
+  const r = this.guardResult!;
+  assert.equal(r.status, 2, `expected exit code 2 (deny); got ${r.status}. stderr: ${r.stderr}`);
+});
+
+Then(/^the deny output should contain permissionDecision deny$/, function (this: TuiWorldWithGuard) {
+  const r = this.guardResult!;
+  let parsed: { hookSpecificOutput?: { permissionDecision?: string } };
+  try {
+    parsed = JSON.parse(r.stdout);
+  } catch {
+    throw new Error(`expected JSON on stdout; got: ${r.stdout.substring(0, 200)}`);
+  }
+  assert.equal(
+    parsed.hookSpecificOutput?.permissionDecision,
+    'deny',
+    `expected permissionDecision===deny; got ${JSON.stringify(parsed.hookSpecificOutput)}`,
+  );
+});
+
+Then(/^the deny reason should mention \/run-tests$/, function (this: TuiWorldWithGuard) {
+  const parsed = JSON.parse(this.guardResult!.stdout) as { hookSpecificOutput?: { permissionDecisionReason?: string } };
+  const reason = parsed.hookSpecificOutput?.permissionDecisionReason ?? '';
+  assert.match(reason, /\/run-tests/, `expected /run-tests in deny reason; got: ${reason.substring(0, 300)}`);
+});
+
+Then(/^the test guard should allow with exit code 0$/, function (this: TuiWorldWithGuard) {
+  const r = this.guardResult!;
+  assert.equal(r.status, 0, `expected exit code 0 (allow); got ${r.status}. stdout: ${r.stdout} stderr: ${r.stderr}`);
+});
+
+Then(/^the deny reason should list vitest pytest and dotnet$/, function (this: TuiWorldWithGuard) {
+  const parsed = JSON.parse(this.guardResult!.stdout) as { hookSpecificOutput?: { permissionDecisionReason?: string } };
+  const reason = parsed.hookSpecificOutput?.permissionDecisionReason ?? '';
+  assert.match(reason, /vitest/, `expected 'vitest' in deny reason; got: ${reason.substring(0, 300)}`);
+  assert.match(reason, /pytest/, `expected 'pytest' in deny reason; got: ${reason.substring(0, 300)}`);
+  assert.match(reason, /dotnet/, `expected 'dotnet' in deny reason; got: ${reason.substring(0, 300)}`);
+});
+
+Then(/^the registry should have at least one SessionStart hook$/, function (this: TuiWorldWithGuard) {
+  const hooks = JSON.parse(fs.readFileSync(PLUGIN_HOOKS_PATH, 'utf-8')) as Record<string, { hooks: Record<string, unknown[]> }>;
+  const sessionStart = (hooks as any).hooks?.SessionStart ?? [];
+  assert.ok(
+    Array.isArray(sessionStart) && sessionStart.length > 0,
+    `expected at least one SessionStart hook; registry has: ${JSON.stringify(Object.keys((hooks as any).hooks ?? {}))}`,
+  );
+});
+
+Then(/^the registry should have a Bash PreToolUse entry for test_guard$/, function (this: TuiWorldWithGuard) {
+  const hooks = JSON.parse(fs.readFileSync(PLUGIN_HOOKS_PATH, 'utf-8')) as Record<string, unknown>;
+  const preEntries: Array<{ matcher?: string; hooks?: Array<{ command?: string }> }> =
+    ((hooks as any).hooks?.PreToolUse ?? []);
+  const testGuardEntry = preEntries.find(
+    (entry) =>
+      entry.matcher === 'Bash' &&
+      (entry.hooks ?? []).some((h) => (h.command ?? '').includes('test_guard')),
+  );
+  assert.ok(
+    testGuardEntry !== undefined,
+    `expected a Bash PreToolUse entry for test_guard; got entries: ${JSON.stringify(preEntries.map((e) => ({ matcher: e.matcher, commands: (e.hooks ?? []).map((h) => h.command) })))}`,
+  );
+});
