@@ -169,3 +169,9 @@ Feature: CEGATE001 Claim-Evidence Gate
     Given the session has scope-open work and the current turn only read the gate's own source with no edit
     When the gate evaluates a second consecutive such inspection turn
     Then it blocks with a bare next-step demand, while a turn that EDITS the gate is treated as real work and approved
+
+  # @feature11
+  Scenario: CEGATE001_35 A backgrounded agent is in-flight while running and not after it comes to rest
+    Given a backgrounded helper agent was launched and has not yet delivered its «came to rest» completion
+    When the gate checks whether a background job is still in flight
+    Then it reports in-flight while running, but the «came to rest» user-message resets the window so it is no longer in-flight

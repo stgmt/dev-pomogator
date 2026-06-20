@@ -12,7 +12,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { classify, firstUnsupported, stripCode } from '../claim_classifier.ts';
-import { extractTurnWindow } from '../turn_window.ts';
+import { extractTurnWindow, bgInFlightInWindow } from '../turn_window.ts';
 
 const HOOK = path.resolve(__dirname, '..', 'claim_evidence_gate_stop.ts');
 
@@ -190,6 +190,27 @@ describe('CEGATE001: pure classifier units', () => {
     expect(out).not.toContain('работает');
     expect(out).not.toContain('существует');
     expect(out.replace(/\s+/g, ' ').trim()).toBe('текст и конец');
+  });
+
+  // @feature11 — investigated for the 5a "agent-completion" tightening (real transcript shapes):
+  // a NATURAL backgrounded-agent completion is a USER message «"<name>" came to rest», which resets
+  // the turn-window boundary — so the existing window detector ALREADY handles the single-agent case
+  // (in-flight while running; not after rest). A whole-transcript agent COUNTER was REJECTED: real
+  // transcripts don't pair launches↔completions reliably (cross-session delivery / sidechains), so it
+  // would be a fake detector. The only residual is multi-agent partial completion → under-defer (the
+  // safe direction, not a regression). This pins the verified single-agent behaviour.
+  it('CEGATE001_35: a backgrounded agent is in-flight while running, not after «came to rest» (window boundary)', () => {
+    const ack: Block = {
+      type: 'user',
+      message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'a1', content: 'Async agent launched successfully.\nagentId: abc123 (internal ID)' }] },
+    };
+    const launch = A([tool('Agent', { id: 'a1', description: 'migrate x', subagent_type: 'bdd-migrator', run_in_background: true })]);
+    const running = [U('go'), launch, ack, A([txt('Запустил помощника — жду его результата.')])].map((r) => JSON.stringify(r)).join('\n');
+    const done = [U('go'), launch, ack, U('"migrate x" came to rest · 5m\n\nрезультат: 14 сценариев зелёные.'), A([txt('Обработал результат, продолжаю.')])]
+      .map((r) => JSON.stringify(r))
+      .join('\n');
+    expect(bgInFlightInWindow(running)).toBe(true); // agent running → in-flight → defer
+    expect(bgInFlightInWindow(done)).toBe(false); // «came to rest» resets the window → not in-flight
   });
 });
 
