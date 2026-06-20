@@ -222,3 +222,21 @@ Feature: TESTQUAL001_strong-tests skill — mutation-resistant test generation a
     Given a mutation report JSON file containing both a survivors array with 2 entries and a gaps array with 1 entry
     When survivors-batch-prompt is run on that report
     Then the output SHALL contain exactly 1 batch JSON line reflecting the gaps array length
+
+  @feature7
+  Scenario: TESTQUAL001_34_Detector_suggests_coverage_and_no_leak_for_Map_returning_function
+    Given a TypeScript file with a Map-returning function and a single loop
+    When the invariant detector scans the file
+    Then the candidate suggestedInvariants SHALL include coverage and no-leak
+
+  @feature7
+  Scenario: TESTQUAL001_35_Detector_suggests_idempotence_and_monotonicity_for_Iterable_returning_function
+    Given a TypeScript file with an Iterable-returning function and a single loop
+    When the invariant detector scans the file
+    Then the candidate suggestedInvariants SHALL include idempotence and monotonicity
+
+  @feature7
+  Scenario: TESTQUAL001_36_Detector_flags_Python_nested_for_in_as_nxm_overlap
+    Given a Python file with a function containing nested for-in loops
+    When the invariant detector scans the file
+    Then the candidate kind SHALL be nxm-overlap with the conservation invariant

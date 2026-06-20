@@ -818,3 +818,97 @@ Then(
     assert.ok(inv.includes('monotonicity'), `missing 'monotonicity' in ${JSON.stringify(inv)}`);
   },
 );
+
+// ---------------------------------------------------------------------------
+// TESTQUAL001_34/35/36 — W4 coverage-gap branches (return-type taxonomy + Python for-in)
+// Close the NoCoverage mutants in suggestInvariants Map/Iterable branches + nestedLoopCount
+// Python (audit-reports/stryker-bdd-mutation-finding.md). Drive scan() in-process.
+// ---------------------------------------------------------------------------
+Given(
+  /^a TypeScript file with a Map-returning function and a single loop$/,
+  function () {
+    const content = [
+      'export function group(items: string[]): Map<string, number> {',
+      '  const out = new Map<string, number>();',
+      '  for (const x of items) out.set(x, (out.get(x) ?? 0) + 1);',
+      '  return out;',
+      '}',
+    ].join('\n');
+    world.tempFile = path.join(world.tempDir!, 'src', 'group.ts');
+    fs.mkdirSync(path.dirname(world.tempFile), { recursive: true });
+    fs.writeFileSync(world.tempFile, content, 'utf-8');
+  },
+);
+
+Given(
+  /^a TypeScript file with an Iterable-returning function and a single loop$/,
+  function () {
+    const content = [
+      'export function gen(items: number[]): Iterable<number> {',
+      '  const out: number[] = [];',
+      '  for (const x of items) out.push(x * 2);',
+      '  return out;',
+      '}',
+    ].join('\n');
+    world.tempFile = path.join(world.tempDir!, 'src', 'gen.ts');
+    fs.mkdirSync(path.dirname(world.tempFile), { recursive: true });
+    fs.writeFileSync(world.tempFile, content, 'utf-8');
+  },
+);
+
+Given(
+  /^a Python file with a function containing nested for-in loops$/,
+  function () {
+    const content = [
+      'def pair(items: list[str]) -> list[str]:',
+      '    out = []',
+      '    for a in items:',
+      '        for b in items:',
+      '            out.append(a + b)',
+      '    return out',
+    ].join('\n');
+    world.tempFile = path.join(world.tempDir!, 'src', 'pair.py');
+    fs.mkdirSync(path.dirname(world.tempFile), { recursive: true });
+    fs.writeFileSync(world.tempFile, content, 'utf-8');
+  },
+);
+
+When(
+  /^the invariant detector scans the file$/,
+  function () {
+    const stack: Stack = detectStack(world.tempFile!)!;
+    world.scanResult = scan(fs.readFileSync(world.tempFile!, 'utf-8'), stack);
+  },
+);
+
+Then(
+  /^the candidate suggestedInvariants SHALL include coverage and no-leak$/,
+  function () {
+    const c = world.scanResult!.candidates[0];
+    assert.ok(c, `expected a candidate; got ${JSON.stringify(world.scanResult)}`);
+    assert.equal(c.kind, 'collection-returning', `kind must be collection-returning, got ${c.kind}`);
+    assert.ok(c.suggestedInvariants.includes('coverage'), `missing 'coverage' in ${JSON.stringify(c.suggestedInvariants)}`);
+    assert.ok(c.suggestedInvariants.includes('no-leak'), `missing 'no-leak' in ${JSON.stringify(c.suggestedInvariants)}`);
+  },
+);
+
+Then(
+  /^the candidate suggestedInvariants SHALL include idempotence and monotonicity$/,
+  function () {
+    const c = world.scanResult!.candidates[0];
+    assert.ok(c, `expected a candidate; got ${JSON.stringify(world.scanResult)}`);
+    assert.equal(c.kind, 'collection-returning', `kind must be collection-returning, got ${c.kind}`);
+    assert.ok(c.suggestedInvariants.includes('idempotence'), `missing 'idempotence' in ${JSON.stringify(c.suggestedInvariants)}`);
+    assert.ok(c.suggestedInvariants.includes('monotonicity'), `missing 'monotonicity' in ${JSON.stringify(c.suggestedInvariants)}`);
+  },
+);
+
+Then(
+  /^the candidate kind SHALL be nxm-overlap with the conservation invariant$/,
+  function () {
+    const c = world.scanResult!.candidates[0];
+    assert.ok(c, `expected a candidate; got ${JSON.stringify(world.scanResult)}`);
+    assert.equal(c.kind, 'nxm-overlap', `kind must be nxm-overlap, got ${c.kind}`);
+    assert.ok(c.suggestedInvariants.includes('conservation'), `missing 'conservation' in ${JSON.stringify(c.suggestedInvariants)}`);
+  },
+);
