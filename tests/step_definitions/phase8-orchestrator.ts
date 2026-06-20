@@ -41,6 +41,7 @@ interface OrchWorld extends V4World {
   drift?: DriftResult;
   preSnapshot?: Record<string, string>;
   actualCaps?: string[];
+  ledgerEntries?: ReturnType<typeof readLedger>;
 }
 
 function snapshotSpecDir(dir: string): Record<string, string> {
@@ -215,3 +216,52 @@ Then(/the message names the unreferenced capability/, function (this: OrchWorld)
   assert.ok(this.drift!.unreferenced.includes('brand_new_tool'));
   assert.match(this.drift!.message, /brand_new_tool/);
 });
+
+// ── SPECGEN004_299 — insertion order + most-recent-first ordering ─────────────
+
+Given(
+  /two pending ledger entries appended in order with distinct observations affected-files and timestamps/,
+  function (this: OrchWorld) {
+    const specDir = path.join(this.tempDir, '.specs', SLUG);
+    fs.mkdirSync(specDir, { recursive: true });
+    appendPendingEntry(
+      this.tempDir,
+      SLUG,
+      { trigger: 'friction', observation: 'older-observation', proposed_change: 'fix-old', affected_files: ['tools/old.ts'] },
+      new Date('2026-06-03T08:00:00Z'),
+    );
+    appendPendingEntry(
+      this.tempDir,
+      SLUG,
+      { trigger: 'gap', observation: 'newer-observation', proposed_change: 'fix-new', affected_files: ['tools/new.ts', 'tests/new.test.ts'] },
+      new Date('2026-06-03T09:00:00Z'),
+    );
+  },
+);
+
+When(
+  /readLedger and pendingReminder are called on that ledger/,
+  function (this: OrchWorld) {
+    this.ledgerEntries = readLedger(this.tempDir, SLUG);
+    this.reminder = pendingReminder(this.tempDir, SLUG, 10);
+  },
+);
+
+Then(
+  /readLedger returns entries in insertion order older-first/,
+  function (this: OrchWorld) {
+    assert.equal(this.ledgerEntries!.length, 2, 'readLedger must return exactly 2 entries');
+    assert.equal(this.ledgerEntries![0].observation, 'older-observation');
+    assert.equal(this.ledgerEntries![1].observation, 'newer-observation');
+    // affected_files are also round-tripped correctly
+    assert.deepEqual(this.ledgerEntries![0].affected_files, ['tools/old.ts']);
+    assert.deepEqual(this.ledgerEntries![1].affected_files, ['tools/new.ts', 'tests/new.test.ts']);
+  },
+);
+
+Then(
+  /pendingReminder returns observations newer-first/,
+  function (this: OrchWorld) {
+    assert.deepEqual(this.reminder!.observations, ['newer-observation', 'older-observation']);
+  },
+);

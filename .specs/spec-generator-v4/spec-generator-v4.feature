@@ -2001,3 +2001,40 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given the spec-backlog resolver registry is loaded
     When listResolvers() is called
     Then every resolver exposes name description and resolve() with correct types
+
+  @feature21
+  Scenario: SPECGEN004_294 spec-status task-table exits 1 with error when TASKS.md is absent
+    Given a spec directory with no TASKS.md file
+    When spec-status runs with the task-table format on that empty spec
+    Then the CLI exits with status 1 and stderr contains "TASKS.md not found"
+
+  @feature19
+  Scenario: SPECGEN004_295 form-guards-dispatch routes violating TASKS.md to task-form-guard and propagates deny
+    Given a v3 spec directory with a progress.json marking version 3
+    When form-guards-dispatch receives a Write for a violating TASKS.md in that spec
+    Then the dispatcher exits 2 and the stdout JSON carries permissionDecision deny mentioning task-form-guard
+
+  @feature19
+  Scenario: SPECGEN004_296 form-guards-dispatch lets a guard-clean TASKS.md through with exit 0
+    Given a v3 spec directory with a progress.json marking version 3
+    When form-guards-dispatch receives a Write for a valid TASKS.md in that spec
+    Then the dispatcher exits 0 with no deny output
+
+  @feature19
+  Scenario: SPECGEN004_297 form-guards-dispatch routes violating USER_STORIES.md to user-story-form-guard and propagates deny
+    Given a v3 spec directory with a progress.json marking version 3
+    When form-guards-dispatch receives a Write for a violating USER_STORIES.md in that spec
+    Then the dispatcher exits 2 and the stdout JSON carries permissionDecision deny mentioning user-story-form-guard
+
+  @feature19
+  Scenario: SPECGEN004_298 form-guards-dispatch fast-exits 0 without spawning a guard for non-spec paths and non-target basenames
+    Given a v3 spec directory with a progress.json marking version 3
+    When form-guards-dispatch receives a Write for a path outside .specs or for a non-target basename NOTES.md
+    Then the dispatcher exits 0 with empty stdout
+
+  @feature33
+  Scenario: SPECGEN004_299 readLedger preserves insertion order and pendingReminder returns most-recent-first across two entries
+    Given two pending ledger entries appended in order with distinct observations affected-files and timestamps
+    When readLedger and pendingReminder are called on that ledger
+    Then readLedger returns entries in insertion order older-first
+    And pendingReminder returns observations newer-first
