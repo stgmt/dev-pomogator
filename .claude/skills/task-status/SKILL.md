@@ -1,7 +1,7 @@
 ---
 name: task-status
 description: Use when you change ANY spec entity's status through the centralized door — ESPECIALLY before starting work (moving a task to `ready`/`in-progress`) or confirming a spec PHASE STOP. It is the validated path: read the requirement's trace chain, confirm it is assembled, then set the status through the door's `set_entity_status` tool. Covers tasks (5-status machine), spec phases (confirm STOP, gated on prior STOPs), and derived entities (FR/story/decision — refused, their status is computed). Explains why a start is refused (which legs are missing) and how to unblock. Trigger phrases: "взять задачу в работу", "поставить задачу in-progress / ready / done", "пометить задачу готовой", "подтвердить STOP фазы", "start working on task", "set task status", "confirm phase stop".
-allowed-tools: mcp__dev-pomogator-specs__get_trace, mcp__dev-pomogator-specs__get_node, mcp__dev-pomogator-specs__get_spec_status, mcp__dev-pomogator-specs__set_entity_status, mcp__dev-pomogator-specs__read_spec_doc
+allowed-tools: mcp__dev-pomogator-specs__get_trace, mcp__dev-pomogator-specs__get_node, mcp__dev-pomogator-specs__get_spec_status, mcp__dev-pomogator-specs__set_entity_status, mcp__dev-pomogator-specs__set_spec_status, mcp__dev-pomogator-specs__read_spec_doc
 ---
 
 # task-status — set a task's status through the validated door (FR-48)
@@ -72,6 +72,16 @@ bypasses the door:
   status is COMPUTED, never hand-set. `set_entity_status` refuses with `STATUS_DERIVED` and
   RETURNS the live verdict (`fr-census` for an FR, `get_spec_status` for a spec). Change it by
   assembling legs / passing the scenario, not by setting a status.
+
+## Park a whole spec — backlog vs active (`set_spec_status`)
+
+A spec's *quality* verdict (GREEN / IMPLEMENTED / …) is COMPUTED and cannot be hand-set (above). But
+whether a spec is **backlog** (being built / populated / parked) vs **active** is an EXPLICIT choice you
+mark — not inferred from task states. `set_spec_status({ spec, status })` with `status: "backlog" | "active"`
+writes a `.spec-status` marker; a `backlog` spec is EXCLUDED from the task-census, so the per-prompt banner
+and the claim-evidence Stop-gate stop counting its open tasks as work-due-now. `active` (the default)
+removes the marker. Mark a spec you are PARKING — never one you are actively working (an active spec's open
+tasks SHOULD count). `get_spec_status` shows the current `spec_status`. Trigger: «пометить спеку беклогом / в работе».
 
 ## See also
 
