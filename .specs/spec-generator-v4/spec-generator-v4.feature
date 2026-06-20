@@ -2479,3 +2479,11 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then the render output contains "orphan project tests (FR-44/GT-1, reverse)"
     And the render output contains "FRs citing no RESEARCH.md (FR-44/GT-2, reverse)"
     And the render output contains "upstream unlinked (FR-44/GT-4, reverse)"
+
+  # ── reconcile-cli: spec-only/missing-acceptance (XSPEC001_02 coverage) ──────
+
+  @feature17
+  Scenario: SPECGEN004_371 reconcileCli detects spec-only/missing-acceptance when AC file is absent
+    Given a reconcile-cli temp repo with one spec that has an FR but no ACCEPTANCE_CRITERIA.md
+    When reconcileCli is called with dry-run=false sarif=false
+    Then the consistency-report.yaml for "spec-b" contains the code "spec-only/missing-acceptance"

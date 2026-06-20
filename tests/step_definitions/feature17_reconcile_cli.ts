@@ -48,6 +48,24 @@ function seedDriftSpec(repoRoot: string): void {
   );
 }
 
+/** Seed a spec that has an FR but no ACCEPTANCE_CRITERIA.md → triggers spec-only/missing-acceptance */
+function seedMissingAcceptanceSpec(repoRoot: string): void {
+  const specDir = path.join(repoRoot, '.specs', 'spec-b');
+  fs.mkdirSync(specDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(specDir, 'FR.md'),
+    '## FR-1: Login flow @feature1\n\nLogin SHALL call AuthManager. (No AC file — planted spec-only drift.)\n',
+  );
+  // Deliberately no ACCEPTANCE_CRITERIA.md
+}
+
+/** Helper: read finding codes from the written consistency-report.yaml for a given slug */
+function findingCodesFromYaml(repoRoot: string, slug: string): string[] {
+  const yamlPath = path.join(repoRoot, '.specs', slug, 'consistency-report.yaml');
+  if (!fs.existsSync(yamlPath)) return [];
+  return [...fs.readFileSync(yamlPath, 'utf-8').matchAll(/- code:\s*(\S+)/g)].map((m) => m[1]);
+}
+
 // ── Given steps ──────────────────────────────────────────────────────────────
 
 Given(
@@ -260,5 +278,25 @@ Then(
   /^the reconcileCli reportPaths is empty$/,
   function (this: ReconcileCliWorld) {
     assert.deepEqual(this.cliResult!.reportPaths, []);
+  },
+);
+
+// ── SPECGEN004_371 — spec-only/missing-acceptance via reconcileCli ────────────
+
+Given(
+  /^a reconcile-cli temp repo with one spec that has an FR but no ACCEPTANCE_CRITERIA\.md$/,
+  function (this: ReconcileCliWorld) {
+    seedMissingAcceptanceSpec(this.tempDir);
+  },
+);
+
+Then(
+  /^the consistency-report\.yaml for "([^"]+)" contains the code "([^"]+)"$/,
+  function (this: ReconcileCliWorld, slug: string, code: string) {
+    const codes = findingCodesFromYaml(this.tempDir, slug);
+    assert.ok(
+      codes.includes(code),
+      `Expected consistency-report.yaml for "${slug}" to contain code "${code}", got: ${JSON.stringify(codes)}`,
+    );
   },
 );
