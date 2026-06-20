@@ -61,6 +61,26 @@ strengthen a BDD mutation surface, ADD scenarios for the NoCoverage branches bef
 assertions. `ignoreStatic:true` (like the specgen config) skips static const/regex mutants that
 dominate wall-clock (331 of 788 = 67% of the time on the detector).
 
+## Deterministic kill check — `verify-kill.ts` (use this instead of the BDD aggregate)
+
+Because the cucumber-runner aggregate is a proven flaky gate (above), the reliable way to ask "does
+this scenario kill this mutant?" is `tools/stryker-mutation/verify-kill.ts` — it automates
+inject+restore and is deterministic:
+
+```bash
+npx tsx tools/stryker-mutation/verify-kill.ts <spec.json>
+# spec.json = { file, original, mutant, config, name }
+#   file/original/mutant — the production line + exact original→mutant strings
+#   config — a THROWAWAY cucumber config (scoped paths/import, throwaway message format)
+#   name   — cucumber --name regex selecting ONLY the covering scenario(s)
+```
+
+It (1) runs the covering scenario as a green baseline (refuses if not green), (2) injects the mutant
+and re-runs (FAIL ⇒ killed), (3) ALWAYS restores the file (try/finally) and re-runs to confirm a
+clean restore. Output `{verdict:"KILLED"|"SURVIVED", killed, baseline, mutant, restored}`; exit 0 iff
+KILLED and restored. Proven on the 299:20 survivor (KILLED) and an unreached nxm-branch mutant
+(SURVIVED) — 2026-06-20. This is the unit to gate on; the aggregate score is not.
+
 ## State
 
 Keep the last run's numbers in `.dev-pomogator/.mutation-state.json` (atomic write — `atomic-config-save`
