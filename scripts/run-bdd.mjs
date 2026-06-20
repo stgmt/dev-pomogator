@@ -27,6 +27,14 @@ const FILTER_FLAGS = ['--name', '-n', '--tags', '-t'];
 const isFiltered = args.some(
   (a) => FILTER_FLAGS.includes(a) || FILTER_FLAGS.some((f) => a.startsWith(f + '=')),
 );
+// A --dry-run executes NOTHING (every scenario reports `skipped`), so its ndjson is
+// all-skipped — writing it to the canonical poisons the census exactly like a filtered
+// run (the honesty gate then reads 0 passed). The collision-check dry-run is UNFILTERED
+// (all paths), so isFiltered is false — route a dry-run to the throwaway regardless.
+// (Dogfood 2026-06-20: an agent's `run-bdd.mjs --dry-run` clobbered the canonical with
+// 703 all-skipped events — done-but-not-run 43→234.)
+const isDryRun = args.includes('--dry-run');
+const isPartial = isFiltered || isDryRun;
 const hasExplicitConfig = args.some(
   (a) => a === '--config' || a === '-c' || a.startsWith('--config='),
 );
@@ -37,7 +45,7 @@ const cukeBin = path.join('node_modules', '@cucumber', 'cucumber', 'bin', 'cucum
 
 let runArgs = ['--import', 'tsx', cukeBin, ...args];
 
-if (isFiltered && !hasExplicitConfig) {
+if (isPartial && !hasExplicitConfig) {
   // Copy cucumber.json, swap the canonical message target → throwaway, run with that.
   const cfg = JSON.parse(fs.readFileSync('cucumber.json', 'utf8'));
   const profile = cfg.default ?? {};
@@ -50,7 +58,7 @@ if (isFiltered && !hasExplicitConfig) {
   fs.writeFileSync(tmpCfg, JSON.stringify(cfg, null, 2));
   runArgs = ['--import', 'tsx', cukeBin, '--config', tmpCfg, ...args];
   process.stderr.write(
-    `[run-bdd] filtered run → ${THROWAWAY} (canonical ${CANONICAL} left intact)\n`,
+    `[run-bdd] ${isDryRun && !isFiltered ? 'dry-run' : 'filtered run'} → ${THROWAWAY} (canonical ${CANONICAL} left intact)\n`,
   );
 }
 
@@ -67,7 +75,7 @@ try {
   // Only archive runs through the DEFAULT config: full → CANONICAL, filtered → THROWAWAY
   // (both targets known here). An explicit `-c` run writes its own target the wrapper can't
   // know, so skip it (those are scoped validation runs that already use a temp ndjson).
-  const wrote = isFiltered ? THROWAWAY : CANONICAL;
+  const wrote = isPartial ? THROWAWAY : CANONICAL;
   if (!hasExplicitConfig && fs.existsSync(wrote)) {
     const HIST = path.join('.dev-pomogator', '.test-history');
     fs.mkdirSync(HIST, { recursive: true });
@@ -93,7 +101,7 @@ try {
     const toMs = (t) => (t ? t.seconds * 1000 + Math.round((t.nanos ?? 0) / 1e6) : null);
     const durationMs = started && finished ? toMs(finished) - toMs(started) : null;
     const epoch = Date.now();
-    const kind = isFiltered ? 'filtered' : 'full';
+    const kind = isFiltered ? 'filtered' : isDryRun ? 'dry-run' : 'full';
     const chunkName = `run-${epoch}-${kind}.ndjson`;
     fs.copyFileSync(wrote, path.join(HIST, chunkName));
     const entry = {
