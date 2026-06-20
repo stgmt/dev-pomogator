@@ -53,6 +53,19 @@ Re-ran the full file after adding TESTQUAL001_34/35/36 [cmd:npm run mutation:bdd
 3. **The 32 survivors must be TRIAGED, not blindly chased — some are equivalent mutants.** Investigated the `findFunctionEndLine` Python-EOF fallback [ref:detect-invariant-candidates.ts:160] `return Math.min(lines.length - 1, startLine + fallbackOffset)`: the two survivors there (`Math.min`→`Math.max`, `length - 1`→`length + 1`) are **equivalent mutants**. The fallback only fires when a Python function runs to EOF, so `startLine + 40` already exceeds the file length; the result feeds `lines.slice(i, endLine + 1)` [ref:detect-invariant-candidates.ts:289], and `Array.prototype.slice` **clamps** an over-large end index — so over-counting `endLine` yields an identical body slice and is unobservable [cmd:node -e slice-clamp proof → body(orig)==body(max)? true; body(orig)==body(+2)? true]. No test can kill them. The honest move per strong-tests §6.5 is to triage survivors into (a) equivalent (annotate / `// Stryker disable` with rationale) vs (b) genuinely-killable (add a tight branch-reaching scenario) — NOT to author impossible tests against equivalent mutants. The remaining survivors need the same per-mutant triage before counting them as "test debt".
 4. **Speed solved on the host too** — 14m46s for 741 mutants without Docker; perTest + 100% concurrency is the lever, exactly as designed.
 
+### W4 survivor triage (all 32, from reports/mutation-bdd/mutation.json)
+
+| Lines | Mutants | Class | Verdict |
+|---|---|---|---|
+| 120/122/151/156 | 14 × Regex | Stryker Regex-mutator | Likely-equivalent (Regex mutator tweaks regex internals; high equivalent rate — also the reason the skill-mutation config reverted the Regex mutator). Needs per-regex review; do not count as test debt yet. |
+| 160:12, 160:21 | 2 (min→max, ±1) | Python EOF-fallback | **Proven equivalent** — `Array.slice` clamps over-large end [cmd above]. Annotate, don't chase. |
+| 148/150/153/155/158 | ~12 (Block/Logical/Conditional/Equality/Method/StringLiteral) | Python indent-loop | Mixed — the `indent <= startIndent` boundary (153/155/158) may be killable with a Python fixture that de-indents at an exact column; needs a targeted scenario. |
+| 71:7, 81:7 | 2 × ConditionalExpression | suggestInvariants Map/Iterator branch | Possibly killable by tightening the W4 scenarios TESTQUAL001_34/35 (assert exact invariant arrays per branch). |
+| 123:38 | 1 ArrayDeclaration | suggestInvariants array | Possibly killable (assert exact array). |
+| 299:20 | 1 StringLiteral | composition-chain rationale | **KILLED** (commit d99682d) — tightened TESTQUAL001_11 to assert the rationale text; proven via inject+restore. |
+
+So the honest survivor picture is **not** "32 weak tests": 14 Regex + 2 slice-clamp are equivalent/likely-equivalent (~half), 1 killed, and ~15 are real targets for tighter/branch-reaching scenarios (the strong-tests §6.5 backlog). Driving those down is incremental scenario work, not an assertion-rewrite sweep.
+
 Everything below is the SUPERSEDED PoC record (kept for history).
 
 ---
