@@ -575,56 +575,57 @@ Then('VCS plumbing commands are allowed and content-reading git commands stay vi
   assert.deepEqual(this.leakedDeny, [], `content-leak/worktree-write/reader wrongly allowed: ${JSON.stringify(this.leakedDeny)}`);
 });
 
-// ── SPECGEN004_149 — P21-1 multi-session read-only door ──────────────────────
-// Binds the REAL chain: a first session owns the write-lock; a second session's
-// acquireLockOrReadOnly returns reader+holder (no throw), so its registry boots
-// with writeLockHeldBy set → apply_spec_change refuses WRITE_LOCK_HELD naming the
-// holder, while read_spec_doc + the propose dry-run stay live and the file on
-// disk is untouched. This is the door staying alive for every session under
-// enforce (the P0 the singleton lock used to kill).
+// ── SPECGEN004_149 — P21-1 multi-session door: EVERY session writes (E-A redesign, owner 2026-06-20) ──
+// Binds the REAL chain under the finished all-write design: a first session holds the lifetime PRESENCE
+// lock; a second session's acquireLockOrReadOnly returns reader+holder (no throw). The lifetime lock NO
+// LONGER blocks writes — apply_spec_change SERIALISES in via the short per-write lock + CAS, reads + the
+// propose dry-run stay live, and the write reaches disk. (The retired lifetime WRITE_LOCK_HELD read-only
+// refusal is GONE — owner decision: finish the redesign so every session can write.) Behaviour verified
+// against the live door before this rewrite (apply → {ok:true, findings:[]}).
 import { acquireLock, acquireLockOrReadOnly } from '../../tools/spec-mcp-server/lock-manager.ts';
 interface RoDoorWorld extends F40World {
-  roApply?: { ok: boolean; error?: string; held_by?: { pid: number; env: string } };
+  roApply?: { ok: boolean; error?: string };
   roRead?: { ok: boolean; content?: string };
   roPropose?: { ok: boolean; error?: string };
   roBodyBefore?: string;
   roBodyAfter?: string;
 }
-Given('a spec corpus whose write-lock is already held by another session', function (this: RoDoorWorld) {
+const RO_WRITTEN = '## FR-1: ReadOnly\n\nSecond session wrote this, serialized.\n';
+Given('a spec corpus whose presence-lock is already held by another session', function (this: RoDoorWorld) {
   const dir = path.join(this.tempDir, '.specs', 'ro-demo');
   fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, 'FR.md'), '## FR-1: ReadOnly\n\nOriginal body, must not change.\n');
+  fs.writeFileSync(path.join(dir, 'FR.md'), '## FR-1: ReadOnly\n\nOriginal body.\n');
   this.roBodyBefore = fs.readFileSync(path.join(dir, 'FR.md'), 'utf-8');
-  // First session owns the singleton lock for THIS corpus.
+  // First session holds the lifetime PRESENCE lock for THIS corpus (no longer a write-block under E-A).
   acquireLock({ repoRoot: this.tempDir, env: 'host' });
 });
 When('a second session boots its door and exercises read + write tools', async function (this: RoDoorWorld) {
   await inCorpus(this, async () => {
-    // The non-fatal acquisition the read-only door uses: contention → reader+holder.
+    // Non-fatal acquisition: contention → presence-reader (no throw). Under E-A it STILL writes.
     const acq = acquireLockOrReadOnly({ repoRoot: this.tempDir, env: 'host' });
-    assert.equal(acq.mode, 'reader', 'a second session must NOT win the lock');
-    const holder = acq.holder!;
-    const tools = buildToolRegistry(() => buildGraph({ repoRoot: this.tempDir, skipNdjson: true }), {
-      writeLockHeldBy: () => ({ pid: holder.pid, env: holder.env, started_at: holder.started_at }),
-    });
+    assert.equal(acq.mode, 'reader', 'a second session does not own the lifetime presence lock');
+    const tools = buildToolRegistry(() => buildGraph({ repoRoot: this.tempDir, skipNdjson: true }));
     const call = async (name: string, args: Record<string, unknown>): Promise<any> => {
       const r = (await tools.find((t) => t.name === name)!.handler(args as never)) as { content: Array<{ text: string }> };
       return JSON.parse(r.content[0].text);
     };
-    this.roApply = await call('apply_spec_change', { spec: 'ro-demo', doc: 'FR.md', content: 'HIJACKED\n', reason: 'should be refused' });
+    this.roApply = await call('apply_spec_change', {
+      spec: 'ro-demo', doc: 'FR.md',
+      old_string: 'Original body.', new_string: 'Second session wrote this, serialized.',
+      reason: 'serialized write from a second session',
+    });
     this.roRead = await call('read_spec_doc', { spec: 'ro-demo', doc: 'FR.md' });
     this.roPropose = await call('propose_spec_change', { spec: 'ro-demo', doc: 'FR.md', content: '## FR-1: ReadOnly\n\nproposed.\n' });
   });
   this.roBodyAfter = fs.readFileSync(path.join(this.tempDir, '.specs', 'ro-demo', 'FR.md'), 'utf-8');
 });
-Then('writes refuse with the holder named while reads and dry-runs stay live and the file is untouched', function (this: RoDoorWorld) {
-  assert.equal(this.roApply!.ok, false, 'apply_spec_change must refuse in a read-only door');
-  assert.equal(this.roApply!.error, 'WRITE_LOCK_HELD');
-  assert.equal(this.roApply!.held_by!.pid, process.pid, 'the refusal must NAME the holder pid');
-  assert.ok(this.roRead!.ok, 'read_spec_doc must stay available in a read-only door');
-  assert.ok(this.roRead!.content!.includes('Original body'), 'the read must return the real, unchanged doc');
-  assert.notEqual(this.roPropose!.error, 'WRITE_LOCK_HELD', 'the propose dry-run must NOT be lock-gated');
-  assert.equal(this.roBodyAfter, this.roBodyBefore, 'a refused write must not touch disk');
+Then('every session can write — the second session\'s write serialises in, reads stay live, and no lifetime lock refuses it', function (this: RoDoorWorld) {
+  assert.equal(this.roApply!.ok, true, 'apply_spec_change must SUCCEED — the door is writable for every session (no lifetime read-only)');
+  assert.notEqual(this.roApply!.error, 'WRITE_LOCK_HELD', 'the retired lifetime read-only refusal must NOT fire');
+  assert.ok(this.roRead!.ok, 'read_spec_doc stays available');
+  assert.ok(this.roRead!.content!.includes('Second session wrote this'), 'the read returns the serialized write');
+  assert.notEqual(this.roPropose!.error, 'WRITE_LOCK_HELD', 'the propose dry-run is not lock-gated');
+  assert.equal(this.roBodyAfter, RO_WRITTEN, 'the serialized write reached disk');
 });
 
 // ── SPECGEN004_150 — P21-2 read_spec_doc pagination over a big doc ───────────
