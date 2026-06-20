@@ -151,12 +151,10 @@ Given(
 );
 
 Then(
-  /^\.claude\/settings\.json should contain UserPromptSubmit hook$/,
+  /^\.claude-plugin\/hooks\.json should contain a UserPromptSubmit hook$/,
   function (this: MdValWorld) {
-    // The UserPromptSubmit hook lives in .claude-plugin/hooks.json, not
-    // settings.json directly. The feature prose says "settings.json" but
-    // the real artifact is hooks.json (canonical plugin distribution).
-    // Assert the canonical artifact.
+    // Assert .claude-plugin/hooks.json has a UserPromptSubmit hook referencing validate-specs.ts.
+    // (Previously the prose said settings.json — fixed via apply_spec_change 2026-06-20.)
     assert.ok(
       fs.existsSync(HOOKS_JSON_PATH),
       `Expected .claude-plugin/hooks.json to exist at ${HOOKS_JSON_PATH}`,

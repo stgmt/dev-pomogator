@@ -16,7 +16,7 @@ Feature: Specs Validator Hook
   @feature2
   Scenario: Hook is registered for Claude
     When dev-pomogator installs specs-workflow for Claude
-    Then .claude/settings.json should contain UserPromptSubmit hook
+    Then .claude-plugin/hooks.json should contain a UserPromptSubmit hook
     And hook command should reference validate-specs.ts
 
   @feature3
