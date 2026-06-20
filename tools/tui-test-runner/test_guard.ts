@@ -10,6 +10,32 @@
  * Fail-open: any error → exit(0)
  */
 
+import { readFileSync } from 'node:fs';
+
+/**
+ * Does a PARTIAL/dry cucumber run's EFFECTIVE config write the canonical ndjson? Reads the actual
+ * config (the `-c`/`--config` path, or the default `cucumber.json`) and any CLI `--format message:`
+ * and checks whether ANY message formatter targets `.last-test-run` (the canonical). A temp config
+ * that COPIED cucumber.json's format still clobbers — the old "-c is safe" assumption was the gap
+ * (an agent's collision dry-run via a scoped temp config that kept the canonical format wiped it,
+ * 2026-06-20). cucumber MERGES formats, so a CLI `--format throwaway` does NOT cancel a canonical
+ * format in the config. builtins-only (fs); fail-open on read error EXCEPT the default cucumber.json
+ * (which is known to write the canonical).
+ */
+function partialRunWritesCanonical(command: string): boolean {
+  if (/--format\s+message:\S*last-test-run/.test(command)) return true;
+  const m = command.match(/(?:^|\s)(?:-c|--config)(?:\s|=)\s*"?([^\s"]+)"?/);
+  const cfgPath = m ? m[1] : 'cucumber.json';
+  try {
+    const cfg = JSON.parse(readFileSync(cfgPath, 'utf-8')) as Record<string, { format?: unknown[] }>;
+    return Object.values(cfg).some(
+      (p) => Array.isArray(p?.format) && p.format.some((f) => typeof f === 'string' && /message:\S*last-test-run/.test(f)),
+    );
+  } catch {
+    return cfgPath === 'cucumber.json'; // default config writes the canonical; unreadable temp → can't tell, allow
+  }
+}
+
 interface PreToolUseInput {
   session_id?: string;
   cwd?: string;
@@ -129,10 +155,9 @@ async function main(): Promise<void> {
   const isCucumber =
     !isProse && (/cucumber(?:\.js|-js)\b/.test(command) || /@cucumber\/cucumber/.test(command));
   const isPartial = /(?:^|\s)(?:--name|-n|--tags|-t|--dry-run)(?:\s|=|$)/.test(command);
-  const usesTempConfig = /(?:^|\s)(?:-c|--config)(?:\s|=)\s*(?!cucumber\.json\b)\S/.test(command);
-  const usesThrowawayFormat = /--format\s+message:(?!\S*last-test-run)/.test(command);
-  const isSafeIsolated = usesTempConfig || usesThrowawayFormat;
-  if (isCucumber && isPartial && !isSafeIsolated) {
+  // Unsafe ONLY if the run's EFFECTIVE config actually writes the canonical (read the config, don't
+  // guess from the command text — a temp config can still copy cucumber.json's canonical format).
+  if (isCucumber && isPartial && partialRunWritesCanonical(command)) {
     const filterArgs =
       command.replace(/^[\s\S]*?cucumber(?:\.js|-js)?\s*/, '').trim() || '--tags "@featureN"';
     const msg = [
