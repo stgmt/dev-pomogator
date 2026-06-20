@@ -240,3 +240,9 @@ Feature: TESTQUAL001_strong-tests skill — mutation-resistant test generation a
     Given a Python file with a function containing nested for-in loops
     When the invariant detector scans the file
     Then the candidate kind SHALL be nxm-overlap with the conservation invariant
+
+  @feature7
+  Scenario: TESTQUAL001_37_Detector_pins_endLine_for_a_de_indenting_Python_function
+    Given a Python file with a nested-loop function followed by a top-level statement
+    When the invariant detector scans the file
+    Then the candidate kind SHALL be nxm-overlap and endLine SHALL be exactly 6
