@@ -1799,3 +1799,143 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given a feature file where every scenario is already tagged
     When renderTagSuggestions is called on that file
     Then the rendered output is an empty string
+
+  # ── converter pure-function tests (FR-11) ──────────────────────────────────
+
+  @feature11
+  Scenario: SPECGEN004_262 convertSource converts ## legacy heading to v4 format
+    Given a v3 source with `## Requirement: FR-001 Login flow`
+    When convertSource is called on that source
+    Then the result has changed=true with before `## Requirement: FR-001 Login flow` and after `## FR-001: Login flow`
+    And newSource contains `## FR-001: Login flow` and does NOT contain `Requirement: FR-001`
+
+  @feature11
+  Scenario: SPECGEN004_263 convertSource converts ### legacy heading to v4 format
+    Given a v3 source with `### Requirement: FR-001 Login flow`
+    When convertSource is called on that source
+    Then the result has changed=true with before `### Requirement: FR-001 Login flow` and after `### FR-001: Login flow`
+    And newSource contains `### FR-001: Login flow` and does NOT contain `Requirement: FR-001`
+
+  @feature11
+  Scenario: SPECGEN004_264 convertSource converts #### legacy heading to v4 format
+    Given a v3 source with `#### Requirement: FR-001 Login flow`
+    When convertSource is called on that source
+    Then the result has changed=true with before `#### Requirement: FR-001 Login flow` and after `#### FR-001: Login flow`
+    And newSource contains `#### FR-001: Login flow` and does NOT contain `Requirement: FR-001`
+
+  @feature11
+  Scenario: SPECGEN004_265 convertSource is idempotent on a modern v4 heading
+    Given a source with modern v4 heading `### FR-001: Login`
+    When convertSource is called on that source
+    Then the result has changed=false and newSource equals the input byte-for-byte
+
+  @feature11
+  Scenario: SPECGEN004_266 convertSource preserves body content and Jira trace lines byte-for-byte
+    Given a v3 source with a legacy heading and a Jira trace line `_Jira: PROJ-42_`
+    When convertSource is called on that source
+    Then newSource contains `_Jira: PROJ-42_` and `Body paragraph with` and `## FR-001: Login`
+
+  @feature11
+  Scenario: SPECGEN004_267 convertSource handles multiple legacy headings in one file
+    Given a v3 source with two legacy headings FR-001 and FR-002
+    When convertSource is called on that source
+    Then the result has 2 changes with frIds ["FR-001", "FR-002"]
+
+  @feature11
+  Scenario: SPECGEN004_268 convertSource returns changed=false when no legacy headings present
+    Given a source with no legacy headings (only `# Doc` and `## Section`)
+    When convertSource is called on that source
+    Then the result has changed=false and an empty changes array
+
+  @feature11
+  Scenario: SPECGEN004_269 convertSource does not match Requirement: in body prose
+    Given a source where `Requirement: FR-001` appears only in body prose, not as a heading
+    When convertSource is called on that source
+    Then convertSource returns changed=false (heading-anchored regex does not match prose)
+
+  @feature11
+  Scenario: SPECGEN004_270 renderDiff returns empty string when nothing changed
+    Given a conversion result with changed=false for `# Doc`
+    When renderDiff is called with filename `test.md`
+    Then the diff output is an empty string
+
+  @feature11
+  Scenario: SPECGEN004_271 renderDiff emits a unified-diff-ish block per change
+    Given a conversion result from `## Requirement: FR-001 Login`
+    When renderDiff is called with filename `.specs/auth/FR.md`
+    Then the diff output contains `--- .specs/auth/FR.md (v3)` and `+++ .specs/auth/FR.md (v4)`
+    And the diff output contains `- ## Requirement: FR-001 Login` and `+ ## FR-001: Login`
+
+  # ── spec-backlog classifier pure-function tests (FR-17) ────────────────────
+
+  @feature17
+  Scenario: SPECGEN004_272 classify routes concept-overlap to NOISE
+    Given a finding with code `cross-spec/concept-overlap` and severity INFO
+    When classify is called on that finding for slug `foo`
+    Then the classification verdict is NOISE
+
+  @feature17
+  Scenario: SPECGEN004_273 classify routes missing-cross-ref to BACKLOG/cross-ref-linker and strips .specs/ prefix
+    Given a finding with code `cross-spec/missing-cross-ref`, spec_a `.specs/foo`, spec_b `.specs/bar`
+    When classify is called on that finding for slug `foo`
+    Then the classification verdict is BACKLOG with category `missing-cross-ref` and resolver `cross-ref-linker`
+
+  @feature17
+  Scenario: SPECGEN004_274 classify routes dead-link sibling-spec target to BACKLOG missing-spec-file
+    Given a finding with code `impl-drift/dead-link` and expected_path `ACCEPTANCE_CRITERIA.md`
+    When classify is called on that finding for slug `foo`
+    Then the classification verdict is BACKLOG with category `missing-spec-file` and resolver `ac-author`
+
+  @feature17
+  Scenario: SPECGEN004_275 classify routes dead-link with case-typo extension to AUTO_FIX
+    Given a finding with code `impl-drift/dead-link` and expected_path `guide.MD` (uppercase extension)
+    When classify is called on that finding for slug `foo`
+    Then the classification verdict is AUTO_FIX
+
+  @feature17
+  Scenario: SPECGEN004_276 classify routes dead-link multi-segment path to BACKLOG dead-link-typo
+    Given a finding with code `impl-drift/dead-link` and expected_path `tools/spec-graph/missing.ts`
+    When classify is called on that finding for slug `foo`
+    Then the classification verdict is BACKLOG with category `dead-link-typo` and resolver `link-fixer`
+
+  @feature17
+  Scenario: SPECGEN004_277 classify routes missing-test to BACKLOG scenario-writer
+    Given a finding with code `impl-drift/missing-test` and severity INFO
+    When classify is called on that finding for slug `foo`
+    Then the classification verdict is BACKLOG with resolver `scenario-writer`
+
+  @feature17
+  Scenario: SPECGEN004_278 classify routes module-ownership-conflict to BACKLOG owner-picker difficulty hard
+    Given a finding with code `cross-spec/module-ownership-conflict` and severity CRITICAL
+    When classify is called on that finding for slug `foo`
+    Then the classification verdict is BACKLOG with resolver `owner-picker` and difficulty `hard`
+
+  @feature17
+  Scenario: SPECGEN004_279 classify routes contradictory-nfr to BACKLOG decision-arbiter
+    Given a finding with code `cross-spec/contradictory-nfr` and severity CRITICAL
+    When classify is called on that finding for slug `foo`
+    Then the classification verdict is BACKLOG with resolver `decision-arbiter`
+
+  @feature17
+  Scenario: SPECGEN004_280 classify routes unrecognised codes to BACKLOG human with no silent loss
+    Given a finding with an unrecognised code `made-up/code`
+    When classify is called on that finding for slug `foo`
+    Then the classification verdict is BACKLOG with category `unrecognised` and resolver `human`
+
+  @feature17
+  Scenario: SPECGEN004_281 classify with repo context routes dead-link no-match to NOISE
+    Given a finding with code `impl-drift/dead-link` and expected_path `tools/no-such-dir/no-such-file-xyz-zzz-12345.ts`
+    When classify is called with repo context for slug `foo`
+    Then the classification verdict is NOISE because the file does not exist anywhere in the repo
+
+  @feature17
+  Scenario: SPECGEN004_282 classify with repo context routes dead-link one-match to BACKLOG dead-link-typo
+    Given a finding with code `impl-drift/dead-link` and expected_path `tools/spec-backlog/classifier.ts`
+    When classify is called with repo context for slug `foo`
+    Then the classification verdict is BACKLOG with category `dead-link-typo` (exactly one basename match)
+
+  @feature17
+  Scenario: SPECGEN004_283 classify without repoRoot falls back to dead-link-typo for backward compat
+    Given a finding with code `impl-drift/dead-link` and expected_path `tools/something/that-may-or-may-not-exist.ts`
+    When classify is called WITHOUT repo context for slug `foo`
+    Then the classification verdict is BACKLOG with category `dead-link-typo` (backward compat, no repoRoot)
