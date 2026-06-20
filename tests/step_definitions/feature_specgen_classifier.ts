@@ -25,8 +25,8 @@ interface ClassifierWorld extends V4World {
 }
 
 // Derive repo root from this file's location:
-// tests/step_definitions/feature_specgen_classifier.ts → up 3 levels
-const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
+// tests/step_definitions/feature_specgen_classifier.ts → up 2 levels
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 // ─── SPECGEN004_272  concept-overlap → NOISE ──────────────────────────────────
 
