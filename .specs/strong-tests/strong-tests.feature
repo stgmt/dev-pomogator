@@ -112,3 +112,78 @@ Feature: TESTQUAL001_strong-tests skill — mutation-resistant test generation a
     Then the detector SHALL identify the function as composition-chain candidate
     And the kind SHALL be composition-chain
     And the suggestedInvariants SHALL include cardinality AND uniqueness AND conservation AND monotonicity
+
+  @feature4
+  Scenario: TESTQUAL001_17_Classifier_detects_pure_unit_C_sharp_file_with_high_confidence
+    Given a C# test file with only plain assertions and no HttpClient or DbContext or Process references
+    When the classifier is run on the directory containing that C# test file
+    Then the JSON output SHALL contain a classification entry with type Unit for the C# file
+    And the confidence SHALL be high
+
+  @feature4
+  Scenario: TESTQUAL001_18_Classifier_detects_C_sharp_file_with_Moq_and_IClassFixture_as_Integration
+    Given a C# test file that references Moq and IClassFixture
+    When the classifier is run on the directory containing that Moq IClassFixture file
+    Then the JSON output SHALL contain a classification entry with type Integration for the Moq file
+
+  @feature4
+  Scenario: TESTQUAL001_19_Classifier_detects_C_sharp_file_with_WebApplicationFactory_and_Docker_as_E2E
+    Given a C# test file that references WebApplicationFactory and Docker
+    When the classifier is run on the directory containing that WebApplicationFactory Docker file
+    Then the JSON output SHALL contain a classification entry with type E2E and high confidence for the WebApplicationFactory file
+
+  @feature4
+  Scenario: TESTQUAL001_20_Classifier_detects_existing_Trait_marker_as_current_marker
+    Given a C# test file that already has a Trait Category marker
+    When the classifier is run on the directory containing that already-marked file
+    Then the JSON output SHALL have a non-null current_marker field for that file
+
+  @feature4
+  Scenario: TESTQUAL001_21_Classifier_detects_Python_pytest_file_with_mock_as_Integration
+    Given a Python test file that imports pytest and unittest.mock
+    When the classifier is run on the directory containing that Python mock file
+    Then the JSON output SHALL contain a classification entry with type Integration for the Python file
+
+  @feature4
+  Scenario: TESTQUAL001_22_Classifier_markdown_format_emits_report_with_Unit_Integration_E2E_sections
+    Given a directory containing a mix of test files of different types
+    When the classifier is run on that directory with --format markdown
+    Then the output SHALL contain markdown headings for Unit and Integration and E2E sections
+
+  @feature4
+  Scenario: TESTQUAL001_23_Classifier_returns_empty_array_for_directory_with_no_test_files
+    Given a directory containing no test files
+    When the classifier is run on that empty directory
+    Then the JSON output SHALL be an empty array
+
+  @feature13
+  Scenario: TESTQUAL001_24_Classifier_dry_run_reports_wouldApply_count_without_modifying_files
+    Given a directory with an unclassified C# test file for dry-run testing
+    When the classifier is run with --apply --dry-run on that directory
+    Then the output SHALL report a wouldApply count greater than zero
+    And the target C# file SHALL remain unmodified after dry-run
+
+  @feature13
+  Scenario: TESTQUAL001_25_Classifier_apply_injects_Trait_Category_Unit_above_C_sharp_class
+    Given a directory with an unclassified Unit-level C# test file for apply testing
+    When the classifier is run with --apply on that directory
+    Then the target C# file SHALL contain a Trait Category Unit annotation above the class declaration
+
+  @feature13
+  Scenario: TESTQUAL001_26_Classifier_apply_skips_files_with_existing_Trait_marker
+    Given a C# test file that already has a Trait Category Integration marker
+    When the classifier is run with --apply on the directory containing that already-marked C# file
+    Then the already-marked C# file SHALL remain unchanged after --apply
+
+  @feature13
+  Scenario: TESTQUAL001_27_Classifier_apply_confidence_high_skips_medium_confidence_files
+    Given a C# test file that the classifier assigns medium confidence
+    When the classifier is run with --apply --confidence=high on the directory containing that medium-confidence file
+    Then the medium-confidence C# file SHALL NOT have a Trait marker injected
+
+  @feature13
+  Scenario: TESTQUAL001_28_Classifier_apply_injects_pytestmark_and_adds_pytest_import_for_Python
+    Given a Python test file without an existing pytestmark and without a pytest import
+    When the classifier is run with --apply on the directory containing that unmarked Python file
+    Then the Python file SHALL contain a pytestmark assignment at module level
+    And the Python file SHALL have import pytest added if it was missing
