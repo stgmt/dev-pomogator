@@ -2458,7 +2458,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then the render output contains "VERDICT: 🔴 RED (hard: collisions+stale)"
     And the render output contains "strict: 🔴 RED"
 
-  @feature44
+  @feature37
   Scenario: SPECGEN004_368 renderCorpusHealth renders collision and dangling and stale sample lines
     Given a synthetic corpus-health RED report with collisions and stale paths
     When renderCorpusHealth is called on that synthetic report
@@ -2466,7 +2466,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And the render output contains "dangling edge" or renders a dangling-edge line
     And the render output contains the stale path sample
 
-  @feature44
+  @feature37
   Scenario: SPECGEN004_369 renderCorpusHealth renders the untraced-atom class breakdown
     Given a synthetic corpus-health RED report with untraced atoms
     When renderCorpusHealth is called on that synthetic report
