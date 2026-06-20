@@ -132,3 +132,30 @@ Then('removing the meta-guard own registration is denied too', function (this: F
   assert.equal(out.hookSpecificOutput.permissionDecision, 'deny');
   assert.match(out.hookSpecificOutput.permissionDecisionReason, /extension-json-meta-guard/);
 });
+
+// ── SPECGEN004_294 — FR-21: absent TASKS.md → exit 1 + error ───────────────
+
+interface F21AbsentWorld extends V4World {
+  emptySpecDir?: string;
+  absentResult?: { status: number | null; stderr: string };
+}
+
+Given('a spec directory with no TASKS.md file', function (this: F21AbsentWorld) {
+  this.emptySpecDir = path.join(this.tempDir, '.specs', 'empty-spec');
+  fs.mkdirSync(this.emptySpecDir, { recursive: true });
+  // Deliberately no TASKS.md
+});
+
+When('spec-status runs with the task-table format on that empty spec', function (this: F21AbsentWorld) {
+  const r = spawnSync(
+    process.execPath,
+    [CORE, 'spec-status', '-Path', '.specs/empty-spec', '-Format', 'task-table'],
+    { encoding: 'utf-8', env: { ...process.env, SPECS_GENERATOR_ROOT: this.tempDir }, timeout: 60_000 },
+  );
+  this.absentResult = { status: r.status, stderr: r.stderr ?? '' };
+});
+
+Then(/the CLI exits with status 1 and stderr contains "TASKS\.md not found"/, function (this: F21AbsentWorld) {
+  assert.equal(this.absentResult!.status, 1, `Expected exit 1; got ${this.absentResult!.status}`);
+  assert.match(this.absentResult!.stderr, /TASKS\.md not found/, `Expected "TASKS.md not found" in stderr; got: ${this.absentResult!.stderr}`);
+});
