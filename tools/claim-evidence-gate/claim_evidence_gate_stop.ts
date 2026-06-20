@@ -215,7 +215,15 @@ async function main(): Promise<void> {
   // the «без дальше» omission bypass; a message WITH the section then still goes to the judge below,
   // which checks the next step is genuine (not пиздёж).
   if (!unsupported) {
-    const open = scoped ? scoped.total.open + scoped.total.doneRed + scoped.total.doneUnrun : 0;
+    // FR-9b (2026-06-20): the deterministic «Дальше:» gate counts ONLY genuinely-unfinished work —
+    // `open` (status not-done) + `doneRed` (done but a mapped scenario FAILS). It must NOT count
+    // `doneUnrun` (done but a scenario has no result in the LAST run): that is "awaiting a run / не
+    // подтверждено", not actionable spec work — a FILTERED canonical run sets it spuriously, so summing
+    // it here made the gate fire «нет Дальше:» on every progress message in any session that merely
+    // touched such a spec (the fake census signal the spec-generator fed the hook). doneUnrun is still
+    // surfaced for a genuine WHOLE-SPEC "done" claim via the FR-49b censusReminder above
+    // (isSpecCompletionClaim) — the real anti-false-close path, where "marked done, unverified" matters.
+    const open = scoped ? scoped.total.open + scoped.total.doneRed : 0;
     if (open > 0 && GRAY_SIGNAL.test(claimText) && !NEXT_SECTION_RE.test(claimText)) {
       unsupported = { cls: 'no-next-section', need: 'в ответе при незакрытой работе нет секции «Дальше:» с конкретным следующим шагом' };
     }
@@ -229,7 +237,7 @@ async function main(): Promise<void> {
   // agent's prior word is NOT evidence — block "prove it or work" (operationalizes no-unverified-blocker).
   // No fuzzy file-extraction / no git-in-hook: it leans only on harness-recorded, agent-independent facts.
   if (!unsupported) {
-    const open = scoped ? scoped.total.open + scoped.total.doneRed + scoped.total.doneUnrun : 0;
+    const open = scoped ? scoped.total.open + scoped.total.doneRed : 0; // FR-9b: exclude doneUnrun (не подтверждено) — see the «Дальше:» gate note
     if (open > 0 && BLOCKER_SIGNAL.test(claimText) && !bgTaskLaunchedThisTurn && toolUses.length === 0) {
       unsupported = {
         cls: 'unproven-blocker',
@@ -246,7 +254,7 @@ async function main(): Promise<void> {
   // no mock, no secondary fallback endpoint (user 2026-06-17 «никаких моков и фолбеков»). judgeStop
   // logs WHY to stderr and returns null when помогатор is unreachable. Fires RARELY.
   if (!unsupported && (process.env.CLAIM_GATE_JUDGE ?? 'true').toLowerCase() === 'true') {
-    const unfinished = scoped ? scoped.total.open + scoped.total.doneRed + scoped.total.doneUnrun : 0;
+    const unfinished = scoped ? scoped.total.open + scoped.total.doneRed : 0; // FR-9b: exclude doneUnrun (не подтверждено) so a freshly recorded-done spec doesn't escalate the judge
     if (unfinished > 0 && GRAY_SIGNAL.test(claimText)) {
       // A TRANSIENT judge failure (timeout / network blip → null) must NOT be a free pass —
       // that fail-open was the actual escape route. The judge BLOCKS the announce-and-stop

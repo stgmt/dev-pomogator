@@ -308,4 +308,28 @@ describe('CEGATE001: claim-evidence gate — spec-false-close class (FR-49b)', (
     expect(featureEdit).toBe(false); // .feature edit → not scoped → no over-fire
     expect(frEdit).toBe(true); // FR.md edit → scoped → still fires (real impl work)
   });
+
+  // @feature9 — FR-9b (2026-06-20): the deterministic «Дальше:» gate counts only GENUINELY-unfinished
+  // work — open (not-done) + doneRed (done but a scenario FAILS). It must NOT fire on doneUnrun
+  // (done-but-not-run / "не подтверждено"): a FILTERED canonical run sets it spuriously, so a freshly
+  // recorded-done spec whose scenarios weren't run canonically is pure doneUnrun — the fake census
+  // signal that made the gate over-fire on a done session. (doneUnrun still surfaces for a whole-spec
+  // "done" claim via FR-49b censusReminder — the real anti-false-close path.)
+  it('CEGATE001_31: doneUnrun alone does NOT arm the «Дальше:» gate; open/doneRed still do', () => {
+    const run = (): boolean =>
+      runHook(
+        [
+          U('правлю требование'),
+          A([tool('Edit', { file_path: '.specs/demo/FR.md' })]), // non-.feature → scopes demo
+          A([txt('Готово, всё закрыто. 37 из 48.')]), // gray progress claim, no «Дальше:» section
+        ],
+        { CLAIM_GATE_JUDGE: 'false' },
+      ).blocked;
+    writeCensus(dir, { open: 0, doneRed: 0, doneUnrun: 7 });
+    expect(run()).toBe(false); // doneUnrun-only ("не подтверждено") → gate quiet — the fake no longer fires
+    writeCensus(dir, { open: 0, doneRed: 2, doneUnrun: 0 });
+    expect(run()).toBe(true); // doneRed (done-but-failing) → real regression → still fires
+    writeCensus(dir, { open: 3, doneRed: 0, doneUnrun: 0 });
+    expect(run()).toBe(true); // open (not-done) → real backlog → still fires
+  });
 });
