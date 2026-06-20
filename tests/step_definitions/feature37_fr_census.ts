@@ -109,6 +109,14 @@ Then(
     const report = computeFrCensus(buildGraphFromCwd(repoRoot), { spec: 'spec-generator-v4' });
     assert.ok(report.rows.length >= 40, `expected the v4 spec's ~44 FRs, got ${report.rows.length}`);
     for (const r of report.rows) assert.ok(ALL_VERDICTS.has(r.verdict), `FR ${r.frId} has an unknown verdict ${r.verdict}`);
-    assert.ok(report.byVerdict.IMPLEMENTED > 0, 'the live corpus must have at least one IMPLEMENTED FR (evidence-derived, not narrated)');
+    // Deterministic on graph EVIDENCE (task Status), not on the volatile in-progress run. This test runs
+    // DURING the canonical suite that is mid-WRITING `.last-test-run.ndjson`; the verified IMPLEMENTED
+    // count depends on scenario results that may not be flushed yet, so `IMPLEMENTED > 0` self-referentially
+    // flaked (a partial ndjson → every FR reads DONE_UNTESTED instead of IMPLEMENTED → false 0). Assert
+    // instead on ALL-DONE FRs (IMPLEMENTED ∪ DONE_UNTESTED) — both are derived from task Status in the
+    // graph, independent of run timing — so the "classified by graph evidence, not narrated" intent holds
+    // deterministically. The verified-vs-unverified split is pinned by the controlled-fixture unit cases above.
+    const allDone = report.byVerdict.IMPLEMENTED + report.byVerdict.DONE_UNTESTED;
+    assert.ok(allDone > 0, `the live corpus must have ≥1 all-tasks-done FR derived from graph status, got ${allDone}`);
   },
 );
