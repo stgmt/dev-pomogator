@@ -918,6 +918,46 @@ describe('PLUGIN007_32 Actionability warnings (Phase 4)', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Evidence enforcement (claims-need-evidence): plan facts need a proof marker
+// (BDD pairing authored in record-as-spec → .specs/plan-evidence-enforcement)
+// ---------------------------------------------------------------------------
+describe('PLUGIN007_45 Evidence enforcement (claims-need-evidence)', () => {
+  it('PLUGIN007_45_01: valid fixture (has Источники + [ref:]) → no evidence warnings', () => {
+    const result = validatePlanPhased(FIXTURE_PATH);
+    expect(result.phase1).toHaveLength(0);
+    expect(findErrors(result.phase4, 'Источники')).toHaveLength(0);
+    expect(findErrors(result.phase4, 'непроверенный факт')).toHaveLength(0);
+  });
+
+  it('PLUGIN007_45_02: plan without Источники section → evidence warning', () => {
+    const stripped = removeSubsection(getValidPlan(), '🔎 Источники / Пруфы');
+    const result = validatePlanPhased(writeTempPlan(stripped));
+    expect(result.phase1).toHaveLength(0); // structure still valid
+    expect(findErrors(result.phase4, 'Нет секции «Источники / Пруфы»').length).toBeGreaterThan(0);
+  });
+
+  it('PLUGIN007_45_03: claim-bullet without proof marker → flagged as unsourced', () => {
+    // Inject an external-fact claim into Implementation Plan without a proof marker.
+    const lines = getValidPlan().split('\n');
+    const implIdx = lines.findIndex((l) => /^##\s+(?:🔧\s+)?Implementation Plan\s*$/.test(l));
+    lines.splice(implIdx + 1, 0, '3. Библиотека foo-bar поддерживает потоковый режим по умолчанию.');
+    const result = validatePlanPhased(writeTempPlan(lines.join('\n')));
+    expect(result.phase1).toHaveLength(0);
+    expect(findErrors(result.phase4, 'непроверенный факт').length).toBeGreaterThan(0);
+  });
+
+  it('PLUGIN007_45_04: claim-bullet WITH a proof marker → not flagged', () => {
+    const lines = getValidPlan().split('\n');
+    const implIdx = lines.findIndex((l) => /^##\s+(?:🔧\s+)?Implementation Plan\s*$/.test(l));
+    lines.splice(implIdx + 1, 0, '3. Библиотека foo-bar поддерживает потоковый режим [src:https://example.com/docs].');
+    const result = validatePlanPhased(writeTempPlan(lines.join('\n')));
+    const flagged = findErrors(result.phase4, 'непроверенный факт');
+    // the WITH-proof line must not be among the flagged
+    expect(flagged.some((e) => e.message.includes('foo-bar'))).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // @feature36: Proactive-investigation rule content verification
 // ---------------------------------------------------------------------------
 

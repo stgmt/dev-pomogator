@@ -699,6 +699,56 @@ function validateBugfixBdd(
   }
 }
 
+// ---------------------------------------------------------------------------
+// Evidence enforcement (claims-need-evidence): a plan's external/technical facts
+// ("X supports Y", "faster", "default", "requires") must carry a proof marker
+// ([src:<url>] / [ref:<file:line>] / [cmd:<output>]) or sit under an «Источники / Пруфы»
+// section. Stops "fantasy" plans built on unverified claims. Phase 4 (warnings) — visible
+// + actionable without breaking legacy plans; escalate to error later if needed.
+// ---------------------------------------------------------------------------
+const CLAIM_VERBS =
+  /(поддержив|\bsupports?\b|быстрее|\bfaster\b|медленнее|\bslower\b|требует|\brequires?\b|умеет|существует|\bexists?\b|по умолчанию|\bdefault\b|совместим|\bcompatible\b)/i;
+const PROOF_MARKER = /\[(?:src|ref|cmd):|https?:\/\//i;
+const EVIDENCE_SECTION = /^#{2,3}\s+(?:🔎\s+)?Источники/i;
+const MAX_EVIDENCE_WARNINGS = 6;
+
+function validateEvidence(
+  lines: string[], indices: Map<string, number>, warnings: ValidationError[],
+): void {
+  // 1. Require an «Источники / Пруфы» section carrying at least one proof marker.
+  const evIdx = lines.findIndex((l) => EVIDENCE_SECTION.test(l.trim()));
+  if (evIdx === -1) {
+    addError(warnings, 0,
+      'Нет секции «Источники / Пруфы» — внешние факты плана не подкреплены',
+      'Добавь «### 🔎 Источники / Пруфы» с пруфами ([src:<url>] / [ref:<file:line>] / [cmd:<вывод>]); правило claims-need-evidence');
+  } else {
+    const evEnd = nextHeadingIndex(lines, evIdx, /^##\s+/);
+    const evText = lines.slice(evIdx, evEnd).join('\n');
+    if (!PROOF_MARKER.test(evText)) {
+      addError(warnings, evIdx,
+        'Секция «Источники / Пруфы» без единого пруфа (нет url / [src:] / [ref:] / [cmd:])',
+        'Добавь хотя бы один источник: ссылку, [ref:file:line] или [cmd:вывод]');
+    }
+  }
+
+  // 2. Flag claim-bullets in Context + Implementation Plan lacking a proof marker.
+  let flagged = 0;
+  for (const name of ['Context', 'Implementation Plan']) {
+    const sIdx = indices.get(name);
+    if (sIdx === undefined) continue;
+    const { start, end } = getSectionRange(lines, sIdx);
+    for (let i = start + 1; i < end && flagged < MAX_EVIDENCE_WARNINGS; i += 1) {
+      const t = lines[i].trim();
+      if (!/^[-*\d]/.test(t)) continue; // only bullets / numbered claim lines
+      if (!CLAIM_VERBS.test(t) || PROOF_MARKER.test(t)) continue;
+      flagged += 1;
+      addError(warnings, i,
+        `Похоже на непроверенный факт без пруфа: «${t.slice(0, 70)}»`,
+        'Добавь метку рядом: [src:<url>] / [ref:<file:line>] / [cmd:<вывод>] — или убери утверждение (claims-need-evidence)');
+    }
+  }
+}
+
 function validateActionability(
   lines: string[], indices: Map<string, number>, warnings: ValidationError[],
 ): void {
@@ -707,6 +757,7 @@ function validateActionability(
   validateFileChangesReasonQuality(lines, indices, warnings);
   validateTestSpecSync(lines, indices, warnings);
   validateBugfixBdd(lines, indices, warnings);
+  validateEvidence(lines, indices, warnings);
 }
 
 /**

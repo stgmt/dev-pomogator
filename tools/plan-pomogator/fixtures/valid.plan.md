@@ -46,6 +46,10 @@
 1. Создать `validate-plan.ts` с функцией `validatePlanPhased()` — многофазная валидация секций, формата Todos и таблицы File Changes.
 2. Добавить CLI wrapper с exit code 1 при ошибках и человеко-читаемым выводом ошибок вместе с хинтами по исправлению.
 
+### 🔎 Источники / Пруфы
+- Многофазная валидация уже реализована в текущем валидаторе [ref:tools/plan-pomogator/validate-plan.ts:731].
+- Правило формата плана [ref:.claude/rules/plan-pomogator/plan-pomogator.md].
+
 ## 💥 Impact Analysis
 
 > N/A — нет удалений/переименований

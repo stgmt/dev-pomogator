@@ -7,8 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | Command | Description |
 |---------|-------------|
 | `npm run lint` | ESLint on `.claude/` and `tools/` |
-| `npm test` | E2E tests via Docker (isolated, safe) |
-| `npm run test:all` | E2E + TUI tests via Docker |
+| `npm test` | E2E tests via Docker — **WSL-only**: авто-уход в WSL через `scripts/_docker-wsl.sh` (Docker Desktop не нужен; запуск на хосте невозможен, `tests/setup/ensure-docker.ts`) |
+| `npm run test:all` | E2E + TUI tests via Docker (WSL-only, см. `scripts/_docker-wsl.sh`) |
 | `npx tsx tools/plan-pomogator/validate-plan.ts <path>` | Validate plan structure |
 | `npx tsx tools/specs-generator/scaffold-spec.ts -Name "feature"` | Scaffold spec structure |
 | `npx tsx tools/specs-generator/validate-spec.ts -Path ".specs/feature"` | Validate spec formats |
@@ -45,6 +45,8 @@ dev-pomogator distributed как canonical Claude Code marketplace plugin (per A
 - **pomogator-doctor**: canonical skill (.claude/skills/pomogator-doctor/) с self-contained engine в scripts/engine/ (24 files); SessionStart hook в scripts/doctor-hook.ts.
 - **Migration**: `tools/migrate-v1-to-v2/migrate-v1-to-v2.ts` — standalone cleanup script для existing v1 users (--project / --global / both flags).
 
+> **🧭 Discipline index — start here for «как репо держит спеки/тесты честными?»:** [`.claude/spec-generator-discipline.md`](.claude/spec-generator-discipline.md) — единая карта, связывающая каждый принцип (трассируемость через спек-граф · статус из улик / анти-фейк-грин · детерминированные гейты через MCP-дверь · свежий агент на фазу · мутационная стойкость · честный стоп · BDD-миграция) с его FR + правилом + инструментом. Каноническое здоровье спеки = `spec-verdict.ts` (смарт-вердикт, не голый структурный pass).
+
 ## Rules
 
 ### Always-apply
@@ -53,12 +55,14 @@ dev-pomogator distributed как canonical Claude Code marketplace plugin (per A
 |------|-------------|------|
 | plan-pomogator | Единый формат планов разработки (9 секций: Context + Extracted Requirements → трёхфазная валидация + prompt-capture) | `.claude/rules/plan-pomogator/plan-pomogator.md` |
 | plan-freshness | Каждый план с нуля; запрет копирования File Changes/Requirements из предыдущих планов; Phase 3 cross-ref валидация | `.claude/rules/plan-pomogator/plan-freshness.md` |
+| claims-need-evidence | Внешние/технические факты в плане ОБЯЗАНЫ нести метку-пруф `[src:<url>]`/`[ref:<file:line>]`/`[cmd:<вывод>]` или быть в секции «🔎 Источники / Пруфы»; иначе фантазия. Enforce: `validate-plan.ts` Phase 4 `validateEvidence` (warning). Инцидент 2026-06-20: план Stryker+BDD на непроверенных фактах | `.claude/rules/plan-pomogator/claims-need-evidence.md` |
 | ts-import-extensions | В `tools/**/*.ts` relative imports ОБЯЗАНЫ использовать `.ts` расширение; `.js` спецификаторы ломают Node 22.6+ native strip-types | `.claude/rules/ts-import-extensions.md` |
 | jira-smart-commit-one-line | Smart Commit парсится только если ключ Jira и команда в первой строке, одна строка | `.claude/rules/jira-smart-commit-one-line.md` |
 | atomic-config-save | Конфиги через temp file + atomic move, не прямой writeJson | `.claude/rules/atomic-config-save.md` |
 | atomic-update-lock | Lock через `flag: 'wx'` (O_EXCL), не exists-check + write | `.claude/rules/atomic-update-lock.md` |
 | claude-md-glossary | CLAUDE.md = глоссарий/индекс на rules; при добавлении/удалении правил обновлять таблицу | `.claude/rules/claude-md-glossary.md` |
 | verify-status-against-code | Verify статус (ls/grep/test) перед планированием/работой из спеки/TASKS/README/правила; status docs drift от кода. `npm run check:status-drift` ловит «помечено TODO/`[ ]` но файл существует» | `.claude/rules/verify-status-against-code-before-acting.md` |
+| no-unverified-blocker | Прежде чем заявить «заблокировано/жду/не могу тронуть/чужая сессия» — предъяви улику (`git diff`/`git log`/`ls`) в том же сообщении; непроверенный блокер = отмазка, которой обманывают и юзера, и Stop-судью. shared-tree ≠ «не трогать любой M-файл». Инцидент 2026-06-18: 34 хода фейк-блокера на cucumber.json (1 строка той же фичи) | `.claude/rules/no-unverified-blocker.md` |
 | no-structural-valid | «Spec valid/clean/done» ТОЛЬКО по смарт-вердикту `spec-verdict.ts` (audit+traceability+conformance+coverage+semantic над одним графом); голый `validate-spec: 0 errors` — pre-filter, не здоровье (FR-37d, инцидент false-green 2026-06-05) | `.claude/rules/spec-verdict/no-structural-valid.md` |
 | clear-questions-to-user | Перед каждым ответом/вопросом — шаблон самопроверки: (1) что я понял бытовым языком, (2) черновик, (3) самооценка "поймёт?", (4) ответ = микроистория с 5 опорными точками (откуда пришли → что юзер сказал → что сделал и почему → где сейчас → дальше), (5) переписать если не прошло. При "не понял" — СТОП, прогнать шаблон заново. Часть extension `answer-simple` (skill для on-demand аудита) | `.claude/rules/answer-simple/clear-questions-to-user.md` |
 | self-improving | Real-time детекция ситуаций для новых rules/skills/hooks (триггеры T2/T3/T4/T6 + automation hints) | `.claude/rules/suggest-rules/self-improving.md` |
