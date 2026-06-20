@@ -42,6 +42,7 @@ import { logSpecAccess } from './spec-access-log.ts';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { validateSpecChange, writeDocAtomic, isSafeSlug, resolveSpecDoc, docSha, casCheck, validateTarget, findInboundLinks, rewriteInboundLinks, isArchivedSlug, type SpecChange } from './mutations.ts';
+import { withWriteLock, type WriteLockBusyError } from './lock-manager.ts';
 import { setEntityStatus } from './set-status.ts';
 import { readProgressState, PHASE_ORDER, STOP_LABELS } from '../specs-validator/phase-constants.ts';
 import type {
@@ -532,20 +533,13 @@ export function buildToolRegistry(
   // every write tool short-circuits here with the holder named. Returns null
   // when writable, so a write handler does `const ro = readOnlyRefusal(...); if
   // (ro) return ro;` as its first line.
-  const readOnlyRefusal = (tool: string, args: unknown): ToolResult | null => {
-    const holder = registryOpts.writeLockHeldBy?.();
-    if (!holder) return null;
-    logSpecAccess(tool, args, 'denied');
-    return asJsonResult({
-      ok: false,
-      error: 'WRITE_LOCK_HELD',
-      held_by: holder,
-      hint:
-        `Another Claude Code session (pid ${holder.pid}, env ${holder.env}) holds the spec ` +
-        `write-lock, so THIS session's door is read-only. Reads + propose_spec_change (dry-run) ` +
-        `work here — make the edit in that session, or close it and retry.`,
-    });
-  };
+  // E-A (FR-8..FR-13, 2026-06-18): the lifetime write-exclusivity is GONE — every session's
+  // door can write, serialized per-mutation by the short `withWriteLock` (lock-manager.ts) +
+  // the existing optimistic CAS for same-doc conflicts. This refusal is now a NO-OP kept only
+  // so the call sites stay structurally identical (returns null → writes proceed). WRITE_LOCK_HELD
+  // (lifetime) is replaced by a transient WRITE_LOCK_BUSY raised only DURING another session's
+  // in-flight write. (Set TEST_QUALITY... no — controlled solely by the lock now.)
+  const readOnlyRefusal = (_tool: string, _args: unknown): ToolResult | null => null;
 
   // ─── 1) get_trace ───────────────────────────────────────────────────────
   tools.push({
@@ -1304,8 +1298,6 @@ export function buildToolRegistry(
       'if another session changed the doc; the reply returns the new sha for chaining edits.',
     inputShape: CHANGE_SHAPE,
     handler: async (args) => {
-      const ro = readOnlyRefusal('apply_spec_change', args);
-      if (ro) return ro;
       const slug = slugOf(args.spec);
       const doc = docOf(args.doc);
       const change = toChange(args as Record<string, unknown>);
@@ -1317,28 +1309,45 @@ export function buildToolRegistry(
         logSpecAccess('apply_spec_change', args, 'error');
         return asJsonResult({ ok: false, error: 'BAD_CHANGE', hint: 'Pass {content} or {old_string,new_string}.' });
       }
-      // P21-5 optimistic CAS — refuse a write against a stale read (another session
-      // changed the doc since `expected_sha` was taken). Opt-in: omitted → unconditional.
       const expectedSha = typeof args.expected_sha === 'string' ? args.expected_sha : null;
-      if (expectedSha !== null) {
-        const cas = casCheck(process.cwd(), slug, doc, expectedSha);
-        if (!cas.ok) {
+      // E-A: hold the short write-lock around casCheck→validate→write so the CAS sha-check and the
+      // write are atomic versus another session's concurrent write (different specs interleave; the
+      // lock is held only for this critical section). writeDocAtomic re-enters the lock as a no-op.
+      try {
+        return withWriteLock(process.cwd(), () => {
+          // P21-5 optimistic CAS — refuse a write against a stale read (another session changed the
+          // doc since `expected_sha` was taken). Opt-in: omitted → unconditional.
+          if (expectedSha !== null) {
+            const cas = casCheck(process.cwd(), slug, doc, expectedSha);
+            if (!cas.ok) {
+              logSpecAccess('apply_spec_change', args, 'denied');
+              return asJsonResult({
+                ok: false, error: 'CAS_MISMATCH', spec: slug, doc, expected_sha: expectedSha, actual_sha: cas.actualSha,
+                hint: 'The doc changed since you read it (another session?). Re-read with read_spec_doc for the fresh sha, rebase your change, and retry.',
+              });
+            }
+          }
+          const r = validateSpecChange(process.cwd(), slug, doc, change);
+          if (!r.ok) {
+            logSpecAccess('apply_spec_change', args, 'denied');
+            return asJsonResult({ ok: false, error: 'VALIDATION_FAILED', spec: slug, doc, findings: r.findings, hint: 'Fix the findings and retry; propose_spec_change is the free dry-run.' });
+          }
+          const abs = writeDocAtomic(process.cwd(), slug, doc, r.next!);
+          registryOpts.refreshGraph?.();
+          logSpecAccess('apply_spec_change', args, 'ok');
+          return asJsonResult({ ok: true, spec: slug, doc, path: abs, bytes: r.next!.length, sha: docSha(r.next!), findings: [] });
+        });
+      } catch (e) {
+        if ((e as WriteLockBusyError).code === 'WRITE_LOCK_BUSY') {
           logSpecAccess('apply_spec_change', args, 'denied');
+          const h = (e as WriteLockBusyError).holder;
           return asJsonResult({
-            ok: false, error: 'CAS_MISMATCH', spec: slug, doc, expected_sha: expectedSha, actual_sha: cas.actualSha,
-            hint: 'The doc changed since you read it (another session?). Re-read with read_spec_doc for the fresh sha, rebase your change, and retry.',
+            ok: false, error: 'WRITE_LOCK_BUSY', spec: slug, doc, held_by: h ?? null,
+            hint: 'Another session is writing a spec RIGHT NOW; this is a brief transient lock — retry in a moment.',
           });
         }
+        throw e;
       }
-      const r = validateSpecChange(process.cwd(), slug, doc, change);
-      if (!r.ok) {
-        logSpecAccess('apply_spec_change', args, 'denied');
-        return asJsonResult({ ok: false, error: 'VALIDATION_FAILED', spec: slug, doc, findings: r.findings, hint: 'Fix the findings and retry; propose_spec_change is the free dry-run.' });
-      }
-      const abs = writeDocAtomic(process.cwd(), slug, doc, r.next!);
-      registryOpts.refreshGraph?.();
-      logSpecAccess('apply_spec_change', args, 'ok');
-      return asJsonResult({ ok: true, spec: slug, doc, path: abs, bytes: r.next!.length, sha: docSha(r.next!), findings: [] });
     },
   });
 

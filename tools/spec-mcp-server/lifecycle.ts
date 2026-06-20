@@ -185,7 +185,7 @@ export async function startLifecycle(opts: LifecycleOptions): Promise<LifecycleH
       lockHolder = acq.holder;
       logWatcherDecision(
         opts.repoRoot,
-        `write-lock held by pid ${acq.holder?.pid} (env ${acq.holder?.env}) — booting READ-ONLY door (P21-1); reads + dry-runs live, mutations refuse`,
+        `presence lock owned by pid ${acq.holder?.pid} (env ${acq.holder?.env}) — booting PRESENCE-READER door (E-A); reads + dry-runs live, writes still proceed serialized by the short write-lock + CAS`,
       );
     }
   } else {

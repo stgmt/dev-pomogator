@@ -150,10 +150,13 @@ describe('P21-2 read_spec_doc pagination — sliceSection (pure)', () => {
   });
 });
 
-describe('P21-1 read-only door — write tools refuse, reads + dry-run stay live', () => {
-  // Simulate a sibling session owning the write-lock: writeLockHeldBy returns a
-  // holder, so the three write tools must short-circuit with WRITE_LOCK_HELD
-  // BEFORE touching disk; propose_spec_change (dry-run) must NOT be gated.
+describe('E-A: a presence-reader door still WRITES (short write-lock + CAS, no lifetime WRITE_LOCK_HELD)', () => {
+  // E-A (FR-8..FR-13, 2026-06-18): the lifetime write-exclusivity is GONE. Even when a sibling
+  // session owns the PRESENCE lock (writeLockHeldBy returns a holder), the write tools NO LONGER
+  // refuse with WRITE_LOCK_HELD — they proceed, serialized per-mutation by the short write-lock +
+  // CAS. So the holder no longer gates writes; a write reaches normal validation, never the
+  // lifetime refusal. (Transient WRITE_LOCK_BUSY can occur only DURING another session's in-flight
+  // write — not exercised here.) propose_spec_change (dry-run) stays ungated.
   const holder = { pid: 4242, env: 'host', started_at: '2026-06-10T00:00:00.000Z' };
   const roRegistry = buildToolRegistry(() => makeGraph(), { writeLockHeldBy: () => holder });
   const roTool = (name: string) => {
@@ -163,22 +166,16 @@ describe('P21-1 read-only door — write tools refuse, reads + dry-run stay live
   };
 
   for (const name of ['apply_spec_change', 'delete_spec_doc', 'create_spec']) {
-    it(`${name} refuses with WRITE_LOCK_HELD naming the holder`, async () => {
+    it(`${name} does NOT refuse with WRITE_LOCK_HELD even when a sibling holds the presence lock`, async () => {
       const args =
         name === 'create_spec'
           ? { slug: 'whatever-new-spec' }
           : name === 'delete_spec_doc'
             ? { spec: 'demo', doc: 'FR.md', reason: 'x' }
             : { spec: 'demo', doc: 'FR.md', content: 'x' };
-      const body = parseResult(await roTool(name).handler(args as never)) as {
-        ok: boolean;
-        error: string;
-        held_by: { pid: number; env: string };
-      };
-      expect(body.ok).toBe(false);
-      expect(body.error).toBe('WRITE_LOCK_HELD');
-      expect(body.held_by.pid).toBe(4242);
-      expect(body.held_by.env).toBe('host');
+      const body = parseResult(await roTool(name).handler(args as never)) as { error?: string };
+      // May fail normal validation against the real fs, but NEVER the lifetime write-lock refusal.
+      expect(body.error).not.toBe('WRITE_LOCK_HELD');
     });
   }
 

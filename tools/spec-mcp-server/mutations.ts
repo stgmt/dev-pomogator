@@ -31,6 +31,7 @@ import { checkLinks } from '../anchor-integrity/check.mjs';
 import { buildGraph } from '../spec-graph/builder.ts';
 import { checkConformance } from '../spec-graph/conformance.ts';
 import { featureStrengthFindings } from '../spec-graph/feature-strength.ts';
+import { withWriteLock } from './lock-manager.ts';
 import {
   parseTaskBlocks,
   parseUserStoryBlocks,
@@ -512,22 +513,26 @@ export function rewriteInboundLinks(
  *  failure (Windows EPERM/EBUSY when the target is locked by an editor/watcher)
  *  the temp file is unlinked so it never litters .specs/ (review #6). */
 export function writeDocAtomic(repoRoot: string, slug: string, doc: string, content: string): string {
-  const dir = path.join(repoRoot, '.specs', slug);
-  const abs = path.join(dir, doc);
-  // P19-6: doc may be a SUBPATH — create the immediate parent (e.g.
-  // .specs/<slug>/.architecture-research/) so the subdir write doesn't ENOENT.
-  fs.mkdirSync(path.dirname(abs), { recursive: true });
-  const tmp = `${abs}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`;
-  fs.writeFileSync(tmp, content, 'utf-8');
-  try {
-    fs.renameSync(tmp, abs);
-  } catch (e) {
+  // E-A: serialize the actual file write across sessions via the short write-lock.
+  // Re-entrant — when `apply_spec_change` already holds it around casCheck→write, this is a no-op acquire.
+  return withWriteLock(repoRoot, () => {
+    const dir = path.join(repoRoot, '.specs', slug);
+    const abs = path.join(dir, doc);
+    // P19-6: doc may be a SUBPATH — create the immediate parent (e.g.
+    // .specs/<slug>/.architecture-research/) so the subdir write doesn't ENOENT.
+    fs.mkdirSync(path.dirname(abs), { recursive: true });
+    const tmp = `${abs}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`;
+    fs.writeFileSync(tmp, content, 'utf-8');
     try {
-      fs.unlinkSync(tmp);
-    } catch {
-      /* best-effort */
+      fs.renameSync(tmp, abs);
+    } catch (e) {
+      try {
+        fs.unlinkSync(tmp);
+      } catch {
+        /* best-effort */
+      }
+      throw e;
     }
-    throw e;
-  }
-  return abs;
+    return abs;
+  });
 }

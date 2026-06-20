@@ -259,3 +259,105 @@ export function acquireLockOrReadOnly(opts: AcquireOptions): LockAcquisition {
     throw err;
   }
 }
+
+// ── E-A (FR-8..FR-13 plan, 2026-06-18): short per-WRITE lock for parallel sessions ──
+//
+// The lifetime `.mcp-lock.json` made the first server the sole writer for its whole life
+// (every sibling session booted read-only). E-A replaces that write-exclusivity with a
+// SHORT lock held only for the duration of ONE mutation's critical section (casCheck→write),
+// so two sessions editing DIFFERENT specs interleave freely and same-doc conflicts are caught
+// by the existing optimistic CAS (`expected_sha` → CAS_MISMATCH). The lifetime lock stays only
+// as a presence/heartbeat marker (it no longer blocks writes).
+//
+// Re-entrant within ONE process: `apply` wraps casCheck+write in withWriteLock, and
+// `writeDocAtomic` re-enters withWriteLock — the inner call is a no-op acquire (no deadlock).
+// Synchronous (the whole mutation path is sync); the busy-wait is bounded to a few ms per write.
+
+const WRITE_LOCK_FILE = '.mcp-write.lock';
+let writeLockDepth = 0;
+
+function writeLockPath(repoRoot: string): string {
+  return path.join(repoRoot, '.dev-pomogator', WRITE_LOCK_FILE);
+}
+
+/** Synchronous sleep (the mutation path is sync; ms-scale, never on a hot loop). */
+function sleepSync(ms: number): void {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, Math.max(1, ms));
+}
+
+export interface WriteLockBusyError extends Error {
+  code: 'WRITE_LOCK_BUSY';
+  holder?: { pid: number; started_at: string };
+}
+
+/**
+ * Run `fn` while holding the short cross-session write-lock. Re-entrant per process.
+ * Spin-retries on contention (another session mid-write), reclaims a stale lock whose
+ * holder pid is dead, and throws `WRITE_LOCK_BUSY` if it can't acquire within the budget
+ * (a real concurrent write is in flight — the caller surfaces a transient retry hint).
+ */
+export function withWriteLock<T>(
+  repoRoot: string,
+  fn: () => T,
+  opts: { retries?: number; intervalMs?: number } = {},
+): T {
+  if (writeLockDepth > 0) {
+    // Already held by THIS process/stack (e.g. apply → writeDocAtomic) → no file op.
+    writeLockDepth++;
+    try {
+      return fn();
+    } finally {
+      writeLockDepth--;
+    }
+  }
+  const lockFile = writeLockPath(repoRoot);
+  fs.mkdirSync(path.dirname(lockFile), { recursive: true });
+  const retries = opts.retries ?? 100; // ~5s @ 50ms — generous; a write is ms
+  const intervalMs = opts.intervalMs ?? 50;
+  const payload = JSON.stringify({ pid: process.pid, started_at: new Date().toISOString() });
+
+  let acquired = false;
+  for (let i = 0; i <= retries && !acquired; i++) {
+    try {
+      fs.writeFileSync(lockFile, payload, { flag: 'wx' });
+      acquired = true;
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== 'EEXIST') throw err;
+      // Stale-lock recovery: a dead holder → reclaim and retry immediately.
+      try {
+        const cur = JSON.parse(fs.readFileSync(lockFile, 'utf8')) as { pid?: number };
+        if (typeof cur.pid === 'number' && !isPidAlive(cur.pid)) {
+          fs.unlinkSync(lockFile);
+          continue;
+        }
+      } catch {
+        /* unparseable/raced → treat as a live holder, wait below */
+      }
+      if (i < retries) sleepSync(intervalMs);
+    }
+  }
+  if (!acquired) {
+    let holder: { pid: number; started_at: string } | undefined;
+    try {
+      holder = JSON.parse(fs.readFileSync(lockFile, 'utf8'));
+    } catch {
+      /* holder vanished between the last attempt and now */
+    }
+    const e = new Error(`spec write-lock busy after ${retries} retries`) as WriteLockBusyError;
+    e.code = 'WRITE_LOCK_BUSY';
+    e.holder = holder;
+    throw e;
+  }
+  writeLockDepth = 1;
+  try {
+    return fn();
+  } finally {
+    writeLockDepth = 0;
+    try {
+      const cur = JSON.parse(fs.readFileSync(lockFile, 'utf8')) as { pid?: number };
+      if (cur.pid === process.pid) fs.unlinkSync(lockFile);
+    } catch {
+      /* already removed / raced — fine */
+    }
+  }
+}

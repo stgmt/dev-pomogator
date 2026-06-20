@@ -49,8 +49,8 @@ export async function boot(opts: BootOptions): Promise<{
   });
   if (lifecycle.readOnly && lifecycle.lockHolder) {
     process.stderr.write(
-      `[${PRODUCT_NAME}] read-only door: write-lock held by pid ${lifecycle.lockHolder.pid} ` +
-        `(env ${lifecycle.lockHolder.env}); reads + dry-runs live, mutations refuse\n`,
+      `[${PRODUCT_NAME}] presence-reader door: presence lock owned by pid ${lifecycle.lockHolder.pid} ` +
+        `(env ${lifecycle.lockHolder.env}); E-A — writes still proceed, serialized per-mutation by the short write-lock + CAS\n`,
     );
   }
   const server = new McpServer({ name: PRODUCT_NAME, version: PRODUCT_VERSION });
