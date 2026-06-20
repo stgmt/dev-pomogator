@@ -1959,3 +1959,45 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given a finding with code `impl-drift/dead-link` and expected_path `tools/something/that-may-or-may-not-exist.ts`
     When classify is called WITHOUT repo context for slug `foo`
     Then the classification verdict is BACKLOG with category `dead-link-typo` (backward compat, no repoRoot)
+
+  @feature51
+  Scenario: SPECGEN004_287 parseScenarios conserves cardinality — N Scenario lines yield N entries with no duplicates
+    Given a feature text with a real-tagged scenario a comment-tagged scenario and an untagged letter-suffix scenario
+    When parseScenarios is called on that feature text
+    Then it returns exactly 3 ScenarioInfo entries with no duplicates
+
+  @feature51
+  Scenario: SPECGEN004_288 parseScenarios detects tag-state real comment and none in order
+    Given a feature text with a real-tagged scenario a comment-tagged scenario and an untagged letter-suffix scenario
+    When parseScenarios is called on that feature text
+    Then the tag states are "real" "comment" and "none" in order
+
+  @feature51
+  Scenario: SPECGEN004_289 parseScenarios keeps letter-suffix id distinct from its base — regression SRC001_05b vs SRC001_05
+    Given a feature text with a real-tagged scenario a comment-tagged scenario and an untagged letter-suffix scenario
+    When parseScenarios is called on that feature text
+    Then the ids are "SRC001_02" "SRC001_05" and "SRC001_05b" keeping the letter suffix distinct
+
+  @feature17
+  Scenario: SPECGEN004_290 listResolvers returns all 8 canonical resolver names
+    Given the spec-backlog resolver registry is loaded
+    When listResolvers() is called
+    Then it returns exactly 8 resolvers with names matching the canonical set
+
+  @feature17
+  Scenario: SPECGEN004_291 findResolver returns the matching instance for each canonical name
+    Given the spec-backlog resolver registry is loaded
+    When findResolver is called with each of the 8 canonical resolver names
+    Then each call returns a Resolver whose name matches the lookup key
+
+  @feature17
+  Scenario: SPECGEN004_292 findResolver returns undefined for an unknown resolver name
+    Given the spec-backlog resolver registry is loaded
+    When findResolver is called with an unknown resolver name "does-not-exist"
+    Then findResolver returns undefined
+
+  @feature17
+  Scenario: SPECGEN004_293 every resolver in the registry exposes the Resolver interface
+    Given the spec-backlog resolver registry is loaded
+    When listResolvers() is called
+    Then every resolver exposes name description and resolve() with correct types

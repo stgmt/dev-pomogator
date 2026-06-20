@@ -1,17 +1,21 @@
 /**
- * @feature51 step definitions (FR-51 — the universal BDD migrator) — SPECGEN004_199.
+ * @feature51 step definitions (FR-51 — the universal BDD migrator) — SPECGEN004_199, 287-289.
  *
- * Dogfoods the migrator's inventory stage: drives the REAL inventoryVitestSource on an inline
- * non-BDD test source covering all four case kinds, and asserts the classification — most
+ * SPECGEN004_199: Dogfoods the migrator's inventory stage: drives the REAL inventoryVitestSource on
+ * an inline non-BDD test source covering all four case kinds, and asserts the classification — most
  * importantly that a case calling a SPAWNING HELPER (runHook) is `runtime` even though its own
  * body has no spawn (the helper-detection fix). Pure, deterministic, in-process — no spawn, no token.
  *
- * @see .specs/spec-generator-v4/spec-generator-v4.feature SPECGEN004_199
- * @see .specs/spec-generator-v4/FR.md FR-51 (FR-51a) · tools/bdd-migrator/inventory.ts
+ * SPECGEN004_287-289: Drive the REAL parseScenarios() from migrate.ts against an inline fixture that
+ * covers all three tag-state variants and the letter-suffix distinctness regression.
+ *
+ * @see .specs/spec-generator-v4/spec-generator-v4.feature SPECGEN004_199, SPECGEN004_287-289
+ * @see .specs/spec-generator-v4/FR.md FR-51 (FR-51a) · tools/bdd-migrator/migrate.ts
  */
 import { Given, When, Then } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
 import { inventoryVitestSource, type VitestInventory } from '../../tools/bdd-migrator/inventory.ts';
+import { parseScenarios, type ScenarioInfo } from '../../tools/bdd-migrator/migrate.ts';
 import { V4World } from '../hooks/before-after.ts';
 import '../hooks/before-after.ts';
 
@@ -55,5 +59,76 @@ Then(
     assert.equal(byId('DEMO_04')?.kind, 'manual', 'an it.skip case is manual');
     assert.equal(byId('DEMO_05')?.kind, 'artifact', 'a case using a beforeEach fs-setup var is artifact (not falsely pure)');
     assert.ok(this.migInv!.prodImports.includes('../foo.ts'), 'the production import is captured for step-def reuse');
+  },
+);
+
+// ─── SPECGEN004_287-289 — parseScenarios (migrate.ts) ─────────────────────────
+//
+// Three cases from the vitest twin tools/bdd-migrator/__tests__/migrate.test.ts:
+//   287 — cardinality: N Scenario lines → N ScenarioInfo entries (no drop, no dup)
+//   288 — tag-state: real @tag line / # comment / none
+//   289 — id letter-suffix regression: SRC001_05b must stay distinct from SRC001_05
+
+interface ParseScenariosWorld extends V4World {
+  _parsedScenarios?: ScenarioInfo[];
+}
+
+// Inline feature fixture matching the original vitest test:
+// - one real-tagged scenario   (@feature2 on its own line)
+// - one comment-tagged scenario (# @feature2)
+// - one untagged with letter-suffix id (SRC001_05b)
+const PARSE_FIXTURE = `Feature: X
+
+  @feature2
+  Scenario: SRC001_02 real-tagged
+    Given a
+
+  # @feature2
+  Scenario: SRC001_05 comment-tagged
+    Given b
+
+  Scenario: SRC001_05b untagged suffix
+    Given c
+`;
+
+Given(
+  /^a feature text with a real-tagged scenario a comment-tagged scenario and an untagged letter-suffix scenario$/,
+  function (this: ParseScenariosWorld) {
+    // fixture is baked in — world just signals readiness
+    this._parsedScenarios = undefined;
+  },
+);
+
+When(
+  /^parseScenarios is called on that feature text$/,
+  function (this: ParseScenariosWorld) {
+    this._parsedScenarios = parseScenarios(PARSE_FIXTURE);
+  },
+);
+
+Then(
+  /^it returns exactly 3 ScenarioInfo entries with no duplicates$/,
+  function (this: ParseScenariosWorld) {
+    const parsed = this._parsedScenarios!;
+    assert.equal(parsed.length, 3, 'cardinality: 3 Scenario lines → 3 entries');
+    const ids = parsed.map((s) => s.id);
+    assert.equal(new Set(ids).size, 3, 'no duplicate ids');
+  },
+);
+
+Then(
+  /^the tag states are "real" "comment" and "none" in order$/,
+  function (this: ParseScenariosWorld) {
+    const states = this._parsedScenarios!.map((s) => s.tagState);
+    assert.deepEqual(states, ['real', 'comment', 'none'], 'tag-state sequence');
+  },
+);
+
+Then(
+  /^the ids are "SRC001_02" "SRC001_05" and "SRC001_05b" keeping the letter suffix distinct$/,
+  function (this: ParseScenariosWorld) {
+    const ids = this._parsedScenarios!.map((s) => s.id);
+    assert.deepEqual(ids, ['SRC001_02', 'SRC001_05', 'SRC001_05b'], 'id extraction including letter suffix');
+    assert.notEqual(ids[1], ids[2], 'SRC001_05b must not collapse into SRC001_05 (regression)');
   },
 );
