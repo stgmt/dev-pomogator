@@ -342,4 +342,90 @@ describe('CEGATE001: claim-evidence gate — spec-false-close class (FR-49b)', (
     expect(doneUnrunOnly).toBe(false); // the fake no longer fires
     expect(doneRed).toBe(true); // a real done-but-red still fires
   });
+
+  // @feature11 — V1+V2 (2026-06-20): a live `.bg-task-active*` marker means a REAL bg job is in
+  // flight RIGHT NOW (test-runner wrapper / spawned agent), even if launched in an EARLIER turn. The
+  // pinator reads the SAME marker the bg-task-guard owns and DEFERS its lazy-stop kicks while it holds
+  // (one source of truth for "we're waiting") — closing the across-turn churn where the agent argued
+  // with the gate for the whole 10-minute test. The marker is wrapper-made, not narrative → ungameable.
+  it('CEGATE001_32: a live .bg-task-active marker defers the lazy-stop kick (across-turn async wait)', () => {
+    writeCensus(dir, { open: 11, doneRed: 0, doneUnrun: 0 }, { id: 'demo:t1', title: 'Wire the gate' });
+    // Gray progress word + no «Дальше:» section + scoped open work → normally a `no-next-section` BLOCK.
+    const rows = [
+      U('правлю требование'),
+      A([tool('Edit', { file_path: '.specs/demo/FR.md' })]), // non-.feature edit → scopes demo (FR-9)
+      A([txt('Продолжаю — жду, пока фоновый прогон закончится, сам пока ничего сделать не могу.')]),
+    ];
+    const env = { CLAIM_GATE_JUDGE: 'false' };
+    const marker = path.join(dir, '.dev-pomogator', '.bg-task-active.testsession');
+    // Marker FIRST (it early-approves without writing the anti-loop marker, so the control stays clean).
+    fs.writeFileSync(marker, `12345 ${Math.floor(Date.now() / 1000)}\n`);
+    expect(runHook(rows, env).blocked).toBe(false); // V1+V2: a live job in flight → defer (approve)
+    fs.rmSync(marker);
+    expect(runHook(rows, env).blocked).toBe(true); // control: no marker → the same lazy stop blocks
+  });
+
+  // @feature11 — V1+V2 generalized (2026-06-20): the bg job is NOT necessarily a test (the test was
+  // just an example). A still-running background COMMAND (build / migration / docker / any
+  // run_in_background Bash) — where bg launches outnumber the harness's bg-completion records in the
+  // window — defers the lazy-stop kick; once its completion record lands («<status>completed</status>»
+  // / «Background command … completed»), the same lazy stop blocks again. The launch+completion are
+  // harness-recorded on both sides → ungameable. (A backgrounded Agent spawn is also a run_in_background
+  // tool_use, so it counts as a launch too.)
+  it('CEGATE001_33: a still-running background command (not a test) defers; its completion un-defers', () => {
+    writeCensus(dir, { open: 11, doneRed: 0, doneUnrun: 0 }, { id: 'demo:t1', title: 'Wire the gate' });
+    const completion: Block = {
+      type: 'user',
+      message: {
+        role: 'user',
+        content: [
+          {
+            type: 'tool_result',
+            tool_use_id: 'b1',
+            content: '<output-file>b.output</output-file>\n<status>completed</status>\n<summary>Background command "build" completed (exit code 0)</summary>',
+          },
+        ],
+      },
+    };
+    const base = [
+      U('собери и почини'),
+      A([tool('Edit', { file_path: '.specs/demo/FR.md' })]), // non-.feature edit → scopes demo (FR-9)
+      A([tool('Bash', { command: 'npm run build', run_in_background: true })]), // a bg BUILD (not a test)
+    ];
+    // Gray word ("Продолжаю") + no «Дальше:» → normally a `no-next-section` BLOCK when not awaiting.
+    const claim = A([txt('Продолжаю — жду, пока фоновая сборка закончится, сам пока ничего сделать не могу.')]);
+    const env = { CLAIM_GATE_JUDGE: 'false' };
+    expect(runHook([...base, claim], env).blocked).toBe(false); // still running → defer (approve)
+    expect(runHook([...base, completion, claim], env).blocked).toBe(true); // completed in-window → blocks
+  });
+
+  // @feature11 — α (2026-06-20): a turn spent INSPECTING / arguing with the gate itself (read-only,
+  // no edit) is NOT progress. The 1st is tolerated; the 2nd+ blocks with a bare next-step demand
+  // (hidden counter, never named, so it can't be gamed). EDITING the gate is real work → never flagged.
+  it('CEGATE001_34: gate-inspection is not progress (1st tolerated, 2nd blocked); editing the gate is never flagged', () => {
+    writeCensus(dir, { open: 11, doneRed: 0, doneUnrun: 0 }, { id: 'demo:t1', title: 'Wire the gate' });
+    const gateFile = 'tools/claim-evidence-gate/claim_evidence_gate_stop.ts';
+    const env = { CLAIM_GATE_JUDGE: 'false' };
+    // Earlier spec edit scopes demo (FR-9); the CURRENT window is pure gate inspection (Read, no edit).
+    const inspect = [
+      U('почини спеку'),
+      A([tool('Edit', { file_path: '.specs/demo/FR.md' })]),
+      A([txt('готово')]),
+      U('теперь разберись почему гейт сработал'),
+      A([tool('Read', { file_path: gateFile })]),
+      A([txt('Посмотрел исходник гейта — похоже на ложное срабатывание.')]),
+    ];
+    expect(runHook(inspect, env).blocked).toBe(false); // 1st inspection → tolerated
+    expect(runHook(inspect, env).blocked).toBe(true); // 2nd inspection (hidden streak persisted) → blocked
+    // EDITING the gate is real work → resets the streak, never flagged as meta.
+    const edit = [
+      U('почини спеку'),
+      A([tool('Edit', { file_path: '.specs/demo/FR.md' })]),
+      A([txt('готово')]),
+      U('теперь улучши гейт'),
+      A([tool('Edit', { file_path: gateFile })]),
+      A([txt('Поправил логику гейта в исходнике.')]),
+    ];
+    expect(runHook(edit, env).blocked).toBe(false); // editing the gate → approve (work, not meta)
+  });
 });

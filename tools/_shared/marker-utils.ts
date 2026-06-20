@@ -18,6 +18,15 @@ export interface MarkerData {
    * work-delta, not time (the time-based cap cannot, audit root-cause #1).
    */
   noProgressStreak?: number;
+  /**
+   * Optional — claim-evidence-gate α (2026-06-20): count CONSECUTIVE turns the agent spent
+   * INSPECTING/arguing with the gate itself (reading the gate's own source / the transcript / the
+   * fires-log, asking the user about the gate) WITHOUT advancing the named work. The first such turn
+   * is tolerated; from the second on the gate blocks — diagnosing the gate is not progress, only
+   * doing the named work is. Resets to 0 the moment the agent runs a real mutating tool. Kept HIDDEN
+   * from every block message so the agent can't learn "I get one free investigation" and game it.
+   */
+  metaStreak?: number;
 }
 
 export function markerPath(repoRoot: string, markerDir: string, markerFilename: string): string {

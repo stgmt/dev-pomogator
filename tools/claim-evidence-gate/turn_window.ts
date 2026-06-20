@@ -119,3 +119,53 @@ export function extractTurnWindow(rawTranscript: string): TurnWindow {
 
   return { claimText, toolUses };
 }
+
+/**
+ * General "a background job is still in flight" signal (V1+V2, generalized 2026-06-20 — the bg job
+ * is NOT necessarily a test; it can be a build / migration / docker run / any `run_in_background`
+ * Bash, or a backgrounded Agent spawn). Within the CURRENT turn-window, count background LAUNCHES
+ * (a tool_use whose input has run_in_background === true) against the bg COMPLETION records the
+ * harness injects when a bg task finishes ("<status>completed</status>" / "Background command …
+ * completed (exit code …)"). More launches than completions ⇒ at least one job hasn't finished ⇒
+ * the agent is legitimately awaiting it and physically cannot proceed. Both sides are harness-
+ * recorded, not agent narrative → ungameable. Window-scoped so it is bounded and cheap. (The
+ * `.bg-task-active` marker the pinator also reads is the test-runner wrapper's belt-and-suspenders
+ * for a job that spans a user message, where the window resets.)
+ */
+const BG_COMPLETION_RE = /<status>\s*completed\s*<\/status>|background command[^<]{0,200}?completed\s*\(exit code/i;
+export function bgInFlightInWindow(rawTranscript: string): boolean {
+  const lines = parseLines(rawTranscript);
+  let boundary = -1;
+  for (let i = lines.length - 1; i >= 0; i--) {
+    if (!lines[i].isSidechain && isRealUser(lines[i])) {
+      boundary = i;
+      break;
+    }
+  }
+  const win = lines.slice(boundary + 1).filter((e) => !e.isSidechain);
+  let launched = 0;
+  let completed = 0;
+  for (const e of win) {
+    // launches: count ONLY structural assistant tool_use blocks (a tool_result echoing the input
+    // must not double-count). Any backgrounded tool — Bash, Agent/Task — sets input.run_in_background.
+    if (role(e) === 'assistant') {
+      for (const b of contentBlocks(e)) {
+        const bb = b as Record<string, unknown>;
+        if (bb?.type === 'tool_use') {
+          const inp = bb.input as Record<string, unknown> | undefined;
+          if (inp && typeof inp === 'object' && inp.run_in_background === true) launched++;
+        }
+      }
+    }
+    // completions: the harness injects them as a separate message; scan the whole serialized line so
+    // we are robust to whether it lands as a tool_result, user text, or system block.
+    let serialized = '';
+    try {
+      serialized = JSON.stringify(e);
+    } catch {
+      serialized = '';
+    }
+    if (serialized && BG_COMPLETION_RE.test(serialized)) completed++;
+  }
+  return launched > completed;
+}

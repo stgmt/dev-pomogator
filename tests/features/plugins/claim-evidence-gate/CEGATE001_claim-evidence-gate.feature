@@ -151,3 +151,21 @@ Feature: CEGATE001 Claim-Evidence Gate
     Given the session edits only a spec's .feature in one turn and only its FR.md in another, with an open census
     When the gate evaluates each turn
     Then the .feature-only turn stays quiet (the spec is not scoped) while the FR.md turn blocks as before
+
+  # @feature11
+  Scenario: CEGATE001_32 A live bg-task-active marker defers the lazy-stop kick across turns
+    Given a real background job is in flight (a live .bg-task-active marker) while scope-open work remains
+    When the gate evaluates a stop that merely awaits the result with no «Дальше:» step
+    Then it defers to the bg-task-guard and approves, but the same stop blocks once the marker is gone
+
+  # @feature11
+  Scenario: CEGATE001_33 A still-running background command (not a test) defers until its completion lands
+    Given the window shows a background command launched (a build, not a test) with no completion record yet
+    When the gate evaluates a stop that merely awaits it while scope-open work remains
+    Then it approves, but once the harness completion record lands in the window the same lazy stop blocks
+
+  # @feature11
+  Scenario: CEGATE001_34 Inspecting the gate is not progress — first tolerated, second blocked; editing it is never flagged
+    Given the session has scope-open work and the current turn only read the gate's own source with no edit
+    When the gate evaluates a second consecutive such inspection turn
+    Then it blocks with a bare next-step demand, while a turn that EDITS the gate is treated as real work and approved

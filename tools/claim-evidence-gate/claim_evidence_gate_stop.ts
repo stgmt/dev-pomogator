@@ -32,7 +32,7 @@ import path from 'node:path';
 
 import { log as _logShared, normalizePath } from '../_shared/hook-utils.ts';
 import { markerPath, readMarker, writeMarkerAtomic, isWithinCooldown, hashFileList } from '../_shared/marker-utils.ts';
-import { extractTurnWindow } from './turn_window.ts';
+import { extractTurnWindow, bgInFlightInWindow } from './turn_window.ts';
 import { firstUnsupported, isSpecCompletionClaim } from './claim_classifier.ts';
 import { readTaskCensusCache, scopeCensusToSlugs, sessionEditedSpecSlugs, type TaskCensusCache } from '../spec-graph/task-census.ts';
 import { judgeStop } from './meridian-judge.ts';
@@ -142,6 +142,47 @@ function censusReminder(c: TaskCensusCache | null): string | null {
   }
 }
 
+/**
+ * V1+V2 (2026-06-20): is a REAL background job in flight RIGHT NOW? The test-runner wrapper
+ * maintains `.dev-pomogator/.bg-task-active[.<session>]` for the job's whole lifetime (created at
+ * start, removed on exit) and the bg-task-guard Stop hook holds the session on it. The pinator now
+ * reads the SAME marker, so a stop that merely AWAITS a still-running job — launched in an EARLIER
+ * turn, not just this one — is recognised as a legitimate async wait. This closes the across-turn
+ * gap where `bgTaskLaunchedThisTurn` (this-turn-only) went false on every waiting turn and the gate
+ * kicked the waiting agent (the 10-minute-test churn). The marker is the wrapper's, not agent
+ * narrative → ungameable. Stale guard: ignore a marker older than the bg-task-guard HARD_TTL
+ * (15 min) so a crashed run can't disarm the gate forever. (V5a will drop a `.bg-task-active.agent*`
+ * marker on a backgrounded agent spawn; the same prefix scan picks it up.)
+ */
+const BG_MARKER_TTL_MS = 900_000; // mirror bg-task-guard HARD_TTL (15 min)
+function bgJobMarkerActive(repoRoot: string): boolean {
+  try {
+    const dir = path.join(repoRoot, MARKER_DIR);
+    const now = Date.now();
+    for (const name of fs.readdirSync(dir)) {
+      if (!name.startsWith('.bg-task-active')) continue;
+      const p = path.join(dir, name);
+      let st: fs.Stats;
+      try {
+        st = fs.statSync(p);
+      } catch {
+        continue;
+      }
+      if (!st.isFile() || now - st.mtimeMs > BG_MARKER_TTL_MS) continue; // missing / stale → ignore
+      let body = '';
+      try {
+        body = fs.readFileSync(p, 'utf-8');
+      } catch {
+        continue;
+      }
+      if (/\S/.test(body)) return true; // non-empty, non-whitespace marker → a job is in flight
+    }
+    return false;
+  } catch {
+    return false; // no marker dir / unreadable → no job (fail toward normal gating)
+  }
+}
+
 async function main(): Promise<void> {
   const config = getConfig();
   if (config.mode === 'false') return approve();
@@ -197,7 +238,32 @@ async function main(): Promise<void> {
   const MUTATING_TOOL = /^(edit|write|multiedit|notebookedit|bash|powershell)$/i;
   const isDoorWrite = /^mcp__.*__(apply_spec_change|create_spec|delete_spec_doc|rename_spec_doc|set_entity_status|archive_spec)$/;
   const mutatingToolsThisTurn = toolUses.filter((t) => MUTATING_TOOL.test(t.name) || isDoorWrite.test(t.name)).length;
-  const bgTaskLaunchedThisTurn = toolUses.some((t) => t.input.includes('"run_in_background":true'));
+  // V1+V2 (2026-06-20, generalized): the agent is legitimately AWAITING ASYNC when ANY background job
+  // is still in flight — NOT only a test. Two observable, agent-independent signals, OR'd:
+  //   1. bgInFlightInWindow — within the window, bg LAUNCHES (any run_in_background Bash/Agent: build,
+  //      migration, docker, test, spawned helper) outnumber bg COMPLETION records → still running. This
+  //      SUBSUMES the old "launched THIS turn" flag: a job launched AND completed in-window is NOT
+  //      awaiting (the agent has the result and must act), so a lazy stop there still blocks.
+  //   2. bgJobMarkerActive — a live `.bg-task-active*` marker (the test-runner wrapper's, which survives
+  //      across a user message where the window resets) — belt-and-suspenders for tests.
+  // While either holds, the pinator defers its lazy-stop kicks to the bg-task-guard (one source of truth
+  // for "we're waiting"). The false-claim classes (works-done / spec-false-close) below are NOT
+  // suppressed — "готово, тесты прошли" while the job still runs is a false claim, caught as before.
+  const awaitingAsync = bgInFlightInWindow(rawTranscript) || bgJobMarkerActive(repoRoot);
+
+  // α (2026-06-20): a turn spent INSPECTING / arguing with the GATE ITSELF — reading its own source,
+  // the transcript or the fires-log — with NO real mutating edit is NOT progress. EDITING the gate
+  // (mutatingToolsThisTurn>0) is real work and is never flagged, so improving the gate is never
+  // punished; only read-only diagnosis-while-stuck is. The 1st such turn is tolerated; the 2nd+ blocks
+  // with a BARE next-step demand. The streak is HIDDEN in the marker (never named in a message) so the
+  // agent can't learn "one free investigation" and game it. Owner ask: «агент не спорит / не ищет дыры
+  // в гейте, а делает». Scoped to sessions with real open work (metaOpen below), so a pure-analysis
+  // turn that merely reads the gate is never punished.
+  const GATE_INTERNAL = /claim.?evidence.?gate|meridian.?judge|bg.?task.?guard|turn_window|claim_classifier|transcript/i;
+  const gateMetaThisTurn = mutatingToolsThisTurn === 0 && toolUses.length > 0 && toolUses.some((t) => GATE_INTERNAL.test(t.input));
+  const mp = markerPath(repoRoot, MARKER_DIR, MARKER_FILENAME);
+  const priorMarker = readMarker(mp);
+  const metaStreak = gateMetaThisTurn ? (priorMarker?.metaStreak ?? 0) + 1 : 0;
 
   let unsupported = firstUnsupported(claimText, toolUses, config.minSearch);
   // FR-49b: a WHOLE-SPEC "done" claim while the task-census shows unfinished work is a
@@ -224,7 +290,9 @@ async function main(): Promise<void> {
     // surfaced for a genuine WHOLE-SPEC "done" claim via the FR-49b censusReminder above
     // (isSpecCompletionClaim) — the real anti-false-close path, where "marked done, unverified" matters.
     const open = scoped ? scoped.total.open + scoped.total.doneRed : 0;
-    if (open > 0 && GRAY_SIGNAL.test(claimText) && !NEXT_SECTION_RE.test(claimText)) {
+    // V2: skip the «Дальше:» requirement while a background job is in flight — the agent is awaiting
+    // an async result and legitimately has no actionable next step until it lands.
+    if (open > 0 && GRAY_SIGNAL.test(claimText) && !NEXT_SECTION_RE.test(claimText) && !awaitingAsync) {
       unsupported = { cls: 'no-next-section', need: 'в ответе при незакрытой работе нет секции «Дальше:» с конкретным следующим шагом' };
     }
   }
@@ -238,7 +306,7 @@ async function main(): Promise<void> {
   // No fuzzy file-extraction / no git-in-hook: it leans only on harness-recorded, agent-independent facts.
   if (!unsupported) {
     const open = scoped ? scoped.total.open + scoped.total.doneRed : 0; // FR-9b: exclude doneUnrun (не подтверждено) — see the «Дальше:» gate note
-    if (open > 0 && BLOCKER_SIGNAL.test(claimText) && !bgTaskLaunchedThisTurn && toolUses.length === 0) {
+    if (open > 0 && BLOCKER_SIGNAL.test(claimText) && !awaitingAsync && toolUses.length === 0) {
       unsupported = {
         cls: 'unproven-blocker',
         need: 'заявлен блокер (жду/заблокировано/держит), но в этом ходе нет улики — ни запущенной фоновой задачи, ни прогона проверки (git diff/log)',
@@ -255,7 +323,7 @@ async function main(): Promise<void> {
   // logs WHY to stderr and returns null when помогатор is unreachable. Fires RARELY.
   if (!unsupported && (process.env.CLAIM_GATE_JUDGE ?? 'true').toLowerCase() === 'true') {
     const unfinished = scoped ? scoped.total.open + scoped.total.doneRed : 0; // FR-9b: exclude doneUnrun (не подтверждено) so a freshly recorded-done spec doesn't escalate the judge
-    if (unfinished > 0 && GRAY_SIGNAL.test(claimText)) {
+    if (unfinished > 0 && GRAY_SIGNAL.test(claimText) && !awaitingAsync) {
       // A TRANSIENT judge failure (timeout / network blip → null) must NOT be a free pass —
       // that fail-open was the actual escape route. The judge BLOCKS the announce-and-stop
       // phrasings when it RUNS, but an intermittent null → approve let a premature stop slip and
@@ -268,7 +336,7 @@ async function main(): Promise<void> {
         tools: toolUses.map((t) => t.name),
         openTasks: scoped!.total.open,
         mutatingToolsThisTurn,
-        bgTaskLaunchedThisTurn,
+        bgTaskLaunchedThisTurn: awaitingAsync,
       };
       let verdict = await judgeStop(jInput);
       if (verdict === null) verdict = await judgeStop(jInput);
@@ -290,6 +358,25 @@ async function main(): Promise<void> {
     }
   }
 
+  // α: 2nd+ consecutive gate-inspection turn (read-only, no edit) while scope-work remains → block
+  // with a BARE next-step demand. The hidden meta-reason is never shown, so it can't be gamed.
+  const metaOpen = scoped ? scoped.total.open + scoped.total.doneRed : 0;
+  if (!unsupported && metaStreak >= 2 && metaOpen > 0) {
+    const nx = scoped?.specs?.[0]?.nextOpen;
+    unsupported = { cls: 'gate-meta', need: nx ? `делай: ${nx.title} [${nx.id}]` : 'делай конкретный следующий шаг по открытой задаче' };
+  }
+  // α: persist the streak even on an approve, so the SECOND inspection is caught (resets to 0 on any
+  // real-work / non-meta turn). Preserve the anti-loop fields; only metaStreak changes.
+  if (!unsupported && metaStreak !== (priorMarker?.metaStreak ?? 0)) {
+    writeMarkerAtomic(mp, {
+      hash: priorMarker?.hash ?? '',
+      timestamp: priorMarker?.timestamp ?? new Date().toISOString(),
+      count: priorMarker?.count ?? 0,
+      noProgressStreak: priorMarker?.noProgressStreak,
+      metaStreak,
+    });
+  }
+
   if (!unsupported) return approve();
 
   logFire(repoRoot, {
@@ -309,8 +396,7 @@ async function main(): Promise<void> {
     return approve();
   }
 
-  // Anti-loop bookkeeping.
-  const mp = markerPath(repoRoot, MARKER_DIR, MARKER_FILENAME);
+  // Anti-loop bookkeeping. (mp + priorMarker were read early for the α gate-meta streak.)
   const marker = readMarker(mp);
   const currentHash = hashFileList([claimText]);
   if (marker && marker.hash === currentHash) return approve(); // same message re-submitted
@@ -330,12 +416,12 @@ async function main(): Promise<void> {
   // FR-13 precedence seam: when a long-running tool is active AND its on-disk output is frozen, this
   // is where it must escalate to a human (block → AskUserQuestion) INSTEAD of silently releasing.
   // Added in FR-13; until then a stalled wait simply releases.
-  if (bgTaskLaunchedThisTurn || noProgressStreak >= config.noProgressCap) {
-    const why = bgTaskLaunchedThisTurn
-      ? 'awaiting async (bg task launched this turn)'
+  if (awaitingAsync || noProgressStreak >= config.noProgressCap) {
+    const why = awaitingAsync
+      ? 'awaiting async (bg task launched this turn or a live .bg-task-active marker)'
       : `no work-delta across ${noProgressStreak} consecutive zero-tool kicks`;
     log('INFO', `FR-11 release: ${why}`);
-    writeMarkerAtomic(mp, { hash: currentHash, timestamp: new Date().toISOString(), count: marker?.count ?? 1, noProgressStreak });
+    writeMarkerAtomic(mp, { hash: currentHash, timestamp: new Date().toISOString(), count: marker?.count ?? 1, noProgressStreak, metaStreak });
     return approve();
   }
 
@@ -349,10 +435,11 @@ async function main(): Promise<void> {
     log('INFO', `retry cap (${cap}${inContinuation ? ', continuation' : ''}) in cooldown → approve`);
     return approve();
   }
-  writeMarkerAtomic(mp, { hash: currentHash, timestamp: new Date().toISOString(), count: newCount, noProgressStreak });
+  writeMarkerAtomic(mp, { hash: currentHash, timestamp: new Date().toISOString(), count: newCount, noProgressStreak, metaStreak });
 
   log('INFO', `blocking ${unsupported.cls} (attempt ${newCount})`);
-  const censusTail = censusMsg && unsupported.cls !== 'spec-false-close' && unsupported.cls !== 'judge-block' ? `\n📋 ${censusMsg}` : '';
+  const censusTail =
+    censusMsg && unsupported.cls !== 'spec-false-close' && unsupported.cls !== 'judge-block' && unsupported.cls !== 'gate-meta' ? `\n📋 ${censusMsg}` : '';
   if (unsupported.cls === 'judge-block') {
     block(
       `⚠️ ${SELF_MARKER}: судья (Meridian) счёл это преждевременным стопом — ${unsupported.need}\n` +
@@ -377,6 +464,9 @@ async function main(): Promise<void> {
         `или запусти проверку. Нет улики → не заблокирован → работай (или возьми безопасную не-перекрывающую работу). ` +
         `«Жду фоновую задачу» — только если ты её РЕАЛЬНО запустил в этом ходе.`,
     );
+  } else if (unsupported.cls === 'gate-meta') {
+    // α: bare next-step demand — the hidden "you were inspecting the gate" reason is NEVER shown.
+    block(`⚠️ ${SELF_MARKER}: не закрыто. ${unsupported.need} — сделай ЭТОТ шаг сейчас.`);
   } else if (unsupported.cls === 'spec-false-close') {
     block(
       `⚠️ ${SELF_MARKER}: ты заявил завершение СПЕКИ/фичи, но ${unsupported.need}\n` +
