@@ -1213,7 +1213,9 @@ Then(/^the summary mentions "python-api" and "FastAPI" and the test command$/, f
   const s = this.textGate!.composedSummary!;
   assert.ok(s.includes('python-api'), `summary missing "python-api": ${s}`);
   assert.ok(s.includes('FastAPI'), `summary missing "FastAPI": ${s}`);
+  assert.ok(s.includes('python'), `summary missing language "python": ${s}`);
   assert.ok(s.includes('uv run pytest'), `summary missing test command: ${s}`);
+  assert.ok(s.includes('DATABASE_URL'), `summary missing env var "DATABASE_URL": ${s}`);
   assert.ok(s.includes('Правильно я понял суть?'), `summary missing confirmation phrase: ${s}`);
 });
 

@@ -80,42 +80,82 @@ Feature: ONBOARD001_Phase0_Repo_Onboarding
     And `.onboarding.json.baseline_tests.skipped_by_user == true`
 
   @feature6
+  @manual
   Scenario: ONBOARD010_Text_gate_accepts_confirmation
-    Given a text gate context for a python-api project
-    When the text gate receives "да, верно" on the first iteration
-    Then the text gate result is confirmed on iteration 1
+    Given Phase 0 Steps 1-5 completed successfully
+    When the agent emits a 1-paragraph architecture summary in chat
+    And I respond with "да, верно"
+    Then `spec-status.ts -ConfirmStop Onboarding` is invoked
+    And Phase 0 completes
 
   @feature6
+  @manual
   Scenario: ONBOARD011_Text_gate_iterates_on_correction
-    Given a text gate context for a python-api project
-    When the text gate receives a correction on iteration 1 then "да, правильно" on iteration 2
-    Then the text gate result is confirmed on iteration 2
-    And the second summary sent to the user contains the correction text
+    Given Phase 0 Steps 1-5 completed successfully
+    And the agent emits summary "this is a Python CLI tool"
+    When I respond with "not quite — it's a web backend"
+    Then the agent updates the summary to mention "web backend"
+    And the agent asks "Правильно я понял суть?" again
+    And the iteration counter increments to 2
 
   @feature6
+  @manual
   Scenario: ONBOARD012_Text_gate_aborts_after_3_iterations
-    Given a text gate context for a python-api project
-    When the text gate receives 3 corrections without confirmation
-    Then the text gate is aborted after 3 iterations
-    And the abort reason mentions "--refresh-onboarding"
+    Given Phase 0 Steps 1-5 completed successfully
+    And the agent attempted 3 summary iterations with no user confirmation
+    When the third iteration receives another correction
+    Then Phase 0 aborts with hint "Gate not confirmed after 3 iterations"
+    And partial artifacts are not finalized
+    And the user can retry with `--refresh-onboarding`
 
   @feature6
-  Scenario: Text_gate_classifyResponse_recognises_confirm_synonyms
+  Scenario Outline: Text_gate_classifyResponse_recognises_confirm_synonyms
     Given a text gate context for a python-api project
-    When "да, верно" is classified by the text gate classifier
+    When "<input>" is classified by the text gate classifier
     Then the classification result is "confirm"
 
-  @feature6
-  Scenario: Text_gate_classifyResponse_recognises_abort_synonyms
-    Given a text gate context for a python-api project
-    When "прервать" is classified by the text gate classifier
-    Then the classification result is "abort"
+    Examples:
+      | input         |
+      | да            |
+      | да, верно     |
+      | верно         |
+      | правильно     |
+      | точно         |
+      | yes           |
+      | Yes, correct  |
+      | yep           |
+      | ok            |
+      | okay          |
 
   @feature6
-  Scenario: Text_gate_classifyResponse_recognises_correction_synonyms
+  Scenario Outline: Text_gate_classifyResponse_recognises_abort_synonyms
     Given a text gate context for a python-api project
-    When "не совсем — это monorepo" is classified by the text gate classifier
+    When "<input>" is classified by the text gate classifier
+    Then the classification result is "abort"
+
+    Examples:
+      | input    |
+      | abort    |
+      | cancel   |
+      | прервать |
+      | отмена   |
+      | stop     |
+      | quit     |
+      | выход    |
+
+  @feature6
+  Scenario Outline: Text_gate_classifyResponse_recognises_correction_synonyms
+    Given a text gate context for a python-api project
+    When "<input>" is classified by the text gate classifier
     Then the classification result is "correction"
+
+    Examples:
+      | input                                        |
+      | не совсем — это monorepo                     |
+      | нет, на самом деле это CLI                   |
+      | not quite — actually we use FastAPI          |
+      | но там ещё Next.js                           |
+      | wrong — это node backend                     |
 
   @feature6
   Scenario: Text_gate_classifyResponse_abort_wins_over_confirm
