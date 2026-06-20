@@ -248,3 +248,28 @@ Feature: PLUGIN012_TUI_Test_Runner
     Given dev-pomogator is installed
     When the TUI package is invoked via python -m tui --help
     Then the TUI help output should advertise the --status-file option
+
+  @feature9
+  Scenario: Store alias guard flags when the only resolved path is the WindowsApps stub
+    Given the resolved python paths are only WindowsApps stubs
+    Then the Store alias guard should flag all paths as alias-only
+
+  @feature9
+  Scenario: Store alias guard flags when every resolved path is a WindowsApps stub
+    Given the resolved python paths are multiple WindowsApps stubs
+    Then the Store alias guard should flag all paths as alias-only
+
+  @feature9
+  Scenario: Store alias guard does not flag when a real interpreter resolves before the stub
+    Given the resolved python paths include a real interpreter before the WindowsApps stub
+    Then the Store alias guard should not flag the paths as alias-only
+
+  @feature9
+  Scenario: Store alias guard does not flag a forward-slash real interpreter path
+    Given the resolved python paths are a single forward-slash real interpreter
+    Then the Store alias guard should not flag the paths as alias-only
+
+  @feature9
+  Scenario: Store alias guard treats empty or whitespace-only resolution as not-alias
+    Given the resolved python paths are empty or whitespace-only
+    Then the Store alias guard should not flag the paths as alias-only
