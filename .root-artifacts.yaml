@@ -22,6 +22,7 @@ allow:
 - stryker.config.mjs
 - stryker.real.config.mjs
 - stryker.specgen.config.mjs
+- stryker.bdd.config.mjs
 - .npmignore
 - .mcp.json
 - .lsp.json

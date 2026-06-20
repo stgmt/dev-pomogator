@@ -36,5 +36,12 @@
       "progress-bar"
     ],
     "publishQuiet": true
+  },
+  "stryker-bdd": {
+    "import": [
+      "tests/step_definitions/feature_strong_tests.ts",
+      "tests/hooks/before-after.ts"
+    ],
+    "publishQuiet": true
   }
 }
