@@ -370,6 +370,11 @@
             "type": "command",
             "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/anchor-integrity/anchor_check_post.ts\"",
             "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/bdd-quality-judge/hook.ts\"",
+            "timeout": 15
           }
         ]
       },
