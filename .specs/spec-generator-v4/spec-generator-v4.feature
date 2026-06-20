@@ -2108,3 +2108,74 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
   Scenario: SPECGEN004_311 parseModifiedSpecSlugs returns an empty array for porcelain with no .specs paths
     Given a git status porcelain output with no .specs/ paths
     Then parseModifiedSpecSlugs returns an empty array
+
+  @feature24
+  Scenario: SPECGEN004_312 meta-guard denies removing a v3 form-guard from settings.json
+    Given a settings manifest with the task-form-guard registration present
+    When an agent write removes the task-form-guard entry from settings.json
+    Then the meta-guard denies the write with exit 2 naming task-form-guard
+
+  @feature24
+  Scenario: SPECGEN004_313 meta-guard denies removing the dev-pomogator-specs MCP entry from .mcp.json
+    Given an .mcp.json manifest carrying the dev-pomogator-specs server entry
+    When an agent write removes the dev-pomogator-specs entry from .mcp.json
+    Then the meta-guard denies the write with exit 2 naming dev-pomogator-specs
+
+  @feature24
+  Scenario: SPECGEN004_314 meta-guard allows adding an unrelated hook without denying
+    Given a settings manifest with the task-form-guard registration present
+    When an agent write adds an unrelated hook entry to settings.json
+    Then the meta-guard exits 0 permitting the additive write
+
+  @feature24
+  Scenario: SPECGEN004_315 meta-guard exits 0 for writes to non-guarded file paths
+    When an agent write targets a non-guarded JSON file path
+    Then the meta-guard exits 0 with no denial output
+
+  @FR-43
+  Scenario: SPECGEN004_316 findBasenameElsewhere returns the new path of a moved file
+    Given a repo root with a file placed inside a tools subdirectory
+    When findBasenameElsewhere searches for the original missing path by basename
+    Then it returns the relative path where the file now lives
+
+  @FR-43
+  Scenario: SPECGEN004_317 findBasenameElsewhere returns an empty array for a truly missing file
+    Given a repo root with no file matching the queried basename
+    When findBasenameElsewhere searches for the missing basename
+    Then it returns an empty array
+
+  @FR-43
+  Scenario: SPECGEN004_318 buildLegacyPrompt embeds missing paths and grep evidence in the prompt
+    Given a slug and evidence list with one moved path and one truly missing path
+    When buildLegacyPrompt constructs the classification prompt
+    Then the prompt contains the slug and both missing paths with their found-at evidence
+
+  @FR-43
+  Scenario: SPECGEN004_319 judgeLegacyState parses a clean MOVED verdict from the injected spawn
+    Given a repo root and a list of missing paths for a slug
+    When judgeLegacyState runs with an injected spawn returning a clean MOVED JSON
+    Then the verdict has state MOVED and ran true
+
+  @FR-43
+  Scenario: SPECGEN004_320 judgeLegacyState tolerates JSON wrapped in stray prose and fences
+    Given a repo root and a list of missing paths for a slug
+    When judgeLegacyState runs with an injected spawn returning JSON inside a markdown fence
+    Then the verdict has state REMOVED and ran true
+
+  @FR-43
+  Scenario: SPECGEN004_321 judgeLegacyState degrades to UNKNOWN when the binary is unavailable
+    Given a repo root and a list of missing paths for a slug
+    When judgeLegacyState runs with an injected spawn that throws a binary-unavailable error
+    Then the verdict has state UNKNOWN and ran false
+
+  @FR-43
+  Scenario: SPECGEN004_322 judgeLegacyState degrades to UNKNOWN on unparseable judge output
+    Given a repo root and a list of missing paths for a slug
+    When judgeLegacyState runs with an injected spawn returning unparseable output
+    Then the verdict has state UNKNOWN and ran false
+
+  @FR-43
+  Scenario: SPECGEN004_323 judgeLegacyState rejects an invalid state value and degrades to UNKNOWN
+    Given a repo root and a list of missing paths for a slug
+    When judgeLegacyState runs with an injected spawn returning an invalid state value
+    Then the verdict has state UNKNOWN and ran false
