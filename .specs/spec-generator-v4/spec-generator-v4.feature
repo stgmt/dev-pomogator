@@ -2257,3 +2257,86 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
   Scenario: SPECGEN004_338 spec-backlog writer readEntry returns null for unknown id
     When readEntry is called with an id that does not exist in the writer temp dir
     Then readEntry returns null
+
+  # FR-17 full-mode (LLM-judge wrapper) — runFullMode with injectable spawn
+
+  @feature17
+  Scenario: SPECGEN004_339 runFullMode fires cross-spec/semantic-drift when spawn returns DRIFT
+    Given two specs each have a FR-1 with long matching prose in the full-mode temp repo
+    When runFullMode is called with a spawn that returns DRIFT
+    Then the full-mode result shows subprocess_calls=1 and drift_detected=1
+    And a cross-spec/semantic-drift finding appears in both spec results with severity CRITICAL and suggested_fix containing "fake drift"
+
+  @feature17
+  Scenario: SPECGEN004_340 runFullMode does NOT fire semantic-drift when spawn returns NO_DRIFT_DETECTED
+    Given two specs each have a FR-1 with long matching prose in the full-mode temp repo
+    When runFullMode is called with a spawn that returns NO_DRIFT_DETECTED
+    Then the full-mode result shows subprocess_calls=1 and drift_detected=0 with no semantic-drift finding
+
+  @feature17
+  Scenario: SPECGEN004_341 runFullMode still ships mechanical findings in shared namespace mode
+    Given two specs each have a shared-namespace FR-1 with long prose in the full-mode temp repo
+    When runFullMode is called with shared namespace and a NO_DRIFT spawn
+    Then the full-mode result still contains a cross-spec/duplicate-fr-id mechanical finding
+
+  @feature17
+  Scenario: SPECGEN004_342 runFullMode honours maxCalls — second pair never triggers spawn
+    Given three specs each have a FR-1 with long prose in the full-mode temp repo
+    When runFullMode is called with maxCalls=1 against three specs
+    Then only 1 spawn call was made despite having 3 FR pairs
+
+  @feature17
+  Scenario: SPECGEN004_343 runFullMode denyOverrides short-circuits spawn per spec
+    Given two specs each have a FR-1 with long matching prose in the full-mode temp repo
+    When runFullMode is called with denyOverrides spec-a=true
+    Then 0 spawn calls were made and deny_list_skips=1 in the full-mode result
+
+  @feature17
+  Scenario: SPECGEN004_344 runFullMode skips FR pairs with bodies shorter than 60 chars
+    Given two specs each have a FR-1 with short bodies in the full-mode temp repo
+    When runFullMode is called with default options against two short-body specs
+    Then 0 spawn calls were made because both FR bodies are shorter than 60 chars
+
+  # FR-18 cross-spec-resolve step-7 — updateStatus YAML stamping
+
+  @feature18
+  Scenario: SPECGEN004_345 updateStatus throws when the YAML file does not exist
+    Given no consistency-report.yaml exists for slug "absent" in the update-status temp repo
+    When updateStatus is called for slug "absent" with empty decisions
+    Then updateStatus throws an error matching "does not exist"
+
+  @feature18
+  Scenario: SPECGEN004_346 updateStatus appends resolution_status and resolved_at inside the matching finding block
+    Given a consistency-report.yaml exists for slug "demo" in the update-status temp repo
+    When updateStatus is called with a resolved decision for the impl-drift/missing-file finding
+    Then the YAML file contains resolution_status: resolved and resolved_at inside the impl-drift block before the second finding
+
+  @feature18
+  Scenario: SPECGEN004_347 updateStatus writes override_reason when status is acknowledged
+    Given a consistency-report.yaml exists for slug "demo" in the update-status temp repo
+    When updateStatus is called with an acknowledged decision with overrideReason "covered by shared runner"
+    Then the YAML file contains resolution_status: acknowledged and override_reason: "covered by shared runner"
+
+  @feature18
+  Scenario: SPECGEN004_348 updateStatus escapes quotes and backslashes in override_reason
+    Given a consistency-report.yaml exists for slug "demo" in the update-status temp repo
+    When updateStatus is called with an acknowledged decision with overrideReason containing quotes and backslashes
+    Then the YAML file contains override_reason with escaped quotes and backslashes
+
+  @feature18
+  Scenario: SPECGEN004_349 updateStatus reports unmatched decisions in result counters
+    Given a consistency-report.yaml exists for slug "demo" in the update-status temp repo
+    When updateStatus is called with one matching and one non-matching decision
+    Then updateStatus returns matched=1 and unmatched=1
+
+  @feature18
+  Scenario: SPECGEN004_350 updateStatus is atomic — no-match leaves the original YAML intact
+    Given a consistency-report.yaml exists for slug "demo" in the update-status temp repo
+    When updateStatus is called with a decision that has no matching finding
+    Then the YAML file content is unchanged after the no-match updateStatus call
+
+  @feature18
+  Scenario: SPECGEN004_351 updateStatus is idempotent — re-running does not double-add status lines beyond limit
+    Given a consistency-report.yaml exists for slug "demo" in the update-status temp repo
+    When updateStatus is called twice with the same resolved decision for the impl-drift finding
+    Then the YAML file contains at most 2 occurrences of resolution_status: resolved after two identical updateStatus calls
