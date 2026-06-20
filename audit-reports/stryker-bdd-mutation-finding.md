@@ -60,7 +60,8 @@ Re-ran the full file after adding TESTQUAL001_34/35/36 [cmd:npm run mutation:bdd
 | 120/122/151/156 | 14 × Regex | Stryker Regex-mutator | Likely-equivalent (Regex mutator tweaks regex internals; high equivalent rate — also the reason the skill-mutation config reverted the Regex mutator). Needs per-regex review; do not count as test debt yet. |
 | 160:12, 160:21 | 2 (min→max, ±1) | Python EOF-fallback | **Proven equivalent** — `Array.slice` clamps over-large end [cmd above]. Annotate, don't chase. |
 | 148/150/153/155/158 | ~12 (Block/Logical/Conditional/Equality/Method/StringLiteral) | Python indent-loop | Mixed — the `indent <= startIndent` boundary (153/155/158) may be killable with a Python fixture that de-indents at an exact column; needs a targeted scenario. |
-| 71:7, 81:7 | 2 × ConditionalExpression | suggestInvariants Map/Iterator branch | Possibly killable by tightening the W4 scenarios TESTQUAL001_34/35 (assert exact invariant arrays per branch). |
+| 81:7 | ConditionalExpression | suggestInvariants Iterator branch | **FALSE survivor** — `verify-kill.ts` proves TESTQUAL001_35 KILLS the `→false` mutant deterministically [cmd:verify-kill kill-81.json → KILLED]. The flaky aggregate mislabeled it; NOT test debt. |
+| 71:7 | ConditionalExpression | detectStack `.go` branch | Genuine coverage gap — scenarios call `scan(content, stack)`, not `detectStack(path)`, so the `.go` branch is never exercised. Needs a detectStack-driving scenario, or accept as out-of-scope. |
 | 123:38 | 1 ArrayDeclaration | suggestInvariants array | Possibly killable (assert exact array). |
 | 299:20 | 1 StringLiteral | composition-chain rationale | **KILLED** (commit d99682d) — tightened TESTQUAL001_11 to assert the rationale text; proven via inject+restore. |
 
