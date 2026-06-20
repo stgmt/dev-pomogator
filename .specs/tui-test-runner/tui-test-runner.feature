@@ -176,6 +176,12 @@ Feature: PLUGIN012_TUI_Test_Runner
     When the dotnet adapter processes the minimal single-line summary
     Then the dotnet adapter should report a 4-total summary
 
+  @feature6
+  Scenario: Generic adapter returns null for every line (passthrough)
+    Given dev-pomogator is installed
+    When each line from a mixed-output sample is processed by the generic adapter
+    Then the generic adapter should return null for every line
+
   @feature11
   Scenario: YAML writer write is a no-op after finalize
     Given dev-pomogator is installed

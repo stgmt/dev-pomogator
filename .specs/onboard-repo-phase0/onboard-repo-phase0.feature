@@ -80,33 +80,104 @@ Feature: ONBOARD001_Phase0_Repo_Onboarding
     And `.onboarding.json.baseline_tests.skipped_by_user == true`
 
   @feature6
-  @manual
   Scenario: ONBOARD010_Text_gate_accepts_confirmation
-    Given Phase 0 Steps 1-5 completed successfully
-    When the agent emits a 1-paragraph architecture summary in chat
-    And I respond with "да, верно"
-    Then `spec-status.ts -ConfirmStop Onboarding` is invoked
-    And Phase 0 completes
+    Given a text gate context for a python-api project
+    When the text gate receives "да, верно" on the first iteration
+    Then the text gate result is confirmed on iteration 1
 
   @feature6
-  @manual
   Scenario: ONBOARD011_Text_gate_iterates_on_correction
-    Given Phase 0 Steps 1-5 completed successfully
-    And the agent emits summary "this is a Python CLI tool"
-    When I respond with "not quite — it's a web backend"
-    Then the agent updates the summary to mention "web backend"
-    And the agent asks "Правильно я понял суть?" again
-    And the iteration counter increments to 2
+    Given a text gate context for a python-api project
+    When the text gate receives a correction on iteration 1 then "да, правильно" on iteration 2
+    Then the text gate result is confirmed on iteration 2
+    And the second summary sent to the user contains the correction text
 
   @feature6
-  @manual
   Scenario: ONBOARD012_Text_gate_aborts_after_3_iterations
-    Given Phase 0 Steps 1-5 completed successfully
-    And the agent attempted 3 summary iterations with no user confirmation
-    When the third iteration receives another correction
-    Then Phase 0 aborts with hint "Gate not confirmed after 3 iterations"
-    And partial artifacts are not finalized
-    And the user can retry with `--refresh-onboarding`
+    Given a text gate context for a python-api project
+    When the text gate receives 3 corrections without confirmation
+    Then the text gate is aborted after 3 iterations
+    And the abort reason mentions "--refresh-onboarding"
+
+  @feature6
+  Scenario: Text_gate_classifyResponse_recognises_confirm_synonyms
+    Given a text gate context for a python-api project
+    When "да, верно" is classified by the text gate classifier
+    Then the classification result is "confirm"
+
+  @feature6
+  Scenario: Text_gate_classifyResponse_recognises_abort_synonyms
+    Given a text gate context for a python-api project
+    When "прервать" is classified by the text gate classifier
+    Then the classification result is "abort"
+
+  @feature6
+  Scenario: Text_gate_classifyResponse_recognises_correction_synonyms
+    Given a text gate context for a python-api project
+    When "не совсем — это monorepo" is classified by the text gate classifier
+    Then the classification result is "correction"
+
+  @feature6
+  Scenario: Text_gate_classifyResponse_abort_wins_over_confirm
+    Given a text gate context for a python-api project
+    When "ok cancel" is classified by the text gate classifier
+    Then the classification result is "abort"
+
+  @feature6
+  Scenario: Text_gate_classifyResponse_returns_ambiguous_for_gibberish
+    Given a text gate context for a python-api project
+    When "xxxxx" is classified by the text gate classifier
+    Then the classification result is "ambiguous"
+
+  @feature6
+  Scenario: Text_gate_composeSummary_mentions_project_details
+    Given a text gate context for a python-api project
+    When the text gate summary is composed
+    Then the summary mentions "python-api" and "FastAPI" and the test command
+
+  @feature6
+  Scenario: Text_gate_composeSummary_flags_baseline_failures
+    Given a text gate context for a python-api project with 2 baseline failures
+    When the text gate summary is composed
+    Then the summary mentions the number of failing tests
+
+  @feature6
+  Scenario: Text_gate_composeSummary_handles_missing_test_framework
+    Given a text gate context for a python-api project with no test framework
+    When the text gate summary is composed
+    Then the summary mentions that no test framework was detected
+
+  @feature6
+  Scenario: Text_gate_composeSummary_mentions_partial_recon_failure
+    Given a text gate context for a python-api project with subagent B failed
+    When the text gate summary is composed
+    Then the summary mentions the partial recon failure
+
+  @feature6
+  Scenario: Text_gate_explicit_abort_keyword_stops_immediately
+    Given a text gate context for a python-api project
+    When the text gate receives "прервать" on the first iteration
+    Then the text gate is aborted after 1 iteration
+    And the abort reason mentions "user requested abort"
+
+  @feature6
+  Scenario: Text_gate_abort_on_second_iteration
+    Given a text gate context for a python-api project
+    When the text gate receives a correction on iteration 1 then "cancel" on iteration 2
+    Then the text gate is aborted after 2 iterations
+
+  @feature6
+  Scenario: Text_gate_ambiguous_response_reprompts
+    Given a text gate context for a python-api project
+    When the text gate receives "xxxxx" on iteration 1 then "да" on iteration 2
+    Then the text gate result is confirmed on iteration 2
+
+  @feature6
+  Scenario: Text_gate_applyCorrection_DI_hook_is_called
+    Given a text gate context for a python-api project
+    When the text gate uses a custom applyCorrection hook and receives a correction then confirmation
+    Then the custom applyCorrection hook was called
+    And the final summary contains the custom merge marker
 
   @feature7
   Scenario: ONBOARD013_Parallel_subagents_launch_in_one_tool_call

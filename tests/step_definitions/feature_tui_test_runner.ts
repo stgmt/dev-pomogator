@@ -1202,3 +1202,36 @@ Then(
     assert.match(h.out, /--status-file/);
   },
 );
+
+// --- @feature6: GenericAdapter returns null for every line (passthrough) ------
+// FBOL003_06 vitest case folded into BDD: GenericAdapter.parseLine() MUST return
+// null for every line — it is the passthrough adapter used when no framework is
+// detected. Drives the REAL GenericAdapter in-process.
+
+When(
+  /^each line from a mixed-output sample is processed by the generic adapter$/,
+  async function (this: TuiWorld) {
+    const mod = await importAdapter('generic_adapter.ts');
+    const adapter = new mod.GenericAdapter();
+    const lines = [
+      'Building...',
+      'Compiled successfully',
+      '✓ Done',
+      'Error: something broke',
+      'PASS tests/foo.test.ts',  // would parse for Jest — must NOT for generic
+      '✓ test passed (5 ms)',    // would parse for Jest — must NOT for generic
+    ];
+    (this as any).genericEvents = lines.map((l: string) => adapter.parseLine(l));
+  },
+);
+
+Then(
+  /^the generic adapter should return null for every line$/,
+  function (this: TuiWorld) {
+    const evts: (null | unknown)[] = (this as any).genericEvents;
+    assert.ok(
+      evts.every((e) => e === null),
+      `GenericAdapter must return null for every line; got: ${JSON.stringify(evts)}`,
+    );
+  },
+);

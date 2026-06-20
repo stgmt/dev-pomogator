@@ -3,9 +3,10 @@
  *
  * Classification:
  *   runtime  — drives real exported functions in-process via DI (all scenarios below)
- *   @manual  — ONBOARD002, ONBOARD006, ONBOARD010-012, ONBOARD028, ONBOARD031
+ *   @manual  — ONBOARD002, ONBOARD006, ONBOARD028, ONBOARD031
  *              (require live Claude Code agent, /create-spec command, or real subagent calls —
  *              tagged @manual in the .feature; excluded from this gate via "not @manual")
+ *              ONBOARD010-012 de-manualized 2026-06-20: reconciled prose → headless DI-testable
  *
  * Scenarios driven here (29 green):
  *   ONBOARD003-005 (@feature4) — cache invalidation / git-sha
@@ -1081,4 +1082,248 @@ Then(/^shell-based top-N fallback is used$/, function (this: OnboardWorld) {
 
 Then(/^`\.onboarding\.json\.ingestion\.method == "fallback"`$/, function (this: OnboardWorld) {
   assert.equal(this.onboard.ingestionResult?.method, 'fallback');
+});
+
+// ── @feature6: Text gate — classifyResponse / composeSummary / runTextGate ────
+// These step-defs fold the vitest text-gate.test.ts cases into the BDD graph.
+// All scenarios are RUNTIME — they drive the real exported functions in-process
+// via DI, no live-agent session required.  De-manualized per SKILL.md reconcile.
+import {
+  classifyResponse,
+  composeSummary,
+  runTextGate,
+  type TextGateContext,
+  type TextGateDeps,
+  MAX_ITERATIONS,
+} from '../../tools/onboard-repo/steps/text-gate.ts';
+
+// ── Shared context builder (mirrors text-gate.test.ts makeContext) ────────────
+function makeTextGateContext(overrides: Partial<TextGateContext> = {}): TextGateContext {
+  return {
+    archetype: { archetype: 'python-api', confidence: 'high', evidence: 'pyproject.toml' },
+    recon: {
+      languages: [{ name: 'python', version: '3.11+', usage: 'all' }],
+      frameworks: [{ name: 'FastAPI', version: '0.110', role: 'web framework' }],
+      package_managers: ['uv'],
+      manifests_found: ['pyproject.toml'],
+      required_env_vars: [
+        { var: 'DATABASE_URL', purpose: 'Postgres', found_in: ['.env.example'] },
+        { var: 'JWT_SECRET', purpose: 'auth', found_in: ['.env.example'] },
+      ],
+      ci_configs: [],
+      test_framework: 'pytest',
+      test_commands: ['uv run pytest'],
+      bdd_present: false,
+      existing_ai_configs: [],
+      entry_points: [{ file: 'src/main.py', role: 'FastAPI entry' }],
+      top_level_dirs: ['src', 'tests'],
+      architecture_hint: 'layered FastAPI',
+      sub_archetypes: undefined,
+      warnings: [],
+      failed_subagents: [],
+    },
+    baseline: {
+      framework: 'pytest',
+      command: 'uv run pytest',
+      via_skill: 'run-tests',
+      passed: 145,
+      failed: 2,
+      skipped: 0,
+      duration_s: 47,
+      failed_test_ids: ['tests/a::test_a', 'tests/b::test_b'],
+      reason_if_null: null,
+      skipped_by_user: false,
+    },
+    project: { name: 'fake-python-api' },
+    ...overrides,
+  };
+}
+
+// State stored on World for text-gate scenarios (no tmpdir/registry needed)
+interface TextGateScenarioState {
+  ctx?: TextGateContext;
+  classifyInput?: string;
+  classifyResult?: string;
+  composedSummary?: string;
+  gateResult?: Awaited<ReturnType<typeof runTextGate>>;
+  summariesSentToUser?: string[];
+  customApplyCalled?: boolean;
+}
+
+interface TextGateWorld extends OnboardWorld {
+  textGate?: TextGateScenarioState;
+}
+
+// ── Given: set up context variants ───────────────────────────────────────────
+
+Given(/^a text gate context for a python-api project$/, function (this: TextGateWorld) {
+  this.textGate = { ctx: makeTextGateContext() };
+  // Ensure this.onboard is initialised (After hook references it)
+  if (!this.onboard) {
+    const snap = snapshotRegistry();
+    this.onboard = { tmpdir: '', registrySnapshot: snap };
+  }
+});
+
+Given(/^a text gate context for a python-api project with 2 baseline failures$/, function (this: TextGateWorld) {
+  this.textGate = { ctx: makeTextGateContext() };
+  if (!this.onboard) this.onboard = { tmpdir: '', registrySnapshot: snapshotRegistry() };
+});
+
+Given(/^a text gate context for a python-api project with no test framework$/, function (this: TextGateWorld) {
+  const ctx = makeTextGateContext();
+  ctx.recon.test_framework = null;
+  ctx.recon.test_commands = [];
+  ctx.baseline.framework = null;
+  this.textGate = { ctx };
+  if (!this.onboard) this.onboard = { tmpdir: '', registrySnapshot: snapshotRegistry() };
+});
+
+Given(/^a text gate context for a python-api project with subagent B failed$/, function (this: TextGateWorld) {
+  const ctx = makeTextGateContext();
+  ctx.recon.failed_subagents = ['B'];
+  this.textGate = { ctx };
+  if (!this.onboard) this.onboard = { tmpdir: '', registrySnapshot: snapshotRegistry() };
+});
+
+// ── When: classifyResponse ────────────────────────────────────────────────────
+
+When(/^"([^"]+)" is classified by the text gate classifier$/, function (this: TextGateWorld, input: string) {
+  this.textGate = this.textGate ?? {};
+  this.textGate.classifyInput = input;
+  this.textGate.classifyResult = classifyResponse(input);
+});
+
+// ── Then: classifyResponse ────────────────────────────────────────────────────
+
+Then(/^the classification result is "([^"]+)"$/, function (this: TextGateWorld, expected: string) {
+  assert.equal(this.textGate?.classifyResult, expected);
+});
+
+// ── When: composeSummary ──────────────────────────────────────────────────────
+
+When(/^the text gate summary is composed$/, function (this: TextGateWorld) {
+  this.textGate = this.textGate ?? {};
+  this.textGate.composedSummary = composeSummary(this.textGate.ctx!);
+});
+
+// ── Then: composeSummary ──────────────────────────────────────────────────────
+
+Then(/^the summary mentions "python-api" and "FastAPI" and the test command$/, function (this: TextGateWorld) {
+  const s = this.textGate!.composedSummary!;
+  assert.ok(s.includes('python-api'), `summary missing "python-api": ${s}`);
+  assert.ok(s.includes('FastAPI'), `summary missing "FastAPI": ${s}`);
+  assert.ok(s.includes('uv run pytest'), `summary missing test command: ${s}`);
+  assert.ok(s.includes('Правильно я понял суть?'), `summary missing confirmation phrase: ${s}`);
+});
+
+Then(/^the summary mentions the number of failing tests$/, function (this: TextGateWorld) {
+  const s = this.textGate!.composedSummary!;
+  assert.ok(/2 падающих теста|failed/i.test(s), `summary missing baseline failure mention: ${s}`);
+});
+
+Then(/^the summary mentions that no test framework was detected$/, function (this: TextGateWorld) {
+  const s = this.textGate!.composedSummary!;
+  assert.ok(s.includes('не обнаружен'), `summary missing "не обнаружен": ${s}`);
+});
+
+Then(/^the summary mentions the partial recon failure$/, function (this: TextGateWorld) {
+  const s = this.textGate!.composedSummary!;
+  assert.ok(/частичный recon|Subagent B/i.test(s), `summary missing partial recon mention: ${s}`);
+});
+
+// ── When: runTextGate — ONBOARD010-012 and variants ──────────────────────────
+
+When(/^the text gate receives "([^"]+)" on the first iteration$/, async function (this: TextGateWorld, firstResponse: string) {
+  const deps: TextGateDeps = {
+    askUser: async () => firstResponse,
+  };
+  this.textGate = this.textGate ?? {};
+  this.textGate.gateResult = await runTextGate(this.textGate.ctx ?? makeTextGateContext(), deps);
+});
+
+When(/^the text gate receives a correction on iteration 1 then "([^"]+)" on iteration 2$/, async function (this: TextGateWorld, secondResponse: string) {
+  const summaries: string[] = [];
+  const deps: TextGateDeps = {
+    askUser: async (iteration, summary) => {
+      summaries.push(summary ?? '');
+      return iteration === 1 ? 'не совсем — это web backend на FastAPI + asyncpg' : secondResponse;
+    },
+  };
+  this.textGate = this.textGate ?? {};
+  this.textGate.summariesSentToUser = summaries;
+  this.textGate.gateResult = await runTextGate(this.textGate.ctx ?? makeTextGateContext(), deps);
+});
+
+When(/^the text gate receives 3 corrections without confirmation$/, async function (this: TextGateWorld) {
+  const deps: TextGateDeps = {
+    askUser: async (iteration) => `не совсем — ${iteration}`,
+  };
+  this.textGate = this.textGate ?? {};
+  this.textGate.gateResult = await runTextGate(this.textGate.ctx ?? makeTextGateContext(), deps);
+});
+
+When(/^the text gate receives "xxxxx" on iteration 1 then "да" on iteration 2$/, async function (this: TextGateWorld) {
+  const summaries: string[] = [];
+  const deps: TextGateDeps = {
+    askUser: async (iteration, summary) => {
+      summaries.push(summary ?? '');
+      return iteration === 1 ? 'xxxxx' : 'да';
+    },
+  };
+  this.textGate = this.textGate ?? {};
+  this.textGate.summariesSentToUser = summaries;
+  this.textGate.gateResult = await runTextGate(this.textGate.ctx ?? makeTextGateContext(), deps);
+});
+
+When(/^the text gate uses a custom applyCorrection hook and receives a correction then confirmation$/, async function (this: TextGateWorld) {
+  let called = false;
+  const deps: TextGateDeps = {
+    askUser: async (iteration) => iteration === 1 ? 'не совсем — что-то другое' : 'да',
+    applyCorrection: (prev, correction) => {
+      called = true;
+      return `${prev}\n[CUSTOM MERGED: ${correction}]`;
+    },
+  };
+  this.textGate = this.textGate ?? {};
+  this.textGate.gateResult = await runTextGate(this.textGate.ctx ?? makeTextGateContext(), deps);
+  this.textGate.customApplyCalled = called;
+});
+
+// ── Then: runTextGate results ─────────────────────────────────────────────────
+
+Then(/^the text gate result is confirmed on iteration (\d+)$/, function (this: TextGateWorld, iterStr: string) {
+  const result = this.textGate!.gateResult!;
+  assert.equal(result.confirmed, true, 'expected confirmed=true');
+  assert.equal(result.aborted, false, 'expected aborted=false');
+  assert.equal(result.iterations, parseInt(iterStr, 10));
+});
+
+Then(/^the second summary sent to the user contains the correction text$/, function (this: TextGateWorld) {
+  const summaries = this.textGate!.summariesSentToUser!;
+  assert.ok(summaries.length >= 2, `expected ≥2 summaries, got ${summaries.length}`);
+  const second = summaries[1];
+  assert.ok(second.includes('Уточнение от пользователя'), `expected correction marker in second summary, got: ${second}`);
+  assert.ok(second.includes('asyncpg') || second.includes('web backend'), `expected correction text in second summary, got: ${second}`);
+});
+
+Then(/^the text gate is aborted after (\d+) iterations?$/, function (this: TextGateWorld, iterStr: string) {
+  const result = this.textGate!.gateResult!;
+  assert.equal(result.aborted, true, 'expected aborted=true');
+  assert.equal(result.confirmed, false, 'expected confirmed=false');
+  assert.equal(result.iterations, parseInt(iterStr, 10));
+});
+
+Then(/^the abort reason mentions "([^"]+)"$/, function (this: TextGateWorld, phrase: string) {
+  const reason = this.textGate!.gateResult?.abortReason ?? '';
+  assert.ok(reason.includes(phrase), `expected abortReason to contain "${phrase}", got: "${reason}"`);
+});
+
+Then(/^the custom applyCorrection hook was called$/, function (this: TextGateWorld) {
+  assert.equal(this.textGate!.customApplyCalled, true, 'expected the custom applyCorrection hook to be called');
+});
+
+Then(/^the final summary contains the custom merge marker$/, function (this: TextGateWorld) {
+  const summary = this.textGate!.gateResult?.finalSummary ?? '';
+  assert.ok(summary.includes('[CUSTOM MERGED'), `expected "[CUSTOM MERGED" in finalSummary, got: "${summary}"`);
 });
