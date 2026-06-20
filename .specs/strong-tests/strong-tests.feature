@@ -113,44 +113,44 @@ Feature: TESTQUAL001_strong-tests skill — mutation-resistant test generation a
     And the kind SHALL be composition-chain
     And the suggestedInvariants SHALL include cardinality AND uniqueness AND conservation AND monotonicity
 
-  @feature4
+  @feature13
   Scenario: TESTQUAL001_17_Classifier_detects_pure_unit_C_sharp_file_with_high_confidence
     Given a C# test file with only plain assertions and no HttpClient or DbContext or Process references
     When the classifier is run on the directory containing that C# test file
     Then the JSON output SHALL contain a classification entry with type Unit for the C# file
     And the confidence SHALL be high
 
-  @feature4
+  @feature13
   Scenario: TESTQUAL001_18_Classifier_detects_C_sharp_file_with_Moq_and_IClassFixture_as_Integration
     Given a C# test file that references Moq and IClassFixture
     When the classifier is run on the directory containing that Moq IClassFixture file
     Then the JSON output SHALL contain a classification entry with type Integration for the Moq file
 
-  @feature4
+  @feature13
   Scenario: TESTQUAL001_19_Classifier_detects_C_sharp_file_with_WebApplicationFactory_and_Docker_as_E2E
     Given a C# test file that references WebApplicationFactory and Docker
     When the classifier is run on the directory containing that WebApplicationFactory Docker file
     Then the JSON output SHALL contain a classification entry with type E2E and high confidence for the WebApplicationFactory file
 
-  @feature4
+  @feature13
   Scenario: TESTQUAL001_20_Classifier_detects_existing_Trait_marker_as_current_marker
     Given a C# test file that already has a Trait Category marker
     When the classifier is run on the directory containing that already-marked file
     Then the JSON output SHALL have a non-null current_marker field for that file
 
-  @feature4
+  @feature13
   Scenario: TESTQUAL001_21_Classifier_detects_Python_pytest_file_with_mock_as_Integration
     Given a Python test file that imports pytest and unittest.mock
     When the classifier is run on the directory containing that Python mock file
     Then the JSON output SHALL contain a classification entry with type Integration for the Python file
 
-  @feature4
+  @feature13
   Scenario: TESTQUAL001_22_Classifier_markdown_format_emits_report_with_Unit_Integration_E2E_sections
     Given a directory containing a mix of test files of different types
     When the classifier is run on that directory with --format markdown
     Then the output SHALL contain markdown headings for Unit and Integration and E2E sections
 
-  @feature4
+  @feature13
   Scenario: TESTQUAL001_23_Classifier_returns_empty_array_for_directory_with_no_test_files
     Given a directory containing no test files
     When the classifier is run on that empty directory
