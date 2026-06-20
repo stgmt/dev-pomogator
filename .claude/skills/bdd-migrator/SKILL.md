@@ -183,6 +183,16 @@ Cross-checked against external BDD-for-AI practice; folded the genuinely-transfe
   Gherkin INSIDE vitest. That's the mainstream alt — but it does NOT feed the spec-graph (which reads
   cucumber-js NDJSON + `@featureN` tags for traceability). We stay on cucumber-js on purpose. (Their
   `--feature → --spec` skeleton generator is a nice-to-have idea for `migrate.ts`, not a dependency.)
+- **Read the WHOLE FR.md before concluding "no FR maps to this behaviour" — a partial read lies
+  (dogfood 2026-06-21).** The `@featureN` tag must map to the FR whose SUBJECT is the behaviour under
+  test. The main loop read only `tui-test-runner` FR-1..FR-9 and wrongly told itself `test-guard.test.ts`
+  had no requirement — but `FR-12 Test Guard Hook` was at line 81, and the fresh agent (reading the full
+  doc) tagged `@feature12` correctly. Find the real FR (`get_node` / full paginated `read_spec_doc`);
+  never borrow a free `@featureN` mapped to an unrelated FR (forges a tested-by edge / fake traceability).
+  ONLY if a FULL read shows no FR → author it via `apply_spec_change` first (in-scope+real) or report a
+  BLOCKER (out-of-scope); never invent the mapping. NOTE: scenario ids are spec-qualified in the graph,
+  so a `CODE_NN` reused across specs is NOT a collision (`GUARD001` lives in three specs independently) —
+  the real collision risk is step-pattern ambiguity, caught by the `--dry-run`, not the code.
 
 Sources: github.com/swingerman/disciplined-agentic-engineering · github.com/AutomationPanda/gherkin-guidelines-for-ai · github.com/amiceli/vitest-cucumber · github.com/bencompton/jest-cucumber
 

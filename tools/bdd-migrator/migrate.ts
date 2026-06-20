@@ -145,12 +145,56 @@ function isWired(featureRel: string): boolean {
   }
 }
 
-/** Find vitest files plausibly owning a spec: tests/e2e/<slug>.test.ts + slug-named matches. */
+const TEST_SKIP_DIRS = new Set([
+  'node_modules', '.git', '.stryker-tmp', 'dist', '.dev-pomogator', '.dev-pomogator-tmp',
+  'reports', '__fixtures__', 'fixtures',
+]);
+
+/** Collect every *.test.ts under tests/ + tools/ + .claude/ (skipping build/vendor/fixture trees). */
+function walkTestFiles(): string[] {
+  const out: string[] = [];
+  const visit = (dir: string): void => {
+    let entries: fs.Dirent[];
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+    for (const e of entries) {
+      if (e.isDirectory()) { if (!TEST_SKIP_DIRS.has(e.name)) visit(path.join(dir, e.name)); }
+      else if (e.isFile() && e.name.endsWith('.test.ts')) out.push(path.join(dir, e.name));
+    }
+  };
+  for (const root of ['tests', 'tools', '.claude']) visit(path.join(REPO, root));
+  return out;
+}
+
+function escapeRe(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/** Does a test file's SOURCE attribute it to `slug` — i.e. reference the spec's production code dir
+ *  (`tools/<slug>/`, `.claude/{skills,rules,agents,commands}/<slug>/`)? Pure + exported so the
+ *  attribution is unit-testable. (Dogfood 2026-06-21 — see {@link findVitestFiles}.) */
+export function testAttributesToSpec(src: string, slug: string): boolean {
+  return new RegExp('(?:tools|\\.claude/(?:skills|rules|agents|commands))/' + escapeRe(slug) + '/').test(src);
+}
+
+/** Find vitest files that own a spec: tests/e2e/<slug>.test.ts (direct, named by slug) PLUS any
+ *  *.test.ts physically UNDER the spec's code dir OR whose body REFERENCES it (content-attribution).
+ *  Dogfood 2026-06-21: the slug-name-only match missed tests/e2e/test-guard.test.ts — it drives the
+ *  spec's hook `tools/tui-test-runner/test_guard.ts` but is not named by the slug, so non-slug twins
+ *  were invisible to the inventory and the agent had to be told about them out-of-band. */
 function findVitestFiles(slug: string): string[] {
-  const hits: string[] = [];
+  const hits = new Set<string>();
   const direct = path.join(REPO, 'tests', 'e2e', `${slug}.test.ts`);
-  if (fs.existsSync(direct)) hits.push(path.relative(REPO, direct).replace(/\\/g, '/'));
-  return hits;
+  if (fs.existsSync(direct)) hits.add(path.relative(REPO, direct).replace(/\\/g, '/'));
+  const locRe = new RegExp('(?:^|/)(?:tools|\\.claude/(?:skills|rules|agents|commands))/' + escapeRe(slug) + '/');
+  for (const abs of walkTestFiles()) {
+    const rel = path.relative(REPO, abs).replace(/\\/g, '/');
+    if (hits.has(rel)) continue;
+    if (locRe.test(rel)) { hits.add(rel); continue; } // physically under the spec's code dir
+    let src: string;
+    try { src = fs.readFileSync(abs, 'utf-8'); } catch { continue; }
+    if (testAttributesToSpec(src, slug)) hits.add(rel);
+  }
+  return [...hits].sort();
 }
 
 export function buildPlan(slug: string): MigrationPlan {
@@ -184,8 +228,13 @@ export function buildPlan(slug: string): MigrationPlan {
   for (const t of vitestTests) byClass[t.cls]++;
   if (vitestFiles.length) {
     actions.push(`migrate ${vitestTests.length} vitest test(s) → step-defs [runtime:${byClass.runtime} artifact:${byClass.artifact} manual:${byClass.manual} unknown:${byClass.unknown}], then delete ${vitestFiles.join(', ')}`);
+    const directRel = `tests/e2e/${slug}.test.ts`;
+    const attributed = vitestFiles.filter((f) => f !== directRel);
+    if (attributed.length) {
+      actions.push(`⚠ CANDIDATE twins (attributed via the spec's shared code dir, NOT the slug name) — confirm each truly belongs to ${slug} by FR-SUBJECT before migrating; a file under tools/${slug}/ may be owned by a sibling spec: ${attributed.join(', ')}`);
+    }
   } else {
-    actions.push(`no slug-named vitest file — already migrated or cross-cutting (check project-test-trace.ts for orphans)`);
+    actions.push(`no vitest twin found (slug-named, located-in, or referencing tools/${slug}/) — already migrated or cross-cutting (check project-test-trace.ts for orphans)`);
   }
 
   return { spec: slug, featurePath: hasFeature ? featureRel : null, wiredInCucumber: wired, scenarios, vitestFiles, vitestTests, localRunRisk, actions };

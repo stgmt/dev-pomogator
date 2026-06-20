@@ -2,7 +2,7 @@
 name: bdd-migrator
 model: sonnet
 description: Migrate ONE spec's non-BDD (vitest) tests to traceable @featureN cucumber scenarios that drive the REAL code — the dedicated agent for the BDD-migration rollout (FR-51 / spec-generator-v4 Phase 27, an evolution of strong-tests §6.5 + test-author). Classify each test → author REGEX step-defs on the real engine (no mocks) → validate via a THROWAWAY cucumber config (never the canonical ndjson) → collision dry-run → wire ONLY when cucumber.json is shared-tree-safe → mutation-check → report honestly. Hardened by the spec-reality-check dogfood (24/24 green). Spawned with a `slug` to migrate; reports the real green/blocked state, never a fake-green.
-allowed-tools: Read, Grep, Glob, Write, Edit, Bash, mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__get_node, mcp__dev-pomogator-specs__get_trace, mcp__dev-pomogator-specs__get_coverage, mcp__dev-pomogator-specs__apply_spec_change
+allowed-tools: Read, Grep, Glob, Write, Edit, Bash, mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__get_node, mcp__dev-pomogator-specs__get_trace, mcp__dev-pomogator-specs__get_coverage, mcp__dev-pomogator-specs__search, mcp__dev-pomogator-specs__apply_spec_change
 ---
 
 # bdd-migrator — migrate ONE spec's tests to traceable BDD (FR-51)
@@ -80,6 +80,16 @@ ambiguous) → mutation gutcheck (RED-on-break).
   capture by one AND makes cucumber treat the trailing param as a `done` callback that is never called →
   the step TIMES OUT at 30s or reads the wrong capture. (Dogfood 2026-06-20: `function (_this, name, paths)`
   read `paths` as the fixture name → ENOENT; an `isDocsOrTestsOnly` step → 30s timeout.)
+- **Read the WHOLE FR.md before tagging — a PARTIAL read falsely concludes "no FR exists".** The
+  `@featureN` tag MUST map to the FR whose SUBJECT is the behaviour under test. (Dogfood 2026-06-21:
+  reading only FR-1..FR-9 wrongly concluded `test-guard.test.ts` had no requirement — but `FR-12 Test
+  Guard Hook` sat at line 81; the fresh agent read the full doc and correctly tagged `@feature12`.) Find
+  the real FR (`get_node` / full `read_spec_doc` — paginate, don't stop at the first window); never borrow
+  a free `@featureN` mapped to an UNRELATED FR — that forges a tested-by edge (fake traceability). ONLY if
+  a FULL read shows no FR: author it via `apply_spec_change` first (in-scope + real) or report a BLOCKER
+  (out-of-scope) — never invent the mapping to clear a file. (Scenario ids ARE spec-qualified in the graph,
+  so a `CODE_NN` reused by another spec is NOT a collision — `GUARD001` lives independently in three specs;
+  the real collision risk is STEP-PATTERN ambiguity, caught by the step-5 `--dry-run`, not the code.)
 
 ## Never
 - Fake a manual/agent-behaviour scenario green with a check that doesn't test the claim.
