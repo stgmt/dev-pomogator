@@ -21,6 +21,21 @@ The PoC (command-runner) conclusion ("BDD weak ~20%, slow 2.5h, cannot replace v
 3. **Speed is solved by the runner + parallelism**, not by narrowing — exactly the owner's instinct. cucumber-runner loaded the tsx step-defs fine (`testRunnerNodeArgs:['--import','tsx']`); dry-run 6 scenarios in 12s.
 4. `detect-invariant-candidates-unit.test.ts` could in principle move to BDD once the 139-gap is closed — but **not urgent**; revisit at L1, do not blind-delete.
 
+### W4 action — the SPECIFIC missing scenarios (from reading the NoCoverage lines)
+
+The 139 NoCoverage mutants cluster in three branches the 6 `@feature7` scenarios never exercise
+[ref:.claude/skills/strong-tests/scripts/detect-invariant-candidates.ts]:
+1. **`suggestInvariants` Dict/Map branch** [ref:detect-invariant-candidates.ts:80] — a function whose
+   returnType matches `dict|Map|Dict` → invariants `coverage`+`no-leak`. No scenario passes a Map-returning function.
+2. **`suggestInvariants` Iterator/Iterable branch** [ref:detect-invariant-candidates.ts:81] → `idempotence`+`monotonicity`.
+3. **`nestedLoopCount` Python `for-in`** [ref:detect-invariant-candidates.ts:120] + **Python indent-based
+   `findFunctionEndLine`** [ref:detect-invariant-candidates.ts:148] — a Python function with nested
+   `for … in …` loops → `nxm-overlap`. The existing Python scenario (TESTQUAL001_07) only tests suppression.
+
+So W4 = author ONE scenario per branch (in-process `scan()` + `suggestInvariants` assertions, the tight
+style already proven at ~98% kill), then re-run `npm run mutation:bdd` and confirm the NoCoverage count
+(and the score) climbs. NOT "rewrite `.includes`→`.toEqual`" — the assertions are already tight.
+
 Everything below is the SUPERSEDED PoC record (kept for history).
 
 ---
