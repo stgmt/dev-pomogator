@@ -36,6 +36,23 @@ So W4 = author ONE scenario per branch (in-process `scan()` + `suggestInvariants
 style already proven at ~98% kill), then re-run `npm run mutation:bdd` and confirm the NoCoverage count
 (and the score) climbs. NOT "rewrite `.includes`→`.toEqual`" — the assertions are already tight.
 
+### W4 RESULT — full re-measure after the 3 added scenarios (2026-06-20)
+
+Re-ran the full file after adding TESTQUAL001_34/35/36 [cmd:npm run mutation:bdd → reports/mutation-bdd/mutation.json; host, 14m46s]:
+
+| Metric | W1 (6 scenarios) | **W4 (+3 coverage scenarios)** |
+|---|---|---|
+| **Total mutation score** | 79.25% (→80.87% w/ id fix) | **82.82%** |
+| **Of COVERED mutants** | ~98% | **94.88%** |
+| NoCoverage (the coverage gap) | **139** | **91** (↓48 — the 3 scenarios closed ~48 uncovered mutants) |
+| killed / timeout / survived / errors | 568 / 1 / 10 / 23 | **592 / 1 / 32 / 25** |
+
+**Conclusions confirmed by real numbers:**
+1. **Target massively exceeded.** The ≥45% goal (FR-4 hypothesis) is met at **82.82% total** — and the hypothesis "BDD is weak" is refuted: covered-score **94.88%** means where a scenario reaches the code it kills ~95% of mutants.
+2. **The diagnosis was right.** Adding scenarios for uncovered branches (not rewriting assertions) is what moved the needle — NoCoverage fell 139→91 and total score rose ~3.5pts. The remaining 91 NoCoverage are deeper branches (further coverage work, not assertion tightening).
+3. **The 32 survivors** are the next coverage/assertion targets (e.g. `Math.min`↔`Math.max` and `±1` arithmetic at L160 fallbackOffset — a real off-by-one branch a future scenario should pin). The strong-tests §6.5 breadth rule (a scenario per branch) is the mechanism to drive these down.
+4. **Speed solved on the host too** — 14m46s for 741 mutants without Docker; perTest + 100% concurrency is the lever, exactly as designed.
+
 Everything below is the SUPERSEDED PoC record (kept for history).
 
 ---
