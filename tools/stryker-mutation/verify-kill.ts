@@ -69,23 +69,23 @@ export interface KillVerdict {
  * Deterministically verify whether the covering scenario kills the mutant. Always restores the file.
  * Throws if `original` is absent or the baseline is not green (can't verify against a red start).
  */
-export function verifyKill(spec: KillSpec): KillVerdict {
+export function verifyKill(spec: KillSpec, run: (config: string, name: string) => ScenarioRun = runScenario): KillVerdict {
   const orig = fs.readFileSync(spec.file, 'utf-8');
   if (!orig.includes(spec.original)) {
     throw new Error(`original string not found in ${spec.file}`);
   }
-  const baseline = runScenario(spec.config, spec.name);
+  const baseline = run(spec.config, spec.name);
   if (!baseline.passed) {
     throw new Error(`baseline not green (${baseline.summary}) — cannot verify a kill against a red/empty start`);
   }
   let mutantRun: ScenarioRun;
   try {
     fs.writeFileSync(spec.file, orig.replace(spec.original, () => spec.mutant));
-    mutantRun = runScenario(spec.config, spec.name);
+    mutantRun = run(spec.config, spec.name);
   } finally {
     fs.writeFileSync(spec.file, orig); // ALWAYS restore — never leave the tree mutated
   }
-  const restored = runScenario(spec.config, spec.name);
+  const restored = run(spec.config, spec.name);
   const killed = !mutantRun.passed; // scenario FAILED under the mutant ⇒ killed
   return {
     verdict: killed ? 'KILLED' : 'SURVIVED',
@@ -105,11 +105,11 @@ export interface BatchResult {
 }
 
 /** Verify a LIST of mutants — the actual gate over a survivor set. Restores each file per-mutant. */
-export function verifyBatch(specs: KillSpec[]): BatchResult {
+export function verifyBatch(specs: KillSpec[], run: (config: string, name: string) => ScenarioRun = runScenario): BatchResult {
   const results = specs.map((s) => {
     const label = s.label ?? `${s.file}: ${s.original.slice(0, 40)}`;
     try {
-      const v = verifyKill(s);
+      const v = verifyKill(s, run);
       return { label, verdict: v.verdict, detail: v };
     } catch (e) {
       return { label, verdict: 'ERROR' as const, detail: { error: e instanceof Error ? e.message : String(e) } };
