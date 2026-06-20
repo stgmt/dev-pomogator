@@ -69,6 +69,15 @@ score, killed, survived, noCoverage, ts }`. Helper: `tools/stryker-mutation/stat
 
 ## Gotchas
 
+- **The BDD aggregate score is NON-DETERMINISTIC under `concurrency:'100%'`** — two runs of
+  identical code gave 82.82%/32-survived and 77.90%/67-survived (2026-06-20), a ~35-mutant swing
+  ("Survived" status flips; NoCoverage stayed stable). So **do NOT gate on the aggregate score** as
+  configured. To verify a specific survivor is actually killed, use **inject+restore** (the
+  trustworthy, deterministic unit): hand-mutate the production line → run ONLY the covering scenario
+  (`--name <ID>`) → it MUST FAIL on your assertion → restore → it MUST PASS. That proves the kill
+  without trusting the flaky full-run count. For a stable aggregate, lower `concurrency` (trade
+  speed) or raise the per-test timeout. See `audit-reports/stryker-bdd-mutation-finding.md`
+  «Flakiness finding».
 - cucumber-runner needs `testRunnerNodeArgs: ['--import', 'tsx']` to load the TypeScript step-defs.
 - The BDD config uses a dedicated `stryker-bdd` cucumber.json profile (scoped import, throwaway/no
   canonical format) — NEVER the `default` profile (it writes the canonical `.last-test-run.ndjson`).
