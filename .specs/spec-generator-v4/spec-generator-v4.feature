@@ -2340,3 +2340,142 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given a consistency-report.yaml exists for slug "demo" in the update-status temp repo
     When updateStatus is called twice with the same resolved decision for the impl-drift finding
     Then the YAML file contains at most 2 occurrences of resolution_status: resolved after two identical updateStatus calls
+
+  # ── reconcile-cli: parseReconcileArgs ────────────────────────────────────────────
+
+  @feature17
+  Scenario: SPECGEN004_352 parseReconcileArgs defaults to light mode, no dry-run, no sarif, all specs
+    When parseReconcileArgs is called with no arguments
+    Then the parsed reconcile args have mode=light dryRun=false sarif=false and empty slugs
+
+  @feature17
+  Scenario: SPECGEN004_353 parseReconcileArgs parses --mode full --dry-run --sarif --slug (repeatable)
+    When parseReconcileArgs is called with "--mode full --dry-run --sarif --slug foo --slug bar"
+    Then the parsed reconcile args have mode=full dryRun=true sarif=true and slugs foo and bar
+
+  @feature17
+  Scenario: SPECGEN004_354 parseReconcileArgs rejects an unknown flag with an error message
+    When parseReconcileArgs is called with "--bogus"
+    Then the parsed reconcile args have an error matching "unknown argument: --bogus"
+
+  @feature17
+  Scenario: SPECGEN004_355 parseReconcileArgs rejects --mode with an invalid value
+    When parseReconcileArgs is called with "--mode ultra"
+    Then the parsed reconcile args have an error matching "light|full"
+
+  @feature17
+  Scenario: SPECGEN004_356 parseReconcileArgs rejects --slug with no value
+    When parseReconcileArgs is called with "--slug"
+    Then the parsed reconcile args have an error matching "--slug expects"
+
+  # ── reconcile-cli: reconcileCli ──────────────────────────────────────────────────
+
+  @feature17
+  Scenario: SPECGEN004_357 reconcileCli --dry-run finds drift, prints table, writes nothing
+    Given a reconcile-cli temp repo with one spec that has a missing impl path
+    When reconcileCli is called with dry-run=true sarif=false
+    Then the reconcileCli result has exitCode=0 totalFindings>=1 and bySeverity.WARNING>=1
+    And the reconcileCli stdout contains "| spec | CRIT | WARN | INFO | total |"
+    And the reconcileCli stdout contains "first" and "finding(s):" and "[WARNING]" and "impl-drift/missing-file"
+    And the reconcileCli stdout contains "--dry-run"
+    And the reconcileCli reportPaths is empty and no yaml was written
+
+  @feature17
+  Scenario: SPECGEN004_358 reconcileCli real run writes consistency-report.yaml to disk
+    Given a reconcile-cli temp repo with one spec that has a missing impl path
+    When reconcileCli is called with dry-run=false sarif=false
+    Then the reconcileCli result has exitCode=0 and reportPaths.length=1
+    And a consistency-report.yaml file exists at the reported path
+    And the yaml body contains "impl-drift/missing-file"
+
+  @feature17
+  Scenario: SPECGEN004_359 reconcileCli --sarif also writes consistency-report.sarif
+    Given a reconcile-cli temp repo with one spec that has a missing impl path
+    When reconcileCli is called with dry-run=false sarif=true
+    Then the reconcileCli sarifPaths.length=1 and the sarif file exists on disk
+
+  @feature17
+  Scenario: SPECGEN004_360 reconcileCli parse error short-circuits with exit 2 and usage, no engine run
+    When reconcileCli is called with a parse-error args object
+    Then the reconcileCli result has exitCode=2 and stdout contains "usage: reconcile-cli"
+    And the reconcileCli reportPaths is empty
+
+  # ── corpus-health: corpusHealth (GREEN / collision / composite-key / untraced / stale) ──
+
+  @feature37
+  Scenario: SPECGEN004_361 corpusHealth returns GREEN on a fully-traced corpus with zero disease counts
+    Given a corpus-health temp corpus root with no specs
+    When corpusHealth is called on the temp corpus root
+    Then the corpus-health report has verdict=GREEN and strictVerdict=GREEN
+    And all corpus-health disease counts are zero
+
+  @feature36
+  Scenario: SPECGEN004_362 corpusHealth catches a planted duplicate bare id as a collision
+    Given a corpus-health temp corpus root where two specs share the same bare FR id
+    When corpusHealth is called on the temp corpus root
+    Then the corpus-health report has a collision entry whose id contains "FR-1"
+    And the corpus-health report has verdict=RED
+
+  @feature36
+  Scenario: SPECGEN004_363 corpusHealth does NOT collide two specs sharing a bare local id (composite keys, FR-36a)
+    Given a corpus-health temp corpus root where two separate specs each have their own FR-1
+    When corpusHealth is called on the temp corpus root
+    Then the corpus-health report has collisions.collisions.length=0
+    And the corpus-health report has verdict=GREEN
+
+  @feature37
+  Scenario: SPECGEN004_364 corpusHealth reports untraced atoms per class and gates only under --strict
+    Given a corpus-health temp corpus root with one spec that has an untraced FR
+    When corpusHealth is called on the temp corpus root
+    Then the corpus-health report has untracedAtoms.byClass.UNCOVERED_FR=1
+    And the corpus-health report has verdict=GREEN and strictVerdict=RED
+
+  @feature37
+  Scenario: SPECGEN004_365 corpusHealth reports a stale FILE_CHANGES edit path as a hard red
+    Given a corpus-health temp corpus root with a stale implements edge pointing to a missing file
+    When corpusHealth is called on the temp corpus root
+    Then the corpus-health report has staleFileChanges.count=1
+    And the corpus-health report has verdict=RED
+
+  @feature37
+  Scenario: SPECGEN004_366 renderCorpusHealth carries every section and the dual verdict line
+    Given a corpus-health GREEN report
+    When renderCorpusHealth is called on that report
+    Then the render output contains "═══ corpus-health"
+    And the render output contains "collisions (raw pre-map)"
+    And the render output contains "dangling edges"
+    And the render output contains "untraced atoms (FR-37b)"
+    And the render output contains "stale FILE_CHANGES paths"
+    And the render output contains "orphan project tests"
+    And the render output contains "VERDICT: 🟢 GREEN"
+
+  # ── corpus-health: renderCorpusHealth (pure, synthetic RED report) ────────────────
+
+  @feature37
+  Scenario: SPECGEN004_367 renderCorpusHealth shows RED verdict icon and dual verdict line
+    Given a synthetic corpus-health RED report with collisions and stale paths
+    When renderCorpusHealth is called on that synthetic report
+    Then the render output contains "VERDICT: 🔴 RED (hard: collisions+stale)"
+    And the render output contains "strict: 🔴 RED"
+
+  @feature44
+  Scenario: SPECGEN004_368 renderCorpusHealth renders collision and dangling and stale sample lines
+    Given a synthetic corpus-health RED report with collisions and stale paths
+    When renderCorpusHealth is called on that synthetic report
+    Then the render output contains "COLLISION"
+    And the render output contains "dangling edge" or renders a dangling-edge line
+    And the render output contains the stale path sample
+
+  @feature44
+  Scenario: SPECGEN004_369 renderCorpusHealth renders the untraced-atom class breakdown
+    Given a synthetic corpus-health RED report with untraced atoms
+    When renderCorpusHealth is called on that synthetic report
+    Then the render output matches "untraced atoms.*UNCOVERED_FR:1.*TASK_UNTESTED:1"
+
+  @feature44
+  Scenario: SPECGEN004_370 renderCorpusHealth renders the three reverse-traceability sections
+    Given a synthetic corpus-health RED report with reverse-traceability debt
+    When renderCorpusHealth is called on that synthetic report
+    Then the render output contains "orphan project tests (FR-44/GT-1, reverse)"
+    And the render output contains "FRs citing no RESEARCH.md (FR-44/GT-2, reverse)"
+    And the render output contains "upstream unlinked (FR-44/GT-4, reverse)"
