@@ -69,11 +69,15 @@ inject+restore and is deterministic:
 
 ```bash
 npx tsx tools/stryker-mutation/verify-kill.ts <spec.json>
-# spec.json = { file, original, mutant, config, name }
+# spec.json = ONE { file, original, mutant, config, name [, label] }  OR an ARRAY of them (batch gate)
 #   file/original/mutant — the production line + exact original→mutant strings
 #   config — a THROWAWAY cucumber config (scoped paths/import, throwaway message format)
 #   name   — cucumber --name regex selecting ONLY the covering scenario(s)
 ```
+
+Pass an **array** to gate a whole survivor set: output `{total, killed, survived, errors, results[]}`,
+exit 0 iff EVERY mutant was KILLED (so it drops into CI as a real, deterministic gate). Each file is
+restored per-mutant (try/finally).
 
 It (1) runs the covering scenario as a green baseline (refuses if not green), (2) injects the mutant
 and re-runs (FAIL ⇒ killed), (3) ALWAYS restores the file (try/finally) and re-runs to confirm a

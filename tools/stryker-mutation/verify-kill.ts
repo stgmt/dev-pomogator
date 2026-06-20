@@ -31,6 +31,8 @@ export interface KillSpec {
   mutant: string;
   config: string;
   name: string;
+  /** optional human label for batch reports (e.g. "detect-invariant.ts:299 StringLiteral"). */
+  label?: string;
 }
 
 export interface ScenarioRun {
@@ -94,17 +96,52 @@ export function verifyKill(spec: KillSpec): KillVerdict {
   };
 }
 
+export interface BatchResult {
+  total: number;
+  killed: number;
+  survived: number;
+  errors: number;
+  results: Array<{ label: string; verdict: 'KILLED' | 'SURVIVED' | 'ERROR'; detail: KillVerdict | { error: string } }>;
+}
+
+/** Verify a LIST of mutants — the actual gate over a survivor set. Restores each file per-mutant. */
+export function verifyBatch(specs: KillSpec[]): BatchResult {
+  const results = specs.map((s) => {
+    const label = s.label ?? `${s.file}: ${s.original.slice(0, 40)}`;
+    try {
+      const v = verifyKill(s);
+      return { label, verdict: v.verdict, detail: v };
+    } catch (e) {
+      return { label, verdict: 'ERROR' as const, detail: { error: e instanceof Error ? e.message : String(e) } };
+    }
+  });
+  return {
+    total: results.length,
+    killed: results.filter((r) => r.verdict === 'KILLED').length,
+    survived: results.filter((r) => r.verdict === 'SURVIVED').length,
+    errors: results.filter((r) => r.verdict === 'ERROR').length,
+    results,
+  };
+}
+
 const isDirectRun =
   process.argv[1]?.endsWith('verify-kill.ts') || process.argv[1]?.endsWith('verify-kill.js');
 if (isDirectRun) {
   const specPath = process.argv[2];
   if (!specPath) {
-    console.error('usage: verify-kill.ts <spec.json>  ({ file, original, mutant, config, name })');
+    console.error('usage: verify-kill.ts <spec.json>  (one { file, original, mutant, config, name } OR an array of them)');
     process.exit(2);
   }
-  const spec = JSON.parse(fs.readFileSync(specPath, 'utf-8')) as KillSpec;
-  const v = verifyKill(spec);
-  console.log(JSON.stringify(v, null, 2));
-  // exit 0 only when the mutant was KILLED and the file restored clean — a usable gate exit code.
-  process.exit(v.killed && v.restored ? 0 : 1);
+  const parsed = JSON.parse(fs.readFileSync(specPath, 'utf-8')) as KillSpec | KillSpec[];
+  if (Array.isArray(parsed)) {
+    const batch = verifyBatch(parsed);
+    console.log(JSON.stringify(batch, null, 2));
+    // gate exit: 0 iff EVERY mutant was KILLED (no survivors, no errors).
+    process.exit(batch.killed === batch.total ? 0 : 1);
+  } else {
+    const v = verifyKill(parsed);
+    console.log(JSON.stringify(v, null, 2));
+    // exit 0 only when the mutant was KILLED and the file restored clean — a usable gate exit code.
+    process.exit(v.killed && v.restored ? 0 : 1);
+  }
 }
