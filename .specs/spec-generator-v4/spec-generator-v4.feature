@@ -2038,3 +2038,73 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When readLedger and pendingReminder are called on that ledger
     Then readLedger returns entries in insertion order older-first
     And pendingReminder returns observations newer-first
+
+  @feature25
+  Scenario: SPECGEN004_300 additiveMergeHooks preserves every v3 hook entry after merge
+    Given a v3 hooks manifest with five named hook commands across PreToolUse and PostToolUse matchers
+    Then the merged manifest JSON still contains every v3 command string
+
+  @feature25
+  Scenario: SPECGEN004_301 additiveMergeHooks places v4 entries in the correct existing matcher group without creating a duplicate group
+    Given a v3 hooks manifest with five named hook commands across PreToolUse and PostToolUse matchers
+    When additiveMergeHooks merges the v4 additions into the v3 manifest
+    Then the PreToolUse Write|Edit matcher group contains v3 entries followed by the v4 spec-conformance-guard entry
+
+  @feature25
+  Scenario: SPECGEN004_302 additiveMergeHooks is idempotent — merging the v4 additions twice equals merging once
+    Given a v3 hooks manifest with five named hook commands across PreToolUse and PostToolUse matchers
+    When additiveMergeHooks is called once on v3 and v4
+    And additiveMergeHooks is called a second time on the already-merged result and v4
+    Then the twice-merged manifest deep-equals the once-merged manifest
+
+  @feature25
+  Scenario: SPECGEN004_303 hook count after additiveMergeHooks grows by exactly the number of new v4 entries
+    Given a v3 hooks manifest with five named hook commands across PreToolUse and PostToolUse matchers
+    When countHookEntries is called before and after the merge
+    Then the count after merge equals the count before plus the number of new v4 entries
+
+  @feature25
+  Scenario: SPECGEN004_304 additiveMergeHooks adds a new event type entirely absent from v3 as a new group
+    Given a v3 hooks manifest that has no Stop event
+    When additiveMergeHooks merges a new Stop event entry into the v3 manifest
+    Then the merged manifest has a Stop event group containing the new entry
+
+  @feature35
+  Scenario: SPECGEN004_305 the real test-quality Stop hook process blocks on a DONE-untested task in ENFORCE mode
+    Given a git repo containing a spec with a task marked DONE but with no linked scenario
+    When the real test-quality Stop hook process runs against that repo in ENFORCE mode
+    Then the hook exits 0 and the stdout JSON carries decision block with a reason matching TASK_UNTESTED
+
+  @feature35
+  Scenario: SPECGEN004_306 enforce is the default — the Stop hook blocks even with no TEST_QUALITY_GATE_ENABLED env set
+    Given a git repo containing a spec with a task marked DONE but with no linked scenario
+    When the real test-quality Stop hook process runs against that repo with no TEST_QUALITY_GATE_ENABLED env
+    Then the hook exits 0 and the stdout JSON carries decision block even without the env var set
+
+  @feature35
+  Scenario: SPECGEN004_307 the Stop hook in SHADOW mode approves but emits a would-block warning to stderr
+    Given a git repo containing a spec with a task marked DONE but with no linked scenario
+    When the real test-quality Stop hook process runs against that repo in SHADOW mode
+    Then the hook exits 0 with empty stdout and stderr contains "would block"
+
+  @feature35
+  Scenario: SPECGEN004_308 the Stop hook approves immediately when stop_hook_active is true in the input
+    Given a git repo containing a spec with a task marked DONE but with no linked scenario
+    When the real test-quality Stop hook process runs against that repo with stop_hook_active true in the input JSON
+    Then the hook exits 0 with empty stdout and does not emit a block decision
+
+  @feature35
+  Scenario: SPECGEN004_309 the TEST_QUALITY_GATE_SKIP=1 env escape allows the Stop to proceed and logs the escape
+    Given a git repo containing a spec with a task marked DONE but with no linked scenario
+    When the real test-quality Stop hook process runs against that repo with env escape TEST_QUALITY_GATE_SKIP=1
+    Then the hook exits 0 with empty stdout approving the Stop despite the untested task
+
+  @feature35
+  Scenario: SPECGEN004_310 parseModifiedSpecSlugs excludes untracked specs from the scope
+    Given a git status porcelain output with an untracked spec, a modified tracked spec, and a new tracked spec
+    Then parseModifiedSpecSlugs returns only the tracked-modified and newly-staged slugs, excluding the untracked one
+
+  @feature35
+  Scenario: SPECGEN004_311 parseModifiedSpecSlugs returns an empty array for porcelain with no .specs paths
+    Given a git status porcelain output with no .specs/ paths
+    Then parseModifiedSpecSlugs returns an empty array
