@@ -802,6 +802,15 @@ Then(
     const candidate = world.scanResult.candidates.find((c) => c.kind === 'composition-chain');
     assert.ok(candidate, 'A composition-chain candidate must exist');
     assert.equal(candidate.kind, 'composition-chain');
+    // Tight assertion (strong-tests §6.5): pin the rationale TEXT, not just the kind. The kind is
+    // set together with the rationale append at detect-invariant-candidates.ts:298-299, so a coarse
+    // "kind == composition-chain" check lets the `rationale += ''` mutant (299:20) survive. Asserting
+    // the rationale string kills it — the mutant leaves kind intact but drops the explanatory text.
+    assert.match(
+      candidate.rationale,
+      /composition chain detected \(\d+ chained call site\(s\)\)/,
+      `Expected composition-chain rationale text; got: ${candidate.rationale}`,
+    );
   },
 );
 
