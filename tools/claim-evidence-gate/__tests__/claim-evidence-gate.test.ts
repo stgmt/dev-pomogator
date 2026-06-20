@@ -315,21 +315,31 @@ describe('CEGATE001: claim-evidence gate — spec-false-close class (FR-49b)', (
   // recorded-done spec whose scenarios weren't run canonically is pure doneUnrun — the fake census
   // signal that made the gate over-fire on a done session. (doneUnrun still surfaces for a whole-spec
   // "done" claim via FR-49b censusReminder — the real anti-false-close path.)
-  it('CEGATE001_31: doneUnrun alone does NOT arm the «Дальше:» gate; open/doneRed still do', () => {
-    const run = (): boolean =>
-      runHook(
-        [
-          U('правлю требование'),
-          A([tool('Edit', { file_path: '.specs/demo/FR.md' })]), // non-.feature → scopes demo
-          A([txt('Готово, всё закрыто. 37 из 48.')]), // gray progress claim, no «Дальше:» section
-        ],
-        { CLAIM_GATE_JUDGE: 'false' },
-      ).blocked;
+  // NB: two DISTINCT zero-tool kicks only (like CEGATE001_30) — a THIRD identical kick would trip the
+  // FR-11 no-progress release (CEGATE001_28) and confound the census assertion. The `open` case is
+  // already covered by CEGATE001_30's frEdit (open:11 → fires); here we isolate doneUnrun vs doneRed.
+  it('CEGATE001_31: doneUnrun alone does NOT arm the «Дальше:» gate; doneRed still does', () => {
+    // doneUnrun-only ("не подтверждено" — a filtered run set it spuriously) → the gate stays QUIET
     writeCensus(dir, { open: 0, doneRed: 0, doneUnrun: 7 });
-    expect(run()).toBe(false); // doneUnrun-only ("не подтверждено") → gate quiet — the fake no longer fires
+    const doneUnrunOnly = runHook(
+      [
+        U('правлю требование'),
+        A([tool('Edit', { file_path: '.specs/demo/FR.md' })]), // non-.feature → scopes demo
+        A([txt('Готово, всё закрыто. 37 из 48.')]), // gray progress claim, no «Дальше:» section
+      ],
+      { CLAIM_GATE_JUDGE: 'false' },
+    ).blocked;
+    // doneRed (done but a mapped scenario FAILS) → real regression → the gate STILL fires «нет Дальше:»
     writeCensus(dir, { open: 0, doneRed: 2, doneUnrun: 0 });
-    expect(run()).toBe(true); // doneRed (done-but-failing) → real regression → still fires
-    writeCensus(dir, { open: 3, doneRed: 0, doneUnrun: 0 });
-    expect(run()).toBe(true); // open (not-done) → real backlog → still fires
+    const doneRed = runHook(
+      [
+        U('правлю другое требование'),
+        A([tool('Edit', { file_path: '.specs/demo/FR.md' })]),
+        A([txt('Тут всё готово. 38 из 48.')]),
+      ],
+      { CLAIM_GATE_JUDGE: 'false' },
+    ).blocked;
+    expect(doneUnrunOnly).toBe(false); // the fake no longer fires
+    expect(doneRed).toBe(true); // a real done-but-red still fires
   });
 });

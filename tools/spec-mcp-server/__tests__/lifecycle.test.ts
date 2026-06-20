@@ -76,7 +76,7 @@ describe('startLifecycle', () => {
     }
   });
 
-  it('boots a READ-ONLY door (no throw) when a sibling holds the lock under onLockContention=readonly (P21-1)', async () => {
+  it('boots a PRESENCE-READER door (no throw, writes still proceed) when a sibling holds the lock under onLockContention=readonly (P21-1)', async () => {
     const first = await startLifecycle({ repoRoot: root, env: 'host', skipNdjson: true });
     try {
       // The second session does NOT crash — it boots read-only.
@@ -89,12 +89,12 @@ describe('startLifecycle', () => {
       try {
         expect(second.readOnly).toBe(true);
         expect(second.lockHolder?.pid).toBe(first.lock.record.pid);
-        // Reads stay live: the read-only door still cold-built its own graph.
+        // Reads stay live: the presence-reader door still cold-built its own graph.
         expect(second.graph.nodes.has('auth:FR-1')).toBe(true);
         // It owns NOTHING — the on-disk lock is still the FIRST session's record.
         expect(readLock(root)!.pid).toBe(first.lock.record.pid);
         const log = fs.readFileSync(path.join(root, '.dev-pomogator', 'logs', 'watcher.log'), 'utf8');
-        expect(log).toMatch(/READ-ONLY door/);
+        expect(log).toMatch(/PRESENCE-READER door/);
       } finally {
         await second.shutdown();
       }
