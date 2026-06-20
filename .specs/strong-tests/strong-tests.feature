@@ -187,3 +187,38 @@ Feature: TESTQUAL001_strong-tests skill — mutation-resistant test generation a
     When the classifier is run with --apply on the directory containing that unmarked Python file
     Then the Python file SHALL contain a pytestmark assignment at module level
     And the Python file SHALL have import pytest added if it was missing
+
+  @feature3
+  Scenario: TESTQUAL001_29_Batch_prompt_splits_130_survivors_into_3_chunks_of_50_with_monotone_cost
+    Given a mutation report JSON file containing 130 survivors
+    When survivors-batch-prompt is run on that report with default batch size 50
+    Then the output SHALL contain exactly 3 batch JSON lines
+    And the cumulative_cost_usd field SHALL be monotonically increasing across all batches
+    And each batch prompt SHALL contain the strings Meta ACH and EQUIVALENT and REAL_GAP and survivor_id
+
+  @feature3
+  Scenario: TESTQUAL001_30_Budget_guard_aborts_emit_when_estimated_cost_exceeds_budget
+    Given a mutation report JSON file containing 500 survivors
+    When survivors-batch-prompt is run with budget-usd 0.1 on that report
+    Then the process SHALL exit with status 3
+    And stderr SHALL contain the string Budget exceeded
+
+  @feature3
+  Scenario: TESTQUAL001_31_Merge_verdicts_enriches_report_gaps_with_equivalentSuspect_and_summary
+    Given a mutation report JSON file with 3 survivors and a verdict JSON file matching all 3 by survivor_id
+    When merge-survivor-verdicts is run with that report and verdicts file
+    Then the stdout JSON SHALL contain a gaps array with equivalentSuspect fields populated
+    And the survivorAnalysis summary SHALL report mergedIntoGaps equal to 3
+
+  @feature3
+  Scenario: TESTQUAL001_32_Merge_verdicts_warns_on_unmatched_verdict_ids
+    Given a mutation report JSON file with 1 survivor and a verdict JSON file with 1 matching and 1 stale verdict
+    When merge-survivor-verdicts is run with that report and mixed verdicts file
+    Then the survivorAnalysis summary SHALL report unmatchedVerdicts equal to 1 and mergedIntoGaps equal to 1
+    And stderr SHALL contain the string did not match any survivor
+
+  @feature3
+  Scenario: TESTQUAL001_33_Batch_prompt_prefers_gaps_array_over_survivors_when_both_present
+    Given a mutation report JSON file containing both a survivors array with 2 entries and a gaps array with 1 entry
+    When survivors-batch-prompt is run on that report
+    Then the output SHALL contain exactly 1 batch JSON line reflecting the gaps array length
