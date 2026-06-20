@@ -76,7 +76,10 @@ const HARD_NEGATIVE = new Set<Bucket>(['failed', 'undefined', 'ambiguous']);
  * Compute the per-spec honest census over a built graph. Pure — the caller
  * stamps the timestamp and writes the cache.
  */
-export function computeTaskCensus(graph: SpecGraph): TaskCensus {
+export function computeTaskCensus(
+  graph: SpecGraph,
+  opts: { backlogSpecs?: Set<string> } = {},
+): TaskCensus {
   const scenarios: ScenarioLike[] = [];
   const tasks: TaskLike[] = [];
   const taskEntries: Array<{ node: TaskNode; slug: string }> = [];
@@ -103,6 +106,11 @@ export function computeTaskCensus(graph: SpecGraph): TaskCensus {
     return r;
   };
   for (const { node: t, slug } of taskEntries) {
+    // Explicit backlog (set via the `set_spec_status` door tool) — the spec is being built /
+    // parked, so its open tasks are NOT "open work to finish now": skip it entirely. The Stop-gate
+    // (pinator) reads this census, so a backlog spec's tasks no longer arm it. No status math — a
+    // human marked it. See tools/spec-graph/spec-status-store.ts.
+    if (opts.backlogSpecs?.has(slug)) continue;
     if (t.status === 'todo' || t.status === 'in-progress' || t.status === 'blocked') {
       const r = row(slug);
       r.open++;

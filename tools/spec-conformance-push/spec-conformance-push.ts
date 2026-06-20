@@ -33,6 +33,7 @@ import { buildGraph } from '../spec-graph/builder.ts';
 import { checkConformance, type Finding } from '../spec-graph/conformance.ts';
 import { appendFindings } from '../spec-check-log/writer.ts';
 import { computeTaskCensus, writeTaskCensusCache } from '../spec-graph/task-census.ts';
+import { backlogSpecs } from '../spec-graph/spec-status-store.ts';
 
 interface HookInput {
   tool_name?: string;
@@ -190,7 +191,7 @@ export function runPush(
   // cache, never the graph (NFR-Performance-6). Best-effort: soft tier.
   try {
     const censusGraph = buildGraph({ repoRoot });
-    writeTaskCensusCache(repoRoot, computeTaskCensus(censusGraph), new Date(now).toISOString());
+    writeTaskCensusCache(repoRoot, computeTaskCensus(censusGraph, { backlogSpecs: backlogSpecs(repoRoot) }), new Date(now).toISOString());
   } catch {
     // Cache write unavailable → banner just stays silent; never block the hook.
   }

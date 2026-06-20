@@ -42,6 +42,7 @@ import { logSpecAccess } from './spec-access-log.ts';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { validateSpecChange, writeDocAtomic, isSafeSlug, resolveSpecDoc, docSha, casCheck, validateTarget, findInboundLinks, rewriteInboundLinks, isArchivedSlug, type SpecChange } from './mutations.ts';
+import { writeSpecStatus, readSpecStatus } from '../spec-graph/spec-status-store.ts';
 import { withWriteLock, type WriteLockBusyError } from './lock-manager.ts';
 import { setEntityStatus } from './set-status.ts';
 import { readProgressState, PHASE_ORDER, STOP_LABELS } from '../specs-validator/phase-constants.ts';
@@ -1033,6 +1034,9 @@ export function buildToolRegistry(
       return asJsonResult({
         ok: true,
         spec: slug,
+        // Explicit SPEC-level marker (set_spec_status). `backlog` ⇒ excluded from the task-census /
+        // Stop-gate open-work count — its open tasks are parked by intent, not counted as work due now.
+        spec_status: readSpecStatus(process.cwd(), slug),
         lifecycle,
         counts,
         last_run,
@@ -1348,6 +1352,38 @@ export function buildToolRegistry(
         }
         throw e;
       }
+    },
+  });
+
+  // ─── 18b) set_spec_status — explicit SPEC-level backlog marker (no status math) ──
+  tools.push({
+    name: 'set_spec_status',
+    description:
+      'Set a SPEC-LEVEL status (active | backlog) EXPLICITLY — not inferred from task states. A ' +
+      '`backlog` spec (being built / populated / parked) is EXCLUDED from the task-census, so its ' +
+      'open tasks no longer count as "open work" and the claim-evidence Stop-gate (pinator) stops ' +
+      'firing on them — you MARK it, the census just reads the marker. `active` (the default) removes ' +
+      'the marker. Atomic write of the `.specs/<slug>/.spec-status` sentinel. Takes effect on the next ' +
+      'census refresh (any spec edit / door boot).',
+    inputShape: {
+      spec: z.string(),
+      status: z.enum(['active', 'backlog']),
+    } as const satisfies z.ZodRawShape,
+    handler: async (args) => {
+      const slug = slugOf(args.spec);
+      if (!isSafeSlug(slug)) {
+        logSpecAccess('set_spec_status', args, 'error');
+        return asJsonResult({ ok: false, error: 'UNSAFE_SPEC', spec: slug, hint: 'slug must stay within .specs/ (no traversal)' });
+      }
+      try {
+        writeSpecStatus(process.cwd(), slug, args.status);
+      } catch (e) {
+        logSpecAccess('set_spec_status', args, 'error');
+        return asJsonResult({ ok: false, error: 'SPEC_NOT_FOUND', spec: slug, hint: String((e as Error).message) });
+      }
+      registryOpts.refreshGraph?.();
+      logSpecAccess('set_spec_status', args, 'ok');
+      return asJsonResult({ ok: true, spec: slug, status: args.status });
     },
   });
 

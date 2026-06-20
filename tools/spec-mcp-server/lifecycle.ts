@@ -25,6 +25,7 @@ import type { FSWatcher } from 'chokidar';
 import { buildGraph } from '../spec-graph/builder.ts';
 import { startWatching, type PatchEvent } from '../spec-graph/incremental.ts';
 import { computeTaskCensus, writeTaskCensusCache } from '../spec-graph/task-census.ts';
+import { backlogSpecs } from '../spec-graph/spec-status-store.ts';
 import {
   acquireLock,
   acquireLockOrReadOnly,
@@ -209,7 +210,7 @@ export async function startLifecycle(opts: LifecycleOptions): Promise<LifecycleH
   // census fresh in the mode that matters. Best-effort: never crash the server.
   const refreshCensus = (): void => {
     try {
-      writeTaskCensusCache(opts.repoRoot, computeTaskCensus(graph), new Date().toISOString());
+      writeTaskCensusCache(opts.repoRoot, computeTaskCensus(graph, { backlogSpecs: backlogSpecs(opts.repoRoot) }), new Date().toISOString());
     } catch {
       // census cache is advisory — a write failure must never break the door
     }
