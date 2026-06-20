@@ -188,3 +188,56 @@ Feature: VSGF001 Verify Generic Scope Fix gate
     Given a scope-gate diff fixture "docs-only-diff.patch"
     When the scope-gate heuristic scores the diff
     Then the suspicion score is exactly 0
+
+  @feature2
+  Scenario: VSGF001_74 writeMarker creates a JSON file under .claude/.scope-verified/
+    Given a fresh temporary directory as the marker store cwd
+    When writeMarker is called with a valid marker
+    Then a JSON file exists under ".claude/.scope-verified/" in that cwd
+
+  @feature2
+  Scenario: VSGF001_75 readFreshMarker returns null on session_id mismatch
+    Given a fresh temporary directory as the marker store cwd
+    And a marker is written for session "sess-A" with a known diff sha
+    When readFreshMarker is called with session "sess-B" and the same diff sha
+    Then readFreshMarker returns null
+
+  @feature2
+  Scenario: VSGF001_76 readFreshMarker returns null on corrupt JSON
+    Given a fresh temporary directory as the marker store cwd
+    And a corrupt JSON marker file exists for session "sess-1" with a known diff sha
+    When readFreshMarker is called with session "sess-1" and that diff sha
+    Then readFreshMarker returns null
+
+  @feature2
+  Scenario: VSGF001_77 runGC removes markers older than 24 hours
+    Given a fresh temporary directory as the marker store cwd
+    And a marker is written and then artificially aged beyond GC_STALE_MS
+    When runGC is called on that cwd
+    Then no JSON files remain under ".claude/.scope-verified/"
+
+  @feature2
+  Scenario: VSGF001_78 runGC preserves fresh markers
+    Given a fresh temporary directory as the marker store cwd
+    And a fresh marker is written for session "sess-fresh"
+    When runGC is called on that cwd
+    Then exactly 1 JSON file remains under ".claude/.scope-verified/"
+
+  @feature2
+  Scenario: VSGF001_79 markerDir resolves to a path inside cwd
+    Given a fresh temporary directory as the marker store cwd
+    When markerDir is called on that cwd
+    Then the result starts with the resolved cwd path
+
+  @feature2
+  Scenario: VSGF001_80 writeMarker strips path separators from session_id in filename
+    Given a fresh temporary directory as the marker store cwd
+    When writeMarker is called with session_id "../../etc/passwd" and a known diff sha
+    Then no file created under ".claude/.scope-verified/" contains ".." or "/"
+
+  @feature3
+  Scenario: VSGF001_81 appendEscapeLog appends multiple entries as valid JSONL
+    Given a fresh temporary directory as the marker store cwd
+    When appendEscapeLog is called twice with reasons "r1" and "r2"
+    Then the escape log file contains exactly 2 valid JSONL lines
+    And the first line has reason "r1" and the second has reason "r2"

@@ -60,6 +60,12 @@ interface VsgfWorld extends V4World {
   vsgfReasons?: string[];
   vsgfBaselineScore?: number;
   vsgfDampenedScore?: number;
+  /** Marker-unit scenarios (VSGF001_74..81): isolated tmp cwd for marker store */
+  vsgfMarkerCwd?: string;
+  /** Last diff sha used in marker-unit scenarios */
+  vsgfMarkerDiff?: string;
+  /** Last readFreshMarker() return value */
+  vsgfReadResult?: import('../../tools/_shared/scope-gate-marker-store.ts').Marker | null;
 }
 
 interface HookResult {
@@ -160,6 +166,11 @@ After({ tags: '@feature1 or @feature2 or @feature3 or @feature4' }, function (th
   if (this.vsgfRepo) {
     try { fs.rmSync(this.vsgfRepo, { recursive: true, force: true }); } catch { /* best-effort */ }
     this.vsgfRepo = undefined;
+  }
+  // Cleanup per-scenario marker-unit tmpdir (VSGF001_74..81)
+  if (this.vsgfMarkerCwd) {
+    try { fs.rmSync(this.vsgfMarkerCwd, { recursive: true, force: true }); } catch { /* best-effort */ }
+    this.vsgfMarkerCwd = undefined;
   }
 });
 
@@ -633,4 +644,159 @@ Then(/^parseFilesFromDiff of fixture "([^"]+)" yields paths "([^"]+)"$/, functio
   const diff = fs.readFileSync(path.join(FIXTURES_DIR, name), 'utf-8');
   const got = parseFilesFromDiff(diff).map((f: { path: string }) => f.path);
   assert.deepEqual(got, paths.split('|'));
+});
+
+// ---------------------------------------------------------------------------
+// VSGF001_74..81 — marker-store internal API (FR-5 + NFR S-2 + FR-3)
+// Folded from tests/unit/marker-store.test.ts (SCOPEGATE002_10..41).
+// All drive the REAL exported functions in-process — no mocks, no spawns.
+// World extension: vsgfMarkerCwd holds the per-scenario tmp dir; vsgfMarkerDiff
+// holds a known diff sha; vsgfReadResult holds the last readFreshMarker return.
+// ---------------------------------------------------------------------------
+import {
+  writeMarker as _writeMarker,
+  readFreshMarker as _readFreshMarker,
+  runGC as _runGC,
+  markerDir as _markerDir,
+  appendEscapeLog as _appendEscapeLog,
+  sha256 as _sha256,
+  shortSha as _shortSha,
+  GC_STALE_MS as _GC_STALE_MS,
+} from '../../tools/_shared/scope-gate-marker-store.ts';
+import type { Marker as _Marker } from '../../tools/_shared/scope-gate-marker-store.ts';
+
+function mkTestMarker(diffSha: string, sessionId: string): _Marker {
+  return {
+    timestamp: Date.now(),
+    diff_sha256: diffSha,
+    session_id: sessionId,
+    variants: [{ file: 'src/a.ts', kind: 'enum-item', name: 'foo', lineNumber: 1, reach: 'traced', evidence: 'ok' }],
+    should_ship: true,
+  };
+}
+
+Given(/^a fresh temporary directory as the marker store cwd$/, function (this: VsgfWorld) {
+  this.vsgfMarkerCwd = fs.mkdtempSync(path.join(os.tmpdir(), 'vsgf-ms-'));
+  this.vsgfMarkerDiff = undefined;
+  this.vsgfReadResult = undefined;
+});
+
+When(/^writeMarker is called with a valid marker$/, function (this: VsgfWorld) {
+  const diffSha = _sha256('test-diff-content');
+  this.vsgfMarkerDiff = diffSha;
+  _writeMarker(this.vsgfMarkerCwd!, mkTestMarker(diffSha, 'sess-test'));
+});
+
+Then(/^a JSON file exists under "\.claude\/\.scope-verified\/" in that cwd$/, function (this: VsgfWorld) {
+  const dir = _markerDir(this.vsgfMarkerCwd!)!;
+  const files = fs.readdirSync(dir);
+  assert.ok(files.some(f => f.endsWith('.json')), `no .json files found in ${dir}; got: ${files.join(', ')}`);
+});
+
+Given(/^a marker is written for session "([^"]+)" with a known diff sha$/, function (this: VsgfWorld, sessionId: string) {
+  const diffSha = _sha256(`known-diff-${sessionId}`);
+  this.vsgfMarkerDiff = diffSha;
+  _writeMarker(this.vsgfMarkerCwd!, mkTestMarker(diffSha, sessionId));
+});
+
+When(/^readFreshMarker is called with session "([^"]+)" and the same diff sha$/, function (this: VsgfWorld, sessionId: string) {
+  this.vsgfReadResult = _readFreshMarker(this.vsgfMarkerCwd!, sessionId, this.vsgfMarkerDiff!);
+});
+
+Then(/^readFreshMarker returns null$/, function (this: VsgfWorld) {
+  assert.equal(this.vsgfReadResult, null, `expected null but got: ${JSON.stringify(this.vsgfReadResult)}`);
+});
+
+Given(/^a corrupt JSON marker file exists for session "([^"]+)" with a known diff sha$/, function (this: VsgfWorld, sessionId: string) {
+  const diffSha = _sha256('corrupt-diff');
+  this.vsgfMarkerDiff = diffSha;
+  const dir = _markerDir(this.vsgfMarkerCwd!)!;
+  fs.mkdirSync(dir, { recursive: true });
+  const filename = `${sessionId}-${_shortSha(diffSha)}.json`;
+  fs.writeFileSync(path.join(dir, filename), '{ not valid json', 'utf-8');
+});
+
+When(/^readFreshMarker is called with session "([^"]+)" and that diff sha$/, function (this: VsgfWorld, sessionId: string) {
+  this.vsgfReadResult = _readFreshMarker(this.vsgfMarkerCwd!, sessionId, this.vsgfMarkerDiff!);
+});
+
+Given(/^a marker is written and then artificially aged beyond GC_STALE_MS$/, function (this: VsgfWorld) {
+  const diffSha = _sha256('old-diff');
+  this.vsgfMarkerDiff = diffSha;
+  _writeMarker(this.vsgfMarkerCwd!, mkTestMarker(diffSha, 'sess-old'));
+
+  const dir = _markerDir(this.vsgfMarkerCwd!)!;
+  const files = fs.readdirSync(dir).filter(f => f.endsWith('.json'));
+  assert.equal(files.length, 1, 'expected exactly 1 marker before aging');
+  const fp = path.join(dir, files[0]);
+  const oldTimeSec = (Date.now() - _GC_STALE_MS - 1000) / 1000;
+  fs.utimesSync(fp, oldTimeSec, oldTimeSec);
+});
+
+When(/^runGC is called on that cwd$/, function (this: VsgfWorld) {
+  _runGC(this.vsgfMarkerCwd!);
+});
+
+Then(/^no JSON files remain under "\.claude\/\.scope-verified\/"$/, function (this: VsgfWorld) {
+  const dir = _markerDir(this.vsgfMarkerCwd!)!;
+  const remaining = fs.readdirSync(dir).filter(f => f.endsWith('.json'));
+  assert.equal(remaining.length, 0, `expected 0 JSON files, found ${remaining.length}: ${remaining.join(', ')}`);
+});
+
+Given(/^a fresh marker is written for session "([^"]+)"$/, function (this: VsgfWorld, sessionId: string) {
+  const diffSha = _sha256(`fresh-diff-${sessionId}`);
+  this.vsgfMarkerDiff = diffSha;
+  _writeMarker(this.vsgfMarkerCwd!, mkTestMarker(diffSha, sessionId));
+});
+
+Then(/^exactly 1 JSON file remains under "\.claude\/\.scope-verified\/"$/, function (this: VsgfWorld) {
+  const dir = _markerDir(this.vsgfMarkerCwd!)!;
+  const remaining = fs.readdirSync(dir).filter(f => f.endsWith('.json'));
+  assert.equal(remaining.length, 1, `expected 1 JSON file, found ${remaining.length}: ${remaining.join(', ')}`);
+});
+
+When(/^markerDir is called on that cwd$/, function (this: VsgfWorld) {
+  // Result stored implicitly; assertion in Then uses markerDir directly
+});
+
+Then(/^the result starts with the resolved cwd path$/, function (this: VsgfWorld) {
+  const result = _markerDir(this.vsgfMarkerCwd!);
+  assert.notEqual(result, null, 'markerDir returned null');
+  assert.ok(result!.startsWith(path.resolve(this.vsgfMarkerCwd!)), `markerDir ${result} does not start with ${path.resolve(this.vsgfMarkerCwd!)}`);
+});
+
+When(/^writeMarker is called with session_id "([^"]+)" and a known diff sha$/, function (this: VsgfWorld, sessionId: string) {
+  const diffSha = _sha256('traversal-test-diff');
+  this.vsgfMarkerDiff = diffSha;
+  _writeMarker(this.vsgfMarkerCwd!, mkTestMarker(diffSha, sessionId));
+});
+
+Then(/^no file created under "\.claude\/\.scope-verified\/" contains "\.\." or "\/"$/, function (this: VsgfWorld) {
+  const dir = _markerDir(this.vsgfMarkerCwd!)!;
+  const files = fs.readdirSync(dir);
+  const hasBadChars = files.some(f => f.includes('..') || f.includes('/'));
+  assert.ok(!hasBadChars, `found unsafe filename(s): ${files.join(', ')}`);
+});
+
+When(/^appendEscapeLog is called twice with reasons "([^"]+)" and "([^"]+)"$/, function (this: VsgfWorld, r1: string, r2: string) {
+  _appendEscapeLog(this.vsgfMarkerCwd!, { ts: '2026-01-01T00:00:00.000Z', diff_sha256: 'aaa', reason: r1, session_id: 'sess-1', cwd: this.vsgfMarkerCwd! });
+  _appendEscapeLog(this.vsgfMarkerCwd!, { ts: '2026-01-01T00:00:01.000Z', diff_sha256: 'bbb', reason: r2, session_id: 'sess-1', cwd: this.vsgfMarkerCwd! });
+});
+
+Then(/^the escape log file contains exactly 2 valid JSONL lines$/, function (this: VsgfWorld) {
+  const logPath = path.join(this.vsgfMarkerCwd!, '.claude', 'logs', 'scope-gate-escapes.jsonl');
+  assert.ok(fs.existsSync(logPath), `escape log not found at ${logPath}`);
+  const lines = fs.readFileSync(logPath, 'utf-8').trim().split('\n');
+  assert.equal(lines.length, 2, `expected 2 lines, got ${lines.length}`);
+  // Both must be valid JSON
+  lines.forEach((l, i) => {
+    try { JSON.parse(l); } catch { assert.fail(`line ${i + 1} is not valid JSON: ${l}`); }
+  });
+});
+
+Then(/^the first line has reason "([^"]+)" and the second has reason "([^"]+)"$/, function (this: VsgfWorld, r1: string, r2: string) {
+  const logPath = path.join(this.vsgfMarkerCwd!, '.claude', 'logs', 'scope-gate-escapes.jsonl');
+  const lines = fs.readFileSync(logPath, 'utf-8').trim().split('\n');
+  assert.equal(JSON.parse(lines[0]).reason, r1, `line 1 reason mismatch`);
+  assert.equal(JSON.parse(lines[1]).reason, r2, `line 2 reason mismatch`);
 });
