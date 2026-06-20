@@ -66,6 +66,19 @@ Re-ran the full file after adding TESTQUAL001_34/35/36 [cmd:npm run mutation:bdd
 
 So the honest survivor picture is **not** "32 weak tests": 14 Regex + 2 slice-clamp are equivalent/likely-equivalent (~half), 1 killed, and ~15 are real targets for tighter/branch-reaching scenarios (the strong-tests §6.5 backlog). Driving those down is incremental scenario work, not an assertion-rewrite sweep.
 
+### ⚠️ Flakiness finding — the aggregate score is NON-DETERMINISTIC under concurrency:100%
+
+The post-kill confirm-run (commit d99682d, a **purely additive** +9/−0 assertion that can only kill MORE, never fewer [cmd:git show d99682d --numstat → 9 0]) returned a WORSE aggregate, not better:
+
+| Run | total | covered | killed | survived | no-cov | errors | time |
+|---|---|---|---|---|---|---|---|
+| W4 re-measure | 82.82% | 94.88% | 592 | **32** | 91 | 25 | 14m46s |
+| post-kill confirm (additive-only change) | 77.90% | 89.26% | 556 | **67** | 91 | 26 | 10m27s |
+
+A +9/−0 test change CANNOT raise the survivor count by 35 — so the swing is **run-to-run nondeterminism** in the cucumber-runner + `coverageAnalysis:perTest` + `concurrency:100%` measurement (likely covering-test mis-attribution / resource contention under high parallelism; NoCoverage stayed stable at 91, errors barely moved 25→26 — it's "Survived" status flipping, not errors). What IS deterministic and confirmed: **299:20 is killed in BOTH the inject+restore proof and this run** [cmd:node mutation.json scan → 299 still survives? false].
+
+**Implication for FR-2 ("automate hard, default-on"):** the aggregate BDD mutation *score* is NOT a stable blocking-gate metric as configured — it varies ~5 pts / ~35 mutants between identical-code runs. Before it can gate, it needs stabilization: lower `concurrency` (trade speed for determinism), raise the per-test timeout, or investigate cucumber-runner perTest stability. **Per-mutant kills remain deterministically verifiable** via the inject+restore technique (output-invariants-first) — that, not the flaky aggregate, is the trustworthy unit of "did this scenario get stronger". This is a real correction to the W4 "82.82% confirmed" framing: 82.82% was ONE sample of a noisy metric, not a fixed number.
+
 Everything below is the SUPERSEDED PoC record (kept for history).
 
 ---
