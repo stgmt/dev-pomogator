@@ -69,15 +69,7 @@ score, killed, survived, noCoverage, ts }`. Helper: `tools/stryker-mutation/stat
 
 ## Gotchas
 
-- **The BDD aggregate score is NON-DETERMINISTIC under `concurrency:'100%'`** — two runs of
-  identical code gave 82.82%/32-survived and 77.90%/67-survived (2026-06-20), a ~35-mutant swing
-  ("Survived" status flips; NoCoverage stayed stable). So **do NOT gate on the aggregate score** as
-  configured. To verify a specific survivor is actually killed, use **inject+restore** (the
-  trustworthy, deterministic unit): hand-mutate the production line → run ONLY the covering scenario
-  (`--name <ID>`) → it MUST FAIL on your assertion → restore → it MUST PASS. That proves the kill
-  without trusting the flaky full-run count. For a stable aggregate, lower `concurrency` (trade
-  speed) or raise the per-test timeout. See `audit-reports/stryker-bdd-mutation-finding.md`
-  «Flakiness finding».
+- **The BDD aggregate score is NON-DETERMINISTIC — PROVEN a `@stryker-mutator/cucumber-runner` bug, NOT a test/concurrency issue.** Four identical-code runs gave 32/40/67/70 survivors; a per-mutant diff of two byte-identical runs found **48 mutants flip verdict** bidirectionally [cmd:diff-mutants.mjs runA runB]. Root cause (read from source): the runner **reuses `this.supportCodeLibrary` across mutant runs** + a singleton `StrykerFormatter.instance` [ref:node_modules/@stryker-mutator/cucumber-runner/dist/src/cucumber-test-runner.js:74] → cross-mutant state bleed in the long-lived worker. **Lowering concurrency does NOT help — it made it WORSE** (conc 6 → 135 survived); do not try that. **The ONLY trustworthy unit is inject+restore** (deterministic): hand-mutate the production line → run ONLY the covering scenario (`--name <ID>`) → it MUST FAIL on your assertion → restore → it MUST PASS. **Do NOT gate on the aggregate score.** Tests + `scan()` are proven deterministic standalone, so a flaky BDD mutation number is the runner, not your test. See `audit-reports/stryker-bdd-mutation-finding.md` «PROVEN root cause».
 - cucumber-runner needs `testRunnerNodeArgs: ['--import', 'tsx']` to load the TypeScript step-defs.
 - The BDD config uses a dedicated `stryker-bdd` cucumber.json profile (scoped import, throwaway/no
   canonical format) — NEVER the `default` profile (it writes the canonical `.last-test-run.ndjson`).
