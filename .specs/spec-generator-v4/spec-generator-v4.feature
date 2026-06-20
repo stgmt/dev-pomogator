@@ -2179,3 +2179,81 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given a repo root and a list of missing paths for a slug
     When judgeLegacyState runs with an injected spawn returning an invalid state value
     Then the verdict has state UNKNOWN and ran false
+
+  @feature7
+  Scenario: SPECGEN004_324 launch-marksman shim resolveMarksmanBinary honours DEV_POMOGATOR_MARKSMAN_BIN override first
+    Given the launch-marksman shim is called with DEV_POMOGATOR_MARKSMAN_BIN set to `/custom/marksman`
+    Then resolveMarksmanBinary returns source `env` and binaryPath `/custom/marksman`
+
+  @feature7
+  Scenario: SPECGEN004_325 launch-marksman shim resolveMarksmanBinary prefers PATH over managed binary
+    Given the launch-marksman shim is called with no env override and marksman found on PATH at `/usr/bin/marksman`
+    Then resolveMarksmanBinary returns source `path` and binaryPath `/usr/bin/marksman`
+
+  @feature7
+  Scenario: SPECGEN004_326 launch-marksman shim resolveMarksmanBinary falls back to managed download when absent from PATH
+    Given the launch-marksman shim is called with no env override and marksman absent from PATH but present at the managed path
+    Then resolveMarksmanBinary returns source `managed` and the managed binary path for linux
+
+  @feature7
+  Scenario: SPECGEN004_327 launch-marksman shim resolveMarksmanBinary returns null when no binary is available (FR-7a no-fallback exit)
+    Given the launch-marksman shim is called with no env override, marksman absent from PATH, and no managed binary on disk
+    Then resolveMarksmanBinary returns null
+
+  @feature7
+  Scenario: SPECGEN004_328 launch-marksman shim managedBinaryPath computes the Windows path with .exe
+    When managedBinaryPath is called with repoRoot `D:\repo` and platform `win32`
+    Then the result is the win32 path `D:\repo\.dev-pomogator\bin\marksman.exe`
+
+  @feature7
+  Scenario: SPECGEN004_329 launch-marksman shim managedBinaryPath computes the POSIX path without extension
+    When managedBinaryPath is called with repoRoot `/repo` and platform `linux`
+    Then the result is the POSIX path `/repo/.dev-pomogator/bin/marksman`
+
+  @feature7
+  Scenario: SPECGEN004_330 launch-marksman shim whichOnPath honours Windows executable extensions
+    When whichOnPath is called for `marksman` on `win32` with PATH `C:\tools` where `marksman.exe` exists
+    Then whichOnPath returns `C:\tools\marksman.exe`
+
+  @feature7
+  Scenario: SPECGEN004_331 launch-marksman shim repoRootFromEnv prefers CLAUDE_PROJECT_DIR over DEV_POMOGATOR_REPO_ROOT
+    When repoRootFromEnv is called with both CLAUDE_PROJECT_DIR `/proj` and DEV_POMOGATOR_REPO_ROOT `/x`
+    Then repoRootFromEnv returns `/proj`
+    When repoRootFromEnv is called with only DEV_POMOGATOR_REPO_ROOT `/x`
+    Then repoRootFromEnv returns `/x`
+
+  @feature17
+  Scenario: SPECGEN004_332 spec-backlog writer entryId is deterministic for same inputs
+    When entryId is called twice with slug `foo`, code `impl-drift/dead-link`, and the same evidence
+    Then both calls return the same 12-character hex id
+
+  @feature17
+  Scenario: SPECGEN004_333 spec-backlog writer entryId differs across slug or code
+    When entryId is called with three different slug/code combinations but the same evidence
+    Then all three ids are distinct
+
+  @feature17
+  Scenario: SPECGEN004_334 spec-backlog writer appendEntry creates the daily JSONL file
+    When appendEntry is called for slug `foo` with code `impl-drift/dead-link` in the writer temp dir
+    Then the returned entry has status `open` and an id of length 12
+    And the daily JSONL file exists under .dev-pomogator/.specs-backlog/ in the writer temp dir
+
+  @feature17
+  Scenario: SPECGEN004_335 spec-backlog writer readAll deduplicates by id with latest line winning
+    When appendEntry is called for a backlog entry and then updateStatus marks it resolved
+    Then readAll returns the entry with status `resolved` (latest line wins)
+
+  @feature17
+  Scenario: SPECGEN004_336 spec-backlog writer readOpen filters to open entries only
+    When two backlog entries exist and the second one is resolved
+    Then readOpen returns exactly 1 entry and its id matches the first entry
+
+  @feature17
+  Scenario: SPECGEN004_337 spec-backlog writer readAll tolerates malformed JSONL lines
+    When two valid backlog entries are appended with a malformed line injected between them
+    Then readAll returns exactly 2 entries (the malformed line is skipped)
+
+  @feature17
+  Scenario: SPECGEN004_338 spec-backlog writer readEntry returns null for unknown id
+    When readEntry is called with an id that does not exist in the writer temp dir
+    Then readEntry returns null
