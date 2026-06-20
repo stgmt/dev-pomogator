@@ -279,3 +279,84 @@ Feature: PLUGIN012_TUI_Test_Runner
   Scenario: Store alias guard treats empty or whitespace-only resolution as not-alias
     Given the resolved python paths are empty or whitespace-only
     Then the Store alias guard should not flag the paths as alias-only
+
+  # ---------------------------------------------------------------------------
+  # @feature12 — FR-12 Test Guard Hook (GUARD001)
+  # PreToolUse hook blocks direct test commands; requires /run-tests skill.
+  # ---------------------------------------------------------------------------
+
+  @feature12
+  Scenario: GUARD001_01 test guard blocks direct pytest command
+    Given the test guard hook receives a direct pytest command
+    Then the test guard should deny with exit code 2
+    And the deny output should contain permissionDecision deny
+    And the deny reason should mention /run-tests
+
+  @feature12
+  Scenario: GUARD001_02 test guard blocks direct vitest command
+    Given the test guard hook receives a direct vitest command
+    Then the test guard should deny with exit code 2
+    And the deny output should contain permissionDecision deny
+    And the deny reason should mention /run-tests
+
+  @feature12
+  Scenario: GUARD001_03 test guard blocks direct jest command
+    Given the test guard hook receives a direct jest command
+    Then the test guard should deny with exit code 2
+    And the deny output should contain permissionDecision deny
+    And the deny reason should mention /run-tests
+
+  @feature12
+  Scenario: GUARD001_04 test guard blocks direct dotnet test command
+    Given the test guard hook receives a direct dotnet test command
+    Then the test guard should deny with exit code 2
+    And the deny output should contain permissionDecision deny
+    And the deny reason should mention /run-tests
+
+  @feature12
+  Scenario: GUARD001_05 test guard blocks direct cargo test command
+    Given the test guard hook receives a direct cargo test command
+    Then the test guard should deny with exit code 2
+    And the deny output should contain permissionDecision deny
+    And the deny reason should mention /run-tests
+
+  @feature12
+  Scenario: GUARD001_06 test guard blocks direct go test command
+    Given the test guard hook receives a direct go test command
+    Then the test guard should deny with exit code 2
+    And the deny output should contain permissionDecision deny
+    And the deny reason should mention /run-tests
+
+  @feature12
+  Scenario: GUARD001_07 test guard blocks direct npm test command
+    Given the test guard hook receives a direct npm test command
+    Then the test guard should deny with exit code 2
+    And the deny output should contain permissionDecision deny
+    And the deny reason should mention /run-tests
+
+  @feature12
+  Scenario: GUARD001_08 test guard allows test_runner_wrapper command
+    Given the test guard hook receives a wrapper command
+    Then the test guard should allow with exit code 0
+
+  @feature12
+  Scenario: GUARD001_09 test guard allows wrapper command with framework flag
+    Given the test guard hook receives a wrapper command with framework flag
+    Then the test guard should allow with exit code 0
+
+  @feature12
+  Scenario: GUARD001_10 test guard allows non-test Bash commands
+    Given the test guard hook receives a non-test command
+    Then the test guard should allow with exit code 0
+
+  @feature12
+  Scenario: GUARD001_11 test guard deny message lists supported frameworks
+    Given the test guard hook receives a direct pytest command
+    When the deny reason is inspected for framework list
+    Then the deny reason should list vitest pytest and dotnet
+
+  @feature12
+  Scenario: GUARD001_12 plugin registry declares SessionStart and PreToolUse test_guard
+    Given the plugin hooks registry is read
+    Then the registry should have at least one SessionStart hook
+    And the registry should have a Bash PreToolUse entry for test_guard
