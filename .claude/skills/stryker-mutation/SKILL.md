@@ -68,7 +68,7 @@ this scenario kill this mutant?" is `tools/stryker-mutation/verify-kill.ts` — 
 inject+restore and is deterministic:
 
 ```bash
-npx tsx tools/stryker-mutation/verify-kill.ts <spec.json>
+npm run mutation:verify -- <spec.json>          # or: npx tsx tools/stryker-mutation/verify-kill.ts <spec.json>
 # spec.json = ONE { file, original, mutant, config, name [, label] }  OR an ARRAY of them (batch gate)
 #   file/original/mutant — the production line + exact original→mutant strings
 #   config — a THROWAWAY cucumber config (scoped paths/import, throwaway message format)

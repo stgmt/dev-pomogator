@@ -52,7 +52,8 @@
     "mutation": "bash scripts/docker-mutation.sh stryker.real.config.mjs",
     "mutation:skill": "bash scripts/docker-mutation.sh stryker.config.mjs",
     "mutation:specgen": "bash scripts/docker-mutation.sh stryker.specgen.config.mjs",
-    "mutation:bdd": "npx stryker run stryker.bdd.config.mjs"
+    "mutation:bdd": "npx stryker run stryker.bdd.config.mjs",
+    "mutation:verify": "tsx tools/stryker-mutation/verify-kill.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
