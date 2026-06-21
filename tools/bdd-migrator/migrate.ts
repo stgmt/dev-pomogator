@@ -252,15 +252,29 @@ function render(plan: MigrationPlan): string {
   return L.join('\n');
 }
 
-/** Specs that own a tests/e2e/<slug>.test.ts AND a matching .feature — migration candidates. */
+/** Every spec slug (nested too) that owns a `<slug>/<slug>.feature`. runBatch then keeps only those
+ *  whose buildPlan().vitestFiles is non-empty (smart attribution via findVitestFiles). Dogfood
+ *  2026-06-21: the old enumerator only read tests/e2e/<slug>.test.ts filenames, so it MISSED every
+ *  spec whose vitest twin isn't named by the slug (the same blind spot findVitestFiles just fixed) —
+ *  --batch under-reported the remaining set. */
 function discoverMigratableSpecs(): string[] {
-  const e2e = path.join(REPO, 'tests', 'e2e');
-  if (!fs.existsSync(e2e)) return [];
+  const root = path.join(REPO, '.specs');
+  if (!fs.existsSync(root)) return [];
   const slugs: string[] = [];
-  for (const f of fs.readdirSync(e2e)) {
-    const m = f.match(/^(.+)\.test\.ts$/);
-    if (!m) continue;
-    if (fs.existsSync(path.join(REPO, '.specs', m[1], `${m[1]}.feature`))) slugs.push(m[1]);
+  const visit = (rel: string): void => {
+    const dir = path.join(root, rel);
+    const base = rel.split('/').pop()!;
+    if (fs.existsSync(path.join(dir, `${base}.feature`))) slugs.push(rel);
+    let entries: fs.Dirent[];
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+    for (const e of entries) {
+      if (e.isDirectory() && !e.name.startsWith('.') && e.name !== '_artifact' && e.name !== 'archive') {
+        visit(`${rel}/${e.name}`);
+      }
+    }
+  };
+  for (const e of fs.readdirSync(root, { withFileTypes: true })) {
+    if (e.isDirectory() && !e.name.startsWith('.')) visit(e.name);
   }
   return slugs;
 }
