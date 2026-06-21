@@ -62,9 +62,17 @@ answer-simple pilot proved (retrospective finding #11) — follow it, don't rein
 6. **Collision dry-run — your step-def file is loaded by the WHOLE suite.** `tests/step_definitions/**`
    is one global namespace; a too-broad regex hijacks another feature's step (ambiguous → main suite
    breaks). Scope every regex to THIS spec's vocabulary, then prove it: `--dry-run` over a **TEMP
-   config** that mirrors the existing `cucumber.json` `paths`, and confirm **0 ambiguous / 0 undefined**
-   (all "skipped" = all matched). Fix any collision by narrowing the regex (a negative lookahead
-   disambiguates in-process vs spawn vs repeat Whens — see gotchas).
+   config** whose `paths` = the existing `cucumber.json` `paths` **PLUS your new `.feature`**, and confirm
+   **0 ambiguous / 0 undefined ACROSS EVERY listed feature — not just your own scenarios** (all "skipped"
+   = all matched). The breadth matters: a GENERIC assertion you add (`hook should exit with code 0`,
+   `stderr should contain "…"`, `file should exist`) does NOT collide for your scenarios — it makes
+   ANOTHER already-wired feature's identical step ambiguous, so the red lands on THEIR scenarios, which a
+   `--name`-filtered solo check never runs. (Dogfood 2026-06-21: test-statusline's generic
+   `hook should exit with code 0` silently made all 8 of auto-capture's exit-code steps ambiguous in the
+   canonical run; invisible until a full-suite census, fixed by renaming the def to the spec-scoped
+   `SessionStart hook should exit with code 0`.) Fix any collision by RENAMING the offending pattern to
+   spec-scoped vocabulary (preferred) or a negative lookahead (disambiguates in-process vs spawn vs repeat
+   Whens — see gotchas). Generic assertion text is a collision magnet — always prefix it with the spec subject.
    > 🚫 **CLOBBER TRAP (observed live 2026-06-19):** the dry-run config MUST set
    > `format:["message:.dev-pomogator/.tmp/<slug>-collision.ndjson"]` (a throwaway) — do **NOT** run the
    > default `cucumber.json` directly (`node … cucumber.js` with no `-c`, or `-c cucumber.json`). The

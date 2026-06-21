@@ -36,9 +36,13 @@ ambiguous) → mutation gutcheck (RED-on-break).
    NEVER fake green.
 3. **Author the step-def** `tests/step_definitions/feature_<slug>.ts` 1:1 with the scenarios. Use
    REGEX step patterns (NOT Cucumber Expressions) so literal `/`, backticks and `{}` match verbatim,
-   and SCOPE every regex to this spec's vocabulary (the file is loaded by the WHOLE suite). Drive the
-   REAL engine — no mock, no inline copy of production logic. Per-scenario isolation comes from the
-   `V4World` Before hook's fresh `tempDir`.
+   and SCOPE every regex to this spec's vocabulary (the file is loaded by the WHOLE suite). In particular,
+   NEVER author a GENERIC assertion step — `/^hook should exit with code 0$/`, `/^stderr should contain
+   "([^"]+)"$/`, `/^file should exist$/` — that another spec's feature could also phrase: it silently makes
+   THEIR steps ambiguous (the collision lands on the other feature, not yours; step 5 explains the trap).
+   Prefix every assertion with this spec's subject (`SessionStart hook should exit with code 0`,
+   `the capture hook stderr should contain …`). Drive the REAL engine — no mock, no inline copy of
+   production logic. Per-scenario isolation comes from the `V4World` Before hook's fresh `tempDir`.
 4. **Validate via a THROWAWAY config FIRST** (never the canonical run, never the shared cucumber.json).
    Write (Write tool, NOT heredoc) `.dev-pomogator/.tmp/cuke-<slug>.json` — the JSON MUST wrap the keys
    in a `"default": { … }` PROFILE: `{"default":{"paths":[the .feature],"import":["tests/step_definitions/**/*.ts","tests/hooks/**/*.ts"],"format":["message:.dev-pomogator/.tmp/cuke-<slug>.ndjson"]}}`.
@@ -48,12 +52,22 @@ ambiguous) → mutation gutcheck (RED-on-break).
    honesty gate). Run `node --import tsx node_modules/@cucumber/cucumber/bin/cucumber.js
    -c .dev-pomogator/.tmp/cuke-<slug>.json --name "<id-regex>"`. Iterate to all-green (if it reports
    0 scenarios, the `default` wrapper is missing — not "all passed").
-5. **Collision dry-run.** `--dry-run` a temp config over cucumber.json's EXISTING paths; scope its
-   `import` to the STABLE step-defs + YOUR own new file — NOT the whole `tests/step_definitions/**`
-   glob (if another migration agent runs concurrently the glob loads its half-written file → spurious
-   failures). Confirm **0 ambiguous / 0 undefined**. Narrow any colliding regex (a negative lookahead
-   disambiguates in-process vs spawn vs repeat Whens). Prefer SEQUENTIAL rollout (one spec at a time)
-   over concurrent agents for this reason.
+5. **Collision dry-run — over ALL wired feature PATHS, not just yours.** `--dry-run` a temp config whose
+   `paths` = cucumber.json's EXISTING paths PLUS your new `.feature`, and whose `import` = the STABLE
+   step-defs + YOUR own new file (NOT the whole `tests/step_definitions/**` glob — if another migration
+   agent runs concurrently the glob loads its half-written file → spurious failures). Confirm **0 ambiguous
+   / 0 undefined ACROSS EVERY listed feature, not only your own scenarios**. This breadth is the point: a
+   too-GENERIC step pattern you add (e.g. `/^hook should exit with code 0$/`) does not collide for YOUR
+   scenarios — it makes ANOTHER already-wired feature's identical step AMBIGUOUS, and that feature's
+   scenarios are the ones that go red. The migrating agent that runs only its own subset via `--name`
+   NEVER sees it (dogfood 2026-06-21: test-statusline authored a generic `hook should exit with code 0`
+   that silently made all 8 of auto-capture's exit-code steps ambiguous in the canonical run; caught only
+   by a full-suite census, fixed by renaming the test-statusline def to the spec-scoped `SessionStart hook
+   should exit with code 0`). So: dry-run the COMBINED path list; if ambiguous, the offender is almost
+   always YOUR over-generic pattern — rename it to spec-scoped vocabulary (preferred) or add a negative
+   lookahead. Generic assertion text (`hook should exit with code 0`, `stderr should contain "…"`,
+   `file should exist`) is a collision magnet: ALWAYS prefix it with this spec's subject. Prefer SEQUENTIAL
+   rollout (one spec at a time) over concurrent agents for this reason.
 6. **Wire — only when the WHOLE feature is clean AND `cucumber.json` is shared-tree-safe.** BEFORE wiring,
    run the ENTIRE `.feature` through the throwaway config with NO `--name` filter (only `not @manual and
    not @wip`) and confirm **0 undefined / 0 ambiguous across EVERY scenario in the file** — not just the
