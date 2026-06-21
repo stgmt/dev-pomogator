@@ -2119,14 +2119,13 @@ Then(
     const r = (this as ArchWorld & { _browserResult2?: { launched: boolean; fallback?: string } })
       ._browserResult2;
     assert.ok(r, 'browserResult2 not set');
-    if (!r.launched) {
-      assert.ok(r.fallback, 'Expected fallback when launched=false');
-      assert.ok(
-        r.fallback.startsWith('file://'),
-        `Expected fallback to start with "file://", got "${r.fallback}"`,
-      );
-    }
-    // If browser IS available (launched=true), the fallback check is vacuously satisfied
+    // xdg-open is unavailable in this env (no display/no xdg-open binary) → launched MUST be false
+    assert.strictEqual(r.launched, false, `Expected launched=false (xdg-open unavailable), got true`);
+    assert.ok(r.fallback, 'Expected fallback when launched=false');
+    assert.ok(
+      r.fallback.startsWith('file://'),
+      `Expected fallback to start with "file://", got "${r.fallback}"`,
+    );
   },
 );
 
