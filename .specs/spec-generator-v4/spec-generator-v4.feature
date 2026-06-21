@@ -2507,3 +2507,57 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given the committed registry-parity snapshot and the live settings.json are both present
     When the snapshot freshness check compares them for every hook event
     Then the snapshot matches the live settings.json for every event or settings.json is absent
+
+  # ── feature-strength unit tests: placeholder detection (FR-49 V2) ─────────
+
+  @feature49
+  Scenario Outline: SPECGEN004_373 placeholderScenarios detects or ignores placeholder steps
+    Given the feature-strength fixture named "<fixture>"
+    When placeholderScenarios is called on the feature-strength fixture
+    Then the feature-strength placeholder count is <expected_count>
+
+    Examples:
+      | fixture          | expected_count | note                                                          |
+      | skeleton         | 1              | whole-step prose <...> with whitespace → flagged              |
+      | real             | 0              | fully-written scenario → INVARIANT: never flagged             |
+      | outline          | 0              | Scenario Outline <amount> single-token param → NOT flagged    |
+      | mid-text-param   | 0              | mid-text <amount> in step text → NOT flagged                  |
+      | bare-token       | 0              | bare single-token <state> (no whitespace) → NOT flagged       |
+      | curly-scaffold   | 1              | whole-step {curly} create_spec scaffold → flagged             |
+      | mid-text-brace   | 0              | mid-text {"k":"v"} brace → NOT flagged                        |
+      | empty            | 0              | empty string → returns []                                     |
+      | empty-feature    | 0              | Feature with no scenarios → returns []                        |
+      | not-gherkin      | 0              | unparseable input → returns []                                |
+
+  # ── feature-strength unit tests: net-new scoping (FR-49 V2) ─────────────
+
+  @feature49
+  Scenario Outline: SPECGEN004_374 featureStrengthFindings only fires on net-new placeholders
+    Given the feature-strength net-new check with current "<current>" and next "<next>"
+    When featureStrengthFindings is called on the feature-strength current and next fixtures
+    Then <assertion>
+
+    Examples:
+      | current  | next             | assertion                                                           | note                                                          |
+      | null     | skeleton         | the feature-strength net-new finding count is at least 1            | new doc with skeleton → finding                               |
+      | null     | real             | the feature-strength net-new finding count is 0                     | new doc with real scenarios → no finding                      |
+      | skeleton | skeleton         | no feature-strength net-new findings contain "PLACEHOLDER"          | MUTATION GUARD: legacy kept (current==next, > not >=) → no finding |
+      | skeleton | real             | the feature-strength net-new finding count is 0                     | filling a skeleton in (count drops) → no finding              |
+      | real     | skeleton         | the feature-strength net-new finding count is at least 1            | adding skeleton to real doc (count rises) → finding           |
+
+  @feature49
+  Scenario: SPECGEN004_375 featureStrengthFindings fires on net-new TBD marker but not on pre-existing one
+    Given the feature-strength net-new check with current "real" and next "real-with-tbd"
+    When featureStrengthFindings is called on the feature-strength current and next fixtures
+    Then some feature-strength net-new findings contain "TBD"
+    Given the feature-strength net-new check with current "real-with-tbd" and next "real-with-tbd"
+    When featureStrengthFindings is called on the feature-strength current and next fixtures
+    Then no feature-strength net-new findings contain "TBD"
+
+  # ── feature-strength MCP door: .md-only gate (FR-49 V2) ──────────────────
+
+  @feature49
+  Scenario: SPECGEN004_376 the feature-strength door gate is .feature-only — a .md write never gets a strength finding
+    Given a temporary spec with a minimal FR.md for the feature-strength door gate
+    When a feature-strength door write targets FR.md with prose containing angle-bracket text
+    Then the feature-strength door gate emits no strength-layer findings for the .md write
