@@ -204,7 +204,7 @@ Feature: CEGATE001 Claim-Evidence Gate
   Scenario: CEGATE001_40 The agent's own open todos arm the gate even with zero spec scope
     Given a session edited no spec but its own task list still has an open todo and it ends on a lazy stop
     When the gate evaluates the stop
-    Then it blocks because the agent's open todo counts as open work, and it stays quiet once all todos are completed
+    Then it blocks because the agent's open todo counts as open work AND the kick names that next open todo, and it stays quiet once all todos are completed
 
   # @feature11
   Scenario: CEGATE001_41 The agent task list is reconstructed from the transcript to count open work

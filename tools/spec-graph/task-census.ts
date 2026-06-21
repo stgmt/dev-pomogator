@@ -330,16 +330,22 @@ export function sessionEditedSpecSlugs(transcriptPath: string): Set<string> {
  * Fail-open → 0 (a parse error must never falsely arm the gate).
  */
 const OPEN_TODO_STATUS = new Set(['pending', 'in_progress']);
-export function agentOpenTodoCount(transcriptPath: string): number {
+interface AgentTodo {
+  subject: string;
+  status: string;
+}
+
+/** Reconstruct the agent's current task list from the transcript. Returns whichever of the two task
+ * systems carries MORE open work (Task-replay vs latest TodoWrite) — never under-count. Fail-open → []. */
+function parseAgentTodos(transcriptPath: string): AgentTodo[] {
   let raw: string;
   try {
     raw = fs.readFileSync(transcriptPath, 'utf-8');
   } catch {
-    return 0;
+    return [];
   }
-  const taskStatus: string[] = []; // index = (1-based id) - 1
-  let latestTodoOpen = 0;
-  let sawTodoWrite = false;
+  const tasks: AgentTodo[] = []; // TaskCreate/Update replay; index = (1-based id) - 1
+  let latestTodoWrite: AgentTodo[] | null = null; // latest TodoWrite carries the whole list
   for (const line of raw.split(/\r?\n/)) {
     if (!line.includes('"tool_use"') || line.length > 2_000_000) continue;
     let entry: { message?: { content?: unknown } };
@@ -355,22 +361,44 @@ export function agentOpenTodoCount(transcriptPath: string): number {
       const name = String(b.name ?? '');
       const input = (b.input ?? {}) as Record<string, unknown>;
       if (name === 'TodoWrite' && Array.isArray(input.todos)) {
-        sawTodoWrite = true; // the latest TodoWrite wins (it carries the whole list)
-        latestTodoOpen = (input.todos as Array<Record<string, unknown>>).filter((t) =>
-          OPEN_TODO_STATUS.has(String(t?.status ?? '')),
-        ).length;
+        latestTodoWrite = (input.todos as Array<Record<string, unknown>>).map((t) => ({
+          subject: String(t?.content ?? t?.subject ?? ''),
+          status: String(t?.status ?? ''),
+        }));
       } else if (name === 'TaskCreate') {
-        taskStatus.push('pending');
+        tasks.push({ subject: String(input.subject ?? ''), status: 'pending' });
       } else if (name === 'TaskUpdate') {
         const id = parseInt(String(input.taskId ?? ''), 10);
-        if (Number.isInteger(id) && id >= 1 && id <= taskStatus.length && typeof input.status === 'string') {
-          taskStatus[id - 1] = input.status;
+        if (Number.isInteger(id) && id >= 1 && id <= tasks.length && typeof input.status === 'string') {
+          tasks[id - 1].status = input.status;
         }
       }
     }
   }
-  const taskOpen = taskStatus.filter((s) => OPEN_TODO_STATUS.has(s)).length;
-  return Math.max(taskOpen, sawTodoWrite ? latestTodoOpen : 0);
+  const taskOpen = tasks.filter((t) => OPEN_TODO_STATUS.has(t.status)).length;
+  const todoOpen = latestTodoWrite ? latestTodoWrite.filter((t) => OPEN_TODO_STATUS.has(t.status)).length : 0;
+  return latestTodoWrite && todoOpen > taskOpen ? latestTodoWrite : tasks;
+}
+
+/**
+ * K3 (2026-06-21): the count of the agent's OWN still-open declared work — its Task / TodoWrite list,
+ * reconstructed from the transcript. Ground truth for work that ISN'T spec tasks: a session editing only
+ * `tools/` (or doing NEW work on a census-complete spec) has 0 SPEC-scope open, yet may have pending
+ * todos the agent itself declared. Counting them arms the gate on an announce-and-stop even with zero
+ * spec scope — the non-spec under-fire the owner hit live («при чём тут спеки если агент явный анонс
+ * делал»). Session-scoped BY CONSTRUCTION (this transcript's todos, not the global backlog) → does NOT
+ * reintroduce the FR-9 over-fire. Fail-open → 0.
+ */
+export function agentOpenTodoCount(transcriptPath: string): number {
+  return parseAgentTodos(transcriptPath).filter((t) => OPEN_TODO_STATUS.has(t.status)).length;
+}
+
+/** The subject of the FIRST still-open agent todo (creation order), for a helpful kick that NAMES the
+ * next step when there is no spec next-task. Null if none / unreadable. */
+export function agentNextOpenTodo(transcriptPath: string): string | null {
+  const next = parseAgentTodos(transcriptPath).find((t) => OPEN_TODO_STATUS.has(t.status));
+  const s = next?.subject?.trim();
+  return s ? s : null;
 }
 
 function readCacheFile(p: string): TaskCensusCache | null {

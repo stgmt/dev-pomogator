@@ -34,7 +34,7 @@ import { log as _logShared, normalizePath } from '../_shared/hook-utils.ts';
 import { markerPath, readMarker, writeMarkerAtomic, isWithinCooldown, hashFileList } from '../_shared/marker-utils.ts';
 import { extractTurnWindow, bgInFlightInWindow, agentBgInFlight, lastUserPrompt } from './turn_window.ts';
 import { firstUnsupported, isSpecCompletionClaim } from './claim_classifier.ts';
-import { readTaskCensusCache, scopeCensusToSlugs, sessionEditedSpecSlugs, agentOpenTodoCount, type TaskCensusCache } from '../spec-graph/task-census.ts';
+import { readTaskCensusCache, scopeCensusToSlugs, sessionEditedSpecSlugs, agentOpenTodoCount, agentNextOpenTodo, type TaskCensusCache } from '../spec-graph/task-census.ts';
 import { judgeStop } from './meridian-judge.ts';
 
 interface StopHookInput {
@@ -242,6 +242,11 @@ async function main(): Promise<void> {
   const scopedSpecOpen = scoped ? scoped.total.open + scoped.total.doneRed : 0;
   // The open-work signal every firing precondition gates on: spec-scope open + the agent's own todos.
   const openWork = scopedSpecOpen + agentOpen;
+  // Phase 2 part 1 (2026-06-21): a HELPFUL kick NAMES the next concrete step — the spec's next open task
+  // if any, else the agent's own next open todo (so a non-spec session is told «делай X», not just barked
+  // at). Cures the «слепота» the owner flagged: the gate should point at the next task, not only block.
+  const nextStepHint = scoped?.specs?.[0]?.nextOpen?.title ?? agentNextOpenTodo(tx);
+  const nextLine = nextStepHint ? `\n👉 Следующее: ${nextStepHint}` : '';
 
   // FR-10/FR-11: observable, agent-INDEPENDENT facts about THIS turn (the harness writes the tool_use
   // records; the agent cannot fabricate them). mutating = real changes attempted this turn (judge
@@ -406,8 +411,7 @@ async function main(): Promise<void> {
   // with a BARE next-step demand. The hidden meta-reason is never shown, so it can't be gamed.
   const metaOpen = openWork; // spec-scope open + agent todos (K3)
   if (!unsupported && !analysisOnly && metaStreak >= 2 && metaOpen > 0) {
-    const nx = scoped?.specs?.[0]?.nextOpen;
-    unsupported = { cls: 'gate-meta', need: nx ? `делай: ${nx.title} [${nx.id}]` : 'делай конкретный следующий шаг по открытой задаче' };
+    unsupported = { cls: 'gate-meta', need: nextStepHint ? `делай: ${nextStepHint}` : 'делай конкретный следующий шаг по открытой задаче' };
   }
   // α: persist the streak even on an approve, so the SECOND inspection is caught (resets to 0 on any
   // real-work / non-meta turn). Preserve the anti-loop fields; only metaStreak changes.
@@ -487,19 +491,19 @@ async function main(): Promise<void> {
   if (unsupported.cls === 'judge-block') {
     block(
       `⚠️ ${SELF_MARKER}: судья (Meridian) счёл это преждевременным стопом — ${unsupported.need}\n` +
-        `Доделай начатое В ЭТОМ ХОДЕ или назови ОДИН конкретный следующий шаг. Не перекладывай на пользователя.`,
+        `Доделай начатое В ЭТОМ ХОДЕ или назови ОДИН конкретный следующий шаг. Не перекладывай на пользователя.${nextLine}`,
     );
   } else if (unsupported.cls === 'judge-unavailable') {
     block(
       `⚠️ ${SELF_MARKER}: ${unsupported.need}.\n` +
         `Не останавливайся на статусе — сделай следующий шаг СЕЙЧАС, в этом ходе. ` +
-        `Стоп только если работа реально закончена ИЛИ нужен ввод, который можешь дать только ты.`,
+        `Стоп только если работа реально закончена ИЛИ нужен ввод, который можешь дать только ты.${nextLine}`,
     );
   } else if (unsupported.cls === 'no-next-section') {
     block(
       `⚠️ ${SELF_MARKER}: ${unsupported.need}.\n` +
         `Каждый ответ при незакрытой работе ОБЯЗАН содержать секцию «Дальше:» с КОНКРЕТНЫМ следующим шагом (без воды). ` +
-        `Допиши её — и сделай этот шаг сейчас, не просто назови.`,
+        `Допиши её — и сделай этот шаг сейчас, не просто назови.${nextLine}`,
     );
   } else if (unsupported.cls === 'unproven-blocker') {
     block(
@@ -515,13 +519,13 @@ async function main(): Promise<void> {
     block(
       `⚠️ ${SELF_MARKER}: ты заявил завершение СПЕКИ/фичи, но ${unsupported.need}\n` +
         `Не закрывай как «готово» — доделай открытое или назови ОДИН конкретный следующий шаг. ` +
-        `GREEN-вердикт = «нет вранья про готовность», НЕ «спека закончена».`,
+        `GREEN-вердикт = «нет вранья про готовность», НЕ «спека закончена».${nextLine}`,
     );
   } else {
     block(
       `⚠️ ${SELF_MARKER}: ты заявил результат (${unsupported.cls}), но в этом ходе нет улики, которая его породила.\n` +
         `Нужно: ${unsupported.need}.\n` +
-        `Сначала реально прогони проверку, потом заявляй — либо явно пометь [UNVERIFIED] если проверить нельзя.${censusTail}`,
+        `Сначала реально прогони проверку, потом заявляй — либо явно пометь [UNVERIFIED] если проверить нельзя.${nextLine}${censusTail}`,
     );
   }
 }

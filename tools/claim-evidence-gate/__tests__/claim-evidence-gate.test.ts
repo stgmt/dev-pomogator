@@ -518,6 +518,7 @@ describe('CEGATE001: claim-evidence gate — spec-false-close class (FR-49b)', (
       { CLAIM_GATE_JUDGE: 'false' },
     );
     expect(open.blocked).toBe(true);
+    expect(open.raw).toContain('t2'); // Phase 2 part 1: the kick NAMES the next open todo (t1 done → t2)
     // all todos completed → openWork 0 → the same lazy stop is NOT blocked (no global-backlog over-fire)
     const done = runHook(
       [
