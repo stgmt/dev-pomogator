@@ -656,3 +656,353 @@ Then(
     }
   }
 );
+
+// ─── Fixture-based step-defs (migrated from steps-validator.test.ts) ────────
+// These drive the REAL fixture dirs under tests/fixtures/steps-validator/
+// without any mocks or inline fakes.
+
+Given(
+  /^the C# fixture directory$/,
+  function () {
+    const w = self(this);
+    w.fixtureDir = path.join(FIXTURES_DIR, "csharp");
+    w.fixtureLang = "csharp";
+  }
+);
+
+Given(
+  /^the TypeScript fixture directory$/,
+  function () {
+    const w = self(this);
+    w.fixtureDir = path.join(FIXTURES_DIR, "typescript");
+    w.fixtureLang = "typescript";
+  }
+);
+
+Given(
+  /^the Python fixture directory$/,
+  function () {
+    const w = self(this);
+    w.fixtureDir = path.join(FIXTURES_DIR, "python");
+    w.fixtureLang = "python";
+  }
+);
+
+When(
+  /^language detection runs on the fixture$/,
+  async function () {
+    const w = self(this);
+    const dir = w.fixtureDir as string;
+    const config = await loadConfig(dir);
+    w.fixtureDetectedLang = await detectLanguage(dir, config);
+  }
+);
+
+Then(
+  /^the detected language should be "([^"]+)"$/,
+  function (expectedLang: string) {
+    const w = self(this);
+    const lang = w.fixtureDetectedLang as string | null;
+    if (lang !== expectedLang) {
+      throw new Error(
+        `Steps-validator fixture language detection: expected "${expectedLang}" but got "${lang}"`
+      );
+    }
+  }
+);
+
+When(
+  /^the fixture is parsed by the steps-validator$/,
+  async function () {
+    const w = self(this);
+    const dir = w.fixtureDir as string;
+    const config = await loadConfig(dir);
+    const lang = (w.fixtureLang as string) as import("../../tools/steps-validator/types.ts").Language;
+    const parser = getParser(lang, config);
+    const files = await parser.findStepFiles(dir);
+    const steps = await parser.parseAll(dir);
+    w.fixtureStepFiles = files;
+    w.fixtureSteps = steps;
+    w.fixtureParsedLang = lang;
+  }
+);
+
+Then(
+  /^at least (\d+) C# step files? should be found$/,
+  function (minStr: string) {
+    const w = self(this);
+    const files = (w.fixtureStepFiles as string[]) ?? [];
+    const min = parseInt(minStr, 10);
+    if (files.length < min) {
+      throw new Error(
+        `steps-validator C# fixture: expected ≥${min} step files but found ${files.length}: ${JSON.stringify(files)}`
+      );
+    }
+  }
+);
+
+Then(
+  /^at least (\d+) TypeScript step files? should be found$/,
+  function (minStr: string) {
+    const w = self(this);
+    const files = (w.fixtureStepFiles as string[]) ?? [];
+    const min = parseInt(minStr, 10);
+    if (files.length < min) {
+      throw new Error(
+        `steps-validator TS fixture: expected ≥${min} step files but found ${files.length}: ${JSON.stringify(files)}`
+      );
+    }
+  }
+);
+
+Then(
+  /^at least (\d+) Python step files? should be found$/,
+  function (minStr: string) {
+    const w = self(this);
+    const files = (w.fixtureStepFiles as string[]) ?? [];
+    const min = parseInt(minStr, 10);
+    if (files.length < min) {
+      throw new Error(
+        `steps-validator Python fixture: expected ≥${min} step files but found ${files.length}: ${JSON.stringify(files)}`
+      );
+    }
+  }
+);
+
+Then(
+  /^the total step count should be greater than 0$/,
+  function () {
+    const w = self(this);
+    const steps = (w.fixtureSteps as import("../../tools/steps-validator/types.ts").StepDefinition[]) ?? [];
+    if (steps.length === 0) {
+      throw new Error(
+        `steps-validator fixture: expected totalSteps > 0 but got 0`
+      );
+    }
+  }
+);
+
+Then(
+  /^the parsed language should be "([^"]+)"$/,
+  function (expectedLang: string) {
+    const w = self(this);
+    const lang = w.fixtureParsedLang as string;
+    if (lang !== expectedLang) {
+      throw new Error(
+        `steps-validator fixture parsed language: expected "${expectedLang}" but got "${lang}"`
+      );
+    }
+  }
+);
+
+When(
+  /^the fixture is analyzed by the steps-validator$/,
+  async function () {
+    const w = self(this);
+    const dir = w.fixtureDir as string;
+    const lang = (w.fixtureLang as string) as import("../../tools/steps-validator/types.ts").Language;
+    const config = await loadConfig(dir);
+    const parser = getParser(lang, config);
+    const steps = await parser.parseAll(dir);
+    const result = analyzeSteps(steps, lang, config, []);
+    w.fixtureAnalysisResult = result;
+  }
+);
+
+Then(
+  /^the step matching "([^"]+)" should have status "([^"]+)"$/,
+  function (patternSubstring: string, expectedStatus: string) {
+    const w = self(this);
+    const result = w.fixtureAnalysisResult as import("../../tools/steps-validator/types.ts").ValidationResult;
+    if (!result) {
+      throw new Error("No fixture analysis result — run 'When the fixture is analyzed by the steps-validator' first");
+    }
+    const matching = result.steps.filter((s) => s.pattern.includes(patternSubstring));
+    if (matching.length === 0) {
+      throw new Error(
+        `No step with pattern containing "${patternSubstring}" found. Available patterns: ${result.steps.map((s) => s.pattern).join(", ")}`
+      );
+    }
+    // Check at least one (in case multiple match) — use the FIRST match
+    const step = matching[0];
+    if (step.quality.status !== expectedStatus) {
+      throw new Error(
+        `Step "${step.pattern}" has status "${step.quality.status}" but expected "${expectedStatus}". Issues: ${JSON.stringify(step.quality.issues)}`
+      );
+    }
+  }
+);
+
+Then(
+  /^at least 1 step with status "([^"]+)" should exist$/,
+  function (expectedStatus: string) {
+    const w = self(this);
+    const result = w.fixtureAnalysisResult as import("../../tools/steps-validator/types.ts").ValidationResult;
+    if (!result) {
+      throw new Error("No fixture analysis result");
+    }
+    const matching = result.steps.filter((s) => s.quality.status === expectedStatus);
+    if (matching.length === 0) {
+      throw new Error(
+        `Expected at least 1 step with status "${expectedStatus}" but found 0. Summary: ${JSON.stringify(result.summary)}`
+      );
+    }
+  }
+);
+
+Then(
+  /^the sum of good plus warning plus bad should equal totalSteps$/,
+  function () {
+    const w = self(this);
+    const result = w.fixtureAnalysisResult as import("../../tools/steps-validator/types.ts").ValidationResult;
+    if (!result) {
+      throw new Error("No fixture analysis result");
+    }
+    const { good, warning, bad } = result.summary;
+    const sum = good + warning + bad;
+    if (sum !== result.totalSteps) {
+      throw new Error(
+        `Summary invariant violated: good(${good}) + warning(${warning}) + bad(${bad}) = ${sum} !== totalSteps(${result.totalSteps})`
+      );
+    }
+  }
+);
+
+// ─── Config default/merge step-defs ──────────────────────────────────────────
+
+When(
+  /^the default config is loaded for the project$/,
+  async function () {
+    const w = self(this);
+    const dir = (w.projectDir as string) ?? (w.tempDir as string);
+    const config = await loadConfig(dir);
+    w.loadedConfig = config;
+  }
+);
+
+Then(
+  /^the config enabled field should be (true|false)$/,
+  function (expectedStr: string) {
+    const w = self(this);
+    const config = w.loadedConfig as import("../../tools/steps-validator/types.ts").ValidatorConfig;
+    const expected = expectedStr === "true";
+    if (config.enabled !== expected) {
+      throw new Error(
+        `Expected config.enabled = ${expected} but got ${config.enabled}`
+      );
+    }
+  }
+);
+
+Then(
+  /^the config should have step paths for (typescript|python|csharp)$/,
+  function (lang: string) {
+    const w = self(this);
+    const config = w.loadedConfig as import("../../tools/steps-validator/types.ts").ValidatorConfig;
+    const paths = config.stepPaths[lang as import("../../tools/steps-validator/types.ts").Language];
+    if (!paths || paths.length === 0) {
+      throw new Error(
+        `Expected config.stepPaths.${lang} to be non-empty but got: ${JSON.stringify(paths)}`
+      );
+    }
+  }
+);
+
+Then(
+  /^the csharp custom assertions should contain "([^"]+)"$/,
+  function (expected: string) {
+    const w = self(this);
+    const config = w.loadedConfig as import("../../tools/steps-validator/types.ts").ValidatorConfig;
+    const assertions = config.customAssertions?.csharp ?? [];
+    if (!assertions.includes(expected)) {
+      throw new Error(
+        `Expected csharp custom assertions to contain "${expected}" but got: ${JSON.stringify(assertions)}`
+      );
+    }
+  }
+);
+
+Then(
+  /^the config should still have default step paths for (typescript|python|csharp)$/,
+  function (lang: string) {
+    const w = self(this);
+    const config = w.loadedConfig as import("../../tools/steps-validator/types.ts").ValidatorConfig;
+    const paths = config.stepPaths[lang as import("../../tools/steps-validator/types.ts").Language];
+    if (!paths || paths.length === 0) {
+      throw new Error(
+        `Expected config.stepPaths.${lang} to still have defaults but got: ${JSON.stringify(paths)}`
+      );
+    }
+  }
+);
+
+Given(
+  /^a project with a custom "\.steps-validator\.yaml" config:$/,
+  async function (docString: string) {
+    const w = self(this);
+    const dir: string = w.tempDir as string;
+    await fsp.writeFile(path.join(dir, ".steps-validator.yaml"), docString, "utf-8");
+    w.projectDir = dir;
+  }
+);
+
+// ─── CLI fixture-based step-defs ─────────────────────────────────────────────
+
+When(
+  /^the CLI runs on the C# fixture directory$/,
+  function () {
+    const w = self(this);
+    const dir = w.fixtureDir as string;
+    const res = spawnSync(
+      process.execPath,
+      ["--import", "tsx", VALIDATE_STEPS_ABS, dir],
+      { cwd: REPO_ROOT, encoding: "utf-8", env: { ...process.env } }
+    );
+    w.cliExitCode = res.status ?? 0;
+    w.cliStdout = res.stdout ?? "";
+    w.cliStderr = res.stderr ?? "";
+  }
+);
+
+When(
+  /^the CLI runs on the TypeScript fixture directory$/,
+  function () {
+    const w = self(this);
+    const dir = w.fixtureDir as string;
+    const res = spawnSync(
+      process.execPath,
+      ["--import", "tsx", VALIDATE_STEPS_ABS, dir],
+      { cwd: REPO_ROOT, encoding: "utf-8", env: { ...process.env } }
+    );
+    w.cliExitCode = res.status ?? 0;
+    w.cliStdout = res.stdout ?? "";
+    w.cliStderr = res.stderr ?? "";
+  }
+);
+
+Then(
+  /^the CLI should exit with code (\d+)$/,
+  function (codeStr: string) {
+    const w = self(this);
+    const expected = parseInt(codeStr, 10);
+    const actual = w.cliExitCode as number;
+    if (actual !== expected) {
+      throw new Error(
+        `CLI fixture run: expected exit code ${expected} but got ${actual}. stderr: ${w.cliStderr}`
+      );
+    }
+  }
+);
+
+Then(
+  /^the CLI stdout should contain "([^"]+)"$/,
+  function (expected: string) {
+    const w = self(this);
+    const stdout = (w.cliStdout as string) ?? "";
+    if (!stdout.includes(expected)) {
+      throw new Error(
+        `CLI stdout does not contain "${expected}". stdout was:\n${stdout.slice(0, 800)}`
+      );
+    }
+  }
+);
