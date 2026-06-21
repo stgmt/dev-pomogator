@@ -193,6 +193,15 @@ Cross-checked against external BDD-for-AI practice; folded the genuinely-transfe
   BLOCKER (out-of-scope); never invent the mapping. NOTE: scenario ids are spec-qualified in the graph,
   so a `CODE_NN` reused across specs is NOT a collision (`GUARD001` lives in three specs independently) —
   the real collision risk is step-pattern ambiguity, caught by the `--dry-run`, not the code.
+- **Throwaway cucumber config MUST use a `"default": { … }` profile wrapper (dogfood 2026-06-21).** A
+  flat `{paths,import,format}` JSON silently runs **0 scenarios / 0 steps** (cucumber.js reads config
+  only under a profile) — do not read that as "all passed". If a temp run reports 0 scenarios, the
+  wrapper is missing.
+- **Audit + fix EXISTING scenario tags in the spec, not only the ones you author (dogfood 2026-06-21).**
+  A scenario whose `@featureN` doesn't match the FR its SUBJECT tests is mis-mapped drift — fix it via
+  `apply_spec_change` in the same pass (tests-create-update had 3; tui-test-runner had 3 YAML-writer
+  scenarios on `@feature11`/`@feature12` that belonged to FR-6). Correcting a mis-map can leave an FR
+  honestly UNCOVERED — that is the right outcome, not a regression.
 
 Sources: github.com/swingerman/disciplined-agentic-engineering · github.com/AutomationPanda/gherkin-guidelines-for-ai · github.com/amiceli/vitest-cucumber · github.com/bencompton/jest-cucumber
 
