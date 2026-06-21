@@ -1,8 +1,11 @@
 /**
- * @feature4 — answer-simple BDD migration pilot (FR-M2). The 4 RUNTIME-testable scenarios
- * (PLUGIN017_06/07 detectJargon + PLUGIN017_08/09 the Stop hook) migrated 1:1 from
- * tests/e2e/answer-simple.test.ts — each step calls the REAL engine (no mock, no inline copy).
- * The 5 agent-behaviour/manual scenarios (_01.._05) stay @wip until migrated (vitest retained).
+ * @feature1 / @feature2 / @feature5 / @feature7 / @feature8 — answer-simple BDD migration (FR-M2).
+ * PLUGIN017_06/07 detectJargon + PLUGIN017_08/09/10 the Stop hook and regression tokens (@feature8),
+ * PLUGIN017_11 universal acronym allowlist (@feature7), PLUGIN017_05 v2 wiring artifact (@feature5),
+ * PLUGIN017_01/02 rule structure (@feature1), PLUGIN017_03 skill frontmatter (@feature2).
+ * Each step calls the REAL engine — no mock, no inline copy of production logic.
+ *
+ * Tag maps: @feature1=FR-1, @feature2=FR-2, @feature5=FR-5, @feature7=FR-7, @feature8=FR-8.
  *
  * Regex step patterns (not Cucumber Expressions) so literal `/`, backticks and `{}` in the
  * step text match verbatim — CE would read `/` as alternation.
@@ -55,11 +58,15 @@ function setupHookTmp(): { hook: string; root: string } {
   fs.copySync(appPath('tools/_shared'), path.join(root, '_shared'));
   return { hook: path.join(toolDir, 'answer_simple_stop.ts'), root };
 }
+const REPO_ROOT = process.env.APP_DIR || process.cwd();
+
 function runHook(hook: string, input: object): { status: number; stdout: string } {
-  const r = spawnSync('npx', ['tsx', hook], {
+  // Use process.execPath + --import tsx (NOT npx tsx) — npx returns empty stdout on Windows host spawns.
+  const r = spawnSync(process.execPath, ['--import', 'tsx', hook], {
     input: JSON.stringify(input),
     encoding: 'utf-8',
-    shell: process.platform === 'win32',
+    cwd: REPO_ROOT,
+    env: { ...process.env },
   });
   return { status: r.status ?? 0, stdout: r.stdout ?? '' };
 }
@@ -212,4 +219,43 @@ Then(/^skill SHALL перечислять фиксированные загол�
   assert.match(c, /Переформулировано:/);
   assert.match(c, /Найдено проблем:/);
   assert.match(c, /Проблем не найдено/);
+});
+
+// --- PLUGIN017_10 (@feature8 — regression tokens from the 2026-06-11 fix) ---
+// These 6 tokens slipped through the OLD detector; each must now be caught individually.
+const REGRESSION_TOKENS: Array<[string, string]> = [
+  ['FR-43c', 'letter-suffixed requirement id'],
+  ['P18-1', 'phase-task id'],
+  ['SUPERSEDED', 'shouted single-word status code'],
+  ['HITL', 'project acronym (not universal)'],
+  ['not_run', 'lowercase snake_case identifier'],
+  ['SPECGEN003', 'SPECGEN id without underscore'],
+];
+
+Given(/^тексты с токенами FR-43c и P18-1 и SUPERSEDED и HITL и not_run и SPECGEN003 встроены в длинную прозу$/, function (this: ASWorld) {
+  // Wrap each token in enough clean prose so the proseRatio hard-OUT never fires
+  this.asTexts = REGRESSION_TOKENS.map(([token]) => 'обычная фраза '.repeat(20) + token);
+});
+When(/^detectJargon анализирует каждый текст$/, function (this: ASWorld) {
+  this.asResults = (this.asTexts ?? []).map((t) => detectJargon(t));
+});
+Then(/^каждый токен SHALL быть обнаружен в stats\.codes$/, function (this: ASWorld) {
+  for (let i = 0; i < REGRESSION_TOKENS.length; i++) {
+    const [token, kind] = REGRESSION_TOKENS[i];
+    const codes = this.asResults![i].stats.codes;
+    assert.ok(
+      codes.includes(token.toLowerCase()),
+      `${token} (${kind}) must be detected — got codes=[${codes.join(', ')}]`,
+    );
+  }
+});
+
+// --- PLUGIN017_11 (@feature7 — universal acronym allowlist must NOT be flagged) ---
+Given(/^текст содержит только общеупотребительные аббревиатуры JSON API HTTP GREEN OK DONE в прозе$/, function (this: ASWorld) {
+  this.asTexts = ['обычная фраза '.repeat(20) + 'JSON API HTTP GREEN OK DONE'];
+});
+// When "detectJargon анализирует текст" is already defined above — reuse it.
+Then(/^stats\.codes SHALL быть пустым массивом$/, function (this: ASWorld) {
+  const codes = this.asResults![0].stats.codes;
+  assert.deepEqual(codes, [], `universal acronyms must not be flagged — got codes=[${codes.join(', ')}]`);
 });

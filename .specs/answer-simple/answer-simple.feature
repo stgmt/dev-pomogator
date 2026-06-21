@@ -34,9 +34,9 @@ Feature: PLUGIN017_answer-simple
     Then skill SHALL вернуть output "Проблем не найдено"
     And output SHALL включать краткий список пройденных критериев
 
-  # @feature3 — US-3 / FR-3 / FR-5 / AC-3 / AC-5 (installer + migration)
+  # @feature5 — US-3 / FR-5 / AC-5 (atomic migration of rule + CLAUDE.md update)
 
-  @feature3
+  @feature5
   Scenario: PLUGIN017_05: v2-проводка и атомарная миграция rule выполнены в репозитории
     Given репозиторий dev-pomogator после атомарной миграции rule (v2 canonical)
     Then Stop-хук answer-simple SHALL быть подключён в `.claude-plugin/hooks.json`
@@ -45,30 +45,46 @@ Feature: PLUGIN017_answer-simple
     And новый путь правила `.claude/rules/answer-simple/clear-questions-to-user.md` SHALL присутствовать
     And `CLAUDE.md` SHALL ссылаться на новый путь и не содержать старый путь в backticks
 
-  # @feature4 — US-1 / FR-8 / AC-8 (Stop-hook runtime enforcement of plain language)
+  # @feature8 — US-1 / FR-8 / AC-8 (Stop-hook runtime enforcement of plain language)
 
-  @feature4
+  @feature8
   Scenario: PLUGIN017_06: детектор блокирует ответ-стену из внутренних кодов независимо от длины
     Given финальный ответ агента содержит >2 различных внутренних кода (FR-N, ARCH-N, SCREAMING_CODE) в прозе
     When detectJargon анализирует текст
     Then результат SHALL иметь block=true
     And reasons SHALL называть найденные коды бытовой формулировкой "стена внутренних кодов"
 
-  @feature4
+  @feature8
   Scenario: PLUGIN017_07: детектор пропускает чистую прозу и hard-OUT для кода/короткого
     Given ответ — чистая проза без внутренних кодов, либо преимущественно блок кода, либо короткий и чистый
     When detectJargon анализирует текст
     Then результат SHALL иметь block=false (ложноположительные исключены)
 
-  @feature4
+  @feature8
   Scenario: PLUGIN017_08: Stop-хук блокирует жаргонную стену с понятной причиной, пропускает чистый ответ
     Given answer_simple_stop.ts установлен и подключён как Stop-hook
     When на Stop приходит финальный ответ-стена из кодов
     Then хук SHALL вернуть `{"decision":"block"}` с reason на простом русском "Перепиши ответ проще"
     And на чистый ответ хук SHALL вернуть `{}` (разрешить)
 
-  @feature4
+  @feature8
   Scenario: PLUGIN017_09: Stop-хук защищён от петли — повтор того же текста и stop_hook_active пропускаются
     Given хук уже заблокировал конкретный ответ один раз
     When тот же текст приходит повторно ИЛИ stop_hook_active=true
     Then хук SHALL вернуть `{}` (не блокировать снова, исключая бесконечный цикл)
+
+  # @feature8 — FR-8 / AC-8 (regression tokens that slipped through before the 2026-06-11 fix)
+
+  @feature8
+  Scenario: PLUGIN017_10: детектор ловит конкретные токены FR-43c P18-1 SUPERSEDED HITL not_run SPECGEN003
+    Given тексты с токенами FR-43c и P18-1 и SUPERSEDED и HITL и not_run и SPECGEN003 встроены в длинную прозу
+    When detectJargon анализирует каждый текст
+    Then каждый токен SHALL быть обнаружен в stats.codes
+
+  # @feature7 — FR-7 / AC-7 (universal engineering vocabulary must not be flagged)
+
+  @feature7
+  Scenario: PLUGIN017_11: детектор не флагует общеупотребительные аббревиатуры JSON API HTTP GREEN OK DONE
+    Given текст содержит только общеупотребительные аббревиатуры JSON API HTTP GREEN OK DONE в прозе
+    When detectJargon анализирует текст
+    Then stats.codes SHALL быть пустым массивом
