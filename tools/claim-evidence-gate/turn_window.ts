@@ -169,3 +169,28 @@ export function bgInFlightInWindow(rawTranscript: string): boolean {
   }
   return launched > completed;
 }
+
+// Hook-injected lines that ride along on a user turn but are NOT the user's typed ask — the spec-tasks
+// banner, specs-validator output, gate kicks, task-notifications, system reminders. Stripped before
+// intent classification so a banner-only turn is not mistaken for the user's request.
+const HOOK_INJECTION_RE =
+  /^\s*(📋|👉|…ещё|\[specs-validator\]|⚠️|PHASE GATE WARNING|Stop hook feedback|UserPromptSubmit hook|<\/?task-notification|<(?:task-id|tool-use-id|output-file|status|summary)|\[SYSTEM NOTIFICATION|This is an automated|Do NOT interpret|[A-Za-z][\w.-]*:\s*\d+\s*(?:open|⏸))/u;
+
+/**
+ * Phase 1 (2026-06-21): the last REAL user prompt text — the agent-independent INTENT signal (the agent
+ * cannot fake the user's words). Hook-injected lines are stripped; a message whose whole text is
+ * hook-injection is skipped to the previous real user message. Empty string if none found.
+ */
+export function lastUserPrompt(rawTranscript: string): string {
+  const lines = parseLines(rawTranscript);
+  for (let i = lines.length - 1; i >= 0; i--) {
+    if (lines[i].isSidechain || !isRealUser(lines[i])) continue;
+    const cleaned = assistantText(lines[i])
+      .split(/\r?\n/)
+      .filter((ln) => !HOOK_INJECTION_RE.test(ln))
+      .join('\n')
+      .trim();
+    if (cleaned) return cleaned;
+  }
+  return '';
+}

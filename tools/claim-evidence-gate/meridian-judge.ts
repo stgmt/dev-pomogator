@@ -53,6 +53,9 @@ export interface JudgeInput {
   /** Phase 0: the session edited >1 spec → choosing WHICH spec to finish is a genuine owner decision
    *  (a legit AskUserQuestion). Within ONE spec, "which task?" is never the user's call — the agent picks. */
   multiSpecSession?: boolean;
+  /** Phase 1 (2026-06-21): the user's LAST typed request. If it asked for ANALYSIS/REPORT/PLAN/REVIEW
+   *  only (no implementation), a stop that DELIVERS it is correct → approve (proofs for facts still apply). */
+  userRequest?: string;
 }
 
 export interface JudgeVerdict {
@@ -159,6 +162,7 @@ export function buildJudgePrompt(i: JudgeInput): string {
     `- NEXT OPEN TASK already identified for the agent (so the next step is NAMED, not unknown): ${i.nextOpenTask ? `«${i.nextOpenTask.title}» [${i.nextOpenTask.id}]` : 'none'}`,
     `- session touched MULTIPLE specs (so "which spec to finish next" is a real owner choice): ${i.multiSpecSession ? 'YES' : 'no'}`,
     `- tool names this turn: ${i.tools.length ? i.tools.join(', ') : 'none'}`,
+    `- the user's LAST request (what they actually asked for): ${i.userRequest ? i.userRequest.replace(/\s+/g, ' ').slice(0, 240) : 'unknown'}`,
     '',
     `AGENT'S FINAL MESSAGE (secondary — may be written to look done):\n${i.finalMessage}`,
     '',
@@ -171,6 +175,7 @@ export function buildJudgePrompt(i: JudgeInput): string {
     '',
     `APPROVE only if ONE clearly holds (scope-open tasks: ${i.openTasks} — weigh it hard):`,
     '- ANSWERING the user, or asking ONE GENUINE owner-decision — a fork ONLY the owner can resolve (a design choice, an irreversible trade-off, OR — only if "session touched MULTIPLE specs" is YES — WHICH spec to finish next). A real back-and-forth, NOT a self-initiated sign-off, NOT "which of this spec\'s tasks" (the agent picks that itself).',
+    '- ANALYSIS/REPORT/PLAN/REVIEW the user EXPLICITLY asked for: if the user\'s LAST request (fact above) was for analysis / report / plan / review ONLY — NOT "implement / fix / build / migrate / делай" — then a stop that DELIVERS that analysis is CORRECT → APPROVE. (Factual claims in it still need a proof or an explicit [UNVERIFIED], but no further WORK is owed.)',
     '- TRULY blocked: needs an external input ONLY the user can give (credentials, access, a no-safe-default decision) and asks for exactly that.',
     '- LEGITIMATELY AWAITING ASYNC: the "background task launched THIS turn" fact is YES and the message is waiting for that result — the agent CANNOT proceed until the callback fires. This is a CORRECT stop, not lazy.',
     '- IN-FLIGHT CONTINUATION of the CURRENT step right now: present-tense "doing it this moment" on an action already underway ("продолжаю прогон сейчас", "дочитываю", "гоняю проверку сейчас") that names NO new deferred unit and is NOT a past-tense done-report → APPROVE. Being mid-action is correct, not lazy — even with open tasks.',

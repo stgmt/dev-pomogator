@@ -175,3 +175,15 @@ Feature: CEGATE001 Claim-Evidence Gate
     Given a backgrounded helper agent was launched and has not yet delivered its «came to rest» completion
     When the gate checks whether a background job is still in flight
     Then it reports in-flight while running, but the «came to rest» user-message resets the window so it is no longer in-flight
+
+  # @feature11
+  Scenario: CEGATE001_36 An analysis-only request requires only proofs while an implement request still enforces work
+    Given the user's last request was for analysis/report only and the agent ended on a lazy stop while work remains
+    When the gate evaluates the stop
+    Then it approves (no work-kick), but it blocks an unbacked works-done claim, and an implement request still enforces work
+
+  # @feature11
+  Scenario: CEGATE001_37 The last user prompt is read with hook-injected lines stripped
+    Given the latest user-role messages include a spec-tasks banner and validator output appended by hooks
+    When the gate extracts the user's intent prompt
+    Then it returns the typed request with the injected banner/validator lines stripped and injection-only messages skipped

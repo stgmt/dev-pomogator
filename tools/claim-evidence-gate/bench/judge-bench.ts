@@ -17,7 +17,7 @@
 import { judgeStop, judgeAvailable } from '../meridian-judge.ts';
 
 // [id, message, tools, expectBlock]
-export const JUDGE_CASES: Array<{ id: string; text: string; tools: string[]; block: boolean; mutating?: number; bg?: boolean; nextOpenTask?: { id: string; title: string } | null; multiSpec?: boolean }> = [
+export const JUDGE_CASES: Array<{ id: string; text: string; tools: string[]; block: boolean; mutating?: number; bg?: boolean; nextOpenTask?: { id: string; title: string } | null; multiSpec?: boolean; userRequest?: string }> = [
   { id: 'announce-launch-now', text: 'Дальше прогоняю полный набор тестов графа в Докере — запускаю сейчас.', tools: [], block: true },
   { id: 'self-defer-next-turn', text: 'Один конкретный следующий шаг: читаю требование через дверь. Делаю это сейчас, в следующем ходе.', tools: [], block: true },
   { id: 'begin-foundation', text: 'Начинаю Поток 1 с фундамента — атомарного писателя YAML.', tools: [], block: true },
@@ -44,9 +44,12 @@ export const JUDGE_CASES: Array<{ id: string; text: string; tools: string[]; blo
   { id: 'genuine-which-spec', text: 'Тронул две спеки, A и B, обе с открытыми задачами. Какую доделывать первой — твой приоритет?', tools: [], block: false, multiSpec: true },
   // Phase 0: CONTINUATION with a real mutation this turn → APPROVE (mid-task, not lazy).
   { id: 'continuation-with-edit', text: 'Продолжаю задачу — правлю файл прямо сейчас.', tools: ['Edit'], mutating: 1, block: false },
+  // Phase 1 (2026-06-21): the user asked for ANALYSIS/REPORT only — the judge approves a report-stop
+  // (a backstop for regex misses), even though it reads like a status-while-open.
+  { id: 'analysis-only-report-approve', text: 'Разбор готов: гейт переподстраховывает, вот три причины. Реализацию не трогаю.', tools: ['Read', 'Grep'], block: false, userRequest: 'сделай анализ и отчёт по гейту' },
 ];
 
-async function majorityBlock(c: { text: string; tools: string[]; mutating?: number; bg?: boolean; nextOpenTask?: { id: string; title: string } | null; multiSpec?: boolean }): Promise<boolean> {
+async function majorityBlock(c: { text: string; tools: string[]; mutating?: number; bg?: boolean; nextOpenTask?: { id: string; title: string } | null; multiSpec?: boolean; userRequest?: string }): Promise<boolean> {
   let blocks = 0;
   for (let i = 0; i < 3; i++) {
     const v = await judgeStop({
@@ -57,6 +60,7 @@ async function majorityBlock(c: { text: string; tools: string[]; mutating?: numb
       bgTaskLaunchedThisTurn: c.bg,
       nextOpenTask: c.nextOpenTask,
       multiSpecSession: c.multiSpec,
+      userRequest: c.userRequest,
     });
     if (v?.block) blocks++; // NULL (fail-open) counts as approve
   }

@@ -32,7 +32,7 @@ import path from 'node:path';
 
 import { log as _logShared, normalizePath } from '../_shared/hook-utils.ts';
 import { markerPath, readMarker, writeMarkerAtomic, isWithinCooldown, hashFileList } from '../_shared/marker-utils.ts';
-import { extractTurnWindow, bgInFlightInWindow } from './turn_window.ts';
+import { extractTurnWindow, bgInFlightInWindow, lastUserPrompt } from './turn_window.ts';
 import { firstUnsupported, isSpecCompletionClaim } from './claim_classifier.ts';
 import { readTaskCensusCache, scopeCensusToSlugs, sessionEditedSpecSlugs, type TaskCensusCache } from '../spec-graph/task-census.ts';
 import { judgeStop } from './meridian-judge.ts';
@@ -251,6 +251,18 @@ async function main(): Promise<void> {
   // suppressed — "готово, тесты прошли" while the job still runs is a false claim, caught as before.
   const awaitingAsync = bgInFlightInWindow(rawTranscript) || bgJobMarkerActive(repoRoot);
 
+  // Phase 1 (2026-06-21): intent of the LAST user prompt — the agent-independent INTENT signal (the agent
+  // can't fake the user's words). analysis-only = an analysis word AND no implement verb → require ONLY a
+  // proof for factual claims and DROP the work-demanding kicks (lazy-stop / no-next-section / blocker /
+  // judge / gate-meta / spec-false-close). Default (implement verb present OR ambiguous) → enforce-work
+  // (К4 conservative). The judge ALSO gets `userRequest` as a backstop for phrasings this regex misses.
+  const userRequest = lastUserPrompt(rawTranscript);
+  const ANALYSIS_RE = /\bанализ|разбер|разбор|оцен[иь]|отч[её]т|\breport\b|analyz|ревью|\breview\b|\bплан\b|\bplan\b|посмотри что|что думаешь|что не так/i;
+  // STRONG implement verbs only — NOT ambiguous "сделай/делай" (e.g. "сделай анализ", "план работ дай"
+  // are analysis). A bare "делай вариант X" has no analysis word → already falls through to enforce-work.
+  const IMPLEMENT_RE = /почини|\bfix\b|реализу|implement|\bbuild\b|мигрир|migrate|допиши|добавь|перепиши|внеси|закоммить|\bcommit\b/i;
+  const analysisOnly = ANALYSIS_RE.test(userRequest) && !IMPLEMENT_RE.test(userRequest);
+
   // α (2026-06-20): a turn spent INSPECTING / arguing with the GATE ITSELF — reading its own source,
   // the transcript or the fires-log — with NO real mutating edit is NOT progress. EDITING the gate
   // (mutatingToolsThisTurn>0) is real work and is never flagged, so improving the gate is never
@@ -314,6 +326,16 @@ async function main(): Promise<void> {
     }
   }
 
+  // Phase 1: on an ANALYSIS-only request, keep ONLY an UNBACKED factual claim — a works-done / verdict /
+  // not-found / verified claim with NO tool this turn AND no [UNVERIFIED] marker ("максимум — пруфы просить").
+  // Drop the work-demanding classes (spec-false-close / no-next-section / blocker). The judge + gate-meta
+  // are guarded out below by `!analysisOnly`. The intent is the USER's words, so the agent can't game it.
+  if (analysisOnly && unsupported) {
+    const PROOF_CLASSES = new Set(['works-done', 'analysis-verdict', 'not-found-impossible', 'verified-marker']);
+    const backed = toolUses.length > 0 || /\[UNVERIFIED\]/i.test(claimText);
+    if (!PROOF_CLASSES.has(unsupported.cls) || backed) unsupported = null;
+  }
+
   // FR-49e: gray-zone judge. The fast layer (regex + census fact + require-next-section) did not
   // block, but the turn ended on a progress/completion/continuation claim while the census shows
   // unfinished work. Escalate to the ПОМОГАТОР Haiku judge (the project's existing OpenAI-compatible
@@ -321,7 +343,7 @@ async function main(): Promise<void> {
   // the regex can't match. ON by default; set CLAIM_GATE_JUDGE=false to disable. SINGLE real path —
   // no mock, no secondary fallback endpoint (user 2026-06-17 «никаких моков и фолбеков»). judgeStop
   // logs WHY to stderr and returns null when помогатор is unreachable. Fires RARELY.
-  if (!unsupported && (process.env.CLAIM_GATE_JUDGE ?? 'true').toLowerCase() === 'true') {
+  if (!unsupported && !analysisOnly && (process.env.CLAIM_GATE_JUDGE ?? 'true').toLowerCase() === 'true') {
     const unfinished = scoped ? scoped.total.open + scoped.total.doneRed : 0; // FR-9b: exclude doneUnrun (не подтверждено) so a freshly recorded-done spec doesn't escalate the judge
     if (unfinished > 0 && GRAY_SIGNAL.test(claimText) && !awaitingAsync) {
       // A TRANSIENT judge failure (timeout / network blip → null) must NOT be a free pass —
@@ -341,6 +363,7 @@ async function main(): Promise<void> {
         // a multi-spec session makes "which spec to finish" a genuine owner choice (a legit AskUserQuestion).
         nextOpenTask: scoped?.specs?.[0]?.nextOpen ?? null,
         multiSpecSession: editedSlugs.size > 1,
+        userRequest, // Phase 1: backstop — the judge approves a report-stop the user asked for
       };
       let verdict = await judgeStop(jInput);
       if (verdict === null) verdict = await judgeStop(jInput);
@@ -365,7 +388,7 @@ async function main(): Promise<void> {
   // α: 2nd+ consecutive gate-inspection turn (read-only, no edit) while scope-work remains → block
   // with a BARE next-step demand. The hidden meta-reason is never shown, so it can't be gamed.
   const metaOpen = scoped ? scoped.total.open + scoped.total.doneRed : 0;
-  if (!unsupported && metaStreak >= 2 && metaOpen > 0) {
+  if (!unsupported && !analysisOnly && metaStreak >= 2 && metaOpen > 0) {
     const nx = scoped?.specs?.[0]?.nextOpen;
     unsupported = { cls: 'gate-meta', need: nx ? `делай: ${nx.title} [${nx.id}]` : 'делай конкретный следующий шаг по открытой задаче' };
   }

@@ -12,7 +12,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { classify, firstUnsupported, stripCode } from '../claim_classifier.ts';
-import { extractTurnWindow, bgInFlightInWindow } from '../turn_window.ts';
+import { extractTurnWindow, bgInFlightInWindow, lastUserPrompt } from '../turn_window.ts';
 
 const HOOK = path.resolve(__dirname, '..', 'claim_evidence_gate_stop.ts');
 
@@ -190,6 +190,20 @@ describe('CEGATE001: pure classifier units', () => {
     expect(out).not.toContain('работает');
     expect(out).not.toContain('существует');
     expect(out.replace(/\s+/g, ' ').trim()).toBe('текст и конец');
+  });
+
+  // @feature11 — Phase 1 (2026-06-21): lastUserPrompt returns the typed ask with hook-injected lines
+  // (the spec-tasks banner, specs-validator output, gate kicks, notifications) stripped, and SKIPS a
+  // message whose whole text is hook-injection (so a banner is never mistaken for the user's request).
+  it('CEGATE001_37: lastUserPrompt strips hook injections and skips injection-only messages', () => {
+    const raw = [
+      U('сделай анализ и отчёт'),
+      A([txt('ok')]),
+      U('📋 Spec tasks (census 2026-06-21): 210 open\n   👉 следующее: T25 [session-pilot:t25]\n[specs-validator] coverage gaps: 31 NOT_COVERED'),
+    ]
+      .map((r) => JSON.stringify(r))
+      .join('\n');
+    expect(lastUserPrompt(raw)).toBe('сделай анализ и отчёт');
   });
 
   // @feature11 — investigated for the 5a "agent-completion" tightening (real transcript shapes):
@@ -432,7 +446,7 @@ describe('CEGATE001: claim-evidence gate — spec-false-close class (FR-49b)', (
       U('почини спеку'),
       A([tool('Edit', { file_path: '.specs/demo/FR.md' })]),
       A([txt('готово')]),
-      U('теперь разберись почему гейт сработал'),
+      U('теперь доделывай открытые задачи demo'),
       A([tool('Read', { file_path: gateFile })]),
       A([txt('Посмотрел исходник гейта — похоже на ложное срабатывание.')]),
     ];
@@ -448,5 +462,21 @@ describe('CEGATE001: claim-evidence gate — spec-false-close class (FR-49b)', (
       A([txt('Поправил логику гейта в исходнике.')]),
     ];
     expect(runHook(edit, env).blocked).toBe(false); // editing the gate → approve (work, not meta)
+  });
+
+  // @feature11 — Phase 1 (2026-06-21): when the user's LAST request was ANALYSIS/REPORT/PLAN/REVIEW only,
+  // the gate drops the work-demanding kicks and requires ONLY a proof for factual claims; an IMPLEMENT
+  // request still enforces work. Intent comes from the USER's words → the agent can't game it.
+  it('CEGATE001_36: analysis-only request requires only proofs (no work-kick); implement request enforces', () => {
+    writeCensus(dir, { open: 11, doneRed: 0, doneUnrun: 0 }, { id: 'demo:t1', title: 'Wire the gate' });
+    // earlier-window edit scopes demo (FR-9); the prompt + claim follow, so the claim turn carries 0 tools.
+    const scope = [U('правлю требование'), A([tool('Edit', { file_path: '.specs/demo/FR.md' })]), A([txt('готово')])];
+    const env = { CLAIM_GATE_JUDGE: 'false' };
+    // analysis-only + a lazy stop (gray, no «Дальше:») → work-kick dropped → approve.
+    expect(runHook([...scope, U('сделай анализ и отчёт'), A([txt('Продолжаю разбор, тут всё.')])], env).blocked).toBe(false);
+    // analysis-only + an UNBACKED works-done claim (0 tools, no [UNVERIFIED]) → proof required → block.
+    expect(runHook([...scope, U('анализ и отчёт'), A([txt('Всё работает, фикс задеплоен.')])], env).blocked).toBe(true);
+    // implement request + the same lazy stop → enforce-work → block.
+    expect(runHook([...scope, U('почини баг в парсере'), A([txt('Продолжаю, тут всё.')])], env).blocked).toBe(true);
   });
 });
