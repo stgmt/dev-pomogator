@@ -462,3 +462,37 @@ Feature: TESTQUAL001_strong-tests skill — mutation-resistant test generation a
     When scan is called on TS source "ts_iterator_return"
     Then the first candidate suggestedInvariants SHALL contain "idempotence"
     And the first candidate suggestedInvariants SHALL contain "monotonicity"
+
+  @feature12
+  Scenario: TESTQUAL001_DOTNET_11_run_mutation_dry_run_on_csharp_fixture_returns_stack_csharp_tool_stryker_net
+    Given the dotnet-stryker-target fixture is copied to a temp directory
+    When run-mutation.ts is spawned with --dry-run on that temp directory
+    Then the run-mutation.ts dry-run exit code SHALL be 0
+    And the run-mutation.ts dry-run stdout JSON stack field SHALL be "csharp"
+    And the run-mutation.ts dry-run stdout JSON tool field SHALL be "stryker-net"
+    And the run-mutation.ts dry-run stdout JSON warnings array SHALL contain "--dry-run: did not invoke Stryker.NET subprocess"
+
+  @feature7
+  Scenario: TESTQUAL001_DOTNET_11b_detector_identifies_CollectionPipeline_ProcessItems_as_composition_chain
+    Given the real C# fixture file Library dot Shared slash CollectionPipeline dot cs is read from the dotnet-stryker-target fixture
+    When the in-process scan is invoked on that C# fixture file content with stack csharp
+    Then the dotnet C# scan SHALL identify a candidate named "ProcessItems"
+    And the dotnet C# candidate "ProcessItems" kind SHALL be "composition-chain"
+    And the dotnet C# candidate "ProcessItems" suggestedInvariants SHALL contain "monotonicity"
+
+  @feature7
+  Scenario: TESTQUAL001_DOTNET_11d_detector_identifies_CartesianProduct_CrossJoin_as_nxm_overlap
+    Given the real C# fixture file Library dot Shared slash CartesianProduct dot cs is read from the dotnet-stryker-target fixture
+    When the in-process scan is invoked on that C# fixture file content with stack csharp
+    Then the dotnet C# scan SHALL identify a candidate named "CrossJoin"
+    And the dotnet C# candidate "CrossJoin" kind SHALL be "nxm-overlap"
+    And the dotnet C# candidate "CrossJoin" suggestedInvariants SHALL contain "conservation"
+
+  @feature12
+  Scenario: TESTQUAL001_DOTNET_11c_full_stryker_net_run_on_csharp_fixture_produces_mutation_report
+    Given the dotnet-stryker-target fixture is copied to a temp directory for full stryker run
+    When run-mutation.ts is spawned without --dry-run on that temp directory for full stryker run
+    Then the full stryker-net run exit code SHALL be 0 or 1
+    And the full stryker-net run stdout JSON stack field SHALL be "csharp"
+    And the full stryker-net run stdout JSON tool field SHALL be "stryker-net"
+    And the full stryker-net run stdout JSON totalMutants field SHALL be greater than 0

@@ -1345,3 +1345,287 @@ Then(
     );
   },
 );
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TESTQUAL001_DOTNET_11  — @feature12  (FR-12: Stryker.NET dispatch, dry-run)
+// TESTQUAL001_DOTNET_11b — @feature7   (FR-7: detect composition-chain in real
+//                                       CollectionPipeline.cs fixture)
+// TESTQUAL001_DOTNET_11d — @feature7   (FR-7: detect nxm-overlap in real
+//                                       CartesianProduct.cs fixture)
+// TESTQUAL001_DOTNET_11c — @feature12  (FR-12: full Stryker.NET run; PENDING on
+//                                       host when dotnet-stryker absent; runs in
+//                                       Docker where .NET 8 SDK + dotnet-stryker
+//                                       are installed per commit 1237da5)
+//
+// All drive the REAL run-mutation.ts / detect-invariant-candidates.ts.  No mocks.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const DOTNET_FIXTURE_DIR = path.join(REPO_ROOT, 'tests', 'fixtures', 'dotnet-stryker-target');
+const RUN_MUTATION_PATH = path.join(
+  REPO_ROOT,
+  '.claude',
+  'skills',
+  'strong-tests',
+  'scripts',
+  'run-mutation.ts',
+);
+// tsx CLI resolved from REPO_ROOT node_modules — avoids `--import tsx` package-resolution failure
+// when cwd=tempDir (no node_modules there). Pattern: `node <tsx_cli> <script>` works from any cwd.
+const TSX_CLI = path.join(REPO_ROOT, 'node_modules', 'tsx', 'dist', 'cli.cjs');
+
+// Shared storage for the dotnet scenarios
+interface DotnetWorld {
+  tempDir: string | null;
+  spawnResult: { stdout: string; stderr: string; status: number | null } | null;
+  parsedReport: Record<string, unknown> | null;
+  csScanResult: ReturnType<typeof scan> | null;
+}
+
+let dw: DotnetWorld = { tempDir: null, spawnResult: null, parsedReport: null, csScanResult: null };
+
+Before({ tags: 'not @manual' }, function () {
+  dw = { tempDir: null, spawnResult: null, parsedReport: null, csScanResult: null };
+});
+
+// ── TESTQUAL001_DOTNET_11 & 11c Given steps ──────────────────────────────────
+
+Given(
+  /^the dotnet-stryker-target fixture is copied to a temp directory$/,
+  function () {
+    dw.tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'strong-tests-dotnet-'));
+    fs.cpSync(DOTNET_FIXTURE_DIR, dw.tempDir, { recursive: true });
+  },
+);
+
+Given(
+  /^the dotnet-stryker-target fixture is copied to a temp directory for full stryker run$/,
+  function () {
+    // Same setup — separate step text to disambiguate the two @feature12 scenarios
+    dw.tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'strong-tests-dotnet-full-'));
+    fs.cpSync(DOTNET_FIXTURE_DIR, dw.tempDir, { recursive: true });
+  },
+);
+
+// ── TESTQUAL001_DOTNET_11 When ────────────────────────────────────────────────
+
+When(
+  /^run-mutation\.ts is spawned with --dry-run on that temp directory$/,
+  function () {
+    assert.ok(dw.tempDir, 'dotnet tempDir must be set');
+    // node <tsx_cli> <script> --dry-run with cwd=tempDir so detectStack() scans the C# fixture.
+    // Cannot use `--import tsx` with cwd=tempDir (no node_modules there → ERR_MODULE_NOT_FOUND).
+    const res = spawnSync(
+      process.execPath,
+      [TSX_CLI, RUN_MUTATION_PATH, '--dry-run'],
+      {
+        cwd: dw.tempDir,
+        encoding: 'utf-8',
+        timeout: 60_000,
+        env: { ...process.env },
+      },
+    );
+    dw.spawnResult = { stdout: res.stdout ?? '', stderr: res.stderr ?? '', status: res.status };
+    assert.ok(
+      dw.spawnResult.stdout.trim().length > 0,
+      `run-mutation.ts --dry-run produced no stdout. stderr: ${dw.spawnResult.stderr.slice(0, 500)}`,
+    );
+    dw.parsedReport = JSON.parse(dw.spawnResult.stdout) as Record<string, unknown>;
+  },
+);
+
+// ── TESTQUAL001_DOTNET_11 Then steps ─────────────────────────────────────────
+
+Then(
+  /^the run-mutation\.ts dry-run exit code SHALL be 0$/,
+  function () {
+    assert.equal(
+      dw.spawnResult!.status,
+      0,
+      `run-mutation.ts --dry-run must exit 0; got ${dw.spawnResult!.status}. stderr: ${dw.spawnResult!.stderr.slice(0, 500)}`,
+    );
+  },
+);
+
+Then(
+  /^the run-mutation\.ts dry-run stdout JSON stack field SHALL be "([^"]*)"$/,
+  function (expected: string) {
+    assert.equal(
+      dw.parsedReport!['stack'],
+      expected,
+      `expected stack="${expected}", got "${dw.parsedReport!['stack']}"`,
+    );
+  },
+);
+
+Then(
+  /^the run-mutation\.ts dry-run stdout JSON tool field SHALL be "([^"]*)"$/,
+  function (expected: string) {
+    assert.equal(
+      dw.parsedReport!['tool'],
+      expected,
+      `expected tool="${expected}", got "${dw.parsedReport!['tool']}"`,
+    );
+  },
+);
+
+Then(
+  /^the run-mutation\.ts dry-run stdout JSON warnings array SHALL contain "([^"]*)"$/,
+  function (expected: string) {
+    const warnings = dw.parsedReport!['warnings'] as string[];
+    assert.ok(
+      Array.isArray(warnings) && warnings.some((w) => w.includes(expected)),
+      `expected warnings to contain "${expected}"; got ${JSON.stringify(warnings)}`,
+    );
+  },
+);
+
+// ── TESTQUAL001_DOTNET_11b & 11d Given/When/Then ─────────────────────────────
+
+Given(
+  /^the real C# fixture file Library dot Shared slash CollectionPipeline dot cs is read from the dotnet-stryker-target fixture$/,
+  function () {
+    const filePath = path.join(DOTNET_FIXTURE_DIR, 'Library.Shared', 'CollectionPipeline.cs');
+    const content = fs.readFileSync(filePath, 'utf-8');
+    world.content = content;
+    world.tempFile = filePath;
+  },
+);
+
+Given(
+  /^the real C# fixture file Library dot Shared slash CartesianProduct dot cs is read from the dotnet-stryker-target fixture$/,
+  function () {
+    const filePath = path.join(DOTNET_FIXTURE_DIR, 'Library.Shared', 'CartesianProduct.cs');
+    const content = fs.readFileSync(filePath, 'utf-8');
+    world.content = content;
+    world.tempFile = filePath;
+  },
+);
+
+When(
+  /^the in-process scan is invoked on that C# fixture file content with stack csharp$/,
+  function () {
+    assert.ok(world.tempFile, 'tempFile must be set');
+    assert.ok(world.content, 'content must be set');
+    const stack: Stack = detectStack(world.tempFile);
+    assert.equal(stack, 'csharp', `detectStack must return 'csharp' for .cs file; got '${stack}'`);
+    dw.csScanResult = scan(world.content, stack);
+  },
+);
+
+Then(
+  /^the dotnet C# scan SHALL identify a candidate named "([^"]*)"$/,
+  function (fnName: string) {
+    assert.ok(dw.csScanResult, 'C# scan result must exist');
+    const found = dw.csScanResult.candidates.find((c) => c.function === fnName);
+    assert.ok(
+      found,
+      `Expected candidate named "${fnName}"; got candidates: ${JSON.stringify(dw.csScanResult.candidates.map((c) => c.function))}`,
+    );
+  },
+);
+
+Then(
+  /^the dotnet C# candidate "([^"]*)" kind SHALL be "([^"]*)"$/,
+  function (fnName: string, expectedKind: string) {
+    assert.ok(dw.csScanResult, 'C# scan result must exist');
+    const c = dw.csScanResult.candidates.find((c) => c.function === fnName);
+    assert.ok(c, `candidate "${fnName}" not found`);
+    assert.equal(
+      c.kind,
+      expectedKind,
+      `expected "${fnName}" kind="${expectedKind}", got "${c.kind}"`,
+    );
+  },
+);
+
+Then(
+  /^the dotnet C# candidate "([^"]*)" suggestedInvariants SHALL contain "([^"]*)"$/,
+  function (fnName: string, invariant: string) {
+    assert.ok(dw.csScanResult, 'C# scan result must exist');
+    const c = dw.csScanResult.candidates.find((c) => c.function === fnName);
+    assert.ok(c, `candidate "${fnName}" not found`);
+    assert.ok(
+      c.suggestedInvariants.includes(invariant),
+      `expected "${fnName}" suggestedInvariants to contain "${invariant}"; got ${JSON.stringify(c.suggestedInvariants)}`,
+    );
+  },
+);
+
+// ── TESTQUAL001_DOTNET_11c When/Then ─────────────────────────────────────────
+
+When(
+  /^run-mutation\.ts is spawned without --dry-run on that temp directory for full stryker run$/,
+  function () {
+    assert.ok(dw.tempDir, 'dotnet tempDir must be set for full stryker run');
+    // Pending on host when dotnet-stryker not in PATH — runs fully in Docker (commit 1237da5)
+    const check = spawnSync('dotnet-stryker', ['--help'], { encoding: 'utf-8', timeout: 10_000 });
+    if (check.status !== 0 || check.error) {
+      // dotnet-stryker unavailable — honest pending; Docker canonical run has it installed
+      return 'pending';
+    }
+    // node <tsx_cli> <script> with cwd=tempDir so detectStack() finds C# fixture + stryker-config.json
+    const res = spawnSync(
+      process.execPath,
+      [TSX_CLI, RUN_MUTATION_PATH],
+      {
+        cwd: dw.tempDir,
+        encoding: 'utf-8',
+        timeout: 60 * 60_000, // 1 hour — Stryker.NET can be slow on first run
+        env: { ...process.env },
+      },
+    );
+    dw.spawnResult = { stdout: res.stdout ?? '', stderr: res.stderr ?? '', status: res.status };
+    assert.ok(
+      dw.spawnResult.stdout.trim().length > 0,
+      `run-mutation.ts (full run) produced no stdout. stderr: ${dw.spawnResult.stderr.slice(0, 500)}`,
+    );
+    dw.parsedReport = JSON.parse(dw.spawnResult.stdout) as Record<string, unknown>;
+  },
+);
+
+Then(
+  /^the full stryker-net run exit code SHALL be 0 or 1$/,
+  function () {
+    if (dw.spawnResult === null) return 'pending';
+    assert.ok(
+      dw.spawnResult.status === 0 || dw.spawnResult.status === 1,
+      `full Stryker.NET run must exit 0 (threshold met) or 1 (below threshold); got ${dw.spawnResult.status}. stderr: ${dw.spawnResult.stderr.slice(0, 500)}`,
+    );
+  },
+);
+
+Then(
+  /^the full stryker-net run stdout JSON stack field SHALL be "([^"]*)"$/,
+  function (expected: string) {
+    if (dw.parsedReport === null) return 'pending';
+    assert.equal(
+      dw.parsedReport['stack'],
+      expected,
+      `expected stack="${expected}", got "${dw.parsedReport['stack']}"`,
+    );
+  },
+);
+
+Then(
+  /^the full stryker-net run stdout JSON tool field SHALL be "([^"]*)"$/,
+  function (expected: string) {
+    if (dw.parsedReport === null) return 'pending';
+    assert.equal(
+      dw.parsedReport['tool'],
+      expected,
+      `expected tool="${expected}", got "${dw.parsedReport['tool']}"`,
+    );
+  },
+);
+
+Then(
+  /^the full stryker-net run stdout JSON totalMutants field SHALL be greater than 0$/,
+  function () {
+    if (dw.parsedReport === null) return 'pending';
+    const total = dw.parsedReport['totalMutants'] as number;
+    assert.ok(
+      typeof total === 'number' && total > 0,
+      `expected totalMutants > 0; got ${total}`,
+    );
+  },
+);
