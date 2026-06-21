@@ -21,7 +21,7 @@ Score = `(killed + timeout) / (killed + timeout + survived + noCoverage)`.
 | Command | Config | Runner | Target |
 |---|---|---|---|
 | `npm run mutation` | `stryker.real.config.mjs` | vitest, perTest | real product modules (ndjson parser, fr-census, add-task-ids) |
-| `npm run mutation:skill` | `stryker.config.mjs` | vitest, off | strong-tests `detect-invariant-candidates.ts` |
+| `npm run mutation:skill` | `stryker.bdd.config.mjs` | **cucumber-runner, perTest** | strong-tests `detect-invariant-candidates.ts` via its `@feature7` BDD scenarios (vitest unit twin retired — BDD-only) |
 | `npm run mutation:specgen` | `stryker.specgen.config.mjs` | vitest, perTest, ignoreStatic | the v4 spec-graph subsystem (42 files) |
 | `npm run mutation:bdd` | `stryker.bdd.config.mjs` | **cucumber-runner, perTest, concurrency 100%** | code via its BDD `@featureN` scenarios |
 
