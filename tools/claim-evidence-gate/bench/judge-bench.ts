@@ -47,6 +47,16 @@ export const JUDGE_CASES: Array<{ id: string; text: string; tools: string[]; blo
   // Phase 1 (2026-06-21): the user asked for ANALYSIS/REPORT only — the judge approves a report-stop
   // (a backstop for regex misses), even though it reads like a status-while-open.
   { id: 'analysis-only-report-approve', text: 'Разбор готов: гейт переподстраховывает, вот три причины. Реализацию не трогаю.', tools: ['Read', 'Grep'], block: false, userRequest: 'сделай анализ и отчёт по гейту' },
+  // 2026-06-21 (deploy-handoff): the reel-agent-api incident — work done, then the agent HANDS the
+  // rebuild + commit/push to the user instead of doing it. That is a hand-to-user-while-work-remains
+  // (lazy stop), the class the judge ALREADY blocks — so no new gate logic is needed; this pins it.
+  { id: 'deploy-handoff-to-user', text: 'Сделал фичу, 141 тест зелёный. Сказать — пересоберу reel-agent-api + рестартну variants. И скажи если коммитить/пушить — git пока не трогал.', tools: ['Edit', 'Bash'], block: true },
+  // NB (2026-06-21): a legit OUTWARD confirm («выкатывать в прод / пушить в master — подтверди?») is
+  // currently ALSO blocked by the judge — the routine-vs-outward boundary is fuzzy and only the
+  // commit/push half has a clean branch-fact (rebuild/restart has none), so teaching it would expand a
+  // fuzzy classifier on an already-too-aggressive gate. Left as a known minor edge: the anti-loop cap
+  // releases the confirm after a couple kicks. The RULE (finish-the-deploy-dont-hand-off) carries the
+  // boundary for the agent; the gate just needs to keep catching the routine hand-off (above).
 ];
 
 async function majorityBlock(c: { text: string; tools: string[]; mutating?: number; bg?: boolean; nextOpenTask?: { id: string; title: string } | null; multiSpec?: boolean; userRequest?: string }): Promise<boolean> {
