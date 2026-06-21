@@ -84,10 +84,16 @@ export function parseScenarios(feature: string): ScenarioInfo[] {
   return out;
 }
 
-/** Symbols imported from a `tools/` module — invoking one in a test = a real engine call. */
+/** Symbols imported from a production module — invoking one in a test = a real engine call. Production
+ *  code lives under BOTH `tools/` AND `.claude/{skills,rules,agents,commands}/<x>/scripts/` (e.g.
+ *  strong-tests' `scan`/`nestedLoopCount`/`suggestInvariants` from
+ *  `.claude/skills/strong-tests/scripts/detect-invariant-candidates.ts`, spec-reality-check's
+ *  `verify.ts`). The old `tools/`-only match mis-labelled those in-process drivers as `unknown` →
+ *  inflated the `needs-triage` U: count for every skill-homed spec (dogfood 2026-06-21: strong-tests'
+ *  48 kill-surface tests showed as a false migration backlog). */
 export function toolImportSymbols(src: string): string[] {
   const syms: string[] = [];
-  const re = /import\s*(?:type\s*)?\{([^}]+)\}\s*from\s*['"][^'"]*tools\/[^'"]+['"]/g;
+  const re = /import\s*(?:type\s*)?\{([^}]+)\}\s*from\s*['"][^'"]*(?:tools|\.claude\/(?:skills|rules|agents|commands))\/[^'"]+['"]/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(src))) {
     for (const s of m[1].split(',')) {

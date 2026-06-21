@@ -7,7 +7,7 @@
  * REAL exported `testAttributesToSpec` — no mocks.
  */
 import { describe, it, expect } from 'vitest';
-import { testAttributesToSpec, isComponentHomed } from '../migrate.ts';
+import { testAttributesToSpec, isComponentHomed, toolImportSymbols, classifyTestBody } from '../migrate.ts';
 
 describe('MIGRATE001: vitest-twin attribution by spec code dir (dogfood 2026-06-21)', () => {
   it('MIGRATE001_01: attributes a test that references the spec code dir tools/<slug>/', () => {
@@ -46,5 +46,36 @@ describe('MIGRATE001: vitest-twin attribution by spec code dir (dogfood 2026-06-
   it('MIGRATE001_07: a test under tests/e2e or tests/unit is NOT component-homed (content-attribution applies)', () => {
     expect(isComponentHomed('tests/e2e/test-guard.test.ts')).toBe(false);
     expect(isComponentHomed('tests/unit/plan-gate-scope-advisory.test.ts')).toBe(false);
+  });
+});
+
+// Production code lives under .claude/{skills,rules,…}/<x>/scripts/ as well as tools/. A test that
+// imports + calls such a symbol IN-PROCESS is a real engine driver (runtime), not 'unknown'. The
+// old tools/-only symbol scan mis-labelled them → a false needs-triage U: count for skill-homed specs
+// (dogfood 2026-06-21: strong-tests' 48 Stryker-kill-surface tests calling scan()/nestedLoopCount()/
+// suggestInvariants() from .claude/skills/strong-tests/scripts/ all showed as 'unknown').
+describe('MIGRATE002: skill-homed production imports classify as runtime (dogfood 2026-06-21)', () => {
+  it('MIGRATE002_01: toolImportSymbols captures a symbol imported from .claude/skills/<x>/scripts/', () => {
+    const src = `import { scan, nestedLoopCount } from '../../.claude/skills/strong-tests/scripts/detect-invariant-candidates.ts';`;
+    expect(toolImportSymbols(src)).toEqual(expect.arrayContaining(['scan', 'nestedLoopCount']));
+  });
+
+  it('MIGRATE002_02: still captures the legacy tools/ import (no regression)', () => {
+    const src = `import { ensureSkillListingBudget } from '../../tools/skill-listing-budget/ensure.ts';`;
+    expect(toolImportSymbols(src)).toContain('ensureSkillListingBudget');
+  });
+
+  it('MIGRATE002_03: an in-process call to a .claude-imported symbol is runtime, not unknown', () => {
+    // scan() does NOT match the verb-prefix heuristic → it relied on the symbol list, which the
+    // tools/-only scan missed. This is the exact strong-tests U:48 case.
+    const src = `import { scan } from '../../.claude/skills/strong-tests/scripts/detect-invariant-candidates.ts';`;
+    const syms = toolImportSymbols(src);
+    const body = `it('scans', () => { const r = scan(code, 'ts'); expect(r.length).toBe(2); });`;
+    expect(classifyTestBody(body, syms)).toBe('runtime');
+  });
+
+  it('MIGRATE002_04: a body that drives nothing real is still unknown (no over-classification)', () => {
+    const body = `it('adds', () => { expect(1 + 1).toBe(2); });`;
+    expect(classifyTestBody(body, [])).toBe('unknown');
   });
 });
