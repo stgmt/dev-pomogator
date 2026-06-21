@@ -126,13 +126,13 @@ Feature: PLUGIN012_TUI_Test_Runner
     When the tui_session_start hook receives empty stdin
     Then the tui_session_start hook should exit with code 0
 
-  @feature9
+  @feature6
   Scenario: Launcher detects Python availability
     Given Python 3.9+ is available on the host
     When the TUI launcher checks Python availability
     Then the launcher should report Python as available
 
-  @feature9
+  @feature6
   Scenario: Launcher reports Python unavailable when none on PATH
     Given no Python interpreter is available to the TUI launcher
     When the TUI launcher checks Python availability with no interpreter on PATH
@@ -158,23 +158,41 @@ Feature: PLUGIN012_TUI_Test_Runner
     And the wrapper should write a canonical v2 status with one pass and one fail
     And the wrapper should populate the advertised log file
 
-  @feature10
+  @feature6
   Scenario: Jest, pytest, dotnet, cargo and go adapters emit runtime events
     Given dev-pomogator is installed
     When each framework adapter processes its sample output
     Then each adapter should emit summary or test events for its framework
 
-  @feature10
+  @feature6
   Scenario: Dotnet adapter parses verbose output with leading-whitespace summary
     Given dev-pomogator is installed
     When the dotnet adapter processes the verbose output sample
     Then the dotnet adapter should report 3 passed, 1 failed, 1 skipped
 
-  @feature10
+  @feature6
   Scenario: Dotnet adapter parses minimal single-line summary
     Given dev-pomogator is installed
     When the dotnet adapter processes the minimal single-line summary
     Then the dotnet adapter should report a 4-total summary
+
+  @feature6
+  Scenario: All adapters continue to emit correct event counts for their fixture outputs
+    Given dev-pomogator is installed
+    When each framework adapter processes its canonical fixture output
+    Then each adapter should emit the exact expected event counts per framework
+
+  @feature6
+  Scenario: yaml-v2-running fixture is a canonical v2 status file
+    Given dev-pomogator is installed
+    When the yaml-v2-running fixture is parsed
+    Then it should have version 2 and the required canonical v2 fields
+
+  @feature6
+  Scenario: yaml-v2-full fixture keeps top-level summary alongside suites and phases
+    Given dev-pomogator is installed
+    When the yaml-v2-full fixture is parsed
+    Then it should have version 2 with top-level counters and non-empty suites and phases arrays
 
   @feature6
   Scenario: Generic adapter returns null for every line (passthrough)
@@ -249,33 +267,33 @@ Feature: PLUGIN012_TUI_Test_Runner
     When the TUI analyst reads both pattern-precedence status files
     Then the keyword-only failure should match by keywords and the regex failure by regex+keywords
 
-  @feature9
+  @feature6
   Scenario: Python package entrypoint is launchable via python -m tui
     Given dev-pomogator is installed
     When the TUI package is invoked via python -m tui --help
     Then the TUI help output should advertise the --status-file option
 
-  @feature9
+  @feature6
   Scenario: Store alias guard flags when the only resolved path is the WindowsApps stub
     Given the resolved python paths are only WindowsApps stubs
     Then the Store alias guard should flag all paths as alias-only
 
-  @feature9
+  @feature6
   Scenario: Store alias guard flags when every resolved path is a WindowsApps stub
     Given the resolved python paths are multiple WindowsApps stubs
     Then the Store alias guard should flag all paths as alias-only
 
-  @feature9
+  @feature6
   Scenario: Store alias guard does not flag when a real interpreter resolves before the stub
     Given the resolved python paths include a real interpreter before the WindowsApps stub
     Then the Store alias guard should not flag the paths as alias-only
 
-  @feature9
+  @feature6
   Scenario: Store alias guard does not flag a forward-slash real interpreter path
     Given the resolved python paths are a single forward-slash real interpreter
     Then the Store alias guard should not flag the paths as alias-only
 
-  @feature9
+  @feature6
   Scenario: Store alias guard treats empty or whitespace-only resolution as not-alias
     Given the resolved python paths are empty or whitespace-only
     Then the Store alias guard should not flag the paths as alias-only

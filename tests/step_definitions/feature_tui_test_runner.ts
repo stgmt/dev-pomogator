@@ -1399,3 +1399,115 @@ Then(/^the registry should have a Bash PreToolUse entry for test_guard$/, functi
     `expected a Bash PreToolUse entry for test_guard; got entries: ${JSON.stringify(preEntries.map((e) => ({ matcher: e.matcher, commands: (e.hooks ?? []).map((h) => h.command) })))}`,
   );
 });
+
+// --- @feature6: regression event-count check for all adapters (in-process) -----
+When(
+  /^each framework adapter processes its canonical fixture output$/,
+  async function (this: TuiWorld) {
+    const [
+      { VitestAdapter },
+      { JestAdapter },
+      { PytestAdapter },
+      { DotnetAdapter },
+      { CargoAdapter },
+      { GoTestAdapter },
+    ] = await Promise.all([
+      importAdapter('vitest_adapter.ts'),
+      importAdapter('jest_adapter.ts'),
+      importAdapter('pytest_adapter.ts'),
+      importAdapter('dotnet_adapter.ts'),
+      importAdapter('cargo_adapter.ts'),
+      importAdapter('go_test_adapter.ts'),
+    ]);
+    const lines = (f: string) => fs.readFileSync(fixturePath(f), 'utf-8').split(/\r?\n/);
+    (this as any).regressionMatrix = {
+      vitest: Array.from(new VitestAdapter().processLines(lines('vitest-output.txt'))),
+      jest: Array.from(new JestAdapter().processLines(lines('jest-output-sample.txt'))),
+      pytest: Array.from(new PytestAdapter().processLines(lines('pytest-output-sample.txt'))),
+      dotnet: Array.from(new DotnetAdapter().processLines(lines('dotnet-output-sample.txt'))),
+      cargo: Array.from(new CargoAdapter().processLines(lines('cargo-output-sample.txt'))),
+      go: Array.from(new GoTestAdapter().processLines(lines('go-test-output-sample.txt'))),
+    };
+  },
+);
+
+Then(
+  /^each adapter should emit the exact expected event counts per framework$/,
+  function (this: TuiWorld) {
+    const m = (this as any).regressionMatrix;
+    const count = (evts: any[], t: string) => evts.filter((e) => e.type === t).length;
+    // Vitest: 3 pass, 1 fail, 1 skip
+    assert.equal(count(m.vitest, 'test_pass'), 3, 'vitest pass count');
+    assert.equal(count(m.vitest, 'test_fail'), 1, 'vitest fail count');
+    assert.equal(count(m.vitest, 'test_skip'), 1, 'vitest skip count');
+    // Jest: 1 pass, 1 fail
+    assert.equal(count(m.jest, 'test_pass'), 1, 'jest pass count');
+    assert.equal(count(m.jest, 'test_fail'), 1, 'jest fail count');
+    // Pytest: 1 pass, 1 fail
+    assert.equal(count(m.pytest, 'test_pass'), 1, 'pytest pass count');
+    assert.equal(count(m.pytest, 'test_fail'), 1, 'pytest fail count');
+    // Dotnet: 1 pass, 1 fail; summary total=2
+    assert.equal(count(m.dotnet, 'test_pass'), 1, 'dotnet pass count');
+    assert.equal(count(m.dotnet, 'test_fail'), 1, 'dotnet fail count');
+    const dotnetSummary = m.dotnet.filter((e: any) => e.type === 'summary').pop();
+    assert.ok(dotnetSummary, 'dotnet summary present');
+    assert.equal(dotnetSummary.summary.total, 2, 'dotnet summary total');
+    // Cargo: 1 pass, 1 fail
+    assert.equal(count(m.cargo, 'test_pass'), 1, 'cargo pass count');
+    assert.equal(count(m.cargo, 'test_fail'), 1, 'cargo fail count');
+    // Go: 1 pass, 1 fail
+    assert.equal(count(m.go, 'test_pass'), 1, 'go pass count');
+    assert.equal(count(m.go, 'test_fail'), 1, 'go fail count');
+  },
+);
+
+// --- @feature6: canonical YAML fixture shape assertions (artifact class) -------
+When(
+  /^the yaml-v2-running fixture is parsed$/,
+  async function (this: TuiWorld) {
+    const { parse } = await import('yaml');
+    (this as any).yamlRunning = parse(
+      fs.readFileSync(fixturePath('yaml-v2-running.yaml'), 'utf-8'),
+    ) as Record<string, any>;
+  },
+);
+
+Then(
+  /^it should have version 2 and the required canonical v2 fields$/,
+  function (this: TuiWorld) {
+    const d = (this as any).yamlRunning as Record<string, any>;
+    assert.equal(d.version, 2, 'version must be 2');
+    assert.equal(d.framework, 'vitest', 'framework must be vitest');
+    assert.ok(d.session_id, 'session_id must be present');
+    assert.ok(d.pid, 'pid must be present');
+    assert.ok(d.log_file, 'log_file must be present');
+    assert.deepEqual(d.suites, [], 'suites must be empty array');
+    assert.deepEqual(d.phases, [], 'phases must be empty array');
+  },
+);
+
+When(
+  /^the yaml-v2-full fixture is parsed$/,
+  async function (this: TuiWorld) {
+    const { parse } = await import('yaml');
+    (this as any).yamlFull = parse(
+      fs.readFileSync(fixturePath('yaml-v2-full.yaml'), 'utf-8'),
+    ) as Record<string, any>;
+  },
+);
+
+Then(
+  /^it should have version 2 with top-level counters and non-empty suites and phases arrays$/,
+  function (this: TuiWorld) {
+    const d = (this as any).yamlFull as Record<string, any>;
+    assert.equal(d.version, 2, 'version must be 2');
+    assert.equal(d.total, 10, 'total must be 10');
+    assert.equal(d.passed, 6, 'passed must be 6');
+    assert.equal(d.failed, 1, 'failed must be 1');
+    assert.ok(Array.isArray(d.suites) && d.suites.length > 0, 'suites must be non-empty');
+    assert.ok(Array.isArray(d.phases) && d.phases.length > 0, 'phases must be non-empty');
+  },
+);
+
+// NOTE: Store alias guard step-defs live in feature_tui_store_alias.ts (pre-existing,
+// correct Given/Then split pattern). Do NOT duplicate them here.
