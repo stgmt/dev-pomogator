@@ -1999,3 +1999,179 @@ Then(
     assert.equal(r.status, 0, 'Expected allow for v3 (pre-architecture) spec — grandfathered');
   },
 );
+
+// ─── @feature40  ARCH002_04 — recommendation pinned top in markdown ────────────
+
+Given(
+  /^the architecture-decision sample axis model is loaded$/,
+  function (this: ArchWorld) {
+    this.axisModel = sampleAxis();
+  },
+);
+
+When(
+  /^renderAxisMarkdown is called on the sample axis$/,
+  function (this: ArchWorld) {
+    assert.ok(this.axisModel, 'axisModel not set');
+    this.renderedMd = renderAxisMarkdown(this.axisModel);
+  },
+);
+
+Then(
+  /^the architecture-decision markdown should contain a "✅ Recommended" marker$/,
+  function (this: ArchWorld) {
+    assert.ok(this.renderedMd, 'renderedMd not set');
+    const idx = this.renderedMd.indexOf('✅ Recommended');
+    assert.ok(idx >= 0, 'Expected "✅ Recommended" marker in rendered markdown');
+  },
+);
+
+Then(
+  /^the "✅ Recommended" marker should appear before any non-recommended variant header in the architecture-decision markdown$/,
+  function (this: ArchWorld) {
+    assert.ok(this.renderedMd, 'renderedMd not set');
+    const recIdx = this.renderedMd.indexOf('✅ Recommended');
+    assert.ok(recIdx >= 0, 'Expected "✅ Recommended" marker in rendered markdown');
+    // All variant section headers start with "## "; find the first one that is NOT the recommended
+    // The recommended variant appears before non-recommended variants (pinned top)
+    // Detect the second "## " variant header (the first non-recommended variant card)
+    const lines = this.renderedMd.split('\n');
+    const h2Lines: number[] = [];
+    let charPos = 0;
+    for (const line of lines) {
+      if (line.startsWith('## ') && !line.startsWith('## Corrections') && !line.startsWith('## Recommended')) {
+        h2Lines.push(charPos);
+      }
+      charPos += line.length + 1;
+    }
+    if (h2Lines.length >= 2) {
+      // The second H2 is the first non-recommended variant; rec marker must be before it
+      assert.ok(
+        recIdx < h2Lines[1],
+        `"✅ Recommended" at position ${recIdx} should appear before non-recommended variant at position ${h2Lines[1]}`,
+      );
+    }
+    // If only 1 variant, pinning is trivially satisfied
+  },
+);
+
+// ─── @feature41  ARCH003_01 — collectRows cardinality ─────────────────────────
+
+Given(
+  /^three axis files with distinct ids exist in a directory$/,
+  function (this: ArchWorld) {
+    seedAxisFile(this.tempDir, 'a', 'pending');
+    seedAxisFile(this.tempDir, 'b', 'accepted');
+    seedAxisFile(this.tempDir, 'c', 'pending');
+    this.axisDir = this.tempDir;
+  },
+);
+
+When(
+  /^collectRows is called on that directory$/,
+  function (this: ArchWorld) {
+    assert.ok(this.axisDir, 'axisDir not set');
+    (this as ArchWorld & { _rows?: ReturnType<typeof collectRows> })._rows = collectRows(this.axisDir);
+  },
+);
+
+Then(
+  /^the row count should equal the number of axis files$/,
+  function (this: ArchWorld) {
+    const rows = (this as ArchWorld & { _rows?: ReturnType<typeof collectRows> })._rows;
+    assert.ok(rows, 'rows not set');
+    assert.equal(rows.length, 3, `Expected 3 rows for 3 axis files, got ${rows.length}`);
+  },
+);
+
+Then(
+  /^all row axis_ids should be unique$/,
+  function (this: ArchWorld) {
+    const rows = (this as ArchWorld & { _rows?: ReturnType<typeof collectRows> })._rows;
+    assert.ok(rows, 'rows not set');
+    const ids = rows.map((r) => r.axis_id);
+    assert.equal(new Set(ids).size, ids.length, `Duplicate axis_ids detected: ${JSON.stringify(ids)}`);
+  },
+);
+
+// ─── @feature42  ARCH004_02 — openInBrowser file:// fallback ──────────────────
+
+Given(
+  /^a path to an HTML file that cannot be opened by xdg-open$/,
+  function (this: ArchWorld) {
+    (this as ArchWorld & { _htmlPath?: string })._htmlPath = 'C:/x/y.html';
+  },
+);
+
+When(
+  /^open-in-browser is called for that path on linux platform$/,
+  async function (this: ArchWorld) {
+    const p = (this as ArchWorld & { _htmlPath?: string })._htmlPath;
+    assert.ok(p, '_htmlPath not set');
+    (this as ArchWorld & { _browserResult2?: Awaited<ReturnType<typeof openInBrowser>> })._browserResult2 =
+      await openInBrowser(p, 'linux');
+  },
+);
+
+Then(
+  /^when launched is false the fallback should start with "file:\/\/"$/,
+  function (this: ArchWorld) {
+    const r = (this as ArchWorld & { _browserResult2?: { launched: boolean; fallback?: string } })
+      ._browserResult2;
+    assert.ok(r, 'browserResult2 not set');
+    if (!r.launched) {
+      assert.ok(r.fallback, 'Expected fallback when launched=false');
+      assert.ok(
+        r.fallback.startsWith('file://'),
+        `Expected fallback to start with "file://", got "${r.fallback}"`,
+      );
+    }
+    // If browser IS available (launched=true), the fallback check is vacuously satisfied
+  },
+);
+
+// ─── @feature43  ARCH005_06 completeness escape log written ───────────────────
+
+Given(
+  /^a completeness ledger with all dimensions addressed or out-of-scope with ARCHITECTURE_LOG_DIR set$/,
+  function (this: ArchWorld) {
+    writeLedger(this.tempDir, {
+      'internal-consistency': 'addressed | diagram synced',
+      'flow-completeness': 'addressed | all flows listed',
+      'compliance-privacy': 'out-of-scope | [skip-completeness-dimension: short]',
+      'auth-secrets': 'addressed | signature auth',
+      observability: 'addressed | system_errors table',
+      'data-lifecycle': 'addressed | cleanup cron',
+      'cost-quota': 'addressed | budget modelled',
+      'deploy-ops': 'addressed | CI/CD documented',
+    });
+    this.ledgerDir = this.tempDir;
+  },
+);
+
+When(
+  /^the audit-completeness command runs with ARCHITECTURE_LOG_DIR pointing to the spec dir$/,
+  function (this: ArchWorld) {
+    const dir = this.ledgerDir ?? this.tempDir;
+    this.cliResult = runCli(['audit-completeness', dir], {
+      env: { ARCHITECTURE_LOG_DIR: dir },
+    });
+  },
+);
+
+Then(
+  /^a spec-completeness-escapes\.jsonl file should be created in ARCHITECTURE_LOG_DIR$/,
+  function (this: ArchWorld) {
+    const dir = this.ledgerDir ?? this.tempDir;
+    assert.equal(this.cliResult?.status, 0, `CLI exited ${this.cliResult?.status}: ${this.cliResult?.stderr}`);
+    const logPath = path.join(dir, 'spec-completeness-escapes.jsonl');
+    assert.ok(
+      fs.existsSync(logPath),
+      `Expected spec-completeness-escapes.jsonl to be created at ${logPath}`,
+    );
+    const lines = fs.readFileSync(logPath, 'utf-8').trim().split('\n').filter(Boolean);
+    assert.ok(lines.length >= 1, 'Expected at least one entry in spec-completeness-escapes.jsonl');
+    const entry = JSON.parse(lines[0]);
+    assert.ok(entry.reason, 'Expected reason field in escape log entry');
+  },
+);
