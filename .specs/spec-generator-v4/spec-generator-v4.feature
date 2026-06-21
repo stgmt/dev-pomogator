@@ -2499,3 +2499,11 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given a reconcile-cli temp repo with one spec that has an FR but no ACCEPTANCE_CRITERIA.md
     When reconcileCli is called with dry-run=false sarif=false
     Then the consistency-report.yaml for "spec-b" contains the code "spec-only/missing-acceptance"
+
+  # ── registry-parity snapshot freshness guard ──────────────────────────────
+
+  @feature25
+  Scenario: SPECGEN004_372 the committed registry-parity snapshot stays in sync with the live settings.json
+    Given the committed registry-parity snapshot and the live settings.json are both present
+    When the snapshot freshness check compares them for every hook event
+    Then the snapshot matches the live settings.json for every event or settings.json is absent
