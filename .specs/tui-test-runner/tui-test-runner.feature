@@ -182,19 +182,19 @@ Feature: PLUGIN012_TUI_Test_Runner
     When each line from a mixed-output sample is processed by the generic adapter
     Then the generic adapter should return null for every line
 
-  @feature11
+  @feature6
   Scenario: YAML writer write is a no-op after finalize
     Given dev-pomogator is installed
     When the YAML writer is finalized then written again
     Then the finalized YAML duration and state should be frozen
 
-  @feature12
+  @feature6
   Scenario: YAML writer uses discovery total for running progress
     Given dev-pomogator is installed
     When the YAML writer is given a discovery total of 100 and one pass while running
     Then the running YAML total should be 100 and percent 1
 
-  @feature12
+  @feature6
   Scenario: YAML writer uses total zero while running without discovery
     Given dev-pomogator is installed
     When the YAML writer is given one pass while running without a discovery total

@@ -93,6 +93,11 @@ ambiguous) → mutation gutcheck (RED-on-break).
   (out-of-scope) — never invent the mapping to clear a file. (Scenario ids ARE spec-qualified in the graph,
   so a `CODE_NN` reused by another spec is NOT a collision — `GUARD001` lives independently in three specs;
   the real collision risk is STEP-PATTERN ambiguity, caught by the step-5 `--dry-run`, not the code.)
+- **Audit the spec's EXISTING scenario tags too — fix mis-maps you find in the same pass.** A scenario
+  whose `@featureN` doesn't match the FR its SUBJECT tests is mis-mapped pre-existing drift; correct it
+  via `apply_spec_change` while you're here (dogfood 2026-06-21: tests-create-update had 3 such; fixing
+  them correctly left one FR honestly UNCOVERED — that is the right outcome, not a regression). Don't
+  leave known false tested-by edges behind just because they predate your task.
 - **Bash tool on Windows is Git Bash — use POSIX paths (`/d/repos/...`), not `D:\repos\...`** (a
   `cat D:\...` fails). Prefer the spawn pattern (`process.execPath` + cwd=REPO_ROOT + a repo-RELATIVE
   script path) which sidesteps absolute paths entirely. Committing a `.specs/` pathspec is allowed
