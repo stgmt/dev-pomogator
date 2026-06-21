@@ -10,17 +10,17 @@ Feature: PLUGIN016 Tests Create Update Skill
     Given the tests-create-update SKILL.md
     Then it declares "name: tests-create-update" and an "allowed-tools" field
 
-  @feature1
+  @feature2
   Scenario: PLUGIN016_02 SKILL.md carries the Assertion Selection Table
     Given the tests-create-update SKILL.md
     Then it contains an "Assertion Selection Table" with BAD and GOOD columns
 
-  @feature2
+  @feature1
   Scenario: PLUGIN016_03 SKILL.md enumerates all the NEVER anti-pattern rules
     Given the tests-create-update SKILL.md
     Then it lists every catalogued "NEVER" anti-pattern rule
 
-  @feature3
+  @feature5
   Scenario: PLUGIN016_04 SKILL.md carries the compliance report template
     Given the tests-create-update SKILL.md
     Then it contains the compliance checklist items and an "X/16 PASS" line
