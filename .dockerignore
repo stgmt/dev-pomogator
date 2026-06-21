@@ -17,4 +17,5 @@ run-tests-workspace
 # assertions fail on a dirty working tree — a faked failure, not a real regression.
 .dev-pomogator/.task-census*.json
 .stryker-tmp
+StrykerOutput
 reports
