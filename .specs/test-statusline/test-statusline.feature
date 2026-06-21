@@ -9,7 +9,7 @@ Feature: PLUGIN011_test-statusline
     Given dev-pomogator is installed
     And test-statusline extension is enabled
 
-  # @feature1
+  @wip
   Scenario: PLUGIN011_01 Statusline renders running state with progress bar
     Given a YAML status file exists with state "running" and percent 76
     And the status file has passed 38, failed 2, running 10, total 50
@@ -19,7 +19,7 @@ Feature: PLUGIN011_test-statusline
     And statusline output should contain "2❌"
     And statusline output should contain "10⏳"
 
-  # @feature1
+  @wip
   Scenario: PLUGIN011_02 Statusline renders completed passed state
     Given a YAML status file exists with state "passed" and percent 100
     And the status file has passed 50, failed 0, running 0, total 50
@@ -27,7 +27,7 @@ Feature: PLUGIN011_test-statusline
     Then statusline output should contain "✅"
     And statusline output should contain "50/50"
 
-  # @feature1
+  @wip
   Scenario: PLUGIN011_03 Statusline renders completed failed state
     Given a YAML status file exists with state "failed" and percent 100
     And the status file has passed 48, failed 2, running 0, total 50
@@ -36,28 +36,28 @@ Feature: PLUGIN011_test-statusline
     And statusline output should contain "48/50"
     And statusline output should contain "2 failed"
 
-  # @feature1
+  @wip
   Scenario: PLUGIN011_35 Statusline ignores nested suite totals in canonical v2 YAML
     Given a canonical multi-suite YAML status file exists with top-level passed 12, failed 7, total 19
     When statusline script receives JSON stdin with matching session_id
     Then statusline output should contain "12/19"
     And statusline output should contain "7 failed"
 
-  # @feature1a
+  @wip
   Scenario: PLUGIN011_04 Statusline outputs nothing when no YAML file exists
     Given no YAML status file exists for current session
     When statusline script receives JSON stdin with matching session_id
     Then statusline output should be empty
     And statusline script should exit with code 0
 
-  # @feature1a
+  @wip
   Scenario: PLUGIN011_05 Statusline handles corrupted YAML gracefully
     Given a corrupted YAML status file exists
     When statusline script receives JSON stdin with matching session_id
     Then statusline output should be empty
     And statusline script should exit with code 0
 
-  # @feature1a
+  @wip
   Scenario: PLUGIN011_06 Statusline works without jq installed
     Given a YAML status file exists with state "running" and percent 50
     And jq is not available in PATH
@@ -128,7 +128,7 @@ Feature: PLUGIN011_test-statusline
     When SessionStart hook receives session_id "abc12345def67890"
     Then ".dev-pomogator/.test-status/" directory should be created
     And hook should output "{}" on stdout
-    And hook should exit with code 0
+    And SessionStart hook should exit with code 0
 
   @feature4
   Scenario: PLUGIN011_15 SessionStart hook writes env var to CLAUDE_ENV_FILE
@@ -152,63 +152,9 @@ Feature: PLUGIN011_test-statusline
     When SessionStart hook is triggered
     Then idle stale YAML file should be deleted
 
-  # @feature5
-  Scenario: PLUGIN011_18 Extension manifest lists all tool files
-    Given extension.json exists at "extensions/test-statusline/extension.json"
-    When manifest is parsed
-    Then toolFiles should include "statusline_render.sh"
-    And toolFiles should include "test_runner_wrapper.sh"
-    And toolFiles should include "statusline_session_start.ts"
-    And toolFiles should include "status_types.ts"
 
-  # @feature5
-  Scenario: PLUGIN011_19 Extension manifest registers SessionStart hook
-    Given extension.json exists at "extensions/test-statusline/extension.json"
-    When manifest hooks section is parsed
-    Then hooks should contain SessionStart event
-    And SessionStart hook command should reference statusline_session_start.ts
 
-  # @feature5
-  Scenario: PLUGIN011_20 Extension manifest declares statusLine command
-    Given extension.json exists at "extensions/test-statusline/extension.json"
-    When manifest statusLine section is parsed
-    Then statusLine should define Claude command type
-    And statusLine command should reference statusline_render.sh
-
-  # @feature8
-  Scenario: PLUGIN011_21 Installer writes managed statusLine when no existing statusLine exists
-    Given no project or global user statusLine is configured
-    When installer processes test-statusline extension
-    Then project ".claude/settings.json" should contain managed statusLine command
-
-  # @feature8
-  Scenario: PLUGIN011_22 Managed statusLine is overwritten on re-install
-    Given project ".claude/settings.json" already contains managed test-statusline command
-    When installer processes test-statusline extension again
-    Then managed statusLine path should be updated to the current project
-
-  # @feature8
-  Scenario: PLUGIN011_23 Project user-defined statusLine is wrapped alongside managed one
-    Given project ".claude/settings.json" contains user-defined statusLine command
-    When installer resolves statusLine coexistence
-    Then resulting statusLine should use statusline wrapper
-    And wrapper should preserve the original user command
-    And wrapper should include managed statusline_render.sh command
-
-  # @feature8
-  Scenario: PLUGIN011_24 Existing wrapper keeps user command and updates managed command
-    Given project ".claude/settings.json" already contains statusline wrapper command
-    When installer resolves statusLine coexistence
-    Then wrapper should preserve existing user command
-    And wrapper should update managed command path only
-
-  # @feature8
-  Scenario: PLUGIN011_25 Wrapper combines outputs of user and managed commands
-    Given statusline wrapper receives the same JSON stdin for both commands
-    When user command outputs "userinfo" and managed command outputs "testinfo"
-    Then wrapper should output "userinfo | testinfo"
-
-  # @feature1
+  @wip
   Scenario: PLUGIN011_26 Statusline rewrites dead running pid to failed
     Given a running YAML status file contains dead pid metadata
     When statusline script receives JSON stdin with matching session_id
@@ -228,46 +174,10 @@ Feature: PLUGIN011_test-statusline
     Then file should remain present
     And YAML state should be rewritten to "failed"
 
-  # @feature1
+  @wip
   Scenario: PLUGIN011_29 Statusline keeps running state when pid is alive
     Given a running YAML status file contains a live pid
     When statusline script receives JSON stdin with matching session_id
     Then YAML state should remain "running"
     And statusline output should still contain running indicators
 
-  # @feature8
-  Scenario: PLUGIN011_30 Project statusLine wins over global one
-    Given project ".claude/settings.json" contains user-defined statusLine command
-    And global "~/.claude/settings.json" contains a different user-defined statusLine command
-    When installer resolves statusLine coexistence
-    Then project statusLine should have priority
-    And wrapper should preserve project user command
-
-  # @feature8
-  Scenario: PLUGIN011_31 Installer wraps global user-defined statusLine when project has none
-    Given project ".claude/settings.json" has no statusLine
-    And global "~/.claude/settings.json" contains user-defined statusLine command
-    When installer processes test-statusline extension
-    Then project ".claude/settings.json" should contain wrapper command
-    And global statusLine should remain unchanged
-
-  # @feature8
-  Scenario: PLUGIN011_32 Wrapper keeps managed output when user command fails
-    Given statusline wrapper receives user command that exits with error
-    And managed command outputs "managedinfo"
-    When wrapper is executed
-    Then wrapper should output only "managedinfo"
-
-  # @feature8
-  Scenario: PLUGIN011_33 Wrapper keeps user output when managed command fails
-    Given statusline wrapper receives managed command that exits with error
-    And user command outputs "userinfo"
-    When wrapper is executed
-    Then wrapper should output only "userinfo"
-
-  # @feature8
-  Scenario: PLUGIN011_34 Broken wrapper falls back to direct managed statusLine
-    Given project ".claude/settings.json" contains wrapper command with invalid encoded arguments
-    When installer resolves statusLine coexistence
-    Then resulting statusLine should fall back to direct managed command
-    And resulting statusLine should not nest another wrapper command

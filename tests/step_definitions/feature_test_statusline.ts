@@ -441,7 +441,7 @@ Then(/^hook should output "\{\}" on stdout$/, function (this: StatuslineWorld) {
   assert.equal(this.hookResult!.stdout.trim(), '{}');
 });
 
-Then(/^hook should exit with code 0$/, function (this: StatuslineWorld) {
+Then(/^SessionStart hook should exit with code 0$/, function (this: StatuslineWorld) {
   assert.equal(this.hookResult!.status, 0);
 });
 
