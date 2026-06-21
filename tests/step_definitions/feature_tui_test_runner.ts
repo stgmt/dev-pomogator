@@ -1511,3 +1511,298 @@ Then(
 
 // NOTE: Store alias guard step-defs live in feature_tui_store_alias.ts (pre-existing,
 // correct Given/Then split pattern). Do NOT duplicate them here.
+
+// ============================================================================
+// @feature15 — FR-15 Build Guard Hook (GUARD002_02–GUARD002_14)
+//
+// Drives the REAL `tools/tui-test-runner/build_guard.ts` PreToolUse hook via
+// `spawnSync(process.execPath, ['--import', 'tsx', ABS_SCRIPT], ...)` per the
+// BDD-migrator dogfood: NOT `npx` (which doesn't resolve in a host spawn).
+// CWD = REPO_ROOT so the hook's node_modules resolution works.
+//
+// GUARD002_01 and GUARD002_03 are @wip:
+//   _01: it.skip in vitest — "no root src/dist build in plugin v2" (deferred).
+//   _03: vacuously passes in v2 (no src/index.ts, no dist/index.js) — @wip.
+// ============================================================================
+
+const BUILD_GUARD_SCRIPT_ABS = path.join(REPO_ROOT, 'tools', 'tui-test-runner', 'build_guard.ts');
+
+interface BuildGuardResult {
+  status: number | null;
+  stdout: string;
+  stderr: string;
+}
+
+function runBuildGuardBDD(command: string, env: Record<string, string> = {}): BuildGuardResult {
+  const input = JSON.stringify({
+    session_id: 'bdd-build-guard',
+    cwd: REPO_ROOT,
+    tool_name: 'Bash',
+    tool_input: { command },
+  });
+  const result = spawnSync(
+    process.execPath,
+    ['--import', 'tsx', BUILD_GUARD_SCRIPT_ABS],
+    {
+      input,
+      encoding: 'utf-8',
+      cwd: REPO_ROOT,
+      env: { ...process.env, FORCE_COLOR: '0', ...env },
+      timeout: 15000,
+    },
+  );
+  return { status: result.status, stdout: (result.stdout || '').trim(), stderr: (result.stderr || '') };
+}
+
+function runBuildGuardBDDWithCwd(command: string, cwd: string): BuildGuardResult {
+  const input = JSON.stringify({
+    session_id: 'bdd-build-guard',
+    cwd,
+    tool_name: 'Bash',
+    tool_input: { command },
+  });
+  const result = spawnSync(
+    process.execPath,
+    ['--import', 'tsx', BUILD_GUARD_SCRIPT_ABS],
+    {
+      input,
+      encoding: 'utf-8',
+      cwd: REPO_ROOT,
+      env: { ...process.env, FORCE_COLOR: '0' },
+      timeout: 15000,
+    },
+  );
+  return { status: result.status, stdout: (result.stdout || '').trim(), stderr: (result.stderr || '') };
+}
+
+function runBuildGuardRawBDD(rawInput: string): BuildGuardResult {
+  const result = spawnSync(
+    process.execPath,
+    ['--import', 'tsx', BUILD_GUARD_SCRIPT_ABS],
+    {
+      input: rawInput,
+      encoding: 'utf-8',
+      cwd: REPO_ROOT,
+      env: { ...process.env, FORCE_COLOR: '0' },
+      timeout: 15000,
+    },
+  );
+  return { status: result.status, stdout: (result.stdout || '').trim(), stderr: (result.stderr || '') };
+}
+
+interface TuiWorldWithBuildGuard extends V4World {
+  buildGuardResult?: BuildGuardResult;
+}
+
+// --- Given steps for GUARD002 -----------------------------------------------
+
+Given(
+  /^the build guard hook receives a wrapper vitest command$/,
+  function (this: TuiWorldWithBuildGuard) {
+    this.buildGuardResult = runBuildGuardBDD(
+      'node tools/tui-test-runner/test_runner_wrapper.cjs --framework vitest -- npx vitest run',
+    );
+  },
+);
+
+Given(
+  /^the build guard hook checks a cwd that has src but no dist$/,
+  function (this: TuiWorldWithBuildGuard) {
+    // Create a tmpDir with src/ but no dist/ — exercises the "dist missing" deny path.
+    const testCwd = path.join(this.tempDir, 'no-dist-cwd');
+    fs.mkdirSync(path.join(testCwd, 'src'), { recursive: true });
+    fs.writeFileSync(path.join(testCwd, 'src', 'index.ts'), '// test');
+    this.buildGuardResult = runBuildGuardBDDWithCwd(
+      'node test_runner_wrapper.cjs --framework vitest -- npx vitest run',
+      testCwd,
+    );
+  },
+);
+
+Given(
+  /^the build guard hook receives a Docker test command with SKIP_BUILD env$/,
+  function (this: TuiWorldWithBuildGuard) {
+    this.buildGuardResult = runBuildGuardBDD(
+      'bash scripts/docker-test.sh npx vitest run',
+      { SKIP_BUILD: '1' },
+    );
+  },
+);
+
+Given(
+  /^the build guard hook receives a dotnet test command with --no-build flag$/,
+  function (this: TuiWorldWithBuildGuard) {
+    this.buildGuardResult = runBuildGuardBDD(
+      'node test_runner_wrapper.cjs --framework dotnet -- dotnet test --no-build',
+    );
+  },
+);
+
+Given(
+  /^the build guard hook receives a pytest wrapper command$/,
+  function (this: TuiWorldWithBuildGuard) {
+    this.buildGuardResult = runBuildGuardBDD(
+      'node test_runner_wrapper.cjs --framework pytest -- python -m pytest',
+    );
+  },
+);
+
+Given(
+  /^the build guard hook receives a go test wrapper command$/,
+  function (this: TuiWorldWithBuildGuard) {
+    this.buildGuardResult = runBuildGuardBDD(
+      'node test_runner_wrapper.cjs --framework go -- go test ./...',
+    );
+  },
+);
+
+Given(
+  /^the build guard hook receives a rust test wrapper command$/,
+  function (this: TuiWorldWithBuildGuard) {
+    this.buildGuardResult = runBuildGuardBDD(
+      'node test_runner_wrapper.cjs --framework rust -- cargo test',
+    );
+  },
+);
+
+Given(
+  /^the build guard hook receives a wrapper vitest command with SKIP_BUILD_CHECK env$/,
+  function (this: TuiWorldWithBuildGuard) {
+    this.buildGuardResult = runBuildGuardBDD(
+      'node test_runner_wrapper.cjs --framework vitest -- npx vitest run',
+      { SKIP_BUILD_CHECK: '1' },
+    );
+  },
+);
+
+Given(
+  /^the build guard hook receives a non-test command$/,
+  function (this: TuiWorldWithBuildGuard) {
+    this.buildGuardResult = runBuildGuardBDD('ls -la');
+  },
+);
+
+Given(
+  /^the build guard hook receives invalid JSON on stdin$/,
+  function (this: TuiWorldWithBuildGuard) {
+    this.buildGuardResult = runBuildGuardRawBDD('not valid json {{{');
+  },
+);
+
+Given(
+  /^the build guard hook checks a cwd with no src directory$/,
+  function (this: TuiWorldWithBuildGuard) {
+    // Use a cwd with no src/ at all — exercises the "no src, allow" fail-open path.
+    const testCwd = path.join(this.tempDir, 'no-src-cwd');
+    fs.mkdirSync(testCwd, { recursive: true });
+    this.buildGuardResult = runBuildGuardBDDWithCwd(
+      'node test_runner_wrapper.cjs --framework vitest -- npx vitest run',
+      testCwd,
+    );
+  },
+);
+
+Given(
+  /^the plugin hooks registry is read for build guard$/,
+  function (this: TuiWorldWithBuildGuard) {
+    // Registry is read in the Then steps; nothing to run here.
+  },
+);
+
+// --- Then steps for GUARD002 ------------------------------------------------
+
+Then(
+  /^the build guard should deny with exit code 2 and reason about npm run build$/,
+  function (this: TuiWorldWithBuildGuard) {
+    const r = this.buildGuardResult!;
+    assert.equal(r.status, 2, `expected exit code 2 (deny); got ${r.status}. stderr: ${r.stderr}`);
+    let parsed: { hookSpecificOutput?: { permissionDecision?: string; permissionDecisionReason?: string } };
+    try {
+      parsed = JSON.parse(r.stdout);
+    } catch {
+      throw new Error(`expected JSON on stdout; got: ${r.stdout.substring(0, 200)}`);
+    }
+    assert.equal(parsed.hookSpecificOutput?.permissionDecision, 'deny');
+    assert.match(parsed.hookSpecificOutput?.permissionDecisionReason ?? '', /npm run build/);
+  },
+);
+
+Then(
+  /^the build guard should deny with exit code 2 and reason about Docker build$/,
+  function (this: TuiWorldWithBuildGuard) {
+    const r = this.buildGuardResult!;
+    assert.equal(r.status, 2, `expected exit code 2 (deny); got ${r.status}. stderr: ${r.stderr}`);
+    let parsed: { hookSpecificOutput?: { permissionDecision?: string; permissionDecisionReason?: string } };
+    try {
+      parsed = JSON.parse(r.stdout);
+    } catch {
+      throw new Error(`expected JSON on stdout; got: ${r.stdout.substring(0, 200)}`);
+    }
+    assert.equal(parsed.hookSpecificOutput?.permissionDecision, 'deny');
+    assert.match(parsed.hookSpecificOutput?.permissionDecisionReason ?? '', /Docker build must not be skipped/);
+  },
+);
+
+Then(
+  /^the build guard should deny with exit code 2 and reason about --no-build$/,
+  function (this: TuiWorldWithBuildGuard) {
+    const r = this.buildGuardResult!;
+    assert.equal(r.status, 2, `expected exit code 2 (deny); got ${r.status}. stderr: ${r.stderr}`);
+    let parsed: { hookSpecificOutput?: { permissionDecision?: string; permissionDecisionReason?: string } };
+    try {
+      parsed = JSON.parse(r.stdout);
+    } catch {
+      throw new Error(`expected JSON on stdout; got: ${r.stdout.substring(0, 200)}`);
+    }
+    assert.equal(parsed.hookSpecificOutput?.permissionDecision, 'deny');
+    assert.match(parsed.hookSpecificOutput?.permissionDecisionReason ?? '', /--no-build/);
+  },
+);
+
+Then(
+  /^the build guard should allow with exit code 0$/,
+  function (this: TuiWorldWithBuildGuard) {
+    const r = this.buildGuardResult!;
+    assert.equal(r.status, 0, `expected exit code 0 (allow); got ${r.status}. stdout: ${r.stdout} stderr: ${r.stderr}`);
+  },
+);
+
+Then(
+  /^the registry should have a Bash PreToolUse entry for build_guard$/,
+  function (this: TuiWorldWithBuildGuard) {
+    const hooks = JSON.parse(fs.readFileSync(PLUGIN_HOOKS_PATH, 'utf-8')) as Record<string, unknown>;
+    const preEntries: Array<{ matcher?: string; hooks?: Array<{ command?: string }> }> =
+      ((hooks as any).hooks?.PreToolUse ?? []);
+    const buildGuardEntry = preEntries.find(
+      (entry) =>
+        entry.matcher === 'Bash' &&
+        (entry.hooks ?? []).some((h) => (h.command ?? '').includes('build_guard')),
+    );
+    assert.ok(
+      buildGuardEntry !== undefined,
+      `expected a Bash PreToolUse entry for build_guard; got entries: ${JSON.stringify(preEntries.map((e) => ({ matcher: e.matcher, commands: (e.hooks ?? []).map((h) => h.command) })))}`,
+    );
+  },
+);
+
+Then(
+  /^build_guard should appear before test_guard in the PreToolUse registry$/,
+  function (this: TuiWorldWithBuildGuard) {
+    const hooks = JSON.parse(fs.readFileSync(PLUGIN_HOOKS_PATH, 'utf-8')) as Record<string, unknown>;
+    const preEntries: Array<{ matcher?: string; hooks?: Array<{ command?: string }> }> =
+      ((hooks as any).hooks?.PreToolUse ?? []);
+    let buildGuardIdx = -1;
+    let testGuardIdx = -1;
+    preEntries.forEach((entry, idx) => {
+      const cmds = (entry.hooks ?? []).map((h) => h.command ?? '').join(',');
+      if (cmds.includes('build_guard')) buildGuardIdx = idx;
+      if (cmds.includes('test_guard')) testGuardIdx = idx;
+    });
+    assert.ok(buildGuardIdx >= 0, `build_guard not found in PreToolUse registry`);
+    assert.ok(testGuardIdx >= 0, `test_guard not found in PreToolUse registry`);
+    assert.ok(
+      buildGuardIdx < testGuardIdx,
+      `expected build_guard (idx ${buildGuardIdx}) before test_guard (idx ${testGuardIdx})`,
+    );
+  },
+);

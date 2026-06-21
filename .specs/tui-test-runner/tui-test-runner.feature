@@ -378,3 +378,79 @@ Feature: PLUGIN012_TUI_Test_Runner
     Given the plugin hooks registry is read
     Then the registry should have at least one SessionStart hook
     And the registry should have a Bash PreToolUse entry for test_guard
+
+  # ---------------------------------------------------------------------------
+  # FR-15: Build Guard Hook (GUARD002)
+  # ---------------------------------------------------------------------------
+
+  @wip
+  @feature15
+  Scenario: GUARD002_01 build guard denies when TypeScript src is newer than dist
+    Given the build guard hook receives a wrapper vitest command
+    Then the build guard should deny with exit code 2 and reason about npm run build
+
+  @feature15
+  Scenario: GUARD002_02 build guard denies when dist directory is missing
+    Given the build guard hook checks a cwd that has src but no dist
+    Then the build guard should deny with exit code 2 and reason about npm run build
+
+  @wip
+  @feature15
+  Scenario: GUARD002_03 build guard allows when build is fresh
+    Given the build guard hook receives a wrapper vitest command with fresh dist
+    Then the build guard should allow with exit code 0
+
+  @feature15
+  Scenario: GUARD002_04 build guard denies when Docker SKIP_BUILD is set
+    Given the build guard hook receives a Docker test command with SKIP_BUILD env
+    Then the build guard should deny with exit code 2 and reason about Docker build
+
+  @feature15
+  Scenario: GUARD002_05 build guard denies when dotnet --no-build flag is present
+    Given the build guard hook receives a dotnet test command with --no-build flag
+    Then the build guard should deny with exit code 2 and reason about --no-build
+
+  @feature15
+  Scenario: GUARD002_06 build guard allows pytest commands without staleness check
+    Given the build guard hook receives a pytest wrapper command
+    Then the build guard should allow with exit code 0
+
+  @feature15
+  Scenario: GUARD002_07 build guard allows go test commands without staleness check
+    Given the build guard hook receives a go test wrapper command
+    Then the build guard should allow with exit code 0
+
+  @feature15
+  Scenario: GUARD002_08 build guard allows rust test commands without staleness check
+    Given the build guard hook receives a rust test wrapper command
+    Then the build guard should allow with exit code 0
+
+  @feature15
+  Scenario: GUARD002_09 build guard allows commands when SKIP_BUILD_CHECK bypass is set
+    Given the build guard hook receives a wrapper vitest command with SKIP_BUILD_CHECK env
+    Then the build guard should allow with exit code 0
+
+  @feature15
+  Scenario: GUARD002_10 build guard allows non-test commands passthrough
+    Given the build guard hook receives a non-test command
+    Then the build guard should allow with exit code 0
+
+  @feature15
+  Scenario: GUARD002_11 build guard fails open on invalid JSON input
+    Given the build guard hook receives invalid JSON on stdin
+    Then the build guard should allow with exit code 0
+
+  @feature15
+  Scenario: GUARD002_12 build guard fails open on stat error from missing src
+    Given the build guard hook checks a cwd with no src directory
+    Then the build guard should allow with exit code 0
+
+  @feature15
+  Scenario: GUARD002_13 plugin registry declares build_guard as Bash PreToolUse hook
+    Given the plugin hooks registry is read for build guard
+    Then the registry should have a Bash PreToolUse entry for build_guard
+
+  @feature15
+  Scenario: GUARD002_14 build_guard is registered before test_guard in PreToolUse order
+    Given the plugin hooks registry is read for build guard
+    Then build_guard should appear before test_guard in the PreToolUse registry
