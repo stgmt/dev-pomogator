@@ -187,3 +187,15 @@ Feature: CEGATE001 Claim-Evidence Gate
     Given the latest user-role messages include a spec-tasks banner and validator output appended by hooks
     When the gate extracts the user's intent prompt
     Then it returns the typed request with the injected banner/validator lines stripped and injection-only messages skipped
+
+  # @feature11
+  Scenario: CEGATE001_38 A sibling agent coming to rest does not clear a still-running backgrounded agent
+    Given two backgrounded agents were launched and only one has delivered its «came to rest» completion
+    When the gate pairs launches against completions by name across the whole transcript
+    Then it reports still in-flight while the other agent runs, not in-flight once both rest, and a cross-session rest with no matching launch clears nothing
+
+  # @feature11
+  Scenario: CEGATE001_39 A backgrounded agent still in flight across a sibling's window-resetting completion defers the kick
+    Given a migration agent launched siblings and one «came to rest» reset the turn window while another agent still runs
+    When the agent ends on a lazy status stop with open tasks remaining
+    Then the gate defers the kick while the other agent is in flight and blocks the same stop once both agents have come to rest

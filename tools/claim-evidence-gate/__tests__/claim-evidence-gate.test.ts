@@ -12,7 +12,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { classify, firstUnsupported, stripCode } from '../claim_classifier.ts';
-import { extractTurnWindow, bgInFlightInWindow, lastUserPrompt } from '../turn_window.ts';
+import { extractTurnWindow, bgInFlightInWindow, agentBgInFlight, lastUserPrompt } from '../turn_window.ts';
 
 const HOOK = path.resolve(__dirname, '..', 'claim_evidence_gate_stop.ts');
 
@@ -211,8 +211,10 @@ describe('CEGATE001: pure classifier units', () => {
   // the turn-window boundary — so the existing window detector ALREADY handles the single-agent case
   // (in-flight while running; not after rest). A whole-transcript agent COUNTER was REJECTED: real
   // transcripts don't pair launches↔completions reliably (cross-session delivery / sidechains), so it
-  // would be a fake detector. The only residual is multi-agent partial completion → under-defer (the
-  // safe direction, not a regression). This pins the verified single-agent behaviour.
+  // would be a fake detector. The residual multi-agent partial-completion case (a sibling «came to rest»
+  // resetting the window while another agent still runs) was originally called "under-defer, the safe
+  // direction" — but it bit a real session as an OVER-fire (the gate pinned a legitimately-waiting agent).
+  // It is now closed by agentBgInFlight (CEGATE001_38). This pins the verified single-agent behaviour.
   it('CEGATE001_35: a backgrounded agent is in-flight while running, not after «came to rest» (window boundary)', () => {
     const ack: Block = {
       type: 'user',
@@ -225,6 +227,23 @@ describe('CEGATE001: pure classifier units', () => {
       .join('\n');
     expect(bgInFlightInWindow(running)).toBe(true); // agent running → in-flight → defer
     expect(bgInFlightInWindow(done)).toBe(false); // «came to rest» resets the window → not in-flight
+  });
+
+  // @feature11 — 5a (2026-06-21): the MULTI-agent across-window case the window detector misses. The real
+  // «came to rest» format is `Agent "<name>" came to rest` (verified against a live transcript). A sibling
+  // resting must NOT clear a DIFFERENTLY-named agent still running; once BOTH rest, not in-flight; and a
+  // cross-session rest with no matching launch here clears nothing.
+  it('CEGATE001_38: agentBgInFlight — a sibling «came to rest» does not clear a still-running agent', () => {
+    const launchA = A([tool('Agent', { description: 'migrate alpha', subagent_type: 'bdd-migrator', run_in_background: true })]);
+    const launchB = A([tool('Agent', { description: 'migrate beta', subagent_type: 'bdd-migrator', run_in_background: true })]);
+    const restA = U('● Agent "migrate alpha" came to rest · 5m\n\nрезультат: 14 зелёных');
+    const restB = U('● Agent "Autonomous migrate beta" came to rest · 8m\n\nрезультат: 9 зелёных'); // autonomous-loop prefix tolerated
+    const oneRunning = [U('go'), launchA, launchB, restA, A([txt('alpha готов; beta ещё идёт в фоне.')])].map((r) => JSON.stringify(r)).join('\n');
+    const bothDone = [U('go'), launchA, launchB, restA, restB, A([txt('оба готовы, обработал.')])].map((r) => JSON.stringify(r)).join('\n');
+    const noLaunch = [U('go'), U('● Agent "migrate gamma" came to rest · 1m'), A([txt('чужой агент из другой сессии — не мой.')])].map((r) => JSON.stringify(r)).join('\n');
+    expect(agentBgInFlight(oneRunning)).toBe(true); // beta unmatched → still in flight → defer
+    expect(agentBgInFlight(bothDone)).toBe(false); // both names matched → not in flight
+    expect(agentBgInFlight(noLaunch)).toBe(false); // a cross-session rest with no launch here clears nothing
   });
 });
 
@@ -432,6 +451,28 @@ describe('CEGATE001: claim-evidence gate — spec-false-close class (FR-49b)', (
     const env = { CLAIM_GATE_JUDGE: 'false' };
     expect(runHook([...base, claim], env).blocked).toBe(false); // still running → defer (approve)
     expect(runHook([...base, completion, claim], env).blocked).toBe(true); // completed in-window → blocks
+  });
+
+  // @feature11 — 5a (2026-06-21): the real incident. A migration agent launches sibling agents; one «came
+  // to rest» RESETS the turn window, so the window detector no longer sees the OTHER agent's launch and the
+  // gate would kick a legitimately-waiting status stop. agentBgInFlight (whole-transcript, name-paired)
+  // keeps the still-running agent visible → defer. Once BOTH rest, the same lazy stop (no «Дальше:») blocks.
+  it('CEGATE001_39: a backgrounded agent still in flight across a sibling «came to rest» defers the kick', () => {
+    writeCensus(dir, { open: 11, doneRed: 0, doneUnrun: 0 }, { id: 'demo:t1', title: 'Wire the gate' });
+    const env = { CLAIM_GATE_JUDGE: 'false' };
+    const pre = [
+      U('мигрируй спеки'),
+      A([tool('Edit', { file_path: '.specs/demo/FR.md' })]), // FR-9 non-.feature edit → scopes demo
+      A([tool('Agent', { description: 'migrate alpha', subagent_type: 'bdd-migrator', run_in_background: true })]),
+      A([tool('Agent', { description: 'migrate beta', subagent_type: 'bdd-migrator', run_in_background: true })]),
+      U('● Agent "migrate alpha" came to rest · 5m\n\nрезультат: 14 зелёных'), // resets the turn window
+    ];
+    // executor in-window (commit) → works-done satisfied, so the ONLY kicker is no-next-section (the one
+    // awaitingAsync suppresses). Lazy gray claim with NO «Дальше:».
+    const tail = [A([tool('Bash', { command: 'git commit -m done' })]), A([txt('Закоммитил готовое; beta придёт — сверю.')])];
+    const restB = U('● Agent "migrate beta" came to rest · 8m\n\nрезультат: 9 зелёных');
+    expect(runHook([...pre, ...tail], env).blocked).toBe(false); // beta still in flight → defer (approve)
+    expect(runHook([...pre, restB, ...tail], env).blocked).toBe(true); // both rested → same lazy stop blocks
   });
 
   // @feature11 — α (2026-06-20): a turn spent INSPECTING / arguing with the gate itself (read-only,

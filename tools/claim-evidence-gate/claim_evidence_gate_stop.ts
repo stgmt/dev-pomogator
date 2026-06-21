@@ -32,7 +32,7 @@ import path from 'node:path';
 
 import { log as _logShared, normalizePath } from '../_shared/hook-utils.ts';
 import { markerPath, readMarker, writeMarkerAtomic, isWithinCooldown, hashFileList } from '../_shared/marker-utils.ts';
-import { extractTurnWindow, bgInFlightInWindow, lastUserPrompt } from './turn_window.ts';
+import { extractTurnWindow, bgInFlightInWindow, agentBgInFlight, lastUserPrompt } from './turn_window.ts';
 import { firstUnsupported, isSpecCompletionClaim } from './claim_classifier.ts';
 import { readTaskCensusCache, scopeCensusToSlugs, sessionEditedSpecSlugs, type TaskCensusCache } from '../spec-graph/task-census.ts';
 import { judgeStop } from './meridian-judge.ts';
@@ -246,10 +246,15 @@ async function main(): Promise<void> {
   //      awaiting (the agent has the result and must act), so a lazy stop there still blocks.
   //   2. bgJobMarkerActive — a live `.bg-task-active*` marker (the test-runner wrapper's, which survives
   //      across a user message where the window resets) — belt-and-suspenders for tests.
-  // While either holds, the pinator defers its lazy-stop kicks to the bg-task-guard (one source of truth
+  //   3. agentBgInFlight (5a, 2026-06-21) — a backgrounded AGENT launched this SESSION whose «came to rest»
+  //      hasn't landed. The window detector (#1) misses it because a SIBLING agent's «came to rest» is a
+  //      USER message that RESETS the window, and no marker is dropped for an agent (#2 is test-only). This
+  //      is the false-positive that pinned a legitimately-waiting migration agent. Whole-transcript,
+  //      name-paired, fails toward over-defer (the SAFE direction). See turn_window.ts for the rationale.
+  // While ANY holds, the pinator defers its lazy-stop kicks to the bg-task-guard (one source of truth
   // for "we're waiting"). The false-claim classes (works-done / spec-false-close) below are NOT
   // suppressed — "готово, тесты прошли" while the job still runs is a false claim, caught as before.
-  const awaitingAsync = bgInFlightInWindow(rawTranscript) || bgJobMarkerActive(repoRoot);
+  const awaitingAsync = bgInFlightInWindow(rawTranscript) || bgJobMarkerActive(repoRoot) || agentBgInFlight(rawTranscript);
 
   // Phase 1 (2026-06-21): intent of the LAST user prompt — the agent-independent INTENT signal (the agent
   // can't fake the user's words). analysis-only = an analysis word AND no implement verb → require ONLY a
@@ -445,7 +450,7 @@ async function main(): Promise<void> {
   // Added in FR-13; until then a stalled wait simply releases.
   if (awaitingAsync || noProgressStreak >= config.noProgressCap) {
     const why = awaitingAsync
-      ? 'awaiting async (bg task launched this turn or a live .bg-task-active marker)'
+      ? 'awaiting async (bg job in-window / live .bg-task-active marker / backgrounded agent still in flight)'
       : `no work-delta across ${noProgressStreak} consecutive zero-tool kicks`;
     log('INFO', `FR-11 release: ${why}`);
     writeMarkerAtomic(mp, { hash: currentHash, timestamp: new Date().toISOString(), count: marker?.count ?? 1, noProgressStreak, metaStreak });

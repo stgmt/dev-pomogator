@@ -170,6 +170,78 @@ export function bgInFlightInWindow(rawTranscript: string): boolean {
   return launched > completed;
 }
 
+/** All readable text of a line regardless of role — string content, text blocks, or a tool_result's
+ * string content. Used to scan for the «came to rest» notification (a user-role text message). */
+function lineText(e: TranscriptLine): string {
+  const c = e.message?.content;
+  if (typeof c === 'string') return c;
+  if (!Array.isArray(c)) return '';
+  return c
+    .map((b: any) => (typeof b?.text === 'string' ? b.text : typeof b?.content === 'string' ? b.content : ''))
+    .join('\n');
+}
+
+/**
+ * 5a (2026-06-21): a backgrounded AGENT still in flight ACROSS a window reset. `bgInFlightInWindow` is
+ * window-scoped and MISSES it, because a SIBLING agent's natural completion is a «Agent "<name>" came to
+ * rest» USER message — which resets the turn-window boundary (extractTurnWindow), dropping a still-running
+ * agent's earlier launch OUT of the window. And no `.bg-task-active*` marker is dropped for an agent (only
+ * the test-runner wrapper writes one), so the marker path doesn't cover it either. That is the false
+ * positive that pinned a legitimately-waiting migration agent: launch pass-3, sibling pass-2 «came to
+ * rest» resets the window, status stop → gate saw no async wait → judged → blocked.
+ *
+ * Fix: pair backgrounded Agent/Task LAUNCHES against «came to rest» completions BY NAME over the WHOLE
+ * transcript. A naive launch−rest COUNTER was rejected for good reason — rests arrive CROSS-SESSION (a
+ * Stop transcript routinely carries «came to rest» lines for agents another session launched), so counting
+ * them undercounts in-flight. Pairing by name sidesteps that: a cross-session/echoed rest whose name
+ * matches NO launch here clears nothing. A launch whose name never gets a matching rest stays in-flight →
+ * over-defer (the SAFE direction — at worst the agent stops when it could have been nudged). It self-clears
+ * the moment the matching rest lands. Main-chain launches only (a sub-agent's own Agent calls are sidechain
+ * → excluded). Name match is exact after normalisation, tolerant of the leading "Autonomous " the
+ * autonomous-loop prepends to the displayed name.
+ */
+const CAME_TO_REST_RE = /agent\s+"([^"]+)"\s+came\s+to\s+rest/gi;
+function normAgentName(s: string): string {
+  return s.toLowerCase().replace(/\s+/g, ' ').trim().replace(/^autonomous\s+/, '');
+}
+export function agentBgInFlight(rawTranscript: string): boolean {
+  const lines = parseLines(rawTranscript);
+  // launches: main-chain backgrounded Agent/Task spawns, keyed by normalised description.
+  const launchCount = new Map<string, number>();
+  for (const e of lines) {
+    if (e.isSidechain || role(e) !== 'assistant') continue;
+    for (const b of contentBlocks(e)) {
+      const bb = b as Record<string, unknown>;
+      if (bb?.type !== 'tool_use') continue;
+      const nm = String(bb.name ?? '').toLowerCase();
+      if (nm !== 'agent' && nm !== 'task') continue;
+      const inp = bb.input as Record<string, unknown> | undefined;
+      if (!inp || typeof inp !== 'object' || inp.run_in_background !== true) continue;
+      const key = normAgentName(String(inp.description ?? ''));
+      if (key) launchCount.set(key, (launchCount.get(key) ?? 0) + 1);
+    }
+  }
+  if (launchCount.size === 0) return false;
+  // rests: «Agent "<name>" came to rest» anywhere in the transcript (text scanned UNescaped per line, so
+  // the regex sees real quotes, not JSON-escaped ones), keyed the same way.
+  const restCount = new Map<string, number>();
+  for (const e of lines) {
+    const text = lineText(e);
+    if (!text) continue;
+    CAME_TO_REST_RE.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = CAME_TO_REST_RE.exec(text)) !== null) {
+      const key = normAgentName(m[1]);
+      restCount.set(key, (restCount.get(key) ?? 0) + 1);
+    }
+  }
+  // in flight = a launched name with more launches than matched rests.
+  for (const [key, lc] of launchCount) {
+    if (lc > (restCount.get(key) ?? 0)) return true;
+  }
+  return false;
+}
+
 // Hook-injected lines that ride along on a user turn but are NOT the user's typed ask — the spec-tasks
 // banner, specs-validator output, gate kicks, task-notifications, system reminders. Stripped before
 // intent classification so a banner-only turn is not mistaken for the user's request.
