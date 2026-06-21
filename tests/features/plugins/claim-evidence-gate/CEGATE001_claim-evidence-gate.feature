@@ -189,16 +189,16 @@ Feature: CEGATE001 Claim-Evidence Gate
     Then it returns the typed request with the injected banner/validator lines stripped and injection-only messages skipped
 
   # @feature11
-  Scenario: CEGATE001_38 A sibling agent coming to rest does not clear a still-running backgrounded agent
-    Given two backgrounded agents were launched and only one has delivered its «came to rest» completion
-    When the gate pairs launches against completions by name across the whole transcript
-    Then it reports still in-flight while the other agent runs, not in-flight once both rest, and a cross-session rest with no matching launch clears nothing
+  Scenario: CEGATE001_38 Backgrounded helpers are counted by tool_use id, so retries do not inflate the count
+    Given a description was launched twice as a retry and both completed while another launch has no completion
+    When the gate counts in-flight helpers by pairing each launch id against its completion id
+    Then it reports exactly one in flight (the retry does not make it two) and zero once every id is completed
 
   # @feature11
-  Scenario: CEGATE001_39 A backgrounded agent still in flight across a sibling's window-resetting completion defers the kick
-    Given a migration agent launched siblings and one «came to rest» reset the turn window while another agent still runs
-    When the agent ends on a lazy status stop with open tasks remaining
-    Then the gate defers the kick while the other agent is in flight and blocks the same stop once both agents have come to rest
+  Scenario: CEGATE001_39 A backgrounded agent in flight by id defers the deterministic kick until its completion lands
+    Given a backgrounded agent was launched with a tool_use id and a later message reset the turn window
+    When the gate evaluates a lazy stop with the judge off and no completion for that id has arrived
+    Then it defers because id-pairing still sees the launch pending, and it blocks the same stop once the completion id lands
 
   # @feature11
   Scenario: CEGATE001_40 The agent's own open todos arm the gate even with zero spec scope

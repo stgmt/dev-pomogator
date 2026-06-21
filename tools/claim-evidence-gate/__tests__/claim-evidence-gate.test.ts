@@ -12,7 +12,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { classify, firstUnsupported, stripCode } from '../claim_classifier.ts';
-import { extractTurnWindow, bgInFlightInWindow, agentBgInFlight, lastUserPrompt } from '../turn_window.ts';
+import { extractTurnWindow, bgInFlightInWindow, agentBgInFlight, agentBgInFlightCount, lastUserPrompt } from '../turn_window.ts';
 import { agentOpenTodoCount } from '../../spec-graph/task-census.ts';
 
 const HOOK = path.resolve(__dirname, '..', 'claim_evidence_gate_stop.ts');
@@ -254,21 +254,27 @@ describe('CEGATE001: pure classifier units', () => {
     expect(agentOpenTodoCount(path.join(dir, 'nope.jsonl'))).toBe(0); // missing file → fail-open 0
   });
 
-  // @feature11 — 5a (2026-06-21): the MULTI-agent across-window case the window detector misses. The real
-  // «came to rest» format is `Agent "<name>" came to rest` (verified against a live transcript). A sibling
-  // resting must NOT clear a DIFFERENTLY-named agent still running; once BOTH rest, not in-flight; and a
-  // cross-session rest with no matching launch here clears nothing.
-  it('CEGATE001_38: agentBgInFlight — a sibling «came to rest» does not clear a still-running agent', () => {
-    const launchA = A([tool('Agent', { description: 'migrate alpha', subagent_type: 'bdd-migrator', run_in_background: true })]);
-    const launchB = A([tool('Agent', { description: 'migrate beta', subagent_type: 'bdd-migrator', run_in_background: true })]);
-    const restA = U('● Agent "migrate alpha" came to rest · 5m\n\nрезультат: 14 зелёных');
-    const restB = U('● Agent "Autonomous migrate beta" came to rest · 8m\n\nрезультат: 9 зелёных'); // autonomous-loop prefix tolerated
-    const oneRunning = [U('go'), launchA, launchB, restA, A([txt('alpha готов; beta ещё идёт в фоне.')])].map((r) => JSON.stringify(r)).join('\n');
-    const bothDone = [U('go'), launchA, launchB, restA, restB, A([txt('оба готовы, обработал.')])].map((r) => JSON.stringify(r)).join('\n');
-    const noLaunch = [U('go'), U('● Agent "migrate gamma" came to rest · 1m'), A([txt('чужой агент из другой сессии — не мой.')])].map((r) => JSON.stringify(r)).join('\n');
-    expect(agentBgInFlight(oneRunning)).toBe(true); // beta unmatched → still in flight → defer
-    expect(agentBgInFlight(bothDone)).toBe(false); // both names matched → not in flight
-    expect(agentBgInFlight(noLaunch)).toBe(false); // a cross-session rest with no launch here clears nothing
+  // @feature11 — 2026-06-21: backgrounded helpers are counted by tool_use ID, not by name. Name-pairing
+  // over-counted catastrophically (retries re-launch the same description; «came to rest» drifts the name)
+  // → it reported «22 in flight» when the CLI had 0. Id-pairing reads the TRUE count: a launch's tool_use
+  // id ↔ its completion's id (a `<tool-use-id>` tag in a task-notification for agents). Retries/drift can't
+  // inflate it. Owner: «ты неправильно считаешь статусы… мне нужен норм счётчик а не врущий».
+  it('CEGATE001_38: agentBgInFlightCount pairs by tool_use id — retries do not inflate it', () => {
+    // a run_in_background spawn carries a STABLE top-level tool_use id; its completion is a task-notification
+    // carrying that same id (NOT a tool_result).
+    const launch = (id: string, desc: string): Block =>
+      A([{ type: 'tool_use', id, name: 'Agent', input: { description: desc, subagent_type: 'bdd-migrator', run_in_background: true } }]);
+    const done = (id: string): Block => U(`<task-notification><tool-use-id>${id}</tool-use-id><status>completed</status></task-notification>`);
+    // alpha launched TWICE (a retry — same description) + both completed; beta launched once, NOT completed.
+    const oneRunning = [U('go'), launch('a1', 'migrate alpha'), launch('a2', 'migrate alpha'), launch('b1', 'migrate beta'), done('a1'), done('a2'), A([txt('alpha done; beta идёт.')])]
+      .map((r) => JSON.stringify(r))
+      .join('\n');
+    const allDone = [U('go'), launch('a1', 'migrate alpha'), launch('b1', 'migrate beta'), done('a1'), done('b1'), A([txt('оба готовы.')])].map((r) => JSON.stringify(r)).join('\n');
+    const noLaunch = [U('go'), U('<task-notification><tool-use-id>z9</tool-use-id><status>completed</status></task-notification>'), A([txt('чужой id, не мой запуск.')])].map((r) => JSON.stringify(r)).join('\n');
+    expect(agentBgInFlightCount(oneRunning)).toBe(1); // only b1 unpaired — the alpha RETRY does NOT make it 2
+    expect(agentBgInFlight(oneRunning)).toBe(true);
+    expect(agentBgInFlightCount(allDone)).toBe(0); // both ids cleared by their completions
+    expect(agentBgInFlight(noLaunch)).toBe(false); // a completion id with no matching launch here clears nothing
   });
 });
 
@@ -478,26 +484,27 @@ describe('CEGATE001: claim-evidence gate — spec-false-close class (FR-49b)', (
     expect(runHook([...base, completion, claim], env).blocked).toBe(true); // completed in-window → blocks
   });
 
-  // @feature11 — 5a (2026-06-21): the real incident. A migration agent launches sibling agents; one «came
-  // to rest» RESETS the turn window, so the window detector no longer sees the OTHER agent's launch and the
-  // gate would kick a legitimately-waiting status stop. agentBgInFlight (whole-transcript, name-paired)
-  // keeps the still-running agent visible → defer. Once BOTH rest, the same lazy stop (no «Дальше:») blocks.
-  it('CEGATE001_39: a backgrounded agent still in flight across a sibling «came to rest» defers the kick', () => {
+  // @feature11 — 2026-06-21: a backgrounded agent in flight (id-paired) across a window reset defers the
+  // DETERMINISTIC kick; its completion un-defers. The agent launch carries a tool_use id; whole-transcript
+  // id-pairing keeps it visible even after a user message resets the turn window. With the judge off
+  // (CLAIM_GATE_JUDGE=false) this exercises the deterministic awaitingAsync path that the FIXED id-counter
+  // now feeds correctly (no name-pairing over-count).
+  it('CEGATE001_39: a backgrounded agent in flight (id-paired) defers the deterministic kick; its completion un-defers', () => {
     writeCensus(dir, { open: 11, doneRed: 0, doneUnrun: 0 }, { id: 'demo:t1', title: 'Wire the gate' });
     const env = { CLAIM_GATE_JUDGE: 'false' };
+    const launch = A([{ type: 'tool_use', id: 'ag-beta', name: 'Agent', input: { description: 'migrate beta', subagent_type: 'bdd-migrator', run_in_background: true } }]);
+    const doneBeta = U('<task-notification><tool-use-id>ag-beta</tool-use-id><status>completed</status></task-notification>');
     const pre = [
       U('мигрируй спеки'),
       A([tool('Edit', { file_path: '.specs/demo/FR.md' })]), // FR-9 non-.feature edit → scopes demo
-      A([tool('Agent', { description: 'migrate alpha', subagent_type: 'bdd-migrator', run_in_background: true })]),
-      A([tool('Agent', { description: 'migrate beta', subagent_type: 'bdd-migrator', run_in_background: true })]),
-      U('● Agent "migrate alpha" came to rest · 5m\n\nрезультат: 14 зелёных'), // resets the turn window
+      launch, // bg agent launched (id ag-beta)
+      U('жди'), // a user message RESETS the turn window → the window detector loses the launch
     ];
-    // executor in-window (commit) → works-done satisfied, so the ONLY kicker is no-next-section (the one
-    // awaitingAsync suppresses). Lazy gray claim with NO «Дальше:».
-    const tail = [A([tool('Bash', { command: 'git commit -m done' })]), A([txt('Закоммитил готовое; beta придёт — сверю.')])];
-    const restB = U('● Agent "migrate beta" came to rest · 8m\n\nрезультат: 9 зелёных');
-    expect(runHook([...pre, ...tail], env).blocked).toBe(false); // beta still in flight → defer (approve)
-    expect(runHook([...pre, restB, ...tail], env).blocked).toBe(true); // both rested → same lazy stop blocks
+    // executor in-window (commit) → works-done satisfied; gray claim, NO «Дальше:», NO «жду» → the only
+    // kicker is no-next-section, which awaitingAsync suppresses while the agent is in flight.
+    const tail = [A([tool('Bash', { command: 'git commit -m done' })]), A([txt('Закоммитил готовое, продолжаю по плану.')])];
+    expect(runHook([...pre, ...tail], env).blocked).toBe(false); // ag-beta in flight (id-paired, no completion) → defer
+    expect(runHook([...pre, doneBeta, ...tail], env).blocked).toBe(true); // completion landed → not in flight → blocks
   });
 
   // @feature11 — residual (c) (2026-06-21): a run_in_background COMMAND (Docker test) launched in an

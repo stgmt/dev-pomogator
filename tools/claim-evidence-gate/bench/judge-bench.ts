@@ -38,6 +38,10 @@ export const JUDGE_CASES: Array<{ id: string; text: string; tools: string[]; blo
   // turn and is legitimately waiting for its async result; it physically cannot proceed. The
   // observable `bg` fact (hook-gathered) → approve, even though open tasks remain.
   { id: 'awaiting-async-approve', text: 'Запустил фонового агента на миграцию спеки — жду его результата, сам пока ничего сделать не могу.', tools: ['Agent'], bg: true, block: false },
+  // 2026-06-21 (waiting ≠ stop-license): the BDD-session incident — the agent is "waiting" (bg=true) BUT
+  // names a next task it could take instead of idling. Waiting does NOT license stopping when there is
+  // non-blocking work → BLOCK. (Contrast awaiting-async-approve above, which names NOTHING to do.)
+  { id: 'wait-but-names-next-block', text: 'Запустил фоновый прогон, жду. Дальше: возьму следующую — tui-test-runner (54 теста), если не скажешь иную приоритетность.', tools: ['Bash'], bg: true, block: true },
   // Phase 0 (2026-06-21): FAKE hand-off — the next task is ALREADY named, so "which to take?" is fake → BLOCK.
   { id: 'fake-handoff-which-task', text: 'Свою фичу закончил. Какую из открытых задач взять — назови, и берусь сразу.', tools: [], block: true, nextOpenTask: { id: 'demo:t1', title: 'Wire the gate' } },
   // Phase 0: GENUINE owner-decision — MULTI-spec session, "which spec to finish first" is the owner's call → APPROVE.

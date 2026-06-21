@@ -32,7 +32,7 @@ import path from 'node:path';
 
 import { log as _logShared, normalizePath } from '../_shared/hook-utils.ts';
 import { markerPath, readMarker, writeMarkerAtomic, isWithinCooldown, hashFileList } from '../_shared/marker-utils.ts';
-import { extractTurnWindow, bgInFlightInWindow, agentBgInFlight, bgCommandInFlight, lastUserPrompt } from './turn_window.ts';
+import { extractTurnWindow, bgInFlightInWindow, agentBgInFlightCount, bgCommandInFlight, lastUserPrompt } from './turn_window.ts';
 import { firstUnsupported, isSpecCompletionClaim } from './claim_classifier.ts';
 import { readTaskCensusCache, scopeCensusToSlugs, sessionEditedSpecSlugs, agentOpenTodoCount, agentNextOpenTodo, type TaskCensusCache } from '../spec-graph/task-census.ts';
 import { judgeStop } from './meridian-judge.ts';
@@ -263,20 +263,19 @@ async function main(): Promise<void> {
   //      awaiting (the agent has the result and must act), so a lazy stop there still blocks.
   //   2. bgJobMarkerActive — a live `.bg-task-active*` marker (the test-runner wrapper's, which survives
   //      across a user message where the window resets) — belt-and-suspenders for tests.
-  //   3. agentBgInFlight (5a, 2026-06-21) — a backgrounded AGENT launched this SESSION whose «came to rest»
-  //      hasn't landed. The window detector (#1) misses it because a SIBLING agent's «came to rest» is a
-  //      USER message that RESETS the window, and no marker is dropped for an agent (#2 is test-only). This
-  //      is the false-positive that pinned a legitimately-waiting migration agent. Whole-transcript,
-  //      name-paired, fails toward over-defer (the SAFE direction). See turn_window.ts for the rationale.
-  // While ANY holds, the pinator defers its lazy-stop kicks to the bg-task-guard (one source of truth
-  // for "we're waiting"). The false-claim classes (works-done / spec-false-close) below are NOT
-  // suppressed — "готово, тесты прошли" while the job still runs is a false claim, caught as before.
+  //   3. agentBgInFlightCount (2026-06-21) — backgrounded AGENT helpers still in flight, paired RELIABLY by
+  //      tool_use id (NOT by name: name-pairing reported «22 in flight» when the CLI had 0, because retries
+  //      and «came to rest» name-drift inflated it; id-pairing reads the TRUE count). Whole-transcript, so it
+  //      survives window resets. This is the «нормальный счётчик» the owner demanded. See turn_window.ts.
   //   4. bgCommandInFlight (residual-c, 2026-06-21) — a `run_in_background` COMMAND launched in an EARLIER
   //      turn whose wait spans a window-resetting message (the window detector #1 loses it; no marker for
-  //      an ad-hoc bg command). Whole-transcript, position-based (last launch after last completion). This
-  //      is the over-fire that bit the gate's author during Docker waits.
+  //      an ad-hoc bg command). Whole-transcript, position-based (last launch after last completion).
+  // NOTE (2026-06-21): awaitingAsync NO LONGER hard-suppresses the JUDGE — it is passed to the judge as a
+  // FACT and the judge decides («жду фоновое» ≠ право встать, если есть неблокирующая работа). It still
+  // suppresses the DETERMINISTIC no-next-section / blocker so a genuine same-turn wait isn't false-kicked.
+  const agentBgCount = agentBgInFlightCount(rawTranscript);
   const awaitingAsync =
-    bgInFlightInWindow(rawTranscript) || bgJobMarkerActive(repoRoot) || agentBgInFlight(rawTranscript) || bgCommandInFlight(rawTranscript);
+    bgInFlightInWindow(rawTranscript) || bgJobMarkerActive(repoRoot) || agentBgCount > 0 || bgCommandInFlight(rawTranscript);
 
   // Phase 1 (2026-06-21): intent of the LAST user prompt — the agent-independent INTENT signal (the agent
   // can't fake the user's words). analysis-only = an analysis word AND no implement verb → require ONLY a
@@ -372,7 +371,10 @@ async function main(): Promise<void> {
   // logs WHY to stderr and returns null when помогатор is unreachable. Fires RARELY.
   if (!unsupported && !analysisOnly && (process.env.CLAIM_GATE_JUDGE ?? 'true').toLowerCase() === 'true') {
     const unfinished = openWork; // spec-scope open + agent todos (K3) — arms the judge on non-spec announce-and-stop
-    if (unfinished > 0 && GRAY_SIGNAL.test(claimText) && !awaitingAsync) {
+    // 2026-06-21: NO `!awaitingAsync` here — «жду фоновое» no longer GAGS the judge. The judge runs even
+    // during a wait and decides with the bg fact: a genuine present-tense continuation → APPROVE; naming a
+    // next task while work is open («возьму следующую, если не скажешь») → BLOCK (waiting ≠ stop-license).
+    if (unfinished > 0 && GRAY_SIGNAL.test(claimText)) {
       // A TRANSIENT judge failure (timeout / network blip → null) must NOT be a free pass —
       // that fail-open was the actual escape route. The judge BLOCKS the announce-and-stop
       // phrasings when it RUNS, but an intermittent null → approve let a premature stop slip and
