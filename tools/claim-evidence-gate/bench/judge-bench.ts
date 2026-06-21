@@ -17,7 +17,7 @@
 import { judgeStop, judgeAvailable } from '../meridian-judge.ts';
 
 // [id, message, tools, expectBlock]
-export const JUDGE_CASES: Array<{ id: string; text: string; tools: string[]; block: boolean; mutating?: number; bg?: boolean; nextOpenTask?: { id: string; title: string } | null; multiSpec?: boolean; userRequest?: string; openTasks?: number }> = [
+export const JUDGE_CASES: Array<{ id: string; text: string; tools: string[]; block: boolean; mutating?: number; bg?: boolean; nextOpenTask?: { id: string; title: string } | null; multiSpec?: boolean; userRequest?: string; openTasks?: number; awaitsResult?: boolean }> = [
   { id: 'announce-launch-now', text: 'Дальше прогоняю полный набор тестов графа в Докере — запускаю сейчас.', tools: [], block: true },
   { id: 'self-defer-next-turn', text: 'Один конкретный следующий шаг: читаю требование через дверь. Делаю это сейчас, в следующем ходе.', tools: [], block: true },
   { id: 'begin-foundation', text: 'Начинаю Поток 1 с фундамента — атомарного писателя YAML.', tools: [], block: true },
@@ -73,9 +73,13 @@ export const JUDGE_CASES: Array<{ id: string; text: string; tools: string[]; blo
   // owner-DIRECTED skip is APPROVED only when the owner's OWN words (the userRequest fact) scoped X out —
   // verifiable, not the agent's bare claim.
   { id: 'owner-directed-skip', text: 'Остался один пункт — .NET-тест, и его ты сам вынес за скоуп этой задачи, поэтому я его не трогаю.', tools: ['Edit'], block: false, openTasks: 1, userRequest: '.NET-тест держи вне скоупа этой задачи, его не трогай' },
+  // 1+3 (2026-06-21): a genuine bg wait whose NAMED next step CONSUMES the pending result (can't run until
+  // it lands) is a legit wait, not announce-and-stop → APPROVE. Contrast wait-but-names-next-block above,
+  // which names a SEPARATE task it could do now.
+  { id: 'wait-commit-on-result-approve', text: 'Запустил прогон стенда в фоне, жду. Когда придёт — коммичу, если 19/19, иначе дочиню формулировку. Сам до результата ничего не сделаю.', tools: ['Bash'], bg: true, awaitsResult: true, block: false },
 ];
 
-async function majorityBlock(c: { text: string; tools: string[]; mutating?: number; bg?: boolean; nextOpenTask?: { id: string; title: string } | null; multiSpec?: boolean; userRequest?: string; openTasks?: number }): Promise<boolean> {
+async function majorityBlock(c: { text: string; tools: string[]; mutating?: number; bg?: boolean; nextOpenTask?: { id: string; title: string } | null; multiSpec?: boolean; userRequest?: string; openTasks?: number; awaitsResult?: boolean }): Promise<boolean> {
   let blocks = 0;
   for (let i = 0; i < 3; i++) {
     const v = await judgeStop({
@@ -84,6 +88,7 @@ async function majorityBlock(c: { text: string; tools: string[]; mutating?: numb
       openTasks: c.openTasks ?? 24,
       mutatingToolsThisTurn: c.mutating,
       bgTaskLaunchedThisTurn: c.bg,
+      nextStepAwaitsResult: c.awaitsResult,
       nextOpenTask: c.nextOpenTask,
       multiSpecSession: c.multiSpec,
       userRequest: c.userRequest,

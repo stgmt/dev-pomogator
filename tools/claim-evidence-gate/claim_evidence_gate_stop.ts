@@ -276,6 +276,13 @@ async function main(): Promise<void> {
   const agentBgCount = agentBgInFlightCount(rawTranscript);
   const awaitingAsync =
     bgInFlightInWindow(rawTranscript) || bgJobMarkerActive(repoRoot) || agentBgCount > 0 || bgCommandInFlight(rawTranscript);
+  // 1+3 (2026-06-21): a genuine bg wait whose named next step CONSUMES the pending result (can't run until
+  // it lands — «когда придёт — обработаю/коммичу», «если 19/19 — коммичу») is NOT an announce-and-stop. The
+  // gate computes a deterministic HINT from the claim text (only meaningful while awaiting); the judge weighs
+  // it so "wait + result-dependent next" → APPROVE while "wait + a separate task it could do now" → BLOCK.
+  const AWAITS_RESULT_RE =
+    /когда\s+придёт|как\s+придёт|по\s+результату|результат[ауые]?\b[^.]{0,40}(?:обработ|свер|прочит|проверю|коммич|закоммич)|если\s+(?:\d|зел[её]н|green|ок\b|чисто)|при\s+зел[её]н|when\s+it\s+(?:returns|lands|completes|finishes)|on\s+the\s+result|once\s+it\s+(?:returns|lands|completes)/i;
+  const nextStepAwaitsResult = awaitingAsync && AWAITS_RESULT_RE.test(claimText);
 
   // Phase 1 (2026-06-21): intent of the LAST user prompt — the agent-independent INTENT signal (the agent
   // can't fake the user's words). analysis-only = an analysis word AND no implement verb → require ONLY a
@@ -388,6 +395,7 @@ async function main(): Promise<void> {
         openTasks: openWork, // K3: spec-scope open + agent todos (no `scoped!` — agentOpen can be > 0 with a null census)
         mutatingToolsThisTurn,
         bgTaskLaunchedThisTurn: awaitingAsync,
+        nextStepAwaitsResult, // 1+3 (2026-06-21): the named next step consumes the pending bg result → legit wait
         // Phase 0 (2026-06-21): the next open task is ALREADY named → "which task?" is a fake hand-off;
         // a multi-spec session makes "which spec to finish" a genuine owner choice (a legit AskUserQuestion).
         nextOpenTask: scoped?.specs?.[0]?.nextOpen ?? null,
