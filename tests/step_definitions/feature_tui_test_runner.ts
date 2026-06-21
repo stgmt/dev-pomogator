@@ -1575,6 +1575,32 @@ function runBuildGuardBDDWithCwd(command: string, cwd: string): BuildGuardResult
   return { status: result.status, stdout: (result.stdout || '').trim(), stderr: (result.stderr || '') };
 }
 
+/** Build a real tempDir TS project where src/ is NEWER than dist/index.js → checkStaleness('vitest')
+ *  reports STALE. mtimes are set deterministically via fs.utimesSync (no sleeps): dist 1h in the past,
+ *  src "now". This is the real fixture that exercises the src→dist staleness path the plugin enforces
+ *  for users with a real build (it is dead only in THIS repo, which has no root src/dist). */
+function makeStaleProject(dir: string): string {
+  fs.mkdirSync(path.join(dir, 'src'), { recursive: true });
+  fs.writeFileSync(path.join(dir, 'src', 'index.ts'), '// source — newer than dist\n');
+  fs.mkdirSync(path.join(dir, 'dist'), { recursive: true });
+  fs.writeFileSync(path.join(dir, 'dist', 'index.js'), '// stale build artifact\n');
+  const past = Date.now() / 1000 - 3600; // dist 1h older than src ("now")
+  fs.utimesSync(path.join(dir, 'dist', 'index.js'), past, past);
+  return dir;
+}
+
+/** Build a real tempDir TS project where dist/index.js is NEWER than src/ → checkStaleness('vitest')
+ *  reports FRESH (allow). Mirror of makeStaleProject with the mtimes inverted. */
+function makeFreshProject(dir: string): string {
+  fs.mkdirSync(path.join(dir, 'src'), { recursive: true });
+  fs.writeFileSync(path.join(dir, 'src', 'index.ts'), '// source — older than dist\n');
+  const past = Date.now() / 1000 - 3600; // src 1h older than dist ("now")
+  fs.utimesSync(path.join(dir, 'src', 'index.ts'), past, past);
+  fs.mkdirSync(path.join(dir, 'dist'), { recursive: true });
+  fs.writeFileSync(path.join(dir, 'dist', 'index.js'), '// fresh build artifact\n');
+  return dir;
+}
+
 function runBuildGuardRawBDD(rawInput: string): BuildGuardResult {
   const result = spawnSync(
     process.execPath,
@@ -1599,8 +1625,25 @@ interface TuiWorldWithBuildGuard extends V4World {
 Given(
   /^the build guard hook receives a wrapper vitest command$/,
   function (this: TuiWorldWithBuildGuard) {
-    this.buildGuardResult = runBuildGuardBDD(
-      'node tools/tui-test-runner/test_runner_wrapper.cjs --framework vitest -- npx vitest run',
+    // GUARD002_01: a real fixture project where src/ is NEWER than dist/ → staleness deny. (This repo
+    // has no root src/dist, so the check is exercised against a tempDir fixture — the plugin enforces
+    // this for users with a real build.)
+    const testCwd = makeStaleProject(path.join(this.tempDir, 'stale-cwd'));
+    this.buildGuardResult = runBuildGuardBDDWithCwd(
+      'node test_runner_wrapper.cjs --framework vitest -- npx vitest run',
+      testCwd,
+    );
+  },
+);
+
+Given(
+  /^the build guard hook receives a wrapper vitest command with fresh dist$/,
+  function (this: TuiWorldWithBuildGuard) {
+    // GUARD002_03: a real fixture project where dist/ is NEWER than src/ → fresh → allow.
+    const testCwd = makeFreshProject(path.join(this.tempDir, 'fresh-cwd'));
+    this.buildGuardResult = runBuildGuardBDDWithCwd(
+      'node test_runner_wrapper.cjs --framework vitest -- npx vitest run',
+      testCwd,
     );
   },
 );

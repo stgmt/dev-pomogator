@@ -383,7 +383,6 @@ Feature: PLUGIN012_TUI_Test_Runner
   # FR-15: Build Guard Hook (GUARD002)
   # ---------------------------------------------------------------------------
 
-  @wip
   @feature15
   Scenario: GUARD002_01 build guard denies when TypeScript src is newer than dist
     Given the build guard hook receives a wrapper vitest command
@@ -394,7 +393,6 @@ Feature: PLUGIN012_TUI_Test_Runner
     Given the build guard hook checks a cwd that has src but no dist
     Then the build guard should deny with exit code 2 and reason about npm run build
 
-  @wip
   @feature15
   Scenario: GUARD002_03 build guard allows when build is fresh
     Given the build guard hook receives a wrapper vitest command with fresh dist
