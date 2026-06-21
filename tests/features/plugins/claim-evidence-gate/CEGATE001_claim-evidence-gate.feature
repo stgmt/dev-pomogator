@@ -207,6 +207,12 @@ Feature: CEGATE001 Claim-Evidence Gate
     Then it blocks because the agent's open todo counts as open work AND the kick names that next open todo, and it stays quiet once all todos are completed
 
   # @feature11
+  Scenario: CEGATE001_42 A backgrounded command still in flight across a window reset defers the kick
+    Given a run_in_background command was launched in an earlier turn and a later message reset the turn window before the agent's lazy stop
+    When the gate evaluates the stop while no completion record has arrived
+    Then it defers because the whole-transcript check sees the launch is still pending, and it blocks the same lazy stop once the completion record lands
+
+  # @feature11
   Scenario: CEGATE001_41 The agent task list is reconstructed from the transcript to count open work
     Given the transcript records TaskCreate/TaskUpdate calls and a latest TodoWrite list
     When the gate counts the agent's open declared work

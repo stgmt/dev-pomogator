@@ -32,7 +32,7 @@ import path from 'node:path';
 
 import { log as _logShared, normalizePath } from '../_shared/hook-utils.ts';
 import { markerPath, readMarker, writeMarkerAtomic, isWithinCooldown, hashFileList } from '../_shared/marker-utils.ts';
-import { extractTurnWindow, bgInFlightInWindow, agentBgInFlight, lastUserPrompt } from './turn_window.ts';
+import { extractTurnWindow, bgInFlightInWindow, agentBgInFlight, bgCommandInFlight, lastUserPrompt } from './turn_window.ts';
 import { firstUnsupported, isSpecCompletionClaim } from './claim_classifier.ts';
 import { readTaskCensusCache, scopeCensusToSlugs, sessionEditedSpecSlugs, agentOpenTodoCount, agentNextOpenTodo, type TaskCensusCache } from '../spec-graph/task-census.ts';
 import { judgeStop } from './meridian-judge.ts';
@@ -271,7 +271,12 @@ async function main(): Promise<void> {
   // While ANY holds, the pinator defers its lazy-stop kicks to the bg-task-guard (one source of truth
   // for "we're waiting"). The false-claim classes (works-done / spec-false-close) below are NOT
   // suppressed — "готово, тесты прошли" while the job still runs is a false claim, caught as before.
-  const awaitingAsync = bgInFlightInWindow(rawTranscript) || bgJobMarkerActive(repoRoot) || agentBgInFlight(rawTranscript);
+  //   4. bgCommandInFlight (residual-c, 2026-06-21) — a `run_in_background` COMMAND launched in an EARLIER
+  //      turn whose wait spans a window-resetting message (the window detector #1 loses it; no marker for
+  //      an ad-hoc bg command). Whole-transcript, position-based (last launch after last completion). This
+  //      is the over-fire that bit the gate's author during Docker waits.
+  const awaitingAsync =
+    bgInFlightInWindow(rawTranscript) || bgJobMarkerActive(repoRoot) || agentBgInFlight(rawTranscript) || bgCommandInFlight(rawTranscript);
 
   // Phase 1 (2026-06-21): intent of the LAST user prompt — the agent-independent INTENT signal (the agent
   // can't fake the user's words). analysis-only = an analysis word AND no implement verb → require ONLY a

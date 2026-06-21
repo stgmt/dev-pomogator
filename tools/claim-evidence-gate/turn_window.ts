@@ -170,6 +170,49 @@ export function bgInFlightInWindow(rawTranscript: string): boolean {
   return launched > completed;
 }
 
+/**
+ * Residual (c) fix (2026-06-21): a backgrounded COMMAND (a `run_in_background` Bash — Docker test /
+ * build / long task) launched in an EARLIER turn whose wait spans a user (or gate-feedback) message that
+ * RESETS the turn window. `bgInFlightInWindow` is window-scoped, so it loses that launch and the gate
+ * falsely kicks a legitimately-waiting stop — it bit the gate's own author repeatedly during Docker
+ * waits. This whole-transcript companion survives window resets: find the LAST `run_in_background` launch
+ * and the LAST bg-COMPLETION record (the harness's «<status>completed</status>» / «Background command …
+ * completed»); if the last launch is AFTER the last completion, a bg job is still pending → awaiting.
+ * Position-based (not a naive total count), so a completion clears everything before it — and it errs
+ * toward OVER-defer, the SAFE direction here (the owner's complaint is over-FIRE, never under). Both
+ * sides are harness-recorded → ungameable.
+ */
+export function bgCommandInFlight(rawTranscript: string): boolean {
+  const lines = parseLines(rawTranscript);
+  let lastLaunchIdx = -1;
+  let lastCompletionIdx = -1;
+  for (let i = 0; i < lines.length; i++) {
+    const e = lines[i];
+    if (e.isSidechain) continue;
+    if (role(e) === 'assistant') {
+      for (const b of contentBlocks(e)) {
+        const bb = b as Record<string, unknown>;
+        if (bb?.type !== 'tool_use') continue;
+        // ONLY backgrounded shell commands — Agent/Task are handled by agentBgInFlight (name-paired by
+        // «came to rest»), and their completion is NOT a «completed» record, so counting them here would
+        // see them as forever-pending and defer wrongly (broke CEGATE001_39). Shell completions ARE «completed».
+        const nm = String(bb.name ?? '').toLowerCase();
+        if (nm !== 'bash' && nm !== 'powershell') continue;
+        const inp = bb.input as Record<string, unknown> | undefined;
+        if (inp && typeof inp === 'object' && inp.run_in_background === true) lastLaunchIdx = i;
+      }
+    }
+    let serialized = '';
+    try {
+      serialized = JSON.stringify(e);
+    } catch {
+      serialized = '';
+    }
+    if (serialized && BG_COMPLETION_RE.test(serialized)) lastCompletionIdx = i;
+  }
+  return lastLaunchIdx >= 0 && lastLaunchIdx > lastCompletionIdx;
+}
+
 /** All readable text of a line regardless of role — string content, text blocks, or a tool_result's
  * string content. Used to scan for the «came to rest» notification (a user-role text message). */
 function lineText(e: TranscriptLine): string {

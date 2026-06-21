@@ -500,6 +500,27 @@ describe('CEGATE001: claim-evidence gate — spec-false-close class (FR-49b)', (
     expect(runHook([...pre, restB, ...tail], env).blocked).toBe(true); // both rested → same lazy stop blocks
   });
 
+  // @feature11 — residual (c) (2026-06-21): a run_in_background COMMAND (Docker test) launched in an
+  // EARLIER turn whose wait spans a window-resetting user/gate-feedback message. The window detector loses
+  // it and the gate falsely kicked a legitimately-waiting stop — it bit the gate's own author during
+  // Docker waits. bgCommandInFlight (whole-transcript, last-launch-after-last-completion) keeps it visible.
+  it('CEGATE001_42: a backgrounded command still in flight across a window reset defers; its completion un-defers', () => {
+    const env = { CLAIM_GATE_JUDGE: 'false' };
+    const launch = A([tool('Bash', { command: 'docker test', run_in_background: true })]);
+    const completion: Block = {
+      type: 'user',
+      message: {
+        role: 'user',
+        content: [{ type: 'tool_result', tool_use_id: 'x', content: '<status>completed</status>\nBackground command "docker test" completed (exit code 0)' }],
+      },
+    };
+    const head = [U('собери и почини'), A([tool('TaskCreate', { subject: 't1' })]), launch]; // open todo → openWork > 0
+    const claim = A([txt('Жду сборку, продолжаю по плану.')]); // lazy gray, no «Дальше:» → would block if not awaiting
+    // launch in turn 1, then a user message RESETS the window before the claim → window detector loses the launch
+    expect(runHook([...head, U('жди'), claim], env).blocked).toBe(false); // still running across the reset → defer
+    expect(runHook([...head, completion, U('жди'), claim], env).blocked).toBe(true); // completion landed → same lazy stop blocks
+  });
+
   // @feature11 — K3 (2026-06-21): the agent's OWN open todos (Task/TodoWrite) arm the gate even with
   // ZERO spec scope. The non-spec under-fire the owner hit live: a session editing only tools/ scopes to
   // 0 spec-open, so an announce-and-stop sailed through — «при чём тут спеки если агент явный анонс
