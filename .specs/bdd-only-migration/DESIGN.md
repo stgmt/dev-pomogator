@@ -2,115 +2,110 @@
 
 ## Реализуемые требования
 
-- [FR-1: {Название}](FR.md#fr-1-название)
-- [FR-2: {Название}](FR.md#fr-2-название)
+- [FR-1: Staged BDD-only test-file guard](FR.md#fr-1-staged-bdd-only-test-file-guard)
+- [FR-2: Detector unit tests migrated to BDD with mutation parity](FR.md#fr-2-detector-unit-tests-migrated-to-bdd-with-mutation-parity)
+- [FR-3: .NET mutation path runs in Docker](FR.md#fr-3-net-mutation-path-runs-in-docker)
+- [FR-4: build-guard updated for v2](FR.md#fr-4-build-guard-updated-for-v2)
+- [FR-5: All vitest tests migrated to BDD](FR.md#fr-5-all-vitest-tests-migrated-to-bdd)
+- [FR-6: bdd-migrator upgraded for BDD-only with no exceptions](FR.md#fr-6-bdd-migrator-upgraded-for-bdd-only-with-no-exceptions)
+- [FR-7: Final gate-switch to the Docker-cucumber canonical run](FR.md#fr-7-final-gate-switch-to-the-docker-cucumber-canonical-run)
+- [FR-8: Spec records the full migration with a GREEN smart verdict](FR.md#fr-8-spec-records-the-migration-with-a-green-smart-verdict)
+- [FR-9: FR-1 guard scenarios drive the real guard](FR.md#fr-9-fr-1-guard-scenarios-drive-the-real-guard)
 
 ## Компоненты
 
-- `{Компонент 1}` — {описание}
-- `{Компонент 2}` — {описание}
+- `bdd-only-test-guard` — PreToolUse hook (builtins-only) that denies new non-BDD test files (FR-1, FR-9).
+- `strong-tests` mutation surface — the detector under `@feature7` Scenario Outline + Examples, gated by `verify-kill` (FR-2).
+- `Dockerfile.test.base` — ships the .NET 8 SDK + dotnet-stryker so the .NET mutation scenario runs (FR-3).
+- `build-staleness.ts` — the build-guard, with the dead `src/→dist/` check removed (FR-4).
+- `bdd-migrator` (agent + skill + `tools/bdd-migrator/*`) — drives the tail migration with no refusals (FR-5, FR-6).
+- `package.json` / `vitest.config.ts` — the gate-switch from vitest to the Docker-cucumber canonical run (FR-7).
 
 ## Где лежит реализация
 
-- App-код: `{путь/к/коду}`
-- Wiring: `{путь/к/wiring}`
+- App-код: `tools/bdd-only-test-guard/guard.ts`, `tools/bdd-migrator/`, `tools/tui-test-runner/build-staleness.ts`, `.claude/skills/strong-tests/scripts/`.
+- Wiring: `.claude/settings.json`, `.claude-plugin/hooks.json`, `cucumber.json`, `Dockerfile.test.base`, `package.json`.
 
 ## Директории и файлы
 
-- `{путь/к/файлу1}`
-- `{путь/к/файлу2}`
+- `tools/bdd-only-test-guard/guard.ts`
+- `tests/step_definitions/feature_bdd_only_guard.ts`
+- `.specs/bdd-only-migration/bdd-only-migration.feature`
+- `.claude/rules/bdd-only/bdd-only-tests.md`
 
 ## Алгоритм
 
-1. {Шаг 1}
-2. {Шаг 2}
-3. {Шаг 3}
+1. The guard reads the PreToolUse payload from stdin (`tool_name`, `tool_input.file_path`, `cwd`).
+2. It classifies the target: a Write of a path matching a non-BDD test pattern that does not yet exist is a NEW non-BDD test.
+3. A new non-BDD test is denied with a BDD-only reason; Edits, `.feature` files, and `tests/step_definitions/` paths are allowed.
+4. An escape (`BDD_ONLY_SKIP=1` or the commit marker) allows the write and appends one JSON line to the escape log.
 
 ## API
 
-### {Endpoint 1}
+### bdd-only-test-guard (PreToolUse)
 
-- Method: `{GET/POST/PUT/DELETE}`
-- Path: `{путь}`
-- Request: `{описание запроса}`
-- Response: `{описание ответа}`
+- Method: `stdin JSON → stdout JSON`
+- Path: `tools/bdd-only-test-guard/guard.ts` (via `tools/_shared/bootstrap.cjs`)
+- Request: `{ tool_name, tool_input: { file_path }, cwd }`
+- Response: `{ hookSpecificOutput: { permissionDecision: "deny" | "allow", permissionDecisionReason } }`; deny → exit 2, allow → exit 0.
 
 ## Key Decisions
 
-> Auto-populated by Skill `requirements-chk-matrix` during Phase 2. Hook `design-decision-guard` enforces format:
-> each `### Decision:` block must include **Rationale:**, **Trade-off:**, **Alternatives considered:** with ≥2 `- {alt}` bullets.
-> Files without any `### Decision:` heading pass unblocked — section is optional but strongly recommended for Phase 2.
+### Decision: Staged (not absolute) file-level guard
 
-### Decision: {short, specific title — the outcome, not the question}
+**Rationale:** Existing vitest tests must remain editable until their BDD twin is green, so the guard blocks only the Write of a NEW non-BDD test, not edits of existing ones.
 
-**Rationale:** {Why this choice is better for the current context}
-
-**Trade-off:** {What we give up — be honest, name the specific downside}
+**Trade-off:** During the migration window a non-BDD test can still be modified, so the regime is enforced fully only once the tail reaches zero `*.test.ts`.
 
 **Alternatives considered:**
-- {Alt 1} — rejected because {specific reason tied to this project, not generic}
-- {Alt 2} — rejected because {specific reason}
+- Block all non-BDD test touches immediately — rejected because it would freeze the in-progress migration of ~120 files.
+- Rely on review discipline only — rejected because it has no mechanical enforcement and lets new vitest files reappear.
+
+### Decision: builtins-only hook with fail-open
+
+**Rationale:** The hook is plugin-distributed; users have no `node_modules`, so it imports only Node builtins and allows on any internal error (dead-integration-guard rule).
+
+**Trade-off:** No third-party parsing helpers are available, so path classification is hand-written.
+
+**Alternatives considered:**
+- Bundle dependencies — rejected as overkill for a few path checks.
+- Lazy-import with fallback — rejected because builtins-only is simpler and has no failure surface for this guard.
 
 ## BDD Test Infrastructure (ОБЯЗАТЕЛЬНО)
 
-> Секция НЕ может быть удалена. Агент обязан классифицировать фичу по ДВУМ осям: TEST_DATA (данные) + TEST_FORMAT (формат тестов).
->
-> **Step 6.1a — TEST_DATA** (ДА/НЕТ на 4 вопроса):
-> 1. Фича создаёт, изменяет или удаляет данные через API/БД/файлы?
-> 2. Фича изменяет состояние системы, которое нужно откатить после теста?
-> 3. BDD сценарии из .feature требуют предустановленных данных (Given-шаги с данными)?
-> 4. Фича взаимодействует с внешними сервисами, требующими mock/stub на уровне теста?
->
-> Хотя бы 1 ДА → `TEST_DATA_ACTIVE` (заполнить все подсекции ниже).
-> Все НЕТ → `TEST_DATA_NONE` (указать Evidence, подсекции не нужны).
->
-> **Step 6.1b — TEST_FORMAT**:
-> - `BDD` (дефолт для всех языков) — `.feature` сценарии + step definitions + hooks через BDD framework.
-> - `UNIT` — escape hatch, требует непустую `## Risks` секцию с обоснованием. Используется только в крайних случаях (legacy, embedded, framework несовместим).
->
-> **Step 6.1c — Framework** (только если TEST_FORMAT=BDD):
-> Запустить `bdd-framework-detector` на target test-projects из FILE_CHANGES.md. Записать результат.
-> Поддерживаемые: `Reqnroll | SpecFlow` (C#), `Cucumber.js | Playwright BDD` (TS), `Behave | pytest-bdd` (Python).
-> Если framework НЕ установлен — это remediation target: TASKS.md Phase 0 будет содержать bootstrap block (install + hooks + fixtures + config).
-
-**TEST_DATA:** {TEST_DATA_ACTIVE | TEST_DATA_NONE}
-**TEST_FORMAT:** {BDD | UNIT}
-**Framework:** {Reqnroll | SpecFlow | Cucumber.js | Playwright BDD | Behave | pytest-bdd | N/A при UNIT}
-**Install Command:** {actual команда, например `dotnet add package Reqnroll` или "already installed"}
-**Evidence:** {grep output или detector evidence — путь + строка + snippet, либо reference на RESEARCH.md "Existing Patterns"}
-**Verdict:** {Краткий вывод: какие hooks/fixtures нужны; при TEST_DATA_NONE — "no hooks required"}
-
-<!-- Подсекции ниже заполнять ТОЛЬКО при TEST_DATA_ACTIVE. При TEST_DATA_NONE — удалить подсекции. -->
+**TEST_DATA:** TEST_DATA_ACTIVE
+**TEST_FORMAT:** BDD
+**Framework:** Cucumber.js
+**Install Command:** already installed (`@cucumber/cucumber` in package.json)
+**Evidence:** `tests/step_definitions/feature_bdd_only_guard.ts` exists and spawns the real guard; `tests/hooks/before-after.ts` provides the V4World per-scenario tempDir.
+**Verdict:** Per-scenario isolation via the V4World Before hook (fresh tempDir); the "existing file" and escape-log assertions live inside that isolated dir. No new hook file needed.
 
 ### Существующие hooks
 
 | Hook файл | Тип | Тег/Scope | Что делает | Можно переиспользовать? |
 |-----------|-----|-----------|------------|------------------------|
-| `{путь}` | {Before/AfterScenario} | {тег} | {описание} | {Да/Нет + причина} |
-
-> Если hooks не найдены в проекте — записать: `Не найдены в проекте`.
+| `tests/hooks/before-after.ts` | Before/After | global (V4World) | fresh per-scenario tempDir + cleanup | Да — used by feature_bdd_only_guard.ts |
 
 ### Новые hooks
 
 | Hook файл | Тип | Тег/Scope | Что делает | По аналогии с |
 |-----------|-----|-----------|------------|---------------|
-| `{путь}` | {AfterScenario} | {тег} | {cleanup} | {существующий hook или N/A} |
-
-> Каждый новый hook ОБЯЗАН быть указан в FILE_CHANGES.md (action=create) и в TASKS.md Phase 0.
+| N/A | N/A | N/A | no new hook required | N/A |
 
 ### Cleanup Strategy
 
-{Порядок удаления тестовых данных, каскадные зависимости, rollback при ошибках}
+The V4World After hook removes the per-scenario tempDir, including the isolated `.claude/logs/bdd-only-escapes.jsonl` written under it; nothing leaks to the real repo logs.
 
 ### Test Data & Fixtures
 
 | Fixture/Data | Путь | Назначение | Lifecycle |
 |-------------|------|------------|-----------|
-| `{имя}` | `{путь}` | {описание} | {per-scenario/per-feature/shared} |
+| existing test file | `<tempDir>/<rel>` | the "existing file" case for the allow-edit scenario | per-scenario |
+| escape log | `<tempDir>/.claude/logs/bdd-only-escapes.jsonl` | asserted by the escape-logged scenario | per-scenario |
 
 ### Shared Context / State Management
 
 | Ключ | Тип | Записывается в | Читается в | Назначение |
 |------|-----|----------------|------------|------------|
-| `{ключ}` | `{тип}` | `{step/hook}` | `{step/hook}` | {описание} |
-
+| `guardExit` | number | When step (runGuard) | Then step | the guard's exit code |
+| `guardStdout` | string | When step (runGuard) | Then step | the guard's stdout JSON |
