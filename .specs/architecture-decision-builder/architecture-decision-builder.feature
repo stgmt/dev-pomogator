@@ -284,3 +284,29 @@ Feature: ARCH001_Architecture_Decision_Builder
     Given a freshly scaffolded spec with its progress version set to 3
     When architecture-gate evaluates a PreToolUse Write of FR.md for the legacy spec
     Then architecture-gate should allow the write without requiring ARCHITECTURE/
+
+  @feature40
+  Scenario: ARCH002_04 recommendation pinned top regardless of variant order in markdown
+    Given the architecture-decision sample axis model is loaded
+    When renderAxisMarkdown is called on the sample axis
+    Then the architecture-decision markdown should contain a "✅ Recommended" marker
+    And the "✅ Recommended" marker should appear before any non-recommended variant header in the architecture-decision markdown
+
+  @feature41
+  Scenario: ARCH003_01 collectRows cardinality equals number of axis files with unique ids
+    Given three axis files with distinct ids exist in a directory
+    When collectRows is called on that directory
+    Then the row count should equal the number of axis files
+    And all row axis_ids should be unique
+
+  @feature42
+  Scenario: ARCH004_02 openInBrowser fallback path starts with file:// when browser unavailable
+    Given a path to an HTML file that cannot be opened by xdg-open
+    When open-in-browser is called for that path on linux platform
+    Then when launched is false the fallback should start with "file://"
+
+  @feature43
+  Scenario: ARCH005_06 completeness escape log written to ARCHITECTURE_LOG_DIR
+    Given a completeness ledger with all dimensions addressed or out-of-scope with ARCHITECTURE_LOG_DIR set
+    When the audit-completeness command runs with ARCHITECTURE_LOG_DIR pointing to the spec dir
+    Then a spec-completeness-escapes.jsonl file should be created in ARCHITECTURE_LOG_DIR
