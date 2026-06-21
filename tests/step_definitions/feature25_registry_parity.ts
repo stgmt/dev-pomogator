@@ -141,3 +141,39 @@ Then(/^both registries declare identical hook identities for that event$/, funct
     `${ev}: in dogfood settings.json but NOT shipped to users`,
   );
 });
+
+// ─── Snapshot freshness scenario (SPECGEN004_372) ─────────────────────────────
+
+const EVENTS_LIST = ['Stop', 'SessionStart', 'PreToolUse', 'PostToolUse', 'UserPromptSubmit'] as const;
+
+Given(/^the committed registry-parity snapshot and the live settings\.json are both present$/, function (this: ParityWorld) {
+  assert.ok(fs.existsSync(SNAPSHOT_PATH), 'committed snapshot must exist at tools/spec-graph/__tests__/__fixtures__/registry-parity/settings-hooks.snapshot.json');
+  // settings.json may be absent if a sibling test wiped it — scenario handles that gracefully (pass silently)
+});
+
+When(/^the snapshot freshness check compares them for every hook event$/, function (this: ParityWorld) {
+  if (!fs.existsSync(SETTINGS_PATH)) {
+    // settings.json absent (wiped by sibling test or Docker) — snapshot IS the source of truth; nothing to compare
+    this.snapshotFresh = true;
+    return;
+  }
+  const liveJson = JSON.parse(fs.readFileSync(SETTINGS_PATH, 'utf8'));
+  const snap = JSON.parse(fs.readFileSync(SNAPSHOT_PATH, 'utf8')) as Record<string, string[]>;
+  for (const event of EVENTS_LIST) {
+    const live = [...identitiesForEvent(liveJson, event)].sort();
+    const snapped = (snap[event] ?? []).slice().sort();
+    if (JSON.stringify(live) !== JSON.stringify(snapped)) {
+      this.snapshotFresh = false;
+      this.lastStdout = `${event}: snapshot drifted — live=[${live.join(',')}] snap=[${snapped.join(',')}]`;
+      return;
+    }
+  }
+  this.snapshotFresh = true;
+});
+
+Then(/^the snapshot matches the live settings\.json for every event or settings\.json is absent$/, function (this: ParityWorld) {
+  assert.ok(
+    this.snapshotFresh,
+    `Registry-parity snapshot is stale: ${this.lastStdout ?? 'unknown drift'}. Regenerate settings-hooks.snapshot.json to match live .claude/settings.json.`,
+  );
+});
