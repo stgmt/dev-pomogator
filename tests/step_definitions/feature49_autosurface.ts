@@ -263,7 +263,10 @@ Then(
     // («open/unfinished tasks in THIS SESSION's scope: 20» + «scope-open tasks: 20»), not the old «20 open».
     assert.match(p, /(?:tasks|scope)[^\n]{0,40}20/i, 'the census fact (20 open) reaches the judge');
     assert.match(p, /ONLY one JSON line/, 'the judge is told to answer with exactly one JSON line');
-    assert.match(p, /genuine clarifying question/i, 'the APPROVE-side clarifying-question carve-out is present');
+    // FR-49 Phase 1 (intent-aware) reworded the APPROVE-side question carve-out from the literal
+    // "genuine clarifying question" to "asking ONE GENUINE owner-decision … A real back-and-forth".
+    // The carve-out is preserved (a genuine owner question still APPROVES); assert the new wording.
+    assert.match(p, /genuine owner-decision/i, 'the APPROVE-side genuine-question / owner-decision carve-out is present');
   },
 );
 
