@@ -21,20 +21,20 @@ Feature: POMOGATORDOCTOR001_pomogator-doctor_diagnostic_command
     When I run `dev-pomogator --doctor` in interactive mode
     Then the report contains all known check IDs including C1, C2, C3, C6, C7, C13, C14
 
-  @feature2
+  @feature3
   Scenario: POMOGATORDOCTOR001_02 Missing tools — C5 critical+reinstallable
     Given temp home fixture "missing-tools" is loaded (F-2)
     When I run `dev-pomogator --doctor` in interactive mode
     Then check C5 is severity "critical" and reinstallable and appears in reinstallableIssues
 
-  @feature3
+  @feature5
   Scenario: POMOGATORDOCTOR001_03 Missing API key — hint only, no reinstall offered
     Given temp home fixture "valid" is loaded (F-1)
     And AUTO_COMMIT_API_KEY is explicitly unset from process.env
     When I run `dev-pomogator --doctor` in interactive mode
     Then check C7 for AUTO_COMMIT_API_KEY is severity "critical" and reinstallable=false and in manualIssues
 
-  @feature4
+  @feature17
   Scenario: POMOGATORDOCTOR001_04 SessionStart silent when all OK
     Given temp home fixture "valid" is loaded (F-1)
     And AUTO_COMMIT_API_KEY is set via envInSettingsLocal
@@ -42,51 +42,51 @@ Feature: POMOGATORDOCTOR001_pomogator-doctor_diagnostic_command
     Then the hook stdout is valid JSON with continue=true
     And the hook stdout has suppressOutput=true
 
-  @feature4
+  @feature17
   Scenario: POMOGATORDOCTOR001_05 SessionStart emits suppressOutput=true on bare home with no config
     When I invoke doctor-hook.ts via SessionStart spawn with empty input on a bare home
     Then the hook stdout is valid JSON with continue=true
     And the hook stdout has suppressOutput=true
 
-  @feature4
+  @feature10
   Scenario: POMOGATORDOCTOR001_06 MCP probe timeout triggers SIGKILL
     Given temp home fixture "valid" is loaded (F-1)
     And a hanging fake MCP server is spawned and wired via .mcp.json
     When I run `dev-pomogator --doctor --json`
     Then check C12 for fake-hanging server is severity "critical" and message contains "timeout"
 
-  @feature2
+  @feature11
   Scenario: POMOGATORDOCTOR001_07 Version mismatch — C13 critical reinstallable
     Given temp home fixture "version-mismatch" is loaded with configVersion "1.3.0" and packageVersion "2.0.0"
     When I run `dev-pomogator --doctor` in interactive mode
     Then check C13 is severity "critical" and reinstallable and message contains "major"
 
-  @feature8
+  @feature24
   Scenario: POMOGATORDOCTOR001_08 CI mode --json outputs redacted JSON and exit 2
     Given temp home fixture "valid" is loaded (F-1)
     And AUTO_COMMIT_API_KEY is explicitly unset from process.env
     When I run `dev-pomogator --doctor --json`
     Then the JSON output is valid, contains no ANSI codes, C7 envStatus.status="unset", no "value" field, and exitCodeFor returns 2
 
-  @feature10
+  @feature13
   Scenario: POMOGATORDOCTOR001_09 Plugin-loader broken-missing — reinstallable
     Given temp home fixture "valid" with pluginJson declaring broken-missing command "create-spec"
     When I run `dev-pomogator --doctor` in interactive mode
     Then check C15 summary is severity "critical" and reinstallable and state="BROKEN-missing" and message matches the broken command
 
-  @feature9
+  @feature20
   Scenario: POMOGATORDOCTOR001_10 Traffic-light grouped output
     Given temp home fixture with installedExtensions=["plan-pomogator","auto-commit"] and AUTO_COMMIT_API_KEY in settingsLocal
     When I run `dev-pomogator --doctor` in interactive mode
     Then formatChalk output contains all three traffic-light group emojis and Summary line
 
-  @feature11
+  @feature21
   Scenario: POMOGATORDOCTOR001_11 Per-extension gating skips irrelevant checks
     Given temp home fixture with installedExtensions=["plan-pomogator","auto-commit"] and AUTO_COMMIT_API_KEY in settingsLocal
     When I run `dev-pomogator --doctor --json`
     Then gatedOut includes C9, C10, C16 and results does NOT include those IDs
 
-  @feature3
+  @feature5
   Scenario: POMOGATORDOCTOR001_12 API key set in settings.local.json env block is accepted
     Given temp home fixture "valid" is loaded with envInSettingsLocal={AUTO_COMMIT_API_KEY:"sk-from-settings"}
     And AUTO_COMMIT_API_KEY is explicitly unset from process.env
@@ -95,7 +95,7 @@ Feature: POMOGATORDOCTOR001_pomogator-doctor_diagnostic_command
 
   # Reliability edge cases (referenced by NFR)
 
-  @feature2
+  @feature3
   Scenario: POMOGATORDOCTOR001_13 Corrupt config.json treated as critical reinstallable
     Given temp home fixture "corrupt-config" is loaded (F-4)
     When I run `dev-pomogator --doctor`
@@ -108,7 +108,7 @@ Feature: POMOGATORDOCTOR001_pomogator-doctor_diagnostic_command
     When I run runDoctor in-process and expect a LockHeldError
     Then runDoctor threw a LockHeldError
 
-  @feature4
+  @feature17
   Scenario: POMOGATORDOCTOR001_15 Hook error never blocks SessionStart
     Given temp home fixture "corrupt-config" is loaded (F-4)
     When SessionStart hook invokes doctor-hook.ts with --quiet
@@ -119,7 +119,7 @@ Feature: POMOGATORDOCTOR001_pomogator-doctor_diagnostic_command
   # ============================================================
 
   @wip
-  @feature12
+  @feature26
   Scenario: POMOGATORDOCTOR001_16 Hook command references missing script file
     # NOTE: C20 not in engine/checks/ — unimplemented in v2.
     Given temp home fixture "valid" is loaded (F-1)
@@ -131,7 +131,7 @@ Feature: POMOGATORDOCTOR001_pomogator-doctor_diagnostic_command
     And that check hint mentions "reinstall"
 
   @wip
-  @feature12
+  @feature26
   Scenario: POMOGATORDOCTOR001_17 Hook storm — 22 missing commands across 5 events aggregated
     # NOTE: C20 not in engine/checks/ — unimplemented in v2.
     Given temp home fixture "webapp-like" (F-14) with settings.local.json containing 22 hook commands across events Stop(8), SessionStart(4), PreToolUse(4), UserPromptSubmit(4), PostToolUse(2)
@@ -143,7 +143,7 @@ Feature: POMOGATORDOCTOR001_pomogator-doctor_diagnostic_command
     And summary.critical is at least 5
 
   @wip
-  @feature12
+  @feature26
   Scenario: POMOGATORDOCTOR001_18 Shell hook (bash .sh) also parsed
     # NOTE: C20 not in engine/checks/ — unimplemented in v2.
     Given temp home fixture "valid" is loaded (F-1)
@@ -153,7 +153,7 @@ Feature: POMOGATORDOCTOR001_pomogator-doctor_diagnostic_command
     Then results contains critical check mentioning "stop-guard.sh"
 
   @wip
-  @feature12
+  @feature27
   Scenario: POMOGATORDOCTOR001_19 Managed file hash mismatch emits warning
     # NOTE: C21 not in engine/checks/ — unimplemented in v2.
     Given temp home fixture "valid" is loaded (F-1)
@@ -164,7 +164,7 @@ Feature: POMOGATORDOCTOR001_pomogator-doctor_diagnostic_command
     And that check hint contains "user edit or version drift"
 
   @wip
-  @feature12
+  @feature27
   Scenario: POMOGATORDOCTOR001_20 Managed file missing emits critical reinstallable
     # NOTE: C21 not in engine/checks/ — unimplemented in v2.
     Given temp home fixture "valid" is loaded (F-1)
@@ -175,7 +175,7 @@ Feature: POMOGATORDOCTOR001_pomogator-doctor_diagnostic_command
     And reinstallableIssues includes the C21 entry
 
   @wip
-  @feature12
+  @feature27
   Scenario: POMOGATORDOCTOR001_21 Managed hash skipped for files over 1MB
     # NOTE: C21 not in engine/checks/ — unimplemented in v2.
     Given temp home fixture "valid" is loaded (F-1)
@@ -184,14 +184,14 @@ Feature: POMOGATORDOCTOR001_pomogator-doctor_diagnostic_command
     Then the corresponding C21 check is severity "ok"
     And message or details note "skipped hash (file > 1MB)"
 
-  @feature10
+  @feature28
   Scenario: POMOGATORDOCTOR001_22 Plugin.json absent when no manifest declared emits ok
     Given temp home fixture "valid" is loaded (F-1)
     When I run `dev-pomogator --doctor --json`
     Then check C15 is severity "ok" with message about no plugin.json manifest
 
   @wip
-  @feature12
+  @feature29
   Scenario: POMOGATORDOCTOR001_23 pomogator-doctor self-install hook missing emits warning
     # NOTE: no corresponding check in engine/checks/ — unimplemented in v2.
     Given temp home fixture "valid" is loaded (F-1)
@@ -201,7 +201,7 @@ Feature: POMOGATORDOCTOR001_pomogator-doctor_diagnostic_command
     And that check is reinstallable=true
 
   @wip
-  @feature12
+  @feature30
   Scenario: POMOGATORDOCTOR001_24 --all-projects iterates installed projectPaths
     # NOTE: allProjects not in DoctorOptions type — unimplemented in v2.
     Given temp home fixture "valid" (F-1) with installedExtensions[*].projectPaths union = ["D:/repos/projA", "D:/repos/projB"]
@@ -214,14 +214,14 @@ Feature: POMOGATORDOCTOR001_pomogator-doctor_diagnostic_command
     And aggregate.critical is at least 3
     And process exits with code 2
 
-  @feature2
+  @feature31
   Scenario: POMOGATORDOCTOR001_25 Hooks registry check reads correct JSON path (regression)
     Given temp home fixture with bun-oom-guard auto-commit and plan-pomogator extensions, AUTO_COMMIT_API_KEY set
     When I run `dev-pomogator --doctor --json`
     Then check C6 is severity "ok" and message does NOT contain "unexpected keys"
 
   @wip
-  @feature2
+  @feature31
   Scenario: POMOGATORDOCTOR001_26 Hooks registry detects duplicate registrations
     # NOTE: C6 checks missing/stale keys but not duplicates across extensions — partial implementation.
     Given temp home fixture "valid" (F-1)
@@ -232,7 +232,7 @@ Feature: POMOGATORDOCTOR001_pomogator-doctor_diagnostic_command
     And check C6 message contains "duplicate hook registration"
 
   @wip
-  @feature2
+  @feature32
   Scenario: POMOGATORDOCTOR001_27 config.version missing emits warning
     # NOTE: C13 emits "cannot compare versions" warning but hint text says "Reinstall to record current version", not "lacks top-level version" — prose diverges from implementation.
     Given temp home fixture "valid" (F-1)
@@ -242,7 +242,7 @@ Feature: POMOGATORDOCTOR001_pomogator-doctor_diagnostic_command
     And check C13 hint contains "lacks top-level version"
 
   @wip
-  @feature4
+  @feature33
   Scenario: POMOGATORDOCTOR001_28 MCP probe timeout is warning not critical at 10s
     # NOTE: mcp-probe.ts produces severity "critical" for timeout, not "warning". Prose diverges from code.
     Given temp home fixture "valid" (F-1)
@@ -254,7 +254,7 @@ Feature: POMOGATORDOCTOR001_pomogator-doctor_diagnostic_command
     And check C12 durationMs is between 9500 and 11000
 
   @wip
-  @feature4
+  @feature33
   Scenario: POMOGATORDOCTOR001_29 MCP spawn ENOENT emits critical with PATH hint
     # NOTE: Not covered by existing vitest tests — needs a dedicated step-def that spawns a bad command.
     Given temp home fixture "valid" (F-1)
@@ -264,7 +264,7 @@ Feature: POMOGATORDOCTOR001_pomogator-doctor_diagnostic_command
     And check C12 hint contains "PATH"
 
   @wip
-  @feature12
+  @feature34
   Scenario: POMOGATORDOCTOR001_30 Stale managed entries orphan warning
     # NOTE: No orphan/stale check in engine/checks/ — unimplemented in v2.
     Given temp home fixture "valid" (F-1)
@@ -273,7 +273,7 @@ Feature: POMOGATORDOCTOR001_pomogator-doctor_diagnostic_command
     Then results contains a warning mentioning "legacy-tool" and "orphaned"
 
   @wip
-  @feature12
+  @feature34
   Scenario: POMOGATORDOCTOR001_31 Sub-tool directories not flagged as stale (specs-validator case)
     # NOTE: No stale sub-tool detection check — unimplemented in v2 (companion to _30).
     Given temp home fixture "valid" (F-1) with specs-workflow extension installed
@@ -282,21 +282,21 @@ Feature: POMOGATORDOCTOR001_pomogator-doctor_diagnostic_command
     When I run `dev-pomogator --doctor --json`
     Then no warning check mentions "specs-validator" as orphaned
 
-  @feature8
+  @feature17
   Scenario: POMOGATORDOCTOR001_10b Hook output is silent when environment is healthy
     Given temp home fixture "valid" is loaded (F-1)
     And AUTO_COMMIT_API_KEY is set via envInSettingsLocal
     When I call buildHookOutput on the DoctorReport in-process
     Then buildHookOutput returns continue=true and either silent or bounded additionalContext
 
-  @feature11
+  @feature7
   Scenario: POMOGATORDOCTOR001_11b Bun gate activates when extension declares bun dependency
     Given temp home fixture with installedExtensions containing bun-oom-guard with binaries dependency bun
     When I run runDoctor in-process
     Then gatedOut does NOT include C9
     And results includes C9
 
-  @feature1
+  @feature35
   Scenario: POMOGATORDOCTOR001_32 C30 check is relevant on Windows, gated on other platforms
     Given temp home fixture "valid" is loaded (F-1)
     When I run `dev-pomogator --doctor --json`
@@ -306,7 +306,7 @@ Feature: POMOGATORDOCTOR001_pomogator-doctor_diagnostic_command
   # Meridian proxy health scenarios (FR-49 C17)
   # ============================================================
 
-  @feature18
+  @feature36
   Scenario: POMOGATORDOCTOR001_40 C17 gated out when judge explicitly disabled and no proxy wired
     Given CLAIM_GATE_JUDGE env is set to "false"
     And MERIDIAN_URL is not set
@@ -315,7 +315,7 @@ Feature: POMOGATORDOCTOR001_pomogator-doctor_diagnostic_command
     Then gatedOut includes C17
     And results does NOT include C17
 
-  @feature18
+  @feature36
   Scenario: POMOGATORDOCTOR001_41 C17 opted-in but proxy down yields warning not critical
     Given CLAIM_GATE_JUDGE env is set to "true"
     And MERIDIAN_URL points to a port with nothing listening
@@ -325,7 +325,7 @@ Feature: POMOGATORDOCTOR001_pomogator-doctor_diagnostic_command
     And C17 message matches not running or no response or timeout
     And C17 hint matches proxy-up or claude-subscription-proxy
 
-  @feature18
+  @feature36
   Scenario: POMOGATORDOCTOR001_42 C17 opted-in and proxy responding yields ok
     Given CLAIM_GATE_JUDGE env is set to "true"
     And a local HTTP server responds with mode passthrough and auth loggedIn true on a random port
@@ -335,7 +335,7 @@ Feature: POMOGATORDOCTOR001_pomogator-doctor_diagnostic_command
     Then results includes C17 with severity "ok"
     And C17 message matches up on.*passthrough
 
-  @feature18
+  @feature36
   Scenario: POMOGATORDOCTOR001_43 C17 relevant by default when judge on and proxy down yields warning
     Given CLAIM_GATE_JUDGE env is not set
     And MERIDIAN_URL points to a port with nothing listening
@@ -345,7 +345,7 @@ Feature: POMOGATORDOCTOR001_pomogator-doctor_diagnostic_command
     And results includes C17 with severity "warning"
 
   @wip
-  @feature18
+  @feature36
   Scenario: POMOGATORDOCTOR001_33 Installed extension whose manifest hook is not wired emits warning (C31)
     # NOTE: C31 removed in v2 — this was a v1 installer concept (extension.json hooks vs settings.local.json).
     # v2 covers hooks via C6 hooksRegistryCheck. Kept as @wip placeholder.
@@ -357,7 +357,7 @@ Feature: POMOGATORDOCTOR001_pomogator-doctor_diagnostic_command
     And C31 is reinstallable=yes with hint to run `npx dev-pomogator`
 
   @wip
-  @feature18
+  @feature36
   Scenario: POMOGATORDOCTOR001_34 Wired manifest hook command passes (C31 ok)
     # NOTE: C31 removed in v2 — same as _33. Kept as @wip placeholder.
     Given extension "answer-simple" is installed in the project
