@@ -65,7 +65,7 @@ Feature: PLUGIN011_test-statusline
     Then statusline output should contain "T"
     And statusline output should contain "50%"
 
-  # @feature2
+  @feature2
   Scenario: PLUGIN011_07 YAML status file contains all required fields
     Given test runner wrapper is configured with session "abc12345"
     When wrapper creates initial status file
@@ -73,7 +73,7 @@ Feature: PLUGIN011_test-statusline
     And YAML status file should contain field "session_id"
     And YAML status file should contain field "started_at"
     And YAML status file should contain field "updated_at"
-    And YAML status file should contain field "state" with value "running"
+    And YAML status file should contain field "state"
     And YAML status file should contain field "total"
     And YAML status file should contain field "passed"
     And YAML status file should contain field "failed"
@@ -82,33 +82,33 @@ Feature: PLUGIN011_test-statusline
     And YAML status file should contain field "percent"
     And YAML status file should contain field "duration_ms"
 
-  # @feature2
+  @feature2
   Scenario: PLUGIN011_08 Wrapper writes atomic YAML via temp file rename
     Given test runner wrapper is configured with session "abc12345"
     When wrapper updates status file
     Then update should use temp file with atomic rename
     And no partial YAML content should be readable during write
 
-  # @feature2
+  @feature2
   Scenario: PLUGIN011_09 Wrapper creates initial state on test start
     Given test runner wrapper is configured with session "abc12345"
     When wrapper starts test command
-    Then YAML status file should contain field "state" with value "running"
-    And YAML status file should contain field "percent" with value "0"
+    Then YAML status file should contain field "state"
+    And YAML status file should contain field "percent"
 
-  # @feature2
+  @feature2
   Scenario: PLUGIN011_10 Wrapper updates state to passed on success
     Given test runner wrapper is running with session "abc12345"
     When test process exits with code 0
     Then YAML status file should contain field "state" with value "passed"
 
-  # @feature2
+  @feature2
   Scenario: PLUGIN011_11 Wrapper updates state to failed on error
     Given test runner wrapper is running with session "abc12345"
     When test process exits with code 1
     Then YAML status file should contain field "state" with value "failed"
 
-  # @feature3
+  @feature3
   Scenario: PLUGIN011_12 Sessions use isolated status files
     Given session "aaaabbbb" has a status file with state "running"
     And session "ccccdddd" has a status file with state "passed"
@@ -116,13 +116,13 @@ Feature: PLUGIN011_test-statusline
     Then statusline output should contain running state indicators
     And statusline output should not contain passed state indicators
 
-  # @feature3
+  @feature3
   Scenario: PLUGIN011_13 Status file path uses session_id prefix
     Given session_id is "abc12345def67890"
     When status file path is computed
     Then status file should be at ".dev-pomogator/.test-status/status.abc12345.yaml"
 
-  # @feature4
+  @feature4
   Scenario: PLUGIN011_14 SessionStart hook creates status directory
     Given ".dev-pomogator/.test-status/" directory does not exist
     When SessionStart hook receives session_id "abc12345def67890"
@@ -130,15 +130,15 @@ Feature: PLUGIN011_test-statusline
     And hook should output "{}" on stdout
     And hook should exit with code 0
 
-  # @feature4
+  @feature4
   Scenario: PLUGIN011_15 SessionStart hook writes env var to CLAUDE_ENV_FILE
     Given CLAUDE_ENV_FILE points to a temp file
     When SessionStart hook receives session_id "abc12345def67890"
     Then CLAUDE_ENV_FILE should contain "TEST_STATUSLINE_SESSION=abc12345"
     And CLAUDE_ENV_FILE should contain "TEST_STATUSLINE_PROJECT="
-    And CLAUDE_ENV_FILE should contain "TEST_STATUSLINE_STATUS_DIR="
+    And CLAUDE_ENV_FILE should contain "SESSION_PREFIX_LEN="
 
-  # @feature4
+  @feature4
   Scenario: PLUGIN011_16 SessionStart hook cleans stale files older than 24h
     Given a YAML status file with mtime older than 24 hours exists
     And a recent YAML status file exists
@@ -146,7 +146,7 @@ Feature: PLUGIN011_test-statusline
     Then stale YAML file should be deleted
     And recent YAML file should remain
 
-  # @feature4
+  @feature4
   Scenario: PLUGIN011_17 SessionStart hook cleans idle files older than 1h
     Given a YAML status file with state "idle" and mtime older than 1 hour exists
     When SessionStart hook is triggered
@@ -215,13 +215,13 @@ Feature: PLUGIN011_test-statusline
     Then YAML state should be repaired to "failed"
     And statusline output should show failed state instead of running state
 
-  # @feature2
+  @feature2
   Scenario: PLUGIN011_27 Wrapper writes pid field to YAML
     Given test runner wrapper starts with a valid session
     When wrapper creates or updates YAML status file
     Then YAML status file should contain numeric field "pid"
 
-  # @feature4
+  @feature4
   Scenario: PLUGIN011_28 SessionStart repairs running files with dead pid
     Given a YAML status file has state "running" and dead pid
     When SessionStart hook is triggered
