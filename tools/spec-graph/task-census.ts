@@ -312,6 +312,67 @@ export function sessionEditedSpecSlugs(transcriptPath: string): Set<string> {
   return slugs;
 }
 
+/**
+ * K3 (2026-06-21): the count of the agent's OWN still-open declared work — its Task / TodoWrite list,
+ * reconstructed from the transcript's tool_use records. This is the ground truth for work that ISN'T
+ * spec tasks: a session editing only `tools/` (or doing NEW work on a census-complete spec) has 0
+ * SPEC-scope open, yet may have pending todos the agent itself declared. Counting them arms the gate on
+ * an announce-and-stop even with zero spec scope — the non-spec under-fire the owner hit live («при чём
+ * тут спеки если агент явный анонс делал что дальше нужно делать»). Session-scoped BY CONSTRUCTION
+ * (these are THIS session's declared todos, parsed from THIS transcript — not the global 210-task
+ * backlog), so it does NOT reintroduce the over-fire FR-9 fixed.
+ *
+ * Two task systems, both handled (MAX of the two → never under-count, which is the safe direction here):
+ *   - TodoWrite: the LATEST call carries the whole list → count status ∈ {pending,in_progress}.
+ *   - TaskCreate/TaskUpdate: replay — each TaskCreate appends a task (1-based sequential id, status
+ *     'pending'); each TaskUpdate sets that id's status ('completed'/'deleted' close it). Count final
+ *     status ∈ {pending,in_progress}.
+ * Fail-open → 0 (a parse error must never falsely arm the gate).
+ */
+const OPEN_TODO_STATUS = new Set(['pending', 'in_progress']);
+export function agentOpenTodoCount(transcriptPath: string): number {
+  let raw: string;
+  try {
+    raw = fs.readFileSync(transcriptPath, 'utf-8');
+  } catch {
+    return 0;
+  }
+  const taskStatus: string[] = []; // index = (1-based id) - 1
+  let latestTodoOpen = 0;
+  let sawTodoWrite = false;
+  for (const line of raw.split(/\r?\n/)) {
+    if (!line.includes('"tool_use"') || line.length > 2_000_000) continue;
+    let entry: { message?: { content?: unknown } };
+    try {
+      entry = JSON.parse(line);
+    } catch {
+      continue;
+    }
+    const content = entry?.message?.content;
+    if (!Array.isArray(content)) continue;
+    for (const b of content as Array<Record<string, unknown>>) {
+      if (b?.type !== 'tool_use') continue;
+      const name = String(b.name ?? '');
+      const input = (b.input ?? {}) as Record<string, unknown>;
+      if (name === 'TodoWrite' && Array.isArray(input.todos)) {
+        sawTodoWrite = true; // the latest TodoWrite wins (it carries the whole list)
+        latestTodoOpen = (input.todos as Array<Record<string, unknown>>).filter((t) =>
+          OPEN_TODO_STATUS.has(String(t?.status ?? '')),
+        ).length;
+      } else if (name === 'TaskCreate') {
+        taskStatus.push('pending');
+      } else if (name === 'TaskUpdate') {
+        const id = parseInt(String(input.taskId ?? ''), 10);
+        if (Number.isInteger(id) && id >= 1 && id <= taskStatus.length && typeof input.status === 'string') {
+          taskStatus[id - 1] = input.status;
+        }
+      }
+    }
+  }
+  const taskOpen = taskStatus.filter((s) => OPEN_TODO_STATUS.has(s)).length;
+  return Math.max(taskOpen, sawTodoWrite ? latestTodoOpen : 0);
+}
+
 function readCacheFile(p: string): TaskCensusCache | null {
   try {
     const parsed = JSON.parse(fs.readFileSync(p, 'utf-8'));

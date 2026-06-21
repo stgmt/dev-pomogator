@@ -199,3 +199,15 @@ Feature: CEGATE001 Claim-Evidence Gate
     Given a migration agent launched siblings and one «came to rest» reset the turn window while another agent still runs
     When the agent ends on a lazy status stop with open tasks remaining
     Then the gate defers the kick while the other agent is in flight and blocks the same stop once both agents have come to rest
+
+  # @feature11
+  Scenario: CEGATE001_40 The agent's own open todos arm the gate even with zero spec scope
+    Given a session edited no spec but its own task list still has an open todo and it ends on a lazy stop
+    When the gate evaluates the stop
+    Then it blocks because the agent's open todo counts as open work, and it stays quiet once all todos are completed
+
+  # @feature11
+  Scenario: CEGATE001_41 The agent task list is reconstructed from the transcript to count open work
+    Given the transcript records TaskCreate/TaskUpdate calls and a latest TodoWrite list
+    When the gate counts the agent's open declared work
+    Then it replays the task ids to their final status and counts pending plus in-progress, failing open to zero on a missing transcript

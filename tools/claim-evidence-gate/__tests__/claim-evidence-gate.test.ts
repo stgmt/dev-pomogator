@@ -13,6 +13,7 @@ import path from 'node:path';
 
 import { classify, firstUnsupported, stripCode } from '../claim_classifier.ts';
 import { extractTurnWindow, bgInFlightInWindow, agentBgInFlight, lastUserPrompt } from '../turn_window.ts';
+import { agentOpenTodoCount } from '../../spec-graph/task-census.ts';
 
 const HOOK = path.resolve(__dirname, '..', 'claim_evidence_gate_stop.ts');
 
@@ -227,6 +228,30 @@ describe('CEGATE001: pure classifier units', () => {
       .join('\n');
     expect(bgInFlightInWindow(running)).toBe(true); // agent running → in-flight → defer
     expect(bgInFlightInWindow(done)).toBe(false); // «came to rest» resets the window → not in-flight
+  });
+
+  // @feature11 — K3 (2026-06-21): agentOpenTodoCount replays the agent's Task/TodoWrite list from the
+  // transcript. TaskCreate appends (1-based id, pending); TaskUpdate flips by id; TodoWrite's latest call
+  // carries the whole list (max of the two, never under-count). This is the source the gate now arms on.
+  it('CEGATE001_41: agentOpenTodoCount replays Task create/update and TodoWrite to count open work', () => {
+    const tmp = path.join(dir, 'todo.jsonl');
+    const tasks = [
+      A([tool('TaskCreate', { subject: 'a' })]), // id 1
+      A([tool('TaskCreate', { subject: 'b' })]), // id 2
+      A([tool('TaskCreate', { subject: 'c' })]), // id 3
+      A([tool('TaskUpdate', { taskId: '1', status: 'completed' })]),
+      A([tool('TaskUpdate', { taskId: '2', status: 'in_progress' })]),
+    ];
+    fs.writeFileSync(tmp, tasks.map((r) => JSON.stringify(r)).join('\n'));
+    expect(agentOpenTodoCount(tmp)).toBe(2); // id2 in_progress + id3 pending; id1 completed
+    // TodoWrite latest-wins, counted alongside (max)
+    const todo = path.join(dir, 'todo2.jsonl');
+    fs.writeFileSync(
+      todo,
+      [A([tool('TodoWrite', { todos: [{ status: 'completed' }, { status: 'pending' }, { status: 'in_progress' }] })])].map((r) => JSON.stringify(r)).join('\n'),
+    );
+    expect(agentOpenTodoCount(todo)).toBe(2); // pending + in_progress
+    expect(agentOpenTodoCount(path.join(dir, 'nope.jsonl'))).toBe(0); // missing file → fail-open 0
   });
 
   // @feature11 — 5a (2026-06-21): the MULTI-agent across-window case the window detector misses. The real
@@ -473,6 +498,38 @@ describe('CEGATE001: claim-evidence gate — spec-false-close class (FR-49b)', (
     const restB = U('● Agent "migrate beta" came to rest · 8m\n\nрезультат: 9 зелёных');
     expect(runHook([...pre, ...tail], env).blocked).toBe(false); // beta still in flight → defer (approve)
     expect(runHook([...pre, restB, ...tail], env).blocked).toBe(true); // both rested → same lazy stop blocks
+  });
+
+  // @feature11 — K3 (2026-06-21): the agent's OWN open todos (Task/TodoWrite) arm the gate even with
+  // ZERO spec scope. The non-spec under-fire the owner hit live: a session editing only tools/ scopes to
+  // 0 spec-open, so an announce-and-stop sailed through — «при чём тут спеки если агент явный анонс
+  // делал». Now the open todo arms the no-next-section path; all-todos-done stays quiet (anti-over-fire).
+  it('CEGATE001_40: the agent’s own open todos arm the gate with zero spec scope; done todos stay quiet', () => {
+    // NO writeCensus → scopedSpecOpen = 0. Two todos created, one completed → ONE open.
+    const open = runHook(
+      [
+        U('переделай пинатор'),
+        A([tool('TaskCreate', { subject: 't1', description: 'x' })]),
+        A([tool('TaskCreate', { subject: 't2', description: 'y' })]),
+        A([tool('TaskUpdate', { taskId: '1', status: 'completed' })]),
+        U('делай'),
+        A([txt('Продолжаю по плану, тут всё.')]), // gray, no «Дальше:» → no-next-section, now armed by the open todo
+      ],
+      { CLAIM_GATE_JUDGE: 'false' },
+    );
+    expect(open.blocked).toBe(true);
+    // all todos completed → openWork 0 → the same lazy stop is NOT blocked (no global-backlog over-fire)
+    const done = runHook(
+      [
+        U('переделай пинатор'),
+        A([tool('TaskCreate', { subject: 't1', description: 'x' })]),
+        A([tool('TaskUpdate', { taskId: '1', status: 'completed' })]),
+        U('делай'),
+        A([txt('Продолжаю по плану, тут всё.')]),
+      ],
+      { CLAIM_GATE_JUDGE: 'false' },
+    );
+    expect(done.blocked).toBe(false);
   });
 
   // @feature11 — α (2026-06-20): a turn spent INSPECTING / arguing with the gate itself (read-only,

@@ -34,7 +34,7 @@ import { log as _logShared, normalizePath } from '../_shared/hook-utils.ts';
 import { markerPath, readMarker, writeMarkerAtomic, isWithinCooldown, hashFileList } from '../_shared/marker-utils.ts';
 import { extractTurnWindow, bgInFlightInWindow, agentBgInFlight, lastUserPrompt } from './turn_window.ts';
 import { firstUnsupported, isSpecCompletionClaim } from './claim_classifier.ts';
-import { readTaskCensusCache, scopeCensusToSlugs, sessionEditedSpecSlugs, type TaskCensusCache } from '../spec-graph/task-census.ts';
+import { readTaskCensusCache, scopeCensusToSlugs, sessionEditedSpecSlugs, agentOpenTodoCount, type TaskCensusCache } from '../spec-graph/task-census.ts';
 import { judgeStop } from './meridian-judge.ts';
 
 interface StopHookInput {
@@ -231,6 +231,18 @@ async function main(): Promise<void> {
     ? { ...scopeCensusToSlugs(globalCensus, editedSlugs), ts: globalCensus.ts }
     : null;
 
+  // K3 (2026-06-21): the agent's OWN open declared work — its Task/TodoWrite list parsed from THIS
+  // transcript. The spec-census alone misses it: a session editing only `tools/` (or doing NEW work on a
+  // census-complete spec) scopes to 0 spec-open, yet may have pending todos the agent itself declared.
+  // The owner hit this live — the gate stayed silent on an announce-and-stop while «Берусь за (1)» named
+  // a pending todo («при чём тут спеки если агент явный анонс делал что дальше нужно делать»). Counting
+  // the agent's todos arms the gate on exactly that. Session-scoped BY CONSTRUCTION (this transcript's
+  // todos, not the global backlog) → it does NOT reintroduce the FR-9 over-fire.
+  const agentOpen = agentOpenTodoCount(tx);
+  const scopedSpecOpen = scoped ? scoped.total.open + scoped.total.doneRed : 0;
+  // The open-work signal every firing precondition gates on: spec-scope open + the agent's own todos.
+  const openWork = scopedSpecOpen + agentOpen;
+
   // FR-10/FR-11: observable, agent-INDEPENDENT facts about THIS turn (the harness writes the tool_use
   // records; the agent cannot fabricate them). mutating = real changes attempted this turn (judge
   // input, FR-10); bg = a background task launched (the agent may legitimately be awaiting its async
@@ -306,7 +318,7 @@ async function main(): Promise<void> {
     // touched such a spec (the fake census signal the spec-generator fed the hook). doneUnrun is still
     // surfaced for a genuine WHOLE-SPEC "done" claim via the FR-49b censusReminder above
     // (isSpecCompletionClaim) — the real anti-false-close path, where "marked done, unverified" matters.
-    const open = scoped ? scoped.total.open + scoped.total.doneRed : 0;
+    const open = openWork; // spec-scope open + the agent's own pending todos (K3)
     // V2: skip the «Дальше:» requirement while a background job is in flight — the agent is awaiting
     // an async result and legitimately has no actionable next step until it lands.
     if (open > 0 && GRAY_SIGNAL.test(claimText) && !NEXT_SECTION_RE.test(claimText) && !awaitingAsync) {
@@ -322,7 +334,7 @@ async function main(): Promise<void> {
   // agent's prior word is NOT evidence — block "prove it or work" (operationalizes no-unverified-blocker).
   // No fuzzy file-extraction / no git-in-hook: it leans only on harness-recorded, agent-independent facts.
   if (!unsupported) {
-    const open = scoped ? scoped.total.open + scoped.total.doneRed : 0; // FR-9b: exclude doneUnrun (не подтверждено) — see the «Дальше:» gate note
+    const open = openWork; // spec-scope open + agent todos (K3); FR-9b: doneUnrun already excluded in scopedSpecOpen
     if (open > 0 && BLOCKER_SIGNAL.test(claimText) && !awaitingAsync && toolUses.length === 0) {
       unsupported = {
         cls: 'unproven-blocker',
@@ -349,7 +361,7 @@ async function main(): Promise<void> {
   // no mock, no secondary fallback endpoint (user 2026-06-17 «никаких моков и фолбеков»). judgeStop
   // logs WHY to stderr and returns null when помогатор is unreachable. Fires RARELY.
   if (!unsupported && !analysisOnly && (process.env.CLAIM_GATE_JUDGE ?? 'true').toLowerCase() === 'true') {
-    const unfinished = scoped ? scoped.total.open + scoped.total.doneRed : 0; // FR-9b: exclude doneUnrun (не подтверждено) so a freshly recorded-done spec doesn't escalate the judge
+    const unfinished = openWork; // spec-scope open + agent todos (K3) — arms the judge on non-spec announce-and-stop
     if (unfinished > 0 && GRAY_SIGNAL.test(claimText) && !awaitingAsync) {
       // A TRANSIENT judge failure (timeout / network blip → null) must NOT be a free pass —
       // that fail-open was the actual escape route. The judge BLOCKS the announce-and-stop
@@ -361,7 +373,7 @@ async function main(): Promise<void> {
       const jInput = {
         finalMessage: claimText,
         tools: toolUses.map((t) => t.name),
-        openTasks: scoped!.total.open,
+        openTasks: openWork, // K3: spec-scope open + agent todos (no `scoped!` — agentOpen can be > 0 with a null census)
         mutatingToolsThisTurn,
         bgTaskLaunchedThisTurn: awaitingAsync,
         // Phase 0 (2026-06-21): the next open task is ALREADY named → "which task?" is a fake hand-off;
@@ -383,7 +395,7 @@ async function main(): Promise<void> {
         // released after a few kicks rather than hung (and CLAIM_GATE_JUDGE=false disables it).
         unsupported = {
           cls: 'judge-unavailable',
-          need: `помогатор-судья недоступен (см. stderr — почему), а перепись показывает ${scoped!.total.open} открытых задач (scope сессии) — стоп не подтверждён`,
+          need: `помогатор-судья недоступен (см. stderr — почему), а открытой работы ${openWork} (спека-scope + todo сессии) — стоп не подтверждён`,
         };
       }
       // verdict.block === false (a reachable judge CLEARED the stop) → fall through to approve
@@ -392,7 +404,7 @@ async function main(): Promise<void> {
 
   // α: 2nd+ consecutive gate-inspection turn (read-only, no edit) while scope-work remains → block
   // with a BARE next-step demand. The hidden meta-reason is never shown, so it can't be gamed.
-  const metaOpen = scoped ? scoped.total.open + scoped.total.doneRed : 0;
+  const metaOpen = openWork; // spec-scope open + agent todos (K3)
   if (!unsupported && !analysisOnly && metaStreak >= 2 && metaOpen > 0) {
     const nx = scoped?.specs?.[0]?.nextOpen;
     unsupported = { cls: 'gate-meta', need: nx ? `делай: ${nx.title} [${nx.id}]` : 'делай конкретный следующий шаг по открытой задаче' };
