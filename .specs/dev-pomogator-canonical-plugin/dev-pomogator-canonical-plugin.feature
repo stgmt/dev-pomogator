@@ -232,6 +232,13 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
     Then tsx-runner should resolve the script against CLAUDE_PLUGIN_ROOT, not the CWD
     And the script should execute (no ENOENT) for an external user
 
+  @feature9
+  Scenario: CANON001_92 the published npm package ships the spec-check-log bin and it runs
+    Given the dev-pomogator repo is packed with npm pack and unpacked into a temp dir
+    Then the packed tarball should contain the spec-check-log bin cli and writer source files
+    And the packed package.json maps dev-pomogator-spec-check-log to the bin.cjs launcher
+    And the packed bin.cjs runs with --count against an empty repo and prints 0
+
   # =========================================================================
   # @feature10 — Update path (FR-10)
   # =========================================================================

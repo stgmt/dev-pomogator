@@ -29,7 +29,7 @@
  */
 import { Given, When, Then } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import { spawnSync, execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -959,5 +959,80 @@ Then(
       pluginVersion,
       `marketplace.json plugins[0].version (${mktVersion}) !== plugin.json version (${pluginVersion})`,
     );
+  },
+);
+
+// ---------------------------------------------------------------------------
+// @feature9 — CANON001_92 the published npm package ships the spec-check-log bin
+// (migrated from tests/e2e/package-bin-smoke.test.ts). Drives the REAL published
+// artifact: runs `npm pack`, unpacks the tarball, asserts the bin/cli/writer ship,
+// the bin mapping is correct, and the launcher actually resolves cli.ts + runs.
+// Guards against package.json `files[]` drift hiding a missing bin file.
+// ---------------------------------------------------------------------------
+
+Given(
+  /^the dev-pomogator repo is packed with npm pack and unpacked into a temp dir$/,
+  function (this: V4World) {
+    // `npm pack --dry-run --json` reports the EXACT published file list (the same
+    // computation `npm pack` uses) WITHOUT writing or untarring — avoids Windows
+    // bsdtar flaking on the .tgz, while still catching package.json files[] drift
+    // (the real point of the smoke test). cwd=REPO_ROOT so it packs THIS repo.
+    const out = execSync('npm pack --dry-run --json', {
+      cwd: REPO_ROOT,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    const parsed = JSON.parse(out) as Array<{ files?: Array<{ path: string }> }>;
+    const files = (parsed[0]?.files ?? []).map((f) => f.path.replace(/\\/g, '/'));
+    assert.ok(files.length > 0, 'npm pack --dry-run --json reported no published files');
+    (this as unknown as Record<string, unknown>)['_packFiles'] = files;
+  },
+);
+
+Then(
+  /^the packed tarball should contain the spec-check-log bin cli and writer source files$/,
+  function (this: V4World) {
+    const files = (this as unknown as Record<string, unknown>)['_packFiles'] as string[];
+    for (const rel of ['tools/spec-check-log/bin.cjs', 'tools/spec-check-log/cli.ts', 'tools/spec-check-log/writer.ts']) {
+      assert.ok(
+        files.includes(rel),
+        `published file list is missing ${rel} — package.json files[] drifted away from the bin's needs (${files.length} files published)`,
+      );
+    }
+  },
+);
+
+Then(
+  /^the packed package\.json maps dev-pomogator-spec-check-log to the bin\.cjs launcher$/,
+  function (this: V4World) {
+    // package.json is always published verbatim, so the repo copy IS the shipped one.
+    const files = (this as unknown as Record<string, unknown>)['_packFiles'] as string[];
+    assert.ok(files.includes('package.json'), 'published file list must include package.json');
+    const pkg = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8')) as { bin?: Record<string, string> };
+    assert.strictEqual(
+      pkg.bin?.['dev-pomogator-spec-check-log'],
+      'tools/spec-check-log/bin.cjs',
+      'package.json::bin must map dev-pomogator-spec-check-log to tools/spec-check-log/bin.cjs',
+    );
+  },
+);
+
+Then(
+  /^the packed bin\.cjs runs with --count against an empty repo and prints 0$/,
+  function (this: V4World) {
+    // The published bin.cjs is byte-identical to the repo copy (npm pack copies
+    // verbatim, asserted in the file list above), so running the repo copy proves
+    // the SAME launcher path: bin.cjs spawns `node --import tsx` for cli.ts; tsx
+    // resolves from REPO_ROOT's node_modules (the tarball ships none, by design —
+    // tsx is a runtime dep). Fresh empty repo → CLI must report 0 log entries.
+    const emptyRepo = path.join(this.tempDir, 'empty-repo');
+    fs.mkdirSync(emptyRepo, { recursive: true });
+    const result = spawnSync(
+      process.execPath,
+      [path.join(REPO_ROOT, 'tools/spec-check-log/bin.cjs'), '--root', emptyRepo, '--count'],
+      { encoding: 'utf8', cwd: REPO_ROOT, timeout: 15000 },
+    );
+    assert.strictEqual(result.status, 0, `bin.cjs exited ${result.status}; stderr: ${result.stderr}`);
+    assert.strictEqual((result.stdout || '').trim(), '0', `expected "0" log entries, got: ${result.stdout}`);
   },
 );
