@@ -176,6 +176,13 @@ export function testAttributesToSpec(src: string, slug: string): boolean {
   return new RegExp('(?:tools|\\.claude/(?:skills|rules|agents|commands))/' + escapeRe(slug) + '/').test(src);
 }
 
+/** Is a test file physically HOMED under some component dir (`tools/<x>/`, `.claude/{skills,rules,agents,
+ *  commands}/<x>/`)? Such a file belongs to THAT component and must not be content-attributed to a
+ *  different slug it merely mentions as a fixture string. Pure + exported for the unit test. */
+export function isComponentHomed(rel: string): boolean {
+  return /(?:^|\/)(?:tools|\.claude\/(?:skills|rules|agents|commands))\/[^/]+\//.test(rel.replace(/\\/g, '/'));
+}
+
 /** Find vitest files that own a spec: tests/e2e/<slug>.test.ts (direct, named by slug) PLUS any
  *  *.test.ts physically UNDER the spec's code dir OR whose body REFERENCES it (content-attribution).
  *  Dogfood 2026-06-21: the slug-name-only match missed tests/e2e/test-guard.test.ts — it drives the
@@ -186,13 +193,18 @@ function findVitestFiles(slug: string): string[] {
   const direct = path.join(REPO, 'tests', 'e2e', `${slug}.test.ts`);
   if (fs.existsSync(direct)) hits.add(path.relative(REPO, direct).replace(/\\/g, '/'));
   const locRe = new RegExp('(?:^|/)(?:tools|\\.claude/(?:skills|rules|agents|commands))/' + escapeRe(slug) + '/');
+  // A file physically homed under SOME component dir (`tools/<x>/`, `.claude/skills/<x>/`, …) belongs to
+  // THAT component — never content-attribute it to a DIFFERENT slug just because it mentions the slug's
+  // path as a fixture string (dogfood 2026-06-21: `tools/bdd-migrator/__tests__/migrate.test.ts` was
+  // wrongly pulled into answer-simple because a MIGRATE001 fixture string is `.claude/skills/answer-simple/…`).
   for (const abs of walkTestFiles()) {
     const rel = path.relative(REPO, abs).replace(/\\/g, '/');
     if (hits.has(rel)) continue;
-    if (locRe.test(rel)) { hits.add(rel); continue; } // physically under the spec's code dir
+    if (locRe.test(rel)) { hits.add(rel); continue; } // physically under THIS spec's code dir → location-attributed
+    if (isComponentHomed(rel)) continue; // homed under ANOTHER component → its own pass, not content-attribution
     let src: string;
     try { src = fs.readFileSync(abs, 'utf-8'); } catch { continue; }
-    if (testAttributesToSpec(src, slug)) hits.add(rel);
+    if (testAttributesToSpec(src, slug)) hits.add(rel); // unhomed (tests/e2e/, tests/unit/, …) → attribute by reference
   }
   return [...hits].sort();
 }

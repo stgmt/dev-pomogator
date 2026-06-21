@@ -7,7 +7,7 @@
  * REAL exported `testAttributesToSpec` — no mocks.
  */
 import { describe, it, expect } from 'vitest';
-import { testAttributesToSpec } from '../migrate.ts';
+import { testAttributesToSpec, isComponentHomed } from '../migrate.ts';
 
 describe('MIGRATE001: vitest-twin attribution by spec code dir (dogfood 2026-06-21)', () => {
   it('MIGRATE001_01: attributes a test that references the spec code dir tools/<slug>/', () => {
@@ -34,5 +34,17 @@ describe('MIGRATE001: vitest-twin attribution by spec code dir (dogfood 2026-06-
     // a literal-dot slug must match literally, not as the regex "any char".
     expect(testAttributesToSpec(`x = 'tools/a.b/c.ts';`, 'a.b')).toBe(true);
     expect(testAttributesToSpec(`x = 'tools/aXb/c.ts';`, 'a.b')).toBe(false);
+  });
+
+  // A test homed under one component must not be content-attributed to another it only mentions as a
+  // fixture string (dogfood 2026-06-21: migrate.test.ts pulled into answer-simple by a fixture path).
+  it('MIGRATE001_06: a test under a component dir is component-homed (excluded from cross-attribution)', () => {
+    expect(isComponentHomed('tools/bdd-migrator/__tests__/migrate.test.ts')).toBe(true);
+    expect(isComponentHomed('.claude/skills/answer-simple/__tests__/x.test.ts')).toBe(true);
+  });
+
+  it('MIGRATE001_07: a test under tests/e2e or tests/unit is NOT component-homed (content-attribution applies)', () => {
+    expect(isComponentHomed('tests/e2e/test-guard.test.ts')).toBe(false);
+    expect(isComponentHomed('tests/unit/plan-gate-scope-advisory.test.ts')).toBe(false);
   });
 });
