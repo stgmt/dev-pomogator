@@ -54,12 +54,21 @@ ambiguous) → mutation gutcheck (RED-on-break).
    failures). Confirm **0 ambiguous / 0 undefined**. Narrow any colliding regex (a negative lookahead
    disambiguates in-process vs spawn vs repeat Whens). Prefer SEQUENTIAL rollout (one spec at a time)
    over concurrent agents for this reason.
-6. **Wire — only when ALL scenarios green AND `cucumber.json` is shared-tree-safe.** Add the `.feature`
-   to `cucumber.json` `paths` (keep `"tags": "not @manual"` + `not @wip` staging) ONLY when every
-   scenario has a step-def AND `git status --short cucumber.json` is clean. If a PARALLEL session has
-   it `M`, DO NOT edit it — that is a legitimate BLOCK; leave the `.feature` comment-tagged, do NOT
-   real-tag (real-tag + wire happen together, else not_run-limbo), and report the block. Otherwise
-   real-tag + wire together, then one FULL run (no `--tags`) so `.last-test-run.ndjson` stays complete.
+6. **Wire — only when the WHOLE feature is clean AND `cucumber.json` is shared-tree-safe.** BEFORE wiring,
+   run the ENTIRE `.feature` through the throwaway config with NO `--name` filter (only `not @manual and
+   not @wip`) and confirm **0 undefined / 0 ambiguous across EVERY scenario in the file** — not just the
+   subset you migrated. A `.feature` routinely carries STALE/un-migrated scenarios (born-pre-step-def, or
+   testing deleted code); a `# @featureN` COMMENT-tag is NOT a skip — cucumber RUNS that scenario and it
+   goes UNDEFINED. Wiring a feature with step-def-less scenarios poisons the canonical run with undefined
+   (dogfood 2026-06-21: test-statusline was wired with 13 migrated + **23 stale comment-tagged** scenarios
+   → 22 undefined in the canonical suite; the agent had validated only its 13 via `--name` and never ran
+   the whole file). So FIRST resolve every non-migrated scenario: **delete** the genuinely-dead ones
+   (test deleted code — e.g. `extensions/` paths removed in v2), **`@wip`** the live-but-not-yet-migrated
+   ones (real tag → excluded by `not @wip`, honest "todo"), or migrate them. NEVER leave a step-def-less
+   scenario un-`@wip`'d in a feature you wire. THEN add the `.feature` to `cucumber.json` `paths` ONLY when
+   `git status --short cucumber.json` is clean. If a PARALLEL session has it `M`, DO NOT edit it — that is
+   a legitimate BLOCK; leave the `.feature` comment-tagged, do NOT real-tag, and report the block.
+   Otherwise real-tag + wire together, then one FULL run (no `--tags`) so `.last-test-run.ndjson` stays complete.
 7. **Mutation gutcheck (runtime class).** Break the engine, re-run, confirm the scenario goes RED,
    restore. A scenario that survives a real mutation is FAKE-POSITIVE-RISK, not a deliverable.
 8. **Verify + retire.** `project-test-trace.ts` shows no orphans; only THEN delete the superseded
