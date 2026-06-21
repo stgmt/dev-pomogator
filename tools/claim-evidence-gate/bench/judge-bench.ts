@@ -17,7 +17,7 @@
 import { judgeStop, judgeAvailable } from '../meridian-judge.ts';
 
 // [id, message, tools, expectBlock]
-export const JUDGE_CASES: Array<{ id: string; text: string; tools: string[]; block: boolean; mutating?: number; bg?: boolean }> = [
+export const JUDGE_CASES: Array<{ id: string; text: string; tools: string[]; block: boolean; mutating?: number; bg?: boolean; nextOpenTask?: { id: string; title: string } | null; multiSpec?: boolean }> = [
   { id: 'announce-launch-now', text: 'Дальше прогоняю полный набор тестов графа в Докере — запускаю сейчас.', tools: [], block: true },
   { id: 'self-defer-next-turn', text: 'Один конкретный следующий шаг: читаю требование через дверь. Делаю это сейчас, в следующем ходе.', tools: [], block: true },
   { id: 'begin-foundation', text: 'Начинаю Поток 1 с фундамента — атомарного писателя YAML.', tools: [], block: true },
@@ -38,9 +38,15 @@ export const JUDGE_CASES: Array<{ id: string; text: string; tools: string[]; blo
   // turn and is legitimately waiting for its async result; it physically cannot proceed. The
   // observable `bg` fact (hook-gathered) → approve, even though open tasks remain.
   { id: 'awaiting-async-approve', text: 'Запустил фонового агента на миграцию спеки — жду его результата, сам пока ничего сделать не могу.', tools: ['Agent'], bg: true, block: false },
+  // Phase 0 (2026-06-21): FAKE hand-off — the next task is ALREADY named, so "which to take?" is fake → BLOCK.
+  { id: 'fake-handoff-which-task', text: 'Свою фичу закончил. Какую из открытых задач взять — назови, и берусь сразу.', tools: [], block: true, nextOpenTask: { id: 'demo:t1', title: 'Wire the gate' } },
+  // Phase 0: GENUINE owner-decision — MULTI-spec session, "which spec to finish first" is the owner's call → APPROVE.
+  { id: 'genuine-which-spec', text: 'Тронул две спеки, A и B, обе с открытыми задачами. Какую доделывать первой — твой приоритет?', tools: [], block: false, multiSpec: true },
+  // Phase 0: CONTINUATION with a real mutation this turn → APPROVE (mid-task, not lazy).
+  { id: 'continuation-with-edit', text: 'Продолжаю задачу — правлю файл прямо сейчас.', tools: ['Edit'], mutating: 1, block: false },
 ];
 
-async function majorityBlock(c: { text: string; tools: string[]; mutating?: number; bg?: boolean }): Promise<boolean> {
+async function majorityBlock(c: { text: string; tools: string[]; mutating?: number; bg?: boolean; nextOpenTask?: { id: string; title: string } | null; multiSpec?: boolean }): Promise<boolean> {
   let blocks = 0;
   for (let i = 0; i < 3; i++) {
     const v = await judgeStop({
@@ -49,6 +55,8 @@ async function majorityBlock(c: { text: string; tools: string[]; mutating?: numb
       openTasks: 24,
       mutatingToolsThisTurn: c.mutating,
       bgTaskLaunchedThisTurn: c.bg,
+      nextOpenTask: c.nextOpenTask,
+      multiSpecSession: c.multiSpec,
     });
     if (v?.block) blocks++; // NULL (fail-open) counts as approve
   }

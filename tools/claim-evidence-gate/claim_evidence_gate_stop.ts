@@ -337,6 +337,10 @@ async function main(): Promise<void> {
         openTasks: scoped!.total.open,
         mutatingToolsThisTurn,
         bgTaskLaunchedThisTurn: awaitingAsync,
+        // Phase 0 (2026-06-21): the next open task is ALREADY named → "which task?" is a fake hand-off;
+        // a multi-spec session makes "which spec to finish" a genuine owner choice (a legit AskUserQuestion).
+        nextOpenTask: scoped?.specs?.[0]?.nextOpen ?? null,
+        multiSpecSession: editedSlugs.size > 1,
       };
       let verdict = await judgeStop(jInput);
       if (verdict === null) verdict = await judgeStop(jInput);

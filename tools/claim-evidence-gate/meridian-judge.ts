@@ -47,6 +47,12 @@ export interface JudgeInput {
   mutatingToolsThisTurn?: number;
   /** FR-10: the agent launched a background task this turn → may be legitimately awaiting async. */
   bgTaskLaunchedThisTurn?: boolean;
+  /** Phase 0 (2026-06-21): the NEXT open task the census already identified for the agent. When set,
+   *  asking the user "which task should I take?" is a FAKE hand-off — the agent PICKS the named task. */
+  nextOpenTask?: { id: string; title: string } | null;
+  /** Phase 0: the session edited >1 spec → choosing WHICH spec to finish is a genuine owner decision
+   *  (a legit AskUserQuestion). Within ONE spec, "which task?" is never the user's call — the agent picks. */
+  multiSpecSession?: boolean;
 }
 
 export interface JudgeVerdict {
@@ -150,6 +156,8 @@ export function buildJudgePrompt(i: JudgeInput): string {
     `- mutating tool calls THIS turn (Edit/Write/Bash/door-writes): ${mut === null ? 'unknown' : mut}`,
     `- background task launched THIS turn (agent may be awaiting an async callback): ${i.bgTaskLaunchedThisTurn ? 'YES' : 'no'}`,
     `- open/unfinished tasks in THIS SESSION's scope: ${i.openTasks}`,
+    `- NEXT OPEN TASK already identified for the agent (so the next step is NAMED, not unknown): ${i.nextOpenTask ? `«${i.nextOpenTask.title}» [${i.nextOpenTask.id}]` : 'none'}`,
+    `- session touched MULTIPLE specs (so "which spec to finish next" is a real owner choice): ${i.multiSpecSession ? 'YES' : 'no'}`,
     `- tool names this turn: ${i.tools.length ? i.tools.join(', ') : 'none'}`,
     '',
     `AGENT'S FINAL MESSAGE (secondary — may be written to look done):\n${i.finalMessage}`,
@@ -157,18 +165,18 @@ export function buildJudgePrompt(i: JudgeInput): string {
     'BLOCK if the message does ANY of these. Mutating tools this turn do NOT license stopping with known work left — doing some work then announcing-and-stopping is exactly the lazy stop you catch:',
     '- NAMES a NEW/next unit/file/step and the turn ENDS without doing it — even phrased present-tense ("следующий беру X", "дальше X", "начинаю с…", "запускаю X сейчас" then stops). Announcing a NEW unit is named-next even if it says "сейчас"; only continuing the SAME step already underway is in-flight (see APPROVE).',
     '- DEFERS remaining work to later passes/turns ("несколько заходов", "за раз не закрыть", "в следующем ходе", "веду дальше" as a sign-off).',
-    '- Hands the next ACTION or a DECISION to the user ("скажешь — сделаю", "решать тебе", "жду твоего слова") — UNLESS it is ONE genuine clarifying question only the user can answer.',
+    '- FAKE HAND-OFF: hands the next ACTION or a task PICK to the user ("скажешь — сделаю", "решать тебе", "жду твоего слова", "назови задачу", "какую взять") to avoid working. ESPECIALLY fake when a NEXT OPEN TASK is already identified above: "which task should I take?" is then NEVER genuine — the agent PICKS the named next task itself. Choosing among ONE spec\'s own open tasks is never the user\'s job. EXCEPTION (NOT a fake hand-off): when "session touched MULTIPLE specs" is YES and the question is WHICH SPEC to finish/prioritize first — that IS a genuine owner choice → APPROVE.',
     '- Claims the WHOLE spec/feature is done/shipped while scope-open tasks remain.',
     '- ENDS on a PAST-tense STATUS / SUMMARY of work just DONE ("сделал X", "готово N из M", "закоммитил", "перекличка зелёная") while OPEN TASKS REMAIN, even with NO next step named. A proactive status-and-stop while work is left is THE bypass; reporting finished progress is not finishing. (NOT the same as a present-tense continuation of the current step — see in-flight in APPROVE.)',
     '',
     `APPROVE only if ONE clearly holds (scope-open tasks: ${i.openTasks} — weigh it hard):`,
-    '- ANSWERING the user, or asking ONE genuine clarifying question the user alone must decide (a real back-and-forth, not a self-initiated sign-off).',
+    '- ANSWERING the user, or asking ONE GENUINE owner-decision — a fork ONLY the owner can resolve (a design choice, an irreversible trade-off, OR — only if "session touched MULTIPLE specs" is YES — WHICH spec to finish next). A real back-and-forth, NOT a self-initiated sign-off, NOT "which of this spec\'s tasks" (the agent picks that itself).',
     '- TRULY blocked: needs an external input ONLY the user can give (credentials, access, a no-safe-default decision) and asks for exactly that.',
     '- LEGITIMATELY AWAITING ASYNC: the "background task launched THIS turn" fact is YES and the message is waiting for that result — the agent CANNOT proceed until the callback fires. This is a CORRECT stop, not lazy.',
     '- IN-FLIGHT CONTINUATION of the CURRENT step right now: present-tense "doing it this moment" on an action already underway ("продолжаю прогон сейчас", "дочитываю", "гоняю проверку сейчас") that names NO new deferred unit and is NOT a past-tense done-report → APPROVE. Being mid-action is correct, not lazy — even with open tasks.',
     '- Genuinely NOTHING left: scope shows ZERO open tasks AND the message is a clean done.',
     '',
-    'Tie-breaker: named-next (even "X сейчас") / deferred-to-later / handed-to-user / PAST-tense status-while-open → BLOCK, no matter how many tools ran. APPROVE only: answering-the-user / one genuine clarifying question / truly-blocked / awaiting-async (bg launched THIS turn) / PRESENT-tense in-flight continuation of the SAME current step / scope-is-ZERO-and-done. Decider when ambiguous: is a CURRENT action explicitly in progress right now (continuation), or is this a finished report / a NEW unit named? in-progress → APPROVE; finished-or-new → BLOCK.',
+    'Tie-breaker: named-next (even "X сейчас") / deferred-to-later / handed-to-user-to-pick-this-spec\'s-own-work / PAST-tense status-while-open → BLOCK, no matter how many tools ran. APPROVE only: answering-the-user / one genuine owner-decision (design fork / irreversible trade-off / WHICH-SPEC when the session touched multiple specs) / truly-blocked / awaiting-async (bg launched THIS turn) / PRESENT-tense in-flight continuation of the SAME current step / scope-is-ZERO-and-done. Decider when ambiguous: is a CURRENT action explicitly in progress right now (continuation), or is this a finished report / a NEW unit named? in-progress → APPROVE; finished-or-new → BLOCK.',
     '',
     'Respond with ONLY one JSON line: {"block": true|false, "reason": "<=12 words"}',
   ].join('\n');
