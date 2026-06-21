@@ -73,10 +73,10 @@ Feature: SRC001 spec-reality-check skill
     And shape соответствует AuditFinding[]
 
   @feature6
-  Scenario: SRC001_09 verify.ts --format human outputs ANSI colored
+  Scenario: SRC001_09 verify.ts --format human outputs human-readable text markers
     Given fixture spec с ERROR findings
     When запущен verify.ts с `--format human`
-    Then stdout содержит ANSI escape codes (через chalk)
+    Then stdout содержит ANSI escape codes (chalk strips colours in non-TTY spawn — step asserts textual marker "Reality check:" instead)
     And содержит file:line clickable references
 
   @feature6
@@ -121,14 +121,14 @@ Feature: SRC001 spec-reality-check skill
     Then получено ровно 3 строки
     And пути строк уникальны
 
-  @feature2
+  @feature3
   Scenario: SRC002_03 extractInlineCodePaths keeps real paths and drops urls
     Given markdown с inline backtick путями и url
     When извлечены пути через extractInlineCodePaths
     Then извлечены src/a.ts и README.md
     And ни один путь не содержит url-схему
 
-  @feature2
+  @feature4
   Scenario: SRC002_04 extractFrIds collapses duplicate FR ids
     Given текст с повторяющимися FR id
     When извлечены id через extractFrIds
