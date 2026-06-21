@@ -193,9 +193,9 @@ export function bgCommandInFlight(rawTranscript: string): boolean {
       for (const b of contentBlocks(e)) {
         const bb = b as Record<string, unknown>;
         if (bb?.type !== 'tool_use') continue;
-        // ONLY backgrounded shell commands — Agent/Task are handled by agentBgInFlight (name-paired by
-        // «came to rest»), and their completion is NOT a «completed» record, so counting them here would
-        // see them as forever-pending and defer wrongly (broke CEGATE001_39). Shell completions ARE «completed».
+        // ONLY backgrounded shell commands — Agent/Task are handled by agentBgInFlightCount (paired by
+        // tool_use id). This position-based shell detector and that id-paired agent counter are separate;
+        // mixing agents in here is unnecessary (the id counter already covers them).
         const nm = String(bb.name ?? '').toLowerCase();
         if (nm !== 'bash' && nm !== 'powershell') continue;
         const inp = bb.input as Record<string, unknown> | undefined;

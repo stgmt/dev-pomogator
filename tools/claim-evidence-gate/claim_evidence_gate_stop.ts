@@ -471,9 +471,15 @@ async function main(): Promise<void> {
   // FR-13 precedence seam: when a long-running tool is active AND its on-disk output is frozen, this
   // is where it must escalate to a human (block → AskUserQuestion) INSTEAD of silently releasing.
   // Added in FR-13; until then a stalled wait simply releases.
-  if (awaitingAsync || noProgressStreak >= config.noProgressCap) {
-    const why = awaitingAsync
-      ? 'awaiting async (bg job in-window / live .bg-task-active marker / backgrounded agent still in flight)'
+  // 2026-06-21: a judge-BLOCK is NOT released by awaitingAsync. The judge already weighed «жду» as a FACT
+  // and chose to block («жду» + a NAMED next task it could take = announce-and-stop under cover of a wait,
+  // not a real wait). Releasing it here is what made «жду фоновое» a stop-license again (the bug the owner
+  // hit: a genuine in-flight agent + «возьму следующую» sailed through). awaitingAsync STILL releases the
+  // other classes (judge-unavailable / no-token / works-done) so a genuine wait with nothing to do isn't kicked.
+  const awaitReleases = awaitingAsync && unsupported.cls !== 'judge-block';
+  if (awaitReleases || noProgressStreak >= config.noProgressCap) {
+    const why = awaitReleases
+      ? 'awaiting async (bg in flight) — non-judge-block class'
       : `no work-delta across ${noProgressStreak} consecutive zero-tool kicks`;
     log('INFO', `FR-11 release: ${why}`);
     writeMarkerAtomic(mp, { hash: currentHash, timestamp: new Date().toISOString(), count: marker?.count ?? 1, noProgressStreak, metaStreak });
