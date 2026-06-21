@@ -26,7 +26,8 @@
       ".specs/spec-workflow-md-validation/spec-workflow-md-validation.feature",
       ".specs/personal-pomogator/personal-pomogator.feature",
       ".specs/test-statusline/test-statusline.feature",
-      ".specs/bdd-only-migration/bdd-only-migration.feature"
+      ".specs/bdd-only-migration/bdd-only-migration.feature",
+      ".specs/fix-bg-output-loss/fix-bg-output-loss.feature"
     ],
     "import": [
       "tests/step_definitions/**/*.ts",
