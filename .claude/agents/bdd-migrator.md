@@ -40,11 +40,14 @@ ambiguous) → mutation gutcheck (RED-on-break).
    REAL engine — no mock, no inline copy of production logic. Per-scenario isolation comes from the
    `V4World` Before hook's fresh `tempDir`.
 4. **Validate via a THROWAWAY config FIRST** (never the canonical run, never the shared cucumber.json).
-   Write (Write tool, NOT heredoc) `.dev-pomogator/.tmp/cuke-<slug>.json` with `paths`:[the .feature],
-   `import`:["tests/step_definitions/**/*.ts","tests/hooks/**/*.ts"], `format`:["message:.dev-pomogator/.tmp/cuke-<slug>.ndjson"]
-   — a TEMP ndjson, NEVER `.dev-pomogator/.last-test-run.ndjson` (clobbering the canonical poisons every
-   other session's honesty gate). Run `node --import tsx node_modules/@cucumber/cucumber/bin/cucumber.js
-   -c .dev-pomogator/.tmp/cuke-<slug>.json --name "<id-regex>"`. Iterate to all-green.
+   Write (Write tool, NOT heredoc) `.dev-pomogator/.tmp/cuke-<slug>.json` — the JSON MUST wrap the keys
+   in a `"default": { … }` PROFILE: `{"default":{"paths":[the .feature],"import":["tests/step_definitions/**/*.ts","tests/hooks/**/*.ts"],"format":["message:.dev-pomogator/.tmp/cuke-<slug>.ndjson"]}}`.
+   A FLAT `{paths,import,format}` (no `default` wrapper) silently runs **0 scenarios / 0 steps** —
+   cucumber.js reads config only under a profile name (dogfood 2026-06-21). The ndjson is a TEMP file,
+   NEVER `.dev-pomogator/.last-test-run.ndjson` (clobbering the canonical poisons every other session's
+   honesty gate). Run `node --import tsx node_modules/@cucumber/cucumber/bin/cucumber.js
+   -c .dev-pomogator/.tmp/cuke-<slug>.json --name "<id-regex>"`. Iterate to all-green (if it reports
+   0 scenarios, the `default` wrapper is missing — not "all passed").
 5. **Collision dry-run.** `--dry-run` a temp config over cucumber.json's EXISTING paths; scope its
    `import` to the STABLE step-defs + YOUR own new file — NOT the whole `tests/step_definitions/**`
    glob (if another migration agent runs concurrently the glob loads its half-written file → spurious
@@ -90,6 +93,11 @@ ambiguous) → mutation gutcheck (RED-on-break).
   (out-of-scope) — never invent the mapping to clear a file. (Scenario ids ARE spec-qualified in the graph,
   so a `CODE_NN` reused by another spec is NOT a collision — `GUARD001` lives independently in three specs;
   the real collision risk is STEP-PATTERN ambiguity, caught by the step-5 `--dry-run`, not the code.)
+- **Bash tool on Windows is Git Bash — use POSIX paths (`/d/repos/...`), not `D:\repos\...`** (a
+  `cat D:\...` fails). Prefer the spawn pattern (`process.execPath` + cwd=REPO_ROOT + a repo-RELATIVE
+  script path) which sidesteps absolute paths entirely. Committing a `.specs/` pathspec is allowed
+  (incl. the multi-line `git commit -F - -- <paths> <<'EOF' … EOF` heredoc form — the spec-access
+  guard's git carve-out now strips the heredoc body before segment-splitting, dogfood 2026-06-21).
 
 ## Never
 - Fake a manual/agent-behaviour scenario green with a check that doesn't test the claim.

@@ -557,6 +557,11 @@ When('git plumbing and git content commands run over the specs tree', function (
     `git stash push ${S}/auth/`,
     `git restore --staged ${S}/auth/FR.md`,
     `git rm --cached ${S}/auth/old.md`,
+    // dogfood 2026-06-21: a multi-line commit via heredoc (`-F - <<'EOF' … EOF`) — the
+    // bdd-migrator's own recommended form — must be allowed even when the message BODY
+    // mentions `.specs/`; the heredoc body is DATA, not a non-git pipeline segment.
+    `git commit -F - -- ${S}/auth/FR.md <<'EOF'\nfix: correct tag\n\nbody mentions ${S}/auth here\nEOF`,
+    `git commit -F - -- ${S}/auth/FR.md <<EOF\nmsg\nEOF`,
   ];
   const mustDeny = [
     `git show HEAD:${S}/auth/FR.md`,

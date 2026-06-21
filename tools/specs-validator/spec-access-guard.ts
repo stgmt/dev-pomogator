@@ -114,10 +114,16 @@ function isEngineToken(tok: string): boolean {
 const GIT_PLUMBING_SAFE = new Set(['add', 'commit', 'status', 'stash']);
 const GIT_CONTENT_LEAK = new Set(['show', 'diff', 'log', 'grep', 'blame', 'cat-file', 'checkout', 'switch']);
 function isSpecVcsPlumbingOnly(rawCmd: string): boolean {
-  // Strip comments AND quoted strings FIRST — a commit message is DATA, not a
-  // command: `git commit -m "…(.specs/x)…"` must not be shredded by the segment
-  // splitter (the message's parens/slashes/`.specs/` are not shell structure).
+  // Strip heredoc BODIES, comments AND quoted strings FIRST — a commit message is
+  // DATA, not a command: `git commit -m "…(.specs/x)…"` must not be shredded by the
+  // segment splitter (the message's parens/slashes/`.specs/` are not shell structure).
+  // A multi-line message via `git commit -F - -- <paths> <<'EOF' … EOF` carries the
+  // message as a HEREDOC; without removing the body the `\n` splitter turns each
+  // message line into a pseudo-segment that isn't `git …`, so the carve-out wrongly
+  // fails (dogfood 2026-06-21: the bdd-migrator's own recommended multi-line-commit
+  // form was DENIED over a `.specs/` pathspec — its body lines split into non-git segments).
   const cmd = rawCmd
+    .replace(/<<-?\s*(['"]?)([A-Za-z_]\w*)\1[^\n]*\n[\s\S]*?\n[ \t]*\2[ \t]*(?=\n|$)/g, ' ')
     .replace(/(^|\s)#.*$/gm, '$1')
     .replace(/"[^"]*"/g, '""')
     .replace(/'[^']*'/g, "''");
