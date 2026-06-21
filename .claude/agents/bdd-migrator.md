@@ -85,8 +85,22 @@ ambiguous) → mutation gutcheck (RED-on-break).
    Otherwise real-tag + wire together, then one FULL run (no `--tags`) so `.last-test-run.ndjson` stays complete.
 7. **Mutation gutcheck (runtime class).** Break the engine, re-run, confirm the scenario goes RED,
    restore. A scenario that survives a real mutation is FAKE-POSITIVE-RISK, not a deliverable.
-8. **Verify + retire.** `project-test-trace.ts` shows no orphans; only THEN delete the superseded
-   `tests/e2e/<slug>.test.ts`. (Skip the delete while wiring is blocked.)
+8. **Verify + retire — but NOT every vitest twin is retirable.** `project-test-trace.ts` shows no
+   orphans; only THEN delete the superseded `tests/e2e/<slug>.test.ts`. (Skip the delete while wiring is
+   blocked.) THREE classes of vitest test must STAY vitest — KEEP them, document why, NEVER migrate or
+   delete:
+   - **Stryker mutation kill-surface.** Stryker traces the VITEST suite, not cucumber — deleting a
+     fine-grained unit test that a `stryker.config.mjs`/`stryker.bdd.config.mjs` `mutate` field targets
+     destroys mutation coverage even if a coarser BDD scenario "covers the behaviour". (e.g. strong-tests'
+     `detect-invariant-candidates-unit.test.ts` ≈56 per-mutation cases — KEEP.) Check the stryker config's
+     `mutate`/`--related` target before retiring any unit-granular twin.
+   - **Env-dependent twins** that only pass in Docker/Linux (gh/docker shell-mocks, real-`.exe`-vs-mock) —
+     the BDD scenario may exist but the vitest twin is the host-runnable form; keep unless the BDD form is
+     proven green in the canonical Docker run.
+   - **Invariant-guard static scans** with no production function to drive (bundle-freshness, deps-safe) —
+     not traceable BDD, keep as scratch.
+   When `migrate.ts --batch` shows a large `U:` for such a spec, that is NOT a migration backlog — classify
+   each as keep-with-reason and report it; do NOT author fake BDD twins to zero the count.
 
 ## Dogfood-hardened gotchas (spec-reality-check)
 - **Spawn the real CLI with `node --import tsx <ABS-script>` via `process.execPath`, cwd=REPO_ROOT —

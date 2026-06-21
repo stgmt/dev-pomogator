@@ -97,10 +97,18 @@ answer-simple pilot proved (retrospective finding #11) — follow it, don't rein
 8. **Mutation gutcheck (runtime class).** Break the engine under test, re-run, confirm the scenario
    goes RED, restore. A scenario that survives a real mutation is FAKE-POSITIVE-RISK, not a deliverable.
    (`.claude/skills/strong-tests/evals/run-evals.ts` is the reusable rubric.)
-9. **Verify traceability + retire vitest.** `npx tsx tools/bdd-migrator/migrate.ts --spec <slug>`
-   should now show wired + all real tags. `project-test-trace.ts` should show no orphans for the
-   spec. Only THEN delete the superseded `tests/e2e/<slug>.test.ts` (BDD parity reached), and
-   confirm the full Docker suite (`npm test`) still passes before the rollout scales.
+9. **Verify traceability + retire vitest — but NOT every twin is retirable.** `npx tsx
+   tools/bdd-migrator/migrate.ts --spec <slug>` should now show wired + all real tags.
+   `project-test-trace.ts` should show no orphans for the spec. Only THEN delete the superseded
+   `tests/e2e/<slug>.test.ts` (BDD parity reached), and confirm the full Docker suite (`npm test`) still
+   passes. THREE classes MUST STAY vitest — keep + document, never migrate/delete: (a) **Stryker mutation
+   kill-surface** — Stryker traces vitest, not cucumber, so deleting a unit test the `stryker*.config.mjs`
+   `mutate` field targets kills mutation coverage even if a coarse BDD scenario "covers" it (e.g.
+   strong-tests' `detect-invariant-candidates-unit.test.ts` ≈56 cases); (b) **env-dependent twins**
+   (gh/docker shell-mocks, Docker-only) — keep until the BDD form is green in the canonical Docker run;
+   (c) **invariant-guard static scans** with no prod function to drive. A large `migrate.ts --batch` `U:`
+   on such a spec is NOT a backlog — classify each as keep-with-reason; do NOT author fake BDD twins to
+   zero it.
 10. **Commit YOURS only — path-limited.** A bare `git commit` commits the WHOLE index incl. a parallel
     agent's staged files (incident 8ab1d22). So: clean the repo root of stray artifacts first (the
     `forbid-root-artifacts` pre-commit hook blocks ANY commit otherwise) → `git add <your explicit
