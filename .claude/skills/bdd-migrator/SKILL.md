@@ -97,18 +97,27 @@ answer-simple pilot proved (retrospective finding #11) — follow it, don't rein
 8. **Mutation gutcheck (runtime class).** Break the engine under test, re-run, confirm the scenario
    goes RED, restore. A scenario that survives a real mutation is FAKE-POSITIVE-RISK, not a deliverable.
    (`.claude/skills/strong-tests/evals/run-evals.ts` is the reusable rubric.)
-9. **Verify traceability + retire vitest — but NOT every twin is retirable.** `npx tsx
+9. **Verify traceability + retire vitest — BDD-only, NO-REFUSAL.** `npx tsx
    tools/bdd-migrator/migrate.ts --spec <slug>` should now show wired + all real tags.
-   `project-test-trace.ts` should show no orphans for the spec. Only THEN delete the superseded
-   `tests/e2e/<slug>.test.ts` (BDD parity reached), and confirm the full Docker suite (`npm test`) still
-   passes. THREE classes MUST STAY vitest — keep + document, never migrate/delete: (a) **Stryker mutation
-   kill-surface** — Stryker traces vitest, not cucumber, so deleting a unit test the `stryker*.config.mjs`
-   `mutate` field targets kills mutation coverage even if a coarse BDD scenario "covers" it (e.g.
-   strong-tests' `detect-invariant-candidates-unit.test.ts` ≈56 cases); (b) **env-dependent twins**
-   (gh/docker shell-mocks, Docker-only) — keep until the BDD form is green in the canonical Docker run;
-   (c) **invariant-guard static scans** with no prod function to drive. A large `migrate.ts --batch` `U:`
-   on such a spec is NOT a backlog — classify each as keep-with-reason; do NOT author fake BDD twins to
-   zero it.
+   `project-test-trace.ts` should show no orphans for the spec. Then delete the superseded
+   `tests/e2e/<slug>.test.ts` (BDD parity reached). The goal is ZERO `*.test.ts` — you do NOT keep a
+   vitest twin; **refusing is forbidden** ("оставлю на vitest / keep-class / не мигрируется / вне scope /
+   Stryker needs it / env-dependent" are abolished excuses). The three formerly-"keep" classes each have a
+   migration technique — use it: **(a) Stryker mutation kill-surface** (a `stryker*.config.mjs` `mutate`
+   target) → migrate the fine-grained assertions to a `@featureN` **Scenario Outline + Examples** (one row
+   per former assertion), wire `stryker.bdd.config.mjs` at that feature/tag, and prove parity with the
+   deterministic `verify-kill` (`npm run mutation:verify`) BEFORE deleting the vitest — the BDD scenarios
+   BECOME the kill-surface; **(b) env-dependent twin** → migrate AND add the env (dotnet/gh/docker) to
+   `Dockerfile.test.base` so the scenario RUNS in the canonical Docker run; **(c) invariant-guard static
+   scan** → migrate as an artifact scenario driving the real check (export a pure checker if needed). A
+   large `migrate.ts --batch` `U:` is a backlog to CLEAR; the ONLY non-migration is a genuinely-dead test
+   of removed code → **delete** it (don't keep, don't fake-green).
+   - **Authoring discipline (do it normally): real fixtures + World hooks.** Step-defs load real artifacts
+     from `tests/fixtures/**` (mirror the producer's output — NOT inline fakes/mocks; rule
+     `verify-against-real-artifact`); pure-value cases take literals from Examples columns. Per-scenario
+     isolation via the `V4World` Before/After hooks in `tests/hooks/before-after.ts` (fresh `tempDir` —
+     seed under `this.tempDir`, never the real repo); a scenario testing a plugin hook spawns the REAL
+     hook via `bootstrap.cjs` with a stdin payload, never a simulated decision.
 10. **Commit YOURS only — path-limited.** A bare `git commit` commits the WHOLE index incl. a parallel
     agent's staged files (incident 8ab1d22). So: clean the repo root of stray artifacts first (the
     `forbid-root-artifacts` pre-commit hook blocks ANY commit otherwise) → `git add <your explicit

@@ -215,6 +215,32 @@ function findVitestFiles(slug: string): string[] {
   return [...hits].sort();
 }
 
+/** Mutate targets declared in any `stryker*.config.mjs` at the repo root — the modules whose mutation
+ *  coverage MUST be preserved. A vitest twin that drives one of these is the "Stryker kill-surface":
+ *  under the BDD-only policy it is NOT kept — it is migrated to a `@featureN` Scenario Outline + Examples
+ *  + wired `stryker.bdd.config.mjs` + gated by `verify-kill` before deletion. Pure + exported for tests. */
+export function strykerMutateTargets(root: string): string[] {
+  const out = new Set<string>();
+  for (const cfg of ['stryker.config.mjs', 'stryker.bdd.config.mjs']) {
+    let src: string;
+    try { src = fs.readFileSync(path.join(root, cfg), 'utf-8'); } catch { continue; }
+    const block = src.match(/mutate\s*:\s*\[([\s\S]*?)\]/);
+    if (!block) continue;
+    for (const m of block[1].matchAll(/['"]([^'"]+)['"]/g)) out.add(m[1]);
+  }
+  return [...out];
+}
+
+/** Which mutate targets do these test sources drive (import by path or name)? Non-empty ⇒ kill-surface. */
+export function mutationSurfaceTargets(vitestSrcs: string[], targets: string[]): string[] {
+  const hit = new Set<string>();
+  for (const t of targets) {
+    const baseNoExt = t.replace(/\\/g, '/').split('/').pop()!.replace(/\.(tsx?|mjs|cjs|js)$/, '');
+    if (vitestSrcs.some((s) => s.includes(baseNoExt))) hit.add(t);
+  }
+  return [...hit];
+}
+
 export function buildPlan(slug: string): MigrationPlan {
   const featureRel = `.specs/${slug}/${slug}.feature`;
   const featureAbs = path.join(REPO, featureRel);
@@ -250,6 +276,10 @@ export function buildPlan(slug: string): MigrationPlan {
     const attributed = vitestFiles.filter((f) => f !== directRel);
     if (attributed.length) {
       actions.push(`⚠ CANDIDATE twins (attributed via the spec's shared code dir, NOT the slug name) — confirm each truly belongs to ${slug} by FR-SUBJECT before migrating; a file under tools/${slug}/ may be owned by a sibling spec: ${attributed.join(', ')}`);
+    }
+    const surface = mutationSurfaceTargets(vitestSrcs, strykerMutateTargets(REPO));
+    if (surface.length) {
+      actions.push(`⚠ MUTATION SURFACE (drives stryker mutate target: ${surface.join(', ')}) — BDD-only policy: do NOT keep. Migrate to a @featureN Scenario Outline + Examples (one row per former assertion), wire stryker.bdd.config.mjs at that tag, then prove parity with \`npm run mutation:verify\` (verify-kill) BEFORE deleting the twin. The BDD scenarios become the kill-surface.`);
     }
   } else {
     actions.push(`no vitest twin found (slug-named, located-in, or referencing tools/${slug}/) — already migrated or cross-cutting (check project-test-trace.ts for orphans)`);

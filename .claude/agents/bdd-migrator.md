@@ -85,22 +85,47 @@ ambiguous) → mutation gutcheck (RED-on-break).
    Otherwise real-tag + wire together, then one FULL run (no `--tags`) so `.last-test-run.ndjson` stays complete.
 7. **Mutation gutcheck (runtime class).** Break the engine, re-run, confirm the scenario goes RED,
    restore. A scenario that survives a real mutation is FAKE-POSITIVE-RISK, not a deliverable.
-8. **Verify + retire — but NOT every vitest twin is retirable.** `project-test-trace.ts` shows no
-   orphans; only THEN delete the superseded `tests/e2e/<slug>.test.ts`. (Skip the delete while wiring is
-   blocked.) THREE classes of vitest test must STAY vitest — KEEP them, document why, NEVER migrate or
-   delete:
-   - **Stryker mutation kill-surface.** Stryker traces the VITEST suite, not cucumber — deleting a
-     fine-grained unit test that a `stryker.config.mjs`/`stryker.bdd.config.mjs` `mutate` field targets
-     destroys mutation coverage even if a coarser BDD scenario "covers the behaviour". (e.g. strong-tests'
-     `detect-invariant-candidates-unit.test.ts` ≈56 per-mutation cases — KEEP.) Check the stryker config's
-     `mutate`/`--related` target before retiring any unit-granular twin.
-   - **Env-dependent twins** that only pass in Docker/Linux (gh/docker shell-mocks, real-`.exe`-vs-mock) —
-     the BDD scenario may exist but the vitest twin is the host-runnable form; keep unless the BDD form is
-     proven green in the canonical Docker run.
-   - **Invariant-guard static scans** with no production function to drive (bundle-freshness, deps-safe) —
-     not traceable BDD, keep as scratch.
-   When `migrate.ts --batch` shows a large `U:` for such a spec, that is NOT a migration backlog — classify
-   each as keep-with-reason and report it; do NOT author fake BDD twins to zero the count.
+8. **Verify + retire.** `project-test-trace.ts` shows no orphans; only THEN delete the superseded
+   `tests/e2e/<slug>.test.ts`. (Skip the delete while wiring is blocked.)
+
+## Policy: BDD-only, no exceptions (NO-REFUSAL — supersedes the old keep-vitest guard)
+The repo is migrating to **BDD-only**: the goal is ZERO `*.test.ts`. You do NOT get to keep a vitest
+twin. **Refusing is forbidden** — never end with "оставлю на vitest / keep-class / не мигрируется /
+вне scope / Stryker needs it / env-dependent" as a reason to NOT migrate. Those are the exact excuses
+this policy abolishes. The three formerly-"keep" classes each have a REAL migration technique — use it:
+- **Stryker mutation kill-surface** (a `stryker*.config.mjs` `mutate` target — e.g. strong-tests'
+  `detect-invariant-candidates-unit.test.ts`): migrate the fine-grained assertions to a **`@featureN`
+  Scenario Outline + Examples** (one Example row per former assertion → same granularity), drive the
+  exported fn in-process in the step-def, then **wire `stryker.bdd.config.mjs`** at that feature/tag and
+  prove parity with the deterministic **`verify-kill`** (`npm run mutation:verify`, inject→run→restore)
+  BEFORE deleting the vitest. The BDD scenarios BECOME the kill-surface — mutation coverage is preserved,
+  not lost. Mutation parity is the retirement gate, not "keep".
+- **Env-dependent twin** (needs dotnet/gh/docker): migrate it AND make the env available in the Docker
+  image (`Dockerfile.test.base`) so the BDD scenario RUNS (not skips) in the canonical Docker run. Mark
+  the scenario so it's exercised in Docker; do not keep a host-only vitest as the excuse.
+- **Invariant-guard static scan** (bundle-freshness, deps-safe, no obvious fn): migrate as an **artifact
+  scenario** that drives the real check exported as a function (refactor the scan to export a pure checker
+  if needed) or spawns the real guard — it IS traceable once you drive the real code, not "scratch".
+A large `migrate.ts --batch` `U:` is a migration backlog to CLEAR, not to classify-and-keep. The ONLY
+legitimate non-migration is a genuinely-dead test of removed code → **delete** it (don't keep, don't fake).
+
+## Authoring discipline — do it NORMALLY (fixtures · hooks · Scenario Outline)
+- **Real fixtures, not inline fakes.** When a step-def needs input that mirrors a producer's output
+  (cucumber NDJSON, a git repo, a CLI artifact, a C# project), load it from `tests/fixtures/**` — a real
+  captured artifact — NOT a hand-built inline string/mock. Inline fakes test your model against itself
+  (fake-positive). Reuse the spec's existing fixture dir; capture a real one if missing. (Rule:
+  `verify-against-real-artifact`.) Pure-value cases (e.g. `detectStack('/foo/bar.ts')→'ts'`) take the
+  literal from an Examples column — that's data, not a fixture, and is fine.
+- **Per-scenario isolation via the World hooks.** Use the `V4World` Before/After hooks in
+  `tests/hooks/before-after.ts` — each scenario gets a fresh `tempDir`; write/seed under `this.tempDir`,
+  never the real repo. Don't hand-roll setup/teardown in step-defs when the World hook already gives you
+  isolation. Where a scenario tests a PLUGIN hook (PreToolUse/Stop), spawn the REAL hook via its launcher
+  (`bootstrap.cjs`) with a stdin payload — don't simulate the decision.
+- **Scenario Outline + Examples for parametric assertion sets.** When the vitest twin asserts the SAME
+  behaviour across many inputs (per-language × per-return-type × boundary values — e.g. detect-invariant's
+  56 cases), author ONE `Scenario Outline` with an `Examples:` table (one row per former assertion), not N
+  near-duplicate flat scenarios. Each row is a distinct mutation-kill data point; the step-def reads the
+  `<columns>` and drives the real fn. This keeps granularity (mutation coverage) without scenario bloat.
 
 ## Dogfood-hardened gotchas (spec-reality-check)
 - **Spawn the real CLI with `node --import tsx <ABS-script>` via `process.execPath`, cwd=REPO_ROOT —

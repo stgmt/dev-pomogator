@@ -7,7 +7,7 @@
  * REAL exported `testAttributesToSpec` — no mocks.
  */
 import { describe, it, expect } from 'vitest';
-import { testAttributesToSpec, isComponentHomed, toolImportSymbols, classifyTestBody } from '../migrate.ts';
+import { testAttributesToSpec, isComponentHomed, toolImportSymbols, classifyTestBody, mutationSurfaceTargets } from '../migrate.ts';
 
 describe('MIGRATE001: vitest-twin attribution by spec code dir (dogfood 2026-06-21)', () => {
   it('MIGRATE001_01: attributes a test that references the spec code dir tools/<slug>/', () => {
@@ -77,5 +77,27 @@ describe('MIGRATE002: skill-homed production imports classify as runtime (dogfoo
   it('MIGRATE002_04: a body that drives nothing real is still unknown (no over-classification)', () => {
     const body = `it('adds', () => { expect(1 + 1).toBe(2); });`;
     expect(classifyTestBody(body, [])).toBe('unknown');
+  });
+});
+
+// Under BDD-only, a vitest twin driving a stryker `mutate` target is the mutation kill-surface — it is
+// MIGRATED (Scenario Outline + stryker.bdd + verify-kill), not kept. The planner must flag it so the
+// agent uses that technique (dogfood 2026-06-21: the old keep-vitest guard wrongly told it to keep).
+describe('MIGRATE003: mutation-surface detection (BDD-only policy)', () => {
+  it('MIGRATE003_01: a test importing a stryker mutate target is flagged as mutation-surface', () => {
+    const target = '.claude/skills/strong-tests/scripts/detect-invariant-candidates.ts';
+    const src = `import { scan } from '../../.claude/skills/strong-tests/scripts/detect-invariant-candidates.ts';`;
+    expect(mutationSurfaceTargets([src], [target])).toEqual([target]);
+  });
+
+  it('MIGRATE003_02: a test that does NOT touch any mutate target is not flagged', () => {
+    const target = '.claude/skills/strong-tests/scripts/detect-invariant-candidates.ts';
+    const src = `import { somethingElse } from '../../tools/other/mod.ts';`;
+    expect(mutationSurfaceTargets([src], [target])).toEqual([]);
+  });
+
+  it('MIGRATE003_03: no mutate targets configured → never flagged (empty list is safe)', () => {
+    const src = `import { scan } from '../../.claude/skills/strong-tests/scripts/detect-invariant-candidates.ts';`;
+    expect(mutationSurfaceTargets([src], [])).toEqual([]);
   });
 });
