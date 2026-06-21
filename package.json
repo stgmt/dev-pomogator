@@ -50,7 +50,7 @@
     "test:e2e:docker": "vitest run --reporter=verbose",
     "test:tui": "bash scripts/docker-test.sh --tui",
     "mutation": "bash scripts/docker-mutation.sh stryker.real.config.mjs",
-    "mutation:skill": "bash scripts/docker-mutation.sh stryker.config.mjs",
+    "mutation:skill": "npx stryker run stryker.bdd.config.mjs",
     "mutation:specgen": "bash scripts/docker-mutation.sh stryker.specgen.config.mjs",
     "mutation:bdd": "npx stryker run stryker.bdd.config.mjs",
     "mutation:verify": "tsx tools/stryker-mutation/verify-kill.ts"

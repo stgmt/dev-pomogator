@@ -246,3 +246,219 @@ Feature: TESTQUAL001_strong-tests skill — mutation-resistant test generation a
     Given a Python file with a nested-loop function followed by a top-level statement
     When the invariant detector scans the file
     Then the candidate kind SHALL be nxm-overlap and endLine SHALL be exactly 6
+
+  # ── Unit-level Scenario Outlines replacing detect-invariant-candidates-unit.test.ts ──
+  # All 56 assertions from the vitest twin, grouped by fn + assertion shape.
+  # Stryker BDD mutation surface: stryker.bdd.config.mjs @feature7 @strong-tests.feature
+
+  @feature7
+  Scenario Outline: TESTQUAL001_UNIT_detectStack detects stack from file extension
+    When detectStack is called with path "<path>"
+    Then the detected stack SHALL be "<expected_stack>"
+
+    Examples:
+      | path                     | expected_stack |
+      | /foo/bar.ts              | ts             |
+      | /foo/bar.tsx             | ts             |
+      | /foo/bar.py              | python         |
+      | /foo/Indexer.cs          | csharp         |
+      | /foo/indexer.go          | go             |
+      | /foo/BAR.CS              | csharp         |
+      | /foo/BAR.TS              | ts             |
+
+  @feature7
+  Scenario Outline: TESTQUAL001_UNIT_detectStack returns null for unknown or empty paths
+    When detectStack is called with path "<path>"
+    Then the detected stack SHALL be null
+
+    Examples:
+      | path           |
+      | /foo/bar.rs    |
+      | /foo/bar.java  |
+      | /foo/bar.txt   |
+      |                |
+
+  @feature7
+  Scenario Outline: TESTQUAL001_UNIT_nestedLoopCount counts loops per stack
+    When nestedLoopCount is called with body "<body>" and stack "<stack>"
+    Then the nested loop count SHALL be <expected_count>
+
+    Examples:
+      | body                                                                          | stack   | expected_count |
+      | for (let i=0;i<n;i++) {\n  for (let j=0;j<m;j++) {} }                       | ts      | 2              |
+      | for (int i=0;i<n;i++) {\n  foreach (var x in items) {} }                    | csharp  | 2              |
+      | foreach (var x in a) { foreach (var y in b) {} }                            | csharp  | 2              |
+      | \tfor _, r := range repos {\n\t\tfor _, w := range wts {\n\t\t}\n\t}        | go      | 2              |
+      | \tfor i := 0; i < n; i++ {\n\t\tfor j := 0; j < m; j++ {\n\t\t}\n\t}      | go      | 2              |
+      | \tfor {\n\t\tfor x := range ch {\n\t\t}\n\t}                                 | go      | 2              |
+      |                                                                               | ts      | 0              |
+      |                                                                               | python  | 0              |
+      |                                                                               | csharp  | 0              |
+
+  @feature7
+  Scenario Outline: TESTQUAL001_UNIT_nestedLoopCount Python counts only for-in loops
+    When nestedLoopCount is called with body "<body>" and stack "python"
+    Then the nested loop count SHALL be <expected_count>
+
+    Examples:
+      | body                                                              | expected_count |
+      | for x in items:\n        for y in cols:\n            pass        | 2              |
+      | for (int i=0; i<n; i++) {}                                       | 0              |
+      | const informer = 42;                                             | 0              |
+
+  @feature7
+  Scenario Outline: TESTQUAL001_UNIT_suggestInvariants maps kind and returnType to invariant sets
+    When suggestInvariants is called with kind "<kind>" and returnType "<returnType>"
+    Then the suggested invariants SHALL equal "<expected_invariants>"
+
+    Examples:
+      | kind                 | returnType        | expected_invariants                                       |
+      | collection-returning | List<int>         | cardinality,uniqueness,conservation                       |
+      | nxm-overlap          | T[]               | cardinality,uniqueness,conservation                       |
+      | composition-chain    | List<X>           | cardinality,uniqueness,conservation,monotonicity          |
+      | collection-returning | Dictionary<K,V>   | cardinality,uniqueness,coverage,no-leak                   |
+      | collection-returning | Map<K,V>          | cardinality,uniqueness,coverage,no-leak                   |
+      | collection-returning | Iterator<T>       | cardinality,uniqueness,idempotence,monotonicity           |
+
+  @feature7
+  Scenario Outline: TESTQUAL001_UNIT_scan detects candidate function and return type
+    When scan is called on TS source "<src_key>"
+    Then the scan SHALL yield exactly <num_candidates> candidates
+    And the first candidate function SHALL be "<fn_name>"
+    And the first candidate returnType SHALL be "<return_type>"
+    And the first candidate kind SHALL be "<kind>"
+
+    Examples:
+      | src_key             | num_candidates | fn_name   | return_type   | kind                  |
+      | array_simple        | 1              | getItems  | Array<string> | collection-returning  |
+      | arrow_const         | 1              | buildList | Array<number> | collection-returning  |
+      | ts_nxm_nested       | 1              | build     | string[]      | nxm-overlap           |
+      | ts_set_return           | 1              | uniq      | Set<string>           | collection-returning  |
+      | ts_map_return           | 1              | idx       | Map<string            | collection-returning  |
+      | ts_iterator_return      | 1              | gen       | Iterator<number>      | collection-returning  |
+      | ts_readonly_return      | 1              | frozen    | ReadonlyArray<string> | collection-returning  |
+      | ts_single_loop_collection | 1            | collect   | Array<string>         | collection-returning  |
+
+  @feature7
+  Scenario: TESTQUAL001_UNIT_scan returns empty for empty content
+    When scan is called on empty TS source
+    Then the scan SHALL yield exactly 0 candidates
+    And the suppressed array SHALL be empty
+
+  @feature7
+  Scenario Outline: TESTQUAL001_UNIT_scan suppression flags and reason format
+    When scan is called on Python suppression source "<src_key>"
+    Then the suppressed array SHALL have exactly <num_suppressed> entries
+    And the suppressed reason SHALL be "<expected_reason>"
+    And the suppressed reasonWarning SHALL be <expected_warning>
+
+    Examples:
+      | src_key              | num_suppressed | expected_reason                                     | expected_warning    |
+      | py_suppress_valid    | 1              | pure-leaf reducer for testing                       | null                |
+      | py_suppress_too_short | 1             | ok                                                  | REASON_TOO_SHORT    |
+      | py_suppress_8chars   | 1              | ab cd ef                                            | null                |
+      | py_suppress_7chars   | 1              | abc def                                             | REASON_TOO_SHORT    |
+
+  @feature7
+  Scenario Outline: TESTQUAL001_UNIT_scan suppression line and function format
+    When scan is called on TS suppression source "<src_key>"
+    Then the suppressed function field SHALL be "<expected_fn_field>"
+    And the suppressed line SHALL be <expected_line>
+
+    Examples:
+      | src_key             | expected_fn_field | expected_line |
+      | ts_suppress_leaf    | leaf:3            | 3             |
+      | ts_suppress_sameline | quick:1           | 1             |
+
+  @feature7
+  Scenario Outline: TESTQUAL001_UNIT_scan boundary line numbers
+    When scan is called on boundary source "<src_key>" with stack "<stack>"
+    Then the first candidate line SHALL be <expected_line>
+    And the first candidate endLine SHALL be <expected_end_line>
+
+    Examples:
+      | src_key               | stack | expected_line | expected_end_line |
+      | ts_candidate_line     | ts    | 2             | 4                 |
+      | ts_endline_compact    | ts    | 1             | 3                 |
+
+  @feature7
+  Scenario Outline: TESTQUAL001_UNIT_scan lookahead and orphan suppression
+    When scan is called on TS source "<src_key>"
+    Then the scan candidates count SHALL be <num_candidates>
+    And the suppressed count SHALL be <num_suppressed>
+
+    Examples:
+      | src_key                          | num_candidates | num_suppressed |
+      | ts_suppress_too_far              | 1              | 0              |
+      | ts_suppress_orphan               | 0              | 0              |
+      | ts_suppress_not_in_candidates    | 1              | 1              |
+
+  @feature7
+  Scenario Outline: TESTQUAL001_UNIT_scan window and body isolation
+    When scan is called on TS source "<src_key>"
+    Then the first candidate function SHALL be "<fn_name>"
+    And the first candidate kind SHALL be "<kind>"
+
+    Examples:
+      | src_key                    | fn_name | kind                  |
+      | ts_return_window           | b       | collection-returning  |
+      | ts_nested_cross_attach     | simple  | collection-returning  |
+
+  @feature7
+  Scenario: TESTQUAL001_UNIT_scan reason preserved verbatim
+    When scan is called on TS suppression source with em-dash reason
+    Then the suppressed reason SHALL be "pure-leaf reducer — type system enforces correctness"
+
+  @feature7
+  Scenario Outline: TESTQUAL001_UNIT_scan composition chain kind detection
+    When scan is called on "<stack>" source "<src_key>"
+    Then the first candidate kind SHALL be "composition-chain"
+
+    Examples:
+      | stack   | src_key              |
+      | ts      | ts_chain_map_filter  |
+      | csharp  | cs_chain_linq        |
+      | python  | py_chain_stacked     |
+      | go      | go_chain_sequential  |
+
+  @feature7
+  Scenario: TESTQUAL001_UNIT_scan nxm overlap wins over chain when both present
+    When scan is called on TS source "ts_nxm_and_chain"
+    Then the first candidate kind SHALL be "nxm-overlap"
+
+  @feature7
+  Scenario Outline: TESTQUAL001_UNIT_scan Go stack specific behaviours
+    When scan is called on "go" source "<src_key>"
+    Then the scan SHALL yield exactly <num_candidates> candidates
+    And the first candidate function SHALL be "<fn_name>"
+
+    Examples:
+      | src_key              | num_candidates | fn_name      |
+      | go_nested_for_range  | 1              | BuildIndex   |
+      | go_map_return        | 1              | Tally        |
+      | go_pointer_receiver  | 1              | GetItems     |
+
+  @feature7
+  Scenario: TESTQUAL001_UNIT_scan Go suppression parses
+    When scan is called on "go" source "go_suppress_valid"
+    Then the suppressed array SHALL have exactly 1 entries
+    And the suppressed reason SHALL contain "pure-leaf"
+    And the suppressed reasonWarning SHALL be null
+
+  @feature7
+  Scenario: TESTQUAL001_UNIT_scan Go map return triggers coverage and no-leak
+    When scan is called on "go" source "go_map_return"
+    Then the first candidate suggestedInvariants SHALL contain "coverage"
+    And the first candidate suggestedInvariants SHALL contain "no-leak"
+
+  @feature7
+  Scenario: TESTQUAL001_UNIT_scan TS Map return triggers coverage and no-leak
+    When scan is called on TS source "ts_map_return"
+    Then the first candidate suggestedInvariants SHALL contain "coverage"
+    And the first candidate suggestedInvariants SHALL contain "no-leak"
+
+  @feature7
+  Scenario: TESTQUAL001_UNIT_scan TS Iterator return triggers idempotence and monotonicity
+    When scan is called on TS source "ts_iterator_return"
+    Then the first candidate suggestedInvariants SHALL contain "idempotence"
+    And the first candidate suggestedInvariants SHALL contain "monotonicity"

@@ -21,6 +21,8 @@ import { Given, When, Then, Before, After, setDefaultTimeout } from '@cucumber/c
 import {
   scan,
   detectStack,
+  suggestInvariants,
+  nestedLoopCount,
 } from '../../.claude/skills/strong-tests/scripts/detect-invariant-candidates.ts';
 import type { Stack, Candidate, Suppressed } from '../../.claude/skills/strong-tests/scripts/detect-invariant-candidates.ts';
 
@@ -951,5 +953,395 @@ Then(
     assert.ok(c, `expected a candidate; got ${JSON.stringify(world.scanResult)}`);
     assert.equal(c.kind, 'nxm-overlap', `kind must be nxm-overlap, got ${c.kind}`);
     assert.equal(c.endLine, Number(expected), `endLine must be exactly ${expected}, got ${c.endLine}`);
+  },
+);
+
+// ──────────────────────────────────────────────────────────────────────────────
+// TESTQUAL001_UNIT — Step definitions for Scenario Outlines covering all 56
+// unit assertions from detect-invariant-candidates-unit.test.ts (BDD parity).
+// Drives the REAL exported functions in-process: detectStack / nestedLoopCount /
+// suggestInvariants / scan.  No mocks, no inline copies.
+// ──────────────────────────────────────────────────────────────────────────────
+
+// Shared result storage for the unit outline steps (separate from the scan-world
+// used by the integration scenarios above, to avoid collisions).
+interface UnitWorld {
+  detectedStack: string | null | undefined;
+  loopCount: number | null;
+  suggestedInvariants: string[] | null;
+  scanResult2: ReturnType<typeof scan> | null;
+  suppressedIdx: number;  // which suppressed entry to assert on (default 0)
+}
+
+let uw: UnitWorld = {
+  detectedStack: undefined,
+  loopCount: null,
+  suggestedInvariants: null,
+  scanResult2: null,
+  suppressedIdx: 0,
+};
+
+Before({ tags: 'not @manual' }, function () {
+  uw = { detectedStack: undefined, loopCount: null, suggestedInvariants: null, scanResult2: null, suppressedIdx: 0 };
+});
+
+// ── Source fixture registry (named fixtures used by src_key Examples columns) ──
+// Each entry is the literal source string the vitest twin uses.
+const TS_SOURCES: Record<string, string> = {
+  array_simple:    `export function getItems(): Array<string> {\n  return [];\n}`,
+  arrow_const:     `export const buildList = (): Array<number> => {\n  return [];\n};`,
+  ts_nxm_nested:   `function build(): string[] {\n  const out: string[] = [];\n  for (let i=0;i<n;i++) {\n    for (let j=0;j<m;j++) {\n      out.push("x");\n    }\n  }\n  return out;\n}`,
+  ts_set_return:   `function uniq(): Set<string> {\n  return new Set();\n}`,
+  ts_map_return:   `function idx(): Map<string, number> {\n  return new Map();\n}`,
+  ts_iterator_return: `function gen(): Iterator<number> {\n  return [][Symbol.iterator]();\n}`,
+  ts_readonly_return: `function frozen(): ReadonlyArray<string> {\n  return [];\n}`,
+  ts_chain_map_filter: `export function pipe(xs: number[]): Array<number> {\n  return xs.map(x => x + 1).filter(x => x > 0);\n}`,
+  ts_nxm_and_chain:   `function both(): number[] {\n  const out: number[] = [];\n  for (let i=0;i<n;i++) { for (let j=0;j<m;j++) { out.push(i); } }\n  return out.map(x => x + 1).filter(x => x > 0);\n}`,
+  ts_suppress_leaf:   `function pre(): void {}\n// strong-tests:skip pure-leaf reducer no composition\nfunction leaf(): number[] {\n  return [1, 2, 3];\n}`,
+  ts_suppress_sameline: `function quick(): number[] { return []; } // strong-tests:skip same-line reducer pure\nfunction other(): string[] {\n  return [];\n}`,
+  ts_suppress_too_far:  `// strong-tests:skip orphan suppression — function too far below\nconst padding1 = 1;\nconst padding2 = 2;\nconst padding3 = 3;\nconst padding4 = 4;\nfunction tooFar(): number[] {\n  return [];\n}`,
+  ts_suppress_orphan:   `// strong-tests:skip dangling reason no function follows\nconst justData = 42;`,
+  ts_suppress_not_in_candidates: `// strong-tests:skip pure-leaf reducer no composition\nfunction leaf(): number[] {\n  return [1, 2, 3];\n}\nfunction normal(): number[] {\n  return [4, 5, 6];\n}`,
+  ts_candidate_line:    `const header = 1;\nfunction builder(): Array<string> {\n  return [];\n}`,
+  ts_endline_compact:   `function compact(): Array<string> {\n  return [];\n}`,
+  ts_return_window:     `function a() {\n  let x = 1;\n  let y = 2;\n  let z = 3;\n  let w = 4;\n}\nfunction b(): Array<number> {\n  return [];\n}`,
+  ts_nested_cross_attach: (() => {
+    const lines = ['function simple(): Array<number> {'];
+    lines.push('  return [];');
+    lines.push('}');
+    for (let i = 0; i < 50; i++) lines.push(`const x${i} = ${i};`);
+    lines.push('function later(): void {');
+    lines.push('  for (let i = 0; i < 1; i++) for (let j = 0; j < 1; j++) {}');
+    lines.push('}');
+    return lines.join('\n');
+  })(),
+  ts_reason_verbatim: `// strong-tests:skip pure-leaf reducer — type system enforces correctness\nfunction leaf(): number[] {\n  return [];\n}`,
+  // single for-loop → collection-returning (NOT nxm-overlap); kills the nestedFor>=2→>=1 mutant
+  ts_single_loop_collection: `function collect(): Array<string> {\n  const out: string[] = [];\n  for (let i = 0; i < n; i++) { out.push("x"); }\n  return out;\n}`,
+};
+
+const PY_SOURCES: Record<string, string> = {
+  py_suppress_valid:    `# strong-tests:skip pure-leaf reducer for testing\ndef tally(items: list[int]) -> int:\n    return len(items)`,
+  py_suppress_too_short: `# strong-tests:skip ok\ndef f(items: list[int]) -> int:\n    return len(items)`,
+  py_suppress_8chars:   `# strong-tests:skip ab cd ef\ndef f(items: list[int]) -> int:\n    return 0`,
+  py_suppress_7chars:   `# strong-tests:skip abc def\ndef f(items: list[int]) -> int:\n    return 0`,
+  py_chain_stacked:     `def pipe(items: list[int]) -> list[int]:\n    a = [x for x in items]\n    b = [y for y in a]\n    return b`,
+};
+
+const CS_SOURCES: Record<string, string> = {
+  cs_chain_linq: `public List<int> Pipe(List<int> xs)\n{\n    return xs.Select(x => x + 1).Where(x => x > 0).ToList();\n}`,
+};
+
+const GO_SOURCES: Record<string, string> = {
+  go_nested_for_range: `package main\n\nfunc BuildIndex(repos []string, wts []string) []string {\n\tout := []string{}\n\tfor _, r := range repos {\n\t\tfor _, w := range wts {\n\t\t\tout = append(out, r+w)\n\t\t}\n\t}\n\treturn out\n}`,
+  go_map_return: `package main\n\nfunc Tally(source []string) map[string]int {\n\tdict := map[string]int{}\n\treturn dict\n}`,
+  go_pointer_receiver: `package main\n\ntype Service struct{}\n\nfunc (s *Service) GetItems(ids []int) []string {\n\treturn []string{}\n}`,
+  go_suppress_valid: `package main\n\n// strong-tests:skip pure-leaf reducer no composition possible\nfunc LeafReducer(items []int) int {\n\treturn len(items)\n}`,
+  go_chain_sequential: `func Pipe(items []int) []int {\n\ta := transform(items)\n\tb := flatten(a)\n\treturn b\n}`,
+};
+
+function getSrc(srcKey: string, stack: string): { src: string; st: Stack } {
+  const st = stack as Stack;
+  if (stack === 'ts' || stack === '') {
+    const s = TS_SOURCES[srcKey];
+    if (s !== undefined) return { src: s, st: 'ts' };
+  }
+  if (stack === 'python') {
+    const s = PY_SOURCES[srcKey];
+    if (s !== undefined) return { src: s, st: 'python' };
+  }
+  if (stack === 'csharp') {
+    const s = CS_SOURCES[srcKey];
+    if (s !== undefined) return { src: s, st: 'csharp' };
+  }
+  if (stack === 'go') {
+    const s = GO_SOURCES[srcKey];
+    if (s !== undefined) return { src: s, st: 'go' };
+  }
+  // fallback: check all maps
+  const maps: [Record<string, string>, Stack][] = [
+    [TS_SOURCES, 'ts'], [PY_SOURCES, 'python'], [CS_SOURCES, 'csharp'], [GO_SOURCES, 'go'],
+  ];
+  for (const [map, s] of maps) {
+    if (map[srcKey] !== undefined) return { src: map[srcKey], st: s };
+  }
+  throw new Error(`Unknown src_key: "${srcKey}" for stack "${stack}"`);
+}
+
+// ── detectStack steps ──
+
+When(
+  /^detectStack is called with path "([^"]*)"$/,
+  function (this: UnitWorld, filePath: string) {
+    uw.detectedStack = detectStack(filePath);
+  },
+);
+
+Then(
+  /^the detected stack SHALL be "([^"]*)"$/,
+  function (this: UnitWorld, expected: string) {
+    assert.equal(uw.detectedStack, expected, `expected stack "${expected}", got "${uw.detectedStack}"`);
+  },
+);
+
+Then(
+  /^the detected stack SHALL be null$/,
+  function (this: UnitWorld) {
+    assert.equal(uw.detectedStack, null, `expected null, got "${uw.detectedStack}"`);
+  },
+);
+
+// ── nestedLoopCount steps ──
+// Body strings use literal \n in Examples — convert escape sequences to real chars.
+
+function unescapeBody(raw: string): string {
+  return raw.replace(/\\n/g, '\n').replace(/\\t/g, '\t');
+}
+
+When(
+  /^nestedLoopCount is called with body "([^"]*)" and stack "([^"]*)"$/,
+  function (this: UnitWorld, rawBody: string, stack: string) {
+    const body = unescapeBody(rawBody);
+    uw.loopCount = nestedLoopCount(body, stack as Stack);
+  },
+);
+
+Then(
+  /^the nested loop count SHALL be (\d+)$/,
+  function (this: UnitWorld, expected: string) {
+    assert.equal(uw.loopCount, Number(expected), `expected loop count ${expected}, got ${uw.loopCount}`);
+  },
+);
+
+// ── suggestInvariants steps ──
+
+When(
+  /^suggestInvariants is called with kind "([^"]*)" and returnType "([^"]*)"$/,
+  function (this: UnitWorld, kind: string, returnType: string) {
+    uw.suggestedInvariants = suggestInvariants(kind as Candidate['kind'], returnType);
+  },
+);
+
+Then(
+  /^the suggested invariants SHALL equal "([^"]*)"$/,
+  function (this: UnitWorld, expected: string) {
+    const expectedArr = expected.split(',');
+    assert.deepEqual(
+      uw.suggestedInvariants,
+      expectedArr,
+      `expected invariants [${expected}], got [${JSON.stringify(uw.suggestedInvariants)}]`,
+    );
+  },
+);
+
+// ── scan steps (TS / stack-parameterised) ──
+
+When(
+  /^scan is called on TS source "([^"]*)"$/,
+  function (this: UnitWorld, srcKey: string) {
+    const { src, st } = getSrc(srcKey, 'ts');
+    uw.scanResult2 = scan(src, st);
+  },
+);
+
+When(
+  /^scan is called on empty TS source$/,
+  function (this: UnitWorld) {
+    uw.scanResult2 = scan('', 'ts');
+  },
+);
+
+When(
+  /^scan is called on Python suppression source "([^"]*)"$/,
+  function (this: UnitWorld, srcKey: string) {
+    const { src } = getSrc(srcKey, 'python');
+    uw.scanResult2 = scan(src, 'python');
+  },
+);
+
+When(
+  /^scan is called on TS suppression source "([^"]*)"$/,
+  function (this: UnitWorld, srcKey: string) {
+    const { src } = getSrc(srcKey, 'ts');
+    uw.scanResult2 = scan(src, 'ts');
+  },
+);
+
+When(
+  /^scan is called on boundary source "([^"]*)" with stack "([^"]*)"$/,
+  function (this: UnitWorld, srcKey: string, stack: string) {
+    const { src, st } = getSrc(srcKey, stack);
+    uw.scanResult2 = scan(src, st);
+  },
+);
+
+When(
+  /^scan is called on "([^"]*)" source "([^"]*)"$/,
+  function (this: UnitWorld, stack: string, srcKey: string) {
+    const { src, st } = getSrc(srcKey, stack);
+    uw.scanResult2 = scan(src, st);
+  },
+);
+
+When(
+  /^scan is called on TS suppression source with em-dash reason$/,
+  function (this: UnitWorld) {
+    uw.scanResult2 = scan(TS_SOURCES['ts_reason_verbatim'], 'ts');
+  },
+);
+
+// ── scan assertion steps ──
+
+Then(
+  /^the strong-tests scan SHALL yield exactly (\d+) candidates$/,
+  function (this: UnitWorld, n: string) {
+    const r = uw.scanResult2!;
+    assert.equal(r.candidates.length, Number(n), `expected ${n} candidates, got ${r.candidates.length}: ${JSON.stringify(r.candidates.map(c => c.function))}`);
+  },
+);
+
+Then(
+  /^the scan SHALL yield exactly (\d+) candidates$/,
+  function (this: UnitWorld, n: string) {
+    const r = uw.scanResult2!;
+    assert.equal(r.candidates.length, Number(n), `expected ${n} candidates, got ${r.candidates.length}: ${JSON.stringify(r.candidates.map(c => c.function))}`);
+  },
+);
+
+Then(
+  /^the suppressed array SHALL be empty$/,
+  function (this: UnitWorld) {
+    const r = uw.scanResult2!;
+    assert.equal(r.suppressed.length, 0, `expected 0 suppressed, got ${r.suppressed.length}`);
+  },
+);
+
+Then(
+  /^the first candidate function SHALL be "([^"]*)"$/,
+  function (this: UnitWorld, expected: string) {
+    const c = uw.scanResult2!.candidates[0];
+    assert.ok(c, 'expected at least one candidate');
+    assert.equal(c.function, expected, `expected function "${expected}", got "${c.function}"`);
+  },
+);
+
+Then(
+  /^the first candidate returnType SHALL be "([^"]*)"$/,
+  function (this: UnitWorld, expected: string) {
+    const c = uw.scanResult2!.candidates[0];
+    assert.ok(c, 'expected at least one candidate');
+    assert.ok(
+      c.returnType.startsWith(expected) || c.returnType === expected,
+      `expected returnType starting with "${expected}", got "${c.returnType}"`,
+    );
+  },
+);
+
+Then(
+  /^the first candidate kind SHALL be "([^"]*)"$/,
+  function (this: UnitWorld, expected: string) {
+    const c = uw.scanResult2!.candidates[0];
+    assert.ok(c, 'expected at least one candidate');
+    assert.equal(c.kind, expected, `expected kind "${expected}", got "${c.kind}"`);
+  },
+);
+
+Then(
+  /^the first candidate line SHALL be (\d+)$/,
+  function (this: UnitWorld, expected: string) {
+    const c = uw.scanResult2!.candidates[0];
+    assert.ok(c, 'expected at least one candidate');
+    assert.equal(c.line, Number(expected), `expected line ${expected}, got ${c.line}`);
+  },
+);
+
+Then(
+  /^the first candidate endLine SHALL be (\d+)$/,
+  function (this: UnitWorld, expected: string) {
+    const c = uw.scanResult2!.candidates[0];
+    assert.ok(c, 'expected at least one candidate');
+    assert.equal(c.endLine, Number(expected), `expected endLine ${expected}, got ${c.endLine}`);
+  },
+);
+
+Then(
+  /^the scan candidates count SHALL be (\d+)$/,
+  function (this: UnitWorld, n: string) {
+    const r = uw.scanResult2!;
+    assert.equal(r.candidates.length, Number(n), `expected ${n} candidates, got ${r.candidates.length}`);
+  },
+);
+
+Then(
+  /^the suppressed count SHALL be (\d+)$/,
+  function (this: UnitWorld, n: string) {
+    const r = uw.scanResult2!;
+    assert.equal(r.suppressed.length, Number(n), `expected ${n} suppressed, got ${r.suppressed.length}`);
+  },
+);
+
+Then(
+  /^the suppressed array SHALL have exactly (\d+) entries$/,
+  function (this: UnitWorld, n: string) {
+    const r = uw.scanResult2!;
+    assert.equal(r.suppressed.length, Number(n), `expected ${n} suppressed, got ${r.suppressed.length}: ${JSON.stringify(r.suppressed)}`);
+  },
+);
+
+Then(
+  /^the suppressed reason SHALL be "([^"]*)"$/,
+  function (this: UnitWorld, expected: string) {
+    const s = uw.scanResult2!.suppressed[0];
+    assert.ok(s, 'expected at least one suppressed entry');
+    assert.equal(s.reason, expected, `expected reason "${expected}", got "${s.reason}"`);
+  },
+);
+
+Then(
+  /^the suppressed reason SHALL contain "([^"]*)"$/,
+  function (this: UnitWorld, expected: string) {
+    const s = uw.scanResult2!.suppressed[0];
+    assert.ok(s, 'expected at least one suppressed entry');
+    assert.ok(s.reason.includes(expected), `expected reason to contain "${expected}", got "${s.reason}"`);
+  },
+);
+
+Then(
+  /^the suppressed reasonWarning SHALL be (null|REASON_TOO_SHORT)$/,
+  function (this: UnitWorld, expected: string) {
+    const s = uw.scanResult2!.suppressed[0];
+    assert.ok(s, 'expected at least one suppressed entry');
+    const expectedVal = expected === 'null' ? null : expected;
+    assert.equal(s.reasonWarning, expectedVal, `expected reasonWarning ${expected}, got "${s.reasonWarning}"`);
+  },
+);
+
+Then(
+  /^the suppressed function field SHALL be "([^"]*)"$/,
+  function (this: UnitWorld, expected: string) {
+    const s = uw.scanResult2!.suppressed[0];
+    assert.ok(s, 'expected at least one suppressed entry');
+    assert.equal(s.function, expected, `expected suppressed.function "${expected}", got "${s.function}"`);
+  },
+);
+
+Then(
+  /^the suppressed line SHALL be (\d+)$/,
+  function (this: UnitWorld, expected: string) {
+    const s = uw.scanResult2!.suppressed[0];
+    assert.ok(s, 'expected at least one suppressed entry');
+    assert.equal(s.line, Number(expected), `expected suppressed.line ${expected}, got ${s.line}`);
+  },
+);
+
+Then(
+  /^the first candidate suggestedInvariants SHALL contain "([^"]*)"$/,
+  function (this: UnitWorld, expected: string) {
+    const c = uw.scanResult2!.candidates[0];
+    assert.ok(c, 'expected at least one candidate');
+    assert.ok(
+      c.suggestedInvariants.includes(expected),
+      `expected suggestedInvariants to contain "${expected}", got [${c.suggestedInvariants.join(',')}]`,
+    );
   },
 );
