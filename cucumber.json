@@ -27,7 +27,8 @@
       ".specs/personal-pomogator/personal-pomogator.feature",
       ".specs/test-statusline/test-statusline.feature",
       ".specs/bdd-only-migration/bdd-only-migration.feature",
-      ".specs/fix-bg-output-loss/fix-bg-output-loss.feature"
+      ".specs/fix-bg-output-loss/fix-bg-output-loss.feature",
+      ".specs/spec-phase-gate/spec-phase-gate.feature"
     ],
     "import": [
       "tests/step_definitions/**/*.ts",
