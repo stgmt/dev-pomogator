@@ -1,6 +1,6 @@
 {
   "name": "dev-pomogator",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Canonical Claude Code plugin: skills, commands, hooks, MCP servers — distributed via Anthropic marketplace (/plugin marketplace add stgmt/dev-pomogator)",
   "author": "stgmt",
   "license": "MIT",
