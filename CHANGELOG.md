@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.2] - 2026-06-23
+
+### Fixed
+
+- **pomogator-doctor crashed on canonical plugin.json** ([#71](https://github.com/stgmt/dev-pomogator/issues/71)): check C15 (plugin-loader) assumed the v1 manifest shape (`commands`/`skills` as `{ name }` objects) and called `path.join(dir, undefined)` on the canonical v2 shape (arrays of path strings like `"./.claude/skills"`), throwing `The "path" argument must be of type string. Received undefined` on every canonical install. C15 now parses both shapes: canonical path entries are enumerated (commands = `*.md`, skills = subdirs containing `SKILL.md`), and non-string entries are skipped instead of crashing. Support/workspace folders under `skills/` without a `SKILL.md` are no longer mis-flagged as broken skills.
+- **Doctor false-criticals on canonical installs** ([#71](https://github.com/stgmt/dev-pomogator/issues/71)): C3 (`~/.dev-pomogator/config.json`), C13 (version match) and C14 (managed `.gitignore` block) checked v1-installer artefacts that `/plugin install` never creates, reporting a fresh canonical clone as broken. When a canonical `.claude-plugin/plugin.json` is present and the v1 config is absent, C3/C14 now report OK and C13 falls back to comparing the plugin manifest version against `package.json`.
+- **Stale reinstall hints**: doctor `reinstallHint`s pointed at the deprecated v1 `npx dev-pomogator` flow; they now reference `/plugin install dev-pomogator@stgmt --force` (canonical).
+
 ## [2.0.1] - 2026-06-23
 
 ### Fixed

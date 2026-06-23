@@ -6,10 +6,22 @@ import type {
   CheckResult,
   PluginLoaderState,
 } from '../types.js';
+import { CANONICAL_REINSTALL_HINT } from './canonical.js';
 
+// `skills`/`commands` may be EITHER the canonical v2 shape (array of path strings,
+// e.g. "./.claude/skills") OR the legacy v1 shape (array of `{ name }` objects, still
+// used by the doctor fixtures). Accept both; anything else is ignored, not crashed.
+type ManifestEntry = string | { name?: string };
 interface PluginManifest {
-  commands?: Array<{ name: string }>;
-  skills?: Array<{ name: string }>;
+  commands?: ManifestEntry[];
+  skills?: ManifestEntry[];
+}
+
+interface DeclaredEntry {
+  name: string;
+  kind: 'command' | 'skill';
+  /** Resolved physical path when derived from a canonical path entry; undefined for legacy {name}. */
+  physicalPath?: string;
 }
 
 function readPluginManifest(projectRoot: string): PluginManifest | null {
@@ -25,6 +37,70 @@ function readPluginManifest(projectRoot: string): PluginManifest | null {
     }
   }
   return null;
+}
+
+/**
+ * Expands one canonical path entry (a directory or a single file) into the
+ * commands/skills it declares. Commands = `*.md` files; skills = subdirs (verified by
+ * SKILL.md existence). A missing path yields one BROKEN-flagged entry (physicalPath
+ * points at the absent target).
+ */
+function enumerateFromPath(
+  rel: string,
+  kind: 'command' | 'skill',
+  projectRoot: string,
+): DeclaredEntry[] {
+  const abs = path.resolve(projectRoot, rel);
+  let stat: fs.Stats;
+  try {
+    stat = fs.statSync(abs);
+  } catch {
+    return [{ name: rel, kind, physicalPath: abs }]; // declared path missing → BROKEN
+  }
+  if (stat.isFile()) {
+    const name = kind === 'command' ? path.basename(abs).replace(/\.md$/, '') : path.basename(abs);
+    return [{ name, kind, physicalPath: abs }];
+  }
+  let dirents: fs.Dirent[];
+  try {
+    dirents = fs.readdirSync(abs, { withFileTypes: true });
+  } catch {
+    return [{ name: rel, kind, physicalPath: abs }];
+  }
+  if (kind === 'command') {
+    return dirents
+      .filter((e) => e.isFile() && e.name.endsWith('.md'))
+      .map((e) => ({ name: e.name.replace(/\.md$/, ''), kind, physicalPath: path.join(abs, e.name) }));
+  }
+  // A skill is a subdirectory containing SKILL.md — that's exactly what Claude Code's
+  // plugin loader registers. Support/workspace folders under skills/ (no SKILL.md) are
+  // NOT skills, so they must not be flagged as broken declarations.
+  return dirents
+    .filter((e) => e.isDirectory())
+    .map((e) => ({ name: e.name, skillMd: path.join(abs, e.name, 'SKILL.md') }))
+    .filter((d) => exists(d.skillMd))
+    .map((d) => ({ name: d.name, kind, physicalPath: d.skillMd }));
+}
+
+/** Normalises both manifest shapes into a flat list of declared entries (crash-free). */
+function normalizeDeclared(manifest: PluginManifest, projectRoot: string): DeclaredEntry[] {
+  const out: DeclaredEntry[] = [];
+  const groups: Array<{ arr: ManifestEntry[] | undefined; kind: 'command' | 'skill' }> = [
+    { arr: manifest.commands, kind: 'command' },
+    { arr: manifest.skills, kind: 'skill' },
+  ];
+  for (const { arr, kind } of groups) {
+    if (!Array.isArray(arr)) continue;
+    for (const entry of arr) {
+      if (typeof entry === 'string') {
+        out.push(...enumerateFromPath(entry, kind, projectRoot)); // canonical path
+      } else if (entry && typeof entry.name === 'string') {
+        out.push({ name: entry.name, kind }); // legacy { name }
+      }
+      // else: malformed entry — skip instead of crashing
+    }
+  }
+  return out;
 }
 
 function classify(
@@ -109,64 +185,66 @@ export const pluginLoaderCheck: CheckDefinition = {
       ];
     }
 
-    const results: CheckResult[] = [];
-    const declared = [
-      ...(manifest.commands ?? []).map((c) => ({ name: c.name, kind: 'command' as const })),
-      ...(manifest.skills ?? []).map((s) => ({ name: s.name, kind: 'skill' as const })),
-    ];
+    const declared = normalizeDeclared(manifest, ctx.projectRoot);
 
     if (declared.length === 0) {
-      results.push({
+      return [
+        {
+          id: 'C15',
+          fr: 'FR-13',
+          name: 'Plugin-loader',
+          group: 'self-sufficient',
+          severity: 'ok',
+          reinstallable: true,
+          message: 'plugin.json declares no commands or skills',
+          durationMs: 0,
+        },
+      ];
+    }
+
+    const broken: string[] = [];
+    for (const entry of declared) {
+      // Canonical path entries carry a resolved physicalPath → check it directly;
+      // legacy { name } entries fall back to classify (physical dir OR plugin registry).
+      const state: PluginLoaderState =
+        entry.physicalPath !== undefined
+          ? exists(entry.physicalPath)
+            ? 'OK-physical'
+            : 'BROKEN-missing'
+          : classify(entry.name, entry.kind, ctx.projectRoot, ctx.homeDir);
+      if (state === 'BROKEN-missing') broken.push(`${entry.kind}:${entry.name}`);
+    }
+
+    if (broken.length > 0) {
+      return [
+        {
+          id: 'C15',
+          fr: 'FR-13',
+          name: 'Plugin-loader',
+          group: 'self-sufficient',
+          severity: 'critical',
+          reinstallable: true,
+          message: `${broken.length} declared entry(ies) not registered: ${broken.join(', ')}`,
+          hint: 'Reinstall to repopulate plugin-loader registry',
+          reinstallHint: CANONICAL_REINSTALL_HINT,
+          state: 'BROKEN-missing',
+          durationMs: 0,
+        },
+      ];
+    }
+
+    return [
+      {
         id: 'C15',
         fr: 'FR-13',
         name: 'Plugin-loader',
         group: 'self-sufficient',
         severity: 'ok',
         reinstallable: true,
-        message: 'plugin.json declares no commands or skills',
+        message: `all ${declared.length} declared command(s)/skill(s) present`,
+        state: 'OK-physical',
         durationMs: 0,
-      });
-      return results;
-    }
-
-    const broken: string[] = [];
-    for (const entry of declared) {
-      const state = classify(entry.name, entry.kind, ctx.projectRoot, ctx.homeDir);
-      if (state === 'BROKEN-missing') broken.push(`${entry.kind}:${entry.name}`);
-      results.push({
-        id: `C15:${entry.kind}:${entry.name}`,
-        fr: 'FR-13',
-        name: `${entry.kind} ${entry.name}`,
-        group: 'self-sufficient',
-        severity: state === 'BROKEN-missing' ? 'critical' : 'ok',
-        reinstallable: true,
-        message: `state=${state}`,
-        hint:
-          state === 'BROKEN-missing'
-            ? 'Reinstall to re-register commands and skills with plugin-loader'
-            : undefined,
-        reinstallHint: 'Run `npx dev-pomogator`',
-        state,
-        durationMs: 0,
-      });
-    }
-
-    if (broken.length > 0) {
-      results.unshift({
-        id: 'C15',
-        fr: 'FR-13',
-        name: 'Plugin-loader',
-        group: 'self-sufficient',
-        severity: 'critical',
-        reinstallable: true,
-        message: `${broken.length} declared entry(ies) not registered: ${broken.join(', ')}`,
-        hint: 'Reinstall to repopulate plugin-loader registry',
-        reinstallHint: 'Run `npx dev-pomogator`',
-        state: 'BROKEN-missing',
-        durationMs: 0,
-      });
-    }
-
-    return results;
+      },
+    ];
   },
 };

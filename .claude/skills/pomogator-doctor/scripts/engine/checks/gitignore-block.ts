@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { CheckContext, CheckDefinition, CheckResult } from '../types.js';
+import { CANONICAL_REINSTALL_HINT, isCanonicalInstall } from './canonical.js';
 
 // Inlined from former src/installer/gitignore.ts (deleted in Phase 1 destructive cleanup).
 // Kept here for legacy v1 install detection — checks if user's project still has the v1 marker block.
@@ -15,17 +16,23 @@ export const gitignoreBlockCheck: CheckDefinition = {
   reinstallable: true,
   pool: 'fs',
   async run(ctx: CheckContext): Promise<CheckResult> {
+    // The managed .gitignore block is a v1 personal-installer artefact. Canonical v2
+    // installs never write it (skills/hooks live in the plugin cache, not the project),
+    // so its absence is expected and must not warn.
+    const canonical = isCanonicalInstall(ctx.projectRoot);
     const gitignorePath = path.join(ctx.projectRoot, '.gitignore');
     let content: string;
     try {
       content = fs.readFileSync(gitignorePath, 'utf-8');
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-        return build(
-          'warning',
-          '.gitignore missing at project root',
-          'Reinstall to create .gitignore with managed block',
-        );
+        return canonical
+          ? build('ok', 'canonical plugin install — managed .gitignore block not used')
+          : build(
+              'warning',
+              '.gitignore missing at project root',
+              'Reinstall to create .gitignore with managed block',
+            );
       }
       return build('warning', `cannot read .gitignore: ${(error as Error).message}`);
     }
@@ -42,11 +49,13 @@ export const gitignoreBlockCheck: CheckDefinition = {
         'Reinstall to rewrite marker block cleanly',
       );
     }
-    return build(
-      'warning',
-      'no managed gitignore block — dev-pomogator files may leak via `git add .`',
-      'Reinstall to add managed block automatically',
-    );
+    return canonical
+      ? build('ok', 'canonical plugin install — managed .gitignore block not used')
+      : build(
+          'warning',
+          'no managed gitignore block — dev-pomogator files may leak via `git add .`',
+          'Reinstall to add managed block automatically',
+        );
   },
 };
 
@@ -64,7 +73,7 @@ function build(
     reinstallable: severity !== 'ok',
     message,
     hint,
-    reinstallHint: 'Run `npx dev-pomogator` to refresh marker block',
+    reinstallHint: CANONICAL_REINSTALL_HINT,
     durationMs: 0,
   };
 }
