@@ -1,5 +1,6 @@
 import semver from 'semver';
 import type { CheckContext, CheckDefinition, CheckResult } from '../types.js';
+import { CANONICAL_REINSTALL_HINT, readCanonicalManifest } from './canonical.js';
 
 export const versionMatchCheck: CheckDefinition = {
   id: 'C13',
@@ -9,7 +10,11 @@ export const versionMatchCheck: CheckDefinition = {
   reinstallable: true,
   pool: 'fs',
   async run(ctx: CheckContext): Promise<CheckResult> {
-    const configVersion = ctx.config?.version ?? null;
+    // Canonical installs have no v1 config.json — fall back to the plugin.json version
+    // as the "installed" version, so C13 can still compare against package.json.
+    const canonicalVersion =
+      ctx.config?.version == null ? (readCanonicalManifest(ctx.projectRoot)?.version ?? null) : null;
+    const configVersion = ctx.config?.version ?? canonicalVersion;
     const packageVersion = ctx.packageVersion;
 
     if (!configVersion || !packageVersion) {
@@ -66,7 +71,7 @@ function build(
     reinstallable: severity !== 'ok',
     message,
     hint,
-    reinstallHint: 'Run `npx dev-pomogator` to align ~/.dev-pomogator/config.json with current package version',
+    reinstallHint: CANONICAL_REINSTALL_HINT,
     durationMs: 0,
   };
 }
