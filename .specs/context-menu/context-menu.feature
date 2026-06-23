@@ -1,3 +1,4 @@
+@windows-only
 Feature: CTXMENU001_Context_Menu_Setup
   Windows right-click context menu integration for Claude Code via Nilesoft Shell.
   Exported functions: generateNss, copyLaunchScript, bundledLaunchScriptPath.
