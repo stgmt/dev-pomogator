@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.1] - 2026-06-23
+
+### Fixed
+
+- **tsx-runner crashes on Node 24** ([#69](https://github.com/stgmt/dev-pomogator/issues/69)): Strategy 0 (native TypeScript via `--experimental-strip-types`) passed `--experimental-default-type=module`, a flag removed in Node 24. Node rejected it pre-V8 with `bad option: --experimental-default-type=module` (exit 9), breaking every hook (`auto_commit_stop`, `simplify_stop`, `prompt_suggest_stop`, `capture`, `test-spec-gate`, `dedup_stop`, `tui_stop`, `build_guard`). The flag is now passed only on Node < 24; on Node 24+ ESM is ensured by default module detection + `package.json "type":"module"` + explicit `.ts` import specifiers.
+- **No fall-through on rejected CLI flags** ([#69](https://github.com/stgmt/dev-pomogator/issues/69)): `bad option` is printed by Node's pre-V8 CLI parser and matched none of `RESOLVER_ERROR_TOKENS`, so the runner propagated a hard exit instead of falling through to the tsx loader family. Added `bad option` to the token list so a removed/unknown flag now degrades gracefully to tsx.
+
 ## [1.5.0] - 2026-04-07
 
 ### Added — Personal-Pomogator (FR-1..FR-11)

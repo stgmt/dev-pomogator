@@ -472,9 +472,19 @@ function runNodeNativeTs() {
   const [major, minor] = process.versions.node.split('.').map(Number);
   if (major < 22 || (major === 22 && minor < 6)) return false;
 
+  // --experimental-default-type=module forces .ts → ESM regardless of nearest
+  // package.json. It existed in Node 22/23 but was REMOVED in Node 24 (module-type
+  // detection became stable); passing it there aborts with `bad option` (exit 9)
+  // before V8 starts. Only pass it on the versions that accept it; on Node 24+ the
+  // default detection + package.json "type":"module" + explicit .ts specifiers
+  // (see rule ts-import-extensions) already yield ESM.
+  const nodeArgs = ['--experimental-strip-types'];
+  if (major < 24) {
+    nodeArgs.push('--experimental-default-type=module');
+  }
+
   execFileSync(process.execPath, [
-    '--experimental-strip-types',
-    '--experimental-default-type=module',
+    ...nodeArgs,
     scriptPath,
     ...scriptArgs,
   ], {
@@ -497,6 +507,11 @@ const RESOLVER_ERROR_TOKENS = [
   'ERR_UNSUPPORTED_NODE_OPTION',
   'SyntaxError',
   'Cannot find module',
+  // Node's pre-V8 CLI parser rejects an unknown/removed flag with `bad option: ...`
+  // (exit 9), which is NOT one of the JS-level tokens above. Treat it as a
+  // node-strip loader failure so the runner falls through to the tsx family
+  // instead of propagating a hard exit (defends against future flag removals).
+  'bad option',
 ];
 function isResolverError(err) {
   if (!err) return false;
