@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.3] - 2026-06-24
+
+### Fixed
+
+- **Hooks broke when the process CWD was not the project root**: the dogfood hook command in `.claude/settings.json` resolved the bootstrap loader via `path.resolve('tools/_shared/bootstrap.cjs')` — relative to `process.cwd()`. When a Stop hook ran with the shell CWD left inside a subdirectory, every hook died with `Cannot find module '<subdir>/tools/_shared/bootstrap.cjs'`. The 22 dogfood hook commands now anchor on `CLAUDE_PROJECT_DIR` (mirroring how `.claude-plugin/hooks.json` already anchors on `CLAUDE_PLUGIN_ROOT`).
+- **tsx-runner script resolution is now CWD-independent**: `resolveScriptPath` resolves the target `.ts` against `CLAUDE_PROJECT_DIR` / `CLAUDE_PLUGIN_ROOT` before falling back to the `.git`-walk, so hooks resolve their script even from a foreign CWD or where `.git` is absent (e.g. Docker). Adds `tests/e2e/hooks-cwd-independent.test.ts` (HOOKSCWD001).
+
 ## [2.0.2] - 2026-06-23
 
 ### Fixed
