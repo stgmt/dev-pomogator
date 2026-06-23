@@ -90,6 +90,16 @@ function resolveScriptPath(rawPath) {
   const cwdResolved = path.resolve(process.cwd(), rawPath);
   if (fs.existsSync(cwdResolved)) return cwdResolved;
 
+  // Anchor on Claude Code's hook env vars — cwd-independent and works without .git
+  // (e.g. Docker, where .git is excluded). CLAUDE_PROJECT_DIR is the project root for
+  // project hooks; CLAUDE_PLUGIN_ROOT is the plugin tree for canonical plugin hooks.
+  for (const base of [process.env.CLAUDE_PROJECT_DIR, process.env.CLAUDE_PLUGIN_ROOT]) {
+    if (base) {
+      const anchored = path.resolve(base, rawPath);
+      if (fs.existsSync(anchored)) return anchored;
+    }
+  }
+
   // Walk up to find git root where script exists
   let dir = path.resolve(process.cwd());
   while (dir !== path.dirname(dir)) {
