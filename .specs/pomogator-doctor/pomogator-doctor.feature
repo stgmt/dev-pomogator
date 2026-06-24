@@ -365,3 +365,17 @@ Feature: POMOGATORDOCTOR001_pomogator-doctor_diagnostic_command
     When I run `dev-pomogator --doctor --json`
     Then results contains check C31 severity ok
     And when no extensions are installed check C31 is gated out with relevant=false
+
+  @feature1
+  Scenario: POMOGATORDOCTOR001_44 Hook-runner smoke — C18 ok when hooks can execute
+    Given temp home fixture "valid" is loaded (F-1)
+    When I run runDoctor in-process
+    Then check C18 is severity "ok"
+
+  @feature1
+  Scenario: POMOGATORDOCTOR001_45 Hook-runner smoke — C18 critical when the runner is broken
+    Given temp home fixture "valid" is loaded (F-1)
+    And the doctor hook-runner probe is pointed at a missing bootstrap
+    When I run runDoctor in-process
+    Then check C18 is severity "critical"
+    And check C18 is reinstallable

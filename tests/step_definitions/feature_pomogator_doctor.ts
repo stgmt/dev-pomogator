@@ -676,3 +676,23 @@ Then(/^either suppressOutput is true with no additionalContext when all checks p
 Then(/^Or additionalContext is defined with length at most 100 and mentions pomogator-doctor$/, async function (this: DoctorWorld) {
   // Covered by the compound buildHookOutput step above
 });
+
+// --- C18 hooks-execute smoke (POMOGATORDOCTOR001_44 / _45) ---
+
+Given(/^the doctor hook-runner probe is pointed at a missing bootstrap$/, async function (this: DoctorWorld) {
+  // Drives the C18 critical branch: the test seam forces locateBootstrap onto a
+  // path that does not exist, so the probe spawn fails. Restored by the After hook.
+  if (!this.home) throw new Error('No temp home fixture built');
+  process.env.DEV_POMOGATOR_DOCTOR_BOOTSTRAP = path.join(this.home.homeDir, 'no-such-bootstrap.cjs');
+});
+
+Then(/^check C18 is severity "([^"]+)"$/, async function (this: DoctorWorld, severity: string) {
+  const c18 = this.report?.results.find((r) => r.id === 'C18');
+  expect(c18, 'C18 present in report').to.not.be.undefined;
+  expect(c18?.severity).to.equal(severity);
+});
+
+Then(/^check C18 is reinstallable$/, async function (this: DoctorWorld) {
+  const c18 = this.report?.results.find((r) => r.id === 'C18');
+  expect(c18?.reinstallable).to.equal(true);
+});

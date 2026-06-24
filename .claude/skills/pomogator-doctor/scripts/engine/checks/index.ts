@@ -6,6 +6,7 @@ import { envExampleCheck } from './env-example.js';
 import { envVarsCheck } from './env-vars.js';
 import { gitCheck } from './git.js';
 import { gitignoreBlockCheck } from './gitignore-block.js';
+import { hooksExecCheck } from './hooks-exec.js';
 import { hooksRegistryCheck } from './hooks-registry.js';
 import { mcpParseCheck } from './mcp-parse.js';
 import { mcpProbeCheck } from './mcp-probe.js';
@@ -23,6 +24,7 @@ export const phase2Checks: CheckDefinition[] = [
   gitCheck,
   pomogatorHomeCheck,
   hooksRegistryCheck,
+  hooksExecCheck,
   envVarsCheck,
   envExampleCheck,
   versionMatchCheck,
@@ -50,6 +52,7 @@ export {
   envVarsCheck,
   gitCheck,
   gitignoreBlockCheck,
+  hooksExecCheck,
   hooksRegistryCheck,
   mcpParseCheck,
   mcpProbeCheck,
