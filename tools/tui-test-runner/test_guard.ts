@@ -64,7 +64,10 @@ const BLOCKED_PATTERNS: Array<{ pattern: RegExp; framework: string }> = [
 const ALLOWED_PATTERNS = [
   /test_runner_wrapper/,
   /docker-test\.sh/,       // project Docker test script (used by /run-tests --docker)
+  /docker-bdd\.sh/,        // project Docker BDD/cucumber script (the ONLY sanctioned cucumber path)
   /docker compose.*test/,  // direct docker compose test invocation
+  /cucumber\.docker\.json/, // in-container cucumber config (docker-bdd.sh spawns this)
+  /test:bdd:docker/,       // npm run test:bdd:docker
   /test:e2e:docker/,       // internal Docker test command
   /vitest.*--reporter/,    // vitest inside Docker (npm run test:e2e:docker)
 ];
@@ -137,6 +140,50 @@ async function main(): Promise<void> {
     if (pattern.test(command)) {
       process.exit(0);
     }
+  }
+
+  // HARD host-execution block (incident 2026-06-24): the cucumber/BDD suite MUST run in Docker,
+  // never on the host. A host run (a) executes Linux/Docker-only scenarios in the wrong env →
+  // false reds; (b) takes ~70 min; (c) CLOBBERS the canonical .dev-pomogator/.last-test-run.ndjson
+  // with host-isolation-artifact results (concurrent e2e tests mutate shared settings.json/.specs
+  // mid-run). This is the cucumber-path analogue of tests/setup/ensure-docker.ts ("no bypass by
+  // design"), which only ever guarded the vitest suite — `node scripts/run-bdd.mjs` (full) and raw
+  // host `cucumber.js` slipped straight through. Docker-wrapped runs already returned above via
+  // ALLOWED_PATTERNS (docker-bdd.sh / docker compose / cucumber.docker.json), so reaching here means
+  // a bare host invocation. Prose (git/echo/…) that merely MENTIONS cucumber is exempt (anchor to a
+  // real run, mirroring the clobber-guard's isProse).
+  const isProseBdd = /^\s*(?:git|echo|printf|cat|sed|awk|grep|rg|ls|stat)\b/.test(command.trimStart());
+  const isBddRun =
+    !isProseBdd &&
+    (/scripts[/\\]run-bdd\.mjs/.test(command) ||
+      /cucumber(?:\.js|-js)\b/.test(command) ||
+      /@cucumber\/cucumber/.test(command));
+  // Harm-precise: only a FULL host run clobbers the canonical .last-test-run.ndjson and runs the
+  // whole suite in the wrong env (the 2026-06-24 incident). A FILTERED run (--name/--tags/--dry-run)
+  // routes to a throwaway via run-bdd.mjs and leaves the canonical intact — single-scenario host
+  // iteration stays working; partial runs against the DEFAULT config are still caught by the
+  // clobber guard below. So block only the full (unfiltered) host run here.
+  const isFilteredRun = /(?:^|\s)(?:--name|-n|--tags|-t|--dry-run)(?:\s|=|$)/.test(command);
+  if (isBddRun && !isFilteredRun) {
+    const msg = [
+      '🚫 The BDD/cucumber suite must run in Docker, NOT on the host.',
+      '   A host run false-reds Linux/Docker-only scenarios, is slow (~70 min), and clobbers the',
+      '   canonical .dev-pomogator/.last-test-run.ndjson with host-isolation artifacts (incident 2026-06-24).',
+      '',
+      '✅ Run it in Docker (WSL-routed):',
+      '   bash scripts/docker-bdd.sh                          — full suite (refreshes the canonical)',
+      '   bash scripts/docker-bdd.sh --name "SPECGEN004_15"   — one scenario (clobber-safe, canonical untouched)',
+      '   npm run test:bdd:docker      OR      /run-tests --docker',
+    ].join('\n');
+    const output = {
+      hookSpecificOutput: {
+        hookEventName: 'PreToolUse',
+        permissionDecision: 'deny',
+        permissionDecisionReason: `[test-guard:host-bdd] ${msg}`,
+      },
+    };
+    process.stdout.write(JSON.stringify(output));
+    process.exit(2);
   }
 
   // Cucumber clobber guard (FR-52a / P28-1): a PARTIAL / non-authoritative cucumber run against the

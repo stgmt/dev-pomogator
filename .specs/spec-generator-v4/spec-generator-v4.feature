@@ -1577,7 +1577,9 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When the clobber-safe run-bdd wrapper is invoked with a name filter
     Then the guard allows the wrapper with exit 0
     When a full cucumber run with no name filter hits the default config
-    Then the guard allows the full run with exit 0
+    Then the guard denies the full host run with exit 2 and points at docker-bdd
+    When a full host run-bdd invocation has no name filter
+    Then the guard denies the full host run-bdd with exit 2 and points at docker-bdd
     When a filtered cucumber run names an explicit temp config
     Then the guard allows the isolated run with exit 0
     When a dry-run cucumber pass hits the default config
