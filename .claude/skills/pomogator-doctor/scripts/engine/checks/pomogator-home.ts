@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { CheckContext, CheckDefinition, CheckResult } from '../types.js';
+import { CANONICAL_REINSTALL_HINT, isCanonicalInstall } from './canonical.js';
 
 const MAKE = (
   id: string,
@@ -14,10 +15,10 @@ const MAKE = (
   name,
   group: 'self-sufficient',
   severity,
-  reinstallable: true,
+  reinstallable: severity !== 'ok',
   message,
   hint,
-  reinstallHint: 'Run `npx dev-pomogator` to recreate ~/.dev-pomogator/ artefacts',
+  reinstallHint: CANONICAL_REINSTALL_HINT,
   durationMs: 0,
 });
 
@@ -34,6 +35,20 @@ export const pomogatorHomeCheck: CheckDefinition = {
 
     if (ctx.configError) {
       const message = ctx.configError.message;
+      // Canonical v2 installs (`/plugin install`) never create ~/.dev-pomogator/config.json —
+      // hooks/skills are served from the plugin cache. A missing config there is expected,
+      // not a broken install, so don't hard-fail (and skip the v1-only C4/C5 artefact checks).
+      if (message.includes('not found') && isCanonicalInstall(ctx.projectRoot)) {
+        results.push(
+          MAKE(
+            'C3',
+            '~/.dev-pomogator/config.json',
+            'ok',
+            'canonical plugin install — ~/.dev-pomogator/config.json not used (managed by /plugin install)',
+          ),
+        );
+        return results;
+      }
       results.push(
         MAKE(
           'C3',

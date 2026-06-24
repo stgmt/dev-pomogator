@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/auto-commit/auto_commit_stop.ts\"",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/auto-commit/auto_commit_stop.ts\"",
             "timeout": 60
           }
         ]
@@ -25,7 +25,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/auto-simplify/simplify_stop.ts\"",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/auto-simplify/simplify_stop.ts\"",
             "timeout": 60
           }
         ]
@@ -35,7 +35,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/plan-pomogator/test-spec-gate.ts\"",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/plan-pomogator/test-spec-gate.ts\"",
             "timeout": 60
           }
         ]
@@ -45,7 +45,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/prompt-suggest/prompt_suggest_stop.ts\"",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/prompt-suggest/prompt_suggest_stop.ts\"",
             "timeout": 60
           }
         ]
@@ -55,7 +55,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/learnings-capture/capture.ts\" --event Stop",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/learnings-capture/capture.ts\" --event Stop",
             "timeout": 60
           }
         ]
@@ -65,7 +65,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/test-quality/dedup_stop.ts\"",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/test-quality/dedup_stop.ts\"",
             "timeout": 60
           }
         ]
@@ -85,7 +85,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/tui-test-runner/tui_stop.ts\"",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/tui-test-runner/tui_stop.ts\"",
             "timeout": 60
           }
         ]
@@ -95,7 +95,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/claim-evidence-gate/claim_evidence_gate_stop.ts\"",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/claim-evidence-gate/claim_evidence_gate_stop.ts\"",
             "timeout": 60
           }
         ]
@@ -105,7 +105,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/answer-simple/answer_simple_stop.ts\"",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/answer-simple/answer_simple_stop.ts\"",
             "timeout": 60
           }
         ]
@@ -115,7 +115,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/anchor-integrity/anchor_gate_stop.ts\"",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/anchor-integrity/anchor_gate_stop.ts\"",
             "timeout": 30
           }
         ]
@@ -157,7 +157,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/bun-oom-guard/patch_bun_runner.ts\"",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/bun-oom-guard/patch_bun_runner.ts\"",
             "timeout": 120
           }
         ]
@@ -167,7 +167,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/claude-mem-health/health-check.ts\"",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/claude-mem-health/health-check.ts\"",
             "timeout": 120
           }
         ]
@@ -177,7 +177,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/test-statusline/statusline_session_start.ts\"",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/test-statusline/statusline_session_start.ts\"",
             "timeout": 120
           }
         ]
@@ -187,7 +187,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/native-statusline/install_native_statusline.ts\"",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/native-statusline/install_native_statusline.ts\"",
             "timeout": 120
           }
         ]
@@ -197,7 +197,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/tui-test-runner/tui_session_start.ts\"",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/tui-test-runner/tui_session_start.ts\"",
             "timeout": 120
           }
         ]
@@ -207,7 +207,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/marksman-installer/ensure-marksman.ts\"",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/marksman-installer/ensure-marksman.ts\"",
             "timeout": 10
           }
         ]
@@ -217,7 +217,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \".claude/skills/pomogator-doctor/scripts/doctor-hook.ts\"",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \".claude/skills/pomogator-doctor/scripts/doctor-hook.ts\"",
             "timeout": 10
           }
         ]
@@ -227,7 +227,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/skill-listing-budget/apply_skill_budget.ts\"",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/skill-listing-budget/apply_skill_budget.ts\"",
             "timeout": 30
           }
         ]
@@ -237,7 +237,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/spec-backlog/session-summary-hook.ts\"",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/spec-backlog/session-summary-hook.ts\"",
             "timeout": 10
           }
         ]
@@ -249,7 +249,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/plan-pomogator/plan-gate.ts\"",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/plan-pomogator/plan-gate.ts\"",
             "timeout": 60
           }
         ]
@@ -259,17 +259,17 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/specs-validator/phase-gate.ts\"",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/specs-validator/phase-gate.ts\"",
             "timeout": 60
           },
           {
             "type": "command",
-            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/specs-validator/extension-json-meta-guard.ts\"",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/specs-validator/extension-json-meta-guard.ts\"",
             "timeout": 60
           },
           {
             "type": "command",
-            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/specs-validator/form-guards-dispatch.ts\"",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/specs-validator/form-guards-dispatch.ts\"",
             "timeout": 60
           },
           {
@@ -279,7 +279,7 @@
           },
           {
             "type": "command",
-            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/bdd-only-test-guard/guard.ts\"",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/bdd-only-test-guard/guard.ts\"",
             "timeout": 30
           }
         ]
@@ -289,7 +289,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/tui-test-runner/build_guard.ts\"",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/tui-test-runner/build_guard.ts\"",
             "timeout": 30
           }
         ]
@@ -299,7 +299,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/tui-test-runner/test_guard.ts\"",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/tui-test-runner/test_guard.ts\"",
             "timeout": 30
           }
         ]
@@ -309,7 +309,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/specs-validator/spec-access-guard.ts\"",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/specs-validator/spec-access-guard.ts\"",
             "timeout": 30
           }
         ]
@@ -321,7 +321,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/plan-pomogator/prompt-capture.ts\"",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/plan-pomogator/prompt-capture.ts\"",
             "timeout": 60
           }
         ]
@@ -331,7 +331,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/prompt-suggest/prompt_suggest_submit.ts\"",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/prompt-suggest/prompt_suggest_submit.ts\"",
             "timeout": 60
           }
         ]
@@ -341,7 +341,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/specs-validator/validate-specs.ts\"",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/specs-validator/validate-specs.ts\"",
             "timeout": 60
           }
         ]
@@ -351,7 +351,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/learnings-capture/capture.ts\" --event UserPromptSubmit",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/learnings-capture/capture.ts\" --event UserPromptSubmit",
             "timeout": 60
           }
         ]
@@ -363,7 +363,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/test-quality/compliance_check.ts\"",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/test-quality/compliance_check.ts\"",
             "timeout": 60
           },
           {
@@ -373,12 +373,12 @@
           },
           {
             "type": "command",
-            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/anchor-integrity/anchor_check_post.ts\"",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/anchor-integrity/anchor_check_post.ts\"",
             "timeout": 30
           },
           {
             "type": "command",
-            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/bdd-quality-judge/hook.ts\"",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/bdd-quality-judge/hook.ts\"",
             "timeout": 15
           }
         ]
@@ -388,12 +388,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/bg-task-guard/mark-bg-task.ts\"",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/bg-task-guard/mark-bg-task.ts\"",
             "timeout": 60
           },
           {
             "type": "command",
-            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/bash-post-test/ingest.ts\"",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/bash-post-test/ingest.ts\"",
             "timeout": 30
           }
         ]
@@ -403,7 +403,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"require(require('path').resolve('tools/_shared/bootstrap.cjs'))\" -- \"tools/research-workflow-marker-guard/research-workflow-marker-guard.ts\"",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/research-workflow-marker-guard/research-workflow-marker-guard.ts\"",
             "timeout": 10
           }
         ]

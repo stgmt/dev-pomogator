@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.3] - 2026-06-24
+
+### Fixed
+
+- **Hooks broke when the process CWD was not the project root**: the dogfood hook command in `.claude/settings.json` resolved the bootstrap loader via `path.resolve('tools/_shared/bootstrap.cjs')` — relative to `process.cwd()`. When a Stop hook ran with the shell CWD left inside a subdirectory, every hook died with `Cannot find module '<subdir>/tools/_shared/bootstrap.cjs'`. The 22 dogfood hook commands now anchor on `CLAUDE_PROJECT_DIR` (mirroring how `.claude-plugin/hooks.json` already anchors on `CLAUDE_PLUGIN_ROOT`).
+- **tsx-runner script resolution is now CWD-independent**: `resolveScriptPath` resolves the target `.ts` against `CLAUDE_PROJECT_DIR` / `CLAUDE_PLUGIN_ROOT` before falling back to the `.git`-walk, so hooks resolve their script even from a foreign CWD or where `.git` is absent (e.g. Docker). Adds `tests/e2e/hooks-cwd-independent.test.ts` (HOOKSCWD001).
+
+## [2.0.2] - 2026-06-23
+
+### Fixed
+
+- **pomogator-doctor crashed on canonical plugin.json** ([#71](https://github.com/stgmt/dev-pomogator/issues/71)): check C15 (plugin-loader) assumed the v1 manifest shape (`commands`/`skills` as `{ name }` objects) and called `path.join(dir, undefined)` on the canonical v2 shape (arrays of path strings like `"./.claude/skills"`), throwing `The "path" argument must be of type string. Received undefined` on every canonical install. C15 now parses both shapes: canonical path entries are enumerated (commands = `*.md`, skills = subdirs containing `SKILL.md`), and non-string entries are skipped instead of crashing. Support/workspace folders under `skills/` without a `SKILL.md` are no longer mis-flagged as broken skills.
+- **Doctor false-criticals on canonical installs** ([#71](https://github.com/stgmt/dev-pomogator/issues/71)): C3 (`~/.dev-pomogator/config.json`), C13 (version match) and C14 (managed `.gitignore` block) checked v1-installer artefacts that `/plugin install` never creates, reporting a fresh canonical clone as broken. When a canonical `.claude-plugin/plugin.json` is present and the v1 config is absent, C3/C14 now report OK and C13 falls back to comparing the plugin manifest version against `package.json`.
+- **Stale reinstall hints**: doctor `reinstallHint`s pointed at the deprecated v1 `npx dev-pomogator` flow; they now reference `/plugin install dev-pomogator@stgmt --force` (canonical).
+
+## [2.0.1] - 2026-06-23
+
+### Fixed
+
+- **tsx-runner crashes on Node 24** ([#69](https://github.com/stgmt/dev-pomogator/issues/69)): Strategy 0 (native TypeScript via `--experimental-strip-types`) passed `--experimental-default-type=module`, a flag removed in Node 24. Node rejected it pre-V8 with `bad option: --experimental-default-type=module` (exit 9), breaking every hook (`auto_commit_stop`, `simplify_stop`, `prompt_suggest_stop`, `capture`, `test-spec-gate`, `dedup_stop`, `tui_stop`, `build_guard`). The flag is now passed only on Node < 24; on Node 24+ ESM is ensured by default module detection + `package.json "type":"module"` + explicit `.ts` import specifiers.
+- **No fall-through on rejected CLI flags** ([#69](https://github.com/stgmt/dev-pomogator/issues/69)): `bad option` is printed by Node's pre-V8 CLI parser and matched none of `RESOLVER_ERROR_TOKENS`, so the runner propagated a hard exit instead of falling through to the tsx loader family. Added `bad option` to the token list so a removed/unknown flag now degrades gracefully to tsx.
+
 ## [1.5.0] - 2026-04-07
 
 ### Added — Personal-Pomogator (FR-1..FR-11)

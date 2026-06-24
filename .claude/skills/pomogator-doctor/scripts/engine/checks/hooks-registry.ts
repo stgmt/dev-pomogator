@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { CheckContext, CheckDefinition, CheckResult } from '../types.js';
+import { CANONICAL_REINSTALL_HINT } from './canonical.js';
 
 interface SettingsLocal {
   hooks?: Record<string, unknown>;
@@ -65,7 +66,7 @@ function build(
     reinstallable: true,
     message,
     hint,
-    reinstallHint: 'Run `npx dev-pomogator` to rewrite managed hooks',
+    reinstallHint: CANONICAL_REINSTALL_HINT,
     durationMs: 0,
   };
 }
