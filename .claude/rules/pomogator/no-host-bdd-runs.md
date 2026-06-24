@@ -29,17 +29,25 @@ npm run test:bdd:docker      # то же
 full-vs-filtered больше не действует: на хосте не запускается ничего. Throwaway-режим `run-bdd.mjs`
 тоже снят с хоста (он сам отказывается вне Docker).
 
-## Enforcement (hook + runtime + проверено live)
+## Enforcement — ТРИ слоя (defense in depth, проверено live)
 
-PreToolUse-хук `tools/tui-test-runner/test_guard.ts` (ветка `[test-guard:host-bdd]`) денаит **любой**
-хостовый Bash, запускающий cucumber/run-bdd в ЛЮБОЙ форме:
-- `node scripts/run-bdd.mjs` (full, `--name`, `--tags`, …) → DENY exit 2 → docker-bdd.sh
-- сырой `cucumber.js` / `@cucumber/cucumber` (full, `--name`, `--tags`, `--dry-run`) → DENY exit 2 → docker-bdd.sh
-- docker-обёрнутый (`docker-bdd.sh`/`docker compose`/`cucumber.docker.json`) → ALLOW;
-  prose (`git`/`echo`/…), что лишь УПОМИНАЕТ cucumber → ALLOW.
+1. **PreToolUse-хук** `tools/tui-test-runner/test_guard.ts` (ветка `[test-guard:host-bdd]`) денаит
+   **любой** хостовый Bash, запускающий cucumber/run-bdd в ЛЮБОЙ форме:
+   - `node scripts/run-bdd.mjs` (full, `--name`, `--tags`, …) → DENY exit 2 → docker-bdd.sh
+   - сырой `cucumber.js` / `@cucumber/cucumber` (full, `--name`, `--tags`, `--dry-run`) → DENY → docker-bdd.sh
+   - docker-обёрнутый (`docker-bdd.sh`/`docker compose`/`cucumber.docker.json`) → ALLOW;
+     prose (`git`/`echo`/…), что лишь УПОМИНАЕТ cucumber → ALLOW.
+2. **Runtime-страховка в раннере**: `scripts/run-bdd.mjs` сам отказывается (exit 1) вне Docker
+   (`DEV_POMOGATOR_TEST_IN_DOCKER!=1`) — на случай обхода Bash-хука.
+3. **Cucumber-уровневый стоп**: `tests/hooks/ensure-docker-bdd.ts` (грузится cucumber'ом из
+   `cucumber.json` `import` glob `tests/hooks/**/*.ts` на КАЖДОМ прогоне) бросает на загрузке, если
+   `DEV_POMOGATOR_TEST_IN_DOCKER!=1`. Это аналог `tests/setup/ensure-docker.ts` (тот только для
+   vitest). Ловит даже прямой `node cucumber.js` в обход хука И run-bdd. Docker-образ метку ставит
+   (Dockerfile.test{,.base} ENV + docker-compose.test.yml) → в Docker не падает. No bypass by design.
 
-Плюс runtime-страховка: `scripts/run-bdd.mjs` сам отказывается (exit 1), если не внутри Docker
-(`DEV_POMOGATOR_TEST_IN_DOCKER!=1`) — на случай обхода Bash-хука.
+Слой 1 покрывает Bash-вызовы, слой 2 — вход через run-bdd, слой 3 — сам рантайм cucumber независимо
+от точки входа. (Stryker-BDD мутации — отдельный поток: они НЕ пишут канон и грузят свой профиль без
+этого guard'а, поэтому не блокируются здесь.)
 
 Матрица закреплена BDD-сценарием SPECGEN004_221 (`tests/step_definitions/feature52_dogfood_hardening.ts`):
 full/name/tag-батч/dry-run/run-bdd → deny→docker-bdd; docker-bdd + prose → allow. Прогон guard
