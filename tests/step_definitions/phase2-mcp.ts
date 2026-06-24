@@ -454,7 +454,7 @@ interface MarksmanWorld extends Phase2World {
 const FAKE_MARKSMAN_BINARY = Buffer.from('fake-marksman-bytes');
 const FAKE_MARKSMAN_SHA = createHash('sha256').update(FAKE_MARKSMAN_BINARY).digest('hex');
 
-Given('a fresh `npx dev-pomogator install` invocation', async function (this: MarksmanWorld) {
+Given('the Marksman installer runs', async function (this: MarksmanWorld) {
   this.marksmanInstallResult = await runMarksmanInstall({
     repoRoot: this.tempDir,
     platform: 'linux',

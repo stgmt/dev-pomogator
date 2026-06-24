@@ -123,7 +123,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
 
   @feature7
   Scenario: SPECGEN004_15 Marksman binary installed silently during npm install
-    Given a fresh `npx dev-pomogator install` invocation
+    Given the Marksman installer runs
     When the postInstall script completes
     Then `.dev-pomogator/bin/marksman` (or platform equivalent) exists and is executable
     And the binary responds to LSP `initialize` request
