@@ -19,7 +19,31 @@ function log(level, message) {
   process.stderr.write(`[${ts}] [PROMPT-SUGGEST] [${level}] ${message}
 `);
 }
+var dotenvLoaded = false;
+function ensureDotenvLoaded() {
+  if (dotenvLoaded) return;
+  dotenvLoaded = true;
+  for (const name of [".env", ".env.local"]) {
+    try {
+      const p = path.join(process.cwd(), name);
+      if (!fs.existsSync(p)) continue;
+      for (const raw of fs.readFileSync(p, "utf-8").split("\n")) {
+        const line = raw.trim();
+        if (!line || line.startsWith("#")) continue;
+        const m = line.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/);
+        if (!m) continue;
+        let v = m[2].trim();
+        if (v.startsWith('"') && v.endsWith('"') || v.startsWith("'") && v.endsWith("'")) {
+          v = v.slice(1, -1);
+        }
+        if (!process.env[m[1]]) process.env[m[1]] = v;
+      }
+    } catch {
+    }
+  }
+}
 function loadConfig() {
+  ensureDotenvLoaded();
   const enabled = process.env.PROMPT_SUGGEST_ENABLED !== "false";
   const ttl = parseInt(process.env.PROMPT_SUGGEST_TTL || "", 10) || DEFAULT_TTL;
   const openrouterKey = process.env.OPENROUTER_API_KEY;
@@ -73,26 +97,32 @@ function extractFirstUserMessage(transcriptPath) {
 }
 async function callSuggestionLLM(config, messages) {
   const url = `${config.llm.baseUrl}/chat/completions`;
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${config.llm.apiKey}`
-    },
-    body: JSON.stringify({
-      model: config.llm.model,
-      messages,
-      max_tokens: 50,
-      temperature: 0.3
-    }),
-    signal: AbortSignal.timeout(3e4)
-  });
-  if (!response.ok) {
-    throw new Error(`LLM API error: ${response.status} ${response.statusText}`);
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), 3e4);
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${config.llm.apiKey}`,
+        Connection: "close"
+      },
+      body: JSON.stringify({
+        model: config.llm.model,
+        messages,
+        max_tokens: 50,
+        temperature: 0.3
+      }),
+      signal: ac.signal
+    });
+    if (!response.ok) {
+      throw new Error(`LLM API error: ${response.status} ${response.statusText}`);
+    }
+    const data = await response.json();
+    return data?.choices?.[0]?.message?.content?.trim() ?? "";
+  } finally {
+    clearTimeout(timer);
   }
-  const data = await response.json();
-  const content = data?.choices?.[0]?.message?.content?.trim() ?? "";
-  return content;
 }
 function redactSecrets(text) {
   return text.replace(/authorization:\s*bearer\s+[a-z0-9._-]+/gi, "Authorization: Bearer [REDACTED]").replace(/sk-[a-z0-9]{10,}/gi, "sk-[REDACTED]").replace(/api[_-]?key\s*[:=]\s*['"]?[^'"\s]+/gi, "apiKey: [REDACTED]").replace(/token\s*[:=]\s*['"]?[^'"\s]+/gi, "token: [REDACTED]");
@@ -201,5 +231,6 @@ main().catch((err) => {
   log("ERROR", `Unhandled: ${err instanceof Error ? err.message : String(err)}`);
   approve();
 }).finally(() => {
-  process.exit(0);
+  process.exitCode = 0;
+  setTimeout(() => process.exit(0), 2e3).unref();
 });
