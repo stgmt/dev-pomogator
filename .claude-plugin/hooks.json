@@ -36,7 +36,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PLUGIN_ROOT || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/prompt-suggest/prompt_suggest_stop.ts\"",
+            "command": "node -e \"const cp=require('child_process'),p=require('path');const b=p.join(process.env.CLAUDE_PLUGIN_ROOT||process.cwd(),'tools','prompt-suggest','prompt_suggest_stop.bundle.mjs');const c=cp.spawn(process.execPath,[b],{stdio:'inherit'});c.on('exit',x=>{if(x)process.stderr.write('[dev-pomogator] WARNING: prompt-suggest stop-hook did NOT run (exit '+x+') -- next-step suggestion skipped\\n');process.exit(0)});c.on('error',e=>{process.stderr.write('[dev-pomogator] WARNING: prompt-suggest stop-hook failed to spawn -- '+e.message+'\\n');process.exit(0)});\"",
             "timeout": 60
           }
         ]
@@ -96,7 +96,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PLUGIN_ROOT || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/claim-evidence-gate/claim_evidence_gate_stop.ts\"",
+            "command": "node -e \"const cp=require('child_process'),p=require('path');const b=p.join(process.env.CLAUDE_PLUGIN_ROOT||process.cwd(),'tools','claim-evidence-gate','claim_evidence_gate_stop.bundle.mjs');const c=cp.spawn(process.execPath,[b],{stdio:'inherit'});c.on('exit',x=>{if(x)process.stderr.write('[dev-pomogator] WARNING: claim-evidence-gate did NOT evaluate this stop (exit '+x+') -- enforcement skipped\\n');process.exit(0)});c.on('error',e=>{process.stderr.write('[dev-pomogator] WARNING: claim-evidence-gate failed to spawn -- '+e.message+'\\n');process.exit(0)});\"",
             "timeout": 60
           }
         ]
@@ -170,6 +170,16 @@
             "type": "command",
             "command": "node -e \"require(require('path').join(process.env.CLAUDE_PLUGIN_ROOT || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/claude-mem-health/health-check.ts\"",
             "timeout": 120
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PLUGIN_ROOT || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/claude-mem-bootstrap/install-claude-mem.ts\"",
+            "timeout": 30
           }
         ]
       },
