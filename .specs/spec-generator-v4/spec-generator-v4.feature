@@ -1570,24 +1570,24 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then it yields exactly three scenarios keyed by POSIX paths with the passing one PASSED and the pending and undefined ones not collapsed to PASSED
 
   @feature52
-  Scenario: SPECGEN004_221 the cucumber-clobber guard denies a bare filtered run yet allows the clobber-safe wrapper
+  Scenario: SPECGEN004_221 the test-guard blocks every host cucumber and run-bdd run and routes to Docker
     Given the test-guard PreToolUse hook is the canonical Bash guard
-    When a bare filtered cucumber run hits the default config
-    Then the clobber guard denies it with exit 2 and points at the run-bdd wrapper
-    When the clobber-safe run-bdd wrapper is invoked with a name filter
-    Then the guard allows the wrapper with exit 0
-    When a full cucumber run with no name filter hits the default config
-    Then the guard denies the full host run with exit 2 and points at docker-bdd
-    When a full host run-bdd invocation has no name filter
-    Then the guard denies the full host run-bdd with exit 2 and points at docker-bdd
-    When a filtered cucumber run names an explicit temp config
-    Then the guard allows the isolated run with exit 0
-    When a dry-run cucumber pass hits the default config
-    Then the clobber guard denies the dry-run with exit 2
-    When a dry-run names the default cucumber.json config explicitly
-    Then the clobber guard still denies it with exit 2
-    When a git commit message merely mentions a filtered cucumber run
-    Then the guard allows the commit with exit 0
+    When a full host cucumber run hits the default config
+    Then the guard denies it with exit 2 and routes to docker-bdd
+    When a host cucumber run is filtered by name
+    Then the guard denies it with exit 2 and routes to docker-bdd
+    When a host cucumber run is filtered by tag as a batch
+    Then the guard denies it with exit 2 and routes to docker-bdd
+    When a full host run-bdd invocation has no filter
+    Then the guard denies it with exit 2 and routes to docker-bdd
+    When a host run-bdd invocation is filtered by name
+    Then the guard denies it with exit 2 and routes to docker-bdd
+    When a dry-run host cucumber pass hits the default config
+    Then the guard denies it with exit 2 and routes to docker-bdd
+    When a docker-bdd.sh invocation runs the suite in Docker
+    Then the guard allows it with exit 0
+    When a git commit message merely mentions a cucumber run
+    Then the guard allows it with exit 0
 
   @feature49
   Scenario: SPECGEN004_222 the gate releases after consecutive zero-tool kicks and a tool-run resets the no-progress streak

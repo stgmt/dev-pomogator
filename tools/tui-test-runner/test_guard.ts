@@ -10,31 +10,6 @@
  * Fail-open: any error → exit(0)
  */
 
-import { readFileSync } from 'node:fs';
-
-/**
- * Does a PARTIAL/dry cucumber run's EFFECTIVE config write the canonical ndjson? Reads the actual
- * config (the `-c`/`--config` path, or the default `cucumber.json`) and any CLI `--format message:`
- * and checks whether ANY message formatter targets `.last-test-run` (the canonical). A temp config
- * that COPIED cucumber.json's format still clobbers — the old "-c is safe" assumption was the gap
- * (an agent's collision dry-run via a scoped temp config that kept the canonical format wiped it,
- * 2026-06-20). cucumber MERGES formats, so a CLI `--format throwaway` does NOT cancel a canonical
- * format in the config. builtins-only (fs); fail-open on read error EXCEPT the default cucumber.json
- * (which is known to write the canonical).
- */
-function partialRunWritesCanonical(command: string): boolean {
-  if (/--format\s+message:\S*last-test-run/.test(command)) return true;
-  const m = command.match(/(?:^|\s)(?:-c|--config)(?:\s|=)\s*"?([^\s"]+)"?/);
-  const cfgPath = m ? m[1] : 'cucumber.json';
-  try {
-    const cfg = JSON.parse(readFileSync(cfgPath, 'utf-8')) as Record<string, { format?: unknown[] }>;
-    return Object.values(cfg).some(
-      (p) => Array.isArray(p?.format) && p.format.some((f) => typeof f === 'string' && /message:\S*last-test-run/.test(f)),
-    );
-  } catch {
-    return cfgPath === 'cucumber.json'; // default config writes the canonical; unreadable temp → can't tell, allow
-  }
-}
 
 interface PreToolUseInput {
   session_id?: string;
@@ -158,21 +133,20 @@ async function main(): Promise<void> {
     (/scripts[/\\]run-bdd\.mjs/.test(command) ||
       /cucumber(?:\.js|-js)\b/.test(command) ||
       /@cucumber\/cucumber/.test(command));
-  // Harm-precise: only a FULL host run clobbers the canonical .last-test-run.ndjson and runs the
-  // whole suite in the wrong env (the 2026-06-24 incident). A FILTERED run (--name/--tags/--dry-run)
-  // routes to a throwaway via run-bdd.mjs and leaves the canonical intact — single-scenario host
-  // iteration stays working; partial runs against the DEFAULT config are still caught by the
-  // clobber guard below. So block only the full (unfiltered) host run here.
-  const isFilteredRun = /(?:^|\s)(?:--name|-n|--tags|-t|--dry-run)(?:\s|=|$)/.test(command);
-  if (isBddRun && !isFilteredRun) {
+  // STRICT (owner directive 2026-06-24, "буквально ничего на машине, всё в Docker"): block EVERY
+  // host cucumber/run-bdd invocation — full, --name, --tags batch, --dry-run, path, temp-config.
+  // Even a single scenario can false-red on the wrong OS, and the owner wants ZERO host runs. With no
+  // host run allowed at all, the old clobber-vs-full distinction is moot (removed below).
+  if (isBddRun) {
     const msg = [
-      '🚫 The BDD/cucumber suite must run in Docker, NOT on the host.',
-      '   A host run false-reds Linux/Docker-only scenarios, is slow (~70 min), and clobbers the',
-      '   canonical .dev-pomogator/.last-test-run.ndjson with host-isolation artifacts (incident 2026-06-24).',
+      '🚫 The BDD/cucumber suite must run in Docker, NOT on the host — in ANY form (full, --name,',
+      '   --tags batch, --dry-run, path). A host run false-reds Linux/Docker-only scenarios and can',
+      '   clobber the canonical .dev-pomogator/.last-test-run.ndjson (incident 2026-06-24).',
       '',
       '✅ Run it in Docker (WSL-routed):',
       '   bash scripts/docker-bdd.sh                          — full suite (refreshes the canonical)',
-      '   bash scripts/docker-bdd.sh --name "SPECGEN004_15"   — one scenario (clobber-safe, canonical untouched)',
+      '   bash scripts/docker-bdd.sh --tags "@feature7"       — a tag batch (clobber-safe: canonical untouched)',
+      '   bash scripts/docker-bdd.sh --name "SPECGEN004_15"   — one scenario (clobber-safe)',
       '   npm run test:bdd:docker      OR      /run-tests --docker',
     ].join('\n');
     const output = {
@@ -186,48 +160,10 @@ async function main(): Promise<void> {
     process.exit(2);
   }
 
-  // Cucumber clobber guard (FR-52a / P28-1): a PARTIAL / non-authoritative cucumber run against the
-  // DEFAULT config overwrites the canonical .dev-pomogator/.last-test-run.ndjson → every spec not in
-  // the result then reads not_run (poisons the honesty gate/census). PARTIAL = a filter
-  // (--name/-n/--tags/-t) OR a --dry-run (executes nothing, writes an ALL-skipped ndjson — the exact
-  // vector that clobbered the canonical live on 2026-06-19; the old guard only caught --name). A FULL
-  // real run is fine (it is the intended way to refresh the canonical).
-  //   Allow ONLY when isolated to a throwaway: a temp config (-c/--config NOT cucumber.json — `-c
-  //   cucumber.json` still writes the canonical, so it is NOT safe), or an explicit --format message:
-  //   to a non-canonical target.
-  //   A prose command (git/echo/cat/…) may MENTION cucumber + a flag in its text (e.g. a commit
-  //   message describing THIS guard) but never RUNS it — anchor to a real invocation so we don't deny
-  //   a commit/echo/doc (false-positive that blocked a commit 2026-06-19).
-  const isProse = /^\s*(?:git|echo|printf|cat|sed|awk|grep|rg)\b/.test(command.trimStart());
-  const isCucumber =
-    !isProse && (/cucumber(?:\.js|-js)\b/.test(command) || /@cucumber\/cucumber/.test(command));
-  const isPartial = /(?:^|\s)(?:--name|-n|--tags|-t|--dry-run)(?:\s|=|$)/.test(command);
-  // Unsafe ONLY if the run's EFFECTIVE config actually writes the canonical (read the config, don't
-  // guess from the command text — a temp config can still copy cucumber.json's canonical format).
-  if (isCucumber && isPartial && partialRunWritesCanonical(command)) {
-    const filterArgs =
-      command.replace(/^[\s\S]*?cucumber(?:\.js|-js)?\s*/, '').trim() || '--tags "@featureN"';
-    const msg = [
-      '🚫 Partial/dry-run cucumber run against the default config would CLOBBER the canonical',
-      '   .dev-pomogator/.last-test-run.ndjson with a partial/all-skipped result (other specs → not_run).',
-      '',
-      '✅ Use the clobber-safe runner (routes a filtered run to a throwaway + archives the run to',
-      '   .dev-pomogator/.test-history/ with timings):',
-      '',
-      `  node scripts/run-bdd.mjs ${filterArgs}`,
-      '',
-      '   (or pass an explicit -c <temp-config> / --format message:<throwaway> for an isolated run).',
-    ].join('\n');
-    const output = {
-      hookSpecificOutput: {
-        hookEventName: 'PreToolUse',
-        permissionDecision: 'deny',
-        permissionDecisionReason: `[test-guard:cucumber-clobber] ${msg}`,
-      },
-    };
-    process.stdout.write(JSON.stringify(output));
-    process.exit(2);
-  }
+  // (The former FR-52a partial/clobber cucumber guard lived here. It is now SUBSUMED by the strict
+  // host-bdd block above — no host cucumber/run-bdd invocation reaches this point in any form. Docker
+  // -side clobber-safety (a filtered Docker run must not overwrite the canonical) is enforced by
+  // scripts/docker-bdd.sh, not here.)
 
   // Check if direct test command (block + smart converter)
   for (const entry of BLOCKED_PATTERNS) {

@@ -21,25 +21,29 @@ npm run test:bdd:docker      # то же
 /run-tests --docker          # через skill
 ```
 
-## Что разрешено на хосте (harm-precise: full-vs-filtered)
+## Что разрешено на хосте: НИЧЕГО (строгий режим, директива владельца)
 
-Вред наносит ТОЛЬКО полный прогон (пишет канон, чужое окружение). **Фильтрованный** хостовый
-прогон (`--name`/`--tags`/`--dry-run`) через `node scripts/run-bdd.mjs` уходит в throwaway, канон
-не трогает, идёт секунды — он РАЗРЕШЁН (быстрая итерация по одному сценарию). Поэтому блокируется
-именно полный (нефильтрованный) хостовый запуск, а не любой.
+Решение владельца 2026-06-24: «буквально ничего на машине, всё в Docker». Даже одиночный сценарий
+на хосте может дать ложный красный (Linux-only шаги на Windows), поэтому **любой** хостовый запуск
+сценарных тестов запрещён — full, `--name`, `--tags`-батч, `--dry-run`, путь, temp-config. Различие
+full-vs-filtered больше не действует: на хосте не запускается ничего. Throwaway-режим `run-bdd.mjs`
+тоже снят с хоста (он сам отказывается вне Docker).
 
-## Enforcement (hook + проверено live)
+## Enforcement (hook + runtime + проверено live)
 
-PreToolUse-хук `tools/tui-test-runner/test_guard.ts` (ветка `[test-guard:host-bdd]`) денаит Bash,
-который на хосте запускает полный cucumber/run-bdd:
-- `node scripts/run-bdd.mjs` (без фильтра) → DENY exit 2 → docker-bdd.sh
-- сырой `cucumber.js` / `@cucumber/cucumber` (без фильтра) → DENY exit 2 → docker-bdd.sh
-- фильтрованный run-bdd → ALLOW; docker-обёрнутый (`docker-bdd.sh`/`docker compose`/
-  `cucumber.docker.json`) → ALLOW; prose (`git`/`echo`/…), что лишь УПОМИНАЕТ cucumber → ALLOW.
+PreToolUse-хук `tools/tui-test-runner/test_guard.ts` (ветка `[test-guard:host-bdd]`) денаит **любой**
+хостовый Bash, запускающий cucumber/run-bdd в ЛЮБОЙ форме:
+- `node scripts/run-bdd.mjs` (full, `--name`, `--tags`, …) → DENY exit 2 → docker-bdd.sh
+- сырой `cucumber.js` / `@cucumber/cucumber` (full, `--name`, `--tags`, `--dry-run`) → DENY exit 2 → docker-bdd.sh
+- docker-обёрнутый (`docker-bdd.sh`/`docker compose`/`cucumber.docker.json`) → ALLOW;
+  prose (`git`/`echo`/…), что лишь УПОМИНАЕТ cucumber → ALLOW.
 
-Матрица закреплена BDD-сценарием SPECGEN004_221 (`tests/step_definitions/feature52_dogfood_hardening.ts`),
-включая регресс-ногу на точную команду инцидента (full `run-bdd.mjs` → deny). Прогон guard вживую
-через bootstrap: все ноги PASS.
+Плюс runtime-страховка: `scripts/run-bdd.mjs` сам отказывается (exit 1), если не внутри Docker
+(`DEV_POMOGATOR_TEST_IN_DOCKER!=1`) — на случай обхода Bash-хука.
+
+Матрица закреплена BDD-сценарием SPECGEN004_221 (`tests/step_definitions/feature52_dogfood_hardening.ts`):
+full/name/tag-батч/dry-run/run-bdd → deny→docker-bdd; docker-bdd + prose → allow. Прогон guard
+вживую через bootstrap: все ноги PASS.
 
 ## Инцидент-основание (2026-06-24)
 

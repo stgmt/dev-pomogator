@@ -1,14 +1,17 @@
-// @feature52 — FR-52 (Session dogfood hardening). P28-1 / FR-52a: the cucumber-clobber
-// guard. Drives the REAL tools/tui-test-runner/test_guard.ts by spawning it exactly the
-// way the PreToolUse hook does (bootstrap.cjs -> tsx) and asserting the allow/deny matrix.
-// No mock: a bare `--name` run against the default config is denied (exit 2) and the deny
-// message points at the clobber-safe runner; the run-bdd FILTERED wrapper and an explicit
-// `-c` isolated run are allowed (exit 0). A FULL host run (raw cucumber OR `node
-// scripts/run-bdd.mjs` with no filter) is denied (exit 2) and points at docker-bdd.sh —
-// the host-bdd block added after the 2026-06-24 incident (a full host run polluted the
-// canonical with Linux/Docker-only false reds). Mutation gutcheck (proven by revert in
-// .dev-pomogator/.tmp/guard-check.mjs): break the guard's cucumber detection and the deny
-// leg reddens; break its redirect-exclusion and the explicit-config allow leg reddens.
+// @feature52 — FR-52 (Session dogfood hardening) + the STRICT host-bdd block (owner directive
+// 2026-06-24: "буквально ничего на машине, всё в Docker"). Drives the REAL
+// tools/tui-test-runner/test_guard.ts by spawning it exactly the way the PreToolUse hook does
+// (bootstrap.cjs -> tsx) and asserting the allow/deny matrix. No mock.
+//
+// Contract: EVERY host cucumber/run-bdd invocation — full, --name, --tags batch, --dry-run, and
+// `node scripts/run-bdd.mjs` (any form) — is DENIED (exit 2) and routed to docker-bdd.sh. Only a
+// docker-wrapped run (docker-bdd.sh / docker compose) and PROSE that merely mentions cucumber are
+// allowed. (Supersedes the earlier full-vs-filtered clobber matrix: under "nothing on host" the
+// clobber-vs-full distinction is moot — the guard's clobber branch was removed.)
+//
+// Mutation gutcheck (revert in .dev-pomogator/.tmp/guard-check.mjs): break the guard's cucumber
+// detection and the deny legs redden; break the docker ALLOWED_PATTERNS and the docker-bdd allow
+// leg reddens.
 import { Given, When, Then } from '@cucumber/cucumber';
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -34,17 +37,7 @@ function runGuard(command: string): { status: number | null; stdout: string } {
 const CUKE = 'node --import tsx node_modules/@cucumber/cucumber/bin/cucumber.js';
 
 interface GuardWorld {
-  clobberStatus?: number | null;
-  clobberStdout?: string;
-  wrapperStatus?: number | null;
-  fullRunStatus?: number | null;
-  fullRunStdout?: string;
-  runBddFullStatus?: number | null;
-  runBddFullStdout?: string;
-  isolatedStatus?: number | null;
-  dryRunStatus?: number | null;
-  cDefaultDryRunStatus?: number | null;
-  proseStatus?: number | null;
+  lastResult?: { status: number | null; stdout: string };
 }
 
 Given(/^the test-guard PreToolUse hook is the canonical Bash guard$/, function () {
@@ -54,96 +47,44 @@ Given(/^the test-guard PreToolUse hook is the canonical Bash guard$/, function (
   );
 });
 
-When(/^a bare filtered cucumber run hits the default config$/, function (this: GuardWorld) {
-  const r = runGuard(`${CUKE} --name "SPECGEN004_149"`);
-  this.clobberStatus = r.status;
-  this.clobberStdout = r.stdout;
-});
-Then(
-  /^the clobber guard denies it with exit 2 and points at the run-bdd wrapper$/,
-  function (this: GuardWorld) {
-    assert.equal(this.clobberStatus, 2, `bare --name must be denied (exit 2); got ${this.clobberStatus}`);
-    assert.ok(
-      /run-bdd\.mjs/.test(this.clobberStdout ?? ''),
-      `deny remediation must point at scripts/run-bdd.mjs; got: ${this.clobberStdout}`,
-    );
-  },
-);
+// ─── DENY legs: every host cucumber/run-bdd form → exit 2 + docker-bdd ────────────────
 
-When(/^the clobber-safe run-bdd wrapper is invoked with a name filter$/, function (this: GuardWorld) {
-  this.wrapperStatus = runGuard('node scripts/run-bdd.mjs --name "SPECGEN004_149"').status;
+When(/^a full host cucumber run hits the default config$/, function (this: GuardWorld) {
+  this.lastResult = runGuard(CUKE);
 });
-Then(/^the guard allows the wrapper with exit 0$/, function (this: GuardWorld) {
-  assert.equal(this.wrapperStatus, 0, `run-bdd wrapper must be allowed (exit 0); got ${this.wrapperStatus}`);
+When(/^a host cucumber run is filtered by name$/, function (this: GuardWorld) {
+  this.lastResult = runGuard(`${CUKE} --name "SPECGEN004_15"`);
+});
+When(/^a host cucumber run is filtered by tag as a batch$/, function (this: GuardWorld) {
+  this.lastResult = runGuard(`${CUKE} --tags "@feature7"`);
+});
+When(/^a full host run-bdd invocation has no filter$/, function (this: GuardWorld) {
+  this.lastResult = runGuard('node scripts/run-bdd.mjs');
+});
+When(/^a host run-bdd invocation is filtered by name$/, function (this: GuardWorld) {
+  this.lastResult = runGuard('node scripts/run-bdd.mjs --name "SPECGEN004_15"');
+});
+When(/^a dry-run host cucumber pass hits the default config$/, function (this: GuardWorld) {
+  this.lastResult = runGuard(`${CUKE} --dry-run`);
 });
 
-When(/^a full cucumber run with no name filter hits the default config$/, function (this: GuardWorld) {
-  const r = runGuard(`${CUKE}`);
-  this.fullRunStatus = r.status;
-  this.fullRunStdout = r.stdout;
-});
-Then(/^the guard denies the full host run with exit 2 and points at docker-bdd$/, function (this: GuardWorld) {
-  assert.equal(this.fullRunStatus, 2, `full host cucumber run must be denied (exit 2); got ${this.fullRunStatus}`);
+Then(/^the guard denies it with exit 2 and routes to docker-bdd$/, function (this: GuardWorld) {
+  assert.equal(this.lastResult?.status, 2, `host BDD run must be denied (exit 2); got ${this.lastResult?.status}`);
   assert.ok(
-    /docker-bdd\.sh/.test(this.fullRunStdout ?? ''),
-    `deny remediation must point at scripts/docker-bdd.sh; got: ${this.fullRunStdout}`,
+    /docker-bdd\.sh/.test(this.lastResult?.stdout ?? ''),
+    `deny remediation must point at scripts/docker-bdd.sh; got: ${this.lastResult?.stdout}`,
   );
 });
 
-// Regression lock on the exact 2026-06-24 incident command: a FULL `node scripts/run-bdd.mjs`
-// (no filter) refreshes the canonical on the HOST → must be denied → docker-bdd.sh. (The FILTERED
-// run-bdd wrapper above stays allowed — harm-precise full-vs-filtered cut.)
-When(/^a full host run-bdd invocation has no name filter$/, function (this: GuardWorld) {
-  const r = runGuard('node scripts/run-bdd.mjs');
-  this.runBddFullStatus = r.status;
-  this.runBddFullStdout = r.stdout;
+// ─── ALLOW legs: docker-wrapped run + prose that only mentions cucumber ────────────────
+
+When(/^a docker-bdd\.sh invocation runs the suite in Docker$/, function (this: GuardWorld) {
+  this.lastResult = runGuard('bash scripts/docker-bdd.sh --tags "@feature7"');
 });
-Then(/^the guard denies the full host run-bdd with exit 2 and points at docker-bdd$/, function (this: GuardWorld) {
-  assert.equal(this.runBddFullStatus, 2, `full host run-bdd must be denied (exit 2); got ${this.runBddFullStatus}`);
-  assert.ok(
-    /docker-bdd\.sh/.test(this.runBddFullStdout ?? ''),
-    `deny remediation must point at scripts/docker-bdd.sh; got: ${this.runBddFullStdout}`,
-  );
+When(/^a git commit message merely mentions a cucumber run$/, function (this: GuardWorld) {
+  this.lastResult = runGuard('git commit -m "fix: cucumber --name X clobbers .last-test-run.ndjson"');
 });
 
-When(/^a filtered cucumber run names an explicit temp config$/, function (this: GuardWorld) {
-  this.isolatedStatus = runGuard(`${CUKE} -c .dev-pomogator/.tmp/cuke.json --name "X"`).status;
-});
-Then(/^the guard allows the isolated run with exit 0$/, function (this: GuardWorld) {
-  assert.equal(
-    this.isolatedStatus,
-    0,
-    `explicit -c isolated run must be allowed (exit 0); got ${this.isolatedStatus}`,
-  );
-});
-
-// FR-52a gap closed 2026-06-19: a --dry-run executes nothing but STILL writes the canonical
-// ndjson (all-skipped), so it poisons the census exactly like a filtered run. The old guard
-// only keyed on --name and let this through (the live clobber this session).
-When(/^a dry-run cucumber pass hits the default config$/, function (this: GuardWorld) {
-  this.dryRunStatus = runGuard(`${CUKE} --dry-run`).status;
-});
-Then(/^the clobber guard denies the dry-run with exit 2$/, function (this: GuardWorld) {
-  assert.equal(this.dryRunStatus, 2, `--dry-run on default config must be denied (exit 2); got ${this.dryRunStatus}`);
-});
-
-// -c cucumber.json is NOT a safe redirect — the default config's format writes the canonical.
-When(/^a dry-run names the default cucumber\.json config explicitly$/, function (this: GuardWorld) {
-  this.cDefaultDryRunStatus = runGuard(`${CUKE} -c cucumber.json --dry-run`).status;
-});
-Then(/^the clobber guard still denies it with exit 2$/, function (this: GuardWorld) {
-  assert.equal(
-    this.cDefaultDryRunStatus,
-    2,
-    `-c cucumber.json (the default, writes canonical) must be denied (exit 2); got ${this.cDefaultDryRunStatus}`,
-  );
-});
-
-// False-positive fixed: a prose command (git commit) may MENTION cucumber + a flag in its
-// message but never RUNS cucumber — the guard must not deny it.
-When(/^a git commit message merely mentions a filtered cucumber run$/, function (this: GuardWorld) {
-  this.proseStatus = runGuard('git commit -m "fix: cucumber --name X clobbers .last-test-run.ndjson"').status;
-});
-Then(/^the guard allows the commit with exit 0$/, function (this: GuardWorld) {
-  assert.equal(this.proseStatus, 0, `a commit message mentioning cucumber must be allowed (exit 0); got ${this.proseStatus}`);
+Then(/^the guard allows it with exit 0$/, function (this: GuardWorld) {
+  assert.equal(this.lastResult?.status, 0, `must be allowed (exit 0); got ${this.lastResult?.status}`);
 });

@@ -22,6 +22,20 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
+// Strict host-block (rule no-host-bdd-runs, owner directive 2026-06-24 "ничего на машине, всё в
+// Docker"): run-bdd is a HOST-only tool (docker-bdd.sh runs cucumber in-container directly, never via
+// run-bdd), so refuse on the host. Belt-and-suspenders behind the test_guard PreToolUse hook — if a
+// caller bypasses the Bash hook, this still stops a host run. No bypass by design (mirrors
+// tests/setup/ensure-docker.ts).
+if (process.env.DEV_POMOGATOR_TEST_IN_DOCKER !== '1') {
+  process.stderr.write(
+    '\n[run-bdd] host BDD runs are disabled — the cucumber suite must run in Docker.\n' +
+      '   Use:  bash scripts/docker-bdd.sh [--tags "@featureN" | --name "SCENARIO"]\n' +
+      '         npm run test:bdd:docker   /   /run-tests --docker\n\n',
+  );
+  process.exit(1);
+}
+
 const args = process.argv.slice(2);
 const FILTER_FLAGS = ['--name', '-n', '--tags', '-t'];
 const isFiltered = args.some(
