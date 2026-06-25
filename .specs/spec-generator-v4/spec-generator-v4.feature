@@ -2693,3 +2693,78 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given a running spec-graph MCP server over real stdio against an isolated demo spec
     When the agent calls get_coverage over the wire
     Then get_coverage returns ok with buckets and totals
+
+  # --- FR-54: TASKS.md task-id rework helper (add-task-ids.ts) ---
+
+  @feature54
+  Scenario: SPECGEN004_460 addTaskIds inserts id before Status on a Tnn header
+    Given a loose TASKS line — `a Tnn header missing its id`
+    When the addTaskIds rework runs over it
+    Then the rework adds 1 id
+    And the reworked content contains `- [x] T01: MOVE files -- @feature1 — id: t01 — Status: DONE | Est: 60m`
+
+  @feature54
+  Scenario: SPECGEN004_461 addTaskIds leaves Done-When child checkboxes untouched
+    Given a loose TASKS line — `a Tnn header with a Done-When child checkbox`
+    When the addTaskIds rework runs over it
+    Then the rework adds 1 id
+    And the reworked content contains `  - [x] 9 files copied`
+    And the reworked content does not match /9 files copied — id:/
+
+  @feature54
+  Scenario: SPECGEN004_462 addTaskIds preserves CRLF endings
+    Given a loose TASKS line — `a CRLF document with two Tnn headers and a child`
+    When the addTaskIds rework runs over it
+    Then the reworked content preserves all 3 CRLF endings
+    And the reworked content contains `T01: A — id: t01 — Status: DONE`
+    And the reworked content contains `T02: B — id: t02 — Status: TODO`
+
+  @feature54
+  Scenario: SPECGEN004_463 addTaskIds is idempotent on a header that already has an id
+    Given a loose TASKS line — `a Tnn header that already carries an id`
+    When the addTaskIds rework runs over it
+    Then the rework adds 0 ids
+    And the rework skips 1 header
+    And the reworked content is byte-identical to the input
+
+  @feature54
+  Scenario: SPECGEN004_464 addTaskIds dedupes colliding Tnn prefixes
+    Given a loose TASKS line — `two headers with the same Tnn prefix`
+    When the addTaskIds rework runs over it
+    Then the rework adds 2 ids
+    And the reworked content matches /A — id: t01 —/
+    And the reworked content matches /B — id: t01-1 —/
+
+  @feature54
+  Scenario: SPECGEN004_465 addTaskIdsAnyHeader inserts a sequential id on a title-only header
+    Given a loose TASKS line — `a title-only header with no Tnn prefix`
+    When the addTaskIdsAnyHeader rework runs over it
+    Then the rework adds 1 id
+    And the reworked content matches /X -- @feature1 — id: t01 — Status: TODO/
+
+  @feature54
+  Scenario: SPECGEN004_466 addTaskIdsAnyHeader derives the id from a phase-dashed prefix
+    Given a loose TASKS line — `a header with a phase-dashed prefix`
+    When the addTaskIdsAnyHeader rework runs over it
+    Then the rework adds 1 id
+    And the reworked content matches /— id: t433 — Status: DONE/
+
+  @feature54
+  Scenario: SPECGEN004_467 addTaskIdsAnyHeader is child-safe on a no-status child line
+    Given a loose TASKS line — `a title-only header with a no-status child`
+    When the addTaskIdsAnyHeader rework runs over it
+    Then the rework adds 1 id
+    And the reworked content contains `a child observable (no status)`
+    And the reworked content does not match /child observable.*id:/
+
+  @feature54
+  Scenario: SPECGEN004_468 addTaskIdsAnyHeader is idempotent across many doc shapes
+    Then addTaskIdsAnyHeader is idempotent across 40 generated docs
+
+  @feature54
+  Scenario: SPECGEN004_469 addTaskIdsAnyHeader gives one unique id per header and none to children
+    Then every header gets exactly one unique id and no child does across 40 generated docs
+
+  @feature54
+  Scenario: SPECGEN004_470 addTaskIdsAnyHeader preserves every Status token byte-for-byte
+    Then every Status token is byte-unchanged across 40 generated docs

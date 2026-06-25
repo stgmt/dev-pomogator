@@ -937,3 +937,10 @@ System SHALL provide `tools/stryker-mutation/verify-kill.ts` — the determinist
 
 ---
 
+---
+
+## FR-54
+
+**TASKS.md task-id rework helper — make loose task lists parser-trackable @feature54**
+
+The repo SHALL ship a rework helper (`scripts/add-task-ids.ts`: `addTaskIds` for `Tnn:`-prefixed headers, `addTaskIdsAnyHeader` for title-only / phase-dashed headers) that inserts an explicit `— id: t<nn>` token before `— Status:` on every task HEADER the SpecGraph task parser requires (the parser needs BOTH `Status:` and an explicit `— id:`). The rework SHALL be CRLF-safe (no split/join reflow), status-preserving (the `Status:` token byte-unchanged), child-safe (Done-When sub-checkboxes without `Status:` never receive an id), idempotent (a header that already has `id:` is left as-is), and id-unique (colliding prefixes deduped, e.g. `t01` / `t01-1`).
