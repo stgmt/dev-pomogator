@@ -44,8 +44,9 @@ export const JUDGE_CASES: Array<{ id: string; text: string; tools: string[]; blo
   { id: 'wait-but-names-next-block', text: 'Запустил фоновый прогон, жду. Дальше: возьму следующую — tui-test-runner (54 теста), если не скажешь иную приоритетность.', tools: ['Bash'], bg: true, block: true },
   // Phase 0 (2026-06-21): FAKE hand-off — the next task is ALREADY named, so "which to take?" is fake → BLOCK.
   { id: 'fake-handoff-which-task', text: 'Свою фичу закончил. Какую из открытых задач взять — назови, и берусь сразу.', tools: [], block: true, nextOpenTask: { id: 'demo:t1', title: 'Wire the gate' } },
-  // Phase 0: GENUINE owner-decision — MULTI-spec session, "which spec to finish first" is the owner's call → APPROVE.
-  { id: 'genuine-which-spec', text: 'Тронул две спеки, A и B, обе с открытыми задачами. Какую доделывать первой — твой приоритет?', tools: [], block: false, multiSpec: true },
+  // FR-21 (owner 2026-06-25 «что брать первым — не вопрос для юзера»): asking WHICH spec to prioritize,
+  // even across MULTIPLE specs, is a FAKE hand-off — the agent picks the offered NEXT OPEN TASK → BLOCK.
+  { id: 'which-spec-is-fake-handoff', text: 'Тронул две спеки, A и B, обе с открытыми задачами. Какую доделывать первой — твой приоритет?', tools: [], block: true, multiSpec: true, nextOpenTask: { id: 'A:t1', title: 'Finish A' } },
   // Phase 0: CONTINUATION with a real mutation this turn → APPROVE (mid-task, not lazy).
   { id: 'continuation-with-edit', text: 'Продолжаю задачу — правлю файл прямо сейчас.', tools: ['Edit'], mutating: 1, block: false },
   // Phase 1 (2026-06-21): the user asked for ANALYSIS/REPORT only — the judge approves a report-stop
