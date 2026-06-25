@@ -15,6 +15,7 @@ import { buildJudgeNoTokenDemand, resolveEndpoint, isJudgeArmed } from '../merid
 import { classify, firstUnsupported, stripCode } from '../claim_classifier.ts';
 import { extractTurnWindow, bgInFlightInWindow, agentBgInFlight, agentBgInFlightCount, lastUserPrompt } from '../turn_window.ts';
 import { agentOpenTodoCount, liveOpenForUncensusedSlugs, lastEditedSpecSlug } from '../../spec-graph/task-census.ts';
+import { gateSelfEdit, selfMarkedBlockedOrBacklog } from '../game_guard_facts.ts';
 
 const HOOK = path.resolve(__dirname, '..', 'claim_evidence_gate_stop.ts');
 
@@ -727,5 +728,30 @@ describe('CEGATE001: FR-22 — offer the task of the MOST RECENTLY edited spec',
     // no edits → null (fail-open)
     fs.writeFileSync(fp, [U('просто текст')].map((r) => JSON.stringify(r)).join('\n'));
     expect(lastEditedSpecSlug(fp)).toBeNull();
+  });
+});
+
+describe('CEGATE001: game-guard facts compute from REAL tool_use shapes (FR-26 — dead-integration guard)', () => {
+  // @feature15 — the judge-bench injects these facts as LITERALS; this proves the hook COMPUTES them from
+  // the actual Edit / apply_spec_change / set_spec_status input shapes (else the WEAKENING rule is dead).
+  it('CEGATE001_43: gateSelfEdit / selfMarkedBlockedOrBacklog fire on real inputs, not literals', () => {
+    // gateSelfEdit — a raw Edit/Write whose file_path is a gate-own file → YES
+    expect(gateSelfEdit([{ name: 'Edit', input: { file_path: 'E:/repos/dev-pomogator/tools/spec-graph/task-census.ts', old_string: 'a', new_string: 'b' } }])).toBe(true);
+    expect(gateSelfEdit([{ name: 'Write', input: { file_path: 'tools/claim-evidence-gate/meridian-judge.ts', content: 'x' } }])).toBe(true);
+    // a REAL door apply_spec_change on the claim-evidence-gate spec (slug carried in `spec`) → YES
+    expect(gateSelfEdit([{ name: 'mcp__dev-pomogator-specs__apply_spec_change', input: { spec: 'claim-evidence-gate', doc: 'FR.md', old_string: 'a', new_string: 'b' } }])).toBe(true);
+    // a normal edit elsewhere → NO; a READ of a gate file (non-mutating) → NO
+    expect(gateSelfEdit([{ name: 'Edit', input: { file_path: 'src/feature/foo.ts', old_string: 'a', new_string: 'b' } }])).toBe(false);
+    expect(gateSelfEdit([{ name: 'Read', input: { file_path: 'tools/claim-evidence-gate/meridian-judge.ts' } }])).toBe(false);
+
+    // selfMarked — a REAL set_spec_status with backlog → YES
+    expect(selfMarkedBlockedOrBacklog([{ name: 'mcp__dev-pomogator-specs__set_spec_status', input: { spec: 'foo', status: 'backlog' } }])).toBe(true);
+    // a REAL apply_spec_change writing Status: BLOCKED into TASKS.md → YES
+    expect(selfMarkedBlockedOrBacklog([{ name: 'mcp__dev-pomogator-specs__apply_spec_change', input: { spec: 'foo', doc: 'TASKS.md', new_string: '- [ ] task -- Status: BLOCKED | Est: 1h' } }])).toBe(true);
+    // a raw Edit setting BLOCKED in TASKS.md → YES
+    expect(selfMarkedBlockedOrBacklog([{ name: 'Edit', input: { file_path: '.specs/foo/TASKS.md', old_string: 'Status: TODO', new_string: 'Status: BLOCKED' } }])).toBe(true);
+    // set_spec_status ACTIVE (not backlog) → NO; a normal edit → NO
+    expect(selfMarkedBlockedOrBacklog([{ name: 'mcp__dev-pomogator-specs__set_spec_status', input: { spec: 'foo', status: 'active' } }])).toBe(false);
+    expect(selfMarkedBlockedOrBacklog([{ name: 'Edit', input: { file_path: 'src/foo.ts', old_string: 'a', new_string: 'b' } }])).toBe(false);
   });
 });

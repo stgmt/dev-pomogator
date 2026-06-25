@@ -5,6 +5,13 @@
 
 set -o pipefail
 
+# ── Docker socket fix (FR-8, 2026-06-25): in this WSL the unix socket /run/docker.sock is created under
+# a STALE group (GID 1001 ≠ the docker group 989) on every boot → "permission denied" each session. The
+# daemon ALSO listens on tcp://127.0.0.1:2375 (localhost-only, already enabled in docker.service ExecStart)
+# — that transport has NO socket-group dependency and needs NO sudo. Default to it; respect an explicit
+# DOCKER_HOST if the caller set one. This makes the suite run without ever touching socket perms.
+export DOCKER_HOST="${DOCKER_HOST:-tcp://127.0.0.1:2375}"
+
 # ── WSL shim: docker живёт только внутри WSL (нет Docker Desktop на хосте) ──
 # Если docker-демон недостижим с хоста, но wsl.exe предлагает рабочий — пере-
 # запускаем ЭТОТ ЖЕ скрипт внутри WSL из того же репо через /mnt/<диск>.
@@ -14,7 +21,8 @@ set -o pipefail
 # TUI не замечают разницы. Guard-переменная исключает рекурсию; WSLENV
 # пробрасывает session/skip-build внутрь WSL.
 if [ -z "${DEV_POMOGATOR_WSL_SHIM:-}" ] && ! docker info >/dev/null 2>&1; then
-  if command -v wsl.exe >/dev/null 2>&1 && wsl.exe -e docker info >/dev/null 2>&1; then
+  # Reachability check via the TCP endpoint (the unix socket fails on a group mismatch — see above).
+  if command -v wsl.exe >/dev/null 2>&1 && wsl.exe -e bash -lc "DOCKER_HOST='${DOCKER_HOST}' docker info" >/dev/null 2>&1; then
     # --cd принимает ТОЛЬКО Windows-форму пути (C:/...); Linux-форма (/mnt/c/...)
     # даёт Wsl/ERROR_PATH_NOT_FOUND. pwd -W в Git Bash выдаёт ровно C:/...
     WIN_PWD=$(pwd -W 2>/dev/null || pwd)
@@ -22,7 +30,7 @@ if [ -z "${DEV_POMOGATOR_WSL_SHIM:-}" ] && ! docker info >/dev/null 2>&1; then
       [A-Za-z]:/*)
         echo "[docker-test] docker недоступен на хосте — выполняю сьют внутри WSL (--cd $WIN_PWD)"
         export DEV_POMOGATOR_WSL_SHIM=1
-        export WSLENV="${WSLENV:+$WSLENV:}DEV_POMOGATOR_WSL_SHIM/u:TEST_STATUSLINE_SESSION/u:SKIP_BUILD/u:SKIP_BUILD_CHECK/u"
+        export WSLENV="${WSLENV:+$WSLENV:}DEV_POMOGATOR_WSL_SHIM/u:DOCKER_HOST/u:TEST_STATUSLINE_SESSION/u:SKIP_BUILD/u:SKIP_BUILD_CHECK/u"
         exec wsl.exe --cd "$WIN_PWD" -e bash scripts/docker-test.sh "$@"
         ;;
       *)

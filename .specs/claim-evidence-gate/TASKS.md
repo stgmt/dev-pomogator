@@ -35,3 +35,12 @@
   _Requirements: FR-15_
   **Done When:**
   - [ ] rebuild `claim_evidence_gate_stop.bundle.mjs`; run it deps-absent with no token -> chat-visible message contains the token demand
+
+## Phase 4: Offloading + fighting-the-gate hardening (FR-23..FR-30)
+
+- [ ] Judge catches offloading + weakening-the-gate; facts computed from real inputs; Docker fixed via TCP -- @feature15 — Status: TODO | Est: 90m
+  _Requirements: FR-23, FR-24, FR-25, FR-26, FR-27, FR-28, FR-29, FR-30_
+  **Done When:**
+  - [x] game_guard_facts compute YES on real Edit / apply_spec_change / set_spec_status, NO on normal edits
+  - [x] Docker test suite runs in-container via the TCP endpoint with no sudo
+  - [ ] judge-bench green twice: offloading and gaming cases BLOCK, legit carve-outs APPROVE

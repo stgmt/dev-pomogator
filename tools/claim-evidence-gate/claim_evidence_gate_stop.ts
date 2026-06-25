@@ -36,6 +36,7 @@ import { extractTurnWindow, bgInFlightInWindow, agentBgInFlightCount, bgCommandI
 import { firstUnsupported, isSpecCompletionClaim } from './claim_classifier.ts';
 import { readTaskCensusCache, scopeCensusToSlugs, sessionEditedSpecSlugs, lastEditedSpecSlug, agentOpenTodoCount, agentNextOpenTodo, liveOpenForUncensusedSlugs, type TaskCensusCache } from '../spec-graph/task-census.ts';
 import { judgeStop, judgeAvailable, buildJudgeNoTokenDemand, isJudgeArmed } from './meridian-judge.ts';
+import { MUTATING_TOOL, isDoorWrite, gateSelfEdit, selfMarkedBlockedOrBacklog } from './game_guard_facts.ts';
 
 interface StopHookInput {
   cwd?: string;
@@ -268,9 +269,16 @@ async function main(): Promise<void> {
   // records; the agent cannot fabricate them). mutating = real changes attempted this turn (judge
   // input, FR-10); bg = a background task launched (the agent may legitimately be awaiting its async
   // result). Deliberately NOT a git-tree hash: the shared worktree always looks "changed" (audit §5).
-  const MUTATING_TOOL = /^(edit|write|multiedit|notebookedit|bash|powershell)$/i;
-  const isDoorWrite = /^mcp__.*__(apply_spec_change|create_spec|delete_spec_doc|rename_spec_doc|set_entity_status|archive_spec)$/;
   const mutatingToolsThisTurn = toolUses.filter((t) => MUTATING_TOOL.test(t.name) || isDoorWrite.test(t.name)).length;
+  // FR-4 (2026-06-25): two MORE observable, agent-INDEPENDENT facts — the gate-gaming the owner flagged.
+  // EDITING the gate's OWN enforcement files (to weaken/silence it) or SELF-marking one's own work
+  // blocked/backlog (to drop it from the open-work count) is FIGHTING the gate, not real work. Surfaced as
+  // FACTS to the judge (NOT a hard block) so HONEST gate development the owner ASKED for is never punished —
+  // the judge weighs `userRequest`. Harness-recorded tool inputs → the agent cannot fabricate them. The
+  // computation is the pure, unit-tested `game_guard_facts` module (dead-integration guard: the judge-bench
+  // injects these as literals, so a broken regex would be invisible there — CEGATE001_42 tests real shapes).
+  const gateSelfEditThisTurn = gateSelfEdit(toolUses);
+  const selfMarkedBlockedOrBacklogThisTurn = selfMarkedBlockedOrBacklog(toolUses);
   // V1+V2 (2026-06-20, generalized): the agent is legitimately AWAITING ASYNC when ANY background job
   // is still in flight — NOT only a test. Two observable, agent-independent signals, OR'd:
   //   1. bgInFlightInWindow — within the window, bg LAUNCHES (any run_in_background Bash/Agent: build,
@@ -306,6 +314,11 @@ async function main(): Promise<void> {
   // judge / gate-meta / spec-false-close). Default (implement verb present OR ambiguous) → enforce-work
   // (К4 conservative). The judge ALSO gets `userRequest` as a backstop for phrasings this regex misses.
   const userRequest = lastUserPrompt(rawTranscript);
+  // FR-5 (2026-06-25): editing the gate is only "fighting" it when the user's task is something ELSE.
+  // When the owner ASKED to work on the gate/pinator itself, the gate-self-edit fact is NOT a tell — it's
+  // the assigned task — so suppress it deterministically (don't rely on the LLM to re-derive the exception;
+  // it over-fired on honest gate-dev). edit-gate-to-dodge keeps the fact (its userRequest is про a spec).
+  const taskIsAboutTheGate = /пинатор|pinator|claim.?evidence.?gate|claim.?gate|сторож/i.test(userRequest);
   const ANALYSIS_RE = /\bанализ|разбер|разбор|оцен[иь]|отч[её]т|\breport\b|analyz|ревью|\breview\b|\bплан\b|\bplan\b|посмотри что|что думаешь|что не так/i;
   // STRONG implement verbs only — NOT ambiguous "сделай/делай" (e.g. "сделай анализ", "план работ дай"
   // are analysis). A bare "делай вариант X" has no analysis word → already falls through to enforce-work.
@@ -429,6 +442,8 @@ async function main(): Promise<void> {
         nextOpenTask: recencyNextOpen ?? scoped?.specs?.[0]?.nextOpen ?? null, // FR-22: prefer the spec edited most recently
         multiSpecSession: editedSlugs.size > 1,
         userRequest, // Phase 1: backstop — the judge approves a report-stop the user asked for
+        gateSelfEditThisTurn: gateSelfEditThisTurn && !taskIsAboutTheGate, // FR-4/5: fighting-the-gate ONLY if the task is NOT про the gate (honest gate-dev not penalised)
+        selfMarkedBlockedOrBacklogThisTurn, // FR-4/5: self-marked own work blocked/backlog this turn (self-exemption)
       };
       let verdict = await judgeStop(jInput);
       if (verdict === null) verdict = await judgeStop(jInput);
@@ -560,7 +575,9 @@ async function main(): Promise<void> {
   if (unsupported.cls === 'judge-block') {
     block(
       `⚠️ ${SELF_MARKER}: судья (Meridian) счёл это преждевременным стопом — ${unsupported.need}\n` +
-        `Доделай начатое В ЭТОМ ХОДЕ или назови ОДИН конкретный следующий шаг. Не перекладывай на пользователя.${nextLine}`,
+        `Делай сам — ты это можешь. Доделай начатое В ЭТОМ ХОДЕ. НЕ перекладывай на владельца ` +
+        `(«нужен твой sudo/ввод/решение» — сначала докажи уликой, что сам не можешь, и исчерпай свои варианты) ` +
+        `и НЕ борись с гейтом (правка гейта / само-пометка blocked/backlog ≠ работа) — делай настоящую задачу.${nextLine}`,
     );
   } else if (unsupported.cls === 'judge-unavailable') {
     block(
