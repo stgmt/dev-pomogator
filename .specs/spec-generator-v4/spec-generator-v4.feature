@@ -2808,3 +2808,87 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given an auth spec with a v4 progress file and a Discovery user story in the MCP workspace
     When the MCP bundle handles set_entity_status on a derived FR then confirms the Discovery phase STOP
     Then the derived FR is refused with a computed verdict, the phase STOP is confirmed, and get_spec_status shows it
+
+  # --- fixture-shapes: 5-shape SpecGraph fixture corpus (F-21..F-25) ---
+
+  @feature2
+  Scenario: SPECGEN004_490 builder produces a graph without crashing on a minimal spec
+    Given a staged "minimal-spec" spec fixture
+    When the SpecGraph builder builds the fixture
+    Then the graph has an FR node `minimal-spec:FR-1` and stamps version 1
+
+  @feature2
+  Scenario: SPECGEN004_491 builder yields zero File nodes for an empty FILE_CHANGES
+    Given a staged "minimal-spec" spec fixture
+    When the SpecGraph builder builds the fixture
+    Then the graph has zero File nodes and zero implements edges
+
+  @feature2
+  Scenario: SPECGEN004_492 builder parses five FRs and five ACs with no scenarios
+    Given a staged "no-scenarios-spec" spec fixture
+    When the SpecGraph builder builds the fixture
+    Then the graph has 5 FR, 5 AC and 0 Scenario nodes
+
+  @feature32
+  Scenario: SPECGEN004_493 coverage rollup reports scenarios=0 for an FR-only spec
+    Given a staged "no-scenarios-spec" spec fixture
+    When the SpecGraph builder builds the fixture
+    Then the per-spec coverage of `no-scenarios-spec` shows fr=5 ac=5 scenario=0
+
+  @feature2
+  Scenario: SPECGEN004_494 every FR in an FR-only spec lacks a tested-by edge
+    Given a staged "no-scenarios-spec" spec fixture
+    When the SpecGraph builder builds the fixture
+    Then every FR in the graph lacks a tested-by edge, 5 in total
+
+  @feature5
+  Scenario: SPECGEN004_495 the hard guard denies a Write that defines a duplicate FR
+    Given a staged "conflicting-fr-spec" spec fixture
+    And the fixture is in v4 conformance mode
+    When the hard guard receives a Write of the fixture's `.specs/conflicting-fr-spec/FR.md`
+    Then the guard denies it citing DUPLICATE_DEFINITION with a line number
+
+  @feature5
+  Scenario: SPECGEN004_496 the hard guard denies an Edit that produces a duplicate FR
+    Given a staged "conflicting-fr-spec" spec fixture
+    And the fixture is in v4 conformance mode
+    When the hard guard receives an Edit that duplicates an FR heading
+    Then the guard denies it citing DUPLICATE_DEFINITION
+
+  @feature3
+  Scenario: SPECGEN004_497 the parser yields FR nodes for both legacy and modern headings
+    Given a staged "v3-legacy-spec" spec fixture
+    When the SpecGraph builder builds the fixture
+    Then the graph has FR nodes for both `v3-legacy-spec:FR-1` and `v3-legacy-spec:FR-2`
+
+  @feature3
+  Scenario: SPECGEN004_498 a legacy Requirement heading registers the triple anchor
+    Given a staged "v3-legacy-spec" spec fixture
+    When the SpecGraph builder builds the fixture
+    Then the parser registers the compact, slug and legacy-requirement anchors for FR-1
+
+  @feature5
+  Scenario: SPECGEN004_499 a modern heading with a custom id is allowed, not flagged MALFORMED
+    Given a staged "v3-legacy-spec" spec fixture
+    And the fixture is in v4 conformance mode
+    When the hard guard receives a Write of the fixture's `.specs/v3-legacy-spec/FR.md`
+    Then the guard allows it and does not flag MALFORMED
+
+  @feature2
+  Scenario: SPECGEN004_500 a dense spec yields the expected node-type cardinality
+    Given a staged "deep-multi-fr-refs-spec" spec fixture
+    When the SpecGraph builder builds the fixture
+    Then the node-type cardinality is FR=10 AC=15 Scenario=8 File=5
+
+  @feature2
+  Scenario: SPECGEN004_501 a dense spec meets the published edge-density floor
+    Given a staged "deep-multi-fr-refs-spec" spec fixture
+    When the SpecGraph builder builds the fixture
+    Then the graph has at least 15 covers, 16 tested-by, 5 implements edges and 40 edges total
+
+  @feature4
+  Scenario: SPECGEN004_502 get_trace answers for every FR in a dense graph
+    Given a staged "deep-multi-fr-refs-spec" spec fixture
+    When the SpecGraph builder builds the fixture
+    And get_trace runs over every FR in the built graph
+    Then get_trace returns ok for all 10 of them
