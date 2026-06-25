@@ -2578,3 +2578,59 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given a temporary spec with a minimal FR.md for the feature-strength door gate
     When a feature-strength door write targets FR.md with prose containing angle-bracket text
     Then the feature-strength door gate emits no strength-layer findings for the .md write
+
+  # ── verify-kill: deterministic inject+restore kill-gate (FR-53) ──────────
+
+  @feature53
+  Scenario: SPECGEN004_377 verifyKill reports KILLED when the covering scenario fails under the mutant and restores the file
+    Given a verifyKill temp source file with original "original_value" and mutant "mutant_value"
+    When verifyKill is called with a sensing runner that detects "mutant_value"
+    Then the verifyKill verdict is "KILLED"
+    And the verifyKill killed flag is true
+    And the verifyKill restored flag is true
+    And the verifyKill source file still contains "original_value"
+    And the verifyKill source file does not contain "mutant_value"
+
+  @feature53
+  Scenario: SPECGEN004_378 verifyKill reports SURVIVED when the run still passes under the mutant and restores
+    Given a verifyKill temp source file with original "original_value" and mutant "mutant_value"
+    When verifyKill is called with an always-passing runner
+    Then the verifyKill verdict is "SURVIVED"
+    And the verifyKill killed flag is false
+    And the verifyKill source file still contains "original_value"
+
+  @feature53
+  Scenario: SPECGEN004_379 verifyKill always restores the source file even if the runner throws during the mutant phase
+    Given a verifyKill temp source file with original "original_value" and mutant "mutant_value"
+    When verifyKill is called with a runner that throws on the second invocation
+    Then the verifyKill call threw an exception matching "boom"
+    And the verifyKill source file still contains "original_value"
+    And the verifyKill source file does not contain "mutant_value"
+
+  @feature53
+  Scenario: SPECGEN004_380 verifyKill throws when the original string is absent from the file
+    Given a verifyKill temp source file with original "original_value" and mutant "mutant_value"
+    When verifyKill is called with original "NOT_PRESENT" and an always-passing runner
+    Then the verifyKill call threw an exception matching "original string not found"
+
+  @feature53
+  Scenario: SPECGEN004_381 verifyKill refuses when the baseline scenario is not green
+    Given a verifyKill temp source file with original "original_value" and mutant "mutant_value"
+    When verifyKill is called with an always-failing runner
+    Then the verifyKill call threw an exception matching "baseline not green"
+
+  @feature53
+  Scenario: SPECGEN004_382 verifyBatch tallies killed and survived mutants across a list of specs
+    Given a verifyKill temp source file with original "original_value" and mutant "mutant_value"
+    When verifyBatch is called with a killable spec "killable" and a surviving spec "survives" sensing "mutant_value"
+    Then the verifyBatch total is 2
+    And the verifyBatch killed count is 1
+    And the verifyBatch survived count is 1
+    And the verifyBatch error count is 0
+
+  @feature53
+  Scenario: SPECGEN004_383 verifyBatch records ERROR for a bad spec without crashing the batch
+    Given a verifyKill temp source file with original "original_value" and mutant "mutant_value"
+    When verifyBatch is called with a spec whose original is "NOT_PRESENT"
+    Then the verifyBatch error count is 1
+    And the first verifyBatch result verdict is "ERROR"

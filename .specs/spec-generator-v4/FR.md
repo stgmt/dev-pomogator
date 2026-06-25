@@ -919,3 +919,21 @@ FR-46 закрыл заднюю скобку («нельзя ЗАКОНЧИТЬ 
 
 ---
 
+## FR-53
+
+**Deterministic mutation kill verifier (`verify-kill`) — trustworthy mutation-parity gate for BDD migration**
+
+System SHALL provide `tools/stryker-mutation/verify-kill.ts` — the deterministic inject+restore kill-gate used as the mutation-parity step of the BDD migration workflow (FR-51). The tool is trustworthy where the `@stryker-mutator/cucumber-runner` aggregate is not (evidence: `audit-reports/stryker-bdd-mutation-finding.md` documents up to 48 verdict flips between identical runs due to `supportCodeLibrary` reuse across mutants).
+
+**FR-53a (`verifyKill` — deterministic three-phase verify):** `verifyKill(spec, run)` SHALL execute: (1) baseline — run ONLY the covering scenario, MUST pass (green start, else throw); (2) inject — replace `original→mutant` on disk, run the scenario, a FAIL result means killed; (3) restore — ALWAYS restore the file via `try/finally`, then re-run, MUST pass. SHALL throw when `original` is absent OR baseline is not green. Return value SHALL carry `{ verdict: 'KILLED'|'SURVIVED', killed, baseline, mutant, restored }`. Node builtins only (`node:fs`, `node:child_process`) — safe to ship in-plugin.
+
+**FR-53b (`verifyBatch` — gate over a survivor set):** `verifyBatch(specs, run)` SHALL verify a list of mutants, restoring each file per-mutant, and tally `{ total, killed, survived, errors }`. A bad spec (original absent or red baseline) SHALL produce verdict `ERROR` in the per-spec results — not a crash, batch always completes. CLI gate exit: 0 only if `killed === total`.
+
+**FR-53c (`runScenario` — the real cucumber runner):** `runScenario(config, name)` SHALL run a covering scenario via `node --import tsx node_modules/@cucumber/cucumber/bin/cucumber.js -c <config> --name <name>`, parse `N scenarios (...)` from combined stdout+stderr, and return `{ passed, ran, summary }`. A run where `ran === 0` SHALL NOT count as passed (`passed` requires `status === 0 AND ran >= 1 AND !failed`).
+
+**Связанные AC:** [AC-53.1](ACCEPTANCE_CRITERIA.md#ac-531), [AC-53.2](ACCEPTANCE_CRITERIA.md#ac-532), [AC-53.3](ACCEPTANCE_CRITERIA.md#ac-533)
+**Use Case:** [UC-3](USE_CASES.md#uc-3)
+**User Story:** US-30
+
+---
+
