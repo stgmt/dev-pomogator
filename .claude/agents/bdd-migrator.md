@@ -165,6 +165,23 @@ legitimate non-migration is a genuinely-dead test of removed code → **delete**
   script path) which sidesteps absolute paths entirely. Committing a `.specs/` pathspec is allowed
   (incl. the multi-line `git commit -F - -- <paths> <<'EOF' … EOF` heredoc form — the spec-access
   guard's git carve-out now strips the heredoc body before segment-splitting, dogfood 2026-06-21).
+- **CRLF `.feature` + `apply_spec_change` matches LF-only.** A v4-style CRLF feature (e.g.
+  `spec-generator-v4.feature`, 2500+ CRLF) rejects any MULTI-LINE `old_string` (one spanning a newline)
+  with `VALIDATION_FAILED: old_string not found` even when the text looks identical. Use a SINGLE-LINE
+  unique `old_string` (no embedded newline → CRLF-agnostic); for a genuine multi-line insert write a
+  CRLF-aware node script (Write tool, NOT heredoc — heredoc mangles `E:\…` backslash paths; run with no
+  `.specs/` literal in the command) then `conformance_check`. (Session 2026-06-25: a multi-line scenario
+  insert failed; the identical edit as single-line renames succeeded.)
+- **Verify green by `@featureN` TAG, not a `--name` substring.** `docker-bdd.sh --name "SPECGEN004_38"`
+  is a SUBSTRING match → it silently MISSES `_378`/`_379` (those are `_37x`); always `--tags "@featureN"`
+  to run the exact set. And a FILTERED `docker-bdd.sh` run **exits 0 even when scenarios FAIL** — read the
+  LOG (`N scenarios (N passed/failed)`), NEVER trust the exit code. (Session 2026-06-25: a `--name "…_38"`
+  run reported 5/7 "green" while 2 scenarios were never executed.)
+- **Mutation gutcheck: ALWAYS restore the production code before finishing — verify `git diff <path>` is
+  EMPTY (== HEAD), then re-run GREEN.** Never leave a mutated `|| true` / stubbed function behind. (Session
+  2026-06-25: an interrupted migrator left `extractWriteContent` mutated WITH the reconstruction deleted —
+  production code was broken until restored from `git show HEAD:<path>`.) The restore + the re-run GREEN are
+  part of the gutcheck, not optional; if you are killed mid-mutation the tree ships broken.
 
 ## Never
 - Fake a manual/agent-behaviour scenario green with a check that doesn't test the claim.
