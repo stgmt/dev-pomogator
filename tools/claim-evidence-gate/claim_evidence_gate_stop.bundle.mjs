@@ -2,8 +2,8 @@
 import { createRequire as __cr } from 'module'; const require = __cr(import.meta.url);
 
 // tools/claim-evidence-gate/claim_evidence_gate_stop.ts
-import fs4 from "node:fs";
-import path4 from "node:path";
+import fs5 from "node:fs";
+import path5 from "node:path";
 
 // tools/_shared/hook-utils.ts
 function log(level, prefix, message) {
@@ -344,12 +344,31 @@ function firstUnsupported(rawText, tools, minSearch = MIN_SEARCH_DEFAULT) {
 }
 
 // tools/spec-graph/task-census.ts
+import fs3 from "node:fs";
+import path3 from "node:path";
+
+// tools/spec-graph/spec-status-store.ts
 import fs2 from "node:fs";
 import path2 from "node:path";
-var CACHE_REL = path2.join(".dev-pomogator", ".task-census.json");
-var PREV_REL = path2.join(".dev-pomogator", ".task-census.prev.json");
+var SPEC_STATUSES = ["active", "backlog"];
+var SENTINEL = ".spec-status";
+function statusPath(repoRoot, slug) {
+  return path2.join(repoRoot, ".specs", slug, SENTINEL);
+}
+function readSpecStatus(repoRoot, slug) {
+  try {
+    const raw = fs2.readFileSync(statusPath(repoRoot, slug), "utf-8").trim();
+    return SPEC_STATUSES.includes(raw) ? raw : "active";
+  } catch {
+    return "active";
+  }
+}
+
+// tools/spec-graph/task-census.ts
+var CACHE_REL = path3.join(".dev-pomogator", ".task-census.json");
+var PREV_REL = path3.join(".dev-pomogator", ".task-census.prev.json");
 function taskCensusCachePath(repoRoot) {
-  return path2.join(repoRoot, CACHE_REL);
+  return path3.join(repoRoot, CACHE_REL);
 }
 function scopeCensusToSlugs(census, slugs) {
   const specs = census.specs.filter((s) => slugs.has(s.slug));
@@ -364,10 +383,11 @@ function liveOpenForUncensusedSlugs(repoRoot, editedSlugs, census) {
   let open = 0;
   for (const slug of editedSlugs) {
     if (known.has(slug)) continue;
+    if (readSpecStatus(repoRoot, slug) === "backlog") continue;
     try {
-      const txt = fs2.readFileSync(path2.join(repoRoot, ".specs", slug, "TASKS.md"), "utf-8");
+      const txt = fs3.readFileSync(path3.join(repoRoot, ".specs", slug, "TASKS.md"), "utf-8");
       for (const line of txt.split("\n")) {
-        if (/^- \[ \]/.test(line) && !line.includes("{")) open++;
+        if (/^- \[ \]/.test(line) && !line.includes("{") && !/Status:\s*BLOCKED/i.test(line)) open++;
       }
     } catch {
     }
@@ -381,7 +401,7 @@ function sessionEditedSpecSlugs(transcriptPath) {
   const slugs = /* @__PURE__ */ new Set();
   let raw;
   try {
-    raw = fs2.readFileSync(transcriptPath, "utf-8");
+    raw = fs3.readFileSync(transcriptPath, "utf-8");
   } catch {
     return slugs;
   }
@@ -418,7 +438,7 @@ function lastEditedSpecSlug(transcriptPath) {
   let last = null;
   let raw;
   try {
-    raw = fs2.readFileSync(transcriptPath, "utf-8");
+    raw = fs3.readFileSync(transcriptPath, "utf-8");
   } catch {
     return null;
   }
@@ -455,7 +475,7 @@ var OPEN_TODO_STATUS = /* @__PURE__ */ new Set(["pending", "in_progress"]);
 function parseAgentTodos(transcriptPath) {
   let raw;
   try {
-    raw = fs2.readFileSync(transcriptPath, "utf-8");
+    raw = fs3.readFileSync(transcriptPath, "utf-8");
   } catch {
     return [];
   }
@@ -504,7 +524,7 @@ function agentNextOpenTodo(transcriptPath) {
 }
 function readCacheFile(p) {
   try {
-    const parsed = JSON.parse(fs2.readFileSync(p, "utf-8"));
+    const parsed = JSON.parse(fs3.readFileSync(p, "utf-8"));
     if (!parsed?.total || typeof parsed.total.open !== "number") return null;
     return parsed;
   } catch {
@@ -516,8 +536,8 @@ function readTaskCensusCache(repoRoot) {
 }
 
 // tools/claim-evidence-gate/meridian-judge.ts
-import * as fs3 from "node:fs";
-import * as path3 from "node:path";
+import * as fs4 from "node:fs";
+import * as path4 from "node:path";
 var MODEL_OVERRIDE = process.env.CLAIM_GATE_JUDGE_MODEL;
 var TIMEOUT_MS = 6e3;
 function logUnavailable(reason) {
@@ -533,9 +553,9 @@ function ensureDotenvLoaded() {
   dotenvLoaded = true;
   for (const name of [".env", ".env.local", ".env.test"]) {
     try {
-      const p = path3.join(process.cwd(), name);
-      if (!fs3.existsSync(p)) continue;
-      for (const raw of fs3.readFileSync(p, "utf-8").split("\n")) {
+      const p = path4.join(process.cwd(), name);
+      if (!fs4.existsSync(p)) continue;
+      for (const raw of fs4.readFileSync(p, "utf-8").split("\n")) {
         const line = raw.trim();
         if (!line || line.startsWith("#")) continue;
         const m = line.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/);
@@ -722,9 +742,9 @@ function warn(systemMessage) {
 }
 function logFire(repoRoot, entry) {
   try {
-    const p = path4.join(repoRoot, MARKER_DIR, FIRES_FILENAME);
-    fs4.mkdirSync(path4.dirname(p), { recursive: true });
-    fs4.appendFileSync(p, JSON.stringify(entry) + "\n");
+    const p = path5.join(repoRoot, MARKER_DIR, FIRES_FILENAME);
+    fs5.mkdirSync(path5.dirname(p), { recursive: true });
+    fs5.appendFileSync(p, JSON.stringify(entry) + "\n");
   } catch {
   }
 }
@@ -746,21 +766,21 @@ function censusReminder(c) {
 var BG_MARKER_TTL_MS = 9e5;
 function bgJobMarkerActive(repoRoot) {
   try {
-    const dir = path4.join(repoRoot, MARKER_DIR);
+    const dir = path5.join(repoRoot, MARKER_DIR);
     const now = Date.now();
-    for (const name of fs4.readdirSync(dir)) {
+    for (const name of fs5.readdirSync(dir)) {
       if (!name.startsWith(".bg-task-active")) continue;
-      const p = path4.join(dir, name);
+      const p = path5.join(dir, name);
       let st;
       try {
-        st = fs4.statSync(p);
+        st = fs5.statSync(p);
       } catch {
         continue;
       }
       if (!st.isFile() || now - st.mtimeMs > BG_MARKER_TTL_MS) continue;
       let body = "";
       try {
-        body = fs4.readFileSync(p, "utf-8");
+        body = fs5.readFileSync(p, "utf-8");
       } catch {
         continue;
       }
@@ -785,10 +805,10 @@ async function main() {
   }
   const inContinuation = input.stop_hook_active === true;
   const tx = input.transcript_path;
-  if (!tx || !fs4.existsSync(tx)) return approve();
+  if (!tx || !fs5.existsSync(tx)) return approve();
   let rawTranscript = "";
   try {
-    rawTranscript = fs4.readFileSync(tx, "utf-8");
+    rawTranscript = fs5.readFileSync(tx, "utf-8");
   } catch {
     return approve();
   }
