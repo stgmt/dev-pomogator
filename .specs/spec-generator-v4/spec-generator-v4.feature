@@ -1217,13 +1217,13 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then the write is refused as ARCHIVE_SEALED
 
   @feature46
-  Scenario: SPECGEN004_160 conformance flags a DONE task that cites no scenario of its own
+  Scenario: SPECGEN004_450 conformance flags a DONE task that cites no scenario of its own
     Given a graph with a DONE task whose Done-When cites only its requirement, not its own scenario
     When conformance runs over the graph
     Then a TASK_NO_OWN_SCENARIO warning is raised for that task
 
   @feature46
-  Scenario: SPECGEN004_161 conformance does not flag a DONE task that cites its own scenario id
+  Scenario: SPECGEN004_451 conformance does not flag a DONE task that cites its own scenario id
     Given a graph with a DONE task whose Done-When cites its own SPECGEN scenario id which passed
     When conformance runs over the graph
     Then no TASK_NO_OWN_SCENARIO finding is raised for that task
@@ -1315,7 +1315,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then the change is refused as STATUS_DERIVED and the reply carries the FR census verdict
 
   @feature48
-  Scenario: SPECGEN004_176 a phase STOP is confirmed through the door only past the ordering gate
+  Scenario: SPECGEN004_452 a phase STOP is confirmed through the door only past the ordering gate
     Given a temp spec whose Discovery STOP is not yet confirmed
     When phase status changes are requested through set_entity_status
     Then confirming the Requirements STOP first is refused for the unconfirmed prior STOP, a task-vocab status on a phase is illegal-for-type, and confirming the Discovery STOP writes stopConfirmed through the canonical writer
@@ -2634,3 +2634,44 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When verifyBatch is called with a spec whose original is "NOT_PRESENT"
     Then the verifyBatch error count is 1
     And the first verifyBatch result verdict is "ERROR"
+
+  @feature19
+  Scenario: SPECGEN004_385 extractWriteContent user-story-form-guard Edit heading-only allows write
+    Given an isolated spec directory with a fully-formed USER_STORIES.md for extractWriteContent testing
+    When the user-story-form-guard receives an Edit of the user story heading only leaving body intact
+    Then the user-story-form-guard exits 0 and allows the user story write
+
+  @feature19
+  Scenario: SPECGEN004_386 extractWriteContent user-story-form-guard Edit on incomplete file still denies
+    Given an isolated spec directory with an incomplete USER_STORIES.md lacking required body fields
+    When the user-story-form-guard receives an Edit of the heading on the incomplete user story file
+    Then the user-story-form-guard exits non-zero and stderr mentions missing why
+
+  @feature19
+  Scenario Outline: SPECGEN004_387 extractWriteContent user-story-form-guard Write tool unchanged behavior
+    Given an isolated spec directory with a fully-formed USER_STORIES.md for extractWriteContent testing
+    When the user-story-form-guard receives a Write with <content_kind> user story content
+    Then the user-story-form-guard Write exits <write_result>
+
+    Examples:
+      | content_kind  | write_result |
+      | fully-formed  | allowed      |
+      | incomplete    | denied       |
+
+  @feature19
+  Scenario: SPECGEN004_388 extractWriteContent task-form-guard Edit title-only allows write
+    Given an isolated spec directory with a fully-formed TASKS.md for extractWriteContent testing
+    When the task-form-guard receives an Edit of the task title only leaving body fields intact
+    Then the task-form-guard exits 0 and allows the task write
+
+  @feature19
+  Scenario: SPECGEN004_389 extractWriteContent user-story-form-guard Edit with replace_all on multi-story file allows write
+    Given an isolated spec directory with a multi-story USER_STORIES.md for extractWriteContent testing
+    When the user-story-form-guard receives an Edit with replace_all true on the multi-story user story file
+    Then the user-story-form-guard exits 0 and allows the user story write
+
+  @feature19
+  Scenario: SPECGEN004_390 extractWriteContent user-story-form-guard Edit fallback when old_string absent uses new_string allowing write
+    Given an isolated spec directory with a fully-formed USER_STORIES.md for extractWriteContent testing
+    When the user-story-form-guard receives an Edit with an old_string absent from the file
+    Then the user-story-form-guard exits 0 and allows the user story write
