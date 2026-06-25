@@ -344,6 +344,51 @@ export function sessionEditedSpecSlugs(transcriptPath: string): Set<string> {
 }
 
 /**
+ * FR-22 (2026-06-25, owner «агент должен выбирать из того что пинатор предлагает, чтоб не делать
+ * рандомные задачи»): the slug of the spec this session edited MOST RECENTLY (last write in transcript
+ * order) — so the gate offers the NEXT OPEN TASK of the spec you are CURRENTLY on, not an arbitrary
+ * `specs[0]`. Same edit-detection as sessionEditedSpecSlugs (door mutations + raw Edit/Write under
+ * `.specs/<slug>/`, skipping `.feature` test-authoring). Fail-open → null.
+ */
+export function lastEditedSpecSlug(transcriptPath: string): string | null {
+  let last: string | null = null;
+  let raw: string;
+  try {
+    raw = fs.readFileSync(transcriptPath, 'utf-8');
+  } catch {
+    return null;
+  }
+  for (const line of raw.split(/\r?\n/)) {
+    if (!line.includes('"tool_use"') || line.length > 2_000_000) continue;
+    let entry: { message?: { content?: unknown } };
+    try {
+      entry = JSON.parse(line);
+    } catch {
+      continue;
+    }
+    const content = entry?.message?.content;
+    if (!Array.isArray(content)) continue;
+    for (const b of content as Array<Record<string, unknown>>) {
+      if (b?.type !== 'tool_use') continue;
+      const name = String(b.name ?? '');
+      const input = (b.input ?? {}) as Record<string, unknown>;
+      if (DOOR_WRITE_TOOL_RE.test(name)) {
+        if (typeof input.doc === 'string' && input.doc.endsWith('.feature')) continue;
+        if (typeof input.spec === 'string') last = input.spec;
+        else if (typeof input.slug === 'string') last = input.slug;
+        continue;
+      }
+      if (RAW_WRITE_TOOL_RE.test(name) && typeof input.file_path === 'string') {
+        if (input.file_path.endsWith('.feature')) continue;
+        const m = input.file_path.match(SPEC_PATH_RE);
+        if (m) last = m[1];
+      }
+    }
+  }
+  return last;
+}
+
+/**
  * K3 (2026-06-21): the count of the agent's OWN still-open declared work — its Task / TodoWrite list,
  * reconstructed from the transcript's tool_use records. This is the ground truth for work that ISN'T
  * spec tasks: a session editing only `tools/` (or doing NEW work on a census-complete spec) has 0

@@ -14,7 +14,7 @@ import { buildJudgeNoTokenDemand, resolveEndpoint, isJudgeArmed } from '../merid
 
 import { classify, firstUnsupported, stripCode } from '../claim_classifier.ts';
 import { extractTurnWindow, bgInFlightInWindow, agentBgInFlight, agentBgInFlightCount, lastUserPrompt } from '../turn_window.ts';
-import { agentOpenTodoCount, liveOpenForUncensusedSlugs } from '../../spec-graph/task-census.ts';
+import { agentOpenTodoCount, liveOpenForUncensusedSlugs, lastEditedSpecSlug } from '../../spec-graph/task-census.ts';
 
 const HOOK = path.resolve(__dirname, '..', 'claim_evidence_gate_stop.ts');
 
@@ -708,5 +708,24 @@ describe('CEGATE001: FR-20 — naming the gate no longer grants a free stop', ()
     // sanity: same claim WITH an executor in the window → works-done is backed → approve (no false block)
     const backed = [U('почини'), A([tool('Bash', { command: 'npm test' })]), A([txt('Гейт claim-evidence-gate работает, всё готово.')])];
     expect(runHook(backed).blocked).toBe(false);
+  });
+});
+
+describe('CEGATE001: FR-22 — offer the task of the MOST RECENTLY edited spec', () => {
+  // FR-22 (owner 2026-06-25 «агент выбирает из того что пинатор предлагает, не рандом»): the gate offers
+  // the NEXT OPEN TASK of the spec edited LAST (the one the agent is on), not an arbitrary specs[0].
+  const door = (spec: string, doc = 'FR.md') => A([tool('mcp__dev-pomogator-specs__apply_spec_change', { spec, doc })]);
+  it('CEGATE001_41: lastEditedSpecSlug returns the LAST-written spec (recency, ignores .feature)', () => {
+    const fp = path.join(dir, 'lt.jsonl');
+    fs.writeFileSync(fp, [door('alpha'), door('beta'), door('alpha')].map((r) => JSON.stringify(r)).join('\n'));
+    expect(lastEditedSpecSlug(fp)).toBe('alpha'); // alpha edited last
+    fs.writeFileSync(fp, [door('alpha'), door('beta')].map((r) => JSON.stringify(r)).join('\n'));
+    expect(lastEditedSpecSlug(fp)).toBe('beta'); // beta edited last
+    // a .feature edit is test-authoring → does NOT take ownership; alpha stays the last impl edit
+    fs.writeFileSync(fp, [door('alpha'), door('beta', 'b.feature')].map((r) => JSON.stringify(r)).join('\n'));
+    expect(lastEditedSpecSlug(fp)).toBe('alpha');
+    // no edits → null (fail-open)
+    fs.writeFileSync(fp, [U('просто текст')].map((r) => JSON.stringify(r)).join('\n'));
+    expect(lastEditedSpecSlug(fp)).toBeNull();
   });
 });

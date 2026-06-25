@@ -414,6 +414,43 @@ function sessionEditedSpecSlugs(transcriptPath) {
   }
   return slugs;
 }
+function lastEditedSpecSlug(transcriptPath) {
+  let last = null;
+  let raw;
+  try {
+    raw = fs2.readFileSync(transcriptPath, "utf-8");
+  } catch {
+    return null;
+  }
+  for (const line of raw.split(/\r?\n/)) {
+    if (!line.includes('"tool_use"') || line.length > 2e6) continue;
+    let entry;
+    try {
+      entry = JSON.parse(line);
+    } catch {
+      continue;
+    }
+    const content = entry?.message?.content;
+    if (!Array.isArray(content)) continue;
+    for (const b of content) {
+      if (b?.type !== "tool_use") continue;
+      const name = String(b.name ?? "");
+      const input = b.input ?? {};
+      if (DOOR_WRITE_TOOL_RE.test(name)) {
+        if (typeof input.doc === "string" && input.doc.endsWith(".feature")) continue;
+        if (typeof input.spec === "string") last = input.spec;
+        else if (typeof input.slug === "string") last = input.slug;
+        continue;
+      }
+      if (RAW_WRITE_TOOL_RE.test(name) && typeof input.file_path === "string") {
+        if (input.file_path.endsWith(".feature")) continue;
+        const m = input.file_path.match(SPEC_PATH_RE);
+        if (m) last = m[1];
+      }
+    }
+  }
+  return last;
+}
 var OPEN_TODO_STATUS = /* @__PURE__ */ new Set(["pending", "in_progress"]);
 function parseAgentTodos(transcriptPath) {
   let raw;
@@ -765,7 +802,9 @@ async function main() {
   const scopedSpecOpen = scoped ? scoped.total.open + scoped.total.doneRed : 0;
   const liveOpen = liveOpenForUncensusedSlugs(repoRoot, editedSlugs, globalCensus);
   const openWork = scopedSpecOpen + agentOpen + liveOpen;
-  const nextStepHint = scoped?.specs?.[0]?.nextOpen?.title ?? agentNextOpenTodo(tx);
+  const recencySlug = lastEditedSpecSlug(tx);
+  const recencyNextOpen = recencySlug ? scoped?.specs?.find((s) => s.slug === recencySlug)?.nextOpen ?? null : null;
+  const nextStepHint = recencyNextOpen?.title ?? scoped?.specs?.[0]?.nextOpen?.title ?? agentNextOpenTodo(tx);
   const nextLine = nextStepHint ? `
 \u{1F449} \u0421\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0435: ${nextStepHint}` : "";
   const MUTATING_TOOL = /^(edit|write|multiedit|notebookedit|bash|powershell)$/i;
@@ -828,7 +867,8 @@ async function main() {
         // 1+3 (2026-06-21): the named next step consumes the pending bg result → legit wait
         // Phase 0 (2026-06-21): the next open task is ALREADY named → "which task?" is a fake hand-off;
         // a multi-spec session makes "which spec to finish" a genuine owner choice (a legit AskUserQuestion).
-        nextOpenTask: scoped?.specs?.[0]?.nextOpen ?? null,
+        nextOpenTask: recencyNextOpen ?? scoped?.specs?.[0]?.nextOpen ?? null,
+        // FR-22: prefer the spec edited most recently
         multiSpecSession: editedSlugs.size > 1,
         userRequest
         // Phase 1: backstop — the judge approves a report-stop the user asked for

@@ -34,7 +34,7 @@ import { log as _logShared, normalizePath } from '../_shared/hook-utils.ts';
 import { markerPath, readMarker, writeMarkerAtomic, isWithinCooldown, hashFileList } from '../_shared/marker-utils.ts';
 import { extractTurnWindow, bgInFlightInWindow, agentBgInFlightCount, bgCommandInFlight, lastUserPrompt } from './turn_window.ts';
 import { firstUnsupported, isSpecCompletionClaim } from './claim_classifier.ts';
-import { readTaskCensusCache, scopeCensusToSlugs, sessionEditedSpecSlugs, agentOpenTodoCount, agentNextOpenTodo, liveOpenForUncensusedSlugs, type TaskCensusCache } from '../spec-graph/task-census.ts';
+import { readTaskCensusCache, scopeCensusToSlugs, sessionEditedSpecSlugs, lastEditedSpecSlug, agentOpenTodoCount, agentNextOpenTodo, liveOpenForUncensusedSlugs, type TaskCensusCache } from '../spec-graph/task-census.ts';
 import { judgeStop, judgeAvailable, buildJudgeNoTokenDemand, isJudgeArmed } from './meridian-judge.ts';
 
 interface StopHookInput {
@@ -255,7 +255,13 @@ async function main(): Promise<void> {
   // Phase 2 part 1 (2026-06-21): a HELPFUL kick NAMES the next concrete step — the spec's next open task
   // if any, else the agent's own next open todo (so a non-spec session is told «делай X», not just barked
   // at). Cures the «слепота» the owner flagged: the gate should point at the next task, not only block.
-  const nextStepHint = scoped?.specs?.[0]?.nextOpen?.title ?? agentNextOpenTodo(tx);
+  // FR-22 (2026-06-25): offer the next task of the spec edited MOST RECENTLY (the one the agent is
+  // currently on), not an arbitrary `specs[0]` — so «pick what the gate offers» means a CONTEXTUAL task,
+  // not a random one. Falls back to specs[0] then the agent's own next todo (recency spec may be absent
+  // from the census snapshot — then specs[0] / todo covers it). Fail-open via the optional chains.
+  const recencySlug = lastEditedSpecSlug(tx);
+  const recencyNextOpen = recencySlug ? (scoped?.specs?.find((s) => s.slug === recencySlug)?.nextOpen ?? null) : null;
+  const nextStepHint = recencyNextOpen?.title ?? scoped?.specs?.[0]?.nextOpen?.title ?? agentNextOpenTodo(tx);
   const nextLine = nextStepHint ? `\n👉 Следующее: ${nextStepHint}` : '';
 
   // FR-10/FR-11: observable, agent-INDEPENDENT facts about THIS turn (the harness writes the tool_use
@@ -420,7 +426,7 @@ async function main(): Promise<void> {
         nextStepAwaitsResult, // 1+3 (2026-06-21): the named next step consumes the pending bg result → legit wait
         // Phase 0 (2026-06-21): the next open task is ALREADY named → "which task?" is a fake hand-off;
         // a multi-spec session makes "which spec to finish" a genuine owner choice (a legit AskUserQuestion).
-        nextOpenTask: scoped?.specs?.[0]?.nextOpen ?? null,
+        nextOpenTask: recencyNextOpen ?? scoped?.specs?.[0]?.nextOpen ?? null, // FR-22: prefer the spec edited most recently
         multiSpecSession: editedSlugs.size > 1,
         userRequest, // Phase 1: backstop — the judge approves a report-stop the user asked for
       };
