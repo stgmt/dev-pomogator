@@ -38,7 +38,6 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { readSpecStatus } from './spec-status-store.ts';
 import type { SpecGraph, TaskNode, ScenarioNode } from './types.ts';
 import {
   mapTasksToScenarios,
@@ -112,11 +111,7 @@ export function computeTaskCensus(
     // (pinator) reads this census, so a backlog spec's tasks no longer arm it. No status math — a
     // human marked it. See tools/spec-graph/spec-status-store.ts.
     if (opts.backlogSpecs?.has(slug)) continue;
-    // FR-23 (2026-06-25): BLOCKED is EXCLUDED from `open`. A blocked task is NOT actionable «open work to
-    // do now» — it needs an external unblock (owner credential, a blocked dependency). It MUST NOT arm the
-    // Stop-gate, else the agent is kicked to «do» something it physically CAN'T (the docker-sudo loop the
-    // owner hit). The gate weighs only what the agent can actually do → only todo / in-progress.
-    if (t.status === 'todo' || t.status === 'in-progress') {
+    if (t.status === 'todo' || t.status === 'in-progress' || t.status === 'blocked') {
       const r = row(slug);
       r.open++;
       // FR-49a: capture the FIRST open task (document order) as the spec's «next step».
@@ -281,15 +276,10 @@ export function liveOpenForUncensusedSlugs(
   let open = 0;
   for (const slug of editedSlugs) {
     if (known.has(slug)) continue; // the cache already counts this spec
-    // FR-23 (2026-06-25): a spec EXPLICITLY marked `backlog` (parked / being built) is not «open work to
-    // do now» — the census excludes it; the LIVE counter must too, else a parked WIP spec keeps arming the
-    // gate even though its work is deferred. Mirrors computeTaskCensus's `backlogSpecs` skip.
-    if (readSpecStatus(repoRoot, slug) === 'backlog') continue;
     try {
       const txt = fs.readFileSync(path.join(repoRoot, '.specs', slug, 'TASKS.md'), 'utf-8');
       for (const line of txt.split('\n')) {
-        // FR-23: skip BLOCKED tasks — not actionable «open work to do now» (must not arm the gate).
-        if (/^- \[ \]/.test(line) && !line.includes('{') && !/Status:\s*BLOCKED/i.test(line)) open++;
+        if (/^- \[ \]/.test(line) && !line.includes('{')) open++;
       }
     } catch {
       /* fail-open: missing/unreadable TASKS.md → contributes 0 */

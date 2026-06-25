@@ -729,22 +729,3 @@ describe('CEGATE001: FR-22 — offer the task of the MOST RECENTLY edited spec',
     expect(lastEditedSpecSlug(fp)).toBeNull();
   });
 });
-
-describe('CEGATE001: FR-23 — BLOCKED tasks + backlog specs are not actionable open work', () => {
-  // FR-23 (2026-06-25): a BLOCKED task (needs an external unblock) and an explicitly-parked `backlog`
-  // spec are NOT «open work to do now» — they must NOT arm the gate (the docker-sudo over-fire loop).
-  it('CEGATE001_42: liveOpen excludes BLOCKED tasks and skips backlog specs', () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cegate-fr23-'));
-    const slug = 'blk-spec';
-    fs.mkdirSync(path.join(root, '.specs', slug), { recursive: true });
-    fs.writeFileSync(
-      path.join(root, '.specs', slug, 'TASKS.md'),
-      ['# Tasks', '- [ ] Real actionable task — Status: TODO', '- [ ] Parked task — Status: BLOCKED'].join('\n'),
-    );
-    // active spec → only the TODO counts; the BLOCKED task is excluded
-    expect(liveOpenForUncensusedSlugs(root, new Set([slug]), { specs: [] })).toBe(1);
-    // mark the spec backlog → the whole spec is skipped → 0
-    fs.writeFileSync(path.join(root, '.specs', slug, '.spec-status'), 'backlog');
-    expect(liveOpenForUncensusedSlugs(root, new Set([slug]), { specs: [] })).toBe(0);
-  });
-});
