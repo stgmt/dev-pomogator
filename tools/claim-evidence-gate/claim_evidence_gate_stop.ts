@@ -34,8 +34,8 @@ import { log as _logShared, normalizePath } from '../_shared/hook-utils.ts';
 import { markerPath, readMarker, writeMarkerAtomic, isWithinCooldown, hashFileList } from '../_shared/marker-utils.ts';
 import { extractTurnWindow, bgInFlightInWindow, agentBgInFlightCount, bgCommandInFlight, lastUserPrompt } from './turn_window.ts';
 import { firstUnsupported, isSpecCompletionClaim } from './claim_classifier.ts';
-import { readTaskCensusCache, scopeCensusToSlugs, sessionEditedSpecSlugs, agentOpenTodoCount, agentNextOpenTodo, type TaskCensusCache } from '../spec-graph/task-census.ts';
-import { judgeStop } from './meridian-judge.ts';
+import { readTaskCensusCache, scopeCensusToSlugs, sessionEditedSpecSlugs, agentOpenTodoCount, agentNextOpenTodo, liveOpenForUncensusedSlugs, type TaskCensusCache } from '../spec-graph/task-census.ts';
+import { judgeStop, judgeAvailable, buildJudgeNoTokenDemand, isJudgeArmed } from './meridian-judge.ts';
 
 interface StopHookInput {
   cwd?: string;
@@ -49,17 +49,14 @@ const MARKER_DIR = '.dev-pomogator';
 const MARKER_FILENAME = '.claim-evidence-gate-marker.json';
 const FIRES_FILENAME = '.claim-evidence-gate-fires.jsonl';
 const SELF_MARKER = 'claim-evidence-gate';
-// Self-reference skip: when a message is ABOUT this gate (reporting on it,
-// quoting its trigger phrases as examples) it must not trigger the gate — including
-// being escalated to the judge. The original single English marker missed Russian
-// meta-discussion ("пинатор", "ДОДЕЛЫВАЙ", "deferred-work"), which false-fired on a
-// completion report that merely DESCRIBED the gate. Low gaming-risk: these are the
-// gate's OWN vocabulary, not words a genuine deferral ("беру дальше пункт 1") contains.
-// NOTE (2026-06-17, user decision): the casual «пинатор»/«ДОДЕЛЫВАЙ» were REMOVED — they granted a
-// FREE STOP to ANY message merely mentioning the kicker, which is how recent premature stops
-// slipped. Scoped now to the gate's PRECISE internals only; genuine meta-reports that don't quote
-// them are still covered by the judge's own answer/clarifying carve-out.
-const SELF_MARKERS = ['claim-evidence-gate', 'deferred-work'];
+// FR-20 (2026-06-25, owner «выпиливай эту хуйню»): the broad SELF_MARKERS self-reference skip was REMOVED.
+// It did `return approve()` whenever the message merely CONTAINED «claim-evidence-gate» / «deferred-work» —
+// so ANY work report that NAMES the gate or its spec/file got a FREE STOP (a status report with open work +
+// no «Дальше:» sailed straight through — the 2026-06-25 incident). It is the SAME class as the 2026-06-17
+// removal of «пинатор»/«ДОДЕЛЫВАЙ» (a name-mention is not a reason to skip evaluation). A report ABOUT the
+// gate is now EVALUATED like any other; the judge's answer/meta carve-out + the classifier's standalone-claim
+// guard handle a genuine meta-discussion without a blanket name-skip. (SELF_MARKER above stays — it's only
+// the block-reason PREFIX the gate prints, not a skip trigger.)
 const LOG_PREFIX = 'CLAIM-EVIDENCE-GATE';
 // FR-49e: loose lexical net for "the turn ended on a progress/completion/continuation
 // claim" — the cheap gate for escalating to the Meridian judge (also requires the census
@@ -109,6 +106,14 @@ function approve(): void {
 }
 function block(reason: string): void {
   process.stdout.write(JSON.stringify({ decision: 'block', reason }));
+}
+/**
+ * Approve the stop BUT surface a chat-visible, non-blocking warning (Claude Code `systemMessage`,
+ * the same channel prompt-suggest uses for its 💡). Used for the no-token case (FR-15): the smart
+ * judge can't run without a token, but that is the user's config gap — warn, don't block.
+ */
+function warn(systemMessage: string): void {
+  process.stdout.write(JSON.stringify({ decision: 'approve', systemMessage }));
 }
 
 function logFire(repoRoot: string, entry: Record<string, unknown>): void {
@@ -217,7 +222,7 @@ async function main(): Promise<void> {
   }
 
   const { claimText, toolUses } = extractTurnWindow(rawTranscript);
-  if (!claimText.trim() || SELF_MARKERS.some((m) => claimText.includes(m))) return approve();
+  if (!claimText.trim()) return approve();
 
   const repoRoot = normalizePath(input.cwd || input.workspace_roots?.[0] || process.cwd());
 
@@ -240,8 +245,13 @@ async function main(): Promise<void> {
   // todos, not the global backlog) → it does NOT reintroduce the FR-9 over-fire.
   const agentOpen = agentOpenTodoCount(tx);
   const scopedSpecOpen = scoped ? scoped.total.open + scoped.total.doneRed : 0;
-  // The open-work signal every firing precondition gates on: spec-scope open + the agent's own todos.
-  const openWork = scopedSpecOpen + agentOpen;
+  // FR-19 (2026-06-25): for session-edited slugs the census SNAPSHOT lacks (a freshly-created / just-edited
+  // spec it predates), count their open tasks LIVE from TASKS.md — so `openWork` isn't falsely 0 (the
+  // no-kick root cause). Bounded to edited slugs, fail-open, no graph build. FR-17 stays load-bearing.
+  const liveOpen = liveOpenForUncensusedSlugs(repoRoot, editedSlugs, globalCensus);
+  // The open-work signal every firing precondition gates on: spec-scope open + the agent's own todos +
+  // FR-19 live count of edited-but-uncensused specs.
+  const openWork = scopedSpecOpen + agentOpen + liveOpen;
   // Phase 2 part 1 (2026-06-21): a HELPFUL kick NAMES the next concrete step — the spec's next open task
   // if any, else the agent's own next open todo (so a non-spec session is told «делай X», not just barked
   // at). Cures the «слепота» the owner flagged: the gate should point at the next task, not only block.
@@ -376,12 +386,24 @@ async function main(): Promise<void> {
   // the regex can't match. ON by default; set CLAIM_GATE_JUDGE=false to disable. SINGLE real path —
   // no mock, no secondary fallback endpoint (user 2026-06-17 «никаких моков и фолбеков»). judgeStop
   // logs WHY to stderr and returns null when помогатор is unreachable. Fires RARELY.
-  if (!unsupported && !analysisOnly && (process.env.CLAIM_GATE_JUDGE ?? 'true').toLowerCase() === 'true') {
-    const unfinished = openWork; // spec-scope open + agent todos (K3) — arms the judge on non-spec announce-and-stop
-    // 2026-06-21: NO `!awaitingAsync` here — «жду фоновое» no longer GAGS the judge. The judge runs even
-    // during a wait and decides with the bg fact: a genuine present-tense continuation → APPROVE; naming a
-    // next task while work is open («возьму следующую, если не скажешь») → BLOCK (waiting ≠ stop-license).
-    if (unfinished > 0 && GRAY_SIGNAL.test(claimText)) {
+  // 2026-06-21: NO `!awaitingAsync` here — «жду фоновое» no longer GAGS the judge. The judge runs even
+  // during a wait and decides with the bg fact: a genuine present-tense continuation → APPROVE; naming a
+  // next task while work is open («возьму следующую, если не скажешь») → BLOCK (waiting ≠ stop-license).
+  // FR-17 (2026-06-25): isJudgeArmed escalates on a «Дальше:» block (NEXT_SECTION_RE) INDEPENDENT of
+  // openWork AND analysisOnly — the task-census can lag a freshly-edited spec (openWork=0 falsely → the
+  // judge never ran → the real incident); a named-next block is the reliable arming trigger. The judge's
+  // own carve-outs still APPROVE a genuine report-stop (no «Дальше:» block). openWork>0 keeps analysisOnly.
+  if (
+    !unsupported &&
+    isJudgeArmed({
+      openWork,
+      gray: GRAY_SIGNAL.test(claimText),
+      hasNextBlock: NEXT_SECTION_RE.test(claimText),
+      analysisOnly,
+      judgeEnabled: (process.env.CLAIM_GATE_JUDGE ?? 'true').toLowerCase() === 'true',
+    })
+  ) {
+    {
       // A TRANSIENT judge failure (timeout / network blip → null) must NOT be a free pass —
       // that fail-open was the actual escape route. The judge BLOCKS the announce-and-stop
       // phrasings when it RUNS, but an intermittent null → approve let a premature stop slip and
@@ -407,16 +429,24 @@ async function main(): Promise<void> {
       if (verdict?.block) {
         unsupported = { cls: 'judge-block', need: verdict.reason };
       } else if (verdict === null) {
-        // NO free stop when помогатор is unreachable. A null verdict (no token / endpoint down /
-        // unparseable — judgeStop logs WHY to stderr) used to fall through to approve — the last
-        // bypass. User decision 2026-06-17 («нельзя обойти»): a gray progress/completion claim while
-        // the census shows open work, with NO judge to clear it, is an unconfirmed stop → BLOCK
-        // deterministically. The anti-loop cap below bounds it, so a genuinely-offline user is
-        // released after a few kicks rather than hung (and CLAIM_GATE_JUDGE=false disables it).
-        unsupported = {
-          cls: 'judge-unavailable',
-          need: `помогатор-судья недоступен (см. stderr — почему), а открытой работы ${openWork} (спека-scope + todo сессии) — стоп не подтверждён`,
-        };
+        // A null verdict (no token / endpoint down / unparseable — judgeStop logs WHY to stderr) splits
+        // by CAUSE (the «why» is chat-visible per FR-15, not stderr-only):
+        //  • token PRESENT but endpoint unreachable → judge-unavailable → BLOCK fail-closed. That user
+        //    wired помогатор and expects enforcement (user 2026-06-17 «нельзя обойти»); the anti-loop cap
+        //    below bounds it so a transient outage releases after a few kicks rather than hanging.
+        //  • NO token resolves (judgeAvailable()===false) — the common case for users who never wired
+        //    помогатор → judge-no-token → WARN, NOT block (handled at the dispatch below). A missing token
+        //    is the user's CONFIG gap, not a lazy stop (user 2026-06-25 «без токена … только предупреждать
+        //    в чате»); the demand names the exact env vars + endpoint so anyone can switch the judge on.
+        unsupported = judgeAvailable()
+          ? {
+              cls: 'judge-unavailable',
+              need: `помогатор-судья недоступен (endpoint не ответил — см. stderr), а открытой работы ${openWork} (спека-scope + todo сессии) — стоп не подтверждён`,
+            }
+          : {
+              cls: 'judge-no-token',
+              need: buildJudgeNoTokenDemand(openWork),
+            };
       }
       // verdict.block === false (a reachable judge CLEARED the stop) → fall through to approve
     }
@@ -457,6 +487,18 @@ async function main(): Promise<void> {
   if (config.mode === 'shadow') {
     log('INFO', `shadow: would block ${unsupported.cls}`);
     return approve();
+  }
+
+  // FR-15 (user 2026-06-25 «без токена блокировать не должен, только предупреждать в чате»): NO TOKEN
+  // → WARN, do NOT block. A gray-zone stop the smart judge can't clear because помогатор has no token
+  // is the user's CONFIG gap, not a lazy stop to punish. Surface the demand as a chat-visible
+  // `systemMessage` and let the stop PROCEED (the demand was already logged via logFire above). Wiring
+  // any judge key removes this branch entirely (the real judge then runs). NOTE: judge-unavailable
+  // (token present but endpoint down) is deliberately NOT softened — that user expects enforcement and
+  // still blocks fail-closed; only the no-token config gap warns.
+  if (unsupported.cls === 'judge-no-token') {
+    log('INFO', 'no token → warn (not block)');
+    return warn(`⚠️ ${SELF_MARKER}: ${unsupported.need}`);
   }
 
   // Anti-loop bookkeeping. (mp + priorMarker were read early for the α gate-meta streak.)

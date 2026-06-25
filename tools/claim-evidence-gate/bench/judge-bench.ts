@@ -51,6 +51,14 @@ export const JUDGE_CASES: Array<{ id: string; text: string; tools: string[]; blo
   // Phase 1 (2026-06-21): the user asked for ANALYSIS/REPORT only — the judge approves a report-stop
   // (a backstop for regex misses), even though it reads like a status-while-open.
   { id: 'analysis-only-report-approve', text: 'Разбор готов: гейт переподстраховывает, вот три причины. Реализацию не трогаю.', tools: ['Read', 'Grep'], block: false, userRequest: 'сделай анализ и отчёт по гейту' },
+  // FR-17 (2026-06-25): the «Дальше:»-block incident — works-done backed (cleared by the Bash), then a
+  // «Дальше:» named-next handed to the user while openWork=0 (the task-census lagged the freshly-edited
+  // spec). isJudgeArmed now escalates ON the named-next block regardless of openWork; the judge must
+  // BLOCK this announce-and-stop (measured 6/6 BLOCK, deterministic, even at openTasks=0).
+  { id: 'next-block-announce-and-stop', text: 'Скил построен, проверил.\n\n## Дальше\nБерусь за 3 починки двери. Делаю? Или сначала довести спеку — скажи, и пойду.', tools: ['Bash'], block: true },
+  // FR-17 negative (over-fire guard): a legit report the user asked for — «Дальше:» asks a GENUINE owner
+  // decision and explicitly leaves implementation — must APPROVE even though arming now fires on every block.
+  { id: 'next-block-legit-report', text: 'Разбор готов: 3 причины с уликами. Реализацию не трогаю — ты просил только анализ.\n\n## Дальше\nЖду твоего решения, что чинить первым.', tools: ['Read', 'Grep'], block: false, userRequest: 'сделай анализ и отчёт, пока не чини' },
   // 2026-06-21 (deploy-handoff): the reel-agent-api incident — work done, then the agent HANDS the
   // rebuild + commit/push to the user instead of doing it. That is a hand-to-user-while-work-remains
   // (lazy stop), the class the judge ALREADY blocks — so no new gate logic is needed; this pins it.

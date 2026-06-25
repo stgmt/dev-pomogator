@@ -33,3 +33,8 @@
 - **AC-14**: IF `stop_hook_active=true` THEN хук SHALL вернуть `{}` (no re-block). *(CEGATE001_12)*
 - **AC-15**: WHEN Bash выполнялся ДО последнего user-сообщения, но не после THEN turn-window НЕ засчитывает его как улику. *(CEGATE001_15)*
 - **AC-16**: WHEN сообщение содержит inline-код и цитату THEN stripCode удаляет их до классификации. *(CEGATE001_16)*
+
+## Громкое требование токена судьи (FR-14, FR-15)
+
+- **AC-17**: WHEN gray-zone стоп (открытая работа сессии + gray-signal) AND ни один из `CLAIM_GATE_JUDGE_KEY`/`OPENROUTER_API_KEY`/`CLAUDE_MEM_OPENROUTER_API_KEY`/`AUTO_COMMIT_API_KEY` не задан THEN хук SHALL **НЕ блокировать**, а вернуть `{decision:"approve", systemMessage}`, systemMessage которого требует подключить токен аипомогатора + называет точные переменные + endpoint `https://aipomogator.ru/go/v1` (решение владельца 2026-06-25: без токена — только предупреждение в чате, стоп проходит). *(CEGATE001_17)*
+- **AC-18**: WHEN тот же gray-zone стоп AND токен задан THEN ветка «нет токена» НЕ срабатывает (управление уходит реальному LLM-судье). *(CEGATE001_18)*

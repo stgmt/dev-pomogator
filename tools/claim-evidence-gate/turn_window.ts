@@ -295,11 +295,16 @@ export function lastUserPrompt(rawTranscript: string): string {
   const lines = parseLines(rawTranscript);
   for (let i = lines.length - 1; i >= 0; i--) {
     if (lines[i].isSidechain || !isRealUser(lines[i])) continue;
-    const cleaned = assistantText(lines[i])
-      .split(/\r?\n/)
-      .filter((ln) => !HOOK_INJECTION_RE.test(ln))
-      .join('\n')
-      .trim();
+    const allLines = assistantText(lines[i]).split(/\r?\n/);
+    // FR-18 (2026-06-25): a user-role message whose FIRST non-empty line is a hook-injection marker
+    // (⚠️ a Stop-hook block reason, 📋 census, «Stop hook feedback», …) IS hook feedback, NOT a user
+    // prompt — skip the WHOLE message. Previously only matching LINES were stripped, so a MULTI-LINE
+    // block reason leaked its continuation lines («Нужно: реальный прогон …») as the «user request», and
+    // the gate read its OWN окрик as the user's intent (polluting analysisOnly). Structural: it reuses
+    // HOOK_INJECTION_RE (the injection markers), not the gate's prose.
+    const firstNonEmpty = allLines.find((ln) => ln.trim()) ?? '';
+    if (HOOK_INJECTION_RE.test(firstNonEmpty)) continue;
+    const cleaned = allLines.filter((ln) => !HOOK_INJECTION_RE.test(ln)).join('\n').trim();
     if (cleaned) return cleaned;
   }
   return '';

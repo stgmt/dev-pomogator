@@ -10,10 +10,11 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { buildJudgeNoTokenDemand, resolveEndpoint, isJudgeArmed } from '../meridian-judge.ts';
 
 import { classify, firstUnsupported, stripCode } from '../claim_classifier.ts';
 import { extractTurnWindow, bgInFlightInWindow, agentBgInFlight, agentBgInFlightCount, lastUserPrompt } from '../turn_window.ts';
-import { agentOpenTodoCount } from '../../spec-graph/task-census.ts';
+import { agentOpenTodoCount, liveOpenForUncensusedSlugs } from '../../spec-graph/task-census.ts';
 
 const HOOK = path.resolve(__dirname, '..', 'claim_evidence_gate_stop.ts');
 
@@ -205,6 +206,20 @@ describe('CEGATE001: pure classifier units', () => {
       .map((r) => JSON.stringify(r))
       .join('\n');
     expect(lastUserPrompt(raw)).toBe('сделай анализ и отчёт');
+  });
+
+  // FR-18 (2026-06-25): a Stop-hook BLOCK reason is MULTI-LINE; HOOK_INJECTION_RE matched only the ⚠️
+  // first line, leaking the continuation («Нужно: …») as the «user request» — the gate read its OWN
+  // окрик as the user's intent (flipping analysisOnly). Now the WHOLE feedback message is skipped.
+  it('CEGATE001_38: lastUserPrompt skips a multi-line gate block-reason, returns the real prompt', () => {
+    const raw = [
+      U('реальный запрос пользователя'),
+      A([txt('делаю работу')]),
+      U('⚠️ claim-evidence-gate: ты заявил результат (works-done), но в этом ходе нет улики.\nНужно: реальный прогон (тесты/запуск) в этом ходе.\nСначала реально прогони проверку.'),
+    ]
+      .map((r) => JSON.stringify(r))
+      .join('\n');
+    expect(lastUserPrompt(raw)).toBe('реальный запрос пользователя');
   });
 
   // @feature11 — investigated for the 5a "agent-completion" tightening (real transcript shapes):
@@ -605,5 +620,93 @@ describe('CEGATE001: claim-evidence gate — spec-false-close class (FR-49b)', (
     expect(runHook([...scope, U('анализ и отчёт'), A([txt('Всё работает, фикс задеплоен.')])], env).blocked).toBe(true);
     // implement request + the same lazy stop → enforce-work → block.
     expect(runHook([...scope, U('почини баг в парсере'), A([txt('Продолжаю, тут всё.')])], env).blocked).toBe(true);
+  });
+});
+
+describe('CEGATE001: loud token demand when the judge has no token (FR-14, FR-15)', () => {
+  it('CEGATE001_17: the no-token demand names every accepted env var + the aipomogator endpoint', () => {
+    const demand = buildJudgeNoTokenDemand(7);
+    // FR-15: chat-visible, actionable — must name the exact keys a user can wire + the endpoint.
+    expect(demand).toContain('AUTO_COMMIT_API_KEY');
+    expect(demand).toContain('OPENROUTER_API_KEY');
+    expect(demand).toContain('CLAIM_GATE_JUDGE_KEY');
+    expect(demand).toContain('https://aipomogator.ru/go/v1');
+    expect(demand).toContain('токен аипомогатора');
+    expect(demand).toContain('7'); // the open-work count is surfaced
+  });
+
+  it('CEGATE001_18: token presence flips resolveEndpoint — the no-token branch fires only with NO token', () => {
+    // FR-14 priority chain: any one key → an endpoint resolves (judge runs, no-token branch bypassed).
+    expect(resolveEndpoint({ AUTO_COMMIT_API_KEY: 'k' })).not.toBeNull();
+    expect(resolveEndpoint({ OPENROUTER_API_KEY: 'k' })).not.toBeNull();
+    expect(resolveEndpoint({ CLAIM_GATE_JUDGE_KEY: 'k' })).not.toBeNull();
+    // No token anywhere → null → THIS is the gray-zone case where FR-15 demands the token.
+    expect(resolveEndpoint({})).toBeNull();
+  });
+});
+
+describe('CEGATE001: judge arming — «Дальше:» block always escalates (FR-17)', () => {
+  // FR-17 (user 2026-06-25 «всегда когда есть блок дальше надо пропускать на судью»). isJudgeArmed is the
+  // pure arming decision the live gate now uses; these pin BOTH directions deterministically (no token).
+  const base = { gray: true, hasNextBlock: false, analysisOnly: false, judgeEnabled: true, openWork: 0 };
+
+  it('CEGATE001_19: a «Дальше:» block arms the judge even when openWork=0 (the real incident)', () => {
+    // The exact failure: census lagged → openWork=0 → judge never ran. Now the named-next block arms it.
+    expect(isJudgeArmed({ ...base, hasNextBlock: true, openWork: 0 })).toBe(true);
+    // …and even on an analysis-only request — the «Дальше:» block is the agent's own signal (bypass).
+    expect(isJudgeArmed({ ...base, hasNextBlock: true, openWork: 0, analysisOnly: true })).toBe(true);
+  });
+
+  it('CEGATE001_20: NO «Дальше:» block + openWork=0 → NOT armed (no over-fire on a clean report)', () => {
+    // A genuine report-stop with no named-next block and nothing open must NOT hit the judge.
+    expect(isJudgeArmed({ ...base, hasNextBlock: false, openWork: 0 })).toBe(false);
+    // openWork>0 still arms via the existing path — but only when NOT analysis-only.
+    expect(isJudgeArmed({ ...base, hasNextBlock: false, openWork: 3 })).toBe(true);
+    expect(isJudgeArmed({ ...base, hasNextBlock: false, openWork: 3, analysisOnly: true })).toBe(false);
+  });
+
+  it('CEGATE001_21: disabled judge or no gray-signal → never armed', () => {
+    expect(isJudgeArmed({ ...base, hasNextBlock: true, openWork: 5, judgeEnabled: false })).toBe(false);
+    expect(isJudgeArmed({ ...base, hasNextBlock: true, openWork: 5, gray: false })).toBe(false);
+  });
+});
+
+describe('CEGATE001: FR-19 live open-work for edited specs the census snapshot lacks', () => {
+  // FR-19: the no-kick root cause was openWork=0 because the census cache predated the edited specs.
+  // This counts open tasks LIVE from TASKS.md (bounded, fail-open), excluding placeholders + sub-items.
+  it('CEGATE001_39: counts top-level open tasks, excludes placeholders / sub-items / done / censused', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cegate-fr19-'));
+    const slug = 'demo-spec';
+    fs.mkdirSync(path.join(root, '.specs', slug), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, '.specs', slug, 'TASKS.md'),
+      [
+        '# Tasks',
+        '- [ ] Real open task one -- @feature1 — Status: TODO', // counted
+        '- [ ] Real open task two — Status: IN_PROGRESS', // counted
+        '  - [ ] Done When sub-item (indented)', // excluded — not column-0
+        '- [x] A finished task', // excluded — checked
+        '- [ ] {Задача placeholder}', // excluded — template placeholder
+      ].join('\n'),
+    );
+    // demo-spec NOT in the census → counted live (the incident shape)
+    expect(liveOpenForUncensusedSlugs(root, new Set([slug]), { specs: [{ slug: 'other' }] })).toBe(2);
+    // demo-spec already in the census → cache owns it, no double-count
+    expect(liveOpenForUncensusedSlugs(root, new Set([slug]), { specs: [{ slug }] })).toBe(0);
+    // missing TASKS.md / null census → fail-open 0
+    expect(liveOpenForUncensusedSlugs(root, new Set(['no-such']), null)).toBe(0);
+  });
+});
+
+describe('CEGATE001: FR-20 — naming the gate no longer grants a free stop', () => {
+  // FR-20 (2026-06-25): the broad self-reference skip (`claimText.includes('claim-evidence-gate')` →
+  // approve) was REMOVED — it free-passed ANY report that named the gate. The gate now EVALUATES such a
+  // message: a works-done claim with NO executor in the window is BLOCKED even though it names the gate.
+  it('CEGATE001_40: a works-done claim that MENTIONS «claim-evidence-gate» is still evaluated (no self-skip)', () => {
+    const rows = [U('почини'), A([txt('Гейт claim-evidence-gate работает, всё готово и проверено.')])];
+    expect(runHook(rows).blocked).toBe(true); // before FR-20: free-approved by the name skip; now → block
+    // sanity: same claim WITH an executor in the window → works-done is backed → approve (no false block)
+    const backed = [U('почини'), A([tool('Bash', { command: 'npm test' })]), A([txt('Гейт claim-evidence-gate работает, всё готово.')])];
+    expect(runHook(backed).blocked).toBe(false);
   });
 });

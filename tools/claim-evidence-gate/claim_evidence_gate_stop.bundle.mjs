@@ -239,7 +239,10 @@ function lastUserPrompt(rawTranscript) {
   const lines = parseLines(rawTranscript);
   for (let i = lines.length - 1; i >= 0; i--) {
     if (lines[i].isSidechain || !isRealUser(lines[i])) continue;
-    const cleaned = assistantText(lines[i]).split(/\r?\n/).filter((ln) => !HOOK_INJECTION_RE.test(ln)).join("\n").trim();
+    const allLines = assistantText(lines[i]).split(/\r?\n/);
+    const firstNonEmpty = allLines.find((ln) => ln.trim()) ?? "";
+    if (HOOK_INJECTION_RE.test(firstNonEmpty)) continue;
+    const cleaned = allLines.filter((ln) => !HOOK_INJECTION_RE.test(ln)).join("\n").trim();
     if (cleaned) return cleaned;
   }
   return "";
@@ -355,6 +358,21 @@ function scopeCensusToSlugs(census, slugs) {
     { open: 0, doneRed: 0, doneUnrun: 0 }
   );
   return { total, specs };
+}
+function liveOpenForUncensusedSlugs(repoRoot, editedSlugs, census) {
+  const known = new Set((census?.specs ?? []).map((s) => s.slug));
+  let open = 0;
+  for (const slug of editedSlugs) {
+    if (known.has(slug)) continue;
+    try {
+      const txt = fs2.readFileSync(path2.join(repoRoot, ".specs", slug, "TASKS.md"), "utf-8");
+      for (const line of txt.split("\n")) {
+        if (/^- \[ \]/.test(line) && !line.includes("{")) open++;
+      }
+    } catch {
+    }
+  }
+  return open;
 }
 var SPEC_PATH_RE = /\.specs[/\\]([a-z0-9][a-z0-9._-]*)[/\\]/i;
 var RAW_WRITE_TOOL_RE = /^(edit|write|multiedit|notebookedit)$/i;
@@ -524,6 +542,16 @@ function resolveEndpoint(injectedEnv) {
   }
   return null;
 }
+function judgeAvailable() {
+  return resolveEndpoint() !== null;
+}
+function buildJudgeNoTokenDemand(openWork) {
+  return `\u0423\u043C\u043D\u044B\u0439 Stop-\u0441\u0443\u0434\u044C\u044F \u0412\u042B\u041A\u041B\u042E\u0427\u0415\u041D \u2014 \u043D\u0435 \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0451\u043D \u0442\u043E\u043A\u0435\u043D \u0430\u0438\u043F\u043E\u043C\u043E\u0433\u0430\u0442\u043E\u0440\u0430, \u043F\u043E\u044D\u0442\u043E\u043C\u0443 \u043F\u0438\u043D\u0430\u0442\u043E\u0440 \u043D\u0435 \u043B\u043E\u0432\u0438\u0442 \u0445\u0438\u0442\u0440\u044B\u0435 \u043B\u0435\u043D\u0438\u0432\u044B\u0435 \u0441\u0442\u043E\u043F\u044B (\u0430 \u043E\u0442\u043A\u0440\u044B\u0442\u043E\u0439 \u0440\u0430\u0431\u043E\u0442\u044B ${openWork}). \u041F\u043E\u0434\u043A\u043B\u044E\u0447\u0438 \u041E\u0414\u0418\u041D \u0438\u0437 \u043A\u043B\u044E\u0447\u0435\u0439 (\u0432 .env \u043F\u0440\u043E\u0435\u043A\u0442\u0430 \u0438\u043B\u0438 env): AUTO_COMMIT_API_KEY=<key> (endpoint https://aipomogator.ru/go/v1), \u043B\u0438\u0431\u043E OPENROUTER_API_KEY=<key>, \u043B\u0438\u0431\u043E CLAIM_GATE_JUDGE_KEY=<key>. \u041F\u043E\u043A\u0430 \u0442\u043E\u043A\u0435\u043D \u043D\u0435 \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0451\u043D \u2014 \u043F\u0438\u043D\u0430\u0442\u043E\u0440 \u0442\u043E\u043B\u044C\u043A\u043E \u041F\u0420\u0415\u0414\u0423\u041F\u0420\u0415\u0416\u0414\u0410\u0415\u0422 (\u043D\u0435 \u0431\u043B\u043E\u043A\u0438\u0440\u0443\u0435\u0442), \u0430 \u0443\u043C\u043D\u044B\u0439 \u0441\u0443\u0434\u044C\u044F \u043C\u043E\u043B\u0447\u0438\u0442. \u041F\u043E\u0434\u043A\u043B\u044E\u0447\u0438 \u0442\u043E\u043A\u0435\u043D, \u0447\u0442\u043E\u0431\u044B \u0432\u043A\u043B\u044E\u0447\u0438\u0442\u044C \u0435\u0433\u043E (\u0441\u043E\u0432\u0441\u0435\u043C \u0443\u0431\u0440\u0430\u0442\u044C \u043F\u0440\u0435\u0434\u0443\u043F\u0440\u0435\u0436\u0434\u0435\u043D\u0438\u0435: CLAIM_GATE_ENABLED=false).`;
+}
+function isJudgeArmed(o) {
+  if (!o.judgeEnabled || !o.gray) return false;
+  return o.hasNextBlock || !o.analysisOnly && o.openWork > 0;
+}
 function buildJudgePrompt(i) {
   const mut = i.mutatingToolsThisTurn ?? null;
   return [
@@ -622,7 +650,6 @@ var MARKER_DIR = ".dev-pomogator";
 var MARKER_FILENAME = ".claim-evidence-gate-marker.json";
 var FIRES_FILENAME = ".claim-evidence-gate-fires.jsonl";
 var SELF_MARKER = "claim-evidence-gate";
-var SELF_MARKERS = ["claim-evidence-gate", "deferred-work"];
 var LOG_PREFIX = "CLAIM-EVIDENCE-GATE";
 var GRAY_SIGNAL = /(готов|сделал|закоммич|закрыл|реализова|продолж|дальше|двину|перехож|беру|next\b|done\b|commit|fixed|finish|ship|complete|wrap)/i;
 var BLOCKER_SIGNAL = /(жду\b|ожида\w*|заблокирован\w*|заблокировал\w*|держит\s+(?:друг|параллел|чуж)|параллельн\w*\s+сесси\w*|нельзя\s+(?:тронуть|трогать|править)|blocked\b|waiting\s+on\b|held\s+by\b|can'?t\s+touch)/i;
@@ -652,6 +679,9 @@ function approve() {
 }
 function block(reason) {
   process.stdout.write(JSON.stringify({ decision: "block", reason }));
+}
+function warn(systemMessage) {
+  process.stdout.write(JSON.stringify({ decision: "approve", systemMessage }));
 }
 function logFire(repoRoot, entry) {
   try {
@@ -726,14 +756,15 @@ async function main() {
     return approve();
   }
   const { claimText, toolUses } = extractTurnWindow(rawTranscript);
-  if (!claimText.trim() || SELF_MARKERS.some((m) => claimText.includes(m))) return approve();
+  if (!claimText.trim()) return approve();
   const repoRoot = normalizePath(input.cwd || input.workspace_roots?.[0] || process.cwd());
   const editedSlugs = sessionEditedSpecSlugs(tx);
   const globalCensus = readTaskCensusCache(repoRoot);
   const scoped = globalCensus ? { ...scopeCensusToSlugs(globalCensus, editedSlugs), ts: globalCensus.ts } : null;
   const agentOpen = agentOpenTodoCount(tx);
   const scopedSpecOpen = scoped ? scoped.total.open + scoped.total.doneRed : 0;
-  const openWork = scopedSpecOpen + agentOpen;
+  const liveOpen = liveOpenForUncensusedSlugs(repoRoot, editedSlugs, globalCensus);
+  const openWork = scopedSpecOpen + agentOpen + liveOpen;
   const nextStepHint = scoped?.specs?.[0]?.nextOpen?.title ?? agentNextOpenTodo(tx);
   const nextLine = nextStepHint ? `
 \u{1F449} \u0421\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0435: ${nextStepHint}` : "";
@@ -778,9 +809,14 @@ async function main() {
     const backed = toolUses.length > 0 || /\[UNVERIFIED\]/i.test(claimText);
     if (!PROOF_CLASSES.has(unsupported.cls) || backed) unsupported = null;
   }
-  if (!unsupported && !analysisOnly && (process.env.CLAIM_GATE_JUDGE ?? "true").toLowerCase() === "true") {
-    const unfinished = openWork;
-    if (unfinished > 0 && GRAY_SIGNAL.test(claimText)) {
+  if (!unsupported && isJudgeArmed({
+    openWork,
+    gray: GRAY_SIGNAL.test(claimText),
+    hasNextBlock: NEXT_SECTION_RE.test(claimText),
+    analysisOnly,
+    judgeEnabled: (process.env.CLAIM_GATE_JUDGE ?? "true").toLowerCase() === "true"
+  })) {
+    {
       const jInput = {
         finalMessage: claimText,
         tools: toolUses.map((t) => t.name),
@@ -802,9 +838,12 @@ async function main() {
       if (verdict?.block) {
         unsupported = { cls: "judge-block", need: verdict.reason };
       } else if (verdict === null) {
-        unsupported = {
+        unsupported = judgeAvailable() ? {
           cls: "judge-unavailable",
-          need: `\u043F\u043E\u043C\u043E\u0433\u0430\u0442\u043E\u0440-\u0441\u0443\u0434\u044C\u044F \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u0435\u043D (\u0441\u043C. stderr \u2014 \u043F\u043E\u0447\u0435\u043C\u0443), \u0430 \u043E\u0442\u043A\u0440\u044B\u0442\u043E\u0439 \u0440\u0430\u0431\u043E\u0442\u044B ${openWork} (\u0441\u043F\u0435\u043A\u0430-scope + todo \u0441\u0435\u0441\u0441\u0438\u0438) \u2014 \u0441\u0442\u043E\u043F \u043D\u0435 \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0451\u043D`
+          need: `\u043F\u043E\u043C\u043E\u0433\u0430\u0442\u043E\u0440-\u0441\u0443\u0434\u044C\u044F \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u0435\u043D (endpoint \u043D\u0435 \u043E\u0442\u0432\u0435\u0442\u0438\u043B \u2014 \u0441\u043C. stderr), \u0430 \u043E\u0442\u043A\u0440\u044B\u0442\u043E\u0439 \u0440\u0430\u0431\u043E\u0442\u044B ${openWork} (\u0441\u043F\u0435\u043A\u0430-scope + todo \u0441\u0435\u0441\u0441\u0438\u0438) \u2014 \u0441\u0442\u043E\u043F \u043D\u0435 \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0451\u043D`
+        } : {
+          cls: "judge-no-token",
+          need: buildJudgeNoTokenDemand(openWork)
         };
       }
     }
@@ -837,6 +876,10 @@ async function main() {
   if (config.mode === "shadow") {
     log2("INFO", `shadow: would block ${unsupported.cls}`);
     return approve();
+  }
+  if (unsupported.cls === "judge-no-token") {
+    log2("INFO", "no token \u2192 warn (not block)");
+    return warn(`\u26A0\uFE0F ${SELF_MARKER}: ${unsupported.need}`);
   }
   const marker = readMarker(mp);
   const currentHash = hashFileList([claimText]);

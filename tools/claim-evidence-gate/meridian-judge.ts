@@ -153,6 +153,44 @@ export function judgeAvailable(): boolean {
   return resolveEndpoint() !== null;
 }
 
+/**
+ * FR-15: the loud, chat-visible demand surfaced (as a NON-BLOCKING `systemMessage` warning) when the
+ * smart judge can't run because NO помогатор token resolves. Names the exact env vars + endpoint so ANY
+ * user can wire it — replacing the old stderr-only silence. A missing token is the user's CONFIG gap,
+ * not a lazy stop to punish (user 2026-06-25: «без токена блокировать не должен, только предупреждать в
+ * чате»), so the stop PROCEEDS and only this warning is shown. Pure + exported so the contract is tested
+ * directly (CEGATE001_17) without spawning the hook.
+ */
+export function buildJudgeNoTokenDemand(openWork: number): string {
+  return (
+    `Умный Stop-судья ВЫКЛЮЧЕН — не подключён токен аипомогатора, поэтому пинатор не ловит хитрые ленивые стопы (а открытой работы ${openWork}). ` +
+    `Подключи ОДИН из ключей (в .env проекта или env): ` +
+    `AUTO_COMMIT_API_KEY=<key> (endpoint https://aipomogator.ru/go/v1), либо OPENROUTER_API_KEY=<key>, либо CLAIM_GATE_JUDGE_KEY=<key>. ` +
+    `Пока токен не подключён — пинатор только ПРЕДУПРЕЖДАЕТ (не блокирует), а умный судья молчит. Подключи токен, чтобы включить его (совсем убрать предупреждение: CLAIM_GATE_ENABLED=false).`
+  );
+}
+
+/**
+ * FR-17 (user 2026-06-25 «всегда когда есть блок дальше надо пропускать на судью»): decide whether a stop
+ * escalates to the gray-zone judge. A NAMED-NEXT «Дальше:» block (`hasNextBlock`) is an INDEPENDENT arming
+ * trigger — the agent announced a next step and stopped (the announce-and-stop the judge catches), so arm
+ * REGARDLESS of openWork (the task-census can lag a freshly-edited spec → openWork=0 falsely; the actual
+ * 2026-06-25 incident) AND regardless of analysisOnly (the «Дальше:» block is the agent's OWN signal — the
+ * judge's own answer/await carve-outs still APPROVE a genuine report-stop, which carries no «Дальше:» block).
+ * The openWork>0 path keeps its analysisOnly guard (on a pure analysis request, no work-kick). Pure +
+ * exported → unit-tested BOTH directions without a token (CEGATE001_19/20). `gray` = GRAY_SIGNAL matched.
+ */
+export function isJudgeArmed(o: {
+  openWork: number;
+  gray: boolean;
+  hasNextBlock: boolean;
+  analysisOnly: boolean;
+  judgeEnabled: boolean;
+}): boolean {
+  if (!o.judgeEnabled || !o.gray) return false;
+  return o.hasNextBlock || (!o.analysisOnly && o.openWork > 0);
+}
+
 export function buildJudgePrompt(i: JudgeInput): string {
   const mut = i.mutatingToolsThisTurn ?? null;
   return [

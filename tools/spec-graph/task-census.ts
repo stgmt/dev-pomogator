@@ -257,6 +257,37 @@ export function scopeCensusToSlugs<T extends TaskCensus>(census: T, slugs: Set<s
   return { total, specs };
 }
 
+/**
+ * FR-19 (2026-06-25): a lightweight, fail-open count of OPEN tasks for session-edited slugs the
+ * task-census CACHE does NOT know about (a freshly-created / just-edited spec the snapshot predates).
+ * The cache lagged → `openWork=0` falsely → the gate's judge precondition never fired (the no-kick
+ * incident). Bounded to the session's edited slugs (1–3 files, NO graph build — see the hot-path caveat):
+ * reads `.specs/<slug>/TASKS.md` and counts TOP-LEVEL open checkboxes `- [ ]`, EXCLUDING template
+ * placeholders (`{…}`) and indented «Done When» sub-items (only column-0 lines). Conservative: a
+ * missing/unreadable file → 0. The judge still decides block/approve, so a small mis-count only shifts how
+ * often the judge is consulted, never forces a block. FR-17 (the «Дальше:» arming) remains load-bearing.
+ */
+export function liveOpenForUncensusedSlugs(
+  repoRoot: string,
+  editedSlugs: Set<string>,
+  census: { specs: ReadonlyArray<{ slug: string }> } | null,
+): number {
+  const known = new Set((census?.specs ?? []).map((s) => s.slug));
+  let open = 0;
+  for (const slug of editedSlugs) {
+    if (known.has(slug)) continue; // the cache already counts this spec
+    try {
+      const txt = fs.readFileSync(path.join(repoRoot, '.specs', slug, 'TASKS.md'), 'utf-8');
+      for (const line of txt.split('\n')) {
+        if (/^- \[ \]/.test(line) && !line.includes('{')) open++;
+      }
+    } catch {
+      /* fail-open: missing/unreadable TASKS.md → contributes 0 */
+    }
+  }
+  return open;
+}
+
 const SPEC_PATH_RE = /\.specs[/\\]([a-z0-9][a-z0-9._-]*)[/\\]/i;
 const RAW_WRITE_TOOL_RE = /^(edit|write|multiedit|notebookedit)$/i;
 const DOOR_WRITE_TOOL_RE =
