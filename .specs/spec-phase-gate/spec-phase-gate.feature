@@ -164,3 +164,157 @@ Feature: PLUGIN008 Spec Phase Gate Anti-Hallucination
       | missing        | null        |
       | invalid_json   | null        |
       | empty          | null        |
+
+  # --- Layer 3: Spec Quality Audit (audit-checks.ts) — FR-8..FR-11 ---
+
+  @feature3
+  Scenario Outline: PLUGIN008_23 partial-impl audit flags a done task whose FR carries a not-implemented marker
+    Given a spec where a done task's FR carries the not-implemented marker `<marker>`
+    When the partial-implementation audit runs
+    Then the partial-implementation audit reports exactly one ERROR mentioning the FR
+
+    Examples:
+      | marker                |
+      | **НЕ РЕАЛИЗОВАНО**     |
+      | NOT IMPLEMENTED yet    |
+      | This is deferred now   |
+
+  @feature3
+  Scenario: PLUGIN008_24 partial-impl audit ignores an OPEN task even with a marker
+    Given a spec where an OPEN task's FR carries a not-implemented marker
+    When the partial-implementation audit runs
+    Then the partial-implementation audit reports nothing
+
+  @feature3
+  Scenario: PLUGIN008_25 partial-impl audit ignores a done task whose FR is implemented
+    Given a spec where a done task's FR is fully implemented
+    When the partial-implementation audit runs
+    Then the partial-implementation audit reports nothing
+
+  @feature3
+  Scenario: PLUGIN008_26 partial-impl audit is silent when FR.md is missing
+    Given a spec with a TASKS.md but no FR.md
+    When the partial-implementation audit runs
+    Then the partial-implementation audit reports nothing
+
+  @feature3
+  Scenario Outline: PLUGIN008_27 partial-impl audit ignores a marker that is not a live prose claim
+    Given a spec where a done task's FR mentions the audit marker `<marker>` only as a <mode>
+    When the partial-implementation audit runs
+    Then the partial-implementation audit reports nothing
+
+    Examples:
+      | marker          | mode              |
+      | PARTIAL         | larger word       |
+      | НЕ РЕАЛИЗОВАНО   | fenced code block |
+      | NOT IMPLEMENTED | inline code span  |
+
+  @feature3
+  Scenario Outline: PLUGIN008_28 partial-impl marker contract — word-bounded fires, substring + code-fenced do not
+    When the partial-implementation audit runs over marker `<marker>` placed as `<placement>`
+    Then the partial-implementation audit finds exactly <count>
+
+    Examples:
+      | marker             | placement   | count |
+      | НЕ РЕАЛИЗОВАНО | standalone  | 1     |
+      | НЕ РЕАЛИЗОВАНО | larger-word | 0     |
+      | НЕ РЕАЛИЗОВАНО | code-fenced | 0     |
+      | NOT IMPLEMENTED | standalone  | 1     |
+      | NOT IMPLEMENTED | larger-word | 0     |
+      | NOT IMPLEMENTED | code-fenced | 0     |
+      | PARTIAL | standalone  | 1     |
+      | PARTIAL | larger-word | 0     |
+      | PARTIAL | code-fenced | 0     |
+      | TODO: implement | standalone  | 1     |
+      | TODO: implement | larger-word | 0     |
+      | TODO: implement | code-fenced | 0     |
+      | deferred | standalone  | 1     |
+      | deferred | larger-word | 0     |
+      | deferred | code-fenced | 0     |
+      | будущее улучшение | standalone  | 1     |
+      | будущее улучшение | larger-word | 0     |
+      | будущее улучшение | code-fenced | 0     |
+
+  @feature3
+  Scenario: PLUGIN008_29 task-atomicity audit warns when one task references multiple FRs
+    Given a spec where a task references multiple FRs
+    When the task-atomicity audit runs
+    Then the task-atomicity audit reports one WARNING naming the extra FR `FR-5`
+
+  @feature3
+  Scenario: PLUGIN008_30 task-atomicity audit allows a single-FR task
+    Given a spec where a task references a single FR
+    When the task-atomicity audit runs
+    Then the task-atomicity audit reports nothing
+
+  @feature3
+  Scenario: PLUGIN008_31 task-atomicity audit allows a task referencing no FR
+    Given a spec where a task references no FR
+    When the task-atomicity audit runs
+    Then the task-atomicity audit reports nothing
+
+  @feature3
+  Scenario: PLUGIN008_32 task-atomicity audit treats a sub-variant as a distinct FR
+    Given a spec where a task references an FR and its sub-variant
+    When the task-atomicity audit runs
+    Then the task-atomicity audit reports one WARNING naming the extra FR `FR-4a`
+
+  @feature3
+  Scenario: PLUGIN008_33 FR-split audit flags an adjacent FR that lacks sub-variants
+    Given a spec where one FR has a sub-variant but an adjacent FR does not
+    When the FR-split-consistency audit runs
+    Then the FR-split-consistency audit reports an INFO naming the un-split FR `FR-5`
+
+  @feature3
+  Scenario: PLUGIN008_34 FR-split audit is silent when no FR has sub-variants
+    Given a spec where no FR has sub-variants
+    When the FR-split-consistency audit runs
+    Then the FR-split-consistency audit reports nothing
+
+  @feature3
+  Scenario: PLUGIN008_35 FR-split audit is silent when both adjacent FRs have sub-variants
+    Given a spec where both adjacent FRs have sub-variants
+    When the FR-split-consistency audit runs
+    Then the FR-split-consistency audit reports nothing
+
+  @feature3
+  Scenario: PLUGIN008_36 BDD-scope audit flags an FR term the scenario does not cover
+    Given a spec whose FR mentions serial but whose only scenario covers batch
+    When the BDD-scenario-scope audit runs
+    Then the BDD-scenario-scope audit reports a gap mentioning the uncovered term
+
+  @feature3
+  Scenario: PLUGIN008_37 BDD-scope audit is silent when the scenario covers every FR term
+    Given a spec whose scenario covers every term its FR mentions
+    When the BDD-scenario-scope audit runs
+    Then the BDD-scenario-scope audit reports nothing
+
+  @feature3
+  Scenario: PLUGIN008_38 BDD-scope audit is silent when there is no .feature file
+    Given a spec with an FR but no .feature file
+    When the BDD-scenario-scope audit runs
+    Then the BDD-scenario-scope audit reports nothing
+
+  @feature3
+  Scenario: PLUGIN008_39 the combined audit returns findings from multiple checks at once
+    Given a spec with both a partial-impl marker and a multi-FR task
+    When the combined audit runs all checks
+    Then the combined audit returns at least two findings
+
+  @feature3
+  Scenario: PLUGIN008_40 the combined audit returns nothing for a clean spec
+    Given a clean spec with a done task and an implemented FR
+    When the combined audit runs all checks
+    Then the combined audit returns nothing
+
+  @feature3
+  Scenario: PLUGIN008_41 the real audit-spec CLI runs and emits output on an FR-without-AC spec
+    Given a real temp spec dir under .specs with an FR but an empty ACCEPTANCE_CRITERIA
+    When the real audit-spec CLI runs over the `audit-cli-demo` spec in json format
+    Then the audit-spec CLI exits 0 and emits output
+
+  @feature3
+  Scenario: PLUGIN008_42 the real audit-spec CLI runs without crashing on a clean spec
+    Given a real temp spec dir under .specs with a clean FR and matching AC
+    When the real audit-spec CLI runs over the `audit-cli-clean` spec in text format
+    Then the audit-spec CLI exits 0 without crashing
