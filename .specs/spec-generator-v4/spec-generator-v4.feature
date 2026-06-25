@@ -589,6 +589,21 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And the error message contains literally «fixture missing README.md: tests/fixtures/reqnroll-sample/»
     And the hint includes literally «document exact runner command + version»
 
+  @feature31
+  Scenario Outline: SPECGEN004_377 real-builder roundtrip -- buildGraph surfaces per-scenario lastResult and failingStep error for <runner> fixture
+    Given the multilang roundtrip fixture directory `<fixture-dir>` with featureUri `<feature-uri>` frId `<fr-id>` frTitle `<fr-title>`
+    When the multilang roundtrip materialises the fixture into a tmpdir and calls buildGraph with featureRoots override
+    Then the SpecGraph contains a `<qualified-fr-id>` FR node and scenario nodes for `<expected-passed>` and `<expected-failed>`
+    And MCP get_trace of `<qualified-fr-id>` returns lastResult PASSED for `<expected-passed>` and FAILED for `<expected-failed>`
+    And MCP get_test_result of `<expected-failed>` returns lastResult FAILED
+    And the multilang roundtrip FAILED scenario `<expected-failed>` carries a non-empty failingStep errorMessage
+
+    Examples:
+      | runner       | fixture-dir     | feature-uri                                 | fr-id | fr-title           | qualified-fr-id | expected-passed           | expected-failed                |
+      | Reqnroll     | reqnroll-sample | features/Auth.feature                       | FR-1  | Authentication     | reqnroll:FR-1   | SCEN-login-ok             | SCEN-login-wrong-password      |
+      | behave       | behave-sample   | features/checkout.feature                   | FR-2  | Checkout flow      | behave:FR-2     | SCEN-add-item-to-cart     | SCEN-apply-expired-coupon      |
+      | Cucumber-JVM | jvm-sample      | src/test/resources/features/payment.feature | FR-3  | Payment processing | jvm:FR-3        | SCEN-charge-succeeds      | SCEN-insufficient-funds        |
+
   @feature32
   Scenario: SPECGEN004_70 spec-status derives DONE only when all mapped scenarios PASSED
     Given a task whose Done-When references scenarios that are all `PASSED` in the latest `.last-test-run.ndjson`
