@@ -2768,3 +2768,43 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
   @feature54
   Scenario: SPECGEN004_470 addTaskIdsAnyHeader preserves every Status token byte-for-byte
     Then every Status token is byte-unchanged across 40 generated docs
+
+  # --- hooks-stdin-e2e: real-stdin guard/push + MCP bundle ---
+
+  @feature5
+  Scenario: SPECGEN004_480 the conformance guard allows a clean Write over real stdin
+    Given a v4 spec workspace where the conformance guard is active
+    When the conformance guard receives a Write of clean FR content
+    Then the conformance guard exits 0 and returns permissionDecision "allow"
+
+  @feature5
+  Scenario: SPECGEN004_481 the conformance guard denies a duplicate-definition Write over real stdin
+    Given a v4 spec workspace where the conformance guard is active
+    When the conformance guard receives a Write of duplicate FR content
+    Then the conformance guard exits 0 and returns permissionDecision "deny"
+    And the deny reason mentions DUPLICATE_DEFINITION
+
+  @feature22
+  Scenario: SPECGEN004_482 the conformance guard yields ALLOW_AFTER_MIGRATION when progress is pre-v4
+    Given a v3 spec workspace where the conformance guard is gated out by migration
+    When the conformance guard receives a Write of duplicate FR content
+    Then the reason is ALLOW_AFTER_MIGRATION
+
+  @feature28
+  Scenario: SPECGEN004_483 the conformance push appends the JSONL finding even when the emit is throttled
+    When the conformance push runs on a Write to a spec whose FR has no AC
+    Then the push exits 0 with no agent-facing stdout
+    And the spec-check-log records an UNCOVERED_FR finding from spec-conformance-push with the session id
+
+  @feature4
+  Scenario: SPECGEN004_484 the MCP server bundle serves three JSON-RPC requests over one stdio session
+    Given an auth spec with two FRs in the MCP workspace
+    When the MCP bundle serves initialize then tools/list then get_trace in one stdio session
+    Then the bundle identifies as dev-pomogator-specs and advertises exactly the canonical tool set
+    And get_trace over the bundle returns ok for `auth:FR-1`
+
+  @feature48
+  Scenario: SPECGEN004_485 set_entity_status over the bundle refuses a derived FR and confirms a phase STOP
+    Given an auth spec with a v4 progress file and a Discovery user story in the MCP workspace
+    When the MCP bundle handles set_entity_status on a derived FR then confirms the Discovery phase STOP
+    Then the derived FR is refused with a computed verdict, the phase STOP is confirmed, and get_spec_status shows it
