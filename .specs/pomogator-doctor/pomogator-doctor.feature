@@ -379,3 +379,40 @@ Feature: POMOGATORDOCTOR001_pomogator-doctor_diagnostic_command
     When I run runDoctor in-process
     Then check C18 is severity "critical"
     And check C18 is reinstallable
+
+  # ---------------------------------------------------------------------------
+  # POMOGATORDOCTOR002 — Canonical v2 plugin manifest (regression issue #71)
+  # The v2 plugin.json uses string arrays for skills/commands paths (not {name} objects).
+  # C15 crashed with "path argument must be of type string. Received undefined".
+  # C3/C13/C14 reported false criticals because they only knew v1 installer artefacts.
+  # ---------------------------------------------------------------------------
+
+  @feature10
+  Scenario: POMOGATORDOCTOR002_01 C15 does not crash and reports OK on canonical string-array manifest
+    Given a canonical v2 project with skills "create-spec,run-tests" and commands "reflect"
+    When I run runDoctor in-process with canonical project root
+    Then check C15 is severity "ok"
+    And check C15 message does not match "internal error"
+    And check C15 message matches "3 declared"
+
+  @feature10
+  Scenario: POMOGATORDOCTOR002_02 Support folder under skills without SKILL.md is not flagged broken
+    Given a canonical v2 project with skills "create-spec" and support folder "answer-simple-workspace"
+    When I run runDoctor in-process with canonical project root
+    Then check C15 is severity "ok"
+    And check C15 message does not mention "answer-simple-workspace"
+
+  @feature10
+  Scenario: POMOGATORDOCTOR002_03 Manifest pointing at a missing skills dir reports C15 critical
+    Given a canonical v2 project with skills "create-spec" and skills path "./.claude/does-not-exist"
+    When I run runDoctor in-process with canonical project root
+    Then check C15 is severity "critical"
+    And check C15 state is "BROKEN-missing"
+
+  @feature2
+  Scenario: POMOGATORDOCTOR002_04 Canonical install does not false-critical C3 C13 C14
+    Given a canonical v2 project with skills "create-spec" and version "2.0.1"
+    When I run runDoctor in-process with canonical project root
+    Then check C3 is severity "ok"
+    And check C14 is severity "ok"
+    And check C13 severity is "ok" or "warning"
