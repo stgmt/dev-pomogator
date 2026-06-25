@@ -174,3 +174,9 @@ dev-pomogator не реализует custom uninstall code — Anthropic mechan
 
 **Связанные AC:** [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-12)
 **Use Case:** [UC-5](USE_CASES.md#uc-5-uninstall-canonical), [UC-6](USE_CASES.md#uc-6-cleanup-v1-residue)
+
+## FR-13: Plugin hooks resolve independent of process CWD
+
+The plugin's hook commands SHALL resolve their bootstrap loader and target script regardless of the process working directory. The `hooks.json` command anchors the `bootstrap.cjs` require on `process.env.CLAUDE_PROJECT_DIR` (falling back to `.`) and `tsx-runner.resolveScriptPath` resolves the script argument against `CLAUDE_PROJECT_DIR` / `CLAUDE_PLUGIN_ROOT` — NEVER a cwd-relative `path.resolve('tools/...')`. A Stop hook spawned with the shell CWD left inside a subdirectory (or an unrelated tmpdir) SHALL still load and exit 0, not die with `Cannot find module .../bootstrap.cjs`.
+
+**Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1-fr-9)

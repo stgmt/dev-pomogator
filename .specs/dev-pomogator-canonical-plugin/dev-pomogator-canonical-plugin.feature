@@ -273,3 +273,22 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
     Then ~/.claude/plugins/cache/stgmt/dev-pomogator/ should be removed
     And ~/.claude/settings.json should NOT contain "dev-pomogator@stgmt" в enabledPlugins
     And ~/.claude/settings.json should preserve other user keys unchanged
+
+  # --- FR-13: plugin hooks resolve independent of process CWD ---
+
+  @feature13
+  Scenario Outline: HOOKSCWD001_01 the plugin Stop hook resolves from a foreign CWD via the env anchor
+    When the plugin Stop hook is launched from a <location> anchored on <anchor>
+    Then the hook does not fail with a missing bootstrap module
+    And the hook exits 0
+
+    Examples:
+      | location          | anchor             |
+      | repo subdirectory | CLAUDE_PROJECT_DIR |
+      | fresh tmpdir      | CLAUDE_PROJECT_DIR |
+      | fresh tmpdir      | CLAUDE_PLUGIN_ROOT |
+
+  @feature13
+  Scenario: HOOKSCWD001_02 the committed settings.json anchors the bootstrap on CLAUDE_PROJECT_DIR
+    Given the committed .claude/settings.json
+    Then it anchors the bootstrap require on CLAUDE_PROJECT_DIR, not the process cwd
