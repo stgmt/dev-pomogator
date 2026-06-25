@@ -1,9 +1,11 @@
 /**
  * Step definitions for pomogator-doctor BDD scenarios.
- * Domain: POMOGATORDOCTOR001
- * Covers: _01-_15, _22, _25, _32, _40-_43, _10b, _11b
+ * Domain: POMOGATORDOCTOR001, POMOGATORDOCTOR002
+ * Covers: _01-_15, _22, _25, _32, _40-_43, _10b, _11b (POMOGATORDOCTOR001)
+ *         _01-_04 (POMOGATORDOCTOR002 — canonical v2 plugin manifest, issue #71)
  * Classification:
  *   runtime (in-process): _01-_03, _06-_14, _22, _25, _32, _40-_43, _10b, _11b
+ *                         POMOGATORDOCTOR002_01-_04
  *   spawn (CLI hook):     _04, _05, _15
  *   @wip (excluded):     _16-_21, _23-_24, _26-_31, _33-_34
  *
@@ -17,6 +19,7 @@
 
 import http from 'node:http';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { After, Before, Given, Then, When } from '@cucumber/cucumber';
@@ -696,3 +699,185 @@ Then(/^check C18 is reinstallable$/, async function (this: DoctorWorld) {
   const c18 = this.report?.results.find((r) => r.id === 'C18');
   expect(c18?.reinstallable).to.equal(true);
 });
+
+// ---------------------------------------------------------------------------
+// POMOGATORDOCTOR002 — Canonical v2 plugin manifest (regression issue #71)
+// The v2 plugin.json uses string arrays for skills/commands paths.
+// Step-defs build a real temp project tree with .claude-plugin/plugin.json
+// in canonical string-array format, then run runDoctor in-process.
+// Per-scenario cleanup is handled by the existing After hook via this.home.
+// ---------------------------------------------------------------------------
+
+/**
+ * Build a canonical v2 plugin project under a temp dir.
+ * Returns a TempHome-compatible adapter so the existing After hook cleans it up.
+ */
+function buildCanonicalProject(opts: {
+  skills?: string[];
+  skillsWithoutManifest?: string[];
+  commands?: string[];
+  skillsPath?: string;
+  version?: string;
+}): { homeDir: string; projectDir: string; cleanup: () => void } {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'doctor-canonical-'));
+  const pluginDir = path.join(root, '.claude-plugin');
+  fs.mkdirSync(pluginDir, { recursive: true });
+
+  for (const s of opts.skills ?? []) {
+    const dir = path.join(root, '.claude', 'skills', s);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'SKILL.md'), `# ${s}\n`);
+  }
+  for (const s of opts.skillsWithoutManifest ?? []) {
+    fs.mkdirSync(path.join(root, '.claude', 'skills', s), { recursive: true });
+  }
+  // Always create the commands dir so enumerateFromPath doesn't flag the absent dir
+  // as BROKEN. When no commands are given the dir is empty (0 .md files → 0 declared).
+  const commandsDir = path.join(root, '.claude', 'commands');
+  fs.mkdirSync(commandsDir, { recursive: true });
+  for (const c of opts.commands ?? []) {
+    fs.writeFileSync(path.join(commandsDir, `${c}.md`), `# ${c}\n`);
+  }
+
+  fs.writeFileSync(
+    path.join(pluginDir, 'plugin.json'),
+    JSON.stringify({
+      name: 'dev-pomogator',
+      version: opts.version ?? '2.0.1',
+      skills: [opts.skillsPath ?? './.claude/skills'],
+      commands: ['./.claude/commands'],
+    }),
+  );
+
+  return {
+    homeDir: root,
+    projectDir: root,
+    cleanup: () => {
+      try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* ignore */ }
+    },
+  };
+}
+
+// --- GIVEN steps for canonical project setup ---
+
+Given(
+  /^a canonical v2 project with skills "([^"]+)" and commands "([^"]+)"$/,
+  async function (this: DoctorWorld, skillsCsv: string, commandsCsv: string) {
+    const skills = skillsCsv.split(',').map((s) => s.trim());
+    const commands = commandsCsv.split(',').map((c) => c.trim());
+    this.home = buildCanonicalProject({ skills, commands });
+  },
+);
+
+Given(
+  /^a canonical v2 project with skills "([^"]+)" and support folder "([^"]+)"$/,
+  async function (this: DoctorWorld, skillsCsv: string, supportFolder: string) {
+    const skills = skillsCsv.split(',').map((s) => s.trim());
+    this.home = buildCanonicalProject({ skills, skillsWithoutManifest: [supportFolder] });
+  },
+);
+
+Given(
+  /^a canonical v2 project with skills "([^"]+)" and skills path "([^"]+)"$/,
+  async function (this: DoctorWorld, skillsCsv: string, skillsPath: string) {
+    const skills = skillsCsv.split(',').map((s) => s.trim());
+    this.home = buildCanonicalProject({ skills, skillsPath });
+  },
+);
+
+Given(
+  /^a canonical v2 project with skills "([^"]+)" and version "([^"]+)"$/,
+  async function (this: DoctorWorld, skillsCsv: string, version: string) {
+    const skills = skillsCsv.split(',').map((s) => s.trim());
+    this.home = buildCanonicalProject({ skills, version });
+  },
+);
+
+// --- WHEN step: run runDoctor with canonical project root (homeDir === projectDir) ---
+
+When(
+  /^I run runDoctor in-process with canonical project root$/,
+  async function (this: DoctorWorld) {
+    if (!this.home) throw new Error('No canonical project fixture built');
+    this.report = await runDoctor({
+      homeDir: this.home.homeDir,
+      projectRoot: this.home.projectDir,
+    });
+  },
+);
+
+// --- THEN steps: C15 assertions ---
+
+Then(
+  /^check C15 is severity "([^"]+)"$/,
+  async function (this: DoctorWorld, severity: string) {
+    const c15 = this.report?.results.find((r) => r.id === 'C15');
+    expect(c15, 'C15 must be present in report').to.not.be.undefined;
+    expect(c15?.severity).to.equal(severity);
+  },
+);
+
+Then(
+  /^check C15 message does not match "([^"]+)"$/,
+  async function (this: DoctorWorld, pattern: string) {
+    const c15 = this.report?.results.find((r) => r.id === 'C15');
+    expect(c15, 'C15 must be present').to.not.be.undefined;
+    expect(c15?.message ?? '').to.not.match(new RegExp(pattern, 'i'));
+  },
+);
+
+Then(
+  /^check C15 message matches "([^"]+)"$/,
+  async function (this: DoctorWorld, pattern: string) {
+    const c15 = this.report?.results.find((r) => r.id === 'C15');
+    expect(c15, 'C15 must be present').to.not.be.undefined;
+    expect(c15?.message ?? '').to.match(new RegExp(pattern));
+  },
+);
+
+Then(
+  /^check C15 message does not mention "([^"]+)"$/,
+  async function (this: DoctorWorld, text: string) {
+    const c15 = this.report?.results.find((r) => r.id === 'C15');
+    expect(c15, 'C15 must be present').to.not.be.undefined;
+    expect(c15?.message ?? '').to.not.include(text);
+  },
+);
+
+Then(
+  /^check C15 state is "([^"]+)"$/,
+  async function (this: DoctorWorld, state: string) {
+    const c15 = this.report?.results.find((r) => r.id === 'C15');
+    expect(c15, 'C15 must be present').to.not.be.undefined;
+    expect((c15 as { state?: string })?.state).to.equal(state);
+  },
+);
+
+// --- THEN steps: C3 / C13 / C14 false-critical regression (POMOGATORDOCTOR002_04) ---
+
+Then(
+  /^check C3 is severity "([^"]+)"$/,
+  async function (this: DoctorWorld, severity: string) {
+    const c3 = this.report?.results.find((r) => r.id === 'C3');
+    expect(c3, 'C3 must be present in report').to.not.be.undefined;
+    expect(c3?.severity).to.equal(severity);
+  },
+);
+
+Then(
+  /^check C14 is severity "([^"]+)"$/,
+  async function (this: DoctorWorld, severity: string) {
+    const c14 = this.report?.results.find((r) => r.id === 'C14');
+    expect(c14, 'C14 must be present in report').to.not.be.undefined;
+    expect(c14?.severity).to.equal(severity);
+  },
+);
+
+Then(
+  /^check C13 severity is "([^"]+)" or "([^"]+)"$/,
+  async function (this: DoctorWorld, sev1: string, sev2: string) {
+    const c13 = this.report?.results.find((r) => r.id === 'C13');
+    expect(c13, 'C13 must be present in report').to.not.be.undefined;
+    expect([sev1, sev2]).to.include(c13?.severity);
+  },
+);
