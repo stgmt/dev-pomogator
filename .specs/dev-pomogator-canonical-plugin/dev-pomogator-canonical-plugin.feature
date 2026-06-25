@@ -292,3 +292,17 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
   Scenario: HOOKSCWD001_02 the committed settings.json anchors the bootstrap on CLAUDE_PROJECT_DIR
     Given the committed .claude/settings.json
     Then it anchors the bootstrap require on CLAUDE_PROJECT_DIR, not the process cwd
+
+  # --- FR-14: plugin hook commands are deps-absent-safe ---
+
+  @feature14
+  Scenario: PLUGINDEPS001_01 the real plugin hooks reach no real npm package
+    Given the real canonical plugin hooks manifest
+    When the deps-safety guard scans that tree
+    Then no hook command reaches a real npm package
+
+  @feature14
+  Scenario: PLUGINDEPS001_02 the deps-safety guard flags a raw-.ts hook that imports a package
+    Given a synthetic plugin tree whose raw-.ts hook imports a real npm package
+    When the deps-safety guard scans that tree
+    Then the guard flags the offending hook citing `zod`

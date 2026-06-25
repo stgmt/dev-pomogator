@@ -180,3 +180,9 @@ dev-pomogator не реализует custom uninstall code — Anthropic mechan
 The plugin's hook commands SHALL resolve their bootstrap loader and target script regardless of the process working directory. The `hooks.json` command anchors the `bootstrap.cjs` require on `process.env.CLAUDE_PROJECT_DIR` (falling back to `.`) and `tsx-runner.resolveScriptPath` resolves the script argument against `CLAUDE_PROJECT_DIR` / `CLAUDE_PLUGIN_ROOT` — NEVER a cwd-relative `path.resolve('tools/...')`. A Stop hook spawned with the shell CWD left inside a subdirectory (or an unrelated tmpdir) SHALL still load and exit 0, not die with `Cannot find module .../bootstrap.cjs`.
 
 **Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1-fr-9)
+
+## FR-14: Plugin hook commands are deps-absent-safe
+
+The plugin install ships NO `node_modules`, so every `.claude-plugin/hooks.json` command SHALL be deps-absent-safe: it either launches a bundled `*.bundle.mjs` (npm deps inlined by esbuild) or a script whose transitive import chain is node-builtins-only. A raw `.ts`/`.cjs` hook that (transitively) imports a real npm package crashes `ERR_MODULE_NOT_FOUND` for plugin users — `tools/plugin-deps-guard/check.ts::findDepsUnsafeHooks` SHALL detect such hooks (returning the `script -> packages` offenders; `[]` when clean) so the dead-integration never ships silently (the dogfood repo has `node_modules` and hides it).
+
+**Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1-fr-9)
