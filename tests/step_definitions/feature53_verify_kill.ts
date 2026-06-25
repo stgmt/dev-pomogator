@@ -1,6 +1,6 @@
 /**
  * @feature53 step definitions (FR-53 — deterministic inject+restore kill-gate).
- * SPECGEN004_377..383: drive the REAL `verifyKill` / `verifyBatch` in-process with injected
+ * SPECGEN004_384,378..383: drive the REAL `verifyKill` / `verifyBatch` in-process with injected
  * fake runners — no cucumber spawn, no network, no real mutation of production files.
  * Fake "sensing" runners read the actual temp file on disk, proving injection (mutant
  * present mid-run) and restore (original present again after) against the live filesystem.
@@ -8,7 +8,7 @@
  * Step patterns are ALL prefixed with "verifyKill" or "verifyBatch" so they are scoped to
  * this spec's vocabulary and cannot accidentally collide with another feature's generic steps.
  *
- * @see .specs/spec-generator-v4/spec-generator-v4.feature SPECGEN004_377..383
+ * @see .specs/spec-generator-v4/spec-generator-v4.feature SPECGEN004_384,378..383
  * @see .specs/spec-generator-v4/FR.md FR-53
  * @see tools/stryker-mutation/verify-kill.ts
  */

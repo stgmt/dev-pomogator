@@ -2582,7 +2582,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
   # ── verify-kill: deterministic inject+restore kill-gate (FR-53) ──────────
 
   @feature53
-  Scenario: SPECGEN004_377 verifyKill reports KILLED when the covering scenario fails under the mutant and restores the file
+  Scenario: SPECGEN004_384 verifyKill reports KILLED when the covering scenario fails under the mutant and restores the file
     Given a verifyKill temp source file with original "original_value" and mutant "mutant_value"
     When verifyKill is called with a sensing runner that detects "mutant_value"
     Then the verifyKill verdict is "KILLED"
