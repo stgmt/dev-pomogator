@@ -2675,3 +2675,21 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given an isolated spec directory with a fully-formed USER_STORIES.md for extractWriteContent testing
     When the user-story-form-guard receives an Edit with an old_string absent from the file
     Then the user-story-form-guard exits 0 and allows the user story write
+
+  @feature4 @mcp-stdio
+  Scenario: SPECGEN004_391 the spec-graph MCP server advertises read-only tools over real stdio
+    Given a running spec-graph MCP server over real stdio against an isolated demo spec
+    When the agent lists the MCP server tools over the wire
+    Then the MCP server advertises the read-only tools get_trace and get_coverage
+
+  @feature4 @mcp-stdio
+  Scenario: SPECGEN004_392 get_trace answers for a real qualified node over real stdio
+    Given a running spec-graph MCP server over real stdio against an isolated demo spec
+    When the agent calls get_trace for the demo node `demo:FR-1` over the wire
+    Then get_trace returns ok for `demo:FR-1` carrying a verified_status surface
+
+  @feature4 @mcp-stdio
+  Scenario: SPECGEN004_393 get_coverage answers over real stdio
+    Given a running spec-graph MCP server over real stdio against an isolated demo spec
+    When the agent calls get_coverage over the wire
+    Then get_coverage returns ok with buckets and totals
