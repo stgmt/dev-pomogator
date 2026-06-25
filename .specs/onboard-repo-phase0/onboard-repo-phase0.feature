@@ -407,3 +407,133 @@ Feature: ONBOARD001_Phase0_Repo_Onboarding
     When Phase 0 Step 3 runs
     Then shell-based top-N fallback is used
     And `.onboarding.json.ingestion.method == "fallback"`
+
+  # ── Ignore-parser helpers (FR-17 @feature2) ────────────────────────────────
+
+  @feature2
+  Scenario Outline: ONBOARD035_parsePatternLines_strips_comments_and_blank_lines
+    When ignore-parser parsePatternLines receives <input>
+    Then the parsed patterns equal <expected>
+
+    Examples:
+      | input                           | expected                |
+      | "# comment\\n\\n*.env\\nfoo/"   | ["*.env","foo/"]        |
+      | "# only comments\\n\\n"         | []                      |
+      | "*.pem\\n# skip\\ncredentials"  | ["*.pem","credentials"] |
+
+  @feature2
+  Scenario Outline: ONBOARD036_normalizePath_normalizes_separators_and_prefix
+    When ignore-parser normalizePath receives <input>
+    Then the normalized path equals <expected>
+
+    Examples:
+      | input           | expected       |
+      | "src\\main.py"  | "src/main.py"  |
+      | "./src/main.py" | "src/main.py"  |
+      | "src/main.py"   | "src/main.py"  |
+
+  @feature2
+  Scenario: ONBOARD037_loadIgnoreMatcher_aggregates_all_three_ignore_files
+    Given fake-python-api fixture is seeded
+    And a file named ".cursorignore" containing "secrets/**" is added to tmpdir
+    And a file named ".aiderignore" containing "private/**" is added to tmpdir
+    When loadIgnoreMatcher runs on tmpdir
+    Then externalConfigsFound includes ".gitignore", ".cursorignore", ".aiderignore"
+    And the onboard ignore matcher excludes "secrets/x.txt"
+    And the onboard ignore matcher excludes "private/notes.md"
+    And the onboard ignore matcher allows "src/main.py"
+
+  @feature2
+  Scenario: ONBOARD038_NFR_S3_always_exclude_works_without_any_ignore_file
+    Given fake-python-api fixture is seeded
+    And the gitignore file is removed from tmpdir
+    When loadIgnoreMatcher runs on tmpdir with no ignore files
+    Then externalConfigsFound is empty
+    And the onboard ignore matcher excludes ".env"
+    And the onboard ignore matcher excludes "config/prod.pem"
+    And the onboard ignore matcher excludes "aws/credentials"
+    And the onboard ignore matcher allows "src/main.py"
+
+  @feature2
+  Scenario: ONBOARD039_extraPatterns_and_filter_helper
+    Given fake-with-cursorignore fixture is seeded
+    When loadIgnoreMatcher runs on tmpdir with extraPatterns "custom-secret/**"
+    Then the onboard ignore matcher excludes "custom-secret/x.txt"
+    And the onboard ignore filter returns only non-excluded paths from a mixed list
+
+  @feature2
+  Scenario Outline: ONBOARD040_onboarding_secret_guard_detects_critical_patterns
+    When the onboarding secret guard scans content containing a <secret_type> value
+    Then detectSecrets returns a hit with pattern "<pattern_name>" and severity "critical"
+
+    Examples:
+      | secret_type          | pattern_name      |
+      | OpenAI sk- key       | openai-api-key    |
+      | GitHub PAT ghp_      | github-pat        |
+      | AWS access key AKIA  | aws-access-key    |
+      | Slack bot xoxb-      | slack-token       |
+      | Anthropic sk-ant-    | anthropic-api-key |
+      | Google OAuth ya29.   | google-oauth      |
+
+  @feature2
+  Scenario: ONBOARD041_redactSecrets_replaces_secret_and_is_noop_for_clean_content
+    When redactSecrets processes content with an OpenAI sk- key and non-secret text
+    Then the redacted result contains the REDACTED marker for openai-api-key
+    And the redacted result preserves the non-secret text
+    And redactSecrets hasCritical is true
+    When redactSecrets processes clean content
+    Then the redacted result is unchanged with no hits
+
+  @feature2
+  Scenario: ONBOARD042_assertNoSecretsInContent_throws_on_critical_and_allows_jwt
+    When assertNoSecretsInContent is called with content containing an OpenAI sk- key
+    Then it throws SecretLeakageError and hits expose the openai-api-key pattern
+    When assertNoSecretsInContent is called with a JWT token
+    Then assertNoSecretsInContent does not throw
+
+  @feature2
+  Scenario: ONBOARD043_NFR_S1_finalize_aborts_if_secret_in_commands_reason
+    Given fake-python-api fixture is seeded
+    And the compose context commands.test.reason contains an OpenAI sk- key
+    When Phase 0 finalize is called with that compose context
+    Then finalize rejects with SecretLeakageError
+    And the onboarding json file is NOT written to disk
+
+  @feature14
+  Scenario: ONBOARD044_ScratchAppender_creates_file_with_header_on_first_append
+    Given fake-python-api fixture is seeded
+    When ScratchAppender appends a finding from Subagent A
+    Then the scratch file exists with header "# Phase 0 Onboarding Scratch"
+    And the scratch file contains a timestamped block for Subagent A
+    And the block contains the finding text
+
+  @feature14
+  Scenario: ONBOARD045_ScratchAppender_multiple_appends_accumulate_timestamped_blocks
+    Given fake-python-api fixture is seeded
+    When ScratchAppender appends findings from Subagent A, Subagent B, and Subagent C
+    Then the scratch file contains 3 timestamped blocks in order
+
+  @feature14
+  Scenario: ONBOARD046_archiveScratch_moves_scratch_to_onboarding_history
+    Given fake-python-api fixture is seeded
+    And the scratch file has been written via ScratchAppender
+    When archiveScratch runs on tmpdir
+    Then archiveScratch returns a path matching the scratch ISO datetime pattern
+    And the archive file exists at that path
+    And the live scratch file no longer exists
+
+  @feature14
+  Scenario: ONBOARD047_archiveScratch_returns_null_when_no_scratch_file_present
+    Given fake-python-api fixture is seeded
+    When archiveScratch runs on tmpdir with no scratch file present
+    Then archiveScratch returns null
+
+  @feature14
+  Scenario: ONBOARD048_pruneScratchArchives_keeps_N_most_recent_and_preserves_other_entries
+    Given fake-python-api fixture is seeded
+    And 7 scratch archive files exist in the onboarding history directory with distinct mtimes
+    And a non-scratch directory entry exists in the onboarding history directory
+    When pruneScratchArchives runs keeping 5
+    Then only 5 scratch archives remain
+    And the 2 oldest scratch archives are deleted
+    And the non-scratch directory entry is preserved

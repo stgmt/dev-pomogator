@@ -99,8 +99,24 @@ import {
   countRepoFiles,
   ScratchAppender,
   archiveScratch,
+  pruneScratchArchives,
+  readScratch,
   SCRATCH_THRESHOLD,
 } from '../../tools/onboard-repo/steps/scratch-findings.ts';
+import {
+  loadIgnoreMatcher,
+  parsePatternLines,
+  normalizePath,
+  ALWAYS_EXCLUDE_PATTERNS,
+  SUPPORTED_IGNORE_FILES,
+} from '../../tools/onboard-repo/lib/ignore-parser.ts';
+import {
+  detectSecrets,
+  redactSecrets,
+  assertNoSecretsInContent,
+  assertNoSecretsInObject,
+  SecretLeakageError,
+} from '../../tools/onboard-repo/lib/secret-redaction.ts';
 import {
   runIngestion,
   defaultDeps as defaultIngestionDeps,
@@ -131,6 +147,23 @@ interface OnboardState {
   commands?: Record<string, CommandBlock>;
   repomixSkipped?: boolean;
   staleSha?: string;
+  // ignore-parser state (ONBOARD035-039)
+  parsedPatterns?: string[];
+  normalizedPath?: string;
+  ignoreMatcher?: Awaited<ReturnType<typeof loadIgnoreMatcher>>;
+  // secret-redaction state (ONBOARD040-043)
+  detectHits?: ReturnType<typeof detectSecrets>;
+  redactResult?: ReturnType<typeof redactSecrets>;
+  secretLeakThrew?: boolean;
+  secretLeakError?: SecretLeakageError;
+  secretLeakAllowed?: boolean;
+  secretFinalizeRejected?: boolean;
+  secretFinalizeError?: unknown;
+  secretFinalizeJsonWritten?: boolean;
+  // scratch helper state (ONBOARD044-048)
+  scratchAppender?: ScratchAppender;
+  scratchArchivePath?: string | null;
+  scratchPruneResult?: { remaining: string[]; historyDir: string };
 }
 
 interface OnboardWorld extends IWorld {
@@ -1328,4 +1361,385 @@ Then(/^the custom applyCorrection hook was called$/, function (this: TextGateWor
 Then(/^the final summary contains the custom merge marker$/, function (this: TextGateWorld) {
   const summary = this.textGate!.gateResult?.finalSummary ?? '';
   assert.ok(summary.includes('[CUSTOM MERGED'), `expected "[CUSTOM MERGED" in finalSummary, got: "${summary}"`);
+});
+
+// ── ONBOARD035: parsePatternLines (FR-17 @feature2) ─────────────────────────
+
+When(/^ignore-parser parsePatternLines receives (.+)$/, function (this: OnboardWorld, rawInput: string) {
+  // Strip surrounding quotes added by Gherkin Examples column
+  const input = rawInput.replace(/^"|"$/g, '').replace(/\\n/g, '\n');
+  this.onboard = this.onboard ?? {} as OnboardState;
+  this.onboard.parsedPatterns = parsePatternLines(input);
+});
+
+Then(/^the parsed patterns equal (.+)$/, function (this: OnboardWorld, rawExpected: string) {
+  const expected: string[] = JSON.parse(rawExpected);
+  assert.deepEqual(this.onboard.parsedPatterns!, expected,
+    `parsePatternLines: expected ${JSON.stringify(expected)}, got ${JSON.stringify(this.onboard.parsedPatterns)}`);
+});
+
+// ── ONBOARD036: normalizePath (FR-17 @feature2) ──────────────────────────────
+
+When(/^ignore-parser normalizePath receives (.+)$/, function (this: OnboardWorld, rawInput: string) {
+  const input = rawInput.replace(/^"|"$/g, '');
+  this.onboard = this.onboard ?? {} as OnboardState;
+  this.onboard.normalizedPath = normalizePath(input);
+});
+
+Then(/^the normalized path equals (.+)$/, function (this: OnboardWorld, rawExpected: string) {
+  const expected = rawExpected.replace(/^"|"$/g, '');
+  assert.equal(this.onboard.normalizedPath!, expected,
+    `normalizePath: expected "${expected}", got "${this.onboard.normalizedPath}"`);
+});
+
+// ── ONBOARD037: loadIgnoreMatcher aggregates 3 files (@feature2) ─────────────
+
+// Reusable Given for fake-with-cursorignore fixture (used by ONBOARD039)
+Given(/^fake-with-cursorignore fixture is seeded$/, async function (this: OnboardWorld) {
+  const registrySnapshot = snapshotRegistry();
+  const tmpdir = await setupFakeRepo('fake-with-cursorignore');
+  this.onboard = { tmpdir, registrySnapshot, commands: fakeCommands() };
+  resetValidatorCache();
+});
+
+Given(/^a file named "([^"]+)" containing "([^"]+)" is added to tmpdir$/, async function (this: OnboardWorld, filename: string, content: string) {
+  await fsExtra.writeFile(path.join(this.onboard.tmpdir, filename), content + '\n', 'utf-8');
+});
+
+Given(/^the gitignore file is removed from tmpdir$/, async function (this: OnboardWorld) {
+  await fsExtra.remove(path.join(this.onboard.tmpdir, '.gitignore'));
+});
+
+When(/^loadIgnoreMatcher runs on tmpdir$/, async function (this: OnboardWorld) {
+  this.onboard.ignoreMatcher = await loadIgnoreMatcher(this.onboard.tmpdir);
+});
+
+When(/^loadIgnoreMatcher runs on tmpdir with no ignore files$/, async function (this: OnboardWorld) {
+  this.onboard.ignoreMatcher = await loadIgnoreMatcher(this.onboard.tmpdir, { files: [] });
+});
+
+When(/^loadIgnoreMatcher runs on tmpdir with extraPatterns "([^"]+)"$/, async function (this: OnboardWorld, patterns: string) {
+  this.onboard.ignoreMatcher = await loadIgnoreMatcher(this.onboard.tmpdir, {
+    extraPatterns: [patterns],
+  });
+});
+
+Then(/^externalConfigsFound includes "([^"]+)", "([^"]+)", "([^"]+)"$/, function (this: OnboardWorld, a: string, b: string, c: string) {
+  const found = this.onboard.ignoreMatcher!.externalConfigsFound;
+  assert.ok(found.includes(a), `expected externalConfigsFound to contain "${a}", got: ${JSON.stringify(found)}`);
+  assert.ok(found.includes(b), `expected externalConfigsFound to contain "${b}", got: ${JSON.stringify(found)}`);
+  assert.ok(found.includes(c), `expected externalConfigsFound to contain "${c}", got: ${JSON.stringify(found)}`);
+});
+
+Then(/^externalConfigsFound is empty$/, function (this: OnboardWorld) {
+  const found = this.onboard.ignoreMatcher!.externalConfigsFound;
+  assert.deepEqual(found, [], `expected externalConfigsFound to be empty, got: ${JSON.stringify(found)}`);
+});
+
+Then(/^the onboard ignore matcher excludes "([^"]+)"$/, function (this: OnboardWorld, relPath: string) {
+  const matcher = this.onboard.ignoreMatcher!;
+  assert.ok(matcher.isIgnored(relPath), `expected matcher.isIgnored("${relPath}") === true`);
+});
+
+Then(/^the onboard ignore matcher allows "([^"]+)"$/, function (this: OnboardWorld, relPath: string) {
+  const matcher = this.onboard.ignoreMatcher!;
+  assert.ok(!matcher.isIgnored(relPath), `expected matcher.isIgnored("${relPath}") === false`);
+});
+
+// ── ONBOARD039: extraPatterns + filter() helper ──────────────────────────────
+
+Then(/^the onboard ignore filter returns only non-excluded paths from a mixed list$/, function (this: OnboardWorld) {
+  const matcher = this.onboard.ignoreMatcher!;
+  const input = ['src/main.py', 'secrets/key.json', 'README.md', '.env'];
+  const result = matcher.filter(input);
+  // .env excluded by ALWAYS_EXCLUDE; secrets/key.json excluded by cursorignore; others pass
+  assert.ok(result.includes('src/main.py'), `expected "src/main.py" in filter result: ${JSON.stringify(result)}`);
+  assert.ok(result.includes('README.md'), `expected "README.md" in filter result: ${JSON.stringify(result)}`);
+  assert.ok(!result.includes('secrets/key.json'), `expected "secrets/key.json" NOT in filter result: ${JSON.stringify(result)}`);
+  assert.ok(!result.includes('.env'), `expected ".env" NOT in filter result: ${JSON.stringify(result)}`);
+});
+
+// ── ONBOARD040: detectSecrets critical patterns (NFR-S1 @feature2) ───────────
+
+// Secret content per secret_type label (must match Examples rows exactly)
+function secretContentFor(secretType: string): string {
+  switch (secretType.trim()) {
+    case 'OpenAI sk- key':       return 'config = { key: "sk-abcd1234efgh5678ijkl9012mnop3456qrst" }';
+    case 'GitHub PAT ghp_':      return 'token: ghp_1234567890abcdefghijklmnopqrstuvwxyz12';
+    case 'AWS access key AKIA':  return 'AKIAIOSFODNN7EXAMPLE';
+    case 'Slack bot xoxb-':      return 'xoxb-1234567890-abcdefghij';
+    case 'Anthropic sk-ant-':    return 'sk-ant-api03-abcd1234efgh5678';
+    case 'Google OAuth ya29.':   return 'ya29.a0AfH6SMB1234567890abcdefghij';
+    default: throw new Error(`Unknown secret_type: "${secretType}"`);
+  }
+}
+
+When(/^the onboarding secret guard scans content containing a (.+) value$/, function (this: OnboardWorld, secretType: string) {
+  const content = secretContentFor(secretType);
+  this.onboard = this.onboard ?? {} as OnboardState;
+  this.onboard.detectHits = detectSecrets(content);
+});
+
+Then(/^detectSecrets returns a hit with pattern "([^"]+)" and severity "([^"]+)"$/, function (this: OnboardWorld, patternName: string, severity: string) {
+  const hits = this.onboard.detectHits!;
+  assert.ok(hits.length > 0, `expected at least 1 hit, got 0`);
+  const hit = hits.find((h) => h.pattern === patternName);
+  assert.ok(hit, `expected hit with pattern "${patternName}", got: ${JSON.stringify(hits.map((h) => h.pattern))}`);
+  assert.equal(hit!.severity, severity, `expected severity "${severity}", got "${hit!.severity}"`);
+});
+
+// ── ONBOARD041: redactSecrets (NFR-S1 @feature2) ─────────────────────────────
+
+When(/^redactSecrets processes content with an OpenAI sk- key and non-secret text$/, function (this: OnboardWorld) {
+  this.onboard = this.onboard ?? {} as OnboardState;
+  this.onboard.redactResult = redactSecrets('key: sk-abcd1234efgh5678ijkl9012mnop3456qrst, user: alice');
+});
+
+When(/^redactSecrets processes clean content$/, function (this: OnboardWorld) {
+  this.onboard.redactResult = redactSecrets('just prose');
+});
+
+Then(/^the redacted result contains the REDACTED marker for openai-api-key$/, function (this: OnboardWorld) {
+  assert.ok(
+    this.onboard.redactResult!.redacted.includes('[REDACTED:openai-api-key]'),
+    `expected "[REDACTED:openai-api-key]" in: ${this.onboard.redactResult!.redacted}`,
+  );
+});
+
+Then(/^the redacted result preserves the non-secret text$/, function (this: OnboardWorld) {
+  assert.ok(
+    this.onboard.redactResult!.redacted.includes('user: alice'),
+    `expected "user: alice" preserved in: ${this.onboard.redactResult!.redacted}`,
+  );
+});
+
+Then(/^redactSecrets hasCritical is true$/, function (this: OnboardWorld) {
+  assert.equal(this.onboard.redactResult!.hasCritical, true, 'expected hasCritical === true');
+});
+
+Then(/^the redacted result is unchanged with no hits$/, function (this: OnboardWorld) {
+  assert.equal(this.onboard.redactResult!.redacted, 'just prose', 'expected redacted === original clean content');
+  assert.deepEqual(this.onboard.redactResult!.hits, [], 'expected no hits for clean content');
+});
+
+// ── ONBOARD042: assertNoSecretsInContent (NFR-S1 @feature2) ──────────────────
+
+When(/^assertNoSecretsInContent is called with content containing an OpenAI sk- key$/, function (this: OnboardWorld) {
+  this.onboard = this.onboard ?? {} as OnboardState;
+  this.onboard.secretLeakThrew = false;
+  this.onboard.secretLeakAllowed = false;
+  this.onboard.secretLeakError = undefined;
+  try {
+    assertNoSecretsInContent('sk-abcd1234efgh5678ijkl9012mnop3456qrst');
+    this.onboard.secretLeakAllowed = true;
+  } catch (err) {
+    this.onboard.secretLeakThrew = true;
+    if (err instanceof SecretLeakageError) {
+      this.onboard.secretLeakError = err;
+    }
+  }
+});
+
+When(/^assertNoSecretsInContent is called with a JWT token$/, function (this: OnboardWorld) {
+  this.onboard.secretLeakThrew = false;
+  this.onboard.secretLeakAllowed = false;
+  const jwt = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
+  try {
+    assertNoSecretsInContent(jwt);
+    this.onboard.secretLeakAllowed = true;
+  } catch {
+    this.onboard.secretLeakThrew = true;
+  }
+});
+
+Then(/^it throws SecretLeakageError and hits expose the openai-api-key pattern$/, function (this: OnboardWorld) {
+  assert.equal(this.onboard.secretLeakThrew!, true, 'expected SecretLeakageError to be thrown');
+  const err = this.onboard.secretLeakError!;
+  assert.ok(err instanceof SecretLeakageError, `expected SecretLeakageError, got: ${err}`);
+  assert.ok(err.hits.length > 0, 'expected at least 1 hit');
+  assert.ok(
+    err.hits.some((h) => h.pattern === 'openai-api-key'),
+    `expected hit with pattern "openai-api-key", got: ${JSON.stringify(err.hits.map((h) => h.pattern))}`,
+  );
+});
+
+Then(/^assertNoSecretsInContent does not throw$/, function (this: OnboardWorld) {
+  assert.equal(this.onboard.secretLeakThrew!, false, 'expected assertNoSecretsInContent NOT to throw');
+  assert.equal(this.onboard.secretLeakAllowed!, true, 'expected call to complete without throwing');
+});
+
+// ── ONBOARD043: NFR-S1 finalize aborts on secret in commands.reason ──────────
+
+Given(/^the compose context commands\.test\.reason contains an OpenAI sk- key$/, async function (this: OnboardWorld) {
+  // Store poison marker in World state; applied in When step
+  this.onboard.commands = {
+    ...fakeCommands(),
+    test: {
+      ...fakeCommands().test,
+      reason: 'DO NOT CHECK IN: sk-abcd1234efgh5678ijkl9012mnop3456qrst',
+    },
+  };
+});
+
+When(/^Phase 0 finalize is called with that compose context$/, async function (this: OnboardWorld) {
+  this.onboard.secretFinalizeRejected = false;
+  this.onboard.secretFinalizeError = undefined;
+  const ctx = makeComposeCtx(this.onboard.tmpdir, { commands: this.onboard.commands });
+  const jsonPath = path.join(this.onboard.tmpdir, '.specs', '.onboarding.json');
+  try {
+    await finalize(ctx);
+    this.onboard.secretFinalizeRejected = false;
+  } catch (err) {
+    this.onboard.secretFinalizeRejected = true;
+    this.onboard.secretFinalizeError = err;
+  }
+  this.onboard.secretFinalizeJsonWritten = await fsExtra.pathExists(jsonPath);
+});
+
+Then(/^finalize rejects with SecretLeakageError$/, function (this: OnboardWorld) {
+  assert.equal(this.onboard.secretFinalizeRejected!, true, 'expected finalize to reject');
+  assert.ok(
+    this.onboard.secretFinalizeError instanceof SecretLeakageError,
+    `expected SecretLeakageError, got: ${this.onboard.secretFinalizeError}`,
+  );
+});
+
+Then(/^the onboarding json file is NOT written to disk$/, function (this: OnboardWorld) {
+  assert.equal(
+    this.onboard.secretFinalizeJsonWritten!, false,
+    'expected .onboarding.json NOT to be written when secret guard fires',
+  );
+});
+
+// ── ONBOARD044: ScratchAppender creates file with header (@feature14) ─────────
+
+When(/^ScratchAppender appends a finding from Subagent A$/, async function (this: OnboardWorld) {
+  this.onboard.scratchAppender = new ScratchAppender(this.onboard.tmpdir);
+  await this.onboard.scratchAppender.append('Subagent A', 'Found pyproject.toml with FastAPI');
+});
+
+Then(/^the scratch file exists with header "([^"]+)"$/, async function (this: OnboardWorld, expectedHeader: string) {
+  const content = await readScratch(this.onboard.tmpdir);
+  assert.ok(content !== null, 'expected scratch file to exist');
+  assert.ok(content!.includes(expectedHeader), `expected header "${expectedHeader}" in scratch, got: ${content!.slice(0, 200)}`);
+});
+
+Then(/^the scratch file contains a timestamped block for Subagent A$/, async function (this: OnboardWorld) {
+  const content = await readScratch(this.onboard.tmpdir);
+  assert.ok(content!.includes('Subagent A'), `expected "Subagent A" in scratch content`);
+  assert.ok(content!.includes('### '), 'expected timestamped block header "### " in scratch');
+});
+
+Then(/^the block contains the finding text$/, async function (this: OnboardWorld) {
+  const content = await readScratch(this.onboard.tmpdir);
+  assert.ok(content!.includes('Found pyproject.toml with FastAPI'),
+    `expected finding text in scratch: ${content!.slice(0, 300)}`);
+});
+
+// ── ONBOARD045: multiple appends accumulate blocks (@feature14) ───────────────
+
+When(/^ScratchAppender appends findings from Subagent A, Subagent B, and Subagent C$/, async function (this: OnboardWorld) {
+  const appender = new ScratchAppender(this.onboard.tmpdir);
+  await appender.append('Subagent A', ['pyproject.toml present', 'FastAPI detected']);
+  // Small delay to ensure distinct timestamps
+  await new Promise((r) => setTimeout(r, 15));
+  await appender.append('Subagent B', 'pytest.ini found');
+  await new Promise((r) => setTimeout(r, 15));
+  await appender.append('Subagent C', 'src/main.py is FastAPI entry');
+});
+
+Then(/^the scratch file contains 3 timestamped blocks in order$/, async function (this: OnboardWorld) {
+  const content = await readScratch(this.onboard.tmpdir);
+  assert.ok(content !== null, 'expected scratch file to exist');
+  const blocks = content!.split('### ').slice(1);
+  assert.equal(blocks.length, 3, `expected 3 timestamped blocks, got ${blocks.length}: ${content!.slice(0, 400)}`);
+  assert.ok(blocks[0].includes('Subagent A'), `expected block[0] to contain "Subagent A"`);
+  assert.ok(blocks[1].includes('Subagent B'), `expected block[1] to contain "Subagent B"`);
+  assert.ok(blocks[2].includes('Subagent C'), `expected block[2] to contain "Subagent C"`);
+});
+
+// ── ONBOARD046: archiveScratch moves scratch to history (@feature14) ──────────
+
+Given(/^the scratch file has been written via ScratchAppender$/, async function (this: OnboardWorld) {
+  const appender = new ScratchAppender(this.onboard.tmpdir);
+  await appender.append('Subagent A', 'finding for archive test');
+});
+
+When(/^archiveScratch runs on tmpdir$/, async function (this: OnboardWorld) {
+  this.onboard.scratchArchivePath = await archiveScratch(this.onboard.tmpdir);
+});
+
+Then(/^archiveScratch returns a path matching the scratch ISO datetime pattern$/, function (this: OnboardWorld) {
+  assert.ok(this.onboard.scratchArchivePath !== null, 'expected archiveScratch to return a path, got null');
+  assert.match(
+    this.onboard.scratchArchivePath!,
+    /scratch-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z\.md$/,
+    `expected path matching scratch ISO pattern, got: "${this.onboard.scratchArchivePath}"`,
+  );
+});
+
+Then(/^the archive file exists at that path$/, async function (this: OnboardWorld) {
+  assert.ok(
+    await fsExtra.pathExists(this.onboard.scratchArchivePath!),
+    `expected archive file to exist at: ${this.onboard.scratchArchivePath}`,
+  );
+});
+
+Then(/^the live scratch file no longer exists$/, async function (this: OnboardWorld) {
+  const scratchPath = path.join(this.onboard.tmpdir, '.specs', '.onboarding-scratch.md');
+  assert.ok(
+    !(await fsExtra.pathExists(scratchPath)),
+    `expected live scratch to be removed: ${scratchPath}`,
+  );
+});
+
+// ── ONBOARD047: archiveScratch returns null when no scratch (@feature14) ──────
+
+When(/^archiveScratch runs on tmpdir with no scratch file present$/, async function (this: OnboardWorld) {
+  this.onboard.scratchArchivePath = await archiveScratch(this.onboard.tmpdir);
+});
+
+Then(/^archiveScratch returns null$/, function (this: OnboardWorld) {
+  assert.equal(this.onboard.scratchArchivePath, null, 'expected archiveScratch to return null when no scratch file');
+});
+
+// ── ONBOARD048: pruneScratchArchives (@feature14) ────────────────────────────
+
+Given(/^7 scratch archive files exist in the onboarding history directory with distinct mtimes$/, async function (this: OnboardWorld) {
+  const historyDir = path.join(this.onboard.tmpdir, '.specs', '.onboarding-history');
+  await fsExtra.ensureDir(historyDir);
+  for (let i = 0; i < 7; i++) {
+    const filePath = path.join(historyDir, `scratch-2026-04-2${i}.md`);
+    await fsExtra.writeFile(filePath, `archive ${i}`, 'utf-8');
+    const mtime = new Date(Date.now() + i * 1000);
+    await fsExtra.utimes(filePath, mtime, mtime);
+  }
+});
+
+Given(/^a non-scratch directory entry exists in the onboarding history directory$/, async function (this: OnboardWorld) {
+  const historyDir = path.join(this.onboard.tmpdir, '.specs', '.onboarding-history');
+  await fsExtra.ensureDir(path.join(historyDir, '2026-04-20T10-00-00-000Z'));
+});
+
+When(/^pruneScratchArchives runs keeping 5$/, async function (this: OnboardWorld) {
+  const historyDir = path.join(this.onboard.tmpdir, '.specs', '.onboarding-history');
+  await pruneScratchArchives(this.onboard.tmpdir, 5);
+  const remaining = await fsExtra.readdir(historyDir);
+  this.onboard.scratchPruneResult = { remaining, historyDir };
+});
+
+Then(/^only 5 scratch archives remain$/, function (this: OnboardWorld) {
+  const scratchFiles = this.onboard.scratchPruneResult!.remaining.filter((n) => n.startsWith('scratch-'));
+  assert.equal(scratchFiles.length, 5, `expected 5 scratch archives, got ${scratchFiles.length}: ${JSON.stringify(scratchFiles)}`);
+});
+
+Then(/^the 2 oldest scratch archives are deleted$/, function (this: OnboardWorld) {
+  const remaining = this.onboard.scratchPruneResult!.remaining;
+  assert.ok(!remaining.includes('scratch-2026-04-20.md'), 'expected scratch-2026-04-20.md (oldest) to be deleted');
+  assert.ok(!remaining.includes('scratch-2026-04-21.md'), 'expected scratch-2026-04-21.md (2nd oldest) to be deleted');
+});
+
+Then(/^the non-scratch directory entry is preserved$/, function (this: OnboardWorld) {
+  const remaining = this.onboard.scratchPruneResult!.remaining;
+  assert.ok(remaining.includes('2026-04-20T10-00-00-000Z'), 'expected non-scratch dir entry to be preserved');
 });
