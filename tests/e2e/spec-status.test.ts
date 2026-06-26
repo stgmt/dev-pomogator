@@ -147,35 +147,32 @@ describe('HSCMD001: Honest Spec Status Command', () => {
     });
   });
 
-  // @feature4 — FR-6 test body quality classification
-  describe('HSCMD001_04: flag weak / fake-positive test bodies', () => {
-    it('HSCMD001_04: weak fixture → all blocks WEAK (presence-only)', () => {
-      const r = classifyTestFile(read(path.join(FIX, 'sample-tests', 'weak.test.ts')));
-      expect(r.summary.total).toBe(2);
+  // @feature4 — FR-6 test body quality classification (BDD step-def shape)
+  describe('HSCMD001_04: flag weak / fake-positive BDD step-def bodies', () => {
+    it('HSCMD001_04: weak BDD fixture → the assertion-bearing step is WEAK (presence-only)', () => {
+      const r = classifyTestFile(read(path.join(FIX, 'sample-tests', 'weak.steps.ts')));
+      expect(r.summary.total).toBe(1); // only the Then asserts; Given/When setup is skipped
       expect(r.blocks.every((b) => b.classification === 'WEAK')).toBe(true);
       expect(r.blocks[0].reason).toMatch(/presence-only/);
     });
 
-    it('HSCMD001_04b: strong fixture → all blocks STRONG (value-level)', () => {
-      const r = classifyTestFile(read(path.join(FIX, 'sample-tests', 'strong.test.ts')));
+    it('HSCMD001_04b: strong BDD fixture → all assertion-bearing steps STRONG (value-level)', () => {
+      const r = classifyTestFile(read(path.join(FIX, 'sample-tests', 'strong.steps.ts')));
       expect(r.summary.strong).toBe(r.summary.total);
-      expect(r.summary.total).toBe(2);
+      expect(r.summary.total).toBe(2); // two Then steps, both assert.deepEqual value-level
     });
 
-    it('HSCMD001_04c: fake-positive fixture → file-mock risk + tautology block', () => {
-      const r = classifyTestFile(read(path.join(FIX, 'sample-tests', 'fake-positive.test.ts')));
+    it('HSCMD001_04c: fake-positive BDD fixture → file-mock risk + tautology step', () => {
+      const r = classifyTestFile(read(path.join(FIX, 'sample-tests', 'fake-positive.steps.ts')));
       expect(r.fileRisks.some((f) => /critical-parser/.test(f.detail))).toBe(true);
       expect(r.blocks.some((b) => b.classification === 'FAKE-POSITIVE-RISK')).toBe(true);
     });
 
-    it('HSCMD001_04-inv: cardinality + conservation — one verdict per it(), buckets sum to total', () => {
-      for (const f of ['weak.test.ts', 'strong.test.ts', 'fake-positive.test.ts']) {
-        const src = read(path.join(FIX, 'sample-tests', f));
-        // Count real it()/test() blocks the way extractBlocks does (quote-anchored),
-        // so `it()` inside a comment ("classify all it() blocks") is not miscounted.
-        const itCount = (src.match(/\b(?:it|test)(?:\.\w+)?\s*\(\s*['"`]/g) || []).length;
-        const r = classifyTestFile(src);
-        expect(r.blocks).toHaveLength(itCount); // one verdict per it() — no drop/dup
+    it('HSCMD001_04-inv: conservation — buckets sum to total; pure Given/When setup steps are skipped', () => {
+      const expected: Record<string, number> = { 'weak.steps.ts': 1, 'strong.steps.ts': 2, 'fake-positive.steps.ts': 1 };
+      for (const [f, n] of Object.entries(expected)) {
+        const r = classifyTestFile(read(path.join(FIX, 'sample-tests', f)));
+        expect(r.summary.total).toBe(n); // only assertion-bearing steps graded — no setup-step noise
         expect(r.summary.strong + r.summary.weak + r.summary.fakePositiveRisk).toBe(r.summary.total);
         expect(r.summary.total).toBe(r.blocks.length);
       }
