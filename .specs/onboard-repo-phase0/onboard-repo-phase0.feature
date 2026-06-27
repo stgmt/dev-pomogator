@@ -236,6 +236,23 @@ Feature: ONBOARD001_Phase0_Repo_Onboarding
     And `.onboarding.json.warnings[]` contains entry with `step: "recon"` and `subagent: "B"`
     And the text gate summary acknowledges partial data
 
+  @feature7
+  Scenario: ONBOARD013b_Recon_prompts_embed_archetype_specific_focus_hints
+    Given the "fake-python-api" fixture is staged for recon
+    Then the recon prompts for "python-api" embed the "FastAPI" focus hint
+    And the recon prompts for "nodejs-frontend" embed the "Next.js" focus hint
+
+  @feature7
+  Scenario: ONBOARD013c_Recon_prompts_carry_project_path_and_archetype_verbatim
+    Given the "fake-python-api" fixture is staged for recon
+    Then every recon prompt for archetype "dotnet-service" at path "/tmp/some-path" includes both verbatim
+
+  @feature7
+  Scenario: ONBOARD014b_All_subagents_failing_marks_allFailed_with_three_warnings
+    Given the "fake-python-api" fixture is staged for recon
+    When recon runs with all three subagents failing
+    Then recon reports allFailed with three warnings and empty merged data
+
   @feature8
   Scenario: ONBOARD015_Archetype_triage_classifies_python_api
     Given fake-python-api fixture contains `pyproject.toml` with FastAPI and uvicorn

@@ -574,6 +574,45 @@ Then(/^all 3 outputs merge via priority rule A > B > C per-field$/, function (th
   assert.ok(merged?.entry_points?.length > 0, 'merged entry_points from C');
 });
 
+// ── ONBOARD013b-c / ONBOARD014b: recon edge cases (@feature7, migrated from the
+// parallel-recon vitest twin) — drive the REAL buildReconPrompts / runParallelRecon.
+Given(/^the "([^"]+)" fixture is staged for recon$/, async function (this: OnboardWorld, fixture: string) {
+  await teardownFakeRepo(this.onboard.tmpdir);
+  this.onboard.tmpdir = await setupFakeRepo(fixture, fixture === 'fake-no-git' ? { initGit: false } : {});
+});
+
+Then(/^the recon prompts for "([^"]+)" embed the "([^"]+)" focus hint$/, function (this: OnboardWorld, archetype: string, hint: string) {
+  const prompts = buildReconPrompts({ archetype: archetype as ReconContext['archetype'], projectPath: this.onboard.tmpdir });
+  const all = prompts.subagentA + prompts.subagentB + prompts.subagentC;
+  assert.ok(all.includes(hint), `expected "${hint}" focus hint in the ${archetype} recon prompts`);
+});
+
+Then(/^every recon prompt for archetype "([^"]+)" at path "([^"]+)" includes both verbatim$/, function (this: OnboardWorld, archetype: string, projectPath: string) {
+  const prompts = buildReconPrompts({ archetype: archetype as ReconContext['archetype'], projectPath });
+  for (const p of [prompts.subagentA, prompts.subagentB, prompts.subagentC]) {
+    assert.ok(p.includes(projectPath), `recon prompt missing path "${projectPath}"`);
+    assert.ok(p.includes(archetype), `recon prompt missing archetype "${archetype}"`);
+  }
+});
+
+When(/^recon runs with all three subagents failing$/, async function (this: OnboardWorld) {
+  const ctx: ReconContext = { archetype: 'python-api', projectPath: this.onboard.tmpdir };
+  this.onboard.reconResult = await runParallelRecon(ctx, async () => ({
+    subagent_A_manifest_env: { _crashed: true, _error: 'timeout', subagent_id: 'A' },
+    subagent_B_tests_configs: { _crashed: true, _error: 'oom', subagent_id: 'B' },
+    subagent_C_entry_points: { _crashed: true, _error: 'network', subagent_id: 'C' },
+  } as ParallelReconOutput));
+});
+
+Then(/^recon reports allFailed with three warnings and empty merged data$/, function (this: OnboardWorld) {
+  const r = this.onboard.reconResult!;
+  assert.equal(r.allFailed, true);
+  assert.deepEqual(r.merged.failed_subagents, ['A', 'B', 'C']);
+  assert.equal(r.merged.warnings.length, 3);
+  assert.deepEqual(r.merged.languages, []);
+  assert.deepEqual(r.merged.entry_points, []);
+});
+
 Then(/^merged result is stored in phase0State$/, function (this: OnboardWorld) {
   assert.ok(this.onboard.reconResult?.merged);
   assert.equal(this.onboard.reconResult?.allFailed, false);
