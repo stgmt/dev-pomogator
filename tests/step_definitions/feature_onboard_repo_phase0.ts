@@ -1314,6 +1314,66 @@ Then(/^the recorded baseline duration is ([\d.]+) seconds$/, function (this: Onb
   assert.equal(this.onboard.baseline?.duration_s, Number(secs));
 });
 
+// ── ONBOARD040b-c / 041b / 042b-c: secret-detection edge cases (@feature2, migrated
+// from the ignore-and-redaction vitest twin) — drive the REAL detectSecrets / redactSecrets / assert*.
+When(/^detectSecrets scans the non-secret text "([^"]+)"$/, function (this: OnboardWorld, text: string) {
+  this.onboard.detectHits = detectSecrets(text);
+});
+
+Then(/^detectSecrets returns no hits$/, function (this: OnboardWorld) {
+  assert.deepEqual(this.onboard.detectHits, []);
+});
+
+When(/^detectSecrets scans a JWT token$/, function (this: OnboardWorld) {
+  this.onboard.detectHits = detectSecrets('eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c');
+});
+
+Then(/^detectSecrets returns a hit with pattern "([^"]+)"$/, function (this: OnboardWorld, p: string) {
+  assert.ok(this.onboard.detectHits!.some((h) => h.pattern === p), `no hit with pattern ${p}`);
+});
+
+When(/^detectSecrets scans content holding both an OpenAI and a GitHub secret$/, function (this: OnboardWorld) {
+  this.onboard.detectHits = detectSecrets('sk-abcd1234efgh5678ijkl9012mnop3456qrst + ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijkl');
+});
+
+Then(/^detectSecrets returns 2 hits covering the openai-api-key and github-pat patterns$/, function (this: OnboardWorld) {
+  const ps = this.onboard.detectHits!.map((h) => h.pattern);
+  assert.equal(this.onboard.detectHits!.length, 2);
+  assert.ok(ps.includes('openai-api-key') && ps.includes('github-pat'), `patterns: ${ps}`);
+});
+
+When(/^redactSecrets processes empty content and null content$/, function (this: OnboardWorld) {
+  (this.onboard as Record<string, any>).redactEmpty = redactSecrets('');
+  (this.onboard as Record<string, any>).redactNull = redactSecrets(null as unknown as string);
+});
+
+Then(/^redactSecrets handles both gracefully with no hits$/, function (this: OnboardWorld) {
+  assert.equal((this.onboard as Record<string, any>).redactEmpty.redacted, '');
+  assert.deepEqual((this.onboard as Record<string, any>).redactNull.hits, []);
+});
+
+When(/^assertNoSecretsInObject is called with an object holding an OpenAI key$/, function (this: OnboardWorld) {
+  try { assertNoSecretsInObject({ key: 'sk-abcd1234efgh5678ijkl9012mnop3456qrst' }); (this.onboard as Record<string, unknown>).secretErr = null; }
+  catch (e) { (this.onboard as Record<string, unknown>).secretErr = e; }
+});
+
+Then(/^it throws SecretLeakageError exposing the openai-api-key pattern$/, function (this: OnboardWorld) {
+  const err = (this.onboard as Record<string, unknown>).secretErr;
+  assert.ok(err instanceof SecretLeakageError, 'expected SecretLeakageError');
+  assert.ok((err as SecretLeakageError).hits.some((h) => h.pattern === 'openai-api-key'));
+});
+
+When(/^assertNoSecretsInContent is called with an OpenAI key and context "([^"]+)"$/, function (this: OnboardWorld, ctx: string) {
+  try { assertNoSecretsInContent('sk-abcd1234efgh5678ijkl9012mnop3456qrst', ctx); (this.onboard as Record<string, unknown>).secretErr = null; }
+  catch (e) { (this.onboard as Record<string, unknown>).secretErr = e; }
+});
+
+Then(/^it throws SecretLeakageError whose message mentions "([^"]+)"$/, function (this: OnboardWorld, ctx: string) {
+  const err = (this.onboard as Record<string, unknown>).secretErr;
+  assert.ok(err instanceof SecretLeakageError, 'expected SecretLeakageError');
+  assert.ok((err as Error).message.includes(ctx), `message should mention "${ctx}": ${(err as Error).message}`);
+});
+
 // ── ONBOARD029-030: .onboarding.md sections (@feature9 @feature11) ───────────
 // (Phase 0 finalizes is the shared When for these scenarios)
 

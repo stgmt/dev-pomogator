@@ -717,6 +717,38 @@ Feature: ONBOARD001_Phase0_Repo_Onboarding
     Then finalize rejects with SecretLeakageError
     And the onboarding json file is NOT written to disk
 
+  @feature2
+  Scenario Outline: ONBOARD040b_detectSecrets_ignores_non_secret_text_<case>
+    When detectSecrets scans the non-secret text "<text>"
+    Then detectSecrets returns no hits
+
+    Examples:
+      | case | text |
+      | prose | just normal prose about an API key concept |
+      | env-var-names | required: AUTO_COMMIT_API_KEY, DATABASE_URL, JWT_SECRET |
+
+  @feature2
+  Scenario: ONBOARD040c_detectSecrets_finds_a_jwt_and_multiple_secrets
+    When detectSecrets scans a JWT token
+    Then detectSecrets returns a hit with pattern "jwt"
+    When detectSecrets scans content holding both an OpenAI and a GitHub secret
+    Then detectSecrets returns 2 hits covering the openai-api-key and github-pat patterns
+
+  @feature2
+  Scenario: ONBOARD041b_redactSecrets_handles_empty_and_null_content
+    When redactSecrets processes empty content and null content
+    Then redactSecrets handles both gracefully with no hits
+
+  @feature2
+  Scenario: ONBOARD042b_assertNoSecretsInObject_throws_on_a_leaked_object
+    When assertNoSecretsInObject is called with an object holding an OpenAI key
+    Then it throws SecretLeakageError exposing the openai-api-key pattern
+
+  @feature2
+  Scenario: ONBOARD042c_assertNoSecretsInContent_includes_the_context_in_the_error
+    When assertNoSecretsInContent is called with an OpenAI key and context "test-context"
+    Then it throws SecretLeakageError whose message mentions "test-context"
+
   @feature14
   Scenario: ONBOARD044_ScratchAppender_creates_file_with_header_on_first_append
     Given fake-python-api fixture is seeded
