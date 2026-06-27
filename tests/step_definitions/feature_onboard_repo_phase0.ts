@@ -1374,6 +1374,131 @@ Then(/^it throws SecretLeakageError whose message mentions "([^"]+)"$/, function
   assert.ok((err as Error).message.includes(ctx), `message should mention "${ctx}": ${(err as Error).message}`);
 });
 
+// ── ONBOARD024b-d / 023b-c / 002b / 014c: finalize render + hook-compile + integration
+// edges (@feature15/@feature3/@feature2, migrated from the finalize vitest twin) — drive the
+// REAL renderOnboardingContext / renderOnboardingMd / compilePreToolUseBlock / evaluateBashCommand / finalize.
+When(/^the onboarding rule is rendered from a composed python-api json$/, function (this: OnboardWorld) {
+  const json = composeOnboardingJson(makeComposeCtx(REPO_ROOT));
+  (this.onboard as Record<string, unknown>).renderedRule = renderOnboardingContext(json);
+});
+
+Then(/^the rendered rule shows the 3-tier boundaries and the skills registry$/, function (this: OnboardWorld) {
+  const r = (this.onboard as Record<string, any>).renderedRule as string;
+  assert.match(r, /✅ Always/);
+  assert.match(r, /⚠️ Ask first/);
+  assert.match(r, /🚫 Never/);
+  assert.ok(r.includes('Use /run-tests') && r.includes('run-tests'), 'boundaries/skills missing in rendered rule');
+});
+
+When(/^the onboarding md is rendered with custom risks and next steps$/, function (this: OnboardWorld) {
+  const json = composeOnboardingJson(makeComposeCtx(REPO_ROOT));
+  (this.onboard as Record<string, unknown>).renderedMd = renderOnboardingMd(json, { risks: ['2 failing tests in baseline'], suggestedNextSteps: ['Fix auth_test.py first'] });
+});
+
+Then(/^the rendered md carries the custom risks and next steps verbatim$/, function (this: OnboardWorld) {
+  const r = (this.onboard as Record<string, any>).renderedMd as string;
+  assert.ok(r.includes('2 failing tests in baseline') && r.includes('Fix auth_test.py first'), 'custom risks/next-steps missing');
+});
+
+When(/^the PreToolUse block is compiled from the fake commands$/, function (this: OnboardWorld) {
+  (this.onboard as Record<string, unknown>).compiledBlock = compilePreToolUseBlock(fakeCommands());
+});
+
+Then(/^the compiled block is managed and has one entry for the "test" command via "run-tests"$/, function (this: OnboardWorld) {
+  const block = (this.onboard as Record<string, any>).compiledBlock;
+  assert.equal(block._marker, MANAGED_MARKER);
+  const entries = block.hooks.PreToolUse[0].hooks[0]._entries;
+  assert.equal(entries.length, 1);
+  assert.equal(entries[0].command_name, 'test');
+  assert.equal(entries[0].skill, 'run-tests');
+});
+
+When(/^evaluateBashCommand judges "([^"]+)" against the compiled block$/, function (this: OnboardWorld, command: string) {
+  const entries = compilePreToolUseBlock(fakeCommands()).hooks.PreToolUse[0].hooks[0]._entries;
+  this.onboard.hookDecision = evaluateBashCommand(command, entries);
+});
+
+Then(/^the bash command is (denied|allowed)$/, function (this: OnboardWorld, verdict: string) {
+  const d = this.onboard.hookDecision!;
+  if (verdict === 'denied') {
+    assert.equal(d.allow, false);
+    assert.equal(d.permissionDecision, 'deny');
+  } else {
+    assert.equal(d.allow, true);
+    assert.equal(d.permissionDecision, undefined);
+  }
+});
+
+Given(/^a fake-python-api repo for finalize$/, async function (this: OnboardWorld) {
+  await teardownFakeRepo(this.onboard.tmpdir);
+  this.onboard.tmpdir = await setupFakeRepo('fake-python-api');
+});
+
+When(/^Phase 0 finalizes the repo end to end$/, async function (this: OnboardWorld) {
+  this.onboard.finalizeResult = await finalize(makeComposeCtx(this.onboard.tmpdir));
+});
+
+Then(/^finalize writes the json, md, rule, and settings.local artifacts$/, async function (this: OnboardWorld) {
+  const r = (this.onboard.finalizeResult as any).result;
+  assert.ok(await fsExtra.pathExists(r.jsonPath), 'jsonPath missing');
+  assert.ok(await fsExtra.pathExists(r.mdPath), 'mdPath missing');
+  assert.ok(await fsExtra.pathExists(r.ruleFilePath), 'ruleFilePath missing');
+  assert.ok(await fsExtra.pathExists(r.hookMerge.settingsPath), 'settingsPath missing');
+});
+
+Then(/^the written json archetype is "([^"]+)" with the run-tests command$/, async function (this: OnboardWorld, archetype: string) {
+  const r = (this.onboard.finalizeResult as any).result;
+  const diskJson = await fsExtra.readJson(r.jsonPath);
+  assert.equal(diskJson.archetype, archetype);
+  assert.equal(diskJson.commands.test.via_skill, 'run-tests');
+});
+
+Given(/^a fake-python-api repo with pre-existing user hooks in settings\.local\.json$/, async function (this: OnboardWorld) {
+  await teardownFakeRepo(this.onboard.tmpdir);
+  this.onboard.tmpdir = await setupFakeRepo('fake-python-api');
+  const settingsPath = path.join(this.onboard.tmpdir, '.claude', 'settings.local.json');
+  await fsExtra.ensureDir(path.dirname(settingsPath));
+  await fsExtra.writeJson(settingsPath, {
+    hooks: { PreToolUse: [{ matcher: 'Write', hooks: [{ type: 'command', command: 'user-custom' }] }], Stop: [{ matcher: '*', hooks: [{ type: 'command', command: 'auto-commit' }] }] },
+    env: { CUSTOM_USER_VAR: 'preserved' },
+  });
+});
+
+Then(/^the user hooks and env are preserved and a managed Bash hook is appended$/, async function (this: OnboardWorld) {
+  const r = (this.onboard.finalizeResult as any).result;
+  assert.equal(r.hookMerge.userHooksPreserved, 1);
+  const merged = await fsExtra.readJson(r.hookMerge.settingsPath);
+  assert.equal(merged.env.CUSTOM_USER_VAR, 'preserved');
+  assert.equal(merged.hooks.Stop[0].hooks[0].command, 'auto-commit');
+  const pre = merged.hooks.PreToolUse as Array<Record<string, unknown>>;
+  assert.equal(pre.length, 2);
+  assert.ok(pre.some((p) => p.matcher === 'Write') && pre.some((p) => p.matcher === 'Bash'), 'Write+Bash hooks expected');
+});
+
+When(/^Phase 0 finalizes the repo twice$/, async function (this: OnboardWorld) {
+  await finalize(makeComposeCtx(this.onboard.tmpdir));
+  this.onboard.finalizeResult = await finalize(makeComposeCtx(this.onboard.tmpdir));
+});
+
+Then(/^settings\.local\.json holds exactly one managed Bash hook entry$/, async function (this: OnboardWorld) {
+  const r = (this.onboard.finalizeResult as any).result;
+  const merged = await fsExtra.readJson(r.hookMerge.settingsPath);
+  const bash = (merged.hooks.PreToolUse as Array<Record<string, unknown>>).filter((p) => p.matcher === 'Bash');
+  assert.equal(bash.length, 1);
+});
+
+When(/^Phase 0 finalizes with a crashed Subagent B in recon$/, async function (this: OnboardWorld) {
+  const state = makePhase0State(this.onboard.tmpdir);
+  state.recon = { ...fakeReconOutput(), subagent_B_tests_configs: { _crashed: true, _error: 'timeout', subagent_id: 'B' } as ParallelReconOutput['subagent_B_tests_configs'] };
+  this.onboard.finalizeResult = await finalize(makeComposeCtx(this.onboard.tmpdir, { state }));
+});
+
+Then(/^the final json warnings include a recon warning naming Subagent B$/, function (this: OnboardWorld) {
+  const json = (this.onboard.finalizeResult as any).json;
+  const warnings = (json.warnings ?? []) as Array<{ step: string; message: string }>;
+  assert.ok(warnings.some((w) => w.step === 'recon' && w.message.includes('Subagent B')), `warnings: ${JSON.stringify(warnings)}`);
+});
+
 // ── ONBOARD029-030: .onboarding.md sections (@feature9 @feature11) ───────────
 // (Phase 0 finalizes is the shared When for these scenarios)
 

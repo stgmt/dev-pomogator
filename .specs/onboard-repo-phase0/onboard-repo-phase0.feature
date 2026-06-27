@@ -749,6 +749,56 @@ Feature: ONBOARD001_Phase0_Repo_Onboarding
     When assertNoSecretsInContent is called with an OpenAI key and context "test-context"
     Then it throws SecretLeakageError whose message mentions "test-context"
 
+  @feature15
+  Scenario: ONBOARD024b_Rendered_rule_shows_3tier_boundaries_and_skills
+    When the onboarding rule is rendered from a composed python-api json
+    Then the rendered rule shows the 3-tier boundaries and the skills registry
+
+  @feature9
+  Scenario: ONBOARD029b_Rendered_md_honours_custom_risks_and_next_steps
+    When the onboarding md is rendered with custom risks and next steps
+    Then the rendered md carries the custom risks and next steps verbatim
+
+  @feature3
+  Scenario: ONBOARD023b_compilePreToolUseBlock_extracts_only_forbidden_commands
+    When the PreToolUse block is compiled from the fake commands
+    Then the compiled block is managed and has one entry for the "test" command via "run-tests"
+
+  @feature3
+  Scenario Outline: ONBOARD023c_evaluateBashCommand_handles_<verdict>_<cmd>
+    When evaluateBashCommand judges "<command>" against the compiled block
+    Then the bash command is <verdict>
+
+    Examples:
+      | verdict | cmd | command |
+      | denied | pytest | pytest -v |
+      | allowed | ls | ls -la |
+
+  @feature2
+  Scenario: ONBOARD002b_Finalize_writes_all_four_artifacts
+    Given a fake-python-api repo for finalize
+    When Phase 0 finalizes the repo end to end
+    Then finalize writes the json, md, rule, and settings.local artifacts
+    And the written json archetype is "python-api" with the run-tests command
+
+  @feature15
+  Scenario: ONBOARD024c_Finalize_smart_merges_preserving_user_hooks
+    Given a fake-python-api repo with pre-existing user hooks in settings.local.json
+    When Phase 0 finalizes the repo end to end
+    Then the user hooks and env are preserved and a managed Bash hook is appended
+
+  @feature15
+  Scenario: ONBOARD024d_Re_running_finalize_is_idempotent_for_managed_hooks
+    Given a fake-python-api repo for finalize
+    When Phase 0 finalizes the repo twice
+    Then settings.local.json holds exactly one managed Bash hook entry
+
+  @feature2
+  Scenario: ONBOARD014c_Recon_warnings_flow_through_to_the_final_json
+    Given a fake-python-api repo for finalize
+    When Phase 0 finalizes with a crashed Subagent B in recon
+    Then the final json warnings include a recon warning naming Subagent B
+
   @feature14
   Scenario: ONBOARD044_ScratchAppender_creates_file_with_header_on_first_append
     Given fake-python-api fixture is seeded
