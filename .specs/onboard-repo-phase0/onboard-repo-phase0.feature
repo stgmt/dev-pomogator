@@ -100,6 +100,51 @@ Feature: ONBOARD001_Phase0_Repo_Onboarding
     Then Phase 0 Step 4 is skipped
     And `.onboarding.json.baseline_tests.skipped_by_user == true`
 
+  @feature5
+  Scenario: ONBOARD007b_parseBaselineOutput_extracts_pytest_summary_counts
+    When parseBaselineOutput parses the test output:
+      """
+      =========================== 145 passed, 2 failed, 8 skipped in 47.23s ============================
+      """
+    Then the parsed summary is 145 passed, 2 failed, 8 skipped
+
+  @feature5
+  Scenario: ONBOARD007c_parseBaselineOutput_extracts_the_failed_test_ids
+    When parseBaselineOutput parses the test output:
+      """
+      =================== FAILURES ===================
+      FAILED tests/unit/foo_test.py::test_a
+      FAILED tests/integration/bar_test.py::test_b
+      2 failed, 10 passed
+      """
+    Then the parsed failed test ids include "tests/unit/foo_test.py::test_a" and "tests/integration/bar_test.py::test_b"
+
+  @feature5
+  Scenario: ONBOARD007d_parseBaselineOutput_extracts_the_vitest_summary
+    When parseBaselineOutput parses the test output:
+      """
+      Tests  2 failed | 48 passed (50)
+      """
+    Then the parsed summary is 48 passed and 2 failed
+
+  @feature5
+  Scenario: ONBOARD007e_Exit_127_aborts_with_an_install_hint
+    Given a fake-python-api repo for baseline tests
+    When baseline tests run but the runner exits 127 with install hint "uv sync --group dev"
+    Then runBaselineTests aborts asking to install dependencies via "uv sync --group dev"
+
+  @feature5
+  Scenario: ONBOARD007f_Exit_127_without_a_hint_names_the_framework
+    Given a fake-python-api repo for baseline tests
+    When baseline tests run but the runner exits 127 with no install hint
+    Then runBaselineTests aborts saying pytest was not found
+
+  @feature5
+  Scenario: ONBOARD007g_Baseline_duration_is_rounded_to_one_decimal
+    Given a fake-python-api repo for baseline tests
+    When baseline tests run and report a 3467 ms duration
+    Then the recorded baseline duration is 3.5 seconds
+
   @feature6
   @manual
   Scenario: ONBOARD010_Text_gate_accepts_confirmation

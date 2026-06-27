@@ -61,7 +61,10 @@ import {
 import type { Decision as CacheDecision } from '../../tools/onboard-repo/lib/git-sha-cache.ts';
 import {
   runBaselineTests,
+  parseBaselineOutput,
+  BaselineAbortError,
   type BaselineTestsContext,
+  type BaselineTestsDeps,
 } from '../../tools/onboard-repo/steps/baseline-tests.ts';
 import {
   buildReconPrompts,
@@ -1234,6 +1237,81 @@ Then(/^the rendered empty-repo \.onboarding\.md carries snapshot and next-steps 
   assert.match(md, /## 1\. Project snapshot/);
   assert.match(md, /## 6\. Suggested next steps/);
   assert.match(md, /N\/A|No test framework detected/);
+});
+
+// ── ONBOARD007b-g: baseline-tests edge cases (@feature5, migrated from the
+// baseline-tests vitest twin) — drive the REAL runBaselineTests / parseBaselineOutput.
+function exit127Deps(): BaselineTestsDeps {
+  return {
+    invokeRunTests: async () => ({ exitCode: 127, stdout: '', stderr: 'command not found: pytest', durationMs: 5, passed: 0, failed: 0, skipped: 0, failedTestIds: [] }),
+  };
+}
+
+When(/^parseBaselineOutput parses the test output:$/, function (this: OnboardWorld, stdout: string) {
+  (this.onboard as Record<string, unknown>).parsed = parseBaselineOutput({ stdout, stderr: '', exitCode: 1, durationMs: 1000 });
+});
+
+Then(/^the parsed summary is (\d+) passed, (\d+) failed, (\d+) skipped$/, function (this: OnboardWorld, p: string, f: string, s: string) {
+  const parsed = (this.onboard as Record<string, any>).parsed;
+  assert.equal(parsed.passed, Number(p));
+  assert.equal(parsed.failed, Number(f));
+  assert.equal(parsed.skipped, Number(s));
+});
+
+Then(/^the parsed summary is (\d+) passed and (\d+) failed$/, function (this: OnboardWorld, p: string, f: string) {
+  const parsed = (this.onboard as Record<string, any>).parsed;
+  assert.equal(parsed.passed, Number(p));
+  assert.equal(parsed.failed, Number(f));
+});
+
+Then(/^the parsed failed test ids include "([^"]+)" and "([^"]+)"$/, function (this: OnboardWorld, a: string, b: string) {
+  const parsed = (this.onboard as Record<string, any>).parsed;
+  assert.ok(parsed.failedTestIds.includes(a), `missing ${a}`);
+  assert.ok(parsed.failedTestIds.includes(b), `missing ${b}`);
+});
+
+Given(/^a fake-python-api repo for baseline tests$/, async function (this: OnboardWorld) {
+  await teardownFakeRepo(this.onboard.tmpdir);
+  this.onboard.tmpdir = await setupFakeRepo('fake-python-api');
+});
+
+When(/^baseline tests run but the runner exits 127 with install hint "([^"]+)"$/, async function (this: OnboardWorld, hint: string) {
+  try {
+    await runBaselineTests({ projectPath: this.onboard.tmpdir, testFramework: 'pytest', testCommand: 'uv run pytest', installHint: hint }, exit127Deps());
+    (this.onboard as Record<string, unknown>).baselineError = null;
+  } catch (e) { (this.onboard as Record<string, unknown>).baselineError = e; }
+});
+
+When(/^baseline tests run but the runner exits 127 with no install hint$/, async function (this: OnboardWorld) {
+  try {
+    await runBaselineTests({ projectPath: this.onboard.tmpdir, testFramework: 'pytest', testCommand: 'pytest' }, exit127Deps());
+    (this.onboard as Record<string, unknown>).baselineError = null;
+  } catch (e) { (this.onboard as Record<string, unknown>).baselineError = e; }
+});
+
+Then(/^runBaselineTests aborts asking to install dependencies via "([^"]+)"$/, function (this: OnboardWorld, hint: string) {
+  const err = (this.onboard as Record<string, unknown>).baselineError;
+  assert.ok(err instanceof BaselineAbortError, 'expected BaselineAbortError');
+  const msg = (err as Error).message;
+  assert.match(msg, /Install dependencies/);
+  assert.ok(msg.includes(hint), `message should mention "${hint}": ${msg}`);
+});
+
+Then(/^runBaselineTests aborts saying pytest was not found$/, function (this: OnboardWorld) {
+  const err = (this.onboard as Record<string, unknown>).baselineError;
+  assert.ok(err instanceof BaselineAbortError, 'expected BaselineAbortError');
+  assert.match((err as Error).message, /pytest.*not found/);
+});
+
+When(/^baseline tests run and report a (\d+) ms duration$/, async function (this: OnboardWorld, ms: string) {
+  this.onboard.baseline = await runBaselineTests(
+    { projectPath: this.onboard.tmpdir, testFramework: 'pytest', testCommand: 'pytest' },
+    { invokeRunTests: async () => ({ exitCode: 0, stdout: '100 passed in 3.47s', stderr: '', durationMs: Number(ms), passed: 100, failed: 0, skipped: 0, failedTestIds: [] }) },
+  );
+});
+
+Then(/^the recorded baseline duration is ([\d.]+) seconds$/, function (this: OnboardWorld, secs: string) {
+  assert.equal(this.onboard.baseline?.duration_s, Number(secs));
 });
 
 // ── ONBOARD029-030: .onboarding.md sections (@feature9 @feature11) ───────────
