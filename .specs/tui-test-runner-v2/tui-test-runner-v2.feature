@@ -17,11 +17,11 @@ Feature: PLUGIN013_TUI_Test_Runner_V2
     And the timeout failure card hint should be "Custom timeout hint from project override"
 
   @feature1
-  Scenario: PLUGIN013_02 analyze_status extracts crash location and code snippet from auth.test.ts failure
+  Scenario: PLUGIN013_02 analyze_status extracts crash location and code snippet from auth.steps.ts failure
     Given a YAML v2 status fixture "yaml-v2-full.yaml" for code snippet test
     When analyze_status is called against the fixture without user patterns
     Then the first failure card should have patternId "assertion_equal"
-    And the failure card crash location should be file "tests/auth.test.ts" line 42 method "Object.<anonymous>"
+    And the failure card crash location should be file "tests/auth.steps.ts" line 42 method "Object.<anonymous>"
     And the code snippet should contain "39│"
     And the code snippet should contain "→ 42│"
     And the code snippet should contain "45│"

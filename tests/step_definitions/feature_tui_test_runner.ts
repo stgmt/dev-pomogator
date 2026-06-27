@@ -1052,7 +1052,7 @@ Then(
   function (this: TuiWorld) {
     const c = this.analystResult!.cards[0];
     assert.equal(c.patternId, 'assertion_equal');
-    assert.deepEqual(c.crash, { file: 'tests/auth.test.ts', line: 42, method: 'Object.<anonymous>' });
+    assert.deepEqual(c.crash, { file: 'tests/auth.steps.ts', line: 42, method: 'Object.<anonymous>' });
   },
 );
 
