@@ -328,6 +328,8 @@ async function main(): Promise<void> {
     `[${HOOK_NAME}] ${v.tool} on .specs/ is not allowed — read/write specs through the MCP door:\n` +
     `  read:  list_spec_docs / read_spec_doc / get_trace / get_node / search\n` +
     `  write: propose_spec_change / apply_spec_change / create_spec\n` +
+    `  no live MCP? harness CLI (no .specs/ literal in the command — use INSTEAD of grepping .specs/):\n` +
+    `         node --import tsx scripts/spec-door.ts search "<query>" | trace <node_id> | list <spec> | read <spec> <doc>\n` +
     `  detail: ${v.detail}\n` +
     escapeLine;
   process.stdout.write(
