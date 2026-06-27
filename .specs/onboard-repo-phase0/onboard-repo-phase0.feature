@@ -433,6 +433,34 @@ Feature: ONBOARD001_Phase0_Repo_Onboarding
     Then shell-based top-N fallback is used
     And `.onboarding.json.ingestion.method == "fallback"`
 
+  @feature7
+  Scenario: ONBOARD034b_Ingestion_falls_back_when_repomix_crashes_mid_run
+    Given the "fake-python-api" fixture is staged for ingestion
+    When ingestion runs with a repomix that crashes
+    Then the ingestion method is "fallback"
+    And the ingestion includes at least one file
+
+  @feature7
+  Scenario: ONBOARD034c_Ingestion_of_an_empty_repo_yields_no_files
+    Given the "fake-empty" fixture is staged for ingestion
+    When ingestion runs without repomix
+    Then the ingestion method is "fallback"
+    And the ingestion includes zero files with a null output path
+
+  @feature2
+  Scenario: ONBOARD034d_Fallback_ingestion_excludes_vendor_directories
+    Given the "fake-python-api" fixture is staged for ingestion
+    And a large file exists under node_modules
+    When ingestion runs without repomix
+    Then the ingestion method is "fallback"
+    And the ingestion output omits node_modules
+
+  @feature7
+  Scenario: ONBOARD034e_Fallback_ingestion_ranks_files_with_a_score
+    Given the "fake-nextjs-frontend" fixture is staged for ingestion
+    When ingestion runs without repomix
+    Then the ingestion output ranks files with a numeric score
+
   # ── Ignore-parser helpers (FR-17 @feature2) ────────────────────────────────
 
   @feature2

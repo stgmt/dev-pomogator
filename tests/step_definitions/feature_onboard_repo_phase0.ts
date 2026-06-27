@@ -1148,6 +1148,60 @@ Then(/^`\.onboarding\.json\.ingestion\.method == "fallback"`$/, function (this: 
   assert.equal(this.onboard.ingestionResult?.method, 'fallback');
 });
 
+// ── ONBOARD034b-e: ingestion edge cases (@feature7/@feature2, migrated from the
+// ingestion vitest twin) — drive the REAL runIngestion with DI deps per case.
+Given(/^the "([^"]+)" fixture is staged for ingestion$/, async function (this: OnboardWorld, fixture: string) {
+  await teardownFakeRepo(this.onboard.tmpdir);
+  this.onboard.tmpdir = await setupFakeRepo(fixture, fixture === 'fake-no-git' ? { initGit: false } : {});
+});
+
+Given(/^a large file exists under node_modules$/, async function (this: OnboardWorld) {
+  const nm = path.join(this.onboard.tmpdir, 'node_modules', 'huge.ts');
+  await fsExtra.ensureDir(path.dirname(nm));
+  await fsExtra.writeFile(nm, 'x'.repeat(100000), 'utf-8');
+});
+
+When(/^ingestion runs with a repomix that crashes$/, async function (this: OnboardWorld) {
+  this.onboard.ingestionResult = await runIngestion(
+    { slug: 'ing', projectPath: this.onboard.tmpdir },
+    { repomixAvailable: () => true, runRepomix: () => ({ status: 1, message: 'fake repomix crash' }) },
+  );
+});
+
+When(/^ingestion runs without repomix$/, async function (this: OnboardWorld) {
+  this.onboard.ingestionResult = await runIngestion(
+    { slug: 'ing', projectPath: this.onboard.tmpdir },
+    { repomixAvailable: () => false, runRepomix: () => ({ status: -1, message: 'not called' }) },
+  );
+});
+
+Then(/^the ingestion method is "([^"]+)"$/, function (this: OnboardWorld, method: string) {
+  assert.equal(this.onboard.ingestionResult?.method, method);
+});
+
+Then(/^the ingestion includes at least one file$/, function (this: OnboardWorld) {
+  assert.ok((this.onboard.ingestionResult?.files_included ?? 0) > 0, 'expected at least one ingested file');
+});
+
+Then(/^the ingestion includes zero files with a null output path$/, function (this: OnboardWorld) {
+  assert.equal(this.onboard.ingestionResult?.files_included, 0);
+  assert.equal(this.onboard.ingestionResult?.output_path, null);
+});
+
+Then(/^the ingestion output omits node_modules$/, async function (this: OnboardWorld) {
+  const out = this.onboard.ingestionResult?.output_path as string;
+  const content = await fsExtra.readFile(out, 'utf-8');
+  assert.ok(!content.includes('node_modules'), 'node_modules must be excluded from fallback output');
+});
+
+Then(/^the ingestion output ranks files with a numeric score$/, async function (this: OnboardWorld) {
+  const out = this.onboard.ingestionResult?.output_path as string;
+  const content = await fsExtra.readFile(out, 'utf-8');
+  const scores = content.match(/score=[\d.]+/g);
+  assert.ok(scores && scores.length > 0, 'expected score= markers in ranked output');
+  assert.match(content, /page\.tsx/);
+});
+
 // ── @feature6: Text gate — classifyResponse / composeSummary / runTextGate ────
 // These step-defs fold the vitest text-gate.test.ts cases into the BDD graph.
 // All scenarios are RUNTIME — they drive the real exported functions in-process
