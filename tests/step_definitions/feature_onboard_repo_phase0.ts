@@ -131,6 +131,7 @@ interface OnboardState {
   registrySnapshot: RegistrySnapshot;
   // per-scenario artifacts
   cacheDecision?: CacheDecision;
+  cacheStatus?: Awaited<ReturnType<typeof checkCache>>;
   archiveResult?: string | null;
   baseline?: BaselineTestResult;
   reconResult?: ReconExecutionResult;
@@ -384,6 +385,53 @@ Then(/^the prompt mentions the drift count in commits$/, function (this: Onboard
   assert.equal(d.action, 'prompt-drift');
   const ahead = (d as Record<string, unknown>).commitsAhead as number | undefined;
   assert.ok(typeof ahead === 'number' && ahead >= 5, `commitsAhead expected >=5, got ${ahead}`);
+});
+
+// ── ONBOARD003b-c / ONBOARD004b: cache edge cases (@feature4, migrated from the
+// cache-invalidation vitest twin) — drive the REAL checkCache / decideAction.
+Given(/^a freshly seeded "([^"]+)" repo with no \.onboarding\.json$/, async function (this: OnboardWorld, fixture: string) {
+  await teardownFakeRepo(this.onboard.tmpdir);
+  this.onboard.tmpdir = await setupFakeRepo(fixture);
+});
+
+Given(/^a "([^"]+)" repo whose \.onboarding\.json is corrupted$/, async function (this: OnboardWorld, fixture: string) {
+  await teardownFakeRepo(this.onboard.tmpdir);
+  this.onboard.tmpdir = await setupFakeRepo(fixture);
+  await fsExtra.ensureDir(path.join(this.onboard.tmpdir, '.specs'));
+  await fsExtra.writeFile(path.join(this.onboard.tmpdir, '.specs', '.onboarding.json'), '{ corrupt: "not valid json');
+});
+
+Given(/^the git log shows 2 commits since last_indexed_sha$/, function (this: OnboardWorld) {
+  for (let i = 0; i < 2; i++) {
+    const f = path.join(this.onboard.tmpdir, `below-${i}.txt`);
+    fs.writeFileSync(f, `below ${i}`);
+    runGit(this.onboard.tmpdir, ['add', `below-${i}.txt`]);
+    runGit(this.onboard.tmpdir, ['commit', '-m', `below commit ${i}`]);
+  }
+});
+
+When(/^the cache decision is computed without the refresh flag$/, async function (this: OnboardWorld) {
+  this.onboard.cacheStatus = await checkCache(this.onboard.tmpdir);
+  this.onboard.cacheDecision = await decideAction({ projectPath: this.onboard.tmpdir, refreshFlag: false });
+});
+
+Then(/^the cache status is "([^"]+)"$/, function (this: OnboardWorld, status: string) {
+  assert.equal(this.onboard.cacheStatus?.status, status);
+});
+
+Then(/^the cache decision action is "run-full" because the cache is absent$/, function (this: OnboardWorld) {
+  assert.equal(this.onboard.cacheDecision?.action, 'run-full');
+  assert.match(this.onboard.cacheDecision?.reason ?? '', /absent/);
+});
+
+Then(/^the cache decision action is "run-full" because the cache cannot be parsed$/, function (this: OnboardWorld) {
+  assert.equal(this.onboard.cacheDecision?.action, 'run-full');
+  assert.match(this.onboard.cacheDecision?.reason ?? '', /parse/);
+});
+
+Then(/^the cache decision action is "skip" because drift is below threshold$/, function (this: OnboardWorld) {
+  assert.equal(this.onboard.cacheDecision?.action, 'skip');
+  assert.match(this.onboard.cacheDecision?.reason ?? '', /threshold/);
 });
 
 // ── ONBOARD005: manual refresh flag (@feature4) ───────────────────────────────

@@ -45,6 +45,27 @@ Feature: ONBOARD001_Phase0_Repo_Onboarding
     And the archive directory uses ISO-8601 timestamp format
     And `.specs/.onboarding-history/` retains at most 5 snapshots
 
+  @feature4
+  Scenario: ONBOARD003b_Missing_onboarding_json_triggers_a_full_run
+    Given a freshly seeded "fake-python-api" repo with no .onboarding.json
+    When the cache decision is computed without the refresh flag
+    Then the cache status is "missing"
+    And the cache decision action is "run-full" because the cache is absent
+
+  @feature4
+  Scenario: ONBOARD003c_Corrupted_onboarding_json_triggers_a_full_run
+    Given a "fake-python-api" repo whose .onboarding.json is corrupted
+    When the cache decision is computed without the refresh flag
+    Then the cache status is "error"
+    And the cache decision action is "run-full" because the cache cannot be parsed
+
+  @feature4
+  Scenario: ONBOARD004b_Drift_below_threshold_is_silent_cache_reuse
+    Given `.specs/.onboarding.json` exists with `last_indexed_sha` matching git HEAD
+    And the git log shows 2 commits since last_indexed_sha
+    When the cache decision is computed without the refresh flag
+    Then the cache decision action is "skip" because drift is below threshold
+
   @feature13
   @manual
   Scenario: ONBOARD006_Missing_dev_pomogator_errors_early
