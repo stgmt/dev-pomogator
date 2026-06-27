@@ -214,6 +214,28 @@ export function violationOf(data: PreToolUseInput): { tool: string; detail: stri
   return null;
 }
 
+/**
+ * #3 actionable DENY: if a DENIED Bash command was a grep/rg over .specs/, map it to the concrete
+ * graph-aware door call the agent should have run instead — e.g. `grep "jira-mode" .specs/` →
+ * `spec-door.ts search "jira-mode"`. Best-effort: the first quoted pattern (or first non-flag /
+ * non-path bareword) after the grep tool. Returns null when no clean search term is recoverable.
+ */
+export function suggestDoorCall(command: string | undefined): string | null {
+  if (!command || !/\b(?:grep|egrep|fgrep|rg)\b/.test(command)) return null;
+  const quoted = command.match(/\b(?:grep|egrep|fgrep|rg)\b[^\n]*?(["'])(.+?)\1/);
+  let pattern: string | undefined = quoted?.[2];
+  if (!pattern) {
+    const after = command.split(/\b(?:grep|egrep|fgrep|rg)\b/)[1] ?? '';
+    pattern = after
+      .trim()
+      .split(/\s+/)
+      .find((tok) => tok && !tok.startsWith('-') && !tok.includes('/') && !tok.includes('.specs'));
+  }
+  const term = (pattern ?? '').replace(/["'`]/g, '').trim().slice(0, 60);
+  if (!term) return null;
+  return `node --import tsx scripts/spec-door.ts search ${JSON.stringify(term)}`;
+}
+
 function logAccess(repoRoot: string, event: Record<string, unknown>): void {
   try {
     const dir = path.join(repoRoot, '.dev-pomogator', 'logs');
@@ -324,8 +346,11 @@ async function main(): Promise<void> {
     v.tool === 'Bash'
       ? `  escape (deliberate): append \`# [skip-spec-access: <reason ≥8 chars>]\` to the command, or set SPEC_ACCESS_SKIP=1 (both logged).`
       : `  escape (deliberate): set SPEC_ACCESS_SKIP=1 (logged); the inline marker is Bash-only — read/write THIS through the door.`;
+  const suggestion = v.tool === 'Bash' ? suggestDoorCall(data.tool_input?.command) : null;
+  const suggestionLine = suggestion ? `  → THIS grep maps to: ${suggestion}\n` : '';
   const reason =
     `[${HOOK_NAME}] ${v.tool} on .specs/ is not allowed — read/write specs through the MCP door:\n` +
+    suggestionLine +
     `  read:  list_spec_docs / read_spec_doc / get_trace / get_node / search\n` +
     `  write: propose_spec_change / apply_spec_change / create_spec\n` +
     `  no live MCP? harness CLI (no .specs/ literal in the command — use INSTEAD of grepping .specs/):\n` +

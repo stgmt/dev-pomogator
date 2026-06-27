@@ -55,6 +55,7 @@ interface Instruction {
   query?: string;
   types?: string[];
   limit?: number;
+  coverage?: boolean;
   node_id?: string;
 }
 
@@ -79,7 +80,8 @@ function parseDirect(argv: string[]): Instruction | null {
   switch (verb) {
     case 'search': {
       const limit = a[2] !== undefined ? Number(a[2]) : undefined;
-      return { action: 'search', query: a[0], types: a[1] ? [a[1]] : undefined, limit: Number.isFinite(limit) ? limit : undefined };
+      // CLI search always asks for coverage — the whole point is a one-call "is it covered?" answer.
+      return { action: 'search', query: a[0], types: a[1] ? [a[1]] : undefined, limit: Number.isFinite(limit) ? limit : undefined, coverage: true };
     }
     case 'list':
       return { action: 'list', spec: a[0] };
@@ -106,6 +108,7 @@ function buildArgs(req: Instruction): Record<string, unknown> {
   if (req.query !== undefined) args.query = req.query;
   if (req.types !== undefined) args.types = req.types;
   if (req.limit !== undefined) args.limit = req.limit;
+  if (req.coverage !== undefined) args.coverage = req.coverage;
   if (req.node_id !== undefined) args.node_id = req.node_id;
   return args;
 }

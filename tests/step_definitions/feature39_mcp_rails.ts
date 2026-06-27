@@ -756,3 +756,58 @@ Then('only the up-to-date write lands and the stale one is refused CAS_MISMATCH'
   assert.equal(this.casStale!.actual_sha, this.casFresh!.sha, 'the refusal reports the actual current sha');
   assert.equal(this.casRebased!.ok, true, 're-reading the fresh sha and retrying must succeed');
 });
+
+// ── SPECGEN004_503 — FR-39 search coverage: tested-by edges + covered flag in ONE call ──
+interface SearchCovWorld extends V4World {
+  covPrevCwd?: string;
+  covResults?: Array<{ id: string; covered?: boolean; tested_by?: string[] }>;
+}
+Given('a cov-demo spec whose FR owns a @feature1-tagged scenario', function (this: SearchCovWorld) {
+  const dir = path.join(this.tempDir, '.specs', 'cov-demo');
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'FR.md'), '## FR-1: Coverage demo @feature1\n\nBody.\n');
+  fs.writeFileSync(
+    path.join(dir, 'cov-demo.feature'),
+    'Feature: Cov demo\n\n  @feature1\n  Scenario: COVDEMO_01 the thing works\n    Given a precondition\n    When an action\n    Then an outcome\n',
+  );
+  this.covPrevCwd = process.cwd();
+  process.chdir(this.tempDir);
+});
+When('the search tool runs with coverage for the cov-demo FR', async function (this: SearchCovWorld) {
+  try {
+    const tools = buildToolRegistry(() => buildGraph({ repoRoot: this.tempDir, skipNdjson: true }));
+    const r = await tools.find((t) => t.name === 'search')!.handler({ query: 'cov-demo:FR-1', coverage: true });
+    this.covResults = JSON.parse((r as { content: Array<{ text: string }> }).content[0].text).results;
+  } finally {
+    process.chdir(this.covPrevCwd!);
+  }
+});
+Then('the cov-demo FR result carries tested-by scenarios and a covered flag in one call', function (this: SearchCovWorld) {
+  const fr = this.covResults!.find((x) => x.id === 'cov-demo:FR-1');
+  assert.ok(fr, 'search must return the cov-demo FR node');
+  assert.equal(fr!.covered, true, 'an FR with a @feature1 scenario must be covered:true — answered by the single search call');
+  assert.deepEqual(fr!.tested_by, ['cov-demo:SCEN-covdemo-01-the-thing-works'], 'tested_by must list EXACTLY the one covering scenario node');
+});
+
+// ── SPECGEN004_504 — FR-39c guard maps a denied .specs grep to the concrete search call ──
+import { suggestDoorCall } from '../../tools/specs-validator/spec-access-guard.ts';
+interface SuggestWorld extends V4World {
+  suggestions?: Record<string, string | null>;
+}
+Given('the spec-access-guard grep-to-search suggester', function (this: SuggestWorld) {
+  this.suggestions = {};
+});
+When('denied .specs greps and a non-grep reader are mapped to door calls', function (this: SuggestWorld) {
+  this.suggestions = {
+    quoted: suggestDoorCall('grep -rn "jira-mode" .specs/foo'),
+    bare: suggestDoorCall('grep jira-mode .specs/foo'),
+    rg: suggestDoorCall('rg "FR-7" .specs/bar'),
+    nonGrep: suggestDoorCall('cat .specs/foo/FR.md'),
+  };
+});
+Then('each grep maps to its concrete spec-door search call and the non-grep maps to nothing', function (this: SuggestWorld) {
+  assert.match(this.suggestions!.quoted!, /spec-door\.ts search "jira-mode"/, 'quoted grep pattern -> search "jira-mode"');
+  assert.match(this.suggestions!.bare!, /spec-door\.ts search "jira-mode"/, 'bareword grep pattern -> search "jira-mode"');
+  assert.match(this.suggestions!.rg!, /spec-door\.ts search "FR-7"/, 'rg pattern -> search "FR-7"');
+  assert.equal(this.suggestions!.nonGrep, null, 'a non-grep .specs read has no grep->search mapping');
+});

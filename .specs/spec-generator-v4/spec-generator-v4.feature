@@ -2892,3 +2892,15 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When the SpecGraph builder builds the fixture
     And get_trace runs over every FR in the built graph
     Then get_trace returns ok for all 10 of them
+
+  @feature39
+  Scenario: SPECGEN004_503 search coverage returns a node's tested-by scenarios in one call
+    Given a cov-demo spec whose FR owns a @feature1-tagged scenario
+    When the search tool runs with coverage for the cov-demo FR
+    Then the cov-demo FR result carries tested-by scenarios and a covered flag in one call
+
+  @feature39
+  Scenario: SPECGEN004_504 the spec-access-guard maps a denied .specs grep to the concrete search call
+    Given the spec-access-guard grep-to-search suggester
+    When denied .specs greps and a non-grep reader are mapped to door calls
+    Then each grep maps to its concrete spec-door search call and the non-grep maps to nothing

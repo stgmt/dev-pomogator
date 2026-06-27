@@ -705,23 +705,47 @@ export function buildToolRegistry(
   // ─── 4) search ──────────────────────────────────────────────────────────
   tools.push({
     name: 'search',
-    description: 'Substring match across node ids and titles (case-insensitive).',
+    description:
+      'Substring match across node ids and titles (case-insensitive), returning file:line per hit. ' +
+      'Pass coverage:true to also get the `tested-by` Scenario edges + a `covered` flag per result — ' +
+      'so "is this covered by a scenario?" is answered in ONE call (which a raw grep cannot do).',
     inputShape: {
       query: z.string().min(1),
       types: z.array(z.string()).optional(),
       limit: z.number().int().min(1).max(200).optional(),
+      coverage: z.boolean().optional(),
     } as const satisfies z.ZodRawShape,
     handler: async (args) => {
+      const graph = getGraph();
       const q = (args.query as string).toLowerCase();
       const limit = (args as { limit?: number }).limit ?? 50;
       const types = new Set((args as { types?: string[] }).types ?? []);
-      const out: Array<{ id: string; type: string; file: string; line: number; title?: string }> = [];
-      for (const node of getGraph().nodes.values()) {
+      const wantCoverage = (args as { coverage?: boolean }).coverage === true;
+      // coverage: index node.id → tested-by Scenario ids ONCE (additive; only when requested).
+      const testedBy = new Map<string, string[]>();
+      if (wantCoverage) {
+        for (const e of graph.edges) {
+          if (e.type !== 'tested-by') continue;
+          if (graph.nodes.get(e.to)?.type !== 'Scenario') continue;
+          const arr = testedBy.get(e.from);
+          if (arr) arr.push(e.to);
+          else testedBy.set(e.from, [e.to]);
+        }
+      }
+      const out: Array<{ id: string; type: string; file: string; line: number; title?: string; tested_by?: string[]; covered?: boolean }> = [];
+      for (const node of graph.nodes.values()) {
         if (types.size > 0 && !types.has(node.type)) continue;
         const titleField = (node as Node & { title?: string }).title;
         const hay = `${node.id} ${titleField ?? ''}`.toLowerCase();
         if (hay.includes(q)) {
-          out.push({ id: node.id, type: node.type, file: node.file, line: node.line, title: titleField });
+          const rec: { id: string; type: string; file: string; line: number; title?: string; tested_by?: string[]; covered?: boolean } =
+            { id: node.id, type: node.type, file: node.file, line: node.line, title: titleField };
+          if (wantCoverage) {
+            const ids = testedBy.get(node.id) ?? [];
+            rec.tested_by = ids;
+            rec.covered = ids.length > 0;
+          }
+          out.push(rec);
           if (out.length >= limit) break;
         }
       }
