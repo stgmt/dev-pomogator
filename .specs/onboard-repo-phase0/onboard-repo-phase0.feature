@@ -370,6 +370,69 @@ Feature: ONBOARD001_Phase0_Repo_Onboarding
     And `commands.test.forbidden_if_skill_present == true`
     And `commands.test.raw_pattern_to_block` is a non-empty regex
 
+  @feature10
+  Scenario Outline: ONBOARD019b_Schema_rejects_an_invalid_<case>
+    Given the golden onboarding json with "<key>" set to <value>
+    When the onboarding json is validated against the schema
+    Then schema validation fails citing "<cites>"
+
+    Examples:
+      | case | key | value | cites |
+      | archetype-enum | archetype | "bogus" | archetype |
+      | indexed_at-format | indexed_at | "not-a-date" | indexed_at |
+      | sha-pattern | last_indexed_sha | "not-a-sha" | last_indexed_sha |
+      | negative-duration | phase0_duration_ms | -1 | phase0_duration_ms |
+      | rules_index-type | rules_index | {} | rules_index |
+      | ingestion-method-enum | ingestion | {"method":"not-a-method"} | method |
+      | hooks-event-enum | hooks_registry | [{"event":"NotARealEvent","matcher":"Bash","action":"x","path":".claude/settings.json"}] | event |
+      | gotchas-severity-enum | gotchas | [{"symptom":"x","cause":"y","fix":"z","severity":"epic"}] | severity |
+      | boundaries-missing | boundaries | {"ask_first":[]} | always |
+
+  @feature10
+  Scenario Outline: ONBOARD019c_Schema_rejects_a_non_object_top_level_<token>
+    Given a non-object onboarding value "<token>"
+    When the onboarding json is validated against the schema
+    Then schema validation fails
+
+    Examples:
+      | token |
+      | null |
+      | string |
+      | number |
+      | array |
+
+  @feature10
+  Scenario: ONBOARD019d_SHA_pattern_accepts_empty_string_for_non_git_repos
+    Given the golden onboarding json with "last_indexed_sha" set to ""
+    When the onboarding json is validated against the schema
+    Then schema validation passes
+
+  @feature10
+  Scenario: ONBOARD019e_baseline_tests_framework_may_be_null
+    Given the golden onboarding json with baseline_tests reporting no framework detected
+    When the onboarding json is validated against the schema
+    Then schema validation passes
+
+  @feature10
+  Scenario: ONBOARD019f_Compiled_schema_validator_is_cached_and_resettable
+    Then the schema validator stays valid across repeated calls and a cache reset
+
+  @feature10
+  Scenario: ONBOARD021b_validateOrThrow_raises_on_the_invalid_fixture
+    Then validateOrThrow raises a SchemaViolationError listing the errors
+
+  @feature2
+  Scenario: ONBOARD022b_via_skill_set_and_forbidding_without_a_block_pattern_fails
+    Given the golden onboarding json with a forbidding test command that has no block pattern
+    When the onboarding json is validated against the schema
+    Then schema validation fails citing "FR-18"
+
+  @feature2
+  Scenario: ONBOARD022c_via_skill_null_with_no_forbidden_block_is_valid
+    Given the golden onboarding json with a test command that has no skill wrapper and forbids nothing
+    When the onboarding json is validated against the schema
+    Then schema validation passes
+
   @feature3
   Scenario: ONBOARD023_PreToolUse_hook_blocks_raw_npm_test
     Given Phase 0 finalized and hook compiled into `.claude/settings.local.json`

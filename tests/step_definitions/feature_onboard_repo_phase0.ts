@@ -138,6 +138,8 @@ interface OnboardState {
   rawReconOutput?: ParallelReconOutput;
   archetype?: ArchetypeTriageResult;
   schemaAborted?: boolean;
+  schemaRaw?: Record<string, unknown>;
+  schemaResult?: ReturnType<typeof validateOnboardingJson>;
   hookEntries?: ReturnType<typeof compilePreToolUseBlock>['hooks']['PreToolUse'][0]['hooks'][0]['_entries'];
   hookDecision?: ReturnType<typeof evaluateBashCommand>;
   finalizeResult?: Awaited<ReturnType<typeof finalize>>;
@@ -432,6 +434,78 @@ Then(/^the cache decision action is "run-full" because the cache cannot be parse
 Then(/^the cache decision action is "skip" because drift is below threshold$/, function (this: OnboardWorld) {
   assert.equal(this.onboard.cacheDecision?.action, 'skip');
   assert.match(this.onboard.cacheDecision?.reason ?? '', /threshold/);
+});
+
+// ── ONBOARD019b-g / ONBOARD022b-c: full AJV schema validation (@feature2/@feature10,
+// migrated from the schema-validation vitest twin) — drive the REAL validateOnboardingJson.
+const GOLDEN_ONBOARDING = path.join(REPO_ROOT, 'tests', 'fixtures', 'onboarding-artifacts', 'valid-v1.json');
+const INVALID_ONBOARDING = path.join(REPO_ROOT, 'tests', 'fixtures', 'onboarding-artifacts', 'invalid-schema.json');
+
+Given(/^the golden onboarding json$/, function (this: OnboardWorld) {
+  this.onboard.schemaRaw = fsExtra.readJsonSync(GOLDEN_ONBOARDING) as Record<string, unknown>;
+});
+
+Given(/^the golden onboarding json with "([^"]+)" set to (.+)$/, function (this: OnboardWorld, key: string, jsonValue: string) {
+  const raw = fsExtra.readJsonSync(GOLDEN_ONBOARDING) as Record<string, unknown>;
+  raw[key] = JSON.parse(jsonValue);
+  this.onboard.schemaRaw = raw;
+});
+
+Given(/^a non-object onboarding value "([^"]+)"$/, function (this: OnboardWorld, token: string) {
+  const map: Record<string, unknown> = { null: null, string: 'a string', number: 42, array: [] };
+  this.onboard.schemaRaw = map[token] as Record<string, unknown>;
+});
+
+Given(/^the golden onboarding json with a forbidding test command that has no block pattern$/, function (this: OnboardWorld) {
+  const raw = fsExtra.readJsonSync(GOLDEN_ONBOARDING) as Record<string, unknown>;
+  raw.commands = { ...(raw.commands as Record<string, unknown>), test: { via_skill: 'run-tests', preferred_invocation: '/run-tests', fallback_cmd: 'pytest', raw_pattern_to_block: '', forbidden_if_skill_present: true, reason: 'demo' } };
+  this.onboard.schemaRaw = raw;
+});
+
+Given(/^the golden onboarding json with a test command that has no skill wrapper and forbids nothing$/, function (this: OnboardWorld) {
+  const raw = fsExtra.readJsonSync(GOLDEN_ONBOARDING) as Record<string, unknown>;
+  raw.commands = { ...(raw.commands as Record<string, unknown>), test: { via_skill: null, preferred_invocation: 'npm test', fallback_cmd: 'npm test', raw_pattern_to_block: '', forbidden_if_skill_present: false, reason: 'No wrapper available' } };
+  this.onboard.schemaRaw = raw;
+});
+
+Given(/^the golden onboarding json with baseline_tests reporting no framework detected$/, function (this: OnboardWorld) {
+  const raw = fsExtra.readJsonSync(GOLDEN_ONBOARDING) as Record<string, unknown>;
+  raw.baseline_tests = { framework: null, command: '', via_skill: null, passed: 0, failed: 0, skipped: 0, duration_s: 0, failed_test_ids: [], reason_if_null: 'no test framework detected', skipped_by_user: false };
+  this.onboard.schemaRaw = raw;
+});
+
+When(/^the onboarding json is validated against the schema$/, function (this: OnboardWorld) {
+  this.onboard.schemaResult = validateOnboardingJson(this.onboard.schemaRaw);
+});
+
+Then(/^schema validation passes$/, function (this: OnboardWorld) {
+  assert.equal(this.onboard.schemaResult?.valid, true, `unexpected errors: ${JSON.stringify(this.onboard.schemaResult?.errors)}`);
+});
+
+Then(/^schema validation fails$/, function (this: OnboardWorld) {
+  assert.equal(this.onboard.schemaResult?.valid, false);
+});
+
+Then(/^schema validation fails citing "([^"]+)"$/, function (this: OnboardWorld, needle: string) {
+  assert.equal(this.onboard.schemaResult?.valid, false);
+  assert.ok(this.onboard.schemaResult!.errors.some((e) => e.includes(needle)), `no error citing "${needle}" in ${JSON.stringify(this.onboard.schemaResult?.errors)}`);
+});
+
+Then(/^validateOrThrow raises a SchemaViolationError listing the errors$/, function (this: OnboardWorld) {
+  const raw = fsExtra.readJsonSync(INVALID_ONBOARDING);
+  let thrown: unknown;
+  try { validateOrThrow(raw); } catch (e) { thrown = e; }
+  assert.ok(thrown instanceof SchemaViolationError, 'expected SchemaViolationError');
+  assert.ok((thrown as SchemaViolationError).errors.length > 0, 'expected a non-empty error list');
+  assert.match((thrown as Error).message, /Schema violation/);
+});
+
+Then(/^the schema validator stays valid across repeated calls and a cache reset$/, function (this: OnboardWorld) {
+  const raw = fsExtra.readJsonSync(GOLDEN_ONBOARDING);
+  assert.equal(validateOnboardingJson(raw).valid, true);
+  assert.equal(validateOnboardingJson(raw).valid, true);
+  resetValidatorCache();
+  assert.equal(validateOnboardingJson(raw).valid, true);
 });
 
 // ── ONBOARD005: manual refresh flag (@feature4) ───────────────────────────────
