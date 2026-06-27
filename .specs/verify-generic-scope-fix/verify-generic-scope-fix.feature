@@ -241,3 +241,27 @@ Feature: VSGF001 Verify Generic Scope Fix gate
     When appendEscapeLog is called twice with reasons "r1" and "r2"
     Then the escape log file contains exactly 2 valid JSONL lines
     And the first line has reason "r1" and the second has reason "r2"
+
+  @feature4
+  Scenario: VSGF001_42 plan-gate advises scope-verify when the plan File Changes touch a guard file
+    Given a plan whose File Changes touch a guard file and a plain utility file
+    When plan-gate evaluates the ExitPlanMode for that plan
+    Then the plan-gate stderr carries a scope-gate advisory naming "StockValidationService.ts" and "verify-generic-scope-fix"
+
+  @feature4
+  Scenario: VSGF001_43 plan-gate stays silent when the plan touches no guard files
+    Given a plan whose File Changes touch only non-guard code files
+    When plan-gate evaluates the ExitPlanMode for that plan
+    Then the plan-gate stderr carries no scope-gate advisory
+
+  @feature4
+  Scenario: VSGF001_44 plan-gate stays silent for a docs-only plan
+    Given a plan whose File Changes touch only documentation files
+    When plan-gate evaluates the ExitPlanMode for that plan
+    Then the plan-gate stderr carries no scope-gate advisory
+
+  @feature4
+  Scenario: VSGF001_45 plan-gate lists the guard files when several are touched
+    Given a plan whose File Changes touch several guard files
+    When plan-gate evaluates the ExitPlanMode for that plan
+    Then the plan-gate stderr carries a scope-gate advisory naming "AService.ts"
