@@ -267,6 +267,31 @@ Feature: ONBOARD001_Phase0_Repo_Onboarding
     And the text gate summary mentions minimal content
     And Suggested next steps section has at most 1 item
 
+  @feature8
+  Scenario: ONBOARD015b_Archetype_triage_classifies_python_api_without_a_tests_dir
+    Given the "fake-no-tests" fixture is staged for archetype triage
+    When archetype triage runs on the staged fixture
+    Then the triage archetype is "python-api"
+    And the triage confidence is not "low"
+
+  @feature8
+  Scenario: ONBOARD015c_Ignore_files_do_not_change_archetype_triage
+    Given the "fake-with-cursorignore" fixture is staged for archetype triage
+    When archetype triage runs on the staged fixture
+    Then the triage archetype is "python-api"
+
+  @feature8
+  Scenario: ONBOARD015d_Archetype_triage_classifies_a_no_git_node_package
+    Given the "fake-no-git" fixture is staged for archetype triage
+    When archetype triage runs on the staged fixture
+    Then the triage archetype is one of "library", "nodejs-backend", or "unknown"
+
+  @feature8
+  Scenario: ONBOARD015e_Archetype_triage_result_exposes_all_required_fields
+    Given the "fake-python-api" fixture is staged for archetype triage
+    When archetype triage runs on the staged fixture
+    Then the triage result exposes archetype, a confidence of high, medium or low, and non-empty evidence
+
   @feature2 @feature10
   Scenario: ONBOARD019_Onboarding_json_conforms_to_schema_v1
     Given fake-python-api fixture is seeded

@@ -702,6 +702,37 @@ Then(/^the text gate summary mentions minimal content$/, function (this: Onboard
   assert.ok(['low', 'unknown'].includes(confidence), `confidence: ${confidence}`);
 });
 
+// ── ONBOARD015b-e: archetype-triage edge cases (@feature8, migrated from the
+// archetype-detection vitest twin) — drive the REAL archetypeTriage per fixture.
+Given(/^the "([^"]+)" fixture is staged for archetype triage$/, async function (this: OnboardWorld, fixture: string) {
+  await teardownFakeRepo(this.onboard.tmpdir);
+  this.onboard.tmpdir = await setupFakeRepo(fixture, fixture === 'fake-no-git' ? { initGit: false } : {});
+});
+
+When(/^archetype triage runs on the staged fixture$/, async function (this: OnboardWorld) {
+  this.onboard.archetype = await archetypeTriage(this.onboard.tmpdir);
+});
+
+Then(/^the triage archetype is "([^"]+)"$/, function (this: OnboardWorld, expected: string) {
+  assert.equal(this.onboard.archetype?.archetype, expected);
+});
+
+Then(/^the triage confidence is not "([^"]+)"$/, function (this: OnboardWorld, notExpected: string) {
+  assert.notEqual(this.onboard.archetype?.confidence, notExpected);
+});
+
+Then(/^the triage archetype is one of "([^"]+)", "([^"]+)", or "([^"]+)"$/, function (this: OnboardWorld, a: string, b: string, c: string) {
+  const got = this.onboard.archetype?.archetype ?? '';
+  assert.ok([a, b, c].includes(got), `archetype "${got}" not in [${a}, ${b}, ${c}]`);
+});
+
+Then(/^the triage result exposes archetype, a confidence of high, medium or low, and non-empty evidence$/, function (this: OnboardWorld) {
+  const r = this.onboard.archetype!;
+  assert.ok(r.archetype, 'archetype field present');
+  assert.ok(['high', 'medium', 'low'].includes(r.confidence), `confidence "${r.confidence}" not high/medium/low`);
+  assert.ok(typeof r.evidence === 'string' && r.evidence.length > 0, 'evidence must be a non-empty string');
+});
+
 Then(/^Suggested next steps section has at most 1 item$/, function (this: OnboardWorld) {
   // Structural: confirmed via archetype=unknown; detailed content in ONBOARD030
 });
