@@ -474,6 +474,25 @@ Feature: ONBOARD001_Phase0_Repo_Onboarding
     And `CLAUDE.md` mtime is unchanged
     And `.onboarding.json.existing_ai_configs[]` contains "CLAUDE.md"
 
+  @feature12
+  Scenario: ONBOARD027b_Finalize_without_CLAUDE_md_omits_it_from_existing_configs
+    Given a fake-python-api repo with no CLAUDE.md
+    When Phase 0 finalizes with no detected AI configs
+    Then `.onboarding.json.existing_ai_configs` does not contain "CLAUDE.md"
+
+  @feature12
+  Scenario: ONBOARD027c_Finalize_leaves_a_pre_existing_cursor_rule_untouched
+    Given a pre-existing .cursor/rules/workflow.mdc with custom content
+    When Phase 0 finalizes treating the cursor rule as a detected AI config
+    Then the .cursor rule file content is byte-identical to before
+
+  @feature11
+  Scenario: ONBOARD018b_Finalize_on_an_empty_repo_yields_a_valid_unknown_artifact
+    Given a fake-empty repo to finalize with empty recon and no baseline
+    When Phase 0 finalizes the empty repo
+    Then the empty-repo onboarding json is unknown with empty languages and a null baseline
+    And the rendered empty-repo .onboarding.md carries snapshot and next-steps sections
+
   @feature2
   @manual
   Scenario: ONBOARD028_Cursorignore_respected_by_phase0

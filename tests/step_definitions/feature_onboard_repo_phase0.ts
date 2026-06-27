@@ -1168,6 +1168,74 @@ Then(/^`\.onboarding\.json\.existing_ai_configs\[\]` contains "CLAUDE\.md"$/, fu
   assert.ok(jsonStr.includes('CLAUDE.md'));
 });
 
+// ── ONBOARD027b-c / ONBOARD018b: coexistence + empty-finalize edges (@feature12/
+// @feature11, migrated from the coexistence vitest twin) — drive the REAL finalize.
+Given(/^a fake-python-api repo with no CLAUDE\.md$/, async function (this: OnboardWorld) {
+  await teardownFakeRepo(this.onboard.tmpdir);
+  this.onboard.tmpdir = await setupFakeRepo('fake-python-api');
+  fs.rmSync(path.join(this.onboard.tmpdir, 'CLAUDE.md'), { force: true });
+});
+
+When(/^Phase 0 finalizes with no detected AI configs$/, async function (this: OnboardWorld) {
+  this.onboard.finalizeResult = await finalize(makeComposeCtx(this.onboard.tmpdir, { existingAiConfigs: [] }));
+});
+
+Then(/^`\.onboarding\.json\.existing_ai_configs` does not contain "CLAUDE\.md"$/, function (this: OnboardWorld) {
+  const configs = (this.onboard.finalizeResult!.json as Record<string, unknown>).existing_ai_configs as string[];
+  assert.ok(Array.isArray(configs), 'existing_ai_configs must be an array');
+  assert.ok(!configs.includes('CLAUDE.md'), `should not contain CLAUDE.md: ${JSON.stringify(configs)}`);
+});
+
+Given(/^a pre-existing \.cursor\/rules\/workflow\.mdc with custom content$/, async function (this: OnboardWorld) {
+  const rulePath = path.join(this.onboard.tmpdir, '.cursor', 'rules', 'workflow.mdc');
+  await fsExtra.ensureDir(path.dirname(rulePath));
+  fs.writeFileSync(rulePath, '---\nalwaysApply: true\n---\n# User workflow rule\n');
+  (this.onboard as Record<string, unknown>).cursorRule = fs.readFileSync(rulePath, 'utf-8');
+});
+
+When(/^Phase 0 finalizes treating the cursor rule as a detected AI config$/, async function (this: OnboardWorld) {
+  this.onboard.finalizeResult = await finalize(makeComposeCtx(this.onboard.tmpdir, { existingAiConfigs: ['.cursor/rules/workflow.mdc'] }));
+});
+
+Then(/^the \.cursor rule file content is byte-identical to before$/, function (this: OnboardWorld) {
+  const after = fs.readFileSync(path.join(this.onboard.tmpdir, '.cursor', 'rules', 'workflow.mdc'), 'utf-8');
+  assert.equal(after, (this.onboard as Record<string, unknown>).cursorRule);
+});
+
+Given(/^a fake-empty repo to finalize with empty recon and no baseline$/, async function (this: OnboardWorld) {
+  await teardownFakeRepo(this.onboard.tmpdir);
+  this.onboard.tmpdir = await setupFakeRepo('fake-empty');
+});
+
+When(/^Phase 0 finalizes the empty repo$/, async function (this: OnboardWorld) {
+  const state = makePhase0State(this.onboard.tmpdir);
+  state.archetype = { archetype: 'unknown', confidence: 'low', evidence: 'minimal' };
+  state.recon = {
+    subagent_A_manifest_env: { manifests_found: [], languages: [], frameworks: [], package_managers: [], env_files: [], required_env_vars: [], ci_configs: [] },
+    subagent_B_tests_configs: { test_framework: null, test_commands: [], bdd_present: false, existing_ai_configs: [] },
+    subagent_C_entry_points: { entry_points: [], top_level_dirs: [], architecture_hint: 'minimal — only README' },
+  };
+  this.onboard.finalizeResult = await finalize(makeComposeCtx(this.onboard.tmpdir, {
+    state,
+    baseline: { framework: null, command: '', via_skill: null, passed: 0, failed: 0, skipped: 0, duration_s: 0, failed_test_ids: [], reason_if_null: 'no test framework detected', skipped_by_user: false },
+    commands: {},
+  }));
+});
+
+Then(/^the empty-repo onboarding json is unknown with empty languages and a null baseline$/, function (this: OnboardWorld) {
+  const json = this.onboard.finalizeResult!.json as Record<string, any>;
+  assert.equal(json.archetype, 'unknown');
+  assert.deepEqual(json.tech_context.languages, []);
+  assert.equal(json.baseline_tests.framework, null);
+});
+
+Then(/^the rendered empty-repo \.onboarding\.md carries snapshot and next-steps sections$/, async function (this: OnboardWorld) {
+  const md = await fsExtra.readFile(this.onboard.finalizeResult!.result.mdPath, 'utf-8');
+  assert.match(md, /## 1\. Project snapshot/);
+  assert.match(md, /## 6\. Suggested next steps/);
+  assert.match(md, /N\/A|No test framework detected/);
+});
+
 // ── ONBOARD029-030: .onboarding.md sections (@feature9 @feature11) ───────────
 // (Phase 0 finalizes is the shared When for these scenarios)
 
