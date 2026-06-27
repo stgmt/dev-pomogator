@@ -70,18 +70,14 @@ Feature: CEGUARD001 Reqnroll Cucumber Expression Slash Guard
     When hook receives invalid JSON on stdin
     Then hook SHALL allow with exit code 0
 
-  # @feature6 — Installer integration
-  Scenario: CEGUARD001_13 installer registers hook in claude settings
-    Given dev-pomogator is installed with --claude --all
-    Then settings SHALL contain reqnroll-ce-guard PreToolUse entry
-    And entry SHALL have matcher "Write|Edit"
+  # @feature6 — v2 canonical plugin: the guard is wired into both manifests + assets ship in place
+  Scenario: CEGUARD001_13 reqnroll-ce-guard is registered as a Write|Edit PreToolUse hook
+    Then reqnroll-ce-guard is registered as a Write|Edit PreToolUse hook in both plugin manifests
 
   # @feature6
-  Scenario: CEGUARD001_14 installer copies rule file to .claude/rules/
-    Given dev-pomogator is installed with --claude --all
-    Then `.claude/rules/reqnroll-ce-guard/reqnroll-ce-slash.md` SHALL exist in the target project
+  Scenario: CEGUARD001_14 the reqnroll-ce-guard rule file ships under .claude/rules/
+    Then the reqnroll-ce-guard rule file is present under `.claude/rules/`
 
   # @feature6
-  Scenario: CEGUARD001_15 installer copies hook script to .dev-pomogator/tools/
-    Given dev-pomogator is installed with --claude --all
-    Then `.dev-pomogator/tools/reqnroll-ce-guard/ce_slash_guard.ts` SHALL exist in the target project
+  Scenario: CEGUARD001_15 the ce_slash_guard hook script ships under tools/
+    Then the ce_slash_guard hook script is present under `tools/`
