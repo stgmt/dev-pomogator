@@ -282,6 +282,11 @@
             "type": "command",
             "command": "node -e \"require(require('path').join(process.env.CLAUDE_PLUGIN_ROOT || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/bdd-only-test-guard/guard.ts\"",
             "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PLUGIN_ROOT || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/reqnroll-ce-guard/ce_slash_guard.ts\"",
+            "timeout": 30
           }
         ]
       },
