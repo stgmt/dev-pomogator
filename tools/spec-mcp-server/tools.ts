@@ -6,8 +6,8 @@
  * out of the graph + format an `explanation_for_agent` summary the agent can
  * paste back into its context.
  *
- * The 14 tools (base set per [SCHEMA Entity 3](../../.specs/spec-generator-v4/spec-generator-v4_SCHEMA.md);
- * + get_coverage FR-32, get_spec_status FR-38 — `buildToolRegistry` below is canonical):
+ * The tools (base set per [SCHEMA Entity 3](../../.specs/spec-generator-v4/spec-generator-v4_SCHEMA.md);
+ * + get_spec_status FR-38/FR-32 with status/counts/coverage views — `buildToolRegistry` below is canonical):
  *
  *   get_trace               primary — structured tree + code_impl + explanation
  *   find_by_tags            scenarios filtered by `@FR/@NFR/@AC` tags
@@ -17,9 +17,9 @@
  *   list_phase_tasks        tasks filtered by phase string
  *   get_test_result         last-result for a scenario id
  *   find_orphans            ORPHAN_* / UNCOVERED_FR findings only
- *   get_coverage            FR-32 — per-scenario buckets + per-task verified_status
- *   get_coverage_summary    per-spec FR/AC/Scenario counts
- *   get_spec_status         FR-38 — lifecycle enum + linked last_run summary
+ *   get_spec_status         FR-38/FR-32 — one tool, three `view`s: status (lifecycle +
+ *                           last_run), counts (per-spec FR/AC/Scenario/Task tallies),
+ *                           coverage (per-scenario buckets + per-task verified_status)
  *   validate_anchor         is anchor alias registered?
  *   list_specs              top-level `.specs/<slug>/` directories
  *   find_refs               incoming references for a node
@@ -842,71 +842,9 @@ export function buildToolRegistry(
     },
   });
 
-  // ─── 9) get_coverage_summary ────────────────────────────────────────────
-  tools.push({
-    name: 'get_coverage_summary',
-    description:
-      'STRUCTURAL counts only — per-spec FR/AC/Scenario/Task tallies grouped by source ' +
-      'directory (how many atoms each spec defines). Says NOTHING about test results or ' +
-      'done-ness. For the FR-32 honesty / DONE rollup (passed/pending/…, verified_status) ' +
-      'use get_coverage instead.',
-    inputShape: {} as const satisfies z.ZodRawShape,
-    handler: async () => {
-      const bySpec = new Map<string, { fr: number; ac: number; scenario: number; task: number }>();
-      // One slug-derivation algorithm corpus-wide: coverage.ts::specOf (full
-      // dir path under .specs/ — nested `backlog/<name>` specs stay distinct
-      // cells per FR-36; the old local regex collapsed them to `backlog`).
-      for (const node of getGraph().nodes.values()) {
-        const spec = specOf(node.file) ?? '(other)';
-        const row = bySpec.get(spec) ?? { fr: 0, ac: 0, scenario: 0, task: 0 };
-        if (node.type === 'FR') row.fr++;
-        else if (node.type === 'AC') row.ac++;
-        else if (node.type === 'Scenario') row.scenario++;
-        else if (node.type === 'Task') row.task++;
-        bySpec.set(spec, row);
-      }
-      return asJsonResult({
-        ok: true,
-        specs: Array.from(bySpec.entries())
-          .map(([spec, counts]) => ({ spec, ...counts }))
-          .sort((a, b) => a.spec.localeCompare(b.spec)),
-      });
-    },
-  });
-
-  // ─── get_coverage (FR-32) ───────────────────────────────────────────────
-  tools.push({
-    name: 'get_coverage',
-    description:
-      'FR-32 honesty rollup from the latest run: per-scenario buckets ' +
-      '(passed/pending/undefined/ambiguous/failed/skipped/not_run) + per-task ' +
-      'verified_status (DONE only when EVERY mapped scenario is green). ' +
-      'Tasks map to scenarios via their FR refs (FR-N ↔ @featureN). Pass `spec` ' +
-      'to SCOPE the buckets to one spec (omit → whole-corpus rollup, where every ' +
-      'OTHER spec not in the last run shows as not_run — usually pass `spec`). ' +
-      'NOT get_coverage_summary — that one is structural atom counts with no test results.',
-    inputShape: { spec: z.string().optional() } as const satisfies z.ZodRawShape,
-    handler: async ({ spec }) => {
-      const graph = getGraph();
-      const scenarios: ScenarioLike[] = [];
-      const tasks: TaskLike[] = [];
-      for (const node of graph.nodes.values()) {
-        const nodeSpec = specOf((node as { file: string }).file);
-        if (spec && nodeSpec !== spec) continue; // FR-32 scoping: per-spec when asked
-        if (node.type === 'Scenario') {
-          const s = node as ScenarioNode;
-          scenarios.push({ id: s.id, tags: s.tags, result: s.lastResult, spec: nodeSpec });
-        } else if (node.type === 'Task') {
-          const t = node as TaskNode;
-          tasks.push({ id: t.id, doneWhen: t.doneWhen ?? '', refs: t.refs, spec: nodeSpec });
-        }
-      }
-      // FR-35a: apply the per-task test-quality side-channel so a DONE task with a
-      // WEAK / FAKE-POSITIVE-RISK test reads IN_PROGRESS here too (absent file → {}).
-      const testQualityByTask = readVerdicts(process.cwd());
-      return asJsonResult({ ok: true, spec: spec ?? null, scope: spec ? 'spec' : 'corpus', ...computeCoverage(tasks, scenarios, testQualityByTask) });
-    },
-  });
+  // get_coverage_summary + get_coverage MERGED into get_spec_status (view:'counts' /
+  // view:'coverage') — see tool #13 below. Consolidation 2026-06-28: one "how is the spec
+  // doing" tool with a `view` selector instead of three confusable tools (was 26 → now 24).
 
   // ─── 10) validate_anchor ────────────────────────────────────────────────
   tools.push({
@@ -975,14 +913,88 @@ export function buildToolRegistry(
   tools.push({
     name: 'get_spec_status',
     description:
-      'Full lifecycle status of ONE spec: SPEC_ONLY / TESTS_NOT_RUN / RED / ' +
-      'PARTIAL / GREEN + the linked last test-run summary (passed/failed/' +
-      'pending/undefined counts, run timestamp, NDJSON source), node counts, ' +
-      'FR-37b gap counts and an agent hint. The agent-facing READ of the same ' +
-      'truth the authoritative verdict gates on (FR-38).',
-    inputShape: { spec: z.string() } as const satisfies z.ZodRawShape,
-    handler: async ({ spec }) => {
+      'How is a spec doing — ONE tool, three VIEWS (merged: was get_spec_status + get_coverage + ' +
+      'get_coverage_summary). `view`: ' +
+      '"status" (default, needs `spec`) → lifecycle SPEC_ONLY/TESTS_NOT_RUN/RED/PARTIAL/GREEN ' +
+      '+ last-run summary + node counts + FR-37b gaps + phases + hint (FR-38). ' +
+      '"counts" → structural FR/AC/Scenario/Task tallies: with `spec` that one spec, without `spec` ' +
+      'the per-spec table across the corpus. ' +
+      '"coverage" → FR-32 honesty rollup: per-scenario buckets (passed/pending/undefined/…) + ' +
+      'per-task verified_status (DONE only when EVERY mapped scenario is green); `spec` scopes, ' +
+      'omit for whole-corpus (every spec not in the last run shows not_run — usually pass `spec`).',
+    inputShape: {
+      spec: z.string().optional(),
+      view: z.enum(['status', 'counts', 'coverage']).optional(),
+    } as const satisfies z.ZodRawShape,
+    handler: async ({ spec, view }) => {
       const graph = getGraph();
+      const v = (view as 'status' | 'counts' | 'coverage' | undefined) ?? 'status';
+
+      // view 'counts' — structural atom tallies (folds in former get_coverage_summary).
+      // `spec` → that one spec; no `spec` → the per-spec table across the corpus.
+      if (v === 'counts') {
+        if (typeof spec === 'string' && spec.length > 0) {
+          const c = { fr: 0, ac: 0, scenario: 0, task: 0 };
+          for (const node of graph.nodes.values()) {
+            if (specOf((node as { file: string }).file) !== spec) continue;
+            if (node.type === 'FR') c.fr++;
+            else if (node.type === 'AC') c.ac++;
+            else if (node.type === 'Scenario') c.scenario++;
+            else if (node.type === 'Task') c.task++;
+          }
+          return asJsonResult({ ok: true, view: 'counts', spec, ...c });
+        }
+        const bySpec = new Map<string, { fr: number; ac: number; scenario: number; task: number }>();
+        for (const node of graph.nodes.values()) {
+          const sp = specOf((node as { file: string }).file) ?? '(other)';
+          const row = bySpec.get(sp) ?? { fr: 0, ac: 0, scenario: 0, task: 0 };
+          if (node.type === 'FR') row.fr++;
+          else if (node.type === 'AC') row.ac++;
+          else if (node.type === 'Scenario') row.scenario++;
+          else if (node.type === 'Task') row.task++;
+          bySpec.set(sp, row);
+        }
+        return asJsonResult({
+          ok: true,
+          view: 'counts',
+          specs: Array.from(bySpec.entries())
+            .map(([sp, counts]) => ({ spec: sp, ...counts }))
+            .sort((a, b) => a.spec.localeCompare(b.spec)),
+        });
+      }
+
+      // view 'coverage' — FR-32 honesty rollup (folds in former get_coverage). The inner shape
+      // (…computeCoverage + spec + scope) is unchanged; only a `view` discriminator is added
+      // (additive, non-breaking) since agents read this payload across the repo.
+      if (v === 'coverage') {
+        const scenarios: ScenarioLike[] = [];
+        const tasks: TaskLike[] = [];
+        for (const node of graph.nodes.values()) {
+          const nodeSpec = specOf((node as { file: string }).file);
+          if (spec && nodeSpec !== spec) continue; // FR-32 scoping: per-spec when asked
+          if (node.type === 'Scenario') {
+            const s = node as ScenarioNode;
+            scenarios.push({ id: s.id, tags: s.tags, result: s.lastResult, spec: nodeSpec });
+          } else if (node.type === 'Task') {
+            const t = node as TaskNode;
+            tasks.push({ id: t.id, doneWhen: t.doneWhen ?? '', refs: t.refs, spec: nodeSpec });
+          }
+        }
+        // FR-35a: per-task test-quality side-channel — a DONE task with a WEAK /
+        // FAKE-POSITIVE-RISK test reads IN_PROGRESS here too (absent file → {}).
+        const testQualityByTask = readVerdicts(process.cwd());
+        return asJsonResult({ ok: true, view: 'coverage', spec: spec ?? null, scope: spec ? 'spec' : 'corpus', ...computeCoverage(tasks, scenarios, testQualityByTask) });
+      }
+
+      // view 'status' (default) — per-spec lifecycle (FR-38). Requires a spec.
+      if (typeof spec !== 'string' || spec.length === 0) {
+        return asJsonResult({
+          ok: false,
+          error: 'SPEC_REQUIRED',
+          view: 'status',
+          hint: 'view "status" needs a spec; for the whole corpus use view "counts" (no spec) or view "coverage".',
+        });
+      }
       const slug = String(spec).replace(/\\/g, '/').replace(/^\.?\/?\.specs\//, '').replace(/\/+$/, '');
       const inSpec = (file: string): boolean =>
         String(file).replace(/\\/g, '/').includes(`.specs/${slug}/`);
@@ -1062,6 +1074,7 @@ export function buildToolRegistry(
 
       return asJsonResult({
         ok: true,
+        view: 'status',
         spec: slug,
         // Explicit SPEC-level marker (set_spec_status). `backlog` ⇒ excluded from the task-census /
         // Stop-gate open-work count — its open tasks are parked by intent, not counted as work due now.

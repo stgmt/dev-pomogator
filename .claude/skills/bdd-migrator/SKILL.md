@@ -1,7 +1,7 @@
 ---
 name: bdd-migrator
 description: Migrate a spec's non-BDD (vitest) tests to traceable @featureN cucumber scenarios so coverage is visible in the spec graph (zero orphan tests, zero uncovered specs). An evolution of strong-tests §6.5. Use when a spec has a .feature with comment-tags / no step-defs / unwired, or vitest tests that are graph-invisible orphans. Drives the proven pilot conveyor: classify → fix tags → author real step-defs → wire → green → mutation-check → delete vitest. Adaptive across specs; ships for users running it on their own repos.
-allowed-tools: Read, Grep, Glob, Bash, Write, Edit, mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__get_trace, mcp__dev-pomogator-specs__get_coverage, mcp__dev-pomogator-specs__apply_spec_change
+allowed-tools: Read, Grep, Glob, Bash, Write, Edit, mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__get_trace, mcp__dev-pomogator-specs__get_spec_status, mcp__dev-pomogator-specs__apply_spec_change
 ---
 
 # bdd-migrator — migrate one spec's tests to traceable BDD (FR-M1)
@@ -267,7 +267,7 @@ else below you do yourself, and it is safe to run in parallel with sibling migra
 
 ### Coordinator residual (NOT the agent — one step per wave)
 After all wave agents report wired+scoped-green: run **one** full canonical run (no `--tags`) so the shared
-`.last-test-run.ndjson` is complete → `get_coverage` to confirm each flip → delete the reported vitest
+`.last-test-run.ndjson` is complete → `get_spec_status` (view: coverage) to confirm each flip → delete the reported vitest
 doubles. This single shared run is the only irreducibly-serial step.
 
 ## Relationship to strong-tests / test-author

@@ -3,7 +3,7 @@
  * Covers SPECGEN004_70..74 against the REAL implementations (no mocks):
  *   - computeCoverage (per-task verified_status) — spec-status's derivation
  *   - checkConformance (TASK_STATUS_UNVERIFIED honesty gate)
- *   - buildToolRegistry get_coverage / get_trace (MCP surface)
+ *   - buildToolRegistry get_spec_status / get_trace (MCP surface)
  *
  * @see .specs/spec-generator-v4/spec-generator-v4.feature SPECGEN004_70..74
  */
@@ -71,7 +71,7 @@ Then(/the rendered status is capped at .IN_PROGRESS., never .DONE.$/, function (
   assert.equal(this.report!.tasks['t-lie'].verified_status, 'IN_PROGRESS');
 });
 
-// ── SPECGEN004_72 — get_coverage buckets (one per scenario) ─────────────────
+// ── SPECGEN004_72 — get_spec_status buckets (one per scenario) ─────────────────
 Given(/a .\.last-test-run\.ndjson. with a mix of passed, pending, undefined and ambiguous scenarios/, function (this: F32World) {
   this.graph = makeGraph(
     [
@@ -83,8 +83,8 @@ Given(/a .\.last-test-run\.ndjson. with a mix of passed, pending, undefined and 
     [],
   );
 });
-When(/the MCP client invokes .get_coverage\(\)/, async function (this: F32World) {
-  const res = await getTool(this.graph!, 'get_coverage').handler({});
+When(/the MCP client invokes .get_spec_status\(view: coverage\)/, async function (this: F32World) {
+  const res = await getTool(this.graph!, 'get_spec_status').handler({ view: 'coverage' });
   this.covPayload = JSON.parse(res.content[0].text);
 });
 Then(/groups every scenario into exactly one of .passed., .pending., .undefined., .ambiguous. or .failed.$/, function (this: F32World) {
@@ -97,7 +97,7 @@ Then(/the per-bucket counts equal the cucumber summary for the same run$/, funct
   assert.deepEqual({ passed: t.passed, pending: t.pending, undefined: t.undefined, ambiguous: t.ambiguous }, { passed: 1, pending: 1, undefined: 1, ambiguous: 1 });
 });
 
-// ── SPECGEN004_73 — get_coverage per-task verified_status ───────────────────
+// ── SPECGEN004_73 — get_spec_status per-task verified_status ───────────────────
 Given(/a spec whose tasks map to scenarios of mixed result$/, function (this: F32World) {
   this.graph = makeGraph(
     [
@@ -170,7 +170,7 @@ function* graphTasks(g: SpecGraph) {
   for (const n of g.nodes.values()) if (n.type === 'Task') yield { id: n.id, doneWhen: (n as any).doneWhen ?? '', refs: (n as any).refs };
 }
 
-// ── SPECGEN004_143 — FR-32 (P19-3): get_coverage {spec} scoping vs bare corpus ──
+// ── SPECGEN004_143 — FR-32 (P19-3): get_spec_status {spec} scoping vs bare corpus ──
 // Binds the REAL registry handler: the spec param filters by specOf(node.file),
 // so the two specs' scenarios live in distinct .specs/<slug>/ files here.
 interface ScopeWorld extends F32World {
@@ -189,11 +189,11 @@ function twoSpecGraph(): SpecGraph {
 Given('a graph holding scenarios from two different specs', function (this: ScopeWorld) {
   this.graph = twoSpecGraph();
 });
-When('get_coverage is called scoped to one spec and then bare', async function (this: ScopeWorld) {
-  const tool = getTool(this.graph!, 'get_coverage');
+When('get_spec_status (view coverage) is called scoped to one spec and then bare', async function (this: ScopeWorld) {
+  const tool = getTool(this.graph!, 'get_spec_status');
   const call = async (args: object) => JSON.parse(((await tool.handler(args as never)) as { content: Array<{ text: string }> }).content[0].text);
-  this.scoped = await call({ spec: 'spec-a' });
-  this.bare = await call({});
+  this.scoped = await call({ spec: 'spec-a', view: 'coverage' });
+  this.bare = await call({ view: 'coverage' });
 });
 Then("the scoped buckets hold only that spec's scenarios and the bare buckets hold the whole corpus", function (this: ScopeWorld) {
   const ids = (r: { buckets: Record<string, string[]> }) => Object.values(r.buckets).flat();

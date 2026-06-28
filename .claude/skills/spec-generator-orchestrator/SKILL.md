@@ -1,7 +1,7 @@
 ---
 name: spec-generator-orchestrator
 description: Thin end-to-end orchestrator for the spec-generator-v4 workflow (scaffold → conformance → coverage → reconcile → resolve → honesty-gate). Owns ONLY the feature map + a human-merge self-improve ledger; delegates every unit of work to existing worker skills and MCP tools — never re-implements worker logic. Triggers on "run the spec workflow / orchestrate specs / end-to-end spec pipeline".
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Skill, AskUserQuestion, mcp__dev-pomogator-specs__get_trace, mcp__dev-pomogator-specs__get_coverage, mcp__dev-pomogator-specs__get_test_result, mcp__dev-pomogator-specs__find_orphans, mcp__dev-pomogator-specs__conformance_check
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Skill, AskUserQuestion, mcp__dev-pomogator-specs__get_trace, mcp__dev-pomogator-specs__get_spec_status, mcp__dev-pomogator-specs__get_test_result, mcp__dev-pomogator-specs__find_orphans, mcp__dev-pomogator-specs__conformance_check
 ---
 
 # spec-generator-orchestrator
@@ -26,22 +26,23 @@ delegates to a worker — a `Skill(...)` or an MCP tool — never inline logic:
 | scaffold | `Skill("create-spec")` | skill |
 | architecture | `Skill("architecture-research-workflow")` | skill |
 | conformance | `conformance_check` MCP tool | mcp-tool |
-| coverage | **`get_coverage` MCP tool** | mcp-tool |
+| coverage | **`get_spec_status` MCP tool (view: coverage)** | mcp-tool |
 | trace | `get_trace` MCP tool | mcp-tool |
 | reconcile | `Skill("cross-spec-reconcile")` | skill |
 | resolve | `Skill("cross-spec-resolve")` | skill |
 | backlog | `Skill("spec-backlog")` | skill |
 | legacy-triage | **`legacy-triage --judge` engine CLI** | engine-cli |
 | archive | **`Skill("spec-archive")`** | skill |
-| honesty-gate | **`get_coverage` MCP tool** | mcp-tool |
+| honesty-gate | **`get_spec_status` MCP tool (view: coverage)** | mcp-tool |
 
 ### Coverage + honesty step (delegation, not re-implementation)
 
 When the workflow reaches the coverage / honesty-gate step, **call the
-`get_coverage` MCP tool** and read its per-scenario buckets + per-task
-`verified_status`. Do NOT compute buckets here — the bucketing + FR-32 honesty
-derivation is owned by `tools/spec-graph/coverage.ts` and surfaced by
-`get_coverage`. This skill body intentionally contains no bucketing code.
+`get_spec_status` MCP tool with `view: 'coverage'`** and read its per-scenario
+buckets + per-task `verified_status`. Do NOT compute buckets here — the
+bucketing + FR-32 honesty derivation is owned by `tools/spec-graph/coverage.ts`
+and surfaced by `get_spec_status` (view coverage). This skill body intentionally
+contains no bucketing code.
 
 ### Legacy/drift triage step (FR-43 — SUSPICION only, the orchestrator runs it)
 
@@ -110,7 +111,7 @@ npx tsx .claude/skills/spec-generator-orchestrator/scripts/drift-check.ts
 
 - Skills: `create-spec`, `cross-spec-reconcile`, `cross-spec-resolve`,
   `spec-backlog`, `architecture-research-workflow`.
-- MCP tools: `get_trace`, `get_coverage`, `get_test_result`, `find_orphans`,
+- MCP tools: `get_trace`, `get_spec_status` (view coverage/counts/status), `get_test_result`, `find_orphans`,
   conformance guard/push hooks.
 - Workers MAY run as isolated sub-agents for parallelism (mirrors spec-backlog
   dispatch).

@@ -49776,50 +49776,6 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
     }
   });
   tools.push({
-    name: "get_coverage_summary",
-    description: "STRUCTURAL counts only \u2014 per-spec FR/AC/Scenario/Task tallies grouped by source directory (how many atoms each spec defines). Says NOTHING about test results or done-ness. For the FR-32 honesty / DONE rollup (passed/pending/\u2026, verified_status) use get_coverage instead.",
-    inputShape: {},
-    handler: async () => {
-      const bySpec = /* @__PURE__ */ new Map();
-      for (const node of getGraph().nodes.values()) {
-        const spec = specOf(node.file) ?? "(other)";
-        const row = bySpec.get(spec) ?? { fr: 0, ac: 0, scenario: 0, task: 0 };
-        if (node.type === "FR") row.fr++;
-        else if (node.type === "AC") row.ac++;
-        else if (node.type === "Scenario") row.scenario++;
-        else if (node.type === "Task") row.task++;
-        bySpec.set(spec, row);
-      }
-      return asJsonResult({
-        ok: true,
-        specs: Array.from(bySpec.entries()).map(([spec, counts]) => ({ spec, ...counts })).sort((a, b) => a.spec.localeCompare(b.spec))
-      });
-    }
-  });
-  tools.push({
-    name: "get_coverage",
-    description: "FR-32 honesty rollup from the latest run: per-scenario buckets (passed/pending/undefined/ambiguous/failed/skipped/not_run) + per-task verified_status (DONE only when EVERY mapped scenario is green). Tasks map to scenarios via their FR refs (FR-N \u2194 @featureN). Pass `spec` to SCOPE the buckets to one spec (omit \u2192 whole-corpus rollup, where every OTHER spec not in the last run shows as not_run \u2014 usually pass `spec`). NOT get_coverage_summary \u2014 that one is structural atom counts with no test results.",
-    inputShape: { spec: external_exports.string().optional() },
-    handler: async ({ spec }) => {
-      const graph = getGraph();
-      const scenarios = [];
-      const tasks = [];
-      for (const node of graph.nodes.values()) {
-        const nodeSpec = specOf(node.file);
-        if (spec && nodeSpec !== spec) continue;
-        if (node.type === "Scenario") {
-          const s = node;
-          scenarios.push({ id: s.id, tags: s.tags, result: s.lastResult, spec: nodeSpec });
-        } else if (node.type === "Task") {
-          const t = node;
-          tasks.push({ id: t.id, doneWhen: t.doneWhen ?? "", refs: t.refs, spec: nodeSpec });
-        }
-      }
-      const testQualityByTask = readVerdicts(process.cwd());
-      return asJsonResult({ ok: true, spec: spec ?? null, scope: spec ? "spec" : "corpus", ...computeCoverage(tasks, scenarios, testQualityByTask) });
-    }
-  });
-  tools.push({
     name: "validate_anchor",
     description: "Check whether an anchor alias (compact id OR slug) resolves to a registered definition.",
     inputShape: { anchor: external_exports.string() },
@@ -49860,10 +49816,67 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
   });
   tools.push({
     name: "get_spec_status",
-    description: "Full lifecycle status of ONE spec: SPEC_ONLY / TESTS_NOT_RUN / RED / PARTIAL / GREEN + the linked last test-run summary (passed/failed/pending/undefined counts, run timestamp, NDJSON source), node counts, FR-37b gap counts and an agent hint. The agent-facing READ of the same truth the authoritative verdict gates on (FR-38).",
-    inputShape: { spec: external_exports.string() },
-    handler: async ({ spec }) => {
+    description: 'How is a spec doing \u2014 ONE tool, three VIEWS (merged: was get_spec_status + get_coverage + get_coverage_summary). `view`: "status" (default, needs `spec`) \u2192 lifecycle SPEC_ONLY/TESTS_NOT_RUN/RED/PARTIAL/GREEN + last-run summary + node counts + FR-37b gaps + phases + hint (FR-38). "counts" \u2192 structural FR/AC/Scenario/Task tallies: with `spec` that one spec, without `spec` the per-spec table across the corpus. "coverage" \u2192 FR-32 honesty rollup: per-scenario buckets (passed/pending/undefined/\u2026) + per-task verified_status (DONE only when EVERY mapped scenario is green); `spec` scopes, omit for whole-corpus (every spec not in the last run shows not_run \u2014 usually pass `spec`).',
+    inputShape: {
+      spec: external_exports.string().optional(),
+      view: external_exports.enum(["status", "counts", "coverage"]).optional()
+    },
+    handler: async ({ spec, view }) => {
       const graph = getGraph();
+      const v = view ?? "status";
+      if (v === "counts") {
+        if (typeof spec === "string" && spec.length > 0) {
+          const c = { fr: 0, ac: 0, scenario: 0, task: 0 };
+          for (const node of graph.nodes.values()) {
+            if (specOf(node.file) !== spec) continue;
+            if (node.type === "FR") c.fr++;
+            else if (node.type === "AC") c.ac++;
+            else if (node.type === "Scenario") c.scenario++;
+            else if (node.type === "Task") c.task++;
+          }
+          return asJsonResult({ ok: true, view: "counts", spec, ...c });
+        }
+        const bySpec = /* @__PURE__ */ new Map();
+        for (const node of graph.nodes.values()) {
+          const sp = specOf(node.file) ?? "(other)";
+          const row = bySpec.get(sp) ?? { fr: 0, ac: 0, scenario: 0, task: 0 };
+          if (node.type === "FR") row.fr++;
+          else if (node.type === "AC") row.ac++;
+          else if (node.type === "Scenario") row.scenario++;
+          else if (node.type === "Task") row.task++;
+          bySpec.set(sp, row);
+        }
+        return asJsonResult({
+          ok: true,
+          view: "counts",
+          specs: Array.from(bySpec.entries()).map(([sp, counts2]) => ({ spec: sp, ...counts2 })).sort((a, b) => a.spec.localeCompare(b.spec))
+        });
+      }
+      if (v === "coverage") {
+        const scenarios = [];
+        const tasks = [];
+        for (const node of graph.nodes.values()) {
+          const nodeSpec = specOf(node.file);
+          if (spec && nodeSpec !== spec) continue;
+          if (node.type === "Scenario") {
+            const s = node;
+            scenarios.push({ id: s.id, tags: s.tags, result: s.lastResult, spec: nodeSpec });
+          } else if (node.type === "Task") {
+            const t = node;
+            tasks.push({ id: t.id, doneWhen: t.doneWhen ?? "", refs: t.refs, spec: nodeSpec });
+          }
+        }
+        const testQualityByTask = readVerdicts(process.cwd());
+        return asJsonResult({ ok: true, view: "coverage", spec: spec ?? null, scope: spec ? "spec" : "corpus", ...computeCoverage(tasks, scenarios, testQualityByTask) });
+      }
+      if (typeof spec !== "string" || spec.length === 0) {
+        return asJsonResult({
+          ok: false,
+          error: "SPEC_REQUIRED",
+          view: "status",
+          hint: 'view "status" needs a spec; for the whole corpus use view "counts" (no spec) or view "coverage".'
+        });
+      }
       const slug = String(spec).replace(/\\/g, "/").replace(/^\.?\/?\.specs\//, "").replace(/\/+$/, "");
       const inSpec = (file2) => String(file2).replace(/\\/g, "/").includes(`.specs/${slug}/`);
       const counts = { fr: 0, ac: 0, scenarios: 0, tasks: 0 };
@@ -49925,6 +49938,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
       }));
       return asJsonResult({
         ok: true,
+        view: "status",
         spec: slug,
         // Explicit SPEC-level marker (set_spec_status). `backlog` ⇒ excluded from the task-census /
         // Stop-gate open-work count — its open tasks are parked by intent, not counted as work due now.

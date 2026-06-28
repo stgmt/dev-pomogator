@@ -27,7 +27,7 @@ export const WORKFLOW: WorkflowStep[] = [
   { step: 'scaffold', worker: 'create-spec', kind: 'skill' },
   { step: 'architecture', worker: 'architecture-research-workflow', kind: 'skill' },
   { step: 'conformance', worker: 'conformance_check', kind: 'mcp-tool' },
-  { step: 'coverage', worker: 'get_coverage', kind: 'mcp-tool' },
+  { step: 'coverage', worker: 'get_spec_status', kind: 'mcp-tool' },
   { step: 'trace', worker: 'get_trace', kind: 'mcp-tool' },
   { step: 'reconcile', worker: 'cross-spec-reconcile', kind: 'skill' },
   { step: 'resolve', worker: 'cross-spec-resolve', kind: 'skill' },
@@ -47,7 +47,7 @@ export const WORKFLOW: WorkflowStep[] = [
   // archive_spec + prunes orphaned tests + reports. Autonomous on hard proof;
   // ambiguous escalates to a human; everything git-revertable.
   { step: 'archive', worker: 'spec-archive', kind: 'skill' },
-  { step: 'honesty-gate', worker: 'get_coverage', kind: 'mcp-tool' },
+  { step: 'honesty-gate', worker: 'get_spec_status', kind: 'mcp-tool' },
 ];
 
 /**
@@ -61,8 +61,6 @@ export const REFERENCED_CAPABILITIES: readonly string[] = [
   'find_by_tags',
   'find_orphans',
   'find_refs',
-  'get_coverage',
-  'get_coverage_summary',
   'get_node',
   'get_test_result',
   'conformance_check',
@@ -123,8 +121,6 @@ export const TOOL_CONSUMERS: Readonly<Record<string, readonly string[]>> = {
   list_phase_tasks: ['spec-graph-query'],
   get_test_result: ['spec-graph-query'],
   find_orphans: ['spec-graph-query'],
-  get_coverage: ['spec-graph-query'],
-  get_coverage_summary: ['spec-graph-query'],
   get_spec_status: ['spec-graph-query'],
   validate_anchor: ['spec-graph-query'],
   list_specs: ['spec-graph-query'],

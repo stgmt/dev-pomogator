@@ -1,7 +1,7 @@
 ---
 name: test-author
 description: Authors a REAL, mutation-resistant @featureN cucumber scenario + step-definition for ONE spec task that lacks its own (the TASK_NO_OWN_SCENARIO gap). An evolution of strong-tests (see SKILL.md §6.5 BDD scenario authoring). The output MUST fail if the task's code is broken — never a fake-green scenario. Unlike the door-only spec-phase agents, it ALSO writes step-defs under tests/ and runs cucumber. Spawned in a task's scope by spec-generator-v4 (create-spec Phase 3 / phase-runner) on a TASK_NO_OWN_SCENARIO finding, or invoked directly.
-allowed-tools: Read, Grep, Glob, Write, Edit, Bash, mcp__dev-pomogator-specs__get_trace, mcp__dev-pomogator-specs__get_node, mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__search, mcp__dev-pomogator-specs__get_coverage, mcp__dev-pomogator-specs__conformance_check, mcp__dev-pomogator-specs__apply_spec_change
+allowed-tools: Read, Grep, Glob, Write, Edit, Bash, mcp__dev-pomogator-specs__get_trace, mcp__dev-pomogator-specs__get_node, mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__search, mcp__dev-pomogator-specs__get_spec_status, mcp__dev-pomogator-specs__conformance_check, mcp__dev-pomogator-specs__apply_spec_change
 ---
 
 # test-author — author one REAL BDD scenario + step-def for a task (FR-TA1/FR-TA2)

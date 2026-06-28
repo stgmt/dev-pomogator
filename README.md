@@ -135,7 +135,7 @@ main, 159 changed files, +20,394/-137 lines.
   `.mcp.json` as `dev-pomogator-specs`. 11 read-only tools over an
   in-memory SpecGraph (`get_trace` primary, plus `find_by_tags` /
   `conformance_check` / `search` / `get_node` / `list_phase_tasks` /
-  `get_test_result` / `find_orphans` / `get_coverage_summary` /
+  `get_test_result` / `find_orphans` / `get_spec_status` (view: counts) /
   `validate_anchor` / `list_specs`). SQLite WAL backend is opt-in
   behind `.spec-config.json::storage.sqlite_enabled = true`.
 

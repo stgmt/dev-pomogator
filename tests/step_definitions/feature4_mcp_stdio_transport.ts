@@ -60,11 +60,11 @@ When(
 );
 
 Then(
-  /^the MCP server advertises the read-only tools get_trace and get_coverage$/,
+  /^the MCP server advertises the read-only tools get_trace and get_spec_status$/,
   function (this: McpStdioWorld) {
     assert.ok(this.mcpToolNames, 'listTools must return tool names over stdio');
     assert.ok(this.mcpToolNames!.includes('get_trace'), `get_trace must be advertised; got ${this.mcpToolNames}`);
-    assert.ok(this.mcpToolNames!.includes('get_coverage'), `get_coverage must be advertised; got ${this.mcpToolNames}`);
+    assert.ok(this.mcpToolNames!.includes('get_spec_status'), `get_spec_status must be advertised; got ${this.mcpToolNames}`);
   },
 );
 
@@ -89,17 +89,17 @@ Then(
 );
 
 When(
-  /^the agent calls get_coverage over the wire$/,
+  /^the agent calls get_spec_status \(view coverage\) over the wire$/,
   async function (this: McpStdioWorld) {
-    const res = await this.mcpClient!.callTool({ name: 'get_coverage', arguments: {} });
+    const res = await this.mcpClient!.callTool({ name: 'get_spec_status', arguments: { view: 'coverage' } });
     this.mcpCoverage = JSON.parse((res.content as Array<{ text: string }>)[0].text);
   },
 );
 
 Then(
-  /^get_coverage returns ok with buckets and totals$/,
+  /^get_spec_status returns ok with buckets and totals$/,
   function (this: McpStdioWorld) {
-    assert.ok(this.mcpCoverage?.ok, `get_coverage must return ok over stdio: ${JSON.stringify(this.mcpCoverage)}`);
+    assert.ok(this.mcpCoverage?.ok, `get_spec_status must return ok over stdio: ${JSON.stringify(this.mcpCoverage)}`);
     assert.ok('buckets' in this.mcpCoverage!, 'coverage payload must carry buckets');
     assert.ok('totals' in this.mcpCoverage!, 'coverage payload must carry totals');
   },

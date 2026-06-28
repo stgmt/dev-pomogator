@@ -38,6 +38,8 @@ for (const node of graph.nodes.values()) {
 }
 if (sampleNodeId === 'FR-1' && frFallback) sampleNodeId = frFallback;
 for (const a of graph.definitions?.keys?.() ?? []) { sampleAnchor = a; break; }
+// get_spec_status now needs a real spec for its status/coverage views (merged tool).
+const sampleSpec = sampleNodeId.includes(':') ? sampleNodeId.slice(0, sampleNodeId.indexOf(':')) : '';
 
 const inputs: Record<string, any> = {
   get_trace: { node_id: sampleNodeId },
@@ -48,8 +50,7 @@ const inputs: Record<string, any> = {
   list_phase_tasks: { phase: samplePhase },
   get_test_result: { scenario_id: sampleScenarioId },
   find_orphans: {},
-  get_coverage_summary: {},
-  get_coverage: {},
+  get_spec_status: { spec: sampleSpec, view: 'coverage' },
   validate_anchor: { anchor: sampleAnchor },
   list_specs: {},
   find_refs: { node_id: sampleNodeId },

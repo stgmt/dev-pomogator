@@ -15,7 +15,7 @@ description: >
   «per-FR implementation review», «which FRs are done».
   Do NOT use for: writing/scaffolding a spec (use create-spec), running tests
   (use /run-tests), or general progress questions answerable from .progress.json alone.
-allowed-tools: Bash, Read, Glob, Grep, Agent, mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__get_coverage
+allowed-tools: Bash, Read, Glob, Grep, Agent, mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__get_spec_status
 ---
 
 # spec-status — honest, sub-agent-verified spec status

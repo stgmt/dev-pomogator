@@ -150,7 +150,7 @@ Then('it allows the claim only with an audited skip-test-quality escape logged t
 
 // ── SPECGEN004_137 — FR-35a: the side-channel FILE is read by the consumer surfaces ──
 // _85/_86 feed the verdict in directly; this binds the actual gap P19-5 closed —
-// `.dev-pomogator/.test-quality.json` was never READ by get_coverage / spec-verdict.
+// `.dev-pomogator/.test-quality.json` was never READ by get_spec_status (view coverage) / spec-verdict.
 // Drives the REAL shared reader (readVerdicts) over a real tmp file, then the real
 // computeCoverage — proving the file path → cap chain end-to-end.
 Given('a side-channel test-quality file recording a WEAK verdict for a green DONE task', function (this: F35World) {

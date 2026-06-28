@@ -1,7 +1,7 @@
 ---
 name: spec-phase-requirements
 description: Requirements-phase agent for the MCP-rails spec workflow (FR-41). Authors FR / NFR / ACCEPTANCE_CRITERIA / DESIGN / REQUIREMENTS / FILE_CHANGES + the .feature for ONE spec THROUGH the MCP door only (no raw Read/Grep/Edit/Write over .specs/). Spawned headless by the orchestrator-verifier; returns when its docs are drafted.
-allowed-tools: mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__get_trace, mcp__dev-pomogator-specs__get_node, mcp__dev-pomogator-specs__search, mcp__dev-pomogator-specs__list_specs, mcp__dev-pomogator-specs__propose_spec_change, mcp__dev-pomogator-specs__apply_spec_change, mcp__dev-pomogator-specs__conformance_check, mcp__dev-pomogator-specs__get_coverage, mcp__dev-pomogator-specs__get_spec_status
+allowed-tools: mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__get_trace, mcp__dev-pomogator-specs__get_node, mcp__dev-pomogator-specs__search, mcp__dev-pomogator-specs__list_specs, mcp__dev-pomogator-specs__propose_spec_change, mcp__dev-pomogator-specs__apply_spec_change, mcp__dev-pomogator-specs__conformance_check, mcp__dev-pomogator-specs__get_spec_status
 ---
 
 # spec-phase-requirements — MCP-only Requirements agent (FR-41a)

@@ -23,7 +23,7 @@ conformance + coverage rollup + semantic. RED ⇒ a gap list you must cite. See 
 1. **Traceability — everything is a graph node/edge.** Requirement → AC → scenario → task → test is a
    real graph (FR↔`@featureN` `tested-by`), navigable both ways.
    *Where:* FR-36 (spec-qualified composite ids), FR-44 (reverse traceability), FR-47 (design/story
-   legs), `tools/spec-graph/` builder + parsers; MCP `get_trace` / `find_refs` / `get_coverage`.
+   legs), `tools/spec-graph/` builder + parsers; MCP `get_trace` / `find_refs` / `get_spec_status`.
    *Verify:* `get_trace({node_id})`; `spec-verdict` (traceability-completeness gate, FR-37b).
 
 2. **Anti-fake-green — status is DERIVED from evidence, never claimed.** A task is DONE only when ALL
@@ -32,7 +32,7 @@ conformance + coverage rollup + semantic. RED ⇒ a gap list you must cite. See 
    its OWN green scenario, not just its FR's), FR-35a (test-quality side-channel caps weak DONE);
    rules `spec-verdict/no-structural-valid`, `gotchas/rollup-completeness-all-not-any`,
    `testing/verify-against-real-artifact`.
-   *Verify:* `get_coverage({spec})` (per-task `verified_status`); `fr-census`; `get_spec_status` (FR-38).
+   *Verify:* `get_spec_status` (view: coverage, per-task `verified_status`); `fr-census`; `get_spec_status` (FR-38).
 
 3. **Deterministic gates — the MCP door, not prompt-trust.** Spec mutations go THROUGH
    `apply_spec_change`, which validates form-contracts + anchors + conformance BEFORE touching disk and

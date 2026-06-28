@@ -408,13 +408,13 @@ WHEN every scenario mapped to a task is `PASSED` in the latest run THEN the task
 
 **Требование:** [FR-32](FR.md#fr-32)
 
-WHEN MCP `get_coverage()` is invoked THEN it SHALL return, from `.last-test-run.ndjson`, per-scenario buckets `{passed|pending|undefined|ambiguous|failed}` AND a per-task `verified_status` rollup matching `spec-status`'s derivation.
+WHEN MCP `get_spec_status(view: coverage)` is invoked THEN it SHALL return, from `.last-test-run.ndjson`, per-scenario buckets `{passed|pending|undefined|ambiguous|failed}` AND a per-task `verified_status` rollup matching `spec-status`'s derivation.
 
 ## AC-33.1
 
 **Требование:** [FR-33](FR.md#fr-33)
 
-WHEN the orchestrator runs a workflow step that an existing worker covers (e.g. coverage rollup) THEN it SHALL invoke that worker (`get_coverage` / skill) AND SHALL NOT contain a re-implementation of the worker's logic.
+WHEN the orchestrator runs a workflow step that an existing worker covers (e.g. coverage rollup) THEN it SHALL invoke that worker (`get_spec_status` / skill) AND SHALL NOT contain a re-implementation of the worker's logic.
 
 ## AC-33.2
 
@@ -540,7 +540,7 @@ WHEN any migration phase completes THEN the full clean-HEAD Docker suite SHALL b
 
 **Требование:** [FR-37a](FR.md#fr-37)
 
-WHEN spec health is reported THEN the verdict SHALL be the smart analysis (`conformance_check` + `get_coverage` + `audit-spec` + the traceability-completeness check) over the one graph; a bare `validate-spec: 0 errors` SHALL NOT be reportable as "valid / clean / done."
+WHEN spec health is reported THEN the verdict SHALL be the smart analysis (`conformance_check` + `get_spec_status` + `audit-spec` + the traceability-completeness check) over the one graph; a bare `validate-spec: 0 errors` SHALL NOT be reportable as "valid / clean / done."
 
 ## AC-37.2
 

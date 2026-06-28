@@ -12,9 +12,9 @@ description: >
   тестит/покрывает FR-7", "что зависит от требования", "сценарии с тегом @featureN", "какие
   спеки есть", "задачи фазы 2", "сколько FR/AC/сценариев в спеке", "резолвится ли якорь". Do
   NOT use for: markdown link/anchor NAVIGATION or rename (markdown-lsp / Marksman), bulk
-  broken-anchor scan+fix (anchor-fix), the honest per-task DONE verdict (get_coverage /
-  spec-status), or cross-spec drift (cross-spec-reconcile).
-allowed-tools: mcp__dev-pomogator-specs__get_trace, mcp__dev-pomogator-specs__find_by_tags, mcp__dev-pomogator-specs__conformance_check, mcp__dev-pomogator-specs__search, mcp__dev-pomogator-specs__get_node, mcp__dev-pomogator-specs__get_spec_status, mcp__dev-pomogator-specs__list_phase_tasks, mcp__dev-pomogator-specs__get_test_result, mcp__dev-pomogator-specs__find_orphans, mcp__dev-pomogator-specs__get_coverage_summary, mcp__dev-pomogator-specs__get_coverage, mcp__dev-pomogator-specs__validate_anchor, mcp__dev-pomogator-specs__list_specs, mcp__dev-pomogator-specs__find_refs, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__read_attachment, Bash, Read
+  broken-anchor scan+fix (anchor-fix), the honest per-task DONE verdict (get_spec_status view
+  coverage / spec-status), or cross-spec drift (cross-spec-reconcile).
+allowed-tools: mcp__dev-pomogator-specs__get_trace, mcp__dev-pomogator-specs__find_by_tags, mcp__dev-pomogator-specs__conformance_check, mcp__dev-pomogator-specs__search, mcp__dev-pomogator-specs__get_node, mcp__dev-pomogator-specs__get_spec_status, mcp__dev-pomogator-specs__list_phase_tasks, mcp__dev-pomogator-specs__get_test_result, mcp__dev-pomogator-specs__find_orphans, mcp__dev-pomogator-specs__validate_anchor, mcp__dev-pomogator-specs__list_specs, mcp__dev-pomogator-specs__find_refs, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__read_attachment, Bash, Read
 ---
 
 # spec-graph-query — one cheatsheet for the spec-graph MCP
@@ -49,7 +49,8 @@ file-local by design (FR-36b).
 | Scenarios carrying ALL these @feature tags (AND, inheritance-aware) | `find_by_tags` | `{ tags: ["@feature5","@regression"] }` |
 | Which specs are loaded in the graph | `list_specs` | `{}` |
 | Tasks under a phase heading | `list_phase_tasks` | `{ phase: "Phase 2: MCP server + hooks" }` |
-| Per-spec FR/AC/Scenario/Task **counts** (structural census) | `get_coverage_summary` | `{}` |
+| Per-spec FR/AC/Scenario/Task **counts** (structural census) | `get_spec_status` | `{ view: "counts" }` (bare) or `{ spec, view: "counts" }` |
+| Honest FR-32 per-scenario buckets + per-task DONE verdict | `get_spec_status` | `{ spec: "<slug>", view: "coverage" }` |
 | Does ONE anchor (compact id or slug) resolve? | `validate_anchor` | `{ anchor: "ac-7-1" }` |
 | List ONE spec's readable docs + binary attachments (recurses subdirs: ARCHITECTURE/, attachments/) (FR-39a/P19-6) | `list_spec_docs` | `{ spec: "spec-generator-v4" }` → `{ docs[], attachments[] }` |
 | Read a WHOLE spec document — prose outside graph nodes (README/DESIGN/RESUME or a SUBPATH `ARCHITECTURE/AXIS-1.md`); audited (FR-39a/b) | `read_spec_doc` | `{ spec: "...", doc: "RESUME.md" }` |
@@ -67,11 +68,11 @@ All return `{ ok, ... }`; `ok:false` (or `registered:false`) when nothing matche
 ## The 6 you already use (here for completeness)
 `get_trace` (full traceability for a node), `conformance_check` (structural findings),
 `search` (free-text over the graph), `get_test_result` (a scenario's last run),
-`find_orphans` (nodes with no inbound coverage), `get_coverage` (the **honest** FR-32 per-task
-DONE verdict — distinct from `get_coverage_summary`, which is just counts). **Always pass
-`get_coverage({ spec: "<slug>" })`** for a per-spec rollup — a bare `get_coverage({})` returns
-the WHOLE-CORPUS buckets (every other spec shows as `not_run`), which reads as "this spec is
-mostly unrun". Scope it.
+`find_orphans` (nodes with no inbound coverage), `get_spec_status` (the umbrella status tool —
+`view: "coverage"` is the **honest** FR-32 per-task DONE verdict; `view: "counts"` is just the
+structural census). **Always pass `get_spec_status({ spec: "<slug>", view: "coverage" })`** for a
+per-spec rollup — a bare `get_spec_status({ view: "coverage" })` returns the WHOLE-CORPUS buckets
+(every other spec shows as `not_run`), which reads as "this spec is mostly unrun". Scope it.
 
 ## Pick the RIGHT neighbour (so you don't reach here by mistake)
 - **Jump** from a `[text](#anchor)` link to its heading, or **rename** a heading + propagate
@@ -79,8 +80,8 @@ mostly unrun". Scope it.
   PROSE links; `find_refs` owns the SEMANTIC edges Marksman can't see — complementary.
 - **Scan the whole corpus for broken anchors + auto-FIX** → **anchor-fix** skill (`check.mjs`).
   `validate_anchor` is a single yes/no, not a bulk fixer.
-- **"Is this task really DONE, backed by a green test?"** → `get_coverage` / **spec-status**.
-  Counting (`get_coverage_summary`) ≠ verifying.
+- **"Is this task really DONE, backed by a green test?"** → `get_spec_status` (view: coverage) / **spec-status**.
+  Counting (`view: counts`) ≠ verifying.
 - **Cross-spec contradictions / drift** → **cross-spec-reconcile**.
 
 ## Why this is one skill, not seven

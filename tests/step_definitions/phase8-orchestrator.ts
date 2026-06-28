@@ -4,7 +4,7 @@
  * SPECGEN004_76..79 are driven against the REAL ledger + feature-map scripts
  * (appendPendingEntry / pendingReminder / applyApproved / checkFeatureMapDrift).
  * SPECGEN004_75 (delegation) is a STATIC check on the shipped SKILL.md + the
- * feature-map routing — the live agent actually invoking get_coverage is
+ * feature-map routing — the live agent actually invoking get_spec_status is
  * agent-flow, but "the skill delegates and does not re-implement bucketing" is
  * a verifiable property of the skill artifact.
  *
@@ -64,15 +64,15 @@ When(/it computes per-scenario coverage/, function () {
   // No-op marker — assertions are on the shipped artifacts (next steps).
 });
 
-Then(/it invokes the .get_coverage. MCP tool/, function () {
+Then(/it invokes the .get_spec_status. MCP tool/, function () {
   const coverage = WORKFLOW.filter((s) => s.step === 'coverage' || s.step === 'honesty-gate');
   assert.ok(coverage.length > 0, 'feature-map must route a coverage step');
   for (const s of coverage) {
-    assert.equal(s.worker, 'get_coverage');
+    assert.equal(s.worker, 'get_spec_status');
     assert.equal(s.kind, 'mcp-tool'); // delegated to a tool, not skill-local logic
   }
   const skill = fs.readFileSync(SKILL_MD, 'utf8');
-  assert.ok(skill.includes('get_coverage'), 'SKILL.md must reference get_coverage');
+  assert.ok(skill.includes('get_spec_status'), 'SKILL.md must reference get_spec_status');
 });
 
 Then(/the orchestrator skill body contains no re-implementation of the bucketing logic/, function () {
@@ -100,8 +100,8 @@ When(/it records the observation/, function (this: OrchWorld) {
     SLUG,
     {
       trigger: 'friction',
-      observation: 'coverage step re-derived buckets instead of calling get_coverage',
-      proposed_change: 'route the coverage step to the get_coverage MCP tool',
+      observation: 'coverage step re-derived buckets instead of calling get_spec_status',
+      proposed_change: 'route the coverage step to the get_spec_status MCP tool',
       affected_files: ['SKILL.md'],
       confidence: 'high',
     },

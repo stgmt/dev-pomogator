@@ -38,7 +38,7 @@ interface FeatureMapWorld extends V4World {
   truthResult?: TruthResult;
 }
 
-// ── SPECGEN004_241 — coverage + honesty-gate steps delegate to get_coverage ──
+// ── SPECGEN004_241 — coverage + honesty-gate steps delegate to get_spec_status ──
 
 Given(
   /^the orchestrator feature-map routing table is loaded$/,
@@ -55,14 +55,14 @@ When(
 );
 
 Then(
-  /^every coverage and honesty-gate step delegates to the get_coverage MCP tool and never re-implements it$/,
+  /^every coverage and honesty-gate step delegates to the get_spec_status MCP tool and never re-implements it$/,
   function (this: FeatureMapWorld) {
     const steps = WORKFLOW.filter(
       (s) => s.step === 'coverage' || s.step === 'honesty-gate',
     );
     assert.ok(steps.length > 0, 'WORKFLOW must contain coverage and/or honesty-gate steps');
     for (const s of steps) {
-      assert.equal(s.worker, 'get_coverage', `step ${s.step} must delegate to get_coverage`);
+      assert.equal(s.worker, 'get_spec_status', `step ${s.step} must delegate to get_spec_status`);
       assert.equal(s.kind, 'mcp-tool', `step ${s.step} kind must be mcp-tool`);
     }
   },

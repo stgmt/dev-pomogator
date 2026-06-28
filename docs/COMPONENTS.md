@@ -52,7 +52,7 @@ cross-spec-reconcile (skill, 28 классов drift) → consistency-report.yam
 
 ### 2. Spec-граф как сервис: MCP + LSP
 
-- **dev-pomogator-specs (MCP)** — `tools/spec-mcp-server/server.bundle.mjs` (бандл, работает у юзеров без node_modules). Read-only тулзы по графу спек: `get_trace`, `find_by_tags`, `conformance_check`, `get_coverage`, `validate_anchor`, `list_specs` и др. Шпаргалка по выбору тулзы — skill **spec-graph-query**; runtime-проверка живости тулз — skill **spec-mcp-dogfood**.
+- **dev-pomogator-specs (MCP)** — `tools/spec-mcp-server/server.bundle.mjs` (бандл, работает у юзеров без node_modules). Read-only тулзы по графу спек: `get_trace`, `find_by_tags`, `conformance_check`, `get_spec_status` (view: coverage), `validate_anchor`, `list_specs` и др. Шпаргалка по выбору тулзы — skill **spec-graph-query**; runtime-проверка живости тулз — skill **spec-mcp-dogfood**.
 - **marksman (LSP)** — `tools/marksman-installer/` качает и верифицирует бинарь (sha256), `.lsp.json` регистрирует его как нативный LSP Claude Code. Навигация/rename по markdown-якорям — skill **markdown-lsp**; массовая починка битых якорей — skill **anchor-fix** + hook **tools/anchor-integrity** (PostToolUse + Stop).
 
 Разделение доменов: spec-MCP = трассируемость спек (coverage/honesty), Marksman = навигация по прозе/якорям.

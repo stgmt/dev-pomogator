@@ -534,7 +534,7 @@ System SHALL emit conformance finding `TASK_STATUS_UNVERIFIED` (severity WARNING
 
 This codifies the manual discipline applied during the 2026-06-02 coverage audit (no task DONE while its BDD scenario is pending/undefined/ambiguous) into the spec-generator itself, removing the human as the enforcement point.
 
-**Зависит от:** FR-2 (SpecGraph task↔scenario edges), FR-13 (conformance findings), FR-30 (MCP node surface). Surfaced via MCP `get_coverage` (per-scenario buckets + per-task derived status) and `get_trace` (`verified_status` per node).
+**Зависит от:** FR-2 (SpecGraph task↔scenario edges), FR-13 (conformance findings), FR-30 (MCP node surface). Surfaced via MCP `get_spec_status` (view coverage: per-scenario buckets + per-task derived status) and `get_trace` (`verified_status` per node).
 **Связанные AC:** [AC-32.1](ACCEPTANCE_CRITERIA.md#ac-321), [AC-32.2](ACCEPTANCE_CRITERIA.md#ac-322), [AC-32.3](ACCEPTANCE_CRITERIA.md#ac-323)
 **Use Case:** [UC-1](USE_CASES.md#uc-1)
 **User Story:** US-20

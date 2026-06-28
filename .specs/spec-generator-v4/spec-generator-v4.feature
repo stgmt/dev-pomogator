@@ -619,16 +619,16 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And the rendered status is capped at `IN_PROGRESS`, never `DONE`
 
   @feature32
-  Scenario: SPECGEN004_72 get_coverage returns per-scenario buckets matching the run
+  Scenario: SPECGEN004_72 get_spec_status (view coverage) returns per-scenario buckets matching the run
     Given a `.last-test-run.ndjson` with a mix of passed, pending, undefined and ambiguous scenarios
-    When the MCP client invokes `get_coverage()`
+    When the MCP client invokes `get_spec_status(view: coverage)`
     Then the response groups every scenario into exactly one of `passed`, `pending`, `undefined`, `ambiguous` or `failed`
     And the per-bucket counts equal the cucumber summary for the same run
 
   @feature32
-  Scenario: SPECGEN004_73 get_coverage returns per-task verified status
+  Scenario: SPECGEN004_73 get_spec_status (view coverage) returns per-task verified status
     Given a spec whose tasks map to scenarios of mixed result
-    When the MCP client invokes `get_coverage()`
+    When the MCP client invokes `get_spec_status(view: coverage)`
     Then each task carries a `verified_status` of `DONE` only if all its mapped scenarios are `passed`
     And tasks with any non-passed mapped scenario carry `verified_status` of `in_progress`
 
@@ -643,7 +643,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
   Scenario: SPECGEN004_75 orchestrator delegates to a worker instead of reimplementing it
     Given the orchestrator reaches the coverage step of the workflow
     When it computes per-scenario coverage
-    Then it invokes the `get_coverage` MCP tool (or the coverage worker skill)
+    Then it invokes the `get_spec_status` MCP tool (or the coverage worker skill)
     And the orchestrator skill body contains no re-implementation of the bucketing logic
 
   @feature33
@@ -1144,9 +1144,9 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then every engine CLI is allowed and the generic reader stays a violation
 
   @FR-32
-  Scenario: SPECGEN004_143 get_coverage scopes to one spec while a bare call stays corpus-wide
+  Scenario: SPECGEN004_143 get_spec_status (view coverage) scopes to one spec while a bare call stays corpus-wide
     Given a graph holding scenarios from two different specs
-    When get_coverage is called scoped to one spec and then bare
+    When get_spec_status (view coverage) is called scoped to one spec and then bare
     Then the scoped buckets hold only that spec's scenarios and the bare buckets hold the whole corpus
 
   @FR-32
@@ -1719,10 +1719,10 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then the verdict is "use-research-workflow" and the reason mentions no architecture keyword and the threshold
 
   @feature33
-  Scenario: SPECGEN004_241 orchestrator WORKFLOW routes coverage and honesty-gate steps to get_coverage MCP tool
+  Scenario: SPECGEN004_241 orchestrator WORKFLOW routes coverage and honesty-gate steps to get_spec_status MCP tool
     Given the orchestrator feature-map routing table is loaded
     When the coverage and honesty-gate workflow steps are inspected
-    Then every coverage and honesty-gate step delegates to the get_coverage MCP tool and never re-implements it
+    Then every coverage and honesty-gate step delegates to the get_spec_status MCP tool and never re-implements it
 
   @feature33
   Scenario: SPECGEN004_242 every WORKFLOW worker appears in the REFERENCED_CAPABILITIES set
@@ -2680,7 +2680,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
   Scenario: SPECGEN004_391 the spec-graph MCP server advertises read-only tools over real stdio
     Given a running spec-graph MCP server over real stdio against an isolated demo spec
     When the agent lists the MCP server tools over the wire
-    Then the MCP server advertises the read-only tools get_trace and get_coverage
+    Then the MCP server advertises the read-only tools get_trace and get_spec_status
 
   @feature4 @mcp-stdio
   Scenario: SPECGEN004_392 get_trace answers for a real qualified node over real stdio
@@ -2689,10 +2689,10 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then get_trace returns ok for `demo:FR-1` carrying a verified_status surface
 
   @feature4 @mcp-stdio
-  Scenario: SPECGEN004_393 get_coverage answers over real stdio
+  Scenario: SPECGEN004_393 get_spec_status (view coverage) answers over real stdio
     Given a running spec-graph MCP server over real stdio against an isolated demo spec
-    When the agent calls get_coverage over the wire
-    Then get_coverage returns ok with buckets and totals
+    When the agent calls get_spec_status (view coverage) over the wire
+    Then get_spec_status returns ok with buckets and totals
 
   # --- FR-54: TASKS.md task-id rework helper (add-task-ids.ts) ---
 

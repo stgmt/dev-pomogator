@@ -2,7 +2,7 @@
 name: bdd-migrator
 model: sonnet
 description: Migrate ONE spec's non-BDD (vitest) tests to traceable @featureN cucumber scenarios that drive the REAL code — the dedicated agent for the BDD-migration rollout (FR-51 / spec-generator-v4 Phase 27, an evolution of strong-tests §6.5 + test-author). Classify each test → author REGEX step-defs on the real engine (no mocks) → validate via a THROWAWAY cucumber config (never the canonical ndjson) → collision dry-run → wire ONLY when cucumber.json is shared-tree-safe → mutation-check → report honestly. Hardened by the spec-reality-check dogfood (24/24 green). Spawned with a `slug` to migrate; reports the real green/blocked state, never a fake-green.
-allowed-tools: Read, Grep, Glob, Write, Edit, Bash, mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__get_node, mcp__dev-pomogator-specs__get_trace, mcp__dev-pomogator-specs__get_coverage, mcp__dev-pomogator-specs__search, mcp__dev-pomogator-specs__apply_spec_change
+allowed-tools: Read, Grep, Glob, Write, Edit, Bash, mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__get_node, mcp__dev-pomogator-specs__get_trace, mcp__dev-pomogator-specs__get_spec_status, mcp__dev-pomogator-specs__search, mcp__dev-pomogator-specs__apply_spec_change
 ---
 
 # bdd-migrator — migrate ONE spec's tests to traceable BDD (FR-51)
