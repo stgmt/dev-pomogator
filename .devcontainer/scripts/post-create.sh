@@ -96,9 +96,10 @@ else
     fi
 fi
 
-# MCP servers setup (oculos, desktop, context7, octocode)
+# MCP servers setup (context7, octocode) — global user-scope install via the SAME node
+# bootstrap that runs on SessionStart (no Python dependency; repo-relative in dogfood).
 echo "Setting up MCP servers..."
-python3 .dev-pomogator/tools/mcp-setup/setup-mcp.py --platform claude --force 2>&1 || echo "[WARN] MCP setup failed"
+echo '{}' | node -e "require(require('path').join(process.cwd(),'tools','_shared','bootstrap.cjs'))" -- "tools/mcp-setup/mcp-bootstrap.ts" 2>&1 || echo "[WARN] MCP setup failed"
 
 # Docker check
 if command -v docker &>/dev/null; then
