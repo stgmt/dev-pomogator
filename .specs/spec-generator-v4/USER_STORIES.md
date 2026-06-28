@@ -778,7 +778,7 @@ Then it emits a specific v1-layout-drift finding with remap guidance, not only a
 
 As a maintainer reading a `consistency-report.yaml`, I want a top-level `summary` block (counts by severity / class / namespace, run totals, and the top-3 recommendations) so that I can triage a spec's drift at a glance without scanning every finding.
 
-**Why:** a long `findings[]` list is unscannable; the roll-up gives severity/namespace shape and the worst few items first.
+**Why:** a long `findings[]` list is hard to scan; the roll-up gives severity/namespace shape and the worst few items first.
 **Independent Test:** emit a consistency-report for a spec with a missing impl path and assert the `summary` block carries `by_severity`, `by_namespace`, `totals.specs_compared`, `totals.impl_paths_checked` and `top_3_recommendations`.
 **Acceptance Scenarios:**
 

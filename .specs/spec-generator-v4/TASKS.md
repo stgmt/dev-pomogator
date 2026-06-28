@@ -665,7 +665,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] extension version bumped per `.claude/rules/extension-manifest-integrity.md`
   - [ ] `npx tsx extensions/_shared/extension-layout-validate.ts` exits 0
 
-- [ ] Create integration test fixture corpus -- @feature17 — id: integration-test-fixture — Status: TODO — own scenario **SPECGEN004_395** (module-ownership conflict from the corpus) | Est: 240m
+- [x] Create integration test fixture corpus -- @feature17 — id: integration-test-fixture — Status: DONE — own scenario **SPECGEN004_395** (module-ownership conflict from the corpus) | Est: 240m
   _depends: register-skills-in-manifest_
   _Requirements: [FR-17](FR.md#fr-17)_
   **Done When:**

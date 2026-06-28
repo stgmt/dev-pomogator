@@ -1231,7 +1231,7 @@ Then a finding is emitted (not silent)
 ## Decision: FR-17 consistency-report carries a computed summary roll-up block
 **Требование:** [FR-17](FR.md#fr-17)
 
-**Rationale:** A scannable top-level `summary` (by_severity/by_class/by_namespace/totals + top_3_recommendations) lets a reader triage a consistency-report without parsing every finding; counts are computed in `yaml-writer.ts::emitSummary` from the findings plus the `specsCompared`/`implPathsChecked` totals tracked in `reconcileLight`.
+**Rationale:** A scannable, top-level `summary` (by_severity/by_class/by_namespace/totals + top_3_recommendations) lets a reader triage a consistency-report without parsing every finding; counts are computed in `yaml-writer.ts::emitSummary` from the findings plus the `specsCompared`/`implPathsChecked` totals tracked in `reconcileLight`.
 **Trade-off:** Adds a hand-emitted block to the fixed-shape YAML (still no YAML dep) and one counter in `findMissingFileReferences`; in exchange the report is self-summarising and diff-friendly.
 **Alternatives considered:**
 - A separate `summary.yaml` file — rejected: splits the report, breaks the one-file-per-spec contract.
