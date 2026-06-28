@@ -37,7 +37,8 @@
       "tests/features/plugins/test-quality/PLUGIN014_test-quality.feature",
       "tests/features/plugins/spec-status/HSCMD001_spec-status.feature",
       "tests/features/plugins/specs-workflow/PLUGIN006_specs-generator.feature",
-      "tests/features/plugins/plan-pomogator/PLUGIN007_plan-validator.feature"
+      "tests/features/plugins/plan-pomogator/PLUGIN007_plan-validator.feature",
+      "tests/features/plugins/devcontainer/PLUGIN012_devcontainer.feature"
     ],
     "import": [
       "tests/step_definitions/**/*.ts",
