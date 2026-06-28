@@ -845,7 +845,11 @@ export function buildToolRegistry(
   // ─── 9) get_coverage_summary ────────────────────────────────────────────
   tools.push({
     name: 'get_coverage_summary',
-    description: 'Per-spec FR/AC/Scenario/Task counts grouped by source directory.',
+    description:
+      'STRUCTURAL counts only — per-spec FR/AC/Scenario/Task tallies grouped by source ' +
+      'directory (how many atoms each spec defines). Says NOTHING about test results or ' +
+      'done-ness. For the FR-32 honesty / DONE rollup (passed/pending/…, verified_status) ' +
+      'use get_coverage instead.',
     inputShape: {} as const satisfies z.ZodRawShape,
     handler: async () => {
       const bySpec = new Map<string, { fr: number; ac: number; scenario: number; task: number }>();
@@ -879,7 +883,8 @@ export function buildToolRegistry(
       'verified_status (DONE only when EVERY mapped scenario is green). ' +
       'Tasks map to scenarios via their FR refs (FR-N ↔ @featureN). Pass `spec` ' +
       'to SCOPE the buckets to one spec (omit → whole-corpus rollup, where every ' +
-      'OTHER spec not in the last run shows as not_run — usually pass `spec`).',
+      'OTHER spec not in the last run shows as not_run — usually pass `spec`). ' +
+      'NOT get_coverage_summary — that one is structural atom counts with no test results.',
     inputShape: { spec: z.string().optional() } as const satisfies z.ZodRawShape,
     handler: async ({ spec }) => {
       const graph = getGraph();

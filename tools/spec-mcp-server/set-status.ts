@@ -57,7 +57,7 @@ export interface SetStatusResult {
   /** FR-48e: on STATUS_DERIVED for an FR, the live `fr-census` verdict — the computed status the caller tried to hand-set. */
   verdict?: string;
   /** Machine-readable refusal class for the tool wrapper. */
-  error?: 'NOT_FOUND' | 'ILLEGAL_TRANSITION' | 'CHAIN_NOT_ASSEMBLED' | 'CAS_MISMATCH' | 'DOOR_REFUSED' | 'STATUS_DERIVED' | 'WAIVED';
+  error?: 'BAD_INPUT' | 'NOT_FOUND' | 'ILLEGAL_TRANSITION' | 'CHAIN_NOT_ASSEMBLED' | 'CAS_MISMATCH' | 'DOOR_REFUSED' | 'STATUS_DERIVED' | 'WAIVED';
 }
 
 /**
@@ -197,6 +197,12 @@ export function setEntityStatus(
   args: { id: string; to: TaskStatus; expectedSha?: string; spec?: string },
   frsWithoutResearch?: Set<string>,
 ): SetStatusResult {
+  // Defensive input guard: this pure function is also called directly (CLI / tests /
+  // dogfood) where zod does NOT pre-validate the shape as it does on the MCP door path.
+  // A missing id must yield a clean refusal — never a `.includes of undefined` throw.
+  if (typeof args?.id !== 'string' || args.id.length === 0) {
+    return { ok: false, error: 'BAD_INPUT', reason: 'id is required (a Phase id, a composite slug:localId, or a bare task id)' };
+  }
   // FR-48e: a PHASE is not a graph node — intercept its id first (a node lookup
   // would 404 it) and route to the phase authored-path (gate → canonical write).
   const ph = parsePhaseId(args.id);

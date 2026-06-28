@@ -49154,6 +49154,9 @@ function setPhaseStatus(repoRoot, ph, to) {
   return { ok: true, to, entityType: "Phase" };
 }
 function setEntityStatus(graph, repoRoot, args, frsWithoutResearch) {
+  if (typeof args?.id !== "string" || args.id.length === 0) {
+    return { ok: false, error: "BAD_INPUT", reason: "id is required (a Phase id, a composite slug:localId, or a bare task id)" };
+  }
   const ph = parsePhaseId(args.id);
   if (ph) return setPhaseStatus(repoRoot, ph, args.to);
   let node = graph.nodes.get(args.id);
@@ -49662,23 +49665,42 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
   });
   tools.push({
     name: "search",
-    description: "Substring match across node ids and titles (case-insensitive).",
+    description: 'Substring match across node ids and titles (case-insensitive), returning file:line per hit. Pass coverage:true to also get the `tested-by` Scenario edges + a `covered` flag per result \u2014 so "is this covered by a scenario?" is answered in ONE call (which a raw grep cannot do).',
     inputShape: {
       query: external_exports.string().min(1),
       types: external_exports.array(external_exports.string()).optional(),
-      limit: external_exports.number().int().min(1).max(200).optional()
+      limit: external_exports.number().int().min(1).max(200).optional(),
+      coverage: external_exports.boolean().optional()
     },
     handler: async (args) => {
+      const graph = getGraph();
       const q = args.query.toLowerCase();
       const limit = args.limit ?? 50;
       const types = new Set(args.types ?? []);
+      const wantCoverage = args.coverage === true;
+      const testedBy = /* @__PURE__ */ new Map();
+      if (wantCoverage) {
+        for (const e of graph.edges) {
+          if (e.type !== "tested-by") continue;
+          if (graph.nodes.get(e.to)?.type !== "Scenario") continue;
+          const arr = testedBy.get(e.from);
+          if (arr) arr.push(e.to);
+          else testedBy.set(e.from, [e.to]);
+        }
+      }
       const out = [];
-      for (const node of getGraph().nodes.values()) {
+      for (const node of graph.nodes.values()) {
         if (types.size > 0 && !types.has(node.type)) continue;
         const titleField = node.title;
         const hay = `${node.id} ${titleField ?? ""}`.toLowerCase();
         if (hay.includes(q)) {
-          out.push({ id: node.id, type: node.type, file: node.file, line: node.line, title: titleField });
+          const rec = { id: node.id, type: node.type, file: node.file, line: node.line, title: titleField };
+          if (wantCoverage) {
+            const ids = testedBy.get(node.id) ?? [];
+            rec.tested_by = ids;
+            rec.covered = ids.length > 0;
+          }
+          out.push(rec);
           if (out.length >= limit) break;
         }
       }
@@ -49755,7 +49777,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
   });
   tools.push({
     name: "get_coverage_summary",
-    description: "Per-spec FR/AC/Scenario/Task counts grouped by source directory.",
+    description: "STRUCTURAL counts only \u2014 per-spec FR/AC/Scenario/Task tallies grouped by source directory (how many atoms each spec defines). Says NOTHING about test results or done-ness. For the FR-32 honesty / DONE rollup (passed/pending/\u2026, verified_status) use get_coverage instead.",
     inputShape: {},
     handler: async () => {
       const bySpec = /* @__PURE__ */ new Map();
@@ -49776,7 +49798,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
   });
   tools.push({
     name: "get_coverage",
-    description: "FR-32 honesty rollup from the latest run: per-scenario buckets (passed/pending/undefined/ambiguous/failed/skipped/not_run) + per-task verified_status (DONE only when EVERY mapped scenario is green). Tasks map to scenarios via their FR refs (FR-N \u2194 @featureN). Pass `spec` to SCOPE the buckets to one spec (omit \u2192 whole-corpus rollup, where every OTHER spec not in the last run shows as not_run \u2014 usually pass `spec`).",
+    description: "FR-32 honesty rollup from the latest run: per-scenario buckets (passed/pending/undefined/ambiguous/failed/skipped/not_run) + per-task verified_status (DONE only when EVERY mapped scenario is green). Tasks map to scenarios via their FR refs (FR-N \u2194 @featureN). Pass `spec` to SCOPE the buckets to one spec (omit \u2192 whole-corpus rollup, where every OTHER spec not in the last run shows as not_run \u2014 usually pass `spec`). NOT get_coverage_summary \u2014 that one is structural atom counts with no test results.",
     inputShape: { spec: external_exports.string().optional() },
     handler: async ({ spec }) => {
       const graph = getGraph();
