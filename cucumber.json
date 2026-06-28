@@ -32,7 +32,8 @@
       ".specs/context-menu/context-menu.feature",
       "tests/features/plugins/reqnroll-ce-guard/CEGUARD001_reqnroll-ce-guard.feature",
       ".specs/specs-workflow-jira-mode/specs-workflow-jira-mode.feature",
-      "tests/features/plugins/suggest-rules/PLUGIN008_deep-insights.feature"
+      "tests/features/plugins/suggest-rules/PLUGIN008_deep-insights.feature",
+      "tests/features/plugins/auto-simplify/PLUGIN_auto-simplify.feature"
     ],
     "import": [
       "tests/step_definitions/**/*.ts",
