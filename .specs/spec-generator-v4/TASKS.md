@@ -629,7 +629,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] When true: skips both write-yaml-report and write-sarif-report invocations
   - [x] Original spec/code state on disk unchanged
 
-- [ ] Implement Coverage Summary Table dashboard -- @feature17 — id: impl-coverage-summary — Status: TODO | Est: 120m
+- [ ] Implement Coverage Summary Table dashboard -- @feature17 — id: impl-coverage-summary — Status: TODO — own scenario **SPECGEN004_394** (consistency-report summary roll-up block) | Est: 120m
   _depends: impl-yaml-writer_
   _Requirements: [FR-17](FR.md#fr-17)_
   **Done When:**

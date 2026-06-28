@@ -34,6 +34,7 @@ import type { V4World } from '../hooks/before-after.ts';
 
 interface CrossSpecWorld extends V4World {
   reconcileReports?: ReconcileResult[];
+  summaryYaml?: string;
   yamlWritten?: string;
   sarifWritten?: string;
   dryRun?: boolean;
@@ -348,6 +349,32 @@ Then(
     assert.ok(fs.existsSync(path.join(dir, 'consistency-report.yaml')));
   },
 );
+
+// ─── SPECGEN004_394 — FR-17 impl-coverage-summary: summary roll-up block ──────
+Given(/^a reconcile corpus with one spec that has a missing impl path$/, function (this: CrossSpecWorld) {
+  const dir = path.join(this.tempDir, '.specs/spec-a');
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'FR.md'), '## FR-1\n\nNeeds `src/missing-xyz.ts`.\n');
+});
+
+When(/^the consistency-report YAML is emitted for that spec$/, function (this: CrossSpecWorld) {
+  this.reconcileReports = reconcileLight({ repoRoot: this.tempDir, slugs: ['spec-a'] });
+  this.summaryYaml = emitYaml(this.reconcileReports[0]);
+});
+
+Then(/^the YAML carries a summary block with by_severity by_class by_namespace totals and top_3_recommendations$/, function (this: CrossSpecWorld) {
+  const y = this.summaryYaml!;
+  assert.ok(y.includes('summary:'), 'summary block must be present');
+  for (const k of ['by_severity:', 'by_class', 'by_namespace', 'totals:', 'top_3_recommendations']) {
+    assert.ok(y.includes(k), `summary must include ${k}`);
+  }
+});
+
+Then(/^the summary totals include specs_compared and impl_paths_checked as integers$/, function (this: CrossSpecWorld) {
+  const y = this.summaryYaml!;
+  assert.match(y, /specs_compared: \d+/, 'totals.specs_compared must be an integer');
+  assert.match(y, /impl_paths_checked: \d+/, 'totals.impl_paths_checked must be an integer');
+});
 
 Then(
   /^the SARIF `runs\[(\d+)\]\.tool\.driver\.rules\[\]\.id` field matches finding codes one-to-one$/,

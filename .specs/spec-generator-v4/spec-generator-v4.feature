@@ -367,6 +367,14 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then `.specs/{slug}/consistency-report.sarif` exists alongside `consistency-report.yaml`
     And the SARIF `runs[0].tool.driver.rules[].id` field matches finding codes one-to-one
 
+  @feature17
+  Scenario: SPECGEN004_394 consistency-report carries a summary roll-up block
+    Given a reconcile corpus with one spec that has a missing impl path
+    When the consistency-report YAML is emitted for that spec
+    Then the YAML carries a summary block with by_severity by_class by_namespace totals and top_3_recommendations
+    And the summary totals include specs_compared and impl_paths_checked as integers
+  # (SPECGEN004_43's SARIF assertion lives in its own scenario, restored below)
+
   @feature18
   Scenario: SPECGEN004_44 Resolve emits 5-field explanation before any edit
     Given `.specs/{slug}/consistency-report.yaml` contains an `impl-drift/missing-file` finding
