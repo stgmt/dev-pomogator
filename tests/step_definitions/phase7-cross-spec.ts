@@ -426,6 +426,37 @@ Then(/^findings contain a cross-spec contradictory-nfr at CRITICAL severity$/, f
   assert.equal(nfr!.severity, 'CRITICAL');
 });
 
+// ─── SPECGEN004_397 — FR-17/FR-18 e2e reconcile roundtrip over the full corpus ───
+Given(/^the full cross-spec fixture corpus with planted drift and a shared on-disk path$/, function (this: CrossSpecWorld) {
+  for (const s of ['spec-a', 'spec-b']) {
+    const dir = path.join(this.tempDir, '.specs', s);
+    fs.mkdirSync(dir, { recursive: true });
+    const base = path.join(process.cwd(), 'tests/fixtures/cross-spec-corpus', s);
+    fs.writeFileSync(path.join(dir, 'FR.md'), fs.readFileSync(path.join(base, 'FR.md'), 'utf8'));
+    fs.writeFileSync(path.join(dir, 'DESIGN.md'), fs.readFileSync(path.join(base, 'DESIGN.md'), 'utf8'));
+  }
+  const cdir = path.join(this.tempDir, '.specs/spec-c');
+  fs.mkdirSync(cdir, { recursive: true });
+  fs.writeFileSync(path.join(cdir, 'FR.md'), fs.readFileSync(path.join(process.cwd(), 'tests/fixtures/cross-spec-corpus/spec-c/FR.md'), 'utf8'));
+  fs.mkdirSync(path.join(this.tempDir, 'src/auth'), { recursive: true });
+  fs.writeFileSync(path.join(this.tempDir, 'src/auth/jwt.ts'), 'export const jwt = 1;\n');
+});
+
+When(/^cross-spec reconcile runs over the corpus and writes the consistency reports$/, function (this: CrossSpecWorld) {
+  this.reconcileReports = reconcileLight({ repoRoot: this.tempDir, contradictoryNfrEnabled: true });
+  for (const r of this.reconcileReports) writeReport(this.tempDir, r);
+});
+
+Then(/^a consistency-report YAML is written carrying the planted finding codes from the corpus$/, function (this: CrossSpecWorld) {
+  const codes = new Set(this.reconcileReports!.flatMap((r) => r.findings).map((f) => f.code));
+  for (const expected of ['impl-drift/missing-file', 'cross-spec/runtime-identifier-drift', 'cross-spec/module-ownership-conflict', 'cross-spec/contradictory-nfr']) {
+    assert.ok(codes.has(expected), `roundtrip findings must include ${expected}`);
+  }
+  const yaml = path.join(this.tempDir, '.specs/spec-a/consistency-report.yaml');
+  assert.ok(fs.existsSync(yaml), 'consistency-report.yaml must be written for spec-a (roundtrip)');
+  assert.match(fs.readFileSync(yaml, 'utf8'), /total_findings: \d+/);
+});
+
 Then(
   /^the SARIF `runs\[(\d+)\]\.tool\.driver\.rules\[\]\.id` field matches finding codes one-to-one$/,
   function (this: CrossSpecWorld, _idx: string) {
