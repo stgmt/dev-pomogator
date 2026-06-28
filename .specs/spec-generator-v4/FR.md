@@ -954,7 +954,8 @@ The repo SHALL ship a rework helper (`scripts/add-task-ids.ts`: `addTaskIds` for
 Each child phase-assistant skill packaged under `.claude/skills/` (specifically `discovery-forms`,
 `requirements-chk-matrix`, and `task-board-forms`) SHALL have SKILL.md frontmatter that:
 - Does NOT contain auto-trigger phrases (`when the user`, `whenever`, `use this skill whenever`)
-  in the first 800 characters of the file.
+  in the first 600 characters of the file (individual skill check) and first 800 characters
+  across all three skills together (combined check, SPECGEN003_24).
 - Has a clear, non-prescriptive description that does not cause Claude Code to auto-invoke the
   skill on unrelated user prompts.
 - `requirements-chk-matrix` SKILL.md SHALL explicitly reference Jira trace preservation (the
