@@ -404,6 +404,28 @@ Then(/^findings contain a cross-spec module-ownership-conflict at CRITICAL sever
   assert.equal(mo!.severity, 'CRITICAL');
 });
 
+// ─── SPECGEN004_396 — FR-17 integration-test-fixture: contradictory-NFR from the corpus ───
+Given(/^the cross-spec fixture corpus where spec-a budgets latency 100ms and spec-b budgets 50ms$/, function (this: CrossSpecWorld) {
+  for (const s of ['spec-a', 'spec-b']) {
+    const dir = path.join(this.tempDir, '.specs', s);
+    fs.mkdirSync(dir, { recursive: true });
+    const base = path.join(process.cwd(), 'tests/fixtures/cross-spec-corpus', s);
+    fs.writeFileSync(path.join(dir, 'FR.md'), fs.readFileSync(path.join(base, 'FR.md'), 'utf8'));
+    fs.writeFileSync(path.join(dir, 'DESIGN.md'), fs.readFileSync(path.join(base, 'DESIGN.md'), 'utf8'));
+  }
+});
+
+When(/^cross-spec reconcile runs over the corpus with the NFR check enabled$/, function (this: CrossSpecWorld) {
+  this.reconcileReports = reconcileLight({ repoRoot: this.tempDir, contradictoryNfrEnabled: true });
+});
+
+Then(/^findings contain a cross-spec contradictory-nfr at CRITICAL severity$/, function (this: CrossSpecWorld) {
+  const all = this.reconcileReports!.flatMap((r) => r.findings);
+  const nfr = all.find((f) => f.code === 'cross-spec/contradictory-nfr');
+  assert.ok(nfr, 'expected a cross-spec/contradictory-nfr finding from the corpus');
+  assert.equal(nfr!.severity, 'CRITICAL');
+});
+
 Then(
   /^the SARIF `runs\[(\d+)\]\.tool\.driver\.rules\[\]\.id` field matches finding codes one-to-one$/,
   function (this: CrossSpecWorld, _idx: string) {

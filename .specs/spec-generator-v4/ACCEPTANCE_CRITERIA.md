@@ -751,3 +751,9 @@ WHEN `verifyKill` is called and `spec.original` is absent from the file THEN it 
 **Требование:** [FR-53b](FR.md#fr-53), [FR-53c](FR.md#fr-53)
 
 WHEN `verifyBatch` is called with a mix of killable and surviving mutants THEN `killed` count SHALL reflect only specs where the scenario failed under the mutant, `survived` only where it passed, and `total` SHALL equal `killed + survived + errors`; WHEN `runScenario` produces output matching `N scenarios (...)` with `ran >= 1` and no `failed` token and exit 0 THEN `passed` SHALL be `true`; WHEN `ran === 0` (no matching scenarios) THEN `passed` SHALL be `false` even if exit 0.
+
+## AC-55.1
+
+**Требование:** [FR-55](FR.md#fr-55)
+
+WHEN the SKILL.md frontmatter of each child phase-assistant skill (`discovery-forms`, `requirements-chk-matrix`, `task-board-forms`) is inspected THEN the first 800 characters SHALL NOT contain auto-trigger phrases (`when the user`, `whenever`, `use this skill whenever`); WHEN the `requirements-chk-matrix` SKILL.md is inspected THEN it SHALL explicitly reference Jira trace preservation; these properties are verified by the `@feature55` BDD scenarios migrated from SPECGEN003_16/17/21/24.

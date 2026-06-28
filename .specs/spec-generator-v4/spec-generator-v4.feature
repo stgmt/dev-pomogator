@@ -381,6 +381,12 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When cross-spec reconcile runs over the corpus
     Then findings contain a cross-spec module-ownership-conflict at CRITICAL severity
 
+  @feature17
+  Scenario: SPECGEN004_396 cross-spec corpus surfaces a contradictory NFR budget
+    Given the cross-spec fixture corpus where spec-a budgets latency 100ms and spec-b budgets 50ms
+    When cross-spec reconcile runs over the corpus with the NFR check enabled
+    Then findings contain a cross-spec contradictory-nfr at CRITICAL severity
+
   @feature18
   Scenario: SPECGEN004_44 Resolve emits 5-field explanation before any edit
     Given `.specs/{slug}/consistency-report.yaml` contains an `impl-drift/missing-file` finding
