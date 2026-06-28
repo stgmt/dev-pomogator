@@ -34,7 +34,8 @@
       ".specs/specs-workflow-jira-mode/specs-workflow-jira-mode.feature",
       "tests/features/plugins/suggest-rules/PLUGIN008_deep-insights.feature",
       "tests/features/plugins/auto-simplify/PLUGIN_auto-simplify.feature",
-      "tests/features/plugins/test-quality/PLUGIN014_test-quality.feature"
+      "tests/features/plugins/test-quality/PLUGIN014_test-quality.feature",
+      "tests/features/plugins/spec-status/HSCMD001_spec-status.feature"
     ],
     "import": [
       "tests/step_definitions/**/*.ts",
