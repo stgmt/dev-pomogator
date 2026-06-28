@@ -224,6 +224,10 @@ export interface ReconcileResult {
   mode: 'light';
   specSlug: string;
   findings: Finding[];
+  /** FR-17 impl-coverage-summary: corpus size compared (count of `.specs/<slug>/` scanned). */
+  specsCompared?: number;
+  /** FR-17 impl-coverage-summary: number of impl path references existence-checked for this spec. */
+  implPathsChecked?: number;
 }
 
 const PATH_REF_RE = /`(?:src|tools|tests|lib)\/[\w./-]+\*?(?:\.[\w]+)?`/g;
@@ -356,8 +360,9 @@ function findMissingFileReferences(
   files: { path: string; body: string }[],
   repoRoot: string,
   implRoots?: string[],
-): Finding[] {
+): { findings: Finding[]; pathsChecked: number } {
   const out: Finding[] = [];
+  let pathsChecked = 0;
   for (const file of files) {
     const lines = file.body.split(/\r?\n/);
     for (let i = 0; i < lines.length; i++) {
@@ -369,6 +374,7 @@ function findMissingFileReferences(
         // etc. share the `<noun>/<verb>` shape with repo paths but are
         // protocol identifiers, not filesystem references.
         if (MCP_METHOD_NAMES.has(cleanRef)) continue;
+        pathsChecked++; // FR-17: count each real impl path existence-check.
         const detail = pathExistsResolvingDetail(repoRoot, ref, implRoots);
         if (detail.exists) continue;
         const hint = detail.globPrefixMissing
@@ -385,7 +391,7 @@ function findMissingFileReferences(
       }
     }
   }
-  return out;
+  return { findings: out, pathsChecked };
 }
 
 // stripFencedBlocks / stripCodeExamples — consolidated to
@@ -1892,7 +1898,10 @@ export function reconcileLight(opts: ReconcileOptions): ReconcileResult[] {
   for (const slug of allSlugs) {
     const files = filesBySlug.get(slug)!;
     const findings: Finding[] = [];
-    findings.push(...findMissingFileReferences(files, opts.repoRoot, opts.implRoots));
+    let implPathsChecked = 0;
+    const mff = findMissingFileReferences(files, opts.repoRoot, opts.implRoots);
+    findings.push(...mff.findings);
+    implPathsChecked += mff.pathsChecked;
     const featureTags = collectFeatureTags(opts.repoRoot, slug);
     findings.push(...findOrphanFRs(files, featureTags, opts.repoRoot));
     findings.push(...findUncoveredACs(files, featureTags, opts.repoRoot));
@@ -1943,6 +1952,8 @@ export function reconcileLight(opts: ReconcileOptions): ReconcileResult[] {
       mode: 'light',
       specSlug: slug,
       findings,
+      specsCompared: allSlugs.length,
+      implPathsChecked,
     });
   }
   return results;

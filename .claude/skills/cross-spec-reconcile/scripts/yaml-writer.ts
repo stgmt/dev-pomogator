@@ -18,12 +18,63 @@ function escape(value: string): string {
   return value;
 }
 
+// FR-17 (impl-coverage-summary): a top-level `summary` block — counts by
+// severity / class / namespace, run totals, and the top-3 highest-severity
+// recommendations. `by_class` reports the REAL FindingClass values (reconcile.ts);
+// the FR-17 Done-When's aspirational `{covered,uncovered,orphaned,outdated}`
+// taxonomy does not match the implemented classes (verify-divergent-contracts:
+// code is the source of truth — the spec Done-When is corrected to match).
+function emitSummary(lines: string[], report: ReconcileResult): void {
+  const findings = report.findings;
+  const sev: Record<string, number> = { CRITICAL: 0, WARNING: 0, INFO: 0 };
+  const byClass = new Map<string, number>();
+  const byNs = new Map<string, number>();
+  for (const f of findings) {
+    if (f.severity in sev) sev[f.severity]++;
+    byClass.set(f.class, (byClass.get(f.class) ?? 0) + 1);
+    const ns = f.code.includes('/') ? f.code.slice(0, f.code.indexOf('/')) : f.code;
+    byNs.set(ns, (byNs.get(ns) ?? 0) + 1);
+  }
+  const emitMap = (label: string, m: Map<string, number>): void => {
+    if (m.size === 0) {
+      lines.push(`  ${label}: {}`);
+      return;
+    }
+    lines.push(`  ${label}:`);
+    for (const [k, n] of [...m].sort((a, b) => a[0].localeCompare(b[0]))) {
+      lines.push(`    ${escape(k)}: ${n}`);
+    }
+  };
+  lines.push('summary:');
+  lines.push('  by_severity:');
+  for (const s of ['CRITICAL', 'WARNING', 'INFO']) lines.push(`    ${s}: ${sev[s]}`);
+  emitMap('by_class', byClass);
+  emitMap('by_namespace', byNs);
+  lines.push('  totals:');
+  lines.push(`    findings: ${findings.length}`);
+  lines.push(`    specs_compared: ${report.specsCompared ?? 0}`);
+  lines.push(`    impl_paths_checked: ${report.implPathsChecked ?? 0}`);
+  const rank: Record<string, number> = { CRITICAL: 0, WARNING: 1, INFO: 2 };
+  const top = [...findings].sort((a, b) => (rank[a.severity] ?? 9) - (rank[b.severity] ?? 9)).slice(0, 3);
+  if (top.length === 0) {
+    lines.push('  top_3_recommendations: []');
+    return;
+  }
+  lines.push('  top_3_recommendations:');
+  for (const f of top) {
+    lines.push(`    - code: ${escape(f.code)}`);
+    lines.push(`      severity: ${escape(f.severity)}`);
+    lines.push(`      fix: ${escape(f.suggested_fix ?? f.class)}`);
+  }
+}
+
 export function emitYaml(report: ReconcileResult): string {
   const lines: string[] = [];
   lines.push(`generated_at: ${report.generatedAt}`);
   lines.push(`mode: ${report.mode}`);
   lines.push(`spec_slug: ${report.specSlug}`);
   lines.push(`total_findings: ${report.findings.length}`);
+  emitSummary(lines, report);
   if (report.findings.length === 0) {
     lines.push('findings: []');
     return lines.join('\n') + '\n';

@@ -14,6 +14,7 @@ and the diff readable). This doc is the schema extract from that emitter; if you
 | `mode` | string | `report.mode` | `light` (mechanical only) or `full` (adds the LLM-semantic pass) |
 | `spec_slug` | string | `report.specSlug` | the spec this report is about |
 | `total_findings` | integer | `report.findings.length` | count of `findings[]` |
+| `summary` | map | computed (FR-17) | aggregate roll-up — see [§ summary](#summary) below; always present, even with zero findings |
 | `findings` | list \| `[]` | `report.findings` | empty list emitted literally as `findings: []` |
 
 ## `findings[]` item
@@ -31,6 +32,67 @@ set (absent keys are omitted, not emitted as null):
 | `spec_a` | — | string | first spec slug of a cross-spec pair (for `cross-spec/*`) |
 | `spec_b` | — | string | second spec slug of a cross-spec pair (for `cross-spec/*`) |
 | `suggested_fix` | — | string | a one-line remediation hint (any finding may carry it) |
+
+## summary
+
+FR-17 (`impl-coverage-summary`) roll-up, emitted right after `total_findings`. Always present
+(zero findings → counts are `0`, the maps are emitted as `{}`, recommendations as `[]`).
+
+| Key | Type | Meaning |
+|---|---|---|
+| `by_severity` | map | counts keyed by `CRITICAL` / `WARNING` / `INFO` (all three keys always present) |
+| `by_class` | map \| `{}` | counts keyed by the REAL `FindingClass` values present (`uncovered`, `contradiction`, `runtime-identifier-drift`, `architectural-decision-vs-reality`, `concept-overlap`, `spec-only`, `schema-drift`), sorted; absent classes omitted |
+| `by_namespace` | map \| `{}` | counts keyed by the code prefix before `/` (e.g. `cross-spec`, `impl-drift`), sorted |
+| `totals.findings` | integer | `report.findings.length` |
+| `totals.specs_compared` | integer | corpus size compared (`.specs/<slug>/` count) — `report.specsCompared` |
+| `totals.impl_paths_checked` | integer | impl path references existence-checked for this spec — `report.implPathsChecked` |
+| `top_3_recommendations` | list \| `[]` | up to 3 findings, highest `severity` first; each item carries `code`, `severity`, `fix` (= `suggested_fix`, falling back to `class`) |
+
+> **Taxonomy note (verify-divergent-contracts):** the FR-17 Done-When originally specified
+> `by_class: {covered, uncovered, orphaned, outdated}`. Those are NOT the implemented finding
+> classes (only `uncovered` overlaps; `covered`/`orphaned`/`outdated` do not exist). Code is the
+> source of truth: `by_class` reports the real `FindingClass` values, and the Done-When taxonomy
+> was corrected to match.
+
+### Example
+
+```yaml
+generated_at: 2026-06-29T00:00:00Z
+mode: light
+spec_slug: demo
+total_findings: 3
+summary:
+  by_severity:
+    CRITICAL: 2
+    WARNING: 1
+    INFO: 0
+  by_class:
+    contradiction: 1
+    runtime-identifier-drift: 1
+    uncovered: 1
+  by_namespace:
+    cross-spec: 2
+    impl-drift: 1
+  totals:
+    findings: 3
+    specs_compared: 12
+    impl_paths_checked: 47
+  top_3_recommendations:
+    - code: cross-spec/runtime-identifier-drift
+      severity: CRITICAL
+      fix: align ids
+    - code: cross-spec/contradictory-nfr
+      severity: CRITICAL
+      fix: contradiction
+    - code: impl-drift/missing-file
+      severity: WARNING
+      fix: add it
+findings:
+  - code: impl-drift/missing-file
+    class: uncovered
+    severity: WARNING
+    ...
+```
 
 ## Escaping
 

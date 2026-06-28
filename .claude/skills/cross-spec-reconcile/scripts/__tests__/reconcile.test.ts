@@ -979,6 +979,38 @@ describe('emitYaml + writeReport', () => {
     expect(out).toContain('expected_path: src/x.ts');
   });
 
+  it('FR-17: emits a summary block (by_severity/class/namespace + totals + top_3_recommendations)', () => {
+    const out = emitYaml({
+      ...fakeReport([
+        { code: 'cross-spec/runtime-identifier-drift', class: 'runtime-identifier-drift', severity: 'CRITICAL', suggested_fix: 'align ids' },
+        { code: 'impl-drift/missing-file', class: 'uncovered', severity: 'WARNING', suggested_fix: 'add it' },
+        { code: 'impl-drift/spec-only', class: 'spec-only', severity: 'INFO' },
+      ]),
+      specsCompared: 12,
+      implPathsChecked: 47,
+    });
+    expect(out).toContain('summary:');
+    expect(out).toContain('    CRITICAL: 1');
+    expect(out).toContain('    WARNING: 1');
+    expect(out).toContain('    INFO: 1');
+    expect(out).toContain('    cross-spec: 1');
+    expect(out).toContain('    impl-drift: 2');
+    expect(out).toContain('    specs_compared: 12');
+    expect(out).toContain('    impl_paths_checked: 47');
+    // highest-severity (CRITICAL) recommendation must come first
+    const top = out.slice(out.indexOf('top_3_recommendations:'));
+    expect(top).toContain('code: cross-spec/runtime-identifier-drift');
+    expect(top.indexOf('cross-spec/runtime-identifier-drift')).toBeLessThan(top.indexOf('impl-drift/missing-file'));
+  });
+
+  it('FR-17: summary present even with zero findings (empty maps, empty recommendations)', () => {
+    const out = emitYaml(fakeReport([]));
+    expect(out).toContain('summary:');
+    expect(out).toContain('  by_class: {}');
+    expect(out).toContain('  top_3_recommendations: []');
+    expect(out).toContain('    findings: 0');
+  });
+
   it('writeReport writes atomically to the canonical location', () => {
     const target = writeReport(root, fakeReport([]));
     expect(target).toBe(path.join(root, '.specs/demo/consistency-report.yaml'));
