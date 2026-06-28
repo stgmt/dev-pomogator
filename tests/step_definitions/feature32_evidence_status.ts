@@ -189,7 +189,7 @@ function twoSpecGraph(): SpecGraph {
 Given('a graph holding scenarios from two different specs', function (this: ScopeWorld) {
   this.graph = twoSpecGraph();
 });
-When('get_spec_status (view coverage) is called scoped to one spec and then bare', async function (this: ScopeWorld) {
+When(/^get_spec_status \(view coverage\) is called scoped to one spec and then bare$/, async function (this: ScopeWorld) {
   const tool = getTool(this.graph!, 'get_spec_status');
   const call = async (args: object) => JSON.parse(((await tool.handler(args as never)) as { content: Array<{ text: string }> }).content[0].text);
   this.scoped = await call({ spec: 'spec-a', view: 'coverage' });
