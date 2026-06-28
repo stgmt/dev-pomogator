@@ -633,9 +633,9 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   _depends: impl-yaml-writer_
   _Requirements: [FR-17](FR.md#fr-17)_
   **Done When:**
-  - [ ] Top-level `summary` block in YAML computed: `by_severity: {CRITICAL, WARNING, INFO}`, `by_class: {covered, uncovered, orphaned, outdated}`, `by_namespace: {cross-spec, impl-drift}`, `totals: {findings, specs_compared, impl_paths_checked}`
-  - [ ] `top_3_recommendations[]` selected by priority + impact (case-study format)
-  - [ ] yaml-schema.md reference doc updated with full example output
+  - [x] Top-level `summary` block in YAML computed: `by_severity: {CRITICAL, WARNING, INFO}`, `by_class: {real FindingClass values — uncovered, contradiction, runtime-identifier-drift, architectural-decision-vs-reality, concept-overlap, spec-only, schema-drift}` (corrected: the original {covered,orphaned,outdated} are not implemented classes — verify-divergent-contracts, code wins), `by_namespace: {cross-spec, impl-drift}`, `totals: {findings, specs_compared, impl_paths_checked}`
+  - [x] `top_3_recommendations[]` selected by priority + impact (case-study format)
+  - [x] yaml-schema.md reference doc updated with full example output
 
 - [x] Implement architectural decision detection -- @feature17 @feature18 — id: impl-architectural-detection — Status: DONE | Est: 720m
   _depends: impl-semantic-subagent_
