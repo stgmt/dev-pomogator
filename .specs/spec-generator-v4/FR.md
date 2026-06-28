@@ -518,7 +518,6 @@ Does NOT depend on FR-29 / FR-30 — purely test infrastructure; can ship indepe
 
 **Связанные AC:** [AC-31.1](ACCEPTANCE_CRITERIA.md#ac-311), [AC-31.2](ACCEPTANCE_CRITERIA.md#ac-312)
 **Use Case:** [UC-3](USE_CASES.md#uc-3)
-**User Story:** US-19
 
 ## FR-32
 
@@ -969,5 +968,4 @@ on unrelated tasks, violating the principle of minimal-surprise tool activation.
 `tests/e2e/spec-generator-v3.test.ts`. With the BDD-only migration (FR-51), these are now
 traceable `@feature55` BDD scenarios in `spec-generator-v4.feature`.
 
-**Связанные AC:** [AC-55.1](ACCEPTANCE_CRITERIA.md#ac-551)
 **User Story:** US-19
