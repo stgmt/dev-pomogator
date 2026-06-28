@@ -69,6 +69,24 @@
 | `CLAUDE.md` | edit | Architecture секция: settings.local.json routing, MCP force-global, uninstall skill. Rules таблица: новые rule если создадим. Per `.claude/rules/claude-md-glossary.md` |
 | `.claude/rules/updater-managed-cleanup.md` | edit | Упомянуть gitignore marker block в scope cleanup + settings.local.json stripping при uninstall |
 
+## Implementation: global MCP bootstrap (FR-16) @feature11
+
+| Path | Action | Reason |
+|------|--------|--------|
+| `tools/mcp-setup/mcp-auth-detect.ts` | create | [FR-16](FR.md#fr-16-global-mcp-bootstrap-feature11): pure auth predicates (Context7 key / Octocode token + `gh auth status`) reused by hook + doctor |
+| `tools/mcp-setup/mcp-bootstrap.ts` | create | [FR-16](FR.md#fr-16-global-mcp-bootstrap-feature11): SessionStart hook — install both servers into user-scope `~/.claude.json` + warn-until-configured |
+| `tools/mcp-setup/set-mcp-key.ts` | create | [FR-16](FR.md#fr-16-global-mcp-bootstrap-feature11): atomic key writer into `~/.claude.json` + real post-check |
+| `tools/mcp-setup/print-mcp-status.ts` | create | [FR-16](FR.md#fr-16-global-mcp-bootstrap-feature11): read-only auth status reporter for the configure-mcp skill |
+| `.claude/skills/configure-mcp/SKILL.md` | create | [FR-16](FR.md#fr-16-global-mcp-bootstrap-feature11): agent assistant — ask/acquire key, validate, write |
+| `.claude/skills/pomogator-doctor/scripts/engine/checks/mcp-auth.ts` | create | [FR-16](FR.md#fr-16-global-mcp-bootstrap-feature11): doctor C-MCPA auth check + configure-mcp fix-action |
+| `tests/step_definitions/feature_global_mcp_bootstrap.ts` | create | [FR-16](FR.md#fr-16-global-mcp-bootstrap-feature11): step-defs driving the real bootstrap/writer/detect/doctor code |
+| `.claude-plugin/hooks.json` | edit | [FR-16](FR.md#fr-16-global-mcp-bootstrap-feature11): register mcp-bootstrap on SessionStart (distribution) |
+| `.claude/settings.json` | edit | [FR-16](FR.md#fr-16-global-mcp-bootstrap-feature11): register mcp-bootstrap on SessionStart (dogfood) |
+| `.claude/skills/pomogator-doctor/scripts/engine/index.ts` | edit | [FR-16](FR.md#fr-16-global-mcp-bootstrap-feature11): add runQuiet/runVerbose (revive the dead SessionStart banner) |
+| `.claude/skills/pomogator-doctor/scripts/engine/checks/index.ts` | edit | [FR-16](FR.md#fr-16-global-mcp-bootstrap-feature11): register mcpAuthCheck |
+| `.claude/skills/pomogator-doctor/scripts/engine/checks/mcp-parse.ts` | edit | [FR-16](FR.md#fr-16-global-mcp-bootstrap-feature11): exclude plugin-provided servers from the missing list |
+| `.claude/skills/pomogator-doctor/SKILL.md` | edit | [FR-16](FR.md#fr-16-global-mcp-bootstrap-feature11): C-MCPA fix-action step |
+
 ## Summary counts
 
 - **Spec files**: 15 (create через scaffold-spec.ts)
