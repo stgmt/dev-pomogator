@@ -665,14 +665,14 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] extension version bumped per `.claude/rules/extension-manifest-integrity.md`
   - [ ] `npx tsx extensions/_shared/extension-layout-validate.ts` exits 0
 
-- [ ] Create integration test fixture corpus -- @feature17 — id: integration-test-fixture — Status: TODO | Est: 240m
+- [ ] Create integration test fixture corpus -- @feature17 — id: integration-test-fixture — Status: TODO — own scenario **SPECGEN004_395** (module-ownership conflict from the corpus) | Est: 240m
   _depends: register-skills-in-manifest_
   _Requirements: [FR-17](FR.md#fr-17)_
   **Done When:**
-  - [ ] `tests/fixtures/cross-spec-corpus/spec-a/FR.md` declares `auth.feedback_key = "session_token"` + reference to `src/auth/jwt.ts`
+  - [x] `tests/fixtures/cross-spec-corpus/spec-a/FR.md` declares `feedback_key = "session_token"` + references `src/auth/jwt.ts` (drives runtime-drift + module-ownership, both asserted; the literal `auth.` prefix is omitted so the runtime-drift key match stays green)
   - [x] `tests/fixtures/cross-spec-corpus/spec-b/FR.md` declares same concept as `sessionToken` + same path (triggers cross-spec/runtime-identifier-drift + cross-spec/module-ownership-conflict)
-  - [ ] `tests/fixtures/cross-spec-corpus/spec-b/DESIGN.md` declares latency budget <50ms where spec-a declares <100ms (triggers cross-spec/nfr-conflict)
-  - [ ] `tests/fixtures/cross-spec-corpus/spec-c/FR.md` declares MCP tool `validate_user` with no implementation file (triggers impl-drift/missing-file + impl-drift/mcp-tool-drift)
+  - [x] `tests/fixtures/cross-spec-corpus/spec-b/DESIGN.md` declares latency budget <50ms where spec-a declares <100ms (triggers `cross-spec/contradictory-nfr` — corrected from `nfr-conflict`, the real engine code; asserted by SPECGEN004_396)
+  - [x] `tests/fixtures/cross-spec-corpus/spec-c/FR.md` declares MCP tool `validate_user` with no implementation file (triggers `impl-drift/missing-file`, asserted by SPECGEN004_38; `impl-drift/mcp-tool-drift` is NOT an implemented engine code — verify-divergent-contracts: corrected, the engine has no such detector)
   - [x] `tests/fixtures/cross-spec-corpus/README.md` documents expected finding codes per scenario
 
 - [ ] E2E test reconcile roundtrip -- @feature17 @feature18 — id: e2e-test-reconcile-roundtrip — Status: TODO | Est: 480m
