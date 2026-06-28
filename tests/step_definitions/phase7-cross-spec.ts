@@ -380,6 +380,30 @@ Then(/^the summary totals include specs_compared and impl_paths_checked as integ
   assert.match(y, /impl_paths_checked: \d+/, 'totals.impl_paths_checked must be an integer');
 });
 
+// ─── SPECGEN004_395 — FR-17 integration-test-fixture: module-ownership conflict from the corpus ───
+Given(/^the cross-spec fixture corpus where spec-a and spec-b both claim src\/auth\/jwt\.ts which exists on disk$/, function (this: CrossSpecWorld) {
+  for (const s of ['spec-a', 'spec-b']) {
+    const dir = path.join(this.tempDir, '.specs', s);
+    fs.mkdirSync(dir, { recursive: true });
+    const fixture = path.join(process.cwd(), 'tests/fixtures/cross-spec-corpus', s, 'FR.md');
+    fs.writeFileSync(path.join(dir, 'FR.md'), fs.readFileSync(fixture, 'utf8'));
+  }
+  // The contested path must EXIST on disk for the ownership detector to fire (Batch-21 anti-FP gate).
+  fs.mkdirSync(path.join(this.tempDir, 'src/auth'), { recursive: true });
+  fs.writeFileSync(path.join(this.tempDir, 'src/auth/jwt.ts'), 'export const jwt = 1;\n');
+});
+
+When(/^cross-spec reconcile runs over the corpus$/, function (this: CrossSpecWorld) {
+  this.reconcileReports = reconcileLight({ repoRoot: this.tempDir });
+});
+
+Then(/^findings contain a cross-spec module-ownership-conflict at CRITICAL severity$/, function (this: CrossSpecWorld) {
+  const all = this.reconcileReports!.flatMap((r) => r.findings);
+  const mo = all.find((f) => f.code === 'cross-spec/module-ownership-conflict');
+  assert.ok(mo, 'expected a cross-spec/module-ownership-conflict finding from the corpus');
+  assert.equal(mo!.severity, 'CRITICAL');
+});
+
 Then(
   /^the SARIF `runs\[(\d+)\]\.tool\.driver\.rules\[\]\.id` field matches finding codes one-to-one$/,
   function (this: CrossSpecWorld, _idx: string) {

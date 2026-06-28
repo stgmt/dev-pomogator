@@ -375,6 +375,12 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And the summary totals include specs_compared and impl_paths_checked as integers
   # (SPECGEN004_43's SARIF assertion lives in its own scenario, restored below)
 
+  @feature17
+  Scenario: SPECGEN004_395 cross-spec corpus surfaces a module-ownership conflict on a shared path
+    Given the cross-spec fixture corpus where spec-a and spec-b both claim src/auth/jwt.ts which exists on disk
+    When cross-spec reconcile runs over the corpus
+    Then findings contain a cross-spec module-ownership-conflict at CRITICAL severity
+
   @feature18
   Scenario: SPECGEN004_44 Resolve emits 5-field explanation before any edit
     Given `.specs/{slug}/consistency-report.yaml` contains an `impl-drift/missing-file` finding
@@ -2912,3 +2918,160 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given the spec-access-guard grep-to-search suggester
     When denied .specs greps and a non-grep reader are mapped to door calls
     Then each grep maps to its concrete spec-door search call and the non-grep maps to nothing
+
+  @feature19
+  Scenario: SPECGEN003_01 user-story-form-guard denies missing Priority field
+    Given a SPECGEN003 v3 spec directory is prepared
+    When the SPECGEN003 user-story-form-guard is invoked via Write on USER_STORIES.md missing Priority
+    Then the SPECGEN003 guard exits with code 2 and stderr mentions "Priority"
+
+  @feature19
+  Scenario: SPECGEN003_02 user-story-form-guard denies missing Why field when Priority is present
+    Given a SPECGEN003 v3 spec directory is prepared
+    When the SPECGEN003 user-story-form-guard is invoked via Write on USER_STORIES.md with Priority but missing Why
+    Then the SPECGEN003 guard exits with code 2 and stderr mentions "Why"
+
+  @feature19
+  Scenario: SPECGEN003_03 user-story-form-guard allows all 4 required fields
+    Given a SPECGEN003 v3 spec directory is prepared
+    When the SPECGEN003 user-story-form-guard is invoked via Write on USER_STORIES.md with all 4 required fields
+    Then the SPECGEN003 guard exits with code 0
+
+  @feature19
+  Scenario: SPECGEN003_04 form guards pass through when no .progress.json exists
+    Given a SPECGEN003 spec directory with no progress.json is prepared
+    When the SPECGEN003 user-story-form-guard is invoked via Write on USER_STORIES.md with minimal invalid content
+    Then the SPECGEN003 guard exits with code 0
+
+  @feature19
+  Scenario: SPECGEN003_05 task-form-guard denies TASKS.md missing Done When section
+    Given a SPECGEN003 v3 spec directory is prepared
+    When the SPECGEN003 task-form-guard is invoked via Write on TASKS.md missing Done When
+    Then the SPECGEN003 guard exits with code 2 and stderr mentions "Done When"
+
+  @feature19
+  Scenario: SPECGEN003_06 task-form-guard denies Done When section with no checkboxes
+    Given a SPECGEN003 v3 spec directory is prepared
+    When the SPECGEN003 task-form-guard is invoked via Write on TASKS.md with Done When but no checkboxes
+    Then the SPECGEN003 guard exits with code 2 and stderr mentions "checkbox"
+
+  @feature19
+  Scenario: SPECGEN003_07 task-form-guard allows valid Done When with checkboxes
+    Given a SPECGEN003 v3 spec directory is prepared
+    When the SPECGEN003 task-form-guard is invoked via Write on TASKS.md with valid Done When and checkboxes
+    Then the SPECGEN003 guard exits with code 0
+
+  @feature19
+  Scenario: SPECGEN003_08 design-decision-guard denies Decision block lacking Alternatives
+    Given a SPECGEN003 v3 spec directory is prepared
+    When the SPECGEN003 design-decision-guard is invoked via Write on DESIGN.md with a Decision block but no Alternatives
+    Then the SPECGEN003 guard exits with code 2 and stderr mentions "Alternatives"
+
+  @feature19
+  Scenario: SPECGEN003_09 design-decision-guard passes when no Decision blocks present
+    Given a SPECGEN003 v3 spec directory is prepared
+    When the SPECGEN003 design-decision-guard is invoked via Write on DESIGN.md with no Decision blocks
+    Then the SPECGEN003 guard exits with code 0
+
+  @feature19
+  Scenario: SPECGEN003_10 requirements-chk-guard denies empty Verification Method cell
+    Given a SPECGEN003 v3 spec directory is prepared
+    When the SPECGEN003 requirements-chk-guard is invoked via Write on REQUIREMENTS.md with an empty Verification Method cell
+    Then the SPECGEN003 guard exits with code 2 and stderr mentions "Verification Method"
+
+  @feature19
+  Scenario: SPECGEN003_11 requirements-chk-guard denies invalid CHK ID format
+    Given a SPECGEN003 v3 spec directory is prepared
+    When the SPECGEN003 requirements-chk-guard is invoked via Write on REQUIREMENTS.md with an invalid CHK ID format
+    Then the SPECGEN003 guard exits with code 2 and stderr mentions "CHK-FR"
+
+  @feature19
+  Scenario: SPECGEN003_12 requirements-chk-guard allows valid CHK-FR format
+    Given a SPECGEN003 v3 spec directory is prepared
+    When the SPECGEN003 requirements-chk-guard is invoked via Write on REQUIREMENTS.md with a valid CHK-FR row
+    Then the SPECGEN003 guard exits with code 0
+
+  @feature19
+  Scenario: SPECGEN003_13 risk-assessment-guard denies only 1 risk row in table
+    Given a SPECGEN003 v3 spec directory is prepared
+    When the SPECGEN003 risk-assessment-guard is invoked via Write on RESEARCH.md with only 1 risk data row
+    Then the SPECGEN003 guard exits with code 2 and stderr mentions "Risk Assessment"
+
+  @feature19
+  Scenario: SPECGEN003_14 risk-assessment-guard passes when no Risk Assessment heading
+    Given a SPECGEN003 v3 spec directory is prepared
+    When the SPECGEN003 risk-assessment-guard is invoked via Write on RESEARCH.md with no Risk Assessment heading
+    Then the SPECGEN003 guard exits with code 0
+
+  @feature19
+  Scenario: SPECGEN003_15 form guards ignore Read tool events
+    Given a SPECGEN003 v3 spec directory is prepared
+    When the SPECGEN003 user-story-form-guard is invoked via Read on USER_STORIES.md
+    Then the SPECGEN003 guard exits with code 0
+
+  @feature55
+  Scenario: SPECGEN003_16 discovery-forms SKILL.md has non-auto-trigger frontmatter
+    Given a SPECGEN003 v3 spec directory is prepared
+    When the SPECGEN003 child phase-assistant skill SKILL.md files are read from the repository
+    Then the SPECGEN003 discovery-forms SKILL.md exists without auto-trigger phrases in the first 600 characters
+
+  @feature55
+  Scenario: SPECGEN003_17 task-board-forms SKILL.md has non-auto-trigger frontmatter
+    Given a SPECGEN003 v3 spec directory is prepared
+    When the SPECGEN003 child phase-assistant skill SKILL.md files are read from the repository
+    Then the SPECGEN003 task-board-forms SKILL.md exists without auto-trigger phrases in the first 600 characters
+
+  @feature19
+  Scenario: SPECGEN003_18 form guards pass through for legacy .progress.json lacking version field
+    Given a SPECGEN003 spec directory with a legacy progress.json lacking a version field is prepared
+    When the SPECGEN003 user-story-form-guard is invoked via Write on USER_STORIES.md with minimal invalid content
+    Then the SPECGEN003 guard exits with code 0
+
+  @feature21
+  Scenario: SPECGEN003_19 spec-status -Format task-table renders a markdown table header
+    Given a SPECGEN003 v3 spec directory with a 5-task TASKS.md is prepared
+    When spec-status.ts is invoked on the SPECGEN003 spec directory with -Format task-table
+    Then the SPECGEN003 task-table output has a header row with ID Title Status Depends Phase Est columns
+    And the SPECGEN003 task-table output has at least 6 markdown table rows including the header
+
+  @feature21
+  Scenario: SPECGEN003_20 spec-status -Format task-table is idempotent across two invocations
+    Given a SPECGEN003 v3 spec directory with a 2-task TASKS.md for idempotency is prepared
+    When spec-status.ts is invoked twice on the SPECGEN003 spec directory with -Format task-table
+    Then both SPECGEN003 task-table outputs are identical
+
+  @feature55
+  Scenario: SPECGEN003_21 requirements-chk-matrix SKILL.md references Jira trace preservation
+    Given a SPECGEN003 v3 spec directory is prepared
+    When the SPECGEN003 child phase-assistant skill SKILL.md files are read from the repository
+    Then the SPECGEN003 requirements-chk-matrix SKILL.md exists and mentions Jira preservation
+
+  @feature19
+  Scenario: SPECGEN003_22 form guards fail-open on malformed JSON stdin
+    Given a SPECGEN003 v3 spec directory is prepared
+    When the SPECGEN003 user-story-form-guard is invoked with malformed JSON on stdin
+    Then the SPECGEN003 guard exits with code 0
+
+  @feature19
+  Scenario: SPECGEN003_23 form guards fail-open on pathological regex content
+    Given a SPECGEN003 v3 spec directory is prepared
+    When the SPECGEN003 user-story-form-guard is invoked via Write on USER_STORIES.md with pathological regex content
+    Then the SPECGEN003 guard exits with code 0 or 2
+
+  @feature55
+  Scenario: SPECGEN003_24 all 3 child phase-assistant skills lack auto-trigger phrases in first 800 characters
+    Given a SPECGEN003 v3 spec directory is prepared
+    When the SPECGEN003 child phase-assistant skill SKILL.md files are read from the repository
+    Then all 3 SPECGEN003 child phase-assistant skills lack auto-trigger phrases in the first 800 characters
+
+  @feature23
+  Scenario: SPECGEN003_27 audit-logger appends a timestamped DENY line to the form-guards log
+    Given the SPECGEN003 audit log is backed up before writing a new log event
+    When the SPECGEN003 audit-logger logEvent is called with DENY for a test path
+    Then the SPECGEN003 form-guards log last line matches the ISO timestamp DENY format
+
+  @feature20
+  Scenario: SPECGEN003_28 UserPromptSubmit hook emits conformance summary for unresolved DENYs
+    Given the SPECGEN003 form-guards log is seeded with 3 DENY and 3 other events and the ack file is cleared
+    When validate-specs.ts is invoked as a SPECGEN003 UserPromptSubmit hook event
+    Then the SPECGEN003 conformance summary mentions at least 3 unresolved DENY
