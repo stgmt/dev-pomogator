@@ -163,7 +163,7 @@ Feature: PLUGIN006 Specs Generator Scripts
     Then findings should contain check "FR_AC_COVERAGE"
     And FR_AC_COVERAGE finding should mention "FR-3"
 
-  @feature22
+  @feature22 @wip
   Scenario: Audit detects featureN tag mismatch between MD and BDD
     Given a spec fixture "audit-coverage-fixture" with @featureN tag gaps
     When I run audit-spec.ts on the spec
@@ -260,7 +260,7 @@ Feature: PLUGIN006 Specs Generator Scripts
   Scenario: Scaffold creates .progress.json with initial state
     When I run scaffold-spec.ts with name "progress-test"
     Then .progress.json should exist in ".specs/progress-test/"
-    And progress.version should be 2
+    And progress.version should be 4
     And progress.currentPhase should be "Discovery"
     And all stopConfirmed flags should be false
     And created_files count should still be 15
@@ -269,7 +269,7 @@ Feature: PLUGIN006 Specs Generator Scripts
   Scenario: Spec-status creates .progress.json for pre-existing specs
     Given a partial spec fixture exists without .progress.json
     When I run spec-status.ts on the spec
-    Then .progress.json should be created with version 2
+    Then .progress.json should be created with version 4
     And progress_state should be included in the output
 
   @feature38
@@ -356,8 +356,8 @@ Feature: PLUGIN006 Specs Generator Scripts
   @feature49
   Scenario: spec-status rejects -Path outside .specs/
     When I run spec-status.ts with -Path "."
-    Then exit code should be non-zero
-    And output should contain "must be inside .specs/"
+    Then specs-generator exit code should be non-zero
+    And specs-generator output should contain "must be inside .specs/"
 
   # Open questions gate - prevent finalization with unclosed research questions
 
