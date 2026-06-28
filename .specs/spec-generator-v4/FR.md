@@ -944,3 +944,30 @@ System SHALL provide `tools/stryker-mutation/verify-kill.ts` — the determinist
 **TASKS.md task-id rework helper — make loose task lists parser-trackable @feature54**
 
 The repo SHALL ship a rework helper (`scripts/add-task-ids.ts`: `addTaskIds` for `Tnn:`-prefixed headers, `addTaskIdsAnyHeader` for title-only / phase-dashed headers) that inserts an explicit `— id: t<nn>` token before `— Status:` on every task HEADER the SpecGraph task parser requires (the parser needs BOTH `Status:` and an explicit `— id:`). The rework SHALL be CRLF-safe (no split/join reflow), status-preserving (the `Status:` token byte-unchanged), child-safe (Done-When sub-checkboxes without `Status:` never receive an id), idempotent (a header that already has `id:` is left as-is), and id-unique (colliding prefixes deduped, e.g. `t01` / `t01-1`).
+
+
+---
+
+## FR-55
+
+**Child phase-assistant skills SHALL have non-auto-trigger frontmatter descriptions @feature55**
+
+Each child phase-assistant skill packaged under `.claude/skills/` (specifically `discovery-forms`,
+`requirements-chk-matrix`, and `task-board-forms`) SHALL have SKILL.md frontmatter that:
+- Does NOT contain auto-trigger phrases (`when the user`, `whenever`, `use this skill whenever`)
+  in the first 800 characters of the file.
+- Has a clear, non-prescriptive description that does not cause Claude Code to auto-invoke the
+  skill on unrelated user prompts.
+- `requirements-chk-matrix` SKILL.md SHALL explicitly reference Jira trace preservation (the
+  skill preserves existing Jira issue links in verification matrices).
+
+These skills are phase-assistants invoked ON-DEMAND by the user or the parent `create-spec` skill,
+not auto-triggered. Auto-trigger phrases in SKILL.md descriptions cause spurious skill invocations
+on unrelated tasks, violating the principle of minimal-surprise tool activation.
+
+**Background (migrated from vitest):** SPECGEN003_16/17/21/24 tested these properties via
+`tests/e2e/spec-generator-v3.test.ts`. With the BDD-only migration (FR-51), these are now
+traceable `@feature55` BDD scenarios in `spec-generator-v4.feature`.
+
+**Связанные AC:** [AC-55.1](ACCEPTANCE_CRITERIA.md#ac-551)
+**User Story:** US-19
