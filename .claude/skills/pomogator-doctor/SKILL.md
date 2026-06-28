@@ -1,13 +1,13 @@
 ---
 name: pomogator-doctor
 description: |
-  Diagnostic tool для dev-pomogator plugin: проверяет 17 environment aspects (Node/Git/Bun/Python/MCP servers/hooks registry/env vars/Claude Code version match/native statusLine/statusline widgets repo+cwd) и предлагает fix actions (incl. установка нативного statusLine ccstatusline и добавление repo/cwd виджетов по подтверждению). Use при подозрениях на broken plugin install, missing dependencies, stale hooks, или когда команды plugin behave unexpectedly. Triggers (Russian): "проверь окружение", "доктор", "диагностика помогатора", "почему не работает плагин". Triggers (English): "check environment", "doctor", "plugin diagnostics", "verify install". Output: severity-coded report (🟢 self-sufficient, 🟡 needs env vars, 🔴 needs external deps) с actionable hints. Можно invoke через slash-command `/pomogator-doctor` (also distributed via plugin) или напрямую как skill.
+  Diagnostic tool для dev-pomogator plugin: проверяет 19 environment aspects (Node/Git/Bun/Python/MCP servers/claude-mem plugin/hooks registry/env vars/Claude Code version match/native statusLine/statusline widgets repo+cwd) и предлагает fix actions (incl. установка нативного statusLine ccstatusline и добавление repo/cwd виджетов по подтверждению). Use при подозрениях на broken plugin install, missing dependencies, stale hooks, или когда команды plugin behave unexpectedly. Triggers (Russian): "проверь окружение", "доктор", "диагностика помогатора", "почему не работает плагин". Triggers (English): "check environment", "doctor", "plugin diagnostics", "verify install". Output: severity-coded report (🟢 self-sufficient, 🟡 needs env vars, 🔴 needs external deps) с actionable hints. Можно invoke через slash-command `/pomogator-doctor` (also distributed via plugin) или напрямую как skill.
 allowed-tools: Read, Bash, Glob, Grep, AskUserQuestion
 ---
 
 # pomogator-doctor — Environment diagnostic
 
-Skill проверяет 18 environment aspects (18 CheckDefinitions в `checks/index.ts`) required для dev-pomogator plugin функционирования. Использует self-contained TypeScript engine в `scripts/engine/` для checks; hook вариант в `scripts/doctor-hook.ts` runs at SessionStart events.
+Skill проверяет 20 environment aspects (20 CheckDefinitions в `checks/index.ts`, incl. C-MCPA — MCP auth Context7/Octocode) required для dev-pomogator plugin функционирования. Использует self-contained TypeScript engine в `scripts/engine/` для checks; hook вариант в `scripts/doctor-hook.ts` runs at SessionStart events.
 
 ## Когда invoke
 
@@ -38,7 +38,11 @@ Skill проверяет 18 environment aspects (18 CheckDefinitions в `checks/
 
    Это пишет `statusLine.command = npx -y ccstatusline@latest` в `~/.claude/settings.json` немедленно (текущая сессия), идемпотентно, не перетирая чужую кастомную строку. Сама строка отрисуется со следующего старта сессии (settings читаются до хуков). Opt-out: `DEV_POMOGATOR_STATUSLINE=off`. Домен NATIVE statusLine ≠ прогресс тестов (compact_bar.py).
 
-7. **Statusline widgets fix-action (id `C-NSW`, FR-11):** если результат `Statusline widgets (repo + cwd)` имеет severity `warning` (конфиг ccstatusline отсутствует или стоковый — на баре нет имени репо и cwd) → предложить через `AskUserQuestion` («Добавить repo + cwd на statusline сейчас?» / «Не надо»). При согласии — выполнить тот же `apply-statusline.ts` (см. выше): он дополнительно сидит/обогащает `~/.config/ccstatusline/settings.json` виджетами `git-root-dir` + `current-working-dir`. Кастомные layouts никогда не трогаются (check репортит для них `ok`).
+7. **claude-mem detect (id `C-CMEM`, FR-6):** если результат `claude-mem plugin installed` имеет severity `warning` (плагин не установлен) → это информационный сигнал: SessionStart-хук `tools/claude-mem-bootstrap/install-claude-mem.ts` поставит claude-mem автоматически на следующей сессии (opt-out: `DEV_POMOGATOR_CLAUDE_MEM=off`). Хинт также предлагает ручную установку (`/plugin marketplace add thedotmack/claude-mem` → `/plugin install claude-mem`, либо `npx claude-mem install`). Чек только детектит — не ставит сам (установщик claude-mem интерактивный; тихую установку делает хук без TTY).
+
+8. **Statusline widgets fix-action (id `C-NSW`, FR-11):** если результат `Statusline widgets (repo + cwd)` имеет severity `warning` (конфиг ccstatusline отсутствует или стоковый — на баре нет имени репо и cwd) → предложить через `AskUserQuestion` («Добавить repo + cwd на statusline сейчас?» / «Не надо»). При согласии — выполнить тот же `apply-statusline.ts` (см. выше): он дополнительно сидит/обогащает `~/.config/ccstatusline/settings.json` виджетами `git-root-dir` + `current-working-dir`. Кастомные layouts никогда не трогаются (check репортит для них `ok`).
+
+9. **MCP auth fix-action (id `C-MCPA`, FR-MCP):** если результат `MCP auth (Context7 / Octocode)` имеет severity `warning` (Context7 без API-ключа = анонимный тир, и/или Octocode без GitHub-доступа; `details.unconfigured` перечисляет какие) → предложить настроить сейчас. Действие — **invoke `Skill("configure-mcp")`** (`details.fixSkill`): он просит ключ у пользователя / говорит где взять / пробует добыть сам (Context7 OAuth `npx ctx7 setup`; Octocode `gh auth login`), вписывает секрет в user-global `~/.claude.json` через `tools/mcp-setup/set-mcp-key.ts` и реально проверяет результат. Сами серверы ставит SessionStart-хук `tools/mcp-setup/mcp-bootstrap.ts` (opt-out: `DEV_POMOGATOR_MCP_SETUP=off`); этот чек только про auth-настройку. Реальная проверка «настроено» (не вслепую): ключ Context7 непустой / `gh auth status` exit 0 — см. `tools/mcp-setup/mcp-auth-detect.ts`.
 
 ## Engine structure (scripts/engine/)
 

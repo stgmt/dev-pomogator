@@ -238,3 +238,14 @@ Implementation lives in `src/installer/settings-local.ts:migrateLegacySettingsJs
 
 **Связанные AC:** [AC-15](ACCEPTANCE_CRITERIA.md#ac-15-fr-15-feature10)
 **Use Case:** UC-1 (fresh install), UC-2 (re-install)
+
+## FR-16: Global MCP bootstrap @feature11
+
+The SessionStart hook `tools/mcp-setup/mcp-bootstrap.ts` SHALL install the Context7 and Octocode MCP servers GLOBALLY into the user-scope config `~/.claude.json` (top-level `mcpServers`, available across all projects), NEVER into a project `.mcp.json` (anti-leak, see [FR-10](FR.md#fr-10-secret-detection-в-project-mcpjson-feature8)). On Windows the stdio command SHALL be wrapped as `cmd /c npx …`. Installation SHALL be idempotent (an existing server entry is never clobbered) and disabled by `DEV_POMOGATOR_MCP_SETUP=off`.
+
+While Context7 lacks a non-empty API key (anonymous tier) OR Octocode lacks GitHub auth, the hook SHALL emit an `additionalContext` warning each session with instructions, and SHALL go silent (`suppressOutput`) once BOTH are configured. The "configured" verdict SHALL be a REAL check — a live read of `~/.claude.json` plus, for Octocode, `gh auth status` — never a blind assumption (predicates in `tools/mcp-setup/mcp-auth-detect.ts`).
+
+The skill `configure-mcp` SHALL let the agent obtain a secret (ask the user / point to where to get it / acquire it via `npx ctx7 setup` or `gh auth`) and persist it via `tools/mcp-setup/set-mcp-key.ts`, which writes the secret into the server's `env` in `~/.claude.json` and re-checks it. The pomogator-doctor check `C-MCPA` SHALL surface the same unconfigured state with a `configure-mcp` fix-action, and the `mcp-parse` check (C11) SHALL exclude plugin-provided servers (`plugin_*`, `claude_ai_*`, `claude-in-chrome`) from its "missing" list.
+
+**Связанные AC:** [AC-16](ACCEPTANCE_CRITERIA.md#ac-16-fr-16-feature11)
+**Use Case:** [UC-13](USE_CASES.md#uc-13-auto-install-mcp-and-configure-auth-feature11)

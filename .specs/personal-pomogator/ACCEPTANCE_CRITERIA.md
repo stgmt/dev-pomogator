@@ -155,3 +155,17 @@
 - WHEN migration empties a hookName array (e.g. all `Stop` entries were dev-pomogator) THEN that key SHALL be deleted from `settings.hooks`, not left as `[]`.
 - WHEN migration empties the entire `hooks` object THEN it SHALL be deleted from settings, not left as `{}`.
 - WHEN team entries existed alongside dev-pomogator entries THEN every team entry SHALL be preserved bit-for-bit identical (matcher, hooks array structure, timeout, etc.).
+
+## AC-16 (FR-16) @feature11
+
+**Требование:** [FR-16: Global MCP bootstrap](FR.md#fr-16-global-mcp-bootstrap-feature11)
+
+- WHEN the SessionStart hook `mcp-bootstrap` runs AND `~/.claude.json` has no `context7`/`octocode` entry THEN it SHALL add both to top-level `mcpServers` (user scope), never to a project `.mcp.json`.
+- IF an entry for a server already exists THEN the hook SHALL leave it untouched (idempotent, no clobber).
+- IF Context7 has no non-empty API key OR Octocode has no GitHub auth (token or `gh auth status` exit 0) THEN the hook SHALL emit an `additionalContext` warning naming what is unconfigured and how to fix it.
+- WHEN both Context7 and Octocode are configured (real check) THEN the hook SHALL return `{continue:true, suppressOutput:true}` so the warning disappears.
+- IF `DEV_POMOGATOR_MCP_SETUP=off` THEN the hook SHALL install nothing and emit no warning.
+- WHEN `set-mcp-key` writes a non-empty secret for a server THEN the secret SHALL be stored in that server's `env` in `~/.claude.json` AND a re-read real-check SHALL report the server configured.
+- WHEN `set-mcp-key` is given an empty secret THEN it SHALL refuse (no write).
+- WHEN the doctor MCP-auth check `C-MCPA` runs AND a referenced/present server is unconfigured THEN it SHALL report severity `warning` with a `configure-mcp` fix-action; otherwise `ok`.
+- WHEN the doctor `mcp-parse` (C11) computes missing servers THEN plugin-provided names (`plugin_*`, `claude_ai_*`, `claude-in-chrome`) SHALL be excluded from the missing list.

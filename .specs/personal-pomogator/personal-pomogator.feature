@@ -508,3 +508,77 @@ Feature: PERSO001 Personal-Pomogator Mode
     Then body should mention "dev-pomogator source repository" refusal check
     And body should mention "git status --porcelain" verification
     And body should document 5-step algorithm
+
+  # =========================================================================
+  # @feature11 — Global MCP bootstrap: install + warn-until-configured (FR-16)
+  # =========================================================================
+
+  @feature11
+  Scenario: PERSO001_B0 mcp-bootstrap installs both servers into global config when absent
+    Given an empty isolated claude home
+    When the mcp-bootstrap hook runs
+    Then global mcpServers should contain "context7"
+    And global mcpServers should contain "octocode"
+    And hook output should warn about "Context7"
+
+  @feature11
+  Scenario: PERSO001_B1 mcp-bootstrap does not clobber an existing server entry
+    Given an isolated claude home with a custom "context7" entry
+    When the mcp-bootstrap hook runs
+    Then the "context7" entry should be the custom one
+
+  @feature11
+  Scenario: PERSO001_B2 warning is suppressed once both servers are auth-configured
+    Given an isolated claude home with "context7" keyed and "octocode" tokened
+    When the mcp-bootstrap hook runs
+    Then hook output should be suppressed
+
+  @feature11
+  Scenario: PERSO001_B3 opt-out installs nothing and stays silent
+    Given an empty isolated claude home
+    And env "DEV_POMOGATOR_MCP_SETUP" is "off"
+    When the mcp-bootstrap hook runs
+    Then global mcpServers should be empty
+    And hook output should be suppressed
+
+  @feature11
+  Scenario: PERSO001_B4 set-mcp-key writes the Context7 key and verifies it
+    Given an empty isolated claude home
+    When I set the "context7" mcp key to "ctx7-test"
+    Then the "context7" entry env "CONTEXT7_API_KEY" should be "ctx7-test"
+    And the set-mcp-key result should be verified
+
+  @feature11
+  Scenario: PERSO001_B5 set-mcp-key writes the Octocode token and verifies it
+    Given an empty isolated claude home
+    When I set the "octocode" mcp key to "ghp-test"
+    Then the "octocode" entry env "GITHUB_TOKEN" should be "ghp-test"
+    And the set-mcp-key result should be verified
+
+  @feature11
+  Scenario: PERSO001_B6 Context7 is unconfigured without a key and configured with one
+    Given a context7 entry without a key
+    Then context7 should be reported as not configured
+    When the context7 entry gets api key "k"
+    Then context7 should be reported as configured
+
+  @feature11
+  Scenario: PERSO001_B7 Octocode is configured by a token or by gh auth
+    Given an octocode entry without a token and gh auth logged out
+    Then octocode should be reported as not configured
+    When gh auth is logged in
+    Then octocode should be reported as configured
+
+  @feature11
+  Scenario: PERSO001_B8 doctor C-MCPA warns when Context7 has no key
+    Given an isolated claude home with "context7" unkeyed and "octocode" tokened
+    When the doctor mcp-auth check runs
+    Then the C-MCPA severity should be "warning"
+    And the C-MCPA message should mention "Context7"
+
+  @feature11
+  Scenario: PERSO001_B9 doctor mcp-parse excludes plugin-provided servers from missing
+    Given referenced mcp servers "plugin_foo_bar,claude_ai_X,context7" with empty config
+    When the doctor mcp-parse check runs
+    Then the missing list should contain "context7"
+    And the missing list should not contain "plugin_foo_bar"

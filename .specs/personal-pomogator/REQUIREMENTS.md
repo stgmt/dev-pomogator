@@ -15,6 +15,7 @@
 | [FR-9](FR.md#fr-9-force-global-mcp-writes-feature8) | Force-global MCP writes | [AC-9](ACCEPTANCE_CRITERIA.md#ac-9-fr-9-feature8) | [UC-9](USE_CASES.md#uc-9-setup-mcppy-с-существующим-project-mcpjson-feature8), [UC-11](USE_CASES.md#uc-11-claude-mem-mcp-registration-invariant-feature8) | @feature8 | Draft |
 | [FR-10](FR.md#fr-10-secret-detection-в-project-mcpjson-feature8) | Secret detection | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-10-feature8) | [UC-10](USE_CASES.md#uc-10-install-с-secrets-в-project-mcpjson-feature8) | @feature8 | Draft |
 | [FR-11](FR.md#fr-11-ai-agent-uninstall-skill-feature9) | AI agent uninstall skill | [AC-11](ACCEPTANCE_CRITERIA.md#ac-11-fr-11-feature9) | [UC-12](USE_CASES.md#uc-12-user-просит-ai-удалить-dev-pomogator-feature9) | @feature9 | Draft |
+| [FR-16](FR.md#fr-16-global-mcp-bootstrap-feature11) | Global MCP bootstrap | [AC-16](ACCEPTANCE_CRITERIA.md#ac-16-fr-16-feature11) | [UC-13](USE_CASES.md#uc-13-auto-install-mcp-and-configure-auth-feature11) | @feature11 | Draft |
 
 ## Functional Requirements
 
@@ -29,6 +30,7 @@
 - [FR-9: Force-global MCP writes](FR.md#fr-9-force-global-mcp-writes-feature8)
 - [FR-10: Secret detection в project .mcp.json](FR.md#fr-10-secret-detection-в-project-mcpjson-feature8)
 - [FR-11: AI agent uninstall skill](FR.md#fr-11-ai-agent-uninstall-skill-feature9)
+- [FR-16: Global MCP bootstrap](FR.md#fr-16-global-mcp-bootstrap-feature11)
 
 ## Non-Functional Requirements
 
@@ -50,3 +52,4 @@
 - [AC-9 (FR-9): Force-global MCP writes](ACCEPTANCE_CRITERIA.md#ac-9-fr-9-feature8)
 - [AC-10 (FR-10): Secret detection](ACCEPTANCE_CRITERIA.md#ac-10-fr-10-feature8)
 - [AC-11 (FR-11): AI agent uninstall skill](ACCEPTANCE_CRITERIA.md#ac-11-fr-11-feature9)
+- [AC-16 (FR-16): Global MCP bootstrap](ACCEPTANCE_CRITERIA.md#ac-16-fr-16-feature11)

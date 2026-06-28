@@ -1,6 +1,7 @@
 import type { CheckDefinition } from '../types.js';
 import { bunCheck } from './bun.js';
 import { claudeBinPriorityCheck } from './claude-bin-priority.js';
+import { claudeMemPluginCheck } from './claude-mem-plugin.js';
 import { dockerCheck } from './docker.js';
 import { envExampleCheck } from './env-example.js';
 import { envVarsCheck } from './env-vars.js';
@@ -8,6 +9,7 @@ import { gitCheck } from './git.js';
 import { gitignoreBlockCheck } from './gitignore-block.js';
 import { hooksExecCheck } from './hooks-exec.js';
 import { hooksRegistryCheck } from './hooks-registry.js';
+import { mcpAuthCheck } from './mcp-auth.js';
 import { mcpParseCheck } from './mcp-parse.js';
 import { mcpProbeCheck } from './mcp-probe.js';
 import { meridianCheck } from './meridian.js';
@@ -36,7 +38,7 @@ export const phase2Checks: CheckDefinition[] = [
 
 export const phase3Checks: CheckDefinition[] = [bunCheck, pythonCheck, dockerCheck, meridianCheck];
 
-export const phase4Checks: CheckDefinition[] = [mcpParseCheck, mcpProbeCheck, pluginLoaderCheck];
+export const phase4Checks: CheckDefinition[] = [mcpParseCheck, mcpProbeCheck, mcpAuthCheck, pluginLoaderCheck, claudeMemPluginCheck];
 
 export const allChecks: CheckDefinition[] = [
   ...phase2Checks,
@@ -47,6 +49,7 @@ export const allChecks: CheckDefinition[] = [
 export {
   bunCheck,
   claudeBinPriorityCheck,
+  claudeMemPluginCheck,
   dockerCheck,
   envExampleCheck,
   envVarsCheck,
@@ -54,6 +57,7 @@ export {
   gitignoreBlockCheck,
   hooksExecCheck,
   hooksRegistryCheck,
+  mcpAuthCheck,
   mcpParseCheck,
   mcpProbeCheck,
   meridianCheck,
