@@ -785,3 +785,16 @@ As a maintainer reading a `consistency-report.yaml`, I want a top-level `summary
 Given a reconcile corpus with one spec that has a missing impl path
 When the consistency-report YAML is emitted for that spec
 Then the YAML carries a summary block with by_severity, by_namespace, totals and top_3_recommendations
+
+### User Story 35: Phase 7 — interactive, confirm-gated cross-spec resolution (Priority: P2)
+**Требование:** [FR-18](FR.md#fr-18)
+
+As a maintainer resolving a consistency-report, I want each finding explained and gated behind an explicit confirm before any file edit, so that I never apply a wrong fix blindly.
+
+**Why:** auto-applied fixes to specs/code are high-risk; a confirm gate keeps every mutation reviewed.
+**Independent Test:** run resolve over a report with a missing-file finding and assert no Edit happens until an Apply confirm.
+**Acceptance Scenarios:**
+
+Given a consistency-report with a missing-file finding
+When cross-spec-resolve processes it
+Then a 5-field explanation is emitted and no edit occurs until the user confirms Apply

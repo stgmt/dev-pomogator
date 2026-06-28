@@ -540,7 +540,7 @@ WHEN any migration phase completes THEN the full clean-HEAD Docker suite SHALL b
 
 **Требование:** [FR-37a](FR.md#fr-37)
 
-WHEN spec health is reported THEN the verdict SHALL be the smart analysis (`conformance_check` + `get_spec_status` + `audit-spec` + the traceability-completeness check) over the one graph; a bare `validate-spec: 0 errors` SHALL NOT be reportable as "valid / clean / done."
+WHEN spec health is reported THEN the verdict SHALL be the smart analysis (`conformance_check`, `get_spec_status`, `audit-spec` + the traceability-completeness check) over the one graph; a bare `validate-spec: 0 errors` SHALL NOT be reportable as "valid / clean / done."
 
 ## AC-37.2
 

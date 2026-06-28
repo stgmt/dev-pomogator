@@ -1236,3 +1236,12 @@ Then a finding is emitted (not silent)
 **Alternatives considered:**
 - A separate `summary.yaml` file — rejected: splits the report, breaks the one-file-per-spec contract.
 - Post-hoc computation by every consumer — rejected: duplicates the bucketing logic the emitter already owns.
+
+## Decision: FR-18 cross-spec-resolve gates every fix behind an explicit confirm-before-edit
+**Требование:** [FR-18](FR.md#fr-18)
+
+**Rationale:** Auto-applying fixes to a consistency-report's findings risks silent wrong edits; `cross-spec-resolve` emits a 5-field explanation per finding and requires an explicit Apply confirmation before any Edit/Write, with a separate banner for foreign-spec edits and an append-only override audit log.
+**Trade-off:** More prompts per resolution run; in exchange every mutation is reviewed and auditable.
+**Alternatives considered:**
+- Batch auto-fix all findings — rejected: silent wrong edits with no review surface.
+- Read-only report with no resolve path — rejected: leaves the user to hand-apply every fix.

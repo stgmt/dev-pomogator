@@ -388,7 +388,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then findings contain a cross-spec contradictory-nfr at CRITICAL severity
 
   @feature17 @feature18
-  Scenario: SPECGEN004_397 cross-spec reconcile e2e roundtrip writes a consistency-report with the corpus findings
+  Scenario: SPECGEN004_397 cross-spec reconcile e2e roundtrip writes a consistency-report carrying the corpus findings
     Given the full cross-spec fixture corpus with planted drift and a shared on-disk path
     When cross-spec reconcile runs over the corpus and writes the consistency reports
     Then a consistency-report YAML is written carrying the planted finding codes from the corpus

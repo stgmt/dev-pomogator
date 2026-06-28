@@ -675,7 +675,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] `tests/fixtures/cross-spec-corpus/spec-c/FR.md` declares MCP tool `validate_user` with no implementation file (triggers `impl-drift/missing-file`, asserted by SPECGEN004_38; `impl-drift/mcp-tool-drift` is NOT an implemented engine code — verify-divergent-contracts: corrected, the engine has no such detector)
   - [x] `tests/fixtures/cross-spec-corpus/README.md` documents expected finding codes per scenario
 
-- [ ] E2E test reconcile roundtrip -- @feature17 @feature18 — id: e2e-test-reconcile-roundtrip — Status: TODO — own scenario **SPECGEN004_397** (e2e reconcile roundtrip over the full corpus) | Est: 480m
+- [x] E2E test reconcile roundtrip -- @feature17 @feature18 — id: e2e-test-reconcile-roundtrip — Status: DONE — own scenario **SPECGEN004_397** (e2e reconcile roundtrip over the full corpus) | Est: 480m
   _depends: integration-test-fixture, impl-resolve-loop_
   _Requirements: [FR-17](FR.md#fr-17), [FR-18](FR.md#fr-18), [AC-17.1](ACCEPTANCE_CRITERIA.md#ac-171), [AC-17.2](ACCEPTANCE_CRITERIA.md#ac-172), [AC-18.2](ACCEPTANCE_CRITERIA.md#ac-182), [AC-18.4](ACCEPTANCE_CRITERIA.md#ac-184)_
   **Done When:**
