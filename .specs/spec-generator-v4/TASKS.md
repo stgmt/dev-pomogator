@@ -670,10 +670,10 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   _Requirements: [FR-17](FR.md#fr-17)_
   **Done When:**
   - [ ] `tests/fixtures/cross-spec-corpus/spec-a/FR.md` declares `auth.feedback_key = "session_token"` + reference to `src/auth/jwt.ts`
-  - [ ] `tests/fixtures/cross-spec-corpus/spec-b/FR.md` declares same concept as `sessionToken` + same path (triggers cross-spec/runtime-identifier-drift + cross-spec/module-ownership-conflict)
+  - [x] `tests/fixtures/cross-spec-corpus/spec-b/FR.md` declares same concept as `sessionToken` + same path (triggers cross-spec/runtime-identifier-drift + cross-spec/module-ownership-conflict)
   - [ ] `tests/fixtures/cross-spec-corpus/spec-b/DESIGN.md` declares latency budget <50ms where spec-a declares <100ms (triggers cross-spec/nfr-conflict)
   - [ ] `tests/fixtures/cross-spec-corpus/spec-c/FR.md` declares MCP tool `validate_user` with no implementation file (triggers impl-drift/missing-file + impl-drift/mcp-tool-drift)
-  - [ ] `tests/fixtures/cross-spec-corpus/README.md` documents expected finding codes per scenario
+  - [x] `tests/fixtures/cross-spec-corpus/README.md` documents expected finding codes per scenario
 
 - [ ] E2E test reconcile roundtrip -- @feature17 @feature18 — id: e2e-test-reconcile-roundtrip — Status: TODO | Est: 480m
   _depends: integration-test-fixture, impl-resolve-loop_

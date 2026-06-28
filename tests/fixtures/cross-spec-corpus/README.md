@@ -22,3 +22,17 @@ read-only fixture.
 To re-capture after an engine change: copy `corpus/` to `<tmp>/.specs/`, run
 `reconcileCli(parseReconcileArgs([]), <tmp>)`, and read each
 `consistency-report.yaml`.
+
+## Direct-path fixtures consumed by the @feature17 BDD scenarios (FR-17)
+
+The `spec-a/`, `spec-b/`, `spec-c/` dirs (directly under this folder, NOT under `corpus/`)
+are the fixtures the @feature17 reconcile scenarios in
+`tests/step_definitions/phase7-cross-spec.ts` actually READ (they copy the fixture FR.md
+into a tmp `.specs/<slug>/`, then run `reconcileLight`). Finding codes verified from the
+REAL engine, one row per asserting scenario:
+
+| Fixture(s) | Planted defect | Expected finding code(s) | Asserting scenario |
+|------------|----------------|--------------------------|--------------------|
+| spec-c | FR declares MCP tool at `src/mcp/validate_user.ts`, absent on disk | `impl-drift/missing-file` (WARNING) | SPECGEN004_38 |
+| spec-a + spec-b | `feedback_key = "session_token"` vs `"sessionToken"` | `cross-spec/runtime-identifier-drift` (CRITICAL) | SPECGEN004_39 |
+| spec-a + spec-b | both reference the same impl path `src/auth/jwt.ts` (must exist on disk — the Batch-21 anti-FP gate) | `cross-spec/module-ownership-conflict` (CRITICAL) | SPECGEN004_395 |
