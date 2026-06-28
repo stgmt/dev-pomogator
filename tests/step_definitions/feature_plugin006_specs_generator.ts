@@ -342,7 +342,10 @@ Given(/^a spec with RESEARCH\.md containing unclosed open questions$/, function 
 Given(/^a spec with RESEARCH\.md where all open questions have DEFERRED markers$/, function (this: SgWorld) {
   loadFixture.call(this, 'valid-spec');
   const resPath = path.join(this.tempDir, '.specs', 'valid-spec', 'RESEARCH.md');
-  fs.writeFileSync(resPath, '# Research\n\n## Project Context\n\nSome context.\n\n## Open Questions\n\n- [ ] What is the best approach? [DEFERRED: out of scope]\n');
+  // validate-spec suppresses OPEN_QUESTIONS only when a `> DEFERRED: reason` blockquote sits on the
+  // line BEFORE the open question (specs-generator-core.mjs:543) — the agent's inline `[DEFERRED:…]`
+  // on the same line was the wrong format and left the warning firing.
+  fs.writeFileSync(resPath, '# Research\n\n## Project Context\n\nSome context.\n\n## Open Questions\n\n> DEFERRED: out of scope\n- [ ] What is the best approach?\n');
 });
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -615,7 +618,10 @@ When(/^I run fill-template\.ts with -ListPlaceholders$/, function (this: SgWorld
 
 When(/^I run fill-template\.ts with -Values JSON$/, function (this: SgWorld) {
   const filePath = path.join(this.tempDir, 'template-file.md');
-  const values = JSON.stringify({ feature: 'my-feature', description: 'My description' });
+  // The fixture's placeholders are Russian ({название}/{роль}/…); value keys are the placeholder
+  // names WITHOUT braces, so these two actually get filled (9 -> 7) — the agent's English keys matched
+  // nothing and left placeholders_after == placeholders_before.
+  const values = JSON.stringify({ 'название': 'Моя фича', 'роль': 'разработчик' });
   const res = spawnSync(process.execPath, [CORE_MJS, 'fill-template', '-File', filePath, '-Values', values, '-Format', 'json'], {
     encoding: 'utf-8',
     cwd: REPO_ROOT,
@@ -690,18 +696,19 @@ Then(/^stepDictionary should contain non-empty given, when, and then arrays$/, f
 
 Then(/^namingPatterns should contain the PLUGIN domain with a count of two$/, function (this: SgWorld) {
   const json = this.sgJson as any;
-  const patterns: any[] = json?.namingPatterns ?? [];
-  const pluginEntry = patterns.find((p: any) => p.domain === 'PLUGIN' || p.code === 'PLUGIN');
-  assert.ok(pluginEntry, `Expected namingPatterns to have a PLUGIN entry: ${JSON.stringify(patterns)}`);
+  const domains: any[] = json?.namingPatterns?.domains ?? [];
+  const pluginEntry = domains.find((d: any) => d.prefix === 'PLUGIN');
+  assert.ok(pluginEntry, `Expected namingPatterns.domains to have a PLUGIN entry: ${JSON.stringify(json?.namingPatterns)}`);
   assert.equal(pluginEntry.count, 2, `Expected PLUGIN count=2, got ${pluginEntry.count}`);
 });
 
 Then(/^every returned candidate should match the PLUGIN domain$/, function (this: SgWorld) {
   const json = this.sgJson as any;
   const candidates: any[] = json?.candidates ?? [];
+  assert.ok(candidates.length > 0, `Expected at least one candidate for -DomainCode PLUGIN`);
   for (const c of candidates) {
     assert.ok(
-      (c.domainCode ?? c.domain ?? '') === 'PLUGIN' || (c.file ?? '').includes('PLUGIN'),
+      (c.path ?? '').includes('PLUGIN') || (c.reasons ?? []).some((r: string) => r.includes('PLUGIN')),
       `Candidate does not match PLUGIN domain: ${JSON.stringify(c)}`
     );
   }
@@ -712,7 +719,7 @@ Then(/^candidates should contain exactly the matching feature$/, function (this:
   const candidates: any[] = json?.candidates ?? [];
   assert.equal(candidates.length, 1, `Expected exactly 1 candidate, got ${candidates.length}: ${JSON.stringify(candidates)}`);
   const c = candidates[0];
-  assert.ok((c.slug ?? c.file ?? '').includes('specs-generator'), `Expected candidate to match specs-generator slug: ${JSON.stringify(c)}`);
+  assert.ok((c.path ?? '').includes('specs-generator'), `Expected candidate to match specs-generator slug: ${JSON.stringify(c)}`);
 });
 
 // ────────────────────────────────────────────────────────────────────────────
