@@ -31,7 +31,8 @@
       ".specs/spec-phase-gate/spec-phase-gate.feature",
       ".specs/context-menu/context-menu.feature",
       "tests/features/plugins/reqnroll-ce-guard/CEGUARD001_reqnroll-ce-guard.feature",
-      ".specs/specs-workflow-jira-mode/specs-workflow-jira-mode.feature"
+      ".specs/specs-workflow-jira-mode/specs-workflow-jira-mode.feature",
+      "tests/features/plugins/suggest-rules/PLUGIN008_deep-insights.feature"
     ],
     "import": [
       "tests/step_definitions/**/*.ts",
