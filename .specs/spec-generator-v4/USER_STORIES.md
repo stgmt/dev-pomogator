@@ -772,3 +772,16 @@ Then the canonical .last-test-run.ndjson is not overwritten with the partial res
 Given a migrated spec whose FILE_CHANGES has an edit row under a removed v1 prefix
 When the audit runs
 Then it emits a specific v1-layout-drift finding with remap guidance, not only a generic missing-file error
+
+### User Story 34: Phase 7 — a scannable summary roll-up in the consistency-report (Priority: P2)
+**Требование:** [FR-17](FR.md#fr-17)
+
+As a maintainer reading a `consistency-report.yaml`, I want a top-level `summary` block (counts by severity / class / namespace, run totals, and the top-3 recommendations) so that I can triage a spec's drift at a glance without scanning every finding.
+
+**Why:** a long `findings[]` list is unscannable; the roll-up gives severity/namespace shape and the worst few items first.
+**Independent Test:** emit a consistency-report for a spec with a missing impl path and assert the `summary` block carries `by_severity`, `by_namespace`, `totals.specs_compared`, `totals.impl_paths_checked` and `top_3_recommendations`.
+**Acceptance Scenarios:**
+
+Given a reconcile corpus with one spec that has a missing impl path
+When the consistency-report YAML is emitted for that spec
+Then the YAML carries a summary block with by_severity, by_namespace, totals and top_3_recommendations
