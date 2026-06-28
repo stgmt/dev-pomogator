@@ -70,10 +70,10 @@ Given(
   function (this: CrossSpecWorld) {
     const dir = path.join(this.tempDir, '.specs/spec-c');
     fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(
-      path.join(dir, 'FR.md'),
-      '## FR-1: Validate user\n\nMCP tool lives at `src/mcp/validate_user.ts`.\n',
-    );
+    // FR-17 integration-test-fixture: consume the REAL fixture corpus (not an inline
+    // copy) so the corpus has a runtime consumer (dead-integration-guard: installed ≠ integrated).
+    const fixture = path.join(process.cwd(), 'tests/fixtures/cross-spec-corpus/spec-c/FR.md');
+    fs.writeFileSync(path.join(dir, 'FR.md'), fs.readFileSync(fixture, 'utf8'));
   },
 );
 
@@ -133,7 +133,9 @@ Given(
   function (this: CrossSpecWorld) {
     const dir = path.join(this.tempDir, '.specs/spec-a');
     fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(path.join(dir, 'FR.md'), '## FR-1\n\nfeedback_key = "session_token"\n');
+    // FR-17 integration-test-fixture: consume the real fixture corpus (dead-integration-guard).
+    const fixture = path.join(process.cwd(), 'tests/fixtures/cross-spec-corpus/spec-a/FR.md');
+    fs.writeFileSync(path.join(dir, 'FR.md'), fs.readFileSync(fixture, 'utf8'));
   },
 );
 
@@ -142,7 +144,9 @@ Given(
   function (this: CrossSpecWorld) {
     const dir = path.join(this.tempDir, '.specs/spec-b');
     fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(path.join(dir, 'FR.md'), '## FR-2\n\nfeedback_key = "sessionToken"\n');
+    // FR-17 integration-test-fixture: consume the real fixture corpus (dead-integration-guard).
+    const fixture = path.join(process.cwd(), 'tests/fixtures/cross-spec-corpus/spec-b/FR.md');
+    fs.writeFileSync(path.join(dir, 'FR.md'), fs.readFileSync(fixture, 'utf8'));
   },
 );
 
