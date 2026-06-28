@@ -13,6 +13,7 @@
 - [FR-9: Force-global MCP writes](FR.md#fr-9-force-global-mcp-writes-feature8)
 - [FR-10: Secret detection в project .mcp.json](FR.md#fr-10-secret-detection-в-project-mcpjson-feature8)
 - [FR-11: AI agent uninstall skill](FR.md#fr-11-ai-agent-uninstall-skill-feature9)
+- [FR-16: Global MCP bootstrap](FR.md#fr-16-global-mcp-bootstrap-feature11)
 
 ## Компоненты
 
