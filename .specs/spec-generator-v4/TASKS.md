@@ -1701,7 +1701,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   **Done When:**
   - [ ] после миграции ВСЕХ целевых спек: `npm test`/`docker-test.sh` гейтит cucumber; остаточный vitest-двойник выпилен/помечен non-traceable scratch; делается ПОСЛЕ раскатки, не раньше (нет mass-UNDEFINED)
 
-- [ ] P27-6: ко-локированный хвост → BDD: `tools/spec-graph/__tests__/*.test.ts` (18, pure) — id: p27-tail-spec-graph — Status: TODO | Est: 900m
+- [ ] P27-6: ко-локированный хвост → BDD: `tools/spec-graph/__tests__/*.test.ts` (18, pure) (FR-51c) — id: p27-tail-spec-graph — Status: TODO | Est: 900m
   _depends: p27-migrator-and-pilot_
   _Requirements: [FR-51](FR.md#fr-51)_
   **Done When:**
@@ -1709,56 +1709,59 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] валидировать зелёным в Docker через детерминированный unique-config обход; mutation-check (сломать движок → сценарий RED → восстановить); выпилить vitest-двойник ПОСЛЕ зелёного эквивалента
   - [ ] РИСК §9: `coverage.test.ts`/`task-census.test.ts`/`ndjson-ingester.test.ts` тестируют сам читатель переклички → мигрировать ВМЕСТЕ/ПОСЛЕ фикса coverage-honesty, не под движущуюся мишень
 
-- [ ] P27-7: ко-локированный хвост → BDD: `tools/spec-mcp-server/(**/)__tests__/*.test.ts` (13, pure) — id: p27-tail-spec-mcp-server — Status: TODO | Est: 720m
+- [ ] P27-7: ко-локированный хвост → BDD: `tools/spec-mcp-server/(**/)__tests__/*.test.ts` (13, pure) (FR-51c) — id: p27-tail-spec-mcp-server — Status: TODO | Est: 720m
   _depends: p27-migrator-and-pilot_
   _Requirements: [FR-51](FR.md#fr-51)_
   **Done When:**
   - [ ] мигрировать 13 (вкл. `sqlite/__tests__/*`) → `PLUGINxxx_spec-mcp-server.feature` + step-def, вызывающий handlers/registry in-process (PURE: import+call, без spawn по spawn-grep)
   - [ ] валидировать зелёным в Docker через детерминированный unique-config обход; mutation-check (сломать движок → сценарий RED → восстановить); выпилить vitest-двойник ПОСЛЕ зелёного эквивалента
 
-- [ ] P27-8: ко-локированный хвост → BDD: `tools/spec-backlog/resolvers/__tests__/*.test.ts` (8, преим. pure) — id: p27-tail-spec-backlog — Status: TODO | Est: 480m
+- [ ] P27-8: ко-локированный хвост → BDD: `tools/spec-backlog/resolvers/__tests__/*.test.ts` (8, преим. pure) (FR-51c) — id: p27-tail-spec-backlog — Status: TODO | Est: 480m
   _depends: p27-migrator-and-pilot_
   _Requirements: [FR-51](FR.md#fr-51)_
   **Done When:**
   - [ ] мигрировать 8 resolver-тестов → `PLUGINxxx_spec-backlog.feature`; 7 pure (in-process вызов resolver-функций) + 1 spawn-class → runtime step-def (реальный CLI), классификация per `bdd-migrator`
   - [ ] валидировать зелёным в Docker через детерминированный unique-config обход; mutation-check (сломать движок → сценарий RED → восстановить); выпилить vitest-двойник ПОСЛЕ зелёного эквивалента
 
-- [ ] P27-9: ко-локированный хвост → BDD: `tools/anchor-integrity/__tests__/*.test.ts` (6, mixed) — id: p27-tail-anchor-integrity — Status: TODO | Est: 360m
+- [ ] P27-9: ко-локированный хвост → BDD: `tools/anchor-integrity/__tests__/*.test.ts` (6, mixed) (FR-51c) — id: p27-tail-anchor-integrity — Status: TODO | Est: 540m
   _depends: p27-migrator-and-pilot_
   _Requirements: [FR-51](FR.md#fr-51)_
   **Done When:**
   - [ ] мигрировать 6 → `PLUGINxxx_anchor-integrity.feature`; классифицировать per `bdd-migrator` — 4 pure (in-process `checkLinks`/`fix`) + 2 spawn-class (реальный хук) → runtime step-def
+  - [ ] ЗАМЕТКА (стоимость): 2 spawn-class шага спавнят реальный хук anchor-integrity — это ИНТЕГРАЦИЯ, дороже чистого import+call; отсюда повышенная оценка относительно pure-волн того же размера
   - [ ] валидировать зелёным в Docker через детерминированный unique-config обход; mutation-check (сломать движок → сценарий RED → восстановить); выпилить vitest-двойник ПОСЛЕ зелёного эквивалента
 
-- [ ] P27-10: ко-локированный хвост → BDD: `tools/marksman-installer/__tests__/*.test.ts` (4, pure) — id: p27-tail-marksman-installer — Status: TODO | Est: 300m
+- [ ] P27-10: ко-локированный хвост → BDD: `tools/marksman-installer/__tests__/*.test.ts` (4, pure) (FR-51c) — id: p27-tail-marksman-installer — Status: TODO | Est: 300m
   _depends: p27-migrator-and-pilot_
   _Requirements: [FR-51](FR.md#fr-51)_
   **Done When:**
   - [ ] мигрировать 4 → `PLUGINxxx_marksman-installer.feature` + in-process step-defs (resolve-binary/ensure/postinstall/launch — без spawn по spawn-grep; драйв реальных функций); launch-marksman-e2e держит real-artifact assert (Docker имеет marksman)
   - [ ] валидировать зелёным в Docker через детерминированный unique-config обход; mutation-check (сломать движок → сценарий RED → восстановить); выпилить vitest-двойник ПОСЛЕ зелёного эквивалента
 
-- [ ] P27-11: ко-локированный хвост → BDD: спутники spec-graph (spec-check-log 2 / specs-validator 1 / specs-generator 1 / spec-conformance-push 1 / spec-conformance-guard 1 / spec-llm-judge 1 / bash-post-test 1 = 8, mixed) — id: p27-tail-spec-graph-satellites — Status: TODO | Est: 480m
+- [ ] P27-11: ко-локированный хвост → BDD: спутники spec-graph (spec-check-log 2 / specs-validator 1 / specs-generator 1 / spec-conformance-push 1 / spec-conformance-guard 1 / spec-llm-judge 1 / bash-post-test 1 = 8, mixed) (FR-51c) — id: p27-tail-spec-graph-satellites — Status: TODO | Est: 660m
   _depends: p27-migrator-and-pilot_
   _Requirements: [FR-51](FR.md#fr-51)_
   **Done When:**
-  - [ ] свернуть эти 8 single/double-test областей в `PLUGINxxx_spec-graph-satellites.feature` (или per-area features) + step-defs; преим. pure in-process, specs-validator — spawn-class → runtime step-def
+  - [ ] авторить ПО ОДНОЙ mini-feature НА ТУЛ (`PLUGINxxx_<area>.feature` per tool: spec-check-log / specs-validator / specs-generator / spec-conformance-push / spec-conformance-guard / spec-llm-judge / bash-post-test) + step-defs — НЕ один grab-bag feature (нарушает «одна фича = одна область»); преим. pure in-process, specs-validator — spawn-class → runtime step-def
+  - [ ] ЗАМЕТКА (стоимость): specs-validator — spawn-class (спавн реального движка), дороже чистого import+call; отсюда повышенная оценка относительно pure-волн того же размера
   - [ ] валидировать зелёным в Docker через детерминированный unique-config обход; mutation-check (сломать движок → сценарий RED → восстановить); выпилить vitest-двойник ПОСЛЕ зелёного эквивалента
 
-- [ ] P27-12: ко-локированный хвост → BDD: миграция + gate tooling (migrate-v3-to-v4 2 / bdd-migrator 2 / plan-pomogator 1 / claim-evidence-gate 1 = 6, mixed) — id: p27-tail-migration-gate-tooling — Status: TODO | Est: 360m
+- [ ] P27-12: ко-локированный хвост → BDD: миграция + gate tooling (migrate-v3-to-v4 2 / bdd-migrator 2 / plan-pomogator 1 / claim-evidence-gate 1 = 6, mixed) (FR-51c) — id: p27-tail-migration-gate-tooling — Status: TODO | Est: 600m
   _depends: p27-migrator-and-pilot_
   _Requirements: [FR-51](FR.md#fr-51)_
   **Done When:**
   - [ ] свернуть в `PLUGINxxx_migration-gate-tooling.feature` + step-defs; migrate-v3-to-v4 + bdd-migrator — pure in-process; plan-pomogator + claim-evidence-gate — spawn-class (реальный хук/гейт) → runtime step-def
+  - [ ] ЗАМЕТКА (стоимость): plan-pomogator + claim-evidence-gate — spawn-class (спавн реального хука/гейта), ИНТЕГРАЦИЯ дороже чистого import+call; отсюда повышенная оценка относительно pure-волн того же размера
   - [ ] валидировать зелёным в Docker через детерминированный unique-config обход; mutation-check (сломать движок → сценарий RED → восстановить); выпилить vitest-двойник ПОСЛЕ зелёного эквивалента
 
-- [ ] P27-13: ко-локированный хвост → BDD: `.claude/skills/**/__tests__/*.test.ts` (4, pure) — id: p27-tail-skills-scripts — Status: TODO | Est: 240m
+- [ ] P27-13: ко-локированный хвост → BDD: `.claude/skills/**/__tests__/*.test.ts` (4, pure) (FR-51c) — id: p27-tail-skills-scripts — Status: TODO | Est: 240m
   _depends: p27-migrator-and-pilot_
   _Requirements: [FR-51](FR.md#fr-51)_
   **Done When:**
   - [ ] мигрировать 4 (architecture-research-workflow ×2, cross-spec-resolve, cross-spec-reconcile) → `PLUGINxxx_skills-scripts.feature` + in-process step-defs, импортящие скрипты скиллов (без spawn по spawn-grep)
   - [ ] валидировать зелёным в Docker через детерминированный unique-config обход; mutation-check (сломать движок → сценарий RED → восстановить); выпилить vitest-двойник ПОСЛЕ зелёного эквивалента
 
-- [ ] P27-14: ко-локированный хвост (другие языки): §9 «3 `*_test.py`/`*Tests.cs`» — fixtures + own-domain, НЕ цель миграции (исключено) — id: p27-tail-other-language-runners — Status: TODO | Est: 30m
+- [ ] P27-14: ко-локированный хвост (другие языки): §9 «3 `*_test.py`/`*Tests.cs`» — fixtures + own-domain, НЕ цель миграции (исключено) (FR-51c) — id: p27-tail-other-language-runners — Status: TODO | Est: 30m
   _depends: p27-migrator-and-pilot_
   _Requirements: [FR-51](FR.md#fr-51)_
   **Done When:**
@@ -1830,27 +1833,29 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   **Done When:**
   - [ ] КАЖДЫЙ путь прогона дописывает в append-only `.dev-pomogator/.scenario-results.ndjson` строку `{scenario_id, result, time, run_id, source, trace_id}` на исполненный сценарий: `scripts/run-bdd.mjs` (полный + фильтрованный + обход `-c <config>`) и `scripts/docker-bdd.sh` (in-Docker путь записи); канон `.last-test-run.ndjson` НЕ трогается (FR-56a)
   - [ ] обход `-c`, пропускающий архив (`scripts/run-bdd.mjs:88-93`), дополнен записью куска `.dev-pomogator/.test-history/run-<id>.ndjson`, чтобы `trace_id` был восстановим (FR-56d)
-  - [ ] append-only verified конкурентно-безопасным на общем дереве (параллельные прогоны только дописывают, не перетирают)
+  - [ ] append-only verified конкурентно-безопасным на общем дереве: каждая строка пишется АТОМАРНО — один `O_APPEND` write() целиком, без чередования частичных строк конкурентных писателей (правила репо `atomic-update-lock`/`atomic-config-save`); параллельные прогоны только дописывают, не перетирают
 
 - [ ] P29-2: читатель — эффективный результат = свежайший из {канон, оверлей} + страж свежести + 3 бакета (FR-56c) — id: p29-reader-merge-staleness — Status: TODO | Est: 480m
   _depends: p29-overlay-writer_
   _Requirements: [FR-56](FR.md#fr-56)_
   **Done When:**
-  - [ ] `tools/spec-graph/coverage.ts` (`bucketByResult`) + `tools/spec-graph/task-census.ts` берут эффективный результат = свежайший из {канон, оверлей}; passed из оверлея засчитывается ТОЛЬКО если `time` ≥ mtime `.feature` сценария; бакеты passed/stale/not_run (FR-56c)
+  - [ ] `tools/spec-graph/coverage.ts` (`bucketByResult`) + `tools/spec-graph/task-census.ts` берут эффективный результат = свежайший из {канон, оверлей}; passed из оверлея засчитывается ТОЛЬКО если `time` ≥ `max(mtime .feature, mtime step-def-файла)` (MVP-страж: feature-mtime-only пропускает регрессии прод/step-def кода); бакеты passed/stale/not_run (FR-56c)
   - [ ] СЕКВЕНС §9: собственные юнит-тесты этих читателей (`coverage.test.ts`/`task-census.test.ts`/`ndjson-ingester.test.ts`) живут в хвосте миграции FR-51c (P27-6, `p27-tail-spec-graph`) → этот фикс-читателя приземляется ДО/ВМЕСТЕ с миграцией тех тестов, не под движущуюся мишень
-  - [ ] страж задокументирован: «грубо по `.feature` mtime» сейчас, «также mtime тестируемого кода» — записанная будущая опция (FR-56c)
+  - [ ] страж задокументирован: MVP = `max(mtime .feature, mtime step-def-файла)` (step-def — код, движется вместе с тестом); feature-mtime-ОДНОЙ НЕДОСТАТОЧНО — пропускает регрессии прод/step-def кода при неизменном `.feature`; «также mtime тестируемого ПРОД-кода» — записанный следующий шаг сверх MVP (FR-56c)
 
 - [ ] P29-3: захват trace_id → след падения (кусок истории + testCaseStartedId) (FR-56d) — id: p29-trace-id-capture — Status: TODO | Est: 240m
   _depends: p29-overlay-writer_
   _Requirements: [FR-56](FR.md#fr-56)_
   **Done When:**
   - [ ] `trace_id` каждой строки оверлея указывает на кусок `.dev-pomogator/.test-history/run-<id>.ndjson` + `testCaseStartedId` сценария; упавший шаг + ошибка восстанавливаются из `testStepFinished.testStepResult.{status,message,duration}` cucumber message-ndjson (FR-56d)
+  - [ ] висячий `trace_id`: ротация кусков (последние 30, `run-bdd.mjs:131-143`) может снести кусок ещё-актуального сценария → ЛИБО пинить (исключать из ротации) кусок любого «current» в оверлее сценария, ЛИБО `get_scenario_trace` деградирует мягко («трейс истёк — перепрогони»), не падает (FR-56d)
 
 - [ ] P29-4: MCP-тул `get_scenario_trace(scenario_id)` + вписать в реестр (FR-56e) — id: p29-get-scenario-trace-tool — Status: TODO | Est: 360m
   _depends: p29-reader-merge-staleness, p29-trace-id-capture_
   _Requirements: [FR-56](FR.md#fr-56)_
   **Done When:**
   - [ ] `tools/spec-mcp-server/` отдаёт `get_scenario_trace(scenario_id)` → свежайший результат + (если failed/stale) упавший шаг + текст ошибки + run_id/time/source + путь к куску, одним вызовом без grep'а (FR-56e)
+  - [ ] кусок отсутствует/истёк (ротация снесла) → `get_scenario_trace` деградирует мягко («трейс истёк — перепрогони для обновления»), не падает; пиннинг актуального куска (исключение из ротации) ИЛИ graceful-degrade — на выбор реализации (FR-56d)
   - [ ] тул вписан в реестр тулов (`buildToolRegistry`) + dep-safe — иначе мёртв у пользователей плагина (dead-integration)
 
 - [ ] P29-5: граф — рантайм-трейс-ребро на ScenarioNode + продление цепочки до →result→trace→logs (FR-56f) — id: p29-graph-runtime-trace-edge — Status: TODO | Est: 300m
@@ -1864,3 +1869,10 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   _Requirements: [FR-56](FR.md#fr-56)_
   **Done When:**
   - [ ] `@feature56`-сценарии: get_scenario_trace отдаёт «где упало» для failed/stale; читатель относит изменённый-после-pass сценарий в `stale`, не `passed`; точечный прогон попадает в перекличку через оверлей — драйвят реальный код (real-engine, без моков), зелены в Docker
+
+- [ ] P29-7: компакция оверлея — держать `.scenario-results.ndjson` ограниченным (свежайшая-на-сценарий / ротация), скан переклички быстрый (FR-56b/c) — id: p29-overlay-compaction — Status: TODO | Est: 240m
+  _depends: p29-overlay-writer_
+  _Requirements: [FR-56](FR.md#fr-56)_
+  **Done When:**
+  - [ ] компакция/ротация держит оверлей в размере «свежайшая запись на сценарий» (или ограниченное окно) — файл не растёт безгранично; verified на синтетике с дублями по `scenario_id`
+  - [ ] чтение переклички (`coverage.ts`/`task-census.ts`) укладывается в текущий бюджет латентности на КАЖДЫЙ UserPromptSubmit — ограниченный скан (компакция или индекс), не полный проход растущего append-only (FR-56c ПЕРФ)
