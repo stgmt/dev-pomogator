@@ -1819,3 +1819,48 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   _Requirements: [FR-52](FR.md#fr-52)_
   **Done When:**
   - [ ] решено + закодировано: many→few (задача «протестирована» если ≥1 покрывающий сценарий passed → ослабить `TASK_NO_OWN_SCENARIO` при наличии tested-by ребра) ЛИБО мигратор обязан сплитить; тест фиксирует выбранную политику
+
+## Phase 29 — Честная перекличка покрытия (FR-56: снимок-канон + посценарный оверлей свежести + рантайм-трейс, 2026-06-29)
+
+Источник: `audit-reports/coverage-not-run-rollcall-analysis.md` (симптом §1, механизм с пруфами §2-§3, усилитель общего дерева §4, варианты дизайна A/B/C §7, рекомендация §8, файлы-якоря §10). Owner-одобренный гибрид: канон — снимок ПОЛНОГО прогона (не трогаем), посценарная свежесть — из НОВОГО append-only оверлея, который пишет каждый путь прогона; читатели сливают свежайший-из-{канон,оверлей} со стражем свежести. Раскрывает FR-56a..f. Держать ОТДЕЛЬНО от волн миграции хвоста FR-51c (Phase 27).
+
+- [ ] P29-1: оверлей-писатель во ВСЕХ путях прогона + `-c`-обход архивирует кусок (FR-56a/b/d) — id: p29-overlay-writer — Status: TODO | Est: 360m
+  _depends: p28-ndjson-clobber-safe_
+  _Requirements: [FR-56](FR.md#fr-56)_
+  **Done When:**
+  - [ ] КАЖДЫЙ путь прогона дописывает в append-only `.dev-pomogator/.scenario-results.ndjson` строку `{scenario_id, result, time, run_id, source, trace_id}` на исполненный сценарий: `scripts/run-bdd.mjs` (полный + фильтрованный + обход `-c <config>`) и `scripts/docker-bdd.sh` (in-Docker путь записи); канон `.last-test-run.ndjson` НЕ трогается (FR-56a)
+  - [ ] обход `-c`, пропускающий архив (`scripts/run-bdd.mjs:88-93`), дополнен записью куска `.dev-pomogator/.test-history/run-<id>.ndjson`, чтобы `trace_id` был восстановим (FR-56d)
+  - [ ] append-only verified конкурентно-безопасным на общем дереве (параллельные прогоны только дописывают, не перетирают)
+
+- [ ] P29-2: читатель — эффективный результат = свежайший из {канон, оверлей} + страж свежести + 3 бакета (FR-56c) — id: p29-reader-merge-staleness — Status: TODO | Est: 480m
+  _depends: p29-overlay-writer_
+  _Requirements: [FR-56](FR.md#fr-56)_
+  **Done When:**
+  - [ ] `tools/spec-graph/coverage.ts` (`bucketByResult`) + `tools/spec-graph/task-census.ts` берут эффективный результат = свежайший из {канон, оверлей}; passed из оверлея засчитывается ТОЛЬКО если `time` ≥ mtime `.feature` сценария; бакеты passed/stale/not_run (FR-56c)
+  - [ ] СЕКВЕНС §9: собственные юнит-тесты этих читателей (`coverage.test.ts`/`task-census.test.ts`/`ndjson-ingester.test.ts`) живут в хвосте миграции FR-51c (P27-6, `p27-tail-spec-graph`) → этот фикс-читателя приземляется ДО/ВМЕСТЕ с миграцией тех тестов, не под движущуюся мишень
+  - [ ] страж задокументирован: «грубо по `.feature` mtime» сейчас, «также mtime тестируемого кода» — записанная будущая опция (FR-56c)
+
+- [ ] P29-3: захват trace_id → след падения (кусок истории + testCaseStartedId) (FR-56d) — id: p29-trace-id-capture — Status: TODO | Est: 240m
+  _depends: p29-overlay-writer_
+  _Requirements: [FR-56](FR.md#fr-56)_
+  **Done When:**
+  - [ ] `trace_id` каждой строки оверлея указывает на кусок `.dev-pomogator/.test-history/run-<id>.ndjson` + `testCaseStartedId` сценария; упавший шаг + ошибка восстанавливаются из `testStepFinished.testStepResult.{status,message,duration}` cucumber message-ndjson (FR-56d)
+
+- [ ] P29-4: MCP-тул `get_scenario_trace(scenario_id)` + вписать в реестр (FR-56e) — id: p29-get-scenario-trace-tool — Status: TODO | Est: 360m
+  _depends: p29-reader-merge-staleness, p29-trace-id-capture_
+  _Requirements: [FR-56](FR.md#fr-56)_
+  **Done When:**
+  - [ ] `tools/spec-mcp-server/` отдаёт `get_scenario_trace(scenario_id)` → свежайший результат + (если failed/stale) упавший шаг + текст ошибки + run_id/time/source + путь к куску, одним вызовом без grep'а (FR-56e)
+  - [ ] тул вписан в реестр тулов (`buildToolRegistry`) + dep-safe — иначе мёртв у пользователей плагина (dead-integration)
+
+- [ ] P29-5: граф — рантайм-трейс-ребро на ScenarioNode + продление цепочки до →result→trace→logs (FR-56f) — id: p29-graph-runtime-trace-edge — Status: TODO | Est: 300m
+  _depends: p29-reader-merge-staleness_
+  _Requirements: [FR-56](FR.md#fr-56)_
+  **Done When:**
+  - [ ] `ScenarioNode` (где `lastResult` уже есть) получает указатель на трейс; цепочка трассировки продлевается spec→FR→scenario→result→trace→logs; `get_trace`/coverage-путь достаёт деталь падения (FR-56f)
+
+- [ ] P29-6: `@feature56` BDD-сценарии (get_scenario_trace + свежесть/бакеты, real-engine) — id: p29-feature56-bdd — Status: TODO | Est: 300m
+  _depends: p29-get-scenario-trace-tool_
+  _Requirements: [FR-56](FR.md#fr-56)_
+  **Done When:**
+  - [ ] `@feature56`-сценарии: get_scenario_trace отдаёт «где упало» для failed/stale; читатель относит изменённый-после-pass сценарий в `stale`, не `passed`; точечный прогон попадает в перекличку через оверлей — драйвят реальный код (real-engine, без моков), зелены в Docker

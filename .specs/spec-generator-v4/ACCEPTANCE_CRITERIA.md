@@ -757,3 +757,21 @@ WHEN `verifyBatch` is called with a mix of killable and surviving mutants THEN `
 **Требование:** [FR-55](FR.md#fr-55)
 
 WHEN the SKILL.md frontmatter of each child phase-assistant skill (`discovery-forms`, `requirements-chk-matrix`, `task-board-forms`) is inspected THEN the first 800 characters SHALL NOT contain auto-trigger phrases (`when the user`, `whenever`, `use this skill whenever`); WHEN the `requirements-chk-matrix` SKILL.md is inspected THEN it SHALL explicitly reference Jira trace preservation; these properties are verified by the `@feature55` BDD scenarios migrated from SPECGEN003_16/17/21/24.
+
+## AC-56.1
+
+**Требование:** [FR-56](FR.md#fr-56)
+
+WHEN полный прогон пишет канон `.dev-pomogator/.last-test-run.ndjson` THEN писатели канона SHALL остаться без изменений (снимок полного прогона), а `spec-verdict` + claim-evidence honesty-gate продолжают читать канон как есть; WHEN исполняется ЛЮБОЙ путь прогона (полный, фильтрованный `--name`/`--tags`, обход `-c <config>`, in-Docker `docker-bdd.sh`) THEN он SHALL дописать в append-only `.dev-pomogator/.scenario-results.ndjson` ОДНУ строку на исполненный сценарий `{scenario_id, result, time, run_id, source, trace_id}`; WHEN пишут конкурентные сессии на общем дереве THEN оверлей SHALL только дополняться (никогда не перетираться), оставаясь конкурентно-безопасным.
+
+## AC-56.2
+
+**Требование:** [FR-56](FR.md#fr-56)
+
+WHEN `coverage.ts bucketByResult` / `task-census.ts` вычисляют результат сценария THEN они SHALL брать ЭФФЕКТИВНЫЙ результат = свежайший из {канон, оверлей}; WHEN свежайший passed пришёл из оверлея И его `time` < mtime `.feature`-файла сценария THEN результат SHALL читаться как `stale`, НЕ `passed`; WHEN сценарий отсутствует и в каноне, и в оверлее THEN бакет SHALL быть `not_run`; перекличка SHALL различать ТРИ бакета passed/stale/not_run; WHEN захватывается результат сценария THEN `trace_id` SHALL указывать на кусок `.dev-pomogator/.test-history/run-<id>.ndjson` + `testCaseStartedId`, а путь прогона, не архивирующий достаточно для восстановления (обход `-c`), SHALL быть дополнен архивом.
+
+## AC-56.3
+
+**Требование:** [FR-56](FR.md#fr-56)
+
+WHEN вызывается MCP-тул `get_scenario_trace(scenario_id)` THEN он SHALL вернуть свежайший результат и, если failed/stale, упавший шаг + текст ошибки + run_id/time/source + путь к куску прогона — «где упало» одним вызовом; WHEN тул добавлен THEN он SHALL быть вписан в реестр тулов `buildToolRegistry` (`tools/spec-mcp-server/`) И покрыт `@feature56` BDD-сценарием; WHEN строится спек-граф THEN цепочка трассировки SHALL продлеваться spec→FR→scenario→result→trace→logs (указатель на трейс на `ScenarioNode`, у которого `lastResult` уже есть), а `get_trace`/coverage-путь SHALL доставать деталь падения.
