@@ -52,6 +52,8 @@
 
 ### Decision: Reuse the deny-guard detector via one shared module
 
+**Требование:** [FR-1](FR.md#fr-1-scan-existing-non-bdd-tests-at-session-start), [FR-2](FR.md#fr-2-shared-non-bdd-test-detector)
+
 **Rationale:** A single source of truth for non-BDD classification prevents the scanner's patterns drifting from the guard's, so the two never disagree on what counts as a non-BDD test.
 
 **Trade-off:** It requires refactoring a live guard to import the extracted module — a small change to existing enforcement code.
@@ -62,6 +64,8 @@
 
 ### Decision: Gate the notice by a GitHub issue, not a local seen-flag
 
+**Требование:** [FR-3](FR.md#fr-3-advisory-two-path-notice), [FR-4](FR.md#fr-4-a-tracking-issue-gates-the-notice)
+
 **Rationale:** A filed issue records the migration debt durably in the team tracker (owner directive), whereas a local flag dismisses it silently with no record.
 
 **Trade-off:** The issue path needs the `gh` tool — an external dependency outside the plugin.
@@ -71,6 +75,8 @@
 - The hook auto-files the issue itself — rejected because that needs network and auth inside a SessionStart hook, breaking the fail-open builtins-only core.
 
 ### Decision: builtins-only fail-open core; dependencies via warn plus doctor-fix
+
+**Требование:** [FR-5](FR.md#fr-5-plugin-wide-distribution), [FR-6](FR.md#fr-6-doctor-verifies-and-repairs-the-hook-and-its-dependencies)
 
 **Rationale:** The core runs for plugin users with no installed dependencies and never crashes a session; any dependency it needs is surfaced rather than silently skipped (owner directive).
 
@@ -99,7 +105,7 @@
 
 | Hook файл | Тип | Тег/Scope | Что делает | По аналогии с |
 |-----------|-----|-----------|------------|---------------|
-| `tests/step_definitions/feature_bdd_test_scanner.ts` | step-defs | @FR-1..@FR-6 | seed temp project, run scanner, assert | existing `feature_*.ts` step-defs |
+| `tests/step_definitions/feature_bdd_test_scanner.ts` | step-defs | @feature1..@feature6 | seed temp project, run scanner, assert | existing `feature_*.ts` step-defs |
 
 ### Cleanup Strategy
 

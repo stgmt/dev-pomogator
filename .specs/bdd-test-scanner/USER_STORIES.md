@@ -6,6 +6,8 @@
 
 As a plugin user working in any project, I want a one-line session-start notice of how many non-BDD test files exist, so I become aware of BDD-migration debt without anything blocking my work.
 
+**Требование:** [FR-1](FR.md#fr-1-scan-existing-non-bdd-tests-at-session-start), [FR-2](FR.md#fr-2-shared-non-bdd-test-detector), [FR-5](FR.md#fr-5-plugin-wide-distribution)
+
 **Why:** The existing deny-guard only stops creation of NEW non-BDD tests; tests that already exist accumulate silently and nobody is reminded to migrate them.
 
 **Independent Test:** BDD scenario — given a temp project with 3 `*.test.ts` files plus a `.feature`, when the scanner runs, then it reports a count of 3 and returns continue=true (does not block).
@@ -21,6 +23,8 @@ Then a non-blocking notice with the count is shown and the session continues
 ### User Story 2: Actionable two-path suggestion (Priority: P1)
 
 As a developer, I want the notice to name the two ways to resolve the debt (run the bdd-migrator agent now, or file a GitHub issue to track it), so I can act immediately without recalling the commands.
+
+**Требование:** [FR-3](FR.md#fr-3-advisory-two-path-notice)
 
 **Why:** A bare count is not actionable; pointing at the migrator and at a tracked GitHub issue turns awareness into a concrete next step that is recorded, not silently dismissed.
 
@@ -38,6 +42,8 @@ Then it lists both the bdd-migrator path and the file-a-GitHub-issue path
 
 As a developer, I want the notice to go quiet once a GitHub issue tracks the migration debt (filing the issue is the acknowledgment), and to re-appear only when new non-BDD tests appear beyond what the issue covers, so the debt is tracked in the issue tracker rather than hidden behind a silent local flag.
 
+**Требование:** [FR-4](FR.md#fr-4-a-tracking-issue-gates-the-notice)
+
 **Why:** A passive "seen" flag hides the debt; a GitHub issue records it durably for the team. A repo mid-migration (e.g. ~120 files) must not show the same notice every session once an issue already tracks it.
 
 **Independent Test:** BDD scenario — after a tracking issue is recorded, a session with the same set of non-BDD tests is silent; adding a new non-BDD test makes the notice fire again with the updated count.
@@ -53,6 +59,8 @@ Then the notice is silent
 ### User Story 4: Doctor verifies and repairs the hook and its dependencies (Priority: P2)
 
 As a plugin maintainer, I want pomogator-doctor to verify the scanner hook is registered and runnable AND that the dependencies it needs are present (the Node runtime; `gh` for the issue path), warning when a dependency is missing and offering a fix, so nothing silently does nothing.
+
+**Требование:** [FR-6](FR.md#fr-6-doctor-verifies-and-repairs-the-hook-and-its-dependencies)
 
 **Why:** A plugin-distributed hook can silently fail to register, and the issue path silently no-ops if `gh` is absent or unauthenticated; pomogator-doctor is the surface that catches and repairs both.
 

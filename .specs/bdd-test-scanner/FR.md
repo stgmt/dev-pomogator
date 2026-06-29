@@ -6,6 +6,7 @@ At session start the scanner SHALL walk the current project, classify each test 
 
 **Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1)
 **Use Case:** [UC-1](USE_CASES.md#uc-1-session-start-notice-of-existing-non-bdd-tests-happy-path)
+**User Story:** [US-1](USER_STORIES.md#user-story-1-session-start-visibility-of-non-bdd-test-debt-priority-p1)
 
 ## FR-2: Shared non-BDD test detector
 
@@ -13,6 +14,7 @@ The non-BDD classification (patterns plus allow-lists) SHALL live in one shared,
 
 **Связанные AC:** [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2)
 **Use Case:** [UC-1](USE_CASES.md#uc-1-session-start-notice-of-existing-non-bdd-tests-happy-path)
+**User Story:** [US-1](USER_STORIES.md#user-story-1-session-start-visibility-of-non-bdd-test-debt-priority-p1)
 
 ## FR-3: Advisory two-path notice
 
@@ -20,6 +22,7 @@ WHEN non-BDD tests are detected the scanner SHALL emit a non-blocking notice car
 
 **Связанные AC:** [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3)
 **Use Case:** [UC-2](USE_CASES.md#uc-2-developer-acts-via-the-migrator)
+**User Story:** [US-2](USER_STORIES.md#user-story-2-actionable-two-path-suggestion-priority-p1)
 
 ## FR-4: A tracking issue gates the notice
 
@@ -27,6 +30,7 @@ The scanner SHALL stay silent once a GitHub issue tracks the detected non-BDD te
 
 **Связанные AC:** [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4)
 **Use Case:** [UC-4](USE_CASES.md#uc-4-a-tracking-issue-silences-the-notice-no-nagging)
+**User Story:** [US-3](USER_STORIES.md#user-story-3-a-filed-github-issue-silences-the-notice-priority-p2)
 
 ## FR-5: Plugin-wide distribution
 
@@ -34,6 +38,7 @@ The scanner hook SHALL be registered as a SessionStart hook in the plugin manife
 
 **Связанные AC:** [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5)
 **Use Case:** [UC-1](USE_CASES.md#uc-1-session-start-notice-of-existing-non-bdd-tests-happy-path)
+**User Story:** [US-1](USER_STORIES.md#user-story-1-session-start-visibility-of-non-bdd-test-debt-priority-p1)
 
 ## FR-6: Doctor verifies and repairs the hook and its dependencies
 
@@ -41,3 +46,4 @@ pomogator-doctor SHALL include a check that verifies the scanner hook is registe
 
 **Связанные AC:** [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6)
 **Use Case:** [UC-5](USE_CASES.md#uc-5-doctor-verifies-and-repairs-the-hook-and-its-dependencies)
+**User Story:** [US-4](USER_STORIES.md#user-story-4-doctor-verifies-and-repairs-the-hook-and-its-dependencies-priority-p2)
