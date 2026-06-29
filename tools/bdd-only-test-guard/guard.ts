@@ -76,6 +76,57 @@ export function bddOnlyDecision(
   return null;
 }
 
+/**
+ * FR-10 (shrink-only invariant): count test-case OPENERS in a test file's content — a builtins-only
+ * regex tally per language (vitest/jest `it(`/`test(`, pytest `def test_`, go `func Test`, xUnit/NUnit
+ * `[Fact]`/`[Theory]`/`[Test]`). Exact accuracy matters less than CONSISTENCY: the guard only compares
+ * pre vs post of the SAME edit, so a stable over/under-count cancels out. Pure + exported for the BDD scenario.
+ */
+export function countTestCases(content: string): number {
+  let n = 0;
+  n += (content.match(/\b(?:it|test)\s*(?:\.\w+)*\s*\(/g) || []).length; // it( / test( / it.each( / test.skip(
+  n += (content.match(/^[ \t]*(?:async[ \t]+)?def[ \t]+test\w*[ \t]*\(/gm) || []).length; // pytest def test_…(
+  n += (content.match(/^[ \t]*func[ \t]+Test\w*[ \t]*\(/gm) || []).length; // go func TestXxx(
+  n += (content.match(/\[[ \t]*(?:Fact|Theory|Test|TestMethod|TestCase)\b/g) || []).length; // xUnit/NUnit/MSTest
+  return n;
+}
+
+/** Apply the harness edit to the pre-content to get the post-content. Mirrors the REAL PreToolUse payload
+ *  shapes (the same ones game_guard_facts.ts tests against): Edit `{old_string,new_string,replace_all?}`,
+ *  MultiEdit `{edits:[{old_string,new_string,replace_all?}]}`, Write `{content}`. Fail-safe: unknown → pre. */
+export function applyEditToContent(toolName: string | undefined, toolInput: Record<string, unknown>, pre: string): string {
+  const one = (s: string, o: unknown, nw: unknown, all: unknown): string =>
+    typeof o === 'string' && typeof nw === 'string' ? (all === true ? s.split(o).join(nw) : s.replace(o, nw)) : s;
+  if (toolName === 'Write') return typeof toolInput.content === 'string' ? (toolInput.content as string) : pre;
+  if (toolName === 'Edit') return one(pre, toolInput.old_string, toolInput.new_string, toolInput.replace_all);
+  if (toolName === 'MultiEdit') {
+    let c = pre;
+    const edits = Array.isArray(toolInput.edits) ? (toolInput.edits as Array<Record<string, unknown>>) : [];
+    for (const e of edits) c = one(c, e?.old_string, e?.new_string, e?.replace_all);
+    return c;
+  }
+  return pre;
+}
+
+/** FR-10: an Edit/MultiEdit/Write to an EXISTING non-BDD test file may not INCREASE its test-case count
+ *  (the staged tail only shrinks). Returns a deny reason when post > pre, else null. Pure + exported. */
+export function shrinkOnlyDeny(filePath: string, preContent: string, postContent: string): string | null {
+  const posix = filePath.replace(/\\/g, '/');
+  if (ALLOWED_PATTERNS.some((re) => re.test(posix))) return null;
+  if (!NON_BDD_TEST_PATTERNS.some((re) => re.test(posix))) return null;
+  const pre = countTestCases(preContent);
+  const post = countTestCases(postContent);
+  if (post <= pre) return null;
+  return (
+    `[bdd-only-test-guard] shrink-only invariant: this edit RAISES the test-case count of an existing non-BDD test file (${pre} → ${post}).\n` +
+    `  File: ${posix}\n` +
+    `  The BDD-only migration lets you EDIT an existing test file to SHRINK/maintain it — not to add NEW coverage to the non-BDD tail.\n` +
+    `  Write the new case as a cucumber scenario instead:\n` +
+    `   • add a Scenario (with a real @featureN tag) to .specs/<slug>/<slug>.feature + a step-def under tests/step_definitions/\n` +
+    `  FALSE POSITIVE: a genuine split/refactor that legitimately raises the opener count → use the logged escape: set BDD_ONLY_SKIP=1.`
+  );
+}
+
 function logEscape(cwd: string, entry: Record<string, unknown>): void {
   try {
     const dir = path.join(cwd, '.claude', 'logs');
@@ -96,7 +147,21 @@ async function main(): Promise<void> {
   const filePath = data.tool_input?.file_path;
   const cwd = data.cwd || process.cwd();
 
-  const reason = bddOnlyDecision(data.tool_name, filePath, resolveExists(filePath, cwd));
+  const exists = resolveExists(filePath, cwd);
+  let reason = bddOnlyDecision(data.tool_name, filePath, exists);
+  // FR-10 shrink-only: an Edit/MultiEdit/Write to an EXISTING non-BDD test file may not RAISE its
+  // test-case count (the staged tail only shrinks). Reads pre from disk, simulates the edit, compares.
+  // Fail-open (unreadable file / odd payload → allow). Escape-able via BDD_ONLY_SKIP (handled below).
+  if (!reason && exists && filePath && (data.tool_name === 'Edit' || data.tool_name === 'MultiEdit' || data.tool_name === 'Write')) {
+    try {
+      const abs = path.isAbsolute(filePath) ? filePath : path.join(cwd, filePath);
+      const pre = fs.readFileSync(abs, 'utf-8');
+      const post = applyEditToContent(data.tool_name, (data.tool_input ?? {}) as Record<string, unknown>, pre);
+      reason = shrinkOnlyDeny(filePath, pre, post);
+    } catch {
+      /* fail-open */
+    }
+  }
   if (!reason) process.exit(0);
 
   // Escape hatch (logged) — allow but record.

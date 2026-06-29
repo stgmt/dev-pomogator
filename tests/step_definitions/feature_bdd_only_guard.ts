@@ -19,6 +19,16 @@ const GUARD_REL = 'tools/bdd-only-test-guard/guard.ts';
 interface GuardWorld extends V4World {
   guardExit: number;
   guardStdout: string;
+  bddRel?: string;
+  bddPre?: string;
+}
+
+/** A real vitest-style file with exactly `n` test-case openers (`it(`), so countTestCases() === n. */
+function makeTestFile(n: number): string {
+  let s = "describe('legacy', () => {\n";
+  for (let i = 1; i <= n; i++) s += `  it('case ${i}', () => { expect(${i}).toBe(${i}); });\n`;
+  s += '});\n';
+  return s;
 }
 
 /** Spawn the guard through its REAL bootstrap launcher with a PreToolUse payload. cwd=REPO so tsx
@@ -39,8 +49,56 @@ function runGuard(
   return { exitCode: res.status ?? 1, stdout: res.stdout || '' };
 }
 
+/** Spawn the guard with a real Edit PreToolUse payload (file_path + old_string/new_string) so the
+ *  FR-10 shrink-only path reads the on-disk pre-content and simulates the edit. No mocks. */
+function runGuardEdit(
+  filePathRel: string,
+  cwd: string,
+  oldStr: string,
+  newStr: string,
+  env: Record<string, string> = {},
+): { exitCode: number; stdout: string } {
+  const payload = JSON.stringify({ tool_name: 'Edit', tool_input: { file_path: filePathRel, old_string: oldStr, new_string: newStr }, cwd });
+  const res = spawnSync(
+    process.execPath,
+    ['-e', "require(require('path').resolve('tools/_shared/bootstrap.cjs'))", '--', GUARD_REL],
+    { input: payload, encoding: 'utf-8', cwd: REPO, env: { ...process.env, ...env }, timeout: 30000 },
+  );
+  return { exitCode: res.status ?? 1, stdout: res.stdout || '' };
+}
+
 Given<GuardWorld>(/^a clean workspace for the bdd-only guard$/, function () {
   // V4World Before already made a fresh tempDir; nothing else needed.
+});
+
+Given<GuardWorld>(/^an existing non-BDD test file with (\d+) test cases$/, function (n: string) {
+  const rel = 'tests/e2e/legacy.test.ts';
+  const content = makeTestFile(parseInt(n, 10));
+  const abs = path.join(this.tempDir, rel);
+  fs.mkdirSync(path.dirname(abs), { recursive: true });
+  fs.writeFileSync(abs, content);
+  this.bddRel = rel;
+  this.bddPre = content;
+});
+
+When<GuardWorld>(/^the bdd-only guard receives an Edit that raises its test-case count to (\d+)$/, function (m: string) {
+  const next = makeTestFile(parseInt(m, 10));
+  const r = runGuardEdit(this.bddRel!, this.tempDir, this.bddPre!, next);
+  this.guardExit = r.exitCode;
+  this.guardStdout = r.stdout;
+});
+
+When<GuardWorld>(/^the bdd-only guard receives an Edit that lowers its test-case count to (\d+)$/, function (m: string) {
+  const next = makeTestFile(parseInt(m, 10));
+  const r = runGuardEdit(this.bddRel!, this.tempDir, this.bddPre!, next);
+  this.guardExit = r.exitCode;
+  this.guardStdout = r.stdout;
+});
+
+Then<GuardWorld>(/^the bdd-only guard should deny with a shrink-only reason$/, function () {
+  assert.strictEqual(this.guardExit, 2, `expected deny exit 2, got ${this.guardExit}. stdout: ${this.guardStdout}`);
+  assert.match(this.guardStdout, /"permissionDecision"\s*:\s*"deny"/, 'deny decision in output');
+  assert.match(this.guardStdout, /shrink-only/, 'names the shrink-only invariant');
 });
 
 Given<GuardWorld>(/^an existing test file "([^"]+)" in the workspace$/, function (rel: string) {
