@@ -234,11 +234,17 @@ function agentBgInFlightCount(rawTranscript) {
   }
   return inFlight.size;
 }
-var HOOK_INJECTION_RE = /^\s*(📋|👉|…ещё|\[specs-validator\]|⚠️|PHASE GATE WARNING|Stop hook feedback|UserPromptSubmit hook|<\/?task-notification|<(?:task-id|tool-use-id|output-file|status|summary)|\[SYSTEM NOTIFICATION|This is an automated|Do NOT interpret|[A-Za-z][\w.-]*:\s*\d+\s*(?:open|⏸))/u;
+var HOOK_INJECTION_RE = /^\s*(📋|👉|…ещё|\[specs-validator\]|⚠️|PHASE GATE WARNING|Stop hook feedback|UserPromptSubmit hook|<\/?task-notification|<(?:task-id|tool-use-id|output-file|status|summary)|<\/?command-(?:name|message|args)|<\/?local-command-(?:stdout|caveat)|\[SYSTEM NOTIFICATION|This is an automated|Do NOT interpret|[A-Za-z][\w.-]*:\s*\d+\s*(?:open|⏸))/u;
+function isTypedHumanPrompt(e) {
+  if (!isRealUser(e)) return false;
+  if (e.isMeta === true || e.isCompactSummary === true || e.isVisibleInTranscriptOnly === true) return false;
+  if (e.promptSource === "system") return false;
+  return true;
+}
 function lastUserPrompt(rawTranscript) {
   const lines = parseLines(rawTranscript);
   for (let i = lines.length - 1; i >= 0; i--) {
-    if (lines[i].isSidechain || !isRealUser(lines[i])) continue;
+    if (lines[i].isSidechain || !isTypedHumanPrompt(lines[i])) continue;
     const allLines = assistantText(lines[i]).split(/\r?\n/);
     const firstNonEmpty = allLines.find((ln) => ln.trim()) ?? "";
     if (HOOK_INJECTION_RE.test(firstNonEmpty)) continue;
@@ -249,16 +255,20 @@ function lastUserPrompt(rawTranscript) {
 }
 var MANDATE_MAX_PROMPTS = 12;
 var MANDATE_MAX_LEN = 400;
+var ACK_ONLY_RE = /^(?:го|гоу|ок|окей|оке|ладно|давай|да|нет|ага|угу|ало|оа|плюс|\+{1,3}|go|ok|okay|yes|yep|nope|no|k|к|sure|next|далее|дальше)$/i;
 function sessionUserPrompts(rawTranscript) {
   const lines = parseLines(rawTranscript);
   const out = [];
   for (const e of lines) {
-    if (e.isSidechain || !isRealUser(e)) continue;
+    if (e.isSidechain || !isTypedHumanPrompt(e)) continue;
     const allLines = assistantText(e).split(/\r?\n/);
     const firstNonEmpty = allLines.find((ln) => ln.trim()) ?? "";
     if (HOOK_INJECTION_RE.test(firstNonEmpty)) continue;
     const cleaned = allLines.filter((ln) => !HOOK_INJECTION_RE.test(ln)).join("\n").trim();
-    if (cleaned) out.push(cleaned.length > MANDATE_MAX_LEN ? cleaned.slice(0, MANDATE_MAX_LEN) + "\u2026" : cleaned);
+    if (!cleaned) continue;
+    const norm = cleaned.replace(/[\s.,!?…]+/gu, "").toLowerCase();
+    if (ACK_ONLY_RE.test(norm)) continue;
+    out.push(cleaned.length > MANDATE_MAX_LEN ? cleaned.slice(0, MANDATE_MAX_LEN) + "\u2026" : cleaned);
   }
   return out.slice(-MANDATE_MAX_PROMPTS);
 }

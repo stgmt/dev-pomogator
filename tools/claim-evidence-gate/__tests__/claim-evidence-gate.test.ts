@@ -227,13 +227,21 @@ describe('CEGATE001: pure classifier units', () => {
   // (oldest→newest) with hook-injection messages dropped — the agent's MANDATE the judge weighs so a stop
   // is approved once everything the human asked is done, even while unrelated backlog stays open (the
   // @feature35-loop fix). A census-banner message is skipped whole; the two real prompts survive in order.
-  it('CEGATE001_44: sessionUserPrompts lists every real prompt oldest→newest, injection messages dropped', () => {
+  it('CEGATE001_44: sessionUserPrompts keeps genuine prompts; drops banner/skill/compact/notification injections + pure acks', () => {
+    // mirrors EVERY leak class found on the real session transcript (verify-against-real-artifact):
+    // census banner (line-injection), isMeta skill-content, isCompactSummary /compact summary,
+    // promptSource:'system' task-notification, /compact command tags, and a pure continuation ack.
+    const meta = (text: string, extra: Record<string, unknown>): Block => ({ type: 'user', isSidechain: false, ...extra, message: { role: 'user', content: [{ type: 'text', text }] } });
     const raw = [
-      U('слей инструменты 26→24'),
+      U('слей инструменты 26→24'), // genuine
       A([txt('делаю')]),
-      U('📋 Spec tasks (census): 207 open\n   👉 следующее: WS-F [spec-generator-v4:ws-f-remaining]'),
-      A([txt('продолжаю')]),
-      U('и почини судью, добавь бенч'),
+      U('📋 Spec tasks (census): 207 open\n   👉 следующее: WS-F [spec-generator-v4:ws-f-remaining]'), // census banner → drop
+      meta('Base directory for this skill: E:/x\n# /run-tests', { isMeta: true }), // skill content → drop (structural)
+      meta('This session is being continued from a previous conversation. The summary…', { isCompactSummary: true, isVisibleInTranscriptOnly: true }), // /compact summary → drop
+      meta('<task-notification>\n<status>completed</status>\n</task-notification>', { promptSource: 'system' }), // bg notification → drop (structural)
+      U('<command-name>/compact</command-name>\n<command-message>compact</command-message>'), // slash-command machinery → drop
+      U('го'), // pure continuation ack → drop
+      U('и почини судью, добавь бенч'), // genuine
     ]
       .map((r) => JSON.stringify(r))
       .join('\n');

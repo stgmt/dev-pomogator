@@ -27,6 +27,11 @@ export interface TurnWindow {
 interface TranscriptLine {
   type?: string;
   isSidechain?: boolean;
+  // FR-28: harness-set markers that distinguish injected user-role messages from genuinely-typed prompts.
+  isMeta?: boolean;
+  isCompactSummary?: boolean;
+  isVisibleInTranscriptOnly?: boolean;
+  promptSource?: string;
   message?: { role?: string; content?: unknown };
 }
 
@@ -284,7 +289,26 @@ export function agentBgInFlight(rawTranscript: string): boolean {
 // banner, specs-validator output, gate kicks, task-notifications, system reminders. Stripped before
 // intent classification so a banner-only turn is not mistaken for the user's request.
 const HOOK_INJECTION_RE =
-  /^\s*(📋|👉|…ещё|\[specs-validator\]|⚠️|PHASE GATE WARNING|Stop hook feedback|UserPromptSubmit hook|<\/?task-notification|<(?:task-id|tool-use-id|output-file|status|summary)|\[SYSTEM NOTIFICATION|This is an automated|Do NOT interpret|[A-Za-z][\w.-]*:\s*\d+\s*(?:open|⏸))/u;
+  /^\s*(📋|👉|…ещё|\[specs-validator\]|⚠️|PHASE GATE WARNING|Stop hook feedback|UserPromptSubmit hook|<\/?task-notification|<(?:task-id|tool-use-id|output-file|status|summary)|<\/?command-(?:name|message|args)|<\/?local-command-(?:stdout|caveat)|\[SYSTEM NOTIFICATION|This is an automated|Do NOT interpret|[A-Za-z][\w.-]*:\s*\d+\s*(?:open|⏸))/u;
+
+/**
+ * FR-28 (2026-06-29): a GENUINELY-TYPED human prompt = a real user turn that the harness did NOT inject.
+ * The harness MARKS its own user-role injections structurally, which is far more robust than regex-matching
+ * the open-ended set of injection TEXT shapes (the real-transcript check leaked the /compact continuation
+ * summary, skill-content, and slash-command machinery past a text blocklist):
+ *   - isMeta=true            → skill-content loads, Stop-hook feedback
+ *   - isCompactSummary=true / isVisibleInTranscriptOnly=true → the /compact continuation summary
+ *   - promptSource='system'  → task-notifications, hook output (genuine prompts are promptSource:'typed')
+ * Used ONLY by the intent extractors (lastUserPrompt / sessionUserPrompts) — NOT by extractTurnWindow's
+ * boundary (which keeps its existing behaviour so the gate's turn-scoping is unchanged). Hand-built test
+ * fixtures set none of these flags → treated as genuine (a negative filter, not a promptSource allowlist).
+ */
+function isTypedHumanPrompt(e: TranscriptLine): boolean {
+  if (!isRealUser(e)) return false;
+  if (e.isMeta === true || e.isCompactSummary === true || e.isVisibleInTranscriptOnly === true) return false;
+  if (e.promptSource === 'system') return false;
+  return true;
+}
 
 /**
  * Phase 1 (2026-06-21): the last REAL user prompt text — the agent-independent INTENT signal (the agent
@@ -294,7 +318,7 @@ const HOOK_INJECTION_RE =
 export function lastUserPrompt(rawTranscript: string): string {
   const lines = parseLines(rawTranscript);
   for (let i = lines.length - 1; i >= 0; i--) {
-    if (lines[i].isSidechain || !isRealUser(lines[i])) continue;
+    if (lines[i].isSidechain || !isTypedHumanPrompt(lines[i])) continue;
     const allLines = assistantText(lines[i]).split(/\r?\n/);
     // FR-18 (2026-06-25): a user-role message whose FIRST non-empty line is a hook-injection marker
     // (⚠️ a Stop-hook block reason, 📋 census, «Stop hook feedback», …) IS hook feedback, NOT a user
@@ -321,16 +345,26 @@ export function lastUserPrompt(rawTranscript: string): string {
  */
 const MANDATE_MAX_PROMPTS = 12;
 const MANDATE_MAX_LEN = 400;
+// A message that is ONLY a continuation ack — no ask. Matched against the prompt with whitespace/punct
+// stripped, so only an EXACT filler is dropped (a real request that merely STARTS with one survives).
+const ACK_ONLY_RE = /^(?:го|гоу|ок|окей|оке|ладно|давай|да|нет|ага|угу|ало|оа|плюс|\+{1,3}|go|ok|okay|yes|yep|nope|no|k|к|sure|next|далее|дальше)$/i;
 export function sessionUserPrompts(rawTranscript: string): string[] {
   const lines = parseLines(rawTranscript);
   const out: string[] = [];
   for (const e of lines) {
-    if (e.isSidechain || !isRealUser(e)) continue;
+    if (e.isSidechain || !isTypedHumanPrompt(e)) continue;
     const allLines = assistantText(e).split(/\r?\n/);
     const firstNonEmpty = allLines.find((ln) => ln.trim()) ?? '';
     if (HOOK_INJECTION_RE.test(firstNonEmpty)) continue; // a hook-injection-led message is not a prompt
     const cleaned = allLines.filter((ln) => !HOOK_INJECTION_RE.test(ln)).join('\n').trim();
-    if (cleaned) out.push(cleaned.length > MANDATE_MAX_LEN ? cleaned.slice(0, MANDATE_MAX_LEN) + '…' : cleaned);
+    if (!cleaned) continue;
+    // Drop a PURE continuation ack ("го"/"ок"/"давай"/"go"…) — it carries no ask, and a run of them must
+    // not crowd a substantive request out of the last-N window (which would leave an acks-only mandate the
+    // judge could falsely read as "complete"). Only an EXACT filler match is dropped: "давай сделай X"
+    // (spaces stripped → "давайсделайx") does NOT match `^давай$`, so a real ask is never lost.
+    const norm = cleaned.replace(/[\s.,!?…]+/gu, '').toLowerCase();
+    if (ACK_ONLY_RE.test(norm)) continue;
+    out.push(cleaned.length > MANDATE_MAX_LEN ? cleaned.slice(0, MANDATE_MAX_LEN) + '…' : cleaned);
   }
   return out.slice(-MANDATE_MAX_PROMPTS);
 }
