@@ -32,7 +32,7 @@ import path from 'node:path';
 
 import { log as _logShared, normalizePath } from '../_shared/hook-utils.ts';
 import { markerPath, readMarker, writeMarkerAtomic, isWithinCooldown, hashFileList } from '../_shared/marker-utils.ts';
-import { extractTurnWindow, bgInFlightInWindow, agentBgInFlightCount, bgCommandInFlight, lastUserPrompt } from './turn_window.ts';
+import { extractTurnWindow, bgInFlightInWindow, agentBgInFlightCount, bgCommandInFlight, lastUserPrompt, sessionUserPrompts } from './turn_window.ts';
 import { firstUnsupported, isSpecCompletionClaim } from './claim_classifier.ts';
 import { readTaskCensusCache, scopeCensusToSlugs, sessionEditedSpecSlugs, lastEditedSpecSlug, agentOpenTodoCount, agentNextOpenTodo, liveOpenForUncensusedSlugs, type TaskCensusCache } from '../spec-graph/task-census.ts';
 import { judgeStop, judgeAvailable, buildJudgeNoTokenDemand, isJudgeArmed } from './meridian-judge.ts';
@@ -314,11 +314,22 @@ async function main(): Promise<void> {
   // judge / gate-meta / spec-false-close). Default (implement verb present OR ambiguous) → enforce-work
   // (К4 conservative). The judge ALSO gets `userRequest` as a backstop for phrasings this regex misses.
   const userRequest = lastUserPrompt(rawTranscript);
+  // FR-28 (2026-06-29): the human's FULL session mandate (every typed prompt, injections stripped). The
+  // judge weighs it as a distinct dimension — once everything the human asked is done, the remaining
+  // nextOpenTask backlog is NOT the agent's job → APPROVE (overrides the next-open-task / fake-handoff
+  // rule). This is the fix for the loop the owner hit: a finished merge kept getting kicked toward an
+  // unrequested backlog umbrella (@feature35) because the gate conflated "open task in a touched spec"
+  // with "the human's mandate". Agent-independent (transcript-derived) → ungameable.
+  const sessionPrompts = sessionUserPrompts(rawTranscript);
   // FR-5 (2026-06-25): editing the gate is only "fighting" it when the user's task is something ELSE.
   // When the owner ASKED to work on the gate/pinator itself, the gate-self-edit fact is NOT a tell — it's
   // the assigned task — so suppress it deterministically (don't rely on the LLM to re-derive the exception;
   // it over-fired on honest gate-dev). edit-gate-to-dodge keeps the fact (its userRequest is про a spec).
-  const taskIsAboutTheGate = /пинатор|pinator|claim.?evidence.?gate|claim.?gate|сторож/i.test(userRequest);
+  // FR-28: «судья/судью/judge/meridian» added — the owner's word for THIS subsystem was «судью», and the
+  // file edited here is meridian-judge.ts. Without it, "fix the judge" requests register gateSelfEdit with
+  // suppression OFF → the agent's own honest gate-dev stop is misread as "edit-gate-to-dodge". `судь[яеиёю]`
+  // matches судья/судье/судьи/судью but NOT судьба (fate), so it does not over-suppress on unrelated prose.
+  const taskIsAboutTheGate = /пинатор|pinator|claim.?evidence.?gate|claim.?gate|сторож|судь[яеиёю]|meridian|\bjudge\b/i.test(userRequest);
   const ANALYSIS_RE = /\bанализ|разбер|разбор|оцен[иь]|отч[её]т|\breport\b|analyz|ревью|\breview\b|\bплан\b|\bplan\b|посмотри что|что думаешь|что не так/i;
   // STRONG implement verbs only — NOT ambiguous "сделай/делай" (e.g. "сделай анализ", "план работ дай"
   // are analysis). A bare "делай вариант X" has no analysis word → already falls through to enforce-work.
@@ -442,6 +453,7 @@ async function main(): Promise<void> {
         nextOpenTask: recencyNextOpen ?? scoped?.specs?.[0]?.nextOpen ?? null, // FR-22: prefer the spec edited most recently
         multiSpecSession: editedSlugs.size > 1,
         userRequest, // Phase 1: backstop — the judge approves a report-stop the user asked for
+        sessionUserPrompts: sessionPrompts, // FR-28: the full human mandate — mandate-complete overrides nextOpenTask backlog
         gateSelfEditThisTurn: gateSelfEditThisTurn && !taskIsAboutTheGate, // FR-4/5: fighting-the-gate ONLY if the task is NOT про the gate (honest gate-dev not penalised)
         selfMarkedBlockedOrBacklogThisTurn, // FR-4/5: self-marked own work blocked/backlog this turn (self-exemption)
       };

@@ -309,3 +309,28 @@ export function lastUserPrompt(rawTranscript: string): string {
   }
   return '';
 }
+
+/**
+ * FR-28 (2026-06-29): the FULL list of real human prompts THIS session, oldest→newest, with the same
+ * hook-injection stripping as lastUserPrompt (the spec-tasks banner / gate kicks / notifications are NOT
+ * the human's words). This is the agent's MANDATE — what the human actually asked for — which the judge's
+ * mandate layer weighs to decide "is the requested task done?" so a stop is approved once that mandate is
+ * complete, even while unrelated backlog (nextOpenTask) stays open. Agent-independent: the agent cannot
+ * fabricate the human's typed prompts. Bounded — the LAST MANDATE_MAX_PROMPTS asks, each truncated to
+ * MANDATE_MAX_LEN — so the judge prompt stays small and cheap. Empty array when no real prompt is found.
+ */
+const MANDATE_MAX_PROMPTS = 12;
+const MANDATE_MAX_LEN = 400;
+export function sessionUserPrompts(rawTranscript: string): string[] {
+  const lines = parseLines(rawTranscript);
+  const out: string[] = [];
+  for (const e of lines) {
+    if (e.isSidechain || !isRealUser(e)) continue;
+    const allLines = assistantText(e).split(/\r?\n/);
+    const firstNonEmpty = allLines.find((ln) => ln.trim()) ?? '';
+    if (HOOK_INJECTION_RE.test(firstNonEmpty)) continue; // a hook-injection-led message is not a prompt
+    const cleaned = allLines.filter((ln) => !HOOK_INJECTION_RE.test(ln)).join('\n').trim();
+    if (cleaned) out.push(cleaned.length > MANDATE_MAX_LEN ? cleaned.slice(0, MANDATE_MAX_LEN) + '…' : cleaned);
+  }
+  return out.slice(-MANDATE_MAX_PROMPTS);
+}

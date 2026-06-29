@@ -13,7 +13,7 @@ import path from 'node:path';
 import { buildJudgeNoTokenDemand, resolveEndpoint, isJudgeArmed } from '../meridian-judge.ts';
 
 import { classify, firstUnsupported, stripCode } from '../claim_classifier.ts';
-import { extractTurnWindow, bgInFlightInWindow, agentBgInFlight, agentBgInFlightCount, lastUserPrompt } from '../turn_window.ts';
+import { extractTurnWindow, bgInFlightInWindow, agentBgInFlight, agentBgInFlightCount, lastUserPrompt, sessionUserPrompts } from '../turn_window.ts';
 import { agentOpenTodoCount, liveOpenForUncensusedSlugs, lastEditedSpecSlug } from '../../spec-graph/task-census.ts';
 import { gateSelfEdit, selfMarkedBlockedOrBacklog } from '../game_guard_facts.ts';
 
@@ -221,6 +221,24 @@ describe('CEGATE001: pure classifier units', () => {
       .map((r) => JSON.stringify(r))
       .join('\n');
     expect(lastUserPrompt(raw)).toBe('реальный запрос пользователя');
+  });
+
+  // @feature28 — FR-28 (2026-06-29): sessionUserPrompts returns the FULL list of real human prompts
+  // (oldest→newest) with hook-injection messages dropped — the agent's MANDATE the judge weighs so a stop
+  // is approved once everything the human asked is done, even while unrelated backlog stays open (the
+  // @feature35-loop fix). A census-banner message is skipped whole; the two real prompts survive in order.
+  it('CEGATE001_44: sessionUserPrompts lists every real prompt oldest→newest, injection messages dropped', () => {
+    const raw = [
+      U('слей инструменты 26→24'),
+      A([txt('делаю')]),
+      U('📋 Spec tasks (census): 207 open\n   👉 следующее: WS-F [spec-generator-v4:ws-f-remaining]'),
+      A([txt('продолжаю')]),
+      U('и почини судью, добавь бенч'),
+    ]
+      .map((r) => JSON.stringify(r))
+      .join('\n');
+    expect(sessionUserPrompts(raw)).toEqual(['слей инструменты 26→24', 'и почини судью, добавь бенч']);
+    expect(sessionUserPrompts('')).toEqual([]); // no transcript → empty mandate (rule cannot fire)
   });
 
   // @feature11 — investigated for the 5a "agent-completion" tightening (real transcript shapes):
