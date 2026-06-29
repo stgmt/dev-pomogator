@@ -80,3 +80,20 @@ D2 is "fixed" — changing the shared scaffold blind risks breaking the establis
 
 Cross-ref: `spec-generator-dev` skill (subsystem maintenance), `spec-mcp-usability-dogfood`
 (systematic friction harvesting from transcripts).
+
+## Resolution (2026-06-29, same day)
+
+The root cause (process: going manual instead of the sub-skills) was fixed by a NEW enforcement
+mechanism rather than by smoothing the manual path — which turned out to obviate most of part Б:
+
+- **Process fix (DONE, shipped):** new PreToolUse hook `tools/spec-authoring-steer/steer.ts`
+  steers/blocks full-doc hand-authoring of form docs to the automator sub-skills (shadow→enforce;
+  6 legitimate authors marked with `[skip-spec-steer:]`). Rule: `.claude/rules/spec-authoring-via-subskills.md`.
+- **D1 / D2 / D4 (OBVIATED):** these "smooth the *manual* path" fixes are moot now the manual path
+  is discouraged — the sub-skill path (which already wires anchors + valid forms) is the only path.
+  Left as future polish, NOT blockers.
+- **D3 (DONE, verifying):** `spec-verdict` now prints a per-code `fix <CODE>: <how>` remediation
+  line under the conformance count (additive). In-session GREEN; a full Docker BDD run is verifying
+  no scenario asserts the old verdict output before the change is committed.
+- **D2 tag canon** (still open, owner call): scaffold `.feature` comment says `@FR-N`, corpus uses
+  `@featureN`; conformance accepts both. Needs an owner decision before the scaffold is changed.
