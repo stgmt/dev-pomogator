@@ -20,11 +20,13 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { inventoryVitestSource, type CaseKind } from './inventory.ts';
 
-// Skip build/vendor dirs AND non-suite trees: `fixtures` holds sample/fixture test DATA (e.g. a
-// deliberate fake-positive.steps.ts BDD sample), and `.specs` holds backlog `_artifact/tests`
-// — neither is the repo's real suite, so neither is a migration target. Roadmapping them overcounts
-// and would tempt the rollout to "migrate" a fixture (actively wrong).
-const SKIP_DIRS = new Set(['node_modules', '.git', '.stryker-tmp', 'dist', '.dev-pomogator', 'coverage', 'fixtures', '.specs']);
+// Skip build/vendor dirs AND non-suite trees: `fixtures` (and any `__fixtures__`) hold sample/fixture
+// test DATA (e.g. a deliberate fake-positive.steps.ts BDD sample), and `.specs` holds backlog
+// `_artifact/__fixtures__` scaffolding (generated example tests for never-built specs — dead refs to
+// the removed v2.0 `extensions/` layout; relocated from `_artifact/tests/` so they stop masquerading
+// as live `*.test.ts` twins). Neither is the repo's real suite, so neither is a migration target.
+// Roadmapping them overcounts and would tempt the rollout to "migrate" a fixture (actively wrong).
+const SKIP_DIRS = new Set(['node_modules', '.git', '.stryker-tmp', 'dist', '.dev-pomogator', 'coverage', 'fixtures', '__fixtures__', '.specs']);
 const TEST_RE = /\.test\.ts$/;
 
 export interface FileReport {

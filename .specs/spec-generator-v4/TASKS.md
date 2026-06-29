@@ -1701,6 +1701,70 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   **Done When:**
   - [ ] после миграции ВСЕХ целевых спек: `npm test`/`docker-test.sh` гейтит cucumber; остаточный vitest-двойник выпилен/помечен non-traceable scratch; делается ПОСЛЕ раскатки, не раньше (нет mass-UNDEFINED)
 
+- [ ] P27-6: ко-локированный хвост → BDD: `tools/spec-graph/__tests__/*.test.ts` (18, pure) — id: p27-tail-spec-graph — Status: TODO | Est: 900m
+  _depends: p27-migrator-and-pilot_
+  _Requirements: [FR-51](FR.md#fr-51)_
+  **Done When:**
+  - [ ] мигрировать 18 `tools/spec-graph/__tests__/*.test.ts` → homeless `PLUGINxxx_spec-graph.feature` + step-def, импортящий функции spec-graph in-process (PURE-FUNCTION: import+call, ноль spawn — приём `spec-status`/`plan-validator`)
+  - [ ] валидировать зелёным в Docker через детерминированный unique-config обход; mutation-check (сломать движок → сценарий RED → восстановить); выпилить vitest-двойник ПОСЛЕ зелёного эквивалента
+  - [ ] РИСК §9: `coverage.test.ts`/`task-census.test.ts`/`ndjson-ingester.test.ts` тестируют сам читатель переклички → мигрировать ВМЕСТЕ/ПОСЛЕ фикса coverage-honesty, не под движущуюся мишень
+
+- [ ] P27-7: ко-локированный хвост → BDD: `tools/spec-mcp-server/(**/)__tests__/*.test.ts` (13, pure) — id: p27-tail-spec-mcp-server — Status: TODO | Est: 720m
+  _depends: p27-migrator-and-pilot_
+  _Requirements: [FR-51](FR.md#fr-51)_
+  **Done When:**
+  - [ ] мигрировать 13 (вкл. `sqlite/__tests__/*`) → `PLUGINxxx_spec-mcp-server.feature` + step-def, вызывающий handlers/registry in-process (PURE: import+call, без spawn по spawn-grep)
+  - [ ] валидировать зелёным в Docker через детерминированный unique-config обход; mutation-check (сломать движок → сценарий RED → восстановить); выпилить vitest-двойник ПОСЛЕ зелёного эквивалента
+
+- [ ] P27-8: ко-локированный хвост → BDD: `tools/spec-backlog/resolvers/__tests__/*.test.ts` (8, преим. pure) — id: p27-tail-spec-backlog — Status: TODO | Est: 480m
+  _depends: p27-migrator-and-pilot_
+  _Requirements: [FR-51](FR.md#fr-51)_
+  **Done When:**
+  - [ ] мигрировать 8 resolver-тестов → `PLUGINxxx_spec-backlog.feature`; 7 pure (in-process вызов resolver-функций) + 1 spawn-class → runtime step-def (реальный CLI), классификация per `bdd-migrator`
+  - [ ] валидировать зелёным в Docker через детерминированный unique-config обход; mutation-check (сломать движок → сценарий RED → восстановить); выпилить vitest-двойник ПОСЛЕ зелёного эквивалента
+
+- [ ] P27-9: ко-локированный хвост → BDD: `tools/anchor-integrity/__tests__/*.test.ts` (6, mixed) — id: p27-tail-anchor-integrity — Status: TODO | Est: 360m
+  _depends: p27-migrator-and-pilot_
+  _Requirements: [FR-51](FR.md#fr-51)_
+  **Done When:**
+  - [ ] мигрировать 6 → `PLUGINxxx_anchor-integrity.feature`; классифицировать per `bdd-migrator` — 4 pure (in-process `checkLinks`/`fix`) + 2 spawn-class (реальный хук) → runtime step-def
+  - [ ] валидировать зелёным в Docker через детерминированный unique-config обход; mutation-check (сломать движок → сценарий RED → восстановить); выпилить vitest-двойник ПОСЛЕ зелёного эквивалента
+
+- [ ] P27-10: ко-локированный хвост → BDD: `tools/marksman-installer/__tests__/*.test.ts` (4, pure) — id: p27-tail-marksman-installer — Status: TODO | Est: 300m
+  _depends: p27-migrator-and-pilot_
+  _Requirements: [FR-51](FR.md#fr-51)_
+  **Done When:**
+  - [ ] мигрировать 4 → `PLUGINxxx_marksman-installer.feature` + in-process step-defs (resolve-binary/ensure/postinstall/launch — без spawn по spawn-grep; драйв реальных функций); launch-marksman-e2e держит real-artifact assert (Docker имеет marksman)
+  - [ ] валидировать зелёным в Docker через детерминированный unique-config обход; mutation-check (сломать движок → сценарий RED → восстановить); выпилить vitest-двойник ПОСЛЕ зелёного эквивалента
+
+- [ ] P27-11: ко-локированный хвост → BDD: спутники spec-graph (spec-check-log 2 / specs-validator 1 / specs-generator 1 / spec-conformance-push 1 / spec-conformance-guard 1 / spec-llm-judge 1 / bash-post-test 1 = 8, mixed) — id: p27-tail-spec-graph-satellites — Status: TODO | Est: 480m
+  _depends: p27-migrator-and-pilot_
+  _Requirements: [FR-51](FR.md#fr-51)_
+  **Done When:**
+  - [ ] свернуть эти 8 single/double-test областей в `PLUGINxxx_spec-graph-satellites.feature` (или per-area features) + step-defs; преим. pure in-process, specs-validator — spawn-class → runtime step-def
+  - [ ] валидировать зелёным в Docker через детерминированный unique-config обход; mutation-check (сломать движок → сценарий RED → восстановить); выпилить vitest-двойник ПОСЛЕ зелёного эквивалента
+
+- [ ] P27-12: ко-локированный хвост → BDD: миграция + gate tooling (migrate-v3-to-v4 2 / bdd-migrator 2 / plan-pomogator 1 / claim-evidence-gate 1 = 6, mixed) — id: p27-tail-migration-gate-tooling — Status: TODO | Est: 360m
+  _depends: p27-migrator-and-pilot_
+  _Requirements: [FR-51](FR.md#fr-51)_
+  **Done When:**
+  - [ ] свернуть в `PLUGINxxx_migration-gate-tooling.feature` + step-defs; migrate-v3-to-v4 + bdd-migrator — pure in-process; plan-pomogator + claim-evidence-gate — spawn-class (реальный хук/гейт) → runtime step-def
+  - [ ] валидировать зелёным в Docker через детерминированный unique-config обход; mutation-check (сломать движок → сценарий RED → восстановить); выпилить vitest-двойник ПОСЛЕ зелёного эквивалента
+
+- [ ] P27-13: ко-локированный хвост → BDD: `.claude/skills/**/__tests__/*.test.ts` (4, pure) — id: p27-tail-skills-scripts — Status: TODO | Est: 240m
+  _depends: p27-migrator-and-pilot_
+  _Requirements: [FR-51](FR.md#fr-51)_
+  **Done When:**
+  - [ ] мигрировать 4 (architecture-research-workflow ×2, cross-spec-resolve, cross-spec-reconcile) → `PLUGINxxx_skills-scripts.feature` + in-process step-defs, импортящие скрипты скиллов (без spawn по spawn-grep)
+  - [ ] валидировать зелёным в Docker через детерминированный unique-config обход; mutation-check (сломать движок → сценарий RED → восстановить); выпилить vitest-двойник ПОСЛЕ зелёного эквивалента
+
+- [ ] P27-14: ко-локированный хвост (другие языки): 3 `*_test.py` / `*Tests.cs` — ОТДЕЛЬНАЯ runner-дорожка — id: p27-tail-other-language-runners — Status: TODO | Est: 240m
+  _depends: p27-migrator-and-pilot_
+  _Requirements: [FR-51](FR.md#fr-51)_
+  **Done When:**
+  - [ ] 3 не-TS теста требуют language-native BDD-раннера (pytest-bdd/behave для Python; Reqnroll для C#), НЕ cucumber-js → вне cucumber-js mainline; НЕ сворачивать в `.feature`
+  - [ ] per-file решение: native-BDD wired в граф если выполнимо, иначе удалить если мёртвый / пометить non-traceable scratch; честный TODO пока нет runner-пути
+
 ## Phase 28 — Session dogfood hardening (FR-52: door/MCP/BDD-workflow frictions, 2026-06-18)
 
 Источник: `audit-reports/session-dogfood-findings-2026-06-18.md` (находки F1–F10). Каждая задача — детерминированный фикс с тестом, раскрывает FR-52a..f. F1 — work-item автору незакоммиченной E-A-переделки двери (код двери не трогаем — чужая работа).

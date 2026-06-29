@@ -16,6 +16,16 @@ pytest/xunit unit files.
   (`tests/fixtures/`, any `__fixtures__/`). Fixture DATA legitimately contains files literally named
   `*.test.ts` (e.g. a deliberate fake-positive fixture) — never blocked.
 
+> **Backlog scaffolding ≠ migration target.** The spec-generator scaffolds example tests into
+> `.specs/backlog/<slug>/_artifact/.../*.test.ts` for *never-built* (backlog) specs. These are generated
+> SCAFFOLDING, not live tests — they import a removed v2.0 `extensions/`/non-existent production path and
+> are not in vitest `include`, so they cannot run. They were relocated from `_artifact/tests/` to
+> `_artifact/__fixtures__/` (commit, 2026-06-29) so they stop masquerading as live `*.test.ts` twins and
+> are classified as fixtures by both the `__fixtures__/` guard allowlist (above) and the `bdd-migrator`
+> corpus (`SKIP_DIRS`). Do **not** migrate them — if such a backlog spec is ever picked up, its tests are
+> authored fresh as BDD; the scaffolding is reference data. See §9 of
+> `audit-reports/coverage-not-run-rollcall-analysis.md`.
+
 Once the tail is fully migrated (no `*.test.ts` left) the staged guard is effectively total.
 
 ## How to write a test instead
