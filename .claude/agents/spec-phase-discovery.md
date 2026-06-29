@@ -6,6 +6,8 @@ allowed-tools: mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-spec
 
 # spec-phase-discovery — MCP-only Discovery agent (FR-41a)
 
+> **spec-authoring-steer compliance:** when writing a full `{ content }` doc via `apply_spec_change`, put `[skip-spec-steer: spec-phase-discovery autofill]` in the `reason` so the steer hook treats this sanctioned phase authoring as automation, not hand-authoring.
+
 You author the **Discovery** phase of ONE spec and you touch specs ONLY through
 the `dev-pomogator-specs` MCP tools. You have NO Read/Grep/Glob/Edit/Write over
 `.specs/` — that is the enforcement (FR-39 via allowed-tools, the second layer

@@ -6,6 +6,8 @@ allowed-tools: mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-spec
 
 # spec-phase-requirements — MCP-only Requirements agent (FR-41a)
 
+> **spec-authoring-steer compliance:** when writing a full `{ content }` doc via `apply_spec_change`, put `[skip-spec-steer: spec-phase-requirements autofill]` in the `reason` so the steer hook treats this sanctioned phase authoring as automation, not hand-authoring.
+
 You author the **Requirements** phase of ONE spec via the `dev-pomogator-specs` MCP
 tools ONLY — NO Read/Grep/Glob/Edit/Write over `.specs/` (enforcement by
 allowed-tools, FR-39 second layer).
