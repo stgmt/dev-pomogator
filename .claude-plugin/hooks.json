@@ -329,6 +329,16 @@
             "timeout": 30
           }
         ]
+      },
+      {
+        "matcher": "mcp__dev-pomogator-specs__apply_spec_change|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PLUGIN_ROOT || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/spec-authoring-steer/steer.ts\"",
+            "timeout": 30
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [
