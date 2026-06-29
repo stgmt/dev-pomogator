@@ -340,14 +340,32 @@ export function lastUserPrompt(rawTranscript: string): string {
  * the human's words). This is the agent's MANDATE — what the human actually asked for — which the judge's
  * mandate layer weighs to decide "is the requested task done?" so a stop is approved once that mandate is
  * complete, even while unrelated backlog (nextOpenTask) stays open. Agent-independent: the agent cannot
- * fabricate the human's typed prompts. Bounded — the LAST MANDATE_MAX_PROMPTS asks, each truncated to
- * MANDATE_MAX_LEN — so the judge prompt stays small and cheap. Empty array when no real prompt is found.
+ * fabricate the human's typed prompts. Bounded — the LAST MANDATE_MAX_PROMPTS asks, each clamped HEAD+TAIL
+ * to MANDATE_MAX_LEN (so a big log/error paste keeps the instruction at EITHER edge, not just the head) —
+ * the judge prompt stays small and cheap. Empty array when no real prompt is found.
  */
 const MANDATE_MAX_PROMPTS = 12;
 const MANDATE_MAX_LEN = 400;
 // A message that is ONLY a continuation ack — no ask. Matched against the prompt with whitespace/punct
 // stripped, so only an EXACT filler is dropped (a real request that merely STARTS with one survives).
 const ACK_ONLY_RE = /^(?:го|гоу|ок|окей|оке|ладно|давай|да|нет|ага|угу|ало|оа|плюс|\+{1,3}|go|ok|okay|yes|yep|nope|no|k|к|sure|next|далее|дальше)$/i;
+
+/**
+ * FR-28: clamp ONE prompt to the budget keeping HEAD + TAIL, not head-only. A big paste (5 KB of logs /
+ * a stack trace) carries the human's actual instruction at an EDGE — "почини вот это: <dump>" (top) OR
+ * "<dump> …что тут не так?" (bottom). Head-only truncation drops the ask whenever it sits AFTER the dump.
+ * Keeping both ends (and eliding the bulky middle with a marker) preserves the framing words on either
+ * side of the paste. Deterministic + cheap — NO extra LLM summarization call in a fast, fail-open Stop
+ * hook (latency/cost/another failure surface); the judge needs the ASK, not the logs. Same byte-window
+ * idea the repo already uses for big files (perf-budget head+tail).
+ */
+function clampMandate(s: string): string {
+  if (s.length <= MANDATE_MAX_LEN) return s;
+  const head = Math.ceil(MANDATE_MAX_LEN * 0.65); // bias to the start (the ask is more often at the top)
+  const tail = MANDATE_MAX_LEN - head;
+  const omitted = s.length - head - tail;
+  return `${s.slice(0, head).trimEnd()} […${omitted} chars omitted…] ${s.slice(s.length - tail).trimStart()}`;
+}
 export function sessionUserPrompts(rawTranscript: string): string[] {
   const lines = parseLines(rawTranscript);
   const out: string[] = [];
@@ -364,7 +382,8 @@ export function sessionUserPrompts(rawTranscript: string): string[] {
     // (spaces stripped → "давайсделайx") does NOT match `^давай$`, so a real ask is never lost.
     const norm = cleaned.replace(/[\s.,!?…]+/gu, '').toLowerCase();
     if (ACK_ONLY_RE.test(norm)) continue;
-    out.push(cleaned.length > MANDATE_MAX_LEN ? cleaned.slice(0, MANDATE_MAX_LEN) + '…' : cleaned);
+    out.push(clampMandate(cleaned)); // head+tail clamp: keep the ask even when it sits AFTER a big paste
+
   }
   return out.slice(-MANDATE_MAX_PROMPTS);
 }

@@ -256,6 +256,13 @@ function lastUserPrompt(rawTranscript) {
 var MANDATE_MAX_PROMPTS = 12;
 var MANDATE_MAX_LEN = 400;
 var ACK_ONLY_RE = /^(?:го|гоу|ок|окей|оке|ладно|давай|да|нет|ага|угу|ало|оа|плюс|\+{1,3}|go|ok|okay|yes|yep|nope|no|k|к|sure|next|далее|дальше)$/i;
+function clampMandate(s) {
+  if (s.length <= MANDATE_MAX_LEN) return s;
+  const head = Math.ceil(MANDATE_MAX_LEN * 0.65);
+  const tail = MANDATE_MAX_LEN - head;
+  const omitted = s.length - head - tail;
+  return `${s.slice(0, head).trimEnd()} [\u2026${omitted} chars omitted\u2026] ${s.slice(s.length - tail).trimStart()}`;
+}
 function sessionUserPrompts(rawTranscript) {
   const lines = parseLines(rawTranscript);
   const out = [];
@@ -268,7 +275,7 @@ function sessionUserPrompts(rawTranscript) {
     if (!cleaned) continue;
     const norm = cleaned.replace(/[\s.,!?…]+/gu, "").toLowerCase();
     if (ACK_ONLY_RE.test(norm)) continue;
-    out.push(cleaned.length > MANDATE_MAX_LEN ? cleaned.slice(0, MANDATE_MAX_LEN) + "\u2026" : cleaned);
+    out.push(clampMandate(cleaned));
   }
   return out.slice(-MANDATE_MAX_PROMPTS);
 }

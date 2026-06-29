@@ -249,6 +249,19 @@ describe('CEGATE001: pure classifier units', () => {
     expect(sessionUserPrompts('')).toEqual([]); // no transcript → empty mandate (rule cannot fire)
   });
 
+  // @feature28 — FR-28: a BIG paste (logs/stack trace) with the actual ask at the END must keep the ask.
+  // head-only truncation would drop it; head+tail clamp preserves the instruction at either edge.
+  it('CEGATE001_45: a big-paste prompt keeps the ask buried AFTER the dump (head+tail clamp, not head-only)', () => {
+    const logs = 'INFO request handled ok\n'.repeat(200); // ~4.8KB of noise between the framing words
+    const big = 'логи ниже:\n' + logs + 'ПОЧИНИ ошибку в самом конце';
+    const raw = [U(big), A([txt('ok')])].map((r) => JSON.stringify(r)).join('\n');
+    const [item] = sessionUserPrompts(raw);
+    expect(item).toContain('логи ниже'); // head survives
+    expect(item).toContain('ПОЧИНИ ошибку в самом конце'); // tail (the real ask) survives — lost if head-only
+    expect(item).toContain('chars omitted'); // bulky middle elided with a marker
+    expect(item!.length).toBeLessThan(450); // still bounded
+  });
+
   // @feature11 — investigated for the 5a "agent-completion" tightening (real transcript shapes):
   // a NATURAL backgrounded-agent completion is a USER message «"<name>" came to rest», which resets
   // the turn-window boundary — so the existing window detector ALREADY handles the single-agent case
