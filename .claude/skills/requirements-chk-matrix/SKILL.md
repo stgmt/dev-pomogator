@@ -10,6 +10,8 @@ allowed-tools: mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs
 
 # Requirements CHK Matrix
 
+> **spec-authoring-steer compliance:** when writing a full `{ content }` document via `apply_spec_change`, include `[skip-spec-steer: requirements-chk-matrix autofill]` in the `reason` — this marks the write as sanctioned automation so the steer hook does not flag it as hand-authoring (targeted `old_string`/`new_string` edits need no marker).
+
 ## Mission
 
 Fill Phase 2 traceability artifacts of a v3 spec that form-guards enforce:

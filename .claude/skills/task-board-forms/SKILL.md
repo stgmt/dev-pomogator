@@ -10,6 +10,8 @@ allowed-tools: mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs
 
 # Task Board Forms
 
+> **spec-authoring-steer compliance:** when writing a full `{ content }` document via `apply_spec_change`, include `[skip-spec-steer: task-board-forms autofill]` in the `reason` — this marks the write as sanctioned automation so the steer hook does not flag it as hand-authoring (targeted `old_string`/`new_string` edits need no marker).
+
 ## Mission
 
 Fill Phase 3 finalization artifacts of a v3 spec that `task-form-guard` enforces:

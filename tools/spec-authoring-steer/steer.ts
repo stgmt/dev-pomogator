@@ -48,6 +48,7 @@ interface PreToolUseInput {
     content?: string;
     old_string?: string;
     file_path?: string;
+    reason?: string;
   };
   cwd?: string;
 }
@@ -89,9 +90,15 @@ export function steerDecision(data: PreToolUseInput): { doc: string; skill: stri
   return { doc: docName, skill: DOC_SKILL[docName] };
 }
 
-/** Deliberate per-call escape marker in the door `reason` / Write text. */
+/**
+ * Deliberate per-call escape marker in the door `reason` (NOT the doc content — a
+ * marker in `content` would pollute the spec doc). The automator sub-skills put
+ * `[skip-spec-steer: <skill> autofill]` in their apply reason so enforce never
+ * blocks their own full-content writes; the agent uses the same channel for a
+ * legitimate hand-write the sub-skill can't do.
+ */
 export function extractSkip(data: PreToolUseInput): string | null {
-  const hay = `${data.tool_input?.content ?? ''}`;
+  const hay = `${data.tool_input?.reason ?? ''}`;
   const m = hay.match(/\[skip-spec-steer:\s*([^\]]*)\]/i);
   return m ? m[1].trim() : null;
 }
