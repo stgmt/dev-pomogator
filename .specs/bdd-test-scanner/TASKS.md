@@ -14,7 +14,7 @@
   - [ ] `guard.ts` imports the shared module; its existing BDD tests still pass
 - Status: TODO
 - Est: 40m
-- refs: [FR-2](FR.md#fr-2-shared-non-bdd-test-detector), @FR-2
+- refs: [FR-2](FR.md#fr-2-shared-non-bdd-test-detector), @feature2
 
 ## Phase 1: Scanner core
 
@@ -28,7 +28,7 @@
   - [ ] classification is path-only via the shared detector
 - Status: TODO
 - Est: 40m
-- refs: [FR-1](FR.md#fr-1-scan-existing-non-bdd-tests-at-session-start), @FR-1
+- refs: [FR-1](FR.md#fr-1-scan-existing-non-bdd-tests-at-session-start), @feature1
 
 ### 📋 `scanner-hook`
 
@@ -40,7 +40,7 @@
   - [ ] any error or timeout returns continue silently
 - Status: TODO
 - Est: 40m
-- refs: [FR-1](FR.md#fr-1-scan-existing-non-bdd-tests-at-session-start), @FR-1
+- refs: [FR-1](FR.md#fr-1-scan-existing-non-bdd-tests-at-session-start), @feature1
 
 ### 📋 `ack-marker`
 
@@ -52,7 +52,7 @@
   - [ ] notice re-fires when a non-BDD test appears beyond the covered set
 - Status: TODO
 - Est: 30m
-- refs: [FR-4](FR.md#fr-4-a-tracking-issue-gates-the-notice), @FR-4
+- refs: [FR-4](FR.md#fr-4-a-tracking-issue-gates-the-notice), @feature4
 
 ## Phase 2: Distribution and Doctor
 
@@ -66,7 +66,7 @@
   - [ ] scanner entry present in project settings via the bootstrap launcher
 - Status: TODO
 - Est: 20m
-- refs: [FR-5](FR.md#fr-5-plugin-wide-distribution), @FR-5
+- refs: [FR-5](FR.md#fr-5-plugin-wide-distribution), @feature5
 
 ### 📋 `doctor-check`
 
@@ -78,7 +78,7 @@
   - [ ] reports a problem with a fix hint when the hook entry is absent or `gh` is missing
 - Status: TODO
 - Est: 40m
-- refs: [FR-6](FR.md#fr-6-doctor-verifies-and-repairs-the-hook-and-its-dependencies), @FR-6
+- refs: [FR-6](FR.md#fr-6-doctor-verifies-and-repairs-the-hook-and-its-dependencies), @feature6
 
 ## Phase 3: Tests and verification
 
@@ -88,11 +88,11 @@
 
 - **files:** `tests/step_definitions/feature_bdd_test_scanner.ts` *(create)*, `cucumber.json` *(edit)*
 - **Done When:**
-  - [ ] all `@FR-1`..`@FR-6` scenarios drive the real scanner and pass in Docker
+  - [ ] all `@feature1`..`@feature6` scenarios drive the real scanner and pass in Docker
   - [ ] detector parity scenario asserts guard and scanner agree
 - Status: TODO
 - Est: 60m
-- refs: [FR-3](FR.md#fr-3-advisory-two-path-notice), @FR-3
+- refs: [FR-3](FR.md#fr-3-advisory-two-path-notice), @feature3
 
 ### 📋 `deps-absent-verify`
 
@@ -103,4 +103,4 @@
   - [ ] with `node_modules` hidden, the hook runs via the real launcher and does not crash the session
 - Status: TODO
 - Est: 20m
-- refs: [FR-1](FR.md#fr-1-scan-existing-non-bdd-tests-at-session-start), @FR-1
+- refs: [FR-1](FR.md#fr-1-scan-existing-non-bdd-tests-at-session-start), @feature1
