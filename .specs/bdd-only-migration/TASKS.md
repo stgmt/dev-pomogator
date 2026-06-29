@@ -84,3 +84,12 @@ BDD foundation is already in place (verified in DESIGN.md Evidence: `tests/step_
   **Done When:**
   - [x] the spec records FR-1..FR-9 with AC + .feature + TASKS
   - [x] `spec-verdict.ts` smart verdict is GREEN
+
+## Phase 4: Shrink-only invariant (FR-10)
+
+- [ ] Guard blocks GROWING an existing tail file -- @feature10 — Status: TODO | Est: 90m
+  _Requirements: [FR-10](FR.md#fr-10-shrink-only-invariant-for-existing-non-bdd-test-files)_
+  **Done When:**
+  - [ ] `bddOnlyDecision` (or a companion) tallies test-case openers and denies a net-positive Edit of an existing non-BDD test file, allowing net-zero/negative and the logged `BDD_ONLY_SKIP` escape
+  - [ ] step-defs authored in `tests/step_definitions/feature_bdd_only_guard.ts` driving the REAL guard for BDDONLY001_05/_06; the `@wip` tag removed
+  - [ ] BDDONLY001_05/_06 green in the Docker-cucumber run

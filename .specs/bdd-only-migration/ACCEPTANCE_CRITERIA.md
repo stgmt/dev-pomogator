@@ -53,3 +53,9 @@ WHEN `spec-verdict.ts` is run on `.specs/bdd-only-migration` THEN the smart verd
 **Требование:** [FR-9](FR.md#fr-9-fr-1-guard-scenarios-drive-the-real-guard)
 
 WHEN the FR-1 guard scenarios run against the real guard THEN a new non-BDD test SHALL be denied, an Edit of an existing test SHALL be allowed, a `.feature`/step-def SHALL be allowed, and a `BDD_ONLY_SKIP` escape SHALL be allowed AND recorded in the escape log.
+
+## AC-10 (FR-10)
+
+**Требование:** [FR-10](FR.md#fr-10-shrink-only-invariant-for-existing-non-bdd-test-files)
+
+WHEN an agent issues an Edit/MultiEdit to an existing non-BDD test file AND the post-edit test-case opener count is GREATER than the pre-edit count THEN the `bdd-only-test-guard` hook SHALL deny the call with a shrink-only reason that names the false-positive surface; WHEN the edit keeps or lowers the test-case count, OR a `BDD_ONLY_SKIP` escape is set, THEN the hook SHALL allow it (the escape recorded in the escape log).

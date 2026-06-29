@@ -62,3 +62,15 @@ The `.feature` SHALL carry `@feature1` guard scenarios (BDDONLY001_01 deny-new, 
 
 **Связанные AC:** [AC-9](ACCEPTANCE_CRITERIA.md#ac-9-fr-9)
 **Use Case:** [UC-5](USE_CASES.md#uc-5-a-deliberate-escape-is-recorded-for-audit)
+
+## FR-10: Shrink-only invariant for existing non-BDD test files
+
+FR-1 ALLOWS any Edit/MultiEdit of an existing non-BDD test file so the ~120-file tail can be migrated and deleted. That allowance has a gap: it ALSO lets an Edit ADD net-new test cases to an existing tail file, so NEW behaviour can dodge the BDD-only regime by parking its tests in a file that already exists. (2026-06-29 incident: the claim-evidence-gate offloading work added two new vitest cases — CEGATE001_43/_44 — to an existing `claim-evidence-gate.test.ts`; the guard correctly stayed silent per FR-1/UC-4, but the non-BDD tail GREW instead of shrinking.)
+
+The guard SHALL enforce a SHRINK-ONLY invariant: an Edit/MultiEdit to an existing non-BDD test file MAY NOT INCREASE its test-case count. WHEN the post-edit test-case opener count (a builtins-only regex tally of `it(` / `test(` / `def test_` / `[Fact]` / `[Test]` per language, no `node_modules`) is GREATER than the pre-edit count, the guard SHALL DENY with a reason that points the author to write the new case as a `@featureN` cucumber scenario AND names the false-positive surface. A net-zero or net-NEGATIVE change (refactor, deletion, migration) SHALL be ALLOWED unchanged. The deliberate, logged escape (`BDD_ONLY_SKIP=1` / `[skip-bdd-only: <reason>]`) SHALL be honoured and recorded in `.claude/logs/bdd-only-escapes.jsonl`.
+
+HONEST LIMIT (false-positive surface, stated openly per claims-need-evidence): a genuine split/extract that legitimately raises the opener count (one large `it` broken into several) is a FALSE POSITIVE — that is why the rule is escape-able (logged) rather than absolute, and the deny reason SHALL say so. The guard SHALL stay fail-open (any error → allow), builtins-only.
+
+**Связанные AC:** [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-10)
+
+**Use Case:** [UC-4](USE_CASES.md#uc-4-editing-an-existing-not-yet-migrated-test-is-still-allowed)

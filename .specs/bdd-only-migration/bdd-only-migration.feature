@@ -30,3 +30,15 @@ Feature: BDDONLY001 Staged BDD-only test-file guard
     When the bdd-only guard receives a Write for a new "tests/e2e/escaped.test.ts" with BDD_ONLY_SKIP set
     Then the bdd-only guard should allow the write
     And the escape should be recorded in the bdd-only escape log
+
+  @feature10 @wip
+  Scenario: BDDONLY001_05 deny an Edit that raises the test-case count of an existing tail file
+    Given an existing non-BDD test file with 2 test cases
+    When the bdd-only guard receives an Edit that raises its test-case count to 3
+    Then the bdd-only guard should deny with a shrink-only reason
+
+  @feature10 @wip
+  Scenario: BDDONLY001_06 allow an Edit that keeps or lowers the test-case count
+    Given an existing non-BDD test file with 3 test cases
+    When the bdd-only guard receives an Edit that lowers its test-case count to 2
+    Then the bdd-only guard should allow the write

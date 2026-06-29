@@ -13,7 +13,7 @@
 
 ## Phase 1: Loud token demand (FR-15)
 
-- [ ] Surface a chat-visible "connect the aipomogator token" message when the smart judge has no token -- @feature15 — Status: TODO | Est: 45m
+- [x] Surface a chat-visible "connect the aipomogator token" message when the smart judge has no token -- @feature15 — Status: DONE | Est: 45m
   _Requirements: FR-14, FR-15_
   **Done When:**
   - [ ] In `claim_evidence_gate_stop.ts` gray-zone branch: when `resolveEndpoint()===null` (no token) and a gray stop with open work, the message names the token env vars + endpoint
@@ -31,16 +31,28 @@
 
 ## Phase 3: Verify for all users
 
-- [ ] Prove the demand fires deps-absent (bundled, no node_modules) -- @feature15 — Status: TODO | Est: 20m
+- [x] Prove the demand fires deps-absent (bundled, no node_modules) -- @feature15 — Status: DONE | Est: 20m
   _Requirements: FR-15_
   **Done When:**
   - [ ] rebuild `claim_evidence_gate_stop.bundle.mjs`; run it deps-absent with no token -> chat-visible message contains the token demand
 
 ## Phase 4: Offloading + fighting-the-gate hardening (FR-23..FR-30)
 
-- [ ] Judge catches offloading + weakening-the-gate; facts computed from real inputs; Docker fixed via TCP -- @feature15 — Status: TODO | Est: 90m
+- [x] Judge catches offloading + weakening-the-gate; facts computed from real inputs; Docker fixed via TCP -- @feature15 — Status: DONE | Est: 90m
   _Requirements: FR-23, FR-24, FR-25, FR-26, FR-27, FR-28, FR-29, FR-30_
   **Done When:**
   - [x] game_guard_facts compute YES on real Edit / apply_spec_change / set_spec_status, NO on normal edits
   - [x] Docker test suite runs in-container via the TCP endpoint with no sudo
   - [ ] judge-bench green twice: offloading and gaming cases BLOCK, legit carve-outs APPROVE
+
+## Phase 5: BDD-coverage findings (2026-06-29 audit)
+
+- [ ] Retire-or-wire the orphan CEGATE001 .feature -- @feature15 — Status: TODO | Est: 60m
+  _Requirements: FR-23, FR-24, FR-25, FR-26_
+  **Done When:**
+  - [ ] `tests/features/plugins/claim-evidence-gate/CEGATE001_claim-evidence-gate.feature` is either retired OR given real step-defs and wired into `cucumber.json` (today it has 30 scenarios, no step-defs, and is absent from cucumber.json — dead documentation)
+  - [ ] the new offloading facts get a `@featureN` scenario driving the real `gateSelfEdit` / `selfMarkedBlockedOrBacklog` during this spec FR-5 migration wave
+- [ ] Record judge-bench as the legit non-tail exception -- @feature15 — Status: TODO | Est: 15m
+  _Requirements: FR-23_
+  **Done When:**
+  - [ ] DESIGN/README note that the LLM-judge behaviour is pinned LIVE in `tools/claim-evidence-gate/bench/judge-bench.ts` (not a `*.test.ts`), so it is NOT an FR-5 migration target nor an FR-6 refusal — it is the genuine non-deterministic-judge exception
