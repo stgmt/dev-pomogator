@@ -52,7 +52,7 @@
   **Done When:**
   - [ ] `tests/features/plugins/claim-evidence-gate/CEGATE001_claim-evidence-gate.feature` is either retired OR given real step-defs and wired into `cucumber.json` (today it has 30 scenarios, no step-defs, and is absent from cucumber.json — dead documentation)
   - [ ] the new offloading facts get a `@featureN` scenario driving the real `gateSelfEdit` / `selfMarkedBlockedOrBacklog` during this spec FR-5 migration wave
-- [ ] Record judge-bench as the legit non-tail exception -- @feature15 — Status: TODO | Est: 15m
+- [x] Record judge-bench as the legit non-tail exception -- @feature15 — Status: DONE | Est: 15m
   _Requirements: FR-23_
   **Done When:**
-  - [ ] DESIGN/README note that the LLM-judge behaviour is pinned LIVE in `tools/claim-evidence-gate/bench/judge-bench.ts` (not a `*.test.ts`), so it is NOT an FR-5 migration target nor an FR-6 refusal — it is the genuine non-deterministic-judge exception
+  - [x] DESIGN/README note that the LLM-judge behaviour is pinned LIVE in `tools/claim-evidence-gate/bench/judge-bench.ts` (not a `*.test.ts`), so it is NOT an FR-5 migration target nor an FR-6 refusal — it is the genuine non-deterministic-judge exception
