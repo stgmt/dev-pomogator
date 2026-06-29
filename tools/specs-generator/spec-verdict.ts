@@ -365,6 +365,23 @@ export async function runSpecVerdict(
   };
 }
 
+/**
+ * FR-37 DX: per-code remediation for conformance warnings/errors. The verdict used
+ * to print only counts (`FR_NO_STORY:6`), forcing the reader into conformance.ts to
+ * learn the fix. This maps each code to a one-line "how to fix". Additive — printed
+ * AFTER the count line so existing assertions on that line are unaffected.
+ */
+const CONFORMANCE_REMEDIATION: Record<string, string> = {
+  FR_NO_STORY: 'add a `**Требование:** [FR-N]` line INSIDE a `### User Story` block (the story→FR covers edge is built only from that line)',
+  FR_NO_DESIGN: 'add a `**Требование:** [FR-N]` line INSIDE a `### Decision` block in DESIGN.md',
+  TOOTHLESS_STORY: 'the `### User Story` block declares no `**Требование:** [FR-N]` — add one (else its story leg dangles)',
+  TOOTHLESS_DECISION: 'the `### Decision` block declares no `**Требование:** [FR-N]` — add one (else its design leg dangles)',
+  UNCOVERED_FR: 'FR has no covering AC — add an `## AC-N (FR-N)` with `**Требование:** [FR-N](FR.md#...)` + a tagged @featureN scenario',
+  UNTAGGED_SCENARIO: 'scenario carries no `@featureN` tag — add the tag mapping it to its FR',
+  TASK_UNTESTED: 'task has no covering scenario — add a clickable `[FR-N]` ref + a @featureN scenario',
+  LINK_VALIDITY: 'reference is plain text — make it a clickable `[FR-N](FR.md#fr-n-...)` / `[AC-N](ACCEPTANCE_CRITERIA.md#...)` link',
+};
+
 /** Render the verdict for humans. GREEN here means "every composed gate passed". */
 export function renderVerdict(r: SpecVerdictResult): string {
   const lines: string[] = [];
@@ -388,6 +405,11 @@ export function renderVerdict(r: SpecVerdictResult): string {
         .map(([c, n]) => `${c}:${n}`)
         .join(', '),
   );
+  // FR-37 DX: surface HOW to fix, not just the counts (additive lines, one per code present).
+  for (const code of Object.keys(r.conformance.byCode)) {
+    const hint = CONFORMANCE_REMEDIATION[code];
+    if (hint) lines.push(`  fix ${code}: ${hint}`);
+  }
   const notRunCount = (r.coverage.buckets as Record<string, number>).not_run ?? 0;
   lines.push(
     `coverage (FR-32 honesty): buckets ${JSON.stringify(r.coverage.buckets)}` +
