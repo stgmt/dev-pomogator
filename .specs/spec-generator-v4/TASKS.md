@@ -1758,12 +1758,12 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] мигрировать 4 (architecture-research-workflow ×2, cross-spec-resolve, cross-spec-reconcile) → `PLUGINxxx_skills-scripts.feature` + in-process step-defs, импортящие скрипты скиллов (без spawn по spawn-grep)
   - [ ] валидировать зелёным в Docker через детерминированный unique-config обход; mutation-check (сломать движок → сценарий RED → восстановить); выпилить vitest-двойник ПОСЛЕ зелёного эквивалента
 
-- [ ] P27-14: ко-локированный хвост (другие языки): 3 `*_test.py` / `*Tests.cs` — ОТДЕЛЬНАЯ runner-дорожка — id: p27-tail-other-language-runners — Status: TODO | Est: 240m
+- [ ] P27-14: ко-локированный хвост (другие языки): §9 «3 `*_test.py`/`*Tests.cs`» — fixtures + own-domain, НЕ цель миграции (исключено) — id: p27-tail-other-language-runners — Status: TODO | Est: 30m
   _depends: p27-migrator-and-pilot_
   _Requirements: [FR-51](FR.md#fr-51)_
   **Done When:**
-  - [ ] 3 не-TS теста требуют language-native BDD-раннера (pytest-bdd/behave для Python; Reqnroll для C#), НЕ cucumber-js → вне cucumber-js mainline; НЕ сворачивать в `.feature`
-  - [ ] per-file решение: native-BDD wired в граф если выполнимо, иначе удалить если мёртвый / пометить non-traceable scratch; честный TODO пока нет runner-пути
+  - [ ] зафиксировано (evidence: `git ls-files '*Tests.cs' '*_test.py' 'test_*.py' | grep -vE 'tests/fixtures/|tools/session-pilot/|tests/tui/'` = пусто): единственные `*Tests.cs` — fixtures (`tests/fixtures/dotnet-stryker-target`, `tests/fixtures/steps-validator`); `*_test.py` вне own-domain = 0; session-pilot/TUI Python — собственный домен (своя спека, pilot-API) → НЕ цель cucumber-js миграции
+  - [ ] guard-residуал: если позже появится ЖИВОЙ не-TS тест ПРОД-кода → language-native BDD (pytest-bdd/behave; Reqnroll) отдельной runner-дорожкой; до тех пор — исключено как fixtures/own-domain (НЕ сворачивать в `.feature`)
 
 ## Phase 28 — Session dogfood hardening (FR-52: door/MCP/BDD-workflow frictions, 2026-06-18)
 
