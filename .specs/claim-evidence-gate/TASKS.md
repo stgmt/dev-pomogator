@@ -47,11 +47,11 @@
 
 ## Phase 5: BDD-coverage findings (2026-06-29 audit)
 
-- [ ] Retire-or-wire the orphan CEGATE001 .feature -- @feature15 — Status: TODO | Est: 60m
+- [x] Retire-or-wire the orphan CEGATE001 .feature -- @feature15 — Status: DONE | Est: 60m
   _Requirements: FR-23, FR-24, FR-25, FR-26_
   **Done When:**
-  - [ ] `tests/features/plugins/claim-evidence-gate/CEGATE001_claim-evidence-gate.feature` is either retired OR given real step-defs and wired into `cucumber.json` (today it has 30 scenarios, no step-defs, and is absent from cucumber.json — dead documentation)
-  - [ ] the new offloading facts get a `@featureN` scenario driving the real `gateSelfEdit` / `selfMarkedBlockedOrBacklog` during this spec FR-5 migration wave
+  - [x] `tests/features/plugins/claim-evidence-gate/CEGATE001_claim-evidence-gate.feature` given real step-defs and wired into `cucumber.json` — 46/46 scenarios green in Docker (commit fb043ad7)
+  - [x] CEGATE001_43 drives the real `gateSelfEdit` / `selfMarkedBlockedOrBacklog` against real tool_use shapes (verified green, commit fb043ad7)
 - [x] Record judge-bench as the legit non-tail exception -- @feature15 — Status: DONE | Est: 15m
   _Requirements: FR-23_
   **Done When:**
